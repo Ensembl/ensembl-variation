@@ -213,6 +213,41 @@ sub fetch_all_by_sub_Population {
   return $result;
 }
 
+=head2 get_synonyms
+
+    Arg [1]              : $pop_id
+    Arg [2] (optional)   : $source
+    Example              : my $dbSNP_synonyms = $pop_adaptor->get_synonyms($dbSNP);
+                           my $all_synonyms = $pop_adaptor->get_synonyms();
+    Description: Retrieves synonyms for the source provided. Otherwise, return all the synonyms for the population
+    Returntype : list of strings
+    Exceptions : none
+    Caller     : Bio:EnsEMBL:Variation::Population
+
+=cut
+
+sub get_synonyms{
+    my $self = shift;
+    my $dbID = shift;
+    my $source = shift;
+    my $population_synonym;
+    my $synonyms;
+
+    my $sql;
+    if (defined $source){
+	$sql = qq{SELECT ps.name FROM population_synonym ps, source s WHERE ps.population_id = ? AND ps.source_id = s.source_id AND s.name = "$source"}
+    }
+    else{
+	$sql = qq{SELECT name FROM population_synonym WHERE population_id = ?};
+    }
+    my $sth = $self->prepare($sql);
+    $sth->execute($dbID);
+    $sth->bind_columns(\$population_synonym);
+    while ($sth->fetch){
+	push @{$synonyms},$population_synonym;
+    }
+    return $synonyms;
+}
 
 #
 # private method, creates population objects from an executed statement handle
