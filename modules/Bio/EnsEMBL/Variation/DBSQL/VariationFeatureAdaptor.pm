@@ -102,6 +102,32 @@ sub fetch_all_by_Variation {
 
 
 
+sub fetch_all_by_Slice {
+  my $self = shift;
+  my $slice = shift;
+
+  my $vfs = $self->SUPER::fetch_all_by_Slice( $slice );
+  my @vids = map { $_->{'_variation_id'} } @$vfs;
+
+  # attach the Variations to the variation features ...
+  my $varAdaptor = $self->db->get_VariationAdaptor();
+  my $vars = $varAdaptor->fetch_all_by_dbID_list( \@vids );
+  my %vars =  map { $_->dbID() , $_ } @$vars;
+  
+  for my $vf ( @$vfs ) {
+    $vf->{'variation'} = $vars{$vf->{'_variation_id'}};
+  }
+
+  my $transcriptVariationAdaptor = $self->db->get_TranscriptVariationAdaptor();
+
+  # this functions attaches the transcriptVariations while fetching them...
+  $transcriptVariationAdaptor->fetch_all_by_VariationFeatures( $vfs );
+
+  return $vfs;
+}
+
+
+
 sub fetch_all_genotyped_by_Slice{
     my $self = shift;
     my $slice = shift;
