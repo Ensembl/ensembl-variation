@@ -305,7 +305,7 @@ create table genotype (
   allele_1 varchar(255),
   allele_2 varchar(255),
 	frequency float,
-	pop_id int,
+	population_id int,
 
 	primary key( genotype_id ),
   key (variation_id)
