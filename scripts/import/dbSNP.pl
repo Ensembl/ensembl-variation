@@ -123,7 +123,8 @@ cleanup();
 
 
 sub source_table {
-  $dbVar->do(qq(INSERT INTO source SET source_id = 1, name = "dbSNP"));
+    $dbSNP->{Name} =~ /dbname=\w+\_(\d+)/;
+    $dbVar->do(qq(INSERT INTO source SET source_id = 1, name = "dbSNP", version = $1));
 }
 
 
