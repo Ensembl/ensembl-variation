@@ -169,7 +169,8 @@ sub variation_group {
         defined($self->{'_variation_group_id'})) {
     # lazy-load from database on demand
     my $vga = $self->{'adaptor'}->db()->get_VariationGroupAdaptor();
-    $self->{'variation_group'} = $vga->fetch_by_dbID($self->{'_variation_id'});
+    $self->{'variation_group'} = 
+      $vga->fetch_by_dbID($self->{'_variation_group_id'});
   }
 
   return $self->{'variation_group'};
