@@ -4,7 +4,7 @@ use warnings;
 
 BEGIN { $| = 1;
 	use Test;
-	plan tests => 28;
+	plan tests => 30;
 }
 
 
@@ -138,4 +138,7 @@ ok($vars[0]->dbID() == 1 && $vars[4]->dbID() == 10);
 
 
 
+#test ambig_code and var_class
+ok($var->ambig_code eq 'Y');
 
+ok($var->var_class() eq 'snp');

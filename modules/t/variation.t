@@ -3,7 +3,7 @@ use warnings;
 
 BEGIN { $| = 1;
 	use Test;
-	plan tests => 31;
+	plan tests => 32;
 }
 
 
@@ -50,7 +50,11 @@ ok($v->get_all_validation_states()->[0] eq 'cluster' &&
 ok($v->five_prime_flanking_seq() eq $five_prime_seq);
 ok($v->three_prime_flanking_seq() eq $three_prime_seq);
 
+#test amibg_code
+ok($v->ambig_code() eq 'M');
 
+#test variation_class
+ok($v->var_class() eq 'snp');
 
 # test getter/setters
 
@@ -111,15 +115,14 @@ my $variation = Bio::EnsEMBL::Variation::Variation->new(
    );
 
 my $igty = $variation->get_all_IndividualGenotypes();
-my @igtys = sort {$a->dbID() <=> $b->dbID()}
+my @igtys = sort {$a->individual->dbID() <=> $b->individual->dbID()}
             @{$variation->get_all_IndividualGenotypes()};
 
 ok(@igtys == 50);
-ok($igtys[0]->dbID() == 417496);
 ok($igtys[0]->variation()->name() eq 'rs193');
 ok($igtys[0]->allele1() eq 'C');
 ok($igtys[0]->allele2() eq 'T');
-ok($igtys[0]->individual()->name() eq 'D001');
+ok($igtys[0]->individual()->name() eq 'NA17011');
 
 #test get_all_PopulationGenotypes
 $variation_id = 2863;

@@ -3,7 +3,7 @@ use warnings;
 
 BEGIN { $| = 1;
 	use Test;
-	plan tests => 11;
+	plan tests => 13;
 }
 
 
@@ -59,3 +59,9 @@ ok(test_getter_setter($vf, 'variation_name', 'rs21431'));
 # test display_id
 
 ok($vf->display_id eq $vname);
+
+#test ambiguity code
+ok($vf->ambig_code eq 'W');
+
+#test variation class
+ok($vf->var_class eq 'snp')

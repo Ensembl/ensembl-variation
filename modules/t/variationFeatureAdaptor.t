@@ -34,7 +34,7 @@ my $vfs = $vfa->fetch_all_by_Slice($slice);
 
 print_feats($vfs);
 
-ok(@$vfs == 63);
+ok(@$vfs == 68);
 
 my $vf = $vfa->fetch_by_dbID(1857);
 

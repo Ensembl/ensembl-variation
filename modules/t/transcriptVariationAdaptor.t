@@ -34,35 +34,35 @@ ok($trva && $trva->isa('Bio::EnsEMBL::Variation::DBSQL::TranscriptVariationAdapt
 
 
 # test fetch_by_dbID
-my $trv = $trva->fetch_by_dbID(1);
+my $trv = $trva->fetch_by_dbID(9);
 
-ok($trv->dbID() == 1);
+ok($trv->dbID() == 9);
 ok(!defined($trv->cdna_start()));
 ok(!defined($trv->cdna_end()));
 ok(!defined($trv->translation_start()));
 ok(!defined($trv->translation_end()));
 ok(!defined($trv->pep_allele_string()));
-ok($trv->consequence_type() eq 'UPSTREAM');
+ok($trv->consequence_type() eq 'DOWNSTREAM');
 ok($trv->adaptor == $trva);
 
 
-$trv = $trva->fetch_by_dbID(40);
+$trv = $trva->fetch_by_dbID(16);
 
-ok($trv->dbID() == 40);
-ok($trv->cdna_start() == 775);
-ok($trv->cdna_end() == 775);
-ok($trv->translation_start() == 255);
-ok($trv->translation_end() == 255);
-ok($trv->pep_allele_string() eq 'V/E');
-ok($trv->consequence_type() eq 'NON_SYNONYMOUS_CODING');
+ok($trv->dbID() == 16);
+ok(!defined($trv->cdna_start()));
+ok(!defined($trv->cdna_end()));
+ok(!defined($trv->translation_start()));
+ok(!defined($trv->translation_end()));
+ok(!defined($trv->pep_allele_string()));
+ok($trv->consequence_type() eq 'INTRONIC');
 ok($trv->adaptor() == $trva);
 
 
 # test fetch_all_by_VariationFeatures
-my $slice = $sa->fetch_by_region('chromosome',12,1,1e6);
+my $slice = $sa->fetch_by_region('chromosome',20,30_600_000,31_000_000);
 my $vf = $vfa->fetch_all_by_Slice($slice);
 my @trvs = @{$trva->fetch_all_by_VariationFeatures($vf)};
-ok(@trvs == 2);
+ok(@trvs == 8);
 
 
 
