@@ -74,19 +74,30 @@ sub load {
 ##### Alternative way of doing same thing
   my $sql;
 
+  #need to find out if possible use the LOCAL option
+  my $host = `hostname`;
+  chop $host;
+  $host =~ /(ecs\d+)/; #get the machine, only use LOCAL in ecs machines (ecs2, ecs4)
+  my $local_option = '';
+  #the script is running in ecs machine, let's find out if the file is in the same machine, too
+  if ($1){
+      if ($table_file =~ /$1/){
+	  $local_option = 'LOCAL';
+      }
+  }
+  
    if ( @colnames ) {
 
      $sql = qq{
-               LOAD DATA INFILE '$table_file'
+               LOAD DATA $local_option INFILE '$table_file'
                INTO TABLE $tablename( $cols )
               };
    } else {
      $sql = qq{
-               LOAD DATA INFILE '$table_file'
+               LOAD DATA $local_option INFILE '$table_file'
                INTO TABLE $tablename
               };
    }
-
    $db->do( $sql );
 
    unlink( "$table_file" );
@@ -135,6 +146,7 @@ sub create_and_load {
 
   $sql .= $create_cols.")";
 
+  $sql .= " MAX_ROWS = 100000000" if ($tablename eq 'tmp_gty'); #need to make bigger this table for human
   $db->do( $sql );
 
   load( $db, $tablename, @col_names );

@@ -116,7 +116,9 @@ sub transcript_variation {
   my $sa = $dbCore->get_SliceAdaptor();
 
   my $dbname = $dbVar->dbname(); #get the name of the database to create the file
-  open FH, ">$TMP_DIR/$dbname.transcript_variation_$$\.txt";
+  my $host = `hostname`;
+  chop $host;
+  open FH, ">$TMP_DIR/$dbname.transcript_variation_$host\:$$\.txt";
 
   my $inc_non_ref = 1;
   my $slices = $sa->fetch_all('toplevel', undef, $inc_non_ref);
@@ -134,7 +136,6 @@ sub transcript_variation {
                     $g->seq_region_start() - $UPSTREAM,
                     $g->seq_region_end()   + $DNSTREAM,
                     $g->seq_region_start() - $MAX_FEATURE_LENGTH - $UPSTREAM);
-
       my $rows = $sth->fetchall_arrayref();
       
       foreach my $tr (@{$g->get_all_Transcripts()}) {
@@ -143,7 +144,8 @@ sub transcript_variation {
 	my $utr3 = $tr->three_prime_utr();
         my $utr5 = $tr->five_prime_utr();
 
-        # compute the effect of the variation on each of the transcripts
+
+# compute the effect of the variation on each of the transcripts
         # of the gene
 
         foreach my $row (@$rows) {

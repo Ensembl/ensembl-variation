@@ -6,7 +6,6 @@ package dbSNP::Human;
 use dbSNP::GenericContig;
 use vars qw(@ISA);
 use ImportUtils qw(debug load dumpSQL create_and_load);
-use Data::Dumper;
 
 @ISA = ('dbSNP::GenericContig');
 
@@ -19,7 +18,7 @@ sub dump_dbSNP{
     #and finally, get TSC data from dbSNP
     $self->dump_TSCIDs();    
     #get mitochondrial SNPs provided by Yuan in .tb file formats
-#    $self->dump_mitocondrialSNPs();
+    $self->dump_mitocondrialSNPs();
 }
 
 #specific function to get the HGVbase IDs from a file provided by Yuan and add them to the variation_synonym table
@@ -178,7 +177,9 @@ sub read_ContigHit{
 	$strand = $line[9]; #strand of the SNP in the sequence
 	$start = $line[10]; #physmapstart of the SNP
 	$end = $line[11];  #physmapend of the SNP
-	$snps->{$snp_id}->{'region'} = $region;
+	#get region name withou th MT
+	$region =~ /MT_(NC_\d+)/;
+	$snps->{$snp_id}->{'region'} = $1;
 	$snps->{$snp_id}->{'strand'} = $strand;
 	$snps->{$snp_id}->{'start'} = $start;
 	$snps->{$snp_id}->{'end'} = $end;

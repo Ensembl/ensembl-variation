@@ -49,7 +49,7 @@ sub add_strains{
     debug("Updating allele table with strain alleles");
     #first, update the MOPTI alleles
     $self->{'dbVariation'}->do(qq{UPDATE allele , variation_synonym, tmp_strain
-				      SET allele.population_id = $STRAINS{'MOPTI'}
+				      SET allele.population_id = $STRAINS{'MOPTI'}, allele.frequency = 1
 				      WHERE allele.variation_id = variation_synonym.variation_id
 				      AND SUBSTRING(variation_synonym.name,3) = tmp_strain.subsnp_id
 				      AND tmp_strain.strain like '%mopti%'
@@ -57,7 +57,7 @@ sub add_strains{
 
     #and do the same for the PEST alleles
     $self->{'dbVariation'}->do(qq{UPDATE allele , variation_synonym, tmp_strain
-				      SET allele.population_id = $STRAINS{'PEST'}
+				      SET allele.population_id = $STRAINS{'PEST'}, allele.frequency = 1
 				      WHERE allele.variation_id = variation_synonym.variation_id
 				      AND SUBSTRING(variation_synonym.name,3) = tmp_strain.subsnp_id
 				      AND tmp_strain.strain like '%pest%'
