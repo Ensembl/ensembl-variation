@@ -298,6 +298,7 @@ sub population_table {
   $dbVar->do("DROP TABLE tmp_pop_class");
   $dbVar->do("DROP TABLE tmp_pop");
   $dbVar->do("DROP TABLE tmp_pop2");
+  $dbVar->do("DROP TABLE tmp_pop_count");
 
   return;
 }
@@ -397,7 +398,8 @@ sub flanking_sequence_table {
   $dbVar->do(qq{CREATE TABLE tmp_seq (variation_id int,
                                       line_num int,
                                       type enum ('5','3'),
-                                      line varchar(255))});
+                                      line varchar(255),
+                                      revcom tinyint)});
 
   # import both the 5prime and 3prime flanking sequence tables
 
@@ -415,24 +417,24 @@ sub flanking_sequence_table {
     $dbVar->do("ALTER TABLE tmp_seq_$type ADD INDEX subsnp_id(subsnp_id)");
 
     # merge the tables into a single tmp table
-    $dbVar->do(qq{INSERT INTO tmp_seq (variation_id, line_num, type, line)
-                  SELECT v.variation_id, ts.line_num, '$type', ts.line
+    $dbVar->do(qq{INSERT INTO tmp_seq (variation_id, line_num, type, line, revcom)
+                  SELECT v.variation_id, ts.line_num, '$type', ts.line, v.substrand_reversed_flag
                   FROM   tmp_seq_$type ts, variation v
                   WHERE  v.subsnp_id = ts.subsnp_id});
   }
 
   $dbVar->do("ALTER TABLE tmp_seq ADD INDEX idx (variation_id, type, line_num)");
 
-  my $sth = $dbVar->prepare(qq{SELECT ts.variation_id, ts.type, ts.line
+  my $sth = $dbVar->prepare(qq{SELECT ts.variation_id, ts.type, ts.line, ts.revcom
                                FROM   tmp_seq ts
                                ORDER BY ts.variation_id, ts.type, ts.line_num},
                             { mysql_use_result => 1 });
 
   $sth->execute();
 
-  my ($vid, $type, $line);
+  my ($vid, $type, $line, $revcom);
 
-  $sth->bind_columns(\$vid, \$type, \$line);
+  $sth->bind_columns(\$vid, \$type, \$line, \$revcom);
 
   open(FH, ">$tmp_dir/flankingdump.txt");
 
@@ -445,11 +447,18 @@ sub flanking_sequence_table {
   # dump sequences to file that can be imported all at once
   while($sth->fetch()) {
     if(defined($cur_vid) && $cur_vid != $vid) {
-        $upstream = '\N' if(!$upstream); # null
-        $dnstream = '\N' if(!$dnstream);
-        print FH join("\t", $cur_vid, $upstream, $dnstream), "\n";
-        $upstream = '';
-        $dnstream = '';
+      # if subsnp in reverse orientation to refsnp, reverse compliment flanking sequence
+      if($revcom) {
+        ($upstream, $dnstream) = ($dnstream, $upstream);
+        reverse_comp(\$upstream);
+        reverse_comp(\$dnstream);
+      }
+
+      $upstream = '\N' if(!$upstream); # null
+      $dnstream = '\N' if(!$dnstream);
+      print FH join("\t", $cur_vid, $upstream, $dnstream), "\n";
+      $upstream = '';
+      $dnstream = '';
     }
     $cur_vid  = $vid;
 
@@ -750,7 +759,6 @@ sub population_genotypes {
 
 
 
-
 # cleans up some of the necessary temporary data structures after the
 # import is complete
 sub cleanup {
@@ -853,6 +861,9 @@ sub debug {
 }
 
 
+#
+# prints number of rows in a given table, used for debugging
+#
 
 sub count_rows {
   my $tablename = shift;
@@ -861,4 +872,19 @@ sub count_rows {
                     ("SELECT count(*) FROM $tablename")->[0]->[0];
 
   print STDERR "table $tablename has $count rows\n";
+}
+
+
+#
+# reverse compliments nucleotide sequence
+#
+
+sub reverse_comp {
+  my $seqref = shift;
+
+  $$seqref = reverse( $$seqref );
+  $$seqref =~
+    tr/acgtrymkswhbvdnxACGTRYMKSWHBVDNX/tgcayrkmswdvbhnxTGCAYRKMSWDVBHNX/;
+
+  return;
 }
