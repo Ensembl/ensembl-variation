@@ -12,8 +12,6 @@ use ImportUtils qw(dumpSQL debug create_and_load load);
 
 use DBI;
 
-
-
 my $TMP_DIR  = $ImportUtils::TMP_DIR;
 my $TMP_FILE = $ImportUtils::TMP_FILE;
 
@@ -314,6 +312,8 @@ sub flanking_sequence {
 
   $sth->finish();
   $update_sth->finish();
+
+  return;
 }
 
 
@@ -342,6 +342,8 @@ sub variation_group_feature {
                 FROM   variation_feature vf, variation_group_variation vgv
                 WHERE  vgv.variation_id = vf.variation_id
                 GROUP BY vgv.variation_group_id, vf.seq_region_id});
+
+  return;
 }
 
 
@@ -359,7 +361,6 @@ sub transcript_variation {
   my $UPSTREAM = 5000;
   my $DNSTREAM = 5000;
 
-
   my $sth = $dbVar->prepare
     (qq{SELECT vf.variation_feature_id, vf.seq_region_start, vf.seq_region_end,
                vf.seq_region_strand, vf.allele_string
@@ -370,9 +371,12 @@ sub transcript_variation {
 
   my $sa = $dbCore->get_SliceAdaptor();
 
+  open FH, ">$TMP_DIR/$TMP_FILE";
+
+  # assumes that variation features have already been pushed to toplevel
   foreach my $slice (@{$sa->fetch_all('toplevel')}) {
-    print STDERR "Processing transcript variations for ",
-      $slice->seq_region_name(), "\n";
+    debug("Processing transcript variations for ",
+          $slice->seq_region_name(), "\n");
     my $genes = $slice->get_all_Genes();
 
     # request all variations which lie in the region of a gene
@@ -384,7 +388,12 @@ sub transcript_variation {
 
       my $rows = $sth->fetchall_arrayref();
 
-      foreach my $tr (@{$g->get_all_Transcripts}) {
+      foreach my $tr (@{$g->get_all_Transcripts()}) {
+
+        next if(!$tr->translation()); # skip pseudogenes
+
+        my $utr3 = $tr->three_prime_utr();
+        my $utr5 = $tr->five_prime_utr();
 
         # compute the effect of the variation on each of the transcripts
         # of the gene
@@ -392,6 +401,7 @@ sub transcript_variation {
         foreach my $row (@$rows) {
           my %var;
           $var{'vf_id'}  = $row->[0];
+          # put variation in slice coordinates
           $var{'start'}  = $row->[1] - $slice->start() + 1;
           $var{'end'}    = $row->[2] - $slice->start() + 1;
           $var{'strand'} = $row->[3];
@@ -410,7 +420,6 @@ sub transcript_variation {
           my $vars = type_variation($tr, \%var);
 
           foreach my $v (@$vars) {
-            ### TBD actually store this information in the db
             my @arr = ($v->{'tr_id'},
                        $v->{'vf_id'},
                        join("/", @{$v->{'aa_alleles'}||[]}),
@@ -420,12 +429,20 @@ sub transcript_variation {
                        $v->{'cdna_end'},
                        $v->{'type'});
             @arr = map {($_) ? $_ : '\N'} @arr;
-            print STDERR join("\t", @arr), "\n";
+            print FH join("\t", @arr), "\n";
           }
         }
       }
     }
   }
+
+  close FH;
+
+  load($dbVar, qw(transcript_variation
+                  transcript_id variation_feature_id peptide_allele_string
+                  translation_start translation_end cdna_start cdna_end type));
+
+  return;
 }
 
 
@@ -466,11 +483,11 @@ sub type_variation {
     # check if the variation is completely outside the transcript:
 
     if($var->{'end'} < $tr->start()) {
-      $var->{'type'} = ($tr->strand() == 1) ? '5PRIME' : '3PRIME';
+      $var->{'type'} = ($tr->strand() == 1) ? 'UPSTREAM' : 'DOWNSTREAM';
       return [$var];
     }
     if($var->{'start'} > $tr->end()) {
-      $var->{'type'} = ($tr->strand() == 1) ? '3PRIME' : '5PRIME';
+      $var->{'type'} = ($tr->strand() == 1) ? 'DOWNSTREAM' : 'UPSTREAM';
       return [$var];
     }
 
@@ -500,11 +517,16 @@ sub type_variation {
   $c = $coords[0];
 
   if($c->isa('Bio::EnsEMBL::Mapper::Gap')) {
-    # variation within transcript but not intronic or part of CDS - must be UTR
+    # mapped successfully to CDNA but not to CDS, must be UTR
+
     if($var->{'end'} < $tr->coding_region_start()) {
       $var->{'type'} = ($tr->strand() == 1) ? '5PRIME_UTR' : '3PRIME_UTR';
-    } else {
+    }
+    elsif($var->{'start'} > $tr->coding_region_end()) {
       $var->{'type'} = ($tr->strand() == 1) ? '3PRIME_UTR' : '5PRIME_UTR';
+    }
+    else {
+      throw('Unexpected: CDNA variation which is not in CDS is not in UTR');
     }
     return [$var];
   }
@@ -538,9 +560,6 @@ sub apply_aa_change {
   my $tr = shift;
   my $var = shift;
 
-  ### TBD fix this so that it works properly with insertions and deletions
-  ### and frameshifting variations in general
-
   if($var->{'cds_start'} == $var->{'cds_end'} + 1) {
     warning("Cannot currently handle CDS insertions");
     return;
@@ -564,15 +583,37 @@ sub apply_aa_change {
   my @aa_alleles = ($old_aa);
 
   foreach my $a (@alleles) {
+    $a =~ s/\-//;
     my $cds = $tr->translateable_seq();
-    substr($cds, $var->{'cds_start'}, $var_len) = $a;
-    my $codon_str = substr($cds, $codon_cds_start-1, $codon_len);
 
-    my $codon_seq = Bio::Seq->new(-seq      => $codon_str,
-                                  -moltype  => 'dna',
-                                  -alphabet => 'dna');
+    if($var_len != length($a)) {
+      if(abs(length($a) - $var_len) % 3) {
+        # frameshifting variation, do not set peptide_allele string
+        # since too complicated and could be very long
+        $var->{'type'} = 'FRAMESHIFT_CODING';
+        return;
+      }
 
-    my $new_aa = $codon_seq->translate()->seq();
+      if($var_len == 0) { # insertion
+        $aa_alleles[0] = '-';
+        $old_aa    = '-';
+      }
+    }
+
+    my $new_aa;
+
+    if(length($a)) {
+      substr($cds, $var->{'cds_start'}, $var_len) = $a;
+      my $codon_str = substr($cds, $codon_cds_start-1, $codon_len);
+
+      my $codon_seq = Bio::Seq->new(-seq      => $codon_str,
+                                    -moltype  => 'dna',
+                                    -alphabet => 'dna');
+
+      $new_aa = $codon_seq->translate()->seq();
+    } else {
+      $new_aa = '-'; # deletion
+    }
 
     if(uc($new_aa) ne uc($old_aa)) {
       push @aa_alleles, $new_aa;
