@@ -23,7 +23,7 @@ use dbSNP::Zebrafish;
 use dbSNP::Mosquito;
 use dbSNP::Human;
 
-my ($TAX_ID, $LIMIT_SQL, $CONTIG_SQL, $TMP_DIR, $TMP_FILE, $ALLDIFF_FILE);
+my ($TAX_ID, $LIMIT_SQL, $TMP_DIR, $TMP_FILE, $ALLDIFF_FILE);
 
 my $dbSNP;
 my $dbVar;
@@ -56,7 +56,7 @@ my $dbCore;
 	     'alldiff=s' => \$ALLDIFF_FILE);
 
   $dshost   ||= 'cbi2.internal.sanger.ac.uk';
-  $dsdbname ||= 'dbSNP_123';
+  $dsdbname ||= 'dbSNP_124';
   $dsuser   ||= 'dbsnpro';
   $dsport   ||= 3306;
 
@@ -106,18 +106,11 @@ my $dbCore;
   $TAX_ID = $mc->get_taxonomy_id();
 
 
-  if($species->binomial() eq 'Homo sapiens') {
-#    $CONTIG_SQL = ' CONCAT(contig_acc, ".", contig_ver) ';
-    $CONTIG_SQL = ' contig_acc ';
-  } else {
-    $CONTIG_SQL = ' contig_acc ';
-  }
 }
 
 my $SPECIES_PREFIX = get_species_prefix($TAX_ID);
 
 #create the dbSNP object for the specie we want to dump the data
-
 if ($SPECIES_PREFIX eq 'dr'){
     if (!$ALLDIFF_FILE) {throw ("file with mappings not provided")}
     #danio rerio (zebra-fish)
@@ -141,10 +134,10 @@ elsif ($SPECIES_PREFIX eq 'mm'){
 					  -tmpfile => $TMP_FILE,
 					  -limit => $LIMIT_SQL,
 					  -taxID => $TAX_ID,
-					  -contigSQL => $CONTIG_SQL,
 					  -species_prefix => $SPECIES_PREFIX
 					  );
     $mouse->dump_dbSNP();
+    add_strains($dbVar); #add strain information
 }
 elsif ($SPECIES_PREFIX eq 'gga'){
     #gallus gallus (chicken)
@@ -158,6 +151,7 @@ elsif ($SPECIES_PREFIX eq 'gga'){
 						-species_prefix => $SPECIES_PREFIX
 					      );
     $chicken->dump_dbSNP();
+    add_strains($dbVar); #add strain information
 }
 elsif ($SPECIES_PREFIX eq 'rn'){
    #rattus norvegiccus (rat)
@@ -184,6 +178,21 @@ elsif ($SPECIES_PREFIX eq 'ag'){
 					-species_prefix => $SPECIES_PREFIX);
     $mosquito->dump_dbSNP();
 }
+elsif ($SPECIES_PREFIX eq 'cfa'){
+    #cannis familiaris (dog)
+    my $dog = dbSNP::GenericContig->new(-dbSNP => $dbSNP,
+					  -dbCore => $dbCore,
+					  -dbVariation => $dbVar,
+					  -tmpdir => $TMP_DIR,
+					  -tmpfile => $TMP_FILE,
+					  -limit => $LIMIT_SQL,
+					  -taxID => $TAX_ID,
+					  -species_prefix => $SPECIES_PREFIX
+					  );
+    $dog->dump_dbSNP();
+    add_strains($dbVar); #add strain information
+
+}
 else{
     #homo sa/piens (human)
     my $human = dbSNP::Human->new(-dbSNP => $dbSNP,
@@ -193,10 +202,9 @@ else{
 					      -tmpfile => $TMP_FILE,
 					      -limit => $LIMIT_SQL,
 					      -taxID => $TAX_ID,
-					      -contigSQL => $CONTIG_SQL,
 					      -species_prefix => $SPECIES_PREFIX
 					      );
-    $human->dump_dbSNP();
+#    $human->dump_dbSNP();
 }
 
 
@@ -215,6 +223,45 @@ sub get_species_prefix {
   warn("tax_id=$tax_id not found in OrganismTax table." .
        "Assuming no species prefix");
   return '';
+}
+
+#gets all the individuals and copies the data in the Population table as strain, and the individual_genotype as allele
+sub add_strains{
+    my $dbVariation = shift;
+
+    #first, copy the data from Individual to Population, necessary to group by name to remove duplicates
+    # (some individuals have the same name, but different individual_id)
+    $dbVariation->do(qq{INSERT INTO population (name, description, is_strain)
+				      SELECT name, description, 1
+				      FROM individual
+				      GROUP BY name
+				  });
+
+    #then, populate the individual_population table with the relation between individual and strains
+    $dbVariation->do(qq{INSERT INTO individual_population (individual_id, population_id)
+				      SELECT i.individual_id, p.population_id
+				      FROM individual i, population p
+				      WHERE i.name = p.name
+				      AND p.is_strain = 1
+				  });
+
+    #and finally, add the alleles to the Allele table for the strains
+    #first, insert the single_bp alleles
+    $dbVariation->do(qq{INSERT INTO allele (variation_id, population_id, allele)
+				      SELECT ig.variation_id, ip.population_id, ig.allele_1
+				      FROM individual_genotype_single_bp ig, individual_population ip, population p
+				      WHERE ig.individual_id = ip.individual_id
+				      AND   ip.population_id = p.population_id
+				      AND   p.is_strain = 1
+				  });
+    #do the same for the multiple_bp alleles
+    $dbVariation->do(qq{INSERT INTO allele (variation_id, population_id, allele)
+				      SELECT ig.variation_id, ip.population_id, ig.allele_1
+				      FROM individual_genotype_multiple_bp ig, individual_population ip, population p
+				      WHERE ig.individual_id = ip.individual_id
+				      AND   ip.population_id = p.population_id
+				      AND   p.is_strain = 1
+				  });
 }
 
 
