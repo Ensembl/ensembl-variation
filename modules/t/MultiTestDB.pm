@@ -188,7 +188,6 @@ sub load_databases {
 
   #only unzip if there are non-preloaded datbases
  UNZIP: foreach my $dbtype (keys %{$db_conf->{'databases'}}) {
-    print STDERR "Possibly unzipping $dbtype\n";
     if (( ! exists $db_conf->{'preloaded'}->{$dbtype} ) ||
         ( ! _db_exists( $db, $db_conf->{'preloaded'}{$dbtype}) )) {
       #unzip database files
