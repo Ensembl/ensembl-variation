@@ -142,7 +142,6 @@ create table population_structure (
 #
 #  individual            - PK, unique internal identifier
 #  name                  - name of individual
-#  population_id         - the population that this individual is a member of
 #  gender                - the sex of this individual
 #  father_individual_id  - self referential id, the father of this individual if known
 #  mother_individual_id  - self referential id, the mother of this individual if known
@@ -153,13 +152,11 @@ create table individual(
   individual_id int not null auto_increment,
   name varchar(255) not null,
   description varchar(255) not null,
-  population_id int not null,
   gender enum('Male', 'Female', 'Unknown') default 'Unknown' NOT NULL,
   father_individual_id int,
   mother_individual_id int,
   
   primary key(individual_id),
-  key population_idx (population_id),
   key name_idx (name)
 );
 
