@@ -56,7 +56,7 @@ use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 
 use Bio::EnsEMBL::Variation::Variation;
 use Bio::EnsEMBL::Variation::Allele;
-use Data::Dumper;
+
 our @ISA = ('Bio::EnsEMBL::DBSQL::BaseAdaptor');
 
 
@@ -82,9 +82,10 @@ sub fetch_by_dbID {
     (q{SELECT v.variation_id, v.name, v.validation_status, s1.name,
               a.allele_id, a.allele, a.frequency, a.population_id,
               vs.name, s2.name
-       FROM   variation v, source s1, source s2, allele a, variation_synonym vs
-       WHERE  v.variation_id = a.variation_id
-       AND    v.variation_id = vs.variation_id
+       FROM   variation v, source s1, source s2, variation_synonym vs
+         LEFT JOIN allele a 
+	 ON v.variation_id = a.variation_id
+       WHERE  v.variation_id = vs.variation_id
        AND    v.source_id = s1.source_id
        AND    vs.source_id = s2.source_id
        AND    v.variation_id = ?});
