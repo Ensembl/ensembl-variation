@@ -41,7 +41,7 @@ my ($TMP_DIR, $TMP_FILE, $LIMIT,$status_file);
   #added default options
   $chost    ||= 'ecs2';
   $cuser    ||= 'ensro';
-#  $cport    ||= 3364;
+  $cport    ||= 3365;
 
   $vport    ||= 3306;
   $vuser    ||= 'ensadmin';
@@ -186,17 +186,18 @@ sub variation_feature {
       if($top_coord) {
         my $allele_str;
         # construct an allele string. Remember to check the expanded version
+
         if($alleles_expanded{$ref_allele}) {
           # make sure the reference allele is first. Remember to convert ref_allele (in expanded version) to a compressed allele
           delete $alleles{$alleles_expanded{$ref_allele}};
           $allele_str = join('/', ($alleles_expanded{$ref_allele}, keys %alleles));
         } else {
-          $allele_str = undef;
+	  $allele_str = undef;
           warn("Reference allele $ref_allele not found in alleles: " .
                join("/", keys %alleles), " discarding feature");
         }
 	
-        if($allele_str) {
+	if($allele_str) {
 	  if ($top_level) {
 	    print FH join("\t", $cur_vf_id, $top_sr_id, $top_sr_start, $top_sr_end, $top_sr_strand,
 			  $cur_v_id, $allele_str, $cur_v_name,
@@ -224,7 +225,7 @@ sub variation_feature {
       $cur_vf_flags = '\N' if (! defined $vf_flags);
       $cur_source_id = $vf_source_id;
       $cur_validation_status = $vf_validation_status if (defined $vf_validation_status);
-      $cur_validation_status = '\N' if (!defined $vf_validation_status);
+      $cur_validation_status = '\N' if (! defined $vf_validation_status);
       $cur_consequence_type = $vf_consequence_type;
       $top_sr_start = $sr_start;
       $top_sr_end = $sr_end;
@@ -233,7 +234,7 @@ sub variation_feature {
       # map the variation coordinates to toplevel
 
       my $slice = $slice_adaptor->fetch_by_seq_region_id($sr_id);
-
+      
       if(!$slice) {
         warning("Could not locate seq_region with id=$sr_id");
         next;
@@ -268,6 +269,7 @@ sub variation_feature {
 	
 	if (@coords != 1 || $coords[0]->isa('Bio::EnsEMBL::Mapper::Gap')) {
 	  $top_coord = undef;
+	  warn ("top_coord is not found for $vf_id\n");
 	} else {
 	  
 	  # obtain the seq_region_id of the seq_region we mapped to
@@ -296,7 +298,9 @@ sub variation_feature {
   $sth->finish();
 
   # print the last row, excluding SNPs with map_weight > 3
-  if($top_coord && $map_weight <= 3) {
+  
+  if($top_coord and $cur_map_weight <=3) {
+
     my $allele_str;
     if($alleles{$ref_allele}) {
       # make sure the reference allele is first
@@ -307,17 +311,17 @@ sub variation_feature {
       warn("Reference allele $ref_allele not found in alleles: " .
            join("/", keys %alleles), " discarding feature\n");
     }
-
+    
     if($allele_str) {
       if ($top_level) {
 	print FH join("\t", $cur_vf_id, $top_sr_id, $top_sr_start, $top_sr_end, $top_sr_strand,
 		      $cur_v_id, $allele_str, $cur_v_name,
-		      $map_weight,$cur_vf_flags, $cur_source_id,$cur_validation_status,$cur_consequence_type), "\n";
+		      $cur_map_weight,$cur_vf_flags, $cur_source_id,$cur_validation_status,$cur_consequence_type), "\n";
       }
       else {
 	print FH join("\t", $cur_vf_id, $top_sr_id, $top_coord->start(),
 		      $top_coord->end(), $top_coord->strand(),
-		      $cur_v_id, $allele_str, $cur_v_name, $map_weight, $cur_vf_flags, $cur_source_id, $cur_validation_status,$cur_consequence_type), "\n";
+		      $cur_v_id, $allele_str, $cur_v_name, $cur_map_weight, $cur_vf_flags, $cur_source_id, $cur_validation_status,$cur_consequence_type), "\n";
       }
     }
   }
