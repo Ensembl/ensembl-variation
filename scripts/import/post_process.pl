@@ -2,6 +2,7 @@ use strict;
 use warnings;
 
 use Getopt::Long;
+use Data::Dumper;
 use Benchmark;
 use DBI;
 use DBH;
@@ -61,11 +62,11 @@ my ($TMP_DIR, $TMP_FILE, $LIMIT);
   $TMP_DIR  = $ImportUtils::TMP_DIR;
   $TMP_FILE = $ImportUtils::TMP_FILE;
 
-  load_asm_cache($dbCore);
-  variation_feature($dbCore, $dbVar);
-  flanking_sequence($dbCore, $dbVar);
-  variation_group_feature($dbCore, $dbVar);
-  transcript_variation($dbCore, $dbVar);
+#  load_asm_cache($dbCore);
+#  variation_feature($dbCore, $dbVar);
+#  flanking_sequence($dbCore, $dbVar);
+#  variation_group_feature($dbCore, $dbVar);
+#  transcript_variation($dbCore, $dbVar);
   ld_populations($dbCore,$dbVar);
 
 }
@@ -576,20 +577,21 @@ sub pairwise_ld{
     my $population_id = shift;
 
     my %seq_region; #hash containing the mapping between seq_region_id->name region
-    my %alleles_variation = (); #will contain the alleles in the genotype and the letter assigned: A or a
+    my %alleles_variation = (); #will contain a record of the alleles in the variation. A will be the major, and a the minor. When more than 2 alleles
+    my %genotype_information; #will contain all the genotype information to write in the file, if necessary
+    #, the genotypes for that variation will be discarded
     my $previous_variation_id = ''; #to know if it is a new variation and we can get the new alleles
     my $genotype; #genotype in the AA, Aa or aa format to write to the file
     debug("Loading pairwise_ld table");
 
-    #necessary to order to know when we change variation. Some of the SNPs seem to be in more than one region, thus the group by clause
+    #necessary the order to know when we change variation
     my $sth = $dbVar->prepare
 	(qq{SELECT ig.variation_id, vf.variation_feature_id, vf.seq_region_id, vf.seq_region_start, ig.individual_id, ig.allele_1, ig.allele_2, vf.seq_region_end
 		FROM   variation_feature vf, individual_genotype ig, individual i
 		WHERE  ig.variation_id = vf.variation_id
 		AND i.individual_id = ig.individual_id
 		AND i.population_id = ?
-		GROUP BY ig.variation_id
-		ORDER BY vf.seq_region_id
+		ORDER BY ig.variation_id,vf.seq_region_id	       
 		});
     $sth->execute($population_id);
     open ( FH, ">$TMP_DIR/temp_genotype.txt");
@@ -600,17 +602,33 @@ sub pairwise_ld{
     my $seq_region_name;
     $sth->bind_columns(\$variation_id, \$variation_feature_id, \$seq_region_id, \$seq_region_start, \$individual_id, \$allele_1,\$allele_2,\$seq_region_end);
     while ($sth->fetch()){
-	#if it is a new variation, empty the hash
+	if ($previous_variation_id eq ''){
+	    $previous_variation_id = $variation_id;
+	}
+	#if it is a new variation, write to the file (if necessary) and empty the hash
 	if ($previous_variation_id ne $variation_id){
+	    #if the variation has 2 or 1 alleles, print all the genotypes to the file
+	    if (keys %alleles_variation <= 2){		
+		&convert_genotype(\%alleles_variation,\%genotype_information);
+		foreach my $individual_id (keys %genotype_information){
+		    print FH join("\t",$previous_variation_id,$genotype_information{$individual_id}{seq_region_start},$individual_id,$genotype_information{$individual_id}{genotype},$genotype_information{$individual_id}{variation_feature_id},$genotype_information{$individual_id}{seq_region_id},$genotype_information{$individual_id}{seq_region_end},$population_id),"\n";
+		}
+	    }
 	    $previous_variation_id = $variation_id;
 	    %alleles_variation = (); #new variation, flush the hash
+	    %genotype_information = (); #new variation, flush the hash
 	}
-	#convert the genotype into the required format: AA, Aa or aa
-	$genotype = &convert_genotype($variation_id,$allele_1,$allele_2,\%alleles_variation);
-	if ($genotype ne ''){
-	    #we will only consider the snps in chromosomic positions	    
-	    print FH join("\t",$variation_id, $seq_region_start, $individual_id, $genotype,$variation_feature_id,$seq_region_id,$seq_region_end,$population_id), "\n";
-	}
+	#we store the genotype information for the variation
+	$genotype_information{$individual_id}{variation_feature_id} = $variation_feature_id;
+	$genotype_information{$individual_id}{seq_region_start} = $seq_region_start;
+	$genotype_information{$individual_id}{allele_1} = $allele_1;
+	$genotype_information{$individual_id}{allele_2} = $allele_2;
+	$genotype_information{$individual_id}{seq_region_end} = $seq_region_end;
+	$genotype_information{$individual_id}{seq_region_id} = $seq_region_id;
+
+	#and the alleles
+	$alleles_variation{$allele_1}++;
+	$alleles_variation{$allele_2}++;
     }
     $sth->finish();
     close FH;
@@ -618,13 +636,13 @@ sub pairwise_ld{
     #and, finally, create the table with the information, calling the calc_genotypes.pl script
     system("perl calc_genotypes.pl $TMP_DIR/temp_genotype.txt $TMP_DIR/temp_genotype_out.txt");
     #delete the original file
-#    unlink("$TMP_DIR/temp_genotype.txt");
+    unlink("$TMP_DIR/temp_genotype.txt");
     #rename the formated file
     rename("$TMP_DIR/temp_genotype_out.txt", "$TMP_DIR/$TMP_FILE");
     debug("Importing pairwise data");
     #and import the data in the database
     load($dbVar, qw(pairwise_ld variation_feature_id_1 variation_feature_id_2 population_id seq_region_id seq_region_start seq_region_end snp_distance_count r2 Dprime));
-#    unlink("$TMP_DIR/$TMP_FILE");
+    unlink("$TMP_DIR/$TMP_FILE");
     return;
 }
 #
@@ -632,40 +650,28 @@ sub pairwise_ld{
 # From the Allele table, will select the alleles and compare to the alleles in the genotype
 #
 sub convert_genotype{
-    my $variation_id = shift;
-    my $allele_1 = shift;
-    my $allele_2 = shift;
-    my $alleles_variation = shift;
+    my $alleles_variation = shift; #reference to the hash containing the alleles for the variation present in the genotypes
+    my $genotype_information = shift; #reference to a hash containing the values to be written to the file
+    my @alleles_ordered; #the array will contain the alleles ordered by apparitions in the genotypes (only 2 values possible)
+    
+    @alleles_ordered = sort({$alleles_variation->{$b} <=> $alleles_variation->{$a}} keys %{$alleles_variation});
 
-    if ((!defined $allele_1) or (!defined $allele_2)){
-	return '';
-    }
-    if ($allele_1 ne $allele_2){
-	return 'Aa';
-    }
-    #both alleles are the same, must find out if they are AA or aa
-    else{
-	if (!exists $alleles_variation->{$allele_1}){
-	    #if it is the first allele in the hash, assign the A
-	    if (keys %{$alleles_variation} == 0){
-		$alleles_variation->{$allele_1} = 'A';
+    #let's convert the allele_1 allele_2 to a genotype in the AA, Aa or aa format, where A corresponds to the major allele and a to the minor
+    foreach my $individual_id (keys %{$genotype_information}){
+	#if both alleles are different, this is the Aa genotype
+	if ($genotype_information->{$individual_id}{allele_1} ne $genotype_information->{$individual_id}{allele_2}){
+	    $genotype_information->{$individual_id}{genotype} = 'Aa';
+	}
+	#when they are the same, must find out which is the major
+	else{	    
+	    if ($alleles_ordered[0] eq $genotype_information->{$individual_id}{allele_1}){
+		#it is the major allele
+		$genotype_information->{$individual_id}{genotype} = 'AA';
 	    }
-	    #when there is a previous allele, assign a
-	    elsif (keys %{$alleles_variation} == 1){
-		$alleles_variation->{$allele_1} = 'a';
-	    }
-	    #if there are already 2 different alleles, we cannot represent it in the required format
-	    elsif (keys %{$alleles_variation} == 2){
-		print STDERR "* $variation_id\n";
-		return '';#not possible to determine genotype: more than 3 alleles
+	    else{
+		$genotype_information->{$individual_id}{genotype} = 'aa';
 	    }
 	    
-	}
-	if ($alleles_variation->{$allele_1} eq 'A'){
-	    return 'AA';
-	}
-	else{
-	    return 'aa';
 	}
     }
 }
