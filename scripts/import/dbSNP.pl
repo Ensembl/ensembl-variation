@@ -19,7 +19,8 @@ my $TAX_ID = 9606; # human
 source_table();
 variation_table();
 population_table();
-genotype_table();
+individual_genotypes();
+population_genotypes();
 allele_table();
 flanking_sequence_table();
 variation_feature();
@@ -152,6 +153,8 @@ sub variation_table {
   load("variation", "variation_id", "source_id",
        "name", "snp_id", "validation_status");
 
+  $dbVar->do("ALTER TABLE variation ADD INDEX subsnp_id(subsnp_id)");
+
 
   count_rows('variation');
 
@@ -224,22 +227,38 @@ sub population_table {
 
   # load Population data into tmp table
 
+  ### TBD should a parent population of UNKNOWN be created for populations without
+  ### a PopClass?
+
   dumpSQL(qq{SELECT concat(p.handle, ':', p.loc_pop_id),
-                    p.pop_id, pc.pop_class_id, count(*) as count
-             FROM   Population p, PopClass pc
-             WHERE  p.pop_id = pc.pop_id
-             GROUP  BY pc.pop_id});
+                    p.pop_id, pc.pop_class_id
+             FROM   Population p
+             LEFT JOIN PopClass pc ON p.pop_id = pc.pop_id});
 
   debug("Loading population data");
 
-  create_and_load( "tmp_pop", "name", "pop_id", "pop_class_id", "count" );
+  create_and_load( "tmp_pop", "name", "pop_id", "pop_class_id" );
+
+  # create a table containing a count of the popclasses that the populations have
+
+  $dbVar->do(qq{CREATE TABLE tmp_pop_count
+                SELECT tp.pop_id AS pop_id, COUNT(*) AS count
+                FROM   tmp_pop tp
+                WHERE  tp.pop_class_id IS NOT NULL
+                GROUP BY tp.pop_id});
+
+  # pops without a popclass get a count of 0
+  $dbVar->do(qq{INSERT INTO tmp_pop_count (pop_id, count)
+                SELECT tp.pop_id, 0
+                FROM   tmp_pop tp
+                WHERE  tp.pop_class_id IS NULL});
 
   $dbVar->do("ALTER TABLE tmp_pop MODIFY pop_class_id int");
   $dbVar->do("ALTER TABLE tmp_pop ADD INDEX pop_class_id(pop_class_id)");
   $dbVar->do("ALTER TABLE tmp_pop MODIFY pop_id int");
   $dbVar->do("ALTER TABLE tmp_pop ADD INDEX pop_id(pop_id)");
-  $dbVar->do("ALTER TABLE tmp_pop MODIFY count int");
-  $dbVar->do("ALTER TABLE tmp_pop ADD INDEX count_idx(count)");
+  $dbVar->do("ALTER TABLE tmp_pop_count ADD INDEX pop_id(pop_id)");
+  $dbVar->do("ALTER TABLE tmp_pop_count ADD INDEX count_idx(count)");
 
   debug("Creating population table");
 
@@ -250,14 +269,15 @@ sub population_table {
                 FROM   tmp_pop_class});
 
   # set the parent pop_id of the other populations,
-  # take only populations with one parent
+  # take only populations with 0 or 1 parent
 
   $dbVar->do(qq(CREATE table tmp_pop2
                 SELECT tp.name as name, tp.pop_id as pop_id,
                        p.population_id as parent_population_id
-                FROM   tmp_pop tp, population p
-                WHERE  tp.pop_class_id = p.pop_class_id
-                AND    tp.count = 1));
+                FROM   tmp_pop tp, tmp_pop_count tpc
+                LEFT JOIN population p ON p.pop_class_id = tp.pop_class_id
+                AND    tp.pop_id = tpc.pop_id
+                AND    tpc.count < 2));
 
   $dbVar->do(qq{INSERT INTO population (name, parent_population_id, pop_id,
                                         population_type)
@@ -272,9 +292,10 @@ sub population_table {
   $dbVar->do(qq(CREATE table tmp_pop2
                 SELECT tp.name as name, tp.pop_id as pop_id,
                        p.population_id as parent_population_id
-                FROM   tmp_pop tp, population p
+                FROM   tmp_pop tp, tmp_pop_count tpc, population p
                 WHERE  p.name = 'MULTI-NATIONAL'
-                AND    tp.count > 1));
+                AND    tpc.pop_id = tp.pop_id
+                AND    tpc.count > 1));
 
   $dbVar->do(qq{INSERT INTO population (name, parent_population_id, pop_id,
                                        population_type)
@@ -382,6 +403,9 @@ sub allele_table {
 # loads the flanking sequence table
 #
 sub flanking_sequence_table {
+  ### TBD - need to reverse compliment flanking sequence if subsnp has
+  ### reverse orientation to refsnp
+
   $dbVar->do(qq{CREATE TABLE tmp_seq (variation_id int,
                                       line_num int,
                                       type enum ('5','3'),
@@ -608,8 +632,11 @@ sub allele_group {
 
 
 
-
-sub genotype_table {
+#
+# loads individuals into the population table, and loads individual genotypes
+# into the genotype table
+#
+sub individual_genotypes {
   #
   # load individuals into the population table
   #
@@ -650,7 +677,7 @@ sub genotype_table {
 
 
   #
-  # load SubInd genotypes into genotype table
+  # load SubInd individual genotypes into genotype table
   #
   debug("Dumping SubInd and ObsGenotype data");
   dumpSQL(qq{SELECT si.subsnp_id, si.submitted_ind_id, og.obs
@@ -706,8 +733,40 @@ sub genotype_table {
   $dbVar->do("DROP TABLE tmp_pop");
   $dbVar->do("DROP TABLE tmp_sub_ind");
   $dbVar->do("DROP TABLE tmp_gty");
+
 }
 
+
+#
+# loads population genotypes into the 
+#
+sub population_genotypes {
+  debug("Dumping GtyFreqBySsPop and UniGty data");
+
+  dumpSQL(qq{SELECT gtfsp.subsnp_id, gtfsp.pop_id, gtfsp.freq, a1.allele, a2.allele
+             FROM   GtyFreqBySsPop gtfsp, UniGty ug, Allele a1, Allele a2
+             WHERE  gtfsp.unigty_id = ug.unigty_id
+             AND    ug.allele_id_1 = a1.allele_id
+             AND    ug.allele_id_2 = a2.allele_id
+             LIMIT  100000});
+
+  debug("loading genotype data");
+
+  create_and_load("tmp_gty", 'subsnp_id', 'pop_id', 'freq', 'allele_1', 'allele_2');
+
+  $dbVar->do('ALTER TABLE tmp_gty ADD INDEX subsnp_id(subsnp_id)');
+  $dbVar->do('ALTER TABLE tmp_gty ADD INDEX pop_id(pop_id)');
+
+  $dbVar->do(qq{INSERT INTO genotype (variation_id, allele_1, allele_2, frequency,
+                                      population_id)
+                SELECT v.variation_id, tg.allele_1, tg.allele_2, tg.freq,
+                       p.population_id
+                FROM   variation v, tmp_gty tg, population p
+                WHERE  v.subsnp_id = tg.subsnp_id
+                AND    p.pop_id = tg.pop_id});
+
+  $dbVar->do("DROP TABLE tmp_gty");
+}
 
 
 
