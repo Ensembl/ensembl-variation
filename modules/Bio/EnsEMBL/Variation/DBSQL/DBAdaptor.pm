@@ -120,6 +120,20 @@ sub get_TranscriptVariationAdaptor {
 }
 
 
+sub get_VariationGroupAdaptor {
+  my $self = shift;
+  return $self->_get_adaptor
+    ('Bio::EnsEMBL::Variation::DBSQL::VariationGroupAdaptor');
+}
+
+
+sub get_AlleleGroupAdaptor {
+  my $self = shift;
+  return $self->_get_adaptor
+    ('Bio::EnsEMBL::Variation::DBSQL::AlleleGroupAdaptor');
+}
+
+
 sub get_SliceAdaptor {
   my $self = shift;
   if(!$self->dnadb()) {
