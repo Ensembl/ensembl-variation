@@ -195,7 +195,7 @@ sub add_Variation {
   my $self = shift;
   my $var = shift;
 
-  if(!ref($var) || !$var->isa('Bio::EnsEMBL::Variation')) {
+  if(!ref($var) || !$var->isa('Bio::EnsEMBL::Variation::Variation')) {
     throw('Bio::EnsEMBL::Variation::Variation argument expected');
   }
 
