@@ -20,10 +20,10 @@ source_table();
 variation_table();
 population_table();
 allele_table();
-flanking_sequence_table();
+#flanking_sequence_table();
 variation_feature();
-allele_group();
 variation_group();
+allele_group();
 cleanup();
 
 
@@ -46,7 +46,7 @@ sub variation_table {
            SELECT 1, concat( "rs", snp_id), snp_id
            FROM SNP
            WHERE tax_id = $TAX_ID
-           LIMIT 10000
+           LIMIT 100000
           }
       );
 
@@ -58,26 +58,26 @@ sub variation_table {
 
   $dbVar->do( "ALTER TABLE variation ADD INDEX snpidx( snp_id )" );
 
+
+  count_rows('variation');
+
   # create a temp table of subSNP info
   # containing RefSNP id, SubSNP id and validation status
 
   debug("Dumping SubSNPs");
 
-  dumpSQL( qq{
-           SELECT subsnp.subsnp_id, subsnplink.snp_id,
-           if ( subsnp.validation_status > 0, "VALIDATED", "NOT_VALIDATED" )
-           FROM SubSNP subsnp, SNPSubSNPLink subsnplink
-           WHERE subsnp.subsnp_id = subsnplink.subsnp_id
-           LIMIT 10000
-          } );
+  dump_subSNPs();
 
-  create_and_load( "tmp_var", "subsnp", "refsnp", "valid" );
+  create_and_load( "tmp_var_allele", "subsnp_id", "refsnp_id", "pop_id",
+                   "allele","valid", "substrand_reversed_flag");
+
+  count_rows('tmp_var_allele');
 
   $dbVar->do( qq{
-                 ALTER TABLE tmp_var MODIFY subsnp int
+                 ALTER TABLE tmp_var_allele MODIFY subsnp_id int
                 } );
   $dbVar->do( qq{
-                 ALTER TABLE tmp_var add INDEX subsnp_idx( subsnp )
+                 ALTER TABLE tmp_var_allele add INDEX subsnp_idx( subsnp_id )
                 } );
 
   debug("Building SubSNP parent ids");
@@ -85,23 +85,30 @@ sub variation_table {
   # create a second temp table containing the parent_id of the subsnps
   $dbVar->do( qq{
                  CREATE TABLE tmp_var2
-                 SELECT tv.subsnp, v.variation_id, tv.valid
-                 FROM tmp_var tv, variation v
-                 WHERE tv.refsnp = v.snp_id
+                 SELECT tv.subsnp_id, v.variation_id, tv.valid,
+                        tv.substrand_reversed_flag
+                 FROM tmp_var_allele tv, variation v
+                 WHERE tv.refsnp_id = v.snp_id
+                 GROUP BY tv.subsnp_id
                 });
-
 
   debug("Loading SubSNPs into variation table");
   # load the SubSNPs into the variation table
+
+
+  $dbVar->do(qq{ALTER TABLE variation ADD COLUMN substrand_reversed_flag});
+
   $dbVar->do( qq{
                  INSERT INTO variation( source_id, name, parent_variation_id,
-                                        validation_status, subsnp_id )
-                 SELECT 1, concat("ss",subsnp), variation_id, valid, subsnp
+                                  validation_status, subsnp_id, substrand_reversed_flag)
+                 SELECT 1, concat("ss",subsnp_id), variation_id,
+                        valid, subsnp_id, substrand_reversed_flag
                  FROM tmp_var2
                 } );
 
-  $dbVar->do('DROP table tmp_var');
   $dbVar->do('DROP table tmp_var2');
+
+  count_rows('variation');
 
   # set the validation status of the RefSNPs.  A refSNP is validated if
   # it has a valid subsnp
@@ -139,10 +146,53 @@ sub variation_table {
 
   $dbVar->do("DELETE FROM variation WHERE parent_variation_id is NULL");
 
+  count_rows('variation');
   load("variation", "variation_id", "source_id",
        "name", "snp_id", "validation_status");
 
+
+  count_rows('variation');
+
   return;
+}
+
+
+#
+# dumps subSNPs and associated allele information
+#
+sub dump_subSNPs {
+
+  my $sth = $dbSNP->prepare
+    (qq{SELECT subsnp.subsnp_id, subsnplink.snp_id, b.pop_id, ov.pattern,
+             if ( subsnp.validation_status > 0, "VALIDATED", "NOT_VALIDATED" ),
+             subsnplink.substrand_reversed_flag
+        FROM SubSNP subsnp, SNPSubSNPLink subsnplink, ObsVariation ov
+        LEFT JOIN Batch b on subsnp.batch_id = b.batch_id
+        WHERE subsnp.subsnp_id = subsnplink.subsnp_id
+        AND   ov.var_id = subsnp.variation_id
+        LIMIT 100000
+       } );
+
+  $sth->execute();
+
+  open ( FH, ">$tmp_dir/tabledump.txt" );
+
+  my $row;
+  while($row = $sth->fetchrow_arrayref()) {
+    my @alleles = split('/', $row->[3]);
+
+    my @row = map {(defined($_)) ? $_ : '\N'} @$row;
+
+    # split alleles into multiple rows
+    foreach my $a (@alleles) {
+      $row[3] = $a;
+      print FH join("\t", @row), "\n";
+    }
+  }
+
+  $sth->finish();
+
+  close FH;
 }
 
 
@@ -248,20 +298,24 @@ sub allele_table {
 
   ### TBD check orientation of SubSNPs to RefSNP and revcom allele if necessary
 
+
+  # first load the allele data for alleles that we have population and
+  # frequency data for
+
   dumpSQL(qq(SELECT afsp.subsnp_id, afsp.pop_id, a.allele_id, a.allele,
                     afsp.freq
              FROM   AlleleFreqBySsPop afsp, Allele a
              WHERE  afsp.allele_id = a.allele_id
              LIMIT  10000));
 
-  debug("Loading allele data");
+  debug("Loading allele frequency data");
 
   create_and_load("tmp_allele", "subsnp_id", "pop_id",
                   "allele_id", "allele", "freq");
 
-  $dbVar->do("ALTER TABLE tmp_allele MODIFY subsnp_id int");
-  $dbVar->do("ALTER TABLE tmp_allele MODIFY pop_id    int");
-  $dbVar->do("ALTER TABLE tmp_allele MODIFY allele_id int");
+  $dbVar->do("ALTER TABLE tmp_allele MODIFY subsnp_id INT");
+  $dbVar->do("ALTER TABLE tmp_allele MODIFY pop_id    INT");
+  $dbVar->do("ALTER TABLE tmp_allele MODIFY allele_id INT");
 
   $dbVar->do("ALTER TABLE tmp_allele ADD INDEX subsnp_id(subsnp_id)");
   $dbVar->do("ALTER TABLE tmp_allele ADD INDEX pop_id(pop_id)");
@@ -276,6 +330,29 @@ sub allele_table {
                 WHERE  ta.subsnp_id = v.subsnp_id
                 AND    ta.pop_id    = p.pop_id));
 
+  # load remaining allele data which we do not have frequence data for
+
+  $dbVar->do("DROP TABLE tmp_allele");
+
+  debug("Loading other allele data");
+
+  $dbVar->do(qq{CREATE TABLE tmp_allele
+                SELECT v.variation_id as variation_id, tva.pop_id,
+                       tva.allele
+                FROM   variation v, tmp_var_allele tva
+                LEFT JOIN allele a ON a.variation_id = v.variation_id
+                AND    a.allele = tva.allele
+                WHERE  tva.subsnp_id = v.subsnp_id
+                AND    a.allele_id is NULL});
+
+  $dbVar->do(qq{INSERT INTO allele (variation_id, allele,
+                                    frequency, population_id)
+                SELECT ta.variation_id, ta.allele, null, p.population_id
+                FROM   tmp_allele ta 
+                LEFT JOIN population p ON p.pop_id = ta.pop_id});
+
+
+  $dbVar->do("DROP TABLE tmp_var_allele");
   $dbVar->do("DROP TABLE tmp_allele");
 }
 
@@ -435,10 +512,21 @@ sub variation_group {
 
   load('variation_group', 'name', 'source_id', 'hapset_id');
 
+  $dbVar->do("ALTER TABLE variation_group ADD INDEX hapset_id(hapset_id)");
+
+  debug("Dumping HapSetSnpList data");
+
   dumpSQL(qq{SELECT hapset_id, subsnp_id
              FROM   HapSetSnpList});
 
+  debug("Loading variation_group_variation");
+
   create_and_load('tmp_variation_group', 'hapset_id', 'subsnp_id');
+
+  $dbVar->do("ALTER TABLE tmp_variation_group MODIFY hapset_id INT");
+  $dbVar->do("ALTER TABLE tmp_variation_group MODIFY subsnp_id INT");
+  $dbVar->do("ALTER TABLE tmp_variation_group ADD INDEX subsnp_id(subsnp_id)");
+  $dbVar->do("ALTER TABLE tmp_variation_group ADD INDEX hapset_id(hapset_id)");
 
   $dbVar->do(qq{INSERT INTO variation_group_variation
                      (variation_group_id, variation_id)
@@ -461,6 +549,8 @@ sub allele_group {
 
   $dbVar->do(qq{ALTER TABLE allele_group ADD COLUMN hap_id int});
 
+  debug("Loading allele_group");
+
   create_and_load('tmp_allele_group', 'hap_id', 'hapset_id', 'name');
 
   $dbVar->do(qq{INSERT INTO allele_group (variation_group_id, name, source_id,
@@ -469,11 +559,37 @@ sub allele_group {
                 FROM   variation_group vg, tmp_allele_group tag
                 WHERE  vg.hapset_id = tag.hapset_id});
 
-#  dumpSQL(qq{SELECT hap_id, subsnp_id, snp_allele
-#             FROM   Hap});
-            
+  $dbVar->do(qq{ALTER TABLE allele_group ADD INDEX hap_id(hap_id)});
+
+  debug("Dumping HapSnpAllele data");
+
+  # This query takes an arbitrary allele which has the same nucleotide,
+  # but different population. This should probably be done in a better way.
+
+  dumpSQL(qq{SELECT hap_id, subsnp_id, snp_allele
+             FROM   HapSnpAllele});
+
+  debug("Loading allele_group_allele");
+
+  create_and_load('tmp_allele_group_allele','hap_id','subsnp_id','snp_allele');
+
+  $dbVar->do("ALTER TABLE tmp_allele_group_allele MODIFY hap_id INT");
+  $dbVar->do("ALTER TABLE tmp_allele_group_allele ADD INDEX hap_id(hap_id)");
+
+  $dbVar->do("ALTER TABLE tmp_allele_group_allele MODIFY subsnp_id INT");
+  $dbVar->do("ALTER TABLE tmp_allele_group_allele ADD INDEX subsnp_id(subsnp_id)");
+
+  $dbVar->do(qq{INSERT INTO allele_group_allele (allele_group_id, allele_id)
+                SELECT ag.allele_group_id, a.allele_id
+                FROM   allele_group ag, tmp_allele_group_allele taga, allele a,
+                       variation v
+                WHERE  ag.hap_id = taga.hap_id
+                AND    a.variation_id = v.variation_id
+                AND    v.subsnp_id = taga.subsnp_id
+                AND    a.allele = taga.snp_allele});
 
   $dbVar->do("DROP TABLE tmp_allele_group");
+  $dbVar->do("DROP TABLE tmp_allele_group_allele");
 }
 
 
@@ -489,6 +605,8 @@ sub cleanup {
   $dbVar->do('ALTER TABLE population DROP COLUMN pop_id');
   $dbVar->do('ALTER TABLE variation_group DROP COLUMN hapset_id');
   $dbVar->do('ALTER TABLE allele_group DROP COLUMN hap_id');
+  $dbVar->do('ALTER TABLE variation DROP COLUMN substrand_reversed_flag');
+  $dbVar->do("DROP TABLE tmp_seq_region");
 }
 
 
@@ -576,4 +694,15 @@ sub create_and_load {
 
 sub debug {
   print STDERR @_, "\n";
+}
+
+
+
+sub count_rows {
+  my $tablename = shift;
+
+  my ($count) = $dbVar->selectall_arrayref
+                    ("SELECT count(*) FROM $tablename")->[0]->[0];
+
+  print STDERR "table $tablename has $count rows\n";
 }
