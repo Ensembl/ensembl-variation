@@ -344,7 +344,7 @@ sub _objs_from_sth {
       if($allele_pop_id) {
         $pop = $seen_pops{$allele_pop_id} ||=
           $pa->fetch_by_dbID($allele_pop_id);
-      }
+    }
       my $allele = Bio::EnsEMBL::Variation::Allele->new
         (-dbID      => $allele_id,
          -ALLELE    => $allele,
