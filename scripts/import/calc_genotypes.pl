@@ -203,7 +203,8 @@ sub calculate_ld{
 						$genotypes->{$snps_ordered->{$position2}} );
     
 
-    next unless $stats_hash->{'r2'} >= 0.05;
+#    next unless $stats_hash->{'r2'} >= 0.05;
+    $snp_count++;
 
     print FH join("\t",
 		  $additional_info->{$locus1}->{variation_feature_id},
@@ -214,7 +215,6 @@ sub calculate_ld{
 		  $stats_hash->{'r2'}, 
 		  abs($stats_hash->{'d_prime'}),
 		  $stats_hash->{'N'}),"\n";	
-    $snp_count++;
   }
 
   return $position;
@@ -289,7 +289,7 @@ sub calculate_pairwise_stats {
 #    print  "Table: $AABb  $AaBb $aaBb\n";
 #    print  "Table: $AAbb  $Aabb $aabb\n";
 
-    $pAB = $pAb = $paB = $pab = 0.25;
+#    $pAB = $pAb = $paB = $pab = 0.25;
 
     my $N = $nAB + $nab + $nAb + $naB + 2*$AaBb;
     
@@ -311,7 +311,7 @@ sub calculate_pairwise_stats {
 		    (($nAB + (1-$theta)*$AaBb)*($nab + (1-$theta)*$AaBb) + 
 		     ($nAb + $theta*$AaBb)*($naB + $theta*$AaBb));
 	};
-	if ($@){$theta = 0;} #included to avoid division by 0
+	if ($@){$theta = 0.5;} #included to avoid division by 0
 #	print "New theta $theta\n";
 	$iterations++;
     }
@@ -323,7 +323,7 @@ sub calculate_pairwise_stats {
     my $D;
     my $r2;
     eval{
-      $D  = $nAB/$N - ($f_A*$f_B);
+      $D  = ($nAB+(1-$theta)*$AaBb)/$N - ($f_A*$f_B);
       $r2 = $D*$D/($f_A*$f_B*(1-$f_A)*(1-$f_B)); 
     };
 
