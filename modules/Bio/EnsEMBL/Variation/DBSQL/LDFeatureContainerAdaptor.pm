@@ -101,8 +101,7 @@ sub fetch_by_Slice{
 =head2 fetch_by_VariationFeature
 
   Arg [1]    : Bio::EnsEMBL:Variation::VariationFeature $vf
-  Example    : my $ldFeatureContainer = $ldFetureContainerAdaptor->fetch_by_VariationFeature($vf);
-  Description: Retrieves LDFeatureContainer for a given variation feature.  Most
+  Example    : my $ldFeatureContainer = $ldFetureContainerAdaptor->fetch_by_VariationFeature($vf);  Description: Retrieves LDFeatureContainer for a given variation feature.  Most
                variations should only hit the genome once and only a return
                a single variation feature.
   Returntype : reference to Bio::EnsEMBL::Variation::LDFeatureContainer
@@ -182,6 +181,7 @@ sub _objs_from_sth {
 
   $sth->bind_columns(\$variation_feature_id_1, \$variation_feature_id_2, \$population_id, \$seq_region_id, \$seq_region_start, \$seq_region_end, \$snp_distance_count, \$r2, \$d_prime, \$sample_count);
 
+  my %_pop_ids = ();
   while($sth->fetch()) {
       my %ld_values;
       #get the id of the variations
@@ -195,15 +195,18 @@ sub _objs_from_sth {
       if (!exists $vf_objects{$variation_feature_id_2}){
 	  $vf_objects{$variation_feature_id_2} = $vfa->fetch_by_dbID($variation_feature_id_2);
       }  
-      
       $feature_container{$variation_feature_id_1 . '-' . $variation_feature_id_2}->{$population_id} =  \%ld_values;
+     $_pop_ids{$population_id} = 1;
   }
   $sth->finish();
-  return Bio::EnsEMBL::Variation::LDFeatureContainer->new(
+  my $t = Bio::EnsEMBL::Variation::LDFeatureContainer->new(
 							  '-ldContainer'=> \%feature_container,
 							  '-name' => '',
 							  '-variationFeatures' => \%vf_objects
 							  );
+  $t->{'_pop_ids'} = \%_pop_ids;
+  return $t;
+
 }
 
 1;
