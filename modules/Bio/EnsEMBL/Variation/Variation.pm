@@ -492,14 +492,41 @@ sub get_all_IndividualGenotypes {
 
 sub get_all_PopulationGenotypes {
     my $self = shift;
-    if (defined ($self->{'adaptor'})){
+
+    #simulate a lazy-load on demand situation, used by the Glovar team
+    if (!defined($self->{'populationGenotypes'}) && defined ($self->{'adaptor'})){
 	my $pgtya = $self->{'adaptor'}->db()->get_PopulationGenotypeAdaptor();
 	
 	return $pgtya->fetch_all_by_Variation($self);
     }
-    return [];
+    return $self->{'populationGenotypes'};
 
 }
+
+
+=head2 add_PopulationGenotype
+
+    Arg [1]     : Bio::EnsEMBL::Variation::PopulationGenotype
+    Example     : $v->add_PopulationGenotype($pop_genotype)
+    Description : Adds another PopulationGenotype to the Variation object
+    Exceptions  : thrown on bad argument
+    Caller      : general
+
+=cut
+
+sub add_PopulationGenotype{
+    my $self = shift;
+
+    if (@_){
+	if(!ref($_[0]) || !$_[0]->isa('Bio::EnsEMBL::Variation::PopulationGenotype')) {
+	    throw("Bio::EnsEMBL::Variation::PopulationGenotype argument expected");
+	}
+	#a variation can have multiple PopulationGenotypes
+	push @{$self->{'populationGenotypes'}},shift;
+    }
+
+}
+
 
 =head2 ambig_code
 
