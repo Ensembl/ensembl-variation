@@ -16,8 +16,8 @@ sub new {
   my $caller = shift;
   my $class = ref($caller) || $caller;
 
-  my ($dbSNP, $dbCore, $dbVariation, $tmp_dir, $tmp_file, $limit, $alldiff_file, $taxID, $contig_SQL, $species_prefix) =
-        rearrange([qw(DBSNP DBCORE DBVARIATION TMPDIR TMPFILE LIMIT ALLDIFF TAXID CONTIGSQL SPECIES_PREFIX)],@_);
+  my ($dbSNP, $dbCore, $dbVariation, $tmp_dir, $tmp_file, $limit, $alldiff_file, $taxID, $species_prefix) =
+        rearrange([qw(DBSNP DBCORE DBVARIATION TMPDIR TMPFILE LIMIT ALLDIFF TAXID SPECIES_PREFIX)],@_);
 
 
   return bless {'dbSNP' => $dbSNP,
@@ -28,7 +28,6 @@ sub new {
 		'limit' => $limit,
                 'alldiff' => $alldiff_file,
 		'taxID' => $taxID,
-		'contigSQL' => $contig_SQL,
 		'species_prefix' => $species_prefix}, $class;
 }
 
@@ -72,7 +71,7 @@ sub variation_table {
     debug("Dumping RefSNPs");
     
     dumpSQL($self->{'dbSNP'},  qq{
-	SELECT 1, concat( "rs", snp_id), validation_status, snp_id
+	SELECT 1, concat( "rs", snp_id), if(validation_status = 0,NULL,validation_status), snp_id
 	    FROM SNP
 	    WHERE tax_id = $self->{'taxID'}
 	    $self->{'limit'}
@@ -238,14 +237,14 @@ sub individual_table {
   #there were less individuals in the individual than in the individual_genotypes table, the reason is that some individuals do not have
   #assigned a specie for some reason in the individual table, but they do have in the SubmittedIndividual table
   #to solve the problem, get the specie information from the SubmittedIndividual table
-  dumpSQL($self->{'dbSNP'}, qq{ SELECT si.pop_id, si.loc_ind_id, i.descrip, i.ind_id
+  dumpSQL($self->{'dbSNP'}, qq{ SELECT si.loc_ind_id, i.descrip, i.ind_id
 				   FROM   SubmittedIndividual si, Individual i
 				   WHERE  si.ind_id = i.ind_id
 				   AND    si.tax_id = $self->{'taxID'}
-				GROUP BY i.ind_id});
+				   GROUP BY i.ind_id
+			    });
 
-  create_and_load($self->{'dbVariation'}, 'tmp_ind', 'pop_id i*', 'loc_ind_id', 'description',
-                  'ind_id i*');
+  create_and_load($self->{'dbVariation'}, 'tmp_ind', 'loc_ind_id', 'description', 'ind_id i*');
 
   # load pedigree into seperate tmp table because there are no
   # indexes on it in dbsnp and it makes the left join b/w tables v. slow
@@ -260,19 +259,35 @@ sub individual_table {
 
   # to make things easier keep dbSNPs individual.ind_id as our individual_id
 
-  $self->{'dbVariation'}->do(qq{INSERT INTO individual (individual_id, name, description,population_id, gender,father_individual_id, mother_individual_id)
-				    SELECT ti.ind_id, ti.loc_ind_id, ti.description, p.population_id,
+  $self->{'dbVariation'}->do(qq{INSERT INTO individual (individual_id, name, description,gender,father_individual_id, mother_individual_id)
+				    SELECT ti.ind_id, ti.loc_ind_id, ti.description,
 				    IF(tp.sex = 'M', 'Male',
 				       IF(tp.sex = 'F', 'Female', 'Unknown')),
 				    IF(tp.pa_ind_id > 0, tp.pa_ind_id, null),
 				    IF(tp.ma_ind_id > 0, tp.ma_ind_id, null)
-				    FROM   tmp_ind ti, population p
-				    LEFT JOIN tmp_ped tp ON ti.ind_id = tp.ind_id
-				    WHERE  ti.pop_id = p.pop_id});
+				    FROM   tmp_ind ti
+				    LEFT JOIN tmp_ped tp ON ti.ind_id = tp.ind_id});
     
     $self->{'dbVariation'}->do("DROP table tmp_ind");
     $self->{'dbVariation'}->do("DROP table tmp_ped");
     
+    #necessary to fill in the individual_population table with the relation between individual and populations
+    dumpSQL($self->{'dbSNP'}, qq{ SELECT si.pop_id, i.ind_id
+				      FROM   SubmittedIndividual si, Individual i
+				      WHERE  si.ind_id = i.ind_id
+				      AND    si.tax_id = $self->{'taxID'}
+			      });
+    
+    create_and_load($self->{'dbVariation'}, 'tmp_ind_pop', 'pop_id i*', 'ind_id i*');
+
+    debug("Loading individuals_population table");
+
+    $self->{'dbVariation'}->do(qq(INSERT INTO individual_population (individual_id, population_id)
+				      SELECT tip.ind_id, p.population_id
+				      FROM tmp_ind_pop tip, population p
+				      WHERE tip.pop_id = p.pop_id));
+    
+    $self->{'dbVariation'}->do("DROP table tmp_ind_pop");
     return;
 }
 
@@ -297,12 +312,11 @@ sub allele_table {
   # frequency data for
 
   dumpSQL($self->{'dbSNP'}, qq(SELECT afsp.subsnp_id, afsp.pop_id, a.allele_id, a.allele, afsp.freq
-             FROM   AlleleFreqBySsPop afsp, Allele a, SubSNP ss #, Batch b
-             WHERE  afsp.allele_id = a.allele_id
-             AND    afsp.subsnp_id = ss.subsnp_id
-#            AND    ss.batch_id = b.batch_id
-             AND    ss.tax_id = $self->{'taxID'}
-             $self->{'limit'}));
+			       FROM   AlleleFreqBySsPop afsp, Allele a, SubSNP ss
+			       WHERE  afsp.allele_id = a.allele_id
+			       AND    afsp.subsnp_id = ss.subsnp_id
+			       AND    ss.tax_id = $self->{'taxID'}
+			       $self->{'limit'}));
 
   debug("Loading allele frequency data");
 
@@ -324,7 +338,6 @@ sub allele_table {
                 WHERE  ta.subsnp_id = vs.subsnp_id
                 AND    ta.allele = tra.allele
 		AND    ta.pop_id = p.pop_id));
-#                GROUP BY vs.variation_id, p.population_id, tra.allele, ta.freq));
     #remove the index
     $self->{'dbVariation'}->do("DROP INDEX unique_allele_idx ON allele");
 
@@ -332,39 +345,64 @@ sub allele_table {
   # this will not import alleles without frequency for a variation which
   # already has frequency
 
-  $self->{'dbVariation'}->do("DROP TABLE tmp_allele");
-
-  $self->{'dbVariation'}->do("ALTER TABLE allele ENABLE KEYS"); #after ignoring in the insertion, we must enable keys again
-
-  debug("Loading other allele data");
 
 
-  $self->{'dbVariation'}->do(qq{CREATE TABLE tmp_allele
-                SELECT vs.variation_id as variation_id, tva.pop_id,
-                       IF(vs.substrand_reversed_flag,
-                          tra.rev_allele, tra.allele) as allele
-                FROM   variation_synonym vs, tmp_var_allele tva,
-                       tmp_rev_allele tra
-                LEFT JOIN allele a ON a.variation_id = vs.variation_id
-                WHERE  tva.subsnp_id = vs.subsnp_id
-                AND    tva.allele = tra.allele
-                AND    a.allele_id is NULL});
+   $self->{'dbVariation'}->do("ALTER TABLE allele ENABLE KEYS"); #after ignoring in the insertion, we must enable keys again
 
-  $self->{'dbVariation'}->do("ALTER TABLE tmp_allele ADD INDEX pop_id(pop_id)");
+   #get SNPs with 1 allele, because the frequency is 1 and there is no entry in the AFSP table for the other allele
+   debug("Getting alleles with no frequency");
 
-  $self->{'dbVariation'}->do(qq{INSERT INTO allele (variation_id, allele,
-                                    frequency, population_id)
-                SELECT ta.variation_id, ta.allele, null, p.population_id
-                FROM   tmp_allele ta
-                LEFT JOIN population p ON p.pop_id = ta.pop_id
-                GROUP BY ta.variation_id, p.population_id, ta.allele });
+   $self->{'dbVariation'}->do(qq{CREATE TABLE tmp_allele_no_freq 
+ 				    SELECT a.variation_id, vs.subsnp_id, a.population_id, 
+				        IF(vs.substrand_reversed_flag, tra.rev_allele, a.allele) as allele, vs.substrand_reversed_flag
+ 				    FROM allele a, variation_synonym vs, tmp_rev_allele tra
+ 				    WHERE a.frequency = 1
+ 				    AND   a.variation_id = vs.variation_id
+				    AND   tra.allele = a.allele
+ 				    GROUP BY a.variation_id, a.population_id, vs.subsnp_id
+ 				    HAVING count(*) = 1
+ 				});
 
+     $self->{'dbVariation'}->do(qq{INSERT INTO allele (variation_id, allele, frequency, population_id)
+ 				      SELECT taf.variation_id, IF(tva.substrand_reversed_flag,tra.rev_allele,tra.allele) as allele, 
+				       0, taf.population_id				       
+ 				      FROM tmp_allele_no_freq taf, tmp_var_allele tva, tmp_rev_allele tra
+ 				      WHERE taf.subsnp_id = tva.subsnp_id
+				      AND   tva.allele = tra.allele
+ 				      AND   taf.allele <> tva.allele
+				      AND   taf.substrand_reversed_flag = tva.substrand_reversed_flag
+				      GROUP BY taf.variation_id, allele, taf.population_id
+ 				  });
+
+     debug("Loading other allele data");
+
+   $self->{'dbVariation'}->do("DROP TABLE tmp_allele");    
+
+   $self->{'dbVariation'}->do(qq{CREATE TABLE tmp_allele
+                 SELECT vs.variation_id as variation_id, tva.pop_id,
+                        IF(vs.substrand_reversed_flag,
+                           tra.rev_allele, tra.allele) as allele
+                 FROM   variation_synonym vs, tmp_var_allele tva,
+                        tmp_rev_allele tra
+                 LEFT JOIN allele a ON a.variation_id = vs.variation_id
+                 WHERE  tva.subsnp_id = vs.subsnp_id
+                 AND    tva.allele = tra.allele
+                 AND    a.allele_id is NULL});
+
+   $self->{'dbVariation'}->do("ALTER TABLE tmp_allele ADD INDEX pop_id(pop_id)");
+
+   $self->{'dbVariation'}->do(qq{INSERT INTO allele (variation_id, allele,
+                                     frequency, population_id)
+                 SELECT ta.variation_id, ta.allele, null, p.population_id
+                 FROM   tmp_allele ta
+                 LEFT JOIN population p ON p.pop_id = ta.pop_id
+                 GROUP BY ta.variation_id, p.population_id, ta.allele });
+
+  $self->{'dbVariation'}->do("DROP TABLE tmp_allele_no_freq");
   $self->{'dbVariation'}->do("DROP TABLE tmp_rev_allele");
   $self->{'dbVariation'}->do("DROP TABLE tmp_var_allele");
   $self->{'dbVariation'}->do("DROP TABLE tmp_allele");
 }
-
-
 
 
 #
@@ -506,7 +544,7 @@ sub variation_feature {
     
      my $tablename = $self->{'species_prefix'} . 'SNPContigLoc';
     
-     dumpSQL($self->{'dbSNP'}, qq{SELECT snp_id, $self->{'contigSQL'},
+     dumpSQL($self->{'dbSNP'}, qq{SELECT snp_id, contig_acc,
  				 asn_from, 
 				 IF(loc_type = 3,  asn_from - 1, asn_to), # 3 = between
  				 IF(orientation, -1, 1)
@@ -522,7 +560,8 @@ sub variation_feature {
      debug("Creating genotyped variations");
     
      #creating the temporary table with the genotyped variations
-     $self->{'dbVariation'}->do(qq{CREATE TABLE tmp_genotyped_var SELECT DISTINCT variation_id FROM individual_genotype});
+     $self->{'dbVariation'}->do(qq{CREATE TABLE tmp_genotyped_var SELECT DISTINCT variation_id FROM individual_genotype_single_bp});
+     $self->{'dbVariation'}->do(qq{INSERT IGNORE INTO  tmp_genotyped_var SELECT DISTINCT variation_id FROM individual_genotype_multiple_bp});
      $self->{'dbVariation'}->do(qq{CREATE INDEX variation_idx ON tmp_genotyped_var (variation_id)});
     
     debug("Creating tmp_variation_feature data");
@@ -666,14 +705,25 @@ sub individual_genotypes {
   create_and_load($self->{'dbVariation'}, "tmp_gty", 'subsnp_id i*', 'ind_id i', 'genotype');
 
   debug("Loading individual_genotype table");
-    $self->{'dbVariation'}->do(qq{INSERT INTO individual_genotype (variation_id, individual_id, allele_1, allele_2) 
-				      SELECT vs.variation_id, tg.ind_id, SUBSTRING_INDEX(tg.genotype,'/',1),SUBSTRING_INDEX(tg.genotype,'/',-1)
+
+    #we have truncated the individual_genotype table, one contains the genotypes single bp, and the other, the rest
+    $self->{'dbVariation'}->do(qq{INSERT INTO individual_genotype_single_bp (variation_id, individual_id, allele_1, allele_2) 
+				      SELECT vs.variation_id, tg.ind_id, SUBSTRING_INDEX(tg.genotype,'/',1) as allele_1, 
+				               SUBSTRING_INDEX(tg.genotype,'/',-1) as allele_2
 				      FROM   tmp_gty tg, variation_synonym vs
-				      WHERE  tg.subsnp_id = vs.subsnp_id});
+				      WHERE  tg.subsnp_id = vs.subsnp_id
+				      AND    length(tg.genotype) = 3});
 
-  $self->{'dbVariation'}->do("DROP TABLE tmp_gty");
-
-  return;
+    $self->{'dbVariation'}->do(qq{INSERT INTO individual_genotype_multiple_bp (variation_id, individual_id, allele_1, allele_2) 
+				      SELECT vs.variation_id, tg.ind_id, SUBSTRING_INDEX(tg.genotype,'/',1) as allele_1,
+				             SUBSTRING_INDEX(tg.genotype,'/',-1) as allele_2
+				      FROM   tmp_gty tg, variation_synonym vs
+				      WHERE  tg.subsnp_id = vs.subsnp_id
+				      AND    length(tg.genotype) > 3});
+    
+    $self->{'dbVariation'}->do("DROP TABLE tmp_gty");
+    
+    return;
 }
 
 
@@ -732,7 +782,7 @@ sub cleanup {
   #remove populations that are not present in the Individual or Allele table for the specie
     $self->{'dbVariation'}->do('CREATE TABLE tmp_pop (population_id int PRIMARY KEY)'); #create a temporary table with unique populations
     $self->{'dbVariation'}->do('INSERT IGNORE INTO tmp_pop SELECT population_id FROM allele'); #add the populations from the alleles
-    $self->{'dbVariation'}->do('INSERT IGNORE INTO tmp_pop SELECT population_id FROM individual'); #add the populations from the individuals
+    $self->{'dbVariation'}->do('INSERT IGNORE INTO tmp_pop SELECT population_id FROM individual_population'); #add the populations from the individuals
     $self->{'dbVariation'}->do(qq{INSERT IGNORE INTO tmp_pop SELECT super_population_id 
 				      FROM population_structure ps, tmp_pop tp 
 				      WHERE tp.population_id = ps.sub_population_id}); #add the populations from the super-populations
@@ -740,6 +790,7 @@ sub cleanup {
     #necessary to difference between MySQL 4.0 and MySQL 4.1
     my $sql;
     my $sql_2;
+
     my $sth = $self->{'dbVariation'}->prepare(qq{SHOW VARIABLES LIKE 'version'});
     $sth->execute();
     my $row_ref = $sth->fetch();
@@ -752,7 +803,7 @@ sub cleanup {
 		      population_synonym ps LEFT JOIN tmp_pop tp1 on ps.population_id = tp1.population_id 
 		      WHERE tp.population_id is null AND tp1.population_id is null};
 	$sql_2 = qq{DELETE FROM ps USING population_structure ps 
-			LEFT JOIN tmp_pop tp ON ps.super_population_id = tp.population_id 
+			LEFT JOIN tmp_pop tp ON ps.sub_population_id = tp.population_id 
 			WHERE tp.population_id is null};
     }
     else{
@@ -762,8 +813,8 @@ sub cleanup {
 		      population_synonym ps LEFT JOIN tmp_pop tp1 on ps.population_id = tp1.population_id 
 		      WHERE tp.population_id is null AND tp1.population_id is null};
 	$sql_2 = qq{DELETE population_structure FROM population_structure ps 
-			LEFT JOIN tmp_pop tp ON ps.super_population_id = tp.population_id 
-			WHERE tp.population_id is null};
+			LEFT JOIN tmp_pop tp ON ps.sub_population_id = tp.population_id 
+			WHERE tp.population_id is null};	
     }
 
     $self->{'dbVariation'}->do($sql); #delete from population and population_synonym
