@@ -70,7 +70,10 @@ our %VALID_TYPES = ('INTRONIC' => 1,
                     'FRAMESHIFT_CODING' => 1,
                     '5PRIME_UTR' => 1,
                     '3PRIME_UTR' => 1,
-		    'INTERGENIC' => 1);
+		    'INTERGENIC' => 1,
+		    'STOP_GAINED' => 1,
+		    'STOP_LOST'  => 1,
+		    'UTR' => 1);
 
 =head2 new
   Arg [-ADAPTOR] :
