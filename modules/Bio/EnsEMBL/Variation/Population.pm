@@ -6,7 +6,8 @@
 
 =head1 NAME
 
-Bio::EnsEMBL::Variation::Population - A population represents a phenotypic group, ethnic group, set of individuals used in an assay, etc.
+Bio::EnsEMBL::Variation::Population - A population represents a phenotypic 
+group, ethnic group, set of individuals used in an assay, etc.
 
 =head1 SYNOPSIS
 
@@ -105,7 +106,7 @@ sub new {
                 'name'        => $name,
                 'description' => $desc,
                 'size'        => $size,
-                'sub_populations' => $sub_pops || []}, $class;
+                'sub_populations' => $sub_pops}, $class;
 }
 
 
@@ -187,8 +188,12 @@ sub size{
 sub get_all_sub_Populations {
   my $self = shift;
 
-  ### TBD - lazy-load from database if not set
-  return $self->{'sub_populations'};
+  if(!defined($self->{'sub_populations'}) && $self->{'adaptor'}) {
+    # lazy-load from database
+    $self->{'sub_populations'} =
+      $self->{'adaptor'}->fetch_all_by_super_Population($self);
+  }
+  return $self->{'sub_populations'} || [];
 }
 
 
@@ -210,10 +215,13 @@ sub get_all_sub_Populations {
 
 =cut
 
-sub get_all_super_Populatons {
+sub get_all_super_Populations {
   my $self = shift;
 
-  ### TBD - lazy load from database - do not set to avoid circular references!
+  return [] if(!$self->{'adaptor'});
+
+  # load from database - do not cache to avoid circular references (mem leak)!
+  return $self->{'adaptor'}->fetch_all_by_sub_Population($self);
 }
 
 
@@ -242,6 +250,7 @@ sub add_sub_Population {
     throw("Cannot add self as sub population.");
   }
 
+  $self->{'sub_populations'} ||= [];
   push @{$self->{'sub_populations'}}, $pop;
 
   return $pop;
