@@ -278,6 +278,8 @@ sub get_flanking_sequence{
 $sth->fetch();
 $sth->finish();
 
+warn "*****[ERROR]: No seq_region_id for SNP with dbID: $variationID. Cannot retrieve flanking region******\n";
+return unless $seq_region_id;
 
 if (!defined $down_seq){
   $down_seq = $self->_get_flank_from_core($seq_region_id, $down_seq_region_start, $down_seq_region_end, $seq_region_strand);
@@ -303,7 +305,7 @@ sub _get_flank_from_core{
 	my $slice_adaptor = $self->db()->dnadb()->get_SliceAdaptor();
 	my $slice = $slice_adaptor->fetch_by_seq_region_id($seq_region_id);
 	if (!$slice){
-	    throw("Not possible to obtain slice for seq_region_id $seq_region_id\n");
+	    throw("Not possible to obtain slice for seq_region_id \"$seq_region_id\"\n");
 	}
 	my $flank = $slice->subseq($seq_region_start,$seq_region_end,$seq_region_strand);
 	return $slice->subseq($seq_region_start,$seq_region_end,$seq_region_strand);
