@@ -392,4 +392,26 @@ sub _highest_priority{
     }    
     return $highest_type;
 }
+
+=head2 ambig_code
+
+  Arg         : None
+  Example     : my $ambig_code = $vari_data->ambig_code();
+  Description : returns the ambiguity code for a SNP allele
+  ReturnType  : String
+                The ambiguity code (or the alleles if code is unknown)
+  Exceptions  : Throw when alleles not present
+  Caller      : general
+
+=cut
+
+sub ambig_code {
+    my $self = shift;
+    my $alleles = $self->allele_string() || throw("Variation without alleles!!!");
+    $alleles = uc( join '', sort split /[\|\/\\]/, $alleles );
+    my %ambig = qw(AC M ACG V ACGT N ACT H AG R AGT D AT W CG S CGT B CT Y 
+GT K);
+    return $ambig{$alleles} || $alleles;
+}
+
 1;
