@@ -166,6 +166,66 @@ sub fetch_by_name {
 
 
 
+=head2 fetch_all_by_dbID_list
+
+  Arg [1]    : reference to list of ints $list
+  Example    : @vars = @{$va->fetch_all_by_dbID_list([124, 56, 90])};
+  Description: Retrieves a set of variations via their internal identifiers.
+               This is faster than repeatedly calling fetch_by_dbID if there
+               are a large number of variations to retrieve
+  Returntype : reference to list of Bio::EnsEMBL::Variation::Variation objects
+  Exceptions : throw on bad argument
+  Caller     : general, IndividualGenotypeAdaptor, PopulationGenotypeAdaptor
+
+=cut
+
+
+sub fetch_all_by_dbID_list {
+  my $self = shift;
+  my $list = shift;
+
+  if(!defined($list) || ref($list) ne 'ARRAY') {
+    throw("list reference argument is required");
+  }
+
+  return [] if(!@$list);
+
+  my @out;
+
+  # mysql is faster and we ensure that we do not exceed the max query size by
+  # splitting large queries into smaller queries of 200 ids
+  my $max = 200;
+
+  while(@$list) {
+    my @ids = (@$list > $max) ? splice(@$list, 0, $max) : splice(@$list, 0);
+
+    my $id_str = (@ids > 1)  ? " IN (".join(',',@ids).")"   :   ' = '.$ids[0];
+
+    my $sth = $self->prepare
+      (qq{SELECT v.variation_id, v.name, v.validation_status, s1.name,
+                 a.allele_id, a.allele, a.frequency, a.population_id,
+                 vs.name, s2.name
+          FROM   variation v, source s1, source s2, allele a,
+                 variation_synonym vs
+          WHERE  v.variation_id = a.variation_id
+          AND    v.variation_id = vs.variation_id
+          AND    v.source_id = s1.source_id
+          AND    vs.source_id = s2.source_id
+          AND    v.variation_id $id_str});
+    $sth->execute();
+
+    my $result = $self->_objs_from_sth($sth);
+
+    $sth->finish();
+
+    push @out, @$result if(@$result);
+  }
+
+  return \@out;
+}
+
+
+
 sub _objs_from_sth {
   my $self = shift;
   my $sth = shift;
