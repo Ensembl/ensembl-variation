@@ -250,7 +250,7 @@ sub parallel_transcript_variation{
 	    else{last;}
 	}
 	$limit = $slice_min . "," . ($slice_max-$slice_min) if ($i+1 < $num_processes or $num_processes==1);
-	$limit = $slice_min . "," . (scalar(@slices_ordered)-$slice_min-1) 
+	$limit = $slice_min . "," . (scalar(@slices_ordered)-$slice_min) 
 	  if ($i+1 == $num_processes and $num_processes != 1); #the last slice, get the left slices
 
 	$call = "bsub -o $TMP_DIR/output_transcript_$i\_$$.txt  -m 'bc_hosts ecs2_hosts' /usr/local/ensembl/bin/perl parallel_transcript_variation.pl -chost $chost -cuser $cuser -cdbname $cdbname -vhost $vhost -vuser $vuser -vport $vport -vdbname $vdbname -limit $limit -tmpdir $TMP_DIR -tmpfile $TMP_FILE -num_processes $num_processes -status_file $transcript_status_file ";
@@ -301,12 +301,13 @@ sub parallel_ld_populations{
     $sth = $dbVar->prepare
 	(qq{
 	    SELECT  STRAIGHT_JOIN ig.variation_id, vf.variation_feature_id, vf.seq_region_id, vf.seq_region_start, 
-                          ig.individual_id, ig.allele_1, ig.allele_2, vf.seq_region_end, i.population_id
-		    FROM  variation_feature vf FORCE INDEX(pos_idx), individual_genotype ig, individual i
+                          ig.individual_id, ig.allele_1, ig.allele_2, vf.seq_region_end, ip.population_id
+		    FROM  variation_feature vf FORCE INDEX(pos_idx), individual_genotype ig, individual i, individual_population ip
 		   WHERE  ig.variation_id = vf.variation_id
 		    AND   i.individual_id = ig.individual_id
 		    AND   ig.allele_2 IS NOT NULL
 		    AND   vf.map_weight = 1
+		    AND   ip.individual_id = i.individual_id
 		    ORDER BY  vf.seq_region_id,vf.seq_region_start}, {mysql_use_result => 1} );
 
 
@@ -330,7 +331,7 @@ sub parallel_ld_populations{
 		if (keys %{$alleles_variation{$population}} == 2){		
 		    &convert_genotype($alleles_variation{$population},$genotype_information{$population});
 		    foreach my $individual_id (keys %{$genotype_information{$population}}){
-			&print_individual_file($buffer,$population,$global_population_id, 
+			&print_individual_file($buffer,$population, 
 					       $previous_variation_id, $individual_id,
 					       \%genotype_information,\%sub_super_pop,$dbname,\%genotypes_file,\%regions);
 		    }
@@ -361,7 +362,7 @@ sub parallel_ld_populations{
 	if (keys %{$alleles_variation{$population}} == 2){		
 	    &convert_genotype($alleles_variation{$population},$genotype_information{$population});
 	    foreach my $individual_id (keys %{$genotype_information{$population}}){
-		&print_individual_file($buffer,$population,$global_population_id, 
+		&print_individual_file($buffer,$population, 
 				       $previous_variation_id, $individual_id,
 				       \%genotype_information,\%sub_super_pop,$dbname,\%genotypes_file,\%regions);
 	    }
@@ -394,7 +395,6 @@ sub parallel_ld_populations{
 sub print_individual_file{
     my $buffer = shift;
     my $population = shift;
-    my $global_population_id = shift;
     my $previous_variation_id = shift;
     my $individual_id = shift;
     my $genotype_information = shift;

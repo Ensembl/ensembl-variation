@@ -304,7 +304,6 @@ sub allele_table {
              AND    ss.tax_id = $self->{'taxID'}
              $self->{'limit'}));
 
-
   debug("Loading allele frequency data");
 
   create_and_load($self->{'dbVariation'}, "tmp_allele", "subsnp_id i*", "pop_id i*",
@@ -768,7 +767,7 @@ sub cleanup {
     my $self = shift;
 
   #remove populations that are not present in the Individual or Allele table for the specie
-    $self->{'dbVariation'}->do('CREATE TABLE tmp_pop (population_id int PRIMARY KEY'); #create a temporary table with unique populations
+    $self->{'dbVariation'}->do('CREATE TABLE tmp_pop (population_id int PRIMARY KEY)'); #create a temporary table with unique populations
     $self->{'dbVariation'}->do('INSERT IGNORE INTO tmp_pop SELECT population_id FROM allele'); #add the populations from the alleles
     $self->{'dbVariation'}->do('INSERT IGNORE INTO tmp_pop SELECT population_id FROM individual'); #add the populations from the individuals
     $self->{'dbVariation'}->do(qq{INSERT IGNORE INTO tmp_pop SELECT super_population_id 
@@ -778,7 +777,7 @@ sub cleanup {
     #necessary to difference between MySQL 4.0 and MySQL 4.1
     my $sql;
     my $sql_2;
-    my $sth = $self->{'dbVariation'}->prepare(qq{SHOW VARIABLE LIKE 'version'});
+    my $sth = $self->{'dbVariation'}->prepare(qq{SHOW VARIABLES LIKE 'version'});
     $sth->execute();
     my $row_ref = $sth->fetch();
     $sth->finish();

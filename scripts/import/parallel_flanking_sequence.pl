@@ -242,7 +242,7 @@ sub last_process{
     my $call = "cat $TMP_DIR/$dbname.flanking_sequence_out*.txt > $TMP_DIR/$TMP_FILE";
     system($call);
     #delete the files
-#    unlink(<$TMP_DIR/$dbname.flanking_sequence*.txt>);
+    unlink(<$TMP_DIR/$dbname.flanking_sequence*.txt>);
     #and upload all the information to the flanking_sequence table
     load ($dbVar,qw(flanking_sequence variation_id up_seq down_seq up_seq_region_start up_seq_region_end down_seq_region_start down_seq_region_end seq_region_id seq_region_strand));
     
