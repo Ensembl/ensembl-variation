@@ -4,17 +4,15 @@ use warnings;
 
 use Getopt::Long;
 use DBI;
+use DBH;
 
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
-use Bio::EnsEMBL::Utils::Exception qw(warning throw);
+use Bio::EnsEMBL::Utils::Exception qw(warning throw verbose);
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
 use ImportUtils qw(dumpSQL debug create_and_load load);
 
 
-my $TMP_DIR  = $ImportUtils::TMP_DIR;
-my $TMP_FILE = $ImportUtils::TMP_FILE;
-
-my $LIMIT;
+my ($TMP_DIR, $TMP_FILE, $LIMIT);
 
 {
   my ($vhost, $vport, $vdbname, $vuser, $vpass,
@@ -31,9 +29,11 @@ my $LIMIT;
              'vpass=s'   => \$vpass,
              'vport=i'   => \$vport,
              'vdbname=s' => \$vdbname,
+             'tmpdir=s'  => \$ImportUtils::TMP_DIR,
+             'tmpfile=s' => \$ImportUtils::TMP_FILE,
              'limit=i'   => \$limit);
 
-  $LIMIT = $limit || '';
+  $LIMIT = ($limit) ? " LIMIT $limit " : '';
 
   usage('-vdbname argument is required') if(!$vdbname);
   usage('-cdbname argument is required') if(!$cdbname);
@@ -45,10 +45,15 @@ my $LIMIT;
      -port   => $cport,
      -dbname => $cdbname);
 
-  my $dbVar = DBI->connect
+  my $dbVar = DBH->connect
     ("DBI:mysql:host=$vhost;dbname=$vdbname;port=$vport",$vuser, $vpass );
   die("Could not connect to variation database: $!") if(!$dbVar);
 
+
+  $TMP_DIR  = $ImportUtils::TMP_DIR;
+  $TMP_FILE = $ImportUtils::TMP_FILE;
+
+  load_asm_cache($dbCore);
   variation_feature($dbCore, $dbVar);
   flanking_sequence($dbCore, $dbVar);
   variation_group_feature($dbCore, $dbVar);
@@ -56,6 +61,42 @@ my $LIMIT;
 }
 
 
+
+
+#
+# preloads the mapper cache
+#
+sub load_asm_cache {
+  my $dbCore = shift;
+
+  debug("Building assembly mapping data cache");
+
+  my $slice_adaptor = $dbCore->get_SliceAdaptor();
+  my $asma = $dbCore->get_AssemblyMapperAdaptor();
+  my $csa  = $dbCore->get_CoordSystemAdaptor();
+
+  my $top_cs  = $csa->fetch_by_name('chromosome');
+  my $sctg_cs = $csa->fetch_by_name('supercontig');
+  my $seq_cs  = $csa->fetch_by_name('seqlevel');
+
+  my $mapper1 = $asma->fetch_by_CoordSystems($top_cs, $sctg_cs);
+  my $mapper2 = $asma->fetch_by_CoordSystems($top_cs, $seq_cs);
+
+  my $slices = $slice_adaptor->fetch_all('chromosome');
+
+  foreach my $mapper ($mapper1, $mapper2) {
+    $mapper->max_pair_count(1000000); # do not flush cache
+    foreach my $slice (@$slices) {
+      # force registration of all regions
+      $mapper->list_ids($slice->seq_region_name,
+                        $slice->start(),
+                        $slice->end(),
+                        $top_cs);
+    }
+  }
+
+  return;
+}
 
 
 #
@@ -95,7 +136,8 @@ sub variation_feature {
         AND    vf.variation_id = tmw.variation_id
         AND    vf.variation_id = v.variation_id
         GROUP BY vf.variation_feature_id, a.allele
-        ORDER BY variation_feature_id});
+        ORDER BY vf.seq_region_id, vf.seq_region_start,
+                 variation_feature_id});
 
 
   $sth->execute();
@@ -204,15 +246,15 @@ sub variation_feature {
 
   close FH;
 
-  debug("Deleting existing variation features");
+   debug("Deleting existing variation features");
 
-  $dbVar->do("DELETE FROM variation_feature");
+   $dbVar->do("DELETE FROM variation_feature");
 
-  debug("Reimporting processed variation features");
+   debug("Reimporting processed variation features");
 
-  load($dbVar, qw(variation_feature variation_feature_id seq_region_id
-          seq_region_start seq_region_end seq_region_strand variation_id
-          allele_string variation_name map_weight));
+   load($dbVar, qw(variation_feature variation_feature_id seq_region_id
+           seq_region_start seq_region_end seq_region_strand variation_id
+           allele_string variation_name map_weight));
 
   $dbVar->do("DROP TABLE tmp_map_weight");
 
@@ -661,6 +703,8 @@ options:
     -vport <port>        TCP port of variation MySQL database to write to (default = 3306)
     -vdbname <dbname>    dbname of variation MySQL database to write to
     -limit <number>      limit the number of rows for testing
+    -tmpdir <dir>        temp directory to use (with lots of space!)
+    -tmpdir <filename>   name of temp file to use
 EOF
 
   die("\n$msg\n\n");
