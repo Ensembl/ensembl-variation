@@ -454,8 +454,11 @@ sub transcript_variation {
 
   open FH, ">$TMP_DIR/$TMP_FILE";
 
+  my $inc_non_ref = 1;
+  my $slices = $sa->fetch_all('toplevel', undef, $inc_non_ref);
+
   # assumes that variation features have already been pushed to toplevel
-  foreach my $slice (@{$sa->fetch_all('toplevel')}) {
+  foreach my $slice (@$slices) {
     debug("Processing transcript variations for ",
           $slice->seq_region_name(), "\n");
     my $genes = $slice->get_all_Genes();
@@ -555,7 +558,7 @@ sub type_variation {
       my %new_var = %{$var};
       $new_var{'end'} = $var->{'start'} + $c->length() - 1;
       $var->{'start'} = $new_var{'end'} + 1;
-      push @out, type_variation($tr, \%new_var);
+      push @out, @{type_variation($tr, \%new_var)};
     }
 
     return \@out;
@@ -594,7 +597,7 @@ sub type_variation {
       my %new_var = %{$var};
       $new_var{'end'} = $var->{'start'} + $c->length() - 1;
       $var->{'start'} = $new_var{'end'} + 1;
-      push @out, type_variation($tr, \%new_var);
+      push @out, @{type_variation($tr, \%new_var)};
     }
     return \@out;
   }
