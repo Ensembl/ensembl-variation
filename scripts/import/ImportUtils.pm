@@ -44,29 +44,43 @@ sub load {
   my $tablename = shift;
   my @colnames = @_;
 
-
   my $cols = join( ",", @colnames );
 
-  local *FH;
-  open FH, "<$TMP_DIR/$TMP_FILE";
-  my $sql;
+  rename("$TMP_DIR/$TMP_FILE", "$TMP_DIR/$tablename.txt");
 
-  if ( @colnames ) {
+  my $host = $db->host();
+  my $user = $db->user();
+  my $pass = $db->pass();
+  my $port = $db->port();
+  my $dbname = $db->dbname();
 
-    $sql = qq{
-              LOAD DATA LOCAL INFILE '$TMP_DIR/$TMP_FILE'
-              INTO TABLE $tablename( $cols )
-             };
-  } else {
-    $sql = qq{
-              LOAD DATA LOCAL INFILE '$TMP_DIR/$TMP_FILE'
-              INTO TABLE $tablename
-             };
-  }
+  my $call = "/usr/local/bin/mysqlimport -c $cols -h $host -u $user " .
+    "-p$pass -P$port $dbname $TMP_DIR/$tablename.txt";
 
-  $db->do( $sql );
+  system($call);
 
-  unlink( "$TMP_DIR/$TMP_FILE" );
+  unlink("$TMP_DIR/$tablename.txt");
+
+
+##### Alternative way of doing same thing
+#  my $sql;
+
+#   if ( @colnames ) {
+
+#     $sql = qq{
+#               LOAD DATA LOCAL INFILE '$TMP_DIR/$TMP_FILE'
+#               INTO TABLE $tablename( $cols )
+#              };
+#   } else {
+#     $sql = qq{
+#               LOAD DATA LOCAL INFILE '$TMP_DIR/$TMP_FILE'
+#               INTO TABLE $tablename
+#              };
+#   }
+
+#   $db->do( $sql );
+
+#   unlink( "$TMP_DIR/$TMP_FILE" );
 }
 
 
