@@ -147,8 +147,8 @@ sub import {
   my $ind_name_str = "IN (".join(',', map{"'$_'"} @names). ");";
 
   my $sub_pop_id = population(\%pop_desc);
-  population_genotype(\%ind_snp, \%var_ids, $sub_pop_id, $ind_name_str);
-  individual(\%ind_name, $sub_pop_id);
+  population_genotype(\%ind_snp, \%var_ids, $sub_pop_id);
+  individual(\%ind_name, $sub_pop_id, $ind_name_str);
   individual_genotype(\%ind_name, \%ind_snp, \%var_ids, $sub_pop_id, $ind_name_str);
 
 }
@@ -233,7 +233,7 @@ sub individual {
   while(my ($ind_id, $name) = $sth->fetchrow_array()) {
     $ind_ids{$name} = $ind_id;
   }
-
+  
   foreach my $num (keys %ind_name) {
     if (!$ind_ids{$ind_name{$num}}) {
       $new_ind_found=1;
