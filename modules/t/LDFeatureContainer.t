@@ -14,7 +14,6 @@ use TestUtils qw ( debug test_getter_setter count_rows);
 use Bio::EnsEMBL::Variation::LDFeatureContainer;
 use Bio::EnsEMBL::Variation::VariationFeature;
 use Bio::EnsEMBL::Variation::Variation;
-use Data::Dumper;
 
 our $verbose = 0;
 
@@ -73,20 +72,20 @@ my $ldContainer = Bio::EnsEMBL::Variation::LDFeatureContainer->new('-name' => 'c
 								   '-ldContainer' =>{ 
 								       '153-163' =>{ 
 									   51 =>
-									   { 'Dprime'             => 0.533013,
+									   { 'd_prime'             => 0.533013,
 									     'r2'                 => 0.258275,
 									     'snp_distance_count' => 1,
 									     'sample_count'       => 42
 									     },
 									     140 =>
-									 { 'Dprime'             => 0.999887,
+									 { 'd_prime'             => 0.999887,
 									   'r2'                 => 0.642712,
 									   'snp_distance_count' => 1,
 									   'sample_count'       => 10
 									   }
 								       },
 								       '749-748' => { 140 =>
-										      { 'Dprime'             => 0.999924,
+										      { 'd_prime'             => 0.999924,
 											'r2'                 => 0.312452,
 											'snp_distance_count' => 1,
 											'sample_count'       => 22
@@ -115,11 +114,12 @@ ok(@{$variations} == 4);
 
 #to check how to get the r_square value for 2 variation_features with a known and an unknown population
 my $r_square;
-$r_square = $ldContainer->get_r_square($vf1,$vf2,140);
-ok($r_square == 0.642712);
+$r_square = $ldContainer->get_r_square($vf1,$vf2,51);
+ok($r_square == 0.258275);
 
 $r_square = $ldContainer->get_r_square($vf1,$vf2);
-ok($r_square == 0.258275);
+ok($r_square == 0.642712);
+
 
 #to check how to get the d_prime value for 2 variation_features with a known and an unknown population
 my $d_prime;
@@ -127,7 +127,7 @@ $d_prime = $ldContainer->get_d_prime($vf3,$vf4,140);
 ok($d_prime == 0.999924);
 
 $d_prime = $ldContainer->get_d_prime($vf1,$vf2);
-ok($d_prime == 0.533013);
+ok($d_prime == 0.999887);
 
 #check method to get ALL ld values in container (d_prime, r2, snp_distance_count and sample_count
 my $ld_values;
@@ -143,7 +143,6 @@ ok(@{$d_primes});
 #check method to retrieve populations in a container
 my $populations = $ldContainer->get_all_populations();
 ok(@{$populations} == 2);
-debug(@{$populations});
 $populations = $ldContainer->get_all_populations($vf3,$vf4);
 ok($populations->[0] == 140);
 
@@ -156,7 +155,7 @@ sub print_container {
       my ($key1,$key2) = split /-/,$key;
       print STDERR "LD values for ", $container->{'variationFeatures'}->{$key1}->variation_name, " and ",$container->{'variationFeatures'}->{$key2}->variation_name;
       foreach my $population (keys %{$container->{'ldContainer'}->{$key}}){
-	  print STDERR " in population $population:\n Dprime - ",$container->{'ldContainer'}->{$key}->{$population}->{'Dprime'}, "\n r2: ", $container->{'ldContainer'}->{$key}->{$population}->{'r2'}, "\n snp_distance: ",$container->{'ldContainer'}->{$key}->{$population}->{'snp_distance_count'}, " \nsample count ",$container->{'ldContainer'}->{$key}->{$population}->{'sample_count'},"\n";
+	  print STDERR " in population $population:\n d_prime - ",$container->{'ldContainer'}->{$key}->{$population}->{'d_prime'}, "\n r2: ", $container->{'ldContainer'}->{$key}->{$population}->{'r2'}, "\n snp_distance: ",$container->{'ldContainer'}->{$key}->{$population}->{'snp_distance_count'}, " \nsample count ",$container->{'ldContainer'}->{$key}->{$population}->{'sample_count'},"\n";
       }
   }
 
