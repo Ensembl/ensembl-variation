@@ -259,31 +259,36 @@ sub get_source_version{
 =cut
 
 sub get_flanking_sequence{
-    my $self = shift;
-    my $variationID = shift;
+  my $self = shift;
+  my $variationID = shift;
 
-    my $flanking_sequence; #reference to an array that will contain the three_prime and five_prime sequences
-    my ($seq_region_id, $seq_region_strand, $up_seq, $down_seq, $up_seq_region_start, $up_seq_region_end, $down_seq_region_start, $down_seq_region_end);
-    
-    my $sth = $self->prepare(qq{SELECT seq_region_id, seq_region_strand, up_seq, down_seq, up_seq_region_start, up_seq_region_end, down_seq_region_start, down_seq_region_end
-				    FROM flanking_sequence
-				    WHERE variation_id = ?
-				});
-    $sth->execute($variationID); #retrieve the flank from the variation database
-    $sth->bind_columns(\($seq_region_id, $seq_region_strand, $up_seq, $down_seq, $up_seq_region_start, $up_seq_region_end, $down_seq_region_start, $down_seq_region_end));
-    $sth->fetch();
-    $sth->finish();
+  my $flanking_sequence; #reference to an array for the three_prime and five_prime seqs
+  my ($seq_region_id, $seq_region_strand, $up_seq, $down_seq, $up_seq_region_start, $up_seq_region_end, $down_seq_region_start, $down_seq_region_end);
+  
+  my $sth = $self->prepare(qq{
+			      SELECT seq_region_id, seq_region_strand, up_seq, 
+			      down_seq, up_seq_region_start, up_seq_region_end, 
+			      down_seq_region_start, down_seq_region_end
+			      FROM flanking_sequence
+			      WHERE variation_id = ?
+			     });
 
-    if (!defined $down_seq){
-	$down_seq = $self->_get_flank_from_core($seq_region_id, $down_seq_region_start, $down_seq_region_end, $seq_region_strand);
-    }
-    if (!defined $up_seq){
-	$up_seq = $self->_get_flank_from_core($seq_region_id, $up_seq_region_start, $up_seq_region_end, $seq_region_strand);
-    }
+  $sth->execute($variationID); #retrieve the flank from the variation database
+  $sth->bind_columns(\($seq_region_id, $seq_region_strand, $up_seq, $down_seq, $up_seq_region_start, $up_seq_region_end, $down_seq_region_start, $down_seq_region_end));
+$sth->fetch();
+$sth->finish();
 
-    push @{$flanking_sequence},$down_seq,$up_seq; #add to the array the 3 and 5 prime sequences
 
-    return $flanking_sequence;
+if (!defined $down_seq){
+  $down_seq = $self->_get_flank_from_core($seq_region_id, $down_seq_region_start, $down_seq_region_end, $seq_region_strand);
+}
+if (!defined $up_seq){
+  $up_seq = $self->_get_flank_from_core($seq_region_id, $up_seq_region_start, $up_seq_region_end, $seq_region_strand);
+}
+
+push @{$flanking_sequence},$down_seq,$up_seq; #add to the array the 3 and 5 prime sequences
+
+return $flanking_sequence;
 }
 
 sub _get_flank_from_core{
@@ -298,7 +303,7 @@ sub _get_flank_from_core{
 	my $slice_adaptor = $self->db()->dnadb()->get_SliceAdaptor();
 	my $slice = $slice_adaptor->fetch_by_seq_region_id($seq_region_id);
 	if (!$slice){
-	    throw("not possible to obtain slice for seq_region_id $seq_region_id\n");
+	    throw("Not possible to obtain slice for seq_region_id $seq_region_id\n");
 	}
 	my $flank = $slice->subseq($seq_region_start,$seq_region_end,$seq_region_strand);
 	return $slice->subseq($seq_region_start,$seq_region_end,$seq_region_strand);
