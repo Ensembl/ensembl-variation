@@ -277,7 +277,7 @@ sub get_all_synonyms {
 
   return [] if(!$self->adaptor()); #if there is no adaptor, return empty strin
 
-  return $self->adaptor()->get_synonyms($self->dbID(),$source);
+  return $self->adaptor()->fetch_synonyms($self->dbID(),$source);
 
 }
 
