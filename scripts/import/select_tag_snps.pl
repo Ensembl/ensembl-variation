@@ -75,7 +75,7 @@ $file =~/.*:(\d+)\.txt/; #extract the seq_region_id from the name of the file
 my $LD_values = &get_LD_chromosome($dbVariation,$1,$r2,$population_id);
 #do the algorithm
 my $remove_snps = {}; #hash containing the snps that must be removed from the entry, they have been ruled out
-foreach $variation_feature_id (sort {$MAF_snps->{$a} cmp $MAF_snps->{$b}} keys %{$MAF_snps}){
+foreach $variation_feature_id (sort {$MAF_snps->{$b} cmp $MAF_snps->{$a}} keys %{$MAF_snps}){
     if (!defined $remove_snps->{$variation_feature_id}){
 	#add the SNPs that should be removed in future iterations
 	#and delete from the hash with the MAF_snps, the ones that have a r2 greater than r2 with $variation_feature_id
