@@ -12,7 +12,7 @@ use Benchmark;
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
 
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
-use ImportUtils qw(dumpSQL debug create_and_load load );
+use ImportUtils qw(dumpSQL debug create_and_load load column_exists table_exists);
 
 my ($TAX_ID, $LIMIT_SQL, $CONTIG_SQL, $TMP_DIR, $TMP_FILE);
 
@@ -46,15 +46,16 @@ my $dbCore;
              'limit=i'   => \$limit);
 
   $dshost   ||= 'cbi2.internal.sanger.ac.uk';
-  $dsdbname ||= 'dbSNP_121';
+  $dsdbname ||= 'dbSNP_122';
   $dsuser   ||= 'dbsnpro';
   $dsport   ||= 3306;
 
   $chost    ||= 'ecs2';
   $cuser    ||= 'ensro';
-  $cport    ||= 3364;
+  $cport    ||= 3365;
 
-  $vport    ||= 3362;
+  $vhost    ||= 'ecs2';
+  $vport    ||= 3361;
   $vuser    ||= 'ensadmin';
 
   usage('-cdbname argument is required.') if(!$cdbname);
@@ -106,14 +107,14 @@ my $SPECIES_PREFIX = get_species_prefix($TAX_ID);
 
 
 
-#source_table();
-#population_table();
-#individual_table();
-#variation_table();
-#individual_genotypes();
-#population_genotypes();
-#allele_table();
-#flanking_sequence_table();
+source_table();
+population_table();
+individual_table();
+variation_table();
+individual_genotypes();
+population_genotypes();
+allele_table();
+flanking_sequence_table();
 variation_feature();
 variation_group();
 allele_group();
@@ -230,8 +231,8 @@ sub dump_subSNPs {
 #
 sub population_table {
 
-  $dbVar->do("ALTER TABLE population ADD column pop_id int");
-  $dbVar->do("ALTER TABLE population ADD column pop_class_id int");
+  $dbVar->do("ALTER TABLE population ADD column pop_id int");       ###unless (column_exists($dbVar, 'population', 'pop_id'));
+  $dbVar->do("ALTER TABLE population ADD column pop_class_id int"); ###unless (column_exists($dbVar, 'population', 'pop_class_id'));
 
   # load PopClassCode data as populations
 
@@ -696,8 +697,9 @@ sub individual_genotypes {
   debug("Dumping SubInd and ObsGenotype data");
   dumpSQL($dbSNP, qq{SELECT si.subsnp_id, sind.ind_id, og.obs
              FROM   SubInd si, ObsGenotype og, SubmittedIndividual sind
-             WHERE  og.gty_id = si.gty_id
+             WHERE  og.gty_id = si.gty_id 
              AND    sind.submitted_ind_id = si.submitted_ind_id
+             AND    sind.tax_id = $TAX_ID
              $LIMIT_SQL});
 
   create_and_load($dbVar, "tmp_gty", 'subsnp_id i*', 'ind_id i', 'genotype');
@@ -742,10 +744,12 @@ sub population_genotypes {
 
   dumpSQL($dbSNP,qq{SELECT gtfsp.subsnp_id, gtfsp.pop_id, gtfsp.freq,
                     a1.allele, a2.allele
-             FROM   GtyFreqBySsPop gtfsp, UniGty ug, Allele a1, Allele a2
+             FROM   GtyFreqBySsPop gtfsp, UniGty ug, Allele a1, Allele a2 ###, SubmittedIndividual si
              WHERE  gtfsp.unigty_id = ug.unigty_id
              AND    ug.allele_id_1 = a1.allele_id
              AND    ug.allele_id_2 = a2.allele_id
+	     #AND    gtfsp.pop_id = si.pop_id
+             #AND    si.tax_id = $TAX_ID
              $LIMIT_SQL});
 
   debug("loading genotype data");
