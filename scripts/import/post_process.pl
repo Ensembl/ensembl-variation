@@ -783,11 +783,6 @@ sub apply_aa_change {
   my $tr = shift;
   my $var = shift;
 
-  if($var->{'cds_start'} == $var->{'cds_end'} + 1) {
-    warning("Cannot currently handle CDS insertions");
-    return;
-  }
-
   my $peptide = $tr->translate->seq();
 
   my $len = $var->{'aa_end'} - $var->{'aa_start'} + 1;
