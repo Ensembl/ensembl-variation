@@ -223,7 +223,8 @@ sub variation_feature {
       $cur_vf_flags = 1 if (defined $vf_flags);
       $cur_vf_flags = '\N' if (! defined $vf_flags);
       $cur_source_id = $vf_source_id;
-      $cur_validation_status = $vf_validation_status;
+      $cur_validation_status = $vf_validation_status if (defined $vf_validation_status);
+      $cur_validation_status = '\N' if (!defined $vf_validation_status);
       $cur_consequence_type = $vf_consequence_type;
       $top_sr_start = $sr_start;
       $top_sr_end = $sr_end;
