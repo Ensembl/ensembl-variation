@@ -474,31 +474,28 @@ create table individual_genotype (
 # pairwise_ld
 # this table contains ld values for 2 SNPs in a certain population
 #
-# pairwise_ld_id - primary key, internal identifier
-# variation_id_1 - FK, references variation table
-# variation_id_2 - FK, references variation table
 # variation_feature_id_1 - FK, references variation_feature table
 # variation_feature_id_2 - FK, references variation_feature table
-# D -  value: prAB - frq(A)*frq(B)
+# population_id - FK, references population
+# seq_region_id_ - FK, references seq_region table
+# seq_region_start_ - where the region start
+# seq_region_end -  where the region ends
+# snp_distance_count - number of variants in the region between two variations
 # r2 - value: D^2/(frq(A)*frq(B)*frq(a)*frq(b))
 # Dprime - value: D/Dmax
-# theta - value: (prAb*praB)/(prAB*prab + prAb*praB)
-# N - value: nAB + nab + nAb + naB + 2*cell4
+
 create table pairwise_ld(
-	pairwise_ld_id int not null auto_increment,
-	variation_id_1 int not null,
-	variation_id_2 int not null,
-	variation_feature_id_1 int,
-	variation_feature_id_2 int,
-	D float not null,
+	variation_feature_id_1 int not null,
+	variation_feature_id_2 int not null,
+	population_id int not null,
+	seq_region_id int not null,
+	seq_region_start int not null,
+	seq_region_end int not null,
+	snp_distance_count int not null,
 	r2 float not null,
 	Dprime float not null,
-	theta float not null,
-	N float not null,
 	
-	primary key(pairwise_ld_id),
-	key variation_1_idx(variation_id_1),
-	key variation_2_idx(variation_id_2)
+	key seq_region_1_idx(seq_region_id)
 );
 
 
