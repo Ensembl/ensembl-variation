@@ -9,7 +9,7 @@ our @ISA = ('Exporter');
 
 our @EXPORT_OK = qw(dumpSQL debug create_and_load load);
 
-our $TMP_DIR = "/ecs2/scratch5/ensembl/mcvicker/dbSNP";
+our $TMP_DIR = "/ecs2/scratch3/dani";
 our $TMP_FILE = 'tabledump.txt';
 
 # successive dumping and loading of tables is typical for this process
@@ -17,13 +17,12 @@ our $TMP_FILE = 'tabledump.txt';
 sub dumpSQL {
   my $db  = shift;
   my $sql = shift;
-  my @vars = shift; #array containing all the bind variables
   local *FH;
 
   open FH, ">$TMP_DIR/$TMP_FILE";
 
-  my $sth = $db->prepare( $sql, { mysql_use_result => 1 });
-  $sth->execute(@vars);
+  my $sth = $db->prepare( $sql);
+  $sth->execute();
   my $first;
   while ( my $aref = $sth->fetchrow_arrayref() ) {
     my @a = map {defined($_) ? $_ : '\N'} @$aref;
@@ -54,7 +53,7 @@ sub load {
   my $port = $db->port();
   my $dbname = $db->dbname();
 
-  my $call = "/usr/local/bin/mysqlimport -c $cols -h $host -u $user " .
+  my $call = "mysqlimport -c $cols -h $host -u $user " .
     "-p$pass -P$port $dbname $TMP_DIR/$tablename.txt";
 
   system($call);
@@ -94,6 +93,7 @@ sub load {
 #
 # e.g.  create_and_load('mytable', 'col0', 'col1 *', 'col2 i', 'col3 i*');
 #
+
 sub create_and_load {
   my $db = shift;
   my $tablename = shift;
