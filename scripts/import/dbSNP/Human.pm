@@ -24,7 +24,7 @@ sub dump_HGVbaseIDs{
     my $self = shift;
     
     #copy the file with the rs-> HGVbaseID information to the temp folder
-    system('cp','dbSNP/rs_hgvbase.txt',$self->{'tmpdir'} . '/' . $self->{'tmpfile'});
+    system('gunzip -c','dbSNP/rs_hgvbase.txt.gz',$self->{'tmpdir'} . '/' . $self->{'tmpfile'});
     debug("Loading HGVbase data");
     create_and_load($self->{'dbVariation'},"tmp_rs_hgvbase","rsID","HGVbaseID");
     #add a new source to the Source table
