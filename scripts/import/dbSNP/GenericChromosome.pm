@@ -29,7 +29,9 @@ sub variation_feature{
     debug("Dumping SNPLoc data");
     
     my $tablename = $self->{'species_prefix'} . 'SNPContigLoc';
-    dumpSQL($self->{'dbSNP'}, qq{SELECT snp_id, contig_chr, phys_pos_from, phys_pos,
+    dumpSQL($self->{'dbSNP'}, qq{SELECT snp_id, contig_chr, phys_pos_from, 
+				 IF(loc_type = 3,  phys_pos_from-1,
+				    IF (loc_type = 1, substring_index(phys_pos, '..', -1),phys_pos)),
 				 IF(orientation, -1, 1)
 				 FROM $tablename
 				 $self->{'limit'}});
