@@ -60,7 +60,7 @@ use vars qw(@ISA);
   Example    : $ind_genotype = Bio:EnsEMBL::Variation::IndividualGenotype->new
                    (-allele1 => 'A',
                     -allele2 => 'T',
-                    -varitation => $variation,
+                    -variation => $variation,
                     -individual => $ind);
   Description: Constructor.  Instantiates an IndividualGenotype object.
   Returntype : Bio::EnsEMBL::Variation::IndividualGenotype

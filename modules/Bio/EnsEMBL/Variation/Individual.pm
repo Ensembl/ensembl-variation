@@ -14,7 +14,6 @@ Bio::EnsEMBL::Variation::Individual - A single member of a population.
        (-name => 'WI530.07',
         -description => 'african',
         -gender => 'Male',
-        -population => $nigerian_pop,
         -father_individual => $father_ind,
         -mother_individual => $mother_ind);
 
@@ -32,7 +31,7 @@ Bio::EnsEMBL::Variation::Individual - A single member of a population.
 =head1 DESCRIPTION
 
 This is a class representing a single individual.  An individual may be part
-of a population.  A pedigree may be constructed using the father_Individual
+of one population or several.  A pedigree may be constructed using the father_Individual
 and mother_Individual attributes.
 
 =head1 CONTACT
@@ -67,8 +66,6 @@ our @ISA = ('Bio::EnsEMBL::Storable');
     string description - description of this individual
   Arg [-GENDER] :
     string - must be one of 'Male', 'Female', 'Unknown'
-  Arg [-POPULATION] :
-    Bio::EnsEMBL::Variation::Population - the pop this individual is from
   Arg [-FATHER_INDIVIDUAL] :
     Bio::EnsEMBL::Variation::Individual - the father of this individual
   Arg [-MOTHER_INDIVIDUAL] :
@@ -83,7 +80,6 @@ our @ISA = ('Bio::EnsEMBL::Storable');
                  (-name => 'WI530.07',
                   -description => 'african',
                   -gender => 'Male',
-                  -population => $nigerian_pop,
                   -father_individual => $father_ind,
                   -mother_individual => $mother_ind);
   Description: Constructor Instantiates an Individual object.
@@ -97,9 +93,9 @@ sub new {
   my $caller = shift;
   my $class = ref($caller) || $caller;
 
-  my ($dbID, $adaptor, $name, $desc, $gender, $pop, $father, $mother,
+  my ($dbID, $adaptor, $name, $desc, $gender, $father, $mother,
       $father_id, $mother_id) =
-    rearrange([qw(dbID adaptor name description gender population
+    rearrange([qw(dbID adaptor name description gender
                   father_individual mother_individual
                   father_individual_id mother_individual_id)], @_);
 
@@ -115,7 +111,6 @@ sub new {
                 'name'    => $name,
                 'description' => $desc,
                 'gender'  => $gender,
-                'population' => $pop,
                 'father_individual' => $father,
                 'mother_individual' => $mother,
                 '_mother_individual_id' => $mother_id,
@@ -192,32 +187,27 @@ sub gender{
 }
 
 
+=head2 get_all_Populations
 
-=head2 population
-
-  Arg [1]    : string $newval (optional) 
-               The new value to set the population attribute to
-  Example    : $population = $obj->population()
-  Description: Getter/Setter for the population attribute
-  Returntype : string
-  Exceptions : none
-  Caller     : general
+   Args        : none
+   Example     : $pops = $ind->get_all_Populations();
+   Description : Getter for the Populations for this Individual. Returns
+                 empty list if there are none.
+   ReturnType  : listref of Bio::EnsEMBL::Population
+   Exceptions  : none
+   Caller      : general
 
 =cut
 
-sub population{
-  my $self = shift;
+sub get_all_Populations{
+    my $self = shift;
 
-  if(@_) {
-    my $pop = shift;
-    if(defined($pop) && (!ref($pop) ||
-                         !$pop->isa('Bio::EnsEMBL::Variation::Population'))) {
-      throw('Bio::EnsEMBL::Variation::Population arg expected');
+    if (defined ($self->{'adaptor'})){
+	my $pop_adaptor = $self->{'adaptor'}->db()->get_PopulationAdaptor();
+
+	return $pop_adaptor->fetch_all_by_Individual($self);
     }
-    $self->{'population'} = $pop;
-  }
-
-  return $self->{'population'};
+    return [];
 }
 
 

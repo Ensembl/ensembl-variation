@@ -191,7 +191,7 @@ sub is_strain{
     my $self = shift;
     if (@_){
 	my $new_strain = shift;
-	if (($new_strain != 0) || ($new_strain != 1) ){
+	if (($new_strain != 0) && ($new_strain != 1) ){
 	    throw('only allowed 1 or 0 as a valid is_strain value');
 	}
 	return $self->{'is_strain'} = $new_strain;
