@@ -43,7 +43,7 @@ my $dbCore;
   
   $chost    ||= 'ecs2';
   $cuser    ||= 'ensro';
-  $cport    ||= 3365;
+  $cport    ||= 3364;
 
   usage('-cdbname argument is required.') if(!$cdbname);
   usage('-vdbname argument is required.') if(!$vdbname);
@@ -75,7 +75,7 @@ sub variation_feature {
   
   my $alldiff_file = shift;
 
-  my (%rec, %source, %status, %rec_hits, %rec_line);
+  my (%rec, %source, %status, %rec_pos, %rec_line, %rec_seq_region);
 
   debug("Dumping Variation");
   
@@ -86,7 +86,8 @@ sub variation_feature {
   while(my ($variation_id, $name, $source_id, $validation_status) = $sth->fetchrow_array()) {
     $rec{$name} = $variation_id;
     $source{$name} = $source_id;
-    $status{$name} = $validation_status;
+    $status{$name} = defined $validation_status ? $validation_status : '\N';
+    #$status{$name} = '\N' if ! defined $validation_status;
   }
 
   $sth->finish();
@@ -97,40 +98,40 @@ sub variation_feature {
   while (<IN>) {
     chomp;
     s/^MORE_HITS\s+//;
-    my ($ref_id, $slice_name, $ver, $start, $end, $exact, $snp_type, $strand, $score, $ratio) =split;
-    $rec_hits{$ref_id}++ if $ref_id;
-    $rec_line{$ref_id} = $_ if $ref_id;
+    my ($ref_id, $slice_name, $start, $end, $strand, $score, $ratio) =split;
+    push @{$rec_line{$ref_id}}, $_;
   }
   
   foreach my $key (keys %rec_line) {
-    next if $rec_hits{$key} >2;
-    
-    my ($ref_id, $slice_name, $ver, $start, $end, $exact, $snp_type, $strand, $score, $ratio) =split /\s+/,$rec_line{$key};
-    next if $ratio <0.7;
-    
-    ##make start > end if it is a between type
-    if ($exact =~ /between/i) {
-      $end = $start-1;
-    }
-    
-    my ($coord_sys,$assembly,$seq_region_name,$seq_region_start,$seq_region_end,$version) = split /\:/, $slice_name
-      if $slice_name =~ /\:/;
-    
-    my $sth = $dbCore->prepare (qq{SELECT seq_region_id from seq_region where name = ?});
-    $sth->execute("$seq_region_name");
-    
-    my $seq_region_id = $sth->fetchrow_array();
-    
-    if (!$seq_region_id) {
-      warn "There is no seq_region_id for $ref_id\n";
-      next;
-    }
+    next if @{$rec_line{$key}} >3;
+    foreach my $line (@{$rec_line{$key}}) {
+      my ($ref_id, $slice_name, $start, $end, $strand, $score, $ratio) =split /\s+/,$line;
+      next if $ratio <0.7;
 
-    my $new_seq_region_start = $seq_region_start + $start -1 if ($seq_region_start);
-    my $new_seq_region_end = $seq_region_start + $end -1 if ($seq_region_start);
+      my ($coord_sys,$assembly,$seq_region_name,$seq_region_start,$seq_region_end,$version) = split /\:/, $slice_name
+	if $slice_name =~ /\:/;
+      my $sth;
+      if (!$rec_seq_region{$seq_region_name}) {
+	$sth = $dbCore->prepare (qq{SELECT seq_region_id from seq_region where name = ?});
+	$sth->execute("$seq_region_name");
+     
+	my $seq_region_id = $sth->fetchrow_array();
+	$rec_seq_region{$seq_region_name}=$seq_region_id;
+      
+	if (!$seq_region_id) {
+	  warn "There is no seq_region_id for $ref_id\n";
+	  next;
+	}
+      }
+      my $seq_region_id = $rec_seq_region{$seq_region_name};
+      my $new_seq_region_start = $seq_region_start + $start -1 if ($seq_region_start);
+      my $new_seq_region_end = $seq_region_start + $end -1 if ($seq_region_start);
     
-    $ref_id = "rs$ref_id";
-    print FH "$seq_region_id\t$new_seq_region_start\t$new_seq_region_end\t$strand\t$rec{$ref_id}\t$ref_id\t$source{$ref_id}\t$status{$ref_id}\n";
+      if (!$rec_pos{$ref_id}{$seq_region_id}{$new_seq_region_start}{$new_seq_region_end}) {
+	print FH "$seq_region_id\t$new_seq_region_start\t$new_seq_region_end\t$strand\t$rec{$ref_id}\t$ref_id\t$source{$ref_id}\t$status{$ref_id}\n";
+	$rec_pos{$ref_id}{$seq_region_id}{$new_seq_region_start}{$new_seq_region_end}=1;
+      }
+    }
   }
   
   $sth->finish();
