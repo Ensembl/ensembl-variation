@@ -16,9 +16,10 @@ my $dbCore = DBI->connect( "DBI:mysql:host=ecs2.internal.sanger.ac.uk;dbname=hom
 
 my $TAX_ID = 9606; # human
 
+
+population_table();
 source_table();
 variation_table();
-population_table();
 individual_genotypes();
 population_genotypes();
 allele_table();
@@ -57,12 +58,7 @@ sub variation_table {
 
   load( "variation", "source_id", "name", "snp_id" );
 
-  debug("Adding index to variation table");
-
   $dbVar->do( "ALTER TABLE variation ADD INDEX snpidx( snp_id )" );
-
-
-  count_rows('variation');
 
   # create a temp table of subSNP info
   # containing RefSNP id, SubSNP id and validation status
@@ -73,8 +69,6 @@ sub variation_table {
 
   create_and_load( "tmp_var_allele", "subsnp_id", "refsnp_id", "pop_id",
                    "allele","valid", "substrand_reversed_flag");
-
-  count_rows('tmp_var_allele');
 
   $dbVar->do( qq{
                  ALTER TABLE tmp_var_allele MODIFY subsnp_id int
@@ -110,8 +104,6 @@ sub variation_table {
                 } );
 
   $dbVar->do('DROP table tmp_var2');
-
-  count_rows('variation');
 
   # set the validation status of the RefSNPs.  A refSNP is validated if
   # it has a valid subsnp
@@ -149,14 +141,10 @@ sub variation_table {
 
   $dbVar->do("DELETE FROM variation WHERE parent_variation_id is NULL");
 
-  count_rows('variation');
   load("variation", "variation_id", "source_id",
        "name", "snp_id", "validation_status");
 
   $dbVar->do("ALTER TABLE variation ADD INDEX subsnp_id(subsnp_id)");
-
-
-  count_rows('variation');
 
   return;
 }
@@ -276,7 +264,7 @@ sub population_table {
                        p.population_id as parent_population_id
                 FROM   tmp_pop tp, tmp_pop_count tpc
                 LEFT JOIN population p ON p.pop_class_id = tp.pop_class_id
-                AND    tp.pop_id = tpc.pop_id
+                WHERE    tp.pop_id = tpc.pop_id
                 AND    tpc.count < 2));
 
   $dbVar->do(qq{INSERT INTO population (name, parent_population_id, pop_id,
@@ -652,8 +640,6 @@ sub individual_genotypes {
   create_and_load('tmp_sub_ind', 'pop_id', 'loc_ind_id',
                   'submitted_ind_id', 'description');
 
-  count_rows('tmp_sub_ind');
-
   $dbVar->do("ALTER TABLE tmp_sub_ind MODIFY pop_id INT");
   $dbVar->do("ALTER TABLE tmp_sub_ind ADD INDEX pop_id(pop_id)");
 
@@ -687,8 +673,6 @@ sub individual_genotypes {
 
   create_and_load("tmp_gty", 'subsnp_id', 'submitted_ind_id', 'genotype');
 
-  count_rows('tmp_gty');
-
   # split apart the genotype strings
   my $sth = $dbVar->prepare("SELECT subsnp_id, submitted_ind_id, genotype FROM tmp_gty",
                             {mysql_use_result => 1});
@@ -715,8 +699,6 @@ sub individual_genotypes {
 
   create_and_load("tmp_gty", 'subsnp_id', 'submitted_ind_id', 'allele_1', 'allele_2');
 
-  count_rows('tmp_gty');
-
   $dbVar->do(qq{ALTER TABLE tmp_gty MODIFY subsnp_id INT});
   $dbVar->do(qq{ALTER TABLE tmp_gty MODIFY submitted_ind_id INT});
   $dbVar->do(qq{ALTER TABLE tmp_gty ADD INDEX subsnp_id(subsnp_id)});
@@ -727,8 +709,6 @@ sub individual_genotypes {
                 FROM   variation v, tmp_gty tg, population p
                 WHERE  v.subsnp_id = tg.subsnp_id
                 AND    p.submitted_ind_id = tg.submitted_ind_id});
-
-  count_rows('genotype');
 
   $dbVar->do("DROP TABLE tmp_pop");
   $dbVar->do("DROP TABLE tmp_sub_ind");
