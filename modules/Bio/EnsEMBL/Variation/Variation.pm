@@ -451,4 +451,43 @@ sub three_prime_flanking_seq{
   return $self->{'three_prime_flanking_seq'};
 }
 
+=head2 get_all_IndividualGenotypes
+
+  Args       : none
+  Example    : $ind_genotypes = $var->get_all_IndividualGenotypes()
+  Description: Getter for IndividualGenotypes for this Variation, returns empty list if 
+               there are none 
+  Returntype : listref of IndividualGenotypes
+  Exceptions : none
+  Caller     : general
+
+=cut
+
+sub get_all_IndividualGenotypes {
+
+  ### TODO for Daniel 
+  # contact the Adaptor and fetch_by_Variation 
+
+}
+
+=head2 get_all_PopulationGenotypes
+
+  Args       : none
+  Example    : $pop_genotypes = $var->get_all_PopulationGenotypes()
+  Description: Getter for PopulationGenotypes for this Variation, returns empty list if 
+               there are none. 
+  Returntype : listref of PopulationGenotypes
+  Exceptions : none
+  Caller     : general
+
+=cut
+
+sub get_all_PopulationGenotypes {
+
+  ### TODO for Daniel 
+  # contact the Adaptor and fetch_by_Variation 
+
+}
+
+
 1;
