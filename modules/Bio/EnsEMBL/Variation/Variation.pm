@@ -34,8 +34,8 @@ Bio::EnsEMBL::Variation::Variation - Ensembl representation of a nucleotide vari
 
     ...
 
-    # print out the default name and source of the variation
-    print $v->source(), ':',$v->name(), "\n";
+    # print out the default name and source of the variation and the version
+    print $v->source(), ':',$v->name(), ".",$v->version,"\n";
 
     # print out every synonym associated with this variation
     @synonyms = @{$v->get_all_synonyms()};
