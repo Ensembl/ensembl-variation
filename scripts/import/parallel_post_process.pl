@@ -72,7 +72,7 @@ $TMP_DIR  = $ImportUtils::TMP_DIR;
 $TMP_FILE = $ImportUtils::TMP_FILE;
 
 ##Apart from human and mouse, we directly import top_level coordinates from dbSNP
-if ($cdbname !~ /homo|mus/i) {
+if ($cdbname !~ /homo|mus|anoph/i) {
   $top_level=1;
 }
 
