@@ -78,15 +78,30 @@ use Data::Dumper;
 our @ISA = ('Bio::EnsEMBL::Feature');
 
 #contains a hash with the highest to the lowest possible consequence type in a trasncript
-our %CONSEQUENCE_TYPES = ('INTRONIC' => 6,
-			  'UPSTREAM' => 7,
-			  'DOWNSTREAM' => 8,
-			  'SYNONYMOUS_CODING' => 3,
-			  'NON_SYNONYMOUS_CODING', => 2,
+# our %CONSEQUENCE_TYPES = ('INTRONIC' => 6,
+# 			  'UPSTREAM' => 7,
+# 			  'DOWNSTREAM' => 8,
+# 			  'SYNONYMOUS_CODING' => 3,
+# 			  'NON_SYNONYMOUS_CODING', => 2,
+# 			  'FRAMESHIFT_CODING' => 1,
+# 			  '5PRIME_UTR' => 4,
+# 			  '3PRIME_UTR' => 5,
+# 			  'INTERGENIC' => 9);
+
+our %CONSEQUENCE_TYPES = (
 			  'FRAMESHIFT_CODING' => 1,
-			  '5PRIME_UTR' => 4,
-			  '3PRIME_UTR' => 5,
-			  'INTERGENIC' => 9);
+			  'STOP_GAINED' => 2,
+			  'STOP_LOST' => 3,
+			  'NON_SYNONYMOUS_CODING', => 4,
+			  'SYNONYMOUS_CODING' => 5,
+			  '5PRIME_UTR' => 6,
+			  '3PRIME_UTR' => 7,
+			  'UTR' => '8',
+			  'INTRONIC' => 9,
+			  'UPSTREAM' => 10,
+			  'DOWNSTREAM' => 11,
+			  'INTERGENIC' => 12,
+			  );
 
 =head2 new
 
