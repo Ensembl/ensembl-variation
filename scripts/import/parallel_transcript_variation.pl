@@ -131,12 +131,12 @@ sub transcript_variation {
                     $g->seq_region_start() - $MAX_FEATURE_LENGTH - $UPSTREAM);
 
       my $rows = $sth->fetchall_arrayref();
-
+      
       foreach my $tr (@{$g->get_all_Transcripts()}) {
 
         next if(!$tr->translation()); # skip pseudogenes
 
-        my $utr3 = $tr->three_prime_utr();
+	my $utr3 = $tr->three_prime_utr();
         my $utr5 = $tr->five_prime_utr();
 
         # compute the effect of the variation on each of the transcripts
@@ -153,7 +153,7 @@ sub transcript_variation {
 	  next if ($row->[4] =~ /LARGE/); #for LARGEINSERTION and LARGEDELETION alleles we don't calculate transcripts
 	  expand(\$row->[4]);#expand the alleles
           my @alleles = split('/',$row->[4]);
-	  
+
           if($var{'strand'} != $tr->strand()) {
             # flip feature onto same strand as transcript
             for(my $i = 0; $i < @alleles; $i++) {
@@ -203,6 +203,7 @@ sub type_variation {
   # Handle simple cases where the variation is not split into parts.
   # Call method recursively with component parts in complicated case.
   # E.g. a single multi-base variation may be both intronic and coding
+
 
   if(@coords > 1) {
     my @out;
@@ -311,7 +312,7 @@ sub apply_aa_change {
   my $codon_len = $codon_cds_end - $codon_cds_start + 1;
 
   my @alleles = @{$var->{'alleles'}};
-
+  
   shift(@alleles); # ignore reference allele
 
   my $var_len = $var->{'cds_end'} - $var->{'cds_start'} + 1;
@@ -321,7 +322,7 @@ sub apply_aa_change {
   foreach my $a (@alleles) {
     $a =~ s/\-//;
     my $cds = $tr->translateable_seq();
-
+    
     if($var_len != length($a)) {
       if(abs(length($a) - $var_len) % 3) {
         # frameshifting variation, do not set peptide_allele string
@@ -339,7 +340,7 @@ sub apply_aa_change {
     my $new_aa;
 
     if(length($a)) {
-      substr($cds, $var->{'cds_start'}, $var_len) = $a;
+      substr($cds, $var->{'cds_start'}-1, $var_len) = $a;
       my $codon_str = substr($cds, $codon_cds_start-1, $codon_len);
 
       my $codon_seq = Bio::Seq->new(-seq      => $codon_str,
@@ -374,11 +375,11 @@ sub last_process{
     my $call = "cat $TMP_DIR/transcript_variation*.txt > $TMP_DIR/$TMP_FILE";
     system($call);
 
-    unlink(<$TMP_DIR/transcript_variation*.txt>);
+#    unlink(<$TMP_DIR/transcript_variation*.txt>);
 
     load($dbVar, qw(transcript_variation
 			      transcript_id variation_feature_id peptide_allele_string
-			      translation_start translation_end cdna_start cdna_end type));
+			      translation_start translation_end cdna_start cdna_end consequence_type));
     
     
     update_meta_coord($dbCore, $dbVar, 'transcript_variation');
