@@ -16,6 +16,9 @@ my $dbCore = DBI->connect( "DBI:mysql:host=ecs2.internal.sanger.ac.uk;dbname=hom
 
 my $TAX_ID = 9606; # human
 
+my $LIMIT = '';
+#my $LIMIT = ' LIMIT 100000';
+
 
 population_table();
 source_table();
@@ -50,7 +53,7 @@ sub variation_table {
            SELECT 1, concat( "rs", snp_id), snp_id
            FROM SNP
            WHERE tax_id = $TAX_ID
-              LIMIT 100000
+           $LIMIT
           }
       );
 
@@ -163,7 +166,7 @@ sub dump_subSNPs {
         LEFT JOIN Batch b on subsnp.batch_id = b.batch_id
         WHERE subsnp.subsnp_id = subsnplink.subsnp_id
         AND   ov.var_id = subsnp.variation_id
-        LIMIT 100000
+        $LIMIT
        } );
 
   $sth->execute();
@@ -328,7 +331,7 @@ sub allele_table {
                     afsp.freq
              FROM   AlleleFreqBySsPop afsp, Allele a
              WHERE  afsp.allele_id = a.allele_id
-             LIMIT  100000));
+             $LIMIT));
 
   debug("Loading allele frequency data");
 
@@ -409,7 +412,7 @@ sub flanking_sequence_table {
 
     dumpSQL(qq{SELECT subsnp_id, line_num, line
                FROM SubSNPSeq$type
-               LIMIT 100000});
+               $LIMIT});
     create_and_load("tmp_seq_$type", "subsnp_id", "line_num", "line");
     $dbVar->do("ALTER TABLE tmp_seq_$type MODIFY subsnp_id int");
     $dbVar->do("ALTER TABLE tmp_seq_$type MODIFY line_num int");
@@ -509,7 +512,7 @@ sub variation_feature {
   dumpSQL( qq{SELECT snp_id, CONCAT(contig_acc, '.', contig_ver),
                      asn_from, asn_to, IF(orientation, -1, 1)
               FROM   SNPContigLoc
-              LIMIT 100000});
+              $LIMIT});
 
 
   debug("Loading SNPLoc data");
@@ -678,7 +681,7 @@ sub individual_genotypes {
   dumpSQL(qq{SELECT si.subsnp_id, si.submitted_ind_id, og.obs
              FROM   SubInd si, ObsGenotype og
              WHERE  og.gty_id = si.gty_id
-             LIMIT  100000});
+             $LIMIT});
 
   create_and_load("tmp_gty", 'subsnp_id', 'submitted_ind_id', 'genotype');
 
@@ -737,7 +740,7 @@ sub population_genotypes {
              WHERE  gtfsp.unigty_id = ug.unigty_id
              AND    ug.allele_id_1 = a1.allele_id
              AND    ug.allele_id_2 = a2.allele_id
-             LIMIT  100000});
+             $LIMIT});
 
   debug("loading genotype data");
 
