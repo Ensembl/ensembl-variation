@@ -9,6 +9,64 @@ use ImportUtils qw(debug load dumpSQL create_and_load);
 
 @ISA = ('dbSNP::GenericContig');
 
+# will be used to store the 2 different strains and the description
+our %STRAINS = ( 'PEST' => 'SNPs detected by comparing mosquito pest and mopti reads against Celera Anopheles Gambiae build 2 Genomic Reference Sequence using ssahaSNP',
+		 'MOPTI' => 'SNPs detected by comparing mosquito pest and mopti reads against Celera Anopheles Gambiae build 2 Genomic Reference Sequence using ssahaSNP');
+
+sub dump_dbSNP{
+    my $self = shift;
+    #first, dump all dbSNP data as usual
+    $self->SUPER::dump_dbSNP();
+    #then, get strain information
+    $self->add_strains();    
+}
+
+
+
+sub add_strains{
+    my $self = shift;
+
+    my $pop_MOPTI; #population_id for the mopti strain
+    my $pop_PEST;  #population_id for the pest strain
+    #first of all, add to the population table the 2 strains: PEST and MOPTI
+    foreach my $population_name (keys %STRAINS){
+	$self->{'dbVariation'}->do(qq{INSERT INTO population (name,description,is_strain) 
+					  VALUES ('$population_name', '$STRAINS{$population_name}', 1)
+				      });
+	$STRAINS{$population_name} = $self->{'dbVariation'}->dbh()->{'mysql_insertid'}; #store in the same hash the id for the population
+    }
+
+    #then, get from dbSNP the relation between ssId and mopti/pest strain
+    debug("Dumping strain information from dbSNP");
+
+    dumpSQL($self->{'dbSNP'}, qq{SELECT subsnp_id, loc_snp_id
+				     FROM SubSNP
+				     WHERE tax_id = $self->{'taxID'}
+			     });
+    
+    create_and_load($self->{'dbVariation'},'tmp_strain', "subsnp_id i*", "strain");
+
+    debug("Updating allele table with strain alleles");
+    #first, update the MOPTI alleles
+    $self->{'dbVariation'}->do(qq{UPDATE allele , variation_synonym, tmp_strain
+				      SET allele.population_id = $STRAINS{'MOPTI'}
+				      WHERE allele.variation_id = variation_synonym.variation_id
+				      AND SUBSTRING(variation_synonym.name,3) = tmp_strain.subsnp_id
+				      AND tmp_strain.strain like '%mopti%'
+				  });
+
+    #and do the same for the PEST alleles
+    $self->{'dbVariation'}->do(qq{UPDATE allele , variation_synonym, tmp_strain
+				      SET allele.population_id = $STRAINS{'PEST'}
+				      WHERE allele.variation_id = variation_synonym.variation_id
+				      AND SUBSTRING(variation_synonym.name,3) = tmp_strain.subsnp_id
+				      AND tmp_strain.strain like '%pest%'
+				  });
+    
+    #and finally, drop the temporary table
+    $self->{'dbVariation'}->do(qq{DROP TABLE tmp_strain});
+}
+
 
 sub variation_feature{
     my $self = shift;
@@ -59,10 +117,11 @@ sub variation_feature{
 		    "end i", "strand i");
     
     #creating the temporary table with the genotyped variations
-    dumpSQL($self->{'dbVariation'},qq{SELECT DISTINCT variation_id
-					  FROM individual_genotype
-				      });
-    create_and_load($self->{'dbVariation'},'tmp_genotyped_var',"variation_id *");
+
+     $self->{'dbVariation'}->do(qq{CREATE TABLE tmp_genotyped_var SELECT DISTINCT variation_id FROM individual_genotype_single_bp});
+     $self->{'dbVariation'}->do(qq{INSERT IGNORE INTO  tmp_genotyped_var SELECT DISTINCT variation_id FROM individual_genotype_multiple_bp});
+     $self->{'dbVariation'}->do(qq{CREATE INDEX variation_idx ON tmp_genotyped_var (variation_id)});
+
 
     debug("Creating variation_feature data");
     
