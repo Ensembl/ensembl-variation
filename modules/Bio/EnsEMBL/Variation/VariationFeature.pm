@@ -396,26 +396,25 @@ sub add_consequence_type{
 
 =cut
 
-sub get_consequence_type{
-    my $self = shift;
-    my $gene = shift;
+sub get_consequence_type {
+  my $self = shift;
+  my $gene = shift;
     
-    if (!defined $gene){
-	return $self->{'consequence_type'};
+  if(!defined $gene){
+    return $self->{'consequence_type'};
+  } else{
+    warn $gene;
+    my $highest_priority;
+    #first, get all the transcripts, if any
+    my $transcript_variations = $self->get_all_TranscriptVariations();
+    #if no transcripts, return INTERGENIC type
+    if (!defined $transcript_variations){
+      return 'INTERGENIC';
     }
-    else{
-	my $highest_priority;
-	#first, get all the transcripts, if any
-	my $transcript_variations = $self->get_all_TranscriptVariations();
-	#if no transcripts, return INTERGENIC type
-	if (!defined $transcript_variations){
-	    return 'INTERGENIC';
-	}
-	$gene = shift;
-	if (!ref $gene || !$gene->isa("Bio::EnsEMBL::Gene")){
-	    throw("$gene is not a Bio::EnsEMBL::Gene type!");
-	}
-	my $transcripts = $gene->get_all_Transcripts();
+    if (!ref $gene || !$gene->isa("Bio::EnsEMBL::Gene")){
+      throw("$gene is not a Bio::EnsEMBL::Gene type!");
+    }
+    my $transcripts = $gene->get_all_Transcripts();
 	my %transcripts_genes;
 	my @new_transcripts;
 	map {$transcripts_genes{$_->dbID()}++} @{$transcripts};
