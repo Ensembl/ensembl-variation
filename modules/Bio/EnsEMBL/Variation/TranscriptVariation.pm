@@ -72,6 +72,11 @@ our %VALID_TYPES = ('INTRONIC' => 1,
                     '3PRIME_UTR' => 1);
 
 =head2 new
+  Arg [-ADAPTOR] :
+    Bio::EnsEMBL::Variation::DBSQL::TranscriptVariationAdaptor
+
+  Arg [-DBID] :
+    int the unique internal identifier for this TranscriptVariation
 
   Arg [-VARIATION_FEATURE] :
     Bio::EnsEMBL::Variation::VariationFeature - The variation feature that was
@@ -127,9 +132,11 @@ our %VALID_TYPES = ('INTRONIC' => 1,
 sub new {
   my $class = shift;
 
-  my ($vf, $tr, $pep_allele, $cdna_start,$cdna_end, $tl_start,$tl_end, $type) =
+  my ($vf, $tr, $pep_allele, $cdna_start,$cdna_end, $tl_start,$tl_end, $type,
+      $dbID, $adaptor) =
     rearrange([qw(VARIATION_FEATURE TRANSCRIPT PEP_ALLELE_STRING CDNA_START
-                  CDNA_END TRANSLATION_START TRANSLATION_END TYPE)], @_);
+                  CDNA_END TRANSLATION_START TRANSLATION_END TYPE
+                  DBID ADAPTOR)], @_);
 
   if(defined($vf) &&
      (!ref($vf) || !$vf->isa('Bio::EnsEMBL::Variation::VariationFeature'))) {
@@ -164,7 +171,9 @@ sub new {
     throw('Translation end must be greater than or equal to 0');
   }
 
-  return bless {'variation_feature' => $vf,
+  return bless {'dbID'              => $dbID,
+                'adaptor'           => $adaptor,
+                'variation_feature' => $vf,
                 'transcript'        => $tr,
                 'pep_allele_string' => $pep_allele,
                 'cdna_start'        => $cdna_start,
