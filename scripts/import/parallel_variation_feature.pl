@@ -143,8 +143,19 @@ sub variation_feature {
   my $csa  = $dbCore->get_CoordSystemAdaptor();
 
   my $top_cs  = $csa->fetch_by_name('toplevel');
-#  my $sctg_cs = $csa->fetch_by_name('supercontig');
-  my $sctg_cs = $csa->fetch_by_rank(2); #replaced to support other species without supercontig
+  my $sctg_cs;
+  if ($dbCore->dbc()->dbname() =~ /anopheles|danio/i){
+      #there are no supercontig in these species, but scaffold
+      $sctg_cs = $csa->fetch_by_name('scaffold');
+  }
+  elsif ($dbCore->dbc()->dbname() =~ /canis/i){
+      $sctg_cs = $csa->fetch_by_rank(5);
+  }
+  else{
+      $sctg_cs = $csa->fetch_by_name('supercontig');
+  }
+
+#  my $sctg_cs = $csa->fetch_by_rank(2); #replaced to support other species without supercontig
 
   my $mapper = $asma->fetch_by_CoordSystems($top_cs, $sctg_cs) if (! $top_level);
   
@@ -232,6 +243,7 @@ sub variation_feature {
       $top_sr_start = $sr_start;
       $top_sr_end = $sr_end;
       $top_sr_strand = $sr_strand;
+      $allele = uc $allele;    #convert allele to uppercase format
 
       # map the variation coordinates to toplevel
 
@@ -261,6 +273,7 @@ sub variation_feature {
 	else {
 	  $ref_allele = $top_coord->seq();
 	  $ref_allele = '-' if(!$ref_allele);
+	  $ref_allele = uc $ref_allele;   #convert reference allele to uppercase
 	  $top_sr_id = $sr_id;
 	  debug ("ref_allele is '-' for $sr_id, $sr_start, $sr_end, $sr_strand") if ($ref_allele eq '-');
 	}

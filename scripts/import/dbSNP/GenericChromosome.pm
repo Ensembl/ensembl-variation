@@ -44,7 +44,8 @@ sub variation_feature{
 
     debug("Creating genotyped variations");
     #creating the temporary table with the genotyped variations
-    $self->{'dbVariation'}->do(qq{CREATE TABLE tmp_genotyped_var SELECT DISTINCT variation_id FROM individual_genotype});
+    $self->{'dbVariation'}->do(qq{CREATE TABLE tmp_genotyped_var SELECT DISTINCT variation_id FROM individual_genotype_single_bp});
+    $self->{'dbVariation'}->do(qq{INSERT IGNORE INTO tmp_genotyped_var SELECT DISTINCT variation_id FROM individual_genotype_multiple_bp});
     $self->{'dbVariation'}->do(qq{CREATE INDEX variation_idx ON tmp_genotyped_var (variation_id)});
  
     debug("Creating tmp_variation_feature data");
@@ -63,7 +64,6 @@ sub variation_feature{
 				      tvf.variation_name,IF(tgv.variation_id,'genotyped',NULL), tvf.source_id, tvf.validation_status
 				      FROM tmp_variation_feature tvf LEFT JOIN tmp_genotyped_var tgv ON tvf.variation_id = tgv.variation_id
 				  });
-
     $self->{'dbVariation'}->do("DROP TABLE tmp_contig_loc");
     $self->{'dbVariation'}->do("DROP TABLE tmp_seq_region");
     $self->{'dbVariation'}->do("DROP TABLE tmp_genotyped_var");

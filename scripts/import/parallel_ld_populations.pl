@@ -11,6 +11,8 @@ use Bio::EnsEMBL::Utils::Exception qw(warning throw verbose);
 
 use ImportUtils qw(debug load);
 
+my $default_population = 'CSHL-HAPMAP:HapMap-CEU'; #default population used to show by default on ldview
+
 my ($TMP_DIR, $TMP_FILE, $LIMIT,$status_file, $population, $num_processes); #ld_global is a flag to know wether we run the ld calculation globally or by population
 
 {
@@ -81,12 +83,14 @@ sub last_process{
     my $dbname = $dbVar->dbname(); #get the name of the database to create the file
     my $call = "cat $TMP_DIR/$dbname.pairwise_ld*out* > $TMP_DIR/$TMP_FILE";
     system($call);
-#    unlink(<$TMP_DIR/$dbname.pairwise_ld_*>);    
+    unlink(<$TMP_DIR/$dbname.pairwise_ld_*>);    
 
     #and import the data in the database
     load($dbVar, qw(pairwise_ld variation_feature_id_1 variation_feature_id_2 population_id seq_region_id seq_region_start seq_region_end r2 d_prime sample_count));
 
     update_meta_coord($dbCore, $dbVar, 'pairwise_ld');
+
+    update_meta($dbVar);
     #and delete the status file
     unlink("$TMP_DIR/$status_file");
 }
@@ -112,6 +116,25 @@ sub update_meta_coord {
   $sth->finish();
 
   return;
+}
+
+sub update_meta{
+    my $dbVar = shift;
+
+    my $population_id;
+    my $sth_pop = $dbVar->prepare('SELECT population_id FROM population where name = ?');
+    
+    $sth_pop->execute($default_population);
+    $sth_pop->bind_columns(\$population_id);
+    $sth_pop->fetch();
+    $sth->finish();
+
+    my $sth = $dbVar->prepare(qq{INSERT INTO meta (meta_key,meta_value) VALUES (?,?)
+				 });
+    $sth->execute('pairwise_ld.default_population', $population_id);
+
+    $sth->finish();
+    return;
 }
 
 sub usage {

@@ -69,10 +69,10 @@ sub variation_feature{
     create_and_load($self->{'dbVariation'}, "tmp_variation_feature","seq_region_id","seq_region_start","seq_region_end",
 		    "seq_region_strand","variation_id *","variation_name", "source_id", "validation_status");
     #creating the temporary table with the genotyped variations
-    dumpSQL($self->{'dbVariation'},qq{SELECT DISTINCT variation_id
-					  FROM individual_genotype
-				      });
-    create_and_load($self->{'dbVariation'},'tmp_genotyped_var',"variation_id *");
+
+    $self->{'dbVariation'}->do(qq{CREATE TABLE tmp_genotyped_var SELECT DISTINCT variation_id FROM individual_genotype_single_bp});
+    $self->{'dbVariation'}->do(qq{INSERT IGNORE INTO  tmp_genotyped_var SELECT DISTINCT variation_id FROM individual_genotype_multiple_bp});
+    $self->{'dbVariation'}->do(qq{CREATE INDEX variation_idx ON tmp_genotyped_var (variation_id)});
     
     $self->{'dbVariation'}->do(qq{INSERT INTO variation_feature
 				      (variation_id,seq_region_id, seq_region_start, seq_region_end, seq_region_strand,

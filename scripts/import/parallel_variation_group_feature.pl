@@ -81,12 +81,13 @@ sub variation_group_feature {
 
   $dbVar->do(qq{INSERT INTO variation_group_feature 
                        (seq_region_id, seq_region_start, seq_region_end,
-                        seq_region_strand, variation_group_id)
+                        seq_region_strand, variation_group_id, variation_group_name)
                 SELECT vf.seq_region_id, min(vf.seq_region_start),
                        max(vf.seq_region_end), vf.seq_region_strand,
-                       vgv.variation_group_id
-                FROM   variation_feature vf, variation_group_variation vgv
+                       vgv.variation_group_id, vg.name
+                FROM   variation_feature vf, variation_group_variation vgv, variation_group vg
                 WHERE  vgv.variation_id = vf.variation_id
+		AND    vg.variation_group_id = vgv.variation_group_id
                 GROUP BY vgv.variation_group_id, vf.seq_region_id});
 
 

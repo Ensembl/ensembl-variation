@@ -165,6 +165,7 @@ elsif ($SPECIES_PREFIX eq 'rn'){
 					    -species_prefix => $SPECIES_PREFIX
 					    );
     $rat->dump_dbSNP();
+    add_strains($dbVar); #add strain information
 }
 elsif ($SPECIES_PREFIX eq 'ag'){
     #(mosquito)
@@ -204,7 +205,7 @@ else{
 					      -taxID => $TAX_ID,
 					      -species_prefix => $SPECIES_PREFIX
 					      );
-#    $human->dump_dbSNP();
+    $human->dump_dbSNP();
 }
 
 
@@ -247,16 +248,16 @@ sub add_strains{
 
     #and finally, add the alleles to the Allele table for the strains
     #first, insert the single_bp alleles
-    $dbVariation->do(qq{INSERT INTO allele (variation_id, population_id, allele)
-				      SELECT ig.variation_id, ip.population_id, ig.allele_1
+    $dbVariation->do(qq{INSERT INTO allele (variation_id, population_id, allele, frequency)
+				      SELECT ig.variation_id, ip.population_id, ig.allele_1, 1
 				      FROM individual_genotype_single_bp ig, individual_population ip, population p
 				      WHERE ig.individual_id = ip.individual_id
 				      AND   ip.population_id = p.population_id
 				      AND   p.is_strain = 1
 				  });
     #do the same for the multiple_bp alleles
-    $dbVariation->do(qq{INSERT INTO allele (variation_id, population_id, allele)
-				      SELECT ig.variation_id, ip.population_id, ig.allele_1
+    $dbVariation->do(qq{INSERT INTO allele (variation_id, population_id, allele, frequency)
+				      SELECT ig.variation_id, ip.population_id, ig.allele_1, 1
 				      FROM individual_genotype_multiple_bp ig, individual_population ip, population p
 				      WHERE ig.individual_id = ip.individual_id
 				      AND   ip.population_id = p.population_id

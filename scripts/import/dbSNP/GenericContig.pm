@@ -35,17 +35,17 @@ sub new {
 sub dump_dbSNP{
     my $self = shift;
     
-    #$self->source_table();
-    #$self->population_table();
-    #$self->individual_table();
-    #$self->variation_table();
-    #$self->individual_genotypes();
-    #$self->population_genotypes();
-    #$self->allele_table();
+    $self->source_table();
+    $self->population_table();
+    $self->individual_table();
+    $self->variation_table();
+    $self->individual_genotypes();
+    $self->population_genotypes();
+    $self->allele_table();
     $self->flanking_sequence_table();
-    #$self->variation_feature();
-    #$self->variation_group();
-    #$self->allele_group();
+    $self->variation_feature();
+    $self->variation_group();
+    $self->allele_group();
     
     $self->cleanup();
 
@@ -339,43 +339,17 @@ sub allele_table {
                 AND    ta.allele = tra.allele
 		AND    ta.pop_id = p.pop_id));
     #remove the index
-    $self->{'dbVariation'}->do("DROP INDEX unique_allele_idx ON allele");
 
   # load remaining allele data which we do not have frequency data for
   # this will not import alleles without frequency for a variation which
   # already has frequency
 
 
-
    $self->{'dbVariation'}->do("ALTER TABLE allele ENABLE KEYS"); #after ignoring in the insertion, we must enable keys again
 
-   #get SNPs with 1 allele, because the frequency is 1 and there is no entry in the AFSP table for the other allele
-   debug("Getting alleles with no frequency");
+    debug("Loading other allele data");
 
-   $self->{'dbVariation'}->do(qq{CREATE TABLE tmp_allele_no_freq 
- 				    SELECT a.variation_id, vs.subsnp_id, a.population_id, 
-				        IF(vs.substrand_reversed_flag, tra.rev_allele, a.allele) as allele, vs.substrand_reversed_flag
- 				    FROM allele a, variation_synonym vs, tmp_rev_allele tra
- 				    WHERE a.frequency = 1
- 				    AND   a.variation_id = vs.variation_id
-				    AND   tra.allele = a.allele
- 				    GROUP BY a.variation_id, a.population_id, vs.subsnp_id
- 				    HAVING count(*) = 1
- 				});
-
-     $self->{'dbVariation'}->do(qq{INSERT INTO allele (variation_id, allele, frequency, population_id)
- 				      SELECT taf.variation_id, IF(tva.substrand_reversed_flag,tra.rev_allele,tra.allele) as allele, 
-				       0, taf.population_id				       
- 				      FROM tmp_allele_no_freq taf, tmp_var_allele tva, tmp_rev_allele tra
- 				      WHERE taf.subsnp_id = tva.subsnp_id
-				      AND   tva.allele = tra.allele
- 				      AND   taf.allele <> tva.allele
-				      AND   taf.substrand_reversed_flag = tva.substrand_reversed_flag
-				      GROUP BY taf.variation_id, allele, taf.population_id
- 				  });
-
-     debug("Loading other allele data");
-
+   $self->{'dbVariation'}->do("DROP INDEX unique_allele_idx ON allele");
    $self->{'dbVariation'}->do("DROP TABLE tmp_allele");    
 
    $self->{'dbVariation'}->do(qq{CREATE TABLE tmp_allele
@@ -398,7 +372,6 @@ sub allele_table {
                  LEFT JOIN population p ON p.pop_id = ta.pop_id
                  GROUP BY ta.variation_id, p.population_id, ta.allele });
 
-  $self->{'dbVariation'}->do("DROP TABLE tmp_allele_no_freq");
   $self->{'dbVariation'}->do("DROP TABLE tmp_rev_allele");
   $self->{'dbVariation'}->do("DROP TABLE tmp_var_allele");
   $self->{'dbVariation'}->do("DROP TABLE tmp_allele");
@@ -428,6 +401,7 @@ sub flanking_sequence_table {
     dumpSQL($self->{'dbSNP'}, qq{SELECT seq.subsnp_id, seq.line_num, seq.line
 				 FROM SubSNPSeq$type seq, SNP snp
 				 WHERE snp.exemplar_subsnp_id = seq.subsnp_id
+				 AND   snp.tax_id = $self->{'taxID'}
 				 $self->{'limit'}});
     
 
@@ -517,7 +491,7 @@ sub flanking_sequence_table {
   debug("Loading flanking sequence data");
 
   # import the generated data
-  $self->{'dbVariation'}->do(qq{LOAD DATA LOCAL INFILE '$self->{'tmpdir'}/$self->{'tmpfile'}' INTO TABLE flanking_sequence });
+  load($self->{'dbVariation'},"flanking_sequence","variation_id","up_seq","down_seq");
 
   unlink($self->{'tmpdir'} . "/" . $self->{'tmpfile'});
 
@@ -598,10 +572,9 @@ sub variation_group {
 
   dumpSQL($self->{'dbSNP'}, qq{SELECT  CONCAT(hs.handle, ':', hs.hapset_name),
                     hs.hapset_id, hssl.subsnp_id
-             FROM HapSet hs, HapSetSnpList hssl, SubSNP ss #, Batch b
+             FROM HapSet hs, HapSetSnpList hssl, SubSNP ss 
              WHERE hs.hapset_id = hssl.hapset_id
              AND   hssl.subsnp_id = ss.subsnp_id
-#             AND   ss.batch_id = b.batch_id
              AND   ss.tax_id = $self->{'taxID'}});
 
   create_and_load($self->{'dbVariation'}, 'tmp_var_grp', 'name', 'hapset_id i*', 'subsnp_id i*');
@@ -644,10 +617,9 @@ sub allele_group {
 
   dumpSQL($self->{'dbSNP'}, qq{SELECT  h.hap_id, h.hapset_id, h.loc_hap_id,
                     hsa.snp_allele, hsa.subsnp_id
-             FROM   Hap h, HapSnpAllele hsa, SubSNP ss #, Batch b
+             FROM   Hap h, HapSnpAllele hsa, SubSNP ss
              WHERE  hsa.hap_id = h.hap_id
              AND    hsa.subsnp_id = ss.subsnp_id
-#             AND    ss.batch_id = b.batch_id
              AND    ss.tax_id = $self->{'taxID'}});
 
   create_and_load($self->{'dbVariation'}, 'tmp_allele_group_allele','hap_id i*','hapset_id i*',
@@ -748,7 +720,7 @@ sub population_genotypes {
     #only dump data if there is population genotype information
     if (defined $ids[0]){
 	dumpSQL($self->{'dbSNP'},qq{SELECT gtfsp.subsnp_id, gtfsp.pop_id, gtfsp.freq,a1.allele, a2.allele
-					FROM   GtyFreqBySsPop gtfsp, UniGty ug, Allele a1, Allele a2 #, SubmittedIndividual si
+					FROM   GtyFreqBySsPop gtfsp, UniGty ug, Allele a1, Allele a2
 					WHERE  gtfsp.unigty_id = ug.unigty_id
 					AND    ug.allele_id_1 = a1.allele_id
 					AND    ug.allele_id_2 = a2.allele_id

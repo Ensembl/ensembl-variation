@@ -7,7 +7,7 @@ use Bio::EnsEMBL::Utils::Exception qw(warning throw verbose);
 use DBH;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 
-use constant MAX_GENOTYPES => 4_000_000; #max number of genotypes per file. When more, split the file into regions
+use constant MAX_GENOTYPES => 6_000_000; #max number of genotypes per file. When more, split the file into regions
 use constant REGIONS => 15; #number of chunks the file will be splited when more than MAX_GENOTYPES
 
 my ($TMP_DIR, $TMP_FILE, $LIMIT);
@@ -74,7 +74,7 @@ $TMP_DIR  = $ImportUtils::TMP_DIR;
 $TMP_FILE = $ImportUtils::TMP_FILE;
 
 ##Apart from human and mouse, we directly import top_level coordinates from dbSNP
-if ($cdbname !~ /homo|mus|anoph/i) {
+if ($cdbname !~ /homo|mus|anoph|can/i) {
   $top_level=1;
 }
 
@@ -116,15 +116,17 @@ sub parallel_variation_feature{
 		      ADD INDEX variation_idx(variation_id,count)});
 
     my $sub_variation = int(($max_variation - $min_variation)/ $num_processes);
+
     #the limit will be (AND variation_feature_id > min and variation_feature_id < max)
     for (my $i = 0; $i < $num_processes ; $i++){
 	$limit = "AND variation_feature_id <= " . (($i+1) * $sub_variation + $min_variation-1) . " AND variation_feature_id >= " . ($i*$sub_variation + $min_variation) if ($i+1 < $num_processes);
 	$limit =  "AND variation_feature_id <= " .  $max_variation . " AND variation_feature_id >= " . ($i*$sub_variation + $min_variation) if ($i + 1 == $num_processes); #the last one takes the left rows
-	$call = "bsub -J $dbname\_variation_job_$i -m 'ecs2a+10 ecs2_hosts bc_hosts' -o $TMP_DIR/output_variation_feature_$i\_$$.txt /usr/local/ensembl/bin/perl parallel_variation_feature.pl -chost $chost -cuser $cuser -cdbname $cdbname -vhost $vhost -vuser $vuser -vport $vport -vdbname $vdbname -limit '$limit' -tmpdir $TMP_DIR -tmpfile $TMP_FILE -num_processes $num_processes -status_file $variation_status_file ";
+	$call = "bsub -J $dbname\_variation_job_$i -m 'bc_hosts' -o $TMP_DIR/output_variation_feature_$i\_$$.txt /usr/local/ensembl/bin/perl parallel_variation_feature.pl -chost $chost -cuser $cuser -cdbname $cdbname -vhost $vhost -vuser $vuser -vport $vport -vdbname $vdbname -limit '$limit' -tmpdir $TMP_DIR -tmpfile $TMP_FILE -num_processes $num_processes -status_file $variation_status_file ";
 	$call .= "-cpass $cpass " if ($cpass);
 	$call .= "-cport $cport " if ($cport);
 	$call .= "-vpass $vpass " if ($vpass);
 	$call .= "-toplevel $top_level " if ($top_level);
+
 	system($call);      
     }
     $call = "bsub -K -w 'done($dbname\_variation_job*)' -J waiting_process sleep 1"; #waits until all variation features have finished to continue
@@ -188,7 +190,7 @@ sub parallel_flanking_sequence{
   $sth->finish();  
   &print_buffered($buffer);
   for (my $i = 1;$i<=$num_processes;$i++){
-      $call = "bsub -m 'bc_hosts ecs2_hosts' -o $TMP_DIR/output_flanking_$i\_$$.txt /usr/local/ensembl/bin/perl parallel_flanking_sequence.pl -chost $chost -cuser $cuser -cdbname $cdbname -vhost $vhost -vuser $vuser -vport $vport -vdbname $vdbname -tmpdir $TMP_DIR -tmpfile $TMP_FILE -num_processes $num_processes -status_file $flanking_status_file -file $i ";
+      $call = "bsub -m 'bc_hosts' -o $TMP_DIR/output_flanking_$i\_$$.txt /usr/local/ensembl/bin/perl parallel_flanking_sequence.pl -chost $chost -cuser $cuser -cdbname $cdbname -vhost $vhost -vuser $vuser -vport $vport -vdbname $vdbname -tmpdir $TMP_DIR -tmpfile $TMP_FILE -num_processes $num_processes -status_file $flanking_status_file -file $i ";
       $call .= "-cpass $cpass " if ($cpass);
       $call .= "-cport $cport " if ($cport);
       $call .= "-vpass $vpass " if ($vpass);
@@ -253,7 +255,7 @@ sub parallel_transcript_variation{
 	$limit = $slice_min . "," . (scalar(@slices_ordered)-$slice_min) 
 	  if ($i+1 == $num_processes and $num_processes != 1); #the last slice, get the left slices
 
-	$call = "bsub -o $TMP_DIR/output_transcript_$i\_$$.txt  -m 'bc_hosts ecs2_hosts' /usr/local/ensembl/bin/perl parallel_transcript_variation.pl -chost $chost -cuser $cuser -cdbname $cdbname -vhost $vhost -vuser $vuser -vport $vport -vdbname $vdbname -limit $limit -tmpdir $TMP_DIR -tmpfile $TMP_FILE -num_processes $num_processes -status_file $transcript_status_file ";
+	$call = "bsub -o $TMP_DIR/output_transcript_$i\_$$.txt  -m 'bc_hosts' /usr/local/ensembl/bin/perl parallel_transcript_variation.pl -chost $chost -cuser $cuser -cdbname $cdbname -vhost $vhost -vuser $vuser -vport $vport -vdbname $vdbname -limit $limit -tmpdir $TMP_DIR -tmpfile $TMP_FILE -num_processes $num_processes -status_file $transcript_status_file ";
 	$call .= "-cpass $cpass " if ($cpass);
 	$call .= "-cport $cport " if ($cport);
 	$call .= "-vpass $vpass " if ($vpass);
@@ -266,26 +268,6 @@ sub parallel_transcript_variation{
 sub parallel_ld_populations{
     my $dbVar = shift;    
     my $call;
-    my %sub_super_pop;
-    my %super_pop;
-
-    #for the superpopulation
-    my $sth = $dbVar->prepare(qq{SELECT super_population_id, sub_population_id
-				     FROM population_structure
-				 });
-    $sth->execute();
-    while( my $arr = $sth->fetchrow_arrayref() ) {
-	$sub_super_pop{ $arr->[1] } ||= [];
-	push( @{$sub_super_pop{ $arr->[1] }}, $arr->[0] );
-	$super_pop{$arr->[0]}++;
-    }
-    $sth->finish();
-
-    #for the global population: we have removed the global population calculation
-
-#    $dbVar->do(qq{INSERT INTO population (name,description) VALUES ('Global population','Population used in the calculation of the LD value across all populations')}); #add a new population for the general ld values
-#    my $global_population_id = $dbVar->dbh()->{'mysql_insertid'}; #id for the global population
-#    my $global_population_id = 912;
 
     my %seq_region; #hash containing the mapping between seq_region_id->name region
     my %alleles_variation = (); #will contain a record of the alleles in the variation. A will be the major, and a the minor. When more than 2 alleles
@@ -302,12 +284,12 @@ sub parallel_ld_populations{
 	(qq{
 	    SELECT  STRAIGHT_JOIN ig.variation_id, vf.variation_feature_id, vf.seq_region_id, vf.seq_region_start, 
                           ig.individual_id, ig.allele_1, ig.allele_2, vf.seq_region_end, ip.population_id
-		    FROM  variation_feature vf FORCE INDEX(pos_idx), individual_genotype ig, individual i, individual_population ip
+		    FROM  variation_feature vf FORCE INDEX(pos_idx), individual_genotype_single_bp ig, individual_population ip
 		   WHERE  ig.variation_id = vf.variation_id
-		    AND   i.individual_id = ig.individual_id
 		    AND   ig.allele_2 IS NOT NULL
 		    AND   vf.map_weight = 1
-		    AND   ip.individual_id = i.individual_id
+		    AND   ip.individual_id = ig.individual_id
+		    AND   ip.population_id IN (898,899,900,936,937,938,939)
 		    ORDER BY  vf.seq_region_id,vf.seq_region_start}, {mysql_use_result => 1} );
 
 
@@ -375,10 +357,10 @@ sub parallel_ld_populations{
     foreach my $file (keys %genotypes_file){
 	if ($genotypes_file{$file} > MAX_GENOTYPES()){
 	    &split_file($file,\%regions,$genotypes_file{$file},$dbname);
-	    $call = "bsub -J '$dbname.pairwise_ld[1-".REGIONS()."]' -m 'ecs2f+10 ecs2_hosts bc_hosts' -o $TMP_DIR/output_pairwise_ld.txt /usr/local/ensembl/bin/perl calc_genotypes.pl $file\_chunk.\\\$LSB_JOBINDEX $file\_chunk_out.\\\$LSB_JOBINDEX"; #create a job array
+	    $call = "bsub -J '$dbname.pairwise_ld[1-".REGIONS()."]' -m 'bc_hosts' -o $TMP_DIR/output_pairwise_ld.txt /usr/local/ensembl/bin/perl calc_genotypes.pl $file\_chunk.\\\$LSB_JOBINDEX $file\_chunk_out.\\\$LSB_JOBINDEX"; #create a job array
 	}
 	else{
-	    $call = "bsub -J '$dbname.pairwise_ld' -m 'ecs2f+10 ecs2_hosts bc_hosts' -o $TMP_DIR/output_ld_populations\_$$.txt /usr/local/ensembl/bin/perl calc_genotypes.pl $file $file\_out ";	    
+	    $call = "bsub -J '$dbname.pairwise_ld' -m 'bc_hosts' -o $TMP_DIR/output_ld_populations\_$$.txt /usr/local/ensembl/bin/perl calc_genotypes.pl $file $file\_out ";	    
 	}
 	system($call);
     }
@@ -415,27 +397,6 @@ sub print_individual_file{
 			 $genotype_information->{$population}->{$individual_id}->{seq_region_end},$population)."\n" );
     $genotypes_file->{"$TMP_DIR/$dbname.pairwise_ld_$population\.txt"}++;
 
-#we will only calculate things in the superpopulations and in the populations, no global population
-#     $regions->{"$TMP_DIR/$dbname.pairwise_ld_$global_population_id\.txt"}->{$genotype_information->{$population}->{$individual_id}->{seq_region_id}}++; #add one more genotype in the region for the population
-#     print_buffered( $buffer, "$TMP_DIR/$dbname.pairwise_ld_$global_population_id\.txt", 
-# 		    join("\t",$previous_variation_id,$genotype_information->{$population}->{$individual_id}->{seq_region_start},
-# 			 $individual_id,
-# 			 $genotype_information->{$population}->{$individual_id}->{genotype},
-# 			 $genotype_information->{$population}->{$individual_id}->{variation_feature_id},
-# 			 $genotype_information->{$population}->{$individual_id}->{seq_region_id},
-# 			 $genotype_information->{$population}->{$individual_id}->{seq_region_end},$global_population_id)."\n" );
-#     $genotypes_file->{"$TMP_DIR/$dbname.pairwise_ld_$global_population_id\.txt"}++;
-    foreach my $superpop_id ( @{$sub_super_pop->{ $population }} ) {
-	$regions->{"$TMP_DIR/$dbname.pairwise_ld_$superpop_id\.txt"}->{$genotype_information->{$population}->{$individual_id}->{seq_region_id}}++; #add one more genotype in the region for the population
-	print_buffered( $buffer, "$TMP_DIR/$dbname.pairwise_ld_$superpop_id\.txt", 
-			join("\t",$previous_variation_id,$genotype_information->{$population}->{$individual_id}->{seq_region_start},
-			     $individual_id,
-			     $genotype_information->{$population}->{$individual_id}->{genotype},
-			     $genotype_information->{$population}->{$individual_id}->{variation_feature_id},
-			     $genotype_information->{$population}->{$individual_id}->{seq_region_id},
-			     $genotype_information->{$population}->{$individual_id}->{seq_region_end},$superpop_id)."\n" );
-	$genotypes_file->{"$TMP_DIR/$dbname.pairwise_ld_$superpop_id\.txt"}++;
-    }
 }
 
 sub print_buffered {
@@ -530,6 +491,7 @@ sub split_file{
 	close OUTFILE;
     }
     close INFILE;
+    unlink $file; #remove the original file after splitting it
 }
 
 sub usage {
