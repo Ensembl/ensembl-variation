@@ -65,7 +65,7 @@ package Bio::EnsEMBL::Variation::DBSQL::VariationFeatureAdaptor;
 
 use Bio::EnsEMBL::Variation::VariationFeature;
 use Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor;
-
+use Data::Dumper;
 
 
 our @ISA = ('Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor');
@@ -124,7 +124,8 @@ sub _objs_from_sth {
   # a fair bit of gymnastics is used.
   #
 
-  my $sa = $self->db()->get_SliceAdaptor();
+
+  my $sa = $self->db()->{'dnadb'}->get_SliceAdaptor();
 
   my @features;
   my %slice_hash;
