@@ -9,7 +9,7 @@ BEGIN { $| = 1;
 }
 
 use Bio::EnsEMBL::Test::TestUtils;
-
+use Data::Dumper;
 
 use Bio::EnsEMBL::Variation::LDFeatureContainer;
 use Bio::EnsEMBL::Variation::VariationFeature;
@@ -133,12 +133,10 @@ ok($d_prime == 0.999887);
 my $ld_values;
 $ld_values = $ldContainer->get_all_ld_values();
 ok(@{$ld_values} == 2);
-
 my $r_squares = $ldContainer->get_all_r_square_values();
 ok(@{$r_squares} == 2);
-
 my $d_primes = $ldContainer->get_all_d_prime_values();
-ok(@{$d_primes});
+ok(@{$d_primes} == 2);
 
 #check method to retrieve populations in a container
 my $populations = $ldContainer->get_all_populations();
