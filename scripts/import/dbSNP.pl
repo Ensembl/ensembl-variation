@@ -588,14 +588,11 @@ sub allele_group {
   $dbVar->do("ALTER TABLE tmp_allele_group_allele MODIFY subsnp_id INT");
   $dbVar->do("ALTER TABLE tmp_allele_group_allele ADD INDEX subsnp_id(subsnp_id)");
 
-  $dbVar->do(qq{INSERT INTO allele_group_allele (allele_group_id, allele_id)
-                SELECT ag.allele_group_id, a.allele_id
-                FROM   allele_group ag, tmp_allele_group_allele taga, allele a,
-                       variation v
+  $dbVar->do(qq{INSERT INTO allele_group_allele (allele_group_id, variation_id, allele)
+                SELECT ag.allele_group_id, v.variation_id, taga.snp_allele
+                FROM   allele_group ag, tmp_allele_group_allele taga, variation v
                 WHERE  ag.hap_id = taga.hap_id
-                AND    a.variation_id = v.variation_id
-                AND    v.subsnp_id = taga.subsnp_id
-                AND    a.allele = taga.snp_allele});
+                AND    v.subsnp_id = taga.subsnp_id});
 
   $dbVar->do("DROP TABLE tmp_allele_group");
   $dbVar->do("DROP TABLE tmp_allele_group_allele");
