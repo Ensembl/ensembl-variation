@@ -256,5 +256,29 @@ sub add_sub_Population {
   return $pop;
 }
 
+=head2 get_all_synonyms
+
+  Arg [1]    : (optional) string $source - the source of the synonyms to
+               return.
+  Example    : @dbsnp_syns = @{$p->get_all_synonyms('dbSNP')};
+               @all_syns = @{$p->get_all_synonyms()};
+  Description: Retrieves synonyms for this Population. If a source argument
+               is provided all synonyms from that source are returned,
+               otherwise all synonyms are returned.
+  Returntype : reference to list of strings
+  Exceptions : none
+  Caller     : general
+
+=cut
+
+sub get_all_synonyms {
+  my $self = shift;
+  my $source = shift;
+
+  return [] if(!$self->adaptor()); #if there is no adaptor, return empty strin
+
+  return $self->adaptor()->get_synonyms($self->dbID(),$source);
+
+}
 
 1;
