@@ -132,34 +132,37 @@ sub parallel_variation_feature{
 #will take the number of processes, and divide the total number of entries in the flanking_sequence table by the number of processes
 #has to wait until the variation_feature table has been filled
 sub parallel_flanking_sequence{
-    my $dbVar = shift;
-
-    my $total_process = 0;
-    my $sequences; #number of entries in the flanking_sequence table
-    my $call;
-    my $flanking_status_file = "flanking_status_file_$$\.log";
-#first, create the log file for the variation_feature
-    open STATUS, ">$TMP_DIR/$flanking_status_file"
-	or throw("Could not open tmp file: $TMP_DIR/$flanking_status_file\n"); 
-    close STATUS;
-    #then, calculate the rows for each subprocess
-    my $sth = $dbVar->prepare(qq{SELECT count(*)
-			   FROM flanking_sequence
-    });
-    $sth->execute();
-    ($sequences) = $sth->fetchrow_array();
-    $sth->finish();
-    my $sub_sequences = int($sequences / $num_processes);
-    for (my $i = 0; $i < $num_processes ; $i++){print "i is $i\n";
-	$limit = $i*$sub_sequences . "," . $sub_sequences  if ($i+1 < $num_processes);
-	$limit = $i*$sub_sequences . "," . $sub_sequences*($i+1) if ($i+1 == $num_processes); #the last one will select the left rows
-	$call = "bsub -o $TMP_DIR/output_flanking_$i\_$$.txt /usr/local/ensembl/bin/perl parallel_flanking_sequence.pl -chost $chost -cuser $cuser -cdbname $cdbname -vhost $vhost -vuser $vuser -vport $vport -vdbname $vdbname -limit $limit -tmpdir $TMP_DIR -tmpfile $TMP_FILE -num_processes $num_processes -status_file $flanking_status_file ";
-	$call .= "-cpass $cpass " if ($cpass);
-	$call .= "-cport $cport " if ($cport);
-	$call .= "-vpass $vpass " if ($vpass);
-	system($call);
-    }
-
+  my $dbVar = shift;
+  
+  my $total_process = 0;
+  my $sequences; #number of entries in the flanking_sequence table
+  my $call;
+  my $flanking_status_file = "flanking_status_file_$$\.log";
+  #first, create the log file for the variation_feature
+  open STATUS, ">$TMP_DIR/$flanking_status_file"
+    or throw("Could not open tmp file: $TMP_DIR/$flanking_status_file\n"); 
+  close STATUS;
+  #then, calculate the rows for each subprocess
+  my $sth = $dbVar->prepare(qq{SELECT count(*)
+			       FROM flanking_sequence
+			      });
+  $sth->execute();
+  ($sequences) = $sth->fetchrow_array();
+  $sth->finish();
+  my $sub_sequences = int($sequences / $num_processes);
+  
+  for (my $i = 0; $i < $num_processes ; $i++){
+   ###num_processes has to be >1, otherwise $i=0, cause limit 0,0
+					      
+   $limit = $i*$sub_sequences . "," . $sub_sequences  if ($i+1 < $num_processes or $num_processes ==1);
+   $limit = $i*$sub_sequences . "," . $sub_sequences*$i if ($i+1 == $num_processes and $num_processes !=1); #the last one will select the left rows
+   $call = "bsub -o $TMP_DIR/output_flanking_$i\_$$.txt /usr/local/ensembl/bin/perl parallel_flanking_sequence.pl -chost $chost -cuser $cuser -cdbname $cdbname -vhost $vhost -vuser $vuser -vport $vport -vdbname $vdbname -limit $limit -tmpdir $TMP_DIR -tmpfile $TMP_FILE -num_processes $num_processes -status_file $flanking_status_file ";
+   $call .= "-cpass $cpass " if ($cpass);
+   $call .= "-cport $cport " if ($cport);
+   $call .= "-vpass $vpass " if ($vpass);
+   system($call);
+  }
+  
 }
 
 #when the variation_feature table has been filled up, run the variation_group_feature. Not necessary to parallelize as fas as I know....
@@ -195,10 +198,12 @@ sub parallel_transcript_variation{
     my $slices = $sa->fetch_all('toplevel', undef, $inc_non_ref);
     #order the slices by name
     my @slices_ordered = sort {$a->seq_region_name cmp $b->seq_region_name }  @{$slices};
+    
     # assumes that variation features have already been pushed to toplevel
     foreach my $slice (@slices_ordered) {
-	$length_slices += $slice->length;
+      $length_slices += $slice->length;
     }
+    
     #I must add up the length of all the slices to find the limit for each 
     my $sub_slice = int($length_slices / $num_processes);
     my $slice_max; #the number of slices in the chunk
@@ -213,8 +218,10 @@ sub parallel_transcript_variation{
 	    }
 	    else{last;}
 	}
-	$limit = $slice_min . "," . ($slice_max-$slice_min) if ($i+1 < $num_processes);
-	$limit = $slice_min . "," . (scalar(@slices_ordered)-$slice_min-1) if ($i+1 == $num_processes); #the last slice, get the left slices
+	$limit = $slice_min . "," . ($slice_max-$slice_min) if ($i+1 < $num_processes or $num_processes==1);
+	$limit = $slice_min . "," . (scalar(@slices_ordered)-$slice_min-1) 
+	  if ($i+1 == $num_processes and $num_processes != 1); #the last slice, get the left slices
+
 	$call = "bsub -o $TMP_DIR/output_transcript_$i\_$$.txt /usr/local/ensembl/bin/perl parallel_transcript_variation.pl -chost $chost -cuser $cuser -cdbname $cdbname -vhost $vhost -vuser $vuser -vport $vport -vdbname $vdbname -limit $limit -tmpdir $TMP_DIR -tmpfile $TMP_FILE -num_processes $num_processes -status_file $transcript_status_file ";
 	$call .= "-cpass $cpass " if ($cpass);
 	$call .= "-cport $cport " if ($cport);
@@ -247,8 +254,11 @@ sub parallel_ld_populations{
     $sth->finish();
     my $sub_populations = int($populations / $num_processes);
     for (my $i = 0; $i < $num_processes ; $i++){
-	$limit = $i*$sub_populations . "," . $sub_populations if ($i+1 < $num_processes);
-	$limit = $i*$sub_populations . "," . $sub_populations*($i+1) if ($i+1 == $num_processes); #the last one will select the left rows
+
+	$limit = $i*$sub_populations . "," . $sub_populations if ($i+1 < $num_processes or $num_processes==1);
+	$limit = $i*$sub_populations . "," . $sub_populations*$i 
+	  if ($i+1 == $num_processes and $num_processes !=1); #the last one will select the left rows
+
 	$call = "bsub -o $TMP_DIR/output_ld_populations_$i\_$$.txt /usr/local/ensembl/bin/perl parallel_ld_populations.pl -chost $chost -cuser $cuser -cdbname $cdbname -vhost $vhost -vuser $vuser -vport $vport -vdbname $vdbname -limit $limit -tmpdir $TMP_DIR -tmpfile $TMP_FILE -num_processes $num_processes -status_file $ld_populations_status_file ";
 	$call .= "-cpass $cpass " if ($cpass);
 	$call .= "-cport $cport " if ($cport);
