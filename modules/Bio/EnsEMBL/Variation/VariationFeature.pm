@@ -300,6 +300,7 @@ sub get_all_TranscriptVariations{
 	#lazy-load from database on demand
 	my $tva = $self->{'adaptor'}->db()->get_TranscriptVariationAdaptor();
 	$tva->fetch_all_by_VariationFeatures([$self]);
+	$self->{'transcriptVariations'} ||= [];
     }
     return $self->{'transcriptVariations'};
 }
