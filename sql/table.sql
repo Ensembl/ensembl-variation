@@ -272,6 +272,7 @@ create table variation_group_variation (
 # seq_region_end             - end position of the variation_group_feature
 # seq_region_strand          - orientation of feature on seq_region
 # variation_group_id         - foreign key references variation_group
+# variation_group_name       - name of the variation_group
 #
 
 create table variation_group_feature(
@@ -598,4 +599,18 @@ CREATE TABLE meta (
   KEY meta_key_index ( meta_key ),
   KEY meta_value_index ( meta_value )
 
+);
+
+###############
+#
+#  Table structure for table tagged_variation_features
+#
+###############
+
+CREATE TABLE tagged_variation_feature (
+
+  variation_feature_id       INT not null,
+  population_id              INT not null,
+  
+  PRIMARY KEY(variation_feature_id, population_id)
 );
