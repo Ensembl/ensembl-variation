@@ -5,7 +5,6 @@ use Getopt::Long;
 use ImportUtils qw(debug);
 use Bio::EnsEMBL::Utils::Exception qw(warning throw verbose);
 use DBH;
-
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 
 my ($TMP_DIR, $TMP_FILE, $LIMIT);
@@ -103,7 +102,7 @@ sub parallel_variation_feature{
     $sth->execute();
     ($min_variation, $max_variation) = $sth->fetchrow_array();
     $sth->finish();
-
+    my $dbname = $dbVar->dbname(); #get the name of the database to create the file    
     #create a temporary table to store the map_weight, that will be deleted by the last process
     $dbVar->do(qq{CREATE TABLE tmp_map_weight
                 SELECT variation_id, count(*) as count
@@ -118,14 +117,14 @@ sub parallel_variation_feature{
     for (my $i = 0; $i < $num_processes ; $i++){
 	$limit = "AND variation_feature_id <= " . (($i+1) * $sub_variation + $min_variation-1) . " AND variation_feature_id >= " . ($i*$sub_variation + $min_variation) if ($i+1 < $num_processes);
 	$limit =  "AND variation_feature_id <= " .  $max_variation . " AND variation_feature_id >= " . ($i*$sub_variation + $min_variation) if ($i + 1 == $num_processes); #the last one takes the left rows
-	$call = "bsub -J variation_job_$i -o $TMP_DIR/output_variation_feature_$i\_$$.txt /usr/local/ensembl/bin/perl parallel_variation_feature.pl -chost $chost -cuser $cuser -cdbname $cdbname -vhost $vhost -vuser $vuser -vport $vport -vdbname $vdbname -limit '$limit' -tmpdir $TMP_DIR -tmpfile $TMP_FILE -num_processes $num_processes -status_file $variation_status_file ";
+	$call = "bsub -J $dbname\_variation_job_$i -o $TMP_DIR/output_variation_feature_$i\_$$.txt /usr/local/ensembl/bin/perl parallel_variation_feature.pl -chost $chost -cuser $cuser -cdbname $cdbname -vhost $vhost -vuser $vuser -vport $vport -vdbname $vdbname -limit '$limit' -tmpdir $TMP_DIR -tmpfile $TMP_FILE -num_processes $num_processes -status_file $variation_status_file ";
 	$call .= "-cpass $cpass " if ($cpass);
 	$call .= "-cport $cport " if ($cport);
 	$call .= "-vpass $vpass " if ($vpass);
 	$call .= "-toplevel $top_level " if ($top_level);
 	system($call);      
     }
-    $call = "bsub -K -w 'done(variation_job*)' -J waiting_process sleep 1"; #waits until all variation features have finished to continue
+    $call = "bsub -K -w 'done($dbname\_variation_job*)' -J waiting_process sleep 1"; #waits until all variation features have finished to continue
     system($call);
 }
 
@@ -252,12 +251,12 @@ sub parallel_ld_populations{
     $sth->execute();
     ($populations) = $sth->fetchrow_array();
     $sth->finish();
-    my $sub_populations = int($populations / $num_processes);
+    $num_processes = $populations if ($populations < $num_processes);
+    my $sub_populations = int($populations / $num_processes) if ($num_processes !=0); #to avoid division by 0 when there are no populations
     for (my $i = 0; $i < $num_processes ; $i++){
 
 	$limit = $i*$sub_populations . "," . $sub_populations if ($i+1 < $num_processes or $num_processes==1);
-	$limit = $i*$sub_populations . "," . $sub_populations*$i 
-	  if ($i+1 == $num_processes and $num_processes !=1); #the last one will select the left rows
+	$limit = $i*$sub_populations . "," . $sub_populations*$i if ($i+1 == $num_processes and $num_processes !=1); #the last one will select the left rows
 
 	$call = "bsub -o $TMP_DIR/output_ld_populations_$i\_$$.txt /usr/local/ensembl/bin/perl parallel_ld_populations.pl -chost $chost -cuser $cuser -cdbname $cdbname -vhost $vhost -vuser $vuser -vport $vport -vdbname $vdbname -limit $limit -tmpdir $TMP_DIR -tmpfile $TMP_FILE -num_processes $num_processes -status_file $ld_populations_status_file ";
 	$call .= "-cpass $cpass " if ($cpass);

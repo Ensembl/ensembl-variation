@@ -2,7 +2,7 @@ use strict;
 use warnings;
 
 use Getopt::Long;
-use Benchmark;
+use Fcntl ':flock';
 use DBI;
 use DBH;
 
@@ -70,7 +70,10 @@ my ($TMP_DIR, $TMP_FILE, $LIMIT,$status_file);
   flanking_sequence($dbCore,$dbVar);
   open STATUS, ">>$TMP_DIR/$status_file"
     or throw("Could not open tmp file: $TMP_DIR/$status_file\n"); 
+  flock(STATUS,LOCK_EX);
+  seek(STATUS, 0, 2); #move to the end of the file
   print STATUS "process finished\n";
+  flock(STATUS,LOCK_UN);
   close STATUS;
   #check if it is the last process
   my $processes = `cat $TMP_DIR/$status_file | wc -l`;
@@ -98,15 +101,14 @@ sub flanking_sequence {
 					 FROM flanking_sequence
 				     ORDER BY variation_id
 				 $LIMIT});
-  print STDERR $LIMIT,"\n";
   $sth_variation->execute();
   my $var_id;
   $sth_variation->bind_columns(\$var_id);
   #in the parallel version, I will write to a file all the flanking sequences to avoid locking the database for updates
- open FH, ">$TMP_DIR/flanking_sequence_$$\.txt"
-    or throw("Could not open tmp file: $TMP_DIR/flanking_sequence_$$\n");
+  my $dbname = $dbVar->dbname(); #get the name of the database to create the file
+  open FH, ">$TMP_DIR/$dbname.flanking_sequence_$$\.txt"
+      or throw("Could not open tmp file: $TMP_DIR/flanking_sequence_$$\n");
   while ($sth_variation->fetch()){
-      print STDERR "variation $var_id\n";
       my $sth = $dbVar->prepare(qq{SELECT fs.up_seq, fs.down_seq,
 				   vf.seq_region_id, vf.seq_region_start,
 				   vf.seq_region_end, vf.seq_region_strand
@@ -217,10 +219,11 @@ sub last_process{
 
     debug("Reimporting processed flanking sequences");
     #group all the fragments in 1 file
-    my $call = "cat $TMP_DIR/flanking_sequence*.txt > $TMP_DIR/$TMP_FILE";
+    my $dbname = $dbVar->dbname(); #get the name of the database to create the file
+    my $call = "cat $TMP_DIR/$dbname.flanking_sequence*.txt > $TMP_DIR/$TMP_FILE";
     system($call);
     #delete the files
-    unlink(<$TMP_DIR/flanking_sequence*.txt>);
+    unlink(<$TMP_DIR/$dbname.flanking_sequence*.txt>);
 
     #and upload all the information to the flanking_sequence table
     load ($dbVar,qw(flanking_sequence variation_id up_seq down_seq up_seq_region_start up_seq_region_end down_seq_region_start down_seq_region_end seq_region_id seq_region_strand));

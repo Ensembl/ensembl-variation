@@ -2,6 +2,7 @@ use strict;
 use warnings;
 
 use Getopt::Long;
+use Fcntl ':flock';
 use DBI;
 use DBH;
 
@@ -72,7 +73,10 @@ my ($TMP_DIR, $TMP_FILE, $LIMIT,$status_file);
 
   open STATUS, ">>$TMP_DIR/$status_file"
     or throw("Could not open tmp file: $TMP_DIR/$status_file\n"); 
+  flock(STATUS,LOCK_EX);
+  seek(STATUS, 0, 2); #move to the end of the file
   print STATUS "process finished\n";
+  flock(STATUS,LOCK_UN);
   close STATUS;
   #check if it is the last process
   my $processes = `cat $TMP_DIR/$status_file | wc -l`;
@@ -109,7 +113,8 @@ sub transcript_variation {
 
   my $sa = $dbCore->get_SliceAdaptor();
 
-  open FH, ">$TMP_DIR/transcript_variation_$$\.txt";
+  my $dbname = $dbVar->dbname(); #get the name of the database to create the file
+  open FH, ">$TMP_DIR/$dbname.transcript_variation_$$\.txt";
 
   my $inc_non_ref = 1;
   my $slices = $sa->fetch_all('toplevel', undef, $inc_non_ref);
@@ -372,10 +377,11 @@ sub last_process{
     my $dbVar = shift;
     
     debug("Reimporting processed transcript variation");
-    my $call = "cat $TMP_DIR/transcript_variation*.txt > $TMP_DIR/$TMP_FILE";
+    my $dbname = $dbVar->dbname(); #get the name of the database to create the file
+    my $call = "cat $TMP_DIR/$dbname.transcript_variation*.txt > $TMP_DIR/$TMP_FILE";
     system($call);
 
-#    unlink(<$TMP_DIR/transcript_variation*.txt>);
+    unlink(<$TMP_DIR/$dbname.transcript_variation*.txt>);
 
     load($dbVar, qw(transcript_variation
 			      transcript_id variation_feature_id peptide_allele_string

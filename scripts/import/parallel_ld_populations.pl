@@ -2,6 +2,7 @@ use strict;
 use warnings;
 
 use Getopt::Long;
+use Fcntl ':flock';
 use DBI;
 use DBH;
 
@@ -10,6 +11,8 @@ use Bio::EnsEMBL::Utils::Exception qw(warning throw verbose);
 
 use ImportUtils qw(debug load);
 
+use constant MAX_GENOTYPES => 1_000_000; #max number of genotypes per file. When more, split the file into regions
+use constant REGIONS => 5; #number of chunks the file will be splited when more than MAX_GENOTYPES
 
 my ($TMP_DIR, $TMP_FILE, $LIMIT,$status_file);
 
@@ -70,7 +73,10 @@ my ($TMP_DIR, $TMP_FILE, $LIMIT,$status_file);
   ld_populations($dbCore,$dbVar);
   open STATUS, ">>$TMP_DIR/$status_file"
     or throw("Could not open tmp file: $TMP_DIR/$status_file\n"); 
+  flock(STATUS,LOCK_EX);
+  seek(STATUS, 0, 2); #move to the end of the file
   print STATUS "process finished\n";
+  flock(STATUS,LOCK_UN);
   close STATUS;
   #check if it is the last process
   my $processes = `cat $TMP_DIR/$status_file | wc -l`;
@@ -93,6 +99,7 @@ sub ld_populations{
     });
     $sth->execute();
     $sth->bind_columns(\$population_id);
+    debug("calculating ld distance");
     #for all the populations, we calculate the pairwise_ld informaiton
     while ($sth->fetch()){
 	&pairwise_ld($dbCore,$dbVar,$population_id);
@@ -111,11 +118,12 @@ sub pairwise_ld{
     my %alleles_variation = (); #will contain a record of the alleles in the variation. A will be the major, and a the minor. When more than 2 alleles
     my %genotype_information; #will contain all the genotype information to write in the file, if necessary
     #, the genotypes for that variation will be discarded
+    my %regions; #will contain all the regions in the population and the number of genotypes in each one
     my $previous_variation_id = ''; #to know if it is a new variation and we can get the new alleles
     my $genotype; #genotype in the AA, Aa or aa format to write to the file
 #    debug("Loading pairwise_ld table for population $population_id\n");
 
-    #necessary the order to know when we change variation. Not get genotypes with a NULL variation
+    #necessary the order to know when we change variation. Not get genotypes with a NULL variation or map_weight > 1
     my $sth = $dbVar->prepare
 	(qq{SELECT ig.variation_id, vf.variation_feature_id, vf.seq_region_id, vf.seq_region_start, ig.individual_id, ig.allele_1, ig.allele_2, vf.seq_region_end
 		FROM   variation_feature vf, individual_genotype ig, individual i
@@ -123,10 +131,12 @@ sub pairwise_ld{
 		AND i.individual_id = ig.individual_id
 		AND i.population_id = ?
 		AND ig.allele_2 IS NOT NULL
+		AND vf.map_weight = 1
 		ORDER BY vf.seq_region_id,vf.seq_region_start
 		});
     $sth->execute($population_id);
-    open ( FH, ">$TMP_DIR/pairwise_ld_$$\.txt");
+    my $dbname = $dbVar->dbname(); #get the name of the database to create the file
+    open ( FH, ">$TMP_DIR/$dbname.pairwise_ld_$$\.txt");
 
     #retrieve all the genotypes and format them into the calculation_genotype required format:
     # snp_id chr position individual_id genotype
@@ -146,6 +156,7 @@ sub pairwise_ld{
 		$count_not_discarded++;
 		&convert_genotype(\%alleles_variation,\%genotype_information);
 		foreach my $individual_id (keys %genotype_information){
+		    $regions{$genotype_information{$individual_id}{seq_region_id}}++; #add one more genotype in the region
 		    print FH join("\t",$previous_variation_id,$genotype_information{$individual_id}{seq_region_start},$individual_id,$genotype_information{$individual_id}{genotype},$genotype_information{$individual_id}{variation_feature_id},$genotype_information{$individual_id}{seq_region_id},$genotype_information{$individual_id}{seq_region_end},$population_id),"\n";
 		}
 	    }
@@ -171,14 +182,59 @@ sub pairwise_ld{
 #    print "Number of variations discarded for population $population_id are: $count_discarded and used $count_not_discarded\n\n";
     $sth->finish();
     close FH;
-#    debug("calculating ld distance");
-    #and, finally, create the table with the information, calling the calc_genotypes.pl script
-    system("perl /nfs/acari/dr2/projects/ExoSeq/scripts/ld_distance/calc_genotypes_test.pl $TMP_DIR/pairwise_ld_$$\.txt $TMP_DIR/pairwise_ld_out_$$\.txt");
+    #to make a better use of the farm, break the population into smaller segments when the population contains more than 2_000_000
+    #check if it is the last process
+    my $lines = `cat $TMP_DIR/$dbname.pairwise_ld_$$\.txt | wc -l`;
+    #when there are more genotypes than MAX, split the file into regions to better use the farm and concatenate them at the end
+    if ($lines > MAX_GENOTYPES()){
+	&split_file("$TMP_DIR/$dbname.pairwise_ld_$$\.txt",\%regions,$lines,$dbname);
+	foreach my $i (1..REGIONS){
+	    system("bsub -J $dbname\_ld_job_$$\_$i -o $TMP_DIR/output_ld_populations_region_$i\_$$.txt /usr/local/ensembl/bin/perl calc_genotypes.pl $TMP_DIR/$dbname.pairwise_ld_chunk_$i\_$$\.txt $TMP_DIR/$dbname.pairwise_ld_chunk_out_$i\_$$\.txt");
+	}
+	system("bsub -K -w 'done($dbname\_ld_job_$$\_*)' -J waiting_process sleep 1"); #wait for the calculation to finish
+	system("cat $TMP_DIR/$dbname.pairwise_ld_chunk_out_?_$$\.txt > $TMP_DIR/$dbname.pairwise_ld_out_$$\.txt"); #concat all the pieces into the final file	
+    }
+    else{
+	#and, finally, create the table with the information, calling the calc_genotypes.pl script
+	system("perl /nfs/acari/dr2/projects/src/ensembl/ensembl-variation/scripts/import/calc_genotypes.pl $TMP_DIR/$dbname.pairwise_ld_$$\.txt $TMP_DIR/$dbname.pairwise_ld_out_$$\.txt");
+    }
     #delete the file with the original file
-    unlink("$TMP_DIR/pairwise_ld_$$\.txt");
-
-
+    unlink("$TMP_DIR/$dbname.pairwise_ld_$$\.txt");
     return;
+}
+
+#given a file with more than MAX_GENOTYPES, splits it in REGIONS different files
+sub split_file{
+    my $file = shift;
+    my $regions = shift; #hash with all the regions in the population and the number of genotypes in each region
+    my $genotypes = shift;
+    my $dbname = shift;
+    my @regions_ordered = sort {$a<=>$b} keys %{$regions};
+    my $sub_genotypes = int($genotypes/REGIONS()); #find minimum number of genotypes in each file
+    #create the groups of regions for each file: the array will contain the number of genotypes (lines) that the group must contain
+    my @groups;
+    my $lines = 0;
+    my $index = 1; #position in the group. The first position will contain n lines, the second $i*$n,...
+    foreach my $region (@regions_ordered){
+	$lines += $regions->{$region};
+	if ($lines > $sub_genotypes * $index){
+	    push @groups,$lines;	    
+	    $index++;
+	}
+    }
+    open INFILE, "< $file" or die "Could not open file $file: $!";
+    my $chunk = 1;
+    until(eof INFILE) {
+	open OUTFILE, "> $TMP_DIR/$dbname.pairwise_ld_chunk_$chunk\_$$\.txt"
+	    or die "Could not open file $TMP_DIR/$dbname.pairwise_ld_chunk_$chunk\_$$\.txt: $!";	
+	while(<INFILE>) {
+	    print OUTFILE;
+	    last unless $. % $groups[$chunk-1]; #will return true when the line
+	}
+	++$chunk;
+	close OUTFILE;
+    }
+    close INFILE;
 }
 #
 # Converts the genotype into the required format for the calculation of the pairwise_ld value: AA, Aa or aa
@@ -220,9 +276,12 @@ sub last_process{
 
     debug("Importing pairwise data");
    #group all the fragments in 1 file
-    my $call = "cat $TMP_DIR/pairwise_ld_out*.txt > $TMP_DIR/$TMP_FILE";
+    my $dbname = $dbVar->dbname(); #get the name of the database to create the file
+    my $call = "cat $TMP_DIR/$dbname.pairwise_ld_out*.txt > $TMP_DIR/$TMP_FILE";
     system($call);
-    unlink(<$TMP_DIR/pairwise_ld_out*>);    
+    unlink(<$TMP_DIR/$dbname.pairwise_ld_out*>);    
+    #remove chunk files created
+    unlink(<$TMP_DIR/$dbname.pairwise_ld_chunk_*>);
 
     #and import the data in the database
     load($dbVar, qw(pairwise_ld variation_feature_id_1 variation_feature_id_2 population_id seq_region_id seq_region_start seq_region_end snp_distance_count r2 d_prime sample_count));
@@ -249,7 +308,7 @@ sub update_meta_coord {
   my $sth = $dbVar->prepare
     ('INSERT INTO meta_coord set table_name = ?, coord_system_id = ?');
 
-  $sth->execute($table_name, $cs->dbID());
+#  $sth->execute($table_name, $cs->dbID());
 
   $sth->finish();
 

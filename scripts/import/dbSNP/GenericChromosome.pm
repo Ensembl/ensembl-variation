@@ -41,21 +41,46 @@ sub variation_feature{
     
     create_and_load($self->{'dbVariation'}, "tmp_contig_loc", "snp_id i*", "chr *", "start i", 
 		    "end i", "strand i");
+
+    debug("Creating genotyped variations");
+    #creating the temporary table with the genotyped variations
+    dumpSQL($self->{'dbVariation'},qq{SELECT DISTINCT variation_id
+					  FROM individual_genotype
+				      });
+    create_and_load($self->{'dbVariation'},'tmp_genotyped_var',"variation_id *");
     
-    debug("Creating variation_feature data");
+
+    debug("Creating tmp_variation_feature data");
     
-    $self->{'dbVariation'}->do(qq{INSERT INTO variation_feature 
-				      (variation_id, seq_region_id,
-				       seq_region_start, seq_region_end, seq_region_strand,
-				       variation_name)
-				      SELECT v.variation_id, ts.seq_region_id, tcl.start, tcl.end,
-				      tcl.strand, v.name
-				      FROM   variation v, tmp_contig_loc tcl, tmp_seq_region ts
-				      WHERE  v.snp_id = tcl.snp_id
-				      AND    tcl.chr = ts.name});
+    dumpSQL($self->{'dbVariation'},qq{SELECT v.variation_id, ts.seq_region_id, tcl.start, tcl.end, tcl.strand, v.name
+					  FROM variation v, tmp_contig_loc tcl, tmp_seq_region ts
+					  WHERE v.snp_id = tcl.snp_id
+					  AND tcl.chr = ts.name });
+
+    create_and_load($self->{'dbVariation'},'tmp_variation_feature',"variation_id *","seq_region_id", "seq_region_start", "seq_region_end", "seq_region_strand", "variation_name");
     
+#    $self->{'dbVariation'}->do(qq{INSERT INTO variation_feature 
+#				      (variation_id, seq_region_id,
+#				       seq_region_start, seq_region_end, seq_region_strand,
+#				       variation_name,flags)
+#				      SELECT STRAIGHT_JOIN v.variation_id, ts.seq_region_id, tcl.start, tcl.end,
+#				      tcl.strand, v.name, IF(tgv.variation_id,'genotyped',NULL)
+#				      FROM   variation v LEFT JOIN tmp_genotyped_var tgv ON v.variation_id = tgv.variation_id, 
+#				      tmp_contig_loc tcl, tmp_seq_region ts
+#				      WHERE  v.snp_id = tcl.snp_id
+#				      AND    tcl.chr = ts.name});
+    debug("Dumping data into variation_feature table");
+    $self->{'dbVariation'}->do(qq{INSERT INTO variation_feature (variation_id, seq_region_id,seq_region_start, seq_region_end, seq_region_strand,
+								 variation_name, flags)
+				      SELECT tvf.variation_id, tvf.seq_region_id, tvf.seq_region_start, tvf.seq_region_end, tvf.seq_region_strand,
+				      tvf.variation_name,IF(tgv.variation_id,'genotyped',NULL)
+				      FROM tmp_variation_feature tvf LEFT JOIN tmp_genotyped_var tgv ON tvf.variation_id = tgv.variation_id
+				  });
+
     $self->{'dbVariation'}->do("DROP TABLE tmp_contig_loc");
     $self->{'dbVariation'}->do("DROP TABLE tmp_seq_region");
+    $self->{'dbVariation'}->do("DROP TABLE tmp_genotyped_var");
+    $self->{'dbVariation'}->do("DROP TABLE tmp_variation_feature");
 }
 
 1;
