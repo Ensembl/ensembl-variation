@@ -164,7 +164,8 @@ create table individual(
 #                         with this position
 # allele_string         - this is a denormalised string taken from the 
 #                         alleles in the allele table associated with this
-#                         variation
+#                         variation.  The reference allele (i.e. one on the
+                          reference genome comes first).
 # variation_name        - a denormalisation taken from the variation table
 #                         this is the name or identifier that is used for
 #                         displaying the feature.
@@ -226,23 +227,38 @@ create table variation_group_feature(
 # This table contains a classification of variation features based on Ensembl
 # predicted transcripts.  Variation features which fall into Ensembl 
 # transcript regions are classified as 'INTRONIC', '5PRIME', '3PRIME',
-# 'SYNONYMOUS_CODING', 'NON_SYNONYMOUS_CODING', '5PRIME_UTR', '3PRIME_UTR'
+# 'SYNONYMOUS_CODING', 'NON_SYNONYMOUS_CODING', 'FRAMESHIFT_CODING',
+# '5PRIME_UTR', '3PRIME_UTR'
 #
 # transcript_variation_id - primary key, internal identifier
+# transcript_id           - foreign key to core databases
+#                           unique internal id of related transcript
 # variation_feature_id    - foreign key ref variation_feature
+# cdna_start              - start position of variation in cdna coordinates
+# cdna_end                - end position of variation in cdna coordinates
+# translation_start       - start position of variation on peptide
+# translation_end         - end position of variation on peptide
+# peptide_allele_string   - allele string of '/' seperated amino acids
+#                           reference allele is first
 # 
 
 create table transcript_variation(
 	transcript_variation_id int not null auto_increment,
+  transcript_id int not null,
 	variation_feature_id int not null,
-	amino_acid_change varchar(255),
-	amino_acid_position int,
-	cdna_position int,
-	type enum( "INTRONIC", "5PRIME", "3PRIME", "SYNONYMOUS_CODING",
-	"NON_SYNONYMOUS_CODING", "5PRIME_UTR", "3PRIME_UTR" ),
+  cdna_start int,
+  cdna_end   int,
+  translation_start int,
+  translation_end int,  
+	peptide_allele_string varchar(255),
+	type enum( "INTRONIC", "UPSTREAM", "DOWNSTREAM", "SYNONYMOUS_CODING",
+	           "NON_SYNONYMOUS_CODING", "FRAMESHIFT_CODING", 
+             "5PRIME_UTR", "3PRIME_UTR" ) not null,
 	
 	primary key( transcript_variation_id ),
-	key variation_idx( variation_feature_id )
+	key variation_idx( variation_feature_id ),
+  key transcript_idx( transcript_id ),
+  key type_idx(type)
 	);
 
 #
