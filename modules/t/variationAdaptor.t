@@ -109,7 +109,7 @@ $states = $var->get_all_validation_states();
 
 ok($states->[0] eq 'freq' && $states->[1] eq 'submitter');
 
-my %a = map {$_->dbID() => $_} @{$var->get_all_Alleles()};
+%a = map {$_->dbID() => $_} @{$var->get_all_Alleles()};
 
 ok($a{1}->allele() eq 'C' && $a{1}->frequency() == 0.96 &&
    $a{2}->allele() eq 'T' && $a{2}->frequency() == 0.04 &&
