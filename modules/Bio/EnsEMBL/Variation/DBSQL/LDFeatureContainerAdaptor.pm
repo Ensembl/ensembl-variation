@@ -68,6 +68,7 @@ our @ISA = ('Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor');
 
   Arg [1]    : Bio::EnsEMBL::Slice $slice
                The slice to fetch genes on. Assuming it is always correct (in the top level)
+  Arg [2]    : (optional) int $population_id. Population where we want to select the LD information
   Example    : $ldFeatureContainer = $ldfeaturecontainer_adaptor->fetch_by_Slice($slice);
   Description: Overwrites superclass method to add the name of the slice to the LDFeatureContainer.
   Returntype : Bio::EnsEMBL::Variation::LDFeatureContainer
@@ -79,12 +80,19 @@ our @ISA = ('Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor');
 sub fetch_by_Slice{
     my $self = shift;
     my $slice = shift;
-
+    my $population_id = shift;
+    my $ldFeatureContainer;
     if(!ref($slice) || !$slice->isa('Bio::EnsEMBL::Slice')) {
 	throw('Bio::EnsEMBL::Slice arg expected');
     }
 
-    my $ldFeatureContainer = $self->generic_fetch("pl.seq_region_id = " . $slice->get_seq_region_id() . " AND pl.seq_region_start >= " . $slice->start() . " AND pl.seq_region_end <= " . $slice->end() .  " AND pl.seq_region_start <= " . $slice->end());
+    #if a population is passed as an argument, select the LD in the region with the population
+    if ($population_id){
+	$ldFeatureContainer = $self->generic_fetch("pl.seq_region_id = " . $slice->get_seq_region_id() . " AND pl.seq_region_start >= " . $slice->start() . " AND pl.seq_region_end <= " . $slice->end() .  " AND pl.seq_region_start <= " . $slice->end() . " AND pl.population_id = " . $population_id);
+    }
+    else{
+	$ldFeatureContainer = $self->generic_fetch("pl.seq_region_id = " . $slice->get_seq_region_id() . " AND pl.seq_region_start >= " . $slice->start() . " AND pl.seq_region_end <= " . $slice->end() .  " AND pl.seq_region_start <= " . $slice->end());
+    }
     #and store the name of the slice in the Container
     $ldFeatureContainer->name($slice->name());
     return $ldFeatureContainer;
