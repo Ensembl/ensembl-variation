@@ -16,6 +16,10 @@ Bio::EnsEMBL::Variation::DBSQL::VariationFeatureAdaptor
   $vdb = Bio::EnsEMBL::Variation::DBSQL::DBAdaptor->new(...);
   $db  = Bio::EnsEMBL::DBSQL::DBAdaptor->new(...);
 
+  # tell the variation database where core database information can be
+  # be found
+  $vdb->dnadb($db);
+
   $va = $vdb->get_VariationAdaptor();
   $vfa = $vdb->get_VariationFeatureAdaptor();
   $sa  = $db->get_SliceAdaptor();
