@@ -16,8 +16,7 @@ Bio::EnsEMBL::Variation::TranscriptVariation
   use Bio::EnsEMBL::Variation::TranscriptVariation;
 
   $tr_var = Bio::EnsEMBL::Variation::TranscriptVariation->new
-    (-variation_feature => $feature,
-     -transcript        => $transcript,
+    (-transcript        => $transcript,
      -pep_allele_string => 'N/K',
      -cdna_start        => 1127,
      -cdna_end          => 1127,
@@ -82,10 +81,6 @@ our %VALID_TYPES = ('INTRONIC' => 1,
   Arg [-DBID] :
     int the unique internal identifier for this TranscriptVariation
 
-  Arg [-VARIATION_FEATURE] :
-    Bio::EnsEMBL::Variation::VariationFeature - The variation feature that was
-    used to derive this TranscriptVariation.
-
   Arg [-TRANSCRIPT] :
     Bio::EnsEMBL::Transcript - The transcript affected by this
     TranscriptVariation
@@ -116,14 +111,13 @@ our %VALID_TYPES = ('INTRONIC' => 1,
 
   Example    : 
     $tr_var = Bio::EnsEMBL::Variation::TranscriptVariation->new
-      (-variation_feature => $feature,
-       -transcript        => $transcript,
+      (-transcript        => $transcript,
        -pep_allele_string => 'N/K',
        -cdna_start        => 1127,
        -cdna_end          => 1127,
        -translation_start => 318,
        -translation_end   => 318,
-       -consequence_type              => 'NON_SYNONYMOUS_CODING');
+       -consequence_type  => 'NON_SYNONYMOUS_CODING');
 
   Description: Constructor. Instantiates a
                Bio::EnsEMBL::Variation::TranscriptVariation object
@@ -136,20 +130,11 @@ our %VALID_TYPES = ('INTRONIC' => 1,
 sub new {
   my $class = shift;
 
-  my ($vf, $tr, $pep_allele, $cdna_start,$cdna_end, $tl_start,$tl_end, $consequence_type,
+  my ($vf_id, $tr_id, $pep_allele, $cdna_start,$cdna_end, $tl_start,$tl_end, $consequence_type,
       $dbID, $adaptor) =
     rearrange([qw(VARIATION_FEATURE TRANSCRIPT PEP_ALLELE_STRING CDNA_START
                   CDNA_END TRANSLATION_START TRANSLATION_END CONSEQUENCE_TYPE
                   DBID ADAPTOR)], @_);
-
-  if(defined($vf) &&
-     (!ref($vf) || !$vf->isa('Bio::EnsEMBL::Variation::VariationFeature'))) {
-    throw('VariationFeature argument expected');
-  }
-
-  if(defined($tr) && (!ref($tr) || !$tr->isa('Bio::EnsEMBL::Transcript'))) {
-    throw('Transcript argument expected');
-  }
 
   if(defined($consequence_type)) {
     $consequence_type = uc($consequence_type);
@@ -177,8 +162,8 @@ sub new {
 
   return bless {'dbID'              => $dbID,
                 'adaptor'           => $adaptor,
-                'variation_feature' => $vf,
-                'transcript'        => $tr,
+                '_vf_id           ' => $vf_id,
+                '_transcript_id'    => $tr_id,
                 'pep_allele_string' => $pep_allele,
                 'cdna_start'        => $cdna_start,
                 'cdna_end'          => $cdna_end,
@@ -231,12 +216,12 @@ sub transcript {
 
 =head2 variation_feature
 
-  Arg [1]    : (optional) Bio::EnsEMBL::Variation::VariationFeature $vf
+  Args       : none
   Example    : print $trvar->variation_feature()->variation_name(), "\n";
-  Description: Getter/Setter for the VariationFeature associated with this
+  Description: Getter for the VariationFeature associated with this
                transcript variation.
   Returntype : Bio::EnsEMBL::Variation::VariationFeature
-  Exceptions : throw on bad argument
+  Exceptions : none
   Caller     : general
 
 =cut
@@ -244,16 +229,12 @@ sub transcript {
 sub variation_feature {
   my $self = shift;
 
-  if(@_) {
-    my $vf = shift;
-    if(defined($vf) && 
-       (!ref($vf) || !$vf->isa('Bio::EnsEMBL::Variation::VariationFeature'))) {
-      throw('Bio::EnsEMBL::Variation::VariationFeature argument expected');
-    }
-    $self->{'variation_feature'} = $vf;
+  if(defined($self->{'_vf_id'}) && $self->{'adaptor'}){
+      #lazy-load  from database on demand
+      my $vf = $self->{'adaptor'}->db()->get_VariationFeatureAdaptor();
+      return $vf->fetch_by_dbID($self->{'_vf_id'});
   }
 
-  return $self->{'variation_feature'};
 }
 
 
