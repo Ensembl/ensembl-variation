@@ -21,14 +21,14 @@ my $LIMIT = ' LIMIT 10000 ';
     (-host   => 'ecs2',
      -user   => 'ensro',
      -port   => 3364,
-     -dbname => 'mus_musculus_core_22_32b');
+     -dbname => 'homo_sapiens_core_22_34d');
 
   my $dbVar = DBI->connect
     ("DBI:mysql:host=$vhost;dbname=$vdbname;port=$vport",$vuser, $vpass );
   die("Could not connect to variation database: $!") if(!$dbVar);
 
   variation_feature($dbCore, $dbVar);
-  flanking_sequence($dbCore, $dbVar);
+#  flanking_sequence($dbCore, $dbVar);
   variation_group_feature($dbCore, $dbVar);
   transcript_variation($dbCore, $dbVar);
 
@@ -106,6 +106,7 @@ sub variation_feature {
         }
 
         if($allele_str) {
+          ### TBD print to a file and load into db
           print STDERR join("\t", $cur_vf_id, $top_sr_id, $top_coord->start(),
                             $top_coord->end(), $top_coord->strand(),
                             $cur_v_id, $allele_str, $cur_v_name,
@@ -124,6 +125,12 @@ sub variation_feature {
       # map the variation coordinates to toplevel
 
       my $slice = $slice_adaptor->fetch_by_seq_region_id($sr_id);
+
+      if(!$slice) {
+        warning("Could not locate seq_region with id=$sr_id");
+        next;
+      }
+         
       my @coords = $mapper->map($slice->seq_region_name(), $sr_start, $sr_end,
                                 $sr_strand, $sctg_cs);
 
@@ -287,7 +294,23 @@ sub flanking_sequence {
 
 
 sub variation_group_feature {
+  my $dbCore = shift;
+  my $dbVar  = shift;
 
+  ### TBD: fix this: does not check to see that all the variation_features
+  ### are actually on the same seq_region or in close proximity
+
+  debug("Loading variation_group_feature table");
+
+  $dbVar->do(qq{INSERT INTO variation_group_feature 
+                       (seq_region_id, seq_region_start, seq_region_end,
+                        seq_region_strand, variation_group_id)
+                SELECT vf.seq_region_id, min(vf.seq_region_start),
+                       max(vf.seq_region_end), vf.strand,
+                       vgv.variation_group_id
+                FROM   variation_feature vf, variation_group_variation vgv
+                WHERE  vgv.variation_id = vf.variation_id
+                GROUP BY vgv.variation_group_id, vf.seq_region_id});
 }
 
 
