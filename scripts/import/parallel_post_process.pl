@@ -278,6 +278,34 @@ sub parallel_ld_populations{
     my $buffer = {}; #will contain a buffer where will be written all the LD information
     my %populations;
     my %genotypes_file; #foreach file, will contain the number of genotypes, so we can split it later
+
+    #going to get the population_id for the HapMap and PerlEgene populations and a hash with the individuals that shouldn't
+    #be present in the LD calculation
+    my $pop_id;
+    my $population_name;
+    #get all populations to be tagged (HapMap and PerlEgen)
+    my $sth = $dbVar->prepare(qq{SELECT population_id, name
+						FROM population
+						WHERE name like 'perlegen:afd%'
+						OR name like 'cshl-hapmap%'
+					    });
+    
+
+    $sth->execute();
+    $sth->bind_columns(\$pop_id,\$population_name);
+    #get all the children that we do not want in the genotypes
+    my $siblings = {}; # hash {$individual_id} ,where the individual is sibling of another one
+    my @pops;
+    while($sth->fetch){
+	if($population_name =~ /CEU|YRI/){
+	    &get_siblings($dbVar,$pop_id,$siblings);
+	}
+	push @pops, $pop_id;
+    }
+    
+    my $in_str = " IN (" . join(',', @pops). ")";
+
+
     #necessary the order to know when we change variation. Not get genotypes with a NULL variation or map_weight > 1
 
     $sth = $dbVar->prepare
@@ -289,7 +317,7 @@ sub parallel_ld_populations{
 		    AND   ig.allele_2 IS NOT NULL
 		    AND   vf.map_weight = 1
 		    AND   ip.individual_id = ig.individual_id
-		    AND   ip.population_id IN (898,899,900,936,937,938,939)
+		    AND   ip.population_id $in_str
 		    ORDER BY  vf.seq_region_id,vf.seq_region_start}, {mysql_use_result => 1} );
 
 
@@ -306,36 +334,39 @@ sub parallel_ld_populations{
 	if ($previous_variation_id eq ''){
 	    $previous_variation_id = $variation_id;
 	}
-	#if it is a new variation, write to the file (if necessary) and empty the hash
-	if ($previous_variation_id ne $variation_id){
-	    foreach my $population (keys %alleles_variation){
-		#if the variation has 2 alleles, print all the genotypes to the file
-		if (keys %{$alleles_variation{$population}} == 2){		
-		    &convert_genotype($alleles_variation{$population},$genotype_information{$population});
-		    foreach my $individual_id (keys %{$genotype_information{$population}}){
-			&print_individual_file($buffer,$population, 
-					       $previous_variation_id, $individual_id,
-					       \%genotype_information,\%sub_super_pop,$dbname,\%genotypes_file,\%regions);
+	#only print genotypes without parents genotyped
+	if (!exists $siblings->{$individual_id}){
+	    #if it is a new variation, write to the file (if necessary) and empty the hash
+	    if ($previous_variation_id ne $variation_id){
+		foreach my $population (keys %alleles_variation){
+		    #if the variation has 2 alleles, print all the genotypes to the file
+		    if (keys %{$alleles_variation{$population}} == 2){		
+			&convert_genotype($alleles_variation{$population},$genotype_information{$population});
+			foreach my $individual_id (keys %{$genotype_information{$population}}){
+			    &print_individual_file($buffer,$population, 
+						   $previous_variation_id, $individual_id,
+						   \%genotype_information,$dbname,\%genotypes_file,\%regions);
+			}
 		    }
 		}
+		$previous_variation_id = $variation_id;
+		%alleles_variation = (); #new variation, flush the hash
+		%genotype_information = (); #new variation, flush the hash
 	    }
-	    $previous_variation_id = $variation_id;
-	    %alleles_variation = (); #new variation, flush the hash
-	    %genotype_information = (); #new variation, flush the hash
-	}
 	    #we store the genotype information for the variation
-	$genotype_information{$population_id}{$individual_id}{variation_feature_id} = $variation_feature_id;
-	$genotype_information{$population_id}{$individual_id}{seq_region_start} = $seq_region_start;
-	$genotype_information{$population_id}{$individual_id}{allele_1} = $allele_1;
-	$genotype_information{$population_id}{$individual_id}{allele_2} = $allele_2;
-	$genotype_information{$population_id}{$individual_id}{seq_region_end} = $seq_region_end;
-	$genotype_information{$population_id}{$individual_id}{seq_region_id} = $seq_region_id;
+	    $genotype_information{$population_id}{$individual_id}{variation_feature_id} = $variation_feature_id;
+	    $genotype_information{$population_id}{$individual_id}{seq_region_start} = $seq_region_start;
+	    $genotype_information{$population_id}{$individual_id}{allele_1} = $allele_1;
+	    $genotype_information{$population_id}{$individual_id}{allele_2} = $allele_2;
+	    $genotype_information{$population_id}{$individual_id}{seq_region_end} = $seq_region_end;
+	    $genotype_information{$population_id}{$individual_id}{seq_region_id} = $seq_region_id;
 	    
-	#and the alleles
-	$alleles_variation{$population_id}{$allele_1}++;
-	$alleles_variation{$population_id}{$allele_2}++;
-	
-	$populations{$population_id}++;
+	    #and the alleles
+	    $alleles_variation{$population_id}{$allele_1}++;
+	    $alleles_variation{$population_id}{$allele_2}++;
+	    
+	    $populations{$population_id}++;
+	}
     }
     $sth->finish();
     #we have to print the last variation
@@ -346,7 +377,7 @@ sub parallel_ld_populations{
 	    foreach my $individual_id (keys %{$genotype_information{$population}}){
 		&print_individual_file($buffer,$population, 
 				       $previous_variation_id, $individual_id,
-				       \%genotype_information,\%sub_super_pop,$dbname,\%genotypes_file,\%regions);
+				       \%genotype_information,$dbname,\%genotypes_file,\%regions);
 	    }
 	}
     }
@@ -380,7 +411,6 @@ sub print_individual_file{
     my $previous_variation_id = shift;
     my $individual_id = shift;
     my $genotype_information = shift;
-    my $sub_super_pop = shift;
     my $dbname = shift;
     my $genotypes_file = shift;
     my $regions = shift;
@@ -492,6 +522,28 @@ sub split_file{
     }
     close INFILE;
     unlink $file; #remove the original file after splitting it
+}
+
+#for a given population, gets all individuals that are children (have father or mother)
+sub get_siblings{
+    my $dbVariation = shift;
+    my $population_id = shift;
+    my $siblings = shift;
+
+    my $sth_individual = $dbVariation->prepare(qq{SELECT i.individual_id
+							     FROM individual i, individual_population ip
+							     WHERE ip.individual_id = i.individual_id
+							     AND ip.population_id = ? 
+							     AND i.father_individual_id IS NOT NULL
+							     AND i.mother_individual_id IS NOT NULL
+							 });
+    my ($individual_id);
+    $sth_individual->execute($population_id);
+    $sth_individual->bind_columns(\$individual_id);
+    while ($sth_individual->fetch){
+	$siblings->{$individual_id}++;
+    }
+    return $siblings;
 }
 
 sub usage {
