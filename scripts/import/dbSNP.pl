@@ -131,7 +131,7 @@ sub variation_table {
   debug("Dumping RefSNPs");
 
   dumpSQL($dbSNP,  qq{
-           SELECT 1, concat( "rs", snp_id), snp_id
+           SELECT 1, concat( "rs", snp_id), validation_status, snp_id
            FROM SNP
            WHERE tax_id = $TAX_ID
            $LIMIT_SQL
@@ -140,19 +140,18 @@ sub variation_table {
 
   debug("Loading RefSNPs into variation table");
 
-  load( $dbVar, "variation", "source_id", "name", "snp_id" );
+  load( $dbVar, "variation", "source_id", "name", "validation_status", "snp_id" );
 
   $dbVar->do( "ALTER TABLE variation ADD INDEX snpidx( snp_id )" );
 
   # create a temp table of subSNP info
-  # containing RefSNP id, SubSNP id and validation status
 
   debug("Dumping SubSNPs");
 
   dump_subSNPs();
 
   create_and_load( $dbVar, "tmp_var_allele", "subsnp_id i*", "refsnp_id i*",
-                   "pop_id i", "allele","valid", "substrand_reversed_flag i");
+                   "pop_id i", "allele", "substrand_reversed_flag i");
 
   # load the synonym table with the subsnp identifiers
 
@@ -161,13 +160,11 @@ sub variation_table {
   $dbVar->do("ALTER TABLE variation_synonym add column subsnp_id int");
   $dbVar->do(qq{ALTER TABLE variation_synonym 
                 add column substrand_reversed_flag tinyint});
-  $dbVar->do(qq{ALTER TABLE variation_synonym 
-                add column validated enum ('VALIDATED', 'NOT_VALIDATED')});
 
   $dbVar->do( qq{INSERT INTO variation_synonym (variation_id, source_id, name,
-                               subsnp_id, validated, substrand_reversed_flag )
+                               subsnp_id, substrand_reversed_flag )
                  SELECT v.variation_id, 1,
-                        CONCAT('ss',tv.subsnp_id), tv.subsnp_id, tv.valid,
+                        CONCAT('ss',tv.subsnp_id), tv.subsnp_id,
                         tv.substrand_reversed_flag
                  FROM tmp_var_allele tv, variation v
                  WHERE tv.refsnp_id = v.snp_id
@@ -176,48 +173,8 @@ sub variation_table {
 
   $dbVar->do("ALTER TABLE variation_synonym ADD INDEX subsnp_id(subsnp_id)");
 
-  # set the validation status of the RefSNPs.  A refSNP is validated if
-  # it has a valid subsnp
-
-  ### FIX: Not sure if all RefSNPs have subsnps, so might eliminate some
-  ### refsnps accidentally here.
-  ### Also validation status needs correcting
-
-  debug("Reloading RefSNPs with validation status set");
-
-  my $sth = $dbVar->prepare
-    (qq{SELECT v.variation_id, v.source_id, v.name, v.snp_id,
-               vs.validated
-        FROM   variation v, variation_synonym vs
-        WHERE  vs.variation_id = v.variation_id
-        ORDER BY v.variation_id, vs.validated});
-
-  $sth->execute();
-
-  my $cur_variation_id = undef;
-  my $validated = 0;
-  my $arr;
-
-  # dump RefSNPs to tmp file with validation status set
-
-  open ( FH, ">$TMP_DIR/$TMP_FILE" );
-
-  while($arr = $sth->fetchrow_arrayref()) {
-    if(!defined($cur_variation_id) || $arr->[0] != $cur_variation_id) {
-      my @arr = map {(defined($_)) ? $_ : '\N' } @$arr;
-      print FH join("\t", @arr), "\n";
-    }
-    $cur_variation_id = $arr->[0];
-  }
-
-  close(FH);
-
-  # remove RefSNPs from db and reload them (faster than individual updates)
-
-  $dbVar->do("DELETE FROM variation");
-
-  load($dbVar, "variation", "variation_id", "source_id",
-       "name", "snp_id", "validation_status");
+  ### FIX: Not sure if all RefSNPs have subsnps, and if ones which do not
+  ### should be eliminated
 
   return;
 }
@@ -230,7 +187,6 @@ sub dump_subSNPs {
 
   my $sth = $dbSNP->prepare
     (qq{SELECT subsnp.subsnp_id, subsnplink.snp_id, b.pop_id, ov.pattern,
-             if ( subsnp.validation_status > 0, "VALIDATED", "NOT_VALIDATED" ),
              subsnplink.substrand_reversed_flag
         FROM SubSNP subsnp, SNPSubSNPLink subsnplink, ObsVariation ov,
              Batch b
@@ -807,7 +763,6 @@ sub population_genotypes {
 sub cleanup {
   $dbVar->do('ALTER TABLE variation  DROP COLUMN snp_id');
   $dbVar->do('ALTER TABLE variation_synonym DROP COLUMN subsnp_id');
-  $dbVar->do('ALTER TABLE variation_synonym DROP COLUMN validated');
   $dbVar->do(qq{ALTER TABLE variation_synonym
                 DROP COLUMN substrand_reversed_flag});
   $dbVar->do('ALTER TABLE population DROP COLUMN pop_class_id');
