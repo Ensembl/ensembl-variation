@@ -73,6 +73,7 @@ use Bio::EnsEMBL::Feature;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Utils::Argument  qw(rearrange);
 use Bio::EnsEMBL::Variation::Utils::Sequence qw(ambiguity_code variation_class);
+use Bio::EnsEMBL::SNP;  #for backwards compatibility
 
 our @ISA = ('Bio::EnsEMBL::Feature');
 
@@ -574,4 +575,33 @@ sub source{
   return $self->{'source'};
 }
 
+=head2 convert_to_SNP
+
+  Args        : None
+  Example     : my $snp = $vf->convert_to_SNP()
+  Description : Creates a Bio::EnsEMBL::SNP object from Bio::EnsEMBL::VariationFeature. Mainly used for
+                backwards comnpatibility
+  ReturnType  : Bio::EnsEMBL::SNP
+  Exceptions  : None
+  Caller      : general      
+
+=cut
+
+sub convert_to_SNP{
+    my $self = shift;
+    my $snp = Bio::EnsEMBL::SNP->new_fast({
+	        'dbID'       => $self->variation()->dbID(),
+		'_gsf_start'  => $self->start,
+		'_gsf_end'    => $self->end,
+		'_snp_strand' => $self->strand,
+		'_gsf_score'  => 1,
+		'_type'       => $self->var_class,
+		'_validated'  => $self->get_all_validation_states(),
+		'alleles'    => $self->allele_string,
+		'_ambiguity_code' => $self->ambig_code,
+		'_mapweight'  => $self->map_weight,
+		'_source' => $self->source
+		});
+    return $snp;
+}
 1;
