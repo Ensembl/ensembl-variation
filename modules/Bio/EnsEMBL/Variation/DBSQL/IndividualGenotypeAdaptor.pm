@@ -177,4 +177,29 @@ sub fetch_all_by_Individual {
   return \@results;
 }
 
+
+
+=head2 fetch_all_by_Variation
+
+  Arg [1]    : Bio::EnsEMBL::Variation $variation
+  Example    : my $var = $variation_adaptor->fetch_by_name( "rs1121" )
+               $igtypes = $igtype_adaptor->fetch_all_by_Variation( $var )
+  Description: Retrieves a list of individual genotypes for the given Variation.
+               If none are available an empty listref is returned.
+  Returntype : listref Bio::EnsEMBL::Variation::IndividualGenotype 
+  Exceptions : none
+  Caller     : general
+
+=cut
+
+
+sub fetch_all_by_Variation {
+
+  ##  TODO for Daniel
+
+}
+
+
+
+
 1;
