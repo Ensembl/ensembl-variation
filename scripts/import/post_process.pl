@@ -258,6 +258,7 @@ sub variation_feature {
 
   $dbVar->do("DROP TABLE tmp_map_weight");
 
+  update_meta_coord($dbCore, $dbVar, 'variation_feature');
 }
 
 
@@ -396,6 +397,33 @@ sub variation_group_feature {
                 WHERE  vgv.variation_id = vf.variation_id
                 GROUP BY vgv.variation_group_id, vf.seq_region_id});
 
+
+  update_meta_coord($dbCore, $dbVar, 'variation_group_feature');
+
+  return;
+}
+
+
+#
+# updates the meta coord table
+#
+sub update_meta_coord {
+  my $dbCore = shift;
+  my $dbVar  = shift;
+  my $table_name = shift;
+  my $csname = shift || 'chromosome';
+
+  my $csa = $dbCore->get_CoordSystemAdaptor();
+
+  my $cs = $csa->fetch_by_name($csname);
+
+  my $sth = $dbVar->prepare
+    ('INSERT INTO meta_coord set table_name = ?, coord_system_id = ?');
+
+  $sth->execute($table_name, $cs->dbID());
+
+  $sth->finish();
+
   return;
 }
 
@@ -494,6 +522,10 @@ sub transcript_variation {
   load($dbVar, qw(transcript_variation
                   transcript_id variation_feature_id peptide_allele_string
                   translation_start translation_end cdna_start cdna_end type));
+
+
+  
+
 
   return;
 }
