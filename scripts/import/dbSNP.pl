@@ -5,6 +5,7 @@
 use strict;
 use warnings;
 use DBI;
+use DBH;
 use Getopt::Long;
 
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
@@ -12,11 +13,7 @@ use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use ImportUtils qw(dumpSQL debug create_and_load load );
 
-my $TAX_ID;
-my $LIMIT_SQL;
-my $CONTIG_SQL;
-my $TMP_DIR  = $ImportUtils::TMP_DIR;
-my $TMP_FILE = $ImportUtils::TMP_FILE;
+my ($TAX_ID, $LIMIT_SQL, $CONTIG_SQL, $TMP_DIR, $TMP_FILE);
 
 my $dbSNP;
 my $dbVar;
@@ -43,6 +40,8 @@ my $dbCore;
              'vpass=s'   => \$vpass,
              'vport=i'   => \$vport,
              'vdbname=s' => \$vdbname,
+             'tmpdir=s'  => \$ImportUtils::TMP_DIR,
+             'tmpfile=s' => \$ImportUtils::TMP_FILE,
              'limit=i'   => \$limit);
 
   $dshost   ||= 'cbi2.internal.sanger.ac.uk';
@@ -60,14 +59,20 @@ my $dbCore;
   usage('-cdbname argument is required.') if(!$cdbname);
   usage('-vdbname argument is required.') if(!$vdbname);
 
+  $TMP_DIR  = $ImportUtils::TMP_DIR;
+  $TMP_FILE = $ImportUtils::TMP_FILE;
+
+
   $LIMIT_SQL = ($limit) ? " LIMIT $limit " : '';
 
-  $dbSNP = DBI->connect
-    ("DBI:mysql:host=$dshost;dbname=$dsdbname;port=$dsport",$dsuser, $dspass);
+  $dbSNP = DBH->connect
+    ("DBI:mysql:host=$dshost;dbname=$dsdbname;port=$dsport",$dsuser, $dspass,
+    {'RaiseError' => 1});
   die("Could not connect to dbSNP db: $!") if(!$dbSNP);
 
-  $dbVar = DBI->connect
-    ("DBI:mysql:host=$vhost;dbname=$vdbname;port=$vport",$vuser, $vpass );
+  $dbVar = DBH->connect
+    ("DBI:mysql:host=$vhost;dbname=$vdbname;port=$vport",$vuser, $vpass,
+    {'RaiseError' => 1});
   die("Could not connect to variation database: $!") if(!$dbVar);
 
   $dbCore = Bio::EnsEMBL::DBSQL::DBAdaptor->new
@@ -173,6 +178,10 @@ sub variation_table {
 
   # set the validation status of the RefSNPs.  A refSNP is validated if
   # it has a valid subsnp
+
+  ### FIX: Not sure if all RefSNPs have subsnps, so might eliminate some
+  ### refsnps accidentally here.
+  ### Also validation status needs correcting
 
   debug("Reloading RefSNPs with validation status set");
 
@@ -454,7 +463,8 @@ sub flanking_sequence_table {
                                       line_num int,
                                       type enum ('5','3'),
                                       line varchar(255),
-                                      revcom tinyint)});
+                                      revcom tinyint)
+                MAX_ROWS = 100000000});
 
   # import both the 5prime and 3prime flanking sequence tables
 
@@ -468,7 +478,16 @@ sub flanking_sequence_table {
                AND   ss.batch_id = b.batch_id
                AND   b.tax_id = $TAX_ID
                $LIMIT_SQL});
-    create_and_load($dbVar, "tmp_seq_$type", "subsnp_id i*", "line_num i", "line");
+
+
+    $dbVar->do(qq{CREATE TABLE tmp_seq_$type (
+                     subsnp_id int,
+                     line_num int,
+                     line varchar(255),
+                     KEY subsnp_id_idx(subsnp_id))
+                  MAX_ROWS = 100000000 });
+
+    load($dbVar, "tmp_seq_$type", "subsnp_id", "line_num", "line");
 
     # merge the tables into a single tmp table
     $dbVar->do(qq{INSERT INTO tmp_seq (variation_id, subsnp_id,
@@ -844,6 +863,8 @@ options:
     -vport <port>        TCP port of variation MySQL database to write to (default = 3306)
     -vdbname <dbname>    dbname of variation MySQL database to write to
     -limit <number>      limit the number of rows transfered for testing
+    -tmpdir <dir>        temporary directory to use (with lots of space!)
+    -tmpfile <filename>  temporary filename to use
 EOF
 
   die("\n$msg\n\n");
