@@ -53,7 +53,8 @@ create table allele(
 	population_id int,
 
 	primary key( allele_id ),
-	key variation_idx( variation_id )
+	key variation_idx( variation_id ),
+  key allele_idx(allele_id)
 );
 
 #
@@ -219,9 +220,7 @@ create table allele_group(
 	source_id int,
 	frequency float,
 
-
 	primary key( allele_group_id )
-
 );
 
 
@@ -229,15 +228,18 @@ create table allele_group(
 # allele_group_allele
 #
 # This is a join table which defines which alleles make up
-# an allele group
+# an allele group.  There is no direct link to the allele table because
+# the allele table has population and frequency data which may not correspond
+# to this allele group
 #
 
 create table allele_group_allele (
-	allele_id int not null,
 	allele_group_id int not null,
+	allele varchar(255) not null,
+  variation_id int not null,
 
-	unique( allele_group_id, allele_id ),
-	key allele_idx( allele_id, allele_group_id )
+	unique( allele_group_id, variation_id ),
+	key allele_idx( variation_id, allele_group_id )
 );
 
 #
@@ -246,8 +248,14 @@ create table allele_group_allele (
 
 create table flanking_sequence (
 	variation_id int not null,
-	upstream text,
-	downstream text,
+	up_seq text,
+	down_seq text,
+  up_seq_region_start int,
+  up_seq_region_end   int,
+  down_seq_region_start int,
+  down_seq_region_end int,
+  seq_region_id int,
+  seq_region_strand tinyint,
 
 	primary key( variation_id )
 );
@@ -282,6 +290,8 @@ create table source(
 	primary key( source_id )
 );
 
+
+
 #
 # genotype
 #
@@ -291,15 +301,17 @@ create table source(
 
 create table genotype (
 	genotype_id int not null auto_increment,
-	allele_id_1 int not null,
-	allele_id_2 int not null,
+  variation_id int not null,
+  allele_1 varchar(255),
+  allele_2 varchar(255),
 	frequency float,
 	pop_id int,
-	source_id int,
 
 	primary key( genotype_id ),
-	key al1_idx( allele_id_1 ),
-	key al2_idx( allele_id_2)
+  key (variation_id)
 );
+
+
+
 
 
