@@ -402,7 +402,6 @@ sub get_consequence_type {
   if(!defined $gene){
     return $self->{'consequence_type'};
   } else{
-    warn $gene;
     my $highest_priority;
     #first, get all the transcripts, if any
     my $transcript_variations = $self->get_all_TranscriptVariations();
