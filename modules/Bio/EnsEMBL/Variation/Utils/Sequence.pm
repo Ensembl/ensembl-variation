@@ -120,7 +120,7 @@ sub variation_class{
 	    return 'mixed'
 	    }
 	else{
-	    warning("not possible to determine class of alleles " . @alleles);
+	  #  warning("not possible to determine class of alleles " . @alleles);
 	    return '';
 	}
     }
