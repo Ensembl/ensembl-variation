@@ -77,7 +77,7 @@ $sth->execute();
 $sth->bind_columns(\$variation_feature_id, \$allele_1, \$allele_2, \$seq_region_id, \$seq_region_start,\$individual_id,\$population_id);
 while ($sth->fetch()){
     #only print genotypes without parents genotyped
-    if (!exists $siblings->{$individual_id}){
+    if (!exists $siblings->{$population_id.'-'.$individual_id}){
 	#print the data to the file with the information in the chromosome
 	print_buffered($buffer,"$TMP_DIR/tag_snps_$population_id\:$seq_region_id\.txt",
 		       join("\t", $variation_feature_id, $allele_1, $allele_2, $seq_region_start) . "\n");
@@ -122,7 +122,8 @@ sub get_siblings{
     $sth_individual->execute($population_id);
     $sth_individual->bind_columns(\$individual_id);
     while ($sth_individual->fetch){
-	$siblings->{$individual_id}++;
+	$siblings->{$population_id.'-'.$individual_id}++; #necessary to have in the key the population, since some individuals are shared between
+	                                                   #populations
     }
     return $siblings;
 }
