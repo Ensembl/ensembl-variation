@@ -113,6 +113,13 @@ sub get_PopulationGenotypeAdaptor {
 }
 
 
+sub get_TranscriptVariationAdaptor {
+  my $self = shift;
+  return $self->_get_adaptor
+    ('Bio::EnsEMBL::Variation::DBSQL::TranscriptVariationAdaptor');
+}
+
+
 sub get_SliceAdaptor {
   my $self = shift;
   if(!$self->dnadb()) {
@@ -145,6 +152,15 @@ sub get_SequenceAdaptor {
     throw("Cannot obtain SequenceAdaptor without attached dnadb");
   }
   return $self->dnadb->get_SequenceAdaptor();
+}
+
+
+sub get_TranscriptAdaptor {
+  my $self = shift;
+  if(!$self->dnadb()) {
+    throw("Cannot obtain TranscriptAdaptor without attached dnadb");
+  }
+  return $self->dnadb->get_TranscriptAdaptor();
 }
 
 
