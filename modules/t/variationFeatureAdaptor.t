@@ -5,7 +5,7 @@ use warnings;
 
 BEGIN { $| = 1;
 	use Test;
-	plan tests => 27;
+	plan tests => 21;
 }
 
 
@@ -48,7 +48,7 @@ ok($vf->start() == 62304671);
 ok($vf->end()   == 62304671);
 ok($vf->strand() == 1);
 ok($vf->allele_string() eq 'G/A');
-#ok($vf->variation()->name() eq 'rs2039');
+ok($vf->variation()->name() eq 'rs2039');
 ok($vf->display_id() eq 'rs2039');
 ok($vf->map_weight() == 1);
 ok($vf->slice()->name() eq $slice->name());
@@ -67,7 +67,7 @@ ok($vf->start == 62304671);
 ok($vf->end()   == 62304671);
 ok($vf->strand() == 1);
 ok($vf->allele_string() eq 'G/A');
-#ok($vf->variation()->name() eq 'rs2039');
+ok($vf->variation()->name() eq 'rs2039');
 ok($vf->display_id() eq 'rs2039');
 ok($vf->map_weight() == 1);
 ok($vf->slice()->name() eq $slice->name());
