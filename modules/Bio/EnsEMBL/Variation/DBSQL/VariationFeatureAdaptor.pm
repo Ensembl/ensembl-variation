@@ -102,6 +102,14 @@ sub fetch_all_by_Variation {
 
 
 
+sub fetch_all_genotyped_by_Slice{
+    my $self = shift;
+    my $slice = shift;
+
+    my $constraint = "vf.flags & 1";
+    #call the method fetch_all_by_Slice_constraint with the genotyped constraint
+    return $self->fetch_all_by_Slice_constraint($slice,$constraint);
+}
 # method used by superclass to construct SQL
 sub _tables { return ['variation_feature', 'vf']; }
 
