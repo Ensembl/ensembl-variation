@@ -298,7 +298,8 @@ sub variation_feature {
 	  $ref_allele = $slice->seq();
 	  $ref_allele = uc $ref_allele;   #convert reference allele to uppercase
 	  $ref_allele = '-' if(!$ref_allele);
-	  
+	  $ref_allele = uc $ref_allele;   #convert reference allele to uppercase
+
 	  $top_sr_id = $slice->get_seq_region_id();
 	}
       }
