@@ -62,8 +62,6 @@ sub new {
 sub dnadb {
   my $self = shift;
 
-  $self = $self->_obj() if($self->isa('Bio::EnsEMBL::Container'));
-
   if(@_) {
     my $dnadb = shift;
     if(defined($dnadb) && !$dnadb->isa('Bio::EnsEMBL::DBSQL::DBAdaptor')) {
