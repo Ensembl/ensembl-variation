@@ -19,8 +19,7 @@ create table variation(
 	source_id int not null, 
 	name varchar(255),
 	parent_variation_id int,
-  validation_status enum('VALIDATED', 'NOT_VALIDATED'),
-  
+	validation_status enum( "VALIDATED", "NOT_VALIDATED" ),
 
 	primary key( variation_id ),
 	key parent_var_idx( parent_variation_id ),
@@ -67,16 +66,24 @@ create table allele(
 
 # population_id        - primary key, internal identifier
 # name                 - name or identifier of the population
-# method               - method of snp assay used on this population
 # parent_population_id - self-referential identifier allowing a population
 #                        hierarchy to e constructed. NULL if no parent pop
+# population_type      - sometimes a variation experiment is done to "a white male"
+#                        and so might be others. To indicate that these are not 
+#                        exactly the same people, set the population_type to "general"
+#                        If you mean exactly the same people when you reference a
+#                        population, set the population_type to "specific"
+# size                 - if the size is NULL its not known or not relevant for this population
+#                        eg. "european" wouldnt have a size and would usually be used as
+#                        a parent population. 
 
 create table population(
 	population_id int not null auto_increment,
 	name varchar(255) not null,
-	method varchar(255) not null,
 	parent_population_id int,
 	size int,
+	population_type enum( "general", "specific" ),
+	description text,
 
 	primary key( population_id ),
 	key parent_pop_idx( parent_population_id ) 
@@ -158,23 +165,72 @@ create table transcript_variation(
 	);
 
 #
+# variation_group
+# 
+# This table defines a variation group.  Allele groups can 
+# be classed into a variation_group when they are comprised
+# of the same set of variations.  This is equivalent to 
+# HapSets in dbSNP.
+#
+# variation_group_id   - primary_key, internal identifier
+# name                 - the code or name of this variation_group
+# source_id            - foreign key ref source
+#
+
+create table variation_group (
+	variation_group_id int not null auto_increment,
+	name varchar(255),
+	source_id int not null,
+
+	primary key (variation_group_id)
+);
+
+
+create table variation_group_variation (
+	variation_id int not null,
+	variation_group_id int not null,
+
+	unique( variation_group_id, variation_id ),
+	key variation_idx( variation_id, variation_group_id )
+);
+	
+
+
+#
 # allele_group
+#
+# This table defines haplotypes - groups of
+# polymorphisms which are found together in a block.
+# This is equivalent to Haps in dbSNP
+#
+# allele_group_id    - primary_key, internal identifier
+# variation_group_id - foreign key, ref variation_group
+# population_id      - foreign key, ref population
+# name               - the name of this allele group
+# frequency          - the frequency of this allele_group
+#                      within the referenced population
 #
 #
 
 create table allele_group(
 	allele_group_id int not null auto_increment,
+	variation_group_id int not null,
 	population_id int,
 	name varchar(255),
+	source_id int,
 	frequency float,
-	type enum( "HAPLOBLOCK", "GENOTYPE" ),
+
 
 	primary key( allele_group_id )
 
 );
 
+
 #
 # allele_group_allele
+#
+# This is a join table which defines which alleles make up
+# an allele group
 #
 
 create table allele_group_allele (
@@ -226,3 +282,25 @@ create table source(
 	
 	primary key( source_id )
 );
+
+#
+# genotype
+#
+# this table contains genotypes for groups or individuals
+#  (depending on the pop_id)
+#
+
+create table genotype (
+	genotype_id int not null auto_increment,
+	allele_id_1 int not null,
+	allele_id_2 int not null,
+	frequency float,
+	pop_id int,
+	source_id int,
+
+	primary key( genotype_id ),
+	key al1_idx( allele_id_1 ),
+	key al2_idx( allele_id_2)
+);
+
+
