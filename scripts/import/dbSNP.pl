@@ -174,7 +174,7 @@ sub variation_table {
   $dbVar->do("ALTER TABLE variation_synonym ADD INDEX subsnp_id(subsnp_id)");
 
   ### FIX: Not sure if all RefSNPs have subsnps, and if ones which do not
-  ### should be eliminated
+  ### should possibly be eliminated
 
   return;
 }
@@ -411,9 +411,6 @@ sub allele_table {
 # loads the flanking sequence table
 #
 sub flanking_sequence_table {
-  ### TBD - need to reverse compliment flanking sequence if subsnp has
-  ### reverse orientation to refsnp
-
   $dbVar->do(qq{CREATE TABLE tmp_seq (variation_id int,
                                       subsnp_id int,
                                       line_num int,
@@ -545,7 +542,7 @@ sub flanking_sequence_table {
 sub variation_feature {
 
   ### TBD not sure if variations with map_weight > 1 or 2 should be
-  ### imported. If they are then the map_weight needs to be set.
+  ### imported.
 
   debug("Dumping seq_region data");
 
@@ -617,13 +614,17 @@ sub variation_group {
 
   debug("Loading variation_group_variation");
 
+  # there are a few hapsets in dbSNP which have two subsnps which have been
+  # merged into the same refsnp.  Thus the group by clause.
+
   $dbVar->do(qq{INSERT INTO variation_group_variation
                      (variation_group_id, variation_id)
                 SELECT vg.variation_group_id, vs.variation_id
                 FROM   variation_group vg, variation_synonym vs,
                        tmp_var_grp tvg
                 WHERE  tvg.hapset_id = vg.hapset_id
-                AND    tvg.subsnp_id = vs.subsnp_id});
+                AND    tvg.subsnp_id = vs.subsnp_id
+                GROUP BY variation_group_id, variation_id});
 
   $dbVar->do("DROP TABLE tmp_var_grp");
 }
@@ -660,13 +661,17 @@ sub allele_group {
 
   debug("Loading allele_group_allele");
 
+  # there are a few haps in dbSNP which have two subsnps which have been
+  # merged into the same refsnp.  Thus the group by clause.
+
   $dbVar->do(qq{INSERT INTO allele_group_allele (allele_group_id,
                                                  variation_id, allele)
                 SELECT ag.allele_group_id, vs.variation_id, taga.snp_allele
                 FROM   allele_group ag, tmp_allele_group_allele taga,
                        variation_synonym vs
                 WHERE  ag.hap_id = taga.hap_id
-                AND    vs.subsnp_id = taga.subsnp_id});
+                AND    vs.subsnp_id = taga.subsnp_id
+                GROUP BY ag.allele_group_id, vs.variation_id});
 
   $dbVar->do("DROP TABLE tmp_allele_group_allele");
 
