@@ -496,7 +496,7 @@ create table pairwise_ld(
 	d_prime float not null,
 	sample_count int not null,
 	
-	key seq_region_1_idx(seq_region_id)
+	key seq_region_idx(seq_region_id,seq_region_start)
 );
 
 
