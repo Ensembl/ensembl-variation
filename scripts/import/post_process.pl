@@ -82,18 +82,18 @@ sub load_asm_cache {
   my $mapper1 = $asma->fetch_by_CoordSystems($top_cs, $sctg_cs);
   my $mapper2 = $asma->fetch_by_CoordSystems($top_cs, $seq_cs);
 
-  my $slices = $slice_adaptor->fetch_all('chromosome');
+  debug("Registering all chromosome/contig assembly information");
 
-  foreach my $mapper ($mapper1, $mapper2) {
-    $mapper->max_pair_count(1000000); # do not flush cache
-    foreach my $slice (@$slices) {
-      # force registration of all regions
-      $mapper->list_ids($slice->seq_region_name,
-                        $slice->start(),
-                        $slice->end(),
-                        $top_cs);
-    }
-  }
+  $mapper2->max_pair_count(10e6);
+  $mapper2->register_all();
+
+  debug("Registering all superctg/chromosome assembly information");
+
+  $mapper1->max_pair_count(10e6);
+  $mapper1->register_all();
+
+
+  debug("Registration DONE");
 
   return;
 }
