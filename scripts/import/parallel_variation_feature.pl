@@ -294,10 +294,9 @@ sub variation_feature {
 
   $sth->finish();
 
-  # print the last row
-  if($top_coord) {
+  # print the last row, excluding SNPs with map_weight > 3
+  if($top_coord && $map_weight <= 3) {
     my $allele_str;
-
     if($alleles{$ref_allele}) {
       # make sure the reference allele is first
       delete $alleles{$ref_allele};
@@ -315,9 +314,9 @@ sub variation_feature {
 		      $map_weight,$cur_vf_flags, $cur_source_id,$cur_validation_status,$cur_consequence_type), "\n";
       }
       else {
-	print FH join("\t", $vf_id, $top_sr_id, $top_coord->start(),
+	print FH join("\t", $cur_vf_id, $top_sr_id, $top_coord->start(),
 		      $top_coord->end(), $top_coord->strand(),
-		      $cur_v_id, $allele_str, $v_name, $map_weight, $cur_vf_flags, $cur_source_id, $cur_validation_status,$cur_consequence_type), "\n";
+		      $cur_v_id, $allele_str, $cur_v_name, $map_weight, $cur_vf_flags, $cur_source_id, $cur_validation_status,$cur_consequence_type), "\n";
       }
     }
   }
