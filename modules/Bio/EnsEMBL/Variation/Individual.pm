@@ -73,6 +73,12 @@ our @ISA = ('Bio::EnsEMBL::Storable');
     Bio::EnsEMBL::Variation::Individual - the father of this individual
   Arg [-MOTHER_INDIVIDUAL] :
     Bio::EnsEMBL::Variation::Individual - the mother of this individual
+  Arg [-MOTHER_INDIVIDUAL_ID] :
+    int - set the internal id of the mother individual so that the actual
+    mother Individual object can be retrieved on demand.
+  Arg [-FATHER_INDIVIDUAL_ID]:
+    int - set the internal id of the mother individual so that the actual
+    mother Individual object can be retrieved on demand.
   Example    : $individual = Bio::EnsEMBL::Variation::Individual->new
                  (-name => 'WI530.07',
                   -description => 'african',
@@ -91,9 +97,11 @@ sub new {
   my $caller = shift;
   my $class = ref($caller) || $caller;
 
-  my ($dbID, $adaptor, $name, $desc, $gender, $pop, $father, $mother) =
+  my ($dbID, $adaptor, $name, $desc, $gender, $pop, $father, $mother,
+      $father_id, $mother_id) =
     rearrange([qw(dbID adaptor name description gender population
-                  father_individual mother_individual)], @_);
+                  father_individual mother_individual
+                  father_individual_id mother_individual_id)], @_);
 
   if(defined($gender)) {
     $gender = ucfirst(lc($gender));
@@ -109,7 +117,9 @@ sub new {
                 'gender'  => $gender,
                 'population' => $pop,
                 'father_individual' => $father,
-                'mother_individual' => $mother}, $class;
+                'mother_individual' => $mother,
+                '_mother_individual_id' => $mother_id,
+                '_father_individual_id' => $father_id}, $class;
 }
 
 
@@ -214,10 +224,13 @@ sub population{
 
 =head2 father_Individual
 
-  Arg [1]    : string $newval (optional) 
+  Arg [1]    : string $newval (optional)
                The new value to set the father_Individual attribute to
   Example    : $father_Individual = $obj->father_Individual()
-  Description: Getter/Setter for the father_Individual attribute
+  Description: Getter/Setter for the father of this Individual. If this
+               has not been set manually and this Individual has an attached
+               adaptor, an attempt will be made to lazy-load it from the
+               database.
   Returntype : string
   Exceptions : none
   Caller     : general
@@ -238,6 +251,14 @@ sub father_Individual{
     }
     return $self->{'father_individual'} = $ind;
   }
+
+  # lazy-load mother if we can
+  if(!defined($self->{'father_individual'}) && $self->adaptor() &&
+     defined($self->{'_father_individual_id'})) {
+    $self->{'father_individual'} =
+      $self->adaptor->fetch_by_dbID($self->{'_father_individual_id'});
+  }
+
   return $self->{'father_individual'};
 }
 
@@ -248,7 +269,10 @@ sub father_Individual{
   Arg [1]    : string $newval (optional) 
                The new value to set the mother_Individual attribute to
   Example    : $mother_Individual = $obj->mother_Individual()
-  Description: Getter/Setter for the mother_Individual attribute
+  Description: Getter/Setter for the mother of this individual. If this
+               has not been set manually and this Individual has an attached
+               adaptor, an attempt will be made to lazy-load it from the
+               database.
   Returntype : string
   Exceptions : none
   Caller     : general
@@ -268,6 +292,13 @@ sub mother_Individual{
       throw("Mother individual may not have gender of Male");
     }
     return $self->{'mother_individual'} = $ind;
+  }
+
+  # lazy-load mother if we can
+  if(!defined($self->{'mother_individual'}) && $self->adaptor() &&
+     defined($self->{'_mother_individual_id'})) {
+    $self->{'mother_individual'} =
+      $self->adaptor->fetch_by_dbID($self->{'_mother_individual_id'});
   }
 
   return $self->{'mother_individual'};
@@ -301,6 +332,7 @@ sub get_all_child_Individuals {
   ### TODO: implement this.  DO NOT CACHE because would create circ. ref and
   ### memory leak.
 }
+
 
 
 1;
