@@ -177,7 +177,9 @@ sub variation_feature {
   my %alleles_expanded; #same hash as before, but with the expanded alleles: $alleles_expanded{AGAGAG} = (AG)3
 
   my $dbname = $dbVar->dbname(); #get the name of the database to create the file
-  open FH, ">$TMP_DIR/$dbname.variation_feature_$$\.txt"
+  my $host = `hostname`;
+  chop $host;
+  open FH, ">$TMP_DIR/$dbname.variation_feature_$host\:$$\.txt"
     or throw("Could not open tmp file: $TMP_DIR/variation_feature_$$\n");
 
   while($sth->fetch()) {
