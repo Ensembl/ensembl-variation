@@ -4,12 +4,18 @@ use warnings;
 
 BEGIN { $| = 1;
 	use Test;
-	plan tests => 10;
+	plan tests => 12;
 }
 
 
 use TestUtils qw ( debug test_getter_setter count_rows);
 use Bio::EnsEMBL::Variation::Population;
+
+use MultiTestDB;
+
+my $multi = MultiTestDB->new();
+
+my $vdb = $multi->get_DBAdaptor('variation');
 
 
 # test constructor
@@ -58,8 +64,6 @@ ok(test_getter_setter($pop, 'size', 10));
 
 
 
-# te
-
 my $purple_pop = Bio::EnsEMBL::Variation::Population->new
   (-dbID => 125,
    -name => 'Purple people',
@@ -71,4 +75,14 @@ $blue_pop->add_sub_Population($purple_pop);
 ok($blue_pop->get_all_sub_Populations()->[0] == $purple_pop);
 
 
-### TODO: add test for get_all_super_Populations once implemented
+# test get_all_super_Populations
+
+my $pa = $vdb->get_PopulationAdaptor();
+
+$pop = $pa->fetch_by_name('PACIFIC');
+
+ok(@{$pop->get_all_sub_Populations()} == 25);
+
+$pop = $pop->get_all_sub_Populations->[0];
+
+ok($pop->get_all_super_Populations()->[0]->name() eq 'PACIFIC');
