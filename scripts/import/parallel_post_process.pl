@@ -5,7 +5,6 @@ use Getopt::Long;
 use ImportUtils qw(debug);
 use Bio::EnsEMBL::Utils::Exception qw(warning throw verbose);
 use DBH;
-use Data::Dumper;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 
 use constant MAX_GENOTYPES => 4_000_000; #max number of genotypes per file. When more, split the file into regions
@@ -189,7 +188,7 @@ sub parallel_flanking_sequence{
   $sth->finish();  
   &print_buffered($buffer);
   for (my $i = 1;$i<=$num_processes;$i++){
-      $call = "bsub -m 'ecs2a+10 ecs2_hosts bc_hosts' -o $TMP_DIR/output_flanking_$i\_$$.txt /usr/local/ensembl/bin/perl parallel_flanking_sequence.pl -chost $chost -cuser $cuser -cdbname $cdbname -vhost $vhost -vuser $vuser -vport $vport -vdbname $vdbname -tmpdir $TMP_DIR -tmpfile $TMP_FILE -num_processes $num_processes -status_file $flanking_status_file -file $i ";
+      $call = "bsub -m 'bc_hosts ecs2_hosts' -o $TMP_DIR/output_flanking_$i\_$$.txt /usr/local/ensembl/bin/perl parallel_flanking_sequence.pl -chost $chost -cuser $cuser -cdbname $cdbname -vhost $vhost -vuser $vuser -vport $vport -vdbname $vdbname -tmpdir $TMP_DIR -tmpfile $TMP_FILE -num_processes $num_processes -status_file $flanking_status_file -file $i ";
       $call .= "-cpass $cpass " if ($cpass);
       $call .= "-cport $cport " if ($cport);
       $call .= "-vpass $vpass " if ($vpass);
@@ -221,7 +220,7 @@ sub parallel_transcript_variation{
     my $length_slices = 0; #number of entries in the variation_feature table
     my $call;
     my $transcript_status_file = "transcript_status_file_$$\.log";
-#first, create the log file for the transcript_variation table
+    #first, create the log file for the transcript_variation table
     open STATUS, ">$TMP_DIR/$transcript_status_file"
 	or throw("Could not open tmp file: $TMP_DIR/$transcript_status_file\n"); 
     close STATUS;
@@ -282,10 +281,12 @@ sub parallel_ld_populations{
     }
     $sth->finish();
 
-    #for the global population
+    #for the global population: we have removed the global population calculation
+
 #    $dbVar->do(qq{INSERT INTO population (name,description) VALUES ('Global population','Population used in the calculation of the LD value across all populations')}); #add a new population for the general ld values
- #   my $global_population_id = $dbVar->dbh()->{'mysql_insertid'}; #id for the global population
-    my $global_population_id = 912;
+#    my $global_population_id = $dbVar->dbh()->{'mysql_insertid'}; #id for the global population
+#    my $global_population_id = 912;
+
     my %seq_region; #hash containing the mapping between seq_region_id->name region
     my %alleles_variation = (); #will contain a record of the alleles in the variation. A will be the major, and a the minor. When more than 2 alleles
     my %genotype_information; #will contain all the genotype information to write in the file, if necessary
@@ -299,7 +300,7 @@ sub parallel_ld_populations{
 
     $sth = $dbVar->prepare
 	(qq{
-	    SELECT   STRAIGHT_JOIN ig.variation_id, vf.variation_feature_id, vf.seq_region_id, vf.seq_region_start, 
+	    SELECT  STRAIGHT_JOIN ig.variation_id, vf.variation_feature_id, vf.seq_region_id, vf.seq_region_start, 
                           ig.individual_id, ig.allele_1, ig.allele_2, vf.seq_region_end, i.population_id
 		    FROM  variation_feature vf FORCE INDEX(pos_idx), individual_genotype ig, individual i
 		   WHERE  ig.variation_id = vf.variation_id
@@ -329,7 +330,6 @@ sub parallel_ld_populations{
 		if (keys %{$alleles_variation{$population}} == 2){		
 		    &convert_genotype($alleles_variation{$population},$genotype_information{$population});
 		    foreach my $individual_id (keys %{$genotype_information{$population}}){
-#			$regions{$genotype_information{$population}{$individual_id}{seq_region_id}}++; #add one more genotype in the region
 			&print_individual_file($buffer,$population,$global_population_id, 
 					       $previous_variation_id, $individual_id,
 					       \%genotype_information,\%sub_super_pop,$dbname,\%genotypes_file,\%regions);
@@ -361,7 +361,6 @@ sub parallel_ld_populations{
 	if (keys %{$alleles_variation{$population}} == 2){		
 	    &convert_genotype($alleles_variation{$population},$genotype_information{$population});
 	    foreach my $individual_id (keys %{$genotype_information{$population}}){
-#		$regions{$genotype_information{$population}{$individual_id}{seq_region_id}}++; #add one more genotype in the region
 		&print_individual_file($buffer,$population,$global_population_id, 
 				       $previous_variation_id, $individual_id,
 				       \%genotype_information,\%sub_super_pop,$dbname,\%genotypes_file,\%regions);
@@ -371,10 +370,7 @@ sub parallel_ld_populations{
 
     print_buffered( $buffer );
     
-    my $processes = scalar(keys %populations) + scalar(keys %super_pop) + 1;
     #let's run a job array
-
-
     foreach my $file (keys %genotypes_file){
 	if ($genotypes_file{$file} > MAX_GENOTYPES()){
 	    &split_file($file,\%regions,$genotypes_file{$file},$dbname);
@@ -419,15 +415,16 @@ sub print_individual_file{
 			 $genotype_information->{$population}->{$individual_id}->{seq_region_end},$population)."\n" );
     $genotypes_file->{"$TMP_DIR/$dbname.pairwise_ld_$population\.txt"}++;
 
-    $regions->{"$TMP_DIR/$dbname.pairwise_ld_$global_population_id\.txt"}->{$genotype_information->{$population}->{$individual_id}->{seq_region_id}}++; #add one more genotype in the region for the population
-    print_buffered( $buffer, "$TMP_DIR/$dbname.pairwise_ld_$global_population_id\.txt", 
-		    join("\t",$previous_variation_id,$genotype_information->{$population}->{$individual_id}->{seq_region_start},
-			 $individual_id,
-			 $genotype_information->{$population}->{$individual_id}->{genotype},
-			 $genotype_information->{$population}->{$individual_id}->{variation_feature_id},
-			 $genotype_information->{$population}->{$individual_id}->{seq_region_id},
-			 $genotype_information->{$population}->{$individual_id}->{seq_region_end},$global_population_id)."\n" );
-    $genotypes_file->{"$TMP_DIR/$dbname.pairwise_ld_$global_population_id\.txt"}++;
+#we will only calculate things in the superpopulations and in the populations, no global population
+#     $regions->{"$TMP_DIR/$dbname.pairwise_ld_$global_population_id\.txt"}->{$genotype_information->{$population}->{$individual_id}->{seq_region_id}}++; #add one more genotype in the region for the population
+#     print_buffered( $buffer, "$TMP_DIR/$dbname.pairwise_ld_$global_population_id\.txt", 
+# 		    join("\t",$previous_variation_id,$genotype_information->{$population}->{$individual_id}->{seq_region_start},
+# 			 $individual_id,
+# 			 $genotype_information->{$population}->{$individual_id}->{genotype},
+# 			 $genotype_information->{$population}->{$individual_id}->{variation_feature_id},
+# 			 $genotype_information->{$population}->{$individual_id}->{seq_region_id},
+# 			 $genotype_information->{$population}->{$individual_id}->{seq_region_end},$global_population_id)."\n" );
+#     $genotypes_file->{"$TMP_DIR/$dbname.pairwise_ld_$global_population_id\.txt"}++;
     foreach my $superpop_id ( @{$sub_super_pop->{ $population }} ) {
 	$regions->{"$TMP_DIR/$dbname.pairwise_ld_$superpop_id\.txt"}->{$genotype_information->{$population}->{$individual_id}->{seq_region_id}}++; #add one more genotype in the region for the population
 	print_buffered( $buffer, "$TMP_DIR/$dbname.pairwise_ld_$superpop_id\.txt", 
