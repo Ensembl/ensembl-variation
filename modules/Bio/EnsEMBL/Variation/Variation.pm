@@ -86,7 +86,6 @@ package Bio::EnsEMBL::Variation::Variation;
 use Bio::EnsEMBL::Storable;
 use Bio::EnsEMBL::Utils::Argument qw(rearrange);
 use Bio::EnsEMBL::Utils::Exception qw(throw deprecate warning);
-
 use vars qw(@ISA);
 
 @ISA = qw(Bio::EnsEMBL::Storable);
@@ -451,7 +450,7 @@ sub three_prime_flanking_seq{
   #lazy-load the flanking sequence from the database
   if (!defined $self->{'three_prime_flanking_seq'} && $self->{'adaptor'}){
       my $variation_adaptor = $self->adaptor()->db()->get_VariationAdaptor();
-      ($self->{'three_prime_flanking_seq'},$self->{'five_prime_flaning_seq'}) = @{$variation_adaptor->get_flanking_sequence($self->{'dbID'})};
+      ($self->{'three_prime_flanking_seq'},$self->{'five_prime_flanking_seq'}) = @{$variation_adaptor->get_flanking_sequence($self->{'dbID'})};
   }
   return $self->{'three_prime_flanking_seq'};
 }
@@ -471,7 +470,7 @@ sub three_prime_flanking_seq{
 sub get_all_IndividualGenotypes {
     my $self = shift;
     if (defined ($self->{'adaptor'})){
-	my $igtya = $self->{'adaptor'}->get_IndividualGenotypeAdaptor();
+	my $igtya = $self->{'adaptor'}->db()->get_IndividualGenotypeAdaptor();
 	
 	return $igtya->fetch_all_by_Variation($self);
     }
@@ -493,7 +492,7 @@ sub get_all_IndividualGenotypes {
 sub get_all_PopulationGenotypes {
     my $self = shift;
     if (defined ($self->{'adaptor'})){
-	my $pgtya = $self->{'adaptor'}->get_PopulationGenotypeAdaptor();
+	my $pgtya = $self->{'adaptor'}->db()->get_PopulationGenotypeAdaptor();
 	
 	return $pgtya->fetch_all_by_Variation($self);
     }
