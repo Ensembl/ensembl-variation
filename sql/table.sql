@@ -40,6 +40,26 @@ create table variation_synonym (
 );
 
 
+#
+# population_synonym
+#
+# Table containing alternate identifiers for the same population.
+# For example this might be pop_id identifiers for the population in dbSNP.
+#
+#
+
+create table population_synonym (
+  population_synonym_id int not null auto_increment,
+  population_id int not null,
+  source_id int not null,
+  name varchar(255),
+
+  primary key(population_synonym_id),
+  key population_idx (population_id),
+  unique (name, source_id)
+);
+
+
 
 #
 # allele
@@ -84,12 +104,14 @@ create table allele(
 # name                 - name or identifier of the population
 # size                 - if the size is NULL its not known or not relevant for this population
 #                        eg. "european" would not have a size 
+# is_strain            - int, 1 means that the population is a strain, 0 otherwise
 
 create table population(
 	population_id int not null auto_increment,
 	name varchar(255) not null,
 	size int,
 	description text,
+	is_strain int(1) default 0 NOT NULL,
 
 	primary key( population_id ),
   unique name_idx( name )
@@ -175,6 +197,9 @@ create table individual(
 #                         particular feature is one example of a mapped 
 #                         location.  This can be used to limit the 
 #                         the features that come back from a query.
+# flags                 - possible values genotyped, to filter the selection of
+#			  variations
+
 
 create table variation_feature(
 	variation_feature_id int not null auto_increment,
@@ -186,6 +211,12 @@ create table variation_feature(
 	allele_string text,
 	variation_name varchar(255),
 	map_weight int not null,
+	flags SET('genotyped'),
+	source_id int not null, 
+	validation_status SET('cluster','freq','submitter','doublehit','hapmap'),
+	consequence_type enum( "INTRONIC", "UPSTREAM", "DOWNSTREAM", "SYNONYMOUS_CODING",
+		           "NON_SYNONYMOUS_CODING", "FRAMESHIFT_CODING", 
+             	"5PRIME_UTR", "3PRIME_UTR", "INTERGENIC" ) default "INTERGENIC" not null ,	
 
 	primary key( variation_feature_id ),
 	key pos_idx( seq_region_id, seq_region_start ),
@@ -449,23 +480,41 @@ create table population_genotype (
 
 
 #
-# individual_genotype
+# individual_genotype_single_bp
 #
-# This table contains genotypes of individuals.
+# This table contains genotypes of individuals with 1 single bp in the alleles.
 #
 # variation_id	- FK to variation table
 # allele_1	- One of the alleles of the genotype
 # allele_2	- The other allele of the genotype
 # individual_id - foreign key, references individual table
 
-create table individual_genotype (
-  individual_genotype_id int not null auto_increment,
+create table individual_genotype_single_bp (
+  variation_id int not null,
+  allele_1 char,
+  allele_2 char,
+  individual_id int,
+
+  key variation_idx(variation_id),
+  key individual_idx(individual_id)
+) MAX_ROWS = 100000000;
+
+#
+# individual_genotype_multiple_bp
+#
+# This table contains genotypes of individuals with more than 1 bp in the alleles.
+#
+# variation_id	- FK to variation table
+# allele_1	- One of the alleles of the genotype
+# allele_2	- The other allele of the genotype
+# individual_id - foreign key, references individual table
+
+create table individual_genotype_multiple_bp (
   variation_id int not null,
   allele_1 varchar(255),
   allele_2 varchar(255),
   individual_id int,
 
-  primary key(individual_genotype_id),
   key variation_idx(variation_id),
   key individual_idx(individual_id)
 );
@@ -480,7 +529,6 @@ create table individual_genotype (
 # seq_region_id_ - FK, references seq_region table
 # seq_region_start_ - where the region start
 # seq_region_end -  where the region ends
-# snp_distance_count - number of variants in the region between two variations
 # r2 - value: D^2/(frq(A)*frq(B)*frq(a)*frq(b))
 # d_prime - value: D/Dmax
 # sample_count - value: N
@@ -492,7 +540,6 @@ create table pairwise_ld(
 	seq_region_id int not null,
 	seq_region_start int not null,
 	seq_region_end int not null,
-	snp_distance_count int not null,
 	r2 float not null,
 	d_prime float not null,
 	sample_count int not null,
@@ -522,3 +569,21 @@ CREATE TABLE meta_coord (
   UNIQUE(table_name, coord_system_id)
 
 ) TYPE=MyISAM;
+
+
+################################################################################
+#
+# Table structure for table 'meta' 
+#
+
+CREATE TABLE meta (
+
+  meta_id 		      INT not null auto_increment,
+  meta_key                    varchar( 40 ) not null,
+  meta_value                  varchar( 255 ) not null,
+
+  PRIMARY KEY( meta_id ),
+  KEY meta_key_index ( meta_key ),
+  KEY meta_value_index ( meta_value )
+
+);
