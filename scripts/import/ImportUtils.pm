@@ -7,11 +7,9 @@ use Exporter;
 
 our @ISA = ('Exporter');
 
-our @EXPORT_OK = qw(dumpSQL debug create_and_load load column_exists table_exists);
+our @EXPORT_OK = qw(dumpSQL debug create_and_load load);
 
-#our $TMP_DIR = "/ecs2/scratch3/dani";
-#our $TMP_DIR = "/ecs2/scratch4/yuan/zfish/new_snpdb";
-our $TMP_DIR = "/acari/work4/yuan/HAP/hapmap/tmp";
+our $TMP_DIR = "/ecs2/scratch3/dani";
 our $TMP_FILE = 'tabledump.txt';
 
 
@@ -111,7 +109,6 @@ sub create_and_load {
   my $tablename = shift;
   my @cols = @_;
 
-  #$db->do ("DROP TABLE $tablename") if (table_exists($db,$tablename)) ;
   my $sql = "CREATE TABLE $tablename ( ";
 
   my @col_defs;
@@ -148,39 +145,6 @@ sub debug {
   print STDERR @_, "\n";
 }
 
-sub table_exists{
 
-  my $db = shift;
-  my $tablename = shift;
-
-  eval $db->do ("select count(*) from $tablename");
-						
-  if (! $db->errstr) {
-    print "$tablename is exist return 1\n";
-    return 1;
-  }
-  else {
-    print "$tablename is not exist return 0 and will create one\n";
-    return 0;
-  }
-}
-
-sub column_exists{
-
-  my $db = shift;
-  my $tablename = shift;
-  my $col_name = shift;
-
-  eval $db->do ("select $col_name from $tablename limit 1");
-
-  if (! $db->errstr) {
-    print "$col_name is exist return 1\n";
-    return 1;
-  }  
-  else {
-    print "$col_name is not exist return 0 and will create one\n";
-    return 0;
-  }
-}
 
 1;
