@@ -117,6 +117,7 @@ sub fetch_by_VariationFeature {
   }
 
   my $ldFeatureContainer = $self->generic_fetch("pl.variation_feature_id_1 = ". $vf->dbID() . " OR pl.variation_feature_id_2 = " . $vf->dbID());
+
   #store the name of the variation feature that generates the object
   $ldFeatureContainer->name($vf->dbID());
   return $ldFeatureContainer;
@@ -130,7 +131,7 @@ sub _tables { return ['pairwise_ld', 'pl']; }
 sub _columns {
   return qw( pl.variation_feature_id_1 pl.variation_feature_id_2 pl.population_id
 	     pl.seq_region_id pl.seq_region_start pl.seq_region_end 
-	     pl.snp_distance_count pl.r2 pl.Dprime);
+	     pl.snp_distance_count pl.r2 pl.Dprime pl.sample_count);
 }
 
 #
@@ -142,26 +143,36 @@ sub _objs_from_sth {
   my $sth  = shift;
 
   my %feature_container;
-  my $ldContainer;
+  
+  my $vfa = $self->db()->get_VariationFeatureAdaptor;
 
+  my %vf_objects; #hash containing the address of all the variation feature objects present in the ld table
   my ($variation_feature_id_1, $variation_feature_id_2, $population_id, $seq_region_id, $seq_region_start, $seq_region_end, $snp_distance_count,
-      $r2, $Dprime);
+      $r2, $Dprime,$sample_count);
 
-  $sth->bind_columns(\$variation_feature_id_1, \$variation_feature_id_2, \$population_id, \$seq_region_id, \$seq_region_start, \$seq_region_end, \$snp_distance_count, \$r2, \$Dprime);
+  $sth->bind_columns(\$variation_feature_id_1, \$variation_feature_id_2, \$population_id, \$seq_region_id, \$seq_region_start, \$seq_region_end, \$snp_distance_count, \$r2, \$Dprime, \$sample_count);
 
   while($sth->fetch()) {
+      my %ld_values;
       #get the id of the variations
-      $feature_container{$variation_feature_id_1 . '-' . $variation_feature_id_2}{'Dprime'} = $Dprime;
-      $feature_container{$variation_feature_id_1 . '-' . $variation_feature_id_2}{'r2'} = $r2;
-      $feature_container{$variation_feature_id_1 . '-' . $variation_feature_id_2}{'snp_distance_count'} = $snp_distance_count;
+      $ld_values{'Dprime'} = $Dprime;
+      $ld_values{'r2'} = $r2;
+      $ld_values{'snp_distance_count'} = $snp_distance_count;      
+      $ld_values{'sample_count'} = $sample_count;
+      if (!exists $vf_objects{$variation_feature_id_1}){
+	  $vf_objects{$variation_feature_id_1} = $vfa->fetch_by_dbID($variation_feature_id_1);
+      }      
+      if (!exists $vf_objects{$variation_feature_id_2}){
+	  $vf_objects{$variation_feature_id_2} = $vfa->fetch_by_dbID($variation_feature_id_2);
+      }  
       
+      $feature_container{$variation_feature_id_1 . '-' . $variation_feature_id_2}->{$population_id} =  \%ld_values;
   }
   $sth->finish();
-
   return Bio::EnsEMBL::Variation::LDFeatureContainer->new(
-							  { 'ldContainer'=> \%feature_container,
-							    'name' => ''
-							  }
+							  '-ldContainer'=> \%feature_container,
+							  '-name' => '',
+							  '-variationFeatures' => \%vf_objects
 							  );
 }
 
