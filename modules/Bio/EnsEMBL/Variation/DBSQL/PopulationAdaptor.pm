@@ -9,7 +9,7 @@
 
 =head1 NAME
 
-Bio::EnsEMBL::DBSQL::PopulationAdaptor
+Bio::EnsEMBL::Variation::DBSQL::PopulationAdaptor
 
 =head1 SYNOPSIS
 
