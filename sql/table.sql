@@ -165,7 +165,7 @@ create table individual(
 # allele_string         - this is a denormalised string taken from the 
 #                         alleles in the allele table associated with this
 #                         variation.  The reference allele (i.e. one on the
-                          reference genome comes first).
+#                         reference genome comes first).
 # variation_name        - a denormalisation taken from the variation table
 #                         this is the name or identifier that is used for
 #                         displaying the feature.
@@ -355,7 +355,8 @@ create table flanking_sequence (
   seq_region_strand tinyint,
 
 	primary key( variation_id )
-);
+
+) MAX_ROWS = 100000000;
 
 
 #
