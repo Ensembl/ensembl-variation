@@ -485,7 +485,6 @@ sub get_all_validation_states {
   my @VSTATES = @Bio::EnsEMBL::Variation::Variation::VSTATES;
 
   my $code = $self->{'validation_code'};
-  print STDERR "the code is $code\n";
 
   # convert the bit field into an ordered array
   my @states;
