@@ -3,7 +3,7 @@ use warnings;
 
 BEGIN { $| = 1;
 	use Test;
-	plan tests => 12;
+	plan tests => 15;
 }
 
 
@@ -23,13 +23,15 @@ my $green_pop = Bio::EnsEMBL::Variation::Population->new
   (-dbID => 123,
    -name => 'Green people',
    -description => 'People who are green',
-   -size => 1000);
+   -size => 1000,
+   -is_strain => 0);
 
 my $blue_pop = Bio::EnsEMBL::Variation::Population->new
   (-dbID => 124,
    -name => 'Blue people',
    -description => 'People who are blue',
-   -size => 1000);
+   -size => 1000,
+   -is_strain => 1);
 
 
 my $sub_pops = [$green_pop, $blue_pop];
@@ -44,6 +46,7 @@ my $pop = Bio::EnsEMBL::Variation::Population->new
    -name => $name,
    -description => $desc,
    -size => $size,
+   -is_strain => 0,
    -sub_populations => $sub_pops);
 
 ok($pop->dbID() == $dbID);
@@ -52,14 +55,13 @@ ok($pop->description() eq $desc);
 ok($pop->size() == $size);
 ok($pop->get_all_sub_Populations()->[0]->name eq 'Green people');
 
-
 # test getter/setters
 
 ok(test_getter_setter($pop, 'dbID', 123));
 ok(test_getter_setter($pop, 'name', 'Saturn People'));
 ok(test_getter_setter($pop, 'description', 'People from Saturn' ));
 ok(test_getter_setter($pop, 'size', 10));
-
+ok(test_getter_setter($pop,'is_strain',0));
 
 
 
@@ -85,3 +87,11 @@ ok(@{$pop->get_all_sub_Populations()} == 25);
 $pop = $pop->get_all_sub_Populations->[0];
 
 ok($pop->get_all_super_Populations()->[0]->name() eq 'PACIFIC');
+
+#test get_all_synonyms
+
+$purple_pop->adaptor($pa);
+my $synonyms = $purple_pop->get_all_synonyms();
+
+ok($synonyms->[0] == 580);
+ok(@{$synonyms} == 1);

@@ -45,7 +45,7 @@ ok($ind->dbID() == 2265);
 # test fetch_all_by_Population
 my $pop = $pa->fetch_by_name('TSC-CSHL:CEL_caucasian_CEPH');
 my $inds = $ia->fetch_all_by_Population($pop);
-ok(@$inds == 625);
+ok(@$inds == 661);
 
 # test fetch_all_by_parent_Individual
 

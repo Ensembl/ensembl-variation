@@ -4,7 +4,7 @@ use warnings;
 
 BEGIN { $| = 1;
 	use Test;
-	plan tests => 10;
+	plan tests => 15;
 }
 
 
@@ -51,3 +51,19 @@ $pop = $pa->fetch_by_name('WRAYLAB:PNG');
 $pops = $pa->fetch_all_by_sub_Population($pop);
 ok(@$pops == 1);
 ok($pops->[0]->name() eq 'PACIFIC');
+
+#test fetch_synonyms
+$pop = $pa->fetch_by_dbID(70);
+my $synonyms = $pa->fetch_synonyms($pop->dbID());
+ok($synonyms->[0] == 525);
+ok(@{$synonyms} == 1);
+
+
+#test fetch_population_by_synonym
+my $pop_array = $pa->fetch_population_by_synonym(525,'dbSNP');
+ok(@{$pop_array} == 1);
+ok($pop_array->[0]->dbID == 70);
+
+#test fetch_all_strains
+my $strains = $pa->fetch_all_strains();
+ok(@{$strains} == 0);

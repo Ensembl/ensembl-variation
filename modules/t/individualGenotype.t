@@ -3,7 +3,7 @@ use warnings;
 
 BEGIN { $| = 1;
 	use Test;
-	plan tests => 9;
+	plan tests => 8;
 }
 
 
@@ -28,11 +28,8 @@ my $var = Bio::EnsEMBL::Variation::Variation->new
 my $a1 = 'A';
 my $a2 = 'C';
 
-my $dbID = 1;
-
 my $ind_gtype = Bio::EnsEMBL::Variation::IndividualGenotype->new
-  (-dbID => $dbID,
-   -allele1 => $a1,
+  (-allele1 => $a1,
    -allele2 => $a2,
    -variation => $var,
    -individual => $ind);
@@ -44,7 +41,6 @@ ok($ind_gtype->variation()->name()  eq $var->name());
 ok($ind_gtype->allele1() eq $a1);
 ok($ind_gtype->allele2() eq $a2);
 
-ok($ind_gtype->dbID() == $dbID);
 
 # test getter/setters
 
