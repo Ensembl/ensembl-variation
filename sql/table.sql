@@ -1,6 +1,22 @@
+#
+# variation
+#
+# Central table containing actual variations (indels, SNPs etc.)  
+# variations may be grouped into a hierarchy  this is used to
+# accomodate dbSNP style SubSNP <-> RefSNP style relationships
+#
+
+# variation_id        - primary key, internal identifier
+# source_id           - foreign key ref source
+# name                - identifier for the variation such as the dbSNP
+#                       refSNP id (rs#) or SubSNP id (ss#)
+# parent_variation_id - this may refer to a parent variation which is similar 
+#                       to a subsnp having a refsnp. This is null if this 
+#                       variation is the top of its hierarchy
+
 create table variation(
-	variation_id int not null auto_increment,
-	source_id int not null,
+	variation_id int not null auto_increment, # PK
+	source_id int not null, 
 	name varchar(255),
 	parent_variation_id int,
 
@@ -8,6 +24,25 @@ create table variation(
 	key parent_var_idx( parent_variation_id ),
 	key name_idx( name, source_id )
 );
+
+
+#
+# allele
+#
+# Every allele for every variation in the database has a row in this table.
+# Alleles are repeated in this table as often as necessary.  For example
+# a variation may have alleles 'A' and 'T'. This would be represented by
+# two rows in this table.  A different variation which also had an 'A'
+# allele would require another row in this table. This way it is 
+# simple to track frequency and population for each allele and hopefully not 
+# too much space is wasted on the actual allele strings.
+#
+
+# allele_id     - primary key, internal identifier
+# variation_id  - foreign key ref variation
+# allele        - string representing an allele.  E.g. 'A', 'T'
+# frequency     - the frequency of this allele in population 
+# population_id - foreign key ref population
 
 create table allele(
 	allele_id int not null auto_increment,
@@ -20,6 +55,20 @@ create table allele(
 	key variation_idx( variation_id )
 );
 
+#
+# population
+#
+# A population may be an individual, group, strain, etc.  A population 
+# hierarchy is allowed so that individuals may be members of a larger group 
+# and so on.
+#
+
+# population_id        - primary key, internal identifier
+# name                 - name or identifier of the population
+# method               - method of snp assay used on this population
+# parent_population_id - self-referential identifier allowing a population
+#                        hierarchy to e constructed. NULL if no parent pop
+
 create table population(
 	population_id int not null auto_increment,
 	name varchar(255) not null,
@@ -31,12 +80,44 @@ create table population(
 	key parent_pop_idx( parent_population_id ) 
 );
 
+
+#
+# variation_feature
+#
+# This is a feature table similar to the feature tables in the core database.
+# The seq_region_id references a seq_region in the core database and the
+# seq_region_start, seq_region_end and seq_region_strand represent a 
+# variation position on that seq_region.  This table incorporates some 
+# denormalisation, taking fields from other tables so that information
+# needed for feature creation can be quickly retrieved.
+#
+# variation_feature_id  - primary key, internal identifier
+# seq_region_id         - foreign key references seq_region in core db
+#                         This refers to the seq_region which this snp is
+#                         on, which may be a chromosome or clone etc.
+# seq_region_start      - the start position of the variation on the seq_region
+# seq_region_end        - the end position of the variation on the seq_region
+# seq_region_strand     - the orientation of the variation on the seq_region
+# variation_id          - foreign key refs variation, the variation associated
+#                         with this position
+# allele_string         - this is a denormalised string taken from the 
+#                         alleles in the allele table associated with this
+#                         variation
+# variation_name        - a denormalisation taken from the variation table
+#                         this is the name or identifier that is used for
+#                         displaying the feature.
+# map_weight            - the number of times that this variation has mapped 
+#                         to the genome.  This is a denormalisation as this
+#                         particular feature is one example of a mapped 
+#                         location.  This can be used to limit the 
+#                         the features that come back from a query.
+
 create table variation_feature(
 	variation_feature_id int not null auto_increment,
 	seq_region_id int not null,
 	seq_region_start int not null,
 	seq_region_end int not null,
-	seq_region_strand enum( "-1", "0", "1" ) default "0"  not null,
+	seq_region_strand tinyint not null,
 	variation_id int not null,
 	allele_string text,
 	method varchar(255),
@@ -48,6 +129,18 @@ create table variation_feature(
 	key variation_idx( variation_id )
 );
 
+
+#
+# transcript_variation
+# 
+# This table contains a classification of variation features based on Ensembl
+# predicted transcripts.  Variation features which fall into Ensembl 
+# transcript regions are classified as 'INTRONIC', '5PRIME', '3PRIME',
+# 'SYNONYMOUS_CODING', 'NON_SYNONYMOUS_CODING', '5PRIME_UTR', '3PRIME_UTR'
+#
+# transcript_variation_id - primary key, internal identifier
+# variation_feature_id    - foreign key ref variation_feature
+# 
 
 create table transcript_variation(
 	transcript_variation_id int not null auto_increment,
@@ -62,6 +155,11 @@ create table transcript_variation(
 	key variation_idx( variation_feature_id )
 	);
 
+#
+# allele_group
+#
+#
+
 create table allele_group(
 	allele_group_id int not null auto_increment,
 	population_id int,
@@ -73,6 +171,10 @@ create table allele_group(
 
 );
 
+#
+# allele_group_allele
+#
+
 create table allele_group_allele (
 	allele_id int not null,
 	allele_group_id int not null,
@@ -80,6 +182,10 @@ create table allele_group_allele (
 	unique( allele_group_id, allele_id ),
 	key allele_idx( allele_id, allele_group_id )
 );
+
+#
+# flanking_sequence
+#
 
 create table flanking_sequence (
 	variation_id int not null,
@@ -89,6 +195,10 @@ create table flanking_sequence (
 	primary key( variation_id )
 );
 
+#
+# httag
+#
+#
 
 create table httag(
 	httag_id int not null auto_increment,
@@ -99,6 +209,14 @@ create table httag(
 	primary key( httag_id ),
 	key variation_idx( variation_id )
 );
+
+#
+# source
+#
+# this table contains sources of snps. this might be dbSNP, TSC, HGBase, etc. 
+#
+# source_id - primary key, internal identifier
+# name      - the name of the source.  e.g. 'dbSNP' 
 
 create table source(
 	source_id int not null auto_increment,
