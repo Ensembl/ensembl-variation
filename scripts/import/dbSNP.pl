@@ -5,21 +5,95 @@
 use strict;
 use warnings;
 use DBI;
+use Getopt::Long;
 
-my $tmp_dir = "/ecs2/scratch5/ensembl/mcvicker/dbSNP";
+use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
+use Bio::EnsEMBL::DBSQL::DBAdaptor;
 
-my $dbSNP = DBI->connect( "DBI:mysql:host=cbi2.internal.sanger.ac.uk;dbname=dbSNP_120", "dbsnpro" ) or die("Could not connect to dbSNP db: $!");
+my $TAX_ID;
+my $LIMIT_SQL;
+my $CONTIG_SQL;
 
-my $dbVar = DBI->connect( "DBI:mysql:host=ecs4.internal.sanger.ac.uk;dbname=mcvicker_variation;port=3352","ensadmin", "ensembl" ) or die("Could not connect to variation database: $!");
+my $dbSNP;
+my $dbVar;
+my $dbCore;
 
-my $dbCore = DBI->connect( "DBI:mysql:host=ecs2.internal.sanger.ac.uk;dbname=mus_musculus_core_22_32b;port=3364","ensro" ) or die("Could not connect to core database: $!");
+{
+  my($dshost, $dsuser, $dspass, $dsport, $dsdbname, # dbSNP db
+     $chost, $cuser, $cpass, $cport, $cdbname,      # ensembl core db
+     $vhost, $vuser, $vpass, $vport, $vdbname,      # ensembl variation db
+     $limit);
+
+  GetOptions('dshost=s'   => \$dshost,
+             'dsuser=s'   => \$dsuser,
+             'dspass=s'   => \$dspass,
+             'dsport=i'   => \$dsport,
+             'dsdbname=s' => \$dsdbname,
+             'chost=s'   => \$chost,
+             'cuser=s'   => \$cuser,
+             'cpass=s'   => \$cpass,
+             'cport=i'   => \$cport,
+             'cdbname=s' => \$cdbname,
+             'vhost=s'   => \$vhost,
+             'vuser=s'   => \$vuser,
+             'vpass=s'   => \$vpass,
+             'vport=i'   => \$vport,
+             'vdbname=s' => \$vdbname,
+             'limit=i'   => \$limit);
+
+  $dshost   ||= 'cbi2.internal.sanger.ac.uk';
+  $dsdbname ||= 'dbSNP_121';
+  $dsuser   ||= 'dbsnpro';
+  $dsport   ||= 3306;
+
+  $chost    ||= 'ecs2';
+  $cuser    ||= 'ensro';
+  $cport    ||= 3364;
+
+  $vport    ||= 3306;
+  $vuser    ||= 'ensadmin';
+
+  usage('-cdbname argument is required.') if(!$cdbname);
+  usage('-vdbname argument is required.') if(!$vdbname);
+
+  $LIMIT_SQL = ($limit) ? " LIMIT $limit " : '';
+
+  $dbSNP = DBI->connect
+    ("DBI:mysql:host=$dshost;dbname=$dsdbname;port=$dsport",$dsuser, $dspass);
+  die("Could not connect to dbSNP db: $!") if(!$dbSNP);
+
+  $dbVar = DBI->connect
+    ("DBI:mysql:host=$vhost;dbname=$vdbname;port=$vport",$vuser, $vpass );
+  die("Could not connect to variation database: $!") if(!$dbVar);
+
+  $dbCore = Bio::EnsEMBL::DBSQL::DBAdaptor->new
+    (-host   => $chost,
+     -user   => $cuser,
+     -pass   => $cpass,
+     -port   => $cport,
+     -dbname => $cdbname);
+
+  my $mc = $dbCore->get_MetaContainer();
+  my $species = $mc->get_Species();
+
+  throw("Unable to determine species from core database.") if(!$species);
+
+  $TAX_ID = $mc->get_taxonomy_id();
 
 
-#my $TAX_ID = 9606; # human
-my $TAX_ID = 10090; # mouse
+  if($species->binomial() eq 'Homo sapiens') {
+    $CONTIG_SQL = ' CONCAT(contig_acc, '.', contig_ver) ';
+  } else {
+    $CONTIG_SQL = ' contig_acc ';
+  }
+}
 
-my $LIMIT = '';
-#my $LIMIT = ' LIMIT 100000 ';
+my $SPECIES_PREFIX = get_species_prefix($TAX_ID);
+
+
+
+my $TMP_DIR = "/ecs2/scratch5/ensembl/mcvicker/dbSNP";
+
 
 source_table();
 population_table();
@@ -54,7 +128,7 @@ sub variation_table {
            SELECT 1, concat( "rs", snp_id), snp_id
            FROM SNP
            WHERE tax_id = $TAX_ID
-           $LIMIT
+           $LIMIT_SQL
           }
       );
 
@@ -116,7 +190,7 @@ sub variation_table {
 
   # dump RefSNPs to tmp file with validation status set
 
-  open ( FH, ">$tmp_dir/tabledump.txt" );
+  open ( FH, ">$TMP_DIR/tabledump.txt" );
 
   while($arr = $sth->fetchrow_arrayref()) {
     if(!defined($cur_variation_id) || $arr->[0] != $cur_variation_id) {
@@ -154,12 +228,12 @@ sub dump_subSNPs {
         AND   subsnp.subsnp_id = subsnplink.subsnp_id
         AND   ov.var_id = subsnp.variation_id
         AND   b.tax_id = $TAX_ID
-        $LIMIT
+        $LIMIT_SQL
        } );
 
   $sth->execute();
 
-  open ( FH, ">$tmp_dir/tabledump.txt" );
+  open ( FH, ">$TMP_DIR/tabledump.txt" );
 
   my $row;
   while($row = $sth->fetchrow_arrayref()) {
@@ -308,7 +382,7 @@ sub allele_table {
              AND    afsp.subsnp_id = ss.subsnp_id
              AND    ss.batch_id = b.batch_id
              AND    b.tax_id = $TAX_ID
-             $LIMIT));
+             $LIMIT_SQL));
 
   debug("Loading allele frequency data");
 
@@ -392,7 +466,7 @@ sub flanking_sequence_table {
                WHERE ss.subsnp_id = seq.subsnp_id
                AND   ss.batch_id = b.batch_id
                AND   b.tax_id = $TAX_ID
-               $LIMIT});
+               $LIMIT_SQL});
     create_and_load("tmp_seq_$type", "subsnp_id i*", "line_num i", "line");
 
     # merge the tables into a single tmp table
@@ -418,7 +492,7 @@ sub flanking_sequence_table {
 
   $sth->bind_columns(\$vid, \$ssid, \$type, \$line, \$revcom);
 
-  open(FH, ">$tmp_dir/flankingdump.txt");
+  open(FH, ">$TMP_DIR/flankingdump.txt");
 
   my $upstream = '';
   my $dnstream = '';
@@ -479,10 +553,10 @@ sub flanking_sequence_table {
   debug("Loading flanking sequence data");
 
   # import the generated data
-  $dbVar->do(qq{LOAD DATA LOCAL INFILE '$tmp_dir/flankingdump.txt'
+  $dbVar->do(qq{LOAD DATA LOCAL INFILE '$TMP_DIR/flankingdump.txt'
               INTO TABLE flanking_sequence});
 
-  unlink(">$tmp_dir/flankingdump.txt");
+  unlink(">$TMP_DIR/flankingdump.txt");
   $dbVar->do("DROP TABLE tmp_seq_3");
   $dbVar->do("DROP TABLE tmp_seq_5");
   $dbVar->do("DROP TABLE tmp_seq");
@@ -507,10 +581,13 @@ sub variation_feature {
   create_and_load("tmp_seq_region", "seq_region_id", "name *");
 
   debug("Dumping SNPLoc data");
-  dumpSQL( qq{SELECT snp_id, CONCAT(contig_acc, '.', contig_ver),
+
+  my $tablename = $SPECIES_PREFIX . 'SNPContigLoc';
+
+  dumpSQL( qq{SELECT snp_id, $CONTIG_SQL,
                      asn_from, asn_to, IF(orientation, -1, 1)
-              FROM   SNPContigLoc
-              $LIMIT});
+              FROM   $tablename
+              $LIMIT_SQL});
 
 
   debug("Loading SNPLoc data");
@@ -589,7 +666,7 @@ sub allele_group {
              AND    b.tax_id = $TAX_ID});
 
   create_and_load('tmp_allele_group_allele','hap_id i*','hapset_id i*',
-                  'loc_hap_id','snp_allele', 'subsnp_id i*');
+                  'name','snp_allele', 'subsnp_id i*');
 
   $dbVar->do(qq{ALTER TABLE allele_group ADD COLUMN hap_id int});
 
@@ -634,7 +711,7 @@ sub individual_genotypes {
              FROM   SubInd si, ObsGenotype og, SubmittedIndividual sind
              WHERE  og.gty_id = si.gty_id
              AND    sind.submitted_ind_id = si.submitted_ind_id
-             $LIMIT});
+             $LIMIT_SQL});
 
   create_and_load("tmp_gty", 'subsnp_id i*', 'ind_id i', 'genotype');
 
@@ -646,7 +723,7 @@ sub individual_genotypes {
 
   $sth->execute();
 
-  open ( FH, ">$tmp_dir/tabledump.txt" );
+  open ( FH, ">$TMP_DIR/tabledump.txt" );
 
   my $row;
   while($row = $sth->fetchrow_arrayref()) {
@@ -683,7 +760,7 @@ sub population_genotypes {
              WHERE  gtfsp.unigty_id = ug.unigty_id
              AND    ug.allele_id_1 = a1.allele_id
              AND    ug.allele_id_2 = a2.allele_id
-             $LIMIT});
+             $LIMIT_SQL});
 
   debug("loading genotype data");
 
@@ -731,7 +808,7 @@ sub dumpSQL {
 
   local *FH;
 
-  open FH, ">$tmp_dir/tabledump.txt";
+  open FH, ">$TMP_DIR/tabledump.txt";
 
   my $sth = $db->prepare( $sql, { mysql_use_result => 1 });
   $sth->execute();
@@ -756,25 +833,25 @@ sub load {
   my $cols = join( ",", @colnames );
 
   local *FH;
-  open FH, "<$tmp_dir/tabledump.txt";
+  open FH, "<$TMP_DIR/tabledump.txt";
   my $sql;
 
   if ( @colnames ) {
 
     $sql = qq{
-              LOAD DATA LOCAL INFILE '$tmp_dir/tabledump.txt' 
+              LOAD DATA LOCAL INFILE '$TMP_DIR/tabledump.txt' 
               INTO TABLE $tablename( $cols )
              };
   } else {
     $sql = qq{
-              LOAD DATA LOCAL INFILE '$tmp_dir/tabledump.txt' 
+              LOAD DATA LOCAL INFILE '$TMP_DIR/tabledump.txt' 
               INTO TABLE $tablename
              };
   }
 
   $dbVar->do( $sql );
 
-  unlink( "$tmp_dir/tabledump.txt" );
+  unlink( "$TMP_DIR/tabledump.txt" );
 }
 
 
@@ -844,16 +921,52 @@ sub count_rows {
 }
 
 
-#
-# reverse compliments nucleotide sequence
-#
 
-sub reverse_comp {
-  my $seqref = shift;
+sub get_species_prefix {
+  my $tax_id = shift;
 
-  $$seqref = reverse( $$seqref );
-  $$seqref =~
-    tr/acgtrymkswhbvdnxACGTRYMKSWHBVDNX/tgcayrkmswdvbhnxTGCAYRKMSWDVBHNX/;
+  my $arr = $dbSNP->selectall_arrayref
+    (qq{SELECT ot.prefix
+        FROM   OrganismTax ot
+        WHERE  ot.tax_id = $tax_id});
 
-  return;
+  if(@$arr) {
+    return $arr->[0]->[0];
+  }
+
+  warn("tax_id=$tax_id not found in OrganismTax table." .
+       "Assuming no species prefix");
+  return '';
+}
+
+
+
+
+sub usage {
+  my $msg = shift;
+
+  print STDERR <<EOF;
+
+usage: perl dbSNP.pl <options>
+
+options:
+    -dshost <hostname>   hostname of dbSNP MySQL database (default = cbi2.internal.sanger.ac.uk)
+    -dsuser <user>       username of dbSNP MySQL database (default = dbsnpro)
+    -dspass <pass>       password of dbSNP MySQL database
+    -dsport <port>       TCP port of dbSNP MySQL database (default = 3306)
+    -dsdbname <dbname>   dbname of dbSNP MySQL database   (default = dbSNP_121)
+    -chost <hostname>    hostname of core Ensembl MySQL database (default = ecs2)
+    -cuser <user>        username of core Ensembl MySQL database (default = ensro)
+    -cpass <pass>        password of core Ensembl MySQL database
+    -cport <port>        TCP port of core Ensembl MySQL database (default = 3364)
+    -cdbname <dbname>    dbname of core Ensembl MySQL database
+    -vhost <hostname>    hostname of variation MySQL database to write to
+    -vuser <user>        username of variation MySQL database to write to (default = ensadmin)
+    -vpass <pass>        password of variation MySQL database to write to
+    -vport <port>        TCP port of variation MySQL database to write to (default = 3306)
+    -vdbname <dbname>    dbname of variation MySQL database to write to
+    -limit <number>      limit the number of rows transfered for testing
+EOF
+
+  die("\n$msg\n\n");
 }
