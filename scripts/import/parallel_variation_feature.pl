@@ -172,6 +172,7 @@ sub variation_feature {
     or throw("Could not open tmp file: $TMP_DIR/variation_feature_$$\n");
 
   while($sth->fetch()) {
+    next if $map_weight >3; #excluding SNPs with map_weight > 3
     if(!defined($cur_vf_id) || $cur_vf_id != $vf_id) {
       if($top_coord) {
         my $allele_str;
@@ -297,7 +298,7 @@ sub variation_feature {
       if ($top_level) {
 	print FH join("\t", $cur_vf_id, $top_sr_id, $top_sr_start, $top_sr_end, $top_sr_strand,
 		      $cur_v_id, $allele_str, $cur_v_name,
-		      $cur_map_weight), "\n";
+		      $map_weight), "\n";
       }
       else {
 	print FH join("\t", $vf_id, $top_sr_id, $top_coord->start(),
