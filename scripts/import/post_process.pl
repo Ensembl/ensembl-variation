@@ -62,12 +62,12 @@ my ($TMP_DIR, $TMP_FILE, $LIMIT);
   $TMP_DIR  = $ImportUtils::TMP_DIR;
   $TMP_FILE = $ImportUtils::TMP_FILE;
 
-#  load_asm_cache($dbCore);
-#  variation_feature($dbCore, $dbVar);
+  load_asm_cache($dbCore);
+  variation_feature($dbCore, $dbVar);
 #  flanking_sequence($dbCore, $dbVar);
 #  variation_group_feature($dbCore, $dbVar);
 #  transcript_variation($dbCore, $dbVar);
-  ld_populations($dbCore,$dbVar);
+#  ld_populations($dbCore,$dbVar);
 
 }
 
@@ -582,7 +582,7 @@ sub pairwise_ld{
     #, the genotypes for that variation will be discarded
     my $previous_variation_id = ''; #to know if it is a new variation and we can get the new alleles
     my $genotype; #genotype in the AA, Aa or aa format to write to the file
-    debug("Loading pairwise_ld table");
+    debug("Loading pairwise_ld table for population $population_id\n");
 
     #necessary the order to know when we change variation
     my $sth = $dbVar->prepare
@@ -601,6 +601,8 @@ sub pairwise_ld{
     my ($variation_id, $variation_feature_id, $seq_region_id, $seq_region_start, $individual_id, $allele_1,$allele_2,$seq_region_end);
     my $seq_region_name;
     $sth->bind_columns(\$variation_id, \$variation_feature_id, \$seq_region_id, \$seq_region_start, \$individual_id, \$allele_1,\$allele_2,\$seq_region_end);
+    my $count_not_discarded = 0;
+    my $count_discarded = 0;
     while ($sth->fetch()){
 	if ($previous_variation_id eq ''){
 	    $previous_variation_id = $variation_id;
@@ -609,10 +611,14 @@ sub pairwise_ld{
 	if ($previous_variation_id ne $variation_id){
 	    #if the variation has 2 or 1 alleles, print all the genotypes to the file
 	    if (keys %alleles_variation <= 2){		
+		$count_not_discarded++;
 		&convert_genotype(\%alleles_variation,\%genotype_information);
 		foreach my $individual_id (keys %genotype_information){
 		    print FH join("\t",$previous_variation_id,$genotype_information{$individual_id}{seq_region_start},$individual_id,$genotype_information{$individual_id}{genotype},$genotype_information{$individual_id}{variation_feature_id},$genotype_information{$individual_id}{seq_region_id},$genotype_information{$individual_id}{seq_region_end},$population_id),"\n";
 		}
+	    }
+	    else{
+		$count_discarded++;
 	    }
 	    $previous_variation_id = $variation_id;
 	    %alleles_variation = (); #new variation, flush the hash
@@ -630,6 +636,7 @@ sub pairwise_ld{
 	$alleles_variation{$allele_1}++;
 	$alleles_variation{$allele_2}++;
     }
+    print "Number of variations discarded for population $population_id are: $count_discarded and used $count_not_discarded\n\n";
     $sth->finish();
     close FH;
     debug("calculating ld distance");

@@ -12,16 +12,25 @@ our @EXPORT_OK = qw(dumpSQL debug create_and_load load);
 our $TMP_DIR = "/ecs2/scratch3/dani";
 our $TMP_FILE = 'tabledump.txt';
 
+
 # successive dumping and loading of tables is typical for this process
 # dump does effectively a select into outfile without server file system access
 sub dumpSQL {
   my $db  = shift;
   my $sql = shift;
   local *FH;
-
+  my $counter = 0;
   open FH, ">$TMP_DIR/$TMP_FILE";
 
+#not necessary any more since increased the timeout of the mysql server
+#  while (!$db->ping()){
+#      print STDERR "Lost connection, trying to reconnect\n";
+#      sleep(5);
+#      $counter++;
+#      if ($counter == 5) {die "Couldn't reconnect to the database\n"}
+#  };
   my $sth = $db->prepare( $sql);
+  $sth->{mysql_use_result} = 1;
   $sth->execute();
   my $first;
   while ( my $aref = $sth->fetchrow_arrayref() ) {

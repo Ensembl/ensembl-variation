@@ -140,13 +140,18 @@ sub calculate_ld{
     #my approach to the problem: have a hash by chromosome and position and compare things    
     #then, sort all the positions
     my @positions_ordered = (sort {$a <=> $b} keys %{$snps_ordered{$seq_region_id}});
+#    while ( @positions_ordered ) { 
+#     my $position = shift( @positions_ordered );
+#     foreach my $position2 ( @positions_ordered ) {
+#       compare position with position2
+
     foreach my $position (sort {$a <=> $b} keys %{$snps_ordered->{$seq_region_id}}){
 	#delete the own snp to not copy it again
 	shift @positions_ordered;#remove first element from the array, it has already been compared
 	    $snp_count = 0;
 	#compare against all the SNPs, until we find one outside the window
 	foreach my $position2 (@positions_ordered){
-	    last if (abs($position - $position2) > 1_00_000);
+	    last if (abs($position - $position2) > 100_000);
 	    my $key = "$snps_ordered->{$seq_region_id}{$position}:$snps_ordered->{$seq_region_id}{$position2}";
 	    $snp_count++;
 	    if( &shared_people($genotypes->{$snps_ordered->{$seq_region_id}{$position}},$genotypes->{$snps_ordered->{$seq_region_id}{$position2}}) < 20 ) {
@@ -169,7 +174,7 @@ sub calculate_ld{
     foreach my $key ( keys %output ) {
 	($locus1,$locus2) = split /:/,$key;
 #format of the output file
-#  variation_feature_id_1 variation_feature_id_2 population_id seq_region_id seq_region_start seq_region_end snp_distance_count r2 Dprime
+#  variation_feature_id_1 variation_feature_id_2 population_id seq_region_id seq_region_start seq_region_end snp_distance_count r2 Dprime samplesize
 #it will be necessary to find out the start and end of the region, that will correspond to the start of the region for the variation in the lowest position and the end of the region for the variation in the higher position
 	if ($additional_info->{$locus1}->{position} < $additional_info->{$locus2}->{position}){
 	    $seq_region_start = $additional_info->{$locus1}->{position};
@@ -183,7 +188,7 @@ sub calculate_ld{
 	else{
 	    $seq_region_end = $additional_info->{$locus1}->{seq_region_end};
 	}
-	print FH join("\t",$additional_info->{$locus1}->{variation_feature_id},$additional_info->{$locus2}->{variation_feature_id},$additional_info->{$locus1}->{population_id},$seq_region_id,$seq_region_start,$seq_region_end,$output{$key}->{'snp_count'},$output{$key}->{'r2'}, abs($output{$key}->{'Dprima'})),"\n";	
+	print FH join("\t",$additional_info->{$locus1}->{variation_feature_id},$additional_info->{$locus2}->{variation_feature_id},$additional_info->{$locus1}->{population_id},$seq_region_id,$seq_region_start,$seq_region_end,$output{$key}->{'snp_count'},$output{$key}->{'r2'}, abs($output{$key}->{'Dprime'}),$output{$key}->{'N'}),"\n";	
     }   
 }
 
@@ -316,7 +321,7 @@ sub calculate_pairwise_stats {
     $o->{'r2'} = $r2;
     $o->{'theta'} = $theta;
     $o->{'N'} = $N;
-    $o->{'Dprima'} = $Dprima;
+    $o->{'Dprime'} = $Dprima;
     $o->{'snp_count'} = $snp_count;
     $o->{'people'} = scalar(keys %people);
 

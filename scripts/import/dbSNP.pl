@@ -8,7 +8,7 @@ use warnings;
 use DBI;
 use DBH;
 use Getopt::Long;
-
+use Benchmark;
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
 
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
@@ -71,6 +71,10 @@ my $dbCore;
     {'RaiseError' => 1});
   die("Could not connect to dbSNP db: $!") if(!$dbSNP);
 
+  $dbSNP->{mysql_auto_reconnect} = 1;
+
+  $dbSNP->do("SET SESSION wait_timeout = 2678200");
+
   $dbVar = DBH->connect
     ("DBI:mysql:host=$vhost;dbname=$vdbname;port=$vport",$vuser, $vpass,
     {'RaiseError' => 1});
@@ -102,14 +106,14 @@ my $SPECIES_PREFIX = get_species_prefix($TAX_ID);
 
 
 
-source_table();
-population_table();
-individual_table();
-variation_table();
-individual_genotypes();
-population_genotypes();
-allele_table();
-flanking_sequence_table();
+#source_table();
+#population_table();
+#individual_table();
+#variation_table();
+#individual_genotypes();
+#population_genotypes();
+#allele_table();
+#flanking_sequence_table();
 variation_feature();
 variation_group();
 allele_group();
@@ -457,7 +461,7 @@ sub flanking_sequence_table {
   my $sth = $dbVar->prepare(qq{SELECT ts.variation_id, ts.subsnp_id, ts.type,
                                       ts.line, ts.revcom
                                FROM   tmp_seq ts
-                               ORDER BY ts.subsnp_id, ts.type, ts.line_num});
+                               ORDER BY ts.subsnp_id, ts.type, ts.line_num},{mysql_use_result => 1});
 
   $sth->execute();
 

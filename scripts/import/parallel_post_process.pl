@@ -71,11 +71,11 @@ $TMP_DIR  = $ImportUtils::TMP_DIR;
 $TMP_FILE = $ImportUtils::TMP_FILE;
 
 
-my $variation_status_file = parallel_variation_feature($dbVar) if ($variation_feature);
-parallel_flanking_sequence($dbVar,$variation_status_file) if ($flanking_sequence);
-parallel_variation_group_feature($dbVar,$variation_status_file) if ($variation_group_feature);
-parallel_transcript_variation($dbVar,$variation_status_file) if ($transcript_variation);
-parallel_ld_populations($dbVar,$variation_status_file) if ($ld_populations);
+parallel_variation_feature($dbVar) if ($variation_feature);
+parallel_flanking_sequence($dbVar) if ($flanking_sequence);
+parallel_variation_group_feature($dbVar) if ($variation_group_feature);
+parallel_transcript_variation($dbVar) if ($transcript_variation);
+parallel_ld_populations($dbVar) if ($ld_populations);
 
 
 #will take the number of processes, and divide the total number of entries in the variation_feature table by the number of processes
@@ -117,16 +117,15 @@ sub parallel_variation_feature{
 	$call .= "-vpass $vpass " if ($vpass);
 	system($call);      
     }
-    $call = "bsub -K -w 'done(variation_job*)' -J waiting_process echo"; #waits until all variation features have finished to continue
+    $call = "bsub -K -w 'done(variation_job*)' -J waiting_process sleep 1"; #waits until all variation features have finished to continue
     system($call);
-    return $variation_status_file;
 }
 
 #will take the number of processes, and divide the total number of entries in the flanking_sequence table by the number of processes
 #has to wait until the variation_feature table has been filled
 sub parallel_flanking_sequence{
     my $dbVar = shift;
-    my $variation_status_file = shift;
+
     my $total_process = 0;
     my $sequences; #number of entries in the flanking_sequence table
     my $call;
@@ -146,7 +145,7 @@ sub parallel_flanking_sequence{
     for (my $i = 0; $i < $num_processes ; $i++){
 	$limit = $i*$sub_sequences . "," . $sub_sequences  if ($i+1 < $num_processes);
 	$limit = $i*$sub_sequences . "," . $sub_sequences*$i if ($i+1 == $num_processes); #the last one will select the left rows
-	$call = "bsub -w 'done(waiting_process)' -o $TMP_DIR/output_flanking_$i\_$$.txt /usr/local/ensembl/bin/perl parallel_flanking_sequence.pl -chost $chost -cuser $cuser -cdbname $cdbname -vhost $vhost -vuser $vuser -vport $vport -vdbname $vdbname -limit $limit -tmpdir $TMP_DIR -tmpfile $TMP_FILE -num_processes $num_processes -status_file $flanking_status_file ";
+	$call = "bsub -o $TMP_DIR/output_flanking_$i\_$$.txt /usr/local/ensembl/bin/perl parallel_flanking_sequence.pl -chost $chost -cuser $cuser -cdbname $cdbname -vhost $vhost -vuser $vuser -vport $vport -vdbname $vdbname -limit $limit -tmpdir $TMP_DIR -tmpfile $TMP_FILE -num_processes $num_processes -status_file $flanking_status_file ";
 	$call .= "-cpass $cpass " if ($cpass);
 	$call .= "-cport $cport " if ($cport);
 	$call .= "-vpass $vpass " if ($vpass);
@@ -158,9 +157,9 @@ sub parallel_flanking_sequence{
 #when the variation_feature table has been filled up, run the variation_group_feature. Not necessary to parallelize as fas as I know....
 sub parallel_variation_group_feature{
     my $dbVar = shift;
-    my $variation_status_file = shift;
+
     my $total_process = 0;
-    my $call = "bsub -w 'done(waiting_process)' -o $TMP_DIR/output_group_feature_$$\.txt /usr/local/ensembl/bin/perl parallel_variation_group_feature.pl -chost $chost -cuser $cuser -cdbname $cdbname -vhost $vhost -vuser $vuser -vport $vport -vdbname $vdbname -tmpdir $TMP_DIR -tmpfile $TMP_FILE ";
+    my $call = "bsub -o $TMP_DIR/output_group_feature_$$\.txt /usr/local/ensembl/bin/perl parallel_variation_group_feature.pl -chost $chost -cuser $cuser -cdbname $cdbname -vhost $vhost -vuser $vuser -vport $vport -vdbname $vdbname -tmpdir $TMP_DIR -tmpfile $TMP_FILE ";
     $call .= "-cpass $cpass " if ($cpass);
     $call .= "-cport $cport " if ($cport);
     $call .= "-vpass $vpass " if ($vpass);
@@ -172,7 +171,7 @@ sub parallel_variation_group_feature{
 # by the number of processes to make the subprocesses
 sub parallel_transcript_variation{
     my $dbVar = shift;
-    my $variation_status_file = shift;
+
     my $total_process = 0;
 
     my $length_slices = 0; #number of entries in the variation_feature table
@@ -208,7 +207,7 @@ sub parallel_transcript_variation{
 	}
 	$limit = $slice_min . "," . ($slice_max-$slice_min) if ($i+1 < $num_processes);
 	$limit = $slice_min . "," . (scalar(@slices_ordered)-$slice_min-1) if ($i+1 == $num_processes); #the last slice, get the left slices
-	$call = "bsub -w 'done(waiting_process)' -o $TMP_DIR/output_transcript_$i\_$$.txt /usr/local/ensembl/bin/perl parallel_transcript_variation.pl -chost $chost -cuser $cuser -cdbname $cdbname -vhost $vhost -vuser $vuser -vport $vport -vdbname $vdbname -limit $limit -tmpdir $TMP_DIR -tmpfile $TMP_FILE -num_processes $num_processes -status_file $transcript_status_file ";
+	$call = "bsub -o $TMP_DIR/output_transcript_$i\_$$.txt /usr/local/ensembl/bin/perl parallel_transcript_variation.pl -chost $chost -cuser $cuser -cdbname $cdbname -vhost $vhost -vuser $vuser -vport $vport -vdbname $vdbname -limit $limit -tmpdir $TMP_DIR -tmpfile $TMP_FILE -num_processes $num_processes -status_file $transcript_status_file ";
 	$call .= "-cpass $cpass " if ($cpass);
 	$call .= "-cport $cport " if ($cport);
 	$call .= "-vpass $vpass " if ($vpass);
@@ -220,7 +219,7 @@ sub parallel_transcript_variation{
 #will have to wait until the variation_feature has finished. Then, divide the total number of populations by the processes, and run it
 sub parallel_ld_populations{
     my $dbVar = shift;
-    my $variation_status_file = shift;
+
     my $total_process = 0;
 
     my $populations; #number of populations with genotypes
@@ -242,7 +241,7 @@ sub parallel_ld_populations{
     for (my $i = 0; $i < $num_processes ; $i++){
 	$limit = $i*$sub_populations . "," . $sub_populations if ($i+1 < $num_processes);
 	$limit = $i*$sub_populations . "," . $sub_populations*$i if ($i+1 == $num_processes); #the last one will select the left rows
-	$call = "bsub -w 'done(waiting_process)' -o $TMP_DIR/output_ld_populations_$i\_$$.txt /usr/local/ensembl/bin/perl parallel_ld_populations.pl -chost $chost -cuser $cuser -cdbname $cdbname -vhost $vhost -vuser $vuser -vport $vport -vdbname $vdbname -limit $limit -tmpdir $TMP_DIR -tmpfile $TMP_FILE -num_processes $num_processes -status_file $ld_populations_status_file ";
+	$call = "bsub -o $TMP_DIR/output_ld_populations_$i\_$$.txt /usr/local/ensembl/bin/perl parallel_ld_populations.pl -chost $chost -cuser $cuser -cdbname $cdbname -vhost $vhost -vuser $vuser -vport $vport -vdbname $vdbname -limit $limit -tmpdir $TMP_DIR -tmpfile $TMP_FILE -num_processes $num_processes -status_file $ld_populations_status_file ";
 	$call .= "-cpass $cpass " if ($cpass);
 	$call .= "-cport $cport " if ($cport);
 	$call .= "-vpass $vpass " if ($vpass);

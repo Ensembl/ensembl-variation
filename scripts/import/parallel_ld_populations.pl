@@ -176,7 +176,7 @@ sub pairwise_ld{
     #and, finally, create the table with the information, calling the calc_genotypes.pl script
     system("perl calc_genotypes.pl $TMP_DIR/pairwise_ld_$$\.txt $TMP_DIR/pairwise_ld_out_$$\.txt");
     #delete the file with the original file
-    unlink("$TMP_DIR/pairwise_ld_$$\.txt");
+#    unlink("$TMP_DIR/pairwise_ld_$$\.txt");
 
 
     return;
@@ -226,7 +226,7 @@ sub last_process{
     unlink(<$TMP_DIR/pairwise_ld_out*>);    
 
     #and import the data in the database
-    load($dbVar, qw(pairwise_ld variation_feature_id_1 variation_feature_id_2 population_id seq_region_id seq_region_start seq_region_end snp_distance_count r2 Dprime));
+    load($dbVar, qw(pairwise_ld variation_feature_id_1 variation_feature_id_2 population_id seq_region_id seq_region_start seq_region_end snp_distance_count r2 d_prime sample_count));
 
 
     update_meta_coord($dbCore, $dbVar, 'pairwise_ld');
