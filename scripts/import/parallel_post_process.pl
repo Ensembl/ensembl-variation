@@ -335,7 +335,7 @@ sub parallel_ld_populations{
 	    $previous_variation_id = $variation_id;
 	}
 	#only print genotypes without parents genotyped
-	if (!exists $siblings->{$individual_id}){
+	if (!exists $siblings->{$population_id . '-' . $individual_id}){ #necessary to use the population_id
 	    #if it is a new variation, write to the file (if necessary) and empty the hash
 	    if ($previous_variation_id ne $variation_id){
 		foreach my $population (keys %alleles_variation){
@@ -541,7 +541,8 @@ sub get_siblings{
     $sth_individual->execute($population_id);
     $sth_individual->bind_columns(\$individual_id);
     while ($sth_individual->fetch){
-	$siblings->{$individual_id}++;
+	$siblings->{$population_id.'-'.$individual_id}++; #necessary to have in the key the population, since some individuals are shared between
+	                                                   #populations
     }
     return $siblings;
 }
