@@ -35,6 +35,7 @@ sub variation_table {
   ### TBD make sure only the correct SNPs for the species come across
   ### by looking at the tax_id
 
+
   $dbVar->do( "ALTER TABLE variation add column snp_id int" );
   $dbVar->do( "ALTER TABLE variation add column subsnp_id int" );
 
@@ -186,6 +187,8 @@ sub population_table {
 sub allele_table {
   debug("Dumping allele data");
 
+  ### TBD check orientation of SubSNPs to RefSNP and revcom allele if necessary
+
   dumpSQL(qq(SELECT afsp.subsnp_id, afsp.pop_id, a.allele_id, a.allele,
                     afsp.freq
              FROM   AlleleFreqBySsPop afsp, Allele a
@@ -308,6 +311,9 @@ sub flanking_sequence_table {
 
 
 sub variation_feature {
+
+  ### TBD not sure if variations with map_weight > 1 or 2 should be
+  ### imported
 
   debug("Dumping seq_region data");
 
