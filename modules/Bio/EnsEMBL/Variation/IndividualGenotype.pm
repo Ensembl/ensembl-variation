@@ -123,5 +123,4 @@ sub individual {
   return $self->{'individual'};
 }
 
-
 1;

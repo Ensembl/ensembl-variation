@@ -12,7 +12,6 @@ use Bio::EnsEMBL::Test::TestUtils;
 
 
 use Bio::EnsEMBL::Test::MultiTestDB;
-
 our $verbose = 0;
 
 

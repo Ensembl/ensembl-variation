@@ -412,6 +412,7 @@ create table httag(
 create table source(
 	source_id int not null auto_increment,
 	name varchar(255),
+	version int,
 	
 	primary key( source_id )
 );

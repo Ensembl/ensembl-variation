@@ -152,7 +152,7 @@ sub parallel_flanking_sequence{
     my $sub_sequences = int($sequences / $num_processes);
     for (my $i = 0; $i < $num_processes ; $i++){print "i is $i\n";
 	$limit = $i*$sub_sequences . "," . $sub_sequences  if ($i+1 < $num_processes);
-	$limit = $i*$sub_sequences . "," . $sub_sequences*$i if ($i+1 == $num_processes); #the last one will select the left rows
+	$limit = $i*$sub_sequences . "," . $sub_sequences*($i+1) if ($i+1 == $num_processes); #the last one will select the left rows
 	$call = "bsub -o $TMP_DIR/output_flanking_$i\_$$.txt /usr/local/ensembl/bin/perl parallel_flanking_sequence.pl -chost $chost -cuser $cuser -cdbname $cdbname -vhost $vhost -vuser $vuser -vport $vport -vdbname $vdbname -limit $limit -tmpdir $TMP_DIR -tmpfile $TMP_FILE -num_processes $num_processes -status_file $flanking_status_file ";
 	$call .= "-cpass $cpass " if ($cpass);
 	$call .= "-cport $cport " if ($cport);
@@ -248,7 +248,7 @@ sub parallel_ld_populations{
     my $sub_populations = int($populations / $num_processes);
     for (my $i = 0; $i < $num_processes ; $i++){
 	$limit = $i*$sub_populations . "," . $sub_populations if ($i+1 < $num_processes);
-	$limit = $i*$sub_populations . "," . $sub_populations*$i if ($i+1 == $num_processes); #the last one will select the left rows
+	$limit = $i*$sub_populations . "," . $sub_populations*($i+1) if ($i+1 == $num_processes); #the last one will select the left rows
 	$call = "bsub -o $TMP_DIR/output_ld_populations_$i\_$$.txt /usr/local/ensembl/bin/perl parallel_ld_populations.pl -chost $chost -cuser $cuser -cdbname $cdbname -vhost $vhost -vuser $vuser -vport $vport -vdbname $vdbname -limit $limit -tmpdir $TMP_DIR -tmpfile $TMP_FILE -num_processes $num_processes -status_file $ld_populations_status_file ";
 	$call .= "-cpass $cpass " if ($cpass);
 	$call .= "-cport $cport " if ($cport);

@@ -98,6 +98,7 @@ sub flanking_sequence {
 					 FROM flanking_sequence
 				     ORDER BY variation_id
 				 $LIMIT});
+  print STDERR $LIMIT,"\n";
   $sth_variation->execute();
   my $var_id;
   $sth_variation->bind_columns(\$var_id);
@@ -105,6 +106,7 @@ sub flanking_sequence {
  open FH, ">$TMP_DIR/flanking_sequence_$$\.txt"
     or throw("Could not open tmp file: $TMP_DIR/flanking_sequence_$$\n");
   while ($sth_variation->fetch()){
+      print STDERR "variation $var_id\n";
       my $sth = $dbVar->prepare(qq{SELECT fs.up_seq, fs.down_seq,
 				   vf.seq_region_id, vf.seq_region_start,
 				   vf.seq_region_end, vf.seq_region_strand
@@ -197,7 +199,6 @@ sub flanking_sequence {
 	  #print to the file the information
 	  print FH join("\t",$var_id,$up_seq, $dn_seq, $up_sr_start, $up_sr_end,$dn_sr_start, $dn_sr_end, $sr_id, $sr_strand),"\n";
       }
-
       $sth->finish();
   }
   close FH;

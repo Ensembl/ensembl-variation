@@ -3,7 +3,7 @@ use warnings;
 
 BEGIN { $| = 1;
 	use Test;
-	plan tests => 19;
+	plan tests => 31;
 }
 
 
@@ -11,6 +11,7 @@ use Bio::EnsEMBL::Test::TestUtils;
 use Bio::EnsEMBL::Variation::Variation;
 use Bio::EnsEMBL::Variation::Allele;
 
+use Bio::EnsEMBL::Test::MultiTestDB;
 
 # test constructor
 
@@ -38,6 +39,7 @@ my $v = Bio::EnsEMBL::Variation::Variation->new
 ok($v->dbID());
 ok($v->name() eq $name);
 ok($v->source() eq $source);
+
 
 ok(@{$v->get_all_synonyms()} == 3);
 ok($v->get_all_synonyms('TSC')->[0] eq '12565');
@@ -90,4 +92,52 @@ ok(join(',', @{$v->get_all_validation_states()}) eq 'cluster,freq,submitter');
 $v->add_validation_state('freq');
 # states are always added in same order
 ok(join(',', @{$v->get_all_validation_states()}) eq 'cluster,freq,submitter');
+
+
+my $multi = Bio::EnsEMBL::Test::MultiTestDB->new();
+
+my $vdb = $multi->get_DBAdaptor('variation');
+my $core = $multi->get_DBAdaptor('core');
+$vdb->dnadb($core);
+
+#test get_all_IndividualGenotypes
+my $variation_id = 191;
+
+my $variation = Bio::EnsEMBL::Variation::Variation->new(
+   -dbID => $variation_id,
+   -name => 'rs193',
+   -adaptor => $vdb
+   );
+
+my $igty = $variation->get_all_IndividualGenotypes();
+my @igtys = sort {$a->dbID() <=> $b->dbID()}
+            @{$variation->get_all_IndividualGenotypes()};
+
+ok(@igtys == 50);
+ok($igtys[0]->dbID() == 417496);
+ok($igtys[0]->variation()->name() eq 'rs193');
+ok($igtys[0]->allele1() eq 'C');
+ok($igtys[0]->allele2() eq 'T');
+ok($igtys[0]->individual()->name() eq 'D001');
+
+#test get_all_PopulationGenotypes
+$variation_id = 2863;
+
+$variation = Bio::EnsEMBL::Variation::Variation->new(
+   -dbID => $variation_id,
+   -name => 'rs2872',
+   -adaptor => $vdb
+   );
+
+@igtys = ();
+
+@igtys = sort {$a->dbID() <=> $b->dbID()}
+            @{$variation->get_all_PopulationGenotypes()};
+
+ok(@igtys == 12);
+ok($igtys[0]->dbID() == 1);
+ok($igtys[0]->population()->name() eq 'AFFY:AfAm');
+ok($igtys[0]->allele1() eq 'C');
+ok($igtys[0]->allele2() eq 'C');
+ok($igtys[0]->frequency() == 0.666667);
 

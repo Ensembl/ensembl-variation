@@ -240,5 +240,11 @@ sub _objs_from_sth {
   return \@pops;
 }
 
+sub _tables{return ['population','p'];}
+
+sub _columns{
+    return qw(p.population_id p.name p.size p.description
+	      );
+}
 
 1;

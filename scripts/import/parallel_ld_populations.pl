@@ -85,7 +85,6 @@ sub ld_populations{
     my $dbCore = shift;
     my $dbVar = shift;
     my $population_id;
-
     my $sth = $dbVar->prepare(qq{SELECT distinct(i.population_id)
 				     FROM individual i, individual_genotype ig 
 				     WHERE ig.individual_id = i.individual_id
@@ -124,7 +123,7 @@ sub pairwise_ld{
 		AND i.individual_id = ig.individual_id
 		AND i.population_id = ?
 		AND ig.allele_2 IS NOT NULL
-		ORDER BY vf.variation_id,vf.seq_region_id	       
+		ORDER BY vf.seq_region_id,vf.seq_region_start
 		});
     $sth->execute($population_id);
     open ( FH, ">$TMP_DIR/pairwise_ld_$$\.txt");
@@ -174,9 +173,9 @@ sub pairwise_ld{
     close FH;
 #    debug("calculating ld distance");
     #and, finally, create the table with the information, calling the calc_genotypes.pl script
-    system("perl calc_genotypes.pl $TMP_DIR/pairwise_ld_$$\.txt $TMP_DIR/pairwise_ld_out_$$\.txt");
+    system("perl /nfs/acari/dr2/projects/ExoSeq/scripts/ld_distance/calc_genotypes_test.pl $TMP_DIR/pairwise_ld_$$\.txt $TMP_DIR/pairwise_ld_out_$$\.txt");
     #delete the file with the original file
-#    unlink("$TMP_DIR/pairwise_ld_$$\.txt");
+    unlink("$TMP_DIR/pairwise_ld_$$\.txt");
 
 
     return;

@@ -4,7 +4,7 @@ use warnings;
 
 BEGIN { $| = 1;
 	use Test;
-	plan tests => 27;
+	plan tests => 28;
 }
 
 
@@ -30,6 +30,7 @@ my $var = $va->fetch_by_dbID(8);
 
 ok($var->name() eq 'rs10');
 ok($var->source eq 'dbSNP');
+ok($va->get_source_version('dbSNP') == 122);
 
 my %syns = map {$_ => 1} @{$var->get_all_synonyms()};
 

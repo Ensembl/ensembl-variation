@@ -355,7 +355,11 @@ sub _objs_from_sth {
 
 }
 
+sub _tables{return ['individual','i']}
 
+sub _columns{
+    return qw(i.individual_id i.name i.description i.population_id i.gender i.father_individual_id i.mother_individual_id);
+}
 
 
 

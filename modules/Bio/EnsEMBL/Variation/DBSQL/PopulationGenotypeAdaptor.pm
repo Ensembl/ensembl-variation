@@ -193,16 +193,63 @@ sub fetch_all_by_Population {
   Description: Retrieves a list of population genotypes for the given Variation.
                If none are available an empty listref is returned.
   Returntype : listref Bio::EnsEMBL::Variation::PopulationGenotype 
-  Exceptions : none
+  Exceptions : throw on bad argument
   Caller     : general
 
 =cut
 
 
 sub fetch_all_by_Variation {
+    my $self = shift;
+    my $variation = shift;
 
-  ##  TODO for Daniel
+    if(!ref($variation) || !$variation->isa('Bio::EnsEMBL::Variation::Variation')) {
+	throw('Bio::EnsEMBL::Variation::Variation argument expected');
+    }
 
+    if(!defined($variation->dbID())) {
+	warning("Cannot retrieve genotypes for variation without set dbID");
+	return [];
+    }
+
+    my $sth = $self->prepare
+	(q{SELECT population_genotype_id, population_id, allele_1, allele_2, frequency
+	       FROM   population_genotype
+	       WHERE  variation_id = ?});
+    
+    $sth->execute($variation->dbID());
+    
+    my ($pgtype_id, $pop_id, $allele1, $allele2, $freq);
+    $sth->bind_columns(\$pgtype_id, \$pop_id, \$allele1, \$allele2, \$freq);
+    
+    my @results;
+    my %population_hash;
+    while($sth->fetch()) {
+	my $pgtype = Bio::EnsEMBL::Variation::PopulationGenotype->new
+	    (-dbID => $pgtype_id,
+	     -variation => $variation,
+	     -adaptor => $self,
+	     -allele1 => $allele1,
+	     -allele2 => $allele2,
+	     -frequency => $freq,
+	     );
+	$population_hash{$pop_id} ||= [];
+	push @{$population_hash{$pop_id}}, $pgtype;
+	push @results, $pgtype;
+    }
+
+    # get all populations in one query (faster)
+    # and add to already created genotypes
+    my @pop_ids = keys %population_hash;
+    my $pa = $self->db()->get_PopulationAdaptor();
+    my $pops = $pa->fetch_all_by_dbID_list(\@pop_ids);
+    
+    foreach my $p (@$pops) {
+	foreach my $pgty (@{$population_hash{$p->dbID()}}) {
+	    $pgty->population($p);
+	}
+    }
+    return \@results;    
 }
 
 1;

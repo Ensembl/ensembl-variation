@@ -3,7 +3,7 @@ use warnings;
 
 BEGIN { $| = 1;
 	use Test;
-	plan tests => 12;
+	plan tests => 18;
 }
 
 
@@ -47,3 +47,17 @@ ok($igtys[0]->allele2() eq 'G');
 ok($igtys[0]->individual()->dbID() == 1208);
 
 
+# test fetch_all_by_Variation
+my $variation_adaptor = $vdb->get_VariationAdaptor();
+my $variation = $variation_adaptor->fetch_by_dbID(191);
+
+@igtys = ();
+@igtys = sort {$a->dbID() <=> $b->dbID()}
+            @{$igty_adaptor->fetch_all_by_Variation($variation)};
+
+ok(@igtys == 50);
+ok($igtys[0]->dbID() == 417496);
+ok($igtys[0]->variation()->name() eq 'rs193');
+ok($igtys[0]->allele1() eq 'C');
+ok($igtys[0]->allele2() eq 'T');
+ok($igtys[0]->individual()->name() eq 'D001');

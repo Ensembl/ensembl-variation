@@ -360,9 +360,6 @@ sub source{
   return $self->{'source'};
 }
 
-
-
-
 =head2 get_all_Alleles
 
   Arg [1]    : none
@@ -421,9 +418,13 @@ sub add_Allele {
 sub five_prime_flanking_seq{
   my $self = shift;
 
-  ### TODO: this should maybe be lazy-loaded from database
-
+  #setter of the flanking sequence
   return $self->{'five_prime_flanking_seq'} = shift if(@_);
+  #lazy-load the flanking sequence from the database
+  if (!defined $self->{'five_prime_flanking_seq'} && $self->{'adaptor'}){
+      my $variation_adaptor = $self->adaptor()->db()->get_VariationAdaptor();
+      ($self->{'three_prime_flanking_seq'},$self->{'five_prime_flanking_seq'}) = @{$variation_adaptor->get_flanking_sequence($self->{'dbID'})};
+  }
   return $self->{'five_prime_flanking_seq'};
 }
 
@@ -445,9 +446,13 @@ sub five_prime_flanking_seq{
 sub three_prime_flanking_seq{
   my $self = shift;
 
-  ### TODO: this should maybe be lazy-loaded from database
-
+  #setter of the flanking sequence
   return $self->{'three_prime_flanking_seq'} = shift if(@_);
+  #lazy-load the flanking sequence from the database
+  if (!defined $self->{'three_prime_flanking_seq'} && $self->{'adaptor'}){
+      my $variation_adaptor = $self->adaptor()->db()->get_VariationAdaptor();
+      ($self->{'three_prime_flanking_seq'},$self->{'five_prime_flaning_seq'}) = @{$variation_adaptor->get_flanking_sequence($self->{'dbID'})};
+  }
   return $self->{'three_prime_flanking_seq'};
 }
 
@@ -464,10 +469,13 @@ sub three_prime_flanking_seq{
 =cut
 
 sub get_all_IndividualGenotypes {
-
-  ### TODO for Daniel 
-  # contact the Adaptor and fetch_by_Variation 
-
+    my $self = shift;
+    if (defined ($self->{'adaptor'})){
+	my $igtya = $self->{'adaptor'}->get_IndividualGenotypeAdaptor();
+	
+	return $igtya->fetch_all_by_Variation($self);
+    }
+    return [];
 }
 
 =head2 get_all_PopulationGenotypes
@@ -483,9 +491,13 @@ sub get_all_IndividualGenotypes {
 =cut
 
 sub get_all_PopulationGenotypes {
-
-  ### TODO for Daniel 
-  # contact the Adaptor and fetch_by_Variation 
+    my $self = shift;
+    if (defined ($self->{'adaptor'})){
+	my $pgtya = $self->{'adaptor'}->get_PopulationGenotypeAdaptor();
+	
+	return $pgtya->fetch_all_by_Variation($self);
+    }
+    return [];
 
 }
 

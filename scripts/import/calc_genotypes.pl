@@ -147,8 +147,8 @@ sub calculate_ld{
 
     foreach my $position (sort {$a <=> $b} keys %{$snps_ordered->{$seq_region_id}}){
 	#delete the own snp to not copy it again
-	shift @positions_ordered;#remove first element from the array, it has already been compared
-	    $snp_count = 0;
+	shift @positions_ordered; #remove first element from the array, it has already been compared
+	$snp_count = 0;
 	#compare against all the SNPs, until we find one outside the window
 	foreach my $position2 (@positions_ordered){
 	    last if (abs($position - $position2) > 100_000);
