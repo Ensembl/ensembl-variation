@@ -73,8 +73,18 @@ use Bio::EnsEMBL::Feature;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Utils::Argument  qw(rearrange);
 
-
 our @ISA = ('Bio::EnsEMBL::Feature');
+
+#contains a hash with the highest to the lowest possible consequence type in a trasncript
+our %CONSEQUENCE_TYPES = ('INTRONIC' => 6,
+			  'UPSTREAM' => 7,
+			  'DOWNSTREAM' => 8,
+			  'SYNONYMOUS_CODING' => 3,
+			  'NON_SYNONYMOUS_CODING', => 2,
+			  'FRAMESHIFT_CODING' => 1,
+			  '5PRIME_UTR' => 4,
+			  '3PRIME_UTR' => 5,
+			  'INTERGENIC' => 9);
 
 =head2 new
 
@@ -135,7 +145,6 @@ sub new {
   my $class = ref($caller) || $caller;
 
   my $self = $class->SUPER::new(@_);
-
   my ($allele_str, $var_name, $map_weight, $variation, $variation_id) =
     rearrange([qw(ALLELE_STRING VARIATION_NAME 
                   MAP_WEIGHT VARIATION VARIATION_ID)], @_);
@@ -242,6 +251,43 @@ sub map_weight{
 }
 
 
+=head2 get_all_TranscriptVariations
+
+  Example     : $vf->get_all_TranscriptVariations;
+  Description : Getter a list with all the TranscriptVariations associated associated to the VariationFeature
+  Returntype  : ref to Bio::EnsEMBL::Variation::VariationFeature
+  Exceptions  : None
+  Caller      : general
+
+=cut
+
+sub get_all_TranscriptVariations{
+    my $self = shift;
+
+    return $self->{'transcriptVariations'};
+}
+
+=head2
+
+   Arg [1]     : Bio::EnsEMBL::Variation::TranscriptVariation
+   Example     : $vf->add_TranscriptVariation($tv);
+   Description : Adds another Transcript variation to the variation feature object
+   Exceptions  : thrown on bad argument
+   Caller      : Bio::EnsEMBL::Variation::TranscriptVariationAdaptor
+
+=cut
+
+sub add_TranscriptVariation{
+    my $self= shift;
+    if (@_){
+	if(!ref($_[0]) || !$_[0]->isa('Bio::EnsEMBL::Variation::TranscriptVariation')) {
+	    throw("Bio::EnsEMBL::Variation::TranscriptVariation argument expected");
+	}
+	#a variation feature can have multiple transcript Variations
+	push @{$self->{'transcriptVariations'}},shift;
+    }
+}
+
 
 =head2 variation
 
@@ -276,5 +322,69 @@ sub variation {
   return $self->{'variation'};
 }
 
+=head2 consequence_type
+   Arg[1]      : (optional) Bio::EnsEMBL::Gene $g
+   Example     : if($vf->consequence_type eq 'INTRONIC'){do_something();}
+   Description : Getter for the consequence type of this variation, which is the highest of the transcripts that has.
+                 If an argument provided, gets the highest of the transcripts where the gene appears
+                 Allowed values are: 'INTRONIC','UPSTREAM','DOWNSTREAM',
+               'SYNONYMOUS_CODING','NON_SYNONYMOUS_CODING','FRAMESHIFT_CODING',
+               '5PRIME_UTR','3PRIME_UTR','INTERGENIC'
+   Returntype : string
+   Exceptions : throw if provided argument not a gene
+   Caller     : general
 
+=cut
+
+sub consequence_type{
+    my $self = shift;
+    my $highest_priority;
+    #first, get all the transcripts, if any
+    my $transcript_variations = $self->get_all_TranscriptVariations();
+    #if no transcripts, return INTERGENIC type
+    if (!defined $transcript_variations){
+	return 'INTERGENIC';
+    }
+    #if an argument is provided, get the highest priority for the transcripts presents in the list
+    if (@_){
+	my $gene = shift;
+	if (!ref $gene || !$gene->isa("Bio::EnsEMBL::Gene")){
+	    throw("$gene is not a Bio::EnsEMBL::Gene type!");
+	}
+	my $transcripts = $gene->get_all_Transcripts();
+	my %transcripts_genes;
+	my @new_transcripts;
+	map {$transcripts_genes{$_->dbID()}++} @{$transcripts};
+	foreach my $transcript_variation (@{$transcript_variations}){
+	    if (exists $transcripts_genes{$transcript_variation->transcript->dbID()}){
+		push @new_transcripts,$transcript_variation;
+	    }
+	}
+	$highest_priority = $self->_highest_priority(\@new_transcripts);
+    }
+    #no argument provided, get the highest priority in the transcript_variation
+    else{
+	$highest_priority = $self->_highest_priority($transcript_variations);
+    }
+    return $highest_priority;
+}
+
+#for a list of transcript variations, gets the one with highest priority
+sub _highest_priority{
+    my $self= shift;
+    my $transcript_variations = shift;
+    my $highest_type = 'INTERGENIC';
+    foreach my $tv (@{$transcript_variations}){
+	#with a frameshift coding, return, is the highest value
+	if ($tv->consequence_type eq 'FRAMESHIFT_CODING') {
+	    return 'FRAMESHIFT_CODING';
+	}
+	else{
+	    if ($CONSEQUENCE_TYPES{$tv->consequence_type} < $CONSEQUENCE_TYPES{$highest_type}){
+		$highest_type = $tv->consequence_type;
+	    }
+	}
+    }    
+    return $highest_type;
+}
 1;

@@ -39,7 +39,7 @@ my $ind = $ind_adaptor->fetch_by_dbID(1208);
 my @igtys = sort {$a->dbID() <=> $b->dbID()}
             @{$igty_adaptor->fetch_all_by_Individual($ind)};
 
-ok(@igtys == 16);
+ok(@igtys == 18);
 ok($igtys[0]->dbID() == 3);
 ok($igtys[0]->variation()->name() eq 'rs221');
 ok($igtys[0]->allele1() eq 'A');

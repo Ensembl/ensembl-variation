@@ -8,8 +8,8 @@ BEGIN { $| = 1;
 	plan tests => 12;
 }
 
+use Bio::EnsEMBL::Test::TestUtils;
 
-use TestUtils qw ( debug test_getter_setter count_rows);
 
 use Bio::EnsEMBL::Variation::LDFeatureContainer;
 use Bio::EnsEMBL::Variation::VariationFeature;

@@ -33,27 +33,27 @@ Bio::EnsEMBL::Variation::DBSQL::TranscriptVariationAdaptor
   $trv = $tra->fetch_by_dbID(552);
   print $trv->transcript()->stable_id(), ' ',
         $trv->variation_feature()->variation_name(), ' ',
-        $trv->type(), "\n";
+        $trv->consequence_type(), "\n";
 
   # retrieve all TranscriptVariations associated with a Transcript
 
   $tr = $tra->fetch_by_stable_id('ENST00000278995');
   foreach $trv (@{$trva->fetch_all_by_Transcript($tr)}) {
-    print $trv->variation_feature->variation_name(), ' ', $trv->type(), "\n";
+    print $trv->variation_feature->variation_name(), ' ', $trv->consequence_type(), "\n";
   }
 
   # retrieve all TranscriptVariations associated with a VariationFeature
 
   $vf = $vfa->fetch_by_dbID(99123);
-  foreach $trv (@{$trva->fetch_all_by_VariationFeature($vf)}) {
-    print $trva->transcript->stable_id(), ' ', $trva->type(), "\n";
+  foreach $trv (@{$trva->fetch_all_by_VariationFeatures($vf)}) {
+    print $trva->transcript->stable_id(), ' ', $trva->consequence_type(), "\n";
   }
 
   # retrieve all TranscriptsVariations associated with a Variation
 
   $v = $v->fetch_by_name('rs1445');
   foreach $trv (@{$trva->fetch_all_by_Variation($v)}) {
-    print $trva->transcript->stable_id(), ' ', $trva->type(), "\n";
+    print $trva->transcript->stable_id(), ' ', $trva->consequence_type(), "\n";
   }
 
 
@@ -86,181 +86,42 @@ use Bio::EnsEMBL::Variation::TranscriptVariation;
 
 our @ISA = ('Bio::EnsEMBL::DBSQL::BaseAdaptor');
 
-=head2 fetch_by_dbID
 
-  Arg [1]    : int $dbID
-  Example    : $var = $var_adaptor->fetch_by_dbID(5526);
-  Description: Retrieves a TranscriptVariation object via its internal
-               identifier. If no such TranscriptVariation exists in the 
-               database undef is returned.
-  Returntype : Bio::EnsEMBL::Variation::TranscriptVariation
-  Exceptions : throw if dbID arg is not defined
-  Caller     : general
-
-=cut
-
-sub fetch_by_dbID {
-  my $self = shift;
-  my $dbID = shift;
-
-  throw('dbID argument expected') if(!defined($dbID));
-
-  my $sth = $self->prepare
-    (q{SELECT tv.transcript_variation_id, tv.transcript_id,
-              tv.variation_feature_id, tv.cdna_start, tv.cdna_end,
-              tv.translation_start, tv.translation_end,
-              tv.peptide_allele_string, tv.type
-       FROM   transcript_variation tv
-       WHERE  tv.transcript_variation_id = ?});
-  $sth->execute($dbID);
-
-  my $result = $self->_objs_from_sth($sth);
-  $sth->finish();
-
-  return undef if(!@$result);
-
-  return $result->[0];
-}
-
-
-
-=head2 fetch_all_by_Transcript
-
-  Arg [1]    : Bio::EnsEMBL::Transcript $tr
-  Example    :
-     $tr = $tr_adaptor->fetch_by_stable_id('ENST00000278995');
-     @tr_vars = @{$tr_var_adaptor->fetch_all_by_Transcript($tr)});
-  Description: Retrieves all TranscriptVariation objects associated with
-               a provided Ensembl Transcript.
-  Returntype : ref to list of Bio::EnsEMBL::Variation::TranscriptVariations
-  Exceptions : throw on bad argument
-  Caller     : general
-
-=cut
-
-sub fetch_all_by_Transcript {
-  my $self = shift;
-  my $tr = shift;
-
-  if(!ref($tr) || !$tr->isa('Bio::EnsEMBL::Transcript')) {
-    throw('Bio::EnsEMBL::Transcript argument expected');
-  }
-
-  if(!$tr->dbID()) {
-    warning('Can not retrieve TranscriptVariations ' .
-            'for transcript without dbID');
-    return [];
-  }
-
-  my $sth = $self->prepare
-    (q{SELECT tv.transcript_variation_id, tv.transcript_id,
-              tv.variation_feature_id, tv.cdna_start, tv.cdna_end,
-              tv.translation_start, tv.translation_end,
-              tv.peptide_allele_string, tv.type
-       FROM   transcript_variation tv
-       WHERE  tv.transcript_id = ?});
-  $sth->execute($tr->dbID());
-
-  my $result = $self->_objs_from_sth($sth);
-
-  $sth->finish();
-
-  return $result;
-}
-
-
-
-=head2 fetch_all_by_VariationFeature
+=head2 fetch_all_by_VariationFeatures
 
   Arg [1]    : Bio::EnsEMBL::Variation::VariationFeature $vf
   Example    :
      $vf = $vf_adaptor->fetch_by_dbID(1234);
-     @tr_vars = @{$tr_var_adaptor->fetch_all_by_VariationFeature($vf)});
+     @tr_vars = @{$tr_var_adaptor->fetch_all_by_VariationFeatures([$vf])});
   Description: Retrieves all TranscriptVariation objects associated with
-               a provided Ensembl variation feature.
+               provided Ensembl variation features. Attaches them to the given variation
+               features.
   Returntype : ref to list of Bio::EnsEMBL::Variation::TranscriptVariations
   Exceptions : throw on bad argument
   Caller     : general
 
 =cut
 
-sub fetch_all_by_VariationFeature {
+sub fetch_all_by_VariationFeatures {
   my $self = shift;
-  my $vf = shift;
+  my $vf_ref = shift;
 
-  if(!ref($vf) || !$vf->isa('Bio::EnsEMBL::Variation::VariationFeature')) {
-    throw('Bio::EnsEMBL::Variation::VariationFeature argument expected');
+  if(ref($vf_ref) ne 'ARRAY') {
+    throw('Array Bio::EnsEMBL::Variation::VariationFeature expected');
   }
 
-  if(!$vf->dbID()) {
-    warning('Can not retrieve TranscriptVariations ' .
-            'for variation feature without dbID');
-    return [];
+  my %vf_by_id;
+
+  %vf_by_id = map {$_->dbID(), $_ } @$vf_ref;
+  my $instr = join (",",keys( %vf_by_id));
+  my $tvs = $self->generic_fetch( "tv.variation_feature_id in ( $instr )" );
+  for my $tv ( @$tvs ) {
+      #add to the variation feature object all the transcript variations
+      $vf_by_id{ $tv->{'_vf_id'} }->add_TranscriptVariation( $tv );
+      delete $tv->{'_vf_id'}; #remove the variation_feature_id from the transcript_variation object    
   }
-
-  my $sth = $self->prepare
-    (q{SELECT tv.transcript_variation_id, tv.transcript_id,
-              tv.variation_feature_id, tv.cdna_start, tv.cdna_end,
-              tv.translation_start, tv.translation_end,
-              tv.peptide_allele_string, tv.type
-       FROM   transcript_variation tv
-       WHERE  tv.variation_feature_id = ?});
-  $sth->execute($vf->dbID());
-
-  my $result = $self->_objs_from_sth($sth);
-
-  $sth->finish();
-
-  return $result;
+  return $tvs;
 }
-
-
-
-=head2 fetch_all_by_Variation
-
-  Arg [1]    : Bio::EnsEMBL::Variation::Variation $v
-  Example    :
-     $v = $var_adaptor->fetch_by_name('rs234');
-     @tr_vars = @{$tr_var_adaptor->fetch_all_by_Variation($v)});
-  Description: Retrieves all TranscriptVariation objects associated with
-               a provided Ensembl variation.
-  Returntype : ref to list of Bio::EnsEMBL::Variation::TranscriptVariations
-  Exceptions : throw on bad argument
-  Caller     : general
-
-=cut
-
-sub fetch_all_by_Variation {
-  my $self = shift;
-  my $v = shift;
-
-  if(!ref($v) || !$v->isa('Bio::EnsEMBL::Variation::Variation')) {
-    throw('Bio::EnsEMBL::Variation::Variation argument expected');
-  }
-
-  if(!$v->dbID()) {
-    warning('Can not retrieve TranscriptVariations ' .
-            'for variation without dbID');
-    return [];
-  }
-
-  my $sth = $self->prepare
-    (q{SELECT tv.transcript_variation_id, tv.transcript_id,
-              tv.variation_feature_id, tv.cdna_start, tv.cdna_end,
-              tv.translation_start, tv.translation_end,
-              tv.peptide_allele_string, tv.type
-       FROM   transcript_variation tv, variation_feature vf
-       WHERE  tv.variation_feature_id = vf.variation_feature_id
-       AND    vf.variation_id = ?});
-  $sth->execute($v->dbID());
-
-  my $result = $self->_objs_from_sth($sth);
-
-  $sth->finish();
-
-  return $result;
-}
-
 
 
 #
@@ -273,10 +134,10 @@ sub _objs_from_sth {
   my $sth = shift;
 
   my ($trv_id, $tr_id, $vf_id, $cdna_start, $cdna_end, $tl_start, $tl_end,
-      $pep_allele, $type);
+      $pep_allele, $consequence_type);
 
   $sth->bind_columns(\$trv_id, \$tr_id, \$vf_id, \$cdna_start, \$cdna_end,
-                     \$tl_start, \$tl_end, \$pep_allele, \$type);
+                     \$tl_start, \$tl_end, \$pep_allele, \$consequence_type);
 
 
   my %tr_hash;
@@ -287,55 +148,32 @@ sub _objs_from_sth {
   # construct all of the TranscriptVariation objects
 
   while($sth->fetch()) {
-    my $trv = Bio::EnsEMBL::Variation::TranscriptVariation->new
-      (-dbID => $trv_id,
-       -adaptor => $self,
-       -cdna_start => $cdna_start,
-       -cdna_end   => $cdna_end,
-       -translation_start => $tl_start,
-       -translation_end => $tl_end,
-       -pep_allele_string => $pep_allele,
-       -type => $type);
+    my $trv = Bio::EnsEMBL::Variation::TranscriptVariation->new_fast
+      ( { 'dbID' => $trv_id,
+	  'adaptor' => $self,
+	  'cdna_start' => $cdna_start,
+	  'cdna_end'   => $cdna_end,
+	  'translation_start' => $tl_start,
+	  'translation_end' => $tl_end,
+	  'pep_allele_string' => $pep_allele,
+	  'consequence_type' => $consequence_type} );
 
-    $tr_hash{$tr_id} ||= [];
-    $vf_hash{$vf_id} ||= [];
-    push @{$tr_hash{$tr_id}}, $trv;
-    push @{$vf_hash{$vf_id}}, $trv;
-
+    $trv->{'_vf_id'} = $vf_id; #add the variation feature
+    $trv->{'_transcript_id'} = $tr_id; #add the transcript id
     push @results, $trv;
   }
 
-  # load all transcripts and variation features with one query -
-  # much faster than individual queries
-
-  my $tra = $self->db()->{'dnadb'}->get_TranscriptAdaptor();
-  my $vfa = $self->db()->get_VariationFeatureAdaptor();
-
-  my @tr_ids = keys %tr_hash;
-  my @vf_ids = keys %vf_hash;
-
-  my @trs = @{$tra->fetch_all_by_dbID_list(\@tr_ids)};
-  my @vfs = @{$vfa->fetch_all_by_dbID_list(\@vf_ids)};
-
-
-  # add the transcripts and variation features to the
-  # already constructed transcript variation objects
-
-  foreach my $tr (@trs) {
-    foreach my $trv (@{$tr_hash{$tr->dbID()}}) {
-      $trv->transcript($tr);
-    }
-  }
-  foreach my $vf (@vfs) {
-    foreach my $trv (@{$vf_hash{$vf->dbID()}}) {
-      $trv->variation_feature($vf);
-    }
-  }
 
   return \@results;
 }
 
+sub _tables {return ['transcript_variation','tv'];}
 
-
-
+sub _columns {
+    return qw (tv.transcript_variation_id tv.transcript_id
+	       tv.variation_feature_id tv.cdna_start tv.cdna_end
+	       tv.translation_start tv.translation_end
+	       tv.peptide_allele_string tv.consequence_type
+	       );
+}
 1;

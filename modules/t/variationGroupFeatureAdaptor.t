@@ -12,7 +12,7 @@ use Bio::EnsEMBL::Test::TestUtils;
 
 
 use Bio::EnsEMBL::Test::MultiTestDB;
-
+use Data::Dumper;
 
 our $verbose = 0;
 
@@ -35,7 +35,6 @@ my $slice = $sa->fetch_by_region('chromosome', '21');
 
 
 my $vgfs = $vgfa->fetch_all_by_Slice($slice);
-
 print_feats($vgfs);
 
 ok(@$vgfs == 8);

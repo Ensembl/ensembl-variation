@@ -44,34 +44,6 @@ use Bio::EnsEMBL::Utils::Argument qw(rearrange);
 
 our @ISA = ('Bio::EnsEMBL::DBSQL::DBAdaptor');
 
-
-sub new {
-  my $class = shift;
-
-  my $self = $class->SUPER::new(@_);
-
-  my ($dnadb) = rearrange(['DNADB'], @_);
-
-  $self->dnadb($dnadb) if($dnadb);
-
-
-  return $self;
-}
-
-
-sub dnadb {
-  my $self = shift;
-
-  if(@_) {
-    my $dnadb = shift;
-    if(defined($dnadb) && !$dnadb->isa('Bio::EnsEMBL::DBSQL::DBAdaptor')) {
-      throw('Bio::EnsEMBL::DBSQL::DBAdaptor argument expected');
-    }
-    $self->{'dnadb'} = $dnadb;
-  }
-  return $self->{'dnadb'};
-}
-
 sub get_available_adaptors{
     my %pairs = (
 		 'Population' => 'Bio::EnsEMBL::Variation::DBSQL::PopulationAdaptor',
@@ -86,11 +58,7 @@ sub get_available_adaptors{
 		 'AlleleGroup' => 'Bio::EnsEMBL::Variation::DBSQL::AlleleGroupAdaptor',
 		 'VariationGroupFeature' => 'Bio::EnsEMBL::Variation::DBSQL::VariationGroupFeatureAdaptor',
 		 'MetaCoordContainer' => 'Bio::EnsEMBL::DBSQL::MetaCoordContainer',
-		 'Slice' => 'Bio::EnsEMBL::DBSQL::SliceAdaptor',
-		 'CoordSystem'   => 'Bio::EnsEMBL::DBSQL::CoordSystemAdaptor',
-		 'AssemblyMapper'       => 'Bio::EnsEMBL::DBSQL::AssemblyMapperAdaptor',
-		 'Sequence'             => 'Bio::EnsEMBL::DBSQL::SequenceAdaptor',
-		 'Transcript'           => 'Bio::EnsEMBL::DBSQL::TranscriptAdaptor'
+		 'SNP'  => 'Bio::EnsEMBL::Variation::DBSQL::SNPAdaptor'
 		 );
     return (\%pairs);
 }

@@ -13,7 +13,6 @@ use Bio::EnsEMBL::Test::TestUtils;
 
 use Bio::EnsEMBL::Test::MultiTestDB;
 
-
 our $verbose = 0;
 
 my $multi = Bio::EnsEMBL::Test::MultiTestDB->new();
@@ -31,15 +30,11 @@ ok($vfa && $vfa->isa('Bio::EnsEMBL::Variation::DBSQL::VariationFeatureAdaptor'))
 my $sa = $db->get_SliceAdaptor();
 
 my $slice = $sa->fetch_by_region('chromosome', '20');
-
-
-
 my $vfs = $vfa->fetch_all_by_Slice($slice);
 
 print_feats($vfs);
 
 ok(@$vfs == 63);
-
 
 my $vf = $vfa->fetch_by_dbID(1857);
 

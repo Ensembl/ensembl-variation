@@ -278,7 +278,7 @@ create table variation_group_feature(
 # translation_start       - start position of variation on peptide
 # translation_end         - end position of variation on peptide
 # peptide_allele_string   - allele string of '/' separated amino acids
-# type                    - reference allele is first
+# consequence_type        - reference allele is first
 # 
 
 create table transcript_variation(
@@ -289,15 +289,15 @@ create table transcript_variation(
   cdna_end   int,
   translation_start int,
   translation_end int,  
-	peptide_allele_string varchar(255),
-	type enum( "INTRONIC", "UPSTREAM", "DOWNSTREAM", "SYNONYMOUS_CODING",
+  peptide_allele_string varchar(255),
+  consequence_type enum( "INTRONIC", "UPSTREAM", "DOWNSTREAM", "SYNONYMOUS_CODING",
 	           "NON_SYNONYMOUS_CODING", "FRAMESHIFT_CODING", 
              "5PRIME_UTR", "3PRIME_UTR" ) not null,
 	
-	primary key( transcript_variation_id ),
-	key variation_idx( variation_feature_id ),
+  primary key( transcript_variation_id ),
+  key variation_idx( variation_feature_id ),
   key transcript_idx( transcript_id ),
-  key type_idx(type)
+  key consequence_type_idx(consequence_type)
 	);
 	
 

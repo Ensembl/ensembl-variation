@@ -174,7 +174,7 @@ sub calculate_ld{
     foreach my $key ( keys %output ) {
 	($locus1,$locus2) = split /:/,$key;
 #format of the output file
-#  variation_feature_id_1 variation_feature_id_2 population_id seq_region_id seq_region_start seq_region_end snp_distance_count r2 Dprime samplesize
+#  variation_feature_id_1 variation_feature_id_2 population_id seq_region_id seq_region_start seq_region_end snp_distance_count r2 d_prime samplesize
 #it will be necessary to find out the start and end of the region, that will correspond to the start of the region for the variation in the lowest position and the end of the region for the variation in the higher position
 	if ($additional_info->{$locus1}->{position} < $additional_info->{$locus2}->{position}){
 	    $seq_region_start = $additional_info->{$locus1}->{position};
@@ -188,7 +188,7 @@ sub calculate_ld{
 	else{
 	    $seq_region_end = $additional_info->{$locus1}->{seq_region_end};
 	}
-	print FH join("\t",$additional_info->{$locus1}->{variation_feature_id},$additional_info->{$locus2}->{variation_feature_id},$additional_info->{$locus1}->{population_id},$seq_region_id,$seq_region_start,$seq_region_end,$output{$key}->{'snp_count'},$output{$key}->{'r2'}, abs($output{$key}->{'Dprime'}),$output{$key}->{'N'}),"\n";	
+	print FH join("\t",$additional_info->{$locus1}->{variation_feature_id},$additional_info->{$locus2}->{variation_feature_id},$additional_info->{$locus1}->{population_id},$seq_region_id,$seq_region_start,$seq_region_end,$output{$key}->{'snp_count'},$output{$key}->{'r2'}, abs($output{$key}->{'d_prime'}),$output{$key}->{'N'}),"\n";	
     }   
 }
 
@@ -298,7 +298,7 @@ sub calculate_pairwise_stats {
     }
     
     my $Dmax = 0;
-    my $Dprima;
+    my $d_prime;
     
     if ($D < 0){
 	$Dmax = $f_A*$f_B if ($f_A*$f_B < ((1-$f_A)*(1-$f_B)));
@@ -309,10 +309,10 @@ sub calculate_pairwise_stats {
 	$Dmax = (1-$f_A)*$f_B if ($f_A*(1-$f_B) >= (1-$f_A)*$f_B);
     }
     eval{
-	$Dprima = $D/$Dmax;
+	$d_prime = $D/$Dmax;
     };
     if ($@){
-	$Dprima = 0;
+	$d_prime = 0;
     }
 
     my $o = {};
@@ -321,7 +321,7 @@ sub calculate_pairwise_stats {
     $o->{'r2'} = $r2;
     $o->{'theta'} = $theta;
     $o->{'N'} = $N;
-    $o->{'Dprime'} = $Dprima;
+    $o->{'d_prime'} = $d_prime;
     $o->{'snp_count'} = $snp_count;
     $o->{'people'} = scalar(keys %people);
 

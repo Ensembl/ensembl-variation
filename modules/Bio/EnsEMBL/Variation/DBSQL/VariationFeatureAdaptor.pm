@@ -65,8 +65,7 @@ package Bio::EnsEMBL::Variation::DBSQL::VariationFeatureAdaptor;
 
 use Bio::EnsEMBL::Variation::VariationFeature;
 use Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor;
-use Data::Dumper;
-
+use Bio::EnsEMBL::Utils::Exception qw(throw);
 
 our @ISA = ('Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor');
 
@@ -124,8 +123,7 @@ sub _objs_from_sth {
   # a fair bit of gymnastics is used.
   #
 
-
-  my $sa = $self->db()->{'dnadb'}->get_SliceAdaptor();
+  my $sa = $self->db()->dnadb()->get_SliceAdaptor();
 
   my @features;
   my %slice_hash;
@@ -170,14 +168,12 @@ sub _objs_from_sth {
   FEATURE: while($sth->fetch()) {
     #get the slice object
     my $slice = $slice_hash{"ID:".$seq_region_id};
-
     if(!$slice) {
       $slice = $sa->fetch_by_seq_region_id($seq_region_id);
       $slice_hash{"ID:".$seq_region_id} = $slice;
       $sr_name_hash{$seq_region_id} = $slice->seq_region_name();
       $sr_cs_hash{$seq_region_id} = $slice->coord_system();
     }
-
     #
     # remap the feature coordinates to another coord system
     # if a mapper was provided

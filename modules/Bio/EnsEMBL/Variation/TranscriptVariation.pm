@@ -23,12 +23,12 @@ Bio::EnsEMBL::Variation::TranscriptVariation
      -cdna_end          => 1127,
      -translation_start => 318,
      -translation_end   => 318,
-     -type              => 'NON_SYNONYMOUS_CODING');
+     -consequence_type              => 'NON_SYNONYMOUS_CODING');
 
 
   print "variation: ", $tr_var->variation_feature()->variation_name(), "\n";
   print "transcript: ", $tr_var->transcript->stable_id(), "\n";
-  print "type: ", $tr_var->type(), "\n";
+  print "consequence type: ", $tr_var->consequence_type(), "\n";
   print "cdna coords: ", $tr_var->cdna_start(), '-', $tr_var->cdna_end(), "\n";
   print "pep coords: ", $tr_var->translation_start(), '-',
         $tr_var->translation_end(), "\n";
@@ -69,7 +69,8 @@ our %VALID_TYPES = ('INTRONIC' => 1,
                     'NON_SYNONYMOUS_CODING', => 1,
                     'FRAMESHIFT_CODING' => 1,
                     '5PRIME_UTR' => 1,
-                    '3PRIME_UTR' => 1);
+                    '3PRIME_UTR' => 1,
+		    'INTERGENIC' => 1);
 
 =head2 new
   Arg [-ADAPTOR] :
@@ -105,7 +106,7 @@ our %VALID_TYPES = ('INTRONIC' => 1,
     The end of this variation on the translation of the associated transcript
     in peptide coordinates
 
-  Arg [-TYPE] :
+  Arg [-CONSEQUENCE_TYPE] :
     The type of this TranscriptVariation.  Must be one of:
     'INTRONIC', 'UPSTREAM', 'DOWNSTREAM', 'SYNONYMOUS_CODING',
     'NON_SYNONYMOUS_CODING', 'FRAMESHIFT_CODING', '5PRIME_UTR', '3PRIME_UTR'
@@ -119,7 +120,7 @@ our %VALID_TYPES = ('INTRONIC' => 1,
        -cdna_end          => 1127,
        -translation_start => 318,
        -translation_end   => 318,
-       -type              => 'NON_SYNONYMOUS_CODING');
+       -consequence_type              => 'NON_SYNONYMOUS_CODING');
 
   Description: Constructor. Instantiates a
                Bio::EnsEMBL::Variation::TranscriptVariation object
@@ -132,10 +133,10 @@ our %VALID_TYPES = ('INTRONIC' => 1,
 sub new {
   my $class = shift;
 
-  my ($vf, $tr, $pep_allele, $cdna_start,$cdna_end, $tl_start,$tl_end, $type,
+  my ($vf, $tr, $pep_allele, $cdna_start,$cdna_end, $tl_start,$tl_end, $consequence_type,
       $dbID, $adaptor) =
     rearrange([qw(VARIATION_FEATURE TRANSCRIPT PEP_ALLELE_STRING CDNA_START
-                  CDNA_END TRANSLATION_START TRANSLATION_END TYPE
+                  CDNA_END TRANSLATION_START TRANSLATION_END CONSEQUENCE_TYPE
                   DBID ADAPTOR)], @_);
 
   if(defined($vf) &&
@@ -147,9 +148,9 @@ sub new {
     throw('Transcript argument expected');
   }
 
-  if(defined($type)) {
-    $type = uc($type);
-    if(!$VALID_TYPES{$type}) {
+  if(defined($consequence_type)) {
+    $consequence_type = uc($consequence_type);
+    if(!$VALID_TYPES{$consequence_type}) {
       my $valid = join(',',map({"'$_'"} keys(%VALID_TYPES)));
       throw("Type argument must be one of: $valid");
     }
@@ -180,9 +181,14 @@ sub new {
                 'cdna_end'          => $cdna_end,
                 'translation_start' => $tl_start,
                 'translation_end'   => $tl_end,
-                'type'              => $type}, $class;
+                'consequence_type'  => $consequence_type}, $class;
 }
 
+sub new_fast {
+  my $class = shift;
+  my $hashref = shift;
+  return bless $hashref, $class;
+}
 
 
 =head2 transcript
@@ -207,11 +213,17 @@ sub transcript {
     }
     $self->{'transcript'} = $tr;
   }
+  else{
+      #lazy-load the transcript object into the transcript_variation, and return it
+      if (!defined $self->{'transcript'} && $self->{'adaptor'} && defined($self->{'_transcript_id'})){
+	  my $transcript_adaptor = $self->{'adaptor'}->db()->dnadb()->get_TranscriptAdaptor();
+	  $self->transcript($transcript_adaptor->fetch_by_dbID($self->{'_transcript_id'}));
+	  delete $self->{'_transcript_id'};
+      }
+  }
 
   return $self->{'transcript'};
 }
-
-
 
 
 =head2 variation_feature
@@ -382,37 +394,37 @@ sub translation_end {
 }
 
 
-=head2 type
+=head2 consequence_type
 
-  Arg [1]    : (optional) string $type
-  Example    : if($tr_var->type() eq 'INTRONIC') { do_something(); }
-  Description: Getter/Setter for the type of this transcript variation.
+  Arg [1]    : (optional) string $consequence_type
+  Example    : if($tr_var->consequence_type() eq 'INTRONIC') { do_something(); }
+  Description: Getter/Setter for the consequence type of this transcript variation.
                Allowed values are:  'INTRONIC','UPSTREAM','DOWNSTREAM',
                'SYNONYMOUS_CODING','NON_SYNONYMOUS_CODING','FRAMESHIFT_CODING',
-               '5PRIME_UTR','3PRIME_UTR'
+               '5PRIME_UTR','3PRIME_UTR','INTERGENIC'
   Returntype : string
   Exceptions : throw if provided argument is not one of the valid strings
   Caller     : general
 
 =cut
 
-sub type {
+sub consequence_type {
   my $self = shift;
 
   if(@_) {
-    my $type = shift;
+    my $consequence_type = shift;
 
-    if(defined($type)) {
-      $type = uc($type);
-      if(!$VALID_TYPES{$type}) {
+    if(defined($consequence_type)) {
+      $consequence_type = uc($consequence_type);
+      if(!$VALID_TYPES{$consequence_type}) {
         my $valid = join(',',map({"'$_'"} keys(%VALID_TYPES)));
         throw("Type argument must be one of: $valid");
       }
     }
-    $self->{'type'} = $type;
+    $self->{'consequence_type'} = $consequence_type;
   }
 
-  return $self->{'type'};
+  return $self->{'consequence_type'};
 }
 
 

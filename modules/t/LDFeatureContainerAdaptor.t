@@ -9,15 +9,13 @@ BEGIN { $| = 1;
 }
 
 
-use TestUtils qw ( debug test_getter_setter count_rows);
-
-
-use MultiTestDB;
+use Bio::EnsEMBL::Test::TestUtils;
+use Bio::EnsEMBL::Test::MultiTestDB;
 use Bio::EnsEMBL::Variation::VariationFeature;
 
 our $verbose = 0;
 
-my $multi = MultiTestDB->new();
+my $multi = Bio::EnsEMBL::Test::MultiTestDB->new();
 
 my $vdb = $multi->get_DBAdaptor('variation');
 my $db = $multi->get_DBAdaptor('core');
