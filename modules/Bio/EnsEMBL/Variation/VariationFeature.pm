@@ -118,6 +118,15 @@ our %CONSEQUENCE_TYPES = ('INTRONIC' => 6,
   Arg [-VARIATION] :
     int - the variation object associated with this feature.
 
+  Arg [-SOURCE] :
+    string - the name of the source where the SNP comes from
+
+  Arg [-VALIDATION_CODE] :
+     reference to list of strings
+
+  Arg [-CONSEQUENCE_TYPE] :
+     string - highest consequence type for the transcripts of the VariationFeature
+
   Arg [-VARIATION_ID] :
     int - the internal id of the variation object associated with this
     identifier. This may be provided instead of a variation object so that
@@ -132,6 +141,9 @@ our %CONSEQUENCE_TYPES = ('INTRONIC' => 6,
         -allele_string => 'A/T',
         -variation_name => 'rs635421',
         -map_weight  => 1,
+	-source  => 'dbSNP',
+	-validation_code => ['cluster','doublehit'],
+	-consequence_type => 'INTRONIC',
         -variation => $v);
 
   Description: Constructor. Instantiates a new VariationFeature object.
@@ -146,15 +158,18 @@ sub new {
   my $class = ref($caller) || $caller;
 
   my $self = $class->SUPER::new(@_);
-  my ($allele_str, $var_name, $map_weight, $variation, $variation_id) =
+  my ($allele_str, $var_name, $map_weight, $variation, $variation_id, $source, $validation_code, $consequence_type) =
     rearrange([qw(ALLELE_STRING VARIATION_NAME 
-                  MAP_WEIGHT VARIATION VARIATION_ID)], @_);
+                  MAP_WEIGHT VARIATION VARIATION_ID SOURCE VALIDATION_CODE CONSEQUENCE_TYPE)], @_);
 
-  $self->{'allele_string'}  = $allele_str;
-  $self->{'variation_name'} = $var_name;
-  $self->{'map_weight'}     = $map_weight;
-  $self->{'variation'}      = $variation;
-  $self->{'_variation_id'}  = $variation_id;
+  $self->{'allele_string'}    = $allele_str;
+  $self->{'variation_name'}   = $var_name;
+  $self->{'map_weight'}       = $map_weight;
+  $self->{'variation'}        = $variation;
+  $self->{'_variation_id'}    = $variation_id;
+  $self->{'source'}           = $source;
+  $self->{'validation_code'}  = $validation_code;
+  $self->{'consequence_type'} = $consequence_type;
 
   return $self;
 }
@@ -328,9 +343,32 @@ sub variation {
   return $self->{'variation'};
 }
 
-=head2 consequence_type
+=head2 add_consequence_type
+
+    Arg [1]     : string $consequence_type
+    Example     : $vf->add_consequence_type("UPSTREAM")
+    Description : Setter for the consequence type of this VariationFeature
+                  Allowed values are: 'INTRONIC','UPSTREAM','DOWNSTREAM',
+                   'SYNONYMOUS_CODING','NON_SYNONYMOUS_CODING','FRAMESHIFT_CODING',
+                   '5PRIME_UTR','3PRIME_UTR','INTERGENIC'
+    ReturnType  : string
+    Exceptions  : none
+    Caller      : general
+
+=cut
+
+sub add_consequence_type{
+    my $self = shift;
+    my $consequence_type = shift;
+
+    return $self->{'consequence_type'} = $consequence_type if ($CONSEQUENCE_TYPES{$consequence_type});
+    warning("You are trying to set the consequence type to a non-allowed type. The allowed types are: " . keys %CONSEQUENCE_TYPES);
+    return '';
+}
+
+=head2 get_consequence_type
    Arg[1]      : (optional) Bio::EnsEMBL::Gene $g
-   Example     : if($vf->consequence_type eq 'INTRONIC'){do_something();}
+   Example     : if($vf->get_consequence_type eq 'INTRONIC'){do_something();}
    Description : Getter for the consequence type of this variation, which is the highest of the transcripts that has.
                  If an argument provided, gets the highest of the transcripts where the gene appears
                  Allowed values are: 'INTRONIC','UPSTREAM','DOWNSTREAM',
@@ -342,18 +380,22 @@ sub variation {
 
 =cut
 
-sub consequence_type{
+sub get_consequence_type{
     my $self = shift;
-    my $highest_priority;
-    #first, get all the transcripts, if any
-    my $transcript_variations = $self->get_all_TranscriptVariations();
-    #if no transcripts, return INTERGENIC type
-    if (!defined $transcript_variations){
-	return 'INTERGENIC';
+    my $gene = shift;
+    
+    if (!defined $gene){
+	return $self->{'consequence_type'};
     }
-    #if an argument is provided, get the highest priority for the transcripts presents in the list
-    if (@_){
-	my $gene = shift;
+    else{
+	my $highest_priority;
+	#first, get all the transcripts, if any
+	my $transcript_variations = $self->get_all_TranscriptVariations();
+	#if no transcripts, return INTERGENIC type
+	if (!defined $transcript_variations){
+	    return 'INTERGENIC';
+	}
+	$gene = shift;
 	if (!ref $gene || !$gene->isa("Bio::EnsEMBL::Gene")){
 	    throw("$gene is not a Bio::EnsEMBL::Gene type!");
 	}
@@ -366,13 +408,10 @@ sub consequence_type{
 		push @new_transcripts,$transcript_variation;
 	    }
 	}
-	$highest_priority = $self->_highest_priority(\@new_transcripts);
+	$highest_priority = $self->_highest_priority(\@new_transcripts);	
+	return $highest_priority;
     }
-    #no argument provided, get the highest priority in the transcript_variation
-    else{
-	$highest_priority = $self->_highest_priority($transcript_variations);
-    }
-    return $highest_priority;
+
 }
 
 #for a list of transcript variations, gets the one with highest priority
@@ -381,15 +420,15 @@ sub _highest_priority{
     my $transcript_variations = shift;
     my $highest_type = 'INTERGENIC';
     foreach my $tv (@{$transcript_variations}){
-	#with a frameshift coding, return, is the highest value
-	if ($tv->consequence_type eq 'FRAMESHIFT_CODING') {
-	    return 'FRAMESHIFT_CODING';
-	}
-	else{
-	    if ($CONSEQUENCE_TYPES{$tv->consequence_type} < $CONSEQUENCE_TYPES{$highest_type}){
-		$highest_type = $tv->consequence_type;
-	    }
-	}
+ 	#with a frameshift coding, return, is the highest value
+ 	if ($tv->consequence_type eq 'FRAMESHIFT_CODING') {
+ 	    return 'FRAMESHIFT_CODING';
+ 	}
+ 	else{
+ 	    if ($CONSEQUENCE_TYPES{$tv->consequence_type} < $CONSEQUENCE_TYPES{$highest_type}){
+ 		$highest_type = $tv->consequence_type;
+ 	    }
+ 	}
     }    
     return $highest_type;
 }
@@ -424,6 +463,91 @@ sub ambig_code{
 sub var_class{
     my $self = shift;
     return &variation_class($self->allele_string());
+}
+
+
+=head2 get_all_validation_states
+
+  Arg [1]    : none
+  Example    : my @vstates = @{$vf->get_all_validation_states()};
+  Description: Retrieves all validation states for this variationFeature.  Current
+               possible validation statuses are 'cluster','freq','submitter',
+               'doublehit', 'hapmap'
+  Returntype : reference to list of strings
+  Exceptions : none
+  Caller     : general
+
+=cut
+
+sub get_all_validation_states {
+  my $self = shift;
+
+  my @VSTATES = @Bio::EnsEMBL::Variation::Variation::VSTATES;
+
+  my $code = $self->{'validation_code'};
+  print STDERR "the code is $code\n";
+
+  # convert the bit field into an ordered array
+  my @states;
+  for(my $i = 0; $i < @VSTATES; $i++) {
+    push @states, $VSTATES[$i] if((1 << $i) & $code);
+  }
+
+  return \@states;
+}
+
+
+
+
+=head2 add_validation_state
+
+  Arg [1]    : string $state
+  Example    : $vf->add_validation_state('cluster');
+  Description: Adds a validation state to this variation.
+  Returntype : none
+  Exceptions : warning if validation state is not a recognised type
+  Caller     : general
+
+=cut
+
+sub add_validation_state {
+  my $self  = shift;
+  my $state = shift;
+
+  my %VSTATE2BIT = %Bio::EnsEMBL::Variation::Variation::VSTATE2BUT;
+  my @VSTATES = @Bio::EnsEMBL::Variation::Variation::VSTATES;
+  # convert string to bit value and add it to the existing bitfield
+  my $bitval = $VSTATE2BIT{lc($state)};
+
+  if(!$bitval) {
+    warning("$state is not a recognised validation status. Recognised " .
+            "validation states are: @VSTATES");
+    return;
+  }
+
+  $self->{'validation_code'} |= $bitval;
+
+  return;
+}
+
+
+
+=head2 source
+
+  Arg [1]    : string $source (optional)
+               The new value to set the source attribute to
+  Example    : $source = $vf->source()
+  Description: Getter/Setter for the source attribute
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+
+=cut
+
+sub source{
+  my $self = shift;
+  return $self->{'source'} = shift if(@_);
+  return $self->{'source'};
 }
 
 1;
