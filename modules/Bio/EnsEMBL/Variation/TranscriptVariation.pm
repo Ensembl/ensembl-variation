@@ -216,7 +216,7 @@ sub transcript {
   else{
       #lazy-load the transcript object into the transcript_variation, and return it
       if (!defined $self->{'transcript'} && $self->{'adaptor'} && defined($self->{'_transcript_id'})){
-	  my $transcript_adaptor = $self->{'adaptor'}->dnadb()->get_TranscriptAdaptor();
+	  my $transcript_adaptor = $self->{'adaptor'}->db()->dnadb()->get_TranscriptAdaptor();
 	  $self->transcript($transcript_adaptor->fetch_by_dbID($self->{'_transcript_id'}));
 	  delete $self->{'_transcript_id'};
       }
