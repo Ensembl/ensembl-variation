@@ -35,17 +35,17 @@ sub new {
 sub dump_dbSNP{
     my $self = shift;
     
-    $self->source_table();
-    $self->population_table();
-    $self->individual_table();
-    $self->variation_table();
-    $self->individual_genotypes();
-    $self->population_genotypes();
-    $self->allele_table();
+    #$self->source_table();
+    #$self->population_table();
+    #$self->individual_table();
+    #$self->variation_table();
+    #$self->individual_genotypes();
+    #$self->population_genotypes();
+    #$self->allele_table();
     $self->flanking_sequence_table();
-    $self->variation_feature();
-    $self->variation_group();
-    $self->allele_group();
+    #$self->variation_feature();
+    #$self->variation_group();
+    #$self->allele_group();
     
     $self->cleanup();
 
@@ -426,8 +426,8 @@ sub flanking_sequence_table {
     debug("Dumping $type' flanking sequence");
     
     dumpSQL($self->{'dbSNP'}, qq{SELECT seq.subsnp_id, seq.line_num, seq.line
-				 FROM SubSNPSeq$type seq, SNPFlankStatus sfs
-				 WHERE sfs.subsnp_id = seq.subsnp_id
+				 FROM SubSNPSeq$type seq, SNP snp
+				 WHERE snp.exemplar_subsnp_id = seq.subsnp_id
 				 $self->{'limit'}});
     
 
