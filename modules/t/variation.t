@@ -100,13 +100,14 @@ my $vdb = $multi->get_DBAdaptor('variation');
 my $core = $multi->get_DBAdaptor('core');
 $vdb->dnadb($core);
 
+my $var_adaptor = $vdb->get_VariationAdaptor;
 #test get_all_IndividualGenotypes
 my $variation_id = 191;
 
 my $variation = Bio::EnsEMBL::Variation::Variation->new(
    -dbID => $variation_id,
    -name => 'rs193',
-   -adaptor => $vdb
+   -adaptor => $var_adaptor
    );
 
 my $igty = $variation->get_all_IndividualGenotypes();
@@ -126,7 +127,7 @@ $variation_id = 2863;
 $variation = Bio::EnsEMBL::Variation::Variation->new(
    -dbID => $variation_id,
    -name => 'rs2872',
-   -adaptor => $vdb
+   -adaptor => $var_adaptor
    );
 
 @igtys = ();
