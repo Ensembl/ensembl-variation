@@ -191,6 +191,35 @@ create table variation_feature(
 );
 
 
+
+#
+# variation_group_feature
+#
+# Places a variation_group (i.e. group of associated haplotypes) on the genome
+# as a feature.
+#
+# variation_group_feature_id - primary key, internal identifier
+# seq_region_id              - foreign key references seq_region in core db
+# seq_region_start           - start position of the variation_group_feature
+#                              on the referenced seq_region
+# seq_region_end             - end position of the variation_group_feature
+# seq_region_strand          - orientation of feature on seq_region
+# variation_group_id         - foreign key references variation_group
+#
+
+create table variation_group_feature(
+  variation_group_feature_id int not null auto_increment,
+  seq_region_id int not null,
+  seq_region_start int not null,
+  seq_region_end int not null,
+  seq_region_strand tinyint not null,
+  variation_group_id int not null,
+
+  primary key (variation_group_feature_id),
+  key pos_idx(seq_region_id, seq_region_start),
+  key variation_group_idx(variation_group_id)
+);
+
 #
 # transcript_variation
 # 
