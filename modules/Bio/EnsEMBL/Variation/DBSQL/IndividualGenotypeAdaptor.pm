@@ -22,7 +22,7 @@ Bio::EnsEMBL::Variation::DBSQL::IndividualGenotypeAdaptor
   $igtype = $ia->fetch_by_dbID(145);
 
   # Get all individual genotypes for an individual
-  $ind = $ia->fetch_by_dbID(1219);
+  $ind = $ia->fetch_all_by_Individual(1219);
 
   foreach $igtype (@{$iga->fetch_all_by_Individual($ind)}) {
     print $igtype->variation()->name(),  ' ',
@@ -57,34 +57,8 @@ use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 
 use Bio::EnsEMBL::Variation::IndividualGenotype;
 
+use Data::Dumper;
 our @ISA = ('Bio::EnsEMBL::DBSQL::BaseAdaptor');
-
-
-
-=head2 fetch_by_dbID
-
-  Arg [1]    : int $dbID
-  Example    : $igtype = $igtype_adaptor->fetch_by_dbID(15767);
-  Description: Retrieves an individual genotype via its unique internal
-               identifier.  undef is returned if no such individual genotype
-               exists.
-  Returntype : Bio::EnsEMBL::Variation::Variation::IndividualGenotype or undef
-  Exceptions : throw if no dbID argument is provided
-  Caller     : general
-
-=cut
-
-sub fetch_by_dbID {
-  my $self = shift;
-  my $dbID = shift;
-
-  if (! $dbID){
-      throw('no dbID argument provided');
-  }
-  return shift @{$self->generic_fetch("individual_genotype_id = " . $dbID)};
-
-}
-
 
 
 =head2 fetch_all_by_Individual
@@ -111,9 +85,13 @@ sub fetch_all_by_Individual {
   if(!defined($ind->dbID())) {
     warning("Cannot retrieve genotypes for individual without set dbID");
     return [];
-  }
+}
 
-  return $self->generic_fetch("individual_id = " . $ind->dbID());
+  $self->_tables(['individual_genotype_single_bp','igs']);
+  my $res = $self->generic_fetch("individual_id = " . $ind->dbID()); #to select data from individual_genotype_single_bp
+  $self->_tables(['individual_genotype_multiple_bp','igm']);
+  push @{$res},@{$self->generic_fetch("individual_id = " . $ind->dbID())}; #to select data from individual_genotype_multiple_bp  
+  return $res
 }
 
 =head2 fetch_all_by_Variation
@@ -141,15 +119,24 @@ sub fetch_all_by_Variation {
     if(!defined($variation->dbID())) {
 	warning("Cannot retrieve genotypes for variation without set dbID");
 	return [];
-    }
-
-    return $self->generic_fetch("variation_id = " . $variation->dbID());
+    }	
+    $self->_tables(['individual_genotype_single_bp','igs']);
+    my $res = $self->generic_fetch("variation_id = " . $variation->dbID()); #to select data from individual_genotype_single_bp
+    $self->_tables(['individual_genotype_multiple_bp','igm']);
+    push @{$res},@{$self->generic_fetch("variation_id = " . $variation->dbID())}; #to select data from individual_genotype_multiple_bp
+    return $res;
 }
 
-sub _tables{return ['individual_genotype','ig']}
+#Getter/Setter of the table where to select the data from
+
+sub _tables{
+    my $self = shift;
+    return $self->{'_table'} = shift if (@_);
+    return $self->{'_table'};
+}
 
 sub _columns{
-    return qw(ig.individual_genotype_id ig.individual_id ig.variation_id ig.allele_1 ig.allele_2);
+    return qw(individual_id variation_id allele_1 allele_2);
 }
 
 sub _objs_from_sth{
@@ -157,15 +144,14 @@ sub _objs_from_sth{
     my $sth = shift;
     
     my @results;
-    my ($dbID, $individual_id, $variation_id, $allele_1, $allele_2);
-    $sth->bind_columns(\$dbID, \$individual_id, \$variation_id, \$allele_1, \$allele_2);
+    my ($individual_id, $variation_id, $allele_1, $allele_2);
+    $sth->bind_columns(\$individual_id, \$variation_id, \$allele_1, \$allele_2);
     
     my %individual_hash;
     my %variation_hash;
     while($sth->fetch()){
 	my $igtype = Bio::EnsEMBL::Variation::IndividualGenotype->new
-	    (-dbID => $dbID,
-	     -adaptor => $self,
+	    (-adaptor => $self,
 	     -allele1 => $allele_1,
 	     -allele2 => $allele_2);
 	$individual_hash{$individual_id} ||= [];

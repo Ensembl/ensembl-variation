@@ -82,7 +82,7 @@ sub fetch_by_dbID {
 
   throw('dbID argument expected') if(!defined($dbID));
 
-  my $sth = $self->prepare(q{SELECT population_id, name, size, description
+  my $sth = $self->prepare(q{SELECT population_id, name, size, description, is_strain
                              FROM   population
                              WHERE  population_id = ?});
   $sth->execute($dbID);
@@ -113,7 +113,7 @@ sub fetch_by_name {
 
   throw('name argument expected') if(!defined($name));
 
-  my $sth = $self->prepare(q{SELECT population_id, name, size, description
+  my $sth = $self->prepare(q{SELECT population_id, name, size, description, is_strain
                              FROM   population
                              WHERE  name = ?});
 
@@ -156,7 +156,7 @@ sub fetch_all_by_super_Population {
   }
 
   my $sth = $self->prepare(q{SELECT p.population_id, p.name, p.size,
-                                    p.description
+                                    p.description, p.is_strain
                              FROM   population p, population_structure ps
                              WHERE  p.population_id = ps.sub_population_id
                              AND    ps.super_population_id = ?});
@@ -199,7 +199,7 @@ sub fetch_all_by_sub_Population {
   }
 
   my $sth = $self->prepare(q{SELECT p.population_id, p.name, p.size,
-                                    p.description
+                                    p.description, p.is_strain
                              FROM   population p, population_structure ps
                              WHERE  p.population_id = ps.super_population_id
                              AND    ps.sub_population_id = ?});
@@ -285,6 +285,26 @@ sub fetch_population_by_synonym{
     return $population_array;
     
 }
+
+=head2 fetch_all_strains
+
+    Args       : none
+    Example    : my $strains = $pop_adaptor->fetch_all_strains();
+    Description: Retrieves populations that should be considered as strain in the specie.
+    Returntype : list of Bio::EnsEMBL::Variation::Population
+    Exceptions : none
+    Caller     : Bio:EnsEMBL:Variation::Population
+
+=cut
+
+sub fetch_all_strains{
+    my $self = shift;
+    
+    return $self->generic_fetch("is_strain = 1");
+
+}
+
+
 #
 # private method, creates population objects from an executed statement handle
 # ordering of columns must be consistant
@@ -295,9 +315,9 @@ sub _objs_from_sth {
 
   my @pops;
 
-  my ($pop_id, $name, $size, $desc);
+  my ($pop_id, $name, $size, $desc, $is_strain);
 
-  $sth->bind_columns(\$pop_id, \$name, \$size, \$desc);
+  $sth->bind_columns(\$pop_id, \$name, \$size, \$desc, \$is_strain);
 
   while($sth->fetch()) {
     push @pops, Bio::EnsEMBL::Variation::Population->new
@@ -305,7 +325,8 @@ sub _objs_from_sth {
        -ADAPTOR => $self,
        -NAME => $name,
        -DESCRIPTION => $desc,
-       -SIZE => $size);
+       -SIZE => $size,
+       -IS_STRAIN => $is_strain);
   }
 
   return \@pops;
@@ -314,7 +335,7 @@ sub _objs_from_sth {
 sub _tables{return ['population','p'];}
 
 sub _columns{
-    return qw(p.population_id p.name p.size p.description
+    return qw(p.population_id p.name p.size p.description p.is_strain
 	      );
 }
 

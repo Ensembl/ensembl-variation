@@ -73,7 +73,6 @@ use Bio::EnsEMBL::Feature;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Utils::Argument  qw(rearrange);
 use Bio::EnsEMBL::Variation::Utils::Sequence qw(ambiguity_code variation_class);
-use Data::Dumper;
 
 our @ISA = ('Bio::EnsEMBL::Feature');
 

@@ -64,7 +64,7 @@ use vars qw(@ISA);
   Example    : $pop_genotype = Bio:EnsEMBL::Variation::PopulationGenotype->new
                    (-allele1 => 'A',
                     -allele2 => 'T',
-                    -varitation => $variation,
+                    -variation => $variation,
                     -population => $pop
                     -frequency  => 0.87);
   Description: Constructor.  Instantiates a PopulationGenotype object.

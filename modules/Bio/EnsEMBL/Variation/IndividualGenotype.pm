@@ -46,8 +46,6 @@ use vars qw(@ISA);
 
 =head2 new
 
-  Arg [-dbID] :
-    int - unique internal identifier
   Arg [-adaptor] :
     Bio::EnsEMBL::Variation::DBSQL::IndividualAdaptor
   Arg [-allele1] :
@@ -74,8 +72,8 @@ use vars qw(@ISA);
 sub new {
   my $class = shift;
 
-  my ($dbID, $adaptor, $allele1, $allele2, $var, $ind) =
-    rearrange([qw(dbID adaptor allele1 allele2 variation individual)],@_);
+  my ($adaptor, $allele1, $allele2, $var, $ind) =
+    rearrange([qw(adaptor allele1 allele2 variation individual)],@_);
 
   if(defined($var) &&
      (!ref($var) || !$var->isa('Bio::EnsEMBL::Variation::Variation'))) {
@@ -87,8 +85,7 @@ sub new {
     throw("Bio::EnsEMBL::Variation::Individual argument expected");
   }
 
-  return bless {'dbID'    => $dbID,
-                'adaptor' => $adaptor,
+  return bless {'adaptor' => $adaptor,
                 'allele1' => $allele1,
                 'allele2' => $allele2,
                 'variation' => $var,

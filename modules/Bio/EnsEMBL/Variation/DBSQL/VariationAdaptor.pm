@@ -333,6 +333,7 @@ sub _objs_from_sth {
 
   while($sth->fetch()) {
     if(!defined($cur_var) || $cur_var_id != $var_id) {
+	$vstatus = 0 if (!defined $vstatus);
       my @states = split(',',$vstatus);
       $cur_var = Bio::EnsEMBL::Variation::Variation->new
         (-dbID   => $var_id,

@@ -160,7 +160,7 @@ sub _tables { return ['pairwise_ld', 'pl']; }
 sub _columns {
   return qw( pl.variation_feature_id_1 pl.variation_feature_id_2 pl.population_id
 	     pl.seq_region_id pl.seq_region_start pl.seq_region_end 
-	     pl.snp_distance_count pl.r2 pl.d_prime pl.sample_count);
+	     pl.r2 pl.d_prime pl.sample_count);
 }
 
 #
@@ -176,29 +176,30 @@ sub _objs_from_sth {
   my $vfa = $self->db()->get_VariationFeatureAdaptor;
 
   my %vf_objects; #hash containing the address of all the variation feature objects present in the ld table
-  my ($variation_feature_id_1, $variation_feature_id_2, $population_id, $seq_region_id, $seq_region_start, $seq_region_end, $snp_distance_count,
+  my ($variation_feature_id_1, $variation_feature_id_2, $population_id, $seq_region_id, $seq_region_start, $seq_region_end,
       $r2, $d_prime,$sample_count);
 
-  $sth->bind_columns(\$variation_feature_id_1, \$variation_feature_id_2, \$population_id, \$seq_region_id, \$seq_region_start, \$seq_region_end, \$snp_distance_count, \$r2, \$d_prime, \$sample_count);
-
+  $sth->bind_columns(\$variation_feature_id_1, \$variation_feature_id_2, \$population_id, \$seq_region_id, \$seq_region_start, \$seq_region_end, \$r2, \$d_prime, \$sample_count);
   my %_pop_ids = ();
   while($sth->fetch()) {
       my %ld_values;
       #get the id of the variations
       $ld_values{'d_prime'} = $d_prime;
       $ld_values{'r2'} = $r2;
-      $ld_values{'snp_distance_count'} = $snp_distance_count;      
       $ld_values{'sample_count'} = $sample_count;
-      if (!exists $vf_objects{$variation_feature_id_1}){
-	  $vf_objects{$variation_feature_id_1} = $vfa->fetch_by_dbID($variation_feature_id_1);
-      }      
-      if (!exists $vf_objects{$variation_feature_id_2}){
-	  $vf_objects{$variation_feature_id_2} = $vfa->fetch_by_dbID($variation_feature_id_2);
-      }  
+      #add the vf to a hash
+      $vf_objects{$variation_feature_id_1}++;
+      $vf_objects{$variation_feature_id_2}++;
+      #add the LD information to the container
       $feature_container{$variation_feature_id_1 . '-' . $variation_feature_id_2}->{$population_id} =  \%ld_values;
      $_pop_ids{$population_id} = 1;
   }
   $sth->finish();
+  my @vf_ids = keys %vf_objects;
+  %vf_objects = ();
+  #convert the array into a hash
+  $vf_objects{$_->dbID()} = $_ for @{$vfa->fetch_all_by_dbID_list(\@vf_ids)};
+
   my $t = Bio::EnsEMBL::Variation::LDFeatureContainer->new(
 							  '-ldContainer'=> \%feature_container,
 							  '-name' => '',
