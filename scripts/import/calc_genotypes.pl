@@ -54,28 +54,27 @@ i.e., D = prAB - frq(A)*frq(B), r^2 = D^2/(frq(A)*frq(B)*frq(a)*frq(b)),
 # Genotype must be AA, Aa, aa
 
 use strict;
-use Data::Dumper;
-use Benchmark;
 use warnings;
-use Bio::EnsEMBL::Utils::Exception qw(warning throw verbose);
 
-
+use constant WINDOW_SIZE => 100_000;
 my %genotypes;
 my %snps_ordered; #hash $snps_ordered{$chr}{$position} = $snp
 my %additional_info; #to store additional information to have in the database: variation_feature_id
-
+my @positions_ordered; #to keep the order of the markers
 #assuming the script is called calc_genotypes.pl genotypes.txt genotypes_output.txt
  open FH, ">>$ARGV[1]"
-    or throw("Could not open tmp file: $ARGV[1]\n");
+    or die("Could not open tmp file: $ARGV[1]\n");
 open IN, "$ARGV[0]"
- or throw("Could not open input file: $ARGV[0]\n");
+ or die("Could not open input file: $ARGV[0]\n");
 
 my $seq_region_id_previous = 0;
-
+my $position_removed; #position where it has been deleted the marker. Remove it from the rest of the hashes
+my %iterations_stats;
 while( <IN> ) {
     chomp;
     /^#/ && next;
     my($locus,$position,$personid,$genotype,$variation_feature_id,$seq_region_id,$seq_region_end,$population_id) = split;
+
     if( !defined $genotype) {
       warn "bad format for locus, $_, skipping";
     }
@@ -92,78 +91,82 @@ while( <IN> ) {
     if( $genotype !~ /AA|Aa|aa/ ) {
       die "Genotype must be AA, Aa or aa, not $genotype";
     }
+    #new region, flush all structures and calculate the ld information for the remaining markers
     if ($seq_region_id != $seq_region_id_previous && $seq_region_id_previous != 0){
-       &calculate_ld(\%snps_ordered,\%genotypes,\%additional_info,$seq_region_id_previous);  
+       #calculate the LD for the remaining markers in the region
+       while (@positions_ordered){
+           &calculate_ld(\%snps_ordered,\%genotypes,\%additional_info,\@positions_ordered,$seq_region_id_previous);  
+       }
        $seq_region_id_previous = $seq_region_id;
        %snps_ordered = ();
        %genotypes = ();
        %additional_info = ();
+       @positions_ordered = ();
     }
+
+    #check if the position is farther than the limit, if so, calculate the ld information for the values in the array
+    while (defined $positions_ordered[0] && (abs($positions_ordered[0]-$position) > WINDOW_SIZE())){
+	$position_removed = &calculate_ld(\%snps_ordered,\%genotypes,\%additional_info,\@positions_ordered,$seq_region_id_previous);
+        #necessary to remove the information from the different hashes already calculated
+        delete $genotypes{$snps_ordered{$position_removed}};
+        delete $additional_info{$snps_ordered{$position_removed}};
+        delete $snps_ordered{$position_removed};
+    }        
     if ($seq_region_id_previous == 0){$seq_region_id_previous = $seq_region_id};
-    #improves version: substituting 2 hashes, one for snps in chromosome and the other for snps in position for 1 hash: $snps_ordered{chr}{position} = sn
-     if (defined $snps_ordered{$seq_region_id}{$position} && $snps_ordered{$seq_region_id}{$position} != $locus){
-           warn "position $seq_region_id,$position for $locus disagrees with earlier position";
-     }
-     else{
-         $snps_ordered{$seq_region_id}{$position} = $locus;
-         #this is to store additional informaiton
-         $additional_info{$locus}->{position} = $position;
-         $additional_info{$locus}->{variation_feature_id} = $variation_feature_id;
-         $additional_info{$locus}->{seq_region_end} = $seq_region_end;
-         $additional_info{$locus}->{population_id} = $population_id;
+    #add the position of the marker to the array if a new position
+    push @positions_ordered, $position if (!defined ($positions_ordered[-1]) || $position != $positions_ordered[-1]);
+
+    #store the information necessary to retrieve all data from the marker
+    $snps_ordered{$position} = $locus;
+    #this is to store additional informaiton
+    $additional_info{$locus}->{position} = $position;
+    $additional_info{$locus}->{variation_feature_id} = $variation_feature_id;
+    $additional_info{$locus}->{seq_region_end} = $seq_region_end;
+    $additional_info{$locus}->{population_id} = $population_id;
 
 
-         my $h = {};
-         $h->{'locus'} = $locus;
-         $h->{'personid'} = $personid;
-         $h->{'genotype'} = $genotype;
+    my $h = {};
+    $h->{'locus'} = $locus;
+    $h->{'personid'} = $personid;
+    $h->{'genotype'} = $genotype;
     
-        if( !defined $genotypes{$locus} ) {
-          $genotypes{$locus} = [];
-         }
-
-        push(@{$genotypes{$locus}},$h);    
+    if( !defined $genotypes{$locus} ) {
+       $genotypes{$locus} = [];
     }
+
+    push(@{$genotypes{$locus}},$h);    
+
 }
 
+#calculate LD for the last region
+while (@positions_ordered){
+   &calculate_ld(\%snps_ordered,\%genotypes,\%additional_info,\@positions_ordered,$seq_region_id_previous);  
+}
 close IN;
 close FH;
+
 
 sub calculate_ld{
     my $snps_ordered = shift;
     my $genotypes = shift;
     my $additional_info = shift;
+    my $positions_ordered = shift;
     my $seq_region_id = shift;
 
     my %output;
     my $snp_count = 0; #to count the number of snps between the 2  in the region
-    #my approach to the problem: have a hash by chromosome and position and compare things    
-    #then, sort all the positions
-    my @positions_ordered = (sort {$a <=> $b} keys %{$snps_ordered{$seq_region_id}});
-#    while ( @positions_ordered ) { 
-#     my $position = shift( @positions_ordered );
-#     foreach my $position2 ( @positions_ordered ) {
-#       compare position with position2
 
-    foreach my $position (sort {$a <=> $b} keys %{$snps_ordered->{$seq_region_id}}){
-	#delete the own snp to not copy it again
-	shift @positions_ordered; #remove first element from the array, it has already been compared
-	$snp_count = 0;
-	#compare against all the SNPs, until we find one outside the window
-	foreach my $position2 (@positions_ordered){
-	    last if (abs($position - $position2) > 100_000);
-	    my $key = "$snps_ordered->{$seq_region_id}{$position}:$snps_ordered->{$seq_region_id}{$position2}";
-	    $snp_count++;
-	    if( &shared_people($genotypes->{$snps_ordered->{$seq_region_id}{$position}},$genotypes->{$snps_ordered->{$seq_region_id}{$position2}}) < 20 ) {
-#               print "skipping $key as not enough shared people\n";
-#		next;
-	    }
-	    
-	    my $stats_hash = &calculate_pairwise_stats($genotypes->{$snps_ordered->{$seq_region_id}{$position}},$genotypes->{$snps_ordered->{$seq_region_id}{$position2}},$snp_count);
-	    
-	    $output{$key} = $stats_hash;
-
-	}
+    my $position = shift @{$positions_ordered}; #remove first element from the array, it has already been compared
+    $snp_count = 0;
+    #calculate LD against all SNPs in the window
+    foreach my $position2 (@{$positions_ordered}){
+	my $key = "$snps_ordered->{$position}:$snps_ordered->{$position2}";
+	$snp_count++;
+	
+	my $stats_hash = &calculate_pairwise_stats($genotypes->{$snps_ordered->{$position}},$genotypes->{$snps_ordered->{$position2}},$snp_count);
+	
+	$output{$key} = $stats_hash;
+	
     }
     
     #and finally, print the ld calculation for the chromosome into a file
@@ -190,6 +193,7 @@ sub calculate_ld{
 	}
 	print FH join("\t",$additional_info->{$locus1}->{variation_feature_id},$additional_info->{$locus2}->{variation_feature_id},$additional_info->{$locus1}->{population_id},$seq_region_id,$seq_region_start,$seq_region_end,$output{$key}->{'snp_count'},$output{$key}->{'r2'}, abs($output{$key}->{'d_prime'}),$output{$key}->{'N'}),"\n";	
     }   
+    return $position;
 }
 
 
@@ -211,7 +215,6 @@ sub calculate_pairwise_stats {
 	    if( $g->{'personid'} ne $h->{'personid'} ) {
 		next;
 	    }
-#	    print "Doing a new person ",$g->{'personid'},"$count\n";
 	    $count++;
 	    $people{$g->{'personid'}}  = 1;
 	    # now assign to double genotype.
@@ -261,10 +264,10 @@ sub calculate_pairwise_stats {
     $nAb = 2*$AAbb+$Aabb+$AABb;
     $naB = 2*$aaBB+$AaBB+$aaBb;
 
-#    my $N = $nAB + $nab + $nAB + $naB + 2*$AaBb;
     my $N = $nAB + $nab + $nAb + $naB + 2*$AaBb;
-
-    while( abs($theta-$thetaprev) > 0.0001 ) {
+    
+   
+    while( abs($theta-$thetaprev) > 0.0001 ) {	
 	$thetaprev = $theta;
 	if ($N != 0){
 	    # restimate probabilities of haplotypes using
@@ -281,8 +284,6 @@ sub calculate_pairwise_stats {
 	if ($@){$theta = 0;} #included to avoid division by 0
 #	print "New theta $theta\n";
     }
-    
-    
 
     # now calculate stats
 
@@ -348,22 +349,4 @@ sub major_frequency {
     return $major/$total if ($total !=0);
     return 0 if ($total == 0);
 
-}
-
-
-sub shared_people {
-    my $first  = shift;
-    my $second = shift;
-    my %h;
-    my $c = 0;
-    #new way to find number repeated elements in 2 arrays
-    foreach my $elem (@{$first},@{$second}){
-	$h{$elem->{'personid'}}++;
-    }
-    foreach my $elem (keys %h){
-	if ($h{$elem} > 1){
-	    $c++;
-	}
-    }
-    return $c;
 }
