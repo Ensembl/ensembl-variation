@@ -57,7 +57,6 @@ use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 
 use Bio::EnsEMBL::Variation::IndividualGenotype;
 
-use Data::Dumper;
 our @ISA = ('Bio::EnsEMBL::DBSQL::BaseAdaptor');
 
 
@@ -120,9 +119,9 @@ sub fetch_all_by_Variation {
 	warning("Cannot retrieve genotypes for variation without set dbID");
 	return [];
     }	
-    $self->_tables(['individual_genotype_single_bp','igs']);
+    $self->_tables(['individual_genotype_single_bp','ig']);
     my $res = $self->generic_fetch("variation_id = " . $variation->dbID()); #to select data from individual_genotype_single_bp
-    $self->_tables(['individual_genotype_multiple_bp','igm']);
+    $self->_tables(['individual_genotype_multiple_bp','ig']);
     push @{$res},@{$self->generic_fetch("variation_id = " . $variation->dbID())}; #to select data from individual_genotype_multiple_bp
     return $res;
 }
@@ -176,9 +175,10 @@ sub _objs_from_sth{
     # get all individual in one query (faster)
     # and add to already created genotypes
     my @ind_ids = keys %individual_hash;
+
     my $ia = $self->db()->get_IndividualAdaptor();
     my $inds = $ia->fetch_all_by_dbID_list(\@ind_ids);
-    
+
     foreach my $i (@$inds) {
 	foreach my $igty (@{$individual_hash{$i->dbID()}}) {
 	    $igty->individual($i);

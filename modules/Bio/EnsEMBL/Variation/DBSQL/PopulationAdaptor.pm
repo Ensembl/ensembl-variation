@@ -305,6 +305,48 @@ sub fetch_all_strains{
 }
 
 
+=head2 fetch_all_by_Individual
+
+  Arg [1]     : Bio::EnsEMBL::Variation::Individual $ind
+  Example     : my $ind = $ind_adaptor->fetch_by_name('NA12004');
+                foreach my $pop (@{$pop_adaptor->fetch_all_by_Individual($ind)}){
+		    print $pop->name,"\n";
+                }
+  Description : Retrieves all populations from a specified individual
+  ReturnType  : reference to list of Bio::EnsEMBL::Variation::Population objects
+  Exceptions  : throw if incorrect argument is passed
+                warning if provided individual does not have a dbID
+  Caller      : general
+
+=cut
+
+sub fetch_all_by_Individual{
+    my $self = shift;
+    my $ind = shift;
+
+    if(!ref($ind) || !$ind->isa('Bio::EnsEMBL::Variation::Individual')) {
+	throw("Bio::EnsEMBL::Variation::Individual arg expected");
+    }
+    
+    if(!$ind->dbID()) {
+	warning("Individual does not have dbID, cannot retrieve Individuals");
+	return [];
+  } 
+
+    my $sth = $self->prepare(qq{SELECT p.population_id, p.name, p.size, p.description, p.is_strain
+				FROM population p, individual_population ip
+				WHERE p.population_id = ip.population_id
+                                AND ip.individual_id = ?
+			    });
+    $sth->execute($ind->dbID());
+
+    my $results = $self->_objs_from_sth($sth);
+
+    $sth->finish();
+
+    return $results;
+}
+
 #
 # private method, creates population objects from an executed statement handle
 # ordering of columns must be consistant

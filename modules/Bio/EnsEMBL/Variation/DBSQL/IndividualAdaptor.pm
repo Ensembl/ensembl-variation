@@ -22,8 +22,7 @@ Bio::EnsEMBL::DBSQL::IndividualAdaptor
 
   # Get all individuals with a particular name
   foreach my $ind (@{$ia->fetch_all_by_name('PKH053(M)')}) {
-    print "Individual ", $ind->name(), " from population ",
-          $ind->population()->name(), "\n";
+    print "Individual ", $ind->name(), "\n";
   }
 
   # get all individuals from a population
@@ -89,7 +88,7 @@ sub fetch_by_dbID {
   defined($dbID) || throw('dbID argument expected');
 
   my $sth = $self->prepare
-    (q{SELECT i.individual_id, i.name, i.description, i.population_id,
+    (q{SELECT i.individual_id, i.name, i.description,
               i.gender, i.father_individual_id, i.mother_individual_id
        FROM   individual i
        WHERE  i.individual_id = ?});
@@ -127,7 +126,7 @@ sub fetch_all_by_name {
   defined($name) || throw("name argument expected");
 
   my $sth = $self->prepare
-    (q{SELECT i.individual_id, i.name, i.description, i.population_id,
+    (q{SELECT i.individual_id, i.name, i.description,
               i.gender, i.father_individual_id, i.mother_individual_id
        FROM   individual i
        WHERE  i.name = ?});
@@ -173,10 +172,11 @@ sub fetch_all_by_Population {
   }
 
   my $sth = $self->prepare
-    (q{SELECT i.individual_id, i.name, i.description, i.population_id,
+    (q{SELECT i.individual_id, i.name, i.description,
               i.gender, i.father_individual_id, i.mother_individual_id
-       FROM   individual i
-       WHERE  i.population_id = ?});
+       FROM   individual i, individual_population ip
+       WHERE  i.individual_id = ip.individual_id
+       AND    ip.population_id = ?});
 
   $sth->execute($pop->dbID());
 
@@ -222,12 +222,12 @@ sub fetch_all_by_parent_Individual {
   my $gender = $parent->gender() || '';
 
   my $father_sql =
-    q{SELECT i.individual_id, i.name, i.description, i.population_id,
+    q{SELECT i.individual_id, i.name, i.description,
              i.gender, i.father_individual_id, i.mother_individual_id
       FROM   individual i
       WHERE  i.father_individual_id = ?};
   my $mother_sql =
-    q{SELECT i.individual_id, i.name, i.description, i.population_id,
+    q{SELECT i.individual_id, i.name, i.description,
               i.gender, i.father_individual_id, i.mother_individual_id
        FROM   individual i
        WHERE  i.mother_individual_id = ?};
@@ -278,19 +278,17 @@ sub _objs_from_sth {
   my $self = shift;
   my $sth = shift;
 
-  my ($dbID, $name, $desc, $pop_id, $gender, $father_id, $mother_id);
+  my ($dbID, $name, $desc, $gender, $father_id, $mother_id);
 
-  $sth->bind_columns(\$dbID, \$name, \$desc, \$pop_id, \$gender,
+  $sth->bind_columns(\$dbID, \$name, \$desc, \$gender,
                      \$father_id, \$mother_id);
 
   my %seen;
   my %wanted_fathers;
   my %wanted_mothers;
-  my %pop_cache;
 
   my @inds;
 
-  my $pop_adaptor = $self->db()->get_PopulationAdaptor();
 
   while($sth->fetch()) {
     # get objects for mother and father if they were already constructed
@@ -312,13 +310,11 @@ sub _objs_from_sth {
       }
     }
 
-    my $pop = $pop_cache{$pop_id} ||= $pop_adaptor->fetch_by_dbID($pop_id);
 
     my $ind = $seen{$dbID} ||= Bio::EnsEMBL::Variation::Individual->new
       (-dbID        => $dbID,
        -adaptor     => $self,
        -description => $desc,
-       -population  => $pop,
        -gender      => $gender,
        -name        => $name,
        -father_individual => $father,
@@ -355,13 +351,11 @@ sub _objs_from_sth {
 
 }
 
-sub _tables{return ['individual','i']}
+sub _tables{return (['individual','i'])}
 
 sub _columns{
-    return qw(i.individual_id i.name i.description i.population_id i.gender i.father_individual_id i.mother_individual_id);
+    return qw(individual_id name description gender father_individual_id mother_individual_id);
 }
-
-
 
 
 1;
