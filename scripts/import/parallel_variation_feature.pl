@@ -210,6 +210,7 @@ sub variation_feature {
       $cur_map_weight = $map_weight;
       $cur_v_id  = $v_id;
       $cur_v_name = $v_name;
+      
       $top_sr_start = $sr_start;
       $top_sr_end = $sr_end;
       $top_sr_strand = $sr_strand;
@@ -230,6 +231,7 @@ sub variation_feature {
 	  ###if start = end+1, this indicate a indel
 	  if ($sr_start == $sr_end+1) {
 	    $ref_allele = '-';
+	    $top_sr_id = $sr_id;
 	    $top_coord=1;
 	    warning("Could not locate $sr_id, $sr_start, $sr_end, $sr_strand, maybe indels");
 	  }
@@ -240,6 +242,7 @@ sub variation_feature {
 	else {
 	  $ref_allele = $top_coord->seq();
 	  $ref_allele = '-' if(!$ref_allele);
+	  $top_sr_id = $sr_id;
 	  debug ("ref_allele is '-' for $sr_id, $sr_start, $sr_end, $sr_strand") if ($ref_allele eq '-');
 	}
       }
