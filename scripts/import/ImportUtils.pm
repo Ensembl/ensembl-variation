@@ -17,13 +17,13 @@ our $TMP_FILE = 'tabledump.txt';
 sub dumpSQL {
   my $db  = shift;
   my $sql = shift;
-
+  my @vars = shift; #array containing all the bind variables
   local *FH;
 
   open FH, ">$TMP_DIR/$TMP_FILE";
 
   my $sth = $db->prepare( $sql, { mysql_use_result => 1 });
-  $sth->execute();
+  $sth->execute(@vars);
   my $first;
   while ( my $aref = $sth->fetchrow_arrayref() ) {
     my @a = map {defined($_) ? $_ : '\N'} @$aref;
