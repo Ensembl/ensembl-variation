@@ -329,8 +329,8 @@ sub get_all_child_Individuals {
     warning("Cannot retrieve child individuals without attached adaptor.");
   }
 
-  ### TODO: implement this.  DO NOT CACHE because would create circ. ref and
-  ### memory leak.
+  return $self->adaptor()->fetch_all_by_parent_Individual($self);
+  
 }
 
 
