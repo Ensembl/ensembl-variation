@@ -65,6 +65,7 @@ use warnings;
 package Bio::EnsEMBL::Variation::Population;
 
 use Bio::EnsEMBL::Storable;
+use Bio::EnsEMBL::Utils::Argument qw(rearrange);
 
 our @ISA = ('Bio::EnsEMBL::Storable');
 
@@ -96,8 +97,8 @@ sub new {
   my $class = ref($caller) || $caller;
 
   my ($dbID, $adaptor, $name, $desc, $size, $sub_pops) =
-    rearrange(['DBID','ADAPTOR','NAME', 'DESC', 'SIZE',
-               'SUPER_POPULATIONS', 'SUB_POPULATIONS'], @_);
+    rearrange(['DBID','ADAPTOR','NAME', 'DESCRIPTION', 'SIZE',
+               'SUB_POPULATIONS'], @_);
 
   return bless {'dbID'        => $dbID,
                 'adaptor'     => $adaptor,

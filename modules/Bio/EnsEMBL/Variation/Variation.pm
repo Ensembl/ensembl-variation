@@ -93,7 +93,7 @@ use vars qw(@ISA);
 
 
 # List of validation states. Order must match that of set in database
-our @VSTATES = ['cluster','freq','submitter','doublehit','hapmap'];
+our @VSTATES = ('cluster','freq','submitter','doublehit','hapmap');
 
 # Conversion of validation state to bit value
 our %VSTATE2BIT = ('cluster'   => 1,   # 00000001
@@ -169,6 +169,7 @@ sub new {
 
   return bless {'dbID' => $dbID,
                 'adaptor' => $adaptor,
+                'name'   => $name,
                 'source' => $src,
                 'synonyms' => $syns || {},
                 'alleles' => $alleles || [],
@@ -242,7 +243,7 @@ sub get_all_synonyms {
     return $self->{'synonyms'}->{$source} || []
   }
 
-  my @synonyms = values %{$self->{'synonyms'}};
+  my @synonyms = map {@$_} values %{$self->{'synonyms'}};
 
   return \@synonyms;
 }
@@ -321,7 +322,7 @@ sub get_all_validation_states {
   # convert the bit field into an ordered array
   my @states;
   for(my $i = 0; $i < @VSTATES; $i++) {
-    push @states, $VSTATES[$i] if((1 << $i) | $code);
+    push @states, $VSTATES[$i] if((1 << $i) & $code);
   }
 
   return \@states;

@@ -57,6 +57,7 @@ use warnings;
 package Bio::EnsEMBL::Variation::Allele;
 
 use Bio::EnsEMBL::Storable;
+use Bio::EnsEMBL::Utils::Argument qw(rearrange);
 
 our @ISA = ('Bio::EnsEMBL::Storable');
 
@@ -87,7 +88,7 @@ sub new {
   my $class = ref($caller) || $caller;
 
   my ($dbID, $adaptor, $allele, $freq, $pop) =
-    rearrange(['dbID', 'ADAPTOR', 'ALLELE', 'FREQ', 'POP'], @_);
+    rearrange(['dbID', 'ADAPTOR', 'ALLELE', 'FREQUENCY', 'POPULATION'], @_);
 
   return bless {'dbID'    => $dbID,
                 'adaptor' => $adaptor,
