@@ -482,6 +482,7 @@ create table individual_genotype (
 # snp_distance_count - number of variants in the region between two variations
 # r2 - value: D^2/(frq(A)*frq(B)*frq(a)*frq(b))
 # Dprime - value: D/Dmax
+# N - value: N
 
 create table pairwise_ld(
 	variation_feature_id_1 int not null,
@@ -493,6 +494,7 @@ create table pairwise_ld(
 	snp_distance_count int not null,
 	r2 float not null,
 	Dprime float not null,
+	N int not null,
 	
 	key seq_region_1_idx(seq_region_id)
 );
@@ -514,6 +516,7 @@ CREATE TABLE meta_coord (
 
   table_name                  VARCHAR(40) NOT NULL,
   coord_system_id             INT NOT NULL,
+  max_length		      INT
 
   UNIQUE(table_name, coord_system_id)
 
