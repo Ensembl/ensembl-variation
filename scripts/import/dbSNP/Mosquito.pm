@@ -14,7 +14,7 @@ sub variation_feature{
     my $self = shift;
 
     my %scaff; #contains relation AAAB -> NW
-    open(IN,"dbSNP/scaff_NW_chr_CRA_AAAB") || die "Could not get file with scaff mapping data: $!\n";
+    open(IN,"gzip -dc dbSNP/scaff_NW_chr_CRA_AAAB.gz") || die "Could not get file with scaff mapping data: $!\n";
     my @line;
     while (<IN>){
 	chomp;
