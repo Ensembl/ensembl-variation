@@ -103,7 +103,7 @@ sub fetch_by_dbID {
 =head2 fetch_by_name
 
   Arg [1]    : string $name
-  Example    : $pop = $pop_adaptor->fetch_by_name('NUSPAE:Singapore_HDL');
+  Example    : $var = $var_adaptor->fetch_by_name('rs1453','dbSNP');
   Description: Retrieves a population object via its name
   Returntype : Bio::EnsEMBL::Variation::Population
   Exceptions : throw if name argument is not defined
@@ -114,6 +114,7 @@ sub fetch_by_dbID {
 sub fetch_by_name {
   my $self = shift;
   my $name = shift;
+  my $source = shift || 'dbSNP';
 
   throw('name argument expected') if(!defined($name));
 
@@ -127,8 +128,9 @@ sub fetch_by_name {
        AND    v.source_id = s1.source_id
        AND    vs.source_id = s2.source_id
        AND    v.name = ?
+       AND    s1.name = ?
        ORDER BY a.allele_id});
-  $sth->execute($name);
+  $sth->execute($name,$source);
 
   my $result = $self->_objs_from_sth($sth);
   $sth->finish();
@@ -147,8 +149,9 @@ sub fetch_by_name {
          AND    v.source_id = s1.source_id
          AND    vs2.source_id = s2.source_id
          AND    vs1.name = ?
+	 AND    s1.name = ?
          ORDER BY a.allele_id});
-    $sth->execute($name);
+    $sth->execute($name,$source);
     $result = $self->_objs_from_sth($sth);
 
     return undef if(!@$result);
