@@ -61,7 +61,6 @@ use Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor;
 use Bio::EnsEMBL::Variation::LDFeatureContainer;
 
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
-use Data::Dumper;
 
 our @ISA = ('Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor');
 
@@ -69,7 +68,7 @@ our @ISA = ('Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor');
 
   Arg [1]    : Bio::EnsEMBL::Slice $slice
                The slice to fetch genes on. Assuming it is always correct (in the top level)
-  Example    : $ldFeatureContainer = @{$ldfeaturecontainer_adaptor->fetch_by_Slice()};
+  Example    : $ldFeatureContainer = $ldfeaturecontainer_adaptor->fetch_by_Slice($slice);
   Description: Overwrites superclass method to add the name of the slice to the LDFeatureContainer.
   Returntype : Bio::EnsEMBL::Variation::LDFeatureContainer
   Exceptions : thrown on bad argument
@@ -85,7 +84,7 @@ sub fetch_by_Slice{
 	throw('Bio::EnsEMBL::Slice arg expected');
     }
 
-    my $ldFeatureContainer = $self->generic_fetch("pl.seq_region_id = " . $slice->get_seq_region_id() . " AND pl.seq_region_start >= " . $slice->start() . " AND pl.seq_region_end <= " . $slice->end());
+    my $ldFeatureContainer = $self->generic_fetch("pl.seq_region_id = " . $slice->get_seq_region_id() . " AND pl.seq_region_start >= " . $slice->start() . " AND pl.seq_region_end <= " . $slice->end() .  " AND pl.seq_region_start <= " . $slice->end());
     #and store the name of the slice in the Container
     $ldFeatureContainer->name($slice->name());
     return $ldFeatureContainer;
@@ -94,7 +93,7 @@ sub fetch_by_Slice{
 =head2 fetch_by_VariationFeature
 
   Arg [1]    : Bio::EnsEMBL:Variation::VariationFeature $vf
-  Example    : my $ld = @{$lda->fetch_by_VariationFeature($vf)};
+  Example    : my $ldFeatureContainer = $ldFetureContainerAdaptor->fetch_by_VariationFeature($vf);
   Description: Retrieves LDFeatureContainer for a given variation feature.  Most
                variations should only hit the genome once and only a return
                a single variation feature.
@@ -124,14 +123,14 @@ sub fetch_by_VariationFeature {
 }
 
 
-# method used by superclass to construct SQL
+# methods used by superclass to construct SQL
 sub _tables { return ['pairwise_ld', 'pl']; }
 
 
 sub _columns {
   return qw( pl.variation_feature_id_1 pl.variation_feature_id_2 pl.population_id
 	     pl.seq_region_id pl.seq_region_start pl.seq_region_end 
-	     pl.snp_distance_count pl.r2 pl.Dprime pl.sample_count);
+	     pl.snp_distance_count pl.r2 pl.d_prime pl.sample_count);
 }
 
 #
@@ -148,14 +147,14 @@ sub _objs_from_sth {
 
   my %vf_objects; #hash containing the address of all the variation feature objects present in the ld table
   my ($variation_feature_id_1, $variation_feature_id_2, $population_id, $seq_region_id, $seq_region_start, $seq_region_end, $snp_distance_count,
-      $r2, $Dprime,$sample_count);
+      $r2, $d_prime,$sample_count);
 
-  $sth->bind_columns(\$variation_feature_id_1, \$variation_feature_id_2, \$population_id, \$seq_region_id, \$seq_region_start, \$seq_region_end, \$snp_distance_count, \$r2, \$Dprime, \$sample_count);
+  $sth->bind_columns(\$variation_feature_id_1, \$variation_feature_id_2, \$population_id, \$seq_region_id, \$seq_region_start, \$seq_region_end, \$snp_distance_count, \$r2, \$d_prime, \$sample_count);
 
   while($sth->fetch()) {
       my %ld_values;
       #get the id of the variations
-      $ld_values{'Dprime'} = $Dprime;
+      $ld_values{'d_prime'} = $d_prime;
       $ld_values{'r2'} = $r2;
       $ld_values{'snp_distance_count'} = $snp_distance_count;      
       $ld_values{'sample_count'} = $sample_count;
