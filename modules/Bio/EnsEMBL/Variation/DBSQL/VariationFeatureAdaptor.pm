@@ -95,7 +95,7 @@ sub fetch_all_by_Variation {
   }
 
   if(!defined($var->dbID())) {
-    throw("VariationFeature arg must have defined dbID");
+    throw("Variation arg must have defined dbID");
   }
 
   return $self->generic_fetch("vf.variation_id = ".$var->dbID());
