@@ -2,29 +2,43 @@
 # variation
 #
 # Central table containing actual variations (indels, SNPs etc.)  
-# variations may be grouped into a hierarchy  this is used to
-# accomodate dbSNP style SubSNP <-> RefSNP style relationships
 #
 
 # variation_id        - primary key, internal identifier
 # source_id           - foreign key ref source
 # name                - identifier for the variation such as the dbSNP
 #                       refSNP id (rs#) or SubSNP id (ss#)
-# parent_variation_id - this may refer to a parent variation which is similar 
-#                       to a subsnp having a refsnp. This is null if this 
-#                       variation is the top of its hierarchy
 
-create table variation(
+create table variation (
 	variation_id int not null auto_increment, # PK
 	source_id int not null, 
 	name varchar(255),
-	parent_variation_id int,
 	validation_status enum( "VALIDATED", "NOT_VALIDATED" ),
 
 	primary key( variation_id ),
-	key parent_var_idx( parent_variation_id ),
 	key name_idx( name, source_id )
 );
+
+
+#
+# variation_synonym
+#
+# Table containing alternate identifiers for the same variation.
+# For example this might be subsnp identifiers for the refsnp.
+#
+#
+
+create table variation_synonym (
+  variation_synonym_id int not null,
+  variation_id int not null,
+  source_id int not null,
+  name varchar(255),
+
+  primary key(variation_synonym_id),
+  key variation_idx (variation_id),
+  key name_idx (name)
+);
+
 
 
 #
@@ -57,38 +71,75 @@ create table allele(
   key allele_idx(allele_id)
 );
 
+
 #
 # population
 #
-# A population may be an individual, group, strain, etc.  A population 
-# hierarchy is allowed so that individuals may be members of a larger group 
-# and so on.
+# A population may be an ethnic group (e.g. caucasian, hispanic), assay group (e.g. 24 europeans),
+# strain, phenotypic group (e.g. blue eyed, diabetes) etc. 
+# Populations may be composed of other populations by defining relationships in the 
+# population_structure table.
 #
 
 # population_id        - primary key, internal identifier
 # name                 - name or identifier of the population
-# parent_population_id - self-referential identifier allowing a population
-#                        hierarchy to e constructed. NULL if no parent pop
-# population_type      - sometimes a variation experiment is done to "a white male"
-#                        and so might be others. To indicate that these are not 
-#                        exactly the same people, set the population_type to "general"
-#                        If you mean exactly the same people when you reference a
-#                        population, set the population_type to "specific"
 # size                 - if the size is NULL its not known or not relevant for this population
-#                        eg. "european" wouldnt have a size and would usually be used as
-#                        a parent population. 
+#                        eg. "european" would not have a size 
 
 create table population(
 	population_id int not null auto_increment,
 	name varchar(255) not null,
-	parent_population_id int,
 	size int,
-	population_type enum( "general", "specific" ),
 	description text,
 
 	primary key( population_id ),
-	key parent_pop_idx( parent_population_id ) 
 );
+
+
+
+#
+# population_structure
+#
+# Defines sub/super population relationships.  For example an assay used to determine
+# allele frequency may be represented by a superpopulation of caucasions and a sub population 
+# of the group of people used in the assay.
+#
+create table population_grouping (
+  super_population_id int not null,
+  sub_population_id int not null,
+
+  unique(super_population_id, sub_population_id),
+  key sub_pop_idx (sub_population_id, super_population_id)
+);
+
+
+#
+# individual
+#
+# Table containing individuals.  An individual is a single member of a population.
+#
+#  individual            - PK, unique internal identifier
+#  name                  - name of individual
+#  population_id         - the population that this individual is a member of
+#  gender                - the sex of this individual
+#  father_individual_id  - self referential id, the father of this individual if known
+#  mother_individual_id  - self referential id, the mother of this individual if known
+#  
+#
+
+create table individual(
+  individual_id int not null auto_increment,
+  name varchar(255) not null,
+  population_id int not null,
+  gender enum('Male', 'Female', 'Unknown'),
+  father_individual_id int,
+  mother_individual_id int,
+  
+  primary key(individual_id),
+  key population_idx (population_id)
+);
+
+
 
 
 #
@@ -181,6 +232,7 @@ create table variation_group (
 	variation_group_id int not null auto_increment,
 	name varchar(255),
 	source_id int not null,
+  type enum('haplotype', 'tag'),
 
 	primary key (variation_group_id)
 );
@@ -194,7 +246,6 @@ create table variation_group_variation (
 	key variation_idx( variation_id, variation_group_id )
 );
 	
-
 
 #
 # allele_group
@@ -227,10 +278,9 @@ create table allele_group(
 #
 # allele_group_allele
 #
-# This is a join table which defines which alleles make up
-# an allele group.  There is no direct link to the allele table because
-# the allele table has population and frequency data which may not correspond
-# to this allele group
+# Defines which alleles make up an allele group.  
+# There is no direct link to the allele table because the allele table has 
+# population and frequency data which may not correspond to this allele group
 #
 
 create table allele_group_allele (
@@ -241,6 +291,7 @@ create table allele_group_allele (
 	unique( allele_group_id, variation_id ),
 	key allele_idx( variation_id, allele_group_id )
 );
+
 
 #
 # flanking_sequence
@@ -260,19 +311,19 @@ create table flanking_sequence (
 	primary key( variation_id )
 );
 
+
 #
 # httag
-#
 #
 
 create table httag(
 	httag_id int not null auto_increment,
-	variation_id int not null,
+  variation_group_id int not null,
 	name varchar(255),
 	source_id int not null,
 
 	primary key( httag_id ),
-	key variation_idx( variation_id )
+	key variation_group_idx( variation_group_id )
 );
 
 #
@@ -293,25 +344,42 @@ create table source(
 
 
 #
-# genotype
+# population_genotype
 #
-# this table contains genotypes for groups or individuals
-#  (depending on the pop_id)
+# This table contains genotype frequencies estimated for populations or calculated on
+# a set of individuals.
 #
-
-create table genotype (
-	genotype_id int not null auto_increment,
+create table population_genotype (
+	population_genotype_id int not null auto_increment,
   variation_id int not null,
   allele_1 varchar(255),
   allele_2 varchar(255),
 	frequency float,
-	population_id int,
+ 	population_id int,
 
-	primary key( genotype_id ),
-  key (variation_id)
+	primary key( population_genotype_id ),
+  key variation_idx(variation_id),
+  key population_idx(population_id)
 );
 
 
 
+#
+# individual_genotype
+#
+# This table contains genotypes of individuals.
+#
+# variation_id - FK to variation table
+# allele_1     - One of the alleles of the genotype
+#
+create table individual_genotype (
+  individual_genotype_id int not null auto_increment,
+  variation_id int not null,
+  allele_1 varchar(255),
+  allele_2 varchar(255),
+  individual_id int,
 
-
+  primary key(individual_genotype_id),
+  key variation_idx(variation_id),
+  key individual_idx(individual_id)
+);
