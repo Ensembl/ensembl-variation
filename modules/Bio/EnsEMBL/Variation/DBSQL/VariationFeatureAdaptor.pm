@@ -101,33 +101,6 @@ sub fetch_all_by_Variation {
 }
 
 
-
-sub fetch_all_by_Slice {
-  my $self = shift;
-  my $slice = shift;
-
-  my $vfs = $self->SUPER::fetch_all_by_Slice( $slice );
-  my @vids = map { $_->{'_variation_id'} } @$vfs;
-
-  # attach the Variations to the variation features ...
-  my $varAdaptor = $self->db->get_VariationAdaptor();
-  my $vars = $varAdaptor->fetch_all_by_dbID_list( \@vids );
-  my %vars =  map { $_->dbID() , $_ } @$vars;
-  
-  for my $vf ( @$vfs ) {
-    $vf->{'variation'} = $vars{$vf->{'_variation_id'}};
-  }
-
-  my $transcriptVariationAdaptor = $self->db->get_TranscriptVariationAdaptor();
-
-  # this functions attaches the transcriptVariations while fetching them...
-  $transcriptVariationAdaptor->fetch_all_by_VariationFeatures( $vfs );
-
-  return $vfs;
-}
-
-
-
 sub fetch_all_genotyped_by_Slice{
     my $self = shift;
     my $slice = shift;
@@ -137,13 +110,20 @@ sub fetch_all_genotyped_by_Slice{
     return $self->fetch_all_by_Slice_constraint($slice,$constraint);
 }
 # method used by superclass to construct SQL
-sub _tables { return ['variation_feature', 'vf']; }
+sub _tables { return (['variation_feature', 'vf'],
+		      [ 'source', 's']); }
 
+
+sub _default_where_clause {
+  my $self = shift;
+
+  return 'vf.source_id = s.source_id';
+}
 
 sub _columns {
   return qw( vf.variation_feature_id vf.seq_region_id vf.seq_region_start
              vf.seq_region_end vf.seq_region_strand vf.variation_id
-             vf.allele_string vf.variation_name vf.map_weight );
+             vf.allele_string vf.variation_name vf.map_weight s.name vf.validation_status vf.consequence_type);
 }
 
 
@@ -166,12 +146,12 @@ sub _objs_from_sth {
 
   my ($variation_feature_id, $seq_region_id, $seq_region_start,
       $seq_region_end, $seq_region_strand, $variation_id,
-      $allele_string, $variation_name, $map_weight );
+      $allele_string, $variation_name, $map_weight, $source_name, $validation_status, $consequence_type );
 
   $sth->bind_columns(\$variation_feature_id, \$seq_region_id,
                      \$seq_region_start, \$seq_region_end, \$seq_region_strand,
                      \$variation_id, \$allele_string, \$variation_name,
-                     \$map_weight);
+                     \$map_weight, \$source_name, \$validation_status, \$consequence_type);
 
   my $asm_cs;
   my $cmp_cs;
@@ -269,6 +249,9 @@ sub _objs_from_sth {
        'adaptor'  => $self,
        'dbID'     => $variation_feature_id,
        'map_weight' => $map_weight,
+       'source'   => $source_name,
+       'validation_code' => $validation_status,
+       'consequence_type' => $consequence_type,
        '_variation_id' => $variation_id});
   }
 
