@@ -468,3 +468,26 @@ create table individual_genotype (
   key variation_idx(variation_id),
   key individual_idx(individual_id)
 );
+
+
+
+#
+# meta_coord
+#
+# Same table structure as in core database. Contains info about what coord
+# systems features can be found in.
+#
+# table_name - name of the feature table
+# coord_system_id - foreign key to core database coord_system table
+#                   refers to coord system that features from this table can
+#                   be found in
+#
+
+CREATE TABLE meta_coord (
+
+  table_name                  VARCHAR(40) NOT NULL,
+  coord_system_id             INT NOT NULL,
+
+  UNIQUE(table_name, coord_system_id)
+
+) TYPE=MyISAM;
