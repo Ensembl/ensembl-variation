@@ -213,12 +213,12 @@ sub fetch_all_by_sub_Population {
   return $result;
 }
 
-=head2 get_synonyms
+=head2 fetch_synonyms
 
     Arg [1]              : $pop_id
     Arg [2] (optional)   : $source
-    Example              : my $dbSNP_synonyms = $pop_adaptor->get_synonyms($dbSNP);
-                           my $all_synonyms = $pop_adaptor->get_synonyms();
+    Example              : my $dbSNP_synonyms = $pop_adaptor->fetch_synonyms($dbSNP);
+                           my $all_synonyms = $pop_adaptor->fetch_synonyms();
     Description: Retrieves synonyms for the source provided. Otherwise, return all the synonyms for the population
     Returntype : list of strings
     Exceptions : none
@@ -226,7 +226,7 @@ sub fetch_all_by_sub_Population {
 
 =cut
 
-sub get_synonyms{
+sub fetch_synonyms{
     my $self = shift;
     my $dbID = shift;
     my $source = shift;
@@ -249,6 +249,42 @@ sub get_synonyms{
     return $synonyms;
 }
 
+=head2 fetch_population_by_synonym
+
+    Arg [1]              : $population_synonym
+    Example              : my $pop = $pop_adaptor->fetch_population_by_synonym($population_synonym,$source);
+    Description          : Retrieves population for the synonym given in the source. If no source is provided, retrieves all the synonyms
+    Returntype           : list of Bio::EnsEMBL::Variation::Population
+    Exceptions           : none
+    Caller               : general
+
+=cut
+
+sub fetch_population_by_synonym{
+    my $self = shift;
+    my $synonym_name = shift;
+    my $source = shift;
+    my $sql;
+    my $population;
+    my $population_array;
+
+    if (defined $source){
+	$sql = qq{SELECT population_id FROM population_synonym ps, source s WHERE ps.name = ? and ps.source = s.source = s.name = "$source"};
+    }
+    else{
+	$sql = qq{SELECT population_id FROM population_synonym WHERE name = ?};
+    }
+    my $population_id;
+    my $sth = $self->prepare($sql);
+    $sth->execute($synonym_name);    
+    $sth->bind_columns(\$population_id);
+    while ($sth->fetch()){
+	$population = $self->fetch_by_dbID($population_id);
+	push @{$population_array}, $population;
+    }
+    return $population_array;
+    
+}
 #
 # private method, creates population objects from an executed statement handle
 # ordering of columns must be consistant
