@@ -251,7 +251,7 @@ sub _objs_from_sth {
        'map_weight' => $map_weight,
        'source'   => $source_name,
        'validation_code' => \@states,
-       'consequence_type' => $consequence_type,
+       'consequence_type' => $consequence_type || 'INTERGENIC',
        '_variation_id' => $variation_id});
   }
 
