@@ -165,8 +165,8 @@ sub dump_subSNPs {
 sub population_table {
     my $self = shift;
     
-  $self->{'dbVariation'}->do("ALTER TABLE population ADD column pop_id int");       ###unless (column_exists($self->{'dbVariation'}, 'population', 'pop_id'));
-  $self->{'dbVariation'}->do("ALTER TABLE population ADD column pop_class_id int"); ###unless (column_exists($self->{'dbVariation'}, 'population', 'pop_class_id'));
+  $self->{'dbVariation'}->do("ALTER TABLE population ADD column pop_id int");   
+  $self->{'dbVariation'}->do("ALTER TABLE population ADD column pop_class_id int"); 
 
   # load PopClassCode data as populations
 
@@ -371,59 +371,58 @@ sub allele_table {
 # loads the flanking sequence table
 #
 sub flanking_sequence_table {
-    my $self = shift;
+  my $self = shift;
 
-    $self->{'dbVariation'}->do(qq{CREATE TABLE tmp_seq (variation_id int,
-                                        subsnp_id int,
-                                        line_num int,
-                                        type enum ('5','3'),
-                                        line varchar(255),
-                                        revcom tinyint)
-                  MAX_ROWS = 100000000});
+  $self->{'dbVariation'}->do(qq{CREATE TABLE tmp_seq (variation_id int,
+						      subsnp_id int,
+						      line_num int,
+						      type enum ('5','3'),
+						      line varchar(255),
+						      revcom tinyint)
+				MAX_ROWS = 100000000});
 
-    # import both the 5prime and 3prime flanking sequence tables
+  # import both the 5prime and 3prime flanking sequence tables
 
-    foreach my $type ('3','5') {
-      debug("Dumping $type' flanking sequence");
+  
+  foreach my $type ('3','5') {
+    debug("Dumping $type' flanking sequence");
+    
+    dumpSQL($self->{'dbSNP'}, qq{SELECT seq.subsnp_id, seq.line_num, seq.line
+				 FROM SubSNPSeq$type seq, SNPFlankStatus sfs
+				 WHERE sfs.subsnp_id = seq.subsnp_id
+				 $self->{'limit'}});
+    
 
-      dumpSQL($self->{'dbSNP'}, qq{SELECT seq.subsnp_id, seq.line_num, seq.line
-                 FROM SubSNPSeq$type seq, SubSNP ss #, Batch b
-                 WHERE ss.subsnp_id = seq.subsnp_id
- #                AND   ss.batch_id = b.batch_id
-                 AND   ss.tax_id = $self->{'taxID'}
-                 $self->{'limit'}});
+    $self->{'dbVariation'}->do(qq{CREATE TABLE tmp_seq_$type (
+							      subsnp_id int,
+							      line_num int,
+							      line varchar(255),
+							      KEY subsnp_id_idx(subsnp_id))
+				  MAX_ROWS = 100000000 });
+    
+    load($self->{'dbVariation'}, "tmp_seq_$type", "subsnp_id", "line_num", "line");
 
-
-      $self->{'dbVariation'}->do(qq{CREATE TABLE tmp_seq_$type (
-                       subsnp_id int,
-                       line_num int,
-                       line varchar(255),
-                       KEY subsnp_id_idx(subsnp_id))
-                    MAX_ROWS = 100000000 });
-
-      load($self->{'dbVariation'}, "tmp_seq_$type", "subsnp_id", "line_num", "line");
-
-      # merge the tables into a single tmp table
-      $self->{'dbVariation'}->do(qq{INSERT INTO tmp_seq (variation_id, subsnp_id,
-                                         line_num, type, line, revcom)
-                    SELECT vs.variation_id, ts.subsnp_id, ts.line_num, '$type',
-                           ts.line, vs.substrand_reversed_flag
-                    FROM   tmp_seq_$type ts, variation_synonym vs
-                    WHERE  vs.subsnp_id = ts.subsnp_id});
-      #drop tmp table to free space
-      $self->{'dbVariation'}->do(qq{DROP TABLE tmp_seq_$type});
+    # merge the tables into a single tmp table
+    $self->{'dbVariation'}->do(qq{INSERT INTO tmp_seq (variation_id, subsnp_id,
+						       line_num, type, line, revcom)
+				  SELECT vs.variation_id, ts.subsnp_id, ts.line_num, '$type',
+				  ts.line, vs.substrand_reversed_flag
+				  FROM   tmp_seq_$type ts, variation_synonym vs
+				  WHERE  vs.subsnp_id = ts.subsnp_id});
+    #drop tmp table to free space
+    $self->{'dbVariation'}->do(qq{DROP TABLE tmp_seq_$type});
   }
       
-    $self->{'dbVariation'}->do("ALTER TABLE tmp_seq ADD INDEX idx (subsnp_id, type, line_num)");
+  $self->{'dbVariation'}->do("ALTER TABLE tmp_seq ADD INDEX idx (subsnp_id, type, line_num)");
 
   my $sth = $self->{'dbVariation'}->prepare(qq{SELECT ts.variation_id, ts.subsnp_id, ts.type,
-                                      ts.line, ts.revcom
-                               FROM   tmp_seq ts FORCE INDEX (idx)
-                               ORDER BY ts.subsnp_id, ts.type, ts.line_num},{mysql_use_result => 1});
-
+					       ts.line, ts.revcom
+					       FROM   tmp_seq ts FORCE INDEX (idx)
+					       ORDER BY ts.subsnp_id, ts.type, ts.line_num},{mysql_use_result => 1});
+  
   $sth->execute();
 
-    my ($vid, $ssid, $type, $line, $revcom);
+  my ($vid, $ssid, $type, $line, $revcom);
 
   $sth->bind_columns(\$vid, \$ssid, \$type, \$line, \$revcom);
 
@@ -431,85 +430,49 @@ sub flanking_sequence_table {
   my $upstream = '';
   my $dnstream = '';
   my $cur_vid;
-  my $cur_ssid;
+  my $cur_revcom;
 
   debug("Rearranging flanking sequence data");
 
-  my $longest_up = '';
-  my $longest_dn = '';
 
   # dump sequences to file that can be imported all at once
-    while($sth->fetch()) {
-    if(defined($cur_ssid) && $cur_ssid != $ssid) {
+  while($sth->fetch()) {
+    if(defined($cur_vid) && $cur_vid != $vid) {
       # if subsnp in reverse orientation to refsnp,
       # reverse compliment flanking sequence
-      if($revcom) {
-        ($upstream, $dnstream) = ($dnstream, $upstream);
-        reverse_comp(\$upstream);
-        reverse_comp(\$dnstream);
+      if($cur_revcom) {
+	($upstream, $dnstream) = ($dnstream, $upstream);
+	reverse_comp(\$upstream);
+	reverse_comp(\$dnstream);
       }
 
-      # take only the longest total flanking from all of the subsnps
-      if(length($upstream) + length($dnstream) >
-         length($longest_up) + length($longest_dn)) {
-        $longest_up = $upstream;
-        $longest_dn = $dnstream;
-      }
-
-      if($cur_vid != $vid) {
-        $upstream = '\N' if(!$upstream); # null
-        $dnstream = '\N' if(!$dnstream);
-	if ($longest_up eq ''){ #some ssID do not have a sequence in dbSNP
-	    $longest_up = '\N';
-	}
-	if ($longest_dn eq ''){
-	    $longest_dn = '\N';
-	}
-        print FH join("\t", $cur_vid, $longest_up, $longest_dn), "\n";
-        $longest_up = '';
-        $longest_dn = '';
-      }
-
+      print FH join("\t", $cur_vid, $upstream, $dnstream), "\n";
+      
       $upstream = '';
       $dnstream = '';
     }
-    $cur_ssid  = $ssid;
-    $cur_vid   = $vid;
 
+    $cur_vid   = $vid;
+    $cur_revcom = $revcom;
+    
     if($type == 5) {
       $upstream .= $line;
     } else {
       $dnstream .= $line;
     }
+    
   }
 
-    # do not forget last row...
-    if($revcom) {
-        ($upstream, $dnstream) = ($dnstream, $upstream);
-        reverse_comp(\$upstream);
-        reverse_comp(\$dnstream);
-    }
-
-    # take only the longest total flanking from all of the subsnps
-    if(length($upstream) + length($dnstream) >
-       length($longest_up) + length($longest_dn)) {
-        $longest_up = $upstream;
-        $longest_dn = $dnstream;
-    }
-
-    $upstream = '\N' if(!$upstream); # null
-    $dnstream = '\N' if(!$dnstream);
-    if ($longest_up eq ''){ #some ssID do not have a sequence in dbSNP
-	$longest_up = '\N';
-    }
-    if ($longest_dn eq ''){
-	$longest_dn = '\N';
-    }
-    print FH join("\t", $cur_vid, $longest_up, $longest_dn), "\n";
-
-
+  # do not forget last row...
+  if($cur_revcom) {
+    ($upstream, $dnstream) = ($dnstream, $upstream);
+    reverse_comp(\$upstream);
+    reverse_comp(\$dnstream);
+  }
+  print FH join("\t", $cur_vid, $upstream, $dnstream), "\n";
+  
   $sth->finish();
-
+  
   close FH;
   $self->{'dbVariation'}->do("DROP TABLE tmp_seq");
 
@@ -574,10 +537,10 @@ sub variation_feature {
     debug("Dumping data into variation_feature table");
     $self->{'dbVariation'}->do(qq{INSERT INTO variation_feature (variation_id, seq_region_id,seq_region_start, seq_region_end, seq_region_strand,
 								 variation_name, flags, source_id, validation_status)
-				      SELECT tvf.variation_id, tvf.seq_region_id, tvf.seq_region_start, tvf.seq_region_end, tvf.seq_region_strand,
-				      tvf.variation_name,IF(tgv.variation_id,'genotyped',NULL), tvf.source_id, tvf.validation_status
-				      FROM tmp_variation_feature tvf LEFT JOIN tmp_genotyped_var tgv ON tvf.variation_id = tgv.variation_id
-				  });
+				  SELECT tvf.variation_id, tvf.seq_region_id, tvf.seq_region_start, tvf.seq_region_end, tvf.seq_region_strand,
+				  tvf.variation_name,IF(tgv.variation_id,'genotyped',NULL), tvf.source_id, tvf.validation_status
+				  FROM tmp_variation_feature tvf LEFT JOIN tmp_genotyped_var tgv ON tvf.variation_id = tgv.variation_id
+				 });
     
     $self->{'dbVariation'}->do("DROP TABLE tmp_contig_loc");
     $self->{'dbVariation'}->do("DROP TABLE tmp_seq_region");
@@ -804,7 +767,7 @@ sub cleanup {
     }
 
     $self->{'dbVariation'}->do($sql); #delete from population and population_synonym
-                                                                                                      # populations not present
+    # populations not present
     $self->{'dbVariation'}->do($sql_2); #and delete from the population_structure table
 
     $self->{'dbVariation'}->do('DROP TABLE tmp_pop'); #and finally remove the temporary table
