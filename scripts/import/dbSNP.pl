@@ -20,7 +20,7 @@ source_table();
 variation_table();
 population_table();
 allele_table();
-#flanking_sequence_table();
+flanking_sequence_table();
 variation_feature();
 variation_group();
 allele_group();
@@ -46,7 +46,7 @@ sub variation_table {
            SELECT 1, concat( "rs", snp_id), snp_id
            FROM SNP
            WHERE tax_id = $TAX_ID
-           LIMIT 100000
+              LIMIT 100000
           }
       );
 
@@ -96,7 +96,7 @@ sub variation_table {
   # load the SubSNPs into the variation table
 
 
-  $dbVar->do(qq{ALTER TABLE variation ADD COLUMN substrand_reversed_flag});
+  $dbVar->do(qq{ALTER TABLE variation ADD COLUMN substrand_reversed_flag tinyint});
 
   $dbVar->do( qq{
                  INSERT INTO variation( source_id, name, parent_variation_id,
@@ -296,8 +296,15 @@ sub population_table {
 sub allele_table {
   debug("Dumping allele data");
 
-  ### TBD check orientation of SubSNPs to RefSNP and revcom allele if necessary
 
+  # load a temp table that can be used to reverse compliment alleles
+  # we place subsnps in the same orientation as the refSNP
+  dumpSQL(qq(SELECT a1.allele, a2.allele
+             FROM Allele a1, Allele a2
+             WHERE a1.rev_allele_id = a2.allele_id));
+
+  create_and_load("tmp_rev_allele", "allele", "rev_allele");
+  $dbVar->do("ALTER TABLE tmp_rev_allele ADD INDEX allele(allele)");
 
   # first load the allele data for alleles that we have population and
   # frequency data for
@@ -306,7 +313,7 @@ sub allele_table {
                     afsp.freq
              FROM   AlleleFreqBySsPop afsp, Allele a
              WHERE  afsp.allele_id = a.allele_id
-             LIMIT  10000));
+             LIMIT  100000));
 
   debug("Loading allele frequency data");
 
@@ -324,25 +331,30 @@ sub allele_table {
 
   $dbVar->do(qq(INSERT INTO allele (variation_id, allele,
                                     frequency, population_id)
-                SELECT v.variation_id, ta.allele, ta.freq,
-                       p.population_id
-                FROM   tmp_allele ta, variation v, population p
+                SELECT v.variation_id,
+                       IF(v.substrand_reversed_flag, tra.rev_allele, tra.allele),
+                       ta.freq, p.population_id
+                FROM   tmp_allele ta, tmp_rev_allele tra, variation v, population p
                 WHERE  ta.subsnp_id = v.subsnp_id
+                AND    ta.allele = tra.allele
                 AND    ta.pop_id    = p.pop_id));
 
   # load remaining allele data which we do not have frequence data for
+  # this will not import alleles without frequency for a variation which already has
+  # frequency
 
   $dbVar->do("DROP TABLE tmp_allele");
 
   debug("Loading other allele data");
 
+
   $dbVar->do(qq{CREATE TABLE tmp_allele
                 SELECT v.variation_id as variation_id, tva.pop_id,
-                       tva.allele
-                FROM   variation v, tmp_var_allele tva
+                    IF(v.substrand_reversed_flag, tra.rev_allele, tra.allele) as allele
+                FROM   variation v, tmp_var_allele tva, tmp_rev_allele tra
                 LEFT JOIN allele a ON a.variation_id = v.variation_id
-                AND    a.allele = tva.allele
                 WHERE  tva.subsnp_id = v.subsnp_id
+                AND    tva.allele = tra.allele
                 AND    a.allele_id is NULL});
 
   $dbVar->do(qq{INSERT INTO allele (variation_id, allele,
@@ -351,7 +363,7 @@ sub allele_table {
                 FROM   tmp_allele ta 
                 LEFT JOIN population p ON p.pop_id = ta.pop_id});
 
-
+  $dbVar->do("DROP TABLE tmp_rev_allele");
   $dbVar->do("DROP TABLE tmp_var_allele");
   $dbVar->do("DROP TABLE tmp_allele");
 }
@@ -363,7 +375,7 @@ sub allele_table {
 # loads the flanking sequence table
 #
 sub flanking_sequence_table {
-  $dbVar->do(qq{CREATE TABLE tmp_seq (subsnp_id int,
+  $dbVar->do(qq{CREATE TABLE tmp_seq (variation_id int,
                                       line_num int,
                                       type enum ('5','3'),
                                       line varchar(255))});
@@ -376,24 +388,25 @@ sub flanking_sequence_table {
 
     dumpSQL(qq{SELECT subsnp_id, line_num, line
                FROM SubSNPSeq$type
-               LIMIT 10000});
+               LIMIT 100000});
     create_and_load("tmp_seq_$type", "subsnp_id", "line_num", "line");
     $dbVar->do("ALTER TABLE tmp_seq_$type MODIFY subsnp_id int");
     $dbVar->do("ALTER TABLE tmp_seq_$type MODIFY line_num int");
 
+    $dbVar->do("ALTER TABLE tmp_seq_$type ADD INDEX subsnp_id(subsnp_id)");
+
     # merge the tables into a single tmp table
-    $dbVar->do(qq{INSERT INTO tmp_seq (subsnp_id, line_num, type, line)
+    $dbVar->do(qq{INSERT INTO tmp_seq (variation_id, line_num, type, line)
                   SELECT v.variation_id, ts.line_num, '$type', ts.line
                   FROM   tmp_seq_$type ts, variation v
                   WHERE  v.subsnp_id = ts.subsnp_id});
   }
 
-  $dbVar->do("ALTER TABLE tmp_seq ADD INDEX idx (subsnp_id, type, line_num)");
+  $dbVar->do("ALTER TABLE tmp_seq ADD INDEX idx (variation_id, type, line_num)");
 
-  my $sth = $dbVar->prepare(qq{SELECT v.variation_id, ts.type, ts.line
-                               FROM   tmp_seq ts, variation v
-                               WHERE  v.subsnp_id = ts.subsnp_id
-                               ORDER BY v.variation_id, ts.type, ts.line_num});
+  my $sth = $dbVar->prepare(qq{SELECT ts.variation_id, ts.type, ts.line
+                               FROM   tmp_seq ts
+                               ORDER BY ts.variation_id, ts.type, ts.line_num});
 
   $sth->execute();
 
@@ -421,9 +434,9 @@ sub flanking_sequence_table {
     $cur_vid  = $vid;
 
     if($type == 5) {
-      $dnstream .= $line;
-    } else {
       $upstream .= $line;
+    } else {
+      $dnstream .= $line;
     }
   }
   $sth->finish();
@@ -465,9 +478,9 @@ sub variation_feature {
 
   debug("Dumping SNPLoc data");
   dumpSQL( qq{SELECT snp_id, CONCAT(contig_acc, '.', contig_ver),
-                     asn_from, asn_to, orientation
+                     asn_from, asn_to, IF(orientation, -1, 1)
               FROM   SNPContigLoc
-              LIMIT 10000});
+              LIMIT 100000});
 
 
   debug("Loading SNPLoc data");
@@ -490,10 +503,6 @@ sub variation_feature {
                 AND    tcl.contig = ts.name});
 
   $dbVar->do("DROP TABLE tmp_contig_loc");
-
-  # TBD need to fix strands of zero, push snps to toplevel and check
-  # that flanking sequence seems right
-
 }
 
 #
@@ -591,6 +600,7 @@ sub allele_group {
   $dbVar->do("DROP TABLE tmp_allele_group");
   $dbVar->do("DROP TABLE tmp_allele_group_allele");
 }
+
 
 
 
