@@ -144,6 +144,13 @@ sub new {
 
 
 
+sub new_fast {
+  my $class = shift;
+  my $hashref = shift;
+  return bless $hashref, $class;
+}
+
+
 =head2 allele_string
 
   Arg [1]    : string $newval (optional)
