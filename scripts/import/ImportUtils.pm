@@ -10,7 +10,7 @@ our @ISA = ('Exporter');
 our @EXPORT_OK = qw(dumpSQL debug create_and_load load);
 
 our $TMP_DIR = "/ecs2/scratch5/ensembl/mcvicker/dbSNP";
-
+our $TMP_FILE = 'tabledump.txt';
 
 # successive dumping and loading of tables is typical for this process
 # dump does effectively a select into outfile without server file system access
@@ -20,7 +20,7 @@ sub dumpSQL {
 
   local *FH;
 
-  open FH, ">$TMP_DIR/tabledump.txt";
+  open FH, ">$TMP_DIR/$TMP_FILE";
 
   my $sth = $db->prepare( $sql, { mysql_use_result => 1 });
   $sth->execute();
@@ -48,25 +48,25 @@ sub load {
   my $cols = join( ",", @colnames );
 
   local *FH;
-  open FH, "<$TMP_DIR/tabledump.txt";
+  open FH, "<$TMP_DIR/$TMP_FILE";
   my $sql;
 
   if ( @colnames ) {
 
     $sql = qq{
-              LOAD DATA LOCAL INFILE '$TMP_DIR/tabledump.txt'
+              LOAD DATA LOCAL INFILE '$TMP_DIR/$TMP_FILE'
               INTO TABLE $tablename( $cols )
              };
   } else {
     $sql = qq{
-              LOAD DATA LOCAL INFILE '$TMP_DIR/tabledump.txt'
+              LOAD DATA LOCAL INFILE '$TMP_DIR/$TMP_FILE'
               INTO TABLE $tablename
              };
   }
 
   $db->do( $sql );
 
-  unlink( "$TMP_DIR/tabledump.txt" );
+  unlink( "$TMP_DIR/$TMP_FILE" );
 }
 
 
