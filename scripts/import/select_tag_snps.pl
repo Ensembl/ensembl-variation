@@ -31,6 +31,8 @@ my $dbVariation = Bio::EnsEMBL::Variation::DBSQL::DBAdaptor->new
 my $file = $ARGV[0] if (defined @ARGV);
 die "Not possible to calculate SNP tagging without file with SNPs" if (!defined @ARGV);
 
+`sort -k 1 -o $file $file`; #order snps by id
+
 open IN, "$file" or die("Could not open input file: $ARGV[0]\n");
 
 my $r2 = 0.99; #default value for r2
