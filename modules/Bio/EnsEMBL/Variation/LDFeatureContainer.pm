@@ -13,14 +13,15 @@ Bio::EnsEMBL::Variation::LDFeatureContainer - A container with all the ld values
     # LDFeature Container representing all the LD values for a certain contig
     $ldContainer = Bio::EnsEMBL::Variation::LDFeatureContainer->new
        (-name   => NT_085213,
-        -LdContainer => $ldhash);
+        -ldContainer => $ldhash,
+        -variation_features => $vfhash);
 
     ...
 
-    #get the d_prime values for a certain variation_features
-    D_prime = get_d_prime($variation_feature_id_1,$variation_feature_id_2);
+    #get the d_prime values for a certain pair of variation_features
+    d_prime = $ldContainer->get_d_prime($variation_feature_1,$variation_feature_2);
     #get the list of variation in the container
-    $variations = get_variations();
+    $variations = $ldContainer->get_variations();
 
     ...
 
@@ -48,7 +49,6 @@ use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Utils::Argument  qw(rearrange);
 
 use vars qw(@ISA);
-use Data::Dumper;
 
 @ISA = qw(Bio::EnsEMBL::Storable);
 
@@ -68,13 +68,13 @@ use Data::Dumper;
     $ldContainer = Bio::EnsEMBL::Variation::LDFeatureContainer->new
        (-name => 'chr1'
         -ldContainer => {'variation_feature_1-variation_feature_2' => { 'population_id_1' =>
-	                                                                          { 'Dprime' => 0.5,
+	                                                                          { 'd_prime' => 0.5,
 										    'r2'      => 0.421,
 										    'snp_distance_count' => 5,
 										    'sample_count' => 120
 										    },
 									'population_id_2' => 
- 								                  { 'Dprime' => 0.3,
+ 								                  { 'd_prime' => 0.3,
 										    'r2'     => 0.321,
 										    'snp_distance_count' => 3,
 										    'sample_count' => 35
@@ -150,10 +150,10 @@ sub get_variations{
 
     Arg [1]     : Bio::EnsEMBL::Variation::VariationFeature $variationFeature
     Arg [2]     : Bio::EnsEMBL::Variation::VariationFeature $variationFeature
-    Arg [3]     : int - population you want to get the r_square value
+    Arg [3]     : (optional) int - population you want to get the r_square value
     Example     : $r_square = $obj->get_r_square($vf1,$vf2,$population_id);
     Description : Get the r_square value for a pair of variation features in the given population. If no population is provided,
-    return the r_square for the population with more sample counts (in case more than 1)
+    return the r_square for the default population with more sample counts (in case more than 1)
     ReturnType  : float
     Exceptions  : throw on incorrect arguments
     Caller      : general
@@ -165,9 +165,14 @@ sub get_r_square{
     my $variation_feature_2 = shift;
     my $population_id = shift;
     
-    $population_id ||= 0;
+    $population_id ||= 0; #in case no population provided, to avoid warning in the hash
     my $r_square;
     my $key;
+
+    #check if the default poppulation has been calculated, otherwise, find it
+    if (! defined $self->{'_default_population'}){
+	$self->{'_default_population'} = $self->_get_major_population;
+    }
     #first of all, check that both arguments have been properly provided
     if (!ref($variation_feature_1) || !$variation_feature_1->isa('Bio::EnsEMBL::Variation::VariationFeature') || !ref($variation_feature_2) || !$variation_feature_2->isa('Bio::EnsEMBL::Variation::VariationFeature')){
 	throw("Bio::EnsEMBL::Variation::VariationFeature arguments expected");
@@ -190,9 +195,13 @@ sub get_r_square{
 		$r_square = $self->{'ldContainer'}->{$key}->{$population_id}->{'r2'}
 	    }
 	    else{
-		#there was no population provided, return the r_square where the population has a bigger sample_count
-		$population_id = $self->_get_major_population($self->{'ldContainer'}->{$key});
-		$r_square = $self->{'ldContainer'}->{$key}->{$population_id}->{'r2'};
+		if (exists $self->{'ldContainer'}->{$key}->{$self->{'_default_population'}}){
+		    #there was no population provided, return the r_square for the default population
+		    $r_square = $self->{'ldContainer'}->{$key}->{$self->{'_default_population'}}->{'r2'};		    
+		}
+		else{
+		    warning("variation features have no pairwise ld information for default population ", $self->{'_default_population'});
+		}
 	    }
 	}
 	    
@@ -204,9 +213,10 @@ sub get_r_square{
 
     Arg [1]     : Bio::EnsEMBL::Variation::VariationFeature $variationFeature
     Arg [2]     : Bio::EnsEMBL::Variation::VariationFeature $variationFeature
-    Arg [3]     : int - population you want to get the d_prime value
+    Arg [3]     : (optional) int - population you want to get the d_prime value
     Example     : $d_prime = $obj->get_d_prime($vf1,$vf2,$population_id);
-    Description : Get the d_prime value for a pair of variation features for a known or unknown population
+    Description : Get the d_prime value for a pair of variation features for a known or unknown population. In case of an unknown population, the default
+poulation is used    
     ReturnType  : float
     Exceptions  : throw on incorrect arguments
     Caller      : general
@@ -217,10 +227,14 @@ sub get_d_prime{
     my $variation_feature_1 = shift;
     my $variation_feature_2 = shift;
     my $population_id = shift;
-    
-    $population_id ||= 0;
+
+    $population_id ||= 0; #in case no population provided, to avoid warning in the hash
     my $d_prime;
     my $key;
+
+    if (! defined $self->{'_default_population'}){
+	$self->{'_default_population'} = $self->_get_major_population;
+    }
     #first of all, check that both arguments have been properly provided
     if (!ref($variation_feature_1) || !$variation_feature_1->isa('Bio::EnsEMBL::Variation::VariationFeature') || !ref($variation_feature_2) || !$variation_feature_2->isa('Bio::EnsEMBL::Variation::VariationFeature')){
 	throw("Bio::EnsEMBL::Variation::VariationFeature arguments expected");
@@ -240,15 +254,18 @@ sub get_d_prime{
 	    }
 	    #and finally, if population provided or the only population
 	    if (exists $self->{'ldContainer'}->{$key}->{$population_id}){
-		$d_prime = $self->{'ldContainer'}->{$key}->{$population_id}->{'Dprime'}
+		$d_prime = $self->{'ldContainer'}->{$key}->{$population_id}->{'d_prime'};
 	    }
 	    else{
-		#there was no population provided, return the r_square where the population has a bigger sample_count
-		$population_id = $self->_get_major_population($self->{'ldContainer'}->{$key});
-		$d_prime = $self->{'ldContainer'}->{$key}->{$population_id}->{'Dprime'};
+		if (exists $self->{'ldContainer'}->{$key}->{$self->{'_default_population'}}){
+		    #there was no population provided, return the r_square for the default population
+		    $d_prime = $self->{'ldContainer'}->{$key}->{$self->{'_default_population'}}->{'d_prime'};
+		}
+		else{
+		    warning("variation features have no pairwise ld information for default population ", $self->{'_default_population'});
+		}
 	    }
-	}
-	    
+	}	    
     }
     return $d_prime;
 }
@@ -258,8 +275,8 @@ sub get_d_prime{
 
     Example     : $ld_values = $obj->get_all_ld_values();
     Description : Get all the information contained in the LDFeatureContainer object
-    ReturnType  : reference to list of [Bio::EnsEMBL::Variation::VariationFeature Bio::EnsEMBL::Variation::VariationFeature Dprime r2 snp_distance_count sample_count population_id]
-    Exceptions  : thrown when there is not valid db connection
+    ReturnType  : reference to list of [Bio::EnsEMBL::Variation::VariationFeature Bio::EnsEMBL::Variation::VariationFeature d_prime r2 snp_distance_count sample_count population_id]
+    Exceptions  : no exceptions
     Caller      : general
 =cut
 
@@ -271,20 +288,21 @@ sub get_all_ld_values{
     #the keys in the ldContainer hash
     my $variation_feature_id_1;
     my $variation_feature_id_2;
-
-    my $population_id;
-
+    
+    if (! defined $self->{'_default_population'}){
+	$self->{'_default_population'} = $self->_get_major_population;
+    }
     foreach my $key_ld (keys %{$self->{'ldContainer'}}){
-	my @ld_value;  #contains a single ld value in the container [variation_feature variation_feature Dprime r2 snp_distance_count]
+	my @ld_value;  #contains a single ld value in the container [variation_feature variation_feature d_prime r2 snp_distance_count]
 	($variation_feature_id_1, $variation_feature_id_2) =  split /-/,$key_ld; #get the variation_features ids
-	#add the information to the ld_value array
-	push @ld_value, $self->{'variationFeatures'}->{$variation_feature_id_1}, $self->{'variationFeatures'}->{$variation_feature_id_2};
-	#and add the ld information: dprime, r2, snp_distance_count and sample_count for the major population (population where the sample count is higher
-	$population_id = $self->_get_major_population($self->{'ldContainer'}->{$key_ld});
-
-	push @ld_value, $self->{'ldContainer'}->{$key_ld}->{$population_id}->{'Dprime'}, $self->{'ldContainer'}->{$key_ld}->{$population_id}->{'r2'},$self->{'ldContainer'}->{$key_ld}->{$population_id}->{'snp_distance_count'}, $self->{'ldContainer'}->{$key_ld}->{$population_id}->{'sample_count'}, $population_id;
-	#and add all the ld information to the final list
-	push @ld_values, \@ld_value;
+	if (exists $self->{'ldContainer'}->{$key_ld}->{$self->{'_default_population'}}){
+	    #add the information to the ld_value array
+	    push @ld_value, $self->{'variationFeatures'}->{$variation_feature_id_1}, $self->{'variationFeatures'}->{$variation_feature_id_2};
+	    #and add the ld information: dprime, r2, snp_distance_count and sample_count for the default population (population appears more times for a pairs of variation)
+	    push @ld_value, $self->{'ldContainer'}->{$key_ld}->{$self->{'_default_population'}}->{'d_prime'}, $self->{'ldContainer'}->{$key_ld}->{$self->{'_default_population'}}->{'r2'},$self->{'ldContainer'}->{$key_ld}->{$self->{'_default_population'}}->{'snp_distance_count'}, $self->{'ldContainer'}->{$key_ld}->{$self->{'_default_population'}}->{'sample_count'}, $self->{'_default_population'};
+	    #and add all the ld information to the final list
+	    push @ld_values, \@ld_value;
+	}
     }
     return \@ld_values;
 }
@@ -295,7 +313,7 @@ sub get_all_ld_values{
     Example     : $r_square_values = $obj->get_all_r_square_values();
     Description : Get all r_square values contained in the LDFeatureContainer object
     ReturnType  : reference to list of [Bio::EnsEMBL::Variation::VariationFeature Bio::EnsEMBL::Variation::VariationFeature r2 population_id]
-    Exceptions  : thrown when there is not valid db connection
+    Exceptions  : no exceptions
     Caller      : general
 =cut
 
@@ -308,19 +326,19 @@ sub get_all_r_square_values{
     my $variation_feature_id_1;
     my $variation_feature_id_2;
 
-    my $population_id;
-
+   if (! defined $self->{'_default_population'}){
+       $self->{'_default_population'} = $self->_get_major_population;
+   }
     foreach my $key_ld (keys %{$self->{'ldContainer'}}){
 	my @r_square;  #contains a single r2 value in the container [variation_feature r2 population_id]
 	($variation_feature_id_1, $variation_feature_id_2) =  split /-/,$key_ld; #get the variation_features ids
-	#add the information to the ld_value array
-	push @r_square, $self->{'variationFeatures'}->{$variation_feature_id_1}, $self->{'variationFeatures'}->{$variation_feature_id_2};
-	#and add the r2 information
-	$population_id = $self->_get_major_population($self->{'ldContainer'}->{$key_ld});
-
-	push @r_square, $self->{'ldContainer'}->{$key_ld}->{$population_id}->{'r2'}, $population_id;
-	#and add all the ld information to the final list
-	push @r_squares, \@r_square;
+	if (exists $self->{'ldContainer'}->{$key_ld}->{$self->{'_default_population'}}){
+	    #add the information to the ld_value array
+	    push @r_square, $self->{'variationFeatures'}->{$variation_feature_id_1}, $self->{'variationFeatures'}->{$variation_feature_id_2};
+	    push @r_square, $self->{'ldContainer'}->{$key_ld}->{$self->{'_default_population'}}->{'r2'}, $self->{'_default_population'};
+	    #and add all the ld information to the final list
+	    push @r_squares, \@r_square;
+	}
     }
     return \@r_squares;
 }
@@ -330,7 +348,7 @@ sub get_all_r_square_values{
     Example     : $d_prime_values = $obj->get_all_d_prime_values();
     Description : Get all d_prime values contained in the LDFeatureContainer object
     ReturnType  : reference to list of [Bio::EnsEMBL::Variation::VariationFeature Bio::EnsEMBL::Variation::VariationFeature d_prime population_id]
-    Exceptions  : thrown when there is not valid db connection
+    Exceptions  : no exceptions
     Caller      : general
 =cut
 
@@ -343,36 +361,82 @@ sub get_all_d_prime_values{
     my $variation_feature_id_1;
     my $variation_feature_id_2;
 
-    my $population_id;
+   if (! defined $self->{'_default_population'}){
+       $self->{'_default_population'} = $self->_get_major_population;
+   }
+   foreach my $key_ld (keys %{$self->{'ldContainer'}}){
+       my @d_prime;  #contains a single r2 value in the container [variation_feature r2 population_id]
+       ($variation_feature_id_1, $variation_feature_id_2) =  split /-/,$key_ld; #get the variation_features ids
+       #add the information to the ld_value array
+       if (exists $self->{'ldContainer'}->{$key_ld}->{$self->{'_default_population'}}){
+	   push @d_prime, $self->{'variationFeatures'}->{$variation_feature_id_1}, $self->{'variationFeatures'}->{$variation_feature_id_2};
+	   push @d_prime, $self->{'ldContainer'}->{$key_ld}->{$self->{'_default_population'}}->{'d_prime'}, $self->{'_default_population'};
+	   #and add all the ld information to the final list if exists the value
+	   push @d_primes, \@d_prime;
+       }
 
-    foreach my $key_ld (keys %{$self->{'ldContainer'}}){
-	my @d_prime;  #contains a single r2 value in the container [variation_feature r2 population_id]
-	($variation_feature_id_1, $variation_feature_id_2) =  split /-/,$key_ld; #get the variation_features ids
-	#add the information to the ld_value array
-	push @d_prime, $self->{'variationFeatures'}->{$variation_feature_id_1}, $self->{'variationFeatures'}->{$variation_feature_id_2};
-	#and add the r2 information
-	$population_id = $self->_get_major_population($self->{'ldContainer'}->{$key_ld});
-
-	push @d_prime, $self->{'ldContainer'}->{$key_ld}->{$population_id}->{'Dprime'}, $population_id;
-	#and add all the ld information to the final list
-	push @d_primes, \@d_prime;
-    }
-    return \@d_primes;
+   }
+   return \@d_primes;
 }
 
+=head2 get_all_populations
 
-sub _get_major_population{
+    Arg [1]     : (optional) Bio::EnsEMBL::Variation::VariationFeature $variationFeature
+    Arg [2]     : (optional) Bio::EnsEMBL::Variation::VariationFeature $variationFeature
+    Example     : $populations = $obj->get_all_populations($vf1,$vf2);
+    Description : If no arguments provided, returns ALL the populations present in the container. When 2 variation features provided, returns the 
+    population/populations where these variation features occurs
+    ReturnType  : ref to an array of int
+    Exceptions  : throw on incorrect arguments
+    Caller      : general
+=cut
+
+sub get_all_populations{
     my $self = shift;
-    my $ld_population = shift;
-    my $population_id;
-    my $max_sample_count = 0;
-    foreach my $population (keys %{$ld_population}){
-	if ($ld_population->{$population}->{'sample_count'} > $max_sample_count){
-	    $max_sample_count = $ld_population->{$population}->{'sample_count'};
-	    $population_id = $population;
+    my $variation_feature_1 = shift;
+    my $variation_feature_2 = shift;
+    my %populations;
+    my @populations;    
+    my $key;
+
+    #if no variation provided, return ALL the populations in the container
+    if (! defined($variation_feature_1) && ! defined($variation_feature_2)){
+	foreach my $key (keys %{$self->{'ldContainer'}}){
+	    map {$populations{$_}++} keys %{$self->{'ldContainer'}->{$key}};
+	}
+	@populations = keys %populations;
+    }
+    else{
+	#first, check if both arguments have been properly provided
+	if (!ref($variation_feature_1) || !$variation_feature_1->isa('Bio::EnsEMBL::Variation::VariationFeature') || !ref($variation_feature_2) || !$variation_feature_2->isa('Bio::EnsEMBL::Variation::VariationFeature')){
+	    throw("Bio::EnsEMBL::Variation::VariationFeature arguments expected");
+	}
+	#if the variation_features are correct, return the list of populations
+	else{
+	    #find out the key in the ld Hash: vf1 - vf2 or vf2 - vf1
+	    if (exists $self->{'ldContainer'}->{$variation_feature_1->dbID() . '-' . $variation_feature_2->dbID()}){
+		$key = $variation_feature_1->dbID() . '-' . $variation_feature_2->dbID();
+	    }
+	    else{
+		$key = $variation_feature_2->dbID() . '-' . $variation_feature_1->dbID();
+	    }	    
+	    @populations = keys %{$self->{'ldContainer'}->{$key}};
 	}
     }
-    return $population_id;
+
+    return \@populations;
+}
+
+#returns from the container the population_id with the maximum number of pairwise_ld 
+sub _get_major_population{
+    my $self = shift;
+    my %populations;
+
+    foreach my $key (keys %{$self->{'ldContainer'}}){
+	map {$populations{$_}++} keys %{$self->{'ldContainer'}->{$key}};
+    }
+    my @sorted_populations = sort{$populations{$b} <=> $populations{$a}} keys %populations;
+    return shift @sorted_populations;
 }
 1;
 
