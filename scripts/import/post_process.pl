@@ -2,43 +2,57 @@
 use strict;
 use warnings;
 
+use Getopt::Long;
+use DBI;
+
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Utils::Exception qw(warning throw);
-
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
-
 use ImportUtils qw(dumpSQL debug create_and_load load);
 
-
-use DBI;
 
 my $TMP_DIR  = $ImportUtils::TMP_DIR;
 my $TMP_FILE = $ImportUtils::TMP_FILE;
 
-my $LIMIT = ' LIMIT 10000 ';
+my $LIMIT;
 
 {
-  my $vhost   = 'ecs4';
-  my $vport   = 3352;
-  my $vdbname = 'mcvicker_variation';
-  my $vuser   = 'ensadmin';
-  my $vpass   = 'ensembl';
+  my ($vhost, $vport, $vdbname, $vuser, $vpass,
+      $chost, $cport, $cdbname, $cuser, $cpass,
+      $limit);
+
+  GetOptions('chost=s'   => \$chost,
+             'cuser=s'   => \$cuser,
+             'cpass=s'   => \$cpass,
+             'cport=i'   => \$cport,
+             'cdbname=s' => \$cdbname,
+             'vhost=s'   => \$vhost,
+             'vuser=s'   => \$vuser,
+             'vpass=s'   => \$vpass,
+             'vport=i'   => \$vport,
+             'vdbname=s' => \$vdbname,
+             'limit=i'   => \$limit);
+
+  $LIMIT = $limit || '';
+
+  usage('-vdbname argument is required') if(!$vdbname);
+  usage('-cdbname argument is required') if(!$cdbname);
 
   my $dbCore = Bio::EnsEMBL::DBSQL::DBAdaptor->new
-    (-host   => 'ecs2',
-     -user   => 'ensro',
-     -port   => 3364,
-     -dbname => 'homo_sapiens_core_22_34d');
+    (-host   => $chost,
+     -user   => $cuser,
+     -pass   => $cpass,
+     -port   => $cport,
+     -dbname => $cdbname);
 
   my $dbVar = DBI->connect
     ("DBI:mysql:host=$vhost;dbname=$vdbname;port=$vport",$vuser, $vpass );
   die("Could not connect to variation database: $!") if(!$dbVar);
 
-#  variation_feature($dbCore, $dbVar);
-#  flanking_sequence($dbCore, $dbVar);
-#  variation_group_feature($dbCore, $dbVar);
+  variation_feature($dbCore, $dbVar);
+  flanking_sequence($dbCore, $dbVar);
+  variation_group_feature($dbCore, $dbVar);
   transcript_variation($dbCore, $dbVar);
-
 }
 
 
@@ -302,11 +316,8 @@ sub flanking_sequence {
 
     # if we changed something update the row in the database
     if(!defined($dn_seq) || !defined($up_seq)) {
-      #      $update_sth->execute($up_seq, $dn_seq, $up_sr_start, $up_sr_end,
-      #                          $dn_sr_start, $dn_sr_end, $sr_id, $sr_strand);
-      print STDERR "updated\n";
-    } else {
-      print STDERR "not updated\n";
+      $update_sth->execute($up_seq, $dn_seq, $up_sr_start, $up_sr_end,
+                           $dn_sr_start, $dn_sr_end, $sr_id, $sr_strand);
     }
   }
 
@@ -631,3 +642,26 @@ sub apply_aa_change {
 
 
 
+sub usage {
+  my $msg = shift;
+
+  print STDERR <<EOF;
+
+usage: perl post_process.pl <options>
+
+options:
+    -chost <hostname>    hostname of core Ensembl MySQL database (default = ecs2)
+    -cuser <user>        username of core Ensembl MySQL database (default = ensro)
+    -cpass <pass>        password of core Ensembl MySQL database
+    -cport <port>        TCP port of core Ensembl MySQL database (default = 3364)
+    -cdbname <dbname>    dbname of core Ensembl MySQL database
+    -vhost <hostname>    hostname of variation MySQL database to write to
+    -vuser <user>        username of variation MySQL database to write to (default = ensadmin)
+    -vpass <pass>        password of variation MySQL database to write to
+    -vport <port>        TCP port of variation MySQL database to write to (default = 3306)
+    -vdbname <dbname>    dbname of variation MySQL database to write to
+    -limit <number>      limit the number of rows for testing
+EOF
+
+  die("\n$msg\n\n");
+}
