@@ -127,4 +127,4 @@ sub variation_feature {
 
 ###
 ###example of usage###
-###/creat_variation_feature.pl -cdbname danio_rerio_core_24_4 -vdbname yuan_zfish_snp -alldiff /ecs2/scratch4/yuan/zfish/ds_chNotOndir/ALL_DIFF -vpass ensembl
+###./load_mapping2vf.pl -cdbname danio_rerio_core_24_4 -vdbname yuan_zfish_snp -alldiff /ecs2/scratch4/yuan/zfish/ds_chNotOndir/ALL_DIFF -vpass ensembl

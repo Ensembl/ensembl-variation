@@ -112,6 +112,7 @@ sub import {
 
   
   while (<GENO>) {
+    chomp;
     if (/^rs\#/) {
       my @array = split;
       my $count = 1; 
@@ -205,6 +206,7 @@ sub population_genotype {
       my $tot_gty = keys %count;
       my ($allele1, $allele2) = split "", $gtys;
       my $freq = $count{$gtys}/$tot_count if ($tot_count != 0);
+      #print "$var_ids{$snp_id}\t$allele1\t$allele2\t$freq\t$sub_pop_id\n";
       print FH "$var_ids{$snp_id}\t$allele1\t$allele2\t$freq\t$sub_pop_id\n";
     }
   }
