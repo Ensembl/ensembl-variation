@@ -275,7 +275,7 @@ sub get_d_prime{
 
     Example     : $ld_values = $obj->get_all_ld_values();
     Description : Get all the information contained in the LDFeatureContainer object
-    ReturnType  : reference to list of [Bio::EnsEMBL::Variation::VariationFeature Bio::EnsEMBL::Variation::VariationFeature d_prime r2 snp_distance_count sample_count population_id]
+    ReturnType  : reference to list of hashes [{variation1 => Bio::EnsEMBL::Variation::VariationFeature, variation2=>Bio::EnsEMBL::Variation::VariationFeature, d_prime=>d_prime, r2=>r2, snp_distance_count=>snp_distance_count, sample_count=>sample_count, population_id=>population_id}]
     Exceptions  : no exceptions
     Caller      : general
 =cut
@@ -293,15 +293,22 @@ sub get_all_ld_values{
 	$self->{'_default_population'} = $self->_get_major_population;
     }
     foreach my $key_ld (keys %{$self->{'ldContainer'}}){
-	my @ld_value;  #contains a single ld value in the container [variation_feature variation_feature d_prime r2 snp_distance_count]
+	my %ld_value;  #contains a single ld value in the container {variation_feature variation_feature d_prime r2 snp_distance_count}
 	($variation_feature_id_1, $variation_feature_id_2) =  split /-/,$key_ld; #get the variation_features ids
 	if (exists $self->{'ldContainer'}->{$key_ld}->{$self->{'_default_population'}}){
-	    #add the information to the ld_value array
-	    push @ld_value, $self->{'variationFeatures'}->{$variation_feature_id_1}, $self->{'variationFeatures'}->{$variation_feature_id_2};
+	    #add the information to the ld_value hash
+	    $ld_value{'variation1'} = $self->{'variationFeatures'}->{$variation_feature_id_1};
+	    $ld_value{'variation2'} = $self->{'variationFeatures'}->{$variation_feature_id_2};
+	    $ld_value{'d_prime'} = $self->{'ldContainer'}->{$key_ld}->{$self->{'_default_population'}}->{'d_prime'};
+	    $ld_value{'r2'} = $self->{'ldContainer'}->{$key_ld}->{$self->{'_default_population'}}->{'r2'};
+	    $ld_value{'snp_distance_count'} = $self->{'ldContainer'}->{$key_ld}->{$self->{'_default_population'}}->{'snp_distance_count'};
+	    $ld_value{'sample_count'} = $self->{'ldContainer'}->{$key_ld}->{$self->{'_default_population'}}->{'sample_count'};
+	    $ld_value{'population_id'} = $self->{'_default_population'};
+#	    push @ld_value, $self->{'variationFeatures'}->{$variation_feature_id_1}, $self->{'variationFeatures'}->{$variation_feature_id_2};
 	    #and add the ld information: dprime, r2, snp_distance_count and sample_count for the default population (population appears more times for a pairs of variation)
-	    push @ld_value, $self->{'ldContainer'}->{$key_ld}->{$self->{'_default_population'}}->{'d_prime'}, $self->{'ldContainer'}->{$key_ld}->{$self->{'_default_population'}}->{'r2'},$self->{'ldContainer'}->{$key_ld}->{$self->{'_default_population'}}->{'snp_distance_count'}, $self->{'ldContainer'}->{$key_ld}->{$self->{'_default_population'}}->{'sample_count'}, $self->{'_default_population'};
+#	    push @ld_value, $self->{'ldContainer'}->{$key_ld}->{$self->{'_default_population'}}->{'d_prime'}, $self->{'ldContainer'}->{$key_ld}->{$self->{'_default_population'}}->{'r2'},$self->{'ldContainer'}->{$key_ld}->{$self->{'_default_population'}}->{'snp_distance_count'}, $self->{'ldContainer'}->{$key_ld}->{$self->{'_default_population'}}->{'sample_count'}, $self->{'_default_population'};
 	    #and add all the ld information to the final list
-	    push @ld_values, \@ld_value;
+	    push @ld_values, \%ld_value;
 	}
     }
     return \@ld_values;
@@ -312,7 +319,7 @@ sub get_all_ld_values{
 
     Example     : $r_square_values = $obj->get_all_r_square_values();
     Description : Get all r_square values contained in the LDFeatureContainer object
-    ReturnType  : reference to list of [Bio::EnsEMBL::Variation::VariationFeature Bio::EnsEMBL::Variation::VariationFeature r2 population_id]
+    ReturnType  : reference to list of [{variation1=>Bio::EnsEMBL::Variation::VariationFeature, variation2=>Bio::EnsEMBL::Variation::VariationFeature, r2=>r2, population_id=>population_id}]
     Exceptions  : no exceptions
     Caller      : general
 =cut
@@ -330,14 +337,18 @@ sub get_all_r_square_values{
        $self->{'_default_population'} = $self->_get_major_population;
    }
     foreach my $key_ld (keys %{$self->{'ldContainer'}}){
-	my @r_square;  #contains a single r2 value in the container [variation_feature r2 population_id]
+	my %r_square;  #contains a single r2 value in the container {variation_feature r2 population_id}
 	($variation_feature_id_1, $variation_feature_id_2) =  split /-/,$key_ld; #get the variation_features ids
 	if (exists $self->{'ldContainer'}->{$key_ld}->{$self->{'_default_population'}}){
-	    #add the information to the ld_value array
-	    push @r_square, $self->{'variationFeatures'}->{$variation_feature_id_1}, $self->{'variationFeatures'}->{$variation_feature_id_2};
-	    push @r_square, $self->{'ldContainer'}->{$key_ld}->{$self->{'_default_population'}}->{'r2'}, $self->{'_default_population'};
+	    $r_square{'variation1'} = $self->{'variationFeatures'}->{$variation_feature_id_1};
+	    $r_square{'variation2'} = $self->{'variationFeatures'}->{$variation_feature_id_2};
+	    $r_square{'r2'} = $self->{'ldContainer'}->{$key_ld}->{$self->{'_default_population'}}->{'r2'};
+	    $r_square{'population_id'} = $self->{'_default_population'};	    
+	    #add the information to the ld_value hash
+#	    push @r_square, $self->{'variationFeatures'}->{$variation_feature_id_1}, $self->{'variationFeatures'}->{$variation_feature_id_2};
+#	    push @r_square, $self->{'ldContainer'}->{$key_ld}->{$self->{'_default_population'}}->{'r2'}, $self->{'_default_population'};
 	    #and add all the ld information to the final list
-	    push @r_squares, \@r_square;
+	    push @r_squares, \%r_square;
 	}
     }
     return \@r_squares;
@@ -347,7 +358,7 @@ sub get_all_r_square_values{
 
     Example     : $d_prime_values = $obj->get_all_d_prime_values();
     Description : Get all d_prime values contained in the LDFeatureContainer object
-    ReturnType  : reference to list of [Bio::EnsEMBL::Variation::VariationFeature Bio::EnsEMBL::Variation::VariationFeature d_prime population_id]
+    ReturnType  : reference to list of [{variation1=>Bio::EnsEMBL::Variation::VariationFeature, variation2=>Bio::EnsEMBL::Variation::VariationFeature, d_prime=>d_prime, population_id=>population_id}]
     Exceptions  : no exceptions
     Caller      : general
 =cut
@@ -365,14 +376,18 @@ sub get_all_d_prime_values{
        $self->{'_default_population'} = $self->_get_major_population;
    }
    foreach my $key_ld (keys %{$self->{'ldContainer'}}){
-       my @d_prime;  #contains a single r2 value in the container [variation_feature r2 population_id]
+       my %d_prime;  #contains a single d_prime value in the container {variation_feature d_prime population_id}
        ($variation_feature_id_1, $variation_feature_id_2) =  split /-/,$key_ld; #get the variation_features ids
        #add the information to the ld_value array
        if (exists $self->{'ldContainer'}->{$key_ld}->{$self->{'_default_population'}}){
-	   push @d_prime, $self->{'variationFeatures'}->{$variation_feature_id_1}, $self->{'variationFeatures'}->{$variation_feature_id_2};
-	   push @d_prime, $self->{'ldContainer'}->{$key_ld}->{$self->{'_default_population'}}->{'d_prime'}, $self->{'_default_population'};
+	   $d_prime{'variation1'} = $self->{'variationFeatures'}->{$variation_feature_id_1};
+	   $d_prime{'variation2'} = $self->{'variationFeatures'}->{$variation_feature_id_2};
+	   $d_prime{'d_prime'} = $self->{'ldContainer'}->{$key_ld}->{$self->{'_default_population'}}->{'d_prime'};
+	   $d_prime{'population_id'} = $self->{'_default_population'};
+#	   push @d_prime, $self->{'variationFeatures'}->{$variation_feature_id_1}, $self->{'variationFeatures'}->{$variation_feature_id_2};
+#	   push @d_prime, $self->{'ldContainer'}->{$key_ld}->{$self->{'_default_population'}}->{'d_prime'}, $self->{'_default_population'};
 	   #and add all the ld information to the final list if exists the value
-	   push @d_primes, \@d_prime;
+	   push @d_primes, \%d_prime;
        }
 
    }
