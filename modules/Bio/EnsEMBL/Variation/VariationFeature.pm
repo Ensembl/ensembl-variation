@@ -263,7 +263,12 @@ sub map_weight{
 
 sub get_all_TranscriptVariations{
     my $self = shift;
-
+    
+    if(!defined($self->{'transcriptVariations'}) && $self->{'adaptor'})    {
+	#lazy-load from database on demand
+	my $tva = $self->{'adaptor'}->db()->get_TranscriptVariationAdaptor();
+	$tva->fetch_all_by_VariationFeatures([$self]);
+    }
     return $self->{'transcriptVariations'};
 }
 
