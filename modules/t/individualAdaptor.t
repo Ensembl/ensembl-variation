@@ -1,0 +1,59 @@
+use lib 't';
+
+use strict;
+use warnings;
+
+BEGIN { $| = 1;
+	use Test;
+	plan tests => 10;
+}
+
+
+use TestUtils qw ( debug test_getter_setter count_rows);
+
+
+use MultiTestDB;
+
+
+our $verbose = 0;
+
+my $multi = MultiTestDB->new();
+
+my $vdb = $multi->get_DBAdaptor('variation');
+
+my $pa = $vdb->get_PopulationAdaptor();
+my $ia = $vdb->get_IndividualAdaptor();
+
+ok($ia && $ia->isa('Bio::EnsEMBL::Variation::DBSQL::IndividualAdaptor'));
+
+# test fetch by dbID
+
+my $ind = $ia->fetch_by_dbID(7);
+
+ok($ind->name() eq 'CEPH104.11');
+ok($ind->dbID() == 7);
+ok($ind->description() eq 'CEPH/VENEZUELAN PEDIGREE 104');
+ok($ind->gender eq 'Female');
+
+
+# test fetch all by name
+
+($ind) = @{$ia->fetch_all_by_name('CL63')};
+ok($ind->name() eq 'CL63');
+ok($ind->dbID() == 2265);
+
+
+# test fetch_all_by_Population
+my $pop = $pa->fetch_by_name('TSC-CSHL:CEL_caucasian_CEPH');
+my $inds = $ia->fetch_all_by_Population($pop);
+ok(@$inds == 625);
+
+# test fetch_all_by_parent_Individual
+
+($ind) = @{$ia->fetch_all_by_name('CEPH104.01')}; # father
+$inds = $ia->fetch_all_by_parent_Individual($ind);
+ok(@$inds == 10);
+
+($ind) = @{$ia->fetch_all_by_name('CEPH104.02')}; # mother
+$inds = $ia->fetch_all_by_parent_Individual($ind);
+ok(@$inds == 10);
