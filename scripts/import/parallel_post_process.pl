@@ -13,7 +13,7 @@ my ($TMP_DIR, $TMP_FILE, $LIMIT);
 
 my ($vhost, $vport, $vdbname, $vuser, $vpass,
     $chost, $cport, $cdbname, $cuser, $cpass,
-    $limit, $num_processes, 
+    $limit, $num_processes, $top_level,
     $variation_feature, $flanking_sequence, $variation_group_feature,
     $transcript_variation, $ld_populations);
 
@@ -42,9 +42,10 @@ GetOptions('chost=s'   => \$chost,
 #added default options
 $chost    ||= 'ecs2';
 $cuser    ||= 'ensro';
-$cport    ||= 3364;
+$cport    ||= 3365;
 
-$vport    ||= 3306;
+$vhost    ||='ecs2';
+$vport    ||= 3361;
 $vuser    ||= 'ensadmin';
 
 $num_processes ||= 1;
@@ -70,8 +71,12 @@ die("Could not connect to variation database: $!") if(!$dbVar);
 $TMP_DIR  = $ImportUtils::TMP_DIR;
 $TMP_FILE = $ImportUtils::TMP_FILE;
 
+##Apart from human and mouse, we directly import top_level coordinates from dbSNP
+if ($cdbname !~ /homo|mus/i) {
+  $top_level=1;
+}
 
-parallel_variation_feature($dbVar) if ($variation_feature);
+parallel_variation_feature($dbVar, $top_level) if ($variation_feature);
 parallel_flanking_sequence($dbVar) if ($flanking_sequence);
 parallel_variation_group_feature($dbVar) if ($variation_group_feature);
 parallel_transcript_variation($dbVar) if ($transcript_variation);
@@ -81,6 +86,8 @@ parallel_ld_populations($dbVar) if ($ld_populations);
 #will take the number of processes, and divide the total number of entries in the variation_feature table by the number of processes
 sub parallel_variation_feature{
     my $dbVar = shift;
+    my $top_level = shift;
+
     my $min_variation; #minim variation_feature_id
     my $max_variation; #maximum variation_feature_id
     my $call;
@@ -115,6 +122,7 @@ sub parallel_variation_feature{
 	$call .= "-cpass $cpass " if ($cpass);
 	$call .= "-cport $cport " if ($cport);
 	$call .= "-vpass $vpass " if ($vpass);
+	$call .= "-toplevel $top_level " if ($top_level);
 	system($call);      
     }
     $call = "bsub -K -w 'done(variation_job*)' -J waiting_process sleep 1"; #waits until all variation features have finished to continue
@@ -142,7 +150,7 @@ sub parallel_flanking_sequence{
     ($sequences) = $sth->fetchrow_array();
     $sth->finish();
     my $sub_sequences = int($sequences / $num_processes);
-    for (my $i = 0; $i < $num_processes ; $i++){
+    for (my $i = 0; $i < $num_processes ; $i++){print "i is $i\n";
 	$limit = $i*$sub_sequences . "," . $sub_sequences  if ($i+1 < $num_processes);
 	$limit = $i*$sub_sequences . "," . $sub_sequences*$i if ($i+1 == $num_processes); #the last one will select the left rows
 	$call = "bsub -o $TMP_DIR/output_flanking_$i\_$$.txt /usr/local/ensembl/bin/perl parallel_flanking_sequence.pl -chost $chost -cuser $cuser -cdbname $cdbname -vhost $vhost -vuser $vuser -vport $vport -vdbname $vdbname -limit $limit -tmpdir $TMP_DIR -tmpfile $TMP_FILE -num_processes $num_processes -status_file $flanking_status_file ";

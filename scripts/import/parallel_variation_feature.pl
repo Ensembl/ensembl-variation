@@ -17,7 +17,7 @@ my ($TMP_DIR, $TMP_FILE, $LIMIT,$status_file);
 {
   my ($vhost, $vport, $vdbname, $vuser, $vpass,
       $chost, $cport, $cdbname, $cuser, $cpass,
-      $limit, $num_processes);
+      $limit, $num_processes, $top_level);
 
   GetOptions('chost=s'   => \$chost,
              'cuser=s'   => \$cuser,
@@ -33,6 +33,7 @@ my ($TMP_DIR, $TMP_FILE, $LIMIT,$status_file);
              'tmpfile=s' => \$ImportUtils::TMP_FILE,
              'limit=s'   => \$limit,
 	     'num_processes=i' => \$num_processes,
+	     'toplevel' => \$top_level,
 	     'status_file=s' => \$status_file);
 
   #added default options
@@ -68,8 +69,9 @@ my ($TMP_DIR, $TMP_FILE, $LIMIT,$status_file);
   $TMP_DIR  = $ImportUtils::TMP_DIR;
   $TMP_FILE = $ImportUtils::TMP_FILE;
 
-  load_asm_cache($dbCore);
-  variation_feature($dbCore, $dbVar);
+  load_asm_cache($dbCore) unless defined $top_level;
+  variation_feature($dbCore, $dbVar, $top_level);
+
   open STATUS, ">>$TMP_DIR/$status_file"
     or throw("Could not open tmp file: $TMP_DIR/$status_file\n"); 
   print STATUS "process finished\n";
@@ -128,6 +130,7 @@ sub load_asm_cache {
 sub variation_feature {
   my $dbCore = shift;
   my $dbVar  = shift;
+  my $top_level = shift;
 
   my $slice_adaptor = $dbCore->get_SliceAdaptor();
   my $asma = $dbCore->get_AssemblyMapperAdaptor();
@@ -136,8 +139,8 @@ sub variation_feature {
   my $top_cs  = $csa->fetch_by_name('toplevel');
   my $sctg_cs = $csa->fetch_by_name('supercontig');
 
-  my $mapper = $asma->fetch_by_CoordSystems($top_cs, $sctg_cs);
-
+  my $mapper = $asma->fetch_by_CoordSystems($top_cs, $sctg_cs) if (! $top_level);
+  
   debug("Processing variation features");
 
   my $sth = $dbVar->prepare
@@ -161,7 +164,7 @@ sub variation_feature {
                      \$v_id, \$allele, \$map_weight, \$v_name);
 
   my ($cur_vf_id, $cur_map_weight, $cur_v_id, $cur_v_name,
-     $top_coord, $top_sr_id, $ref_allele);
+     $top_coord, $top_sr_id, $top_sr_start, $top_sr_end, $top_sr_strand, $ref_allele);
   my %alleles;
   my %alleles_expanded; #same hash as before, but with the expanded alleles: $alleles_expanded{AGAGAG} = (AG)3
 
@@ -180,25 +183,36 @@ sub variation_feature {
         } else {
           $allele_str = undef;
           warn("Reference allele $ref_allele not found in alleles: " .
-               join("/", keys %alleles), " discarding feature\n");
+               join("/", keys %alleles), " discarding feature");
         }
-
+	
         if($allele_str) {
-          print FH join("\t", $cur_vf_id, $top_sr_id, $top_coord->start(),
-                        $top_coord->end(), $top_coord->strand(),
-                        $cur_v_id, $allele_str, $cur_v_name,
-                        $cur_map_weight), "\n";
-        }
+	  if ($top_level) {
+	    print FH join("\t", $cur_vf_id, $top_sr_id, $top_sr_start, $top_sr_end, $top_sr_strand,
+			  $cur_v_id, $allele_str, $cur_v_name,
+			  $cur_map_weight), "\n";
+	  }
+	  else {
+	    print FH join("\t", $cur_vf_id, $top_sr_id, $top_coord->start(),
+			  $top_coord->end(), $top_coord->strand(),
+			  $cur_v_id, $allele_str, $cur_v_name,
+			  $cur_map_weight), "\n";
+	  }
+	}
       }
-
+      
       %alleles = ();
       %alleles_expanded = ();
       $ref_allele = undef;
       $top_sr_id = undef;
+      $top_coord = undef;
       $cur_vf_id = $vf_id;
       $cur_map_weight = $map_weight;
       $cur_v_id  = $v_id;
       $cur_v_name = $v_name;
+      $top_sr_start = $sr_start;
+      $top_sr_end = $sr_end;
+      $top_sr_strand = $sr_strand;
 
       # map the variation coordinates to toplevel
 
@@ -209,25 +223,47 @@ sub variation_feature {
         next;
       }
 
-      my @coords = $mapper->map($slice->seq_region_name(), $sr_start, $sr_end,
-                                $sr_strand, $sctg_cs);
-
-      if(@coords != 1 || $coords[0]->isa('Bio::EnsEMBL::Mapper::Gap')) {
-        $top_coord = undef;
-      } else {
-
-        # obtain the seq_region_id of the seq_region we mapped to
-        # and the reference allele from the genome sequence
-        ($top_coord) = @coords;
-        $slice = $slice_adaptor->fetch_by_region
-          ($top_coord->coord_system()->name(),$top_coord->id(),
-           $top_coord->start(),$top_coord->end(), $top_coord->strand(),
-           $top_coord->coord_system()->version());
-
-        $ref_allele = $slice->seq();
-        $ref_allele = '-' if(!$ref_allele);
-
-        $top_sr_id = $slice->get_seq_region_id();
+      ###if it is a toplevel coordinates already, we need find ref_allele for it
+      if ($top_level) {
+	$top_coord = $slice->sub_Slice($sr_start, $sr_end,$sr_strand);
+	if (!$top_coord) {
+	  ###if start = end+1, this indicate a indel
+	  if ($sr_start == $sr_end+1) {
+	    $ref_allele = '-';
+	    $top_coord=1;
+	    warning("Could not locate $sr_id, $sr_start, $sr_end, $sr_strand, maybe indels");
+	  }
+	  else {
+	    next;
+	  }
+	}
+	else {
+	  $ref_allele = $top_coord->seq();
+	  $ref_allele = '-' if(!$ref_allele);
+	  debug ("ref_allele is '-' for $sr_id, $sr_start, $sr_end, $sr_strand") if ($ref_allele eq '-');
+	}
+      }
+      else {
+	my @coords = $mapper->map($slice->seq_region_name(), $sr_start, $sr_end,
+				  $sr_strand, $sctg_cs);
+	
+	if (@coords != 1 || $coords[0]->isa('Bio::EnsEMBL::Mapper::Gap')) {
+	  $top_coord = undef;
+	} else {
+	  
+	  # obtain the seq_region_id of the seq_region we mapped to
+	  # and the reference allele from the genome sequence
+	  ($top_coord) = @coords;
+	  $slice = $slice_adaptor->fetch_by_region
+	    ($top_coord->coord_system()->name(),$top_coord->id(),
+	     $top_coord->start(),$top_coord->end(), $top_coord->strand(),
+	     $top_coord->coord_system()->version());
+	  
+	  $ref_allele = $slice->seq();
+	  $ref_allele = '-' if(!$ref_allele);
+	  
+	  $top_sr_id = $slice->get_seq_region_id();
+	}
       }
     }
 
@@ -255,9 +291,16 @@ sub variation_feature {
     }
 
     if($allele_str) {
-      print FH join("\t", $vf_id, $top_sr_id, $top_coord->start(),
-                        $top_coord->end(), $top_coord->strand(),
-                        $cur_v_id, $allele_str, $v_name, $map_weight), "\n";
+      if ($top_level) {
+	print FH join("\t", $cur_vf_id, $top_sr_id, $top_sr_start, $top_sr_end, $top_sr_strand,
+		      $cur_v_id, $allele_str, $cur_v_name,
+		      $cur_map_weight), "\n";
+      }
+      else {
+	print FH join("\t", $vf_id, $top_sr_id, $top_coord->start(),
+		      $top_coord->end(), $top_coord->strand(),
+		      $cur_v_id, $allele_str, $v_name, $map_weight), "\n";
+      }
     }
   }
 
@@ -308,7 +351,7 @@ sub update_meta_coord {
   my $cs = $csa->fetch_by_name($csname);
 
   my $sth = $dbVar->prepare
-    ('INSERT INTO meta_coord set table_name = ?, coord_system_id = ?');
+    ('INSERT INTO meta_coord set table_name = ?, coord_system_id = ?, max_length =500');
 
   $sth->execute($table_name, $cs->dbID());
 
