@@ -477,7 +477,22 @@ create table population_genotype (
 	key population_idx(population_id)
 );
 
+#
+# individuals_population
+#
+# This table contains the relations between individuals and populations (n to n relationship)
+#
+# individual_id - FK to individual table
+# population_id - FK to population table
 
+create table individual_population (
+  individual_id int not null,
+  population_id int not null,
+
+  key individual_idx(individual_id),
+  key population_idx(population_id)
+
+);
 
 #
 # individual_genotype_single_bp
