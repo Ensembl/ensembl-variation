@@ -13,7 +13,7 @@ create table variation (
 	variation_id int not null auto_increment, # PK
 	source_id int not null, 
 	name varchar(255),
-	validation_status enum( "VALIDATED", "NOT_VALIDATED" ),
+	validation_status SET('cluster','freq','submitter','doublehit','hapmap'),
 
 	primary key( variation_id ),
 	key name_idx( name, source_id )
