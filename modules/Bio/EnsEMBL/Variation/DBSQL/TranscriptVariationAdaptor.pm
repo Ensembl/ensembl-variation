@@ -86,7 +86,6 @@ use Bio::EnsEMBL::Variation::TranscriptVariation;
 
 our @ISA = ('Bio::EnsEMBL::DBSQL::BaseAdaptor');
 
-
 =head2 fetch_by_dbID
 
   Arg [1]    : int $dbID
@@ -309,7 +308,7 @@ sub _objs_from_sth {
   # load all transcripts and variation features with one query -
   # much faster than individual queries
 
-  my $tra = $self->db()->get_TranscriptAdaptor();
+  my $tra = $self->db()->{'dnadb'}->get_TranscriptAdaptor();
   my $vfa = $self->db()->get_VariationFeatureAdaptor();
 
   my @tr_ids = keys %tr_hash;
