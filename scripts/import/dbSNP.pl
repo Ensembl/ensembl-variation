@@ -19,11 +19,13 @@ my $TAX_ID = 9606; # human
 source_table();
 variation_table();
 population_table();
+genotype_table();
 allele_table();
 flanking_sequence_table();
 variation_feature();
 variation_group();
 allele_group();
+
 cleanup();
 
 
@@ -281,6 +283,9 @@ sub population_table {
 
 
 
+  $dbVar->do("ALTER TABLE population ADD INDEX pop_id(pop_id)");
+  $dbVar->do("ALTER TABLE population ADD INDEX pop_class_id(pop_class_id)");
+
   $dbVar->do("DROP TABLE tmp_pop_class");
   $dbVar->do("DROP TABLE tmp_pop");
   $dbVar->do("DROP TABLE tmp_pop2");
@@ -357,6 +362,8 @@ sub allele_table {
                 AND    tva.allele = tra.allele
                 AND    a.allele_id is NULL});
 
+  $dbVar->do("ALTER TABLE tmp_allele ADD INDEX pop_id(pop_id)");
+
   $dbVar->do(qq{INSERT INTO allele (variation_id, allele,
                                     frequency, population_id)
                 SELECT ta.variation_id, ta.allele, null, p.population_id
@@ -406,7 +413,8 @@ sub flanking_sequence_table {
 
   my $sth = $dbVar->prepare(qq{SELECT ts.variation_id, ts.type, ts.line
                                FROM   tmp_seq ts
-                               ORDER BY ts.variation_id, ts.type, ts.line_num});
+                               ORDER BY ts.variation_id, ts.type, ts.line_num},
+                            { mysql_use_result => 1 });
 
   $sth->execute();
 
@@ -601,6 +609,107 @@ sub allele_group {
 
 
 
+sub genotype_table {
+  #
+  # load individuals into the population table
+  #
+
+  debug("Dumping SubmittedIndividual data");
+
+  dumpSQL(qq{SELECT si.pop_id, si.loc_ind_id, si.submitted_ind_id, i.descrip
+             FROM   SubmittedIndividual si, Individual i
+             WHERE  si.ind_id = i.ind_id});
+
+  debug("Loading individuals into population table");
+
+  create_and_load('tmp_sub_ind', 'pop_id', 'loc_ind_id',
+                  'submitted_ind_id', 'description');
+
+  count_rows('tmp_sub_ind');
+
+  $dbVar->do("ALTER TABLE tmp_sub_ind MODIFY pop_id INT");
+  $dbVar->do("ALTER TABLE tmp_sub_ind ADD INDEX pop_id(pop_id)");
+
+  # set the parent population ids of the individuals
+  $dbVar->do(qq{CREATE TABLE tmp_pop
+                SELECT tsi.loc_ind_id as name, p.population_id as parent_population_id,
+                       tsi.submitted_ind_id as submitted_ind_id, tsi.description
+                FROM   tmp_sub_ind tsi, population p
+                WHERE  tsi.pop_id = p.pop_id});
+
+
+  $dbVar->do("ALTER TABLE population ADD COLUMN submitted_ind_id int");
+
+  $dbVar->do(qq{INSERT INTO population (name, parent_population_id, submitted_ind_id,
+                                        size, population_type, description)
+                SELECT name, parent_population_id, submitted_ind_id, 1, 'specific',
+                       description
+                FROM   tmp_pop});
+
+  $dbVar->do("ALTER TABLE population ADD INDEX submitted_ind_id(submitted_ind_id)");
+
+
+  #
+  # load SubInd genotypes into genotype table
+  #
+  debug("Dumping SubInd and ObsGenotype data");
+  dumpSQL(qq{SELECT si.subsnp_id, si.submitted_ind_id, og.obs
+             FROM   SubInd si, ObsGenotype og
+             WHERE  og.gty_id = si.gty_id
+             LIMIT  100000});
+
+  create_and_load("tmp_gty", 'subsnp_id', 'submitted_ind_id', 'genotype');
+
+  count_rows('tmp_gty');
+
+  # split apart the genotype strings
+  my $sth = $dbVar->prepare("SELECT subsnp_id, submitted_ind_id, genotype FROM tmp_gty",
+                            {mysql_use_result => 1});
+
+
+  $sth->execute();
+
+  open ( FH, ">$tmp_dir/tabledump.txt" );
+
+  my $row;
+  while($row = $sth->fetchrow_arrayref()) {
+    my @row = @$row;
+    ($row[2], $row[3]) = split('/', $row[2]);
+    @row = map {(defined($_)) ? $_ : '\N'} @row;  # convert undefined to NULL;
+    print FH join("\t", @row), "\n";
+  }
+
+  $sth->finish();
+  close(FH);
+
+  $dbVar->do("DROP TABLE tmp_gty");
+
+  debug("Loading genotype table");
+
+  create_and_load("tmp_gty", 'subsnp_id', 'submitted_ind_id', 'allele_1', 'allele_2');
+
+  count_rows('tmp_gty');
+
+  $dbVar->do(qq{ALTER TABLE tmp_gty MODIFY subsnp_id INT});
+  $dbVar->do(qq{ALTER TABLE tmp_gty MODIFY submitted_ind_id INT});
+  $dbVar->do(qq{ALTER TABLE tmp_gty ADD INDEX subsnp_id(subsnp_id)});
+  $dbVar->do(qq{ALTER TABLE tmp_gty ADD INDEX submitted_ind_id(submitted_ind_id)});
+
+  $dbVar->do(qq{INSERT INTO genotype (variation_id, allele_1, allele_2, population_id)
+                SELECT v.variation_id, tg.allele_1, tg.allele_2, p.population_id
+                FROM   variation v, tmp_gty tg, population p
+                WHERE  v.subsnp_id = tg.subsnp_id
+                AND    p.submitted_ind_id = tg.submitted_ind_id});
+
+  count_rows('genotype');
+
+  $dbVar->do("DROP TABLE tmp_pop");
+  $dbVar->do("DROP TABLE tmp_sub_ind");
+  $dbVar->do("DROP TABLE tmp_gty");
+}
+
+
+
 
 
 # cleans up some of the necessary temporary data structures after the
@@ -610,6 +719,7 @@ sub cleanup {
   $dbVar->do('ALTER TABLE variation  DROP COLUMN subsnp_id');
   $dbVar->do('ALTER TABLE population DROP COLUMN pop_class_id');
   $dbVar->do('ALTER TABLE population DROP COLUMN pop_id');
+  $dbVar->do('ALTER TABLE population DROP COLUMN submitted_ind_id');
   $dbVar->do('ALTER TABLE variation_group DROP COLUMN hapset_id');
   $dbVar->do('ALTER TABLE allele_group DROP COLUMN hap_id');
   $dbVar->do('ALTER TABLE variation DROP COLUMN substrand_reversed_flag');
@@ -628,7 +738,7 @@ sub dumpSQL {
 
   local *FH;
 
-  open ( FH, ">$tmp_dir/tabledump.txt" );
+  open FH, ">$tmp_dir/tabledump.txt";
 
   my $sth = $db->prepare( $sql, { mysql_use_result => 1 });
   $sth->execute();
@@ -663,7 +773,7 @@ sub load {
   my $cols = join( ",", @colnames );
 
   local *FH;
-  open( FH, "<$tmp_dir/tabledump.txt" );
+  open FH, "<$tmp_dir/tabledump.txt";
   my $sql;
 
   if ( @colnames ) {
