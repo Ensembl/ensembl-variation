@@ -6,7 +6,7 @@ package dbSNP::Zebrafish;
 
 use dbSNP::GenericContig;
 use vars qw(@ISA);
-use ImportUtils qw(debug load);
+use ImportUtils qw(debug load create_and_load dumpSQL);
 
 @ISA = ('dbSNP::GenericContig');
 
@@ -59,9 +59,27 @@ sub variation_feature{
     
     close IN;
     close FH;
+
+    debug("Creating genotyped variations");
+
+    create_and_load($self->{'dbVariation'}, "tmp_variation_feature","seq_region_id","seq_region_start","seq_region_end",
+		    "seq_region_strand","variation_id *","variation_name");
+    #creating the temporary table with the genotyped variations
+    dumpSQL($self->{'dbVariation'},qq{SELECT DISTINCT variation_id
+					  FROM individual_genotype
+				      });
+    create_and_load($self->{'dbVariation'},'tmp_genotyped_var',"variation_id *");
     
-    load($self->{'dbVariation'}, "variation_feature","seq_region_id","seq_region_start","seq_region_end",
-	 "seq_region_strand","variation_id","variation_name");
+    $self->{'dbVariation'}->do(qq{INSERT INTO variation_feature
+				      (variation_id,seq_region_id, seq_region_start, seq_region_end, seq_region_strand,
+				       variation_name, flags)
+				      SELECT tv.variation_id, tv.seq_region_id, tv.seq_region_start, tv.seq_region_end,
+				      tv.seq_region_strand, tv.variation_name, IF(tgv.variation_id,'genotyped',NULL)
+				      FROM tmp_variation_feature tv LEFT JOIN tmp_genotyped_var tgv ON tv.variation_id = tgv.variation_id
+				  });
+    $self->{'dbVariation'}->do(qq{DROP TABLE tmp_variation_feature});
+    $self->{'dbVariation'}->do(qq{DROP TABLE tmp_genotyped_var});
+
 }
 
 1;

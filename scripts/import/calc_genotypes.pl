@@ -57,6 +57,7 @@ use strict;
 use warnings;
 
 use constant WINDOW_SIZE => 100_000;
+use Data::Dumper;
 my %genotypes;
 my %snps_ordered; #hash $snps_ordered{$chr}{$position} = $snp
 my %additional_info; #to store additional information to have in the database: variation_feature_id
@@ -74,7 +75,6 @@ while( <IN> ) {
     chomp;
     /^#/ && next;
     my($locus,$position,$personid,$genotype,$variation_feature_id,$seq_region_id,$seq_region_end,$population_id) = split;
-
     if( !defined $genotype) {
       warn "bad format for locus, $_, skipping";
     }
@@ -124,7 +124,6 @@ while( <IN> ) {
     $additional_info{$locus}->{seq_region_end} = $seq_region_end;
     $additional_info{$locus}->{population_id} = $population_id;
 
-
     my $h = {};
     $h->{'locus'} = $locus;
     $h->{'personid'} = $personid;
@@ -137,7 +136,6 @@ while( <IN> ) {
     push(@{$genotypes{$locus}},$h);    
 
 }
-
 #calculate LD for the last region
 while (@positions_ordered){
    &calculate_ld(\%snps_ordered,\%genotypes,\%additional_info,\@positions_ordered,$seq_region_id_previous);  

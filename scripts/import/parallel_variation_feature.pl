@@ -3,6 +3,7 @@ use warnings;
 
 use Getopt::Long;
 use Data::Dumper;
+use Fcntl ':flock';
 use DBI;
 use DBH;
 
@@ -74,7 +75,10 @@ my ($TMP_DIR, $TMP_FILE, $LIMIT,$status_file);
 
   open STATUS, ">>$TMP_DIR/$status_file"
     or throw("Could not open tmp file: $TMP_DIR/$status_file\n"); 
+  flock(STATUS,LOCK_EX);
+  seek(STATUS, 0, 2); #move to the end of the file
   print STATUS "process finished\n";
+  flock(STATUS,LOCK_UN);
   close STATUS;
   #check if it is the last process
   my $processes = `cat $TMP_DIR/$status_file | wc -l`;
@@ -100,7 +104,8 @@ sub load_asm_cache {
   my $csa  = $dbCore->get_CoordSystemAdaptor();
 
   my $top_cs  = $csa->fetch_by_name('chromosome');
-  my $sctg_cs = $csa->fetch_by_name('supercontig');
+#  my $sctg_cs = $csa->fetch_by_name('supercontig');
+  my $sctg_cs = $csa->fetch_by_rank(2); #replaced to support other species without supercontig
   my $seq_cs  = $csa->fetch_by_name('seqlevel');
 
   my $mapper1 = $asma->fetch_by_CoordSystems($top_cs, $sctg_cs);
@@ -137,7 +142,8 @@ sub variation_feature {
   my $csa  = $dbCore->get_CoordSystemAdaptor();
 
   my $top_cs  = $csa->fetch_by_name('toplevel');
-  my $sctg_cs = $csa->fetch_by_name('supercontig');
+#  my $sctg_cs = $csa->fetch_by_name('supercontig');
+  my $sctg_cs = $csa->fetch_by_rank(2); #replaced to support other species without supercontig
 
   my $mapper = $asma->fetch_by_CoordSystems($top_cs, $sctg_cs) if (! $top_level);
   
@@ -146,29 +152,30 @@ sub variation_feature {
   my $sth = $dbVar->prepare
     (qq{SELECT vf.variation_feature_id, vf.seq_region_id,
                vf.seq_region_start, vf.seq_region_end, vf.seq_region_strand,
-               vf.variation_id, a.allele, tmw.count, v.name
+               vf.variation_id, a.allele, tmw.count, v.name, vf.flags
         FROM   variation_feature vf, allele a, tmp_map_weight tmw,
                variation v
         WHERE  a.variation_id = vf.variation_id
         AND    vf.variation_id = tmw.variation_id
         AND    vf.variation_id = v.variation_id
 	$LIMIT
-        ORDER BY vf.seq_region_id, vf.seq_region_start, vf.variation_feature_id},{mysql_use_result => 1});
+        ORDER BY vf.seq_region_id, vf.seq_region_start, vf.variation_feature_id},{mysql_use_result=>1});
 
   $sth->execute();
 
   my ($vf_id, $sr_id, $sr_start, $sr_end, $sr_strand,
-      $v_id, $allele, $map_weight, $v_name);
+      $v_id, $allele, $map_weight, $v_name, $vf_flags);
 
   $sth->bind_columns(\$vf_id, \$sr_id, \$sr_start, \$sr_end, \$sr_strand,
-                     \$v_id, \$allele, \$map_weight, \$v_name);
+                     \$v_id, \$allele, \$map_weight, \$v_name, \$vf_flags);
 
   my ($cur_vf_id, $cur_map_weight, $cur_v_id, $cur_v_name,
-     $top_coord, $top_sr_id, $top_sr_start, $top_sr_end, $top_sr_strand, $ref_allele);
+     $top_coord, $top_sr_id, $top_sr_start, $top_sr_end, $top_sr_strand, $ref_allele,$cur_vf_flags);
   my %alleles;
   my %alleles_expanded; #same hash as before, but with the expanded alleles: $alleles_expanded{AGAGAG} = (AG)3
 
-  open FH, ">$TMP_DIR/variation_feature_$$\.txt"
+  my $dbname = $dbVar->dbname(); #get the name of the database to create the file
+  open FH, ">$TMP_DIR/$dbname.variation_feature_$$\.txt"
     or throw("Could not open tmp file: $TMP_DIR/variation_feature_$$\n");
 
   while($sth->fetch()) {
@@ -191,13 +198,13 @@ sub variation_feature {
 	  if ($top_level) {
 	    print FH join("\t", $cur_vf_id, $top_sr_id, $top_sr_start, $top_sr_end, $top_sr_strand,
 			  $cur_v_id, $allele_str, $cur_v_name,
-			  $cur_map_weight), "\n";
+			  $cur_map_weight,$cur_vf_flags), "\n";
 	  }
 	  else {
 	    print FH join("\t", $cur_vf_id, $top_sr_id, $top_coord->start(),
 			  $top_coord->end(), $top_coord->strand(),
 			  $cur_v_id, $allele_str, $cur_v_name,
-			  $cur_map_weight), "\n";
+			  $cur_map_weight,$cur_vf_flags), "\n";
 	  }
 	}
       }
@@ -211,7 +218,8 @@ sub variation_feature {
       $cur_map_weight = $map_weight;
       $cur_v_id  = $v_id;
       $cur_v_name = $v_name;
-      
+      $cur_vf_flags = 1 if (defined $vf_flags);
+      $cur_vf_flags = '\N' if (! defined $vf_flags);
       $top_sr_start = $sr_start;
       $top_sr_end = $sr_end;
       $top_sr_strand = $sr_strand;
@@ -298,12 +306,12 @@ sub variation_feature {
       if ($top_level) {
 	print FH join("\t", $cur_vf_id, $top_sr_id, $top_sr_start, $top_sr_end, $top_sr_strand,
 		      $cur_v_id, $allele_str, $cur_v_name,
-		      $map_weight), "\n";
+		      $map_weight,$cur_vf_flags), "\n";
       }
       else {
 	print FH join("\t", $vf_id, $top_sr_id, $top_coord->start(),
 		      $top_coord->end(), $top_coord->strand(),
-		      $cur_v_id, $allele_str, $v_name, $map_weight), "\n";
+		      $cur_v_id, $allele_str, $v_name, $map_weight, $cur_vf_flags), "\n";
       }
     }
   }
@@ -322,23 +330,23 @@ sub last_process{
     $dbVar->do("DELETE FROM variation_feature");
     
     debug("Reimporting processed variation features");
-    
+    my $dbname = $dbVar->dbname(); #get the name of the database to create the file    
     #group all the fragments in 1 file
-    my $call = "cat $TMP_DIR/variation_feature*.txt > $TMP_DIR/$TMP_FILE";
+    my $call = "cat $TMP_DIR/$dbname.variation_feature*.txt > $TMP_DIR/$TMP_FILE";
     system($call);
 
-    unlink(<$TMP_DIR/variation_feature*.txt>);
+    unlink(<$TMP_DIR/$dbname.variation_feature*.txt>);
     #and finally, load the information
     load($dbVar, qw(variation_feature variation_feature_id seq_region_id
 			     seq_region_start seq_region_end seq_region_strand variation_id
-			     allele_string variation_name map_weight));
+			     allele_string variation_name map_weight flags));
 
     $dbVar->do("DROP TABLE tmp_map_weight");
 
     update_meta_coord($dbCore, $dbVar, 'variation_feature');
     #and delete the status file
 
-#    unlink("$TMP_DIR/$status_file");
+    unlink("$TMP_DIR/$status_file");
 }
 
 #

@@ -14,7 +14,7 @@ sub variation_feature{
     my $self = shift;
 
     my %scaff; #contains relation AAAB -> NW
-    open(IN,"gzip -dc dbSNP/scaff_NW_chr_CRA_AAAB.gz") || die "Could not get file with scaff mapping data: $!\n";
+    open(IN,"gzip -dc dbSNP/scaff_NW_chr_CRA_AAAB.gz |") || die "Could not get file with scaff mapping data: $!\n";
     my @line;
     while (<IN>){
 	chomp;
@@ -58,20 +58,27 @@ sub variation_feature{
     create_and_load($self->{'dbVariation'}, "tmp_contig_loc", "snp_id i*", "chr *", "start i", 
 		    "end i", "strand i");
     
+    #creating the temporary table with the genotyped variations
+    dumpSQL($self->{'dbVariation'},qq{SELECT DISTINCT variation_id
+					  FROM individual_genotype
+				      });
+    create_and_load($self->{'dbVariation'},'tmp_genotyped_var',"variation_id *");
+
     debug("Creating variation_feature data");
     
     $self->{'dbVariation'}->do(qq{INSERT INTO variation_feature 
 				      (variation_id, seq_region_id,
 				       seq_region_start, seq_region_end, seq_region_strand,
-				       variation_name)
+				       variation_name, flags)
 				      SELECT v.variation_id, ts.seq_region_id, tcl.start, tcl.end,
-				      tcl.strand, v.name
-				      FROM   variation v, tmp_contig_loc tcl, tmp_seq_region ts
+				      tcl.strand, v.name, IF(tgv.variation_id,'genotyped',NULL)
+				      FROM   variation v LEFT JOIN tmp_genotyped_var tgv ON v.variation_id = tgv.variation_id, tmp_contig_loc tcl, tmp_seq_region ts
 				      WHERE  v.snp_id = tcl.snp_id
 				      AND    tcl.chr = ts.name});
     
     $self->{'dbVariation'}->do("DROP TABLE tmp_contig_loc");
     $self->{'dbVariation'}->do("DROP TABLE tmp_seq_region");
+    $self->{'dbVariation'}->do("DROP TABLE tmp_genotyped_var");
 }
 
 1;

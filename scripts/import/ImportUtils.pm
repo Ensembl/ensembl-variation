@@ -54,41 +54,42 @@ sub load {
 
   my $cols = join( ",", @colnames );
 
-  rename("$TMP_DIR/$TMP_FILE", "$TMP_DIR/$tablename.txt");
+  my $table_file = "$TMP_DIR/$tablename\_$$\.txt";
+  rename("$TMP_DIR/$TMP_FILE", $table_file);
+   
+#  my $host = $db->host();
+#  my $user = $db->user();
+#  my $pass = $db->pass();
+#  my $port = $db->port();
+#  my $dbname = $db->dbname();
 
-  my $host = $db->host();
-  my $user = $db->user();
-  my $pass = $db->pass();
-  my $port = $db->port();
-  my $dbname = $db->dbname();
+#  my $call = "mysqlimport -c $cols -h $host -u $user " .
+#    "-p$pass -P$port $dbname $TMP_DIR/$tablename.txt";
 
-  my $call = "mysqlimport -c $cols -h $host -u $user " .
-    "-p$pass -P$port $dbname $TMP_DIR/$tablename.txt";
+#  system($call);
 
-  system($call);
-
-  unlink("$TMP_DIR/$tablename.txt");
+#  unlink("$TMP_DIR/$tablename.txt");
 
 
 ##### Alternative way of doing same thing
-#  my $sql;
+  my $sql;
 
-#   if ( @colnames ) {
+   if ( @colnames ) {
 
-#     $sql = qq{
-#               LOAD DATA LOCAL INFILE '$TMP_DIR/$TMP_FILE'
-#               INTO TABLE $tablename( $cols )
-#              };
-#   } else {
-#     $sql = qq{
-#               LOAD DATA LOCAL INFILE '$TMP_DIR/$TMP_FILE'
-#               INTO TABLE $tablename
-#              };
-#   }
+     $sql = qq{
+               LOAD DATA LOCAL INFILE '$table_file'
+               INTO TABLE $tablename( $cols )
+              };
+   } else {
+     $sql = qq{
+               LOAD DATA LOCAL INFILE '$table_file'
+               INTO TABLE $tablename
+              };
+   }
 
-#   $db->do( $sql );
+   $db->do( $sql );
 
-#   unlink( "$TMP_DIR/$TMP_FILE" );
+   unlink( "$table_file" );
 }
 
 
