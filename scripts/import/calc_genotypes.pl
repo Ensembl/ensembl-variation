@@ -59,12 +59,13 @@ use Benchmark;
 use warnings;
 use Bio::EnsEMBL::Utils::Exception qw(warning throw verbose);
 
+
 my %genotypes;
 my %snps_ordered; #hash $snps_ordered{$chr}{$position} = $snp
 my %additional_info; #to store additional information to have in the database: variation_feature_id
 
 #assuming the script is called calc_genotypes.pl genotypes.txt genotypes_output.txt
- open FH, ">$ARGV[1]"
+ open FH, ">>$ARGV[1]"
     or throw("Could not open tmp file: $ARGV[1]\n");
 open IN, "$ARGV[0]"
  or throw("Could not open input file: $ARGV[0]\n");
@@ -100,8 +101,8 @@ while( <IN> ) {
     }
     if ($seq_region_id_previous == 0){$seq_region_id_previous = $seq_region_id};
     #improves version: substituting 2 hashes, one for snps in chromosome and the other for snps in position for 1 hash: $snps_ordered{chr}{position} = sn
-     if (defined $snps_ordered{$seq_region_id}{$position} && $snps_ordered{$seq_region_id}{$position} == $locus){
-           die "position $seq_region_id,$position for $locus disagrees with earlier position";
+     if (defined $snps_ordered{$seq_region_id}{$position} && $snps_ordered{$seq_region_id}{$position} != $locus){
+           warn "position $seq_region_id,$position for $locus disagrees with earlier position";
      }
      else{
          $snps_ordered{$seq_region_id}{$position} = $locus;
@@ -134,7 +135,6 @@ sub calculate_ld{
     my $additional_info = shift;
     my $seq_region_id = shift;
 
-    my $t1 = new Benchmark;
     my %output;
     my $snp_count = 0; #to count the number of snps between the 2  in the region
     #my approach to the problem: have a hash by chromosome and position and compare things    
@@ -148,20 +148,18 @@ sub calculate_ld{
 	foreach my $position2 (@positions_ordered){
 	    last if (abs($position - $position2) > 1_00_000);
 	    my $key = "$snps_ordered->{$seq_region_id}{$position}:$snps_ordered->{$seq_region_id}{$position2}";
-	    
+	    $snp_count++;
 	    if( &shared_people($genotypes->{$snps_ordered->{$seq_region_id}{$position}},$genotypes->{$snps_ordered->{$seq_region_id}{$position2}}) < 20 ) {
 #               print "skipping $key as not enough shared people\n";
+#		next;
 	    }
 	    
 	    my $stats_hash = &calculate_pairwise_stats($genotypes->{$snps_ordered->{$seq_region_id}{$position}},$genotypes->{$snps_ordered->{$seq_region_id}{$position2}},$snp_count);
 	    
 	    $output{$key} = $stats_hash;
-	    $snp_count++;
+
 	}
     }
-    my $t2 = new Benchmark;
-    my $td = timediff($t2,$t1);
-    print "ld in region $seq_region_id took: ",timestr($td), "\n";	
     
     #and finally, print the ld calculation for the chromosome into a file
     my $locus1;
@@ -185,7 +183,7 @@ sub calculate_ld{
 	else{
 	    $seq_region_end = $additional_info->{$locus1}->{seq_region_end};
 	}
-	print FH join("\t",$additional_info->{$locus1}->{variation_feature_id},$additional_info->{$locus2}->{variation_feature_id},$additional_info->{$locus1}->{population_id},$seq_region_id,$seq_region_start,$seq_region_end,$output{$key}->{'snp_count'},$output{$key}->{'r2'}, $output{$key}->{'Dprima'}),"\n";	
+	print FH join("\t",$additional_info->{$locus1}->{variation_feature_id},$additional_info->{$locus2}->{variation_feature_id},$additional_info->{$locus1}->{population_id},$seq_region_id,$seq_region_start,$seq_region_end,$output{$key}->{'snp_count'},$output{$key}->{'r2'}, abs($output{$key}->{'Dprima'})),"\n";	
     }   
 }
 
