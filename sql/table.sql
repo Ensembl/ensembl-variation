@@ -67,7 +67,7 @@ create table allele(
 	population_id int,
 
 	primary key( allele_id ),
-	key variation_idx( variation_id,allele )
+	key variation_idx( variation_id,allele(10) )
 );
 
 
