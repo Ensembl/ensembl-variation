@@ -19,6 +19,8 @@ create table variation(
 	source_id int not null, 
 	name varchar(255),
 	parent_variation_id int,
+  validation_status enum('VALIDATED', 'NOT_VALIDATED'),
+  
 
 	primary key( variation_id ),
 	key parent_var_idx( parent_variation_id ),
@@ -189,8 +191,8 @@ create table allele_group_allele (
 
 create table flanking_sequence (
 	variation_id int not null,
-	upstream varchar(255),
-	downstream varchar(255),
+	upstream text,
+	downstream text,
 
 	primary key( variation_id )
 );
