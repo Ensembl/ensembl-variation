@@ -45,7 +45,7 @@ Bio::EnsEMBL::Variation::VariationFeature - A genomic position for a nucleotide 
     # Get the Variation object which this feature represents the genomic
     # position of. If not already retrieved from the DB, this will be
     # transparently lazy-loaded
-    my $v = $vf->get_Variation();
+    my $v = $vf->variation();
 
 =head1 DESCRIPTION
 
@@ -79,9 +79,6 @@ our @ISA = ('Bio::EnsEMBL::Feature');
 =head2 new
 
   Arg [-dbID] :
-    see superclass constructor
-
-  Arg [-ADAPTOR] :
     see superclass constructor
 
   Arg [-ADAPTOR] :
