@@ -190,7 +190,7 @@ sub _objs_from_sth {
   # construct all variation groups without their associated variations
 
   while($sth->fetch()) {
-    if(!defined($cur_vg) || !$cur_vg_id == $vg_id) {
+    if(!defined($cur_vg) || $cur_vg_id != $vg_id) {
       $cur_vg = Bio::EnsEMBL::Variation::VariationGroup->new
         (-dbID => $vg_id,
          -adaptor => $self,
