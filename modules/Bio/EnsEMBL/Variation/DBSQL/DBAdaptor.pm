@@ -57,7 +57,8 @@ sub get_available_adaptors{
 		 'VariationGroup' => 'Bio::EnsEMBL::Variation::DBSQL::VariationGroupAdaptor',
 		 'AlleleGroup' => 'Bio::EnsEMBL::Variation::DBSQL::AlleleGroupAdaptor',
 		 'VariationGroupFeature' => 'Bio::EnsEMBL::Variation::DBSQL::VariationGroupFeatureAdaptor',
-		 'MetaCoordContainer' => 'Bio::EnsEMBL::DBSQL::MetaCoordContainer'
+		 'MetaCoordContainer' => 'Bio::EnsEMBL::DBSQL::MetaCoordContainer',
+		 'MetaContainer' => 'Bio::EnsEMBL::Variation::DBSQL::MetaContainer'
 		 );
     return (\%pairs);
 }
