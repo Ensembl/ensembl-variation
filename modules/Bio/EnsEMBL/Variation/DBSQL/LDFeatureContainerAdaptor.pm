@@ -130,6 +130,29 @@ sub fetch_by_VariationFeature {
   return $ldFeatureContainer;
 }
 
+=head2 get_global_population
+
+    Example     : $global_population = $ldContainer->get_global_population();
+    Description : Gets the global population used in the ld table to calculate the LD across all populations
+    ReturnType  : int $pop_id
+    Exceptions  : none
+    Caller      : general
+
+=cut
+
+sub get_global_population{
+    my $self = shift;
+    my $global_population = '';
+
+    my $sth = $self->prepare(qq{SELECT population_id FROM population WHERE name = 'Global population'});
+    $sth->execute();
+    $sth->bind_columns(\$global_population);
+    $sth->fetch;
+    $sth->finish;
+
+    return $global_population;
+    
+}
 
 # methods used by superclass to construct SQL
 sub _tables { return ['pairwise_ld', 'pl']; }
