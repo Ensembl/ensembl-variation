@@ -37,12 +37,12 @@ use warnings;
 package Bio::EnsEMBL::Variation::DBSQL::DBAdaptor;
 
 
-use Bio::EnsEMBL::DBSQL::DBConnection;
+use Bio::EnsEMBL::DBSQL::DBAdaptor;
 
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Utils::Argument qw(rearrange);
 
-our @ISA = ('Bio::EnsEMBL::DBSQL::DBConnection');
+our @ISA = ('Bio::EnsEMBL::DBSQL::DBAdaptor');
 
 
 sub new {
@@ -72,121 +72,27 @@ sub dnadb {
   return $self->{'dnadb'};
 }
 
-
-sub get_PopulationAdaptor {
-  my $self = shift;
-  return $self->_get_adaptor
-    ('Bio::EnsEMBL::Variation::DBSQL::PopulationAdaptor');
-}
-
-sub get_IndividualAdaptor {
-  my $self = shift;
-  return $self->_get_adaptor
-    ('Bio::EnsEMBL::Variation::DBSQL::IndividualAdaptor');
-}
-
-
-sub get_VariationAdaptor {
-  my $self = shift;
-  return $self->_get_adaptor
-    ('Bio::EnsEMBL::Variation::DBSQL::VariationAdaptor');
-}
-
-sub get_VariationFeatureAdaptor {
-  my $self = shift;
-  return $self->_get_adaptor
-    ('Bio::EnsEMBL::Variation::DBSQL::VariationFeatureAdaptor');
-}
-
-sub get_IndividualGenotypeAdaptor {
-  my $self = shift;
-  return $self->_get_adaptor
-    ('Bio::EnsEMBL::Variation::DBSQL::IndividualGenotypeAdaptor');
-}
-
-sub get_PopulationGenotypeAdaptor {
-  my $self = shift;
-  return $self->_get_adaptor
-    ('Bio::EnsEMBL::Variation::DBSQL::PopulationGenotypeAdaptor');
-}
-
-
-sub get_TranscriptVariationAdaptor {
-  my $self = shift;
-  return $self->_get_adaptor
-    ('Bio::EnsEMBL::Variation::DBSQL::TranscriptVariationAdaptor');
-}
-
-
-sub get_VariationGroupAdaptor {
-  my $self = shift;
-  return $self->_get_adaptor
-    ('Bio::EnsEMBL::Variation::DBSQL::VariationGroupAdaptor');
-}
-
-
-sub get_AlleleGroupAdaptor {
-  my $self = shift;
-  return $self->_get_adaptor
-    ('Bio::EnsEMBL::Variation::DBSQL::AlleleGroupAdaptor');
-}
-
-
-sub get_VariationGroupFeatureAdaptor {
-  my $self = shift;
-  return $self->_get_adaptor
-    ('Bio::EnsEMBL::Variation::DBSQL::VariationGroupFeatureAdaptor');
-
-}
-
-
-sub get_SliceAdaptor {
-  my $self = shift;
-  if(!$self->dnadb()) {
-    throw('Cannot obtain SliceAdaptor without attached dnadb');
-  }
-  return $self->dnadb->get_SliceAdaptor();
-}
-
-sub get_CoordSystemAdaptor {
-  my $self = shift;
-  if(!$self->dnadb()) {
-    throw('Cannot obtain CoordSystemAdaptor without attached dnadb');
-  }
-  return $self->dnadb->get_CoordSystemAdaptor();
-}
-
-
-sub get_AssemblyMapperAdaptor {
-  my $self = shift;
-  if(!$self->dnadb()) {
-    throw('Cannot obtain AssemblyMapperAdaptor without attached dnadb');
-  }
-  return $self->dnadb->get_AssemblyMapperAdaptor();
-}
-
-
-sub get_SequenceAdaptor {
-  my $self = shift;
-  if(!$self->dnadb()) {
-    throw("Cannot obtain SequenceAdaptor without attached dnadb");
-  }
-  return $self->dnadb->get_SequenceAdaptor();
-}
-
-
-sub get_TranscriptAdaptor {
-  my $self = shift;
-  if(!$self->dnadb()) {
-    throw("Cannot obtain TranscriptAdaptor without attached dnadb");
-  }
-  return $self->dnadb->get_TranscriptAdaptor();
-}
-
-
-sub get_MetaCoordContainer {
-  my $self = shift;
-  return $self->_get_adaptor('Bio::EnsEMBL::DBSQL::MetaCoordContainer');
+sub get_available_adaptors{
+    my %pairs = (
+		 'Population' => 'Bio::EnsEMBL::Variation::DBSQL::PopulationAdaptor',
+		 'Individual' => 'Bio::EnsEMBL::Variation::DBSQL::IndividualAdaptor',
+		 'Variation' => 'Bio::EnsEMBL::Variation::DBSQL::VariationAdaptor',
+		 'VariationFeature' => 'Bio::EnsEMBL::Variation::DBSQL::VariationFeatureAdaptor',
+		 'LDFeatureContainer' => 'Bio::EnsEMBL::Variation::DBSQL::LDFeatureContainerAdaptor',
+		 'IndividualGenotype' => 'Bio::EnsEMBL::Variation::DBSQL::IndividualGenotypeAdaptor',
+		 'PopulationGenotype' => 'Bio::EnsEMBL::Variation::DBSQL::PopulationGenotypeAdaptor',
+		 'TranscriptVariation' => 'Bio::EnsEMBL::Variation::DBSQL::TranscriptVariationAdaptor',
+		 'VariationGroup' => 'Bio::EnsEMBL::Variation::DBSQL::VariationGroupAdaptor',
+		 'AlleleGroup' => 'Bio::EnsEMBL::Variation::DBSQL::AlleleGroupAdaptor',
+		 'VariationGroupFeature' => 'Bio::EnsEMBL::Variation::DBSQL::VariationGroupFeatureAdaptor',
+		 'MetaCoordContainer' => 'Bio::EnsEMBL::DBSQL::MetaCoordContainer',
+		 'Slice' => 'Bio::EnsEMBL::DBSQL::SliceAdaptor',
+		 'CoordSystem'   => 'Bio::EnsEMBL::DBSQL::CoordSystemAdaptor',
+		 'AssemblyMapper'       => 'Bio::EnsEMBL::DBSQL::AssemblyMapperAdaptor',
+		 'Sequence'             => 'Bio::EnsEMBL::DBSQL::SequenceAdaptor',
+		 'Transcript'           => 'Bio::EnsEMBL::DBSQL::TranscriptAdaptor'
+		 );
+    return (\%pairs);
 }
 
 1;
