@@ -12,7 +12,7 @@ use Bio::EnsEMBL::Utils::Exception qw(warning throw verbose);
 use Bio::EnsEMBL::Utils::Sequence qw(expand);
 use ImportUtils qw(debug load);
 
-use constant MITHOCONDRIAL_CONTIG => 'MT_NC_001807'; #the human mithocondrial contigs are already in top_level
+use constant MITHOCONDRIAL_CONTIG => 'MT'; #the human mithocondrial contigs are already in top_level
 
 my ($TMP_DIR, $TMP_FILE, $LIMIT,$status_file);
 
