@@ -14,9 +14,8 @@ use TestUtils qw ( debug test_getter_setter count_rows);
 
 use MultiTestDB;
 use Bio::EnsEMBL::Variation::VariationFeature;
-use Data::Dumper;
 
-our $verbose = 1;
+our $verbose = 0;
 
 my $multi = MultiTestDB->new();
 
@@ -69,7 +68,7 @@ sub print_container {
       my ($key1,$key2) = split /-/,$key;
       print STDERR "LD values for ", $container->{'variationFeatures'}->{$key1}->variation_name, " and ",$container->{'variationFeatures'}->{$key2}->variation_name;
       foreach my $population (keys %{$container->{'ldContainer'}->{$key}}){
-	  print STDERR " in population $population:\n Dprime - ",$container->{'ldContainer'}->{$key}->{$population}->{'Dprime'}, "\n r2: ", $container->{'ldContainer'}->{$key}->{$population}->{'r2'}, "\n snp_distance: ",$container->{'ldContainer'}->{$key}->{$population}->{'snp_distance_count'}, " \nsample count ",$container->{'ldContainer'}->{$key}->{$population}->{'sample_count'},"\n";
+	  print STDERR " in population $population:\n d_prime - ",$container->{'ldContainer'}->{$key}->{$population}->{'d_prime'}, "\n r2: ", $container->{'ldContainer'}->{$key}->{$population}->{'r2'}, "\n snp_distance: ",$container->{'ldContainer'}->{$key}->{$population}->{'snp_distance_count'}, " \nsample count ",$container->{'ldContainer'}->{$key}->{$population}->{'sample_count'},"\n";
       }
   }
 
