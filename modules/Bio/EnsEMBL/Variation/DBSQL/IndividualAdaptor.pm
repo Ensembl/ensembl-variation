@@ -199,7 +199,7 @@ sub fetch_all_by_Population {
                that Male individuals can only be fathers, Female individuals
                can only be mothers and Unknown individuals can only be one
                or the other - not both.
-  Returntype : reference to list of Bio::EnsEMBL::DBSQL::Individuals
+  Returntype : reference to list of Bio::EnsEMBL::Variation::Individuals
   Exceptions : throw if incorrect argument passed
                warning if provided individual has no dbID 
   Caller     : general, Individual::get_all_child_Individuals
@@ -260,7 +260,7 @@ sub fetch_all_by_parent_Individual {
   # otherwise assume was a father (or nothing)
   $sth = $self->prepare($father_sql);
   $sth->execute($parent->dbID());
-  $result = $self->_objs_from_sth;
+  $result = $self->_objs_from_sth($sth);
   $sth->finish();
 
   return $result;
