@@ -123,9 +123,10 @@ sub fetch_by_name {
     (q{SELECT v.variation_id, v.name, v.validation_status, s1.name,
               a.allele_id, a.allele, a.frequency, a.population_id,
               vs.name, s2.name
-       FROM   variation v, source s1, source s2, allele a, variation_synonym vs
-       WHERE  v.variation_id = a.variation_id
-       AND    v.variation_id = vs.variation_id
+       FROM   variation v, source s1, source s2, variation_synonym vs
+         LEFT JOIN allele a
+	 ON v.variation_id = a.variation_id
+       WHERE  v.variation_id = vs.variation_id
        AND    v.source_id = s1.source_id
        AND    vs.source_id = s2.source_id
        AND    v.name = ?
@@ -142,10 +143,11 @@ sub fetch_by_name {
       (q{SELECT v.variation_id, v.name, v.validation_status, s1.name,
                 a.allele_id, a.allele, a.frequency, a.population_id,
                 vs2.name, s2.name
-         FROM   variation v, source s1, source s2, allele a,
+         FROM   variation v, source s1, source s2,
                 variation_synonym vs1, variation_synonym vs2
-         WHERE  v.variation_id = a.variation_id
-         AND    v.variation_id = vs1.variation_id
+	   LEFT JOIN allele a
+	   ON v.variation_id = a.variation_id
+         WHERE  v.variation_id = vs1.variation_id
          AND    v.variation_id = vs2.variation_id
          AND    v.source_id = s1.source_id
          AND    vs2.source_id = s2.source_id
@@ -203,10 +205,11 @@ sub fetch_all_by_dbID_list {
       (qq{SELECT v.variation_id, v.name, v.validation_status, s1.name,
                  a.allele_id, a.allele, a.frequency, a.population_id,
                  vs.name, s2.name
-          FROM   variation v, source s1, source s2, allele a,
+          FROM   variation v, source s1, source s2,
                  variation_synonym vs
-          WHERE  v.variation_id = a.variation_id
-          AND    v.variation_id = vs.variation_id
+	   LEFT JOIN allele a
+	   ON v.variation_id = a.variation_id
+          WHERE  v.variation_id = vs.variation_id
           AND    v.source_id = s1.source_id
           AND    vs.source_id = s2.source_id
           AND    v.variation_id $id_str});
