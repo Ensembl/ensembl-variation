@@ -24,7 +24,7 @@ Bio::EnsEMBL::Variation::DBSQL::IndividualGenotypeAdaptor
   # Get all individual genotypes for an individual
   $ind = $ia->fetch_by_dbID(1219);
 
-  foreach $igtype (@{$iga->fetch_by_Individual($ind)}) {
+  foreach $igtype (@{$iga->fetch_all_by_Individual($ind)}) {
     print $igtype->variation()->name(),  ' ',
           $igtype->allele1(), '/', $igtype->allele2(), "\n";
   }
@@ -114,7 +114,7 @@ sub fetch_by_dbID {
 
   Arg [1]    : Bio::EnsEMBL::Variation::Individual
   Example    : $ind = $ind_adaptor->fetch_by_dbID(1345);
-               @gtys = $igty_adaptor->fetch_all_by_individual($ind);
+               @gtys = $igty_adaptor->fetch_all_by_Individual($ind);
   Description: Retrieves all genotypes which are stored for a specified
                individual.
   Returntype : Bio::EnsEMBL::Variation::IndividualGenotype
