@@ -127,7 +127,7 @@ sub update_meta{
     $sth_pop->execute($default_population);
     $sth_pop->bind_columns(\$population_id);
     $sth_pop->fetch();
-    $sth->finish();
+    $sth_pop->finish();
 
     my $sth = $dbVar->prepare(qq{INSERT INTO meta (meta_key,meta_value) VALUES (?,?)
 				 });
