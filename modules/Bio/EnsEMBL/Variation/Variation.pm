@@ -200,26 +200,6 @@ sub name{
 
 
 
-=head2 source
-
-  Arg [1]    : string $newval (optional) 
-               The new value to set the source attribute to
-  Example    : $source = $obj->source()
-  Description: Getter/Setter for the source attribute
-  Returntype : string
-  Exceptions : none
-  Caller     : general
-
-=cut
-
-sub source{
-  my $self = shift;
-  return $self->{'source'} = shift if(@_);
-  return $self->{'source'};
-}
-
-
-
 =head2 get_all_synonyms
 
   Arg [1]    : (optional) string $source - the source of the synonyms to
@@ -364,9 +344,9 @@ sub add_validation_state {
 
 =head2 source
 
-  Arg [1]    : string $newval (optional) 
+  Arg [1]    : string $source (optional)
                The new value to set the source attribute to
-  Example    : $source = $obj->source()
+  Example    : $source = $v->source()
   Description: Getter/Setter for the source attribute
   Returntype : string
   Exceptions : none

@@ -64,12 +64,17 @@ Post questions to the Ensembl development list: ensembl-dev@ebi.ac.uk
 
 =cut
 
-
 use strict;
 use warnings;
 
 package Bio::EnsEMBL::Variation::VariationFeature;
 
+use Bio::EnsEMBL::Feature;
+use Bio::EnsEMBL::Utils::Exception qw(throw warning);
+use Bio::EnsEMBL::Utils::Argument  qw(rearrange);
+
+
+our @ISA = ('Bio::EnsEMBL::Feature');
 
 =head2 new
 
@@ -224,19 +229,29 @@ sub map_weight{
 
 
 
-=head2 get_Variation
+=head2 variation
 
-  Arg [1]    : none
-  Example    : $v = $vf->get_Variation();
-  Description: Retrieves the variation associated with this feature.
-  Returntype : 
-  Exceptions : 
-  Caller     : 
+  Arg [1]    : (optional) Bio::EnsEMBL::Variation::Variation $variation
+  Example    : $v = $vf->variation();
+  Description: Getter/Setter for the variation associated with this feature.
+               If not set, and this VariationFeature has an associated adaptor
+               an attempt will be made to lazy-load the variation from the
+               database.
+  Returntype : Bio::EnsEMBL::Variation::Variation
+  Exceptions : throw on incorrect argument
+  Caller     : general
 
 =cut
 
-sub get_Variation {
+sub variation {
   my $self = shift;
+
+  if(@_) {
+    if(!ref($_[0]) || !$_[0]->isa('Bio::EnsEMBL::Variation::Variation')) {
+      throw("Bio::EnsEMBL::Variation::Variation argument expected");
+    }
+    $self->{'variation'} = shift;
+  }
 
   ### TODO: this should be lazy-loaded on demand
   return $self->{'variation'};
