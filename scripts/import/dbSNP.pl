@@ -585,7 +585,9 @@ sub variation_feature {
   my $tablename = $SPECIES_PREFIX . 'SNPContigLoc';
 
   dumpSQL( qq{SELECT snp_id, $CONTIG_SQL,
-                     asn_from, asn_to, IF(orientation, -1, 1)
+                     asn_from, 
+                     IF(loc_type = 3,  asn_from - 1, asn_to), # 3 = between
+                     IF(orientation, -1, 1)
               FROM   $tablename
               $LIMIT_SQL});
 
