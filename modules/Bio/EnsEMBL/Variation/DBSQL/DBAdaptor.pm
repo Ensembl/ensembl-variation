@@ -134,6 +134,14 @@ sub get_AlleleGroupAdaptor {
 }
 
 
+sub get_VariationGroupFeatureAdaptor {
+  my $self = shift;
+  return $self->_get_adaptor
+    ('Bio::EnsEMBL::Variation::DBSQL::VariationGroupFeatureAdaptor');
+
+}
+
+
 sub get_SliceAdaptor {
   my $self = shift;
   if(!$self->dnadb()) {
