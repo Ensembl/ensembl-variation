@@ -15,7 +15,8 @@ use ImportUtils qw(dumpSQL debug create_and_load load );
 my $TAX_ID;
 my $LIMIT_SQL;
 my $CONTIG_SQL;
-my $TMP_DIR = $ImportUtils::TMP_DIR;
+my $TMP_DIR  = $ImportUtils::TMP_DIR;
+my $TMP_FILE = $ImportUtils::TMP_FILE;
 
 my $dbSNP;
 my $dbVar;
@@ -190,7 +191,7 @@ sub variation_table {
 
   # dump RefSNPs to tmp file with validation status set
 
-  open ( FH, ">$TMP_DIR/tabledump.txt" );
+  open ( FH, ">$TMP_DIR/$TMP_FILE" );
 
   while($arr = $sth->fetchrow_arrayref()) {
     if(!defined($cur_variation_id) || $arr->[0] != $cur_variation_id) {
@@ -233,7 +234,7 @@ sub dump_subSNPs {
 
   $sth->execute();
 
-  open ( FH, ">$TMP_DIR/tabledump.txt" );
+  open ( FH, ">$TMP_DIR/$TMP_FILE" );
 
   my $row;
   while($row = $sth->fetchrow_arrayref()) {
@@ -492,7 +493,7 @@ sub flanking_sequence_table {
 
   $sth->bind_columns(\$vid, \$ssid, \$type, \$line, \$revcom);
 
-  open(FH, ">$TMP_DIR/flankingdump.txt");
+  open(FH, ">$TMP_DIR/$TMP_FILE");
 
   my $upstream = '';
   my $dnstream = '';
@@ -556,7 +557,7 @@ sub flanking_sequence_table {
   $dbVar->do(qq{LOAD DATA LOCAL INFILE '$TMP_DIR/flankingdump.txt'
               INTO TABLE flanking_sequence});
 
-  unlink(">$TMP_DIR/flankingdump.txt");
+  unlink("$TMP_DIR/flankingdump.txt");
   $dbVar->do("DROP TABLE tmp_seq_3");
   $dbVar->do("DROP TABLE tmp_seq_5");
   $dbVar->do("DROP TABLE tmp_seq");
@@ -724,7 +725,7 @@ sub individual_genotypes {
 
   $sth->execute();
 
-  open ( FH, ">$TMP_DIR/tabledump.txt" );
+  open ( FH, ">$TMP_DIR/$TMP_FILE" );
 
   my $row;
   while($row = $sth->fetchrow_arrayref()) {
