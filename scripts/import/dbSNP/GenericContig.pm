@@ -17,7 +17,7 @@ sub new {
   my $class = ref($caller) || $caller;
 
   my ($dbSNP, $dbCore, $dbVariation, $tmp_dir, $tmp_file, $limit, $alldiff_file, $taxID, $contig_SQL, $species_prefix) =
-        rearrange([qw(DBSNP DBCORE DBVARIATION TMPDIR TMPFILE LIMIT ALLDIFF TAXID CONTIG_SQL SPECIES_PREFIX)],@_);
+        rearrange([qw(DBSNP DBCORE DBVARIATION TMPDIR TMPFILE LIMIT ALLDIFF TAXID CONTIGSQL SPECIES_PREFIX)],@_);
 
 
   return bless {'dbSNP' => $dbSNP,
@@ -36,14 +36,14 @@ sub new {
 sub dump_dbSNP{
     my $self = shift;
     
-    $self->source_table();
-    $self->population_table();
-    $self->individual_table();
-    $self->variation_table();
-    $self->individual_genotypes();
-    $self->population_genotypes();
-    $self->allele_table();
-    $self->flanking_sequence_table();
+#    $self->source_table();
+#    $self->population_table();
+#    $self->individual_table();
+#    $self->variation_table();
+#    $self->individual_genotypes();
+#    $self->population_genotypes();
+#    $self->allele_table();
+#    $self->flanking_sequence_table();
     $self->variation_feature();
     $self->variation_group();
     $self->allele_group();

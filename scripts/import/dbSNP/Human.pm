@@ -48,7 +48,7 @@ sub dump_TSCIDs{
     my $self = shift;
     
     #add the TSC source to the table
-    $self->{'Variation'}->do(qq{INSERT INTO source (name,version) values ('TSC',1)
+    $self->{'dbVariation'}->do(qq{INSERT INTO source (name,version) values ('TSC',1)
     });
     my $source_id = $self->{'dbVariation'}->dbh()->{'mysql_insertid'}; #get the last autoinc id in the database (the one from the TSC source)
     #and finally add the TSC ids to the synonyms table
