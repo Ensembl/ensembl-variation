@@ -1,4 +1,4 @@
-#!/usr/local/bin/perl5.6.1 -w
+#!/usr/local/ensembl/bin/perl -w
 # this is the experimental script to fill the new variation 
 # schema with data from dbSNP
 # we use the local mysql copy of dbSNP at the sanger center
@@ -457,8 +457,7 @@ sub flanking_sequence_table {
   my $sth = $dbVar->prepare(qq{SELECT ts.variation_id, ts.subsnp_id, ts.type,
                                       ts.line, ts.revcom
                                FROM   tmp_seq ts
-                               ORDER BY ts.subsnp_id, ts.type, ts.line_num},
-                            { mysql_use_result => 1 });
+                               ORDER BY ts.subsnp_id, ts.type, ts.line_num});
 
   $sth->execute();
 
@@ -518,7 +517,9 @@ sub flanking_sequence_table {
   }
 
   # do not forget last row...
-  print FH join("\t", $cur_vid, $longest_up, $longest_dn), "\n";
+  print FH join("\t", $cur_vid, $longest_up, $longest_dn), "\n" if ($longest_up ne '');
+  #only to test when there is 1 ssID in the temp table
+  print FH join("\t", $cur_vid, $upstream, $dnstream), "\n" if ($longest_up eq '');
 
   $sth->finish();
 
@@ -527,10 +528,9 @@ sub flanking_sequence_table {
   debug("Loading flanking sequence data");
 
   # import the generated data
-  $dbVar->do(qq{LOAD DATA LOCAL INFILE '$TMP_DIR/flankingdump.txt'
-              INTO TABLE flanking_sequence});
+  $dbVar->do(qq{LOAD DATA LOCAL INFILE '$TMP_DIR/$TMP_FILE' INTO TABLE flanking_sequence });
 
-  unlink("$TMP_DIR/flankingdump.txt");
+  unlink("$TMP_DIR/$TMP_FILE");
   $dbVar->do("DROP TABLE tmp_seq_3");
   $dbVar->do("DROP TABLE tmp_seq_5");
   $dbVar->do("DROP TABLE tmp_seq");
@@ -701,8 +701,7 @@ sub individual_genotypes {
   # dump to file and split apart the genotype strings
   my $sth = $dbVar->prepare(qq{SELECT vs.variation_id, tg.ind_id, tg.genotype
                                FROM   tmp_gty tg, variation_synonym vs
-                               WHERE  tg.subsnp_id = vs.subsnp_id},
-                            {mysql_use_result => 1});
+                               WHERE  tg.subsnp_id = vs.subsnp_id});
 
   $sth->execute();
 
