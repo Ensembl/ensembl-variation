@@ -108,7 +108,7 @@ sub fetch_by_dbID {
 sub fetch_all_by_Population {
   my $self = shift;
   my $pop = shift;
-
+warn "calling this with $pop";
   if(!ref($pop) || !$pop->isa('Bio::EnsEMBL::Variation::Population')) {
     throw('Bio::EnsEMBL::Variation::Population argument expected');
   }
