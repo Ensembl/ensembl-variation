@@ -50,7 +50,7 @@ use vars qw(@ISA @EXPORT_OK);
                 print "the ambiguity code for $alleles is: ",$ambig_code;
   Description : returns the ambiguity code for a SNP allele
   ReturnType  : String
-                The ambiguity code (or the alleles if code is unknown)
+                The ambiguity code
   Exceptions  : None
   Caller      : Variation, VariationFeature
 
@@ -61,7 +61,7 @@ sub ambiguity_code {
     $alleles = uc( join '', sort split /[\|\/\\]/, $alleles );
     my %ambig = qw(AC M ACG V ACGT N ACT H AG R AGT D AT W CG S CGT B CT Y 
 GT K);
-    return $ambig{$alleles} || $alleles;
+    return $ambig{$alleles};
 }
 
 =head2 variation_class
