@@ -481,8 +481,8 @@ create table individual_genotype (
 # seq_region_end -  where the region ends
 # snp_distance_count - number of variants in the region between two variations
 # r2 - value: D^2/(frq(A)*frq(B)*frq(a)*frq(b))
-# Dprime - value: D/Dmax
-# N - value: N
+# d_prime - value: D/Dmax
+# sample_count - value: N
 
 create table pairwise_ld(
 	variation_feature_id_1 int not null,
@@ -493,8 +493,8 @@ create table pairwise_ld(
 	seq_region_end int not null,
 	snp_distance_count int not null,
 	r2 float not null,
-	Dprime float not null,
-	N int not null,
+	d_prime float not null,
+	sample_count int not null,
 	
 	key seq_region_1_idx(seq_region_id)
 );
