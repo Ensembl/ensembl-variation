@@ -129,12 +129,11 @@ create table variation_feature(
 	seq_region_strand tinyint not null,
 	variation_id int not null,
 	allele_string text,
-	method varchar(255),
 	variation_name varchar(255),
 	map_weight int not null,
 
 	primary key( variation_feature_id ),
-	key pos_idx( seq_region_id, seq_region_start, method ),
+	key pos_idx( seq_region_id, seq_region_start ),
 	key variation_idx( variation_id )
 );
 
