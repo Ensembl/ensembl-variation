@@ -254,6 +254,7 @@ create table variation_group_feature(
   seq_region_end int not null,
   seq_region_strand tinyint not null,
   variation_group_id int not null,
+  variation_group_name varchar(255),
 
   primary key (variation_group_feature_id),
   key pos_idx(seq_region_id, seq_region_start),
