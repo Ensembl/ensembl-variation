@@ -222,7 +222,30 @@ sub fetch_all_by_dbID_list {
   return \@out;
 }
 
+=head2 get_source_version
 
+  Arg[1]      : string $name
+  Example     : $version = $va->get_source_version('dbSNP');
+  Description : Retrieves from the database the version for the source given as an argument
+  ReturnType  : int
+  Exceptions  : none
+  Caller      : general
+
+=cut
+
+sub get_source_version{
+    my $self = shift;
+    my $name = shift;
+    my $version;
+    my $sth = $self->prepare(qq{SELECT version from source where name = ?
+				});
+    $sth->execute($name);
+    $sth->bind_columns(\$version);
+    $sth->fetch();
+    $sth->finish();
+
+    return $version;
+}
 
 sub _objs_from_sth {
   my $self = shift;
