@@ -443,7 +443,7 @@ sub get_all_populations{
 }
 
 #returns from the container the population_id with the maximum number of pairwise_ld 
-sub _get_major_population{
+sub _get_populations {
     my $self = shift;
     my %populations;
 
@@ -451,7 +451,12 @@ sub _get_major_population{
 	map {$populations{$_}++} keys %{$self->{'ldContainer'}->{$key}};
     }
     my @sorted_populations = sort{$populations{$b} <=> $populations{$a}} keys %populations;
-    return shift @sorted_populations;
+    return @sorted_populations;
+}
+
+sub _get_major_population { 
+  my( $pop ) = $_[0]->_get_populations;
+  return $pop;
 }
 1;
 
