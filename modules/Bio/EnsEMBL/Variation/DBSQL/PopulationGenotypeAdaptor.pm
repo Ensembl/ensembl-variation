@@ -81,36 +81,14 @@ our @ISA = ('Bio::EnsEMBL::DBSQL::BaseAdaptor');
 sub fetch_by_dbID {
   my $self = shift;
   my $dbID = shift;
+  
+  if (! $dbID){
+      throw('no dbID argument provided');
+  }
+  return shift @{$self->generic_fetch("population_genotype_id = " . $dbID)};
 
-  my $sth = $self->prepare
-    (q{SELECT variation_id, allele_1, allele_2, frequency, population_id
-       FROM   population_genotype
-       WHERE  population_genotype_id = ?});
-
-  $sth->execute($dbID);
-
-  my $row = $sth->fetchrow_arrayref();
-  $sth->finish();
-
-  return undef if(!$row);
-
-  my ($var_id, $allele1, $allele2, $freq, $pop_id) = @$row;
-
-  my $va = $self->db()->get_VariationAdaptor();
-  my $var = $va->fetch_by_dbID($var_id);
-
-  my $pa = $self->db()->get_PopulationAdaptor();
-  my $pop = $pa->fetch_by_dbID($pop_id);
-
-  return Bio::EnsEMBL::Variation::PopulationGenotype->new
-    (-dbID    => $dbID,
-     -adaptor => $self,
-     -allele1 => $allele1,
-     -allele2 => $allele2,
-     -variation => $var,
-     -frequency => $freq,
-     -population => $pop);
 }
+
 
 
 
@@ -140,47 +118,7 @@ sub fetch_all_by_Population {
     return [];
   }
 
-  my $sth = $self->prepare
-    (q{SELECT population_genotype_id, variation_id, allele_1, allele_2,
-              frequency
-       FROM   population_genotype
-       WHERE  population_id = ?});
-
-  $sth->execute($pop->dbID());
-
-  my %variation_hash;
-
-  my ($pgtype_id, $var_id, $allele1, $allele2, $freq);
-  $sth->bind_columns(\$pgtype_id, \$var_id, \$allele1, \$allele2, \$freq);
-
-  my @results;
-
-  while($sth->fetch()) {
-    my $pgtype = Bio::EnsEMBL::Variation::PopulationGenotype->new
-      (-dbID => $pgtype_id,
-       -adaptor => $self,
-       -allele1 => $allele1,
-       -allele2 => $allele2,
-       -frequency => $freq,
-       -population => $pop);
-    $variation_hash{$var_id} ||= [];
-    push @{$variation_hash{$var_id}}, $pgtype;
-    push @results, $pgtype;
-  }
-
-  # get all variations in one query (faster)
-  # and add to already created genotypes
-  my @var_ids = keys %variation_hash;
-  my $va = $self->db()->get_VariationAdaptor();
-  my $vars = $va->fetch_all_by_dbID_list(\@var_ids);
-
-  foreach my $v (@$vars) {
-    foreach my $pgty (@{$variation_hash{$v->dbID()}}) {
-      $pgty->variation($v);
-    }
-  }
-
-  return \@results;
+  return $self->generic_fetch("population_id = " . $pop->dbID());
 }
 
 
@@ -212,30 +150,50 @@ sub fetch_all_by_Variation {
 	return [];
     }
 
-    my $sth = $self->prepare
-	(q{SELECT population_genotype_id, population_id, allele_1, allele_2, frequency
-	       FROM   population_genotype
-	       WHERE  variation_id = ?});
-    
-    $sth->execute($variation->dbID());
-    
-    my ($pgtype_id, $pop_id, $allele1, $allele2, $freq);
-    $sth->bind_columns(\$pgtype_id, \$pop_id, \$allele1, \$allele2, \$freq);
-    
+    return $self->generic_fetch("variation_id = " . $variation->dbID());
+
+}
+
+sub _tables{return ['population_genotype','pg']}
+
+sub _columns{
+    return qw(pg.population_genotype_id pg.variation_id pg.population_id pg.allele_1 pg.allele_2 pg.frequency)
+}
+
+sub _objs_from_sth{
+    my $self = shift;
+    my $sth = shift;
+
     my @results;
+    my ($dbID, $variation_id, $population_id, $allele_1, $allele_2, $frequency);
+    $sth->bind_columns(\$dbID, \$variation_id, \$population_id, \$allele_1, \$allele_2, \$frequency);
+    
     my %population_hash;
-    while($sth->fetch()) {
+    my %variation_hash;
+    while($sth->fetch()){
 	my $pgtype = Bio::EnsEMBL::Variation::PopulationGenotype->new
-	    (-dbID => $pgtype_id,
-	     -variation => $variation,
+	    (-dbID => $dbID,
 	     -adaptor => $self,
-	     -allele1 => $allele1,
-	     -allele2 => $allele2,
-	     -frequency => $freq,
-	     );
-	$population_hash{$pop_id} ||= [];
-	push @{$population_hash{$pop_id}}, $pgtype;
+	     -allele1 => $allele_1,
+	     -allele2 => $allele_2,
+	     -frequency => $frequency);
+	$population_hash{$population_id} ||= [];
+	$variation_hash{$variation_id} ||= [];
+	push @{$variation_hash{$variation_id}}, $pgtype; #store the variations to get the objects once
+	push @{$population_hash{$population_id}}, $pgtype; #store the populations to get the objects once
 	push @results, $pgtype;
+    }
+
+    # get all variations in one query (faster)
+    # and add to already created genotypes
+    my @var_ids = keys %variation_hash;
+    my $va = $self->db()->get_VariationAdaptor();
+    my $vars = $va->fetch_all_by_dbID_list(\@var_ids);
+    
+    foreach my $v (@$vars) {
+	foreach my $igty (@{$variation_hash{$v->dbID()}}) {
+	    $igty->variation($v);
+	}
     }
 
     # get all populations in one query (faster)
@@ -249,7 +207,7 @@ sub fetch_all_by_Variation {
 	    $pgty->population($p);
 	}
     }
-    return \@results;    
-}
+    return \@results;   
 
+}
 1;

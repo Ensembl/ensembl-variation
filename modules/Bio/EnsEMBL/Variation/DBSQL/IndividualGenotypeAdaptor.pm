@@ -56,7 +56,6 @@ use Bio::EnsEMBL::DBSQL::BaseAdaptor;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 
 use Bio::EnsEMBL::Variation::IndividualGenotype;
-use Data::Dumper;
 
 our @ISA = ('Bio::EnsEMBL::DBSQL::BaseAdaptor');
 
@@ -79,34 +78,11 @@ sub fetch_by_dbID {
   my $self = shift;
   my $dbID = shift;
 
-  my $sth = $self->prepare
-    (q{SELECT variation_id, allele_1, allele_2,
-              individual_id
-       FROM   individual_genotype
-       WHERE  individual_genotype_id = ?});
+  if (! $dbID){
+      throw('no dbID argument provided');
+  }
+  return shift @{$self->generic_fetch("individual_genotype_id = " . $dbID)};
 
-  $sth->execute($dbID);
-
-  my $row = $sth->fetchrow_arrayref();
-  $sth->finish();
-
-  return undef if(!$row);
-
-  my ($var_id, $allele1, $allele2, $ind_id) = @$row;
-
-  my $va = $self->db()->get_VariationAdaptor();
-  my $var = $va->fetch_by_dbID($var_id);
-
-  my $ia = $self->db()->get_IndividualAdaptor();
-  my $ind = $ia->fetch_by_dbID($ind_id);
-
-  return Bio::EnsEMBL::Variation::IndividualGenotype->new
-    (-dbID    => $dbID,
-     -adaptor => $self,
-     -allele1 => $allele1,
-     -allele2 => $allele2,
-     -variation => $var,
-     -individual => $ind);
 }
 
 
@@ -137,48 +113,8 @@ sub fetch_all_by_Individual {
     return [];
   }
 
-  my $sth = $self->prepare
-    (q{SELECT individual_genotype_id, variation_id, allele_1, allele_2
-       FROM   individual_genotype
-       WHERE  individual_id = ?});
-
-  $sth->execute($ind->dbID());
-
-  my %variation_hash;
-
-  my ($igtype_id, $var_id, $allele1, $allele2);
-  $sth->bind_columns(\$igtype_id, \$var_id, \$allele1, \$allele2);
-
-  my @results;
-
-  while($sth->fetch()) {
-    my $igtype = Bio::EnsEMBL::Variation::IndividualGenotype->new
-      (-dbID => $igtype_id,
-       -adaptor => $self,
-       -allele1 => $allele1,
-       -allele2 => $allele2,
-       -individual => $ind);
-    $variation_hash{$var_id} ||= [];
-    push @{$variation_hash{$var_id}}, $igtype;
-    push @results, $igtype;
-  }
-
-  # get all variations in one query (faster)
-  # and add to already created genotypes
-  my @var_ids = keys %variation_hash;
-  my $va = $self->db()->get_VariationAdaptor();
-  my $vars = $va->fetch_all_by_dbID_list(\@var_ids);
-
-  foreach my $v (@$vars) {
-    foreach my $igty (@{$variation_hash{$v->dbID()}}) {
-      $igty->variation($v);
-    }
-  }
-
-  return \@results;
+  return $self->generic_fetch("individual_id = " . $ind->dbID());
 }
-
-
 
 =head2 fetch_all_by_Variation
 
@@ -207,29 +143,48 @@ sub fetch_all_by_Variation {
 	return [];
     }
 
-    my $sth = $self->prepare
-	(q{SELECT individual_genotype_id, individual_id, allele_1, allele_2
-	       FROM   individual_genotype
-	       WHERE  variation_id = ?});
-    
-    $sth->execute($variation->dbID());
-    
-    my ($igty_id, $ind_id, $allele1, $allele2);
-    $sth->bind_columns(\$igty_id, \$ind_id, \$allele1, \$allele2);
+    return $self->generic_fetch("variation_id = " . $variation->dbID());
+}
+
+sub _tables{return ['individual_genotype','ig']}
+
+sub _columns{
+    return qw(ig.individual_genotype_id ig.individual_id ig.variation_id ig.allele_1 ig.allele_2);
+}
+
+sub _objs_from_sth{
+    my $self = shift;
+    my $sth = shift;
     
     my @results;
+    my ($dbID, $individual_id, $variation_id, $allele_1, $allele_2);
+    $sth->bind_columns(\$dbID, \$individual_id, \$variation_id, \$allele_1, \$allele_2);
+    
     my %individual_hash;
-    while($sth->fetch()) {
-	my $igty = Bio::EnsEMBL::Variation::IndividualGenotype->new
-	    (-dbID => $igty_id,
-	     -variation => $variation,
+    my %variation_hash;
+    while($sth->fetch()){
+	my $igtype = Bio::EnsEMBL::Variation::IndividualGenotype->new
+	    (-dbID => $dbID,
 	     -adaptor => $self,
-	     -allele1 => $allele1,
-	     -allele2 => $allele2,
-	     );
-	$individual_hash{$ind_id} ||= [];
-	push @{$individual_hash{$ind_id}}, $igty;
-	push @results, $igty;
+	     -allele1 => $allele_1,
+	     -allele2 => $allele_2);
+	$individual_hash{$individual_id} ||= [];
+	$variation_hash{$variation_id} ||= [];
+	push @{$variation_hash{$variation_id}}, $igtype; #store the variations to get the objects once
+	push @{$individual_hash{$individual_id}}, $igtype; #store the individuals to get the objects once
+	push @results, $igtype;
+    }
+
+    # get all variations in one query (faster)
+    # and add to already created genotypes
+    my @var_ids = keys %variation_hash;
+    my $va = $self->db()->get_VariationAdaptor();
+    my $vars = $va->fetch_all_by_dbID_list(\@var_ids);
+    
+    foreach my $v (@$vars) {
+	foreach my $igty (@{$variation_hash{$v->dbID()}}) {
+	    $igty->variation($v);
+	}
     }
 
     # get all individual in one query (faster)
@@ -246,8 +201,5 @@ sub fetch_all_by_Variation {
     return \@results;   
 
 }
-
-
-
 
 1;
