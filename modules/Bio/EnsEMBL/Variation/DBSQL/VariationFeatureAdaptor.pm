@@ -238,7 +238,7 @@ sub _objs_from_sth {
       }
       $slice = $dest_slice;
     }
-
+    my @states = split(',',$validation_status);
     push @features, Bio::EnsEMBL::Variation::VariationFeature->new_fast(
       {'start'    => $seq_region_start,
        'end'      => $seq_region_end,
@@ -250,7 +250,7 @@ sub _objs_from_sth {
        'dbID'     => $variation_feature_id,
        'map_weight' => $map_weight,
        'source'   => $source_name,
-       'validation_code' => $validation_status,
+       'validation_code' => \@states,
        'consequence_type' => $consequence_type,
        '_variation_id' => $variation_id});
   }
