@@ -36,16 +36,16 @@ create table variation_feature(
 	seq_region_id int not null,
 	seq_region_start int not null,
 	seq_region_end int not null,
-	seq_region_strand enum( -1, 0, 1 ) default 0 not null,
+	seq_region_strand enum( "-1", "0", "1" ) default "0"  not null,
 	variation_id int not null,
 	allele_string text,
 	method varchar(255),
-	variation_name varchar(255,
+	variation_name varchar(255),
 	map_weight int not null,
 
 	primary key( variation_feature_id ),
 	key pos_idx( seq_region_id, seq_region_start, method ),
-	key variation_idx( variation_id ),
+	key variation_idx( variation_id )
 );
 
 
@@ -93,10 +93,15 @@ create table httag(
 	httag_id int not null auto_increment,
 	variation_id int not null,
 	name varchar(255),
-	source_id int not null
+	source_id int not null,
+
+	primary key( httag_id ),
+	key variation_idx( variation_id )
 );
 
 create table source(
 	source_id int not null auto_increment,
 	name varchar(255),
+	
+	primary key( source_id )
 );
