@@ -86,9 +86,8 @@ while ($sth->fetch()){
 $sth->finish();
 print_buffered($buffer);
 my $call;
-#when the data is selected in the files (one per chromosome), sort the file by MAF and position, and send the jobs to the farm
+#when the data is selected in the files (one per chromosome), send the jobs to the farm
 foreach my $file (keys %{$buffer}){
-    `sort -k 1 -o $file $file`; #order snps by id
     $file =~ /tag_snps_(\d+)\:.*/; #extract the population_id from the name of the file
     $call = "bsub -q normal -m 'bc_hosts ecs4_hosts' -J tag_snps_$1 ";
     $call .= "-o $TMP_DIR/output_tag.txt /usr/local/ensembl/bin/perl select_tag_snps.pl $file ";
