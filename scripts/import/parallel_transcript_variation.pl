@@ -11,7 +11,7 @@ use Bio::EnsEMBL::Variation::VariationFeature; #to get the consequence_types pri
 use Bio::EnsEMBL::Utils::Exception qw(warning throw verbose);
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp expand);
 use ImportUtils qw(debug load create_and_load);
-
+use Data::Dumper;
 
 my ($TMP_DIR, $TMP_FILE, $LIMIT,$status_file);
 
@@ -83,6 +83,7 @@ my ($TMP_DIR, $TMP_FILE, $LIMIT,$status_file);
   my $processes = `cat $TMP_DIR/$status_file | wc -l`;
   if ($processes == $num_processes){
       #if is the last process, finish it
+    debug("Last process: ready to import data");
       last_process($dbCore,$dbVar);
   }
 }
@@ -127,9 +128,7 @@ sub transcript_variation {
     debug("Processing transcript variations for ",
           $slice->seq_region_name(), "\n");
     my $genes = $slice->get_all_Genes();
-
     # request all variations which lie in the region of a gene
-
     foreach my $g (@$genes) {
       $sth->execute($slice->get_seq_region_id(),
                     $g->seq_region_start() - $UPSTREAM,
@@ -141,7 +140,6 @@ sub transcript_variation {
       foreach my $tr (@{$g->get_all_Transcripts()}) {
 
         next if(!$tr->translation()); # skip pseudogenes
-
 	my $utr3 = $tr->three_prime_utr();
         my $utr5 = $tr->five_prime_utr();
 
@@ -190,7 +188,6 @@ sub transcript_variation {
   }
 
   close FH;
-
   return;
 }
 
@@ -390,7 +387,7 @@ sub last_process{
     my $call = "cat $TMP_DIR/$dbname.transcript_variation*.txt > $TMP_DIR/$TMP_FILE";
     system($call);
 
-#    unlink(<$TMP_DIR/$dbname.transcript_variation*.txt>);
+    unlink(<$TMP_DIR/$dbname.transcript_variation*.txt>);
 
     load($dbVar, qw(transcript_variation
 			      transcript_id variation_feature_id peptide_allele_string
@@ -401,9 +398,9 @@ sub last_process{
     debug("Preparing to update consequence type in variation feature table");
     #and delete the status file
     my $sth = $dbVar->prepare( "SELECT STRAIGHT_JOIN vf.variation_feature_id, tv.consequence_type ".
-			       "  FROM variation_feature vf, transcript_variation tv ".
-			       "  WHERE vf.variation_feature_id = tv.variation_feature_id ".
-			       " ORDER BY vf.variation_feature_id" );
+			       "FROM variation_feature vf LEFT JOIN transcript_variation tv ON ".
+			       "vf.variation_feature_id = tv.variation_feature_id ".
+			       "ORDER BY vf.variation_feature_id" );
     $sth->{mysql_use_result} = 1;
     # create a file which contains the var_feat_id and the max consequence type
     $sth->execute();
@@ -416,6 +413,7 @@ sub last_process{
     my $highest_priority;
     open(FH, ">" . $TMP_DIR . "/" . $TMP_FILE);
     while($sth->fetch()){
+	if (!$consequence_type){$consequence_type = 'INTERGENIC'}
 	#when we have seen all consequence_types for the variation_feature, find the highest
 	if (($variation_feature_id != $previous_variation_feature_id) && ($previous_variation_feature_id != 0)){
 	    foreach my $type (@consequence_types_ordered){

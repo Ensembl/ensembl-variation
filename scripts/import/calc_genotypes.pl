@@ -57,7 +57,6 @@ use strict;
 use warnings;
 
 use constant WINDOW_SIZE => 100_000;
-use Data::Dumper;
 use Bio::EnsEMBL::Utils::Cache;
 
 my %ld_cache;
@@ -179,10 +178,9 @@ sub calculate_ld{
   my $positions_ordered = shift;
   my $seq_region_id = shift;
   
-  my $snp_count = 0; #to count the number of snps between the 2  in the region
+#  my $snp_count = 0; #to count the number of snps between the 2  in the region
 
   my $position = shift @{$positions_ordered}; #remove first element from the array, it has already been compared
-  $snp_count = 0;
   #calculate LD against all SNPs in the window
   my $locus1 = $snps_ordered->{$position};
   my $seq_region_start = $additional_info->{$locus1}->{position};
@@ -204,14 +202,14 @@ sub calculate_ld{
     
 
     next unless ($stats_hash->{'r2'} >= 0.05 && $stats_hash->{'N'} >= 40); #cut-off in 5% and at least 20 individuals genotyped
-    $snp_count++;
+#    $snp_count++;
 
     print FH join("\t",
 		  $additional_info->{$locus1}->{variation_feature_id},
 		  $additional_info->{$locus2}->{variation_feature_id},
 		  $additional_info->{$locus1}->{population_id},
 		  $seq_region_id, $seq_region_start, $seq_region_end,
-		  $snp_count,
+#		  $snp_count,
 		  $stats_hash->{'r2'}, 
 		  abs($stats_hash->{'d_prime'}),
 		  $stats_hash->{'N'}),"\n";	

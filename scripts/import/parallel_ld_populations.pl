@@ -39,7 +39,7 @@ my ($TMP_DIR, $TMP_FILE, $LIMIT,$status_file, $population, $num_processes); #ld_
   #added default options
   $chost    ||= 'ecs2';
   $cuser    ||= 'ensro';
-#  $cport    ||= 3364;
+  $cport    ||= 3365;
 
   $vport    ||= 3306;
   $vuser    ||= 'ensadmin';
@@ -76,13 +76,12 @@ my ($TMP_DIR, $TMP_FILE, $LIMIT,$status_file, $population, $num_processes); #ld_
 sub last_process{
     my $dbCore = shift;
     my $dbVar = shift;
-
     debug("Importing pairwise data");
    #group all the fragments in 1 file
     my $dbname = $dbVar->dbname(); #get the name of the database to create the file
     my $call = "cat $TMP_DIR/$dbname.pairwise_ld*out* > $TMP_DIR/$TMP_FILE";
     system($call);
-    unlink(<$TMP_DIR/$dbname.pairwise_ld_*>);    
+#    unlink(<$TMP_DIR/$dbname.pairwise_ld_*>);    
 
     #and import the data in the database
     load($dbVar, qw(pairwise_ld variation_feature_id_1 variation_feature_id_2 population_id seq_region_id seq_region_start seq_region_end r2 d_prime sample_count));
