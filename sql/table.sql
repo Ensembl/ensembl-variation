@@ -65,6 +65,7 @@ create table transcript_variation(
 create table allele_group(
 	allele_group_id int not null auto_increment,
 	population_id int,
+	name varchar(255),
 	frequency float,
 	type enum( "HAPLOBLOCK", "GENOTYPE" ),
 
