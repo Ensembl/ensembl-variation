@@ -1,4 +1,3 @@
-use lib 't';
 
 use strict;
 use warnings;
@@ -9,15 +8,15 @@ BEGIN { $| = 1;
 }
 
 
-use TestUtils qw ( debug test_getter_setter count_rows);
+use Bio::EnsEMBL::Test::TestUtils;
 
 
-use MultiTestDB;
+use Bio::EnsEMBL::Test::MultiTestDB;
 
 
 our $verbose = 0;
 
-my $multi = MultiTestDB->new();
+my $multi = Bio::EnsEMBL::Test::MultiTestDB->new();
 
 my $vdb = $multi->get_DBAdaptor('variation');
 

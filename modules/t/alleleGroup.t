@@ -1,4 +1,3 @@
-use lib 't';
 use strict;
 use warnings;
 
@@ -7,7 +6,7 @@ BEGIN { $| = 1;
 	plan tests => 14;
 }
 
-use TestUtils qw ( debug test_getter_setter count_rows);
+use Bio::EnsEMBL::Test::TestUtils;
 use Bio::EnsEMBL::Variation::AlleleGroup;
 use Bio::EnsEMBL::Variation::VariationGroup;
 use Bio::EnsEMBL::Variation::Population;

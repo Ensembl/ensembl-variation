@@ -1,4 +1,3 @@
-use lib 't';
 use strict;
 use warnings;
 
@@ -8,7 +7,7 @@ BEGIN { $| = 1;
 }
 
 
-use TestUtils qw ( debug test_getter_setter count_rows);
+use Bio::EnsEMBL::Test::TestUtils;
 use Bio::EnsEMBL::Variation::IndividualGenotype;
 use Bio::EnsEMBL::Variation::Variation;
 use Bio::EnsEMBL::Variation::Individual;
