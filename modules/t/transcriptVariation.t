@@ -4,7 +4,7 @@ use warnings;
 
 BEGIN { $| = 1;
 	use Test;
-	plan tests => 11;
+	plan tests => 16;
 }
 
 
