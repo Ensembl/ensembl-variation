@@ -72,6 +72,7 @@ package Bio::EnsEMBL::Variation::VariationFeature;
 use Bio::EnsEMBL::Feature;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Utils::Argument  qw(rearrange);
+use Bio::EnsEMBL::Variation::Utils::Sequence qw(ambiguity_code variation_class);
 
 our @ISA = ('Bio::EnsEMBL::Feature');
 
@@ -395,23 +396,34 @@ sub _highest_priority{
 
 =head2 ambig_code
 
-  Arg         : None
-  Example     : my $ambig_code = $vari_data->ambig_code();
-  Description : returns the ambiguity code for a SNP allele
-  ReturnType  : String
-                The ambiguity code (or the alleles if code is unknown)
-  Exceptions  : Throw when alleles not present
-  Caller      : general
+    Args         : None
+    Example      : my $ambiguity_code = $vf->ambig_code()
+    Description  : Returns the ambigutiy code for the alleles in the VariationFeature
+    ReturnType   : String $ambiguity_code
+    Exceptions   : none    
+    Caller       : General
 
+=cut 
+
+sub ambig_code{
+    my $self = shift;
+    
+    return &ambiguity_code($self->allele_string());
+}
+
+=head2 var_class
+
+    Args         : None
+    Example      : my $variation_class = $vf->var_class()
+    Description  : returns the class for the variation, according to dbSNP classification
+    ReturnType   : String $variation_class
+    Exceptions   : none
+    Caller       : General
 =cut
 
-sub ambig_code {
+sub var_class{
     my $self = shift;
-    my $alleles = $self->allele_string() || throw("Variation without alleles!!!");
-    $alleles = uc( join '', sort split /[\|\/\\]/, $alleles );
-    my %ambig = qw(AC M ACG V ACGT N ACT H AG R AGT D AT W CG S CGT B CT Y 
-GT K);
-    return $ambig{$alleles} || $alleles;
+    return &variation_class($self->allele_string());
 }
 
 1;

@@ -85,6 +85,7 @@ package Bio::EnsEMBL::Variation::Variation;
 
 use Bio::EnsEMBL::Storable;
 use Bio::EnsEMBL::Utils::Argument qw(rearrange);
+use Bio::EnsEMBL::Variation::Utils::Sequence qw(ambiguity_code variation_class);
 use Bio::EnsEMBL::Utils::Exception qw(throw deprecate warning);
 use vars qw(@ISA);
 
@@ -500,5 +501,43 @@ sub get_all_PopulationGenotypes {
 
 }
 
+=head2 ambig_code
+
+    Args         : None
+    Example      : my $ambiguity_code = $v->ambig_code()
+    Description  : Returns the ambigutiy code for the alleles in the Variation
+    ReturnType   : String $ambiguity_code
+    Exceptions   : none    
+    Caller       : General
+
+=cut 
+
+sub ambig_code{
+    my $self = shift;
+    my $alleles = $self->get_all_Alleles(); #get all Allele objects
+    my %alleles; #to get all the different alleles in the Variation
+    map {$alleles{$_->allele}++} @{$alleles};
+    my $allele_string = join "|",keys %alleles;
+    return &ambiguity_code($allele_string);
+}
+
+=head2 var_class
+
+    Args         : None
+    Example      : my $variation_class = $vf->var_class()
+    Description  : returns the class for the variation, according to dbSNP classification
+    ReturnType   : String $variation_class
+    Exceptions   : none
+    Caller       : General
+=cut
+
+sub var_class{
+    my $self = shift;
+    my $alleles = $self->get_all_Alleles(); #get all Allele objects
+    my %alleles; #to get all the different alleles in the Variation
+    map {$alleles{$_->allele}++} @{$alleles};
+    my $allele_string = join "|",keys %alleles;
+    return &variation_class($allele_string);
+}
 
 1;
