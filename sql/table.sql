@@ -194,6 +194,43 @@ create table variation_feature(
 );
 
 
+#
+# variation_group
+# 
+# This table defines a variation group.  Allele groups can 
+# be classed into a variation_group when they are comprised
+# of the same set of variations.  This is equivalent to 
+# HapSets in dbSNP.
+#
+# variation_group_id   - primary_key, internal identifier
+# name                 - the code or name of this variation_group
+# source_id            - foreign key ref source
+#
+
+create table variation_group (
+	variation_group_id int not null auto_increment,
+	name varchar(255),
+	source_id int not null,
+  type enum('haplotype', 'tag'),
+
+	primary key (variation_group_id),
+  unique(name)
+);
+
+#
+# variation_group_feature
+# Keeps all the variations stored in a group (normalisation of the n..n relationship between variation and variation_group)
+# variation_id - foreign key references variation
+# variation_group_id - foreign key references variation_group
+#
+
+create table variation_group_variation (
+	variation_id int not null,
+	variation_group_id int not null,
+
+	unique( variation_group_id, variation_id ),
+	key variation_idx( variation_id, variation_group_id )
+);
 
 #
 # variation_group_feature
@@ -240,8 +277,8 @@ create table variation_group_feature(
 # cdna_end                - end position of variation in cdna coordinates
 # translation_start       - start position of variation on peptide
 # translation_end         - end position of variation on peptide
-# peptide_allele_string   - allele string of '/' seperated amino acids
-#                           reference allele is first
+# peptide_allele_string   - allele string of '/' separated amino acids
+# type                    - reference allele is first
 # 
 
 create table transcript_variation(
@@ -262,38 +299,6 @@ create table transcript_variation(
   key transcript_idx( transcript_id ),
   key type_idx(type)
 	);
-
-#
-# variation_group
-# 
-# This table defines a variation group.  Allele groups can 
-# be classed into a variation_group when they are comprised
-# of the same set of variations.  This is equivalent to 
-# HapSets in dbSNP.
-#
-# variation_group_id   - primary_key, internal identifier
-# name                 - the code or name of this variation_group
-# source_id            - foreign key ref source
-#
-
-create table variation_group (
-	variation_group_id int not null auto_increment,
-	name varchar(255),
-	source_id int not null,
-  type enum('haplotype', 'tag'),
-
-	primary key (variation_group_id),
-  unique(name)
-);
-
-
-create table variation_group_variation (
-	variation_id int not null,
-	variation_group_id int not null,
-
-	unique( variation_group_id, variation_id ),
-	key variation_idx( variation_id, variation_group_id )
-);
 	
 
 #
@@ -332,11 +337,14 @@ create table allele_group(
 # There is no direct link to the allele table because the allele table has 
 # population and frequency data which may not correspond to this allele group
 #
+# allele_group_id - primary key, internal identifier
+# allele - base present in the group
+# variation_id - foreign key, references variation
 
 create table allele_group_allele (
 	allele_group_id int not null,
 	allele varchar(255) not null,
-  variation_id int not null,
+        variation_id int not null,
 
 	unique( allele_group_id, variation_id ),
 	key allele_idx( variation_id, allele_group_id )
@@ -345,6 +353,15 @@ create table allele_group_allele (
 
 #
 # flanking_sequence
+#
+# table that stores the flanking sequences from th core database. To reduce space used, takes coordinates from the sequences in the core database
+# variation_id - primary key, internal identifier
+# up_seq - upstream sequence, used to initially store the sequence from the core database, and in a later process get from here the position
+# down_seq - similiar the one before, but for the downstream
+# up_seq_region_start, down_seq_region_start - position of the starting of the sequence in the region
+# up_seq_region_end, down_seq_region_end - position of the end of the sequence in the region
+# seq_region_id - foreign key, references the sequence table in the core database
+# seq_region_stran - strand of the seq_region in the core database
 #
 
 create table flanking_sequence (
@@ -366,10 +383,17 @@ create table flanking_sequence (
 #
 # httag
 #
+# this table contains the tags of a haplotype: bases of the haplotypes that uniquely identify it
+#
+# httag_id - primary key, internal identifier
+# variation_group_id - foreign key, references variation_group
+# name - name of the tag, for web purposes
+# source_id - foreign key, references source
+#
 
 create table httag(
 	httag_id int not null auto_increment,
-  variation_group_id int not null,
+	variation_group_id int not null,
 	name varchar(255),
 	source_id int not null,
 
@@ -400,17 +424,25 @@ create table source(
 # This table contains genotype frequencies estimated for populations or calculated on
 # a set of individuals.
 #
+# population_genotype_id - primary key, internal identifier
+# variation_id - foreign key, references variation table
+# allele_1 - first allele in the genotype
+# allele_2 - second allele in the genotype
+# frequency - frequency of the genotype in the population
+# population_id - foreign key, references population table
+#
+
 create table population_genotype (
 	population_genotype_id int not null auto_increment,
-  variation_id int not null,
-  allele_1 varchar(255),
-  allele_2 varchar(255),
+	variation_id int not null,
+	allele_1 varchar(255),
+	allele_2 varchar(255),
 	frequency float,
  	population_id int,
 
 	primary key( population_genotype_id ),
-  key variation_idx(variation_id),
-  key population_idx(population_id)
+ 	key variation_idx(variation_id),
+	key population_idx(population_id)
 );
 
 
@@ -420,9 +452,11 @@ create table population_genotype (
 #
 # This table contains genotypes of individuals.
 #
-# variation_id - FK to variation table
-# allele_1     - One of the alleles of the genotype
-#
+# variation_id	- FK to variation table
+# allele_1	- One of the alleles of the genotype
+# allele_2	- The other allele of the genotype
+# individual_id - foreign key, references individual table
+
 create table individual_genotype (
   individual_genotype_id int not null auto_increment,
   variation_id int not null,

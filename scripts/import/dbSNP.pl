@@ -1,3 +1,4 @@
+#!/usr/local/bin/perl5.6.1 -w
 # this is the experimental script to fill the new variation 
 # schema with data from dbSNP
 # we use the local mysql copy of dbSNP at the sanger center
@@ -53,7 +54,7 @@ my $dbCore;
   $cuser    ||= 'ensro';
   $cport    ||= 3364;
 
-  $vport    ||= 3306;
+  $vport    ||= 3362;
   $vuser    ||= 'ensadmin';
 
   usage('-cdbname argument is required.') if(!$cdbname);
