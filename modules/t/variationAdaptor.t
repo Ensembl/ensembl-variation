@@ -5,7 +5,7 @@ use warnings;
 
 BEGIN { $| = 1;
 	use Test;
-	plan tests => 25;
+	plan tests => 27;
 }
 
 
@@ -123,4 +123,19 @@ ok($a{1}->allele() eq 'C' && $a{1}->frequency() == 0.96 &&
 
 ok($a{1}->population->name() eq 'KWOK:C');
 ok($a{8}->population->name() eq 'KWOK:S');
+
+
+
+
+# test fetch_by_dbID_list
+my $list = [1, 2, 3, 4, 10];
+
+my @vars =  sort {$a->dbID <=> $b->dbID} @{$va->fetch_all_by_dbID_list($list)};
+
+ok(@vars == 5);
+
+ok($vars[0]->dbID() == 1 && $vars[4]->dbID() == 10);
+
+
+
 
