@@ -269,7 +269,7 @@ sub fetch_population_by_synonym{
     my $population_array;
 
     if (defined $source){
-	$sql = qq{SELECT population_id FROM population_synonym ps, source s WHERE ps.name = ? and ps.source = s.source = s.name = "$source"};
+	$sql = qq{SELECT population_id FROM population_synonym ps, source s WHERE ps.name = ? and ps.source_id = s.source_id = s.name = "$source"};
     }
     else{
 	$sql = qq{SELECT population_id FROM population_synonym WHERE name = ?};
