@@ -206,7 +206,7 @@ sub variation_feature {
           $allele_str = join('/', ($alleles_expanded{$ref_allele}, keys %alleles));
         } else {
 	  $allele_str = undef;
-          warn("Reference allele $ref_allele not found in alleles: " .
+          warn("Reference allele $ref_allele for $cur_v_name not found in alleles: " .
                join("/", keys %alleles), " discarding feature");
         }
 	
@@ -296,6 +296,7 @@ sub variation_feature {
 	     $top_coord->coord_system()->version());
 	  
 	  $ref_allele = $slice->seq();
+	  $ref_allele = uc $ref_allele;   #convert reference allele to uppercase
 	  $ref_allele = '-' if(!$ref_allele);
 	  
 	  $top_sr_id = $slice->get_seq_region_id();
@@ -317,13 +318,14 @@ sub variation_feature {
   if($top_coord and $cur_map_weight <=3) {
 
     my $allele_str;
+
     if($alleles{$ref_allele}) {
       # make sure the reference allele is first
       delete $alleles{$ref_allele};
       $allele_str = join('/', ($ref_allele, keys %alleles));
     } else {
       $allele_str = undef;
-      warn("Reference allele $ref_allele not found in alleles: " .
+      warn("Reference allele $ref_allele for $cur_v_name not found in alleles: " .
            join("/", keys %alleles), " discarding feature\n");
     }
     
@@ -352,6 +354,7 @@ sub last_process{
     
     debug("Deleting existing variation features");
     
+    $dbVar->do("CREATE TABLE variation_feature_old select * from variation_feature");
     $dbVar->do("DELETE FROM variation_feature");
     
     debug("Reimporting processed variation features");
@@ -363,8 +366,8 @@ sub last_process{
     unlink(<$TMP_DIR/$dbname.variation_feature*>);
     #and finally, load the information
     load($dbVar, qw(variation_feature variation_feature_id seq_region_id
-			     seq_region_start seq_region_end seq_region_strand variation_id
-			     allele_string variation_name map_weight flags source_id validation_status consequence_type));
+		    seq_region_start seq_region_end seq_region_strand variation_id
+		    allele_string variation_name map_weight flags source_id validation_status consequence_type));
 
     $dbVar->do("DROP TABLE tmp_map_weight");
 
