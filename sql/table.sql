@@ -29,7 +29,7 @@ create table variation (
 #
 
 create table variation_synonym (
-  variation_synonym_id int not null,
+  variation_synonym_id int not null auto_increment,
   variation_id int not null,
   source_id int not null,
   name varchar(255),
@@ -104,7 +104,7 @@ create table population(
 # allele frequency may be represented by a superpopulation of caucasions and a sub population 
 # of the group of people used in the assay.
 #
-create table population_grouping (
+create table population_structure (
   super_population_id int not null,
   sub_population_id int not null,
 
@@ -130,8 +130,9 @@ create table population_grouping (
 create table individual(
   individual_id int not null auto_increment,
   name varchar(255) not null,
+  description varchar(255) not null,
   population_id int not null,
-  gender enum('Male', 'Female', 'Unknown'),
+  gender enum('Male', 'Female', 'Unknown') default 'Unknown' NOT NULL,
   father_individual_id int,
   mother_individual_id int,
   
