@@ -7,9 +7,10 @@ use DBI;
 use DBH;
 
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
+use Bio::EnsEMBL::Variation::VariationFeature; #to get the consequence_types priorities
 use Bio::EnsEMBL::Utils::Exception qw(warning throw verbose);
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp expand);
-use ImportUtils qw(debug load);
+use ImportUtils qw(debug load create_and_load);
 
 
 my ($TMP_DIR, $TMP_FILE, $LIMIT,$status_file);
@@ -167,9 +168,10 @@ sub transcript_variation {
             $var{'strand'} = $tr->strand();
           }
           $var{'alleles'} = \@alleles;
-
-          my $vars = type_variation($tr, \%var);
-
+	  my $vars;
+	  if ($row->[4] !~ /\+/){
+	      $vars = type_variation($tr, \%var);
+	  }
           foreach my $v (@$vars) {
             my @arr = ($v->{'tr_id'},
                        $v->{'vf_id'},
@@ -309,6 +311,12 @@ sub apply_aa_change {
 
   my $peptide = $tr->translate->seq();
 
+  my ($attrib) = @{$tr->slice()->get_all_Attributes('codon_table')}; #for mithocondrial dna it is necessary to change the table
+
+  my $codon_table;
+  $codon_table = $attrib->value() if($attrib);
+  $codon_table ||= 1; # default vertebrate codon table 
+
   my $len = $var->{'aa_end'} - $var->{'aa_start'} + 1;
   my $old_aa = substr($peptide, $var->{'aa_start'} -1 , $len);
 
@@ -352,7 +360,8 @@ sub apply_aa_change {
                                     -moltype  => 'dna',
                                     -alphabet => 'dna');
 
-      $new_aa = $codon_seq->translate()->seq();
+
+      $new_aa = $codon_seq->translate(undef,undef,undef,$codon_table)->seq();
     } else {
       $new_aa = '-'; # deletion
     }
@@ -381,7 +390,7 @@ sub last_process{
     my $call = "cat $TMP_DIR/$dbname.transcript_variation*.txt > $TMP_DIR/$TMP_FILE";
     system($call);
 
-    unlink(<$TMP_DIR/$dbname.transcript_variation*.txt>);
+#    unlink(<$TMP_DIR/$dbname.transcript_variation*.txt>);
 
     load($dbVar, qw(transcript_variation
 			      transcript_id variation_feature_id peptide_allele_string
@@ -389,8 +398,57 @@ sub last_process{
     
     
     update_meta_coord($dbCore, $dbVar, 'transcript_variation');
+    debug("Preparing to update consequence type in variation feature table");
     #and delete the status file
+    my $sth = $dbVar->prepare( "SELECT STRAIGHT_JOIN vf.variation_feature_id, tv.consequence_type ".
+			       "  FROM variation_feature vf, transcript_variation tv ".
+			       "  WHERE vf.variation_feature_id = tv.variation_feature_id ".
+			       " ORDER BY vf.variation_feature_id" );
+    $sth->{mysql_use_result} = 1;
+    # create a file which contains the var_feat_id and the max consequence type
+    $sth->execute();
+    my ($variation_feature_id, $consequence_type);
+    $sth->bind_columns(\$variation_feature_id,\$consequence_type);
+    my $previous_variation_feature_id = 0;
+    my %consequence_types = %Bio::EnsEMBL::Variation::VariationFeature::CONSEQUENCE_TYPES;
+    my @consequence_types_ordered = sort {$consequence_types{$a} <=> $consequence_types{$b}} keys %consequence_types;
+    my $var_consequence_type = {}; #will contain all the consequence types for the variation_feature
+    my $highest_priority;
+    open(FH, ">" . $TMP_DIR . "/" . $TMP_FILE);
+    while($sth->fetch()){
+	#when we have seen all consequence_types for the variation_feature, find the highest
+	if (($variation_feature_id != $previous_variation_feature_id) && ($previous_variation_feature_id != 0)){
+	    foreach my $type (@consequence_types_ordered){
+		if ($var_consequence_type->{$type}){
+		    $highest_priority = $type;
+		    last;
+		}
+	    }
+	    print FH join("\t",$previous_variation_feature_id,$highest_priority), "\n";
+	    $var_consequence_type= {}; #initialize the consequence type for the next variation_feature
+	}
+	$previous_variation_feature_id = $variation_feature_id;
+	$var_consequence_type->{$consequence_type}++;
+    }
+    #and print the last variation
+    foreach my $type (@consequence_types_ordered){
+	if ($var_consequence_type->{$type}){
+	    $highest_priority = $type;
+	    last;
+	}
+    }
+    print FH join("\t",$previous_variation_feature_id,$highest_priority), "\n";
 
+    close(FH);
+    # upload into tmp table
+    debug("creating temporary table with consequence type");
+    create_and_load($dbVar,"tmp_consequence_type", "variation_feature_id *", "consequence_type");
+    # do a multi table update with that one.
+    $dbVar->do(qq{UPDATE variation_feature vf, tmp_consequence_type tct 
+		      SET vf.consequence_type = tct.consequence_type
+		      WHERE vf.variation_feature_id = tct.variation_feature_id
+		  });
+    $dbVar->do(qq{DROP TABLE tmp_consequence_type});
     unlink("$TMP_DIR/$status_file");
 }
 

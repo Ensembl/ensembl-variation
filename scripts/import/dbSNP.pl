@@ -56,7 +56,7 @@ my $dbCore;
 	     'alldiff=s' => \$ALLDIFF_FILE);
 
   $dshost   ||= 'cbi2.internal.sanger.ac.uk';
-  $dsdbname ||= 'dbSNP_122';
+  $dsdbname ||= 'dbSNP_123';
   $dsuser   ||= 'dbsnpro';
   $dsport   ||= 3306;
 
@@ -107,7 +107,8 @@ my $dbCore;
 
 
   if($species->binomial() eq 'Homo sapiens') {
-    $CONTIG_SQL = ' CONCAT(contig_acc, ".", contig_ver) ';
+#    $CONTIG_SQL = ' CONCAT(contig_acc, ".", contig_ver) ';
+    $CONTIG_SQL = ' contig_acc ';
   } else {
     $CONTIG_SQL = ' contig_acc ';
   }
@@ -184,7 +185,7 @@ elsif ($SPECIES_PREFIX eq 'ag'){
     $mosquito->dump_dbSNP();
 }
 else{
-    #homo sapiens (human)
+    #homo sa/piens (human)
     my $human = dbSNP::Human->new(-dbSNP => $dbSNP,
 					      -dbCore => $dbCore,
 					      -dbVariation => $dbVar,

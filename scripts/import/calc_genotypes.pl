@@ -165,7 +165,7 @@ while (@positions_ordered){
 		 $seq_region_id_previous);  
 }
 
-print STDERR "Iterations: $iterations\n";
+#print STDERR "Iterations: $iterations\n";
 
 close IN;
 close FH;
@@ -203,7 +203,7 @@ sub calculate_ld{
 						$genotypes->{$snps_ordered->{$position2}} );
     
 
-#    next unless $stats_hash->{'r2'} >= 0.05;
+    next unless ($stats_hash->{'r2'} >= 0.05 && $stats_hash->{'N'} >= 40); #cut-off in 5% and at least 20 individuals genotyped
     $snp_count++;
 
     print FH join("\t",

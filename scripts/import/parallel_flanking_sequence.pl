@@ -11,7 +11,7 @@ use Bio::EnsEMBL::Utils::Exception qw(warning throw verbose);
 use ImportUtils qw(debug load);
 
 
-my ($TMP_DIR, $TMP_FILE, $LIMIT,$status_file);
+my ($TMP_DIR, $TMP_FILE, $LIMIT,$status_file, $file_number);
 
 {
   my ($vhost, $vport, $vdbname, $vuser, $vpass,
@@ -32,7 +32,8 @@ my ($TMP_DIR, $TMP_FILE, $LIMIT,$status_file);
              'tmpfile=s' => \$ImportUtils::TMP_FILE,
              'limit=s'   => \$limit,
 	     'num_processes=i' => \$num_processes,
-	     'status_file=s' => \$status_file);
+	     'status_file=s' => \$status_file,
+	     'file=i'  => \$file_number);
 
   #added default options
   $chost    ||= 'ecs2';
@@ -95,116 +96,134 @@ sub flanking_sequence {
   debug("Compressing storage of flanking sequence");
   my $slice_adaptor = $dbCore->get_SliceAdaptor();
 
-  #there are problems with disk space for this query. To avoid them, I will first select the variation_id we want to calculate the flanking_Sequence
-# and then, run the query
-  my $sth_variation = $dbVar->prepare(qq{SELECT variation_id
-					 FROM flanking_sequence
-				     ORDER BY variation_id
-				 $LIMIT});
-  $sth_variation->execute();
-  my $var_id;
-  $sth_variation->bind_columns(\$var_id);
-  #in the parallel version, I will write to a file all the flanking sequences to avoid locking the database for updates
   my $dbname = $dbVar->dbname(); #get the name of the database to create the file
-  open FH, ">$TMP_DIR/$dbname.flanking_sequence_$$\.txt"
-      or throw("Could not open tmp file: $TMP_DIR/flanking_sequence_$$\n");
-  while ($sth_variation->fetch()){
-      my $sth = $dbVar->prepare(qq{SELECT fs.up_seq, fs.down_seq,
-				   vf.seq_region_id, vf.seq_region_start,
-				   vf.seq_region_end, vf.seq_region_strand
-				       FROM flanking_sequence fs LEFT JOIN variation_feature vf
-				       ON vf.variation_id = fs.variation_id
-				       WHERE fs.variation_id = ?});
-      
-      
-      $sth->execute($var_id);
-      my ($up_seq, $dn_seq, $sr_id, $sr_start, $sr_end, $sr_strand);
-      $sth->bind_columns(\$up_seq, \$dn_seq, \$sr_id, \$sr_start,
-			 \$sr_end, \$sr_strand);
-      
-      while($sth->fetch()) {
-	  my ($up_sr_start, $up_sr_end, $dn_sr_start, $dn_sr_end);
-          #only figure out coordinates if there is entry in the VARIATION_FEATURE table
-	  if (!$sr_id){
-	      $sr_id = '\N';
-	      $up_sr_start = '\N';
-	      $up_sr_end = '\N';
-	      $dn_sr_start = '\N';
-	      $dn_sr_end = '\N';
-	      $sr_strand = '\N';
+  open FH, ">$TMP_DIR/$dbname.flanking_sequence_out_$file_number\.txt"
+      or throw("Could not open tmp file: $TMP_DIR/flanking_sequence_$file_number\.txt\n");
+  open IN, "$TMP_DIR/$dbname.flanking_sequence_$file_number\.txt" or throw("Could not open input file with flanks: $!\n");
+  my ($var_id,$up_seq, $dn_seq, $sr_id, $sr_start, $sr_end, $sr_strand);
+  my $previous_var_id = 0; #to know when we change variation
+  my @lines; #will store all the flanks for the variation_feature, if more than one. To write, take the first one with the sr_id defined
+  my @row;
+  my $printed = 0;
+  while(<IN>) {
+      chomp;
+      ($var_id,$up_seq, $dn_seq, $sr_id, $sr_start, $sr_end, $sr_strand) = split /\t/;
+      my ($up_sr_start, $up_sr_end, $dn_sr_start, $dn_sr_end);
+      #only figure out coordinates if there is entry in the VARIATION_FEATURE table
+      if ($sr_id eq '\N'){
+	  $up_sr_start = '\N';
+	  $up_sr_end = '\N';
+	  $dn_sr_start = '\N';
+	  $dn_sr_end = '\N';
+      }
+      else{
+	  my $up_len = 0;
+	  my $dn_len = 0;
+	  $up_len = length($up_seq) if ($up_seq);
+	  $dn_len = length($dn_seq) if ($dn_seq);
+	  
+	  # figure out the coordinates of the flanking sequence	      
+	  
+	  if($sr_strand == 1) {
+	      $up_sr_start = $sr_start - $up_len;
+	      $up_sr_end   = $sr_start - 1;
+	      $dn_sr_start = $sr_end + 1;
+	      $dn_sr_end   = $sr_end + $dn_len;
+	  } else {
+	      $up_sr_start = $sr_end + 1;
+	      $up_sr_end   = $sr_end + $up_len;
+	      $dn_sr_start = $sr_start - $dn_len;
+	      $dn_sr_end   = $sr_start - 1;
+	  }
+	  
+	  my $slice = $slice_adaptor->fetch_by_seq_region_id($sr_id);
+	  if(!$slice) {
+	      warning("Could not obtain slice for seq_region_id $sr_id\n");
+	      next;
+	  }
+	  
+	  # compare sequence in database to flanking sequence
+	  # if it matches store only coordinates, otherwise still store flanking
+	  
+	  # there are sometimes off by ones in dbSNP, try to take this into account
+	  # with a 'wobble' of one base on either side
+	  my @wobble = (0, 1, -1);
+	  my $i = 0;
+	  my $w;
+	  while((defined($up_seq) || defined($dn_seq)) && $i < 3) {
+	      $w = $wobble[$i++];
+	      
+	      if(defined($up_seq)) {
+		  my $up = $slice->subseq($up_sr_start+$w, $up_sr_end+$w, $sr_strand);
+		  $up_seq = undef if(uc($up) eq uc($up_seq));
+		  if($w && !defined($up_seq)){
+		      print STDERR "*";
+		      $up_sr_start += $w;
+		      $up_sr_end += $w;
+		  }
+	      }
+	      
+	      if(defined($dn_seq)) {
+		  my $dn = $slice->subseq($dn_sr_start+$w, $dn_sr_end+$w, $sr_strand);
+		  $dn_seq = undef if(uc($dn) eq uc($dn_seq));
+		  if($w && !defined($dn_seq)){
+		      print STDERR "*";
+		      $dn_sr_start += $w;
+		      $dn_sr_end += $w;
+		  }
+	      }
+	  }
+	  #to write NULL values in the database, we have to write \n
+	  $up_sr_start = $up_sr_end = '\N' if (defined($up_seq));
+	  $dn_sr_start = $dn_sr_end = '\N' if(defined($dn_seq));	 
+	  
+	  $up_seq = '\N' if (!defined($up_seq));
+	  $dn_seq = '\N' if (!defined($dn_seq));
+	  
+      }
+      #when changing the variation, print to the file the flanking information for the variation with sr_id
+      if (($previous_var_id != $var_id) && ($previous_var_id !=0)){
+	  foreach my $line (@lines){
+	      @row = split /\t/,$line;
+	      if ($row[7] ne '\N'){
+		  print FH $line;
+		  $printed = 1;
+		  last;
+	      }
+	  }
+	  #the line still needs to be printed. This will happen when there is no seq_region defined for the flank
+	  if ($printed == 0){
+	      my $line = shift @lines;
+	      print FH $line;
 	  }
 	  else{
-	      my $up_len = 0;
-	      my $dn_len = 0;
-	      $up_len = length($up_seq) if ($up_seq);
-	      $dn_len = length($dn_seq) if ($dn_seq);
-	      
-	      # figure out the coordinates of the flanking sequence	      
-	      
-	      if($sr_strand == 1) {
-		  $up_sr_start = $sr_start - $up_len;
-		  $up_sr_end   = $sr_start - 1;
-		  $dn_sr_start = $sr_end + 1;
-		  $dn_sr_end   = $sr_end + $dn_len;
-	      } else {
-		  $up_sr_start = $sr_end + 1;
-		  $up_sr_end   = $sr_end + $up_len;
-		  $dn_sr_start = $sr_start - $dn_len;
-		  $dn_sr_end   = $sr_start - 1;
-	      }
-	      
-	      my $slice = $slice_adaptor->fetch_by_seq_region_id($sr_id);
-	      if(!$slice) {
-		  warning("Could not obtain slice for seq_region_id $sr_id\n");
-		  next;
-	      }
-	  
-	      # compare sequence in database to flanking sequence
-	      # if it matches store only coordinates, otherwise still store flanking
-	      
-	      # there are sometimes off by ones in dbSNP, try to take this into account
-	      # with a 'wobble' of one base on either side
-	      my @wobble = (0, 1, -1);
-	      my $i = 0;
-	      my $w;
-	      while((defined($up_seq) || defined($dn_seq)) && $i < 3) {
-		  $w = $wobble[$i++];
-	      
-		  if(defined($up_seq)) {
-		      my $up = $slice->subseq($up_sr_start+$w, $up_sr_end+$w, $sr_strand);
-		      $up_seq = undef if(uc($up) eq uc($up_seq));
-		      if($w && !defined($up_seq)){
-			print STDERR "*";
-			$up_sr_start += $w;
-			$up_sr_end += $w;
-		    }
-		  }
-		  
-		  if(defined($dn_seq)) {
-		      my $dn = $slice->subseq($dn_sr_start+$w, $dn_sr_end+$w, $sr_strand);
-		      $dn_seq = undef if(uc($dn) eq uc($dn_seq));
-		      if($w && !defined($dn_seq)){
-			  print STDERR "*";
-			  $dn_sr_start += $w;
-			  $dn_sr_end += $w;
-		      }
-		  }
-	      }
-	      #to write NULL values in the database, we have to write \n
-	      $up_sr_start = $up_sr_end = '\N' if (defined($up_seq));
-	      $dn_sr_start = $dn_sr_end = '\N' if(defined($dn_seq));	 
-
-	      $up_seq = '\N' if (!defined($up_seq));
-	      $dn_seq = '\N' if (!defined($dn_seq));
-	 
+	      $printed = 0;
 	  }
-	  #print to the file the information
-	  print FH join("\t",$var_id,$up_seq, $dn_seq, $up_sr_start, $up_sr_end,$dn_sr_start, $dn_sr_end, $sr_id, $sr_strand),"\n";
+	  @lines = ();
       }
-      $sth->finish();
+      $previous_var_id = $var_id;
+      #print to the buffer the information
+      push @lines, join("\t",$var_id,$up_seq, $dn_seq, $up_sr_start, $up_sr_end,$dn_sr_start, $dn_sr_end, $sr_id, $sr_strand) . "\n";
+
+  }  
+  foreach my $line (@lines){
+      @row = split /\t/,$line;
+      if ($row[7] ne '\N'){
+	  print FH $line;
+	  $printed = 1;
+	  last;
+      }
+  }
+  #the line still needs to be printed. This will happen when there is no seq_region defined for the flank
+  if ($printed == 0){
+      my $line = shift @lines;
+      print FH $line;
+  }
+  else{
+      $printed = 0;
   }
   close FH;
-  $sth_variation->finish();
+  close IN;
   return;
 }
 
@@ -214,17 +233,16 @@ sub last_process{
     my $dbCore = shift;
     my $dbVar = shift;
 
-#    debug("Deleting existing flanking_sequences");
+    debug("Deleting existing flanking_sequences");
     $dbVar->do("DELETE FROM flanking_sequence");
 
     debug("Reimporting processed flanking sequences");
     #group all the fragments in 1 file
     my $dbname = $dbVar->dbname(); #get the name of the database to create the file
-    my $call = "cat $TMP_DIR/$dbname.flanking_sequence*.txt > $TMP_DIR/$TMP_FILE";
+    my $call = "cat $TMP_DIR/$dbname.flanking_sequence_out*.txt > $TMP_DIR/$TMP_FILE";
     system($call);
     #delete the files
-    unlink(<$TMP_DIR/$dbname.flanking_sequence*.txt>);
-
+#    unlink(<$TMP_DIR/$dbname.flanking_sequence*.txt>);
     #and upload all the information to the flanking_sequence table
     load ($dbVar,qw(flanking_sequence variation_id up_seq down_seq up_seq_region_start up_seq_region_end down_seq_region_start down_seq_region_end seq_region_id seq_region_strand));
     
