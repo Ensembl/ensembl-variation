@@ -70,13 +70,11 @@ use vars qw(@ISA);
         -ldContainer => {'variation_feature_1-variation_feature_2' => { 'population_id_1' =>
 	                                                                          { 'd_prime' => 0.5,
 										    'r2'      => 0.421,
-										    'snp_distance_count' => 5,
 										    'sample_count' => 120
 										    },
 									'population_id_2' => 
  								                  { 'd_prime' => 0.3,
 										    'r2'     => 0.321,
-										    'snp_distance_count' => 3,
 										    'sample_count' => 35
 										    }
 								    }
@@ -125,7 +123,6 @@ sub name{
   return $self->{'name'} = shift if(@_);
   return $self->{'name'};
 }
-
 
 
 =head2 get_variations
@@ -275,7 +272,7 @@ sub get_d_prime{
 
     Example     : $ld_values = $obj->get_all_ld_values();
     Description : Get all the information contained in the LDFeatureContainer object
-    ReturnType  : reference to list of hashes [{variation1 => Bio::EnsEMBL::Variation::VariationFeature, variation2=>Bio::EnsEMBL::Variation::VariationFeature, d_prime=>d_prime, r2=>r2, snp_distance_count=>snp_distance_count, sample_count=>sample_count, population_id=>population_id}]
+    ReturnType  : reference to list of hashes [{variation1 => Bio::EnsEMBL::Variation::VariationFeature, variation2=>Bio::EnsEMBL::Variation::VariationFeature, d_prime=>d_prime, r2=>r2, sample_count=>sample_count, population_id=>population_id}]
     Exceptions  : no exceptions
     Caller      : general
 =cut
@@ -301,7 +298,6 @@ sub get_all_ld_values{
 	    $ld_value{'variation2'} = $self->{'variationFeatures'}->{$variation_feature_id_2};
 	    $ld_value{'d_prime'} = $self->{'ldContainer'}->{$key_ld}->{$self->{'_default_population'}}->{'d_prime'};
 	    $ld_value{'r2'} = $self->{'ldContainer'}->{$key_ld}->{$self->{'_default_population'}}->{'r2'};
-	    $ld_value{'snp_distance_count'} = $self->{'ldContainer'}->{$key_ld}->{$self->{'_default_population'}}->{'snp_distance_count'};
 	    $ld_value{'sample_count'} = $self->{'ldContainer'}->{$key_ld}->{$self->{'_default_population'}}->{'sample_count'};
 	    $ld_value{'population_id'} = $self->{'_default_population'};
 #	    push @ld_value, $self->{'variationFeatures'}->{$variation_feature_id_1}, $self->{'variationFeatures'}->{$variation_feature_id_2};

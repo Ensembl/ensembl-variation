@@ -109,6 +109,7 @@ sub fetch_all_genotyped_by_Slice{
     #call the method fetch_all_by_Slice_constraint with the genotyped constraint
     return $self->fetch_all_by_Slice_constraint($slice,$constraint);
 }
+
 # method used by superclass to construct SQL
 sub _tables { return (['variation_feature', 'vf'],
 		      [ 'source', 's']); }
@@ -238,6 +239,7 @@ sub _objs_from_sth {
       }
       $slice = $dest_slice;
     }
+    $validation_status = 0 if (!defined $validation_status);
     my @states = split(',',$validation_status);
     push @features, Bio::EnsEMBL::Variation::VariationFeature->new_fast(
       {'start'    => $seq_region_start,

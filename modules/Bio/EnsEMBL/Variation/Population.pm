@@ -67,6 +67,7 @@ package Bio::EnsEMBL::Variation::Population;
 
 use Bio::EnsEMBL::Storable;
 use Bio::EnsEMBL::Utils::Argument qw(rearrange);
+use Bio::EnsEMBL::Utils::Exception qw(throw);
 
 our @ISA = ('Bio::EnsEMBL::Storable');
 
@@ -78,6 +79,7 @@ our @ISA = ('Bio::EnsEMBL::Storable');
   Arg [-NAME]: string - name of the population
   Arg [-DESCRIPTION]: string - description of the population
   Arg [-SIZE]: int - the size of the population
+  Arg [-IS_STRAIN]: int - 1 if the population should be treated as a strain, 0 otherwise
   Arg [-SUB_POPULATIONS]: listref of Bio::EnsEMBL::Population objects 
   Example    : $pop = Bio::EnsEMBL::Variation::Population->new
        (-name => 'WEST AFRICA',
@@ -97,8 +99,8 @@ sub new {
 
   my $class = ref($caller) || $caller;
 
-  my ($dbID, $adaptor, $name, $desc, $size, $sub_pops) =
-    rearrange(['DBID','ADAPTOR','NAME', 'DESCRIPTION', 'SIZE',
+  my ($dbID, $adaptor, $name, $desc, $size, $is_strain, $sub_pops) =
+    rearrange(['DBID','ADAPTOR','NAME', 'DESCRIPTION', 'SIZE', 'IS_STRAIN',
                'SUB_POPULATIONS'], @_);
 
   return bless {'dbID'        => $dbID,
@@ -106,6 +108,7 @@ sub new {
                 'name'        => $name,
                 'description' => $desc,
                 'size'        => $size,
+		'is_strain'   => $is_strain,
                 'sub_populations' => $sub_pops}, $class;
 }
 
@@ -170,6 +173,31 @@ sub size{
 }
 
 
+=head2 is_strain
+
+    Arg [1]     : int $newval (optional)
+                  The new value to set the is_strain attribute to
+                  Only possible values 0 and 1
+    Example     : $is_strain = $obj->is_strain();
+    Description : Getter/Setter for the is_strain attribute
+    Returntype  : int
+    Exceptions  : only possible values to set the is_strain attribute
+                  are 1 and 0
+    Caller      : general
+
+=cut
+
+sub is_strain{
+    my $self = shift;
+    if (@_){
+	my $new_strain = shift;
+	if (($new_strain != 0) || ($new_strain != 1) ){
+	    throw('only allowed 1 or 0 as a valid is_strain value');
+	}
+	return $self->{'is_strain'} = $new_strain;
+    }
+    return $self->{'is_strain'};
+}
 
 =head2 get_all_sub_Populations
 
