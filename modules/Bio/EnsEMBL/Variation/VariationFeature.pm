@@ -169,7 +169,7 @@ sub new {
   $self->{'variation'}        = $variation;
   $self->{'_variation_id'}    = $variation_id;
   $self->{'source'}           = $source;
-  $self->{'validation_code'}  = $vcode;
+  $self->{'validation_code'}  = $validation_code;
   $self->{'consequence_type'} = $consequence_type;
 
   return $self;
