@@ -107,6 +107,14 @@ our @ISA = ('Bio::EnsEMBL::Feature');
     has hit the genome. If this was the only feature associated with this
     variation_feature the map_weight would be 1.
 
+  Arg [-VARIATION] :
+    int - the variation object associated with this feature.
+
+  Arg [-VARIATION_ID] :
+    int - the internal id of the variation object associated with this
+    identifier. This may be provided instead of a variation object so that
+    the variation may be lazy-loaded from the database on demand.
+
   Example    :
     $vf = Bio::EnsEMBL::Variation::VariationFeature->new
        (-start   => 100,
@@ -131,13 +139,15 @@ sub new {
 
   my $self = $class->SUPER::new(@_);
 
-  my ($allele_str, $var_name, $map_weight, $variation) =
-    rearrange([qw(ALLELE_STRING VARIATION_NAME MAP_WEIGHT VARIATION)], @_);
+  my ($allele_str, $var_name, $map_weight, $variation, $variation_id) =
+    rearrange([qw(ALLELE_STRING VARIATION_NAME 
+                  MAP_WEIGHT VARIATION VARIATION_ID)], @_);
 
   $self->{'allele_string'}  = $allele_str;
   $self->{'variation_name'} = $var_name;
   $self->{'map_weight'}     = $map_weight;
   $self->{'variation'}      = $variation;
+  $self->{'_variation_id'}  = $variation_id;
 
   return $self;
 }
@@ -259,8 +269,13 @@ sub variation {
     }
     $self->{'variation'} = shift;
   }
+  elsif(!defined($self->{'variation'}) && $self->{'adaptor'} &&
+        defined($self->{'_variation_id'})) {
+    # lazy-load from database on demand
+    my $va = $self->{'adaptor'}->db()->get_VariationAdaptor();
+    $self->{'variation'} = $va->fetch_by_dbID($self->{'_variation_id'});
+  }
 
-  ### TODO: this should be lazy-loaded on demand
   return $self->{'variation'};
 }
 

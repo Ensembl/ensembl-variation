@@ -233,7 +233,8 @@ sub _objs_from_sth {
        'variation_name' => $variation_name,
        'adaptor'  => $self,
        'dbID'     => $variation_feature_id,
-       'map_weight' => $map_weight});
+       'map_weight' => $map_weight,
+       '_variation_id' => $variation_id});
   }
 
   return \@features;
