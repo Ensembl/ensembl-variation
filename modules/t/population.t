@@ -17,13 +17,13 @@ use Bio::EnsEMBL::Variation::Population;
 my $green_pop = Bio::EnsEMBL::Variation::Population->new
   (-dbID => 123,
    -name => 'Green people',
-   -desc => 'People who are green',
+   -description => 'People who are green',
    -size => 1000);
 
 my $blue_pop = Bio::EnsEMBL::Variation::Population->new
   (-dbID => 124,
    -name => 'Blue people',
-   -desc => 'People who are blue',
+   -description => 'People who are blue',
    -size => 1000);
 
 
