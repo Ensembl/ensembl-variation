@@ -73,6 +73,7 @@ use Bio::EnsEMBL::Feature;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Utils::Argument  qw(rearrange);
 use Bio::EnsEMBL::Variation::Utils::Sequence qw(ambiguity_code variation_class);
+use Data::Dumper;
 
 our @ISA = ('Bio::EnsEMBL::Feature');
 
@@ -168,7 +169,7 @@ sub new {
   $self->{'variation'}        = $variation;
   $self->{'_variation_id'}    = $variation_id;
   $self->{'source'}           = $source;
-  $self->{'validation_code'}  = $validation_code;
+  $self->{'validation_code'}  = $vcode;
   $self->{'consequence_type'} = $consequence_type;
 
   return $self;
@@ -486,10 +487,22 @@ sub get_all_validation_states {
 
   my $code = $self->{'validation_code'};
 
+  # convert the validation state strings into a bit field
+  # this preserves the same order and representation as in the database
+  # and filters out invalid states
+
+  my %VSTATE2BIT = %Bio::EnsEMBL::Variation::Variation::VSTATE2BIT;
+
+  my $vcode = 0;
+  $code ||= [];
+  foreach my $vstate (@$code) {
+    $vcode |= $VSTATE2BIT{lc($vstate)} || 0;
+  }
+
   # convert the bit field into an ordered array
   my @states;
   for(my $i = 0; $i < @VSTATES; $i++) {
-    push @states, $VSTATES[$i] if((1 << $i) & $code);
+    push @states, $VSTATES[$i] if((1 << $i) & $vcode);
   }
 
   return \@states;
@@ -513,7 +526,7 @@ sub add_validation_state {
   my $self  = shift;
   my $state = shift;
 
-  my %VSTATE2BIT = %Bio::EnsEMBL::Variation::Variation::VSTATE2BUT;
+  my %VSTATE2BIT = %Bio::EnsEMBL::Variation::Variation::VSTATE2BIT;
   my @VSTATES = @Bio::EnsEMBL::Variation::Variation::VSTATES;
   # convert string to bit value and add it to the existing bitfield
   my $bitval = $VSTATE2BIT{lc($state)};
