@@ -105,7 +105,7 @@ sub fetch_by_dbID {
   Arg [1]    : string $name
   Example    : $var = $var_adaptor->fetch_by_name('rs1453','dbSNP');
   Description: Retrieves a population object via its name
-  Returntype : Bio::EnsEMBL::Variation::Population
+  Returntype : Bio::EnsEMBL::Variation::Variation
   Exceptions : throw if name argument is not defined
   Caller     : general
 
@@ -158,7 +158,6 @@ sub fetch_by_name {
 
     $sth->finish();
   }
-
   return $result->[0];
 }
 
