@@ -575,6 +575,27 @@ sub source{
   return $self->{'source'};
 }
 
+=head2 is_tagged
+
+  Args        : None
+  Example     : my $populations = $vf->is_tagged();
+  Description : If the variation is tagged in any population, returns an array with the populations where the variation_feature
+                is tagged (using a criteria of r2 > 0.99). Otherwise, returns null
+  ReturnType  : list of Bio::EnsEMBL::Variation::Population
+  Exceptions  : none
+  Caller      : general
+  
+=cut
+
+sub is_tagged{
+    my $self = shift;
+    
+    if ($self->{'adaptor'}){
+	my $population_adaptor = $self->{'adaptor'}->db()->get_PopulationAdaptor();
+	return $population_adaptor->fetch_tagged_Population($self);
+    }
+}
+
 =head2 convert_to_SNP
 
   Args        : None

@@ -347,6 +347,49 @@ sub fetch_all_by_Individual{
     return $results;
 }
 
+
+=head2 fetch_tagged_Population
+
+  Arg [1]     : Bio::EnsEMBL::Variation::VariationFeature $vf
+  Example     : my $vf = $vf_adaptor->fetch_by_name('rs205621');
+                my $populations_tagged = $vf->is_tagged();
+                foreach my $pop (@{$vf_adaptor->is_tagged}){
+		    print $pop->name," has been tagged using a 0.99 r2 criteria\n";
+                }
+  Description : Retrieves all populations from a specified variation feature that have been tagged
+  ReturnType  : reference to list of Bio::EnsEMBL::Variation::Population objects
+  Exceptions  : throw if incorrect argument is passed
+                warning if provided variation feature does not have a dbID
+  Caller      : general
+
+=cut
+
+sub fetch_tagged_Population{
+    my $self = shift;
+    my $variation_feature = shift;
+
+    if(!ref($variation_feature) || !$variation_feature->isa('Bio::EnsEMBL::Variation::VariationFeature')) {
+	throw("Bio::EnsEMBL::Variation::VariationFeature arg expected");
+    }
+    
+    if(!$variation_feature->dbID()) {
+	warning("Variation feature does not have dbID, cannot retrieve tagged populations");
+	return [];
+  } 
+
+    my $sth = $self->prepare(qq{SELECT p.population_id, p.name, p.size, p.description, p.is_strain
+				FROM population p, tagged_variation_feature tvf
+				WHERE p.population_id = tvf.population_id
+                                AND tvf.variation_feature_id = ?
+			    });
+    $sth->execute($variation_feature->dbID());
+    my $results = $self->_objs_from_sth($sth);
+
+    $sth->finish();
+
+    return $results;
+}
+
 #
 # private method, creates population objects from an executed statement handle
 # ordering of columns must be consistant
