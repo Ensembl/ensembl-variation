@@ -16,7 +16,7 @@ create table variation (
 	validation_status SET('cluster','freq','submitter','doublehit','hapmap'),
 
 	primary key( variation_id ),
-	key name_idx( name, source_id )
+	unique ( name )
 );
 
 
@@ -36,7 +36,7 @@ create table variation_synonym (
 
   primary key(variation_synonym_id),
   key variation_idx (variation_id),
-  key name_idx (name)
+  unique (name, source_id)
 );
 
 
@@ -93,6 +93,7 @@ create table population(
 	description text,
 
 	primary key( population_id ),
+  unique name_idx( name )
 );
 
 
@@ -137,7 +138,8 @@ create table individual(
   mother_individual_id int,
   
   primary key(individual_id),
-  key population_idx (population_id)
+  key population_idx (population_id),
+  key name_idx (name)
 );
 
 
@@ -280,7 +282,8 @@ create table variation_group (
 	source_id int not null,
   type enum('haplotype', 'tag'),
 
-	primary key (variation_group_id)
+	primary key (variation_group_id),
+  unique(name)
 );
 
 
@@ -317,7 +320,8 @@ create table allele_group(
 	source_id int,
 	frequency float,
 
-	primary key( allele_group_id )
+	primary key( allele_group_id ),
+  unique(name)
 );
 
 
