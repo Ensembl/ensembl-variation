@@ -771,18 +771,43 @@ sub cleanup {
     $self->{'dbVariation'}->do('CREATE TABLE tmp_pop (population_id int PRIMARY KEY'); #create a temporary table with unique populations
     $self->{'dbVariation'}->do('INSERT IGNORE INTO tmp_pop SELECT population_id FROM allele'); #add the populations from the alleles
     $self->{'dbVariation'}->do('INSERT IGNORE INTO tmp_pop SELECT population_id FROM individual'); #add the populations from the individuals
-    $self->{'dbVariation'}->do(qq{NSERT IGNORE INTO tmp_pop SELECT super_population_id 
+    $self->{'dbVariation'}->do(qq{INSERT IGNORE INTO tmp_pop SELECT super_population_id 
 				      FROM population_structure ps, tmp_pop tp 
 				      WHERE tp.population_id = ps.sub_population_id}); #add the populations from the super-populations
     
-    $self->{'dbVariation'}->do(qq{DELETE FROM p, ps USING population p 
-				      LEFT JOIN tmp_pop tp ON p.population_id = tp.population_id, 
-				      population_synonym ps LEFT JOIN tmp_pop tp1 on ps.population_id = tp1.population_id 
-				      WHERE tp.population_id is null AND tp1.population_id is null}); #delete from population and population_synonym
+    #necessary to difference between MySQL 4.0 and MySQL 4.1
+    my $sql;
+    my $sql_2;
+    my $sth = $self->{'dbVariation'}->prepare(qq{SHOW VARIABLE LIKE 'version'});
+    $sth->execute();
+    my $row_ref = $sth->fetch();
+    $sth->finish();
+    #check if the value in the version contains the 4.1
+    if ($row_ref->[1] =~ /4\.1/){
+    
+	$sql = qq{DELETE FROM p, ps USING population p 
+		      LEFT JOIN tmp_pop tp ON p.population_id = tp.population_id, 
+		      population_synonym ps LEFT JOIN tmp_pop tp1 on ps.population_id = tp1.population_id 
+		      WHERE tp.population_id is null AND tp1.population_id is null};
+	$sql_2 = qq{DELETE FROM ps USING population_structure ps 
+			LEFT JOIN tmp_pop tp ON ps.super_population_id = tp.population_id 
+			WHERE tp.population_id is null};
+    }
+    else{
+
+	$sql = qq{DELETE population, population_synonym FROM population p 
+		      LEFT JOIN tmp_pop tp ON p.population_id = tp.population_id, 
+		      population_synonym ps LEFT JOIN tmp_pop tp1 on ps.population_id = tp1.population_id 
+		      WHERE tp.population_id is null AND tp1.population_id is null};
+	$sql_2 = qq{DELETE population_structure FROM population_structure ps 
+			LEFT JOIN tmp_pop tp ON ps.super_population_id = tp.population_id 
+			WHERE tp.population_id is null};
+    }
+
+    $self->{'dbVariation'}->do($sql); #delete from population and population_synonym
                                                                                                       # populations not present
-    $self->{'dbVariation'}->do(qq{DELETE FROM ps USING population_structure ps 
-				      LEFT JOIN tmp_pop tp ON ps.super_population_id = tp.population_id 
-				      WHERE tp.population_id is null}); #and delete from the population_structure table
+    $self->{'dbVariation'}->do($sql_2); #and delete from the population_structure table
+
     $self->{'dbVariation'}->do('DROP TABLE tmp_pop'); #and finally remove the temporary table
     
     $self->{'dbVariation'}->do('ALTER TABLE variation  DROP COLUMN snp_id');
