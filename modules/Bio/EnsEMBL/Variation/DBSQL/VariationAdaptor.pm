@@ -30,11 +30,6 @@ Bio::EnsEMBL::Variation::DBSQL::VariationAdaptor
   $pop = $pa->fetch_by_name('PACIFIC');
   @vars = {$va->fetch_all_by_Population($pop)};
 
-  # fetch all variations belonging to a variation group (haplotype set)
-  $vg = $vga->fetch_by_name('PERLEGEN:B000009');
-  @vars = @{$va->fetch_all_by_VariationGroup($vg)};
-
-
 =head1 DESCRIPTION
 
 This adaptor provides database connectivity for Variation objects.
