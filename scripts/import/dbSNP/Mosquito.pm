@@ -69,9 +69,9 @@ sub variation_feature{
     $self->{'dbVariation'}->do(qq{INSERT INTO variation_feature 
 				      (variation_id, seq_region_id,
 				       seq_region_start, seq_region_end, seq_region_strand,
-				       variation_name, flags)
+				       variation_name, flags, source_id, validation_status)
 				      SELECT v.variation_id, ts.seq_region_id, tcl.start, tcl.end,
-				      tcl.strand, v.name, IF(tgv.variation_id,'genotyped',NULL)
+				      tcl.strand, v.name, IF(tgv.variation_id,'genotyped',NULL), v.source_id, v.validation_status
 				      FROM   variation v LEFT JOIN tmp_genotyped_var tgv ON v.variation_id = tgv.variation_id, tmp_contig_loc tcl, tmp_seq_region ts
 				      WHERE  v.snp_id = tcl.snp_id
 				      AND    tcl.chr = ts.name});

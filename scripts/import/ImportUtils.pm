@@ -9,7 +9,7 @@ our @ISA = ('Exporter');
 
 our @EXPORT_OK = qw(dumpSQL debug create_and_load load);
 
-our $TMP_DIR = "/ecs2/scratch3/dani";
+our $TMP_DIR = "/ecs2/scratch6/dani";
 our $TMP_FILE = 'tabledump.txt';
 
 
@@ -64,7 +64,7 @@ sub load {
 #  my $dbname = $db->dbname();
 
 #  my $call = "mysqlimport -c $cols -h $host -u $user " .
-#    "-p$pass -P$port $dbname $TMP_DIR/$tablename.txt";
+#    "-p$pass -P$port $dbname $table_file";
 
 #  system($call);
 
@@ -77,12 +77,12 @@ sub load {
    if ( @colnames ) {
 
      $sql = qq{
-               LOAD DATA LOCAL INFILE '$table_file'
+               LOAD DATA INFILE '$table_file'
                INTO TABLE $tablename( $cols )
               };
    } else {
      $sql = qq{
-               LOAD DATA LOCAL INFILE '$table_file'
+               LOAD DATA INFILE '$table_file'
                INTO TABLE $tablename
               };
    }

@@ -172,7 +172,9 @@ sub population_table {
 
   debug("Dumping population class data");
 
-  dumpSQL($self->{'dbSNP'}, "SELECT pop_class, pop_class_id, pop_class_text FROM PopClassCode");
+  dumpSQL($self->{'dbSNP'}, qq{SELECT pop_class, pop_class_id, pop_class_text
+				   FROM PopClassCode 
+			   });
 
   load($self->{'dbVariation'}, 'population', 'name', 'pop_class_id', 'description');
 
@@ -182,10 +184,11 @@ sub population_table {
 
   # load Population data as populations
 
-  dumpSQL($self->{'dbSNP'}, qq{SELECT concat(p.handle, ':', p.loc_pop_id),
+  dumpSQL($self->{'dbSNP'}, qq{SELECT DISTINCT concat(p.handle, ':', p.loc_pop_id),
                     p.pop_id, pc.pop_class_id
              FROM   Population p
-             LEFT JOIN PopClass pc ON p.pop_id = pc.pop_id});
+             LEFT JOIN PopClass pc ON p.pop_id = pc.pop_id
+	 });
 
   debug("Loading population data");
 
@@ -294,11 +297,11 @@ sub allele_table {
   # frequency data for
 
   dumpSQL($self->{'dbSNP'}, qq(SELECT afsp.subsnp_id, afsp.pop_id, a.allele_id, a.allele, afsp.freq
-             FROM   AlleleFreqBySsPop afsp, Allele a, SubSNP ss, Batch b
+             FROM   AlleleFreqBySsPop afsp, Allele a, SubSNP ss #, Batch b
              WHERE  afsp.allele_id = a.allele_id
              AND    afsp.subsnp_id = ss.subsnp_id
-            AND    ss.batch_id = b.batch_id
-             AND    b.tax_id = $self->{'taxID'}
+#            AND    ss.batch_id = b.batch_id
+             AND    ss.tax_id = $self->{'taxID'}
              $self->{'limit'}));
 
 
@@ -309,7 +312,10 @@ sub allele_table {
 
   debug("Creating allele table");
 
-  $self->{'dbVariation'}->do(qq(INSERT INTO allele (variation_id, allele,frequency, population_id)
+  #necessary to create a unique index to simulate the GROUP BY clause
+  $self->{'dbVariation'}->do(qq{CREATE UNIQUE INDEX unique_allele_idx ON allele (variation_id,allele(2),frequency,population_id)});
+
+  $self->{'dbVariation'}->do(qq(INSERT IGNORE INTO allele (variation_id, allele,frequency, population_id)
                 SELECT vs.variation_id,
                        IF(vs.substrand_reversed_flag,
                           tra.rev_allele,tra.allele) as allele,
@@ -318,14 +324,18 @@ sub allele_table {
                        population p
                 WHERE  ta.subsnp_id = vs.subsnp_id
                 AND    ta.allele = tra.allele
-                AND    ta.pop_id = p.pop_id
-                GROUP BY vs.variation_id, p.population_id, allele, ta.freq));
+		AND    ta.pop_id = p.pop_id));
+#                GROUP BY vs.variation_id, p.population_id, tra.allele, ta.freq));
+    #remove the index
+    $self->{'dbVariation'}->do("DROP INDEX unique_allele_idx ON allele");
 
-  # load remaining allele data which we do not have frequence data for
+  # load remaining allele data which we do not have frequency data for
   # this will not import alleles without frequency for a variation which
   # already has frequency
 
   $self->{'dbVariation'}->do("DROP TABLE tmp_allele");
+
+  $self->{'dbVariation'}->do("ALTER TABLE allele ENABLE KEYS"); #after ignoring in the insertion, we must enable keys again
 
   debug("Loading other allele data");
 
@@ -364,64 +374,61 @@ sub allele_table {
 sub flanking_sequence_table {
     my $self = shift;
 
-   $self->{'dbVariation'}->do(qq{CREATE TABLE tmp_seq (variation_id int,
-                                       subsnp_id int,
-                                       line_num int,
-                                       type enum ('5','3'),
-                                       line varchar(255),
-                                       revcom tinyint)
-                 MAX_ROWS = 100000000});
+    $self->{'dbVariation'}->do(qq{CREATE TABLE tmp_seq (variation_id int,
+                                        subsnp_id int,
+                                        line_num int,
+                                        type enum ('5','3'),
+                                        line varchar(255),
+                                        revcom tinyint)
+                  MAX_ROWS = 100000000});
 
-   # import both the 5prime and 3prime flanking sequence tables
+    # import both the 5prime and 3prime flanking sequence tables
 
-   foreach my $type ('3','5') {
+    foreach my $type ('3','5') {
+      debug("Dumping $type' flanking sequence");
 
-     debug("Dumping $type' flanking sequence");
-
-     dumpSQL($self->{'dbSNP'}, qq{SELECT seq.subsnp_id, seq.line_num, seq.line
-                FROM SubSNPSeq$type seq, Batch b, SubSNP ss
-                WHERE ss.subsnp_id = seq.subsnp_id
-                AND   ss.batch_id = b.batch_id
-                AND   b.tax_id = $self->{'taxID'}
-                $self->{'limit'}});
+      dumpSQL($self->{'dbSNP'}, qq{SELECT seq.subsnp_id, seq.line_num, seq.line
+                 FROM SubSNPSeq$type seq, SubSNP ss #, Batch b
+                 WHERE ss.subsnp_id = seq.subsnp_id
+ #                AND   ss.batch_id = b.batch_id
+                 AND   ss.tax_id = $self->{'taxID'}
+                 $self->{'limit'}});
 
 
-     $self->{'dbVariation'}->do(qq{CREATE TABLE tmp_seq_$type (
-                      subsnp_id int,
-                      line_num int,
-                      line varchar(255),
-                      KEY subsnp_id_idx(subsnp_id))
-                   MAX_ROWS = 100000000 });
+      $self->{'dbVariation'}->do(qq{CREATE TABLE tmp_seq_$type (
+                       subsnp_id int,
+                       line_num int,
+                       line varchar(255),
+                       KEY subsnp_id_idx(subsnp_id))
+                    MAX_ROWS = 100000000 });
 
-     load($self->{'dbVariation'}, "tmp_seq_$type", "subsnp_id", "line_num", "line");
+      load($self->{'dbVariation'}, "tmp_seq_$type", "subsnp_id", "line_num", "line");
 
-     # merge the tables into a single tmp table
-     $self->{'dbVariation'}->do(qq{INSERT INTO tmp_seq (variation_id, subsnp_id,
-                                        line_num, type, line, revcom)
-                   SELECT vs.variation_id, ts.subsnp_id, ts.line_num, '$type',
-                          ts.line, vs.substrand_reversed_flag
-                   FROM   tmp_seq_$type ts, variation_synonym vs
-                   WHERE  vs.subsnp_id = ts.subsnp_id});
-   }
-    #drop tables to free space
-    $self->{'dbVariation'}->do("DROP TABLE tmp_seq_3");
-    $self->{'dbVariation'}->do("DROP TABLE tmp_seq_5");
-
-   $self->{'dbVariation'}->do("ALTER TABLE tmp_seq ADD INDEX idx (variation_id, type, line_num)");
+      # merge the tables into a single tmp table
+      $self->{'dbVariation'}->do(qq{INSERT INTO tmp_seq (variation_id, subsnp_id,
+                                         line_num, type, line, revcom)
+                    SELECT vs.variation_id, ts.subsnp_id, ts.line_num, '$type',
+                           ts.line, vs.substrand_reversed_flag
+                    FROM   tmp_seq_$type ts, variation_synonym vs
+                    WHERE  vs.subsnp_id = ts.subsnp_id});
+      #drop tmp table to free space
+      $self->{'dbVariation'}->do(qq{DROP TABLE tmp_seq_$type});
+  }
+      
+    $self->{'dbVariation'}->do("ALTER TABLE tmp_seq ADD INDEX idx (subsnp_id, type, line_num)");
 
   my $sth = $self->{'dbVariation'}->prepare(qq{SELECT ts.variation_id, ts.subsnp_id, ts.type,
                                       ts.line, ts.revcom
-                               FROM   tmp_seq ts
+                               FROM   tmp_seq ts FORCE INDEX (idx)
                                ORDER BY ts.subsnp_id, ts.type, ts.line_num},{mysql_use_result => 1});
 
   $sth->execute();
 
-  my ($vid, $ssid, $type, $line, $revcom);
+    my ($vid, $ssid, $type, $line, $revcom);
 
   $sth->bind_columns(\$vid, \$ssid, \$type, \$line, \$revcom);
 
   open(FH, ">" . $self->{'tmpdir'} . "/" . $self->{'tmpfile'});
-
   my $upstream = '';
   my $dnstream = '';
   my $cur_vid;
@@ -433,7 +440,7 @@ sub flanking_sequence_table {
   my $longest_dn = '';
 
   # dump sequences to file that can be imported all at once
-  while($sth->fetch()) {
+    while($sth->fetch()) {
     if(defined($cur_ssid) && $cur_ssid != $ssid) {
       # if subsnp in reverse orientation to refsnp,
       # reverse compliment flanking sequence
@@ -453,6 +460,12 @@ sub flanking_sequence_table {
       if($cur_vid != $vid) {
         $upstream = '\N' if(!$upstream); # null
         $dnstream = '\N' if(!$dnstream);
+	if ($longest_up eq ''){ #some ssID do not have a sequence in dbSNP
+	    $longest_up = '\N';
+	}
+	if ($longest_dn eq ''){
+	    $longest_dn = '\N';
+	}
         print FH join("\t", $cur_vid, $longest_up, $longest_dn), "\n";
         $longest_up = '';
         $longest_dn = '';
@@ -471,14 +484,35 @@ sub flanking_sequence_table {
     }
   }
 
-  # do not forget last row...
-  print FH join("\t", $cur_vid, $longest_up, $longest_dn), "\n" if ($longest_up ne '');
-  #only to test when there is 1 ssID in the temp table
-  print FH join("\t", $cur_vid, $upstream, $dnstream), "\n" if ($longest_up eq '');
+    # do not forget last row...
+    if($revcom) {
+        ($upstream, $dnstream) = ($dnstream, $upstream);
+        reverse_comp(\$upstream);
+        reverse_comp(\$dnstream);
+    }
+
+    # take only the longest total flanking from all of the subsnps
+    if(length($upstream) + length($dnstream) >
+       length($longest_up) + length($longest_dn)) {
+        $longest_up = $upstream;
+        $longest_dn = $dnstream;
+    }
+
+    $upstream = '\N' if(!$upstream); # null
+    $dnstream = '\N' if(!$dnstream);
+    if ($longest_up eq ''){ #some ssID do not have a sequence in dbSNP
+	$longest_up = '\N';
+    }
+    if ($longest_dn eq ''){
+	$longest_dn = '\N';
+    }
+    print FH join("\t", $cur_vid, $longest_up, $longest_dn), "\n";
+
 
   $sth->finish();
 
   close FH;
+  $self->{'dbVariation'}->do("DROP TABLE tmp_seq");
 
   debug("Loading flanking sequence data");
 
@@ -486,8 +520,6 @@ sub flanking_sequence_table {
   $self->{'dbVariation'}->do(qq{LOAD DATA LOCAL INFILE '$self->{'tmpdir'}/$self->{'tmpfile'}' INTO TABLE flanking_sequence });
 
   unlink($self->{'tmpdir'} . "/" . $self->{'tmpfile'});
-
-  $self->{'dbVariation'}->do("DROP TABLE tmp_seq");
 
   return;
 }
@@ -500,69 +532,58 @@ sub variation_feature {
   ### TBD not sure if variations with map_weight > 1 or 2 should be
   ### imported.
 
-  debug("Dumping seq_region data");
+     debug("Dumping seq_region data");
 
-  dumpSQL($self->{'dbCore'}, qq{SELECT sr.seq_region_id, sr.name
-				    FROM   seq_region sr});
-
-  debug("Loading seq_region data");
-  create_and_load($self->{'dbVariation'}, "tmp_seq_region", "seq_region_id", "name *");
-
-  debug("Dumping SNPLoc data");
-
-  my $tablename = $self->{'species_prefix'} . 'SNPContigLoc';
-
- dumpSQL($self->{'dbSNP'}, qq{SELECT snp_id, $self->{'contigSQL'},
-                    asn_from, 
-                    IF(loc_type = 3,  asn_from - 1, asn_to), # 3 = between
-                    IF(orientation, -1, 1)
-             FROM   $tablename
-             $self->{'limit'}});
-
-
-  debug("Loading SNPLoc data");
-
-  create_and_load($self->{'dbVariation'}, "tmp_contig_loc", "snp_id i*", "contig *", "start i", 
-		    "end i", "strand i");
-
-    debug("Creating genotyped variations");
-    #creating the temporary table with the genotyped variations
-    dumpSQL($self->{'dbVariation'},qq{SELECT DISTINCT variation_id
-					  FROM individual_genotype
-				      });
-    create_and_load($self->{'dbVariation'},'tmp_genotyped_var',"variation_id *");
+     dumpSQL($self->{'dbCore'}, qq{SELECT sr.seq_region_id, sr.name
+ 				      FROM   seq_region sr});
     
+     debug("Loading seq_region data");
+     create_and_load($self->{'dbVariation'}, "tmp_seq_region", "seq_region_id", "name *");
+    
+     debug("Dumping SNPLoc data");
+    
+     my $tablename = $self->{'species_prefix'} . 'SNPContigLoc';
+    
+     dumpSQL($self->{'dbSNP'}, qq{SELECT snp_id, $self->{'contigSQL'},
+ 				 asn_from, 
+				 IF(loc_type = 3,  asn_from - 1, asn_to), # 3 = between
+ 				 IF(orientation, -1, 1)
+ 				     FROM   $tablename
+ 				     $self->{'limit'}});
+    
+    
+     debug("Loading SNPLoc data");
 
+     create_and_load($self->{'dbVariation'}, "tmp_contig_loc", "snp_id i*", "contig *", "start i", 
+ 		    "end i", "strand i");
+    
+     debug("Creating genotyped variations");
+    
+     #creating the temporary table with the genotyped variations
+     $self->{'dbVariation'}->do(qq{CREATE TABLE tmp_genotyped_var SELECT DISTINCT variation_id FROM individual_genotype});
+     $self->{'dbVariation'}->do(qq{CREATE INDEX variation_idx ON tmp_genotyped_var (variation_id)});
+    
     debug("Creating tmp_variation_feature data");
     
-    dumpSQL($self->{'dbVariation'},qq{SELECT v.variation_id, ts.seq_region_id, tcl.start, tcl.end, tcl.strand, v.name
+    dumpSQL($self->{'dbVariation'},qq{SELECT v.variation_id, ts.seq_region_id, tcl.start, tcl.end, tcl.strand, v.name, v.source_id, v.validation_status
 					  FROM variation v, tmp_contig_loc tcl, tmp_seq_region ts
 					  WHERE v.snp_id = tcl.snp_id
 					  AND ts.name = tcl.contig});
-
-    create_and_load($self->{'dbVariation'},'tmp_variation_feature',"variation_id *","seq_region_id", "seq_region_start", "seq_region_end", "seq_region_strand", "variation_name");
     
-# $self->{'dbVariation'}->do(qq{INSERT INTO variation_feature 
-#                      (variation_id, seq_region_id,
-#                       seq_region_start, seq_region_end, seq_region_strand,
-#                       variation_name,flags)
-#               SELECT STRAIGHT_JOIN v.variation_id, ts.seq_region_id, tcl.start, tcl.end,
-#                      tcl.strand, v.name, IF(tgv.variation_id,'genotyped',NULL)
-#               FROM   variation v LEFT JOIN tmp_genotyped_var tgv ON v.variation_id = tgv.variation_id, tmp_contig_loc tcl, tmp_seq_region ts
-#               WHERE  v.snp_id = tcl.snp_id
-#               AND    tcl.contig = ts.name});
+    create_and_load($self->{'dbVariation'},'tmp_variation_feature',"variation_id *","seq_region_id", "seq_region_start", "seq_region_end", "seq_region_strand", "variation_name", "source_id", "validation_status");
+    
     debug("Dumping data into variation_feature table");
     $self->{'dbVariation'}->do(qq{INSERT INTO variation_feature (variation_id, seq_region_id,seq_region_start, seq_region_end, seq_region_strand,
-								 variation_name, flags)
+								 variation_name, flags, source_id, validation_status)
 				      SELECT tvf.variation_id, tvf.seq_region_id, tvf.seq_region_start, tvf.seq_region_end, tvf.seq_region_strand,
-				      tvf.variation_name,IF(tgv.variation_id,'genotyped',NULL)
+				      tvf.variation_name,IF(tgv.variation_id,'genotyped',NULL), tvf.source_id, tvf.validation_status
 				      FROM tmp_variation_feature tvf LEFT JOIN tmp_genotyped_var tgv ON tvf.variation_id = tgv.variation_id
 				  });
-
-  $self->{'dbVariation'}->do("DROP TABLE tmp_contig_loc");
-  $self->{'dbVariation'}->do("DROP TABLE tmp_seq_region");
-  $self->{'dbVariation'}->do("DROP TABLE tmp_genotyped_var");
-  $self->{'dbVariation'}->do("DROP TABLE tmp_variation_feature");
+    
+    $self->{'dbVariation'}->do("DROP TABLE tmp_contig_loc");
+    $self->{'dbVariation'}->do("DROP TABLE tmp_seq_region");
+    $self->{'dbVariation'}->do("DROP TABLE tmp_genotyped_var");
+    $self->{'dbVariation'}->do("DROP TABLE tmp_variation_feature");
 }
 
 #
@@ -576,11 +597,11 @@ sub variation_group {
 
   dumpSQL($self->{'dbSNP'}, qq{SELECT  CONCAT(hs.handle, ':', hs.hapset_name),
                     hs.hapset_id, hssl.subsnp_id
-             FROM HapSet hs, HapSetSnpList hssl, SubSNP ss, Batch b
+             FROM HapSet hs, HapSetSnpList hssl, SubSNP ss #, Batch b
              WHERE hs.hapset_id = hssl.hapset_id
              AND   hssl.subsnp_id = ss.subsnp_id
-             AND   ss.batch_id = b.batch_id
-             AND   b.tax_id = $self->{'taxID'}});
+#             AND   ss.batch_id = b.batch_id
+             AND   ss.tax_id = $self->{'taxID'}});
 
   create_and_load($self->{'dbVariation'}, 'tmp_var_grp', 'name', 'hapset_id i*', 'subsnp_id i*');
 
@@ -622,11 +643,11 @@ sub allele_group {
 
   dumpSQL($self->{'dbSNP'}, qq{SELECT  h.hap_id, h.hapset_id, h.loc_hap_id,
                     hsa.snp_allele, hsa.subsnp_id
-             FROM   Hap h, HapSnpAllele hsa, SubSNP ss, Batch b
+             FROM   Hap h, HapSnpAllele hsa, SubSNP ss #, Batch b
              WHERE  hsa.hap_id = h.hap_id
              AND    hsa.subsnp_id = ss.subsnp_id
-             AND    ss.batch_id = b.batch_id
-             AND    b.tax_id = $self->{'taxID'}});
+#             AND    ss.batch_id = b.batch_id
+             AND    ss.tax_id = $self->{'taxID'}});
 
   create_and_load($self->{'dbVariation'}, 'tmp_allele_group_allele','hap_id i*','hapset_id i*',
                   'name','snp_allele', 'subsnp_id i*');
@@ -682,31 +703,11 @@ sub individual_genotypes {
 
   create_and_load($self->{'dbVariation'}, "tmp_gty", 'subsnp_id i*', 'ind_id i', 'genotype');
 
-  # dump to file and split apart the genotype strings
-  my $sth = $self->{'dbVariation'}->prepare(qq{SELECT vs.variation_id, tg.ind_id, tg.genotype
-                               FROM   tmp_gty tg, variation_synonym vs
-                               WHERE  tg.subsnp_id = vs.subsnp_id});
-
-  $sth->execute();
-
-  open ( FH, ">" . $self->{'tmpdir'} ."/" .$self->{'tmpfile'} );
-
-  my $row;
-  while($row = $sth->fetchrow_arrayref()) {
-    my @row = @$row;
-    ($row[2], $row[3]) = split('/', $row[2]);
-    @row = map {(defined($_)) ? $_ : '\N'} @row;  # convert undefined to NULL;
-    print FH join("\t", @row), "\n";
-  }
-
-  $sth->finish();
-  close(FH);
-
   debug("Loading individual_genotype table");
-
-  load($self->{'dbVariation'}, "individual_genotype", 'variation_id', 'individual_id',
-       'allele_1', 'allele_2');
-
+    $self->{'dbVariation'}->do(qq{INSERT INTO individual_genotype (variation_id, individual_id, allele_1, allele_2) 
+				      SELECT vs.variation_id, tg.ind_id, SUBSTRING_INDEX(tg.genotype,'/',1),SUBSTRING_INDEX(tg.genotype,'/',-1)
+				      FROM   tmp_gty tg, variation_synonym vs
+				      WHERE  tg.subsnp_id = vs.subsnp_id});
 
   $self->{'dbVariation'}->do("DROP TABLE tmp_gty");
 
@@ -740,10 +741,8 @@ sub population_genotypes {
 					AND    ug.allele_id_1 = a1.allele_id
 					AND    ug.allele_id_2 = a2.allele_id
 					AND    gtfsp.pop_id $in_str
+					$self->{'limit'}
 				    });
-#				  AND    gtfsp.pop_id = si.pop_id
-#				  AND    si.tax_id = $self->{'taxID'}
-#					$self->{'limit'}});
 	
 	debug("loading genotype data");
 	
@@ -768,13 +767,31 @@ sub population_genotypes {
 sub cleanup {
     my $self = shift;
 
-  $self->{'dbVariation'}->do('ALTER TABLE variation  DROP COLUMN snp_id');
-  $self->{'dbVariation'}->do('ALTER TABLE variation_synonym DROP COLUMN subsnp_id');
-  $self->{'dbVariation'}->do('ALTER TABLE variation_synonym DROP COLUMN substrand_reversed_flag');
-  $self->{'dbVariation'}->do('ALTER TABLE population DROP COLUMN pop_class_id');
-  $self->{'dbVariation'}->do('ALTER TABLE population DROP COLUMN pop_id');
-  $self->{'dbVariation'}->do('ALTER TABLE variation_group DROP COLUMN hapset_id');
-  $self->{'dbVariation'}->do('ALTER TABLE allele_group DROP COLUMN hap_id');
+  #remove populations that are not present in the Individual or Allele table for the specie
+    $self->{'dbVariation'}->do('CREATE TABLE tmp_pop (population_id int PRIMARY KEY'); #create a temporary table with unique populations
+    $self->{'dbVariation'}->do('INSERT IGNORE INTO tmp_pop SELECT population_id FROM allele'); #add the populations from the alleles
+    $self->{'dbVariation'}->do('INSERT IGNORE INTO tmp_pop SELECT population_id FROM individual'); #add the populations from the individuals
+    $self->{'dbVariation'}->do(qq{NSERT IGNORE INTO tmp_pop SELECT super_population_id 
+				      FROM population_structure ps, tmp_pop tp 
+				      WHERE tp.population_id = ps.sub_population_id}); #add the populations from the super-populations
+    
+    $self->{'dbVariation'}->do(qq{DELETE FROM p, ps USING population p 
+				      LEFT JOIN tmp_pop tp ON p.population_id = tp.population_id, 
+				      population_synonym ps LEFT JOIN tmp_pop tp1 on ps.population_id = tp1.population_id 
+				      WHERE tp.population_id is null AND tp1.population_id is null}); #delete from population and population_synonym
+                                                                                                      # populations not present
+    $self->{'dbVariation'}->do(qq{DELETE FROM ps USING population_structure ps 
+				      LEFT JOIN tmp_pop tp ON ps.super_population_id = tp.population_id 
+				      WHERE tp.population_id is null}); #and delete from the population_structure table
+    $self->{'dbVariation'}->do('DROP TABLE tmp_pop'); #and finally remove the temporary table
+    
+    $self->{'dbVariation'}->do('ALTER TABLE variation  DROP COLUMN snp_id');
+    $self->{'dbVariation'}->do('ALTER TABLE variation_synonym DROP COLUMN subsnp_id');
+    $self->{'dbVariation'}->do('ALTER TABLE variation_synonym DROP COLUMN substrand_reversed_flag');
+    $self->{'dbVariation'}->do('ALTER TABLE population DROP COLUMN pop_class_id');
+    $self->{'dbVariation'}->do('ALTER TABLE population DROP COLUMN pop_id');
+    $self->{'dbVariation'}->do('ALTER TABLE variation_group DROP COLUMN hapset_id');
+    $self->{'dbVariation'}->do('ALTER TABLE allele_group DROP COLUMN hap_id');
 
 }
 

@@ -12,6 +12,7 @@ use Bio::EnsEMBL::Utils::Exception qw(warning throw verbose);
 use Bio::EnsEMBL::Utils::Sequence qw(expand);
 use ImportUtils qw(debug load);
 
+use constant MITHOCONDRIAL_CONTIG => 'MT_NC_001807'; #the human mithocondrial contigs are already in top_level
 
 my ($TMP_DIR, $TMP_FILE, $LIMIT,$status_file);
 
@@ -136,7 +137,7 @@ sub variation_feature {
   my $dbCore = shift;
   my $dbVar  = shift;
   my $top_level = shift;
-
+  my $mithocondrial = 0;
   my $slice_adaptor = $dbCore->get_SliceAdaptor();
   my $asma = $dbCore->get_AssemblyMapperAdaptor();
   my $csa  = $dbCore->get_CoordSystemAdaptor();
@@ -150,27 +151,28 @@ sub variation_feature {
   debug("Processing variation features");
 
   my $sth = $dbVar->prepare
-    (qq{SELECT vf.variation_feature_id, vf.seq_region_id,
+    (qq{SELECT STRAIGHT_JOIN vf.variation_feature_id, vf.seq_region_id,
                vf.seq_region_start, vf.seq_region_end, vf.seq_region_strand,
-               vf.variation_id, a.allele, tmw.count, v.name, vf.flags
-        FROM   variation_feature vf, allele a, tmp_map_weight tmw,
+               vf.variation_id, a.allele, tmw.count, v.name, vf.flags, vf.source_id, vf.validation_status, vf.consequence_type
+        FROM   variation_feature vf FORCE INDEX(PRIMARY), allele a, tmp_map_weight tmw,
                variation v
         WHERE  a.variation_id = vf.variation_id
         AND    vf.variation_id = tmw.variation_id
         AND    vf.variation_id = v.variation_id
 	$LIMIT
-        ORDER BY vf.seq_region_id, vf.seq_region_start, vf.variation_feature_id},{mysql_use_result=>1});
+        ORDER BY vf.seq_region_id, vf.seq_region_start},{mysql_use_result=>1});
 
   $sth->execute();
 
   my ($vf_id, $sr_id, $sr_start, $sr_end, $sr_strand,
-      $v_id, $allele, $map_weight, $v_name, $vf_flags);
+      $v_id, $allele, $map_weight, $v_name, $vf_flags, $vf_source_id, $vf_validation_status, $vf_consequence_type);
 
   $sth->bind_columns(\$vf_id, \$sr_id, \$sr_start, \$sr_end, \$sr_strand,
-                     \$v_id, \$allele, \$map_weight, \$v_name, \$vf_flags);
+                     \$v_id, \$allele, \$map_weight, \$v_name, \$vf_flags, \$vf_source_id, \$vf_validation_status, \$vf_consequence_type);
 
   my ($cur_vf_id, $cur_map_weight, $cur_v_id, $cur_v_name,
-     $top_coord, $top_sr_id, $top_sr_start, $top_sr_end, $top_sr_strand, $ref_allele,$cur_vf_flags);
+     $top_coord, $top_sr_id, $top_sr_start, $top_sr_end, $top_sr_strand, 
+      $ref_allele,$cur_vf_flags, $cur_source_id, $cur_validation_status, $cur_consequence_type);
   my %alleles;
   my %alleles_expanded; #same hash as before, but with the expanded alleles: $alleles_expanded{AGAGAG} = (AG)3
 
@@ -198,13 +200,13 @@ sub variation_feature {
 	  if ($top_level) {
 	    print FH join("\t", $cur_vf_id, $top_sr_id, $top_sr_start, $top_sr_end, $top_sr_strand,
 			  $cur_v_id, $allele_str, $cur_v_name,
-			  $cur_map_weight,$cur_vf_flags), "\n";
+			  $cur_map_weight,$cur_vf_flags,$cur_source_id, $cur_validation_status,$cur_consequence_type), "\n";
 	  }
 	  else {
 	    print FH join("\t", $cur_vf_id, $top_sr_id, $top_coord->start(),
 			  $top_coord->end(), $top_coord->strand(),
 			  $cur_v_id, $allele_str, $cur_v_name,
-			  $cur_map_weight,$cur_vf_flags), "\n";
+			  $cur_map_weight,$cur_vf_flags,$cur_source_id,$cur_validation_status,$cur_consequence_type), "\n";
 	  }
 	}
       }
@@ -220,6 +222,9 @@ sub variation_feature {
       $cur_v_name = $v_name;
       $cur_vf_flags = 1 if (defined $vf_flags);
       $cur_vf_flags = '\N' if (! defined $vf_flags);
+      $cur_source_id = $vf_source_id;
+      $cur_validation_status = $vf_validation_status;
+      $cur_consequence_type = $vf_consequence_type;
       $top_sr_start = $sr_start;
       $top_sr_end = $sr_end;
       $top_sr_strand = $sr_strand;
@@ -232,9 +237,10 @@ sub variation_feature {
         warning("Could not locate seq_region with id=$sr_id");
         next;
       }
-
+      if ($slice->seq_region_name() eq MITHOCONDRIAL_CONTIG()){$mithocondrial = 1} #the human mithocondrial conigs are already top_level
+      else{$mithocondrial = 0} #for the res
       ###if it is a toplevel coordinates already, we need find ref_allele for it
-      if ($top_level) {
+      if ($top_level || $mithocondrial) {
 	$top_coord = $slice->sub_Slice($sr_start, $sr_end,$sr_strand);
 	if (!$top_coord) {
 	  ###if start = end+1, this indicate a indel
@@ -306,12 +312,12 @@ sub variation_feature {
       if ($top_level) {
 	print FH join("\t", $cur_vf_id, $top_sr_id, $top_sr_start, $top_sr_end, $top_sr_strand,
 		      $cur_v_id, $allele_str, $cur_v_name,
-		      $map_weight,$cur_vf_flags), "\n";
+		      $map_weight,$cur_vf_flags, $cur_source_id,$cur_validation_status,$cur_consequence_type), "\n";
       }
       else {
 	print FH join("\t", $vf_id, $top_sr_id, $top_coord->start(),
 		      $top_coord->end(), $top_coord->strand(),
-		      $cur_v_id, $allele_str, $v_name, $map_weight, $cur_vf_flags), "\n";
+		      $cur_v_id, $allele_str, $v_name, $map_weight, $cur_vf_flags, $cur_source_id, $cur_validation_status,$cur_consequence_type), "\n";
       }
     }
   }
@@ -335,11 +341,11 @@ sub last_process{
     my $call = "cat $TMP_DIR/$dbname.variation_feature*.txt > $TMP_DIR/$TMP_FILE";
     system($call);
 
-    unlink(<$TMP_DIR/$dbname.variation_feature*.txt>);
+    unlink(<$TMP_DIR/$dbname.variation_feature*>);
     #and finally, load the information
     load($dbVar, qw(variation_feature variation_feature_id seq_region_id
 			     seq_region_start seq_region_end seq_region_strand variation_id
-			     allele_string variation_name map_weight flags));
+			     allele_string variation_name map_weight flags source_id validation_status consequence_type));
 
     $dbVar->do("DROP TABLE tmp_map_weight");
 

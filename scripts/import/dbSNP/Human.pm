@@ -13,13 +13,13 @@ use Data::Dumper;
 sub dump_dbSNP{
     my $self = shift;
     #first, dump all dbSNP data as usual
-#    $self->SUPER::dump_dbSNP();
+    $self->SUPER::dump_dbSNP();
     #then, get HGVbase IDs from Yuans file
-#    $self->dump_HGVbaseIDs();
+    $self->dump_HGVbaseIDs();
     #and finally, get TSC data from dbSNP
-#    $self->dump_TSCIDs();    
+    $self->dump_TSCIDs();    
     #get mitochondrial SNPs provided by Yuan in .tb file formats
-    $self->dump_mitocondrialSNPs();
+#    $self->dump_mitocondrialSNPs();
 }
 
 #specific function to get the HGVbase IDs from a file provided by Yuan and add them to the variation_synonym table
@@ -123,9 +123,9 @@ sub dump_mitocondrialSNPs{
 	}
 	#and finally, insert the variation_feature table
 	$self->{'dbVariation'}->do(qq{INSERT INTO variation_feature (variation_id, seq_region_id, 
-								     seq_region_start, seq_region_end, seq_region_strand, variation_name)
+								     seq_region_start, seq_region_end, seq_region_strand, variation_name,source_id,validation_status)
 					  VALUES ($variation_id, $seq_region_id, $mitoSNPs{$snp}{'start'}, $mitoSNPs{$snp}{'end'}, 
-						  $mitoSNPs{$snp}{'strand'}, "$mitoSNPs{$snp}{'name'}")
+						  $mitoSNPs{$snp}{'strand'}, "$mitoSNPs{$snp}{'name'}",$source_id, $status)
 				      });
     }
 	

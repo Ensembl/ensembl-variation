@@ -62,9 +62,9 @@ my ($TMP_DIR, $TMP_FILE, $LIMIT);
   $TMP_DIR  = $ImportUtils::TMP_DIR;
   $TMP_FILE = $ImportUtils::TMP_FILE;
 
-  load_asm_cache($dbCore);
-  variation_feature($dbCore, $dbVar);
-#  flanking_sequence($dbCore, $dbVar);
+#  load_asm_cache($dbCore);
+#  variation_feature($dbCore, $dbVar);
+  flanking_sequence($dbCore, $dbVar);
 #  variation_group_feature($dbCore, $dbVar);
 #  transcript_variation($dbCore, $dbVar);
 #  ld_populations($dbCore,$dbVar);
@@ -300,12 +300,12 @@ sub flanking_sequence {
   my $sth = $dbVar->prepare(qq{SELECT fs.variation_id, fs.up_seq, fs.down_seq,
                                       vf.seq_region_id, vf.seq_region_start,
                                       vf.seq_region_end, vf.seq_region_strand
-                               FROM variation_feature vf, flanking_sequence fs
+                               FROM variation_feature vf FORCE INDEX(variation_idx), flanking_sequence fs
                                WHERE vf.variation_id = fs.variation_id
-                               GROUP BY fs.variation_id
-                               ORDER BY vf.seq_region_id, vf.seq_region_start
+                               GROUP BY vf.variation_id
+#                               ORDER BY vf.seq_region_id, vf.seq_region_start
                                $LIMIT},
-                            {'mysql_use_result' => 1});
+                            );
 
 
   $sth->execute();
