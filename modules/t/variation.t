@@ -1,0 +1,94 @@
+use lib 't';
+use strict;
+use warnings;
+
+BEGIN { $| = 1;
+	use Test;
+	plan tests => 19;
+}
+
+
+use TestUtils qw ( debug test_getter_setter count_rows);
+use Bio::EnsEMBL::Variation::Variation;
+use Bio::EnsEMBL::Variation::Allele;
+
+
+# test constructor
+
+my $dbID = 123;
+my $name = 'rs5432';
+my $source = 'dbSNP';
+my $synonyms = {'dbSNP' => ['ss355', 'ss556'], 'TSC' => ['12565']};
+my $a1 = Bio::EnsEMBL::Variation::Allele->new(-allele => 'A');
+my $a2 = Bio::EnsEMBL::Variation::Allele->new(-allele => 'C');
+my $alleles = [$a1,$a2];
+my $validation_states = ['submitter', 'cluster'];
+my $five_prime_seq = 'AAATTAACCATTGGCG';
+my $three_prime_seq = 'TTATTTTAAGGCCGGAGTA';
+
+my $v = Bio::EnsEMBL::Variation::Variation->new
+  (-dbID => 123,
+   -name => $name,
+   -source => $source,
+   -synonyms => $synonyms,
+   -alleles => $alleles,
+   -validation_states => $validation_states,
+   -five_prime_flanking_seq => $five_prime_seq,
+   -three_prime_flanking_seq => $three_prime_seq);
+
+ok($v->dbID());
+ok($v->name() eq $name);
+ok($v->source() eq $source);
+
+ok(@{$v->get_all_synonyms()} == 3);
+ok($v->get_all_synonyms('TSC')->[0] eq '12565');
+ok($v->get_all_Alleles()->[0]->allele() eq 'A');
+ok($v->get_all_validation_states()->[0] eq 'cluster' &&
+   $v->get_all_validation_states()->[1] eq 'submitter');
+
+ok($v->five_prime_flanking_seq() eq $five_prime_seq);
+ok($v->three_prime_flanking_seq() eq $three_prime_seq);
+
+
+
+# test getter/setters
+
+ok(test_getter_setter($v, 'name', 'newname'));
+ok(test_getter_setter($v, 'source', 'newsource'));
+ok(test_getter_setter($v, 'five_prime_flanking_seq', 'AATTTA'));
+ok(test_getter_setter($v, 'three_prime_flanking_seq', 'TTTA'));
+
+
+
+# test add_synonym, get_all_synonym_sources and get_all_synonyms
+
+$v->add_synonym('newsource', 'mysyn');
+ok($v->get_all_synonyms('newsource')->[0] eq 'mysyn');
+
+my @sources = sort {$a cmp $b} @{$v->get_all_synonym_sources()};
+
+ok($sources[0] eq 'TSC' &&
+   $sources[1] eq 'dbSNP' &&
+   $sources[2] eq 'newsource');
+
+ok(@{$v->get_all_synonyms()} == 4);
+
+
+
+# test add_Allele, get_all_Alleles
+
+my $a3  = Bio::EnsEMBL::Variation::Allele->new('allele' => '-');
+$v->add_Allele($a3);
+ok($v->get_all_Alleles()->[2] == $a3);
+
+
+# test add_validation_state
+$v->add_validation_state('freq');
+# states are always added in same order
+ok(join(',', @{$v->get_all_validation_states()}) eq 'cluster,freq,submitter');
+
+# adding the same state twice does nothing
+$v->add_validation_state('freq');
+# states are always added in same order
+ok(join(',', @{$v->get_all_validation_states()}) eq 'cluster,freq,submitter');
+
