@@ -73,7 +73,8 @@ use Bio::EnsEMBL::Feature;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Utils::Argument  qw(rearrange);
 use Bio::EnsEMBL::Variation::Utils::Sequence qw(ambiguity_code variation_class);
-use Bio::EnsEMBL::SNP;  #for backwards compatibility
+
+
 
 our @ISA = ('Bio::EnsEMBL::Feature');
 
@@ -611,6 +612,9 @@ sub is_tagged{
 
 sub convert_to_SNP{
     my $self = shift;
+
+    require Bio::EnsEMBL::SNP;  #for backwards compatibility. It will only be loaded if the function is called
+
     my $snp = Bio::EnsEMBL::SNP->new_fast({
 	        'dbID'       => $self->variation()->dbID(),
 		'_gsf_start'  => $self->start,
