@@ -111,6 +111,40 @@ sub fetch_all_genotyped_by_Slice{
     return $self->fetch_all_by_Slice_constraint($slice,$constraint);
 }
 
+=head2 fetch_all_by_Slice_Population
+
+   Arg[0]      : Bio::EnsEMBL::Slice $slice
+   Arg[1]      : Bio::EnsEMBL::Variation::Population $population
+   Example     : my $vf = $vfa->fetch_all_by_Slice_Population($slice,$population);   
+   Description : Gets all the VariationFeatures in a certain Slice for a given
+                 Population
+   ReturnType  : listref of Bio::EnsEMBL::Variation::VariationFeature
+   Exceptions  : thrown on bad arguments
+   Caller      : general
+   
+=cut
+
+sub fetch_all_by_Slice_Population{
+    my $self = shift;
+    my $slice = shift;
+    my $population = shift;
+
+    if(!ref($slice) || !$slice->isa('Bio::EnsEMBL::Slice')) {
+	throw('Bio::EnsEMBL::Slice arg expected');
+    }
+
+    if(!ref($population) || !$population->isa('Bio::EnsEMBL::Variation::Population')) {
+	throw('Bio::EnsEMBL::Variation::Population arg expected');
+    }
+    if(!defined($population->dbID())) {
+	throw("Population arg must have defined dbID");
+    }
+    
+    my $constraint = "a.population_id = " . $population->dbID;
+    #call the method fetch_all_by_Slice_constraint with the population constraint
+    return $self->fetch_all_by_Slice_constraint($slice,$constraint);    
+}
+
 # method used by superclass to construct SQL
 sub _tables { return (['variation_feature', 'vf'],
 		      ['source', 's'],
@@ -186,15 +220,15 @@ sub _objs_from_sth {
       $dest_slice_length = $dest_slice->length();
   }
   # variables to store the alleles and find out when we have a different variation
-  my $cur_variation_feature_id;
+  my $cur_variation_feature_id = 0;
   my $variation_feature; #current variation_feature object
   my $alleles = {}; #contains all the alleles for the current variation feature
  FEATURE: while($sth->fetch()) {
-     if (!defined($variation_feature) || $cur_variation_feature_id != $variation_feature_id){
-	 if (defined($variation_feature)){
+     if ($cur_variation_feature_id != $variation_feature_id){	 
+	 if ($cur_variation_feature_id != 0){
+	     #with a different row, update the alleles in the object and push it
 	     $variation_feature->allele_string(join('/',keys %{$alleles}));
 	     push @features,$variation_feature;
-	     #flush hashes
 	     $alleles = {};
 	 }
 	 #create the object variation_feature
@@ -210,7 +244,7 @@ sub _objs_from_sth {
 	 #
 	 # remap the feature coordinates to another coord system
 	 # if a mapper was provided
-	 #
+	     #
 	 if($mapper) {
 	     my $sr_name = $sr_name_hash{$seq_region_id};
 	     my $sr_cs   = $sr_cs_hash{$seq_region_id};
@@ -242,7 +276,7 @@ sub _objs_from_sth {
 	     if($dest_slice_start != 1 || $dest_slice_strand != 1) {
 		 if($dest_slice_strand == 1) {
 		     $seq_region_start = $seq_region_start - $dest_slice_start + 1;
-		    $seq_region_end   = $seq_region_end   - $dest_slice_start + 1;
+		     $seq_region_end   = $seq_region_end   - $dest_slice_start + 1;
 		 } else {
 		     my $tmp_seq_region_start = $seq_region_start;
 		     $seq_region_start = $dest_slice_end - $seq_region_end + 1;
@@ -251,14 +285,14 @@ sub _objs_from_sth {
 		 }
 		 
 		 #throw away features off the end of the requested slice
-		if($seq_region_end < 1 || $seq_region_start > $dest_slice_length) {
-		    next FEATURE;
-		}
+		 if($seq_region_end < 1 || $seq_region_start > $dest_slice_length) {
+		     next FEATURE;
+		 }
 	     }
 	     $slice = $dest_slice;
 	 }
 	 
-	
+	 
 	 $validation_status = 0 if (!defined $validation_status);
 	 my @states = split(',',$validation_status);
 	 $variation_feature = Bio::EnsEMBL::Variation::VariationFeature->new_fast({'start'    => $seq_region_start,
@@ -273,18 +307,20 @@ sub _objs_from_sth {
 										   'validation_code' => \@states,
 										   'consequence_type' => $consequence_type || 'INTERGENIC',
 										   '_variation_id' => $variation_id});
-     
-	
+	 
+	     
+	     
      }
      #update the alleles
      $alleles->{$allele}++;
-     $cur_variation_feature_id = $variation_feature_id;
- }
+     $cur_variation_feature_id = $variation_feature_id;     
+ }    
   #update last variation_feature
   if (defined($variation_feature)){
       $variation_feature->allele_string(join('/',keys %{$alleles}));
       push @features,$variation_feature;
   }
+  
   return \@features;
 }
 
