@@ -73,20 +73,11 @@ use Bio::EnsEMBL::Feature;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Utils::Argument  qw(rearrange);
 use Bio::EnsEMBL::Variation::Utils::Sequence qw(ambiguity_code variation_class);
-use Bio::EnsEMBL::SNP;  #for backwards compatibility
+
 
 our @ISA = ('Bio::EnsEMBL::Feature');
 
 #contains a hash with the highest to the lowest possible consequence type in a trasncript
-# our %CONSEQUENCE_TYPES = ('INTRONIC' => 6,
-# 			  'UPSTREAM' => 7,
-# 			  'DOWNSTREAM' => 8,
-# 			  'SYNONYMOUS_CODING' => 3,
-# 			  'NON_SYNONYMOUS_CODING', => 2,
-# 			  'FRAMESHIFT_CODING' => 1,
-# 			  '5PRIME_UTR' => 4,
-# 			  '3PRIME_UTR' => 5,
-# 			  'INTERGENIC' => 9);
 
 our %CONSEQUENCE_TYPES = (
 			  'FRAMESHIFT_CODING' => 1,
@@ -611,6 +602,9 @@ sub is_tagged{
 
 sub convert_to_SNP{
     my $self = shift;
+
+    require Bio::EnsEMBL::SNP;  #for backwards compatibility
+
     my $snp = Bio::EnsEMBL::SNP->new_fast({
 	        'dbID'       => $self->variation()->dbID(),
 		'_gsf_start'  => $self->start,
@@ -626,4 +620,69 @@ sub convert_to_SNP{
 		});
     return $snp;
 }
+
+
+=head2 apply_edit
+    
+    Arg [1]    : reference to string $seqref
+    Arg [2]    : int $start of the seq_ref
+    Example    : $sequence = 'ACTGAATATTTAAGGCA';
+               $vf->apply_edit(\$sequence,$start);
+               print $sequence, "\n";
+    Description: Applies this variationFeature directly to a sequence which is
+               passed by reference.  
+               If either the start or end of this VariationFeature are not defined
+               this function will not do anything to the passed sequence.
+    Returntype : reference to the same sequence that was passed in
+    Exceptions : none
+    Caller     : Slice
+
+=cut
+
+sub apply_edit  {
+
+  my $self   = shift;
+  my $seqref = shift;
+
+  if(ref($seqref) ne 'SCALAR') {
+    throw("Reference to scalar argument expected");
+  }
+
+  if(!defined($self->{'start'}) || !defined($self->{'end'})) {
+    return $seqref;
+  }
+
+
+  my $len = $self->length;
+  substr($$seqref, $self->{'start'}-1, $len) = $self->{'allele_string'} if ($self->{'allele_string'} ne '-'); #allele_string
+  substr($$seqref, $self->{'start'}-1, $len) = '' if ($self->{'allele_string'} eq '-'); #allele_string
+  return $seqref;
+
+}
+
+=head2 length_diff
+  Arg [1]    : none
+  Example    : my $diff = $vf->length_diff();
+  Description: Returns the difference in length caused by applying this
+               VariationFeature to a sequence.  This may be be negative (deletion),
+               positive (insertion) or 0 (replacement).
+
+               If either start or end are not defined 0 is returned.
+  Returntype : int
+  Exceptions : none
+  Caller     : general
+
+=cut
+
+sub length_diff  {
+
+  my $self = shift;
+
+  return 0 if(!defined($self->{'end'}) || !defined($self->{'start'}));
+
+  return length($self->{'allele_string'}) - ($self->{'end'} - $self->{'start'} + 1) if ($self->{'allele_string'} ne '-'); 
+  return 0 - ($self->{'end'} - $self->{'start'} + 1) if ($self->{'allele_string'} eq '-'); 
+
+}
+
 1;
