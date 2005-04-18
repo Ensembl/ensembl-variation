@@ -19,7 +19,7 @@ sub variation_feature{
     debug("Dumping seq_region data");
     
     #only take chromosome coordinates
-    dumpSQL($self->{'dbCore'}, qq{SELECT sr.seq_region_id, sr.name
+    dumpSQL($self->{'dbCore'}->dbc(), qq{SELECT sr.seq_region_id, sr.name
 				      FROM   seq_region sr, coord_system cs
 				      WHERE cs.name = 'chromosome'
 				      AND cs.coord_system_id = sr.coord_system_id});
@@ -46,8 +46,9 @@ sub variation_feature{
     debug("Creating genotyped variations");
     #creating the temporary table with the genotyped variations
     $self->{'dbVariation'}->do(qq{CREATE TABLE tmp_genotyped_var SELECT DISTINCT variation_id FROM individual_genotype_single_bp});
+    $self->{'dbVariation'}->do(qq{CREATE UNIQUE INDEX variation_idx ON tmp_genotyped_var (variation_id)});
     $self->{'dbVariation'}->do(qq{INSERT IGNORE INTO tmp_genotyped_var SELECT DISTINCT variation_id FROM individual_genotype_multiple_bp});
-    $self->{'dbVariation'}->do(qq{CREATE INDEX variation_idx ON tmp_genotyped_var (variation_id)});
+
  
     debug("Creating tmp_variation_feature data");
     
