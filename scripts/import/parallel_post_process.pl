@@ -121,12 +121,11 @@ sub parallel_variation_feature{
     for (my $i = 0; $i < $num_processes ; $i++){
 	$limit = "AND variation_feature_id <= " . (($i+1) * $sub_variation + $min_variation-1) . " AND variation_feature_id >= " . ($i*$sub_variation + $min_variation) if ($i+1 < $num_processes);
 	$limit =  "AND variation_feature_id <= " .  $max_variation . " AND variation_feature_id >= " . ($i*$sub_variation + $min_variation) if ($i + 1 == $num_processes); #the last one takes the left rows
-	$call = "bsub -J $dbname\_variation_job_$i -m 'bc_hosts' -o $TMP_DIR/output_variation_feature_$i\_$$.txt /usr/local/ensembl/bin/perl parallel_variation_feature.pl -chost $chost -cuser $cuser -cdbname $cdbname -vhost $vhost -vuser $vuser -vport $vport -vdbname $vdbname -limit '$limit' -tmpdir $TMP_DIR -tmpfile $TMP_FILE -num_processes $num_processes -status_file $variation_status_file ";
+	$call = "bsub -J $dbname\_variation_job_$i -m 'bc_hosts ecs4_hosts' -o $TMP_DIR/output_variation_feature_$i\_$$.txt /usr/local/ensembl/bin/perl parallel_variation_feature.pl -chost $chost -cuser $cuser -cdbname $cdbname -vhost $vhost -vuser $vuser -vport $vport -vdbname $vdbname -limit '$limit' -tmpdir $TMP_DIR -tmpfile $TMP_FILE -num_processes $num_processes -status_file $variation_status_file ";
 	$call .= "-cpass $cpass " if ($cpass);
 	$call .= "-cport $cport " if ($cport);
 	$call .= "-vpass $vpass " if ($vpass);
 	$call .= "-toplevel $top_level " if ($top_level);
-
 	system($call);      
     }
     $call = "bsub -K -w 'done($dbname\_variation_job*)' -J waiting_process sleep 1"; #waits until all variation features have finished to continue
@@ -286,8 +285,8 @@ sub parallel_ld_populations{
     #get all populations to be tagged (HapMap and PerlEgen)
     my $sth = $dbVar->prepare(qq{SELECT population_id, name
 						FROM population
-						WHERE name like 'perlegen:afd%'
-						OR name like 'cshl-hapmap%'
+						WHERE name like 'PERLEGEN:AFD%'
+						OR name like 'CSHL-HAPMAP%'
 					    });
     
 
@@ -304,7 +303,6 @@ sub parallel_ld_populations{
     }
     
     my $in_str = " IN (" . join(',', @pops). ")";
-
 
     #necessary the order to know when we change variation. Not get genotypes with a NULL variation or map_weight > 1
 

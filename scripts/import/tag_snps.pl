@@ -44,8 +44,8 @@ my $population_name;
 #get all populations to be tagged (HapMap and PerlEgen)
 my $sth = $dbVariation->dbc->prepare(qq{SELECT population_id, name
 					    FROM population
-					    WHERE name like 'perlegen:afd%'
-					    OR name like 'cshl-hapmap%'
+					    WHERE name like 'PERLEGEN:AFD%'
+					    OR name like 'CSHL-HAPMAP%'
 					});
 
 $sth->execute();
