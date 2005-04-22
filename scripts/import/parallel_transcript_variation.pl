@@ -308,7 +308,9 @@ sub apply_aa_change {
   my $tr = shift;
   my $var = shift;
 
-  my $peptide = $tr->translate->seq();
+  #my $peptide = $tr->translate->seq();
+  #to consider stop codon as well
+  my $mrna = $tr->translatable_seq();
 
   my ($attrib) = @{$tr->slice()->get_all_Attributes('codon_table')}; #for mithocondrial dna it is necessary to change the table
 
@@ -317,7 +319,8 @@ sub apply_aa_change {
   $codon_table ||= 1; # default vertebrate codon table 
 
   my $len = $var->{'aa_end'} - $var->{'aa_start'} + 1;
-  my $old_aa = substr($peptide, $var->{'aa_start'} -1 , $len);
+  #my $old_aa = substr($peptide, $var->{'aa_start'} -1 , $len);
+  my $old_aa = substr($mrna, $var->{'aa_start'} -1 , $len);
 
   my $codon_cds_start = $var->{'aa_start'} * 3 - 2;
   my $codon_cds_end   = $var->{'aa_end'}   * 3;
@@ -367,11 +370,19 @@ sub apply_aa_change {
 
     if(uc($new_aa) ne uc($old_aa)) {
       push @aa_alleles, $new_aa;
+      if ($new_aa =~ /\*/) {
+	$var->{'type'} = 'STOP_GAINED';
+      }
+      elsif ($old_aa =~ /\*/) {
+	$var->{'type'} = 'STOP_LOST';
+      }
     }
   }
 
   if(@aa_alleles > 1) {
-    $var->{'type'} = 'NON_SYNONYMOUS_CODING';
+    if (! defined $var->{'type'}) {
+      $var->{'type'} = 'NON_SYNONYMOUS_CODING';
+    }
   } else {
     $var->{'type'} = 'SYNONYMOUS_CODING';
   }
