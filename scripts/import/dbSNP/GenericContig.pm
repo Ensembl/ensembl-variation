@@ -519,8 +519,8 @@ sub variation_feature {
      my $tablename = $self->{'species_prefix'} . 'SNPContigLoc';
     
      dumpSQL($self->{'dbSNP'}, qq{SELECT snp_id, contig_acc,
- 				 asn_from, 
-				 IF(loc_type = 3,  asn_from - 1, asn_to), # 3 = between
+ 				 IF(loc_type = 3,  asn_to, asn_from), 
+				 IF(loc_type = 3,  asn_from, asn_to), # 3 = between
  				 IF(orientation, -1, 1)
  				     FROM   $tablename
  				     $self->{'limit'}});
