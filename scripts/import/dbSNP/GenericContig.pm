@@ -35,19 +35,19 @@ sub new {
 sub dump_dbSNP{
     my $self = shift;
     
-    $self->source_table();
-    $self->population_table();
-    $self->individual_table();
-    $self->variation_table();
-    $self->individual_genotypes();
-    $self->population_genotypes();
-    $self->allele_table();
-    $self->flanking_sequence_table();
+    #$self->source_table();
+    #$self->population_table();
+    #$self->individual_table();
+    #$self->variation_table();
+    #$self->individual_genotypes();
+    #$self->population_genotypes();
+    #$self->allele_table();
+    #$self->flanking_sequence_table();
     $self->variation_feature();
-    $self->variation_group();
-    $self->allele_group();
+    #$self->variation_group();
+    #$self->allele_group();
     
-    $self->cleanup();
+    #$self->cleanup();
 
 }
 
@@ -550,8 +550,8 @@ sub variation_feature {
      my $tablename = $self->{'species_prefix'} . 'SNPContigLoc';
     
      dumpSQL($self->{'dbSNP'}, qq{SELECT snp_id, contig_acc,
- 				 asn_from, 
-				 IF(loc_type = 3,  asn_from - 1, asn_to), # 3 = between
+ 				 IF(loc_type = 3,  asn_to, asn_from),
+				 IF(loc_type = 3,  asn_from , asn_to), # 3 = between
  				 IF(orientation, -1, 1)
  				     FROM   $tablename
  				     $self->{'limit'}});
@@ -587,10 +587,10 @@ sub variation_feature {
 				  FROM tmp_variation_feature tvf LEFT JOIN tmp_genotyped_var tgv ON tvf.variation_id = tgv.variation_id
 				 });
     
-    $self->{'dbVariation'}->do("DROP TABLE tmp_contig_loc");
-    $self->{'dbVariation'}->do("DROP TABLE tmp_seq_region");
-    $self->{'dbVariation'}->do("DROP TABLE tmp_genotyped_var");
-    $self->{'dbVariation'}->do("DROP TABLE tmp_variation_feature");
+    #$self->{'dbVariation'}->do("DROP TABLE tmp_contig_loc");
+    #$self->{'dbVariation'}->do("DROP TABLE tmp_seq_region");
+    #$self->{'dbVariation'}->do("DROP TABLE tmp_genotyped_var");
+    #$self->{'dbVariation'}->do("DROP TABLE tmp_variation_feature");
 }
 
 #
@@ -832,8 +832,8 @@ sub cleanup {
     $self->{'dbVariation'}->do('ALTER TABLE variation_synonym DROP COLUMN substrand_reversed_flag');
     $self->{'dbVariation'}->do('ALTER TABLE population DROP COLUMN pop_class_id');
     $self->{'dbVariation'}->do('ALTER TABLE population DROP COLUMN pop_id');
-    $self->{'dbVariation'}->do('ALTER TABLE variation_group DROP COLUMN hapset_id');
-    $self->{'dbVariation'}->do('ALTER TABLE allele_group DROP COLUMN hap_id');
+    $self->{'dbVariation'}->do('ALTER TABLE variation_group DROP COLUMN hapset_id') if ($self->{'species_prefix'} eq '');
+    $self->{'dbVariation'}->do('ALTER TABLE allele_group DROP COLUMN hap_id') if ($self->{'species_prefix'} eq '');
 
 }
 
