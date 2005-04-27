@@ -310,7 +310,11 @@ sub apply_aa_change {
 
   #my $peptide = $tr->translate->seq();
   #to consider stop codon as well
-  my $mrna = $tr->translatable_seq();
+  my $mrna = $tr->translateable_seq();
+
+  my $mrna_seqobj = Bio::Seq->new( -seq        => $mrna,
+				   -moltype    => "dna",
+				   -alphabet   => "dna");
 
   my ($attrib) = @{$tr->slice()->get_all_Attributes('codon_table')}; #for mithocondrial dna it is necessary to change the table
 
@@ -318,9 +322,10 @@ sub apply_aa_change {
   $codon_table = $attrib->value() if($attrib);
   $codon_table ||= 1; # default vertebrate codon table 
 
+  my $peptide = $mrna_seqobj->translate(undef,undef,undef,$codon_table)->seq;
+
   my $len = $var->{'aa_end'} - $var->{'aa_start'} + 1;
-  #my $old_aa = substr($peptide, $var->{'aa_start'} -1 , $len);
-  my $old_aa = substr($mrna, $var->{'aa_start'} -1 , $len);
+  my $old_aa = substr($peptide, $var->{'aa_start'} -1 , $len);
 
   my $codon_cds_start = $var->{'aa_start'} * 3 - 2;
   my $codon_cds_end   = $var->{'aa_end'}   * 3;
@@ -346,7 +351,7 @@ sub apply_aa_change {
         return;
       }
 
-      if($var_len == 0) { # insertion
+      if($codon_len == 0) { # insertion
         $aa_alleles[0] = '-';
         $old_aa    = '-';
       }
@@ -356,7 +361,7 @@ sub apply_aa_change {
 
     if(length($a)) {
       substr($cds, $var->{'cds_start'}-1, $var_len) = $a;
-      my $codon_str = substr($cds, $codon_cds_start-1, $codon_len);
+      my $codon_str = substr($cds, $codon_cds_start-1, $codon_len + abs(length($a)-$var_len));
 
       my $codon_seq = Bio::Seq->new(-seq      => $codon_str,
                                     -moltype  => 'dna',
