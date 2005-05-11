@@ -23,11 +23,7 @@ Represents the effect of a Variation in a Transcript
 package Bio::EnsEMBL::Variation::ConsequenceType;
 
 use strict;
-use vars qw(@ISA @EXPORT_OK);
 
-@ISA = qw(Exporter);
-
-@EXPORT_OK = qw(&type_variation);
 
 use Bio::EnsEMBL::Utils::Exception qw(warning);
 use Bio::EnsEMBL::Variation::VariationFeature; #to get the consequence_types priorities
