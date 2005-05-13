@@ -325,5 +325,69 @@ sub aa_alleles {
   return $self->{'aa_alleles'}
 }
 
+
+=head2 codon
+
+  Arg [1]    : (optional) string $codon
+  Example    : $codon = $consequence_type->codon
+  Description: Getter/Setter for the codon affected by that Allele in the transcript
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+
+=cut
+
+sub codon {
+  my $self = shift;
+
+  if(@_) {
+    $self->{'codon'} = shift;
+  }
+  
+  return $self->{'codon'}
+}
+
+=head2 cds_start
+
+  Arg [1]    : (optional) int $cds_start
+  Example    : $cds_start = $consequence_type->cds_start
+  Description: Getter/Setter for the start of the variation in the coding sequence
+  Returntype : int
+  Exceptions : none
+  Caller     : general
+
+=cut
+
+sub cds_start {
+  my $self = shift;
+
+  if(@_) {
+    $self->{'cds_start'} = shift;
+  }
+  
+  return $self->{'cds_start'}
+}
+
+=head2 cds_end
+
+  Arg [1]    : (optional) int $cds_end
+  Example    : $cds_end = $consequence_type->cds_end
+  Description: Getter/Setter for the end of the variation in the coding sequence
+  Returntype : int
+  Exceptions : none
+  Caller     : general
+
+=cut
+
+sub cds_end {
+  my $self = shift;
+
+  if(@_) {
+    $self->{'cds_end'} = shift;
+  }
+  
+  return $self->{'cds_end'}
+}
+
 1;
 
