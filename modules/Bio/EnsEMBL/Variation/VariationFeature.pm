@@ -92,6 +92,7 @@ our %CONSEQUENCE_TYPES = (
 			  'UPSTREAM' => 10,
 			  'DOWNSTREAM' => 11,
 			  'INTERGENIC' => 12,
+			  'SPLICE_SITE' => 13
 			  );
 
 =head2 new

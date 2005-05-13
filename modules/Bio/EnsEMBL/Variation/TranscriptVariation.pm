@@ -72,7 +72,8 @@ our %VALID_TYPES = ('INTRONIC' => 1,
 		    'INTERGENIC' => 1,
 		    'STOP_GAINED' => 1,
 		    'STOP_LOST'  => 1,
-		    'UTR' => 1);
+		    'UTR' => 1,
+		    'SPLICE_SITE' =>1);
 
 =head2 new
   Arg [-ADAPTOR] :
