@@ -1,0 +1,127 @@
+#!/usr/local/ensembl/bin/perl
+
+use strict;
+use warnings;
+
+use Getopt::Long;
+use DBH;
+
+use Bio::EnsEMBL::Mapper::RangeRegistry;
+use Bio::EnsEMBL::DBSQL::DBAdaptor;
+use ImportUtils qw(debug load);
+
+my ($TMP_DIR, $TMP_FILE); #global variables for the tmp files and folder
+
+my ($vhost, $vport, $vdbname, $vuser, $vpass,
+    $chost, $cport, $cdbname, $cuser, $cpass,
+    $read_dir);
+
+  GetOptions('chost=s'     => \$chost,
+             'cuser=s'     => \$cuser,
+             'cpass=s'     => \$cpass,
+             'cport=i'     => \$cport,
+             'cdbname=s'   => \$cdbname,
+             'vhost=s'     => \$vhost,
+             'vuser=s'     => \$vuser,
+             'vpass=s'     => \$vpass,
+             'vport=i'     => \$vport,
+             'vdbname=s'   => \$vdbname,
+             'tmpdir=s'    => \$ImportUtils::TMP_DIR,
+             'tmpfile=s'   => \$ImportUtils::TMP_FILE,
+	     'readdir=s' => \$read_dir);
+
+#added default options
+$chost    ||= 'ecs2';
+$cuser    ||= 'ensro';
+$cport    ||= 3364;
+
+$vport    ||= 3306;
+$vuser    ||= 'ensadmin';
+
+usage('-vdbname argument is required') if(!$vdbname);
+usage('-cdbname argument is required') if(!$cdbname);
+usage('-readdir argument is required (name of directory with read information') if (!$read_dir);
+
+my $dbCore = Bio::EnsEMBL::DBSQL::DBAdaptor->new
+    (-host   => $chost,
+     -user   => $cuser,
+     -pass   => $cpass,
+     -port   => $cport,
+     -dbname => $cdbname);
+
+my $dbVar = DBH->connect
+    ("DBI:mysql:host=$vhost;dbname=$vdbname;port=$vport",$vuser, $vpass );
+die("Could not connect to variation database: $!") if(!$dbVar);
+
+
+$TMP_DIR  = $ImportUtils::TMP_DIR;
+$TMP_FILE = $ImportUtils::TMP_FILE;
+
+my $call;
+my $i = 0;
+foreach my $read_file (glob("$read_dir/*.mapped")){
+    $call = "bsub -J read_coverage_job_$i -o /ecs4/scratch5/dani/output_reads.txt -m 'bc_hosts ecs4_hosts' /usr/local/ensembl/bin/perl read_coverage.pl -chost 'ecs2' -cuser 'ensro' -cport 3365 -cdbname 'homo_sapiens_core_30_35c' -vhost $vhost -vuser $vuser -vpass $vpass -vport $vport -vdbname $vdbname -tmpdir '/ecs4/scratch5/dani' -tmpfile read_coverage_$i.txt -readfile $read_file";
+    system($call);
+    $i++;
+}
+debug("Waiting for read_coverage jobs to finish");
+$call = "bsub -K -w 'done(read_coverage_job_*)' -J waiting_process sleep 1"; #waits until all reads have succesfully finished
+system($call);
+debug("Ready to import coverage data");
+$call = "cat $TMP_DIR/read_coverage_* > $TMP_DIR/$TMP_FILE"; #concat all files 
+system($call);
+load($dbVar,"read_coverage","seq_region_id","seq_region_start","seq_region_end","level","individual_id"); #load table with information
+
+unlink(<$TMP_DIR/read_coverage_*>); #and delete the files with the data
+update_meta_coord($dbCore,$dbVar,'read_coverage');
+
+
+#
+# updates the meta coord table
+#
+sub update_meta_coord {
+  my $dbCore = shift;
+  my $dbVar  = shift;
+  my $table_name = shift;
+  my $csname = shift || 'chromosome';
+
+  my $csa = $dbCore->get_CoordSystemAdaptor();
+
+  my $cs = $csa->fetch_by_name($csname);
+
+  my $sth = $dbVar->prepare
+    ('INSERT INTO meta_coord set table_name = ?, coord_system_id = ?, max_length =500');
+
+  $sth->execute($table_name, $cs->dbID());
+
+  $sth->finish();
+
+  return;
+}
+
+
+sub usage {
+  my $msg = shift;
+
+  print STDERR <<EOF;
+
+usage: perl read_coverage.pl <options>
+
+options:
+    -chost <hostname>    hostname of core Ensembl MySQL database (default = ecs2)
+    -cuser <user>        username of core Ensembl MySQL database (default = ensro)
+    -cpass <pass>        password of core Ensembl MySQL database
+    -cport <port>        TCP port of core Ensembl MySQL database (default = 3364)
+    -cdbname <dbname>    dbname of core Ensembl MySQL database
+    -vhost <hostname>    hostname of variation MySQL database to write to
+    -vuser <user>        username of variation MySQL database to write to (default = ensadmin)
+    -vpass <pass>        password of variation MySQL database to write to
+    -vport <port>        TCP port of variation MySQL database to write to (default = 3306)
+    -vdbname <dbname>    dbname of variation MySQL database to write to
+    -tmpdir <dir>        temp directory to use (with lots of space!)
+    -tmpfile <filename>  name of temp file to use
+    -readdir <dirname>   name of dir with read information
+EOF
+
+  die("\n$msg\n\n");
+}
