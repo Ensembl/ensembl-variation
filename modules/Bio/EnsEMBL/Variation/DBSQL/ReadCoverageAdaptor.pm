@@ -1,0 +1,245 @@
+#
+# Ensembl module for Bio::EnsEMBL::Variation::DBSQL::ReadCoverageAdaptor
+#
+# Copyright (c) 2005 Ensembl
+#
+# You may distribute this module under the same terms as perl itself
+#
+#
+
+=head1 NAME
+
+Bio::EnsEMBL::Variation::DBSQL::ReadCoverageAdaptor
+
+=head1 SYNOPSIS
+
+  $vdb = Bio::EnsEMBL::Variation::DBSQL::DBAdaptor->new(...);
+  $db  = Bio::EnsEMBL::DBSQL::DBAdaptor->new(...);
+
+  # tell the variation database where core database information can be
+  # be found
+  $vdb->dnadb($db);
+
+  $rca = $vdb->get_ReadCoverageAdaptor();
+  $sa  = $db->get_SliceAdaptor();
+  $pa  = $vdb->get_PopulationAdaptor();
+
+
+  # get read coverage in a region for a certain population in in a certain level
+  $slice = $sa->fetch_by_region('chromosome', 'X', 1e6, 2e6);
+  $population = $pa->fetch_by_name("UNKNOWN");
+  $level = 1;
+  foreach $rc (@{$vfa->fetch_all_by_Slice_Population_depth($slice,$population,$level)}) {
+    print $rc->start(), '-', $rc->end(), "\n";
+  }
+
+
+=head1 DESCRIPTION
+
+This adaptor provides database connectivity for ReadCoverage objects.
+Coverage information for reads can be obtained from the database using this
+adaptor.  See the base class BaseFeatureAdaptor for more information.
+
+=head1 AUTHOR - Daniel Rios
+
+=head1 CONTACT
+
+Post questions to the Ensembl development list ensembl-dev@ebi.ac.uk
+
+=head1 METHODS
+
+=cut
+
+use strict;
+use warnings;
+
+package Bio::EnsEMBL::Variation::DBSQL::ReadCoverageAdaptor;
+
+use Bio::EnsEMBL::Variation::ReadCoverage;
+use Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor;
+use Bio::EnsEMBL::Utils::Exception qw(throw);
+
+our @ISA = ('Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor');
+
+=head2 fetch_all_by_Slice_Population_depth
+
+    Arg[0]      : Bio::EnsEMBL::Slice $slice
+    Arg[1]      : Bio::EnsEMBL::Variation::Population $population
+    Arg[2]      : int $level
+    Example     : my $feature = $rca->fetch_all_by_Slice_Population_depth($slice,$population,$level);
+    Description : Gets all the read coverage features for a given population in a certain level
+                  in the provided slice
+    ReturnType  : listref of Bio::EnsEMBL::Variation::ReadCoverage
+    Exceptions  : thrown on bad arguments
+    Caller      : general
+
+=cut
+
+sub fetch_all_by_Slice_Population_depth{
+    my $self = shift;
+    my $slice = shift;
+    my $population = shift;
+    my $level = shift;
+
+    if(!ref($slice) || !$slice->isa('Bio::EnsEMBL::Slice')) {
+	throw('Bio::EnsEMBL::Slice arg expected');
+    }
+    
+    if(!ref($population) || !$population->isa('Bio::EnsEMBL::Variation::Population')) {
+	throw('Bio::EnsEMBL::Variation::Population arg expected');
+    }
+    if(!defined($population->dbID())) {
+	throw("Population arg must have defined dbID");
+    }
+    
+    my $constraint = "ip.population_id = " . $population->dbID . " AND rc.level = " . $level;
+    #call the method fetch_all_by_Slice_constraint with the population constraint
+    return $self->fetch_all_by_Slice_constraint($slice,$constraint);    
+}
+
+
+sub _tables{ return (['read_coverage','rc'],
+		     ['individual_population','ip'],
+		     )}
+
+sub _default_where_clause{
+    return 'rc.individual_id = ip.individual_id';
+}
+
+sub _columns{
+    return qw (rc.seq_region_id rc.seq_region_start rc.seq_region_end rc.level ip.population_id);
+}
+
+
+sub _objs_from_sth{
+  my ($self, $sth, $mapper, $dest_slice) = @_;
+  
+  my $sa = $self->db()->dnadb()->get_SliceAdaptor();
+
+  #
+  # This code is ugly because an attempt has been made to remove as many
+  # function calls as possible for speed purposes.  Thus many caches and
+  # a fair bit of gymnastics is used.
+  #
+
+  my ($seq_region_id, $seq_region_start, $seq_region_end, $level, $population_id);
+  my $seq_region_strand = 1; #assume all reads are in the + strand
+
+  $sth->bind_columns(\$seq_region_id, \$seq_region_start, \$seq_region_end, \$level, \$population_id);
+
+  my @features;
+  my %seen_pops;  #hash containing the populations seen
+  my %slice_hash;
+  my %sr_name_hash;
+  my %sr_cs_hash;
+  my $asm_cs;
+  my $cmp_cs;
+  my $asm_cs_vers;
+  my $asm_cs_name;
+  my $cmp_cs_vers;
+  my $cmp_cs_name;
+
+  if($mapper) {
+      $asm_cs = $mapper->assembled_CoordSystem();
+      $cmp_cs = $mapper->component_CoordSystem();
+      $asm_cs_name = $asm_cs->name();
+      $asm_cs_vers = $asm_cs->version();
+      $cmp_cs_name = $cmp_cs->name();
+      $cmp_cs_vers = $cmp_cs->version();
+  }
+  
+  my $dest_slice_start;
+  my $dest_slice_end;
+  my $dest_slice_strand;
+  my $dest_slice_length;
+
+  if($dest_slice) {
+      $dest_slice_start  = $dest_slice->start();
+      $dest_slice_end    = $dest_slice->end();
+      $dest_slice_strand = $dest_slice->strand();
+      $dest_slice_length = $dest_slice->length();
+  }
+
+  my $read_coverage;
+  FEATURE: while ($sth->fetch()){
+
+      #get the population_adaptor object
+      my $pa = $self->db()->get_PopulationAdaptor();
+
+      #get the slice object
+      my $slice = $slice_hash{"ID:".$seq_region_id};
+      if(!$slice) {
+	  $slice = $sa->fetch_by_seq_region_id($seq_region_id);
+	  $slice_hash{"ID:".$seq_region_id} = $slice;
+	  $sr_name_hash{$seq_region_id} = $slice->seq_region_name();
+	  $sr_cs_hash{$seq_region_id} = $slice->coord_system();
+      }
+      #
+      # remap the feature coordinates to another coord system
+      # if a mapper was provided
+      #
+      if($mapper) {
+	  my $sr_name = $sr_name_hash{$seq_region_id};
+	  my $sr_cs   = $sr_cs_hash{$seq_region_id};
+	  
+	  ($sr_name,$seq_region_start,$seq_region_end,$seq_region_strand) =
+	      $mapper->fastmap($sr_name, $seq_region_start, $seq_region_end,
+			       $seq_region_strand, $sr_cs);
+	  
+	  #skip features that map to gaps or coord system boundaries
+	  next FEATURE if(!defined($sr_name));
+	  
+	  #get a slice in the coord system we just mapped to
+	  if($asm_cs == $sr_cs || ($cmp_cs != $sr_cs && $asm_cs->equals($sr_cs))) {
+	      $slice = $slice_hash{"NAME:$sr_name:$cmp_cs_name:$cmp_cs_vers"} ||=
+		  $sa->fetch_by_region($cmp_cs_name, $sr_name,undef, undef, undef,
+				       $cmp_cs_vers);
+	  } else {
+	      $slice = $slice_hash{"NAME:$sr_name:$asm_cs_name:$asm_cs_vers"} ||=
+		  $sa->fetch_by_region($asm_cs_name, $sr_name, undef, undef, undef,
+				       $asm_cs_vers);
+	  }
+      }
+      
+      #
+      # If a destination slice was provided convert the coords
+      # If the dest_slice starts at 1 and is foward strand, nothing needs doing
+      #
+      if($dest_slice) {
+	  if($dest_slice_start != 1 || $dest_slice_strand != 1) {
+	      if($dest_slice_strand == 1) {
+		  $seq_region_start = $seq_region_start - $dest_slice_start + 1;
+		  $seq_region_end   = $seq_region_end   - $dest_slice_start + 1;
+	      } else {
+		  my $tmp_seq_region_start = $seq_region_start;
+		  $seq_region_start = $dest_slice_end - $seq_region_end + 1;
+		  $seq_region_end   = $dest_slice_end - $tmp_seq_region_start + 1;
+		  $seq_region_strand *= -1;
+	      }
+	      
+	      #throw away features off the end of the requested slice
+	      if($seq_region_end < 1 || $seq_region_start > $dest_slice_length) {
+		  next FEATURE;
+	      }
+	  }
+	  $slice = $dest_slice;
+      }
+
+      my $pop;
+      if($population_id){
+	  $pop = $seen_pops{$population_id} ||= $pa->fetch_by_dbID($population_id);
+      }
+      $read_coverage = Bio::EnsEMBL::Variation::ReadCoverage->new(-start => $seq_region_start,
+								  -end   => $seq_region_end,
+								  -slice => $slice,
+								  -adaptor  => $self,
+								  -level => $level,
+								  -population => $pop,
+								  );
+      push @features, $read_coverage;
+  }
+  $sth->finish();
+  return \@features;
+}
+
+1;
