@@ -614,3 +614,19 @@ CREATE TABLE tagged_variation_feature (
   
   PRIMARY KEY(variation_feature_id, population_id)
 );
+
+###############
+#
+# Table structure for table read_coverage
+#
+###############
+
+CREATE TABLE read_coverage (
+   seq_region_id int not null,
+   seq_region_start int not null,
+   seq_region_end int not null,
+   level tinyint not null,
+   individual_id int not null,
+		  
+   key seq_region_idx(seq_region_id,seq_region_start)   
+);
