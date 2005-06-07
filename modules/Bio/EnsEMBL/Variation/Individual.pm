@@ -50,9 +50,9 @@ package Bio::EnsEMBL::Variation::Individual;
 
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Utils::Argument qw(rearrange);
-use Bio::EnsEMBL::Storable;
+use Bio::EnsEMBL::Variation::Sample;
 
-our @ISA = ('Bio::EnsEMBL::Storable');
+our @ISA = ('Bio::EnsEMBL::Variation::Sample');
 
 =head2 new
 
@@ -70,10 +70,10 @@ our @ISA = ('Bio::EnsEMBL::Storable');
     Bio::EnsEMBL::Variation::Individual - the father of this individual
   Arg [-MOTHER_INDIVIDUAL] :
     Bio::EnsEMBL::Variation::Individual - the mother of this individual
-  Arg [-MOTHER_INDIVIDUAL_ID] :
+  Arg [-MOTHER_INDIVIDUAL_SAMPLE_ID] :
     int - set the internal id of the mother individual so that the actual
     mother Individual object can be retrieved on demand.
-  Arg [-FATHER_INDIVIDUAL_ID]:
+  Arg [-FATHER_INDIVIDUAL_SAMPLE_ID]:
     int - set the internal id of the mother individual so that the actual
     mother Individual object can be retrieved on demand.
   Example    : $individual = Bio::EnsEMBL::Variation::Individual->new
@@ -97,7 +97,7 @@ sub new {
       $father_id, $mother_id) =
     rearrange([qw(dbID adaptor name description gender
                   father_individual mother_individual
-                  father_individual_id mother_individual_id)], @_);
+                  father_individual_sample_id mother_individual_sample_id)], @_);
 
   if(defined($gender)) {
     $gender = ucfirst(lc($gender));
@@ -113,48 +113,8 @@ sub new {
                 'gender'  => $gender,
                 'father_individual' => $father,
                 'mother_individual' => $mother,
-                '_mother_individual_id' => $mother_id,
-                '_father_individual_id' => $father_id}, $class;
-}
-
-
-
-=head2 name
-
-  Arg [1]    : string $newval (optional)
-               The new value to set the name attribute to
-  Example    : $name = $obj->name()
-  Description: Getter/Setter for the name attribute
-  Returntype : string
-  Exceptions : none
-  Caller     : general
-
-=cut
-
-sub name{
-  my $self = shift;
-  return $self->{'name'} = shift if(@_);
-  return $self->{'name'};
-}
-
-
-
-=head2 description
-
-  Arg [1]    : string $newval (optional)
-               The new value to set the description attribute to
-  Example    : $description = $obj->description()
-  Description: Getter/Setter for the description attribute
-  Returntype : string
-  Exceptions : none
-  Caller     : general
-
-=cut
-
-sub description{
-  my $self = shift;
-  return $self->{'description'} = shift if(@_);
-  return $self->{'description'};
+                '_mother_individual_sample_id' => $mother_id,
+                '_father_individual_sample_id' => $father_id}, $class;
 }
 
 
@@ -244,9 +204,9 @@ sub father_Individual{
 
   # lazy-load mother if we can
   if(!defined($self->{'father_individual'}) && $self->adaptor() &&
-     defined($self->{'_father_individual_id'})) {
+     defined($self->{'_father_individual_sample_id'})) {
     $self->{'father_individual'} =
-      $self->adaptor->fetch_by_dbID($self->{'_father_individual_id'});
+      $self->adaptor->fetch_by_dbID($self->{'_father_individual_sample_id'});
   }
 
   return $self->{'father_individual'};
@@ -286,9 +246,9 @@ sub mother_Individual{
 
   # lazy-load mother if we can
   if(!defined($self->{'mother_individual'}) && $self->adaptor() &&
-     defined($self->{'_mother_individual_id'})) {
+     defined($self->{'_mother_individual_sample_id'})) {
     $self->{'mother_individual'} =
-      $self->adaptor->fetch_by_dbID($self->{'_mother_individual_id'});
+      $self->adaptor->fetch_by_dbID($self->{'_mother_individual_sample_id'});
   }
 
   return $self->{'mother_individual'};

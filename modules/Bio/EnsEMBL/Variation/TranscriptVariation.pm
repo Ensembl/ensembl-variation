@@ -130,8 +130,8 @@ our %VALID_TYPES = ('INTRONIC' => 1,
 sub new {
   my $class = shift;
 
-  my ($vf_id, $tr_id, $pep_allele, $cdna_start,$cdna_end, $tl_start,$tl_end, $consequence_type,
-      $dbID, $adaptor) =
+  my ($vf, $tr, $pep_allele, $cdna_start,$cdna_end, $tl_start,$tl_end, $consequence_type,
+      $dbID, $adaptor, $transcript) =
     rearrange([qw(VARIATION_FEATURE TRANSCRIPT PEP_ALLELE_STRING CDNA_START
                   CDNA_END TRANSLATION_START TRANSLATION_END CONSEQUENCE_TYPE
                   DBID ADAPTOR)], @_);
@@ -162,8 +162,8 @@ sub new {
 
   return bless {'dbID'              => $dbID,
                 'adaptor'           => $adaptor,
-                '_vf_id           ' => $vf_id,
-                '_transcript_id'    => $tr_id,
+                'variation_feature' => $vf,
+                'transcript'        => $tr,
                 'pep_allele_string' => $pep_allele,
                 'cdna_start'        => $cdna_start,
                 'cdna_end'          => $cdna_end,
@@ -234,7 +234,7 @@ sub variation_feature {
       my $vf = $self->{'adaptor'}->db()->get_VariationFeatureAdaptor();
       return $vf->fetch_by_dbID($self->{'_vf_id'});
   }
-
+  return $self->{'variation_feature'};
 }
 
 

@@ -17,7 +17,7 @@ Bio::EnsEMBL::Variation::ReadCoverage - A coverage reagion for a read.
         -end     => 200,
         -slice   => $slice,
         -level   => 1.
-        -population => $population);
+        -sample  => $individual);
 
     $rc = $rc->transform('supercontig');
 
@@ -66,8 +66,8 @@ our @ISA = ('Bio::EnsEMBL::Feature');
   Arg [-LEVEL] :
     int - the number of times the region represented by start and end has been seen
 
-  Arg [-POPULATION] :
-    Bio::EnsEMBL::Variation::Population - the population
+  Arg [-SAMPLE] :
+    Bio::EnsEMBL::Variation::Individual - the individual
                      in which the allele was recorded
     
   Example    :
@@ -76,7 +76,7 @@ our @ISA = ('Bio::EnsEMBL::Feature');
         -end     => 100,
         -slice   => $slice,
         -level  => 1,
-        -population => $population);
+        -sample => $individual);
 
   Description: Constructor. Instantiates a new ReadCoverage object.
   Returntype : Bio::EnsEMBL::Variation::ReadCoverage
@@ -90,11 +90,11 @@ sub new {
   my $class = ref($caller) || $caller;
 
   my $self = $class->SUPER::new(@_);
-  my ($level, $population) =
-    rearrange([qw(LEVEL POPULATION)], @_);
+  my ($level, $individual) =
+    rearrange([qw(LEVEL SAMPLE)], @_);
 
   $self->{'level'}    = $level;
-  $self->{'population'}   = $population;
+  $self->{'sample'}   = $individual;
 
   return $self;
 }
@@ -120,29 +120,29 @@ sub level{
 }
 
 
-=head2 population
+=head2 sample
 
-  Arg [1]    : Bio::EnsEMBL::Variation::Population $newval (optional)
-               The new value to set the population attribute to
-  Example    : $population = $rc->population();
-  Description: Getter/Setter for the population attribute
-  Returntype : Bio::EnsEMBL::Variation::Population
+  Arg [1]    : Bio::EnsEMBL::Variation::Individual $newval (optional)
+               The new value to set the sample attribute to
+  Example    : $individual = $rc->sample();
+  Description: Getter/Setter for the individual attribute
+  Returntype : Bio::EnsEMBL::Variation::Individual
   Exceptions : throw on incorrect argument
   Caller     : general
 
 =cut
 
-sub population{
+sub sample{
   my $self = shift;
 
   if(@_) {
-    if(!ref($_[0]) || !$_[0]->isa('Bio::EnsEMBL::Variation::Population')) {
-      throw('Bio::EnsEMBL::Variation::Population argument expected.');
+    if(!ref($_[0]) || !$_[0]->isa('Bio::EnsEMBL::Variation::Individual')) {
+      throw('Bio::EnsEMBL::Variation::Individual argument expected.');
     }
-    $self->{'population'} = shift;
+    $self->{'sample'} = shift;
   }
 
-  return $self->{'population'};
+  return $self->{'sample'};
 }
 
 1;

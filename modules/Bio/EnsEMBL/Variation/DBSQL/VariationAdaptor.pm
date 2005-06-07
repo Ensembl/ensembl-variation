@@ -56,7 +56,7 @@ use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 
 use Bio::EnsEMBL::Variation::Variation;
 use Bio::EnsEMBL::Variation::Allele;
-use Data::Dumper;
+
 our @ISA = ('Bio::EnsEMBL::DBSQL::BaseAdaptor');
 
 
@@ -80,7 +80,7 @@ sub fetch_by_dbID {
 
   my $sth = $self->prepare
     (q{SELECT v.variation_id, v.name, v.validation_status, s1.name,
-              a.allele_id, a.allele, a.frequency, a.population_id,
+              a.allele_id, a.allele, a.frequency, a.sample_id,
               vs.name, s2.name
        FROM   variation v, source s1, source s2, allele a, variation_synonym vs
        WHERE  v.variation_id = a.variation_id
@@ -120,7 +120,7 @@ sub fetch_by_name {
 
   my $sth = $self->prepare
     (q{SELECT v.variation_id, v.name, v.validation_status, s1.name,
-              a.allele_id, a.allele, a.frequency, a.population_id,
+              a.allele_id, a.allele, a.frequency, a.sample_id,
               vs.name, s2.name
        FROM   variation v, source s1, source s2, allele a, variation_synonym vs
        WHERE  v.variation_id = a.variation_id
@@ -139,7 +139,7 @@ sub fetch_by_name {
     # try again if nothing found, but check synonym table instead
     $sth = $self->prepare
       (q{SELECT v.variation_id, v.name, v.validation_status, s1.name,
-                a.allele_id, a.allele, a.frequency, a.population_id,
+                a.allele_id, a.allele, a.frequency, a.sample_id,
                 vs2.name, s2.name
          FROM   variation v, source s1, source s2, allele a,
                 variation_synonym vs1, variation_synonym vs2
@@ -200,7 +200,7 @@ sub fetch_all_by_dbID_list {
 
     my $sth = $self->prepare
       (qq{SELECT v.variation_id, v.name, v.validation_status, s1.name,
-                 a.allele_id, a.allele, a.frequency, a.population_id,
+                 a.allele_id, a.allele, a.frequency, a.sample_id,
                  vs.name, s2.name
           FROM   variation v, source s1, source s2, allele a,
                  variation_synonym vs
@@ -278,8 +278,10 @@ sub get_flanking_sequence{
 $sth->fetch();
 $sth->finish();
 
+unless ($seq_region_id){
 warn "*****[ERROR]: No seq_region_id for SNP with dbID: $variationID. Cannot retrieve flanking region******\n";
-return unless $seq_region_id;
+return
+}
 
 if (!defined $down_seq){
   $down_seq = $self->_get_flank_from_core($seq_region_id, $down_seq_region_start, $down_seq_region_end, $seq_region_strand);
@@ -292,6 +294,51 @@ push @{$flanking_sequence},$down_seq,$up_seq; #add to the array the 3 and 5 prim
 
 return $flanking_sequence;
 }
+
+=head2 fetch_all_by_Population
+
+  Arg [1]    : Bio::EnsEMBL::Variation::Population
+  Example    : $pop = $pop_adaptor->fetch_by_dbID(1345);
+               @vars = @{$va_adaptor->fetch_all_by_Population($pop)};
+  Description: Retrieves all variations which are stored for a specified
+               population.
+  Returntype : listref of Bio::EnsEMBL::Variation::Variation
+  Exceptions : throw on incorrect argument
+  Caller     : general
+
+=cut
+
+sub fetch_all_by_Population {
+  my $self = shift;
+  my $pop = shift;
+
+  if(!ref($pop) || !$pop->isa('Bio::EnsEMBL::Variation::Population')) {
+    throw('Bio::EnsEMBL::Variation::Population argument expected');
+  }
+
+  if(!defined($pop->dbID())) {
+    warning("Cannot retrieve genotypes for population without set dbID");
+    return [];
+  }
+
+  my $sth = $self->prepare
+    (q{SELECT v.variation_id, v.name, v.validation_status, s1.name,
+              a.allele_id, a.allele, a.frequency, a.sample_id,
+              vs.name, s2.name
+       FROM   variation v, source s1, source s2, allele a, variation_synonym vs
+       WHERE  v.variation_id = a.variation_id
+       AND    v.variation_id = vs.variation_id
+       AND    v.source_id = s1.source_id
+       AND    vs.source_id = s2.source_id
+       AND    a.sample_id = ?});
+  $sth->execute($pop->dbID);
+
+  my $results = $self->_objs_from_sth($sth);
+  $sth->finish();
+
+  return $results;
+}
+
 
 sub _get_flank_from_core{
     my $self = shift;
@@ -319,11 +366,11 @@ sub _objs_from_sth {
   my $sth = shift;
 
   my ($var_id, $name, $vstatus, $source, $allele_id, $allele, $allele_freq,
-      $allele_pop_id, $syn_name, $syn_source,
+      $allele_sample_id, $syn_name, $syn_source,
       $cur_allele_id, $cur_var, $cur_var_id);
 
   $sth->bind_columns(\$var_id, \$name, \$vstatus, \$source, \$allele_id,
-                     \$allele, \$allele_freq, \$allele_pop_id, \$syn_name,
+                     \$allele, \$allele_freq, \$allele_sample_id, \$syn_name,
                      \$syn_source);
 
   my @vars;
@@ -349,9 +396,9 @@ sub _objs_from_sth {
 
     if(!defined($cur_allele_id) || $cur_allele_id != $allele_id) {
       my $pop;
-      if($allele_pop_id) {
-        $pop = $seen_pops{$allele_pop_id} ||=
-          $pa->fetch_by_dbID($allele_pop_id);
+      if($allele_sample_id) {
+        $pop = $seen_pops{$allele_sample_id} ||=
+          $pa->fetch_by_dbID($allele_sample_id);
     }
       my $allele = Bio::EnsEMBL::Variation::Allele->new
         (-dbID      => $allele_id,
