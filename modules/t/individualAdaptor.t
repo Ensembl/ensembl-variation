@@ -27,10 +27,10 @@ ok($ia && $ia->isa('Bio::EnsEMBL::Variation::DBSQL::IndividualAdaptor'));
 
 # test fetch by dbID
 
-my $ind = $ia->fetch_by_dbID(7);
-
+my $individuals = $ia->fetch_individual_by_synonym(7);
+my $ind = shift @{$individuals};
 ok($ind->name() eq 'CEPH104.11');
-ok($ind->dbID() == 7);
+ok($ind->dbID() == 781);
 ok($ind->description() eq 'CEPH/VENEZUELAN PEDIGREE 104');
 ok($ind->gender eq 'Female');
 
@@ -39,7 +39,7 @@ ok($ind->gender eq 'Female');
 
 ($ind) = @{$ia->fetch_all_by_name('CL63')};
 ok($ind->name() eq 'CL63');
-ok($ind->dbID() == 2265);
+ok($ind->dbID() == 2781);
 
 
 # test fetch_all_by_Population
