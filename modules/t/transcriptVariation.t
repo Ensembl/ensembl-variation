@@ -3,7 +3,7 @@ use warnings;
 
 BEGIN { $| = 1;
 	use Test;
-	plan tests => 16;
+	plan tests => 15;
 }
 
 
@@ -12,7 +12,6 @@ use Bio::EnsEMBL::Variation::Variation;
 use Bio::EnsEMBL::Variation::VariationFeature;
 use Bio::EnsEMBL::Variation::TranscriptVariation;
 use Bio::EnsEMBL::Transcript;
-
 
 our $verbose = 5;
 
@@ -30,7 +29,8 @@ my $vf = Bio::EnsEMBL::Variation::VariationFeature->new
    -variation_name => 'rs665',
    -map_weight => 1,
    -allele_string => 'G/A',
-   -variation => $v);
+   -variation => $v,
+   -dbID => 582);
 
 
 
@@ -53,7 +53,6 @@ my $trvar = Bio::EnsEMBL::Variation::TranscriptVariation->new
    -translation_end   => $tl_end,
    -consequence_type  => $consequence_type);
 
-
 ok($trvar->variation_feature() == $vf);
 ok($trvar->transcript() == $tr);
 ok($trvar->pep_allele_string() eq $pep_allele);
@@ -69,8 +68,6 @@ my $tr_new = Bio::EnsEMBL::Transcript->new();
 ok(test_getter_setter($trvar, 'transcript', $tr_new));
 
 
-my $vf_new = Bio::EnsEMBL::Variation::VariationFeature->new();
-ok(test_getter_setter($trvar, 'variation_feature', $vf_new));
 
 
 ok(test_getter_setter($trvar, 'pep_allele_string', $pep_allele));
