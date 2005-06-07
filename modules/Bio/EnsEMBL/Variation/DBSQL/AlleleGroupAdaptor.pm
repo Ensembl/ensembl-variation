@@ -79,7 +79,7 @@ sub fetch_by_dbID {
   # left join allows allele groups without any alleles to be fetched
 
   my $sth = $self->prepare
-    (q{SELECT ag.allele_group_id, ag.variation_group_id, ag.population_id,
+    (q{SELECT ag.allele_group_id, ag.variation_group_id, ag.sample_id,
               ag.name, s.name, ag.frequency, aga.allele, aga.variation_id
        FROM   allele_group ag, source s
        LEFT JOIN allele_group_allele aga
@@ -118,7 +118,7 @@ sub fetch_by_name {
   # left join allows allele groups without any alleles to be fetched
 
   my $sth = $self->prepare
-    (q{SELECT ag.allele_group_id, ag.variation_group_id, ag.population_id,
+    (q{SELECT ag.allele_group_id, ag.variation_group_id, ag.sample_id,
               ag.name, s.name, ag.frequency, aga.allele, aga.variation_id
        FROM   allele_group ag, source s
        LEFT JOIN allele_group_allele aga
@@ -160,7 +160,7 @@ sub fetch_all_by_VariationGroup {
   # left join allows allele groups without any alleles to be fetched
 
   my $sth = $self->prepare
-    (q{SELECT ag.allele_group_id, ag.variation_group_id, ag.population_id,
+    (q{SELECT ag.allele_group_id, ag.variation_group_id, ag.sample_id,
               ag.name, s.name, ag.frequency, aga.allele, aga.variation_id
        FROM   allele_group ag, source s
        LEFT JOIN allele_group_allele aga
@@ -182,8 +182,8 @@ sub _objs_from_sth {
   my $self = shift;
   my $sth  = shift;
 
-  my ($ag_id,  $vg_id, $pop_id, $name, $source, $freq, $allele, $var_id);
-  $sth->bind_columns(\$ag_id, \$vg_id, \$pop_id, \$name, \$source,
+  my ($ag_id,  $vg_id, $sample_id, $name, $source, $freq, $allele, $var_id);
+  $sth->bind_columns(\$ag_id, \$vg_id, \$sample_id, \$name, \$source,
                      \$freq, \$allele, \$var_id);
 
   my %pop_cache;
@@ -204,8 +204,8 @@ sub _objs_from_sth {
 
       # obtain the population for this allele group
       my $pop;
-      if(defined($pop_id)) {
-        $pop = $pop_cache{$pop_id} ||= $pop_adaptor->fetch_by_dbID($pop_id);
+      if(defined($sample_id)) {
+        $pop = $pop_cache{$sample_id} ||= $pop_adaptor->fetch_by_dbID($sample_id);
       }
 
       # obtain the variation group for this allele group

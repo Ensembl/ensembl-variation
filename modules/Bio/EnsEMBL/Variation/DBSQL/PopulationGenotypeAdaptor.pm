@@ -118,7 +118,7 @@ sub fetch_all_by_Population {
     return [];
   }
 
-  return $self->generic_fetch("population_id = " . $pop->dbID());
+  return $self->generic_fetch("sample_id = " . $pop->dbID());
 }
 
 
@@ -157,7 +157,7 @@ sub fetch_all_by_Variation {
 sub _tables{return ['population_genotype','pg']}
 
 sub _columns{
-    return qw(pg.population_genotype_id pg.variation_id pg.population_id pg.allele_1 pg.allele_2 pg.frequency)
+    return qw(pg.population_genotype_id pg.variation_id pg.sample_id pg.allele_1 pg.allele_2 pg.frequency)
 }
 
 sub _objs_from_sth{
@@ -165,8 +165,8 @@ sub _objs_from_sth{
     my $sth = shift;
 
     my @results;
-    my ($dbID, $variation_id, $population_id, $allele_1, $allele_2, $frequency);
-    $sth->bind_columns(\$dbID, \$variation_id, \$population_id, \$allele_1, \$allele_2, \$frequency);
+    my ($dbID, $variation_id, $sample_id, $allele_1, $allele_2, $frequency);
+    $sth->bind_columns(\$dbID, \$variation_id, \$sample_id, \$allele_1, \$allele_2, \$frequency);
     
     my %population_hash;
     my %variation_hash;
@@ -177,10 +177,10 @@ sub _objs_from_sth{
 	     -allele1 => $allele_1,
 	     -allele2 => $allele_2,
 	     -frequency => $frequency);
-	$population_hash{$population_id} ||= [];
+	$population_hash{$sample_id} ||= [];
 	$variation_hash{$variation_id} ||= [];
 	push @{$variation_hash{$variation_id}}, $pgtype; #store the variations to get the objects once
-	push @{$population_hash{$population_id}}, $pgtype; #store the populations to get the objects once
+	push @{$population_hash{$sample_id}}, $pgtype; #store the populations to get the objects once
 	push @results, $pgtype;
     }
 

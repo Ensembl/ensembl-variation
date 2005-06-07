@@ -87,9 +87,9 @@ sub fetch_all_by_Individual {
 }
 
   $self->_tables(['individual_genotype_single_bp','igs']);
-  my $res = $self->generic_fetch("individual_id = " . $ind->dbID()); #to select data from individual_genotype_single_bp
+  my $res = $self->generic_fetch("sample_id = " . $ind->dbID()); #to select data from individual_genotype_single_bp
   $self->_tables(['individual_genotype_multiple_bp','igm']);
-  push @{$res},@{$self->generic_fetch("individual_id = " . $ind->dbID())}; #to select data from individual_genotype_multiple_bp  
+  push @{$res},@{$self->generic_fetch("sample_id = " . $ind->dbID())}; #to select data from individual_genotype_multiple_bp  
   return $res
 }
 
@@ -135,7 +135,7 @@ sub _tables{
 }
 
 sub _columns{
-    return qw(individual_id variation_id allele_1 allele_2);
+    return qw(sample_id variation_id allele_1 allele_2);
 }
 
 sub _objs_from_sth{

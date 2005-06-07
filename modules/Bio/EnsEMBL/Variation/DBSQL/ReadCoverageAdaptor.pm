@@ -29,7 +29,7 @@ Bio::EnsEMBL::Variation::DBSQL::ReadCoverageAdaptor
   $slice = $sa->fetch_by_region('chromosome', 'X', 1e6, 2e6);
   $population = $pa->fetch_by_name("UNKNOWN");
   $level = 1;
-  foreach $rc (@{$vfa->fetch_all_by_Slice_Population_depth($slice,$population,$level)}) {
+  foreach $rc (@{$vfa->fetch_all_by_Slice_Sample_depth($slice,$population,$level)}) {
     print $rc->start(), '-', $rc->end(), "\n";
   }
 
@@ -61,13 +61,16 @@ use Bio::EnsEMBL::Utils::Exception qw(throw);
 
 our @ISA = ('Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor');
 
-=head2 fetch_all_by_Slice_Population_depth
+=head2 fetch_all_by_Slice_Sample_depth
 
     Arg[0]      : Bio::EnsEMBL::Slice $slice
-    Arg[1]      : Bio::EnsEMBL::Variation::Population $population
-    Arg[2]      : int $level
-    Example     : my $feature = $rca->fetch_all_by_Slice_Population_depth($slice,$population,$level);
-    Description : Gets all the read coverage features for a given population in a certain level
+    Arg[1]      : (optional) Bio::EnsEMBL::Variation::Individual $sample
+    Arg[2]      : (optional) int $level
+    Example     : my $features = $rca->fetch_all_by_Slice_Sample_depth($slice,$sample,$level); or
+                  my $features = $rca->fetch_all_by_Slice_Sample_depth($slice, $sample); or
+                  my $features = $rca->fetch_all_by_Slice_Sample_depth($slice, $level); or
+                  my $features = $rca->fetch_all_by_Slice_Sample_depth($slice); 
+    Description : Gets all the read coverage features for a given individual in a certain level
                   in the provided slice
     ReturnType  : listref of Bio::EnsEMBL::Variation::ReadCoverage
     Exceptions  : thrown on bad arguments
@@ -78,36 +81,50 @@ our @ISA = ('Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor');
 sub fetch_all_by_Slice_Population_depth{
     my $self = shift;
     my $slice = shift;
-    my $population = shift;
-    my $level = shift;
+    my @args = @_; #can contain individual and/or level
 
     if(!ref($slice) || !$slice->isa('Bio::EnsEMBL::Slice')) {
 	throw('Bio::EnsEMBL::Slice arg expected');
     }
-    
-    if(!ref($population) || !$population->isa('Bio::EnsEMBL::Variation::Population')) {
-	throw('Bio::EnsEMBL::Variation::Population arg expected');
+
+    if (defined $args[0]){ #contains, at least, 1 parameter, either a Individual or the level
+	my $constraint;
+	if (defined $args[1]){ #contains both parameters, first the Individual and second the level
+	    if(!ref($args[0]) || !$args[0]->isa('Bio::EnsEMBL::Variation::Individual')) {
+		throw('Bio::EnsEMBL::Variation::Individual arg expected');
+	    }
+	    if(!defined($args[0]->dbID())) {
+		throw("Sample arg must have defined dbID");
+	    }
+	    $constraint = "rc.sample_id = " . $args[0]->dbID . " AND rc.level = " . $args[1];
+	}
+	else{ #there is just 1 argument, can either be the Individual or the level
+	    if (!ref($args[0])){
+		#it should just contain the level
+		$constraint = "rc.level = " . $args[0];
+	    }
+	    else{
+		#it should contain the Individual
+		if (!$args[0]->isa('Bio::EnsEMBL::Variation::Individual')){
+		    throw('Bio::EnsEMBL::Variation::Individual arg expected');
+		}
+		$constraint = "rc.sample_id = " . $args[0]->dbID;
+	    }
+	}
+
+	return $self->fetch_all_by_Slice_constraint($slice,$constraint);    
     }
-    if(!defined($population->dbID())) {
-	throw("Population arg must have defined dbID");
-    }
-    
-    my $constraint = "ip.population_id = " . $population->dbID . " AND rc.level = " . $level;
-    #call the method fetch_all_by_Slice_constraint with the population constraint
-    return $self->fetch_all_by_Slice_constraint($slice,$constraint);    
+    #call the method fetch_all_by_Slice
+    return $self->fetch_all_by_Slice($slice);    
 }
 
 
-sub _tables{ return (['read_coverage','rc'],
-		     ['individual_population','ip'],
+sub _tables{ return (['read_coverage','rc']
 		     )}
 
-sub _default_where_clause{
-    return 'rc.individual_id = ip.individual_id';
-}
 
 sub _columns{
-    return qw (rc.seq_region_id rc.seq_region_start rc.seq_region_end rc.level ip.population_id);
+    return qw (rc.seq_region_id rc.seq_region_start rc.seq_region_end rc.level rc.sample_id);
 }
 
 
@@ -122,10 +139,10 @@ sub _objs_from_sth{
   # a fair bit of gymnastics is used.
   #
 
-  my ($seq_region_id, $seq_region_start, $seq_region_end, $level, $population_id);
+  my ($seq_region_id, $seq_region_start, $seq_region_end, $level, $sample_id);
   my $seq_region_strand = 1; #assume all reads are in the + strand
 
-  $sth->bind_columns(\$seq_region_id, \$seq_region_start, \$seq_region_end, \$level, \$population_id);
+  $sth->bind_columns(\$seq_region_id, \$seq_region_start, \$seq_region_end, \$level, \$sample_id);
 
   my @features;
   my %seen_pops;  #hash containing the populations seen
@@ -225,16 +242,16 @@ sub _objs_from_sth{
 	  $slice = $dest_slice;
       }
 
-      my $pop;
-      if($population_id){
-	  $pop = $seen_pops{$population_id} ||= $pa->fetch_by_dbID($population_id);
+      my $sample;
+      if($sample_id){
+	  $sample = $seen_pops{$sample_id} ||= $pa->fetch_by_dbID($sample_id);
       }
       $read_coverage = Bio::EnsEMBL::Variation::ReadCoverage->new(-start => $seq_region_start,
 								  -end   => $seq_region_end,
 								  -slice => $slice,
 								  -adaptor  => $self,
 								  -level => $level,
-								  -population => $pop,
+								  -sample => $sample,
 								  );
       push @features, $read_coverage;
   }

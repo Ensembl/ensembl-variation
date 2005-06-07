@@ -55,45 +55,39 @@ use warnings;
 
 package Bio::EnsEMBL::Variation::DBSQL::PopulationAdaptor;
 
-use Bio::EnsEMBL::DBSQL::BaseAdaptor;
+use Bio::EnsEMBL::Variation::DBSQL::SampleAdaptor;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 
 use Bio::EnsEMBL::Variation::Population;
 
-our @ISA = ('Bio::EnsEMBL::DBSQL::BaseAdaptor');
+our @ISA = ('Bio::EnsEMBL::Variation::DBSQL::SampleAdaptor');
 
+=head2 fetch_population_by_synonym
 
-
-=head2 fetch_by_dbID
-
-  Arg [1]    : int $dbID
-  Example    : $pop = $pop_adaptor->fetch_by_dbID(5543);
-  Description: Retrieves a Population object via its internal identifier.
-               If no such population exists undef is returned.
-  Returntype : Bio::EnsEMBL::Variation::Population
-  Exceptions : throw if dbID arg is not defined
-  Caller     : general, IndividualAdaptor
+    Arg [1]              : $population_synonym
+    Example              : my $pop = $pop_adaptor->fetch_population_by_synonym($population_synonym,$source);
+    Description          : Retrieves populations for the synonym given in the source. If no source is provided, retrieves all the synonyms
+    Returntype           : list of Bio::EnsEMBL::Variation::Population
+    Exceptions           : none
+    Caller               : general
 
 =cut
 
-sub fetch_by_dbID {
-  my $self = shift;
-  my $dbID = shift;
-
-  throw('dbID argument expected') if(!defined($dbID));
-
-  my $sth = $self->prepare(q{SELECT population_id, name, size, description, is_strain
-                             FROM   population
-                             WHERE  population_id = ?});
-  $sth->execute($dbID);
-  my $result = $self->_objs_from_sth($sth);
-  $sth->finish();
-
-  return undef if(!@$result);
-
-  return $result->[0];
+sub fetch_population_by_synonym{
+    my $self = shift;
+    my $synonym_name = shift;
+    my $source = shift;
+    my $pops;
+    my $pop;
+    #return all sample_id from the database
+    my $samples = $self->SUPER::fetch_sample_by_synonym($synonym_name, $source);
+    foreach my $sample_id (@{$samples}){
+	#get the ones that are individuals
+	$pop = $self->fetch_by_dbID($sample_id);
+	push @{$pops}, $pop if (defined $pop);
+    }
+    return $pops;
 }
-
 
 
 =head2 fetch_by_name
@@ -113,9 +107,10 @@ sub fetch_by_name {
 
   throw('name argument expected') if(!defined($name));
 
-  my $sth = $self->prepare(q{SELECT population_id, name, size, description, is_strain
-                             FROM   population
-                             WHERE  name = ?});
+  my $sth = $self->prepare(q{SELECT p.sample_id, s.name, s.size, s.description, p.is_strain
+                             FROM   population p, sample s
+                             WHERE  s.name = ?
+			     AND    s.sample_id = p.sample_id});
 
   $sth->execute($name);
 
@@ -155,11 +150,12 @@ sub fetch_all_by_super_Population {
     return [];
   }
 
-  my $sth = $self->prepare(q{SELECT p.population_id, p.name, p.size,
-                                    p.description, p.is_strain
-                             FROM   population p, population_structure ps
-                             WHERE  p.population_id = ps.sub_population_id
-                             AND    ps.super_population_id = ?});
+  my $sth = $self->prepare(q{SELECT p.sample_id, s.name, s.size,
+                                    s.description, p.is_strain
+                             FROM   population p, population_structure ps, sample s
+                             WHERE  p.sample_id = ps.sub_population_sample_id
+                             AND    ps.super_population_sample_id = ?
+			     AND    p.sample_id = s.sample_id});
 
   $sth->execute($pop->dbID());
 
@@ -198,11 +194,12 @@ sub fetch_all_by_sub_Population {
     return [];
   }
 
-  my $sth = $self->prepare(q{SELECT p.population_id, p.name, p.size,
-                                    p.description, p.is_strain
-                             FROM   population p, population_structure ps
-                             WHERE  p.population_id = ps.super_population_id
-                             AND    ps.sub_population_id = ?});
+  my $sth = $self->prepare(q{SELECT p.sample_id, s.name, s.size,
+                                    s.description, p.is_strain
+                             FROM   population p, population_structure ps, sample s
+                             WHERE  p.sample_id = ps.super_population_sample_id
+                             AND    ps.sub_population_sample_id = ?
+			     AND    p.sample_id = s.sample_id});
 
   $sth->execute($pop->dbID());
 
@@ -213,78 +210,6 @@ sub fetch_all_by_sub_Population {
   return $result;
 }
 
-=head2 fetch_synonyms
-
-    Arg [1]              : $pop_id
-    Arg [2] (optional)   : $source
-    Example              : my $dbSNP_synonyms = $pop_adaptor->fetch_synonyms($dbSNP);
-                           my $all_synonyms = $pop_adaptor->fetch_synonyms();
-    Description: Retrieves synonyms for the source provided. Otherwise, return all the synonyms for the population
-    Returntype : list of strings
-    Exceptions : none
-    Caller     : Bio:EnsEMBL:Variation::Population
-
-=cut
-
-sub fetch_synonyms{
-    my $self = shift;
-    my $dbID = shift;
-    my $source = shift;
-    my $population_synonym;
-    my $synonyms;
-
-    my $sql;
-    if (defined $source){
-	$sql = qq{SELECT ps.name FROM population_synonym ps, source s WHERE ps.population_id = ? AND ps.source_id = s.source_id AND s.name = "$source"}
-    }
-    else{
-	$sql = qq{SELECT name FROM population_synonym WHERE population_id = ?};
-    }
-    my $sth = $self->prepare($sql);
-    $sth->execute($dbID);
-    $sth->bind_columns(\$population_synonym);
-    while ($sth->fetch){
-	push @{$synonyms},$population_synonym;
-    }
-    return $synonyms;
-}
-
-=head2 fetch_population_by_synonym
-
-    Arg [1]              : $population_synonym
-    Example              : my $pop = $pop_adaptor->fetch_population_by_synonym($population_synonym,$source);
-    Description          : Retrieves population for the synonym given in the source. If no source is provided, retrieves all the synonyms
-    Returntype           : list of Bio::EnsEMBL::Variation::Population
-    Exceptions           : none
-    Caller               : general
-
-=cut
-
-sub fetch_population_by_synonym{
-    my $self = shift;
-    my $synonym_name = shift;
-    my $source = shift;
-    my $sql;
-    my $population;
-    my $population_array;
-
-    if (defined $source){
-	$sql = qq{SELECT population_id FROM population_synonym ps, source s WHERE ps.name = ? and ps.source_id = s.source_id = s.name = "$source"};
-    }
-    else{
-	$sql = qq{SELECT population_id FROM population_synonym WHERE name = ?};
-    }
-    my $population_id;
-    my $sth = $self->prepare($sql);
-    $sth->execute($synonym_name);    
-    $sth->bind_columns(\$population_id);
-    while ($sth->fetch()){
-	$population = $self->fetch_by_dbID($population_id);
-	push @{$population_array}, $population;
-    }
-    return $population_array;
-    
-}
 
 =head2 fetch_all_strains
 
@@ -333,10 +258,11 @@ sub fetch_all_by_Individual{
 	return [];
   } 
 
-    my $sth = $self->prepare(qq{SELECT p.population_id, p.name, p.size, p.description, p.is_strain
-				FROM population p, individual_population ip
-				WHERE p.population_id = ip.population_id
-                                AND ip.individual_id = ?
+    my $sth = $self->prepare(qq{SELECT p.sample_id, s.name, s.size, s.description, p.is_strain
+				FROM population p, individual_population ip, sample s
+				WHERE s.sample_id = ip.population_sample_id
+				AND s.sample_id = p.sample_id
+                                AND ip.individual_sample_id = ?
 			    });
     $sth->execute($ind->dbID());
 
@@ -377,10 +303,11 @@ sub fetch_tagged_Population{
 	return [];
   } 
 
-    my $sth = $self->prepare(qq{SELECT p.population_id, p.name, p.size, p.description, p.is_strain
-				FROM population p, tagged_variation_feature tvf
-				WHERE p.population_id = tvf.population_id
-                                AND tvf.variation_feature_id = ?
+    my $sth = $self->prepare(qq{SELECT p.sample_id, s.name, s.size, s.description, p.is_strain
+				FROM population p, tagged_variation_feature tvf, sample s
+				WHERE p.sample_id = tvf.sample_id
+				AND   s.sample_id = p.sample_id
+                                AND   tvf.variation_feature_id = ?
 			    });
     $sth->execute($variation_feature->dbID());
     my $results = $self->_objs_from_sth($sth);
@@ -417,11 +344,16 @@ sub _objs_from_sth {
   return \@pops;
 }
 
-sub _tables{return ['population','p'];}
+sub _tables{return (['population','p'],
+		    ['sample','s']);}
 
 sub _columns{
-    return qw(p.population_id p.name p.size p.description p.is_strain
+    return qw(s.sample_id s.name s.size s.description p.is_strain
 	      );
+}
+
+sub _default_where_clause{
+    return 's.sample_id = p.sample_id';
 }
 
 1;

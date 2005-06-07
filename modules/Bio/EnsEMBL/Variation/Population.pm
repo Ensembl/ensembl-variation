@@ -65,16 +65,16 @@ use warnings;
 
 package Bio::EnsEMBL::Variation::Population;
 
-use Bio::EnsEMBL::Storable;
+use Bio::EnsEMBL::Variation::Sample;
 use Bio::EnsEMBL::Utils::Argument qw(rearrange);
 use Bio::EnsEMBL::Utils::Exception qw(throw);
 
-our @ISA = ('Bio::EnsEMBL::Storable');
+our @ISA = ('Bio::EnsEMBL::Variation::Sample');
 
 
 =head2 new
 
-  Arg [-dbID]: int - unique internal identifier of the population
+  Arg [-dbID]: int - unique internal identifier of the sample
   Arg [-ADAPTOR]: Bio::EnsEMBL::PopulationAdaptor
   Arg [-NAME]: string - name of the population
   Arg [-DESCRIPTION]: string - description of the population
@@ -110,66 +110,6 @@ sub new {
                 'size'        => $size,
 		'is_strain'   => $is_strain,
                 'sub_populations' => $sub_pops}, $class;
-}
-
-
-
-=head2 name
-
-  Arg [1]    : string $newval (optional)
-               The new value to set the name attribute to
-  Example    : $name = $obj->name()
-  Description: Getter/Setter for the name attribute
-  Returntype : string
-  Exceptions : none
-  Caller     : general
-
-=cut
-
-sub name{
-  my $self = shift;
-  return $self->{'name'} = shift if(@_);
-  return $self->{'name'};
-}
-
-
-
-=head2 description
-
-  Arg [1]    : string $newval (optional) 
-               The new value to set the description attribute to
-  Example    : $description = $obj->description()
-  Description: Getter/Setter for the description attribute
-  Returntype : string
-  Exceptions : none
-  Caller     : general
-
-=cut
-
-sub description{
-  my $self = shift;
-  return $self->{'description'} = shift if(@_);
-  return $self->{'description'};
-}
-
-
-
-=head2 size
-
-  Arg [1]    : int $newval (optional) 
-               The new value to set the size attribute to
-  Example    : $size = $obj->size()
-  Description: Getter/Setter for the size attribute
-  Returntype : int
-  Exceptions : none
-  Caller     : general
-
-=cut
-
-sub size{
-  my $self = shift;
-  return $self->{'size'} = shift if(@_);
-  return $self->{'size'};
 }
 
 

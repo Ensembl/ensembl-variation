@@ -88,7 +88,7 @@ sub fetch_by_Slice{
 
     #if a population is passed as an argument, select the LD in the region with the population
     if ($population_id){
-	$ldFeatureContainer = $self->generic_fetch("pl.seq_region_id = " . $slice->get_seq_region_id() . " AND pl.seq_region_start >= " . $slice->start() . " AND pl.seq_region_end <= " . $slice->end() .  " AND pl.seq_region_start <= " . $slice->end() . " AND pl.population_id = " . $population_id);
+	$ldFeatureContainer = $self->generic_fetch("pl.seq_region_id = " . $slice->get_seq_region_id() . " AND pl.seq_region_start >= " . $slice->start() . " AND pl.seq_region_end <= " . $slice->end() .  " AND pl.seq_region_start <= " . $slice->end() . " AND pl.sample_id = " . $population_id);
     }
     else{
 	$ldFeatureContainer = $self->generic_fetch("pl.seq_region_id = " . $slice->get_seq_region_id() . " AND pl.seq_region_start >= " . $slice->start() . " AND pl.seq_region_end <= " . $slice->end() .  " AND pl.seq_region_start <= " . $slice->end());
@@ -129,36 +129,12 @@ sub fetch_by_VariationFeature {
   return $ldFeatureContainer;
 }
 
-=head2 get_global_population
-
-    Example     : $global_population = $ldContainer->get_global_population();
-    Description : Gets the global population used in the ld table to calculate the LD across all populations
-    ReturnType  : int $pop_id
-    Exceptions  : none
-    Caller      : general
-
-=cut
-
-sub get_global_population{
-    my $self = shift;
-    my $global_population = '';
-
-    my $sth = $self->prepare(qq{SELECT population_id FROM population WHERE name = 'Global population'});
-    $sth->execute();
-    $sth->bind_columns(\$global_population);
-    $sth->fetch;
-    $sth->finish;
-
-    return $global_population;
-    
-}
-
 # methods used by superclass to construct SQL
 sub _tables { return ['pairwise_ld', 'pl']; }
 
 
 sub _columns {
-  return qw( pl.variation_feature_id_1 pl.variation_feature_id_2 pl.population_id
+  return qw( pl.variation_feature_id_1 pl.variation_feature_id_2 pl.sample_id
 	     pl.seq_region_id pl.seq_region_start pl.seq_region_end 
 	     pl.r2 pl.d_prime pl.sample_count);
 }
@@ -176,10 +152,10 @@ sub _objs_from_sth {
   my $vfa = $self->db()->get_VariationFeatureAdaptor;
 
   my %vf_objects; #hash containing the address of all the variation feature objects present in the ld table
-  my ($variation_feature_id_1, $variation_feature_id_2, $population_id, $seq_region_id, $seq_region_start, $seq_region_end,
+  my ($variation_feature_id_1, $variation_feature_id_2, $sample_id, $seq_region_id, $seq_region_start, $seq_region_end,
       $r2, $d_prime,$sample_count);
 
-  $sth->bind_columns(\$variation_feature_id_1, \$variation_feature_id_2, \$population_id, \$seq_region_id, \$seq_region_start, \$seq_region_end, \$r2, \$d_prime, \$sample_count);
+  $sth->bind_columns(\$variation_feature_id_1, \$variation_feature_id_2, \$sample_id, \$seq_region_id, \$seq_region_start, \$seq_region_end, \$r2, \$d_prime, \$sample_count);
   my %_pop_ids = ();
   while($sth->fetch()) {
       my %ld_values;
@@ -191,8 +167,8 @@ sub _objs_from_sth {
       $vf_objects{$variation_feature_id_1}++;
       $vf_objects{$variation_feature_id_2}++;
       #add the LD information to the container
-      $feature_container{$variation_feature_id_1 . '-' . $variation_feature_id_2}->{$population_id} =  \%ld_values;
-     $_pop_ids{$population_id} = 1;
+      $feature_container{$variation_feature_id_1 . '-' . $variation_feature_id_2}->{$sample_id} =  \%ld_values;
+     $_pop_ids{$sample_id} = 1;
   }
   $sth->finish();
   my @vf_ids = keys %vf_objects;
