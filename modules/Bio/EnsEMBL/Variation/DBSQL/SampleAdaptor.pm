@@ -1,0 +1,216 @@
+#
+# Ensembl module for Bio::EnsEMBL::Variation::DBSQL::SampleAdaptor
+#
+# Copyright (c) 2005 Ensembl
+#
+# You may distribute this module under the same terms as perl itself
+#
+#
+
+=head1 NAME
+
+Bio::EnsEMBL::Variation::DBSQL::SampleAdaptor
+
+=head1 SYNOPSIS
+
+Abstract class - should not be instantiated.  Implementation of
+abstract methods must be performed by subclasses.
+
+Base adaptors provides:
+
+#using the adaptor of the subclass, given the id of the sample, returns all synonyms in database
+$synonyms = $sample_adaptor->fetch_synonyms($sample_id);
+
+#using the adaptor of the subclass and given the name of the synonym, returns the sample
+$sample = $sample_adaptor->fetch_sample_by_synonym($sample_synonym_id);
+
+=head1 DESCRIPTION
+
+This is a base class implementing common methods in population, individual and strain. This base
+class is simply a way of merging similar concepts that should have the same ID
+
+=head1 AUTHOR - Daniel Rios
+
+=head1 CONTACT
+
+Post questions to the Ensembl development list ensembl-dev@ebi.ac.uk
+
+=head1 METHODS
+
+=cut
+
+use strict;
+use warnings;
+
+package Bio::EnsEMBL::Variation::DBSQL::SampleAdaptor;
+
+use Bio::EnsEMBL::DBSQL::BaseAdaptor;
+use Bio::EnsEMBL::Utils::Exception qw(throw warning);
+
+
+our @ISA = ('Bio::EnsEMBL::DBSQL::BaseAdaptor');
+
+=head2 fetch_synonyms
+
+    Arg [1]              : $sample_id
+    Arg [2] (optional)   : $source
+    Example              : my $dbSNP_synonyms = $pop_adaptor->fetch_synonyms($sample_id,$dbSNP);
+                           my $all_synonyms = $pop_adaptor->fetch_synonyms($sample_id);
+    Description: Retrieves synonyms for the source provided. Otherwise, return all the synonyms for the sample
+    Returntype : list of strings
+    Exceptions : none
+    Caller     : Bio:EnsEMBL:Variation::Sample
+
+=cut
+
+sub fetch_synonyms{
+    my $self = shift;
+    my $dbID = shift;
+    my $source = shift;
+    my $sample_synonym;
+    my $synonyms;
+
+    my $sql;
+    if (defined $source){
+	$sql = qq{SELECT ss.name FROM sample_synonym ss, source s WHERE ss.sample_id = ? AND ss.source_id = s.source_id AND s.name = "$source"}
+    }
+    else{
+	$sql = qq{SELECT name FROM sample_synonym WHERE sample_id = ?};
+    }
+    my $sth = $self->prepare($sql);
+    $sth->execute($dbID);
+    $sth->bind_columns(\$sample_synonym);
+    while ($sth->fetch){
+	push @{$synonyms},$sample_synonym;
+    }
+    return $synonyms;
+}
+
+=head2 fetch_sample_by_synonym
+
+    Arg [1]              : $sample_synonym
+    Example              : my $pop = $pop_adaptor->fetch_sample_by_synonym($sample_synonym,$source);
+    Description          : Retrieves sample for the synonym given in the source. If no source is provided, retrieves all the synonyms
+    Returntype           : list of Bio::EnsEMBL::Variation::Sample
+    Exceptions           : none
+    Caller               : general
+
+=cut
+
+sub fetch_sample_by_synonym{
+    my $self = shift;
+    my $synonym_name = shift;
+    my $source = shift;
+    my $sql;
+    my $sample;
+    my $sample_array;
+    if (defined $source){
+	$sql = qq{SELECT sample_id FROM sample_synonym ss, source s WHERE ss.name = ? and ss.source_id = s.source_id AND s.name = "$source"};
+    }
+    else{
+	$sql = qq{SELECT sample_id FROM sample_synonym WHERE name = ?};
+    }
+    my $sample_id;
+    my $sth = $self->prepare($sql);
+    $sth->execute($synonym_name);    
+    $sth->bind_columns(\$sample_id);
+    while ($sth->fetch()){
+	push @{$sample_array}, $sample_id;
+    }
+    return $sample_array;
+    
+}
+
+=head2 fetch_by_dbID
+
+  Arg [1]    : int $id
+               The unique sample identifier for the sample to be obtained
+  Example    : $population = $population_adaptor->fetch_by_dbID(1234);
+  Description: Returns the feature sample from the database defined by the
+               the id $id.  
+  Returntype : Bio::EnsEMBL::Variation::Sample
+  Exceptions : thrown if $id arg is not provided
+               does not exist
+  Caller     : general
+
+=cut
+
+sub fetch_by_dbID{
+  my ($self,$id) = @_;
+
+  throw("id argument is required") if(!defined $id);
+
+  #construct a constraint like 't1.table1_id = 123'
+  my @tabs = $self->_tables;
+  my ($name, $syn) = @{$tabs[0]};
+  #the constraint must contain the sample_id, that it is used either for individuals or populations
+  my $constraint = "${syn}.sample_id = $id";
+
+  #Should only be one
+  my ($feat) = @{$self->generic_fetch($constraint)};
+
+  return undef if(!$feat);
+
+  return $feat;
+}
+
+
+=head2 fetch_all_by_dbID_list
+
+  Arg [1]    : listref of ints $id_list
+               The unique database identifiers for the samples to be obtained
+  Example    : @individuals = @{$individual_adaptor->fetch_by_dbID_list([1234, 2131, 982]))};
+  Description: Returns the samples created from the database defined by the
+               the ids in contained in the id list $id_list.  If none of the
+               samples are found in the database a reference to an empty 
+               list is returned.
+  Returntype : listref of Bio::EnsEMBL::Variation::Sample
+  Exceptions : thrown if $id arg is not provided
+               does not exist
+  Caller     : general
+
+=cut
+
+sub fetch_all_by_dbID_list {
+  my ($self,$id_list_ref) = @_;
+
+  if(!defined($id_list_ref) || ref($id_list_ref) ne 'ARRAY') {
+    throw("id_list list reference argument is required");
+  }
+
+  return [] if(!@$id_list_ref);
+
+  my @out;
+  #construct a constraint like 't1.table1_id = 123'
+  my @tabs = $self->_tables;
+  my ($name, $syn) = @{$tabs[0]};
+
+  # mysql is faster and we ensure that we do not exceed the max query size by
+  # splitting large queries into smaller queries of 200 ids
+  my $max_size = 200;
+  my @id_list = @$id_list_ref;
+
+  while(@id_list) {
+    my @ids;
+    if(@id_list > $max_size) {
+      @ids = splice(@id_list, 0, $max_size);
+    } else {
+      @ids = splice(@id_list, 0);
+    }
+
+    my $id_str;
+    if(@ids > 1)  {
+      $id_str = " IN (" . join(',', @ids). ")";
+    } else {
+      $id_str = " = " . $ids[0];
+    }
+
+    my $constraint = "${syn}.sample_id $id_str";
+
+    push @out, @{$self->generic_fetch($constraint)};
+  }
+
+  return \@out;
+}
+
+1;
