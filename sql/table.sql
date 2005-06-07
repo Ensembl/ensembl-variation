@@ -41,22 +41,23 @@ create table variation_synonym (
 
 
 #
-# population_synonym
+# sample_synonym
 #
-# Table containing alternate identifiers for the same population.
-# For example this might be pop_id identifiers for the population in dbSNP.
+# Table containing alternate identifiers for the same sample.
+# For example this might be pop_id identifiers for the population in dbSNP
+# or individual id identifiers for the individual in dbSNP.
 #
 #
 
-create table population_synonym (
-  population_synonym_id int not null auto_increment,
-  population_id int not null,
+create table sample_synonym (
+  sample_synonym_id int not null auto_increment,
+  sample_id int not null,
   source_id int not null,
   name varchar(255),
 
-  primary key(population_synonym_id),
-  key population_idx (population_id),
-  unique (name, source_id)
+  primary key(sample_synonym_id),
+  key sample_idx (sample_id),
+  key (name, source_id)
 );
 
 
@@ -77,19 +78,40 @@ create table population_synonym (
 # variation_id  - foreign key ref variation
 # allele        - string representing an allele.  E.g. 'A', 'T'
 # frequency     - the frequency of this allele in population 
-# population_id - foreign key ref population
+# sample_id     - foreign key ref population
 
 create table allele(
 	allele_id int not null auto_increment,
 	variation_id int not null,
 	allele text,
 	frequency float,
-	population_id int,
+	sample_id int,
 
 	primary key( allele_id ),
 	key variation_idx( variation_id,allele(10) )
 );
 
+#
+# sample
+#
+# A base class to merge the individual and population or assay in a more general]
+# concept, basically to have a unique sample_id
+
+# sample_id      - primary key, internal identifier
+# name           - name or identifier of the sample
+# size           - if the size is NULL its not known or not relevant for this sample
+#                  eg. "european" would not have a size 
+# description    - free text that describes the sample
+
+create table sample(
+	sample_id int not null auto_increment,
+	name varchar(255) not null,
+	size int,
+	description text,
+
+	primary key( sample_id ),
+  unique name_idx( name )
+);
 
 #
 # population
@@ -100,23 +122,15 @@ create table allele(
 # population_structure table.
 #
 
-# population_id        - primary key, internal identifier
-# name                 - name or identifier of the population
-# size                 - if the size is NULL its not known or not relevant for this population
-#                        eg. "european" would not have a size 
+# sample_id            - primary key, internal identifier
 # is_strain            - int, 1 means that the population is a strain, 0 otherwise
 
 create table population(
-	population_id int not null auto_increment,
-	name varchar(255) not null,
-	size int,
-	description text,
+	sample_id int not null,
 	is_strain int(1) default 0 NOT NULL,
 
-	primary key( population_id ),
-  unique name_idx( name )
+	primary key( sample_id )
 );
-
 
 
 #
@@ -127,11 +141,11 @@ create table population(
 # of the group of people used in the assay.
 #
 create table population_structure (
-  super_population_id int not null,
-  sub_population_id int not null,
+  super_population_sample_id int not null,
+  sub_population_sample_id int not null,
 
-  unique(super_population_id, sub_population_id),
-  key sub_pop_idx (sub_population_id, super_population_id)
+  unique(super_population_sample_id, sub_population_sample_id),
+  key sub_pop_sample_idx (sub_population_sample_id, super_population_sample_id)
 );
 
 
@@ -140,8 +154,7 @@ create table population_structure (
 #
 # Table containing individuals.  An individual is a single member of a population.
 #
-#  individual            - PK, unique internal identifier
-#  name                  - name of individual
+#  sample_id             - PK, unique internal identifier
 #  gender                - the sex of this individual
 #  father_individual_id  - self referential id, the father of this individual if known
 #  mother_individual_id  - self referential id, the mother of this individual if known
@@ -149,17 +162,13 @@ create table population_structure (
 #
 
 create table individual(
-  individual_id int not null auto_increment,
-  name varchar(255) not null,
-  description varchar(255) not null,
+  sample_id int not null,
   gender enum('Male', 'Female', 'Unknown') default 'Unknown' NOT NULL,
   father_individual_id int,
   mother_individual_id int,
   
-  primary key(individual_id),
-  key name_idx (name)
+  primary key(sample_id)
 );
-
 
 
 
@@ -245,7 +254,7 @@ create table variation_group (
 );
 
 #
-# variation_group_feature
+# variation_group_variation
 # Keeps all the variations stored in a group (normalisation of the n..n relationship between variation and variation_group)
 # variation_id - foreign key references variation
 # variation_group_id - foreign key references variation_group
@@ -339,7 +348,7 @@ create table transcript_variation(
 #
 # allele_group_id    - primary_key, internal identifier
 # variation_group_id - foreign key, ref variation_group
-# population_id      - foreign key, ref population
+# sample_id          - foreign key, ref population
 # name               - the name of this allele group
 # frequency          - the frequency of this allele_group
 #                      within the referenced population
@@ -349,7 +358,7 @@ create table transcript_variation(
 create table allele_group(
 	allele_group_id int not null auto_increment,
 	variation_group_id int not null,
-	population_id int,
+	sample_id int,
 	name varchar(255),
 	source_id int,
 	frequency float,
@@ -459,7 +468,7 @@ create table source(
 # allele_1 - first allele in the genotype
 # allele_2 - second allele in the genotype
 # frequency - frequency of the genotype in the population
-# population_id - foreign key, references population table
+# sample_id - foreign key, references population table
 #
 
 create table population_genotype (
@@ -468,27 +477,27 @@ create table population_genotype (
 	allele_1 varchar(255),
 	allele_2 varchar(255),
 	frequency float,
- 	population_id int,
+ 	sample_id int,
 
 	primary key( population_genotype_id ),
  	key variation_idx(variation_id),
-	key population_idx(population_id)
+	key sample_idx(sample_id)
 );
 
 #
-# individuals_population
+# individual_population
 #
 # This table contains the relations between individuals and populations (n to n relationship)
 #
-# individual_id - FK to individual table
-# population_id - FK to population table
+# individual_sample_id - FK to individual table
+# population_sample_id - FK to population table
 
 create table individual_population (
-  individual_id int not null,
-  population_id int not null,
+  individual_sample_id int not null,
+  population_sample_id int not null,
 
-  key individual_idx(individual_id),
-  key population_idx(population_id)
+  key individual_sample_idx(individual_sample_id),
+  key population_sample_idx(population_sample_id)
 
 );
 
@@ -500,16 +509,16 @@ create table individual_population (
 # variation_id	- FK to variation table
 # allele_1	- One of the alleles of the genotype
 # allele_2	- The other allele of the genotype
-# individual_id - foreign key, references individual table
+# sample_id     - foreign key, references individual table
 
 create table individual_genotype_single_bp (
   variation_id int not null,
   allele_1 char,
   allele_2 char,
-  individual_id int,
+  sample_id int,
 
   key variation_idx(variation_id),
-  key individual_idx(individual_id)
+  key sample_idx(sample_id)
 ) MAX_ROWS = 100000000;
 
 #
@@ -520,16 +529,16 @@ create table individual_genotype_single_bp (
 # variation_id	- FK to variation table
 # allele_1	- One of the alleles of the genotype
 # allele_2	- The other allele of the genotype
-# individual_id - foreign key, references individual table
+# sample_id     - foreign key, references individual table
 
 create table individual_genotype_multiple_bp (
   variation_id int not null,
   allele_1 varchar(255),
   allele_2 varchar(255),
-  individual_id int,
+  sample_id int,
 
   key variation_idx(variation_id),
-  key individual_idx(individual_id)
+  key sample_idx(sample_id)
 );
 
 #
@@ -538,7 +547,7 @@ create table individual_genotype_multiple_bp (
 #
 # variation_feature_id_1 - FK, references variation_feature table
 # variation_feature_id_2 - FK, references variation_feature table
-# population_id - FK, references population
+# sample_id - FK, references population
 # seq_region_id_ - FK, references seq_region table
 # seq_region_start_ - where the region start
 # seq_region_end -  where the region ends
@@ -549,7 +558,7 @@ create table individual_genotype_multiple_bp (
 create table pairwise_ld(
 	variation_feature_id_1 int not null,
 	variation_feature_id_2 int not null,
-	population_id int not null,
+	sample_id int not null,
 	seq_region_id int not null,
 	seq_region_start int not null,
 	seq_region_end int not null,
@@ -610,9 +619,9 @@ CREATE TABLE meta (
 CREATE TABLE tagged_variation_feature (
 
   variation_feature_id       INT not null,
-  population_id              INT not null,
+  sample_id              INT not null,
   
-  PRIMARY KEY(variation_feature_id, population_id)
+  PRIMARY KEY(variation_feature_id, sample_id)
 );
 
 ###############
@@ -626,7 +635,7 @@ CREATE TABLE read_coverage (
    seq_region_start int not null,
    seq_region_end int not null,
    level tinyint not null,
-   individual_id int not null,
+   sample_id int not null,
 		  
    key seq_region_idx(seq_region_id,seq_region_start)   
 );
