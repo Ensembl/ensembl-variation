@@ -202,6 +202,49 @@ sub name{
 }
 
 
+=head2 get_all_Genes
+
+  Args        : None
+  Example     : $genes = $v->get_all_genes();
+  Description : Retrieves all the genes where this Variation
+                has a consequence.
+  ReturnType  : reference to list of Bio::EnsEMBL::Gene
+  Exceptions  : None
+  Caller      : general
+
+=cut
+
+sub get_all_Genes{
+    my $self = shift;
+    my $genes;
+    if (defined $self->{'adaptor'}){
+	my $UPSTREAM = 5000;
+	my $DOWNSTREAM = 5000;
+	my $vf_adaptor = $self->adaptor()->db()->get_VariationFeatureAdaptor();
+	my $vf_list = $vf_adaptor->fetch_all_by_Variation($self);
+	#foreach vf, get the slice is on, us ethe USTREAM and DOWNSTREAM limits to get all the genes, and see if SNP is within the gene
+	my $new_slice;
+	my $gene_list;
+	my $gene_hash;
+	foreach my $vf (@{$vf_list}){
+	    #expand the slice UPSTREAM and DOWNSTREAM
+	    $new_slice = $vf->slice()->expand($UPSTREAM,$DOWNSTREAM);
+	    #get the genes in the new slice
+	    $gene_list = $new_slice->get_all_Genes();
+	    foreach my $gene (@{$gene_list}){
+		if (($vf->start >= $gene->start) && ($vf->start <= $gene->end) && ($vf->end <= $gene->end)){
+		    #the vf is affecting the gene, add to the hash if not present already
+		    if (!exists $gene_hash->{$gene->dbID}){
+			$gene_hash->{$gene->dbID} = $gene;
+		    }
+		}
+	    }
+	}
+	#and return all the genes
+	push @{$genes}, values %{$gene_hash};
+    }
+    return $genes;
+}
 
 =head2 get_all_synonyms
 
