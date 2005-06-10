@@ -10,8 +10,8 @@ use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Variation::VariationFeature; #to get the consequence_types priorities
 use Bio::EnsEMBL::Utils::Exception qw(warning throw verbose);
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp expand);
+use Bio::EnsEMBL::Utils::TranscriptAlleles qw(type_variation);  #function to calculate the consequence type of a Variation in a transcript
 use ImportUtils qw(debug load create_and_load);
-use Data::Dumper;
 
 my ($TMP_DIR, $TMP_FILE, $LIMIT,$status_file);
 
@@ -132,12 +132,13 @@ sub transcript_variation {
     my $genes = $slice->get_all_Genes();
     # request all variations which lie in the region of a gene
     foreach my $g (@$genes) {
+
       $sth->execute($slice->get_seq_region_id(),
                     $g->seq_region_start() - $UPSTREAM,
                     $g->seq_region_end()   + $DNSTREAM,
                     $g->seq_region_start() - $MAX_FEATURE_LENGTH - $UPSTREAM);
       my $rows = $sth->fetchall_arrayref();
-      
+
       foreach my $tr (@{$g->get_all_Transcripts()}) {
 
         next if(!$tr->translation()); # skip pseudogenes
@@ -147,40 +148,39 @@ sub transcript_variation {
 
 # compute the effect of the variation on each of the transcripts
         # of the gene
-
+	my $consequence_type;
+	my ($start,$end, $strand); #start, end and strand of the variation feature in the slice
         foreach my $row (@$rows) {
-          my %var;
-          $var{'vf_id'}  = $row->[0];
-          # put variation in slice coordinates
-          $var{'start'}  = $row->[1] - $slice->start() + 1;
-          $var{'end'}    = $row->[2] - $slice->start() + 1;
-          $var{'strand'} = $row->[3];
-          $var{'tr_id'}  = $tr->dbID();
 	  next if ($row->[4] =~ /LARGE/); #for LARGEINSERTION and LARGEDELETION alleles we don't calculate transcripts
+          # put variation in slice coordinates
+          $start = $row->[1] - $slice->start() + 1;
+          $end = $row->[2] - $slice->start() + 1;
+	  $strand = $row->[3];
 	  expand(\$row->[4]);#expand the alleles
           my @alleles = split('/',$row->[4]);
 
-          if($var{'strand'} != $tr->strand()) {
+          if($strand != $tr->strand()) {
             # flip feature onto same strand as transcript
             for(my $i = 0; $i < @alleles; $i++) {
               reverse_comp(\$alleles[$i]);
             }
-            $var{'strand'} = $tr->strand();
+            $strand = $tr->strand();
           }
-          $var{'alleles'} = \@alleles;
-	  my $vars;
+	  shift @alleles; #remove reference allele
+	  $consequence_type = Bio::EnsEMBL::Variation::ConsequenceType->new($tr->dbID,$row->[0],$start,$end,$strand,\@alleles);
+	  my $consequences;
 	  if ($row->[4] !~ /\+/){
-	      $vars = type_variation($tr, \%var);
+	      $consequences = type_variation($tr, $consequence_type);
 	  }
-          foreach my $v (@$vars) {
-            my @arr = ($v->{'tr_id'},
-                       $v->{'vf_id'},
-                       join("/", @{$v->{'aa_alleles'}||[]}),
-                       $v->{'aa_start'},
-                       $v->{'aa_end'},
-                       $v->{'cdna_start'},
-                       $v->{'cdna_end'},
-                       $v->{'type'});
+          foreach my $ct (@$consequences) {
+            my @arr = ($ct->transcript_id,
+                       $ct->variation_feature_id,
+                       join("/", @{$ct->aa_alleles||[]}),
+                       $ct->aa_start,
+                       $ct->aa_end,
+                       $ct->cdna_start,
+                       $ct->cdna_end,
+                       $ct->type);
             @arr = map {($_) ? $_ : '\N'} @arr;
             print FH join("\t", @arr), "\n";
           }
@@ -191,208 +191,6 @@ sub transcript_variation {
 
   close FH;
   return;
-}
-
-#
-# Classifies a variation which is in the vicinity of a transcript
-#
-sub type_variation {
-  my $tr  = shift;
-  my $var = shift;
-
-  my $tm = $tr->get_TranscriptMapper();
-
-  my @coords = $tm->genomic2cdna($var->{'start'},
-                                 $var->{'end'},
-                                 $var->{'strand'});
-
-  # Handle simple cases where the variation is not split into parts.
-  # Call method recursively with component parts in complicated case.
-  # E.g. a single multi-base variation may be both intronic and coding
-
-
-  if(@coords > 1) {
-    my @out;
-
-    foreach my $c (@coords) {
-      my %new_var = %{$var};
-      $new_var{'end'} = $var->{'start'} + $c->length() - 1;
-      $var->{'start'} = $new_var{'end'} + 1;
-      push @out, @{type_variation($tr, \%new_var)};
-    }
-
-    return \@out;
-  }
-
-  my $c = $coords[0];
-
-  if($c->isa('Bio::EnsEMBL::Mapper::Gap')) {
-
-    # check if the variation is completely outside the transcript:
-
-    if($var->{'end'} < $tr->start()) {
-      $var->{'type'} = ($tr->strand() == 1) ? 'UPSTREAM' : 'DOWNSTREAM';
-      return [$var];
-    }
-    if($var->{'start'} > $tr->end()) {
-      $var->{'type'} = ($tr->strand() == 1) ? 'DOWNSTREAM' : 'UPSTREAM';
-      return [$var];
-    }
-
-    # variation must be intronic since mapped to cdna gap, but is within
-    # transcript
-    $var->{'type'} = 'INTRONIC';
-    return [$var];
-  }
-
-  $var->{'cdna_start'} = $c->start();
-  $var->{'cdna_end'}   = $c->end();
-
-  @coords = $tm->genomic2cds($var->{'start'}, $var->{'end'},$var->{'strand'});
-
-  if(@coords > 1) {
-    my @out;
-
-    foreach my $c (@coords) {
-      my %new_var = %{$var};
-      $new_var{'end'} = $var->{'start'} + $c->length() - 1;
-      $var->{'start'} = $new_var{'end'} + 1;
-      push @out, @{type_variation($tr, \%new_var)};
-    }
-    return \@out;
-  }
-
-  $c = $coords[0];
-
-  if($c->isa('Bio::EnsEMBL::Mapper::Gap')) {
-    # mapped successfully to CDNA but not to CDS, must be UTR
-
-    if($var->{'end'} < $tr->coding_region_start()) {
-      $var->{'type'} = ($tr->strand() == 1) ? '5PRIME_UTR' : '3PRIME_UTR';
-    }
-    elsif($var->{'start'} > $tr->coding_region_end()) {
-      $var->{'type'} = ($tr->strand() == 1) ? '3PRIME_UTR' : '5PRIME_UTR';
-    }
-    else {
-      throw('Unexpected: CDNA variation which is not in CDS is not in UTR');
-    }
-    return [$var];
-  }
-
-  $var->{'cds_start'} = $c->start();
-  $var->{'cds_end'}   = $c->end();
-
-  @coords = $tm->genomic2pep($var->{'start'}, $var->{'end'}, $var->{'strand'});
-
-  if(@coords != 1 || $coords[0]->isa('Bio::EnsEMBL::Mapper::Gap')) {
-    throw("Unexpected: Could map to CDS but not to peptide coordinates.");
-  }
-
-  $c = $coords[0];
-
-  $var->{'aa_start'} = $c->start();
-  $var->{'aa_end'}   = $c->end();
-
-  apply_aa_change($tr, $var);
-
-  return [$var];
-}
-
-
-
-#
-# Determines the effect of a coding variation on the peptide sequence
-#
-
-sub apply_aa_change {
-  my $tr = shift;
-  my $var = shift;
-
-  #my $peptide = $tr->translate->seq();
-  #to consider stop codon as well
-  my $mrna = $tr->translateable_seq();
-
-  my $mrna_seqobj = Bio::Seq->new( -seq        => $mrna,
-				   -moltype    => "dna",
-				   -alphabet   => "dna");
-
-  my ($attrib) = @{$tr->slice()->get_all_Attributes('codon_table')}; #for mithocondrial dna it is necessary to change the table
-
-  my $codon_table;
-  $codon_table = $attrib->value() if($attrib);
-  $codon_table ||= 1; # default vertebrate codon table 
-
-  my $peptide = $mrna_seqobj->translate(undef,undef,undef,$codon_table)->seq;
-
-  my $len = $var->{'aa_end'} - $var->{'aa_start'} + 1;
-  my $old_aa = substr($peptide, $var->{'aa_start'} -1 , $len);
-
-  my $codon_cds_start = $var->{'aa_start'} * 3 - 2;
-  my $codon_cds_end   = $var->{'aa_end'}   * 3;
-  my $codon_len = $codon_cds_end - $codon_cds_start + 1;
-
-  my @alleles = @{$var->{'alleles'}};
-  
-  shift(@alleles); # ignore reference allele
-
-  my $var_len = $var->{'cds_end'} - $var->{'cds_start'} + 1;
-
-  my @aa_alleles = ($old_aa);
-
-  foreach my $a (@alleles) {
-    $a =~ s/\-//;
-    my $cds = $tr->translateable_seq();
-    
-    if($var_len != length($a)) {
-      if(abs(length($a) - $var_len) % 3) {
-        # frameshifting variation, do not set peptide_allele string
-        # since too complicated and could be very long
-        $var->{'type'} = 'FRAMESHIFT_CODING';
-        return;
-      }
-
-      if($codon_len == 0) { # insertion
-        $aa_alleles[0] = '-';
-        $old_aa    = '-';
-      }
-    }
-
-    my $new_aa;
-
-    if(length($a)) {
-      substr($cds, $var->{'cds_start'}-1, $var_len) = $a;
-      my $codon_str = substr($cds, $codon_cds_start-1, $codon_len + abs(length($a)-$var_len));
-
-      my $codon_seq = Bio::Seq->new(-seq      => $codon_str,
-                                    -moltype  => 'dna',
-                                    -alphabet => 'dna');
-
-
-      $new_aa = $codon_seq->translate(undef,undef,undef,$codon_table)->seq();
-    } else {
-      $new_aa = '-'; # deletion
-    }
-
-    if(uc($new_aa) ne uc($old_aa)) {
-      push @aa_alleles, $new_aa;
-      if ($new_aa =~ /\*/) {
-	$var->{'type'} = 'STOP_GAINED';
-      }
-      elsif ($old_aa =~ /\*/) {
-	$var->{'type'} = 'STOP_LOST';
-      }
-    }
-  }
-
-  if(@aa_alleles > 1) {
-    if (! defined $var->{'type'}) {
-      $var->{'type'} = 'NON_SYNONYMOUS_CODING';
-    }
-  } else {
-    $var->{'type'} = 'SYNONYMOUS_CODING';
-  }
-
-  $var->{'aa_alleles'} = \@aa_alleles;
 }
 
 #will know if it is the last process running counting the lines of the status_file.If so, load all data
