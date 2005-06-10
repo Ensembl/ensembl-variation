@@ -60,7 +60,7 @@ $TMP_FILE = $ImportUtils::TMP_FILE;
 my $call;
 my $i = 0;
 foreach my $read_file (glob("$read_dir/*.mapped")){
-    $call = "bsub -J read_coverage_job_$i -o /ecs4/scratch5/dani/output_reads.txt -m 'bc_hosts ecs4_hosts' /usr/local/ensembl/bin/perl read_coverage.pl -chost 'ecs2' -cuser 'ensro' -cport 3365 -cdbname 'homo_sapiens_core_30_35c' -vhost $vhost -vuser $vuser -vpass $vpass -vport $vport -vdbname $vdbname -tmpdir '/ecs4/scratch5/dani' -tmpfile read_coverage_$i.txt -readfile $read_file";
+    $call = "bsub -J read_coverage_job_$i -o $TMP_DIR/output_reads.txt -m 'bc_hosts ecs4_hosts ecs2_hosts' /usr/local/ensembl/bin/perl read_coverage.pl -chost $chost -cuser $cuser -cport $cport -cdbname $cdbname -vhost $vhost -vuser $vuser -vpass $vpass -vport $vport -vdbname $vdbname -tmpdir $TMP_DIR -tmpfile read_coverage_$i.txt -readfile $read_file";
     system($call);
     $i++;
 }
@@ -70,7 +70,7 @@ system($call);
 debug("Ready to import coverage data");
 $call = "cat $TMP_DIR/read_coverage_* > $TMP_DIR/$TMP_FILE"; #concat all files 
 system($call);
-load($dbVar,"read_coverage","seq_region_id","seq_region_start","seq_region_end","level","individual_id"); #load table with information
+load($dbVar,"read_coverage","seq_region_id","seq_region_start","seq_region_end","level","sample_id"); #load table with information
 
 unlink(<$TMP_DIR/read_coverage_*>); #and delete the files with the data
 update_meta_coord($dbCore,$dbVar,'read_coverage');
