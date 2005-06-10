@@ -20,6 +20,7 @@ my %individual_id = ('Fosmid'  => '',
 		     'NA11321' => '',
 		     'TSC'     => '',
 		     'NA10470' => '',
+		     'Unknown' => '',
 		     'NA07340' => 115,
 		     'NA17109' => 840,
 		     'NA17119' => 850
@@ -86,6 +87,7 @@ while (<IN>){
     #TSC     8093917 617     957
     ($pair) = [split /\t/];
     splice @{$pair},1,1;    #we need to get rid of the second column, ID_read
+    if ($pair->[0] eq ''){$pair->[0] = 'Unknown'}
     &register_range_level($range_registry,$pair,1,$individuals);
 }
 close IN;
@@ -178,18 +180,20 @@ sub load_individuals{
 	if ($individual_id->{$individual_name} eq ''){
 	    my $individualAdaptor = $dbVar->get_IndividualAdaptor();
 	    my $individual = ($individualAdaptor->fetch_all_by_name($individual_name))->[0];
-	    my $ind_id;
+	    my $sample_id;
 	    #the individual is not in the database, will need to create it
 	    if (!defined $individual){
+		#insert the sample
+		$dbVar->dbc()->do(qq{INSERT INTO sample (name,description) VALUES ("$individual_name",'Individuals used to get read information')});
+		$sample_id = $dbVar->dbc()->db_handle->{'mysql_insertid'}; #get the id inserted
 		#insert the individual
-		$dbVar->dbc()->do(qq{INSERT INTO individual (name,description,gender) VALUES ("$individual_name",'Individuals used to get read information','Unknown')});
-		$ind_id = $dbVar->dbc()->db_handle->{'mysql_insertid'}; #get the id inserted
+		$dbVar->dbc()->do(qq{INSERT INTO individual (sample_id,gender) VALUES ("$sample_id",'Unknown')});
 		#get the population. We will used Unknown, since the origin it is not clear
 		my $population_adaptor = $dbVar->get_PopulationAdaptor();
 		my $population = $population_adaptor->fetch_by_name('UNKNOWN');
 		my $population_id = $population->dbID();
 		#insert the relation individual-population
-		$dbVar->dbc()->do(qq{INSERT INTO individual_population (individual_id,population_id) VALUES ("$ind_id","$population_id")});
+		$dbVar->dbc()->do(qq{INSERT INTO individual_population (individual_sample_id,population_sample_id) VALUES ("$sample_id","$population_id")});
 	    }
 	    else{
 		$ind_id = $individual->dbID();
