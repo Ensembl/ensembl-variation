@@ -21,14 +21,13 @@ sub dumpSQL {
   local *FH;
   my $counter = 0;
   open FH, ">$TMP_DIR/$TMP_FILE";
-
 #not necessary any more since increased the timeout of the mysql server
-#  while (!$db->ping()){
-#      print STDERR "Lost connection, trying to reconnect\n";
-#      sleep(5);
-#      $counter++;
-#      if ($counter == 5) {die "Couldn't reconnect to the database\n"}
-#  };
+  while (!$db->ping()){
+      print STDERR "Lost connection, trying to reconnect\n";
+      sleep(5);
+      $counter++;
+      if ($counter == 5) {die "Couldn't reconnect to the database\n"}
+  };
   my $sth = $db->prepare( $sql);
   $sth->{mysql_use_result} = 1;
   $sth->execute();
