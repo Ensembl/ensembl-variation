@@ -283,11 +283,12 @@ sub parallel_ld_populations{
     my $pop_id;
     my $population_name;
     #get all populations to be tagged (HapMap and PerlEgen)
-    my $sth = $dbVar->prepare(qq{SELECT population_id, name
-						FROM population
-						WHERE name like 'PERLEGEN:AFD%'
-						OR name like 'CSHL-HAPMAP%'
-					    });
+    my $sth = $dbVar->prepare(qq{SELECT s.sample_id, s.name
+				     FROM population p, sample s
+				     WHERE (s.name like 'PERLEGEN:AFD%'
+				     OR s.name like 'CSHL-HAPMAP%')
+				     AND s.sample_id = p.sample_id
+				 });
     
 
     $sth->execute();
@@ -309,13 +310,13 @@ sub parallel_ld_populations{
     $sth = $dbVar->prepare
 	(qq{
 	    SELECT  STRAIGHT_JOIN ig.variation_id, vf.variation_feature_id, vf.seq_region_id, vf.seq_region_start, 
-                          ig.individual_id, ig.allele_1, ig.allele_2, vf.seq_region_end, ip.population_id
+                          ig.individual_sample_id, ig.allele_1, ig.allele_2, vf.seq_region_end, ip.population_sample_id
 		    FROM  variation_feature vf FORCE INDEX(pos_idx), individual_genotype_single_bp ig, individual_population ip
 		   WHERE  ig.variation_id = vf.variation_id
 		    AND   ig.allele_2 IS NOT NULL
 		    AND   vf.map_weight = 1
 		    AND   ip.individual_id = ig.individual_id
-		    AND   ip.population_id $in_str
+		    AND   ip.population_sample_id $in_str
 		    ORDER BY  vf.seq_region_id,vf.seq_region_start}, {mysql_use_result => 1} );
 
 
