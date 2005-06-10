@@ -232,37 +232,48 @@ sub add_strains{
 
     #first, copy the data from Individual to Population, necessary to group by name to remove duplicates
     # (some individuals have the same name, but different individual_id)
-    $dbVariation->do(qq{INSERT INTO population (name, description, is_strain)
-				      SELECT name, description, 1
-				      FROM individual
-				      GROUP BY name
-				  });
+    $dbVariation->do(qq{ALTER TABLE sample ADD COLUMN is_strain int});
 
+    $dbVariation->do(qq{INSERT INTO sample (name, description,is_strain)
+			    SELECT s.name, s.description,1
+			    FROM individual i, sample s
+			    WHERE i.sample_id = s.sample_id
+			    GROUP BY s.name
+			});
+    #and insert the new strain in the population table
+    $dbVariation->do(qq{INSERT INTO population (sample_id, is_strain)
+			    SELECT sample_id, is_strain
+			    FROM sample
+			    WHERE is_strain = 1
+			});
     #then, populate the individual_population table with the relation between individual and strains
-    $dbVariation->do(qq{INSERT INTO individual_population (individual_id, population_id)
-				      SELECT i.individual_id, p.population_id
-				      FROM individual i, population p
-				      WHERE i.name = p.name
-				      AND p.is_strain = 1
+    $dbVariation->do(qq{INSERT INTO individual_population (individual_sample_id, population_sample_id)
+				      SELECT s1.sample_id, s2.sample_id
+				      FROM sample s1, sample s2, individual i
+				      WHERE s1.name = s2.name
+				      AND s2.is_strain = 1
+				      AND s1.sample_id = i.sample_id
 				  });
 
     #and finally, add the alleles to the Allele table for the strains
     #first, insert the single_bp alleles
-    $dbVariation->do(qq{INSERT INTO allele (variation_id, population_id, allele, frequency)
-				      SELECT ig.variation_id, ip.population_id, ig.allele_1, 1
-				      FROM individual_genotype_single_bp ig, individual_population ip, population p
-				      WHERE ig.individual_id = ip.individual_id
-				      AND   ip.population_id = p.population_id
-				      AND   p.is_strain = 1
+    $dbVariation->do(qq{INSERT INTO allele (variation_id, sample_id, allele, frequency)
+				      SELECT ig.variation_id, ip.population_sample_id, ig.allele_1, 1
+				      FROM individual_genotype_single_bp ig, individual_population ip, sample s
+				      WHERE ig.sample_id = ip.individual_sample_id
+				      AND   ip.population_sample_id = s.sample_id
+				      AND   s.is_strain = 1
 				  });
     #do the same for the multiple_bp alleles
-    $dbVariation->do(qq{INSERT INTO allele (variation_id, population_id, allele, frequency)
-				      SELECT ig.variation_id, ip.population_id, ig.allele_1, 1
-				      FROM individual_genotype_multiple_bp ig, individual_population ip, population p
-				      WHERE ig.individual_id = ip.individual_id
-				      AND   ip.population_id = p.population_id
-				      AND   p.is_strain = 1
+    $dbVariation->do(qq{INSERT INTO allele (variation_id, sample_id, allele, frequency)
+				      SELECT ig.variation_id, ip.population_sample_id, ig.allele_1, 1
+				      FROM individual_genotype_multiple_bp ig, individual_population ip, sample s
+				      WHERE ig.sample_id = ip.individual_sample_id
+				      AND   ip.population_sample_id = s.sample_id
+				      AND   s.is_strain = 1
 				  });
+    #and remove the extra column in sample to identify strains
+    $dbVariation->do(qq{ALTER TABLE sample DROP COLUMN is_strain});
 }
 
 
