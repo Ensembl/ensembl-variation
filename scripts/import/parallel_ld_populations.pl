@@ -86,7 +86,7 @@ sub last_process{
     unlink(<$TMP_DIR/$dbname.pairwise_ld_*>);    
 
     #and import the data in the database
-    load($dbVar, qw(pairwise_ld variation_feature_id_1 variation_feature_id_2 population_id seq_region_id seq_region_start seq_region_end r2 d_prime sample_count));
+    load($dbVar, qw(pairwise_ld variation_feature_id_1 variation_feature_id_2 sample_id seq_region_id seq_region_start seq_region_end r2 d_prime sample_count));
 
     update_meta_coord($dbCore, $dbVar, 'pairwise_ld');
 
@@ -122,7 +122,7 @@ sub update_meta{
     my $dbVar = shift;
 
     my $population_id;
-    my $sth_pop = $dbVar->prepare('SELECT population_id FROM population where name = ?');
+    my $sth_pop = $dbVar->prepare('SELECT sample_id FROM sample s, population p where p.sample_id = s.sample_id AND s.name = ?');
     
     $sth_pop->execute($default_population);
     $sth_pop->bind_columns(\$population_id);
