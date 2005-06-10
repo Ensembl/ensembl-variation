@@ -19,7 +19,7 @@ sub variation_feature{
     debug("Dumping seq_region data");
     
     #only take chromosome coordinates
-    dumpSQL($self->{'dbCore'}->dbc(), qq{SELECT sr.seq_region_id, sr.name
+    dumpSQL($self->{'dbCore'}->dbc()->db_handle, qq{SELECT sr.seq_region_id, sr.name
 				      FROM   seq_region sr, coord_system cs
 				      WHERE cs.name = 'chromosome'
 				      AND cs.coord_system_id = sr.coord_system_id});
