@@ -296,7 +296,6 @@ sub variation_feature {
 	     $top_coord->coord_system()->version());
 	  
 	  $ref_allele = $slice->seq();
-	  $ref_allele = uc $ref_allele;   #convert reference allele to uppercase
 	  $ref_allele = '-' if(!$ref_allele);
 	  $ref_allele = uc $ref_allele;   #convert reference allele to uppercase
 
@@ -355,7 +354,6 @@ sub last_process{
     
     debug("Deleting existing variation features");
     
-    $dbVar->do("CREATE TABLE variation_feature_old select * from variation_feature");
     $dbVar->do("DELETE FROM variation_feature");
     
     debug("Reimporting processed variation features");
@@ -364,12 +362,12 @@ sub last_process{
     my $call = "cat $TMP_DIR/$dbname.variation_feature*.txt > $TMP_DIR/$TMP_FILE";
     system($call);
 
-    unlink(<$TMP_DIR/$dbname.variation_feature*>);
     #and finally, load the information
     load($dbVar, qw(variation_feature variation_feature_id seq_region_id
 		    seq_region_start seq_region_end seq_region_strand variation_id
 		    allele_string variation_name map_weight flags source_id validation_status consequence_type));
 
+    unlink(<$TMP_DIR/$dbname.variation_feature*>);
     $dbVar->do("DROP TABLE tmp_map_weight");
 
     update_meta_coord($dbCore, $dbVar, 'variation_feature');
