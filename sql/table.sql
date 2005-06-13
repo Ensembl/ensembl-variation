@@ -110,7 +110,7 @@ create table sample(
 	description text,
 
 	primary key( sample_id ),
-  unique name_idx( name )
+	key name_idx( name )
 );
 
 #
