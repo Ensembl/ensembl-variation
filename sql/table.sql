@@ -221,7 +221,7 @@ create table variation_feature(
 	source_id int not null, 
 	validation_status SET('cluster','freq','submitter','doublehit','hapmap'),
 	consequence_type enum( "INTRONIC", "UPSTREAM", "DOWNSTREAM", "SYNONYMOUS_CODING",
-		           "NON_SYNONYMOUS_CODING", "FRAMESHIFT_CODING", 
+		           "NON_SYNONYMOUS_CODING", "FRAMESHIFT_CODING", "STOP_GAINED", "STOP_LOST",
              	"5PRIME_UTR", "3PRIME_UTR", "INTERGENIC" ) default "INTERGENIC" not null ,	
 
 	primary key( variation_feature_id ),
@@ -329,7 +329,7 @@ create table transcript_variation(
   translation_end int,  
   peptide_allele_string varchar(255),
   consequence_type enum( "INTRONIC", "UPSTREAM", "DOWNSTREAM", "SYNONYMOUS_CODING",
-	           "NON_SYNONYMOUS_CODING", "FRAMESHIFT_CODING", 
+	           "NON_SYNONYMOUS_CODING", "FRAMESHIFT_CODING", "STOP_GAINED", "STOP_LOST",
              "5PRIME_UTR", "3PRIME_UTR" ) not null,
 	
   primary key( transcript_variation_id ),
