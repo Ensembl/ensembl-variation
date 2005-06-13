@@ -278,16 +278,27 @@ sub get_flanking_sequence{
 $sth->fetch();
 $sth->finish();
 
-unless ($seq_region_id){
-warn "*****[ERROR]: No seq_region_id for SNP with dbID: $variationID. Cannot retrieve flanking region******\n";
-return
-}
-
 if (!defined $down_seq){
-  $down_seq = $self->_get_flank_from_core($seq_region_id, $down_seq_region_start, $down_seq_region_end, $seq_region_strand);
+  if( $seq_region_id){
+    $down_seq = $self->_get_flank_from_core($seq_region_id, 
+                                            $down_seq_region_start, 
+                                            $down_seq_region_end, 
+                                            $seq_region_strand);
+  } else {
+    warn( "*****[ERROR]: No seq_region_id for SNP with dbID: $variationID. ".
+          "Cannot retrieve flanking region******\n" );    
+  }
 }
 if (!defined $up_seq){
-  $up_seq = $self->_get_flank_from_core($seq_region_id, $up_seq_region_start, $up_seq_region_end, $seq_region_strand);
+  if( $seq_region_id){
+    $up_seq = $self->_get_flank_from_core($seq_region_id, 
+                                          $up_seq_region_start, 
+                                          $up_seq_region_end, 
+                                          $seq_region_strand);
+  } else {
+    warn( "*****[ERROR]: No seq_region_id for SNP with dbID: $variationID. ".
+          "Cannot retrieve flanking region******\n" );
+  }
 }
 
 push @{$flanking_sequence},$down_seq,$up_seq; #add to the array the 3 and 5 prime sequences
