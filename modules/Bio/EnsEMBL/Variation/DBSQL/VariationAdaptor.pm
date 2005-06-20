@@ -278,8 +278,10 @@ sub get_flanking_sequence{
 $sth->fetch();
 $sth->finish();
 
-warn "*****[ERROR]: No seq_region_id for SNP with dbID: $variationID. Cannot retrieve flanking region******\n";
-return unless $seq_region_id;
+if (!defined $seq_region_id){
+    warn "*****[ERROR]: No seq_region_id for SNP with dbID: $variationID. Cannot retrieve flanking region******\n";
+    return '';
+}
 
 if (!defined $down_seq){
   $down_seq = $self->_get_flank_from_core($seq_region_id, $down_seq_region_start, $down_seq_region_end, $seq_region_strand);
