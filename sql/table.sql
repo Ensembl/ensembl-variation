@@ -220,9 +220,9 @@ create table variation_feature(
 	flags SET('genotyped'),
 	source_id int not null, 
 	validation_status SET('cluster','freq','submitter','doublehit','hapmap'),
-	consequence_type enum( "INTRONIC", "UPSTREAM", "DOWNSTREAM", "SYNONYMOUS_CODING",
-		           "NON_SYNONYMOUS_CODING", "FRAMESHIFT_CODING", "STOP_GAINED", "STOP_LOST",
-             	"5PRIME_UTR", "3PRIME_UTR", "INTERGENIC" ) default "INTERGENIC" not null ,	
+	consequence_type SET ('ESSENTIAL_SPLICE_SITE','SPLICE_SITE','FRAMESHIFT_CODING',
+		'STOP_GAINED','STOP_LOST','NON_SYNONYMOUS_CODING','SYNONYMOUS_CODING','5PRIME_UTR',
+		'3PRIME_UTR','INTRONIC','UPSTREAM','DOWNSTREAM','INTERGENIC' ) default "INTERGENIC" not null ,	
 
 	primary key( variation_feature_id ),
 	key pos_idx( seq_region_id, seq_region_start ),
@@ -303,9 +303,10 @@ create table variation_group_feature(
 # 
 # This table contains a classification of variation features based on Ensembl
 # predicted transcripts.  Variation features which fall into Ensembl 
-# transcript regions are classified as 'INTRONIC', '5PRIME', '3PRIME',
-# 'SYNONYMOUS_CODING', 'NON_SYNONYMOUS_CODING', 'FRAMESHIFT_CODING',
-# '5PRIME_UTR', '3PRIME_UTR'
+# transcript regions are classified as 'ESSENTIAL_SPLICE_SITE','SPLICE_SITE',
+# 'FRAMESHIFT_CODING','STOP_GAINED','STOP_LOST','NON_SYNONYMOUS_CODING',
+# 'SYNONYMOUS_CODING','5PRIME_UTR','3PRIME_UTR','INTRONIC','UPSTREAM','DOWNSTREAM'
+
 #
 # transcript_variation_id - primary key, internal identifier
 # transcript_id           - foreign key to core databases
@@ -328,9 +329,9 @@ create table transcript_variation(
   translation_start int,
   translation_end int,  
   peptide_allele_string varchar(255),
-  consequence_type enum( "INTRONIC", "UPSTREAM", "DOWNSTREAM", "SYNONYMOUS_CODING",
-	           "NON_SYNONYMOUS_CODING", "FRAMESHIFT_CODING", "STOP_GAINED", "STOP_LOST",
-             "5PRIME_UTR", "3PRIME_UTR" ) not null,
+  consequence_type SET( 'ESSENTIAL_SPLICE_SITE','SPLICE_SITE','FRAMESHIFT_CODING',
+	'STOP_GAINED','STOP_LOST','NON_SYNONYMOUS_CODING','SYNONYMOUS_CODING','5PRIME_UTR',
+	'3PRIME_UTR','INTRONIC','UPSTREAM','DOWNSTREAM' ) not null,
 	
   primary key( transcript_variation_id ),
   key variation_idx( variation_feature_id ),
