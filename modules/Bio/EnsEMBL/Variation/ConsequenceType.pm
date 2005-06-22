@@ -24,9 +24,23 @@ package Bio::EnsEMBL::Variation::ConsequenceType;
 
 use strict;
 
-
 use Bio::EnsEMBL::Utils::Exception qw(warning);
-use Bio::EnsEMBL::Variation::VariationFeature; #to get the consequence_types priorities
+
+our %CONSEQUENCE_TYPES = (
+			  'ESSENTIAL_SPLICE_SITE' =>1,
+			  'SPLICE_SITE' => 2,
+			  'FRAMESHIFT_CODING' => 5,
+			  'STOP_GAINED' => 6,
+			  'STOP_LOST' => 7,
+			  'NON_SYNONYMOUS_CODING' => 8,
+			  'SYNONYMOUS_CODING' => 9,
+			  '5PRIME_UTR' => 10,
+			  '3PRIME_UTR' => 11,
+			  'INTRONIC' => 13,
+			  'UPSTREAM' => 14,
+			  'DOWNSTREAM' => 15,
+			  'INTERGENIC' => 16
+			  );
 
 =head2 new
 
@@ -291,14 +305,13 @@ sub cdna_end {
 sub type {
   my $self = shift;
 
-  my %consequence_types = %Bio::EnsEMBL::Variation::VariationFeature::CONSEQUENCE_TYPES;
   if(@_) {
       my $type = shift;
-      if (defined $consequence_types{$type}){
+      if (defined $CONSEQUENCE_TYPES{$type}){
 	  $self->{'type'} = $type;
       }
       else{
-	  warning("Trying to set the consequence type to a not valid value. Possible values: ",keys %consequence_types,"\n");
+	  warning("Trying to set the consequence type to a not valid value. Possible values: ",keys %CONSEQUENCE_TYPES,"\n");
       }
   }
   return $self->{'type'}
