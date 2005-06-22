@@ -26,20 +26,23 @@ use strict;
 
 use Bio::EnsEMBL::Utils::Exception qw(warning);
 
+#list of consequence types. Order must match that set in the database
+our @CONSEQUENCES = ('ESSENTIAL_SPLICE_SITE','SPLICE_SITE','FRAMESHIFT_CODING','STOP_GAINED','STOP_LOST','NON_SYNONYMOUS_CODING','SYNONYMOUS_CODING','5PRIME_UTR','3PRIME_UTR','INTRONIC','UPSTREAM','DOWNSTREAM','INTERGENIC');
+#conversion of consequence type to bit value
 our %CONSEQUENCE_TYPES = (
 			  'ESSENTIAL_SPLICE_SITE' =>1,
 			  'SPLICE_SITE' => 2,
-			  'FRAMESHIFT_CODING' => 5,
-			  'STOP_GAINED' => 6,
-			  'STOP_LOST' => 7,
-			  'NON_SYNONYMOUS_CODING' => 8,
-			  'SYNONYMOUS_CODING' => 9,
-			  '5PRIME_UTR' => 10,
-			  '3PRIME_UTR' => 11,
-			  'INTRONIC' => 13,
-			  'UPSTREAM' => 14,
-			  'DOWNSTREAM' => 15,
-			  'INTERGENIC' => 16
+			  'FRAMESHIFT_CODING' => 4,
+			  'STOP_GAINED' => 8,
+			  'STOP_LOST' => 16,
+			  'NON_SYNONYMOUS_CODING' => 32,
+			  'SYNONYMOUS_CODING' => 64,
+			  '5PRIME_UTR' => 128,
+			  '3PRIME_UTR' => 256,
+			  'INTRONIC' => 512,
+			  'UPSTREAM' => 1024,
+			  'DOWNSTREAM' => 2048,
+			  'INTERGENIC' => 4096
 			  );
 
 =head2 new
@@ -288,33 +291,62 @@ sub cdna_end {
 }
 
 
-=head2 type
+=head2 get_all_types
 
-  Arg [1]    : (optional) string $type 
-               (possible values "INTRONIC", "UPSTREAM", "DOWNSTREAM", "SYNONYMOUS_CODING",
-                 "NON_SYNONYMOUS_CODING", "FRAMESHIFT_CODING", "5PRIME_UTR", "3PRIME_UTR",
-		 "STOP_GAINED", "STOP_LOST", "UTR", "INTERGENIC")
+    Args        : None
+    Example     : my @types = @{$ct->get_all_types()};
+    Description : Retrieves all consequence types for this variation. Current possible
+                  types are 'ESSENTIAL_SPLICE_SITE','SPLICE_SITE','FRAMESHIFT_CODING',
+                  'STOP_GAINED','STOP_LOST','NON_SYNONYMOUS_CODING','SYNONYMOUS_CODING',
+                  '5PRIME_UTR','3PRIME_UTR','INTRONIC','UPSTREAM','DOWNSTREAM','INTERGENIC'
+    Returntype  : Reference to a list of strings
+    Exceptions  : none
+    Caller      : General
+
+=cut
+
+sub get_all_types{
+    my $self = shift;
+
+    my $code = $self->{'type'};
+
+    #convert the bit field into an ordered array
+    my @types;
+    for (my $i=0;$i< @CONSEQUENCES;$i++){
+	push @types, $CONSEQUENCES[$i] if ((1 << $i) & $code);
+    }
+    
+    return \@types;
+}
+
+
+=head2 add_type
+
+  Arg [1]    : string $type 
+               (possible types 'ESSENTIAL_SPLICE_SITE','SPLICE_SITE','FRAMESHIFT_CODING',
+		'STOP_GAINED','STOP_LOST','NON_SYNONYMOUS_CODING','SYNONYMOUS_CODING',
+		'5PRIME_UTR','3PRIME_UTR','INTRONIC','UPSTREAM','DOWNSTREAM','INTERGENIC')
   Example    : $consequence_type = $consequence_type->type
-  Description: Getter/Setter for the consequence type of the variation in the transcript
-  Returntype : string
-  Exceptions : none
+  Description: Adds a consequence type of the variation in the transcript
+  Returntype : none
+  Exceptions : warning if the consequence type is not recognised
   Caller     : general
 
 =cut
 
-sub type {
+sub add_type {
   my $self = shift;
+  my $consequence_type = shift;
 
-  if(@_) {
-      my $type = shift;
-      if (defined $CONSEQUENCE_TYPES{$type}){
-	  $self->{'type'} = $type;
-      }
-      else{
-	  warning("Trying to set the consequence type to a not valid value. Possible values: ",keys %CONSEQUENCE_TYPES,"\n");
-      }
+  #convert string to bit value and add it to the existing bitfield
+  my $bitval = $CONSEQUENCE_TYPES{uc($consequence_type)};
+ 
+  if (!$bitval){      
+      warning("Trying to set the consequence type to a not valid value. Possible values: ",keys %CONSEQUENCE_TYPES,"\n");
+      return;
   }
-  return $self->{'type'}
+  $self->{'type'} |= $bitval;
+
 }
 
 =head2 aa_alleles
