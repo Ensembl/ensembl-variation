@@ -73,36 +73,10 @@ use Bio::EnsEMBL::Feature;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Utils::Argument  qw(rearrange);
 use Bio::EnsEMBL::Variation::Utils::Sequence qw(ambiguity_code variation_class);
-
+use Bio::EnsEMBL::Variation::ConsequenceType;
 
 
 our @ISA = ('Bio::EnsEMBL::Feature');
-
-#contains a hash with the highest to the lowest possible consequence type in a trasncript
-# our %CONSEQUENCE_TYPES = ('INTRONIC' => 6,
-# 			  'UPSTREAM' => 7,
-# 			  'DOWNSTREAM' => 8,
-# 			  'SYNONYMOUS_CODING' => 3,
-# 			  'NON_SYNONYMOUS_CODING', => 2,
-# 			  'FRAMESHIFT_CODING' => 1,
-# 			  '5PRIME_UTR' => 4,
-# 			  '3PRIME_UTR' => 5,
-# 			  'INTERGENIC' => 9);
-
-our %CONSEQUENCE_TYPES = (
-			  'FRAMESHIFT_CODING' => 1,
-			  'STOP_GAINED' => 2,
-			  'STOP_LOST' => 3,
-			  'NON_SYNONYMOUS_CODING', => 4,
-			  'SYNONYMOUS_CODING' => 5,
-			  '5PRIME_UTR' => 6,
-			  '3PRIME_UTR' => 7,
-			  'UTR' => '8',
-			  'INTRONIC' => 9,
-			  'UPSTREAM' => 10,
-			  'DOWNSTREAM' => 11,
-			  'INTERGENIC' => 12,
-			  );
 
 =head2 new
 
@@ -380,7 +354,7 @@ sub add_consequence_type{
     my $consequence_type = shift;
 
     return $self->{'consequence_type'} = $consequence_type if ($CONSEQUENCE_TYPES{$consequence_type});
-    warning("You are trying to set the consequence type to a non-allowed type. The allowed types are: " . keys %CONSEQUENCE_TYPES);
+    warning("You are trying to set the consequence type to a non-allowed type. The allowed types are: ", keys %CONSEQUENCE_TYPES);
     return '';
 }
 
