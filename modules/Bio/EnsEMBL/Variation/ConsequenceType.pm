@@ -26,12 +26,12 @@ use strict;
 
 use Bio::EnsEMBL::Utils::Exception qw(warning);
 
-#list of consequence types. Order must match that set in the database
-our @CONSEQUENCES = ('ESSENTIAL_SPLICE_SITE','SPLICE_SITE','FRAMESHIFT_CODING','STOP_GAINED','STOP_LOST','NON_SYNONYMOUS_CODING','SYNONYMOUS_CODING','5PRIME_UTR','3PRIME_UTR','INTRONIC','UPSTREAM','DOWNSTREAM','INTERGENIC');
+#list of splice site valid types for the splice_site attribute
+our %SPLICE_SITES = ('ESSENTIAL_SPLICE_SITE' => 1,
+		     'SPLICE_SITE' => 2);
+
 #conversion of consequence type to bit value
 our %CONSEQUENCE_TYPES = (
-			  'ESSENTIAL_SPLICE_SITE' =>1,
-			  'SPLICE_SITE' => 2,
 			  'FRAMESHIFT_CODING' => 4,
 			  'STOP_GAINED' => 8,
 			  'STOP_LOST' => 16,
@@ -291,62 +291,60 @@ sub cdna_end {
 }
 
 
-=head2 get_all_types
-
-    Args        : None
-    Example     : my @types = @{$ct->get_all_types()};
-    Description : Retrieves all consequence types for this variation. Current possible
-                  types are 'ESSENTIAL_SPLICE_SITE','SPLICE_SITE','FRAMESHIFT_CODING',
-                  'STOP_GAINED','STOP_LOST','NON_SYNONYMOUS_CODING','SYNONYMOUS_CODING',
-                  '5PRIME_UTR','3PRIME_UTR','INTRONIC','UPSTREAM','DOWNSTREAM','INTERGENIC'
-    Returntype  : Reference to a list of strings
-    Exceptions  : none
-    Caller      : General
-
-=cut
-
-sub get_all_types{
-    my $self = shift;
-
-    my $code = $self->{'type'};
-
-    #convert the bit field into an ordered array
-    my @types;
-    for (my $i=0;$i< @CONSEQUENCES;$i++){
-	push @types, $CONSEQUENCES[$i] if ((1 << $i) & $code);
-    }
-    
-    return \@types;
-}
-
-
-=head2 add_type
+=head2 type
 
   Arg [1]    : string $type 
-               (possible types 'ESSENTIAL_SPLICE_SITE','SPLICE_SITE','FRAMESHIFT_CODING',
-		'STOP_GAINED','STOP_LOST','NON_SYNONYMOUS_CODING','SYNONYMOUS_CODING',
-		'5PRIME_UTR','3PRIME_UTR','INTRONIC','UPSTREAM','DOWNSTREAM','INTERGENIC')
+               (possible types 'FRAMESHIFT_CODING','STOP_GAINED','STOP_LOST','NON_SYNONYMOUS_CODING',
+		'SYNONYMOUS_CODING','5PRIME_UTR','3PRIME_UTR','INTRONIC','UPSTREAM','DOWNSTREAM','INTERGENIC')
   Example    : $consequence_type = $consequence_type->type
-  Description: Adds a consequence type of the variation in the transcript
+  Description: Getter/Setter for consequence type of the variation in the transcript
   Returntype : none
   Exceptions : warning if the consequence type is not recognised
   Caller     : general
 
 =cut
 
-sub add_type {
+sub type {
   my $self = shift;
-  my $consequence_type = shift;
 
-  #convert string to bit value and add it to the existing bitfield
-  my $bitval = $CONSEQUENCE_TYPES{uc($consequence_type)};
- 
-  if (!$bitval){      
-      warning("Trying to set the consequence type to a not valid value. Possible values: ",keys %CONSEQUENCE_TYPES,"\n");
-      return;
+  if(@_) {
+      my $type = shift;
+      if (defined $CONSEQUENCE_TYPES{$type}){
+	  $self->{'type'} = $type;
+      }
+      else{
+	  warning("Trying to set the consequence type to a not valid value. Possible values: ",keys %CONSEQUENCE_TYPES,"\n");
+      }
   }
-  $self->{'type'} |= $bitval;
+  return $self->{'type'}
+}
 
+
+=head2 splice_site
+
+  Arg [1]    : string $splice_site
+               (possible types 'ESSENTIAL_SPLICE_SITE', 'SPLICE_SITE')
+  Example    : $splice_site = $consequence_type->splice_site
+  Description: Getter/Setter for splice site of the variation in the transcript
+  Returntype : none
+  Exceptions : warning if the splice site is not recognised
+  Caller     : general
+
+=cut
+
+sub splice_site {
+  my $self = shift;
+
+  if(@_) {
+      my $splice_site = shift;
+      if (defined $SPLICE_SITES{$splice_site}){
+	  $self->{'splice_site'} = $splice_site;
+      }
+      else{
+	  warning("Trying to set the splice site to a not valid value. Possible values: ",keys %SPLICE_SITES,"\n");
+      }
+  }
+  return $self->{'splice_site'}
 }
 
 =head2 aa_alleles
