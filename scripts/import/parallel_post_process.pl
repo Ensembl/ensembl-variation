@@ -315,7 +315,7 @@ sub parallel_ld_populations{
 		   WHERE  ig.variation_id = vf.variation_id
 		    AND   ig.allele_2 IS NOT NULL
 		    AND   vf.map_weight = 1
-		    AND   ip.individual_id = ig.individual_id
+		    AND   ip.individual_sample_id = ig.sample_id
 		    AND   ip.population_sample_id $in_str
 		    ORDER BY  vf.seq_region_id,vf.seq_region_start}, {mysql_use_result => 1} );
 
