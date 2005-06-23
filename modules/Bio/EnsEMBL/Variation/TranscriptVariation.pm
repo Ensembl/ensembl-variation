@@ -61,20 +61,13 @@ use Bio::EnsEMBL::Storable;
 
 our @ISA = ('Bio::EnsEMBL::Storable');
 
-our %VALID_TYPES = ('INTRONIC' => 1,
-                    'UPSTREAM' => 1,
-                    'DOWNSTREAM' => 1,
-                    'SYNONYMOUS_CODING' => 1,
-                    'NON_SYNONYMOUS_CODING', => 1,
-                    'FRAMESHIFT_CODING' => 1,
-                    '5PRIME_UTR' => 1,
-                    '3PRIME_UTR' => 1,
-		    'INTERGENIC' => 1,
-		    'STOP_GAINED' => 1,
-		    'STOP_LOST'  => 1,
-		    'UTR' => 1);
+
+my %CONSEQUENCE_TYPES = %Bio::EnsEMBL::Variation::ConsequenceType::CONSEQUENCE_TYPES;
+my %SPLICE_SITES = %Bio::EnsEMBL::Variation::ConsequenceType::SPLICE_SITES;
+
 
 =head2 new
+
   Arg [-ADAPTOR] :
     Bio::EnsEMBL::Variation::DBSQL::TranscriptVariationAdaptor
 
@@ -109,6 +102,10 @@ our %VALID_TYPES = ('INTRONIC' => 1,
     'INTRONIC', 'UPSTREAM', 'DOWNSTREAM', 'SYNONYMOUS_CODING',
     'NON_SYNONYMOUS_CODING', 'FRAMESHIFT_CODING', '5PRIME_UTR', '3PRIME_UTR'
 
+  Arg [-SPLICE_SITE] :
+    If the variation is affecting a splice site or an essential splice site.
+    Must be one of 'SPLICE_SITE', 'ESSENTIAL_SPLICE_SITE'
+
   Example    : 
     $tr_var = Bio::EnsEMBL::Variation::TranscriptVariation->new
       (-transcript        => $transcript,
@@ -117,7 +114,8 @@ our %VALID_TYPES = ('INTRONIC' => 1,
        -cdna_end          => 1127,
        -translation_start => 318,
        -translation_end   => 318,
-       -consequence_type  => 'NON_SYNONYMOUS_CODING');
+       -consequence_type  => 'NON_SYNONYMOUS_CODING',
+       -splice_site       => 'SPLICE_SITE');
 
   Description: Constructor. Instantiates a
                Bio::EnsEMBL::Variation::TranscriptVariation object
@@ -131,17 +129,25 @@ sub new {
   my $class = shift;
 
   my ($vf, $tr, $pep_allele, $cdna_start,$cdna_end, $tl_start,$tl_end, $consequence_type,
-      $dbID, $adaptor, $transcript) =
+      $dbID, $adaptor, $transcript, $splice_site) =
     rearrange([qw(VARIATION_FEATURE TRANSCRIPT PEP_ALLELE_STRING CDNA_START
                   CDNA_END TRANSLATION_START TRANSLATION_END CONSEQUENCE_TYPE
-                  DBID ADAPTOR)], @_);
+                  DBID ADAPTOR TRANSCRIPT SPLICE_SITE)], @_);
 
   if(defined($consequence_type)) {
     $consequence_type = uc($consequence_type);
-    if(!$VALID_TYPES{$consequence_type}) {
-      my $valid = join(',',map({"'$_'"} keys(%VALID_TYPES)));
+    if(!$CONSEQUENCE_TYPES{$consequence_type}) {
+      my $valid = join(',',map({"'$_'"} keys(%CONSEQUENCE_TYPES)));
       throw("Type argument must be one of: $valid");
     }
+  }
+
+  if (defined($splice_site)){
+      $splice_site = uc($splice_site);
+      if (!$SPLICE_SITES{$splice_site}){
+	  my $valid = join (',', map({"'$_'"} keys(%SPLICE_SITES)));
+	  throw("Splice site argument must be one of: $valid");
+      }
   }
 
   if(defined($cdna_start) && ($cdna_start !~ /^\d+$/ || $cdna_start < 1)) {
@@ -169,7 +175,8 @@ sub new {
                 'cdna_end'          => $cdna_end,
                 'translation_start' => $tl_start,
                 'translation_end'   => $tl_end,
-                'consequence_type'  => $consequence_type}, $class;
+                'consequence_type'  => $consequence_type,
+	        'splice_site'       => $splice_site || ''}, $class;
 }
 
 sub new_fast {
@@ -383,9 +390,9 @@ sub translation_end {
   Arg [1]    : (optional) string $consequence_type
   Example    : if($tr_var->consequence_type() eq 'INTRONIC') { do_something(); }
   Description: Getter/Setter for the consequence type of this transcript variation.
-               Allowed values are:  'INTRONIC','UPSTREAM','DOWNSTREAM',
-               'SYNONYMOUS_CODING','NON_SYNONYMOUS_CODING','FRAMESHIFT_CODING',
-               '5PRIME_UTR','3PRIME_UTR','INTERGENIC'
+               Allowed values are: 'FRAMESHIFT_CODING','STOP_GAINED','STOP_LOST',
+                  'NON_SYNONYMOUS_CODING','SYNONYMOUS_CODING','5PRIME_UTR','3PRIME_UTR',
+                  'INTRONIC','UPSTREAM','DOWNSTREAM',
   Returntype : string
   Exceptions : throw if provided argument is not one of the valid strings
   Caller     : general
@@ -400,8 +407,8 @@ sub consequence_type {
 
     if(defined($consequence_type)) {
       $consequence_type = uc($consequence_type);
-      if(!$VALID_TYPES{$consequence_type}) {
-        my $valid = join(',',map({"'$_'"} keys(%VALID_TYPES)));
+      if(!$CONSEQUENCE_TYPES{$consequence_type}) {
+        my $valid = join(',',map({"'$_'"} keys(%CONSEQUENCE_TYPES)));
         throw("Type argument must be one of: $valid");
       }
     }
@@ -411,5 +418,35 @@ sub consequence_type {
   return $self->{'consequence_type'};
 }
 
+=head2 splice_site
+
+  Arg [1]    : (optional) string $splice_site
+  Example    : if($tr_var->splice_site() eq 'ESSENTIAL_SPLICE_SITE') { do_something(); }
+  Description: Getter/Setter for the splice site of this transcript variation.
+               Allowed values are: 'ESSENTIAL_SPLICE_SITE','SPLICE_SITE'
+  Returntype : string
+  Exceptions : throw if provided argument is not one of the valid strings
+  Caller     : general
+
+=cut
+
+sub splice_site {
+  my $self = shift;
+
+  if(@_) {
+    my $splice_site = shift;
+
+    if(defined($splice_site)) {
+      $splice_site = uc($splice_site);
+      if(!$SPLICE_SITES{$splice_site}) {
+        my $valid = join(',',map({"'$_'"} keys(%SPLICE_SITES)));
+        throw("Type argument must be one of: $valid");
+      }
+    }
+    $self->{'splice_site'} = $splice_site;
+  }
+
+  return $self->{'splice_site'};
+}
 
 1;
