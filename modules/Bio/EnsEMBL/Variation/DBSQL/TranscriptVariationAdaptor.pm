@@ -148,6 +148,17 @@ sub _objs_from_sth {
   # construct all of the TranscriptVariation objects
 
   while($sth->fetch()) {
+
+    #added new attribute, splice_site
+    my %splice_sites = %Bio::EnsEMBL::Variation::ConsequenceType::SPLICE_SITES; #get the hash with the valid SPLICE_SITES
+    my $splice_site;
+    my @types = split(',',$consequence_type); #get the different consequence types and separate in 2 different attributes: slice_site and
+    #there is a splice_site type
+    if (@types > 1){
+	$splice_site = shift @types; #relying in the order of the SET column in the database
+    }
+    $consequence_type = shift @types if (@types > 0);
+
     my $trv = Bio::EnsEMBL::Variation::TranscriptVariation->new_fast
       ( { 'dbID' => $trv_id,
 	  'adaptor' => $self,
@@ -156,7 +167,8 @@ sub _objs_from_sth {
 	  'translation_start' => $tl_start,
 	  'translation_end' => $tl_end,
 	  'pep_allele_string' => $pep_allele,
-	  'consequence_type' => $consequence_type} );
+	  'consequence_type' => $consequence_type,
+          'splice_site'      => $splice_site || ''} );
 
     $trv->{'_vf_id'} = $vf_id; #add the variation feature
     $trv->{'_transcript_id'} = $tr_id; #add the transcript id

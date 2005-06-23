@@ -241,6 +241,16 @@ sub _objs_from_sth {
     }
     $validation_status = 0 if (!defined $validation_status);
     my @states = split(',',$validation_status);
+    #added new attribute, splice_site
+    my %splice_sites = %Bio::EnsEMBL::Variation::ConsequenceType::SPLICE_SITES; #get the hash with the valid SPLICE_SITES
+    my $splice_site;
+    my @types = split(',',$consequence_type); #get the different consequence types and separate in 2 different attributes: slice_site and
+    #there is a splice_site type
+    if (@types > 1){
+	$splice_site = shift @types; #relying in the order of the SET column in the database
+    }
+    $consequence_type = shift @types if (@types > 0);
+    # consequence_type
     push @features, Bio::EnsEMBL::Variation::VariationFeature->new_fast(
       {'start'    => $seq_region_start,
        'end'      => $seq_region_end,
@@ -253,6 +263,7 @@ sub _objs_from_sth {
        'map_weight' => $map_weight,
        'source'   => $source_name,
        'validation_code' => \@states,
+       'splice_site' => $splice_site || '',
        'consequence_type' => $consequence_type || 'INTERGENIC',
        '_variation_id' => $variation_id});
   }
