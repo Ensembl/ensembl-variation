@@ -7,9 +7,9 @@ use DBI;
 use DBH;
 
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
-use Bio::EnsEMBL::Variation::VariationFeature; #to get the consequence_types priorities
 use Bio::EnsEMBL::Utils::Exception qw(warning throw verbose);
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp expand);
+use Bio::EnsEMBL::Variation::ConsequenceType;
 use Bio::EnsEMBL::Utils::TranscriptAlleles qw(type_variation);  #function to calculate the consequence type of a Variation in a transcript
 use ImportUtils qw(debug load create_and_load);
 
@@ -39,7 +39,7 @@ my ($TMP_DIR, $TMP_FILE, $LIMIT,$status_file);
   #added default options
   $chost    ||= 'ecs2';
   $cuser    ||= 'ensro';
-#  $cport    ||= 3364;
+  $cport    ||= 3365;
 
   $vport    ||= 3306;
   $vuser    ||= 'ensadmin';
@@ -173,8 +173,8 @@ sub transcript_variation {
 	  }
           foreach my $ct (@$consequences) {
 	      my $type; 
-	      $type = join(',',$ct->splice_site,$ct->type) if ($ct->splice_site != ''); #when there is splice site
-	      $type = $ct->type if ($ct->splice_site == ''); #when there is no splice site;
+	      $type = join(',',$ct->splice_site,$ct->type) if ($ct->splice_site ne ''); #when there is splice site
+	      $type = $ct->type if ($ct->splice_site eq ''); #when there is no splice site;
             my @arr = ($ct->transcript_id,
                        $ct->variation_feature_id,
                        join("/", @{$ct->aa_alleles||[]}),
@@ -211,7 +211,6 @@ sub last_process{
 		    transcript_id variation_feature_id peptide_allele_string
 		    translation_start translation_end cdna_start cdna_end consequence_type));
     
-    
     update_meta_coord($dbCore, $dbVar, 'transcript_variation');
     debug("Preparing to update consequence type in variation feature table");
     #and delete the status file
@@ -225,7 +224,6 @@ sub last_process{
     my ($variation_feature_id, $consequence_type);
     $sth->bind_columns(\$variation_feature_id,\$consequence_type);
     my $previous_variation_feature_id = 0;
-
     my %consequence_types = %Bio::EnsEMBL::Variation::ConsequenceType::CONSEQUENCE_TYPES;
     my %splice_sites =  %Bio::EnsEMBL::Variation::ConsequenceType::SPLICE_SITES;
 
