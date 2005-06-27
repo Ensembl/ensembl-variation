@@ -42,10 +42,11 @@ my $dbVariation = Bio::EnsEMBL::Variation::DBSQL::DBAdaptor->new
 my $population_id;
 my $population_name;
 #get all populations to be tagged (HapMap and PerlEgen)
-my $sth = $dbVariation->dbc->prepare(qq{SELECT population_id, name
-					    FROM population
-					    WHERE name like 'PERLEGEN:AFD%'
-					    OR name like 'CSHL-HAPMAP%'
+my $sth = $dbVariation->dbc->prepare(qq{SELECT s.sample_id, s.name
+					    FROM population p, sample s
+					    WHERE (s.name like 'PERLEGEN:AFD%'
+					    OR s.name like 'CSHL-HAPMAP%')
+					    AND s.sample_id = p.sample_id
 					});
 
 $sth->execute();
@@ -64,12 +65,12 @@ my $in_str = " IN (" . join(',', @pops). ")";
 
 #select all SNPs in the population given with genotypes, and order them by variation
 $sth = $dbVariation->dbc->prepare(qq{SELECT vf.variation_feature_id, ig.allele_1, ig.allele_2, vf.seq_region_id, 
-				            vf.seq_region_start, ip.individual_id, ip.population_id
+				            vf.seq_region_start, ip.individual_sample_id, ip.population_sample_id
 				     FROM individual_genotype_single_bp ig, variation_feature vf, individual_population ip
 				     WHERE ig.variation_id = vf.variation_id
-				     AND ig.individual_id = ip.individual_id
+				     AND ig.sample_id = ip.individual_sample_id
 				     AND vf.map_weight = 1
-				     AND ip.population_id $in_str
+				     AND ip.population_sample_id $in_str
 				 },{mysql_use_result =>1});
 my ($variation_feature_id, $allele_1, $allele_2, $seq_region_id, $seq_region_start,$individual_id);
 my $buffer = {}; #buffer with data to write to file
@@ -111,12 +112,12 @@ sub get_siblings{
     my $population_id = shift;
     my $siblings = shift;
 
-    my $sth_individual = $dbVariation->dbc()->prepare(qq{SELECT i.individual_id
+    my $sth_individual = $dbVariation->dbc()->prepare(qq{SELECT i.sample_id
 							     FROM individual i, individual_population ip
-							     WHERE ip.individual_id = i.individual_id
-							     AND ip.population_id = ? 
-							     AND i.father_individual_id IS NOT NULL
-							     AND i.mother_individual_id IS NOT NULL
+							     WHERE ip.individual_sample_id = i.sample_id
+							     AND ip.population_sample_id = ? 
+							     AND i.father_individual_sample_id IS NOT NULL
+							     AND i.mother_individual_sample_id IS NOT NULL
 							 });
     my ($individual_id);
     $sth_individual->execute($population_id);
@@ -163,7 +164,7 @@ sub import_tagg_snps{
 
     unlink(<$TMP_DIR/snps_tagged_*>);
     #and finally, load the information
-    load($dbVariation->dbc(), qw(tagged_variation_feature variation_feature_id population_id));
+    load($dbVariation->dbc(), qw(tagged_variation_feature variation_feature_id sample_id));
     unlink(<$TMP_DIR/tag_snps_*>);
    
 }
