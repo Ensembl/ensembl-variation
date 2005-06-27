@@ -164,8 +164,8 @@ create table population_structure (
 create table individual(
   sample_id int not null,
   gender enum('Male', 'Female', 'Unknown') default 'Unknown' NOT NULL,
-  father_individual_id int,
-  mother_individual_id int,
+  father_individual_sample_id int,
+  mother_individual_sample_id int,
   
   primary key(sample_id)
 );
@@ -223,7 +223,6 @@ create table variation_feature(
 	consequence_type SET ('ESSENTIAL_SPLICE_SITE','SPLICE_SITE','FRAMESHIFT_CODING',
 		'STOP_GAINED','STOP_LOST','NON_SYNONYMOUS_CODING','SYNONYMOUS_CODING','5PRIME_UTR',
 		'3PRIME_UTR','INTRONIC','UPSTREAM','DOWNSTREAM','INTERGENIC' ) default "INTERGENIC" not null ,	
-
 	primary key( variation_feature_id ),
 	key pos_idx( seq_region_id, seq_region_start ),
 	key variation_idx( variation_id )
@@ -332,7 +331,6 @@ create table transcript_variation(
   consequence_type SET( 'ESSENTIAL_SPLICE_SITE','SPLICE_SITE','FRAMESHIFT_CODING',
 	'STOP_GAINED','STOP_LOST','NON_SYNONYMOUS_CODING','SYNONYMOUS_CODING','5PRIME_UTR',
 	'3PRIME_UTR','INTRONIC','UPSTREAM','DOWNSTREAM' ) not null,
-	
   primary key( transcript_variation_id ),
   key variation_idx( variation_feature_id ),
   key transcript_idx( transcript_id ),
