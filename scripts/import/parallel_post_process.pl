@@ -529,12 +529,12 @@ sub get_siblings{
     my $population_id = shift;
     my $siblings = shift;
 
-    my $sth_individual = $dbVariation->prepare(qq{SELECT i.individual_id
+    my $sth_individual = $dbVariation->prepare(qq{SELECT i.sample_id
 							     FROM individual i, individual_population ip
-							     WHERE ip.individual_id = i.individual_id
-							     AND ip.population_id = ? 
-							     AND i.father_individual_id IS NOT NULL
-							     AND i.mother_individual_id IS NOT NULL
+							     WHERE ip.individual_sample_id = i.sample_id
+							     AND ip.population_sample_id = ? 
+							     AND i.father_individual_sample_id IS NOT NULL
+							     AND i.mother_individual_sample_id IS NOT NULL
 							 });
     my ($individual_id);
     $sth_individual->execute($population_id);
