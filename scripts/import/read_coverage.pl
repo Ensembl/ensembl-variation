@@ -180,7 +180,7 @@ sub load_individuals{
 	if ($individual_id->{$individual_name} eq ''){
 	    my $individualAdaptor = $dbVar->get_IndividualAdaptor();
 	    my $individual = ($individualAdaptor->fetch_all_by_name($individual_name))->[0];
-	    my $sample_id;
+	    my ($sample_id,$ind_id);
 	    #the individual is not in the database, will need to create it
 	    if (!defined $individual){
 		#insert the sample
