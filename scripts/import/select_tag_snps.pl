@@ -120,7 +120,7 @@ sub get_LD_chromosome{
 						FROM pairwise_ld
 						WHERE seq_region_id = ?
 						AND r2 > ?
-						AND population_id = ?
+						AND sample_id = ?
 					    },{mysql_use_result =>1});
     $sth->execute($seq_region_id,$r2,$population_id);
     my ($variation_feature_id_1, $variation_feature_id_2);
