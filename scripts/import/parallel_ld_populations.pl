@@ -122,7 +122,7 @@ sub update_meta{
     my $dbVar = shift;
 
     my $population_id;
-    my $sth_pop = $dbVar->prepare('SELECT sample_id FROM sample s, population p where p.sample_id = s.sample_id AND s.name = ?');
+    my $sth_pop = $dbVar->prepare('SELECT s.sample_id FROM sample s, population p where p.sample_id = s.sample_id AND s.name = ?');
     
     $sth_pop->execute($default_population);
     $sth_pop->bind_columns(\$population_id);
