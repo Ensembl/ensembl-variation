@@ -115,7 +115,7 @@ sub variation_table {
     
     ### FIX: Not sure if all RefSNPs have subsnps, and if ones which do not
     ### should possibly be eliminated
-    
+
     return;
 }
 
@@ -281,8 +281,8 @@ sub individual_table {
 			          FROM tmp_ind ti
 			      });
 
-  $self->{'dbVariation'}->do(qq{INSERT INTO individual (sample_id, father_individual_id, mother_individual_id, gender)
-				    SELECT s.sample_id, 
+  $self->{'dbVariation'}->do(qq{INSERT INTO individual (sample_id, father_individual_sample_id, mother_individual_sample_id, gender)
+				    SELECT s.sample_id,
 				    IF(tp.pa_ind_id > 0, tp.pa_ind_id, null),
 				     IF(tp.ma_ind_id > 0, tp.ma_ind_id, null),
 				     IF(tp.sex = 'M', 'Male',
@@ -322,7 +322,7 @@ sub individual_table {
  				      WHERE individual_id is NOT NULL
  				  });
   
-    return;
+return;
 }
 
 
@@ -336,11 +336,11 @@ sub allele_table {
 
      # load a temp table that can be used to reverse compliment alleles
      # we place subsnps in the same orientation as the refSNP
-     dumpSQL($self->{'dbSNP'}, qq(SELECT a1.allele, a2.allele
+    dumpSQL($self->{'dbSNP'}, qq(SELECT a1.allele, a2.allele
  				 FROM Allele a1, Allele a2
  				 WHERE a1.rev_allele_id = a2.allele_id));
 
-   create_and_load($self->{'dbVariation'}, "tmp_rev_allele", "allele *", "rev_allele");
+    create_and_load($self->{'dbVariation'}, "tmp_rev_allele", "allele *", "rev_allele");
 
   # first load the allele data for alleles that we have population and
   # frequency data for
@@ -732,70 +732,72 @@ sub individual_genotypes {
    #
    # load SubInd individual genotypes into genotype table
    #
-     debug("Dumping SubInd and ObsGenotype data");
-     dumpSQL($self->{'dbSNP'}, qq{SELECT si.subsnp_id, sind.ind_id, og.obs, si.submitted_strand_code
-                FROM   SubInd si, ObsGenotype og, SubmittedIndividual sind
-                WHERE  og.gty_id = si.gty_id 
-                AND    sind.submitted_ind_id = si.submitted_ind_id
-                AND    sind.tax_id = $self->{'taxID'}
-                $self->{'limit'}});
-
-     create_and_load($self->{'dbVariation'}, "tmp_gty", 'subsnp_id i*', 'ind_id i', 'genotype','submitted_strand i');
-
-     debug("Loading individual_genotype table");
-
-       # load a temp table that can be used to reverse compliment alleles
-       # we place subsnps in the same orientation as the refSNP
-       dumpSQL($self->{'dbSNP'}, qq(SELECT a1.allele, a2.allele
-    				 FROM Allele a1, Allele a2
-    				 WHERE a1.rev_allele_id = a2.allele_id));
+    debug("Dumping SubInd and ObsGenotype data");
+    dumpSQL($self->{'dbSNP'}, qq{SELECT si.subsnp_id, sind.ind_id, og.obs, si.submitted_strand_code
+				 FROM   SubInd si, ObsGenotype og, SubmittedIndividual sind
+				 WHERE  og.gty_id = si.gty_id 
+				 AND    sind.submitted_ind_id = si.submitted_ind_id
+				 AND    sind.tax_id = $self->{'taxID'}
+				 $self->{'limit'}});
     
-       create_and_load($self->{'dbVariation'}, "tmp_rev_allele", "allele *", "rev_allele");
+    create_and_load($self->{'dbVariation'}, "tmp_gty", 'subsnp_id i*', 'ind_id i', 'genotype','submitted_strand i');
 
-      #we have truncated the individual_genotype table, one contains the genotypes single bp, and the other, the rest
-      #necessary to create a unique index to remove duplicated genotypes
-       $self->{'dbVariation'}->do(qq{CREATE UNIQUE INDEX ind_genotype_idx ON individual_genotype_single_bp(variation_id,sample_id,allele_1,allele_2)});
-      $self->{'dbVariation'}->do(qq{INSERT IGNORE INTO individual_genotype_single_bp (variation_id, sample_id, allele_1, allele_2) 
-  				      SELECT vs.variation_id, s.sample_id, 
- 				       CASE tg.submitted_strand
- 				           WHEN 0 THEN IF(vs.substrand_reversed_flag,tra1.rev_allele, tra1.allele)
- 					   WHEN 1 THEN IF(vs.substrand_reversed_flag,tra1.allele, tra1.rev_allele)
- 					   WHEN 2 THEN IF(vs.substrand_reversed_flag,tra1.rev_allele, tra1.allele)
- 					   WHEN 3 THEN IF(vs.substrand_reversed_flag,tra1.allele, tra1.rev_allele)
- 					   WHEN 4 THEN IF(vs.substrand_reversed_flag,tra1.rev_allele, tra1.allele)
- 					   WHEN 5 THEN IF(vs.substrand_reversed_flag,tra1.allele, tra1.rev_allele)
-					   ELSE tra1.allele
- 				       END as allele_1,
- 				       CASE tg.submitted_strand
- 				           WHEN 0 THEN IF(vs.substrand_reversed_flag,tra2.rev_allele, tra2.allele)
- 					   WHEN 1 THEN IF(vs.substrand_reversed_flag,tra2.allele, tra2.rev_allele)
-					   WHEN 2 THEN IF(vs.substrand_reversed_flag,tra2.rev_allele, tra2.allele)
- 					   WHEN 3 THEN IF(vs.substrand_reversed_flag,tra2.allele, tra2.rev_allele)
- 					   WHEN 4 THEN IF(vs.substrand_reversed_flag,tra2.rev_allele, tra2.allele)
- 					   WHEN 5 THEN IF(vs.substrand_reversed_flag,tra2.allele, tra2.rev_allele)
-					   ELSE tra2.allele
- 				       END as allele_2
-  				      FROM   tmp_gty tg, variation_synonym vs, tmp_rev_allele tra1, tmp_rev_allele tra2, sample s
-  				      WHERE  tg.subsnp_id = vs.subsnp_id
-  				      AND    tra1.allele = SUBSTRING_INDEX(tg.genotype,'/',1)
-  				      AND    tra2.allele = SUBSTRING_INDEX(tg.genotype,'/',-1)
-  				      AND    length(tg.genotype) = 3
-				      AND    tg.ind_id = s.individual_id});
+    debug("Loading individual_genotype table");
 
-       $self->{'dbVariation'}->do(qq{DROP INDEX ind_genotype_idx ON individual_genotype_single_bp});
+    # load a temp table that can be used to reverse compliment alleles
+    # we place subsnps in the same orientation as the refSNP
+    dumpSQL($self->{'dbSNP'}, qq(SELECT a1.allele, a2.allele
+     				 FROM Allele a1, Allele a2
+     				 WHERE a1.rev_allele_id = a2.allele_id));
 
-       $self->{'dbVariation'}->do(qq{INSERT INTO individual_genotype_multiple_bp (variation_id, sample_id, allele_1, allele_2) 
-   				      SELECT vs.variation_id, s.sample_id,
-   				            SUBSTRING_INDEX(tg.genotype,'/',1) as allele_1,
-   				            SUBSTRING_INDEX(tg.genotype,'/',-1) as allele_2 
-   				      FROM   tmp_gty tg, variation_synonym vs, sample s
-   				      WHERE  tg.subsnp_id = vs.subsnp_id
-   				      AND    length(tg.genotype) > 3
-				      AND    tg.ind_id = s.individual_id});
+    create_and_load($self->{'dbVariation'}, "tmp_rev_allele", "allele *", "rev_allele");
     
+    #we have truncated the individual_genotype table, one contains the genotypes single bp, and the other, the rest
+    #necessary to create a unique index to remove duplicated genotypes
+   $self->{'dbVariation'}->do(qq{CREATE UNIQUE INDEX ind_genotype_idx ON individual_genotype_single_bp(variation_id,sample_id,allele_1,allele_2)});
+   $self->{'dbVariation'}->do(qq{CREATE INDEX individual_id on sample(individual_id)});
+    
+   $self->{'dbVariation'}->do(qq{INSERT IGNORE INTO individual_genotype_single_bp (variation_id, sample_id, allele_1, allele_2) 
+				  SELECT vs.variation_id, s.sample_id, 
+				  CASE tg.submitted_strand
+				  WHEN 0 THEN IF(vs.substrand_reversed_flag,tra1.rev_allele, tra1.allele)
+				  WHEN 1 THEN IF(vs.substrand_reversed_flag,tra1.allele, tra1.rev_allele)
+				  WHEN 2 THEN IF(vs.substrand_reversed_flag,tra1.rev_allele, tra1.allele)
+				  WHEN 3 THEN IF(vs.substrand_reversed_flag,tra1.allele, tra1.rev_allele)
+				  WHEN 4 THEN IF(vs.substrand_reversed_flag,tra1.allele, tra1.rev_allele)
+				  WHEN 5 THEN IF(vs.substrand_reversed_flag,tra1.rev_allele, tra1.allele)
+				  ELSE tra1.allele
+				  END as allele_1,
+				  CASE tg.submitted_strand
+				  WHEN 0 THEN IF(vs.substrand_reversed_flag,tra2.rev_allele, tra2.allele)
+				  WHEN 1 THEN IF(vs.substrand_reversed_flag,tra2.allele, tra2.rev_allele)
+				  WHEN 2 THEN IF(vs.substrand_reversed_flag,tra2.rev_allele, tra2.allele)
+				  WHEN 3 THEN IF(vs.substrand_reversed_flag,tra2.allele, tra2.rev_allele)
+				  WHEN 4 THEN IF(vs.substrand_reversed_flag,tra2.allele, tra2.rev_allele)
+				  WHEN 5 THEN IF(vs.substrand_reversed_flag,tra2.rev_allele, tra2.allele)
+				  ELSE tra2.allele
+				  END as allele_2
+				  FROM   tmp_gty tg, variation_synonym vs, tmp_rev_allele tra1, tmp_rev_allele tra2, sample s
+				  WHERE  tg.subsnp_id = vs.subsnp_id
+				  AND    tra1.allele = SUBSTRING_INDEX(tg.genotype,'/',1)
+				  AND    tra2.allele = SUBSTRING_INDEX(tg.genotype,'/',-1)
+				  AND    length(tg.genotype) = 3
+				  AND    tg.ind_id = s.individual_id});
+
+    $self->{'dbVariation'}->do(qq{DROP INDEX ind_genotype_idx ON individual_genotype_single_bp});
+
+    $self->{'dbVariation'}->do(qq{INSERT INTO individual_genotype_multiple_bp (variation_id, sample_id, allele_1, allele_2) 
+				  SELECT vs.variation_id, s.sample_id,
+				  SUBSTRING_INDEX(tg.genotype,'/',1) as allele_1,
+				  SUBSTRING_INDEX(tg.genotype,'/',-1) as allele_2 
+				  FROM   tmp_gty tg, variation_synonym vs, sample s
+				  WHERE  tg.subsnp_id = vs.subsnp_id
+				  AND    length(tg.genotype) > 3
+				  AND    tg.ind_id = s.individual_id});
+
     $self->{'dbVariation'}->do("DROP TABLE tmp_gty");
     $self->{'dbVariation'}->do("DROP TABLE tmp_rev_allele");
-    
+
     return;
 }
 
@@ -911,8 +913,8 @@ sub cleanup {
     $self->{'dbVariation'}->do('ALTER TABLE variation  DROP COLUMN snp_id');
     $self->{'dbVariation'}->do('ALTER TABLE variation_synonym DROP COLUMN subsnp_id, DROP COLUMN substrand_reversed_flag');
     $self->{'dbVariation'}->do('ALTER TABLE sample DROP COLUMN pop_class_id, DROP COLUMN pop_id, DROP COLUMN individual_id');
-    $self->{'dbVariation'}->do('ALTER TABLE variation_group DROP COLUMN hapset_id') if ($self->{'species_prefix'} eq '');
-    $self->{'dbVariation'}->do('ALTER TABLE allele_group DROP COLUMN hap_id') if ($self->{'species_prefix'} eq '');
+    $self->{'dbVariation'}->do('ALTER TABLE variation_group DROP COLUMN hapset_id'); #if (! defined $self->{'species_prefix'});
+    $self->{'dbVariation'}->do('ALTER TABLE allele_group DROP COLUMN hap_id'); #if (defined $self->{'species_prefix'});
 
 }
 
