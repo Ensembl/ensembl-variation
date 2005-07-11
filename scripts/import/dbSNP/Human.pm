@@ -17,8 +17,8 @@ sub dump_dbSNP{
     $self->dump_HGVbaseIDs();
     #and finally, get TSC data from dbSNP
     $self->dump_TSCIDs();    
-    #get mitochondrial SNPs provided by Yuan in .tb file formats
-    $self->dump_mitocondrialSNPs();
+    #get mitochondrial SNPs provided by Yuan in .tb file formats---DON'T RUN THIS ANYMORE
+    #$self->dump_mitocondrialSNPs();
 }
 
 #specific function to get the HGVbase IDs from a file provided by Yuan and add them to the variation_synonym table
