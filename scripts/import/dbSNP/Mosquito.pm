@@ -30,11 +30,18 @@ sub add_strains{
     my $pop_PEST;  #population_id for the pest strain
     #first of all, add to the population table the 2 strains: PEST and MOPTI
     foreach my $population_name (keys %STRAINS){
-	$self->{'dbVariation'}->do(qq{INSERT INTO population (name,description,is_strain) 
-					  VALUES ('$population_name', '$STRAINS{$population_name}', 1)
-				      });
-	$STRAINS{$population_name} = $self->{'dbVariation'}->dbh()->{'mysql_insertid'}; #store in the same hash the id for the population
+      $self->{'dbVariation'}->do(qq{INSERT INTO sample (name,description)
+				    VALUES ('$population_name', '$STRAINS{$population_name}')});
+      #store in the same hash the id for the population
+      $STRAINS{$population_name} = $self->{'dbVariation'}->dbh()->{'mysql_insertid'};
     }
+    #and copy the data from the sample to the Population table
+    debug("Loading population table with data from sample");
+    $self->{'dbVariation'}->do(qq{INSERT INTO population (sample_id,is_strain) 
+				  SELECT sample_id, 1
+				  FROM sample
+				 });
+    
 
     #then, get from dbSNP the relation between ssId and mopti/pest strain
     debug("Dumping strain information from dbSNP");
@@ -49,7 +56,7 @@ sub add_strains{
     debug("Updating allele table with strain alleles");
     #first, update the MOPTI alleles
     $self->{'dbVariation'}->do(qq{UPDATE allele , variation_synonym, tmp_strain
-				      SET allele.population_id = $STRAINS{'MOPTI'}, allele.frequency = 1
+				      SET allele.sample_id = $STRAINS{'MOPTI'}, allele.frequency = 1
 				      WHERE allele.variation_id = variation_synonym.variation_id
 				      AND SUBSTRING(variation_synonym.name,3) = tmp_strain.subsnp_id
 				      AND tmp_strain.strain like '%mopti%'
@@ -57,7 +64,7 @@ sub add_strains{
 
     #and do the same for the PEST alleles
     $self->{'dbVariation'}->do(qq{UPDATE allele , variation_synonym, tmp_strain
-				      SET allele.population_id = $STRAINS{'PEST'}, allele.frequency = 1
+				      SET allele.sample_id = $STRAINS{'PEST'}, allele.frequency = 1
 				      WHERE allele.variation_id = variation_synonym.variation_id
 				      AND SUBSTRING(variation_synonym.name,3) = tmp_strain.subsnp_id
 				      AND tmp_strain.strain like '%pest%'
@@ -104,8 +111,9 @@ sub variation_feature{
     debug("Dumping SNPLoc data");
     
     my $tablename = $self->{'species_prefix'} . 'SNPContigLoc';
-    dumpSQL($self->{'dbSNP'}, qq{SELECT snp_id, contig_acc, asn_from,
-				 IF(loc_type = 3,  asn_from - 1, asn_to), # 3 = between
+    dumpSQL($self->{'dbSNP'}, qq{SELECT snp_id, contig_acc,
+				 IF(loc_type = 3,  asn_to, asn_from),
+				 IF(loc_type = 3,  asn_from, asn_to), # 3 = between
 				 IF(orientation, -1, 1)
 				 FROM $tablename
 				 $self->{'limit'}});
