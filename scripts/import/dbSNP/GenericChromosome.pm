@@ -30,8 +30,9 @@ sub variation_feature{
     debug("Dumping SNPLoc data");
     
     my $tablename = $self->{'species_prefix'} . 'SNPContigLoc';
-    dumpSQL($self->{'dbSNP'}, qq{SELECT snp_id, contig_chr, phys_pos_from, 
-				 IF(loc_type = 3,  phys_pos_from-1,
+    dumpSQL($self->{'dbSNP'}, qq{SELECT snp_id, contig_chr, 
+				 IF(loc_type = 3, phys_pos_from+1, phys_pos_from),
+				 IF(loc_type = 3,  phys_pos_from,
 				    IF (loc_type = 1, substring_index(phys_pos, '..', -1),phys_pos)),
 				 IF(orientation, -1, 1)
 				 FROM $tablename
@@ -45,11 +46,11 @@ sub variation_feature{
 
     debug("Creating genotyped variations");
     #creating the temporary table with the genotyped variations
+
     $self->{'dbVariation'}->do(qq{CREATE TABLE tmp_genotyped_var SELECT DISTINCT variation_id FROM individual_genotype_single_bp});
     $self->{'dbVariation'}->do(qq{CREATE UNIQUE INDEX variation_idx ON tmp_genotyped_var (variation_id)});
     $self->{'dbVariation'}->do(qq{INSERT IGNORE INTO tmp_genotyped_var SELECT DISTINCT variation_id FROM individual_genotype_multiple_bp});
 
- 
     debug("Creating tmp_variation_feature data");
     
     dumpSQL($self->{'dbVariation'},qq{SELECT v.variation_id, ts.seq_region_id, tcl.start, tcl.end, tcl.strand, v.name, v.source_id, v.validation_status
