@@ -189,8 +189,8 @@ sub population_table {
              FROM   Population p
              LEFT JOIN PopClass pc ON p.pop_id = pc.pop_id
 	     LEFT JOIN PopLine pl ON p.pop_id = pl.pop_id
-	     GROUP BY pl.pop_id
-	     ORDER BY pl.line_num
+	     GROUP BY p.pop_id
+#	     ORDER BY pl.line_num
 	 });
 
   debug("Loading sample data");
