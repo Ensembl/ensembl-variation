@@ -21,9 +21,9 @@ my %individual_id = ('Fosmid'  => '',
 		     'TSC'     => '',
 		     'NA10470' => '',
 		     'Unknown' => '',
-		     'NA07340' => 115,
-		     'NA17109' => 840,
-		     'NA17119' => 850
+		     'NA07340' => 1063, ##115,
+		     'NA17109' => 1703, ##840,
+		     'NA17119' => 1713  ##850
 		     );
 my ($chost, $cport, $cdbname, $cuser, $cpass,
     $vhost, $vport, $vdbname, $vuser, $vpass,
