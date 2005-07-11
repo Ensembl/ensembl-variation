@@ -172,9 +172,6 @@ sub transcript_variation {
 	      $consequences = type_variation($tr, $consequence_type);
 	  }
           foreach my $ct (@$consequences) {
-	      my $type; 
-	      $type = join(',',$ct->splice_site,$ct->type) if ($ct->splice_site ne ''); #when there is splice site
-	      $type = $ct->type if ($ct->splice_site eq ''); #when there is no splice site;
             my @arr = ($ct->transcript_id,
                        $ct->variation_feature_id,
                        join("/", @{$ct->aa_alleles||[]}),
@@ -182,7 +179,7 @@ sub transcript_variation {
                        $ct->aa_end,
                        $ct->cdna_start,
                        $ct->cdna_end,
-		       $type);
+		       $ct->splice_site ? join ',', $ct->splice_site,$ct->type : $ct->type);
             @arr = map {($_) ? $_ : '\N'} @arr;
             print FH join("\t", @arr), "\n";
           }
@@ -246,8 +243,7 @@ sub last_process{
 	@types = split(',',$consequence_type) if (defined $consequence_type); #get types, there might be a splice_site and a normal one
 	if (@types > 1){
 	    $splice_site = shift @types; #and the splice_site
-	    $type = shift @types; #get the consequence type
-
+	    $type = shift @types;
 	}
 	elsif (@types == 1){
 	    $type = shift @types; #get the consequence type
@@ -273,8 +269,8 @@ sub last_process{
 
     @types = split(',',$consequence_type) if (defined $consequence_type); #get types, there might be a splice_site and a normal one
     if (@types > 1){
-	$type = shift @types; #get the consequence type
 	$splice_site = shift @types; #and the splice_site
+	$type = shift @types; #get the consequence type
     }
     elsif (@types == 1){
 	$type = shift @types; #get the consequence type
