@@ -34,6 +34,7 @@ GetOptions('chost=s'   => \$chost,
 	   'tmpdir=s'  => \$ImportUtils::TMP_DIR,
 	   'tmpfile=s' => \$ImportUtils::TMP_FILE,
 	   'limit=i'   => \$limit,
+	   'top_level=i' => \$top_level,
 	   'num_processes=i' => \$num_processes,
 	   'variation_feature' => \$variation_feature,
 	   'flanking_sequence' => \$flanking_sequence,
@@ -46,8 +47,8 @@ $chost    ||= 'ecs2';
 $cuser    ||= 'ensro';
 $cport    ||= 3365;
 
-$vhost    ||='ecs2';
-$vport    ||= 3361;
+$vhost    ||='ia64g';
+$vport    ||= 3306;
 $vuser    ||= 'ensadmin';
 
 $num_processes ||= 1;
@@ -74,7 +75,7 @@ $TMP_DIR  = $ImportUtils::TMP_DIR;
 $TMP_FILE = $ImportUtils::TMP_FILE;
 
 ##Apart from human and mouse, we directly import top_level coordinates from dbSNP
-if ($cdbname !~ /homo|mus|anoph|can/i) {
+if (! defined $top_level && $cdbname !~ /homo|mus|anoph|can/i) {
   $top_level=1;
 }
 
@@ -156,10 +157,10 @@ sub parallel_flanking_sequence{
   my $sth = $dbVar->prepare(qq{SELECT fs.variation_id, fs.up_seq, fs.down_seq,
 			       vf.seq_region_id, vf.seq_region_start,
 			       vf.seq_region_end, vf.seq_region_strand
-				   FROM flanking_sequence fs FORCE INDEX (PRIMARY) LEFT JOIN variation_feature vf
-				   ON vf.variation_id = fs.variation_id
-				   ORDER BY fs.variation_id
-				   $LIMIT},{mysql_use_result => 1});
+			       FROM flanking_sequence fs FORCE INDEX (PRIMARY) LEFT JOIN variation_feature vf
+			       ON vf.variation_id = fs.variation_id
+			       ORDER BY fs.variation_id
+			       $LIMIT},{mysql_use_result => 1});
  
   $sth->execute();
   my $count = 0; #to know the number of variations
@@ -181,7 +182,7 @@ sub parallel_flanking_sequence{
 	  }
       }
       my @a = map {defined($_) ? $_ : '\N'} @$row;
-
+      
       &print_buffered($buffer,"$TMP_DIR/$dbname.flanking_sequence_$process\.txt",join("\t",@a) . "\n");
       $previous_variation_id = $curr_variation_id;
       
@@ -310,9 +311,10 @@ sub parallel_ld_populations{
     $sth = $dbVar->prepare
 	(qq{
 	    SELECT  STRAIGHT_JOIN ig.variation_id, vf.variation_feature_id, vf.seq_region_id, vf.seq_region_start, 
-                          ig.individual_sample_id, ig.allele_1, ig.allele_2, vf.seq_region_end, ip.population_sample_id
+                          ig.sample_id, ig.allele_1, ig.allele_2, vf.seq_region_end, ip.population_sample_id
 		    FROM  variation_feature vf FORCE INDEX(pos_idx), individual_genotype_single_bp ig, individual_population ip
 		   WHERE  ig.variation_id = vf.variation_id
+
 		    AND   ig.allele_2 IS NOT NULL
 		    AND   vf.map_weight = 1
 		    AND   ip.individual_sample_id = ig.sample_id
@@ -353,18 +355,20 @@ sub parallel_ld_populations{
 		%genotype_information = (); #new variation, flush the hash
 	    }
 	    #we store the genotype information for the variation
-	    $genotype_information{$population_id}{$individual_id}{variation_feature_id} = $variation_feature_id;
-	    $genotype_information{$population_id}{$individual_id}{seq_region_start} = $seq_region_start;
-	    $genotype_information{$population_id}{$individual_id}{allele_1} = $allele_1;
-	    $genotype_information{$population_id}{$individual_id}{allele_2} = $allele_2;
-	    $genotype_information{$population_id}{$individual_id}{seq_region_end} = $seq_region_end;
-	    $genotype_information{$population_id}{$individual_id}{seq_region_id} = $seq_region_id;
+	    if ($allele_1 ne 'N' and $allele_2 ne 'N'){
+	      $genotype_information{$population_id}{$individual_id}{variation_feature_id} = $variation_feature_id;
+	      $genotype_information{$population_id}{$individual_id}{seq_region_start} = $seq_region_start;
+	      $genotype_information{$population_id}{$individual_id}{allele_1} = $allele_1;
+	      $genotype_information{$population_id}{$individual_id}{allele_2} = $allele_2;
+	      $genotype_information{$population_id}{$individual_id}{seq_region_end} = $seq_region_end;
+	      $genotype_information{$population_id}{$individual_id}{seq_region_id} = $seq_region_id;
+	      
+	      #and the alleles
+	      $alleles_variation{$population_id}{$allele_1}++;
+	      $alleles_variation{$population_id}{$allele_2}++;
 	    
-	    #and the alleles
-	    $alleles_variation{$population_id}{$allele_1}++;
-	    $alleles_variation{$population_id}{$allele_2}++;
-	    
-	    $populations{$population_id}++;
+	      $populations{$population_id}++;
+	    }
 	}
     }
     $sth->finish();
