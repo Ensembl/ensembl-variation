@@ -1,0 +1,94 @@
+use strict;
+use warnings;
+#object that loading mapping data into the variation_feature table
+
+package dbSNP::MappingChromosome;
+
+use dbSNP::GenericContig;
+use vars qw(@ISA);
+use ImportUtils qw(debug load create_and_load dumpSQL);
+
+@ISA = ('dbSNP::GenericContig');
+
+
+sub variation_feature{
+  my $self = shift;
+    
+  my %rec;
+  my %source;
+  my %status;
+  my %rec_pos;
+  
+  debug("Dumping Variation");
+    
+  my $sth = $self->{'dbVariation'}->prepare (qq{SELECT variation_id, name, source_id, validation_status
+						    FROM variation});
+  $sth->execute();
+    
+  while(my ($variation_id, $name, $source_id, $validation_status) = $sth->fetchrow_array()) {
+    $rec{$name} = $variation_id;
+    $source{$name} = $source_id;
+    $status{$name} = $validation_status;
+  }
+  
+  $sth->finish();
+  
+  open (IN, $self->{'mapping_file'});
+  open (FH, ">" . $self->{'tmpdir'} . "/" . $self->{'tmpfile'} );
+  
+  while (<IN>) {
+    chomp;
+    next if /^more/;
+    s/^MORE_HITS//;
+    my ($ref_id, $slice_name, $start, $end, $strand, $ratio) =split;
+    
+    next if $ratio <0.5;
+    
+    my ($seq_region_name,$seq_region_start,$seq_region_end) = split /\-/, $slice_name
+      if $slice_name =~ /\-/;
+    
+    my $sth = $self->{'dbCore'}->dbc->prepare (qq{SELECT seq_region_id from seq_region where name = ?});
+    $sth->execute("$seq_region_name");
+    
+    my $seq_region_id = $sth->fetchrow_array();
+    
+    my $new_seq_region_start = $seq_region_start + $start -1 if ($seq_region_start);
+    my $new_seq_region_end = $seq_region_start + $end -1 if ($seq_region_start);
+    
+    if (!$rec_pos{$ref_id}{$seq_region_id}{$new_seq_region_start}{$new_seq_region_end}) {
+      print FH "$seq_region_id\t$new_seq_region_start\t$new_seq_region_end\t$strand\t$rec{$ref_id}\t$ref_id\t$source{$ref_id}\t",$status{$ref_id} ? $status{$ref_id} : 0,"\n";
+      $rec_pos{$ref_id}{$seq_region_id}{$new_seq_region_start}{$new_seq_region_end}=1;
+    }
+  }
+  $sth->finish();
+    
+  close IN;
+  close FH;
+  
+    
+  debug("Creating genotyped variations");
+  
+  create_and_load($self->{'dbVariation'}, "tmp_variation_feature","seq_region_id","seq_region_start","seq_region_end",
+		  "seq_region_strand","variation_id *","variation_name", "source_id", "validation_status");
+  #creating the temporary table with the genotyped variations
+  
+  $self->{'dbVariation'}->do(qq{CREATE TABLE tmp_genotyped_var SELECT DISTINCT variation_id FROM individual_genotype_single_bp});
+  $self->{'dbVariation'}->do(qq{CREATE UNIQUE INDEX variation_idx ON tmp_genotyped_var (variation_id)});
+  $self->{'dbVariation'}->do(qq{INSERT IGNORE INTO  tmp_genotyped_var SELECT DISTINCT variation_id FROM individual_genotype_multiple_bp});
+  
+  
+  $self->{'dbVariation'}->do(qq{INSERT INTO variation_feature
+				(variation_id,seq_region_id, seq_region_start, seq_region_end, seq_region_strand,
+				 variation_name, flags, source_id, validation_status)
+				SELECT tv.variation_id, tv.seq_region_id, tv.seq_region_start, tv.seq_region_end,
+				tv.seq_region_strand, tv.variation_name, IF(tgv.variation_id,'genotyped',NULL), tv.source_id,
+				tv.validation_status
+				FROM tmp_variation_feature tv LEFT JOIN tmp_genotyped_var tgv ON tv.variation_id = tgv.variation_id
+			       });
+  $self->{'dbVariation'}->do(qq{DROP TABLE tmp_variation_feature});
+  $self->{'dbVariation'}->do(qq{DROP TABLE tmp_genotyped_var});
+  
+  
+}
+
+1;
