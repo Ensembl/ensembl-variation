@@ -16,8 +16,8 @@ sub new {
   my $caller = shift;
   my $class = ref($caller) || $caller;
 
-  my ($dbSNP, $dbCore, $dbVariation, $tmp_dir, $tmp_file, $limit, $alldiff_file, $taxID, $species_prefix) =
-        rearrange([qw(DBSNP DBCORE DBVARIATION TMPDIR TMPFILE LIMIT ALLDIFF TAXID SPECIES_PREFIX)],@_);
+  my ($dbSNP, $dbCore, $dbVariation, $tmp_dir, $tmp_file, $limit, $mapping_file, $taxID, $species_prefix) =
+        rearrange([qw(DBSNP DBCORE DBVARIATION TMPDIR TMPFILE LIMIT MAPPING_FILE TAXID SPECIES_PREFIX)],@_);
 
 
   return bless {'dbSNP' => $dbSNP,
@@ -26,7 +26,7 @@ sub new {
 		'tmpdir' => $tmp_dir,
 		'tmpfile' => $tmp_file,
 		'limit' => $limit,
-                'alldiff' => $alldiff_file,
+                'mapping_file' => $mapping_file,
 		'taxID' => $taxID,
 		'species_prefix' => $species_prefix}, $class;
 }
