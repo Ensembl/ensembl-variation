@@ -19,11 +19,11 @@ use Bio::EnsEMBL::Utils::Exception qw(throw);
 
 use dbSNP::GenericContig;
 use dbSNP::GenericChromosome;
-use dbSNP::Zebrafish;
+use dbSNP::MappingChromosome;
 use dbSNP::Mosquito;
 use dbSNP::Human;
 
-my ($TAX_ID, $LIMIT_SQL, $TMP_DIR, $TMP_FILE, $ALLDIFF_FILE);
+my ($TAX_ID, $LIMIT_SQL, $TMP_DIR, $TMP_FILE, $MAPPING_FILE);
 
 my $dbSNP;
 my $dbVar;
@@ -35,25 +35,25 @@ my $dbCore;
      $vhost, $vuser, $vpass, $vport, $vdbname,      # ensembl variation db
      $limit);
 
-  GetOptions('dshost=s'   => \$dshost,
-             'dsuser=s'   => \$dsuser,
-             'dspass=s'   => \$dspass,
-             'dsport=i'   => \$dsport,
-             'dsdbname=s' => \$dsdbname,
-             'chost=s'   => \$chost,
-             'cuser=s'   => \$cuser,
-             'cpass=s'   => \$cpass,
-             'cport=i'   => \$cport,
-             'cdbname=s' => \$cdbname,
-             'vhost=s'   => \$vhost,
-             'vuser=s'   => \$vuser,
-             'vpass=s'   => \$vpass,
-             'vport=i'   => \$vport,
-             'vdbname=s' => \$vdbname,
-             'tmpdir=s'  => \$ImportUtils::TMP_DIR,
-             'tmpfile=s' => \$ImportUtils::TMP_FILE,
-             'limit=i'   => \$limit,
-	     'alldiff=s' => \$ALLDIFF_FILE);
+  GetOptions('dshost=s'       => \$dshost,
+             'dsuser=s'       => \$dsuser,
+             'dspass=s'       => \$dspass,
+             'dsport=i'       => \$dsport,
+             'dsdbname=s'     => \$dsdbname,
+             'chost=s'        => \$chost,
+             'cuser=s'        => \$cuser,
+             'cpass=s'        => \$cpass,
+             'cport=i'        => \$cport,
+             'cdbname=s'      => \$cdbname,
+             'vhost=s'        => \$vhost,
+             'vuser=s'        => \$vuser,
+             'vpass=s'        => \$vpass,
+             'vport=i'        => \$vport,
+             'vdbname=s'      => \$vdbname,
+             'tmpdir=s'       => \$ImportUtils::TMP_DIR,
+             'tmpfile=s'      => \$ImportUtils::TMP_FILE,
+             'limit=i'        => \$limit,
+	     'mapping_file=s' => \$MAPPING_FILE);
 
   $dshost   ||= 'cbi2.internal.sanger.ac.uk';
   $dsdbname ||= 'dbSNP_124';
@@ -62,10 +62,10 @@ my $dbCore;
 
   $chost    ||= 'ecs2';
   $cuser    ||= 'ensro';
-  $cport    ||= 3365;
+  $cport    ||= 3364;
 
   $vhost    ||= 'ecs2';
-  $vport    ||= 3362;
+  $vport    ||= 3366;
   $vuser    ||= 'ensadmin';
 
   usage('-cdbname argument is required.') if(!$cdbname);
@@ -112,19 +112,19 @@ my $SPECIES_PREFIX = get_species_prefix($TAX_ID);
 
 #create the dbSNP object for the specie we want to dump the data
 if ($SPECIES_PREFIX eq 'dr'){
-    if (!$ALLDIFF_FILE) {throw ("file with mappings not provided")}
+    if (!$MAPPING_FILE) {throw ("file with mappings not provided")}
     #danio rerio (zebra-fish)
-    my $zebrafish = dbSNP::Zebrafish->new(-dbSNP => $dbSNP,
-					  -dbCore => $dbCore,
-					  -dbVariation => $dbVar,					   
-					  -tmpdir => $TMP_DIR,
-					  -tmpfile => $TMP_FILE,
-					  -limit => $LIMIT_SQL,
-					  -alldiff => $ALLDIFF_FILE,
-					  -taxID => $TAX_ID
-					  );
+    my $zebrafish = dbSNP::MappingChromosome->new(-dbSNP => $dbSNP,
+						  -dbCore => $dbCore,
+						  -dbVariation => $dbVar,					   
+						  -tmpdir => $TMP_DIR,
+						  -tmpfile => $TMP_FILE,
+						  -limit => $LIMIT_SQL,
+						  -mapping_file => $MAPPING_FILE,
+						  -taxID => $TAX_ID
+						 );
     $zebrafish->dump_dbSNP();
-}
+  }
 elsif ($SPECIES_PREFIX eq 'mm'){
     #mus-musculus (mouse)
     my $mouse = dbSNP::GenericContig->new(-dbSNP => $dbSNP,
@@ -303,7 +303,7 @@ sub usage {
       -limit <number>      limit the number of rows transfered for testing
       -tmpdir <dir>        temporary directory to use (with lots of space!)
       -tmpfile <filename>  temporary filename to use
-      -alldiff <filename>  file containing the mapping data for the zebrafish specie
+      -mapping_file <filename>  file containing the mapping data
 EOF
 
       die("\n$msg\n\n");
