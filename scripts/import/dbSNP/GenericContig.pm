@@ -183,6 +183,7 @@ sub population_table {
   debug("Dumping population data");
 
   # load Population data as populations
+    $self->{'dbSNP'}->do("SET SESSION group_concat_max_len = 10000");
 
   dumpSQL($self->{'dbSNP'}, qq{SELECT DISTINCT concat(p.handle, ':', p.loc_pop_id),
                     p.pop_id, pc.pop_class_id, GROUP_CONCAT(pl.line)
@@ -195,7 +196,7 @@ sub population_table {
 
   debug("Loading sample data");
 
-  create_and_load( $self->{'dbVariation'}, "tmp_pop", "name", "pop_id i*", "pop_class_id i*", "description" );
+  create_and_load( $self->{'dbVariation'}, "tmp_pop", "name", "pop_id i*", "pop_class_id i*", "description l" );
 
     #populate the Sample table with the populations
 
