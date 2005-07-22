@@ -133,8 +133,8 @@ sub dump_subSNPs {
 		AND   subsnp.subsnp_id = subsnplink.subsnp_id
 		AND   ov.var_id = subsnp.variation_id
 		AND   b.tax_id = $self->{'taxID'}
-	    $self->{'limit'}
-	} );
+	    $self->{'limit'}}, {mysql_use_result => 1});
+
     
     $sth->execute();
     
@@ -418,16 +418,20 @@ sub allele_table {
     # already has frequency
     
     debug("Loading other allele data");
+
     $self->{'dbVariation'}->do(qq{CREATE TABLE tmp_allele
-                  SELECT vs.variation_id as variation_id, tva.pop_id,
-                         IF(vs.substrand_reversed_flag,
-                            tra.rev_allele, tra.allele) as allele
-                  FROM   variation_synonym vs, tmp_var_allele tva,
-                         tmp_rev_allele tra
-                  LEFT JOIN allele a ON a.variation_id = vs.variation_id
-                  WHERE  tva.subsnp_id = vs.subsnp_id
-                  AND    tva.allele = tra.allele
-                  AND    a.allele_id is NULL});
+                   SELECT vs.variation_id as variation_id, tva.pop_id,
+                          IF(vs.substrand_reversed_flag,
+                             tra.rev_allele, tra.allele) as allele
+		   FROM   variation_synonym vs, tmp_var_allele tva,
+                          tmp_rev_allele tra
+		   WHERE  tva.subsnp_id = vs.subsnp_id
+                   AND    tva.allele = tra.allele 
+		   AND    tva.pop_id=0
+                   AND    NOT EXISTS ## excluding alleles that already in allele table
+                        (SELECT * FROM allele a where a.variation_id = vs.variation_id
+                         AND a.allele = tva.allele)});
+
 
     $self->{'dbVariation'}->do("ALTER TABLE tmp_allele ADD INDEX pop_id(pop_id)");
 
