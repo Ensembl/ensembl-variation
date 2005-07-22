@@ -131,7 +131,11 @@ sub create_and_load {
 
     if(defined($type) && $type =~ /i/) {
       push @col_defs, "$name INT";
-    } else {
+    } 
+    elsif (defined($type) && $type =~ /l/) {
+      push @col_defs, "$name TEXT";
+    } 
+    else {
       push @col_defs, "$name VARCHAR(255)";
     }
 
