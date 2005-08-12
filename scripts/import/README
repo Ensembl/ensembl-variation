@@ -1,0 +1,229 @@
+Populating an Ensembl Variation database with data from DBSNP
+======================================================================
+
+Checkout required scripts and APIs
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Set the working directory
+
+  $ cd /some/path/to/workdir
+  $ setenv BASEDIR $PWD
+
+Get bioperl code
+
+  $ cvs -d :pserver:cvs@cvs.open-bio.org:/home/repository/bioperl login
+    (pass cvs)
+
+  $ cvs -d :pserver:cvs@cvs.open-bio.org:/home/repository/bioperl \
+    co bioperl-live 
+
+Get ensembl-core code
+
+  $ cvs -d :ext:cvs.sanger.ac.uk:/cvsroot/ensembl co ensembl
+
+Get ensembl-variation code
+
+  $ cvs -d :ext:cvs.sanger.ac.uk:/cvsroot/ensembl co ensembl-variation
+
+Get ensembl-analysis code
+
+  $ cvs -d :ext:cvs.sanger.ac.uk:/cvsroot/ensembl co ensembl-pipeline
+
+Get ensembl-personal code (code may move to ensembl-variation in future)
+
+  $ cvs -d :ext:cvs.sanger.ac.uk:/cvsroot/ensembl co ensembl-personal
+
+Set the Perl environment
+
+  $ setenv PERL5LIB ${BASEDIR}/bioperl-live:${PERL5LIB}
+  $ setenv PERL5LIB ${BASEDIR}/ensembl/modules:${PERL5LIB}
+  $ setenv PERL5LIB ${BASEDIR}/ensembl-variation/modules:${PERL5LIB}
+  $ setenv PERL5LIB ${BASEDIR}/ensembl-analysis/modules:${PERL5LIB}
+  $ setenv PERL5LIB ${BASEDIR}/ensembl-personal/yuan:${PERL5LIB}
+  
+
+Configure databases
+~~~~~~~~~~~~~~~~~~~
+Variation databases are created on a per-species basis. For
+convenience, the species in this README is represented as an
+environment variable;
+
+  $ setenv species 'homo_sapiens'
+
+Pick a mysql instance and create an empty ensembl variation database;
+
+  $ setenv variation_db ${USER}_${species}_variation_test
+
+  $ mysql --host=myhost --port=3306" --user=${USER} --password \
+    -e "create database ${variation_db}
+
+And load the schema;
+
+  $ mysql --host=myhost --port=3306" --user=${USER} --password \
+    whs_oryza_sativa_variation_31 \
+    < $BASEDIR/ensembl-variation/sql/table.sql
+
+
+Configure import script
+~~~~~~~~~~~~~~~~~~~~~~~
+Go to script dir;
+
+  $ cd $BASEDIR/ensembl-variation/ensembl-variation/scripts/import/
+
+
+Look at the following file, and determine whether an appropriate
+SPECIES_PREFIX is configured;
+
+  $ <editor> dbSNP.pl
+
+Add a new "if ($SPECIES_PREFIX eq 'xx')" block if required. The most
+basic, used for importing variations (e.g. SNPs) and flanking
+sequences only may resemble;
+
+  my $rice = dbSNP::GenericContig->new(-dbSNP => $dbSNP,
+                                       -dbCore => $dbCore,
+                                       -dbVariation => $dbVar,
+                                       -tmpdir => $TMP_DIR,
+                                       -tmpfile => $TMP_FILE,
+                                       -limit => $LIMIT_SQL,
+                                       -taxID => $TAX_ID,
+                                       -species_prefix => $SPECIES_PREFIX
+                                       );
+  $rice->dump_dbSNP();
+
+Next you need to edit the dbSNP::GenericContig::dump_dbSNP module so
+that only appropriate data gets dumped. For the simple case of
+importing variations (e.g. SNPs) and flanking sequences only, the code
+is;
+
+  $ <editor> dbSNP/GenericContig.pm
+  sub dump_dbSNP{
+    my $self = shift;
+    $self->source_table();
+    $self->variation_table();
+    $self->allele_table();
+    $self->flanking_sequence_table();
+    $self->cleanup();
+  }
+
+
+Run import script
+~~~~~~~~~~~~~~~~~
+Go to script dir;
+
+  $ cd $BASEDIR/ensembl-variation/scripts/import/
+
+Make sure dbSNP.pl script can run (should get usage info);
+
+  $ /usr/local/ensembl/bin/perl dbSNP.pl
+
+Make sure dbSNP.pl script can run over lsf (more usage info);
+
+  $bsub -I /usr/local/ensembl/bin/perl dbSNP.pl
+
+Run the import script for real (substitute values below for real ones);
+
+  $ bsub -e errors.txt -o dbSNP_output.txt     \
+    -K /usr/local/ensembl/bin/perl dbSNP.pl    \
+    -dsdbname=dbSNP_124                        \
+    -dshost=cbi2 -dsport=3306 -dsuser=dbsnpro  \
+    -cdbname whs_oryza_sativa_core_31      \
+    -chost=ecs2 -cport=3361 -cuser=ensro       \
+    -vdbname whs_oryza_sativa_variation_31 \
+    -vhost=ecs2 -vport=3361 -vuser=ensadmin -vpass=ensembl \
+    -tmpdir=/ecs2/work5/whs/tmp -tmpfile=temp_file.txt
+
+Check the errors.txt file for, erm, errors?
+
+  $ cat errors.txt
+
+
+Dump the flanking sequences into a text file
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Go to the script dir;
+
+  $ cd $BASEDIR/ensembl-personal/yuan/snp/scripts
+
+Run the input file generation program. This will generate a fasta file
+per 10000 SNPs in the current working dir;
+
+  $ bsub -e bsub_errors.txt -o bsub_output.txt           \
+    -K /usr/local/ensembl/bin/perl generate_input_seq.pl \
+    -cdbname whs_oryza_sativa_core_31                \
+    -chost=ecs2 -cport=3361 -cuser=ensro                 \
+    -vdbname whs_oryza_sativa_variation_31           \
+    -vhost=ecs2 -vport=3361 -vuser=ensro
+
+Finally, move the query_seq files into an appropriate dir, e.g.;
+
+  $ mkdir -p $BASEDIR/data/oryza_sativa/fasta/snp
+  $ cd $BASEDIR/data/oryza_sativa/fasta/snp
+  $ mv $BASEDIR/ensembl-personal/yuan/snp/scripts/*_query_seq .
+
+
+Prepare the target sequence
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+The target sequence comprise of fasta files, one per chromosome for
+the target species, in a single directory. The files should be named
+1.fa, 2.fa etc. If the files are not already available, they will need
+to be dumped from the core ensembl database.
+
+
+Generate the ssaha alignments
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Make sure that the following file exists
+
+ $ ls $BASEDIR/ensembl-analysis/modules/Bio/EnsEMBL/Analysis/Config/General.pm
+
+If not, copy the General.pm.example file, and check that %Config is
+correct for your system.
+
+Go to the following script dir
+
+  $ cd $BASEDIR/ensembl-personal/yuan/snp/scripts
+
+Run the bsub_ssaha script. The following example will cause the first
+10 snp chunk files to be aligned against the target sequence using
+ssaha. A second crossmatch step extends the seeds generated by ssaha
+by alignment with the genome.
+
+  $ /usr/local/ensembl/perl bsub_ssaha.pl /
+  -input_dir $BASEDIR/data/fasta/snp /
+  -target_dir $BASEDIR/data/fasta/dna /
+  -cdbname whs_oryza_sativa_core_31
+  -ssaha_here
+  -start 1 -end 10
+
+The runs typically takes several hours. Check the bsub output and
+error files after the job completed to ensure that it was
+successful. These are out_N and error_N, and can be very large. Keep
+an eye on free disk space and clean up as needed. Rerun failed jobs
+using bsub_ssaha's -start and -end params. The end product will be a
+set of map_N_query_seq files containing the filtered, processed snp
+locations. Note; the proportion of SNPs that maped is indicated at the
+end of the out_N file. 
+
+
+Load the SNP features into the Variation DB
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Concatenate all mapping files into a single file;
+
+  $ cat map_*_ > map_ALL_
+
+Go to the following script dir;
+
+  $ cd $BASEDIR/ensembl-variation/scripts/import
+
+Run the following script;
+
+  $ bsub -o out_load_mapping -e error_load_mapping \
+    /usr/local/ensembl/bin/perl load_mapping2vf.pl \
+    -cdbname whs_oryza_sativa_core_31              \
+    -chost=ecs2 -cport=3361 -cuser=ro              \
+    -vdbname whs_oryza_sativa_variation_31         \
+    -vhost=ecs2 -vport=3361 -vuser=rw              \
+    -alldiff $BASEDIR/ensembl-personal/yuan/snp/scripts/map_<N>_query_seq
+    
+
+
+
+
