@@ -1,0 +1,149 @@
+use Bio::EnsEMBL::DBSQL::DBAdaptor;
+use Bio::EnsEMBL::Variation::DBSQL::DBAdaptor;
+use Bio::EnsEMBL::Registry;
+
+Bio::EnsEMBL::DBSQL::DBAdaptor->new
+  ( '-species' => "Homo_sapiens",
+    '-group'   => "core",
+    '-port'    => 3365,
+    '-host'    => 'ecs2',
+    '-user'    => 'ensro',
+    '-pass'    => '',
+    '-dbname'  => 'homo_sapiens_core_32_35e', );
+
+Bio::EnsEMBL::DBSQL::DBAdaptor->new
+  ( '-species' => "Homo_sapiens",
+    '-group'   => "variation",
+    '-port'    => 3306,
+    '-host'    => 'ia64g',
+    '-user'    => 'ensadmin',
+    '-pass'    => 'ensembl',
+    '-dbname'  => 'yuan_hum_test_33', );
+
+Bio::EnsEMBL::DBSQL::DBAdaptor->new
+  ( '-species' => "dbsnp",
+    '-group'   => 'dbsnp',
+    '-port'    => 3306,
+    '-host'    => 'cbi2',
+    '-user'    => 'dbsnpro',
+    '-pass'    => '',
+    '-dbname'  => 'dbSNP_124', );
+
+Bio::EnsEMBL::DBSQL::DBAdaptor->new
+  ( '-species' => "Mus_musculus",
+    '-group'   => "core",
+    '-port'    => 3365,
+    '-host'    => 'ecs2',
+    '-user'    => 'ensro',
+    '-pass'    => '',
+    '-dbname'  => 'mus_musculus_core_32_34', );
+
+Bio::EnsEMBL::DBSQL::DBAdaptor->new
+  ( '-species' => "Mus_musculus",
+    '-group'   => "variation",
+    '-port'    => 3306,
+    '-host'    => 'ia64g',
+    '-user'    => 'ensadmin',
+    '-pass'    => 'ensembl',
+    '-dbname'  => 'yuan_mouse_var_33', );
+
+Bio::EnsEMBL::DBSQL::DBAdaptor->new
+  ( '-species' => "Rattus_norvegicus",
+    '-group'   => "core",
+    '-port'    => 3365,
+    '-host'    => 'ecs2',
+    '-user'    => 'ensro',
+    '-pass'    => '',
+    '-dbname'  => 'rattus_norvegicus_core_32_34b', );
+
+Bio::EnsEMBL::DBSQL::DBAdaptor->new
+  ( '-species' => "Rattus_norvegicus",
+    '-group'   => "variation",
+    '-port'    => 3306,
+    '-host'    => 'ia64g',
+    '-user'    => 'ensadmin',
+    '-pass'    => 'ensembl',
+    '-dbname'  => 'yuan_rat_test_33a', );
+
+Bio::EnsEMBL::DBSQL::DBAdaptor->new
+  ( '-species' => "Gallus_gallus",
+    '-group'   => "core",
+    '-port'    => 3365,
+    '-host'    => 'ecs2',
+    '-user'    => 'ensro',
+    '-pass'    => '',
+    '-dbname'  => 'gallus_gallus_core_32_1h', );
+
+Bio::EnsEMBL::DBSQL::DBAdaptor->new
+  ( '-species' => "Gallus_gallus",
+    '-group'   => "variation",
+    '-port'    => 3306,
+    '-host'    => 'ia64g',
+    '-user'    => 'ensadmin',
+    '-pass'    => 'ensembl',
+    '-dbname'  => 'yuan_chicken_var_33', );
+
+Bio::EnsEMBL::DBSQL::DBAdaptor->new
+  ( '-species' => "Danio_rerio",
+    '-group'   => "core",
+    '-port'    => 3365,
+    '-host'    => 'ecs2',
+    '-user'    => 'ensro',
+    '-pass'    => '',
+    '-dbname'  => 'danio_rerio_core_32_5', );
+
+Bio::EnsEMBL::DBSQL::DBAdaptor->new
+  ( '-species' => "Danio_rerio",
+    '-group'   => "variation",
+    '-port'    => 3306,
+    '-host'    => 'ia64g',
+    '-user'    => 'ensadmin',
+    '-pass'    => 'ensembl',
+    '-dbname'  => 'yuan_zfish_var_33', );
+
+Bio::EnsEMBL::DBSQL::DBAdaptor->new
+  ( '-species' => "Canis_familiaris",
+    '-group'   => "core",
+    '-port'    => 3365,
+    '-host'    => 'ecs2',
+    '-user'    => 'ensro',
+    '-pass'    => '',
+    '-dbname'  => 'canis_familiaris_core_32_1d', );
+
+Bio::EnsEMBL::DBSQL::DBAdaptor->new
+  ( '-species' => "Canis_familiaris",
+    '-group'   => "variation",
+    '-port'    => 3306,
+    '-host'    => 'ia64g',
+    '-user'    => 'ensadmin',
+    '-pass'    => 'ensembl',
+    '-dbname'  => 'yuan_dog_var_33', );
+
+Bio::EnsEMBL::DBSQL::DBAdaptor->new
+  ( '-species' => "Anopheles_gambiae",
+    '-group'   => "core",
+    '-port'    => 3365,
+    '-host'    => 'ecs2',
+    '-user'    => 'ensro',
+    '-pass'    => '',
+    '-dbname'  => 'anopheles_gambiae_core_32_2g', );
+
+Bio::EnsEMBL::DBSQL::DBAdaptor->new
+  ( '-species' => "Anopheles_gambiae",
+    '-group'   => "variation",
+    '-port'    => 3306,
+    '-host'    => 'ia64g',
+    '-user'    => 'ensadmin',
+    '-pass'    => 'ensembl',
+    '-dbname'  => 'yuan_anopheles_var_33', );
+
+
+Bio::EnsEMBL::Registry->add_alias("Homo_sapiens","human");
+Bio::EnsEMBL::Registry->add_alias("Mus_musculus","mouse");
+Bio::EnsEMBL::Registry->add_alias("Rattus_norvegicus","rat");
+Bio::EnsEMBL::Registry->add_alias("Gallus_gallus","chicken");
+Bio::EnsEMBL::Registry->add_alias("Canis_familiaris","dog");
+Bio::EnsEMBL::Registry->add_alias("Danio_rerio","zebrafish");
+Bio::EnsEMBL::Registry->add_alias("Anopheles_gambiae","mosquitos");
+
+1;
