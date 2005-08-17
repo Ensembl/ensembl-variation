@@ -16,13 +16,14 @@ sub new {
   my $caller = shift;
   my $class = ref($caller) || $caller;
 
-  my ($dbSNP, $dbCore, $dbVariation, $tmp_dir, $tmp_file, $limit, $mapping_file, $taxID, $species_prefix) =
-        rearrange([qw(DBSNP DBCORE DBVARIATION TMPDIR TMPFILE LIMIT MAPPING_FILE TAXID SPECIES_PREFIX)],@_);
+  my ($dbSNP, $dbCore, $dbVariation, $snp_dbname, $tmp_dir, $tmp_file, $limit, $mapping_file, $taxID, $species_prefix) =
+        rearrange([qw(DBSNP DBCORE DBVARIATION SNP_DBNAME TMPDIR TMPFILE LIMIT MAPPING_FILE TAXID SPECIES_PREFIX)],@_);
 
 
   return bless {'dbSNP' => $dbSNP,
 		'dbCore' => $dbCore,
 		'dbVariation' => $dbVariation,
+		'snp_dbname' => $snp_dbname,
 		'tmpdir' => $tmp_dir,
 		'tmpfile' => $tmp_file,
 		'limit' => $limit,
@@ -36,17 +37,17 @@ sub dump_dbSNP{
     my $self = shift;
     
 
-    #$self->source_table();
-    #$self->population_table();
-    #$self->individual_table();
+    $self->source_table();
+    $self->population_table();
+    $self->individual_table();
     $self->variation_table();
-    #$self->individual_genotypes();
-    #$self->population_genotypes();
+    $self->individual_genotypes();
+    $self->population_genotypes();
     $self->allele_table();
     #$self->flanking_sequence_table();
     #$self->variation_feature();
     #$self->variation_group();
-    #$self->allele_group();
+    $self->allele_group();
 
     #$self->cleanup();
 
@@ -54,7 +55,9 @@ sub dump_dbSNP{
 
 sub source_table {
     my $self = shift;
-    my ($dbname,$version) = split /\_/,$self->{'dbSNP'}->dbname(); #get the version of the dbSNP release
+    #my ($dbname,$version) = split /\_/,$self->{'dbSNP'}->dbname(); #get the version of the dbSNP release
+    my ($dbname,$version) = split /\_/,$self->{'snp_dbname'};
+    
     $self->{'dbVariation'}->do(qq{INSERT INTO source (source_id,name,version) VALUES (1,"$dbname",$version)});
 
 }
@@ -274,7 +277,7 @@ sub individual_table {
   # to make things easier keep dbSNPs individual.ind_id as our individual_id
 
   #add the individual_id column in the sample table
-  $self->{'dbVariation'}->do("ALTER TABLE sample ADD column individual_id int");   
+  $self->{'dbVariation'}->do("ALTER TABLE sample ADD column individual_id int, add index ind_idx (individual_id)");   
 
   #and the individual data in the sample table
   $self->{'dbVariation'}->do(qq{INSERT INTO sample (individual_id, name, description)
@@ -288,12 +291,17 @@ sub individual_table {
 				     IF(tp.ma_ind_id > 0, tp.ma_ind_id, null),
 				     IF(tp.sex = 'M', 'Male',
 				        IF(tp.sex = 'F', 'Female', 'Unknown'))
-				    FROM sample s 
+				    FROM sample s
 				      LEFT JOIN tmp_ped tp ON s.individual_id = tp.ind_id
 				      WHERE s.individual_id is not null
 				});
 
     $self->{'dbVariation'}->do("DROP table tmp_ind");
+
+    #need to convert the father_individual_id and mother_individual_id in father_sample_individual_id and mother_sample_individual_id
+    $self->{'dbVariation'}->do("UPDATE individual i, sample s, individual i2 set i.father_individual_sample_id = s.sample_id where i.father_individual_sample_id = s.individual_id and i2.sample_id = s.sample_id");
+   $self->{'dbVariation'}->do("UPDATE individual i, sample s, individual i2 set i.mother_individual_sample_id = s.sample_id where i.mother_individual_sample_id = s.individual_id and i2.sample_id = s.sample_id");
+
     $self->{'dbVariation'}->do("DROP table tmp_ped");
     
     #necessary to fill in the individual_population table with the relation between individual and populations
@@ -333,56 +341,55 @@ return;
 sub allele_table {
     my $self = shift;
 
-  debug("Dumping allele data");
+ debug("Dumping allele data");
 
-     # load a temp table that can be used to reverse compliment alleles
-     # we place subsnps in the same orientation as the refSNP
-    dumpSQL($self->{'dbSNP'}, qq(SELECT a1.allele, a2.allele
- 				 FROM Allele a1, Allele a2
- 				 WHERE a1.rev_allele_id = a2.allele_id));
+    # load a temp table that can be used to reverse compliment alleles
+    # we place subsnps in the same orientation as the refSNP
+   dumpSQL($self->{'dbSNP'}, qq(SELECT a1.allele_id, a1.allele, a2.allele
+				 FROM Allele a1, Allele a2
+				 WHERE a1.rev_allele_id = a2.allele_id));
 
-    create_and_load($self->{'dbVariation'}, "tmp_rev_allele", "allele *", "rev_allele");
+   create_and_load($self->{'dbVariation'}, "tmp_rev_allele", "allele_id *","allele *", "rev_allele");
 
-  # first load the allele data for alleles that we have population and
-  # frequency data for
+ # first load the allele data for alleles that we have population and
+ # frequency data for
 
-  dumpSQL($self->{'dbSNP'}, qq(SELECT afsp.subsnp_id, afsp.pop_id, a.allele_id, a.allele, afsp.freq
-			       FROM   AlleleFreqBySsPop afsp, Allele a, SubSNP ss
-			       WHERE  afsp.allele_id = a.allele_id
-			       AND    afsp.subsnp_id = ss.subsnp_id
+ dumpSQL($self->{'dbSNP'}, qq(SELECT afsp.subsnp_id, afsp.pop_id, afsp.allele_id, afsp.freq
+			       FROM   AlleleFreqBySsPop afsp, SubSNP ss
+			       WHERE    afsp.subsnp_id = ss.subsnp_id
 			       AND    ss.tax_id = $self->{'taxID'}
 			       $self->{'limit'}));
 
-    debug("Loading allele frequency data");
+   debug("Loading allele frequency data");
 
-    create_and_load($self->{'dbVariation'}, "tmp_allele", "subsnp_id i*", "pop_id i*",
-		    "allele_id i*", "allele", "freq");
-#
-   debug("Creating allele table");
+   create_and_load($self->{'dbVariation'}, "tmp_allele", "subsnp_id i*", "pop_id i*",
+		    "allele_id i*", "freq");
+
+  debug("Creating allele table");
+  
+  #necessary to create a unique index to simulate the GROUP BY clause
+  $self->{'dbVariation'}->do(qq{CREATE UNIQUE INDEX unique_allele_idx ON allele (variation_id,allele(2),frequency,sample_id)});
+
+   $self->{'dbVariation'}->do(qq(INSERT IGNORE INTO allele (variation_id, allele,frequency, sample_id)
+               SELECT vs.variation_id,
+                      IF(vs.substrand_reversed_flag,
+                         tra.rev_allele,tra.allele) as allele,
+                      ta.freq, s.sample_id
+               FROM   tmp_allele ta, tmp_rev_allele tra, variation_synonym vs,
+                      sample s
+               WHERE  ta.subsnp_id = vs.subsnp_id
+	       AND    ta.allele_id = tra.allele_id
+	       AND    ta.pop_id = s.pop_id));
+
+   $self->{'dbVariation'}->do("ALTER TABLE allele ENABLE KEYS"); #after ignoring in the insertion, we must enable keys again
    
-   #necessary to create a unique index to simulate the GROUP BY clause
-   $self->{'dbVariation'}->do(qq{CREATE UNIQUE INDEX unique_allele_idx ON allele (variation_id,allele(2),frequency,sample_id)});
-
-    $self->{'dbVariation'}->do(qq(INSERT IGNORE INTO allele (variation_id, allele,frequency, sample_id)
-                SELECT vs.variation_id,
-                       IF(vs.substrand_reversed_flag,
-                          tra.rev_allele,tra.allele) as allele,
-                       ta.freq, s.sample_id
-                FROM   tmp_allele ta, tmp_rev_allele tra, variation_synonym vs,
-                       sample s
-                WHERE  ta.subsnp_id = vs.subsnp_id
-                AND    ta.allele = tra.allele
-		AND    ta.pop_id = s.pop_id));
-
-    $self->{'dbVariation'}->do("ALTER TABLE allele ENABLE KEYS"); #after ignoring in the insertion, we must enable keys again
-    
-    $self->{'dbVariation'}->do("DROP TABLE tmp_allele");    
-    #going to add the other allele for the variations with 1 allele (have frequency 1 but no frequency for the other allele)
-    debug("Loading allele data without frequency");
-    
-    $self->{'dbVariation'}->do("CREATE TABLE tmp_allele (variation_id int, allele text, primary key (variation_id,allele(10)))");
-    $self->{'dbVariation'}->do("INSERT IGNORE INTO tmp_allele SELECT variation_id, allele FROM allele");
-    $self->{'dbVariation'}->do(qq{CREATE TABLE tmp_unique_allele 
+   $self->{'dbVariation'}->do("DROP TABLE tmp_allele");    
+   #going to add the other allele for the variations with 1 allele (have frequency 1 but no frequency for the other allele)
+   debug("Loading allele data without frequency");
+   
+   $self->{'dbVariation'}->do("CREATE TABLE tmp_allele (variation_id int, allele text, primary key (variation_id,allele(10)))");
+   $self->{'dbVariation'}->do("INSERT IGNORE INTO tmp_allele SELECT variation_id, allele FROM allele");
+   $self->{'dbVariation'}->do(qq{CREATE TABLE tmp_unique_allele 
 				      SELECT ta.variation_id,  ta.allele, vs.snp_id
 				         FROM variation vs,
 				                    (SELECT variation_id, allele 
@@ -391,59 +398,59 @@ sub allele_table {
 						     HAVING COUNT(*) = 1) as ta
 					 WHERE ta.variation_id = vs.variation_id});
 
-    $self->{'dbVariation'}->do("CREATE INDEX tmp_unique_allele_idx on tmp_unique_allele (variation_id)");
-    $self->{'dbVariation'}->do("DROP TABLE tmp_allele");
-    #create table with unique alleles from dbSNP
-    $self->{'dbVariation'}->do("CREATE TABLE tmp_allele (refsnp_id int, allele text, primary key (refsnp_id,allele(10)))");
+   $self->{'dbVariation'}->do("CREATE INDEX tmp_unique_allele_idx on tmp_unique_allele (variation_id)");
+   $self->{'dbVariation'}->do("DROP TABLE tmp_allele");
+   #create table with unique alleles from dbSNP
+   $self->{'dbVariation'}->do("CREATE TABLE tmp_allele (refsnp_id int, allele text, primary key (refsnp_id,allele(10)))");
 
-    $self->{'dbVariation'}->do(qq{INSERT IGNORE INTO tmp_allele
+   $self->{'dbVariation'}->do(qq{INSERT IGNORE INTO tmp_allele
 				      SELECT tva.refsnp_id, IF (tva.substrand_reversed_flag, tra.rev_allele,tva.allele) as allele
 				      FROM tmp_var_allele tva, tmp_rev_allele tra, tmp_unique_allele tua
 				      WHERE tva.allele = tra.allele
 				      AND tua.snp_id = tva.refsnp_id
 				  });
 
-    $self->{'dbVariation'}->do(qq{INSERT IGNORE INTO allele (variation_id, allele, frequency)
+   $self->{'dbVariation'}->do(qq{INSERT IGNORE INTO allele (variation_id, allele, frequency)
 						  SELECT tua.variation_id, ta.allele,0
 						  FROM tmp_unique_allele tua, tmp_allele ta
 						  WHERE tua.snp_id = ta.refsnp_id
 						  AND tua.allele <> ta.allele
 						  });
-    #remove the index
-    $self->{'dbVariation'}->do("DROP INDEX unique_allele_idx ON allele");    
-    $self->{'dbVariation'}->do("DROP TABLE tmp_unique_allele");
-    $self->{'dbVariation'}->do("DROP TABLE tmp_allele");
-    # load remaining allele data which we do not have frequency data for
-    # this will not import alleles without frequency for a variation which
-    # already has frequency
-    
-    debug("Loading other allele data");
+   #remove the index
+   $self->{'dbVariation'}->do("DROP INDEX unique_allele_idx ON allele");    
+   $self->{'dbVariation'}->do("DROP TABLE tmp_unique_allele");
+   $self->{'dbVariation'}->do("DROP TABLE tmp_allele");
+   # load remaining allele data which we do not have frequency data for
+   # this will not import alleles without frequency for a variation which
+   # already has frequency
+   
+   debug("Loading other allele data");
 
-    $self->{'dbVariation'}->do(qq{CREATE TABLE tmp_allele
-                   SELECT vs.variation_id as variation_id, tva.pop_id,
-                          IF(vs.substrand_reversed_flag,
-                             tra.rev_allele, tra.allele) as allele
+   $self->{'dbVariation'}->do(qq{CREATE TABLE tmp_allele
+		   SELECT vs.variation_id as variation_id, tva.pop_id,
+                         IF(vs.substrand_reversed_flag,
+                            tra.rev_allele, tra.allele) as allele
 		   FROM   variation_synonym vs, tmp_var_allele tva,
-                          tmp_rev_allele tra
+                         tmp_rev_allele tra
 		   WHERE  tva.subsnp_id = vs.subsnp_id
                    AND    tva.allele = tra.allele 
                    AND    NOT EXISTS ## excluding alleles that already in allele table
-                        (SELECT * FROM allele a where a.variation_id = vs.variation_id
-                         AND a.allele = IF(tva.substrand_reversed_flag,tra.rev_allele, tra.allele))});
+                       (SELECT * FROM allele a where a.variation_id = vs.variation_id
+                        AND a.allele = IF(tva.substrand_reversed_flag,tra.rev_allele, tra.allele))});
 
 
-    $self->{'dbVariation'}->do("ALTER TABLE tmp_allele ADD INDEX pop_id(pop_id)");
+   $self->{'dbVariation'}->do("ALTER TABLE tmp_allele ADD INDEX pop_id(pop_id)");
 
-    $self->{'dbVariation'}->do(qq{INSERT INTO allele (variation_id, allele,
+   $self->{'dbVariation'}->do(qq{INSERT INTO allele (variation_id, allele,
                                       frequency, sample_id)
                   SELECT ta.variation_id, ta.allele, null, s.sample_id
                   FROM   tmp_allele ta
                   LEFT JOIN sample s ON s.pop_id = ta.pop_id
                   GROUP BY ta.variation_id, s.sample_id, ta.allele });
 
-  #$self->{'dbVariation'}->do("DROP TABLE tmp_rev_allele");
-  #$self->{'dbVariation'}->do("DROP TABLE tmp_var_allele");
-  #$self->{'dbVariation'}->do("DROP TABLE tmp_allele");
+  $self->{'dbVariation'}->do("DROP TABLE tmp_rev_allele");
+  $self->{'dbVariation'}->do("DROP TABLE tmp_var_allele");
+  $self->{'dbVariation'}->do("DROP TABLE tmp_allele");
 }
 
 
