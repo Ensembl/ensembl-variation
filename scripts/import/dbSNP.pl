@@ -10,6 +10,8 @@ use warnings;
 use DBI;
 use DBH;
 use Getopt::Long;
+use Bio::EnsEMBL::Registry;
+use FindBin qw( $Bin );
 
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Variation::DBSQL::DBAdaptor;
@@ -25,187 +27,156 @@ use dbSNP::Human;
 
 my ($TAX_ID, $LIMIT_SQL, $TMP_DIR, $TMP_FILE, $MAPPING_FILE);
 
-my $dbSNP;
-my $dbVar;
-my $dbCore;
+my ($species,$limit);
+my($dshost, $dsuser, $dspass, $dsport, $dsdbname);
 
-{
-  my($dshost, $dsuser, $dspass, $dsport, $dsdbname, # dbSNP db
-     $chost, $cuser, $cpass, $cport, $cdbname,      # ensembl core db
-     $vhost, $vuser, $vpass, $vport, $vdbname,      # ensembl variation db
-     $limit);
+GetOptions('species=s'      => \$species,
+	   'tmpdir=s'       => \$ImportUtils::TMP_DIR,
+	   'tmpfile=s'      => \$ImportUtils::TMP_FILE,
+	   'limit=i'        => \$limit,
+	   'mapping_file=s' => \$MAPPING_FILE);
 
-  GetOptions('dshost=s'       => \$dshost,
-             'dsuser=s'       => \$dsuser,
-             'dspass=s'       => \$dspass,
-             'dsport=i'       => \$dsport,
-             'dsdbname=s'     => \$dsdbname,
-             'chost=s'        => \$chost,
-             'cuser=s'        => \$cuser,
-             'cpass=s'        => \$cpass,
-             'cport=i'        => \$cport,
-             'cdbname=s'      => \$cdbname,
-             'vhost=s'        => \$vhost,
-             'vuser=s'        => \$vuser,
-             'vpass=s'        => \$vpass,
-             'vport=i'        => \$vport,
-             'vdbname=s'      => \$vdbname,
-             'tmpdir=s'       => \$ImportUtils::TMP_DIR,
-             'tmpfile=s'      => \$ImportUtils::TMP_FILE,
-             'limit=i'        => \$limit,
-	     'mapping_file=s' => \$MAPPING_FILE);
+warn("Make sure you have a updated ensembl.registry file!\n");
 
-  $dshost   ||= 'cbi2.internal.sanger.ac.uk';
-  $dsdbname ||= 'dbSNP_124';
-  $dsuser   ||= 'dbsnpro';
-  $dsport   ||= 3306;
+my $registry_file ||= $Bin . "/ensembl.registry";
 
-  $chost    ||= 'ecs2';
-  $cuser    ||= 'ensro';
-  $cport    ||= 3364;
+Bio::EnsEMBL::Registry->load_all( $registry_file );
 
-  $vhost    ||= 'ecs2';
-  $vport    ||= 3366;
-  $vuser    ||= 'ensadmin';
-
-  usage('-cdbname argument is required.') if(!$cdbname);
-  usage('-vdbname argument is required.') if(!$vdbname);
-
-  $TMP_DIR  = $ImportUtils::TMP_DIR;
-  $TMP_FILE = $ImportUtils::TMP_FILE;
+my $cdba = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'core');
+my $vdba = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'variation');
+my $sdba = Bio::EnsEMBL::Registry->get_DBAdaptor('dbsnp','dbsnp');
 
 
-  $LIMIT_SQL = ($limit) ? " LIMIT $limit " : '';
+my $dbSNP = $sdba->dbc->db_handle; # Equivalent to direct connection
+my $dbVar = $vdba->dbc->db_handle;
+my $dbCore = $cdba;
 
-  $dbSNP = DBH->connect
-    ("DBI:mysql:host=$dshost;dbname=$dsdbname;port=$dsport",$dsuser, $dspass,
-    {'RaiseError' => 1});
-  die("Could not connect to dbSNP db: $!") if(!$dbSNP);
-
-  $dbSNP->{mysql_auto_reconnect} = 1;
-
-  $dbSNP->do("SET SESSION wait_timeout = 2678200");
-
-  $dbVar = DBH->connect
-      ("DBI:mysql:host=$vhost;dbname=$vdbname;port=$vport",$vuser, $vpass,
-       {'RaiseError' => 1});
-  die("Could not connect to variation database: $!") if(!$dbVar);
-
-  $dbCore = Bio::EnsEMBL::DBSQL::DBAdaptor->new
-    (-host   => $chost,
-     -user   => $cuser,
-     -pass   => $cpass,
-     -port   => $cport,
-     -dbname => $cdbname);
-
-  my $mc = $dbCore->get_MetaContainer();
-  my $species = $mc->get_Species();
-
-  throw("Unable to determine species from core database.") if(!$species);
-
-  $TAX_ID = $mc->get_taxonomy_id();
+$TMP_DIR  = $ImportUtils::TMP_DIR;
+$TMP_FILE = $ImportUtils::TMP_FILE;
 
 
-}
+$LIMIT_SQL = ($limit) ? " LIMIT $limit " : '';
+
+$dbSNP->{mysql_auto_reconnect} = 1;
+
+$dbSNP->do("SET SESSION wait_timeout = 2678200");
+
+my $mc = $cdba->get_MetaContainer();
+my $my_species = $mc->get_Species();
+
+throw("Unable to determine species from core database.") if(!$my_species);
+
+$TAX_ID = $mc->get_taxonomy_id();
+
+
+
 
 my $SPECIES_PREFIX = get_species_prefix($TAX_ID);
 
 #create the dbSNP object for the specie we want to dump the data
 if ($SPECIES_PREFIX eq 'dr'){
-    if (!$MAPPING_FILE) {throw ("file with mappings not provided")}
-    #danio rerio (zebra-fish)
-    my $zebrafish = dbSNP::MappingChromosome->new(-dbSNP => $dbSNP,
-						  -dbCore => $dbCore,
-						  -dbVariation => $dbVar,					   
-						  -tmpdir => $TMP_DIR,
-						  -tmpfile => $TMP_FILE,
-						  -limit => $LIMIT_SQL,
-						  -mapping_file => $MAPPING_FILE,
-						  -taxID => $TAX_ID
-						 );
-    $zebrafish->dump_dbSNP();
-  }
-elsif ($SPECIES_PREFIX eq 'mm'){
-    #mus-musculus (mouse)
-    my $mouse = dbSNP::GenericContig->new(-dbSNP => $dbSNP,
-					  -dbCore => $dbCore,
-					  -dbVariation => $dbVar,
-					  -tmpdir => $TMP_DIR,
-					  -tmpfile => $TMP_FILE,
-					  -limit => $LIMIT_SQL,
-					  -taxID => $TAX_ID,
-					  -species_prefix => $SPECIES_PREFIX
-					  );
-    $mouse->dump_dbSNP();
-    add_strains($dbVar); #add strain information
-}
-elsif ($SPECIES_PREFIX eq 'gga'){
-    #gallus gallus (chicken)
-    my $chicken = dbSNP::GenericChromosome->new(-dbSNP => $dbSNP,
+  if (!$MAPPING_FILE) {throw ("file with mappings not provided")}
+  #danio rerio (zebra-fish)
+  my $zebrafish = dbSNP::MappingChromosome->new(-dbSNP => $dbSNP,
 						-dbCore => $dbCore,
-						-dbVariation => $dbVar,
+						-dbVariation => $dbVar,					                                          -snp_dbname => $sdba->dbc->dbname,
 						-tmpdir => $TMP_DIR,
 						-tmpfile => $TMP_FILE,
 						-limit => $LIMIT_SQL,
-						-taxID => $TAX_ID,
-						-species_prefix => $SPECIES_PREFIX
-					      );
-    $chicken->dump_dbSNP();
-    add_strains($dbVar); #add strain information
+						-mapping_file => $MAPPING_FILE,
+						-taxID => $TAX_ID
+					       );
+  $zebrafish->dump_dbSNP();
 }
-elsif ($SPECIES_PREFIX eq 'rn'){
-   #rattus norvegiccus (rat)
-    my $rat = dbSNP::GenericChromosome->new(-dbSNP => $dbSNP,
+elsif ($SPECIES_PREFIX eq 'mm'){
+  #mus-musculus (mouse)
+  #my $mouse = dbSNP::GenericContig->new(-dbSNP => $dbSNP,
+  my $mouse = dbSNP::MappingChromosome->new(-dbSNP => $dbSNP,
 					    -dbCore => $dbCore,
 					    -dbVariation => $dbVar,
+					    -snp_dbname => $sdba->dbc->dbname,
 					    -tmpdir => $TMP_DIR,
 					    -tmpfile => $TMP_FILE,
 					    -limit => $LIMIT_SQL,
 					    -taxID => $TAX_ID,
-					    -species_prefix => $SPECIES_PREFIX
-					    );
-    $rat->dump_dbSNP();
-    add_strains($dbVar); #add strain information
+					    -species_prefix => $SPECIES_PREFIX,
+					    -mapping_file => $MAPPING_FILE,
+					   );
+  $mouse->dump_dbSNP();
+  add_strains($dbVar); #add strain information
 }
-elsif ($SPECIES_PREFIX eq 'ag'){
-    #(mosquito)
-    my $mosquito = dbSNP::Mosquito->new(-dbSNP => $dbSNP,
-					-dbCore => $dbCore,
-					-dbVariation => $dbVar,
-					-tmpdir => $TMP_DIR,
-					-tmpfile => $TMP_FILE,
-					-limit => $LIMIT_SQL,
-					-taxID => $TAX_ID,
-					-species_prefix => $SPECIES_PREFIX);
-    $mosquito->dump_dbSNP();
-}
-elsif ($SPECIES_PREFIX eq 'cfa'){
-    #cannis familiaris (dog)
-    my $dog = dbSNP::GenericContig->new(-dbSNP => $dbSNP,
-					  -dbCore => $dbCore,
-					  -dbVariation => $dbVar,
-					  -tmpdir => $TMP_DIR,
-					  -tmpfile => $TMP_FILE,
-					  -limit => $LIMIT_SQL,
-					  -taxID => $TAX_ID,
-					  -species_prefix => $SPECIES_PREFIX
-					  );
-    $dog->dump_dbSNP();
-    add_strains($dbVar); #add strain information
-
-}
-else{
-    #homo sa/piens (human)
-    my $human = dbSNP::Human->new(-dbSNP => $dbSNP,
+elsif ($SPECIES_PREFIX eq 'gga'){
+  #gallus gallus (chicken)
+  my $chicken = dbSNP::GenericChromosome->new(-dbSNP => $dbSNP,
 					      -dbCore => $dbCore,
 					      -dbVariation => $dbVar,
+					      -snp_dbname => $sdba->dbc->dbname,
 					      -tmpdir => $TMP_DIR,
 					      -tmpfile => $TMP_FILE,
 					      -limit => $LIMIT_SQL,
 					      -taxID => $TAX_ID,
 					      -species_prefix => $SPECIES_PREFIX
-					      );
-    $human->dump_dbSNP();
+					     );
+  $chicken->dump_dbSNP();
+  add_strains($dbVar); #add strain information
+}
+elsif ($SPECIES_PREFIX eq 'rn'){
+  #rattus norvegiccus (rat)
+  my $rat = dbSNP::GenericChromosome->new(-dbSNP => $dbSNP,
+					  -dbCore => $dbCore,
+					  -dbVariation => $dbVar,
+					  -snp_dbname => $sdba->dbc->dbname,
+					  -tmpdir => $TMP_DIR,
+					  -tmpfile => $TMP_FILE,
+					  -limit => $LIMIT_SQL,
+					  -taxID => $TAX_ID,
+					  -species_prefix => $SPECIES_PREFIX
+					 );
+  $rat->dump_dbSNP();
+  add_strains($dbVar); #add strain information
+}
+elsif ($SPECIES_PREFIX eq 'ag'){
+  #(mosquito)
+  my $mosquito = dbSNP::Mosquito->new(-dbSNP => $dbSNP,
+				      -dbCore => $dbCore,
+				      -dbVariation => $dbVar,
+				      -snp_dbname => $sdba->dbc->dbname,
+				      -tmpdir => $TMP_DIR,
+				      -tmpfile => $TMP_FILE,
+				      -limit => $LIMIT_SQL,
+				      -taxID => $TAX_ID,
+				      -species_prefix => $SPECIES_PREFIX);
+  $mosquito->dump_dbSNP();
+}
+elsif ($SPECIES_PREFIX eq 'cfa'){
+  #cannis familiaris (dog)
+  my $dog = dbSNP::GenericContig->new(-dbSNP => $dbSNP,
+				      -dbCore => $dbCore,
+				      -dbVariation => $dbVar,
+				      -snp_dbname => $sdba->dbc->dbname,
+				      -tmpdir => $TMP_DIR,
+				      -tmpfile => $TMP_FILE,
+				      -limit => $LIMIT_SQL,
+				      -taxID => $TAX_ID,
+				      -species_prefix => $SPECIES_PREFIX
+				     );
+  $dog->dump_dbSNP();
+  add_strains($dbVar); #add strain information
+
+}
+else{
+  #homo sa/piens (human)
+  my $human = dbSNP::Human->new(-dbSNP => $dbSNP,
+				-dbCore => $dbCore,
+				-dbVariation => $dbVar,
+				-snp_dbname => $sdba->dbc->dbname,
+				-tmpdir => $TMP_DIR,
+				-tmpfile => $TMP_FILE,
+				-limit => $LIMIT_SQL,
+				-taxID => $TAX_ID,
+				-species_prefix => $SPECIES_PREFIX
+			       );
+  $human->dump_dbSNP();
 }
 
 
