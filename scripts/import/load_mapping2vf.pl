@@ -32,7 +32,7 @@ my $dbCore;
              'cpass=s'   => \$cpass,
              'cport=i'   => \$cport,
              'cdbname=s' => \$cdbname,
-	     'alldiff=s' => \$alldiff_file,
+	     'mapping_file=s' => \$mapping_file,
              'tmpdir=s'  => \$ImportUtils::TMP_DIR,
              'tmpfile=s' => \$ImportUtils::TMP_FILE,
              'limit=i'   => \$limit);
@@ -47,7 +47,7 @@ my $dbCore;
 
   usage('-cdbname argument is required.') if(!$cdbname);
   usage('-vdbname argument is required.') if(!$vdbname);
-  usage('-alldiff argument is required.') if(!$alldiff_file);
+  usage('-mapping_file argument is required.') if(!$mapping_file);
 
   $TMP_DIR  = $ImportUtils::TMP_DIR;
   $TMP_FILE = $ImportUtils::TMP_FILE;
@@ -68,12 +68,12 @@ my $dbCore;
      -dbname => $cdbname);
 
 
-  variation_feature($alldiff_file);
+  variation_feature($mapping_file);
 }
 
 sub variation_feature {
   
-  my $alldiff_file = shift;
+  my $mapping_file = shift;
 
   my (%rec, %source, %status, %rec_pos, %rec_line, %rec_seq_region);
 
@@ -92,25 +92,33 @@ sub variation_feature {
 
   $sth->finish();
 
-  open (IN, "$alldiff_file");
+  open (IN, "$mapping_file");
   open ( FH, ">$TMP_DIR/$TMP_FILE" );
 
   while (<IN>) {
     chomp;
+    next if /^more |^PARSING/;
     s/^MORE_HITS\s+//;
-    my ($ref_id, $slice_name, $start, $end, $strand, $score, $ratio) =split;
+    my ($ref_id, $slice_name, $start, $end, $strand, $ratio) =split;
     push @{$rec_line{$ref_id}}, $_;
   }
   
   foreach my $key (keys %rec_line) {
     next if @{$rec_line{$key}} >3;
     foreach my $line (@{$rec_line{$key}}) {
-      my ($ref_id, $slice_name, $start, $end, $strand, $score, $ratio) =split /\s+/,$line;
+      my ($ref_id, $slice_name, $start, $end, $strand, $ratio) =split /\s+/,$line;
       next if $ratio <0.7;
 
-      my ($coord_sys,$assembly,$seq_region_name,$seq_region_start,$seq_region_end,$version) = split /\:/, $slice_name
+      my ($coord_sys,$assembly,$seq_region_name,$seq_region_start,$seq_region_end,$version);
+
+      ($seq_region_name,$seq_region_start,$seq_region_end) = split /\-/, $slice_name
+	if $slice_name =~ /\-/;
+
+      ($coord_sys,$assembly,$seq_region_name,$seq_region_start,$seq_region_end,$version) = split /\:/, $slice_name
 	if $slice_name =~ /\:/;
+
       my $sth;
+
       if (!$rec_seq_region{$seq_region_name}) {
 	$sth = $dbCore->prepare (qq{SELECT seq_region_id from seq_region where name = ?});
 	$sth->execute("$seq_region_name");
@@ -128,7 +136,7 @@ sub variation_feature {
       my $new_seq_region_end = $seq_region_start + $end -1 if ($seq_region_start);
     
       if (!$rec_pos{$ref_id}{$seq_region_id}{$new_seq_region_start}{$new_seq_region_end}) {
-	print FH "$seq_region_id\t$new_seq_region_start\t$new_seq_region_end\t$strand\t$rec{$ref_id}\t$ref_id\t$source{$ref_id}\t$status{$ref_id}\n";
+	print FH "$seq_region_id\t$new_seq_region_start\t$new_seq_region_end\t$strand\t$rec{$ref_id}\t$ref_id\t$source{$ref_id}\t",$status{$ref_id} ? $status{$ref_id} : 0,"\n";
 	$rec_pos{$ref_id}{$seq_region_id}{$new_seq_region_start}{$new_seq_region_end}=1;
       }
     }
@@ -145,4 +153,4 @@ sub variation_feature {
 
 ###
 ###example of usage###
-###./load_mapping2vf.pl -cdbname danio_rerio_core_24_4 -vdbname yuan_zfish_snp -alldiff /ecs2/scratch4/yuan/zfish/ds_chNotOndir/ALL_DIFF -vpass ensembl
+###./load_mapping2vf.pl -cdbname danio_rerio_core_24_4 -vdbname yuan_zfish_snp -alldiff /ecs2/scratch4/yuan/zfish/ds_chNotOndir/ALL_DIFF -vpass xxxx
