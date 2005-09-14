@@ -76,12 +76,12 @@ sub ambiguity_code {
 	    #insertion/deletion of more than 1 base
 	    if (length $allele_1 > length $allele_2){
 		#the allele_1 contains the bases inserted/deleted
-		@alleles = split $allele_1;
+		@alleles = split //,$allele_1;
 
 	    }
 	    else{
 		#allele_2 contains the bases inserted/deleted
-		@alleles = split $allele_2;
+		@alleles = split //,$allele_2;
 	    }
 	    foreach my $allele (@alleles){
 		$ambig_alleles .= $ambig{'-'.$allele};
