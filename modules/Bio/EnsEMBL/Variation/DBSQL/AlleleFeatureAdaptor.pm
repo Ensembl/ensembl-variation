@@ -36,7 +36,7 @@ Bio::EnsEMBL::Variation::DBSQL::AlleleFeatureAdaptor
 =head1 DESCRIPTION
 
 This adaptor provides database connectivity for AlleleFeature objects.
-Genomic locations of alleles in populations can be obtained from the 
+Genomic locations of alleles in samples can be obtained from the 
 database using this adaptor.  See the base class BaseFeatureAdaptor for more information.
 
 =head1 AUTHOR - Daniel Rios
@@ -58,14 +58,37 @@ use Bio::EnsEMBL::Variation::AlleleFeature;
 use Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor;
 use Bio::EnsEMBL::Utils::Exception qw(throw);
 use Bio::EnsEMBL::Utils::Sequence qw(expand);
+use Bio::EnsEMBL::Variation::Utils::Sequence qw(ambiguity_code);
 
 our @ISA = ('Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor');
+
+
+=head2 from_IndividualSlice
+    
+    Arg[0]      : (optional) int $number
+    Example     : $afa->from_IndividualSlice(1);
+    Description : Getter/Setter to know wether the Adaptor has been called
+                  from and IndividualSlice (and must create the objects from the
+		  genotype table) or from the StrainSlice (and must create the objects
+                  from the allele table)
+    ReturnType  : int
+    Exceptions  : none
+    Caller      : general    
+
+=cut
+
+sub from_IndividualSlice{
+    my $self = shift;
+
+    return $self->{'from_IndividualSlice'} = shift if(@_);
+    return $self->{'from_IndividualSlice'};    
+}
 
 =head2 fetch_all_by_Slice_Population
 
    Arg[0]      : Bio::EnsEMBL::Slice $slice
    Arg[1]      : Bio::EnsEMBL::Variation::Population $population
-   Example     : my $vf = $vfa->fetch_all_by_Slice_Population($slice,$population);   
+   Example     : my $vf = $vfa->fetch_all_by_Slice_Individual($slice,$population);   
    Description : Gets all the VariationFeatures in a certain Slice for a given
                  Population
    ReturnType  : listref of Bio::EnsEMBL::Variation::VariationFeature
@@ -90,22 +113,90 @@ sub fetch_all_by_Slice_Population{
 	throw("Population arg must have defined dbID");
     }
     
-    my $constraint = "a.population_id = " . $population->dbID;
+    my $constraint = "a.sample_id = " . $population->dbID;
     #call the method fetch_all_by_Slice_constraint with the population constraint
     return $self->fetch_all_by_Slice_constraint($slice,$constraint);    
 }
 
-sub _tables{return (['variation_feature','vf'],
-		    ['allele','a']
-		    )}
+
+=head2 fetch_all_by_Slice_Individual
+
+   Arg[0]      : Bio::EnsEMBL::Slice $slice
+   Arg[1]      : Bio::EnsEMBL::Variation::Individual $individual
+   Example     : my $vf = $vfa->fetch_all_by_Slice_Individual($slice,$individual);   
+   Description : Gets all the VariationFeatures in a certain Slice for a given
+                 Individual
+   ReturnType  : listref of Bio::EnsEMBL::Variation::VariationFeature
+   Exceptions  : thrown on bad arguments
+   Caller      : general
+   
+=cut
+
+sub fetch_all_by_Slice_Individual{
+    my $self = shift;
+    my $slice = shift;
+    my $individual = shift;
+
+    if(!ref($slice) || !$slice->isa('Bio::EnsEMBL::Slice')) {
+	throw('Bio::EnsEMBL::Slice arg expected');
+    }
+
+    if(!ref($individual) || !$individual->isa('Bio::EnsEMBL::Variation::Individual')) {
+	throw('Bio::EnsEMBL::Variation::Individual arg expected');
+    }
+    if(!defined($individual->dbID())) {
+	throw("Individual arg must have defined dbID");
+    }
+    
+    my $constraint = "ig.sample_id = " . $individual->dbID;
+
+    #indicate to select the data from the single_bp table
+    $self->_multiple_bp(0);
+    #call the method fetch_all_by_Slice_constraint with the population constraint for the single_bp
+    my $allele_features = $self->fetch_all_by_Slice_constraint($slice,$constraint);
+    
+    #remove from the cache the result of the query (would not run the second one)
+    my $key = uc(join(':', $slice->name, $constraint));
+
+    delete $self->{'_slice_feature_cache'}->{$key};
+    #indicate to select the data from the multiple_bp table
+    $self->_multiple_bp(1);
+    #and add the same information for the multiple_bp table
+    my $allele_features_multiple = $self->fetch_all_by_Slice_constraint($slice,$constraint);
+    push @{$allele_features},$allele_features_multiple if (@{$allele_features_multiple} > 0);
+    #and include then the result of both queries
+    $self->{'_slice_feature_cache'}->{$key} = $allele_features;
+    return $allele_features;
+}
+
+sub _tables{    
+    my $self = shift;
+
+    if ($self->from_IndividualSlice){	
+	return (['variation_feature','vf'], ['individual_genotype_single_bp','ig']) if (!$self->_multiple_bp());
+	return (['variation_feature','vf'], ['individual_genotype_multiple_bp','ig']) if ($self->_multiple_bp());
+    }
+    else{
+	return (['variation_feature','vf'],   ['allele','a']);
+    }
+
+}
 
 sub _columns{
-    return qw(a.variation_id a.population_id a.allele 
+    my $self = shift;
+
+    return ('vf.variation_id' ,'ig.sample_id', 'CONCAT(ig.allele_1,"|",ig.allele_2) as alleles',
+	      'vf.seq_region_id', 'vf.seq_region_start', 'vf.seq_region_end', 
+	      'vf.seq_region_strand', 'vf.variation_name') if ($self->from_IndividualSlice());
+
+    return qw(a.variation_id a.sample_id a.allele 
 	      vf.seq_region_id vf.seq_region_start vf.seq_region_end 
 	      vf.seq_region_strand vf.variation_name);
 }
 
 sub _default_where_clause{
+    my $self = shift;
+    return "ig.variation_id = vf.variation_id" if ($self->from_IndividualSlice());
     return "a.variation_id = vf.variation_id";
 }
 
@@ -125,10 +216,10 @@ sub _objs_from_sth{
   my %sr_name_hash;
   my %sr_cs_hash;
 
-  my ($variation_id, $population_id, $allele,$seq_region_id,
+  my ($variation_id, $sample_id, $allele,$seq_region_id,
       $seq_region_start,$seq_region_end, $seq_region_strand, $variation_name );
 
-  $sth->bind_columns(\$variation_id,\$population_id,\$allele,
+  $sth->bind_columns(\$variation_id,\$sample_id,\$allele,
 		     \$seq_region_id,\$seq_region_start,\$seq_region_end,\$seq_region_strand,
 		     \$variation_name);
 
@@ -215,21 +306,28 @@ sub _objs_from_sth{
           next FEATURE;
         }
       }
-      $slice = $dest_slice;
-    }
-    push @features, Bio::EnsEMBL::Variation::AlleleFeature->new_fast(
-      {'start'    => $seq_region_start,
-       'end'      => $seq_region_end,
-       'strand'   => $seq_region_strand,
-       'slice'    => $slice,
-       'allele_string' => $allele,
-       'variation_name' => $variation_name,
-       'adaptor'  => $self,
-       '_variation_id' => $variation_id,
-       '_population_id' => $population_id});
+      $slice = $dest_slice;   
   }
+    $allele = ambiguity_code($allele) if ($self->from_IndividualSlice);
+    push @features, Bio::EnsEMBL::Variation::AlleleFeature->new_fast(
+								     {'start'    => $seq_region_start,
+								      'end'      => $seq_region_end,
+								      'strand'   => $seq_region_strand,
+								      'slice'    => $slice,
+								      'allele_string' => $allele,
+								      'variation_name' => $variation_name,
+								      'adaptor'  => $self,
+								      '_variation_id' => $variation_id,
+								      '_sample_id' => $sample_id});      
+}
+ return\@features;
+}
 
-  return\@features;
+#internal function used to determine wether selecting data from the individual_genotype_single_bp table or the multiple_bp
+sub _multiple_bp{
+    my $self = shift;
+    $self->{'multiple_bp'} = shift if (@_);
+    return $self->{'multiple_bp'};
 }
 
 1;
