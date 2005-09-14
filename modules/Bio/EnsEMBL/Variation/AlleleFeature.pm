@@ -6,7 +6,7 @@
 
 =head1 NAME
 
-Bio::EnsEMBL::Variation::AlleleFeature - A genomic position for an allele in a population.
+Bio::EnsEMBL::Variation::AlleleFeature - A genomic position for an allele in a sample.
 
 =head1 SYNOPSIS
 
@@ -36,7 +36,7 @@ Bio::EnsEMBL::Variation::AlleleFeature - A genomic position for an allele in a p
 
 =head1 DESCRIPTION
 
-This is a class representing the genomic position of a allele in a population
+This is a class representing the genomic position of a allele in a sample
 from the ensembl-variation database.  The actual variation information is
 represented by an associated Bio::EnsEMBL::Variation::Variation object. Some
 of the information has been denormalized and is available on the feature for
@@ -91,10 +91,10 @@ our @ISA = ('Bio::EnsEMBL::Feature');
     identifier. This may be provided instead of a variation object so that
     the variation may be lazy-loaded from the database on demand.
     
-  Arg [-POPULATION_ID] :
-    int - the internal id of the population object associated with this
-    identifier. This may be provided instead of the population object so that
-    the population may be lazy-loaded from the database on demand.
+  Arg [-SAMPLE_ID] :
+    int - the internal id of the sample object associated with this
+    identifier. This may be provided instead of the object so that
+    the population/individual may be lazy-loaded from the database on demand.
 
   Arg [-ALLELE_STRING] :
     string - the allele for this AlleleFeature object.
@@ -107,7 +107,7 @@ our @ISA = ('Bio::EnsEMBL::Feature');
         -slice   => $slice,
         -allele_string => 'A',
         -variation_name => 'rs635421',
-	-population  => $p,
+	-sample_id  => $sample_id,
         -variation => $v);
 
   Description: Constructor. Instantiates a new AlleleFeature object.
@@ -122,16 +122,15 @@ sub new {
   my $class = ref($caller) || $caller;
 
   my $self = $class->SUPER::new(@_);
-  my ($allele, $var_name, $variation, $variation_id,$population, $population_id) =
+  my ($allele, $var_name, $variation, $variation_id,$population, $sample_id) =
     rearrange([qw(ALLELE_STRING VARIATION_NAME 
-                  VARIATION VARIATION_ID POPULATION POPULATION_ID)], @_);
+                  VARIATION VARIATION_ID SAMPLE_ID)], @_);
 
   $self->{'allele'}           = $allele;
   $self->{'variation_name'}   = $var_name;
   $self->{'variation'}        = $variation;
   $self->{'_variation_id'}    = $variation_id;
-  $self->{'population'}       = $population;
-  $self->{'_population_id'}   = $population_id;
+  $self->{'_sample_id'}       = $sample_id;
 
   return $self;
 }
@@ -239,14 +238,54 @@ sub population {
     $self->{'population'} = shift;
   }
   elsif(!defined($self->{'population'}) && $self->{'adaptor'} &&
-        defined($self->{'_population_id'})) {
+        defined($self->{'_sample_id'})) {
     # lazy-load from database on demand
     my $pa = $self->{'adaptor'}->db()->get_PopulationAdaptor();
-    $self->{'population'} = $pa->fetch_by_dbID($self->{'_population_id'});
+    $self->{'population'} = $pa->fetch_by_dbID($self->{'_sample_id'});
+    if (!defined $self->{'population'}){
+	warning("AlleleFeature attached to Individual, not Strain");
+    }
   }
 
   return $self->{'population'};
 }
+
+=head2 individual
+
+  Arg [1]    : (optional) Bio::EnsEMBL::Variation::Individual $individual
+  Example    : $p = $af->individual();
+  Description: Getter/Setter for the individual associated with this feature.
+               If not set, and this AlleleFeature has an associated adaptor
+               an attempt will be made to lazy-load the individual from the
+               database.
+  Returntype : Bio::EnsEMBL::Variation::Individual
+  Exceptions : throw on incorrect argument
+  Caller     : general
+
+=cut
+
+sub individual {
+  my $self = shift;
+
+  if(@_) {
+    if(!ref($_[0]) || !$_[0]->isa('Bio::EnsEMBL::Variation::Individual')) {
+      throw("Bio::EnsEMBL::Variation::Individual argument expected");
+    }
+    $self->{'individual'} = shift;
+  }
+  elsif(!defined($self->{'individual'}) && $self->{'adaptor'} &&
+        defined($self->{'_sample_id'})) {
+    # lazy-load from database on demand
+    my $ia = $self->{'adaptor'}->db()->get_IndividualAdaptor();
+    $self->{'individual'} = $ia->fetch_by_dbID($self->{'_sample_id'});
+    if (!defined $self->{'individual'}){
+	warning("AlleleFeature attached to Strain, not Individual");
+    }
+  }
+
+  return $self->{'individual'};
+}
+
 
 =head2 apply_edit
     
