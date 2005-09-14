@@ -58,10 +58,39 @@ use vars qw(@ISA @EXPORT_OK);
 
 sub ambiguity_code {
     my $alleles = shift;
-    $alleles = uc( join '', sort split /[\|\/\\]/, $alleles );
-    my %ambig = qw(AC M ACG V ACGT N ACT H AG R AGT D AT W CG S CGT B CT Y 
-GT K);
-    return $ambig{$alleles};
+    my %ambig = qw(AC M ACG V ACGT N ACT H AG R AGT D AT W CG S CGT B CT Y GT K -A P -C Q -T S -G U);
+    my $ambig_alleles;
+    if (length $alleles == 3){
+	$alleles = uc( join '', sort split /[\|\/\\]/, $alleles );
+	$ambig_alleles = $ambig{$alleles};
+    }
+    else{
+	#we have a complex allele (insertion of more than one base, likely)
+	my ($allele_1, $allele_2) = split /[\|\/\\]/, $alleles, 2; #split the alleles
+	if ($allele_1 eq $allele_2){
+	    #homozigous SNP
+	    $ambig_alleles = $allele_1
+	}
+	else{
+	    my @alleles;
+	    #insertion/deletion of more than 1 base
+	    if (length $allele_1 > length $allele_2){
+		#the allele_1 contains the bases inserted/deleted
+		@alleles = split $allele_1;
+
+	    }
+	    else{
+		#allele_2 contains the bases inserted/deleted
+		@alleles = split $allele_2;
+	    }
+	    foreach my $allele (@alleles){
+		$ambig_alleles .= $ambig{'-'.$allele};
+	    }
+	}
+    }
+
+
+    return $ambig_alleles;
 }
 
 =head2 variation_class
