@@ -58,53 +58,39 @@ use warnings;
 
 package Bio::EnsEMBL::Variation::DBSQL::IndividualAdaptor;
 
-use Bio::EnsEMBL::DBSQL::BaseAdaptor;
+use Bio::EnsEMBL::Variation::DBSQL::SampleAdaptor;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 
 use Bio::EnsEMBL::Variation::Individual;
-
-our @ISA = ('Bio::EnsEMBL::DBSQL::BaseAdaptor');
-
+our @ISA = ('Bio::EnsEMBL::Variation::DBSQL::SampleAdaptor');
 
 
-=head2 fetch_by_dbID
+=head2 fetch_individual_by_synonym
 
-  Arg [1]    : int $dbID - internal identifier of the individual to fetch
-  Example    : my $ind = $ind_adptor->fetch_by_dbID(451);
-  Description: Retrieves an individual via its internal identifier.
-               If no such individual exists in the database undef is returned.
-  Returntype : Bio::EnsEMBL::Individual or undef
-  Exceptions : throw if no argument provided
-  Caller     : general, 
-               Individual::mother_Individual,
-               Individual::father_Individual
+    Arg [1]              : $individual_synonym
+    Example              : my $ind = $ind_adaptor->fetch_individual_by_synonym($individual_synonym,$source);
+    Description          : Retrieves individual for the synonym given in the source. If no source is provided, retrieves all the synonyms
+    Returntype           : list of Bio::EnsEMBL::Variation::Individual
+    Exceptions           : none
+    Caller               : general
 
 =cut
 
-sub fetch_by_dbID {
-  my $self = shift;
-  my $dbID = shift;
-
-  defined($dbID) || throw('dbID argument expected');
-
-  my $sth = $self->prepare
-    (q{SELECT i.individual_id, i.name, i.description,
-              i.gender, i.father_individual_id, i.mother_individual_id
-       FROM   individual i
-       WHERE  i.individual_id = ?});
-
-  $sth->execute($dbID);
-
-  my $result = $self->_objs_from_sth($sth);
-
-  $sth->finish();
-
-  return undef if(!@$result);
-
-  return $result->[0];
+sub fetch_individual_by_synonym{
+    my $self = shift;
+    my $synonym_name = shift;
+    my $source = shift;
+    my $individuals;
+    my $ind;
+    #return all sample_id from the database
+    my $samples = $self->SUPER::fetch_sample_by_synonym($synonym_name, $source);
+    foreach my $sample_id (@{$samples}){
+	#get the ones that are individuals
+	$ind = $self->fetch_by_dbID($sample_id);
+	push @{$individuals}, $ind if (defined $ind);
+    }
+    return $individuals;
 }
-
-
 
 =head2 fetch_all_by_name
 
@@ -126,10 +112,11 @@ sub fetch_all_by_name {
   defined($name) || throw("name argument expected");
 
   my $sth = $self->prepare
-    (q{SELECT i.individual_id, i.name, i.description,
-              i.gender, i.father_individual_id, i.mother_individual_id
-       FROM   individual i
-       WHERE  i.name = ?});
+    (q{SELECT i.sample_id, s.name, s.description,
+              i.gender, i.father_individual_sample_id, i.mother_individual_sample_id
+       FROM   individual i, sample s
+       WHERE  s.name = ?
+       AND    s.sample_id = i.sample_id});
 
   $sth->execute($name);
 
@@ -172,11 +159,12 @@ sub fetch_all_by_Population {
   }
 
   my $sth = $self->prepare
-    (q{SELECT i.individual_id, i.name, i.description,
-              i.gender, i.father_individual_id, i.mother_individual_id
-       FROM   individual i, individual_population ip
-       WHERE  i.individual_id = ip.individual_id
-       AND    ip.population_id = ?});
+    (q{SELECT i.sample_id, s.name, s.description,
+              i.gender, i.father_individual_sample_id, i.mother_individual_sample_id
+       FROM   individual i, individual_population ip, sample s
+       WHERE  i.sample_id = ip.individual_sample_id
+       AND    i.sample_id = s.sample_id
+       AND    ip.population_sample_id = ?});
 
   $sth->execute($pop->dbID());
 
@@ -222,15 +210,17 @@ sub fetch_all_by_parent_Individual {
   my $gender = $parent->gender() || '';
 
   my $father_sql =
-    q{SELECT i.individual_id, i.name, i.description,
-             i.gender, i.father_individual_id, i.mother_individual_id
-      FROM   individual i
-      WHERE  i.father_individual_id = ?};
+    q{SELECT i.sample_id, s.name, s.description,
+             i.gender, i.father_individual_sample_id, i.mother_individual_sample_id
+      FROM   individual i, sample s
+      WHERE  i.father_individual_sample_id = ?
+      AND    s.sample_id = i.sample_id};
   my $mother_sql =
-    q{SELECT i.individual_id, i.name, i.description,
-              i.gender, i.father_individual_id, i.mother_individual_id
-       FROM   individual i
-       WHERE  i.mother_individual_id = ?};
+    q{SELECT i.sample_id, s.name, s.description,
+              i.gender, i.father_individual_sample_id, i.mother_individual_sample_id
+       FROM   individual i, sample s
+       WHERE  i.mother_individual_sample_id = ?
+       AND    i.sample_id = s.sample_id};
 
   if($gender eq 'Male') {
     my $sth = $self->prepare($father_sql);
@@ -265,9 +255,6 @@ sub fetch_all_by_parent_Individual {
 
   return $result;
 }
-
-
-
 
 
 #
@@ -351,11 +338,15 @@ sub _objs_from_sth {
 
 }
 
-sub _tables{return (['individual','i'])}
+sub _tables{return (['individual','i'],
+		    ['sample','s'])}
 
 sub _columns{
-    return qw(individual_id name description gender father_individual_id mother_individual_id);
+    return qw(s.sample_id s.name s.description i.gender i.father_individual_sample_id i.mother_individual_sample_id);
 }
 
+sub _default_where_clause{
+    return 's.sample_id = i.sample_id';
+}
 
 1;
