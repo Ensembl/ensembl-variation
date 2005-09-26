@@ -82,9 +82,10 @@ sub fetch_by_dbID {
 
   throw('dbID argument expected') if(!defined($dbID));
 
-  my $sth = $self->prepare(q{SELECT population_id, name, size, description, is_strain
-                             FROM   population
-                             WHERE  population_id = ?});
+  my $sth = $self->prepare(q{SELECT s.sample_id, s.name, s.size, s.description, p.is_strain
+                             FROM   population p, sample s
+                             WHERE  p.sample_id = s.sample_id
+			     AND    p.sample_id = ?});
   $sth->execute($dbID);
   my $result = $self->_objs_from_sth($sth);
   $sth->finish();
@@ -113,9 +114,10 @@ sub fetch_by_name {
 
   throw('name argument expected') if(!defined($name));
 
-  my $sth = $self->prepare(q{SELECT population_id, name, size, description, is_strain
-                             FROM   population
-                             WHERE  name = ?});
+  my $sth = $self->prepare(q{SELECT s.sample_id, s.name, s.size, s.description, p.is_strain
+                             FROM   population p, sample s
+                             WHERE  p.sample_id = s.sample_id 
+			     AND    s.name = ?});
 
   $sth->execute($name);
 
@@ -155,11 +157,12 @@ sub fetch_all_by_super_Population {
     return [];
   }
 
-  my $sth = $self->prepare(q{SELECT p.population_id, p.name, p.size,
-                                    p.description, p.is_strain
-                             FROM   population p, population_structure ps
-                             WHERE  p.population_id = ps.sub_population_id
-                             AND    ps.super_population_id = ?});
+  my $sth = $self->prepare(q{SELECT s.sample_id, s.name, s.size,
+                                    s.description, p.is_strain
+                             FROM   population p, sample s, population_structure ps
+                             WHERE  s.sample_id = ps.sub_population_sample_id
+			     AND    s.sample_id = p.sample_id
+                             AND    ps.super_population_sample_id = ?});
 
   $sth->execute($pop->dbID());
 
@@ -198,11 +201,12 @@ sub fetch_all_by_sub_Population {
     return [];
   }
 
-  my $sth = $self->prepare(q{SELECT p.population_id, p.name, p.size,
-                                    p.description, p.is_strain
-                             FROM   population p, population_structure ps
-                             WHERE  p.population_id = ps.super_population_id
-                             AND    ps.sub_population_id = ?});
+  my $sth = $self->prepare(q{SELECT s.sample_id, s.name, s.size,
+                                    s.description, p.is_strain
+                             FROM   population p, sample s, population_structure ps
+                             WHERE  s.sample_id = ps.super_population_sample_id
+			     AND    s.sample_id = p.sample_id
+                             AND    ps.sub_population_sample_id = ?});
 
   $sth->execute($pop->dbID());
 
@@ -235,10 +239,10 @@ sub fetch_synonyms{
 
     my $sql;
     if (defined $source){
-	$sql = qq{SELECT ps.name FROM population_synonym ps, source s WHERE ps.population_id = ? AND ps.source_id = s.source_id AND s.name = "$source"}
+	$sql = qq{SELECT ss.name FROM sample_synonym ss, source s WHERE ss.sample_id = ? AND ss.source_id = s.source_id AND s.name = "$source"}
     }
     else{
-	$sql = qq{SELECT name FROM population_synonym WHERE population_id = ?};
+	$sql = qq{SELECT name FROM sample_synonym WHERE sample_id = ?};
     }
     my $sth = $self->prepare($sql);
     $sth->execute($dbID);
@@ -257,7 +261,7 @@ sub fetch_synonyms{
     Returntype           : list of Bio::EnsEMBL::Variation::Population
     Exceptions           : none
     Caller               : general
-
+d
 =cut
 
 sub fetch_population_by_synonym{
@@ -269,14 +273,14 @@ sub fetch_population_by_synonym{
     my $population_array;
 
     if (defined $source){
-	$sql = qq{SELECT population_id FROM population_synonym ps, source s WHERE ps.name = ? and ps.source_id = s.source_id = s.name = "$source"};
+	$sql = qq{SELECT ss.sample_id FROM sample_synonym ss, source s WHERE ss.name = ? and ss.source_id = s.source_id = s.name = "$source"};
     }
     else{
-	$sql = qq{SELECT population_id FROM population_synonym WHERE name = ?};
+	$sql = qq{SELECT sample_id FROM sample_synonym WHERE name = ?};
     }
     my $population_id;
     my $sth = $self->prepare($sql);
-    $sth->execute($synonym_name);    
+    $sth->execute($synonym_name);
     $sth->bind_columns(\$population_id);
     while ($sth->fetch()){
 	$population = $self->fetch_by_dbID($population_id);
@@ -333,10 +337,11 @@ sub fetch_all_by_Individual{
 	return [];
   } 
 
-    my $sth = $self->prepare(qq{SELECT p.population_id, p.name, p.size, p.description, p.is_strain
-				FROM population p, individual_population ip
-				WHERE p.population_id = ip.population_id
-                                AND ip.individual_id = ?
+    my $sth = $self->prepare(qq{SELECT s.sample_id, s.name, s.size, s.description, p.is_strain
+				FROM population p, sample s, individual_population ip
+				WHERE s.sample_id = ip.population_sample_id
+				AND   s.sample_id = p.sample_id
+                                AND ip.individual_sample_id = ?
 			    });
     $sth->execute($ind->dbID());
 
@@ -377,9 +382,10 @@ sub fetch_tagged_Population{
 	return [];
   } 
 
-    my $sth = $self->prepare(qq{SELECT p.population_id, p.name, p.size, p.description, p.is_strain
-				FROM population p, tagged_variation_feature tvf
-				WHERE p.population_id = tvf.population_id
+    my $sth = $self->prepare(qq{SELECT s.sample_id, s.name, s.size, s.description, p.is_strain
+				FROM population p, sample s, tagged_variation_feature tvf
+				WHERE s.sample_id = tvf.sample_id
+				AND   s.sample_id = p.sample_id
                                 AND tvf.variation_feature_id = ?
 			    });
     $sth->execute($variation_feature->dbID());
@@ -417,10 +423,10 @@ sub _objs_from_sth {
   return \@pops;
 }
 
-sub _tables{return ['population','p'];}
+sub _tables{return ['sample', 's', 'population','p'];}
 
 sub _columns{
-    return qw(p.population_id p.name p.size p.description p.is_strain
+    return qw(s.sample_id s.name s.size s.description p.is_strain
 	      );
 }
 
