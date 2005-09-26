@@ -118,7 +118,7 @@ sub fetch_all_by_Population {
     return [];
   }
 
-  return $self->generic_fetch("population_id = " . $pop->dbID());
+  return $self->generic_fetch("sample_id = " . $pop->dbID());
 }
 
 
@@ -157,7 +157,7 @@ sub fetch_all_by_Variation {
 sub _tables{return ['population_genotype','pg']}
 
 sub _columns{
-    return qw(pg.population_genotype_id pg.variation_id pg.population_id pg.allele_1 pg.allele_2 pg.frequency)
+    return qw(pg.population_genotype_id pg.variation_id pg.sample_id pg.allele_1 pg.allele_2 pg.frequency)
 }
 
 sub _objs_from_sth{
@@ -207,7 +207,7 @@ sub _objs_from_sth{
 	    $pgty->population($p);
 	}
     }
-    return \@results;   
+    return \@results;
 
 }
 1;
