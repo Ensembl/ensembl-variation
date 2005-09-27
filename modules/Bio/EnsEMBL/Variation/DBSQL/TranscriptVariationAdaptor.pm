@@ -38,7 +38,7 @@ Bio::EnsEMBL::Variation::DBSQL::TranscriptVariationAdaptor
   # retrieve all TranscriptVariations associated with a Transcript
 
   $tr = $tra->fetch_by_stable_id('ENST00000278995');
-  foreach $trv (@{$trva->fetch_all_by_Transcript($tr)}) {
+  foreach $trv (@{$trva->fetch_all_by_Transcripts([$tr])}) {
     print $trv->variation_feature->variation_name(), ' ', $trv->consequence_type(), "\n";
   }
 
@@ -86,6 +86,39 @@ use Bio::EnsEMBL::Variation::TranscriptVariation;
 
 our @ISA = ('Bio::EnsEMBL::DBSQL::BaseAdaptor');
 
+
+=head2 fetch_all_by_Transcripts
+
+    Arg[1]      : listref of Bio::EnsEMBL::Transcript
+    Example     : $tr = $ta->fetch_by_stable_id('ENST00000278995');
+                  @tr_vars = @{$tr_var_adaptor->fetch_all_by_Transcripts([$tr])};
+    Description : Retrieves all TranscriptVariation objects associated with
+                  provided Ensembl Transcript. Attaches them to the TranscriptVariation
+    ReturnType  : ref to list of Bio::EnsEMBL::Variation::TranscriptVariations
+    Exceptions  : throw on bad argument
+    Caller      : general
+
+=cut
+
+sub fetch_all_by_Transcripts{
+    my $self = shift;
+    my $transcript_ref = shift;
+    
+    if (ref($transcript_ref) ne 'ARRAY'){
+	throw('Array Bio::EnsEMBL::Transcript expected');
+    }
+    
+    my %tr_by_id;
+    %tr_by_id = map {$_->dbID(), $_} @{$transcript_ref};
+    my $instr = join (",", keys( %tr_by_id));
+    my $transcript_variations = $self->generic_fetch( "tv.transcript_id in ( $instr )");
+    for my $tv (@{$transcript_variations}){
+	#add to the TranscriptVariation object all the Transcripts
+	$tv->{'transcript'} = $tr_by_id{$tv->{'_transcript_id'}};
+	delete $tv->{'_transcript_id'}; #remove the transcript_id from the transcript_variation object
+    }
+    return $transcript_variations;
+}
 
 =head2 fetch_all_by_VariationFeatures
 
