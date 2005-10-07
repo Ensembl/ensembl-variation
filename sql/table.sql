@@ -222,7 +222,8 @@ create table variation_feature(
 	validation_status SET('cluster','freq','submitter','doublehit','hapmap'),
 	consequence_type SET ('ESSENTIAL_SPLICE_SITE','SPLICE_SITE','FRAMESHIFT_CODING',
 		'STOP_GAINED','STOP_LOST','NON_SYNONYMOUS_CODING','SYNONYMOUS_CODING','5PRIME_UTR',
-		'3PRIME_UTR','INTRONIC','UPSTREAM','DOWNSTREAM','INTERGENIC' ) default "INTERGENIC" not null ,	
+		'3PRIME_UTR','INTRONIC','UPSTREAM','DOWNSTREAM','INTERGENIC','REGULATORY_REGION') 
+	default "INTERGENIC" not null ,	
 	primary key( variation_feature_id ),
 	key pos_idx( seq_region_id, seq_region_start ),
 	key variation_idx( variation_id )
@@ -330,7 +331,7 @@ create table transcript_variation(
   peptide_allele_string varchar(255),
   consequence_type SET( 'ESSENTIAL_SPLICE_SITE','SPLICE_SITE','FRAMESHIFT_CODING',
 	'STOP_GAINED','STOP_LOST','NON_SYNONYMOUS_CODING','SYNONYMOUS_CODING','5PRIME_UTR',
-	'3PRIME_UTR','INTRONIC','UPSTREAM','DOWNSTREAM' ) not null,
+	'3PRIME_UTR','INTRONIC','UPSTREAM','DOWNSTREAM','REGULATORY_REGION' ) not null,
   primary key( transcript_variation_id ),
   key variation_idx( variation_feature_id ),
   key transcript_idx( transcript_id ),
