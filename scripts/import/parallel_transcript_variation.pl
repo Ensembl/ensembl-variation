@@ -83,7 +83,7 @@ my ($TMP_DIR, $TMP_FILE, $LIMIT,$status_file);
   if ($processes == $num_processes){
       #if is the last process, finish it
     debug("Last process: ready to import data");
-      last_process($dbCore,$dbVar);
+      #last_process($dbCore,$dbVar);
   }
 }
 
@@ -120,12 +120,15 @@ sub transcript_variation {
   open FH, ">$TMP_DIR/$dbname.transcript_variation_$host\:$$\.txt";
 
   my $inc_non_ref = 1;
+
   my $slices = $sa->fetch_all('toplevel', undef, $inc_non_ref);
   #order the slices
   my @slices_ordered = sort {$a->seq_region_name cmp $b->seq_region_name }  @{$slices};
+
   my ($offset,$length) = split /,/,$LIMIT; #get the offset and length of the elements we have to get from the slice
   # assumes that variation features have already been pushed to toplevel
   foreach my $slice (splice (@slices_ordered,$offset,$length)) {
+    #next if $slice->seq_region_name() ne '17';
     debug("Processing transcript variations for ",
           $slice->seq_region_name(), "\n");
     my $genes = $slice->get_all_Genes();
@@ -166,6 +169,7 @@ sub transcript_variation {
             $strand = $tr->strand();
           }
 	  shift @alleles; #remove reference allele
+
 	  $consequence_type = Bio::EnsEMBL::Variation::ConsequenceType->new($tr->dbID,$row->[0],$start,$end,$strand,\@alleles);
 	  my $consequences;
 	  if ($row->[4] !~ /\+/){
@@ -179,7 +183,8 @@ sub transcript_variation {
                        $ct->aa_end,
                        $ct->cdna_start,
                        $ct->cdna_end,
-		       $ct->splice_site ? join ',', $ct->splice_site,$ct->type : $ct->type);
+		       join ',', $ct->splice_site ? $ct->splice_site : "",
+		       $ct->regulatory_region ? $ct->regulatory_region : "", $ct->type);
             @arr = map {($_) ? $_ : '\N'} @arr;
             print FH join("\t", @arr), "\n";
           }
@@ -226,74 +231,105 @@ sub last_process{
 
     my $highest_priority_type = 'INTERGENIC'; #by default, has this type
     my $highest_splice_site = '';
+    my $regulatory_region;
     my $type;
     my $splice_site;
     my @types;
+    my $final_type;
 
     open(FH, ">" . $TMP_DIR . "/" . $TMP_FILE);
     while($sth->fetch()){
-	if (($variation_feature_id != $previous_variation_feature_id) && ($previous_variation_feature_id != 0)){
-	    print FH join("\t",$previous_variation_feature_id,join(',',$highest_splice_site,$highest_priority_type)), "\n" if ($highest_splice_site ne '');
-	    print FH join("\t",$previous_variation_feature_id,$highest_priority_type), "\n" if ($highest_splice_site eq '');
-	    $highest_splice_site = '';
-	    $highest_priority_type = 'INTERGENIC';
-	}
- 	$previous_variation_feature_id = $variation_feature_id;
+      if (($variation_feature_id != $previous_variation_feature_id) && ($previous_variation_feature_id != 0)){
+	$final_type = "$highest_splice_site," if defined $highest_splice_site;
+	$final_type .= "$highest_priority_type,";
+	$final_type .= "$regulatory_region" if defined $regulatory_region;
+	print FH join("\t",$previous_variation_feature_id,$final_type),"\n";
+      
+	$highest_splice_site = '';
+	$highest_priority_type = 'INTERGENIC';
+      }
+      $previous_variation_feature_id = $variation_feature_id;
 
-	@types = split(',',$consequence_type) if (defined $consequence_type); #get types, there might be a splice_site and a normal one
-	if (@types > 1){
-	    $splice_site = shift @types; #and the splice_site
-	    $type = shift @types;
+      @types = split(',',$consequence_type) if (defined $consequence_type); #get types, there might be a splice_site and a normal one
+      foreach my $ct (@types) {
+	if ($ct =~ /regulatory/i) {
+	  $regulatory_region = $ct;
 	}
-	elsif (@types == 1){
-	    $type = shift @types; #get the consequence type
-	    $splice_site = '';
+	elsif ($ct =~ /splice/i) {
+	  $splice_site = $ct;
 	}
-	else{
-	    $highest_priority_type ||= 'INTERGENIC';
-	    $splice_site = '';
+	else {
+	  $type = $ct;
 	}
+      }
+#       if (@types > 1){
+# 	    $splice_site = shift @types; #and the splice_site
+# 	    $type = shift @types;
+# 	}
+# 	elsif (@types == 1){
+# 	    $type = shift @types; #get the consequence type
+# 	    $splice_site = '';
+# 	}
+# 	else{
+# 	    $highest_priority_type ||= 'INTERGENIC';
+# 	    $splice_site = '';
+# 	}
 	#find the highest consequence type
-	if (defined $consequence_type and ($consequence_types{$type} < $consequence_types{$highest_priority_type})){
-	    $highest_priority_type = $type;
-	}
-	#and the highest splice site
-	if ($splice_site ne '' and $highest_splice_site eq ''){
-	    $highest_splice_site = $splice_site;
-	}
-	if ($splice_site ne '' and $highest_splice_site ne '' and $splice_sites{$splice_site} < $splice_sites{$highest_splice_site}){
-	    $highest_splice_site = $splice_site;
-	}
+      if (defined $consequence_type and ($consequence_types{$type} < $consequence_types{$highest_priority_type})){
+	$highest_priority_type = $type;
+      }
+      #and the highest splice site
+      if ($splice_site ne '' and $highest_splice_site eq ''){
+	$highest_splice_site = $splice_site;
+      }
+      if ($splice_site ne '' and $highest_splice_site ne '' and $splice_sites{$splice_site} < $splice_sites{$highest_splice_site}){
+	$highest_splice_site = $splice_site;
+      }
     }
     #and print the last variation
 
     @types = split(',',$consequence_type) if (defined $consequence_type); #get types, there might be a splice_site and a normal one
-    if (@types > 1){
-	$splice_site = shift @types; #and the splice_site
-	$type = shift @types; #get the consequence type
+
+    foreach my $ct (@types) {
+      if ($ct =~ /regulatory/i) {
+	$regulatory_region = $ct;
+      }
+      elsif ($ct =~ /splice/i) {
+	$splice_site = $ct;
+      }
+      else {
+	$type = $ct;
+      }
     }
-    elsif (@types == 1){
-	$type = shift @types; #get the consequence type
-	$splice_site ||= '';
-    }
-    else{
-	$type ||= 'INTERGENIC';
-	$splice_site ||= '';
-    }
+
+#     if (@types > 1){
+# 	$splice_site = shift @types; #and the splice_site
+# 	$type = shift @types; #get the consequence type
+#     }
+#     elsif (@types == 1){
+# 	$type = shift @types; #get the consequence type
+# 	$splice_site ||= '';
+#     }
+#     else{
+# 	$type ||= 'INTERGENIC';
+# 	$splice_site ||= '';
+#     }
     #find the highest consequence type
     if (defined $consequence_type and ($consequence_types{$type} < $consequence_types{$highest_priority_type})){
-	$highest_priority_type = $type;
+      $highest_priority_type = $type;
     }
     #and the highest splice site
     if ($splice_site ne '' and $highest_splice_site eq ''){
-	$highest_splice_site = $splice_site;
+      $highest_splice_site = $splice_site;
     }
     if ($splice_site ne '' and $highest_splice_site ne '' and $splice_sites{$splice_site} < $splice_sites{$highest_splice_site}){
-	$highest_splice_site = $splice_site;
+      $highest_splice_site = $splice_site;
     }
-    print FH join("\t",$previous_variation_feature_id,join(',',$highest_splice_site,$highest_priority_type)), "\n" if ($highest_splice_site ne '');
-    print FH join("\t",$previous_variation_feature_id,$highest_priority_type), "\n" if ($highest_splice_site eq '');
-    
+    $final_type = "$highest_splice_site," if defined $highest_splice_site;
+    $final_type .= "$highest_priority_type,";
+    $final_type .= "$regulatory_region" if defined $regulatory_region;
+    print FH join("\t",$previous_variation_feature_id,$final_type),"\n";
+
     close(FH);
     # upload into tmp table
     debug("creating temporary table with consequence type");
