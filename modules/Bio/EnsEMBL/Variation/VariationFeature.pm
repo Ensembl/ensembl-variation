@@ -80,6 +80,7 @@ our @ISA = ('Bio::EnsEMBL::Feature');
 
 my %CONSEQUENCE_TYPES = %Bio::EnsEMBL::Variation::ConsequenceType::CONSEQUENCE_TYPES;
 my %SPLICE_SITES = %Bio::EnsEMBL::Variation::ConsequenceType::SPLICE_SITES;
+my %REGULATORY_REGION = %Bio::EnsEMBL::Variation::ConsequenceType::REGULATORY_REGION;
 
 =head2 new
 
@@ -124,6 +125,9 @@ my %SPLICE_SITES = %Bio::EnsEMBL::Variation::ConsequenceType::SPLICE_SITES;
   Arg [-SPLICE_SITE] :
      string - highest splice site for the transcripts of the VariationFeature
 
+  Arg [-REGULATORY_REGION] :
+     string - regulatory region for the transcripts of the VariationFeature
+
   Arg [-VARIATION_ID] :
     int - the internal id of the variation object associated with this
     identifier. This may be provided instead of a variation object so that
@@ -142,6 +146,7 @@ my %SPLICE_SITES = %Bio::EnsEMBL::Variation::ConsequenceType::SPLICE_SITES;
 	-validation_code => ['cluster','doublehit'],
 	-consequence_type => 'INTRONIC',
 	-splice_site => 'ESSENTIAL_SPLICE_SITE',
+	-regulatory_region => 'REGULATORY_REGION',
         -variation => $v);
 
   Description: Constructor. Instantiates a new VariationFeature object.
@@ -156,9 +161,10 @@ sub new {
   my $class = ref($caller) || $caller;
 
   my $self = $class->SUPER::new(@_);
-  my ($allele_str, $var_name, $map_weight, $variation, $variation_id, $source, $validation_code, $consequence_type, $splice_site) =
+  my ($allele_str, $var_name, $map_weight, $variation, $variation_id, $source, $validation_code, $consequence_type, $splice_site, $regulatory_region) =
     rearrange([qw(ALLELE_STRING VARIATION_NAME 
-                  MAP_WEIGHT VARIATION VARIATION_ID SOURCE VALIDATION_CODE CONSEQUENCE_TYPE SPLICE_SITE)], @_);
+                  MAP_WEIGHT VARIATION VARIATION_ID SOURCE VALIDATION_CODE 
+		  CONSEQUENCE_TYPE SPLICE_SITE REGULATORY_REGION)], @_);
 
   $self->{'allele_string'}    = $allele_str;
   $self->{'variation_name'}   = $var_name;
@@ -169,6 +175,7 @@ sub new {
   $self->{'validation_code'}  = $validation_code;
   $self->{'consequence_type'} = $consequence_type || 'INTERGENIC';
   $self->{'splice_site'}      = $splice_site || '';
+  $self->{'regulatory_region'}= $regulatory_region || '';
 
   return $self;
 }
@@ -482,6 +489,78 @@ sub get_splice_site{
 	  }
       }      
       return $highest_priority;      
+  }
+}
+
+=head2 add_regulatory_region
+
+    Arg [1]     : string $regulatory_region
+    Example     : $vf->add_regulatory_region('REGULATORY_REGION')
+    Description : Setter for the regulatory region type of this VariationFeature
+                  Allowed value is: 'REGULATORY_REGION'
+    ReturnType  : string
+    Exceptions  : none
+    Caller      : general
+
+=cut
+
+sub add_regulatory_region{
+    my $self = shift;
+    my $regulatory_region = shift;
+
+    return $self->{'regulatory_region'} = $regulatory_region if ($REGULATORY_REGION{$regulatory_region});
+    warning("You are trying to set the regulatory_region to a non-allowed type. The allowed type is: ", keys %REGULATORY_REGION);
+    return '';
+}
+
+=head2 get_regulatory_region
+
+   Arg[1]      : (optional) Bio::EnsEMBL::Gene $g
+   Example     : if($vf->get_regulatory_region eq 'REGULATORY_REGION'){do_something();}
+   Description : Getter for the regulatory region of this variation
+                 If an argument provided, gets the highest of the transcripts where the gene appears
+                 Allowed value is :'REGULATORY_REGION'
+   Returntype : string
+   Exceptions : throw if provided argument not a gene
+   Caller     : general
+
+=cut
+
+sub get_regulatory_region{
+  my $self = shift;
+  my $gene = shift;
+    
+  if(!defined $gene){
+    return $self->{'regulatory_region'};
+  } 
+  else{
+      my $regulatory_region;
+      #first, get all the transcripts, if any
+      my $transcript_variations = $self->get_all_TranscriptVariations();
+      #if no transcripts, return INTERGENIC type
+      if (!defined $transcript_variations){
+	  return '';
+      }
+      if (!ref $gene || !$gene->isa("Bio::EnsEMBL::Gene")){
+	  throw("$gene is not a Bio::EnsEMBL::Gene type!");
+      }
+      my $transcripts = $gene->get_all_Transcripts();
+      my %transcripts_genes;
+      my @new_transcripts;
+      map {$transcripts_genes{$_->dbID()}++} @{$transcripts};
+      foreach my $transcript_variation (@{$transcript_variations}){
+	  if (exists $transcripts_genes{$transcript_variation->transcript->dbID()}){
+	      push @new_transcripts,$transcript_variation;
+	  }
+      }
+      #get the highest type in the splice site
+      foreach my $tv (@new_transcripts){
+	if (defined $tv->regulatory_region ()){
+	  $regulatory_region = $tv->regulatory_region();
+	  last;
+	}
+      }
+      return $regulatory_region;
   }
 }
 

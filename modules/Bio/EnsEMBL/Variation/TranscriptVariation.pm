@@ -58,13 +58,13 @@ package Bio::EnsEMBL::Variation::TranscriptVariation;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Utils::Argument qw(rearrange);
 use Bio::EnsEMBL::Storable;
+use Bio::EnsEMBL::Variation::ConsequenceType;
 
 our @ISA = ('Bio::EnsEMBL::Storable');
 
-
 my %CONSEQUENCE_TYPES = %Bio::EnsEMBL::Variation::ConsequenceType::CONSEQUENCE_TYPES;
 my %SPLICE_SITES = %Bio::EnsEMBL::Variation::ConsequenceType::SPLICE_SITES;
-
+my %regulatory_region = %Bio::EnsEMBL::Variation::ConsequenceType::REGULATORY_REGION;
 
 =head2 new
 
@@ -106,6 +106,9 @@ my %SPLICE_SITES = %Bio::EnsEMBL::Variation::ConsequenceType::SPLICE_SITES;
     If the variation is affecting a splice site or an essential splice site.
     Must be one of 'SPLICE_SITE', 'ESSENTIAL_SPLICE_SITE'
 
+  Arg [-REGULATORY_REGION] :
+    If the variation is affecting a regulatory region.
+
   Example    : 
     $tr_var = Bio::EnsEMBL::Variation::TranscriptVariation->new
       (-transcript        => $transcript,
@@ -115,6 +118,7 @@ my %SPLICE_SITES = %Bio::EnsEMBL::Variation::ConsequenceType::SPLICE_SITES;
        -translation_start => 318,
        -translation_end   => 318,
        -consequence_type  => 'NON_SYNONYMOUS_CODING',
+       -regulatory_region => 'REGULATORY_REGION',
        -splice_site       => 'SPLICE_SITE');
 
   Description: Constructor. Instantiates a
@@ -129,10 +133,10 @@ sub new {
   my $class = shift;
 
   my ($vf, $tr, $pep_allele, $cdna_start,$cdna_end, $tl_start,$tl_end, $consequence_type,
-      $dbID, $adaptor, $transcript, $splice_site) =
+      $dbID, $adaptor, $transcript, $splice_site, $regulatory_region) =
     rearrange([qw(VARIATION_FEATURE TRANSCRIPT PEP_ALLELE_STRING CDNA_START
                   CDNA_END TRANSLATION_START TRANSLATION_END CONSEQUENCE_TYPE
-                  DBID ADAPTOR TRANSCRIPT SPLICE_SITE)], @_);
+                  DBID ADAPTOR TRANSCRIPT SPLICE_SITE REGULATORY_REGION)], @_);
 
   if(defined($consequence_type)) {
     $consequence_type = uc($consequence_type);
@@ -147,6 +151,14 @@ sub new {
       if (!$SPLICE_SITES{$splice_site}){
 	  my $valid = join (',', map({"'$_'"} keys(%SPLICE_SITES)));
 	  throw("Splice site argument must be one of: $valid");
+      }
+  }
+
+  if (defined($regulatory_region)){
+      $regulatory_region = uc($regulatory_region);
+      if (!$REGULATORY_REGION{$regulatory_region}){
+	  my $valid = join (',', map({"'$_'"} keys(%REGULATORY_REGION)));
+	  throw("Regulatory region argument must be : $valid");
       }
   }
 
@@ -176,6 +188,7 @@ sub new {
                 'translation_start' => $tl_start,
                 'translation_end'   => $tl_end,
                 'consequence_type'  => $consequence_type,
+		'regulatory_region' => $regulatory_region,
 	        'splice_site'       => $splice_site || ''}, $class;
 }
 
@@ -447,6 +460,37 @@ sub splice_site {
   }
 
   return $self->{'splice_site'};
+}
+
+=head2 regulatory_region
+
+  Arg [1]    : (optional) string $regulatory_region
+  Example    : if($tr_var->regulatory_region() eq 'REGULATORY_REGION') { do_something(); }
+  Description: Getter/Setter for the regulatory region of this transcript variation.
+               Allowed values are: 'REGULATORY_REGION'
+  Returntype : string
+  Exceptions : throw if provided argument is not one of the valid strings
+  Caller     : general
+
+=cut
+
+sub regulatory_region {
+  my $self = shift;
+
+  if(@_) {
+    my $regulatory_region = shift;
+
+    if(defined($regulatory_region)) {
+      $regulatory_region = uc($regulatory_region);
+      if(!$REGULATORY_REGION{$regulatory_region}) {
+        my $valid = join(',',map({"'$_'"} keys(%REGULATORY_REGION)));
+        throw("Type argument must be : $valid");
+      }
+    }
+    $self->{'regulatory_region'} = $regulatory_region;
+  }
+
+  return $self->{'regulatory_region'};
 }
 
 1;

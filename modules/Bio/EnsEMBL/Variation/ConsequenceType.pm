@@ -45,6 +45,10 @@ our %CONSEQUENCE_TYPES = (
 			  'INTERGENIC' => 4096
 			  );
 
+our %REGULATORY_REGION = (
+                          'REGULATORY_REGION' => 8192
+                           );
+
 =head2 new
 
   Arg [1]    : (optional) int $transcript_id
@@ -345,6 +349,33 @@ sub splice_site {
       }
   }
   return $self->{'splice_site'}
+}
+
+=head2 regulatory_region
+
+  Arg [1]    : string $regulatory_region
+               (possible types 'REGULATORY_REGION')
+  Example    : $regulatory_region = $consequence_type->regulatory_region();
+  Description: Getter/Setter for regulatory_region of the variation in the transcript
+  Returntype : none
+  Exceptions : warning if the regulatory region is not recognised
+  Caller     : general
+
+=cut
+
+sub regulatory_region {
+  my $self = shift;
+
+  if(@_) {
+      my $regulatory_region = shift;
+      if (defined $REGULATORY_REGION{$regulatory_region}){
+	  $self->{'regulatory_region'} = $regulatory_region;
+      }
+      else{
+	  warning("Trying to set the regulatory region to a not valid value. Possible values: ",keys %REGULATORY_REGION,"\n");
+      }
+  }
+  return $self->{'regulatory_region'}
 }
 
 =head2 aa_alleles
