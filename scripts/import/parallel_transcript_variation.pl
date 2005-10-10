@@ -83,7 +83,7 @@ my ($TMP_DIR, $TMP_FILE, $LIMIT,$status_file);
   if ($processes == $num_processes){
       #if is the last process, finish it
     debug("Last process: ready to import data");
-      #last_process($dbCore,$dbVar);
+      last_process($dbCore,$dbVar);
   }
 }
 
@@ -176,6 +176,14 @@ sub transcript_variation {
 	      $consequences = type_variation($tr, $consequence_type);
 	  }
           foreach my $ct (@$consequences) {
+	    my $final_ct;
+	    if ($ct->splice_site) {
+		$final_ct = $ct->splice_site . ",";
+            }
+	    if ($ct->regulatory_region) {
+	       $final_ct .= $ct->regulatory_region . ",";
+            }
+	    $final_ct .= $ct->type;
             my @arr = ($ct->transcript_id,
                        $ct->variation_feature_id,
                        join("/", @{$ct->aa_alleles||[]}),
@@ -183,9 +191,8 @@ sub transcript_variation {
                        $ct->aa_end,
                        $ct->cdna_start,
                        $ct->cdna_end,
-		       join ',', $ct->splice_site ? $ct->splice_site : "",
-		       $ct->regulatory_region ? $ct->regulatory_region : "", $ct->type);
-            @arr = map {($_) ? $_ : '\N'} @arr;
+		       $final_ct); 
+            @arr = map {($_) ? ($_) = $_ =~ /^(.*)[,]*$/ : '\N'} @arr;
             print FH join("\t", @arr), "\n";
           }
         }
@@ -279,10 +286,10 @@ sub last_process{
 	$highest_priority_type = $type;
       }
       #and the highest splice site
-      if ($splice_site ne '' and $highest_splice_site eq ''){
+      if (defined $splice_site and $splice_site ne '' and $highest_splice_site eq ''){
 	$highest_splice_site = $splice_site;
       }
-      if ($splice_site ne '' and $highest_splice_site ne '' and $splice_sites{$splice_site} < $splice_sites{$highest_splice_site}){
+      if (defined $splice_site and $splice_site ne '' and $highest_splice_site ne '' and $splice_sites{$splice_site} < $splice_sites{$highest_splice_site}){
 	$highest_splice_site = $splice_site;
       }
     }
