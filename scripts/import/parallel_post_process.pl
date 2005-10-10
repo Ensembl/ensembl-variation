@@ -6,6 +6,7 @@ use ImportUtils qw(debug);
 use Bio::EnsEMBL::Utils::Exception qw(warning throw verbose);
 use DBH;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
+use FindBin qw( $Bin );
 
 use constant MAX_GENOTYPES => 6_000_000; #max number of genotypes per file. When more, split the file into regions
 use constant REGIONS => 15; #number of chunks the file will be splited when more than MAX_GENOTYPES
@@ -15,24 +16,25 @@ my ($TMP_DIR, $TMP_FILE, $LIMIT);
 
 my ($vhost, $vport, $vdbname, $vuser, $vpass,
     $chost, $cport, $cdbname, $cuser, $cpass,
-    $limit, $num_processes, $top_level,
+    $limit, $num_processes, $top_level, $species,
     $variation_feature, $flanking_sequence, $variation_group_feature,
     $transcript_variation, $ld_populations);
 
 $variation_feature = $flanking_sequence = $variation_group_feature = $transcript_variation = $ld_populations = '';
 
-GetOptions('chost=s'   => \$chost,
-	   'cuser=s'   => \$cuser,
-	   'cpass=s'   => \$cpass,
-	   'cport=i'   => \$cport,
-	   'cdbname=s' => \$cdbname,
-	   'vhost=s'   => \$vhost,
-	   'vuser=s'   => \$vuser,
-	   'vpass=s'   => \$vpass,
-	   'vport=i'   => \$vport,
-	   'vdbname=s' => \$vdbname,
+GetOptions(#'chost=s'   => \$chost,
+	   #'cuser=s'   => \$cuser,
+	   #'cpass=s'   => \$cpass,
+	   #'cport=i'   => \$cport,
+	   #'cdbname=s' => \$cdbname,
+	   #'vhost=s'   => \$vhost,
+	   #'vuser=s'   => \$vuser,
+	   #'vpass=s'   => \$vpass,
+	   #'vport=i'   => \$vport,
+	   #'vdbname=s' => \$vdbname,
 	   'tmpdir=s'  => \$ImportUtils::TMP_DIR,
 	   'tmpfile=s' => \$ImportUtils::TMP_FILE,
+	   'species=s' => \$species,
 	   'limit=i'   => \$limit,
 	   'top_level=i' => \$top_level,
 	   'num_processes=i' => \$num_processes,
@@ -42,40 +44,45 @@ GetOptions('chost=s'   => \$chost,
 	   'transcript_variation' => \$transcript_variation,
 	   'ld_populations' => \$ld_populations );
 
-#added default options
-$chost    ||= 'ecs2';
-$cuser    ||= 'ensro';
-$cport    ||= 3365;
-
-$vhost    ||='ia64g';
-$vport    ||= 3306;
-$vuser    ||= 'ensadmin';
-
 $num_processes ||= 1;
 
 $LIMIT = ($limit) ? " $limit " : ''; #will refer to position in a slice
 
-usage('-vdbname argument is required') if(!$vdbname);
-usage('-cdbname argument is required') if(!$cdbname);
+#usage('-vdbname argument is required') if(!$vdbname);
+#usage('-cdbname argument is required') if(!$cdbname);
 
 usage('-num_processes must at least be 1') if ($num_processes == 0);
 
-my $dbVar = DBH->connect
-    ("DBI:mysql:host=$vhost;dbname=$vdbname;port=$vport",$vuser, $vpass );
-die("Could not connect to variation database: $!") if(!$dbVar);
+warn("Make sure you have a updated ensembl.registry file!\n");
 
- my $dbCore = Bio::EnsEMBL::DBSQL::DBAdaptor->new
-    (-host   => $chost,
-     -user   => $cuser,
-     -pass   => $cpass,
-     -port   => $cport,
-     -dbname => $cdbname);
+my $registry_file ||= $Bin . "/ensembl.registry";
+
+Bio::EnsEMBL::Registry->load_all( $registry_file );
+
+my $cdba = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'core');
+my $vdba = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'variation');
+
+
+my $dbVar = $vdba->dbc->db_handle;
+my $dbCore = $cdba;
+
+#added default options
+$chost = $cdba->dbc->host; 
+$cuser    ||= 'ensro';
+$cport = $cdba->dbc->port ;
+$cdbname = $cdba->dbc->dbname;
+
+$vhost = $vdba->dbc->host;
+$vport = $vdba->dbc->port;
+$vuser    ||= 'ensadmin';
+$vdbname = $vdba->dbc->dbname;
+$vpass = $vdba->dbc->password;
 
 $TMP_DIR  = $ImportUtils::TMP_DIR;
 $TMP_FILE = $ImportUtils::TMP_FILE;
 
 ##Apart from human and mouse, we directly import top_level coordinates from dbSNP
-if (! defined $top_level && $cdbname !~ /homo|mus|anoph|can/i) {
+if (! defined $top_level && $species !~ /hum|homo|mouse|mus|anoph|dog|can/i) {
   $top_level=1;
 }
 
@@ -122,7 +129,7 @@ sub parallel_variation_feature{
     for (my $i = 0; $i < $num_processes ; $i++){
 	$limit = "AND variation_feature_id <= " . (($i+1) * $sub_variation + $min_variation-1) . " AND variation_feature_id >= " . ($i*$sub_variation + $min_variation) if ($i+1 < $num_processes);
 	$limit =  "AND variation_feature_id <= " .  $max_variation . " AND variation_feature_id >= " . ($i*$sub_variation + $min_variation) if ($i + 1 == $num_processes); #the last one takes the left rows
-	$call = "bsub -J $dbname\_variation_job_$i -m 'bc_hosts ecs4_hosts' -o $TMP_DIR/output_variation_feature_$i\_$$.txt /usr/local/ensembl/bin/perl parallel_variation_feature.pl -chost $chost -cuser $cuser -cdbname $cdbname -vhost $vhost -vuser $vuser -vport $vport -vdbname $vdbname -limit '$limit' -tmpdir $TMP_DIR -tmpfile $TMP_FILE -num_processes $num_processes -status_file $variation_status_file ";
+	$call = "bsub -J $dbname\_variation_job_$i -m 'bc_hosts' -o $TMP_DIR/output_variation_feature_$i\_$$.txt /usr/local/ensembl/bin/perl parallel_variation_feature.pl -chost $chost -cuser $cuser -cdbname $cdbname -vhost $vhost -vuser $vuser -vport $vport -vdbname $vdbname -limit '$limit' -tmpdir $TMP_DIR -tmpfile $TMP_FILE -num_processes $num_processes -status_file $variation_status_file ";
 	$call .= "-cpass $cpass " if ($cpass);
 	$call .= "-cport $cport " if ($cport);
 	$call .= "-vpass $vpass " if ($vpass);
