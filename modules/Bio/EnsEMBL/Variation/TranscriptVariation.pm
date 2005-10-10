@@ -64,7 +64,7 @@ our @ISA = ('Bio::EnsEMBL::Storable');
 
 my %CONSEQUENCE_TYPES = %Bio::EnsEMBL::Variation::ConsequenceType::CONSEQUENCE_TYPES;
 my %SPLICE_SITES = %Bio::EnsEMBL::Variation::ConsequenceType::SPLICE_SITES;
-my %regulatory_region = %Bio::EnsEMBL::Variation::ConsequenceType::REGULATORY_REGION;
+my %REGULATORY_REGION = %Bio::EnsEMBL::Variation::ConsequenceType::REGULATORY_REGION;
 
 =head2 new
 
