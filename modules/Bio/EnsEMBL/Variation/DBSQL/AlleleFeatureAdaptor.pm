@@ -119,36 +119,36 @@ sub fetch_all_by_Slice_Population{
 }
 
 
-=head2 fetch_all_by_Slice_Individual
+=head2 fetch_all_by_Slice
 
    Arg[0]      : Bio::EnsEMBL::Slice $slice
-   Arg[1]      : Bio::EnsEMBL::Variation::Individual $individual
-   Example     : my $vf = $vfa->fetch_all_by_Slice_Individual($slice,$individual);   
+   Arg[1]      : Bio::EnsEMBL::Variation::Population $population
+   Example     : my $vf = $vfa->fetch_all_by_Slice($slice,$population);   
    Description : Gets all the VariationFeatures in a certain Slice for a given
-                 Individual
+                 Population
    ReturnType  : listref of Bio::EnsEMBL::Variation::VariationFeature
    Exceptions  : thrown on bad arguments
    Caller      : general
    
 =cut
 
-sub fetch_all_by_Slice_Individual{
+sub fetch_all_by_Slice{
     my $self = shift;
     my $slice = shift;
-    my $individual = shift;
+    my $population = shift;
 
     if(!ref($slice) || !$slice->isa('Bio::EnsEMBL::Slice')) {
 	throw('Bio::EnsEMBL::Slice arg expected');
     }
 
-    if(!ref($individual) || !$individual->isa('Bio::EnsEMBL::Variation::Individual')) {
-	throw('Bio::EnsEMBL::Variation::Individual arg expected');
+    if(!ref($population) || !$population->isa('Bio::EnsEMBL::Variation::Population')) {
+	throw('Bio::EnsEMBL::Variation::Population arg expected');
     }
-    if(!defined($individual->dbID())) {
-	throw("Individual arg must have defined dbID");
+    if(!defined($population->dbID())) {
+	throw("Population arg must have defined dbID");
     }
     
-    my $constraint = "ig.sample_id = " . $individual->dbID;
+    my $constraint = "ip.population_sample_id = " . $population->dbID;
 
     #indicate to select the data from the single_bp table
     $self->_multiple_bp(0);
@@ -162,8 +162,8 @@ sub fetch_all_by_Slice_Individual{
     #indicate to select the data from the multiple_bp table
     $self->_multiple_bp(1);
     #and add the same information for the multiple_bp table
-    my $allele_features_multiple = $self->fetch_all_by_Slice_constraint($slice,$constraint);
-    push @{$allele_features},$allele_features_multiple if (@{$allele_features_multiple} > 0);
+#    my $allele_features_multiple = $self->fetch_all_by_Slice_constraint($slice,$constraint);
+#    push @{$allele_features},$allele_features_multiple if (@{$allele_features_multiple} > 0);
     #and include then the result of both queries
     $self->{'_slice_feature_cache'}->{$key} = $allele_features;
     return $allele_features;
@@ -173,7 +173,7 @@ sub _tables{
     my $self = shift;
 
     if ($self->from_IndividualSlice){	
-	return (['variation_feature','vf'], ['individual_genotype_single_bp','ig']) if (!$self->_multiple_bp());
+	return (['variation_feature','vf'], ['individual_genotype_single_bp','ig'], ['individual_population','ip']) if (!$self->_multiple_bp());
 	return (['variation_feature','vf'], ['individual_genotype_multiple_bp','ig']) if ($self->_multiple_bp());
     }
     else{
@@ -196,7 +196,7 @@ sub _columns{
 
 sub _default_where_clause{
     my $self = shift;
-    return "ig.variation_id = vf.variation_id" if ($self->from_IndividualSlice());
+    return "ig.variation_id = vf.variation_id AND ig.sample_id = ip.individual_sample_id" if ($self->from_IndividualSlice());
     return "a.variation_id = vf.variation_id";
 }
 
