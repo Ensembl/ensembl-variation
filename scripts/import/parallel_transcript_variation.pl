@@ -69,6 +69,7 @@ my ($TMP_DIR, $TMP_FILE, $LIMIT,$status_file);
   $TMP_DIR  = $ImportUtils::TMP_DIR;
   $TMP_FILE = $ImportUtils::TMP_FILE;
 
+
   transcript_variation($dbCore, $dbVar);
 
   open STATUS, ">>$TMP_DIR/$status_file"
@@ -128,7 +129,7 @@ sub transcript_variation {
   my ($offset,$length) = split /,/,$LIMIT; #get the offset and length of the elements we have to get from the slice
   # assumes that variation features have already been pushed to toplevel
   foreach my $slice (splice (@slices_ordered,$offset,$length)) {
-    #next if $slice->seq_region_name() ne '17';
+    #next if $slice->seq_region_name() ne '17'; 
     debug("Processing transcript variations for ",
           $slice->seq_region_name(), "\n");
     my $genes = $slice->get_all_Genes();
@@ -144,36 +145,38 @@ sub transcript_variation {
       foreach my $tr (@{$g->get_all_Transcripts()}) {
 
         next if(!$tr->translation()); # skip pseudogenes
-	my $utr3 = $tr->three_prime_utr();
-        my $utr5 = $tr->five_prime_utr();
 
-
-# compute the effect of the variation on each of the transcripts
-        # of the gene
-	my $consequence_type;
 	my ($start,$end, $strand); #start, end and strand of the variation feature in the slice
-        foreach my $row (@$rows) {
+
+	foreach my $row (@$rows) {
 	  next if ($row->[4] =~ /LARGE/); #for LARGEINSERTION and LARGEDELETION alleles we don't calculate transcripts
-          # put variation in slice coordinates
-          $start = $row->[1] - $slice->start() + 1;
-          $end = $row->[2] - $slice->start() + 1;
+	  # put variation in slice coordinates
+	  $start = $row->[1] - $slice->start() + 1;
+	  $end = $row->[2] - $slice->start() + 1;
 	  $strand = $row->[3];
 	  expand(\$row->[4]);#expand the alleles
-          my @alleles = split('/',$row->[4]);
-
-          if($strand != $tr->strand()) {
-            # flip feature onto same strand as transcript
-            for(my $i = 0; $i < @alleles; $i++) {
-              reverse_comp(\$alleles[$i]);
-            }
-            $strand = $tr->strand();
-          }
+	  my @alleles = split('/',$row->[4]);
+	  
+	  if($strand != $tr->strand()) {
+	    # flip feature onto same strand as transcript
+	    for(my $i = 0; $i < @alleles; $i++) {
+	      reverse_comp(\$alleles[$i]);
+	    }
+	    $strand = $tr->strand();
+	  }
 	  shift @alleles; #remove reference allele
-
+	  
+	  my $consequence_type;
+	
 	  $consequence_type = Bio::EnsEMBL::Variation::ConsequenceType->new($tr->dbID,$row->[0],$start,$end,$strand,\@alleles);
-	  my $consequences;
+
+	  # compute the effect of the variation on each of the transcripts
+	  # of the gene
+	
+
+	  my ($consequences);
 	  if ($row->[4] !~ /\+/){
-	      $consequences = type_variation($tr, $consequence_type);
+	    $consequences = type_variation($tr, $g, $consequence_type);
 	  }
           foreach my $ct (@$consequences) {
 	    my $final_ct;
@@ -247,17 +250,51 @@ sub last_process{
     open(FH, ">" . $TMP_DIR . "/" . $TMP_FILE);
     while($sth->fetch()){
       if (($variation_feature_id != $previous_variation_feature_id) && ($previous_variation_feature_id != 0)){
-	$final_type = "$highest_splice_site," if defined $highest_splice_site;
-	$final_type .= "$highest_priority_type,";
-	$final_type .= "$regulatory_region" if defined $regulatory_region;
+	$final_type = "$highest_splice_site," if $highest_splice_site;
+	$final_type .= "$regulatory_region," if $regulatory_region;
+	$final_type .= "$highest_priority_type";
 	print FH join("\t",$previous_variation_feature_id,$final_type),"\n";
       
+	$regulatory_region = '';
+	$splice_site = '';
 	$highest_splice_site = '';
 	$highest_priority_type = 'INTERGENIC';
+	$final_type = '';
       }
       $previous_variation_feature_id = $variation_feature_id;
 
-      @types = split(',',$consequence_type) if (defined $consequence_type); #get types, there might be a splice_site and a normal one
+      if (defined $consequence_type) {#get types, there might be a splice_site and a normal one and regulatory_region
+	@types = split(',',$consequence_type);
+	foreach my $ct (@types) {
+	  if ($ct =~ /regulatory/i) {
+	    $regulatory_region = $ct;
+	  }
+	  elsif ($ct =~ /splice/i) {
+	    $splice_site = $ct;
+	  }
+	  else {
+	    $type = $ct;
+	  }
+	}
+
+	#find the highest consequence type
+	if ($consequence_types{$type} < $consequence_types{$highest_priority_type}){
+	  $highest_priority_type = $type;
+	}
+	#and the highest splice site
+	if ($splice_site and $highest_splice_site eq ''){
+	  $highest_splice_site = $splice_site;
+	}
+	if ($splice_site and $highest_splice_site and $splice_sites{$splice_site} < $splice_sites{$highest_splice_site}){
+	  $highest_splice_site = $splice_site;
+	}
+      }
+    }
+    #and print the last variation
+
+    if (defined $consequence_type) {
+      @types = split(',',$consequence_type);
+
       foreach my $ct (@types) {
 	if ($ct =~ /regulatory/i) {
 	  $regulatory_region = $ct;
@@ -269,20 +306,9 @@ sub last_process{
 	  $type = $ct;
 	}
       }
-#       if (@types > 1){
-# 	    $splice_site = shift @types; #and the splice_site
-# 	    $type = shift @types;
-# 	}
-# 	elsif (@types == 1){
-# 	    $type = shift @types; #get the consequence type
-# 	    $splice_site = '';
-# 	}
-# 	else{
-# 	    $highest_priority_type ||= 'INTERGENIC';
-# 	    $splice_site = '';
-# 	}
-	#find the highest consequence type
-      if (defined $consequence_type and ($consequence_types{$type} < $consequence_types{$highest_priority_type})){
+
+      #find the highest consequence type
+      if ($consequence_types{$type} < $consequence_types{$highest_priority_type}){
 	$highest_priority_type = $type;
       }
       #and the highest splice site
@@ -293,51 +319,15 @@ sub last_process{
 	$highest_splice_site = $splice_site;
       }
     }
-    #and print the last variation
 
-    @types = split(',',$consequence_type) if (defined $consequence_type); #get types, there might be a splice_site and a normal one
-
-    foreach my $ct (@types) {
-      if ($ct =~ /regulatory/i) {
-	$regulatory_region = $ct;
-      }
-      elsif ($ct =~ /splice/i) {
-	$splice_site = $ct;
-      }
-      else {
-	$type = $ct;
-      }
-    }
-
-#     if (@types > 1){
-# 	$splice_site = shift @types; #and the splice_site
-# 	$type = shift @types; #get the consequence type
-#     }
-#     elsif (@types == 1){
-# 	$type = shift @types; #get the consequence type
-# 	$splice_site ||= '';
-#     }
-#     else{
-# 	$type ||= 'INTERGENIC';
-# 	$splice_site ||= '';
-#     }
-    #find the highest consequence type
-    if (defined $consequence_type and ($consequence_types{$type} < $consequence_types{$highest_priority_type})){
-      $highest_priority_type = $type;
-    }
-    #and the highest splice site
-    if ($splice_site ne '' and $highest_splice_site eq ''){
-      $highest_splice_site = $splice_site;
-    }
-    if ($splice_site ne '' and $highest_splice_site ne '' and $splice_sites{$splice_site} < $splice_sites{$highest_splice_site}){
-      $highest_splice_site = $splice_site;
-    }
     $final_type = "$highest_splice_site," if defined $highest_splice_site;
-    $final_type .= "$highest_priority_type,";
-    $final_type .= "$regulatory_region" if defined $regulatory_region;
+    $final_type .= "$regulatory_region," if defined $regulatory_region;
+    $final_type .= "$highest_priority_type";
     print FH join("\t",$previous_variation_feature_id,$final_type),"\n";
 
     close(FH);
+    
+
     # upload into tmp table
     debug("creating temporary table with consequence type");
     create_and_load($dbVar,"tmp_consequence_type", "variation_feature_id *", "consequence_type");
