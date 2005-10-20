@@ -79,8 +79,8 @@ sub get_schema_version {
     }
     return $ver;
   } else {
-    $self->warn("Please insert meta_key 'schema_version' " .
-                "in meta table at core db.\n");
+    warn("Please insert meta_key 'schema_version' " .
+         "in meta table at core db.\n");
   }
   return 0;
 }
