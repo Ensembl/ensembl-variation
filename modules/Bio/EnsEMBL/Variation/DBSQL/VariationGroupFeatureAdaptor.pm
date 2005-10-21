@@ -123,8 +123,7 @@ sub _objs_from_sth {
   # function calls as possible for speed purposes.  Thus many caches and
   # a fair bit of gymnastics is used.
   #
-
-  my $sa = $self->db()->get_SliceAdaptor();
+  my $sa = $self->db()->dnadb()->get_SliceAdaptor();
 
   my @features;
   my %slice_hash;
