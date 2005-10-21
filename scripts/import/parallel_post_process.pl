@@ -329,6 +329,7 @@ sub parallel_ld_populations{
 		    ORDER BY  vf.seq_region_id,vf.seq_region_start}, {mysql_use_result => 1} );
 
 
+    print "Time starting to dump data from database: ",scalar(localtime(time)),"\n";
     $sth->execute();
 
     my $dbname = $dbVar->dbname(); #get the name of the database to create the file
@@ -393,23 +394,25 @@ sub parallel_ld_populations{
     }
 
     print_buffered( $buffer );
-    
+    print "Time starting to submit jobs to queues: ",scalar(localtime(time)),"\n";
     #let's run a job array
     foreach my $file (keys %genotypes_file){
-	if ($genotypes_file{$file} > MAX_GENOTYPES()){
-	    &split_file($file,\%regions,$genotypes_file{$file},$dbname);
-	    $call = "bsub -J '$dbname.pairwise_ld[1-".REGIONS()."]' -m 'bc_hosts' -o $TMP_DIR/output_pairwise_ld.txt /usr/local/ensembl/bin/perl calc_genotypes.pl $file\_chunk.\\\$LSB_JOBINDEX $file\_chunk_out.\\\$LSB_JOBINDEX"; #create a job array
-	}
-	else{
-	    $call = "bsub -J '$dbname.pairwise_ld' -m 'bc_hosts' -o $TMP_DIR/output_ld_populations\_$$.txt /usr/local/ensembl/bin/perl calc_genotypes.pl $file $file\_out ";	    
-	}
+#	if ($genotypes_file{$file} > MAX_GENOTYPES()){
+#	    &split_file($file,\%regions,$genotypes_file{$file},$dbname);
+#	    $call = "bsub -J '$dbname.pairwise_ld[1-".REGIONS()."]' -m 'bc_hosts' -o $TMP_DIR/output_pairwise_ld.txt /usr/local/ensembl/bin/perl calc_genotypes.pl $file\_chunk.\\\$LSB_JOBINDEX $file\_chunk_out.\\\$LSB_JOBINDEX"; #create a job array
+#	    $call = "bsub -J '$dbname.pairwise_ld[1-".REGIONS()."]' -m 'bc_hosts' ./ld_wrapper.sh $file\_chunk.\\\$LSB_JOBINDEX $file\_chunk_out.\\\$LSB_JOBINDEX"; #create a job array
+#	}
+#	else{
+#	    $call = "bsub -J '$dbname.pairwise_ld' -m 'bc_hosts' -o $TMP_DIR/output_ld_populations\_$$.txt /usr/local/ensembl/bin/perl calc_genotypes.pl $file $file\_out ";	    
+	    $call = "bsub -J '$dbname.pairwise_ld' -m 'bc_hosts' ./ld_wrapper.sh $file $file\_out";	    
+#	}
 	system($call);
     }
-    $call = "bsub -w 'done($dbname.pairwise_ld)' -m 'ecs2f+10 ecs2_hosts' -o $TMP_DIR/output_ld_populations_import.txt /usr/local/ensembl/bin/perl parallel_ld_populations.pl -chost $chost -cuser $cuser -cdbname $cdbname -vhost $vhost -vuser $vuser -vport $vport -vdbname $vdbname -tmpdir $TMP_DIR -tmpfile $TMP_FILE ";
+    $call = "bsub -w 'done($dbname.pairwise_ld)' -m 'ecs4_hosts' -o $TMP_DIR/output_ld_populations_import.txt /usr/local/ensembl/bin/perl parallel_ld_populations.pl -chost $chost -cuser $cuser -cdbname $cdbname -vhost $vhost -vuser $vuser -vport $vport -vdbname $vdbname -tmpdir $TMP_DIR -tmpfile $TMP_FILE ";
     $call .= "-cpass $cpass " if ($cpass);
     $call .= "-cport $cport " if ($cport);
     $call .= "-vpass $vpass " if ($vpass);
-    system($call); #send the last job, that will wait for the rest to finish and upload everything to the table 
+#    system($call); #send the last job, that will wait for the rest to finish and upload everything to the table 
 
 }
 
