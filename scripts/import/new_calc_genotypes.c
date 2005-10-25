@@ -143,15 +143,14 @@ void major_freqs(const Haplotype * haplotypes, double *f_A, double *f_B){
   return;  
 }
 
-inline Genotype * find_person(int person_id, Locus_info *l){
-
-  int j=0;
-  for (j=0;j < l->number_genotypes; j++){
-    if (person_id == l->genotypes[j].person_id){
-      return &l->genotypes[j];
-    }
-  }
-  return NULL;
+int by_person_id(const void *v1, const void *v2){
+  Genotype * data1 = (Genotype *)v1;
+  Genotype * data2 = (Genotype *)v2;
+  
+  if (data1->person_id > data2->person_id) return 1;
+  if (data1->person_id == data2->person_id) return 0;
+  if (data1->person_id < data2->person_id) return -1;
+  return 0;
 }
 
 void calculate_pairwise_stats(Locus_info *first, Locus_info *second, Stats *s){
@@ -166,25 +165,37 @@ void calculate_pairwise_stats(Locus_info *first, Locus_info *second, Stats *s){
   double f_A, f_B;
   double D,r2, Dmax = 0.0, d_prime;
   int i;
+  int j;
   Genotype *genotype;
   uint8_t haplotype;
 
   Haplotype haplotypes;
-  
+
+  /*sort the arrays with the person_id numbers*/
+  qsort(first->genotypes,first->number_genotypes,sizeof(Genotype),by_person_id);
+  qsort(second->genotypes,second->number_genotypes,sizeof(Genotype),by_person_id);
+
   for (i=0;i< first->number_genotypes;i++){
-    genotype = find_person(first->genotypes[i].person_id, second);
-    if (genotype != NULL){
-      /*the second locus has the same person_id*/
-      haplotype = first->genotypes[i].genotype << 2;
-      haplotype |= genotype->genotype;
-
-      allele_counters[haplotype]++;
-
-      haplotypes.haplotype[i] = haplotype;
-      haplotypes.number_haplotypes = i+1;
-    }
-    else{
-      /*      fprintf(stderr, "Could not find %hd in locus %d\n",first->genotypes[i].person_id,second->locus);*/
+    for (j=i;j<second->number_genotypes;j++){
+      if (first->genotypes[i].person_id == second->genotypes[j].person_id){
+	genotype = &second->genotypes[j];
+	/*the second locus has the same person_id*/
+	haplotype = first->genotypes[i].genotype << 2;
+	haplotype |= genotype->genotype;
+	
+	allele_counters[haplotype]++;
+	
+	haplotypes.haplotype[i] = haplotype;
+	haplotypes.number_haplotypes = i+1;
+	break;
+      }    
+      else{
+	/*they have different, */
+	if (first->genotypes[i].person_id < second->genotypes[j].person_id){
+	  break;
+	}
+	/*      fprintf(stderr, "Could not find %hd in locus %d\n",first->genotypes[i].person_id,second->locus);*/
+      }
     }
   }
 
