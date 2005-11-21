@@ -74,7 +74,7 @@ use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Utils::Argument  qw(rearrange);
 use Bio::EnsEMBL::Variation::Utils::Sequence qw(ambiguity_code variation_class);
 use Bio::EnsEMBL::Variation::ConsequenceType;
-
+use Bio::EnsEMBL::Variation::Variation;
 
 our @ISA = ('Bio::EnsEMBL::Feature');
 
@@ -636,13 +636,11 @@ sub get_all_validation_states {
   my @VSTATES = @Bio::EnsEMBL::Variation::Variation::VSTATES;
 
   my $code = $self->{'validation_code'};
-
   # convert the validation state strings into a bit field
   # this preserves the same order and representation as in the database
   # and filters out invalid states
 
   my %VSTATE2BIT = %Bio::EnsEMBL::Variation::Variation::VSTATE2BIT;
-
   my $vcode = 0;
   $code ||= [];
   foreach my $vstate (@$code) {
@@ -654,7 +652,6 @@ sub get_all_validation_states {
   for(my $i = 0; $i < @VSTATES; $i++) {
     push @states, $VSTATES[$i] if((1 << $i) & $vcode);
   }
-
   return \@states;
 }
 
