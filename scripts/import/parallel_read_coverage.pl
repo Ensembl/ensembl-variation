@@ -5,6 +5,7 @@ use warnings;
 
 use Getopt::Long;
 use DBH;
+use FindBin qw( $Bin );
 
 use Bio::EnsEMBL::Mapper::RangeRegistry;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
@@ -14,45 +15,47 @@ my ($TMP_DIR, $TMP_FILE); #global variables for the tmp files and folder
 
 my ($vhost, $vport, $vdbname, $vuser, $vpass,
     $chost, $cport, $cdbname, $cuser, $cpass,
-    $read_dir);
+    $species, $read_dir);
 
-  GetOptions('chost=s'     => \$chost,
-             'cuser=s'     => \$cuser,
-             'cpass=s'     => \$cpass,
-             'cport=i'     => \$cport,
-             'cdbname=s'   => \$cdbname,
-             'vhost=s'     => \$vhost,
-             'vuser=s'     => \$vuser,
-             'vpass=s'     => \$vpass,
-             'vport=i'     => \$vport,
-             'vdbname=s'   => \$vdbname,
+  GetOptions(#'chost=s'     => \$chost,
+             #'cuser=s'     => \$cuser,
+             #'cpass=s'     => \$cpass,
+             #'cport=i'     => \$cport,
+             #'cdbname=s'   => \$cdbname,
+             #'vhost=s'     => \$vhost,
+             #'vuser=s'     => \$vuser,
+             #'vpass=s'     => \$vpass,
+             #'vport=i'     => \$vport,
+             #'vdbname=s'   => \$vdbname,
+	     'species=s'     => \$species,
              'tmpdir=s'    => \$ImportUtils::TMP_DIR,
              'tmpfile=s'   => \$ImportUtils::TMP_FILE,
 	     'readdir=s' => \$read_dir);
 
+warn("Make sure you have a updated ensembl.registry file!\n");
+
+my $registry_file ||= $Bin . "/ensembl.registry";
+
+Bio::EnsEMBL::Registry->load_all( $registry_file );
+
+my $cdba = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'core');
+my $vdba = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'variation');
+
+
+my $dbVar = $vdba->dbc->db_handle;
+my $dbCore = $cdba;
+
 #added default options
-$chost    ||= 'ecs2';
+$chost = $cdba->dbc->host; 
 $cuser    ||= 'ensro';
-$cport    ||= 3364;
+$cport = $cdba->dbc->port ;
+$cdbname = $cdba->dbc->dbname;
 
-$vport    ||= 3306;
+$vhost = $vdba->dbc->host;
+$vport = $vdba->dbc->port;
 $vuser    ||= 'ensadmin';
-
-usage('-vdbname argument is required') if(!$vdbname);
-usage('-cdbname argument is required') if(!$cdbname);
-usage('-readdir argument is required (name of directory with read information') if (!$read_dir);
-
-my $dbCore = Bio::EnsEMBL::DBSQL::DBAdaptor->new
-    (-host   => $chost,
-     -user   => $cuser,
-     -pass   => $cpass,
-     -port   => $cport,
-     -dbname => $cdbname);
-
-my $dbVar = DBH->connect
-    ("DBI:mysql:host=$vhost;dbname=$vdbname;port=$vport",$vuser, $vpass );
-die("Could not connect to variation database: $!") if(!$dbVar);
-
+$vdbname = $vdba->dbc->dbname;
+$vpass = $vdba->dbc->password;
 
 $TMP_DIR  = $ImportUtils::TMP_DIR;
 $TMP_FILE = $ImportUtils::TMP_FILE;
