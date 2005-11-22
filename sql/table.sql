@@ -8,12 +8,14 @@
 # source_id           - foreign key ref source
 # name                - identifier for the variation such as the dbSNP
 #                       refSNP id (rs#) or SubSNP id (ss#)
+# SNPAncestralAllele  - taken from dbSNP to show ancestral allele for the variation
 
 create table variation (
 	variation_id int not null auto_increment, # PK
 	source_id int not null, 
 	name varchar(255),
 	validation_status SET('cluster','freq','submitter','doublehit','hapmap'),
+	ancestral_allele text,
 
 	primary key( variation_id ),
 	unique ( name )
@@ -33,6 +35,7 @@ create table variation_synonym (
   variation_id int not null,
   source_id int not null,
   name varchar(255),
+  moltype varchar(50),
 
   primary key(variation_synonym_id),
   key variation_idx (variation_id),
@@ -215,7 +218,7 @@ create table variation_feature(
 	seq_region_strand tinyint not null,
 	variation_id int not null,
 	allele_string text,
-	variation_name varchar(255),
+        variation_name varchar(255),
 	map_weight int not null,
 	flags SET('genotyped'),
 	source_id int not null, 
