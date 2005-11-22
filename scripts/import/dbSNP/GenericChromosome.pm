@@ -19,7 +19,8 @@ sub variation_feature{
     debug("Dumping seq_region data");
     
     #only take chromosome coordinates
-    dumpSQL($self->{'dbCore'}->dbc()->db_handle, qq{SELECT sr.seq_region_id, sr.name
+    dumpSQL($self->{'dbCore'}->dbc()->db_handle, qq{SELECT sr.seq_region_id, 
+				      if (sr.name like "E%", CONCAT("LG",sr.name),sr.name) ##add LG for chicken
 				      FROM   seq_region sr, coord_system cs
 				      WHERE cs.name = 'chromosome'
 				      AND cs.coord_system_id = sr.coord_system_id});
@@ -29,13 +30,33 @@ sub variation_feature{
     
     debug("Dumping SNPLoc data");
     
-    my $tablename = $self->{'species_prefix'} . 'SNPContigLoc';
-    dumpSQL($self->{'dbSNP'}, qq{SELECT snp_id, contig_chr, 
-				 IF(loc_type = 3, phys_pos_from+1, phys_pos_from),
-				 IF(loc_type = 3,  phys_pos_from,
-				    IF (loc_type = 1, substring_index(phys_pos, '..', -1),phys_pos)),
-				 IF(orientation, -1, 1)
-				 FROM $tablename
+    my ($tablename1,$tablename2,$row);
+
+    my ($assembly_version) =  $self->{'assembly_version'} =~ /^[a-zA-Z]+(\d+)\.*.*$/;
+    my $sth = $self->{'dbSNP'}->prepare(qq{SHOW TABLES LIKE 
+					   '$self->{'dbSNP_version'}\_SNPContigLoc\_$assembly_version\__'});
+    $sth->execute();
+
+    while($row = $sth->fetchrow_arrayref()) {
+      $tablename1 = $row->[0];
+    }
+
+    my $sth1 = $self->{'dbSNP'}->prepare(qq{SHOW TABLES LIKE 
+					   '$self->{'dbSNP_version'}\_ContigInfo\_$assembly_version\__'});
+    $sth1->execute();
+
+    while($row = $sth1->fetchrow_arrayref()) {
+      $tablename2 = $row->[0];
+    }
+    print "table_name1 is $tablename1 table_name2 is $tablename2\n";
+    #my $tablename = $self->{'species_prefix'} . 'SNPContigLoc';
+    dumpSQL($self->{'dbSNP'}, qq{SELECT t1.snp_id, t2.contig_chr, 
+				 IF(t1.loc_type = 3, t1.phys_pos_from+2, t1.phys_pos_from+1),
+				 IF(t1.loc_type = 3,  t1.phys_pos_from+1, t1.phys_pos_from+length(t1.allele)),
+				 IF(t1.orientation, -1, 1)
+				 FROM $tablename1 t1, $tablename2 t2 
+				 WHERE t1.ctg_id = t2.ctg_id
+				 AND t2.group_term like "ref_%"
 				 $self->{'limit'}});
     
     
@@ -67,12 +88,12 @@ sub variation_feature{
 				      tvf.variation_name,IF(tgv.variation_id,'genotyped',NULL), tvf.source_id, tvf.validation_status
 				      FROM tmp_variation_feature tvf LEFT JOIN tmp_genotyped_var tgv ON tvf.variation_id = tgv.variation_id
 				  });
-    $self->{'dbVariation'}->do("DROP TABLE tmp_contig_loc");
-    $self->{'dbVariation'}->do("DROP TABLE tmp_seq_region");
-    $self->{'dbVariation'}->do("DROP TABLE tmp_genotyped_var");
-    $self->{'dbVariation'}->do("DROP TABLE tmp_variation_feature");
+    #$self->{'dbVariation'}->do("DROP TABLE tmp_contig_loc");
+    #$self->{'dbVariation'}->do("DROP TABLE tmp_seq_region");
+    #$self->{'dbVariation'}->do("DROP TABLE tmp_genotyped_var");
+    #$self->{'dbVariation'}->do("DROP TABLE tmp_variation_feature");
     #for the chicken, delete 13,000 SNPs that cannot be mapped to EnsEMBL coordinate
-    if ($self->{'species_prefix'} eq 'gga'){
+    if ($self->{'dbCore'}->species =~ /gga/i){
 	$self->{'dbVariation'}->do("DELETE FROM variation_feature WHERE seq_region_end = -1");
     }
 }

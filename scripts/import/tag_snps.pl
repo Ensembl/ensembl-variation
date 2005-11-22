@@ -6,38 +6,41 @@ use warnings;
 use Getopt::Long;
 use Bio::EnsEMBL::Variation::DBSQL::DBAdaptor;
 use ImportUtils qw(load);
+use FindBin qw( $Bin );
 
 my ($TMP_DIR, $TMP_FILE);
 
-my ($vhost, $vport, $vdbname, $vuser, $vpass);
+my ($species, $vhost, $vport, $vdbname, $vuser, $vpass);
 
 
 
-GetOptions('vhost=s'   => \$vhost,
-	   'vuser=s'   => \$vuser,
-	   'vpass=s'   => \$vpass,
-	   'vport=i'   => \$vport,
-	   'vdbname=s' => \$vdbname,
+GetOptions(#'vhost=s'   => \$vhost,
+	   #'vuser=s'   => \$vuser,
+	   #'vpass=s'   => \$vpass,
+	   #'vport=i'   => \$vport,
+	   #'vdbname=s' => \$vdbname,
+	   'species=s' => \$species,
 	   'tmpdir=s'  => \$ImportUtils::TMP_DIR,
 	   'tmpfile=s' => \$ImportUtils::TMP_FILE);
+warn("Make sure you have a updated ensembl.registry file!\n");
 
-$vhost    ||='ia64g';
-$vport    ||= 3306;
+my $registry_file ||= $Bin . "/ensembl.registry";
+
+Bio::EnsEMBL::Registry->load_all( $registry_file );
+
+my $dbVariation = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'variation');
+
+
+#added default options
+
+$vhost = $dbVariation->dbc->host;
+$vport = $dbVariation->dbc->port;
 $vuser    ||= 'ensadmin';
+$vdbname = $dbVariation->dbc->dbname;
+$vpass = $dbVariation->dbc->password;
 
 $TMP_DIR  = $ImportUtils::TMP_DIR;
 $TMP_FILE = $ImportUtils::TMP_FILE;
-
-usage('-vdbname argument is required') if(!$vdbname);
-
-my $dbVariation = Bio::EnsEMBL::Variation::DBSQL::DBAdaptor->new
-    (-host => $vhost,
-     -user => $vuser,
-     -pass => $vpass,
-     -port => $vport,
-     -dbname => $vdbname
-     );
-
 
 my $population_id;
 my $population_name;

@@ -81,6 +81,7 @@ $vpass = $vdba->dbc->password;
 $TMP_DIR  = $ImportUtils::TMP_DIR;
 $TMP_FILE = $ImportUtils::TMP_FILE;
 
+
 ##Apart from human and mouse, we directly import top_level coordinates from dbSNP
 if (! defined $top_level && $species !~ /hum|homo|mouse|mus|anoph|dog|can/i) {
   $top_level=1;
@@ -113,7 +114,7 @@ sub parallel_variation_feature{
     $sth->execute();
     ($min_variation, $max_variation) = $sth->fetchrow_array();
     $sth->finish();
-    my $dbname = $dbVar->dbname(); #get the name of the database to create the file    
+    my $dbname = $vdbname; #get the name of the database to create the file    
     #create a temporary table to store the map_weight, that will be deleted by the last process
     $dbVar->do(qq{CREATE TABLE tmp_map_weight
                 SELECT variation_id, count(*) as count
@@ -151,7 +152,7 @@ sub parallel_flanking_sequence{
     or throw("Could not open tmp file: $TMP_DIR/$flanking_status_file\n"); 
   close STATUS;
 
-  my $dbname = $dbVar->dbname(); #get the name of the database to create the file
+  my $dbname = $vdbname; #get the name of the database to create the file
 
   #find out the total number of variations to split the into the files
   my $sequences; #total number of flanking sequences in table
@@ -332,7 +333,7 @@ sub parallel_ld_populations{
     print "Time starting to dump data from database: ",scalar(localtime(time)),"\n";
     $sth->execute();
 
-    my $dbname = $dbVar->dbname(); #get the name of the database to create the file
+    my $dbname = $vdbname; #get the name of the database to create the file
     my ($variation_id, $variation_feature_id, $seq_region_id, $seq_region_start, 
 	$individual_id, $allele_1,$allele_2,$seq_region_end,$population_id);
 
