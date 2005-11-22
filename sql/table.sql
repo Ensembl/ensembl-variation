@@ -306,6 +306,7 @@ create table variation_group_feature(
 # transcript regions are classified as 'ESSENTIAL_SPLICE_SITE','SPLICE_SITE',
 # 'FRAMESHIFT_CODING','STOP_GAINED','STOP_LOST','NON_SYNONYMOUS_CODING',
 # 'SYNONYMOUS_CODING','5PRIME_UTR','3PRIME_UTR','INTRONIC','UPSTREAM','DOWNSTREAM'
+# 'REGULATORY_REGION'
 
 #
 # transcript_variation_id - primary key, internal identifier
@@ -501,25 +502,6 @@ create table individual_population (
 
 );
 
-#
-# individual_genotype_single_bp
-#
-# This table contains genotypes of individuals with 1 single bp in the alleles.
-#
-# variation_id	- FK to variation table
-# allele_1	- One of the alleles of the genotype
-# allele_2	- The other allele of the genotype
-# sample_id     - foreign key, references individual table
-
-create table individual_genotype_single_bp (
-  variation_id int not null,
-  allele_1 char,
-  allele_2 char,
-  sample_id int,
-
-  key variation_idx(variation_id),
-  key sample_idx(sample_id)
-) MAX_ROWS = 100000000;
 
 #
 # individual_genotype_multiple_bp
@@ -539,34 +521,6 @@ create table individual_genotype_multiple_bp (
 
   key variation_idx(variation_id),
   key sample_idx(sample_id)
-);
-
-#
-# pairwise_ld
-# this table contains ld values for 2 SNPs in a certain population
-#
-# variation_feature_id_1 - FK, references variation_feature table
-# variation_feature_id_2 - FK, references variation_feature table
-# sample_id - FK, references population
-# seq_region_id_ - FK, references seq_region table
-# seq_region_start_ - where the region start
-# seq_region_end -  where the region ends
-# r2 - value: D^2/(frq(A)*frq(B)*frq(a)*frq(b))
-# d_prime - value: D/Dmax
-# sample_count - value: N
-
-create table pairwise_ld(
-	variation_feature_id_1 int not null,
-	variation_feature_id_2 int not null,
-	sample_id int not null,
-	seq_region_id int not null,
-	seq_region_start int not null,
-	seq_region_end int not null,
-	r2 float not null,
-	d_prime float not null,
-	sample_count int not null,
-	
-	key seq_region_idx(seq_region_id,seq_region_start)
 );
 
 
@@ -638,4 +592,22 @@ CREATE TABLE read_coverage (
    sample_id int not null,
 		  
    key seq_region_idx(seq_region_id,seq_region_start)   
+);
+
+
+################
+#
+# Table structure for table compressed_genotype_single_bp
+#
+################
+
+CREATE TABLE compressed_genotype_single_bp(
+  sample_id int not null,
+  seq_region_id int not null,
+  seq_region_start int not null,
+  seq_region_end int not null,
+  seq_region_strand tinyint not null,
+  genotypes blob,
+
+  key pos_idx(seq_region_id,seq_region_start)
 );
