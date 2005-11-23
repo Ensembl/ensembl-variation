@@ -48,7 +48,7 @@ use warnings;
 use vars qw(@ISA);
 
 use Bio::EnsEMBL::DBSQL::BaseAdaptor;
-use Bio::EnsEMBL::Variation::IndividualGenotype;
+use Bio::EnsEMBL::Variation::IndividualGenotypeFeature;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 
 
@@ -220,7 +220,7 @@ sub _objs_from_sth{
 	$slice = $dest_slice;
     }
 
-    my $igtype = Bio::EnsEMBL::Variation::IndividualGenotype->new_fast({
+    my $igtype = Bio::EnsEMBL::Variation::IndividualGenotypeFeature->new_fast({
 	'start'    => $seq_region_start,
 	'end'      => $seq_region_end,
 	'strand'   => $seq_region_strand,
