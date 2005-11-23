@@ -88,7 +88,8 @@ sub fetch_by_dbID {
        AND    v.source_id = s1.source_id
        AND    vs.source_id = s2.source_id
        AND    v.variation_id = ?});
-  $sth->execute($dbID);
+  $sth->bind_param(1,$dbID,SQL_INTEGER);
+  $sth->execute();
 
   my $result = $self->_objs_from_sth($sth);
   $sth->finish();
@@ -130,7 +131,9 @@ sub fetch_by_name {
        AND    v.name = ?
        AND    s1.name = ?
        ORDER BY a.allele_id});
-  $sth->execute($name,$source);
+  $sth->bind_param(1,$name,SQL_VARCHAR);
+  $sth->bind_param(2,$source,SQL_VARCHAR);
+  $sth->execute();
 
   my $result = $self->_objs_from_sth($sth);
   $sth->finish();
@@ -151,7 +154,9 @@ sub fetch_by_name {
          AND    vs1.name = ?
 	 AND    s1.name = ?
          ORDER BY a.allele_id});
-    $sth->execute($name,$source);
+    $sth->bind_param(1,$name,SQL_VARCHAR);
+    $sth->bind_param(2,$source,SQL_VARCHAR);
+    $sth->execute();
     $result = $self->_objs_from_sth($sth);
 
     return undef if(!@$result);
@@ -238,7 +243,8 @@ sub get_source_version{
     my $version;
     my $sth = $self->prepare(qq{SELECT version from source where name = ?
 				});
-    $sth->execute($name);
+    $sth->bind_param(1,$name,SQL_VARCHAR);
+    $sth->execute();
     $sth->bind_columns(\$version);
     $sth->fetch();
     $sth->finish();
@@ -273,7 +279,8 @@ sub get_flanking_sequence{
 			      WHERE variation_id = ?
 			     });
 
-  $sth->execute($variationID); #retrieve the flank from the variation database
+  $sth->bind_param(1,$variationID,SQL_INTEGER);
+  $sth->execute(); #retrieve the flank from the variation database
   $sth->bind_columns(\($seq_region_id, $seq_region_strand, $up_seq, $down_seq, $up_seq_region_start, $up_seq_region_end, $down_seq_region_start, $down_seq_region_end));
 $sth->fetch();
 $sth->finish();
@@ -342,7 +349,8 @@ sub fetch_all_by_Population {
        AND    v.source_id = s1.source_id
        AND    vs.source_id = s2.source_id
        AND    a.sample_id = ?});
-  $sth->execute($pop->dbID);
+  $sth->bind_param(1,$pop->dbID,SQL_INTEGER);
+  $sth->execute();
 
   my $results = $self->_objs_from_sth($sth);
   $sth->finish();
@@ -416,7 +424,6 @@ sub _objs_from_sth {
          -ALLELE    => $allele,
          -FREQUENCY => $allele_freq,
          -POPULATION => $pop);
-
       $cur_var->add_Allele($allele);
 
       $cur_allele_id = $allele_id;
@@ -426,8 +433,7 @@ sub _objs_from_sth {
       $seen_syns{"$syn_source:$syn_name"} = 1;
       $cur_var->add_synonym($syn_source, $syn_name);
     }
-  }
-
+}
   return \@vars;
 }
 

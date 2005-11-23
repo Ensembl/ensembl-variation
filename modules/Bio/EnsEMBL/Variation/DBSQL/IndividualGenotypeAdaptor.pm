@@ -47,18 +47,18 @@ Post questions to the Ensembl development list ensembl-dev@ebi.ac.uk
 
 =cut
 
+package Bio::EnsEMBL::Variation::DBSQL::IndividualGenotypeAdaptor;
+
 use strict;
 use warnings;
 
-package Bio::EnsEMBL::Variation::DBSQL::IndividualGenotypeAdaptor;
+use vars qw(@ISA);
 
 use Bio::EnsEMBL::DBSQL::BaseAdaptor;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
+use Bio::EnsEMBL::Variation::DBSQL::BaseGenotypeAdaptor;
 
-use Bio::EnsEMBL::Variation::IndividualGenotype;
-
-our @ISA = ('Bio::EnsEMBL::DBSQL::BaseAdaptor');
-
+@ISA = ('Bio::EnsEMBL::Variation::DBSQL::BaseGenotypeAdaptor');
 
 =head2 fetch_all_by_Individual
 
@@ -76,22 +76,12 @@ our @ISA = ('Bio::EnsEMBL::DBSQL::BaseAdaptor');
 sub fetch_all_by_Individual {
   my $self = shift;
   my $ind = shift;
+  
 
-  if(!ref($ind) || !$ind->isa('Bio::EnsEMBL::Variation::Individual')) {
-    throw('Bio::EnsEMBL::Variation::Individual argument expected');
-  }
-
-  if(!defined($ind->dbID())) {
-    warning("Cannot retrieve genotypes for individual without set dbID");
-    return [];
+  $self->_multiple(0); #to return data from single and multiple genotype table
+  return $self->SUPER::fetch_all_by_Individual($ind);
 }
 
-  $self->_tables(['individual_genotype_single_bp','igs']);
-  my $res = $self->generic_fetch("sample_id = " . $ind->dbID()); #to select data from individual_genotype_single_bp
-  $self->_tables(['individual_genotype_multiple_bp','igm']);
-  push @{$res},@{$self->generic_fetch("sample_id = " . $ind->dbID())}; #to select data from individual_genotype_multiple_bp  
-  return $res
-}
 
 =head2 fetch_all_by_Variation
 
@@ -110,82 +100,22 @@ sub fetch_all_by_Individual {
 sub fetch_all_by_Variation {
     my $self = shift;
     my $variation = shift;
+    $self->_multiple(0); #to return data from single and multiple table
+    return $self->SUPER::fetch_all_by_Variation($variation);
 
-    if(!ref($variation) || !$variation->isa('Bio::EnsEMBL::Variation::Variation')) {
-	throw('Bio::EnsEMBL::Variation::Variation argument expected');
-    }
-
-    if(!defined($variation->dbID())) {
-	warning("Cannot retrieve genotypes for variation without set dbID");
-	return [];
-    }	
-    $self->_tables(['individual_genotype_single_bp','ig']);
-    my $res = $self->generic_fetch("variation_id = " . $variation->dbID()); #to select data from individual_genotype_single_bp
-    $self->_tables(['individual_genotype_multiple_bp','ig']);
-    push @{$res},@{$self->generic_fetch("variation_id = " . $variation->dbID())}; #to select data from individual_genotype_multiple_bp
-    return $res;
 }
 
-#Getter/Setter of the table where to select the data from
-
-sub _tables{
+sub fetch_all_by_Slice{
     my $self = shift;
-    return $self->{'_table'} = shift if (@_);
-    return $self->{'_table'};
-}
-
-sub _columns{
-    return qw(sample_id variation_id allele_1 allele_2);
-}
-
-sub _objs_from_sth{
-    my $self = shift;
-    my $sth = shift;
+    my $slice = shift;
     
-    my @results;
-    my ($individual_id, $variation_id, $allele_1, $allele_2);
-    $sth->bind_columns(\$individual_id, \$variation_id, \$allele_1, \$allele_2);
-    
-    my %individual_hash;
-    my %variation_hash;
-    while($sth->fetch()){
-	my $igtype = Bio::EnsEMBL::Variation::IndividualGenotype->new
-	    (-adaptor => $self,
-	     -allele1 => $allele_1,
-	     -allele2 => $allele_2);
-	$individual_hash{$individual_id} ||= [];
-	$variation_hash{$variation_id} ||= [];
-	push @{$variation_hash{$variation_id}}, $igtype; #store the variations to get the objects once
-	push @{$individual_hash{$individual_id}}, $igtype; #store the individuals to get the objects once
-	push @results, $igtype;
-    }
-
-    # get all variations in one query (faster)
-    # and add to already created genotypes
-    my @var_ids = keys %variation_hash;
-    my $va = $self->db()->get_VariationAdaptor();
-    my $vars = $va->fetch_all_by_dbID_list(\@var_ids);
-    
-    foreach my $v (@$vars) {
-	foreach my $igty (@{$variation_hash{$v->dbID()}}) {
-	    $igty->variation($v);
-	}
-    }
-
-    # get all individual in one query (faster)
-    # and add to already created genotypes
-    my @ind_ids = keys %individual_hash;
-
-    my $ia = $self->db()->get_IndividualAdaptor();
-    my $inds = $ia->fetch_all_by_dbID_list(\@ind_ids);
-
-    foreach my $i (@$inds) {
-	foreach my $igty (@{$individual_hash{$i->dbID()}}) {
-	    $igty->individual($i);
-	}
-    }
-    return \@results;   
-
+    $self->_multiple(0);
+    my @final_genotypes;
+    push @final_genotypes, @{$self->SUPER::fetch_all_by_Slice($slice)};
+    $self->_multiple(1);
+    $self->SUPER::fetch_all_by_Slice($slice);
+    push @final_genotypes, @{$self->SUPER::fetch_all_by_Slice($slice)};
+    return \@final_genotypes;
 }
 
 1;

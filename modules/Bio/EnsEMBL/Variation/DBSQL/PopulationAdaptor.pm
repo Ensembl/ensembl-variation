@@ -112,7 +112,8 @@ sub fetch_by_name {
                              WHERE  s.name = ?
 			     AND    s.sample_id = p.sample_id});
 
-  $sth->execute($name);
+  $sth->bind_param(1,$name,SQL_VARCHAR);
+  $sth->execute();
 
   my $result = $self->_objs_from_sth($sth);
 
@@ -157,7 +158,8 @@ sub fetch_all_by_super_Population {
                              AND    ps.super_population_sample_id = ?
 			     AND    p.sample_id = s.sample_id});
 
-  $sth->execute($pop->dbID());
+  $sth->bind_param(1,$pop->dbID,SQL_INTEGER);
+  $sth->execute();
 
   my $result = $self->_objs_from_sth($sth);
 
@@ -201,7 +203,8 @@ sub fetch_all_by_sub_Population {
                              AND    ps.sub_population_sample_id = ?
 			     AND    p.sample_id = s.sample_id});
 
-  $sth->execute($pop->dbID());
+  $sth->bind_param(1,$pop->dbID,SQL_INTEGER);
+  $sth->execute();
 
   my $result = $self->_objs_from_sth($sth);
 
@@ -264,7 +267,8 @@ sub fetch_all_by_Individual{
 				AND s.sample_id = p.sample_id
                                 AND ip.individual_sample_id = ?
 			    });
-    $sth->execute($ind->dbID());
+    $sth->bind_param(1,$ind->dbID,SQL_INTEGER);
+    $sth->execute();
 
     my $results = $self->_objs_from_sth($sth);
 
@@ -309,7 +313,8 @@ sub fetch_tagged_Population{
 				AND   s.sample_id = p.sample_id
                                 AND   tvf.variation_feature_id = ?
 			    });
-    $sth->execute($variation_feature->dbID());
+    $sth->bind_param(1,$variation_feature->dbID,SQL_INTEGER);
+    $sth->execute();
     my $results = $self->_objs_from_sth($sth);
 
     $sth->finish();

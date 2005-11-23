@@ -43,12 +43,13 @@ use strict;
 use warnings;
 
 package Bio::EnsEMBL::Variation::DBSQL::SampleAdaptor;
-
+use vars qw(@ISA @EXPORT);
 use Bio::EnsEMBL::DBSQL::BaseAdaptor;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 
 
 our @ISA = ('Bio::EnsEMBL::DBSQL::BaseAdaptor');
+@EXPORT = (@{$DBI::EXPORT_TAGS{'sql_types'}});
 
 =head2 fetch_synonyms
 
@@ -78,7 +79,8 @@ sub fetch_synonyms{
 	$sql = qq{SELECT name FROM sample_synonym WHERE sample_id = ?};
     }
     my $sth = $self->prepare($sql);
-    $sth->execute($dbID);
+    $sth->bind_param(1,$dbID,SQL_INTEGER);
+    $sth->execute();
     $sth->bind_columns(\$sample_synonym);
     while ($sth->fetch){
 	push @{$synonyms},$sample_synonym;
@@ -112,7 +114,8 @@ sub fetch_sample_by_synonym{
     }
     my $sample_id;
     my $sth = $self->prepare($sql);
-    $sth->execute($synonym_name);    
+    $sth->bind_param(1,$synonym_name,SQL_VARCHAR);
+    $sth->execute();    
     $sth->bind_columns(\$sample_id);
     while ($sth->fetch()){
 	push @{$sample_array}, $sample_id;

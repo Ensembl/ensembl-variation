@@ -51,7 +51,8 @@ sub get_available_adaptors{
 		 'Variation' => 'Bio::EnsEMBL::Variation::DBSQL::VariationAdaptor',
 		 'VariationFeature' => 'Bio::EnsEMBL::Variation::DBSQL::VariationFeatureAdaptor',
 		 'LDFeatureContainer' => 'Bio::EnsEMBL::Variation::DBSQL::LDFeatureContainerAdaptor',
-		 'IndividualGenotype' => 'Bio::EnsEMBL::Variation::DBSQL::IndividualGenotypeAdaptor',
+#		 'IndividualGenotype' => 'Bio::EnsEMBL::Variation::DBSQL::IndividualGenotypeAdaptor',
+		 'IndividualGenotype' => 'Bio::EnsEMBL::Variation::DBSQL::CompressedGenotypeAdaptor',
 		 'PopulationGenotype' => 'Bio::EnsEMBL::Variation::DBSQL::PopulationGenotypeAdaptor',
 		 'TranscriptVariation' => 'Bio::EnsEMBL::Variation::DBSQL::TranscriptVariationAdaptor',
 		 'VariationGroup' => 'Bio::EnsEMBL::Variation::DBSQL::VariationGroupAdaptor',
@@ -59,7 +60,8 @@ sub get_available_adaptors{
 		 'VariationGroupFeature' => 'Bio::EnsEMBL::Variation::DBSQL::VariationGroupFeatureAdaptor',
 		 'MetaCoordContainer' => 'Bio::EnsEMBL::DBSQL::MetaCoordContainer',
 		 'MetaContainer' => 'Bio::EnsEMBL::Variation::DBSQL::MetaContainer',
-		 'ReadCoverage' => 'Bio::EnsEMBL::Variation::DBSQL::ReadCoverageAdaptor'
+		 'ReadCoverage' => 'Bio::EnsEMBL::Variation::DBSQL::ReadCoverageAdaptor',
+#		 'CompressedGenotype' => 'Bio::EnsEMBL::Variation::DBSQL::CompressedGenotypeAdaptor'
 		 );
     return (\%pairs);
 }
