@@ -32,7 +32,7 @@ Post questions to the Ensembl development list: ensembl-dev@ebi.ac.uk
 use strict;
 use warnings;
 
-package Bio::EnsEMBL::Variation::IndividualGenotype;
+package Bio::EnsEMBL::Variation::IndividualGenotypeFeature;
 
 use Bio::EnsEMBL::Variation::Genotype;
 use Bio::EnsEMBL::Feature;
