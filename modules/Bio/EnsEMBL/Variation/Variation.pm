@@ -126,11 +126,17 @@ our %VSTATE2BIT = ('cluster'   => 1,   # 00000001
     names and values are lists of identifiers from that db.
     e.g.: {'dbSNP' => ['ss1231', '1231'], 'TSC' => ['1452']}
 
+  Arg [-ANCESTRAL_ALLELES] :
+    string - the ancestral allele of this SNP
+
   Arg [-ALLELES] :
     reference to list of Bio::EnsEMBL::Variation::Allele objects
 
   Arg [-VALIDATION_STATES] :
     reference to list of strings
+
+  Arg [-MOLTYPE] :
+    string - the moltype of this SNP
 
   Arg [-FIVE_PRIME_FLANKING_SEQ] :
     string - the five prime flanking nucleotide sequence
@@ -154,10 +160,10 @@ sub new {
   my $caller = shift;
   my $class = ref($caller) || $caller;
 
-  my ($dbID, $adaptor, $name, $src, $syns,
-      $alleles, $valid_states, $five_seq, $three_seq) =
-        rearrange([qw(dbID ADAPTOR NAME SOURCE SYNONYMS ALLELES
-                      VALIDATION_STATES FIVE_PRIME_FLANKING_SEQ
+  my ($dbID, $adaptor, $name, $src, $syns, $ancestral_allele,
+      $alleles, $valid_states, $moltype, $five_seq, $three_seq) =
+        rearrange([qw(dbID ADAPTOR NAME SOURCE SYNONYMS ANCESTRAL_ALLELE ALLELES
+                      VALIDATION_STATES MOLTYPE FIVE_PRIME_FLANKING_SEQ
                       THREE_PRIME_FLANKING_SEQ)],@_);
 
 
@@ -175,8 +181,10 @@ sub new {
                 'name'   => $name,
                 'source' => $src,
                 'synonyms' => $syns || {},
+		'ancestral_allele' => $ancestral_allele,
                 'alleles' => $alleles || [],
                 'validation_code' => $vcode,
+		'moltype' => $moltype,
                 'five_prime_flanking_seq' => $five_seq,
                 'three_prime_flanking_seq' => $three_seq}, $class;
 }
@@ -225,7 +233,22 @@ sub get_all_Genes{
 	#foreach vf, get the slice is on, us ethe USTREAM and DOWNSTREAM limits to get all the genes, and see if SNP is within the gene
 	my $new_slice;
 	my $gene_list;
-	my $gene_hash;
+	my $gene_hash;=head2 get_all_Alleles
+
+  Arg [1]    : none
+  Example    : @alleles = @{v->get_all_Alleles()};
+  Description: Retrieves all Alleles associated with this variation
+  Returntype : reference to list of Bio::EnsEMBL::Variation::Allele objects
+  Exceptions : none
+  Caller     : general
+
+=cut
+
+sub get_all_Alleles {
+  my $self = shift;
+  return $self->{'alleles'};
+}
+
 	foreach my $vf (@{$vf_list}){
 	    #expand the slice UPSTREAM and DOWNSTREAM
 	    $new_slice = $vf->slice()->expand($UPSTREAM,$DOWNSTREAM);
@@ -439,14 +462,47 @@ sub add_Allele {
   my $self = shift;
   my $allele = shift;
 
-  if(!ref($allele) || !$allele->isa('Bio::EnsEMBL::Variation::Allele')) {
+  if(!ref($allele) || !$alleleThe new value to set the source attribute to->isa('Bio::EnsEMBL::Variation::Allele')) {
     throw("Bio::EnsEMBL::Variation::Allele argument expected");
   }
 
   push @{$self->{'alleles'}}, $allele;
 }
 
+=head2 ancestral_allele
 
+  Arg [1]    : string $ancestral_allele (optional)
+  Example    : $ancestral_allele = v->ancestral_allele();
+  Description: Getter/Setter ancestral allele associated with this variation
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+
+=cut
+
+sub ancestral_allele {
+  my $self = shift;
+  return $self->{'ancestral_allele'} = shift if(@_);
+  return $self->{'ancestral_allele'};
+}
+
+=head2 moltype
+
+  Arg [1]    : string $moltype (optional)
+               The new value to set the moltype attribute to
+  Example    : $moltype = v->moltype();
+  Description: Getter/Setter moltype associated with this variation
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+
+=cut
+
+sub moltype {
+  my $self = shift;
+  return $self->{'moltype'} = shift if(@_);
+  return $self->{'moltype'};
+}
 
 
 =head2 five_prime_flanking_seq
