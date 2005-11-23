@@ -118,7 +118,8 @@ sub fetch_all_by_name {
        WHERE  s.name = ?
        AND    s.sample_id = i.sample_id});
 
-  $sth->execute($name);
+  $sth->bind_param(1,$name,SQL_VARCHAR);
+  $sth->execute();
 
   my $result =  $self->_objs_from_sth($sth);
 
@@ -166,7 +167,8 @@ sub fetch_all_by_Population {
        AND    i.sample_id = s.sample_id
        AND    ip.population_sample_id = ?});
 
-  $sth->execute($pop->dbID());
+  $sth->bind_param(1,$pop->dbID,SQL_INTEGER);
+  $sth->execute();
 
   my $results = $self->_objs_from_sth($sth);
 
@@ -224,14 +226,16 @@ sub fetch_all_by_parent_Individual {
 
   if($gender eq 'Male') {
     my $sth = $self->prepare($father_sql);
-    $sth->execute($parent->dbID());
+    $sth->bind_param(1,$parent->dbID,SQL_INTEGER);
+    $sth->execute();
     my $result = $self->_objs_from_sth($sth);
     $sth->finish();
     return $result;
   }
   elsif($gender eq 'Female') {
     my $sth = $self->prepare($mother_sql);
-    $sth->execute($parent->dbID());
+    $sth->bind_param(1,$parent->dbID,SQL_INTEGER);
+    $sth->execute();
     my $result = $self->_objs_from_sth($sth);
     $sth->finish();
     return $result;
@@ -240,7 +244,8 @@ sub fetch_all_by_parent_Individual {
   # unknown gender
 
   my $sth = $self->prepare($mother_sql);
-  $sth->execute($parent->dbID());
+  $sth->bind_param(1,$parent->dbID,SQL_INTEGER);
+  $sth->execute();
   my $result = $self->_objs_from_sth($sth);
   $sth->finish();
 
@@ -249,7 +254,8 @@ sub fetch_all_by_parent_Individual {
 
   # otherwise assume was a father (or nothing)
   $sth = $self->prepare($father_sql);
-  $sth->execute($parent->dbID());
+  $sth->bind_param(1,$parent->dbID,SQL_INTEGER);
+  $sth->execute();
   $result = $self->_objs_from_sth($sth);
   $sth->finish();
 

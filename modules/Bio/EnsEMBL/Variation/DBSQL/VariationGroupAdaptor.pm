@@ -85,7 +85,8 @@ sub fetch_by_dbID {
                  vgv.variation_group_id = vg.variation_group_id
        WHERE  vg.source_id = s.source_id
        AND    vg.variation_group_id = ?});
-  $sth->execute($dbID);
+  $sth->bind_param(1,$dbID,SQL_INTEGER);
+  $sth->execute();
 
   my $result = $self->_objs_from_sth($sth);
   $sth->finish();
@@ -123,7 +124,8 @@ sub fetch_by_name {
        ON    vgv.variation_group_id = vg.variation_group_id
        WHERE  vg.source_id = s.source_id
        AND    vg.name = ?});
-  $sth->execute($name);
+  $sth->bind_param(1,$name,SQL_VARCHAR);
+  $sth->execute();
 
   my $result = $self->_objs_from_sth($sth);
   $sth->finish();
@@ -162,8 +164,8 @@ sub fetch_all_by_Variation {
        AND    vgv.variation_group_id = vg.variation_group_id
        AND    vgv.variation_id = ?
        ORDER BY vg.variation_group_id});
-
-  $sth->execute($var->dbID());
+  $sth->bind_param(1,$var->dbID,SQL_INTEGER);
+  $sth->execute();
 
   my $result = $self->_objs_from_sth($sth);
   $sth->finish();

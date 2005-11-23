@@ -86,7 +86,8 @@ sub fetch_by_dbID {
        ON     aga.allele_group_id = ag.allele_group_id
        WHERE  ag.source_id = s.source_id
        AND    ag.allele_group_id = ?});
-  $sth->execute($dbID);
+  $sth->bind_param(1,$dbID,SQL_INTEGER);
+  $sth->execute();
 
   my $result = $self->_objs_from_sth($sth);
   $sth->finish();
@@ -125,7 +126,8 @@ sub fetch_by_name {
        ON     aga.allele_group_id = ag.allele_group_id
        WHERE  ag.source_id = s.source_id
        AND    ag.name = ?});
-  $sth->execute($name);
+  $sth->bind_param(1,$name,SQL_VARCHAR);
+  $sth->execute();
 
   my $result = $self->_objs_from_sth($sth);
   $sth->finish();
@@ -168,7 +170,8 @@ sub fetch_all_by_VariationGroup {
        WHERE  ag.source_id = s.source_id
        AND    ag.variation_group_id = ?
        ORDER BY ag.allele_group_id});
-  $sth->execute($vg->dbID());
+  $sth->bind_param(1,$vg->dbID,SQL_INTEGER);
+  $sth->execute();
 
   my $result = $self->_objs_from_sth($sth);
   $sth->finish();
