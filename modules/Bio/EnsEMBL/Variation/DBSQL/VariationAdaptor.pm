@@ -79,8 +79,8 @@ sub fetch_by_dbID {
   throw('dbID argument expected') if(!defined($dbID));
 
   my $sth = $self->prepare
-    (q{SELECT v.variation_id, v.name, v.validation_status, s1.name,
-              a.allele_id, a.allele, a.frequency, a.sample_id,
+    (q{SELECT v.variation_id, v.name, v.validation_status, s1.name, v.ancestral_allele,
+              a.allele_id, a.allele, a.frequency, a.sample_id, vs.moltype,
               vs.name, s2.name
        FROM   variation v, source s1, source s2, allele a, variation_synonym vs
        WHERE  v.variation_id = a.variation_id
@@ -120,8 +120,8 @@ sub fetch_by_name {
   throw('name argument expected') if(!defined($name));
 
   my $sth = $self->prepare
-    (q{SELECT v.variation_id, v.name, v.validation_status, s1.name,
-              a.allele_id, a.allele, a.frequency, a.sample_id,
+    (q{SELECT v.variation_id, v.name, v.validation_status, s1.name, v.ancestral_allele,
+              a.allele_id, a.allele, a.frequency, a.sample_id, vs.moltype,
               vs.name, s2.name
        FROM   variation v, source s1, source s2, allele a, variation_synonym vs
        WHERE  v.variation_id = a.variation_id
@@ -141,8 +141,8 @@ sub fetch_by_name {
   if(!@$result) {
     # try again if nothing found, but check synonym table instead
     $sth = $self->prepare
-      (q{SELECT v.variation_id, v.name, v.validation_status, s1.name,
-                a.allele_id, a.allele, a.frequency, a.sample_id,
+      (q{SELECT v.variation_id, v.name, v.validation_status, s1.name, v.ancestral_allele,
+                a.allele_id, a.allele, a.frequency, a.sample_id, vs1.moltype,
                 vs2.name, s2.name
          FROM   variation v, source s1, source s2, allele a,
                 variation_synonym vs1, variation_synonym vs2
@@ -204,8 +204,8 @@ sub fetch_all_by_dbID_list {
     my $id_str = (@ids > 1)  ? " IN (".join(',',@ids).")"   :   ' = '.$ids[0];
 
     my $sth = $self->prepare
-      (qq{SELECT v.variation_id, v.name, v.validation_status, s1.name,
-                 a.allele_id, a.allele, a.frequency, a.sample_id,
+      (qq{SELECT v.variation_id, v.name, v.validation_status, s1.name, v.ancestral_allele,
+                 a.allele_id, a.allele, a.frequency, a.sample_id, vs.moltype,
                  vs.name, s2.name
           FROM   variation v, source s1, source s2, allele a,
                  variation_synonym vs
@@ -340,8 +340,8 @@ sub fetch_all_by_Population {
   }
 
   my $sth = $self->prepare
-    (q{SELECT v.variation_id, v.name, v.validation_status, s1.name,
-              a.allele_id, a.allele, a.frequency, a.sample_id,
+    (q{SELECT v.variation_id, v.name, v.validation_status, s1.name, v.ancestral_allele,
+              a.allele_id, a.allele, a.frequency, a.sample_id, vs.moltype,
               vs.name, s2.name
        FROM   variation v, source s1, source s2, allele a, variation_synonym vs
        WHERE  v.variation_id = a.variation_id
@@ -384,12 +384,12 @@ sub _objs_from_sth {
   my $self = shift;
   my $sth = shift;
 
-  my ($var_id, $name, $vstatus, $source, $allele_id, $allele, $allele_freq,
-      $allele_sample_id, $syn_name, $syn_source,
+  my ($var_id, $name, $vstatus, $source, $ancestral_allele, $allele_id, $allele, $allele_freq,
+      $allele_sample_id, $moltype, $syn_name, $syn_source,
       $cur_allele_id, $cur_var, $cur_var_id);
 
-  $sth->bind_columns(\$var_id, \$name, \$vstatus, \$source, \$allele_id,
-                     \$allele, \$allele_freq, \$allele_sample_id, \$syn_name,
+  $sth->bind_columns(\$var_id, \$name, \$vstatus, \$source, \$ancestral_allele, \$allele_id,
+                     \$allele, \$allele_freq, \$allele_sample_id, \$moltype, \$syn_name,
                      \$syn_source);
 
   my @vars;
@@ -408,6 +408,8 @@ sub _objs_from_sth {
          -ADAPTOR => $self,
          -NAME   => $name,
          -SOURCE => $source,
+	 -ANCESTRAL_ALLELE => $ancestral_allele,
+	 -MOLTYPE => $moltype,
          -VALIDATION_STATES => \@states);
       push @vars, $cur_var;
       $cur_var_id = $var_id;
