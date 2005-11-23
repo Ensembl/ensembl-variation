@@ -86,32 +86,4 @@ sub allele2 {
   return $self->{'allele2'};
 }
 
-
-
-
-=head2 variation
-
-  Arg [1]    : (optional) Bio::EnsEMBL::Variation::Variation $var
-  Example    : $var = $genotype->variation();
-  Description: Getter/Setter for the Variation as
-  Returntype : Bio::EnsEMBL::Variation::Variation
-  Exceptions : throw on bad argument
-  Caller     : general
-
-=cut
-
-sub variation {
-  my $self = shift;
-  if(@_) {
-    my $v = shift;
-    if(defined($v) &&
-       (!ref($v) || !$v->isa('Bio::EnsEMBL::Variation::Variation'))) {
-      throw('Bio::EnsEMBL::Variation::Variation argument expected.');
-    }
-    return $self->{'variation'} = $v;
-  }
-  return $self->{'variation'};
-}
-
-
 1;
