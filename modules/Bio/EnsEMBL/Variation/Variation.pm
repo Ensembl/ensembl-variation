@@ -233,21 +233,7 @@ sub get_all_Genes{
 	#foreach vf, get the slice is on, us ethe USTREAM and DOWNSTREAM limits to get all the genes, and see if SNP is within the gene
 	my $new_slice;
 	my $gene_list;
-	my $gene_hash;=head2 get_all_Alleles
-
-  Arg [1]    : none
-  Example    : @alleles = @{v->get_all_Alleles()};
-  Description: Retrieves all Alleles associated with this variation
-  Returntype : reference to list of Bio::EnsEMBL::Variation::Allele objects
-  Exceptions : none
-  Caller     : general
-
-=cut
-
-sub get_all_Alleles {
-  my $self = shift;
-  return $self->{'alleles'};
-}
+	my $gene_hash;
 
 	foreach my $vf (@{$vf_list}){
 	    #expand the slice UPSTREAM and DOWNSTREAM
@@ -462,7 +448,7 @@ sub add_Allele {
   my $self = shift;
   my $allele = shift;
 
-  if(!ref($allele) || !$alleleThe new value to set the source attribute to->isa('Bio::EnsEMBL::Variation::Allele')) {
+  if(!ref($allele) || !$allele->isa('Bio::EnsEMBL::Variation::Allele')) {
     throw("Bio::EnsEMBL::Variation::Allele argument expected");
   }
 
