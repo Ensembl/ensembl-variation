@@ -762,4 +762,28 @@ sub convert_to_SNP{
 		});
     return $snp;
 }
+
+=head2 get_all_LD_values
+
+    Args        : none
+    Description : returns all LD values for this variation feature. This function will only work correctly if the variation
+                  database has been attached to the core database. 
+    ReturnType  : Bio::EnsEMBL::Variation::LDFeatureContainer
+    Exceptions  : none
+    Caller      : snpview
+    Status      : At Risk
+                : Variation database is under development.
+
+=cut
+
+sub get_all_LD_values{
+    my $self = shift;
+    
+    if ($self->{'adaptor'}){
+	my $ld_adaptor = $self->{'adaptor'}->db()->get_LDFeatureContainerAdaptor();
+	return $ld_adaptor->fetch_by_VariationFeature($self);
+    }
+    return {};
+}
+
 1;
