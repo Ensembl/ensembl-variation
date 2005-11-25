@@ -3,7 +3,7 @@ use warnings;
 
 BEGIN { $| = 1;
 	use Test;
-	plan tests => 32;
+	plan tests => 36;
 }
 
 
@@ -25,6 +25,9 @@ my $alleles = [$a1,$a2];
 my $validation_states = ['submitter', 'cluster'];
 my $five_prime_seq = 'AAATTAACCATTGGCG';
 my $three_prime_seq = 'TTATTTTAAGGCCGGAGTA';
+my $ancestral_allele = 'A';
+my $moltype = 'Genomic';
+
 
 my $v = Bio::EnsEMBL::Variation::Variation->new
   (-dbID => 123,
@@ -34,7 +37,9 @@ my $v = Bio::EnsEMBL::Variation::Variation->new
    -alleles => $alleles,
    -validation_states => $validation_states,
    -five_prime_flanking_seq => $five_prime_seq,
-   -three_prime_flanking_seq => $three_prime_seq);
+   -three_prime_flanking_seq => $three_prime_seq,
+   -ancestral_allele => $ancestral_allele,
+   -moltype => $moltype);
 
 ok($v->dbID());
 ok($v->name() eq $name);
@@ -56,12 +61,20 @@ ok($v->ambig_code() eq 'M');
 #test variation_class
 ok($v->var_class() eq 'snp');
 
+##test ancestral_allele
+ok($v->ancestral_allele() eq 'A');
+
+##test molecular type
+ok($v->moltype() eq 'Genomic');
+
 # test getter/setters
 
 ok(test_getter_setter($v, 'name', 'newname'));
 ok(test_getter_setter($v, 'source', 'newsource'));
 ok(test_getter_setter($v, 'five_prime_flanking_seq', 'AATTTA'));
 ok(test_getter_setter($v, 'three_prime_flanking_seq', 'TTTA'));
+ok(test_getter_setter($v,'ancestral_allele','C'));
+ok(test_getter_setter($v,'moltype','cDNA'));
 
 
 
@@ -117,8 +130,7 @@ my $variation = Bio::EnsEMBL::Variation::Variation->new(
 my $igty = $variation->get_all_IndividualGenotypes();
 my @igtys = sort {$a->individual->dbID() <=> $b->individual->dbID()}
             @{$variation->get_all_IndividualGenotypes()};
-
-ok(@igtys == 50);
+ok(@igtys == 96);
 ok($igtys[0]->variation()->name() eq 'rs193');
 ok($igtys[0]->allele1() eq 'C');
 ok($igtys[0]->allele2() eq 'T');
