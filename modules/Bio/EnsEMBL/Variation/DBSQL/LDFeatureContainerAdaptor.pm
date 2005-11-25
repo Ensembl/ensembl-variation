@@ -95,16 +95,18 @@ sub fetch_by_Slice{
     my $sth;
     my $in_str;
     my $siblings = {};
+    #when there is no population selected, return LD in the HapMap and PerlEgen populations
     $in_str = $self->_get_LD_populations($siblings);
     #if a population is passed as an argument, select the LD in the region with the population
     if ($population_id){
-	if ($in_str =~ /$population_id/){
-	    $in_str = "IN ($population_id)";
-	}
-	else{
-	    warning("Not possible to calculate LD for a non HapMap or PerlEgen population: $population_id");
-	    return {};
-	}
+	$in_str = " = $population_id";
+#	if ($in_str =~ /$population_id/){
+#	    $in_str = "IN ($population_id)";
+#'	}
+#	else{
+#	    warning("Not possible to calculate LD for a non HapMap or PerlEgen population: $population_id");
+#	    return {};
+#	}
     }
     $sth = $self->prepare(qq{SELECT c.sample_id,c.seq_region_id,c.seq_region_start,c.seq_region_end,c.genotypes,ip.population_sample_id
 				 FROM compressed_genotype_single_bp c, individual_population ip
@@ -133,6 +135,7 @@ sub fetch_by_Slice{
 =head2 fetch_by_VariationFeature
 
   Arg [1]    : Bio::EnsEMBL:Variation::VariationFeature $vf
+  Arg [2]    : (optional) int $population_id. Population where we want to select the LD information
   Example    : my $ldFeatureContainer = $ldFetureContainerAdaptor->fetch_by_VariationFeature($vf);  Description: Retrieves LDFeatureContainer for a given variation feature.  Most
                variations should only hit the genome once and only a return
                a single variation feature.
@@ -146,6 +149,7 @@ sub fetch_by_VariationFeature {
   my $self = shift;
   my $vf  = shift;
   my $pop = shift;
+
   if(!ref($vf) || !$vf->isa('Bio::EnsEMBL::Variation::VariationFeature')) {
     throw('Bio::EnsEMBL::Variation::VariationFeature arg expected');
   }
