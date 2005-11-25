@@ -4,7 +4,7 @@ use warnings;
 
 BEGIN { $| = 1;
 	use Test;
-	plan tests => 30;
+	plan tests => 36;
 }
 
 
@@ -31,6 +31,8 @@ my $var = $va->fetch_by_dbID(8);
 ok($var->name() eq 'rs10');
 ok($var->source eq 'dbSNP');
 ok($va->get_source_version('dbSNP') == 122);
+ok($var->ancestral_allele() eq 'A');
+ok($var->moltype() eq 'Genomic');
 
 my %syns = map {$_ => 1} @{$var->get_all_synonyms()};
 
@@ -63,6 +65,8 @@ $var = $va->fetch_by_name('rs3');
 ok($var->name() eq 'rs3');
 ok($var->dbID() == 1);
 ok($var->source eq 'dbSNP');
+ok($var->ancestral_allele eq 'C');
+ok($var->moltype eq 'cDNA');
 
 my @syns = @{$var->get_all_synonyms()};
 ok(@syns == 1 && $syns[0] eq 'ss2');
@@ -99,6 +103,8 @@ $var = $va->fetch_by_name('ss2');
 ok($var->name() eq 'rs3');
 ok($var->dbID() == 1);
 ok($var->source eq 'dbSNP');
+ok($var->ancestral_allele eq 'C');
+ok($var->moltype eq 'cDNA');
 
 @syns = @{$var->get_all_synonyms()};
 ok(@syns == 1 && $syns[0] eq 'ss2');
