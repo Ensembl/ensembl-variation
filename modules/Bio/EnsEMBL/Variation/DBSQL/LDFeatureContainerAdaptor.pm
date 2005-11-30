@@ -195,6 +195,7 @@ sub fetch_by_VariationFeature {
 #
 sub _objs_from_sth {
   my $self = shift;
+  return $self->_objs_from_sth_temp_file( @_ );
   my $sth  = shift;
   my $slice = shift;
   my $siblings = shift;
@@ -449,4 +450,108 @@ sub _get_LD_populations{
 
     return $in_str;
 }
+1;
+
+sub _objs_from_sth_temp_file {
+  my $self = shift;
+  my $sth  = shift;
+  my $slice = shift;
+  my $siblings = shift;
+
+  my ($sample_id,$ld_region_id,$ld_region_start,$ld_region_end,$d_prime,$r2,$sample_count);
+  my ($vf_id1,$vf_id2);
+
+  my %feature_container = ();
+  my %vf_objects = ();
+
+  #get all Variation Features in Slice
+  my $vfa = $self->db->get_VariationFeatureAdaptor();
+  my $variations = $vfa->fetch_all_by_Slice($slice); #retrieve all variation features
+  #create a hash that maps the position->vf_id
+  my %pos_vf = ();
+  my $region_Slice = $slice->seq_region_Slice();
+  map {$pos_vf{$_->seq_region_start} = $_->transfer($region_Slice)} @{$variations};
+
+  my %alleles_variation = (); #will contain a record of the alleles in the variation. A will be the major, and a the minor. When more than 2 alleles
+  #, the genotypes for that variation will be discarded
+  my %individual_information = (); #to store the relation of snps->individuals
+  my %regions; #will contain all the regions in the population and the number of genotypes in each one
+  my $previous_seq_region_id = 0;
+
+  my %_pop_ids;
+
+  my ($individual_id, $seq_region_id, $seq_region_start,$seq_region_end,$genotypes, $population_id);
+  my @cmd = qw(calc_genotypes);
+  my @path = split /:/,$ENV{PATH};
+  my $found_file = grep {-e $_ . '/' . $cmd[0]} @path;
+  #open the pipe between processes if the binary file exists in the PATH
+  if (! $found_file){
+      warning("Binary file calc_genotypes not found. Please, read the ensembl-variation/C_code/README.txt file if you want to use LD calculation\n");
+      goto OUT;
+  }
+  my $pid;
+  my $IN = "/tmp/ld-$ENV{SERVER_ADDR}-$$.in";
+  my $OUT = "/tmp/ld-$ENV{SERVER_ADDR}-$$.out";
+  warn ">>> $IN $OUT <<<";
+  open IN, ">$IN";
+  $sth->bind_columns(\$individual_id, \$seq_region_id, \$seq_region_start, \$seq_region_end, \$genotypes, \$population_id);
+  while($sth->fetch()) {
+    #only print genotypes without parents genotyped
+    if (!exists $siblings->{$population_id . '-' . $individual_id}){ #necessary to use the population_id
+      $self->_store_genotype(\%individual_information,\%alleles_variation, $individual_id, $seq_region_start, $genotypes, $population_id, $slice);
+      $previous_seq_region_id = $seq_region_id;
+    }
+  }
+  $sth->finish();
+      #we have to print the variations
+      foreach my $snp_start (sort{$a<=>$b} keys %alleles_variation){
+          foreach my $population (keys %{$alleles_variation{$snp_start}}){
+              #if the variation has 2 alleles, print all the genotypes to the file
+              if (keys %{$alleles_variation{$snp_start}{$population}} == 2){
+                  $self->_convert_genotype($alleles_variation{$snp_start}{$population},$individual_information{$population}{$snp_start});
+                  foreach my $individual_id (keys %{$individual_information{$population}{$snp_start}}){
+                      print IN join("\t",$previous_seq_region_id,$snp_start, $snp_start,
+                                      $population, $individual_id,
+                                      $individual_information{$population}{$snp_start}{$individual_id}{genotype})."\n" || warn $!;
+
+                  }
+              }
+          }
+      }
+  close IN;
+  `calc_genotypes <$IN >$OUT`;
+  open OUT, $OUT;
+  while(<OUT>){
+  my %ld_values = ();
+#     936	965891	164284	166818	0.628094	0.999996	120 
+	  #get the ouput into the hashes
+	  chomp;
+	  ($sample_id,$ld_region_id,$ld_region_start,$ld_region_end,$r2,$d_prime,$sample_count) = split /\s/;
+	  $ld_values{'d_prime'} = $d_prime;
+	  $ld_values{'r2'} = $r2;
+	  $ld_values{'sample_count'} = $sample_count;
+	  $vf_id1 = $pos_vf{$ld_region_start}->dbID();
+	  $vf_id2 = $pos_vf{$ld_region_end}->dbID();
+
+	  $feature_container{$vf_id1 . '-' . $vf_id2}->{$sample_id} = \%ld_values;
+	  $vf_objects{$vf_id1} = $pos_vf{$ld_region_start};
+	  $vf_objects{$vf_id2} = $pos_vf{$ld_region_end};
+
+	  $_pop_ids{$sample_id} = 1;	  
+      }
+      close OUT || die "Could not close filehandle: $!\n";
+  unlink( $IN );
+  unlink( $OUT );
+OUT:
+  my $t = Bio::EnsEMBL::Variation::LDFeatureContainer->new(
+ 							   '-ldContainer'=> \%feature_container,
+							   '-name' => '',
+							   '-variationFeatures' => \%vf_objects
+							   );
+
+  $t->{'_pop_ids'} =\%_pop_ids;
+
+  return $t;      
+}
+
 1;
