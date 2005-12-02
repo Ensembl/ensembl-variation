@@ -64,13 +64,13 @@ our @ISA = ('Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor');
 =head2 fetch_all_by_Slice_Sample_depth
 
     Arg[0]      : Bio::EnsEMBL::Slice $slice
-    Arg[1]      : (optional) Bio::EnsEMBL::Variation::Individual $sample
+    Arg[1]      : (optional) Bio::EnsEMBL::Variation::Sample $sample
     Arg[2]      : (optional) int $level
     Example     : my $features = $rca->fetch_all_by_Slice_Sample_depth($slice,$sample,$level); or
                   my $features = $rca->fetch_all_by_Slice_Sample_depth($slice, $sample); or
                   my $features = $rca->fetch_all_by_Slice_Sample_depth($slice, $level); or
                   my $features = $rca->fetch_all_by_Slice_Sample_depth($slice); 
-    Description : Gets all the read coverage features for a given individual in a certain level
+    Description : Gets all the read coverage features for a given sample(strain or individual) in a certain level
                   in the provided slice
     ReturnType  : listref of Bio::EnsEMBL::Variation::ReadCoverage
     Exceptions  : thrown on bad arguments
@@ -78,7 +78,7 @@ our @ISA = ('Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor');
 
 =cut
 
-sub fetch_all_by_Slice_Population_depth{
+sub fetch_all_by_Slice_Sample_depth{
     my $self = shift;
     my $slice = shift;
     my @args = @_; #can contain individual and/or level
@@ -90,8 +90,8 @@ sub fetch_all_by_Slice_Population_depth{
     if (defined $args[0]){ #contains, at least, 1 parameter, either a Individual or the level
 	my $constraint;
 	if (defined $args[1]){ #contains both parameters, first the Individual and second the level
-	    if(!ref($args[0]) || !$args[0]->isa('Bio::EnsEMBL::Variation::Individual')) {
-		throw('Bio::EnsEMBL::Variation::Individual arg expected');
+	    if(!ref($args[0]) || !$args[0]->isa('Bio::EnsEMBL::Variation::Sample')) {
+		throw('Bio::EnsEMBL::Variation::Sample arg expected');
 	    }
 	    if(!defined($args[0]->dbID())) {
 		throw("Sample arg must have defined dbID");
@@ -105,8 +105,8 @@ sub fetch_all_by_Slice_Population_depth{
 	    }
 	    else{
 		#it should contain the Individual
-		if (!$args[0]->isa('Bio::EnsEMBL::Variation::Individual')){
-		    throw('Bio::EnsEMBL::Variation::Individual arg expected');
+		if (!$args[0]->isa('Bio::EnsEMBL::Variation::Sample')){
+		    throw('Bio::EnsEMBL::Variation::Sample arg expected');
 		}
 		$constraint = "rc.sample_id = " . $args[0]->dbID;
 	    }
