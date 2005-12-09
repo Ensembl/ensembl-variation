@@ -108,6 +108,16 @@ sub fetch_by_Slice{
 #	    return {};
 #	}
     }
+    if ($in_str eq ''){
+	#there is no population, not a human specie or not passed as an argument, return the empy container
+	my $t = Bio::EnsEMBL::Variation::LDFeatureContainer->new(
+								 '-ldContainer'=> {},
+								 '-name' => $slice->name,
+								 '-variationFeatures' => {}
+								 );
+	return $t
+    }
+
     $sth = $self->prepare(qq{SELECT c.sample_id,c.seq_region_id,c.seq_region_start,c.seq_region_end,c.genotypes,ip.population_sample_id
 				 FROM compressed_genotype_single_bp c, individual_population ip
 				 WHERE  ip.individual_sample_id = c.sample_id
@@ -447,8 +457,9 @@ sub _get_LD_populations{
     }
     
     my $in_str = " IN (" . join(',', @pops). ")";
-
-    return $in_str;
+    
+    return $in_str if (defined $pops[0]);
+    return '' if (!defined $pops[0]);
 }
 
 sub _objs_from_sth_temp_file {
