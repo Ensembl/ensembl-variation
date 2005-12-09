@@ -450,7 +450,6 @@ sub _get_LD_populations{
 
     return $in_str;
 }
-1;
 
 sub _objs_from_sth_temp_file {
   my $self = shift;
