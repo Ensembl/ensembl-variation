@@ -108,6 +108,7 @@ sub fetch_by_Slice{
 #	    return {};
 #	}
     }
+
     if ($in_str eq ''){
 	#there is no population, not a human specie or not passed as an argument, return the empy container
 	my $t = Bio::EnsEMBL::Variation::LDFeatureContainer->new(
@@ -460,6 +461,7 @@ sub _get_LD_populations{
     
     return $in_str if (defined $pops[0]);
     return '' if (!defined $pops[0]);
+
 }
 
 sub _objs_from_sth_temp_file {
