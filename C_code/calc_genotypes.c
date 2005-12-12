@@ -244,6 +244,7 @@ void calculate_pairwise_stats(Locus_info *first, Locus_info *second, Stats *s){
 void calculate_ld(const Locus_list *ll, int seq_region_id, FILE *fh){
   Locus_info *next, *head;
   Stats stats;
+  int i;
 
   /* Doesn't look like it, but sets head and next to the first and
      second entries - I love C, sometimes */
@@ -251,7 +252,6 @@ void calculate_ld(const Locus_list *ll, int seq_region_id, FILE *fh){
   next = &ll->locus[ll->head];
   head = next++;
 
-  int i;
   for (i = ll->head; i < ll->tail; i++, next++) {
     /*Only calculate the LD when both SNPs are in the same population*/
     if (head->population_id != next->population_id)
