@@ -83,6 +83,9 @@ our @ISA = ('Bio::EnsEMBL::Feature');
     string - the name of the variation this feature is for (denormalisation
     from Variation object).
 
+ Arg [-SOURCE] :
+    string - the name of the source where the SNP comes from
+
   Arg [-VARIATION] :
     int - the variation object associated with this feature.
 
@@ -107,6 +110,7 @@ our @ISA = ('Bio::EnsEMBL::Feature');
         -slice   => $slice,
         -allele_string => 'A',
         -variation_name => 'rs635421',
+	-source => 'Celera',
 	-sample_id  => $sample_id,
         -variation => $v);
 
@@ -122,15 +126,16 @@ sub new {
   my $class = ref($caller) || $caller;
 
   my $self = $class->SUPER::new(@_);
-  my ($allele, $var_name, $variation, $variation_id,$population, $sample_id) =
+  my ($allele, $var_name, $variation, $variation_id,$population, $sample_id, $source) =
     rearrange([qw(ALLELE_STRING VARIATION_NAME 
-                  VARIATION VARIATION_ID SAMPLE_ID)], @_);
+                  VARIATION VARIATION_ID SAMPLE_ID SOURCE)], @_);
 
   $self->{'allele'}           = $allele;
   $self->{'variation_name'}   = $var_name;
   $self->{'variation'}        = $variation;
   $self->{'_variation_id'}    = $variation_id;
   $self->{'_sample_id'}       = $sample_id;
+  $self->{'source'}           = $source;
 
   return $self;
 }
@@ -348,6 +353,24 @@ sub length_diff  {
   return length($self->{'allele_string'}) - ($self->{'end'} - $self->{'start'} + 1) if ($self->{'allele_string'} ne '-'); 
   return 0 - ($self->{'end'} - $self->{'start'} + 1) if ($self->{'allele_string'} eq '-'); 
 
+}
+
+=head2 source
+
+  Arg [1]    : string $source (optional)
+               The new value to set the source attribute to
+  Example    : $source = $vf->source()
+  Description: Getter/Setter for the source attribute
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+
+=cut
+
+sub source{
+  my $self = shift;
+  return $self->{'source'} = shift if(@_);
+  return $self->{'source'};
 }
 
 1;

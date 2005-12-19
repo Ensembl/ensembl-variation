@@ -87,11 +87,11 @@ sub from_IndividualSlice{
 =head2 fetch_all_by_Slice_Population
 
    Arg[0]      : Bio::EnsEMBL::Slice $slice
-   Arg[1]      : Bio::EnsEMBL::Variation::Population $population
+   Arg[1]      : (optional) Bio::EnsEMBL::Variation::Population $population
    Example     : my $vf = $vfa->fetch_all_by_Slice_Individual($slice,$population);   
    Description : Gets all the VariationFeatures in a certain Slice for a given
-                 Population
-   ReturnType  : listref of Bio::EnsEMBL::Variation::VariationFeature
+                 Population (if provided)
+   ReturnType  : listref of Bio::EnsEMBL::Variation::AlleleFeature
    Exceptions  : thrown on bad arguments
    Caller      : general
    
@@ -105,6 +105,7 @@ sub fetch_all_by_Slice_Population{
     if(!ref($slice) || !$slice->isa('Bio::EnsEMBL::Slice')) {
 	throw('Bio::EnsEMBL::Slice arg expected');
     }
+    
 
     if(!ref($population) || !$population->isa('Bio::EnsEMBL::Variation::Population')) {
 	throw('Bio::EnsEMBL::Variation::Population arg expected');
@@ -114,8 +115,9 @@ sub fetch_all_by_Slice_Population{
     }
     
     my $constraint = "a.sample_id = " . $population->dbID;
+
     #call the method fetch_all_by_Slice_constraint with the population constraint
-    return $self->fetch_all_by_Slice_constraint($slice,$constraint);    
+    $self->fetch_all_by_Slice_constraint($slice,$constraint);    
 }
 
 
@@ -170,7 +172,7 @@ sub _tables{
 	return (['variation_feature','vf'], ['individual_genotype_multiple_bp','ig']) if ($self->_multiple_bp());
     }
     else{
-	return (['variation_feature','vf'],   ['allele','a']);
+	return (['variation_feature','vf'],   ['allele','a'], ['source','s']);
     }
 
 }
@@ -184,13 +186,14 @@ sub _columns{
 
     return qw(a.variation_id a.sample_id a.allele 
 	      vf.seq_region_id vf.seq_region_start vf.seq_region_end 
-	      vf.seq_region_strand vf.variation_name);
+	      vf.seq_region_strand vf.variation_name s.name);
 }
 
 sub _default_where_clause{
     my $self = shift;
     return "ig.variation_id = vf.variation_id" if ($self->from_IndividualSlice());
-    return "a.variation_id = vf.variation_id";
+    return "a.variation_id = vf.variation_id AND " . 
+	   "vf.source_id = s.source_id";
 }
 
 sub _objs_from_sth{
@@ -210,11 +213,11 @@ sub _objs_from_sth{
   my %sr_cs_hash;
 
   my ($variation_id, $sample_id, $allele,$seq_region_id,
-      $seq_region_start,$seq_region_end, $seq_region_strand, $variation_name );
+      $seq_region_start,$seq_region_end, $seq_region_strand, $variation_name, $source_name );
 
   $sth->bind_columns(\$variation_id,\$sample_id,\$allele,
 		     \$seq_region_id,\$seq_region_start,\$seq_region_end,\$seq_region_strand,
-		     \$variation_name);
+		     \$variation_name, \$source_name);
 
   my $asm_cs;
   my $cmp_cs;
@@ -310,6 +313,7 @@ sub _objs_from_sth{
 								      'allele_string' => $allele,
 								      'variation_name' => $variation_name,
 								      'adaptor'  => $self,
+								      'source'   => $source_name,
 								      '_variation_id' => $variation_id,
 								      '_sample_id' => $sample_id});      
 }
