@@ -423,11 +423,18 @@ sub _objs_from_sth {
   return \@pops;
 }
 
-sub _tables{return ['sample', 's', 'population','p'];}
+sub _tables{return['sample','s'],['population','p']}
+
 
 sub _columns{
     return qw(s.sample_id s.name s.size s.description p.is_strain
 	      );
+}
+
+sub _default_where_clause {
+  my $self = shift;
+
+  return 'p.sample_id = s.sample_id ';
 }
 
 1;
