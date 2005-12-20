@@ -60,14 +60,19 @@ sub ambiguity_code {
     my $alleles = shift;
     my %ambig = qw(AC M ACG V ACGT N ACT H AG R AGT D AT W CG S CGT B CT Y GT K -A P -C Q -T S -G U);
     my $ambig_alleles;
-    if (length $alleles == 3){
+
+    if ($alleles =~ /^[ACGT](\/[ACGT])+$/i){
 	$alleles = uc( join '', sort split /[\|\/\\]/, $alleles );
 	$ambig_alleles = $ambig{$alleles};
     }
     else{
 	#we have a complex allele (insertion of more than one base, likely)
 	my ($allele_1, $allele_2) = split /[\|\/\\]/, $alleles, 2; #split the alleles
-	if ($allele_1 eq $allele_2){
+	if (!$allele_2) { ## added by fc1 - ok?
+	    #homozigous SNP
+	    $ambig_alleles = $allele_1
+	}
+	elsif ($allele_1 eq $allele_2){
 	    #homozigous SNP
 	    $ambig_alleles = $allele_1
 	}
@@ -84,7 +89,7 @@ sub ambiguity_code {
 		@alleles = split //,$allele_2;
 	    }
 	    foreach my $allele (@alleles){
-		$ambig_alleles .= $ambig{'-'.$allele};
+		$ambig_alleles .= $ambig{'-'.$allele}; 
 	    }
 	}
     }
