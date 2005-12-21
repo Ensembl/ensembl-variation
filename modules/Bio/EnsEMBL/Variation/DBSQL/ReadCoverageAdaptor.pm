@@ -56,6 +56,7 @@ use warnings;
 package Bio::EnsEMBL::Variation::DBSQL::ReadCoverageAdaptor;
 
 use Bio::EnsEMBL::Variation::ReadCoverage;
+use Bio::EnsEMBL::Mapper::RangeRegistry;
 use Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor;
 use Bio::EnsEMBL::Utils::Exception qw(throw);
 
@@ -118,6 +119,70 @@ sub fetch_all_by_Slice_Sample_depth{
     return $self->fetch_all_by_Slice($slice);    
 }
 
+#returns a list of regions that are covered by all the sample given
+sub fetch_all_regions_covered{
+    my $self = shift;
+    my $slice = shift;
+    my $samples = shift;  #listref of sample names to get the coverage from
+
+    my $population_adaptor = $self->db->get_PopulationAdaptor;
+    my $range_registry = [];
+    my $max_level = scalar(@{$samples});
+    _initialize_range_registry($range_registry,$max_level);
+    foreach my $sample_name (@{$samples}){
+	my $sample = $population_adaptor->fetch_by_name($sample_name);
+	my $coverage = $self->fetch_all_by_Slice_Sample_depth($slice,$sample,1); #get coverage information
+	foreach my $cv_feature (@{$coverage}){
+	    my $range = [$cv_feature->seq_region_start,$cv_feature->seq_region_end]; #store toplevel coordinates
+	    _register_range_level($range_registry,$range,1,$max_level);	   
+	}
+    }
+    return $range_registry->[$max_level]->get_ranges(1);
+}
+
+sub _initialize_range_registry{
+    my $range_registry = shift;
+    my $max_level = shift;
+
+    foreach my $level (1..$max_level){
+	$range_registry->[$level] = Bio::EnsEMBL::Mapper::RangeRegistry->new();
+    }
+
+    return;
+}
+
+
+sub _register_range_level{
+    my $range_registry = shift;
+    my $range = shift;
+    my $level = shift;
+    my $max_level = shift;
+    
+    return if ($level > $max_level);
+    my $rr = $range_registry->[$level];
+    my $pair = $rr->check_and_register(1,$range->[0],$range->[1]);
+    my $pair_inverted = _invert_pair($range,$pair);
+    return if (!defined $pair_inverted);
+    foreach my $inverted_range (@{$pair_inverted}){
+	_register_range_level($range_registry,$inverted_range,$level+1, $max_level);
+    }
+}
+
+#for a given range and the one covered, returns the inverted
+sub _invert_pair{
+    my $range = shift; #initial range of the array
+    my $pairs = shift; #listref with the pairs that have been added to the range
+
+    my @inverted_pairs;
+    my $inverted;
+
+    my $rr = Bio::EnsEMBL::Mapper::RangeRegistry->new();
+
+    foreach my $pair (@{$pairs}){
+	$rr->check_and_register(1,$pair->[0],$pair->[1]);
+    }
+    return $rr->check_and_register(1,$range->[0],$range->[1]); #register again the range
+}
 
 sub _tables{ return (['read_coverage','rc']
 		     )}
