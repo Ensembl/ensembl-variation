@@ -373,4 +373,32 @@ sub source{
   return $self->{'source'};
 }
 
+=head2 ref_allele_string
+
+  Args       : None
+  Example    : $allele = $obj->ref_allele_string()
+  Description: Getter for the reference allele.
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+
+=cut
+
+ sub ref_allele_string{
+   my $self = shift;
+
+   my $reference_allele;
+   if (isa($self->slice) eq 'Bio::EnsEMBL::Slice' ){
+       #we already have the reference slice, so just get the sequence
+       $reference_allele = $self->seq;
+   }
+   else{
+       #we have a Strain or IndividualSlice, get the reference sequence from the method
+       $reference_allele = $self->slice->ref_subseq($self->start,$self->end,$self->strand);
+   }
+
+   return $reference_allele;
+ }
+
+
 1;
