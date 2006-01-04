@@ -388,7 +388,7 @@ sub source{
    my $self = shift;
 
    my $reference_allele;
-   if (isa($self->slice) eq 'Bio::EnsEMBL::Slice' ){
+   if ( ref ($self->slice) eq 'Bio::EnsEMBL::Slice' ){
        #we already have the reference slice, so just get the sequence
        $reference_allele = $self->seq;
    }
