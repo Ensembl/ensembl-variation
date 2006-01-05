@@ -80,19 +80,16 @@ GT K);
 
 sub variation_class{
     my $alleles = shift;
+    return 'snp' if $alleles =~ /^[ACGT]([\|\\\/][ACGT])+$/;
+
     my @alleles = split /[\|\/\\]/, $alleles;
 
-#    print STDERR "\n",@alleles," and number ",scalar(@alleles),"\n";
     if (@alleles == 1){       
 	#(HETEROZYGOUS) 1 allele
 	return 'het'
     }
     elsif(@alleles == 2){
-	if (($alleles[0] =~ tr/ACTG//) == 1 && ($alleles[1] =~ tr/ACTG//) == 1){
-	    #A/T 2 alleles
-	    return 'snp';
-	}
-	elsif ((($alleles[0] =~ tr/ACTG//)== length($alleles[0]) && ($alleles[1] =~ tr/-//) == 1) || (($alleles[0] =~ tr/-//) == 1 && ($alleles[1] =~ tr/ACTG//) == length($alleles[1]))){
+	if ((($alleles[0] =~ tr/ACTG//)== length($alleles[0]) && ($alleles[1] =~ tr/-//) == 1) || (($alleles[0] =~ tr/-//) == 1 && ($alleles[1] =~ tr/ACTG//) == length($alleles[1]))){
 	    #A/- 2 alleles
 	    return 'in-del'
 	    }
