@@ -80,7 +80,7 @@ GT K);
 
 sub variation_class{
     my $alleles = shift;
-    return 'snp' if $alleles =~ /^[ACGT]([\|\\\/][ACGT])+$/;
+    return 'snp' if $alleles =~ /^[ACGT]([\|\\\/][ACGT])+$/i;
 
     my @alleles = split /[\|\/\\]/, $alleles;
 
