@@ -151,7 +151,7 @@ sub fetch_all_regions_covered{
 
 =cut
 
-sub fetch_coverage_levels{
+sub get_coverage_levels{
     my $self = shift;
     my @levels;
     my $level_coverage;
