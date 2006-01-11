@@ -223,7 +223,7 @@ sub update_meta_table {
 
   foreach (1,$max_level){
       my $cur_level = $_;
-      if ((grep {$cur_level eq $_} @{$levels}) = 0){
+      if ((grep {$cur_level eq $_} @{$levels}) == 0){
 	  $sth->execute('coverage_level',$_);
       }
   }
