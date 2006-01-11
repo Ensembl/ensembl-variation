@@ -10,7 +10,6 @@ use Bio::EnsEMBL::Mapper::RangeRegistry;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Variation::DBSQL::DBAdaptor;
 use ImportUtils qw(debug);
-use constant MAX_LEVEL => 6;
 
 my ($TMP_DIR, $TMP_FILE); #global variables for the tmp files and folder
 my $range_registry = []; #reference to an array containing an rr for each of the possible levels (from 1-6)
@@ -21,13 +20,13 @@ my %individual_id = ('Fosmid'  => '',
 		     'TSC'     => '',
 		     'NA10470' => '',
 		     'Unknown' => '',
-		     'NA07340' => 1063, ##115,
-		     'NA17109' => 1703, ##840,
-		     'NA17119' => 1713  ##850
+		     'NA07340' => '', ##115,
+		     'NA17109' => '', ##840,
+		     'NA17119' => ''  ##850
 		     );
 my ($chost, $cport, $cdbname, $cuser, $cpass,
     $vhost, $vport, $vdbname, $vuser, $vpass,
-    $read_file);
+    $read_file, $max_level);
 
   GetOptions('chost=s'     => \$chost,
              'cuser=s'     => \$cuser,
@@ -41,7 +40,8 @@ my ($chost, $cport, $cdbname, $cuser, $cpass,
              'vdbname=s'   => \$vdbname,
              'tmpdir=s'    => \$ImportUtils::TMP_DIR,
              'tmpfile=s'   => \$ImportUtils::TMP_FILE,
-	     'readfile=s' => \$read_file);
+	     'readfile=s' => \$read_file,
+	     'maxlevel=i'  => \$max_level);
 
 #added default options
 $chost    ||= 'ecs2';
@@ -51,6 +51,7 @@ $cport    ||= 3364;
 usage('-vdbname argument is required') if(!$vdbname);
 usage('-cdbname argument is required') if(!$cdbname);
 usage('-readfile argument is required (name of file with read information)') if (!$read_file);
+usage('-maxlevel argument is required (max level coverage calculated)') if (!$max_level);
 
 my $dbCore = Bio::EnsEMBL::DBSQL::DBAdaptor->new
     (-host   => $chost,
@@ -72,7 +73,7 @@ $TMP_DIR  = $ImportUtils::TMP_DIR;
 $TMP_FILE = $ImportUtils::TMP_FILE;
 
 &load_individuals($dbVar,\%individual_id); #first of all, load the hash with the individual_id
-&initialize_range_registry($range_registry);
+&initialize_range_registry($range_registry, $max_level);
 my $pair; #reference to an array with id,start,end format
 $read_file =~ /((\d+)|X|Y)\.mapped/;  #extract the chromosome from the file name
 my $region = $1;
@@ -88,7 +89,7 @@ while (<IN>){
     ($pair) = [split /\t/];
     splice @{$pair},1,1;    #we need to get rid of the second column, ID_read
     if ($pair->[0] eq ''){$pair->[0] = 'Unknown'}
-    &register_range_level($range_registry,$pair,1,$individuals);
+    &register_range_level($range_registry,$pair,1,$individuals,$max_level);
 }
 close IN;
     
@@ -99,14 +100,15 @@ my $slice = $slice_adaptor->fetch_by_region('toplevel',$region);
 my $seq_region_id = $slice->get_seq_region_id();
     
 &import_data(1,$range_registry,"read_coverage",$individuals,$seq_region_id,\%individual_id);
-&import_data(6,$range_registry,"read_coverage",$individuals,$seq_region_id,\%individual_id);
+&import_data($max_level,$range_registry,"read_coverage",$individuals,$seq_region_id,\%individual_id);
+&update_meta_table($dbVar,$max_level);
     
 debug("File $read_file finished");
 
 sub initialize_range_registry{
     my $range_registry = shift;
-
-    foreach my $level (1..MAX_LEVEL){
+    my $max_level = shift;
+    foreach my $level (1..$max_level){
 	$range_registry->[$level] = Bio::EnsEMBL::Mapper::RangeRegistry->new();
     }
 
@@ -134,9 +136,10 @@ sub register_range_level{
     my $range = shift;
     my $level = shift;
     my $individuals = shift;
+    my $max_level = shift;
 
     my $individual_name = shift @{$range}; #get the individual from the array
-    return if ($level > MAX_LEVEL());
+    return if ($level > $max_level);
     $individuals->{$individual_name}++;
     my $rr = $range_registry->[$level];
     my $pair = $rr->check_and_register($individual_name,$range->[0],$range->[1]);
@@ -203,6 +206,33 @@ sub load_individuals{
     }
 }
 
+#
+# updates the meta table
+#
+sub update_meta_table {
+  my $dbVar  = shift;
+  my $max_level = shift;
+
+  #find out if the meta table has been updated with the coverage levels calculated
+  my $rca = $dbVar->get_ReadCoverageAdaptor();
+  my $levels = $rca->fetch_coverage_levels();
+  
+  
+  my $sth = $dbVar->dbc->prepare
+    ('INSERT INTO meta (meta_key,meta_value) VALUES (?,?)');
+
+  foreach (1,$max_level){
+      my $cur_level = $_;
+      if ((grep {$cur_level eq $_} @{$levels}) = 0){
+	  $sth->execute('coverage_level',$_);
+      }
+  }
+  
+  $sth->finish();
+
+  return;
+}
+
 sub usage {
   my $msg = shift;
 
@@ -224,6 +254,7 @@ options:
     -tmpdir <dir>        temp directory to use (with lots of space!)
     -tmpfile <filename>  name of temp file to use
     -readfile <filename> name of file with read information
+    -maxlevel <number>   max level of coverage calculated
 EOF
 
   die("\n$msg\n\n");
