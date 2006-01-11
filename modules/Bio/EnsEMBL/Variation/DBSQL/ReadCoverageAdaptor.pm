@@ -140,6 +140,33 @@ sub fetch_all_regions_covered{
     return $range_registry->[$max_level]->get_ranges(1);
 }
 
+=head2 fetch_coverage_levels
+
+    Args        : none
+    Example     : my @coverage_levels = @{$rca->fetch_coverage_levels()};
+    Description : Gets the read coverage depths calculated in the database
+    ReturnType  : listref of integer
+    Exceptions  : none
+    Caller      : general
+
+=cut
+
+sub fetch_coverage_levels{
+    my $self = shift;
+    my @levels;
+    my $level_coverage;
+    my $sth = $self->prepare(qq{SELECT meta_value from meta where meta_key = 'coverage_level'
+				});
+    $sth->execute();
+    $sth->bind_columns(\$level_coverage);
+    while ($sth->fetch()){
+	push @levels, $level_coverage;
+    }
+    $sth->finish();
+
+    return \@levels;
+}
+
 sub _initialize_range_registry{
     my $range_registry = shift;
     my $max_level = shift;
