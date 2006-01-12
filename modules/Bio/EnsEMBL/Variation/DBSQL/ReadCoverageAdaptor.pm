@@ -97,12 +97,22 @@ sub fetch_all_by_Slice_Sample_depth{
 	    if(!defined($args[0]->dbID())) {
 		throw("Sample arg must have defined dbID");
 	    }
-	    $constraint = "rc.sample_id = " . $args[0]->dbID . " AND rc.level = " . $args[1];
+	    if ($args[1] =~ /^(1-9)$/){
+		$constraint = "rc.sample_id = " . $args[0]->dbID . " AND rc.level = " . $args[1];
+	    }
+	    else{
+		throw("Level must be a number between 1 and 9");
+	    }
 	}
 	else{ #there is just 1 argument, can either be the Individual or the level
 	    if (!ref($args[0])){
 		#it should just contain the level
-		$constraint = "rc.level = " . $args[0];
+		if ($args[0] =~ /^(1-9)$/){
+		    $constraint = "rc.level = " . $args[0];
+		}
+		else{
+		    throw("Level must be a number between 1 and 9");
+		}									   
 	    }
 	    else{
 		#it should contain the Individual
