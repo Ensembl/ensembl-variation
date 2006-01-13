@@ -58,7 +58,7 @@ package Bio::EnsEMBL::Variation::DBSQL::ReadCoverageAdaptor;
 use Bio::EnsEMBL::Variation::ReadCoverage;
 use Bio::EnsEMBL::Mapper::RangeRegistry;
 use Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor;
-use Bio::EnsEMBL::Utils::Exception qw(throw);
+use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 
 our @ISA = ('Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor');
 
@@ -90,6 +90,7 @@ sub fetch_all_by_Slice_Sample_depth{
 
     if (defined $args[0]){ #contains, at least, 1 parameter, either a Individual or the level
 	my $constraint;
+	my $levels = $self->get_coverage_levels();
 	if (defined $args[1]){ #contains both parameters, first the Individual and second the level
 	    if(!ref($args[0]) || !$args[0]->isa('Bio::EnsEMBL::Variation::Sample')) {
 		throw('Bio::EnsEMBL::Variation::Sample arg expected');
@@ -97,21 +98,23 @@ sub fetch_all_by_Slice_Sample_depth{
 	    if(!defined($args[0]->dbID())) {
 		throw("Sample arg must have defined dbID");
 	    }
-	    if ($args[1] =~ /^(1-9)$/){
+	    if (grep {$args[1] eq $_} @{$levels} > 0){
 		$constraint = "rc.sample_id = " . $args[0]->dbID . " AND rc.level = " . $args[1];
 	    }
 	    else{
-		throw("Level must be a number between 1 and 9");
+		warning("Level must be a number of: " . join(",", @{$levels}));
+		return [];
 	    }
 	}
 	else{ #there is just 1 argument, can either be the Individual or the level
 	    if (!ref($args[0])){
 		#it should just contain the level
-		if ($args[0] =~ /^(1-9)$/){
+		if (grep {$args[0] eq $_} @{$levels} > 0){
 		    $constraint = "rc.level = " . $args[0];
 		}
 		else{
-		    throw("Level must be a number between 1 and 9");
+		    warning("Level must be a number of: " . join(",", @{$levels}));
+		    return [];
 		}									   
 	    }
 	    else{
