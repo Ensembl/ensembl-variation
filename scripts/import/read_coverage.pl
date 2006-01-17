@@ -215,7 +215,7 @@ sub update_meta_table {
 
   #find out if the meta table has been updated with the coverage levels calculated
   my $rca = $dbVar->get_ReadCoverageAdaptor();
-  my $levels = $rca->fetch_coverage_levels();
+  my $levels = $rca->get_coverage_levels();
   
   
   my $sth = $dbVar->dbc->prepare
