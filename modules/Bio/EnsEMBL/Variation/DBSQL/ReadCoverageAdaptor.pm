@@ -153,7 +153,7 @@ sub fetch_all_regions_covered{
     return $range_registry->[$max_level]->get_ranges(1);
 }
 
-=head2 fetch_coverage_levels
+=head2 get_coverage_levels
 
     Args        : none
     Example     : my @coverage_levels = @{$rca->fetch_coverage_levels()};
