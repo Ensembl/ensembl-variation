@@ -82,18 +82,17 @@ sub fetch_by_dbID {
     (q{SELECT v.variation_id, v.name, v.validation_status, s1.name, v.ancestral_allele,
               a.allele_id, a.allele, a.frequency, a.sample_id, vs.moltype,
               vs.name, s2.name
-       FROM   variation v, source s1, source s2, allele a, variation_synonym vs
+       FROM   variation v, source s1, allele a LEFT JOIN 
+                variation_synonym vs on v.variation_id = vs.variation_id 
+              LEFT JOIN source s2 on  vs.source_id = s2.source_id
        WHERE  v.variation_id = a.variation_id
-       AND    v.variation_id = vs.variation_id
        AND    v.source_id = s1.source_id
-       AND    vs.source_id = s2.source_id
        AND    v.variation_id = ?});
   $sth->bind_param(1,$dbID,SQL_INTEGER);
   $sth->execute();
 
   my $result = $self->_objs_from_sth($sth);
   $sth->finish();
-
   return undef if(!@$result);
 
   return $result->[0];
@@ -431,7 +430,7 @@ sub _objs_from_sth {
       $cur_allele_id = $allele_id;
     }
 
-    if(!$seen_syns{"$syn_source:$syn_name"}) {
+    if(defined ($syn_source) && !$seen_syns{"$syn_source:$syn_name"}) {
       $seen_syns{"$syn_source:$syn_name"} = 1;
       $cur_var->add_synonym($syn_source, $syn_name);
     }
