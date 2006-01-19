@@ -122,11 +122,14 @@ sub fetch_by_name {
     (q{SELECT v.variation_id, v.name, v.validation_status, s1.name, v.ancestral_allele,
               a.allele_id, a.allele, a.frequency, a.sample_id, vs.moltype,
               vs.name, s2.name
-       FROM   variation v, source s1, source s2, allele a, variation_synonym vs
+#       FROM   variation v, source s1, source s2, allele a, variation_synonym vs
+	  FROM   variation v, source s1, allele a LEFT JOIN 
+                variation_synonym vs on v.variation_id = vs.variation_id 
+              LEFT JOIN source s2 on  vs.source_id = s2.source_id
        WHERE  v.variation_id = a.variation_id
-       AND    v.variation_id = vs.variation_id
+#       AND    v.variation_id = vs.variation_id
        AND    v.source_id = s1.source_id
-       AND    vs.source_id = s2.source_id
+#       AND    vs.source_id = s2.source_id
        AND    v.name = ?
        AND    s1.name = ?
        ORDER BY a.allele_id});
@@ -206,12 +209,11 @@ sub fetch_all_by_dbID_list {
       (qq{SELECT v.variation_id, v.name, v.validation_status, s1.name, v.ancestral_allele,
                  a.allele_id, a.allele, a.frequency, a.sample_id, vs.moltype,
                  vs.name, s2.name
-          FROM   variation v, source s1, source s2, allele a,
-                 variation_synonym vs
+	     FROM   variation v, source s1, allele a LEFT JOIN 
+                variation_synonym vs on v.variation_id = vs.variation_id 
+              LEFT JOIN source s2 on  vs.source_id = s2.source_id
           WHERE  v.variation_id = a.variation_id
-          AND    v.variation_id = vs.variation_id
           AND    v.source_id = s1.source_id
-          AND    vs.source_id = s2.source_id
           AND    v.variation_id $id_str});
     $sth->execute();
 
@@ -342,12 +344,12 @@ sub fetch_all_by_Population {
     (q{SELECT v.variation_id, v.name, v.validation_status, s1.name, v.ancestral_allele,
               a.allele_id, a.allele, a.frequency, a.sample_id, vs.moltype,
               vs.name, s2.name
-       FROM   variation v, source s1, source s2, allele a, variation_synonym vs
-       WHERE  v.variation_id = a.variation_id
-       AND    v.variation_id = vs.variation_id
-       AND    v.source_id = s1.source_id
-       AND    vs.source_id = s2.source_id
-       AND    a.sample_id = ?});
+	    FROM   variation v, source s1, allele a LEFT JOIN 
+                variation_synonym vs on v.variation_id = vs.variation_id 
+              LEFT JOIN source s2 on  vs.source_id = s2.source_id
+	      WHERE  v.variation_id = a.variation_id
+	      AND    v.source_id = s1.source_id
+	      AND    a.sample_id = ?});
   $sth->bind_param(1,$pop->dbID,SQL_INTEGER);
   $sth->execute();
 
