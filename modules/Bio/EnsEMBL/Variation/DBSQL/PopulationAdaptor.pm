@@ -233,12 +233,12 @@ sub fetch_all_strains{
 }
 
 
-=head2 get_default_strain_name
+=head2 get_default_strains
 
     Args       : none
-    Example    : my $strains = $pop_adaptor->fetch_default_strains();
+    Example    : my $strains = $pop_adaptor->get_default_strains();
     Description: Retrieves strain_names that are defined as default in the database(mainly, for web purposes)
-    Returntype : list of Bio::EnsEMBL::Variation::Population
+    Returntype : list of strings
     Exceptions : none
     Caller     : web
 
@@ -261,6 +261,33 @@ sub get_default_strains{
 
 }
 
+
+=head2 get_reference_strain_name
+
+    Args       : none
+    Example    : my $reference_strain = $pop_adaptor->get_reference_strain_name();
+    Description: Retrieves the reference strain_name that is defined as default in the database(mainly, for web purposes)
+    Returntype : string
+    Exceptions : none
+    Caller     : web
+
+=cut
+
+sub get_reference_strain_name{
+    my $self = shift;
+
+    my $name;
+    my $sth = $self->prepare(qq{SELECT meta_value from meta where meta_key = ?
+				});
+    $sth->bind_param(1,'reference_strain',SQL_VARCHAR);
+    $sth->execute();
+    $sth->bind_columns(\$name);
+    $sth->fetch();
+    $sth->finish;
+
+    return $name;
+
+}
 
 =head2 fetch_all_by_Individual
 
