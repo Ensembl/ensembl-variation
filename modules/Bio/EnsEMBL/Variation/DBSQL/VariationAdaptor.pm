@@ -244,7 +244,7 @@ sub get_source_version{
     my $version;
     my $sth = $self->prepare(qq{SELECT version from source where name = ?
 				});
-    $sth->bind_param(1,$name,SQL_VARCHAR);
+    $sth->bind_param(1,$name,SQL_INTEGER);
     $sth->execute();
     $sth->bind_columns(\$version);
     $sth->fetch();
