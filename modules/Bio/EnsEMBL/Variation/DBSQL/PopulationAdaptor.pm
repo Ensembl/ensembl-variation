@@ -250,7 +250,7 @@ sub get_default_strains{
     my $name;
     my $sth = $self->prepare(qq{SELECT meta_value from meta where meta_key = ?
 				});
-    $sth->bind_param(1,'default_strain',SQL_VARCHAR);
+    $sth->bind_param(1,'population.default_strain',SQL_VARCHAR);
     $sth->execute();
     $sth->bind_columns(\$name);
     while ($sth->fetch()){
@@ -279,7 +279,7 @@ sub get_reference_strain_name{
     my $name;
     my $sth = $self->prepare(qq{SELECT meta_value from meta where meta_key = ?
 				});
-    $sth->bind_param(1,'reference_strain',SQL_VARCHAR);
+    $sth->bind_param(1,'population.reference_strain',SQL_VARCHAR);
     $sth->execute();
     $sth->bind_columns(\$name);
     $sth->fetch();

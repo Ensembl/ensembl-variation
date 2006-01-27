@@ -168,7 +168,7 @@ sub get_coverage_levels{
     my $self = shift;
     my @levels;
     my $level_coverage;
-    my $sth = $self->prepare(qq{SELECT meta_value from meta where meta_key = 'coverage_level'
+    my $sth = $self->prepare(qq{SELECT meta_value from meta where meta_key = 'read_coverage.coverage_level'
 				});
     $sth->execute();
     $sth->bind_columns(\$level_coverage);
