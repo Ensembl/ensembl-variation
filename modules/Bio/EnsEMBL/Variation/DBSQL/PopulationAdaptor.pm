@@ -233,6 +233,38 @@ sub fetch_all_strains{
 }
 
 
+=head2 fetch_default_LDPopulation
+
+    Args        : none
+    Example     : $population = $pop_adaptor->fetch_default_LDPopulation();
+    Description : Obtains the population it is used as a default in the LD display of the pairwise LD data
+    ReturnType  : Bio::EnsEMBL::Variation::Population
+    Exceptions  : none
+    Caller      : general
+
+=cut
+
+sub fetch_default_LDPopulation{
+    my $self = shift;
+    my $population_id;
+    
+    my $sth = $self->prepare(qq{SELECT meta_value from meta where meta_key = ?});
+
+    $sth->bind_param(1,'pairwise_ld.default_population',SQL_INTEGER);
+    $sth->execute();
+    $sth->bind_columns(\$population_id);
+    $sth->fetch();
+    $sth->finish;
+
+    if (defined $population_id){
+	return $self->fetch_by_dbID($population_id);
+    }
+    else{
+	return undef;
+    }
+}
+
+
 =head2 get_default_strains
 
     Args       : none
