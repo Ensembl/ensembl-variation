@@ -502,8 +502,10 @@ sub _objs_from_sth_temp_file {
       goto OUT;
   }
   my $pid;
-  my $IN = "/tmp/ld-$ENV{SERVER_ADDR}-$$.in";
-  my $OUT = "/tmp/ld-$ENV{SERVER_ADDR}-$$.out";
+#  my $IN = "/tmp/ld-$ENV{SERVER_ADDR}-$$.in";
+  my $IN = "/tmp/ld-$$.in";
+#  my $OUT = "/tmp/ld-$ENV{SERVER_ADDR}-$$.out";
+  my $OUT = "/tmp/ld-$$.out";
   warn ">>> $IN $OUT <<<";
   open IN, ">$IN";
   $sth->bind_columns(\$individual_id, \$seq_region_id, \$seq_region_start, \$seq_region_end, \$genotypes, \$population_id);
@@ -542,6 +544,9 @@ sub _objs_from_sth_temp_file {
 	  $ld_values{'d_prime'} = $d_prime;
 	  $ld_values{'r2'} = $r2;
 	  $ld_values{'sample_count'} = $sample_count;
+  if (!defined $pos_vf{$ld_region_start} || !defined $pos_vf{$ld_region_end}){
+      next; #problem to fix in the compressed genotype table: some of the positions seem to be wrong
+  }
 	  $vf_id1 = $pos_vf{$ld_region_start}->dbID();
 	  $vf_id2 = $pos_vf{$ld_region_end}->dbID();
 
