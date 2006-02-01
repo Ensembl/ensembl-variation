@@ -108,6 +108,7 @@ sub fetch_by_Slice{
 #	    return {};
 #	}
     }
+
     if ($in_str eq ''){
 	#there is no population, not a human specie or not passed as an argument, return the empy container
 	my $t = Bio::EnsEMBL::Variation::LDFeatureContainer->new(
@@ -460,6 +461,7 @@ sub _get_LD_populations{
     
     return $in_str if (defined $pops[0]);
     return '' if (!defined $pops[0]);
+
 }
 
 sub _objs_from_sth_temp_file {
@@ -540,6 +542,9 @@ sub _objs_from_sth_temp_file {
 	  $ld_values{'d_prime'} = $d_prime;
 	  $ld_values{'r2'} = $r2;
 	  $ld_values{'sample_count'} = $sample_count;
+          if (!defined $pos_vf{$ld_region_start} || !defined $pos_vf{$ld_region_end}){
+	       next; #problem to fix in the compressed genotype table: some of the positions seem to be wrong
+	   }
 	  $vf_id1 = $pos_vf{$ld_region_start}->dbID();
 	  $vf_id2 = $pos_vf{$ld_region_end}->dbID();
 
