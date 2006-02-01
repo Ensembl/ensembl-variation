@@ -227,6 +227,33 @@ sub fetch_all_by_dbID_list {
   return \@out;
 }
 
+=head2 get_default_source
+
+  Args      : none
+  Example     : $default_source = $va->get_default_source();
+  Description : Retrieves from the database the default source used for display purposes
+  ReturnType  : string
+  Exceptions  : none
+  Caller      : web
+
+=cut
+
+sub get_default_source{
+    my $self = shift;
+
+    my $source_name;
+    my $sth = $self->prepare(qq{SELECT meta_value from meta where meta_key = ?
+				});
+    $sth->bind_param(1,'source.default_source',SQL_VARCHAR);
+    $sth->execute();
+    $sth->bind_columns(\$source_name);
+    $sth->fetch();
+    $sth->finish();
+
+    return $source_name;
+}
+
+
 =head2 get_source_version
 
   Arg[1]      : string $name
@@ -246,6 +273,7 @@ sub get_source_version{
 				});
 
     $sth->bind_param(1,$name,SQL_VARCHAR);
+
     $sth->execute();
     $sth->bind_columns(\$version);
     $sth->fetch();
