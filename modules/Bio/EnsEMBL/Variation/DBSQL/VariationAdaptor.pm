@@ -227,6 +227,37 @@ sub fetch_all_by_dbID_list {
   return \@out;
 }
 
+
+=head2 get_all_sources
+
+  Args        : none
+  Example     : $sources = $va->get_all_sources();
+  Description : Retrieves from the database all sources in the Source table
+  ReturnType  : array ref of string
+  Exceptions  : none
+  Caller      : web
+
+=cut
+
+sub get_all_sources{
+    my $self = shift;
+    my @sources;
+
+    my $source_name;
+    my $sth = $self->prepare(qq{SELECT name from source
+				});
+    $sth->execute();
+    $sth->bind_columns(\$source_name);
+    
+    while ($sth->fetch()){
+	push @sources, $source_name
+    }
+    $sth->finish();
+
+    return \@sources;
+}
+
+
 =head2 get_default_source
 
   Args      : none
