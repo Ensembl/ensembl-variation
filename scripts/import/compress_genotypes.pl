@@ -10,6 +10,7 @@ use Bio::EnsEMBL::Variation::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
 use FindBin qw( $Bin );
 use POSIX;
+use Data::Dumper;
 
 use constant DISTANCE => 100_000;
 use constant MAX_SHORT => 2**16 -1;
@@ -48,7 +49,7 @@ $ImportUtils::TMP_FILE = $TMP_FILE;
 
 
 compress_genotypes($dbCore,$dbVar);
-update_meta_coord($dbCore,$dbVar,"compressed_genotype_single_bp");
+#update_meta_coord($dbCore,$dbVar,"compressed_genotype_single_bp");
 
 #reads the genotype and variation_feature data and compress it in one table with blob field
 sub compress_genotypes{
@@ -64,6 +65,7 @@ sub compress_genotypes{
 				     AND vf.map_weight = 1
 				     AND ig.allele_1 <> 'N'
 				     AND ig.allele_2 <> 'N'
+
 				     ORDER BY vf.seq_region_id, vf.seq_region_start}, {mysql_use_result => 1});
 
     print "Time starting to dump data from database: ",scalar(localtime(time)),"\n";
@@ -78,6 +80,7 @@ sub compress_genotypes{
 	#new chromosome, print all remaining genotypes and upload the file
 	if ($previous_seq_region_id != $seq_region_id && $previous_seq_region_id != 0){
 	    print_file("$TMP_DIR/compressed_genotype.txt",$genotypes, $previous_seq_region_id);
+	    $genotypes = {}; #and flush the hash
 	    #need to fork for upload the data
 	    my $pid = fork;
 	    if (! defined $pid){
@@ -104,6 +107,7 @@ sub compress_genotypes{
 	if ((abs($genotypes->{$sample_id}->{region_start} - $seq_region_start) > DISTANCE()) || (abs($seq_region_start - $genotypes->{$sample_id}->{region_end}) > MAX_SHORT)){
 	    #snp outside the region, print the region for the sample we have already visited and start a new one
 	    print_file("$TMP_DIR/compressed_genotype.txt",$genotypes, $seq_region_id, $sample_id);
+	    delete $genotypes->{$sample_id}; #and remove the printed entry
 	    $genotypes->{$sample_id}->{region_start} = $seq_region_start;
 	}
 	#escape characters (tab, new line)
@@ -138,22 +142,18 @@ sub print_file{
     my $seq_region_id = shift;
     my $sample_id = shift;
 
-    
     open( FH, ">>$file") or die "Could not add compressed information: $!\n";
     if (!defined $sample_id){
 	#new chromosome, print all the genotypes and flush the hash
 	foreach my $sample_id (keys %{$genotypes}){
 	    print FH join("\t",$sample_id,$seq_region_id, $genotypes->{$sample_id}->{region_start}, $genotypes->{$sample_id}->{region_end}, 1, $genotypes->{$sample_id}->{genotypes}) . "\n";
 	}
-	$genotypes = {}; #and flush the hash
     }
     else{
 	#only print the region corresponding to sample_id
 	print FH join("\t",$sample_id,$seq_region_id, $genotypes->{$sample_id}->{region_start}, $genotypes->{$sample_id}->{region_end}, 1, $genotypes->{$sample_id}->{genotypes}) . "\n";
-	undef $genotypes->{$sample_id};
     }
     close FH;
-
 }
 
 sub import_genotypes{
