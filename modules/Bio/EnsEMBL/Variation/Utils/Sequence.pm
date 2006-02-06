@@ -102,7 +102,7 @@ sub variation_class{
 	    return 'mnp'
 	    }
 	else{
-	    warning("not possible to determine class for " . @alleles);
+	    warning("not possible to determine class for  @alleles");
 	    return '';
 	}
     }
