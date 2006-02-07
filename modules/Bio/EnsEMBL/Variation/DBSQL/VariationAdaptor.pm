@@ -114,12 +114,17 @@ sub fetch_by_dbID {
 sub fetch_by_name {
   my $self = shift;
   my $name = shift;
-  my $source = shift || 'dbSNP';
+  my $source = shift;
 
   throw('name argument expected') if(!defined($name));
+  my $extra_sql;
+
+  if ( defined $source ) {
+    $extra_sql = qq(AND    s1.name = ?);
+  }
 
   my $sth = $self->prepare
-    (q{SELECT v.variation_id, v.name, v.validation_status, s1.name, v.ancestral_allele,
+    (qq{SELECT v.variation_id, v.name, v.validation_status, s1.name, v.ancestral_allele,
               a.allele_id, a.allele, a.frequency, a.sample_id, vs.moltype,
               vs.name, s2.name
 #       FROM   variation v, source s1, source s2, allele a, variation_synonym vs
@@ -131,10 +136,11 @@ sub fetch_by_name {
        AND    v.source_id = s1.source_id
 #       AND    vs.source_id = s2.source_id
        AND    v.name = ?
-       AND    s1.name = ?
+       $extra_sql  
        ORDER BY a.allele_id});
+
   $sth->bind_param(1,$name,SQL_VARCHAR);
-  $sth->bind_param(2,$source,SQL_VARCHAR);
+  $sth->bind_param(2,$source,SQL_VARCHAR) if defined $source;
   $sth->execute();
 
   my $result = $self->_objs_from_sth($sth);
@@ -143,7 +149,7 @@ sub fetch_by_name {
   if(!@$result) {
     # try again if nothing found, but check synonym table instead
     $sth = $self->prepare
-      (q{SELECT v.variation_id, v.name, v.validation_status, s1.name, v.ancestral_allele,
+      (qq{SELECT v.variation_id, v.name, v.validation_status, s1.name, v.ancestral_allele,
                 a.allele_id, a.allele, a.frequency, a.sample_id, vs1.moltype,
                 vs2.name, s2.name
          FROM   variation v, source s1, source s2, allele a,
@@ -154,10 +160,10 @@ sub fetch_by_name {
          AND    v.source_id = s1.source_id
          AND    vs2.source_id = s2.source_id
          AND    vs1.name = ?
-	 AND    s1.name = ?
+                $extra_sql
          ORDER BY a.allele_id});
     $sth->bind_param(1,$name,SQL_VARCHAR);
-    $sth->bind_param(2,$source,SQL_VARCHAR);
+    $sth->bind_param(2,$source,SQL_VARCHAR) if defined $source;
     $sth->execute();
     $result = $self->_objs_from_sth($sth);
 
