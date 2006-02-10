@@ -117,7 +117,7 @@ sub fetch_by_name {
   my $source = shift;
 
   throw('name argument expected') if(!defined($name));
-  my $extra_sql;
+  my $extra_sql = "";
 
   if ( defined $source ) {
     $extra_sql = qq(AND    s1.name = ?);
