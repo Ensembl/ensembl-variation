@@ -132,7 +132,7 @@ create table population(
 	sample_id int not null,
 	is_strain int(1) default 0 NOT NULL,
 
-	primary key( sample_id )
+	primary key( population_sample_id )
 );
 
 
@@ -170,7 +170,7 @@ create table individual(
   father_individual_sample_id int,
   mother_individual_sample_id int,
   
-  primary key(sample_id)
+  primary key(individual_sample_id)
 );
 
 
@@ -417,7 +417,7 @@ create table flanking_sequence (
   seq_region_id int,
   seq_region_strand tinyint,
 
-	primary key( variation_id )
+	primary key( flanking_sequence_variation_id )
 
 ) MAX_ROWS = 100000000;
 
