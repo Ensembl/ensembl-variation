@@ -86,7 +86,7 @@ create table sample_synonym (
 create table allele(
 	allele_id int not null auto_increment,
 	variation_id int not null,
-	allele text,
+	allele varchar(255),
 	frequency float,
 	sample_id int,
 
