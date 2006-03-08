@@ -11,15 +11,17 @@ use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use FindBin qw( $Bin );
 use DBI qw(:sql_types);
 use Data::Dumper;
+my $species;
 
 GetOptions('tmpdir=s'  => \$ImportUtils::TMP_DIR,
 	   'tmpfile=s' => \$ImportUtils::TMP_FILE,
+	   'species=s' => \$species
 	   );
 
 warn("Make sure you have a updated ensembl.registry file!\n");
-
+die "you must specify the species:" if (!$species);
 my $registry_file ||= $Bin . "/ensembl.registry";
-my $species = 'mouse';
+
 Bio::EnsEMBL::Registry->load_all( $registry_file );
 
 my $dbVar = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'variation');
