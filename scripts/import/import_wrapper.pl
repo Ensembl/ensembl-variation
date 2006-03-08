@@ -52,5 +52,7 @@ load($dbVar->dbc,"variation", "variation_id", "source_id", "name", "validation_s
  load($dbVar->dbc,"transcript_variation", "transcript_id", "variation_feature_id", "cdna_start", "cdna_end", "translation_start", "translation_end", "peptide_allele_string", "consequence_type");
  rename "$TMP_DIR/read_coverage.txt","$TMP_DIR/$TMP_FILE";
  load($dbVar->dbc,"read_coverage", "seq_region_id", "seq_region_start", "seq_region_end", "level", "sample_id");
+ rename "$TMP_DIR/tmp_individual_genotype_single_bp.txt","$TMP_DIR/$TMP_FILE";
+ load($dbVar->dbc,"tmp_individual_genotype_single_bp","variation_id", "sample_id", "allele_1", "allele_2");
 
 print "Time finished importing data: ", scalar(localtime),"\n";

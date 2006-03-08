@@ -44,7 +44,10 @@ my $last_variation_feature_id = get_last_table_id($dbVar,"variation_feature"); #
 import_Sample_table($dbSanger, $dbVar, $old_new_sample_id, $last_sample_id);
 import_Source_table($dbSanger, $dbVar, $old_new_source_id, $last_source_id);
 import_Population_table($dbSanger, $dbVar, $old_new_sample_id);
+import_Individual_table($dbSanger,$dbVar,$old_new_sample_id);
+import_Individual_Population_table($dbSanger,$dbVar,$old_new_sample_id);
 import_Meta_table($dbSanger,$dbVar);
+import_Meta_Coord_table($dbSanger,$dbVar);
 import_Variation_table($dbSanger,$dbVar,$old_new_variation_id,$last_variation_id, $old_new_source_id);
 import_Allele_table($dbSanger,$dbVar,$old_new_variation_id, $old_new_sample_id);
 import_Flanking_sequence_table($dbSanger,$dbVar,$old_new_variation_id);
@@ -52,6 +55,9 @@ import_Flanking_sequence_table($dbSanger,$dbVar,$old_new_variation_id);
 import_Variation_feature_table($dbSanger,$dbVar,$old_new_variation_feature_id,$last_variation_feature_id, $old_new_variation_id, $old_new_source_id);
 import_Transcript_variation_table($dbSanger,$dbVar,$old_new_variation_feature_id);
 import_Read_coverage_table($dbSanger,$dbVar, $old_new_sample_id);
+import_Tmp_individual_genotype_single_bp($dbSanger,$dbVar,$old_new_variation_id,$old_new_sample_id);
+
+
 
 debug("Finished reading data, ready to start loading in the database....");
 
@@ -141,6 +147,56 @@ sub import_Population_table{
     #copy_file("population.txt");
 }
 
+sub import_Individual_table{
+    my $dbSanger = shift;
+    my $dbVar = shift;
+    my $old_new_sample_id = shift;
+
+    debug("Load Individual table");
+    my ($sample_id, $father_individual_sample_id, $mother_individual_sample_id, $gender);
+    my $sth = $dbSanger->dbc->prepare(qq{SELECT sample_id, father_individual_sample_id, mother_individual_sample_id, gender from individual});
+    $sth->execute();
+    $sth->bind_columns(\$sample_id, \$father_individual_sample_id, \$mother_individual_sample_id, \$gender);
+    while ($sth->fetch){
+	#get the new id for the sample in the variation table
+	write_file($old_new_sample_id->{$sample_id}, $father_individual_sample_id, $mother_individual_sample_id, $gender);
+    }   
+    $sth->finish;
+    #and finally import the table    
+    my $call = "lsrcp $LOCAL_TMP_DIR/$TMP_FILE ecs4a:$TMP_DIR/$TMP_FILE";
+    system($call);
+
+    load($dbVar->dbc,"individual","sample_id", "father_individual_sample_id","mother_individual_sample_id","gender");
+    $call = "$LOCAL_TMP_DIR/$TMP_FILE";
+    unlink ($call);   
+    #copy_file("individual.txt");
+}
+
+sub import_Individual_Population_table{
+    my $dbSanger = shift;
+    my $dbVar = shift;
+    my $old_new_sample_id = shift;
+
+    debug("Load Individual_Population table");
+    my ($individual_sample_id, $population_sample_id);
+    my $sth = $dbSanger->dbc->prepare(qq{SELECT individual_sample_id, population_sample_id, gender from individual_population});
+    $sth->execute();
+    $sth->bind_columns(\$individual_sample_id, \$population_sample_id);
+    while ($sth->fetch){
+	#get the new id for the sample in the variation table
+	write_file($old_new_sample_id->{$individual_sample_id}, $old_new_sample_id->{$population_sample_id});
+    }   
+    $sth->finish;
+    #and finally import the table    
+    my $call = "lsrcp $LOCAL_TMP_DIR/$TMP_FILE ecs4a:$TMP_DIR/$TMP_FILE";
+    system($call);
+
+    load($dbVar->dbc,"individual_population","individual_sample_id", "population_sample_id");
+    $call = "$LOCAL_TMP_DIR/$TMP_FILE";
+    unlink ($call);   
+    #copy_file("individual_population.txt");
+}
+
 sub import_Meta_table{
     my $dbSanger = shift;
     my $dbVar = shift;
@@ -149,6 +205,16 @@ sub import_Meta_table{
 
     dumpSQL($dbSanger->dbc,qq{SELECT meta_key,meta_value FROM meta});    
     load($dbVar->dbc,"meta","meta_key","meta_value");
+}
+
+sub import_Meta_Coord_table{
+    my $dbSanger = shift;
+    my $dbVar = shift;
+
+    debug("Load MetaCoord table");
+
+    dumpSQL($dbSanger->dbc,qq{SELECT table_name, coord_system_id, max_length FROM meta_coord});    
+    load($dbVar->dbc,"meta_coord","table_name","coord_system_id","max_length");
 }
 
 sub import_Variation_table{
@@ -309,6 +375,28 @@ sub import_Read_coverage_table{
     $sth->finish;
     #and finally import the table    
     copy_file("read_coverage.txt");
+}
+
+sub import_Tmp_individual_genotype_single_bp_table{
+    my $dbSanger = shift;
+    my $dbVar = shift;
+    my $old_new_variation_id = shift;
+    my $old_new_sample_id = shift;
+
+    debug("Load tmp_individual_genotype_single_bp table");
+    my ($variation_id, $sample_id, $allele_1, $allele_2);
+    my $sth = $dbSanger->dbc->prepare(qq{SELECT variation_id, sample_id, allele_1, allele_2 from tmp_individual_genotype_single_bp});
+    $sth->{'mysql_use_result'} = 1;
+    $sth->execute();
+    $sth->bind_columns(\$variation_id, \$sample_id, \$allele_1, \$allele_2);
+    while ($sth->fetch){
+	#get the new id for the sample and variation in the variation table
+	write_file($old_new_variation_id->{$variation_id}, $old_new_sample_id->{$sample_id}, $allele_1, $allele_2);
+    }   
+    $sth->finish;
+    #and finally import the table    
+    copy_file("tmp_individual_genotype_single_bp.txt");
+
 }
 
 sub write_file{
