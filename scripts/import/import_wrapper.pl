@@ -1,0 +1,53 @@
+#!/usr/local/bin/perl -w
+
+use strict;
+use warnings;
+
+use Getopt::Long;
+use ImportUtils qw(debug load dumpSQL);
+use Bio::EnsEMBL::Utils::Exception qw(warning throw verbose);
+use DBH;
+use Bio::EnsEMBL::DBSQL::DBAdaptor;
+use FindBin qw( $Bin );
+use DBI qw(:sql_types);
+use Data::Dumper;
+
+GetOptions('tmpdir=s'  => \$ImportUtils::TMP_DIR,
+	   'tmpfile=s' => \$ImportUtils::TMP_FILE,
+	   );
+
+warn("Make sure you have a updated ensembl.registry file!\n");
+
+my $registry_file ||= $Bin . "/ensembl.registry";
+my $species = 'mouse';
+Bio::EnsEMBL::Registry->load_all( $registry_file );
+
+my $dbVar = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'variation');
+my $dbSanger = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'sanger');
+
+my $TMP_DIR  = $ImportUtils::TMP_DIR;
+my $TMP_FILE = $ImportUtils::TMP_FILE;
+
+print "Time starting to import data: ", scalar(localtime),"\n";
+my $call = "bsub -J import_job -o output_import_snps.txt -m bc_hosts /usr/local/bin/perl import_Sanger_database.pl -tmpdir $TMP_DIR -tmpfile $TMP_FILE";
+system($call);
+sleep(10);
+$call = "bsub -K -w 'done(import_job)' -J waiting_process sleep 1";
+system($call);
+
+rename "$TMP_DIR/variation.txt","$TMP_DIR/$TMP_FILE";
+load($dbVar->dbc,"variation", "variation_id", "source_id", "name", "validation_status", "ancestral_allele");
+ rename "$TMP_DIR/allele.txt","$TMP_DIR/$TMP_FILE";
+ load($dbVar->dbc,"allele", "variation_id", "sample_id", "allele", "frequency");
+ rename "$TMP_DIR/flanking_sequence.txt","$TMP_DIR/$TMP_FILE";
+ load($dbVar->dbc,"flanking_sequence", "variation_id", "up_seq", "down_seq", "up_seq_region_start", "up_seq_region_end", "down_seq_region_start", "down_seq_region_end", "seq_region_id", "seq_region_strand");
+# rename "$TMP_DIR/variation_synonym.txt","$TMP_DIR/$TMP_FILE";
+# load($dbVar->dbc,"variation_synonym", "variation_id", "source_id", "name", "moltype");
+ rename "$TMP_DIR/variation_feature.txt","$TMP_DIR/$TMP_FILE";
+ load($dbVar->dbc,"variation_feature", "variation_feature_id", "variation_id", "seq_region_id", "seq_region_start", "seq_region_end", "seq_region_strand", "allele_string", "variation_name", "map_weight", "flags", "source_id", "validation_status", "consequence_type");
+ rename "$TMP_DIR/transcript_variation.txt","$TMP_DIR/$TMP_FILE";
+ load($dbVar->dbc,"transcript_variation", "transcript_id", "variation_feature_id", "cdna_start", "cdna_end", "translation_start", "translation_end", "peptide_allele_string", "consequence_type");
+ rename "$TMP_DIR/read_coverage.txt","$TMP_DIR/$TMP_FILE";
+ load($dbVar->dbc,"read_coverage", "seq_region_id", "seq_region_start", "seq_region_end", "level", "sample_id");
+
+print "Time finished importing data: ", scalar(localtime),"\n";
