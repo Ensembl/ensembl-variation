@@ -15,14 +15,19 @@ my ($TMP_DIR, $TMP_FILE); #global variables for the tmp files and folder
 my $range_registry = []; #reference to an array containing an rr for each of the possible levels (from 1-6)
 #hash that, for a given individual_name, returns the individual_id in the database, if present. The last 4 samples are defined individuals in dbSNP
 #with a predefined id that do not change
-my %individual_id = ('Fosmid'  => '',
-		     'NA11321' => '',
-		     'TSC'     => '',
-		     'NA10470' => '',
-		     'Unknown' => '',
-		     'NA07340' => '', ##115,
-		     'NA17109' => '', ##840,
-		     'NA17119' => ''  ##850
+my %individual_id = (#'Fosmid'  => '',
+		     #'NA11321' => '',
+		     #'TSC'     => '',
+		     #'NA10470' => '',
+		     #'Unknown' => '',
+		     #'NA07340' => '', ##1063, ##115,
+		     #'NA17109' => '', ##1703, ##840,
+		     #'NA17119' => '', ##1713  ##850
+		     'GK/Ox'   => 5,
+		     'SS/Jr'   => 4,
+                     'SHRSP/mdc' => 3,
+		     'WKY/mdc' => 2,
+		     'BN/Crl'  => 1,
 		     );
 my ($chost, $cport, $cdbname, $cuser, $cpass,
     $vhost, $vport, $vdbname, $vuser, $vpass,
@@ -75,7 +80,7 @@ $TMP_FILE = $ImportUtils::TMP_FILE;
 &load_individuals($dbVar,\%individual_id); #first of all, load the hash with the individual_id
 &initialize_range_registry($range_registry, $max_level);
 my $pair; #reference to an array with id,start,end format
-$read_file =~ /((\d+)|X|Y)\.mapped/;  #extract the chromosome from the file name
+$read_file =~ /^.*((\d+)|X|Y|MT)\.mapped$/;  #extract the chromosome from the file name
 my $region = $1;
 my $individuals = {}; #reference to a hash containing all individuals present in the chromosome
 open IN, "$read_file" or die "Could not open file $read_file with read information in the format seq_region_id\tstart\tend:$!\n";
@@ -87,7 +92,7 @@ while (<IN>){
     #NA17109 7495470 1833    2533
     #TSC     8093917 617     957
     ($pair) = [split /\t/];
-    splice @{$pair},1,1;    #we need to get rid of the second column, ID_read
+#    splice @{$pair},1,1;    #we need to get rid of the second column, ID_read
     if ($pair->[0] eq ''){$pair->[0] = 'Unknown'}
     &register_range_level($range_registry,$pair,1,$individuals,$max_level);
 }
@@ -147,7 +152,7 @@ sub register_range_level{
     return if (!defined $pair_inverted);
     foreach my $inverted_range (@{$pair_inverted}){
 	unshift @{$inverted_range},$individual_name; #add again the name of the individual
-	&register_range_level($range_registry,$inverted_range,$level+1,$individuals);
+	&register_range_level($range_registry,$inverted_range,$level+1,$individuals,$max_level);
     }
 }
 
@@ -183,7 +188,7 @@ sub load_individuals{
 	if ($individual_id->{$individual_name} eq ''){
 	    my $individualAdaptor = $dbVar->get_IndividualAdaptor();
 	    my $individual = ($individualAdaptor->fetch_all_by_name($individual_name))->[0];
-	    my ($sample_id,$ind_id);
+	    my ($sample_id);
 	    #the individual is not in the database, will need to create it
 	    if (!defined $individual){
 		#insert the sample
@@ -199,9 +204,9 @@ sub load_individuals{
 		$dbVar->dbc()->do(qq{INSERT INTO individual_population (individual_sample_id,population_sample_id) VALUES ("$sample_id","$population_id")});
 	    }
 	    else{
-		$ind_id = $individual->dbID();
+		$sample_id = $individual->dbID();
 	    }
-	    $individual_id->{$individual_name} = $ind_id;
+	    $individual_id->{$individual_name} = $sample_id;
 	}
     }
 }
