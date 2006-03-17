@@ -98,7 +98,7 @@ sub fetch_all_by_Slice_Sample_depth{
 	    if(!defined($args[0]->dbID())) {
 		throw("Sample arg must have defined dbID");
 	    }
-	    if (grep {$args[1] eq $_} @{$levels} > 0){
+	    if ((grep {$args[1] == $_} @{$levels}) > 0){
 		$constraint = "rc.sample_id = " . $args[0]->dbID . " AND rc.level = " . $args[1];
 	    }
 	    else{
@@ -109,7 +109,7 @@ sub fetch_all_by_Slice_Sample_depth{
 	else{ #there is just 1 argument, can either be the Individual or the level
 	    if (!ref($args[0])){
 		#it should just contain the level
-		if (grep {$args[0] eq $_} @{$levels} > 0){
+		if ((grep {$args[0] == $_} @{$levels}) > 0){
 		    $constraint = "rc.level = " . $args[0];
 		}
 		else{
