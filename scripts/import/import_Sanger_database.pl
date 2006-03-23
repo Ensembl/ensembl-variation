@@ -75,12 +75,17 @@ sub import_Sample_table{
     $sth->execute();
     $sth->bind_columns(\$sample_id, \$name, \$size, \$description);
     while ($sth->fetch){
-	#get the new id for the sample in the variation table
-	$new_sample_id = $last_sample_id + 1;
-	#and store the relation with the old one
+	#need to check if the strain is already in the Variation database
+	$new_sample_id = &get_sample_variation_database($dbVariation, $name);
+	if ($new_sample_id == 0){
+	    #get the new id for the sample in the variation table
+	    $new_sample_id = $last_sample_id + 1;
+	    $last_sample_id++;	    
+	    #and copy to the variation database
+	    write_file($new_sample_id,$name,$size,$description);
+	}
+        #and store the relation with the old one
 	$old_new_sample_id->{$sample_id} = $new_sample_id;
-	$last_sample_id++;
-	write_file($new_sample_id,$name,$size,$description);
     }   
     $sth->finish;
     #and finally import the table
@@ -90,6 +95,20 @@ sub import_Sample_table{
     $call = "$LOCAL_TMP_DIR/$TMP_FILE";
     unlink ($call);   
 #    copy_file("sample.txt");
+}
+
+sub get_sample_variation_database{
+    my $dbVariation = shift;
+    my $sanger_sample_name = shift;
+
+    my $variation_sample_id = 0;
+
+    my $pop_adaptor = $dbVariation->get_PopulationAdaptor();
+    my $population = $pop_adaptor->fetch_by_name($sanger_sample_name);
+    if (defined($population)){
+	$variation_sample_id = $population->dbID();
+    }
+    return $variation_sample_id;
 }
 
 sub import_Source_table{
