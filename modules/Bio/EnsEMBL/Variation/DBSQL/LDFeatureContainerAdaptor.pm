@@ -93,7 +93,7 @@ sub fetch_by_Slice{
     if(!ref($slice) || !$slice->isa('Bio::EnsEMBL::Slice')) {
 	throw('Bio::EnsEMBL::Slice arg expected');
     }
-    if(!ref($population) || !$slice->isa('Bio::EnsEMBL::Variation::Population')) {
+    if(!ref($population) || !$population->isa('Bio::EnsEMBL::Variation::Population')) {
 	throw('Bio::EnsEMBL::Population arg expected');
     }
     my $sth;
