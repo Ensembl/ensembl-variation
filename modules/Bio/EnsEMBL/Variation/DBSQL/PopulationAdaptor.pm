@@ -264,6 +264,41 @@ sub fetch_default_LDPopulation{
     }
 }
 
+=head2 get_display_strains
+
+    Args       : none
+    Example    : my $strains = $pop_adaptor->get_display_strains();
+    Description: Retrieves strain_names that are going to be displayedin the web (reference + default + others)
+    Returntype : list of strings
+    Exceptions : none
+    Caller     : web
+
+=cut
+
+sub get_display_strains{
+    my $self = shift;
+    my @strain_names;
+    my $name;
+    #first, get the reference strain
+    $name = $self->get_reference_strain_name();
+    push @strain_names, $name;
+    #then, get the default ones
+    my $default_strains = $self->get_default_strains();
+    push @strain_names, @{$default_strains};
+    #and finally, get the others
+    my $sth = $self->prepare(qq{SELECT meta_value from meta where meta_key = ?
+				});
+    $sth->bind_param(1,'population.display_strain',SQL_VARCHAR);
+    $sth->execute();
+    $sth->bind_columns(\$name);
+    while ($sth->fetch()){
+	push @strain_names, $name;
+    }
+    $sth->finish;
+    return \@strain_names;
+
+}
+
 
 =head2 get_default_strains
 
