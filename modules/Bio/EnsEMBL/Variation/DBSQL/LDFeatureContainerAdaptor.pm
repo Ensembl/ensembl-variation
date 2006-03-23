@@ -75,7 +75,8 @@ use constant MAX_SNP_DISTANCE => 100_000;
 
   Arg [1]    : Bio::EnsEMBL::Slice $slice
                The slice to fetch genes on. Assuming it is always correct (in the top level)
-  Arg [2]    : (optional) int $population_id. Population where we want to select the LD information
+  Arg [2]    : (optional) Bio::EnsEMBL::Variation::Population $population. Population where 
+                we want to select the LD information
   Example    : $ldFeatureContainer = $ldfeaturecontainer_adaptor->fetch_by_Slice($slice);
   Description: Overwrites superclass method to add the name of the slice to the LDFeatureContainer.
   Returntype : Bio::EnsEMBL::Variation::LDFeatureContainer
@@ -87,10 +88,13 @@ use constant MAX_SNP_DISTANCE => 100_000;
 sub fetch_by_Slice{
     my $self = shift;
     my $slice = shift;
-    my $population_id = shift;
+    my $population = shift;
 
     if(!ref($slice) || !$slice->isa('Bio::EnsEMBL::Slice')) {
 	throw('Bio::EnsEMBL::Slice arg expected');
+    }
+    if(!ref($population) || !$slice->isa('Bio::EnsEMBL::Variation::Population')) {
+	throw('Bio::EnsEMBL::Population arg expected');
     }
     my $sth;
     my $in_str;
@@ -98,7 +102,8 @@ sub fetch_by_Slice{
     #when there is no population selected, return LD in the HapMap and PerlEgen populations
     $in_str = $self->_get_LD_populations($siblings);
     #if a population is passed as an argument, select the LD in the region with the population
-    if ($population_id){
+    if ($population){
+	my $population_id = $population->dbID;
 	$in_str = " = $population_id";
 #	if ($in_str =~ /$population_id/){
 #	    $in_str = "IN ($population_id)";
@@ -502,8 +507,10 @@ sub _objs_from_sth_temp_file {
       goto OUT;
   }
   my $pid;
-  my $IN = "/tmp/ld-$ENV{SERVER_ADDR}-$$.in";
-  my $OUT = "/tmp/ld-$ENV{SERVER_ADDR}-$$.out";
+#  my $IN = "/tmp/ld-$ENV{SERVER_ADDR}-$$.in";
+  my $IN = "/tmp/ld-$$.in";
+#  my $OUT = "/tmp/ld-$ENV{SERVER_ADDR}-$$.out";
+  my $OUT = "/tmp/ld-$$.out";
   warn ">>> $IN $OUT <<<";
   open IN, ">$IN";
   $sth->bind_columns(\$individual_id, \$seq_region_id, \$seq_region_start, \$seq_region_end, \$genotypes, \$population_id);
