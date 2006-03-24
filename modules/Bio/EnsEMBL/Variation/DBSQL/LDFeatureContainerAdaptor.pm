@@ -94,7 +94,7 @@ sub fetch_by_Slice{
 	throw('Bio::EnsEMBL::Slice arg expected');
     }
     if(!ref($population) || !$population->isa('Bio::EnsEMBL::Variation::Population')) {
-	throw('Bio::EnsEMBL::Population arg expected');
+	throw('Bio::EnsEMBL::Variation::Population arg expected');
     }
     my $sth;
     my $in_str;
