@@ -93,9 +93,6 @@ sub fetch_by_Slice{
     if(!ref($slice) || !$slice->isa('Bio::EnsEMBL::Slice')) {
 	throw('Bio::EnsEMBL::Slice arg expected');
     }
-    if(!ref($population) || !$population->isa('Bio::EnsEMBL::Variation::Population')) {
-	throw('Bio::EnsEMBL::Variation::Population arg expected');
-    }
     my $sth;
     my $in_str;
     my $siblings = {};
@@ -103,6 +100,9 @@ sub fetch_by_Slice{
     $in_str = $self->_get_LD_populations($siblings);
     #if a population is passed as an argument, select the LD in the region with the population
     if ($population){
+	if(!ref($population) || !$population->isa('Bio::EnsEMBL::Variation::Population')) {
+	    throw('Bio::EnsEMBL::Variation::Population arg expected');
+	}
 	my $population_id = $population->dbID;
 	$in_str = " = $population_id";
 #	if ($in_str =~ /$population_id/){
