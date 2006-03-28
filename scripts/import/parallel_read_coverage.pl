@@ -91,11 +91,12 @@ sub update_meta_coord {
   my $csa = $dbCore->get_CoordSystemAdaptor();
 
   my $cs = $csa->fetch_by_name($csname);
-
+  my $max_length_ref = $dbVar->selectall_arrayref(qq{SELECT max(seq_region_end - seq_region_start+1) from read_coverage});
+  my $max_length = $max_length_ref->[0][0];
   my $sth = $dbVar->prepare
-    ('INSERT INTO meta_coord set table_name = ?, coord_system_id = ?, max_length =500');
+    ('INSERT INTO meta_coord set table_name = ?, coord_system_id = ?, max_length = ?');
 
-  $sth->execute($table_name, $cs->dbID());
+  $sth->execute($table_name, $cs->dbID(), $max_length);
 
   $sth->finish();
 
