@@ -35,19 +35,20 @@ my $old_new_variation_id = {}; #reference to a hash with the old_variation_id =>
 my $old_new_variation_feature_id = {}; #reference to a hash with the old_Variation_feature_id => new_variation_feature_id
 my $old_new_source_id = {}; # reference to a hash with the old_source_id => new_source_id
 my $old_new_sample_id = {}; #reference to a hash with the old_sample_id => new_sample_id
+my $sanger_sample = {}; #reference to a hash containing the samples that are in the variation database
 
 my $last_source_id = get_last_table_id($dbVar,"source"); #last source_id used in the database
 my $last_sample_id = get_last_table_id($dbVar,"sample"); #last sample_id used in the database
 my $last_variation_id = get_last_table_id($dbVar,"variation"); #last variation_id used in the database
 my $last_variation_feature_id = get_last_table_id($dbVar,"variation_feature"); #last variation_feature_id used in the database
 
-import_Sample_table($dbSanger, $dbVar, $old_new_sample_id, $last_sample_id);
+import_Sample_table($dbSanger, $dbVar, $old_new_sample_id, $last_sample_id, $sanger_sample);
 import_Source_table($dbSanger, $dbVar, $old_new_source_id, $last_source_id);
-import_Population_table($dbSanger, $dbVar, $old_new_sample_id);
-import_Individual_table($dbSanger,$dbVar,$old_new_sample_id);
-import_Individual_Population_table($dbSanger,$dbVar,$old_new_sample_id);
-import_Meta_table($dbSanger,$dbVar);
-import_Meta_Coord_table($dbSanger,$dbVar);
+import_Population_table($dbSanger, $dbVar, $old_new_sample_id, $sanger_sample);
+#import_Individual_table($dbSanger,$dbVar,$old_new_sample_id);
+#import_Individual_Population_table($dbSanger,$dbVar,$old_new_sample_id);
+#import_Meta_table($dbSanger,$dbVar);
+#import_Meta_Coord_table($dbSanger,$dbVar);
 import_Variation_table($dbSanger,$dbVar,$old_new_variation_id,$last_variation_id, $old_new_source_id);
 import_Allele_table($dbSanger,$dbVar,$old_new_variation_id, $old_new_sample_id);
 import_Flanking_sequence_table($dbSanger,$dbVar,$old_new_variation_id);
@@ -55,7 +56,7 @@ import_Flanking_sequence_table($dbSanger,$dbVar,$old_new_variation_id);
 import_Variation_feature_table($dbSanger,$dbVar,$old_new_variation_feature_id,$last_variation_feature_id, $old_new_variation_id, $old_new_source_id);
 import_Transcript_variation_table($dbSanger,$dbVar,$old_new_variation_feature_id);
 import_Read_coverage_table($dbSanger,$dbVar, $old_new_sample_id);
-import_Tmp_individual_genotype_single_bp($dbSanger,$dbVar,$old_new_variation_id,$old_new_sample_id);
+import_Tmp_individual_genotype_single_bp_table($dbSanger,$dbVar,$old_new_variation_id,$old_new_sample_id);
 
 
 
@@ -67,6 +68,7 @@ sub import_Sample_table{
     my $dbVar = shift;
     my $old_new_sample_id = shift;
     my $last_sample_id = shift;
+    my $sanger_sample = shift;
 
     debug("Loading Sample table");
     my ($sample_id, $name, $size, $description);
@@ -75,14 +77,18 @@ sub import_Sample_table{
     $sth->execute();
     $sth->bind_columns(\$sample_id, \$name, \$size, \$description);
     while ($sth->fetch){
-	#need to check if the strain is already in the Variation database
-	$new_sample_id = &get_sample_variation_database($dbVariation, $name);
+	#need to check if the strain is already in the Variation database, as a population or individual
+	$new_sample_id = &get_sample_variation_database($dbVar, $name);
 	if ($new_sample_id == 0){
 	    #get the new id for the sample in the variation table
 	    $new_sample_id = $last_sample_id + 1;
 	    $last_sample_id++;	    
 	    #and copy to the variation database
 	    write_file($new_sample_id,$name,$size,$description);
+	}
+	else{
+	    #this sample is already in the variation database
+	    $sanger_sample->{$sample_id}++;
 	}
         #and store the relation with the old one
 	$old_new_sample_id->{$sample_id} = $new_sample_id;
@@ -97,6 +103,7 @@ sub import_Sample_table{
 #    copy_file("sample.txt");
 }
 
+#check wether the sample_id is already present in the Variation database as a individual or a population
 sub get_sample_variation_database{
     my $dbVariation = shift;
     my $sanger_sample_name = shift;
@@ -104,9 +111,17 @@ sub get_sample_variation_database{
     my $variation_sample_id = 0;
 
     my $pop_adaptor = $dbVariation->get_PopulationAdaptor();
+    my $ind_adaptor = $dbVariation->get_IndividualAdaptor();
+
     my $population = $pop_adaptor->fetch_by_name($sanger_sample_name);
     if (defined($population)){
 	$variation_sample_id = $population->dbID();
+    }
+    else{
+	my $individual = $ind_adaptor->fetch_by_name($sanger_sample_name);
+	if (defined $individual){
+	    $variation_sample_id = $individual->dbID();
+	}
     }
     return $variation_sample_id;
 }
@@ -145,6 +160,7 @@ sub import_Population_table{
     my $dbSanger = shift;
     my $dbVar = shift;
     my $old_new_sample_id = shift;
+    my $sanger_sample = shift;
 
     debug("Load Population table");
     my ($sample_id, $is_strain);
@@ -152,8 +168,10 @@ sub import_Population_table{
     $sth->execute();
     $sth->bind_columns(\$sample_id, \$is_strain);
     while ($sth->fetch){
-	#get the new id for the sample in the variation table
-	write_file($old_new_sample_id->{$sample_id}, $is_strain);
+	if (!defined $sanger_sample->{$sample_id}){
+	    #get the new id for the sample in the variation table
+	    write_file($old_new_sample_id->{$sample_id}, $is_strain);
+	}
     }   
     $sth->finish;
     #and finally import the table    
