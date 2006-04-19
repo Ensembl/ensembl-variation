@@ -508,7 +508,6 @@ sub _objs_from_sth_temp_file {
   }
   my $pid;
 #  my $IN = "/tmp/ld-$ENV{SERVER_ADDR}-$$.in";
-my $time = time;
   my $IN = "/tmp/ld-$$.in";
 #  my $OUT = "/tmp/ld-$ENV{SERVER_ADDR}-$$.out";
   my $OUT = "/tmp/ld-$$.out";
