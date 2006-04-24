@@ -21,13 +21,6 @@ sub dumpSQL {
   local *FH;
   my $counter = 0;
   open FH, ">$TMP_DIR/$TMP_FILE";
-#not necessary any more since increased the timeout of the mysql server
-  while (!$db->ping()){
-      print STDERR "Lost connection, trying to reconnect\n";
-      sleep(5);
-      $counter++;
-      if ($counter == 5) {die "Couldn't reconnect to the database\n"}
-  };
   my $sth = $db->prepare( $sql);
   $sth->{mysql_use_result} = 1;
   $sth->execute();
@@ -74,26 +67,36 @@ sub load {
   my $sql;
 
   #need to find out if possible use the LOCAL option
-  my $host = `hostname`;
-  chop $host;
-  $host =~ /(ecs\d+)/; #get the machine, only use LOCAL in ecs machines (ecs2, ecs4)
-  my $local_option = '';
-  #the script is running in ecs machine, let's find out if the file is in the same machine, too
-  if ($1){
-      if ($table_file =~ /$1/){
-	  $local_option = 'LOCAL';
-      }
+
+  my $local_option = 'LOCAL'; #by default, use the LOCAL option
+  if( `hostname` =~ /^bc/ ){ # No LOCAL on bcs nodes
+    $local_option = '';
   }
+  elsif( ! -e $table_file ){ # File is not on local filesystem
+    $local_option = '';
+  }
+
+#  my $host = `hostname`;
+#  chop $host;
+#   $host =~ /(ecs\d+)/; #get the machine, only use LOCAL in ecs machines (ecs2, ecs4)
+#   my $local_option = '';
+#   #the script is running in ecs machine, let's find out if the file is in the same machine, too
+#   if ($1){
+#       if ($table_file =~ /$1/){
+# 	  $local_option = 'LOCAL';
+#       }
+#   }
+
   
    if ( @colnames ) {
 
      $sql = qq{
-               LOAD DATA $local_option INFILE '$table_file'
+               LOAD DATA $local_option INFILE "$table_file"
                INTO TABLE $tablename( $cols )
               };
    } else {
      $sql = qq{
-               LOAD DATA $local_option INFILE '$table_file'
+               LOAD DATA $local_option INFILE "$table_file"
                INTO TABLE $tablename
               };
    }
