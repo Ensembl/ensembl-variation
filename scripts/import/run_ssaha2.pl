@@ -3,57 +3,83 @@
 use strict;
 use Getopt::Long;
 
-my ($start, $end, $input_dir, $target_dir);
+my ($start, $end, $chr, $output_dir, $input_dir, $target_dir);
 
 GetOptions('start=i'         => \$start,
 	   'end=i'           => \$end,
+	   'chr=s'           => \$chr,
+           'output_dir=s'      => \$output_dir,   
 	   'input_dir=s'       => \$input_dir,
 	   'target_dir=s'      => \$target_dir);
 
 
-$input_dir ||= "/ecs2/scratch4/yuan/mouse/release32/snp_seq";
-$target_dir ||= "/ecs2/scratch4/yuan/mouse/release32/target";
-
+$input_dir ||= "/ecs2/scratch4/yuan/mouse/release35/snp_seq";
+$target_dir ||= "/ecs2/scratch4/yuan/mouse/release35/target";
+#$target_dir ||= "/data/blastdb/Ensembl/Mouse/NCBIM35/genome/softmasked_dusted";
+$output_dir ||=".";
 my $seed;
 ###kmer is always set to 12, so ajust seed for different species
 $seed = 3 if $input_dir =~ /zfish/;
 $seed = 5 if $input_dir !~ /zfish/;
 
-my $output_file = "ssaha2_output2";
-my $queue = "-q normal -R'select[largedata && mem>1000] rusage[mem=1000]'";
+my $output_file = "ssaha2_output";
+my $queue = "-q normal -R'select[mem>1000] rusage[mem=1000]'";
 my $queue1 = "-q normal -R'select[largedata]'";
 my $queue2 = "-q normal"; ##for new farm
 
-$queue = $queue2;
 
-my (@chr_names, %snp_pos, %input_length);
+$queue = $queue;
 
-while (<$target_dir/*fasta>) {
-  chomp;
-  push @chr_names, $_;
+my (@chr_names, %snp_pos, %input_length, %done);
+
+if ($chr) {
+  push @chr_names,"$target_dir/$chr\.fa";
 }
-
+else {
+  while (<$target_dir/*fa>) {
+    chomp;
+    push @chr_names, $_;
+  }
+}
 
 if ($start and $end) {
-  my $input = "$input_dir/$start\_query_seq" if $input_dir;
-  if (! -e "$start\_total_ssaha_out" and ! -e "total_ssaha_out") {
-    for ($start=$start; $start<=$end; $start++) {
-      bsub_ssaha_job ($start,$input,$queue2,\@chr_names);
+  for (my $start=$start; $start<=$end; $start++) {
+    my $input = "$input_dir/$start\_query_seq" if $input_dir;
+    next if (-z "$input");
+    if (! -e "$output_dir/$start\_total_ssaha_out") {
+      bsub_ssaha_job ($start,$input,$queue,\@chr_names);
     }
-    
-    my $call = "bsub -K -w 'done($input_dir\_ssaha_job*)' -J waiting_process sleep 1"; #waits until all ssaha jobs have finished to continue
-    system($call);
-
-    system("cat ssaha_out_* > total_ssaha_out");
-    unlink<ssaha_out_*>;
   }
 
-  print "PARSING SSAHA2 OUTPUT...\n";
-  
-  parse_ssaha2_out ($input,"total_ssaha_out");
-  
-}
+  my $call = "bsub -K -w 'done($input_dir\_ssaha_job*)' -J waiting_process sleep 1"; #waits until all ssaha jobs have finished to continue
+  system($call);
 
+  for (my $start=$start; $start<=$end; $start++) {
+    my $input = "$input_dir/$start\_query_seq" if $input_dir;
+    if (! -e "$output_dir/$start\_total_ssaha_out") {
+
+      LINE : my $num = `ls $output_dir/ssaha_out_$start\_* |wc`;
+      
+      ($num) = $num =~ /^\s+(\d+)\s+/;
+      if ($num == scalar @chr_names) {
+	system("cat $output_dir/ssaha_out_$start\_* > $output_dir/$start\_total_ssaha_out");
+	unlink<$output_dir/ssaha_out_$start\_*>;
+	parse_ssaha2_out ($start, $input,"$output_dir/$start\_total_ssaha_out");
+      }
+      else {
+	print STDERR "Number of ssaha_out_$start\_* files not equal number of chromosomes\n";
+	unlink<$output_dir/$start\_total_ssaha_out>;
+	bsub_ssaha_job ($start,$input,$queue,\@chr_names);
+	my $call = "bsub -K -w 'done($input_dir\_ssaha_job_$start\_*)' -J waiting_process sleep 1";
+	system($call);
+	goto LINE;
+      }
+    }
+    else {
+      parse_ssaha2_out ($start, $input,"$output_dir/$start\_total_ssaha_out");
+    }
+  }
+}
 
 sub bsub_ssaha_job {
   
@@ -69,9 +95,9 @@ sub bsub_ssaha_job {
 
     my $target_file = "$chr_name"; ###need to check for exact file_name
     print "target_file is $target_file\n";
-    $ssaha_command = "/usr/local/ensembl/bin/ssaha2 $input_file $target_file -align 0 -kmer 12 -seeds $seed -cut 100 -depth 5 -output vulgar";
+    $ssaha_command = "/usr/local/ensembl/bin/ssaha2 $input_file $target_file -align 0 -kmer 12 -seeds $seed -cut 100 -depth 5 -output vulgar -depth 10 -best 1";
     print "job_num is ", ++$count, " and start is $start and chr_name is $chr_name out is ssaha_out_$start\_$chr\n";
-    my $call = "bsub -J $input_dir\_ssaha_job_$start $queue -e error_ssaha -o ssaha_out_$start\_$chr $ssaha_command";
+    my $call = "bsub -J $input_dir\_ssaha_job_$start\_$chr_name $queue -e $output_dir/error_ssaha -o $output_dir/ssaha_out_$start\_$chr $ssaha_command";
     system ($call);
   }
 }
@@ -81,12 +107,12 @@ sub bsub_ssaha_job {
 
 sub parse_ssaha2_out {
 
-  my ($input_file, $ssaha2_output) = @_;
+  my ($start, $input_file, $ssaha2_output) = @_;
 
   print "input_file is $input_file ssaha2_output is $ssaha2_output\n";
 
   open INPUT, "$input_file" or die "can't open $input_file : $!\n";
-  open OUT, ">mapping_file" or die "can't open output_file : $!\n";
+  open OUT, ">$output_dir/mapping_file_$start" or die "can't open output_file : $!\n";
 
   my ($name,%rec_seq,%rec_find);
 
@@ -105,7 +131,7 @@ sub parse_ssaha2_out {
     my ($fseq,$lseq) = split /[WACTG\-\_]+/,$rec_seq{$name};
     my $snp_posf = length($fseq)+1;
     my $snp_posl = length($lseq)+1;
-    my $tot_length = $snp_posf + $snp_posl;
+    my $tot_length = $snp_posf + $snp_posl-2;
     $snp_pos{$name} = "$snp_posf\_$snp_posl";
     $input_length{$name} = $tot_length;
   }
@@ -135,19 +161,31 @@ sub parse_ssaha2_out {
 
   foreach my $q_id (keys %rec_find) {
     my @h = sort {$b->{'score'}<=>$a->{'score'}} @{$rec_find{$q_id}};
-    if ($h[0]->{'score'} > $h[1]->{'score'}) {
+    if ($h[0]->{'score'} > $h[1]->{'score'} and @h=>2) {
       find_results($h[0]);
     }
-    elsif ($h[1]->{'score'} > $h[2]->{'score'}) {
+    elsif ($h[1]->{'score'} > $h[2]->{'score'} and @h=>3) {
       find_results($h[0],$h[1]);
     }
-    elsif ($h[2]->{'score'} > $h[3]->{'score'}) {
+    elsif ($h[2]->{'score'} > $h[3]->{'score'} and @h=>4) {
       find_results($h[0],$h[1],$h[2]);
     }
     else {
       print "\tmore than 3 hits having same score for $q_id\n";
     }
   }
+
+  my ($total_seq,$no);
+
+  $total_seq = keys %rec_seq;
+
+  foreach my $q_id (keys %rec_seq) {
+    if (!$done{$q_id}) {
+      $no++;
+    }
+  }
+
+  print "$no out of $total_seq are not mapped\n";
 }
 
 sub find_results {
@@ -218,7 +256,9 @@ sub find_results {
       
       if ($snp_t_start && $snp_t_end && $snp_strand ) {
 	my $final_score = $score/$input_length{$q_id};
+	print OUT "MORE_HITS\t" if ($h2);
 	print OUT "$q_id\t$t_id\t$snp_t_start\t$snp_t_end\t$snp_strand\t$final_score\n";
+	$done{$q_id}=1;
 	last;
       }
       
