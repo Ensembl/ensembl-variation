@@ -20,7 +20,7 @@ sub dumpSQL {
   my $sql = shift;
   local *FH;
   my $counter = 0;
-  open FH, ">$TMP_DIR/$TMP_FILE"
+  open( FH, ">$TMP_DIR/$TMP_FILE" )
       or die( "Cannot open $TMP_DIR/$TMP_FILE: $!" );
   my $sth = $db->prepare( $sql);
   $sth->{mysql_use_result} = 1;
