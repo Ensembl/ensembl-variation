@@ -21,21 +21,28 @@ use ImportUtils qw(dumpSQL debug create_and_load load);
 # optional a directory or sequence files (for unknown placing)
 
 
-our ($species,$output_dir,$seq_region_id,$TMP_DIR,$TMP_FILE, $chr_name,$read_file,$generate_input_seq,$read_flank);
+our ($species,$output_dir,$seq_region_id,$TMP_DIR,$TMP_FILE, $chr_name,$read_file,$generate_input_seq,$read_flank,$registry_file);
 
-GetOptions('species=s'    => \$species,
-	   'output_dir=s' => \$output_dir,
-	   'chr_name=s'   => \$chr_name,
-	   'seq_region_id=i' =>\$seq_region_id,
-	   'tmpdir=s'     => \$ImportUtils::TMP_DIR,
-	   'tmpfile=s'    => \$ImportUtils::TMP_FILE,
-	   'read_file=s'  => \$read_file,
+GetOptions('species=s'          => \$species,
+	   'output_dir=s'       => \$output_dir,
+	   'chr_name=s'         => \$chr_name,
+	   'seq_region_id=i'    => \$seq_region_id,
+	   'tmpdir=s'           => \$ImportUtils::TMP_DIR,
+	   'tmpfile=s'          => \$ImportUtils::TMP_FILE,
+	   'read_file=s'        => \$read_file,
+           'ensembl_registry=s' => \$registry_file,
 	   'generate_input_seq' => \$generate_input_seq,
-	   'read_flank'   => \$read_flank,
+	   'read_flank'         => \$read_flank,
 	  );
-my $registry_file ||= $Bin . "/ensembl.registry";
+$registry_file ||= $Bin . "/ensembl.registry";
+$output_dir    ||= $ENV{PWD};
+
+-f $registry_file or usage( "Non existent registry file $registry_file" );
+-d $output_dir    or usage( "Non existent output dir $output_dir" );
 
 usage('-species argument is required') if(!$species);
+usage('-generate_input_seq and/or -read_flank is required' ) 
+    if( !$generate_input_seq and !$read_flank );
 
 $TMP_DIR  = $ImportUtils::TMP_DIR;
 $TMP_FILE = $ImportUtils::TMP_FILE;
@@ -67,21 +74,31 @@ sub generate_input_seq {
   my $i = 0;
 
   if ($chr_name or $seq_region_id) {
-    print "chr_name is $chr_name or $seq_region_id\n";
+    # Only dump sequences corresponding to chr_name or seq_region_id
     if ($chr_name and ! $seq_region_id) {
-      my $seq_region_id_ref = $dbCore->selectall_arrayref(qq{select seq_region_id from seq_region where name = "$chr_name"});
+      # Get the seq_region_id corresponding to the chr_name
+      my $seq_region_id_ref = $dbCore->selectall_arrayref(qq{
+SELECT seq_region_id 
+FROM   seq_region 
+WHERE  name = "$chr_name"});
       $seq_region_id = $seq_region_id_ref->[0][0];
     } elsif (! $chr_name and $seq_region_id) {
-      my $seq_region_name_ref = $dbCore->selectall_arrayref(qq{select name from seq_region where seq_region_id = $seq_region_id});
+      # Get the seq_region_name corresponding to the ID
+      my $seq_region_name_ref = $dbCore->selectall_arrayref(qq{
+SELECT name 
+FROM   seq_region
+WHERE  seq_region_id = $seq_region_id});
       $chr_name = $seq_region_name_ref->[0][0];
     }
-    print "chr_name is $chr_name\n";
+    print "seq_region_name is $chr_name\n";
+    print "seq_region_id is $seq_region_id\n";
 
     if ($chr_name) {
       if ($chr_name =~ /NT|^A|^B|^C/) {
 	$chr_name = "NT";
       }
       if (! -e "$output_dir/$chr_name") {
+        # Create per-chromosome output dir
 	mkdir "$output_dir/$chr_name" or die "can't make dir $chr_name: $!";
       }
       $output_dir = "$output_dir/$chr_name";
@@ -93,32 +110,64 @@ sub generate_input_seq {
     print "seq_region_id is $seq_region_id\n";
     
     if (! -e "$TMP_DIR/$TMP_FILE" or -z "$TMP_DIR/$TMP_FILE") {
-      dumpSQL($dbVar, qq{SELECT vf.variation_name,vf.variation_id,vf.seq_region_id,vf.seq_region_strand,null,null,
-                           IF (vf.seq_region_strand =1, vf.seq_region_start-100, vf.seq_region_end+1),
-                           IF (vf.seq_region_strand =1, vf.seq_region_start-1, vf.seq_region_end+100),
-                           IF (vf.seq_region_strand =1, vf.seq_region_end+1, vf.seq_region_start-100),
-                           IF (vf.seq_region_strand =1, vf.seq_region_end+100, vf.seq_region_start-1)
-                           FROM variation_feature vf
-                           WHERE vf.seq_region_id = $seq_region_id
-                           #AND v.name like "CE%" ##this is only for mouse
+      # Only dump if tmp file does not exist, or is compressed
+      dumpSQL($dbVar, qq{
+SELECT vf.variation_name,
+       vf.variation_id,
+       vf.seq_region_id,
+       vf.seq_region_strand, 
+       null, null,
+       IF (vf.seq_region_strand =1, 
+           vf.seq_region_start-100, 
+           vf.seq_region_end+1),
+       IF (vf.seq_region_strand =1, 
+           vf.seq_region_start-1, 
+           vf.seq_region_end+100),
+       IF (vf.seq_region_strand =1, 
+           vf.seq_region_end+1, 
+           vf.seq_region_start-100),
+       IF (vf.seq_region_strand =1, 
+           vf.seq_region_end+100, 
+           vf.seq_region_start-1)
+FROM   variation_feature vf
+WHERE  vf.seq_region_id = $seq_region_id
+#AND    v.name like "CE%" ##this is only for mouse
                            }
 	     );
     }
   }
   else {
-    dumpSQL($dbVar, qq{SELECT v.name,f.variation_id,f.seq_region_id,f.seq_region_strand,
-                               f.up_seq,f.down_seq,f.up_seq_region_start, f.up_seq_region_end,
-                               f.down_seq_region_start, f.down_seq_region_end
-                               FROM variation v, flanking_sequence f 
-                               WHERE v.variation_id=f.variation_id}
-	     );
+    # No chr_name or seq_region_id specified. 
+    my $sql = qq(
+SELECT v.name,
+       f.variation_id,
+       f.seq_region_id,
+       f.seq_region_strand,
+       f.up_seq,f.down_seq,
+       f.up_seq_region_start, 
+       f.up_seq_region_end,
+       f.down_seq_region_start, 
+       f.down_seq_region_end
+FROM   variation v, 
+       flanking_sequence f
+WHERE  v.variation_id=f.variation_id );
+
+    dumpSQL($dbVar, $sql);
   }
+
 
   open ( FH, "$TMP_DIR/$TMP_FILE");
   while (<FH>) {
-    my ($variation_name,$variation_id,$seq_region_id,$seq_region_strand,$up_seq,$down_seq,
-	$up_seq_region_start, $up_seq_region_end,
-	$down_seq_region_start, $down_seq_region_end) = split;
+    my ($variation_name,
+        $variation_id,
+        $seq_region_id,
+        $seq_region_strand,
+        $up_seq,
+        $down_seq,
+	$up_seq_region_start, 
+        $up_seq_region_end,
+	$down_seq_region_start, 
+        $down_seq_region_end) = split;
     #print "$variation_name,$variation_id,$seq_region_id,$up_seq,$down_seq,$up_seq_region_start,$up_seq_region_end,$down_seq_region_start,$down_seq_region_end\n";
     $variation_ids{$variation_id}{'var_name'}=$variation_name;
     $variation_ids{$variation_id}{'up_seq'}=$up_seq;
@@ -154,21 +203,27 @@ sub print_seqs {
   my %variation_ids = %$variation_ids;
   my @ids = keys %variation_ids;
 
-  open OUT, ">$output_dir/$file_count\_query_seq" or die "can't open query_seq file : $!";
+  open OUT, ">$output_dir/$file_count\_query_seq" 
+      or die "can't open query_seq file : $!";
 
   foreach my $var_id (@ids) {
     my ($flanking_sequence,$down_seq,$up_seq);
     if ( $variation_ids{$var_id}{'up_seq'} eq '\N') {
-      my $up_tmp_slice = $slice_adaptor->fetch_by_seq_region_id ($variation_ids{$var_id}{'seq_region_id'});
-      my $up_seq_slice = $up_tmp_slice->sub_Slice (
-						   $variation_ids{$var_id}{'up_seq_region_start'},
-						   $variation_ids{$var_id}{'up_seq_region_end'},
-						   $variation_ids{$var_id}{'seq_region_strand'}
-						  ) if $up_tmp_slice;
+      # Upstream sequence not in query; create from slice
+      my $up_tmp_slice = $slice_adaptor->fetch_by_seq_region_id 
+          ($variation_ids{$var_id}{'seq_region_id'});
+      my $up_seq_slice = $up_tmp_slice->sub_Slice 
+          (
+           $variation_ids{$var_id}{'up_seq_region_start'},
+           $variation_ids{$var_id}{'up_seq_region_end'},
+           $variation_ids{$var_id}{'seq_region_strand'}
+           ) if $up_tmp_slice;
       if (! $up_tmp_slice or ! $up_seq_slice) {
-	print "variation_id $var_id don't have up_seq_slice $variation_ids{$var_id}{'seq_region_id'},
-               $variation_ids{$var_id}{'up_seq_region_start'},$variation_ids{$var_id}{'up_seq_region_end'},
-               $variation_ids{$var_id}{'seq_region_strand'}\n";
+	print "variation_id $var_id don't have up_seq_slice ".
+              "$variation_ids{$var_id}{'seq_region_id'}, ".
+              "$variation_ids{$var_id}{'up_seq_region_start'}, ".
+              "$variation_ids{$var_id}{'up_seq_region_end'}, ".
+              "$variation_ids{$var_id}{'seq_region_strand'}\n";
       }
       else {
 	$up_seq = $up_seq_slice->seq;
@@ -178,16 +233,21 @@ sub print_seqs {
       $up_seq = $variation_ids{$var_id}{'up_seq'};
     }
     if ( $variation_ids{$var_id}{'down_seq'} eq '\N') {
-      my $down_tmp_slice = $slice_adaptor->fetch_by_seq_region_id ($variation_ids{$var_id}{'seq_region_id'});
-      my $down_seq_slice = $down_tmp_slice->sub_Slice (
-                                                       $variation_ids{$var_id}{'down_seq_region_start'},
-						       $variation_ids{$var_id}{'down_seq_region_end'},
-						       $variation_ids{$var_id}{'seq_region_strand'}
-						      ) if $down_tmp_slice;
+      # Downstream sequence not in query; create from slice
+      my $down_tmp_slice = $slice_adaptor->fetch_by_seq_region_id 
+          ($variation_ids{$var_id}{'seq_region_id'});
+      my $down_seq_slice = $down_tmp_slice->sub_Slice 
+          (
+           $variation_ids{$var_id}{'down_seq_region_start'},
+           $variation_ids{$var_id}{'down_seq_region_end'},
+           $variation_ids{$var_id}{'seq_region_strand'}
+           ) if $down_tmp_slice;
       if (!$down_seq_slice or !$down_tmp_slice) {
-	print "variation_id $var_id don't have down_seq_slice $variation_ids{$var_id}{'seq_region_id'},
-               $variation_ids{$var_id}{'down_seq_region_start'},$variation_ids{$var_id}{'down_seq_region_end'},
-               $variation_ids{$var_id}{'seq_region_strand'}\n";
+	print "variation_id $var_id don't have down_seq_slice ".
+              "$variation_ids{$var_id}{'seq_region_id'}, ".
+              "$variation_ids{$var_id}{'down_seq_region_start'}, ".
+              "$variation_ids{$var_id}{'down_seq_region_end'}, ".
+              "$variation_ids{$var_id}{'seq_region_strand'}\n";
       }
       else {
 	$down_seq = $down_seq_slice->seq;
@@ -197,13 +257,17 @@ sub print_seqs {
       $down_seq = $variation_ids{$var_id}{'down_seq'};
     }
 
+    # Trim flanking sequences to 200 bp
     if (length($up_seq) >200) {
       $up_seq = substr($up_seq, -200);
     }
     if (length($down_seq) >200) {
       $down_seq = substr($down_seq,0,200);
     }
+    # Join the flanks
     my $seq = lc($up_seq)."W".lc($down_seq);
+
+    # Print to file
     print OUT ">$variation_ids{$var_id}{'var_name'}\n$seq\n";
   }
 
@@ -226,7 +290,10 @@ sub get_read_flank_seq {
 
 
   if (! $chr_name and $seq_region_id) {
-    my $seq_region_name_ref = $dbCore->selectall_arrayref(qq{select name from seq_region where seq_region_id = $seq_region_id});
+    my $seq_region_name_ref = $dbCore->selectall_arrayref(qq{
+SELECT name 
+FROM   seq_region 
+WHERE  seq_region_id = $seq_region_id});
     $chr_name = $seq_region_name_ref->[0][0];
   }
   print "chr_name is $chr_name\n";
@@ -263,12 +330,21 @@ sub get_read_flank_seq {
   open OUT, ">$output_dir/$file_count\_query_seq" or die "can't open output\n";
   while (<FH>) {
     if (/^\d+/) {
-      my ($seq_region_id, $seq_region_start, $seq_region_end, $level, $sample_id) = split;
+      my ($seq_region_id, 
+          $seq_region_start, 
+          $seq_region_end, 
+          $level, 
+          $sample_id) = split;
+
       if ($rec_slice{$seq_region_id}) {
-	my $up_seq_start = $rec_slice{$seq_region_id}->sub_Slice ($seq_region_start-100,$seq_region_start-1);
-	my $down_seq_start = $rec_slice{$seq_region_id}->sub_Slice ($seq_region_start+1,$seq_region_start+100);
-	my $up_seq_end = $rec_slice{$seq_region_id}->sub_Slice ($seq_region_end-100,$seq_region_end-1);
-	my $down_seq_end = $rec_slice{$seq_region_id}->sub_Slice ($seq_region_end+1,$seq_region_end+100);
+	my $up_seq_start = $rec_slice{$seq_region_id}->sub_Slice 
+            ($seq_region_start-100,$seq_region_start-1);
+	my $down_seq_start = $rec_slice{$seq_region_id}->sub_Slice 
+            ($seq_region_start+1,$seq_region_start+100);
+	my $up_seq_end = $rec_slice{$seq_region_id}->sub_Slice 
+            ($seq_region_end-100,$seq_region_end-1);
+	my $down_seq_end = $rec_slice{$seq_region_id}->sub_Slice 
+            ($seq_region_end+1,$seq_region_end+100);
 	if ($up_seq_start and $down_seq_start) {
 	  print OUT ">$seq_region_id\_$seq_region_start\_$seq_region_end\_$level\_$sample_id\_1\n";
 	  print OUT lc($up_seq_start->seq).'W'.lc($down_seq_start->seq),"\n";
@@ -303,17 +379,35 @@ sub usage {
 usage: generate_input_seq.pl  <options>
 
 options:
-    -chost <hostname>    hostname of core Ensembl MySQL database (default = ecs2)
-    -cuser <user>        username of core Ensembl MySQL database (default = ensro)
-    -cpass <pass>        password of core Ensembl MySQL database
-    -cport <port>        TCP port of core Ensembl MySQL database (default = 3365)
-    -cdbname <dbname>    dbname of core Ensembl MySQL database
-    -vhost <hostname>    hostname of variation MySQL database to write to
-    -vuser <user>        username of variation MySQL database to write to (default = ensro)
-    -vpass <pass>        password of variation MySQL database to write to
-    -vport <port>        TCP port of variation MySQL database to write to (default = 3365)
-    -vdbname <dbname>    dbname of variation MySQL database to write to
-    -chr_name <chromosomename> chromosome name for which flanking sequences are mapping to
+    -ensembl_registry <path> 
+       Use this ensembl registry file, 
+       default: ensembl-variation/scripts/import/ensembl.registry 
+
+    -species  <string>   
+       Use DBs for this species in the ensembl registry file
+
+    -chr_name <string>   
+       Dump sequences mapping to this chromosome only
+
+    -seq_region_id <int> 
+       Dump sequences mapping to this seq_region_id only
+
+    -output_dir <path>
+      Dump sequences into this directoty. Def $ENV{PWD}
+
+    -tmpdir <path>       
+       Use this dir for tmp files. Def; $ImportUtils::TMP_DIR
+
+    -tmpfile <name>    
+       Use this file for tmp file. Def; $ImportUtils::TMP_FILE
+
+    -generate_input_seq
+       Whether to generate sequence files
+
+    -read_flank
+
+    -read_file <path>
+       Path to file containing flanking sequences
 
 EOF
 
