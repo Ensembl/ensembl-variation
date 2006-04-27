@@ -14,56 +14,76 @@ use ImportUtils qw(debug load create_and_load dumpSQL);
 sub variation_feature{
   my $self = shift;
     
-  my %rec;
-  my %source;
-  my %status;
-  my %rec_pos;
+ # my (%rec,%source,%status,%rec_pos,%rec_seq_region);
   
-  debug("Dumping Variation");
-    
-  my $sth = $self->{'dbVariation'}->prepare (qq{SELECT variation_id, name, source_id, validation_status
-						    FROM variation});
-  $sth->execute();
-    
-  while(my ($variation_id, $name, $source_id, $validation_status) = $sth->fetchrow_array()) {
-    $rec{$name} = $variation_id;
-    $source{$name} = $source_id;
-    $status{$name} = $validation_status;
-  }
+  #debug("Dumping Variation");
+
+ # my ($variation_id,$name,$source_id,$validation_status);
+  #my $sth = $self->{'dbVariation'}->prepare (qq{SELECT variation_id, name, source_id, validation_status
+#						    FROM variation});
+  #$sth->execute();
+  #$sth->bind_columns(\$variation_id,\$name,\$source_id,\$validation_status);
+
+  #while($sth->fetch){
+   # $rec{$name} = $variation_id;
+   # $source{$name} = $source_id;
+   # $status{$name} = $validation_status ? $validation_status : '\N';
+  #}
   
-  $sth->finish();
-  
-  open (IN, $self->{'mapping_file'});
-  open (FH, ">" . $self->{'tmpdir'} . "/" . $self->{'tmpfile'} );
-  
-  while (<IN>) {
-    chomp;
-    next if /^more/;
-    s/^MORE_HITS//;
-    my ($ref_id, $slice_name, $start, $end, $strand, $ratio) =split;
+  #$sth->finish();
+
+  #my ($seq_region_id,$seq_region_name);
+  #my $sth1 = $self->{'dbCore'}->dbc->prepare (qq{select sr.seq_region_id, sr.name from seq_region sr, seq_region_attrib sra, attrib_type at where sr.seq_region_id=sra.seq_region_id and sra.attrib_type_id = at.attrib_type_id and (at.code="toplevel" or at.code="non_ref")});
+  #$sth1->execute();
+  #$sth1->bind_columns(\$seq_region_id,\$seq_region_name);
+  #while ($sth1->fetch) {
+  #  $rec_seq_region{$seq_region_name} = $seq_region_id;
+  #}
+
+  #$sth1->finish();
+
+  #open (FH, ">" . $self->{'tmpdir'} . "/" . $self->{'tmpfile'} );
+
+  #my $mapping_dir = $self->{'mapping_file'};
+  #  system("cat $mapping_dir/mapping_file* > $mapping_dir/all_mapping_file");
+  #  open (IN, "$mapping_dir/all_mapping_file") or die "can't open mapping_file:$!";;
+
+    #while (<IN>) {
+    #  chomp;
+    #  next if /^more |^PARSING/;
+    #  s/^MORE_HITS//;
+    #  my ($ref_id, $slice_name, $start, $end, $strand, $ratio) =split;
+      
+    #  next if $ratio <0.5;
+      
+    #  my ($coord_sys,$assembly,$seq_region_name,$seq_region_start,$seq_region_end,$version);
+
+    #  ($seq_region_name,$seq_region_start,$seq_region_end) = split /\-/, $slice_name
+#	if $slice_name =~ /\-/;
     
-    next if $ratio <0.5;
+ #     ($coord_sys,$assembly,$seq_region_name,$seq_region_start,$seq_region_end,$version) = split /\:/, $slice_name
+	#if $slice_name =~ /\:/;
     
-    my ($seq_region_name,$seq_region_start,$seq_region_end) = split /\-/, $slice_name
-      if $slice_name =~ /\-/;
+   #   my $seq_region_id = $rec_seq_region{$seq_region_name};
+    #  if (! $seq_region_id) {
+	#my $sth = $self->{'dbCore'}->dbc->prepare (qq{SELECT seq_region_id from seq_region where name = ?});
+	#$sth->execute("$seq_region_name");
     
-    my $sth = $self->{'dbCore'}->dbc->prepare (qq{SELECT seq_region_id from seq_region where name = ?});
-    $sth->execute("$seq_region_name");
+#	$seq_region_id = $sth->fetchrow_array();
+ #     }
+
+ #     my $new_seq_region_start = $seq_region_start + $start -1 if ($seq_region_start);
+  #    my $new_seq_region_end = $seq_region_start + $end -1 if ($seq_region_start);
     
-    my $seq_region_id = $sth->fetchrow_array();
+   #   if (!$rec_pos{$ref_id}{$seq_region_id}{$new_seq_region_start}{$new_seq_region_end}) {
+	#print FH "$seq_region_id\t$new_seq_region_start\t$new_seq_region_end\t$strand\t$rec{$ref_id}\t$ref_id\t$source{$ref_id}\t$status{$ref_id}\n";
+	#$rec_pos{$ref_id}{$seq_region_id}{$new_seq_region_start}{$new_seq_region_end}=1;
+     # }
+    #}
+  #}
     
-    my $new_seq_region_start = $seq_region_start + $start -1 if ($seq_region_start);
-    my $new_seq_region_end = $seq_region_start + $end -1 if ($seq_region_start);
-    
-    if (!$rec_pos{$ref_id}{$seq_region_id}{$new_seq_region_start}{$new_seq_region_end}) {
-      print FH "$seq_region_id\t$new_seq_region_start\t$new_seq_region_end\t$strand\t$rec{$ref_id}\t$ref_id\t$source{$ref_id}\t",$status{$ref_id} ? $status{$ref_id} : 0,"\n";
-      $rec_pos{$ref_id}{$seq_region_id}{$new_seq_region_start}{$new_seq_region_end}=1;
-    }
-  }
-  $sth->finish();
-    
-  close IN;
-  close FH;
+  #close IN;
+  #close FH;
   
     
   debug("Creating genotyped variations");
@@ -72,21 +92,21 @@ sub variation_feature{
 		  "seq_region_strand","variation_id *","variation_name", "source_id", "validation_status");
   #creating the temporary table with the genotyped variations
   
-  $self->{'dbVariation'}->do(qq{CREATE TABLE tmp_genotyped_var SELECT DISTINCT variation_id FROM individual_genotype_single_bp});
-  $self->{'dbVariation'}->do(qq{CREATE UNIQUE INDEX variation_idx ON tmp_genotyped_var (variation_id)});
-  $self->{'dbVariation'}->do(qq{INSERT IGNORE INTO  tmp_genotyped_var SELECT DISTINCT variation_id FROM individual_genotype_multiple_bp});
+#   $self->{'dbVariation'}->do(qq{CREATE TABLE tmp_genotyped_var SELECT DISTINCT variation_id FROM tmp_individual_genotype_single_bp});
+#   $self->{'dbVariation'}->do(qq{CREATE UNIQUE INDEX variation_idx ON tmp_genotyped_var (variation_id)});
+#   $self->{'dbVariation'}->do(qq{INSERT IGNORE INTO  tmp_genotyped_var SELECT DISTINCT variation_id FROM individual_genotype_multiple_bp});
   
   
-  $self->{'dbVariation'}->do(qq{INSERT INTO variation_feature
-				(variation_id,seq_region_id, seq_region_start, seq_region_end, seq_region_strand,
-				 variation_name, flags, source_id, validation_status)
-				SELECT tv.variation_id, tv.seq_region_id, tv.seq_region_start, tv.seq_region_end,
-				tv.seq_region_strand, tv.variation_name, IF(tgv.variation_id,'genotyped',NULL), tv.source_id,
-				tv.validation_status
-				FROM tmp_variation_feature tv LEFT JOIN tmp_genotyped_var tgv ON tv.variation_id = tgv.variation_id
-			       });
-  $self->{'dbVariation'}->do(qq{DROP TABLE tmp_variation_feature});
-  $self->{'dbVariation'}->do(qq{DROP TABLE tmp_genotyped_var});
+   $self->{'dbVariation'}->do(qq{INSERT INTO variation_feature
+ 				(variation_id,seq_region_id, seq_region_start, seq_region_end, seq_region_strand,
+ 				 variation_name, flags, source_id, validation_status)
+ 				SELECT tv.variation_id, tv.seq_region_id, tv.seq_region_start, tv.seq_region_end,
+ 				tv.seq_region_strand, tv.variation_name, IF(tgv.variation_id,'genotyped',NULL), tv.source_id,
+ 				tv.validation_status
+ 				FROM tmp_variation_feature tv LEFT JOIN tmp_genotyped_var tgv ON tv.variation_id = tgv.variation_id
+ 			       });
+  #$self->{'dbVariation'}->do(qq{DROP TABLE tmp_variation_feature});
+  #$self->{'dbVariation'}->do(qq{DROP TABLE tmp_genotyped_var});
   
   
 }

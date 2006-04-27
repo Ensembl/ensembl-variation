@@ -33,7 +33,7 @@ sub add_strains{
       $self->{'dbVariation'}->do(qq{INSERT INTO sample (name,description)
 				    VALUES ('$population_name', '$STRAINS{$population_name}')});
       #store in the same hash the id for the population
-      $STRAINS{$population_name} = $self->{'dbVariation'}->dbh()->{'mysql_insertid'};
+      $STRAINS{$population_name} = $self->{'dbVariation'}->{'mysql_insertid'};
     }
     #and copy the data from the sample to the Population table
     debug("Loading population table with data from sample");
@@ -47,9 +47,8 @@ sub add_strains{
     debug("Dumping strain information from dbSNP");
 
     dumpSQL($self->{'dbSNP'}, qq{SELECT subsnp_id, loc_snp_id
-				     FROM SubSNP
-				     WHERE tax_id = $self->{'taxID'}
-			     });
+				 FROM SubSNP
+				});
     
     create_and_load($self->{'dbVariation'},'tmp_strain', "subsnp_id i*", "strain");
 
@@ -90,11 +89,14 @@ sub variation_feature{
     ### imported.
     debug("Dumping seq_region data");
     my $sth = $self->{'dbCore'}->dbc()->prepare(qq{SELECT sr.seq_region_id, sr.name
-						 FROM   seq_region sr
-						 WHERE coord_system_id = 3});
+						 FROM   seq_region sr, coord_system cs
+						 WHERE sr.coord_system_id = cs.coord_system_id
+						 AND cs.name = "scaffold"});
     $sth->execute();
     open(FH,">" . $self->{'tmpdir'} . '/' . $self->{'tmpfile'}); #open the file with the data dump from the core database
-    my $row;
+
+    my ($tablename1,$tablename2,$row);
+
     while($row = $sth->fetchrow_arrayref()) {
 	my @row = @$row;
 	$row[1] = $scaff{$row[1]} if (defined $scaff{$row[1]});
@@ -107,26 +109,45 @@ sub variation_feature{
 
     debug("Loading seq_region data");
     create_and_load($self->{'dbVariation'}, "tmp_seq_region", "seq_region_id", "name *");
-    
+
     debug("Dumping SNPLoc data");
+
     
-    my $tablename = $self->{'species_prefix'} . 'SNPContigLoc';
-    dumpSQL($self->{'dbSNP'}, qq{SELECT snp_id, contig_acc,
-				 IF(loc_type = 3,  asn_to, asn_from),
-				 IF(loc_type = 3,  asn_from, asn_to), # 3 = between
+    my ($assembly_version) =  $self->{'assembly_version'} =~ /^[a-zA-Z]+(\d+)\.*.*$/; $assembly_version=2;
+    print "assembly_version again is $assembly_version\n";
+
+    my $sth1 = $self->{'dbSNP'}->prepare(qq{SHOW TABLES LIKE 
+					 '$self->{'dbSNP_version'}\_SNPContigLoc\_$assembly_version\__'});
+    $sth1->execute();
+
+    while($row = $sth1->fetchrow_arrayref()) {
+      $tablename1 = $row->[0];
+    }
+
+    my $sth2 = $self->{'dbSNP'}->prepare(qq{SHOW TABLES LIKE 
+					   '$self->{'dbSNP_version'}\_ContigInfo\_$assembly_version\__'});
+    $sth2->execute();
+
+    while($row = $sth2->fetchrow_arrayref()) {
+      $tablename2 = $row->[0];
+    }
+    print "table_name1 is $tablename1 table_name2 is $tablename2\n";
+
+    dumpSQL($self->{'dbSNP'}, qq{SELECT t1.snp_id, t2.contig_acc,
+				 t1.lc_ngbr+2,t1.rc_ngbr,
 				 IF(orientation, -1, 1)
-				 FROM $tablename
+				 FROM   $tablename1 t1, $tablename2 t2
+				 WHERE t1.ctg_id=t2.ctg_id
 				 $self->{'limit'}});
-    
     
     debug("Loading SNPLoc data");
     
-    create_and_load($self->{'dbVariation'}, "tmp_contig_loc", "snp_id i*", "chr *", "start i", 
+    create_and_load($self->{'dbVariation'}, "tmp_contig_loc", "snp_id i*", "contig *", "start i", 
 		    "end i", "strand i");
     
     #creating the temporary table with the genotyped variations
 
-     $self->{'dbVariation'}->do(qq{CREATE TABLE tmp_genotyped_var SELECT DISTINCT variation_id FROM individual_genotype_single_bp});
+     $self->{'dbVariation'}->do(qq{CREATE TABLE tmp_genotyped_var SELECT DISTINCT variation_id FROM tmp_individual_genotype_single_bp});
      $self->{'dbVariation'}->do(qq{CREATE UNIQUE INDEX variation_idx ON tmp_genotyped_var (variation_id)});
      $self->{'dbVariation'}->do(qq{INSERT IGNORE INTO  tmp_genotyped_var SELECT DISTINCT variation_id FROM individual_genotype_multiple_bp});
 
@@ -142,7 +163,7 @@ sub variation_feature{
 				      tcl.strand, v.name, IF(tgv.variation_id,'genotyped',NULL), v.source_id, v.validation_status
 				      FROM   variation v LEFT JOIN tmp_genotyped_var tgv ON v.variation_id = tgv.variation_id, tmp_contig_loc tcl, tmp_seq_region ts
 				      WHERE  v.snp_id = tcl.snp_id
-				      AND    tcl.chr = ts.name});
+				      AND    tcl.contig = ts.name});
     
     $self->{'dbVariation'}->do("DROP TABLE tmp_contig_loc");
     $self->{'dbVariation'}->do("DROP TABLE tmp_seq_region");
