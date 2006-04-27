@@ -185,7 +185,7 @@ FROM   tmp_variation_feature tv LEFT JOIN
        tmp_genotyped_var tgv ON tv.variation_id = tgv.variation_id });
 
   $self->{'dbVariation'}->do(qq{DROP TABLE tmp_variation_feature});
-  #$self->{'dbVariation'}->do(qq{DROP TABLE tmp_genotyped_var});
+  $self->{'dbVariation'}->do(qq{DROP TABLE tmp_genotyped_var});
 }
 
 1;
