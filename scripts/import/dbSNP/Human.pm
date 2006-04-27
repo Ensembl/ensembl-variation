@@ -14,9 +14,9 @@ sub dump_dbSNP{
     #first, dump all dbSNP data as usual
     $self->SUPER::dump_dbSNP();
     #then, get HGVbase IDs from Yuans file
-    $self->dump_HGVbaseIDs();
+    #$self->dump_HGVbaseIDs();
     #and finally, get TSC data from dbSNP
-    $self->dump_TSCIDs();    
+    #$self->dump_TSCIDs();    
     #get mitochondrial SNPs provided by Yuan in .tb file formats---DON'T RUN THIS ANYMORE
     #$self->dump_mitocondrialSNPs();
 }
@@ -33,7 +33,7 @@ sub dump_HGVbaseIDs{
     $self->{'dbVariation'}->do(qq{INSERT INTO source (name,version) values ('HGVbase',15)
 				  });
     debug("Adding HGVbaseIDs to synonym table");
-    my $source_id = $self->{'dbVariation'}->dbh()->{'mysql_insertid'}; #get the last autoinc id from the database (the one from the HGVbase source)
+    my $source_id = $self->{'dbVariation'}->{'mysql_insertid'}; #get the last autoinc id from the database (the one from the HGVbase source)
     #add the HGVbaseIDs to the Variation_Synonym table
     $self->{'dbVariation'}->do(qq{INSERT INTO variation_synonym (variation_id,source_id,name)
 				      SELECT v.variation_id, $source_id, trh.HGVbaseID
@@ -52,7 +52,7 @@ sub dump_TSCIDs{
     #add the TSC source to the table
     $self->{'dbVariation'}->do(qq{INSERT INTO source (name,version) values ('TSC',1)
     });
-    my $source_id = $self->{'dbVariation'}->dbh()->{'mysql_insertid'}; #get the last autoinc id in the database (the one from the TSC source)
+    my $source_id = $self->{'dbVariation'}->{'mysql_insertid'}; #get the last autoinc id in the database (the one from the TSC source)
     #and finally add the TSC ids to the synonyms table
     debug("Dumping TSC information from dbSNP");
     dumpSQL($self->{'dbSNP'}, qq{SELECT concat('rs',ss.snp_id), $source_id, s.loc_snp_id 
