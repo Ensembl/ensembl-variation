@@ -178,11 +178,10 @@ sub fetch_by_VariationFeature {
   my %feature_container = ();
   my %vf_objects = ();
   my %pop_ids = ();
-
+  my $vf_id = $vf->dbID;
   #iterate all the LD container looking for values related to this variation Feature
   foreach my $ld_key (keys %{$ldFeatureContainer->{'ldContainer'}}){
-      my $vf_id = $vf->dbID;
-      if ($ld_key =~ /$vf_id/o){
+      if ($ld_key =~ /$vf_id/){
 	  #add the value to the new hash
 	  my ($vf_id1,$vf_id2) = split /-/,$ld_key;
 
