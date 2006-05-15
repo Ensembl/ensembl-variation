@@ -1,0 +1,200 @@
+#!/usr/local/bin/perl5.8.0 -w
+
+use strict;
+use DBI;
+use lib qw(../../ensembl-code/ensembl/modules
+           ../../ensembl-code/ensembl-variation/modules
+           ../../ensembl-code/bioperl-live
+           ../../ensembl-code/ensembl-external/modules
+           );
+use Bio::EnsEMBL::DBSQL::DBAdaptor;
+use Bio::EnsEMBL::Variation::DBSQL::DBAdaptor;
+use Bio::EnsEMBL::Utils::Exception qw(throw);
+use DBH;
+use FileHandle;
+use FindBin qw( $Bin );
+
+$|++;
+
+my %lookups;
+my %slice_cache;
+
+$lookups{strain}->{id} = 0; # stops warnings.
+
+# inc for snpname,
+my $snp = 1;
+
+#schema version;
+my $schema = 39;
+
+# source id
+my $source_id = 1;
+
+my $registry_file ||= $Bin . "/ensembl.registry";
+Bio::EnsEMBL::Registry->load_all( $registry_file ); 
+my $dbCore = Bio::EnsEMBL::Registry->get_DBAdaptor('mouse','core');
+
+my $mc = $dbCore->get_MetaContainer();
+my $species = $mc->get_Species();
+
+die("Unable to determine species from core database.") if(!$species);
+
+my $file = $ARGV[0];
+
+my $fh = open_file($file);
+
+my $cache = cache_handles();
+
+my $slice_adaptor = $dbCore->get_SliceAdaptor();
+
+#MYSQL: source
+writer($cache,'source',$source_id,"\"Sanger\"",'NULL');
+
+# MYSQL: meta
+writer($cache,'meta', "schema_version",$schema);
+
+# Reference
+write_sample($cache,\%lookups,'C57BL/6J');
+
+while(defined(my $ln = <$fh>)) {
+
+#SNP: 1 2 30284 2 chr1.NT_114051.1 G/C 19600404395402.q1k 48 [ 129X1-SvJ ] 3 1 1
+#     1 2 30284 2 chr1.NT_114051.1 G/C 19600419935393.q1k 87 [ 129S1-SvImJ ] 3 1 1
+    
+    if(my($ctg_pos,$nt,$ver,$a1,$a2,$read,$rpos,$strain) = 
+       $ln =~ /[SNP:]?\s\d+\s\d+\s(\d+)\s\d+\schr\S+\.(\S+)\.(\d+)\s(\S)\/(\S)\s(\S+)\s([\-]?\d+)\s\[\s(\S+)\s\]/){
+
+        next if (defined $lookups{$nt}->{bad});
+
+        # get the seq_region_id / seq and store it in a hash
+        if(!exists $lookups{$nt}->{region_id}) {
+            my $slice = $slice_adaptor->fetch_by_region('toplevel',$nt);
+            if(!defined $slice) {
+                warn "Unable to find slice for $nt\n";
+                $lookups{$nt}->{bad}++;
+                next;
+            }
+            $lookups{$nt}->{region_id} = $slice_adaptor->get_seq_region_id($slice);
+        }
+        
+        # only enter one allele per strain.
+        my %uniq_strain_allele = ();
+
+        #my $snpname = "CE".$snp++;
+        my $snpname = "${nt}.${ver}_${ctg_pos}";
+
+        # MYSQL: sample
+        write_sample($cache,\%lookups,$strain);
+        
+        # MYSQL: variation
+        writer($cache,'variation',$cache->{auto},$source_id,$snpname,'NULL');
+        $lookups{varid}++;
+
+        #MYSQL: variation_synonym
+        writer($cache,'variation_synonym',$lookups{varid},$source_id,$snpname);
+        
+
+        # MYSQL: flanking_sequence
+        writer($cache,'flanking_sequence'
+               ,$lookups{varid},$lookups{$nt}->{region_id},1,$ctg_pos-100,$ctg_pos-1,$ctg_pos+1,$ctg_pos+100,);
+        
+        # MYSQL: variation_feature
+        writer($cache,'variation_feature'   
+               ,$lookups{varid},$lookups{$nt}->{region_id},$source_id,$ctg_pos,$ctg_pos,1,$snpname,1,1);
+
+        #MYSQL: allele
+        # the reference allele. (NB. only needed for post-processing steps, then it gets deleted.)
+        writer($cache,'allele',$lookups{varid},$a1,1,$lookups{strain}->{'C57BL/6J'});
+        writer($cache,'tmp_individual_single_genotype_bp',$lookups{varid},$a1,$a1,$lookups{strain}->{'C57BL/6J'});
+
+        # read allele + individual_single_genotype_bp
+        writer($cache,'allele',$lookups{varid},$a2,1,$lookups{strain}->{$strain});
+        writer($cache,'tmp_individual_single_genotype_bp',$lookups{varid},$a2,$a2,$lookups{individual}->{$strain});
+        $uniq_strain_allele{$strain}{$a2}++;
+        while(defined(my $al = <$fh>)) {
+            if(my($allele,$rp,$st) = $al =~ /^\s+\d+\s\d+\s\d+\s\d+\schr\S+\.\S+\.\d+\s\S\/(\S)\s\S+\s([\-]?\d+)\s\[\s(\S+)\s\]/){
+                # MYSQL: allele + individual_single_genotype_bp
+                next if ($uniq_strain_allele{$st}{$allele});
+                
+                # MYSQL: sample ( account for those new strains NOT having appeared on a line starting with SNP)
+                write_sample($cache,\%lookups,$st);
+                
+                writer($cache,'allele',$lookups{varid},$allele,1,$lookups{strain}->{$st});
+                writer($cache,'tmp_individual_single_genotype_bp',$lookups{varid},$allele,$allele,$lookups{individual}->{$st});
+                $uniq_strain_allele{$st}{$allele}++;
+            }else{
+                last;             
+            }
+        }
+        $cache->{auto}++;
+    }
+            
+}
+
+
+sub write_sample {
+    my ($cache,$look,$strain) = @_;    
+    if(!exists $look->{strain}->{$strain}) {
+        # increment count for new strain id and new individual_id
+        $look->{strain}->{$strain} = ++$look->{strain}->{id};
+        $look->{individual}->{$strain} = ++$look->{individual}->{id};
+        if($strain eq 'C57BL/6J') {
+            writer($cache,'sample',$look->{strain}->{$strain},$strain,'NULL',"\"C57BL/6J\""); #this is the population
+            writer($cache,'sample',$look->{individual}->{$strain},$strain,'NULL',"\"C57BL/6J individual\""); #this is the individual
+        }elsif($strain eq 'MSM') {
+            writer($cache,'sample',$look->{strain}->{$strain},"MSM/Ms",'NULL',"\"MSM\""); #this is the population
+            writer($cache,'sample',$look->{individual}->{$strain},"MSM/Ms",'NULL',"\"MSM individual\""); #this is the individual
+        }elsif($strain eq 'C3H') {
+            writer($cache,'sample',$look->{strain}->{$strain},"C3H/HeJ",'NULL',"\"C3H\""); #this is the population
+            writer($cache,'sample',$look->{individual}->{$strain},"C3H/HeJ",'NULL',"\"C3H individual\""); #this is the individual
+        }elsif($strain eq 'NOD') {            
+            writer($cache,'sample',$look->{strain}->{$strain},"NOD/DIL",'NULL',"\"Sanger NODBACend sequencing\""); #population
+            writer($cache,'sample',$look->{individual}->{$strain},"NOD/DIL",'NULL',"\"Sanger NODBACend sequencing individual\""); #individual
+        }else{        
+            writer($cache,'sample',$look->{strain}->{$strain},$strain,'NULL',"\"Celera Strain $strain\"");  #population
+            writer($cache,'sample',$look->{individual}->{$strain},$strain,'NULL',"\"Celera individual $strain\"");      #individual      
+        }
+        writer($cache,'population',$look->{strain}->{$strain},1);
+
+        # add individual info, needed for read_coverage. 3 = enum (unknown)
+        writer($cache,'individual',$look->{individual}->{$strain},3); 
+	#add new entry in individual_population table
+        writer($cache,'individual_population',$look->{individual}->{$strain},$look->{strain}->{$strain}); 
+    }
+}
+
+
+sub cache_handles {
+    
+    my %handles;
+    
+    map { $handles{$_} = new FileHandle ">${_}.dat"; }
+    qw(meta source sample variation variation_feature allele flanking_sequence variation_synonym population tmp_individual_single_genotype_bp individual individual_population);
+    
+    $handles{auto} = 1;
+
+    return \%handles;
+
+}
+
+sub writer {
+    my ($cache,$type,@vals) = @_;
+    local $, = "\t";       
+    my $fh = $cache->{$type};
+    print $fh "@vals\n";    
+}
+
+
+sub open_file {
+
+    my $file = shift;
+
+    if(!-e "$file") { die "$file does not exist.$!\n"; }
+
+    unless(open(F,"$file")) {
+        die "Unable to open $file for reading.$!\n"; 
+    }
+    
+    return \*F;
+
+}
