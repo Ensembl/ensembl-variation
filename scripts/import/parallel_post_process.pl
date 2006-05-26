@@ -4,10 +4,12 @@ use warnings;
 use Getopt::Long;
 use ImportUtils qw(debug);
 use Bio::EnsEMBL::Utils::Exception qw(warning throw verbose);
+use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
 use DBH;
+use DBI qw(:sql_types);
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use FindBin qw( $Bin );
-
+use Data::Dumper;
 use constant MAX_GENOTYPES => 6_000_000; #max number of genotypes per file. When more, split the file into regions
 use constant REGIONS => 15; #number of chunks the file will be splited when more than MAX_GENOTYPES
 
@@ -18,21 +20,11 @@ my ($vhost, $vport, $vdbname, $vuser, $vpass,
     $chost, $cport, $cdbname, $cuser, $cpass,
     $limit, $num_processes, $top_level, $species,
     $variation_feature, $flanking_sequence, $variation_group_feature,
-    $transcript_variation, $ld_populations);
+    $transcript_variation, $ld_populations, $genotype);
 
-$variation_feature = $flanking_sequence = $variation_group_feature = $transcript_variation = $ld_populations = '';
+$variation_feature = $flanking_sequence = $variation_group_feature = $transcript_variation = $ld_populations = $genotype = '';
 
-GetOptions(#'chost=s'   => \$chost,
-	   #'cuser=s'   => \$cuser,
-	   #'cpass=s'   => \$cpass,
-	   #'cport=i'   => \$cport,
-	   #'cdbname=s' => \$cdbname,
-	   #'vhost=s'   => \$vhost,
-	   #'vuser=s'   => \$vuser,
-	   #'vpass=s'   => \$vpass,
-	   #'vport=i'   => \$vport,
-	   #'vdbname=s' => \$vdbname,
-	   'tmpdir=s'  => \$ImportUtils::TMP_DIR,
+GetOptions('tmpdir=s'  => \$ImportUtils::TMP_DIR,
 	   'tmpfile=s' => \$ImportUtils::TMP_FILE,
 	   'species=s' => \$species,
 	   'limit=i'   => \$limit,
@@ -42,14 +34,12 @@ GetOptions(#'chost=s'   => \$chost,
 	   'flanking_sequence' => \$flanking_sequence,
 	   'variation_group_feature' => \$variation_group_feature,
 	   'transcript_variation' => \$transcript_variation,
+	   'genotype'              => \$genotype,
 	   'ld_populations' => \$ld_populations );
 
 $num_processes ||= 1;
 
 $LIMIT = ($limit) ? " $limit " : ''; #will refer to position in a slice
-
-#usage('-vdbname argument is required') if(!$vdbname);
-#usage('-cdbname argument is required') if(!$cdbname);
 
 usage('-num_processes must at least be 1') if ($num_processes == 0);
 
@@ -83,7 +73,7 @@ $TMP_FILE = $ImportUtils::TMP_FILE;
 
 
 ##Apart from human and mouse, we directly import top_level coordinates from dbSNP
-if (! defined $top_level && $species !~ /hum|homo|mouse|mus|anoph|dog|can/i) {
+if (! defined $top_level && $species !~ /hum|homo|mouse|mus|mosquito|anoph|dog|can/i) {
   $top_level=1;
 }
 
@@ -92,7 +82,7 @@ parallel_flanking_sequence($dbVar) if ($flanking_sequence);
 parallel_variation_group_feature($dbVar) if ($variation_group_feature);
 parallel_transcript_variation($dbVar) if ($transcript_variation);
 parallel_ld_populations($dbVar) if ($ld_populations);
-
+genotype($dbVar) if ($genotype);
 
 #will take the number of processes, and divide the total number of entries in the variation_feature table by the number of processes
 sub parallel_variation_feature{
@@ -135,6 +125,7 @@ sub parallel_variation_feature{
 	$call .= "-cport $cport " if ($cport);
 	$call .= "-vpass $vpass " if ($vpass);
 	$call .= "-toplevel $top_level " if ($top_level);
+	#print $call,"\n";
 	system($call);      
     }
     $call = "bsub -K -w 'done($dbname\_variation_job*)' -J waiting_process sleep 1"; #waits until all variation features have finished to continue
@@ -169,7 +160,7 @@ sub parallel_flanking_sequence{
 			       ON vf.variation_id = fs.variation_id
 			       ORDER BY fs.variation_id
 			       $LIMIT},{mysql_use_result => 1});
- 
+
   $sth->execute();
   my $count = 0; #to know the number of variations
   my $process = 1; #number of file to write the process to
@@ -272,6 +263,55 @@ sub parallel_transcript_variation{
     }
 }
 
+##use genotype method to change alleles in genotype table to forward strand
+sub genotype{
+  my $dbVar = shift;
+  $dbVar->do(qq{CREATE TABLE tmp_varid
+                SELECT variation_id
+                FROM   variation_feature
+                WHERE map_weight=1 and seq_region_strand = -1 and flags="genotyped"}
+	    );
+  $dbVar->do(qq{ALTER TABLE tmp_varid
+		      ADD INDEX variation_idx(variation_id)});
+
+  my ($population_genotype_id,$variation_id,$allele_1,$allele_2,$frequency,$sample_id);
+
+  foreach my $table ("tmp_individual_genotype_single_bp") {
+  #foreach my $table ("population_genotype") {
+    warn("processling table $table");
+    my $sth = $dbVar->prepare(qq{select tg.* from $table tg, tmp_varid tv where tg.variation_id=tv.variation_id});
+    $sth->execute();
+    if ($table =~ /pop/i) {
+      $sth->bind_columns(\$population_genotype_id,\$variation_id,\$allele_1,\$allele_2,\$frequency,\$sample_id);
+    }
+    else {
+      $sth->bind_columns(\$variation_id,\$allele_1,\$allele_2,\$sample_id);
+    }
+    while (my $row = $sth->fetch()){
+      next if ($allele_1 eq "-" and $allele_2 eq "-");
+      my $old_allele_1 = $allele_1;
+      my $old_allele_2 = $allele_2;
+      reverse_comp(\$allele_1);
+      reverse_comp(\$allele_2);
+    
+      my $ref_line = $dbVar->selectall_arrayref(qq{select variation_id from $table where variation_id = $variation_id and allele_1 = "$allele_1" and allele_2 = "$allele_2" and sample_id = $sample_id});
+
+#       my $sth = $dbVar->prepare(qq{select variation_id from $table where variation_id = ? and allele_1 = ? and allele_2 = ? and sample_id = ?});
+#       $sth->bind_param(1,$variation_id,SQL_INTEGER);
+#       $sth->bind_param(2,$allele_1,SQL_VARCHAR);
+#       $sth->bind_param(3,$allele_2,SQL_VARCHAR);
+#       $sth->bind_param(4,$sample_id,SQL_INTEGER);
+#       $sth->execute();
+#       if ($sth->rows() == 0 ){
+# 	print "rows ", $sth->rows,"\n";
+
+      if (! defined $ref_line->[0][0]) {
+	$dbVar->do(qq{update $table set allele_1 = "$allele_1", allele_2 = "$allele_2" where variation_id=$variation_id and sample_id=$sample_id and allele_1 = "$old_allele_1" and allele_2 = "$old_allele_2"});
+      }
+    }
+  }
+}
+
 #will have to wait until the variation_feature has finished. Then, select all the genotype, and split the data into files (1 per population)
 sub parallel_ld_populations{
     my $dbVar = shift;    
@@ -311,7 +351,7 @@ sub parallel_ld_populations{
 	}
 	push @pops, $pop_id;
     }
-    
+ 
     my $in_str = " IN (" . join(',', @pops). ")";
 
     #necessary the order to know when we change variation. Not get genotypes with a NULL variation or map_weight > 1
@@ -453,7 +493,7 @@ sub print_buffered {
     if( ! $filename ) {
 	# flush the buffer
 	foreach my $file (keys %{$buffer}){
-	    open( FH, ">>$file" ) or die;
+	    open( FH, ">>$file" ) or die "Could not print to file $! \n";
 	    print FH $buffer->{ $file };
 	    close FH;
 	}
