@@ -165,13 +165,14 @@ sub variation_feature {
     (qq{SELECT STRAIGHT_JOIN vf.variation_feature_id, vf.seq_region_id,
                vf.seq_region_start, vf.seq_region_end, vf.seq_region_strand,
                vf.variation_id, a.allele, tmw.count, v.name, vf.flags, vf.source_id, vf.validation_status, vf.consequence_type
-        FROM   variation_feature vf FORCE INDEX(PRIMARY), allele a, tmp_map_weight tmw,
+        FROM   variation_feature vf FORCE INDEX(PRIMARY), allele_string a, tmp_map_weight tmw,
                variation v
-        WHERE  a.variation_id = vf.variation_id
+        WHERE  a.variation_id = vf.variation_id 
         AND    vf.variation_id = tmw.variation_id
-        AND    vf.variation_id = v.variation_id
-	$LIMIT
-        ORDER BY vf.seq_region_id, vf.seq_region_start},{mysql_use_result=>1});
+        AND    vf.variation_id = v.variation_id 
+	$LIMIT 
+        ORDER BY vf.seq_region_id, vf.seq_region_start 
+	},{mysql_use_result=>1});
 
   $sth->execute();
 
@@ -190,7 +191,8 @@ sub variation_feature {
   my $dbname = $dbVar->dbname(); #get the name of the database to create the file
   my $host = `hostname`;
   chop $host;
-  open FH, ">$TMP_DIR/$dbname.variation_feature_$host\:$$\.txt"
+  #open FH, ">$TMP_DIR/$dbname.variation_feature_$host\:$$\.txt"
+  open FH, ">/tmp/$dbname.variation_feature_$host\_$$\.txt"
     or throw("Could not open tmp file: $TMP_DIR/variation_feature_$$\n");
 
   while($sth->fetch()) {
@@ -264,7 +266,7 @@ sub variation_feature {
 	    $ref_allele = '-';
 	    $top_sr_id = $sr_id;
 	    $top_coord=1;
-	    warning("Could not locate $sr_id, $sr_start, $sr_end, $sr_strand, maybe indels");
+	    #warning("Could not locate $sr_id, $sr_start, $sr_end, $sr_strand, maybe indels");
 	  }
 	  else {
 	    next;
@@ -279,6 +281,7 @@ sub variation_feature {
 	}
       }
       else {
+	debug("seq_region_name is ",$slice->seq_region_name(),"$sr_start, $sr_end, $sr_strand\n");
 	my @coords = $mapper->map($slice->seq_region_name(), $sr_start, $sr_end,
 				  $sr_strand, $sctg_cs);
 	
@@ -344,7 +347,9 @@ sub variation_feature {
   }
 
   close FH;
-
+  my $call = "lsrcp /tmp/$dbname.variation_feature_$host\_$$\.txt $TMP_DIR/$dbname.variation_feature_$host\_$$\.txt";
+  system($call);
+  unlink("/tmp/$dbname.variation_feature_$host\_$$\.txt");
 }
 
 #will know if it is the last process running counting the lines of the status_file.If so, load all data
@@ -367,7 +372,7 @@ sub last_process{
 		    seq_region_start seq_region_end seq_region_strand variation_id
 		    allele_string variation_name map_weight flags source_id validation_status consequence_type));
 
-    unlink(<$TMP_DIR/$dbname.variation_feature*>);
+    #unlink(<$TMP_DIR/$dbname.variation_feature*>);
     $dbVar->do("DROP TABLE tmp_map_weight");
 
     update_meta_coord($dbCore, $dbVar, 'variation_feature');
