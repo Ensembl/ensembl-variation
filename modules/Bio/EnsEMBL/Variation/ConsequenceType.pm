@@ -31,6 +31,11 @@ our %SPLICE_SITES = ('ESSENTIAL_SPLICE_SITE' => 1,
 		     'SPLICE_SITE' => 2);
 
 #conversion of consequence type to bit value
+
+#there is a special type, SARA, that only applies to the effect of the Alleles, not Variations, and is equivalent
+#to Same As Reference Allele, meaning that the Allele is the same as in reference sequence, so has no effect 
+#but it is not stored anywhere in the database and need no conversion at all
+#when creating the VariationFeature object, thus the absence in the hash
 our %CONSEQUENCE_TYPES = (
 			  'FRAMESHIFT_CODING' => 4,
 			  'STOP_GAINED' => 8,
@@ -42,8 +47,9 @@ our %CONSEQUENCE_TYPES = (
 			  'INTRONIC' => 512,
 			  'UPSTREAM' => 1024,
 			  'DOWNSTREAM' => 2048,
-			  'INTERGENIC' => 4096
+			  'INTERGENIC' => 4096,
 			  );
+
 
 our %REGULATORY_REGION = (
                           'REGULATORY_REGION' => 8192
@@ -299,7 +305,7 @@ sub cdna_end {
 
   Arg [1]    : string $type 
                (possible types 'FRAMESHIFT_CODING','STOP_GAINED','STOP_LOST','NON_SYNONYMOUS_CODING',
-		'SYNONYMOUS_CODING','5PRIME_UTR','3PRIME_UTR','INTRONIC','UPSTREAM','DOWNSTREAM','INTERGENIC')
+		'SYNONYMOUS_CODING','5PRIME_UTR','3PRIME_UTR','INTRONIC','UPSTREAM','DOWNSTREAM','INTERGENIC', 'SARA')
   Example    : $consequence_type = $consequence_type->type
   Description: Getter/Setter for consequence type of the variation in the transcript
   Returntype : none
@@ -313,7 +319,10 @@ sub type {
 
   if(@_) {
       my $type = shift;
-      if (defined $CONSEQUENCE_TYPES{$type}){
+      #there is a special type, SARA, that only applies to the effect of the Alleles, and is equivalent
+      #to Same As Reference Allele, which is not stored anywhere in the database and need no conversion at all
+      #when creating the VariationFeature object, thus the absence in the hash
+      if (defined $CONSEQUENCE_TYPES{$type} || $type eq 'SARA'){
 	  $self->{'type'} = $type;
       }
       else{
