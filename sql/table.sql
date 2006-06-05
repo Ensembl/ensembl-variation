@@ -11,8 +11,8 @@
 # SNPAncestralAllele  - taken from dbSNP to show ancestral allele for the variation
 
 create table variation (
-	variation_id int not null auto_increment, # PK
-	source_id int not null, 
+	variation_id int(10) unsigned not null auto_increment, # PK
+	source_id int(10) unsigned not null, 
 	name varchar(255),
 	validation_status SET('cluster','freq','submitter','doublehit','hapmap'),
 	ancestral_allele text,
@@ -31,9 +31,9 @@ create table variation (
 #
 
 create table variation_synonym (
-  variation_synonym_id int not null auto_increment,
-  variation_id int not null,
-  source_id int not null,
+  variation_synonym_id int(10) unsigned not null auto_increment,
+  variation_id int(10) unsigned not null,
+  source_id int(10) unsigned not null,
   name varchar(255),
   moltype varchar(50),
 
@@ -53,9 +53,9 @@ create table variation_synonym (
 #
 
 create table sample_synonym (
-  sample_synonym_id int not null auto_increment,
-  sample_id int not null,
-  source_id int not null,
+  sample_synonym_id int(10) unsigned not null auto_increment,
+  sample_id int(10) unsigned not null,
+  source_id int(10) unsigned not null,
   name varchar(255),
 
   primary key(sample_synonym_id),
@@ -84,11 +84,11 @@ create table sample_synonym (
 # sample_id     - foreign key ref population
 
 create table allele(
-	allele_id int not null auto_increment,
-	variation_id int not null,
+	allele_id int(10) unsigned not null auto_increment,
+	variation_id int(10) unsigned not null,
 	allele varchar(255),
 	frequency float,
-	sample_id int,
+	sample_id int(10) unsigned,
 
 	primary key( allele_id ),
 	key variation_idx( variation_id,allele(10) )
@@ -107,7 +107,7 @@ create table allele(
 # description    - free text that describes the sample
 
 create table sample(
-	sample_id int not null auto_increment,
+	sample_id int(10) unsigned not null auto_increment,
 	name varchar(255) not null,
 	size int,
 	description text,
@@ -129,7 +129,7 @@ create table sample(
 # is_strain            - int, 1 means that the population is a strain, 0 otherwise
 
 create table population(
-	sample_id int not null,
+	sample_id int(10) unsigned not null,
 	is_strain int(1) default 0 NOT NULL,
 
 	primary key( sample_id )
@@ -144,8 +144,8 @@ create table population(
 # of the group of people used in the assay.
 #
 create table population_structure (
-  super_population_sample_id int not null,
-  sub_population_sample_id int not null,
+  super_population_sample_id int(10) unsigned not null,
+  sub_population_sample_id int(10) unsigned not null,
 
   unique(super_population_sample_id, sub_population_sample_id),
   key sub_pop_sample_idx (sub_population_sample_id, super_population_sample_id)
@@ -165,10 +165,10 @@ create table population_structure (
 #
 
 create table individual(
-  sample_id int not null,
+  sample_id int(10) unsigned not null,
   gender enum('Male', 'Female', 'Unknown') default 'Unknown' NOT NULL,
-  father_individual_sample_id int,
-  mother_individual_sample_id int,
+  father_individual_sample_id int(10) unsigned,
+  mother_individual_sample_id int(10) unsigned,
   
   primary key(sample_id)
 );
@@ -211,12 +211,12 @@ create table individual(
 
 
 create table variation_feature(
-	variation_feature_id int not null auto_increment,
-	seq_region_id int not null,
+	variation_feature_id int(10) unsigned not null auto_increment,
+	seq_region_id int(10) unsigned not null,
 	seq_region_start int not null,
 	seq_region_end int not null,
 	seq_region_strand tinyint not null,
-	variation_id int not null,
+	variation_id int(10) unsigned not null,
 	allele_string text,
         variation_name varchar(255),
 	map_weight int not null,
@@ -247,9 +247,9 @@ create table variation_feature(
 #
 
 create table variation_group (
-	variation_group_id int not null auto_increment,
+	variation_group_id int(10) unsigned not null auto_increment,
 	name varchar(255),
-	source_id int not null,
+	source_id int(10) unsigned not null,
   type enum('haplotype', 'tag'),
 
 	primary key (variation_group_id),
@@ -264,8 +264,8 @@ create table variation_group (
 #
 
 create table variation_group_variation (
-	variation_id int not null,
-	variation_group_id int not null,
+	variation_id int(10) unsigned not null,
+	variation_group_id int(10) unsigned not null,
 
 	unique( variation_group_id, variation_id ),
 	key variation_idx( variation_id, variation_group_id )
@@ -288,12 +288,12 @@ create table variation_group_variation (
 #
 
 create table variation_group_feature(
-  variation_group_feature_id int not null auto_increment,
-  seq_region_id int not null,
+  variation_group_feature_id int(10) unsigned not null auto_increment,
+  seq_region_id int(10) unsigned not null,
   seq_region_start int not null,
   seq_region_end int not null,
   seq_region_strand tinyint not null,
-  variation_group_id int not null,
+  variation_group_id int(10) unsigned not null,
   variation_group_name varchar(255),
 
   primary key (variation_group_feature_id),
@@ -325,9 +325,9 @@ create table variation_group_feature(
 # 
 
 create table transcript_variation(
-	transcript_variation_id int not null auto_increment,
-  transcript_id int not null,
-	variation_feature_id int not null,
+  transcript_variation_id int(10) unsigned not null auto_increment,
+  transcript_id int(10) unsigned not null,
+  variation_feature_id int(10) unsigned not null,
   cdna_start int,
   cdna_end   int,
   translation_start int,
@@ -360,11 +360,11 @@ create table transcript_variation(
 #
 
 create table allele_group(
-	allele_group_id int not null auto_increment,
-	variation_group_id int not null,
-	sample_id int,
+	allele_group_id int(10) unsigned not null auto_increment,
+	variation_group_id int(10) unsigned not null,
+	sample_id int(10) unsigned,
 	name varchar(255),
-	source_id int,
+	source_id int(10) unsigned,
 	frequency float,
 
 	primary key( allele_group_id ),
@@ -384,9 +384,9 @@ create table allele_group(
 # variation_id - foreign key, references variation
 
 create table allele_group_allele (
-	allele_group_id int not null,
+	allele_group_id int(10) unsigned not null,
 	allele varchar(255) not null,
-        variation_id int not null,
+        variation_id int(10) unsigned not null,
 
 	unique( allele_group_id, variation_id ),
 	key allele_idx( variation_id, allele_group_id )
@@ -407,15 +407,15 @@ create table allele_group_allele (
 #
 
 create table flanking_sequence (
-	variation_id int not null,
+	variation_id int(10) unsigned not null,
 	up_seq text,
 	down_seq text,
-  up_seq_region_start int,
-  up_seq_region_end   int,
-  down_seq_region_start int,
-  down_seq_region_end int,
-  seq_region_id int,
-  seq_region_strand tinyint,
+  	up_seq_region_start int,
+  	up_seq_region_end   int,
+  	down_seq_region_start int,
+  	down_seq_region_end int,
+  	seq_region_id int(10) unsigned,
+  	seq_region_strand tinyint,
 
   primary key( variation_id )
 
@@ -434,10 +434,10 @@ create table flanking_sequence (
 #
 
 create table httag(
-	httag_id int not null auto_increment,
-	variation_group_id int not null,
+	httag_id int(10) unsigned not null auto_increment,
+	variation_group_id int(10) unsigned not null,
 	name varchar(255),
-	source_id int not null,
+	source_id int(10) unsigned not null,
 
 	primary key( httag_id ),
 	key variation_group_idx( variation_group_id )
@@ -452,7 +452,7 @@ create table httag(
 # name      - the name of the source.  e.g. 'dbSNP' 
 
 create table source(
-	source_id int not null auto_increment,
+	source_id int(10) unsigned not null auto_increment,
 	name varchar(255),
 	version int,
 	
@@ -476,12 +476,12 @@ create table source(
 #
 
 create table population_genotype (
-	population_genotype_id int not null auto_increment,
-	variation_id int not null,
+	population_genotype_id int(10) unsigned not null auto_increment,
+	variation_id int(10) unsigned not null,
 	allele_1 varchar(255),
 	allele_2 varchar(255),
 	frequency float,
- 	sample_id int,
+ 	sample_id int(10) unsigned,
 
 	primary key( population_genotype_id ),
  	key variation_idx(variation_id),
@@ -497,8 +497,8 @@ create table population_genotype (
 # population_sample_id - FK to population table
 
 create table individual_population (
-  individual_sample_id int not null,
-  population_sample_id int not null,
+  individual_sample_id int(10) unsigned not null,
+  population_sample_id int(10) unsigned not null,
 
   key individual_sample_idx(individual_sample_id),
   key population_sample_idx(population_sample_id)
@@ -517,10 +517,10 @@ create table individual_population (
 # sample_id     - foreign key, references individual table
 
 create table individual_genotype_multiple_bp (
-  variation_id int not null,
+  variation_id int(10) unsigned not null,
   allele_1 varchar(255),
   allele_2 varchar(255),
-  sample_id int,
+  sample_id int(10) unsigned,
 
   key variation_idx(variation_id),
   key sample_idx(sample_id)
@@ -542,7 +542,7 @@ create table individual_genotype_multiple_bp (
 CREATE TABLE meta_coord (
 
   table_name                  VARCHAR(40) NOT NULL,
-  coord_system_id             INT NOT NULL,
+  coord_system_id             INT(10) UNSIGNED NOT NULL,
   max_length		      INT,
 
   UNIQUE(table_name, coord_system_id)
@@ -557,7 +557,7 @@ CREATE TABLE meta_coord (
 
 CREATE TABLE meta (
 
-  meta_id 		      INT not null auto_increment,
+  meta_id 		      INT(10) UNSIGNED not null auto_increment,
   meta_key                    varchar( 40 ) not null,
   meta_value                  varchar( 255 ) not null,
 
@@ -575,8 +575,8 @@ CREATE TABLE meta (
 
 CREATE TABLE tagged_variation_feature (
 
-  variation_feature_id       INT not null,
-  sample_id              INT not null,
+  variation_feature_id       INT(10) UNSIGNED not null,
+  sample_id              INT(10) UNSIGNED not null,
   
   PRIMARY KEY(variation_feature_id, sample_id)
 );
@@ -588,11 +588,11 @@ CREATE TABLE tagged_variation_feature (
 ###############
 
 CREATE TABLE read_coverage (
-   seq_region_id int not null,
+   seq_region_id int(10) unsigned not null,
    seq_region_start int not null,
    seq_region_end int not null,
    level tinyint not null,
-   sample_id int not null,
+   sample_id int(10) unsigned not null,
 		  
    key seq_region_idx(seq_region_id,seq_region_start)   
 );
@@ -605,8 +605,8 @@ CREATE TABLE read_coverage (
 ################
 
 CREATE TABLE compressed_genotype_single_bp(
-  sample_id int not null,
-  seq_region_id int not null,
+  sample_id int(10) unsigned not null,
+  seq_region_id int(10) unsigned not null,
   seq_region_start int not null,
   seq_region_end int not null,
   seq_region_strand tinyint not null,
