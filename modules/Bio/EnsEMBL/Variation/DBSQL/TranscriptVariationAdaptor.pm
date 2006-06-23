@@ -184,13 +184,25 @@ sub _objs_from_sth {
 
     #added new attribute, splice_site
     my %splice_sites = %Bio::EnsEMBL::Variation::ConsequenceType::SPLICE_SITES; #get the hash with the valid SPLICE_SITES
+    my %regulatory_regions = %Bio::EnsEMBL::Variation::ConsequenceType::REGULATORY_REGION; #get the hash with the valid REGULATORY_REGION
+    my %consequence_types = %Bio::EnsEMBL::Variation::ConsequenceType::CONSEQUENCE_TYPES; #get the hash with the valid CONSEQUENCE_TYPES
     my $splice_site;
+    my $regulatory_region;
     my @types = split(',',$consequence_type); #get the different consequence types and separate in 2 different attributes: slice_site and
-    #there is a splice_site type
-    if (@types > 1){
-	$splice_site = shift @types; #relying in the order of the SET column in the database
+    foreach my $type (@types){
+	if (defined $splice_sites{$type}){
+	    $splice_site = $type;
+	}
+	elsif (defined $regulatory_regions{$type}){
+	    $regulatory_region = $type;
+	}
+	elsif (defined $consequence_types{$type}){
+	   $consequence_type = $type;
+	}
+	else{
+	    warning("Not valid consequence type in the database $type for transcript_variation_id $trv_id\n");
+	}
     }
-    $consequence_type = shift @types if (@types > 0);
 
     my $trv = Bio::EnsEMBL::Variation::TranscriptVariation->new_fast
       ( { 'dbID' => $trv_id,
@@ -201,7 +213,8 @@ sub _objs_from_sth {
 	  'translation_end' => $tl_end,
 	  'pep_allele_string' => $pep_allele,
 	  'consequence_type' => $consequence_type,
-          'splice_site'      => $splice_site || ''} );
+          'splice_site'      => $splice_site,
+          'regulatory_region' => $regulatory_region} );
 
     $trv->{'_vf_id'} = $vf_id; #add the variation feature
     $trv->{'_transcript_id'} = $tr_id; #add the transcript id
