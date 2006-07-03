@@ -338,6 +338,41 @@ sub variation {
   return $self->{'variation'};
 }
 
+
+=head2 display_consequence
+
+  Arg [1]    : (optional) string $consequence_type
+  Example    : $display_consequence = $vf->display_consequence();
+  Description: Getter/Setter for the consequence type to display,
+               when more than one
+  Returntype : string
+  Exceptions : throw on incorrect argument
+  Caller     : webteam
+
+=cut
+
+sub display_consequence{
+    my $self = shift;
+    
+    if (@_){
+	my $display_consequence = shift;
+	if (! defined $CONSEQUENCE_TYPES{$display_consequence}){
+	    my $valid = join(',',map({"'$_'"} keys(%CONSEQUENCE_TYPES)));
+	    throw("Type argument must be one of: $valid");
+	}
+	return $display_consequence;
+    }
+    else{
+	#get the value to display from the consequence_type attribute
+	my $highest_ct = 'INTERGENIC';
+	foreach my $ct (@{$self->get_consequence_type}){
+	    if ($CONSEQUENCE_TYPES{$ct} < $CONSEQUENCE_TYPES{$highest_ct}){
+		$highest_ct = $ct;
+	    }
+	}
+	return $highest_ct;
+    }
+}
 =head2 add_consequence_type
 
     Arg [1]     : string $consequence_type
