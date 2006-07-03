@@ -26,34 +26,28 @@ use strict;
 
 use Bio::EnsEMBL::Utils::Exception qw(warning);
 
-#list of splice site valid types for the splice_site attribute
-our %SPLICE_SITES = ('ESSENTIAL_SPLICE_SITE' => 1,
-		     'SPLICE_SITE' => 2);
-
 #conversion of consequence type to bit value
 
 #there is a special type, SARA, that only applies to the effect of the Alleles, not Variations, and is equivalent
 #to Same As Reference Allele, meaning that the Allele is the same as in reference sequence, so has no effect 
 #but it is not stored anywhere in the database and need no conversion at all
 #when creating the VariationFeature object, thus the absence in the hash
-our %CONSEQUENCE_TYPES = (
-			  'FRAMESHIFT_CODING' => 4,
-			  'STOP_GAINED' => 8,
-			  'STOP_LOST' => 16,
-			  'NON_SYNONYMOUS_CODING' => 32,
+our %CONSEQUENCE_TYPES = ('ESSENTIAL_SPLICE_SITE' => 1,
+			  'STOP_GAINED' => 2,
+			  'STOP_LOST' => 4,
+			  'FRAMESHIFT_CODING' => 8,
+			  'NON_SYNONYMOUS_CODING' => 16,
+			  'SPLICE_SITE' => 32,
 			  'SYNONYMOUS_CODING' => 64,
-			  '5PRIME_UTR' => 128,
-			  '3PRIME_UTR' => 256,
-			  'INTRONIC' => 512,
-			  'UPSTREAM' => 1024,
-			  'DOWNSTREAM' => 2048,
-			  'INTERGENIC' => 4096,
+			  'REGULATORY_REGION' => 128,
+			  '5PRIME_UTR' => 256,
+			  '3PRIME_UTR' => 512,
+			  'INTRONIC' => 1024,
+			  'UPSTREAM' => 2048,
+			  'DOWNSTREAM' => 4096,
+			  'INTERGENIC' => 8192,
 			  );
 
-
-our %REGULATORY_REGION = (
-                          'REGULATORY_REGION' => 8192
-                           );
 
 =head2 new
 
@@ -332,60 +326,6 @@ sub type {
   return $self->{'type'}
 }
 
-
-=head2 splice_site
-
-  Arg [1]    : string $splice_site
-               (possible types 'ESSENTIAL_SPLICE_SITE', 'SPLICE_SITE')
-  Example    : $splice_site = $consequence_type->splice_site
-  Description: Getter/Setter for splice site of the variation in the transcript
-  Returntype : none
-  Exceptions : warning if the splice site is not recognised
-  Caller     : general
-
-=cut
-
-sub splice_site {
-  my $self = shift;
-
-  if(@_) {
-      my $splice_site = shift;
-      if (defined $SPLICE_SITES{$splice_site}){
-	  $self->{'splice_site'} = $splice_site;
-      }
-      else{
-	  warning("Trying to set the splice site to a not valid value. Possible values: ",keys %SPLICE_SITES,"\n");
-      }
-  }
-  return $self->{'splice_site'}
-}
-
-=head2 regulatory_region
-
-  Arg [1]    : string $regulatory_region
-               (possible types 'REGULATORY_REGION')
-  Example    : $regulatory_region = $consequence_type->regulatory_region();
-  Description: Getter/Setter for regulatory_region of the variation in the transcript
-  Returntype : none
-  Exceptions : warning if the regulatory region is not recognised
-  Caller     : general
-
-=cut
-
-sub regulatory_region {
-  my $self = shift;
-
-  if(@_) {
-      my $regulatory_region = shift;
-      if (defined $REGULATORY_REGION{$regulatory_region}){
-	  $self->{'regulatory_region'} = $regulatory_region;
-      }
-      else{
-	  warning("Trying to set the regulatory region to a not valid value. Possible values: ",keys %REGULATORY_REGION,"\n");
-      }
-  }
-  return $self->{'regulatory_region'}
-}
 
 =head2 aa_alleles
 

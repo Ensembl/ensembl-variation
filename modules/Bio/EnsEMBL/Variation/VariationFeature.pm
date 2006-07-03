@@ -79,8 +79,6 @@ use Bio::EnsEMBL::Variation::Variation;
 our @ISA = ('Bio::EnsEMBL::Feature');
 
 my %CONSEQUENCE_TYPES = %Bio::EnsEMBL::Variation::ConsequenceType::CONSEQUENCE_TYPES;
-my %SPLICE_SITES = %Bio::EnsEMBL::Variation::ConsequenceType::SPLICE_SITES;
-my %REGULATORY_REGION = %Bio::EnsEMBL::Variation::ConsequenceType::REGULATORY_REGION;
 
 =head2 new
 
@@ -345,9 +343,9 @@ sub variation {
     Arg [1]     : string $consequence_type
     Example     : $vf->add_consequence_type("UPSTREAM")
     Description : Setter for the consequence type of this VariationFeature
-                  Allowed values are: 'FRAMESHIFT_CODING','STOP_GAINED','STOP_LOST',
-                  'NON_SYNONYMOUS_CODING','SYNONYMOUS_CODING','5PRIME_UTR','3PRIME_UTR',
-                  'INTRONIC','UPSTREAM','DOWNSTREAM','INTERGENIC'
+                  Allowed values are: 'ESSENTIAL_SPLICE_SITE','STOP_GAINED','STOP_LOST','FRAMESHIFT_CODING',
+		  'NON_SYNONYMOUS_CODING','SPLICE_SITE','SYNONYMOUS_CODING','REGULATORY_REGION',
+		  '5PRIME_UTR','3PRIME_UTR','INTRONIC','UPSTREAM','DOWNSTREAM','INTERGENIC'
     ReturnType  : string
     Exceptions  : none
     Caller      : general
@@ -358,11 +356,11 @@ sub add_consequence_type{
     my $self = shift;
     my $consequence_type = shift;
 
-    if ($CONSEQUENCE_TYPES{$consequence_type} || $SPLICE_SITES{$consequence_type} || $REGULATORY_REGION{$consequence_type}){
+    if ($CONSEQUENCE_TYPES{$consequence_type}){
 	push @{$self->{'consequence_type'}}, $consequence_type;
 	return $self->{'consequence_type'};
     }
-    warning("You are trying to set the consequence type to a non-allowed type. The allowed types are: ", keys %CONSEQUENCE_TYPES, keys %SPLICE_SITES, keys %REGULATORY_REGION);
+    warning("You are trying to set the consequence type to a non-allowed type. The allowed types are: ", keys %CONSEQUENCE_TYPES);
     return '';
 }
 
@@ -372,9 +370,9 @@ sub add_consequence_type{
    Example     : if($vf->get_consequence_type eq 'INTRONIC'){do_something();}
    Description : Getter for the consequence type of this variation, which is the highest of the transcripts that has.
                  If an argument provided, gets the highest of the transcripts where the gene appears
-                 Allowed values are:'FRAMESHIFT_CODING','STOP_GAINED','STOP_LOST',
-                  'NON_SYNONYMOUS_CODING','SYNONYMOUS_CODING','5PRIME_UTR','3PRIME_UTR',
-                  'INTRONIC','UPSTREAM','DOWNSTREAM','INTERGENIC'
+                 Allowed values are:'ESSENTIAL_SPLICE_SITE','STOP_GAINED','STOP_LOST','FRAMESHIFT_CODING',
+		  'NON_SYNONYMOUS_CODING','SPLICE_SITE','SYNONYMOUS_CODING','REGULATORY_REGION',
+		  '5PRIME_UTR','3PRIME_UTR','INTRONIC','UPSTREAM','DOWNSTREAM','INTERGENIC'
    Returntype : ref to array of strings
    Exceptions : throw if provided argument not a gene
    Caller     : general
@@ -424,14 +422,9 @@ sub _highest_priority{
  	#with a frameshift coding, return, is the highest value
 	my $consequences = $tv->consequence_type; #returns a ref to array
 	foreach my $consequence_type (@{$consequences}){
-	    if ($consequence_type eq 'FRAMESHIFT_CODING') {
-		return $tv->consequence_type;
-	    }
-	    else{
-		if (defined $CONSEQUENCE_TYPES{$consequence_type} && $CONSEQUENCE_TYPES{$consequence_type} < $CONSEQUENCE_TYPES{$highest_type}){
-		    $highest_type = $consequence_type;
-		    $highest_priority = $tv->consequence_type; 
-		}
+	    if (defined $CONSEQUENCE_TYPES{$consequence_type} && $CONSEQUENCE_TYPES{$consequence_type} < $CONSEQUENCE_TYPES{$highest_type}){
+		$highest_type = $consequence_type;
+		$highest_priority = $tv->consequence_type; 
 	    }
 	}
     }    
