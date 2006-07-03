@@ -22,7 +22,7 @@ Bio::EnsEMBL::Variation::TranscriptVariation
      -cdna_end          => 1127,
      -translation_start => 318,
      -translation_end   => 318,
-     -consequence_type              => 'NON_SYNONYMOUS_CODING');
+     -consequence_type  => 'NON_SYNONYMOUS_CODING');
 
 
   print "variation: ", $tr_var->variation_feature()->variation_name(), "\n";
@@ -63,8 +63,6 @@ use Bio::EnsEMBL::Variation::ConsequenceType;
 our @ISA = ('Bio::EnsEMBL::Storable');
 
 my %CONSEQUENCE_TYPES = %Bio::EnsEMBL::Variation::ConsequenceType::CONSEQUENCE_TYPES;
-my %SPLICE_SITES = %Bio::EnsEMBL::Variation::ConsequenceType::SPLICE_SITES;
-my %REGULATORY_REGION = %Bio::EnsEMBL::Variation::ConsequenceType::REGULATORY_REGION;
 
 =head2 new
 
@@ -133,8 +131,8 @@ sub new {
       my @consequences = split /,/,@{$consequence_type};
       foreach my $consequence (@consequences){
 	  $consequence = uc($consequence);  
-	  if(!$CONSEQUENCE_TYPES{$consequence} || !$SPLICE_SITES{$consequence} || !$REGULATORY_REGION{$consequence}) {
-	      my $valid = join(',',map({"'$_'"} keys(%CONSEQUENCE_TYPES),keys(%SPLICE_SITES),keys(%REGULATORY_REGION)));
+	  if(!$CONSEQUENCE_TYPES{$consequence}) {
+	      my $valid = join(',',map({"'$_'"} keys(%CONSEQUENCE_TYPES)));
 	      throw("Type argument must be one of: $valid");
 	  } 
       }   
@@ -379,10 +377,9 @@ sub translation_end {
   Arg [1]    : (optional) string $consequence_type
   Example    : if($tr_var->consequence_type()->[0] eq 'INTRONIC') { do_something(); }
   Description: Getter/Setter for the consequence type of this transcript variation.
-               Allowed values are: 'FRAMESHIFT_CODING','STOP_GAINED','STOP_LOST',
-                  'NON_SYNONYMOUS_CODING','SYNONYMOUS_CODING','5PRIME_UTR','3PRIME_UTR',
-                  'INTRONIC','UPSTREAM','DOWNSTREAM', 'ESSENTIAL_SPLICE_SITE','SPLICE_SITE',
-                   'REGULATORY_REGION'
+               Allowed values are: 'ESSENTIAL_SPLICE_SITE','STOP_GAINED','STOP_LOST','FRAMESHIFT_CODING',
+		  'NON_SYNONYMOUS_CODING','SPLICE_SITE','SYNONYMOUS_CODING','REGULATORY_REGION',
+		  '5PRIME_UTR','3PRIME_UTR','INTRONIC','UPSTREAM','DOWNSTREAM'
   Returntype : ref to array of strings
   Exceptions : throw if provided argument is not one of the valid strings
   Caller     : general
@@ -396,8 +393,8 @@ sub consequence_type {
       my $consequence_type = shift;
       if(defined($consequence_type)) {
 	  $consequence_type = uc($consequence_type);  
-	  if(!$CONSEQUENCE_TYPES{$consequence_type} || !$SPLICE_SITES{$consequence_type} || !$REGULATORY_REGION{$consequence_type}) {
-	      my $valid = join(',',map({"'$_'"} keys(%CONSEQUENCE_TYPES),keys(%SPLICE_SITES),keys(%REGULATORY_REGION)));
+	  if(!$CONSEQUENCE_TYPES{$consequence_type}) {
+	      my $valid = join(',',map({"'$_'"} keys(%CONSEQUENCE_TYPES)));
 	      throw("Type argument must be one of: $valid");
 	  } 
 	    
