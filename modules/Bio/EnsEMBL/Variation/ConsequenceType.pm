@@ -317,7 +317,7 @@ sub type {
       #to Same As Reference Allele, which is not stored anywhere in the database and need no conversion at all
       #when creating the VariationFeature object, thus the absence in the hash
       if (defined $CONSEQUENCE_TYPES{$type} || $type eq 'SARA'){
-	  $self->{'type'} = $type;
+	  push @{$self->{'type'}}, $type;
       }
       else{
 	  warning("Trying to set the consequence type to a not valid value. Possible values: ",keys %CONSEQUENCE_TYPES,"\n");
