@@ -412,5 +412,33 @@ sub cds_end {
   return $self->{'cds_end'}
 }
 
+=head2 display_consequence
+
+  Arg [1]    : (optional) string $consequence_type
+  Example    : $display_consequence = $ct->display_consequence();
+  Description: Getter for the consequence type to display,
+               when more than one
+  Returntype : string
+  Exceptions : throw on incorrect argument
+  Caller     : webteam
+
+=cut
+
+sub display_consequence{
+    my $self = shift;
+ 
+    my $highest_priority;
+    #get the value to display from the consequence_type attribute
+    $highest_priority = 'INTERGENIC';
+    foreach my $ct (@{$self->type}){
+	if ($CONSEQUENCE_TYPES{$ct} < $CONSEQUENCE_TYPES{$highest_priority}){
+	    $highest_priority = $ct;
+	}
+    }
+
+    return $highest_priority;
+}
+
+
 1;
 
