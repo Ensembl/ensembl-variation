@@ -343,7 +343,7 @@ sub variation {
 
   Arg [1]    : (optional) string $consequence_type
   Example    : $display_consequence = $vf->display_consequence();
-  Description: Getter/Setter for the consequence type to display,
+  Description: Getter for the consequence type to display,
                when more than one
   Returntype : string
   Exceptions : throw on incorrect argument
@@ -353,26 +353,43 @@ sub variation {
 
 sub display_consequence{
     my $self = shift;
-    
-    if (@_){
-	my $display_consequence = shift;
-	if (! defined $CONSEQUENCE_TYPES{$display_consequence}){
-	    my $valid = join(',',map({"'$_'"} keys(%CONSEQUENCE_TYPES)));
-	    throw("Type argument must be one of: $valid");
-	}
-	return $display_consequence;
-    }
-    else{
+    my $gene = shift;
+ 
+    my $highest_priority;
+    if (!defined $gene){
 	#get the value to display from the consequence_type attribute
-	my $highest_ct = 'INTERGENIC';
+	$highest_priority = 'INTERGENIC';
 	foreach my $ct (@{$self->get_consequence_type}){
-	    if ($CONSEQUENCE_TYPES{$ct} < $CONSEQUENCE_TYPES{$highest_ct}){
-		$highest_ct = $ct;
+	    if ($CONSEQUENCE_TYPES{$ct} < $CONSEQUENCE_TYPES{$highest_priority}){
+		$highest_priority = $ct;
 	    }
 	}
-	return $highest_ct;
     }
+    else{
+	#first, get all the transcripts, if any
+	my $transcript_variations = $self->get_all_TranscriptVariations();
+	#if no transcripts, return INTERGENIC type
+	if (!defined $transcript_variations){
+	    return 'INTERGENIC';
+	}
+	if (!ref $gene || !$gene->isa("Bio::EnsEMBL::Gene")){
+	    throw("$gene is not a Bio::EnsEMBL::Gene type!");
+	}
+	my $transcripts = $gene->get_all_Transcripts();
+	my %transcripts_genes;
+	my @new_transcripts;
+	map {$transcripts_genes{$_->dbID()}++} @{$transcripts};
+	foreach my $transcript_variation (@{$transcript_variations}){
+	    if (exists $transcripts_genes{$transcript_variation->transcript->dbID()}){
+		push @new_transcripts,$transcript_variation;
+	    }
+	}
+	$highest_priority = $self->_highest_priority(\@new_transcripts);	
+    }
+
+    return $highest_priority;
 }
+
 =head2 add_consequence_type
 
     Arg [1]     : string $consequence_type
