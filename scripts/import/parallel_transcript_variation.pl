@@ -118,8 +118,8 @@ sub transcript_variation {
   my $dbname = $dbVar->dbname(); #get the name of the database to create the file
   my $host = `hostname`;
   chop $host;
-  open FH, ">$TMP_DIR/$dbname.transcript_variation_$host\:$$\.txt";
-
+  #open FH, ">$TMP_DIR/$dbname.transcript_variation_$host\:$$\.txt";
+  open FH, ">/tmp/$dbname.transcript_variation_$host\_$$\.txt" or die "Could not open file: $!\n";
   my $inc_non_ref = 1;
 
   my $slices = $sa->fetch_all('toplevel', undef, $inc_non_ref);
@@ -135,7 +135,7 @@ sub transcript_variation {
     my $genes = $slice->get_all_Genes();
     # request all variations which lie in the region of a gene
     foreach my $g (@$genes) {
-
+      #debug("Time to do gene ",$g->stable_id," : ",scalar(localtime(time)));
       $sth->execute($slice->get_seq_region_id(),
                     $g->seq_region_start() - $UPSTREAM,
                     $g->seq_region_end()   + $DNSTREAM,
@@ -176,17 +176,18 @@ sub transcript_variation {
 
 	  my ($consequences);
 	  if ($row->[4] !~ /\+/){
+
 	    $consequences = type_variation($tr, $g, $consequence_type);
 	  }
           foreach my $ct (@$consequences) {
-	    my $final_ct;
-	    if ($ct->splice_site) {
-		$final_ct = $ct->splice_site . ",";
-            }
-	    if ($ct->regulatory_region) {
-	       $final_ct .= $ct->regulatory_region . ",";
-            }
-	    $final_ct .= $ct->type;
+	 #   my $final_ct;
+	 #   if ($ct->splice_site) {
+	 #     $final_ct = $ct->splice_site . ",";
+         #   }
+	 #   if ($ct->regulatory_region) {
+	 #     $final_ct .= $ct->regulatory_region . ",";
+         #   }
+	    $final_ct = join(",",@{$ct->type});
             my @arr = ($ct->transcript_id,
                        $ct->variation_feature_id,
                        join("/", @{$ct->aa_alleles||[]}),
@@ -204,6 +205,11 @@ sub transcript_variation {
   }
 
   close FH;
+  my $call = "lsrcp /tmp/$dbname.transcript_variation_$host\_$$\.txt $TMP_DIR/$dbname.transcript_variation_$host\_$$\.txt";
+  print $call,"\n";
+  system($call);
+
+  unlink("/tmp/$dbname.transcript_variation_$host\_$$\.txt");
   return;
 }
 
@@ -237,7 +243,7 @@ sub last_process{
     $sth->bind_columns(\$variation_feature_id,\$consequence_type);
     my $previous_variation_feature_id = 0;
     my %consequence_types = %Bio::EnsEMBL::Variation::ConsequenceType::CONSEQUENCE_TYPES;
-    my %splice_sites =  %Bio::EnsEMBL::Variation::ConsequenceType::SPLICE_SITES;
+#    my %splice_sites =  %Bio::EnsEMBL::Variation::ConsequenceType::SPLICE_SITES;
 
     my $highest_priority_type = 'INTERGENIC'; #by default, has this type
     my $highest_splice_site = '';
@@ -285,7 +291,7 @@ sub last_process{
 	if ($splice_site and $highest_splice_site eq ''){
 	  $highest_splice_site = $splice_site;
 	}
-	if ($splice_site and $highest_splice_site and $splice_sites{$splice_site} < $splice_sites{$highest_splice_site}){
+	if ($splice_site and $highest_splice_site and $consequence_types{$splice_site} < $consequence_types{$highest_splice_site}){
 	  $highest_splice_site = $splice_site;
 	}
       }

@@ -22,7 +22,7 @@ Bio::EnsEMBL::Variation::TranscriptVariation
      -cdna_end          => 1127,
      -translation_start => 318,
      -translation_end   => 318,
-     -consequence_type              => 'NON_SYNONYMOUS_CODING');
+     -consequence_type  => 'NON_SYNONYMOUS_CODING');
 
 
   print "variation: ", $tr_var->variation_feature()->variation_name(), "\n";
@@ -63,8 +63,6 @@ use Bio::EnsEMBL::Variation::ConsequenceType;
 our @ISA = ('Bio::EnsEMBL::Storable');
 
 my %CONSEQUENCE_TYPES = %Bio::EnsEMBL::Variation::ConsequenceType::CONSEQUENCE_TYPES;
-my %SPLICE_SITES = %Bio::EnsEMBL::Variation::ConsequenceType::SPLICE_SITES;
-my %REGULATORY_REGION = %Bio::EnsEMBL::Variation::ConsequenceType::REGULATORY_REGION;
 
 =head2 new
 
@@ -102,13 +100,6 @@ my %REGULATORY_REGION = %Bio::EnsEMBL::Variation::ConsequenceType::REGULATORY_RE
     'INTRONIC', 'UPSTREAM', 'DOWNSTREAM', 'SYNONYMOUS_CODING',
     'NON_SYNONYMOUS_CODING', 'FRAMESHIFT_CODING', '5PRIME_UTR', '3PRIME_UTR'
 
-  Arg [-SPLICE_SITE] :
-    If the variation is affecting a splice site or an essential splice site.
-    Must be one of 'SPLICE_SITE', 'ESSENTIAL_SPLICE_SITE'
-
-  Arg [-REGULATORY_REGION] :
-    If the variation is affecting a regulatory region.
-
   Example    : 
     $tr_var = Bio::EnsEMBL::Variation::TranscriptVariation->new
       (-transcript        => $transcript,
@@ -117,9 +108,7 @@ my %REGULATORY_REGION = %Bio::EnsEMBL::Variation::ConsequenceType::REGULATORY_RE
        -cdna_end          => 1127,
        -translation_start => 318,
        -translation_end   => 318,
-       -consequence_type  => 'NON_SYNONYMOUS_CODING',
-       -regulatory_region => 'REGULATORY_REGION',
-       -splice_site       => 'SPLICE_SITE');
+       -consequence_type  => 'NON_SYNONYMOUS_CODING');
 
   Description: Constructor. Instantiates a
                Bio::EnsEMBL::Variation::TranscriptVariation object
@@ -133,33 +122,20 @@ sub new {
   my $class = shift;
 
   my ($vf, $tr, $pep_allele, $cdna_start,$cdna_end, $tl_start,$tl_end, $consequence_type,
-      $dbID, $adaptor, $transcript, $splice_site, $regulatory_region) =
+      $dbID, $adaptor, $transcript) =
     rearrange([qw(VARIATION_FEATURE TRANSCRIPT PEP_ALLELE_STRING CDNA_START
                   CDNA_END TRANSLATION_START TRANSLATION_END CONSEQUENCE_TYPE
-                  DBID ADAPTOR TRANSCRIPT SPLICE_SITE REGULATORY_REGION)], @_);
+                  DBID ADAPTOR TRANSCRIPT)], @_);
 
   if(defined($consequence_type)) {
-    $consequence_type = uc($consequence_type);
-    if(!$CONSEQUENCE_TYPES{$consequence_type}) {
-      my $valid = join(',',map({"'$_'"} keys(%CONSEQUENCE_TYPES)));
-      throw("Type argument must be one of: $valid");
-    }
-  }
-
-  if (defined($splice_site)){
-      $splice_site = uc($splice_site);
-      if (!$SPLICE_SITES{$splice_site}){
-	  my $valid = join (',', map({"'$_'"} keys(%SPLICE_SITES)));
-	  throw("Splice site argument must be one of: $valid");
-      }
-  }
-
-  if (defined($regulatory_region)){
-      $regulatory_region = uc($regulatory_region);
-      if (!$REGULATORY_REGION{$regulatory_region}){
-	  my $valid = join (',', map({"'$_'"} keys(%REGULATORY_REGION)));
-	  throw("Regulatory region argument must be : $valid");
-      }
+      my @consequences = split /,/,@{$consequence_type};
+      foreach my $consequence (@consequences){
+	  $consequence = uc($consequence);  
+	  if(!$CONSEQUENCE_TYPES{$consequence}) {
+	      my $valid = join(',',map({"'$_'"} keys(%CONSEQUENCE_TYPES)));
+	      throw("Type argument must be one of: $valid");
+	  } 
+      }   
   }
 
   if(defined($cdna_start) && ($cdna_start !~ /^\d+$/ || $cdna_start < 1)) {
@@ -187,9 +163,7 @@ sub new {
                 'cdna_end'          => $cdna_end,
                 'translation_start' => $tl_start,
                 'translation_end'   => $tl_end,
-                'consequence_type'  => $consequence_type,
-		'regulatory_region' => $regulatory_region,
-	        'splice_site'       => $splice_site || ''}, $class;
+                'consequence_type'  => $consequence_type}, $class;
 }
 
 sub new_fast {
@@ -401,12 +375,12 @@ sub translation_end {
 =head2 consequence_type
 
   Arg [1]    : (optional) string $consequence_type
-  Example    : if($tr_var->consequence_type() eq 'INTRONIC') { do_something(); }
+  Example    : if($tr_var->consequence_type()->[0] eq 'INTRONIC') { do_something(); }
   Description: Getter/Setter for the consequence type of this transcript variation.
-               Allowed values are: 'FRAMESHIFT_CODING','STOP_GAINED','STOP_LOST',
-                  'NON_SYNONYMOUS_CODING','SYNONYMOUS_CODING','5PRIME_UTR','3PRIME_UTR',
-                  'INTRONIC','UPSTREAM','DOWNSTREAM',
-  Returntype : string
+               Allowed values are: 'ESSENTIAL_SPLICE_SITE','STOP_GAINED','STOP_LOST','FRAMESHIFT_CODING',
+		  'NON_SYNONYMOUS_CODING','SPLICE_SITE','SYNONYMOUS_CODING','REGULATORY_REGION',
+		  '5PRIME_UTR','3PRIME_UTR','INTRONIC','UPSTREAM','DOWNSTREAM'
+  Returntype : ref to array of strings
   Exceptions : throw if provided argument is not one of the valid strings
   Caller     : general
 
@@ -414,83 +388,22 @@ sub translation_end {
 
 sub consequence_type {
   my $self = shift;
-
+ 
   if(@_) {
-    my $consequence_type = shift;
-
-    if(defined($consequence_type)) {
-      $consequence_type = uc($consequence_type);
-      if(!$CONSEQUENCE_TYPES{$consequence_type}) {
-        my $valid = join(',',map({"'$_'"} keys(%CONSEQUENCE_TYPES)));
-        throw("Type argument must be one of: $valid");
+      my $consequence_type = shift;
+      if(defined($consequence_type)) {
+	  $consequence_type = uc($consequence_type);  
+	  if(!$CONSEQUENCE_TYPES{$consequence_type}) {
+	      my $valid = join(',',map({"'$_'"} keys(%CONSEQUENCE_TYPES)));
+	      throw("Type argument must be one of: $valid");
+	  } 
+	    
       }
-    }
-    $self->{'consequence_type'} = $consequence_type;
+      push @{$self->{'consequence_type'}}, $consequence_type;
   }
-
+  
   return $self->{'consequence_type'};
 }
 
-=head2 splice_site
-
-  Arg [1]    : (optional) string $splice_site
-  Example    : if($tr_var->splice_site() eq 'ESSENTIAL_SPLICE_SITE') { do_something(); }
-  Description: Getter/Setter for the splice site of this transcript variation.
-               Allowed values are: 'ESSENTIAL_SPLICE_SITE','SPLICE_SITE'
-  Returntype : string
-  Exceptions : throw if provided argument is not one of the valid strings
-  Caller     : general
-
-=cut
-
-sub splice_site {
-  my $self = shift;
-
-  if(@_) {
-    my $splice_site = shift;
-
-    if(defined($splice_site)) {
-      $splice_site = uc($splice_site);
-      if(!$SPLICE_SITES{$splice_site}) {
-        my $valid = join(',',map({"'$_'"} keys(%SPLICE_SITES)));
-        throw("Type argument must be one of: $valid");
-      }
-    }
-    $self->{'splice_site'} = $splice_site;
-  }
-
-  return $self->{'splice_site'};
-}
-
-=head2 regulatory_region
-
-  Arg [1]    : (optional) string $regulatory_region
-  Example    : if($tr_var->regulatory_region() eq 'REGULATORY_REGION') { do_something(); }
-  Description: Getter/Setter for the regulatory region of this transcript variation.
-               Allowed values are: 'REGULATORY_REGION'
-  Returntype : string
-  Exceptions : throw if provided argument is not one of the valid strings
-  Caller     : general
-
-=cut
-
-sub regulatory_region {
-  my $self = shift;
-
-  if(@_) {
-    my $regulatory_region = shift;
-
-    if(defined($regulatory_region)) {
-      $regulatory_region = uc($regulatory_region);
-      if(!$REGULATORY_REGION{$regulatory_region}) {
-        my $valid = join(',',map({"'$_'"} keys(%REGULATORY_REGION)));
-        throw("Type argument must be : $valid");
-      }
-    }
-    $self->{'regulatory_region'} = $regulatory_region;
-  }
-
-  return $self->{'regulatory_region'};
-}
 
 1;
