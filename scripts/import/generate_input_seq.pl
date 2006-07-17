@@ -32,7 +32,7 @@ GetOptions('species=s'          => \$species,
 	   'read_file=s'        => \$read_file,
            'ensembl_registry=s' => \$registry_file,
 	   'generate_input_seq' => \$generate_input_seq,
-	   'read_flank'         => \$read_flank,
+	   'read_flank'         => \$read_flank, ###this is to mapping read_coverage feature
 	  );
 $registry_file ||= $Bin . "/ensembl.registry";
 $output_dir    ||= $ENV{PWD};
@@ -105,7 +105,7 @@ WHERE  seq_region_id = $seq_region_id});
       print "output_dir is $output_dir\n";
       $ImportUtils::TMP_DIR = $output_dir;
       $TMP_DIR = $ImportUtils::TMP_DIR;
-      print "tmp_file is $TMP_DIR\n";
+      print "tmp_dir is $TMP_DIR\n";
     }
     print "seq_region_id is $seq_region_id\n";
     
@@ -131,14 +131,16 @@ SELECT vf.variation_name,
            vf.seq_region_start-1)
 FROM   variation_feature vf
 WHERE  vf.seq_region_id = $seq_region_id
-#AND    v.name like "CE%" ##this is only for mouse
+AND    vf.name not like "NT%" ##this is only for mouse
                            }
 	     );
     }
   }
   else {
-    # No chr_name or seq_region_id specified. 
-    my $sql = qq(
+    if (! -e "$TMP_DIR/$TMP_FILE" or -z "$TMP_DIR/$TMP_FILE") {
+      # Only dump if tmp file does not exist, or is compressed
+      # No chr_name or seq_region_id specified. 
+      my $sql = qq(
 SELECT v.name,
        f.variation_id,
        f.seq_region_id,
@@ -152,11 +154,13 @@ FROM   variation v,
        flanking_sequence f
 WHERE  v.variation_id=f.variation_id );
 
-    dumpSQL($dbVar, $sql);
+      #dump this to a file to save mysql time out problem
+      dumpSQL($dbVar, $sql);
+    }
   }
 
 
-  open ( FH, "$TMP_DIR/$TMP_FILE");
+  open ( FH, "<$TMP_DIR/$TMP_FILE");
   while (<FH>) {
     my ($variation_name,
         $variation_id,
@@ -167,7 +171,7 @@ WHERE  v.variation_id=f.variation_id );
 	$up_seq_region_start, 
         $up_seq_region_end,
 	$down_seq_region_start, 
-        $down_seq_region_end) = split;
+        $down_seq_region_end) = split /\t/, $_;
     #print "$variation_name,$variation_id,$seq_region_id,$up_seq,$down_seq,$up_seq_region_start,$up_seq_region_end,$down_seq_region_start,$down_seq_region_end\n";
     $variation_ids{$variation_id}{'var_name'}=$variation_name;
     $variation_ids{$variation_id}{'up_seq'}=$up_seq;
@@ -191,7 +195,7 @@ WHERE  v.variation_id=f.variation_id );
       $i = 0;
     }
   }
-
+  close FH;
   ###print the last batch of seq
   print_seqs ($slice_adaptor, $file_count, $output_dir, \%variation_ids);
 
@@ -257,12 +261,12 @@ sub print_seqs {
       $down_seq = $variation_ids{$var_id}{'down_seq'};
     }
 
-    # Trim flanking sequences to 200 bp
-    if (length($up_seq) >200) {
-      $up_seq = substr($up_seq, -200);
+    # Trim flanking sequences to 100 bp
+    if (length($up_seq) >100) {
+      $up_seq = substr($up_seq, -100);
     }
-    if (length($down_seq) >200) {
-      $down_seq = substr($down_seq,0,200);
+    if (length($down_seq) >100) {
+      $down_seq = substr($down_seq,0,100);
     }
     # Join the flanks
     my $seq = lc($up_seq)."W".lc($down_seq);

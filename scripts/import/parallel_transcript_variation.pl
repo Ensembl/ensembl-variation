@@ -187,7 +187,7 @@ sub transcript_variation {
 	 #   if ($ct->regulatory_region) {
 	 #     $final_ct .= $ct->regulatory_region . ",";
          #   }
-	    $final_ct = join(",",@{$ct->type});
+	    my $final_ct = join(",",@{$ct->type});
             my @arr = ($ct->transcript_id,
                        $ct->variation_feature_id,
                        join("/", @{$ct->aa_alleles||[]}),
@@ -243,7 +243,7 @@ sub last_process{
     $sth->bind_columns(\$variation_feature_id,\$consequence_type);
     my $previous_variation_feature_id = 0;
     my %consequence_types = %Bio::EnsEMBL::Variation::ConsequenceType::CONSEQUENCE_TYPES;
-#    my %splice_sites =  %Bio::EnsEMBL::Variation::ConsequenceType::SPLICE_SITES;
+    #my %splice_sites =  %Bio::EnsEMBL::Variation::ConsequenceType::SPLICE_SITES;
 
     my $highest_priority_type = 'INTERGENIC'; #by default, has this type
     my $highest_splice_site = '';
@@ -321,7 +321,7 @@ sub last_process{
       if (defined $splice_site and $splice_site ne '' and $highest_splice_site eq ''){
 	$highest_splice_site = $splice_site;
       }
-      if (defined $splice_site and $splice_site ne '' and $highest_splice_site ne '' and $splice_sites{$splice_site} < $splice_sites{$highest_splice_site}){
+      if (defined $splice_site and $splice_site ne '' and $highest_splice_site ne '' and $consequence_types{$splice_site} < $consequence_types{$highest_splice_site}){
 	$highest_splice_site = $splice_site;
       }
     }

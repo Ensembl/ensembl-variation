@@ -13,23 +13,25 @@ use ImportUtils qw(debug load create_and_load dumpSQL);
 
 sub variation_feature{
   my $self = shift;
-    
+
   my (%rec,%source,%status,%rec_pos,%rec_seq_region);
 
   debug("Dumping Variation");
 
   # Create hashes of variation_id's, source_id's etc keyed by variation name
-  my $sth = $self->{'dbVariation'}->prepare (qq{
-SELECT variation_id, name, source_id, validation_status
-FROM variation});
+  my ($variation_id,$name,$source_id,$validation_status);
+  my $sth = $self->{'dbVariation'}->prepare (qq{SELECT variation_id, name, source_id, validation_status
+						FROM   variation});
   $sth->execute();
-  while( my ($variation_id, $name, $source_id, $validation_status) 
-         = $sth->fetchrow_array()) {
+  $sth->bind_columns(\$variation_id,\$name,\$source_id,\$validation_status);
+
+  while($sth->fetch){
     $rec{$name} = $variation_id;
     $source{$name} = $source_id;
-    $status{$name} = $validation_status;
+    $status{$name} = $validation_status ? $validation_status : '\N';
   }
   $sth->finish();
+
 
   # Create hash of top-level seq_region_id keyed by seq_region_name
   my ($seq_region_id,$seq_region_name);
@@ -46,25 +48,30 @@ and    (at.code="toplevel" or at.code="non_ref") } );
   }
   $sth1->finish();
 
-
+  debug("Reading Mapping file");
   open (FH, ">" . $self->{'tmpdir'} . "/" . $self->{'tmpfile'} );
 
+  my $mapping_file_dir = $self->{'mapping_file_dir'};
+  # If mapping_file_dir is a file, read from it
+  if (-f $mapping_file_dir) {
+    open (IN, "$mapping_file_dir") or die "can't open mapping_file:$!";
+  }
   # Concatenate all mapping_file_N files into a single result file
-  my $mapping_dir = $self->{'mapping_file'};
-  system("cat $mapping_dir/mapping_file* > $mapping_dir/all_mapping_file");
-  open (IN, "$mapping_dir/all_mapping_file") 
-      or die "can't open mapping_file:$!";
-  
+  elsif (-d $mapping_file_dir) {
+    system("cat $mapping_file_dir/mapping_file* > $mapping_file_dir/all_mapping_file");
+    open (IN, "$mapping_file_dir/all_mapping_file") or die "can't open mapping_file:$!";
+  }
+
   # Process results file
   while (<IN>) {
     chomp;
     next if /^more |^PARSING/;
     s/^MORE_HITS//;
-    my ($ref_id, $slice_name, $start, $end, $strand, $ratio) = split;
-    
+    my ($ref_id, $slice_name, $start, $end, $strand, $ratio) =split;
+    open (FH, ">" . $self->{'tmpdir'} . "/" . $self->{'tmpfile'} );
+
     # Skip mappings where %ID < 50%
     next if $ratio <0.5;
-      
     my ($coord_sys,$assembly,$seq_region_name,$seq_region_start,$seq_region_end,$version);
 
     # Parse the slice name 
@@ -131,11 +138,10 @@ and    (at.code="toplevel" or at.code="non_ref") } );
     # Flag as processed
     $rec_pos{$ref_id}{$seq_region_id}{$new_seq_region_start}{$new_seq_region_end}=1;
   }
-    
+
   close IN;
   close FH;
-  
-    
+
   debug("Creating genotyped variations");
 
   # Creating temporary variation_feature table
@@ -151,6 +157,7 @@ and    (at.code="toplevel" or at.code="non_ref") } );
                    "validation_status" );
 
   #creating the temporary table with the genotyped variations
+
    $self->{'dbVariation'}->do(qq{
 CREATE TABLE tmp_genotyped_var 
 SELECT DISTINCT variation_id FROM tmp_individual_genotype_single_bp});

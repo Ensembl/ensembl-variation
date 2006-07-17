@@ -38,10 +38,13 @@ my ($TMP_DIR, $TMP_FILE, $LIMIT,$status_file, $file_number);
   #added default options
   $chost    ||= 'ecs2';
   $cuser    ||= 'ensro';
-#  $cport    ||= 3364;
+  $cport    ||= 3365;
+  #$cdbname  ||= 'mus_musculus_core_36_34d';
 
+  $vhost    ||= 'ia64e';
   $vport    ||= 3306;
   $vuser    ||= 'ensadmin';
+  #$vdbname  ||= 'yuan_mouse_var_36';
   
   $num_processes ||= 1;
 
@@ -67,6 +70,7 @@ my ($TMP_DIR, $TMP_FILE, $LIMIT,$status_file, $file_number);
 
   $TMP_DIR  = $ImportUtils::TMP_DIR;
   $TMP_FILE = $ImportUtils::TMP_FILE;
+
 
   flanking_sequence($dbCore,$dbVar);
   open STATUS, ">>$TMP_DIR/$status_file"
@@ -97,9 +101,18 @@ sub flanking_sequence {
   my $slice_adaptor = $dbCore->get_SliceAdaptor();
 
   my $dbname = $dbVar->dbname(); #get the name of the database to create the file
-  open FH, ">$TMP_DIR/$dbname.flanking_sequence_out_$file_number\.txt"
-      or throw("Could not open tmp file: $TMP_DIR/flanking_sequence_$file_number\.txt\n");
-  open IN, "$TMP_DIR/$dbname.flanking_sequence_$file_number\.txt" or throw("Could not open input file with flanks: $!\n");
+
+  my $call = "lsrcp ecs4a:$TMP_DIR/$dbname.flanking_sequence_$file_number\.txt /tmp/$dbname.flanking_sequence_$file_number\.txt";
+  system($call);
+
+#  open FH, ">$TMP_DIR/$dbname.flanking_sequence_out_$file_number\.txt"
+#      or throw("Could not open tmp file: $TMP_DIR/flanking_sequence_$file_number\.txt\n");
+#  open IN, "$TMP_DIR/$dbname.flanking_sequence_$file_number\.txt" 
+#    or throw("Could not open input file with flanks: $TMP_DIR/$dbname.flanking_sequence_$file_number\.txt $!\n");
+
+  open FH, ">/tmp/$dbname.flanking_sequence_out_$file_number\.txt" or throw("can't open flanking_output");
+  open IN, "</tmp/$dbname.flanking_sequence_$file_number\.txt" or throw("can't open flanking input");
+
   my ($var_id,$up_seq, $dn_seq, $sr_id, $sr_start, $sr_end, $sr_strand);
   my $previous_var_id = 0; #to know when we change variation
   my @lines; #will store all the flanks for the variation_feature, if more than one. To write, take the first one with the sr_id defined
@@ -224,6 +237,10 @@ sub flanking_sequence {
   }
   close FH;
   close IN;
+  $call = "lsrcp /tmp/$dbname.flanking_sequence_out_$file_number\.txt ecs4a:$TMP_DIR/$dbname.flanking_sequence_out_$file_number\.txt";
+  system($call);
+  unlink("/tmp/$dbname.flanking_sequence_out_$file_number\.txt");
+  unlink("/tmp/$dbname.flanking_sequence_$file_number\.txt");
   return;
 }
 
@@ -242,7 +259,7 @@ sub last_process{
     my $call = "cat $TMP_DIR/$dbname.flanking_sequence_out*.txt > $TMP_DIR/$TMP_FILE";
     system($call);
     #delete the files
-    unlink(<$TMP_DIR/$dbname.flanking_sequence*.txt>);
+    #unlink(<$TMP_DIR/$dbname.flanking_sequence*.txt>);
     #and upload all the information to the flanking_sequence table
     load ($dbVar,qw(flanking_sequence variation_id up_seq down_seq up_seq_region_start up_seq_region_end down_seq_region_start down_seq_region_end seq_region_id seq_region_strand));
     

@@ -120,7 +120,7 @@ sub parallel_variation_feature{
     for (my $i = 0; $i < $num_processes ; $i++){
 	$limit = "AND variation_feature_id <= " . (($i+1) * $sub_variation + $min_variation-1) . " AND variation_feature_id >= " . ($i*$sub_variation + $min_variation) if ($i+1 < $num_processes);
 	$limit =  "AND variation_feature_id <= " .  $max_variation . " AND variation_feature_id >= " . ($i*$sub_variation + $min_variation) if ($i + 1 == $num_processes); #the last one takes the left rows
-	$call = "bsub -J $dbname\_variation_job_$i -m 'bc_hosts' -o $TMP_DIR/output_variation_feature_$i\_$$.txt /usr/local/ensembl/bin/perl parallel_variation_feature.pl -chost $chost -cuser $cuser -cdbname $cdbname -vhost $vhost -vuser $vuser -vport $vport -vdbname $vdbname -limit '$limit' -tmpdir $TMP_DIR -tmpfile $TMP_FILE -num_processes $num_processes -status_file $variation_status_file ";
+	$call = "bsub -q normal -J $dbname\_variation_job_$i -m 'bc_hosts' -o $TMP_DIR/output_variation_feature_$i\_$$.txt /usr/local/ensembl/bin/perl parallel_variation_feature.pl -chost $chost -cuser $cuser -cdbname $cdbname -vhost $vhost -vuser $vuser -vport $vport -vdbname $vdbname -limit '$limit' -tmpdir $TMP_DIR -tmpfile $TMP_FILE -num_processes $num_processes -status_file $variation_status_file ";
 	$call .= "-cpass $cpass " if ($cpass);
 	$call .= "-cport $cport " if ($cport);
 	$call .= "-vpass $vpass " if ($vpass);
@@ -128,7 +128,7 @@ sub parallel_variation_feature{
 	#print $call,"\n";
 	system($call);      
     }
-    $call = "bsub -K -w 'done($dbname\_variation_job*)' -J waiting_process sleep 1"; #waits until all variation features have finished to continue
+    $call = "bsub -q normal -K -w 'done($dbname\_variation_job*)' -J waiting_process sleep 1"; #waits until all variation features have finished to continue
     system($call);
 }
 
@@ -189,7 +189,7 @@ sub parallel_flanking_sequence{
   $sth->finish();  
   &print_buffered($buffer);
   for (my $i = 1;$i<=$num_processes;$i++){
-      $call = "bsub -m 'bc_hosts' -o $TMP_DIR/output_flanking_$i\_$$.txt /usr/local/ensembl/bin/perl parallel_flanking_sequence.pl -chost $chost -cuser $cuser -cdbname $cdbname -vhost $vhost -vuser $vuser -vport $vport -vdbname $vdbname -tmpdir $TMP_DIR -tmpfile $TMP_FILE -num_processes $num_processes -status_file $flanking_status_file -file $i ";
+      $call = "bsub -q normal -m 'bc_hosts' -o $TMP_DIR/output_flanking_$i\_$$.txt /usr/local/ensembl/bin/perl parallel_flanking_sequence.pl -chost $chost -cuser $cuser -cdbname $cdbname -vhost $vhost -vuser $vuser -vport $vport -vdbname $vdbname -tmpdir $TMP_DIR -tmpfile $TMP_FILE -num_processes $num_processes -status_file $flanking_status_file -file $i ";
       $call .= "-cpass $cpass " if ($cpass);
       $call .= "-cport $cport " if ($cport);
       $call .= "-vpass $vpass " if ($vpass);
@@ -203,7 +203,7 @@ sub parallel_variation_group_feature{
     my $dbVar = shift;
 
     my $total_process = 0;
-    my $call = "bsub -o $TMP_DIR/output_group_feature_$$\.txt /usr/local/ensembl/bin/perl parallel_variation_group_feature.pl -chost $chost -cuser $cuser -cdbname $cdbname -vhost $vhost -vuser $vuser -vport $vport -vdbname $vdbname -tmpdir $TMP_DIR -tmpfile $TMP_FILE ";
+    my $call = "bsub -q normal  -o $TMP_DIR/output_group_feature_$$\.txt /usr/local/ensembl/bin/perl parallel_variation_group_feature.pl -chost $chost -cuser $cuser -cdbname $cdbname -vhost $vhost -vuser $vuser -vport $vport -vdbname $vdbname -tmpdir $TMP_DIR -tmpfile $TMP_FILE ";
     $call .= "-cpass $cpass " if ($cpass);
     $call .= "-cport $cport " if ($cport);
     $call .= "-vpass $vpass " if ($vpass);
@@ -254,7 +254,7 @@ sub parallel_transcript_variation{
 	$limit = $slice_min . "," . (scalar(@slices_ordered)-$slice_min) 
 	  if ($i+1 == $num_processes and $num_processes != 1); #the last slice, get the left slices
 
-	$call = "bsub -o $TMP_DIR/output_transcript_$i\_$$.txt  -m 'bc_hosts' /usr/local/ensembl/bin/perl parallel_transcript_variation.pl -chost $chost -cuser $cuser -cdbname $cdbname -vhost $vhost -vuser $vuser -vport $vport -vdbname $vdbname -limit $limit -tmpdir $TMP_DIR -tmpfile $TMP_FILE -num_processes $num_processes -status_file $transcript_status_file ";
+	$call = "bsub -a normal -o $TMP_DIR/output_transcript_$i\_$$.txt  -q normal -m 'bc_hosts' /usr/local/ensembl/bin/perl parallel_transcript_variation.pl -chost $chost -cuser $cuser -cdbname $cdbname -vhost $vhost -vuser $vuser -vport $vport -vdbname $vdbname -limit $limit -tmpdir $TMP_DIR -tmpfile $TMP_FILE -num_processes $num_processes -status_file $transcript_status_file ";
 	$call .= "-cpass $cpass " if ($cpass);
 	$call .= "-cport $cport " if ($cport);
 	$call .= "-vpass $vpass " if ($vpass);
@@ -266,17 +266,17 @@ sub parallel_transcript_variation{
 ##use genotype method to change alleles in genotype table to forward strand
 sub genotype{
   my $dbVar = shift;
-  $dbVar->do(qq{CREATE TABLE tmp_varid
-                SELECT variation_id
-                FROM   variation_feature
-                WHERE map_weight=1 and seq_region_strand = -1 and flags="genotyped"}
-	    );
-  $dbVar->do(qq{ALTER TABLE tmp_varid
-		      ADD INDEX variation_idx(variation_id)});
+#   $dbVar->do(qq{CREATE TABLE tmp_varid
+#                 SELECT variation_id
+#                 FROM   variation_feature
+#                 WHERE map_weight=1 and seq_region_strand = -1 and flags="genotyped"}
+# 	    );
+#   $dbVar->do(qq{ALTER TABLE tmp_varid
+# 		      ADD INDEX variation_idx(variation_id)});
 
   my ($population_genotype_id,$variation_id,$allele_1,$allele_2,$frequency,$sample_id);
 
-  foreach my $table ("tmp_individual_genotype_single_bp") {
+  foreach my $table ("tmp_individual_genotype_single_bp","individual_genotype_multiple_bp","population_genotype") {
   #foreach my $table ("population_genotype") {
     warn("processling table $table");
     my $sth = $dbVar->prepare(qq{select tg.* from $table tg, tmp_varid tv where tg.variation_id=tv.variation_id});
@@ -440,16 +440,16 @@ sub parallel_ld_populations{
     foreach my $file (keys %genotypes_file){
 #	if ($genotypes_file{$file} > MAX_GENOTYPES()){
 #	    &split_file($file,\%regions,$genotypes_file{$file},$dbname);
-#	    $call = "bsub -J '$dbname.pairwise_ld[1-".REGIONS()."]' -m 'bc_hosts' -o $TMP_DIR/output_pairwise_ld.txt /usr/local/ensembl/bin/perl calc_genotypes.pl $file\_chunk.\\\$LSB_JOBINDEX $file\_chunk_out.\\\$LSB_JOBINDEX"; #create a job array
-#	    $call = "bsub -J '$dbname.pairwise_ld[1-".REGIONS()."]' -m 'bc_hosts' ./ld_wrapper.sh $file\_chunk.\\\$LSB_JOBINDEX $file\_chunk_out.\\\$LSB_JOBINDEX"; #create a job array
+#	    $call = "bsub -q normal -J '$dbname.pairwise_ld[1-".REGIONS()."]' -m 'bc_hosts' -o $TMP_DIR/output_pairwise_ld.txt /usr/local/ensembl/bin/perl calc_genotypes.pl $file\_chunk.\\\$LSB_JOBINDEX $file\_chunk_out.\\\$LSB_JOBINDEX"; #create a job array
+#	    $call = "bsub -q normal -J '$dbname.pairwise_ld[1-".REGIONS()."]' -m 'bc_hosts' ./ld_wrapper.sh $file\_chunk.\\\$LSB_JOBINDEX $file\_chunk_out.\\\$LSB_JOBINDEX"; #create a job array
 #	}
 #	else{
-#	    $call = "bsub -J '$dbname.pairwise_ld' -m 'bc_hosts' -o $TMP_DIR/output_ld_populations\_$$.txt /usr/local/ensembl/bin/perl calc_genotypes.pl $file $file\_out ";	    
-	    $call = "bsub -J '$dbname.pairwise_ld' -m 'bc_hosts' ./ld_wrapper.sh $file $file\_out";	    
+#	    $call = "bsub -q normal -J '$dbname.pairwise_ld' -m 'bc_hosts' -o $TMP_DIR/output_ld_populations\_$$.txt /usr/local/ensembl/bin/perl calc_genotypes.pl $file $file\_out ";	    
+	    $call = "bsub -q normal -J '$dbname.pairwise_ld' -m 'bc_hosts' ./ld_wrapper.sh $file $file\_out";	    
 #	}
 	system($call);
     }
-    $call = "bsub -w 'done($dbname.pairwise_ld)' -m 'ecs4_hosts' -o $TMP_DIR/output_ld_populations_import.txt /usr/local/ensembl/bin/perl parallel_ld_populations.pl -chost $chost -cuser $cuser -cdbname $cdbname -vhost $vhost -vuser $vuser -vport $vport -vdbname $vdbname -tmpdir $TMP_DIR -tmpfile $TMP_FILE ";
+    $call = "bsub -q normal -w 'done($dbname.pairwise_ld)' -m 'ecs4_hosts' -o $TMP_DIR/output_ld_populations_import.txt /usr/local/ensembl/bin/perl parallel_ld_populations.pl -chost $chost -cuser $cuser -cdbname $cdbname -vhost $vhost -vuser $vuser -vport $vport -vdbname $vdbname -tmpdir $TMP_DIR -tmpfile $TMP_FILE ";
     $call .= "-cpass $cpass " if ($cpass);
     $call .= "-cport $cport " if ($cport);
     $call .= "-vpass $vpass " if ($vpass);

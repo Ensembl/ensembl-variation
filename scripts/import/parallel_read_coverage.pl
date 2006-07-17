@@ -15,7 +15,7 @@ my ($TMP_DIR, $TMP_FILE); #global variables for the tmp files and folder
 
 my ($vhost, $vport, $vdbname, $vuser, $vpass,
     $chost, $cport, $cdbname, $cuser, $cpass,
-    $species, $read_dir);
+    $species, $read_dir, $max_level);
 
   GetOptions(#'chost=s'     => \$chost,
              #'cuser=s'     => \$cuser,
@@ -30,6 +30,7 @@ my ($vhost, $vport, $vdbname, $vuser, $vpass,
 	     'species=s'     => \$species,
              'tmpdir=s'    => \$ImportUtils::TMP_DIR,
              'tmpfile=s'   => \$ImportUtils::TMP_FILE,
+             'maxlevel=i'  => \$max_level,
 	     'readdir=s' => \$read_dir);
 
 warn("Make sure you have a updated ensembl.registry file!\n");
@@ -63,16 +64,17 @@ $TMP_FILE = $ImportUtils::TMP_FILE;
 my $call;
 my $i = 0;
 foreach my $read_file (glob("$read_dir/*.mapped")){
-    $call = "bsub -J read_coverage_job_$i -o $TMP_DIR/output_reads.txt -m 'bc_hosts ecs4_hosts ecs2_hosts' /usr/local/ensembl/bin/perl read_coverage.pl -chost $chost -cuser $cuser -cport $cport -cdbname $cdbname -vhost $vhost -vuser $vuser -vpass $vpass -vport $vport -vdbname $vdbname -tmpdir $TMP_DIR -tmpfile read_coverage_$i.txt -readfile $read_file";
+    $call = "bsub -J read_coverage_job_$i -o $TMP_DIR/output_reads.txt -q normal -m 'bc_hosts ecs4_hosts ecs2_hosts' /usr/local/ensembl/bin/perl read_coverage.pl -chost $chost -cuser $cuser -cport $cport -cdbname $cdbname -vhost $vhost -vuser $vuser -vpass $vpass -vport $vport -vdbname $vdbname -tmpdir $TMP_DIR -tmpfile read_coverage_$i.txt -maxlevel $max_level -readfile $read_file";
     system($call);
     $i++;
 }
 debug("Waiting for read_coverage jobs to finish");
 $call = "bsub -K -w 'done(read_coverage_job_*)' -J waiting_process sleep 1"; #waits until all reads have succesfully finished
 system($call);
-debug("Ready to import coverage data");
-$call = "cat $TMP_DIR/read_coverage_* > $TMP_DIR/$TMP_FILE"; #concat all files 
-system($call);
+ debug("Ready to import coverage data");
+ $call = "cat $TMP_DIR/read_coverage_* > $TMP_DIR/$TMP_FILE"; #concat all files 
+ system($call);
+
 load($dbVar,"read_coverage","seq_region_id","seq_region_start","seq_region_end","level","sample_id"); #load table with information
 
 unlink(<$TMP_DIR/read_coverage_*>); #and delete the files with the data
@@ -80,7 +82,7 @@ update_meta_coord($dbCore,$dbVar,'read_coverage');
 
 
 #
-# updates the meta coord table
+# Updates the meta coord table
 #
 sub update_meta_coord {
   my $dbCore = shift;

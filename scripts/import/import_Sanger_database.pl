@@ -216,7 +216,7 @@ sub import_Individual_Population_table{
 
     debug("Load Individual_Population table");
     my ($individual_sample_id, $population_sample_id);
-    my $sth = $dbSanger->dbc->prepare(qq{SELECT individual_sample_id, population_sample_id, gender from individual_population});
+    my $sth = $dbSanger->dbc->prepare(qq{SELECT individual_sample_id, population_sample_id from individual_population});
     $sth->execute();
     $sth->bind_columns(\$individual_sample_id, \$population_sample_id);
     while ($sth->fetch){

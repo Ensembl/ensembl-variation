@@ -49,7 +49,7 @@ $ImportUtils::TMP_FILE = $TMP_FILE;
 
 
 compress_genotypes($dbCore,$dbVar);
-#update_meta_coord($dbCore,$dbVar,"compressed_genotype_single_bp");
+update_meta_coord($dbCore,$dbVar,"compressed_genotype_single_bp");
 
 #reads the genotype and variation_feature data and compress it in one table with blob field
 sub compress_genotypes{
@@ -60,7 +60,7 @@ sub compress_genotypes{
     my $blob = '';
     my $count = 0;
     my $sth = $dbVar->prepare(qq{SELECT STRAIGHT_JOIN vf.seq_region_id, vf.seq_region_start, vf.seq_region_end, vf.seq_region_strand, ig.allele_1, ig.allele_2, ig.sample_id, vf.allele_string
-				     FROM variation_feature vf FORCE INDEX(pos_idx), individual_genotype_single_bp ig
+				     FROM variation_feature vf FORCE INDEX(pos_idx), tmp_individual_genotype_single_bp ig
 				     WHERE ig.variation_id = vf.variation_id
 				     AND vf.map_weight = 1
 				     AND ig.allele_1 <> 'N'
