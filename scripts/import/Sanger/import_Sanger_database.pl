@@ -43,20 +43,20 @@ my $last_variation_id = get_last_table_id($dbVar,"variation"); #last variation_i
 my $last_variation_feature_id = get_last_table_id($dbVar,"variation_feature"); #last variation_feature_id used in the database
 
 import_Sample_table($dbSanger, $dbVar, $old_new_sample_id, $last_sample_id, $sanger_sample);
-import_Source_table($dbSanger, $dbVar, $old_new_source_id, $last_source_id);
-import_Population_table($dbSanger, $dbVar, $old_new_sample_id, $sanger_sample);
-import_Individual_table($dbSanger,$dbVar,$old_new_sample_id);
-import_Individual_Population_table($dbSanger,$dbVar,$old_new_sample_id);
+#import_Source_table($dbSanger, $dbVar, $old_new_source_id, $last_source_id);
+#import_Population_table($dbSanger, $dbVar, $old_new_sample_id, $sanger_sample);
+#import_Individual_table($dbSanger,$dbVar,$old_new_sample_id);
+#import_Individual_Population_table($dbSanger,$dbVar,$old_new_sample_id);
 #import_Meta_table($dbSanger,$dbVar);
 #import_Meta_Coord_table($dbSanger,$dbVar);
 import_Variation_table($dbSanger,$dbVar,$old_new_variation_id,$last_variation_id, $old_new_source_id);
 import_Allele_table($dbSanger,$dbVar,$old_new_variation_id, $old_new_sample_id);
-import_Flanking_sequence_table($dbSanger,$dbVar,$old_new_variation_id);
+#import_Flanking_sequence_table($dbSanger,$dbVar,$old_new_variation_id);
 #import_Variation_synonym_table($dbSanger, $dbVar, $old_new_variation_id, $old_new_source_id);
-import_Variation_feature_table($dbSanger,$dbVar,$old_new_variation_feature_id,$last_variation_feature_id, $old_new_variation_id, $old_new_source_id);
-import_Transcript_variation_table($dbSanger,$dbVar,$old_new_variation_feature_id);
-import_Read_coverage_table($dbSanger,$dbVar, $old_new_sample_id);
-import_Tmp_individual_genotype_single_bp_table($dbSanger,$dbVar,$old_new_variation_id,$old_new_sample_id);
+#import_Variation_feature_table($dbSanger,$dbVar,$old_new_variation_feature_id,$last_variation_feature_id, $old_new_variation_id, $old_new_source_id);
+#import_Transcript_variation_table($dbSanger,$dbVar,$old_new_variation_feature_id);
+#import_Read_coverage_table($dbSanger,$dbVar, $old_new_sample_id);
+#import_Tmp_individual_genotype_single_bp_table($dbSanger,$dbVar,$old_new_variation_id,$old_new_sample_id);
 
 
 
@@ -73,12 +73,17 @@ sub import_Sample_table{
     debug("Loading Sample table");
     my ($sample_id, $name, $size, $description);
     my $new_sample_id;
-    my $sth = $dbSanger->dbc->prepare(qq{SELECT sample_id, name, size, description from sample});
+    my $sth = $dbSanger->dbc->db_handle->prepare(qq{SELECT sample_id, name, size, description from sample});
     $sth->execute();
     $sth->bind_columns(\$sample_id, \$name, \$size, \$description);
     while ($sth->fetch){
 	#need to check if the strain is already in the Variation database, as a population or individual
-	$new_sample_id = &get_sample_variation_database($dbVar, $name);
+	if ($description =~ /individual/i) {
+	   $new_sample_id = &get_sample_variation_database($dbVar, $name,"ind");
+	   }
+	   elsif ($description =~ /population/i) {
+	   $new_sample_id = &get_sample_variation_database($dbVar, $name,"pop");
+	   }
 	if ($new_sample_id == 0){
 	    #get the new id for the sample in the variation table
 	    $new_sample_id = $last_sample_id + 1;
@@ -91,39 +96,43 @@ sub import_Sample_table{
 	    $sanger_sample->{$sample_id}++;
 	}
         #and store the relation with the old one
+	#print "sample_id is $sample_id and new_sample_id is $new_sample_id\n";
 	$old_new_sample_id->{$sample_id} = $new_sample_id;
     }   
     $sth->finish;
     #and finally import the table
     my $call = "lsrcp $LOCAL_TMP_DIR/$TMP_FILE ecs4a:$TMP_DIR/$TMP_FILE";
     system($call);
-    load($dbVar->dbc,"sample", "sample_id", "name", "size", "description");
+    #load($dbVar->dbc->db_handle,"sample", "sample_id", "name", "size", "description");
     $call = "$LOCAL_TMP_DIR/$TMP_FILE";
     unlink ($call);   
-#    copy_file("sample.txt");
+    #copy_file("sample.txt");
 }
 
 #check wether the sample_id is already present in the Variation database as a individual or a population
 sub get_sample_variation_database{
     my $dbVariation = shift;
     my $sanger_sample_name = shift;
-
-    my $variation_sample_id = 0;
+    my $sample_type = shift;
+    my $population_sample_id = 0;
+    my $individual_sample_id = 0;
 
     my $pop_adaptor = $dbVariation->get_PopulationAdaptor();
     my $ind_adaptor = $dbVariation->get_IndividualAdaptor();
 
     my $population = $pop_adaptor->fetch_by_name($sanger_sample_name);
-    if (defined($population)){
-	$variation_sample_id = $population->dbID();
+    if (defined($population) and $sample_type eq "pop"){
+	$population_sample_id = $population->dbID();
+	return $population_sample_id;
     }
     else{
-	my $individual = $ind_adaptor->fetch_by_name($sanger_sample_name);
-	if (defined $individual){
-	    $variation_sample_id = $individual->dbID();
+	my $individual = $ind_adaptor->fetch_all_by_name($sanger_sample_name);
+	if (defined $individual and $$individual[0] and $sample_type eq "ind") {
+	    $individual_sample_id = $$individual[0]->dbID();
+	    return $individual_sample_id;
 	}
     }
-    return $variation_sample_id;
+    #return ($individual_sample_id,$population_sample_id);
 }
 
 sub import_Source_table{
@@ -135,7 +144,7 @@ sub import_Source_table{
     debug("Loading Source table");
     my ($source_id, $name, $version);
     my $new_source_id;
-    my $sth = $dbSanger->dbc->prepare(qq{SELECT source_id, name, version from source});
+    my $sth = $dbSanger->dbc->db_handle->prepare(qq{SELECT source_id, name, version from source});
     $sth->execute();
     $sth->bind_columns(\$source_id, \$name, \$version);
     while ($sth->fetch){
@@ -150,10 +159,10 @@ sub import_Source_table{
     #and finally import the table
     my $call = "lsrcp $LOCAL_TMP_DIR/$TMP_FILE ecs4a:$TMP_DIR/$TMP_FILE";
     system($call);
-    load($dbVar->dbc,"source","source_id", "name", "version");
+    load($dbVar->dbc->db_handle,"source","source_id", "name", "version");
     $call = "$LOCAL_TMP_DIR/$TMP_FILE";
     unlink ($call);   
-#    copy_file("source.txt");
+    #copy_file("source.txt");
 }
 
 sub import_Population_table{
@@ -164,7 +173,7 @@ sub import_Population_table{
 
     debug("Load Population table");
     my ($sample_id, $is_strain);
-    my $sth = $dbSanger->dbc->prepare(qq{SELECT sample_id, is_strain from population});
+    my $sth = $dbSanger->dbc->db_handle->prepare(qq{SELECT sample_id, is_strain from population});
     $sth->execute();
     $sth->bind_columns(\$sample_id, \$is_strain);
     while ($sth->fetch){
@@ -178,7 +187,7 @@ sub import_Population_table{
     my $call = "lsrcp $LOCAL_TMP_DIR/$TMP_FILE ecs4a:$TMP_DIR/$TMP_FILE";
     system($call);
 
-    load($dbVar->dbc,"population","sample_id", "is_strain");
+    load($dbVar->dbc->db_handle,"population","sample_id", "is_strain");
     $call = "$LOCAL_TMP_DIR/$TMP_FILE";
     unlink ($call);   
     #copy_file("population.txt");
@@ -191,7 +200,7 @@ sub import_Individual_table{
 
     debug("Load Individual table");
     my ($sample_id, $father_individual_sample_id, $mother_individual_sample_id, $gender);
-    my $sth = $dbSanger->dbc->prepare(qq{SELECT sample_id, father_individual_sample_id, mother_individual_sample_id, gender from individual});
+    my $sth = $dbSanger->dbc->db_handle->prepare(qq{SELECT sample_id, father_individual_sample_id, mother_individual_sample_id, gender from individual});
     $sth->execute();
     $sth->bind_columns(\$sample_id, \$father_individual_sample_id, \$mother_individual_sample_id, \$gender);
     while ($sth->fetch){
@@ -203,7 +212,7 @@ sub import_Individual_table{
     my $call = "lsrcp $LOCAL_TMP_DIR/$TMP_FILE ecs4a:$TMP_DIR/$TMP_FILE";
     system($call);
 
-    load($dbVar->dbc,"individual","sample_id", "father_individual_sample_id","mother_individual_sample_id","gender");
+    load($dbVar->dbc->db_handle,"individual","sample_id", "father_individual_sample_id","mother_individual_sample_id","gender");
     $call = "$LOCAL_TMP_DIR/$TMP_FILE";
     unlink ($call);   
     #copy_file("individual.txt");
@@ -216,7 +225,7 @@ sub import_Individual_Population_table{
 
     debug("Load Individual_Population table");
     my ($individual_sample_id, $population_sample_id);
-    my $sth = $dbSanger->dbc->prepare(qq{SELECT individual_sample_id, population_sample_id, gender from individual_population});
+    my $sth = $dbSanger->dbc->db_handle->prepare(qq{SELECT individual_sample_id, population_sample_id from individual_population});
     $sth->execute();
     $sth->bind_columns(\$individual_sample_id, \$population_sample_id);
     while ($sth->fetch){
@@ -228,7 +237,7 @@ sub import_Individual_Population_table{
     my $call = "lsrcp $LOCAL_TMP_DIR/$TMP_FILE ecs4a:$TMP_DIR/$TMP_FILE";
     system($call);
 
-    load($dbVar->dbc,"individual_population","individual_sample_id", "population_sample_id");
+    load($dbVar->dbc->db_handle,"individual_population","individual_sample_id", "population_sample_id");
     $call = "$LOCAL_TMP_DIR/$TMP_FILE";
     unlink ($call);   
     #copy_file("individual_population.txt");
@@ -240,8 +249,8 @@ sub import_Meta_table{
 
     debug("Load Meta table");
 
-    dumpSQL($dbSanger->dbc,qq{SELECT meta_key,meta_value FROM meta});    
-    load($dbVar->dbc,"meta","meta_key","meta_value");
+    dumpSQL($dbSanger->dbc->db_handle,qq{SELECT meta_key,meta_value FROM meta});    
+    load($dbVar->dbc->db_handle,"meta","meta_key","meta_value");
 }
 
 sub import_Meta_Coord_table{
@@ -250,8 +259,8 @@ sub import_Meta_Coord_table{
 
     debug("Load MetaCoord table");
 
-    dumpSQL($dbSanger->dbc,qq{SELECT table_name, coord_system_id, max_length FROM meta_coord});    
-    load($dbVar->dbc,"meta_coord","table_name","coord_system_id","max_length");
+    dumpSQL($dbSanger->dbc->db_handle,qq{SELECT table_name, coord_system_id, max_length FROM meta_coord});    
+    load($dbVar->dbc->db_handle,"meta_coord","table_name","coord_system_id","max_length");
 }
 
 sub import_Variation_table{
@@ -264,7 +273,7 @@ sub import_Variation_table{
     debug("Loading Variation table");
     my ($variation_id, $source_id, $name, $validation_status, $ancestral_allele);
     my $new_variation_id;
-    my $sth = $dbSanger->dbc->prepare(qq{SELECT variation_id, source_id, name, validation_status, ancestral_allele from variation});
+    my $sth = $dbSanger->dbc->db_handle->prepare(qq{SELECT variation_id, source_id, name, validation_status, ancestral_allele from variation});
     $sth->{'mysql_use_result'} = 1;
     $sth->execute();
     $sth->bind_columns(\$variation_id, \$source_id, \$name, \$validation_status, \$ancestral_allele);
@@ -274,11 +283,11 @@ sub import_Variation_table{
 	#and store the relation with the old one
 	$old_new_variation_id->{$variation_id} = $new_variation_id;
 	$last_variation_id++;
-	write_file($new_variation_id,$old_new_source_id->{$source_id}, $name, $validation_status, $ancestral_allele);
+	#write_file($new_variation_id,$old_new_source_id->{$source_id}, $name, $validation_status, $ancestral_allele);
     }   
     $sth->finish;
     #and finally import the table
-    copy_file("variation.txt");
+    #copy_file("variation.txt");
 }
 
 sub import_Allele_table{
@@ -286,21 +295,22 @@ sub import_Allele_table{
     my $dbVar = shift;
     my $old_new_variation_id = shift;
     my $old_new_sample_id = shift;
+    my $count = 0;
+    my (@a,@lines);
 
     debug("Load Allele table");
     my ($variation_id, $sample_id, $allele, $frequency);
-    my $sth = $dbSanger->dbc->prepare(qq{SELECT variation_id, sample_id, allele, frequency from allele});
+    my $sth = $dbSanger->dbc->db_handle->prepare(qq{SELECT variation_id, allele, frequency, sample_id from allele});
     $sth->{'mysql_use_result'} = 1;
     $sth->execute();
-    $sth->bind_columns(\$variation_id, \$sample_id, \$allele, \$frequency);
+    $sth->bind_columns(\$variation_id, \$allele, \$frequency, \$sample_id);
     while ($sth->fetch){
-	#get the new id for the sample and variation in the variation table
-	write_file($old_new_variation_id->{$variation_id}, $old_new_sample_id->{$sample_id}, $allele, $frequency);
-    }   
+      #get the new id for the sample and variation in the variation table
+      write_file($old_new_variation_id->{$variation_id}, $old_new_sample_id->{$sample_id}, $allele, $frequency);
+    }
     $sth->finish;
     #and finally import the table    
     copy_file("allele.txt");
-
 }
 
 sub import_Flanking_sequence_table{
@@ -310,7 +320,7 @@ sub import_Flanking_sequence_table{
 
     debug("Load Flanking Sequence table");
     my ($variation_id, $up_seq, $down_seq, $up_seq_region_start, $up_seq_region_end, $down_seq_region_start, $down_seq_region_end, $seq_region_id, $seq_region_strand);
-    my $sth = $dbSanger->dbc->prepare(qq{SELECT variation_id, up_seq, down_seq, up_seq_region_start, up_seq_region_end, down_seq_region_start, down_seq_region_end, seq_region_id, seq_region_strand from flanking_sequence});
+    my $sth = $dbSanger->dbc->db_handle->prepare(qq{SELECT variation_id, up_seq, down_seq, up_seq_region_start, up_seq_region_end, down_seq_region_start, down_seq_region_end, seq_region_id, seq_region_strand from flanking_sequence});
     $sth->{'mysql_use_result'} = 1;
     $sth->execute();
     $sth->bind_columns(\$variation_id, \$up_seq, \$down_seq, \$up_seq_region_start, \$up_seq_region_end, \$down_seq_region_start, \$down_seq_region_end,\$seq_region_id, \$seq_region_strand);
@@ -332,7 +342,7 @@ sub import_Variation_synonym_table{
 
     debug("Load Variation synonym table");
     my ($variation_id, $source_id, $name, $moltype);
-    my $sth = $dbSanger->dbc->prepare(qq{SELECT variation_id, source_id, name, moltype from variation_synonym});
+    my $sth = $dbSanger->dbc->db_handle->prepare(qq{SELECT variation_id, source_id, name, moltype from variation_synonym});
     $sth->{'mysql_use_result'} = 1;
     $sth->execute();
     $sth->bind_columns(\$variation_id, \$source_id, \$name, \$moltype);
@@ -356,7 +366,7 @@ sub import_Variation_feature_table{
     debug("Loading VariationFeature table");
     my ($variation_feature_id, $variation_id, $seq_region_id, $seq_region_start, $seq_region_end, $seq_region_strand, $allele_string, $variation_name, $map_weight, $flags, $source_id, $validation_status, $consequence_type);
     my $new_variation_feature_id;
-    my $sth = $dbSanger->dbc->prepare(qq{SELECT variation_feature_id, variation_id, seq_region_id, seq_region_start, seq_region_end, seq_region_strand, allele_string, variation_name, map_weight, flags, source_id, validation_status, consequence_type from variation_feature});
+    my $sth = $dbSanger->dbc->db_handle->prepare(qq{SELECT variation_feature_id, variation_id, seq_region_id, seq_region_start, seq_region_end, seq_region_strand, allele_string, variation_name, map_weight, flags, source_id, validation_status, consequence_type from variation_feature});
     $sth->{'mysql_use_result'} = 1;
     $sth->execute();
     $sth->bind_columns(\$variation_feature_id, \$variation_id, \$seq_region_id, \$seq_region_start, \$seq_region_end, \$seq_region_strand, \$allele_string, \$variation_name, \$map_weight, \$flags, \$source_id, \$validation_status, \$consequence_type);
@@ -366,7 +376,7 @@ sub import_Variation_feature_table{
 	#and store the relation with the old one
 	$old_new_variation_feature_id->{$variation_feature_id} = $new_variation_feature_id;
 	$last_variation_feature_id++;
-	write_file($new_variation_feature_id,$old_new_variation_id->{$variation_id}, $seq_region_id, $seq_region_start, $seq_region_end, $seq_region_strand, $allele_string, $variation_name, $map_weight, $flags, $old_new_source_id->{$source_id}, $validation_status, $consequence_type);
+	write_file($new_variation_feature_id,$seq_region_id, $seq_region_start, $seq_region_end, $seq_region_strand, $old_new_variation_id->{$variation_id}, $allele_string, $variation_name, $map_weight, $flags, $old_new_source_id->{$source_id}, $validation_status, $consequence_type);
     }   
     $sth->finish;
     #and finally import the table
@@ -380,7 +390,7 @@ sub import_Transcript_variation_table{
 
     debug("Load TranscriptVariation table");
     my ($transcript_id, $variation_feature_id, $cdna_start, $cdna_end, $translation_start, $translation_end, $peptide_allele_string, $consequence_type);
-    my $sth = $dbSanger->dbc->prepare(qq{SELECT transcript_id, variation_feature_id, cdna_start, cdna_end, translation_start, translation_end, peptide_allele_string, consequence_type from transcript_variation});
+    my $sth = $dbSanger->dbc->db_handle->prepare(qq{SELECT transcript_id, variation_feature_id, cdna_start, cdna_end, translation_start, translation_end, peptide_allele_string, consequence_type from transcript_variation});
     $sth->{'mysql_use_result'} = 1;
     $sth->execute();
     $sth->bind_columns(\$transcript_id, \$variation_feature_id, \$cdna_start, \$cdna_end, \$translation_start, \$translation_end, \$peptide_allele_string, \$consequence_type);
@@ -401,7 +411,7 @@ sub import_Read_coverage_table{
 
     debug("Load ReadCoverage table");
     my ($seq_region_id, $seq_region_start, $seq_region_end, $level, $sample_id);
-    my $sth = $dbSanger->dbc->prepare(qq{SELECT seq_region_id, seq_region_start, seq_region_end, level, sample_id from read_coverage});
+    my $sth = $dbSanger->dbc->db_handle->prepare(qq{SELECT seq_region_id, seq_region_start, seq_region_end, level, sample_id from read_coverage});
     $sth->{'mysql_use_result'} = 1;
     $sth->execute();
     $sth->bind_columns(\$seq_region_id, \$seq_region_start, \$seq_region_end, \$level, \$sample_id);
@@ -422,14 +432,14 @@ sub import_Tmp_individual_genotype_single_bp_table{
 
     debug("Load tmp_individual_genotype_single_bp table");
     my ($variation_id, $sample_id, $allele_1, $allele_2);
-    my $sth = $dbSanger->dbc->prepare(qq{SELECT variation_id, sample_id, allele_1, allele_2 from tmp_individual_genotype_single_bp});
+    my $sth = $dbSanger->dbc->db_handle->prepare(qq{SELECT variation_id, allele_1, allele_2, sample_id from tmp_individual_genotype_single_bp});
     $sth->{'mysql_use_result'} = 1;
     $sth->execute();
-    $sth->bind_columns(\$variation_id, \$sample_id, \$allele_1, \$allele_2);
+    $sth->bind_columns(\$variation_id, \$allele_1, \$allele_2, \$sample_id);
     while ($sth->fetch){
 	#get the new id for the sample and variation in the variation table
-	write_file($old_new_variation_id->{$variation_id}, $old_new_sample_id->{$sample_id}, $allele_1, $allele_2);
-    }   
+	write_file($old_new_variation_id->{$variation_id}, $allele_1, $allele_2, $old_new_sample_id->{$sample_id});
+    }
     $sth->finish;
     #and finally import the table    
     copy_file("tmp_individual_genotype_single_bp.txt");
@@ -452,7 +462,7 @@ sub get_last_table_id{
     my $tablename = shift;
 
     my $max_id;
-    my $sth = $dbSanger->dbc->prepare(qq{SELECT MAX($tablename\_id) from $tablename});
+    my $sth = $dbSanger->dbc->db_handle->prepare(qq{SELECT MAX($tablename\_id) from $tablename});
     $sth->execute();
     $sth->bind_columns(\$max_id);
     $sth->fetch;

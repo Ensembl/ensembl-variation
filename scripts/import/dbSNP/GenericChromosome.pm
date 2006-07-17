@@ -23,6 +23,7 @@ sub variation_feature{
 				      if (sr.name like "E%", CONCAT("LG",sr.name),sr.name) ##add LG for chicken
 				      FROM   seq_region sr, coord_system cs
 				      WHERE cs.name = 'chromosome'
+				      AND cs.name not like "%random"
 				      AND cs.coord_system_id = sr.coord_system_id});
 
     debug("Loading seq_region data");
@@ -68,7 +69,7 @@ sub variation_feature{
     debug("Creating genotyped variations");
     #creating the temporary table with the genotyped variations
 
-    $self->{'dbVariation'}->do(qq{CREATE TABLE tmp_genotyped_var SELECT DISTINCT variation_id FROM individual_genotype_single_bp});
+    $self->{'dbVariation'}->do(qq{CREATE TABLE tmp_genotyped_var SELECT DISTINCT variation_id FROM tmp_individual_genotype_single_bp});
     $self->{'dbVariation'}->do(qq{CREATE UNIQUE INDEX variation_idx ON tmp_genotyped_var (variation_id)});
     $self->{'dbVariation'}->do(qq{INSERT IGNORE INTO tmp_genotyped_var SELECT DISTINCT variation_id FROM individual_genotype_multiple_bp});
 

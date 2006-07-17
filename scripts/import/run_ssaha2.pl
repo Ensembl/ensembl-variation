@@ -19,8 +19,9 @@ $target_dir ||= "/ecs2/scratch4/yuan/mouse/release35/target";
 $output_dir ||=".";
 my $seed;
 ###kmer is always set to 12, so ajust seed for different species
-$seed = 3 if $input_dir =~ /zfish/;
-$seed = 5 if $input_dir !~ /zfish/;
+$seed = 2 if $input_dir =~ /zfish/;
+$seed = 4 if $input_dir !~ /zfish/;
+print "seed is $seed\n";
 
 my $output_file = "ssaha2_output";
 my $queue = "-q normal -R'select[mem>1000] rusage[mem=1000]'";

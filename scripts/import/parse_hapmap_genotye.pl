@@ -39,15 +39,15 @@ my %rec;
              'tmpfile=s' => \$ImportUtils::TMP_FILE,
              'limit=i'   => \$limit);
   
-  $vhost    ||= 'ecs2';
-  $vport    ||= 3366;
+  $vhost    ||= 'ia64g';
+  $vport    ||= 3306;
   $vuser    ||= 'ensadmin';
-  $vdbname  ||= 'dr2_homo_sapiens_variation';
+  $vdbname  ||= 'dr2_homo_sapiens_variation_27';
 
   $chost    ||= 'ecs2';
   $cuser    ||= 'ensro';
-  $cport    ||= 3365;
-  $cdbname  ||= 'homo_sapiens_core_26_35';
+  $cport    ||= 3364;
+  $cdbname  ||= 'homo_sapiens_core_27_35a';
 
   usage('-cdbname argument is required.') if(!$cdbname);
   usage('-vdbname argument is required.') if(!$vdbname);
@@ -167,7 +167,7 @@ sub population {
   ##checking the name is already in population table or not
   my $sth = $dbVar->prepare (qq{SELECT population_id from population where name = ?;});
   $sth->execute("$name");
-
+  
   my ($sub_pop_id) = $sth->fetchrow_array;
 
   if (!$sub_pop_id) {
@@ -190,32 +190,35 @@ sub population_genotype {
 
   my %ind_snp = %$ind_snp;
   my %var_ids = %$var_ids;
+  my $TMP_FILE = "population_genotype.$$";
 
-  open FH, ">$TMP_DIR/$TMP_FILE";
-    
+  open FH, ">$TMP_DIR/$TMP_FILE" or die "can't open file $TMP_DIR/$TMP_FILE\n";
+  
   foreach my $snp_id (keys %ind_snp) {
-    my %count;
-    my %ind_gty = %{$ind_snp{$snp_id}};
-
-    
-    my $tot_count = keys %ind_gty;
-    foreach my $num (keys %ind_gty) {
-      $count{$ind_gty{$num}}++;
-    }
-    foreach my $gtys (keys %count) {
-      my $tot_gty = keys %count;
-      my ($allele1, $allele2) = split "", $gtys;
-      my $freq = $count{$gtys}/$tot_count if ($tot_count != 0);
-      #print "$var_ids{$snp_id}\t$allele1\t$allele2\t$freq\t$sub_pop_id\n";
-      print FH "$var_ids{$snp_id}\t$allele1\t$allele2\t$freq\t$sub_pop_id\n";
+    if ($snp_id and $var_ids{$snp_id}) {
+      my %count;
+      my %ind_gty = %{$ind_snp{$snp_id}};
+      
+      
+      my $tot_count = keys %ind_gty;
+      foreach my $num (keys %ind_gty) {
+	$count{$ind_gty{$num}}++;
+      }
+      foreach my $gtys (keys %count) {
+	my $tot_gty = keys %count;
+	my ($allele1, $allele2) = split "", $gtys;
+	my $freq = $count{$gtys}/$tot_count if ($tot_count != 0);
+	#print "$var_ids{$snp_id}\t$allele1\t$allele2\t$freq\t$sub_pop_id\n";
+	print FH "$var_ids{$snp_id}\t$allele1\t$allele2\t$freq\t$sub_pop_id\n";
+      }
     }
   }
-
+  
   close FH; ###need to close handle before loading data
 
-  debug("loading data into population_genotype table...\n");
+  #debug("loading data into population_genotype table...\n");
 
-  load( $dbVar, "population_genotype", "variation_id", "allele_1", "allele_2", "frequency", "population_id" );
+  #load( $dbVar, "population_genotype", "variation_id", "allele_1", "allele_2", "frequency", "population_id" );
 }
     
 sub individual {
@@ -224,8 +227,9 @@ sub individual {
   
   my %ind_name = %$ind_name;
   my (%ind_ids, $new_ind_found);
+  #my $TMP_FILE = "individual.$$";
 
-  open ( FH, ">$TMP_DIR/$TMP_FILE" );
+  open ( FH, ">$TMP_DIR/$TMP_FILE" ) or die "can't open file $TMP_DIR/$TMP_FILE\n";
   
   my $sth = $dbVar->prepare (qq{SELECT individual_id, name
                                 FROM individual where population_id = $sub_pop_id
@@ -233,7 +237,7 @@ sub individual {
   $sth->execute();
 
   while(my ($ind_id, $name) = $sth->fetchrow_array()) {
-    $ind_ids{$name} = $ind_id;
+    $ind_ids{$name} = $ind_id if $ind_id;
   }
   
   foreach my $num (keys %ind_name) {
@@ -261,8 +265,9 @@ sub individual_genotype {
   my %ind_snp = %$ind_snp;
   my %var_ids = %$var_ids;
   my %ind_ids;
+  my $TMP_FILE = "individual_genotype.$$";
 
-  open ( FH, ">$TMP_DIR/$TMP_FILE" );
+  open ( FH, ">$TMP_DIR/$TMP_FILE" ) or die "can't open file $TMP_DIR/$TMP_FILE\n";
   
   my $sth = $dbVar->prepare (qq{SELECT individual_id, name
                                 FROM individual where population_id = $sub_pop_id
@@ -270,22 +275,24 @@ sub individual_genotype {
   $sth->execute();
 
   while(my ($ind_id, $name) = $sth->fetchrow_array()) {
-    $ind_ids{$name} = $ind_id;
+    $ind_ids{$name} = $ind_id if $ind_id; 
   }
 
   foreach my $snp_id (keys %ind_snp) {
-    my %ind_gty = %{$ind_snp{$snp_id}};
-    foreach my $num (keys %ind_gty) {
-      my ($allele_1, $allele_2) = split "", $ind_gty{$num};
-      print FH "$var_ids{$snp_id}\t$allele_1\t$allele_2\t$ind_ids{$ind_name{$num}}\n";
+    if ($snp_id and $var_ids{$snp_id}) {
+      my %ind_gty = %{$ind_snp{$snp_id}};
+      foreach my $num (keys %ind_gty) {
+	my ($allele_1, $allele_2) = split "", $ind_gty{$num};
+	print FH "$var_ids{$snp_id}\t$allele_1\t$allele_2\t$ind_ids{$ind_name{$num}}\n";
+      }
     }
   }
-
+  
   close FH;
-
-  debug("loading data into individual_genotype table...\n");
-
-  load($dbVar,"individual_genotype","variation_id","allele_1","allele_2","individual_id");
+  
+  #debug("loading data into individual_genotype table...\n");
+  
+  #load($dbVar,"individual_genotype","variation_id","allele_1","allele_2","individual_id");
 }
 
 sub usage {

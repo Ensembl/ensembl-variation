@@ -2,7 +2,7 @@
 #
 
 use strict;
-#use DBH;
+Use DBH;
 use Bio::EnsEMBL::Registry;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Variation::DBSQL::DBAdaptor;

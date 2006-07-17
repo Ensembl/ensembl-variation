@@ -25,17 +25,17 @@ use dbSNP::MappingChromosome;
 use dbSNP::Mosquito;
 use dbSNP::Human;
 
-my ($TAX_ID, $LIMIT_SQL, $dbSNP_BUILD_VERSION, $TMP_DIR, $TMP_FILE, $MAPPING_FILE);
+my ($TAX_ID, $LIMIT_SQL, $dbSNP_BUILD_VERSION, $TMP_DIR, $TMP_FILE, $MAPPING_FILE_DIR);
 
 my ($species,$limit);
 my($dshost, $dsuser, $dspass, $dsport, $dsdbname);
 
 GetOptions('species=s'      => \$species,
-	   'dbSNP_version=s'=> \$dbSNP_BUILD_VERSION, ##sunch as b125
+	   'dbSNP_version=s'=> \$dbSNP_BUILD_VERSION, ##such as b125
 	   'tmpdir=s'       => \$ImportUtils::TMP_DIR,
 	   'tmpfile=s'      => \$ImportUtils::TMP_FILE,
 	   'limit=i'        => \$limit,
-	   'mapping_file=s' => \$MAPPING_FILE);
+	   'mapping_file_dir=s' => \$MAPPING_FILE_DIR);
 
 warn("Make sure you have a updated ensembl.registry file!\n");
 
@@ -48,7 +48,7 @@ my $vdba = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'variation');
 my $sdba = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'dbsnp');
 
 my $dbSNP = $sdba->dbc->db_handle; # Equivalent to direct connection
-my $dbVar = $vdba->dbc->db_handle;
+my $dbVar = $vdba->dbc;
 my $dbCore = $cdba;
 
 ###find a large tmp directory to contain the tmp file
@@ -76,19 +76,38 @@ my $ASSEMBLY_VERSION = $cs->version();
 
 #create the dbSNP object for the specie we want to dump the data
 if ($species =~ /fish/i){
-  if (!$MAPPING_FILE) {throw ("file with mappings not provided")}
   #danio rerio (zebra-fish)
 
+  #my $zebrafish = dbSNP::GenericContig->new(-dbSNP => $dbSNP,
   my $zebrafish = dbSNP::MappingChromosome->new(-dbSNP => $dbSNP,
 						-dbCore => $dbCore,
-						-dbVariation => $dbVar,			
+						-dbVar => $dbVar,
 						-snp_dbname => $sdba->dbc->dbname,
 						-tmpdir => $TMP_DIR,
 						-tmpfile => $TMP_FILE,
 						-limit => $LIMIT_SQL,
-						-mapping_file => $MAPPING_FILE,
+						-mapping_file_dir => $MAPPING_FILE_DIR,
+					        -dbSNP_version => $dbSNP_BUILD_VERSION,
+						-assembly_version => $ASSEMBLY_VERSION
 					       );
   $zebrafish->dump_dbSNP();
+}
+if ($species =~ /chimp/i){
+  #Pan_troglodytes (chimpanzee)
+
+  my $chimp = dbSNP::GenericChromosome->new(-dbSNP => $dbSNP,
+  #my $chimp = dbSNP::MappingChromosome->new(-dbSNP => $dbSNP,
+					    -dbCore => $dbCore,
+					    -dbVar => $dbVar,
+					    -snp_dbname => $sdba->dbc->dbname,
+					    -tmpdir => $TMP_DIR,
+					    -tmpfile => $TMP_FILE,
+					    -limit => $LIMIT_SQL,
+					    -mapping_file_dir => $MAPPING_FILE_DIR,
+					    -dbSNP_version => $dbSNP_BUILD_VERSION,
+					    -assembly_version => $ASSEMBLY_VERSION
+					   );
+  $chimp->dump_dbSNP();
 }
 elsif ($species =~ /mouse/i){
   #mus-musculus (mouse)
@@ -96,14 +115,14 @@ elsif ($species =~ /mouse/i){
   my $mouse = dbSNP::GenericContig->new(-dbSNP => $dbSNP,
   #my $mouse = dbSNP::MappingChromosome->new(-dbSNP => $dbSNP,
 					    -dbCore => $dbCore,
-					    -dbVariation => $dbVar,
+					    -dbVar => $dbVar,
 					    -snp_dbname => $sdba->dbc->dbname,
 					    -tmpdir => $TMP_DIR,
 					    -tmpfile => $TMP_FILE,
 					    -limit => $LIMIT_SQL,
+					    -mapping_file_dir => $MAPPING_FILE_DIR,
 					    -dbSNP_version => $dbSNP_BUILD_VERSION,
 					    -assembly_version => $ASSEMBLY_VERSION
-					    #-mapping_file => $MAPPING_FILE,
 					   );
   $mouse->dump_dbSNP();
   add_strains($dbVar); #add strain information
@@ -113,7 +132,7 @@ elsif ($species =~ /chicken/i){
 
   my $chicken = dbSNP::GenericChromosome->new(-dbSNP => $dbSNP,
 					      -dbCore => $dbCore,
-					      -dbVariation => $dbVar,
+					      -dbVar => $dbVar,
 					      -snp_dbname => $sdba->dbc->dbname,
 					      -tmpdir => $TMP_DIR,
 					      -tmpfile => $TMP_FILE,
@@ -129,7 +148,7 @@ elsif ($species =~ /rat/i){
 
   my $rat = dbSNP::GenericChromosome->new(-dbSNP => $dbSNP,
 					  -dbCore => $dbCore,
-					  -dbVariation => $dbVar,
+					  -dbVar => $dbVar,
 					  -snp_dbname => $sdba->dbc->dbname,
 					  -tmpdir => $TMP_DIR,
 					  -tmpfile => $TMP_FILE,
@@ -145,7 +164,7 @@ elsif ($species =~ /mosquitos/i){
 
   my $mosquito = dbSNP::Mosquito->new(-dbSNP => $dbSNP,
 				      -dbCore => $dbCore,
-				      -dbVariation => $dbVar,
+				      -dbVar => $dbVar,
 				      -snp_dbname => $sdba->dbc->dbname,
 				      -tmpdir => $TMP_DIR,
 				      -tmpfile => $TMP_FILE,
@@ -160,7 +179,7 @@ elsif ($species =~ /dog/i){
 
   my $dog = dbSNP::GenericContig->new(-dbSNP => $dbSNP,
 				      -dbCore => $dbCore,
-				      -dbVariation => $dbVar,
+				      -dbVar => $dbVar,
 				      -snp_dbname => $sdba->dbc->dbname,
 				      -tmpdir => $TMP_DIR,
 				      -tmpfile => $TMP_FILE,
@@ -176,12 +195,14 @@ elsif ($species =~ /hum/i) {
   #homo sa/piens (human)
 
   my $human = dbSNP::Human->new(-dbSNP => $dbSNP,
+  #my $human = dbSNP::MappingChromosome->new(-dbSNP => $dbSNP,
 				-dbCore => $dbCore,
-				-dbVariation => $dbVar,
+				-dbVar => $dbVar,
 				-snp_dbname => $sdba->dbc->dbname,
 				-tmpdir => $TMP_DIR,
 				-tmpfile => $TMP_FILE,
 				-limit => $LIMIT_SQL,
+				-mapping_file_dir => $MAPPING_FILE_DIR,
 				-dbSNP_version => $dbSNP_BUILD_VERSION,
 				-assembly_version => $ASSEMBLY_VERSION
 			       );
@@ -222,18 +243,19 @@ sub add_strains{
 
   #check to see allele_1 and allele_2 is same or not to determine frequency
 
-  for my $gtype_table ('individual_genotype_single_bp','individual_genotype_multiple_bp') {
+  for my $gtype_table ('tmp_individual_genotype_single_bp','individual_genotype_multiple_bp') {
     debug("create tmp_freq table...from $gtype_table");
 
     $dbVariation->do(qq{CREATE TABLE tmp_freq (variation_id int, allele_1 text, sample_id int, gtype char (4), key (sample_id))});
+    #add allele_1 into tmp_freq
     $dbVariation->do(qq{INSERT INTO tmp_freq
-			SELECT variation_id, allele_1, sample_id, 
+			SELECT distinct variation_id, allele_1, sample_id,
 			IF (allele_1 != allele_2, 'DIFF', 'SAME')
 			FROM $gtype_table
 		       });
-
+    #add allele_2 into tmp_freq only if it's different from allele_1
     $dbVariation->do(qq{INSERT INTO tmp_freq
-			SELECT variation_id, allele_2, sample_id, 'DIFF'
+			SELECT distinct variation_id, allele_2, sample_id, 'DIFF'
 			FROM $gtype_table
 			WHERE allele_1 != allele_2
 		       });

@@ -9,7 +9,7 @@ our @ISA = ('Exporter');
 
 our @EXPORT_OK = qw(dumpSQL debug create_and_load load);
 
-our $TMP_DIR = "/ecs2/scratch6/dani";
+our $TMP_DIR = "/ecs4/scratch4/yuan/tmp";
 our $TMP_FILE = 'tabledump.txt';
 
 
@@ -135,7 +135,10 @@ sub create_and_load {
 
     if(defined($type) && $type =~ /i/) {
       push @col_defs, "$name INT";
-    } 
+    }
+    elsif (defined($type) && $type =~ /f/) {
+      push @col_defs, "$name FLOAT";
+    }
     elsif (defined($type) && $type =~ /l/) {
       push @col_defs, "$name TEXT";
     } 
@@ -153,7 +156,7 @@ sub create_and_load {
 
   $sql .= $create_cols.")";
 
-  $sql .= " MAX_ROWS = 100000000" if ($tablename eq 'tmp_gty'); #need to make bigger this table for human
+  $sql .= " MAX_ROWS = 100000000" if ($tablename =~ /^tmp.*gty$/); #need to make bigger this table for human
   $db->do( $sql );
 
   load( $db, $tablename, @col_names );

@@ -1,3 +1,4 @@
+#!/usr/local/bin/perl
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Variation::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Registry;
@@ -8,23 +9,51 @@ use Bio::EnsEMBL::Registry;
 Bio::EnsEMBL::DBSQL::DBAdaptor->new
   ( '-species' => "Homo_sapiens",
     '-group'   => "core",
-    '-port'    => 3365,
+    '-port'    => 3364,
     '-host'    => 'ecs2',
+    #'-port'    => 3306,
+    #'-host'    => 'ia64g',
     '-user'    => 'ensro',
     '-pass'    => '',
-    '-dbname'  => 'homo_sapiens_core_35_35h',);
+    '-dbname'  => 'homo_sapiens_core_40_36b',
+    #'-dbname'  => 'homo_sapiens_core_37_35j',
+  );
+Bio::EnsEMBL::DBSQL::DBAdaptor->new
+  ( '-species' => "Homo_sapiens",
+    '-group'   => "core1",
+    '-port'    => 3365,
+    '-host'    => 'ecs2',
+    #'-port'    => 3306,
+    #'-host'    => 'ia64g',
+    '-user'    => 'ensro',
+    '-pass'    => '',
+    #'-dbname'  => 'homo_sapiens_core_38_36',
+    '-dbname'  => 'homo_sapiens_core_37_35j',
+  );
 
 Bio::EnsEMBL::Variation::DBSQL::DBAdaptor->new
   ( '-species' => "Homo_sapiens",
-    '-group'   => "variation",
+    '-group'   => "variation1",
     '-port'    => 3306,
-    #'-port'    => 3364,
+    #'-port'    => 3365,
     '-host'    => 'ia64g',
     #'-host'    => 'ecs2',
     '-user'    => 'ensadmin',
     '-pass'    => 'ensembl',
-    #'-dbname'  => 'homo_sapiens_variation_35_35h',);
+    #'-dbname'  => 'homo_sapiens_variation_37_35j',);
     '-dbname'  => 'yuan_hum_var_36', );
+
+Bio::EnsEMBL::Variation::DBSQL::DBAdaptor->new
+  ( '-species' => "Homo_sapiens",
+    '-group'   => "variation",
+    '-port'    => 3306,
+    #'-port'    => 3365,
+    '-host'    => 'ia64g',
+    #'-host'    => 'ecs2',
+    '-user'    => 'ensadmin',
+    '-pass'    => 'ensembl',
+    #'-dbname'  => 'homo_sapiens_variation_37_35j',);
+    '-dbname'  => 'yuan_hum_var_40', );
 
 Bio::EnsEMBL::DBSQL::DBAdaptor->new
   ( '-species' => "Homo_sapiens",
@@ -33,43 +62,102 @@ Bio::EnsEMBL::DBSQL::DBAdaptor->new
     '-host'    => 'cbi2',
     '-user'    => 'dbsnpro',
     '-pass'    => '',
-    '-dbname'  => 'dbSNP_125_human_9606', );
+    '-dbname'  => 'dbSNP_126_human_9606', );
 
+# Bio::EnsEMBL::DBSQL::DBAdaptor->new
+#   ( '-species' => "Mus_musculus",
+#     '-group'   => "core2",
+#     '-port'    => 3364,
+#     '-host'    => 'ecs2',
+#     '-user'    => 'ensro',
+#     '-pass'    => '',
+#     '-dbname'  => 'pm2_mus_musculus_38_ncbim36_b',
+#     #'-dbname'  => 'jhv_mus_37_seq_ncbim36',
+#     #'-dbname'  => 'mus_musculus_core_38_35',
+#   );
+
+ Bio::EnsEMBL::DBSQL::DBAdaptor->new
+   ( '-species' => "Mus_musculus",
+     '-group'   => "core",
+     '-port'    => 3364,
+     '-host'    => 'ecs2',
+     '-user'    => 'ensro',
+     '-pass'    => '',
+     '-dbname'  => 'mus_musculus_core_40_36a',
+   );
 Bio::EnsEMBL::DBSQL::DBAdaptor->new
   ( '-species' => "Mus_musculus",
-    '-group'   => "core",
-    '-port'    => 3364,
+    '-group'   => "core1",
+    '-port'    => 3365,
     '-host'    => 'ecs2',
     '-user'    => 'ensro',
     '-pass'    => '',
-    '-dbname'  => 'mus_musculus_core_36_34d', );
+    '-dbname'  => 'mus_musculus_core_38_35',
+  );
+
+ Bio::EnsEMBL::Variation::DBSQL::DBAdaptor->new
+   ( '-species' => "Mus_musculus",
+     '-group'   => "variation",
+     '-port'    => 3306,
+     '-host'    => 'ia64g',
+     #'-port'    => 3364,
+     #'-host'    => 'ecs2',
+     '-user'    => 'ensadmin',
+     '-pass'    => 'ensembl',
+     #'-dbname'  => 'mus_musculus_variation_39_36',
+     #'-dbname'  => 'dr2_mus_musculus_celera_MM36',
+     '-dbname'  => 'yuan_mouse_var_40', 
+   );
 
 Bio::EnsEMBL::Variation::DBSQL::DBAdaptor->new
   ( '-species' => "Mus_musculus",
-    '-group'   => "variation",
-    '-port'    => 3306,
-    '-host'    => 'ia64e',
+    '-group'   => "variation1",
+    #'-port'    => 3306,
+    #'-host'    => 'ia64g',
+    '-port'    => 3365,
+    '-host'    => 'ecs2',
     '-user'    => 'ensadmin',
     '-pass'    => 'ensembl',
-    '-dbname'  => 'yuan_mouse_var_36', );
+    '-dbname'  => 'mus_musculus_variation_38_35',
+    #'-dbname'  => 'yuan_mouse_var_39', 
+  );
+
+# Bio::EnsEMBL::Variation::DBSQL::DBAdaptor->new
+#   ( '-species' => "Mus_musculus",
+#     '-group'   => "variation2",
+#     '-port'    => 3306,
+#     '-host'    => 'ia64g',
+#     #'-port'    => 3365,
+#     #'-host'    => 'ecs2',
+#     '-user'    => 'ensadmin',
+#     '-pass'    => 'ensembl',
+#     #'-dbname'  => 'mus_musculus_variation_38_35',
+#     '-dbname'  => 'yuan_mouse_var_39_test', 
+#   );
 
 Bio::EnsEMBL::DBSQL::DBAdaptor->new
   ( '-species' => "Mus_musculus",
     '-group'   => 'dbsnp',
-    '-port'    => 3306,
+    #'-group'   => 'sanger',
+    #'-host'    => 'ia64g',
+    #'-user'    => 'ensadmin',
+    #'-pass'    => 'ensembl',
+    #'-port'    => 3306,
+    #'-dbname'  => 'dr2_mus_musculus_celera_MM36',
     '-host'    => 'cbi2',
     '-user'    => 'dbsnpro',
     '-pass'    => '',
-    '-dbname'  => 'dbSNP_125_mouse_10090', );
-
+    '-dbname'  => 'dbSNP_126_mouse_10090',
+  );
 Bio::EnsEMBL::DBSQL::DBAdaptor->new
   ( '-species' => "Rattus_norvegicus",
     '-group'   => "core",
     '-port'    => 3364,
     '-host'    => 'ecs2',
-    '-user'    => 'ensro',
-    '-pass'    => '',
-    '-dbname'  => 'rattus_norvegicus_core_36_34f', );
+    '-user'    => 'ensadmin',
+    '-pass'    => 'ensembl',
+    '-dbname'  => 'rattus_norvegicus_core_40_34j', 
+  );
 
 Bio::EnsEMBL::Variation::DBSQL::DBAdaptor->new
   ( '-species' => "Rattus_norvegicus",
@@ -78,7 +166,18 @@ Bio::EnsEMBL::Variation::DBSQL::DBAdaptor->new
     '-host'    => 'ia64e',
     '-user'    => 'ensadmin',
     '-pass'    => 'ensembl',
-    '-dbname'  => 'yuan_rat_var_36', );
+    #'-dbname'  => 'yuan_rat_var_36',
+    '-dbname'  => 'yuan_rattus_norvegicus_variation_39_34i',
+);
+
+# Bio::EnsEMBL::Variation::DBSQL::DBAdaptor->new
+#   ( '-species' => "Rattus_norvegicus",
+#     '-group'   => "variation",
+#     '-port'    => 3306,
+#     '-host'    => 'ia64e',
+#     '-user'    => 'ensadmin',
+#     '-pass'    => 'ensembl',
+#     '-dbname'  => 'yuan_rat_var_40_celera', );
 
 Bio::EnsEMBL::DBSQL::DBAdaptor->new
   ( '-species' => "Rattus_norvegicus",
@@ -92,17 +191,17 @@ Bio::EnsEMBL::DBSQL::DBAdaptor->new
 Bio::EnsEMBL::DBSQL::DBAdaptor->new
   ( '-species' => "Gallus_gallus",
     '-group'   => "core",
-    '-port'    => 3364,
+    '-port'    => 3365,
     '-host'    => 'ecs2',
     '-user'    => 'ensro',
     '-pass'    => '',
-    '-dbname'  => 'gallus_gallus_core_36_1l', );
+    '-dbname'  => 'gallus_gallus_core_38_1n', );
 
 Bio::EnsEMBL::Variation::DBSQL::DBAdaptor->new
   ( '-species' => "Gallus_gallus",
     '-group'   => "variation",
     '-port'    => 3306,
-    '-host'    => 'ia64e',
+    '-host'    => 'ia64g',
     '-user'    => 'ensadmin',
     '-pass'    => 'ensembl',
     '-dbname'  => 'yuan_chicken_var_36', );
@@ -119,20 +218,28 @@ Bio::EnsEMBL::DBSQL::DBAdaptor->new
 Bio::EnsEMBL::DBSQL::DBAdaptor->new
   ( '-species' => "Danio_rerio",
     '-group'   => "core",
-    '-port'    => 3365,
+    '-port'    => 3364,
     '-host'    => 'ecs2',
+    #'-port'    => 3306,
+    #'-host'    => 'ia64g',
     '-user'    => 'ensro',
     '-pass'    => '',
-    '-dbname'  => 'danio_rerio_core_35_5b', );
+    #'-dbname'  => 'is1_zv6_core',
+    '-dbname'  => 'danio_rerio_core_39_6',
+  );
 
 Bio::EnsEMBL::Variation::DBSQL::DBAdaptor->new
   ( '-species' => "Danio_rerio",
     '-group'   => "variation",
-    '-port'    => 3306,
-    '-host'    => 'ia64g',
+    #'-port'    => 3306,
+    #'-host'    => 'ia64g',
+    '-port'    =>  3364,
+    '-host'    => 'ecs2',
     '-user'    => 'ensadmin',
     '-pass'    => 'ensembl',
-    '-dbname'  => 'yuan_zfish_var_36', );
+    '-dbname'  => 'danio_rerio_variation_39_6',
+    #'-dbname'  => 'yuan_zfish_var_39', 
+    );
 
 Bio::EnsEMBL::DBSQL::DBAdaptor->new
   ( '-species' => "Danio_rerio",
@@ -146,20 +253,24 @@ Bio::EnsEMBL::DBSQL::DBAdaptor->new
 Bio::EnsEMBL::DBSQL::DBAdaptor->new
   ( '-species' => "Canis_familiaris",
     '-group'   => "core",
-    '-port'    => 3364,
+    '-port'    => 3365,
     '-host'    => 'ecs2',
     '-user'    => 'ensro',
     '-pass'    => '',
-    '-dbname'  => 'canis_familiaris_core_36_1e', );
+    '-dbname'  => 'canis_familiaris_core_38_1g', );
 
 Bio::EnsEMBL::Variation::DBSQL::DBAdaptor->new
   ( '-species' => "Canis_familiaris",
     '-group'   => "variation",
     '-port'    => 3306,
     '-host'    => 'ia64e',
+    #'-port'    => '3364',
+    #'-host'    => 'ecs2',
     '-user'    => 'ensadmin',
     '-pass'    => 'ensembl',
-    '-dbname'  => 'yuan_dog_var_36', );
+    #'-dbname'  => 'canis_familiaris_variation_39_1h',
+    '-dbname'  => 'yuan_dog_var_36', 
+  );
 
 Bio::EnsEMBL::DBSQL::DBAdaptor->new
   ( '-species' => "Canis_familiaris",
@@ -173,20 +284,25 @@ Bio::EnsEMBL::DBSQL::DBAdaptor->new
 Bio::EnsEMBL::DBSQL::DBAdaptor->new
   ( '-species' => "Anopheles_gambiae",
     '-group'   => "core",
-    '-port'    => 3365,
-    '-host'    => 'ecs2',
+    #'-port'    => 3365,
+    #'-host'    => 'ecs2',
+    '-port'    => 3306,
+    '-host'    => 'ia64e',
     '-user'    => 'ensro',
     '-pass'    => '',
-    '-dbname'  => 'anopheles_gambiae_core_35_2g', );
+    #'-dbname'  => 'anopheles_gambiae_core_35_2g',
+    '-dbname'  => 'mh4_anopheles_gambiae_core_35_3',
+  );
 
 Bio::EnsEMBL::Variation::DBSQL::DBAdaptor->new
   ( '-species' => "Anopheles_gambiae",
     '-group'   => "variation",
     '-port'    => 3306,
-    '-host'    => 'ia64g',
+    '-host'    => 'ia64e',
     '-user'    => 'ensadmin',
     '-pass'    => 'ensembl',
-    '-dbname'  => 'yuan_anopheles_var_36', );
+    '-dbname'  => 'yuan_anopheles_var_37', 
+  );
 
 Bio::EnsEMBL::DBSQL::DBAdaptor->new
   ( '-species' => "Anopheles_gambiae",
@@ -195,7 +311,89 @@ Bio::EnsEMBL::DBSQL::DBAdaptor->new
     '-host'    => 'cbi2',
     '-user'    => 'dbsnpro',
     '-pass'    => '',
-    '-dbname'  => 'dbSNP_125_mosquito_7165', );
+    '-dbname'  => 'dbSNP_125_mosquito_7165', 
+  );
+
+Bio::EnsEMBL::DBSQL::DBAdaptor->new
+  ( '-species' => "Pan_troglodytes",
+    '-group'   => "core",
+    '-port'    => 3365,
+    '-host'    => 'ecs2',
+    #'-port'    => 3306,
+    #'-host'    => 'ia64e',
+    '-user'    => 'ensro',
+    '-pass'    => '',
+    #'-dbname'  => 'anopheles_gambiae_core_35_2g',
+    '-dbname'  => 'pan_troglodytes_core_38_3b',
+  );
+
+Bio::EnsEMBL::Variation::DBSQL::DBAdaptor->new
+  ( '-species' => "Pan_troglodytes",
+    '-group'   => "variation",
+    '-port'    => 3306,
+    '-host'    => 'ia64g',
+    '-user'    => 'ensadmin',
+    '-pass'    => 'ensembl',
+    '-dbname'  => 'yuan_chimp_var_39', 
+  );
+
+Bio::EnsEMBL::DBSQL::DBAdaptor->new
+  ( '-species' => "Pan_troglodytes",
+    '-group'   => 'dbsnp',
+    '-port'    => 3306,
+    '-host'    => 'cbi2',
+    '-user'    => 'dbsnpro',
+    '-pass'    => '',
+    '-dbname'  => 'dbSNP_125_chimpanzee_9598', 
+  );
+
+Bio::EnsEMBL::DBSQL::DBAdaptor->new
+  ( '-species' => "Tetraodon_nigroviridis",
+    '-group'   => "core",
+    '-port'    => 3364,
+    '-host'    => 'ecs2',
+    #'-port'    => 3306,
+    #'-host'    => 'ia64e',
+    '-user'    => 'ensro',
+    '-pass'    => '',
+    #'-dbname'  => 'anopheles_gambiae_core_35_2g',
+    '-dbname'  => 'tetraodon_nigroviridis_core_38_1e',
+  );
+
+Bio::EnsEMBL::Variation::DBSQL::DBAdaptor->new
+  ( '-species' => "Tetraodon_nigroviridis",
+    '-group'   => "variation",
+    '-port'    => 3306,
+    '-host'    => 'ia64g',
+    '-user'    => 'ensadmin',
+    '-pass'    => 'ensembl',
+    '-dbname'  => 'yuan_tetraodon_var_38', 
+  );
+
+Bio::EnsEMBL::DBSQL::DBAdaptor->new
+  ( '-species' => "fugu_rubripes",
+    '-group'   => "core",
+    '-port'    => 3364,
+    '-host'    => 'ecs2',
+    #'-port'    => 3306,
+    #'-host'    => 'ia64e',
+    '-user'    => 'ensro',
+    '-pass'    => '',
+    #'-dbname'  => 'anopheles_gambiae_core_35_2g',
+    '-dbname'  => 'fugu_rubripes_core_38_4a',
+  );
+
+
+
+# Bio::EnsEMBL::Variation::DBSQL::DBAdaptor->new
+#   ( '-species' => "Homo_sapiens",
+#     '-group'   => "variation",
+#     '-port'    => 3306,
+#     '-host'    => 'ia64g',
+#     '-user'    => 'ensadmin',
+#     '-pass'    => 'ensembl',
+#     '-dbname'  => 'yuan_hum_yali', 
+#   );
 
 Bio::EnsEMBL::Registry->add_alias("Homo_sapiens","human");
 Bio::EnsEMBL::Registry->add_alias("Mus_musculus","mouse");
@@ -203,6 +401,8 @@ Bio::EnsEMBL::Registry->add_alias("Rattus_norvegicus","rat");
 Bio::EnsEMBL::Registry->add_alias("Gallus_gallus","chicken");
 Bio::EnsEMBL::Registry->add_alias("Canis_familiaris","dog");
 Bio::EnsEMBL::Registry->add_alias("Danio_rerio","zebrafish");
+Bio::EnsEMBL::Registry->add_alias("Pan_troglodytes","chimp");
 Bio::EnsEMBL::Registry->add_alias("Anopheles_gambiae","mosquitos");
-
+Bio::EnsEMBL::Registry->add_alias("Tetraodon_nigroviridis","tetraodon");
+Bio::EnsEMBL::Registry->add_alias("Fugu_rubripes","fugu");
 1;

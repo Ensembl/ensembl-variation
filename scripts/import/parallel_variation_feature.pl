@@ -281,7 +281,7 @@ sub variation_feature {
 	}
       }
       else {
-	debug("seq_region_name is ",$slice->seq_region_name(),"$sr_start, $sr_end, $sr_strand\n");
+	#debug("seq_region_name is ",$slice->seq_region_name(),"$sr_start, $sr_end, $sr_strand\n");
 	my @coords = $mapper->map($slice->seq_region_name(), $sr_start, $sr_end,
 				  $sr_strand, $sctg_cs);
 	

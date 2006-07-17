@@ -27,7 +27,17 @@ my %individual_id = (#'Fosmid'  => '',
 		     'SS/Jr'   => 4,
                      'SHRSP/mdc' => 3,
 		     'WKY/mdc' => 2,
-		     'BN/Crl'  => 1,
+		     'BN/Crl'  => 3,
+		     'SD'   =>4,
+                     'GSC'  =>2,
+		     'WIBR' =>3,
+		     'C57BL/6J' =>2,
+		     '129X1/SvJ' =>4,
+		     'A/J' =>6,
+		     'DBA/2J' =>8,
+		     '129S1/SvImJ' =>10,
+		     'MSM' =>12,
+		     'NOD' =>14,
 		     );
 my ($chost, $cport, $cdbname, $cuser, $cpass,
     $vhost, $vport, $vdbname, $vuser, $vpass,
@@ -80,8 +90,8 @@ $TMP_FILE = $ImportUtils::TMP_FILE;
 &load_individuals($dbVar,\%individual_id); #first of all, load the hash with the individual_id
 &initialize_range_registry($range_registry, $max_level);
 my $pair; #reference to an array with id,start,end format
-$read_file =~ /^.*((\d+)|X|Y|MT)\.mapped$/;  #extract the chromosome from the file name
-my $region = $1;
+$read_file =~ /^.*\/((\d+)|X|Y|MT|\S+\_random)\.mapped$/;  #extract the chromosome from the file name
+my $region = $1;print "the region is $region\n";
 my $individuals = {}; #reference to a hash containing all individuals present in the chromosome
 open IN, "$read_file" or die "Could not open file $read_file with read information in the format seq_region_id\tstart\tend:$!\n";
 while (<IN>){
