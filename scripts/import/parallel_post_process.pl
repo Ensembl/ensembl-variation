@@ -93,7 +93,7 @@ sub parallel_variation_feature{
     my $max_variation; #maximum variation_feature_id
     my $call;
     my $variation_status_file = "status_file_variation_feature_$$\.log";
-#first, create the log file for the variation_feature
+    #first, create the log file for the variation_feature
     open STATUS, ">$TMP_DIR/$variation_status_file"
 	or throw("Could not open tmp file: $TMP_DIR/$variation_status_file\n"); 
     close STATUS;
@@ -105,10 +105,25 @@ sub parallel_variation_feature{
     ($min_variation, $max_variation) = $sth->fetchrow_array();
     $sth->finish();
     my $dbname = $vdbname; #get the name of the database to create the file    
+    
+    #to get haplotype seq_region_id
+    my $sth1 = $dbCore->dbc->db_handle->prepare(qq{SELECT seq_region_id 
+                                                   FROM seq_region_attrib sa, attrib_type at 
+                                                   WHERE sa.attrib_type_id=at.attrib_type_id 
+                                                   AND at.code='non_ref'});
+    $sth1->execute();
+    my @hap_seq_region_ids;
+    while (my ($seq_region_id) = $sth1->fetchrow_array()) {
+      push @hap_seq_region_ids, $seq_region_id;
+    }
+
+    my $in_string = "IN (" . join (",",@hap_seq_region_ids) . ")";
+
     #create a temporary table to store the map_weight, that will be deleted by the last process
     $dbVar->do(qq{CREATE TABLE tmp_map_weight
                 SELECT variation_id, count(*) as count
                 FROM   variation_feature
+                WHERE  seq_region_id not $in_string
                 GROUP BY variation_id}
 	       );
     $dbVar->do(qq{ALTER TABLE tmp_map_weight 
@@ -148,7 +163,7 @@ sub parallel_flanking_sequence{
   #find out the total number of variations to split the into the files
   my $sequences; #total number of flanking sequences in table
   my $sth_variations = $dbVar->prepare(qq{SELECT COUNT(*) from flanking_sequence
-					  });
+ 					  });
   $sth_variations->execute();
   ($sequences) = $sth_variations->fetch();
   $sth_variations->finish();
@@ -158,7 +173,7 @@ sub parallel_flanking_sequence{
 			       vf.seq_region_end, vf.seq_region_strand
 			       FROM flanking_sequence fs FORCE INDEX (PRIMARY) LEFT JOIN variation_feature vf
 			       ON vf.variation_id = fs.variation_id
-			       ORDER BY fs.variation_id
+ 			       ORDER BY fs.variation_id
 			       $LIMIT},{mysql_use_result => 1});
 
   $sth->execute();
@@ -266,13 +281,13 @@ sub parallel_transcript_variation{
 ##use genotype method to change alleles in genotype table to forward strand
 sub genotype{
   my $dbVar = shift;
-#   $dbVar->do(qq{CREATE TABLE tmp_varid
-#                 SELECT variation_id
-#                 FROM   variation_feature
-#                 WHERE map_weight=1 and seq_region_strand = -1 and flags="genotyped"}
-# 	    );
-#   $dbVar->do(qq{ALTER TABLE tmp_varid
-# 		      ADD INDEX variation_idx(variation_id)});
+  $dbVar->do(qq{CREATE TABLE tmp_varid
+                SELECT variation_id
+                FROM   variation_feature
+                WHERE map_weight=1 and seq_region_strand = -1 and flags="genotyped"}
+	    );
+  $dbVar->do(qq{ALTER TABLE tmp_varid
+		      ADD INDEX variation_idx(variation_id)});
 
   my ($population_genotype_id,$variation_id,$allele_1,$allele_2,$frequency,$sample_id);
 
