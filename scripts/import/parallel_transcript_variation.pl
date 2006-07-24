@@ -136,6 +136,8 @@ sub transcript_variation {
     # request all variations which lie in the region of a gene
     foreach my $g (@$genes) {
       #debug("Time to do gene ",$g->stable_id," : ",scalar(localtime(time)));
+      #debug( "seq_region_start is ",$g->seq_region_start()," seq_region_id is ",
+      #$slice->get_seq_region_id()," seq_region_end is ",$g->seq_region_end());
       $sth->execute($slice->get_seq_region_id(),
                     $g->seq_region_start() - $UPSTREAM,
                     $g->seq_region_end()   + $DNSTREAM,
@@ -143,11 +145,11 @@ sub transcript_variation {
       my $rows = $sth->fetchall_arrayref();
 
       foreach my $tr (@{$g->get_all_Transcripts()}) {
-
+	my $tr_name = $tr->display_id;
         next if(!$tr->translation()); # skip pseudogenes
 
 	my ($start,$end, $strand); #start, end and strand of the variation feature in the slice
-
+	
 	foreach my $row (@$rows) {
 	  next if ($row->[4] =~ /LARGE/); #for LARGEINSERTION and LARGEDELETION alleles we don't calculate transcripts
 	  # put variation in slice coordinates
@@ -224,7 +226,12 @@ sub last_process{
     system($call);
     
     unlink(<$TMP_DIR/$dbname.transcript_variation*.txt>);
+
+    debug("Deleting existing transcript variation");
     
+    $dbVar->do("DELETE FROM transcript_variation");
+
+    #load transcript_variation data
     load($dbVar, qw(transcript_variation
 		    transcript_id variation_feature_id peptide_allele_string
 		    translation_start translation_end cdna_start cdna_end consequence_type));
