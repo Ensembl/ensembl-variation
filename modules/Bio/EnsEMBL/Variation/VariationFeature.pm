@@ -407,10 +407,11 @@ sub display_consequence{
 sub add_consequence_type{
     my $self = shift;
     my $consequence_type = shift;
-
     if ($CONSEQUENCE_TYPES{$consequence_type}){
-	push @{$self->{'consequence_type'}}, $consequence_type;
-	return $self->{'consequence_type'};
+		if (ref($self->{'consequence_type'}) eq 'ARRAY') {
+			push @{$self->{'consequence_type'}}, $consequence_type;
+		}
+		return $self->{'consequence_type'};
     }
     warning("You are trying to set the consequence type to a non-allowed type. The allowed types are: ", keys %CONSEQUENCE_TYPES);
     return '';
