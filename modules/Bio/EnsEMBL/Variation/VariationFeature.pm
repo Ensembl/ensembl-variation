@@ -685,4 +685,25 @@ sub get_all_LD_values{
     return {};
 }
 
+=head2 get_all_synonym_sources
+
+    Args        : none
+    Example     : my @sources = @{$vf_adaptor->get_all_synonym_sources()};
+    Description : returns a list of all the sources for synonyms of this
+                  VariationFeature
+    ReturnType  : reference to list of strings
+    Exceptions  : none
+    Caller      : general
+    Status      : At Risk
+                : Variation database is under development.
+=cut
+
+sub get_all_synonym_sources{
+    my $self = shift;
+    
+    if ($self->{'adaptor'}){
+	return $self->{'adaptor'}->get_all_synonym_sources($self);
+    }
+    return ();
+}
 1;
