@@ -327,4 +327,56 @@ sub _multiple_bp{
     return $self->{'multiple_bp'};
 }
 
+=head2 get_all_synonym_sources
+
+    Args[1]     : Bio::EnsEMBL::Variation::AlleleFeature vf
+    Example     : my @sources = @{$af_adaptor->get_all_synonym_sources($af)};
+    Description : returns a list of all the sources for synonyms of this
+                  AlleleFeature
+    ReturnType  : reference to list of strings
+    Exceptions  : none
+    Caller      : general
+    Status      : At Risk
+                : Variation database is under development.
+=cut
+
+sub get_all_synonym_sources{
+    my $self = shift;
+    my $af = shift;
+    my %sources;
+    my @sources;
+
+    if(!ref($af) || !$af->isa('Bio::EnsEMBL::Variation::AlleleFeature')) {
+	 throw("Bio::EnsEMBL::Variation::AlleleFeature argument expected");
+    }
+    
+    if (!defined($af->{'_variation_id'}) && !defined($af->{'variation'})){
+	warning("Not possible to get synonym sources for the AlleleFeature: you need to attach a Variation first");
+	return \@sources;
+    }
+    #get the variation_id
+    my $variation_id;
+    if (defined ($af->{'_variation_id'})){
+	$variation_id = $af->{'_variation_id'};
+    }
+    else{
+	$variation_id = $af->variation->dbID();
+    }
+    #and go to the varyation_synonym table to get the extra sources
+    my $source_name;
+    my $sth = $self->prepare(qq{SELECT s.name 
+				FROM variation_synonym vs, source s 
+				WHERE s.source_id = vs.source_id
+			        AND   vs.variation_id = ?
+			    });
+    $sth->bind_param(1,$variation_id,SQL_INTEGER);
+    $sth->execute();
+    $sth->bind_columns(\$source_name);
+    while ($sth->fetch){
+	$sources{$source_name}++;
+    }
+    @sources = keys(%sources); 
+    return \@sources;
+}
+
 1;
