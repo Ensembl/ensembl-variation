@@ -341,7 +341,7 @@ sub variation {
 
 =head2 display_consequence
 
-  Arg [1]    : (optional) string $consequence_type
+  Args       : none
   Example    : $display_consequence = $vf->display_consequence();
   Description: Getter for the consequence type to display,
                when more than one
