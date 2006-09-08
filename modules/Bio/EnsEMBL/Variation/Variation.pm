@@ -237,7 +237,7 @@ sub get_all_Genes{
 
 	foreach my $vf (@{$vf_list}){
 	    #expand the slice UPSTREAM and DOWNSTREAM
-	    $new_slice = $vf->slice()->expand($UPSTREAM,$DOWNSTREAM);
+	    $new_slice = $vf->feature_Slice()->expand($UPSTREAM,$DOWNSTREAM);
 	    #get the genes in the new slice
 	    $gene_list = $new_slice->get_all_Genes();
 	    foreach my $gene (@{$gene_list}){
