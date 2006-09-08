@@ -80,7 +80,7 @@ sub fetch_by_dbID {
 
   my $sth = $self->prepare
     (q{SELECT vg.variation_group_id, vg.name, s.name, vg.type, vgv.variation_id
-       FROM   variation_group vg, source s
+       FROM   (variation_group vg, source s)
        LEFT JOIN variation_group_variation vgv ON
                  vgv.variation_group_id = vg.variation_group_id
        WHERE  vg.source_id = s.source_id
@@ -119,7 +119,7 @@ sub fetch_by_name {
 
   my $sth = $self->prepare
     (q{SELECT vg.variation_group_id, vg.name, s.name, vg.type, vgv.variation_id
-       FROM   variation_group vg, source s
+       FROM   (variation_group vg, source s)
        LEFT JOIN variation_group_variation vgv
        ON    vgv.variation_group_id = vg.variation_group_id
        WHERE  vg.source_id = s.source_id

@@ -81,7 +81,7 @@ sub fetch_by_dbID {
   my $sth = $self->prepare
     (q{SELECT ag.allele_group_id, ag.variation_group_id, ag.sample_id,
               ag.name, s.name, ag.frequency, aga.allele, aga.variation_id
-       FROM   allele_group ag, source s
+       FROM   (allele_group ag, source s)
        LEFT JOIN allele_group_allele aga
        ON     aga.allele_group_id = ag.allele_group_id
        WHERE  ag.source_id = s.source_id
@@ -121,7 +121,7 @@ sub fetch_by_name {
   my $sth = $self->prepare
     (q{SELECT ag.allele_group_id, ag.variation_group_id, ag.sample_id,
               ag.name, s.name, ag.frequency, aga.allele, aga.variation_id
-       FROM   allele_group ag, source s
+       FROM   (allele_group ag, source s)
        LEFT JOIN allele_group_allele aga
        ON     aga.allele_group_id = ag.allele_group_id
        WHERE  ag.source_id = s.source_id
@@ -164,7 +164,7 @@ sub fetch_all_by_VariationGroup {
   my $sth = $self->prepare
     (q{SELECT ag.allele_group_id, ag.variation_group_id, ag.sample_id,
               ag.name, s.name, ag.frequency, aga.allele, aga.variation_id
-       FROM   allele_group ag, source s
+       FROM   (allele_group ag, source s)
        LEFT JOIN allele_group_allele aga
        ON     aga.allele_group_id = ag.allele_group_id
        WHERE  ag.source_id = s.source_id
