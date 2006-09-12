@@ -33,4 +33,7 @@ UPDATE individual set individual_type_id = 1 where (database() like 'mus%');
 UPDATE individual set individual_type_id = 2 where (database() like 'canis%' or database() like 'danio%' or database() like 'gallus%' or database() like 'rattus%');
 UPDATE individual set individual_type_id = 3 where (database() like 'homo%' or database() like 'anopheles%');
 
+UPDATE meta set meta_key = 'individual.default_strain' where meta_key = 'population.default_strain';
+UPDATE meta set meta_key = 'individual.reference_strain' where meta_key = 'population.reference_strain';
+UPDATE meta set meta_key = 'individual.display_strain' where meta_key = 'population.display_strain';
 INSERT INTO meta (meta_key,meta_value) VALUES ('patch','patch_40_41_a.sql|change population/individual schema');
