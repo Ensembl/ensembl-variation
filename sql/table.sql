@@ -126,11 +126,9 @@ create table sample(
 #
 
 # sample_id            - primary key, internal identifier
-# is_strain            - int, 1 means that the population is a strain, 0 otherwise
 
 create table population(
 	sample_id int(10) unsigned not null,
-	is_strain int(1) default 0 NOT NULL,
 
 	primary key( sample_id )
 );
@@ -169,11 +167,31 @@ create table individual(
   gender enum('Male', 'Female', 'Unknown') default 'Unknown' NOT NULL,
   father_individual_sample_id int(10) unsigned,
   mother_individual_sample_id int(10) unsigned,
-  
+  individual_type_id int(10) unsigned not null,
+
   primary key(sample_id)
 );
 
+#
+# individual_type
+#
+# Table containing the different types of individuals depending on the specie
+#
 
+create table individual_type(
+  individual_type_id int(0) unsigned not null auto_increment,
+  name varchar(255) not null,
+  description text,
+  
+  primary key (individual_type_id)
+);
+
+#this table will always contain the same values
+
+INSERT INTO individual_type (name,description) VALUES ('fully_inbred','multiple organisms have the same genome sequence');
+INSERT INTO individual_type (name,description) VALUES ('partly_inbred','single organisms have reduced genome variability due to human intervention');
+INSERT INTO individual_type (name,description) VALUES ('outbred','a single organism which breeds freely');
+INSERT INTO individual_type (name,description) VALUES ('mutant','a single or multiple organisms with the same genome sequence that have a natural or experimentally induced mutation');
 
 #
 # variation_feature
@@ -221,7 +239,7 @@ create table variation_feature(
         variation_name varchar(255),
 	map_weight int not null,
 	flags SET('genotyped'),
-	source_id int not null, 
+	source_id int(10) unsigned not null, 
 	validation_status SET('cluster','freq','submitter','doublehit','hapmap'),
 	consequence_type SET ('ESSENTIAL_SPLICE_SITE','STOP_GAINED','STOP_LOST','FRAMESHIFT_CODING',
 			'NON_SYNONYMOUS_CODING','SPLICE_SITE','SYNONYMOUS_CODING','REGULATORY_REGION',
