@@ -113,9 +113,10 @@ sub fetch_all_by_name {
 
   my $sth = $self->prepare
     (q{SELECT i.sample_id, s.name, s.description,
-              i.gender, i.father_individual_sample_id, i.mother_individual_sample_id
-       FROM   individual i, sample s
+              i.gender, i.father_individual_sample_id, i.mother_individual_sample_id, it.name, it.description
+       FROM   individual i, sample s, individual_type it
        WHERE  s.name = ?
+       AND    it.individual_type_id = i.individual_type_id
        AND    s.sample_id = i.sample_id});
 
   $sth->bind_param(1,$name,SQL_VARCHAR);
@@ -161,10 +162,11 @@ sub fetch_all_by_Population {
 
   my $sth = $self->prepare
     (q{SELECT i.sample_id, s.name, s.description,
-              i.gender, i.father_individual_sample_id, i.mother_individual_sample_id
-       FROM   individual i, individual_population ip, sample s
+              i.gender, i.father_individual_sample_id, i.mother_individual_sample_id, it.name, it.description
+       FROM   individual i, individual_population ip, sample s, individual_type it
        WHERE  i.sample_id = ip.individual_sample_id
        AND    i.sample_id = s.sample_id
+       AND    i.individual_type_id = it.individual_type_id
        AND    ip.population_sample_id = ?});
 
   $sth->bind_param(1,$pop->dbID,SQL_INTEGER);
@@ -213,15 +215,17 @@ sub fetch_all_by_parent_Individual {
 
   my $father_sql =
     q{SELECT i.sample_id, s.name, s.description,
-             i.gender, i.father_individual_sample_id, i.mother_individual_sample_id
-      FROM   individual i, sample s
+             i.gender, i.father_individual_sample_id, i.mother_individual_sample_id, it.name, it.description
+      FROM   individual i, sample s, individual_type it
       WHERE  i.father_individual_sample_id = ?
+      AND    i.individual_type_id = it.individual_type_id
       AND    s.sample_id = i.sample_id};
   my $mother_sql =
     q{SELECT i.sample_id, s.name, s.description,
-              i.gender, i.father_individual_sample_id, i.mother_individual_sample_id
-       FROM   individual i, sample s
+              i.gender, i.father_individual_sample_id, i.mother_individual_sample_id, it.name, it.description
+       FROM   individual i, sample s, individual_type it
        WHERE  i.mother_individual_sample_id = ?
+       AND    i.individual_type_id = it.individual_type_id
        AND    i.sample_id = s.sample_id};
 
   if($gender eq 'Male') {
@@ -262,6 +266,115 @@ sub fetch_all_by_parent_Individual {
   return $result;
 }
 
+=head2 fetch_all_strains
+
+    Args       : none
+    Example    : my $strains = $ind_adaptor->fetch_all_strains();
+    Description: Retrieves Individuals that should be considered as strain (fully inbred) in the specie.
+    Returntype : list of Bio::EnsEMBL::Variation::Individual
+    Exceptions : none
+    Caller     : Bio:EnsEMBL:Variation::Individual
+
+=cut
+
+sub fetch_all_strains{
+    my $self = shift;
+    
+    return $self->generic_fetch("it.name = 'fully_inbred'");
+
+}
+
+=head2 get_display_strains
+
+    Args       : none
+    Example    : my $strains = $ind_adaptor->get_display_strains();
+    Description: Retrieves strain_names that are going to be displayed in the web (reference + default + others)
+    Returntype : list of strings
+    Exceptions : none
+    Caller     : web
+
+=cut
+
+sub get_display_strains{
+    my $self = shift;
+    my @strain_names;
+    my $name;
+    #first, get the reference strain
+    $name = $self->get_reference_strain_name();
+    push @strain_names, $name;
+    #then, get the default ones
+    my $default_strains = $self->get_default_strains();
+    push @strain_names, @{$default_strains};
+    #and finally, get the others
+    my $sth = $self->prepare(qq{SELECT meta_value from meta where meta_key = ?
+				});
+    $sth->bind_param(1,'individual.display_strain',SQL_VARCHAR);
+    $sth->execute();
+    $sth->bind_columns(\$name);
+    while ($sth->fetch()){
+	push @strain_names, $name;
+    }
+    $sth->finish;
+    return \@strain_names;
+
+}
+
+
+=head2 get_default_strains
+
+    Args       : none
+    Example    : my $strains = $ind_adaptor->get_default_strains();
+    Description: Retrieves strain_names that are defined as default in the database(mainly, for web purposes)
+    Returntype : list of strings
+    Exceptions : none
+    Caller     : web
+
+=cut
+
+sub get_default_strains{
+    my $self = shift;
+    my @strain_names;
+    my $name;
+    my $sth = $self->prepare(qq{SELECT meta_value from meta where meta_key = ?
+				});
+    $sth->bind_param(1,'individual.default_strain',SQL_VARCHAR);
+    $sth->execute();
+    $sth->bind_columns(\$name);
+    while ($sth->fetch()){
+	push @strain_names, $name;
+    }
+    $sth->finish;
+    return \@strain_names;
+
+}
+
+
+=head2 get_reference_strain_name
+
+    Args       : none
+    Example    : my $reference_strain = $ind_adaptor->get_reference_strain_name();
+    Description: Retrieves the reference strain_name that is defined as default in the database(mainly, for web purposes)
+    Returntype : string
+    Exceptions : none
+    Caller     : web
+
+=cut
+
+sub get_reference_strain_name{
+    my $self = shift;
+
+    my $name;
+    my $sth = $self->prepare(qq{SELECT meta_value from meta where meta_key = ?
+				});
+    $sth->bind_param(1,'individual.reference_strain',SQL_VARCHAR);
+    $sth->execute();
+    $sth->bind_columns(\$name);
+    $sth->fetch();
+    $sth->finish;
+
+    return $name;
+
+}
 
 #
 # private method, constructs Individuals from an executed statement handle
@@ -271,10 +384,10 @@ sub _objs_from_sth {
   my $self = shift;
   my $sth = shift;
 
-  my ($dbID, $name, $desc, $gender, $father_id, $mother_id);
+  my ($dbID, $name, $desc, $gender, $father_id, $mother_id,$it_name,$it_desc);
 
   $sth->bind_columns(\$dbID, \$name, \$desc, \$gender,
-                     \$father_id, \$mother_id);
+                     \$father_id, \$mother_id, \$it_name, \$it_desc);
 
   my %seen;
   my %wanted_fathers;
@@ -313,7 +426,9 @@ sub _objs_from_sth {
        -father_individual => $father,
        -mother_individual => $mother,
        -father_individual_id => $father_id,
-       -mother_individual_id => $mother_id);
+       -mother_individual_id => $mother_id,
+       -type_individual => $it_name,
+       -type_description => $it_desc);
 
     $seen{$dbID} = $ind;
 
@@ -345,14 +460,15 @@ sub _objs_from_sth {
 }
 
 sub _tables{return (['individual','i'],
-		    ['sample','s'])}
+		    ['sample','s'],
+		    ['individual_type','it'])}
 
 sub _columns{
-    return qw(s.sample_id s.name s.description i.gender i.father_individual_sample_id i.mother_individual_sample_id);
+    return qw(s.sample_id s.name s.description i.gender i.father_individual_sample_id i.mother_individual_sample_id it.name it.description);
 }
 
 sub _default_where_clause{
-    return 's.sample_id = i.sample_id';
+    return 's.sample_id = i.sample_id AND i.individual_type_id = it.individual_type_id';
 }
 
 1;

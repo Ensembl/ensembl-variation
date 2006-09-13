@@ -107,7 +107,7 @@ sub fetch_by_name {
 
   throw('name argument expected') if(!defined($name));
 
-  my $sth = $self->prepare(q{SELECT p.sample_id, s.name, s.size, s.description, p.is_strain
+  my $sth = $self->prepare(q{SELECT p.sample_id, s.name, s.size, s.description
                              FROM   population p, sample s
                              WHERE  s.name = ?
 			     AND    s.sample_id = p.sample_id});
@@ -152,7 +152,7 @@ sub fetch_all_by_super_Population {
   }
 
   my $sth = $self->prepare(q{SELECT p.sample_id, s.name, s.size,
-                                    s.description, p.is_strain
+                                    s.description
                              FROM   population p, population_structure ps, sample s
                              WHERE  p.sample_id = ps.sub_population_sample_id
                              AND    ps.super_population_sample_id = ?
@@ -197,7 +197,7 @@ sub fetch_all_by_sub_Population {
   }
 
   my $sth = $self->prepare(q{SELECT p.sample_id, s.name, s.size,
-                                    s.description, p.is_strain
+                                    s.description
                              FROM   population p, population_structure ps, sample s
                              WHERE  p.sample_id = ps.super_population_sample_id
                              AND    ps.sub_population_sample_id = ?
@@ -211,25 +211,6 @@ sub fetch_all_by_sub_Population {
   $sth->finish();
 
   return $result;
-}
-
-
-=head2 fetch_all_strains
-
-    Args       : none
-    Example    : my $strains = $pop_adaptor->fetch_all_strains();
-    Description: Retrieves populations that should be considered as strain in the specie.
-    Returntype : list of Bio::EnsEMBL::Variation::Population
-    Exceptions : none
-    Caller     : Bio:EnsEMBL:Variation::Population
-
-=cut
-
-sub fetch_all_strains{
-    my $self = shift;
-    
-    return $self->generic_fetch("is_strain = 1");
-
 }
 
 
@@ -264,97 +245,6 @@ sub fetch_default_LDPopulation{
     }
 }
 
-=head2 get_display_strains
-
-    Args       : none
-    Example    : my $strains = $pop_adaptor->get_display_strains();
-    Description: Retrieves strain_names that are going to be displayedin the web (reference + default + others)
-    Returntype : list of strings
-    Exceptions : none
-    Caller     : web
-
-=cut
-
-sub get_display_strains{
-    my $self = shift;
-    my @strain_names;
-    my $name;
-    #first, get the reference strain
-    $name = $self->get_reference_strain_name();
-    push @strain_names, $name;
-    #then, get the default ones
-    my $default_strains = $self->get_default_strains();
-    push @strain_names, @{$default_strains};
-    #and finally, get the others
-    my $sth = $self->prepare(qq{SELECT meta_value from meta where meta_key = ?
-				});
-    $sth->bind_param(1,'population.display_strain',SQL_VARCHAR);
-    $sth->execute();
-    $sth->bind_columns(\$name);
-    while ($sth->fetch()){
-	push @strain_names, $name;
-    }
-    $sth->finish;
-    return \@strain_names;
-
-}
-
-
-=head2 get_default_strains
-
-    Args       : none
-    Example    : my $strains = $pop_adaptor->get_default_strains();
-    Description: Retrieves strain_names that are defined as default in the database(mainly, for web purposes)
-    Returntype : list of strings
-    Exceptions : none
-    Caller     : web
-
-=cut
-
-sub get_default_strains{
-    my $self = shift;
-    my @strain_names;
-    my $name;
-    my $sth = $self->prepare(qq{SELECT meta_value from meta where meta_key = ?
-				});
-    $sth->bind_param(1,'population.default_strain',SQL_VARCHAR);
-    $sth->execute();
-    $sth->bind_columns(\$name);
-    while ($sth->fetch()){
-	push @strain_names, $name;
-    }
-    $sth->finish;
-    return \@strain_names;
-
-}
-
-
-=head2 get_reference_strain_name
-
-    Args       : none
-    Example    : my $reference_strain = $pop_adaptor->get_reference_strain_name();
-    Description: Retrieves the reference strain_name that is defined as default in the database(mainly, for web purposes)
-    Returntype : string
-    Exceptions : none
-    Caller     : web
-
-=cut
-
-sub get_reference_strain_name{
-    my $self = shift;
-
-    my $name;
-    my $sth = $self->prepare(qq{SELECT meta_value from meta where meta_key = ?
-				});
-    $sth->bind_param(1,'population.reference_strain',SQL_VARCHAR);
-    $sth->execute();
-    $sth->bind_columns(\$name);
-    $sth->fetch();
-    $sth->finish;
-
-    return $name;
-
-}
 
 =head2 fetch_all_by_Individual
 
@@ -384,7 +274,7 @@ sub fetch_all_by_Individual{
 	return [];
   } 
 
-    my $sth = $self->prepare(qq{SELECT p.sample_id, s.name, s.size, s.description, p.is_strain
+    my $sth = $self->prepare(qq{SELECT p.sample_id, s.name, s.size, s.description
 				FROM population p, individual_population ip, sample s
 				WHERE s.sample_id = ip.population_sample_id
 				AND s.sample_id = p.sample_id
@@ -430,7 +320,7 @@ sub fetch_tagged_Population{
 	return [];
   } 
 
-    my $sth = $self->prepare(qq{SELECT p.sample_id, s.name, s.size, s.description, p.is_strain
+    my $sth = $self->prepare(qq{SELECT p.sample_id, s.name, s.size, s.description
 				FROM population p, tagged_variation_feature tvf, sample s
 				WHERE p.sample_id = tvf.sample_id
 				AND   s.sample_id = p.sample_id
@@ -455,9 +345,9 @@ sub _objs_from_sth {
 
   my @pops;
 
-  my ($pop_id, $name, $size, $desc, $is_strain);
+  my ($pop_id, $name, $size, $desc);
 
-  $sth->bind_columns(\$pop_id, \$name, \$size, \$desc, \$is_strain);
+  $sth->bind_columns(\$pop_id, \$name, \$size, \$desc);
 
   while($sth->fetch()) {
     push @pops, Bio::EnsEMBL::Variation::Population->new
@@ -465,8 +355,7 @@ sub _objs_from_sth {
        -ADAPTOR => $self,
        -NAME => $name,
        -DESCRIPTION => $desc,
-       -SIZE => $size,
-       -IS_STRAIN => $is_strain);
+       -SIZE => $size);
   }
 
   return \@pops;
@@ -476,8 +365,7 @@ sub _tables{return (['population','p'],
 		    ['sample','s']);}
 
 sub _columns{
-    return qw(s.sample_id s.name s.size s.description p.is_strain
-	      );
+    return qw(s.sample_id s.name s.size s.description);
 }
 
 sub _default_where_clause{

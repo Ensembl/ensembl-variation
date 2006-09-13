@@ -76,12 +76,18 @@ our @ISA = ('Bio::EnsEMBL::Variation::Sample');
   Arg [-FATHER_INDIVIDUAL_SAMPLE_ID]:
     int - set the internal id of the mother individual so that the actual
     mother Individual object can be retrieved on demand.
+  Arg [-TYPE_INDIVIDUAL]:
+    int - name for the type of the individual (fully or partly inbred, outbred or mutant
+  Arg [-TYPE_DESCRIPTION]:
+    string - description of the type of individual
   Example    : $individual = Bio::EnsEMBL::Variation::Individual->new
                  (-name => 'WI530.07',
                   -description => 'african',
                   -gender => 'Male',
                   -father_individual => $father_ind,
-                  -mother_individual => $mother_ind);
+                  -mother_individual => $mother_ind,
+		  -type_individual => 'outbred',
+		  -type_description => 'a single organism which breeds freely');
   Description: Constructor Instantiates an Individual object.
   Returntype : Bio::EnsEMBL::Variation::Individual
   Exceptions : throw if gender arg is provided but not valid
@@ -93,10 +99,11 @@ sub new {
   my $caller = shift;
   my $class = ref($caller) || $caller;
 
-  my ($dbID, $adaptor, $name, $desc, $gender, $father, $mother,
+  my ($dbID, $adaptor, $name, $desc, $gender, $father, $mother, $type_name, $type_desc,
       $father_id, $mother_id) =
     rearrange([qw(dbID adaptor name description gender
                   father_individual mother_individual
+		  type_individual type_description
                   father_individual_sample_id mother_individual_sample_id)], @_);
 
   if(defined($gender)) {
@@ -106,6 +113,12 @@ sub new {
     }
   }
 
+  if (defined($type_name)){
+      $type_name = ucfirst(lc($type_name));
+      if ($type_name ne 'Fully_inbred' && $type_name ne 'Partly_inbred' && $type_name ne 'Outbred' && $type_name ne 'Mutant'){
+	  throw('Type of individual must of one of: "fully_inbred", "partly_inbred", "outbred", "mutant"');
+      }
+  }
   return bless {'dbID'    => $dbID,
                 'adaptor' => $adaptor,
                 'name'    => $name,
@@ -113,11 +126,54 @@ sub new {
                 'gender'  => $gender,
                 'father_individual' => $father,
                 'mother_individual' => $mother,
+		'type_individual' => $type_name,
+		'type_description' => $type_desc,
                 '_mother_individual_sample_id' => $mother_id,
                 '_father_individual_sample_id' => $father_id}, $class;
 }
 
 
+=head2 type_individual
+
+    Arg [1]     : int $newval (optional)
+                  The new value to set the type_individual attribute to                  
+    Example     : $type_individual = $obj->type_individual();
+    Description : Getter/Setter for the type_individual attribute
+    Returntype  : int
+    Exceptions  : none
+    Caller      : general
+
+=cut
+
+sub type_individual{
+    my $self = shift;
+    if (@_){
+	my $new_name = shift;
+	return $self->{'type_name'} = $new_name;
+    }
+    return $self->{'type_name'};
+}
+
+=head2 type_description
+
+    Arg [1]     : int $newval (optional)
+                  The new value to set the type_description attribute to                  
+    Example     : $type_description = $obj->type_description();
+    Description : Getter/Setter for the type_description attribute
+    Returntype  : int
+    Exceptions  : none
+    Caller      : general
+
+=cut
+
+sub type_description{
+    my $self = shift;
+    if (@_){
+	my $new_desc = shift;
+	return $self->{'type_description'} = $new_desc;
+    }
+    return $self->{'type_description'};
+}
 
 =head2 gender
 
