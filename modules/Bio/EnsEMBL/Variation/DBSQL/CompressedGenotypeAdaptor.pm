@@ -102,8 +102,10 @@ sub fetch_all_by_Variation {
 =head2 fetch_all_by_Slice
 
   Arg [1]    : Bio::EnsEMBL:Slice $slice
+  Arg [2]    : (optional) Bio::EnsEMBL::Variation::Individual $individual
   Example    : my @IndividualGenotypesFeatures = @{$ca->fetch_all_by_Slice($slice)};
-  Description: Retrieves all IndividualGenotypeFeature features for a given slice. 
+  Description: Retrieves all IndividualGenotypeFeature features for a given slice for
+               a certain individual (if provided). 
   Returntype : reference to list Bio::EnsEMBL::Variation::IndividualGenotype
   Exceptions : throw on bad argument
   Caller     : general
@@ -113,9 +115,19 @@ sub fetch_all_by_Variation {
 sub fetch_all_by_Slice{
     my $self = shift;
     my $slice = shift;
+    my $individual = shift;
     my @results;
+    my $features;
+    my $constraint;
     if (!$self->_multiple){
-	my $features = $self->SUPER::fetch_all_by_Slice($slice);
+	#if passed inividual, add constraint
+	if (defined $individual && defined $individual->dbID){
+	    $constraint = ' c.sample_id = ' . $individual->dbID;
+	    $features = $self->SUPER::fetch_all_by_Slice_constraint($slice,$constraint);
+	}
+	else{
+	    $features = $self->SUPER::fetch_all_by_Slice($slice);
+	}
 	#need to check the feature is within the Slice
 	foreach my $indFeature (@{$features}){
 	    if ($indFeature->start > 0 && ($slice->end-$slice->start +1) >= $indFeature->end){
@@ -124,8 +136,16 @@ sub fetch_all_by_Slice{
 	}
     }
     else{
+	#if passed inividual, add constraint
+	if (defined $individual && defined $individual->dbID){
+	    $constraint = ' c.sample_id = ' . $individual->dbID;
+	    $features = $self->SUPER::fetch_all_by_Slice_constraint($slice,$constraint);
+	}
+	else{
+	    $features = $self->SUPER::fetch_all_by_Slice($slice);
+	}
 	#and include the genotypes from the multiple genotype table
-	push @results, @{$self->SUPER::fetch_all_by_Slice($slice)};
+	push @results, $features;
     }
     return \@results;
     

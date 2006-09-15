@@ -219,42 +219,6 @@ sub variation {
   return $self->{'variation'};
 }
 
-=head2 population
-
-  Arg [1]    : (optional) Bio::EnsEMBL::Variation::Population $population
-  Example    : $p = $af->population();
-  Description: Getter/Setter for the population associated with this feature.
-               If not set, and this AlleleFeature has an associated adaptor
-               an attempt will be made to lazy-load the population from the
-               database.
-  Returntype : Bio::EnsEMBL::Variation::Population
-  Exceptions : throw on incorrect argument
-  Caller     : general
-
-=cut
-
-sub population {
-  my $self = shift;
-
-  if(@_) {
-    if(!ref($_[0]) || !$_[0]->isa('Bio::EnsEMBL::Variation::Population')) {
-      throw("Bio::EnsEMBL::Variation::Population argument expected");
-    }
-    $self->{'population'} = shift;
-  }
-  elsif(!defined($self->{'population'}) && $self->{'adaptor'} &&
-        defined($self->{'_sample_id'})) {
-    # lazy-load from database on demand
-    my $pa = $self->{'adaptor'}->db()->get_PopulationAdaptor();
-    $self->{'population'} = $pa->fetch_by_dbID($self->{'_sample_id'});
-    if (!defined $self->{'population'}){
-	warning("AlleleFeature attached to Individual, not Strain");
-    }
-  }
-
-  return $self->{'population'};
-}
-
 =head2 individual
 
   Arg [1]    : (optional) Bio::EnsEMBL::Variation::Individual $individual
