@@ -84,40 +84,59 @@ sub from_IndividualSlice{
     return $self->{'from_IndividualSlice'};    
 }
 
-=head2 fetch_all_by_Slice_Population
+=head2 fetch_all_by_Slice
 
    Arg[0]      : Bio::EnsEMBL::Slice $slice
-   Arg[1]      : (optional) Bio::EnsEMBL::Variation::Population $population
-   Example     : my $vf = $vfa->fetch_all_by_Slice_Individual($slice,$population);   
+   Arg[1]      : (optional) Bio::EnsEMBL::Variation::Individual $individual
+   Example     : my $vf = $vfa->fetch_all_by_Slice($slice,$individual);   
    Description : Gets all the VariationFeatures in a certain Slice for a given
-                 Population (if provided)
+                 Individual (if provided)
    ReturnType  : listref of Bio::EnsEMBL::Variation::AlleleFeature
    Exceptions  : thrown on bad arguments
    Caller      : general
    
 =cut
 
-sub fetch_all_by_Slice_Population{
+sub fetch_all_by_Slice{
     my $self = shift;
     my $slice = shift;
-    my $population = shift;
+    my $individual = shift;
 
     if(!ref($slice) || !$slice->isa('Bio::EnsEMBL::Slice')) {
 	throw('Bio::EnsEMBL::Slice arg expected');
     }
     
-
-    if(!ref($population) || !$population->isa('Bio::EnsEMBL::Variation::Population')) {
-	throw('Bio::EnsEMBL::Variation::Population arg expected');
+    if (defined $individual){
+	if(!ref($individual) || !$individual->isa('Bio::EnsEMBL::Variation::Individual')) {
+	    throw('Bio::EnsEMBL::Variation::Individual arg expected');
+	}
+	if(!defined($individual->dbID())) {
+	    throw("Individual arg must have defined dbID");
+	}
     }
-    if(!defined($population->dbID())) {
-	throw("Population arg must have defined dbID");
-    }
-    
-    my $constraint = "a.sample_id = " . $population->dbID;
-
-    #call the method fetch_all_by_Slice_constraint with the population constraint
-    $self->fetch_all_by_Slice_constraint($slice,$constraint);    
+    my $genotype_adaptor = $self->db->get_IndividualGenotypeAdaptor; #get genotype adaptor
+    my $genotypes = $genotype_adaptor->fetch_all_by_Slice($slice,$individual); #and get all genotype data
+    my $afs = $self->SUPER::fetch_all_by_Slice($slice); #get all AlleleFeatures within the Slice
+    my $last_position = 0;
+    #we need to merge genotype data with AlleleFeatures to assign alleles
+    foreach my $af (@{$afs}){
+	#both, genotypes and af should be sorted
+	for (my $i = $last_position;$i<@{$genotypes};$i++){
+	    if ($genotypes->[$i]->start == $af->seq_region_start){
+		#we need to put the allele and Individual in the AlleleFeature object
+		$af->allele_string(ambiguity_code($genotypes->[$i]->allele1  . '/' . $genotypes->[$i]->allele2));
+		$af->individual($genotypes->[$i]->individual);		
+		$last_position++;
+	    }
+	    elsif ($genotypes->[$i]->start < $af->seq_region_start){
+		$last_position++; #this should not happen, it means the genotype has no allele feature 
+	    }
+	    else{
+		last;
+	    }
+	}
+    } 
+    return $afs;
 }
 
 
@@ -172,7 +191,7 @@ sub _tables{
 	return (['variation_feature','vf'], ['individual_genotype_multiple_bp','ig']) if ($self->_multiple_bp());
     }
     else{
-	return (['variation_feature','vf'],   ['allele','a'], ['source','s']);
+	return (['variation_feature','vf'],  ['source','s']);
     }
 
 }
@@ -184,7 +203,7 @@ sub _columns{
 	      'vf.seq_region_id', 'vf.seq_region_start', 'vf.seq_region_end', 
 	      'vf.seq_region_strand', 'vf.variation_name') if ($self->from_IndividualSlice());
 
-    return qw(a.variation_id a.sample_id a.allele 
+    return qw(vf.variation_id 
 	      vf.seq_region_id vf.seq_region_start vf.seq_region_end 
 	      vf.seq_region_strand vf.variation_name s.name);
 }
@@ -192,8 +211,7 @@ sub _columns{
 sub _default_where_clause{
     my $self = shift;
     return "ig.variation_id = vf.variation_id" if ($self->from_IndividualSlice());
-    return "a.variation_id = vf.variation_id AND " . 
-	   "vf.source_id = s.source_id";
+    return "vf.source_id = s.source_id";
 }
 
 sub _objs_from_sth{
@@ -212,10 +230,10 @@ sub _objs_from_sth{
   my %sr_name_hash;
   my %sr_cs_hash;
 
-  my ($variation_id, $sample_id, $allele,$seq_region_id,
+  my ($variation_id, $seq_region_id,
       $seq_region_start,$seq_region_end, $seq_region_strand, $variation_name, $source_name );
 
-  $sth->bind_columns(\$variation_id,\$sample_id,\$allele,
+  $sth->bind_columns(\$variation_id,
 		     \$seq_region_id,\$seq_region_start,\$seq_region_end,\$seq_region_strand,
 		     \$variation_name, \$source_name);
 
@@ -304,18 +322,19 @@ sub _objs_from_sth{
       }
       $slice = $dest_slice;   
   }
-    $allele = ambiguity_code($allele) if ($self->from_IndividualSlice);
+    #allele and sample table comes from the Compressed genotype adaptor
+#    $allele = ambiguity_code($allele) if ($self->from_IndividualSlice);
     push @features, Bio::EnsEMBL::Variation::AlleleFeature->new_fast(
 								     {'start'    => $seq_region_start,
 								      'end'      => $seq_region_end,
 								      'strand'   => $seq_region_strand,
 								      'slice'    => $slice,
-								      'allele_string' => $allele,
+								      'allele_string' => '',
 								      'variation_name' => $variation_name,
 								      'adaptor'  => $self,
 								      'source'   => $source_name,
 								      '_variation_id' => $variation_id,
-								      '_sample_id' => $sample_id});      
+								      '_sample_id' => ''});      
 }
  return\@features;
 }
