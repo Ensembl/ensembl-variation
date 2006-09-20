@@ -64,7 +64,6 @@ sub generate_input_seq {
   my $vdb = shift;
   my $chr_name = shift;
 
-  #my $var_adaptor = $vdb->get_VariationAdaptor();
   my $slice_adaptor = $cdb->get_SliceAdaptor();
 
   my (%variation_ids);
@@ -110,7 +109,7 @@ WHERE  seq_region_id = $seq_region_id});
     print "seq_region_id is $seq_region_id\n";
     
     if (! -e "$TMP_DIR/$TMP_FILE" or -z "$TMP_DIR/$TMP_FILE") {
-      # Only dump if tmp file does not exist, or is compressed
+      # Only dump if tmp file does not exist, only dump flanking sequence that belong to $chr
       dumpSQL($dbVar, qq{
 SELECT vf.variation_name,
        vf.variation_id,
@@ -131,7 +130,7 @@ SELECT vf.variation_name,
            vf.seq_region_start-1)
 FROM   variation_feature vf
 WHERE  vf.seq_region_id = $seq_region_id
-AND    vf.name not like "NT%" ##this is only for mouse
+AND    vf.variation_name not like "NT%" ##this is only for mouse
                            }
 	     );
     }
@@ -139,8 +138,24 @@ AND    vf.name not like "NT%" ##this is only for mouse
   else {
     if (! -e "$TMP_DIR/$TMP_FILE" or -z "$TMP_DIR/$TMP_FILE") {
       # Only dump if tmp file does not exist, or is compressed
-      # No chr_name or seq_region_id specified. 
+      # No chr_name or seq_region_id specified. dump flanking sequence from paralle_processed flanking_sequence table
+      #only can dump flanking seq which is mappedmapped
       my $sql = qq(
+SELECT vf.variation_name,
+       f.variation_id,
+       f.seq_region_id,
+       f.seq_region_strand,
+       f.up_seq,f.down_seq,
+       f.up_seq_region_start, 
+       f.up_seq_region_end,
+       f.down_seq_region_start, 
+       f.down_seq_region_end
+FROM   variation_feature vf, 
+       flanking_sequence f
+WHERE  vf.variation_id=f.variation_id 
+       );
+      #dump from paralle_processed/or un-processed flanking sequence which is not mapped
+      my $sql2 = qq(
 SELECT v.name,
        f.variation_id,
        f.seq_region_id,
@@ -150,12 +165,28 @@ SELECT v.name,
        f.up_seq_region_end,
        f.down_seq_region_start, 
        f.down_seq_region_end
-FROM   variation v, 
-       flanking_sequence f
-WHERE  v.variation_id=f.variation_id );
+FROM flanking_sequence f, variation v
+LEFT JOIN variation_feature vf
+ON   vf.variation_id=f.variation_id
+WHERE v.variation_id = f.variation_id
+AND vf.variation_id is null);
+      #dump all from unprocessed flanking sequences or un-mapped from processed
+      my $sql3 = qq(
+SELECT v.name,
+       f.variation_id,
+       f.seq_region_id,
+       f.seq_region_strand,
+       f.up_seq,f.down_seq,
+       f.up_seq_region_start, 
+       f.up_seq_region_end,
+       f.down_seq_region_start, 
+       f.down_seq_region_end
+FROM flanking_sequence f, variation v
+WHERE v.variation_id = f.variation_id
+AND f.seq_region_id is null);
 
-      #dump this to a file to save mysql time out problem
-      dumpSQL($dbVar, $sql);
+      #dump with which sql???
+      dumpSQL($dbVar, $sql3);
     }
   }
 
