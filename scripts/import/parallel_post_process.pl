@@ -117,13 +117,15 @@ sub parallel_variation_feature{
       push @hap_seq_region_ids, $seq_region_id;
     }
 
-    my $in_string = "IN (" . join (",",@hap_seq_region_ids) . ")";
-
+    my $in_string = "WHERE  seq_region_id not IN (" . join (",",@hap_seq_region_ids) . ")";
+    if (scalar @hap_seq_region_ids <1) {
+      $in_string = "";
+    }
     #create a temporary table to store the map_weight, that will be deleted by the last process
     $dbVar->do(qq{CREATE TABLE tmp_map_weight
                 SELECT variation_id, count(*) as count
                 FROM   variation_feature
-                WHERE  seq_region_id not $in_string
+                $in_string
                 GROUP BY variation_id}
 	       );
     $dbVar->do(qq{ALTER TABLE tmp_map_weight 
@@ -145,6 +147,20 @@ sub parallel_variation_feature{
     }
     $call = "bsub -q normal -K -w 'done($dbname\_variation_job*)' -J waiting_process sleep 1"; #waits until all variation features have finished to continue
     system($call);
+
+    #After post processing, re-calculate map_weight
+    $dbVar->do(qq{CREATE TABLE tmp_map_weight
+                SELECT variation_id, count(*) as count
+                FROM   variation_feature
+                $in_string
+                GROUP BY variation_id}
+	       );
+    $dbVar->do(qq{ALTER TABLE tmp_map_weight 
+		      ADD INDEX variation_idx(variation_id,count)});
+
+    $dbVar->do(qq{UPDATE variation_feature vf, tmp_map_weight tmw set vf.map_weight = tmw.count
+                  WHERE vf.variation_id=tmw.variation_id});
+    $dbVar->do(qq{DROP TABLE tmp_map_weight});
 }
 
 #will take the number of processes, and divide the total number of entries in the flanking_sequence table by the number of processes
@@ -269,16 +285,17 @@ sub parallel_transcript_variation{
 	$limit = $slice_min . "," . (scalar(@slices_ordered)-$slice_min) 
 	  if ($i+1 == $num_processes and $num_processes != 1); #the last slice, get the left slices
 
-	$call = "bsub -a normal -o $TMP_DIR/output_transcript_$i\_$$.txt  -q normal -m 'bc_hosts' /usr/local/ensembl/bin/perl parallel_transcript_variation.pl -chost $chost -cuser $cuser -cdbname $cdbname -vhost $vhost -vuser $vuser -vport $vport -vdbname $vdbname -limit $limit -tmpdir $TMP_DIR -tmpfile $TMP_FILE -num_processes $num_processes -status_file $transcript_status_file ";
-	$call .= "-cpass $cpass " if ($cpass);
-	$call .= "-cport $cport " if ($cport);
-	$call .= "-vpass $vpass " if ($vpass);
+	#$call = "bsub -a normal -o $TMP_DIR/output_transcript_$i\_$$.txt  -q normal -m 'bc_hosts' /usr/local/ensembl/bin/perl parallel_transcript_variation.pl -chost $chost -cuser $cuser -cdbname $cdbname -vhost $vhost -vuser $vuser -vport $vport -vdbname $vdbname -limit $limit -tmpdir $TMP_DIR -tmpfile $TMP_FILE -num_processes $num_processes -status_file $transcript_status_file ";
+	#$call .= "-cpass $cpass " if ($cpass);
+	#$call .= "-cport $cport " if ($cport);
+	#$call .= "-vpass $vpass " if ($vpass);
+	$call = "bsub -a normal -o $TMP_DIR/output_transcript_$i\_$$.txt  -q normal -m 'bc_hosts' /usr/local/ensembl/bin/perl parallel_transcript_variation.pl -species $species -limit $limit -tmpdir $TMP_DIR -tmpfile $TMP_FILE -num_processes $num_processes -status_file $transcript_status_file ";
 	$slice_min = $slice_max;
 	system($call);
     }
 }
 
-##use genotype method to change alleles in genotype table to forward strand
+##use genotype method to change alleles in genotype table to forward strand, this is for mouse only in order to merge with sanger called SNPs
 sub genotype{
   my $dbVar = shift;
   $dbVar->do(qq{CREATE TABLE tmp_varid

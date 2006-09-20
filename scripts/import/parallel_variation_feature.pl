@@ -74,19 +74,19 @@ my ($TMP_DIR, $TMP_FILE, $LIMIT,$status_file);
   load_asm_cache($dbCore) unless defined $top_level;
   variation_feature($dbCore, $dbVar, $top_level);
 
-  open STATUS, ">>$TMP_DIR/$status_file"
-    or throw("Could not open tmp file: $TMP_DIR/$status_file\n"); 
-  flock(STATUS,LOCK_EX);
-  seek(STATUS, 0, 2); #move to the end of the file
-  print STATUS "process finished\n";
-  flock(STATUS,LOCK_UN);
-  close STATUS;
-  #check if it is the last process
-  my $processes = `cat $TMP_DIR/$status_file | wc -l`;
-  if ($processes == $num_processes){
-      #if is the last process, delete the variation table and upload with the new coordinate information from the different tables
-      last_process($dbCore,$dbVar);
-  }
+   open STATUS, ">>$TMP_DIR/$status_file"
+     or throw("Could not open tmp file: $TMP_DIR/$status_file\n"); 
+   flock(STATUS,LOCK_EX);
+   seek(STATUS, 0, 2); #move to the end of the file
+   print STATUS "process finished\n";
+   flock(STATUS,LOCK_UN);
+   close STATUS;
+   #check if it is the last process
+   my $processes = `cat $TMP_DIR/$status_file | wc -l`;
+   if ($processes == $num_processes){
+       #if is the last process, delete the variation table and upload with the new coordinate information from the different tables
+     last_process($dbCore,$dbVar);
+   }
 }
 
 
@@ -155,7 +155,7 @@ sub variation_feature {
       $sctg_cs = $csa->fetch_by_name('supercontig');
   }
 
-#  my $sctg_cs = $csa->fetch_by_rank(2); #replaced to support other species without supercontig
+  #my $sctg_cs = $csa->fetch_by_rank(2); #replaced to support other species without supercontig
 
   my $mapper = $asma->fetch_by_CoordSystems($top_cs, $sctg_cs) if (! $top_level);
   
@@ -314,7 +314,9 @@ sub variation_feature {
     $alleles_expanded{$allele} = $allele_copy; 
   }
 
-  $sth->finish();
+  # check for problems which may have terminated the fetch early
+  die $sth->errstr if $sth->err;
+
 
   # print the last row, excluding SNPs with map_weight > 3
   
@@ -375,10 +377,10 @@ sub last_process{
     #unlink(<$TMP_DIR/$dbname.variation_feature*>);
     $dbVar->do("DROP TABLE tmp_map_weight");
 
-    update_meta_coord($dbCore, $dbVar, 'variation_feature');
     #and delete the status file
 
     unlink("$TMP_DIR/$status_file");
+    update_meta_coord($dbCore, $dbVar, 'variation_feature');
 }
 
 #

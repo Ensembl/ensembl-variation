@@ -54,7 +54,7 @@ my ($TMP_DIR, $TMP_FILE, $LIMIT,$status_file, $file_number);
   usage('-cdbname argument is required') if(!$cdbname);
 
   usage('-num_processes must at least be 1') if ($num_processes == 0);
-  usage('-status_file argument is required') if (!$status_file);
+  #usage('-status_file argument is required') if (!$status_file);
 
   my $dbCore = Bio::EnsEMBL::DBSQL::DBAdaptor->new
     (-host   => $chost,
@@ -84,7 +84,7 @@ my ($TMP_DIR, $TMP_FILE, $LIMIT,$status_file, $file_number);
   my $processes = `cat $TMP_DIR/$status_file | wc -l`;
   if ($processes == $num_processes){
       #if is the last process, delete the variation table and upload with the new coordinate information from the different tables
-      last_process($dbCore,$dbVar);
+    last_process($dbCore,$dbVar);
   }
 }
 
@@ -104,11 +104,6 @@ sub flanking_sequence {
 
   my $call = "lsrcp ecs4a:$TMP_DIR/$dbname.flanking_sequence_$file_number\.txt /tmp/$dbname.flanking_sequence_$file_number\.txt";
   system($call);
-
-#  open FH, ">$TMP_DIR/$dbname.flanking_sequence_out_$file_number\.txt"
-#      or throw("Could not open tmp file: $TMP_DIR/flanking_sequence_$file_number\.txt\n");
-#  open IN, "$TMP_DIR/$dbname.flanking_sequence_$file_number\.txt" 
-#    or throw("Could not open input file with flanks: $TMP_DIR/$dbname.flanking_sequence_$file_number\.txt $!\n");
 
   open FH, ">/tmp/$dbname.flanking_sequence_out_$file_number\.txt" or throw("can't open flanking_output");
   open IN, "</tmp/$dbname.flanking_sequence_$file_number\.txt" or throw("can't open flanking input");
@@ -218,7 +213,7 @@ sub flanking_sequence {
       #print to the buffer the information
       push @lines, join("\t",$var_id,$up_seq, $dn_seq, $up_sr_start, $up_sr_end,$dn_sr_start, $dn_sr_end, $sr_id, $sr_strand) . "\n";
 
-  }  
+    }
   foreach my $line (@lines){
       @row = split /\t/,$line;
       if ($row[7] ne '\N'){
@@ -262,10 +257,9 @@ sub last_process{
     #unlink(<$TMP_DIR/$dbname.flanking_sequence*.txt>);
     #and upload all the information to the flanking_sequence table
     load ($dbVar,qw(flanking_sequence variation_id up_seq down_seq up_seq_region_start up_seq_region_end down_seq_region_start down_seq_region_end seq_region_id seq_region_strand));
-    
-    update_meta_coord($dbCore, $dbVar, 'flanking_sequence');
 
     unlink("$TMP_DIR/$status_file");
+    update_meta_coord($dbCore, $dbVar, 'flanking_sequence');
 }
 
 #
