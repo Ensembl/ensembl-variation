@@ -20,7 +20,7 @@ sub variation_feature{
 
   # Create hashes of variation_id's, source_id's etc keyed by variation name
   my ($variation_id,$name,$source_id,$validation_status);
-  my $sth = $self->{'dbVariation'}->prepare (qq{SELECT variation_id, name, source_id, validation_status
+  my $sth = $self->{'dbVar'}->prepare (qq{SELECT variation_id, name, source_id, validation_status
 						FROM   variation});
   $sth->execute();
   $sth->bind_columns(\$variation_id,\$name,\$source_id,\$validation_status);
@@ -40,7 +40,7 @@ select sr.seq_region_id, sr.name
 from   seq_region sr, seq_region_attrib sra, attrib_type at 
 where  sr.seq_region_id=sra.seq_region_id 
 and    sra.attrib_type_id = at.attrib_type_id 
-and    (at.code="toplevel" or at.code="non_ref") } );
+and    at.code="toplevel" } );
   $sth1->execute();
   $sth1->bind_columns(\$seq_region_id,\$seq_region_name);
   while ($sth1->fetch) {
@@ -53,11 +53,11 @@ and    (at.code="toplevel" or at.code="non_ref") } );
 
   my $mapping_file_dir = $self->{'mapping_file_dir'};
   # If mapping_file_dir is a file, read from it
-  if (-f $mapping_file_dir) {
+  if (-f "$mapping_file_dir") {
     open (IN, "$mapping_file_dir") or die "can't open mapping_file:$!";
   }
   # Concatenate all mapping_file_N files into a single result file
-  elsif (-d $mapping_file_dir) {
+  elsif (-d "$mapping_file_dir") {
     system("cat $mapping_file_dir/mapping_file* > $mapping_file_dir/all_mapping_file");
     open (IN, "$mapping_file_dir/all_mapping_file") or die "can't open mapping_file:$!";
   }
@@ -68,7 +68,6 @@ and    (at.code="toplevel" or at.code="non_ref") } );
     next if /^more |^PARSING/;
     s/^MORE_HITS//;
     my ($ref_id, $slice_name, $start, $end, $strand, $ratio) =split;
-    open (FH, ">" . $self->{'tmpdir'} . "/" . $self->{'tmpfile'} );
 
     # Skip mappings where %ID < 50%
     next if $ratio <0.5;
@@ -145,7 +144,7 @@ and    (at.code="toplevel" or at.code="non_ref") } );
   debug("Creating genotyped variations");
 
   # Creating temporary variation_feature table
-  create_and_load( $self->{'dbVariation'}, 
+  create_and_load( $self->{'dbVar'}, 
                    "tmp_variation_feature",
                    "seq_region_id",
                    "seq_region_start",
@@ -158,17 +157,17 @@ and    (at.code="toplevel" or at.code="non_ref") } );
 
   #creating the temporary table with the genotyped variations
 
-   $self->{'dbVariation'}->do(qq{
+  $self->{'dbVar'}->do(qq{
 CREATE TABLE tmp_genotyped_var 
 SELECT DISTINCT variation_id FROM tmp_individual_genotype_single_bp});
-   $self->{'dbVariation'}->do(qq{
+   $self->{'dbVar'}->do(qq{
 CREATE UNIQUE INDEX variation_idx ON tmp_genotyped_var (variation_id)});
-   $self->{'dbVariation'}->do(qq{
+   $self->{'dbVar'}->do(qq{
 INSERT IGNORE INTO  tmp_genotyped_var 
 SELECT DISTINCT variation_id FROM individual_genotype_multiple_bp});
   
   # Copy from tmp variation_feature to final variation_feature
-  $self->{'dbVariation'}->do(qq{
+  $self->{'dbVar'}->do(qq{
 INSERT INTO variation_feature
       (variation_id,
        seq_region_id, 
@@ -191,8 +190,8 @@ SELECT tv.variation_id,
 FROM   tmp_variation_feature tv LEFT JOIN 
        tmp_genotyped_var tgv ON tv.variation_id = tgv.variation_id });
 
-  $self->{'dbVariation'}->do(qq{DROP TABLE tmp_variation_feature});
-  $self->{'dbVariation'}->do(qq{DROP TABLE tmp_genotyped_var});
+  $self->{'dbVar'}->do(qq{DROP TABLE tmp_variation_feature});
+  $self->{'dbVar'}->do(qq{DROP TABLE tmp_genotyped_var});
 }
 
 1;
