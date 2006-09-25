@@ -60,7 +60,7 @@ sub ambiguity_code {
     my $alleles = shift;
     $alleles = uc( join '', sort split /[\|\/\\]/, $alleles );
     my %ambig = qw(AC M ACG V ACGT N ACT H AG R AGT D AT W CG S CGT B CT Y 
-GT K);
+GT K CC C AA A TT T GG G);
     return $ambig{$alleles};
 }
 
