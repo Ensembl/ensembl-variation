@@ -79,6 +79,7 @@ our @ISA = ('Bio::EnsEMBL::Storable');
   Returntype : Bio::EnsEMBL::Variation::Allele
   Exceptions : none
   Caller     : general
+  Status     : At Risk
 
 =cut
 
@@ -112,6 +113,7 @@ sub new {
   Returntype : string
   Exceptions : none
   Caller     : general
+  Status     : At Risk
 
 =cut
 
@@ -136,6 +138,7 @@ sub allele{
   Returntype : float
   Exceptions : none
   Caller     : general
+  Status     : At Risk
 
 =cut
 
@@ -156,6 +159,7 @@ sub frequency{
   Returntype : Bio::EnsEMBL::Variation::Population
   Exceptions : throw on incorrect argument
   Caller     : general
+  Status     : At Risk
 
 =cut
 

@@ -62,6 +62,7 @@ our %CONSEQUENCE_TYPES = ('ESSENTIAL_SPLICE_SITE' => 1,
   Returntype : Bio::EnsEMBL::Variation::ConsequenceType
   Exceptions : none
   Caller     : general
+  Status     : At Risk
 
 =cut
 
@@ -88,6 +89,7 @@ sub new {
   Returntype : int
   Exceptions : none
   Caller     : general
+  Status     : At Risk
 
 =cut
 
@@ -110,6 +112,7 @@ sub transcript_id {
   Returntype : int
   Exceptions : none
   Caller     : general
+  Status     : At Risk
 
 =cut
 
@@ -131,6 +134,7 @@ sub variation_feature_id {
   Returntype : reference to array
   Exceptions : none
   Caller     : general
+  Status     : At Risk
 
 =cut
 
@@ -152,6 +156,7 @@ sub alleles {
   Returntype : int
   Exceptions : none
   Caller     : general
+  Status     : At Risk
 
 =cut
 
@@ -174,6 +179,7 @@ sub start {
   Returntype : int
   Exceptions : none
   Caller     : general
+  Status     : At Risk
 
 =cut
 
@@ -196,6 +202,7 @@ sub end {
   Returntype : int
   Exceptions : none
   Caller     : general
+  Status     : At Risk
 
 =cut
 
@@ -218,6 +225,7 @@ sub strand {
   Returntype : int
   Exceptions : none
   Caller     : general
+  Status     : At Risk
 
 =cut
 
@@ -239,6 +247,7 @@ sub aa_start {
   Returntype : int
   Exceptions : none
   Caller     : general
+  Status     : At Risk
 
 =cut
 
@@ -260,6 +269,7 @@ sub aa_end {
   Returntype : int
   Exceptions : none
   Caller     : general
+  Status     : At Risk
 
 =cut
 
@@ -281,6 +291,7 @@ sub cdna_start {
   Returntype : int
   Exceptions : none
   Caller     : general
+  Status     : At Risk
 
 =cut
 
@@ -305,6 +316,7 @@ sub cdna_end {
   Returntype : none
   Exceptions : warning if the consequence type is not recognised
   Caller     : general
+  Status     : At Risk
 
 =cut
 
@@ -335,6 +347,7 @@ sub type {
   Returntype : string
   Exceptions : none
   Caller     : general
+  Status     : At Risk
 
 =cut
 
@@ -357,6 +370,7 @@ sub aa_alleles {
   Returntype : string
   Exceptions : none
   Caller     : general
+  Status     : At Risk
 
 =cut
 
@@ -378,6 +392,7 @@ sub codon {
   Returntype : int
   Exceptions : none
   Caller     : general
+  Status     : At Risk
 
 =cut
 
@@ -399,6 +414,7 @@ sub cds_start {
   Returntype : int
   Exceptions : none
   Caller     : general
+  Status     : At Risk
 
 =cut
 
@@ -421,6 +437,7 @@ sub cds_end {
   Returntype : string
   Exceptions : throw on incorrect argument
   Caller     : webteam
+  Status     : At Risk
 
 =cut
 

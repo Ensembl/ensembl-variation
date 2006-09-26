@@ -143,6 +143,7 @@ my %CONSEQUENCE_TYPES = %Bio::EnsEMBL::Variation::ConsequenceType::CONSEQUENCE_T
   Returntype : Bio::EnsEMBL::Variation::Variation
   Exceptions : none
   Caller     : general
+  Status     : At Risk
 
 =cut
 
@@ -188,6 +189,7 @@ sub new_fast {
   Returntype : string
   Exceptions : none
   Caller     : general
+  Status     : Stable
 
 =cut
 
@@ -209,6 +211,7 @@ sub allele_string{
   Returntype : string
   Exceptions : none
   Caller     : webcode
+  Status     : At Risk
 
 =cut
 
@@ -229,6 +232,7 @@ sub display_id {
   Returntype : string
   Exceptions : none
   Caller     : general
+  Status     : Stable
 
 =cut
 
@@ -251,6 +255,7 @@ sub variation_name{
   Returntype : int
   Exceptions : none
   Caller     : general
+  Status     : At Risk
 
 =cut
 
@@ -268,6 +273,7 @@ sub map_weight{
   Returntype  : ref to Bio::EnsEMBL::Variation::VariationFeature
   Exceptions  : None
   Caller      : general
+  Status      : At Risk
 
 =cut
 
@@ -283,13 +289,14 @@ sub get_all_TranscriptVariations{
     return $self->{'transcriptVariations'};
 }
 
-=head2
+=head2 add_TranscriptVariation
 
    Arg [1]     : Bio::EnsEMBL::Variation::TranscriptVariation
    Example     : $vf->add_TranscriptVariation($tv);
    Description : Adds another Transcript variation to the variation feature object
    Exceptions  : thrown on bad argument
    Caller      : Bio::EnsEMBL::Variation::TranscriptVariationAdaptor
+   Status     : At Risk
 
 =cut
 
@@ -316,6 +323,7 @@ sub add_TranscriptVariation{
   Returntype : Bio::EnsEMBL::Variation::Variation
   Exceptions : throw on incorrect argument
   Caller     : general
+  Status     : Stable
 
 =cut
 
@@ -348,6 +356,7 @@ sub variation {
   Returntype : string
   Exceptions : throw on incorrect argument
   Caller     : webteam
+  Status     : At Risk
 
 =cut
 
@@ -401,6 +410,7 @@ sub display_consequence{
     ReturnType  : string
     Exceptions  : none
     Caller      : general
+    Status      : At Risk
 
 =cut
 
@@ -428,6 +438,7 @@ sub add_consequence_type{
    Returntype : ref to array of strings
    Exceptions : throw if provided argument not a gene
    Caller     : general
+   Status     : At Risk
 
 =cut
 
@@ -491,6 +502,7 @@ sub _highest_priority{
     ReturnType   : String $ambiguity_code
     Exceptions   : none    
     Caller       : General
+    Status       : At Risk
 
 =cut 
 
@@ -508,6 +520,8 @@ sub ambig_code{
     ReturnType   : String $variation_class
     Exceptions   : none
     Caller       : General
+    Status       : At Risk
+
 =cut
 
 sub var_class{
@@ -526,6 +540,7 @@ sub var_class{
   Returntype : reference to list of strings
   Exceptions : none
   Caller     : general
+  Status     : At Risk
 
 =cut
 
@@ -565,6 +580,7 @@ sub get_all_validation_states {
   Returntype : none
   Exceptions : warning if validation state is not a recognised type
   Caller     : general
+  Status     : At Risk
 
 =cut
 
@@ -599,6 +615,7 @@ sub add_validation_state {
   Returntype : string
   Exceptions : none
   Caller     : general
+  Status     : At Risk
 
 =cut
 
@@ -617,6 +634,7 @@ sub source{
   ReturnType  : list of Bio::EnsEMBL::Variation::Population
   Exceptions  : none
   Caller      : general
+  Status      : At Risk
   
 =cut
 
@@ -638,6 +656,7 @@ sub is_tagged{
   ReturnType  : Bio::EnsEMBL::SNP
   Exceptions  : None
   Caller      : general      
+  Status      : At Risk
 
 =cut
 

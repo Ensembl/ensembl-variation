@@ -50,6 +50,7 @@ our @ISA = ('Bio::EnsEMBL::Storable');
   Returntype : string
   Exceptions : none
   Caller     : general
+  Status     : At Risk
 
 =cut
 
@@ -70,6 +71,7 @@ sub name{
   Returntype : string
   Exceptions : none
   Caller     : general
+  Status     : At Risk
 
 =cut
 
@@ -90,6 +92,7 @@ sub description{
   Returntype : int
   Exceptions : none
   Caller     : general
+  Status     : At Risk
 
 =cut
 

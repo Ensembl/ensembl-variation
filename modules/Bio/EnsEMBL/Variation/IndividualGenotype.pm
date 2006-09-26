@@ -79,6 +79,7 @@ use vars qw(@ISA);
   Returntype : Bio::EnsEMBL::Variation::IndividualGenotype
   Exceptions : throw on bad argument
   Caller     : general
+  Status     : At Risk
 
 =cut
 
@@ -128,6 +129,7 @@ sub new_fast {
   Returntype : Bio::EnsEMBL::Variation::Individual
   Exceptions : throw on bad argument
   Caller     : general
+  Status     : At Risk
 
 =cut
 
@@ -153,6 +155,7 @@ sub individual {
   Returntype : Bio::EnsEMBL::Variation::Variation
   Exceptions : throw on bad argument
   Caller     : general
+  Status     : At Risk
 
 =cut
 

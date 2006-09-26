@@ -113,6 +113,7 @@ use vars qw(@ISA);
   Returntype : Bio::EnsEMBL::Variation::AlleleGroup
   Exceptions : none
   Caller     : general
+  Status     : At Risk
 
 =cut
 
@@ -152,6 +153,7 @@ sub new {
   Returntype : string
   Exceptions : none
   Caller     : general
+  Status     : At Risk
 
 =cut
 
@@ -173,6 +175,7 @@ sub name {
   Returntype : Bio::EnsEMBL::Variation::Population
   Exceptions : tr
   Caller     : general
+  Status     : At Risk
 
 =cut
 
@@ -201,6 +204,7 @@ sub population {
   Returntype : Bio::EnsEMBL::Variation::VariationGroup
   Exceptions : none
   Caller     : general
+  Status     : At Risk
 
 =cut
 
@@ -228,6 +232,7 @@ sub variation_group {
   Returntype : string
   Exceptions : none
   Caller     : general
+  Status     : At Risk
 
 =cut
 
@@ -246,6 +251,7 @@ sub source {
   Returntype : float
   Exceptions : none
   Caller     : general
+  Status     : At Risk
 
 =cut
 
@@ -277,6 +283,7 @@ sub frequency {
   Returntype : reference to a list of strings
   Exceptions : none
   Caller     : general
+  Status     : At Risk
 
 =cut
 
@@ -306,6 +313,7 @@ sub get_all_alleles {
   Returntype : reference to a list of strings
   Exceptions : none
   Caller     : general
+  Status     : At Risk
 
 =cut
 
@@ -325,6 +333,7 @@ sub get_all_Variations {
   Returntype : none
   Exceptions : throw on incorrect arguments
   Caller     : AlleleGroupAdaptor
+  Status     : At Risk
 
 =cut
 

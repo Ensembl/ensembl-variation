@@ -118,6 +118,7 @@ our @ISA = ('Bio::EnsEMBL::Feature');
   Returntype : Bio::EnsEMBL::Variation::AlleleFeature
   Exceptions : none
   Caller     : general
+  Status     : At Risk
 
 =cut
 
@@ -158,6 +159,7 @@ sub new_fast {
   Returntype : string
   Exceptions : none
   Caller     : general
+  Status     : At Risk
 
 =cut
 
@@ -177,6 +179,7 @@ sub allele_string{
   Returntype : string
   Exceptions : none
   Caller     : general
+  Status     : At Risk
 
 =cut
 
@@ -197,6 +200,7 @@ sub variation_name{
   Returntype : Bio::EnsEMBL::Variation::Variation
   Exceptions : throw on incorrect argument
   Caller     : general
+  Status     : At Risk
 
 =cut
 
@@ -230,6 +234,7 @@ sub variation {
   Returntype : Bio::EnsEMBL::Variation::Individual
   Exceptions : throw on incorrect argument
   Caller     : general
+  Status     : At Risk
 
 =cut
 
@@ -270,6 +275,7 @@ sub individual {
     Returntype : reference to the same sequence that was passed in
     Exceptions : none
     Caller     : Slice
+    Status     : At Risk
 
 =cut
 
@@ -305,6 +311,7 @@ sub apply_edit  {
   Returntype : int
   Exceptions : none
   Caller     : general
+  Status     : At Risk
 
 =cut
 
@@ -328,6 +335,7 @@ sub length_diff  {
   Returntype : string
   Exceptions : none
   Caller     : general
+  Status     : At Risk
 
 =cut
 
@@ -345,6 +353,7 @@ sub source{
   Returntype : string
   Exceptions : none
   Caller     : general
+  Status     : At Risk
 
 =cut
 

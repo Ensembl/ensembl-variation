@@ -88,6 +88,7 @@ use vars qw(@ISA);
   Returntype : Bio::EnsEMBL::Variation::LDFeatureContainer
   Exceptions : none
   Caller     : general
+  Status     : At Risk
 
 =cut
 
@@ -115,6 +116,7 @@ sub new {
   Returntype : string
   Exceptions : none
   Caller     : general
+  Status     : At Risk
 
 =cut
 
@@ -126,11 +128,14 @@ sub name{
 
 
 =head2 get_variations
+
     Example     : $variations = $obj->get_variations()
     Description : Gets all the variation objects contained in the LDFeatureContainer
     ReturnType  : list of Bio::EnsEMBL::Variation::Variation
     Exceptions  : none
     Caller      : general
+    Status      : At Risk
+
 =cut
 
 sub get_variations{
@@ -154,6 +159,8 @@ sub get_variations{
     ReturnType  : float
     Exceptions  : throw on incorrect arguments
     Caller      : general
+    Status      : At Risk
+
 =cut
 
 sub get_r_square{
@@ -217,6 +224,8 @@ poulation is used
     ReturnType  : float
     Exceptions  : throw on incorrect arguments
     Caller      : general
+    Status      : At Risk
+
 =cut
 
 sub get_d_prime{
@@ -275,6 +284,8 @@ sub get_d_prime{
     ReturnType  : reference to list of hashes [{variation1 => Bio::EnsEMBL::Variation::VariationFeature, variation2=>Bio::EnsEMBL::Variation::VariationFeature, d_prime=>d_prime, r2=>r2, sample_count=>sample_count, sample_id=>population_sample_id}]
     Exceptions  : no exceptions
     Caller      : general
+    Status      : At Risk
+
 =cut
 
 
@@ -314,6 +325,8 @@ sub get_all_ld_values{
     ReturnType  : reference to list of [{variation1=>Bio::EnsEMBL::Variation::VariationFeature, variation2=>Bio::EnsEMBL::Variation::VariationFeature, r2=>r2, sample_id=>population_sample_id}]
     Exceptions  : no exceptions
     Caller      : general
+    Status      : At Risk
+
 =cut
 
 
@@ -350,6 +363,8 @@ sub get_all_r_square_values{
     ReturnType  : reference to list of [{variation1=>Bio::EnsEMBL::Variation::VariationFeature, variation2=>Bio::EnsEMBL::Variation::VariationFeature, d_prime=>d_prime, sample_id=>population_sample_id}]
     Exceptions  : no exceptions
     Caller      : general
+    Status      : At Risk
+
 =cut
 
 
@@ -391,6 +406,8 @@ sub get_all_d_prime_values{
     ReturnType  : ref to an array of int
     Exceptions  : throw on incorrect arguments
     Caller      : general
+    Status      : At Risk
+
 =cut
 
 sub get_all_populations{

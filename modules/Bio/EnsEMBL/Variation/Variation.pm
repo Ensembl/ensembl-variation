@@ -152,6 +152,7 @@ our %VSTATE2BIT = ('cluster'   => 1,   # 00000001
   Returntype : Bio::EnsEMBL::Variation::Variation
   Exceptions : none
   Caller     : general
+  Status     : At Risk
 
 =cut
 
@@ -200,6 +201,7 @@ sub new {
   Returntype : string
   Exceptions : none
   Caller     : general
+  Status     : Stable
 
 =cut
 
@@ -219,6 +221,7 @@ sub name{
   ReturnType  : reference to list of Bio::EnsEMBL::Gene
   Exceptions  : None
   Caller      : general
+  Status      : At Risk
 
 =cut
 
@@ -267,6 +270,7 @@ sub get_all_Genes{
   Returntype : reference to list of strings
   Exceptions : none
   Caller     : general
+  Status     : At Risk
 
 =cut
 
@@ -294,6 +298,7 @@ sub get_all_synonyms {
   Returntype : reference to a list of strings
   Exceptions : none
   Caller     : general
+  Status     : At Risk
 
 =cut
 
@@ -315,6 +320,7 @@ sub get_all_synonym_sources {
   Exceptions : throw if $source argument is not provided
                throw if $syn argument is not provided
   Caller     : general
+  Status     : At Risk
 
 =cut
 
@@ -345,6 +351,7 @@ sub add_synonym {
   Returntype : reference to list of strings
   Exceptions : none
   Caller     : general
+  Status     : At Risk
 
 =cut
 
@@ -374,6 +381,7 @@ sub get_all_validation_states {
   Returntype : none
   Exceptions : warning if validation state is not a recognised type
   Caller     : general
+  Status     : At Risk
 
 =cut
 
@@ -406,6 +414,7 @@ sub add_validation_state {
   Returntype : string
   Exceptions : none
   Caller     : general
+  Status     : Stable
 
 =cut
 
@@ -423,6 +432,7 @@ sub source{
   Returntype : reference to list of Bio::EnsEMBL::Variation::Allele objects
   Exceptions : none
   Caller     : general
+  Status     : Stable
 
 =cut
 
@@ -441,6 +451,7 @@ sub get_all_Alleles {
   Returntype : none
   Exceptions : throw on incorrect argument
   Caller     : general
+  Status     : At Risk
 
 =cut
 
@@ -463,6 +474,7 @@ sub add_Allele {
   Returntype : string
   Exceptions : none
   Caller     : general
+  Status     : At Risk
 
 =cut
 
@@ -481,6 +493,7 @@ sub ancestral_allele {
   Returntype : string
   Exceptions : none
   Caller     : general
+  Status     : At Risk
 
 =cut
 
@@ -500,6 +513,7 @@ sub moltype {
   Returntype : string
   Exceptions : none
   Caller     : general
+  Status     : Stable
 
 =cut
 
@@ -528,6 +542,7 @@ sub five_prime_flanking_seq{
   Returntype : string
   Exceptions : none
   Caller     : general
+  Status     : Stable
 
 =cut
 
@@ -553,6 +568,7 @@ sub three_prime_flanking_seq{
   Returntype : listref of IndividualGenotypes
   Exceptions : none
   Caller     : general
+  Status     : At Risk
 
 =cut
 
@@ -575,6 +591,7 @@ sub get_all_IndividualGenotypes {
   Returntype : listref of PopulationGenotypes
   Exceptions : none
   Caller     : general
+  Status     : At Risk
 
 =cut
 
@@ -599,6 +616,7 @@ sub get_all_PopulationGenotypes {
     Description : Adds another PopulationGenotype to the Variation object
     Exceptions  : thrown on bad argument
     Caller      : general
+    Status      : At Risk
 
 =cut
 
@@ -624,6 +642,7 @@ sub add_PopulationGenotype{
     ReturnType   : String $ambiguity_code
     Exceptions   : none    
     Caller       : General
+    Status       : At Risk
 
 =cut 
 
@@ -644,6 +663,8 @@ sub ambig_code{
     ReturnType   : String $variation_class
     Exceptions   : none
     Caller       : General
+    Status       : At Risk
+
 =cut
 
 sub var_class{
