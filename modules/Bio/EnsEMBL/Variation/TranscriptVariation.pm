@@ -115,6 +115,7 @@ my %CONSEQUENCE_TYPES = %Bio::EnsEMBL::Variation::ConsequenceType::CONSEQUENCE_T
   Returntype : Bio::EnsEMBL::Variation::TranscriptVariation
   Exceptions : throw on bad argument
   Caller     : general, TranscriptVariationAdaptor
+  Status     : At Risk
 
 =cut
 
@@ -182,6 +183,7 @@ sub new_fast {
   Returntype : Bio::EnsEMBL::Transcript
   Exceptions : throw on bad argument
   Caller     : general
+  Status     : At Risk
 
 =cut
 
@@ -217,6 +219,7 @@ sub transcript {
   Returntype : Bio::EnsEMBL::Variation::VariationFeature
   Exceptions : none
   Caller     : general
+  Status     : At Risk
 
 =cut
 
@@ -248,6 +251,7 @@ sub variation_feature {
   Returntype : string
   Exceptions : none
   Caller     : general
+  Status     : Stable
 
 =cut
 
@@ -269,6 +273,7 @@ sub pep_allele_string{
   Exceptions : throw if $start is not an int
                throw if $start < 1
   Caller     : general
+  Status     : Stable
 
 =cut
 
@@ -297,6 +302,7 @@ sub cdna_start {
   Exceptions : throw if $end is not an int
                throw if $end < 0
   Caller     : general
+  Status     : Stable
 
 =cut
 
@@ -326,6 +332,7 @@ sub cdna_end {
   Exceptions : throw if $start is not an int
                throw if $start < 0
   Caller     : general
+  Status     : Stable
 
 =cut
 
@@ -354,6 +361,7 @@ sub translation_start {
   Exceptions : throw if $end is not an int
                throw if $end < 0
   Caller     : general
+  Status     : Stable
 
 =cut
 
@@ -383,6 +391,7 @@ sub translation_end {
   Returntype : ref to array of strings
   Exceptions : throw if provided argument is not one of the valid strings
   Caller     : general
+  Status     : At Risk
 
 =cut
 
@@ -414,6 +423,7 @@ sub consequence_type {
   Returntype : string
   Exceptions : throw on incorrect argument
   Caller     : webteam
+  Status     : At Risk
 
 =cut
 

@@ -102,6 +102,7 @@ our @ISA = ('Bio::EnsEMBL::Feature');
   Returntype : Bio::EnsEMBL::Variation::Variation
   Exceptions : none
   Caller     : general
+  Status     : At Risk
 
 =cut
 
@@ -131,6 +132,7 @@ sub new {
   Returntype : string
   Exceptions : none
   Caller     : general
+  Status     : At Risk
 
 =cut
 
@@ -152,6 +154,95 @@ sub variation_group_name{
   Returntype : Bio::EnsEMBL::Variation::VariationGroup
   Exceptions : throw on bad argument
   Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub variation_group_name{
+  my $self = shift;
+  return $self->{'variation_group_name'} = shift if(@_);
+  return $self->{'variation_group_name'};
+}
+
+
+=head2 variation_group
+
+  Arg [1]    : Bio::EnsEMBL::Variation::VaritionGroup $vg (optional)
+  Example    : print $vg->variation_group->name();
+  Description: Getter/Setter for the VariationGroup associated with this
+               feature.  If not set and this feature has an associated adaptor,
+               an attempt will be made to lazy-load the variation from the
+               database.
+  Returntype : Bio::EnsEMBL::Variation::VariationGroup
+  Exceptions : throw on bad argument
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub variation_group_name{
+  my $self = shift;
+  return $self->{'variation_group_name'} = shift if(@_);
+  return $self->{'variation_group_name'};
+}
+
+
+=head2 variation_group
+
+  Arg [1]    : Bio::EnsEMBL::Variation::VaritionGroup $vg (optional)
+  Example    : print $vg->variation_group->name();
+  Description: Getter/Setter for the VariationGroup associated with this
+               feature.  If not set and this feature has an associated adaptor,
+               an attempt will be made to lazy-load the variation from the
+               database.
+  Returntype : Bio::EnsEMBL::Variation::VariationGroup
+  Exceptions : throw on bad argument
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub variation_group_name{
+  my $self = shift;
+  return $self->{'variation_group_name'} = shift if(@_);
+  return $self->{'variation_group_name'};
+}
+
+
+=head2 variation_group
+
+  Arg [1]    : Bio::EnsEMBL::Variation::VaritionGroup $vg (optional)
+  Example    : print $vg->variation_group->name();
+  Description: Getter/Setter for the VariationGroup associated with this
+               feature.  If not set and this feature has an associated adaptor,
+               an attempt will be made to lazy-load the variation from the
+               database.
+  Returntype : Bio::EnsEMBL::Variation::VariationGroup
+  Exceptions : throw on bad argument
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub variation_group_name{
+  my $self = shift;
+  return $self->{'variation_group_name'} = shift if(@_);
+  return $self->{'variation_group_name'};
+}
+
+
+=head2 variation_group
+
+  Arg [1]    : Bio::EnsEMBL::Variation::VaritionGroup $vg (optional)
+  Example    : print $vg->variation_group->name();
+  Description: Getter/Setter for the VariationGroup associated with this
+               feature.  If not set and this feature has an associated adaptor,
+               an attempt will be made to lazy-load the variation from the
+               database.
+  Returntype : Bio::EnsEMBL::Variation::VariationGroup
+  Exceptions : throw on bad argument
+  Caller     : general
+  Status     : At Risk
 
 =cut
 
@@ -187,6 +278,7 @@ sub variation_group {
   Returntype : string
   Exceptions : none
   Caller     : webcode
+  Status     : At Risk
 
 =cut
 

@@ -77,6 +77,7 @@ use vars qw(@ISA);
   Returntype : Bio::EnsEMBL::Variation::VariationGroup
   Exceptions : none
   Caller     : general
+  Status     : At Risk
 
 =cut
 
@@ -111,6 +112,7 @@ sub new {
   Returntype : string
   Exceptions : none
   Caller     : general
+  Status     : At Risk
 
 =cut
 
@@ -131,6 +133,7 @@ sub name {
   Returntype : string
   Exceptions : none
   Caller     : general
+  Status     : At Risk
 
 =cut
 
@@ -151,6 +154,7 @@ sub source {
   Returntype : string
   Exceptions : none
   Caller     : general
+  Status     : At Risk
 
 =cut
 
@@ -170,6 +174,7 @@ sub type{
   Returntype : reference to a list of strings
   Exceptions : none
   Caller     : general
+  Status     : At Risk
 
 =cut
 
@@ -188,6 +193,7 @@ sub get_all_Variations {
   Returntype : none
   Exceptions : throw on incorrect arguments
   Caller     : general
+  Status     : At Risk
 
 =cut
 

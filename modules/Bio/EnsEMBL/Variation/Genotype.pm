@@ -55,6 +55,7 @@ use vars qw(@ISA);
   Returntype : string
   Exceptions : none
   Caller     : general
+  Status     : Stable
 
 =cut
 
@@ -77,6 +78,7 @@ sub allele1 {
   Returntype : string
   Exceptions : none
   Caller     : general
+  Status     : Stable
 
 =cut
 
