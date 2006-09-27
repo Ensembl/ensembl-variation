@@ -65,6 +65,7 @@ use Bio::EnsEMBL::Utils::Exception qw(throw warning);
   Returntype : listref Bio::EnsEMBL::Variation::IndividualGenotype 
   Exceptions : none
   Caller     : general
+  Status     : At Risk
 
 =cut
 

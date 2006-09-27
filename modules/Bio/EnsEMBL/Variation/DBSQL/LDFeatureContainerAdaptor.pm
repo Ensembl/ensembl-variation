@@ -82,6 +82,7 @@ use constant MAX_SNP_DISTANCE => 100_000;
   Returntype : Bio::EnsEMBL::Variation::LDFeatureContainer
   Exceptions : thrown on bad argument
   Caller     : general
+  Status     : At Risk
 
 =cut
 
@@ -158,6 +159,7 @@ sub fetch_by_Slice{
   Returntype : reference to Bio::EnsEMBL::Variation::LDFeatureContainer
   Exceptions : throw on bad argument
   Caller     : general
+  Status     : At Risk
 
 =cut
 
@@ -510,7 +512,7 @@ sub _objs_from_sth_temp_file {
   my $IN = "/tmp/ld-$$.in";
 #  my $OUT = "/tmp/ld-$ENV{SERVER_ADDR}-$$.out";
   my $OUT = "/tmp/ld-$$.out";
-  warn ">>> $IN $OUT <<<";
+#  warn ">>> $IN $OUT <<<";
   open IN, ">$IN";
   $sth->bind_columns(\$individual_id, \$seq_region_id, \$seq_region_start, \$seq_region_end, \$genotypes, \$population_id);
   while($sth->fetch()) {

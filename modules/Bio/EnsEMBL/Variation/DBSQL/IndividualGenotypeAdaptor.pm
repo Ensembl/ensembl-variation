@@ -70,6 +70,7 @@ use Bio::EnsEMBL::Variation::DBSQL::BaseGenotypeAdaptor;
   Returntype : Bio::EnsEMBL::Variation::IndividualGenotype
   Exceptions : throw on incorrect argument
   Caller     : general
+  Status     : At Risk
 
 =cut
 
@@ -93,6 +94,7 @@ sub fetch_all_by_Individual {
   Returntype : listref Bio::EnsEMBL::Variation::IndividualGenotype 
   Exceptions : none
   Caller     : general
+  Status     : At Risk
 
 =cut
 

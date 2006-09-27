@@ -73,6 +73,7 @@ our @ISA = ('Bio::EnsEMBL::Variation::DBSQL::SampleAdaptor');
     Returntype           : list of Bio::EnsEMBL::Variation::Individual
     Exceptions           : none
     Caller               : general
+    Status               : At Risk
 
 =cut
 
@@ -102,6 +103,7 @@ sub fetch_individual_by_synonym{
   Returntype : reference to a list of Individual ids
   Exceptions : throw if no argument passed
   Caller     : general
+  Status     : At Risk
 
 =cut
 
@@ -144,6 +146,7 @@ sub fetch_all_by_name {
   Exceptions : throw if incorrect argument is passed
                warning if provided Population does not have an dbID
   Caller     : general
+  Status     : At Risk
 
 =cut
 
@@ -195,6 +198,7 @@ sub fetch_all_by_Population {
   Exceptions : throw if incorrect argument passed
                warning if provided individual has no dbID 
   Caller     : general, Individual::get_all_child_Individuals
+  Status     : At Risk
 
 =cut
 
@@ -274,6 +278,7 @@ sub fetch_all_by_parent_Individual {
     Returntype : list of Bio::EnsEMBL::Variation::Individual
     Exceptions : none
     Caller     : Bio:EnsEMBL:Variation::Individual
+    Status     : At Risk
 
 =cut
 
@@ -292,6 +297,7 @@ sub fetch_all_strains{
     Returntype : list of strings
     Exceptions : none
     Caller     : web
+    Status     : At Risk
 
 =cut
 
@@ -328,6 +334,7 @@ sub get_display_strains{
     Returntype : list of strings
     Exceptions : none
     Caller     : web
+    Status     : At Risk
 
 =cut
 
@@ -357,6 +364,7 @@ sub get_default_strains{
     Returntype : string
     Exceptions : none
     Caller     : web
+    Status     : At Risk
 
 =cut
 

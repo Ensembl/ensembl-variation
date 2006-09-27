@@ -66,6 +66,7 @@ use Data::Dumper;
   Returntype : listref Bio::EnsEMBL::Variation::IndividualGenotype 
   Exceptions : none
   Caller     : general
+  Status     : At Risk
 
 =cut
 
@@ -96,6 +97,7 @@ sub fetch_all_by_Variation {
     #and include the genotypes from the multiple genotype table
     $self->_multiple(1);
     push @{$res}, @{$self->SUPER::fetch_all_by_Variation($variation)};
+    $self->_multiple(0);
     return $res;
 }
 
@@ -109,6 +111,7 @@ sub fetch_all_by_Variation {
   Returntype : reference to list Bio::EnsEMBL::Variation::IndividualGenotype
   Exceptions : throw on bad argument
   Caller     : general
+  Status     : At Risk
 
 =cut
 

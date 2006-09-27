@@ -97,6 +97,7 @@ our @ISA = ('Bio::EnsEMBL::DBSQL::BaseAdaptor');
     ReturnType  : ref to list of Bio::EnsEMBL::Variation::TranscriptVariations
     Exceptions  : throw on bad argument
     Caller      : general
+    Status      : Stable
 
 =cut
 
@@ -132,6 +133,7 @@ sub fetch_all_by_Transcripts{
   Returntype : ref to list of Bio::EnsEMBL::Variation::TranscriptVariations
   Exceptions : throw on bad argument
   Caller     : general
+  Status     : Stable
 
 =cut
 

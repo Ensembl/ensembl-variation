@@ -70,6 +70,7 @@ our @ISA = ('Bio::EnsEMBL::Variation::DBSQL::SampleAdaptor');
     Returntype           : list of Bio::EnsEMBL::Variation::Population
     Exceptions           : none
     Caller               : general
+    Status               : At Risk
 
 =cut
 
@@ -98,6 +99,7 @@ sub fetch_population_by_synonym{
   Returntype : Bio::EnsEMBL::Variation::Population
   Exceptions : throw if name argument is not defined
   Caller     : general
+  Status     : At Risk
 
 =cut
 
@@ -135,6 +137,7 @@ sub fetch_by_name {
   Returntype : Bio::EnsEMBL::Population
   Exceptions : throw on bad argument
   Caller     : general
+  Status     : At Risk
 
 =cut
 
@@ -180,6 +183,7 @@ sub fetch_all_by_super_Population {
   Returntype : Bio::EnsEMBL::Population
   Exceptions : throw on bad argument
   Caller     : general
+  Status     : At Risk
 
 =cut
 
@@ -222,6 +226,7 @@ sub fetch_all_by_sub_Population {
     ReturnType  : Bio::EnsEMBL::Variation::Population
     Exceptions  : none
     Caller      : general
+    Status      : At Risk
 
 =cut
 
@@ -258,6 +263,7 @@ sub fetch_default_LDPopulation{
   Exceptions  : throw if incorrect argument is passed
                 warning if provided individual does not have a dbID
   Caller      : general
+  Status      : At Risk
 
 =cut
 
@@ -304,6 +310,7 @@ sub fetch_all_by_Individual{
   Exceptions  : throw if incorrect argument is passed
                 warning if provided variation feature does not have a dbID
   Caller      : general
+  Status      : At Risk
 
 =cut
 

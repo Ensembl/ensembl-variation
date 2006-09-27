@@ -81,6 +81,7 @@ our @ISA = ('Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor');
   Returntype : reference to list Bio::EnsEMBL::Variation::VariationFeature
   Exceptions : throw on bad argument
   Caller     : general
+  Status     : Stable
 
 =cut
 
@@ -100,6 +101,19 @@ sub fetch_all_by_Variation {
   return $self->generic_fetch("vf.variation_id = ".$var->dbID());
 }
 
+=head2 fetch_all_genotyped_by_Slice
+
+  Arg [1]    : Bio::EnsEMBL:Variation::Slice $slice
+  Example    : my @vfs = @{$vfa->fetch_all_genotyped_by_Slice($slice)};
+  Description: Retrieves all variation features that have been gentoyped for a given slice.
+               Most variations should only hit the genome once and only a return
+               a single variation feature.
+  Returntype : reference to list Bio::EnsEMBL::Variation::VariationFeature
+  Exceptions : throw on bad argument
+  Caller     : general
+  Status     : Stable
+
+=cut
 
 sub fetch_all_genotyped_by_Slice{
     my $self = shift;
@@ -275,7 +289,8 @@ sub _objs_from_sth {
                the current db
   Returntype : list of ints
   Exceptions : none
-  Caller     : ?
+  Caller     : general
+  Status     : At Risk
 
 =cut
 
@@ -296,6 +311,7 @@ sub list_dbIDs {
     Caller      : general
     Status      : At Risk
                 : Variation database is under development.
+
 =cut
 
 sub get_all_synonym_sources{

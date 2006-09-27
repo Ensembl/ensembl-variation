@@ -74,6 +74,7 @@ our @ISA = ('Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor');
     ReturnType  : int
     Exceptions  : none
     Caller      : general    
+    Status     : At Risk
 
 =cut
 
@@ -94,6 +95,7 @@ sub from_IndividualSlice{
    ReturnType  : listref of Bio::EnsEMBL::Variation::AlleleFeature
    Exceptions  : thrown on bad arguments
    Caller      : general
+   Status      : At Risk
    
 =cut
 
@@ -124,7 +126,8 @@ sub fetch_all_by_Slice{
 	for (my $i = $last_position;$i<@{$genotypes};$i++){
 	    if ($genotypes->[$i]->start == $af->seq_region_start){
 		#we need to put the allele and Individual in the AlleleFeature object
-		$af->allele_string(ambiguity_code($genotypes->[$i]->allele1  . '/' . $genotypes->[$i]->allele2));
+	#	$af->allele_string(ambiguity_code($genotypes->[$i]->allele1  . '/' . $genotypes->[$i]->allele2));
+		$af->allele_string($genotypes->[$i]->allele1); #if it is strain, both alleles should be the same, might be changed in the future
 		$af->individual($genotypes->[$i]->individual);		
 		$last_position++;
 	    }
@@ -150,6 +153,7 @@ sub fetch_all_by_Slice{
    ReturnType  : listref of Bio::EnsEMBL::Variation::VariationFeature
    Exceptions  : thrown on bad arguments
    Caller      : general
+   Status      : At Risk
    
 =cut
 
