@@ -82,6 +82,7 @@ our @ISA = ('Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor');
   Returntype : reference to list Bio::EnsEMBL::Variation::VariationFeature
   Exceptions : throw on bad argument
   Caller     : general
+  Status     : At Risk
 
 =cut
 
@@ -249,7 +250,8 @@ sub _objs_from_sth {
                the current db
   Returntype : list of ints
   Exceptions : none
-  Caller     : ?
+  Caller     : general
+  Status     : At Risk
 
 =cut
 

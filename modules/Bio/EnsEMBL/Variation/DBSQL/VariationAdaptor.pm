@@ -69,6 +69,7 @@ our @ISA = ('Bio::EnsEMBL::DBSQL::BaseAdaptor');
   Returntype : Bio::EnsEMBL::Variation::Variation
   Exceptions : throw if dbID arg is not defined
   Caller     : general, IndividualAdaptor
+  Status     : Stable
 
 =cut
 
@@ -108,6 +109,7 @@ sub fetch_by_dbID {
   Returntype : Bio::EnsEMBL::Variation::Variation
   Exceptions : throw if name argument is not defined
   Caller     : general
+  Status     : Stable
 
 =cut
 
@@ -186,6 +188,7 @@ sub fetch_by_name {
   Returntype : reference to list of Bio::EnsEMBL::Variation::Variation objects
   Exceptions : throw on bad argument
   Caller     : general, IndividualGenotypeAdaptor, PopulationGenotypeAdaptor
+  Status     : At Risk
 
 =cut
 
@@ -242,6 +245,7 @@ sub fetch_all_by_dbID_list {
   ReturnType  : array ref of string
   Exceptions  : none
   Caller      : web
+  Status      : At Risk
 
 =cut
 
@@ -272,6 +276,7 @@ sub get_all_sources{
   ReturnType  : string
   Exceptions  : none
   Caller      : web
+  Status      : At Risk
 
 =cut
 
@@ -298,7 +303,8 @@ sub get_default_source{
   Description : Retrieves from the database the version for the source given as an argument
   ReturnType  : int
   Exceptions  : none
-  Caller      : genera
+  Caller      : general
+  Status      : At Risk
 
 =cut
 
@@ -328,6 +334,7 @@ sub get_source_version{
     ReturnType  : reference to a list containing (three_flank,five_flank)
     Exceptions  : throw when not possible to obtain sequence
     Caller      : general, Variation
+    Status      : Stable
 
 =cut
 
@@ -390,6 +397,7 @@ return $flanking_sequence;
   Returntype : listref of Bio::EnsEMBL::Variation::Variation
   Exceptions : throw on incorrect argument
   Caller     : general
+  Status     : At Risk
 
 =cut
 

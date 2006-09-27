@@ -75,6 +75,7 @@ our @ISA = ('Bio::EnsEMBL::DBSQL::BaseAdaptor');
   Returntype : Bio::EnsEMBL::Variation::Variation::PopulationGenotype or undef
   Exceptions : throw if no dbID argument is provided
   Caller     : general
+  Status     : At Risk
 
 =cut
 
@@ -102,6 +103,7 @@ sub fetch_by_dbID {
   Returntype : Bio::EnsEMBL::Variation::PopulationGenotype
   Exceptions : throw on incorrect argument
   Caller     : general
+  Status     : At Risk
 
 =cut
 
@@ -133,6 +135,7 @@ sub fetch_all_by_Population {
   Returntype : listref Bio::EnsEMBL::Variation::PopulationGenotype 
   Exceptions : throw on bad argument
   Caller     : general
+  Status     : At Risk
 
 =cut
 

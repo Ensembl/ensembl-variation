@@ -76,6 +76,7 @@ our @ISA = ('Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor');
     ReturnType  : listref of Bio::EnsEMBL::Variation::ReadCoverage
     Exceptions  : thrown on bad arguments
     Caller      : general
+    Status      : At Risk
 
 =cut
 
@@ -161,6 +162,7 @@ sub fetch_all_regions_covered{
     ReturnType  : listref of integer
     Exceptions  : none
     Caller      : general
+    Status      : At Risk
 
 =cut
 

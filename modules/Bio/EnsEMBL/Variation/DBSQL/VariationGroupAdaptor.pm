@@ -67,6 +67,7 @@ our @ISA = ('Bio::EnsEMBL::DBSQL::BaseAdaptor');
   Returntype : Bio::EnsEMBL::Variation::VariationGroup
   Exceptions : throw if dbID arg is not defined
   Caller     : general
+  Status     : At Risk
 
 =cut
 
@@ -106,6 +107,7 @@ sub fetch_by_dbID {
   Returntype : Bio::EnsEMBL::Variation::VariationGroup
   Exceptions : throw if name argument is not provided
   Caller     : general
+  Status     : At Risk
 
 =cut
 
@@ -146,6 +148,7 @@ sub fetch_by_name {
   Returntype : reference to list of Bio::EnsEMBL::Variation::VariationGroups
   Exceptions : throw on incorrect argument
   Caller     : general
+  Status     : At Risk
 
 =cut
 
