@@ -132,6 +132,7 @@ sub fetch_all_by_Slice{
 	    $features = $self->SUPER::fetch_all_by_Slice($slice);
 	}
 	#need to check the feature is within the Slice
+
 	foreach my $indFeature (@{$features}){
 	    if ($indFeature->start > 0 && ($slice->end-$slice->start +1) >= $indFeature->end){
 		push @results,$indFeature->transfer($slice->seq_region_Slice);
@@ -266,9 +267,10 @@ sub _objs_from_sth{
 		$seq_region_end   = $seq_region_end   - $dest_slice_start + 1;
 	    } else {
 		my $tmp_seq_region_start = $seq_region_start;
-		$seq_region_start = $dest_slice_end - $seq_region_end + 1;
+#		$seq_region_start = $dest_slice_end - $seq_region_end + 1;
+		$seq_region_start = $seq_region_start - $dest_slice_start + 1;
 		$seq_region_end   = $dest_slice_end - $tmp_seq_region_start + 1;
-		$seq_region_strand *= -1;
+#		$seq_region_strand *= -1;
 	    }
 	    
 	    #throw away features off the end of the requested slice
@@ -293,12 +295,12 @@ sub _objs_from_sth{
 	    $snp_start = $seq_region_start; #first SNP is in the beginning of the region
 	}
 	else{
+	    next if ($genotypes[$i] == 0);
 	    $snp_start += $genotypes[$i] +1;
 	}
 	#genotype
 	$allele_1 = $genotypes[$i+1];
 	$allele_2 = $genotypes[$i+2];
-
 	my $igtype = Bio::EnsEMBL::Variation::IndividualGenotype->new_fast({
 	    'start'    => $snp_start,
 	    'end'      => $snp_start,

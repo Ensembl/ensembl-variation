@@ -390,6 +390,7 @@ sub _store_genotype{
 	    $snp_start = $seq_region_start; #first SNP is in the beginning of the region
 	}
 	else{
+	    next if ($genotypes[$i] == 0); #ignore when there is more than 1 genotype in the same position
 	    $snp_start += $genotypes[$i] +1;
 	}
 	#genotype
