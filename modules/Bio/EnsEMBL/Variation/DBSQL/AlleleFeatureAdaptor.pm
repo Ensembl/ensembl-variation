@@ -120,6 +120,7 @@ sub fetch_all_by_Slice{
     my $genotypes = $genotype_adaptor->fetch_all_by_Slice($slice,$individual); #and get all genotype data
     my $afs = $self->SUPER::fetch_all_by_Slice($slice); #get all AlleleFeatures within the Slice
     my $last_position = 0;
+    my $new_afs = ();
     #we need to merge genotype data with AlleleFeatures to assign alleles
     foreach my $af (@{$afs}){
 	#both, genotypes and af should be sorted
@@ -130,6 +131,7 @@ sub fetch_all_by_Slice{
 		$af->allele_string($genotypes->[$i]->allele1); #if it is strain, both alleles should be the same, might be changed in the future
 		$af->individual($genotypes->[$i]->individual);		
 		$last_position++;
+		push @{$new_afs},$af;
 	    }
 	    elsif ($genotypes->[$i]->start < $af->seq_region_start){
 		$last_position++; #this should not happen, it means the genotype has no allele feature 
@@ -139,7 +141,7 @@ sub fetch_all_by_Slice{
 	    }
 	}
     } 
-    return $afs;
+    return $new_afs;
 }
 
 

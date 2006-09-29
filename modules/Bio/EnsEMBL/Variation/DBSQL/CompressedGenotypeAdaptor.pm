@@ -296,15 +296,18 @@ sub _objs_from_sth{
     unshift @genotypes, substr($genotypes,0,1); #add the first allele of the first genotype
     unshift @genotypes, 0; #the first SNP is in the position indicated by the seq_region1
     my ($snp_start, $allele_1, $allele_2);
-
+ 
     for (my $i=0; $i < @genotypes -1;$i+=3){
 	#number of gaps
 	if ($i == 0){
 	    $snp_start = $seq_region_start; #first SNP is in the beginning of the region
 	}
 	else{
-	    next if ($genotypes[$i] == 0); #ignore multiple genotypes in same position
-	    $snp_start += $genotypes[$i] +1;
+	    if ($genotypes[$i] == 0){ #remove duplicates !!
+		$snp_start += 1;
+		next;
+	    }
+	    $snp_start += ($genotypes[$i] +1);
 	}
 	#genotype
 	$allele_1 = $genotypes[$i+1];
