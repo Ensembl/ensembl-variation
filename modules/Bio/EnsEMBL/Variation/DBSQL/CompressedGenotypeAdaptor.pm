@@ -135,7 +135,15 @@ sub fetch_all_by_Slice{
 
 	foreach my $indFeature (@{$features}){
 	    if ($indFeature->start > 0 && ($slice->end-$slice->start +1) >= $indFeature->end){
-		push @results,$indFeature->transfer($slice->seq_region_Slice);
+		if ($indFeature->slice->strand == -1){ #ignore the different strand transformation
+		    $indFeature->slice->{'strand'} = 1;
+		    my $newFeature = $indFeature->transfer($slice->seq_region_Slice); 
+		    $newFeature->slice->{'strand'} = -1;
+		    push @results, $newFeature;
+		}
+		else{
+		    push @results,$indFeature->transfer($slice->seq_region_Slice);
+		}
 	    }
 	}
     }
@@ -295,7 +303,7 @@ sub _objs_from_sth{
 	    $snp_start = $seq_region_start; #first SNP is in the beginning of the region
 	}
 	else{
-	    next if ($genotypes[$i] == 0);
+	    next if ($genotypes[$i] == 0); #ignore multiple genotypes in same position
 	    $snp_start += $genotypes[$i] +1;
 	}
 	#genotype
