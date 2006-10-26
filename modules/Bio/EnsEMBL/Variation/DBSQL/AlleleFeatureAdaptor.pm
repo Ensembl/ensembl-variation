@@ -197,7 +197,7 @@ sub _tables{
 	return (['variation_feature','vf'], ['individual_genotype_multiple_bp','ig']) if ($self->_multiple_bp());
     }
     else{
-	return (['variation_feature','vf'],  ['source','s']);
+	return (['variation_feature','vf'],  ['source','s FORCE INDEX(PRIMARY)']);
     }
 
 }
