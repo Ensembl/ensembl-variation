@@ -289,7 +289,7 @@ sub _objs_from_sth{
 
       #get the population_adaptor object
       my $pa = $self->db()->get_PopulationAdaptor();
-
+      my $ia = $self->db()->get_IndividualAdaptor();
       #get the slice object
       my $slice = $slice_hash{"ID:".$seq_region_id};
       if(!$slice) {
@@ -352,6 +352,7 @@ sub _objs_from_sth{
       my $sample;
       if($sample_id){
 	  $sample = $seen_pops{$sample_id} ||= $pa->fetch_by_dbID($sample_id);
+	  $sample = $seen_pops{$sample_id} ||= $ia->fetch_by_dbID($sample_id);
       }
       $read_coverage = Bio::EnsEMBL::Variation::ReadCoverage->new(-start => $seq_region_start,
 								  -end   => $seq_region_end,
