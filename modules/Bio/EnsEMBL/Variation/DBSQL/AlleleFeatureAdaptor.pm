@@ -120,7 +120,7 @@ sub fetch_all_by_Slice{
     my $genotypes = $genotype_adaptor->fetch_all_by_Slice($slice,$individual); #and get all genotype data
     my $afs = $self->SUPER::fetch_all_by_Slice($slice); #get all AlleleFeatures within the Slice
     my $last_position = 0;
-    my $new_afs = ();
+    my $new_afs = [];
     #we need to merge genotype data with AlleleFeatures to assign alleles
     foreach my $af (@{$afs}){
 	#both, genotypes and af should be sorted
