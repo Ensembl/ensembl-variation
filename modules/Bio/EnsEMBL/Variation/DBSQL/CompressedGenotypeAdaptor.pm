@@ -318,7 +318,8 @@ sub _objs_from_sth{
 	    'strand'   => $seq_region_strand,
 	    'slice'    => $slice,	    
 	    'allele1'  => $allele_1,
-	    'allele2' => $allele_2
+	    'allele2' => $allele_2,
+	    'adaptor' => $self
 	});
 	$individual_hash{$sample_id} ||= [];
 	push @{$individual_hash{$sample_id}}, $igtype;
