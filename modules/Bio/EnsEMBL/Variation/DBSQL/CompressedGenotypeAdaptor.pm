@@ -303,7 +303,7 @@ sub _objs_from_sth{
 	    $snp_start = $seq_region_start; #first SNP is in the beginning of the region
 	}
 	else{
-	    if ($genotypes[$i] == 0){ #remove duplicates !!
+	    if ($genotypes[$i] == -1){ #remove duplicates !!
 		$snp_start += 1;
 		next;
 	    }
@@ -318,7 +318,8 @@ sub _objs_from_sth{
 	    'strand'   => $seq_region_strand,
 	    'slice'    => $slice,	    
 	    'allele1'  => $allele_1,
-	    'allele2' => $allele_2
+	    'allele2' => $allele_2,
+	    'adaptor' => $self
 	});
 	$individual_hash{$sample_id} ||= [];
 	push @{$individual_hash{$sample_id}}, $igtype;
