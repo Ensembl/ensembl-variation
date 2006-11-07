@@ -42,10 +42,12 @@ our %CONSEQUENCE_TYPES = ('ESSENTIAL_SPLICE_SITE' => 1,
 			  'REGULATORY_REGION' => 128,
 			  '5PRIME_UTR' => 256,
 			  '3PRIME_UTR' => 512,
+			  'UTR'        => 394,
 			  'INTRONIC' => 1024,
 			  'UPSTREAM' => 2048,
 			  'DOWNSTREAM' => 4096,
 			  'INTERGENIC' => 8192,
+			  '_'          => 8193,
 			  );
 
 
