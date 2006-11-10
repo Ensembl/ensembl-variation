@@ -458,6 +458,12 @@ sub display_consequence{
     return $highest_priority;
 }
 
+sub empty_type{
+    my $self = shift;
+
+    $self->{'type'} = ();
+    return $self->type;
+}
 
 1;
 
