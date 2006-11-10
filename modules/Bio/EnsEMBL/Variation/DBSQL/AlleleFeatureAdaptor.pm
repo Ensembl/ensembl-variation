@@ -116,6 +116,7 @@ sub fetch_all_by_Slice{
 	    throw("Individual arg must have defined dbID");
 	}
     }
+    %{$self->{'_slice_feature_cache'}} = (); #clean the cache to avoid caching problems
     my $genotype_adaptor = $self->db->get_IndividualGenotypeAdaptor; #get genotype adaptor
     my $genotypes = $genotype_adaptor->fetch_all_by_Slice($slice,$individual); #and get all genotype data
     my $afs = $self->SUPER::fetch_all_by_Slice($slice); #get all AlleleFeatures within the Slice
