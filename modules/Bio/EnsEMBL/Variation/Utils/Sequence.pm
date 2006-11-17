@@ -38,7 +38,7 @@ use vars qw(@ISA @EXPORT_OK);
 
 @ISA = qw(Exporter);
 
-@EXPORT_OK = qw(&ambiguity_code &variation_class);
+@EXPORT_OK = qw(&ambiguity_code &variation_class &unambiguity_code);
 
 
 =head2 ambiguity_code
@@ -60,9 +60,33 @@ sub ambiguity_code {
     my $alleles = shift;
     $alleles = uc( join '', sort split /[\|\/\\]/, $alleles );
     my %ambig = qw(AC M ACG V ACGT N ACT H AG R AGT D AT W CG S CGT B CT Y 
-GT K CC C AA A TT T GG G);
+GT K CC C AA A TT T GG G -- -); #we will need to decide what to do with alleles like -A. Is that possible??
     return $ambig{$alleles};
 }
+
+=head2 unambiguity_code
+
+  Arg[1]      : string $alleles
+  Example     :  use Bio::EnsEMBL::Variation::Utils::Sequence qw(unambiguity_code)
+                 my $ambiguity_code = 'M';
+                 my $alleles = unambiguity_code($ambiguity_code);
+                print "the alleles for ambiguity code $ambiguity_code is: ",$alleles;
+  Description : returns the alleles for an ambiguity code
+  ReturnType  : String
+                The Alleles, alphabetically sorted and in capital
+  Exceptions  : None
+  Caller      : Variation, VariationFeature
+
+=cut
+
+sub unambiguity_code {
+    my $ambiguity_code = shift;
+   
+    my %unambig = qw(M AC V ACG N ACGT H ACT R AG D AGT W AT S CG B CGT Y CT K 
+GT C CC A AA T TT G GG - --); #we will need to decide what to do with alleles like -A. Is that possible??
+    return $unambig{$ambiguity_code};
+}
+
 
 =head2 variation_class
 
