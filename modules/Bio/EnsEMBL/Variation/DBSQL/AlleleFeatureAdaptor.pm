@@ -127,8 +127,15 @@ sub fetch_all_by_Slice{
 	#both, genotypes and af should be sorted
 	for (my $i = $last_position;$i<@{$genotypes};$i++){
 	    if ($genotypes->[$i]->start == $af->seq_region_start){
-		#we need to put the allele and Individual in the AlleleFeature object
-		$af->allele_string(ambiguity_code($genotypes->[$i]->allele1  . '/' . $genotypes->[$i]->allele2)); #for heterozigous alleles
+		if ($genotypes->[$i]->allele2 eq 'N'){
+		    $af->{'_half_genotype'} = 1;
+		    $af->allele_string($genotypes->[$i]->allele1); #for half genotypes
+		}
+		else{
+		    $af->{'_half_genotype'} = 0;
+		    #we need to put the allele and Individual in the AlleleFeature object
+		    $af->allele_string(ambiguity_code($genotypes->[$i]->allele1  . '/' . $genotypes->[$i]->allele2)); #for heterozigous alleles
+		}
 	#	$af->allele_string($genotypes->[$i]->allele1); #if it is strain, both alleles should be the same, might be changed in the future
 		$af->individual($genotypes->[$i]->individual);		
 		$last_position++;
