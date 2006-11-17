@@ -128,8 +128,8 @@ sub fetch_all_by_Slice{
 	for (my $i = $last_position;$i<@{$genotypes};$i++){
 	    if ($genotypes->[$i]->start == $af->seq_region_start){
 		#we need to put the allele and Individual in the AlleleFeature object
-	#	$af->allele_string(ambiguity_code($genotypes->[$i]->allele1  . '/' . $genotypes->[$i]->allele2));
-		$af->allele_string($genotypes->[$i]->allele1); #if it is strain, both alleles should be the same, might be changed in the future
+		$af->allele_string(ambiguity_code($genotypes->[$i]->allele1  . '/' . $genotypes->[$i]->allele2)); #for heterozigous alleles
+	#	$af->allele_string($genotypes->[$i]->allele1); #if it is strain, both alleles should be the same, might be changed in the future
 		$af->individual($genotypes->[$i]->individual);		
 		$last_position++;
 		push @{$new_afs},$af;
