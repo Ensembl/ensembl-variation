@@ -59,6 +59,7 @@ package Bio::EnsEMBL::Variation::AlleleFeature;
 use Bio::EnsEMBL::Feature;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Utils::Argument  qw(rearrange);
+use Bio::EnsEMBL::Variation::Utils::Sequence qw(unambiguity_code);
 
 
 our @ISA = ('Bio::EnsEMBL::Feature');
@@ -166,7 +167,9 @@ sub new_fast {
 sub allele_string{
   my $self = shift;
   return $self->{'allele_string'} = shift if(@_);
-  return $self->{'allele_string'};
+  
+  return $self->{'allele_string'} if ($self->{'allele_string'} =~ /[ACTG-]/); #for homozigous
+  return join('/',split (//,unambiguity_code($self->{'allele_string'}))); #for heterozygous alleles
 }
 
 =head2 variation_name
