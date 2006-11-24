@@ -122,11 +122,21 @@ sub fetch_all_by_Slice{
     my $afs = $self->SUPER::fetch_all_by_Slice($slice); #get all AlleleFeatures within the Slice
     my $last_position = 0;
     my $new_afs = [];
+    my $string;
     #we need to merge genotype data with AlleleFeatures to assign alleles
     foreach my $af (@{$afs}){
 	#both, genotypes and af should be sorted
 	for (my $i = $last_position;$i<@{$genotypes};$i++){
 	    if ($genotypes->[$i]->start == $af->seq_region_start){
+		#need to reverse the alleles if they are in different strand, since the genotype
+		#table is stored always in the positive strand
+		if ($af->seq_region_strand == -1){
+		    $string = $genotypes->[$i]->allele1;
+		    $string =~ tr/ACGTN-/TGCAN-/;
+		    $genotypes->[$i]->allele1($string);
+		    $string = $genotypes->[$i]->allele2;
+		    $genotypes->[$i]->allele2($string);
+		}
 		if ($genotypes->[$i]->allele2 eq 'N'){
 		    $af->{'_half_genotype'} = 1;
 		    $af->allele_string($genotypes->[$i]->allele1); #for half genotypes
