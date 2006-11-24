@@ -65,7 +65,6 @@ sub compress_genotypes{
 				     AND vf.map_weight = 1
 				     AND ig.allele_1 <> 'N'
 				     AND ig.allele_2 <> 'N'
-
 				     ORDER BY vf.seq_region_id, vf.seq_region_start}, {mysql_use_result => 1});
 
     print "Time starting to dump data from database: ",scalar(localtime(time)),"\n";
@@ -197,19 +196,22 @@ sub reverse_alleles{
     my $ref_allele_2 = shift;
     
     my @alleles = split("/",$allele_string);
-    #the variation_feature is in the opposite strand, reverse the alleles
+    #the variation_feature is in the opposite strand, reverse the genotypes
+
     if ($seq_region_strand == -1){
-	reverse_comp(\$alleles[0]);
-	reverse_comp(\$alleles[1]);
+	reverse_comp($ref_allele_1);
+	reverse_comp($ref_allele_2);
+#	reverse_comp(\$alleles[0]);
+#	reverse_comp(\$alleles[1]);
     }
     #Only reverse genotypes with valid base
-    if ($$ref_allele_1 ne 'N'){
-	#compare the genotype with the forward alleles, if they are different, reverse them
-	if ((@alleles == 2) && (($$ref_allele_1 ne $alleles[0]) && ($$ref_allele_1 ne $alleles[1]))){
-	    reverse_comp($ref_allele_1);
-	    reverse_comp($ref_allele_2);
-	}	
-    }
+#    if ($$ref_allele_1 ne 'N'){
+#	#compare the genotype with the forward alleles, if they are different, reverse them
+#	if ((@alleles == 2) && (($$ref_allele_1 ne $alleles[0]) && ($$ref_allele_1 ne $alleles[1]))){
+#	    reverse_comp($ref_allele_1);
+#	    reverse_comp($ref_allele_2);
+#	}	
+#    }
 }
 
 # $special_characters_escaped = printable( $source_string );
