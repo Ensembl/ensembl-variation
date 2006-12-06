@@ -58,7 +58,9 @@ use vars qw(@ISA @EXPORT_OK);
 
 sub ambiguity_code {
     my $alleles = shift;
-    $alleles = uc( join '', sort split /[\|\/\\]/, $alleles );
+    my %duplicates; #hash containing all alleles to remove duplicates
+    map {$duplicates{$_}++} split /[\|\/\\]/, $alleles;
+    $alleles = uc( join '', sort keys %duplicates );
     my %ambig = qw(AC M ACG V ACGT N ACT H AG R AGT D AT W CG S CGT B CT Y 
 GT K CC C AA A TT T GG G -- -); #we will need to decide what to do with alleles like -A. Is that possible??
     return $ambig{$alleles};
