@@ -62,7 +62,7 @@ sub ambiguity_code {
     map {$duplicates{$_}++} split /[\|\/\\]/, $alleles;
     $alleles = uc( join '', sort keys %duplicates );
     my %ambig = qw(AC M ACG V ACGT N ACT H AG R AGT D AT W CG S CGT B CT Y 
-GT K C C A A T T G G - - A A C C G G T T - - ); #we will need to decide what to do with alleles like -A. Is that possible??
+GT K C C A A T T G G - -); #we will need to decide what to do with alleles like -A. Is that possible??
     return $ambig{$alleles};
 }
 
