@@ -135,6 +135,7 @@ sub fetch_all_by_Slice{
 		    $string =~ tr/ACGTN-/TGCAN-/;
 		    $genotypes->[$i]->allele1($string);
 		    $string = $genotypes->[$i]->allele2;
+		    $string =~ tr/ACGTN-/TGCAN-/;
 		    $genotypes->[$i]->allele2($string);
 		}
 		if ($genotypes->[$i]->allele2 eq 'N'){
