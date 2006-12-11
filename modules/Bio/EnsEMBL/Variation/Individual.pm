@@ -151,9 +151,9 @@ sub type_individual{
     my $self = shift;
     if (@_){
 	my $new_name = shift;
-	return $self->{'type_name'} = $new_name;
+	return $self->{'type_individual'} = $new_name;
     }
-    return $self->{'type_name'};
+    return $self->{'type_individual'};
 }
 
 =head2 type_description
