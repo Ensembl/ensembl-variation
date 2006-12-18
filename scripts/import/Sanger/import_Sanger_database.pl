@@ -28,7 +28,7 @@ my $dbVar = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'variation');
 my $dbSanger = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'sanger');
 
 my $TMP_DIR  = $ImportUtils::TMP_DIR;
-my $LOCAL_TMP_DIR  = '/tmp';
+#my $LOCAL_TMP_DIR  = '/tmp';
 my $TMP_FILE = $ImportUtils::TMP_FILE;
 
 my $old_new_variation_id = {}; #reference to a hash with the old_variation_id => new_variation_id
@@ -43,20 +43,20 @@ my $last_variation_id = get_last_table_id($dbVar,"variation"); #last variation_i
 my $last_variation_feature_id = get_last_table_id($dbVar,"variation_feature"); #last variation_feature_id used in the database
 
 import_Sample_table($dbSanger, $dbVar, $old_new_sample_id, $last_sample_id, $sanger_sample);
-#import_Source_table($dbSanger, $dbVar, $old_new_source_id, $last_source_id);
-#import_Population_table($dbSanger, $dbVar, $old_new_sample_id, $sanger_sample);
-#import_Individual_table($dbSanger,$dbVar,$old_new_sample_id);
-#import_Individual_Population_table($dbSanger,$dbVar,$old_new_sample_id);
+import_Source_table($dbSanger, $dbVar, $old_new_source_id, $last_source_id);
+import_Population_table($dbSanger, $dbVar, $old_new_sample_id, $sanger_sample);
+import_Individual_table($dbSanger,$dbVar,$old_new_sample_id);
+import_Individual_Population_table($dbSanger,$dbVar,$old_new_sample_id);
 #import_Meta_table($dbSanger,$dbVar);
 #import_Meta_Coord_table($dbSanger,$dbVar);
 import_Variation_table($dbSanger,$dbVar,$old_new_variation_id,$last_variation_id, $old_new_source_id);
 import_Allele_table($dbSanger,$dbVar,$old_new_variation_id, $old_new_sample_id);
-#import_Flanking_sequence_table($dbSanger,$dbVar,$old_new_variation_id);
-#import_Variation_synonym_table($dbSanger, $dbVar, $old_new_variation_id, $old_new_source_id);
-#import_Variation_feature_table($dbSanger,$dbVar,$old_new_variation_feature_id,$last_variation_feature_id, $old_new_variation_id, $old_new_source_id);
-#import_Transcript_variation_table($dbSanger,$dbVar,$old_new_variation_feature_id);
-#import_Read_coverage_table($dbSanger,$dbVar, $old_new_sample_id);
-#import_Tmp_individual_genotype_single_bp_table($dbSanger,$dbVar,$old_new_variation_id,$old_new_sample_id);
+import_Flanking_sequence_table($dbSanger,$dbVar,$old_new_variation_id);
+import_Variation_synonym_table($dbSanger, $dbVar, $old_new_variation_id, $old_new_source_id);
+import_Variation_feature_table($dbSanger,$dbVar,$old_new_variation_feature_id,$last_variation_feature_id, $old_new_variation_id, $old_new_source_id);
+import_Transcript_variation_table($dbSanger,$dbVar,$old_new_variation_feature_id);
+import_Read_coverage_table($dbSanger,$dbVar, $old_new_sample_id);
+import_Tmp_individual_genotype_single_bp_table($dbSanger,$dbVar,$old_new_variation_id,$old_new_sample_id);
 
 
 
@@ -84,10 +84,10 @@ sub import_Sample_table{
 	   elsif ($description =~ /population/i) {
 	   $new_sample_id = &get_sample_variation_database($dbVar, $name,"pop");
 	   }
-	if ($new_sample_id == 0){
+	if (! $new_sample_id){
 	    #get the new id for the sample in the variation table
 	    $new_sample_id = $last_sample_id + 1;
-	    $last_sample_id++;	    
+	    $last_sample_id++;
 	    #and copy to the variation database
 	    write_file($new_sample_id,$name,$size,$description);
 	}
@@ -98,15 +98,12 @@ sub import_Sample_table{
         #and store the relation with the old one
 	#print "sample_id is $sample_id and new_sample_id is $new_sample_id\n";
 	$old_new_sample_id->{$sample_id} = $new_sample_id;
-    }   
+    }
     $sth->finish;
     #and finally import the table
-    my $call = "lsrcp $LOCAL_TMP_DIR/$TMP_FILE ecs4a:$TMP_DIR/$TMP_FILE";
-    system($call);
-    #load($dbVar->dbc->db_handle,"sample", "sample_id", "name", "size", "description");
-    $call = "$LOCAL_TMP_DIR/$TMP_FILE";
+    load($dbVar->dbc,"sample", "sample_id", "name", "size", "description");
+    my $call = "$TMP_DIR/$TMP_FILE";
     unlink ($call);   
-    #copy_file("sample.txt");
 }
 
 #check wether the sample_id is already present in the Variation database as a individual or a population
@@ -132,7 +129,6 @@ sub get_sample_variation_database{
 	    return $individual_sample_id;
 	}
     }
-    #return ($individual_sample_id,$population_sample_id);
 }
 
 sub import_Source_table{
@@ -157,12 +153,9 @@ sub import_Source_table{
     }   
     $sth->finish;
     #and finally import the table
-    my $call = "lsrcp $LOCAL_TMP_DIR/$TMP_FILE ecs4a:$TMP_DIR/$TMP_FILE";
-    system($call);
-    load($dbVar->dbc->db_handle,"source","source_id", "name", "version");
-    $call = "$LOCAL_TMP_DIR/$TMP_FILE";
+    load($dbVar->dbc,"source","source_id", "name", "version");
+    my $call = "$TMP_DIR/$TMP_FILE";
     unlink ($call);   
-    #copy_file("source.txt");
 }
 
 sub import_Population_table{
@@ -172,25 +165,21 @@ sub import_Population_table{
     my $sanger_sample = shift;
 
     debug("Load Population table");
-    my ($sample_id, $is_strain);
-    my $sth = $dbSanger->dbc->db_handle->prepare(qq{SELECT sample_id, is_strain from population});
+    my ($sample_id);
+    my $sth = $dbSanger->dbc->db_handle->prepare(qq{SELECT sample_id from population});
     $sth->execute();
-    $sth->bind_columns(\$sample_id, \$is_strain);
+    $sth->bind_columns(\$sample_id);
     while ($sth->fetch){
 	if (!defined $sanger_sample->{$sample_id}){
 	    #get the new id for the sample in the variation table
-	    write_file($old_new_sample_id->{$sample_id}, $is_strain);
+	    write_file($old_new_sample_id->{$sample_id});
 	}
     }   
     $sth->finish;
     #and finally import the table    
-    my $call = "lsrcp $LOCAL_TMP_DIR/$TMP_FILE ecs4a:$TMP_DIR/$TMP_FILE";
-    system($call);
-
-    load($dbVar->dbc->db_handle,"population","sample_id", "is_strain");
-    $call = "$LOCAL_TMP_DIR/$TMP_FILE";
+    load($dbVar->dbc,"population","sample_id");
+    my $call = "$TMP_DIR/$TMP_FILE";
     unlink ($call);   
-    #copy_file("population.txt");
 }
 
 sub import_Individual_table{
@@ -199,23 +188,19 @@ sub import_Individual_table{
     my $old_new_sample_id = shift;
 
     debug("Load Individual table");
-    my ($sample_id, $father_individual_sample_id, $mother_individual_sample_id, $gender);
-    my $sth = $dbSanger->dbc->db_handle->prepare(qq{SELECT sample_id, father_individual_sample_id, mother_individual_sample_id, gender from individual});
+    my ($sample_id, $father_individual_sample_id, $mother_individual_sample_id, $gender, $individual_type_id);
+    my $sth = $dbSanger->dbc->db_handle->prepare(qq{SELECT sample_id, father_individual_sample_id, mother_individual_sample_id, gender, individual_type_id from individual});
     $sth->execute();
-    $sth->bind_columns(\$sample_id, \$father_individual_sample_id, \$mother_individual_sample_id, \$gender);
+    $sth->bind_columns(\$sample_id, \$father_individual_sample_id, \$mother_individual_sample_id, \$gender,\$individual_type_id);
     while ($sth->fetch){
 	#get the new id for the sample in the variation table
-	write_file($old_new_sample_id->{$sample_id}, $father_individual_sample_id, $mother_individual_sample_id, $gender);
+	write_file($old_new_sample_id->{$sample_id}, $father_individual_sample_id, $mother_individual_sample_id, $gender, $individual_type_id);
     }   
     $sth->finish;
     #and finally import the table    
-    my $call = "lsrcp $LOCAL_TMP_DIR/$TMP_FILE ecs4a:$TMP_DIR/$TMP_FILE";
-    system($call);
-
-    load($dbVar->dbc->db_handle,"individual","sample_id", "father_individual_sample_id","mother_individual_sample_id","gender");
-    $call = "$LOCAL_TMP_DIR/$TMP_FILE";
+    load($dbVar->dbc,"individual","sample_id", "father_individual_sample_id","mother_individual_sample_id","gender","individual_type_id");
+    my $call = "$TMP_DIR/$TMP_FILE";
     unlink ($call);   
-    #copy_file("individual.txt");
 }
 
 sub import_Individual_Population_table{
@@ -234,13 +219,9 @@ sub import_Individual_Population_table{
     }   
     $sth->finish;
     #and finally import the table    
-    my $call = "lsrcp $LOCAL_TMP_DIR/$TMP_FILE ecs4a:$TMP_DIR/$TMP_FILE";
-    system($call);
-
-    load($dbVar->dbc->db_handle,"individual_population","individual_sample_id", "population_sample_id");
-    $call = "$LOCAL_TMP_DIR/$TMP_FILE";
+    load($dbVar->dbc,"individual_population","individual_sample_id", "population_sample_id");
+    my $call = "$TMP_DIR/$TMP_FILE";
     unlink ($call);   
-    #copy_file("individual_population.txt");
 }
 
 sub import_Meta_table{
@@ -249,8 +230,8 @@ sub import_Meta_table{
 
     debug("Load Meta table");
 
-    dumpSQL($dbSanger->dbc->db_handle,qq{SELECT meta_key,meta_value FROM meta});    
-    load($dbVar->dbc->db_handle,"meta","meta_key","meta_value");
+    dumpSQL($dbSanger->dbc,qq{SELECT meta_key,meta_value FROM meta});    
+    load($dbVar->dbc,"meta","meta_key","meta_value");
 }
 
 sub import_Meta_Coord_table{
@@ -259,8 +240,8 @@ sub import_Meta_Coord_table{
 
     debug("Load MetaCoord table");
 
-    dumpSQL($dbSanger->dbc->db_handle,qq{SELECT table_name, coord_system_id, max_length FROM meta_coord});    
-    load($dbVar->dbc->db_handle,"meta_coord","table_name","coord_system_id","max_length");
+    dumpSQL($dbSanger->dbc,qq{SELECT table_name, coord_system_id, max_length FROM meta_coord});    
+    load($dbVar->dbc,"meta_coord","table_name","coord_system_id","max_length");
 }
 
 sub import_Variation_table{
@@ -283,11 +264,11 @@ sub import_Variation_table{
 	#and store the relation with the old one
 	$old_new_variation_id->{$variation_id} = $new_variation_id;
 	$last_variation_id++;
-	#write_file($new_variation_id,$old_new_source_id->{$source_id}, $name, $validation_status, $ancestral_allele);
+	write_file($new_variation_id,$old_new_source_id->{$source_id}, $name, $validation_status, $ancestral_allele);
     }   
     $sth->finish;
     #and finally import the table
-    #copy_file("variation.txt");
+    copy_file("variation.txt");
 }
 
 sub import_Allele_table{
@@ -449,7 +430,7 @@ sub import_Tmp_individual_genotype_single_bp_table{
 sub write_file{
     my @values = @_;
 
-    open FH, ">>$LOCAL_TMP_DIR/$TMP_FILE" || die "Could not open file with information: $!\n";
+    open FH, ">>$TMP_DIR/$TMP_FILE" || die "Could not open file with information: $!\n";
     my @a = map {defined($_) ? $_ : '\N'} @values; #to replace undefined values by \N in the file
     print FH join("\t", @a), "\n";
     close FH || die "Could not close file with information: $!\n";
@@ -476,9 +457,10 @@ sub get_last_table_id{
 sub copy_file{
     my $filename = shift;
 
-    my $call = "lsrcp $LOCAL_TMP_DIR/$TMP_FILE ecs4a:$TMP_DIR/$filename";
+    my $call = "mv $TMP_DIR/$TMP_FILE $TMP_DIR/$filename";
     system($call);
-    #and remove the file
-    $call = "$LOCAL_TMP_DIR/$TMP_FILE";
-    unlink ($call);   
 }
+#for most tables, can use mysqlimport to load the data, but for allele and transcript_variation tables, need:
+#mysqlimport -uensadmin -pensembl -hia64g -c "variation_id,sample_id,allele,frequency" yuan_rattus_norvegicus_variation_41_34k allele
+#mysqlimport -uensadmin -pensembl -hia64g -c "transcript_id,variation_feature_id,cdna_start,cdna_end,translation_start,translation_end,peptide_allele_string,consequence_type" yuan_rattus_norvegicus_variation_41_34k transcript_variation
+
