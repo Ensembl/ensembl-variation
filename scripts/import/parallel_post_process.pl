@@ -20,9 +20,9 @@ my ($vhost, $vport, $vdbname, $vuser, $vpass,
     $chost, $cport, $cdbname, $cuser, $cpass,
     $limit, $num_processes, $top_level, $species,
     $variation_feature, $flanking_sequence, $variation_group_feature,
-    $transcript_variation, $ld_populations, $genotype);
+    $transcript_variation, $ld_populations, $reverse_things);
 
-$variation_feature = $flanking_sequence = $variation_group_feature = $transcript_variation = $ld_populations = $genotype = '';
+$variation_feature = $flanking_sequence = $variation_group_feature = $transcript_variation = $ld_populations = $reverse_things = '';
 
 GetOptions('tmpdir=s'  => \$ImportUtils::TMP_DIR,
 	   'tmpfile=s' => \$ImportUtils::TMP_FILE,
@@ -34,7 +34,7 @@ GetOptions('tmpdir=s'  => \$ImportUtils::TMP_DIR,
 	   'flanking_sequence' => \$flanking_sequence,
 	   'variation_group_feature' => \$variation_group_feature,
 	   'transcript_variation' => \$transcript_variation,
-	   'genotype'              => \$genotype,
+	   'reverse_things'       => \$reverse_things,
 	   'ld_populations' => \$ld_populations );
 
 $num_processes ||= 1;
@@ -82,7 +82,7 @@ parallel_flanking_sequence($dbVar) if ($flanking_sequence);
 parallel_variation_group_feature($dbVar) if ($variation_group_feature);
 parallel_transcript_variation($dbVar) if ($transcript_variation);
 parallel_ld_populations($dbVar) if ($ld_populations);
-genotype($dbVar) if ($genotype);
+reverse_things($dbVar) if ($reverse_things);
 
 #will take the number of processes, and divide the total number of entries in the variation_feature table by the number of processes
 sub parallel_variation_feature{
@@ -296,56 +296,159 @@ sub parallel_transcript_variation{
 }
 
 ##use genotype method to change alleles in genotype table to forward strand, this is for mouse only in order to merge with sanger called SNPs
-sub genotype{
+
+sub reverse_things {
+
   my $dbVar = shift;
-  $dbVar->do(qq{CREATE TABLE tmp_varid
-                SELECT variation_id
-                FROM   variation_feature
-                WHERE map_weight=1 and seq_region_strand = -1 and flags="genotyped"}
-	    );
-  $dbVar->do(qq{ALTER TABLE tmp_varid
-		      ADD INDEX variation_idx(variation_id)});
+  reverse_genotype($dbVar);
+  #reverse_variation_feature($dbVar);
+  #reverse_flanking_sequence($dbVar);
+}
 
-  my ($population_genotype_id,$variation_id,$allele_1,$allele_2,$frequency,$sample_id);
+sub reverse_genotype{
+  my $dbVar = shift;
 
-  foreach my $table ("tmp_individual_genotype_single_bp","individual_genotype_multiple_bp","population_genotype") {
-  #foreach my $table ("population_genotype") {
-    warn("processling table $table");
-    my $sth = $dbVar->prepare(qq{select tg.* from $table tg, tmp_varid tv where tg.variation_id=tv.variation_id});
+  my ($population_genotype_id,$variation_id,$allele_id,$allele,$allele_1,$allele_2,$frequency,$sample_id,$allele_string);
+
+  #foreach my $table ("tmp_individual_genotype_single_bp","individual_genotype_multiple_bp","population_genotype","allele") {
+    #we only change things that have map_weight=1
+    foreach my $table ("population_genotype") {
+    debug("processling table $table");
+    open OUT, ">$TMP_DIR/$table\_out" or die "can't open file $table\_out : $!";
+    
+    my $sth = $dbVar->prepare(qq{select tg.*,vf.allele_string from $table tg, variation_feature vf 
+                                 where vf.variation_id=tg.variation_id
+                                 #and vf.variation_id in (13,14)
+                                 and vf.seq_region_strand = -1 and map_weight=1}, {mysql_use_result=>1} );
     $sth->execute();
     if ($table =~ /pop/i) {
-      $sth->bind_columns(\$population_genotype_id,\$variation_id,\$allele_1,\$allele_2,\$frequency,\$sample_id);
+      $sth->bind_columns(\$population_genotype_id,\$variation_id,\$allele_1,\$allele_2,\$frequency,\$sample_id,\$allele_string);
+    }
+    elsif($table =~ /allele/i) {
+      $sth->bind_columns(\$allele_id,\$variation_id,\$allele,\$frequency,\$sample_id,\$allele_string);
     }
     else {
-      $sth->bind_columns(\$variation_id,\$allele_1,\$allele_2,\$sample_id);
+      $sth->bind_columns(\$variation_id,\$allele_1,\$allele_2,\$sample_id,\$allele_string);
     }
-    while (my $row = $sth->fetch()){
-      next if ($allele_1 eq "-" and $allele_2 eq "-");
-      my $old_allele_1 = $allele_1;
-      my $old_allele_2 = $allele_2;
-      reverse_comp(\$allele_1);
-      reverse_comp(\$allele_2);
-    
-      my $ref_line = $dbVar->selectall_arrayref(qq{select variation_id from $table where variation_id = $variation_id and allele_1 = "$allele_1" and allele_2 = "$allele_2" and sample_id = $sample_id});
-
-#       my $sth = $dbVar->prepare(qq{select variation_id from $table where variation_id = ? and allele_1 = ? and allele_2 = ? and sample_id = ?});
-#       $sth->bind_param(1,$variation_id,SQL_INTEGER);
-#       $sth->bind_param(2,$allele_1,SQL_VARCHAR);
-#       $sth->bind_param(3,$allele_2,SQL_VARCHAR);
-#       $sth->bind_param(4,$sample_id,SQL_INTEGER);
-#       $sth->execute();
-#       if ($sth->rows() == 0 ){
-# 	print "rows ", $sth->rows,"\n";
-
-      if (! defined $ref_line->[0][0]) {
-	$dbVar->do(qq{update $table set allele_1 = "$allele_1", allele_2 = "$allele_2" where variation_id=$variation_id and sample_id=$sample_id and allele_1 = "$old_allele_1" and allele_2 = "$old_allele_2"});
+    while ($sth->fetch()){
+      my ($old_allele,$old_allele_1,$old_allele_2);
+      my @alleles = split /\//, $allele_string;
+      foreach my $a (@alleles) {
+        reverse_comp(\$a);
+      }  
+      my $new_allele_string = join "/", @alleles;
+      
+      if ($table =~ /allele/) {
+	next if ($allele =~ /\-|\+/);
+	$old_allele = $allele;
+        if ($new_allele_string !~ /$allele/ or ($new_allele_string =~ /$allele/ and $allele_string =~ /$allele/)) {
+	    reverse_comp(\$allele);
+	    if ($sample_id) {
+	        print OUT "update $table set allele = \"$allele\" where variation_id=$variation_id and sample_id=$sample_id and allele = \"$old_allele\";\n";
+            }
+	    else {
+	        print OUT "update $table set allele = \"$allele\" where variation_id=$variation_id and allele = \"$old_allele\";\n";
+            }
+        }     
       }
+      else {
+	next if ($allele_1 =~ /\-|\+/ and $allele_2 =~ /\-|\+/);
+	next if ($allele_1 =~/\+/ or $allele_2 =~/\+/);
+	next if ($allele_1 =~/homozygous|indeterminate|SEQUENCE/ig or $allele_2 =~/homozygous|indeterminate|SEQUENCE/ig);
+        $old_allele_1 = $allele_1;
+	$old_allele_2 = $allele_2;
+	if (($new_allele_string !~ /$allele_1/ and $new_allele_string !~ /$allele_2/) or ($new_allele_string =~ /$allele_1|$allele_2/ and $allele_string =~ /$allele_1|$allele_2/)) {
+          reverse_comp(\$allele_1);
+	  reverse_comp(\$allele_2);
+	  print OUT "update $table set allele_1 = \"$allele_1\", allele_2 = \"$allele_2\" where variation_id=$variation_id and sample_id=$sample_id and allele_1 = \"$old_allele_1\" and allele_2 = \"$old_allele_2\";\n";
+        }
+      }   
     }
+    close OUT;
+    system("mysql -uensadmin -pensembl -h $vhost $vdbname <$TMP_DIR/$table\_out");
   }
 }
 
+sub reverse_variation_feature{
+  my $dbVar = shift;
+
+  debug("processing reverse variation_feature strand");
+
+  my ($variation_id,$allele_string);
+
+  my $sth = $dbVar->prepare(qq{select variation_id,allele_string from variation_feature where seq_region_strand=-1 and map_weight=1});
+  $sth->execute();
+  $sth->bind_columns(\$variation_id,\$allele_string);
+
+  while ($sth->fetch()){
+    my $old_allele_string = $allele_string;
+    my @alleles = split /\//,$allele_string;
+    foreach my $allele (@alleles) {
+      reverse_comp(\$allele);
+    }
+    my $new_allele_string = join "/",@alleles;
+    $dbVar->do(qq{update variation_feature set allele_string = "$new_allele_string", seq_region_strand =1 where variation_id=$variation_id and allele_string = "$old_allele_string" and seq_region_strand=-1});
+  }
+}
+
+sub reverse_flanking_sequence {
+
+  my $dbVar = shift;
+
+  debug("Processing flanking_sequence reverse strand");
+
+  my $sth=$dbVar->prepare(qq{select * from flanking_sequence where seq_region_strand=-1});
+  $sth->execute();
+  my ($variation_id,$up_seq,$down_seq,$up_seq_start,$up_seq_end,$down_seq_start,$down_seq_end,$seq_region_id,$seq_region_strand);
+
+  $sth->bind_columns(\$variation_id,\$up_seq,\$down_seq,\$up_seq_start,\$up_seq_end,\$down_seq_start,\$down_seq_end,\$seq_region_id,\$seq_region_strand);
+  while($sth->fetch()) {
+    #print "$variation_id,$up_seq,$down_seq,$up_seq_start,$up_seq_end,$down_seq_start,$down_seq_end,$seq_region_id,$seq_region_strand\n";
+    if ($up_seq and $down_seq) {
+      ($up_seq, $down_seq) = ($down_seq, $up_seq);
+      reverse_comp(\$up_seq);
+      reverse_comp(\$down_seq);
+      $up_seq_start = $up_seq_end = $down_seq_start = $down_seq_end = '\N';
+    }
+    elsif (! $up_seq and ! $down_seq) {
+      my $tmp_seq_start = $up_seq_start;
+      my $tmp_seq_end = $up_seq_end;
+      ($up_seq_start, $up_seq_end) = ($down_seq_start, $down_seq_end);
+      ($down_seq_start, $down_seq_end) = ($tmp_seq_start, $tmp_seq_end);
+      $up_seq = $down_seq = '\N';
+    }
+    elsif ($up_seq and ! $down_seq) {
+      $down_seq = $up_seq;
+      reverse_comp(\$down_seq);
+      $up_seq = '\N';
+      ($up_seq_start, $up_seq_end) = ($down_seq_start, $down_seq_end);
+      $down_seq_start = '\N';
+      $down_seq_end = '\N';
+    }
+    elsif (! $up_seq and $down_seq) {
+      $up_seq = $down_seq;
+      reverse_comp(\$up_seq);
+      $down_seq = '\N';
+      ($down_seq_start, $down_seq_end) = ($up_seq_start, $up_seq_end);
+      $up_seq_start = '\N';
+      $up_seq_end = '\N';
+    }
+    $seq_region_strand = 1 if ($seq_region_strand == -1);
+    #my $sth1 = $dbVar->prepare(qq{update flanking_sequence set up_seq = ?, down_seq = ?, up_seq_region_start = $up_seq_start, up_seq_region_end = $up_seq_end, down_seq_region_start=$down_seq_start, down_seq_region_end=$down_seq_end, seq_region_strand=1  where variation_id = $variation_id and seq_region_id = $seq_region_id and seq_region_strand = -1});
+    #print "up_seq is $up_seq and down_seq is $down_seq\n";
+    #$sth1->bind_param(1,$up_seq,SQL_VARCHAR) if ($up_seq ne '\N');
+    #$sth1->bind_param(1,'NULL',SQL_VARCHAR) if ($up_seq eq '\N');
+    #$sth1->bind_param(2,$down_seq,SQL_VARCHAR) if ($down_seq ne '\N');
+    #$sth1->bind_param(2,'NULL',SQL_VARCHAR) if ($down_seq eq '\N');
+    #$sth1->execute();
+    $dbVar->do(qq{update flanking_sequence set up_seq = "$up_seq", down_seq = "$down_seq", up_seq_region_start = $up_seq_start, up_seq_region_end = $up_seq_end, down_seq_region_start=$down_seq_start, down_seq_region_end=$down_seq_end, seq_region_strand=1  where variation_id = $variation_id and seq_region_id = $seq_region_id and seq_region_strand = -1});
+  }
+  $dbVar->do(qq{update flanking_sequence set up_seq = null where up_seq = 'N'});
+  $dbVar->do(qq{update flanking_sequence set down_seq = null where down_seq = 'N'});
+}
+
 #will have to wait until the variation_feature has finished. Then, select all the genotype, and split the data into files (1 per population)
-sub parallel_ld_populations{
+sub parallel_ld_populations {
     my $dbVar = shift;    
     my $call;
 
