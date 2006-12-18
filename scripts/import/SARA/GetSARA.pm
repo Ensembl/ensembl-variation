@@ -59,9 +59,8 @@ sub get_sara{
   #$self->get_flanking_seq_qual(\%rec_seq_region_id,$var_dbname,$queue_linux64);
   #print "Time to run GetSARA ", tv_interval($t0,$t1),"\n";
   #$self->make_genotype_allele_table(\%rec_seq_region_id,$var_dbname);
-  #$self->insert_allele_gtype_to_vardb(\%rec_seq_region_id,$var_dbname);
+  $self->insert_allele_gtype_to_vardb(\%rec_seq_region_id,$var_dbname);
   #$self->read_coverage($var_dbname);
-  $self->check_allele_hit($var_dbname);
 }
 
 sub update_feature_table {
@@ -88,9 +87,8 @@ sub get_query_snp_pos {
 
   my $species = $self->{'species'};
 
-  #foreach my $seq_region_id (keys %$rec_seq_region_id) {
-  foreach my $seq_region_id (226034) {
-    my $call = "bsub -q normal -J $var_dbname\_ssaha_feature_job_$seq_region_id -o $tmp_dir/ssaha_feature_out\_$seq_region_id /usr/local/ensembl/bin/perl parallel_ssaha_feature.pl -species $species -seq_region_id $seq_region_id -job snp_pos -tmpdir $tmp_dir -tmpfile $tmp_file";
+  foreach my $seq_region_id (keys %$rec_seq_region_id) {
+    my $call = "bsub -q normal -J $var_dbname\_ssaha_feature_job_$seq_region_id -o $tmp_dir/ssaha_feature_out\_$seq_region_id /usr/local/ensembl/bin/perl parallel_sara_feature.pl -species $species -seq_region_id $seq_region_id -job snp_pos -tmpdir $tmp_dir -tmpfile $tmp_file";
     print "call is $call\n";
     system($call);
   }
@@ -113,7 +111,7 @@ sub get_flanking_seq_qual {
   my $species = $self->{'species'};
   my $count;
   foreach my $seq_region_id (keys %$rec_seq_region_id) {
-    my $call = "bsub $queue -J $var_dbname\_ssaha_flank_job_$seq_region_id -o $tmp_dir/ssaha_flank_out\_$seq_region_id /usr/local/ensembl64/bin/perl parallel_ssaha_feature.pl -species $species -seq_region_id $seq_region_id -job flank -tmpdir $tmp_dir -tmpfile $tmp_file";
+    my $call = "bsub $queue -J $var_dbname\_ssaha_flank_job_$seq_region_id -o $tmp_dir/ssaha_flank_out\_$seq_region_id /usr/local/ensembl64/bin/perl parallel_sara_feature.pl -species $species -seq_region_id $seq_region_id -job flank -tmpdir $tmp_dir -tmpfile $tmp_file";
     $count++;
     print "call is $call $count\n";
     system($call);
@@ -135,7 +133,7 @@ sub make_genotype_allele_table {
   my $species = $self->{'species'};
 
   foreach my $seq_region_id (keys %$rec_seq_region_id) {
-    my $call = "bsub -q bigmem -R'select[mem>5000] rusage[mem=5000]' -J $var_dbname\_ssaha_gtype_job_$seq_region_id -o $tmp_dir/ssaha_gtype_out\_$seq_region_id /usr/local/ensembl/bin/perl parallel_ssaha_feature.pl -species $species -seq_region_id $seq_region_id -job gtype_allele -tmpdir $tmp_dir -tmpfile $tmp_file";
+    my $call = "bsub -q bigmem -R'select[mem>5000] rusage[mem=5000]' -J $var_dbname\_ssaha_gtype_job_$seq_region_id -o $tmp_dir/ssaha_gtype_out\_$seq_region_id /usr/local/ensembl/bin/perl parallel_sara_feature.pl -species $species -seq_region_id $seq_region_id -job gtype_allele -tmpdir $tmp_dir -tmpfile $tmp_file";
     print "call is $call\n";
     system($call);
   }
@@ -155,11 +153,10 @@ sub insert_allele_gtype_to_vardb {
     $self->{'dbSara'}->do(qq{INSERT IGNORE  INTO $var_dbname.allele (variation_id,allele,sample_id) select ga.variation_id,ga.allele,ip.population_sample_id from gtype_allele_$seq_region_id ga, $var_dbname.sample s, $var_dbname.individual_population ip where ga.sample_name = s.name and s.sample_id = ip.individual_sample_id});
     #then insert reference allele
     $self->{'dbSara'}->do(qq{INSERT IGNORE INTO $var_dbname.allele (variation_id,allele,sample_id) select ga.variation_id,ga.allele,s.sample_id from gtype_allele_$seq_region_id ga, $var_dbname.sample s where ga.sample_name = s.name and s.name like "ref%"}) ;
+    $self->{'dbVar'}->do(qq{DROP INDEX unique_allele_idx ON allele});
     $self->{'dbSara'}->do(qq{INSERT INTO $var_dbname.tmp_individual_genotype_single_bp
     (variation_id,allele_1,allele_2,sample_id) select ig.variation_id,ig.allele_1,ig.allele_2,s.sample_id from tmp_individual_genotype_single_bp_$seq_region_id ig, $var_dbname.sample s where ig.sample_name = s.name});
   }
-
-  $self->{'dbVar'}->do(qq{DROP INDEX unique_allele_idx ON allele});
 
   #delete entries from variation, variation_feature and flanking_sequence tables that variation_id is not in allele and tmp_genotype_single_bp table
 
@@ -206,7 +203,7 @@ sub read_coverage {
 
   foreach my $seq_region_id (keys %rec_seq_region) {
     my $seq_region_name = $rec_seq_region{$seq_region_id};
-    my $call = "bsub -q hugemem -R'select[mem>3000] rusage[mem=3000]' -J $var_dbname\_read_coverage_job_$seq_region_id -o /$tmp_dir/read_coverage_out\_$seq_region_id /usr/local/bin/perl /nfs/acari/yuan/ensembl/src/ensembl-variation/scripts/import/parallel_ssaha_feature.pl -species $species -seq_region_name $seq_region_name -job read_coverage -alignment_file $alignment_file -tmpdir $tmp_dir -tmpfile $tmp_file";
+    my $call = "bsub -q hugemem -R'select[mem>3000] rusage[mem=3000]' -J $var_dbname\_read_coverage_job_$seq_region_id -o /$tmp_dir/read_coverage_out\_$seq_region_id /usr/local/bin/perl /nfs/acari/yuan/ensembl/src/ensembl-variation/scripts/import/parallel_sara_feature.pl -species $species -seq_region_name $seq_region_name -job read_coverage -alignment_file $alignment_file -tmpdir $tmp_dir -tmpfile $tmp_file";
     print "call is $call\n";
     system($call);
   }
@@ -214,81 +211,4 @@ sub read_coverage {
   system($call1);
 }
 
-sub check_allele_hit {
-
-  my ($self, $var_dbname) = @_;
-  my $tmp_dir = $self->{'tmpdir'};
-  my $dbname_sara = $self->{'dbSara'}->dbname;
-  my $dbhost = $self->{'dbSara'}->host;
-  my ($count,$count1,$count2);
-
-  open FLA, ">$tmp_dir/snp_query_name_flank_length";
-  open QUAL, ">$tmp_dir/snp_query_name_qual_value";
-  open BASE, ">$tmp_dir/snp_query_name_more_base";
-
-  #$self->{'dbVar'}->do(qq{CREATE TABLE allele_hit SELECT variation_id,count(*) as count from (select distinct variation_id,allele from allele group by variation_id, allele) group by variation_id having count=1});
-  #$self->{'dbVar'}->do(qq{ALTER TABLE allele_hit add index variation_idx(variation_id)});
-  #$self->{'dbSara'}->do(qq{CREATE TABLE allele_hit SELECT hit.variation_id, vf.seq_region_id from $var_dbname.allele_hit hit, $var_dbname.variation_feature vf where hit.variation_id=vf.variation_id});
-  #$self->{'dbSara'}->do(qq{ALTER TABLE allele_hit add index variation_idx(variation_id)});
-  #system("perl -ane '@all=split;print \"$all[3]\t$all[8]\n\";' SNP_file >$tmp_dir/snp_query_name");
-  #$self->{'dbSara'}->do(qq{create table snp_query_name (query_name varchar(20), seq_region_start int(20))});
-  #system("mysqlimport -L -uensadmin -pensembl -h $dbhost $dbname_sara $tmp_dir/snp_query_name");
-  #$self->{'dbSara'}->do(qq{ALTER TABLE snp_query_name add index variation_idx(variation_id)});
-
-  debug("Query to allele_hit");
-  my $sth = $self->{'dbSara'}->prepare(qq{SELECT variation_id, seq_region_id from allele_hit});
-
-  my ($var_id,$seq_id,%rec_allele,%rec_var,%var_allele,%done);
-  $sth->execute();
-  $sth->bind_columns(\$var_id,\$seq_id);
-
-  while ($sth->fetch()) {
-    push @{$rec_allele{$seq_id}},$var_id;
-    $rec_var{$var_id}=$seq_id;
-  }
-
-  foreach my $seq_region_id (keys %rec_allele) {
-  #foreach my $seq_region_id (226034) { 
-    my @variation_ids = @{$rec_allele{$seq_region_id}};
-    #my @variation_ids = (16812,20310,20823,240663);
-    my $var_id_str = " IN (" . join(',',@variation_ids) . ")";
-
-    my $sth1 = $self->{'dbSara'}->prepare(qq{select hit.variation_id,sf.feature_id,sf.query_name,sf.query_start,sf.query_end,sf.query_strand,snp.snp_pos,snp.allele_string from allele_hit hit, snp_query_name n, ssahaSNP_feature sf, snp_pos_$seq_region_id snp left join flanking_qual_$seq_region_id q on (q.feature_id = snp.feature_id and q.variation_id=snp.variation_id) where hit.variation_id=snp.variation_id and n.query_name = snp.query_name and n.seq_region_start = snp.seq_region_start and snp.query_name=sf.query_name and hit.variation_id $var_id_str and q.feature_id is null});
-
-    #note this query consider query_match_start and end, not query_real_start and end
-    my ($variation_id,$feature_id,$query_name,$query_start,$query_end,$query_strand,$match_length,$snp_pos,$allele_string);
-    $sth1->execute();
-    $sth1->bind_columns(\$variation_id,\$feature_id,\$query_name,\$query_start,\$query_end,\$query_strand,\$snp_pos,\$allele_string);
-    my ($length_of_flank_5,$length_of_flank_3);
-
-    while ($sth1->fetch()) {
-      #print "var_id is $variation_id,$query_name,$query_start,$query_end,$query_strand,$snp_pos,$allele_string\n";
-      next if (! $variation_id);
-      $length_of_flank_5 = $snp_pos-$query_start;
-      $length_of_flank_3 = $query_end-$snp_pos;
-      #print "$length_of_flank_5  and $length_of_flank_3\n" if ($variation_id==124891);
-      if ($length_of_flank_5 <5 or $length_of_flank_3 <5) {
-	$count++;
-	$done{$variation_id}=1;
-	print FLA join "\t",$count,$variation_id,$seq_region_id,$feature_id,$query_name,$query_start,$query_end,$query_strand,$snp_pos,$allele_string,"\n";
-	next;
-      }
-      $var_allele{$variation_id} = $seq_region_id;
-     }
-  }
-
-  foreach my $variation_id (keys %rec_var) {
-    my $seq_region_id = $rec_var{$variation_id};
-    if ($var_allele{$variation_id}) {
-      $count1++;
-      print QUAL "$count1\t$variation_id\t$seq_region_id has  qual < 15\n";
-    }
-    elsif (! $var_allele{$variation_id} and ! $done{$variation_id}) {
-      $count2++;
-      print BASE "$count2\t$variation_id\t$seq_region_id has base > 2\n";
-    }
-  }
-}
-
-    
 1;
