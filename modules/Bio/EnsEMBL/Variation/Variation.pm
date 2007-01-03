@@ -101,8 +101,8 @@ our %VSTATE2BIT = ('cluster'   => 1,   # 00000001
                    'submitter' => 4,   # 00000100
                    'doublehit' => 8,   # 00001000
                    'hapmap'    => 16,  # 00010000
-		   'non-polymorphic' => 32, # 00100000
-		   'observed'  => 64   # 01000000
+		       'non-polymorphic' => 32, # 00100000
+		       'observed'  => 64   # 01000000
 		   ); 
 
 
@@ -144,6 +144,9 @@ our %VSTATE2BIT = ('cluster'   => 1,   # 00000001
   Arg [-THREE_PRIME_FLANKING_SEQ] :
     string - the three prime flanking nucleotide sequence
 
+  Arg [-FAILED_DESCRIPTION] :
+    string - description why the variation failed Ensembl pipeline
+
   Example    : $v = Bio::EnsEMBL::Variation::Variation->new
                     (-name   => 'rs123',
                      -source => 'dbSNP');
@@ -165,7 +168,7 @@ sub new {
       $alleles, $valid_states, $moltype, $five_seq, $three_seq) =
         rearrange([qw(dbID ADAPTOR NAME SOURCE SYNONYMS ANCESTRAL_ALLELE ALLELES
                       VALIDATION_STATES MOLTYPE FIVE_PRIME_FLANKING_SEQ
-                      THREE_PRIME_FLANKING_SEQ)],@_);
+                      THREE_PRIME_FLANKING_SEQ FAILED_DESCRIPTION)],@_);
 
 
   # convert the validation state strings into a bit field
@@ -182,12 +185,13 @@ sub new {
                 'name'   => $name,
                 'source' => $src,
                 'synonyms' => $syns || {},
-		'ancestral_allele' => $ancestral_allele,
+		    'ancestral_allele' => $ancestral_allele,
                 'alleles' => $alleles || [],
                 'validation_code' => $vcode,
-		'moltype' => $moltype,
+		    'moltype' => $moltype,
                 'five_prime_flanking_seq' => $five_seq,
-                'three_prime_flanking_seq' => $three_seq}, $class;
+                'three_prime_flanking_seq' => $three_seq,
+	          'failed_description' => $failed_description}, $class;
 }
 
 
@@ -674,6 +678,25 @@ sub var_class{
     map {$alleles{$_->allele}++} @{$alleles};
     my $allele_string = join "|",keys %alleles;
     return &variation_class($allele_string);
+}
+
+=head2 failed_description
+
+  Arg [1]    : string $failed_description (optional)
+               The new value to set the failed_description attribute to
+  Example    : $failed_description = $v->failed_description()
+  Description: Getter/Setter for the failed_description attribute
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub failed_description{
+  my $self = shift;
+  return $self->{'failed_description'} = shift if(@_);
+  return $self->{'failed_description'};
 }
 
 1;
