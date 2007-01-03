@@ -9,13 +9,15 @@
 # name                - identifier for the variation such as the dbSNP
 #                       refSNP id (rs#) or SubSNP id (ss#)
 # SNPAncestralAllele  - taken from dbSNP to show ancestral allele for the variation
+# failed_description_id - foreign key to failed_description table
 
 create table variation (
 	variation_id int(10) unsigned not null auto_increment, # PK
 	source_id int(10) unsigned not null, 
 	name varchar(255),
-	validation_status SET('cluster','freq','submitter','doublehit','hapmap'),
+	validation_status SET('cluster','freq','submitter','doublehit','hapmap','failed'),
 	ancestral_allele text,
+	failed_description_id int(10) unsigned not null
 
 	primary key( variation_id ),
 	unique ( name )
@@ -632,3 +634,27 @@ CREATE TABLE compressed_genotype_single_bp(
 
   key pos_idx(seq_region_id,seq_region_start)
 );
+
+#
+# failed_description
+#
+# Contains reasons for removing some variations from the Variation database
+#
+# failed_description_id  - primary key, internal identifier
+# description - text containing the reason why the Variation information has been removed from the 
+#               Variation databse except in the Variation table
+#
+
+CREATE TABLE failed_description(
+
+ failed_description_id int(10) unsigned not null,
+ description  text not null,
+
+ PRIMARY KEY (failed_description_id)
+);
+
+#possible values in the failed_description table
+INSERT INTO failed_description (failed_description_id,description) VALUES (1,'Variation has more than 3 different locations');
+INSERT INTO failed_description (failed_description_id,description) VALUES (2,'Reference allele not present in the alleles of the variation');
+INSERT INTO failed_description (failed_description_id,description) VALUES (3,'Variation containing more than 3 alleles');
+INSERT INTO failed_description (failed_description_id,description) VALUES (4,'Variation with \'NoVariation\' alleles');
