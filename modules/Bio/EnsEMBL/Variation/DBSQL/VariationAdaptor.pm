@@ -83,7 +83,7 @@ sub fetch_by_dbID {
     (q{SELECT v.variation_id, v.name, v.validation_status, s1.name, v.ancestral_allele,
               a.allele_id, a.allele, a.frequency, a.sample_id, vs.moltype,
               vs.name, s2.name, f.description
-       FROM   (variation v, source s1
+       FROM   (variation v, source s1)
 	       LEFT JOIN allele a ON v.variation_id = a.variation_id
                 LEFT JOIN variation_synonym vs on v.variation_id = vs.variation_id 
    	            LEFT JOIN source s2 on  vs.source_id = s2.source_id
