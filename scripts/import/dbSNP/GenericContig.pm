@@ -37,21 +37,21 @@ sub dump_dbSNP{
 
   my $self = shift;
 
-  $self->source_table();
-  $self->population_table();
-  $self->individual_table();
-  $self->variation_table();
-  $self->individual_genotypes();
+  #$self->source_table();
+  #$self->population_table();
+  #$self->individual_table();
+  #$self->variation_table();
+  #$self->individual_genotypes();
   $self->population_genotypes();
-  $self->allele_table();
-  $self->flanking_sequence_table();
-  $self->variation_feature();
-  if ($self->{'dbCore'}->species =~ /homo/i) {
-   $self->variation_group();
-   $self->allele_group();
-  }
+  #$self->allele_table();
+  #$self->flanking_sequence_table();
+  #$self->variation_feature();
+  #if ($self->{'dbCore'}->species =~ /homo/i) {
+  # $self->variation_group();
+  # $self->allele_group();
+  #}
 
-  $self->cleanup();
+  #$self->cleanup();
 
 }
 
@@ -107,8 +107,18 @@ sub variation_table {
     
     debug("Dumping SubSNPs");
     
-    $self->dump_subSNPs;
+    #$self->dump_subSNPs; #changed to get allele data from UniVariAllele and Allele, do not need this method anymore
 
+    dumpSQL($self->{'dbSNP'},
+	    (qq{SELECT subsnp.subsnp_id, subsnplink.snp_id, b.pop_id, a.allele,
+	    subsnplink.substrand_reversed_flag, b.moltype
+		FROM SubSNP subsnp, SNPSubSNPLink subsnplink, ObsVariation ov, Batch b, UniVariAllele uv, Allele a
+		WHERE subsnp.batch_id = b.batch_id
+		AND   subsnp.subsnp_id = subsnplink.subsnp_id
+		AND   ov.var_id = subsnp.variation_id
+                AND   ov.univar_id = uv.univar_id
+                AND   uv.allele_id=a.allele_id
+	        $self->{'limit'}});
     create_and_load( $self->{'dbVar'}, "tmp_var_allele", "subsnp_id i*", "refsnp_id i*",
 		     "pop_id i", "allele", "substrand_reversed_flag i", "moltype");
     
@@ -130,9 +140,6 @@ sub variation_table {
 		   });
     
     $self->{'dbVar'}->do("ALTER TABLE variation_synonym ADD INDEX subsnp_id(subsnp_id)");
-    
-    ### FIX: Not sure if all RefSNPs have subsnps, and if ones which do not
-    ### should possibly be eliminated
 
     return;
 }
@@ -158,8 +165,9 @@ sub dump_subSNPs {
 
     open ( FH, ">" . $self->{'tmpdir'} . "/" . $self->{'tmpfile'} );
     
-  my ($row, $prefix);
+  my ($row);
   while($row = $sth->fetchrow_arrayref()) {
+    my $prefix
     my @alleles = split('/', $row->[3]);
     if ($row->[3] =~ /^(\(.*\))\d+\/\d+/) {
       $prefix = $1;
@@ -170,7 +178,7 @@ sub dump_subSNPs {
     foreach my $a (@alleles) {
       if ($prefix and $a !~ /\(.*\)/) {#incase (CA)12/13/14 CHANGE TO (CA)12/(CA)13/(CA)14
 	$a = $prefix.$a;
-	$prefix = "";
+	#$prefix = "";
       }
       $row[3] = $a;
       print FH join("\t", @row), "\n";
@@ -305,7 +313,7 @@ sub individual_table {
 
   #decide which individual_type should this species be
   my $individual_type_id;
-  if ($self->{'dbCore'}->species =~ /homo|pan/i) {
+  if ($self->{'dbCore'}->species =~ /homo|pan|anoph/i) {
     $individual_type_id = 3;
   }
   elsif ($self->{'dbCore'}->species =~ /mus/i) {
@@ -480,28 +488,12 @@ sub allele_table {
 
     ###generate allele_string table for variation_feature allele_string column
 
-    dumpSQL($self->{'dbSNP'}, qq(select snp.snp_id, uv.var_str from SNP snp, UniVariation uv 
-                                 where snp.univar_id = uv.univar_id));
+    dumpSQL($self->{'dbSNP'}, qq(SELECT snp.snp_id, a.allele
+                                 FROM   SNP snp, UniVariAllele uva, Allele a
+                                 WHERE  snp.univar_id = uva.univar_id
+                                 AND    uva.allele_id = a.allele_id
+                               ));
 
-    open ( IN, $self->{'tmpdir'} . "/" . $self->{'tmpfile'} );
-    open OUT, ">" . $self->{'tmpdir'} . "/allele_string.txt";
-    my $prefix; ##in case like (AT)/10/11/12->(AT)10/(AT)11/..because this is how it appear in tmp_rev_allele table
-    while (<IN>) {
-      my ($snp_id,$var_str) = split /\t/,$_;
-      my @alleles = split /\//, $var_str;
-      if ($var_str =~ /^(\(.*\))\d+\/\d+/) {
-	$prefix = $1;
-      }
-      foreach my $allele (@alleles) {
-	if ($prefix and $allele !~ /\(.*\)/) {
-	  $allele = $prefix.$allele ;
-	}
-	print OUT "rs$snp_id\t$allele\n";
-      }
-    }
-    my $call = "mv ". $self->{'tmpdir'}."/allele_string.txt ". $self->{'tmpdir'} . "/" . $self->{'tmpfile'};
-    print "$call\n";
-    system($call);
     create_and_load($self->{'dbVar'},"tmp_allele_string","snp_name *","allele");
     
     $self->{'dbVar'}->do(qq{CREATE TABLE allele_string select v.variation_id as variation_id, tas.allele as allele                                  FROM variation v, tmp_allele_string tas
@@ -690,9 +682,9 @@ sub variation_feature {
   debug("Creating genotyped variations");
     
   #creating the temporary table with the genotyped variations
-  #$self->{'dbVar'}->do(qq{CREATE TABLE tmp_genotyped_var SELECT DISTINCT variation_id FROM tmp_individual_genotype_single_bp});
-  #$self->{'dbVar'}->do(qq{CREATE UNIQUE INDEX variation_idx ON tmp_genotyped_var (variation_id)});
-  #$self->{'dbVar'}->do(qq{INSERT IGNORE INTO  tmp_genotyped_var SELECT DISTINCT variation_id FROM individual_genotype_multiple_bp});
+  $self->{'dbVar'}->do(qq{CREATE TABLE tmp_genotyped_var SELECT DISTINCT variation_id FROM tmp_individual_genotype_single_bp});
+  $self->{'dbVar'}->do(qq{CREATE UNIQUE INDEX variation_idx ON tmp_genotyped_var (variation_id)});
+  $self->{'dbVar'}->do(qq{INSERT IGNORE INTO  tmp_genotyped_var SELECT DISTINCT variation_id FROM individual_genotype_multiple_bp});
 
     
   debug("Creating tmp_variation_feature data");
@@ -825,11 +817,11 @@ sub individual_genotypes {
 
     debug("Time starting to dump tmp2_gty table: ",scalar(localtime(time)));
     dumpSQL($self->{'dbSNP'}, qq{select si.subsnp_id, sind.ind_id, length(og.obs) as length_pat,
-				 IF (length(og.obs)=3, SUBSTRING(og.obs,1,1),SUBSTRING_INDEX(og.obs,'/',1)) as allele_1,
-				 IF (length(og.obs)=3, SUBSTRING(og.obs,3,1),SUBSTRING_INDEX(og.obs,'/',-1)) as allele_2,
+				 SUBSTRING_INDEX(og.obs,'/',1) as allele_1,
+				 SUBSTRING_INDEX(og.obs,'/',-1) as allele_2,
 				 si.submitted_strand_code
 				 FROM   SubInd si, ObsGenotype og, SubmittedIndividual sind
-				 WHERE  og.gty_id = si.gty_id 
+				 WHERE  og.gty_id = si.gty_id
 				 AND    sind.submitted_ind_id = si.submitted_ind_id
                                  AND    og.obs != 'N/N'
 				 $self->{'limit'}});
@@ -871,7 +863,7 @@ sub individual_genotypes {
       calculate_gtype($self,$self->{'dbVar'},"tmp2_gty","tmp_individual_genotype_single_bp",$insert);
     }
    else {
-     my $total_row_ref = $self->{'dbVar'}->selectall_arrayref(qq{select count(*) from tmp2_gty});
+     my $total_row_ref = $self->{'dbVar'}->db_handle->selectall_arrayref(qq{select count(*) from tmp2_gty});
      my $total_row = $total_row_ref->[0][0];
      my $limit_start = 0;
      my $num_tables = 4;
@@ -898,7 +890,6 @@ sub individual_genotypes {
        elsif ($pid == 0){
 	 #you are the child.....
 	 calculate_gtype($self,$self->{'dbVar'},$table1,$table2,$insert);
-	 
        POSIX:_exit(0);
        }
        $limit_start += $table_row;
@@ -913,21 +904,34 @@ sub individual_genotypes {
      #load ($self->{'dbVar'},"tmp_individual_genotype_single_bp","variation_id","allele_1", "allele_2","sample_id");
      #$self->{'dbVar'}->do(qq{DROP INDEX ind_genotype_idx ON individual_genotype_single_bp});
      debug("Time finishing to insert to tmp_individual_genotype_single_bp table: ",scalar(localtime(time)));
+  }
+     debug("Time start to insert to individual_genotype_multiple_bp table");
 
-     debug("Time start to insert to tmp_individual_genotype_multiple_bp table");
      $self->{'dbVar'}->do(qq{INSERT INTO individual_genotype_multiple_bp (variation_id, sample_id, allele_1, allele_2) 
-				  SELECT vs.variation_id, s.sample_id,
-				  SUBSTRING_INDEX(tg.allele_1,'/',1) as allele_1,
-				  SUBSTRING_INDEX(tg.allele_2,'/',-1) as allele_2 
-				  FROM   tmp2_gty tg, variation_synonym vs, sample s
-				  WHERE  tg.subsnp_id = vs.subsnp_id
-				  AND    tg.length_pat > 3
-				  AND    tg.ind_id = s.individual_id});
+			     SELECT vs.variation_id, s.sample_id,
+                             IF(vs.substrand_reversed_flag,tra1.allele,tra1.rev.allele) as allele_1,				                        IF(vs.substrand_reversed_flag,tra2.allele,tra2.rev.allele) as allele_2				                           FROM tmp2_gty tg, variation_synonym vs, sample s, tmp_rev_allele tra1, tmp_rev_allele tra2
+			     WHERE tg.subsnp_id = vs.subsnp_id
+                             AND   tg.submitted_strand IN (1,3,5)
+                             AND   tra1.allele = tg.allele_1
+                             AND   tra2.allele = tg.allele_2
+			     AND   tg.length_pat > 3
+			     AND   tg.ind_id = s.individual_id});
+
+     $self->{'dbVar'}->do(qq{INSERT INTO individual_genotype_multiple_bp (variation_id, sample_id, allele_1, allele_2) 
+			     SELECT vs.variation_id, s.sample_id,
+                             IF(vs.substrand_reversed_flag,tra1.rev.allele,tra1.allele) as allele_1,
+                             IF(vs.substrand_reversed_flag,tra2.rev.allele,tra2.allele) as allele_2
+	                     FROM tmp2_gty tg, variation_synonym vs, sample s, tmp_rev_allele tra1, tmp_rev_allele tra2
+			     WHERE tg.subsnp_id = vs.subsnp_id
+                             AND   tg.submitted_strand IN (0,2,4)
+                             AND   tra1.allele = tg.allele_1
+                             AND   tra2.allele = tg.allele_2
+			     AND   tg.length_pat > 3
+			     AND   tg.ind_id = s.individual_id});
+
 
      #$self->{'dbVar'}->do("DROP TABLE tmp2_gty");
-     debug("Time finishing to insert to tmp_individual_genotype_multiple_bp table: ",scalar(localtime(time)));
-     return;
-   }
+     debug("Time finishing to insert to individual_genotype_multiple_bp table: ",scalar(localtime(time)));
 }
 
 sub calculate_gtype {
@@ -939,7 +943,7 @@ sub calculate_gtype {
   $dbVariation->do(qq{$insert INTO $table2 (variation_id, sample_id, allele_1, allele_2) 
 				 SELECT vs.variation_id, s.sample_id, tra1.allele, tra2.allele
 				 FROM $table1 tg, variation_synonym vs, tmp_rev_allele tra1, tmp_rev_allele tra2, sample s
-				 WHERE tg.submitted_strand IN (1,3,4)
+				 WHERE tg.submitted_strand IN (1,3,5)
 				 AND vs.substrand_reversed_flag =1
 				 AND tg.subsnp_id = vs.subsnp_id
 				 AND tra1.allele = tg.allele_1
@@ -951,7 +955,7 @@ sub calculate_gtype {
   $dbVariation->do(qq{$insert INTO $table2 (variation_id, sample_id, allele_1, allele_2)
 				 SELECT vs.variation_id, s.sample_id, tra1.rev_allele, tra2.rev_allele
 				 FROM $table1 tg, variation_synonym vs, tmp_rev_allele tra1, tmp_rev_allele tra2, sample s
-				 WHERE tg.submitted_strand IN (1,3,4)
+				 WHERE tg.submitted_strand IN (1,3,5)
 				 AND vs.substrand_reversed_flag =0
 				 AND tg.subsnp_id = vs.subsnp_id
 				 AND tra1.allele = tg.allele_1
@@ -965,7 +969,7 @@ sub calculate_gtype {
 
 				 SELECT vs.variation_id, s.sample_id, tra1.rev_allele, tra2.rev_allele
 				 FROM $table1 tg, variation_synonym vs, tmp_rev_allele tra1, tmp_rev_allele tra2, sample s
-				 WHERE tg.submitted_strand IN (0,2,5)
+				 WHERE tg.submitted_strand IN (0,2,4)
 				 AND vs.substrand_reversed_flag =1
 				 AND tg.subsnp_id = vs.subsnp_id
 				 AND tra1.allele = tg.allele_1
@@ -979,7 +983,7 @@ sub calculate_gtype {
 
 				 SELECT vs.variation_id, s.sample_id, tra1.allele, tra2.allele
 				 FROM $table1 tg, variation_synonym vs, tmp_rev_allele tra1, tmp_rev_allele tra2, sample s
-				 WHERE tg.submitted_strand IN (0,2,5)
+				 WHERE tg.submitted_strand IN (0,2,4)
 				 AND vs.substrand_reversed_flag =0
 				 AND tg.subsnp_id = vs.subsnp_id
 				 AND tra1.allele = tg.allele_1
@@ -1001,64 +1005,6 @@ sub calculate_gtype {
   }
 }
 
-#     if ($self->{'dbCore'}->species =~ /mouse|mus/i) {
-#       $self->{'dbVar'}->do(qq{CREATE TABLE tmp_strain_gtype_final (
-# 								      variation_id int not null, 
-# 								      allele_string char(3) not null,
-# 								      sample_id1 int(11) not null,
-# 								      sample_id2 int(11) not null,
-#                                                                       sample_name1 varchar(50) not null,
-#                                                                       sample_name2 varchar(50) not null,
-# 								      unique key variation_idx(variation_id,sample_id1,sample_id2),
-# 								      key sample_idx(sample_id1,sample_id2)) MAX_ROWS = 100000000
-# 				});
-#       $self->{'dbVar'}->do(qq{INSERT IGNORE into tmp_strain_gtype_final
-# 				  SELECT ig1.variation_id,concat(ig1.allele_1,"/",ig2.allele_1) as allele_string,ip1.population_sample_id as sample_id1,ip2.population_sample_id as sample_id2, s1.name as sample_name1, s2.name as sample_name2
-# 				  FROM population p1, population p2,tmp_individual_genotype_single_bp ig1, tmp_individual_genotype_single_bp ig2,individual_population ip1,individual_population ip2, sample s1, sample s2
-# 				  WHERE p1.is_strain=1 
-# 				  AND p2.is_strain=1 
-# 				  AND ig1.allele_1=ig1.allele_2 
-# 				  AND ig2.allele_1 = ig2.allele_2 
-# 				  AND ig1.variation_id=ig2.variation_id 
-# 				  AND ig1.sample_id=ip1.individual_sample_id 
-# 				  AND ig2.sample_id=ip2.individual_sample_id 
-# 				  AND p1.sample_id = ip1.population_sample_id 
-# 				  AND p2.sample_id = ip2.population_sample_id 
-# 				  AND ig1.allele_1 != ig2.allele_1 
-# 				  AND ig1.allele_1 != 'N' 
-# 				  AND ig2.allele_1 != 'N' 
-# 				  AND p2.sample_id != p1.sample_id
-#                                   AND s1.sample_id = p1.sample_id
-#                                   AND s2.sample_id = p2.sample_id
-# 				 });
-#Query OK, 141999022 rows affected (13 hours 54 min 5.95 sec)
-#Records: 142921258  Duplicates: 922236  Warnings: 0
-#       $self->{'dbVar'}->do(qq{CREATE TABLE tmp_strain_gtype_count_final 
-# 				  SELECT sg1.sample_id1 as sample_id1,sg2.sample_id2 as sample_id2,count(*) as count 
-# 				  FROM tmp_strain_gtype_final sg1 
-#                                        LEFT JOIN tmp_ids1 t1 on sg1.variation_id = t1.variation_id1,  
-#                                      tmp_strain_gtype_final sg2
-# 				  WHERE sg1.variation_id=sg2.variation_id 
-# 				  AND sg1.sample_id1 != sg2.sample_id2 
-# 				  AND sg1.sample_id1 = sg2.sample_id1 
-# 				  AND sg1.sample_id2 = sg2.sample_id2 
-#                                 AND t1.variation_id1 is NULL #to avoid duplicate variation from both dbsnp and sanger
-# 				  GROUP BY sg1.sample_id1,sg2.sample_id2});
-#     $self->{'dbVar'}->do("ALTER TABLE tmp_strain_gtype_count_final ADD INDEX sample_idx(sample_id1,sample_id2)");
-#Query OK, 6578 rows affected (29 min 33.50 sec)
-#Records: 6578  Duplicates: 0  Warnings: 0
-#     #$self->{'dbVariation'}->do(qq{CREATE TABLE strain_gtype_final ( variation_id int not null, allele_string char(3) not null, sample_id1 int(11) not null, sample_id2 int(11) not null, sample_name1 varchar(50) not null, sample_name2 varchar(50) not null, count int, key sample_idx(sample_id1,sample_id2))});
-#     $self->{'dbVariation'}->do(qq{CREATE TABLE strain_gtype_final select s.*,c.count from tmp_strain_gtype_final s, tmp_strain_gtype_count_final c where s.sample_id1 = c.sample_id1 and s.sample_id2 = c.sample_id2 and c.count < 110000});
-#     $self->{'dbVariation'}->do("ALTER TABLE strain_gtype_final ADD INDEX sample_id1(sample_id1), add INDEX sample_id2(sample_id2), add index variation_id(variation_id)");
-#     create tmp_sample table contail only 46 selected sample
-#     create table tmp_sample select s.sample_id,s.name from sample s, meta m, population p where s.name=m.meta_value and s.sample_id=p.sample_id and p.is_strain=1;
-# only use tmp_sample instead of sample and population tables
-#INSERT IGNORE into tmp_strain_gtype_final SELECT ig1.variation_id,concat(ig1.allele_1,"/",ig2.allele_1) as allele_string,ip1.population_sample_id as sample_id1,ip2.population_sample_id as sample_id2, s1.name as sample_name1, s2.name as sample_name2 FROM tmp_individual_genotype_single_bp ig1, tmp_individual_genotype_single_bp ig2,individual_population ip1,individual_population ip2, tmp_sample s1, tmp_sample s2 WHERE ig1.allele_1=ig1.allele_2 AND ig2.allele_1 = ig2.allele_2 AND ig1.variation_id=ig2.variation_id AND ig1.sample_id=ip1.individual_sample_id AND ig2.sample_id=ip2.individual_sample_id AND s1.sample_id = ip1.population_sample_id AND s2.sample_id = ip2.population_sample_id AND ig1.allele_1 != ig2.allele_1 AND s2.sample_id != s1.sample_id;
-#updated see strain_table.sql in import directory
-#     } ###end of if ($self->{'dbCore'}->species =~ /mouse|mus/i)
-
-
-
 #
 # loads population genotypes into the population_genotype table
 #
@@ -1069,38 +1015,47 @@ sub population_genotypes {
     my $allele_table = $allele_table_ref->[0][0];
     if (! $allele_table) {
       debug("Dumping allele data");
-      
       dumpSQL($self->{'dbSNP'}, qq(SELECT a1.allele_id, a1.allele, a2.allele
-                                   FROM Allele a1, Allele a2
-                                   WHERE a1.rev_allele_id = a2.allele_id));
-    
+                                 FROM Allele a1, Allele a2
+                                 WHERE a1.rev_allele_id = a2.allele_id));
+
       create_and_load($self->{'dbVar'}, "tmp_rev_allele", "allele_id i*","allele *", "rev_allele");
     }
-    debug("Dumping GtyFreqBySsPop and UniGty data");
-    
-    dumpSQL($self->{'dbSNP'},qq{SELECT gtfsp.subsnp_id, gtfsp.pop_id, gtfsp.freq,a1.allele, a2.allele
-					FROM   GtyFreqBySsPop gtfsp, UniGty ug, Allele a1, Allele a2
-					WHERE  gtfsp.unigty_id = ug.unigty_id
-					AND    ug.allele_id_1 = a1.allele_id
-					AND    ug.allele_id_2 = a2.allele_id
-					$self->{'limit'}
-				    });
-	
-    debug("loading genotype data");
-	
-    create_and_load($self->{'dbVar'}, "tmp_gty", 'subsnp_id i*', 'pop_id i*', 'freq',
-			'allele_1', 'allele_2');
+#     debug("Dumping GtyFreqBySsPop and UniGty data");
+
+#     dumpSQL($self->{'dbSNP'},qq{SELECT gtfsp.subsnp_id, gtfsp.pop_id, gtfsp.freq,a1.allele, a2.allele
+# 					FROM   GtyFreqBySsPop gtfsp, UniGty ug, Allele a1, Allele a2
+# 					WHERE  gtfsp.unigty_id = ug.unigty_id
+# 					AND    ug.allele_id_1 = a1.allele_id
+# 					AND    ug.allele_id_2 = a2.allele_id
+# 					$self->{'limit'}
+# 				    });
+
+#      debug("loading population_genotype data");
+
+#      create_and_load($self->{'dbVar'}, "tmp_pop_gty", 'subsnp_id i*', 'pop_id i*', 'freq',
+#  			'allele_1', 'allele_2');
+
+    $self->{'dbVar'}->do(qq{CREATE UNIQUE INDEX pop_genotype_idx ON population_genotype(variation_id,frequency,sample_id,allele_1,allele_2)});
 
     $self->{'dbVar'}->do(qq{INSERT INTO population_genotype (variation_id,allele_1, allele_2, frequency, sample_id)
-					  SELECT vs.variation_id,IF(vs.substrand_reversed_flag,tra.rev_allele,tra.allele) as allele_1,IF(vs.substrand_reversed_flag,tra.rev_allele,tra.allele) as allele_2,tg.freq,s.sample_id
-					  FROM   variation_synonym vs, tmp_gty tg, tmp_rev_allele tra, sample s
+					  SELECT vs.variation_id,tra1.rev_allele as allele_1,tra2.rev_allele as allele_2,tg.freq,s.sample_id
+					  FROM   variation_synonym vs, tmp_pop_gty tg,tmp_rev_allele tra1,tmp_rev_allele tra2, sample s
 					  WHERE  vs.subsnp_id = tg.subsnp_id
-                                          AND    tg.allele_1 = tra.allele
-                                          AND    tg.allele_2 = tra.allele
+                                          AND    tg.allele_1 = tra1.allele
+                                          AND    tg.allele_2 = tra2.allele
+                                          AND    vs.substrand_reversed_flag = 1
 					  AND    s.pop_id = tg.pop_id});
-	
-    $self->{'dbVar'}->do("DROP TABLE tmp_gty");
-    $self->{'dbVar'}->do("DROP TABLE tmp_rev_allele");
+
+    $self->{'dbVar'}->do(qq{INSERT INTO population_genotype (variation_id,allele_1, allele_2, frequency, sample_id)
+					  SELECT vs.variation_id,tg.allele_1,tg.allele_2,tg.freq,s.sample_id
+					  FROM   variation_synonym vs, tmp_pop_gty tg,sample s
+					  WHERE  vs.subsnp_id = tg.subsnp_id
+                                          AND    vs.substrand_reversed_flag = 0
+					  AND    s.pop_id = tg.pop_id});
+
+    $self->{'dbVar'}->do(qq{DROP INDEX pop_genotype_idx ON population_genotype});
+    #$self->{'dbVar'}->do("DROP TABLE tmp_pop_gty");
 }
 
 # cleans up some of the necessary temporary data structures after the
