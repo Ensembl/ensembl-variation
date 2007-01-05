@@ -29,5 +29,16 @@ INSERT INTO failed_description (failed_description_id,description) VALUES (2,'Re
 INSERT INTO failed_description (failed_description_id,description) VALUES (3,'Variation containing more than 3 alleles');
 INSERT INTO failed_description (failed_description_id,description) VALUES (4,'Variation with \'NoVariation\' alleles');
 
+
+#update the VariationFeature and the TranscriptVariation tables with the new consequenceType
+ALTER TABLE variation_feature MODIFY consequence_type SET ('ESSENTIAL_SPLICE_SITE','STOP_GAINED','STOP_LOST','COMPLEX_INDEL',
+			'FRAMESHIFT_CODING','NON_SYNONYMOUS_CODING','SPLICE_SITE','SYNONYMOUS_CODING','REGULATORY_REGION',
+			'5PRIME_UTR','3PRIME_UTR','INTRONIC','UPSTREAM','DOWNSTREAM','INTERGENIC')
+	default "INTERGENIC" not null;
+
+ALTER TABLE TranscriptVariation MODIFY consequence_type SET ('ESSENTIAL_SPLICE_SITE','STOP_GAINED','STOP_LOST','COMPLEX_INDEL',
+			'FRAMESHIFT_CODING','NON_SYNONYMOUS_CODING','SPLICE_SITE','SYNONYMOUS_CODING','REGULATORY_REGION',
+			'5PRIME_UTR','3PRIME_UTR','INTRONIC','UPSTREAM','DOWNSTREAM') not null;
+
 #and update the meta table with the patch applied
 INSERT INTO meta (meta_key,meta_value) VALUES ('patch','patch_42_43_a.sql|update database schema');	
