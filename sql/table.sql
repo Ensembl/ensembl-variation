@@ -243,9 +243,10 @@ create table variation_feature(
 	flags SET('genotyped'),
 	source_id int(10) unsigned not null, 
 	validation_status SET('cluster','freq','submitter','doublehit','hapmap'),
-	consequence_type SET ('ESSENTIAL_SPLICE_SITE','STOP_GAINED','STOP_LOST','FRAMESHIFT_CODING',
-			'NON_SYNONYMOUS_CODING','SPLICE_SITE','SYNONYMOUS_CODING','REGULATORY_REGION',
-			'5PRIME_UTR','3PRIME_UTR','INTRONIC','UPSTREAM','DOWNSTREAM','INTERGENIC')
+	consequence_type SET ('ESSENTIAL_SPLICE_SITE','STOP_GAINED','STOP_LOST','COMPLEX_INDEL',
+	                      'FRAMESHIFT_CODING','NON_SYNONYMOUS_CODING','SPLICE_SITE','SYNONYMOUS_CODING',
+				    'REGULATORY_REGION',	'5PRIME_UTR','3PRIME_UTR','INTRONIC','UPSTREAM','DOWNSTREAM',
+				    'INTERGENIC')
 	default "INTERGENIC" not null ,	
 	primary key( variation_feature_id ),
 	key pos_idx( seq_region_id, seq_region_start ),
@@ -329,7 +330,7 @@ create table variation_group_feature(
 # transcript regions are classified as 'ESSENTIAL_SPLICE_SITE','SPLICE_SITE',
 # 'FRAMESHIFT_CODING','STOP_GAINED','STOP_LOST','NON_SYNONYMOUS_CODING',
 # 'SYNONYMOUS_CODING','5PRIME_UTR','3PRIME_UTR','INTRONIC','UPSTREAM','DOWNSTREAM'
-# 'REGULATORY_REGION'
+# 'REGULATORY_REGION', 'COMPLEX_INDEL'
 
 #
 # transcript_variation_id - primary key, internal identifier
@@ -353,9 +354,10 @@ create table transcript_variation(
   translation_start int,
   translation_end int,  
   peptide_allele_string varchar(255),
-  consequence_type SET ('ESSENTIAL_SPLICE_SITE','STOP_GAINED','STOP_LOST','FRAMESHIFT_CODING',
-			'NON_SYNONYMOUS_CODING','SPLICE_SITE','SYNONYMOUS_CODING','REGULATORY_REGION',
-			'5PRIME_UTR','3PRIME_UTR','INTRONIC','UPSTREAM','DOWNSTREAM') not null,	 
+  consequence_type SET ('ESSENTIAL_SPLICE_SITE','STOP_GAINED','STOP_LOST','COMPLEX_INDEL',
+			     'FRAMESHIFT_CODING', 'NON_SYNONYMOUS_CODING','SPLICE_SITE','SYNONYMOUS_CODING',
+			     'REGULATORY_REGION','5PRIME_UTR','3PRIME_UTR','INTRONIC','UPSTREAM',
+			     'DOWNSTREAM') not null,	 
   primary key( transcript_variation_id ),
   key variation_idx( variation_feature_id ),
   key transcript_idx( transcript_id ),
