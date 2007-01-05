@@ -77,6 +77,8 @@ if (! defined $top_level && $species !~ /hum|homo|mouse|mus|mosquito|anoph|dog|c
   $top_level=1;
 }
 
+#we need to create a tmp table to store variations that we filter out
+create_failed_variation_table($dbVar);
 parallel_variation_feature($dbVar, $top_level) if ($variation_feature);
 parallel_flanking_sequence($dbVar) if ($flanking_sequence);
 parallel_variation_group_feature($dbVar) if ($variation_group_feature);
@@ -761,6 +763,21 @@ sub get_siblings{
     }
     return $siblings;
 }
+
+
+#method to crete a tmp table to store failed variations
+sub create_failed_variation_table{
+    my $dbVar = shift;
+
+    $dbVar->do(qq{CREATE TABLE IF NOT EXISTS failed_variation(
+			  variation_id int(10) unsigned not null,
+			  failed_description_id int(10) unsigned not null,
+
+			   PRIMARY KEY(variation_id))
+		  }
+	       );
+}
+
 
 sub usage {
   my $msg = shift;
