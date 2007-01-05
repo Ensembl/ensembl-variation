@@ -3,7 +3,7 @@
 
 #first, add a new column in the Variation table
 
-ALTER TABLE Variation ADD failed_description_id int(10) unsigned not null, MODIFY validation_status SET('cluster','freq','submitter','doublehit','hapmap','failed');
+ALTER TABLE variation ADD failed_description_id int(10) unsigned not null, MODIFY validation_status SET('cluster','freq','submitter','doublehit','hapmap','failed');
 
 #
 # create the failed_description table
@@ -36,7 +36,7 @@ ALTER TABLE variation_feature MODIFY consequence_type SET ('ESSENTIAL_SPLICE_SIT
 			'5PRIME_UTR','3PRIME_UTR','INTRONIC','UPSTREAM','DOWNSTREAM','INTERGENIC')
 	default "INTERGENIC" not null;
 
-ALTER TABLE TranscriptVariation MODIFY consequence_type SET ('ESSENTIAL_SPLICE_SITE','STOP_GAINED','STOP_LOST','COMPLEX_INDEL',
+ALTER TABLE transcript_variation MODIFY consequence_type SET ('ESSENTIAL_SPLICE_SITE','STOP_GAINED','STOP_LOST','COMPLEX_INDEL',
 			'FRAMESHIFT_CODING','NON_SYNONYMOUS_CODING','SPLICE_SITE','SYNONYMOUS_CODING','REGULATORY_REGION',
 			'5PRIME_UTR','3PRIME_UTR','INTRONIC','UPSTREAM','DOWNSTREAM') not null;
 
