@@ -300,8 +300,8 @@ sub parallel_transcript_variation{
 sub reverse_things {
 
   my $dbVar = shift;
-  reverse_genotype($dbVar);
-  #reverse_variation_feature($dbVar);
+  #reverse_genotype($dbVar);
+  reverse_variation_feature($dbVar);
   #reverse_flanking_sequence($dbVar);
 }
 
@@ -312,11 +312,11 @@ sub reverse_genotype{
 
   #foreach my $table ("tmp_individual_genotype_single_bp","individual_genotype_multiple_bp","population_genotype","allele") {
     #we only change things that have map_weight=1
-    foreach my $table ("population_genotype") {
+    foreach my $table ("test_allele") {
     debug("processling table $table");
     open OUT, ">$TMP_DIR/$table\_out" or die "can't open file $table\_out : $!";
     
-    my $sth = $dbVar->prepare(qq{select tg.*,vf.allele_string from $table tg, variation_feature vf 
+    my $sth = $dbVar->prepare(qq{select tg.*,vf.allele_string from $table tg, test_variation_feature vf 
                                  where vf.variation_id=tg.variation_id
                                  #and vf.variation_id in (13,14)
                                  and vf.seq_region_strand = -1 and map_weight=1}, {mysql_use_result=>1} );
@@ -340,16 +340,20 @@ sub reverse_genotype{
       
       if ($table =~ /allele/) {
 	next if ($allele =~ /\-|\+/);
-	$old_allele = $allele;
+	next if ($allele =~ /(INDETERMINATE)/i);
+        $old_allele = $allele;
         if ($new_allele_string !~ /$allele/ or ($new_allele_string =~ /$allele/ and $allele_string =~ /$allele/)) {
-	    reverse_comp(\$allele);
-	    if ($sample_id) {
-	        print OUT "update $table set allele = \"$allele\" where variation_id=$variation_id and sample_id=$sample_id and allele = \"$old_allele\";\n";
-            }
-	    else {
-	        print OUT "update $table set allele = \"$allele\" where variation_id=$variation_id and allele = \"$old_allele\";\n";
-            }
-        }     
+	  if ($allele =~ /\(|\)/g) {
+            $allele =~ /\((\S+)\)(\d+)/; print "match is $1 and num is $2\n";
+            $allele = $1;
+            reverse_comp(\$allele);
+            $allele = "($allele)$2";
+          }  
+          else {
+            reverse_comp(\$allele);
+          }  
+          print OUT "update $table set allele = \"$allele\" where allele_id=$allele_id;\n";
+	}
       }
       else {
 	next if ($allele_1 =~ /\-|\+/ and $allele_2 =~ /\-|\+/);
@@ -358,14 +362,30 @@ sub reverse_genotype{
         $old_allele_1 = $allele_1;
 	$old_allele_2 = $allele_2;
 	if (($new_allele_string !~ /$allele_1/ and $new_allele_string !~ /$allele_2/) or ($new_allele_string =~ /$allele_1|$allele_2/ and $allele_string =~ /$allele_1|$allele_2/)) {
-          reverse_comp(\$allele_1);
-	  reverse_comp(\$allele_2);
-	  print OUT "update $table set allele_1 = \"$allele_1\", allele_2 = \"$allele_2\" where variation_id=$variation_id and sample_id=$sample_id and allele_1 = \"$old_allele_1\" and allele_2 = \"$old_allele_2\";\n";
+          if ($allele_1 =~ /\(|\)/g) {
+            $allele_1 =~ /\((\S+)\)(\d+)/; 
+            $allele_1 = $1;
+            reverse_comp(\$allele_1);
+            $allele_1 = "($allele_1)$2";
+          }
+          else {
+            reverse_comp(\$allele_1);
+          }
+          if ($allele_2 =~ /\(|\)/g) {
+            $allele_2 =~ /\((\S+)\)(\d+)/; 
+            $allele_2 = $1;
+            reverse_comp(\$allele_2);   
+            $allele_2 = "($allele_2)$2";      
+          }                                               
+         else {
+           reverse_comp(\$allele_1);   
+         }
+	 print OUT "update $table set allele_1 = \"$allele_1\", allele_2 = \"$allele_2\" where variation_id=$variation_id and sample_id=$sample_id and allele_1 = \"$old_allele_1\" and allele_2 = \"$old_allele_2\";\n";
         }
       }   
     }
     close OUT;
-    system("mysql -uensadmin -pensembl -h $vhost $vdbname <$TMP_DIR/$table\_out");
+    #system("mysql -uensadmin -pensembl -h $vhost $vdbname <$TMP_DIR/$table\_out");
   }
 }
 
@@ -374,20 +394,26 @@ sub reverse_variation_feature{
 
   debug("processing reverse variation_feature strand");
 
-  my ($variation_id,$allele_string);
+  my ($variation_feature_id,$allele_string);
 
-  my $sth = $dbVar->prepare(qq{select variation_id,allele_string from variation_feature where seq_region_strand=-1 and map_weight=1});
+  my $sth = $dbVar->prepare(qq{select variation_feature_id,allele_string from test_variation_feature where seq_region_strand=-1 and map_weight=1});
   $sth->execute();
-  $sth->bind_columns(\$variation_id,\$allele_string);
+  $sth->bind_columns(\$variation_feature_id,\$allele_string);
 
   while ($sth->fetch()){
-    my $old_allele_string = $allele_string;
     my @alleles = split /\//,$allele_string;
     foreach my $allele (@alleles) {
-      reverse_comp(\$allele);
+      if ($allele =~ /\((\S+)\)(\d+)/) {
+        $allele = $1;                    
+        reverse_comp(\$allele);                    
+        $allele = "($allele)$2";
+      }
+      else {
+        reverse_comp(\$allele);
+      }  
     }
     my $new_allele_string = join "/",@alleles;
-    $dbVar->do(qq{update variation_feature set allele_string = "$new_allele_string", seq_region_strand =1 where variation_id=$variation_id and allele_string = "$old_allele_string" and seq_region_strand=-1});
+    $dbVar->do(qq{update variation_feature set allele_string = "$new_allele_string", seq_region_strand =1 where variation_feature_id=$variation_feature_id});
   }
 }
 
