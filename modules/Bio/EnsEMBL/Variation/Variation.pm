@@ -93,7 +93,7 @@ use vars qw(@ISA);
 
 
 # List of validation states. Order must match that of set in database
-our @VSTATES = ('cluster','freq','submitter','doublehit','hapmap', 'non-polymorphic', 'observed');
+our @VSTATES = ('cluster','freq','submitter','doublehit','hapmap', 'failed', 'non-polymorphic', 'observed');
 
 # Conversion of validation state to bit value
 our %VSTATE2BIT = ('cluster'   => 1,   # 00000001
@@ -101,8 +101,10 @@ our %VSTATE2BIT = ('cluster'   => 1,   # 00000001
                    'submitter' => 4,   # 00000100
                    'doublehit' => 8,   # 00001000
                    'hapmap'    => 16,  # 00010000
-		       'non-polymorphic' => 32, # 00100000
-		       'observed'  => 64   # 01000000
+		   'failed'    => 32,
+		   'non-polymorphic' => 64, # 00100000
+		   'observed'  => 128   # 01000000
+		   
 		   ); 
 
 
@@ -165,7 +167,7 @@ sub new {
   my $class = ref($caller) || $caller;
 
   my ($dbID, $adaptor, $name, $src, $syns, $ancestral_allele,
-      $alleles, $valid_states, $moltype, $five_seq, $three_seq) =
+      $alleles, $valid_states, $moltype, $five_seq, $three_seq, $failed_description) =
         rearrange([qw(dbID ADAPTOR NAME SOURCE SYNONYMS ANCESTRAL_ALLELE ALLELES
                       VALIDATION_STATES MOLTYPE FIVE_PRIME_FLANKING_SEQ
                       THREE_PRIME_FLANKING_SEQ FAILED_DESCRIPTION)],@_);
