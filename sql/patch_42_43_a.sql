@@ -3,7 +3,7 @@
 
 #first, add a new column in the Variation table
 
-ALTER Variation ADD failed_description_id int(10) unsigned not null;
+ALTER TABLE Variation ADD failed_description_id int(10) unsigned not null;
 
 #
 # create the failed_description table
