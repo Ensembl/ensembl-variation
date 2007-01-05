@@ -3,7 +3,7 @@
 
 #first, add a new column in the Variation table
 
-ALTER TABLE Variation ADD failed_description_id int(10) unsigned not null;
+ALTER TABLE Variation ADD failed_description_id int(10) unsigned not null, MODIFY validation_status SET('cluster','freq','submitter','doublehit','hapmap','failed');
 
 #
 # create the failed_description table
