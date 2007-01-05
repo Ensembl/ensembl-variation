@@ -84,7 +84,7 @@ my ($TMP_DIR, $TMP_FILE, $LIMIT,$status_file);
    #check if it is the last process
    my $processes = `cat $TMP_DIR/$status_file | wc -l`;
    if ($processes == $num_processes){
-       #if is the last process, delete the variation table and upload with the new coordinate information from the different tables
+       #if is the last process, delete the variation table and upload with the new coordinate information from the different tables and the failed_Variation information
      last_process($dbCore,$dbVar);
    }
 }
@@ -194,9 +194,14 @@ sub variation_feature {
   #open FH, ">$TMP_DIR/$dbname.variation_feature_$host\:$$\.txt"
   open FH, ">/tmp/$dbname.variation_feature_$host\_$$\.txt"
     or throw("Could not open tmp file: $TMP_DIR/variation_feature_$$\n");
-
   while($sth->fetch()) {
-    next if $map_weight >3; #excluding SNPs with map_weight > 3
+      #excluding SNPs with map_weight > 3    
+      if ($map_weight >3){
+	#needs to be written to the failed_variation table
+	  $dbVar->do(qq{INSERT INTO failed_variation (variation_id,failed_description_id) VALUES ($v_id,1)
+	  });
+	  next;  
+      }
     if(!defined($cur_vf_id) || $cur_vf_id != $vf_id) {
       if($top_coord) {
         my $allele_str;
@@ -209,7 +214,8 @@ sub variation_feature {
         } else {
 	  $allele_str = undef;
           warn("Reference allele $ref_allele for $cur_v_name not found in alleles: " .
-               join("/", keys %alleles), " discarding feature");
+              join("/", keys %alleles), " discarding feature");
+	  $dbVar->do(qq{INSERT INTO failed_variation (variation_id,failed_description_id) VALUES ($cur_v_id,2)
         }
 	
 	if($allele_str) {
@@ -319,7 +325,9 @@ sub variation_feature {
 
 
   # print the last row, excluding SNPs with map_weight > 3
-  
+  if ($cur_map_weight >3){
+      $dbVar->do(qq{INSERT INTO failed_variation (variation_id,failed_description_id) VALUES ($cur_v_id,1)
+  }
   if($top_coord and $cur_map_weight <=3) {
 
     my $allele_str;
@@ -332,6 +340,9 @@ sub variation_feature {
       $allele_str = undef;
       warn("Reference allele $ref_allele for $cur_v_name not found in alleles: " .
            join("/", keys %alleles), " discarding feature\n");
+	#needs to be written to the failed_variation table
+      $dbVar->do(qq{INSERT INTO failed_variation (variation_id,failed_description_id) VALUES ($cur_v_id,2)
+		    });
     }
     
     if($allele_str) {
