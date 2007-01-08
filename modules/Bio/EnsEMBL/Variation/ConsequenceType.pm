@@ -35,7 +35,7 @@ use Bio::EnsEMBL::Utils::Exception qw(warning);
 our %CONSEQUENCE_TYPES = ('ESSENTIAL_SPLICE_SITE' => 1,
 			  'STOP_GAINED' => 2,
 			  'STOP_LOST' => 4,
-			  'COMPLEX_INDEL' => 8
+			  'COMPLEX_INDEL' => 8,
 			  'FRAMESHIFT_CODING' => 16,
 			  'NON_SYNONYMOUS_CODING' => 32,
 			  'SPLICE_SITE' => 64,
