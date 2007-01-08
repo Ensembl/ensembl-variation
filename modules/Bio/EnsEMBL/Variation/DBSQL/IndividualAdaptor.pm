@@ -433,8 +433,8 @@ sub _objs_from_sth {
        -name        => $name,
        -father_individual => $father,
        -mother_individual => $mother,
-       -father_individual_id => $father_id,
-       -mother_individual_id => $mother_id,
+       -father_individual_sample_id => $father_id,
+       -mother_individual_sample_id => $mother_id,
        -type_individual => $it_name,
        -type_description => $it_desc);
 
