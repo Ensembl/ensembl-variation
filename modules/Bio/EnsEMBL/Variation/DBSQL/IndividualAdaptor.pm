@@ -407,20 +407,23 @@ sub _objs_from_sth {
   while($sth->fetch()) {
     # get objects for mother and father if they were already constructed
     # otherwise may have to be lazy-loaded later
-
+      if ($dbID == 8373){
+	  1;
+      }
     my $father;
     if(defined($father_id)) {
       $father = $seen{$father_id};
       if(!$father) {
-        $wanted_fathers{$father_id} ||= [];
-        push @{$wanted_fathers{$father_id}}, $father_id;
+        $wanted_fathers{$dbID} ||= [];
+        push @{$wanted_fathers{$father_id}}, $dbID;
       }
     }
     my $mother;
     if(defined($mother_id)) {
       $mother = $seen{$mother_id};
       if(!$mother) {
-        push @{$wanted_mothers{$mother_id}}, $mother_id;
+        $wanted_mothers{$mother_id} ||= [];
+        push @{$wanted_mothers{$mother_id}}, $dbID;
       }
     }
 
