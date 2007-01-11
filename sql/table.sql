@@ -17,7 +17,7 @@ create table variation (
 	name varchar(255),
 	validation_status SET('cluster','freq','submitter','doublehit','hapmap','failed'),
 	ancestral_allele text,
-	failed_description_id int(10) unsigned not null
+	failed_description_id int(10) unsigned not null,
 
 	primary key( variation_id ),
 	unique ( name )
