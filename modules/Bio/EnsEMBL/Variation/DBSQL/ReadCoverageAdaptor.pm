@@ -139,12 +139,12 @@ sub fetch_all_regions_covered{
     my $slice = shift;
     my $samples = shift;  #listref of sample names to get the coverage from
 
-    my $population_adaptor = $self->db->get_PopulationAdaptor;
+    my $ind_adaptor = $self->db->get_IndividualAdaptor;
     my $range_registry = [];
     my $max_level = scalar(@{$samples});
     _initialize_range_registry($range_registry,$max_level);
     foreach my $sample_name (@{$samples}){
-	my $sample = $population_adaptor->fetch_by_name($sample_name);
+	my $sample = shift@{$ind_adaptor->fetch_all_by_name($sample_name)};
 	my $coverage = $self->fetch_all_by_Slice_Sample_depth($slice,$sample,1); #get coverage information
 	foreach my $cv_feature (@{$coverage}){
 	    my $range = [$cv_feature->seq_region_start,$cv_feature->seq_region_end]; #store toplevel coordinates
