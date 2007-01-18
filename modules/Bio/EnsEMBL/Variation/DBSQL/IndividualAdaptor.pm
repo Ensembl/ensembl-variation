@@ -384,6 +384,35 @@ sub get_reference_strain_name{
 
 }
 
+
+=head2 fetch_all_strains_with_coverage
+
+    Args       : none
+    Example    : my $strains = $ind_adaptor->fetch_all_strains_with_coverage();
+    Description: Retrieves strain that have coverage information
+    Returntype : list of Bio::EnsEMBL::Variation::Individual
+    Exceptions : none
+    Caller     : web
+    Status     : At Risk
+
+=cut
+
+sub fetch_all_strains_with_coverage{
+
+    my $self = shift;
+
+    my $sample_id;
+    my @strains;
+    my $sth = $self->prepare(qq{SELECT DISTINCT sample_id from read_coverage
+				});
+    $sth->execute();
+    $sth->bind_columns(\$sample_id);
+    while ($sth->fetch()){
+	push @strains, $self->fetch_by_dbID($sample_id)
+    }
+    $sth->finish;
+    return \@strains;
+}
 #
 # private method, constructs Individuals from an executed statement handle
 # ordering of columns must be consistant
