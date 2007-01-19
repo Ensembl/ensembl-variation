@@ -35,6 +35,12 @@ my $slice_adaptor = $dbCore->get_SliceAdaptor();
 my $rc_adaptor = $dbVar->get_ReadCoverageAdaptor();
 my $ind_adaptor = $dbVar->get_IndividualAdaptor();
 
+#find out MAX_LEVEL in this specie
+my $levels = $rc_adaptor->get_coverage_levels();
+die("The dumping process only works with 2 different levels: 1 and a second one") if (@{$levels} != 2);
+my $MAX_LEVEL;
+$MAX_LEVEL =$levels->[0] if ($levels->[0] > $levels->[1]);
+$MAX_LEVEL =$levels->[1] if ($levels->[0] < $levels->[1]);
 
 open DUMP, ">$dump_file" || die "Could not open file to dump data: $!\n";
 
@@ -43,19 +49,18 @@ my $strains = $ind_adaptor->fetch_all_strains_with_coverage();#get strains with 
 
 #my $slices = $slice_adaptor->fetch_all('chromosome');
 #foreach my $slice (@{$slices}){
-my $slice = $slice_adaptor->fetch_by_region('chromosome','X',69356929,70999929);
-#my $slice = $slice_adaptor->fetch_by_region('chromosome','Y');
+#my $slice = $slice_adaptor->fetch_by_region('chromosome','12',36_085_000,36_085_300);
+my $slice = $slice_adaptor->fetch_by_region('chromosome','19');
+print "Processing chromosome ", $slice->seq_region_name,"\n";
 #for each chromosome, get the union of all coverages for all strains
 my $regions_covered = &get_chromosome_coverage($rc_adaptor,$slice);
 foreach my $region (@{$regions_covered}){
 #foreach of the subSlices with coverage for one strain, print the header, and the base information
-# print DUMP $region->start,"-",$region->end,"\n";   
     &print_seq_header($region,$strains); #method to print the SEQ and SCORE block
     #and print the sequence information, one base per row
     &print_base_info($rc_adaptor,$region,$strains);
-    last;
+    print DUMP "//\n"; #end of block
 }
-
 close DUMP || die "Could not close file to dump data: $!\n";
 #}
 
@@ -67,6 +72,8 @@ sub print_base_info{
     my %strain_seq;
     my $rcs;
     my $seq;
+
+    print DUMP "DATA\n";
     foreach my $strain (@{$strains}){
 	$rcs = $rc_adaptor->fetch_all_by_Slice_Sample_depth($slice,$strain);
 	$seq =  &get_strain_seq($slice,$rcs); #with the seq and the coverage info, make the seq
@@ -129,9 +136,11 @@ sub get_strain_seq{
     my $end = 0;
     my $end_level1 = 0;
     foreach my $rc (@{$rcs}){
+	$rc->start(1) if ($rc->start < 0); #if the region lies outside the boundaries of the slice
+	$rc->end($slice->end - $slice->start + 1) if ($rc->end + $slice->start > $slice->end); 
 	$seq .= '.' x ($rc->start - 1 - $end_level1) if ($rc->level == 1);
 	$seq .= lc(substr($slice->seq,$rc->start-1,$rc->end - $rc->start +1)) if ($rc->level == 1);
-	substr($seq,$rc->start-1,$rc->end-$rc->start+1,uc(substr($seq,$rc->start-1,$rc->end - $rc->start +1))) if ($rc->level == 2);
+	substr($seq,$rc->start-1,$rc->end-$rc->start+1,uc(substr($seq,$rc->start-1,$rc->end - $rc->start +1))) if ($rc->level == $MAX_LEVEL);
 	$end = $rc->end;
 	$end_level1 = $rc->end if ($rc->level == 1);	
     }
@@ -186,10 +195,9 @@ sub get_chromosome_coverage{
 sub create_file_header{
     
    
-    print DUMP "#File Header\n";
-    print DUMP "FORMAT (resequencing)\n";
-    print DUMP "DATE ",scalar(localtime),"\n";
-    print DUMP "RELEASE ",Bio::EnsEMBL::Registry->software_version(),"\n\n";
+    print DUMP "##FORMAT (resequencing)\n";
+    print DUMP "##DATE ",scalar(localtime),"\n";
+    print DUMP "##RELEASE ",Bio::EnsEMBL::Registry->software_version(),"\n\n";
 
 }
 
