@@ -11,6 +11,7 @@ use Bio::EnsEMBL::Mapper::RangeRegistry;
 use Bio::EnsEMBL::Variation::Utils::Sequence qw(ambiguity_code);
 
 use Data::Dumper;
+#use Time::HiRes qw(gettimeofday tv_interval);
 
 my $species;
 my $dump_file;
@@ -47,22 +48,22 @@ open DUMP, ">$dump_file" || die "Could not open file to dump data: $!\n";
 &create_file_header(); #create the file header
 my $strains = $ind_adaptor->fetch_all_strains_with_coverage();#get strains with coverage information, all the columns in the file
 
-#my $slices = $slice_adaptor->fetch_all('chromosome');
-#foreach my $slice (@{$slices}){
-#my $slice = $slice_adaptor->fetch_by_region('chromosome','12',36_085_000,36_085_300);
-my $slice = $slice_adaptor->fetch_by_region('chromosome','19');
-print "Processing chromosome ", $slice->seq_region_name,"\n";
+my $slices = $slice_adaptor->fetch_all('chromosome');
+foreach my $slice (@{$slices}){
+#my $slice = $slice_adaptor->fetch_by_region('chromosome','10',114_586_900,114_586_999);
+#my $slice = $slice_adaptor->fetch_by_region('chromosome','19');
+    print "Processing chromosome ", $slice->seq_region_name,"\n";
 #for each chromosome, get the union of all coverages for all strains
-my $regions_covered = &get_chromosome_coverage($rc_adaptor,$slice);
-foreach my $region (@{$regions_covered}){
+    my $regions_covered = &get_chromosome_coverage($rc_adaptor,$slice);
+    foreach my $region (@{$regions_covered}){
 #foreach of the subSlices with coverage for one strain, print the header, and the base information
-    &print_seq_header($region,$strains); #method to print the SEQ and SCORE block
-    #and print the sequence information, one base per row
-    &print_base_info($rc_adaptor,$region,$strains);
-    print DUMP "//\n"; #end of block
+	&print_seq_header($region,$strains); #method to print the SEQ and SCORE block
+	#and print the sequence information, one base per row
+	&print_base_info($rc_adaptor,$region,$strains);
+	print DUMP "//\n"; #end of block
+    }
+    close DUMP || die "Could not close file to dump data: $!\n";
 }
-close DUMP || die "Could not close file to dump data: $!\n";
-#}
 
 #method to print all the bases in the region, one per line
 sub print_base_info{
@@ -72,7 +73,7 @@ sub print_base_info{
     my %strain_seq;
     my $rcs;
     my $seq;
-
+    my $t4;
     print DUMP "DATA\n";
     foreach my $strain (@{$strains}){
 	$rcs = $rc_adaptor->fetch_all_by_Slice_Sample_depth($slice,$strain);
@@ -94,7 +95,8 @@ sub apply_AF_to_seq{
 
     my $afs = $strainSlice->get_all_AlleleFeatures_Slice();
     foreach my $af (@{$afs}){
-	my $base = substr($$ref_seq,$af->start-1,$af->end - $af->start + 1);
+	my $format = "@" . ($af->start-1) . "A" . ($af->end - $af->start +1);
+	my $base = unpack($format,$$ref_seq);
 	substr($$ref_seq,$af->start-1,$af->end - $af->start + 1,uc(ambiguity_code($af->allele_string))) if ($base =~ /[A-Z]/);
 	substr($$ref_seq,$af->start-1,$af->end - $af->start + 1,lc(ambiguity_code($af->allele_string))) if ($base =~ /[a-z]/);
     }
@@ -106,25 +108,20 @@ sub print_sequences{
     my $strains = shift;
     my $strain_seq = shift;
 
-    my %strain_reads;
+    my @strain_reads;
+    my @strain_array;
     my $base;
-    for (my $i = 0;$i<$slice->length - 1;$i++){
-	#print the reference base
-	print DUMP substr($slice->seq,$i,1), " ";
-	foreach my $strain (@{$strains}){
-	    #get the base and the number read information
-	    $base = substr($strain_seq->{$strain->name},$i,1);
-	    $strain_reads{$strain->name} = 0 if ($base eq '.');
-	    $strain_reads{$strain->name} = 1 if ($base =~ /[a-z]/);
-	    $strain_reads{$strain->name} = 2 if ($base =~ /[A-Z]/);
-	    #and print the base 
-	    print DUMP uc($base)," ";
-	}
-	#and print the score information
-	foreach my $strain (@{$strains}){
-	    print DUMP $strain_reads{$strain->name}, " ";
-	}
-	print DUMP "\n";
+    my $format;
+    my @ref_seq = split//,$slice->seq;
+    my $index_strain = 0;
+    foreach my $strain (@{$strains}){
+	push @{$strain_array[$index_strain]},split //,$strain_seq->{$strain->name};
+	$index_strain++;
+    }
+    for (my $i=0;$i<@ref_seq;$i++){
+	print DUMP join(" ",$ref_seq[$i],map {$_->[$i] eq '.' ? push (@strain_reads,0) : $_->[$i] =~ /[a-z]/ ? push(@strain_reads, 1) : push (@strain_reads, 2);uc($_->[$i])} @strain_array,), " ";
+	print DUMP join(" ",@strain_reads,"\n");
+	@strain_reads = ();					      
     }
 }
 #with a slice and the regions covered for a particular strain, make the strain_seq
@@ -135,12 +132,14 @@ sub get_strain_seq{
     my $seq;
     my $end = 0;
     my $end_level1 = 0;
+    my $format;
     foreach my $rc (@{$rcs}){
 	$rc->start(1) if ($rc->start < 0); #if the region lies outside the boundaries of the slice
 	$rc->end($slice->end - $slice->start + 1) if ($rc->end + $slice->start > $slice->end); 
 	$seq .= '.' x ($rc->start - 1 - $end_level1) if ($rc->level == 1);
-	$seq .= lc(substr($slice->seq,$rc->start-1,$rc->end - $rc->start +1)) if ($rc->level == 1);
-	substr($seq,$rc->start-1,$rc->end-$rc->start+1,uc(substr($seq,$rc->start-1,$rc->end - $rc->start +1))) if ($rc->level == $MAX_LEVEL);
+	$format = '@' . ($rc->start - 1) . 'A' . ($rc->end - $rc->start + 1);
+	$seq .= lc(unpack($format,$slice->seq)) if ($rc->level == 1);
+	substr($seq,$rc->start-1,$rc->end-$rc->start+1,uc(unpack($format,$seq))) if ($rc->level == $MAX_LEVEL);
 	$end = $rc->end;
 	$end_level1 = $rc->end if ($rc->level == 1);	
     }
