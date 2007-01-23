@@ -46,11 +46,11 @@ $MAX_LEVEL =$levels->[1] if ($levels->[0] < $levels->[1]);
 open DUMP, ">$dump_file" || die "Could not open file to dump data: $!\n";
 
 &create_file_header(); #create the file header
-my $strains = $ind_adaptor->fetch_all_strains_with_coverage();#get strains with coverage information, all the columns in the file
-
+my $strains = $ind_adaptor->fetch_all_strains_with_coverage();   #get strains with coverage information, all the columns in the file
+    
 my $slices = $slice_adaptor->fetch_all('chromosome');
 foreach my $slice (@{$slices}){
-#my $slice = $slice_adaptor->fetch_by_region('chromosome','10',114_586_900,114_586_999);
+#my $slice = $slice_adaptor->fetch_by_region('chromosome','1',100_222_020,130_222_025); #dump this region to find problem 108213779-108237682
 #my $slice = $slice_adaptor->fetch_by_region('chromosome','19');
     print "Processing chromosome ", $slice->seq_region_name,"\n";
 #for each chromosome, get the union of all coverages for all strains
@@ -62,8 +62,8 @@ foreach my $slice (@{$slices}){
 	&print_base_info($rc_adaptor,$region,$strains);
 	print DUMP "//\n"; #end of block
     }
-    close DUMP || die "Could not close file to dump data: $!\n";
 }
+close DUMP || die "Could not close file to dump data: $!\n";
 
 #method to print all the bases in the region, one per line
 sub print_base_info{
@@ -73,7 +73,6 @@ sub print_base_info{
     my %strain_seq;
     my $rcs;
     my $seq;
-    my $t4;
     print DUMP "DATA\n";
     foreach my $strain (@{$strains}){
 	$rcs = $rc_adaptor->fetch_all_by_Slice_Sample_depth($slice,$strain);
@@ -92,13 +91,23 @@ sub apply_AF_to_seq{
     my $ref_seq = shift;
 
     my $strainSlice = $slice->get_by_strain($strain);
-
+    my $allele;
     my $afs = $strainSlice->get_all_AlleleFeatures_Slice();
     foreach my $af (@{$afs}){
 	my $format = "@" . ($af->start-1) . "A" . ($af->end - $af->start +1);
 	my $base = unpack($format,$$ref_seq);
-	substr($$ref_seq,$af->start-1,$af->end - $af->start + 1,uc(ambiguity_code($af->allele_string))) if ($base =~ /[A-Z]/);
-	substr($$ref_seq,$af->start-1,$af->end - $af->start + 1,lc(ambiguity_code($af->allele_string))) if ($base =~ /[a-z]/);
+	$allele = ambiguity_code($af->allele_string);
+	#if it is a deletion, use the * to mean it is covered by $max_level reads
+	if ($base =~ /[A-Z]/){
+	    #we have to consider deletions of more than 1 base in the reference !!!
+	    substr($$ref_seq,$af->start-1,$af->end - $af->start + 1,uc($allele) . '*' x ($af->end - $af->start)) if ($allele ne '-');
+	    substr($$ref_seq,$af->start-1,$af->end - $af->start + 1,'*' x ($af->end - $af->start +1 )) if ($allele eq '-');
+	}
+	if ($base =~ /[a-z-]/){
+	    #if it is a deletion, use the '-' to mean it is covered by 1 read
+	    substr($$ref_seq,$af->start-1,$af->end - $af->start + 1,lc($allele) . '-' x ($af->end - $af->start)) if ($allele ne '-');
+	    substr($$ref_seq,$af->start-1,$af->end - $af->start + 1,'-' x ($af->end - $af->start + 1)) if ($allele eq '-');
+	}
     }
 }
 
@@ -110,8 +119,6 @@ sub print_sequences{
 
     my @strain_reads;
     my @strain_array;
-    my $base;
-    my $format;
     my @ref_seq = split//,$slice->seq;
     my $index_strain = 0;
     foreach my $strain (@{$strains}){
@@ -119,7 +126,7 @@ sub print_sequences{
 	$index_strain++;
     }
     for (my $i=0;$i<@ref_seq;$i++){
-	print DUMP join(" ",$ref_seq[$i],map {$_->[$i] eq '.' ? push (@strain_reads,0) : $_->[$i] =~ /[a-z]/ ? push(@strain_reads, 1) : push (@strain_reads, 2);uc($_->[$i])} @strain_array,), " ";
+	print DUMP join(" ",$ref_seq[$i],map {$_->[$i] eq '.' ? push (@strain_reads,0) : $_->[$i] =~ /[a-z|\-]/ ? push(@strain_reads, 1) : push (@strain_reads, 2);($_->[$i] eq '*') ? '-' : uc($_->[$i])} @strain_array,), " ";
 	print DUMP join(" ",@strain_reads,"\n");
 	@strain_reads = ();					      
     }
