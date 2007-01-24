@@ -35,6 +35,10 @@ my $dbCore = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'core');
 my $slice_adaptor = $dbCore->get_SliceAdaptor();
 my $rc_adaptor = $dbVar->get_ReadCoverageAdaptor();
 my $ind_adaptor = $dbVar->get_IndividualAdaptor();
+#the hashs contains all base conversion to avoid comparisons when printing the sequences
+my %read_code = qw(M 2 V 2 N 2 H 2 R 2 D 2 W 2 S 2 B 2 Y 2 K 2 C 2 A 2 T 2 G 2 * 2
+. 0 
+m 1 v 1 n 1 h 1 r 1 d 1 w 1 s 1 b 1 y 1 k 1 c 1 a 1 t 1 g 1 - 1);
 
 #find out MAX_LEVEL in this specie
 my $levels = $rc_adaptor->get_coverage_levels();
@@ -47,11 +51,11 @@ open DUMP, ">$dump_file" || die "Could not open file to dump data: $!\n";
 
 &create_file_header(); #create the file header
 my $strains = $ind_adaptor->fetch_all_strains_with_coverage();   #get strains with coverage information, all the columns in the file
-    
+
 my $slices = $slice_adaptor->fetch_all('chromosome');
 foreach my $slice (@{$slices}){
 #my $slice = $slice_adaptor->fetch_by_region('chromosome','1',100_222_020,130_222_025); #dump this region to find problem 108213779-108237682
-#my $slice = $slice_adaptor->fetch_by_region('chromosome','19');
+#my $slice = $slice_adaptor->fetch_by_region('chromosome','Y');
     print "Processing chromosome ", $slice->seq_region_name,"\n";
 #for each chromosome, get the union of all coverages for all strains
     my $regions_covered = &get_chromosome_coverage($rc_adaptor,$slice);
@@ -82,6 +86,7 @@ sub print_base_info{
 	$strain_seq{$strain->name} = $seq;
     }
     &print_sequences($slice,$strains,\%strain_seq); #method that prints the actual sequence
+    
 }
 
 #gets the strain and the AF compared to the Slice, and applies them to the sequence
@@ -117,7 +122,7 @@ sub print_sequences{
     my $strains = shift;
     my $strain_seq = shift;
 
-    my @strain_reads;
+    my $strain_reads;
     my @strain_array;
     my @ref_seq = split//,$slice->seq;
     my $index_strain = 0;
@@ -126,10 +131,11 @@ sub print_sequences{
 	$index_strain++;
     }
     for (my $i=0;$i<@ref_seq;$i++){
-	print DUMP join(" ",$ref_seq[$i],map {$_->[$i] eq '.' ? push (@strain_reads,0) : $_->[$i] =~ /[a-z|\-]/ ? push(@strain_reads, 1) : push (@strain_reads, 2);($_->[$i] eq '*') ? '-' : uc($_->[$i])} @strain_array,), " ";
-	print DUMP join(" ",@strain_reads,"\n");
-	@strain_reads = ();					      
-    }
+	print DUMP join(" ",$ref_seq[$i],map {$strain_reads .= $read_code{$_->[$i]}. ' ';($_->[$i] eq '*') ? '-' : uc($_->[$i]) } @strain_array), " ";
+	chomp $strain_reads;
+	print DUMP $strain_reads,"\n";
+	$strain_reads = '';
+   }
 }
 #with a slice and the regions covered for a particular strain, make the strain_seq
 sub get_strain_seq{
