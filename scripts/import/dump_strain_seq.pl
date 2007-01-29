@@ -10,24 +10,44 @@ use Bio::EnsEMBL::Registry;
 use Bio::EnsEMBL::Mapper::RangeRegistry;
 use Bio::EnsEMBL::Variation::Utils::Sequence qw(ambiguity_code);
 
-use Data::Dumper;
-#use Time::HiRes qw(gettimeofday tv_interval);
-
 my $species;
 my $dump_file;
+my $region;
 
 GetOptions('dump_file=s' => \$dump_file,
 	   'species=s'   => \$species,
+	   'region=i'    => \$region
 	   );
 
+$region = $ENV{LSB_JOBINDEX} if (!defined $region); #if there is no region as an argument, try to get it from LSF
 warn("Make sure you have a updated ensembl.registry file!\n");
 
 $species ||= 'mouse'; #by default, dump mouse data
 usage('You need to enter the file name where you want to dump the data') if (!defined $dump_file); 
+usage('You need to give the region you want to dump data') if(!defined $region);
+
+#we need to transform the region name to chromosome names if taken from LSF: X, Y or MT
+if ($species eq 'mouse' && defined $ENV{LSB_JOBINDEX}){
+    $region = 'X' if($region == 20);
+    $region = 'Y' if ($region == 21);
+    $region = 'MT' if ($region == 22);
+}
+elsif ($species eq 'rat' && defined $ENV{LSB_JOBINDEX}){
+    $region = 'X' if($region == 20);
+    $region = 'MT' if ($region == 21);
+}
+elsif ($species eq 'human' && defined $ENV{LSB_JOBINDEX}){
+    $region = 'X' if($region == 23);
+    $region = 'Y' if ($region == 24);
+    $region = 'MT' if ($region == 25);
+}
+else{
+    die "Species $species not supported to dump data\n\n";
+}
+
 my $registry_file ||= $Bin . "/ensembl.registry";
 
 Bio::EnsEMBL::Registry->load_all( $registry_file );
-
 
 my $dbVar = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'variation');
 my $dbCore = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'core');
@@ -47,26 +67,26 @@ my $MAX_LEVEL;
 $MAX_LEVEL =$levels->[0] if ($levels->[0] > $levels->[1]);
 $MAX_LEVEL =$levels->[1] if ($levels->[0] < $levels->[1]);
 
-open DUMP, ">$dump_file" || die "Could not open file to dump data: $!\n";
+open DUMP, ">$dump_file" . $region || die "Could not open file to dump data: $!\n";
 
-&create_file_header(); #create the file header
 my $strains = $ind_adaptor->fetch_all_strains_with_coverage();   #get strains with coverage information, all the columns in the file
-
-my $slices = $slice_adaptor->fetch_all('chromosome');
-foreach my $slice (@{$slices}){
 #my $slice = $slice_adaptor->fetch_by_region('chromosome','1',100_222_020,130_222_025); #dump this region to find problem 108213779-108237682
-#my $slice = $slice_adaptor->fetch_by_region('chromosome','Y');
-    print "Processing chromosome ", $slice->seq_region_name,"\n";
+my $slice = $slice_adaptor->fetch_by_region('chromosome',$region);
+my $subSlice;
+print "Processing chromosome ", $slice->seq_region_name,"\n";
 #for each chromosome, get the union of all coverages for all strains
-    my $regions_covered = &get_chromosome_coverage($rc_adaptor,$slice);
-    foreach my $region (@{$regions_covered}){
-#foreach of the subSlices with coverage for one strain, print the header, and the base information
-	&print_seq_header($region,$strains); #method to print the SEQ and SCORE block
-	#and print the sequence information, one base per row
-	&print_base_info($rc_adaptor,$region,$strains);
-	print DUMP "//\n"; #end of block
-    }
+my $regions_covered = &get_chromosome_coverage($rc_adaptor,$slice);
+&create_file_header() if (@{$regions_covered} > 0); #create the file header, if there is coverage in the region
+foreach my $region (@{$regions_covered}){
+    $subSlice = $slice->sub_Slice($region->[0],$region->[1],1);
+    #foreach of the subSlices with coverage for one strain, print the header, and the base information
+    &print_seq_header($subSlice,$strains); #method to print the SEQ and SCORE block
+
+    #and print the sequence information, one base per row
+    &print_base_info($rc_adaptor,$subSlice,$strains);
+    print DUMP "//\n"; #end of block
 }
+
 close DUMP || die "Could not close file to dump data: $!\n";
 
 #method to print all the bases in the region, one per line
@@ -192,11 +212,14 @@ sub get_chromosome_coverage{
 
     #and return slices for all the regions covered
     my @sub_Slices;
+    goto END if (!defined $range_registry->get_ranges(1)); #some regions might not have coverage at all
     foreach my $region (@{$range_registry->get_ranges(1)}){
 	$region->[0] = 1 if ($region->[0] < 0); #if the region lies outside the boundaries of the slice
 	$region->[1] = ($slice->end - $slice->start + 1) if ($region->[1] + $slice->start > $slice->end); 
-	push @sub_Slices, $slice->sub_Slice($region->[0],$region->[1],1);#create the subSlice
+	push @sub_Slices, [$region->[0],$region->[1]];#create the subSlice
     }
+
+END: 
     return \@sub_Slices;   
 }
 
@@ -223,6 +246,7 @@ usage: perl dump_strain_seq.pl <options>
 options:
     -dump_file <filename>    file where you want to dump the resequencing data
     -species   <species>     species you want to dump data (default = mouse)
+    -region    <region_name> region to dump the data
 
 EOF
    
