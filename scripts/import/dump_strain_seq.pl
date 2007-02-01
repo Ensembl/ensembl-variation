@@ -27,16 +27,16 @@ usage('You need to enter the file name where you want to dump the data') if (!de
 usage('You need to give the region you want to dump data') if(!defined $region);
 
 #we need to transform the region name to chromosome names if taken from LSF: X, Y or MT
-if ($species eq 'mouse' && defined $ENV{LSB_JOBINDEX}){
+if ($species eq 'mouse' && defined $region){
     $region = 'X' if($region == 20);
     $region = 'Y' if ($region == 21);
     $region = 'MT' if ($region == 22);
 }
-elsif ($species eq 'rat' && defined $ENV{LSB_JOBINDEX}){
-    $region = 'X' if($region == 20);
-    $region = 'MT' if ($region == 21);
+elsif ($species eq 'rat' && defined $region){
+    $region = 'X' if($region == 21);
+    $region = 'MT' if ($region == 22);
 }
-elsif ($species eq 'human' && defined $ENV{LSB_JOBINDEX}){
+elsif ($species eq 'human' && defined $region){
     $region = 'X' if($region == 23);
     $region = 'Y' if ($region == 24);
     $region = 'MT' if ($region == 25);
@@ -70,12 +70,16 @@ $MAX_LEVEL =$levels->[1] if ($levels->[0] < $levels->[1]);
 open DUMP, ">$dump_file" . $region || die "Could not open file to dump data: $!\n";
 
 my $strains = $ind_adaptor->fetch_all_strains_with_coverage();   #get strains with coverage information, all the columns in the file
+if ($species eq 'rat'){
+#let's start with the exceptions... we only dump CELERA strain in rat
+    @{$strains} = grep {$_->name eq 'SD'} @{$strains};
+}
 #my $slice = $slice_adaptor->fetch_by_region('chromosome','1',100_222_020,130_222_025); #dump this region to find problem 108213779-108237682
 my $slice = $slice_adaptor->fetch_by_region('chromosome',$region);
 my $subSlice;
 print "Processing chromosome ", $slice->seq_region_name,"\n";
 #for each chromosome, get the union of all coverages for all strains
-my $regions_covered = &get_chromosome_coverage($rc_adaptor,$slice);
+my $regions_covered = &get_chromosome_coverage($rc_adaptor,$slice,$strains);
 &create_file_header() if (@{$regions_covered} > 0); #create the file header, if there is coverage in the region
 foreach my $region (@{$regions_covered}){
     $subSlice = $slice->sub_Slice($region->[0],$region->[1],1);
@@ -184,10 +188,10 @@ sub print_seq_header{
     my $slice = shift;
     my $strains = shift;
 
-    print DUMP "SEQ mouse reference ", $slice->seq_region_name," ",$slice->start," ",$slice->end," ",$slice->strand,"\n";
+    print DUMP "SEQ $species reference ", $slice->seq_region_name," ",$slice->start," ",$slice->end," ",$slice->strand,"\n";
     #print the SEQ
     foreach my $strain (@{$strains}){
-	print DUMP "SEQ mouse ",$strain->name, " WGS\n";
+	print DUMP "SEQ $species ",$strain->name, " WGS\n";
     }
     #and print the SCORE
     foreach my $strain (@{$strains}){
@@ -199,15 +203,20 @@ sub print_seq_header{
 sub get_chromosome_coverage{
     my $rc_adaptor = shift;
     my $slice = shift;
+    my $strains = shift;
 
-    my $rcs = $rc_adaptor->fetch_all_by_Slice_Sample_depth($slice);
     #need to overlap the regions using the RangeRegistry module
     my $range_registry = Bio::EnsEMBL::Mapper::RangeRegistry->new();
+    
+    #we have to do it for strain, since we might not want to dump all strains....
+    foreach my $strain (@{$strains}){
+	my $rcs = $rc_adaptor->fetch_all_by_Slice_Sample_depth($slice,$strain);
 
-    #get all regions covered in the chromsome for all strains
-    foreach my $rc (@{$rcs}){	
-	#insert a new region, without bothering about the strain
-	$range_registry->check_and_register(1,$rc->start,$rc->end);
+	#get all regions covered in the chromsome for all strains
+	foreach my $rc (@{$rcs}){	
+	    #insert a new region, without bothering about the strain
+	    $range_registry->check_and_register(1,$rc->start,$rc->end);
+	}
     }
 
     #and return slices for all the regions covered
