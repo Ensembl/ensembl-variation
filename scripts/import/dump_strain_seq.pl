@@ -74,6 +74,10 @@ if ($species eq 'rat'){
 #let's start with the exceptions... we only dump CELERA strain in rat
     @{$strains} = grep {$_->name eq 'SD'} @{$strains};
 }
+#we only want to dump Celera data
+if ($species eq 'human'){
+    @{$strains} = grep {$_->name =~ /Hu\w\w/i} @{$strains};
+}
 #my $slice = $slice_adaptor->fetch_by_region('chromosome','1',100_222_020,130_222_025); #dump this region to find problem 108213779-108237682
 my $slice = $slice_adaptor->fetch_by_region('chromosome',$region);
 my $subSlice;
