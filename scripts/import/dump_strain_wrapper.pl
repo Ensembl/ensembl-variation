@@ -32,13 +32,13 @@ my $slice_adaptor = $dbCore->get_SliceAdaptor();
 my $slices = $slice_adaptor->fetch_all('chromosome');
 #find out all possible chromosomes we want to dump and create the different job arrays
 print "Time starting to dump data: ", scalar(localtime),"\n";
-my $call = "bsub  -J dump_strain_$species'[1-" . @{$slices} . "]' -q long /usr/local/bin/perl dump_strain_seq.pl -dump_file $dump_file -species $species";
+my $call = "bsub -J dump_strain_$species'[1-" . @{$slices} . "]' -q long /usr/local/bin/perl dump_strain_seq.pl -dump_file $dump_file -species $species";
 system($call);
 #print $call,"\n";    
 
 #wait for all the process to go to LSF
 sleep(120);
-$call = "bsub  -o finish_dump.txt -w 'done(dump_strain)' -J waiting_process date";
+$call = "bsub  -o finish_dump.txt -w 'done(dump_strain_" . $species . ")' -J waiting_process date";
 #print $call,"\n";
 system($call);
 
