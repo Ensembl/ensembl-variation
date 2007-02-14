@@ -175,9 +175,18 @@ sub variation_class{
 sub sequence_with_ambiguity{
     my ($dbCore,$dbVar,$chr,$start,$end,$strand) = @_;
 
+    my $slice;
+    if (ref($dbCore) ne 'Bio::EnsEMBL::DBSQL::DBAdaptor'){
+	warning('You need to provide a Bio::EnsEMBL::DBSQL::DBAdaptor as a first argument');
+	return $slice;
+    }
+    if (ref($dbVar) ne 'Bio::EnsEMBL::Variation::DBSQL::DBAdaptor'){
+	warning('You need to provide a Bio::EnsEMBL::Variation::DBSQL::DBAdaptor object as second argument');
+	return $slice;
+    }
     my $slice_adaptor = $dbCore->get_SliceAdaptor();
     my $vf_adaptor = $dbVar->get_VariationFeatureAdaptor;
-    my $slice = $slice_adaptor->fetch_by_region('chromosome',$chr,$start,$end,$strand); #get the slice
+    $slice = $slice_adaptor->fetch_by_region('chromosome',$chr,$start,$end,$strand); #get the slice
     my $seq = $slice->seq;
     foreach my $vf (@{$vf_adaptor->fetch_all_by_Slice($slice)}){
 	substr($seq,$vf->start-1,1,$vf->ambig_code);
