@@ -38,7 +38,7 @@ use vars qw(@ISA @EXPORT_OK);
 
 @ISA = qw(Exporter);
 
-@EXPORT_OK = qw(&ambiguity_code &variation_class &unambiguity_code);
+@EXPORT_OK = qw(&ambiguity_code &variation_class &unambiguity_code &sequence_with_ambiguity);
 
 
 =head2 ambiguity_code
@@ -151,6 +151,39 @@ sub variation_class{
 	warning("no alleles available ");
 	return '';
     }
+}
+
+=head2 sequence_with_ambiguity
+
+  Arg[1]      : Bio::EnsEMBL::DBSQL::DBAdaptor $dbCore
+  Arg[2]      : Bio::EnsEMBL::Variation::DBSQL::DBAdaptor $dbVar
+  Arg[3]      : string $chr
+  Arg[4]      : int $start
+  Arg[5]      : int $end
+  Arg[6]      : int $strand
+  Example     : use Bio::EnsEMBL::Variation::Utils::Sequence qw (sequence_with_ambiguity)
+                my $slice = sequence_with_ambiguity($dbCore,$dbVar,1,100,200);
+                print "the sequence with ambiguity code for your region is: ",$slice->seq()
+  Description : given a region, returns a Bio::EnsEMBL::Slice object with 
+                the sequence set with ambiguity codes
+  ReturnType  : Bio::EnsEMBL::Slice object
+  Exceptions  : none
+  Caller      : general
+
+=cut
+
+sub sequence_with_ambiguity{
+    my ($dbCore,$dbVar,$chr,$start,$end,$strand) = @_;
+
+    my $slice_adaptor = $dbCore->get_SliceAdaptor();
+    my $vf_adaptor = $dbVar->get_VariationFeatureAdaptor;
+    my $slice = $slice_adaptor->fetch_by_region('chromosome',$chr,$start,$end,$strand); #get the slice
+    my $seq = $slice->seq;
+    foreach my $vf (@{$vf_adaptor->fetch_all_by_Slice($slice)}){
+	substr($seq,$vf->start-1,1,$vf->ambig_code);
+    }
+    $slice->{'seq'} = $seq;
+    return $slice;
 }
 
 1;
