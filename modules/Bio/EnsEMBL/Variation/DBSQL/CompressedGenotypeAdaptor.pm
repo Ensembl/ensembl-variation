@@ -136,8 +136,11 @@ sub fetch_all_by_Slice{
 	foreach my $indFeature (@{$features}){
 	    if ($indFeature->start > 0 && ($slice->end-$slice->start +1) >= $indFeature->end){
 		if ($indFeature->slice->strand == -1){ #ignore the different strand transformation
+
+		  # Position will change if the strand is negative so change the strand to 1 temporarily
 		    $indFeature->slice->{'strand'} = 1;
 		    my $newFeature = $indFeature->transfer($slice->seq_region_Slice); 
+		    $indFeature->slice->{'strand'} = -1;
 		    $newFeature->slice->{'strand'} = -1;
 		    push @results, $newFeature;
 		}
