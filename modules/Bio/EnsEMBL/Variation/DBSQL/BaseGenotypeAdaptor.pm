@@ -50,6 +50,7 @@ use vars qw(@ISA);
 use Bio::EnsEMBL::DBSQL::BaseAdaptor;
 use Bio::EnsEMBL::Variation::IndividualGenotypeFeature;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
+use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
 
 
 @ISA = ('Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor');
@@ -220,7 +221,13 @@ sub _objs_from_sth{
 	}
 	$slice = $dest_slice;
     }
-
+    #we have to consider if the variation is in the opposite strand, we should have it in the forward
+    if ($seq_region_strand == -1){
+	$seq_region_strand = 1;
+	reverse_comp(\$allele_1);
+	reverse_comp(\$allele_2);
+	$slice->{'strand'} = -1;
+    }
     my $igtype = Bio::EnsEMBL::Variation::IndividualGenotypeFeature->new_fast({
 	'start'    => $seq_region_start,
 	'end'      => $seq_region_end,
