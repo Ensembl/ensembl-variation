@@ -5,66 +5,44 @@ use Getopt::Long;
 use Fcntl ':flock';
 use DBI;
 use DBH;
+use FindBin qw( $Bin );
 
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Utils::Exception qw(warning throw verbose);
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp expand);
 use Bio::EnsEMBL::Variation::ConsequenceType;
 use Bio::EnsEMBL::Utils::TranscriptAlleles qw(type_variation);  #function to calculate the consequence type of a Variation in a transcript
-use ImportUtils qw(debug load create_and_load);
+use ImportUtils qw(dumpSQL debug load create_and_load);
 
 my ($TMP_DIR, $TMP_FILE, $LIMIT,$status_file);
 
 {
-  my ($vhost, $vport, $vdbname, $vuser, $vpass,
-      $chost, $cport, $cdbname, $cuser, $cpass,
-      $limit, $num_processes);
 
-  GetOptions('chost=s'   => \$chost,
-             'cuser=s'   => \$cuser,
-             'cpass=s'   => \$cpass,
-             'cport=i'   => \$cport,
-             'cdbname=s' => \$cdbname,
-             'vhost=s'   => \$vhost,
-             'vuser=s'   => \$vuser,
-             'vpass=s'   => \$vpass,
-             'vport=i'   => \$vport,
-             'vdbname=s' => \$vdbname,
-             'tmpdir=s'  => \$ImportUtils::TMP_DIR,
-             'tmpfile=s' => \$ImportUtils::TMP_FILE,
-             'limit=s'   => \$limit,
-	     'num_processes=i' => \$num_processes,
-	     'status_file=s' => \$status_file);
+  my ($species,$limit,$num_processes);
 
-  #added default options
-  $chost    ||= 'ecs2';
-  $cuser    ||= 'ensro';
-  $cport    ||= 3365;
+  GetOptions('species=s'   => \$species,
+	     'tmpdir=s'  => \$ImportUtils::TMP_DIR,
+	     'tmpfile=s' => \$ImportUtils::TMP_FILE,
+	     'limit=s'   => \$limit,
+ 	     'num_processes=i' => \$num_processes,
+ 	     'status_file=s' => \$status_file);
 
-  $vport    ||= 3306;
-  $vuser    ||= 'ensadmin';
-  
   $num_processes ||= 1;
 
   $LIMIT = ($limit) ? " $limit " : ''; #the limit will refer to the slices the process must used (1,4-5,7,.....)
 
-  usage('-vdbname argument is required') if(!$vdbname);
-  usage('-cdbname argument is required') if(!$cdbname);
-
   usage('-num_processes must at least be 1') if ($num_processes == 0);
   usage('-status_file argument is required') if (!$status_file);
 
-  my $dbCore = Bio::EnsEMBL::DBSQL::DBAdaptor->new
-    (-host   => $chost,
-     -user   => $cuser,
-     -pass   => $cpass,
-     -port   => $cport,
-     -dbname => $cdbname);
+  my $registry_file ||= $Bin . "/ensembl.registry";
 
-  my $dbVar = DBH->connect
-    ("DBI:mysql:host=$vhost;dbname=$vdbname;port=$vport",$vuser, $vpass );
-  die("Could not connect to variation database: $!") if(!$dbVar);
+  Bio::EnsEMBL::Registry->load_all( $registry_file );
 
+  my $cdba = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'core');
+  my $vdba = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'variation');
+
+  my $dbVar = $vdba->dbc;
+  my $dbCore = $cdba;
 
   $TMP_DIR  = $ImportUtils::TMP_DIR;
   $TMP_FILE = $ImportUtils::TMP_FILE;
@@ -84,7 +62,7 @@ my ($TMP_DIR, $TMP_FILE, $LIMIT,$status_file);
   if ($processes == $num_processes){
       #if is the last process, finish it
     debug("Last process: ready to import data");
-      last_process($dbCore,$dbVar);
+    last_process($dbCore,$dbVar);
   }
 }
 
@@ -118,8 +96,8 @@ sub transcript_variation {
   my $dbname = $dbVar->dbname(); #get the name of the database to create the file
   my $host = `hostname`;
   chop $host;
-  #open FH, ">$TMP_DIR/$dbname.transcript_variation_$host\:$$\.txt";
-  open FH, ">/tmp/$dbname.transcript_variation_$host\_$$\.txt" or die "Could not open file: $!\n";
+  open FH, ">$TMP_DIR/$dbname.transcript_variation_$host\:$$\.txt";
+  #open FH, ">/tmp/$dbname.transcript_variation_$host\_$$\.txt" or die "Could not open file: $!\n";
   my $inc_non_ref = 1;
 
   my $slices = $sa->fetch_all('toplevel', undef, $inc_non_ref);
@@ -128,10 +106,66 @@ sub transcript_variation {
 
   my ($offset,$length) = split /,/,$LIMIT; #get the offset and length of the elements we have to get from the slice
   # assumes that variation features have already been pushed to toplevel
+
+  my $rfa = $dbCore->get_RegulatoryFeatureAdaptor();
+  my %done;
   foreach my $slice (splice (@slices_ordered,$offset,$length)) {
-    #next if $slice->seq_region_name() ne '17'; 
     debug("Processing transcript variations for ",
           $slice->seq_region_name(), "\n");
+    #first consider the regulatory region that overlap with SNPs
+    foreach my $rf (@{$rfa->fetch_all_by_Slice($slice)}) {
+      # request all variations which lie in the region of a regulate feature
+      $sth->execute($slice->get_seq_region_id(),
+                    $rf->seq_region_start(),
+                    $rf->seq_region_end(),
+                    $rf->seq_region_start());
+      my $rows = $sth->fetchall_arrayref();
+      my ($start,$end, $rf_start, $rf_end); #start, end of the variation feature in the slice
+
+      foreach my $row (@$rows) {
+	$start = $row->[1];
+	$end = $row->[2];
+	$rf_start = $rf->seq_region_start();
+	$rf_end = $rf->seq_region_end();
+	if ($end >= $rf_start and $start <= $rf_end) {
+	  foreach my $g (@{$rf->regulated_genes()}) {
+            if ($g) {
+	      my $g_start = $g->seq_region_start;
+	      my $g_end = $g->seq_region_end;
+	      #SNPs needs to be out side gene+flanking region,otherwise will be considered later
+	      if ($end < $g_start - $UPSTREAM or $start > $g_end + $DNSTREAM ) {
+	        foreach my $tr (@{$g->get_all_Transcripts()}) {
+		  my @arr = ($tr->dbID,$row->[0],'\N','\N','\N','\N','\N','REGULATORY_REGION');
+		  if (! $done{$row->[0]}{$tr->dbID}) {#get rid of duplicated transcript entries
+		    print FH join("\t", @arr), "\n";
+		    $done{$row->[0]}{$tr->dbID}=1;
+		  }
+		}
+              }
+	    }
+	  }
+	  foreach my $tr (@{$rf->regulated_transcripts()}) {
+	    if ($tr) {
+	      my $tr_start = $tr->seq_region_start;
+	      my $tr_end = $tr->seq_region_end;
+	      #SNPs needs to be out side gene+flanking region,otherwise will be considered later
+	      if ($end < $tr_start - $UPSTREAM or $start > $tr_end + $DNSTREAM ) {
+		my @arr = ($tr->dbID,$row->[0],'\N','\N','\N','\N','\N','REGULATORY_REGION');
+		if (! $done{$row->[0]}{$tr->dbID}) {#get rid of duplicated transcript entries
+		  print FH join("\t", @arr), "\n";
+		  $done{$row->[0]}{$tr->dbID}=1;
+		}
+              }
+	    }
+	  }
+	}
+      }
+    }
+
+    # then compute the effect of the variation on each of the transcripts
+    # of the gene
+    #next if $slice->seq_region_name() ne '17'; 
+
     my $genes = $slice->get_all_Genes();
     # request all variations which lie in the region of a gene
     foreach my $g (@$genes) {
@@ -149,7 +183,7 @@ sub transcript_variation {
         next if(!$tr->translation()); # skip pseudogenes
 
 	my ($start,$end, $strand); #start, end and strand of the variation feature in the slice
-	
+
 	foreach my $row (@$rows) {
 	  next if ($row->[4] =~ /LARGE/); #for LARGEINSERTION and LARGEDELETION alleles we don't calculate transcripts
 	  # put variation in slice coordinates
@@ -182,13 +216,6 @@ sub transcript_variation {
 	    $consequences = type_variation($tr, $g, $consequence_type);
 	  }
           foreach my $ct (@$consequences) {
-	 #   my $final_ct;
-	 #   if ($ct->splice_site) {
-	 #     $final_ct = $ct->splice_site . ",";
-         #   }
-	 #   if ($ct->regulatory_region) {
-	 #     $final_ct .= $ct->regulatory_region . ",";
-         #   }
 	    my $final_ct = join(",",@{$ct->type});
             my @arr = ($ct->transcript_id,
                        $ct->variation_feature_id,
@@ -207,11 +234,11 @@ sub transcript_variation {
   }
 
   close FH;
-  my $call = "lsrcp /tmp/$dbname.transcript_variation_$host\_$$\.txt $TMP_DIR/$dbname.transcript_variation_$host\_$$\.txt";
-  print $call,"\n";
-  system($call);
+  #my $call = "lsrcp /tmp/$dbname.transcript_variation_$host\_$$\.txt $TMP_DIR/$dbname.transcript_variation_$host\_$$\.txt";
+  #print $call,"\n";
+  #system($call);
 
-  unlink("/tmp/$dbname.transcript_variation_$host\_$$\.txt");
+  #unlink("/tmp/$dbname.transcript_variation_$host\_$$\.txt");
   return;
 }
 
@@ -221,37 +248,38 @@ sub last_process{
     my $dbVar = shift;
     
     debug("Reimporting processed transcript variation");
-    my $dbname = $dbVar->dbname(); #get the name of the database to create the file
-    my $call = "cat $TMP_DIR/$dbname.transcript_variation*.txt > $TMP_DIR/$TMP_FILE";
-    system($call);
+     my $dbname = $dbVar->dbname(); #get the name of the database to create the file
+     my $call = "cat $TMP_DIR/$dbname.transcript_variation*.txt > $TMP_DIR/$TMP_FILE";
+     system($call);
     
-    unlink(<$TMP_DIR/$dbname.transcript_variation*.txt>);
+     unlink(<$TMP_DIR/$dbname.transcript_variation*.txt>);
 
-    debug("Deleting existing transcript variation");
+     debug("Deleting existing transcript variation");
     
-    $dbVar->do("DELETE FROM transcript_variation");
+     $dbVar->do("DELETE FROM transcript_variation");
 
-    #load transcript_variation data
-    load($dbVar, qw(transcript_variation
-		    transcript_id variation_feature_id peptide_allele_string
-		    translation_start translation_end cdna_start cdna_end consequence_type));
-    
-    update_meta_coord($dbCore, $dbVar, 'transcript_variation');
+     #load transcript_variation data
+     load($dbVar, qw(transcript_variation
+ 		    transcript_id variation_feature_id peptide_allele_string
+ 		    translation_start translation_end cdna_start cdna_end consequence_type));
+
+
     debug("Preparing to update consequence type in variation feature table");
-    #and delete the status file
-    my $sth = $dbVar->prepare( "SELECT STRAIGHT_JOIN vf.variation_feature_id, tv.consequence_type ".
-			       "FROM variation_feature vf LEFT JOIN transcript_variation tv ON ".
-			       "vf.variation_feature_id = tv.variation_feature_id ".
-			       "ORDER BY vf.variation_feature_id" );
-    $sth->{mysql_use_result} = 1;
     # create a file which contains the var_feat_id and the max consequence type
-    $sth->execute();
-    my ($variation_feature_id, $consequence_type);
-    $sth->bind_columns(\$variation_feature_id,\$consequence_type);
+    dumpSQL($dbVar,qq{SELECT STRAIGHT_JOIN vf.variation_feature_id, tv.consequence_type 
+		      FROM variation_feature vf LEFT JOIN transcript_variation tv ON 
+			   vf.variation_feature_id = tv.variation_feature_id}
+                               );
+ 
+    # sort the file
+    system("sort $TMP_DIR/$TMP_FILE |uniq > $TMP_DIR/$TMP_FILE.su");
+    open IN, "$TMP_DIR/$TMP_FILE\.su" or die "can't open tmp_file $!";
+    open(FH, ">" . $TMP_DIR . "/" . $TMP_FILE);
+
     my $previous_variation_feature_id = 0;
     my %consequence_types = %Bio::EnsEMBL::Variation::ConsequenceType::CONSEQUENCE_TYPES;
     #my %splice_sites =  %Bio::EnsEMBL::Variation::ConsequenceType::SPLICE_SITES;
-
+    my ($variation_feature_id, $consequence_type);
     my $highest_priority_type = 'INTERGENIC'; #by default, has this type
     my $highest_splice_site = '';
     my $regulatory_region;
@@ -259,9 +287,9 @@ sub last_process{
     my $splice_site;
     my @types;
     my $final_type;
-
-    open(FH, ">" . $TMP_DIR . "/" . $TMP_FILE);
-    while($sth->fetch()){
+    
+    while (<IN>) {
+      ($variation_feature_id, $consequence_type) = split;
       if (($variation_feature_id != $previous_variation_feature_id) && ($previous_variation_feature_id != 0)){
 	$final_type = "$highest_splice_site," if $highest_splice_site;
 	$final_type .= "$regulatory_region," if $regulatory_region;
@@ -291,7 +319,7 @@ sub last_process{
 	}
 
 	#find the highest consequence type
-	if ($consequence_types{$type} < $consequence_types{$highest_priority_type}){
+	if ($type and $consequence_types{$type}  and $consequence_types{$type} < $consequence_types{$highest_priority_type}){
 	  $highest_priority_type = $type;
 	}
 	#and the highest splice site
@@ -307,7 +335,7 @@ sub last_process{
 
     if (defined $consequence_type) {
       @types = split(',',$consequence_type);
-
+      #print "type is @types\n";
       foreach my $ct (@types) {
 	if ($ct =~ /regulatory/i) {
 	  $regulatory_region = $ct;
@@ -321,7 +349,7 @@ sub last_process{
       }
 
       #find the highest consequence type
-      if ($consequence_types{$type} < $consequence_types{$highest_priority_type}){
+      if ($type and $consequence_types{$type} and $consequence_types{$type} < $consequence_types{$highest_priority_type}){
 	$highest_priority_type = $type;
       }
       #and the highest splice site
@@ -348,9 +376,11 @@ sub last_process{
     $dbVar->do(qq{UPDATE variation_feature vf, tmp_consequence_type tct 
 		      SET vf.consequence_type = tct.consequence_type
 		      WHERE vf.variation_feature_id = tct.variation_feature_id
-		  });
+                  });
     $dbVar->do(qq{DROP TABLE tmp_consequence_type});
     unlink("$TMP_DIR/$status_file");
+    unlink("$TMP_DIR/$TMP_FILE.su");
+    update_meta_coord($dbCore, $dbVar, 'transcript_variation');
 }
 
 #
