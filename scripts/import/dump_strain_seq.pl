@@ -57,7 +57,7 @@ my $rc_adaptor = $dbVar->get_ReadCoverageAdaptor();
 my $ind_adaptor = $dbVar->get_IndividualAdaptor();
 #the hashs contains all base conversion to avoid comparisons when printing the sequences
 my %read_code = qw(M 2 V 2 N 2 H 2 R 2 D 2 W 2 S 2 B 2 Y 2 K 2 C 2 A 2 T 2 G 2 * 2
-. 0 
+~ 0 
 m 1 v 1 n 1 h 1 r 1 d 1 w 1 s 1 b 1 y 1 k 1 c 1 a 1 t 1 g 1 - 1);
 
 #find out MAX_LEVEL in this specie
@@ -67,7 +67,7 @@ my $MAX_LEVEL;
 $MAX_LEVEL =$levels->[0] if ($levels->[0] > $levels->[1]);
 $MAX_LEVEL =$levels->[1] if ($levels->[0] < $levels->[1]);
 
-open DUMP, ">$dump_file" . $region || die "Could not open file to dump data: $!\n";
+open DUMP, ">$dump_file" . $region . ".emf"|| die "Could not open file to dump data: $!\n";
 
 my $strains = $ind_adaptor->fetch_all_strains_with_coverage();   #get strains with coverage information, all the columns in the file
 if ($species eq 'rat'){
@@ -177,14 +177,14 @@ sub get_strain_seq{
     foreach my $rc (@{$rcs}){
 	$rc->start(1) if ($rc->start < 0); #if the region lies outside the boundaries of the slice
 	$rc->end($slice->end - $slice->start + 1) if ($rc->end + $slice->start > $slice->end); 
-	$seq .= '.' x ($rc->start - 1 - $end_level1) if ($rc->level == 1);
+	$seq .= '~' x ($rc->start - 1 - $end_level1) if ($rc->level == 1);
 	$format = '@' . ($rc->start - 1) . 'A' . ($rc->end - $rc->start + 1);
 	$seq .= lc(unpack($format,$slice->seq)) if ($rc->level == 1);
 	substr($seq,$rc->start-1,$rc->end-$rc->start+1,uc(unpack($format,$seq))) if ($rc->level == $MAX_LEVEL);
 	$end = $rc->end;
 	$end_level1 = $rc->end if ($rc->level == 1);	
     }
-    $seq .= '.' x ($slice->length - $end);
+    $seq .= '~' x ($slice->length - $end);
     return $seq;
 }
 
