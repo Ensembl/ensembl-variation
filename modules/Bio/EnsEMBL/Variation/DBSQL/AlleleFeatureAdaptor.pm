@@ -145,6 +145,9 @@ sub fetch_all_by_Slice{
 		else{
 		    $af->{'_half_genotype'} = 0;
 		    #we need to put the allele and Individual in the AlleleFeature object
+		    if($genotypes->[$i]->allele1 eq '-' and $genotypes->[$i]->allele1 eq '-'){
+			1;
+		    }
 		    $af->allele_string(ambiguity_code($genotypes->[$i]->allele1  . '/' . $genotypes->[$i]->allele2)); #for heterozigous alleles
 		}
 	#	$af->allele_string($genotypes->[$i]->allele1); #if it is strain, both alleles should be the same, might be changed in the future
