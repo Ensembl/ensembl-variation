@@ -175,7 +175,7 @@ sub variation {
       if(!defined($self->{'variation'}) && $self->{'adaptor'})    {
 	  #lazy-load from database on demand
 	  my $vfa = $self->{'adaptor'}->db()->get_VariationFeatureAdaptor();
-	  $self->{'variation'} = shift @{$vfa->fetch_all_by_Slice($self->slice())};
+	  $self->{'variation'} = (shift @{$vfa->fetch_all_by_Slice($self->feature_Slice())})->variation;
       }
   }
   return $self->{'variation'};
