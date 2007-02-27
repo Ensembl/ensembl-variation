@@ -325,7 +325,7 @@ sub length_diff  {
   return 0 if(!defined($self->{'end'}) || !defined($self->{'start'}));
 
   return length($self->{'allele_string'}) - ($self->{'end'} - $self->{'start'} + 1) if ($self->{'allele_string'} ne '-'); 
-  return 0 - ($self->{'end'} - $self->{'start'} + 1) if ($self->{'allele_string'} eq '-'); 
+  return 0 - ($self->{'end'} - $self->{'start'} +1) if ($self->{'allele_string'} eq '-'); #do we need the +1 in the distance ??
 
 }
 
