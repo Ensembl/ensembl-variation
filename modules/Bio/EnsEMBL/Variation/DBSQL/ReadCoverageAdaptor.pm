@@ -84,11 +84,12 @@ sub fetch_all_by_Slice_Sample_depth{
     my $self = shift;
     my $slice = shift;
     my @args = @_; #can contain individual and/or level
+    my $strand;
+    my $rcs;
 
     if(!ref($slice) || !$slice->isa('Bio::EnsEMBL::Slice')) {
 	throw('Bio::EnsEMBL::Slice arg expected');
     }
-
     if (defined $args[0]){ #contains, at least, 1 parameter, either a Individual or the level
 	my $constraint;
 	my $levels = $self->get_coverage_levels();
@@ -126,11 +127,17 @@ sub fetch_all_by_Slice_Sample_depth{
 		$constraint = "rc.sample_id = " . $args[0]->dbID;
 	    }
 	}
-
-	return $self->fetch_all_by_Slice_constraint($slice,$constraint);    
+	$strand = $slice->strand;
+	$slice->{'strand'} = 1;
+	$rcs = $self->fetch_all_by_Slice_constraint($slice,$constraint);    
+	$slice->{'strand'} = $strand;
+	return $rcs;
     }
     #call the method fetch_all_by_Slice
-    return $self->fetch_all_by_Slice($slice);    
+    $strand = $slice->strand;
+    $slice->{'strand'} = 1;
+    $rcs = $self->fetch_all_by_Slice($slice);    
+    return $rcs;
 }
 
 #returns a list of regions that are covered by all the sample given
