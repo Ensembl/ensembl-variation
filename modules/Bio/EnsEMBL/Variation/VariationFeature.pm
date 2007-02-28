@@ -448,30 +448,30 @@ sub get_consequence_type {
     
   if(!defined $gene){
     return $self->{'consequence_type'};
-  } else{
-    my $highest_priority;
+  } 
+  else{
+      my $highest_priority;
     #first, get all the transcripts, if any
-    my $transcript_variations = $self->get_all_TranscriptVariations();
-    #if no transcripts, return INTERGENIC type
-    if (!defined $transcript_variations){
-      return 'INTERGENIC';
-    }
-    if (!ref $gene || !$gene->isa("Bio::EnsEMBL::Gene")){
-      throw("$gene is not a Bio::EnsEMBL::Gene type!");
-    }
-    my $transcripts = $gene->get_all_Transcripts();
-	my %transcripts_genes;
-	my @new_transcripts;
-	map {$transcripts_genes{$_->dbID()}++} @{$transcripts};
-	foreach my $transcript_variation (@{$transcript_variations}){
-	    if (exists $transcripts_genes{$transcript_variation->transcript->dbID()}){
-		push @new_transcripts,$transcript_variation;
-	    }
+      my $transcript_variations = $self->get_all_TranscriptVariations();
+      #if no transcripts, return INTERGENIC type
+      if (!defined $transcript_variations){
+	  return ['INTERGENIC'];
+      }
+      if (!ref $gene || !$gene->isa("Bio::EnsEMBL::Gene")){
+	  throw("$gene is not a Bio::EnsEMBL::Gene type!");
+      }
+      my $transcripts = $gene->get_all_Transcripts();
+      my %transcripts_genes;
+      my @new_transcripts;
+      map {$transcripts_genes{$_->dbID()}++} @{$transcripts};
+      foreach my $transcript_variation (@{$transcript_variations}){
+	  if (exists $transcripts_genes{$transcript_variation->transcript->dbID()}){
+	    push @new_transcripts,$transcript_variation;
 	}
-	$highest_priority = $self->_highest_priority(\@new_transcripts);	
-	return $highest_priority;
-    }
-
+      }
+      $highest_priority = $self->_highest_priority(\@new_transcripts);	
+      return $highest_priority;
+  }
 }
 
 
@@ -480,7 +480,7 @@ sub _highest_priority{
     my $self= shift;
     my $transcript_variations = shift;
     my $highest_type = 'INTERGENIC';
-    my $highest_priority; #ref to array with highest types
+    my $highest_priority = ['INTERGENIC']; #ref to array with highest types
     foreach my $tv (@{$transcript_variations}){
  	#with a frameshift coding, return, is the highest value
 	my $consequences = $tv->consequence_type; #returns a ref to array
