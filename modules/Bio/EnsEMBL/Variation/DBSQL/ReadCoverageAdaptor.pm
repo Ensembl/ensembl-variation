@@ -127,15 +127,10 @@ sub fetch_all_by_Slice_Sample_depth{
 		$constraint = "rc.sample_id = " . $args[0]->dbID;
 	    }
 	}
-	$strand = $slice->strand;
-	$slice->{'strand'} = 1;
 	$rcs = $self->fetch_all_by_Slice_constraint($slice,$constraint);    
-	$slice->{'strand'} = $strand;
 	return $rcs;
     }
     #call the method fetch_all_by_Slice
-    $strand = $slice->strand;
-    $slice->{'strand'} = 1;
     $rcs = $self->fetch_all_by_Slice($slice);    
     return $rcs;
 }
