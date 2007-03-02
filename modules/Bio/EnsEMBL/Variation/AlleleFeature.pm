@@ -132,7 +132,7 @@ sub new {
     rearrange([qw(ALLELE_STRING VARIATION_NAME 
                   VARIATION VARIATION_ID SAMPLE_ID SOURCE)], @_);
 
-  $self->{'allele'}           = $allele;
+  $self->{'allele_string'}           = $allele;
   $self->{'variation_name'}   = $var_name;
   $self->{'variation'}        = $variation;
   $self->{'_variation_id'}    = $variation_id;
