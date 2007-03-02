@@ -84,7 +84,6 @@ sub fetch_all_by_Slice_Sample_depth{
     my $self = shift;
     my $slice = shift;
     my @args = @_; #can contain individual and/or level
-    my $strand;
     my $rcs;
 
     if(!ref($slice) || !$slice->isa('Bio::EnsEMBL::Slice')) {
