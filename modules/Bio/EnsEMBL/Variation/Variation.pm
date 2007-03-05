@@ -250,7 +250,7 @@ sub get_all_Genes{
 	    #get the genes in the new slice
 	    $gene_list = $new_slice->get_all_Genes();
 	    foreach my $gene (@{$gene_list}){
-		if (($vf->start >= $gene->seq_region_start) && ($vf->start <= $gene->seq_region_end) && ($vf->end <= $gene->seq_region_end)){
+		if (($vf->start >= $gene->seq_region_start - $UPSTREAM) && ($vf->start <= $gene->seq_region_end + $DOWNSTREAM) && ($vf->end <= $gene->seq_region_end + $DOWNSTREAM)){
 		    #the vf is affecting the gene, add to the hash if not present already
 		    if (!exists $gene_hash->{$gene->dbID}){
 			$gene_hash->{$gene->dbID} = $gene;
