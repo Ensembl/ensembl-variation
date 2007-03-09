@@ -87,7 +87,8 @@ sub fetch_by_dbID {
 	       LEFT JOIN allele a ON v.variation_id = a.variation_id
                 LEFT JOIN variation_synonym vs on v.variation_id = vs.variation_id 
    	            LEFT JOIN source s2 on  vs.source_id = s2.source_id
-                    LEFT JOIN failed_description f on v.failed_description_id = f.failed_description_id
+		    LEFT JOIN failed_variation fv on v.variation_id = fv.variation_id
+                    LEFT JOIN failed_description f on fv.failed_description_id = f.failed_description_id
        WHERE    v.source_id = s1.source_id
        AND    v.variation_id = ?});
   $sth->bind_param(1,$dbID,SQL_INTEGER);
@@ -135,7 +136,8 @@ sub fetch_by_name {
 	     LEFT JOIN allele a on v.variation_id = a.variation_id 
 	      LEFT JOIN variation_synonym vs on v.variation_id = vs.variation_id 
               LEFT JOIN source s2 on  vs.source_id = s2.source_id
-	         LEFT JOIN failed_description f on v.failed_description_id = f.failed_description_id
+	      LEFT JOIN failed_variation fv on v.variation_id = fv.variation_id
+	         LEFT JOIN failed_description f on fv.failed_description_id = f.failed_description_id
 #       WHERE  v.variation_id = a.variation_id
 #       AND    v.variation_id = vs.variation_id
        WHERE    v.source_id = s1.source_id
@@ -225,7 +227,8 @@ sub fetch_all_by_dbID_list {
 		  LEFT JOIN allele a on v.variation_id = a.variation_id
 		     LEFT JOIN variation_synonym vs on v.variation_id = vs.variation_id 
 		       LEFT JOIN source s2 on  vs.source_id = s2.source_id
-		         LEFT JOIN failed_description f on v.failed_description_id = f.failed_description_id
+		         LEFT JOIN failed_variation fv on v.variation_id = fv.variation_id
+			  LEFT JOIN failed_description f on fv.failed_description_id = f.failed_description_id
           WHERE    v.source_id = s1.source_id
           AND    v.variation_id $id_str});
     $sth->execute();
@@ -421,10 +424,12 @@ sub fetch_all_by_Population {
   my $sth = $self->prepare
     (q{SELECT v.variation_id, v.name, v.validation_status, s1.name, v.ancestral_allele,
               a.allele_id, a.allele, a.frequency, a.sample_id, vs.moltype,
-              vs.name, s2.name, NULL
+              vs.name, s2.name, f.failed_description_id
 	    FROM   (variation v, source s1, allele a)
 	      LEFT JOIN variation_synonym vs on v.variation_id = vs.variation_id 
               LEFT JOIN source s2 on  vs.source_id = s2.source_id
+	      LEFT JOIN failed_variation fv on v.variation_id = fv.variation_id
+	      LEFT JOIN failed_description f on fv.failed_description_id = f.failed_description_id
 	      WHERE  v.variation_id = a.variation_id
 	      AND    v.source_id = s1.source_id
 	      AND    a.sample_id = ?});
@@ -501,14 +506,16 @@ sub _objs_from_sth {
         $pop = $seen_pops{$allele_sample_id} ||=
           $pa->fetch_by_dbID($allele_sample_id);
     }
-      my $allele = Bio::EnsEMBL::Variation::Allele->new
-        (-dbID      => $allele_id,
-         -ALLELE    => $allele,
-         -FREQUENCY => $allele_freq,
-         -POPULATION => $pop);
-      $cur_var->add_Allele($allele);
-
-      $cur_allele_id = $allele_id;
+      if (defined $allele_id){
+	  my $allele = Bio::EnsEMBL::Variation::Allele->new
+	      (-dbID      => $allele_id,
+	       -ALLELE    => $allele,
+	       -FREQUENCY => $allele_freq,
+	       -POPULATION => $pop);
+	  $cur_var->add_Allele($allele);
+	  
+	  $cur_allele_id = $allele_id;
+      }
     }
 
     if(defined ($syn_source) && !$seen_syns{"$syn_source:$syn_name"}) {
