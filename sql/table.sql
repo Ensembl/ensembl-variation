@@ -17,7 +17,6 @@ create table variation (
 	name varchar(255),
 	validation_status SET('cluster','freq','submitter','doublehit','hapmap','failed'),
 	ancestral_allele text,
-	failed_description_id int(10) unsigned not null,
 
 	primary key( variation_id ),
 	unique ( name )
@@ -654,6 +653,22 @@ CREATE TABLE failed_description(
 
  PRIMARY KEY (failed_description_id)
 );
+
+#
+# failed_variation
+#
+# Contains all variations that did not pass the Ensembl filters
+# variation_id - primary key
+# failed_descriptin_id - foreign key to failed_description table
+#
+
+CREATE TABLE failed_variation(
+    variation_id int(10) unsigned not null,
+    failed_description_id int(10) unsigned not null,
+
+    PRIMARY KEY(variation_id)
+);
+
 
 #possible values in the failed_description table
 INSERT INTO failed_description (failed_description_id,description) VALUES (1,'Variation has more than 3 different locations');
