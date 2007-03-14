@@ -49,13 +49,6 @@ Bio::EnsEMBL::Variation::DBSQL::TranscriptVariationAdaptor
     print $trva->transcript->stable_id(), ' ', $trva->consequence_type(), "\n";
   }
 
-  # retrieve all TranscriptsVariations associated with a Variation
-
-  $v = $v->fetch_by_name('rs1445');
-  foreach $trv (@{$trva->fetch_all_by_Variation($v)}) {
-    print $trva->transcript->stable_id(), ' ', $trva->consequence_type(), "\n";
-  }
-
 
 =head1 DESCRIPTION
 
