@@ -480,18 +480,44 @@ sub _highest_priority{
     my $self= shift;
     my $transcript_variations = shift;
     my $highest_type = 'INTERGENIC';
-    my $highest_priority = ['INTERGENIC']; #ref to array with highest types
+    my $highest_splice = '';
+    my $highest_regulatory = '';
+    my @highest_priority;
+    my %splice_site = ( 'ESSENTIAL_SPLICE_SITE' => 1,
+			'SPLICE_SITE'           => 2);
+    my %regulatory_region = ( 'REGULATORY_REGION' => 1);
+
     foreach my $tv (@{$transcript_variations}){
  	#with a frameshift coding, return, is the highest value
 	my $consequences = $tv->consequence_type; #returns a ref to array
 	foreach my $consequence_type (@{$consequences}){
-	    if (defined $CONSEQUENCE_TYPES{$consequence_type} && $CONSEQUENCE_TYPES{$consequence_type} < $CONSEQUENCE_TYPES{$highest_type}){
-		$highest_type = $consequence_type;
-		$highest_priority = $tv->consequence_type; 
+	    if (defined $splice_site{$consequence_type}){
+		if ((!defined $splice_site{$highest_splice}) || (defined $splice_site{$highest_splice} && $splice_site{$consequence_type} < $splice_site{$highest_splice})){
+		    $highest_splice = $consequence_type;
+		}
 	    }
+	    else{
+		if (defined $regulatory_region{$consequence_type}){
+		    if ((!defined $regulatory_region{$highest_regulatory}) || (defined $regulatory_region{$highest_regulatory} && $regulatory_region{$consequence_type} < $regulatory_region{$highest_regulatory})){
+			$highest_regulatory = $consequence_type;
+		    }
+		}
+		else{
+		    if (defined $CONSEQUENCE_TYPES{$consequence_type} && $CONSEQUENCE_TYPES{$consequence_type} < $CONSEQUENCE_TYPES{$highest_type}){
+			$highest_type = $consequence_type;
+		    }
+		}
+	    }
+	    
 	}
-    }    
-    return $highest_priority;
+	
+    }   
+    return ['INTERGENIC'] if (!defined $transcript_variations);
+    push @highest_priority, $highest_regulatory if ($highest_regulatory ne '');
+    push @highest_priority, $highest_splice if ($highest_splice ne '');
+    push @highest_priority, $highest_type;
+    
+    return \@highest_priority;
 }
 
 =head2 ambig_code
