@@ -67,12 +67,15 @@ my ($TMP_DIR, $TMP_FILE, $LIMIT,$status_file);
     ("DBI:mysql:host=$vhost;dbname=$vdbname;port=$vport",$vuser, $vpass );
   die("Could not connect to variation database: $!") if(!$dbVar);
 
+  my $dbVar_write = DBH->connect
+    ("DBI:mysql:host=$vhost;dbname=$vdbname;port=$vport",$vuser, $vpass );
+  die("Could not connect to variation database: $!") if(!$dbVar_write);
 
   $TMP_DIR  = $ImportUtils::TMP_DIR;
   $TMP_FILE = $ImportUtils::TMP_FILE;
 
   load_asm_cache($dbCore) unless defined $top_level;
-  variation_feature($dbCore, $dbVar, $top_level);
+  variation_feature($dbCore, $dbVar, $dbVar_write, $top_level);
 
    open STATUS, ">>$TMP_DIR/$status_file"
      or throw("Could not open tmp file: $TMP_DIR/$status_file\n"); 
@@ -136,6 +139,7 @@ sub load_asm_cache {
 sub variation_feature {
   my $dbCore = shift;
   my $dbVar  = shift;
+  my $dbVar_write = shift;
   my $top_level = shift;
   my $mithocondrial = 0;
   my $slice_adaptor = $dbCore->get_SliceAdaptor();
@@ -191,17 +195,16 @@ sub variation_feature {
   my $dbname = $dbVar->dbname(); #get the name of the database to create the file
   my $host = `hostname`;
   chop $host;
-  #open FH, ">$TMP_DIR/$dbname.variation_feature_$host\:$$\.txt"
-  open FH, ">/tmp/$dbname.variation_feature_$host\_$$\.txt"
+  open FH, ">$TMP_DIR/$dbname.variation_feature_$host\:$$\.txt"
     or throw("Could not open tmp file: $TMP_DIR/variation_feature_$$\n");
+
   while($sth->fetch()) {
-      #excluding SNPs with map_weight > 3    
-      if ($map_weight >3){
-	#needs to be written to the failed_variation table
-	  $dbVar->do(qq{INSERT INTO failed_variation (variation_id,failed_description_id) VALUES ($v_id,1)
-	  });
-	  next;  
-      }
+    #excluding SNPs with map_weight>3
+    if ($map_weight>3) {	
+      #needs to be written to the failed_variation table
+      $dbVar_write->do(qq{INSERT IGNORE INTO failed_variation (variation_id,failed_description_id) VALUES ($v_id,1)});
+      next;
+    }
     if(!defined($cur_vf_id) || $cur_vf_id != $vf_id) {
       if($top_coord) {
         my $allele_str;
@@ -213,9 +216,9 @@ sub variation_feature {
           $allele_str = join('/', ($alleles_expanded{$ref_allele}, keys %alleles));
         } else {
 	  $allele_str = undef;
-          warn("Reference allele $ref_allele for $cur_v_name not found in alleles: " .
-              join("/", keys %alleles), " discarding feature");
-	  $dbVar->do(qq{INSERT INTO failed_variation (variation_id,failed_description_id) VALUES ($cur_v_id,2)
+          #warn("Reference allele $ref_allele for $cur_v_name not found in alleles: " .
+	    #join("/", keys %alleles), " discarding feature");
+	  $dbVar_write->do(qq{INSERT IGNORE INTO failed_variation (variation_id,failed_description_id) VALUES ($cur_v_id,2)}) if ($cur_map_weight ==1); #only put into failed_variation when map_weight==1
         }
 	
 	if($allele_str) {
@@ -299,16 +302,24 @@ sub variation_feature {
 	  # obtain the seq_region_id of the seq_region we mapped to
 	  # and the reference allele from the genome sequence
 	  ($top_coord) = @coords;
-	  $slice = $slice_adaptor->fetch_by_region
-	    ($top_coord->coord_system()->name(),$top_coord->id(),
+
+	  $slice = $slice_adaptor->fetch_by_seq_region_id
+	    ($top_coord->id(),
 	     $top_coord->start(),$top_coord->end(), $top_coord->strand(),
 	     $top_coord->coord_system()->version());
-	  
-	  $ref_allele = $slice->seq();
-	  $ref_allele = '-' if(!$ref_allele);
-	  $ref_allele = uc $ref_allele;   #convert reference allele to uppercase
-
-	  $top_sr_id = $slice->get_seq_region_id();
+	  if (! $slice) {
+	    print "$cur_v_id ",join " ", $top_coord->coord_system()->name(),$top_coord->id(),
+	      $top_coord->start(),$top_coord->end(), $top_coord->strand(),
+		$top_coord->coord_system()->version(),"\n";
+	    $ref_allele = "";
+	  }
+	  else {
+            $ref_allele = $slice->seq();
+	    $ref_allele = '-' if(!$ref_allele);
+	    $ref_allele = uc $ref_allele;   #convert reference allele to uppercase
+            $top_sr_id = $top_coord->id();
+#	    $top_sr_id = $slice->get_seq_region_id();
+	  }
 	}
       }
     }
@@ -324,12 +335,8 @@ sub variation_feature {
   die $sth->errstr if $sth->err;
 
 
-  # print the last row, excluding SNPs with map_weight > 3
-  if ($cur_map_weight >3){
-      $dbVar->do(qq{INSERT INTO failed_variation (variation_id,failed_description_id) VALUES ($cur_v_id,1)
-  }
-  if($top_coord and $cur_map_weight <=3) {
-
+  # print the last row
+  if($top_coord ) {
     my $allele_str;
 
     if($alleles{$ref_allele}) {
@@ -338,11 +345,10 @@ sub variation_feature {
       $allele_str = join('/', ($ref_allele, keys %alleles));
     } else {
       $allele_str = undef;
-      warn("Reference allele $ref_allele for $cur_v_name not found in alleles: " .
-           join("/", keys %alleles), " discarding feature\n");
-	#needs to be written to the failed_variation table
-      $dbVar->do(qq{INSERT INTO failed_variation (variation_id,failed_description_id) VALUES ($cur_v_id,2)
-		    });
+      #warn("Reference allele $ref_allele for $cur_v_name not found in alleles: " .
+      #     join("/", keys %alleles), " discarding feature\n");
+      #needs to be written to the failed_variation table
+      $dbVar_write->do(qq{INSERT IGNORE INTO failed_variation (variation_id,failed_description_id) VALUES ($cur_v_id,2)}) if ($cur_map_weight==1);
     }
     
     if($allele_str) {
@@ -360,9 +366,6 @@ sub variation_feature {
   }
 
   close FH;
-  my $call = "lsrcp /tmp/$dbname.variation_feature_$host\_$$\.txt $TMP_DIR/$dbname.variation_feature_$host\_$$\.txt";
-  system($call);
-  unlink("/tmp/$dbname.variation_feature_$host\_$$\.txt");
 }
 
 #will know if it is the last process running counting the lines of the status_file.If so, load all data
