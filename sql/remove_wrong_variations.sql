@@ -1,10 +1,12 @@
 #set of SQL statements to remove from the database variations that have been flagged as wrong
 #by the Ensembl team, and to update the Variation table to reflect the reason
+#DELETE fv FROM failed_variation fv, variation_feature vf WHERE fv.variation_id = vf.variation_id AND vf.map_weight != 1;
+UPDATE variation v, failed_variation w set v.validation_status = 'failed', v.ancestral_allele = NULL WHERE v.variation_id = w.variation_id;
 DELETE a FROM allele a, failed_variation v WHERE a.variation_id = v.variation_id;
 DELETE f FROM flanking_sequence f, failed_variation v WHERE f.variation_id = v.variation_id; 
 DELETE i FROM individual_genotype_multiple_bp i, failed_variation v WHERE i.variation_id = v.variation_id;
 DELETE tv FROM transcript_variation tv, variation_feature vf, failed_variation v where tv.variation_feature_id = vf.variation_feature_id and vf.variation_id = v.variation_id;
-DELETE vs FROM variation_synonym vs, failed_variation v WHERE vs.variation_id = v.variation_id;
+#DELETE vs FROM variation_synonym vs, failed_variation v WHERE vs.variation_id = v.variation_id;
 DELETE i FROM tmp_individual_genotype_single_bp i, failed_variation v WHERE i.variation_id = v.variation_id;
 DELETE i FROM individual_genotype_multiple_bp i, failed_variation v WHERE i.variation_id = v.variation_id;
 DELETE i FROM population_genotype i, failed_variation v WHERE i.variation_id = v.variation_id;
