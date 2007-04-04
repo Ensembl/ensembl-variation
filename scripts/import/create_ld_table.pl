@@ -4,6 +4,7 @@ use warnings;
 
 use Getopt::Long;
 use ImportUtils qw(load);
+use Bio::EnsEMBL::Registry;
 use FindBin qw( $Bin );
 
 use constant MAX_SIZE => 500_000_000;
@@ -35,7 +36,7 @@ my $sth = $dbVariation->dbc->prepare(qq{SELECT c.sample_id,c.seq_region_id,c.seq
 				 FROM compressed_genotype_single_bp c FORCE INDEX(pos_idx), individual_population ip
 				 WHERE  ip.individual_sample_id = c.sample_id
 				 AND   ip.population_sample_id $in_str
-#				 LIMIT 10000
+#				 LIMIT 100000
 			     },{mysql_use_result => 1});
 
 $sth->execute();
@@ -45,11 +46,11 @@ my @files = glob("$TMP_DIR/*");
 my $call = '';
 my @stats;
 foreach my $file (@files){
-    $file =~ /.*_(\d+)\-(\d+)/;
+    $file =~ /.*_(\d+)/;
     @stats = stat($file);
     if ($stats[7] > MAX_SIZE){
 #once the files are created, we have to calculate the ld
-	$call = "bsub -q normal -J ld_calculation_$1_$2 ";
+	$call = "bsub -q normal -J ld_calculation_$1 ";
     }
     $call .= "perl calculate_ld_table.pl -tmpdir $TMP_DIR -tmpfile $TMP_FILE -ldfile $file ";
   #  print $call,"\n";
@@ -97,7 +98,7 @@ sub store_file{
 	#genotype
 	$allele_1 = $genotypes[$i+1];
 	$allele_2 = $genotypes[$i+2];
-	print_buffered($buffer,"$TMP_DIR/dump_data_$seq_region_id-$population_id.txt",join("\t",$snp_start,$individual_id,$allele_1,$allele_2)."\n");
+	print_buffered($buffer,"$TMP_DIR/dump_data_$seq_region_id.txt",join("\t",$snp_start,$individual_id,$population_id,$allele_1,$allele_2)."\n");
     }
 }
 
