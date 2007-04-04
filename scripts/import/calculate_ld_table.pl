@@ -31,9 +31,8 @@ my $allele_1;
 my $allele_2;
 my $previous_seq_region_start = 0;
 
-$ld_file =~ /dump_data_(\d+)\-(\d+)/;
+$ld_file =~ /dump_data_(\d+)/;
 $seq_region_id = $1;
-$population_id = $2;
 my %individual_information = (); #hash containing relation snps->individuals
 my %alleles_information = (); #hash containing a record of alleles in the variation. A will be the major and a the minor. When more than
 my $buffer = {};
@@ -42,57 +41,61 @@ my $buffer = {};
 open IN,"<$ld_file" or die "Could not open input file: $ld_file\n";
 while (<IN>){
     chomp;
-    ($seq_region_start,$individual_id, $allele_1,$allele_2) = split; #get all the fields in the file
+    ($seq_region_start,$individual_id, $population_id,$allele_1,$allele_2) = split; #get all the fields in the file
     if ($previous_seq_region_start == 0 or $seq_region_start == $previous_seq_region_start){
 	$previous_seq_region_start = $seq_region_start;
 	if ($allele_1 ne 'N' and $allele_2 ne 'N'){
-	    $alleles_information{$allele_1}++;
-	    $alleles_information{$allele_2}++;
+	    $alleles_information{$population_id}{$allele_1}++;
+	    $alleles_information{$population_id}{$allele_2}++;
 	    
-	    $individual_information{$individual_id}{allele_1} = $allele_1;
-	    $individual_information{$individual_id}{allele_2} = $allele_2;
+	    $individual_information{$population_id}{$individual_id}{allele_1} = $allele_1;
+	    $individual_information{$population_id}{$individual_id}{allele_2} = $allele_2;    
 	}
     }
     else{
 	#at this point, we have seen all variations for individual, time to convert genotype and print to file
-	next if (keys %alleles_information != 2); #skip variations with 3 alleles
-	convert_genotype(\%alleles_information,\%individual_information);
-	#print all individuals to a file
-	map {print_buffered ($buffer,"$TMP_DIR/$TMP_FILE\.$seq_region_id\.$population_id",
-			join("\t",$seq_region_id,$previous_seq_region_start, $previous_seq_region_start,
-			     $population_id, $_,
-			     $individual_information{$_}{genotype})."\n")} keys %individual_information;
+	foreach my $population (keys %alleles_information){
+	    next if (keys %{$alleles_information{$population}} > 2); #skip variations with 3 alleles
+	    convert_genotype($alleles_information{$population},$individual_information{$population});
+	    #print all individuals to a file
+	    map {print_buffered ($buffer,"$TMP_DIR/$TMP_FILE\.$seq_region_id",
+				 join("\t",$seq_region_id,$previous_seq_region_start, $previous_seq_region_start,
+				      $population, $_,
+				      $individual_information{$population}{$_}{genotype})."\n")} keys %{$individual_information{$population}};
+	}
 	#and finally, empty structures
 	%alleles_information = ();
 	%individual_information = ();
 	$previous_seq_region_start = $seq_region_start;
 	if ($allele_1 ne 'N' and $allele_2 ne 'N'){
-	    $alleles_information{$allele_1}++;
-	    $alleles_information{$allele_2}++;
+	    $alleles_information{$population_id}{$allele_1}++;
+	    $alleles_information{$population_id}{$allele_2}++;
 	    
-	    $individual_information{$individual_id}{allele_1} = $allele_1;
-	    $individual_information{$individual_id}{allele_2} = $allele_2;
+	    $individual_information{$population_id}{$individual_id}{allele_1} = $allele_1;
+	    $individual_information{$population_id}{$individual_id}{allele_2} = $allele_2;
 	}
     }
 }
 close IN or die "Could not close input file";
 #print remaining region, if has 2 alleles
-if (keys %alleles_information == 2){
-    convert_genotype(\%alleles_information,\%individual_information);
-    #print all individuals to a file
-    map {print_buffered ($buffer,"$TMP_DIR/$TMP_FILE\.$seq_region_id\.$population_id",
-			 join("\t",$seq_region_id,$previous_seq_region_start, $previous_seq_region_start,
-			      $population_id, $_,
-			      $individual_information{$_}{genotype})."\n")} keys %individual_information;
+foreach my $population (keys %alleles_information){
+    if (keys %{$alleles_information{$population}} <= 2){
+	convert_genotype($alleles_information{$population},$individual_information{$population});
+	#print all individuals to a file
+	map {print_buffered ($buffer,"$TMP_DIR/$TMP_FILE\.$seq_region_id",
+			     join("\t",$seq_region_id,$previous_seq_region_start, $previous_seq_region_start,
+				  $population, $_,
+				  $individual_information{$population}{$_}{genotype})."\n")} keys %{$individual_information{$population}};
+    }
 }
 print_buffered($buffer);
 #and run ld calculation
-my $file = "$TMP_DIR/$TMP_FILE\.$seq_region_id\.$population_id"; #file containing the genotype in the AA format
+my $file = "$TMP_DIR/$TMP_FILE\.$seq_region_id"; #file containing the genotype in the AA format
 #once the files are created, we have to calculate the ld
 my $call .= "calc_genotypes $file $file\.out";
 #print $call,"\n";
 system($call);
-#unlink($ld_file);
+unlink($ld_file);
 unlink("$TMP_DIR/$TMP_FILE\.$seq_region_id\.$population_id");
 
 #
@@ -109,22 +112,22 @@ sub convert_genotype{
     
     #let's convert the allele_1 allele_2 to a genotype in the AA, Aa or aa format, where A corresponds to the major allele and a to the minor
     foreach my $individual_id (keys %{$individual_information}){
-	#if both alleles are different, this is the Aa genotype
-	if ($individual_information->{$individual_id}{allele_1} ne $individual_information->{$individual_id}{allele_2}){
-	    $individual_information->{$individual_id}{genotype} = 'Aa';
-	}
-	#when they are the same, must find out which is the major
-	else{	    
-	    if ($alleles_ordered[0] eq $individual_information->{$individual_id}{allele_1}){
-		#it is the major allele
-		$individual_information->{$individual_id}{genotype} = 'AA';
+	    #if both alleles are different, this is the Aa genotype
+	    if ($individual_information->{$individual_id}{allele_1} ne $individual_information->{$individual_id}{allele_2}){
+		$individual_information->{$individual_id}{genotype} = 'Aa';
 	    }
-	    else{
-		$individual_information->{$individual_id}{genotype} = 'aa';
+	    #when they are the same, must find out which is the major
+	    else{	    
+		if ($alleles_ordered[0] eq $individual_information->{$individual_id}{allele_1}){
+		    #it is the major allele
+		    $individual_information->{$individual_id}{genotype} = 'AA';
+		}
+		else{
+		    $individual_information->{$individual_id}{genotype} = 'aa';
+		}
+		
 	    }
-	    
 	}
-    }
 }
 
 sub print_buffered {
