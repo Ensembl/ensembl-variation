@@ -96,7 +96,7 @@ my $call .= "calc_genotypes $file $file\.out";
 #print $call,"\n";
 system($call);
 unlink($ld_file);
-unlink("$TMP_DIR/$TMP_FILE\.$seq_region_id\.$population_id");
+unlink("$TMP_DIR/$TMP_FILE\.$seq_region_id");
 
 #
 # Converts the genotype into the required format for the calculation of the pairwise_ld value: AA, Aa or aa
