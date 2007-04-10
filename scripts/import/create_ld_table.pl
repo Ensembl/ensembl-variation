@@ -7,6 +7,10 @@ use ImportUtils qw(load);
 use Bio::EnsEMBL::Registry;
 use FindBin qw( $Bin );
 
+
+##
+##  run with bsub -q long -W14:00 -o /lustre/scratch1/ensembl/dr2/tag_snps/output_tag.txt perl create_ld_table.pl -tmpdir /lustre/scratch1/ensembl/dr2/tag_snps
+##  -tmpfile tag_snps.txt
 use constant MAX_SIZE => 500_000_000;
 my ($TMP_DIR, $TMP_FILE, $species);
 
@@ -50,19 +54,20 @@ foreach my $file (@files){
     @stats = stat($file);
     if ($stats[7] > MAX_SIZE){
 #once the files are created, we have to calculate the ld
-	$call = "bsub -q normal -J ld_calculation_$1 ";
+	$call = "bsub -W2:00 -M3500000 -R'select[mem>3500] rusage[mem=3500]' -q normal -J ld_calculation_$1 ";
     }
     $call .= "perl calculate_ld_table.pl -tmpdir $TMP_DIR -tmpfile $TMP_FILE -ldfile $file ";
   #  print $call,"\n";
     system($call);
 }
-$call = "bsub -w 'done(ld_calculation*)' -J waiting_ld date";
+sleep(60);
+$call = "bsub -K -W2:00 -w 'done(ld_calculation*)' -J waiting_ld date";
 system($call);
 #finally, import the data in the LD table
 $call = "cat $TMP_DIR/tag_snps*.out > $TMP_DIR/$TMP_FILE";
 system($call);
 load($dbVariation->dbc,qw(pairwise_ld sample_id seq_region_id seq_region_start seq_region_end r2));
-unlink("$TMP_DIR/tag_snps*.out");
+unlink(<$TMP_DIR/tag_snps*.out>);
 
 sub store_file{
     my $buffer = shift;
