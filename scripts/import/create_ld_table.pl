@@ -59,6 +59,7 @@ foreach my $file (@files){
     $call .= "perl calculate_ld_table.pl -tmpdir $TMP_DIR -tmpfile $TMP_FILE -ldfile $file ";
   #  print $call,"\n";
     system($call);
+    $call = '';
 }
 sleep(60);
 $call = "bsub -K -W2:00 -w 'done(ld_calculation*)' -J waiting_ld date";
