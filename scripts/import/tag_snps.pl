@@ -8,6 +8,8 @@ use Bio::EnsEMBL::Variation::DBSQL::DBAdaptor;
 use ImportUtils qw(load);
 use FindBin qw( $Bin );
 
+use constant MAX_SIZE => 30_000_000;
+
 my ($TMP_DIR, $TMP_FILE, $species);
 
 
@@ -19,6 +21,9 @@ warn("Make sure you have a updated ensembl.registry file!\n");
 
 my $registry_file ||= $Bin . "/ensembl.registry";
 
+##
+## bsub -q long -W12:00 -o /lustre/scratch1/ensembl/dr2/tag_snps/output_tag.txt perl tag_snps.pl -tmpdir /lustre/scratch1/ensembl/dr2/tag_snps -tmpfile tag_snps.txt
+##
 Bio::EnsEMBL::Registry->load_all( $registry_file );
 
 #added default options
@@ -27,9 +32,7 @@ $species ||= 'human';
 $TMP_DIR  = $ImportUtils::TMP_DIR;
 $TMP_FILE = $ImportUtils::TMP_FILE;
 
-
 my $dbVariation = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'variation');
-my $dbCore = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'core');
 
 my $population_id;
 my $population_name;
@@ -62,6 +65,7 @@ $sth = $dbVariation->dbc->prepare(qq{SELECT STRAIGHT_JOIN c.genotypes, c.seq_reg
 						WHERE c.sample_id = ip.individual_sample_id
 						AND   ip.population_sample_id $in_str
 						ORDER BY c.seq_region_id,c.seq_region_start
+#						LIMIT 10000
 					    },{mysql_use_result=>1});
 
 my ($genotypes, $seq_region_id, $seq_region_start,$individual_id);
@@ -104,56 +108,31 @@ while ($sth->fetch()){
 $sth->finish();
 print_buffered($buffer);
 my $call;
-my $file_name;
-my $chromosomes = &get_hugemem_chromosomes($dbCore,$seq_region);
+my @stats;
 #when the data is selected in the files (one per chromosome), send the jobs to the farm
+my $files_size = {};
 foreach my $file (keys %{$buffer}){
-    ($population_id) = $file =~ /tag_snps_(\d+)\-.*/; #extract the population_id from the name of the file
-    ($file_name) = $file =~ /\/(tag_snps_\d+.*)/;
-    ($seq_region_id) = $file =~ /tag_snps_\d+\-(\d+)\.txt/;
-    if (defined $chromosomes->{$seq_region_id} and $chromosomes->{$seq_region_id} eq 'hugemem'){
-	$call = "bsub -q hugemem -R'select[mem>10000] rusage[mem=10000]' -J tag_snps_$population_id ";
-	$call .= "/usr/local/bin/perl ";
+    @stats = stat($file);
+    $files_size->{$file} = $stats[7];
+}
+foreach my $file (sort {$files_size->{$b} <=> $files_size->{$a}} keys %{$files_size}){
+    $file =~ /tag_snps_(\d+)\-.*/; #extract the population_id from the name of the file
+    if ($files_size->{$file} > MAX_SIZE){
+	$call = "bsub -W2:00 -J tag_snps_$1 -R'select[myens_genomics1 < 200] rusage[myens_genomics1=10]' ";
     }
-    elsif (defined $chromosomes->{$seq_region_id} and $chromosomes->{$seq_region_id} eq 'bigmem'){
-	$call = "bsub -q bigmem -R'select[mem>3500] rusage[mem=3500]' -J tag_snps_$population_id ";
-	$call .= "/usr/local/ensembl/bin/perl ";
-    }
-    else{
-	$call = "bsub -J tag_snps_$population_id ";
-	$call .= "/usr/local/ensembl/bin/perl ";
-    }
-    $call .= "/nfs/acari/dr2/projects/src/ensembl/ensembl-variation/scripts/import/select_tag_snps.pl $file_name ";
-    $call .= " -tmpdir $TMP_DIR -population_id $population_id -species $species";
-#    print $call,"\n";
+    $call .= "/usr/local/ensembl/bin/perl select_tag_snps.pl $file ";
+    $call .= " -tmpdir $TMP_DIR -population_id $1 -species $species";
+    
+#   print $call,"\n";
     system($call); #send the job to one queue
+    $call = '';
     
 }
-$call = "bsub -K -w 'done(tag_snps*)' -J waiting_process sleep 1"; #waits until all snp_tagging have finished to continue
-system($call);
+
+ $call = "bsub -K -w 'done(tag_snps*)' -J waiting_process sleep 1"; #waits until all snp_tagging have finished to continue
+ system($call);
 
 &import_tagg_snps($dbVariation);    
-
-#method that will return a hash with seq_region that need to be run in hugemem queue
-sub get_hugemem_chromosomes{
-    my $dbCore = shift;
-    my $seq_region = shift;
-    my $chromosomes = {};
-    my $slice_adaptor = $dbCore->get_SliceAdaptor;
-    my $slice;
-    my %huge_chromosomes = (10=>1,11=>1,7=>1,13=>1,12=>1,2=>1,3=>1,9=>1,8=>1,1=>1,4=>1);
-    my %big_chromosomes = (19=>1,5=>1,'c5_H2'=>1,'c6_COX'=>1,15=>1,21=>1,17=>1,16=>1,20=>1,18=>1,14=>1,6=>1,'X'=>1,'c6_QBL'=>1);
-    foreach my $seq_region_id (keys %{$seq_region}){
-	$slice = $slice_adaptor->fetch_by_seq_region_id($seq_region_id);
-	if (defined $huge_chromosomes{$slice->seq_region_name}){
-	    $chromosomes->{$seq_region_id} = 'hugemem';
-	}
-	elsif (defined $big_chromosomes{$slice->seq_region_name}){
-	    $chromosomes->{$seq_region_id} = 'bigmem';
-	}
-    }
-    return $chromosomes;
-}
 
 #for a given population, gets all individuals that are children (have father or mother)
 sub get_siblings{
@@ -214,7 +193,7 @@ sub import_tagg_snps{
     unlink(<$TMP_DIR/snps_tagged_*>);
     #and finally, load the information
     load($dbVariation->dbc(), qw(tagged_variation_feature variation_feature_id sample_id));
-    unlink(<$TMP_DIR/tag_snps_*>);
+#    unlink(<$TMP_DIR/tag_snps_*>);
    
 }
 sub usage {
