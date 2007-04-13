@@ -26,10 +26,8 @@ Bio::EnsEMBL::Registry->load_all( $registry_file );
 my $dbVariation = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'variation');
 my $dbCore = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'core');
 
-#first, copy the file locally
-system("lsrcp ecs4a:$TMP_DIR/$ARGV[0] /tmp/$ARGV[0]");
 #first, calculate the MAF for the SNPs in the chromosome
-my $file = "/tmp/$ARGV[0]" if (defined @ARGV);
+my $file = "$ARGV[0]" if (defined @ARGV);
 die "Not possible to calculate SNP tagging without file with SNPs" if (!defined @ARGV);
 
 `sort -k 3 -o $file $file`; #order snps by position
@@ -73,7 +71,7 @@ my $seq_region_id = $1;
 my $pos_to_vf = {};
 my $host = `hostname`;
 chop $host;
-my $LD_values = &get_LD_chromosome($dbCore,$dbVariation,$seq_region_id,$r2,$population_id, $pos_to_vf);
+my $LD_values = &get_LD_chromosome($dbVariation,$seq_region_id,$r2,$population_id, $pos_to_vf);
 #do the algorithm
 my $remove_snps = {}; #hash containing the snps that must be removed from the entry, they have been ruled out
 foreach $seq_region_start (sort {$MAF_snps->{$b} cmp $MAF_snps->{$a}} keys %{$MAF_snps}){
@@ -84,7 +82,7 @@ foreach $seq_region_start (sort {$MAF_snps->{$b} cmp $MAF_snps->{$a}} keys %{$MA
     }
 }
 my $genotype_without_vf = 0;
-open OUT, ">/tmp/snps_tagged_$population_id\_$host\-$$\.txt" or die ("Could not open output file");
+open OUT, ">$TMP_DIR/snps_tagged_$population_id\_$host\-$$\.txt" or die ("Could not open output file");
 foreach my $position_vf (keys %{$MAF_snps}){
     if (! defined $pos_to_vf->{$position_vf}){ #some variations might not have LD, get dbID from database
 	#get it from the database
@@ -97,11 +95,9 @@ foreach my $position_vf (keys %{$MAF_snps}){
 	$genotype_without_vf++;
     }
 }
-print "Genotypes without vf $genotype_without_vf\n";
+#print "Genotypes without vf $genotype_without_vf\n";
 close OUT or die ("Could not close output file with tagged SNPs");
-system("lsrcp /tmp/snps_tagged_$population_id\_$host\-$$\.txt ecs4a:$TMP_DIR/snps_tagged_$population_id\_$host\-$$\.txt");
-system("rm -r /tmp/snps_tagged_$population_id\_$host\-$$\.txt");
-system("rm -r $file");
+unlink($file);
 
 #for a given position retrieve the vf_id from the database
 sub get_vf_id_from_position{
@@ -140,33 +136,25 @@ sub calculate_MAF{
 
 #creates a hash with all the variation_features in the chromosome with a r2 greater than r2
 sub get_LD_chromosome{
-    my $dbCore = shift;
     my $dbVariation = shift;
     my $seq_region_id = shift;
     my $r2 = shift;
     my $population_id = shift;
-    my $pos_to_vf = shift;
     
     my $variation_features = {};
-    my $ld_adaptor = $dbVariation->get_LDFeatureContainerAdaptor();
-    my $slice_adaptor = $dbCore->get_SliceAdaptor;
-    my $population_adaptor = $dbVariation->get_PopulationAdaptor;
-    my $population = $population_adaptor->fetch_by_dbID($population_id); 
-    my $slice = $slice_adaptor->fetch_by_seq_region_id($seq_region_id);
-    my $ld_container = $ld_adaptor->fetch_by_Slice($slice, $population);
- #returns a list with vf1 vf2 r2 sample_id
-    my ($vf1,$vf2);
-    foreach my $ld_key (keys %{$ld_container->{'ldContainer'}}){
-	foreach my $sample_id (keys %{$ld_container->{'ldContainer'}->{$ld_key}}){		    
-	    ($vf1,$vf2) = split /-/, $ld_key;
-	    $pos_to_vf->{$ld_container->{'variationFeatures'}->{$vf1}->start} = $vf1;
-	    $pos_to_vf->{$ld_container->{'variationFeatures'}->{$vf2}->start} = $vf2;
-	    if (($ld_container->{'ldContainer'}->{$ld_key}->{$sample_id}->{'r2'} > $r2) and ($sample_id == $population_id)){
-		#there is high LD between these 2 variations in this population
-		push @{$variation_features->{$ld_container->{'variationFeatures'}->{$vf1}->start}}, $ld_container->{'variationFeatures'}->{$vf2}->start;
-		push @{$variation_features->{$ld_container->{'variationFeatures'}->{$vf2}->start}}, $ld_container->{'variationFeatures'}->{$vf1}->start;
-	    }
-	}
+    my $sth = $dbVariation->dbc->prepare(qq{SELECT seq_region_start,seq_region_end
+						FROM pairwise_ld
+						WHERE seq_region_id = ?
+						AND r2 > ?
+						AND sample_id = ?
+					    },{mysql_use_result =>1});
+    $sth->execute($seq_region_id,$r2,$population_id);
+    my ($seq_region_start,$seq_region_end);
+    $sth->bind_columns(\$seq_region_start, \$seq_region_end);
+    while ($sth->fetch()){
+	push @{$variation_features->{$seq_region_start}}, $seq_region_end;
+	push @{$variation_features->{$seq_region_end}}, $seq_region_start;
     }
+    $sth->finish();
     return $variation_features;
 }
