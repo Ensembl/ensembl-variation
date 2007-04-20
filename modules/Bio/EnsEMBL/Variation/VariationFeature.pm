@@ -756,4 +756,23 @@ sub get_all_sources{
     }
     return \@sources;
 }
+
+=head2 ref_allele_string
+
+  Args       : none
+  Example    : $reference_allele_string = $self->ref_allele_string()
+  Description: Getter for the reference allele_string, always the first.
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub ref_allele_string{
+    my $self = shift;
+
+    my @alleles = split /[\|\\\/]/,$self->allele_string;
+    return $alleles[1];
+}
 1;
