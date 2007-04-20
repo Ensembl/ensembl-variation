@@ -773,6 +773,6 @@ sub ref_allele_string{
     my $self = shift;
 
     my @alleles = split /[\|\\\/]/,$self->allele_string;
-    return $alleles[1];
+    return $alleles[0];
 }
 1;
