@@ -10,6 +10,11 @@ use Data::Dumper;
 my ($species, $snpassay_file, $snpind_file,$population_name);
 
 
+
+#
+# bsub -q bigmem -W4:00 -R"select[mem>3500] rusage[mem=3500]" -M3500000
+#
+
 GetOptions('species=s' => \$species,
 	   'snpassay_file=s' => \$snpassay_file,
 	   'snpind_file=s' => \$snpind_file,
@@ -33,6 +38,7 @@ open SNP, ">$snpassay_file" or die "could not open output file for snp assay inf
 
 #first of all, write header for files
 print_snp_headers();
+print_ind_headers();
 #get data
 my $var_adaptor = $dbVariation->get_VariationAdaptor();
 my $pop_adaptor = $dbVariation->get_PopulationAdaptor();
@@ -48,38 +54,12 @@ close SNP or die "Could not close snp assay info file: $!\n";
 
 #will print the snpassay file header
 sub print_snp_headers{
-    #contact details
-    print SNP "TYPE:\tCONT\n";
-    print SNP "HANDLE:\tENSEMBL\n"; #should this be the source ??
-    print SNP "NAME:\tDaniel Rios\n"; #my name ??
-    print SNP "FAX:\t00441223494468\n";
-    print SNP "TEL:\t00441223494684\n";
-    print SNP "EMAIL:\tdani\@ebi.ac.uk\n";
-    print SNP "LAB:\tEnsembl project\n";
-    print SNP "INST:\tEuopearn Bioinformatics Institute\n";
-    print SNP "ADDR:\tEMBL-EBI,Wellcome Trust Genome Campus,Hinxton,CB10 1SD Cambridge, UK\n";
-    print SNP "||\n";
-    #publications
-    print SNP "TYPE:\tPUB:\n";
-    print SNP "||\n";
-    #method
-    print SNP "TYPE:\tMETHOD\n";
-    print SNP "HANDLE:\tENSEMBL\n";
-    print SNP "ID:\tEnsembl-SSAHA\n"; #which method ??
-    print SNP "METHOD_CLASS:\tComputation\n";
-    print SNP "SEQ_BOTH_STRANDS:\tNA\n"; #both strands ??
-    print SNP "TEMPLATE_TYPE:\tUNKNOWN\n";
-    print SNP "MULT_PCR_AMPLIFICATION:\tNA\n";
-    print SNP "MULT_CLONES_TESTED:\tNA\n";
-    print SNP "METHOD:\tComputationally discovered SNPs usng SSAHA\n"; #another comment ??
-    print SNP "||\n";
-    #population
-    print SNP "TYPE:\tPOPULATION\n";
-    print SNP "HANDLE:\tENSEMBL\n";
-    print SNP "ID:\t",$population_name,"\n";
-    print SNP "POP_CLASS:\tUNKNOWN\n";
-    print SNP "POPULATION:\t"; #add population description ??
-    print SNP "||\n";
+  
+    print_cont_section(SNP); #contacts
+    print_pub_section(SNP); #publications
+    print_method_section(IND); #methods
+    print_pop_section(SNP); #print population section
+
     #snpassay
     print SNP "TYPE:\tSNPASSAY\n";
     print SNP "HANDLE:\tENSEMBL\n";
@@ -92,6 +72,7 @@ sub print_snp_headers{
     print SNP "POPULATION:\t",$population_name,"\n";
     print SNP "COMMENT:\t\n"; #any comment ??
     print SNP "||\n";
+
 }
 
 
@@ -112,4 +93,77 @@ sub print_snp_data{
 	print SNP "3\'_FLANK:\t",$variation->three_prime_flanking_seq,"\n";
 	print SNP "||\n";
     }
+}
+
+
+#prints contacts section
+sub print_cont_section{
+    my $fh  = shift;
+
+  #contact details
+    print $fh "TYPE:\tCONT\n";
+    print $fh "HANDLE:\tENSEMBL\n"; #should this be the source ??
+    print $fh "NAME:\tDaniel Rios\n"; #my name ??
+    print $fh "FAX:\t00441223494468\n";
+    print $fh "TEL:\t00441223494684\n";
+    print $fh "EMAIL:\tdani\@ebi.ac.uk\n";
+    print $fh "LAB:\tEnsembl project\n";
+    print $fh "INST:\tEuopearn Bioinformatics Institute\n";
+    print $fh "ADDR:\tEMBL-EBI,Wellcome Trust Genome Campus,Hinxton,CB10 1SD Cambridge, UK\n";
+    print $fh "||\n";
+
+}
+
+#prints pub section
+
+sub print_pub_section{
+    my $fh = shift;
+
+   #publications
+    print $fh "TYPE:\tPUB:\n";
+    print $fh "||\n";
+
+}
+
+#print population section
+
+sub print_pop_section{
+    my $fh = shift;
+
+    #population
+    print $fh "TYPE:\tPOPULATION\n";
+    print $fh "HANDLE:\tENSEMBL\n";
+    print $fh "ID:\t",$population_name,"\n";
+    print $fh "POP_CLASS:\tUNKNOWN\n";
+    print $fh "POPULATION:\t"; #add population description ??
+    print $fh "||\n";
+
+}
+
+sub print_method_section{
+    my $fh = shift;
+
+    #method
+    print $fh "TYPE:\tMETHOD\n";
+    print $fh "HANDLE:\tENSEMBL\n";
+    print $fh "ID:\tEnsembl-SSAHA\n"; #which method ??
+    print $fh "METHOD_CLASS:\tComputation\n";
+    print $fh "SEQ_BOTH_STRANDS:\tNA\n"; #both strands ??
+    print $fh "TEMPLATE_TYPE:\tUNKNOWN\n";
+    print $fh "MULT_PCR_AMPLIFICATION:\tNA\n";
+    print $fh "MULT_CLONES_TESTED:\tNA\n";
+    print $fh "METHOD:\tComputationally discovered SNPs usng SSAHA\n"; #another comment ??
+    print $fh "||\n";
+
+}
+
+#prints the headers for the snpinduse file
+sub print_ind_headers{
+
+    print_cont_section(IND); #contacts section
+    print_pub_section(IND); #publications section
+    print_pop_section(IND); #population section
+    #print some individual specific section
+    print_method_section(IND); #method section
+    
 }
