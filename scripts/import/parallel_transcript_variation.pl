@@ -301,6 +301,7 @@ sub last_process{
 	$highest_splice_site = '';
 	$highest_priority_type = 'INTERGENIC';
 	$final_type = '';
+	$type = '';
       }
       $previous_variation_feature_id = $variation_feature_id;
 
@@ -330,7 +331,7 @@ sub last_process{
 	  $highest_splice_site = $splice_site;
 	}
       }
-    }
+  }
     #and print the last variation
 
     if (defined $consequence_type) {
