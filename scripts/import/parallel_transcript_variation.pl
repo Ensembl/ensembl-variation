@@ -127,35 +127,32 @@ sub transcript_variation {
 	$end = $row->[2];
 	$rf_start = $rf->seq_region_start();
 	$rf_end = $rf->seq_region_end();
+	#print "start is $start,end is $end,rf_start is $rf_start and rf_end is $rf_end\n";
 	if ($end >= $rf_start and $start <= $rf_end) {
 	  foreach my $g (@{$rf->regulated_genes()}) {
-            if ($g) {
-	      my $g_start = $g->seq_region_start;
-	      my $g_end = $g->seq_region_end;
-	      #SNPs needs to be out side gene+flanking region,otherwise will be considered later
-	      if ($end < $g_start - $UPSTREAM or $start > $g_end + $DNSTREAM ) {
-	        foreach my $tr (@{$g->get_all_Transcripts()}) {
-		  my @arr = ($tr->dbID,$row->[0],'\N','\N','\N','\N','\N','REGULATORY_REGION');
-		  if (! $done{$row->[0]}{$tr->dbID}) {#get rid of duplicated transcript entries
-		    print FH join("\t", @arr), "\n";
-		    $done{$row->[0]}{$tr->dbID}=1;
-		  }
-		}
-              }
-	    }
-	  }
-	  foreach my $tr (@{$rf->regulated_transcripts()}) {
-	    if ($tr) {
-	      my $tr_start = $tr->seq_region_start;
-	      my $tr_end = $tr->seq_region_end;
-	      #SNPs needs to be out side gene+flanking region,otherwise will be considered later
-	      if ($end < $tr_start - $UPSTREAM or $start > $tr_end + $DNSTREAM ) {
+	    my $g_start = $g->seq_region_start;
+	    my $g_end = $g->seq_region_end;
+	    #SNPs needs to be out side gene+flanking region,otherwise will be considered later
+	    if ($end < $g_start - $UPSTREAM or $start > $g_end + $DNSTREAM ) {
+	      foreach my $tr (@{$g->get_all_Transcripts()}) {
 		my @arr = ($tr->dbID,$row->[0],'\N','\N','\N','\N','\N','REGULATORY_REGION');
 		if (! $done{$row->[0]}{$tr->dbID}) {#get rid of duplicated transcript entries
 		  print FH join("\t", @arr), "\n";
 		  $done{$row->[0]}{$tr->dbID}=1;
 		}
-              }
+	      }
+	    }
+	  }
+	  foreach my $tr (@{$rf->regulated_transcripts()}) {
+	    my $tr_start = $tr->seq_region_start;
+	    my $tr_end = $tr->seq_region_end;
+	    #SNPs needs to be out side gene+flanking region,otherwise will be considered later
+	    if ($end < $tr_start - $UPSTREAM or $start > $tr_end + $DNSTREAM ) {
+	      my @arr = ($tr->dbID,$row->[0],'\N','\N','\N','\N','\N','REGULATORY_REGION');
+	      if (! $done{$row->[0]}{$tr->dbID}) {#get rid of duplicated transcript entries
+		print FH join("\t", @arr), "\n";
+		$done{$row->[0]}{$tr->dbID}=1;
+	      }
 	    }
 	  }
 	}
@@ -166,7 +163,7 @@ sub transcript_variation {
     # of the gene
     #next if $slice->seq_region_name() ne '17'; 
 
-    my $genes = $slice->get_all_Genes();
+    my $genes = $slice->get_all_Genes_by_type("protein_coding");
     # request all variations which lie in the region of a gene
     foreach my $g (@$genes) {
       #debug("Time to do gene ",$g->stable_id," : ",scalar(localtime(time)));
@@ -192,7 +189,7 @@ sub transcript_variation {
 	  $strand = $row->[3];
 	  expand(\$row->[4]);#expand the alleles
 	  my @alleles = split('/',$row->[4]);
-	  
+
 	  if($strand != $tr->strand()) {
 	    # flip feature onto same strand as transcript
 	    for(my $i = 0; $i < @alleles; $i++) {
@@ -201,14 +198,14 @@ sub transcript_variation {
 	    $strand = $tr->strand();
 	  }
 	  shift @alleles; #remove reference allele
-	  
+
 	  my $consequence_type;
-	
+
 	  $consequence_type = Bio::EnsEMBL::Variation::ConsequenceType->new($tr->dbID,$row->[0],$start,$end,$strand,\@alleles);
 
 	  # compute the effect of the variation on each of the transcripts
 	  # of the gene
-	
+
 
 	  my ($consequences);
 	  if ($row->[4] !~ /\+/){
@@ -301,7 +298,7 @@ sub last_process{
 	$highest_splice_site = '';
 	$highest_priority_type = 'INTERGENIC';
 	$final_type = '';
-	$type = '';
+        $type = '';
       }
       $previous_variation_feature_id = $variation_feature_id;
 
