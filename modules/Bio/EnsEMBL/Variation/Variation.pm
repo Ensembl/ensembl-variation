@@ -717,19 +717,30 @@ sub failed_description{
 
 sub derived_allele_frequency{
   my $self = shift;
-  my $allele = shift;
+  my $population = shift;
   my $daf;
 
-  if(!ref($allele) || !$allele->isa('Bio::EnsEMBL::Variation::Allele')) {
-      throw('Bio::EnsEMBL::Variation::Allele argument expected.');
+  if(!ref($population) || !$population->isa('Bio::EnsEMBL::Variation::Population')) {
+      throw('Bio::EnsEMBL::Variation::Population argument expected.');
   }
   my $ancestral_allele = $self->ancestral_allele();
   if (defined $ancestral_allele){
-      if ($ancestral_allele eq $allele->allele){
-	  $daf = 1 - $allele->frequency;
+      #get reference allele
+      my $vf_adaptor = $self->adaptor->db->get_VariationFeatureAdaptor();
+      my $vf = shift @{$vf_adaptor->fetch_all_by_Variation($self)};
+      my $ref_freq;
+      #get allele in population
+      my $alleles = $self->get_all_Alleles();
+      foreach my $allele (@{$alleles}){
+	  if (($allele->allele eq $vf->ref_allele_string) and ($allele->population->name eq $population->name)){
+	      $ref_freq = $allele->frequency;
+	  }
       }
-      elsif ($ancestral_allele ne $allele->allele){
-	  $daf = $allele->frequency;
+      if ($ancestral_allele eq $vf->ref_allele_string){
+	  $daf = 1 - $ref_freq
+      }
+      elsif ($ancestral_allele ne $vf->ref_allele_string){
+	  $daf = $ref_freq;
       }
   }
      
