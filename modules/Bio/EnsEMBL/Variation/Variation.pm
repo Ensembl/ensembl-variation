@@ -701,4 +701,39 @@ sub failed_description{
   return $self->{'failed_description'};
 }
 
+=head2 derived_allele_frequency
+
+  Arg[1]     : Bio::EnsEMBL::Variation::Allele  $allele 
+  Example    : $daf = $variation->derived_allele_frequency($allele);
+  Description: Gets the derived allele frequency for the allele. 
+               The DAF is the frequency of the allele that is different 
+               from the allele in Chimp
+  Returntype : float
+  Exceptions : none
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub derived_allele_frequency{
+  my $self = shift;
+  my $allele = shift;
+  my $daf;
+
+  if(!ref($allele) || !$allele->isa('Bio::EnsEMBL::Variation::Allele')) {
+      throw('Bio::EnsEMBL::Variation::Allele argument expected.');
+  }
+  my $ancestral_allele = $self->ancestral_allele();
+  if (defined $ancestral_allele){
+      if ($ancestral_allele eq $allele->allele){
+	  $daf = 1 - $allele->frequency;
+      }
+      elsif ($ancestral_allele ne $allele->allele){
+	  $daf = $allele->frequency;
+      }
+  }
+     
+  return $daf;
+}
+
 1;
