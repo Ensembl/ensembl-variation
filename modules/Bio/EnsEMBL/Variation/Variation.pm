@@ -703,11 +703,11 @@ sub failed_description{
 
 =head2 derived_allele_frequency
 
-  Arg[1]     : Bio::EnsEMBL::Variation::Allele  $allele 
-  Example    : $daf = $variation->derived_allele_frequency($allele);
-  Description: Gets the derived allele frequency for the allele. 
-               The DAF is the frequency of the allele that is different 
-               from the allele in Chimp
+  Arg[1]     : Bio::EnsEMBL::Variation::Population  $population 
+  Example    : $daf = $variation->derived_allele_frequency($population);
+  Description: Gets the derived allele frequency for the population. 
+               The DAF is the frequency of the reference allele that is 
+               different from the allele in Chimp
   Returntype : float
   Exceptions : none
   Caller     : general
