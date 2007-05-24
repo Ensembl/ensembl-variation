@@ -502,7 +502,7 @@ sub _objs_from_sth {
 
     if(!defined($cur_allele_id) || $cur_allele_id != $allele_id) {
       my $pop;
-      if($allele_sample_id) {
+      if($allele_sample_id) { 
         $pop = $seen_pops{$allele_sample_id} ||=
           $pa->fetch_by_dbID($allele_sample_id);
     }
