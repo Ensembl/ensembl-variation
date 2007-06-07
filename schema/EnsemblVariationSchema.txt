@@ -1,0 +1,406 @@
+= Sample =
+
+'''Sample'''
+ * sample_id : int(10) : Internal id
+ * name : varchar(255) : Name
+ * size : int : when sample is an individual or a population of unknown size it will have null.
+ * description : text : Description
+ * '''PRIMARY KEY'''(sample_id)
+
+''Sample'' is a base class to merge the ''Individual'' and ''Population'' into a more general concept so that both have a unique sample_id. So each ''Population'' and each ''Individual'' has its own unique record in ''Sample''.
+
+''Individual'' Extends the ''Sample'' and provides reference for the ancestors if available and allows to specify the gender.
+
+== Population ==
+
+'''Population'''
+ * sample_id : int(10)
+ * '''PRIMARY KEY''' (variation_id)
+
+'''Population_genotype'''
+ * population_genotype_id : int(10) : Internal id
+ * variation_id : int(10) : Foriegn key to Variation.variation_id
+ * allele_1 : varchar(255)
+ * allele_2 : varchar(255) 
+ * frequency : float : genotype frequency
+ * sample_id : int(10) : Foriegn key to Population.sample_id
+ * '''PRIMARY KEY''' (population_genotype_id)
+
+'''Population''' stores population wide information about frequencies for every different allele, for every ''Varation'' in the ''Population'' in the ''Allele'' table, It also stores the genotype information in the ''Population_genotype'' table. This does not allows to reconstruct the different haplotypes/genotypes but just know what the unique alternatives are for every polymorphic position separately. Genotype information about the alternatives for every ''Variation'' in the ''Population'' can be stored in the ''Population_genotype'' table.
+
+'''comment: ''' heterozygous location will have different allele_1 and allele_2, homozygous will have same value in both.
+
+'''Allele'''
+ * allele_id : int(10) : Internal id
+ * variation_id : int(10) : Foreign Key to Variation.variation_id
+ * allele : varchar(255) : Nucleotide value for this Allele
+ * frequency : float : Allele Frequency for this Allele
+ * sample_id : int(10) : Foreign Key to Population.sample_id
+ * '''PRIMARY KEY''' (allele_id)
+ * '''UNIQUE''' (variation_id, allele)
+
+Every ''Allele'' for every ''Variation'' for every ''Population'' will have a record in this table to count its frequency in the ''Population''. This allows for non infinite sites data.
+
+'''Population_structure'''
+ * super_population_sample_id : int(10) : Foreign Key to Population.sample_id
+ * sub_population_sample_id : int(10) : Foreign Key to Population.sample_id
+ * '''UNIQUE''' (super_population_sample_id, sub_population_sample_id),
+ * '''PRIMARY KEY''' (sub_population_sample_id, super_population_sample_id)
+
+'''Variation'''
+ * variation_id : int(10) : Interval id
+ * source_id : int(10) : Foreign Key to Source.source_id
+ * name : varchar(255) : Name
+ * ancestral_allele : text : Nucleotide value at the ancestral sequence.
+ * '''PRIMARY KEY''' (variation_id)
+ * '''UNIQUE''' (name)
+
+''Variation'' can be a SNP an insertion or a deletion, in fact any polymorphism in the sequence. 
+
+for example, suppose this simple set of 5 genotype sequences and a reference.
+Position 5 is a snp, position 8 had a deletion, and the region between position 8 and 9 had insertions on some of the strains.
+When there are multiple insertions in one place, they will all be aligned one against the other so they will all be of the same length.
+We assume the gap character is '-', in the table i use '~' to represent a gap that is not part of the reference coordinate system, just to make it more readable.
+
+||Position		||1||2||3||4||'''5'''||6||7||'''8'''||~||~||~||~||9||
+||Reference		||A||A||G||C||'''C'''||T||A||'''T'''||~||~||~||~||T||
+||sample 2 / allele 1	||A||A||G||C||'''C'''||T||A||'''-'''||~||~||~||~||T||
+||sample 2 / allele 2	||A||A||G||C||'''T'''||T||A||'''T'''||~||~||~||~||T||
+||sample 3 / allele 1	||A||A||G||C||'''C'''||T||A||'''T'''||~||~||~||~||T||
+||sample 3 / allele 2	||A||A||G||C||'''C'''||T||A||'''T'''||A||A||T||~||T||
+||sample 4 / allele 1	||A||A||G||C||'''T'''||T||A||'''T'''||~||~||~||~||T||
+||sample 4 / allele 2	||A||A||G||C||'''T'''||T||A||'''T'''||~||T||A||A||T||
+||sample 5 / allele 1	||A||A||G||C||'''T'''||T||A||'''T'''||~||~||~||~||T||
+||sample 5 / allele 2	||A||A||G||C||'''T'''||T||A||'''T'''||~||~||~||~||T||
+||sample 6 / allele 1	||A||A||G||C||'''C'''||T||A||'''T'''||~||~||~||~||T||
+||sample 6 / allele 2	||A||A||G||C||'''C'''||T||A||'''T'''||~||~||~||~||T||
+
+would mean:
+{{{
+INSERT INTO Sample(sample_id) VALUES(1);
+
+INSERT INTO Population(sample_id) VALUES(1);
+
+INSERT INTO Variation(variation_id, name, ancestral_allele) 
+VALUES(1, 'variation_at_position_5', 'C');
+
+
+-- Variation at position 5
+
+INSERT INTO 
+Population_genotype(population_genotype_id, variation_id, sample_id, 
+  allele_1, allele_2, frequency) 
+VALUES(1, 1, 1, 'C', 'T', 0.2);
+
+INSERT INTO 
+Population_genotype(population_genotype_id, variation_id, sample_id, 
+  allele_1, allele_2, frequency) 
+VALUES(2, 1, 1, 'C', 'C', 0.4);
+
+INSERT INTO 
+Population_genotype(population_genotype_id, variation_id, sample_id, 
+  allele_1, allele_2, frequency) 
+VALUES(3, 1, 1, 'T', 'T', 0.4);
+
+INSERT INTO Allele(allele_id, variation_id, sample_id, allele, frequency)
+VALUES(1, 1, 1, 'C', 0.5);
+
+INSERT INTO Allele(allele_id, variation_id, sample_id, allele, frequency)
+VALUES(2, 1, 1, 'T', 0.5);
+
+
+-- Variation at position 8
+
+INSERT INTO Variation(variation_id, name, ancestral_allele) 
+VALUES(2, 'variation_at_position_8', '----');
+
+INSERT INTO 
+Population_genotype(population_genotype_id, variation_id, sample_id, 
+  allele_1, allele_2, frequency) 
+VALUES(3, 2, 1, '-', 'T', 0.2);
+
+INSERT INTO 
+Population_genotype(population_genotype_id, variation_id, sample_id, 
+  allele_1, allele_2, frequency) 
+VALUES(4, 2, 1, 'T', 'T', 0.8);
+
+INSERT INTO Allele(allele_id, variation_id, sample_id, allele, frequency)
+VALUES(3, 2, 1, 'T', 0.9);
+
+INSERT INTO Allele(allele_id, variation_id, sample_id, allele, frequency)
+VALUES(4, 2, 1, '-', 0.1);
+
+
+-- Insertion between position 8 and 9
+
+INSERT INTO Variation(variation_id, name, ancestral_allele) 
+VALUES(3, 'insertion_between_position_8_and_9', 'T');
+
+INSERT INTO 
+Population_genotype(population_genotype_id, variation_id, sample_id, 
+  allele_1, allele_2, frequency) 
+VALUES(5, 3, 1, '----', '----', 0.6);
+
+INSERT INTO 
+Population_genotype(population_genotype_id, variation_id, sample_id, 
+  allele_1, allele_2, frequency) 
+VALUES(6, 3, 1, '----', 'AAT-', 0.2);
+
+INSERT INTO 
+Population_genotype(population_genotype_id, variation_id, sample_id, 
+  allele_1, allele_2, frequency) 
+VALUES(7, 3, 1, '-TAA', '----', 0.2);
+
+INSERT INTO Allele(allele_id, variation_id, sample_id, allele, frequency)
+VALUES(5, 2, 1, '----', 0.8);
+
+INSERT INTO Allele(allele_id, variation_id, sample_id, allele, frequency)
+VALUES(6, 2, 1, 'AAT-', 0.1);
+
+INSERT INTO Allele(allele_id, variation_id, sample_id, allele, frequency)
+VALUES(7, 2, 1, '-TAA', 0.1);
+
+}}}
+
+== Individual ==
+
+'''Individual'''
+ * sample_id : int(10) : Foreign Key to Sample.sample_id : PRIMARY KEY
+ * gender : {'Male', 'Female', 'Unknown'} : Gender
+ * father_individual_sample_id : int(10) : Foreign Key to Sample.sample_id
+ * mother_individual_sample_id : int(10) : Foreign Key to Sample.sample_id
+ * '''PRIMARY KEY'''(sample_id)
+
+'''Individual_population'''
+ * individual_sample_id : int(10) : Foreign Key to Individual.sample_id
+ * population_sample_id : int(10) : Foreign Key to Population.sample_id
+ * '''PRIMARY KEY''' (individual_sample_id, population_sample_id)
+
+''Individual''s stores information about every one of the sequences. multiple ''Individual'' records can be grouped into a ''Population'' and an ''Individual'' can belong to more then one ''Population'' in the ''Individual_population'' relation table
+
+For every ''Variation'' in every ''Sample'' this stores the nucleotide found in the ''Sample''.
+If the ''Sample'' is homozygous both ''allele_1'' and ''allele_2'' will be identical.
+If the ''Sample'' is heterozygous the two different nucleotide options will be stored in ''allele_1'' and ''allele_2''.
+
+'''Individual_genotype_multiple_bp'''
+ * sample_id : int(10) : Foreign Key to Sample.sample_id
+ * variation_id : int(10) : Foreign Key to Variation.variation_id
+ * allele_1 varchar(255) : First Allele (single nucleotide)
+ * allele_2 varchar(255) : Second Allele (single nucleotide)
+ * '''PRIMARY KEY'''(sample_id, variation_id)
+
+if we continue the above given example:
+
+{{{
+INSERT INTO Sample(sample_id) VALUES(2);
+INSERT INTO Sample(sample_id) VALUES(3);
+INSERT INTO Sample(sample_id) VALUES(4);
+INSERT INTO Sample(sample_id) VALUES(5);
+INSERT INTO Sample(sample_id) VALUES(6);
+
+INSERT INTO Individual(sample_id) VALUES(2);
+INSERT INTO Individual(sample_id) VALUES(3);
+INSERT INTO Individual(sample_id) VALUES(4);
+INSERT INTO Individual(sample_id) VALUES(5);
+INSERT INTO Individual(sample_id) VALUES(6);
+
+INSERT INTO Individual_population(individual_sample_id, population_sample_id) 
+VALUES(2,1);
+INSERT INTO Individual_population(individual_sample_id, population_sample_id) 
+VALUES(3,1);
+INSERT INTO Individual_population(individual_sample_id, population_sample_id) 
+VALUES(4,1);
+INSERT INTO Individual_population(individual_sample_id, population_sample_id)
+VALUES(5,1);
+INSERT INTO Individual_population(individual_sample_id, population_sample_id) 
+VALUES(6,1);
+
+
+
+CREATE TABLE tmp_individual_genotype_single_bp LIKE Individual_genotype_multiple_bp;
+
+
+-- Variation at position 5
+
+INSERT INTO 
+tmp_individual_genotype_single_bp(sample_id, variation_id, allele_1, allele_2) 
+VALUES(2, 1, 'C', 'T');
+
+INSERT INTO 
+tmp_individual_genotype_single_bp(sample_id, variation_id, allele_1, allele_2) 
+VALUES(3, 1, 'C', 'C');
+
+INSERT INTO 
+tmp_individual_genotype_single_bp(sample_id, variation_id, allele_1, allele_2) 
+VALUES(4, 1, 'T', 'T');
+
+INSERT INTO 
+tmp_individual_genotype_single_bp(sample_id, variation_id, allele_1, allele_2) 
+VALUES(5, 1, 'T', 'T');
+
+INSERT INTO 
+tmp_individual_genotype_single_bp(sample_id, variation_id, allele_1, allele_2) 
+VALUES(6, 1, 'C', 'C');
+
+
+-- Variation at position 8
+
+INSERT INTO 
+tmp_individual_genotype_single_bp(sample_id, variation_id, allele_1, allele_2) 
+VALUES(2, 2, '-', 'T');
+
+INSERT INTO 
+tmp_individual_genotype_single_bp(sample_id, variation_id, allele_1, allele_2) 
+VALUES(3, 2, 'T', 'T');
+
+INSERT INTO 
+tmp_individual_genotype_single_bp(sample_id, variation_id, allele_1, allele_2) 
+VALUES(4, 2, 'T', 'T');
+
+INSERT INTO 
+tmp_individual_genotype_single_bp(sample_id, variation_id, allele_1, allele_2) 
+VALUES(5, 2, 'T', 'T');
+
+INSERT INTO 
+tmp_individual_genotype_single_bp(sample_id, variation_id, allele_1, allele_2) 
+VALUES(6, 2, 'T', 'T');
+
+
+-- Insertion between position 8 and 9
+
+INSERT INTO 
+Individual_genotype_multiple_bp(sample_id, variation_id, allele_1, allele_2) 
+VALUES(2, 3, '----', '----');
+
+INSERT INTO 
+Individual_genotype_multiple_bp(sample_id, variation_id, allele_1, allele_2) 
+VALUES(3, 3, '----', 'AAT-');
+
+INSERT INTO 
+Individual_genotype_multiple_bp(sample_id, variation_id, allele_1, allele_2) 
+VALUES(4, 3, '----', '-TAA');
+
+INSERT INTO 
+Individual_genotype_multiple_bp(sample_id, variation_id, allele_1, allele_2) 
+VALUES(5, 3, '----', '----');
+
+INSERT INTO 
+Individual_genotype_multiple_bp(sample_id, variation_id, allele_1, allele_2) 
+VALUES(6, 3, '----', '----');
+
+}}}
+
+
+'''Variation_feature'''
+''Variation_feature''
+
+ * variation_feature_id : int(10) : Internal id
+
+ * variation_id : int(10) : Foreign key to Variation.variation_id
+ * variation_name : varchar(255) : Foreign key to Variation.name
+ * source_id : int(10) : Foreign key to Variation.source_id
+ * allele_string : text : '/' separated list of all possible alleles in the population.
+ * validation_status : SET(''cluster'',''freq'',''submitter'',''doublehit'',''hapmap'') : 
+
+ * seq_region_id : int(10) : Foreign Key to Seq_region.seq_region_id (in Core)
+ * seq_region_start : int : coordinate of start position in reference (Forign Key ?)
+ * seq_region_end : int : coordinate of end position in reference (Forign Key ?)
+ * seq_region_strand : tinyint : strand in reference this feature refers to (Foreign Key ?)
+
+ * map_weight : int :
+ * flags : {'genotyped'}
+ * consequence_type :  {''ESSENTIAL_SPLICE_SITE'',''STOP_GAINED'',''STOP_LOST'',''COMPLEX_INDEL'', ''FRAMESHIFT_CODING'', ''NON_SYNONYMOUS_CODING'',''SPLICE_SITE'',''SYNONYMOUS_CODING'', ''REGULATORY_REGION'',	 ''5PRIME_UTR'',''3PRIME_UTR'',''INTRONIC'',''UPSTREAM'',''DOWNSTREAM'', ''INTERGENIC'' } default ''INTERGENIC''
+ * '''PRIMARY KEY''' ( variation_feature_id )
+
+Provides the coordinates with respect to the reference sequence for the ''Variation''. 
+
+in our small example assuming the very simple coordinate system or just the 9 nucleotides in the reference:
+
+{{{
+
+-- Variation at position 5
+
+INSERT INTO variation_feature (
+	variation_feature_id, variation_id, variation_name, 
+	source_id, allele_string, validation_status,
+
+	seq_region_id, seq_region_start, 
+	seq_region_end, seq_region_strand, 
+
+	map_weight, flags, consequence_type
+) 
+
+VALUES (
+	1, 1, 'variation_at_position_5', 1, 'C/T', NULL, 
+	1, 5, 5, 1, 
+	1, 'genotyped', NULL
+);
+
+
+-- Variation at position 8
+
+INSERT INTO variation_feature ( ... ) 
+
+VALUES (
+	2, 2, 'variation_at_position_8', 1, '-/T', NULL, 
+	1, 8, 8, 1, 
+	1, 'genotyped', NULL
+);
+
+
+-- Insertion between position 8 and 9
+
+INSERT INTO variation_feature ( ... ) 
+
+VALUES (
+	3, 4, 'insertion_between_position_8_and_9', 1, '----/AAT-/-TAA', NULL, 
+	1, 8, 9, 1, 
+	1, 'genotyped', NULL
+);
+
+}}}
+
+'''Flanking_sequence'''
+ * variation_id : int(10) : Internal id
+ * up_seq : text
+ * down_seq : text
+ * up_seq_region_start : int
+ * up_seq_region_end : int
+ * down_seq_region_start : int
+ * down_seq_region_end : int
+ * seq_region_id : int(10)
+ * seq_region_strand : tinyint
+ * '''PRIMARY KEY''' (variation_id)
+
+''Flanking_sequence'' optionally extends the ''Variation'' table and caches the flanking sequence with respect to the reference (either by reference, value or both).
+
+'''comment : '''assuming we have a seq_region record with seq_region_id = 1 in core.
+
+{{{
+INSERT INTO Flanking_sequence (
+  variation_id, seq_region_id, up_seq_region_start, up_seq_region_end, 
+  down_seq_region_start, down_seq_region_end)
+VALUES(1, 1, 1, 4, 6, 7);
+}}}
+
+ == Coverage ==
+For every ''Individual'' on every interval we can define a degree of coverage
+
+'''Read_coverage'''
+ * seq_region_id : int(10) : Foreign Key to Seq_region.seq_region_id (in Core)
+ * seq_region_start : int : Start coordinate
+ * seq_region_end : int : End coordinate
+ * level : tinyint : Degree of coverage
+ * sample_id : int(10) : Foreign Key to Individual.sample_id
+ * '''UNIQUE'''(seq_region_id,seq_region_start)   
+
+
+ == Meta data ==
+
+''Source'' lists providers of the data, i.e. dbsnp or the facility that preformed the sequencing.
+This table can be referenced by ''Sample_synonym'', ''Variation_synonym'', ''Variation'', ''Allele_group'', ''Variation_group'' and ''Httag'' and simply provides the info about who provided the resource.
+
+''' Source '''
+ * source_id : int : Internal id
+ * name : text
+ * version : int
