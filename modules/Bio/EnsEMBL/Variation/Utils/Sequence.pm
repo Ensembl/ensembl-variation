@@ -107,6 +107,7 @@ GT C CC A AA T TT G GG - --); #we will need to decide what to do with alleles li
 sub variation_class{
     my $alleles = shift;
     return 'snp' if $alleles =~ /^[ACGT]([\|\\\/][ACGT])+$/i;
+    return 'cnv' if (($alleles eq 'cnv') || ($alleles eq 'CNV'));
 
     my @alleles = split /[\|\/\\]/, $alleles;
 
