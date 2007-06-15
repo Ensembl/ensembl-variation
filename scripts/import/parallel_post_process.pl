@@ -13,7 +13,7 @@ use Data::Dumper;
 use constant MAX_GENOTYPES => 6_000_000; #max number of genotypes per file. When more, split the file into regions
 use constant REGIONS => 15; #number of chunks the file will be splited when more than MAX_GENOTYPES
 
-my ($TMP_DIR, $TMP_FILE, $LIMIT, $PERLBIN);
+my ($TMP_DIR, $TMP_FILE, $LIMIT, $PERLBIN, $SCHEDULER);
 
 
 my ($vhost, $vport, $vdbname, $vuser, $vpass,
@@ -29,6 +29,7 @@ GetOptions('tmpdir=s'  => \$ImportUtils::TMP_DIR,
 	   'species=s' => \$species,
 	   'limit=i'   => \$limit,
            'perlbin=s' => \$PERLBIN,
+           'scheduler=s' => \$SCHEDULER,
 	   'top_level=i' => \$top_level,
 	   'num_processes=i' => \$num_processes,
 	   'variation_feature' => \$variation_feature,
@@ -42,7 +43,14 @@ GetOptions('tmpdir=s'  => \$ImportUtils::TMP_DIR,
 $num_processes ||= 1;
 
 $LIMIT = ($limit) ? " $limit " : ''; #will refer to position in a slice
-$PERLBIN ||= '/usr/local/ensembl/bin/perl';
+$PERLBIN   ||= '/usr/local/ensembl/bin/perl'; # Could use $^X?
+-x $PERLBIN or usage("Perl interpretor at $PERLBIN is not suitable. " .
+                     "See the -perlbin argument" );
+$SCHEDULER ||= 'LSF';
+$SCHEDULER = uc($SCHEDULER);
+
+my %valid_schedulers = map{$_=>1} qw( LSF PBS );
+$valid_schedulers{$SCHEDULER} || usage("-scheduler $SCHEDULER is invalid");
 
 usage('-num_processes must at least be 1') if ($num_processes == 0);
 usage('-species argument required') if(!$species);
@@ -274,6 +282,14 @@ sub parallel_transcript_variation{
     foreach my $slice (@slices_ordered) {
       $length_slices += $slice->length;
     }
+
+    my $batchid;
+    if( $SCHEDULER eq 'PBS' ){ # For PBS/qsub;
+      # Set a job that depends on the completion of all other jobs
+      $batchid = submit_qsub( q( echo 'sleep 1' ),
+                              [ -W => "depend=on:$num_processes",
+                                -N => "ptv_waiter" ] );
+    }
     
     #I must add up the length of all the slices to find the limit for each 
     my $sub_slice = int($length_slices / $num_processes);
@@ -294,17 +310,32 @@ sub parallel_transcript_variation{
 	if ($i+1 == $num_processes and $num_processes != 1); #the last slice, get the left slices
 
       my $command = 
-          ( "$PERLBIN parallel_transcript_variation.pl ".
+          ( "$PERLBIN $Bin/parallel_transcript_variation.pl ".
             "-species $species ".
             "-limit $limit ".
             "-tmpdir $TMP_DIR ".
             "-tmpfile $TMP_FILE ".
             "-num_processes $num_processes ".
             "-status_file $transcript_status_file" );
+
+      my $outfile = "$TMP_DIR/output_transcript_$i\_$$.txt";
+      my $errfile = "$TMP_DIR/error_transcript_$i\_$$.txt";
+      my $jobname = "ptv_job_$i";
       
-      $call = "bsub -a normal -o $TMP_DIR/output_transcript_$i\_$$.txt -q normal $command";
+      if( $SCHEDULER eq 'PBS' ){ # Use specified PBS/qsub
+        my $jobid = submit_qsub( $command,
+                                 [ '-W' => "depend=beforeany:$batchid",
+                                   '-o' => $outfile,
+                                   '-e' => $errfile,
+                                   '-v' => 'PERL5LIB',
+                                   '-N' => $jobname ] );
+        
+      }
+      else{ # Use default LSF/bsub
+        $call = "bsub -a normal -o $outfile -q normal $command";
+        system($call);
+      }
       $slice_min = $slice_max;
-      system($call);
     }
 }
 
@@ -885,6 +916,56 @@ sub create_failed_variation_table{
 	       );
 }
 
+#----------------------------------------------------------------------
+# A wrapper for submitting PBS qsub jobs;
+# First the READER (this process) opens a pipe (-|) on the WRITER.
+# The WRITER then opens a pipe (|-) on the RUNNER.
+# The RUNNER then execs qsub with command line options,
+# the WRITER writes the script to the RUNNER, 
+# and any output is collected by the READER.
+# Returns the qsub job ID.
+sub submit_qsub{
+  my $script = shift || die( "Need a script to submit to qsub!" );
+  my @qsub_args = @{ shift || [] };
+
+  local *QSUB;
+  local *QSUB_READER;
+  
+  my $jobid;
+  
+  my $writer_pid;
+  if( $writer_pid = open( QSUB_READER, '-|' ) ){
+    # READER - Reads stdout from RUNNER process
+    while( <QSUB_READER> ){
+      if( /^(\d+)/ ){
+        $jobid = $1;
+        print( "Job ID $1 submitted to qsub\n" );
+      }
+    }
+    close( QSUB_READER );
+  }
+  else{
+    unless( defined($writer_pid) ){ die("Could not fork : $!" ) }
+    my $runner_pid;
+    if( $runner_pid = open(QSUB, '|-') ){
+      # WRITER - Writes command to RUNNER process
+      print QSUB $script;
+      close QSUB;
+      unless( $? == 0 ){ die( "qsub failed; non-zero status" ) }
+      exit(0);
+    }
+    else{
+      # RUNNER - Runs the command; STDIN,STDOUT attached to WRITER,READER.
+      unless( defined($runner_pid) ){ die("Could not fork : $!" ) }
+      #warn join( " ", 'qsub', @qsub_args );
+      exec( 'qsub', @qsub_args );
+      die("Could not exec qsub : $!");
+    }
+  }
+  return $jobid;
+}
+
+#----------------------------------------------------------------------
 
 sub usage {
   my $msg = shift;
@@ -894,19 +975,12 @@ sub usage {
 usage: perl parallel_post_process.pl <options>
 
 options:
-    -chost <hostname>    hostname of core Ensembl MySQL database (default = ecs2)
-    -cuser <user>        username of core Ensembl MySQL database (default = ensro)
-    -cpass <pass>        password of core Ensembl MySQL database
-    -cport <port>        TCP port of core Ensembl MySQL database (default = 3364)
-    -cdbname <dbname>    dbname of core Ensembl MySQL database
-    -vhost <hostname>    hostname of variation MySQL database to write to
-    -vuser <user>        username of variation MySQL database to write to (default = ensadmin)
-    -vpass <pass>        password of variation MySQL database to write to
-    -vport <port>        TCP port of variation MySQL database to write to (default = 3306)
-    -vdbname <dbname>    dbname of variation MySQL database to write to
-    -limit <number>      limit the number of rows for testing
-    -tmpdir <dir>        temp directory to use (with lots of space!)
-    -tmpfile <filename>   name of temp file to use
+    -species <string>       species in ensembl.registry
+    -limit <number>         limit the number of rows for testing
+    -perlbin <path>         path to perl interpreter (def /usr/local/ensembl/bin/perl)
+    -scheduler <string>     job submission system to use (def LSF)
+    -tmpdir <dir>           temp directory to use (with lots of space!)
+    -tmpfile <filename>     name of temp file to use
     -num_processes <number> number of processes that are running (default = disabled)
     -variation_feature  fill in the Variation_feature table (default = disabled)
     -flanking_sequence  fill in the flanking sequence tables (default = disabled)
