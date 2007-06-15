@@ -43,6 +43,7 @@ $num_processes ||= 1;
 $LIMIT = ($limit) ? " $limit " : ''; #will refer to position in a slice
 
 usage('-num_processes must at least be 1') if ($num_processes == 0);
+usage('-species argument required') if(!$species);
 
 warn("Make sure you have a updated ensembl.registry file!\n");
 
@@ -50,9 +51,10 @@ my $registry_file ||= $Bin . "/ensembl.registry";
 
 Bio::EnsEMBL::Registry->load_all( $registry_file );
 
-my $cdba = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'core');
-my $vdba = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'variation');
-
+my $cdba = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'core')
+    || usage( "Cannot find core db for $species in $registry_file" );
+my $vdba = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'variation')
+    || usage( "Cannot find variation db for $species in $registry_file" );
 
 my $dbVar = $vdba->dbc->db_handle;
 my $dbCore = $cdba;
