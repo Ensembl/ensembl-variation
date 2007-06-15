@@ -13,7 +13,7 @@ use Data::Dumper;
 use constant MAX_GENOTYPES => 6_000_000; #max number of genotypes per file. When more, split the file into regions
 use constant REGIONS => 15; #number of chunks the file will be splited when more than MAX_GENOTYPES
 
-my ($TMP_DIR, $TMP_FILE, $LIMIT);
+my ($TMP_DIR, $TMP_FILE, $LIMIT, $PERLBIN);
 
 
 my ($vhost, $vport, $vdbname, $vuser, $vpass,
@@ -28,6 +28,7 @@ GetOptions('tmpdir=s'  => \$ImportUtils::TMP_DIR,
 	   'tmpfile=s' => \$ImportUtils::TMP_FILE,
 	   'species=s' => \$species,
 	   'limit=i'   => \$limit,
+           'perlbin=s' => \$PERLBIN,
 	   'top_level=i' => \$top_level,
 	   'num_processes=i' => \$num_processes,
 	   'variation_feature' => \$variation_feature,
@@ -41,6 +42,7 @@ GetOptions('tmpdir=s'  => \$ImportUtils::TMP_DIR,
 $num_processes ||= 1;
 
 $LIMIT = ($limit) ? " $limit " : ''; #will refer to position in a slice
+$PERLBIN ||= '/usr/local/ensembl/bin/perl';
 
 usage('-num_processes must at least be 1') if ($num_processes == 0);
 usage('-species argument required') if(!$species);
@@ -143,7 +145,7 @@ sub parallel_variation_feature{
     for (my $i = 0; $i < $num_processes ; $i++){
 	$limit = "AND variation_feature_id <= " . (($i+1) * $sub_variation + $min_variation-1) . " AND variation_feature_id >= " . ($i*$sub_variation + $min_variation) if ($i+1 < $num_processes);
 	$limit =  "AND variation_feature_id <= " .  $max_variation . " AND variation_feature_id >= " . ($i*$sub_variation + $min_variation) if ($i + 1 == $num_processes); #the last one takes the left rows
-	$call = "bsub -q normal -J $dbname\_variation_job_$i -m 'bc_hosts' -o $TMP_DIR/output_variation_feature_$i\_$$.txt /usr/local/ensembl/bin/perl parallel_variation_feature.pl -chost $chost -cuser $cuser -cdbname $cdbname -vhost $vhost -vuser $vuser -vport $vport -vdbname $vdbname -limit '$limit' -tmpdir $TMP_DIR -tmpfile $TMP_FILE -num_processes $num_processes -status_file $variation_status_file ";
+	$call = "bsub -q normal -J $dbname\_variation_job_$i -m 'bc_hosts' -o $TMP_DIR/output_variation_feature_$i\_$$.txt $PERLBIN parallel_variation_feature.pl -chost $chost -cuser $cuser -cdbname $cdbname -vhost $vhost -vuser $vuser -vport $vport -vdbname $vdbname -limit '$limit' -tmpdir $TMP_DIR -tmpfile $TMP_FILE -num_processes $num_processes -status_file $variation_status_file ";
 	$call .= "-cpass $cpass " if ($cpass);
 	$call .= "-cport $cport " if ($cport);
 	$call .= "-vpass $vpass " if ($vpass);
@@ -226,7 +228,7 @@ sub parallel_flanking_sequence{
   $sth->finish();  
   &print_buffered($buffer);
   for (my $i = 1;$i<=$num_processes;$i++){
-      $call = "bsub -q normal -m 'bc_hosts' -o $TMP_DIR/output_flanking_$i\_$$.txt /usr/local/ensembl/bin/perl parallel_flanking_sequence.pl -chost $chost -cuser $cuser -cdbname $cdbname -vhost $vhost -vuser $vuser -vport $vport -vdbname $vdbname -tmpdir $TMP_DIR -tmpfile $TMP_FILE -num_processes $num_processes -status_file $flanking_status_file -file $i ";
+      $call = "bsub -q normal -m 'bc_hosts' -o $TMP_DIR/output_flanking_$i\_$$.txt $PERLBIN parallel_flanking_sequence.pl -chost $chost -cuser $cuser -cdbname $cdbname -vhost $vhost -vuser $vuser -vport $vport -vdbname $vdbname -tmpdir $TMP_DIR -tmpfile $TMP_FILE -num_processes $num_processes -status_file $flanking_status_file -file $i ";
       $call .= "-cpass $cpass " if ($cpass);
       $call .= "-cport $cport " if ($cport);
       $call .= "-vpass $vpass " if ($vpass);
@@ -240,7 +242,7 @@ sub parallel_variation_group_feature{
     my $dbVar = shift;
 
     my $total_process = 0;
-    my $call = "bsub -q normal  -o $TMP_DIR/output_group_feature_$$\.txt /usr/local/ensembl/bin/perl parallel_variation_group_feature.pl -chost $chost -cuser $cuser -cdbname $cdbname -vhost $vhost -vuser $vuser -vport $vport -vdbname $vdbname -tmpdir $TMP_DIR -tmpfile $TMP_FILE ";
+    my $call = "bsub -q normal  -o $TMP_DIR/output_group_feature_$$\.txt $PERLBIN parallel_variation_group_feature.pl -chost $chost -cuser $cuser -cdbname $cdbname -vhost $vhost -vuser $vuser -vport $vport -vdbname $vdbname -tmpdir $TMP_DIR -tmpfile $TMP_FILE ";
     $call .= "-cpass $cpass " if ($cpass);
     $call .= "-cport $cport " if ($cport);
     $call .= "-vpass $vpass " if ($vpass);
@@ -290,8 +292,17 @@ sub parallel_transcript_variation{
       $limit = $slice_min . "," . ($slice_max-$slice_min) if ($i+1 < $num_processes or $num_processes==1);
       $limit = $slice_min . "," . (scalar(@slices_ordered)-$slice_min) 
 	if ($i+1 == $num_processes and $num_processes != 1); #the last slice, get the left slices
+
+      my $command = 
+          ( "$PERLBIN parallel_transcript_variation.pl ".
+            "-species $species ".
+            "-limit $limit ".
+            "-tmpdir $TMP_DIR ".
+            "-tmpfile $TMP_FILE ".
+            "-num_processes $num_processes ".
+            "-status_file $transcript_status_file" );
       
-      $call = "bsub -a normal -o $TMP_DIR/output_transcript_$i\_$$.txt  -q normal /usr/local/ensembl/bin/perl parallel_transcript_variation.pl -species $species -limit $limit -tmpdir $TMP_DIR -tmpfile $TMP_FILE -num_processes $num_processes -status_file $transcript_status_file ";
+      $call = "bsub -a normal -o $TMP_DIR/output_transcript_$i\_$$.txt -q normal $command";
       $slice_min = $slice_max;
       system($call);
     }
@@ -699,16 +710,16 @@ sub parallel_ld_populations {
     foreach my $file (keys %genotypes_file){
 #	if ($genotypes_file{$file} > MAX_GENOTYPES()){
 #	    &split_file($file,\%regions,$genotypes_file{$file},$dbname);
-#	    $call = "bsub -q normal -J '$dbname.pairwise_ld[1-".REGIONS()."]' -m 'bc_hosts' -o $TMP_DIR/output_pairwise_ld.txt /usr/local/ensembl/bin/perl calc_genotypes.pl $file\_chunk.\\\$LSB_JOBINDEX $file\_chunk_out.\\\$LSB_JOBINDEX"; #create a job array
+#	    $call = "bsub -q normal -J '$dbname.pairwise_ld[1-".REGIONS()."]' -m 'bc_hosts' -o $TMP_DIR/output_pairwise_ld.txt $PERLBIN calc_genotypes.pl $file\_chunk.\\\$LSB_JOBINDEX $file\_chunk_out.\\\$LSB_JOBINDEX"; #create a job array
 #	    $call = "bsub -q normal -J '$dbname.pairwise_ld[1-".REGIONS()."]' -m 'bc_hosts' ./ld_wrapper.sh $file\_chunk.\\\$LSB_JOBINDEX $file\_chunk_out.\\\$LSB_JOBINDEX"; #create a job array
 #	}
 #	else{
-#	    $call = "bsub -q normal -J '$dbname.pairwise_ld' -m 'bc_hosts' -o $TMP_DIR/output_ld_populations\_$$.txt /usr/local/ensembl/bin/perl calc_genotypes.pl $file $file\_out ";	    
+#	    $call = "bsub -q normal -J '$dbname.pairwise_ld' -m 'bc_hosts' -o $TMP_DIR/output_ld_populations\_$$.txt $PERLBIN calc_genotypes.pl $file $file\_out ";	    
 	    $call = "bsub -q normal -J '$dbname.pairwise_ld' -m 'bc_hosts' ./ld_wrapper.sh $file $file\_out";	    
 #	}
 	system($call);
     }
-    $call = "bsub -q normal -w 'done($dbname.pairwise_ld)' -m 'ecs4_hosts' -o $TMP_DIR/output_ld_populations_import.txt /usr/local/ensembl/bin/perl parallel_ld_populations.pl -chost $chost -cuser $cuser -cdbname $cdbname -vhost $vhost -vuser $vuser -vport $vport -vdbname $vdbname -tmpdir $TMP_DIR -tmpfile $TMP_FILE ";
+    $call = "bsub -q normal -w 'done($dbname.pairwise_ld)' -m 'ecs4_hosts' -o $TMP_DIR/output_ld_populations_import.txt $PERLBIN parallel_ld_populations.pl -chost $chost -cuser $cuser -cdbname $cdbname -vhost $vhost -vuser $vuser -vport $vport -vdbname $vdbname -tmpdir $TMP_DIR -tmpfile $TMP_FILE ";
     $call .= "-cpass $cpass " if ($cpass);
     $call .= "-cport $cport " if ($cport);
     $call .= "-vpass $vpass " if ($vpass);
