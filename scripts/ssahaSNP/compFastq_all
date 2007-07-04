@@ -1,0 +1,80 @@
+#! /software/bin/perl
+
+#compFastq ();
+splitFastq();
+
+sub compFastq{
+#while (</turing/mouse129_extra/yuan/human_celera/fastq/cra-homo_sapiens-wgs*.fastq>) {
+#while (</lustre/work1/ensembl/yuan/rat/STAR/reads/fastq/*fastq>) {
+#while (</lustre/work1/ensembl/yuan/SARA/platypus/reads_dir/nisc/*fastq>) {
+while (</lustre/scratch1/ensembl/yuan/mouse/perlegen/115/*fastq>) {
+  my $fastq_name = $_;
+  $fastq_name =~ s/\.fasta//;
+  print "fastq_name is $fastq_name\n";
+  #system("/nfs/acari/yuan/ensembl/src/ensembl-variation/scripts/ssahaSNP/compFastq $_ $fastq_name");
+  system("/nfs/acari/yuan/ensembl/src/ensembl-variation/scripts/ssahaSNP/compFastq_linux $_ $fastq_name");
+  #system("/nfs/team71/psg/zn1/phusion_pipeline/compFastq/compFastq $_ $fastq_name");
+}
+}
+
+sub splitFastq {
+  while (</lustre/scratch1/ensembl/yuan/mouse/perlegen/test/perl*.fastq>) {
+    my $fastq_name = $_;
+    open IN, "$fastq_name" or die "Can't open fastq file\n";
+    open OUT,">$fastq_name\_split" or die "Can't open fastq split file\n";
+    my ($seq_head,$qual_head,%seq_n,%done);
+    
+    while (<IN>) {
+      my ($seq,$qual,@seqs,@quals,$n);
+      chomp;
+      if (/^\@/) {
+        $seq_head = $_;
+        $seq_head =~ s/^\@//;
+        $done{'seq_head'}=1;
+        #print "seq_head is $seq_head\n";
+      }
+      elsif (/^[A-Za-z]/) {
+        $seq = $_;
+        $done{'seq'}=1;
+        @seqs = split '', $seq;
+        $n=0;
+        for ($n=0;$n+2000<length($seq);$n=$n+2000) {
+          $seq_n{$n}{'seq'}=join '',@seqs[$n..$n+2000-1];
+          $seq_n{$n}{'seq_head'} = "$n\_$seq_head";
+        }
+        $seq_n{$n}{'seq'}=join '',@seqs[$n..$#seqs];
+        $seq_n{$n}{'seq_head'} = "$n\_$seq_head";
+      }
+      elsif (/^\+/) {
+        $qual_head = $_;
+        $qual_head =~ s/^\+//;
+        $done{'qual_head'}=1;
+        #print "qual_head is $qual_head\n";
+      }
+      elsif (/^\!/) {
+        $qual = $_;
+        $done{'qual'}=1;
+        @quals = split '', $qual;
+        $n=0;
+        for ($n=0;$n+2000<length($qual);$n=$n+2000) {
+          $seq_n{$n}{'qual'}=join '',@quals[$n..$n+2000-1];
+          $seq_n{$n}{'qual_head'} = "$n\_$qual_head";
+        }
+        $seq_n{$n}{'qual'}=join '',@quals[$n..$#quals];
+        $seq_n{$n}{'qual_head'} = "$n\_$qual_head";
+      }                                                                     
+      if ($done{'seq_head'} and $done{'seq'} and $done{'qual_head'} and $done{'qual'}) {
+        foreach my $n (sort {$a<=>$b} keys %seq_n) {
+          my $seq = $seq_n{$n}{'seq'};
+          my $qual = $seq_n{$n}{'qual'};
+          my $seq_head = $seq_n{$n}{'seq_head'};
+          my $qual_head = $seq_n{$n}{'qual_head'};
+          print OUT "\@$seq_head\n$seq\n\+$qual_head\n$qual\n";
+        }
+        undef %done;
+        undef %seq_n;
+      }
+    }
+  }
+}
+    
