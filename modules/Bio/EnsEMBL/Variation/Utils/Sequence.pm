@@ -116,7 +116,7 @@ sub variation_class{
 	return 'het'
     }
     elsif(@alleles == 2){
-	if ((($alleles[0] =~ tr/ACTG//)== length($alleles[0]) && ($alleles[1] =~ tr/-//) == 1) || (($alleles[0] =~ tr/-//) == 1 && ($alleles[1] =~ tr/ACTG//) == length($alleles[1]))){
+	if ((($alleles[0] =~ tr/ACTGN//)== length($alleles[0]) && ($alleles[1] =~ tr/-//) == 1) || (($alleles[0] =~ tr/-//) == 1 && ($alleles[1] =~ tr/ACTGN//) == length($alleles[1]))){
 	    #A/- 2 alleles
 	    return 'in-del'
 	    }
