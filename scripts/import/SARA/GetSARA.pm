@@ -18,8 +18,8 @@ sub new {
   my $caller = shift;
   my $class = ref($caller) || $caller;
 
-  my ($dbCore, $dbVar, $dbSara, $tmp_dir, $tmp_file, $species) =
-        rearrange([qw(DBCORE DBVAR DBSARA TMPDIR TMPFILE SPECIES)],@_);
+  my ($dbCore, $dbVar, $dbSara, $tmp_dir, $tmp_file, $species, $source_id) =
+        rearrange([qw(DBCORE DBVAR DBSARA TMPDIR TMPFILE SPECIES SOURCE_ID)],@_);
 
   return bless {'dbSara' => $dbSara,
 		'dbCore' => $dbCore,
@@ -27,6 +27,7 @@ sub new {
 		'tmpdir' => $tmp_dir,
 		'tmpfile' => $tmp_file,
 		'species' => $species,
+		'source_id' => $source_id,
 	       }, $class;
 }
 
@@ -35,61 +36,61 @@ sub get_sara{
 
   my $self = shift;
   my $var_dbname = ($self->{'dbVar'}) ? $self->{'dbVar'}->dbname : "var_dbname";
+  my %rec_seq_region_id;
 
   my $sth = $self->{'dbSara'}->prepare(qq{SELECT distinct seq_region_id
                                           FROM $var_dbname.variation_feature
-                              });
-   my ($seq_region_id,%rec_seq_region_id);
-   $sth->execute();
-   $sth->bind_columns(\$seq_region_id);
+                                    });
+  my ($seq_region_id);
+  $sth->execute();
+  $sth->bind_columns(\$seq_region_id);
 
-   while ($sth->fetch()) {
-     $rec_seq_region_id{$seq_region_id}=1;
-   }
+  while ($sth->fetch()) {
+    $rec_seq_region_id{$seq_region_id}=1;
+  }
 
-  my $queue_hugemem = "-q hugemem -R'select[mem>2000] rusage[mem=2000]'";
-  my $queue_linux64 = "-q normal -R'select[type==LINUX64]'";
-  
-  #$self->update_feature_table();
+  #can't built index_file for human in lustre file system, ask Tim? (need 2-3 days), so need to use turing for flanking_qual part of the comput
+  my $queue_hugemem = "-q hugemem -R'select[mem>20000] rusage[mem=20000]'";
+  my $queue_linux64 = "-q long -R'select[type==LINUX64 && myens_genomics2 < 200] rusage[myens_genomics1=10]'";
+  my $queue_long = "-q normal -R'select[mem>5000] rusage[mem=5000]'";
+  my $queue;
+  $queue = $queue_hugemem if $self->{'tmpdir'} =~ /turing/;
+  $queue = $queue_long if $self->{'tmpdir'} !~ /turing/;
+
   #my $t0 = [gettimeofday];
   #debug("Time to start get_query_snp_pos $t0");
   #$self->get_query_snp_pos(\%rec_seq_region_id,$var_dbname);
   #my $t1 = [gettimeofday];
   #debug("Time to start get_flanking_seq_qual $t1");
-  #$self->get_flanking_seq_qual(\%rec_seq_region_id,$var_dbname,$queue_linux64);
+  #$self->make_reads_file(\%rec_seq_region_id,$queue);
+  #$self->get_flanking_seq_qual(\%rec_seq_region_id,$var_dbname,$queue);
   #print "Time to run GetSARA ", tv_interval($t0,$t1),"\n";
-  #$self->make_genotype_allele_table(\%rec_seq_region_id,$var_dbname);
+  #$self->make_genotype_allele_table(\%rec_seq_region_id,$var_dbname,$queue);
   $self->insert_allele_gtype_to_vardb(\%rec_seq_region_id,$var_dbname);
-  #$self->read_coverage($var_dbname);
-}
-
-sub update_feature_table {
-   my $self = shift;
-
-   #cigar line has query_start and query_end reversed when query_strand=-1, but we don't want this, we reverse them back so we can get right base and right quality values (we can alse reverse sequence but we can't reverse quality data)
-
-   $self->{'dbSara'}->do(qq{UPDATE ssahaSNP_feature sf, query_match_length ql 
-                           SET sf.query_start_new = ql.length-sf.query_end,
-                               sf.query_end_new = ql.length-sf.query_start
-                           WHERE sf.query_strand =-1
-                           AND sf.query_name=ql.query_name
-                          });
-
+  #$self->read_coverage($var_dbname);##this is been calculated ealier
+  #$self->remove_empty_tables();
+  #$self->merge_tables();
+  #$self->remove_tables();
+  #$self->merge_table_with_same_seq_region_id();
 }
 
 sub get_query_snp_pos {
   my $self = shift;
   my $rec_seq_region_id = shift;
   my $var_dbname = shift;
+  my $source_id = $self->{'source_id'};
   my $tmp_dir = $self->{'tmpdir'};
   my $tmp_file = $self->{'tmpfile'};
-
+  my $count;
 
   my $species = $self->{'species'};
-
+  
   foreach my $seq_region_id (keys %$rec_seq_region_id) {
-    my $call = "bsub -q normal -J $var_dbname\_ssaha_feature_job_$seq_region_id -o $tmp_dir/ssaha_feature_out\_$seq_region_id /usr/local/ensembl/bin/perl parallel_sara_feature.pl -species $species -seq_region_id $seq_region_id -job snp_pos -tmpdir $tmp_dir -tmpfile $tmp_file";
-    print "call is $call\n";
+  #foreach my $seq_region_id (98) {
+    my $call = "bsub -q normal -R'select[myens_genomics2 < 200] rusage[myens_genomics2=10]' -J $var_dbname\_ssaha_feature_job_$seq_region_id -o $tmp_dir/ssaha_feature_out\_$seq_region_id /usr/local/ensembl/bin/perl parallel_sara_zm.pl -species $species -source_id $source_id -seq_region_id $seq_region_id -job snp_pos -tmpdir $tmp_dir -tmpfile $tmp_file";
+    $count++;
+    
+    print "call is $call $count\n";
     system($call);
   }
 
@@ -99,42 +100,136 @@ sub get_query_snp_pos {
 }
 
 sub get_flanking_seq_qual {
-
+  ##use farm run smaller jobs or use turing run all jobs
   my $self = shift;
   my $rec_seq_region_id = shift;
   my $var_dbname = shift;
   my $queue = shift;
-
+  my $index_file;
+  my $species = $self->{'species'};
   my $tmp_dir = $self->{'tmpdir'};
   my $tmp_file = $self->{'tmpfile'};
-
-  my $species = $self->{'species'};
   my $count;
+  my $defined_table_row = 100000;
+  my $reads_dir;
+  $reads_dir = "/lustre/scratch1/ensembl/yuan/tmp/mouse/reads_out" if $tmp_dir =~ /lustre/;
+  $reads_dir = "/turing/mouse129/yuan/mouse/sanger_mouse/input_dir/reads_dir" if $tmp_dir =~ /turing/;
+  #job 1 somehow failed with memory 7 GB, so sent to turing, but only maxmem 3GB
+
+  my $call; 
   foreach my $seq_region_id (keys %$rec_seq_region_id) {
-    my $call = "bsub $queue -J $var_dbname\_ssaha_flank_job_$seq_region_id -o $tmp_dir/ssaha_flank_out\_$seq_region_id /usr/local/ensembl64/bin/perl parallel_sara_feature.pl -species $species -seq_region_id $seq_region_id -job flank -tmpdir $tmp_dir -tmpfile $tmp_file";
-    $count++;
-    print "call is $call $count\n";
-    system($call);
-    sleep(1200);
+  #foreach my $seq_region_id (6) {
+    my $row_count_ref = $self->{'dbSara'}->db_handle->selectall_arrayref(qq{SELECT COUNT(*) FROM snp_pos_$seq_region_id});
+    my $row_count = $row_count_ref->[0][0];
+    if ($row_count > $defined_table_row) {
+      my $reads_file = "$reads_dir/reads_out_$seq_region_id";
+      $call = "bsub $queue -J $var_dbname\_ssaha_flank_job_$seq_region_id -o $tmp_dir/ssaha_flank_out\_$seq_region_id perl parallel_sara_zm.pl -species $species -seq_region_id $seq_region_id -job flank -reads_file $reads_file -tmpdir $tmp_dir -tmpfile $tmp_file";
+    }
+    else {
+    my $reads_file = "$reads_dir/reads_out_small";
+    $call = "bsub $queue -J $var_dbname\_ssaha_flank_job_$seq_region_id -o $tmp_dir/ssaha_flank_out\_$seq_region_id perl parallel_sara_zm.pl -species $species -seq_region_id $seq_region_id -job flank -reads_file $reads_file -tmpdir $tmp_dir -tmpfile $tmp_file";
+    }
+    $count++;      
+    print "call is $call $count\n";      
+    system($call);      
+    sleep(10);  
   }
 
   my $call1 = "bsub -q normal -K -w 'done($var_dbname\_ssaha_flank_job*)' -J waiting_process sleep 1"; #waits until all variation features have finished to continue
   system($call1);
 }
 
-sub make_genotype_allele_table {
+sub make_reads_file {
+  ##use turing run all seq_region_ids
+  my $self = shift;
+  my $rec_seq_region_id = shift;
+  my $queue = shift;
+  my $tmp_dir = $self->{'tmpdir'};
+  my $tmp_file = $self->{'tmpfile'};
+  my $reads_dir = "/turing/mouse129/yuan/mouse/sanger_mouse/input_dir";
+  my $defined_table_row = 100000;
+  my (@big_seq_region_id,@small_seq_region_id);
+  
+  foreach my $seq_region_id (keys %$rec_seq_region_id) {
+  #foreach my $seq_region_id (226066) {
+    my $row_count_ref = $self->{'dbSara'}->db_handle->selectall_arrayref(qq{SELECT COUNT(*) FROM snp_pos_$seq_region_id});
+    my $row_count = $row_count_ref->[0][0];
+    if ($row_count > $defined_table_row) {
+      push @big_seq_region_id,$seq_region_id;
+    }
+    else {
+      push @small_seq_region_id, $seq_region_id;
+    }
+  }                                                         
+  if ($tmp_dir !~ /turing/) {
+    die "search_read job has to run on turing\n";
+  }
 
+  foreach my $seq_region_id (@big_seq_region_id) {
+  #foreach my $seq_region_id (226066) {
+    debug("Dumping reads names for $seq_region_id...");
+
+    dumpSQL($self->{'dbSara'},qq{SELECT query_name FROM snp_pos_$seq_region_id});
+
+    system("sort $tmp_dir/$tmp_file |uniq >$reads_dir/reads_dir/reads_name_$seq_region_id");
+  
+    ###needs 50GB memeory to run search_read (for any size of reads_name)
+    system("bsub -q hugemem -R'select[mem>50000] rusage[mem=50000]' -J reads_file_$seq_region_id -o $reads_dir/reads_dir/out_reads_file_$seq_region_id /nfs/team71/psg/zn1/bin/search_read -fastq 1 $reads_dir/reads_dir/reads_name_$seq_region_id $reads_dir/reads_dir/reads_out_$seq_region_id $reads_dir/readname.tag $reads_dir/*fastq");
+
+    if ($? == -1) {
+      print "failed to execute: $!\n";
+    }
+    elsif ($? & 127) {
+      printf "child died with signal %d, %s coredump\n",
+	($? & 127),  ($? & 128) ? 'with' : 'without';
+    }
+    else {
+      printf "child exited with value %d\n", $? >> 8;
+    }
+  }
+
+  foreach my $seq_region_id (@small_seq_region_id) {
+    debug("Dumping reads names for $seq_region_id...");    
+    dumpSQL($self->{'dbSara'},qq{SELECT query_name FROM snp_pos_$seq_region_id});    
+    system("sort $tmp_dir/$tmp_file |uniq >>$reads_dir/reads_dir/reads_name_small");
+  }
+  ###needs 50GB memeory to run search_read (for any size of reads_name)    
+  system("bsub -q hugemem -R'select[mem>50000] rusage[mem=50000]' -J reads_file_small -o $reads_dir/reads_dir/out_reads_file_small /nfs/team71/psg/zn1/bin/search_read -fastq 1 $reads_dir/reads_dir/reads_name_small $reads_dir/reads_dir/reads_out_small $reads_dir/readname.tag $reads_dir/*fastq");
+
+  if ($? == -1) {
+    print "failed to execute: $!\n";
+  }
+  elsif ($? & 127) {
+    printf "child died with signal %d, %s coredump\n",
+    ($? & 127),  ($? & 128) ? 'with' : 'without';
+  }
+  else {
+    printf "child exited with value %d\n", $? >> 8;
+  }
+                                                     
+  my $call1 = "bsub -q hugemem -R'select[mem>100] rusage[mem=100]' -K -w 'done(reads_file*)' -J waiting_process sleep 1"; #waits until all variation features have finished to continue
+  system($call1);
+  system("scp $reads_dir/reads_dir/reads_out_*.fastq farm-login:/lustre/scratch1/ensembl/yuan/tmp/mouse/reads_out");
+  #return ("$reads_dir/reads_dir/reads_out_$seq_region_id$t\_000.fastq");
+
+}
+
+sub make_genotype_allele_table {
+  ##use farm run these jobs  
   my $self = shift;
   my $rec_seq_region_id = shift;
   my $var_dbname = shift;
+  my $queue = shift;
   my $tmp_dir = $self->{'tmpdir'};
   my $tmp_file = $self->{'tmpfile'};
-
+  my $count;
   my $species = $self->{'species'};
-
-  foreach my $seq_region_id (keys %$rec_seq_region_id) {
-    my $call = "bsub -q bigmem -R'select[mem>5000] rusage[mem=5000]' -J $var_dbname\_ssaha_gtype_job_$seq_region_id -o $tmp_dir/ssaha_gtype_out\_$seq_region_id /usr/local/ensembl/bin/perl parallel_sara_feature.pl -species $species -seq_region_id $seq_region_id -job gtype_allele -tmpdir $tmp_dir -tmpfile $tmp_file";
-    print "call is $call\n";
+  
+  #foreach my $seq_region_id (keys %$rec_seq_region_id) {
+  foreach my $seq_region_id (16) { 
+    my $call = "bsub -q normal -R'select[myens_genomics2 < 200] rusage[myens_genomics2=10]' -J $var_dbname\_ssaha_gtype_job_$seq_region_id -o $tmp_dir/ssaha_gtype_out\_$seq_region_id perl parallel_sara_zm.pl -species $species -seq_region_id $seq_region_id -job gtype_allele -tmpdir $tmp_dir -tmpfile $tmp_file";
+    $count++;
+    print "call is $call $count\n";
     system($call);
   }
 
@@ -146,37 +241,55 @@ sub insert_allele_gtype_to_vardb {
 
   my ($self, $rec_seq_region_id, $var_dbname) = @_;
 
-  #$self->{'dbVar'}->do(qq{ALTER TABLE allele add unique index unique_allele_idx(var+iation_id,allele,sample_id)});
+
+   $self->{'dbVar'}->do(qq{ALTER TABLE allele add unique index unique_allele_idx(variation_id,allele,sample_id)});
+ 
+   $self->{'dbVar'}->do(qq{CREATE TABLE tmp_individual_genotype_single_bp (
+                          variation_id int not null,allele_1 varchar(255),allele_2 varchar(255),sample_id int,
+                          key variation_idx(variation_id),
+                          key sample_idx(sample_id)
+                          ) MAX_ROWS = 100000000}
+   );
   
-  foreach my $seq_region_id (keys %$rec_seq_region_id) {
-    #insert individual allele first
-    $self->{'dbSara'}->do(qq{INSERT IGNORE  INTO $var_dbname.allele (variation_id,allele,sample_id) select ga.variation_id,ga.allele,ip.population_sample_id from gtype_allele_$seq_region_id ga, $var_dbname.sample s, $var_dbname.individual_population ip where ga.sample_name = s.name and s.sample_id = ip.individual_sample_id});
-    #then insert reference allele
-    $self->{'dbSara'}->do(qq{INSERT IGNORE INTO $var_dbname.allele (variation_id,allele,sample_id) select ga.variation_id,ga.allele,s.sample_id from gtype_allele_$seq_region_id ga, $var_dbname.sample s where ga.sample_name = s.name and s.name like "ref%"}) ;
-    $self->{'dbVar'}->do(qq{DROP INDEX unique_allele_idx ON allele});
-    $self->{'dbSara'}->do(qq{INSERT INTO $var_dbname.tmp_individual_genotype_single_bp
-    (variation_id,allele_1,allele_2,sample_id) select ig.variation_id,ig.allele_1,ig.allele_2,s.sample_id from tmp_individual_genotype_single_bp_$seq_region_id ig, $var_dbname.sample s where ig.sample_name = s.name});
-  }
+  $self->{'dbVar'}->do(qq{CREATE UNIQUE INDEX ind_genotype_idx ON tmp_individual_genotype_single_bp(variation_id,sample_id,allele_1,allele_2)});
+  
+  debug("Insert individual allele first...");
+  $self->{'dbSara'}->do(qq{INSERT IGNORE  INTO $var_dbname.allele (variation_id,allele,sample_id) select ga.variation_id,ga.allele,ip.population_sample_id from gtype_allele ga, $var_dbname.sample s, $var_dbname.individual_population ip where ga.sample_name = s.name and s.sample_id = ip.individual_sample_id});
+  
+  debug("Then insert reference allele...");
+  $self->{'dbSara'}->do(qq{INSERT IGNORE INTO $var_dbname.allele (variation_id,allele,sample_id) select ga.variation_id,ga.allele,s.sample_id from gtype_allele ga, $var_dbname.sample s where ga.sample_name = s.name and s.name like "ref%"}) ;
+  
+  debug("insert into tmp_genotype table...");
+  $self->{'dbSara'}->do(qq{INSERT IGNORE INTO $var_dbname.tmp_individual_genotype_single_bp
+    (variation_id,allele_1,allele_2,sample_id) select ig.variation_id,ig.allele_1,ig.allele_2,s.sample_id from tmp_individual_genotype_single_bp ig, $var_dbname.sample s where ig.sample_name = s.name});
+  
+
+  $self->{'dbVar'}->do(qq{DROP INDEX unique_allele_idx ON allele});
+  $self->{'dbVar'}->do(qq{DROP INDEX ind_genotype_idx ON tmp_individual_genotype_single_bp});
+
 
   #delete entries from variation, variation_feature and flanking_sequence tables that variation_id is not in allele and tmp_genotype_single_bp table
 
-  $self->{'dbSara'}->do(qq{CREATE TABLE variation_old SELECT * FROM $var_dbname.variation});
-  $self->{'dbSara'}->do(qq{CREATE TABLE variation_feature_old SELECT * FROM $var_dbname.variation_feature});
+  #$self->{'dbSara'}->do(qq{CREATE TABLE variation_old SELECT * FROM $var_dbname.variation});
+  #$self->{'dbSara'}->do(qq{CREATE TABLE variation_feature_old SELECT * FROM $var_dbname.variation_feature});
   $self->{'dbSara'}->do(qq{CREATE TABLE flanking_sequence_old SELECT * FROM $var_dbname.flanking_sequence});
 
-  $self->{'dbVar'}->do(qq{DELETE FROM v USING variation v LEFT JOIN tmp_individual_genotype_single_bp t ON v.variation_id = t.variation_id
-                           WHERE t.variation_id IS NULL
-                          });
-  $self->{'dbVar'}->do(qq{DELETE FROM vf USING variation_feature vf LEFT JOIN tmp_individual_genotype_single_bp t ON vf.variation_id = t.variation_id
-                           WHERE t.variation_id IS NULL
-                          });
-  $self->{'dbVar'}->do(qq{DELETE FROM f USING flanking_sequence f LEFT JOIN tmp_individual_genotype_single_bp t ON f.variation_id = t.variation_id
-                           WHERE t.variation_id IS NULL
-                          });
+
+  $self->{'dbVar'}->do(qq{CREATE TABLE uniq_var_id_tmp_gtype SELECT DISTINCT variation_id FROM tmp_individual_genotype_single_bp});
+  $self->{'dbVar'}->do(qq{ALTER TABLE uniq_var_id_tmp_gtype ADD INDEX variation_idx(variation_id)});  
+   $self->{'dbVar'}->do(qq{DELETE FROM v USING variation v LEFT JOIN uniq_var_id_tmp_gtype u ON v.variation_id = u.variation_id
+                            WHERE u.variation_id IS NULL
+                           });
+   $self->{'dbVar'}->do(qq{DELETE FROM vf USING variation_feature vf LEFT JOIN uniq_var_id_tmp_gtype u ON vf.variation_id = u.variation_id
+                            WHERE u.variation_id IS NULL
+                           });
+   $self->{'dbVar'}->do(qq{DELETE FROM f USING flanking_sequence f LEFT JOIN uniq_var_id_tmp_gtype u ON f.variation_id = u.variation_id
+                            WHERE u.variation_id IS NULL
+                           });
 }
 
 sub read_coverage {
-
+  #not used here
   my $self = shift;
   my $var_dbname = shift;
   my $tmp_dir = $self->{'tmpdir'};
@@ -185,8 +298,8 @@ sub read_coverage {
   my $species = $self->{'species'};
 
 
-  my $alignment_file ="/turing/mouse129_extra/yuan/human_celera/analysis/chimp/ALIGNMENT_FILE";
-  #my $alignment_file ="/ecs2/scratch4/yuan/hum/CELERA/read_coverage/chimp/TEST";
+  #my $alignment_file ="/turing/mouse129_extra/yuan/human_celera/analysis/chimp/ALIGNMENT_FILE";
+  my $alignment_file ="/lustre/work1/ensembl/yuan/rat/STAR/output_dir/ALIGNMENT_FILE";
   my $sth = $self->{'dbCore'}->prepare(qq{SELECT sr.seq_region_id,sr.name
                                  FROM   seq_region_attrib sra, attrib_type at, seq_region sr
                                  WHERE sra.attrib_type_id=at.attrib_type_id 
@@ -203,12 +316,90 @@ sub read_coverage {
 
   foreach my $seq_region_id (keys %rec_seq_region) {
     my $seq_region_name = $rec_seq_region{$seq_region_id};
-    my $call = "bsub -q hugemem -R'select[mem>3000] rusage[mem=3000]' -J $var_dbname\_read_coverage_job_$seq_region_id -o /$tmp_dir/read_coverage_out\_$seq_region_id /usr/local/bin/perl /nfs/acari/yuan/ensembl/src/ensembl-variation/scripts/import/parallel_sara_feature.pl -species $species -seq_region_name $seq_region_name -job read_coverage -alignment_file $alignment_file -tmpdir $tmp_dir -tmpfile $tmp_file";
+    my $call = "bsub -q bigmem -R'select[mem>3000] rusage[mem=3000]' -J $var_dbname\_read_coverage_job_$seq_region_id -o /$tmp_dir/read_coverage_out\_$seq_region_id /usr/local/bin/perl /nfs/acari/yuan/ensembl/src/ensembl-variation/scripts/import/parallel_sara_feature.pl -species $species -seq_region_name $seq_region_name -job read_coverage -alignment_file $alignment_file -tmpdir $tmp_dir -tmpfile $tmp_file";
     print "call is $call\n";
     system($call);
   }
   my $call1 = "bsub -q normal -K -w 'done($var_dbname\_read_coverage_job*)' -J waiting_process sleep 1"; #waits until all variation features have finished to continue
   system($call1);
+}
+
+sub merge_tables {
+
+  my ($self) = @_;
+
+  #foreach my $table ("combine_feature","snp_pos","flanking_qual","gtype_allele","failed_flanking_qual","failed_gtype","tmp_individual_genotype_single_bp") {
+  foreach my $table ("failed_gtype","gtype_allele","tmp_individual_genotype_single_bp") {
+    debug("Merge table $table...");
+    my $single_table_ref = $self->{'dbSara'}->db_handle->selectall_arrayref(qq{SHOW tables like "$table\_%"});
+    my @tables = map {$_->[0] } @$single_table_ref;
+
+    $self->{'dbSara'}->do(qq{CREATE TABLE  $table like $tables[0]});
+
+    my $table_names = join ',',@tables;
+    #print "table_names is $table_names\n";
+    $self->{'dbSara'}->do(qq{ALTER TABLE $table engine = merge union($table_names) insert_method=last});
+  }
+}
+
+sub remove_tables {
+
+  my ($self) = @_;
+
+  #foreach my $table ("combine_feature","snp_pos","failed_flanking_qual","flanking_qual","gtype_allele","failed_gtype","tmp_individual_genotype_single_bp") {
+  foreach my $table ("gtype_allele","failed_gtype","tmp_individual_genotype_single_bp") { 
+    my $single_table_ref = $self->{'dbSara'}->db_handle->selectall_arrayref(qq{SHOW tables like "$table%"});
+    my @tables = map {$_->[0] } @$single_table_ref;
+
+    my $table_names = join ',',@tables;
+    print "table_names is $table_names\n";
+    $self->{'dbSara'}->do(qq{DROP TABLES $table_names});
+  }
+}
+
+sub remove_empty_tables {
+
+  my ($self) = @_;
+
+  #foreach my $table ("combine_feature","snp_pos","failed_qual","flanking_qual","gtype_allele","failed_gtype","tmp_individual_genotype_single_bp") {
+  foreach my $table ("failed_gtype","gtype_allele","tmp_individual_genotype_single_bp") { 
+    my $single_table_ref = $self->{'dbSara'}->db_handle->selectall_arrayref(qq{SHOW tables like "$table%"});
+    my @tables = map {$_->[0] } @$single_table_ref;
+    my @empty_tables;
+    foreach my $table (@tables) {
+      my $table_row_ref = $self->{'dbSara'}->db_handle->selectall_arrayref(qq{SELECT COUNT(*) FROM $table});
+      #print "table is $table\n";
+      my $table_row = $table_row_ref->[0][0];
+      if (! $table_row) {
+	push @empty_tables, $table;
+      }
+    }
+    my $table_names = join ',',@empty_tables;
+    print "empty_table_names is $table_names\n";
+    $self->{'dbSara'}->do(qq{DROP TABLES $table_names});
+  }
+}
+
+sub merge_table_with_same_seq_region_id {
+
+  my ($self) = @_;
+
+  #foreach my $table ("combine_feature","snp_pos","flanking_qual","gtype_allele","failed_qual","failed_gtype","tmp_individual_genotype_single_bp") {
+  foreach my $table ("flanking_qual","failed_qual") {
+    my $single_table_ref = $self->{'dbSara'}->db_handle->selectall_arrayref(qq{SHOW tables like "$table\_%"});
+    my @tables = map {$_->[0] } @$single_table_ref;
+    my $main_tab_name;
+    $self->{'dbSara'}->do(qq{CREATE TABLE IF NOT EXISTS $main_tab_name like $tables[0]});
+    foreach my $tab (@tables) {
+      if ($tab =~ /(.*\_.*).*\_(\d+)(\_\d+)$/) {
+	$main_tab_name = $1.$3;
+	$self->{'dbSara'}->do(qq{CREATE TABLE IF NOT EXISTS $main_tab_name like $tab});
+	print "table is $tab and main table is $main_tab_name\n";
+	#$self->{'dbSara'}->do(qq{INSERT INTO $main_tab_name select * from $tab});
+	#$self->{'dbSara'}->do(qq{DROP TABLE $tab});
+      }
+    }
+  }
 }
 
 1;
