@@ -76,7 +76,7 @@ if ($species eq 'rat'){
 }
 #we only want to dump Celera data
 if ($species eq 'human'){
-    @{$strains} = grep {$_->name =~ /Hu\w\w/i} @{$strains};
+    @{$strains} = grep {$_->name =~ /Hu\w\w|Venter|Watson/i} @{$strains};
 }
 #my $slice = $slice_adaptor->fetch_by_region('chromosome','1',100_222_020,130_222_025); #dump this region to find problem 108213779-108237682
 my $slice = $slice_adaptor->fetch_by_region('chromosome',$region);
@@ -85,6 +85,7 @@ print "Processing chromosome ", $slice->seq_region_name,"\n";
 #for each chromosome, get the union of all coverages for all strains
 my $regions_covered = &get_chromosome_coverage($rc_adaptor,$slice,$strains);
 &create_file_header() if (@{$regions_covered} > 0); #create the file header, if there is coverage in the region
+my $i=0;
 foreach my $region (@{$regions_covered}){
     $subSlice = $slice->sub_Slice($region->[0],$region->[1],1);
     #foreach of the subSlices with coverage for one strain, print the header, and the base information
@@ -125,7 +126,7 @@ sub apply_AF_to_seq{
 
     my $strainSlice = $slice->get_by_strain($strain);
     my $allele;
-    my $afs = $strainSlice->get_all_AlleleFeatures_Slice();
+    my $afs = $strainSlice->get_all_AlleleFeatures_Slice(1);
     foreach my $af (@{$afs}){
 	my $format = "@" . ($af->start-1) . "A" . ($af->end - $af->start +1);
 	my $base = unpack($format,$$ref_seq);
@@ -174,7 +175,11 @@ sub get_strain_seq{
     my $end = 0;
     my $end_level1 = 0;
     my $format;
-    foreach my $rc (@{$rcs}){
+    my $rcs_1; #regions with level = 1;
+    my $rcs_2; #regipons with level =2;
+    map {$_->level eq 1 ? push @{$rcs_1},$_ : push @{$rcs_2},$_} @{$rcs};  
+#    foreach my $rc (@{$rcs}){
+    foreach my $rc (@{$rcs_1},@{$rcs_2}){
 	$rc->start(1) if ($rc->start < 0); #if the region lies outside the boundaries of the slice
 	$rc->end($slice->end - $slice->start + 1) if ($rc->end + $slice->start > $slice->end); 
 	$seq .= '~' x ($rc->start - 1 - $end_level1) if ($rc->level == 1);
@@ -183,6 +188,10 @@ sub get_strain_seq{
 	substr($seq,$rc->start-1,$rc->end-$rc->start+1,uc(unpack($format,$seq))) if ($rc->level == $MAX_LEVEL);
 	$end = $rc->end;
 	$end_level1 = $rc->end if ($rc->level == 1);	
+	$i++;
+	if ($i == 22){
+	    1;
+	}
     }
     $seq .= '~' x ($slice->length - $end);
     return $seq;
