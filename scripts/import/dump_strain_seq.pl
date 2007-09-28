@@ -81,12 +81,13 @@ if ($species eq 'human'){
 #my $slice = $slice_adaptor->fetch_by_region('chromosome','1',100_222_020,130_222_025); #dump this region to find problem 108213779-108237682
 my $slice = $slice_adaptor->fetch_by_region('chromosome',$region);
 my $subSlice;
-print "Processing chromosome ", $slice->seq_region_name,"\n";
 #for each chromosome, get the union of all coverages for all strains
-my $regions_covered = &get_chromosome_coverage($rc_adaptor,$slice,$strains);
-&create_file_header() if (@{$regions_covered} > 0); #create the file header, if there is coverage in the region
-my $i=0;
-foreach my $region (@{$regions_covered}){
+my $range_registry = &get_chromosome_coverage($rc_adaptor,$slice,$strains);
+#print "size regions_covered: ",total_size($regions_covered)," and length array ", scalar(@{$regions_covered}),"\n";
+&create_file_header() if (defined $range_registry->get_ranges(1)); #create the file header, some regions might not have coverage at all
+foreach my $region (@{$range_registry->get_ranges(1)}){
+    $region->[0] = 1 if ($region->[0] < 0); #if the region lies outside the boundaries of the slice
+    $region->[1] = ($slice->end - $slice->start + 1) if ($region->[1] + $slice->start > $slice->end); 
     $subSlice = $slice->sub_Slice($region->[0],$region->[1],1);
     #foreach of the subSlices with coverage for one strain, print the header, and the base information
     &print_seq_header($subSlice,$strains); #method to print the SEQ and SCORE block
@@ -105,11 +106,15 @@ sub print_base_info{
     my $strains = shift;
     my %strain_seq;
     my $rcs;
-    my $seq;
+
     print DUMP "DATA\n";
     foreach my $strain (@{$strains}){
-	$rcs = $rc_adaptor->fetch_all_by_Slice_Sample_depth($slice,$strain);
-	$seq =  &get_strain_seq($slice,$rcs); #with the seq and the coverage info, make the seq
+	my $seq='';	
+	foreach my $level (1,$MAX_LEVEL){
+	    $rcs = $rc_adaptor->fetch_all_by_Slice_Sample_depth($slice,$strain,$level);	    
+	    &get_strain_seq($slice,$rcs,\$seq); #with the seq and the coverage info, make the seq
+	    @{$rcs} = ();
+	}	
 	#we need to apply AlleleFeature to the sequence, adding ambiguity codes and indels
 	&apply_AF_to_seq($slice,$strain->name,\$seq);
 	$strain_seq{$strain->name} = $seq;
@@ -170,31 +175,23 @@ sub print_sequences{
 sub get_strain_seq{
     my $slice = shift;
     my $rcs = shift;
-    
-    my $seq;
+    my $ref_seq = shift; #ref to sequence
+
     my $end = 0;
     my $end_level1 = 0;
     my $format;
-    my $rcs_1; #regions with level = 1;
-    my $rcs_2; #regipons with level =2;
-    map {$_->level eq 1 ? push @{$rcs_1},$_ : push @{$rcs_2},$_} @{$rcs};  
-#    foreach my $rc (@{$rcs}){
-    foreach my $rc (@{$rcs_1},@{$rcs_2}){
+    foreach my $rc (@{$rcs}){
 	$rc->start(1) if ($rc->start < 0); #if the region lies outside the boundaries of the slice
 	$rc->end($slice->end - $slice->start + 1) if ($rc->end + $slice->start > $slice->end); 
-	$seq .= '~' x ($rc->start - 1 - $end_level1) if ($rc->level == 1);
+	$$ref_seq .= '~' x ($rc->start - 1 - $end_level1) if ($rc->level == 1);
 	$format = '@' . ($rc->start - 1) . 'A' . ($rc->end - $rc->start + 1);
-	$seq .= lc(unpack($format,$slice->seq)) if ($rc->level == 1);
-	substr($seq,$rc->start-1,$rc->end-$rc->start+1,uc(unpack($format,$seq))) if ($rc->level == $MAX_LEVEL);
+	$$ref_seq .= lc(unpack($format,$slice->seq)) if ($rc->level == 1);
+	substr($$ref_seq,$rc->start-1,$rc->end-$rc->start+1,uc(unpack($format,$$ref_seq))) if ($rc->level == $MAX_LEVEL);
 	$end = $rc->end;
 	$end_level1 = $rc->end if ($rc->level == 1);	
-	$i++;
-	if ($i == 22){
-	    1;
-	}
     }
-    $seq .= '~' x ($slice->length - $end);
-    return $seq;
+    $$ref_seq .= '~' x ($slice->length - $end);
+  
 }
 
 sub print_seq_header{
@@ -223,7 +220,7 @@ sub get_chromosome_coverage{
     
     #we have to do it for strain, since we might not want to dump all strains....
     foreach my $strain (@{$strains}){
-	my $rcs = $rc_adaptor->fetch_all_by_Slice_Sample_depth($slice,$strain);
+	my $rcs = $rc_adaptor->fetch_all_by_Slice_Sample_depth($slice,$strain,1);
 
 	#get all regions covered in the chromsome for all strains
 	foreach my $rc (@{$rcs}){	
@@ -231,18 +228,7 @@ sub get_chromosome_coverage{
 	    $range_registry->check_and_register(1,$rc->start,$rc->end);
 	}
     }
-
-    #and return slices for all the regions covered
-    my @sub_Slices;
-    goto END if (!defined $range_registry->get_ranges(1)); #some regions might not have coverage at all
-    foreach my $region (@{$range_registry->get_ranges(1)}){
-	$region->[0] = 1 if ($region->[0] < 0); #if the region lies outside the boundaries of the slice
-	$region->[1] = ($slice->end - $slice->start + 1) if ($region->[1] + $slice->start > $slice->end); 
-	push @sub_Slices, [$region->[0],$region->[1]];#create the subSlice
-    }
-
-END: 
-    return \@sub_Slices;   
+    return $range_registry;
 }
 
 
