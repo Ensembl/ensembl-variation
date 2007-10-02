@@ -3,4 +3,4 @@
 update meta set meta_value = 47 where meta_key = 'schema_version';
 
 # patch identifier
-INSERT INTO meta (meta_key, meta_value) VALUES ('patch', 'patch_46_47.sql|schema version');
+INSERT INTO meta (meta_key, meta_value) VALUES ('patch', 'patch_46_47a.sql|schema version');
