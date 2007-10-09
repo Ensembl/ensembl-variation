@@ -28,18 +28,34 @@ usage('You need to give the region you want to dump data') if(!defined $region);
 
 #we need to transform the region name to chromosome names if taken from LSF: X, Y or MT
 if ($species eq 'mouse' && defined $region){
-    $region = 'X' if($region == 20);
-    $region = 'Y' if ($region == 21);
-    $region = 'MT' if ($region == 22);
+    if($region == 20){
+	$region = 'X';
+    }
+    elsif ($region == 21){
+	$region = 'Y';
+    }
+    elsif ($region == 22){
+	$region = 'MT';
+    }
 }
 elsif ($species eq 'rat' && defined $region){
-    $region = 'X' if($region == 21);
-    $region = 'MT' if ($region == 22);
+    if ($region == 21){
+	$region = 'X';
+    }
+    elsif ($region == 22){
+	$region = 'MT';
+    }
 }
 elsif ($species eq 'human' && defined $region){
-    $region = 'X' if($region == 23);
-    $region = 'Y' if ($region == 24);
-    $region = 'MT' if ($region == 25);
+    if($region == 23){
+	$region = 'X';
+    }
+    elsif ($region == 24){
+	$region = 'Y';
+    }
+    elsif ($region == 25){
+	$region = 'MT';
+    }
 }
 else{
     die "Species $species not supported to dump data\n\n";
