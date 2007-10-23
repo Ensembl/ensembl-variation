@@ -297,8 +297,8 @@ sub apply_edit  {
 
 
   my $len = $self->length;
-  substr($$seqref, $self->{'start'}-1, $len) = $self->{'allele_string'} if ($self->{'allele_string'} ne '-'); 
-  substr($$seqref, $self->{'start'}-1, $len) = '' if ($self->{'allele_string'} eq '-');
+  substr($$seqref, $self->{'start'}-1, $len) = $self->{'allele_string'} if ($self->allele_string ne '-'); 
+  substr($$seqref, $self->{'start'}-1, 0) = $self->{'allele_string'} if ($self->allele_string eq '-');
   return $seqref;
 
 }
