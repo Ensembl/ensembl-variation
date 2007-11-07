@@ -182,6 +182,79 @@ sub fetch_by_name {
 }
 
 
+=head2 fetch_all_by_source
+
+  Arg [1]    : string $source_name
+  Arg [2]    : int $primary
+  Example    : $var = $var_adaptor->fetch_all_by_source();
+  Description: Retrieves all Variation objects associated with a source. By default ($primary=0)
+               returns variations that have the source or variation_synonym that have the source.
+               If primary set to 1, it returns only variations where the primary name is associated
+               with the source
+  Returntype : listref of Bio::EnsEMBL::Variation::Variation
+  Exceptions : thrown if source_name not provided
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub fetch_all_by_source {
+  my $self = shift;
+  my $source_name = shift;
+  my $primary = shift;
+
+  my @out;
+
+  $primary ||= 0; #by default, returns ALL variation and variation_synonyms where source = $name
+
+  throw('name argument expected') if(!defined($source_name));
+
+  my $sth = $self->prepare
+    (qq{SELECT v.variation_id, v.name, v.validation_status, s1.name, v.ancestral_allele,
+              a.allele_id, a.allele, a.frequency, a.sample_id, vs.moltype,
+              vs.name, s2.name, f.description
+	  FROM   (variation v, source s1)
+	     LEFT JOIN allele a on v.variation_id = a.variation_id 
+	      LEFT JOIN variation_synonym vs on v.variation_id = vs.variation_id 
+              LEFT JOIN source s2 on  vs.source_id = s2.source_id
+	      LEFT JOIN failed_variation fv on v.variation_id = fv.variation_id
+	         LEFT JOIN failed_description f on fv.failed_description_id = f.failed_description_id
+
+       WHERE    v.source_id = s1.source_id
+       AND    s1.name = ?
+   });
+
+  $sth->bind_param(1,$source_name,SQL_VARCHAR);
+  $sth->execute();
+
+  my $result = $self->_objs_from_sth($sth);
+  $sth->finish();
+  
+  push @out, @{$result};
+
+  #we need to include variation_synonym as well, where the variation was merged with dbSNP
+  if (!$primary){
+      $sth = $self->prepare
+	  (qq{SELECT v.variation_id, v.name, v.validation_status, s1.name, v.ancestral_allele,
+	      a.allele_id, a.allele, a.frequency, a.sample_id, vs1.moltype,
+	      vs1.name, s2.name, NULL
+		  FROM   (variation v, source s1, source s2,  variation_synonym vs1)
+		  LEFT JOIN allele a ON v.variation_id = a.variation_id
+		  WHERE  v.variation_id = vs1.variation_id
+		  AND    v.source_id = s1.source_id
+		  AND    vs1.source_id = s2.source_id
+		  AND    s2.name = ?
+		  ORDER BY v.variation_id
+	      });
+    $sth->bind_param(1,$source_name,SQL_VARCHAR);
+    $sth->execute();
+    $result = $self->_objs_from_sth($sth);
+    $sth->finish();      
+     #need to merge both lists, trying to avoid duplicates
+      push @out, @{$result};
+  }
+  return \@out;
+}
 
 =head2 fetch_all_by_dbID_list
 
