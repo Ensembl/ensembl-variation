@@ -19,7 +19,8 @@ create table variation (
 	ancestral_allele text,
 
 	primary key( variation_id ),
-	unique ( name )
+	unique ( name ),
+	key source_idx (source_id)
 );
 
 
@@ -40,7 +41,8 @@ create table variation_synonym (
 
   primary key(variation_synonym_id),
   key variation_idx (variation_id),
-  unique (name, source_id)
+  unique (name, source_id),
+  key source_idx (source_id)
 );
 
 
@@ -675,3 +677,4 @@ INSERT INTO failed_description (failed_description_id,description) VALUES (1,'Va
 INSERT INTO failed_description (failed_description_id,description) VALUES (2,'Reference allele not present in the alleles of the variation');
 INSERT INTO failed_description (failed_description_id,description) VALUES (3,'Variation containing more than 3 alleles');
 INSERT INTO failed_description (failed_description_id,description) VALUES (4,'Variation with \'NoVariation\' alleles');
+
