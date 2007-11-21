@@ -233,7 +233,7 @@ sub _columns{
 
     return qw(vf.variation_id 
 	      vf.seq_region_id vf.seq_region_start vf.seq_region_end 
-	      vf.seq_region_strand vf.variation_name s.name);
+	      vf.seq_region_strand vf.variation_name s.name vf.variation_feature_id);
 }
 
 sub _default_where_clause{
@@ -259,11 +259,11 @@ sub _objs_from_sth{
   my %sr_cs_hash;
 
   my ($variation_id, $seq_region_id,
-      $seq_region_start,$seq_region_end, $seq_region_strand, $variation_name, $source_name );
+      $seq_region_start,$seq_region_end, $seq_region_strand, $variation_name, $source_name, $variation_feature_id );
 
   $sth->bind_columns(\$variation_id,
 		     \$seq_region_id,\$seq_region_start,\$seq_region_end,\$seq_region_strand,
-		     \$variation_name, \$source_name);
+		     \$variation_name, \$source_name, \$variation_feature_id);
 
   my $asm_cs;
   my $cmp_cs;
@@ -362,6 +362,7 @@ sub _objs_from_sth{
 								      'adaptor'  => $self,
 								      'source'   => $source_name,
 								      '_variation_id' => $variation_id,
+								      '_variation_feature_id' => $variation_feature_id,
 								      '_sample_id' => ''});      
 }
  return\@features;
