@@ -122,21 +122,29 @@ sub fetch_all_by_Slice{
     my $afs = $self->SUPER::fetch_all_by_Slice($slice); #get all AlleleFeatures within the Slice
     my $last_position = 0;
     my $new_afs = [];
-    my $string;
+    my $string1;
+    my $string2;
+    my $alleles = {}; #hash to alleles, so we can check the genotype is within the alleles
     #we need to merge genotype data with AlleleFeatures to assign alleles
     foreach my $af (@{$afs}){
+	map {$alleles->{$_}++} split /\//,$af->{'_vf_allele_string'}; #create a hash with the alleles
 	#both, genotypes and af should be sorted
 	for (my $i = $last_position;$i<@{$genotypes};$i++){
-	    if ($genotypes->[$i]->start == $af->seq_region_start){
-		#need to reverse the alleles if they are in different strand, since the genotype
-		#table is stored always in the positive strand
+	    #need to reverse the alleles if they are in different strand, since the genotype
+	    #table is stored always in the positive strand
+	    $string1 = $genotypes->[$i]->allele1;
+	    $string2 = $genotypes->[$i]->allele2;
+	    if ($af->seq_region_strand == -1){
+		$string1 =~ tr/ACGTN-/TGCAN-/;
+		$string2 =~ tr/ACGTN-/TGCAN-/;
+	    }
+	    #we need to check the genotypes are within the alleles of the variation
+	    if ($genotypes->[$i]->start == $af->seq_region_start && (exists $alleles->{$string1} || exists $alleles->{$string2})){		
+		$alleles = {}; #flush the alleles hash
+		delete $af->{'_vf_allele_string'}; #and remove the attribute
 		if ($af->seq_region_strand == -1){
-		    $string = $genotypes->[$i]->allele1;
-		    $string =~ tr/ACGTN-/TGCAN-/;
-		    $genotypes->[$i]->allele1($string);
-		    $string = $genotypes->[$i]->allele2;
-		    $string =~ tr/ACGTN-/TGCAN-/;
-		    $genotypes->[$i]->allele2($string);
+		    $genotypes->[$i]->allele1($string1);
+		    $genotypes->[$i]->allele2($string2);
 		}
 		if ($genotypes->[$i]->allele2 eq 'N'){
 		    $af->{'_half_genotype'} = 1;
@@ -233,7 +241,7 @@ sub _columns{
 
     return qw(vf.variation_id 
 	      vf.seq_region_id vf.seq_region_start vf.seq_region_end 
-	      vf.seq_region_strand vf.variation_name s.name vf.variation_feature_id);
+	      vf.seq_region_strand vf.variation_name s.name vf.variation_feature_id vf.allele_string);
 }
 
 sub _default_where_clause{
@@ -259,11 +267,11 @@ sub _objs_from_sth{
   my %sr_cs_hash;
 
   my ($variation_id, $seq_region_id,
-      $seq_region_start,$seq_region_end, $seq_region_strand, $variation_name, $source_name, $variation_feature_id );
+      $seq_region_start,$seq_region_end, $seq_region_strand, $variation_name, $source_name, $variation_feature_id, $allele_string );
 
   $sth->bind_columns(\$variation_id,
 		     \$seq_region_id,\$seq_region_start,\$seq_region_end,\$seq_region_strand,
-		     \$variation_name, \$source_name, \$variation_feature_id);
+		     \$variation_name, \$source_name, \$variation_feature_id, \$allele_string);
 
   my $asm_cs;
   my $cmp_cs;
@@ -363,6 +371,7 @@ sub _objs_from_sth{
 								      'source'   => $source_name,
 								      '_variation_id' => $variation_id,
 								      '_variation_feature_id' => $variation_feature_id,
+								      '_vf_allele_string' => $allele_string,
 								      '_sample_id' => ''});      
 }
  return\@features;
