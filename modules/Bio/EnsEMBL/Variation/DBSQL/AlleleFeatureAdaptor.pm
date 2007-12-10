@@ -127,6 +127,7 @@ sub fetch_all_by_Slice{
     my $alleles = {}; #hash to alleles, so we can check the genotype is within the alleles
     #we need to merge genotype data with AlleleFeatures to assign alleles
     foreach my $af (@{$afs}){
+	$alleles = {}; #flush the hash
 	map {$alleles->{$_}++} split /\//,$af->{'_vf_allele_string'}; #create a hash with the alleles
 	#both, genotypes and af should be sorted
 	for (my $i = $last_position;$i<@{$genotypes};$i++){
