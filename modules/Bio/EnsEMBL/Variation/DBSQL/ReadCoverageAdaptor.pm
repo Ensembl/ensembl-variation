@@ -361,6 +361,7 @@ sub _objs_from_sth{
 								  -adaptor  => $self,
 								  -level => $level,
 								  -sample => $sample,
+								  -strand => 1
 								  );
       push @features, $read_coverage;
   }
