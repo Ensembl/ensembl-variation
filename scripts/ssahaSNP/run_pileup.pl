@@ -45,9 +45,9 @@ my $slice_adaptor = $cdb->get_SliceAdaptor;
 my $buffer = {};
 
 #make_pileup_reads_file();
-#parse_pileup_snp_file();
+parse_pileup_snp_file();
 #create_vdb();
-PAR_regions();
+#PAR_regions();
 
 sub make_pileup_reads_file {
   ##use turing run all chromosomes
@@ -94,7 +94,7 @@ sub make_pileup_reads_file {
 
 sub parse_pileup_snp_file {
 
-  #my $input_file = "/turing/mouse129_extra/yuan/watson/output_dir/SNP_file";
+  my $input_file = "/turing/mouse129_extra/yuan/watson/output_dir/SNP_file";
   #my $input_file = "/lustre/work1/ensembl/yuan/SARA/watson/output_dir/TEST_SNP";
   my $individual_name = "watson";
   my $snp_count;
@@ -116,15 +116,23 @@ sub parse_pileup_snp_file {
     map {/[A-Z]/ ? $base_big{$_}++ : $base_small{$_}++} @bases;
 
     if (scalar keys %base_big >2) {
+      #possible tri-alleleic alleles
+      foreach my $B (keys %base_big) {
+	if ($base_big{$B}==1) {
+	  delete $base_big{$B};
+	}
+      }
+    }
+    if (scalar keys %base_big >2) {
       #get rid of tri-alleleic alleles
-      print_buffered($buffer,"$TMP_DIR/failed_file", join "\t", $chr,$seq_region_start,join (",",keys %base_big),"\n");
+      print_buffered($buffer,"$TMP_DIR/failed_file", join ("\t", $chr,$seq_region_start,$allele_string,join (",",keys %base_big))."\n");
       next;
     }
     elsif (scalar keys %base_big == 2) {
       my @keys = keys %base_big;
-      if ($keys[0] ne $ref_base and $keys[1] ne $ref_base) {
+      if ($keys[0] ne $snp_base and $keys[1] ne $snp_base) {
 	#get rid of tri-alleleic alleles
-	print_buffered($buffer, "$TMP_DIR/failed_file",join "\t", $chr,$seq_region_start,join (",",keys %base_big),"\n");
+	print_buffered($buffer, "$TMP_DIR/failed_file",join ("\t", $chr,$seq_region_start,$allele_string,join (",",keys %base_big))."\n");
 	next;
       }
       my $num1 = $base_big{$keys[0]};
@@ -132,20 +140,25 @@ sub parse_pileup_snp_file {
       ($num1,$num2) = ($num2,$num1) if $num2 < $num1 ;
       my $ratio = $num1/$num2;
       my ($allele_1,$allele_2) = @keys;
-      if ($ratio >=0.25) {
+      if ($ratio >=0.25 and $allele_string =~ /$allele_1/i and $allele_string =~ /$allele_2/i) {
 	#if have both alleles capital, they need to satisfy this ratio
 	$snp_count++;
-	print_buffered($buffer,"$TMP_DIR/output_file", join "\t", $snp_count,$chr,$seq_region_start,$allele_string,$allele_1,$allele_2,$individual_name,"\n");
+	print_buffered($buffer,"$TMP_DIR/output_file", join ("\t", $snp_count,$chr,$seq_region_start,$allele_string,$allele_1,$allele_2,$individual_name)."\n");
       }
       else {
-	#if have two alleles, but not satisfy above ratio, get the more alleles as allele
-	if ($base_big{$allele_1}==$num2) {
+	#if have two alleles, but not satisfy above ratio, get the allele with big number as genotypes
+	if ($base_big{$allele_1}==$num2 and $allele_string =~ /$allele_1/i) {
 	  $snp_count++;
-	  print_buffered($buffer, "$TMP_DIR/output_file",join "\t", $snp_count,$chr,$seq_region_start,$allele_string,$allele_1,$allele_1,$individual_name,"\n");
+	  print_buffered($buffer, "$TMP_DIR/output_file",join ("\t", $snp_count,$chr,$seq_region_start,$allele_string,$allele_1,$allele_1,$individual_name)."\n");
 	}
-	elsif ($base_big{$allele_2}==$num2) {
+	elsif ($base_big{$allele_2}==$num2 and $allele_string =~ /$allele_2/i) {
 	  $snp_count++;
-	  print_buffered($buffer, "$TMP_DIR/output_file",join "\t", $snp_count,$chr,$seq_region_start,$allele_string,$allele_2,$allele_2,$individual_name,"\n");
+	  print_buffered($buffer, "$TMP_DIR/output_file",join ("\t", $snp_count,$chr,$seq_region_start,$allele_string,$allele_2,$allele_2,$individual_name)."\n");
+	}
+	else {
+	  #case like G       T       AAAAAAAT
+	  print_buffered($buffer, "$TMP_DIR/failed_file",join ("\t", $chr,$seq_region_start,$allele_string,join (",",keys %base_big))."\n");
+	  next;
 	}
       }
     }
@@ -161,27 +174,47 @@ sub parse_pileup_snp_file {
       $reads_bases =~ tr/[A-Z]/[a-z]/;
       my @all_letters = split "", $reads_bases;
       map {$all_letter{$_}++,1}  @all_letters;
+
+      if (scalar keys %all_letter >2) {
+      #possible tri-alleleic alleles, delete if only one exist
+	foreach my $B (keys %all_letter) {
+	  if ($all_letter{$B}==1) {
+	    delete $all_letter{$B};
+	  }
+	}
+      }
       if (keys %all_letter >2) {
 	#ignore it if have more than 2 alleles
-	print_buffered($buffer,"$TMP_DIR/failed_file", join "\t", $chr,$seq_region_start,join(",",keys %all_letter),"\n");
+	print_buffered($buffer,"$TMP_DIR/failed_file", join "\t", $chr,$seq_region_start,$allele_string,join(",",keys %all_letter),"\n");
 	next;
       }
       my ($key1,$key2) = keys %all_letter;
       my $n1 = $all_letter{$key1};
       my $n2 = $key2 ? $all_letter{$key2} : 0;
 
+      #make n1 is always smaller than n2
       ($n1,$n2) = ($n2,$n1) if $n2 < $n1 ;
-      my $ratio = $n1/$n2;
-      if ($n1 >2 and $ratio >=0.25) {
+      my $ratio = $n1/$n2 ;
+      if ($n1 >2 and $ratio >=0.25 and $allele_string =~ /$key1/i and $allele_string =~ /$key2/i) {
 	#if small number of alleles >2 and have correct ratio, take it
 	$snp_count++;
-	print_buffered($buffer,"$TMP_DIR/output_file", join "\t", $snp_count,$chr,$seq_region_start,$allele_string,$key1,$key2,$individual_name,"\n");
+	print_buffered($buffer,"$TMP_DIR/output_file", join "\t", $snp_count,$chr,$seq_region_start,$allele_string,uc($key1),uc($key2),$individual_name,"\n");
       }
       else {
-	if ($n2 > 2) {
+	if ($n2 > 3) {
+	  #if use n2>2, there are 32125 failed, if use n2>3, there are 46680 failed out of total 3818462
 	  #if only one letter OR have less than three first letter, and have at least 3 of more letters, take it
 	  $snp_count++;
-	  print_buffered($buffer,"$TMP_DIR/output_file", join "\t", $snp_count,$chr,$seq_region_start,$allele_string,uc($key1),uc($key1),$individual_name,"\n");
+	  if ($all_letter{$key1}==$n2 and $allele_string =~ /$key1/i) {
+	    print_buffered($buffer,"$TMP_DIR/output_file", join "\t", $snp_count,$chr,$seq_region_start,$allele_string,uc($key1),uc($key1),$individual_name,"\n");
+	  }
+	  elsif ($all_letter{$key2}==$n2 and $allele_string =~ /$key2/) {
+	    print_buffered($buffer,"$TMP_DIR/output_file", join "\t", $snp_count,$chr,$seq_region_start,$allele_string,uc($key2),uc($key2),$individual_name,"\n");
+	  }
+	}
+	else {
+	  #these are failed ones
+	  print_buffered($buffer,"$TMP_DIR/failed_file", join "\t", $chr,$seq_region_start,$allele_string,join(",",keys %all_letter),"\n");
 	}
       }
     }
@@ -195,6 +228,7 @@ sub parse_pileup_snp_file {
   create_and_load($dbVar,"parse_snp","snp_count i*","chr *","seq_region_start i*","allele_string","allele_1","allele_2","individual_name");
   system("mv $TMP_DIR/pileup_file $TMP_DIR/$TMP_FILE");
   create_and_load($dbVar,"pileup_snp_out","target_name","chr *","seq_region_start i*","num_reads i","ref_base","snp_base","reads_bases","num_same_ref i","num_diff_ref i","num_same_ref_cap i","num_diff_ref_cap i");
+
 }
 
 sub create_vdb {
