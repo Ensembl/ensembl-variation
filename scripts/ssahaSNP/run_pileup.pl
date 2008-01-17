@@ -109,12 +109,13 @@ sub parse_pileup_snp_file {
     my $allele_string = "$ref_base/$snp_base";
     my ($chr,$start,$end) = split /\-/, $target_name;
     my $seq_region_start = $pos + $start -1; #most chr start =1, but haplotype chr start >1
-    print_buffered($buffer, "$TMP_DIR/pileup_file",join "\t", $target_name,$chr,$seq_region_start,$num_reads,$ref_base,$snp_base,$reads_bases,$num_same_ref,$num_diff_ref,$num_same_ref_cap,$num_diff_ref_cap,"\n");
+    #print_buffered($buffer, "$TMP_DIR/pileup_file",join "\t", $target_name,$chr,$seq_region_start,$num_reads,$ref_base,$snp_base,$reads_bases,$num_same_ref,$num_diff_ref,$num_same_ref_cap,$num_diff_ref_cap,"\n");
 
     $reads_bases =~ s/\-+//g;
     my @bases = split "", $reads_bases;
     map {/[A-Z]/ ? $base_big{$_}++ : $base_small{$_}++} @bases;
 
+    #if without this if{}, i.e keep the single capital base, it will reduce 25746 entries
     if (scalar keys %base_big >2) {
       #possible tri-alleleic alleles
       foreach my $B (keys %base_big) {
@@ -123,6 +124,7 @@ sub parse_pileup_snp_file {
 	}
       }
     }
+
     if (scalar keys %base_big >2) {
       #get rid of tri-alleleic alleles
       print_buffered($buffer,"$TMP_DIR/failed_file", join ("\t", $chr,$seq_region_start,$allele_string,join (",",keys %base_big))."\n");
@@ -140,6 +142,7 @@ sub parse_pileup_snp_file {
       ($num1,$num2) = ($num2,$num1) if $num2 < $num1 ;
       my $ratio = $num1/$num2;
       my ($allele_1,$allele_2) = @keys;
+      #if change 0.25 to 0.2, give 48745 more entries which is 1.3% 48745/3818462
       if ($ratio >=0.25 and $allele_string =~ /$allele_1/i and $allele_string =~ /$allele_2/i) {
 	#if have both alleles capital, they need to satisfy this ratio
 	$snp_count++;
@@ -147,11 +150,15 @@ sub parse_pileup_snp_file {
       }
       else {
 	#if have two alleles, but not satisfy above ratio, get the allele with big number as genotypes
-	if ($base_big{$allele_1}==$num2 and $allele_string =~ /$allele_1/i) {
+	#also if only one allele, then this allele has to equal snp_base, i.e different from ref_base to quality for a snp
+	#177515 difference if use allele_string rather then snp_base which is 4.6% 177515/3818462
+	#add $ratio < 0.34 will reduce 5k entries which is 0.01% 5002/3818462
+	#add $ratio <= 0.25 will reduce another 2k entries it's safer to use <=0.25, i.e at least 1 to 4 to ignore 1
+	if ($ratio <= 0.25 and $base_big{$allele_1}==$num2 and $snp_base =~ /$allele_1/i) {
 	  $snp_count++;
 	  print_buffered($buffer, "$TMP_DIR/output_file",join ("\t", $snp_count,$chr,$seq_region_start,$allele_string,$allele_1,$allele_1,$individual_name)."\n");
 	}
-	elsif ($base_big{$allele_2}==$num2 and $allele_string =~ /$allele_2/i) {
+	elsif ($ratio <= 0.25 and $base_big{$allele_2}==$num2 and $snp_base =~ /$allele_2/i) {
 	  $snp_count++;
 	  print_buffered($buffer, "$TMP_DIR/output_file",join ("\t", $snp_count,$chr,$seq_region_start,$allele_string,$allele_2,$allele_2,$individual_name)."\n");
 	}
@@ -165,7 +172,9 @@ sub parse_pileup_snp_file {
     elsif (scalar keys %base_big < 2) {
       my @cap_letters = keys %base_big;
       my @small_letters = keys %base_small;
-      if ($cap_letters[0] and $base_big{$cap_letters[0]} >=2) {
+      #if only one big letter and it's different from ref_base, i.e is a snp (use allele_string instead of snp_base affect 1895 entries, which is 0.05% 1895/3818462
+      #if use >2 instead of >=2, lose 252031 entries which is 6.6% 252031/3818462
+      if ($cap_letters[0] and $base_big{$cap_letters[0]} >=2 and $snp_base =~ /$cap_letters[0]/i) {
 	#if only have one capital letter, but have more than 2, use it
 	$snp_count++;
 	print_buffered($buffer,"$TMP_DIR/output_file", join "\t", $snp_count,$chr,$seq_region_start,$allele_string,$cap_letters[0],$cap_letters[0],$individual_name,"\n");
@@ -201,14 +210,15 @@ sub parse_pileup_snp_file {
 	print_buffered($buffer,"$TMP_DIR/output_file", join "\t", $snp_count,$chr,$seq_region_start,$allele_string,uc($key1),uc($key2),$individual_name,"\n");
       }
       else {
-	if ($n2 > 3) {
+	if ($n2 > 3) {#current watson has $n2>2
 	  #if use n2>2, there are 32125 failed, if use n2>3, there are 46680 failed out of total 3818462
 	  #if only one letter OR have less than three first letter, and have at least 3 of more letters, take it
 	  $snp_count++;
-	  if ($all_letter{$key1}==$n2 and $allele_string =~ /$key1/i) {
+	  #this allele must be different from ref_base to quality as a snp
+	  if ($all_letter{$key1}==$n2 and $snp_base =~ /$key1/i) {
 	    print_buffered($buffer,"$TMP_DIR/output_file", join "\t", $snp_count,$chr,$seq_region_start,$allele_string,uc($key1),uc($key1),$individual_name,"\n");
 	  }
-	  elsif ($all_letter{$key2}==$n2 and $allele_string =~ /$key2/) {
+	  elsif ($all_letter{$key2}==$n2 and $snp_base =~ /$key2/) {
 	    print_buffered($buffer,"$TMP_DIR/output_file", join "\t", $snp_count,$chr,$seq_region_start,$allele_string,uc($key2),uc($key2),$individual_name,"\n");
 	  }
 	}
@@ -221,14 +231,14 @@ sub parse_pileup_snp_file {
   }
 
   print_buffered($buffer);
-
+=head
   system("mv $TMP_DIR/failed_file $TMP_DIR/$TMP_FILE");
   create_and_load($dbVar,"tri_allelic_alleles","chr *","seq_region_start i*","alleles");
   system("mv $TMP_DIR/output_file $TMP_DIR/$TMP_FILE");
   create_and_load($dbVar,"parse_snp","snp_count i*","chr *","seq_region_start i*","allele_string","allele_1","allele_2","individual_name");
   system("mv $TMP_DIR/pileup_file $TMP_DIR/$TMP_FILE");
   create_and_load($dbVar,"pileup_snp_out","target_name","chr *","seq_region_start i*","num_reads i","ref_base","snp_base","reads_bases","num_same_ref i","num_diff_ref i","num_same_ref_cap i","num_diff_ref_cap i");
-
+=cut
 }
 
 sub create_vdb {
@@ -241,6 +251,7 @@ sub create_vdb {
   my $ind_pop_name = "ENSEMBL:Watson";
   my $ind_sample_pop_desc = "Population for $pop_size individual(s)";
   my $ind_sample_desc = "Individual within population $ind_pop_name";
+
   debug("Inserting into population, individual and sample tables");
 
   $dbVar->do(qq{INSERT INTO sample (name,description) values ("$ind_pop_name","$ind_sample_pop_desc")});
@@ -286,8 +297,16 @@ sub create_vdb {
              AND substring(v.name,$length_name+1) = snp.snp_count
              });
 
+  debug("Insert into variation_feature table... ABOUT Y CHROMOSOME");
+  $dbVar->do(qq{create table vf_y_top select * from variation_feature where seq_region_id=226054 and seq_region_start>=1 and seq_region_start<=2709520});
+  $dbVar->do(qq{insert into vf_y_top select * from variation_feature where seq_region_id=226054 and seq_region_start>=57443438 and seq_region_start<=57772954});
+  $dbVar->do(qq{update vf_y_top set seq_region_id=226031});
+  $dbVar->do(qq{insert into variation_feature (seq_region_id,seq_region_start,seq_region_end,seq_region_strand,variation_id,allele_string,variation_name,map_weight,flags,source_id,validation_status,consequence_type) select seq_region_id,seq_region_start,seq_region_end,seq_region_strand,variation_id,allele_string,variation_name,map_weight,flags,source_id,validation_status,consequence_type from vf_y_top});
+  #Query OK, 5020 rows affected (0.10 sec)
+  #Records: 5020  Duplicates: 0  Warnings: 0
+
   debug("Insert into flanking_sequence table...");
-  $dbVar->do(qq{INSERT INTO flanking_sequence (variation_id,up_seq,down_seq,up_seq_region_start,up_seq_region_end,down_seq_region_start,down_seq_region_end,seq_region_id,seq_region_strand)
+  $dbVar->do(qq{INSERT IGNORE INTO flanking_sequence (variation_id,up_seq,down_seq,up_seq_region_start,up_seq_region_end,down_seq_region_start,down_seq_region_end,seq_region_id,seq_region_strand)
               SELECT vf.variation_id,NULL,NULL,vf.seq_region_start-101,vf.seq_region_start-1,vf.seq_region_end+1,vf.seq_region_end+101,vf.seq_region_id,vf.seq_region_strand
               FROM variation_feature vf
                });
