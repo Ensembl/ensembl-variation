@@ -2,7 +2,6 @@
 
 use strict;
 use warnings;
-use FindBin qw( $Bin );
 use Getopt::Long;
 use Bio::EnsEMBL::Utils::Exception qw(warning throw verbose);
 
@@ -20,7 +19,6 @@ GetOptions('dump_file=s' => \$dump_file,
 	   );
 
 $region = $ENV{LSB_JOBINDEX} if (!defined $region); #if there is no region as an argument, try to get it from LSF
-warn("Make sure you have a updated ensembl.registry file!\n");
 
 $species ||= 'mouse'; #by default, dump mouse data
 usage('You need to enter the file name where you want to dump the data') if (!defined $dump_file); 
@@ -61,9 +59,8 @@ else{
     die "Species $species not supported to dump data\n\n";
 }
 
-my $registry_file ||= $Bin . "/ensembl.registry";
-
-Bio::EnsEMBL::Registry->load_all( $registry_file );
+Bio::EnsEMBL::Registry->load_registry_from_db( -host => 'ens-staging'
+					      );
 
 my $dbVar = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'variation');
 my $dbCore = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'core');
