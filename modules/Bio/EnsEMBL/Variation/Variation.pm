@@ -707,7 +707,9 @@ sub failed_description{
   Example    : $daf = $variation->derived_allele_frequency($population);
   Description: Gets the derived allele frequency for the population. 
                The DAF is the frequency of the reference allele that is 
-               different from the allele in Chimp
+               different from the allele in Chimp. If none of the alleles
+               is the same as the ancestral, will return reference allele
+               frequency
   Returntype : float
   Exceptions : none
   Caller     : general
@@ -747,4 +749,50 @@ sub derived_allele_frequency{
   return $daf;
 }
 
+=head2 derived_allele
+
+  Arg[1]     : Bio::EnsEMBL::Variation::Population  $population 
+  Example    : $da = $variation->derived_allele($population);
+  Description: Gets the derived allele for the population. 
+  Returntype : float
+  Exceptions : none
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub derived_allele {
+     my $self = shift();
+     my $population = shift();
+
+     my $population_dbID = $population->dbID();
+     my $ancestral_allele_str = $self->ancestral_allele();
+
+     if (not defined($ancestral_allele_str)) {
+         return;
+     }
+
+     my $alleles = $self->get_all_Alleles();
+
+     my $derived_allele_str;
+
+     foreach my $allele (@{$alleles}) {
+         my $allele_population = $allele->population();
+
+         if (defined($allele_population) and
+             $allele_population->dbID() == $population_dbID)
+         {
+             my $allele_str = $allele->allele();
+
+             if ($ancestral_allele_str ne $allele_str) {
+                 if (defined($derived_allele_str)) {
+                     return;
+                 } else {
+                     $derived_allele_str = $allele_str;
+                 }
+             }
+         }
+     }
+     return $derived_allele_str;
+}
 1;
