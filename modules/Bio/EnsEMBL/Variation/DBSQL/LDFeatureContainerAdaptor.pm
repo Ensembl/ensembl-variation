@@ -135,7 +135,8 @@ sub fetch_by_Slice{
 				 ORDER BY c.seq_region_id, c.seq_region_start},{mysql_use_result => 1});
 
     $sth->bind_param(1,$slice->get_seq_region_id,SQL_INTEGER);
-    $sth->bind_param(2,$slice->start - MAX_SNP_DISTANCE,SQL_INTEGER);
+    $sth->bind_param(2,$slice->start - MAX_SNP_DISTANCE,SQL_INTEGER) if ($slice->start - MAX_SNP_DISTANCE >= 1);
+    $sth->bind_param(2,1,SQL_INTEGER) if ($slice->start - MAX_SNP_DISTANCE < 1);
     $sth->bind_param(3,$slice->end,SQL_INTEGER);
     $sth->bind_param(4,$slice->start,SQL_INTEGER);
 
