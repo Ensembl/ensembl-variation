@@ -135,7 +135,8 @@ sub fetch_by_Slice{
 				 ORDER BY c.seq_region_id, c.seq_region_start},{mysql_use_result => 1});
 
     $sth->bind_param(1,$slice->get_seq_region_id,SQL_INTEGER);
-    $sth->bind_param(2,$slice->start - MAX_SNP_DISTANCE,SQL_INTEGER);
+    $sth->bind_param(2,$slice->start - MAX_SNP_DISTANCE,SQL_INTEGER) if ($slice->start - MAX_SNP_DISTANCE >= 1);
+    $sth->bind_param(2,1,SQL_INTEGER) if ($slice->start - MAX_SNP_DISTANCE < 1);
     $sth->bind_param(3,$slice->end,SQL_INTEGER);
     $sth->bind_param(4,$slice->start,SQL_INTEGER);
 
@@ -241,8 +242,10 @@ sub _objs_from_sth {
 
   my ($individual_id, $seq_region_id, $seq_region_start,$seq_region_end,$genotypes, $population_id);
   my @cmd = qw(calc_genotypes);
-  my @path = split /:/,$ENV{PATH};
-  my $found_file = grep {-e $_ . '/' . $cmd[0]} @path;
+ # my @path = split /:/,$ENV{PATH};
+  my @path = qw(/nfs/acari/dr2/projects/src/ensembl/ensembl-variation/C_code);
+my $found_file = grep {-e $_ . '/' . $cmd[0]} @path;
+  print $found_file,"\n";
   #open the pipe between processes if the binary file exists in the PATH
   if (! $found_file){
       warning("Binary file calc_genotypes not found. Please, read the ensembl-variation/C_code/README.txt file if you want to use LD calculation\n");
@@ -505,6 +508,7 @@ sub _objs_from_sth_temp_file {
 
   my ($individual_id, $seq_region_id, $seq_region_start,$seq_region_end,$genotypes, $population_id);
   my @cmd = qw(calc_genotypes);
+
   my @path = split /:/,$ENV{PATH};
   my $found_file = grep {-e $_ . '/' . $cmd[0]} @path;
   #open the pipe between processes if the binary file exists in the PATH
@@ -544,8 +548,9 @@ sub _objs_from_sth_temp_file {
           }
       }
   close IN;
-  `calc_genotypes <$IN >$OUT`;
-  open OUT, $OUT;
+#  `calc_genotypes <$IN >$OUT`;
+  `/nfs/acari/dr2/projects/src/ensembl/ensembl-variation/C_code/calc_genotypes <$IN >$OUT`;
+ open OUT, $OUT;
   while(<OUT>){
   my %ld_values = ();
 #     936	965891	164284	166818	0.628094	0.999996	120 
