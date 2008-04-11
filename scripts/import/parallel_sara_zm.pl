@@ -8,7 +8,7 @@ use Getopt::Long;
 use Data::Dumper;
 use Fcntl ':flock';
 use DBI;
-use DBH;
+#use DBH;
 use Time::HiRes qw(tv_interval gettimeofday);
 use Bio::EnsEMBL::Utils::Cache;
 
@@ -68,10 +68,11 @@ sub ssahasnp_feature {
   debug("Make query to variation_feature table");
   my $sth = $dbSara->prepare(qq{SELECT v.variation_id,vf.seq_region_start,vf.allele_string 
                                 FROM  $VAR_DBNAME.variation v,$VAR_DBNAME.variation_feature vf
-                                WHERE vf.source_id = $source_id
+                                WHERE v.source_id = $source_id
                                 AND v.variation_id = vf.variation_id
                                 AND vf.seq_region_id = $SEQ_REGION_ID_NEW
-                                #ORDER BY seq_region_start
+                                AND vf.map_weight=1
+                                #ORDER BY seq_region_start #sorted later
                                });
   my ($variation_id,$seq_region_id,$seq_region_start,$allele_string,%rec_var,%rec_seq_start);
   $sth->execute();
@@ -101,12 +102,12 @@ sub combine_feature {
 
   debug("Dumping ssahaSNP_feature");
   dumpSQL($dbSara, qq{SELECT * FROM ssahaSNP_feature WHERE target_seq_region_id = $SEQ_REGION_ID_NEW});
-  `sort -k 10 -g -o $TMP_DIR/$TMP_FILE\_s $TMP_DIR/$TMP_FILE`;#order the file by the target_start
+  `sort -k 8 -g -o $TMP_DIR/$TMP_FILE\_s $TMP_DIR/$TMP_FILE`;#order the file by the target_start
   system("mv $TMP_DIR/$TMP_FILE\_s $TMP_DIR/$TMP_FILE");
   open SF,  "$TMP_DIR/$TMP_FILE";
   open OUT, ">$TMP_DIR/snp_feature$SEQ_REGION_ID";
   LINE : while (<SF>) {
-    my ($feature_id,$query_name,$query_start,$query_end,$null,$null1,$query_strand,$target_seq_region_id,$target_name,$target_start,$target_end,$target_strand,$score,$cigar_string,$individual_name) = split;
+    my ($feature_id,$query_name,$query_start,$query_end,$query_strand,$target_seq_region_id,$target_name,$target_start,$target_end,$target_strand,$score,$cigar_string,$individual_name) = split;
 
     for (my $i=0;$i<@sorted_start;$i++) {
       my $seq_region_start = $sorted_start[$i];
@@ -132,7 +133,7 @@ sub combine_feature {
   create_and_load($dbSara,"combine_feature$SEQ_REGION_ID","feature_id","query_name","query_start","query_end","query_strand","target_name","target_start","target_end","target_strand","target_seq_region_id i*","variation_id i*","vf_seq_region_start","allele_string","cigar_string");
 
   debug("Done for loading combine_feature$SEQ_REGION_ID");
-  #unlink ("$TMP_DIR/ssahasnp_feature$SEQ_REGION_ID");
+  unlink ("$TMP_DIR/ssahasnp_feature$SEQ_REGION_ID");
 }
 
 sub snp_pos {
@@ -214,7 +215,7 @@ sub snp_pos {
 	}
 	#print STDERR "block: $block\tfeat1: $q_start-$q_end\tfeat2: $t_start-$t_end START1 IS $start1\n";
       } elsif ( $block =~ /D$/ ) {
-	if ($query_strand ==1) {
+	if ($target_strand ==1) {
 	  $start2 += $length;
 	} else {
 	  $start2 -= $length;
@@ -231,7 +232,6 @@ sub snp_pos {
 	  $snp_pos = $q_end-$distance+1;
 	}
         print OUT "$feature_id\t$query_name\t$query_strand\t$snp_pos\t$variation_id\t$target_seq_region_id\t$seq_region_start\t$allele_string\n";
-	
 	last;
       }
     }
@@ -252,17 +252,6 @@ sub flanking_qual {
     debug("table flanking_qual$SEQ_REGION_ID already exist");
     return;
   }
-  #my $index_name;
-  #$index_name = "/tmp/index_file_sara" if ($TMP_DIR =~ /turing/);
-  #$index_name = "/tmp/index_file$SEQ_REGION_ID" if ($TMP_DIR !~ /turing/);
-  
-  #debug("copying index_file $INDEX_FILE to $index_name");
-  #system("cp $INDEX_FILE $index_name") if (! (-e "$index_name"));
-  #system("lsrcp $index_file\.pag /tmp/index_file\_$SEQ_REGION_ID\.pag")
-  #if (! (-e "/tmp/index_file\_$SEQ_REGION_ID\.pag"));
-  #system("lsrcp $index_file\.dir /tmp/index_file\_$SEQ_REGION_ID\.dir")
-  #if (! (-e "/tmp/index_file\_$SEQ_REGION_ID\.dir"));
-  #unlink "$TMP_DIR/flanking_qual_error" if (-e "$TMP_DIR/flanking_qual_error");
 
   open OUT, ">/tmp/flank\_$TMP_FILE";
   open ERR, ">$TMP_DIR/flanking_qual_error\_$TMP_FILE";
@@ -272,12 +261,13 @@ sub flanking_qual {
   make_seq_qual_hash("$READS_FILE");
   debug("Dumping snp_pos");
 
-   dumpSQL($dbSara,qq{SELECT feature_id, variation_id, query_name, query_strand, snp_pos, allele_string
+  if (! -e "$TMP_DIR/$TMP_FILE") { 
+    dumpSQL($dbSara,qq{SELECT feature_id, variation_id, query_name, query_strand, snp_pos, allele_string
                        FROM snp_pos$SEQ_REGION_ID
                        $LIMIT_SQL
                        #ORDER BY query_name 
      		    });
-
+  }
   open IN, "$TMP_DIR/$TMP_FILE" or die "$TMP_DIR/$TMP_FILE not exist";
   LINE : while (<IN>){
     my ($feature_id,$variation_id,$query_name,$query_strand,$snp_pos,$allele_string) = split;
@@ -325,32 +315,33 @@ sub flanking_qual {
 sub make_seq_qual_hash {
   my $reads_file = shift;
   my $name;
-  while (<$reads_file\*fastq>) {
+  #while (<$reads_file>) {
+  #while (<$reads_file\*fastq /turing/mouse129_extra/yuan/watson/output_dir/missed1_dir/missed_name1\*fastq>) {
     #print "file is $_\n";
-    my $file = $_;
+    my $file = $reads_file;
     open FASTQ, $file or die "Can't open $file";
     my $found;
     while (<FASTQ>) {
       chomp;
-      if (/^\@(.*)/) {
+      if (/^\@(.*)$/) {
 	$name = $1;
         ($name) = split /\s+/,$name;
       }
-      elsif (/^\+(.*)/) {
-	$name = $1;
-        ($name) = split /\s+/,$name;
-      }
+#      elsif (/^\+(.*)/) {
+#	$name = $1;
+#        ($name) = split /\s+/,$name;
+#      }
       elsif ($name and /(^\!.*)$/) {
 	$REC_QUAL{$name} = $1;
 	undef $name;
       }
-      elsif ($name and /[^?%*]/) {
+      elsif ($name and /[^?%*=<!+]/) {
 	$REC_SEQ{$name} = $_;
-	undef $name;
+	#undef $name;
       }
     }
     close FASTQ;
-  }
+  #}
 }
 
 sub get_pfetch_sequence_and_quality {
@@ -398,7 +389,7 @@ sub get_flanking_seq {
   $end = $snp_pos+5;
   $start = 1 if $snp_pos -5 <= 0;
   $end = $len if $snp_pos+5 > $len;
-
+  #print "seq is $seq and snp_pos is $snp_pos\n";
   $snp_base = substr($seq,$snp_pos-1,1);
   $snp_qual = substr($qual,$snp_pos-1,1);
   $qual_5 = substr($qual,$start-1,5);
@@ -427,7 +418,7 @@ sub get_flanking_seq {
   #print "Time to fetch and calculate flanking qual: ",tv_interval($t0,$t2),"\n";
 
   return ([$qual_5,$qual_3,$snp_base,$snp_qual]);
-  
+  #exit;
 }
 
 sub gtype_allele {
@@ -450,13 +441,14 @@ sub gtype_allele {
     return;
   }
                 
-  dumpSQL($dbSara,qq{SELECT f.variation_id, f.snp_base, s.allele_string, m.strain_name
-                                          FROM flanking_qual$SEQ_REGION_ID f, snp_pos$SEQ_REGION_ID s, query_match_length_strain m
+  dumpSQL($dbSara,qq{SELECT f.variation_id, f.snp_base, s.allele_string, m.individual_name
+                                          FROM flanking_qual$SEQ_REGION_ID f, snp_pos$SEQ_REGION_ID s, ssahaSNP_feature m
                                           WHERE s.variation_id=f.variation_id
                                           AND f.feature_id = s.feature_id
                                           AND f.query_name = s.query_name
                                           AND f.query_name = m.query_name
 					  $LIMIT_SQL
+                                          #AND f.variation_id=922
                                           #GROUP BY f.variation_id,f.snp_base,s.allele_string,m.strain_name
                                          });
 
@@ -469,38 +461,79 @@ sub gtype_allele {
   while (<IN>) {
     my ($variation_id,$snp_base,$allele_string,$strain_name) = split;
     $snp_base = uc($snp_base);
-    next if $rec_var_allele{$strain_name}{$variation_id}{$snp_base};
+    #$rec_var_allele{$strain_name}{$variation_id}++;
     $rec_var_allele{$strain_name}{$variation_id}{$snp_base}++;
-    my ($allele_1,$allele_2) = split /\//, $allele_string;
+    next if $rec_var_allele{$strain_name}{$variation_id}{$snp_base}>1;
+    my ($allele_1,$allele_2,$allele_3,$allele_4) = split /\//, $allele_string;
     $allele_1 = uc($allele_1);
     $allele_2 = uc($allele_2);
+    $allele_3 = uc($allele_3);
+    $allele_4 = uc($allele_4);
     $var_allele_string{$strain_name}{$variation_id}{$allele_1}='ref_allele';
-    $var_allele_string{$strain_name}{$variation_id}{$allele_2}='non_ref_allele';
+    $var_allele_string{$strain_name}{$variation_id}{$allele_2}='non_ref_allele1';
+    $var_allele_string{$strain_name}{$variation_id}{$allele_3}='non_ref_allele2';
+    $var_allele_string{$strain_name}{$variation_id}{$allele_4}='non_ref_allele3';
     $var_allele_string{$strain_name}{$variation_id}{'ref_allele'} = $allele_1;
-    $var_allele_string{$strain_name}{$variation_id}{'non_ref_allele'} = $allele_2;
+    $var_allele_string{$strain_name}{$variation_id}{'non_ref_allele1'} = $allele_2;
+    $var_allele_string{$strain_name}{$variation_id}{'non_ref_allele2'} = $allele_3;
+    $var_allele_string{$strain_name}{$variation_id}{'non_ref_allele3'} = $allele_4;
   }
 
   foreach my $strain_name (keys %rec_var_allele) {
     foreach my $variation_id (keys %{$rec_var_allele{$strain_name}}) {
       my @snp_bases = keys %{$rec_var_allele{$strain_name}{$variation_id}};
-      my $ref_allele = $var_allele_string{$strain_name}{$variation_id}{'ref_allele'};
-      my $non_ref_allele = $var_allele_string{$strain_name}{$variation_id}{'non_ref_allele'};
+      my ($ref_allele,$non_ref_allele1,$non_ref_allele2,$non_ref_allele3);
+      $ref_allele = $var_allele_string{$strain_name}{$variation_id}{'ref_allele'};
+      $non_ref_allele1 = $var_allele_string{$strain_name}{$variation_id}{'non_ref_allele1'};
+      $non_ref_allele2 = $var_allele_string{$strain_name}{$variation_id}{'non_ref_allele2'};
+      $non_ref_allele3 = $var_allele_string{$strain_name}{$variation_id}{'non_ref_allele3'};
       if (scalar @snp_bases >2) {
-	print ERR "snp_bases >2\t$strain_name\t$variation_id\t@snp_bases\t$ref_allele/$non_ref_allele\n";
-	next;
+	my @new_snp_bases ;
+	#if more than 2 snp_bases, check any snp_base only have one read support, get rid of it
+	foreach my $base (@snp_bases) {
+	  push @new_snp_bases, $base if $rec_var_allele{$strain_name}{$variation_id}{$base}>1;
+	}
+	if (scalar @new_snp_bases >2 ) {
+	  print ERR "snp_bases >2\t$strain_name\t$variation_id\t@new_snp_bases\t$ref_allele/$non_ref_allele1,$non_ref_allele2,$non_ref_allele3\n";
+	  next;
+	}
+	elsif (@new_snp_bases == 1) {
+	  if ($var_allele_string{$strain_name}{$variation_id}{$new_snp_bases[0]}) {
+	    print GTY "$variation_id\t$new_snp_bases[0]\t$new_snp_bases[0]\t$strain_name\n";
+	    print ALE "$variation_id\t$new_snp_bases[0]\t$strain_name\n";
+	    print ALE "$variation_id\t$ref_allele\trefstrain\n" if !$ref_allele_done{$variation_id};
+	    $ref_allele_done{$variation_id}=1;
+	  }
+	  else {
+	    print ERR "snp_base not in allele_string\t$strain_name\t$variation_id\t$new_snp_bases[0]\t$ref_allele/$non_ref_allele1,$non_ref_allele2,$non_ref_allele3\n";
+	  }
+	}
+	elsif (@new_snp_bases == 2 and $species !~ /mus|mouse/i) {
+	  if ( $var_allele_string{$strain_name}{$variation_id}{$new_snp_bases[0]} and $var_allele_string{$strain_name}{$variation_id}{$new_snp_bases[1]} ) {
+	    print GTY "$variation_id\t$new_snp_bases[0]\t$new_snp_bases[1]\t$strain_name\n";
+	    print ALE "$variation_id\t$new_snp_bases[0]\t$strain_name\n";
+	    print ALE "$variation_id\t$new_snp_bases[1]\t$strain_name\n";
+	  }
+	  else {
+	    print ERR "snp_base not in allele_string\t$strain_name\t$variation_id\t@new_snp_bases\t$ref_allele/$non_ref_allele1,$non_ref_allele2,$non_ref_allele3\n";
+	  }
+	}
       }
-      #elsif (@snp_bases == 1 and $snp_bases[0] ne $ref_allele) {#if only one snp_base survived, it has to be different from ref_allele, we give homozygoes genotype, but this only for run with single individual
-      elsif (@snp_bases == 1) {#for this case (run against dbSNP SNPs), we expecting all bases are same as reference base also for multi individuals, this individual may have alleles all same as reference one
-	if ($var_allele_string{$strain_name}{$variation_id}{$snp_bases[0]}) {
+
+      elsif (@snp_bases == 1) {#problem of snp allele failed, so not a snp anymore????see variation_id=943938 for tetraodon
+        #if (scalar keys %rec_var_allele ==1 and $snp_bases[0] ne $ref_allele or scalar keys %rec_var_allele > 1) {#if only one snp_base survived, it has to be different from ref_allele, we give homozygoes genotype, but this only for run with single individual, for multi individual, allow single base same as reference base
+        #if ($snp_bases[0] eq $ref_allele) {#for this case (run against dbSNP SNPs), we expecting all bases are same as reference base also for multi individuals, this individual may have alleles all same as reference one
+	if ($var_allele_string{$strain_name}{$variation_id}{$snp_bases[0]}) {##for multi individual
 	  print GTY "$variation_id\t$snp_bases[0]\t$snp_bases[0]\t$strain_name\n";
-	  print ALE "$variation_id\t$snp_bases[0]\t$strain_name\n";
+          print ALE "$variation_id\t$snp_bases[0]\t$strain_name\n";
           print ALE "$variation_id\t$ref_allele\trefstrain\n" if !$ref_allele_done{$variation_id};
 	  $ref_allele_done{$variation_id}=1;
         }
-	else {
-	  print ERR "snp_base not in allele_string\t$strain_name\t$variation_id\t$snp_bases[0]\t$ref_allele/$non_ref_allele\n";
+        else {
+	  print ERR "snp_base not in allele_string\t$strain_name\t$variation_id\t$snp_bases[0]\t$ref_allele/$non_ref_allele1,$non_ref_allele2,$non_ref_allele3\n";
 	}
       }
+
       elsif (@snp_bases == 2 and $species !~ /mus|mouse/i) {
 	if ( $var_allele_string{$strain_name}{$variation_id}{$snp_bases[0]} and $var_allele_string{$strain_name}{$variation_id}{$snp_bases[1]} ) {
 	  print GTY "$variation_id\t$snp_bases[0]\t$snp_bases[1]\t$strain_name\n";
@@ -508,11 +541,11 @@ sub gtype_allele {
 	  print ALE "$variation_id\t$snp_bases[1]\t$strain_name\n";
 	}
 	else {
-	  print ERR "snp_base not in allele_string\t$strain_name\t$variation_id\t@snp_bases\t$ref_allele/$non_ref_allele\n";
+	  print ERR "snp_base not in allele_string\t$strain_name\t$variation_id\t@snp_bases\t$ref_allele/$non_ref_allele1,$non_ref_allele2,$non_ref_allele3\n";
 	}
       }
       else {
-	print ERR "snp_bases = 2\t$strain_name\t$variation_id\t@snp_bases\t$ref_allele/$non_ref_allele\n";
+	print ERR "snp_bases = 2\t$strain_name\t$variation_id\t@snp_bases\t$ref_allele/$non_ref_allele1,$non_ref_allele2,$non_ref_allele3\n";
       }
     }
   }
@@ -528,7 +561,7 @@ sub gtype_allele {
     $allele_table_name = "gtype_allele_$TMP_FILE";
     $failed_table_name = "failed_gtype_$TMP_FILE";
   }
-  
+
   system("mv $TMP_DIR/gtype_$TMP_FILE $TMP_DIR/$TMP_FILE");
   create_and_load($dbSara,"$gtype_table_name","variation_id i*","allele_1","allele_2","sample_name");
 
