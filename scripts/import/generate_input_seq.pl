@@ -1,5 +1,5 @@
 #! /usr/local/ensembl/bin/perl
-#
+#directly use this script if generate from small genome like zebrafish
 
 use strict;
 #use DBH;
@@ -68,7 +68,7 @@ sub generate_input_seq {
 
   my (%variation_ids);
 
-  my $file_size = 10000;
+  my $file_size = 20000;
   my $file_count=1;
   my $i = 0;
 
@@ -93,7 +93,7 @@ WHERE  seq_region_id = $seq_region_id});
     print "seq_region_id is $seq_region_id\n";
 
     if ($chr_name) {
-      if ($chr_name =~ /NT|^A|^B|^C/) {
+      if ($chr_name =~ /NT|^A|^B|^C|^ZV7/i) {
 	$chr_name = "NT";
       }
       if (! -e "$output_dir/$chr_name") {
@@ -139,7 +139,7 @@ AND    vf.variation_name not like "NT%" ##this is only for mouse
     if (! -e "$TMP_DIR/$TMP_FILE" or -z "$TMP_DIR/$TMP_FILE") {
       # Only dump if tmp file does not exist, or is compressed
       # No chr_name or seq_region_id specified. dump flanking sequence from paralle_processed flanking_sequence table
-      #only can dump flanking seq which is mappedmapped
+      #only can dump flanking seq which is mapped
       my $sql = qq(
 SELECT vf.variation_name,
        f.variation_id,
@@ -152,7 +152,10 @@ SELECT vf.variation_name,
        f.down_seq_region_end
 FROM   variation_feature vf, 
        flanking_sequence f
-WHERE  vf.variation_id=f.variation_id 
+       #top_level_var_id m
+WHERE  vf.variation_id=f.variation_id
+#AND    v.source_id=2
+#AND    vf.variation_id=m.variation_id
        );
       #dump from paralle_processed/or un-processed flanking sequence which is not mapped
       my $sql2 = qq(
@@ -169,6 +172,7 @@ FROM flanking_sequence f, variation v
 LEFT JOIN variation_feature vf
 ON   vf.variation_id=f.variation_id
 WHERE v.variation_id = f.variation_id
+#AND v.source_id=2
 AND vf.variation_id is null);
       #dump all from unprocessed flanking sequences or un-mapped from processed
       my $sql3 = qq(
@@ -186,7 +190,7 @@ WHERE v.variation_id = f.variation_id
 AND f.seq_region_id is null);
 
       #dump with which sql???
-      dumpSQL($dbVar, $sql3);
+      dumpSQL($dbVar, $sql);
     }
   }
 
@@ -247,6 +251,10 @@ sub print_seqs {
       # Upstream sequence not in query; create from slice
       my $up_tmp_slice = $slice_adaptor->fetch_by_seq_region_id 
           ($variation_ids{$var_id}{'seq_region_id'});
+      #sometimes the edge is outside the chromosome length 
+      if ($variation_ids{$var_id}{'up_seq_region_start'}<1) {
+	$variation_ids{$var_id}{'up_seq_region_start'} = 1;
+      }
       my $up_seq_slice = $up_tmp_slice->sub_Slice 
           (
            $variation_ids{$var_id}{'up_seq_region_start'},
@@ -271,6 +279,10 @@ sub print_seqs {
       # Downstream sequence not in query; create from slice
       my $down_tmp_slice = $slice_adaptor->fetch_by_seq_region_id 
           ($variation_ids{$var_id}{'seq_region_id'});
+      #edge effect
+      if ($variation_ids{$var_id}{'down_seq_region_end'} > $down_tmp_slice->length()) {
+	$variation_ids{$var_id}{'down_seq_region_end'} = $down_tmp_slice->length();
+      }
       my $down_seq_slice = $down_tmp_slice->sub_Slice 
           (
            $variation_ids{$var_id}{'down_seq_region_start'},
@@ -292,6 +304,7 @@ sub print_seqs {
       $down_seq = $variation_ids{$var_id}{'down_seq'};
     }
 
+
     # Trim flanking sequences to 100 bp
     if (length($up_seq) >100) {
       $up_seq = substr($up_seq, -100);
@@ -304,7 +317,9 @@ sub print_seqs {
 
     # Print to file
     print OUT ">$variation_ids{$var_id}{'var_name'}\n$seq\n";
-  }
+
+    #print OUT "$var_id\t$up_seq\t$down_seq\n";
+}
 
   close OUT;
 }
