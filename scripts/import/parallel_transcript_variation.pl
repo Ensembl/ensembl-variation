@@ -40,7 +40,7 @@ my ($TMP_DIR, $TMP_FILE, $LIMIT,$status_file);
 
   my $cdba = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'core');
   my $vdba = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'variation');
-  my $fdba = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'funcgen');
+  my $fdba = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'funcgen') if $species =~ /hum|hom/i;
 
   my $dbVar = $vdba->dbc;
   my $dbCore = $cdba;
@@ -110,63 +110,63 @@ sub transcript_variation {
   my ($offset,$length) = split /,/,$LIMIT; #get the offset and length of the elements we have to get from the slice
   # assumes that variation features have already been pushed to toplevel
 
-  my $rfa = $dbFunc->get_ExternalFeatureAdaptor();
-  my $gene_adaptor = $dbCore->get_GeneAdaptor();
-  my $transcript_adaptor = $dbCore->get_TranscriptAdaptor();
-					      
-#  my $rfa = $dbCore->get_RegulatoryFeatureAdaptor(); this information comes from the FuncGen database
+
   my %done;
   foreach my $slice (splice (@slices_ordered,$offset,$length)) {
     debug("Processing transcript variations for ",
-          $slice->seq_region_name(), "\n");
-    #first consider the regulatory region that overlap with SNPs
-    foreach my $rf (@{$rfa->fetch_all_by_Slice($slice)}) {
+	  $slice->seq_region_name(), "\n");
+    #if it is human, $dbFunc is defined, therefore go through below to calculate regulatory feature
+    if ($dbFunc) {
+      my $rfa = $dbFunc->get_ExternalFeatureAdaptor();
+      my $gene_adaptor = $dbCore->get_GeneAdaptor();
+      my $transcript_adaptor = $dbCore->get_TranscriptAdaptor();
+      #first consider the regulatory region that overlap with SNPs
+      foreach my $rf (@{$rfa->fetch_all_by_Slice($slice)}) {
 	next if (($rf->feature_set->name !~ /miRNA/) && ($rf->feature_set->name !~ /cisRED/));
-#    foreach my $rf (@{fa->fetch_all_by_Slice($slice)}) {
-      # request all variations which lie in the region of a regulate feature
-      $sth->execute($slice->get_seq_region_id(),
-                    $rf->seq_region_start(),
-                    $rf->seq_region_end(),
-                    $rf->seq_region_start());
-      my $rows = $sth->fetchall_arrayref();
-      my ($start,$end, $rf_start, $rf_end); #start, end of the variation feature in the slice
 
-      foreach my $row (@$rows) {
-	$start = $row->[1];
-	$end = $row->[2];
-	$rf_start = $rf->seq_region_start();
-	$rf_end = $rf->seq_region_end();
-	#print "start is $start,end is $end,rf_start is $rf_start and rf_end is $rf_end\n";
-	if ($end >= $rf_start and $start <= $rf_end) {
-#	  foreach my $g (@{$rf->regulated_genes()}) {
-	  foreach my $dbEntry (@{$rf->get_all_DBEntries('core_gene','MISC')}) {
+	# request all variations which lie in the region of a regulate feature
+	$sth->execute($slice->get_seq_region_id(),
+		      $rf->seq_region_start(),
+		      $rf->seq_region_end(),
+		      $rf->seq_region_start());
+	my $rows = $sth->fetchall_arrayref();
+	my ($start,$end, $rf_start, $rf_end); #start, end of the variation feature in the slice
+
+	foreach my $row (@$rows) {
+	  $start = $row->[1];
+	  $end = $row->[2];
+	  $rf_start = $rf->seq_region_start();
+	  $rf_end = $rf->seq_region_end();
+	  #print "start is $start,end is $end,rf_start is $rf_start and rf_end is $rf_end\n";
+	  if ($end >= $rf_start and $start <= $rf_end) {
+	    foreach my $dbEntry (@{$rf->get_all_DBEntries('core_gene','MISC')}) {
 	      my $g = $gene_adaptor->fetch_by_stable_id($dbEntry->primary_id); #get the gene for the stable_id
 	      next if(!defined $g); #some of the genes do not seem to be in the core database
 	      my $g_start = $g->seq_region_start;
 	      my $g_end = $g->seq_region_end;
-	    #SNPs needs to be out side gene+flanking region,otherwise will be considered later
-	    if ($end < $g_start - $UPSTREAM or $start > $g_end + $DNSTREAM ) {
-	      foreach my $tr (@{$g->get_all_Transcripts()}) {
+	      #SNPs needs to be out side gene+flanking region,otherwise will be considered later
+	      if ($end < $g_start - $UPSTREAM or $start > $g_end + $DNSTREAM ) {
+		foreach my $tr (@{$g->get_all_Transcripts()}) {
+		  my @arr = ($tr->dbID,$row->[0],'\N','\N','\N','\N','\N','REGULATORY_REGION');
+		  if (! $done{$row->[0]}{$tr->dbID}) {#get rid of duplicated transcript entries
+		    print FH join("\t", @arr), "\n";
+		    $done{$row->[0]}{$tr->dbID}=1;
+		  }
+		}
+	      }
+	    }
+	    foreach my $dbEntry (@{$rf->get_all_DBEntries('core_transcript')}) {	     
+	      my $tr = $transcript_adaptor->fetch_by_stable_id($dbEntry->primary_id); #get transcript for stable_id
+	      next if(!defined $tr); #some of the transcripts do not seem to be in the core database
+	      my $tr_start = $tr->seq_region_start;
+	      my $tr_end = $tr->seq_region_end;
+	      #SNPs needs to be out side gene+flanking region,otherwise will be considered later
+	      if ($end < $tr_start - $UPSTREAM or $start > $tr_end + $DNSTREAM ) {
 		my @arr = ($tr->dbID,$row->[0],'\N','\N','\N','\N','\N','REGULATORY_REGION');
 		if (! $done{$row->[0]}{$tr->dbID}) {#get rid of duplicated transcript entries
 		  print FH join("\t", @arr), "\n";
 		  $done{$row->[0]}{$tr->dbID}=1;
 		}
-	      }
-	    }
-	  }
-#	  foreach my $tr (@{$rf->regulated_transcripts()}) {
-	  foreach my $dbEntry (@{$rf->get_all_DBEntries('core_transcript')}) {	     
-	      my $tr = $transcript_adaptor->fetch_by_stable_id($dbEntry->primary_id); #get transcript for stable_id
-	      next if(!defined $tr); #some of the transcripts do not seem to be in the core database
-	    my $tr_start = $tr->seq_region_start;
-	    my $tr_end = $tr->seq_region_end;
-	    #SNPs needs to be out side gene+flanking region,otherwise will be considered later
-	    if ($end < $tr_start - $UPSTREAM or $start > $tr_end + $DNSTREAM ) {
-	      my @arr = ($tr->dbID,$row->[0],'\N','\N','\N','\N','\N','REGULATORY_REGION');
-	      if (! $done{$row->[0]}{$tr->dbID}) {#get rid of duplicated transcript entries
-		print FH join("\t", @arr), "\n";
-		$done{$row->[0]}{$tr->dbID}=1;
 	      }
 	    }
 	  }
