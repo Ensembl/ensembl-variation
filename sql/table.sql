@@ -528,6 +528,15 @@ create table individual_population (
 
 );
 
+#This table is only needed for create master schema when run healthcheck system
+#need to find a way do this automatically
+
+CREATE TABLE tmp_individual_genotype_single_bp (
+                            variation_id int not null,allele_1 varchar(255),allele_2 varchar(255),sample_id int,
+                            key variation_idx(variation_id),
+                            key sample_idx(sample_id)
+                            ) MAX_ROWS = 100000000
+
 
 #
 # individual_genotype_multiple_bp
@@ -636,7 +645,7 @@ CREATE TABLE compressed_genotype_single_bp(
   genotypes blob,
 
   key pos_idx(seq_region_id,seq_region_start)
-);
+) MAX_ROWS = 100000000;
 
 #
 # failed_description
