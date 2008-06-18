@@ -75,6 +75,7 @@ use Bio::EnsEMBL::Utils::Argument  qw(rearrange);
 use Bio::EnsEMBL::Variation::Utils::Sequence qw(ambiguity_code variation_class);
 use Bio::EnsEMBL::Variation::ConsequenceType;
 use Bio::EnsEMBL::Variation::Variation;
+use Bio::EnsEMBL::Slice;
 
 our @ISA = ('Bio::EnsEMBL::Feature');
 
@@ -289,6 +290,35 @@ sub get_all_TranscriptVariations{
     return $self->{'transcriptVariations'};
 }
 
+sub get_nearest_gene{
+
+    my $self = shift;
+    my $flanking_size = shift;
+    my $sa = $self->{'adaptor'}->db()->->dnadb->get_SliceAdaptor();
+    my $slice = $sa->fetch_by_Feature($self,$flanking_size);
+    my @genes = @{$slice->get_all_Genes};
+    if (@genes) {
+      my %distances = ();
+      foreach my $g (@genes) {
+        if ($g->seq_region_start > $self->start) {
+          $distances{$g->seq_region_start-$self->start}=$g;
+        }
+        else {
+          $distances{$self->start-$g->seq_region_start}=$g;
+        }
+      }
+      my @distances = sort {$a<=>$b} keys %distances;
+      my $shortest_distance = $distances[0];
+      if ($shortest_distance) {
+        my $nearest_gene = $distances{$shortest_distances};
+        return $nearest_gene;
+      }
+    }
+    else {
+      throw('variation_feature with flanking_size is not overlap with a gene, try a bigger flanking_size');
+    }
+}
+
 =head2 add_TranscriptVariation
 
    Arg [1]     : Bio::EnsEMBL::Variation::TranscriptVariation
@@ -474,6 +504,147 @@ sub get_consequence_type {
   }
 }
 
+
+=head2 add_splice_site
+
+    Arg [1]     : string $splice_site
+    Example     : $vf->add_splice_site('ESSENTIAL_SPLICE_SITE')
+    Description : Setter for the splice site type of this VariationFeature
+                  Allowed values are: 'ESSENTIAL_SPLICE_SITE', 'SPLICE_SITE'
+    ReturnType  : string
+    Exceptions  : none
+    Caller      : general
+
+
+sub add_splice_site{
+    my $self = shift;
+    my $splice_site = shift;
+
+    return $self->{'splice_site'} = $splice_site if ($SPLICE_SITES{$splice_site});
+    warning("You are trying to set the splice site to a non-allowed type. The allowed types are: ", keys %SPLICE_SITES);
+    return '';
+}
+
+=head2 get_splice_site
+
+   Arg[1]      : (optional) Bio::EnsEMBL::Gene $g
+   Example     : if($vf->get_splice_site eq 'SPLICE_SITE'){do_something();}
+   Description : Getter for the splice site of this variation, which is the highest of the transcripts that has.
+                 If an argument provided, gets the highest of the transcripts where the gene appears
+                 Allowed values are:'ESSENTIAL_SPLICE_SITES','SPLICE_SITE'
+   Returntype : string
+   Exceptions : throw if provided argument not a gene
+   Caller     : general
+
+
+sub get_splice_site{
+  my $self = shift;
+  my $gene = shift;
+    
+  if(!defined $gene){
+    return $self->{'splice_site'};
+  } 
+  else{
+      my $highest_priority;
+      #first, get all the transcripts, if any
+      my $transcript_variations = $self->get_all_TranscriptVariations();
+      #if no transcripts, return INTERGENIC type
+      if (!defined $transcript_variations){
+	  return '';
+      }
+      if (!ref $gene || !$gene->isa("Bio::EnsEMBL::Gene")){
+	  throw("$gene is not a Bio::EnsEMBL::Gene type!");
+      }
+      my $transcripts = $gene->get_all_Transcripts();
+      my %transcripts_genes;
+      my @new_transcripts;
+      map {$transcripts_genes{$_->dbID()}++} @{$transcripts};
+      foreach my $transcript_variation (@{$transcript_variations}){
+	  if (exists $transcripts_genes{$transcript_variation->transcript->dbID()}){
+	      push @new_transcripts,$transcript_variation;
+	  }
+      }
+      #get the highest type in the splice site
+      foreach my $tv (@new_transcripts){
+	  if ((defined $tv->splice_site) and ($SPLICE_SITES{$tv->splice_site} < $SPLICE_SITES{$highest_priority})){
+	      $highest_priority = $tv->splice_site;
+	  }
+      }      
+      return $highest_priority;      
+  }
+}
+
+=head2 add_regulatory_region
+
+    Arg [1]     : string $regulatory_region
+    Example     : $vf->add_regulatory_region('REGULATORY_REGION')
+    Description : Setter for the regulatory region type of this VariationFeature
+                  Allowed value is: 'REGULATORY_REGION'
+    ReturnType  : string
+    Exceptions  : none
+    Caller      : general
+
+
+sub add_regulatory_region{
+    my $self = shift;
+    my $regulatory_region = shift;
+
+    return $self->{'regulatory_region'} = $regulatory_region if ($REGULATORY_REGION{$regulatory_region});
+    warning("You are trying to set the regulatory_region to a non-allowed type. The allowed type is: ", keys %REGULATORY_REGION);
+    return '';
+}
+
+=head2 get_regulatory_region
+
+   Arg[1]      : (optional) Bio::EnsEMBL::Gene $g
+   Example     : if($vf->get_regulatory_region eq 'REGULATORY_REGION'){do_something();}
+   Description : Getter for the regulatory region of this variation
+                 If an argument provided, gets the highest of the transcripts where the gene appears
+                 Allowed value is :'REGULATORY_REGION'
+   Returntype : string
+   Exceptions : throw if provided argument is not a gene
+   Caller     : general
+
+
+sub get_regulatory_region{
+  my $self = shift;
+  my $gene = shift;
+    
+  if(!defined $gene){
+    return $self->{'regulatory_region'};
+  } 
+  else{
+      my $regulatory_region;
+      #first, get all the transcripts, if any
+      my $transcript_variations = $self->get_all_TranscriptVariations();
+      #if no transcripts, return INTERGENIC type
+      if (!defined $transcript_variations){
+	  return '';
+      }
+      if (!ref $gene || !$gene->isa("Bio::EnsEMBL::Gene")){
+	  throw("$gene is not a Bio::EnsEMBL::Gene type!");
+      }
+      my $transcripts = $gene->get_all_Transcripts();
+      my %transcripts_genes;
+      my @new_transcripts;
+      map {$transcripts_genes{$_->dbID()}++} @{$transcripts};
+      foreach my $transcript_variation (@{$transcript_variations}){
+	  if (exists $transcripts_genes{$transcript_variation->transcript->dbID()}){
+	      push @new_transcripts,$transcript_variation;
+	  }
+      }
+
+      foreach my $tv (@new_transcripts){
+	if (defined $tv->regulatory_region ()){
+	  $regulatory_region = $tv->regulatory_region();
+	  last;
+	}
+      }
+      return $regulatory_region;
+  }
+}
+
+=cut
 
 #for a list of transcript variations, gets the one with highest priority
 sub _highest_priority{
