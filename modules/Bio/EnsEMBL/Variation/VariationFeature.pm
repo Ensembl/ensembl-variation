@@ -294,9 +294,15 @@ sub get_nearest_gene{
 
     my $self = shift;
     my $flanking_size = shift;
-    my $sa = $self->{'adaptor'}->db()->->dnadb->get_SliceAdaptor();
+    my $sa = $self->{'adaptor'}->db()->dnadb->get_SliceAdaptor();
     my $slice = $sa->fetch_by_Feature($self,$flanking_size);
     my @genes = @{$slice->get_all_Genes};
+    if (! @genes) {
+      warning("flanking_size $flanking_size is not big enough to overlap a gene, increase it by 1,000,000");
+      $flanking_size += 1000000;
+      $slice = $sa->fetch_by_Feature($self,$flanking_size);
+      @genes = @{$slice->get_all_Genes};
+    }
     if (@genes) {
       my %distances = ();
       foreach my $g (@genes) {
@@ -310,12 +316,12 @@ sub get_nearest_gene{
       my @distances = sort {$a<=>$b} keys %distances;
       my $shortest_distance = $distances[0];
       if ($shortest_distance) {
-        my $nearest_gene = $distances{$shortest_distances};
+        my $nearest_gene = $distances{$shortest_distance};
         return $nearest_gene;
       }
     }
     else {
-      throw('variation_feature with flanking_size is not overlap with a gene, try a bigger flanking_size');
+      throw("variation_feature with flanking_size $flanking_size is not overlap with a gene, try a bigger flanking_size");
     }
 }
 
