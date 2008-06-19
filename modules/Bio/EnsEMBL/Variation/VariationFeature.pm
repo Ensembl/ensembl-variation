@@ -290,14 +290,28 @@ sub get_all_TranscriptVariations{
     return $self->{'transcriptVariations'};
 }
 
-sub get_nearest_gene{
+=head2 get_nearest_Gene
+
+  Example     : $vf->get_nearest_Gene($flanking_size);
+  Description : Getter a Gene which is associated to or nearest to the VariationFeature
+  Returntype  : a reference to a list of objects of Bio::EnsEMBL::Gene
+  Exceptions  : None
+  Caller      : general
+  Status      : At Risk
+
+=cut
+
+sub get_nearest_Gene{
 
     my $self = shift;
-    my $flanking_size = shift;
+    my $flanking_size = shift; #flanking size is optional
+    $flanking_size ||= 0;
     my $sa = $self->{'adaptor'}->db()->dnadb->get_SliceAdaptor();
     my $slice = $sa->fetch_by_Feature($self,$flanking_size);
     my @genes = @{$slice->get_all_Genes};
-    if (! @genes) {
+    return \@genes if @genes; #$vf is on the gene
+
+    if (! @genes) { #if $vf is not on the gene, increase flanking size
       warning("flanking_size $flanking_size is not big enough to overlap a gene, increase it by 1,000,000");
       $flanking_size += 1000000;
       $slice = $sa->fetch_by_Feature($self,$flanking_size);
@@ -310,14 +324,14 @@ sub get_nearest_gene{
           $distances{$g->seq_region_start-$self->start}=$g;
         }
         else {
-          $distances{$self->start-$g->seq_region_start}=$g;
+          $distances{$self->start-$g->seq_region_end}=$g;
         }
       }
       my @distances = sort {$a<=>$b} keys %distances;
       my $shortest_distance = $distances[0];
       if ($shortest_distance) {
         my $nearest_gene = $distances{$shortest_distance};
-        return $nearest_gene;
+        return [$nearest_gene];
       }
     }
     else {
