@@ -23,7 +23,10 @@ usage('You need to enter the file name where you want to dump the data') if (!de
 Bio::EnsEMBL::Registry->load_registry_from_db( -host => 'ens-staging'
 					      );
 my $queue = 'normal';
+my $memory = "'select[mem>4000] rusage[mem=4000]' -M4000000";
+
 $queue = 'long' if ($species eq 'human');
+$memory = "'select[mem>5000] rusage[mem=5000]' -M5000000" if ($species eq 'human');
 
 my $dbCore = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'core');
 
@@ -31,7 +34,7 @@ my $slice_adaptor = $dbCore->get_SliceAdaptor();
 my $slices = $slice_adaptor->fetch_all('chromosome');
 #find out all possible chromosomes we want to dump and create the different job arrays
 print "Time starting to dump data: ", scalar(localtime),"\n";
-my $call = "bsub -q $queue -R'select[mem>3000] rusage[mem=3000]' -M3000000  -J dump_strain_$species'[1-" . @{$slices} . "]' ./dump_strain_seq.pl -dump_file $dump_file -species $species";
+my $call = "bsub -q $queue -R$memory  -J dump_strain_$species'[1-" . @{$slices} . "]' ./dump_strain_seq.pl -dump_file $dump_file -species $species";
 system($call);
 #print $call,"\n";    
 
