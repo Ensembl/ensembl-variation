@@ -49,7 +49,6 @@ my ($TMP_DIR, $TMP_FILE, $LIMIT,$status_file);
   $TMP_DIR  = $ImportUtils::TMP_DIR;
   $TMP_FILE = $ImportUtils::TMP_FILE;
 
-
   transcript_variation($dbCore, $dbVar, $dbFunc);
 
   open STATUS, ">>$TMP_DIR/$status_file"
@@ -66,6 +65,8 @@ my ($TMP_DIR, $TMP_FILE, $LIMIT,$status_file);
     debug("Last process: ready to import data");
     last_process($dbCore,$dbVar);
   }
+
+  #last_process($dbCore,$dbVar);
 }
 
 #
@@ -117,13 +118,19 @@ sub transcript_variation {
 	  $slice->seq_region_name(), "\n");
     #if it is human, $dbFunc is defined, therefore go through below to calculate regulatory feature
     if ($dbFunc) {
-      my $rfa = $dbFunc->get_ExternalFeatureAdaptor();
+      my $efa = $dbFunc->get_ExternalFeatureAdaptor();
+      my $rfa = $dbFunc->get_RegulatoryFeatureAdaptor();
       my $gene_adaptor = $dbCore->get_GeneAdaptor();
       my $transcript_adaptor = $dbCore->get_TranscriptAdaptor();
       #first consider the regulatory region that overlap with SNPs
-      foreach my $rf (@{$rfa->fetch_all_by_Slice($slice)}) {
-	next if (($rf->feature_set->name !~ /miRNA/) && ($rf->feature_set->name !~ /cisRED/));
-
+      my (@rf);
+      foreach my $f  (@{$efa->fetch_all_by_Slice($slice)}) {
+	if ($f->feature_set->name =~ /VISTA\s+enhancer\s+set/i or $f->feature_set->name =~ /cisRED\s+group\s+motifs/i) {
+	  push @rf, $f;
+	}
+      }
+      push @rf, @{$rfa->fetch_all_by_Slice($slice)};
+      foreach my $rf (@rf) {
 	# request all variations which lie in the region of a regulate feature
 	$sth->execute($slice->get_seq_region_id(),
 		      $rf->seq_region_start(),
@@ -137,9 +144,9 @@ sub transcript_variation {
 	  $end = $row->[2];
 	  $rf_start = $rf->seq_region_start();
 	  $rf_end = $rf->seq_region_end();
-	  #print "start is $start,end is $end,rf_start is $rf_start and rf_end is $rf_end\n";
+	  print FH "start is $start,end is $end,rf_start is $rf_start and rf_end is $rf_end\n";
 	  if ($end >= $rf_start and $start <= $rf_end) {
-	    foreach my $dbEntry (@{$rf->get_all_DBEntries('core_gene','MISC')}) {
+	    foreach my $dbEntry (@{$rf->get_all_DBEntries('ensembl_core_Gene','MISC')}) {
 	      my $g = $gene_adaptor->fetch_by_stable_id($dbEntry->primary_id); #get the gene for the stable_id
 	      next if(!defined $g); #some of the genes do not seem to be in the core database
 	      my $g_start = $g->seq_region_start;
@@ -155,7 +162,7 @@ sub transcript_variation {
 		}
 	      }
 	    }
-	    foreach my $dbEntry (@{$rf->get_all_DBEntries('core_transcript')}) {	     
+	    foreach my $dbEntry (@{$rf->get_all_DBEntries('ensembl_core_Transcript')}) {	     
 	      my $tr = $transcript_adaptor->fetch_by_stable_id($dbEntry->primary_id); #get transcript for stable_id
 	      next if(!defined $tr); #some of the transcripts do not seem to be in the core database
 	      my $tr_start = $tr->seq_region_start;
@@ -258,7 +265,7 @@ sub transcript_variation {
 sub last_process{
     my $dbCore = shift;
     my $dbVar = shift;
-    
+
     debug("Reimporting processed transcript variation");
      my $dbname = $dbVar->dbname(); #get the name of the database to create the file
      my $call = "cat $TMP_DIR/$dbname.transcript_variation*.txt > $TMP_DIR/$TMP_FILE";
