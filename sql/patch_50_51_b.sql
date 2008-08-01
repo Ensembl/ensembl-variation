@@ -1,4 +1,4 @@
-# patch_50_51_d.sql
+# patch_50_51_b.sql
 #
 # Title: make database multi-species capable
 #
@@ -22,6 +22,9 @@ ALTER TABLE meta
  ADD INDEX species_value_idx (species_id, meta_value);
 
 UPDATE  meta SET species_id = NULL WHERE meta_key IN ('patch', 'schema_version');
+
+# patch identifier
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_50_51_b.sql|meta_species_id_values');
 
 -- Optimize the modified tables
 OPTIMIZE TABLE meta;
