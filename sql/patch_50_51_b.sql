@@ -21,5 +21,7 @@ ALTER TABLE meta
 ALTER TABLE meta
  ADD INDEX species_value_idx (species_id, meta_value);
 
+UPDATE  meta SET species_id = NULL WHERE meta_key IN ('patch', 'schema_version');
+
 -- Optimize the modified tables
 OPTIMIZE TABLE meta;
