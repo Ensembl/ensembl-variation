@@ -93,6 +93,7 @@ sub fetch_all_by_Variation {
     #foreach of the hitting variation Features, get the Genotype information
     foreach my $vf (@{$variation_features}){
 	map {$_->variation($variation); push @{$res}, $_} @{$self->fetch_all_by_Slice($vf->feature_Slice)};
+	print "this is _ $_\n" if $_;
     }
     #and include the genotypes from the multiple genotype table
     $self->_multiple(1);
@@ -125,8 +126,10 @@ sub fetch_all_by_Slice{
     if (!$self->_multiple){
 	#if passed inividual, add constraint
 	if (defined $individual && defined $individual->dbID){
-	    $constraint = ' c.sample_id = ' . $individual->dbID;
-	    $features = $self->SUPER::fetch_all_by_Slice_constraint($slice,$constraint);
+	  #$constraint = ' c.sample_id = ' . $individual->dbID;
+	  $constraint = ' c.sample_id = ?';
+	  $self->bind_param_generic_fetch($individual->dbID,SQL_INTEGER);
+	  $features = $self->SUPER::fetch_all_by_Slice_constraint($slice,$constraint);
 	}
 	else{
 	    $features = $self->SUPER::fetch_all_by_Slice($slice);
@@ -134,6 +137,7 @@ sub fetch_all_by_Slice{
 	#need to check the feature is within the Slice
 
 	foreach my $indFeature (@{$features}){
+	  print "feature_start ",$indFeature->start,"slice_end ",$slice->end,"slice_start ",$slice->start,"feature_end ",$indFeature->end,"\n" if ($indFeature->end==1);
 	    if ($indFeature->start > 0 && ($slice->end-$slice->start +1) >= $indFeature->end){
 		if ($indFeature->slice->strand == -1){ #ignore the different strand transformation
 
@@ -153,8 +157,10 @@ sub fetch_all_by_Slice{
     else{
 	#if passed inividual, add constraint
 	if (defined $individual && defined $individual->dbID){
-	    $constraint = ' c.sample_id = ' . $individual->dbID;
-	    $features = $self->SUPER::fetch_all_by_Slice_constraint($slice,$constraint);
+	  #$constraint = ' c.sample_id = ' . $individual->dbID;
+	  $constraint = ' c.sample_id = ?';
+	  $self->bind_param_generic_fetch($individual->dbID,SQL_INTEGER);
+	  $features = $self->SUPER::fetch_all_by_Slice_constraint($slice,$constraint);
 	}
 	else{
 	    $features = $self->SUPER::fetch_all_by_Slice($slice);

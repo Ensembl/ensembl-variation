@@ -150,7 +150,8 @@ sub fetch_by_dbID{
   my @tabs = $self->_tables;
   my ($name, $syn) = @{$tabs[0]};
   #the constraint must contain the sample_id, that it is used either for individuals or populations
-  my $constraint = "${syn}.sample_id = $id";
+  my $constraint = "${syn}.sample_id = ?";
+  $self->bind_param_generic_fetch($id,SQL_INTEGER);
 
   #Should only be one
   my ($feat) = @{$self->generic_fetch($constraint)};
@@ -209,10 +210,12 @@ sub fetch_all_by_dbID_list {
     if(@ids > 1)  {
       $id_str = " IN (" . join(',', @ids). ")";
     } else {
-      $id_str = " = " . $ids[0];
+      $id_str = " = ?";
+      $self->bind_param_generic_fetch($ids[0],SQL_INTEGER);
     }
 
     my $constraint = "${syn}.sample_id $id_str";
+    $self->bind_param_generic_fetch($id_str,SQL_INTEGER);
 
     push @out, @{$self->generic_fetch($constraint)};
   }
