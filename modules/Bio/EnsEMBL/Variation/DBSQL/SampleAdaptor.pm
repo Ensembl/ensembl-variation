@@ -215,7 +215,6 @@ sub fetch_all_by_dbID_list {
     }
 
     my $constraint = "${syn}.sample_id $id_str";
-    $self->bind_param_generic_fetch($id_str,SQL_INTEGER);
 
     push @out, @{$self->generic_fetch($constraint)};
   }
