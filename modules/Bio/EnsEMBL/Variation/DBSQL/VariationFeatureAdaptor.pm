@@ -274,7 +274,7 @@ sub _objs_from_sth {
        '-source'   => $source_name,
        '-validation_code' => \@states,
        '-consequence_type' => \@types || 'INTERGENIC',
-       '-_variation_id' => $variation_id});
+       '-variation_id' => $variation_id});
   }
 
   return \@features;
