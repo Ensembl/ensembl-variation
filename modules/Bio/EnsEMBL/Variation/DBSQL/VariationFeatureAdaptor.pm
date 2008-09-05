@@ -259,22 +259,23 @@ sub _objs_from_sth {
     my @types = split(',',$consequence_type); #get the different consequence types
  
     # consequence_type
-    push @features, $self->_create_feature('Bio::EnsEMBL::Variation::VariationFeature',
+    push @features, $self->_create_feature_fast('Bio::EnsEMBL::Variation::VariationFeature',
     #push @features, Bio::EnsEMBL::Variation::VariationFeature->new_fast(
     #if use new_fast, then do not need "-" infront of key, i.e 'start' => $seq_region_start,
-      {'-start'    => $seq_region_start,
-       '-end'      => $seq_region_end,
-       '-strand'   => $seq_region_strand,
-       '-slice'    => $slice,
-       '-allele_string' => $allele_string,
-       '-variation_name' => $variation_name,
-       '-adaptor'  => $self,
-       '-dbID'     => $variation_feature_id,
-       '-map_weight' => $map_weight,
-       '-source'   => $source_name,
-       '-validation_code' => \@states,
-       '-consequence_type' => \@types || 'INTERGENIC',
-       '-variation_id' => $variation_id});
+
+      {'start'    => $seq_region_start,
+       'end'      => $seq_region_end,
+       'strand'   => $seq_region_strand,
+       'slice'    => $slice,
+       'allele_string' => $allele_string,
+       'variation_name' => $variation_name,
+       'adaptor'  => $self,
+       'dbID'     => $variation_feature_id,
+       'map_weight' => $map_weight,
+       'source'   => $source_name,
+       'validation_code' => \@states,
+       'consequence_type' => \@types || 'INTERGENIC',
+       '_variation_id' => $variation_id});
   }
 
   return \@features;
