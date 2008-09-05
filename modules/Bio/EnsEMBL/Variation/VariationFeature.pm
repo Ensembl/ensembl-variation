@@ -155,7 +155,7 @@ sub new {
   my $self = $class->SUPER::new(@_);
   my ($allele_str, $var_name, $map_weight, $variation, $variation_id, $source, $validation_code, $consequence_type) =
     rearrange([qw(ALLELE_STRING VARIATION_NAME 
-                  MAP_WEIGHT VARIATION VARIATION_ID SOURCE VALIDATION_CODE 
+                  MAP_WEIGHT VARIATION _VARIATION_ID SOURCE VALIDATION_CODE 
 		  CONSEQUENCE_TYPE)], @_);
 
   $self->{'allele_string'}    = $allele_str;
