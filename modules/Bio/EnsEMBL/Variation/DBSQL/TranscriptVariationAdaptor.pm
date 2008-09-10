@@ -97,13 +97,19 @@ our @ISA = ('Bio::EnsEMBL::DBSQL::BaseAdaptor');
 sub fetch_all_by_Transcripts{
     my $self = shift;
     my $transcript_ref = shift;
-    
-    if (ref($transcript_ref) ne 'ARRAY'){
-	throw('Array Bio::EnsEMBL::Transcript expected');
+
+    if (ref($transcript_ref) ne 'ARRAY' or ! $transcript_ref->[0]->isa('Bio::EnsEMBL::Transcript')){
+      throw('Array Bio::EnsEMBL::Transcript expected');
     }
     
     my %tr_by_id;
-    %tr_by_id = map {$_->dbID(), $_} @{$transcript_ref};
+
+    foreach my $tr (@{$transcript_ref}) {
+      if (!$tr->isa('Bio::EnsEMBL::Transcript')){
+	throw('Bio::EnsEMBL::Transcript is expected');
+      }
+      $tr_by_id{$tr->dbID()} = $tr;
+    }
     my $instr = join (",", keys( %tr_by_id));
     my $transcript_variations = $self->generic_fetch( "tv.transcript_id in ( $instr )");
     for my $tv (@{$transcript_variations}){
