@@ -137,7 +137,7 @@ sub fetch_all_by_Slice{
 	#need to check the feature is within the Slice
 
 	foreach my $indFeature (@{$features}){
-	  print "feature_start ",$indFeature->start,"slice_end ",$slice->end,"slice_start ",$slice->start,"feature_end ",$indFeature->end,"\n" if ($indFeature->end==1);
+#	  print "feature_start ",$indFeature->start,"slice_end ",$slice->end,"slice_start ",$slice->start,"feature_end ",$indFeature->end,"\n" if ($indFeature->end==1);
 	    if ($indFeature->start > 0 && ($slice->end-$slice->start +1) >= $indFeature->end){
 		if ($indFeature->slice->strand == -1){ #ignore the different strand transformation
 
