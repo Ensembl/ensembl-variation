@@ -69,6 +69,7 @@ use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 
 use constant MAX_SNP_DISTANCE => 100_000;
 
+
 @ISA = ('Bio::EnsEMBL::DBSQL::BaseAdaptor');
 
 =head2 fetch_by_Slice
@@ -242,8 +243,7 @@ sub _objs_from_sth {
 
   my ($individual_id, $seq_region_id, $seq_region_start,$seq_region_end,$genotypes, $population_id);
   my @cmd = qw(calc_genotypes);
- # my @path = split /:/,$ENV{PATH};
-  my @path = qw(/nfs/acari/dr2/projects/src/ensembl/ensembl-variation/C_code);
+  my @path = split /:/,$ENV{PATH};
 my $found_file = grep {-e $_ . '/' . $cmd[0]} @path;
   print $found_file,"\n";
   #open the pipe between processes if the binary file exists in the PATH
