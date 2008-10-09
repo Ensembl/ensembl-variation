@@ -69,8 +69,11 @@ use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 
 use constant MAX_SNP_DISTANCE => 100_000;
 
+use base qw(Bio::EnsEMBL::DBSQL::BaseAdaptor);
 
-@ISA = ('Bio::EnsEMBL::DBSQL::BaseAdaptor');
+our $MAX_SNP_DISTANCE = 100000;
+our $BINARY_FILE      = '';
+our $TMP_PATH         = '';
 
 =head2 fetch_by_Slice
 
@@ -86,6 +89,23 @@ use constant MAX_SNP_DISTANCE => 100_000;
   Status     : At Risk
 
 =cut
+
+sub executable {
+  my $self = shift;
+  $BINARY_FILE = shift if @_;
+  unless( $BINARY_FILE ) {
+    my $binary_name = 'calc_genotypes';
+    ($BINARY_FILE) = grep {-e $_} map {"$_/calc_genotypes"} split /:/,$ENV{'PATH'};
+  }
+  return $BINARY_FILE; 
+}
+
+sub temp_path {
+  my $self = shift;
+  $TMP_PATH = shift if @_;
+  $TMP_PATH ||= '/tmp'; 
+  return $TMP_PATH;
+}
 
 sub fetch_by_Slice{
     my $self = shift;
@@ -242,34 +262,26 @@ sub _objs_from_sth {
   my %_pop_ids;
 
   my ($individual_id, $seq_region_id, $seq_region_start,$seq_region_end,$genotypes, $population_id);
-  my @cmd = qw(calc_genotypes);
-  my @path = split /:/,$ENV{PATH};
-my $found_file = grep {-e $_ . '/' . $cmd[0]} @path;
-  print $found_file,"\n";
+  my $bin = $self->executable;
   #open the pipe between processes if the binary file exists in the PATH
-  if (! $found_file){
-      warning("Binary file calc_genotypes not found. Please, read the ensembl-variation/C_code/README.txt file if you want to use LD calculation\n");
-      goto OUT;
+  if( ! $bin ) {
+    warning("Binary file calc_genotypes not found. Please, read the ensembl-variation/C_code/README.txt file if you want to use LD calculation\n");
+    goto OUT;
   }
   my $pid;
   eval "require IPC::Run"; #check wether the IPC::Run module it is installed
-  if ($@){
-      warning("IPC::Run it is not installed in you system. Please, read ensembl-variation/C_code/README.txt if you want to use the LD calculation");
-      goto OUT;
-  }
-  else{
-      use IPC::Run qw(start finish);
-      $pid = start \@cmd,
-      '<pipe', \*IN,
-      '>pipe', \*OUT,
-      '2>pipe', \*ERR 
-	  || die "returned $?" ;
+  if( $@ ){
+    warning("IPC::Run it is not installed in you system. Please, read ensembl-variation/C_code/README.txt if you want to use the LD calculation");
+    goto OUT;
+  } else{
+    use IPC::Run qw(start finish);
+    $pid = start [$bin], '<pipe', \*IN, '>pipe', \*OUT, '2>pipe', \*ERR || die "returned $?" ;
   }
     
   #set autoflush
   my $piid = fork;
   if (!defined $piid){
-      throw("Not possible to fork: $!\n");
+    throw("Not possible to fork: $!\n");
   }
   elsif ($piid !=0){
       close IN || die "Could not close writer filehandle: $!\n";
@@ -509,20 +521,17 @@ sub _objs_from_sth_temp_file {
   my ($individual_id, $seq_region_id, $seq_region_start,$seq_region_end,$genotypes, $population_id);
   my @cmd = qw(calc_genotypes);
 
-  my @path = split /:/,$ENV{PATH};
-  my $found_file = grep {-e $_ . '/' . $cmd[0]} @path;
   #open the pipe between processes if the binary file exists in the PATH
-  if (! $found_file){
-      warning("Binary file calc_genotypes not found. Please, read the ensembl-variation/C_code/README.txt file if you want to use LD calculation\n");
-      goto OUT;
+  my $bin = $self->executable;
+  #open the pipe between processes if the binary file exists in the PATH
+  if( ! $bin ) {
+    warning("Binary file calc_genotypes not found. Please, read the ensembl-variation/C_code/README.txt file if you want to use LD calculation\n");
+    goto OUT;
   }
+
   my $pid;
-#  my $IN = "/tmp/ld-$ENV{SERVER_ADDR}-$$.in";
-  my $IN = "/tmp/ld-$$.in";
-#  my $OUT = "/tmp/ld-$ENV{SERVER_ADDR}-$$.out";
-  my $OUT = "/tmp/ld-$$.out";
-#  warn ">>> $IN $OUT <<<";
-  open IN, ">$IN";
+  my $file= $self->temp_path."/".sprintf( "ld%08x%08x%08x", $$, time, rand( 0x7fffffff) );
+  open IN, ">$file.in";
   $sth->bind_columns(\$individual_id, \$seq_region_id, \$seq_region_start, \$seq_region_end, \$genotypes, \$population_id);
   while($sth->fetch()) {
     #only print genotypes without parents genotyped
@@ -549,10 +558,10 @@ sub _objs_from_sth_temp_file {
       }
   close IN;
 #  `calc_genotypes <$IN >$OUT`;
-  `/nfs/acari/dr2/projects/src/ensembl/ensembl-variation/C_code/calc_genotypes <$IN >$OUT`;
- open OUT, $OUT;
+  `$bin <$file.in >$file.out`;
+  open OUT, "$file.out";
   while(<OUT>){
-  my %ld_values = ();
+    my %ld_values = ();
 #     936	965891	164284	166818	0.628094	0.999996	120 
 	  #get the ouput into the hashes
 	  chomp;
@@ -573,8 +582,8 @@ sub _objs_from_sth_temp_file {
 	  $_pop_ids{$sample_id} = 1;	  
       }
       close OUT || die "Could not close filehandle: $!\n";
-  unlink( $IN );
-  unlink( $OUT );
+  unlink( "$file.in" );
+  unlink( "$file.out" );
 OUT:
   my $t = Bio::EnsEMBL::Variation::LDFeatureContainer->new(
  							   '-ldContainer'=> \%feature_container,
