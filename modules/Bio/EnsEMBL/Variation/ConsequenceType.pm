@@ -41,14 +41,16 @@ our %CONSEQUENCE_TYPES = ('ESSENTIAL_SPLICE_SITE' => 1,
 			  'SPLICE_SITE' => 64,
 			  'SYNONYMOUS_CODING' => 128,
 			  'REGULATORY_REGION' => 256,
-			  '5PRIME_UTR' => 512,
-			  '3PRIME_UTR' => 1024,
-			  'UTR'        => 1094,
-			  'INTRONIC' => 2048,
-			  'UPSTREAM' => 4096,
-			  'DOWNSTREAM' => 8192,
-			  'INTERGENIC' => 16384,
-			  '_'          => 16385,
+			  'WITHIN_MATURE_miRNA' =>512,
+			  '5PRIME_UTR' => 1024,
+			  '3PRIME_UTR' => 2048,
+			  'UTR'        => 2094,
+			  'INTRONIC' => 4096,
+			  'WITHIN_NON_CODING_GENE' => 8192,
+			  'UPSTREAM' => 16384,
+			  'DOWNSTREAM' => 32768,
+			  'INTERGENIC' => 65536,
+			  '_'          => 65537,
 			  );
 
 
@@ -313,7 +315,7 @@ sub cdna_end {
 
   Arg [1]    : string $type 
                (possible types 'FRAMESHIFT_CODING','STOP_GAINED','STOP_LOST','NON_SYNONYMOUS_CODING',
-		'SYNONYMOUS_CODING','5PRIME_UTR','3PRIME_UTR','INTRONIC','UPSTREAM','DOWNSTREAM','INTERGENIC', 'SARA')
+		'SYNONYMOUS_CODING','REGULATORY_REGION','WITHIN_MATURE_miRNA','5PRIME_UTR','3PRIME_UTR','INTRONIC','UPSTREAM','DOWNSTREAM','WITHIN_NON_CODING_GENE','INTERGENIC', 'SARA')
   Example    : $consequence_type = $consequence_type->type
   Description: Getter/Setter for consequence type of the variation in the transcript
   Returntype : none
