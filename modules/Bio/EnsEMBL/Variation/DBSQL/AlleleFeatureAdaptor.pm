@@ -101,7 +101,7 @@ sub from_IndividualSlice{
 
 sub fetch_all_by_Slice{
     my $self = shift;
-    my $slice = shift;
+    my $slice = shift; 
     my $individual = shift;
 
     if(!ref($slice) || !$slice->isa('Bio::EnsEMBL::Slice')) {
@@ -118,7 +118,7 @@ sub fetch_all_by_Slice{
     }
     %{$self->{'_slice_feature_cache'}} = (); #clean the cache to avoid caching problems
     my $genotype_adaptor = $self->db->get_IndividualGenotypeAdaptor; #get genotype adaptor
-    my $genotypes = $genotype_adaptor->fetch_all_by_Slice($slice,$individual); #and get all genotype data
+    my $genotypes = $genotype_adaptor->fetch_all_by_Slice($slice,$individual); #and get all genotype data 
     my $afs = $self->SUPER::fetch_all_by_Slice($slice); #get all AlleleFeatures within the Slice
     my $last_position = 0;
     my $new_afs = [];

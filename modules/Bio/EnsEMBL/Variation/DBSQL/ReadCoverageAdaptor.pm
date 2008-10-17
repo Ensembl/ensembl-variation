@@ -100,10 +100,10 @@ sub fetch_all_by_Slice_Sample_depth{
 		throw("Sample arg must have defined dbID");
 	    }
 	    if ((grep {$args[1] == $_} @{$levels}) > 0){
-	      #$constraint = "rc.sample_id = " . $args[0]->dbID . " AND rc.level = " . $args[1];
-	      $constraint = "rc.sample_id = ? AND rc.level = ?";
-	      $self->bind_param_generic_fetch($args[0]->dbID,SQL_INTEGER);
-	      $self->bind_param_generic_fetch($args[1],SQL_INTEGER);
+	      $constraint = "rc.sample_id = " . $args[0]->dbID . " AND rc.level = " . $args[1];
+	     # $constraint = "rc.sample_id = ? AND rc.level = ?";
+	     # $self->bind_param_generic_fetch($args[0]->dbID,SQL_INTEGER);
+	     # $self->bind_param_generic_fetch($args[1],SQL_INTEGER);
 	    }
 	    else{
 		warning("Level must be a number of: " . join(",", @{$levels}));
@@ -114,9 +114,9 @@ sub fetch_all_by_Slice_Sample_depth{
 	    if (!ref($args[0])){
 		#it should just contain the level
 		if ((grep {$args[0] == $_} @{$levels}) > 0){
-		  #$constraint = "rc.level = " . $args[0];
-		  $constraint = "rc.level = ? ";
-		  $self->bind_param_generic_fetch($args[0],SQL_INTEGER);
+		  $constraint = "rc.level = " . $args[0];
+		  #$constraint = "rc.level = ? ";
+		  #$self->bind_param_generic_fetch($args[0],SQL_INTEGER);
 		}
 		else{
 		    warning("Level must be a number of: " . join(",", @{$levels}));
@@ -128,9 +128,9 @@ sub fetch_all_by_Slice_Sample_depth{
 		if (!$args[0]->isa('Bio::EnsEMBL::Variation::Sample')){
 		    throw('Bio::EnsEMBL::Variation::Sample arg expected');
 		}
-		#$constraint = "rc.sample_id = " . $args[0]->dbID;
-		$constraint = "rc.sample_id = ?";
-		$self->bind_param_generic_fetch($args[0]->dbID,SQL_INTEGER);
+		$constraint = "rc.sample_id = " . $args[0]->dbID; 
+		#$constraint = "rc.sample_id = ?";
+		#$self->bind_param_generic_fetch($args[0]->dbID,SQL_INTEGER);
 	    }
 	}
 	$rcs = $self->fetch_all_by_Slice_constraint($slice,$constraint);    
