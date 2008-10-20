@@ -126,9 +126,9 @@ sub fetch_all_by_Slice{
     if (!$self->_multiple){
 	#if passed inividual, add constraint
 	if (defined $individual && defined $individual->dbID){
-	  #$constraint = ' c.sample_id = ' . $individual->dbID;
-	  $constraint = ' c.sample_id = ?';
-	  $self->bind_param_generic_fetch($individual->dbID,SQL_INTEGER);
+	  $constraint = ' c.sample_id = ' . $individual->dbID;
+	 # $constraint = ' c.sample_id = ?';
+	 # $self->bind_param_generic_fetch($individual->dbID,SQL_INTEGER);
 	  $features = $self->SUPER::fetch_all_by_Slice_constraint($slice,$constraint);
 	}
 	else{
@@ -157,9 +157,9 @@ sub fetch_all_by_Slice{
     else{
 	#if passed inividual, add constraint
 	if (defined $individual && defined $individual->dbID){
-	  #$constraint = ' c.sample_id = ' . $individual->dbID;
-	  $constraint = ' c.sample_id = ?';
-	  $self->bind_param_generic_fetch($individual->dbID,SQL_INTEGER);
+	  $constraint = ' c.sample_id = ' . $individual->dbID;
+	 # $constraint = ' c.sample_id = ?';
+	 # $self->bind_param_generic_fetch($individual->dbID,SQL_INTEGER);
 	  $features = $self->SUPER::fetch_all_by_Slice_constraint($slice,$constraint);
 	}
 	else{
