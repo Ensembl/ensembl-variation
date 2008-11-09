@@ -93,7 +93,6 @@ sub fetch_all_by_Variation {
     #foreach of the hitting variation Features, get the Genotype information
     foreach my $vf (@{$variation_features}){
 	map {$_->variation($variation); push @{$res}, $_} @{$self->fetch_all_by_Slice($vf->feature_Slice)};
-	print "this is _ $_\n" if $_;
     }
     #and include the genotypes from the multiple genotype table
     $self->_multiple(1);
@@ -146,6 +145,7 @@ sub fetch_all_by_Slice{
 		    my $newFeature = $indFeature->transfer($slice->seq_region_Slice); 
 		    $indFeature->slice->{'strand'} = -1;
 		    $newFeature->slice->{'strand'} = -1;
+                    $newFeature->variation($indFeature->variation);
 		    push @results, $newFeature;
 		}
 		else{
