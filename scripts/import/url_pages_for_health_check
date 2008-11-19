@@ -1,0 +1,5 @@
+http://staging.ensembl.org/Homo_sapiens/Variation/Summary?r=21:14857547-14867547;v=rs2256965;vdb=variation #for haplotype chromosome
+http://staging.ensembl.org/Homo_sapiens/Location/SequenceAlignment?r=20:38084753-38104752 
+http://staging.ensembl.org/Homo_sapiens/Variation/Summary?v=rs539157   #changed strand
+http://staging.ensembl.org/Homo_sapiens/Variation/Summary?v=rs745764   #changed strand
+http://staging.ensembl.org/Homo_sapiens/Variation/Mappings?r=21:14862047-14863047;v=rs699;vdb=variation;vf=724 #for gene/transcriptSNPView
