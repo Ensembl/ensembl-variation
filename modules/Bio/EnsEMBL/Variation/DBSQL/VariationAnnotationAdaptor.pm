@@ -49,8 +49,10 @@ use warnings;
 package Bio::EnsEMBL::Variation::DBSQL::VariationAnnotationAdaptor;
 
 use Bio::EnsEMBL::Variation::Variation;
+use Bio::EnsEMBL::Variation::VariationAnnotation;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor;
+
 
 our @ISA = ('Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor');
 

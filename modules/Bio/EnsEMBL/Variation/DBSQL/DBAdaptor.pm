@@ -62,6 +62,7 @@ sub get_available_adaptors{
 		 'MetaCoordContainer' => 'Bio::EnsEMBL::DBSQL::MetaCoordContainer',
 		 'MetaContainer' => 'Bio::EnsEMBL::Variation::DBSQL::MetaContainer',
 		 'ReadCoverage' => 'Bio::EnsEMBL::Variation::DBSQL::ReadCoverageAdaptor',
+     'VariationAnnotation' => 'Bio::EnsEMBL::Variation::DBSQL::VariationAnnotationAdaptor',  
 #		 'CompressedGenotype' => 'Bio::EnsEMBL::Variation::DBSQL::CompressedGenotypeAdaptor'
 		 );
     return (\%pairs);
