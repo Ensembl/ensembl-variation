@@ -68,13 +68,13 @@ my %Printable = ( "\\"=>'\\', "\r"=>'r', "\n"=>'n', "\t"=>'t', "\""=>'"' );
 =head2 fetch_all_by_Slice_Sample
 
     Arg[0]      : Bio::EnsEMBL::Slice $slice
-    Arg[1]      : (optional) Bio::EnsEMBL::Variation::Sample $sample
+    Arg[1]      : (optional) $sample_id
     Arg[2]      : (optional) int $display_size (default 700)
     Arg[3]      : (optional) int $display_type (one of "AVERAGE" or "MAX","MIN") (default "AVERAGE")
     Arg[4]      : (optional) int $window_size
-    Example     : my $reads_coverages = $rcca->fetch_all_by_Slice_Sample_depth($slice,$sample,$display_size,$display_type,$window_size);
+    Example     : my $reads_coverages = $rcca->fetch_all_by_Slice_SampleId($slice,$sample_id,$display_size,$display_type,$window_size);
                Window_size defines which set of pre-averaged scores to use. 
-	       Valid values are 1, 50, 500 or 5000. There is no need to define 
+	       Valid values are 50, 500 or 5000. There is no need to define 
                the window_size because the program will select the most 
                appropriate window_size to use based on the slice_length and the
                display_size.
@@ -86,7 +86,7 @@ my %Printable = ( "\\"=>'\\', "\r"=>'r', "\n"=>'n', "\t"=>'t', "\""=>'"' );
 
 =cut
 
-sub fetch_all_by_Slice_Sample{
+sub fetch_all_by_Slice_SampleId{
     my $self = shift;
     my ($slice,$sample_id,$display_size,$display_type,$window_size) = @_;
 
@@ -119,7 +119,7 @@ sub fetch_all_by_Slice_Sample{
     
     #default window size is the largest bucket that gives at least 
     #display_size values ie get speed but reasonable resolution
-    my @window_sizes = (10,100,500,5000);
+    my @window_sizes = (50,500,5000);
     #my $num_windows = 100;
 
     #check if valid window_size
