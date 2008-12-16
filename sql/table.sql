@@ -23,6 +23,41 @@ create table variation (
 	key source_idx (source_id)
 );
 
+#
+# variation_annotation
+#
+# Table containing annotation associated with the variation
+# such as GWAS
+#
+
+create table variation_annotation (
+        variation_annotation_id int(10) unsigned not null auto_increment,
+        variation_id int(10) unsigned not null,
+        phenotype_id int(10) unsigned not null,
+        source_id int(10) unsigned not null,
+        study_type set('GWAS'),
+        local_stable_id varchar(255),
+        
+        primary key (variation_annotation_id),
+        key variation_idx(variation_id),
+        key phenotype_idx(phenotype_id),
+        key source_idx(source_id)
+);
+
+#
+# phenotype
+# containing phenotype name and description, from GWAS so far
+#
+#
+
+create table phenotype (
+        phenotype_id int(10) unsigned not null auto_increment,
+        name varchar(50),
+        description varchar(255),
+
+        primary key (phenotype_id),
+        unique key name_idx(name)
+);
 
 #
 # variation_synonym
@@ -246,8 +281,8 @@ create table variation_feature(
 	validation_status SET('cluster','freq','submitter','doublehit','hapmap'),
 	consequence_type SET ('ESSENTIAL_SPLICE_SITE','STOP_GAINED','STOP_LOST','COMPLEX_INDEL',
 	                      'FRAMESHIFT_CODING','NON_SYNONYMOUS_CODING','SPLICE_SITE','SYNONYMOUS_CODING',
-				    'REGULATORY_REGION',	'5PRIME_UTR','3PRIME_UTR','INTRONIC','UPSTREAM','DOWNSTREAM',
-				    'INTERGENIC')
+				    'REGULATORY_REGION','WITHIN_MATURE_miRNA','5PRIME_UTR','3PRIME_UTR','INTRONIC','UPSTREAM','DOWNSTREAM',
+				    'WITHIN_NON_CODING_GENE','INTERGENIC')
 	default "INTERGENIC" not null ,	
 	primary key( variation_feature_id ),
 	key pos_idx( seq_region_id, seq_region_start ),
@@ -330,8 +365,8 @@ create table variation_group_feature(
 # predicted transcripts.  Variation features which fall into Ensembl 
 # transcript regions are classified as 'ESSENTIAL_SPLICE_SITE','SPLICE_SITE',
 # 'FRAMESHIFT_CODING','STOP_GAINED','STOP_LOST','NON_SYNONYMOUS_CODING',
-# 'SYNONYMOUS_CODING','5PRIME_UTR','3PRIME_UTR','INTRONIC','UPSTREAM','DOWNSTREAM'
-# 'REGULATORY_REGION', 'COMPLEX_INDEL'
+# 'SYNONYMOUS_CODING','REGULATORY_REGION','WITHIN_MATURE_miRNA','5PRIME_UTR','3PRIME_UTR','INTRONIC','UPSTREAM','DOWNSTREAM'
+# 'WITHIN_NON_CODING_GENE', 'COMPLEX_INDEL'
 
 #
 # transcript_variation_id - primary key, internal identifier
@@ -357,14 +392,25 @@ create table transcript_variation(
   peptide_allele_string varchar(255),
   consequence_type SET ('ESSENTIAL_SPLICE_SITE','STOP_GAINED','STOP_LOST','COMPLEX_INDEL',
 			     'FRAMESHIFT_CODING', 'NON_SYNONYMOUS_CODING','SPLICE_SITE','SYNONYMOUS_CODING',
-			     'REGULATORY_REGION','5PRIME_UTR','3PRIME_UTR','INTRONIC','UPSTREAM',
-			     'DOWNSTREAM') not null,	 
+			     'REGULATORY_REGION','WITHIN_MATURE_miRNA','5PRIME_UTR','3PRIME_UTR','INTRONIC','UPSTREAM',
+			     'DOWNSTREAM','WITHIN_NON_CODING_GENE') not null,	 
   primary key( transcript_variation_id ),
   key variation_idx( variation_feature_id ),
   key transcript_idx( transcript_id ),
   key consequence_type_idx(consequence_type)
 	);
 	
+
+CREATE TABLE seq_region (
+
+  seq_region_id               INT(10) UNSIGNED NOT NULL,
+  name                        VARCHAR(40) NOT NULL,
+
+  PRIMARY KEY (seq_region_id),
+  UNIQUE KEY name_idx (name)
+
+) ;
+
 
 #
 # allele_group
@@ -630,6 +676,22 @@ CREATE TABLE read_coverage (
    key seq_region_idx(seq_region_id,seq_region_start)   
 );
 
+###############
+#
+# Table structure for table read_coverage_collection
+#
+###############
+
+#CREATE TABLE read_coverage_collection(
+#	seq_region_id int(10) unsigned not null,
+#	window_size smallint(5) unsigned not null,
+#	window_start int(10) unsigned not null,
+#	read_coverage_string blob, 
+#	sample_id smallint(5) unsigned not null,
+#
+#	key seq_region_idx(seq_region_id),
+#	key sample_idx(sample_id)
+#);
 
 ################
 #
