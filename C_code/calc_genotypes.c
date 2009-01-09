@@ -124,7 +124,7 @@ void major_freqs(const Haplotype * haplotypes, double *f_A, double *f_B){
     *f_B = 0.0;
     return;
   }
-  if (f_a > f_A_tmp){
+/*if (f_a > f_A_tmp){
     tmp = f_a;
     f_a = f_A_tmp;
     f_A_tmp = tmp;
@@ -133,7 +133,7 @@ void major_freqs(const Haplotype * haplotypes, double *f_A, double *f_B){
     tmp = f_b;
     f_b = f_B_tmp;
     f_B_tmp = f_b;
-  }
+  }*/
   *f_A = ((double)f_A_tmp / (double)total);
   *f_B = ((double)f_B_tmp / (double)total);
   return;  
