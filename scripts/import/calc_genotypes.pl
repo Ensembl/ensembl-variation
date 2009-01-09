@@ -378,13 +378,14 @@ sub major_freqs {
     return ( 0,0 );
   }
 
-  if( $f_a > $f_A ) {
-    ( $f_a, $f_A ) = ( $f_A, $f_a );
-  }
+  #just use $f_A and $f_B, no need to find bigger value
+  #if( $f_a > $f_A ) {
+  #  ( $f_a, $f_A ) = ( $f_A, $f_a );
+  #}
 
-  if( $f_b > $f_B ) {
-    ( $f_b, $f_B ) = ( $f_B, $f_b );
-  }
+  #if( $f_b > $f_B ) {
+  #  ( $f_b, $f_B ) = ( $f_B, $f_b );
+  #}
 
   return ( $f_A/$total, $f_B/$total );
 }
