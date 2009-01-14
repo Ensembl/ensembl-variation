@@ -97,7 +97,7 @@ sub fetch_all_by_Variation {
 
 =cut
 
-sub fetch_all_by_pheonotype_source_name {
+sub fetch_all_by_pheonotype_name_source_name {
 
   my $self = shift;
   my $phenotype_name  = shift;
@@ -106,6 +106,36 @@ sub fetch_all_by_pheonotype_source_name {
   throw('phenotype_name argument expected') if(!defined($phenotype_name));
 
   my $extra_sql = " AND p.phenotype_name = ? ";
+  if (defined $source_name ) {
+    $extra_sql .= qq( AND s.name = ?);
+  }
+  
+  return $self->generic_fetch("$extra_sql");
+  
+}
+
+=head2 fetch_all_by_phenotype_description_source_name
+
+  Arg [1]    : string $phenotype_description
+  Arg [2]    : string $source_name (optional)
+  Example    : $vaa = $va_adaptor->fetch_by_phenotype_description_source_name('diabetes','EGA');
+  Description: Retrieves a variation annotation object via its phenotype description/source name
+  Returntype : list of ref of Bio::EnsEMBL::Variation::VariationAnnotation
+  Exceptions : throw if phenotype name argument is not defined
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub fetch_all_by_pheonotype_description_source_name {
+
+  my $self = shift;
+  my $phenotype_description  = shift;
+  my $source_name = shift;
+
+  throw('phenotype_description argument expected') if(!defined($phenotype_description));
+
+  my $extra_sql = qq( AND p.phenotype_description like '%?%' );
   if (defined $source_name ) {
     $extra_sql .= qq( AND s.name = ?);
   }
@@ -127,10 +157,10 @@ sub _default_where_clause {
 }
 
 sub _columns {
-  return qw( va.variation_annotation_id va.variation_id 
-             p.name p.description 
-             s.name va.study_type
-             va.local_stable_id
+  return qw( va.variation_annotation_id va.variation_id p.name p.description
+             s.name va.study va.study_type va.local_stable_id
+             va.associated_gene va.associated_variant_risk_allele
+	     va.variation_names va.risk_allele_freq_in_controls va.p_value
              );
 }
 
@@ -141,19 +171,25 @@ sub _objs_from_sth {
 
   my @features;
 
-  my ($variation_annotation_id,$var_id,$phenotype_name,$phenotype_description,$source_name,$study_type,$local_stable_id);
-  $sth->bind_columns(\$variation_annotation_id,\$var_id,\$phenotype_name,\$phenotype_description,\$source_name,\$study_type,\$local_stable_id);
+  my ($variation_annotation_id,$var_id,$phenotype_name,$phenotype_description,$source_name,$study,$study_type,$local_stable_id,$associated_gene,$associated_variant_risk_allele,$variation_names,$risk_allele_freq_in_controls,$p_value);
+  $sth->bind_columns(\$variation_annotation_id,\$var_id,\$phenotype_name,\$phenotype_description,\$source_name,\$study,\$study_type,\$local_stable_id,\$associated_gene,\$associated_variant_risk_allele,\$variation_names,\$risk_allele_freq_in_controls, \$p_value);
 
   while($sth->fetch()) {
     push @features, $self->_create_feature_fast('Bio::EnsEMBL::Variation::VariationAnnotation',
 
     {'dbID' => $variation_annotation_id,
      '_variation_id'         => $var_id,
-     'phenotype_name'       => $phenotype_name,
-     'phenotype_description'=> $phenotype_description,
-     'source_name'          => $source_name,
-     'study_type'           => $study_type,
-     'local_stable_id'      => $local_stable_id,
+     'phenotype_name'        => $phenotype_name,
+     'phenotype_description' => $phenotype_description,
+     'source_name'           => $source_name,
+     'study'                 => $study,
+     'study_type'            => $study_type,
+     'local_stable_id'       => $local_stable_id,
+     'associated_gene'       => $associated_gene,
+     'associated_variant_risk_allele' => $associated_variant_risk_allele,
+     'variation_names'       => $variation_names,
+     'risk_allele_freq_in_controls'   => $risk_allele_freq_in_controls,
+     'p_value'               => $p_value,
      'adaptor'  => $self,
     });
   }
