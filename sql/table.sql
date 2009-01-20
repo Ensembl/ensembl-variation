@@ -35,10 +35,16 @@ create table variation_annotation (
         variation_id int(10) unsigned not null,
         phenotype_id int(10) unsigned not null,
         source_id int(10) unsigned not null,
+	study varchar(30) default NULL,
         study_type set('GWAS'),
         local_stable_id varchar(255),
+        associated_gene varchar(255) default NULL,
+        associated_variant_risk_allele varchar(255) default NULL,
+        variation_names varchar(255) default NULL,
+  	risk_allele_freq_in_controls varchar(30) default NULL,
+  	p_value varchar(20) default NULL,
         
-        primary key (variation_annotation_id),
+	primary key (variation_annotation_id),
         key variation_idx(variation_id),
         key phenotype_idx(phenotype_id),
         key source_idx(source_id)
