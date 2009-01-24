@@ -12,9 +12,11 @@ use Bio::EnsEMBL::Variation::Utils::Sequence qw(ambiguity_code);
 my $species;
 my $dump_file;
 my $region;
+my $new_db_version;
 
 GetOptions('dump_file=s' => \$dump_file,
 	   'species=s'   => \$species,
+           'new_db_version=i' => \$new_db_version,
 	   'region=i'    => \$region
 	   );
 
@@ -59,12 +61,15 @@ else{
     die "Species $species not supported to dump data\n\n";
 }
 
-Bio::EnsEMBL::Registry->load_registry_from_db( -host => 'ens-staging'
+Bio::EnsEMBL::Registry->load_registry_from_db( -host => 'ens-staging',
+                                               -db_version => $new_db_version,
+                                               -user => 'ensro',
 					      );
 
 my $dbVar = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'variation');
 my $dbCore = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'core');
 
+print "dbCore is ",ref($dbCore),"\n";
 my $slice_adaptor = $dbCore->get_SliceAdaptor();
 my $rc_adaptor = $dbVar->get_ReadCoverageAdaptor();
 my $ind_adaptor = $dbVar->get_IndividualAdaptor();
@@ -90,8 +95,10 @@ if ($species eq 'rat'){
 #we only want to dump Celera data
 if ($species eq 'human'){
     @{$strains} = grep {$_->name =~ /Hu\w\w|Venter|Watson/i} @{$strains};
+    #print $$strains[0]->name,"\n";
 }
-#my $slice = $slice_adaptor->fetch_by_region('chromosome','1',100_222_020,130_222_025); #dump this region to find problem 108213779-108237682
+#my $slice = $slice_adaptor->fetch_by_region('chromosome','8',109_700_000,110_000_000); #dump this region to find problem 108213779-108237682
+#my $slice = $slice_adaptor->fetch_by_region('chromosome','1',1_900_900,2_300_300);
 my $slice = $slice_adaptor->fetch_by_region('chromosome',$region);
 my $subSlice;
 #for each chromosome, get the union of all coverages for all strains
@@ -104,7 +111,6 @@ foreach my $region (@{$range_registry->get_ranges(1)}){
     $subSlice = $slice->sub_Slice($region->[0],$region->[1],1);
     #foreach of the subSlices with coverage for one strain, print the header, and the base information
     &print_seq_header($subSlice,$strains); #method to print the SEQ and SCORE block
-
     #and print the sequence information, one base per row
     &print_base_info($rc_adaptor,$subSlice,$strains);
     print DUMP "//\n"; #end of block
@@ -118,15 +124,15 @@ sub print_base_info{
     my $slice = shift;
     my $strains = shift;
     my %strain_seq;
-    my $rcs;
+    #my $rcs;
 
     print DUMP "DATA\n";
     foreach my $strain (@{$strains}){
-	my $seq='';	
+	my $seq='';
 	foreach my $level (1,$MAX_LEVEL){
-	    $rcs = $rc_adaptor->fetch_all_by_Slice_Sample_depth($slice,$strain,$level);	    
+	    my $rcs = $rc_adaptor->fetch_all_by_Slice_Sample_depth($slice,$strain,$level);	    
 	    &get_strain_seq($slice,$rcs,\$seq); #with the seq and the coverage info, make the seq
-	    @{$rcs} = ();
+	    #@{$rcs} = ();
 	}	
 	#we need to apply AlleleFeature to the sequence, adding ambiguity codes and indels
 	&apply_AF_to_seq($slice,$strain->name,\$seq);
@@ -194,12 +200,13 @@ sub get_strain_seq{
     my $end_level1 = 0;
     my $format;
     foreach my $rc (@{$rcs}){
-	$rc->start(1) if ($rc->start < 0); #if the region lies outside the boundaries of the slice
+	$rc->start(1) if ($rc->start <= 0); #if the region lies outside the boundaries of the slice
 	$rc->end($slice->end - $slice->start + 1) if ($rc->end + $slice->start > $slice->end); 
 	$$ref_seq .= '~' x ($rc->start - 1 - $end_level1) if ($rc->level == 1);
 	$format = '@' . ($rc->start - 1) . 'A' . ($rc->end - $rc->start + 1);
 	$$ref_seq .= lc(unpack($format,$slice->seq)) if ($rc->level == 1);
 	substr($$ref_seq,$rc->start-1,$rc->end-$rc->start+1,uc(unpack($format,$$ref_seq))) if ($rc->level == $MAX_LEVEL);
+		
 	$end = $rc->end;
 	$end_level1 = $rc->end if ($rc->level == 1);	
     }
@@ -233,13 +240,13 @@ sub get_chromosome_coverage{
     
     #we have to do it for strain, since we might not want to dump all strains....
     foreach my $strain (@{$strains}){
-	my $rcs = $rc_adaptor->fetch_all_by_Slice_Sample_depth($slice,$strain,1);
+      my $rcs = $rc_adaptor->fetch_all_by_Slice_Sample_depth($slice,$strain,1);
 
-	#get all regions covered in the chromsome for all strains
-	foreach my $rc (@{$rcs}){	
-	    #insert a new region, without bothering about the strain
-	    $range_registry->check_and_register(1,$rc->start,$rc->end);
-	}
+      #get all regions covered in the chromsome for all strains
+      foreach my $rc (@{$rcs}){	
+	#insert a new region, without bothering about the strain
+	$range_registry->check_and_register(1,$rc->start,$rc->end);
+      }
     }
     return $range_registry;
 }
@@ -253,7 +260,8 @@ sub create_file_header{
    
     print DUMP "##FORMAT (resequencing)\n";
     print DUMP "##DATE ",scalar(localtime),"\n";
-    print DUMP "##RELEASE ",Bio::EnsEMBL::Registry->software_version(),"\n\n";
+    print DUMP "##RELEASE $new_db_version\n\n";
+    #print DUMP "##RELEASE ",Bio::EnsEMBL::Registry->software_version(),"\n\n";
 
 }
 
