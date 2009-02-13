@@ -188,8 +188,6 @@ sub newFromFile {
         }
     }
 
-    #$lrg->printAll;
-
     # return
     return $lrg;
 }
@@ -215,8 +213,6 @@ sub addNode {
     }
 
     (@{$self->{'nodes'}})[-1]->{'parent'} = $self;
-
-    #print "Adding node ", $name, " to node ", $self->name, "\n";
 
     # return the last node added (i.e. this one)
     return (@{$self->{'nodes'}})[-1];
@@ -255,8 +251,6 @@ sub findNode {
 
     # do a multi find if the name is delimited with "/"s
     return $self->findNodeMulti($name, $data) if $name =~ /\//;
-
-    #print "Looking for node ", $name, " in ", $self->name, "\n";
     
     my $found;
     my $match;
@@ -264,20 +258,24 @@ sub findNode {
     # look through the nodes
     foreach my $node(@{$self->{'nodes'}}) {
 
+	# if the name matches
 	if(defined $node->name && defined $name && $node->name eq $name) {
 	
 	    $match = 1;
 
-	    if(scalar keys %$data && scalar keys %{$node->{'data'}}) {
+	    # if we are comparing data too
+	    if(scalar keys %$data && scalar keys %{$node->data}) {
 		$match = 0;
+
+		my $needed = scalar keys %$data;
 
 		foreach my $key(keys %$data) {
 		    next unless defined $node->data->{$key};
 
-		    print "COMPARING: ", $node->data->{$key}, " vs ", $data->{$key}, " in node ", $node->name, "\n";
-
-		    $match = 1 if $node->data->{$key} eq $data->{$key};
+		    $match++ if $node->data->{$key} eq $data->{$key};
 		}
+
+		$match = ($match == $needed ? 1 : 0);
 	    }
 	    
 	    if($match) {
@@ -285,11 +283,13 @@ sub findNode {
 		last;
 	    }
 	}
-	    
-	# look recursively in any sub-nodes
-	$found = $node->findNode($name);
+	
+	last if defined $found;
+
+	# look recursively in any sub-nodes if not found
+	$found = $node->findNode($name, $data);
     }
-    
+
     return $found;
 }
 
