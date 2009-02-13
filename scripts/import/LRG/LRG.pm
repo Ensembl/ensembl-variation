@@ -247,29 +247,6 @@ sub addEmptyNode {
     return (@{$self->{'nodes'}})[-1];
 }
 
-    
-
-# print all
-sub printAll {
-    my $self = shift;
-    
-    # required to open the XML doc
-    $self->{'xml'}->xmlDecl('UTF-8');
-
-    $self->{'xml'}->pi('xml-stylesheet', 'type="text/xsl href="lrg2html.xsl"');
-    
-    # iterate through the nodes recursively
-    foreach my $node(@{$self->{'nodes'}}) {
-	print "Printing sub-nodes of ", $self->name, "\n";
-
-	$node->printNode();
-    }
-    
-    # finish and write the file
-    $self->{'xml'}->end();
-}
-
-
 # find node
 sub findNode {
     my $self = shift;
@@ -279,7 +256,7 @@ sub findNode {
     # do a multi find if the name is delimited with "/"s
     return $self->findNodeMulti($name, $data) if $name =~ /\//;
 
-    print "Looking for node ", $name, " in ", $self->name, "\n";
+    #print "Looking for node ", $name, " in ", $self->name, "\n";
     
     my $found;
     my $match;
@@ -351,21 +328,6 @@ sub findNodeMulti {
 # print node
 sub printNode {
     my $self = shift;
-
-#    print "Printing contents of ", $self->name;
-
-#    print ". Has sub-nodes\n";
-
-#    foreach my $node(@{$self->{'nodes'}}) {
-#	print "\t", $node->name, "\n";
-#    }
-
-#    print "Has hash keys\n";
-#    foreach my $key(keys %$self) {
-#	print "\t", $key, "\n";
-#    }
-
-    #print Data::Dumper::Dumper($self);
     
     if($self->empty) {
         if(scalar keys %{$self->data}) {
@@ -402,6 +364,24 @@ sub printNode {
 
     # end the tag
     $self->{'xml'}->endTag() unless $self->{'empty'};
+}
+
+# print all
+sub printAll {
+    my $self = shift;
+    
+    # required to open the XML doc
+    $self->{'xml'}->xmlDecl('UTF-8');
+
+    $self->{'xml'}->pi('xml-stylesheet', 'type="text/xsl href="lrg2html.xsl"');
+    
+    # iterate through the nodes recursively
+    foreach my $node(@{$self->{'nodes'}}) {
+        $node->printNode();
+    }
+    
+    # finish and write the file
+    $self->{'xml'}->end();
 }
 
 # getter/setter for name
