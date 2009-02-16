@@ -88,7 +88,7 @@ sub newFromFile {
 	my $start = $pos - $length;
 	my $end = $pos;
 
-	# this code searches for data between tags
+	# this code searches for content between tags
 	if($prev_end >= 1 && $start - $prev_end > 1) {
 
 	    # get substring from the XML string
@@ -329,6 +329,8 @@ sub findNodeMulti {
 sub printNode {
     my $self = shift;
     
+    # if this is an empty tag
+    # e.g. <mytag data1="value" />
     if($self->empty) {
         if(scalar keys %{$self->data}) {
 	    $self->{'xml'}->emptyTag($self->name, %{$self->data});
@@ -427,6 +429,22 @@ sub content() {
     return $self->{'content'};
 }
 
+# return this node's position in the array order
+sub position() {
+    my $self = shift;
+
+    my $pos;
+
+    for my $i(0..(scalar @{$self->parent->{'nodes'}} - 1)) {
+	if($self eq $self->parent->{'nodes'}->[$i]) {
+	    $pos = $i;
+	    last;
+	}
+    }
+
+    return $pos;
+}
+
 # get content from STDIN given a list of fields
 sub requestContent() {
     my $self = shift;
@@ -441,6 +459,33 @@ sub requestContent() {
     }
 }
 
+# move a node to a specific position in the array
+# NB shunts all others down one so any pos need
+# to be recalculated
+sub moveTo() {
+    my $self = shift;
+    my $num = (@_ ? shift : 1);
+    #$num--;
+
+    my $pos = $self->position();
+
+    my @nodes = @{$self->parent->{'nodes'}};
+
+    my $last_index = $#nodes;
+
+    my @before = ($pos - 1 >= 0 ? @nodes[0..($pos-1)] : ());
+    my @after = ($pos + 1 <= $last_index ? @nodes[($pos+1)..$last_index] : ());
+
+    @nodes = (@before, @after);
+    $last_index = $#nodes;
+
+    @before = ($num - 1 >= 0 ? @nodes[0..($num-1)] : ());
+    @after = ($num <= $last_index ? @nodes[$num..$last_index] : ());
+
+    @nodes = (@before, $self, @after);
+
+    $self->parent->{'nodes'} = \@nodes;
+}
 
 
 
