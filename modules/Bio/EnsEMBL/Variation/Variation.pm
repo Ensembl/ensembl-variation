@@ -28,8 +28,8 @@ Bio::EnsEMBL::Variation::Variation - Ensembl representation of a nucleotide vari
     $v->add_Allele($a2);
 
     # set the flanking sequences
-    $v->five_prime_flanking($seq);
-    $v->three_prime_flanking($seq);
+    $v->five_prime_flanking_seq($seq);
+    $v->three_prime_flanking_seq($seq);
 
 
     ...
@@ -54,8 +54,8 @@ Bio::EnsEMBL::Variation::Variation - Ensembl representation of a nucleotide vari
     print "@validation_states\n";
 
     # print out flanking sequences
-    print "5' flanking: ", $v->five_prime_flanking(), "\n";
-    print "3' flanking: ", $v->five_prime_flanking(), "\n";
+    print "5' flanking: ", $v->five_prime_flanking_seq(), "\n";
+    print "3' flanking: ", $v->three_prime_flanking_seq(), "\n";
 
 
 =head1 DESCRIPTION
