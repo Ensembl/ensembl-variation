@@ -3,104 +3,112 @@
 use strict;
 use Getopt::Long;
 
-my ($start, $end, $chr, $output_dir, $input_dir, $target_dir);
+my ($start, $end, $chr, $output_dir, $input_dir, $target_file, $run, $parse);
 
 GetOptions('start=i'         => \$start,
 	   'end=i'           => \$end,
-	   'chr=s'           => \$chr,
            'output_dir=s'      => \$output_dir,   
 	   'input_dir=s'       => \$input_dir,
-	   'target_dir=s'      => \$target_dir);
+	   'target_file=s'      => \$target_file,
+           'run'             => \$run,
+           'parse'           => \$parse,
+           );
 
 
-$input_dir ||= "/ecs2/scratch4/yuan/mouse/release35/snp_seq";
-$target_dir ||= "/ecs2/scratch4/yuan/mouse/release35/target";
-#$target_dir ||= "/data/blastdb/Ensembl/Mouse/NCBIM35/genome/softmasked_dusted";
 $output_dir ||=".";
 my $seed;
 ###kmer is always set to 12, so ajust seed for different species
 $seed = 2 if $input_dir =~ /zfish/;
-$seed = 4 if $input_dir !~ /zfish/;
+##if input from array, this is short sequence, run it in turing (big mem) or use exonerate(small memory 1024 MB)
+##/software/ensembl/bin/exonerate-1.4.0 --query /lustre/work1/ensembl/yuan/array/GenomeWideSNP_6/mapping/input_dir/1_query_seq --target /lustre/blastdb/Ensembl/Human/NCBI36/genome/softmasked_dusted.fa --showalignment no --showvulgar yes
+##nathan's affy array parameters to ensure one mismatch : --bestn 100 --dnahspthreshold 116 --fsmmemory 256 --dnawordlen 25 --dnawordthreshold 11
+##my affy parameters to ensure full match : /software/ensembl/bin/exonerate-1.4.0 --query /lustre/work1/ensembl/yuan/array/GenomeWideSNP_6/mapping/input_dir/1_query_seq --target /lustre/blastdb/Ensembl/Human/NCBI36/genome/softmasked_dusted.fa --showalignment yes --showvulgar no --ryo "vulgar: %S %V %pi\n" --dnahspthreshold 156
+##dnahspthreshold 116 for 25 mer 156 for 33 mer for exact match test it for each run
+
+$seed = "2 -kmer 6 -ckmer 6 -cmatch 10 -tags 1 -score 12 -skip 1 -sense 1" if $input_dir =~ /array/;
+$seed = 5 if $input_dir !~ /zfish|array/;
 print "seed is $seed\n";
 
 my $output_file = "ssaha2_output";
-my $queue = "-q normal -R'select[mem>1000] rusage[mem=1000]'";
-my $queue1 = "-q normal -R'select[largedata]'";
-my $queue2 = "-q normal"; ##for new farm
+my $queue_long = "-q long -M7000000 -R'select[mem>7000] rusage[mem=7000]'";
+my $queue_normal = "-q normal -M4000000 -R'select[mem>4000] rusage[mem=4000]'"; ##for new farm
 
 
-$queue = $queue;
+#my $queue = $queue_long;
+my $queue = $queue_normal;
 
 my (@chr_names, %snp_pos, %input_length, %done);
 
-if ($chr) {
-  push @chr_names,"$target_dir/$chr\.fa";
-}
-else {
-  while (<$target_dir/*fa>) {
-    chomp;
-    push @chr_names, $_;
+run_ssaha2() if $run;
+#parse_ssaha2() if $parse;
+
+sub run_ssaha2 {
+
+  my ($subj_dir,$tar_file) = $target_file =~ /^(.*)\/(.*)$/;
+  my ($subname) = $tar_file =~ /^(.*)\..*$/;
+  my $subject = "$subj_dir/$subname";
+  #my @tars = split /\//, $target_file;
+  #my $tar_file = $tars[-1]; 
+  #my ($subject) = $tar_file =~ /^(.*)\..*$/;
+  print "tar_file is $tar_file and subject is $subject and target_file is $target_file\n";
+  #print "Submitting ssaha2Build job...\n";
+  #my $ssaha2build = "bsub $queue_long -J 'ssaha2build' -o $target_file\_out /nfs/acari/yuan/ensembl/src/ensembl-variation/scripts/ssahaSNP/ssaha2/ssaha2_v1.0.9_x86_64/ssaha2Build -save $subject $target_file";
+  #system("$ssaha2build");
+
+  #my $call = "bsub -q normal -K -w 'done('ssaha2build')' -J waiting_process sleep 1"; #waits until all variation features have finished to continue
+
+  #system($call);
+
+  if ($start and $end) {
+    for (my $start=$start; $start<=$end; $start++) {
+      my $input = "$input_dir/$start\_query_seq" if $input_dir;
+      next if (-z "$input");
+      if (! -e "$output_dir/ssaha_out_$start") {
+	print "Submitting ssaha2 job...\n";
+	bsub_ssaha_job ($start,$input,$queue,$target_file);
+      }
+    }
   }
 }
 
-if ($start and $end) {
-  for (my $start=$start; $start<=$end; $start++) {
-    my $input = "$input_dir/$start\_query_seq" if $input_dir;
-    next if (-z "$input");
-    if (! -e "$output_dir/$start\_total_ssaha_out") {
-      bsub_ssaha_job ($start,$input,$queue,\@chr_names);
-    }
-  }
 
-  my $call = "bsub -K -w 'done($input_dir\_ssaha_job*)' -J waiting_process sleep 1"; #waits until all ssaha jobs have finished to continue
-  system($call);
+#my $call = "bsub -K -w 'done($input_dir\_ssaha_job\_$start)' -J waiting_process sleep 1"; #waits until all ssaha jobs have finished to continue
+#system($call);
 
-  for (my $start=$start; $start<=$end; $start++) {
-    my $input = "$input_dir/$start\_query_seq" if $input_dir;
-    if (! -e "$output_dir/$start\_total_ssaha_out") {
+sub parse_ssaha2 {
 
-      LINE : my $num = `ls $output_dir/ssaha_out_$start\_* |wc`;
-      
-      ($num) = $num =~ /^\s+(\d+)\s+/;
-      if ($num == scalar @chr_names) {
-	system("cat $output_dir/ssaha_out_$start\_* > $output_dir/$start\_total_ssaha_out");
-	unlink<$output_dir/ssaha_out_$start\_*>;
-	parse_ssaha2_out ($start, $input,"$output_dir/$start\_total_ssaha_out");
-      }
-      else {
-	print STDERR "Number of ssaha_out_$start\_* files not equal number of chromosomes\n";
-	unlink<$output_dir/$start\_total_ssaha_out>;
-	bsub_ssaha_job ($start,$input,$queue,\@chr_names);
-	my $call = "bsub -K -w 'done($input_dir\_ssaha_job_$start\_*)' -J waiting_process sleep 1";
-	system($call);
-	goto LINE;
-      }
-    }
-    else {
-      parse_ssaha2_out ($start, $input,"$output_dir/$start\_total_ssaha_out");
+  if ($start and $end) {
+    for (my $start=$start; $start<=$end; $start++) {
+      my $input = "$input_dir/$start\_query_seq" if $input_dir;
+      next if (-z "$output_dir/ssaha_out_$start");
+      parse_ssaha2_out ($start, $input,"$output_dir/ssaha_out_$start");
     }
   }
 }
 
 sub bsub_ssaha_job {
   
-  my ($start, $input_file, $queue, $chr_names) = @_ ;
+  my ($start, $input_file, $queue, $target_file) = @_ ;
 
-  my @chr_names = @$chr_names;
+  my ($subj_dir,$tar_file) = $target_file =~ /^(.*)\/(.*)$/;
+  my ($subname) = $tar_file =~ /^(.*)\..*$/;
+  my $subject = "$subj_dir/$subname";
+  #my @tars = split /\//, $target_file;
+  #my $tar_file = $tars[-1];
+  #my ($subject) = $tar_file =~ /^(.*)\..*$/;
 
   my ($ssaha_command, $count);
 
-  foreach my $chr_name (@chr_names) {
-    my @chrs = split /\//, $chr_name;
-    my $chr = $chrs[-1]; 
+  print "target_file is $target_file\n";
 
-    my $target_file = "$chr_name"; ###need to check for exact file_name
-    print "target_file is $target_file\n";
-    $ssaha_command = "/usr/local/ensembl/bin/ssaha2 $input_file $target_file -align 0 -kmer 12 -seeds $seed -cut 100 -depth 5 -output vulgar -depth 10 -best 1";
-    print "job_num is ", ++$count, " and start is $start and chr_name is $chr_name out is ssaha_out_$start\_$chr\n";
-    my $call = "bsub -J $input_dir\_ssaha_job_$start\_$chr_name $queue -e $output_dir/error_ssaha -o $output_dir/ssaha_out_$start\_$chr $ssaha_command";
-    system ($call);
-  }
+  $ssaha_command = "/nfs/acari/yuan/ensembl/src/ensembl-variation/scripts/ssahaSNP/ssaha2/ssaha2_v1.0.9_x86_64/ssaha2 -align 0 -kmer 12 -seeds $seed -cut 5000 -output vulgar -depth 5 -best 1 -tags 1 -save $subject $input_file";
+  print "job_num is ", ++$count, " and start is $start and out is ssaha_out_$start\n";
+  my $call = "bsub -J $input_dir\_ssaha_job_$start $queue -e $output_dir/error_ssaha_$start -o $output_dir/ssaha_out_$start ";
+  #$call .= "-f '$target_file\.body > /tmp/$tar_file\.body' -f '$target_file\.size > /tmp/$tar_file\.size' -f '$target_file\.name > /tmp/$tar_file\.name' -f '$target_file\.head > /tmp/$tar_file\.head' -f '$target_file\.base > /tmp/$tar_file\.base'";
+  $call .= " $ssaha_command";
+  
+  system ($call);
+  print "$call\n";
 }
 
 
@@ -129,7 +137,7 @@ sub parse_ssaha2_out {
   }
 
   foreach my $name (keys %rec_seq) {
-    my ($fseq,$lseq) = split /[WACTG\-\_]+/,$rec_seq{$name};
+    my ($fseq,$lseq) = split /[NWACTG\-\_]+/,$rec_seq{$name};
     my $snp_posf = length($fseq)+1;
     my $snp_posl = length($lseq)+1;
     my $tot_length = $snp_posf + $snp_posl-2;
@@ -139,11 +147,13 @@ sub parse_ssaha2_out {
 
 
   open SSAHA, "$ssaha2_output" or die "can't open $output_file : $!\n";
+  open MAP, ">>$output_dir/THREE_MAPPINGS";
 
   while (<SSAHA>) {
     #print ;
-    if (/^(\S+)\s+(\d+)\s+(\d+)\s+(\+|\-)\s+(\S+)\s+(\d+)\s+(\d+)\s+(\+|\-)\s+(\d+)\s+(.*)$/) {
-      #next unless $1 eq "rs16822290";
+    if (/^vulgar\:\s+(\S+)\s+(\d+)\s+(\d+)\s+(\+|\-)\s+(\S+)\s+(\d+)\s+(\d+)\s+(\+|\-)\s+(\d+)\s+(.*)$/) {
+      #print "q_id is $1 and q_start is $2 and q_end is $3 and q_strand is $4 and t_id is $5 and t_start is $6 and t_end is $7 and t_strand is $8 and score is $9 and match is $10\n";
+      #next unless $1 eq "rs31190187";
       my $h={};
       $h->{'q_id'} = $1;
       $h->{'q_start'} = $2;
@@ -162,17 +172,28 @@ sub parse_ssaha2_out {
 
   foreach my $q_id (keys %rec_find) {
     my @h = sort {$b->{'score'}<=>$a->{'score'}} @{$rec_find{$q_id}};
-    if ($h[0]->{'score'} > $h[1]->{'score'} and @h=>2) {
+    #print "There are ",scalar @h," hits and q_id is $q_id\n";
+    if (scalar @h==1) {
       find_results($h[0]);
+    }
+    elsif ($h[0]->{'score'} > $h[1]->{'score'} and @h=>2) {
+      find_results($h[0]);
+    }
+    elsif ($h[0]->{'score'} = $h[1]->{'score'} and @h==2) {
+      find_results($h[0],$h[1]);
     }
     elsif ($h[1]->{'score'} > $h[2]->{'score'} and @h=>3) {
       find_results($h[0],$h[1]);
+    }
+    elsif ($h[1]->{'score'} = $h[2]->{'score'} and @h==3) {
+      find_results($h[0],$h[1],$h[2]);
     }
     elsif ($h[2]->{'score'} > $h[3]->{'score'} and @h=>4) {
       find_results($h[0],$h[1],$h[2]);
     }
     else {
-      print "\tmore than 3 hits having same score for $q_id\n";
+      #needs to be written to the failed_variation table
+      print MAP "$q_id\n";
     }
   }
 
@@ -187,13 +208,16 @@ sub parse_ssaha2_out {
   }
 
   print "$no out of $total_seq are not mapped\n";
+
+  close OUT;
+  close MAP;
 }
 
 sub find_results {
 
   my ($h1,$h2,$h3) = @_;
 
-  foreach my $h ($h1,$h2,$h3) {
+  LINE : foreach my $h ($h1,$h2,$h3) {
     my $q_id = $h->{'q_id'};
     my $q_start = $h->{'q_start'};
     my $q_end = $h->{'q_end'};
@@ -205,9 +229,6 @@ sub find_results {
     my $score = $h->{'score'};
     my $match = $h->{'match'};
 
-    $q_start = $q_start+1;
-    $t_start = $t_start+1;
-      
     my @match_components = split /\s+/, $match;
       
     my ($new_q_start, $new_q_end, $new_t_start, $new_t_end);
@@ -220,28 +241,32 @@ sub find_results {
       my $query_match_length = shift @match_components;
       my $target_match_length = shift @match_components;
       
-      $new_t_start = $t_start + $target_match_length -1;
+      #print "type is $type and query_match_length is $query_match_length and target_match_length is $target_match_length\n";
+      next LINE if (! defined $query_match_length or ! defined $target_match_length);
       my ($snp_q_pos, $snp_t_start, $snp_t_end, $snp_strand, $pre_target_match_length);
       my ($snp_posf,$snp_posl) = split /\_/, $snp_pos{$q_id};
-      if ($q_strand eq '-') {
-	$snp_q_pos = $snp_posl;
-	$snp_strand = -1;
-      }
-      else {
-	$snp_q_pos = $snp_posf;
-	$snp_strand = 1;
-      }
+      $snp_q_pos = $snp_posf;
       
-      $new_q_start = $q_start + $query_match_length - 1 if ($type eq 'M');
-      $new_q_start = $q_start + $query_match_length + 1 if ($type eq 'G');
-      $new_t_start = $t_start + $target_match_length -1 if ($type eq 'M');
-      $new_t_start = $t_start + $target_match_length +1 if ($type eq 'G');
-      
+      if ($q_strand eq '+') {
+        $new_q_start = $q_start + $query_match_length - 1 if ($type eq 'M');
+        $new_q_start = $q_start + $query_match_length + 1 if ($type eq 'G');
+        $new_t_start = $t_start + $target_match_length -1 if ($type eq 'M');
+        $new_t_start = $t_start + $target_match_length +1 if ($type eq 'G');
+      }
+      elsif ($q_strand eq '-') {
+        $new_q_start = $q_start - $query_match_length + 1 if ($type eq 'M');
+        $new_q_start = $q_start - $query_match_length - 1 if ($type eq 'G');
+        $new_t_start = $t_start + $target_match_length -1 if ($type eq 'M');
+        $new_t_start = $t_start + $target_match_length +1 if ($type eq 'G');
+      }
+                                              
       #print "$snp_q_pos,$q_start,$new_q_start and $t_start\n";
-      if ($snp_q_pos >= $q_start and $snp_q_pos <= $new_q_start) {
+      if ($snp_q_pos >= $q_start and $snp_q_pos <= $new_q_start or $snp_q_pos >= $new_q_start and $snp_q_pos <= $q_start) {
 	if ($type eq 'M') {
-	  $snp_t_start = $t_start + ($snp_q_pos-$q_start);
+	  $snp_t_start = $t_start + abs($snp_q_pos-$q_start);
 	  $snp_t_end = $snp_t_start;
+          #print "abs is ",abs($snp_q_pos-$q_start),"\n";
+          #print "$snp_t_start and $snp_t_end\n";
 	}
 	elsif ($type eq 'G') {
 	  if ($target_match_length ==0) {
@@ -254,11 +279,12 @@ sub find_results {
 	  }
 	}
       }
-      
-      if ($snp_t_start && $snp_t_end && $snp_strand ) {
-	my $final_score = $score/$input_length{$q_id};
+      #print "$snp_t_start && $snp_t_end && $q_strand\n";      
+      if ($snp_t_start && $snp_t_end && $q_strand ) {
+	#print "$snp_t_start && $snp_t_end && $q_strand\n";
+        my $final_score = $score/$input_length{$q_id};
 	print OUT "MORE_HITS\t" if ($h2);
-	print OUT "$q_id\t$t_id\t$snp_t_start\t$snp_t_end\t$snp_strand\t$final_score\n";
+	print OUT "$q_id\t$t_id\t$snp_t_start\t$snp_t_end\t$q_strand\t$final_score\n";
 	$done{$q_id}=1;
 	last;
       }
