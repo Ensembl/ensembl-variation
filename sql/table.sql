@@ -755,4 +755,4 @@ INSERT INTO failed_description (failed_description_id,description) VALUES (1,'Va
 INSERT INTO failed_description (failed_description_id,description) VALUES (2,'Reference allele not present in the alleles of the variation');
 INSERT INTO failed_description (failed_description_id,description) VALUES (3,'Variation containing more than 3 alleles');
 INSERT INTO failed_description (failed_description_id,description) VALUES (4,'Variation with \'NoVariation\' alleles');
-
+INSERT INTO failed_description (failed_description_id,description) VALUES (5,'Variation do not have genome mappings'); 
