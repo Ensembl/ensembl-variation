@@ -149,12 +149,14 @@ create table allele(
 # size           - if the size is NULL its not known or not relevant for this sample
 #                  eg. "european" would not have a size 
 # description    - free text that describes the sample
+# display		 - determines whether the sample appears by default, optionally or not at all
 
 create table sample(
 	sample_id int(10) unsigned not null auto_increment,
 	name varchar(255) not null,
 	size int,
 	description text,
+	display enum('REFERENCE','DEFAULT','DISPLAYABLE','UNDISPLAYABLE') default 'DISPLAYABLE'
 
 	primary key( sample_id ),
 	key name_idx( name )
@@ -523,13 +525,15 @@ create table httag(
 #
 # this table contains sources of snps. this might be dbSNP, TSC, HGBase, etc. 
 #
-# source_id - primary key, internal identifier
-# name      - the name of the source.  e.g. 'dbSNP' 
+# source_id 	- primary key, internal identifier
+# name      	- the name of the source.  e.g. 'dbSNP'
+# description	- description of the source for ContigView
 
 create table source(
 	source_id int(10) unsigned not null auto_increment,
 	name varchar(255),
 	version int,
+	description varchar(255)
 	
 	primary key( source_id )
 );
