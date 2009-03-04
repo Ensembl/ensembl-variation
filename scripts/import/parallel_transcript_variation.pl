@@ -40,7 +40,8 @@ my ($TMP_DIR, $TMP_FILE, $LIMIT,$status_file);
 
   my $cdba = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'core');
   my $vdba = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'variation');
-  my $fdba = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'funcgen') if $species =~ /hum|hom/i;
+  my $fdba = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'funcgen') if $species =~ /hum|hom|mouse|mus/i;
+  my $species_name = $cdba->species();#used by funcg table
 
   my $dbVar = $vdba->dbc;
   my $dbCore = $cdba;
@@ -66,7 +67,6 @@ my ($TMP_DIR, $TMP_FILE, $LIMIT,$status_file);
     last_process($dbCore,$dbVar);
   }
 
-  #last_process($dbCore,$dbVar);
 }
 
 #
@@ -125,12 +125,15 @@ sub transcript_variation {
       #first consider the regulatory region that overlap with SNPs
       my (@rf);
       foreach my $f  (@{$efa->fetch_all_by_Slice($slice)}) {
-	if ($f->feature_set->name =~ /VISTA\s+enhancer\s+set/i or $f->feature_set->name =~ /cisRED\s+group\s+motifs/i) {
-	  push @rf, $f;
+        if ($f->feature_set->name =~ /miRanda/ or $f->feature_set->name =~ /VISTA\s+enhancer\s+set/i or $f->feature_set->name =~ /cisRED\s+motifs/i) {
+	  #print "feature_name is ",$f->feature_set->name,"\n";
+          push @rf, $f;
 	}
       }
+
+      print "slice name is ",$slice->name,"\n";
       push @rf, @{$rfa->fetch_all_by_Slice($slice)};
-      foreach my $rf (@rf) {
+      foreach my $rf (@rf) { 
 	# request all variations which lie in the region of a regulate feature
 	$sth->execute($slice->get_seq_region_id(),
 		      $rf->seq_region_start(),
@@ -144,36 +147,33 @@ sub transcript_variation {
 	  $end = $row->[2];
 	  $rf_start = $rf->seq_region_start();
 	  $rf_end = $rf->seq_region_end();
-	  print FH "start is $start,end is $end,rf_start is $rf_start and rf_end is $rf_end\n";
+
 	  if ($end >= $rf_start and $start <= $rf_end) {
-	    foreach my $dbEntry (@{$rf->get_all_DBEntries('ensembl_core_Gene','MISC')}) {
-	      my $g = $gene_adaptor->fetch_by_stable_id($dbEntry->primary_id); #get the gene for the stable_id
-	      next if(!defined $g); #some of the genes do not seem to be in the core database
-	      my $g_start = $g->seq_region_start;
-	      my $g_end = $g->seq_region_end;
-	      #SNPs needs to be out side gene+flanking region,otherwise will be considered later
-	      if ($end < $g_start - $UPSTREAM or $start > $g_end + $DNSTREAM ) {
-		foreach my $tr (@{$g->get_all_Transcripts()}) {
-		  my @arr = ($tr->dbID,$row->[0],'\N','\N','\N','\N','\N','REGULATORY_REGION');
-		  if (! $done{$row->[0]}{$tr->dbID}) {#get rid of duplicated transcript entries
-		    print FH join("\t", @arr), "\n";
-		    $done{$row->[0]}{$tr->dbID}=1;
-		  }
-		}
+	    #print "start is $start and rf_start is $rf_start and rf_end is $rf_end\n";
+	    foreach my $dbEntry (@{$rf->get_all_DBEntries("$species_name\_core_Gene")}) {
+	      #print "gene is ",$dbEntry->primary_id,"\n";
+              my $g = $gene_adaptor->fetch_by_stable_id($dbEntry->primary_id); #get the gene for the stable_id
+	      if(!defined $g) {
+		#some of the genes do not seem to be in the core database due to core gene update
+		print "Gene : ",$dbEntry->primary_id," is not in coredb\n";
+		next;
 	      }
-	    }
-	    foreach my $dbEntry (@{$rf->get_all_DBEntries('ensembl_core_Transcript')}) {	     
-	      my $tr = $transcript_adaptor->fetch_by_stable_id($dbEntry->primary_id); #get transcript for stable_id
-	      next if(!defined $tr); #some of the transcripts do not seem to be in the core database
-	      my $tr_start = $tr->seq_region_start;
-	      my $tr_end = $tr->seq_region_end;
-	      #SNPs needs to be out side gene+flanking region,otherwise will be considered later
-	      if ($end < $tr_start - $UPSTREAM or $start > $tr_end + $DNSTREAM ) {
+	      foreach my $tr (@{$g->get_all_Transcripts()}) {
 		my @arr = ($tr->dbID,$row->[0],'\N','\N','\N','\N','\N','REGULATORY_REGION');
 		if (! $done{$row->[0]}{$tr->dbID}) {#get rid of duplicated transcript entries
 		  print FH join("\t", @arr), "\n";
 		  $done{$row->[0]}{$tr->dbID}=1;
 		}
+	      }
+	    }
+	    foreach my $dbEntry (@{$rf->get_all_DBEntries("$species_name\_core_Transcript")}) {	
+	      my $tr = $transcript_adaptor->fetch_by_stable_id($dbEntry->primary_id); #get transcript for stable_id
+	      next if(!defined $tr); #some of the transcripts do not seem to be in the core database
+
+	      my @arr = ($tr->dbID,$row->[0],'\N','\N','\N','\N','\N','REGULATORY_REGION');
+	      if (! $done{$row->[0]}{$tr->dbID}) {#get rid of duplicated transcript entries
+		print FH join("\t", @arr), "\n";
+		$done{$row->[0]}{$tr->dbID}=1;
 	      }
 	    }
 	  }
@@ -184,70 +184,74 @@ sub transcript_variation {
     # then compute the effect of the variation on each of the transcripts
     # of the gene
     #next if $slice->seq_region_name() ne '17'; 
+    my $load_transcripts = 1;
 
-    my $genes = $slice->get_all_Genes_by_type("protein_coding");
+    #we want all genes, not just genes with protein_coding biotype
+    my $transcripts = $slice->get_all_Transcripts();
+
     # request all variations which lie in the region of a gene
-    foreach my $g (@$genes) {
-      #debug("Time to do gene ",$g->stable_id," : ",scalar(localtime(time)));
-      #debug( "seq_region_start is ",$g->seq_region_start()," seq_region_id is ",
-      #$slice->get_seq_region_id()," seq_region_end is ",$g->seq_region_end());
+    # in future, could use get_all_Transcript instead
+    foreach my $tr (@$transcripts) {
+      #debug("Time to do transcript ",$tr->stable_id," : ",scalar(localtime(time)));
+
+
+      #debug( "seq_region_start is ",$tr->seq_region_start()," seq_region_id is ",
+      #$slice->get_seq_region_id()," seq_region_end is ",$tr->seq_region_end());
       $sth->execute($slice->get_seq_region_id(),
-                    $g->seq_region_start() - $UPSTREAM,
-                    $g->seq_region_end()   + $DNSTREAM,
-                    $g->seq_region_start() - $MAX_FEATURE_LENGTH - $UPSTREAM);
+                    $tr->seq_region_start() - $UPSTREAM,
+                    $tr->seq_region_end()   + $DNSTREAM,
+                    $tr->seq_region_start() - $MAX_FEATURE_LENGTH - $UPSTREAM);
       my $rows = $sth->fetchall_arrayref();
 
-      foreach my $tr (@{$g->get_all_Transcripts()}) {
-	my $tr_name = $tr->display_id;
-        next if(!$tr->translation()); # skip pseudogenes
 
-	my ($start,$end, $strand); #start, end and strand of the variation feature in the slice
+      my $tr_name = $tr->display_id;
 
-	foreach my $row (@$rows) {
-	  next if ($row->[4] =~ /LARGE/); #for LARGEINSERTION and LARGEDELETION alleles we don't calculate transcripts
-	  # put variation in slice coordinates
-	  $start = $row->[1] - $slice->start() + 1;
-	  $end = $row->[2] - $slice->start() + 1;
-	  $strand = $row->[3];
-	  expand(\$row->[4]);#expand the alleles
-	  my @alleles = split('/',$row->[4]);
+      my ($start,$end, $strand); #start, end and strand of the variation feature in the slice
 
-	  if($strand != $tr->strand()) {
-	    # flip feature onto same strand as transcript
-	    for(my $i = 0; $i < @alleles; $i++) {
-	      reverse_comp(\$alleles[$i]);
-	    }
-	    $strand = $tr->strand();
+      foreach my $row (@$rows) {
+	next if ($row->[4] =~ /LARGE/); #for LARGEINSERTION and LARGEDELETION alleles we don't calculate transcripts
+	# put variation in slice coordinates
+	$start = $row->[1] - $slice->start() + 1;
+	$end = $row->[2] - $slice->start() + 1;
+	$strand = $row->[3];
+	expand(\$row->[4]);	#expand the alleles
+	my @alleles = split('/',$row->[4]);
+
+	if ($strand != $tr->strand()) {
+	  # flip feature onto same strand as transcript
+	  for (my $i = 0; $i < @alleles; $i++) {
+	    reverse_comp(\$alleles[$i]);
 	  }
-	  shift @alleles; #remove reference allele
+	  $strand = $tr->strand();
+	}
+	shift @alleles;		#remove reference allele
 
-	  my $consequence_type;
+	my $consequence_type;
 
-	  $consequence_type = Bio::EnsEMBL::Variation::ConsequenceType->new($tr->dbID,$row->[0],$start,$end,$strand,\@alleles);
+	$consequence_type = Bio::EnsEMBL::Variation::ConsequenceType->new($tr->dbID,$row->[0],$start,$end,$strand,\@alleles);
 
-	  # compute the effect of the variation on each of the transcripts
-	  # of the gene
+	# compute the effect of the variation on each of the transcripts
+	# of the gene
 
 
-	  my ($consequences);
-	  if ($row->[4] !~ /\+/){
+	my ($consequences);
+	if ($row->[4] !~ /\+/) {
 
-	    $consequences = type_variation($tr, $g, $consequence_type);
-	  }
-          foreach my $ct (@$consequences) {
-	    my $final_ct = join(",",@{$ct->type});
-            my @arr = ($ct->transcript_id,
-                       $ct->variation_feature_id,
-                       join("/", @{$ct->aa_alleles||[]}),
-                       $ct->aa_start,
-                       $ct->aa_end,
-                       $ct->cdna_start,
-                       $ct->cdna_end,
-		       $final_ct); 
-            @arr = map {($_) ? ($_) = $_ =~ /^(.*)[,]*$/ : '\N'} @arr;
-            print FH join("\t", @arr), "\n";
-          }
-        }
+	  $consequences = type_variation($tr, "", $consequence_type);
+	}
+	foreach my $ct (@$consequences) {
+	  my $final_ct = join(",",@{$ct->type});
+	  my @arr = ($ct->transcript_id,
+		     $ct->variation_feature_id,
+		     join("/", @{$ct->aa_alleles||[]}),
+		     $ct->aa_start,
+		     $ct->aa_end,
+		     $ct->cdna_start,
+		     $ct->cdna_end,
+		     $final_ct); 
+	  @arr = map {($_) ? ($_) = $_ =~ /^(.*)[,]*$/ : '\N'} @arr;
+	  print FH join("\t", @arr), "\n";
+	}
       }
     }
   }
@@ -266,21 +270,24 @@ sub last_process{
     my $dbCore = shift;
     my $dbVar = shift;
 
+
+
+    my $dbname = $dbVar->dbname(); #get the name of the database to create the file
+    my $call = "cat $TMP_DIR/$dbname.transcript_variation*.txt > $TMP_DIR/$TMP_FILE";
+    system($call);
+
+    unlink(<$TMP_DIR/$dbname.transcript_variation*.txt>);
+
+    debug("Deleting existing transcript variation");
+
+    $dbVar->do("DELETE FROM transcript_variation");
+
+    #load transcript_variation data
     debug("Reimporting processed transcript variation");
-     my $dbname = $dbVar->dbname(); #get the name of the database to create the file
-     my $call = "cat $TMP_DIR/$dbname.transcript_variation*.txt > $TMP_DIR/$TMP_FILE";
-     system($call);
-    
-     unlink(<$TMP_DIR/$dbname.transcript_variation*.txt>);
-
-     debug("Deleting existing transcript variation");
-    
-     $dbVar->do("DELETE FROM transcript_variation");
-
-     #load transcript_variation data
-     load($dbVar, qw(transcript_variation
+    load($dbVar, qw(transcript_variation
  		    transcript_id variation_feature_id peptide_allele_string
  		    translation_start translation_end cdna_start cdna_end consequence_type));
+
 
 
     debug("Preparing to update consequence type in variation feature table");
