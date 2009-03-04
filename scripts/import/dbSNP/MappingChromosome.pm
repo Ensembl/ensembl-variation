@@ -14,7 +14,8 @@ use ImportUtils qw(debug load create_and_load dumpSQL);
 sub variation_feature{
   my $self = shift;
 
-  my (%rec,%source,%status,%rec_pos,%rec_seq_region);
+  my (%rec,%source,%status,%rec_pos,%rec_seq_region,$three_mappings);
+
 
   debug("Dumping Variation");
 
@@ -32,6 +33,13 @@ sub variation_feature{
   }
   $sth->finish();
 
+  #we need to create a seq_region table
+  $self->{'dbVar'}->dbc->do(qq{CREATE TABLE seq_region(
+                               seq_region_id,int(10) unsigned,
+                               name varchar(40),
+                               primary key (seq_region_id),
+                               unique (name)
+ });
 
   # Create hash of top-level seq_region_id keyed by seq_region_name
   my ($seq_region_id,$seq_region_name);
@@ -45,22 +53,43 @@ and    at.code="toplevel" } );
   $sth1->bind_columns(\$seq_region_id,\$seq_region_name);
   while ($sth1->fetch) {
     $rec_seq_region{$seq_region_name} = $seq_region_id;
+    $self->{'dbVar'}->dbc->do(qq{INSERT INTO seq_region(seq_region_id,name)values($seq_region_id,"$seq_region_name")});
   }
   $sth1->finish();
+
 
   debug("Reading Mapping file");
   open (FH, ">" . $self->{'tmpdir'} . "/" . $self->{'tmpfile'} );
 
   my $mapping_file_dir = $self->{'mapping_file_dir'};
+
+  debug("Mapping file is $mapping_file_dir");
   # If mapping_file_dir is a file, read from it
   if (-f "$mapping_file_dir") {
     open (IN, "$mapping_file_dir") or die "can't open mapping_file:$!";
+    my @ar = split /\//, $mapping_file_dir;
+    $ar[-1] = "THREE_MAPPINGS";
+    $three_mappings = join "/", @ar;
+    print "three_mappings is $three_mappings\n";
   }
   # Concatenate all mapping_file_N files into a single result file
   elsif (-d "$mapping_file_dir") {
     system("cat $mapping_file_dir/mapping_file* > $mapping_file_dir/all_mapping_file");
+    system("cat $mapping_file_dir/THREE_MAPPINGS > $mapping_file_dir/THREE_MAPPINGS");
+    $three_mappings = "$mapping_file_dir/THREE_MAPPINGS";
     open (IN, "$mapping_file_dir/all_mapping_file") or die "can't open mapping_file:$!";
   }
+
+
+  #create table three_mappings and failed_variation
+  my $host = $self->{'dbVar'}->host();
+  my $dbname = $self->{'dbVar'}->dbname();
+  print "host is $host and dbname is $dbname\n";
+
+  $self->{'dbVar'}->do(qq{CREATE TABLE THREE_MAPPINGS (name varchar(15), index name(name))});
+  system("mysqlimport -L -uensadmin -pensembl -h$host $dbname $three_mappings");
+  $self->{'dbVar'}->do(qq{insert into failed_variation (variation_id,failed_description_id) select v.variation_id,1 from variation v, THREE_MAPPINGS t where v.name=t.name});
+
 
   # Process results file
   while (<IN>) {
@@ -118,8 +147,10 @@ and    at.code="toplevel" } );
       $new_seq_region_start = $seq_region_start + $start -1;
       $new_seq_region_end   = $seq_region_start + $end   -1;
     }
-    
-    next if ( $rec_pos{$ref_id}{$seq_region_id}{$new_seq_region_start}{$new_seq_region_end}); # Skip if variation_feature already processed
+    $strand = ($strand eq "+") ? 1 : -1;
+    #print "$ref_id\n";
+    #next if ( $rec_pos{$ref_id}{$seq_region_id}{$new_seq_region_start}{$new_seq_region_end}); # Skip if variation_feature already processed
+
 
     # Print to output file
     print FH join
@@ -135,11 +166,12 @@ and    at.code="toplevel" } );
           ) . "\n";
 
     # Flag as processed
-    $rec_pos{$ref_id}{$seq_region_id}{$new_seq_region_start}{$new_seq_region_end}=1;
+    #$rec_pos{$ref_id}{$seq_region_id}{$new_seq_region_start}{$new_seq_region_end}=1; needs too much memory to hashing
   }
 
   close IN;
   close FH;
+
 
   debug("Creating genotyped variations");
 
@@ -155,7 +187,8 @@ and    at.code="toplevel" } );
                    "source_id", 
                    "validation_status" );
 
-  #creating the temporary table with the genotyped variations
+# creating the temporary table with the genotyped variations
+
 
   $self->{'dbVar'}->do(qq{
 CREATE TABLE tmp_genotyped_var 
@@ -165,7 +198,9 @@ CREATE UNIQUE INDEX variation_idx ON tmp_genotyped_var (variation_id)});
    $self->{'dbVar'}->do(qq{
 INSERT IGNORE INTO  tmp_genotyped_var 
 SELECT DISTINCT variation_id FROM individual_genotype_multiple_bp});
-  
+
+
+
   # Copy from tmp variation_feature to final variation_feature
   $self->{'dbVar'}->do(qq{
 INSERT INTO variation_feature
@@ -190,8 +225,8 @@ SELECT tv.variation_id,
 FROM   tmp_variation_feature tv LEFT JOIN 
        tmp_genotyped_var tgv ON tv.variation_id = tgv.variation_id });
 
-  $self->{'dbVar'}->do(qq{DROP TABLE tmp_variation_feature});
-  $self->{'dbVar'}->do(qq{DROP TABLE tmp_genotyped_var});
+  #$self->{'dbVar'}->do(qq{DROP TABLE tmp_variation_feature});
+  #$self->{'dbVar'}->do(qq{DROP TABLE tmp_genotyped_var});
 }
 
 1;
