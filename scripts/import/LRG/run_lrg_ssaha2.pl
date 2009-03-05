@@ -128,7 +128,7 @@ sub parse_ssaha2_out {
     }
   }
 
-  my (pairs,$feature_pairs);
+  my ($pairs,$feature_pairs);
   foreach my $q_id (keys %rec_find) {
     my @h = sort {$b->{'score'}<=>$a->{'score'}} @{$rec_find{$q_id}};
     if ($h[0]->{'score'} > $h[1]->{'score'} and @h>=2) {
@@ -186,9 +186,11 @@ sub find_results {
     else {
       ($f_q_start,$f_q_end) = ($q_end,$q_start);
     }
+
     my ($seq_region_name) = split /\-/, $t_id;
     print "seq_region_name is $seq_region_name and t_start is $t_start, t_end is $t_end\n";
     my $slice = $sa->fetch_by_region('chromosome',$seq_region_name,$t_start,$t_end, 1);
+    #print "slice is ",ref($slice),"\n";
     print "slice seq_region_name is ",$slice->seq_region_name,'-',length($slice->seq),'-',$slice->length,'-',$slice->start,'-',$slice->end,"\n";
     #print "slice seq is ",$slice->seq,"\n";
     my $q_seqobj = $rec_seq{$q_id};
@@ -209,11 +211,12 @@ sub find_results {
     }
 
     while (@match_components) {
-	
+
       my $type = shift @match_components;
       my $query_match_length = shift @match_components;
       my $target_match_length = shift @match_components;
-
+      my ($tmp_q_start,$tmp_q_end);
+      
       if ($type eq 'M') {#go through each base to check SNP,target strand always 1
 	my ($q_seq);
 	if ($q_strand == 1) {
@@ -233,6 +236,7 @@ sub find_results {
 	#print "t_seq is $t_seq\n";
 	my $q_count = 1;
 	my $t_count = 1;
+
 	my %q_seqs = map {$q_count++,$_} split '', $q_seq;
 	my %t_seqs = map {$t_count++,$_} split '', $t_seq;
 	my ($sub_q_end);
@@ -274,7 +278,16 @@ sub find_results {
 	print "q_start is $q_start and t_start is $t_start\n";
         print "in M, q_start is $q_start and q_end is $new_q_start and t_start is $t_start and t_end is $new_t_start\n";
 
-	push @pairs, [$type,$q_start,$new_q_start,$t_start,$new_t_start,$q_strand];
+	if  ($q_strand==1) {
+	  $tmp_q_start = $q_start;
+	  $tmp_q_end = $new_q_start;
+	}
+	else {
+	  $tmp_q_start = $new_q_start;
+	  $tmp_q_end = $q_start;
+	}
+	($tmp_q_start,$tmp_q_end) = ($tmp_q_end,$tmp_q_start) if($tmp_q_end<$tmp_q_start);
+	push @pairs, [$type,$tmp_q_start,$tmp_q_end,$t_start,$new_t_start,$q_strand];
       }
       elsif ($type eq 'G') {
 	if ($q_strand ==1) {
@@ -297,7 +310,7 @@ sub find_results {
 
 	print "in G, q_start is $q_start and q_end is $new_q_start and t_start is $t_start and t_end is $new_t_start\n";
       }
-      
+
       $q_start = $new_q_start;
       $t_start = $new_t_start;
     }
@@ -312,42 +325,57 @@ sub find_results {
 
     my $fp = Bio::EnsEMBL::FeaturePair->new(-start    => $f_q_start,
 					    -end      => $f_q_end,
-					    -strand   => $q_strand
+					    -strand   => $q_strand,
+					    -display_id => $h->{'q_id'},
 					    -hstart   => $h->{'t_start'},
 					    -hend     => $h->{'t_end'},
 					    -hstrand  => $h->{'t_strand'},
 					    -hseqname => $h->{'t_id'},
+					    -slice    => $slice,
 					    -type     => $full_match,
 					   );
+    $fp->seqname($h->{'q_id'});
     push @fps, $fp;
 
+    foreach my $pair (sort {$a->[3]<=>$b->[3]} @pairs) {
+      print "pairs are ",$pair->[0],'-',$pair->[1],'-',$pair->[2],'-',$pair->[3],'-',$pair->[4],"\n";
+    }
   }
   return \@pairs,\@fps;
 }
 
+sub seqname {
+
+  my $self = shift;
+  $self->{'seqname'} = shift if(@_);
+  return $self->{seqname};
+
+}
 sub get_annotations {
   my $feature_pairs = shift;
   my $lrg_name = 'LRG2';
 
   foreach my $fp (@$feature_pairs) {
-    my $full_match = $fp->type;
+    my $full_match = $fp->type;print "full_match is $full_match\n";
     my ($q_start,$q_end,$t_start,$t_end,$q_strand);
-    if ($full_match) {
-      $q_start = $fp->start;
-      $q_end = $fp->end;
-      $t_start = $fp->hstart;
-      $t_end = $fp->hend;
-      $q_strand = $fp->strand;
-    }
-    else {#it's not full match, insert data in several tables
+    my $slice = $fp->slice; print "slice is ",ref($slice),"\n";
+
+    $q_start = $fp->start;
+    $q_end = $fp->end;
+    $t_start = $fp->hstart;
+    $t_end = $fp->hend;
+    $q_strand = $fp->strand;
+
+    if (!$full_match) {#it's not full match, insert data in several tables
       my $csa = $dbCore->get_CoordSystemAdaptor();
       my $cs = $csa->fetch_all_by_name('LRG');
       my $cs_id = $cs->[0]->dbID();
       my $q_seq_region_id;
+      my $q_seqobj = $rec_seq{$fp->seqname};
       my $q_seq = $q_seqobj->seq;
       my $q_seq_length = length($q_seq);
       my $t_seq_region_id = $sa->get_seq_region_id($slice);
-      my $lrg_name_ref =$dbCore-> $dbCore->dbc->db_handle->selectall_arrayref(qq{SELECT name from seq_region WHERE name="$lrg_name"});
+      my $lrg_name_ref =$dbCore->dbc->db_handle->selectall_arrayref(qq{SELECT name from seq_region WHERE name="$lrg_name"});
       if (! $lrg_name_ref->[0][0]) {
 	$dbCore->dbc->do(qq{INSERT INTO seq_region(name,coord_system_id,length)values("$lrg_name",$cs_id,$q_seq_length)});
 	$q_seq_region_id = $dbCore->dbc->db_handle->{'mysql_insertid'};
@@ -358,24 +386,14 @@ sub get_annotations {
 	$q_seq_region_id = $q_seqid_ref->[0][0];
       }
 
-      my @starts = sort {$a->start<=>$b->start} @{$feature_pairs};
-      my @ends = sort {$a->end<=>$b->end} @{$feature_pairs};
-      my @hstarts = sort {$a->hstart<=>$b->hend} @{$feature_pairs};
-      my @hends = sort {$a->hend<=>$b->hend} @{$feature_pairs};
-      $q_start = $starts[0];
-      $q_end = $ends[-1];
-      $t_start = $hstart[0];
-      $t_end = $hend[0];
-      $q_strand = $feature_pairs->[0]->strand;
-
       if ($q_end-$q_start == $t_end-$t_start) {
-	$dbCore->dbc->do(qq{INSERT IGNORE INTO assembly(asm_seq_region_id,cmp_seq_region_id,asm_start,asm_end,cmp_start,cmp_end,ori)values($t_seq_region_id,$q_seq_region_id,$t_start,$t_end,$q_start,$q_end,$q_strand)});
+	#$dbCore->dbc->do(qq{INSERT IGNORE INTO assembly(asm_seq_region_id,cmp_seq_region_id,asm_start,asm_end,cmp_start,cmp_end,ori)values($t_seq_region_id,$q_seq_region_id,$t_start,$t_end,$q_start,$q_end,$q_strand)});
       }
       else {
 	throw("distance between query and target is not the same, there is a indel");
       }
     }
-	
+
       my $hslice = $sa->fetch_by_region('LRG',"$lrg_name");
       print "q_seq from hslice is ",$hslice->start,'-'.$hslice->end,"\n";
       #my $exp_slice      = $hslice->expand( 10000, 10000);
@@ -399,18 +417,6 @@ sub get_annotations {
       print "trans name again is ", $transcript[0]->stable_id,'-',$transcript[0]->start,'-',$transcript[0]->end,"\n" if defined $transcript[0];
       #print Dumper($chr_slice);
       #print Dumper($contig_slice);
-
-      if (substr($$chr_slice[0]->to_Slice->seq,22800,500) eq substr($q_seq,22800,500)) {
-	print "chr_seq is same as q_seq\n";
-      }
-      else {
-	print "chr_seq is different from q_seq\n";
-	print "length of chr_seq is ",length($$chr_slice[0]->to_Slice->seq),"\n";
-	print "length of q_seq is ",length($q_seq),"\n";
-	print substr($$chr_slice[0]->to_Slice->seq,22800,300),"\n";
-	print substr($q_seq,22800,300),"\n";
-      }
-    }
   }
 
 }
