@@ -1,0 +1,155 @@
+# Relax NG schema for LRG
+# Version $Revision: 1.1 $
+
+start = LRG
+LRG = element lrg { 
+
+   attribute schema_version { xsd:decimal },
+   FIXED_ANNOTATION, 
+   UPDATABLE_ANNOTATION 
+
+}
+
+FIXED_ANNOTATION = element fixed_annotation {
+
+   element id { xsd:string { pattern = 'LRG_[0-9]*' } },
+   
+   element organism { 
+      attribute taxon { xsd:integer },
+      text
+   },
+   
+   SOURCE+,
+   
+   element mol_type { text }, # TODO: enumeration?
+   
+   element creation_date { xsd:date },
+   
+   DNA_SEQUENCE,  
+   
+   element transcript {
+      attribute name { text },
+      element exon {
+         attribute lrg_number { xsd:integer },
+         element start { xsd:integer },
+         element end { xsd:integer }
+      }+,
+      element coding_region {
+         element cds_start { xsd:integer },
+         element cds_end { xsd:integer },
+         element codon_start { xsd:integer }?,
+         element codon_stop { xsd:integer }?, 
+         element codon_selenocysteine { xsd:integer }?, 
+         element translation { PEPTIDE_SEQUENCE } 
+      },
+      
+      element cdna { 
+
+         DNA_SEQUENCE,
+
+         element exon {
+            attribute lrg_number { xsd:integer },
+            element start { xsd:integer },
+            element end { xsd:integer }
+         }+
+
+      }
+
+   } # /transcript
+   
+} # /fixed_annotation
+
+
+UPDATABLE_ANNOTATION = element updatable_annotation {
+
+   element comment { text }?,
+
+   element modification_date { xsd:date }, 
+   
+   SOURCE, 
+
+   element other_exon_naming {
+      element source { 
+         attribute description { text },
+         element exon {
+            attribute lrg_number { xsd:integer },
+            attribute other_name { text }
+         }*
+      }*
+   },
+
+   element mapping {
+      attribute assembly { text }, 
+      element align {
+         attribute chromosome { text },
+         attribute lrg_start { xsd:integer },
+         attribute lrg_end {xsd:integer },
+         attribute strand { '-1' | '1' },
+         attribute start { xsd:integer },
+         attribute end { xsd:integer }
+      }*
+   },
+
+   element amino_acid_mapping {
+      element source { 
+         attribute description { text },
+         element align {
+            attribute lrg_start { xsd:integer },
+            attribute lrg_end {xsd:integer },
+            attribute start { xsd:integer },
+            attribute end { xsd:integer }
+         }*
+      }*
+   },
+        
+   element features {
+      element gene {
+         attribute name { text },
+         attribute start { xsd:integer },
+         attribute end { xsd:integer },
+         element synonym { text }*,
+         element note { text }*,
+         DB_XREF*
+      }*,
+      element cds {
+         attribute source { text },
+         attribute codon_start { xsd:integer },
+         attribute transcript_id { text },
+         DB_XREF*,
+         element protein_product {
+            element protein_id { 
+               attribute source { text },   
+               attribute accession { text }
+            },
+            element note { text }*,
+            DB_XREF*
+         }
+      }*
+   },
+ # / features
+
+   element variation {
+      empty     # TODO more details
+   }?
+
+} # /updatable_annotation
+
+DNA_SEQUENCE = element sequence { xsd:string { pattern = '[ATGC]+' } } 
+
+PEPTIDE_SEQUENCE = element sequence { xsd:string { pattern = '[GPAVLIMCFYWHKRQNEDSTU]+' } }
+
+DB_XREF = element db_xref { 
+   attribute source { 'GeneID' | 'HGNC' | 'MIM' | 'GI' | 'RefSeq' | 'Ensembl' | 'CCDS' | 'UniProtKB'},   
+   attribute accession { text }
+}
+
+SOURCE = element source {
+   element name { text },
+   element url { text }*, 
+   element contact {
+      element name { text },
+      element url { text }?, 
+      element address { text },
+      element email { text } 
+   }
+}
