@@ -3,6 +3,7 @@
 use strict;
 use Getopt::Long;
 use Bio::Seq;
+use Bio::EnsEMBL::MappedSliceContainer;
 use Bio::EnsEMBL::DBSQL::DBConnection;
 use Bio::EnsEMBL::FeaturePair;
 use ImportUtils qw(dumpSQL debug create_and_load load );
@@ -359,7 +360,8 @@ sub get_annotations {
     my $full_match = $fp->type;print "full_match is $full_match\n";
     my ($q_start,$q_end,$t_start,$t_end,$q_strand);
     my $slice = $fp->slice; print "slice is ",ref($slice),"\n";
-
+    my $q_seqobj = $rec_seq{$fp->seqname};
+    my $q_seq = $q_seqobj->seq;
     $q_start = $fp->start;
     $q_end = $fp->end;
     $t_start = $fp->hstart;
@@ -371,8 +373,6 @@ sub get_annotations {
       my $cs = $csa->fetch_all_by_name('LRG');
       my $cs_id = $cs->[0]->dbID();
       my $q_seq_region_id;
-      my $q_seqobj = $rec_seq{$fp->seqname};
-      my $q_seq = $q_seqobj->seq;
       my $q_seq_length = length($q_seq);
       my $t_seq_region_id = $sa->get_seq_region_id($slice);
       my $lrg_name_ref =$dbCore->dbc->db_handle->selectall_arrayref(qq{SELECT name from seq_region WHERE name="$lrg_name"});
@@ -394,29 +394,74 @@ sub get_annotations {
       }
     }
 
-      my $hslice = $sa->fetch_by_region('LRG',"$lrg_name");
-      print "q_seq from hslice is ",$hslice->start,'-'.$hslice->end,"\n";
-      #my $exp_slice      = $hslice->expand( 10000, 10000);
-      #print "the expanded slice length is ",length($exp_slice->seq),"\n";
-      my $contig_slice = $sa->fetch_by_region('contig',"AC015909.14.1.217746");
-      my $chr_slice = $hslice->project('chromosome');
-      #print Dumper($chr_slice);
-      my @genes = @{$$chr_slice[0]->to_Slice->get_all_Genes()};
-      my @transcripts =  @{$$chr_slice[0]->to_Slice->get_all_Transcripts()};
-      print "gene name is ", $genes[0]->stable_id,'-',$genes[0]->start,'-',$genes[0]->end,"\n" if defined $genes[0];
-      print "trans name is ", $transcripts[0]->stable_id,'-',$transcripts[0]->start,'-',$transcripts[0]->end,"\n" if defined $transcripts[0];
-      my @gene_dbentries = @{$genes[0]->get_all_DBEntries()};
-      foreach my $dbe (@gene_dbentries) {
-	my @gene_syns = @{$dbe->get_all_synonyms()};
-	print "all_synonyms are @gene_syns\n";
-	print $dbe->db_display_name(),'-',$dbe->description(),'-',$genes[0]->external_db(),"\n";
+    my $msc = Bio::EnsEMBL::MappedSliceContainer->new(
+						      -SLICE => $slice
+						     );
+    my $asa = $dbCore->get_AssemblySliceAdaptor();
+    $msc->set_AssemblySliceAdaptor($asa);
+    $msc->attach_LRG('LRG');
+
+    foreach my $mapped_slice (@{$msc->get_all_MappedSlices()}){
+      if ($mapped_slice->seq eq $q_seq) {
+	print "mapped_seq is same as q_seq\n";
       }
-      my @exons = $transcripts[0]->get_all_Exons();#having problem
-      print "exons name again is ", $exons[0]->stable_id,'-',$exons[0]->start,'-',$exons[0]->end,"\n" if defined $exons[0];
-      my @transcript = $genes[0]->get_all_Transcripts();#having problem
-      print "trans name again is ", $transcript[0]->stable_id,'-',$transcript[0]->start,'-',$transcript[0]->end,"\n" if defined $transcript[0];
-      #print Dumper($chr_slice);
-      #print Dumper($contig_slice);
+      else {
+	print "mapped_seq is different from q_seq\n";
+      }
+      print "mapped_slice name is ",$mapped_slice->name,"\t",$mapped_slice->start,"\t",$mapped_slice->end,"\n";
+      my $num_exons = 0;
+      my $num_trans = 0;
+      foreach my $exon (@{ $mapped_slice->get_all_Exons }) {
+	print "  ", $exon->stable_id,"\t",$exon->start,," ", $exon->end, "\n";
+	$num_exons++;
+      }
+      print "There are ", $num_exons," exons\n";
+      foreach my $gene (@{ $mapped_slice->get_all_Genes }) {
+	my @gene_dbentries = @{$gene->get_all_DBEntries()};
+	foreach my $dbe (@gene_dbentries) {
+	  my @gene_syns = @{$dbe->get_all_synonyms()};
+	  print "all_synonyms are @gene_syns\n";
+	  print $dbe->db_display_name(),'-',$dbe->description(),'-',$gene->external_db(),"\n";
+	}
+	foreach my $transcript (@{$mapped_slice->get_all_Transcripts()}) {
+	  print "Tanscript cdna_start_end  ", $transcript->stable_id,"\t",$transcript->cdna_coding_start,," ", $transcript->cdna_coding_end, "\n";
+	  $num_trans++;
+	  print "There are ", $num_trans," transcripts\n";
+	  my $translation = $transcript->transclation();
+	  print "The protein sequence is ",$translation->seq,"\n";
+	  my @transl_dbentries = @{$translation->get_all_DBEntries()};
+	  foreach my $dbe (@transl_dbentries) {
+	    print $dbe->db_display_name(),'-',$dbe->get_all_synonyms(),'-',$dbe->description(),'-',$translation->external_db,"\n";
+	  }
+	}
+      }
+    }
+
+
+    my $hslice = $sa->fetch_by_region('LRG',"$lrg_name");
+    print "q_seq from hslice is ",$hslice->start,'-'.$hslice->end,"\n";
+    #my $exp_slice      = $hslice->expand( 10000, 10000);
+    #print "the expanded slice length is ",length($exp_slice->seq),"\n";
+    my $contig_slice = $sa->fetch_by_region('contig',"AC015909.14.1.217746");
+    my $chr_slice = $hslice->project('chromosome');
+    #print Dumper($chr_slice);
+    my @genes = @{$$chr_slice[0]->to_Slice->get_all_Genes()};
+    my @transcripts =  @{$$chr_slice[0]->to_Slice->get_all_Transcripts()};
+    print "gene name is ", $genes[0]->stable_id,'-',$genes[0]->start,'-',$genes[0]->end,"\n" if defined $genes[0];
+    print "trans name is ", $transcripts[0]->stable_id,'-',$transcripts[0]->start,'-',$transcripts[0]->end,"\n" if defined $transcripts[0];
+    my @gene_dbentries = @{$genes[0]->get_all_DBEntries()};
+    foreach my $dbe (@gene_dbentries) {
+      my @gene_syns = @{$dbe->get_all_synonyms()};
+      print "all_synonyms are @gene_syns\n";
+      print $dbe->db_display_name(),'-',$dbe->description(),'-',$genes[0]->external_db(),"\n";
+    }
+    my @exons = $transcripts[0]->get_all_Exons();#having problem
+    print "exons name again is ", $exons[0]->stable_id,'-',$exons[0]->start,'-',$exons[0]->end,"\n" if defined $exons[0];
+    my @transcript = $genes[0]->get_all_Transcripts();#having problem
+    print "trans name again is ", $transcript[0]->stable_id,'-',$transcript[0]->start,'-',$transcript[0]->end,"\n" if defined $transcript[0];
+    #print Dumper($chr_slice);
+    #print Dumper($contig_slice);
+
   }
 
 }
