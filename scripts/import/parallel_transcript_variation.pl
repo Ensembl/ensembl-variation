@@ -16,7 +16,7 @@ use ImportUtils qw(dumpSQL debug load create_and_load);
 
 my ($TMP_DIR, $TMP_FILE, $LIMIT,$status_file);
 
-{
+# {
 
   my ($species,$limit,$num_processes);
 
@@ -67,7 +67,7 @@ my ($TMP_DIR, $TMP_FILE, $LIMIT,$status_file);
     last_process($dbCore,$dbVar);
   }
 
-}
+# }
 
 #
 # Loads the transcript variation table.  Retrieves every transcript in the
