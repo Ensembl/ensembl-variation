@@ -118,7 +118,7 @@ sub variation_table {
 		AND   ov.var_id = subsnp.variation_id
                 AND   ov.univar_id = uv.univar_id
                 AND   uv.allele_id=a.allele_id
-	        $self->{'limit'}});
+	        $self->{'limit'}}));
     create_and_load( $self->{'dbVar'}, "tmp_var_allele", "subsnp_id i*", "refsnp_id i*",
 		     "pop_id i", "allele", "substrand_reversed_flag i", "moltype");
     
