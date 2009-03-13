@@ -62,6 +62,7 @@ my ($TMP_DIR, $TMP_FILE, $LIMIT,$status_file);
   #check if it is the last process
   my $processes = `cat $TMP_DIR/$status_file | wc -l`;
   if ($processes == $num_processes){
+#   if (1){
       #if is the last process, finish it
     debug("Last process: ready to import data");
     last_process($dbCore,$dbVar);
@@ -292,10 +293,11 @@ sub last_process{
 
     debug("Preparing to update consequence type in variation feature table");
     # create a file which contains the var_feat_id and the max consequence type
-    dumpSQL($dbVar,qq{SELECT STRAIGHT_JOIN vf.variation_feature_id, tv.consequence_type 
-		      FROM variation_feature vf LEFT JOIN transcript_variation tv ON 
-			   vf.variation_feature_id = tv.variation_feature_id}
-                               );
+#     dumpSQL($dbVar,qq{SELECT STRAIGHT_JOIN vf.variation_feature_id, tv.consequence_type 
+# 		      FROM variation_feature vf LEFT JOIN transcript_variation tv ON 
+# 			   vf.variation_feature_id = tv.variation_feature_id}
+#                                );
+	dumpSQL($dbVar, qq{SELECT variation_feature_id, consequence_type FROM transcript_variation});
  
     # sort the file
     system("sort $TMP_DIR/$TMP_FILE |uniq > $TMP_DIR/$TMP_FILE.su");
