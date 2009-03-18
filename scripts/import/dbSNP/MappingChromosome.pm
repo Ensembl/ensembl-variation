@@ -34,11 +34,11 @@ sub variation_feature{
   $sth->finish();
 
   #we need to create a seq_region table
-  $self->{'dbVar'}->dbc->do(qq{CREATE TABLE seq_region(
-                               seq_region_id,int(10) unsigned,
+  $self->{'dbVar'}->do(qq{CREATE TABLE IF NOT EXISTS seq_region(
+                               seq_region_id int(10),
                                name varchar(40),
                                primary key (seq_region_id),
-                               unique (name)
+                               unique key (name))
  });
 
   # Create hash of top-level seq_region_id keyed by seq_region_name
@@ -53,11 +53,11 @@ and    at.code="toplevel" } );
   $sth1->bind_columns(\$seq_region_id,\$seq_region_name);
   while ($sth1->fetch) {
     $rec_seq_region{$seq_region_name} = $seq_region_id;
-    $self->{'dbVar'}->dbc->do(qq{INSERT INTO seq_region(seq_region_id,name)values($seq_region_id,"$seq_region_name")});
+    $self->{'dbVar'}->do(qq{INSERT IGNORE INTO seq_region(seq_region_id,name)values($seq_region_id,"$seq_region_name")});
   }
   $sth1->finish();
 
-
+=head
   debug("Reading Mapping file");
   open (FH, ">" . $self->{'tmpdir'} . "/" . $self->{'tmpfile'} );
 
@@ -86,7 +86,7 @@ and    at.code="toplevel" } );
   my $dbname = $self->{'dbVar'}->dbname();
   print "host is $host and dbname is $dbname\n";
 
-  $self->{'dbVar'}->do(qq{CREATE TABLE THREE_MAPPINGS (name varchar(15), index name(name))});
+  $self->{'dbVar'}->do(qq{CREATE TABLE IF NOT EXISTS THREE_MAPPINGS (name varchar(15), index name(name))});
   system("mysqlimport -L -uensadmin -pensembl -h$host $dbname $three_mappings");
   $self->{'dbVar'}->do(qq{insert into failed_variation (variation_id,failed_description_id) select v.variation_id,1 from variation v, THREE_MAPPINGS t where v.name=t.name});
 
@@ -172,7 +172,7 @@ and    at.code="toplevel" } );
   close IN;
   close FH;
 
-
+=cut
   debug("Creating genotyped variations");
 
   # Creating temporary variation_feature table
