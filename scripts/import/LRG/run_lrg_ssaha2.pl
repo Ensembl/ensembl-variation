@@ -1,5 +1,6 @@
 #! /usr/local/bin/perl
 
+use lib '/nfs/acari/dr2/projects/src/ensembl/ensembl/modules';
 use strict;
 use Getopt::Long;
 use Bio::Seq;
@@ -41,7 +42,7 @@ $input_dir ||= "/lustre/work1/ensembl/yuan/SARA/LRG/input_dir";
 $output_dir ||= "/lustre/work1/ensembl/yuan/SARA/LRG/output_dir";
 $target_dir ||= "/lustre/work1/ensembl/yuan/SARA/human/ref_seq_hash";
 
-my $queue = "-q normal -R'select[mem>10000] rusage[mem=10000]'";
+my $queue = "-q normal -R'select[mem>5000] rusage[mem=5000]'";
 
 my $output_file_name = "ssaha2_output\_$input_file_name";
 my $input_file = "$input_dir/$input_file_name";
@@ -90,7 +91,7 @@ sub bsub_ssaha_job {
   #my $ssaha_command = "/nfs/acari/yuan/ensembl/src/ensembl-variation/scripts/ssahaSNP/ssaha2/ssaha2_v1.0.9_ia64/ssaha2";
   my $ssaha_command = "/nfs/acari/yuan/ensembl/src/ensembl-variation/scripts/ssahaSNP/ssaha2/ssaha2_v1.0.9_x86_64/ssaha2";
   #$ssaha_command .= " -align 0 -kmer 2 -seeds 2 -cut 1000 -output vulgar -depth 10 -best 1 $input_dir/test.fa $input_file";
-  $ssaha_command .= " -align 1 -kmer 12 -seeds 4 -cut 1000 -output vulgar -depth 10 -best 1 -save $subject $input_file";
+  $ssaha_command .= " -align 1 -kmer 12 -seeds 5 -cut 1000 -output vulgar -depth 10 -best 1 -save $subject $input_file";
   my $call = "bsub -J $input_file\_ssaha_job -P ensembl-variation $queue -e $output_dir/error_ssaha -o $output_file $ssaha_command";
   system ($call);
 }
@@ -163,7 +164,7 @@ sub parse_ssaha2_out {
 
 sub find_results {
 
-  my @pairs;
+  my (@pairs,@pair_gaps);
   my ($h1,$h2,$h3) = @_;
   my @fps;
 
@@ -190,7 +191,8 @@ sub find_results {
 
     my ($seq_region_name) = split /\-/, $t_id;
     print "seq_region_name is $seq_region_name and t_start is $t_start, t_end is $t_end\n";
-    my $slice = $sa->fetch_by_region('chromosome',$seq_region_name,$t_start,$t_end, 1);
+    #my $slice = $sa->fetch_by_region('chromosome',$seq_region_name,$t_start,$t_end, 1);
+    my $slice = $sa->fetch_by_region('chromosome',$seq_region_name);
     #print "slice is ",ref($slice),"\n";
     print "slice seq_region_name is ",$slice->seq_region_name,'-',length($slice->seq),'-',$slice->length,'-',$slice->start,'-',$slice->end,"\n";
     #print "slice seq is ",$slice->seq,"\n";
@@ -208,7 +210,7 @@ sub find_results {
 
     print "$q_id,$q_start,$q_end,$q_strand,$t_id,$t_start,$t_end,$t_strand,$score,@match_components\n";
     if (scalar @match_components ==3 and $match_components[0] eq 'M') {
-      $no_gap=1;
+      $no_gap =1;
     }
 
     while (@match_components) {
@@ -230,8 +232,12 @@ sub find_results {
 	  reverse_comp(\$q_seq);
 	}
 	$new_t_start = $t_start + $target_match_length -1;
+	my $tmp_qs = ($q_strand ==1) ? $q_start : $new_q_start;
+	my $tmp_qe = ($q_strand ==1) ? $new_q_start : $q_start;
+	push @pair_gaps, ['DNA',$tmp_qs,$tmp_qe,$t_start,$new_t_start,$q_strand];
+
 	print "$q_start,$new_q_start,$t_start,$new_t_start\n";
-	my $t_seq = $slice->seq;
+	my $t_seq = substr($slice->seq,$t_start-1,$new_t_start-$t_start+1);
 	print "$q_start,$new_q_start,$t_start,$new_t_start and length of q_seq ",length($q_seq),'-',length($t_seq),"\n";
 	#print "q_seq_is $q_seq\n";
 	#print "t_seq is $t_seq\n";
@@ -247,7 +253,7 @@ sub find_results {
 	  if ($q_seqs{$count} !~ /$t_seqs{$count}/i) {
 	    #next;
 	    print "count is $count\n";
-	    $mis_match=1;
+	    $mis_match =1;
 	    my $sub_t_end = $t_start + ($count -1) - 1;
 	    if ($q_strand ==1) {
 	      $sub_q_end = $q_start + ($count -1) - 1;
@@ -307,7 +313,7 @@ sub find_results {
 	  $tmp_q_end = $new_q_start-1;
 	}
 	($tmp_q_start,$tmp_q_end) = ($tmp_q_end,$tmp_q_start) if($tmp_q_end<$tmp_q_start);
-	push @pairs, [$type,$tmp_q_start,$tmp_q_end,$t_start+1,$new_t_start-1,$q_strand];
+	#push @pairs, [$type,$tmp_q_start,$tmp_q_end,$t_start+1,$new_t_start-1,$q_strand];
 
 	print "in G, q_start is $q_start and q_end is $new_q_start and t_start is $t_start and t_end is $new_t_start\n";
       }
@@ -319,11 +325,6 @@ sub find_results {
     $done{$q_id} =1 if $pairs[0]->[0];
 
 
-    #make featurePair here, 
-    if ($no_gap and ! $mis_match) {
-      $full_match=1;
-    }
-
     my $fp = Bio::EnsEMBL::FeaturePair->new(-start    => $f_q_start,
 					    -end      => $f_q_end,
 					    -strand   => $q_strand,
@@ -333,12 +334,13 @@ sub find_results {
 					    -hstrand  => $h->{'t_strand'},
 					    -hseqname => $h->{'t_id'},
 					    -slice    => $slice,
-					    -type     => $full_match,
 					   );
     $fp->seqname($h->{'q_id'});
+    $fp->type(\@pair_gaps);
+
     push @fps, $fp;
 
-    foreach my $pair (sort {$a->[3]<=>$b->[3]} @pairs) {
+    foreach my $pair (sort {$a->[3]<=>$b->[3]} @pair_gaps) {
       print "pairs are ",$pair->[0],'-',$pair->[1],'-',$pair->[2],'-',$pair->[3],'-',$pair->[4],"\n";
     }
   }
@@ -352,14 +354,23 @@ sub seqname {
   return $self->{seqname};
 
 }
+
+sub type {
+
+  my $self = shift;
+  $self->{'type'} = shift if(@_);
+  return $self->{type};
+
+}
+
 sub get_annotations {
   my $feature_pairs = shift;
-  my $lrg_name = 'LRG2';
+  my $lrg_name = 'LRG1';
+  #my @pair_gaps;
 
   foreach my $fp (@$feature_pairs) {
-    my $full_match = $fp->type;print "full_match is $full_match\n";
     my ($q_start,$q_end,$t_start,$t_end,$q_strand);
-    my $slice = $fp->slice; print "slice is ",ref($slice),"\n";
+    my $slice = $fp->slice;
     my $q_seqobj = $rec_seq{$fp->seqname};
     my $q_seq = $q_seqobj->seq;
     $q_start = $fp->start;
@@ -367,11 +378,16 @@ sub get_annotations {
     $t_start = $fp->hstart;
     $t_end = $fp->hend;
     $q_strand = $fp->strand;
-
-    if (!$full_match) {#it's not full match, insert data in several tables
+    my $pair_gaps = $fp->type;
+    foreach my $pair (sort {$a->[3]<=>$b->[3]} @$pair_gaps) {
+      print "pair_gaps are ",$pair->[0],'-',$pair->[1],'-',$pair->[2],'-',$pair->[3],'-',$pair->[4],"\n";
+    }
+    print "there is ",scalar @$pair_gaps, " gaps\n";
+    my $sub_slice = $slice->sub_Slice($t_start,$t_end);
+    if (scalar @$pair_gaps >1) {#it's not full match, insert data in several tables
       my $csa = $dbCore->get_CoordSystemAdaptor();
       my $cs = $csa->fetch_all_by_name('LRG');
-      my $cs_id = $cs->[0]->dbID();
+      my $cs_id = $cs->[0]->dbID();print "coord_system_id is $cs_id\n";
       my $q_seq_region_id;
       my $q_seq_length = length($q_seq);
       my $t_seq_region_id = $sa->get_seq_region_id($slice);
@@ -385,17 +401,19 @@ sub get_annotations {
 	my $q_seqid_ref = $dbCore->dbc->db_handle->selectall_arrayref(qq{SELECT seq_region_id from seq_region WHERE name="$lrg_name"});
 	$q_seq_region_id = $q_seqid_ref->[0][0];
       }
+      foreach  my $pair (sort {$a->[3]<=>$b->[3]} @$pair_gaps) {
+	#print "pair_gaps are ",$pair->[0],'-',$pair->[1],'-',$pair->[2],'-',$pair->[3],'-',$pair->[4],"\n";
 
-      if ($q_end-$q_start == $t_end-$t_start) {
-	#$dbCore->dbc->do(qq{INSERT IGNORE INTO assembly(asm_seq_region_id,cmp_seq_region_id,asm_start,asm_end,cmp_start,cmp_end,ori)values($t_seq_region_id,$q_seq_region_id,$t_start,$t_end,$q_start,$q_end,$q_strand)});
-      }
-      else {
-	throw("distance between query and target is not the same, there is a indel");
+	if ($pair->[2]-$pair->[1] == $pair->[4]-$pair->[3]) {
+	  $dbCore->dbc->do(qq{INSERT IGNORE INTO assembly(asm_seq_region_id,cmp_seq_region_id,asm_start,asm_end,cmp_start,cmp_end,ori)values($t_seq_region_id,$q_seq_region_id,$pair->[3],$pair->[4],$pair->[1],$pair->[2],$q_strand)});
+	}
+	else {
+	  throw("distance between query and target is not the same, there is a indel");
+	}
       }
     }
-
     my $msc = Bio::EnsEMBL::MappedSliceContainer->new(
-						      -SLICE => $slice
+						      -SLICE => $sub_slice
 						     );
     my $asa = $dbCore->get_AssemblySliceAdaptor();
     $msc->set_AssemblySliceAdaptor($asa);
