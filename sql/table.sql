@@ -156,7 +156,7 @@ create table sample(
 	name varchar(255) not null,
 	size int,
 	description text,
-	display enum('REFERENCE','DEFAULT','DISPLAYABLE','UNDISPLAYABLE') default 'DISPLAYABLE'
+	display enum('REFERENCE','DEFAULT','DISPLAYABLE','UNDISPLAYABLE') default 'DISPLAYABLE',
 
 	primary key( sample_id ),
 	key name_idx( name )
@@ -533,7 +533,7 @@ create table source(
 	source_id int(10) unsigned not null auto_increment,
 	name varchar(255),
 	version int,
-	description varchar(255)
+	description varchar(255),
 	
 	primary key( source_id )
 );
