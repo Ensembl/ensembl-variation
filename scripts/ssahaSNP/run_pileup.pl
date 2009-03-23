@@ -2,6 +2,7 @@
 
 use strict;
 use warnings;
+use lib '/nfs/team71/psg/wm2/Variation/scripts/import/';
 use Bio::EnsEMBL::Registry;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Variation::DBSQL::DBAdaptor;
@@ -30,7 +31,7 @@ GetOptions('species=s'    => \$species,
 
 $TMP_DIR  = $ImportUtils::TMP_DIR;
 $TMP_FILE = $ImportUtils::TMP_FILE;
-$strain_name ||="abelii";
+$strain_name ||="tg1";
 
 my $registry_file;
 $registry_file ||= $Bin . "/ensembl.registry";
@@ -64,10 +65,10 @@ while (my ($seq_region_id,$seq_region_name) = $sth->fetchrow_array()) {
 #read_match_file();
 #make_pileup_reads_file();
 #parse_pileup_snp_file();
-merge_pileup_snp();
-#create_vdb();
+#merge_pileup_snp();
+# create_vdb();
 #PAR_regions();
-#read_coverage();
+read_coverage();
 
 sub read_cigar_file {
 
@@ -322,7 +323,7 @@ sub parse_pileup_snp_file {
 
 sub merge_pileup_snp {
 
-  my $variation_name = "ENSTNISNP";
+  my $variation_name = "TEMP";
  
   debug("Create table pileup_snp_merge...");
   
@@ -367,10 +368,7 @@ sub merge_pileup_snp {
 
 sub create_vdb {
 
-  my %rec_strain = ("gsc" => 1,
-                    "clone"     => 1,
-                    "wibr" => 1
-                   );
+  my %rec_strain = ("tg1" => 1);
 
   my $individual_type_id = 3;
   my $pop_size = keys %rec_strain;
@@ -378,6 +376,8 @@ sub create_vdb {
   my $ind_pop_name = "refstrain";
   my $ind_sample_pop_desc = "Population for $pop_size individual(s)";
   my $ind_sample_desc = "Individual within population $ind_pop_name";
+
+
 
   debug("Inserting into population, individual and sample tables");
 
@@ -466,9 +466,9 @@ sub create_vdb {
     debug("Insert into tmp_individual_genotype_single_bp table...");
     $dbVar->do(qq{INSERT INTO tmp_individual_genotype_single_bp (variation_id,allele_1,allele_2,sample_id)
                 SELECT  v.variation_id,snp.allele_1,snp.allele_2,s.sample_id
-                FROM variation v, pileup_snp_merge snp, sample s
+                FROM variation v, pileup_snp_new snp, sample s
                 WHERE v.variation_id = snp.variation_id
-                AND snp.individual_name like "%s.name%"
+                AND snp.individual_name = s.name
                 });
   }
 }
