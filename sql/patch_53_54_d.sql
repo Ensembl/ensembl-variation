@@ -12,8 +12,8 @@ INSERT IGNORE INTO failed_variation (variation_id,failed_description_id)
    SELECT v.variation_id, 5
    FROM  variation v LEFT JOIN variation_feature vf
    ON v.variation_id=vf.variation_id
-   WHERE vf.variation_id is null
-   AND v.validation_status != 'failed';
+   WHERE vf.variation_id is null;
+   #AND v.validation_status != 'failed';
 
 #delete newly failed_variation from other tables
 UPDATE variation v, failed_variation w set v.validation_status = 'failed', v.ancestral_allele = NULL WHERE v.variation_id = w.variation_id;
