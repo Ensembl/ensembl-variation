@@ -597,87 +597,87 @@ sub _objs_from_sth {
     }
 }
 
-	# this next slab of code is a hack
-	# it deals with the case where the same rsID and population have multiple
-	# allele frequencies in the allele table - it forces each variation to return
-	# only 1 matching (i.e. add up to 1) pair of frequencies for each population
-	my %by_pop;
-	my %seen_alleles;
-	my %by_allele;
-	my %flag;
-	my @chosen;
-	
-	foreach my $var(@vars) {
-		%by_pop = ();
-		%seen_alleles = ();
-		%flag = ();
-		@chosen = ();
-		
-		# get all the alleles
-		my @alleles = @{$var->get_all_Alleles()};
-		
-		# arrange them in a hash by population and flag any that we want to check
-		foreach my $allele(@alleles) {
-			push @{$by_pop{$allele->population->name}}, $allele;
-			
-			if(defined $seen_alleles{$allele->population}{$allele->allele}) {
-				$flag{$allele->population->name} = 1;
-			}
-			else {
-				$seen_alleles{$allele->population}{$allele->allele} = 1;
-			}
-		}
-		
-		foreach my $pop(keys %by_pop) {
-		
-			# if this population has been flagged
-			if(defined $flag{$pop}) {
-				
-				# arrange in a hash by allele
-				%by_allele = ();
-				foreach my $allele(@{$by_pop{$pop}}) {
-					push @{$by_allele{$allele->allele}}, $allele;
-				}
-				
-				# since it's arbitrary which pair we choose, just get the first allele and frequency
-				my @allele_order = sort keys %by_allele;
-				my $first_allele = shift @allele_order;
-				my $first_freq = $by_allele{$first_allele}->[0]->frequency;
-				
-				push @chosen, $by_allele{$first_allele}->[0];
-				last if $first_freq == 1;
-				
-				# now try and get an allele to match this first chosen one
-				# only works at the moment if the SNP has 2 alleles
-				if(scalar @allele_order == 1) {
-					my %diffs = ();
-					my %link = ();
-				
-					foreach my $allele(@{$by_allele{$allele_order[0]}}) {
-						$diffs{$allele->frequency} = abs(1 - ($first_freq + $allele->frequency));
-						$link{$allele->frequency} = $allele;
-					}
-					
-					my $best = (sort {$diffs{$a} <=> $diffs{$b}} keys %diffs)[0];
-					
-					push @chosen, $link{$best};# if $diffs{$best} < 0.01;
-				}
-				
-				# if it has more than 2 alleles, just put all of them in
-				else {
-					push @chosen, @{$by_pop{$pop}};
-				}
-			}
-			
-			# if not flagged, add all alleles
-			else {
-				push @chosen, @{$by_pop{$pop}};
-			}
-		}
-		
-		# replace this variation's allele list ref with the new one
-		$var->{'alleles'} = \@chosen;
-	}
+# 	# this next slab of code is a hack
+# 	# it deals with the case where the same rsID and population have multiple
+# 	# allele frequencies in the allele table - it forces each variation to return
+# 	# only 1 matching (i.e. add up to 1) pair of frequencies for each population
+# 	my %by_pop;
+# 	my %seen_alleles;
+# 	my %by_allele;
+# 	my %flag;
+# 	my @chosen;
+# 	
+# 	foreach my $var(@vars) {
+# 		%by_pop = ();
+# 		%seen_alleles = ();
+# 		%flag = ();
+# 		@chosen = ();
+# 		
+# 		# get all the alleles
+# 		my @alleles = @{$var->get_all_Alleles()};
+# 		
+# 		# arrange them in a hash by population and flag any that we want to check
+# 		foreach my $allele(@alleles) {
+# 			push @{$by_pop{$allele->population->name}}, $allele;
+# 			
+# 			if(defined $seen_alleles{$allele->population}{$allele->allele}) {
+# 				$flag{$allele->population->name} = 1;
+# 			}
+# 			else {
+# 				$seen_alleles{$allele->population}{$allele->allele} = 1;
+# 			}
+# 		}
+# 		
+# 		foreach my $pop(keys %by_pop) {
+# 		
+# 			# if this population has been flagged
+# 			if(defined $flag{$pop}) {
+# 				
+# 				# arrange in a hash by allele
+# 				%by_allele = ();
+# 				foreach my $allele(@{$by_pop{$pop}}) {
+# 					push @{$by_allele{$allele->allele}}, $allele;
+# 				}
+# 				
+# 				# since it's arbitrary which pair we choose, just get the first allele and frequency
+# 				my @allele_order = sort keys %by_allele;
+# 				my $first_allele = shift @allele_order;
+# 				my $first_freq = $by_allele{$first_allele}->[0]->frequency;
+# 				
+# 				push @chosen, $by_allele{$first_allele}->[0];
+# 				last if $first_freq == 1;
+# 				
+# 				# now try and get an allele to match this first chosen one
+# 				# only works at the moment if the SNP has 2 alleles
+# 				if(scalar @allele_order == 1) {
+# 					my %diffs = ();
+# 					my %link = ();
+# 				
+# 					foreach my $allele(@{$by_allele{$allele_order[0]}}) {
+# 						$diffs{$allele->frequency} = abs(1 - ($first_freq + $allele->frequency));
+# 						$link{$allele->frequency} = $allele;
+# 					}
+# 					
+# 					my $best = (sort {$diffs{$a} <=> $diffs{$b}} keys %diffs)[0];
+# 					
+# 					push @chosen, $link{$best};# if $diffs{$best} < 0.01;
+# 				}
+# 				
+# 				# if it has more than 2 alleles, just put all of them in
+# 				else {
+# 					push @chosen, @{$by_pop{$pop}};
+# 				}
+# 			}
+# 			
+# 			# if not flagged, add all alleles
+# 			else {
+# 				push @chosen, @{$by_pop{$pop}};
+# 			}
+# 		}
+# 		
+# 		# replace this variation's allele list ref with the new one
+# 		$var->{'alleles'} = \@chosen;
+# 	}
 	
   return \@vars;
 }
