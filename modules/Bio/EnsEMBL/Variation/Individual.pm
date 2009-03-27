@@ -100,9 +100,9 @@ sub new {
   my $caller = shift;
   my $class = ref($caller) || $caller;
 
-  my ($dbID, $adaptor, $name, $desc, $gender, $father, $mother, $type_name, $type_desc,
+  my ($dbID, $adaptor, $name, $desc, $display_flag, $gender, $father, $mother, $type_name, $type_desc,
       $father_id, $mother_id) =
-    rearrange([qw(dbID adaptor name description gender
+    rearrange([qw(dbID adaptor name description display gender
                   father_individual mother_individual
 		  type_individual type_description
                   father_individual_sample_id mother_individual_sample_id)], @_);
@@ -124,6 +124,7 @@ sub new {
                 'adaptor' => $adaptor,
                 'name'    => $name,
                 'description' => $desc,
+		'display' => $display_flag,
                 'gender'  => $gender,
                 'father_individual' => $father,
                 'mother_individual' => $mother,
@@ -204,6 +205,36 @@ sub gender{
   }
 
   return $self->{'gender'};
+}
+
+
+=head2 display
+
+  Arg [1]    : string $newval (optional)
+               The new value to set the display attribute to
+  Example    : $display = $obj->display()
+  Description: Getter/Setter for the display attribute
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub display{
+  my $self = shift;
+  
+  if(@_) {
+    my $display = uc(shift);
+    
+    if($display ne 'UNDISPLAYABLE' && $display ne 'REFERENCE' && $display ne 'DISPLAYABLE' && $display ne 'DEFAULT') {
+      throw('Display flag must be one of "REFERENCE", "DEFAULT", "DISPLAYABLE", "UNDISPLAYABLE"');
+    }
+    
+    $self->{'display'} = $display;
+  }
+  
+  return $self->{'display'};
 }
 
 
@@ -346,7 +377,5 @@ sub get_all_child_Individuals {
   return $self->adaptor()->fetch_all_by_parent_Individual($self);
   
 }
-
-
 
 1;
