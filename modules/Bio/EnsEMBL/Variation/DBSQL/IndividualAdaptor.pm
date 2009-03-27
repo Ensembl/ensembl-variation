@@ -114,7 +114,7 @@ sub fetch_all_by_name {
   defined($name) || throw("name argument expected");
 
   my $sth = $self->prepare
-    (q{SELECT i.sample_id, s.name, s.description,
+    (q{SELECT i.sample_id, s.name, s.description, s.display,
               i.gender, i.father_individual_sample_id, i.mother_individual_sample_id, it.name, it.description
        FROM   individual i, sample s, individual_type it
        WHERE  s.name = ?
@@ -164,7 +164,7 @@ sub fetch_all_by_Population {
   }
 
   my $sth = $self->prepare
-    (q{SELECT i.sample_id, s.name, s.description,
+    (q{SELECT i.sample_id, s.name, s.description, s.display,
               i.gender, i.father_individual_sample_id, i.mother_individual_sample_id, it.name, it.description
        FROM   individual i, individual_population ip, sample s, individual_type it
        WHERE  i.sample_id = ip.individual_sample_id
@@ -218,14 +218,14 @@ sub fetch_all_by_parent_Individual {
   my $gender = $parent->gender() || '';
 
   my $father_sql =
-    q{SELECT i.sample_id, s.name, s.description,
+    q{SELECT i.sample_id, s.name, s.description, s.display,
              i.gender, i.father_individual_sample_id, i.mother_individual_sample_id, it.name, it.description
       FROM   individual i, sample s, individual_type it
       WHERE  i.father_individual_sample_id = ?
       AND    i.individual_type_id = it.individual_type_id
       AND    s.sample_id = i.sample_id};
   my $mother_sql =
-    q{SELECT i.sample_id, s.name, s.description,
+    q{SELECT i.sample_id, s.name, s.description, s.display,
               i.gender, i.father_individual_sample_id, i.mother_individual_sample_id, it.name, it.description
        FROM   individual i, sample s, individual_type it
        WHERE  i.mother_individual_sample_id = ?
@@ -311,12 +311,18 @@ sub get_display_strains{
     #then, get the default ones
     my $default_strains = $self->get_default_strains();
     push @strain_names, @{$default_strains};
+    
     #and finally, get the others
-    my $sth = $self->prepare(qq{SELECT meta_value from meta where meta_key = ?
-				});
-    $sth->bind_param(1,'individual.display_strain',SQL_VARCHAR);
-    $sth->execute();
+    my $sth = $self->prepare(qq{SELECT name FROM sample WHERE display = ?});
+    
+    $sth->bind_param(1, 'DISPLAY');
+    $sth->execute;
     $sth->bind_columns(\$name);
+#    my $sth = $self->prepare(qq{SELECT meta_value from meta where meta_key = ?
+#				});
+#    $sth->bind_param(1,'individual.display_strain',SQL_VARCHAR);
+#    $sth->execute();
+#    $sth->bind_columns(\$name);
     while ($sth->fetch()){
 	push @strain_names, $name;
     }
@@ -342,11 +348,18 @@ sub get_default_strains{
     my $self = shift;
     my @strain_names;
     my $name;
-    my $sth = $self->prepare(qq{SELECT meta_value from meta where meta_key = ?
-				});
-    $sth->bind_param(1,'individual.default_strain',SQL_VARCHAR);
-    $sth->execute();
+    
+    my $sth = $self->prepare(qq{SELECT name FROM sample WHERE display = ?});
+    
+    $sth->bind_param(1, 'DEFAULT');
+    $sth->execute;
     $sth->bind_columns(\$name);
+    
+#    my $sth = $self->prepare(qq{SELECT meta_value from meta where meta_key = ?
+#				});
+#    $sth->bind_param(1,'individual.default_strain',SQL_VARCHAR);
+#    $sth->execute();
+#    $sth->bind_columns(\$name);
     while ($sth->fetch()){
 	push @strain_names, $name;
     }
@@ -372,15 +385,26 @@ sub get_reference_strain_name{
     my $self = shift;
 
     my $name;
-    my $sth = $self->prepare(qq{SELECT meta_value from meta where meta_key = ?
-				});
-    $sth->bind_param(1,'individual.reference_strain',SQL_VARCHAR);
-    $sth->execute();
+    
+    my $sth = $self->prepare(qq{SELECT name FROM sample WHERE display = ?});
+    
+    $sth->bind_param(1, 'REFERENCE');
+    $sth->execute;
     $sth->bind_columns(\$name);
     $sth->fetch();
     $sth->finish;
-
+    
     return $name;
+#    
+#    my $sth = $self->prepare(qq{SELECT meta_value from meta where meta_key = ?
+#				});
+#    $sth->bind_param(1,'individual.reference_strain',SQL_VARCHAR);
+#    $sth->execute();
+#    $sth->bind_columns(\$name);
+#    $sth->fetch();
+#    $sth->finish;
+#
+#    return $name;
 
 }
 
@@ -421,9 +445,9 @@ sub _objs_from_sth {
   my $self = shift;
   my $sth = shift;
 
-  my ($dbID, $name, $desc, $gender, $father_id, $mother_id,$it_name,$it_desc);
+  my ($dbID, $name, $desc, $gender, $display_flag, $father_id, $mother_id,$it_name,$it_desc);
 
-  $sth->bind_columns(\$dbID, \$name, \$desc, \$gender,
+  $sth->bind_columns(\$dbID, \$name, \$desc, \$display_flag, \$gender,
                      \$father_id, \$mother_id, \$it_name, \$it_desc);
 
   my %seen;
@@ -458,6 +482,7 @@ sub _objs_from_sth {
       (-dbID        => $dbID,
        -adaptor     => $self,
        -description => $desc,
+       -display     => $display_flag,
        -gender      => $gender,
        -name        => $name,
        -father_individual => $father,
@@ -501,7 +526,7 @@ sub _tables{return (['individual','i'],
 		    ['individual_type','it'])}
 
 sub _columns{
-    return qw(s.sample_id s.name s.description i.gender i.father_individual_sample_id i.mother_individual_sample_id it.name it.description);
+    return qw(s.sample_id s.name s.description s.display i.gender i.father_individual_sample_id i.mother_individual_sample_id it.name it.description);
 }
 
 sub _default_where_clause{
