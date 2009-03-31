@@ -480,7 +480,7 @@ sub parse_ssaha2_out {
 				($h->{'q_start'}, $h->{'q_end'}) = ($h->{'q_end'}, $h->{'q_start'});
 				($h->{'t_start'}, $h->{'t_end'}) = ($h->{'t_end'}, $h->{'t_start'});
 			}
-						
+			
 			push @rec_find, $h if $h->{'q_id'};
 		}
 	}
