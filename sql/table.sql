@@ -107,7 +107,18 @@ create table sample_synonym (
   key (name, source_id)
 );
 
+#
+# subsnp_handle
+#
+# Table containing information about subsnp_id and submitter handle
+#
 
+create table subsnp_id (
+  subsnp_id int(11) unsigned not null,
+  handle varchar(20),
+
+  primary key(subsnp_id)
+);
 
 #
 # allele
@@ -692,16 +703,20 @@ CREATE TABLE read_coverage (
 #
 ###############
 
-#CREATE TABLE read_coverage_collection(
-#	seq_region_id int(10) unsigned not null,
-#	window_size smallint(5) unsigned not null,
-#	window_start int(10) unsigned not null,
-#	read_coverage_string blob, 
-#	sample_id smallint(5) unsigned not null,
-#
-#	key seq_region_idx(seq_region_id),
-#	key sample_idx(sample_id)
-#);
+CREATE TABLE read_coverage_collection(
+	seq_region_id int(10) unsigned not null,
+	window_size smallint(5) unsigned not null,
+	window_start int(10) unsigned not null,
+        window_end int(10) unsigned not null,
+	read_coverage_string_avg blob,
+        read_coverage_string_min blob,
+        read_coverage_string_max blob,
+	sample_id smallint(5) unsigned not null,
+
+	key seq_region_idx(seq_region_id),
+        key window_index(window_size,window_start,window_end),
+	key sample_idx(sample_id)
+);
 
 ################
 #
