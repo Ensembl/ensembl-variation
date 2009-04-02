@@ -297,27 +297,31 @@ while(<IN>) {
 	$current = $root->findOrAdd('updatable_annotation/mapping');
 
 	my $mapping = mapping($genomic_sequence);
-        my $pairs = $mapping->type;
-        foreach  my $pair (sort {$a->[3]<=>$b->[3]} @$pairs) {
-	  if ($pair->[0] ne 'DNA') {
-	    print "pairs are ",$pair->[0],'-',$pair->[1],'-',$pair->[2],'-',$pair->[3],'-',$pair->[4],"\n";
-	  }
-	}
-	$current->addEmptyNode(
-		'align',
-		{
-			'chromosome' => $mapping->hseqname,
-			'start' => $mapping->hstart,
-			'end' => $mapping->hend,
-			'lrg_start' => $mapping->start,
-			'lrg_end' => $mapping->end,
-			'strand' => $mapping->strand,
+	
+	foreach my $pair(@{$mapping->type}) {
+		next unless $pair->[0] eq 'M';
+		
+		# switch chromosome start/end if on negative strand
+		if($pair->[5] < 0 && $pair->[3] < $pair->[4]) {
+			($pair->[3], $pair->[4]) = ($pair->[4], $pair->[3]);
 		}
-	);
+		
+		$current->addEmptyNode(
+			'align',
+			{
+				'chromosome' => $mapping->hseqname,
+				'start' => $pair->[3],
+				'end' => $pair->[4],
+				'lrg_start' => $pair->[1],
+				'lrg_end' => $pair->[2],
+				'strand' => $pair->[5],
+			}
+		);
+	}
 	
     # export
     $root->printAll();
-    #get_annotations ($mapping);
+    get_annotations ($mapping);
 }
 
 close IN;
@@ -357,12 +361,13 @@ sub mapping {
 		
     my @maps = ();
     my @pairs = ();
+	
     while($current_start < $seq_length) {
 			
       # split_size is conservative; if this is the penultimate split, just do a bigger
       # one to make sure we don't try and map too small a sequence
       if($seq_length - $current_start < (2 * $split_size)) {
-	$split_size = 2 * $split_size;
+		$split_size = 2 * $split_size;
       }
 			
       print "Mapping from $current_start to ", $current_start + $split_size, "\n";
@@ -370,36 +375,98 @@ sub mapping {
 			
       $current_start += $split_size;
     }
+
+	my $prev_end = 0;
+	my @dna_pairs;
+
+	# get all pairs from all maps into arrays
+	foreach my $map(@maps) {
 		
-    for my $i(0..$#maps) {
-      my $map = $maps[$i];
-      print $i, ": ", $map->hstart, " ", $map->hend, "\t", $map->start, " ", $map->end, "\n";
-       my $pairs = $map->type;
-      foreach  my $pair (sort {$a->[3]<=>$b->[3]} @$pairs) {
-	if ($pair->[0] ne 'DNA') {
-	  print "pairs are ",$pair->[0],'-',$pair->[1],'-',$pair->[2],'-',$pair->[3],'-',$pair->[4],"\n";
+		# sort by query start
+		foreach my $pair(sort {$a->[2] <=> $b->[2]} @{$map->type}) {
+			
+			# add the previous DNA end to each query coordinate
+			# since we split up the query sequence
+			$pair->[1] += $prev_end;
+			$pair->[2] += $prev_end;
+			
+			# put the DNA pairs in a separate array
+			if($pair->[0] eq 'DNA') {
+				push @dna_pairs, $pair;
+			}
+			
+			# put the match pairs in the @pairs array
+			else {
+				push @pairs, $pair;
+			}
+		}
+		
+		# get prev_end from the last added DNA pair
+		$prev_end = $dna_pairs[-1]->[2];
 	}
-      }
-    }
+	
+	# now join the pairs
+	my $prev_pair;
+	my @joined_pairs;
+	my $pair;
+	
+	foreach $pair(@pairs) {
+		if(defined $prev_pair) {
+			
+			# if the start of this pair is 1 more than the
+			# end of the previous one we want to join them
+			if($pair->[1] - $prev_pair->[2] == 1) {
+				
+				# copy this pair's query end to prev_pair
+				$prev_pair->[2] = $pair->[2];
+				
+				# do the same with the target end
+				# but we have to work out which it is since target
+				# coords are always reported start < end
+				if($pair->[3] < $prev_pair->[3] && $pair->[4] < $prev_pair->[4]) {
+					$prev_pair->[3] = $pair->[3];
+				}
+				
+				else {
+					$prev_pair->[4] = $pair->[4];
+				}
+			}
+			
+			# if the two pairs shouldn't be joined
+			else {
+				push @joined_pairs, $prev_pair;
+				
+				# clear prev_pair so that code below works
+				$prev_pair = undef;
+			}
+		}
 		
-    # join the maps
+		# copy this pair to prev_pair if we're not joining to previous
+		$prev_pair = $pair unless defined $prev_pair;
+	}
+	
+	# clean up remaining prev_pair by adding to joined_pairs
+	# also allows for situation where there's only 1 pair
+	push @joined_pairs, $prev_pair if defined $prev_pair;
+	
+	# add the DNA pairs again
+	push @joined_pairs, @dna_pairs;
+		
+	# join the maps
     my $main_map = shift @maps;
 		
     my $prev_q_end = $main_map->end;
 		
     foreach my $map(@maps) {
-      push @pairs,$map->type;
-      $main_map->hend($map->hend);
-
-      $main_map->end( $map->end + $prev_q_end);
-			
-      $prev_q_end = $main_map->end;
+		$main_map->hend($map->hend);
+		
+		$main_map->end( $map->end + $prev_q_end);
+		
+		$prev_q_end = $main_map->end;
     }
-    print "main_map : ", $main_map->hstart, " ", $main_map->hend, "\t", $main_map->start, " ", $main_map->end, "\n";
-
-    #join pairs
-    my $main_pair = shift @pairs;
-    my $prev_q_p_end = $main_pair->[2];
+	
+	# add the pairs onto the joined map
+	$main_map->type(\@joined_pairs);
 
     return $main_map;
   }
@@ -410,7 +477,8 @@ sub mapping {
     #my $name = "temp_will";
     my $input_file_name = $name.'.fa';
 		
-    open OUT, ">$input_dir/$name\.fa" or die ;
+    #open OUT, ">$input_dir/$name\.fa" or die $!;
+	open OUT, ">$name\.fa" or die $!;
     print OUT '>', $name, "\n", $sequence;
     close OUT;
 		
