@@ -407,52 +407,10 @@ sub mapping {
 	}
 	
 	# now join the pairs
-	my $prev_pair;
-	my @joined_pairs;
-	my $pair;
-
-	foreach $pair(@pairs) {
-		if(defined $prev_pair) {
-			
-			# if the start of this pair is 1 more than the
-			# end of the previous one we want to join them
-			if($pair->[1] - $prev_pair->[2] == 1) {
-				
-				# copy this pair's query end to prev_pair
-				$prev_pair->[2] = $pair->[2];
-				
-				# do the same with the target end
-				# but we have to work out which it is since target
-				# coords are always reported start < end
-				if($pair->[3] < $prev_pair->[3] && $pair->[4] < $prev_pair->[4]) {
-					$prev_pair->[3] = $pair->[3];
-				}
-				
-				else {
-					$prev_pair->[4] = $pair->[4];
-				}
-			}
-			
-			# if the two pairs shouldn't be joined
-			else {
-				push @joined_pairs, $prev_pair;
-				
-				# clear prev_pair so that code below works
-				$prev_pair = undef;
-			}
-		}
-		
-		# copy this pair to prev_pair if we're not joining to previous
-		$prev_pair = $pair unless defined $prev_pair;
-	}
+	my @joined_pairs = (@{join_pairs(\@pairs)}, @{join_pairs(\@dna_pairs)});
 	
-	# clean up remaining prev_pair by adding to joined_pairs
-	# also allows for situation where there's only 1 pair
-	push @joined_pairs, $prev_pair if defined $prev_pair;
 	
-	# add the DNA pairs again
-	push @joined_pairs, @dna_pairs;
-		
+	
 	# join the maps
         my $main_map = shift @maps;
 		
@@ -519,6 +477,52 @@ sub mapping {
   }
 }
 
+sub join_pairs {
+	my $pairs = shift;
+	my $prev_pair;
+	my @joined_pairs;
+	
+	foreach my $pair(@$pairs) {
+		if(defined $prev_pair) {
+			
+			# if the start of this pair is 1 more than the
+			# end of the previous one we want to join them
+			if($pair->[1] - $prev_pair->[2] == 1) {
+				
+				# copy this pair's query end to prev_pair
+				$prev_pair->[2] = $pair->[2];
+				
+				# do the same with the target end
+				# but we have to work out which it is since target
+				# coords are always reported start < end
+				if($pair->[3] < $prev_pair->[3] && $pair->[4] < $prev_pair->[4]) {
+					$prev_pair->[3] = $pair->[3];
+				}
+				
+				else {
+					$prev_pair->[4] = $pair->[4];
+				}
+			}
+			
+			# if the two pairs shouldn't be joined
+			else {
+				push @joined_pairs, $prev_pair;
+				
+				# clear prev_pair so that code below works
+				$prev_pair = undef;
+			}
+		}
+		
+		# copy this pair to prev_pair if we're not joining to previous
+		$prev_pair = $pair unless defined $prev_pair;
+	}
+	
+	# clean up remaining prev_pair by adding to joined_pairs
+	# also allows for situation where there's only 1 pair
+	push @joined_pairs, $prev_pair if defined $prev_pair;
+	
+	return \@joined_pairs;
+}
 
 sub bsub_ssaha_job {
   my ($queue, $input_file, $output_file, $subject) = @_;
