@@ -471,11 +471,14 @@ sub mapping {
 		
 	  $prev_q_end = $main_map->end;
 	}
-        $main_map->identical_matches;
-    print "main_map is ",$main_map->start,'-',$main_map->end,'-',$main_map->hstart,'-',$main_map->hend,'-',$main_map->identical_matches,"\n";
+        #$main_map->identical_matches($full_match);
+    print "main_map is ",$main_map->seqname,'-',$main_map->hseqname,'-',$main_map->start,'-',$main_map->end,'-',$main_map->hstart,'-',$main_map->hend,'-',$main_map->identical_matches,"\n";
     # add the pairs onto the joined map
     $main_map->type(\@joined_pairs);
 
+    foreach my $pair (@{$main_map->type}) {
+      print "checking DNA bit : ",$pair->[0],'-',$pair->[1],'-',$pair->[2],'-',$pair->[3],'-',$pair->[4],"\n";
+    }
     return $main_map;
   }
 	
@@ -718,9 +721,9 @@ sub make_feature_pair {
     $t_start = $new_t_start;
   }
 
-  foreach  my $pair (sort {$a->[3]<=>$b->[3]} @pairs) {
-    print "pairs in ssaha_mapping are ",$pair->[0],'-',$pair->[1],'-',$pair->[2],'-',$pair->[3],'-',$pair->[4],"\n";
-  }
+  #foreach  my $pair (sort {$a->[3]<=>$b->[3]} @pairs) {
+  #  print "pairs in ssaha_mapping are ",$pair->[0],'-',$pair->[1],'-',$pair->[2],'-',$pair->[3],'-',$pair->[4],"\n";
+  #}
   my $fp = Bio::EnsEMBL::FeaturePair->new(-start    => $f_q_start,
 					  -end      => $f_q_end,
 					  -strand   => $q_strand,
@@ -766,7 +769,7 @@ sub identical_matches {
 sub get_annotations {
   my $fp = shift;
   my $lrg_name = 'LRG5';
-print "I AM HERE\n";
+
   my ($q_start,$q_end,$t_start,$t_end,$q_strand);
   my $slice = $fp->slice;
   my $q_seqobj = $rec_seq{$fp->seqname};
@@ -783,17 +786,19 @@ print "I AM HERE\n";
 
   if ($full_match) {
     $sub_slice->seq_region_name($lrg_name);
-    my @genes = @{$sub_slice->get_all_Genes()};
-    my @transcripts = @{$genes[0]->get_all_Transcripts()};
-    print "gene name is ", $genes[0]->stable_id,'-',$genes[0]->start,'-',$genes[0]->end,"\n" if defined $genes[0];
-    print "trans name is ", $transcripts[0]->stable_id,'-',$transcripts[0]->start,'-',$transcripts[0]->end,"\n" if defined $transcripts[0];
-    my $hnum_exons;
+    foreach my $gene (@{$sub_slice->get_all_Genes()}) {
+      foreach my $transcript ( @{$gene->get_all_Transcripts()}) {
+	print "gene name is ", $gene->stable_id,'-',$gene->start,'-',$gene->end,"\n" if defined $gene;
+	print "trans name is ", $transcript->stable_id,'-',$transcript->start,'-',$transcript->end,"\n" if defined $transcript;
+	my $hnum_exons;
 
-    foreach my $exon (@{$transcripts[0]->get_all_Exons }) {
-      print "  ", $exon->stable_id,"\t",$exon->start,," ", $exon->end, "\n";
-      $hnum_exons++;
+	foreach my $exon (@{$transcript->get_all_Exons }) {
+	  print "  ", $exon->stable_id,"\t",$exon->start,," ", $exon->end, "\n";
+	  $hnum_exons++;
+	}
+	print "There are ", $hnum_exons," exons\n";
+      }
     }
-    print "There are ", $hnum_exons," exons\n";
   }
   else {
     my $csa = $dbCore->get_CoordSystemAdaptor();
@@ -845,85 +850,24 @@ print "I AM HERE\n";
       print "hseq is ",$hslice->seq,"\n";
     }
 
-=head
-    my $msc = Bio::EnsEMBL::MappedSliceContainer->new(
-						      -SLICE => $hslice
-						     );
-    my $asa = $dbCore->get_AssemblySliceAdaptor();
-    $msc->set_AssemblySliceAdaptor($asa);
-    #$msc->attach_AssemblySlice('NCBI36');
-    $msc->attach_LRG('LRG');
-    
-    foreach my $mapped_slice (@{$msc->get_all_MappedSlices()}){
-      if ($mapped_slice->seq eq $q_seq) {
-	print "mapped_seq is same as q_seq\n";
-      }
-      else {
-	print "mapped_seq is different from q_seq\n";
-	#print "mapped_seq is ",$mapped_slice->seq,"\n";
-      }
-
-      print "mapped_slice name is ",$mapped_slice->name,"\t",$mapped_slice->start,"\t",$mapped_slice->end,"\n";
-      my $num_exons = 0;
-      my $num_trans = 0;
-
-      foreach my $exon (@{ $mapped_slice->get_all_Exons }) {#working here???
-	print "  ", $exon->stable_id,"\t",$exon->start,," ", $exon->end, "\n";
-	$num_exons++;
-      }
-      print "There are ", $num_exons," exons\n"; 
-
-#=head
-#need mapped_slice->get_all_Exons to work for multi seq_region_name defined as LRG
-	foreach my $gene (@{ $mapped_slice->get_all_Genes }) {#not working here
-	  print "gene is ",ref($gene),"\n";
-	  my @gene_dbentries = @{$gene->get_all_DBEntries()};
-	  foreach my $dbe (@gene_dbentries) {
-	    my @gene_syns = @{$dbe->get_all_synonyms()};
-	    print "all_synonyms are @gene_syns\n";
-	    print $dbe->db_display_name(),'-',$dbe->description(),'-',$gene->external_db(),"\n";
-	  }
-	  foreach my $transcript (@{$mapped_slice->get_all_Transcripts()}) {
-	    print "Tanscript cdna_start_end  ", $transcript->stable_id,"\t",$transcript->cdna_coding_start,," ", $transcript->cdna_coding_end, "\n";
-	    $num_trans++;
-	    print "There are ", $num_trans," transcripts\n";
-	    my $translation = $transcript->translation();
-	    print "The protein sequence is ",$translation->seq,"\n";
-	    my @transl_dbentries = @{$translation->get_all_DBEntries()};
-	    foreach my $dbe (@transl_dbentries) {
-	      print $dbe->db_display_name(),'-',$dbe->get_all_synonyms(),'-',$dbe->description(),'-',$translation->external_db,"\n";
-	    }
-	  }
-	}
-=cut
-#    }
-
-
-
-
     my @genes = @{$sub_slice->get_all_Genes()};
     foreach my $gene (@genes) {
-      my $num_exons = 0;
       my $num_trans = 0;
+
       print "before transfprm g start-end ",$gene->start,'-',$gene->end,"\n";
       my $new_gene = $gene->transform('LRG');
       print "after transform g start-end ",$new_gene->start,'-',$new_gene->end,"\n" if $new_gene;
-      my @transcripts = @{$new_gene->get_all_Transcripts()};
-      print "trs start-end ",$transcripts[0]->start,'-',$transcripts[0]->end,"\n" if $transcripts[0];
-      print "new_gene name is ", $new_gene->stable_id,'-',$new_gene->start,'-',$new_gene->end,"\n" if defined $new_gene;
-      #my @genes = @{$hslice->get_all_Genes()};
-      my @transcripts = @{$new_gene->get_all_Transcripts()} if $new_gene;
-      #print "gene name is ", $genes[0]->stable_id,'-',$genes[0]->start,'-',$genes[0]->end,"\n" if defined $genes[0];
-      print "trans name is ", $transcripts[0]->stable_id,'-',$transcripts[0]->start,'-',$transcripts[0]->end,"\n" if defined $transcripts[0];
-      my $hnum_exons;
+      foreach my $transcript ( @{$new_gene->get_all_Transcripts()}) {
+	print "trs start-end ",$transcript->start,'-',$transcript->end,"\n" if $transcript;
+	print "new_gene name is ", $new_gene->stable_id,'-',$new_gene->start,'-',$new_gene->end,"\n" if defined $new_gene;
+	print "trans name is ", $transcript->stable_id,'-',$transcript->start,'-',$transcript->end,"\n" if defined $transcript;
+	my $num_exons;
+	foreach my $exon (@{$transcript->get_all_Exons }) {
+	  print "  ", $exon->stable_id,"\t",$exon->start,," ", $exon->end, "\n";
+	  $num_exons++;
+	}
+	print "There are ", $num_exons," exons\n";
 
-      foreach my $exon (@{$transcripts[0]->get_all_Exons }) {
-	print "  ", $exon->stable_id,"\t",$exon->start,," ", $exon->end, "\n";
-	$hnum_exons++;
-      }
-      print "There are ", $hnum_exons," exons\n";
-      
-      foreach my $transcript (@{$new_gene->get_all_Transcripts()}) {
 	print "Tanscript cdna_start_end  ", $transcript->stable_id,"\t",$transcript->cdna_coding_start,," ", $transcript->cdna_coding_end, "\n";
 	$num_trans++;
 	print "There are ", $num_trans," transcripts\n";
