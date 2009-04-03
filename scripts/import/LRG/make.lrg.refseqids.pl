@@ -459,7 +459,13 @@ sub mapping {
         my $prev_q_end = $main_map->end;
 		
         foreach my $map(@maps) {
-	  $main_map->hend($map->hend);
+	  if($map->hend < $main_map->hend && $map->hstart < $main_map->hstart) {
+		$main_map->hstart($map->hstart);
+	  }
+	  
+	  else {
+		$main_map->hend($map->hend);
+	  }
 	
 	  $main_map->end( $map->end + $prev_q_end);
 		
