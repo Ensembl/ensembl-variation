@@ -1,6 +1,7 @@
 #! /usr/local/bin/perl
 
 use lib '/nfs/acari/dr2/projects/src/ensembl/ensembl/modules';
+#use lib '/nfs/acari/yuan/ensembl/src/ensembl/modules/Bio/EnsEMBL/DBSQL';
 use strict;
 use Getopt::Long;
 use Bio::Seq;
@@ -133,14 +134,17 @@ sub parse_ssaha2_out {
   my ($pairs,$feature_pairs);
   foreach my $q_id (keys %rec_find) {
     my @h = sort {$b->{'score'}<=>$a->{'score'}} @{$rec_find{$q_id}};
-    if ($h[0]->{'score'} > $h[1]->{'score'} and @h>=2) {
-      ($pairs,$feature_pairs) = find_results($h[0]);
+    if (@h ==1) {
+      ($feature_pairs) = find_results($h[0]);
+    }
+    elsif ($h[0]->{'score'} > $h[1]->{'score'} and @h>=2) {
+      ($feature_pairs) = find_results($h[0]);
     }
     elsif ($h[1]->{'score'} > $h[2]->{'score'} and @h>=3) {
-      ($pairs,$feature_pairs) = find_results($h[0],$h[1]);
+      ($feature_pairs) = find_results($h[0],$h[1]);
     }
     elsif ($h[2]->{'score'} > $h[3]->{'score'} and @h>=4) {
-      ($pairs,$feature_pairs) = find_results($h[0],$h[1],$h[2]);
+      ($feature_pairs) = find_results($h[0],$h[1],$h[2]);
     }
     else {
       print "\tmore than 3 hits having same score for $q_id\n";
@@ -164,7 +168,7 @@ sub parse_ssaha2_out {
 
 sub find_results {
 
-  my (@pairs,@pair_gaps);
+  my (@pairs);
   my ($h1,$h2,$h3) = @_;
   my @fps;
 
@@ -190,28 +194,22 @@ sub find_results {
     }
 
     my ($seq_region_name) = split /\-/, $t_id;
-    print "seq_region_name is $seq_region_name and t_start is $t_start, t_end is $t_end\n";
-    #my $slice = $sa->fetch_by_region('chromosome',$seq_region_name,$t_start,$t_end, 1);
+
     my $slice = $sa->fetch_by_region('chromosome',$seq_region_name);
-    #print "slice is ",ref($slice),"\n";
-    print "slice seq_region_name is ",$slice->seq_region_name,'-',length($slice->seq),'-',$slice->length,'-',$slice->start,'-',$slice->end,"\n";
-    #print "slice seq is ",$slice->seq,"\n";
+
     my $q_seqobj = $rec_seq{$q_id};
 
     #warning that query_seq length != matched query_length
-    if (length($q_seqobj->seq) != abs($q_end - $q_start) + 1){
+    if ($q_seqobj and length($q_seqobj->seq) != abs($q_end - $q_start) + 1){
       print "q_start is $q_start and q_end is $q_end and length is ",length($q_seqobj->seq),"\n";
       die("query sequence length not equal matched query sequence length");
     }
 
     my @match_components = split /\s+/, $match;
 
-    my ($no_gap,$mis_match,$full_match,$new_q_start, $new_q_end, $new_t_start, $new_t_end);
+    my ($full_match,$new_q_start, $new_q_end, $new_t_start, $new_t_end);
 
-    print "$q_id,$q_start,$q_end,$q_strand,$t_id,$t_start,$t_end,$t_strand,$score,@match_components\n";
-    if (scalar @match_components ==3 and $match_components[0] eq 'M') {
-      $no_gap =1;
-    }
+    $full_match=1; #initial full_match
 
     while (@match_components) {
 
@@ -234,11 +232,11 @@ sub find_results {
 	$new_t_start = $t_start + $target_match_length -1;
 	my $tmp_qs = ($q_strand ==1) ? $q_start : $new_q_start;
 	my $tmp_qe = ($q_strand ==1) ? $new_q_start : $q_start;
-	push @pair_gaps, ['DNA',$tmp_qs,$tmp_qe,$t_start,$new_t_start,$q_strand];
+	push @pairs, ['DNA',$tmp_qs,$tmp_qe,$t_start,$new_t_start,$q_strand];
 
-	print "$q_start,$new_q_start,$t_start,$new_t_start\n";
+	#print "$q_start,$new_q_start,$t_start,$new_t_start\n";
 	my $t_seq = substr($slice->seq,$t_start-1,$new_t_start-$t_start+1);
-	print "$q_start,$new_q_start,$t_start,$new_t_start and length of q_seq ",length($q_seq),'-',length($t_seq),"\n";
+	#print "$q_start,$new_q_start,$t_start,$new_t_start and length of q_seq ",length($q_seq),'-',length($t_seq),"\n";
 	#print "q_seq_is $q_seq\n";
 	#print "t_seq is $t_seq\n";
 	my $q_count = 1;
@@ -253,7 +251,7 @@ sub find_results {
 	  if ($q_seqs{$count} !~ /$t_seqs{$count}/i) {
 	    #next;
 	    print "count is $count\n";
-	    $mis_match =1;
+	    $full_match =0;
 	    my $sub_t_end = $t_start + ($count -1) - 1;
 	    if ($q_strand ==1) {
 	      $sub_q_end = $q_start + ($count -1) - 1;
@@ -282,8 +280,8 @@ sub find_results {
 	$q_start = $sub_q_start;
 	$t_start = $sub_t_start;
 	
-	print "q_start is $q_start and t_start is $t_start\n";
-        print "in M, q_start is $q_start and q_end is $new_q_start and t_start is $t_start and t_end is $new_t_start\n";
+	#print "q_start is $q_start and t_start is $t_start\n";
+        #print "in M, q_start is $q_start and q_end is $new_q_start and t_start is $t_start and t_end is $new_t_start\n";
 
 	if  ($q_strand==1) {
 	  $tmp_q_start = $q_start;
@@ -315,7 +313,7 @@ sub find_results {
 	($tmp_q_start,$tmp_q_end) = ($tmp_q_end,$tmp_q_start) if($tmp_q_end<$tmp_q_start);
 	#push @pairs, [$type,$tmp_q_start,$tmp_q_end,$t_start+1,$new_t_start-1,$q_strand];
 
-	print "in G, q_start is $q_start and q_end is $new_q_start and t_start is $t_start and t_end is $new_t_start\n";
+	#print "in G, q_start is $q_start and q_end is $new_q_start and t_start is $t_start and t_end is $new_t_start\n";
       }
 
       $q_start = $new_q_start;
@@ -336,15 +334,14 @@ sub find_results {
 					    -slice    => $slice,
 					   );
     $fp->seqname($h->{'q_id'});
-    $fp->type(\@pair_gaps);
+    $fp->type(\@pairs);
+    $fp->identical_matches($full_match);
 
     push @fps, $fp;
 
-    foreach my $pair (sort {$a->[3]<=>$b->[3]} @pair_gaps) {
-      print "pairs are ",$pair->[0],'-',$pair->[1],'-',$pair->[2],'-',$pair->[3],'-',$pair->[4],"\n";
-    }
   }
-  return \@pairs,\@fps;
+
+  return \@fps;
 }
 
 sub seqname {
@@ -363,10 +360,17 @@ sub type {
 
 }
 
+sub identical_matches {
+
+  my $self = shift;
+  $self->{'identical_matches'} = shift if(@_);
+  return $self->{'identical_matches'};
+
+}
+
 sub get_annotations {
   my $feature_pairs = shift;
-  my $lrg_name = 'LRG1';
-  #my @pair_gaps;
+  my $lrg_name = 'LRG3';
 
   foreach my $fp (@$feature_pairs) {
     my ($q_start,$q_end,$t_start,$t_end,$q_strand);
@@ -378,16 +382,29 @@ sub get_annotations {
     $t_start = $fp->hstart;
     $t_end = $fp->hend;
     $q_strand = $fp->strand;
-    my $pair_gaps = $fp->type;
-    foreach my $pair (sort {$a->[3]<=>$b->[3]} @$pair_gaps) {
-      print "pair_gaps are ",$pair->[0],'-',$pair->[1],'-',$pair->[2],'-',$pair->[3],'-',$pair->[4],"\n";
-    }
-    print "there is ",scalar @$pair_gaps, " gaps\n";
+    my $pairs = $fp->type;
+
     my $sub_slice = $slice->sub_Slice($t_start,$t_end);
-    if (scalar @$pair_gaps >1) {#it's not full match, insert data in several tables
+    my $full_match = $fp->identical_matches;
+
+    if ($full_match) {
+      $sub_slice->seq_region_name($lrg_name);
+      my @genes = @{$sub_slice->get_all_Genes()};
+      my @transcripts = @{$genes[0]->get_all_Transcripts()};
+      print "gene name is ", $genes[0]->stable_id,'-',$genes[0]->start,'-',$genes[0]->end,"\n" if defined $genes[0];
+      print "trans name is ", $transcripts[0]->stable_id,'-',$transcripts[0]->start,'-',$transcripts[0]->end,"\n" if defined $transcripts[0];
+      my $hnum_exons;
+
+      foreach my $exon (@{$transcripts[0]->get_all_Exons }) {
+	print "  ", $exon->stable_id,"\t",$exon->start,," ", $exon->end, "\n";
+	$hnum_exons++;
+      }
+      print "There are ", $hnum_exons," exons\n";
+    }
+    else {
       my $csa = $dbCore->get_CoordSystemAdaptor();
       my $cs = $csa->fetch_all_by_name('LRG');
-      my $cs_id = $cs->[0]->dbID();print "coord_system_id is $cs_id\n";
+      my $cs_id = $cs->[0]->dbID();
       my $q_seq_region_id;
       my $q_seq_length = length($q_seq);
       my $t_seq_region_id = $sa->get_seq_region_id($slice);
@@ -395,93 +412,147 @@ sub get_annotations {
       if (! $lrg_name_ref->[0][0]) {
 	$dbCore->dbc->do(qq{INSERT INTO seq_region(name,coord_system_id,length)values("$lrg_name",$cs_id,$q_seq_length)});
 	$q_seq_region_id = $dbCore->dbc->db_handle->{'mysql_insertid'};
-	$dbCore->dbc->do(qq{INSERT INTO dna(seq_region_id,sequence)values($q_seq_region_id,"$q_seq")});
       }
       else {
 	my $q_seqid_ref = $dbCore->dbc->db_handle->selectall_arrayref(qq{SELECT seq_region_id from seq_region WHERE name="$lrg_name"});
 	$q_seq_region_id = $q_seqid_ref->[0][0];
       }
-      foreach  my $pair (sort {$a->[3]<=>$b->[3]} @$pair_gaps) {
-	#print "pair_gaps are ",$pair->[0],'-',$pair->[1],'-',$pair->[2],'-',$pair->[3],'-',$pair->[4],"\n";
+      my $dna_ref = $dbCore->dbc->db_handle->selectall_arrayref(qq{SELECT seq_region_id from dna WHERE seq_region_id = $q_seq_region_id});
+      if (! $dna_ref->[0][0]) {
+	$dbCore->dbc->do(qq{INSERT INTO dna(seq_region_id,sequence)values($q_seq_region_id,"$q_seq")});
+      }
 
-	if ($pair->[2]-$pair->[1] == $pair->[4]-$pair->[3]) {
-	  $dbCore->dbc->do(qq{INSERT IGNORE INTO assembly(asm_seq_region_id,cmp_seq_region_id,asm_start,asm_end,cmp_start,cmp_end,ori)values($t_seq_region_id,$q_seq_region_id,$pair->[3],$pair->[4],$pair->[1],$pair->[2],$q_strand)});
-	}
-	else {
-	  throw("distance between query and target is not the same, there is a indel");
-	}
-      }
-    }
-    my $msc = Bio::EnsEMBL::MappedSliceContainer->new(
-						      -SLICE => $sub_slice
-						     );
-    my $asa = $dbCore->get_AssemblySliceAdaptor();
-    $msc->set_AssemblySliceAdaptor($asa);
-    $msc->attach_LRG('LRG');
+      foreach  my $pair (sort {$a->[3]<=>$b->[3]} @$pairs) {
+	print "pairs are ",$pair->[0],'-',$pair->[1],'-',$pair->[2],'-',$pair->[3],'-',$pair->[4],"\n";
 
-    foreach my $mapped_slice (@{$msc->get_all_MappedSlices()}){
-      if ($mapped_slice->seq eq $q_seq) {
-	print "mapped_seq is same as q_seq\n";
-      }
-      else {
-	print "mapped_seq is different from q_seq\n";
-      }
-      print "mapped_slice name is ",$mapped_slice->name,"\t",$mapped_slice->start,"\t",$mapped_slice->end,"\n";
-      my $num_exons = 0;
-      my $num_trans = 0;
-      foreach my $exon (@{ $mapped_slice->get_all_Exons }) {
-	print "  ", $exon->stable_id,"\t",$exon->start,," ", $exon->end, "\n";
-	$num_exons++;
-      }
-      print "There are ", $num_exons," exons\n";
-      foreach my $gene (@{ $mapped_slice->get_all_Genes }) {
-	my @gene_dbentries = @{$gene->get_all_DBEntries()};
-	foreach my $dbe (@gene_dbentries) {
-	  my @gene_syns = @{$dbe->get_all_synonyms()};
-	  print "all_synonyms are @gene_syns\n";
-	  print $dbe->db_display_name(),'-',$dbe->description(),'-',$gene->external_db(),"\n";
-	}
-	foreach my $transcript (@{$mapped_slice->get_all_Transcripts()}) {
-	  print "Tanscript cdna_start_end  ", $transcript->stable_id,"\t",$transcript->cdna_coding_start,," ", $transcript->cdna_coding_end, "\n";
-	  $num_trans++;
-	  print "There are ", $num_trans," transcripts\n";
-	  my $translation = $transcript->transclation();
-	  print "The protein sequence is ",$translation->seq,"\n";
-	  my @transl_dbentries = @{$translation->get_all_DBEntries()};
-	  foreach my $dbe (@transl_dbentries) {
-	    print $dbe->db_display_name(),'-',$dbe->get_all_synonyms(),'-',$dbe->description(),'-',$translation->external_db,"\n";
+	if ($pair->[0] eq 'DNA') {
+	  if ($pair->[2]-$pair->[1] == $pair->[4]-$pair->[3]) {
+	    $dbCore->dbc->do(qq{INSERT IGNORE INTO assembly(asm_seq_region_id,cmp_seq_region_id,asm_start,asm_end,cmp_start,cmp_end,ori)values($t_seq_region_id,$q_seq_region_id,$pair->[3],$pair->[4],$pair->[1],$pair->[2],$q_strand)});
+	  }
+	  else {
+	    die("distance between query and target is not the same, there is a indel");
 	  }
 	}
       }
+
+      my $hslice = $sa->fetch_by_region('LRG',"$lrg_name");
+      foreach my $gene (@{$hslice->get_all_Genes()}){
+	print "gene_name is ",$gene->stable_id,"\n";
+      }
+      print "q_seq from hslice is ",$hslice->start,'-'.$hslice->end,"\n";
+      print "length of q_seq is ",length($q_seq), " and length of hseq is ", length($hslice->seq),"\n";
+
+      if ($hslice->seq eq $q_seq) {
+	print "hseq is same as q_seq\n";
+      }
+      else {
+	print "hseq is different from q_seq\n";
+	print "q_seq is ",$q_seq,"\n";
+	print "hseq is ",$hslice->seq,"\n";
+      }
+
+=head
+      my $msc = Bio::EnsEMBL::MappedSliceContainer->new(
+							-SLICE => $hslice
+						       );
+      my $asa = $dbCore->get_AssemblySliceAdaptor();
+      $msc->set_AssemblySliceAdaptor($asa);
+      #$msc->attach_AssemblySlice('NCBI36');
+      $msc->attach_LRG('LRG');
+
+      foreach my $mapped_slice (@{$msc->get_all_MappedSlices()}){
+	print "mapped_name is ",$mapped_slice->name,"\n";
+	#$mapped_slice->get_all_Genes;
+
+
+	foreach my $mapped_slice (@{$msc->get_all_MappedSlices()}){
+	  print "mapped_name is ",$mapped_slice->name,"\n";
+	  if ($mapped_slice->seq eq $q_seq) {
+	    print "mapped_seq is same as q_seq\n";
+	  }
+	  else {
+	    print "mapped_seq is different from q_seq\n";
+	    #print "mapped_seq is ",$mapped_slice->seq,"\n";
+	  }
+
+	  print "mapped_slice name is ",$mapped_slice->name,"\t",$mapped_slice->start,"\t",$mapped_slice->end,"\n";
+	  my $num_exons = 0;
+	  my $num_trans = 0;
+
+	  foreach my $exon (@{ $mapped_slice->get_all_Exons }) {#working here???
+	    print "  ", $exon->stable_id,"\t",$exon->start,," ", $exon->end, "\n";
+	    $num_exons++;
+	  }
+	  print "There are ", $num_exons," exons\n"; 
+	
+
+
+	  #need mapped_slice->get_all_Exons to work for multi seq_region_name defined as LRG
+	  foreach my $gene (@{ $mapped_slice->get_all_Genes }) {#not working here
+	    print "gene is ",ref($gene),"\n";
+	    my @gene_dbentries = @{$gene->get_all_DBEntries()};
+	    foreach my $dbe (@gene_dbentries) {
+	      my @gene_syns = @{$dbe->get_all_synonyms()};
+	      print "all_synonyms are @gene_syns\n";
+	      print $dbe->db_display_name(),'-',$dbe->description(),'-',$gene->external_db(),"\n";
+	    }
+	    foreach my $transcript (@{$mapped_slice->get_all_Transcripts()}) {
+	      print "Tanscript cdna_start_end  ", $transcript->stable_id,"\t",$transcript->cdna_coding_start,," ", $transcript->cdna_coding_end, "\n";
+	      $num_trans++;
+	      print "There are ", $num_trans," transcripts\n";
+	      my $translation = $transcript->translation();
+	      print "The protein sequence is ",$translation->seq,"\n";
+	      my @transl_dbentries = @{$translation->get_all_DBEntries()};
+	      foreach my $dbe (@transl_dbentries) {
+		print $dbe->db_display_name(),'-',$dbe->get_all_synonyms(),'-',$dbe->description(),'-',$translation->external_db,"\n";
+	      }
+	    }
+	  }
+	  #=cut
+	}
+      }
+=cut
+
+
+
+
+      my @genes = @{$sub_slice->get_all_Genes()};
+      foreach my $gene (@genes) {
+	my $num_exons = 0;
+	my $num_trans = 0;
+	
+	print "before transfprm g start-end ",$gene->start,'-',$gene->end,"\n";
+	my $new_gene = $gene->transform('LRG');
+	print "after transform g start-end ",$new_gene->start,'-',$new_gene->end,"\n" if $new_gene;
+	my @transcripts = @{$new_gene->get_all_Transcripts()};
+	print "trs start-end ",$transcripts[0]->start,'-',$transcripts[0]->end,"\n" if $transcripts[0];
+	print "new_gene name is ", $new_gene->stable_id,'-',$new_gene->start,'-',$new_gene->end,"\n" if defined $new_gene;
+	#my @genes = @{$hslice->get_all_Genes()};
+	my @transcripts = @{$new_gene->get_all_Transcripts()} if $new_gene;
+	#print "gene name is ", $genes[0]->stable_id,'-',$genes[0]->start,'-',$genes[0]->end,"\n" if defined $genes[0];
+	print "trans name is ", $transcripts[0]->stable_id,'-',$transcripts[0]->start,'-',$transcripts[0]->end,"\n" if defined $transcripts[0];
+	my $hnum_exons;
+
+	foreach my $exon (@{$transcripts[0]->get_all_Exons }) {
+	  print "  ", $exon->stable_id,"\t",$exon->start,," ", $exon->end, "\n";
+	  $hnum_exons++;
+	}
+	print "There are ", $hnum_exons," exons\n";
+
+	foreach my $transcript (@{$new_gene->get_all_Transcripts()}) {
+	    print "Tanscript cdna_start_end  ", $transcript->stable_id,"\t",$transcript->cdna_coding_start,," ", $transcript->cdna_coding_end, "\n";
+	    $num_trans++;
+	    print "There are ", $num_trans," transcripts\n";
+	    my $translation = $transcript->translation();
+	    print "The protein sequence is ",$translation->seq,"\n";
+	    my @transl_dbentries = @{$translation->get_all_DBEntries()};
+	    foreach my $dbe (@transl_dbentries) {
+	      print $dbe->db_display_name(),'-',$dbe->get_all_synonyms(),'-',$dbe->description(),"\n";
+	    }
+	  }
+      }
     }
-
-
-    my $hslice = $sa->fetch_by_region('LRG',"$lrg_name");
-    print "q_seq from hslice is ",$hslice->start,'-'.$hslice->end,"\n";
-    #my $exp_slice      = $hslice->expand( 10000, 10000);
-    #print "the expanded slice length is ",length($exp_slice->seq),"\n";
-    my $contig_slice = $sa->fetch_by_region('contig',"AC015909.14.1.217746");
-    my $chr_slice = $hslice->project('chromosome');
-    #print Dumper($chr_slice);
-    my @genes = @{$$chr_slice[0]->to_Slice->get_all_Genes()};
-    my @transcripts =  @{$$chr_slice[0]->to_Slice->get_all_Transcripts()};
-    print "gene name is ", $genes[0]->stable_id,'-',$genes[0]->start,'-',$genes[0]->end,"\n" if defined $genes[0];
-    print "trans name is ", $transcripts[0]->stable_id,'-',$transcripts[0]->start,'-',$transcripts[0]->end,"\n" if defined $transcripts[0];
-    my @gene_dbentries = @{$genes[0]->get_all_DBEntries()};
-    foreach my $dbe (@gene_dbentries) {
-      my @gene_syns = @{$dbe->get_all_synonyms()};
-      print "all_synonyms are @gene_syns\n";
-      print $dbe->db_display_name(),'-',$dbe->description(),'-',$genes[0]->external_db(),"\n";
-    }
-    my @exons = $transcripts[0]->get_all_Exons();#having problem
-    print "exons name again is ", $exons[0]->stable_id,'-',$exons[0]->start,'-',$exons[0]->end,"\n" if defined $exons[0];
-    my @transcript = $genes[0]->get_all_Transcripts();#having problem
-    print "trans name again is ", $transcript[0]->stable_id,'-',$transcript[0]->start,'-',$transcript[0]->end,"\n" if defined $transcript[0];
-    #print Dumper($chr_slice);
-    #print Dumper($contig_slice);
-
   }
-
 }
 
 
