@@ -317,7 +317,7 @@ while(<IN>) {
 				'strand' => $pair->[5],
 			}
 		);
-	}
+	      }
 	
     # export
     $root->printAll();
@@ -378,13 +378,14 @@ sub mapping {
 
 	my $prev_end = 0;
 	my @dna_pairs;
+        my $full_match =1;
 
 	# get all pairs from all maps into arrays
 	foreach my $map(@maps) {
-		
+		$full_match=0 if ($map->identical_matches==0);
 		# sort by query start
 		foreach my $pair(sort {$a->[2] <=> $b->[2]} @{$map->type}) {
-			
+			print "full_match is $full_match and ",$map->identical_matches,'-',$pair->[0],'-',$pair->[1],'-',$pair->[2],'-',$pair-[3],'-',$pair->[4],'-',$pair->[5],"\n";
 			# add the previous DNA end to each query coordinate
 			# since we split up the query sequence
 			$pair->[1] += $prev_end;
@@ -409,7 +410,7 @@ sub mapping {
 	my $prev_pair;
 	my @joined_pairs;
 	my $pair;
-	
+
 	foreach $pair(@pairs) {
 		if(defined $prev_pair) {
 			
@@ -453,20 +454,21 @@ sub mapping {
 	push @joined_pairs, @dna_pairs;
 		
 	# join the maps
-    my $main_map = shift @maps;
+        my $main_map = shift @maps;
 		
-    my $prev_q_end = $main_map->end;
+        my $prev_q_end = $main_map->end;
 		
-    foreach my $map(@maps) {
-		$main_map->hend($map->hend);
-		
-		$main_map->end( $map->end + $prev_q_end);
-		
-		$prev_q_end = $main_map->end;
-    }
+        foreach my $map(@maps) {
+	  $main_map->hend($map->hend);
 	
-	# add the pairs onto the joined map
-	$main_map->type(\@joined_pairs);
+	  $main_map->end( $map->end + $prev_q_end);
+		
+	  $prev_q_end = $main_map->end;
+	}
+        $main_map->identical_matches;
+    print "main_map is ",$main_map->start,'-',$main_map->end,'-',$main_map->hstart,'-',$main_map->hend,'-',$main_map->identical_matches,"\n";
+    # add the pairs onto the joined map
+    $main_map->type(\@joined_pairs);
 
     return $main_map;
   }
@@ -710,7 +712,9 @@ sub make_feature_pair {
     $t_start = $new_t_start;
   }
 
-
+  foreach  my $pair (sort {$a->[3]<=>$b->[3]} @pairs) {
+    print "pairs in ssaha_mapping are ",$pair->[0],'-',$pair->[1],'-',$pair->[2],'-',$pair->[3],'-',$pair->[4],"\n";
+  }
   my $fp = Bio::EnsEMBL::FeaturePair->new(-start    => $f_q_start,
 					  -end      => $f_q_end,
 					  -strand   => $q_strand,
@@ -756,7 +760,7 @@ sub identical_matches {
 sub get_annotations {
   my $fp = shift;
   my $lrg_name = 'LRG5';
-
+print "I AM HERE\n";
   my ($q_start,$q_end,$t_start,$t_end,$q_strand);
   my $slice = $fp->slice;
   my $q_seqobj = $rec_seq{$fp->seqname};
@@ -820,6 +824,9 @@ sub get_annotations {
     }
 
     my $hslice = $sa->fetch_by_region('LRG',"$lrg_name");
+    foreach my $gene (@{$hslice->get_all_Genes()}){
+	print "gene_name is ",$gene->stable_id,"\n";
+    }
     print "q_seq from hslice is ",$hslice->start,'-'.$hslice->end,"\n";
     print "length of q_seq is ",length($q_seq), " and length of hseq is ", length($hslice->seq),"\n";
     
@@ -832,7 +839,7 @@ sub get_annotations {
       print "hseq is ",$hslice->seq,"\n";
     }
 
-
+=head
     my $msc = Bio::EnsEMBL::MappedSliceContainer->new(
 						      -SLICE => $hslice
 						     );
@@ -860,7 +867,7 @@ sub get_annotations {
       }
       print "There are ", $num_exons," exons\n"; 
 
-=head
+#=head
 #need mapped_slice->get_all_Exons to work for multi seq_region_name defined as LRG
 	foreach my $gene (@{ $mapped_slice->get_all_Genes }) {#not working here
 	  print "gene is ",ref($gene),"\n";
@@ -883,7 +890,7 @@ sub get_annotations {
 	  }
 	}
 =cut
-    }
+#    }
 
 
 
