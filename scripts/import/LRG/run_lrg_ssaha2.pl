@@ -417,10 +417,10 @@ sub get_annotations {
 	my $q_seqid_ref = $dbCore->dbc->db_handle->selectall_arrayref(qq{SELECT seq_region_id from seq_region WHERE name="$lrg_name"});
 	$q_seq_region_id = $q_seqid_ref->[0][0];
       }
-      my $dna_ref = $dbCore->dbc->db_handle->selectall_arrayref(qq{SELECT seq_region_id from dna WHERE seq_region_id = $q_seq_region_id});
-      if (! $dna_ref->[0][0]) {
-	$dbCore->dbc->do(qq{INSERT INTO dna(seq_region_id,sequence)values($q_seq_region_id,"$q_seq")});
-      }
+      #my $dna_ref = $dbCore->dbc->db_handle->selectall_arrayref(qq{SELECT seq_region_id from dna WHERE seq_region_id = $q_seq_region_id});
+      #if (! $dna_ref->[0][0]) {
+	#$dbCore->dbc->do(qq{INSERT INTO dna(seq_region_id,sequence)values($q_seq_region_id,"$q_seq")});
+      #}
 
       foreach  my $pair (sort {$a->[3]<=>$b->[3]} @$pairs) {
 	print "pairs are ",$pair->[0],'-',$pair->[1],'-',$pair->[2],'-',$pair->[3],'-',$pair->[4],"\n";
@@ -522,7 +522,8 @@ sub get_annotations {
 	my $num_trans = 0;
 	
 	print "before transfprm g start-end ",$gene->start,'-',$gene->end,"\n";
-	my $new_gene = $gene->transform('LRG');
+	#my $new_gene = $gene->transform('LRG');
+	my $new_gene = $gene->transfer($hslice);
 	print "after transform g start-end ",$new_gene->start,'-',$new_gene->end,"\n" if $new_gene;
 	my @transcripts = @{$new_gene->get_all_Transcripts()};
 	print "trs start-end ",$transcripts[0]->start,'-',$transcripts[0]->end,"\n" if $transcripts[0];

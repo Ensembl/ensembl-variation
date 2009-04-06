@@ -321,7 +321,7 @@ while(<IN>) {
 	
     # export
     $root->printAll();
-    get_annotations ($mapping);
+    get_annotations ($mapping,$genomic_sequence);
 }
 
 close IN;
@@ -385,7 +385,7 @@ sub mapping {
 		$full_match=0 if ($map->identical_matches==0);
 		# sort by query start
 		foreach my $pair(sort {$a->[2] <=> $b->[2]} @{$map->type}) {
-			print "full_match is $full_match and ",$map->identical_matches,'-',$pair->[0],'-',$pair->[1],'-',$pair->[2],'-',$pair-[3],'-',$pair->[4],'-',$pair->[5],"\n";
+			#print "full_match is $full_match and ",$map->identical_matches,'-',$pair->[0],'-',$pair->[1],'-',$pair->[2],'-',$pair-[3],'-',$pair->[4],'-',$pair->[5],"\n";
 			# add the previous DNA end to each query coordinate
 			# since we split up the query sequence
 			$pair->[1] += $prev_end;
@@ -429,14 +429,17 @@ sub mapping {
 		
 	  $prev_q_end = $main_map->end;
 	}
-        #$main_map->identical_matches($full_match);
+    $main_map->identical_matches($full_match);
+    my $seqname = $main_map->seqname;
+    chop($seqname);
+    $main_map->seqname($seqname);
     print "main_map is ",$main_map->seqname,'-',$main_map->hseqname,'-',$main_map->start,'-',$main_map->end,'-',$main_map->hstart,'-',$main_map->hend,'-',$main_map->identical_matches,"\n";
     # add the pairs onto the joined map
     $main_map->type(\@joined_pairs);
 
-    foreach my $pair (@{$main_map->type}) {
-      print "checking DNA bit : ",$pair->[0],'-',$pair->[1],'-',$pair->[2],'-',$pair->[3],'-',$pair->[4],"\n";
-    }
+    #foreach my $pair (@{$main_map->type}) {
+    #  print "checking DNA bit : ",$pair->[0],'-',$pair->[1],'-',$pair->[2],'-',$pair->[3],'-',$pair->[4],"\n";
+    #}
     return $main_map;
   }
 	
@@ -460,9 +463,8 @@ sub mapping {
     my ($subject, %rec_find, %input_length, %done);
 		
     $subject = "$target_dir/ref";
-		
     $rec_seq{$name} = $sequence;
-			
+    print "q_seq length is ",length($sequence),"\n";			
     my $seqobj = Bio::PrimarySeq->new(-id => $name, -seq => $rec_seq{$name});
     $rec_seq{$name} = $seqobj;
 		
@@ -741,6 +743,7 @@ sub make_feature_pair {
   $fp->seqname($h->{'q_id'});
   $fp->type(\@pairs);
   $fp->identical_matches($full_match);
+
   push @fps,$fp;
 
   return \@fps;
@@ -772,12 +775,11 @@ sub identical_matches {
 
 sub get_annotations {
   my $fp = shift;
+  my $q_seq = shift;
   my $lrg_name = 'LRG5';
 
   my ($q_start,$q_end,$t_start,$t_end,$q_strand);
   my $slice = $fp->slice;
-  my $q_seqobj = $rec_seq{$fp->seqname};
-  my $q_seq = $q_seqobj->seq;
   $q_start = $fp->start;
   $q_end = $fp->end;
   $t_start = $fp->hstart;
@@ -791,17 +793,7 @@ sub get_annotations {
   if ($full_match) {
     $sub_slice->seq_region_name($lrg_name);
     foreach my $gene (@{$sub_slice->get_all_Genes()}) {
-      foreach my $transcript ( @{$gene->get_all_Transcripts()}) {
-	print "gene name is ", $gene->stable_id,'-',$gene->start,'-',$gene->end,"\n" if defined $gene;
-	print "trans name is ", $transcript->stable_id,'-',$transcript->start,'-',$transcript->end,"\n" if defined $transcript;
-	my $hnum_exons;
-
-	foreach my $exon (@{$transcript->get_all_Exons }) {
-	  print "  ", $exon->stable_id,"\t",$exon->start,," ", $exon->end, "\n";
-	  $hnum_exons++;
-	}
-	print "There are ", $hnum_exons," exons\n";
-      }
+      get_gene_annotation($gene);
     }
   }
   else {
@@ -820,10 +812,11 @@ sub get_annotations {
       my $q_seqid_ref = $dbCore->dbc->db_handle->selectall_arrayref(qq{SELECT seq_region_id from seq_region WHERE name="$lrg_name"});
       $q_seq_region_id = $q_seqid_ref->[0][0];
     }
-    my $dna_ref = $dbCore->dbc->db_handle->selectall_arrayref(qq{SELECT seq_region_id from dna WHERE seq_region_id = $q_seq_region_id});
-    if (! $dna_ref->[0][0]) {
-      $dbCore->dbc->do(qq{INSERT INTO dna(seq_region_id,sequence)values($q_seq_region_id,"$q_seq")});
-    }
+    #we don't need dna sequence
+    #my $dna_ref = $dbCore->dbc->db_handle->selectall_arrayref(qq{SELECT seq_region_id from dna WHERE seq_region_id = $q_seq_region_id});
+    #if (! $dna_ref->[0][0]) {
+    #  $dbCore->dbc->do(qq{INSERT INTO dna(seq_region_id,sequence)values($q_seq_region_id,"$q_seq")});
+    #}
     
     foreach  my $pair (sort {$a->[3]<=>$b->[3]} @$pairs) {
       print "pairs are ",$pair->[0],'-',$pair->[1],'-',$pair->[2],'-',$pair->[3],'-',$pair->[4],"\n";
@@ -840,7 +833,7 @@ sub get_annotations {
 
     my $hslice = $sa->fetch_by_region('LRG',"$lrg_name");
     foreach my $gene (@{$hslice->get_all_Genes()}){
-	print "gene_name is ",$gene->stable_id,"\n";
+      print "gene_name is ",$gene->stable_id,"\n";
     }
     print "q_seq from hslice is ",$hslice->start,'-'.$hslice->end,"\n";
     print "length of q_seq is ",length($q_seq), " and length of hseq is ", length($hslice->seq),"\n";
@@ -850,41 +843,95 @@ sub get_annotations {
     }
     else {
       print "hseq is different from q_seq\n";
-      print "q_seq is ",$q_seq,"\n";
-      print "hseq is ",$hslice->seq,"\n";
+      #print "q_seq is ",$q_seq,"\n";
+      #print "hseq is ",$hslice->seq,"\n";
     }
 
     my @genes = @{$sub_slice->get_all_Genes()};
     foreach my $gene (@genes) {
-      my $num_trans = 0;
-
       print "before transfprm g start-end ",$gene->start,'-',$gene->end,"\n";
-      my $new_gene = $gene->transform('LRG');
+      #my $new_gene = $gene->transform('LRG');
+      my $new_gene = $gene->transfer($hslice);
       print "after transform g start-end ",$new_gene->start,'-',$new_gene->end,"\n" if $new_gene;
-      foreach my $transcript ( @{$new_gene->get_all_Transcripts()}) {
-	print "trs start-end ",$transcript->start,'-',$transcript->end,"\n" if $transcript;
-	print "new_gene name is ", $new_gene->stable_id,'-',$new_gene->start,'-',$new_gene->end,"\n" if defined $new_gene;
-	print "trans name is ", $transcript->stable_id,'-',$transcript->start,'-',$transcript->end,"\n" if defined $transcript;
-	my $num_exons;
-	foreach my $exon (@{$transcript->get_all_Exons }) {
-	  print "  ", $exon->stable_id,"\t",$exon->start,," ", $exon->end, "\n";
-	  $num_exons++;
-	}
-	print "There are ", $num_exons," exons\n";
-
-	print "Tanscript cdna_start_end  ", $transcript->stable_id,"\t",$transcript->cdna_coding_start,," ", $transcript->cdna_coding_end, "\n";
-	$num_trans++;
-	print "There are ", $num_trans," transcripts\n";
-	my $translation = $transcript->translation();
-	print "The protein sequence is ",$translation->seq,"\n";
-	my @transl_dbentries = @{$translation->get_all_DBEntries()};
-	foreach my $dbe (@transl_dbentries) {
-	  print $dbe->db_display_name(),'-',$dbe->get_all_synonyms(),'-',$dbe->description(),"\n";
-	}
-      }
+      get_gene_annotation($new_gene);
     }
   }
 }
+
+sub get_gene_annotation {
+
+  my $gene = shift;
+  print "gene_stable_name is ",$gene->stable_id,"\n";
+
+  my $entries = $gene->get_all_DBEntries();
+
+  my $hgnc_entry;
+  while(my $hgnc_entry = shift @$entries) {
+    print $gene->external_name, " ", $hgnc_entry->dbname, " ", $hgnc_entry->description, " ", $hgnc_entry->primary_id, "\n";
+    last if $hgnc_entry->dbname eq 'HGNC';
+  }
+
+  foreach my $synonym(@{$hgnc_entry->get_all_synonyms}) {
+    print "gene_synonym is $synonym\n" if $synonym;
+  }
+
+  my $num_trans;
+  foreach my $transcript ( @{$gene->get_all_Transcripts()}) {
+    print "trs start-end ",$transcript->start,'-',$transcript->end,"\n" if $transcript;
+    print "gene name is ", $gene->stable_id,'-',$gene->start,'-',$gene->end,"\n" if defined $gene;
+    print "trans name is ", $transcript->stable_id,'-',$transcript->start,'-',$transcript->end,"\n" if defined $transcript;
+    my $num_exons;
+    my @exons = @{$transcript->get_all_Exons };
+    my @aa_mappings;
+    my $first_exon = shift @exons;
+    my $last_exon = pop @exons;
+    my $first_aa_start = $transcript->translation->genomic_start;
+    my $first_aa_end = $first_exon->end;
+    my $num_aa = ($first_aa_end-$first_aa_start+1)/3;
+    my $aa_start = 1;
+    my $aa_end = $num_aa;
+    my $last_aa_start = $transcript->translation->genomic_start;
+    my $last_aa_end = $first_exon->end;
+    my $last_num_aa = ($last_aa_end-$last_aa_start)/3;
+    push @aa_mappings, [$first_aa_start,$first_aa_end,$aa_start,$aa_end];
+    print "first_aa_start is $first_aa_start and firt_aa_end is $first_aa_end and num aa is $num_aa\n";
+    print "last_aa_start is $last_aa_start and last_aa_end is $last_aa_end and num aa is $num_aa\n";
+
+    foreach my $exon (@exons ) {
+      print "  ", $exon->stable_id,"\t",$exon->start,," ", $exon->end, "\n";
+      $num_aa = ($exon->end-$exon->start+1)/3;
+      $aa_start = $aa_end +1;
+      $aa_end = $aa_start + $num_aa -1;
+      push @aa_mappings, [$exon->start,$exon->end,$aa_start,$aa_end];
+      $num_exons++;
+    }
+    $aa_start = $aa_end +1;
+    $aa_end = $aa_start + $last_num_aa -1;
+    push @aa_mappings, [$last_aa_start,$last_aa_end,$aa_start,$aa_end];
+    print "There are ", $num_exons+2," exons\n";
+    foreach my $aa (@aa_mappings) {
+      print "aa_mappings : ",$aa->[0],'-',$aa->[1],'-',$aa->[2],'-',$aa->[3],"\n";
+    }
+
+    my (%ext,%extdesc);
+    my $entries = $transcript->get_all_DBLinks();
+
+    while(my $entry = shift @$entries) {
+      $ext{$entry->dbname} = $entry->primary_id;
+      $extdesc{$entry->dbname} = $entry->description;
+      print $gene->external_name, " ", $entry->dbname, " ", $entry->description, " ", $entry->primary_id, "\n";
+    }
+
+    print "Tanscript cdna_start_end  ", $transcript->stable_id,"\t",$transcript->cdna_coding_start,," ", $transcript->cdna_coding_end, "\n";
+    $num_trans++;
+    print "There are ", $num_trans," transcripts\n";
+    my $translation = $transcript->translation();
+    print "The protein sequence is ",$translation->seq,"\n";
+    print "aa start-end : ",$translation->start,'-',$translation->end,"\n";
+    print "aa genomic_start_end :",$translation->genomic_start,'-',$translation->genomic_end,"\n";
+  }
+}
+
 
 
 
