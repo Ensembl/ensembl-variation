@@ -260,9 +260,11 @@ sub addExisting() {
 	
 	my $new_node = shift;
 	
-	if(!defined $new_node->xml) {
+	$new_node->{'parent'} = $self;
+	
+	#if(!defined $new_node->xml) {
 		$new_node->xml($self->xml) if defined $self->xml;
-	}
+	#}
 	
 	push @{$self->{'nodes'}}, $new_node;
 }
@@ -274,7 +276,7 @@ sub addNodeMulti() {
 
     my @levels = split /\s*\/\s*/, $name;
 
-    # if only one level given, do a normal findNode
+    # if only one level given, do a normal addNode
     if(scalar @levels == 1) {
 		return $self->addNode($name);
     }
@@ -393,6 +395,40 @@ sub findOrAdd() {
 		return $self->addNode($name);
 	}
 }
+
+# compare a node with another
+#sub compare {
+#	my $self = shift;
+#	my $comp = shift;
+#	
+#	my $match;
+#	
+#	# if the name matches
+#	if(defined $node->name && defined $name && $node->name eq $name) {
+#	
+#		$match = 1;
+#
+#		# if we are comparing data too
+#		if(scalar keys %$data && scalar keys %{$node->data}) {
+#			$match = 0;
+#	
+#			my $needed = scalar keys %$data;
+#	
+#			foreach my $key(keys %$data) {
+#				next unless defined $node->data->{$key};
+#	
+#				$match++ if $node->data->{$key} eq $data->{$key};
+#			}
+#	
+#			$match = ($match == $needed ? 1 : 0);
+#		}
+#		
+#		if($match) {
+#			$found = $node;
+#			last;
+#		}
+#	}
+#}
 
 # print node
 sub printNode {
@@ -605,7 +641,7 @@ sub xml() {
 	if(defined $xml) {
 		$self->{'xml'} = $xml;
 		
-		foreach my $node($self->{'nodes'}) {
+		foreach my $node(@{$self->{'nodes'}}) {
 			$node->xml($xml);
 		}
 	}
@@ -642,6 +678,11 @@ our @ISA = "LRG::LRG";
 
 sub new {
     my $name = shift;
+	
+	if($name =~ /\:\:/) {
+		$name = shift;
+	}
+	
     my $xml = shift if @_;
     
     # look for an additional arg containing
