@@ -242,57 +242,57 @@ while(<IN>) {
     # UPDATABLE ANNOTATION SECTION #
     ################################
     
-    $current = $root->findOrAdd('updatable_annotation/features');
-    
-    # gene
-#     print "Fetching gene using ", $trans->stable_id, "\n";
-    my $gene = $geneAd->fetch_by_transcript_stable_id($trans->stable_id);
-    
-    $current = $current->addNode('gene', {'start' => $first_exon_start, 'end' => $last_exon_end, 'name' => $gene->external_name()});
-    
-    my $entries = $gene->get_all_DBEntries();
-    
-    my $hgnc_entry;
-    while($hgnc_entry = shift @$entries) {
-    	last if $hgnc_entry->dbname eq 'HGNC';
-    }
-    
-    foreach my $synonym(@{$hgnc_entry->get_all_synonyms}) {
-    	$current->addNode('synonym')->content($synonym);
-    }
-    
-    $current->addNode('note')->content($hgnc_entry->description) if length($hgnc_entry->description) > 1;
-
-	# get the xrefs for the transcript
-    my %ext = ();
-    my %extdesc = ();
-    
-    foreach my $temptrans(@{$gene->get_all_Transcripts}) {
-		$entries = $temptrans->get_all_DBLinks();
-    
-		while(my $entry = shift @$entries) {
-			$ext{$entry->dbname} = $entry->primary_id;
-			$extdesc{$entry->dbname} = $entry->description;
-# 			print $gene->external_name, " ", $entry->dbname, " ", $entry->description, " ", $entry->primary_id, "\n";
-		}
-    }
-    
-    # finish the gene with MIM and HGNC xrefs
-	$current->addEmptyNode('db_xref', {'source' => 'GeneID', 'accession' => $ext{'EntrezGene'}}) if defined $ext{'EntrezGene'};
-    $current->addEmptyNode('db_xref', {'source' => 'HGNC', 'accession' => $ext{'HGNC'}}) if defined $ext{'HGNC'};
-    $current->addEmptyNode('db_xref', {'source' => 'MIM', 'accession' => $ext{'MIM_GENE'}}) if defined $ext{'MIM_GENE'};
-    
-    $current = $current->parent;
-    
-    # now add the cds node
-	$current = $current->addNode('cds', {'source' => 'RefSeq', 'transcript_id' => $ext{'RefSeq_dna'}, 'codon_start' => ($trans->cdna_coding_start + $first_exon_start - 1)});
-	
-	$current = $current->addNode('protein_product');
-	
-	$current->addEmptyNode('protein_id', {'source' => 'RefSeq', 'accession' =>  $data{'protein'}});
-	$current->addNode('note')->content($extdesc{'RefSeq_peptide'}) if defined $extdesc{'RefSeq_peptide'};
-	$current->addEmptyNode('db_xref', {'source' => 'CCDS', 'accession' => $ext{'CCDS'}}) if defined $ext{'CCDS'};
-	$current->addEmptyNode('db_xref', {'source' => 'GeneID', 'accession' => $ext{'EntrezGene'}}) if defined $ext{'EntrezGene'};
+#    $current = $root->findOrAdd('updatable_annotation/features');
+#    
+#    # gene
+##     print "Fetching gene using ", $trans->stable_id, "\n";
+#    my $gene = $geneAd->fetch_by_transcript_stable_id($trans->stable_id);
+#    
+#    $current = $current->addNode('gene', {'start' => $first_exon_start, 'end' => $last_exon_end, 'name' => $gene->external_name()});
+#    
+#    my $entries = $gene->get_all_DBEntries();
+#    
+#    my $hgnc_entry;
+#    while($hgnc_entry = shift @$entries) {
+#    	last if $hgnc_entry->dbname eq 'HGNC';
+#    }
+#    
+#    foreach my $synonym(@{$hgnc_entry->get_all_synonyms}) {
+#    	$current->addNode('synonym')->content($synonym);
+#    }
+#    
+#    $current->addNode('note')->content($hgnc_entry->description) if length($hgnc_entry->description) > 1;
+#
+#	# get the xrefs for the transcript
+#    my %ext = ();
+#    my %extdesc = ();
+#    
+#    foreach my $temptrans(@{$gene->get_all_Transcripts}) {
+#		$entries = $temptrans->get_all_DBLinks();
+#    
+#		while(my $entry = shift @$entries) {
+#			$ext{$entry->dbname} = $entry->primary_id;
+#			$extdesc{$entry->dbname} = $entry->description;
+## 			print $gene->external_name, " ", $entry->dbname, " ", $entry->description, " ", $entry->primary_id, "\n";
+#		}
+#    }
+#    
+#    # finish the gene with MIM and HGNC xrefs
+#	$current->addEmptyNode('db_xref', {'source' => 'GeneID', 'accession' => $ext{'EntrezGene'}}) if defined $ext{'EntrezGene'};
+#    $current->addEmptyNode('db_xref', {'source' => 'HGNC', 'accession' => $ext{'HGNC'}}) if defined $ext{'HGNC'};
+#    $current->addEmptyNode('db_xref', {'source' => 'MIM', 'accession' => $ext{'MIM_GENE'}}) if defined $ext{'MIM_GENE'};
+#    
+#    $current = $current->parent;
+#    
+#    # now add the cds node
+#	$current = $current->addNode('cds', {'source' => 'RefSeq', 'transcript_id' => $ext{'RefSeq_dna'}, 'codon_start' => ($trans->cdna_coding_start + $first_exon_start - 1)});
+#	
+#	$current = $current->addNode('protein_product');
+#	
+#	$current->addEmptyNode('protein_id', {'source' => 'RefSeq', 'accession' =>  $data{'protein'}});
+#	$current->addNode('note')->content($extdesc{'RefSeq_peptide'}) if defined $extdesc{'RefSeq_peptide'};
+#	$current->addEmptyNode('db_xref', {'source' => 'CCDS', 'accession' => $ext{'CCDS'}}) if defined $ext{'CCDS'};
+#	$current->addEmptyNode('db_xref', {'source' => 'GeneID', 'accession' => $ext{'EntrezGene'}}) if defined $ext{'EntrezGene'};
 	
 	$current = $root->findOrAdd('updatable_annotation/mapping');
 
@@ -319,9 +319,16 @@ while(<IN>) {
 		);
 	      }
 	
+	
+	my @feature_nodes = @{get_annotations($mapping,$genomic_sequence)};
+	$current = $root->findOrAdd('updatable_annotation/features');
+	
+    foreach my $feature(@feature_nodes) {
+		$current->addExisting($feature);
+	}
+	
     # export
     $root->printAll();
-    get_annotations ($mapping,$genomic_sequence);
 }
 
 close IN;
@@ -789,6 +796,8 @@ sub get_annotations {
   
   my $sub_slice = $slice->sub_Slice($t_start,$t_end);
   my $full_match = $fp->identical_matches;
+  
+  my @nodes;
 
   if ($full_match) {
     $sub_slice->seq_region_name($lrg_name);
@@ -848,88 +857,180 @@ sub get_annotations {
     }
 
     my @genes = @{$sub_slice->get_all_Genes()};
-    foreach my $gene (@genes) {
+	
+	foreach my $gene (@genes) {
       print "before transfprm g start-end ",$gene->start,'-',$gene->end,"\n";
       #my $new_gene = $gene->transform('LRG');
       my $new_gene = $gene->transfer($hslice);
       print "after transform g start-end ",$new_gene->start,'-',$new_gene->end,"\n" if $new_gene;
-      get_gene_annotation($new_gene);
+      push @nodes, @{get_gene_annotation($new_gene)};
+	  
+	  my $cheese = 1;
     }
   }
+  
+  return \@nodes;
 }
 
 sub get_gene_annotation {
 
-  my $gene = shift;
-  print "gene_stable_name is ",$gene->stable_id,"\n";
+	my $gene = shift;
+	my $current;
+	my @nodes;
+	
+	#print "gene_stable_name is ",$gene->stable_id, " ", $gene->start, "-", $gene->end, "\n";
+	
+    my $entries = $gene->get_all_DBEntries();
 
-  my $entries = $gene->get_all_DBEntries();
+	my $hgnc_entry;
+	while($hgnc_entry = shift @$entries) {
+		last if $hgnc_entry->dbname eq 'HGNC';
+	}
+	
+	my $gene_node = LRG::Node->new("gene", undef, {'name' => $gene->external_name, 'start' => $gene->start, 'end' => $gene->end});
+	
+	if(defined $hgnc_entry && $hgnc_entry->dbname eq 'HGNC') {
+			
+		foreach my $synonym(@{$hgnc_entry->get_all_synonyms}) {
+			$gene_node->addNode('synonym')->content($synonym);
+		}
+		$gene_node->addNode('note')->content($hgnc_entry->description) if length($hgnc_entry->description) > 1;
+	}
+	
+	# get the xrefs for the transcript
+	my %ext = ();
+	my %extdesc = ();
+	
+	foreach my $trans(@{$gene->get_all_Transcripts}) {
+		
+		#print "Gene/Trans ", $gene->stable_id, " ", $trans->stable_id, "\n";
+		
+		my $cds_node = LRG::Node->new("cds", undef, {'source' => 'Ensembl', 'codon_start' => $trans->coding_region_start, 'transcript_id' => $trans->stable_id});
+		
+		$entries = $trans->get_all_DBLinks();
+	
+		while(my $entry = shift @$entries) {
+			$ext{$entry->dbname} = $entry->primary_id;
+			$extdesc{$entry->dbname} = $entry->description;
+	# 		print $gene->external_name, " ", $trans->stable_id, " ";
+	#		print $entry->dbname, " ", $entry->description, " ", $entry->primary_id, "\n";
+			
+		}
+		
+		my $protein = $trans->translation;
+		
+		if($protein ne '') {
+			$current = $cds_node->addNode('protein_product');
+			
+			$current->addEmptyNode('protein_id', {'source' => 'Ensembl', 'accession' => $protein->stable_id});
+			
+			$entries = $protein->get_all_DBLinks();
 
-  my $hgnc_entry;
-  while(my $hgnc_entry = shift @$entries) {
-    print $gene->external_name, " ", $hgnc_entry->dbname, " ", $hgnc_entry->description, " ", $hgnc_entry->primary_id, "\n";
-    last if $hgnc_entry->dbname eq 'HGNC';
-  }
+			my %prot_ext = ();
+			my %prot_extdesc = ();
+			
+			while(my $entry = shift @$entries) {
+				$prot_ext{$entry->dbname} = $entry->primary_id;
+				$prot_extdesc{$entry->dbname} = $entry->description;
+				#print $gene->external_name, " ", $protein->stable_id, " ";
+				#print $entry->dbname, " ", $entry->description, " ", $entry->primary_id, "\n";
+			}
+			
+			$current->addNode('note')->content($prot_extdesc{'RefSeq_peptide'}) if defined $prot_extdesc{'RefSeq_peptide'};
+			$current->addEmptyNode('db_xref', {'source' => 'GeneID', 'accession' => $prot_ext{'EntrezGene'}}) if defined $prot_ext{'EntrezGene'};
+			$current->addEmptyNode('db_xref', {'source' => 'CCDS', 'accession' => $prot_ext{'CCDS'}}) if defined $prot_ext{'CCDS'};
+		}
+		
+		push @nodes, $cds_node;
+	}
+	
+	# finish the gene with MIM and HGNC xrefs
+	$gene_node->addEmptyNode('db_xref', {'source' => 'GeneID', 'accession' => $ext{'EntrezGene'}}) if defined $ext{'EntrezGene'};
+	$gene_node->addEmptyNode('db_xref', {'source' => 'HGNC', 'accession' => $ext{'HGNC'}}) if defined $ext{'HGNC'};
+	$gene_node->addEmptyNode('db_xref', {'source' => 'MIM', 'accession' => $ext{'MIM_GENE'}}) if defined $ext{'MIM_GENE'};
+	
+	unshift @nodes, $gene_node;
+	
+	#
+	## now add the cds node
+	#$current = $current->addNode('cds', {'source' => 'RefSeq', 'transcript_id' => $ext{'RefSeq_dna'}, 'codon_start' => ($trans->cdna_coding_start + $first_exon_start - 1)});
+	#
+	#$current = $current->addNode('protein_product');
+	#
+	#$current->addEmptyNode('protein_id', {'source' => 'RefSeq', 'accession' =>  $data{'protein'}});
+	#$current->addNode('note')->content($extdesc{'RefSeq_peptide'}) if defined $extdesc{'RefSeq_peptide'};
+	#$current->addEmptyNode('db_xref', {'source' => 'CCDS', 'accession' => $ext{'CCDS'}}) if defined $ext{'CCDS'};
+	#$current->addEmptyNode('db_xref', {'source' => 'GeneID', 'accession' => $ext{'EntrezGene'}}) if defined $ext{'EntrezGene'};
 
-  foreach my $synonym(@{$hgnc_entry->get_all_synonyms}) {
-    print "gene_synonym is $synonym\n" if $synonym;
-  }
-
-  my $num_trans;
-  foreach my $transcript ( @{$gene->get_all_Transcripts()}) {
-    print "trs start-end ",$transcript->start,'-',$transcript->end,"\n" if $transcript;
-    print "gene name is ", $gene->stable_id,'-',$gene->start,'-',$gene->end,"\n" if defined $gene;
-    print "trans name is ", $transcript->stable_id,'-',$transcript->start,'-',$transcript->end,"\n" if defined $transcript;
-    my $num_exons;
-    my @exons = @{$transcript->get_all_Exons };
-    my @aa_mappings;
-    my $first_exon = shift @exons;
-    my $last_exon = pop @exons;
-    my $first_aa_start = $transcript->translation->genomic_start;
-    my $first_aa_end = $first_exon->end;
-    my $num_aa = ($first_aa_end-$first_aa_start+1)/3;
-    my $aa_start = 1;
-    my $aa_end = $num_aa;
-    my $last_aa_start = $transcript->translation->genomic_start;
-    my $last_aa_end = $first_exon->end;
-    my $last_num_aa = ($last_aa_end-$last_aa_start)/3;
-    push @aa_mappings, [$first_aa_start,$first_aa_end,$aa_start,$aa_end];
-    print "first_aa_start is $first_aa_start and firt_aa_end is $first_aa_end and num aa is $num_aa\n";
-    print "last_aa_start is $last_aa_start and last_aa_end is $last_aa_end and num aa is $num_aa\n";
-
-    foreach my $exon (@exons ) {
-      print "  ", $exon->stable_id,"\t",$exon->start,," ", $exon->end, "\n";
-      $num_aa = ($exon->end-$exon->start+1)/3;
-      $aa_start = $aa_end +1;
-      $aa_end = $aa_start + $num_aa -1;
-      push @aa_mappings, [$exon->start,$exon->end,$aa_start,$aa_end];
-      $num_exons++;
-    }
-    $aa_start = $aa_end +1;
-    $aa_end = $aa_start + $last_num_aa -1;
-    push @aa_mappings, [$last_aa_start,$last_aa_end,$aa_start,$aa_end];
-    print "There are ", $num_exons+2," exons\n";
-    foreach my $aa (@aa_mappings) {
-      print "aa_mappings : ",$aa->[0],'-',$aa->[1],'-',$aa->[2],'-',$aa->[3],"\n";
-    }
-
-    my (%ext,%extdesc);
-    my $entries = $transcript->get_all_DBLinks();
-
-    while(my $entry = shift @$entries) {
-      $ext{$entry->dbname} = $entry->primary_id;
-      $extdesc{$entry->dbname} = $entry->description;
-      print $gene->external_name, " ", $entry->dbname, " ", $entry->description, " ", $entry->primary_id, "\n";
-    }
-
-    print "Tanscript cdna_start_end  ", $transcript->stable_id,"\t",$transcript->cdna_coding_start,," ", $transcript->cdna_coding_end, "\n";
-    $num_trans++;
-    print "There are ", $num_trans," transcripts\n";
-    my $translation = $transcript->translation();
-    print "The protein sequence is ",$translation->seq,"\n";
-    print "aa start-end : ",$translation->start,'-',$translation->end,"\n";
-    print "aa genomic_start_end :",$translation->genomic_start,'-',$translation->genomic_end,"\n";
-  }
+  #my $entries = $gene->get_all_DBEntries();
+  #
+  #my $hgnc_entry;
+  #while(my $hgnc_entry = shift @$entries) {
+  #  print $gene->external_name, " ", $hgnc_entry->dbname, " ", $hgnc_entry->description, " ", $hgnc_entry->primary_id, "\n";
+  #  last if $hgnc_entry->dbname eq 'HGNC';
+  #}
+  #
+  #foreach my $synonym(@{$hgnc_entry->get_all_synonyms}) {
+  #  print "gene_synonym is $synonym\n" if $synonym;
+  #}
+  #
+  #my $num_trans;
+  #foreach my $transcript ( @{$gene->get_all_Transcripts()}) {
+  #  print "trs start-end ",$transcript->start,'-',$transcript->end,"\n" if $transcript;
+  #  print "gene name is ", $gene->stable_id,'-',$gene->start,'-',$gene->end,"\n" if defined $gene;
+  #  print "trans name is ", $transcript->stable_id,'-',$transcript->start,'-',$transcript->end,"\n" if defined $transcript;
+  #  my $num_exons;
+  #  my @exons = @{$transcript->get_all_Exons };
+  #  my @aa_mappings;
+  #  my $first_exon = shift @exons;
+  #  my $last_exon = pop @exons;
+  #  my $first_aa_start = $transcript->translation->genomic_start;
+  #  my $first_aa_end = $first_exon->end;
+  #  my $num_aa = ($first_aa_end-$first_aa_start+1)/3;
+  #  my $aa_start = 1;
+  #  my $aa_end = $num_aa;
+  #  my $last_aa_start = $transcript->translation->genomic_start;
+  #  my $last_aa_end = $first_exon->end;
+  #  my $last_num_aa = ($last_aa_end-$last_aa_start)/3;
+  #  push @aa_mappings, [$first_aa_start,$first_aa_end,$aa_start,$aa_end];
+  #  print "first_aa_start is $first_aa_start and firt_aa_end is $first_aa_end and num aa is $num_aa\n";
+  #  print "last_aa_start is $last_aa_start and last_aa_end is $last_aa_end and num aa is $num_aa\n";
+  #
+  #  foreach my $exon (@exons ) {
+  #    print "  ", $exon->stable_id,"\t",$exon->start,," ", $exon->end, "\n";
+  #    $num_aa = ($exon->end-$exon->start+1)/3;
+  #    $aa_start = $aa_end +1;
+  #    $aa_end = $aa_start + $num_aa -1;
+  #    push @aa_mappings, [$exon->start,$exon->end,$aa_start,$aa_end];
+  #    $num_exons++;
+  #  }
+  #  $aa_start = $aa_end +1;
+  #  $aa_end = $aa_start + $last_num_aa -1;
+  #  push @aa_mappings, [$last_aa_start,$last_aa_end,$aa_start,$aa_end];
+  #  print "There are ", $num_exons+2," exons\n";
+  #  foreach my $aa (@aa_mappings) {
+  #    print "aa_mappings : ",$aa->[0],'-',$aa->[1],'-',$aa->[2],'-',$aa->[3],"\n";
+  #  }
+  #
+  #  my (%ext,%extdesc);
+  #  my $entries = $transcript->get_all_DBLinks();
+  #
+  #  while(my $entry = shift @$entries) {
+  #    $ext{$entry->dbname} = $entry->primary_id;
+  #    $extdesc{$entry->dbname} = $entry->description;
+  #    print $gene->external_name, " ", $entry->dbname, " ", $entry->description, " ", $entry->primary_id, "\n";
+  #  }
+  #
+  #  print "Tanscript cdna_start_end  ", $transcript->stable_id,"\t",$transcript->cdna_coding_start,," ", $transcript->cdna_coding_end, "\n";
+  #  $num_trans++;
+  #  print "There are ", $num_trans," transcripts\n";
+  #  my $translation = $transcript->translation();
+  #  print "The protein sequence is ",$translation->seq,"\n";
+  #  print "aa start-end : ",$translation->start,'-',$translation->end,"\n";
+  #  print "aa genomic_start_end :",$translation->genomic_start,'-',$translation->genomic_end,"\n";
+  #}
+  
+  return \@nodes;
 }
 
 
