@@ -26,11 +26,11 @@ my $target_dir;
 
 # get options from command line
 GetOptions(
-    'in_file_name=s' => \$in_file_name,
-    'output_file_stem=s' => \$out_file_stem,
-    'template_file_name=s' => \$template_file_name,
-    'registry_file=s' => \$registry_file,
-    'input_dir=s' => \$input_dir,
+	   'in_file_name=s' => \$in_file_name,#file in format : LRG_5   LEPRE1  NG_008123   NM_022356   NP_071751
+	   'output_file_stem=s' => \$out_file_stem,
+	   'template_file_name=s' => \$template_file_name,
+	   'registry_file=s' => \$registry_file,
+	   'input_dir=s' => \$input_dir,
 	   'output_dir=s' => \$output_dir,
 	   'target_dir=s' => \$target_dir,
 );
@@ -64,7 +64,7 @@ open IN, $in_file or die "Could not read from input file ", $in_file, "\n";
 my @cols = qw/lrg gene sequence cdna protein/;
 
 # just a variable to hold the current node
-my $current;
+my (%data,$current);
 
 while(<IN>) {
     chomp;
@@ -76,7 +76,6 @@ while(<IN>) {
 		die "Incorrect number of columns in file ", $in_file, "\n";
     }
 
-    my %data;
 
     # add data to a hash using @cols array for column names
     foreach my $col(@cols) {
@@ -452,12 +451,13 @@ sub mapping {
 	
   else {
 	
-    my $name = "temp5863".$mapping_num++;
+    my $name = "temp$$".$mapping_num++;
+    #my $name = "temp23614".$mapping_num++;
     #my $name = "temp_will";
     my $input_file_name = $name.'.fa';
 		
-    #open OUT, ">$input_dir/$name\.fa" or die $!;
-	open OUT, ">$name\.fa" or die $!;
+    open OUT, ">$input_dir/$name\.fa" or die $!;
+    #open OUT, ">$name\.fa" or die $!;
     print OUT '>', $name, "\n", $sequence;
     close OUT;
 		
@@ -475,10 +475,10 @@ sub mapping {
     my $seqobj = Bio::PrimarySeq->new(-id => $name, -seq => $rec_seq{$name});
     $rec_seq{$name} = $seqobj;
 		
-    #bsub_ssaha_job($queue,$input_file,$output_file,$subject);
+    bsub_ssaha_job($queue,$input_file,$output_file,$subject);
 		
     my $call = "bsub -P ensembl-variation -K -w 'done($input_file\_ssaha_job)' -J waiting_process sleep 1"; #waits until all ssaha jobs have finished to continue
-    #system($call);
+    system($call);
 		
     my $mapping = parse_ssaha2_out($output_file);
 		
@@ -599,6 +599,7 @@ sub make_feature_pair {
   my $score = $h->{'score'};
   my $match = $h->{'match'};
 
+  print "$q_id,$q_start,$q_end,$q_strand,$t_id,$t_start,$t_end,$t_strand,$score and match $match\n";
   my ($f_q_start,$f_q_end) ;#feature start-end used to make feature_pairs
   if ($q_strand ==1) {
     ($f_q_start,$f_q_end) = ($q_start,$q_end);
@@ -783,7 +784,7 @@ sub identical_matches {
 sub get_annotations {
   my $fp = shift;
   my $q_seq = shift;
-  my $lrg_name = 'LRG5';
+  my $lrg_name = $data{'lrg'};
 
   my ($q_start,$q_end,$t_start,$t_end,$q_strand);
   my $slice = $fp->slice;
@@ -858,14 +859,14 @@ sub get_annotations {
 
     my @genes = @{$sub_slice->get_all_Genes()};
 	
-	foreach my $gene (@genes) {
+    foreach my $gene (@genes) {
       print "before transfprm g start-end ",$gene->start,'-',$gene->end,"\n";
       #my $new_gene = $gene->transform('LRG');
       my $new_gene = $gene->transfer($hslice);
       print "after transform g start-end ",$new_gene->start,'-',$new_gene->end,"\n" if $new_gene;
       push @nodes, @{get_gene_annotation($new_gene)};
 	  
-	  my $cheese = 1;
+      my $cheese = 1;
     }
   }
   
@@ -880,7 +881,7 @@ sub get_gene_annotation {
 	
 	#print "gene_stable_name is ",$gene->stable_id, " ", $gene->start, "-", $gene->end, "\n";
 	
-    my $entries = $gene->get_all_DBEntries();
+	my $entries = $gene->get_all_DBEntries();
 
 	my $hgnc_entry;
 	while($hgnc_entry = shift @$entries) {
