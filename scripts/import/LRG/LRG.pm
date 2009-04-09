@@ -569,6 +569,9 @@ sub moveTo() {
 
     # find out the highest index of the array
     my $last_index = $#nodes;
+	
+	# if num is out of range
+	#$num = $last_index + 1 if $num > $last_index + 1;
 
     # get the before and after arrays:
     # (..@before..)*(..@after..)
