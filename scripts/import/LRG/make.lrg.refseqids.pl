@@ -655,7 +655,8 @@ sub make_feature_pair {
       #print "q_seq_is $q_seq\n";
       #print "t_seq is $t_seq\n";
       my $q_count = 1;
-      my $t_count = 1;
+      my $t_count = 1;my ($q_seq);
+            
 
       my %q_seqs = map {$q_count++,$_} split '', $q_seq;
       my %t_seqs = map {$t_count++,$_} split '', $t_seq;
@@ -664,7 +665,12 @@ sub make_feature_pair {
       my $sub_t_start = $t_start;
       foreach my $count (sort {$a<=>$b} keys %q_seqs) {
 	if ($q_seqs{$count} !~ /$t_seqs{$count}/i) {
-	  #next;
+	  #if there is a mismatch, we need to record the base based in query sequence
+          if ($q_strand==-1) {
+            reverse_comp(\$q_seqs{$count});
+            reverse_comp(\$t_seqs{$count});
+          }
+
 	  print "count is $count\n";
 	  $full_match =0;
 	  my $sub_t_end = $t_start + ($count -1) - 1;
@@ -686,7 +692,7 @@ sub make_feature_pair {
 	  }
 	
 	  ($tmp_q_start,$tmp_q_end) = ($tmp_q_end,$tmp_q_start) if($tmp_q_end<$tmp_q_start);
-	  push @pairs, [$type,$tmp_q_start,$tmp_q_end,$sub_t_start,$sub_t_end,$q_strand];
+	  push @pairs, [$type,$tmp_q_start,$tmp_q_end,$sub_t_start,$sub_t_end,$q_strand,uc($q_seqs{$count}),uc($t_seqs{$count})];
 
 	  $sub_t_start = $sub_t_end+2;
 	}
@@ -710,13 +716,25 @@ sub make_feature_pair {
       push @pairs, [$type,$tmp_q_start,$tmp_q_end,$t_start,$new_t_start,$q_strand];
     }
     elsif ($type eq 'G') {
+    my ($q_seq);
       if ($q_strand ==1) {
 	$new_q_start = $q_start + $query_match_length + 1;
+        $q_seq = substr($q_seqobj->seq,$q_start,$query_match_length);
+        $q_seq = ($q_seq) ? $q_seq : '-';
       }
       else {
 	$new_q_start = $q_start - $query_match_length - 1;
+        $q_seq = substr($q_seqobj->seq,$new_q_start,$query_match_length);
+        $q_seq = ($q_seq) ? $q_seq : '-';
       }
       $new_t_start = $t_start + $target_match_length +1;
+      my $t_seq = substr($slice->seq, $t_start, $target_match_length);
+      if ($q_strand ==-1) {
+        reverse_comp(\$t_seq) if $t_seq;
+      }
+      $t_seq = ($t_seq) ? $t_seq : '-';
+
+      #the following part just to make tmp start-end to put into pairs
       if ($q_strand ==-1) {
 	$tmp_q_start = $new_q_start+1;
 	$tmp_q_end = $q_start-1;
@@ -726,7 +744,7 @@ sub make_feature_pair {
 	$tmp_q_end = $new_q_start-1;
       }
       ($tmp_q_start,$tmp_q_end) = ($tmp_q_end,$tmp_q_start) if($tmp_q_end<$tmp_q_start);
-      #push @pairs, [$type,$tmp_q_start,$tmp_q_end,$t_start+1,$new_t_start-1,$q_strand];
+      push @pairs, [$type,$tmp_q_start,$tmp_q_end,$t_start+1,$new_t_start-1,$q_strand,uc($q_seq),uc($t_seq)];
 
       #print "in G, q_start is $q_start and q_end is $new_q_start and t_start is $t_start and t_end is $new_t_start\n";
     }
@@ -831,7 +849,7 @@ sub get_annotations {
     #}
     
     foreach  my $pair (sort {$a->[3]<=>$b->[3]} @$pairs) {
-      print "pairs are ",$pair->[0],'-',$pair->[1],'-',$pair->[2],'-',$pair->[3],'-',$pair->[4],"\n";
+      print "pairs are ",$pair->[0],'-',$pair->[1],'-',$pair->[2],'-',$pair->[3],'-',$pair->[4],'-', $pair->[5],'-',$pair->[6],'-',$pair->[7],"\n";
       
       if ($pair->[0] eq 'DNA') {
 	if ($pair->[2]-$pair->[1] == $pair->[4]-$pair->[3]) {
