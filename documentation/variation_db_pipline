@@ -17,6 +17,7 @@ flanking sequence					    SubSNPSeq5, SubSNPSeq3, SNP
 individual genotype					    SubInd,ObsGenotype,SubmittedIndividual 
 population genotype					    GtyFreqBySsPop, UniGty, Allele 
 variation feature					    SNPContigLoc, ContigInfo 
+
 *All of the subsnp information are used in the intermediate steps, and deleted in the final 
 variation synonym table. 
 
@@ -38,7 +39,7 @@ GenericChromosome.pm--this is used in most cases to import chromosome+toplevel c
 
 Apart from the above mentioned general cases, there are specific cases in Human,mosquitos. 
 
-For human, apart from normal import, we import HGVbaseIDs, TSCIDs as well as AFFYIDs. We stored HGVbaseIDs upto version 15 in a flat file :  dbSNP/rs_hgvbase.txt.gz, also affy data in separate array: 100k,500k and genome wide 6.0. 
+For human, apart from normal import, we import HGVbaseIDs, TSCIDs as well as AFFYIDs, aLso illumina data. We stored HGVbaseIDs upto version 15 in a flat file :  dbSNP/rs_hgvbase.txt.gz, also affy data in separate array: 100k,500k and genome wide 6.0. 
 
 For mosquitos, ensembl using different naming system, i.r chromosome 1,2L,2R,3L,3R,X, also we put "PEST" and "MOPTI" into genotype table bu sorting them out using dbSNP.loc_snp_id(we have submitted this data, so the local_id has MOPTI or PEST in it to distinguash between them).
 
@@ -56,6 +57,7 @@ variation feature table:
 - with reference allele not in allele string column in variation feature table 
 - with more than three different alleles in allele string column in variation feature table, 
 - with duplicated positions and alleles, the SNP with smallest rsId is kept
+- variation with no variation_feature
 
 Note that the removed variations themselves are only kept in variation/failed variation tables and have a status of failed and the reason of failing. 
 
@@ -134,7 +136,71 @@ The remaining variations are called tagged SNPs and are stored in table tagged v
 
 Once tagged variation calculation finished, it's ready to copy database to staging server for health check.
 
+health check:
+go to the web page: http://admin.ensembl.org/common/web/admin_home
+and go through each species to check for any problems.
+
+also if new data/display is added/changed, need to check related pages to see whether diaplay is correct. There are severa pages worth looking at :
+
+#Human SNPView with minus strand, ancestral allele, synonym and consequence in tv, also should have LDView linked
+http://staging.ensembl.org/Homo_sapiens/Variation/Summary?v=rs745764
+#Another Human SNPView with synonym with Venter and Watson
+http://staging.ensembl.org/Homo_sapiens/Variation/Summary?v=rs539157
+#Resequencing alignment Ref:36/Venter/Watson
+http://staging.ensembl.org/Homo_sapiens/Location/SequenceAlignment?r=20:38084753-38104752
+#Good to see transcriptSNPView/GeneSNPView
+http://staging.ensembl.org/Homo_sapiens/Variation/Mappings?r=1:228911917-228912917;v=rs699;vdb=variation;vf=724
 Also prepare emf files dump to be hand over to web team
+
+The method to prepare emf dumps:
+
+We don't have a variation directory on /lustre/work
+I have a directory : /lustre/work1/ensembl/yuan/emf_dumps/
+under this directory, there are three directories: hum, rat and mouse.
+under each of the three species, there are two directory, one is for previous release, one is for current release (if don't have one for current release, create one)
+
+- if there was no change in the variation data (no new import from dbSNP) and no new assembly, there is a script, under
+ensembl-variation/scripts/import/upgrade_resequencing_files.pl that can be run. 
+First copy all the files from the previous release (cp /lustre/work1/ensembl/yuan/emf_dumps/hum/release_53/* .)
+Once the information is copied in the new directory, you are ready to run the script:
+bsub -q normal -o /lustre/work1/ensembl/yuan/emf_dumps/hum/out_release_54 perl upgrade_resequencing_files.pl
+-path /lustre/work1/ensembl/yuan/emf_dumps/hum/release_54 -version 54
+
+You should repeat the process for all the resequencing species we dump data for (currently, human, mouse and rat). This is not accessing ens-staging, so it is safe to run it while martians are hammering the server.
+
+-if there is a change in the data, you will need to run a different script. First, create the directory structure again (e.g. mkdir release_54 ). Copy the README file (e.g. cp /lustre/work1/ensembl/yuan/emf_dumps/rat/release_53/README .)
+You are now ready to run the script:
+
+perl dump_strain_wrapper.pl -species rat -dump_file
+'/lustre/work1/ensembl/yuan/emf_dumps/rat/release_54/Rattus_norvegicus.RGSC3.4.54.resequencing.chromosome.'
+
+Be careful, since the "dump_file" argument should include the path and the file name (which is kind of standard for all the EMF files).
+Creating the new files will take around 20 hours for human and access the ens-staging server, so run it before martians start/finish with their built
+
+After sending jobs, do check if all the jobs successfully finished. If so, send a email to release coordinator to tell them emf dumps are finished and where those dump files are.
+
+Make patch sql to patch new schema/version for all databases:
+
+go to /nfs/acari/yuan/ensembl/src/ensembl-variation/sql, copy patch_53_54_a.sql to patch_54_55_a.sql, this is to copy release 53_54 patch to 54_55 patch for version, edit patch_54_55_a.sql, change version to 55.
+also make other patch sql to reflect schema change.
+
+Once we have a number of sql patch files, do schema patches by using script:
+
+The script is within ensembl folder: (in the core, not the variation)
+
+ensembl/misc-scripts/schema_patch.pl
+
+to run it, you should do something like:
+
+schema_patch.pl --host ens-staging --user ensadmin --pass ensembl --port 3306
+--pattern '%variation_55_%' --schema 55 --patch_variation_database
+--dry_run = 1 --interactive=0
+
+with the dry_run option you will check which pathces are going to be
+applied and which databases. When you are sure about the patches and
+databases, remove the --dry_run option
+
+
 _________________________________________________________________________
 The following is a list of command that to do each steps described above:
 _________________________________________________________________________
