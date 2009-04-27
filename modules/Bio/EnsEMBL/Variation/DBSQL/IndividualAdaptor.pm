@@ -315,7 +315,7 @@ sub get_display_strains{
     #and finally, get the others
     my $sth = $self->prepare(qq{SELECT name FROM sample WHERE display = ?});
     
-    $sth->bind_param(1, 'DISPLAY');
+    $sth->bind_param(1, 'DISPLAYABLE');
     $sth->execute;
     $sth->bind_columns(\$name);
 #    my $sth = $self->prepare(qq{SELECT meta_value from meta where meta_key = ?
