@@ -35,10 +35,10 @@ GetOptions(
 	   'target_dir=s' => \$target_dir,
 );
 
-#$input_dir ||= "tempin";
-#$output_dir ||= "tempout";
-$input_dir ||= "/lustre/work1/ensembl/yuan/SARA/LRG/input_dir";
-$output_dir ||= "/lustre/work1/ensembl/yuan/SARA/LRG/output_dir";
+$input_dir ||= "tempin";
+$output_dir ||= "tempout";
+#$input_dir ||= "/lustre/work1/ensembl/yuan/SARA/LRG/input_dir";
+#$output_dir ||= "/lustre/work1/ensembl/yuan/SARA/LRG/output_dir";
 $target_dir ||= "/lustre/work1/ensembl/yuan/SARA/human/ref_seq_hash";
 our $template_file = $template_file_name;
 our $in_file = $in_file_name;
@@ -220,13 +220,24 @@ while(<IN>) {
 
     # go through the exons again
     # this time we want coords relative to the coding region
+	my $prev_end;
+	
     while(my $start = shift @starts) {
 		my $end = shift @ends;
-	
-		$start -= $first_exon_start - 1;
-		$end -= $first_exon_start - 1;
-	
-		addExon($current, $start, $end);
+		my $newstart;
+		
+		if(defined $prev_end) {
+			$newstart = $prev_end + 1;
+			$end = $newstart + ($end - $start);
+		}
+		
+		else {
+			$newstart = ($start - $first_exon_start) + 1;
+			$end -= $first_exon_start - 1;
+		}
+		
+		addExon($current, $newstart, $end);
+		$prev_end = $end;
     }
 
     # add the cdna sequence
