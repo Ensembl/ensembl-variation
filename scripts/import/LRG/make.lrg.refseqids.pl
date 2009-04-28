@@ -35,10 +35,10 @@ GetOptions(
 	   'target_dir=s' => \$target_dir,
 );
 
-$input_dir ||= "tempin";
-$output_dir ||= "tempout";
-#$input_dir ||= "/lustre/work1/ensembl/yuan/SARA/LRG/input_dir";
-#$output_dir ||= "/lustre/work1/ensembl/yuan/SARA/LRG/output_dir";
+#$input_dir ||= "tempin";
+#$output_dir ||= "tempout";
+$input_dir ||= "/lustre/work1/ensembl/yuan/SARA/LRG/input_dir";
+$output_dir ||= "/lustre/work1/ensembl/yuan/SARA/LRG/output_dir";
 $target_dir ||= "/lustre/work1/ensembl/yuan/SARA/human/ref_seq_hash";
 our $template_file = $template_file_name;
 our $in_file = $in_file_name;
@@ -451,8 +451,8 @@ sub mapping {
 	
   else {
 	
-    my $name = "temp$$".$mapping_num++;
-    #my $name = "temp2540".$mapping_num++;
+    #my $name = "temp$$".$mapping_num++;
+    my $name = "temp23614".$mapping_num++;
     #my $name = "temp_will";
     my $input_file_name = $name.'.fa';
 		
@@ -861,33 +861,66 @@ sub get_annotations {
       }
     }
 
-    my $hslice = $sa->fetch_by_region('LRG',"$lrg_name");
-    foreach my $gene (@{$hslice->get_all_Genes()}){
+    my $lrg_slice = $sa->fetch_by_region('LRG',"$lrg_name");
+
+    my $min = 99999999;
+    my $max = -9999999;
+    my $chrom;
+    my $strand;
+
+    foreach my $segment (@{$lrg_slice->project('chromosome')}) {
+      my $from_start = $segment->from_start();
+      my $from_end    = $segment->from_end();
+      my $to_name    = $segment->to_Slice->seq_region_name();
+      $chrom = $to_name;
+
+      my $to_start    = $segment->to_Slice->start();
+      my $to_end    = $segment->to_Slice->end();
+      if($to_start > $max){
+	$max = $to_start;
+      }
+      if($to_start < $min){
+	$min = $to_start;
+      }
+      if($to_end > $max){
+	$max = $to_end;
+      }
+      if($to_end <  $min){
+	$min = $to_end;
+      }
+      my $ori        = $segment->to_Slice->strand();
+      $strand = $ori;   
+    
+      print "$from_start-$from_end  => $to_name $to_start-$to_end ($ori) \n";
+    }
+
+    foreach my $gene (@{$lrg_slice->get_all_Genes()}){
       print "gene_name is ",$gene->stable_id,"\n";
     }
-    print "q_seq from hslice is ",$hslice->start,'-'.$hslice->end,"\n";
-    print "length of q_seq is ",length($q_seq), " and length of hseq is ", length($hslice->seq),"\n";
+    print "q_seq from lrg_slice is ",$lrg_slice->start,'-'.$lrg_slice->end,"\n";
+    print "length of q_seq is ",length($q_seq), " and length of hseq is ", length($lrg_slice->seq),"\n";
     
-    if ($hslice->seq eq $q_seq) {
+    if ($lrg_slice->seq eq $q_seq) {
       print "hseq is same as q_seq\n";
     }
     else {
       print "hseq is different from q_seq\n";
       #print "q_seq is ",$q_seq,"\n";
-      #print "hseq is ",$hslice->seq,"\n";
+      #print "hseq is ",$lrg_slice->seq,"\n";
     }
 
-    my @genes = @{$sub_slice->get_all_Genes()};
+    my $ref_slice = $sa->fetch_by_region("chromosome",$chrom, $min, $max, $strand);
+    my @genes = @{$ref_slice->get_all_Genes()};
 	
-	foreach my $gene (@genes) {
-	  next unless $gene->biotype eq 'protein_coding';
+    foreach my $gene (@genes) {
+      next unless $gene->biotype eq 'protein_coding';
 		
       print "before transfprm g start-end ",$gene->start,'-',$gene->end,"\n";
       #my $new_gene = $gene->transform('LRG');
-      my $new_gene = $gene->transfer($hslice);
+      my $new_gene = $gene->transfer($lrg_slice);
       print "after transform g start-end ",$new_gene->start,'-',$new_gene->end,"\n" if $new_gene;
 	  
-	  my @new_nodes = @{get_gene_annotation($new_gene)};
+      my @new_nodes = @{get_gene_annotation($new_gene)};
 	  
       push @nodes, @new_nodes;
     }
