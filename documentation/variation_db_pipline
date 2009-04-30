@@ -25,7 +25,7 @@ The tables listed on the left column are generated in Ensembl variation database
 During the importing process, variation synonym table holds most information about subsnp, such as subsnp id, snp id, substrand reversed flag etc. which are used to produce other Ensembl tables, such as allele, genotype tables. When all the tables are generated, the final clean up process is used to drop unwanted tables/columns. During this clean up process, the information stored in variation synonym table is deleted because the subsnp information is not needed in the end.
 
 The scripts that are used to import data from dbSNP and post-processing are stored in cvs repository :
-http://cvs.sanger.ac.uk/cgi-bin/viewcvs.cgi/ensembl-variation/scripts/import/, and the database schema in http://cvs.sanger.ac.uk/cgi-bin/viewcvs.cgi/ensembl-variation/schema/.
+http://cvs.sanger.ac.uk/cgi-bin/viewvc.cgi/ensembl-variation/scripts/import/?root=ensembl, and the database schema in http://cvs.sanger.ac.uk/cgi-bin/viewvc.cgi/ensembl-variation/schema/?root=ensembl.
 
 Importing :
 
