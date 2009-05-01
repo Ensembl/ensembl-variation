@@ -271,7 +271,7 @@ sub map_weight{
 
   Example     : $vf->get_all_TranscriptVariations;
   Description : Getter a list with all the TranscriptVariations associated associated to the VariationFeature
-  Returntype  : ref to Bio::EnsEMBL::Variation::VariationFeature
+  Returntype  : ref to list of Bio::EnsEMBL::Variation::TranscriptVariation objects
   Exceptions  : None
   Caller      : general
   Status      : At Risk
