@@ -1,6 +1,6 @@
 #! /usr/local/bin/perl
 
-use lib '/nfs/acari/dr2/projects/src/ensembl/ensembl/modules';
+#use lib '/nfs/acari/dr2/projects/src/ensembl/ensembl/modules';
 #use lib '/nfs/acari/yuan/ensembl/src/ensembl/modules/Bio/EnsEMBL/DBSQL';
 use strict;
 use Getopt::Long;
@@ -35,6 +35,13 @@ my $dbCore = $cdb;
 #my $dbVar = $vdb->dbc;
 
 my $sa = $dbCore->get_SliceAdaptor();
+my $asma = Bio::EnsEMBL::Registry->get_adaptor($species,"core","assemblymapper");
+my $csa = Bio::EnsEMBL::Registry->get_adaptor($species,"core","coordsystem");
+
+
+
+
+
 #$input_dir ||= "/turing/mouse129_extra/yuan/LRG/input_dir";
 #$target_dir ||= "/turing/mouse129_extra/yuan/human";
 #$output_dir ||= "/turing/mouse129_extra/yuan/LRG/output_dir";
@@ -249,7 +256,11 @@ sub find_results {
 	my $sub_t_start = $t_start;
 	foreach my $count (sort {$a<=>$b} keys %q_seqs) {
 	  if ($q_seqs{$count} !~ /$t_seqs{$count}/i) {
-	    #next;
+	    #if there is a mismatch, we need to record the base based in query sequence
+            if ($q_strand==-1) {
+              reverse_comp(\$q_seqs{$count});
+              reverse_comp(\$t_seqs{$count});
+            }
 	    print "count is $count\n";
 	    $full_match =0;
 	    my $sub_t_end = $t_start + ($count -1) - 1;
@@ -271,8 +282,8 @@ sub find_results {
 	    }
 	
 	    ($tmp_q_start,$tmp_q_end) = ($tmp_q_end,$tmp_q_start) if($tmp_q_end<$tmp_q_start);
-	    push @pairs, [$type,$tmp_q_start,$tmp_q_end,$sub_t_start,$sub_t_end,$q_strand];
-
+	    push @pairs, [$type,$tmp_q_start,$tmp_q_end,$sub_t_start,$sub_t_end,$q_strand,uc($q_seqs{$count}),uc($t_seqs{$count})];
+            print "in mis-match,q_seq is $q_seqs{$count} and t_seq is $t_seqs{$count}\n";
 	    $sub_t_start = $sub_t_end+2;
 	  }
 	}
@@ -295,13 +306,26 @@ sub find_results {
 	push @pairs, [$type,$tmp_q_start,$tmp_q_end,$t_start,$new_t_start,$q_strand];
       }
       elsif ($type eq 'G') {
+        my $q_seq;
 	if ($q_strand ==1) {
 	  $new_q_start = $q_start + $query_match_length + 1;
+          $q_seq = substr($q_seqobj->seq,$q_start,$query_match_length);
+          $q_seq = ($q_seq) ? $q_seq : '-';
 	}
 	else {
 	  $new_q_start = $q_start - $query_match_length - 1;
+          $q_seq = substr($q_seqobj->seq,$new_q_start,$query_match_length);
+          #reverse_comp(\$q_seq) if $q_seq;#query seq keep same, change target seq
+          $q_seq = ($q_seq) ? $q_seq : '-';
+
 	}
 	$new_t_start = $t_start + $target_match_length +1;
+        my $t_seq = substr($slice->seq, $t_start, $target_match_length);
+        if ($q_strand ==-1) {
+          reverse_comp(\$t_seq) if $q_seq;
+        }
+        $t_seq = ($t_seq) ? $t_seq : '-';
+
 	if ($q_strand ==-1) {
 	  $tmp_q_start = $new_q_start+1;
 	  $tmp_q_end = $q_start-1;
@@ -311,9 +335,9 @@ sub find_results {
 	  $tmp_q_end = $new_q_start-1;
 	}
 	($tmp_q_start,$tmp_q_end) = ($tmp_q_end,$tmp_q_start) if($tmp_q_end<$tmp_q_start);
-	#push @pairs, [$type,$tmp_q_start,$tmp_q_end,$t_start+1,$new_t_start-1,$q_strand];
+	push @pairs, [$type,$tmp_q_start,$tmp_q_end,$t_start+1,$new_t_start-1,$q_strand,uc($q_seq),uc($t_seq)];
 
-	#print "in G, q_start is $q_start and q_end is $new_q_start and t_start is $t_start and t_end is $new_t_start\n";
+	print "in G, q_start is $q_start and q_end is $new_q_start and t_start is $t_start and t_end is $new_t_start and q_seq is $q_seq and t_seq is $t_seq\n";
       }
 
       $q_start = $new_q_start;
@@ -423,33 +447,91 @@ sub get_annotations {
       #}
 
       foreach  my $pair (sort {$a->[3]<=>$b->[3]} @$pairs) {
-	print "pairs are ",$pair->[0],'-',$pair->[1],'-',$pair->[2],'-',$pair->[3],'-',$pair->[4],"\n";
+	print "pairs are ",$pair->[0],'-',$pair->[1],'-',$pair->[2],'-',$pair->[3],'-',$pair->[4],'-',$pair->[5],'-',$pair->[6],'-',$pair->[7],"\n";
 
 	if ($pair->[0] eq 'DNA') {
 	  if ($pair->[2]-$pair->[1] == $pair->[4]-$pair->[3]) {
 	    $dbCore->dbc->do(qq{INSERT IGNORE INTO assembly(asm_seq_region_id,cmp_seq_region_id,asm_start,asm_end,cmp_start,cmp_end,ori)values($t_seq_region_id,$q_seq_region_id,$pair->[3],$pair->[4],$pair->[1],$pair->[2],$q_strand)});
 	  }
 	  else {
+
 	    die("distance between query and target is not the same, there is a indel");
 	  }
 	}
       }
 
-      my $hslice = $sa->fetch_by_region('LRG',"$lrg_name");
-      foreach my $gene (@{$hslice->get_all_Genes()}){
-	print "gene_name is ",$gene->stable_id,"\n";
-      }
-      print "q_seq from hslice is ",$hslice->start,'-'.$hslice->end,"\n";
-      print "length of q_seq is ",length($q_seq), " and length of hseq is ", length($hslice->seq),"\n";
+      my $cs1 = $csa->fetch_by_name("Chromosome","NCBI36");
+      my $cs2 = $csa->fetch_by_name("LRG");
 
-      if ($hslice->seq eq $q_seq) {
-	print "hseq is same as q_seq\n";
-      }
-      else {
-	print "hseq is different from q_seq\n";
-	print "q_seq is ",$q_seq,"\n";
-	print "hseq is ",$hslice->seq,"\n";
-      }
+
+      my $asm = $asma->fetch_by_CoordSystems($cs1,$cs2);
+
+      #foreach my $name ($lrg_name){
+	my $asm = $asma->fetch_by_CoordSystems($cs1,$cs2);
+	$asm->flush;
+	my $lrg_slice = $sa->fetch_by_region("LRG",$lrg_name);
+  
+	print "$name start = ".$lrg_slice->start."\tend= ".$lrg_slice->end."\n";
+  
+	#foreach my $gene (@{$lrg_slice->get_all_Genes}){
+	#  print "\tLRG\t".$gene->stable_id."\n";
+	#}
+
+      ###needs projection to make transfer to work!!!
+
+	my $min = 99999999;
+	my $max = -9999999;
+	my $chrom;
+	my $strand;
+
+	foreach my $segment (@{$lrg_slice->project('chromosome')}) {
+	  my $from_start = $segment->from_start();
+	  my $from_end    = $segment->from_end();
+	  my $to_name    = $segment->to_Slice->seq_region_name();
+	  $chrom = $to_name;
+
+	  my $to_start    = $segment->to_Slice->start();
+	  my $to_end    = $segment->to_Slice->end();
+	  if($to_start > $max){
+	    $max = $to_start;
+	  }
+	  if($to_start < $min){
+	    $min = $to_start;
+	  }
+	  if($to_end > $max){
+	    $max = $to_end;
+	  }
+	  if($to_end <  $min){
+	    $min = $to_end;
+	  }
+	  my $ori        = $segment->to_Slice->strand();
+	  $strand = $ori;   
+    
+	  print "$from_start-$from_end  => $to_name $to_start-$to_end ($ori) \n";
+	}
+	
+	print "################\n";
+	print "STUFF STARTS NOW\n";
+	print "################\n";
+
+
+	##initial run, there should be only one LRG covering the region
+#       my $hslice = $sa->fetch_by_region('LRG',"$lrg_name");
+#       print "hslice_start ",$hslice->start," and hslice_end ",$hslice->end,"\n";
+#       foreach my $gene (@{$hslice->get_all_Genes()}){
+# 	print "gene_name is ",$gene->stable_id,"\n";
+#       }
+#       print "q_seq from hslice is ",$hslice->start,'-'.$hslice->end,"\n";
+#       print "length of q_seq is ",length($q_seq), " and length of hseq is ", length($hslice->seq),"\n";
+
+#       if ($hslice->seq eq $q_seq) {
+# 	print "hseq is same as q_seq\n";
+#       }
+#       else {
+# 	print "hseq is different from q_seq\n";
+# 	print "q_seq is ",$q_seq,"\n";
+# 	print "hseq is ",$hslice->seq,"\n";
+#       }
 
 =head
       my $msc = Bio::EnsEMBL::MappedSliceContainer->new(
@@ -513,17 +595,22 @@ sub get_annotations {
       }
 =cut
 
+        #my $min = 45616138;
+        #my $max = 45638999;
+        #my $strand = -1;
+        #my $chrom = 17;
+        my $slice = $sa->fetch_by_region("chromosome",$chrom, $min, $max, $strand);
+	print "Slice ".$slice->seq_region_name."\t".$slice->start."\t".$slice->end."\n";
+	foreach my $gene (@{$slice->get_all_Genes}){
 
-
-
-      my @genes = @{$sub_slice->get_all_Genes()};
-      foreach my $gene (@genes) {
+      #my @genes = @{$sub_slice->get_all_Genes()};
+      #foreach my $gene (@genes) {
 	my $num_exons = 0;
 	my $num_trans = 0;
 	
 	print "before transfprm g start-end ",$gene->start,'-',$gene->end,"\n";
 	#my $new_gene = $gene->transform('LRG');
-	my $new_gene = $gene->transfer($hslice);
+	my $new_gene = $gene->transfer($lrg_slice);
 	print "after transform g start-end ",$new_gene->start,'-',$new_gene->end,"\n" if $new_gene;
 	my @transcripts = @{$new_gene->get_all_Transcripts()};
 	print "trs start-end ",$transcripts[0]->start,'-',$transcripts[0]->end,"\n" if $transcripts[0];
@@ -555,6 +642,6 @@ sub get_annotations {
     }
   }
 }
-
+#}
 
 
