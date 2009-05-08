@@ -462,8 +462,8 @@ sub mapping {
 	
   else {
 	
-    #my $name = "temp$$".$mapping_num++;
-    my $name = "temp23614".$mapping_num++;
+    my $name = "temp$$".$mapping_num++;
+    #my $name = "temp23614".$mapping_num++;
     #my $name = "temp_will";
     my $input_file_name = $name.'.fa';
 		
@@ -666,7 +666,7 @@ sub make_feature_pair {
       #print "q_seq_is $q_seq\n";
       #print "t_seq is $t_seq\n";
       my $q_count = 1;
-      my $t_count = 1;my ($q_seq);
+      my $t_count = 1;
             
 
       my %q_seqs = map {$q_count++,$_} split '', $q_seq;

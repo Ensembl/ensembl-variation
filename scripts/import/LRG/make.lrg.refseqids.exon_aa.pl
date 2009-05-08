@@ -46,8 +46,8 @@ our $mapping_num = 1;
 my %rec_seq;
 
 # get registry and a gene adaptor
-#Bio::EnsEMBL::Registry->load_all( $registry_file );
-Bio::EnsEMBL::Registry->load_registry_from_db(-host => 'ensembldb.ensembl.org',-user => 'anonymous');
+Bio::EnsEMBL::Registry->load_all( $registry_file );
+#Bio::EnsEMBL::Registry->load_registry_from_db(-host => 'ensembldb.ensembl.org',-user => 'anonymous');
 
 my $species = 'human';
 my $cdb = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'core');
@@ -367,7 +367,6 @@ sub addExon {
 
 sub mapping {
   my $sequence = shift;
-
   my $seq_length = length($sequence);
 	
   print "LENGTH $seq_length\n";
@@ -404,7 +403,7 @@ sub mapping {
 		$full_match=0 if ($map->identical_matches==0);
 		# sort by query start
 		foreach my $pair(sort {$a->[2] <=> $b->[2]} @{$map->type}) {
-			#print "full_match is $full_match and ",$map->identical_matches,'-',$pair->[0],'-',$pair->[1],'-',$pair->[2],'-',$pair-[3],'-',$pair->[4],'-',$pair->[5],"\n";
+			print "full_match is $full_match and ",$map->identical_matches,'-',$pair->[0],'-',$pair->[1],'-',$pair->[2],'-',$pair-[3],'-',$pair->[4],'-',$pair->[5],'-',$pair->[6],'-',$pair->[7],"\n";
 			# add the previous DNA end to each query coordinate
 			# since we split up the query sequence
 			$pair->[1] += $prev_end;
@@ -456,16 +455,16 @@ sub mapping {
     # add the pairs onto the joined map
     $main_map->type(\@joined_pairs);
 
-    #foreach my $pair (@{$main_map->type}) {
-    #  print "checking DNA bit : ",$pair->[0],'-',$pair->[1],'-',$pair->[2],'-',$pair->[3],'-',$pair->[4],"\n";
-    #}
+    foreach my $pair (@{$main_map->type}) {
+      print "checking DNA bit : ",$pair->[0],'-',$pair->[1],'-',$pair->[2],'-',$pair->[3],'-',$pair->[4],'-',$pair->[5],'-',$pair->[6],'-',$pair->[7],"\n";
+    }
     return $main_map;
   }
 	
   else {
 	
     my $name = "temp$$".$mapping_num++;
-    #my $name = "temp23614".$mapping_num++;
+    #my $name = "temp214871".$mapping_num++;
     #my $name = "temp_will";
     my $input_file_name = $name.'.fa';
 		
@@ -668,7 +667,7 @@ sub make_feature_pair {
       #print "q_seq_is $q_seq\n";
       #print "t_seq is $t_seq\n";
       my $q_count = 1;
-      my $t_count = 1;my ($q_seq);
+      my $t_count = 1;
             
 
       my %q_seqs = map {$q_count++,$_} split '', $q_seq;
@@ -678,7 +677,7 @@ sub make_feature_pair {
       my $sub_t_start = $t_start;
       foreach my $count (sort {$a<=>$b} keys %q_seqs) {
 	if ($q_seqs{$count} !~ /$t_seqs{$count}/i) {
-	  #if there is a mismatch, we need to record the base based in query sequence
+	  #if there is a mismatch, we need to record the base based on query sequence
           if ($q_strand==-1) {
             reverse_comp(\$q_seqs{$count});
             reverse_comp(\$t_seqs{$count});
@@ -841,8 +840,8 @@ sub get_annotations {
   }
   else {
     my $csa = $dbCore->get_CoordSystemAdaptor();
-    my $cs = $csa->fetch_all_by_name('LRG');
-    my $cs_id = $cs->[0]->dbID();
+    my $cs = $csa->fetch_by_name('LRG');
+    my $cs_id = $cs->dbID();
     my $q_seq_region_id;
     my $q_seq_length = length($q_seq);
     my $t_seq_region_id = $sa->get_seq_region_id($slice);
