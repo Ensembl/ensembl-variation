@@ -31,7 +31,7 @@ print "seed is $seed\n";
 
 my $output_file = "ssaha2_output";
 my $queue_long = "-q long -M7000000 -R'select[mem>7000] rusage[mem=7000]'";
-my $queue_normal = "-q normal -M4000000 -R'select[mem>4000] rusage[mem=4000]'"; ##for new farm
+my $queue_normal = "-q normal -M5000000 -R'select[mem>5000] rusage[mem=5000]'"; ##for new farm
 
 
 #my $queue = $queue_long;
@@ -40,16 +40,13 @@ my $queue = $queue_normal;
 my (@chr_names, %snp_pos, %input_length, %done);
 
 run_ssaha2() if $run;
-#parse_ssaha2() if $parse;
+parse_ssaha2() if $parse;
 
 sub run_ssaha2 {
 
   my ($subj_dir,$tar_file) = $target_file =~ /^(.*)\/(.*)$/;
-  my ($subname) = $tar_file =~ /^(.*)\..*$/;
+  my ($subname) = $tar_file =~ /^(.*)\.*.*$/;
   my $subject = "$subj_dir/$subname";
-  #my @tars = split /\//, $target_file;
-  #my $tar_file = $tars[-1]; 
-  #my ($subject) = $tar_file =~ /^(.*)\..*$/;
   print "tar_file is $tar_file and subject is $subject and target_file is $target_file\n";
   #print "Submitting ssaha2Build job...\n";
   #my $ssaha2build = "bsub $queue_long -J 'ssaha2build' -o $target_file\_out /nfs/acari/yuan/ensembl/src/ensembl-variation/scripts/ssahaSNP/ssaha2/ssaha2_v1.0.9_x86_64/ssaha2Build -save $subject $target_file";
@@ -63,9 +60,34 @@ sub run_ssaha2 {
     for (my $start=$start; $start<=$end; $start++) {
       my $input = "$input_dir/$start\_query_seq" if $input_dir;
       next if (-z "$input");
-      if (! -e "$output_dir/ssaha_out_$start") {
+      if (! -e "$output_dir/ssaha_out_$start") {#check for ssaha2_output is exists or not
 	print "Submitting ssaha2 job...\n";
-	bsub_ssaha_job ($start,$input,$queue,$target_file);
+	bsub_ssaha_job ($start,$end,$input,$queue,$target_file);
+      }
+    }
+  }
+  else {
+    while (<$input_dir/*fastq>) {
+      my $input = $_;
+      my ($input_file) = $input =~ /^.*\/(.*)$/;
+
+      my $num = `grep "^\@" $input |grep -v -c "[?%*]"`;
+      $num =~ s/^\s+|\s+$//g;
+      print "num is $num again\n";
+
+      my $n;
+      #my $size = $num;#this is run whole file in one go
+      my $size = 50000;#this is to split file in this size
+      my $count;
+
+      for ($n = 1;$n<=$num;$n+=$size) {
+        my $end = $n+$size-1;
+        $end = $num if ($end > $num);
+        $count++;
+        if (! -e "$output_dir/ssaha_out_$input_file\:$n") {#check for ssaha2_output is exists or not
+	  print "Submitting ssaha2 job $count ...\n";
+	  bsub_ssaha_job ("$input_file\:$n",$end,$input,$queue,$target_file);
+	}
       }
     }
   }
@@ -88,23 +110,31 @@ sub parse_ssaha2 {
 
 sub bsub_ssaha_job {
   
-  my ($start, $input_file, $queue, $target_file) = @_ ;
+  my ($start, $end, $input_file, $queue, $target_file) = @_ ;
 
+  my ($input_file_name,$n) = split /\:/, $start if $start =~ /\:/;
+  
   my ($subj_dir,$tar_file) = $target_file =~ /^(.*)\/(.*)$/;
-  my ($subname) = $tar_file =~ /^(.*)\..*$/;
+  my ($subname) = $tar_file =~ /^(.*)\.*.*$/;
   my $subject = "$subj_dir/$subname";
-  #my @tars = split /\//, $target_file;
-  #my $tar_file = $tars[-1];
-  #my ($subject) = $tar_file =~ /^(.*)\..*$/;
 
   my ($ssaha_command, $count);
 
   print "target_file is $target_file\n";
 
+  #for normal mapping
   $ssaha_command = "/nfs/acari/yuan/ensembl/src/ensembl-variation/scripts/ssahaSNP/ssaha2/ssaha2_v1.0.9_x86_64/ssaha2 -align 0 -kmer 12 -seeds $seed -cut 5000 -output vulgar -depth 5 -best 1 -tags 1 -save $subject $input_file";
+  #for abi reads
+  #$ssaha_command = "/nfs/acari/yuan/ensembl/src/ensembl-variation/scripts/ssahaSNP/ssaha2/pileup_v0.5/ssaha2/ssaha2-2.3_x86_64 -start $n -end $end -seeds 15 -score 250 -tags 1 -best 1 -output cigar -name -memory 300 -cut 5000 -save $subject $input_file";
+  #for 454 reads
+  #$ssaha_command = "/nfs/acari/yuan/ensembl/src/ensembl-variation/scripts/ssahaSNP/ssaha2/pileup_v0.5/ssaha2/ssaha2-2.3_x86_64 -start $n -end $end -454 -seeds 5 -score 30 -kmer 13 -skip 4 -best 1 -output cigar -name -save $subject $input_file";
+  #for watson reads
+  #$ssaha_command = "/nfs/acari/yuan/ensembl/src/ensembl-variation/scripts/ssahaSNP/ssaha2/pileup_v0.5/ssaha2/ssaha2-2.3_x86_64 -start $n -end $end -seeds 5 -cut 5000 -memory 300 -best 1 -output cigar -name -save $subject $input_file";
+  #for sam output
+  #$ssaha_command = "/nfs/acari/yuan/ensembl/src/ensembl-variation/scripts/ssahaSNP/ssaha2/ssaha2_x86_64.bin -start $n -end $end -seeds 15 -score 250 -tags 1 -best 1 -output sam -name -memory 300 -cut 5000 -save $subject $input_file";
   print "job_num is ", ++$count, " and start is $start and out is ssaha_out_$start\n";
   my $call = "bsub -J $input_dir\_ssaha_job_$start $queue -e $output_dir/error_ssaha_$start -o $output_dir/ssaha_out_$start ";
-  #$call .= "-f '$target_file\.body > /tmp/$tar_file\.body' -f '$target_file\.size > /tmp/$tar_file\.size' -f '$target_file\.name > /tmp/$tar_file\.name' -f '$target_file\.head > /tmp/$tar_file\.head' -f '$target_file\.base > /tmp/$tar_file\.base'";
+
   $call .= " $ssaha_command";
   
   system ($call);
@@ -141,6 +171,8 @@ sub parse_ssaha2_out {
     my $snp_posf = length($fseq)+1;
     my $snp_posl = length($lseq)+1;
     my $tot_length = $snp_posf + $snp_posl-2;
+    my $tot_length = length($rec_seq{$name});
+    $snp_pos{$name} = "$snp_posf\_$snp_posl";
     $snp_pos{$name} = "$snp_posf\_$snp_posl";
     $input_length{$name} = $tot_length;
   }
@@ -173,23 +205,28 @@ sub parse_ssaha2_out {
   foreach my $q_id (keys %rec_find) {
     my @h = sort {$b->{'score'}<=>$a->{'score'}} @{$rec_find{$q_id}};
     #print "There are ",scalar @h," hits and q_id is $q_id\n";
+    
     if (scalar @h==1) {
       find_results($h[0]);
     }
     elsif ($h[0]->{'score'} > $h[1]->{'score'} and @h=>2) {
       find_results($h[0]);
     }
-    elsif ($h[0]->{'score'} = $h[1]->{'score'} and @h==2) {
+    elsif ($h[0]->{'score'} == $h[1]->{'score'} and @h==2) {
       find_results($h[0],$h[1]);
     }
     elsif ($h[1]->{'score'} > $h[2]->{'score'} and @h=>3) {
       find_results($h[0],$h[1]);
     }
-    elsif ($h[1]->{'score'} = $h[2]->{'score'} and @h==3) {
+    elsif ($h[1]->{'score'} == $h[2]->{'score'} and @h==3) {
       find_results($h[0],$h[1],$h[2]);
     }
     elsif ($h[2]->{'score'} > $h[3]->{'score'} and @h=>4) {
       find_results($h[0],$h[1],$h[2]);
+    }
+    #for MHC region
+    elsif (($h[3]->{'t_id'}=~/6|MHC/ and $h[3]->{'score'} <= $h[2]->{'score'} and @h==4) or ($h[4] and $h[4]->{'t_id'}=~/6|MHC/ and $h[4]->{'score'} <= $h[2]->{'score'} and @h==5) or ($h[5] and $h[5]->{'t_id'}=~/6|MHC/ and $h[5]->{'score'} <= $h[2]->{'score'} and @h==6) or ($h[6] and $h[6]->{'t_id'}=~/6|MHC/ and $h[6]->{'score'} <= $h[2]->{'score'} and @h==7) or ($h[7] and $h[7]->{'t_id'}=~/6|MHC/ and $h[7]->{'score'} <= $h[2]->{'score'} and @h ==8)) {
+      find_results(@h);
     }
     else {
       #needs to be written to the failed_variation table
@@ -215,9 +252,9 @@ sub parse_ssaha2_out {
 
 sub find_results {
 
-  my ($h1,$h2,$h3) = @_;
+  my (@h) = @_;
 
-  LINE : foreach my $h ($h1,$h2,$h3) {
+  LINE : foreach my $h (@h) {
     my $q_id = $h->{'q_id'};
     my $q_start = $h->{'q_start'};
     my $q_end = $h->{'q_end'};
@@ -283,7 +320,7 @@ sub find_results {
       if ($snp_t_start && $snp_t_end && $q_strand ) {
 	#print "$snp_t_start && $snp_t_end && $q_strand\n";
         my $final_score = $score/$input_length{$q_id};
-	print OUT "MORE_HITS\t" if ($h2);
+	#print OUT "MORE_HITS\t" if ($h[2]);
 	print OUT "$q_id\t$t_id\t$snp_t_start\t$snp_t_end\t$q_strand\t$final_score\n";
 	$done{$q_id}=1;
 	last;
