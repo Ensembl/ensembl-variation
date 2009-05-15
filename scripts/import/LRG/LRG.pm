@@ -434,11 +434,57 @@ sub findOrAdd() {
 sub printNode {
     my $self = shift;
     
+	# hash for putting key/value pairs in a nice order in the output
+	my %priority = (
+		
+		# mapping
+		'chromosome' => 1,
+		'strand' => 2,
+		'lrg_start' => 3,
+		'lrg_end' => 4,
+		'start' => 5,
+		'end' => 6,
+		'lrg_sequence' => 7,
+		'ref_sequence' => 8,
+		
+		# gene
+		'name' => 1,
+		
+		# other
+		'source' => 1,
+		'accession' => 2,
+		'transcript_id' => 2,
+		'codon_start' => 3,
+		'codon_end' => 4,
+	);
+
+	my @data_array;
+	
+	# put key/value pairs in a nice order
+	if(scalar keys %{$self->data}) {
+		
+		my @key_order;
+		
+		# we only need to order when there is more than one set
+		if(scalar keys %{$self->data} > 1) {
+			@key_order = sort {$priority{$a} <=> $priority{$b}} keys %{$self->data};
+		}
+		
+		else {
+			@key_order =  keys %{$self->data};
+		}
+		
+		# put the data into a hash (key, value, key, value etc.)
+		foreach my $key(@key_order) {
+			push @data_array, ($key, $self->data->{$key});
+		}
+	}
+	
     # if this is an empty tag
     # e.g. <mytag data1="value" />
     if($self->empty) {
         if(scalar keys %{$self->data}) {
-	    	$self->{'xml'}->emptyTag($self->name, %{$self->data});
+	    	$self->{'xml'}->emptyTag($self->name, @data_array);#%{$self->data});
 		}
 
 		else {
@@ -449,7 +495,7 @@ sub printNode {
     # if there is data for this node print like
     # e.g. <mytag data1="value">
     elsif(scalar keys %{$self->data}) {
-		$self->{'xml'}->startTag($self->name, %{$self->data});
+		$self->{'xml'}->startTag($self->name, @data_array);
     }
 
     # otherwise just open the bare tag
