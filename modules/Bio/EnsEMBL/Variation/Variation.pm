@@ -727,26 +727,31 @@ sub derived_allele_frequency{
   }
   my $ancestral_allele = $self->ancestral_allele();
   if (defined $ancestral_allele){
-      #get reference allele
-      my $vf_adaptor = $self->adaptor->db->get_VariationFeatureAdaptor();
-      my $vf = shift @{$vf_adaptor->fetch_all_by_Variation($self)};
-      my $ref_freq;
-      #get allele in population
-      my $alleles = $self->get_all_Alleles();
-      foreach my $allele (@{$alleles}){
+	#get reference allele
+	my $vf_adaptor = $self->adaptor->db->get_VariationFeatureAdaptor();
+	my $vf = shift @{$vf_adaptor->fetch_all_by_Variation($self)};
+	my $ref_freq;
+	#get allele in population
+	my $alleles = $self->get_all_Alleles();
+	
+	foreach my $allele (@{$alleles}){
 	  next unless defined $allele->population;
+	  
 	  if (($allele->allele eq $vf->ref_allele_string) and ($allele->population->name eq $population->name)){
-	      $ref_freq = $allele->frequency;
+		$ref_freq = $allele->frequency;
 	  }
-      }
-      if ($ancestral_allele eq $vf->ref_allele_string){
-	  $daf = 1 - $ref_freq
-      }
-      elsif ($ancestral_allele ne $vf->ref_allele_string){
-	  $daf = $ref_freq;
-      }
+	}
+	
+	if(defined $ref_freq) {
+	  if ($ancestral_allele eq $vf->ref_allele_string){
+		$daf = 1 - $ref_freq
+	  }
+	  elsif ($ancestral_allele ne $vf->ref_allele_string){
+		$daf = $ref_freq;
+	  }
+	}
   }
-     
+  
   return $daf;
 }
 
