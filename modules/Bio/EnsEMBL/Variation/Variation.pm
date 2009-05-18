@@ -734,6 +734,7 @@ sub derived_allele_frequency{
       #get allele in population
       my $alleles = $self->get_all_Alleles();
       foreach my $allele (@{$alleles}){
+	  next unless defined $allele->population;
 	  if (($allele->allele eq $vf->ref_allele_string) and ($allele->population->name eq $population->name)){
 	      $ref_freq = $allele->frequency;
 	  }
