@@ -145,14 +145,17 @@ while(<IN>) {
 	my $cdna_seq = $root->pfetch($data{'cdna'});
 	my $prot_seq = $root->pfetch($data{'protein'});
 	
+	# add the cdna node and cdna sequence
+    $trans_node->addNode('cdna')->addNode('sequence')->content($cdna_seq);
+	
     # add coding region node
     $current = $trans_node->addNode('coding_region');
 
     # add the translation node and the protein sequence
-    $current->addNode('cdna')->addNode('sequence')->content($cdna_seq);
-	
-	# add the cdna node and cdna sequence
 	$current->addNode('translation')->addNode('sequence')->content($prot_seq);
+	
+	
+	$current = $trans_node;
 	
 	# now work out where and what frame the AA sequence starts in the cDNA
 	my $seq_obj = Bio::Seq->new(-name => 'cdna', -seq => $cdna_seq);
@@ -254,8 +257,8 @@ while(<IN>) {
 			$cds_end = $end - ($first_exon_start - 1);
 		}
 		
-		$exon->addNode('cds_start')->content($cds_start);
-		$exon->addNode('cds_end')->content($cds_end);
+		$exon->addNode('cdna_start')->content($cds_start);
+		$exon->addNode('cdna_end')->content($cds_end);
 		
 		
 		### EXON IN AA COORDS
@@ -283,6 +286,8 @@ while(<IN>) {
 		$prev_cds_end = $cds_end; 
     }
 	
+	$current = $trans_node->findNode('coding_region');
+	
     # get coords for the coding region relative to the genomic sequence - relies on Ensembl
     my $temp = $current->addNode('cds_end');
 	$temp->content($last_exon_end - (length($total_exon_seq) - $trans->cdna_coding_end));
@@ -298,42 +303,92 @@ while(<IN>) {
     # UPDATABLE ANNOTATION SECTION #
     ################################
     
-	$current = $root->findOrAdd('updatable_annotation/mapping');
-
-	print "Starting mapping\n";
-	
-	substr($genomic_sequence, 50, 3) = "AAA";
+	$current = $root->findOrAdd('updatable_annotation/annotation_set/mapping');
 
 	my $mapping = mapping($genomic_sequence);
 	
-	#print "DUMPY: ", Dumper($mapping), "\n";
+	my (@dna_pairs, @match_pairs, @mis_pairs);
 	
-	foreach my $pair(@{$mapping->type}) {
-		print "@{$pair}\n";
+	foreach my $pair(sort {$a->[1] <=> $b->[1]} @{$mapping->type}) {
 		
-		next unless $pair->[0] eq 'M';
-		
-		# switch chromosome start/end if on negative strand
-		if($pair->[5] < 0 && $pair->[3] < $pair->[4]) {
-			($pair->[3], $pair->[4]) = ($pair->[4], $pair->[3]);
+		if($pair->[0] eq 'DNA') {
+			push @dna_pairs, $pair;
 		}
 		
-		$current->addEmptyNode(
-			'align',
-			{
-				'chromosome' => $mapping->hseqname,
-				'start' => $pair->[3],
-				'end' => $pair->[4],
-				'lrg_start' => $pair->[1],
-				'lrg_end' => $pair->[2],
-				'strand' => $pair->[5],
-			}
-		);
+		elsif($pair->[6].$pair->[7]) {
+			push @mis_pairs, $pair;
+		}
+		
+		else {
+			push @match_pairs, $pair
+		}
+	}
+	
+	foreach my $pair(@dna_pairs, @match_pairs, @mis_pairs) {
+		
+		my ($l_s, $l_e, $c_s, $c_e);
+		
+		($l_s, $l_e, $c_s, $c_e) = ($pair->[1], $pair->[2], $pair->[3], $pair->[4]);
+		
+		# switch chromosome start/end if on negative strand
+		if($pair->[5] < 0 && $c_s < $c_e) {
+			($c_s, $c_e) = ($c_e, $c_s);
+		}
+		
+		# switch LRG start/end if needed - start should _always_ be less than end since LRG-centric
+		($l_s, $l_e) = ($l_e, $l_s) if $l_s > $l_e;
+		
+		# DNA pair - whole alignment
+		if($pair->[0] eq 'DNA') {
+			my $temp = $current->addEmptyNode(
+				'mapping_span',
+				{
+					'chromosome' => $mapping->hseqname,
+					'start' => ($c_s < $c_e ? $c_s : $c_e),
+					'end' => ($c_s < $c_e ? $c_e : $c_s),
+				}
+			);
+			
+			# move it to first in the mapping element
+			$temp->position(0);
+		}
+		
+		# mismatch pair
+		elsif($pair->[6].$pair->[7] =~ /.+/) {
+			$current->addEmptyNode(
+				'mismatch',
+				{
+					'chromosome' => $mapping->hseqname,
+					'start' => $c_s,
+					'end' => $c_e,
+					'lrg_start' => $l_s,
+					'lrg_end' => $l_e,
+					'strand' => $pair->[5],
+					'lrg_sequence' => $pair->[6],
+					'ref_sequence' => $pair->[7],
+				}
+			);
+		}
+		
+		# match pair
+		else {
+			$current->addEmptyNode(
+				'align',
+				{
+					'chromosome' => $mapping->hseqname,
+					'start' => $c_s,
+					'end' => $c_e,
+					'lrg_start' => $l_s,
+					'lrg_end' => $l_e,
+					'strand' => $pair->[5],
+				}
+			);
+		}
 	}
 	
 	
 	my @feature_nodes = @{get_annotations($mapping,$genomic_sequence)};
-	$current = $root->findOrAdd('updatable_annotation/features');
+	$current = $root->findOrAdd('updatable_annotation/annotation_set/features');
 	
     foreach my $feature(@feature_nodes) {
 		$current->addExisting($feature);
@@ -345,25 +400,6 @@ while(<IN>) {
 
 close IN;
 
-
-sub addExon {
-    my ($current, $start, $end, $number) = @_;
-    my $exon;
-
-    if(defined $number) {
-		$exon = $current->addNode('exon', {'lrg_number' => $number});
-    }
-
-    else {
-		$exon = $current->addNode('exon');
-		$exon->data({'lrg_number' => $exon->position + 1});
-    }
-
-    $exon->addNode('start')->content($start);
-    $exon->addNode('end')->content($end);
-
-    return $exon;
-}
 
 sub mapping {
   my $sequence = shift;
@@ -378,7 +414,6 @@ sub mapping {
     my $current_start = 0;
 		
     my @maps = ();
-    my @pairs = ();
 	
     while($current_start < $seq_length) {
 			
@@ -388,22 +423,30 @@ sub mapping {
 		$split_size = 2 * $split_size;
       }
 			
-      print "Mapping from $current_start to ", $current_start + $split_size, "\n";
+      print "\nMapping from $current_start to ", $current_start + $split_size, "\n";
       push @maps, mapping(substr($sequence, $current_start, $split_size));
 			
       $current_start += $split_size;
     }
+	
+	print "\n>>> Done running ssaha\n";
 
 	my $prev_end = 0;
-	my @dna_pairs;
-        my $full_match =1;
+	my @dna_pairs = ();
+    my @pairs = ();
+	my @mis_pairs = ();
+    
+	my $full_match = 1;
 
 	# get all pairs from all maps into arrays
 	foreach my $map(@maps) {
-		$full_match=0 if ($map->identical_matches==0);
+		
+		$full_match = 0 if ($map->identical_matches == 0);
+		
 		# sort by query start
 		foreach my $pair(sort {$a->[2] <=> $b->[2]} @{$map->type}) {
-			print "full_match is $full_match and ",$map->identical_matches,'-',$pair->[0],'-',$pair->[1],'-',$pair->[2],'-',$pair-[3],'-',$pair->[4],'-',$pair->[5],'-',$pair->[6],'-',$pair->[7],"\n";
+			print "full_match is $full_match and ",$map->identical_matches,'-',$pair->[0],'-',$pair->[1],'-',$pair->[2],'-',$pair->[3],'-',$pair->[4],'-',$pair->[5],'-',$pair->[6],'-',$pair->[7],"\n";
+			
 			# add the previous DNA end to each query coordinate
 			# since we split up the query sequence
 			$pair->[1] += $prev_end;
@@ -412,6 +455,11 @@ sub mapping {
 			# put the DNA pairs in a separate array
 			if($pair->[0] eq 'DNA') {
 				push @dna_pairs, $pair;
+			}
+			
+			# put mismatch pairs in the @mis_pairs array
+			elsif($pair->[6].$pair->[7] =~ /.+/) {
+				push @mis_pairs, $pair;
 			}
 			
 			# put the match pairs in the @pairs array
@@ -425,45 +473,48 @@ sub mapping {
 	}
 	
 	# now join the pairs
-	my @joined_pairs = (@{join_pairs(\@pairs)}, @{join_pairs(\@dna_pairs)});
-	
-	
+	my @joined_pairs = (@{join_pairs(\@pairs)}, @{join_pairs(\@mis_pairs)}, @{join_pairs(\@dna_pairs)});
 	
 	# join the maps
-        my $main_map = shift @maps;
-		
-        my $prev_q_end = $main_map->end;
-		
-        foreach my $map(@maps) {
-	  if($map->hend < $main_map->hend && $map->hstart < $main_map->hstart) {
-		$main_map->hstart($map->hstart);
-	  }
-	  
-	  else {
-		$main_map->hend($map->hend);
-	  }
+	my $main_map = shift @maps;
 	
-	  $main_map->end( $map->end + $prev_q_end);
+	my $prev_q_end = $main_map->end;
+	
+	foreach my $map(@maps) {
+		if($map->hend < $main_map->hend && $map->hstart < $main_map->hstart) {
+		  $main_map->hstart($map->hstart);
+		}
 		
-	  $prev_q_end = $main_map->end;
+		else {
+		  $main_map->hend($map->hend);
+		}
+	  
+		$main_map->end( $map->end + $prev_q_end);
+		  
+		$prev_q_end = $main_map->end;
 	}
+	
     $main_map->identical_matches($full_match);
     my $seqname = $main_map->seqname;
     chop($seqname);
     $main_map->seqname($seqname);
-    print "main_map is ",$main_map->seqname,'-',$main_map->hseqname,'-',$main_map->start,'-',$main_map->end,'-',$main_map->hstart,'-',$main_map->hend,'-',$main_map->identical_matches,"\n";
-    # add the pairs onto the joined map
+    
+	print "main_map is ",$main_map->seqname,'-',$main_map->hseqname,'-',$main_map->start,'-',$main_map->end,'-',$main_map->hstart,'-',$main_map->hend,'-',$main_map->identical_matches,"\n";
+    
+	# add the pairs onto the joined map
     $main_map->type(\@joined_pairs);
 
     foreach my $pair (@{$main_map->type}) {
       print "checking DNA bit : ",$pair->[0],'-',$pair->[1],'-',$pair->[2],'-',$pair->[3],'-',$pair->[4],'-',$pair->[5],'-',$pair->[6],'-',$pair->[7],"\n";
     }
+	
     return $main_map;
   }
 	
   else {
 	
     my $name = "temp$$".$mapping_num++;
+	#my $name = "temp7563".$mapping_num++;
     #my $name = "temp214871".$mapping_num++;
     #my $name = "temp_will";
     my $input_file_name = $name.'.fa';
@@ -512,6 +563,10 @@ sub join_pairs {
 				
 				# copy this pair's query end to prev_pair
 				$prev_pair->[2] = $pair->[2];
+				
+				# add any bases that were in a mismatch pair
+				$prev_pair->[6] .= $pair->[6];
+				$prev_pair->[7] .= $pair->[7];
 				
 				# do the same with the target end
 				# but we have to work out which it is since target
@@ -662,8 +717,12 @@ sub make_feature_pair {
       push @pairs, ['DNA',$tmp_qs,$tmp_qe,$t_start,$new_t_start,$q_strand];
 
       #print "$q_start,$new_q_start,$t_start,$new_t_start\n";
-      my $t_seq = substr($slice->seq,$t_start-1,$new_t_start-$t_start+1);
-      #print "$q_start,$new_q_start,$t_start,$new_t_start and length of q_seq ",length($q_seq),'-',length($t_seq),"\n";
+      #my $t_seq = substr($slice->seq,$t_start-1,$new_t_start-$t_start+1);
+	  
+	  my $t_end = $t_start + $target_match_length -1;
+	  my $t_seq = $slice->sub_Slice($t_start, $t_end)->seq;
+	  
+      print "$q_start,$new_q_start,$t_start,$new_t_start and length of q_seq ",length($q_seq),'-',length($t_seq),"\n";
       #print "q_seq_is $q_seq\n";
       #print "t_seq is $t_seq\n";
       my $q_count = 1;
@@ -672,10 +731,14 @@ sub make_feature_pair {
 
       my %q_seqs = map {$q_count++,$_} split '', $q_seq;
       my %t_seqs = map {$t_count++,$_} split '', $t_seq;
-      my ($sub_q_end);
+      my ($sub_q_end,$new_count);
       my $sub_q_start = $q_start;#initial sub_q_start
       my $sub_t_start = $t_start;
       foreach my $count (sort {$a<=>$b} keys %q_seqs) {
+	if ($q_seqs{$count+1} !~ /$t_seqs{$count+1}/i and $q_seqs{$count} =~ /$t_seqs{$count}/i and $count < length($q_seq)) {
+	  push @pairs, [$type,$q_start,$q_start+$count-1,$t_start,$t_start+$count-1,$q_strand] if $q_strand==1;
+	  push @pairs, [$type,$q_start,$q_start-$count+1,$t_start,$t_start+$count-1,$q_strand] if $q_strand==-1;
+	}
 	if ($q_seqs{$count} !~ /$t_seqs{$count}/i) {
 	  #if there is a mismatch, we need to record the base based on query sequence
           if ($q_strand==-1) {
@@ -685,7 +748,9 @@ sub make_feature_pair {
 
 	  print "count is $count\n";
 	  $full_match =0;
-	  my $sub_t_end = $t_start + ($count -1) - 1;
+	  my $sub_t_end = $t_start + ($count) - 1;
+	  $sub_t_start = $sub_t_end ;
+
 	  if ($q_strand ==1) {
 	    $sub_q_end = $q_start + ($count -1) - 1;
 	  }
@@ -693,20 +758,21 @@ sub make_feature_pair {
 	    $sub_q_end = $q_start - ($count -1) + 1;
 	  }
 	  if ($q_strand==1) {
-	    $tmp_q_start = $sub_q_start;
-	    $tmp_q_end = $sub_q_end;
+	    $tmp_q_start = $sub_q_end+1;#change start to end
+	    $tmp_q_end = $sub_q_end+1; #change start to end
 	    $sub_q_start = $sub_q_end+2;#+1 cover SNP base, +1 cover next base
 	  }
 	  else {
-	    $tmp_q_start = $sub_q_end;
-	    $tmp_q_end = $sub_q_start;
+	    $tmp_q_start = $sub_q_end-1;
+	    $tmp_q_end = $sub_q_end-1;
 	    $sub_q_start = $sub_q_end-2;
 	  }
 	
 	  ($tmp_q_start,$tmp_q_end) = ($tmp_q_end,$tmp_q_start) if($tmp_q_end<$tmp_q_start);
 	  push @pairs, [$type,$tmp_q_start,$tmp_q_end,$sub_t_start,$sub_t_end,$q_strand,uc($q_seqs{$count}),uc($t_seqs{$count})];
 
-	  $sub_t_start = $sub_t_end+2;
+	  print "in Mismatch, q_start is $tmp_q_start and q_end is $tmp_q_end and t_start is $sub_t_start and t_end is $sub_t_end and q_base is,uc($q_seqs{$count}) and target_base is ,uc($t_seqs{$count}) \n";
+	  $sub_t_start = $sub_t_end+1;
 	}
       }
 
@@ -714,7 +780,7 @@ sub make_feature_pair {
       $t_start = $sub_t_start;
 	
       #print "q_start is $q_start and t_start is $t_start\n";
-      #print "in M, q_start is $q_start and q_end is $new_q_start and t_start is $t_start and t_end is $new_t_start\n";
+      print "in M, q_start is $q_start and q_end is $new_q_start and t_start is $t_start and t_end is $new_t_start\n";
 
       if  ($q_strand==1) {
 	$tmp_q_start = $q_start;
@@ -786,6 +852,7 @@ sub make_feature_pair {
 
   return \@fps;
 }
+
 
 sub seqname {
 
@@ -875,8 +942,8 @@ sub get_annotations {
 
     my $lrg_slice = $sa->fetch_by_region('LRG',"$lrg_name");
 
-    my $min = 99999999;
-    my $max = -9999999;
+    my $min = 9999999999;
+    my $max = -9999999999;
     my $chrom;
     my $strand;
 
@@ -973,6 +1040,8 @@ sub get_gene_annotation {
 		
 		print $entry->dbname, " ", $entry->primary_id, ".", $entry->version, " ", $entry->description, "\n";
 	}
+	
+	$gene_node->addEmptyNode('db_xref', {'source' => 'Ensembl', 'accession' => $gene->stable_id});
 
 	# get the xrefs for the transcript
 	my %ext = ();
@@ -982,7 +1051,7 @@ sub get_gene_annotation {
 		
 		#print "Gene/Trans ", $gene->stable_id, " ", $trans->stable_id, "\n";
 		
-		my $cds_node = LRG::Node->new("cds", undef, {'source' => 'Ensembl', 'codon_start' => $trans->coding_region_start, 'transcript_id' => $trans->stable_id});
+		my $cds_node = LRG::Node->new("cds", undef, {'source' => 'Ensembl', 'codon_start' => $trans->coding_region_start, 'codon_end' => $trans->coding_region_end, 'transcript_id' => $trans->stable_id});
 		
 		$entries = $trans->get_all_DBLinks();
 		
@@ -1028,11 +1097,10 @@ sub get_gene_annotation {
 			}
 		}
 		
-		push @nodes, $cds_node;
+		$gene_node->addExisting($cds_node);
 	}
 	
 	# finish the gene with xrefs
-	$gene_node->addEmptyNode('db_xref', {'source' => 'Ensembl', 'accession' => $gene->stable_id});
 	#$gene_node->addEmptyNode('db_xref', {'source' => 'GeneID', 'accession' => $ext{'EntrezGene'}}) if defined $ext{'EntrezGene'};
 	#$gene_node->addEmptyNode('db_xref', {'source' => 'HGNC', 'accession' => $ext{'HGNC'}}) if defined $ext{'HGNC'};
 	#$gene_node->addEmptyNode('db_xref', {'source' => 'MIM', 'accession' => $ext{'MIM_GENE'}}) if defined $ext{'MIM_GENE'};
