@@ -5,15 +5,10 @@ package LRGMapping;
 
 use lib '/nfs/acari/dr2/projects/src/ensembl/ensembl/modules';
 
-use Bio::EnsEMBL::Registry;
-use Bio::Seq;
 use Bio::EnsEMBL::MappedSliceContainer;
 use Bio::EnsEMBL::DBSQL::DBConnection;
 use Bio::EnsEMBL::FeaturePair;
-use ImportUtils qw(dumpSQL debug create_and_load load );
-use FindBin qw( $Bin );
-use Bio::EnsEMBL::Variation::Utils::Sequence qw(unambiguity_code);
-use Bio::EnsEMBL::Utils::Sequence qw(expand reverse_comp);
+use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
 
 
 # global variables
@@ -168,7 +163,7 @@ sub mapping {
 		
     bsub_ssaha_job($queue,$input_file,$output_file,$subject);
 
-    my $call = "bsub -o /tmp/$$.waiting.out -P ensembl-variation -K -w 'done($input_file\_ssaha_job)' -J waiting_process sleep 1"; #waits until all ssaha jobs have finished to continue
+    my $call = "bsub -o $input_dir/$$.waiting.out -P ensembl-variation -K -w 'done($input_file\_ssaha_job)' -J waiting_process sleep 1"; #waits until all ssaha jobs have finished to continue
     system($call);
 	
 	unlink $input_file;
@@ -177,6 +172,21 @@ sub mapping {
 		
     return $mapping->[0];
   }
+}
+
+# subroutine to submit a job to the farm
+sub bsub_ssaha_job {
+  my ($queue, $input_file, $output_file, $subject) = @_;
+  
+  my $host = `hostname`;
+  chomp $host;
+  
+  my $ssaha_command = "/nfs/acari/yuan/ensembl/src/ensembl-variation/scripts/ssahaSNP/ssaha2/ssaha2_v1.0.9_x86_64/ssaha2";
+  $ssaha_command .= " -align 1 -kmer 12 -seeds 4 -cut 1000 -output vulgar -depth 10 -best 1 -save $subject $input_file";
+  my $call = "echo '$ssaha_command; scp $output_file $host:$input_dir/' | bsub -E 'scp $host:$input_file $input_dir/' -J $input_file\_ssaha_job -P ensembl-variation $queue -e $output_dir/error_ssaha -o $output_file";
+	
+  system ($call);
+  #print $call, "\n";
 }
 
 # subroutine to join mapping elements
@@ -229,21 +239,6 @@ sub join_pairs {
 	push @joined_pairs, $prev_pair if defined $prev_pair;
 	
 	return \@joined_pairs;
-}
-
-# subroutine to submit a job to the farm
-sub bsub_ssaha_job {
-  my ($queue, $input_file, $output_file, $subject) = @_;
-  
-  my $host = `hostname`;
-  chomp $host;
-  
-  my $ssaha_command = "/nfs/acari/yuan/ensembl/src/ensembl-variation/scripts/ssahaSNP/ssaha2/ssaha2_v1.0.9_x86_64/ssaha2";
-  $ssaha_command .= " -align 1 -kmer 12 -seeds 4 -cut 1000 -output vulgar -depth 10 -best 1 -save $subject $input_file";
-  my $call = "echo '$ssaha_command; scp $output_file $host:/tmp/' | bsub -E 'scp $host:$input_file /tmp/' -J $input_file\_ssaha_job -P ensembl-variation $queue -e $output_dir/error_ssaha -o $output_file";
-	
-  system ($call);
-  #print $call, "\n";
 }
 
 # subroutine to parse the output from ssaha2
@@ -521,6 +516,8 @@ sub identical_matches {
 sub get_annotations {
   my $fp = shift;
   my $q_seq = shift;
+  
+  die("LRG name not defined\n") unless defined $lrg_name;
 
   my ($q_start,$q_end,$t_start,$t_end,$q_strand);
   my $slice = $fp->slice;
