@@ -257,7 +257,7 @@ void calculate_ld(const Locus_list *ll, int seq_region_id, FILE *fh){
     if (head->population_id != next->population_id)
       continue;
     calculate_pairwise_stats(head, next, &stats);
-    if (stats.r2 < 0.05 || stats.N < 40 || stats.r2 > 1 || stats.d_prime > 1)
+    if ((float) stats.r2 < 0.05 || stats.N < 40 || (float) stats.r2 > 1 || (float) stats.d_prime > 1)
       continue;
     fprintf(fh, "%hd\t%d\t%d\t%d\t%f\t%f\t%d\n",
 	    head->population_id,
