@@ -108,6 +108,7 @@ sub variation_class{
     my $alleles = shift;
     return 'snp' if $alleles =~ /^[ACGT]([\|\\\/][ACGT])+$/i;
     return 'cnv' if (($alleles eq 'cnv') || ($alleles eq 'CNV'));
+	return 'cnv probe' if $alleles =~ /CNV\_PROBE/i;
 
     my @alleles = split /[\|\/\\]/, $alleles;
 
