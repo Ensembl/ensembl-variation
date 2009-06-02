@@ -50,7 +50,8 @@ our %CONSEQUENCE_TYPES = ('ESSENTIAL_SPLICE_SITE' => 1,
 			  'UPSTREAM' => 16384,
 			  'DOWNSTREAM' => 32768,
 			  'INTERGENIC' => 65536,
-			  '_'          => 65537,
+			  'NO_CONSEQUENCE' => 65537,
+			  '_'          => 65538,
 			  );
 
 
