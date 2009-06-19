@@ -676,7 +676,7 @@ sub make_feature_pair {
       my $sub_t_start = $t_start;
       foreach my $count (sort {$a<=>$b} keys %q_seqs) {
 	if ($q_seqs{$count+1} !~ /$t_seqs{$count+1}/i and $q_seqs{$count} =~ /$t_seqs{$count}/i and $count < length($q_seq)) {
-	  push @pairs, [$type,"hello",$q_start,$q_start+$count-1,$t_start,$t_start+$count-1,$q_strand] if $q_strand==1;
+	  push @pairs, [$type,$q_start,$q_start+$count-1,$t_start,$t_start+$count-1,$q_strand] if $q_strand==1;
 	  push @pairs, [$type,$q_start,$q_start-$count+1,$t_start,$t_start+$count-1,$q_strand] if $q_strand==-1;
 	}
 	if ($q_seqs{$count} !~ /$t_seqs{$count}/i) {
