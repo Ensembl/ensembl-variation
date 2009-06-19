@@ -28,11 +28,13 @@ GetOptions(
 	   'target_dir=s' => \$target_dir,
 );
 
-#$input_dir ||= "tempin";
-#$output_dir ||= "tempout";
-$input_dir ||= "/lustre/work1/ensembl/yuan/SARA/LRG/input_dir";
-$output_dir ||= "/lustre/work1/ensembl/yuan/SARA/LRG/output_dir";
-$target_dir ||= "/lustre/work1/ensembl/yuan/SARA/human/ref_seq_hash";
+$LRGMapping::input_dir = $input_dir if defined $input_dir;
+$LRGMapping::output_dir = $output_dir if defined $output_dir;
+$LRGMapping::target_dir = $target_dir if defined $target_dir;
+
+#$input_dir ||= "/lustre/work1/ensembl/yuan/SARA/LRG/input_dir";
+#$output_dir ||= "/lustre/work1/ensembl/yuan/SARA/LRG/output_dir";
+#$target_dir ||= "/lustre/work1/ensembl/yuan/SARA/human/ref_seq_hash";
 our $template_file = $template_file_name;
 our $in_file = $in_file_name;
 our $mapping_num = 1;
@@ -43,7 +45,7 @@ Bio::EnsEMBL::Registry->load_all( $registry_file );
 #Bio::EnsEMBL::Registry->load_registry_from_db(-host => 'ensembldb.ensembl.org',-user => 'anonymous');
 
 my $species = 'human';
-my $cdb = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'core');
+my $cdb = Bio::EnsEMBL::Registry->get_DBAdaptor('human','core');
 my $dbCore = $cdb;
 
 $LRGMapping::dbCore = $dbCore;
@@ -53,7 +55,6 @@ my $sa = $dbCore->get_SliceAdaptor();
 my $geneAd = Bio::EnsEMBL::Registry->get_adaptor($species ,'core', 'gene');
 my $transAd = Bio::EnsEMBL::Registry->get_adaptor($species, 'core', 'transcript');
 my $protAd = Bio::EnsEMBL::Registry->get_adaptor($species, 'core', 'protein');
-print "genead is ",ref($geneAd),"\n";
 
 open IN, $in_file or die "Could not read from input file ", $in_file, "\n";
 
@@ -231,12 +232,11 @@ while(<IN>) {
 		}
 		
 		# create exon node
-		my $exon = $current->addNode('exon', {'lrg_number' => ++$exon_number});
+		my $exon = $current->addNode('exon');#, {'lrg_number' => ++$exon_number});
 		
 		
 		### EXON IN LRG COORDS
-		$exon->addNode('lrg_start')->content($start);
-		$exon->addNode('lrg_end')->content($end);
+		$exon->addEmptyNode('lrg_coords', {'start' => $start, 'end' => $end});
 		
 		
 		### EXON IN CDNA COORDS
@@ -252,8 +252,8 @@ while(<IN>) {
 			$cds_end = $end - ($first_exon_start - 1);
 		}
 		
-		$exon->addNode('cdna_start')->content($cds_start);
-		$exon->addNode('cdna_end')->content($cds_end);
+		
+		$exon->addEmptyNode('cdna_coords', {'start' => $cds_start, 'end' => $cds_end});
 		
 		
 		### EXON IN AA COORDS
@@ -272,8 +272,15 @@ while(<IN>) {
 			$aa_start = int($aa_start);
 			$aa_end = int($aa_end);
 			
-			$exon->addNode('translation_start', {'phase' => $phase_start})->content($aa_start);
-			$exon->addNode('translation_end', {'phase' => $phase_end})->content($aa_end);
+			$exon->addEmptyNode(
+				'peptide_coords',
+				{
+					'start' => $aa_start,
+					'end' => $aa_end,
+					'start_phase' => $phase_start,
+					'end_phase' => ($aa_end == length($prot_seq) ? 2 : $phase_end)
+				}
+			);
 		}
 		
 		# store the coords of the last exon - needed later
@@ -281,16 +288,16 @@ while(<IN>) {
 		$prev_cds_end = $cds_end; 
     }
 	
-	$current = $trans_node->findNode('coding_region');
+	# add transcript start and end
+	$trans_node->addData({'start' => $first_exon_start, 'end' => $last_exon_end});
 	
-    # get coords for the coding region relative to the genomic sequence - relies on Ensembl
-    my $temp = $current->addNode('cds_end');
-	$temp->content($last_exon_end - (length($total_exon_seq) - $trans->cdna_coding_end));
-	$temp->position(0);
-	
-    $temp = $current->addNode('cds_start');
-	$temp->content($trans->cdna_coding_start + $first_exon_start - 1);
-	$temp->position(0);
+	# add coding region start and end
+	$trans_node->findNode('coding_region')->addData(
+		{
+			'start' => $trans->cdna_coding_start + $first_exon_start - 1,
+			'end' => ($last_exon_end - (length($total_exon_seq) - $trans->cdna_coding_end)),
+		}
+	);
 	
     
     
@@ -299,10 +306,14 @@ while(<IN>) {
     ################################
     
 	# add a mapping node
-	$current = $root->findOrAdd('updatable_annotation/annotation_set/mapping');
+	my $mapping_node = $root->findOrAdd('updatable_annotation/annotation_set/mapping');
+	
+	# update the modification date
+	$root->findNode('updatable_annotation/annotation_set/modification_date')->content($root->date);
 	
 	# run the mapping sub-routine
 	my $mapping = LRGMapping::mapping($genomic_sequence);
+	my $current = $mapping_node->addNode('mapping_span');
 	
 	# create three arrays to hold the different pair types
 	my (@dna_pairs, @match_pairs, @mis_pairs);
@@ -343,50 +354,57 @@ while(<IN>) {
 		
 		# DNA pair - whole alignment
 		if($pair->[0] eq 'DNA') {
-			my $temp = $current->addEmptyNode(
-				'mapping_span',
+			
+			# this gets added as attributes to the mapping node
+			$mapping_node->addData(
 				{
-					'chromosome' => $mapping->hseqname,
-					'start' => ($c_s < $c_e ? $c_s : $c_e),
-					'end' => ($c_s < $c_e ? $c_e : $c_s),
+					'chr_name' => $mapping->hseqname,
+					'chr_start' => ($c_s < $c_e ? $c_s : $c_e),
+					'chr_end' => ($c_s < $c_e ? $c_e : $c_s)
 				}
 			);
 			
-			# move it to first in the mapping element
-			$temp->position(0);
+			$current->addData(
+				{
+					'start' => $c_s,
+					'end' => $c_e,
+					'lrg_start' => $l_s,
+					'lrg_end' => $l_e,
+					'strand' => $pair->[5],
+				}
+			)
 		}
 		
 		# mismatch pair
 		elsif($pair->[6].$pair->[7] =~ /.+/) {
 			$current->addEmptyNode(
-				'mismatch',
+				'diff',
 				{
-					'chromosome' => $mapping->hseqname,
+					'type' => 'mismatch',
 					'start' => $c_s,
 					'end' => $c_e,
 					'lrg_start' => $l_s,
 					'lrg_end' => $l_e,
-					'strand' => $pair->[5],
 					'lrg_sequence' => $pair->[6],
-					'ref_sequence' => $pair->[7],
+					'genomic_sequence' => $pair->[7],
 				}
 			);
 		}
 		
 		# match pair
-		else {
-			$current->addEmptyNode(
-				'align',
-				{
-					'chromosome' => $mapping->hseqname,
-					'start' => $c_s,
-					'end' => $c_e,
-					'lrg_start' => $l_s,
-					'lrg_end' => $l_e,
-					'strand' => $pair->[5],
-				}
-			);
-		}
+		#else {
+		#	$current->addEmptyNode(
+		#		'align',
+		#		{
+		#			'chromosome' => $mapping->hseqname,
+		#			'start' => $c_s,
+		#			'end' => $c_e,
+		#			'lrg_start' => $l_s,
+		#			'lrg_end' => $l_e,
+		#			'strand' => $pair->[5],
+		#		}
+		#	);
+		#}
 	}
 	
 	# get annotations

@@ -35,10 +35,10 @@ GetOptions(
 	   'target_dir=s' => \$target_dir,
 );
 
-$input_dir ||= "tempin";
-$output_dir ||= "tempout";
-#$input_dir ||= "/lustre/work1/ensembl/yuan/SARA/LRG/input_dir";
-#$output_dir ||= "/lustre/work1/ensembl/yuan/SARA/LRG/output_dir";
+#$input_dir ||= "tempin";
+#$output_dir ||= "tempout";
+$input_dir ||= "/lustre/work1/ensembl/yuan/SARA/LRG/input_dir";
+$output_dir ||= "/lustre/work1/ensembl/yuan/SARA/LRG/output_dir";
 $target_dir ||= "/lustre/work1/ensembl/yuan/SARA/human/ref_seq_hash";
 our $template_file = $template_file_name;
 our $in_file = $in_file_name;
@@ -306,9 +306,15 @@ while(<IN>) {
 	
 	$current = $root->findOrAdd('updatable_annotation/mapping');
 
+	print "Starting mapping\n";
+
 	my $mapping = mapping($genomic_sequence);
 	
+	#print "DUMPY: ", Dumper($mapping), "\n";
+	
 	foreach my $pair(@{$mapping->type}) {
+		print "@{$pair}\n";
+		
 		next unless $pair->[0] eq 'M';
 		
 		# switch chromosome start/end if on negative strand
@@ -327,7 +333,7 @@ while(<IN>) {
 				'strand' => $pair->[5],
 			}
 		);
-	      }
+	}
 	
 	
 	my @feature_nodes = @{get_annotations($mapping,$genomic_sequence)};

@@ -85,10 +85,10 @@ foreach my $name (keys %rec_seq) {#get query seq object
   $rec_seq{$name} = $seqobj;
 }
 
-#bsub_ssaha_job($queue,$input_file,$subject);
+# bsub_ssaha_job($queue,$input_file,$subject);
 
 my $call = "bsub -P ensembl-variation -K -w 'done($input_file\_ssaha_job)' -J waiting_process sleep 1"; #waits until all ssaha jobs have finished to continue
-#system($call);
+# system($call);
 
 parse_ssaha2_out ();
 
@@ -107,7 +107,7 @@ sub bsub_ssaha_job {
 
 sub parse_ssaha2_out {
 
-  open OUT, ">$output_dir/mapping_file_$input_file_name" or die "can't open output_file : $!\n";
+#   open OUT, ">$output_dir/mapping_file_$input_file_name" or die "can't open output_file : $!\n";
 
   open SSAHA, "$output_file" or die "can't open $output_file : $!\n";
 
@@ -191,6 +191,8 @@ sub find_results {
     my $t_strand = $h->{'t_strand'};
     my $score = $h->{'score'};
     my $match = $h->{'match'};
+    
+    my ($tmp_q_start, $tmp_q_end);
 
     my ($f_q_start,$f_q_end) ;#feature start-end used to make feature_pairs
     if ($q_strand ==1) {
@@ -201,9 +203,25 @@ sub find_results {
     }
 
     my ($seq_region_name) = split /\-/, $t_id;
+<<<<<<< run_lrg_ssaha2.pl
+<<<<<<< run_lrg_ssaha2.pl
+    print "cheesey seq_region_name is $seq_region_name and t_start is $t_start, t_end is $t_end\n";
+    my $slice = $sa->fetch_by_region('chromosome',$seq_region_name,$t_start,$t_end, 1);
+=======
+    print "seq_region_name is $seq_region_name and t_start is $t_start, t_end is $t_end\n";
+    #my $slice = $sa->fetch_by_region('chromosome',$seq_region_name,$t_start,$t_end, 1);
+=======
 
+>>>>>>> 1.6
     my $slice = $sa->fetch_by_region('chromosome',$seq_region_name);
+<<<<<<< run_lrg_ssaha2.pl
+>>>>>>> 1.4
+    #print "slice is ",ref($slice),"\n";
+    print "slice seq_region_name is ",$slice->seq_region_name,'-',length($slice->seq),'-',$slice->length,'-',$slice->start,'-',$slice->end,"\n";
+    #print "slice seq is ",$slice->seq,"\n";
+=======
 
+>>>>>>> 1.6
     my $q_seqobj = $rec_seq{$q_id};
 
     #warning that query_seq length != matched query_length
