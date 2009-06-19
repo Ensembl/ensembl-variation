@@ -113,6 +113,10 @@ sub newFromFile {
 	
 		# get rid of tag open/close characters
 		$string =~ s/\<|\>//g;
+		
+		my $is_empty;
+		$is_empty = 1 if $string =~ /\/$/;
+		$string =~ s/\/$//;
 	
 		# if this is a closing tag, point current to this node's parent
 		if($string =~ /^\//) {
@@ -140,6 +144,32 @@ sub newFromFile {
 		
 				# re-split by space or =
 				@split = split /\s+|\=/, $string;
+				
+				my @copy = @split;
+				@split = ();
+				
+				# re-join any values that have been accidentally split
+				for(my $i=0; $i<=$#copy; $i++) {
+					if($copy[$i] =~ /\'|\"/ and $copy[$i] !~ /\'$|\"$/ and $copy[$i+1] !~ /^\'|^\"/) {
+						my $j = $i + 1;
+						
+						my $val = $copy[$i];
+						
+						$val .= " ".$copy[$j];
+						
+						while($copy[$j++] !~ /\'$|\"$/) {
+							$val .= " ".$copy[$j];
+						}
+						
+						push @split, $val;
+						
+						$i = $j - 1;
+					}
+					
+					else {
+						push @split, $copy[$i];
+					}
+				}
 		
 				# create a new hash
 				my %data = ();
@@ -150,6 +180,8 @@ sub newFromFile {
 					# get key/value pair
 					my $key = shift @split;
 					my $val = shift @split;
+					
+					print "$key $val\n" if !(defined $val);
 		
 					# remove "s and 's as these are converted to HTML form
 					# by XML::Writer
@@ -163,7 +195,7 @@ sub newFromFile {
 				}
 		
 				# if this is an empty tag (ends with a "/")
-				if($string =~ /\/$/) {
+				if($is_empty) {
 					$current = $current->addEmptyNode($name, \%data);
 					
 					# reset current to this node's parents
@@ -180,7 +212,7 @@ sub newFromFile {
 			else {
 			
 				# if this is an empty tag (ends with a "/")
-				if($string =~ /\/$/) {
+				if($is_empty) {
 					$current = $current->addEmptyNode($name);
 					
 					# reset current node to this node's parents
@@ -439,23 +471,36 @@ sub printNode {
 		
 		# mapping
 		'chromosome' => 1,
+		'type' => 1,
 		'strand' => 2,
 		'lrg_start' => 3,
 		'lrg_end' => 4,
 		'start' => 5,
 		'end' => 6,
 		'lrg_sequence' => 7,
-		'ref_sequence' => 8,
+		'genomic_sequence' => 8,
+		'start_phase' => 9,
+		'end_phase' => 10,
+		
+		'assembly' => 1,
+		'chr_name' => 2,
+		'chr_id' => 3,
+		'chr_start' => 4,
+		'chr_end' => 5,
 		
 		# gene
 		'name' => 1,
+		
+		# other_exon_naming
+		'lrg_number' => 1,
+		'other_name' => 2,
 		
 		# other
 		'source' => 1,
 		'accession' => 2,
 		'transcript_id' => 2,
-		'codon_start' => 3,
-		'codon_end' => 4,
+		'cds_start' => 3,
+		'cds_end' => 4,
 	);
 
 	my @data_array;
@@ -476,8 +521,12 @@ sub printNode {
 		
 		# put the data into a hash (key, value, key, value etc.)
 		foreach my $key(@key_order) {
+			#print $key, " ", $self->data->{$key}, "\n" unless $priority{$key};
+			
 			push @data_array, ($key, $self->data->{$key});
 		}
+		
+		#print "\n";
 	}
 	
     # if this is an empty tag
@@ -560,6 +609,22 @@ sub data {
     $self->{'data'} = shift if @_;
 
     return $self->{'data'};
+}
+
+# add data
+sub addData {
+	my $self = shift;
+	my $new_data = shift;
+	
+	my %data = %{$self->{'data'}};
+	
+	foreach my $key(keys %$new_data) {
+		$data{$key} = $new_data->{$key};
+	}
+	
+	$self->{'data'} = \%data;
+	
+	return $self->{'data'};
 }
 
 # getter/setter for empty status

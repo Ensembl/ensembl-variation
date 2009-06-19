@@ -9,6 +9,7 @@ use Bio::EnsEMBL::MappedSliceContainer;
 use Bio::EnsEMBL::DBSQL::DBConnection;
 use Bio::EnsEMBL::FeaturePair;
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
+use LRG;
 
 
 # global variables
@@ -69,6 +70,8 @@ sub mapping {
 		# sort by query start
 		foreach my $pair(sort {$a->[2] <=> $b->[2]} @{$map->type}) {
 			#print "full_match is $full_match and ",$map->identical_matches,'-',$pair->[0],'-',$pair->[1],'-',$pair->[2],'-',$pair->[3],'-',$pair->[4],'-',$pair->[5],'-',$pair->[6],'-',$pair->[7],"\n";
+			
+			#print "@$pair\n";
 			
 			# add the previous DNA end to each query coordinate
 			# since we split up the query sequence
@@ -137,7 +140,7 @@ sub mapping {
   else {
 	
     my $name = "temp$$".$mapping_num++;
-	#my $name = "temp7563".$mapping_num++;
+	#my $name = "temp19098".$mapping_num++;
     #my $name = "temp214871".$mapping_num++;
     #my $name = "temp_will";
     my $input_file_name = $name.'.fa';
@@ -166,7 +169,7 @@ sub mapping {
     my $call = "bsub -o $input_dir/$$.waiting.out -P ensembl-variation -K -w 'done($input_file\_ssaha_job)' -J waiting_process sleep 1"; #waits until all ssaha jobs have finished to continue
     system($call);
 	
-	unlink $input_file;
+	#unlink $input_file;
 		
     my $mapping = parse_ssaha2_out($output_file);
 		
@@ -181,7 +184,7 @@ sub bsub_ssaha_job {
   my $host = `hostname`;
   chomp $host;
   
-  my $ssaha_command = "/nfs/acari/yuan/ensembl/src/ensembl-variation/scripts/ssahaSNP/ssaha2/ssaha2_v1.0.9_x86_64/ssaha2";
+  my $ssaha_command = "/nfs/users/nfs_y/yuan/ensembl/src/ensembl-variation/scripts/ssahaSNP/ssaha2/ssaha2_v1.0.9_x86_64/ssaha2";
   $ssaha_command .= " -align 1 -kmer 12 -seeds 4 -cut 1000 -output vulgar -depth 10 -best 1 -save $subject $input_file";
   my $call = "echo '$ssaha_command; scp $output_file $host:$input_dir/' | bsub -E 'scp $host:$input_file $input_dir/' -J $input_file\_ssaha_job -P ensembl-variation $queue -e $output_dir/error_ssaha -o $output_file";
 	
@@ -274,7 +277,7 @@ sub parse_ssaha2_out {
   }
   close SSAHA;
   
-  unlink $output_file;
+  #unlink $output_file;
   
   # if we have more than one hit
   if(scalar @rec_find > 1 && $rec_find[0]->{'score'} == $rec_find[1]->{'score'}) {
@@ -466,9 +469,9 @@ sub make_feature_pair {
     $t_start = $new_t_start;
   }
 
-  #foreach  my $pair (sort {$a->[3]<=>$b->[3]} @pairs) {
-  #  print "pairs in ssaha_mapping are ",$pair->[0],'-',$pair->[1],'-',$pair->[2],'-',$pair->[3],'-',$pair->[4],"\n";
-  #}
+  foreach  my $pair (sort {$a->[3]<=>$b->[3]} @pairs) {
+    print "pairs in ssaha_mapping are @$pair\n";
+  }
   my $fp = Bio::EnsEMBL::FeaturePair->new(-start    => $f_q_start,
 					  -end      => $f_q_end,
 					  -strand   => $q_strand,
@@ -653,7 +656,7 @@ sub get_gene_annotation {
 	my @nodes;
 	
 	# create the gene node
-	my $gene_node = LRG::Node->new("gene", undef, {'name' => $gene->external_name, 'start' => $gene->start, 'end' => $gene->end});
+	my $gene_node = LRG::Node->new("gene", undef, {'symbol' => $gene->external_name, 'start' => $gene->start, 'end' => $gene->end, 'strand' => $gene->strand});
 	
 	# get xrefs for the gene
 	my $entries = $gene->get_all_DBEntries();
@@ -668,7 +671,7 @@ sub get_gene_annotation {
 				$gene_node->addNode('synonym')->content($synonym);
 			}
 			
-			$gene_node->addNode('note')->content($entry->description) if length($entry->description) > 1;
+			$gene_node->addNode('long_name')->content($entry->description) if length($entry->description) > 1;
 		}
 		
 		next unless $entry->dbname =~ /GI|RefSeq|HGNC$/;
@@ -689,7 +692,7 @@ sub get_gene_annotation {
 		
 		#print "Gene/Trans ", $gene->stable_id, " ", $trans->stable_id, "\n";
 		
-		my $cds_node = LRG::Node->new("cds", undef, {'source' => 'Ensembl', 'codon_start' => $trans->coding_region_start, 'codon_end' => $trans->coding_region_end, 'transcript_id' => $trans->stable_id});
+		my $cds_node = LRG::Node->new("transcript", undef, {'source' => 'Ensembl', 'start' => $trans->start, 'end' => $trans->end, 'transcript_id' => $trans->stable_id});
 		
 		$entries = $trans->get_all_DBLinks();
 		
@@ -711,9 +714,15 @@ sub get_gene_annotation {
 		my $protein = $trans->translation;
 		
 		if($protein ne '') {
-			my $prot_node = $cds_node->addNode('protein_product');
-			
-			$prot_node->addEmptyNode('protein_id', {'source' => 'Ensembl', 'accession' => $protein->stable_id});
+			my $prot_node = $cds_node->addNode(
+			  'protein_product',
+			  {
+				'source' => 'Ensembl',
+				'accession' => $protein->stable_id,
+				'cds_start' => $trans->coding_region_start,
+				'cds_end' => $trans->coding_region_end
+			  }
+			);
 			
 			$entries = $protein->get_all_DBLinks();
 			
@@ -724,9 +733,9 @@ sub get_gene_annotation {
 				next unless $entry->dbname =~ /RefSeq|Uniprot|CCDS/;
 				
 				if($entry->dbname eq 'RefSeq_peptide') {
-					my $note_node = $prot_node->addNode('note');
+					my $note_node = $prot_node->addNode('long_name');
 					$note_node->content($entry->description);
-					$note_node->moveTo(1);
+					$note_node->moveTo(0);
 				}
 				
 				$prot_node->addExisting(xref($entry));
