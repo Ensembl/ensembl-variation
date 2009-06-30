@@ -416,15 +416,16 @@ sub findNodeMulti {
 sub findOrAdd() {
 	my $self = shift;
 	my $name = shift;
+	my $data = shift;
 	
-	my $find = $self->findNode($name);
+	my $find = $self->findNode($name, $data);
 	
 	if(defined $find) {
 		return $find;
 	}
 	
 	else {
-		return $self->addNode($name);
+		return $self->addNode($name, $data);
 	}
 }
 
@@ -481,6 +482,8 @@ sub printNode {
 		'genomic_sequence' => 8,
 		'start_phase' => 9,
 		'end_phase' => 10,
+		'codon_start' => 11,
+		'codon_selenocysteine' => 12,
 		
 		'assembly' => 1,
 		'chr_name' => 2,
@@ -489,11 +492,8 @@ sub printNode {
 		'chr_end' => 5,
 		
 		# gene
+		'symbol' => 1,
 		'name' => 1,
-		
-		# other_exon_naming
-		'lrg_number' => 1,
-		'other_name' => 2,
 		
 		# other
 		'source' => 1,
