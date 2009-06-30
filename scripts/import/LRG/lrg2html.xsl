@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-
-<xsl:transform version="2.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform" xmlns:loop="http://informatik.hu-berlin.de/loop">
+<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
 
   <xsl:output method="html" doctype-public="-//W3C//DTD HTML 4.0 Transitional//EN"/>
 
@@ -232,7 +231,7 @@
 	<p><strong>Creation date: </strong><xsl:value-of select="fixed_annotation/creation_date"/></p>
 
 	<table>
-	  <tr valign="top">
+	  <tr>
 		<td style="border:0px;"><h4>- Genomic sequence</h4></td>
 		<td style="border:0px;"><a><xsl:attribute name="href">javascript:showhide('sequence');</xsl:attribute>show/hide</a></td>
 	  </tr>
@@ -343,7 +342,7 @@
 		<xsl:value-of select="coding_region/@start"/>-<xsl:value-of select="coding_region/@end"/><br/>
 	  </p>
 	  <table>
-		<tr valign="top">
+		<tr>
 		  <td style="border:0px;"><h4>- cDNA sequence</h4></td>
 		  <td style="border:0px;"><a><xsl:attribute name="href">javascript:showhide('cdna');</xsl:attribute>show/hide</a></td>
 		</tr>
@@ -428,7 +427,7 @@
 	  <a><xsl:attribute name="name">exons_<xsl:value-of select="$transname"/></xsl:attribute></a>
 	  
 	  <table>
-		<tr valign="top">
+		<tr>
 		  <td style="border:0px;"><h4>- Exons</h4></td>
 		  <td style="border:0px;"><a><xsl:attribute name="href">javascript:showhide('exons');</xsl:attribute>show/hide</a></td>
 		</tr>
@@ -487,7 +486,7 @@
 	  </div>
 
 	  <table>
-		<tr valign="top">
+		<tr>
 		  <td style="border:0px;"><h4>- Translated sequence</h4></td>
 		  <td style="border:0px;"><a><xsl:attribute name="href">javascript:showhide('translated');</xsl:attribute>show/hide</a></td>
 		</tr>
@@ -1130,4 +1129,4 @@
     </html>
   </xsl:template>
 
-</xsl:transform>
+</xsl:stylesheet>
