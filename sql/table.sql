@@ -76,12 +76,14 @@ create table phenotype (
 create table variation_synonym (
   variation_synonym_id int(10) unsigned not null auto_increment,
   variation_id int(10) unsigned not null,
+  subsnp_id int(15) unsigned not null,
   source_id int(10) unsigned not null,
   name varchar(255),
   moltype varchar(50),
 
   primary key(variation_synonym_id),
   key variation_idx (variation_id),
+  key subsnp_idx(subsnp_id),
   unique (name, source_id),
   key source_idx (source_id)
 );
@@ -113,7 +115,7 @@ create table sample_synonym (
 # Table containing information about subsnp_id and submitter handle
 #
 
-create table subsnp_id (
+create table subsnp_handle (
   subsnp_id int(11) unsigned not null,
   handle varchar(20),
 
@@ -141,11 +143,13 @@ create table subsnp_id (
 create table allele(
 	allele_id int(10) unsigned not null auto_increment,
 	variation_id int(10) unsigned not null,
+        subsnp_id int(15) unsigned not null,
 	allele varchar(255),
 	frequency float,
 	sample_id int(10) unsigned,
 
 	primary key( allele_id ),
+        key subsnp_idx(subsnp_id),
 	key variation_idx( variation_id,allele(10) )
 );
 
@@ -301,7 +305,7 @@ create table variation_feature(
 	consequence_type SET ('ESSENTIAL_SPLICE_SITE','STOP_GAINED','STOP_LOST','COMPLEX_INDEL',
 	                      'FRAMESHIFT_CODING','NON_SYNONYMOUS_CODING','SPLICE_SITE','SYNONYMOUS_CODING',
 				    'REGULATORY_REGION','WITHIN_MATURE_miRNA','5PRIME_UTR','3PRIME_UTR','INTRONIC','UPSTREAM','DOWNSTREAM',
-				    'WITHIN_NON_CODING_GENE','INTERGENIC')
+				    'WITHIN_NON_CODING_GENE','NO_CONSEQUENCE','INTERGENIC')
 	default "INTERGENIC" not null ,	
 	primary key( variation_feature_id ),
 	key pos_idx( seq_region_id, seq_region_start ),
@@ -568,6 +572,7 @@ create table source(
 create table population_genotype (
 	population_genotype_id int(10) unsigned not null auto_increment,
 	variation_id int(10) unsigned not null,
+        subsnp_id int(15) unsigned not null,
 	allele_1 varchar(255),
 	allele_2 varchar(255),
 	frequency float,
@@ -575,6 +580,7 @@ create table population_genotype (
 
 	primary key( population_genotype_id ),
  	key variation_idx(variation_id),
+        key subsnp_idx(subsnp_id),
 	key sample_idx(sample_id)
 );
 
@@ -599,8 +605,11 @@ create table individual_population (
 #needed for other species, but human, so keep it
 
 CREATE TABLE tmp_individual_genotype_single_bp (
-                            variation_id int not null,allele_1 varchar(255),allele_2 varchar(255),sample_id int,
+                            variation_id int(10) not null,
+			    subsnp_id int(15) unsigned not null,   
+	                    allele_1 varchar(255),allele_2 varchar(255),sample_id int,
                             key variation_idx(variation_id),
+                            key subsnp_idx(subsnp_id),
                             key sample_idx(sample_id)
                             ) MAX_ROWS = 100000000
 ;
@@ -617,11 +626,13 @@ CREATE TABLE tmp_individual_genotype_single_bp (
 
 create table individual_genotype_multiple_bp (
   variation_id int(10) unsigned not null,
+  subsnp_id int(15) unsigned not null,	
   allele_1 varchar(255),
   allele_2 varchar(255),
   sample_id int(10) unsigned,
 
   key variation_idx(variation_id),
+  key subsnp_idx(subsnp_id),
   key sample_idx(sample_id)
 );
 
@@ -770,8 +781,8 @@ CREATE TABLE failed_variation(
 
 
 #possible values in the failed_description table
-INSERT INTO failed_description (failed_description_id,description) VALUES (1,'Variation has more than 3 different locations');
-INSERT INTO failed_description (failed_description_id,description) VALUES (2,'Reference allele not present in the alleles of the variation');
-INSERT INTO failed_description (failed_description_id,description) VALUES (3,'Variation containing more than 3 alleles');
-INSERT INTO failed_description (failed_description_id,description) VALUES (4,'Variation with \'NoVariation\' alleles');
-INSERT INTO failed_description (failed_description_id,description) VALUES (5,'Variation do not have genome mappings'); 
+INSERT INTO failed_description (failed_description_id,description) VALUES (1,'Variation maps to more than 3 different locations');
+INSERT INTO failed_description (failed_description_id,description) VALUES (2,'None of the variant alleles match the reference allele');
+INSERT INTO failed_description (failed_description_id,description) VALUES (3,'Variation has more than 3 different alleles');
+INSERT INTO failed_description (failed_description_id,description) VALUES (4,'Loci with no observed variant alleles in dbSNP');
+INSERT INTO failed_description (failed_description_id,description) VALUES (5,'Variation does not map to the genome'); 
