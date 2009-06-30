@@ -170,9 +170,25 @@ sub mapping {
     system($call);
 	
 	#unlink $input_file;
-		
+	
+	# check the output file
+	open IN, $output_file or die("Could not read from output file $output_file\n");
+	
+	my $ok = 0;
+	
+	while(<IN>) {
+	  if(/^Query/) {
+		$ok = 1;
+		last;
+	  }
+	}
+	
+	close IN;
+	
+	die "Error in mapping process - no data found in ssaha output file $output_file\n" unless $ok;
+	
     my $mapping = parse_ssaha2_out($output_file);
-		
+	
     return $mapping->[0];
   }
 }
