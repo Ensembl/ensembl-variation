@@ -49,9 +49,9 @@ our %CONSEQUENCE_TYPES = ('ESSENTIAL_SPLICE_SITE' => 1,
 			  'WITHIN_NON_CODING_GENE' => 8192,
 			  'UPSTREAM' => 16384,
 			  'DOWNSTREAM' => 32768,
-			  'INTERGENIC' => 65536,
-			  'NO_CONSEQUENCE' => 65537,
-			  '_'          => 65538,
+			  'NO_CONSEQUENCE' => 65536,
+			  'INTERGENIC' => 131072,
+			  '_'          => 131073,
 			  );
 
 
