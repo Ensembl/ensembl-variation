@@ -574,20 +574,39 @@ sub _objs_from_sth {
     }
 
     if(!defined($cur_allele_id) || $cur_allele_id != $allele_id) {
-      my $pop;
-      if($allele_sample_id) { 
-        $pop = $seen_pops{$allele_sample_id} ||=
-          $pa->fetch_by_dbID($allele_sample_id);
-    }
-      if (defined $allele_id){
-	  my $allele = Bio::EnsEMBL::Variation::Allele->new
-	      (-dbID      => $allele_id,
-	       -ALLELE    => $allele,
-	       -FREQUENCY => $allele_freq,
-	       -POPULATION => $pop);
-	  $cur_var->add_Allele($allele);
+	  my $pop;
+	  if($allele_sample_id) { 
+		$pop = $seen_pops{$allele_sample_id} ||=
+		  $pa->fetch_by_dbID($allele_sample_id);
+	  }
 	  
-	  $cur_allele_id = $allele_id;
+      if (defined $allele_id){
+		
+		# THIS IS A HACK - THIS SHOULD BE REMOVED WHEN DATA FIXED
+		# basically ignores A/N alleles stored for cnvi variations
+		# and adds "CNV_PROBE" as the allele instead
+		if($cur_var->name =~ /^cnvi/i) {
+		  my $allele = Bio::EnsEMBL::Variation::Allele->new(
+			-dbID	=> $allele_id,
+			-ALLELE	=> 'CNV_PROBE',
+			-FREQUENCY => '',
+			-POPULATION => '',
+		  );
+		  
+		  $cur_var->add_Allele($allele) unless scalar @{$cur_var->{'alleles'}};
+		}
+		
+		else {
+		  my $allele = Bio::EnsEMBL::Variation::Allele->new
+			  (-dbID      => $allele_id,
+			   -ALLELE    => $allele,
+			   -FREQUENCY => $allele_freq,
+			   -POPULATION => $pop);
+			  
+		  $cur_var->add_Allele($allele);
+		}
+		
+		$cur_allele_id = $allele_id;
       }
     }
 
