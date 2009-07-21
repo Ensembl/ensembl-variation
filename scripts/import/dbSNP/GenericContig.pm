@@ -1058,14 +1058,18 @@ sub individual_genotypes {
 
   $self->{'dbVar'}->do(qq{INSERT INTO individual_genotype_multiple_bp select * 
                        FROM tmp_individual_genotype_single_bp
-                       WHERE length(allele_1)>1 or length(allele_2)>1});
+                       WHERE length(allele_1)>1 or length(allele_2)>1
+                       OR allele_1 = '-' or allele_2 = '-'});
   $self->{'dbVar'}->do(qq{DELETE FROM tmp_individual_genotype_single_bp
-                          WHERE length(allele_1)>1 or length(allele_2)>1});
+                          WHERE length(allele_1)>1 or length(allele_2)>1
+                          OR allele_1 = '-' or allele_2 = '-'});
    $self->{'dbVar'}->do(qq{INSERT INTO tmp_individual_genotype_single_bp select * 
                        FROM individual_genotype_multiple_bp
-                       WHERE length(allele_1)=1 and length(allele_2=1)});
+                       WHERE length(allele_1)=1 and length(allele_2=1)
+                       AND allele_1 != '-' and allele_2 != '-'});
   $self->{'dbVar'}->do(qq{DELETE FROM individual_genotype_multiple_bp
-                          WHERE length(allele_1)=1 and length(allele_2)=1});
+                          WHERE length(allele_1)=1 and length(allele_2)=1
+                          AND allele_1 != '-' and allele_2 != '-'});
   $self->{'dbVar'}->do(qq{DELETE FROM individual_genotype_multiple_bp
                           WHERE allele_1 like "%indeterminate%"});
    
