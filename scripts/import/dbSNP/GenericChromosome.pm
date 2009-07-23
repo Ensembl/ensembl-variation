@@ -26,7 +26,7 @@ sub variation_feature{
 
 
      debug("Loading seq_region data");
-     load($self->{'dbVar'}, "seq_region", "seq_region_id", "name *");
+     load($self->{'dbVar'}, "seq_region", "seq_region_id", "name");
     
      debug("Dumping SNPLoc data");
     
@@ -37,7 +37,11 @@ sub variation_feature{
      $assembly_version=$1 if $self->{'assembly_version'} =~ /RGSC\d\.(\d+)/;
 
      my $sth = $self->{'dbSNP'}->prepare(qq{SHOW TABLES LIKE 
-# 					   '$self->{'dbSNP_version'}\_SNPContigLoc\_$assembly_version\__'});
+# 					   '$self->{'dbSNP_version'}\_SNPContigLoc\_$assembly_version\_%'});
+	 
+	 print qq{SHOW TABLES LIKE 
+# 					   '$self->{'dbSNP_version'}\_SNPContigLoc\_$assembly_version\_%'};
+	 
      $sth->execute();
 
      while($row = $sth->fetchrow_arrayref()) {
@@ -45,7 +49,7 @@ sub variation_feature{
      }
 
      my $sth1 = $self->{'dbSNP'}->prepare(qq{SHOW TABLES LIKE 
- 					   '$self->{'dbSNP_version'}\_ContigInfo\_$assembly_version\__'});
+ 					   '$self->{'dbSNP_version'}\_ContigInfo\_$assembly_version\_%'});
      $sth1->execute();
 
      while($row = $sth1->fetchrow_arrayref()) {
