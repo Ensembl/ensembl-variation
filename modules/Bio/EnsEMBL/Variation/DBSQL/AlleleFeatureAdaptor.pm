@@ -127,50 +127,62 @@ sub fetch_all_by_Slice{
     my $alleles = {}; #hash to alleles, so we can check the genotype is within the alleles
     #we need to merge genotype data with AlleleFeatures to assign alleles
     foreach my $af (@{$afs}){
-	$alleles = {}; #flush the hash
-	map {$alleles->{$_}++} split /\//,$af->{'_vf_allele_string'}; #create a hash with the alleles
-	#both, genotypes and af should be sorted
-	for (my $i = $last_position;$i<@{$genotypes};$i++){
-	    #need to reverse the alleles if they are in different strand, since the genotype
-	    #table is stored always in the positive strand
-	    $string1 = $genotypes->[$i]->allele1;
-	    $string2 = $genotypes->[$i]->allele2;
-	    if ($af->seq_region_strand == -1){
-		$string1 =~ tr/ACGTN-/TGCAN-/;
-		$string2 =~ tr/ACGTN-/TGCAN-/;
-	    }
-	    #we need to check the genotypes are within the alleles of the variation
-	    if ($genotypes->[$i]->start == $af->seq_region_start && (exists $alleles->{$string1} || exists $alleles->{$string2})){		
+		$alleles = {}; #flush the hash
+		map {$alleles->{$_}++} split /\//,$af->{'_vf_allele_string'}; #create a hash with the alleles
+		
+		#both, genotypes and af should be sorted
+		for (my $i = $last_position;$i<@{$genotypes};$i++){
+			#need to reverse the alleles if they are in different strand, since the genotype
+			#table is stored always in the positive strand
+			$string1 = $genotypes->[$i]->allele1;
+			$string2 = $genotypes->[$i]->allele2;
+			
+			if ($af->seq_region_strand == -1){
+				$string1 =~ tr/ACGTN-/TGCAN-/;
+				$string2 =~ tr/ACGTN-/TGCAN-/;
+			}
+			
+			#we need to check the genotypes are within the alleles of the variation
+			if ($genotypes->[$i]->start == $af->seq_region_start && (exists $alleles->{$string1} || exists $alleles->{$string2})){
+				
+				# create a clone of the AF to work with
+				my $new_af = { %$af };
+				bless $new_af, ref $af;
+				
+				if ($new_af->seq_region_strand == -1){
+					$genotypes->[$i]->allele1($string1);
+					$genotypes->[$i]->allele2($string2);
+				}
+				if ($genotypes->[$i]->allele2 eq 'N'){
+					$new_af->{'_half_genotype'} = 1;
+					$new_af->allele_string($genotypes->[$i]->allele1); #for half genotypes
+				}
+				else{
+					$new_af->{'_half_genotype'} = 0;
+					#we need to put the allele and Individual in the AlleleFeature object
+					if($genotypes->[$i]->allele1 eq '-' and $genotypes->[$i]->allele1 eq '-'){
+					1;
+					}
+					$new_af->allele_string(ambiguity_code($genotypes->[$i]->allele1  . '/' . $genotypes->[$i]->allele2)); #for heterozigous alleles
+				}
+			#	$af->allele_string($genotypes->[$i]->allele1); #if it is strain, both alleles should be the same, might be changed in the future
+				$new_af->individual($genotypes->[$i]->individual);		
+				$last_position++;
+				
+				push @{$new_afs},$new_af;
+			}
+			
+			elsif ($genotypes->[$i]->start < $af->seq_region_start){
+				$last_position++; #this should not happen, it means the genotype has no allele feature 
+			}
+			
+			else{
+				last;
+			}
+		}
+		
 		$alleles = {}; #flush the alleles hash
 		delete $af->{'_vf_allele_string'}; #and remove the attribute
-		if ($af->seq_region_strand == -1){
-		    $genotypes->[$i]->allele1($string1);
-		    $genotypes->[$i]->allele2($string2);
-		}
-		if ($genotypes->[$i]->allele2 eq 'N'){
-		    $af->{'_half_genotype'} = 1;
-		    $af->allele_string($genotypes->[$i]->allele1); #for half genotypes
-		}
-		else{
-		    $af->{'_half_genotype'} = 0;
-		    #we need to put the allele and Individual in the AlleleFeature object
-		    if($genotypes->[$i]->allele1 eq '-' and $genotypes->[$i]->allele1 eq '-'){
-			1;
-		    }
-		    $af->allele_string(ambiguity_code($genotypes->[$i]->allele1  . '/' . $genotypes->[$i]->allele2)); #for heterozigous alleles
-		}
-	#	$af->allele_string($genotypes->[$i]->allele1); #if it is strain, both alleles should be the same, might be changed in the future
-		$af->individual($genotypes->[$i]->individual);		
-		$last_position++;
-		push @{$new_afs},$af;
-	    }
-	    elsif ($genotypes->[$i]->start < $af->seq_region_start){
-		$last_position++; #this should not happen, it means the genotype has no allele feature 
-	    }
-	    else{
-		last;
-	    }
-	}
     } 
     return $new_afs;
 }
