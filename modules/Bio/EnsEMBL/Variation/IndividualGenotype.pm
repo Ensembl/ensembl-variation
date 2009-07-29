@@ -173,11 +173,58 @@ sub variation {
   }
   else{
       if(!defined($self->{'variation'}) && $self->{'adaptor'})    {
-	  #lazy-load from database on demand
-	  my $vfa = $self->{'adaptor'}->db()->get_VariationFeatureAdaptor();
-	  %{$vfa->{'_slice_feature_cache'}} = (); #this is ugly, but I have no clue why the cache is not being properly stored...
-	  my $vf = shift @{$vfa->fetch_all_by_Slice($self->feature_Slice())};
-	  $self->{'variation'} = $vf->variation;
+		
+		#lazy-load from database on demand
+		my $vfa = $self->{'adaptor'}->db()->get_VariationFeatureAdaptor();
+		%{$vfa->{'_slice_feature_cache'}} = (); #this is ugly, but I have no clue why the cache is not being properly stored...
+		
+		#print "FS: ", $self->feature_Slice->start, "-", $self->feature_Slice->end, "\n";
+		
+		# get all VFs on the feature slice
+		my $vfs = $vfa->fetch_all_by_Slice($self->feature_Slice());
+		
+		# if there's only one that must be it
+		if(scalar @$vfs == 1) {
+		  $self->{'variation'} = $vfs->[0]->variation;
+		}
+		
+		# otherwise we need to check co-ordinates match
+		else {
+		  foreach my $vf(@$vfs) {
+			  #print "VF: ", $vf->variation_name, " ", $vf->seq_region_start, "-", $vf->seq_region_end, "\n";
+			  
+			  # only attach if the seq_region_start/end match the feature slice's
+			  $self->{'variation'} = $vf->variation if $vf->seq_region_start == $self->feature_Slice->start and $vf->seq_region_end == $self->feature_Slice->end;
+		  }
+		}
+		
+		# if we still haven't got one
+		if(!defined $self->{'variation'}) {
+		  # try getting a bigger slice to find in-dels
+		  my $new_slice = $self->feature_Slice->expand(1,1);
+		  
+		  #print "expanded FS: ", $new_slice->start, "-", $new_slice->end, "\n";
+		  
+		  # get VFs on the expanded slice
+		  my $new_vfs = $vfa->fetch_all_by_Slice($new_slice);
+		  
+		  # if there's only one that must be it
+		  if(scalar @$new_vfs == 1) {
+			$self->{'variation'} = $new_vfs->[0]->variation;
+		  }
+		  
+		  # otherwise we need to check start coord matches start coord of original feature slice
+		  else {
+			foreach my $vf(@$new_vfs) {
+				#print "VF: ", $vf->variation_name, " ", $vf->seq_region_start, "-", $vf->seq_region_end, "\n";
+				$self->{'variation'} = $vf->variation if $vf->seq_region_start == $self->feature_Slice->start;
+			}
+		  }
+		}
+		
+		# old code just shifts off first variation found!!!
+		#my $vf = shift @{$vfa->fetch_all_by_Slice($self->feature_Slice())};
+		#$self->{'variation'} = $vf->variation;
       }
   }
   return $self->{'variation'};
