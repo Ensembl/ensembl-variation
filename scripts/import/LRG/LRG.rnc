@@ -1,5 +1,5 @@
 # Relax NG schema for LRG
-# Version $Revision: 1.2 $
+# Version $Revision: 1.3 $
 
 start = LRG
 LRG = element lrg { 
@@ -55,10 +55,9 @@ FIXED_ANNOTATION = element fixed_annotation {
          },
          element peptide_coords {
             attribute start { xsd:integer },
-            attribute end { xsd:integer },
-            attribute start_phase { '0' | '1' | '2' },
-            attribute end_phase { '0' | '1' | '2' }
-         }?
+            attribute end { xsd:integer }
+         }?,
+         element intron_phase { '0' | '1' | '2' }?
       }+
       
    }+ # /transcript
