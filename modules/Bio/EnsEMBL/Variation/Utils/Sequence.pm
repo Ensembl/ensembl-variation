@@ -62,7 +62,7 @@ sub ambiguity_code {
     map {$duplicates{$_}++} split /[\|\/\\]/, $alleles;
     $alleles = uc( join '', sort keys %duplicates );
     my %ambig = qw(AC M ACG V ACGT N ACT H AG R AGT D AT W CG S CGT B CT Y 
-GT K C C A A T T G G - -); #we will need to decide what to do with alleles like -A. Is that possible??
+GT K C C A A T T G G - - -A -A -C -C -G -G -T -T A- A- C- C- G- G- T- T-); #for now just make e.g. 'A-' -> 'A-'
     return $ambig{$alleles};
 }
 
@@ -85,7 +85,7 @@ sub unambiguity_code {
     my $ambiguity_code = shift;
    
     my %unambig = qw(M AC V ACG N ACGT H ACT R AG D AGT W AT S CG B CGT Y CT K 
-GT C CC A AA T TT G GG - --); #we will need to decide what to do with alleles like -A. Is that possible??
+GT C CC A AA T TT G GG - -- -A -A -C -C -G -G -T -T A- A- C- C- G- G- T- T-); #for now just make e.g. 'A-' -> 'A-'
     return $unambig{$ambiguity_code};
 }
 
