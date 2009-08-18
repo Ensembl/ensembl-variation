@@ -44,14 +44,14 @@ $TMP_DIR  = $ImportUtils::TMP_DIR;
 $TMP_FILE = $ImportUtils::TMP_FILE;
 
 #check_allele_table($dbVar,$check);
-check_genotype_table($dbVar,$check);
+#check_genotype_table($dbVar,$check);
 #check_variation_feature_table($dbVar);
 #change_allele_table($dbVar);
 #change_allele_table1($dbVar);
 #change_allele_table2($dbVar);
 #change_allele_table3($dbVar);
 #delete_allele_gtype_tables($dbVar);
-#change_allele_gtype_tables($dbVar);
+change_allele_gtype_tables($dbVar);
 #change_variation_feature_table($dbVar);
 
 
@@ -73,11 +73,11 @@ sub check_allele_table {
   debug("Checking for allele table...All alleles in allele_string of variation_feature table should match alleles in allele table for the variation"); 
 
   #only find out variation with one mapping that is vf.map_weight=1 and seq_region_id not in (226063,226064,226065,226066)
-  my $sth = $dbVar->prepare(qq{select a.*,vf.allele_string from allele a, variation_feature vf where a.variation_id = vf.variation_id and vf.map_weight=1 and seq_region_id not in (226063,226064,226065,226066)}, {mysql_use_result=>1});
+  my $sth = $dbVar->prepare(qq{select a.*,vf.allele_string from allele a, variation_feature vf where a.variation_id = vf.variation_id and vf.map_weight=1 and (vf.seq_region_id < 27533 or vf.seq_region_id > 27803) and vf.source_id < 11}, {mysql_use_result=>1});
   
-  my (%total_var,%matched_var,$variation_id,$allele,$allele_string,$allele_id,$frequency,$sample_id);
+  my (%total_var,%matched_var,$variation_id,$ss_id,$allele,$allele_string,$allele_id,$frequency,$sample_id);
   $sth->execute();
-  $sth->bind_columns(\$allele_id,\$variation_id,\$allele,\$frequency,\$sample_id,\$allele_string);
+  $sth->bind_columns(\$allele_id,\$variation_id,\$ss_id,\$allele,\$frequency,\$sample_id,\$allele_string);
   while($sth->fetch()) {
      #print "$variation_id,$allele,$allele_string\n";
      next if ($allele =~ /N|^\(.*\)$|\+/ig);
@@ -90,13 +90,14 @@ sub check_allele_table {
        if ($1 and $2) {
          $al = $1;
          $nu = $2;
+		 next if $al =~ /\(/;
          next if ($al and $nu and $allele_string =~ /$al/);
        }
      }
      if ($allele_string !~ /$allele/i) {
         $frequency = '\N' if ! defined $frequency;
         $sample_id = '\N' if ! defined $sample_id;
-        print OUT "$allele_id\t$variation_id\t$allele\t$frequency\t$sample_id\t$allele_string\n";
+        print OUT "$allele_id\t$variation_id\t$ss_id\t$allele\t$frequency\t$sample_id\t$allele_string\n";
      }
      #$matched_var{$variation_id}++;
   }
@@ -129,21 +130,23 @@ sub check_genotype_table {
   
   debug("Checking for genotype tables...All genotypes in genotype table should match alleles in allele_string of variation_feature table for the variation, also check if we have four genotypes for the same variation");
 
-  #foreach my $table ("tmp_individual_genotype_single_bp","individual_genotype_multiple_bp","population_genotype") {  
-  foreach my $table ("tmp_individual_genotype_single_bp") {  
+  #foreach my $table ("tmp_individual_genotype_single_bp","individual_genotype_multiple_bp","population_genotype") {
+  #foreach my $table ("individual_genotype_multiple_bp") {
+  foreach my $table ("population_genotype") {  
+  #foreach my $table ("tmp_individual_genotype_single_bp") {  
     debug("checking table $table...");
 
     open OUT, ">$TMP_DIR/$vdbname\_$table\_$check";
     #only find out variation with one mapping that is vf.map_weight=1 and seq_region_id not in(226063,226064,226065,226066
-    my $sth = $dbVar->prepare(qq{select gt.*, vf.allele_string, vf.seq_region_id from $table gt, variation_feature vf where gt.variation_id = vf.variation_id and vf.map_weight=1 and vf.seq_region_id not in (226063,226064,226065,226066)}, {mysql_use_result=>1});
+    my $sth = $dbVar->prepare(qq{select gt.*, vf.allele_string, vf.seq_region_id from $table gt, variation_feature vf where gt.variation_id = vf.variation_id and vf.map_weight=1 and (vf.seq_region_id < 27533 or vf.seq_region_id > 27803) and vf.source_id < 11}, {mysql_use_result=>1});
 
-    my (%rec_var,$population_genotype_id,$variation_id,$allele_1,$allele_2,$allele_string,$seq_region_id,$frequency,$sample_id);
+    my (%rec_var,$population_genotype_id,$variation_id,$ss_id,$allele_1,$allele_2,$allele_string,$seq_region_id,$frequency,$sample_id);
     $sth->execute();
     if ($table =~ /pop/i) {
-      $sth->bind_columns(\$population_genotype_id,\$variation_id,\$allele_1,\$allele_2,\$frequency,\$sample_id,\$allele_string,\$seq_region_id);
+      $sth->bind_columns(\$population_genotype_id,\$variation_id,\$ss_id,\$allele_1,\$allele_2,\$frequency,\$sample_id,\$allele_string,\$seq_region_id);
     }
     else {
-      $sth->bind_columns(\$variation_id,\$allele_1,\$allele_2,\$sample_id,\$allele_string,\$seq_region_id);
+      $sth->bind_columns(\$variation_id,\$ss_id,\$allele_1,\$allele_2,\$sample_id,\$allele_string,\$seq_region_id);
     }
     LINE : while($sth->fetch()) {
       next if $allele_1 =~ /N/i;
@@ -169,15 +172,15 @@ sub check_genotype_table {
       }
       if ($allele_string and ($allele_string !~ /$allele_1/i or $allele_string !~ /$allele_2/i)) {
         if ($table =~ /pop/i) {
-          print OUT "$population_genotype_id\t$variation_id\t$allele_1\t$allele_2\t$frequency\t$sample_id\t$allele_string\t$seq_region_id\n";
+          print OUT "$population_genotype_id\t$variation_id\t$ss_id\t$allele_1\t$allele_2\t$frequency\t$sample_id\t$allele_string\t$seq_region_id\n";
         }
         else {
-          print OUT "$variation_id\t$allele_1\t$allele_2\t$sample_id\t$allele_string\t$seq_region_id\n";
+          print OUT "$variation_id\t$ss_id\t$allele_1\t$allele_2\t$sample_id\t$allele_string\t$seq_region_id\n";
         }
       }
     }
     
-    system("mv $TMP_DIR/$vdbname\_$table\_$check $TMP_DIR/$TMP_FILE");
+    #system("mv $TMP_DIR/$vdbname\_$table\_$check $TMP_DIR/$TMP_FILE");
     
     if ($table =~ /pop/i) {
       create_and_load($dbVar,"$vdbname\_$table\_$check","population_genotype_id i","variation_id i*","allele_1","allele_2","frequency","sample_id i","allele_string","seq_region_id");
@@ -313,7 +316,7 @@ sub change_allele_table3 {
 sub delete_allele_gtype_tables {
   my $dbVar = shift;  
   my $buffer = {}; #hash containing all the files to be parallelized
-  my ($table_name,$population_genotype_id,$variation_id,$allele_id,$allele,$allele_1,$allele_2,$frequency,$sample_id,$allele_string,$seq_region_id);
+  my ($table_name,$population_genotype_id,$variation_id,$ss_id,$allele_id,$allele,$allele_1,$allele_2,$frequency,$sample_id,$allele_string,$seq_region_id);
 
   my (%rec_seq_region_ids,%rec_table_name);
   if ($species =~ /hum|homo/i) {
@@ -321,7 +324,7 @@ sub delete_allele_gtype_tables {
                                        FROM seq_region sr, coord_system cs 
                                        WHERE sr.coord_system_id=cs.coord_system_id 
                                        AND cs.name='chromosome'
-                                       AND cs.version='NCBI36'});
+                                       AND cs.version='GRCh37'});
     $sth1->execute();
   
     while (my ($seq_reg_id,$name) = $sth1->fetchrow_array()) {
@@ -339,20 +342,20 @@ sub delete_allele_gtype_tables {
       $allele_column = "allele";
     }
       
-    $dbVar->do(qq{DELETE FROM $vdbname\_$table\_check WHERE $allele_column like "(%)"});
+    $dbVar->do(qq{DELETE FROM $table\_check WHERE $allele_column like "(%)"});
     
-    my $sth = $dbVar->prepare(qq{select v.* from $vdbname\_$table\_check v}, {mysql_use_result=>1});
+    my $sth = $dbVar->prepare(qq{select v.* from $table\_check v}, {mysql_use_result=>1});
 
     $sth->execute();
   
     if ($table =~ /pop/i) {
-      $sth->bind_columns(\$population_genotype_id,\$variation_id,\$allele_1,\$allele_2,\$frequency,\$sample_id,\$allele_string,\$seq_region_id);
+      $sth->bind_columns(\$population_genotype_id,\$variation_id,\$ss_id,\$allele_1,\$allele_2,\$frequency,\$sample_id,\$allele_string,\$seq_region_id);
     }
     elsif($table =~ /allele/i) {
-      $sth->bind_columns(\$allele_id,\$variation_id,\$allele,\$frequency,\$sample_id,\$allele_string);
+      $sth->bind_columns(\$allele_id,\$variation_id,\$ss_id,\$allele,\$frequency,\$sample_id,\$allele_string);
     }
     else {
-      $sth->bind_columns(\$variation_id,\$allele_1,\$allele_2,\$sample_id,\$allele_string,\$seq_region_id);
+      $sth->bind_columns(\$variation_id,\$ss_id,\$allele_1,\$allele_2,\$sample_id,\$allele_string,\$seq_region_id);
     }
 
     LINE : while($sth->fetch()) {
@@ -378,7 +381,7 @@ sub delete_allele_gtype_tables {
 sub change_allele_gtype_tables {
   my $dbVar = shift;  
   my $buffer = {}; #hash containing all the files to be parallelized
-  my ($table_name,$population_genotype_id,$variation_id,$allele_id,$allele,$allele_1,$allele_2,$frequency,$sample_id,$allele_string,$seq_region_id);
+  my ($table_name,$population_genotype_id,$variation_id,$ss_id,$allele_id,$allele,$allele_1,$allele_2,$frequency,$sample_id,$allele_string,$seq_region_id);
 
   my (%rec_seq_region_ids,%rec_table_name);
   if ($species =~ /hum|homo/i) {
@@ -386,7 +389,7 @@ sub change_allele_gtype_tables {
                                        FROM seq_region sr, coord_system cs 
                                        WHERE sr.coord_system_id=cs.coord_system_id 
                                        AND cs.name='chromosome'
-                                       AND cs.version='NCBI36'});
+                                       AND cs.version='GRCh37'});
     $sth1->execute();
   
     while (my ($seq_reg_id,$name) = $sth1->fetchrow_array()) {
@@ -394,8 +397,9 @@ sub change_allele_gtype_tables {
     }
   }
   
+  foreach my $table ("tmp_individual_genotype_single_bp") {
   #foreach my $table ("tmp_individual_genotype_single_bp","individual_genotype_multiple_bp","population_genotype","allele") {#we only change things that have map_weight=1
-  foreach my $table ("tmp_individual_genotype_single_bp") { 
+  #foreach my $table ("tmp_individual_genotype_single_bp") { 
   #foreach my $table ("individual_genotype_multiple_bp") {
     my $allele_column = "allele_1";
     debug("processling table $table");    
@@ -407,20 +411,20 @@ sub change_allele_gtype_tables {
       $allele_column = "allele";
     }
     #delete allele = (INDETERMINATE)  
-    $dbVar->do(qq{DELETE FROM $vdbname\_$table\_$check WHERE $allele_column like "(%)"});
+    $dbVar->do(qq{DELETE FROM $table\_check WHERE $allele_column like "(%)"});
     
-    my $sth = $dbVar->prepare(qq{select v.* from $vdbname\_$table\_$check v}, {mysql_use_result=>1});
+    my $sth = $dbVar->prepare(qq{select v.* from $table\_check v}, {mysql_use_result=>1});
 
     $sth->execute();
   
     if ($table =~ /pop/i) {
-      $sth->bind_columns(\$population_genotype_id,\$variation_id,\$allele_1,\$allele_2,\$frequency,\$sample_id,\$allele_string,\$seq_region_id);
+      $sth->bind_columns(\$population_genotype_id,\$variation_id,\$ss_id,\$allele_1,\$allele_2,\$frequency,\$sample_id,\$allele_string,\$seq_region_id);
     }
     elsif($table =~ /allele/i) {
-      $sth->bind_columns(\$allele_id,\$variation_id,\$allele,\$frequency,\$sample_id,\$allele_string);
+      $sth->bind_columns(\$allele_id,\$variation_id,\$ss_id,\$allele,\$frequency,\$sample_id,\$allele_string);
     }
     else {
-      $sth->bind_columns(\$variation_id,\$allele_1,\$allele_2,\$sample_id,\$allele_string,\$seq_region_id);
+      $sth->bind_columns(\$variation_id,\$ss_id,\$allele_1,\$allele_2,\$sample_id,\$allele_string,\$seq_region_id);
     }
 
     LINE : while($sth->fetch()) {
@@ -534,7 +538,7 @@ sub change_allele_gtype_tables {
 	      print OUT "update $table set allele_1 = \"$new_allele_1\", allele_2 = \"$new_allele_2\" where population_genotype_id = $population_genotype_id;\n";
 	    }
 	    elsif ($table =~ /multi/) {#for individual_genotype_multiple_base table
-	      print OUT "update $table set allele_1 = \"$new_allele_1\", allele_2 = \"$new_allele_2\" where variation_id=$variation_id and sample_id=$sample_id and allele_1 = \"$old_allele_1\" and allele_2 = \"$old_allele_2\";\n";
+	      print OUT "update $table set allele_1 = \"$new_allele_1\", allele_2 = \"$new_allele_2\" where variation_id=$variation_id and subsnp_id = $ss_id and sample_id=$sample_id and allele_1 = \"$old_allele_1\" and allele_2 = \"$old_allele_2\";\n";
 	    }
 	    elsif ($table =~ /single/) {
               if ($species =~ /hum|homo/i) {
@@ -550,7 +554,7 @@ sub change_allele_gtype_tables {
               print_buffered($buffer, "$TMP_DIR/$table_name\_del",
               "DELETE FROM $table WHERE variation_id=$variation_id and sample_id=$sample_id;\n");
               print_buffered( $buffer, "$TMP_DIR/$table_name\.import",
-              join ("\t",$variation_id,$new_allele_1,$new_allele_2,$sample_id)."\n");
+              join ("\t",$variation_id,$ss_id,$new_allele_1,$new_allele_2,$sample_id)."\n");
               #print_buffered( $buffer, "$TMP_DIR/$table_name\_change","update $table_name set allele_1 = \"$new_allele_1\", allele_2 = \"$new_allele_2\" where variation_id=$variation_id and sample_id=$sample_id and allele_1 = \"$old_allele_1\" and allele_2 = \"$old_allele_2\";\n");
             }
 	  }
@@ -561,7 +565,7 @@ sub change_allele_gtype_tables {
           else {
             if ($old_allele_1 !~ /y|r/i and $old_allele_2 !~ /y|r/i) {
               print_buffered($buffer,"$TMP_DIR/$table\_remove",
-              "DELETE FROM $table WHERE variation_id=$variation_id and allele_1 = \"$old_allele_1\" and allele_2=\"$old_allele_2\" and sample_id=$sample_id;\n");
+              "DELETE FROM $table WHERE variation_id=$variation_id and subsnp_id=$ss_id and allele_1 = \"$old_allele_1\" and allele_2=\"$old_allele_2\" and sample_id=$sample_id;\n");
             } 
           }
         }
