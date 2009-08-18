@@ -121,7 +121,7 @@ sub variation_class{
 	    #A/- 2 alleles
 	    return 'in-del'
 	    }
-	elsif (($alleles[0] =~ /LARGE/) || ($alleles[1] =~ /LARGE/)){
+	elsif (($alleles[0] =~ /LARGE|INS|DEL/) || ($alleles[1] =~ /LARGE|INS|DEL/)){
 	    #(LARGEDELETION) 2 alleles
 	    return 'named'
 	    }
