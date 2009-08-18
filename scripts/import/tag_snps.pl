@@ -50,7 +50,7 @@ $sth->bind_columns(\$population_id,\$population_name);
 my $siblings = {}; # hash {$individual_id} ,where the individual is sibling of another one
 my @pops;
 while($sth->fetch){
-    if($population_name =~ /CEU|YRI/){
+    if($population_name =~ /CEU|YRI|MEX/){
 	&get_siblings($dbVariation,$population_id,$siblings);
     }
     push @pops, $population_id;
