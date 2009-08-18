@@ -169,7 +169,7 @@ sub get_LD_populations{
     #get all the children that we do not want in the genotypes
     my @pops;
     while($sth->fetch){
-	if($population_name =~ /CEU|YRI/){
+	if($population_name =~ /CEU|YRI|MEX/){
 	    get_siblings($dbVariation,$pop_id,$siblings);
 	}
 	push @pops, $pop_id;
