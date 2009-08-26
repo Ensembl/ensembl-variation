@@ -160,7 +160,7 @@ sub fetch_all_by_Variation {
 sub _tables{return ['population_genotype','pg']}
 
 sub _columns{
-    return qw(pg.population_genotype_id pg.variation_id pg.sample_id pg.allele_1 pg.allele_2 pg.frequency)
+    return qw(pg.population_genotype_id pg.variation_id pg.subsnp_id pg.sample_id pg.allele_1 pg.allele_2 pg.frequency)
 }
 
 sub _objs_from_sth{
@@ -168,23 +168,24 @@ sub _objs_from_sth{
     my $sth = shift;
 
     my @results;
-    my ($dbID, $variation_id, $sample_id, $allele_1, $allele_2, $frequency);
-    $sth->bind_columns(\$dbID, \$variation_id, \$sample_id, \$allele_1, \$allele_2, \$frequency);
+    my ($dbID, $variation_id, $ss_id, $sample_id, $allele_1, $allele_2, $frequency);
+    $sth->bind_columns(\$dbID, \$variation_id, \$ss_id, \$sample_id, \$allele_1, \$allele_2, \$frequency);
     
     my %population_hash;
     my %variation_hash;
     while($sth->fetch()){
-	my $pgtype = Bio::EnsEMBL::Variation::PopulationGenotype->new
-	    (-dbID => $dbID,
-	     -adaptor => $self,
-	     -allele1 => $allele_1,
-	     -allele2 => $allele_2,
-	     -frequency => $frequency);
-	$population_hash{$sample_id} ||= [];
-	$variation_hash{$variation_id} ||= [];
-	push @{$variation_hash{$variation_id}}, $pgtype; #store the variations to get the objects once
-	push @{$population_hash{$sample_id}}, $pgtype; #store the populations to get the objects once
-	push @results, $pgtype;
+		my $pgtype = Bio::EnsEMBL::Variation::PopulationGenotype->new
+			(-dbID => $dbID,
+			-adaptor => $self,
+			-allele1 => $allele_1,
+			-allele2 => $allele_2,
+			-subsnp => $ss_id,
+			-frequency => $frequency);
+		$population_hash{$sample_id} ||= [];
+		$variation_hash{$variation_id} ||= [];
+		push @{$variation_hash{$variation_id}}, $pgtype; #store the variations to get the objects once
+		push @{$population_hash{$sample_id}}, $pgtype; #store the populations to get the objects once
+		push @results, $pgtype;
     }
 
     # get all variations in one query (faster)
@@ -194,9 +195,9 @@ sub _objs_from_sth{
     my $vars = $va->fetch_all_by_dbID_list(\@var_ids);
     
     foreach my $v (@$vars) {
-	foreach my $igty (@{$variation_hash{$v->dbID()}}) {
-	    $igty->variation($v);
-	}
+		foreach my $igty (@{$variation_hash{$v->dbID()}}) {
+			$igty->variation($v);
+		}
     }
 
     # get all populations in one query (faster)
@@ -206,9 +207,9 @@ sub _objs_from_sth{
     my $pops = $pa->fetch_all_by_dbID_list(\@pop_ids);
     
     foreach my $p (@$pops) {
-	foreach my $pgty (@{$population_hash{$p->dbID()}}) {
-	    $pgty->population($p);
-	}
+		foreach my $pgty (@{$population_hash{$p->dbID()}}) {
+			$pgty->population($p);
+		}
     }
     return \@results;   
 
