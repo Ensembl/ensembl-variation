@@ -88,14 +88,21 @@ sub new {
   my $caller = shift;
   my $class = ref($caller) || $caller;
 
-  my ($dbID, $adaptor, $allele, $freq, $pop) =
-    rearrange(['dbID', 'ADAPTOR', 'ALLELE', 'FREQUENCY', 'POPULATION'], @_);
+  my ($dbID, $adaptor, $allele, $freq, $pop, $ss_id) =
+    rearrange(['dbID', 'ADAPTOR', 'ALLELE', 'FREQUENCY', 'POPULATION', 'SUBSNP'], @_);
+  
+  # set subsnp_id to undefined if it's 0 in the DB
+  $ss_id = undef if (defined $ss_id && $ss_id == 0);
+  
+  # add ss to the subsnp_id
+  $ss_id = 'ss'.$ss_id if defined $ss_id && $ss_id !~ /^ss/;
 
   return bless {'dbID'    => $dbID,
                 'adaptor' => $adaptor,
                 'allele'  => $allele,
                 'frequency' => $freq,
-                'population' => $pop}, $class;
+                'population' => $pop,
+                'subsnp'  => $ss_id}, $class;
 }
 
 
@@ -174,6 +181,72 @@ sub population{
   }
 
   return $self->{'population'};
+}
+
+
+
+=head2 subsnp
+
+  Arg [1]    : string $newval (optional) 
+               The new value to set the subsnp attribute to
+  Example    : print $a->subsnp();
+  Description: Getter/Setter for the subsnp attribute.
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub subsnp{
+  my $self = shift;
+  return $self->{'subsnp'} = shift if(@_);
+  return $self->{'subsnp'};
+}
+
+
+
+
+=head2 subsnp_handle
+
+  Arg [1]    : string $newval (optional) 
+               The new value to set the subsnp_handle attribute to
+  Example    : print $a->subsnp_handle();
+  Description: Getter/Setter for the subsnp_handle attribute.
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub subsnp_handle{
+  my $self = shift;
+  
+  # if changing handle
+  if(@_) {
+    return $self->{'subsnp_handle'} = shift;
+  }
+  
+  # if not already defined, retrieve from the database
+  if(!defined $self->{'subsnp_handle'}) {
+    
+    # check if the subsnp is useable and the db exists
+    if(defined ($self->{'subsnp'}) && defined ($self->{'adaptor'})) {
+      my $ss = $self->subsnp();
+      
+      # get rid of the ss from the beginning
+      $ss =~ s/^ss//g;
+      
+      my $sth = $self->{'adaptor'}->dbc->prepare(qq/SELECT handle FROM subsnp_handle WHERE subsnp_id = ?;/);
+      $sth->execute($ss);
+      my $handle = $sth->fetchrow_arrayref->[0];
+      
+      return $self->{'subsnp_handle'} = $handle;
+    }
+  }
+  
+  return $self->{'subsnp_handle'};
 }
 
 
