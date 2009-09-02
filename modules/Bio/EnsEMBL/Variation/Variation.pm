@@ -334,7 +334,6 @@ sub add_synonym {
   my $self   = shift;
   my $source = shift;
   my $syn    = shift;
-  my $handle = shift if @_;
 
   throw("source argument is required") if(!$source);
   throw("syn argument is required") if(!$syn);
@@ -342,11 +341,6 @@ sub add_synonym {
   $self->{'synonyms'}->{$source} ||= [];
 
   push @{$self->{'synonyms'}->{$source}}, $syn;
-  
-  # if we've been given a subsnp handle
-  if(defined($handle)) {
-	$self->{'handles'}->{$syn} = $handle;
-  }
 
   return;
 }
@@ -806,39 +800,6 @@ sub derived_allele {
          }
      }
      return $derived_allele_str;
-}
-
-
-
-=head2 synonym_handle
-
-    Args         : string $synonym
-				   The synonym whose handle is required
-    Example      : my $handle = $v->synonym_handle($synonym)
-    Description  : returns the subsnp handle/submitter identifier for a given
-				   synonym of this variation
-    ReturnType   : String $handle
-    Exceptions   : none
-    Caller       : General
-    Status       : At Risk
-
-=cut
-
-sub synonym_handle{
-  my $self = shift;
-  my $synonym = shift;
-  
-  # get existing synonyms
-  my $synonyms = $self->get_all_synonyms();
-  my $found = 0;
-  
-  foreach my $syn(@$synonyms) {
-	$found = 1 if $synonym eq $syn;
-  }
-  
-  throw("synonym \"".$synonym."\" not found for this variation") if (!$found);
-  
-  return $self->{'handles'}->{$synonym};
 }
 
 1;
