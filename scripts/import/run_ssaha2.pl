@@ -31,7 +31,7 @@ print "seed is $seed\n";
 
 my $output_file = "ssaha2_output";
 my $queue_long = "-q long -M7000000 -R'select[mem>7000] rusage[mem=7000]'";
-my $queue_normal = "-q normal -M5000000 -R'select[mem>5000] rusage[mem=5000]'"; ##for new farm
+my $queue_normal = "-q long -M5000000 -R'select[mem>5000] rusage[mem=5000]'"; ##for new farm
 
 
 #my $queue = $queue_long;
@@ -49,25 +49,26 @@ sub run_ssaha2 {
   my $subject = "$subj_dir/$subname";
   print "tar_file is $tar_file and subject is $subject and target_file is $target_file\n";
   #print "Submitting ssaha2Build job...\n";
-  #my $ssaha2build = "bsub $queue_long -J 'ssaha2build' -o $target_file\_out /nfs/acari/yuan/ensembl/src/ensembl-variation/scripts/ssahaSNP/ssaha2/ssaha2_v1.0.9_x86_64/ssaha2Build -save $subject $target_file";
+  #my $ssaha2build = "bsub $queue_long -J 'ssaha2build' -o $target_file\_out /nfs/users/nfs_y/yuan/ensembl/src/ensembl-variation/scripts/ssahaSNP/ssaha2/ssaha2_v1.0.9_x86_64/ssaha2Build -save $subject $target_file";
   #system("$ssaha2build");
 
   #my $call = "bsub -q normal -K -w 'done('ssaha2build')' -J waiting_process sleep 1"; #waits until all variation features have finished to continue
 
   #system($call);
 
-  if ($start and $end) {
-    for (my $start=$start; $start<=$end; $start++) {
-      my $input = "$input_dir/$start\_query_seq" if $input_dir;
+  if ($start and $end) {#mainly for flanking_sequence mapping
+    #for (my $start=$start; $start<=$end; $start++) {
+    #input name will change to \\\$LSB_JOBINDEX\_query_seq for flanking sequence mapping
+      my $input = "$input_dir/Watson_\\\$LSB_JOBINDEX\.fastq" if $input_dir;
       next if (-z "$input");
       if (! -e "$output_dir/ssaha_out_$start") {#check for ssaha2_output is exists or not
 	print "Submitting ssaha2 job...\n";
-	bsub_ssaha_job ($start,$end,$input,$queue,$target_file);
+	bsub_ssaha_job_array($start,$end,$input,$queue,$target_file);
       }
-    }
+    #}
   }
   else {
-    while (<$input_dir/*fastq>) {
+    while (<$input_dir/*fastq>) { #mainly for sequencing reads
       my $input = $_;
       my ($input_file) = $input =~ /^.*\/(.*)$/;
 
@@ -77,14 +78,14 @@ sub run_ssaha2 {
 
       my $n;
       #my $size = $num;#this is run whole file in one go
-      my $size = 50000;#this is to split file in this size
+      my $size = 50000;		#this is to split file in this size
       my $count;
 
       for ($n = 1;$n<=$num;$n+=$size) {
-        my $end = $n+$size-1;
-        $end = $num if ($end > $num);
-        $count++;
-        if (! -e "$output_dir/ssaha_out_$input_file\:$n") {#check for ssaha2_output is exists or not
+	my $end = $n+$size-1;
+	$end = $num if ($end > $num);
+	$count++;
+	if (! -e "$output_dir/ssaha_out_$input_file\:$n") { #check for ssaha2_output is exists or not
 	  print "Submitting ssaha2 job $count ...\n";
 	  bsub_ssaha_job ("$input_file\:$n",$end,$input,$queue,$target_file);
 	}
@@ -94,8 +95,8 @@ sub run_ssaha2 {
 }
 
 
-#my $call = "bsub -K -w 'done($input_dir\_ssaha_job\_$start)' -J waiting_process sleep 1"; #waits until all ssaha jobs have finished to continue
-#system($call);
+my $call = "bsub -K -w 'done(ssaha_out*)' -J waiting_process sleep 1"; #waits until all ssaha jobs have finished to continue
+system($call);
 
 sub parse_ssaha2 {
 
@@ -106,6 +107,24 @@ sub parse_ssaha2 {
       parse_ssaha2_out ($start, $input,"$output_dir/ssaha_out_$start");
     }
   }
+}
+
+sub bsub_ssaha_job_array {
+  my ($start,$end, $input_file, $queue, $target_file) = @_ ;
+
+  my ($subj_dir,$tar_file) = $target_file =~ /^(.*)\/(.*)$/;
+  my ($subname) = $tar_file =~ /^(.*)\.*.*$/;
+  my $subject = "$subj_dir/$subname";
+
+  #for 454 reads
+  my $ssaha_command = "/nfs/users/nfs_y/yuan/ensembl/src/ensembl-variation/scripts/ssahaSNP/ssaha2/pileup_v0.5/ssaha2/ssaha2-2.3_x86_64 -rtype 454 -best 1 -output cigar -name -save $subject $input_file";
+
+  my $call = "bsub -J'ssaha_out_[$start-$end]%2' $queue -e $output_dir/ssaha-%J.%I.err -o $output_dir/ssaha-%J.%I.out ";
+
+  $call .= " $ssaha_command";
+  
+  system ($call);
+  print "$call\n";
 }
 
 sub bsub_ssaha_job {
@@ -122,16 +141,16 @@ sub bsub_ssaha_job {
 
   print "target_file is $target_file\n";
 
-  #for normal mapping
-  $ssaha_command = "/nfs/acari/yuan/ensembl/src/ensembl-variation/scripts/ssahaSNP/ssaha2/ssaha2_v1.0.9_x86_64/ssaha2 -align 0 -kmer 12 -seeds $seed -cut 5000 -output vulgar -depth 5 -best 1 -tags 1 -save $subject $input_file";
+  #for normal mapping with long sequence (more than 2 kb)
+  #$ssaha_command = "/nfs/users/nfs_y/yuan/ensembl/src/ensembl-variation/scripts/ssahaSNP/ssaha2/ssaha2_v1.0.9_x86_64/ssaha2 -align 0 -kmer 12 -seeds $seed -cut 5000 -output vulgar -depth 5 -best 1 -tags 1 -save $subject $input_file";
   #for abi reads
-  #$ssaha_command = "/nfs/acari/yuan/ensembl/src/ensembl-variation/scripts/ssahaSNP/ssaha2/pileup_v0.5/ssaha2/ssaha2-2.3_x86_64 -start $n -end $end -seeds 15 -score 250 -tags 1 -best 1 -output cigar -name -memory 300 -cut 5000 -save $subject $input_file";
+  #$ssaha_command = "/nfs/users/nfs_y/yuan/ensembl/src/ensembl-variation/scripts/ssahaSNP/ssaha2/pileup_v0.5/ssaha2/ssaha2-2.3_x86_64 -start $n -end $end -seeds 15 -score 250 -tags 1 -best 1 -output cigar -name -memory 300 -cut 5000 -save $subject $input_file";
   #for 454 reads
-  #$ssaha_command = "/nfs/acari/yuan/ensembl/src/ensembl-variation/scripts/ssahaSNP/ssaha2/pileup_v0.5/ssaha2/ssaha2-2.3_x86_64 -start $n -end $end -454 -seeds 5 -score 30 -kmer 13 -skip 4 -best 1 -output cigar -name -save $subject $input_file";
+  $ssaha_command = "/nfs/users/nfs_y/yuan/ensembl/src/ensembl-variation/scripts/ssahaSNP/ssaha2/pileup_v0.5/ssaha2/ssaha2-2.3_x86_64 -start $n -end $end -454 -best 1 -output cigar -name -save $subject $input_file";
   #for watson reads
-  #$ssaha_command = "/nfs/acari/yuan/ensembl/src/ensembl-variation/scripts/ssahaSNP/ssaha2/pileup_v0.5/ssaha2/ssaha2-2.3_x86_64 -start $n -end $end -seeds 5 -cut 5000 -memory 300 -best 1 -output cigar -name -save $subject $input_file";
+  #$ssaha_command = "/nfs/users/nfs_y/yuan/ensembl/src/ensembl-variation/scripts/ssahaSNP/ssaha2/pileup_v0.5/ssaha2/ssaha2-2.3_x86_64 -start $n -end $end -seeds 5 -cut 5000 -memory 300 -best 1 -output cigar -name -save $subject $input_file";
   #for sam output
-  #$ssaha_command = "/nfs/acari/yuan/ensembl/src/ensembl-variation/scripts/ssahaSNP/ssaha2/ssaha2_x86_64.bin -start $n -end $end -seeds 15 -score 250 -tags 1 -best 1 -output sam -name -memory 300 -cut 5000 -save $subject $input_file";
+  #$ssaha_command = "/nfs/users/nfs_y/yuan/ensembl/src/ensembl-variation/scripts/ssahaSNP/ssaha2/ssaha2_x86_64.bin -start $n -end $end -seeds 15 -score 250 -tags 1 -best 1 -output sam -name -memory 300 -cut 5000 -save $subject $input_file";
   print "job_num is ", ++$count, " and start is $start and out is ssaha_out_$start\n";
   my $call = "bsub -J $input_dir\_ssaha_job_$start $queue -e $output_dir/error_ssaha_$start -o $output_dir/ssaha_out_$start ";
 
