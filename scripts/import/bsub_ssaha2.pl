@@ -54,7 +54,7 @@ my $vdb = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'variation');
 my $dbCore = $cdb->dbc->db_handle;
 #my $dbVar = $vdb->dbc->db_handle;
 
-$start ||=1;
+#$start ||=1;
 
 &run();
 #get_read_flank_seq($cdb, $vdb, $read_file);
@@ -93,8 +93,11 @@ sub run {
   }
   elsif ($map_all) {
     print "input_dir is $input_dir and output_dir is $output_dir\n";
-    my $call = "./run_ssaha2.pl -start $start -end $end -input_dir $input_dir -output_dir $output_dir -target_file $target_file $run_parse";
+    my $call = "./run_ssaha2.pl ";
+    $call .= ($start) ? "-start $start -end $end" : '' ;
+    $call .= " -input_dir $input_dir -output_dir $output_dir -target_file $target_file $run_parse";
     system($call);
+    print "call is $call\n";
     print "submit job for $start and $end\n";
   }
 }
