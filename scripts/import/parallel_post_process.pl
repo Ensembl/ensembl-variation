@@ -192,7 +192,7 @@ sub parallel_variation_feature{
 	$limit = "AND variation_feature_id <= " . (($i+1) * $sub_variation + $min_variation-1) . " AND variation_feature_id >= " . ($i*$sub_variation + $min_variation) if ($i+1 < $num_processes);
 	$limit =  "AND variation_feature_id <= " .  $max_variation . " AND variation_feature_id >= " . ($i*$sub_variation + $min_variation) if ($i + 1 == $num_processes); #the last one takes the left rows
 
-	$call = "bsub -q normal -J $dbname\_variation_job_$i -o $TMP_DIR/output_variation_feature_$i\_$$.txt $PERLBIN parallel_variation_feature.pl -chost $chost -cuser $cuser -cdbname $cdbname -vhost $vhost -vuser $vuser -vport $vport -vdbname $vdbname -limit '$limit' -tmpdir $TMP_DIR -tmpfile $TMP_FILE -num_processes $num_processes -status_file $variation_status_file ";
+	$call = "bsub -q long -J $dbname\_variation_job_$i -o $TMP_DIR/output_variation_feature_$i\_$$.txt $PERLBIN parallel_variation_feature.pl -chost $chost -cuser $cuser -cdbname $cdbname -vhost $vhost -vuser $vuser -vport $vport -vdbname $vdbname -limit '$limit' -tmpdir $TMP_DIR -tmpfile $TMP_FILE -num_processes $num_processes -status_file $variation_status_file ";
 	$call .= "-cpass $cpass " if ($cpass);
 	$call .= "-cport $cport " if ($cport);
 	$call .= "-vpass $vpass " if ($vpass);
@@ -284,7 +284,7 @@ sub parallel_variation_group_feature{
     my $dbVar = shift;
 
     my $total_process = 0;
-    my $call = "bsub -q normal  -o $TMP_DIR/output_group_feature_$$\.txt $PERLBIN parallel_variation_group_feature.pl -chost $chost -cuser $cuser -cdbname $cdbname -vhost $vhost -vuser $vuser -vport $vport -vdbname $vdbname -tmpdir $TMP_DIR -tmpfile $TMP_FILE ";
+    my $call = "bsub -q long  -o $TMP_DIR/output_group_feature_$$\.txt $PERLBIN parallel_variation_group_feature.pl -chost $chost -cuser $cuser -cdbname $cdbname -vhost $vhost -vuser $vuser -vport $vport -vdbname $vdbname -tmpdir $TMP_DIR -tmpfile $TMP_FILE ";
     $call .= "-cpass $cpass " if ($cpass);
     $call .= "-cport $cport " if ($cport);
     $call .= "-vpass $vpass " if ($vpass);
@@ -391,7 +391,7 @@ sub reverse_genotype{
   my $dbVar = shift;
   my $buffer = {}; #hash containing all the files to be parallelized
 
-  my ($source_id,$name,$validation_status,$ancestral_allele,$population_genotype_id,$variation_id,$allele_id,$allele,$allele_1,$allele_2,$frequency,$sample_id,$allele_string,$seq_region_id);
+  my ($source_id,$name,$validation_status,$ancestral_allele,$population_genotype_id,$variation_id,$ss_id,$allele_id,$allele,$allele_1,$allele_2,$frequency,$sample_id,$allele_string,$seq_region_id);
   my (%rec_seq_region_ids,%rec_table_name,$table_name);
 
   #create rec_seq_region_ids hash to contain chromosomes that appear in SubIndch_chromosome_name, so can write output file separatly for human genotype
@@ -410,7 +410,8 @@ sub reverse_genotype{
 
   #foreach my $table ("variation","tmp_individual_genotype_single_bp","individual_genotype_multiple_bp","population_genotype","allele") {
   #we only change things that have map_weight=1 that is vf.map_weight=1 and seq_region_id not in (226063,226064,226065,226066)
-  foreach my $table ("individual_genotype_multiple_bp","population_genotype","allele") {
+  foreach my $table ("tmp_individual_genotype_single_bp","individual_genotype_multiple_bp","population_genotype","allele","variation") {
+  #foreach my $table ("variation") {
     debug("processling table $table");
     if ($table !~ /single/) {
       open OUT, ">$TMP_DIR/$table\.$vdbname" or die "can't open file $table\_out : $!";
@@ -436,16 +437,16 @@ sub reverse_genotype{
 
     $sth->execute();
     if ($table =~ /pop/i) {
-      $sth->bind_columns(\$population_genotype_id,\$variation_id,\$allele_1,\$allele_2,\$frequency,\$sample_id,\$allele_string,\$seq_region_id);
+      $sth->bind_columns(\$population_genotype_id,\$variation_id,\$ss_id,\$allele_1,\$allele_2,\$frequency,\$sample_id,\$allele_string,\$seq_region_id);
     }
     elsif($table =~ /allele/i) {
-      $sth->bind_columns(\$allele_id,\$variation_id,\$allele,\$frequency,\$sample_id,\$allele_string,\$seq_region_id);
+      $sth->bind_columns(\$allele_id,\$variation_id,\$ss_id,\$allele,\$frequency,\$sample_id,\$allele_string,\$seq_region_id);
     }
     elsif($table =~ /variation/) {
       $sth->bind_columns(\$allele_id,\$source_id,\$name,\$validation_status,\$allele,\$allele_string,\$seq_region_id);
     }
     else {
-      $sth->bind_columns(\$variation_id,\$allele_1,\$allele_2,\$sample_id,\$allele_string,\$seq_region_id);
+      $sth->bind_columns(\$variation_id,\$ss_id,\$allele_1,\$allele_2,\$sample_id,\$allele_string,\$seq_region_id);
     }
     LINE : while ($sth->fetch()){
       #print "allele_1 is $allele_1\n";
@@ -482,7 +483,7 @@ sub reverse_genotype{
         } 
         next LINE if ($al and $nu and $new_allele_string =~ /$al/);
         if ($new_allele_string !~ /$allele/ or ($new_allele_string =~ /$allele/ and $allele_string =~ /$allele/)) {
-	  next if ($allele !~ /\(/);#added for the test
+	  #next if ($allele !~ /\(/);#added for the test
           if ($allele =~ /\(|\)/g) {
             $allele =~ /\((\S+)\)(\d+)/; 
             #print "match is $1 and num is $2\n";
@@ -564,14 +565,17 @@ sub reverse_genotype{
 	      else {
 		$table_name = "$table";
 	      }
+		  
+		  $table_name = 'tmp_individual_genotype_single_bp';
+		  
 	      print_buffered($buffer, "$TMP_DIR/$table_name\_del", 
-              "DELETE FROM $table_name WHERE variation_id=$variation_id and sample_id=$sample_id;\n");
+              "DELETE FROM $table_name WHERE variation_id=$variation_id and subsnp_id=$ss_id and sample_id=$sample_id;\n");
               print_buffered( $buffer, "$TMP_DIR/$table_name\.import",
-              join ("\t",$variation_id,$new_allele_1,$new_allele_2,$sample_id)."\n");
+              join ("\t",$variation_id,$ss_id,$new_allele_1,$new_allele_2,$sample_id)."\n");
 			      #"update ignore $table_name set allele_1 = \"$allele_1\", allele_2 = \"$allele_2\" where variation_id=$variation_id and sample_id=$sample_id and allele_1 = \"$old_allele_1\" and allele_2 = \"$old_allele_2\";\n");
 	    }
 	    else {
-	      print OUT "update ignore $table set allele_1 = \"$new_allele_1\", allele_2 = \"$new_allele_2\" where variation_id=$variation_id and sample_id=$sample_id and allele_1 = \"$old_allele_1\" and allele_2 = \"$old_allele_2\";\n";
+	      print OUT "update ignore $table set allele_1 = \"$new_allele_1\", allele_2 = \"$new_allele_2\" where variation_id=$variation_id and subsnp_id=$ss_id and  sample_id=$sample_id and allele_1 = \"$old_allele_1\" and allele_2 = \"$old_allele_2\";\n";
 	    }
 	  }
 	}
@@ -627,7 +631,7 @@ sub reverse_flanking_sequence {
 
   my $sth=$dbVar->prepare(qq{select fl.* from flanking_sequence fl, variation_feature_before_re vf 
                              where vf.map_weight=1
-                             and seq_region_id not in (226063,226064,226065,226066)
+                             and vf.seq_region_id not in (226063,226064,226065,226066)
                              and fl.variation_id = vf.variation_id
                              and vf.seq_region_strand=-1
                              and vf.seq_region_strand = fl.seq_region_strand});
@@ -684,7 +688,7 @@ sub merge_ensembl_snps {
 
   #this one is used to merge ENSEMBL SNPs with dbSNP SNPs and other SNPs
   my $dbVar = shift;
-  my $new_source_id=11 ;
+  my $new_source_id=11;
 
 
   if (! $new_source_id) {
@@ -705,7 +709,7 @@ sub merge_ensembl_snps {
                AND vf1.seq_region_id not in (226063,226064,226065,226066)
                AND vf2.seq_region_id not in (226063,226064,226065,226066)
                AND vf1.variation_id > vf2.variation_id
-               AND vf1.source_id =$new_source_id and  vf2.source_id<$new_source_id
+               AND vf1.source_id =$new_source_id and  vf2.source_id!=$new_source_id
  });
 
   $dbVar->do(qq{alter table tmp_ids_$new_source_id add index variation_idx1(variation_id1), add index variation_idx2(variation_id2)});
@@ -756,13 +760,15 @@ sub merge_ensembl_snps {
 
   $dbVar->do(qq{DELETE from v using flanking_sequence v, tmp_ids_$new_source_id t where t.variation_id1=v.variation_id});
 
-  $dbVar->do(qq{DELETE from v using allele v, tmp_ids_$new_source_id t where t.variation_id1=v.variation_id});
-
   $dbVar->do(qq{DELETE from tv using transcript_variation tv 
                 LEFT JOIN variation_feature vf on tv.variation_feature_id=vf.variation_feature_id 
                 WHERE vf.variation_feature_id is null});
 
-  debug("Updating tmp_individual_genotype_single_bp table ...");
+  debug("Updating tables...");
+
+  $dbVar->do(qq{UPDATE allele a, tmp_ids_$new_source_id t SET a.variation_id = t.variation_id2 where t.variation_id1 = a.variation_id});
+
+  $dbVar->do(qq{UPDATE population_genotype a, tmp_ids_$new_source_id t SET a.variation_id = t.variation_id2 where t.variation_id1 = a.variation_id});
 
   $dbVar->do(qq{UPDATE individual_genotype_multiple_bp vs, tmp_ids_$new_source_id t 
                 SET vs.variation_id=t.variation_id2 
@@ -771,9 +777,9 @@ sub merge_ensembl_snps {
   $dbVar->do(qq{UPDATE IGNORE tmp_individual_genotype_single_bp vs, tmp_ids_$new_source_id t 
                 SET vs.variation_id=t.variation_id2 
                 WHERE vs.variation_id = t.variation_id1});
-  $dbVar->do(qq{DELETE FROM vs.* USING tmp_individual_genotype_single_bp vs, tmp_ids_$new_source_id t 
+  $dbVar->do(qq{DELETE FROM vs USING tmp_individual_genotype_single_bp vs, tmp_ids_$new_source_id t 
                 WHERE vs.variation_id=t.variation_id1});#when insert ignore, if the entry is already exist, it will do nothing, i.e leave the one unchanged, so need to delete them
-  #$dbVar->do(qq{DROP table tmp_ids_$source_id});
+  $dbVar->do(qq{DROP table tmp_ids_$source_id});
 }
 
 sub merge_venter_gtype {
@@ -1280,7 +1286,7 @@ sub parallel_ld_populations {
     my $siblings = {}; # hash {$individual_id} ,where the individual is sibling of another one
     my @pops;
     while($sth->fetch){
-	if($population_name =~ /CEU|YRI/){
+	if($population_name =~ /CEU|YRI|MEX/){
 	    &get_siblings($dbVar,$pop_id,$siblings);
 	}
 	push @pops, $pop_id;
