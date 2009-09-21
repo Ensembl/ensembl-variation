@@ -22,7 +22,7 @@ use ImportUtils qw(dumpSQL debug create_and_load load);
 # optional a directory or sequence files (for unknown placing)
 
 
-our ($species, $map_by_chr, $map_all, $output_dir, $input_dir, $target_file, $run, $parse, $TMP_DIR, $TMP_FILE, $start, $end);
+our ($species, $map_by_chr, $map_all, $split, $rerun, $output_dir, $input_dir, $target_file, $run, $parse, $TMP_DIR, $TMP_FILE, $start, $end);
 
 GetOptions('species=s'    => \$species,
 	   'output_dir=s' => \$output_dir,
@@ -32,6 +32,8 @@ GetOptions('species=s'    => \$species,
            'end=i'        => \$end,
 	   'run'          => \$run,
 	   'parse'        => \$parse,
+	   'split'        => \$split, #option to split reads in groups to reduce run time
+	   'rerun=i'      => \$rerun, #to rerun it if some jobs failed i is the split start number
 	   'map_by_chr=i' => \$map_by_chr,
 	   'map_all'      => \$map_all,
 	   'tmpdir=s'     => \$ImportUtils::TMP_DIR,
@@ -95,7 +97,7 @@ sub run {
     print "input_dir is $input_dir and output_dir is $output_dir\n";
     my $call = "./run_ssaha2.pl ";
     $call .= ($start) ? "-start $start -end $end" : '' ;
-    $call .= " -input_dir $input_dir -output_dir $output_dir -target_file $target_file $run_parse";
+    $call .= " -input_dir $input_dir -output_dir $output_dir -target_file $target_file $run_parse -split $split -rerun $rerun";
     system($call);
     print "call is $call\n";
     print "submit job for $start and $end\n";
