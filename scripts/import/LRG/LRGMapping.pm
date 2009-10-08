@@ -79,7 +79,7 @@ sub mapping {
 			$pair->[2] += $prev_end;
 			
 			# put the DNA pairs in a separate array
-			if($pair->[0] eq 'DNA') {
+			if((defined $pair->[0]) && ($pair->[0] eq 'DNA')) {
 				push @dna_pairs, $pair;
 			}
 			
@@ -225,8 +225,8 @@ sub join_pairs {
 				$prev_pair->[2] = $pair->[2];
 				
 				# add any bases that were in a mismatch pair
-				$prev_pair->[6] .= $pair->[6];
-				$prev_pair->[7] .= $pair->[7];
+				$prev_pair->[6] .= $pair->[6] if defined $prev_pair->[6];
+				$prev_pair->[7] .= $pair->[7] if defined $prev_pair->[7];
 				
 				# do the same with the target end
 				# but we have to work out which it is since target
@@ -552,52 +552,130 @@ sub get_annotations {
   
   my @nodes;
   my $sa = $dbCore->get_SliceAdaptor();
+  
+  
+  ## ADD ENTRIES TO CORE DB
+  #########################
+  
+  my $csa = $dbCore->get_CoordSystemAdaptor();
+  
+  
+  
+  # first we need to check if the coordinate system for this LRG exists
+  my $cs_id;
+  my $cs_name_ref = $dbCore->dbc->db_handle->selectall_arrayref(qq{SELECT name from coord_system WHERE name="$lrg_name"});
+  
+  # if it doesn't, insert into the coord_system table
+  if(! $cs_name_ref->[0][0]) {
+	
+	# get the max rank
+	my $max_rank = $dbCore->dbc->db_handle->selectall_arrayref(qq{SELECT MAX(rank) FROM coord_system;})->[0][0];
+	$max_rank++;
+	
+	$dbCore->dbc->do(qq{INSERT INTO coord_system(species_id,name,rank,attrib) values(1,"$lrg_name",$max_rank,"default_version");});
+  }
+  
+  # now get the ID
+  my $cs_id_ref = $dbCore->dbc->db_handle->selectall_arrayref(qq{SELECT coord_system_id from coord_system WHERE name="$lrg_name";});
+  $cs_id = $cs_id_ref->[0][0];
+  
+  
+  
+  
+  # now we need to do the same for seq_region
+  my $q_seq_region_id;
+  my $q_seq_length = length($q_seq);
+  
+  my $t_seq_region_id = $sa->get_seq_region_id($slice);
+  my $lrg_name_ref =$dbCore->dbc->db_handle->selectall_arrayref(qq{SELECT name from seq_region WHERE name="$lrg_name"});
+  if (! $lrg_name_ref->[0][0]) {
+	$dbCore->dbc->do(qq{INSERT INTO seq_region(name,coord_system_id,length)values("$lrg_name",$cs_id,$q_seq_length)});
+  }
+  
+  # now get the ID
+  my $q_seqid_ref = $dbCore->dbc->db_handle->selectall_arrayref(qq{SELECT seq_region_id from seq_region WHERE name="$lrg_name"});
+  $q_seq_region_id = $q_seqid_ref->[0][0];
+  
+  
+  
+  
+  # now we need to add entries to meta if needed
+  my $meta_ref = $dbCore->dbc->db_handle->selectall_arrayref(qq{SELECT * FROM meta WHERE meta_key = "assembly.mapping" AND meta_value like "$lrg_name\%";});
+  
+  if(! $meta_ref->[0][0]) {
+	# get the assembly name
+	my $ass_name = $dbCore->dbc->db_handle->selectall_arrayref(qq{SELECT meta_value FROM meta WHERE meta_key = "assembly.name";})->[0][0];
+	
+	$dbCore->dbc->do(qq{INSERT INTO meta(species_id,meta_key,meta_value) VALUES(1,"assembly.mapping","$lrg_name\#chromosome:$ass_name");});
+	$dbCore->dbc->do(qq{INSERT INTO meta(species_id,meta_key,meta_value) VALUES(1,"assembly.mapping","$lrg_name\#chromosome:$ass_name\#contig");});
+	$dbCore->dbc->do(qq{INSERT INTO meta(species_id,meta_key,meta_value) VALUES(1,"assembly.mapping","$lrg_name\#chromosome:$ass_name\#supercontig");});
+  }
+  #we don't need dna sequence
+  #my $dna_ref = $dbCore->dbc->db_handle->selectall_arrayref(qq{SELECT seq_region_id from dna WHERE seq_region_id = $q_seq_region_id});
+  #if (! $dna_ref->[0][0]) {
+  #  $dbCore->dbc->do(qq{INSERT INTO dna(seq_region_id,sequence)values($q_seq_region_id,"$q_seq")});
+  #}
 
+
+
+  # now we need to add entries to the assembly table
+  # and to the seq_region_attrib table for mismatches
+  foreach  my $pair (sort {$a->[3]<=>$b->[3]} @$pairs) {
+	
+	#print "pairs are ",$pair->[0],'-',$pair->[1],'-',$pair->[2],'-',$pair->[3],'-',$pair->[4],'-', $pair->[5],'-',$pair->[6],'-',$pair->[7],"\n";
+	
+	if ($pair->[0] eq 'DNA') {
+	  if ($pair->[2]-$pair->[1] == $pair->[4]-$pair->[3]) {
+		
+		# original coords
+		#$dbCore->dbc->do(qq{INSERT IGNORE INTO assembly(asm_seq_region_id,cmp_seq_region_id,asm_start,asm_end,cmp_start,cmp_end,ori)values($t_seq_region_id,$q_seq_region_id,$pair->[3],$pair->[4],$pair->[1],$pair->[2],$q_strand)});
+		
+		# switched coords
+		$dbCore->dbc->do(qq{INSERT IGNORE INTO assembly(asm_seq_region_id,cmp_seq_region_id,asm_start,asm_end,cmp_start,cmp_end,ori)values($q_seq_region_id,$t_seq_region_id,$pair->[1],$pair->[2],$pair->[3],$pair->[4],$q_strand)});
+	  }
+	  else {
+		die("distance between query and target is not the same, there is a indel");
+	  }
+	}
+	
+	elsif ($pair->[0] eq 'M' and defined $pair->[7]) {
+	  $dbCore->dbc->do(qq{INSERT IGNORE INTO seq_region_attrib(seq_region_id,attrib_type_id,value) VALUES($q_seq_region_id, 145, "$pair->[1] $pair->[2] $pair->[6]");})
+	}
+	
+	elsif ($pair->[0] eq 'G') {
+	  print "Gap pair\n";
+	}
+  }
+
+
+  ## GET LRG SLICE
+  ################
+
+  # if the sequence matches exactly
   if ($full_match) {
     $sub_slice->seq_region_name($lrg_name);
+	
+	# we need to invert the slice if the sequence matches the reverse strand
+	if($q_strand == -1) {
+	  $sub_slice = $sub_slice->invert();
+	}
+	
     foreach my $gene (@{$sub_slice->get_all_Genes()}) {
+      next unless $gene->biotype eq 'protein_coding';
+	  
       my @new_nodes = @{get_gene_annotation($gene)};
 	  
       push @nodes, @new_nodes;
     }
   }
+  
+  # if it doesn't
   else {
-    my $csa = $dbCore->get_CoordSystemAdaptor();
-    my $cs = $csa->fetch_by_name('LRG');
-    my $cs_id = $cs->dbID();
-    my $q_seq_region_id;
-    my $q_seq_length = length($q_seq);
+    my $lrg_slice = $sa->fetch_by_region($lrg_name,$lrg_name);
 	
-    my $t_seq_region_id = $sa->get_seq_region_id($slice);
-    my $lrg_name_ref =$dbCore->dbc->db_handle->selectall_arrayref(qq{SELECT name from seq_region WHERE name="$lrg_name"});
-    if (! $lrg_name_ref->[0][0]) {
-      $dbCore->dbc->do(qq{INSERT INTO seq_region(name,coord_system_id,length)values("$lrg_name",$cs_id,$q_seq_length)});
-      $q_seq_region_id = $dbCore->dbc->db_handle->{'mysql_insertid'};
-    }
-    else {
-      my $q_seqid_ref = $dbCore->dbc->db_handle->selectall_arrayref(qq{SELECT seq_region_id from seq_region WHERE name="$lrg_name"});
-      $q_seq_region_id = $q_seqid_ref->[0][0];
-    }
-    #we don't need dna sequence
-    #my $dna_ref = $dbCore->dbc->db_handle->selectall_arrayref(qq{SELECT seq_region_id from dna WHERE seq_region_id = $q_seq_region_id});
-    #if (! $dna_ref->[0][0]) {
-    #  $dbCore->dbc->do(qq{INSERT INTO dna(seq_region_id,sequence)values($q_seq_region_id,"$q_seq")});
-    #}
-    
-    foreach  my $pair (sort {$a->[3]<=>$b->[3]} @$pairs) {
-      #print "pairs are ",$pair->[0],'-',$pair->[1],'-',$pair->[2],'-',$pair->[3],'-',$pair->[4],'-', $pair->[5],'-',$pair->[6],'-',$pair->[7],"\n";
-      
-      if ($pair->[0] eq 'DNA') {
-	if ($pair->[2]-$pair->[1] == $pair->[4]-$pair->[3]) {
-	  $dbCore->dbc->do(qq{INSERT IGNORE INTO assembly(asm_seq_region_id,cmp_seq_region_id,asm_start,asm_end,cmp_start,cmp_end,ori)values($t_seq_region_id,$q_seq_region_id,$pair->[3],$pair->[4],$pair->[1],$pair->[2],$q_strand)});
-	}
-	else {
-	  die("distance between query and target is not the same, there is a indel");
-	}
-      }
-    }
-
-    my $lrg_slice = $sa->fetch_by_region('LRG',"$lrg_name");
+	die "Didn't get LRG slice\n" unless defined $lrg_slice;
+	
+	print "Got a slice $lrg_slice\n";
 
     my $min = 9999999999;
     my $max = -9999999999;
@@ -613,26 +691,27 @@ sub get_annotations {
       my $to_start    = $segment->to_Slice->start();
       my $to_end    = $segment->to_Slice->end();
       if($to_start > $max){
-	$max = $to_start;
+		$max = $to_start;
       }
       if($to_start < $min){
-	$min = $to_start;
+		$min = $to_start;
       }
       if($to_end > $max){
-	$max = $to_end;
+		$max = $to_end;
       }
       if($to_end <  $min){
-	$min = $to_end;
+		$min = $to_end;
       }
-      my $ori        = $segment->to_Slice->strand();
+	  
+      my $ori = $segment->to_Slice->strand();
       $strand = $ori;   
     
-      #print "$from_start-$from_end  => $to_name $to_start-$to_end ($ori) \n";
+      print "Segment $from_start-$from_end  => $to_name $to_start-$to_end ($ori) \n";
     }
 
-    foreach my $gene (@{$lrg_slice->get_all_Genes()}){
+    #foreach my $gene (@{$lrg_slice->get_all_Genes()}){
       #print "gene_name is ",$gene->stable_id,"\n";
-    }
+    #}
     #print "q_seq from lrg_slice is ",$lrg_slice->start,'-'.$lrg_slice->end,"\n";
     #print "length of q_seq is ",length($q_seq), " and length of hseq is ", length($lrg_slice->seq),"\n";
     
@@ -706,6 +785,9 @@ sub get_gene_annotation {
 	
 	foreach my $trans(@{$gene->get_all_Transcripts}) {
 		
+		# we need to skip certain biotypes
+		next unless $trans->biotype =~ /protein_coding/;
+		
 		#print "Gene/Trans ", $gene->stable_id, " ", $trans->stable_id, "\n";
 		
 		my $cds_node = LRG::Node->new("transcript", undef, {'source' => 'Ensembl', 'start' => $trans->start, 'end' => $trans->end, 'transcript_id' => $trans->stable_id});
@@ -729,7 +811,7 @@ sub get_gene_annotation {
 		
 		my $protein = $trans->translation;
 		
-		if($protein ne '') {
+		if($protein ne '' and defined $protein) {
 			my $prot_node = $cds_node->addNode(
 			  'protein_product',
 			  {
