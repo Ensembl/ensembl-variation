@@ -1,5 +1,5 @@
 # Relax NG schema for LRG
-# Version $Revision: 1.3 $
+# Version $Revision: 1.4 $
 
 start = LRG
 LRG = element lrg { 
@@ -10,8 +10,10 @@ LRG = element lrg {
 
 }
 
+# fixed annotation section will remain unchanged for lifespan of LRG
 FIXED_ANNOTATION = element fixed_annotation {
 
+   # main LRG identifier e.g. LRG_1
    element id { xsd:string { pattern = 'LRG_[0-9]+' } },
    
    element organism { 
@@ -19,54 +21,54 @@ FIXED_ANNOTATION = element fixed_annotation {
       text
    },
    
-   SOURCE+,
+   SOURCE+, # see SOURCE element below
    
-   element mol_type { text }, # TODO: enumeration?
+   element mol_type { text }, # e.g. "genomic DNA". TODO: enumeration?
    
    element creation_date { xsd:date },
    
-   DNA_SEQUENCE,  
+   DNA_SEQUENCE, # see DNA_SEQUENCE element below
    
    element transcript {
-      attribute name { text },
+      attribute name { text }, # e.g. "t1", "t2"
+      
+      # location of transcript in LRG coordinates
       attribute start { xsd:integer },
       attribute end { xsd:integer },
       
       element cdna { DNA_SEQUENCE },
       
       element coding_region {
+         
+         # location of coding region in LRG coordinates
          attribute start { xsd:integer },
          attribute end { xsd:integer },
+         
+         # start phase of coding sequence when coding sequence is incomplete
          attribute codon_start { xsd:integer }?,
+         
+         # location of selenocysteine codon(s)
          attribute codon_selenocysteine { xsd:integer }*,
          
          element translation { PEPTIDE_SEQUENCE } 
       },
       
-      element exon {
-         
-         element lrg_coords {
-            attribute start { xsd:integer },
-            attribute end { xsd:integer }
-         },
-         element cdna_coords {
-            attribute start { xsd:integer },
-            attribute end { xsd:integer }
-         },
-         element peptide_coords {
-            attribute start { xsd:integer },
-            attribute end { xsd:integer }
-         }?,
-         element intron_phase { '0' | '1' | '2' }?
-      }+
+      # element corresponds to one exon and zero or one introns (see below)
+      # along with optional final exon, allows for the case where a transcript has only one exon
+      EXONINTRON+,
+      
+      # final exon element
+      EXON?
       
    }+ # /transcript
    
 } # /fixed_annotation
 
 
+# updatable annotation can be updated with e.g. new annotations, mappings, labels etc
 UPDATABLE_ANNOTATION = element updatable_annotation {
 
+   # an annotation set comes from one source - allows multiple sets of annotations from e.g. Ensembl/NCBI
    element annotation_set {
       SOURCE,
       
@@ -74,10 +76,16 @@ UPDATABLE_ANNOTATION = element updatable_annotation {
       
       element modification_date { xsd:date }, 
       
+      # allows exons to be named; in fixed layer exons are defined only by their coordinates
       element other_exon_naming {
+      
+         # allow for multiple name sources e.g. different groups
          element source {
+         
+            # description of source - may be URL/group/name
             attribute description { text },
             
+            # naming corresponds to only one transcript per set
             element transcript {
                attribute name { text },
                
@@ -92,6 +100,7 @@ UPDATABLE_ANNOTATION = element updatable_annotation {
          }*
       },
       
+      # multiple mappings allowed e.g. to different assemblies
       element mapping {
          attribute assembly { text },
          attribute chr_name { text },
@@ -99,6 +108,7 @@ UPDATABLE_ANNOTATION = element updatable_annotation {
          attribute chr_start { xsd:integer },
          attribute chr_end { xsd:integer },
          
+         # a mapping span corresponds to a block of the LRG sequence that aligns with an assembly
          element mapping_span {
             attribute lrg_start { xsd:integer },
             attribute lrg_end { xsd:integer },
@@ -106,6 +116,7 @@ UPDATABLE_ANNOTATION = element updatable_annotation {
             attribute start { xsd:integer },
             attribute end { xsd:integer },
             
+            # diff elements allow small-scale differences between the LRG sequence and assembly to be detailed
             element diff {
                attribute type {'mismatch' | 'lrg_ins' | 'genomic_ins'},
                attribute lrg_start { xsd:integer }?,
@@ -118,6 +129,7 @@ UPDATABLE_ANNOTATION = element updatable_annotation {
          }+
       }*,
       
+      # allows for legacy systems of amino acid numbering
       element alternate_amino_acid_numbering {
          element source { 
             attribute description { text },
@@ -138,16 +150,21 @@ UPDATABLE_ANNOTATION = element updatable_annotation {
       element features {
          element gene {
             attribute symbol { text },
-            attribute strand { '-1' | '1' },
+            attribute strand { '-1' | '1' }, # strand to which the gene maps
+            
+            # position of gene in LRG coordinates
             attribute start { xsd:integer },
             attribute end { xsd:integer },
             
+            # indicates if the gene only partially overlaps the LRG
             element partial { '5-prime' | '3-prime' }*,
             element synonym { text }*,
             element long_name { text }*,
             element comment { text }*,
-            DB_XREF*,
             
+            DB_XREF*, # see DB_XREF element below
+            
+            # genes may contain zero or more transcripts
             element transcript {
                attribute source { text },
                attribute start { xsd:integer },
@@ -195,7 +212,9 @@ DB_XREF = element db_xref {
 
 SOURCE = element source {
    element name { text },
-   element url { text }*, 
+   element url { text }*,
+   
+   # multiple contacts may be specified within a source
    element contact {
       element name { text }?,
       element url { text }*,
@@ -203,3 +222,31 @@ SOURCE = element source {
       element email { text }? 
    }*
 }
+
+# exon element - coordinates given in three systems
+EXON = element exon {
+   element lrg_coords { # relative to LRG sequence
+      attribute start { xsd:integer },
+      attribute end { xsd:integer }
+   },
+   element cdna_coords { # relative to cDNA sequence
+      attribute start { xsd:integer },
+      attribute end { xsd:integer }
+   },
+   element peptide_coords { # relative to peptide sequence (optional)
+      attribute start { xsd:integer },
+      attribute end { xsd:integer }
+   }?
+}
+
+# compound element containing one exon and zero or one introns
+EXONINTRON  = (
+   EXON,
+   element intron {
+      # intron phase
+      #  0 : intron falls between codons
+      #  1 : intron falls between 1st and 2nd base of codon
+      #  2 : intron falls between 2nd and 3rd base of codon
+      attribute phase { '0' | '1' | '2' }
+   }?
+)
