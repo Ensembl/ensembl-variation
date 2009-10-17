@@ -68,7 +68,7 @@ sub generate_input_seq {
 
   my (%variation_ids);
 
-  my $file_size = 20000;
+  my $file_size = 5000;
   my $file_count=1;
   my $i = 0;
 
@@ -128,9 +128,11 @@ SELECT vf.variation_name,
        IF (vf.seq_region_strand =1, 
            vf.seq_region_end+100, 
            vf.seq_region_start-1)
-FROM   variation_feature vf
+FROM   variation_feature vf,
+       yuan_enssnp_mapping_55.failed_mapping_vf_Watson_SARA m
 WHERE  vf.seq_region_id = $seq_region_id
-AND    vf.variation_name not like "NT%" ##this is only for mouse
+AND    vf.variation_id=m.variation_id
+#AND    vf.variation_name not like "NT%" ##this is only for mouse
                            }
 	     );
     }
@@ -151,11 +153,12 @@ SELECT vf.variation_name,
        f.down_seq_region_start, 
        f.down_seq_region_end
 FROM   variation_feature vf, 
-       flanking_sequence f
-       #top_level_var_id m
+       flanking_sequence f,
+       failed_mapping_vf_Celera m
+       #yuan_enssnp_mapping_55.failed_mapping_vf_Celera_SARA m
 WHERE  vf.variation_id=f.variation_id
 #AND    v.source_id=2
-#AND    vf.variation_id=m.variation_id
+AND    vf.variation_id=m.variation_id
        );
       #dump from paralle_processed/or un-processed flanking sequence which is not mapped
       my $sql2 = qq(
@@ -190,7 +193,7 @@ WHERE v.variation_id = f.variation_id
 AND f.seq_region_id is null);
 
       #dump with which sql???
-      dumpSQL($dbVar, $sql);
+      dumpSQL($dbVar, $sql3);
     }
   }
 
@@ -242,7 +245,7 @@ sub print_seqs {
   my %variation_ids = %$variation_ids;
   my @ids = keys %variation_ids;
 
-  open OUT, ">$output_dir/$file_count\_query_seq" 
+  open OUT, ">$output_dir/$file_count\.query_seq" 
       or die "can't open query_seq file : $!";
 
   foreach my $var_id (@ids) {

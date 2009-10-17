@@ -97,9 +97,11 @@ sub run {
     print "input_dir is $input_dir and output_dir is $output_dir\n";
     my $call = "./run_ssaha2.pl ";
     $call .= ($start) ? "-start $start -end $end" : '' ;
-    $call .= " -input_dir $input_dir -output_dir $output_dir -target_file $target_file $run_parse -split $split -rerun $rerun";
-    system($call);
+    $call .= " -split $split " if $split ;
+    $call .= " -rerun $rerun" if $rerun;
+    $call .= " -input_dir $input_dir -output_dir $output_dir -target_file $target_file $run_parse";
     print "call is $call\n";
+    system($call);
     print "submit job for $start and $end\n";
   }
 }

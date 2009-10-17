@@ -27,7 +27,7 @@ sub variation_feature{
 
      debug("Loading seq_region data");
      load($self->{'dbVar'}, "seq_region", "seq_region_id", "name");
-    
+
      debug("Dumping SNPLoc data");
     
      my ($tablename1,$tablename2,$row);
@@ -37,10 +37,10 @@ sub variation_feature{
      $assembly_version=$1 if $self->{'assembly_version'} =~ /RGSC\d\.(\d+)/;
 
      my $sth = $self->{'dbSNP'}->prepare(qq{SHOW TABLES LIKE 
-# 					   '$self->{'dbSNP_version'}\_SNPContigLoc\_$assembly_version\_%'});
+ 					   '$self->{'dbSNP_version'}\_SNPContigLoc\_$assembly_version\_%'});
 	 
 	 print qq{SHOW TABLES LIKE 
-# 					   '$self->{'dbSNP_version'}\_SNPContigLoc\_$assembly_version\_%'};
+ 					   '$self->{'dbSNP_version'}\_SNPContigLoc\_$assembly_version\_%'};
 	 
      $sth->execute();
 
@@ -56,6 +56,17 @@ sub variation_feature{
        $tablename2 = $row->[0];
      }
      print "table_name1 is $tablename1 table_name2 is $tablename2\n";
+
+    if (!$tablename1) {
+      debug("core db has assembly version : $assembly_version, which is different from dbsnp");
+      my $tablename1_ref = $self->{'dbSNP'}->selectall_arrayref(qq{SHOW TABLES LIKE 
+ 					   '$self->{'dbSNP_version'}\_SNPContigLoc\_%\_1'});
+      $tablename1 = $tablename1_ref->[0][0] if $tablename1_ref;
+      my $tablename2_ref = $self->{'dbSNP'}->selectall_arrayref(qq{SHOW TABLES LIKE 
+ 					   '$self->{'dbSNP_version'}\_ContigInfo\_%\_1'});
+      $tablename2 = $tablename1_ref->[0][0] if $tablename2_ref;
+    }
+
      #my $tablename = $self->{'species_prefix'} . 'SNPContigLoc';
      dumpSQL($self->{'dbSNP'}, qq{SELECT t1.snp_id, t2.contig_acc,t1.lc_ngbr+2,t1.rc_ngbr,
  				 IF(t2.group_term like "ref_%",t2.contig_chr,t2.contig_label), 
