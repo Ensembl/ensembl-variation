@@ -65,6 +65,7 @@ read_file();
 source();
 variation();
 variation_feature();
+meta_coord();
 
 sub read_file{
   debug("Loading file into temporary table");
@@ -131,6 +132,16 @@ sub variation_feature{
 			  WHERE q.name = t.chr AND v.name = t.id;
 			 });
 }
+
+
+sub meta_coord{
+  
+  debug("Adding entry to meta_coord table");
+  
+  $dbVar->do(qq{INSERT INTO meta_coord(table_name, coord_system_id, max_length) VALUES ('structural_variation_feature', 2, 500);});
+}
+
+
 
 sub mapping{
   debug("Mapping SV features to $target_assembly");
