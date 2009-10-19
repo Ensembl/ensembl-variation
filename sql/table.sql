@@ -171,7 +171,7 @@ create table sample(
 	name varchar(255) not null,
 	size int,
 	description text,
-	display enum('REFERENCE','DEFAULT','DISPLAYABLE','UNDISPLAYABLE') default 'DISPLAYABLE',
+	display enum('REFERENCE','DEFAULT','DISPLAYABLE','UNDISPLAYABLE','LD') default 'UNDISPLAYABLE',
 
 	primary key( sample_id ),
 	key name_idx( name )
@@ -312,6 +312,59 @@ create table variation_feature(
 	key variation_idx( variation_id )
 );
 
+
+#
+# structural_variation_feature
+#
+# This is a feature table similar to the variation_feature table above.
+# It specifically stores structural variation features, and has several
+# differences with the columns seen in the variation_feature table.
+# The seq_region_id references a seq_region in the core database and the
+# seq_region_start, seq_region_end and seq_region_strand represent a 
+# variation position on that seq_region. This table also has columns for
+# bound_start and bound_end, which represent the outermost boundaries of the
+# feature submitted. As above, this table incorporates some 
+# denormalisation, taking fields from other tables so that information
+# needed for feature creation can be quickly retrieved.
+#
+# structural_variation_feature_id  - primary key, internal identifier
+# seq_region_id         - foreign key references seq_region in core db
+#                         This refers to the seq_region which this snp is
+#                         on, which may be a chromosome or clone etc.
+# seq_region_start      - the start position of the variation on the seq_region
+# seq_region_end        - the end position of the variation on the seq_region
+# seq_region_strand     - the orientation of the variation on the seq_region
+# bound_start           - the 5'-most bound defined for the feature
+# bound_end             - the 3'-most bound defined for the feature
+# variation_id          - foreign key refs variation, the variation associated
+#                         with this position
+# variation_name        - a denormalisation taken from the variation table
+#                         this is the name or identifier that is used for
+#                         displaying the feature.
+# map_weight            - the number of times that this variation has mapped 
+#                         to the genome.  This is a denormalisation as this
+#                         particular feature is one example of a mapped 
+#                         location.  This can be used to limit the 
+#                         the features that come back from a query.
+# class                 - the type of structural variation feature e.g. 'CNV'
+
+CREATE TABLE structural_variation_feature (
+  structural_variation_feature_id int(10) unsigned NOT NULL AUTO_INCREMENT,
+  seq_region_id int(10) unsigned NOT NULL,
+  seq_region_start int(11) NOT NULL,
+  seq_region_end int(11) NOT NULL,
+  seq_region_strand tinyint(4) NOT NULL,
+  variation_id int(10) unsigned NOT NULL,
+  variation_name varchar(255) DEFAULT NULL,
+  map_weight int(11) NOT NULL,
+  source_id int(10) unsigned NOT NULL,
+  class varchar(255) DEFAULT NULL,
+  bound_start int(11) DEFAULT NULL,
+  bound_end int(11) DEFAULT NULL,
+  PRIMARY KEY (structural_variation_feature_id),
+  KEY pos_idx (seq_region_id,seq_region_start),
+  KEY variation_idx (variation_id)
+);
 
 #
 # variation_group
