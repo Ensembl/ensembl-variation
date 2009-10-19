@@ -76,7 +76,7 @@ create table phenotype (
 create table variation_synonym (
   variation_synonym_id int(10) unsigned not null auto_increment,
   variation_id int(10) unsigned not null,
-  subsnp_id int(15) unsigned not null,
+  subsnp_id int(15) unsigned ,
   source_id int(10) unsigned not null,
   name varchar(255),
   moltype varchar(50),
@@ -143,7 +143,7 @@ create table subsnp_handle (
 create table allele(
 	allele_id int(10) unsigned not null auto_increment,
 	variation_id int(10) unsigned not null,
-        subsnp_id int(15) unsigned not null,
+        subsnp_id int(15) unsigned,
 	allele varchar(255),
 	frequency float,
 	sample_id int(10) unsigned,
@@ -606,7 +606,7 @@ create table individual_population (
 
 CREATE TABLE tmp_individual_genotype_single_bp (
                             variation_id int(10) not null,
-			    subsnp_id int(15) unsigned not null,   
+			    subsnp_id int(15) unsigned,   
 	                    allele_1 varchar(255),allele_2 varchar(255),sample_id int,
                             key variation_idx(variation_id),
                             key subsnp_idx(subsnp_id),
@@ -626,7 +626,7 @@ CREATE TABLE tmp_individual_genotype_single_bp (
 
 create table individual_genotype_multiple_bp (
   variation_id int(10) unsigned not null,
-  subsnp_id int(15) unsigned not null,	
+  subsnp_id int(15) unsigned,	
   allele_1 varchar(255),
   allele_2 varchar(255),
   sample_id int(10) unsigned,
