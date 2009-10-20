@@ -65,6 +65,7 @@ read_file();
 source();
 variation();
 variation_feature();
+flanking_sequence();
 meta_coord();
 
 sub read_file{
@@ -131,6 +132,21 @@ sub variation_feature{
 			  FROM seq_region q, temp_cnv t, variation v
 			  WHERE q.name = t.chr AND v.name = t.id;
 			 });
+}
+
+sub flanking_sequence{
+  debug("Inserting into flanking sequence table");
+  $dbVar->do(qq{
+			  INSERT INTO flanking_sequence (variation_id, up_seq_region_start,
+			  up_seq_region_end, down_seq_region_start, down_seq_region_end,
+			  seq_region_id, seq_region_strand)
+			  SELECT vf.variation_id,
+			  vf.seq_region_start - 100, vf.seq_region_start - 1,
+			  vf.seq_region_end + 1, vf.seq_region_end + 100,
+			  vf.seq_region_id, vf.seq_region_strand
+			  FROM structural_variation_feature vf, temp_cnv t
+			  WHERE t.id = vf.variation_name;
+			});
 }
 
 
