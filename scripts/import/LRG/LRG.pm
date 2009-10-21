@@ -96,7 +96,7 @@ sub newFromFile {
 		my $end = $pos;
 	
 		# this code searches for content between tags
-		if($prev_end >= 1 && $start - $prev_end > 1) {
+		if($prev_end >= 1 && $start - $prev_end >= 1) {
 	
 			# get substring from the XML string
 			my $temp = substr($xml_string, $prev_end, ($start - $prev_end));
