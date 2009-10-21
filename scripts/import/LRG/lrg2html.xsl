@@ -277,11 +277,13 @@
 	<xsl:variable name="lrg_id" select="fixed_annotation/id"/>
 	<h1>
 	  <xsl:value-of select="$lrg_id"/><br/>
-	  <xsl:for-each select="updatable_annotation/annotation_set/features/gene">
-		- <xsl:value-of select="@symbol"/>
-		<xsl:if test="long_name"> : <xsl:value-of select="long_name"/></xsl:if>
-		<xsl:if test="position()!=last()"><br/></xsl:if>
-	  </xsl:for-each>
+	  - <xsl:value-of select="updatable_annotation/annotation_set/features/gene/@symbol"/>
+	  <xsl:if test="updatable_annotation/annotation_set/features/gene/long_name"> : <xsl:value-of select="updatable_annotation/annotation_set/features/gene/long_name"/></xsl:if>
+	<!--  <xsl:for-each select="updatable_annotation/annotation_set/features/gene">-->
+	<!--	- <xsl:value-of select="@symbol"/>-->
+	<!--	<xsl:if test="long_name"> : <xsl:value-of select="long_name"/></xsl:if>-->
+	<!--	<xsl:if test="position()!=last()"><br/></xsl:if>-->
+	<!--  </xsl:for-each>-->
 	</h1>
 
 	<h2>FIXED ANNOTATION</h2>
@@ -661,7 +663,7 @@
 				  <th style="background:#2266BB">
 					<span>
 					  <xsl:attribute name="title"><xsl:value-of select="@description"/></xsl:attribute>
-					  <a><xsl:attribute name="href">#source_<xsl:value-of select="$setnum"/>_<xsl:value-of select="position()"/></xsl:attribute>Source <xsl:value-of select="position()"/></a>
+					  <a><xsl:attribute name="href">#source_<xsl:value-of select="$setnum"/>_<xsl:value-of select="position()"/></xsl:attribute>Source <xsl:value-of select="$setnum"/>:<xsl:value-of select="position()"/></a>
 					</span>
 				  </th>
 				</xsl:if>
@@ -746,16 +748,32 @@
 				</xsl:choose>
 			  </td>
 			  
-			  <xsl:for-each select="/*/updatable_annotation/*/other_exon_naming/source">
-				<xsl:if test="position()=1"><td style="background:#000000;border-color:#000000;"> </td></xsl:if>
-				<td>
-				  <xsl:choose>
-					<xsl:when test="transcript[@name=$transname]/exon/lrg_coords[@start=$start]">
-					  <xsl:value-of select="transcript[@name=$transname]/exon/lrg_coords[@start=$start]/../label"/>
-					</xsl:when>
-					<xsl:otherwise>-</xsl:otherwise>
-				  </xsl:choose>
-				</td>
+			<!--  <xsl:for-each select="/*/updatable_annotation/*/other_exon_naming/source">-->
+			<!--	<xsl:if test="position()=1"><td style="background:#000000;border-color:#000000;"> </td></xsl:if>-->
+			<!--	<td>-->
+			<!--	  <xsl:choose>-->
+			<!--		<xsl:when test="transcript[@name=$transname]/exon/lrg_coords[@start=$start]">-->
+			<!--		  <xsl:value-of select="transcript[@name=$transname]/exon/lrg_coords[@start=$start]/../label"/>-->
+			<!--		</xsl:when>-->
+			<!--		<xsl:otherwise>-</xsl:otherwise>-->
+			<!--	  </xsl:choose>-->
+			<!--	</td>-->
+			<!--  </xsl:for-each>-->
+			  <xsl:for-each select="/*/updatable_annotation/annotation_set">
+				<xsl:variable name="setnum" select="position()"/>
+				<xsl:for-each select="other_exon_naming/source">
+				  <xsl:if test="transcript[@name=$transname]">
+					<xsl:if test="position()=1"><th style="background:#000000;border-color:#000000;"> </th></xsl:if>
+					<td>
+					  <xsl:choose>
+						<xsl:when test="transcript[@name=$transname]/exon/lrg_coords[@start=$start]">
+						  <xsl:value-of select="transcript[@name=$transname]/exon/lrg_coords[@start=$start]/../label"/>
+						</xsl:when>
+						<xsl:otherwise>-</xsl:otherwise>
+					  </xsl:choose>
+					</td>
+				  </xsl:if>
+				</xsl:for-each>
 			  </xsl:for-each>
 			</tr>
 		  </xsl:for-each>
@@ -958,6 +976,8 @@
 	<xsl:for-each select="updatable_annotation/annotation_set">
 	  
 	  <xsl:variable name="setnum" select="position()"/>
+	  
+	  <xsl:if test="$setnum>1"><hr/></xsl:if>
 
 	  <p><strong>Modification date: </strong><xsl:value-of select="modification_date"/></p>
   
@@ -1043,7 +1063,7 @@
 		<p>
 		  <strong>Region covered: </strong>
 		  <xsl:choose>
-			<xsl:when test="@assembly='GRCh37'">
+			<xsl:when test="contains(@assembly,'37')">
 			  <xsl:value-of select="@chr_name"/>:<xsl:value-of select="@chr_start"/>-<xsl:value-of select="@chr_end"/>
 			  <a>
 				<xsl:attribute name="href">http://www.ensembl.org/Homo_sapiens/Location/View?r=<xsl:value-of select="@chr_name"/>:<xsl:value-of select="@chr_start"/>-<xsl:value-of select="@chr_end"/></xsl:attribute>
@@ -1256,6 +1276,13 @@
 									  <xsl:value-of select="@accession"/>
 									</a>
 								  </xsl:when>
+								  <xsl:when test="@source='GI'">
+									<a>
+									  <xsl:attribute name="href">http://www.ncbi.nlm.nih.gov/nuccore/<xsl:value-of select="@accession"/></xsl:attribute>
+									  <xsl:attribute name="target">_blank</xsl:attribute>
+									  <xsl:value-of select="@accession"/>
+									</a>
+								  </xsl:when>								  
 								  
 								  <xsl:otherwise>
 									<xsl:value-of select="@accession"/>
@@ -1355,6 +1382,13 @@
 										<xsl:when test="@source='MIM'">
 										  <a>
 											<xsl:attribute name="href">http://www.ncbi.nlm.nih.gov/entrez/dispomim.cgi?id=<xsl:value-of select="@accession"/></xsl:attribute>
+											<xsl:attribute name="target">_blank</xsl:attribute>
+											<xsl:value-of select="@accession"/>
+										  </a>
+										</xsl:when>
+										<xsl:when test="@source='GI'">
+										  <a>
+											<xsl:attribute name="href">http://www.ncbi.nlm.nih.gov/nuccore/<xsl:value-of select="@accession"/></xsl:attribute>
 											<xsl:attribute name="target">_blank</xsl:attribute>
 											<xsl:value-of select="@accession"/>
 										  </a>
@@ -1460,6 +1494,13 @@
 										  <xsl:when test="@source='MIM'">
 											<a>
 											  <xsl:attribute name="href">http://www.ncbi.nlm.nih.gov/entrez/dispomim.cgi?id=<xsl:value-of select="@accession"/></xsl:attribute>
+											  <xsl:attribute name="target">_blank</xsl:attribute>
+											  <xsl:value-of select="@accession"/>
+											</a>
+										  </xsl:when>
+										  <xsl:when test="@source='GI'">
+											<a>
+											  <xsl:attribute name="href">http://www.ncbi.nlm.nih.gov/protein/<xsl:value-of select="@accession"/></xsl:attribute>
 											  <xsl:attribute name="target">_blank</xsl:attribute>
 											  <xsl:value-of select="@accession"/>
 											</a>
