@@ -11,7 +11,7 @@ create table variation_annotation (
         variation_id int(10) unsigned not null,
         phenotype_id int(10) unsigned not null,
         source_id int(10) unsigned not null,
-        study_tyoe set('GWAS'),
+        study_type set('GWAS'),
         local_stable_id varchar(255),
         primary key (variation_annotation_id),
         key variation_idx(variation_id),
