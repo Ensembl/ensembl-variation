@@ -112,15 +112,15 @@ my $call = "bsub -K -w 'done(ssaha_out*)' -J waiting_process sleep 1"; #waits un
 
 sub parse_ssaha2 {
 
-  if ($start and $end) {
-    my $input = "$input_dir/$start\_query_seq" if $input_dir;
-    my @out_files = glob("$output_dir/ssaha-*.out");
-    foreach my $out_file (@out_files) {
-      next if (-z "$out_file");
-      parse_ssaha2_out ($start, $input,"$out_file");
-    }
+  foreach my $num ($start..$end) {
+    my $input = "$input_dir/$num\.query_seq" if $input_dir;
+    my $out_file = "$output_dir/ssaha-47912\.$num\.out";
+    print "input is $input and out_file is $out_file\n";
+    next if (-z "$out_file");
+    parse_ssaha2_out ($num, $input,"$out_file");
   }
 }
+
 
 sub bsub_ssaha_job_array {
   my ($start,$end, $input_file, $queue, $target_file) = @_ ;
@@ -168,7 +168,7 @@ sub bsub_ssaha_job {
   print "job_num is ", ++$count, " and start is $start and out is ssaha_out_$start\n";
   #my $call = "bsub -J $input_dir\_ssaha_job_$start $queue -e $output_dir/error_ssaha_$start -o $output_dir/ssaha_out_$start ";
 
-  my $call = "bsub -J'ssaha_out_[$start-$end]%50' $queue -e $output_dir/ssaha-%J.%I:$n.err -o $output_dir/ssaha-%J.%I:$n.out ";
+  my $call = "bsub -J'ssaha_out_[$start-$end]%50' $queue -e $output_dir/ssaha-%J.%I:$n.err -o $output_dir/ssaha-%I:$n.out ";
 
   $call .= " $ssaha_command";
   
@@ -187,6 +187,7 @@ sub parse_ssaha2_out {
 
   open INPUT, "$input_file" or die "can't open $input_file : $!\n";
   open OUT, ">$output_dir/mapping_file_$start" or die "can't open output_file : $!\n";
+  open OUT1, ">$output_dir/out_mapping"  or die "can't open out_mapping file : $!\n";
 
   my ($name,%rec_seq,%rec_find);
 
@@ -279,9 +280,10 @@ sub parse_ssaha2_out {
     }
   }
 
-  print "$no out of $total_seq are not mapped\n";
+  print OUT1 "$no out of $total_seq are not mapped\n";
 
   close OUT;
+  close OUT1;
   close MAP;
 }
 
