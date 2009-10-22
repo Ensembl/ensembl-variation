@@ -79,7 +79,7 @@ sub create_coredb {
     $csid = $csid_ref->[0][0];
   }
   $self->{'dbVar'}->do(qq{create table coord_system(coord_system_id int(10) unsigned,species_id int(10) unsigned default 1)});
-  $self->{'dbVar'}->do(insert into coord_system(coord_system_id)values($csid));
+  $self->{'dbVar'}->do(qq{insert into coord_system(coord_system_id) values($csid)});
   $self->{'dbVar'}->do(qq{RENAME TABLE coord_system TO $coredb_name.coord_system});
 }
 
