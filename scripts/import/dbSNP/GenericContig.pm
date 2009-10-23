@@ -63,7 +63,7 @@ sub dump_dbSNP{
   #}
 
   #try run this step when all above steps have finished
-  #$self->cleanup();
+  $self->cleanup();
 
 }
 
@@ -892,7 +892,7 @@ sub individual_genotypes {
        dumpSQL($dbh_child, qq{select si.subsnp_id, sind.ind_id, length(og.obs) as length_pat,
 				 SUBSTRING_INDEX(og.obs,'/',1) as allele_1,
 				 SUBSTRING_INDEX(og.obs,'/',-1) as allele_2,
-				 si.submitted_strand_code
+				 IFNULL(si.submitted_strand_code, 0)
 				 FROM   $subind si, $self->{'dbSNP_share_db'}.ObsGenotype og, SubmittedIndividual sind
 				 WHERE  og.gty_id = si.gty_id
 				 AND    sind.submitted_ind_id = si.submitted_ind_id
