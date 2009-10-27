@@ -228,6 +228,155 @@ sub fetch_by_VariationFeature {
  
 }
 
+
+sub get_populations_by_Slice{
+  my $self = shift;
+  my $slice = shift;
+  
+  if(!ref($slice) || !$slice->isa('Bio::EnsEMBL::Slice')) {
+    throw('Bio::EnsEMBL::Slice arg expected');
+  }
+  
+  my $pop_list = $self->_get_LD_populations();
+  
+  my ($sr, $slice_start, $slice_end) = ($slice->get_seq_region_id, $slice->start, $slice->end);
+
+  # just get the population list if it's really too long
+  if($slice->length > 10000000) {
+	
+	my $sth = $self->prepare(qq{SELECT name FROM sample WHERE sample_id $pop_list;});
+	$sth->execute;
+	
+	
+	my @results = map {$_->[0]} @{$sth->fetchall_arrayref()};
+	print "@results\n";
+  }
+
+  # do a guesstimate for long slices, otherwise it takes too long
+  elsif($slice->length > 5000000) {
+	
+	my $sth = $self->prepare(qq{
+	  SELECT distinct(c.sample_id), s.sample_id
+	  FROM compressed_genotype_single_bp c, individual_population ip, sample s, individual i
+	  WHERE c.sample_id = ip.individual_sample_id
+	  AND ip.population_sample_id = s.sample_id
+	  AND c.sample_id = i.sample_id
+	  AND c.seq_region_id = ?
+	  AND   c.seq_region_start >= ? and c.seq_region_start <= ?
+	  AND   c.seq_region_end >= ?
+	  #AND (((LENGTH(c.genotypes) - 2) / 4) + 1) >= 3
+	  AND i.father_individual_sample_id is NULL AND i.mother_individual_sample_id is NULL
+	  AND (s.sample_id $pop_list)
+	});
+	
+	$sth->execute($slice->get_seq_region_id, $slice->start, $slice->end, $slice->start);
+	
+	my %pops = ();
+	
+	while(my $row = $sth->fetchrow_arrayref()) {
+	  my ($ind_id, $pop_id) = @$row;
+	  
+	  $pops{$pop_id}++;
+	}
+	
+	foreach my $pop(keys %pops) {
+	  print "$pop $pops{$pop}\n";
+	}
+  }
+  
+  else {
+
+	my $sth = $self->prepare(qq{
+	  SELECT s.sample_id, s.name, c.sample_id, c.seq_region_start, c.seq_region_end, c.genotypes 
+	  FROM compressed_genotype_single_bp c, individual_population ip, sample s, individual i
+	  WHERE c.sample_id = ip.individual_sample_id
+	  AND ip.population_sample_id = s.sample_id
+	  AND c.sample_id = i.sample_id
+	  AND c.seq_region_id = ?
+	  AND   c.seq_region_start >= ? and c.seq_region_start <= ?
+	  AND   c.seq_region_end >= ?
+	  #AND (((LENGTH(c.genotypes) - 2) / 4) + 1) >= 3
+	  AND i.father_individual_sample_id is NULL AND i.mother_individual_sample_id is NULL
+	  #AND (s.name like 'PERLEGEN:AFD%' OR s.name like 'CSHL-HAPMAP%')
+	  AND (s.sample_id $pop_list)
+	  #GROUP BY s.sample_id
+	  #ORDER BY s.sample_id, c.sample_id
+	  #LIMIT 5
+	});
+	
+	$sth->execute($sr, $slice_start, $slice_end, $slice_start);
+	
+	print "\nGetting rows from $sr $slice_start\-$slice_end\n\n";
+	
+	my (%enough, %counts, %sample_pop, %counts_pop);
+	
+	my $threshold = 3;
+	my $pop_threshold = 20;
+	
+	my $row_count = 0;
+	
+	while(my $row = $sth->fetchrow_arrayref()) {
+	  my ($population_id, $population_name, $sample_id, $start, $end, $genotypes) = @$row;
+	  
+	  $row_count++;
+	  
+	  next if $enough{$sample_id};
+	  
+	  $sample_pop{$sample_id} = $population_name;
+	  
+	  # if the row is only partially within the slice
+	  if($start < $slice_start || $end > $slice_end) {
+		my $blob = substr($genotypes,2);
+		#the array contains the uncompressed value of genotype, always in the format number_gaps . genotype		  
+		my @genotypes = unpack("naa" x (length($blob)/4),$blob);
+		unshift @genotypes, substr($genotypes,1,1); #add the second allele of the first genotype
+		unshift @genotypes, substr($genotypes,0,1); #add the first allele of the first genotype
+		unshift @genotypes, 0; #the first SNP is in the position indicated by the seq_region1
+		
+		print "\n\n>>GENOTYPES\n\n", (join " ", @genotypes);
+		print "\n";
+		
+		last;
+		
+		my $snp_start;
+		for (my $i=0; $i < @genotypes -1;$i+=3){
+		  #number of gaps
+		  if ($i == 0){
+			$snp_start = $start; #first SNP is in the beginning of the region
+		  }
+		  else{
+			#ignore when there is more than 1 genotype in the same position
+			if ($genotypes[$i] == 0){
+			  $snp_start += 1;
+			  next; 
+			}
+			
+			$snp_start += $genotypes[$i] +1;
+		  }
+		  
+		  next if $snp_start < $slice_start;
+		  last if $snp_start > $slice_end;
+		  
+		  $counts{$sample_id}++;
+		}
+	  }
+	  
+	  # if the row is fully within the slice
+	  else {
+		$counts{$sample_id} += (((length($genotypes) - 2) / 4) + 1);
+	  }
+	  
+	  $enough{$sample_id} = 1 if $counts{$sample_id} >= $threshold;
+	  $counts_pop{$population_name}++ if $counts{$sample_id} >= $threshold;
+	}
+	
+	foreach my $pop(keys %counts_pop) {
+	  print "$pop has $counts_pop{$pop} individuals with $threshold or more genotypes\n";
+	}
+  }
+}
+
+
 #
 # private method, creates ldfeatureContainer objects from an executed statement handle
 # ordering of columns must be consistant
@@ -489,6 +638,7 @@ sub _get_LD_populations{
     return '' if (!defined $pops[0]);
 
 }
+
 
 sub _objs_from_sth_temp_file {
   my $self = shift;
