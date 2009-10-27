@@ -1,5 +1,5 @@
 
-# Ensembl module for Bio::EnsEMBL::Variation::DBSQL::StructuralVariationFeatureAdaptor
+# Ensembl module for Bio::EnsEMBL::Variation::DBSQL::StructuralVariationAdaptor
 #
 # Copyright (c) 2004 Ensembl
 #
@@ -9,7 +9,7 @@
 
 =head1 NAME
 
-Bio::EnsEMBL::Variation::DBSQL::StructuralVariationFeatureAdaptor
+Bio::EnsEMBL::Variation::DBSQL::StructuralVariationAdaptor
 
 =head1 SYNOPSIS
 
@@ -21,13 +21,13 @@ Bio::EnsEMBL::Variation::DBSQL::StructuralVariationFeatureAdaptor
   $vdb->dnadb($db);
 
   $va = $vdb->get_VariationAdaptor();
-  $vfa = $vdb->get_StructuralVariationFeatureAdaptor();
+  $vfa = $vdb->get_StructuralVariationAdaptor();
   $sa  = $db->get_SliceAdaptor();
 
-  # Get a StructuralVariationFeature by its internal identifier
+  # Get a StructuralVariation by its internal identifier
   $vf = $va->fetch_by_dbID(145);
 
-  # get all StructuralVariationFeatures in a region
+  # get all StructuralVariations in a region
   $slice = $sa->fetch_by_region('chromosome', 'X', 1e6, 2e6);
   foreach $vf (@{$vfa->fetch_all_by_Slice($slice)}) {
     print $vf->start(), '-', $vf->end(), ' ', $vf->allele_string(), "\n";
@@ -44,7 +44,7 @@ Bio::EnsEMBL::Variation::DBSQL::StructuralVariationFeatureAdaptor
 
 =head1 DESCRIPTION
 
-This adaptor provides database connectivity for StructuralVariationFeature objects.
+This adaptor provides database connectivity for StructuralVariation objects.
 Genomic locations of structural variations can be obtained from the database using this
 adaptor.  See the base class BaseFeatureAdaptor for more information.
 
@@ -61,61 +61,31 @@ Post questions to the Ensembl development list ensembl-dev@ebi.ac.uk
 use strict;
 use warnings;
 
-package Bio::EnsEMBL::Variation::DBSQL::StructuralVariationFeatureAdaptor;
+package Bio::EnsEMBL::Variation::DBSQL::StructuralVariationAdaptor;
 
-use Bio::EnsEMBL::Variation::StructuralVariationFeature;
+use Bio::EnsEMBL::Variation::StructuralVariation;
 use Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 
 our @ISA = ('Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor');
 
 
-
-=head2 fetch_all_by_Variation
-
-  Arg [1]    : Bio::EnsEMBL:Variation::Variation $var
-  Example    : my @vfs = @{$vfa->fetch_all_by_Variation($var)};
-  Description: Retrieves all structural variation features for a given variation.
-               Most should only a return a single variation feature.
-  Returntype : reference to list Bio::EnsEMBL::Variation::StructuralVariationFeature
-  Exceptions : throw on bad argument
-  Caller     : general
-  Status     : Stable
-
-=cut
-
-
-sub fetch_all_by_Variation {
-  my $self = shift;
-  my $var  = shift;
-
-  if(!ref($var) || !$var->isa('Bio::EnsEMBL::Variation::Variation')) {
-    throw('Bio::EnsEMBL::Variation::Variation arg expected');
-  }
-
-  if(!defined($var->dbID())) {
-    throw("Variation arg must have defined dbID");
-  }
-
-  return $self->generic_fetch("svf.variation_id = ".$var->dbID());
-}
-
 # method used by superclass to construct SQL
-sub _tables { return (['structural_variation_feature', 'svf'],
+sub _tables { return (['structural_variation', 'sv'],
 		      [ 'source', 's']); }
 
 
 sub _default_where_clause {
   my $self = shift;
 
-  return 'svf.source_id = s.source_id';
+  return 'sv.source_id = s.source_id';
 }
 
 sub _columns {
-  return qw( svf.structural_variation_feature_id svf.seq_region_id svf.seq_region_start
-             svf.seq_region_end svf.seq_region_strand svf.variation_id
-             svf.variation_name svf.map_weight s.name svf.class
-			 svf.bound_start svf.bound_end);
+  return qw( sv.structural_variation_id sv.seq_region_id sv.seq_region_start
+             sv.seq_region_end sv.seq_region_strand
+             sv.variation_name s.name sv.class
+			 sv.bound_start sv.bound_end);
 }
 
 
@@ -136,14 +106,14 @@ sub _objs_from_sth {
   my %sr_name_hash;
   my %sr_cs_hash;
 
-  my ($struct_variation_feature_id, $seq_region_id, $seq_region_start,
-      $seq_region_end, $seq_region_strand, $variation_id,
-      $variation_name, $map_weight, $source_name, $sv_class,
+  my ($struct_variation_id, $seq_region_id, $seq_region_start,
+      $seq_region_end, $seq_region_strand,
+      $variation_name, $source_name, $sv_class,
 	  $bound_start, $bound_end);
 
-  $sth->bind_columns(\$struct_variation_feature_id, \$seq_region_id,
+  $sth->bind_columns(\$struct_variation_id, \$seq_region_id,
                      \$seq_region_start, \$seq_region_end, \$seq_region_strand,
-                     \$variation_id, \$variation_name, \$map_weight,
+                     \$variation_name,
 					 \$source_name, \$sv_class, \$bound_start, \$bound_end);
 
   my $asm_cs;
@@ -232,8 +202,8 @@ sub _objs_from_sth {
       $slice = $dest_slice;
     }
 	
-    push @features, $self->_create_feature_fast('Bio::EnsEMBL::Variation::StructuralVariationFeature',
-    #push @features, Bio::EnsEMBL::Variation::StructuralVariationFeature->new_fast(
+    push @features, $self->_create_feature_fast('Bio::EnsEMBL::Variation::StructuralVariation',
+    #push @features, Bio::EnsEMBL::Variation::StructuralVariation->new_fast(
     #if use new_fast, then do not need "-" infront of key, i.e 'start' => $seq_region_start,
 
       {'start'    => $seq_region_start,
@@ -242,13 +212,11 @@ sub _objs_from_sth {
        'slice'    => $slice,
        'variation_name' => $variation_name,
        'adaptor'  => $self,
-       'dbID'     => $struct_variation_feature_id,
-       'map_weight' => $map_weight,
+       'dbID'     => $struct_variation_id,
        'source'   => $source_name,
 	   'class'     => $sv_class,
 	   'bound_start' => $bound_start,
-	   'bound_end'   => $bound_end,
-       '_variation_id' => $variation_id});
+	   'bound_end'   => $bound_end,});
   }
 
   return \@features;
@@ -278,10 +246,10 @@ sub list_dbIDs {
 
 =head2 get_all_synonym_sources
 
-    Args[1]     : Bio::EnsEMBL::Variation::StructuralVariationFeature vf
+    Args[1]     : Bio::EnsEMBL::Variation::StructuralVariation vf
     Example     : my @sources = @{$vf_adaptor->get_all_synonym_sources($vf)};
     Description : returns a list of all the sources for synonyms of this
-                  StructuralVariationFeature
+                  StructuralVariation
     ReturnType  : reference to list of strings
     Exceptions  : none
     Caller      : general
@@ -296,12 +264,12 @@ sub get_all_synonym_sources{
     my %sources;
     my @sources;
 
-    if(!ref($vf) || !$vf->isa('Bio::EnsEMBL::Variation::StructuralVariationFeature')) {
-	 throw("Bio::EnsEMBL::Variation::StructuralVariationFeature argument expected");
+    if(!ref($vf) || !$vf->isa('Bio::EnsEMBL::Variation::StructuralVariation')) {
+	 throw("Bio::EnsEMBL::Variation::StructuralVariation argument expected");
     }
     
     if (!defined($vf->{'_variation_id'}) && !defined($vf->{'variation'})){
-	warning("Not possible to get synonym sources for the StructuralVariationFeature: you need to attach a Variation first");
+	warning("Not possible to get synonym sources for the StructuralVariation: you need to attach a Variation first");
 	return \@sources;
     }
     #get the variation_id
