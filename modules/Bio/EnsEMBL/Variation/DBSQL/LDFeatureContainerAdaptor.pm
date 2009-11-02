@@ -240,6 +240,10 @@ sub get_populations_by_Slice{
   my $pop_list = $self->_get_LD_populations();
   
   my ($sr, $slice_start, $slice_end) = ($slice->get_seq_region_id, $slice->start, $slice->end);
+  
+  my @results;
+  my $pop_threshold = 20;	# number of individuals required
+  my $gen_threshold = 3;	# number of genotypes per individual required
 
   # just get the population list if it's really too long
   if($slice->length > 10000000) {
@@ -248,15 +252,14 @@ sub get_populations_by_Slice{
 	$sth->execute;
 	
 	
-	my @results = map {$_->[0]} @{$sth->fetchall_arrayref()};
-	print "@results\n";
+	@results = map {$_->[0]} @{$sth->fetchall_arrayref()};
   }
 
   # do a guesstimate for long slices, otherwise it takes too long
   elsif($slice->length > 5000000) {
 	
 	my $sth = $self->prepare(qq{
-	  SELECT distinct(c.sample_id), s.sample_id
+	  SELECT distinct(c.sample_id), s.name
 	  FROM compressed_genotype_single_bp c, individual_population ip, sample s, individual i
 	  WHERE c.sample_id = ip.individual_sample_id
 	  AND ip.population_sample_id = s.sample_id
@@ -264,7 +267,6 @@ sub get_populations_by_Slice{
 	  AND c.seq_region_id = ?
 	  AND   c.seq_region_start >= ? and c.seq_region_start <= ?
 	  AND   c.seq_region_end >= ?
-	  #AND (((LENGTH(c.genotypes) - 2) / 4) + 1) >= 3
 	  AND i.father_individual_sample_id is NULL AND i.mother_individual_sample_id is NULL
 	  AND (s.sample_id $pop_list)
 	});
@@ -279,9 +281,7 @@ sub get_populations_by_Slice{
 	  $pops{$pop_id}++;
 	}
 	
-	foreach my $pop(keys %pops) {
-	  print "$pop $pops{$pop}\n";
-	}
+	@results = grep {$pops{$_} > $pop_threshold} keys %pops;
   }
   
   else {
@@ -295,23 +295,13 @@ sub get_populations_by_Slice{
 	  AND c.seq_region_id = ?
 	  AND   c.seq_region_start >= ? and c.seq_region_start <= ?
 	  AND   c.seq_region_end >= ?
-	  #AND (((LENGTH(c.genotypes) - 2) / 4) + 1) >= 3
 	  AND i.father_individual_sample_id is NULL AND i.mother_individual_sample_id is NULL
-	  #AND (s.name like 'PERLEGEN:AFD%' OR s.name like 'CSHL-HAPMAP%')
 	  AND (s.sample_id $pop_list)
-	  #GROUP BY s.sample_id
-	  #ORDER BY s.sample_id, c.sample_id
-	  #LIMIT 5
 	});
 	
 	$sth->execute($sr, $slice_start, $slice_end, $slice_start);
 	
-	print "\nGetting rows from $sr $slice_start\-$slice_end\n\n";
-	
 	my (%enough, %counts, %sample_pop, %counts_pop);
-	
-	my $threshold = 3;
-	my $pop_threshold = 20;
 	
 	my $row_count = 0;
 	
@@ -332,11 +322,6 @@ sub get_populations_by_Slice{
 		unshift @genotypes, substr($genotypes,1,1); #add the second allele of the first genotype
 		unshift @genotypes, substr($genotypes,0,1); #add the first allele of the first genotype
 		unshift @genotypes, 0; #the first SNP is in the position indicated by the seq_region1
-		
-		print "\n\n>>GENOTYPES\n\n", (join " ", @genotypes);
-		print "\n";
-		
-		last;
 		
 		my $snp_start;
 		for (my $i=0; $i < @genotypes -1;$i+=3){
@@ -366,14 +351,14 @@ sub get_populations_by_Slice{
 		$counts{$sample_id} += (((length($genotypes) - 2) / 4) + 1);
 	  }
 	  
-	  $enough{$sample_id} = 1 if $counts{$sample_id} >= $threshold;
-	  $counts_pop{$population_name}++ if $counts{$sample_id} >= $threshold;
+	  $enough{$sample_id} = 1 if $counts{$sample_id} >= $gen_threshold;
+	  $counts_pop{$population_name}++ if $counts{$sample_id} >= $gen_threshold;
 	}
 	
-	foreach my $pop(keys %counts_pop) {
-	  print "$pop has $counts_pop{$pop} individuals with $threshold or more genotypes\n";
-	}
+	@results = grep {$counts_pop{$_} > $pop_threshold} keys %counts_pop;
   }
+  
+  return \@results;
 }
 
 
@@ -615,11 +600,12 @@ sub _get_LD_populations{
     my $self = shift;
     my $siblings = shift;
     my ($pop_id,$population_name);
-    my $sth = $self->db->dbc->prepare(qq{SELECT s.sample_id, s.name
-				     FROM population p, sample s
-				     WHERE (s.name like 'PERLEGEN:AFD%'
-				     OR s.name like 'CSHL-HAPMAP%')
-				     AND s.sample_id = p.sample_id});
+#    my $sth = $self->db->dbc->prepare(qq{SELECT s.sample_id, s.name
+#				     FROM population p, sample s
+#				     WHERE (s.name like 'PERLEGEN:AFD%'
+#				     OR s.name like 'CSHL-HAPMAP%')
+#				     AND s.sample_id = p.sample_id});
+	my $sth = $self->db->dbc->prepare(qq{SELECT sample_id, name FROM sample WHERE display = 'LD'});
 
     $sth->execute();
     $sth->bind_columns(\$pop_id,\$population_name);
@@ -633,7 +619,7 @@ sub _get_LD_populations{
     }
     
     my $in_str = " IN (" . join(',', @pops). ")";
-    
+	
     return $in_str if (defined $pops[0]);
     return '' if (!defined $pops[0]);
 
