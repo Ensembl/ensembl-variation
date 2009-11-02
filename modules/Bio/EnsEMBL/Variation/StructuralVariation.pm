@@ -339,7 +339,7 @@ sub transform {
   if(defined $transformed) {
 	
 	# fit the bound_start and bound_end coords to the new coords
-	$transformed->->_fix_bounds($self);
+	$transformed->_fix_bounds($self);
   }
   
   return $transformed;
