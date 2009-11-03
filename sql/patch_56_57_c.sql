@@ -15,4 +15,4 @@ CREATE TABLE structural_variation (
 );
 
 # patch identifier
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL,'patch', 'patch_56_57_c.sql|schema version');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL,'patch', 'patch_56_57_c.sql|add structural variation');
