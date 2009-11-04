@@ -37,7 +37,7 @@ use vars qw(@ISA);
 use strict;
 
 use Bio::EnsEMBL::DBSQL::BaseMetaContainer;
-use Bio::EnsEMBL::Utils::Exception qw(deprecate);
+use Bio::EnsEMBL::Utils::Exception;
 
 
 @ISA = qw(Bio::EnsEMBL::DBSQL::BaseMetaContainer);
@@ -55,8 +55,8 @@ sub get_schema_version {
     }
     return $ver;
   } else {
-    warn("Please insert meta_key 'schema_version' " .
-         "in meta table at core db.\n");
+    warning("Please insert meta_key 'schema_version' " .
+         "in meta table at variation db.\n");
   }
   return 0;
 }
