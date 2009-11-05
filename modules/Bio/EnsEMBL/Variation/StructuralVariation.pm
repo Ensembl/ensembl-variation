@@ -88,6 +88,9 @@ our @ISA = ('Bio::EnsEMBL::Feature');
 
   Arg [-SOURCE] :
     string - the name of the source where the variation comes from
+	
+  Arg [-SOURCE_DESCRIPTION] :
+	string - description of the source
 
   Arg [-TYPE] :
      string - the class of structural variation e.g. 'CNV'
@@ -119,11 +122,12 @@ sub new {
   my $class = ref($caller) || $caller;
 
   my $self = $class->SUPER::new(@_);
-  my ($var_name, $source, $sv_class, $bound_start, $bound_end) =
-    rearrange([qw(VARIATION_NAME SOURCE TYPE BOUND_START BOUND_END)], @_);
+  my ($var_name, $source, $source_description, $sv_class, $bound_start, $bound_end) =
+    rearrange([qw(VARIATION_NAME SOURCE SOURCE_DESCRIPTION TYPE BOUND_START BOUND_END)], @_);
 
   $self->{'variation_name'}   = $var_name;
   $self->{'source'}           = $source;
+  $self->{'source_description'}           = $source_description;
   $self->{'class'}  = $sv_class;
   $self->{'bound_start'} = $bound_start;
   $self->{'bound_end'} = $bound_end;
@@ -271,6 +275,27 @@ sub source{
   my $self = shift;
   return $self->{'source'} = shift if(@_);
   return $self->{'source'};
+}
+
+
+
+=head2 source_description
+
+  Arg [1]    : string $source_description (optional)
+               The new value to set the source_description attribute to
+  Example    : $source_description = $svf->source_description()
+  Description: Getter/Setter for the source_description attribute
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub source_description{
+  my $self = shift;
+  return $self->{'source_description'} = shift if(@_);
+  return $self->{'source_description'};
 }
 
 
