@@ -21,15 +21,17 @@ GetOptions(
 	   'help' => \$help,
 );
 
+usage() if $help;
+
 # connect to core database
 Bio::EnsEMBL::Registry->load_all( $registry_file );
 #Bio::EnsEMBL::Registry->load_registry_from_db(-host => 'ensembldb.ensembl.org',-user => 'anonymous');
 our $dbCore = Bio::EnsEMBL::Registry->get_DBAdaptor('human','core');
-die "ERROR: Could not connect to core database\n$usage" unless defined $dbCore;
+die "ERROR: Could not connect to core database\n" unless defined $dbCore;
 
 # check for an input file
 my $input_file = shift @ARGV;
-die "ERROR: No input file specified\n$usage" unless -e $input_file;
+die "ERROR: No input file specified\n" unless -e $input_file;
 
 # create an LRG object from it
 my $lrg = LRG::LRG::newFromFile($input_file, "\.$$\.temp");
