@@ -111,7 +111,7 @@ if(defined $genomic_file) {
 	}
 	
 	# check to see we have something
-	if($genomic_sequence !~ /a|c|g|t/i) {
+	if($genomic_sequence !~ /^[acgt]+$/i) {
 		die "Could not get genomic sequence, or error in genomic sequence\n";
 	}
 	
@@ -143,7 +143,7 @@ if(defined $cdna_file) {
 	}
 	
 	# check to see we have something
-	if($cdna_sequence !~ /a|c|g|t/i) {
+	if($cdna_sequence !~ /^[acgt]+$/i) {
 		die "Could not get cdna sequence, or error in cdna sequence\n";
 	}
 	
@@ -239,6 +239,7 @@ my $prev_cdna_end = 0;
 my $exon_number = 0;
 my $first = 1;
 my $coding_end_lrg = $coding_end;
+my $coding_start_lrg = $coding_start;
 my ($first_exon_start, $last_exon_end, $start, $end, $cdna_start, $cdna_end);
 
 while(my $exon = shift @exons) {
@@ -303,10 +304,11 @@ while(my $exon = shift @exons) {
 		$trans_node->addEmptyNode('intron', {'phase' => ($phase_end < 2 ? $phase_end + 1 : 0)}) if scalar @exons;
 	}
 	
-	# update the coding_end coord with the intron length
+	# update the coding_start/end coord with the intron length
+	$coding_start_lrg += ($start - $last_exon_end) - 1 if $coding_start > $cdna_start;
 	$coding_end_lrg += ($start - $last_exon_end) - 1 if $coding_end >= $cdna_start;
 	
-	#print "$start $end\t$cdna_start $cdna_end\t$coding_end $coding_end_lrg\n";
+	print "$start $end\t$cdna_start $cdna_end\t$coding_start $coding_start_lrg\t$coding_end $coding_end_lrg\n";
 	
 	# store the coords of the last exon - needed later
 	$last_exon_end = $end;
@@ -317,7 +319,7 @@ while(my $exon = shift @exons) {
 $trans_node->addData({'start' => $first_exon_start, 'end' => $last_exon_end});
 
 # add CDS start and end
-$coding_region_node->addData({'start' => $first_exon_start + $coding_start, 'end' => $coding_end_lrg});
+$coding_region_node->addData({'start' => $coding_start_lrg, 'end' => $coding_end_lrg});
 
 
 
@@ -349,7 +351,7 @@ $current->findOrAdd('modification_date')->content($root->date);
 $current->findOrAdd('other_exon_naming');
 
 # add a mapping node
-my $mapping_node = $current->addNode('mapping');
+my $mapping_node = $current->findOrAdd('mapping');
 
 # run the mapping sub-routine
 my $mapping = LRGMapping::mapping($genomic_sequence);
