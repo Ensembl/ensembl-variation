@@ -1,4 +1,6 @@
 #!/usr/local/ensembl/bin/perl
+use lib '/nfs/users/nfs_y/yuan/ensembl/src/ensembl-variation-55/modules';
+
 use strict;
 use warnings;
 
@@ -26,10 +28,17 @@ warn("Make sure you have a updated ensembl.registry file!\n");
 
 my $registry_file ||= $Bin . "/ensembl.registry";
 
-my $sample_size = 6;#need change for different submisson
-my $pop_class ='';
-my $tax_id = 99883;#for tetraodon #need change for different submisson
-my $batch = '2009-06';
+#need change for different submisson
+my $sample_size = 932;
+my $pop_class ='Unknown';
+my $tax_id = 10116;
+my $batch = '2009-11';
+my $orgainism_name = "Rattus Norvegicus";
+my $seq_source = "STAR-genotype";
+my $pop_source = "NA";
+my $place_source = "NA";
+my $breed = "NA";
+my $sex = "Unknown";
 
 Bio::EnsEMBL::Registry->load_all( $registry_file );
 
@@ -50,9 +59,9 @@ open IND, ">$TMP_DIR/snpind_file\_$seq_region_id" or die "could not open output 
 #get data
 my $var_adaptor = $dbVariation->get_VariationAdaptor();
 my $pop_adaptor = $dbVariation->get_PopulationAdaptor();
-my $population = $pop_adaptor->fetch_by_name($population_name);
+#my $population = $pop_adaptor->fetch_by_name($population_name);
 my $ind_adaptor = $dbVariation->get_IndividualAdaptor();
-my $variations = $var_adaptor->fetch_all_by_Population($population);
+#my $variations = $var_adaptor->fetch_all_by_Population($population);
 my $vf_adaptor = $dbVariation->get_VariationFeatureAdaptor();
 my $ind_gtype_adaptor = $dbVariation->get_IndividualGenotypeAdaptor();
 my $slice_adaptor = $dbCore->get_SliceAdaptor();
@@ -71,7 +80,7 @@ close IND or die "Could not close ind assay info file: $!\n";
 sub print_snp_headers{
 
     print_cont_section(); #contacts
-    #print_pub_section(); #publications
+    print_pub_section(); #publications
     print_method_section(); #methods
     print_pop_section(); #print population section
     print_individual_section($pop_adaptor,$ind_adaptor); #print individual section
@@ -84,14 +93,12 @@ sub print_snp_headers{
     print SNP "MOLTYPE:Genomic\n";
     print SNP "METHOD:Ensembl-SSAHA\n";
     print SNP "SAMPLESIZE:$sample_size\n"; #samplesize ??
-    #print SNP "ORGANISM:Homo sapiens\n";
-    #print SNP "ORGANISM:Pongo pygmaeus\n";
-    print SNP "ORGANISM:Tetraodon_nigroviridis\n";#need change for different submisson
+    print SNP "ORGANISM:$orgainism_name\n";#need change for different submisson
     print SNP "CITATION:\n";
     print SNP "POPULATION:",$new_pop_name,"\n";
     #need change for different submisson
     #print SNP "COMMENT:Mouse strain : A/J,129X1/SvJ,C3HeB/FeJ,129S1/SvImJ,DBA/2J,NOD/DIL,MSM/Ms\n"; #any comment ??
-    print SNP "COMMENT: Genomics sequences are from three individuals : gsc-plamid,wibr-plasmid and gsc-BAC\n";
+    #print SNP "COMMENT: Genomics sequences are from three individuals : gsc-plamid,wibr-plasmid and gsc-BAC\n";
     print SNP "||\n";
 
 }
@@ -100,18 +107,16 @@ sub print_snp_data_whole {
   my $dbVar = shift;
   my $LIMIT = $seq_region_id ? "AND vf.seq_region_id = $seq_region_id" : '';
 
-=head
   my $sql=qq(SELECT vf.variation_name,vf.allele_string,tg.allele_1,tg.allele_2,s.name,f.seq_region_id,f.up_seq_region_start,f.up_seq_region_end,f.down_seq_region_start,f.down_seq_region_end
               FROM variation_feature vf,sample s, flanking_sequence f, tmp_individual_genotype_single_bp tg
               WHERE vf.variation_id=f.variation_id
               AND vf.variation_id=tg.variation_id
-              AND tg.sample_id=s.sample_id #and vf.variation_id in (100030,100090,100091)
-              ORDER BY vf.variation_name
+              AND tg.sample_id=s.sample_id 
               $LIMIT
               );
 
   dumpSQL($dbVar->dbc,$sql);
-=cut
+
   open FH, "$TMP_DIR/$TMP_FILE" or die "can't open $TMP_FILE file";
 
   my ($var,$pre_var_name,$up_seq,$down_seq);
@@ -140,7 +145,7 @@ sub print_snp_data_whole {
       undef $var;
     }
 
-    ($up_seq,$down_seq) = get_flanking_seq($seq_region_id,$up_seq_region_start,$up_seq_region_end,$down_seq_region_start,$down_seq_region_end) if !$var->{'up_seq'};
+    ($up_seq,$down_seq) = get_flanking_seq($seq_region_id,$up_seq_region_start-300,$up_seq_region_end,$down_seq_region_start,$down_seq_region_end+300) if !$var->{'up_seq'};
 
     $pre_var_name = $variation_name;
     $var->{'var_name'} = $variation_name;
@@ -276,7 +281,6 @@ sub print_individual_section{
     print "individual_names are @ind_names\n";
     #individual
     foreach my $ind_name (@ind_names) {
-      my ($seq_source,$pop_source,$place_source) ;
       if ($ind_name =~/gsc/i) {
 	$seq_source = "Genoscope";
 	$pop_source = "NA";
@@ -293,7 +297,7 @@ sub print_individual_section{
 	$place_source = "NA";
       }
       print SNP "TYPE:INDIVIDUAL\n";
-      print SNP "HANDLE:ENSEMBL\|$new_pop_name\|$ind_name\|$tax_id\|Unknown\|O\|$pop_source\n";
+      print SNP "HANDLE:ENSEMBL\|$new_pop_name\|$ind_name\|$tax_id\|$sex\|$breed\|$pop_source\n";
       print SNP "SOURCE:repository\|$seq_source|$ind_name\|$place_source\n";
       #print SNP "PEDIGREE:NA\|NA\|NA\|NA\|NA\n";delete suggested by dbSNP
       print SNP "||\n";
@@ -312,9 +316,9 @@ sub print_method_section{
     print SNP "MULT_PCR_AMPLIFICATION:NA\n";
     print SNP "MULT_CLONES_TESTED:NA\n";
     #need change for different submisson
-    print SNP "METHOD:Computationally discovered SNPs using ssahaSNP (see ssahaSNP description: http://www.sanger.ac.uk/Software/analysis/ssahaSNP/). The sequencing reads were from three individuals, two from gsc plasmid and BAC clones and one from wibr plasmid clone. These reads are component of reference sequence. The default parameters for ssahaSNP were used.\n";
+    #print SNP "METHOD:Computationally discovered SNPs using ssahaSNP (see ssahaSNP description: http://www.sanger.ac.uk/Software/analysis/ssahaSNP/). The sequencing reads were from three individuals, two from gsc plasmid and BAC clones and one from wibr plasmid clone. These reads are component of reference sequence. The default parameters for ssahaSNP were used.\n";
     #print SNP "METHOD:Computationally discovered SNPs using ssahaSNP (see ssahaSNP description: http://www.sanger.ac.uk/Software/analysis/ssahaSNP/). The sequencing reads were from one individual abelii. These reads are component of reference sequence. The default parameters for ssahaSNP were used.\n"; #another comment ??
-    #print SNP "METHOD:Using ssaha2SNP, mouse sequencing reads from several sources were aligned to the top_level coordinates associated with build NCBI37 of the mouse genome. The read set includes whole genome sequencing reads from the DBA/2J, 129S1/ImJ, 129X1/SvJ, A/J strains of Mus musculus, C3HeB/FeJ strain of Mus musculus, BAC-end sequence reads from the NOD strain of Mus musculus, and additional sequencing reads from the MSM/Ms strain of Mus musculus molossinus. The reads for C3HeB/FeJ and NOD were generated at the Wellcome Trust Sanger Institute, the MSM-Ms reads were generated by Riken. Reads for the other strains were generated by Celera\n";
+    print SNP "METHOD:Using ssaha2SNP, mouse sequencing reads from several sources were aligned to the top_level coordinates associated with build NCBI37 of the mouse genome. The read set includes whole genome sequencing reads from the DBA/2J, 129S1/ImJ, 129X1/SvJ, A/J strains of Mus musculus, C3HeB/FeJ strain of Mus musculus, BAC-end sequence reads from the NOD strain of Mus musculus, and additional sequencing reads from the MSM/Ms strain of Mus musculus molossinus. The reads for C3HeB/FeJ and NOD were generated at the Wellcome Trust Sanger Institute, the MSM-Ms reads were generated by Riken. Reads for the other strains were generated by Celera\n";
     print SNP "||\n";
 
 
@@ -338,7 +342,7 @@ sub print_ind_headers{
     print IND "TYPE:SNPINDUSE\n";
     print IND "HANDLE:ENSEMBL\n";
     print IND "BATCH:$batch\n";
-    print IND "METHOD:Computationally discovered SNPs using ssahaSNP. For each SNP loci, reads were checked again for genotype.\n"; #another comment ??
+    print IND "METHOD:Ensembl-SSAHA\n";
     print IND "||\n";
 
     #print_cont_section(IND); #contacts section
@@ -346,5 +350,5 @@ sub print_ind_headers{
     #print_pop_section(IND); #population section
     #print some individual specific section
     #print_method_section(IND); #method section
-    
+
 }
