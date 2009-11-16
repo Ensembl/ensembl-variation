@@ -29,16 +29,20 @@ warn("Make sure you have a updated ensembl.registry file!\n");
 my $registry_file ||= $Bin . "/ensembl.registry";
 
 #need change for different submisson
-my $sample_size = 932;
+my $sample_size = 8;
+#my $sample_size = 932;
 my $pop_class ='Unknown';
 my $tax_id = 10116;
-my $batch = '2009-11';
+my $batch = '2009-11_STAR_4_strain';
+#my $batch = '2009-11_STAR-genotype';
 my $orgainism_name = "Rattus Norvegicus";
-my $seq_source = "STAR-genotype";
+my $seq_source = "STAR";
+my $source_type = 'submitter'; # choice of repository or curator or submitter 
 my $pop_source = "NA";
 my $place_source = "NA";
 my $breed = "NA";
 my $sex = "Unknown";
+my $method = 'RAT_STRAIN-READS_SNPS_200712'; #'RAT_STRAIN-GENOTYPES_200712''Ensembl-SSAHA';
 
 Bio::EnsEMBL::Registry->load_all( $registry_file );
 
@@ -51,7 +55,9 @@ $TMP_FILE = $ImportUtils::TMP_FILE;
 $seq_region_id ||='';
 
 my $new_pop_name = $population_name;
-$new_pop_name =~ s/\:/\_/;
+$new_pop_name =~ s/\:/\_/;#dbSNP more like '_' then ':'
+
+print "new_pop_name is $new_pop_name\n";
 
 open SNP, ">$TMP_DIR/snpassay_file\_$seq_region_id" or die "could not open output file for snp assay info: $!\n";
 open IND, ">$TMP_DIR/snpind_file\_$seq_region_id" or die "could not open output file for ind assay info: $!\n";
@@ -79,9 +85,9 @@ close IND or die "Could not close ind assay info file: $!\n";
 #will print the snpassay file header
 sub print_snp_headers{
 
-    print_cont_section(); #contacts
-    print_pub_section(); #publications
-    print_method_section(); #methods
+    #print_cont_section(); #contacts
+    #print_pub_section(); #publications
+    #print_method_section(); #methods
     print_pop_section(); #print population section
     print_individual_section($pop_adaptor,$ind_adaptor); #print individual section
 
@@ -91,7 +97,8 @@ sub print_snp_headers{
     print SNP "HANDLE:ENSEMBL\n";
     print SNP "BATCH:$batch\n";  #use year of submission for batch ?? #need change for different submisson
     print SNP "MOLTYPE:Genomic\n";
-    print SNP "METHOD:Ensembl-SSAHA\n";
+    #print SNP "METHOD:Ensembl-SSAHA\n";
+    print SNP "METHOD:$method\n";
     print SNP "SAMPLESIZE:$sample_size\n"; #samplesize ??
     print SNP "ORGANISM:$orgainism_name\n";#need change for different submisson
     print SNP "CITATION:\n";
@@ -116,6 +123,9 @@ sub print_snp_data_whole {
               );
 
   dumpSQL($dbVar->dbc,$sql);
+
+  system("sort $TMP_DIR/$TMP_FILE >$TMP_DIR/$TMP_FILE\.s");
+  system("mv $TMP_DIR/$TMP_FILE\.s $TMP_DIR/$TMP_FILE");
 
   open FH, "$TMP_DIR/$TMP_FILE" or die "can't open $TMP_FILE file";
 
@@ -297,8 +307,9 @@ sub print_individual_section{
 	$place_source = "NA";
       }
       print SNP "TYPE:INDIVIDUAL\n";
-      print SNP "HANDLE:ENSEMBL\|$new_pop_name\|$ind_name\|$tax_id\|$sex\|$breed\|$pop_source\n";
-      print SNP "SOURCE:repository\|$seq_source|$ind_name\|$place_source\n";
+      #print SNP "HANDLE:ENSEMBL\|$new_pop_name\|$ind_name\|$tax_id\|$sex\|$breed\|$pop_source\n";
+      print SNP "IND:ENSEMBL\|$new_pop_name\|$ind_name\|$tax_id\|$sex\|$breed\|$pop_source\n"; #dbSNP suggest use IND rather than HANDLE in the begining
+      print SNP "SOURCE:$source_type\|$seq_source|$ind_name\|$place_source\n";
       #print SNP "PEDIGREE:NA\|NA\|NA\|NA\|NA\n";delete suggested by dbSNP
       print SNP "||\n";
     }
@@ -342,7 +353,8 @@ sub print_ind_headers{
     print IND "TYPE:SNPINDUSE\n";
     print IND "HANDLE:ENSEMBL\n";
     print IND "BATCH:$batch\n";
-    print IND "METHOD:Ensembl-SSAHA\n";
+    #print IND "METHOD:Ensembl-SSAHA\n";
+    print IND "METHOD:$method\n";
     print IND "||\n";
 
     #print_cont_section(IND); #contacts section
