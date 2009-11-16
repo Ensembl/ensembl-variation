@@ -17,8 +17,8 @@ sub new {
   my $caller = shift;
   my $class = ref($caller) || $caller;
 
-  my ($dbSNP, $dbCore, $dbVar, $snp_dbname, $tmp_dir, $tmp_file, $limit, $mapping_file_dir, $dbSNP_BUILD_VERSION, $ASSEMBLY_VERSION) =
-        rearrange([qw(DBSNP DBCORE DBVAR SNP_DBNAME TMPDIR TMPFILE LIMIT MAPPING_FILE_DIR DBSNP_VERSION ASSEMBLY_VERSION)],@_);
+  my ($dbSNP, $dbCore, $dbVar, $snp_dbname, $species, $tmp_dir, $tmp_file, $limit, $mapping_file_dir, $dbSNP_BUILD_VERSION, $ASSEMBLY_VERSION) =
+        rearrange([qw(DBSNP DBCORE DBVAR SNP_DBNAME SPECIES TMPDIR TMPFILE LIMIT MAPPING_FILE_DIR DBSNP_VERSION ASSEMBLY_VERSION)],@_);
 
   my $dbSNP_share_db = "dbSNP_$dbSNP_BUILD_VERSION\_shared";
   #my $dbSNP_share_db = "dbSNP_128_shared";
@@ -29,6 +29,7 @@ sub new {
 		'dbCore' => $dbCore,
 		'dbVar' => $dbVar, ##this is a dbconnection
 		'snp_dbname' => $snp_dbname,
+		'species'   => $species,
 		'tmpdir' => $tmp_dir,
 		'tmpfile' => $tmp_file,
 		'limit' => $limit,
@@ -45,16 +46,16 @@ sub dump_dbSNP{
 
   #the following steps need to be run when initial starting the job. If job failed for some reason and some steps below are already finished, then can comment them out
 
-  $self->create_coredb() if ($self->{'dbCore'}->species =~ /homo/i);#this coredb is needed during build process in tagged_snp.pl
-  $self->source_table();
-  $self->population_table();
-  $self->individual_table();
-  $self->variation_table();
+  #$self->create_coredb() if ($self->{'dbCore'}->species =~ /homo/i);#this coredb is needed during build process in tagged_snp.pl
+  #$self->source_table();
+  #$self->population_table();
+  #$self->individual_table();
+  #$self->variation_table();
   $self->individual_genotypes();
-  $self->population_genotypes();
-  $self->allele_table();
-  $self->flanking_sequence_table();
-  $self->variation_feature();
+  #$self->population_genotypes();
+  #$self->allele_table();
+  #$self->flanking_sequence_table();
+  #$self->variation_feature();
 
   #the following not run for human any more, not used and also don't have HapSet table in dbSNP_129_human_9606
   #if ($self->{'dbCore'}->species =~ /homo/i) {
@@ -132,8 +133,18 @@ sub variation_table {
     
     $self->{'dbVar'}->do( "ALTER TABLE variation ADD INDEX snpidx( snp_id )" );
     
+
+    #create table rsHist to store rs history
+    dumpSQL($self->{'dbSNP'},(qq{SELECT * FROM vwRsMergeArch}));
+
+    #loading it to variation database
+    create_and_load( $self->{'dbVar'}, "rsHist", "rsHigh *", "rsCurrent *","orien2Current");
+
+    #change rs_id to rs_name, i.e add rs to number
+    $self->{'dbVar'}->do(qq{UPDATE rsHist SET rsHigh = CONCAT('rs',rsHigh), rsCurrent = CONCAT('rs',rsCurrent)});
+
     # create a temp table of subSNP info
-    
+
     debug("Dumping SubSNPs");
     
     #$self->dump_subSNPs; #changed to get allele data from UniVariAllele and Allele, do not need this method anymore
@@ -595,14 +606,14 @@ sub flanking_sequence_table {
     #drop tmp table to free space
     $self->{'dbVar'}->do(qq{DROP TABLE tmp_seq_$type});
   }
-      
+
   $self->{'dbVar'}->do("ALTER TABLE tmp_seq ADD INDEX idx (subsnp_id, type, line_num)");
 
   my $sth = $self->{'dbVar'}->prepare(qq{SELECT ts.variation_id, ts.subsnp_id, ts.type,
 					       ts.line, ts.revcom
 					       FROM   tmp_seq ts FORCE INDEX (idx)
 					       ORDER BY ts.subsnp_id, ts.type, ts.line_num},{mysql_use_result => 1});
-  
+
   $sth->execute();
 
   my ($vid, $ssid, $type, $line, $revcom);
@@ -689,6 +700,7 @@ sub variation_feature {
   my ($tablename1,$tablename2,$row);
 
   my ($assembly_version) =  $self->{'assembly_version'} =~ /^[a-zA-Z]+(\d+)\.*.*$/;
+  #$assembly_version = 3;  #just for zebrafish
   print "assembly_version again is $assembly_version\n";
 
   my $sth = $self->{'dbSNP'}->prepare(qq{SHOW TABLES LIKE 
@@ -979,6 +991,7 @@ sub individual_genotypes {
 
        #need to fork to processce gtype data
        my $pid = fork;
+
        if (! defined $pid){
 	 throw("Not possible to fork: $!\n");
        }
@@ -1243,6 +1256,10 @@ sub cleanup {
     $self->{'dbVar'}->do('DROP TABLE tmp_pop'); #and finally remove the temporary table
 
     $self->{'dbVar'}->do('ALTER TABLE variation  DROP COLUMN snp_id');
+#     $self->{'dbVar'}->do('RENAME TABLE variation_synonym TO variation_synonym_old');
+#     $self->{'dbVar'}->do('CREATE TABLE variation_synonym LIKE variation_synonym_old');
+#     $self->{'dbVar'}->do('INSERT INTO variation_synonym SELECT * FROM variation_synonym_old WHERE source_id!=1');
+#     $self->{'dbVar'}->do('ALTER TABLE variation_synonym DROP COLUMN subsnp_id, DROP COLUMN substrand_reversed_flag');
     $self->{'dbVar'}->do('ALTER TABLE variation_synonym DROP COLUMN substrand_reversed_flag');
     $self->{'dbVar'}->do('ALTER TABLE sample DROP COLUMN pop_class_id, DROP COLUMN pop_id, DROP COLUMN individual_id');
     #$self->{'dbVar'}->do('ALTER TABLE variation_group DROP COLUMN hapset_id') if ($self->{'dbCore'}->species =~ /homo|hum/i);
