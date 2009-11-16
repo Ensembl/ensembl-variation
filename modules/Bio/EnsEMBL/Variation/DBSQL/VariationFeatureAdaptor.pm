@@ -124,6 +124,79 @@ sub fetch_all_genotyped_by_Slice{
     return $self->fetch_all_by_Slice_constraint($slice,$constraint);
 }
 
+
+=head2 fetch_all_with_phenotype_by_Slice
+
+  Arg [1]    : Bio::EnsEMBL:Variation::Slice $slice
+  Arg [2]    : $variation_feature_source [optional]
+  Arg [3]    : $phenotype_source [optional]
+  Arg [4]    : $phenotype_name [optional]
+  Example    : my @vfs = @{$vfa->fetch_all_with_phenotype_by_Slice($slice)};
+  Description: Retrieves all variation features associated with phenotypes for
+               a given slice.
+			   The optional $variation_feature_source argument can be used to
+			   retrieve only variation features from a paricular source.
+			   The optional $phenotype source argument can be used to
+               retrieve only variation features with phenotypes annotated by
+               a particular source.
+			   The optional $phenotype_name argument can
+               be used to retrieve only variation features associated with
+               that phenotype.
+  Returntype : reference to list Bio::EnsEMBL::Variation::VariationFeature
+  Exceptions : throw on bad argument
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub fetch_all_with_phenotype_by_Slice{
+
+	my $self = shift;
+	my $slice = shift;
+	my $v_source = shift;
+	my $p_source = shift;
+	my $phenotype = shift;
+	
+	if(!ref($slice) || !$slice->isa('Bio::EnsEMBL::Slice')) {
+		throw('Bio::EnsEMBL::Slice arg expected');
+	}
+	
+	my $extra_sql = '';
+    
+    if(defined $v_source) {
+		$extra_sql .= qq{ AND s.name = '$v_source' };
+    }
+    
+    if(defined $p_source) {
+		$extra_sql .= qq{ AND ps.name = '$p_source' };
+    }
+    
+    if(defined $phenotype) {
+		$extra_sql .= qq{ AND p.name = '$phenotype' };
+    }
+    
+    my $cols = join ",", $self->_columns();
+    
+    my $sth = $self->prepare(qq{
+		SELECT $cols
+		FROM variation_feature vf, variation_annotation va,
+		phenotype p, source s, source ps # need to link twice to source
+		WHERE va.source_id = ps.source_id
+		AND vf.source_id = s.source_id
+		AND vf.variation_id = va.variation_id
+		AND va.phenotype_id = p.phenotype_id
+		$extra_sql
+		AND vf.seq_region_id = ?
+		AND vf.seq_region_end > ?
+		AND vf.seq_region_start < ?
+		GROUP BY vf.variation_feature_id
+    });
+    
+    $sth->execute($slice->get_seq_region_id, $slice->start, $slice->end);
+    
+    return $self->_objs_from_sth($sth);
+}
+
 # method used by superclass to construct SQL
 sub _tables { return (['variation_feature', 'vf'],
 		      [ 'source', 's']); }
