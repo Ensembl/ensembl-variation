@@ -133,7 +133,7 @@ sub print_snp_data_whole {
 
   while (<FH>) {
 
-    my ($variation_name,$allele_string,$allele_1,$allele_2,$ind_name,$seq_region_id,$up_seq_region_start,$up_seq_region_end,$down_seq_region_start,$down_seq_region_end) = split;
+    my ($variation_name,$allele_string,$allele_1,$allele_2,$ind_name,$seq_region_id,$up_seq_region_start,$up_seq_region_end,$down_seq_region_start,$down_seq_region_end) = split /\t/;
     next if ($variation_name !~ /^ENS/);
     #print "$variation_name,$allele_string,$allele_1,$allele_2,$ind_name,$seq_region_id,$up_seq_region_start,$up_seq_region_end,$down_seq_region_start,$down_seq_region_end\n";
     if ($pre_var_name and $variation_name ne $pre_var_name) {
