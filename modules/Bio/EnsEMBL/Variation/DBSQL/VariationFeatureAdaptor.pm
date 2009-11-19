@@ -172,7 +172,7 @@ sub fetch_all_with_annotation_by_Slice{
     }
     
     if(defined $annotation) {
-		$extra_sql .= qq{ AND p.name = '$annotation' };
+		$extra_sql .= qq{ AND (p.name = '$annotation' OR p.description LIKE '%$annotation%') };
     }
     
     my $cols = join ",", $self->_columns();
