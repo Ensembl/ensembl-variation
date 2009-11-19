@@ -125,23 +125,23 @@ sub fetch_all_genotyped_by_Slice{
 }
 
 
-=head2 fetch_all_with_phenotype_by_Slice
+=head2 fetch_all_with_annotation_by_Slice
 
   Arg [1]    : Bio::EnsEMBL:Variation::Slice $slice
   Arg [2]    : $variation_feature_source [optional]
-  Arg [3]    : $phenotype_source [optional]
-  Arg [4]    : $phenotype_name [optional]
-  Example    : my @vfs = @{$vfa->fetch_all_with_phenotype_by_Slice($slice)};
-  Description: Retrieves all variation features associated with phenotypes for
+  Arg [3]    : $annotation_source [optional]
+  Arg [4]    : $annotation_name [optional]
+  Example    : my @vfs = @{$vfa->fetch_all_with_annotation_by_Slice($slice)};
+  Description: Retrieves all variation features associated with annotations for
                a given slice.
 			   The optional $variation_feature_source argument can be used to
 			   retrieve only variation features from a paricular source.
-			   The optional $phenotype source argument can be used to
-               retrieve only variation features with phenotypes annotated by
+			   The optional $annotation source argument can be used to
+               retrieve only variation features with annotations provided by
                a particular source.
-			   The optional $phenotype_name argument can
+			   The optional $annotation_name argument can
                be used to retrieve only variation features associated with
-               that phenotype.
+               that annotation.
   Returntype : reference to list Bio::EnsEMBL::Variation::VariationFeature
   Exceptions : throw on bad argument
   Caller     : general
@@ -149,13 +149,13 @@ sub fetch_all_genotyped_by_Slice{
 
 =cut
 
-sub fetch_all_with_phenotype_by_Slice{
+sub fetch_all_with_annotation_by_Slice{
 
 	my $self = shift;
 	my $slice = shift;
 	my $v_source = shift;
 	my $p_source = shift;
-	my $phenotype = shift;
+	my $annotation = shift;
 	
 	if(!ref($slice) || !$slice->isa('Bio::EnsEMBL::Slice')) {
 		throw('Bio::EnsEMBL::Slice arg expected');
@@ -171,8 +171,8 @@ sub fetch_all_with_phenotype_by_Slice{
 		$extra_sql .= qq{ AND ps.name = '$p_source' };
     }
     
-    if(defined $phenotype) {
-		$extra_sql .= qq{ AND p.name = '$phenotype' };
+    if(defined $annotation) {
+		$extra_sql .= qq{ AND p.name = '$annotation' };
     }
     
     my $cols = join ",", $self->_columns();
