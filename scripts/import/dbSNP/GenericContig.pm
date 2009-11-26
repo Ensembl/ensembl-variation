@@ -176,7 +176,7 @@ sub variation_table {
 		       tv.substrand_reversed_flag
 		       FROM tmp_var_allele tv, variation v
 		       WHERE tv.refsnp_id = v.snp_id
-		       GROUP BY tv.subsnp_id
+		       GROUP BY tv.subsnp_id  #can use distinct instead
 		   });
     
     $self->{'dbVar'}->do("ALTER TABLE variation_synonym ADD INDEX subsnp_id(subsnp_id)");
@@ -266,7 +266,7 @@ sub population_table {
              FROM   Population p
              LEFT JOIN $self->{'dbSNP_share_db'}.PopClass pc ON p.pop_id = pc.pop_id
 	     LEFT JOIN PopLine pl ON p.pop_id = pl.pop_id
-	     GROUP BY p.pop_id
+	     GROUP BY p.pop_id  #table size is small, so no need to change
 	 });
 
     debug("Loading sample data");
@@ -278,7 +278,7 @@ sub population_table {
     $self->{'dbVar'}->do(qq{INSERT INTO sample (name, pop_id,description)
                  SELECT tp.name, tp.pop_id, description
                  FROM   tmp_pop tp
-                 GROUP BY tp.pop_id
+                 GROUP BY tp.pop_id #table size is small, so no need to change
                  });
 
     $self->{'dbVar'}->do(qq{ALTER TABLE sample ADD INDEX pop_id (pop_id)});
@@ -325,11 +325,11 @@ sub individual_table {
   # we ignore this problem with a group by
   #there were less individuals in the individual than in the individual_genotypes table, the reason is that some individuals do not have
   #assigned a specie for some reason in the individual table, but they do have in the SubmittedIndividual table
-  #to solve the problem, get the specie information from the SubmittedIndividual table
-  dumpSQL($self->{'dbSNP'}, qq{ SELECT IF(si.loc_ind_alias = '' ,si.loc_ind_id, si.loc_ind_alias), i.descrip, i.ind_id
+  #to solve the problem, get the specie information from the SubmittedIn or dividual table
+  dumpSQL($self->{'dbSNP'}, qq{ SELECT IF(si.loc_ind_alias = '' or si.loc_ind_alias is null ,si.loc_ind_id, si.loc_ind_alias), i.descrip, i.ind_id
 				   FROM   SubmittedIndividual si, Individual i
 				   WHERE  si.ind_id = i.ind_id
-				   GROUP BY i.ind_id
+				   GROUP BY i.ind_id #table size is small, so no need to change group by
 			    });
 
   create_and_load($self->{'dbVar'}, 'tmp_ind', 'loc_ind_id', 'description', 'ind_id i*');
