@@ -326,7 +326,7 @@ sub individual_table {
   #there were less individuals in the individual than in the individual_genotypes table, the reason is that some individuals do not have
   #assigned a specie for some reason in the individual table, but they do have in the SubmittedIndividual table
   #to solve the problem, get the specie information from the SubmittedIn or dividual table
-  dumpSQL($self->{'dbSNP'}, qq{ SELECT IF(si.loc_ind_alias = '' or si.loc_ind_alias is null ,si.loc_ind_id, si.loc_ind_alias), i.descrip, i.ind_id
+  dumpSQL($self->{'dbSNP'}, qq{ SELECT IF(si.loc_ind_alias = '' or si.loc_ind_alias is null ,concat(si.pop_id,"_",si.loc_ind_id), si.loc_ind_alias), i.descrip, i.ind_id
 				   FROM   SubmittedIndividual si, Individual i
 				   WHERE  si.ind_id = i.ind_id
 				   GROUP BY i.ind_id #table size is small, so no need to change group by
