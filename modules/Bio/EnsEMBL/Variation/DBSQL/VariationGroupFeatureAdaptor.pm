@@ -12,17 +12,13 @@
 Bio::EnsEMBL::Variation::DBSQL::VariationGroupFeatureAdaptor
 
 =head1 SYNOPSIS
-
-  $vdb = Bio::EnsEMBL::Variation::DBSQL::DBAdaptor->new(...);
-  $db  = Bio::EnsEMBL::DBSQL::DBAdaptor->new(...);
-
-  # tell the variation database where core database information can be
-  # be found
-  $vdb->dnadb($db);
-
-  $vga = $vdb->get_VariationGroupAdaptor();
-  $vgfa = $vdb->get_VariationGroupFeatureAdaptor();
-  $sa  = $db->get_SliceAdaptor();
+  $reg = 'Bio::EnsEMBL::Registry';
+  
+  $reg->load_registry_from_db(-host => 'ensembldb.ensembl.org',-user => 'anonymous');
+  
+  $vgfa = $reg->get_adaptor("human","variation","variationgroupfeature");
+  $vga = $reg->get_adaptor("human","variation","variationgroup");
+  $sa = $reg->get_adaptor("human","core","slice");
 
   # Get a VariationFeature by its internal identifier
   $vgf = $vgfa->fetch_by_dbID(145);

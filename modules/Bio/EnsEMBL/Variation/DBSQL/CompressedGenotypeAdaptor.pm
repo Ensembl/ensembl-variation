@@ -12,10 +12,11 @@
 Bio::EnsEMBL::Variation::DBSQL::CompressedGenotypeAdaptor
 
 =head1 SYNOPSIS
-
-  $db = Bio::EnsEMBL::Variation::DBSQL::DBAdaptor->new(...);
-
-  $iga = $db->get_IndividualGenotypeAdaptor();
+  $reg = 'Bio::EnsEMBL::Registry';
+  
+  $reg->load_registry_from_db(-host => 'ensembldb.ensembl.org',-user => 'anonymous');
+  
+  $iga = $reg->get_adaptor("human","variation","individualgenotype");
 
   #returns all genotypes in a certain Slice
 

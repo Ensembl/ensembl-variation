@@ -12,10 +12,12 @@
 Bio::EnsEMBL::DBSQL::IndividualAdaptor
 
 =head1 SYNOPSIS
-
-  my $db = Bio::EnsEMBL::Variation::DBSQL::DBAdaptor->new(...);
-
-  my $ia = $db->get_IndividualAdaptor();
+  $reg = 'Bio::EnsEMBL::Registry';
+  
+  $reg->load_registry_from_db(-host => 'ensembldb.ensembl.org',-user => 'anonymous');
+  
+  $ia = $reg->get_adaptor("human","variation","individual");
+  $pa = $reg->get_adaptor("human","variation","population");
 
   # Get an individual by its internal identifier
   my $ind = $ia->fetch_by_dbID(52);
@@ -26,7 +28,7 @@ Bio::EnsEMBL::DBSQL::IndividualAdaptor
   }
 
   # get all individuals from a population
-  my $pop = $pop_adaptor->fetch_by_name('PACIFIC');
+  my $pop = $pa->fetch_by_name('PACIFIC');
   foreach my $ind (@{$ia->fetch_all_by_Population($pop)}) {
     print $ind->name(), "\n";
   }

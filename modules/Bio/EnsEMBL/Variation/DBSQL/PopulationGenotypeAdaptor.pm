@@ -12,11 +12,12 @@
 Bio::EnsEMBL::Variation::DBSQL::PopulationGenotypeAdaptor
 
 =head1 SYNOPSIS
-
-  $db = Bio::EnsEMBL::Variation::DBSQL::DBAdaptor->new(...);
-
-  $pga = $db->get_PopulationGenotypeAdaptor();
-  $pa  = $db->get_PopulationAdaptor();
+  $reg = 'Bio::EnsEMBL::Registry';
+  
+  $reg->load_registry_from_db(-host => 'ensembldb.ensembl.org',-user => 'anonymous');
+  
+  $pga = $reg->get_adaptor("human","variation","populationgenotype");  
+  $pa = $reg->get_adaptor("human","variation","population");
 
   # Get a PopulationGenotype by its internal identifier
   $pgtype = $ia->fetch_by_dbID(145);

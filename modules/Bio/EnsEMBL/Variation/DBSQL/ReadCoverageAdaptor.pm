@@ -12,18 +12,13 @@
 Bio::EnsEMBL::Variation::DBSQL::ReadCoverageAdaptor
 
 =head1 SYNOPSIS
-
-  $vdb = Bio::EnsEMBL::Variation::DBSQL::DBAdaptor->new(...);
-  $db  = Bio::EnsEMBL::DBSQL::DBAdaptor->new(...);
-
-  # tell the variation database where core database information can be
-  # be found
-  $vdb->dnadb($db);
-
-  $rca = $vdb->get_ReadCoverageAdaptor();
-  $sa  = $db->get_SliceAdaptor();
-  $pa  = $vdb->get_PopulationAdaptor();
-
+  $reg = 'Bio::EnsEMBL::Registry';
+  
+  $reg->load_registry_from_db(-host => 'ensembldb.ensembl.org',-user => 'anonymous');
+  
+  $rca = $reg->get_adaptor("human","variation","readcoverage");
+  $sa = $reg->get_adaptor("human","core","slice");
+  $pa = $reg->get_adaptor("human","variation","population");
 
   # get read coverage in a region for a certain population in in a certain level
   $slice = $sa->fetch_by_region('chromosome', 'X', 1e6, 2e6);
