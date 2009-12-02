@@ -264,6 +264,39 @@ sub get_all_Genes{
     return $genes;
 }
 
+
+
+
+=head2 get_all_VariationFeatures
+
+  Args        : None
+  Example     : $vfs = $v->get_all_VariationFeatures();
+  Description : Retrieves all VariationFeatures for this Variation
+  ReturnType  : reference to list of Bio::EnsEMBL::Variation::VariationFeature
+  Exceptions  : None
+  Caller      : general
+  Status      : At Risk
+
+=cut
+
+sub get_all_VariationFeatures{
+  my $self = shift;
+  
+  if(defined $self->adaptor) {
+	
+	# get variation feature adaptor
+	my $vf_adaptor = $self->adaptor()->db()->get_VariationFeatureAdaptor();
+	
+	return $vf_adaptor->fetch_all_by_Variation($self);
+  }
+  
+  else {
+	warn("No variation database attached");
+	return [];
+  }
+}
+
+
 =head2 get_all_synonyms
 
   Arg [1]    : (optional) string $source - the source of the synonyms to
