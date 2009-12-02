@@ -27,7 +27,7 @@ Bio::EnsEMBL::Variation::TranscriptVariation
 
   print "variation: ", $tr_var->variation_feature()->variation_name(), "\n";
   print "transcript: ", $tr_var->transcript->stable_id(), "\n";
-  print "consequence type: ", $tr_var->consequence_type(), "\n";
+  print "consequence type: ", (join ",", @{$tr_var->consequence_type()}), "\n";
   print "cdna coords: ", $tr_var->cdna_start(), '-', $tr_var->cdna_end(), "\n";
   print "pep coords: ", $tr_var->translation_start(), '-',
         $tr_var->translation_end(), "\n";
