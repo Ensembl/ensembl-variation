@@ -12,11 +12,12 @@
 Bio::EnsEMBL::Variation::DBSQL::VariationGroupAdaptor
 
 =head1 SYNOPSIS
-
-  $db = Bio::EnsEMBL::Variation::DBSQL::DBAdaptor->new(...);
-
-  $vga = $db->get_VariationGroupAdaptor();
-
+  $reg = 'Bio::EnsEMBL::Registry';
+  
+  $reg->load_registry_from_db(-host => 'ensembldb.ensembl.org',-user => 'anonymous');
+  
+  $vga = $reg->get_adaptor("human","variation","variationgroup");
+  
   # retrieve a variation group by its name
   $vg = $vga->fetch_by_name('PERLEGEN:B000009');
 

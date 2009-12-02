@@ -12,13 +12,13 @@
 Bio::EnsEMBL::Variation::DBSQL::LDFeatureContainerAdaptor
 
 =head1 SYNOPSIS
-
-  $vdb = Bio::EnsEMBL::Variation::DBSQL::DBAdaptor->new(...);
-  $db  = Bio::EnsEMBL::DBSQL::DBAdaptor->new(...);
-
-  $sa  = $db->get_SliceAdaptor();
-  $lda = $vdb->get_LDFeatureContainerAdaptor();
-  $vfa =  $vdb->get_VariationFeatureAdaptor();
+  $reg = 'Bio::EnsEMBL::Registry';
+  
+  $reg->load_registry_from_db(-host => 'ensembldb.ensembl.org',-user => 'anonymous');
+  
+  $sa = $reg->get_adaptor("human","core","slice");
+  $lda = $reg->get_adaptor("human","variation","ldfeaturecontainer");
+  $vfa = $reg->get_adaptor("human","variation","variationfeature");
 
   # Get a LDFeatureContainer in a region
   $slice = $sa->fetch_by_region('chromosome', 'X', 1e6, 2e6);

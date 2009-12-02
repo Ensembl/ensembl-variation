@@ -12,11 +12,12 @@
 Bio::EnsEMBL::Variation::DBSQL::IndividualGenotypeAdaptor
 
 =head1 SYNOPSIS
-
-  $db = Bio::EnsEMBL::Variation::DBSQL::DBAdaptor->new(...);
-
-  $iga = $db->get_IndividualGenotypeAdaptor();
-  $ia  = $db->get_IndividualAdaptor();
+  $reg = 'Bio::EnsEMBL::Registry';
+  
+  $reg->load_registry_from_db(-host => 'ensembldb.ensembl.org',-user => 'anonymous');
+  
+  $iga = $reg->get_adaptor("human","variation","individualgenotype");
+  $ia = $reg->get_adaptor("human","variation","individual");
 
   # Get an IndividualGenotype by its internal identifier
   $igtype = $ia->fetch_by_dbID(145);

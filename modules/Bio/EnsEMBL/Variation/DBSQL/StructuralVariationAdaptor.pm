@@ -12,34 +12,20 @@
 Bio::EnsEMBL::Variation::DBSQL::StructuralVariationAdaptor
 
 =head1 SYNOPSIS
-
-  $vdb = Bio::EnsEMBL::Variation::DBSQL::DBAdaptor->new(...);
-  $db  = Bio::EnsEMBL::DBSQL::DBAdaptor->new(...);
-
-  # tell the variation database where core database information can be
-  # be found
-  $vdb->dnadb($db);
-
-  $va = $vdb->get_VariationAdaptor();
-  $vfa = $vdb->get_StructuralVariationAdaptor();
-  $sa  = $db->get_SliceAdaptor();
-
+  $reg = 'Bio::EnsEMBL::Registry';
+  
+  $reg->load_registry_from_db(-host => 'ensembldb.ensembl.org',-user => 'anonymous');
+  
+  $sa = $reg->get_adaptor("human","core","slice");
+  $sva = $reg->get_adaptor("human","variation","structuralvariation");
+  
   # Get a StructuralVariation by its internal identifier
-  $vf = $va->fetch_by_dbID(145);
+  $sv = $sva->fetch_by_dbID(145);
 
   # get all StructuralVariations in a region
   $slice = $sa->fetch_by_region('chromosome', 'X', 1e6, 2e6);
-  foreach $vf (@{$vfa->fetch_all_by_Slice($slice)}) {
-    print $vf->start(), '-', $vf->end(), ' ', $vf->allele_string(), "\n";
-  }
-
-
-  # fetch all genome hits for a particular variation
-  $v = $va->fetch_by_name('esv25480');
-
-  foreach $vf (@{$vfa->fetch_all_by_Variation($v)}) {
-    print $vf->seq_region_name(), $vf->seq_region_start(), '-',
-          $vf->seq_region_end(),"\n";
+  foreach $sv (@{$sva->fetch_all_by_Slice($slice)}) {
+    print $sv->start(), '-', $sv->end(), ' ', $svf->class(), "\n";
   }
 
 =head1 DESCRIPTION
@@ -48,7 +34,7 @@ This adaptor provides database connectivity for StructuralVariation objects.
 Genomic locations of structural variations can be obtained from the database using this
 adaptor.  See the base class BaseFeatureAdaptor for more information.
 
-=head1 AUTHOR - Graham McVicker
+=head1 AUTHOR - William McLaren
 
 =head1 CONTACT
 

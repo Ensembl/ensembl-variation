@@ -12,10 +12,11 @@
 Bio::EnsEMBL::Variation::DBSQL::PopulationAdaptor
 
 =head1 SYNOPSIS
-
-  $db = Bio::EnsEMBL::Variation::DBSQL::DBAdaptor->new(...);
-
-  $pa = $db->get_PopulationAdaptor();
+  $reg = 'Bio::EnsEMBL::Registry';
+  
+  $reg->load_registry_from_db(-host => 'ensembldb.ensembl.org',-user => 'anonymous');
+  
+  $pa = $reg->get_adaptor("human","variation","population");
 
   # Get a Population by its internal identifier
   $pop = $pa->fetch_by_dbID(145);

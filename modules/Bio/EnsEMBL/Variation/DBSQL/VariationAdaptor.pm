@@ -12,11 +12,14 @@
 Bio::EnsEMBL::Variation::DBSQL::VariationAdaptor
 
 =head1 SYNOPSIS
-
-  $db = Bio::EnsEMBL::Variation::DBSQL::DBAdaptor->new(...);
+  $reg = 'Bio::EnsEMBL::Registry';
+  
+  $reg->load_registry_from_db(-host => 'ensembldb.ensembl.org',-user => 'anonymous');
+  
+  $va = $reg->get_adaptor("human","variation","variation");
+  $pa = $reg->get_adaptor("human","variation","population");
 
   $va = $db->get_VariationAdaptor();
-  $vga = $db->get_VariationGroupAdaptor();
   $pa = $db->get_PopulationAdaptor();
 
   # Get a Variation by its internal identifier
@@ -106,8 +109,9 @@ sub fetch_by_dbID {
 =head2 fetch_by_name
 
   Arg [1]    : string $name
-  Example    : $var = $var_adaptor->fetch_by_name('rs1453','dbSNP');
-  Description: Retrieves a population object via its name
+  Arg [2]    : string $source (optional)
+  Example    : $var = $var_adaptor->fetch_by_name('rs1453');
+  Description: Retrieves a variation object via its name
   Returntype : Bio::EnsEMBL::Variation::Variation
   Exceptions : throw if name argument is not defined
   Caller     : general

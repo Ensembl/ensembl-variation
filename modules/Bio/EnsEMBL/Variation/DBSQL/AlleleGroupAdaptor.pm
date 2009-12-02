@@ -12,11 +12,12 @@
 Bio::EnsEMBL::Variation::DBSQL::AlleleGroupAdaptor
 
 =head1 SYNOPSIS
-
-  $db = Bio::EnsEMBL::Variation::DBSQL::DBAdaptor->new(...);
-
-  $aga = $db->get_AlleleGroupAdaptor();
-
+  $reg = 'Bio::EnsEMBL::Registry';
+  
+  $reg->load_registry_from_db(-host => 'ensembldb.ensembl.org',-user => 'anonymous');
+  
+  $aga = $reg->get_adaptor("human","variation","allelegroup");
+  
   # retrieve an allele group by its name
   $ag = $aga->fetch_by_name('ABDR-10');
 

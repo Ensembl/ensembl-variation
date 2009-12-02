@@ -12,13 +12,13 @@
 Bio::EnsEMBL::Variation::DBSQL::VariationAnnotationAdaptor
 
 =head1 SYNOPSIS
-
-  $vdb = Bio::EnsEMBL::Variation::DBSQL::DBAdaptor->new(...);
-  $db  = Bio::EnsEMBL::DBSQL::DBAdaptor->new(...);
-
-  $va = $vdb->get_VariationAdaptor();
-  $vaa = $vdb->get_VariationAnnotationAdaptor();
-
+  $reg = 'Bio::EnsEMBL::Registry';
+  
+  $reg->load_registry_from_db(-host => 'ensembldb.ensembl.org',-user => 'anonymous');
+  
+  $vaa = $reg->get_adaptor("human","variation","variationannotation");
+  $va = $reg->get_adaptor("human","variation","variation");
+  
   # Get a VariationAnotation by its internal identifier
   $va = $vaa->fetch_by_dbID(45);
 

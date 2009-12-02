@@ -12,21 +12,13 @@
 Bio::EnsEMBL::Variation::DBSQL::TranscriptVariationAdaptor
 
 =head1 SYNOPSIS
-
-  # connect to variation database
-  $vdb = Bio::EnsEMBL::Variation::DBSQL::DBAdaptor->new(...);
-
-  # connect to core database
-  $db  = Bio::EnsEMBL::DBSQL::DBAdaptor->new(...);
-
-
-  # tell the variation database where to obtain core database data
-  $vdb->dnadb($db);
-
-  $trva = $vdb->get_TranscriptVariationAdaptor();
-  $vfa  = $vdb->get_VariationFeatureAdaptor();
-  $tra  = $db->get_TranscriptAdaptor();
-
+  $reg = 'Bio::EnsEMBL::Registry';
+  
+  $reg->load_registry_from_db(-host => 'ensembldb.ensembl.org',-user => 'anonymous');
+  
+  $trva = $reg->get_adaptor("human","variation","transcriptvariation");
+  $vfa = $reg->get_adaptor("human","variation","variationfeature");
+  $tra = $reg->get_adaptor("human","core","transcript");
 
   # retrieve a TranscriptVariation by its internal identifier
 
