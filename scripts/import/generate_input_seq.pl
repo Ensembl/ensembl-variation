@@ -154,7 +154,7 @@ SELECT vf.variation_name,
        f.down_seq_region_end
 FROM   variation_feature vf, 
        flanking_sequence f,
-       failed_mapping_vf_Celera m
+       tmp_var m
        #yuan_enssnp_mapping_55.failed_mapping_vf_Celera_SARA m
 WHERE  vf.variation_id=f.variation_id
 #AND    v.source_id=2
@@ -193,7 +193,7 @@ WHERE v.variation_id = f.variation_id
 AND f.seq_region_id is null);
 
       #dump with which sql???
-      dumpSQL($dbVar, $sql3);
+      dumpSQL($dbVar, $sql);
     }
   }
 
@@ -254,9 +254,14 @@ sub print_seqs {
       # Upstream sequence not in query; create from slice
       my $up_tmp_slice = $slice_adaptor->fetch_by_seq_region_id 
           ($variation_ids{$var_id}{'seq_region_id'});
-      #sometimes the edge is outside the chromosome length 
-      if ($variation_ids{$var_id}{'up_seq_region_start'}<1) {
-	$variation_ids{$var_id}{'up_seq_region_start'} = 1;
+      #make sure the total length of up_flanking_seq is 400 bp
+      if ($variation_ids{$var_id}{'up_seq_region_end'} - $variation_ids{$var_id}{'up_seq_region_start'} +1 < 400) {
+	my $length_added = 400 - ($variation_ids{$var_id}{'up_seq_region_end'} - $variation_ids{$var_id}{'up_seq_region_start'} +1);
+	$variation_ids{$var_id}{'up_seq_region_start'} = $variation_ids{$var_id}{'up_seq_region_start'}-$length_added;
+	#sometimes the edge is outside the chromosome length
+	if ($variation_ids{$var_id}{'up_seq_region_start'}<1) {
+	  $variation_ids{$var_id}{'up_seq_region_start'} = 1;
+	}
       }
       my $up_seq_slice = $up_tmp_slice->sub_Slice 
           (
@@ -282,9 +287,14 @@ sub print_seqs {
       # Downstream sequence not in query; create from slice
       my $down_tmp_slice = $slice_adaptor->fetch_by_seq_region_id 
           ($variation_ids{$var_id}{'seq_region_id'});
-      #edge effect
-      if ($variation_ids{$var_id}{'down_seq_region_end'} > $down_tmp_slice->length()) {
-	$variation_ids{$var_id}{'down_seq_region_end'} = $down_tmp_slice->length();
+      #make sure the total length of down_flanking_seq is 400 bp
+      if ($variation_ids{$var_id}{'down_seq_region_end'} - $variation_ids{$var_id}{'down_seq_region_start'} +1 < 400) {
+	my $length_added = 400 - ($variation_ids{$var_id}{'down_seq_region_end'} - $variation_ids{$var_id}{'down_seq_region_start'} +1);
+	$variation_ids{$var_id}{'down_seq_region_end'} = $variation_ids{$var_id}{'down_seq_region_end'}+$length_added;
+	#edge effect
+	if ($variation_ids{$var_id}{'down_seq_region_end'} > $down_tmp_slice->length()) {
+	  $variation_ids{$var_id}{'down_seq_region_end'} = $down_tmp_slice->length();
+	}
       }
       my $down_seq_slice = $down_tmp_slice->sub_Slice 
           (
@@ -308,13 +318,13 @@ sub print_seqs {
     }
 
 
-    # Trim flanking sequences to 100 bp
-    if (length($up_seq) >100) {
-      $up_seq = substr($up_seq, -100);
-    }
-    if (length($down_seq) >100) {
-      $down_seq = substr($down_seq,0,100);
-    }
+#     # Trim flanking sequences to 100 bp
+#     if (length($up_seq) >100) {
+#       $up_seq = substr($up_seq, -100);
+#     }
+#     if (length($down_seq) >100) {
+#       $down_seq = substr($down_seq,0,100);
+#     }
     # Join the flanks
     my $seq = lc($up_seq)."W".lc($down_seq);
 
