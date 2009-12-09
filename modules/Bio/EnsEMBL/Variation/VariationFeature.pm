@@ -165,7 +165,7 @@ sub new {
   $self->{'_variation_id'}    = $variation_id;
   $self->{'source'}           = $source;
   $self->{'validation_code'}  = $validation_code;
-  $self->{'consequence_type'} = $consequence_type || 'INTERGENIC';
+  $self->{'consequence_type'} = $consequence_type || ['INTERGENIC'];
  
   return $self;
 }
