@@ -230,6 +230,11 @@ sub fetch_all_by_VariationFeatures {
 			# get the feature slice
 			my $slice = $vf->feature_Slice;
 			
+			# invert it if needed
+			if($slice->strand < 0) {
+				$slice = $slice->invert();
+			}
+			
 			# hash for storing IDs so we don't create the same TV twice
 			my %done;
 			
@@ -328,6 +333,11 @@ sub fetch_all_by_VariationFeatures {
 		# get another slice, expanded to include up/down-stream regions
 		my $expanded_slice = $vf->feature_Slice->expand($UP_DOWN_SIZE,$UP_DOWN_SIZE);
 		
+		# invert it if needed
+		if($expanded_slice->strand < 0) {
+			$expanded_slice = $expanded_slice->invert();
+		}
+		
 		# get all the transcripts
 		my @transcripts = @{$expanded_slice->get_all_Transcripts()};
 		
@@ -340,6 +350,9 @@ sub fetch_all_by_VariationFeatures {
 			my @alleles = split /\//, $allele_string;
 			my $strand = $vf->strand;
 			
+			print "VF: $strand\tTranscript: ", $transcript->strand(), "\n";
+			print "Before @alleles\n";
+			
 			# if we need to flip strand to match the transcript
 			if ($strand != $transcript->strand()) {
 				
@@ -350,6 +363,8 @@ sub fetch_all_by_VariationFeatures {
 				
 				$strand = $transcript->strand();
 			}
+			
+			print "After @alleles\n";
 			
 			# shift off the reference allele
 			shift @alleles;
