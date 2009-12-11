@@ -412,6 +412,34 @@ sub fetch_all_by_VariationFeatures {
   return $tvs;
 }
 
+=head2 new_fake
+
+  Arg [1]    : string $species
+  Example    :
+	$tva = Bio::EnsEMBL::Variation::TranscriptVariationAdaptor->new_fake('human');
+  Description: Creates a TranscriptVariationAdaptor with no underlying database
+			   attached. Should be used only when getting consequence types for
+			   species with no variation database available.
+  Returntype : Bio::EnsEMBL::Variation::TranscriptVariationAdaptor
+  Exceptions : throw if no species given
+  Caller     : called from Bio::EnsEMBL::VariationFeatureAdaptor
+  Status     : Stable
+
+=cut
+
+sub new_fake {
+  my $class = shift;
+  my $species = shift;
+  
+  throw("No species defined") unless defined $species;
+  
+  my $self = bless {}, $class;
+  
+  $self->{'species'} = $species;
+  
+  return $self;
+}
+
 
 sub _tables {return ['transcript_variation','tv'];}
 
