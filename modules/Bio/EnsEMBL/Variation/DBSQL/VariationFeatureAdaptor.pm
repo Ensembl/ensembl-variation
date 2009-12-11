@@ -355,4 +355,32 @@ sub get_all_synonym_sources{
     @sources = keys(%sources); 
     return \@sources;
 }
+
+=head2 new_fake
+
+  Arg [1]    : string $species
+  Example    :
+	$vfa = Bio::EnsEMBL::Variation::VariationFeatureAdaptor->new_fake('human');
+  Description: Creates a VariationFeatureAdaptor with no underlying database
+			   attached. Should be used only when getting consequence types for
+			   species with no variation database available.
+  Returntype : Bio::EnsEMBL::Variation::VariationFeatureAdaptor
+  Exceptions : throw if no species given
+  Caller     : called from webcode for species where no variation database present
+  Status     : Stable
+
+=cut
+
+sub new_fake {
+  my $class = shift;
+  my $species = shift;
+  
+  throw("No species defined") unless defined $species;
+  
+  my $self = bless {}, $class;
+  
+  $self->{'species'} = $species;
+  
+  return $self;
+}
 1;
