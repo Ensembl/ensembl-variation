@@ -350,9 +350,6 @@ sub fetch_all_by_VariationFeatures {
 			my @alleles = split /\//, $allele_string;
 			my $strand = $vf->strand;
 			
-			print "VF: $strand\tTranscript: ", $transcript->strand(), "\n";
-			print "Before @alleles\n";
-			
 			# if we need to flip strand to match the transcript
 			if ($strand != $transcript->strand()) {
 				
@@ -363,8 +360,6 @@ sub fetch_all_by_VariationFeatures {
 				
 				$strand = $transcript->strand();
 			}
-			
-			print "After @alleles\n";
 			
 			# shift off the reference allele
 			shift @alleles;
