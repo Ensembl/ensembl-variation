@@ -422,6 +422,7 @@ sub fetch_all_by_VariationFeatures {
   return $tvs;
 }
 
+
 =head2 new_fake
 
   Arg [1]    : string $species
@@ -449,6 +450,54 @@ sub new_fake {
   
   return $self;
 }
+
+
+#
+# internal method responsible for constructing transcript variation objects
+# from an executed statement handle.  Ordering of columns in executed statement
+# must be consistant with function implementation.
+#
+sub _objs_from_sth {
+  my $self = shift;
+  my $sth = shift;
+
+  my ($trv_id, $tr_id, $vf_id, $cdna_start, $cdna_end, $tl_start, $tl_end,
+      $pep_allele, $consequence_type);
+
+  $sth->bind_columns(\$trv_id, \$tr_id, \$vf_id, \$cdna_start, \$cdna_end,
+                     \$tl_start, \$tl_end, \$pep_allele, \$consequence_type);
+
+
+  my %tr_hash;
+  my %vf_hash;
+
+  my @results;
+
+  # construct all of the TranscriptVariation objects
+
+  while($sth->fetch()) {
+
+      my @consequences = split /,/,$consequence_type;
+    
+      my $trv = Bio::EnsEMBL::Variation::TranscriptVariation->new_fast
+	  ( { 'dbID' => $trv_id,
+	      'adaptor' => $self,
+	      'cdna_start' => $cdna_start,
+	      'cdna_end'   => $cdna_end,
+	      'translation_start' => $tl_start,
+	      'translation_end' => $tl_end,
+	      'pep_allele_string' => $pep_allele,
+	      'consequence_type' => \@consequences} );
+
+    $trv->{'_vf_id'} = $vf_id; #add the variation feature
+    $trv->{'_transcript_id'} = $tr_id; #add the transcript id
+    push @results, $trv;
+  }
+
+
+  return \@results;
+}
+
 
 
 sub _tables {return ['transcript_variation','tv'];}
