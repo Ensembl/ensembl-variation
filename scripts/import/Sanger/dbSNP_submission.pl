@@ -10,39 +10,70 @@ use Bio::EnsEMBL::Registry;
 use Data::Dumper;
 use ImportUtils qw(dumpSQL load debug);
 
-my ($species, $snpassay_file, $snpind_file,$population_name,$seq_region_id,$TMP_DIR,$TMP_FILE);
+my ($species, $snpassay_file, $snpind_file,$population_name,$seq_region_id,$config_file,$TMP_DIR,$TMP_FILE);
 
+=head
+The example of config file :
+#need change for different submisson
+#The method section is already generated in a separated file, otherwise should be put inside config file 
+$sample_size = 4
+$pop_class = Unknown
+$tax_id = 9258
+$batch = 2009-12_platypus_ssaha
+$organism_name = Ornithorhynchus anatinus
+$seq_source = WUGSC/NISC
+$source_type = repository
+$pop_source = NA
+$place_source = NA
+$breed = NA
+$sex = Unknown
+$method = PLATYPUS-READS_SNPS_200801
 
+=cut
 
 #
-# bsub -q normal -W4:00 -R"select[mem>3500] rusage[mem=3500]" -M3500000
+# bsub -q normal  -R"select[mem>3500] rusage[mem=3500]" -M3500000
 #
 
 GetOptions('species=s' => \$species,
 	   'tmpdir=s'  => \$ImportUtils::TMP_DIR,
 	   'tmpfile=s' => \$ImportUtils::TMP_FILE,
 	   'seq_region_id=i' => \$seq_region_id,
-           'population_name=s' => \$population_name
+           'population_name=s' => \$population_name,
+	   'config_file=s' => \$config_file,
 	   );
 warn("Make sure you have a updated ensembl.registry file!\n");
 
 my $registry_file ||= $Bin . "/ensembl.registry";
 
+my %config;
+if(defined $config_file) {
+  open IN, $config_file or die "Could not read from config file $config_file\n";
+
+  while(<IN>) {
+    chomp;
+    my ($option,$value) = split /\=/, $_;
+    $option =~ s/\s+|^\$//g; #incase there is a $ sign or spaces
+    $value =~ s/\s+// if $value =~ /\s+/;
+    $config{$option} = $value;
+  }
+}
 #need change for different submisson
-my $sample_size = 8;
-#my $sample_size = 932;
-my $pop_class ='Unknown';
-my $tax_id = 10116;
-my $batch = '2009-11_STAR_4_strain';
-#my $batch = '2009-11_STAR-genotype';
-my $orgainism_name = "Rattus Norvegicus";
-my $seq_source = "STAR";
-my $source_type = 'submitter'; # choice of repository or curator or submitter 
-my $pop_source = "NA";
-my $place_source = "NA";
-my $breed = "NA";
-my $sex = "Unknown";
-my $method = 'RAT_STRAIN-READS_SNPS_200712'; #'RAT_STRAIN-GENOTYPES_200712''Ensembl-SSAHA';
+my $sample_size = $config{'sample_size'};
+my $pop_class =$config{'pop_class'};
+my $tax_id = $config{'tax_id'};
+my $batch = $config{'batch'};
+my $organism_name = $config{'organism_name'};
+my $seq_source = $config{'seq_source'};
+my $source_type = $config{'source_type'}; # choice of repository or curator or submitter 
+my $pop_source = $config{'pop_source'};
+my $place_source = $config{'place_source'};
+my $breed = $config{'breed'};
+my $sex = $config{'sex'};
+my $method = $config{'method'}; #'RAT_STRAIN-GENOTYPES_200712''Ensembl-SSAHA';
+
+print "Check is this correct ?? sample_size is $sample_size, pop_class is $pop_class, tax_id is $tax_id, batch is $batch, organism_name is $organism_name, seq_source is $seq_source, source_type is $source_type, pop_source is pop_source, place_source is $place_source, breed is $breed, sex is $sex, method is $method\n";
+sleep(60);
 
 Bio::EnsEMBL::Registry->load_all( $registry_file );
 
@@ -65,9 +96,7 @@ open IND, ">$TMP_DIR/snpind_file\_$seq_region_id" or die "could not open output 
 #get data
 my $var_adaptor = $dbVariation->get_VariationAdaptor();
 my $pop_adaptor = $dbVariation->get_PopulationAdaptor();
-#my $population = $pop_adaptor->fetch_by_name($population_name);
 my $ind_adaptor = $dbVariation->get_IndividualAdaptor();
-#my $variations = $var_adaptor->fetch_all_by_Population($population);
 my $vf_adaptor = $dbVariation->get_VariationFeatureAdaptor();
 my $ind_gtype_adaptor = $dbVariation->get_IndividualGenotypeAdaptor();
 my $slice_adaptor = $dbCore->get_SliceAdaptor();
@@ -75,7 +104,6 @@ my $slice_adaptor = $dbCore->get_SliceAdaptor();
 #first of all, write header for files
 print_snp_headers();
 print_ind_headers();
-#print_snp_data($variations,$vf_adaptor,$ind_gtype_adaptor);#this is for small amonut of SNPs
 print_snp_data_whole($dbVariation);#this is for big amount of SNPs
 
 close SNP or die "Could not close snp assay info file: $!\n";
@@ -97,15 +125,11 @@ sub print_snp_headers{
     print SNP "HANDLE:ENSEMBL\n";
     print SNP "BATCH:$batch\n";  #use year of submission for batch ?? #need change for different submisson
     print SNP "MOLTYPE:Genomic\n";
-    #print SNP "METHOD:Ensembl-SSAHA\n";
     print SNP "METHOD:$method\n";
     print SNP "SAMPLESIZE:$sample_size\n"; #samplesize ??
-    print SNP "ORGANISM:$orgainism_name\n";#need change for different submisson
+    print SNP "ORGANISM:$organism_name\n";#need change for different submisson
     print SNP "CITATION:\n";
     print SNP "POPULATION:",$new_pop_name,"\n";
-    #need change for different submisson
-    #print SNP "COMMENT:Mouse strain : A/J,129X1/SvJ,C3HeB/FeJ,129S1/SvImJ,DBA/2J,NOD/DIL,MSM/Ms\n"; #any comment ??
-    #print SNP "COMMENT: Genomics sequences are from three individuals : gsc-plamid,wibr-plasmid and gsc-BAC\n";
     print SNP "||\n";
 
 }
@@ -114,11 +138,13 @@ sub print_snp_data_whole {
   my $dbVar = shift;
   my $LIMIT = $seq_region_id ? "AND vf.seq_region_id = $seq_region_id" : '';
 
+
   my $sql=qq(SELECT vf.variation_name,vf.allele_string,tg.allele_1,tg.allele_2,s.name,f.seq_region_id,f.up_seq_region_start,f.up_seq_region_end,f.down_seq_region_start,f.down_seq_region_end
               FROM variation_feature vf,sample s, flanking_sequence f, tmp_individual_genotype_single_bp tg
               WHERE vf.variation_id=f.variation_id
               AND vf.variation_id=tg.variation_id
-              AND tg.sample_id=s.sample_id 
+              AND tg.sample_id=s.sample_id
+              AND vf.source_id=2
               $LIMIT
               );
 
@@ -134,7 +160,7 @@ sub print_snp_data_whole {
   while (<FH>) {
 
     my ($variation_name,$allele_string,$allele_1,$allele_2,$ind_name,$seq_region_id,$up_seq_region_start,$up_seq_region_end,$down_seq_region_start,$down_seq_region_end) = split /\t/;
-    next if ($variation_name !~ /^ENS/);
+    next if ($variation_name !~ /^ENS|PCAP/);
     #print "$variation_name,$allele_string,$allele_1,$allele_2,$ind_name,$seq_region_id,$up_seq_region_start,$up_seq_region_end,$down_seq_region_start,$down_seq_region_end\n";
     if ($pre_var_name and $variation_name ne $pre_var_name) {
       print SNP "SNP:",$var->{'var_name'},"\n";
@@ -155,7 +181,9 @@ sub print_snp_data_whole {
       undef $var;
     }
 
-    ($up_seq,$down_seq) = get_flanking_seq($seq_region_id,$up_seq_region_start-300,$up_seq_region_end,$down_seq_region_start,$down_seq_region_end+300) if !$var->{'up_seq'};
+    my $num = 400 - ($up_seq_region_end - $up_seq_region_start +1);
+
+    ($up_seq,$down_seq) = get_flanking_seq($seq_region_id,$up_seq_region_start-$num,$up_seq_region_end,$down_seq_region_start,$down_seq_region_end+$num) if !$var->{'up_seq'};
 
     $pre_var_name = $variation_name;
     $var->{'var_name'} = $variation_name;
@@ -195,7 +223,7 @@ sub get_flanking_seq {
  if ($up_seq_region_start<1) {
    $up_seq_region_start=1;
  }
- elsif ($down_seq_region_end>$tmp_slice->length) {
+ if ($down_seq_region_end>$tmp_slice->length) {
    $down_seq_region_end = $tmp_slice->length;
  }
 
@@ -203,41 +231,13 @@ sub get_flanking_seq {
  my $down_slice = $tmp_slice->sub_Slice($down_seq_region_start,$down_seq_region_end,1);
 
  if (!$up_slice or !$down_slice) {
-   debug("Can't make up_slice or down slice with this line : $seq_region_id,$up_seq_region_start,$up_seq_region_end,$down_seq_region_start,$down_seq_region_end");
+   debug("Can't make up_slice or down slice with this line : $seq_region_id,$up_seq_region_start,$up_seq_region_end,$down_seq_region_start,$down_seq_region_end and the length of slice is ",$tmp_slice->length,"\n");
  }
 
  my $up_seq = $up_slice->seq;
  my $down_seq = $down_slice->seq;
  return (\$up_seq,\$down_seq);
 }
-
-#for a list of variation objects, print the necessary information for dbSNP
-sub print_snp_data{
-    my $variations = shift;
-    my $vf_adaptor = shift;
-    my $ind_gtype_adaptor = shift;
-
-    foreach my $variation (@{$variations}){
-	my $vf = shift @{$vf_adaptor->fetch_all_by_Variation($variation)};
-	
-	print SNP "SNP:",$variation->name,"\n";
-	print IND "SNP:ENSEMBL|",$variation->name,"|SS_STRAND_FWD\n";
-	print SNP "ACCESSION:",$vf->slice->accession_number,"\n"; #is this the info they want ??
-	print SNP "SAMPLESIZE:$sample_size\n"; #number of chromosomes ??
-	print SNP "LENGTH:", length($variation->five_prime_flanking_seq) + length($variation->three_prime_flanking_seq) + 1,"\n";
-	print SNP "5\'_FLANK:",$variation->five_prime_flanking_seq,"\n";
-	print SNP "OBSERVED:", $vf->allele_string,"\n";
-	print SNP "3\'_FLANK:",$variation->three_prime_flanking_seq,"\n";
-	print SNP "||\n";
-
-	foreach my $ig (@{$ind_gtype_adaptor->fetch_all_by_Variation($variation)}){
-	  my $ind_name = $ig->individual()->name;
-	  print IND "ID:ENSEMBL|$new_pop_name:$ind_name",$ig->allele1,"/",$ig->allele2,"\n";
-	}
-	print IND "||\n";
-    }
-}
-
 
 #prints contacts section
 sub print_cont_section{
@@ -291,26 +291,9 @@ sub print_individual_section{
     print "individual_names are @ind_names\n";
     #individual
     foreach my $ind_name (@ind_names) {
-      if ($ind_name =~/gsc/i) {
-	$seq_source = "Genoscope";
-	$pop_source = "NA";
-	$place_source = "NA";
-      }
-      elsif ($ind_name =~ /wibr/i) {
-	$seq_source = "Broad Institute (MIT)";
-	$pop_source = "NA";
-	$place_source = "NA";
-      }
-      elsif ($ind_name =~ /abeii/) {
-	$seq_source = "abelii";
-	$pop_source = "NA";
-	$place_source = "NA";
-      }
       print SNP "TYPE:INDIVIDUAL\n";
-      #print SNP "HANDLE:ENSEMBL\|$new_pop_name\|$ind_name\|$tax_id\|$sex\|$breed\|$pop_source\n";
       print SNP "IND:ENSEMBL\|$new_pop_name\|$ind_name\|$tax_id\|$sex\|$breed\|$pop_source\n"; #dbSNP suggest use IND rather than HANDLE in the begining
       print SNP "SOURCE:$source_type\|$seq_source|$ind_name\|$place_source\n";
-      #print SNP "PEDIGREE:NA\|NA\|NA\|NA\|NA\n";delete suggested by dbSNP
       print SNP "||\n";
     }
 }
@@ -327,9 +310,7 @@ sub print_method_section{
     print SNP "MULT_PCR_AMPLIFICATION:NA\n";
     print SNP "MULT_CLONES_TESTED:NA\n";
     #need change for different submisson
-    #print SNP "METHOD:Computationally discovered SNPs using ssahaSNP (see ssahaSNP description: http://www.sanger.ac.uk/Software/analysis/ssahaSNP/). The sequencing reads were from three individuals, two from gsc plasmid and BAC clones and one from wibr plasmid clone. These reads are component of reference sequence. The default parameters for ssahaSNP were used.\n";
-    #print SNP "METHOD:Computationally discovered SNPs using ssahaSNP (see ssahaSNP description: http://www.sanger.ac.uk/Software/analysis/ssahaSNP/). The sequencing reads were from one individual abelii. These reads are component of reference sequence. The default parameters for ssahaSNP were used.\n"; #another comment ??
-    print SNP "METHOD:Using ssaha2SNP, mouse sequencing reads from several sources were aligned to the top_level coordinates associated with build NCBI37 of the mouse genome. The read set includes whole genome sequencing reads from the DBA/2J, 129S1/ImJ, 129X1/SvJ, A/J strains of Mus musculus, C3HeB/FeJ strain of Mus musculus, BAC-end sequence reads from the NOD strain of Mus musculus, and additional sequencing reads from the MSM/Ms strain of Mus musculus molossinus. The reads for C3HeB/FeJ and NOD were generated at the Wellcome Trust Sanger Institute, the MSM-Ms reads were generated by Riken. Reads for the other strains were generated by Celera\n";
+    print SNP $method;
     print SNP "||\n";
 
 
@@ -356,11 +337,5 @@ sub print_ind_headers{
     #print IND "METHOD:Ensembl-SSAHA\n";
     print IND "METHOD:$method\n";
     print IND "||\n";
-
-    #print_cont_section(IND); #contacts section
-    #print_pub_section(IND); #publications section
-    #print_pop_section(IND); #population section
-    #print some individual specific section
-    #print_method_section(IND); #method section
 
 }
