@@ -16,6 +16,7 @@ my ($species, $snpassay_file, $snpind_file,$population_name,$seq_region_id,$conf
 The example of config file :
 #need change for different submisson
 #The method section is already generated in a separated file, otherwise should be put inside config file 
+#If unsure about a particular option, look at dbSNP web page : http://www.ncbi.nlm.nih.gov/SNP/how_to_submit.html
 $sample_size = 4
 $pop_class = Unknown
 $tax_id = 9258
@@ -58,7 +59,7 @@ if(defined $config_file) {
     $config{$option} = $value;
   }
 }
-#need change for different submisson
+#need change for different submisson, see config file
 my $sample_size = $config{'sample_size'};
 my $pop_class =$config{'pop_class'};
 my $tax_id = $config{'tax_id'};
@@ -71,6 +72,7 @@ my $place_source = $config{'place_source'};
 my $breed = $config{'breed'};
 my $sex = $config{'sex'};
 my $method = $config{'method'}; #'RAT_STRAIN-GENOTYPES_200712''Ensembl-SSAHA';
+my $method_description = $config{'method_description'};
 
 print "Check is this correct ?? sample_size is $sample_size, pop_class is $pop_class, tax_id is $tax_id, batch is $batch, organism_name is $organism_name, seq_source is $seq_source, source_type is $source_type, pop_source is pop_source, place_source is $place_source, breed is $breed, sex is $sex, method is $method\n";
 sleep(60);
@@ -303,14 +305,14 @@ sub print_method_section{
     #method
     print SNP "TYPE:METHOD\n";
     print SNP "HANDLE:ENSEMBL\n";
-    print SNP "ID:Ensembl-SSAHA\n"; #which method ??
+    print SNP "$method\n"; ID:Ensembl-SSAHA\n"; #which method ??
     print SNP "METHOD_CLASS:Computation\n";
     print SNP "SEQ_BOTH_STRANDS:NA\n"; #both strands ??
     print SNP "TEMPLATE_TYPE:UNKNOWN\n";
     print SNP "MULT_PCR_AMPLIFICATION:NA\n";
     print SNP "MULT_CLONES_TESTED:NA\n";
     #need change for different submisson
-    print SNP $method;
+    print SNP "$method_description\n";
     print SNP "||\n";
 
 
