@@ -123,6 +123,9 @@ our %VSTATE2BIT = ('cluster'   => 1,   # 00000001
   Arg [-SOURCE] :
     string - the source of this SNP
 
+  Arg [-SOURCE_DESCRIPTION] :
+    string - description of the SNP source
+
   Arg [-SYNONYMS] :
     reference to hash with list reference values -  keys are source
     names and values are lists of identifiers from that db.
@@ -166,9 +169,9 @@ sub new {
   my $caller = shift;
   my $class = ref($caller) || $caller;
 
-  my ($dbID, $adaptor, $name, $src, $syns, $ancestral_allele,
+  my ($dbID, $adaptor, $name, $src, $src_desc, $syns, $ancestral_allele,
       $alleles, $valid_states, $moltype, $five_seq, $three_seq, $failed_description) =
-        rearrange([qw(dbID ADAPTOR NAME SOURCE SYNONYMS ANCESTRAL_ALLELE ALLELES
+        rearrange([qw(dbID ADAPTOR NAME SOURCE SOURCE_DESCRIPTION SYNONYMS ANCESTRAL_ALLELE ALLELES
                       VALIDATION_STATES MOLTYPE FIVE_PRIME_FLANKING_SEQ
                       THREE_PRIME_FLANKING_SEQ FAILED_DESCRIPTION)],@_);
 
@@ -186,6 +189,7 @@ sub new {
                 'adaptor' => $adaptor,
                 'name'   => $name,
                 'source' => $src,
+				'source_description' => $src_desc,
                 'synonyms' => $syns || {},
 		    'ancestral_allele' => $ancestral_allele,
                 'alleles' => $alleles || [],
@@ -461,6 +465,27 @@ sub source{
   my $self = shift;
   return $self->{'source'} = shift if(@_);
   return $self->{'source'};
+}
+
+
+
+=head2 source_description
+
+  Arg [1]    : string $source_description (optional)
+               The new value to set the source description attribute to
+  Example    : $source_description = $v->source_description()
+  Description: Getter/Setter for the source description attribute
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub source_description{
+  my $self = shift;
+  return $self->{'source_description'} = shift if(@_);
+  return $self->{'source_description'};
 }
 
 =head2 get_all_Alleles
