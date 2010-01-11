@@ -66,7 +66,6 @@ use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 our @ISA = ('Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor');
 
 
-
 =head2 fetch_all_by_Variation
 
   Arg [1]    : Bio::EnsEMBL:Variation::Variation $var
@@ -189,6 +188,55 @@ sub fetch_all_with_annotation_by_Slice{
     });
     
     $sth->execute($slice->get_seq_region_id, $slice->start, $slice->end);
+    
+    return $self->_objs_from_sth($sth);
+}
+
+
+=head2 fetch_all_by_Slice_set
+
+  Arg [1]    : Bio::EnsEMBL:Variation::Slice $slice
+  Arg [2]    : string $set
+  Example    : my @vfs = @{$vfa->fetch_all_with_annotation_by_Slice($slice, $set)};
+  Description: Retrieves all variation features in a slice that belong to a
+			   given set.
+  Returntype : reference to list Bio::EnsEMBL::Variation::VariationFeature
+  Exceptions : throw on bad argument
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub fetch_all_by_Slice_set{
+
+	my $self = shift;
+	my $slice = shift;
+	my $set = shift;
+	
+	if(!ref($slice) || !$slice->isa('Bio::EnsEMBL::Slice')) {
+		throw('Bio::EnsEMBL::Slice arg expected');
+	}
+	
+	if(!defined $set) {
+	  throw('No set name given')
+	}
+    
+    my $cols = join ",", $self->_columns();
+    
+    my $sth = $self->prepare(qq{
+		SELECT $cols
+		FROM variation_feature vf, variation_set vs,
+		variation_set_variation vsv, source s
+		WHERE vf.source_id = s.source_id
+		AND vf.variation_id = vsv.variation_id
+		AND vsv.variation_set_id = vs.variation_set_id
+		AND vs.name = ?
+		AND vf.seq_region_id = ?
+		AND vf.seq_region_end > ?
+		AND vf.seq_region_start < ?
+    });
+    
+    $sth->execute($set, $slice->get_seq_region_id, $slice->start, $slice->end);
     
     return $self->_objs_from_sth($sth);
 }
@@ -424,4 +472,34 @@ sub get_all_synonym_sources{
     @sources = keys(%sources); 
     return \@sources;
 }
+
+=head2 new_fake
+
+  Arg [1]    : string $species
+  Example    :
+	$vfa = Bio::EnsEMBL::Variation::VariationFeatureAdaptor->new_fake('human');
+  Description: Creates a VariationFeatureAdaptor with no underlying database
+			   attached. Should be used only when getting consequence types for
+			   species with no variation database available.
+  Returntype : Bio::EnsEMBL::Variation::VariationFeatureAdaptor
+  Exceptions : throw if no species given
+  Caller     : called from webcode for species where no variation database present
+  Status     : Stable
+
+=cut
+
+sub new_fake {
+  my $class = shift;
+  my $species = shift;
+  
+  throw("No species defined") unless defined $species;
+  
+  my $self = bless {}, $class;
+  
+  $self->{'species'} = $species;
+  
+  return $self;
+}
+
+
 1;
