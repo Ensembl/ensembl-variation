@@ -76,6 +76,7 @@ use Bio::EnsEMBL::Variation::Utils::Sequence qw(ambiguity_code variation_class);
 use Bio::EnsEMBL::Variation::ConsequenceType;
 use Bio::EnsEMBL::Variation::Variation;
 use Bio::EnsEMBL::Slice;
+use Bio::EnsEMBL::Variation::DBSQL::TranscriptVariationAdaptor;
 
 our @ISA = ('Bio::EnsEMBL::Feature');
 
@@ -280,10 +281,20 @@ sub map_weight{
 
 sub get_all_TranscriptVariations{
     my $self = shift;
-    
+	
     if(!defined($self->{'transcriptVariations'}) && $self->{'adaptor'})    {
+	 
+	  my $tva;
+	  
+	  if($self->{'adaptor'}->db()) {
+		$tva = $self->{'adaptor'}->db()->get_TranscriptVariationAdaptor();
+	  }
+	  
+	  elsif($self->{'adaptor'}) {
+		$tva = Bio::EnsEMBL::Variation::DBSQL::TranscriptVariationAdaptor->new_fake($self->{'adaptor'}->{'species'});
+	  }
+	  
 	  #lazy-load from database on demand
-	  my $tva = $self->{'adaptor'}->db()->get_TranscriptVariationAdaptor();
 	  $tva->fetch_all_by_VariationFeatures([$self]);
 	  $self->{'transcriptVariations'} ||= [];
 	  
