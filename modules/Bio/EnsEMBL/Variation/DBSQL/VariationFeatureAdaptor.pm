@@ -192,14 +192,14 @@ sub fetch_all_with_annotation_by_Slice{
     return $self->_objs_from_sth($sth);
 }
 
-
-=head2 fetch_all_by_Slice_set
+=head2 fetch_all_by_Slice_VariationSet
 
   Arg [1]    : Bio::EnsEMBL:Variation::Slice $slice
-  Arg [2]    : string $set
-  Example    : my @vfs = @{$vfa->fetch_all_with_annotation_by_Slice($slice, $set)};
+  Arg [2]    : Bio::EnsEMBL:Variation::VariationSet $set
+  Example    : my @vfs =
+@{$vfa->fetch_all_by_Slice_VariationSet($slice, $set)};
   Description: Retrieves all variation features in a slice that belong to a
-			   given set.
+			   given variation set.
   Returntype : reference to list Bio::EnsEMBL::Variation::VariationFeature
   Exceptions : throw on bad argument
   Caller     : general
@@ -207,7 +207,7 @@ sub fetch_all_with_annotation_by_Slice{
 
 =cut
 
-sub fetch_all_by_Slice_set{
+sub fetch_all_by_Slice_VariationSet{
 
 	my $self = shift;
 	my $slice = shift;
@@ -216,31 +216,28 @@ sub fetch_all_by_Slice_set{
 	if(!ref($slice) || !$slice->isa('Bio::EnsEMBL::Slice')) {
 		throw('Bio::EnsEMBL::Slice arg expected');
 	}
-	
-	if(!defined $set) {
-	  throw('No set name given')
+	if(!ref($set) || !$set->isa('Bio::EnsEMBL::Variation::VariationSet')) {
+		throw('Bio::EnsEMBL::Variation::VariationSet arg expected');
 	}
-    
+
     my $cols = join ",", $self->_columns();
-    
+
     my $sth = $self->prepare(qq{
 		SELECT $cols
-		FROM variation_feature vf, variation_set vs,
+		FROM variation_feature vf,
 		variation_set_variation vsv, source s
 		WHERE vf.source_id = s.source_id
 		AND vf.variation_id = vsv.variation_id
-		AND vsv.variation_set_id = vs.variation_set_id
-		AND vs.name = ?
+		AND vsv.variation_set_id = ?
 		AND vf.seq_region_id = ?
 		AND vf.seq_region_end > ?
 		AND vf.seq_region_start < ?
     });
-    
-    $sth->execute($set, $slice->get_seq_region_id, $slice->start, $slice->end);
-    
+
+    $sth->execute($set->dbID, $slice->get_seq_region_id, $slice->start, $slice->end);
+
     return $self->_objs_from_sth($sth);
 }
-
 # method used by superclass to construct SQL
 sub _tables { return (['variation_feature', 'vf'],
 		      [ 'source', 's']); }
