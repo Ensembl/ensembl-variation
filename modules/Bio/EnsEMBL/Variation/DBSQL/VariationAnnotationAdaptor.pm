@@ -84,6 +84,65 @@ sub fetch_all_by_Variation {
   return $self->generic_fetch("va.variation_id = ".$var->dbID());
 }
 
+=head2 fetch_all_by_Variation_list
+
+  Arg [1]    : reference to a list of Bio::EnsEMBL:Variation::Variation objects
+  Example    : my @vas = @{$vaa->fetch_all_by_Variation_list($vars)};
+  Description: Retrieves all variation annotations for a given list of variations
+  Returntype : reference to a list of Bio::EnsEMBL::Variation::VariationAnnotation objects
+  Exceptions : throw on bad argument
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+
+sub fetch_all_by_Variation_list {
+  my $self = shift;
+  my $vars  = shift;
+
+  if(!ref($vars) || !$vars->[0]->isa('Bio::EnsEMBL::Variation::Variation')) {
+    throw('Bio::EnsEMBL::Variation::Variation arg expected');
+  }
+
+  if(!defined($vars->[0]->dbID())) {
+    throw("Variation arg must have defined dbID");
+  }
+  
+  my $in_str = join ',', map {$_->dbID()} @$vars;
+
+  return $self->generic_fetch("va.variation_id in (".$in_str.")");
+}
+
+=head2 fetch_all_by_VariationFeature_list
+
+  Arg [1]    : reference to a list of Bio::EnsEMBL::Variation::VariationFeature objects
+  Example    : my @vas = @{$vaa->fetch_all_by_VariationFeature_list($vfs)};
+  Description: Retrieves all variation annotations for a given list of variation features
+  Returntype : reference to a list Bio::EnsEMBL::Variation::VariationAnnotation objects
+  Exceptions : throw on bad argument
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub fetch_all_by_VariationFeature_list {
+  my $self = shift;
+  my $vfs  = shift;
+
+  if(!ref($vfs) || !$vfs->[0]->isa('Bio::EnsEMBL::Variation::VariationFeature')) {
+    throw('Listref of Bio::EnsEMBL::Variation::VariationFeature arg expected');
+  }
+
+  if(!defined($vfs->[0]->dbID())) {
+    throw("VariationFeatures in list must have defined dbIDs");
+  }
+  
+  my $in_str = join ',', map {$_->{'_variation_id'}} @$vfs;
+
+  return $self->generic_fetch("va.variation_id in (".$in_str.")");
+}
+
 =head2 fetch_all_by_phenotype_source_name
 
   Arg [1]    : string $phenotype_name
