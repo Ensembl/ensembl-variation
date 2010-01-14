@@ -68,8 +68,7 @@ sub get_available_adaptors{
 		 #'VariationFeatureCollection' => 'Bio::EnsEMBL::Variation::Collection::VariationFeature',
 		 'VariationAnnotation' => 'Bio::EnsEMBL::Variation::DBSQL::VariationAnnotationAdaptor',
 		 'ReadCoverageCollection' => 'Bio::EnsEMBL::Variation::DBSQL::ReadCoverageCollectionAdaptor',
-                 'VariationSet' => 
-'Bio::EnsEMBL::Variation::DBSQL::VariationSetAdaptor.pm',
+                 'VariationSet' => 'Bio::EnsEMBL::Variation::DBSQL::VariationSetAdaptor',
                  );
     return (\%pairs);
 }
