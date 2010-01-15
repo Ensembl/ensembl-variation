@@ -191,6 +191,41 @@ elsif ($species =~ /dog/i){
   add_strains($dbVar); #add strain information
 
 }
+
+elsif ($species =~ /horse/i){
+  #equus caballus (horse)
+
+  my $horse = dbSNP::GenericChromosome->new(-dbSNP => $dbSNP,
+					      -dbCore => $dbCore,
+					      -dbVar => $dbVar,
+					      -snp_dbname => $sdba->dbc->dbname,
+					      -tmpdir => $TMP_DIR,
+					      -tmpfile => $TMP_FILE,
+					      -limit => $LIMIT_SQL,
+					      -dbSNP_version => $dbSNP_BUILD_VERSION,
+					      -assembly_version => $ASSEMBLY_VERSION
+					     );
+  $horse->dump_dbSNP();
+  #add_strains($dbVar); #add strain information
+}
+
+elsif ($species =~ /platypus/i){
+  #ornithorhyncus anatinus (platypus)
+
+  my $platypus = dbSNP::GenericChromosome->new(-dbSNP => $dbSNP,
+					      -dbCore => $dbCore,
+					      -dbVar => $dbVar,
+					      -snp_dbname => $sdba->dbc->dbname,
+					      -tmpdir => $TMP_DIR,
+					      -tmpfile => $TMP_FILE,
+					      -limit => $LIMIT_SQL,
+					      -dbSNP_version => $dbSNP_BUILD_VERSION,
+					      -assembly_version => $ASSEMBLY_VERSION
+					     );
+  $platypus->dump_dbSNP();
+  #add_strains($dbVar); #add strain information
+}
+
 elsif ($species =~ /hum/i) {
   #homo sa/piens (human)
 
