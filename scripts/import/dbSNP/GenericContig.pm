@@ -47,15 +47,15 @@ sub dump_dbSNP{
   #the following steps need to be run when initial starting the job. If job failed for some reason and some steps below are already finished, then can comment them out
 
   #$self->create_coredb() if ($self->{'dbCore'}->species =~ /homo/i);#this coredb is needed during build process in tagged_snp.pl
-  #$self->source_table();
-  #$self->population_table();
-  #$self->individual_table();
-  #$self->variation_table();
+  $self->source_table();
+  $self->population_table();
+  $self->individual_table();
+  $self->variation_table();
   $self->individual_genotypes();
-  #$self->population_genotypes();
-  #$self->allele_table();
-  #$self->flanking_sequence_table();
-  #$self->variation_feature();
+  $self->population_genotypes();
+  $self->allele_table();
+  $self->flanking_sequence_table();
+  $self->variation_feature();
 
   #the following not run for human any more, not used and also don't have HapSet table in dbSNP_129_human_9606
   #if ($self->{'dbCore'}->species =~ /homo/i) {
@@ -64,7 +64,7 @@ sub dump_dbSNP{
   #}
 
   #try run this step when all above steps have finished
-  $self->cleanup();
+  #$self->cleanup();
 
 }
 
@@ -577,34 +577,73 @@ sub flanking_sequence_table {
 
   # import both the 5prime and 3prime flanking sequence tables
 
+
+  ## in human the flanking sequence tables have been partitioned
+  if($self->{'dbCore'}->species =~ /human|homo/i) {
+	foreach my $type ('3','5') {
+	  
+	  foreach my $partition('p1_human','p2_human','p3_human','ins') {
+		
+		debug("Dumping $type\_$partition flanking sequence");
+	  
+		dumpSQL($self->{'dbSNP'}, qq{SELECT seq.subsnp_id, seq.line_num, seq.line
+					 FROM SubSNPSeq$type\_$partition seq, SNP snp
+					 WHERE snp.exemplar_subsnp_id = seq.subsnp_id
+					 $self->{'limit'}});
+		
+	
+		$self->{'dbVar'}->do(qq{CREATE TABLE tmp_seq_$type\_$partition (
+									  subsnp_id int,
+									  line_num int,
+									  line varchar(255),
+									  KEY subsnp_id_idx(subsnp_id))
+					  MAX_ROWS = 100000000 });
+		
+		load($self->{'dbVar'}, "tmp_seq_$type\_$partition", "subsnp_id", "line_num", "line");
+	
+		# merge the tables into a single tmp table
+		$self->{'dbVar'}->do(qq{INSERT INTO tmp_seq (variation_id, subsnp_id,
+								   line_num, type, line, revcom)
+					  SELECT vs.variation_id, ts.subsnp_id, ts.line_num, '$type',
+					  ts.line, vs.substrand_reversed_flag
+					  FROM   tmp_seq_$type\_$partition ts, variation_synonym vs
+					  WHERE  vs.subsnp_id = ts.subsnp_id});
+		#drop tmp table to free space
+		$self->{'dbVar'}->do(qq{DROP TABLE tmp_seq_$type\_$partition});
+	  }
+	}
+  }
   
-  foreach my $type ('3','5') {
-    debug("Dumping $type' flanking sequence");
-    
-    dumpSQL($self->{'dbSNP'}, qq{SELECT seq.subsnp_id, seq.line_num, seq.line
-				 FROM SubSNPSeq$type seq, SNP snp
-				 WHERE snp.exemplar_subsnp_id = seq.subsnp_id
-				 $self->{'limit'}});
-    
-
-    $self->{'dbVar'}->do(qq{CREATE TABLE tmp_seq_$type (
-							      subsnp_id int,
-							      line_num int,
-							      line varchar(255),
-							      KEY subsnp_id_idx(subsnp_id))
-				  MAX_ROWS = 100000000 });
-    
-    load($self->{'dbVar'}, "tmp_seq_$type", "subsnp_id", "line_num", "line");
-
-    # merge the tables into a single tmp table
-    $self->{'dbVar'}->do(qq{INSERT INTO tmp_seq (variation_id, subsnp_id,
-						       line_num, type, line, revcom)
-				  SELECT vs.variation_id, ts.subsnp_id, ts.line_num, '$type',
-				  ts.line, vs.substrand_reversed_flag
-				  FROM   tmp_seq_$type ts, variation_synonym vs
-				  WHERE  vs.subsnp_id = ts.subsnp_id});
-    #drop tmp table to free space
-    $self->{'dbVar'}->do(qq{DROP TABLE tmp_seq_$type});
+  ## other species no partitions
+  else {
+	foreach my $type ('3','5') {
+	  debug("Dumping $type' flanking sequence");
+	  
+	  dumpSQL($self->{'dbSNP'}, qq{SELECT seq.subsnp_id, seq.line_num, seq.line
+				   FROM SubSNPSeq$type seq, SNP snp
+				   WHERE snp.exemplar_subsnp_id = seq.subsnp_id
+				   $self->{'limit'}});
+	  
+  
+	  $self->{'dbVar'}->do(qq{CREATE TABLE tmp_seq_$type (
+									subsnp_id int,
+									line_num int,
+									line varchar(255),
+									KEY subsnp_id_idx(subsnp_id))
+					MAX_ROWS = 100000000 });
+	  
+	  load($self->{'dbVar'}, "tmp_seq_$type", "subsnp_id", "line_num", "line");
+  
+	  # merge the tables into a single tmp table
+	  $self->{'dbVar'}->do(qq{INSERT INTO tmp_seq (variation_id, subsnp_id,
+								 line_num, type, line, revcom)
+					SELECT vs.variation_id, ts.subsnp_id, ts.line_num, '$type',
+					ts.line, vs.substrand_reversed_flag
+					FROM   tmp_seq_$type ts, variation_synonym vs
+					WHERE  vs.subsnp_id = ts.subsnp_id});
+	  #drop tmp table to free space
+	  $self->{'dbVar'}->do(qq{DROP TABLE tmp_seq_$type});
+	}
   }
 
   $self->{'dbVar'}->do("ALTER TABLE tmp_seq ADD INDEX idx (subsnp_id, type, line_num)");
@@ -700,7 +739,12 @@ sub variation_feature {
   my ($tablename1,$tablename2,$row);
 
   my ($assembly_version) =  $self->{'assembly_version'} =~ /^[a-zA-Z]+(\d+)\.*.*$/;
+
+  # override for platypus
+  $assembly_version = 1 if $self->{'dbCore'}->species =~ /ornith/i;
+
   #$assembly_version = 3;  #just for zebrafish
+
   print "assembly_version again is $assembly_version\n";
 
   my $sth = $self->{'dbSNP'}->prepare(qq{SHOW TABLES LIKE 
