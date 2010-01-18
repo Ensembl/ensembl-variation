@@ -21,17 +21,17 @@ sub variation_feature{
 
   # Create hashes of variation_id's, source_id's etc keyed by variation name
   my ($variation_id,$name,$source_id,$validation_status);
-  #my $sth = $self->{'dbVar'}->prepare (qq{SELECT variation_id, name
-  #						FROM   variation});
-  #$sth->execute();
-  #$sth->bind_columns(\$variation_id,\$name,\$source_id,\$validation_status);
+#  my $sth = $self->{'dbVar'}->prepare (qq{SELECT variation_id, name, source_id, validation_status
+#						FROM   variation});
+#  $sth->execute();
+#  $sth->bind_columns(\$variation_id,\$name,\$source_id,\$validation_status);
 
-  #while($sth->fetch){
-  #  $rec{$name} = $variation_id;
-  #  #$source{$name} = $source_id;
-  #  #$status{$name} = $validation_status ? $validation_status : '\N';
-  #}
-  #$sth->finish();
+#  while($sth->fetch){
+#    $rec{$name} = $variation_id;
+#    $source{$name} = $source_id;
+#    $status{$name} = $validation_status ? $validation_status : '\N';
+#  }
+#  $sth->finish();
 
   #we need to create a seq_region table
   $self->{'dbVar'}->do(qq{CREATE TABLE IF NOT EXISTS seq_region(
@@ -57,8 +57,9 @@ and    at.code="toplevel" } );
   }
   $sth1->finish();
 
+
   debug("Reading Mapping file");
-  #open (FH, ">" . $self->{'tmpdir'} . "/" . $self->{'tmpfile'} );
+#  open (FH, ">" . $self->{'tmpdir'} . "/" . $self->{'tmpfile'} );
 
   my $mapping_file_dir = $self->{'mapping_file_dir'};
 
@@ -82,11 +83,10 @@ and    at.code="toplevel" } );
 
   #create table three_mappings and failed_variation
   $self->{'dbVar'}->do(qq{CREATE TABLE IF NOT EXISTS THREE_MAPPINGS (name varchar(15), unique key name(name))});
-  system("cp  $three_mappings " . $self->{'tmpdir'} . "/" . $self->{'tmpfile'}); 
+  system("cp  $three_mappings " . $self->{'tmpdir'} . "/" . $self->{'tmpfile'});
   load($self->{'dbVar'}, "THREE_MAPPINGS", "name");
-
+  
   $self->{'dbVar'}->do(qq{insert ignore into failed_variation (variation_id,failed_description_id) select v.variation_id,1 from variation v, THREE_MAPPINGS t where v.name=t.name});
-
   open (FH, ">" . $self->{'tmpdir'} . "/" . $self->{'tmpfile'} );
 
   # Process results file
@@ -157,10 +157,10 @@ and    at.code="toplevel" } );
           $new_seq_region_start,    # variation_feature.seq_region_start
           $new_seq_region_end,      # variation_feature.seq_region_end
           $strand,                  # variation_feature.seq_region_strand
-          #$ref_id,                  # variation_feature.variation_name
+#          $rec{$ref_id},            # variation_feature.variation_id
           $ref_id,                  # variation_feature.variation_name
-          #$source{$ref_id},         # variation_feature.source_id
-          #$status{$ref_id}||'NULL', # variation_feature.validation_status
+#          $source{$ref_id},         # variation_feature.source_id
+#          $status{$ref_id}||'NULL', # variation_feature.validation_status
           ) . "\n";
 
     # Flag as processed
@@ -169,7 +169,6 @@ and    at.code="toplevel" } );
 
   close IN;
   close FH;
-
 
   debug("Creating tmp variation_features");
 
@@ -183,9 +182,8 @@ and    at.code="toplevel" } );
                    #"variation_id i*",
                    "variation_name *", 
                    #"source_id", 
-                   #"validation_status" 
-                   );
-
+                   #"validation_status"
+		   );
 
 # creating the temporary table with the genotyped variations
 
@@ -198,6 +196,7 @@ CREATE UNIQUE INDEX variation_idx ON tmp_genotyped_var (variation_id)});
    $self->{'dbVar'}->do(qq{
 INSERT IGNORE INTO  tmp_genotyped_var 
 SELECT DISTINCT variation_id FROM individual_genotype_multiple_bp});
+
 
 
   # Copy from tmp variation_feature to final variation_feature
@@ -224,7 +223,7 @@ SELECT v.variation_id,
 FROM   variation v LEFT JOIN tmp_variation_feature tv
 ON v.name = tv.variation_name
 LEFT JOIN
-       tmp_genotyped_var tgv ON v.variation_id = tgv.variation_id });
+tmp_genotyped_var tgv ON v.variation_id = tgv.variation_id });
 
   #$self->{'dbVar'}->do(qq{DROP TABLE tmp_variation_feature});
   #$self->{'dbVar'}->do(qq{DROP TABLE tmp_genotyped_var});

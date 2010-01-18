@@ -46,9 +46,14 @@ sub add_strains{
     #then, get from dbSNP the relation between ssId and mopti/pest strain
     debug("Dumping strain information from dbSNP");
 
-    dumpSQL($self->{'dbSNP'}, qq{SELECT subsnp_id, loc_snp_id
-				 FROM SubSNP
-				});
+    my $stmt = qq{
+                  SELECT 
+                    subsnp_id, 
+                    loc_snp_id
+	          FROM 
+	            SubSNP
+                 };
+    dumpSQL($self->{'dbSNP'},$stmt);
     
     create_and_load($self->{'dbVariation'},'tmp_strain', "subsnp_id i*", "strain");
 
@@ -116,16 +121,31 @@ sub variation_feature{
     my ($assembly_version) =  $self->{'assembly_version'} =~ /^[a-zA-Z]+(\d+)\.*.*$/; $assembly_version=2;
     print "assembly_version again is $assembly_version\n";
 
-    my $sth1 = $self->{'dbSNP'}->prepare(qq{SHOW TABLES LIKE 
-					 '$self->{'dbSNP_version'}\_SNPContigLoc\_$assembly_version\__'});
+
+    my $stmt = qq{
+                  SELECT 
+                    name 
+                  FROM 
+                    $self->{'snp_dbname'}..sysobjects 
+                  WHERE 
+                    name LIKE '$self->{'dbSNP_version'}\_SNPContigLoc\_$assembly_version\__'
+               };                 
+    my $sth1 = $self->{'dbSNP'}->prepare($stmt);
     $sth1->execute();
 
     while($row = $sth1->fetchrow_arrayref()) {
       $tablename1 = $row->[0];
     }
-
-    my $sth2 = $self->{'dbSNP'}->prepare(qq{SHOW TABLES LIKE 
-					   '$self->{'dbSNP_version'}\_ContigInfo\_$assembly_version\__'});
+    
+    $stmt = qq{
+               SELECT 
+                 name 
+               FROM 
+                 $self->{'snp_dbname'}..sysobjects 
+               WHERE 
+                 name LIKE '$self->{'dbSNP_version'}\_ContigInfo\_$assembly_version\__'
+            };
+    my $sth2 = $self->{'dbSNP'}->prepare($stmt);
     $sth2->execute();
 
     while($row = $sth2->fetchrow_arrayref()) {
@@ -133,12 +153,30 @@ sub variation_feature{
     }
     print "table_name1 is $tablename1 table_name2 is $tablename2\n";
 
-    dumpSQL($self->{'dbSNP'}, qq{SELECT t1.snp_id, t2.contig_acc,
-				 t1.lc_ngbr+2,t1.rc_ngbr,
-				 IF(orientation, -1, 1)
-				 FROM   $tablename1 t1, $tablename2 t2
-				 WHERE t1.ctg_id=t2.ctg_id
-				 $self->{'limit'}});
+    $stmt = "SELECT ";
+    if ($self->{'limit'}) {
+      $stmt .= "TOP $self->{'limit'} ";
+    }
+    $stmt .= qq{
+                  t1.snp_id AS sorting_id, 
+                  t2.contig_acc,
+		  t1.lc_ngbr+2,t1.rc_ngbr,
+		  CASE WHEN
+		    orientation
+		  THEN
+		    -1
+		  ELSE
+		    1
+		  END
+		FROM   
+		  $tablename1 t1, 
+		  $tablename2 t2
+		WHERE 
+		  t1.ctg_id=t2.ctg_id
+	        ORDER BY
+		  sorting_id ASC  
+               };
+    dumpSQL($self->{'dbSNP'},$stmt);
     
     debug("Loading SNPLoc data");
     
