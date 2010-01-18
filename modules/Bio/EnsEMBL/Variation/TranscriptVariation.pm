@@ -57,6 +57,7 @@ package Bio::EnsEMBL::Variation::TranscriptVariation;
 
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Utils::Argument qw(rearrange);
+use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp expand);
 use Bio::EnsEMBL::Storable;
 use Bio::EnsEMBL::Variation::ConsequenceType;
 
@@ -123,10 +124,10 @@ sub new {
   my $class = shift;
 
   my ($vf, $tr, $pep_allele, $cdna_start,$cdna_end, $tl_start,$tl_end, $consequence_type,
-      $dbID, $adaptor, $transcript) =
+      $dbID, $adaptor, $transcript, $codons) =
     rearrange([qw(VARIATION_FEATURE TRANSCRIPT PEP_ALLELE_STRING CDNA_START
                   CDNA_END TRANSLATION_START TRANSLATION_END CONSEQUENCE_TYPE
-                  DBID ADAPTOR TRANSCRIPT)], @_);
+                  DBID ADAPTOR TRANSCRIPT CODONS)], @_);
 
   if(defined($consequence_type)) {
       my @consequences = split /,/,@{$consequence_type};
@@ -164,7 +165,8 @@ sub new {
                 'cdna_end'          => $cdna_end,
                 'translation_start' => $tl_start,
                 'translation_end'   => $tl_end,
-                'consequence_type'  => $consequence_type}, $class;
+                'consequence_type'  => $consequence_type,
+				'codons'				=> $codons,}, $class;
 }
 
 sub new_fast {
@@ -442,6 +444,105 @@ sub display_consequence{
     
     
     return $highest_priority;
+}
+
+
+
+=head2 codons
+
+  Arg [1]    : (optional) string $codons
+  Example    : $codons = $consequence_type->codons
+  Description: Getter/Setter for the possible codons created in this transcript
+  Returntype : "/"-separated string
+  Exceptions : none
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub codons {
+  my $self = shift;
+
+  if(@_) {
+    $self->{'codons'} = shift;
+  }
+  
+  elsif(
+	!(defined($self->{'codons'}))
+	&& defined($self->transcript)
+	&& defined($self->translation_start)
+	&& defined($self->variation_feature)
+	&& ((join ',', @{$self->consequence_type}) =~ /SYN|STOP/)
+  ) {
+	
+	my @codons;
+	
+	# get the transcript and its translateable sequence
+	my $tr = $self->transcript;
+	my $cds = $tr->translateable_seq();
+	
+	$cds = "\L$cds";
+	
+	# get the VF
+	my $vf = $self->variation_feature;
+	
+	# get codon start end and length in CDS terms
+	my $codon_cds_start = $self->translation_start * 3 - 2;
+	my $codon_cds_end   = $self->translation_end   * 3;
+	my $codon_len = $codon_cds_end - $codon_cds_start + 1;
+	
+	# add reference codon to codon list
+	#push @codons, substr($cds, $codon_cds_start-1, $codon_len);
+	
+	my $var_len = $vf->length;
+	
+	# fetch and expand the allele string
+	my $allele_string = $vf->allele_string;
+	expand(\$allele_string);
+	
+	my @alleles = split /\//, $allele_string;
+	my $strand = $vf->strand;
+	
+	# if we need to flip strand to match the transcript
+	if ($strand != $tr->strand()) {
+		
+		# flip feature onto same strand as transcript
+		for (my $i = 0; $i < @alleles; $i++) {
+		  reverse_comp(\$alleles[$i]);
+		}
+		
+		$strand = $tr->strand();
+	}
+	
+	# first allele is reference
+	#shift @alleles;
+	
+	# iterate through remaining alleles
+	foreach my $a(@alleles) {
+	  
+	  # make a copy of the cds
+	  my $tmp_cds = $cds;
+	  
+	  # work out which coord to edit
+	  my $exon_phase = $tr->start_Exon->phase;
+	  
+	  my $edit_coord = ($self->cdna_start - $tr->cdna_coding_start) + ($exon_phase > 0 ? $exon_phase : 0);
+	  
+	  # do the edit
+	  substr($tmp_cds, $edit_coord, $var_len) = $a;
+	  
+	  # get the new codon
+	  my $codon_str = substr($tmp_cds, $codon_cds_start-1, $codon_len + length($a)-$var_len);
+	  
+	  # add it to the list
+	  push @codons, $codon_str;
+	}
+	
+	# create slash-separated codon string
+	$self->{'codons'} = join '/', @codons;
+  }
+  
+  return $self->{'codons'};
 }
 
 
