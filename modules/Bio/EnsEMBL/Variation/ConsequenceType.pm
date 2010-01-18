@@ -39,19 +39,20 @@ our %CONSEQUENCE_TYPES = ('ESSENTIAL_SPLICE_SITE' => 1,
 			  'FRAMESHIFT_CODING' => 16,
 			  'NON_SYNONYMOUS_CODING' => 32,
 			  'SPLICE_SITE' => 64,
-			  'SYNONYMOUS_CODING' => 128,
-			  'REGULATORY_REGION' => 256,
-			  'WITHIN_MATURE_miRNA' =>512,
-			  '5PRIME_UTR' => 1024,
-			  '3PRIME_UTR' => 2048,
-			  'UTR'        => 2094,
-			  'INTRONIC' => 4096,
-			  'WITHIN_NON_CODING_GENE' => 8192,
-			  'UPSTREAM' => 16384,
-			  'DOWNSTREAM' => 32768,
-			  'NO_CONSEQUENCE' => 65536,
-			  'INTERGENIC' => 131072,
-			  '_'          => 131073,
+			  'PARTIAL_CODON' => 128,
+			  'SYNONYMOUS_CODING' => 256,
+			  'REGULATORY_REGION' => 512,
+			  'WITHIN_MATURE_miRNA' => 1024,
+			  '5PRIME_UTR' => 2048,
+			  '3PRIME_UTR' => 2094,
+			  'UTR'        => 4096,
+			  'INTRONIC' => 8192,
+			  'WITHIN_NON_CODING_GENE' => 16384,
+			  'UPSTREAM' => 32768,
+			  'DOWNSTREAM' => 65536,
+			  'NO_CONSEQUENCE' => 131072,
+			  'INTERGENIC' => 262144,
+			  '_'          => 524288,
 			  );
 
 
@@ -388,6 +389,29 @@ sub codon {
   }
   
   return $self->{'codon'}
+}
+
+
+=head2 codons
+
+  Arg [1]    : (optional) string $codons
+  Example    : $codons = $consequence_type->codons
+  Description: Getter/Setter for the possible codons
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub codons {
+  my $self = shift;
+
+  if(@_) {
+    $self->{'codons'} = shift;
+  }
+  
+  return $self->{'codons'}
 }
 
 =head2 cds_start
