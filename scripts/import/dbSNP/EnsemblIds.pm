@@ -38,13 +38,22 @@ sub dump_ENSIDs{
 	my $source_id = $self->{'dbVar'}->db_handle->{'mysql_insertid'}; #get the last autoinc id in the database (the one from the ENS source)
 	#and finally add the ENS ids to the synonyms table
 	debug("Dumping ENS information from dbSNP");
-	dumpSQL($self->{'dbSNP'}, qq{SELECT concat('rs',s.snp_id), s.subsnp_id, $source_id, s.loc_snp_id
-				     FROM SubSNP s, Batch b
-				     WHERE s.batch_id = b.batch_id
-                                     AND b.handle = 'ENSEMBL'
-                                     AND b.loc_batch_id = "$batch_name"
-				 }
-	       );
+	
+	my $stmt = qq{
+	  SELECT
+	    'rs'+s.snp_id,
+	    s.subsnp_id,
+	    $source_id,
+	    s.loc_snp_id
+	  FROM
+	    SubSNP s,
+	    Batch b
+	  WHERE
+	    s.batch_id = b.batch_id AND
+	    b.handle = 'ENSEMBL' AND
+	    b.loc_batch_id = '$batch_name'
+	};
+	dumpSQL($self->{'dbSNP'},$stmt);
 	debug("Loading ENS ids into temporary table");
 	create_and_load($self->{'dbVar'},"tmp_rs_ENS_$batch_name","rsID *","ss_id i","source_id i","ENSid");
 	debug("Loading ENS ids into variation_synonym table");
