@@ -50,21 +50,24 @@ sub run_ssaha2 {
   my ($subname) = $tar_file =~ /^(.*)\.*.*$/;
   my $subject = "$subj_dir/$subname";
   print "tar_file is $tar_file and subject is $subject and target_file is $target_file\n";
-  #print "Submitting ssaha2Build job...\n";
-  #my $ssaha2build = "bsub $queue_long -J 'ssaha2build' -o $target_file\_out /nfs/users/nfs_y/yuan/ensembl/src/ensembl-variation/scripts/ssahaSNP/ssaha2/ssaha2_v1.0.9_x86_64/ssaha2Build -save $subject $target_file";
-  #system("$ssaha2build");
 
-  #my $call = "bsub -q normal -K -w 'done('ssaha2build')' -J waiting_process sleep 1"; #waits until all variation features have finished to continue
+  if (! -f "$subject\.body") {
+    print "Submitting ssaha2Build job...\n";
+    my $ssaha2build = "bsub $queue_long -J 'ssaha2build' -o $target_file\_out /nfs/users/nfs_y/yuan/ensembl/src/ensembl-variation/scripts/ssahaSNP/ssaha2/ssaha2_v1.0.9_x86_64/ssaha2Build -save $subject $target_file";
+    system("$ssaha2build");
 
-  #system($call);
+    my $call = "bsub -q normal -K -w 'done('ssaha2build')' -J waiting_process sleep 1"; #waits until all variation features have finished to continue
 
-  if ($start and $end) {#mainly for flanking_sequence mapping
+    system($call);
+  }
+
+  if ($start and $end) {
     #input name will change to \\\$LSB_JOBINDEX\_query_seq for flanking sequence mapping
     #my $input = "$input_dir/Watson_\\\$LSB_JOBINDEX\.fastq" if $input_dir;
     my $input = "$input_dir/\\\$LSB_JOBINDEX\.query_seq" if $input_dir;#need a dot in input, not a '_' after LSB_JOBINDEX
     #next if (-z "$input");
     print "input is $input and split $split\n";
-    if (! $split) {print "here not split\n";
+    if (! $split) {#mainly for flanking_sequence mapping
       print "Submitting ssaha2 job...\n";
       bsub_ssaha_job_array($start,$end,$input,$queue,$target_file);
     }
@@ -114,7 +117,7 @@ sub parse_ssaha2 {
 
   foreach my $num ($start..$end) {
     my $input = "$input_dir/$num\.query_seq" if $input_dir;
-    my $out_file = "$output_dir/ssaha-47912\.$num\.out";
+    my $out_file = "$output_dir/ssaha.$num\.out";
     print "input is $input and out_file is $out_file\n";
     next if (-z "$out_file");
     parse_ssaha2_out ($num, $input,"$out_file");
@@ -136,7 +139,7 @@ sub bsub_ssaha_job_array {
 
   #for normal flanking mapping
   my $ssaha_command = "/nfs/users/nfs_y/yuan/ensembl/src/ensembl-variation/scripts/ssahaSNP/ssaha2/pileup_v0.5/ssaha2/ssaha2-2.3_x86_64 -align 0 -kmer 12 -seeds $seed -cut 5000 -output vulgar -depth 5 -best 1 -tags 1 -name -save $subject $input_file";
-  my $call = "bsub -J'ssaha_out_[$start-$end]%50' $queue -e $output_dir/ssaha-%J.%I.err -o $output_dir/ssaha-%J.%I.out ";
+  my $call = "bsub -J'ssaha_out_[$start-$end]%50' $queue -e $output_dir/ssaha.%I.err -o $output_dir/ssaha.%I.out ";
   $call .= " $ssaha_command";
   print "$call\n";
   system ($call);
@@ -168,7 +171,7 @@ sub bsub_ssaha_job {
   print "job_num is ", ++$count, " and start is $start and out is ssaha_out_$start\n";
   #my $call = "bsub -J $input_dir\_ssaha_job_$start $queue -e $output_dir/error_ssaha_$start -o $output_dir/ssaha_out_$start ";
 
-  my $call = "bsub -J'ssaha_out_[$start-$end]%50' $queue -e $output_dir/ssaha-%J.%I:$n.err -o $output_dir/ssaha-%I:$n.out ";
+  my $call = "bsub -J'ssaha_out_[$start-$end]%50' $queue -e $output_dir/ssaha.%I:$n.err -o $output_dir/ssaha.%I:$n.out ";
 
   $call .= " $ssaha_command";
   
