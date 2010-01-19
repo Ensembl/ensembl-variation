@@ -9,6 +9,7 @@ use Getopt::Long;
 use Benchmark;
 use Bio::EnsEMBL::DBSQL::DBConnection;
 use ImportUtils qw(dumpSQL debug create_and_load load );
+use FindBin qw( $Bin );
 
 my ($TAX_ID, $LIMIT_SQL, $CONTIG_SQL, $TMP_DIR, $TMP_FILE);
 
@@ -17,36 +18,14 @@ my $dbVar;
 my $dbCore;
 
 {
-  my($dshost, $dsuser, $dspass, $dsport, $dsdbname, # dbSNP db
-     $chost, $cuser, $cpass, $cport, $cdbname,      # ensembl core db
-     $vhost, $vuser, $vpass, $vport, $vdbname,      # ensembl variation db
-     $alldiff_file, $limit);
+  my ($species,$mapping_file,$limit);
   
-  GetOptions('vuser=s'   => \$vuser,
-             'vhost=s'   => \$vhost,
-             'vpass=s'   => \$vpass,
-             'vport=i'   => \$vport,
-             'vdbname=s' => \$vdbname,
-	     'chost=s'   => \$chost,
-             'cuser=s'   => \$cuser,
-             'cpass=s'   => \$cpass,
-             'cport=i'   => \$cport,
-             'cdbname=s' => \$cdbname,
+  GetOptions('species=s' => \$species,
 	     'mapping_file=s' => \$mapping_file,
              'tmpdir=s'  => \$ImportUtils::TMP_DIR,
              'tmpfile=s' => \$ImportUtils::TMP_FILE,
              'limit=i'   => \$limit);
   
-  $vhost    ||= 'ecs2';
-  $vport    ||= 3366;
-  $vuser    ||= 'ensadmin';
-  
-  $chost    ||= 'ecs2';
-  $cuser    ||= 'ensro';
-  $cport    ||= 3364;
-
-  usage('-cdbname argument is required.') if(!$cdbname);
-  usage('-vdbname argument is required.') if(!$vdbname);
   usage('-mapping_file argument is required.') if(!$mapping_file);
 
   $TMP_DIR  = $ImportUtils::TMP_DIR;
@@ -55,17 +34,14 @@ my $dbCore;
 
   $LIMIT_SQL = ($limit) ? " LIMIT $limit " : '';
 
-  $dbVar = DBH->connect
-    ("DBI:mysql:host=$vhost;dbname=$vdbname;port=$vport",$vuser, $vpass,
-    {'RaiseError' => 1});
-  die("Could not connect to variation database: $!") if(!$dbVar);
+  my $registry_file;
+  $registry_file ||= $Bin . "/ensembl.registry";
+  Bio::EnsEMBL::Registry->load_all( $registry_file );
 
-  $dbCore = Bio::EnsEMBL::DBSQL::DBConnection->new
-    (-host   => $chost,
-     -user   => $cuser,
-     -pass   => $cpass,
-     -port   => $cport,
-     -dbname => $cdbname);
+  my $cdb = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'core');
+  my $vdb = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'variation');
+  $dbCore = $cdb->dbc;
+  $dbVar = $vdb->dbc;
 
 
   variation_feature($mapping_file);
@@ -75,22 +51,31 @@ sub variation_feature {
   
   my $mapping_file = shift;
 
-  my (%rec, %source, %status, %rec_pos, %rec_line, %rec_seq_region);
+  my (%rec, %rec_pos, %rec_line, %rec_seq_region);
+
 
   debug("Dumping Variation");
   
-  my $sth = $dbVar->prepare (qq{SELECT variation_id, name, source_id, validation_status
-                                  FROM variation});
+  my $sth = $dbVar->prepare (qq{SELECT variation_id, variation_name, source_id, allele_string, validation_status
+                                #FROM variation_feature_venter_map1_no_hap
+                                FROM variation_feature
+                                #WHERE seq_region_id=100965538
+  });
   $sth->execute();
 
-  while(my ($variation_id, $name, $source_id, $validation_status) = $sth->fetchrow_array()) {
-    $rec{$name} = $variation_id;
-    $source{$name} = $source_id;
-    $status{$name} = defined $validation_status ? $validation_status : '\N';
-    #$status{$name} = '\N' if ! defined $validation_status;
+  while(my ($variation_id, $name, $source_id, $allele_string, $validation_status) = $sth->fetchrow_array()) {
+    my $h={};
+    $h->{name} = $name;
+    $h->{variation_id} = $variation_id;
+    $h->{source_id} = $source_id;
+    $h->{allele_string} = $allele_string;
+    $h->{validation} = defined $validation_status ? $validation_status : '\N';
+    $rec{$name} = $h;
   }
 
   $sth->finish();
+
+  debug("Reading Mapping file...");
 
   open (IN, "$mapping_file");
   open ( FH, ">$TMP_DIR/$TMP_FILE" );
@@ -104,11 +89,12 @@ sub variation_feature {
   }
   
   foreach my $key (keys %rec_line) {
-    next if @{$rec_line{$key}} >3;
+    #next if @{$rec_line{$key}} >3;
     foreach my $line (@{$rec_line{$key}}) {
       my ($ref_id, $slice_name, $start, $end, $strand, $ratio) =split /\s+/,$line;
       next if $ratio <0.7;
 
+      $strand = ($strand eq "+") ? 1 : -1;
       my ($coord_sys,$assembly,$seq_region_name,$seq_region_start,$seq_region_end,$version);
 
       ($seq_region_name,$seq_region_start,$seq_region_end) = split /\-/, $slice_name
@@ -136,7 +122,7 @@ sub variation_feature {
       my $new_seq_region_end = $seq_region_start + $end -1 if ($seq_region_start);
     
       if (!$rec_pos{$ref_id}{$seq_region_id}{$new_seq_region_start}{$new_seq_region_end}) {
-	print FH "$seq_region_id\t$new_seq_region_start\t$new_seq_region_end\t$strand\t$rec{$ref_id}\t$ref_id\t$source{$ref_id}\t",$status{$ref_id} ? $status{$ref_id} : 0,"\n";
+	print FH join ("\t", $seq_region_id,$new_seq_region_start,$new_seq_region_end,$strand,$rec{$ref_id}->{variation_id},$ref_id,$rec{$ref_id}->{allele_string},$rec{$ref_id}->{source_id},$rec{$ref_id}->{validation})."\n";
 	$rec_pos{$ref_id}{$seq_region_id}{$new_seq_region_start}{$new_seq_region_end}=1;
       }
     }
@@ -146,9 +132,11 @@ sub variation_feature {
   
   close IN;
   close FH;
-  
-  load($dbVar, "variation_feature","seq_region_id","seq_region_start","seq_region_end",
-       "seq_region_strand","variation_id","variation_name","source_id", "validation_status");
+
+
+  $dbVar->do(qq{CREATE TABLE IF NOT EXISTS variation_feature_mapping_MT LIKE variation_feature});
+  load($dbVar, "variation_feature_mapping_MT","seq_region_id","seq_region_start","seq_region_end",
+       "seq_region_strand","variation_id","variation_name","allele_string","source_id", "validation_status");
 }
 
 ###
