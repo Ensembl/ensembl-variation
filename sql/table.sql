@@ -303,7 +303,7 @@ create table variation_feature(
 	source_id int(10) unsigned not null, 
 	validation_status SET('cluster','freq','submitter','doublehit','hapmap'),
 	consequence_type SET ('ESSENTIAL_SPLICE_SITE','STOP_GAINED','STOP_LOST','COMPLEX_INDEL',
-	                      'FRAMESHIFT_CODING','NON_SYNONYMOUS_CODING','SPLICE_SITE','SYNONYMOUS_CODING',
+	                      'FRAMESHIFT_CODING','NON_SYNONYMOUS_CODING','SPLICE_SITE','PARTIAL_CODON','SYNONYMOUS_CODING',
 				    'REGULATORY_REGION','WITHIN_MATURE_miRNA','5PRIME_UTR','3PRIME_UTR','INTRONIC','UPSTREAM','DOWNSTREAM',
 				    'WITHIN_NON_CODING_GENE','NO_CONSEQUENCE','INTERGENIC')
 	default "INTERGENIC" not null ,	
@@ -351,6 +351,34 @@ CREATE TABLE structural_variation (
   PRIMARY KEY (structural_variation_id),
   KEY pos_idx (seq_region_id,seq_region_start)
 );
+
+
+# A table for mapping variations to variation_sets
+CREATE TABLE IF NOT EXISTS variation_set_variation (
+	variation_id int(10) unsigned NOT NULL,
+	variation_set_id int(10) unsigned NOT NULL,
+	PRIMARY KEY (variation_id,variation_set_id),
+	KEY variation_set_idx (variation_set_id,variation_id)
+);
+
+# A table containing variation_set information  
+CREATE TABLE IF NOT EXISTS variation_set (
+	variation_set_id int(10) unsigned NOT NULL AUTO_INCREMENT,
+	name VARCHAR(255),
+	description TEXT,
+	PRIMARY KEY (variation_set_id),
+	KEY name_idx (name)
+);
+
+ 
+# A table containing relashionship between variation sets
+CREATE TABLE IF NOT EXISTS variation_set_structure (
+	variation_set_super int(10) unsigned NOT NULL,
+	variation_set_sub int(10) unsigned NOT NULL,
+	PRIMARY KEY (variation_set_super,variation_set_sub),
+	KEY sub_idx (variation_set_sub,variation_set_super)
+);
+
 
 
 #
@@ -427,7 +455,7 @@ create table variation_group_feature(
 # This table contains a classification of variation features based on Ensembl
 # predicted transcripts.  Variation features which fall into Ensembl 
 # transcript regions are classified as 'ESSENTIAL_SPLICE_SITE','SPLICE_SITE',
-# 'FRAMESHIFT_CODING','STOP_GAINED','STOP_LOST','NON_SYNONYMOUS_CODING',
+# 'FRAMESHIFT_CODING','STOP_GAINED','STOP_LOST','NON_SYNONYMOUS_CODING','PARTIAL_CODON',
 # 'SYNONYMOUS_CODING','REGULATORY_REGION','WITHIN_MATURE_miRNA','5PRIME_UTR','3PRIME_UTR','INTRONIC','UPSTREAM','DOWNSTREAM'
 # 'WITHIN_NON_CODING_GENE', 'COMPLEX_INDEL'
 
@@ -454,7 +482,7 @@ create table transcript_variation(
   translation_end int,  
   peptide_allele_string varchar(255),
   consequence_type SET ('ESSENTIAL_SPLICE_SITE','STOP_GAINED','STOP_LOST','COMPLEX_INDEL',
-			     'FRAMESHIFT_CODING', 'NON_SYNONYMOUS_CODING','SPLICE_SITE','SYNONYMOUS_CODING',
+			     'FRAMESHIFT_CODING', 'NON_SYNONYMOUS_CODING','SPLICE_SITE','PARTIAL_CODON','SYNONYMOUS_CODING',
 			     'REGULATORY_REGION','WITHIN_MATURE_miRNA','5PRIME_UTR','3PRIME_UTR','INTRONIC','UPSTREAM',
 			     'DOWNSTREAM','WITHIN_NON_CODING_GENE') not null,	 
   primary key( transcript_variation_id ),
