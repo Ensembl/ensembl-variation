@@ -19,19 +19,11 @@ sub variation_feature{
 
   debug("Dumping Variation");
 
-  # Create hashes of variation_id's, source_id's etc keyed by variation name
-  my ($variation_id,$name,$source_id,$validation_status);
-#  my $sth = $self->{'dbVar'}->prepare (qq{SELECT variation_id, name, source_id, validation_status
-#						FROM   variation});
-#  $sth->execute();
-#  $sth->bind_columns(\$variation_id,\$name,\$source_id,\$validation_status);
+  my ($variation_id,$name,$source_id,$validation_status,$variation_feature_id,$allele_string);
 
-#  while($sth->fetch){
-#    $rec{$name} = $variation_id;
-#    $source{$name} = $source_id;
-#    $status{$name} = $validation_status ? $validation_status : '\N';
-#  }
-#  $sth->finish();
+  debug("Move current variation_feature table to variation_feature_before_mapping");
+  $self->{'dbVar'}->do(qq{RENAME TABLE variation_feature TO variation_feature_before_mapping});
+  $self->{'dbVar'}->do(qq{CREATE TABLE variation_feature LIKE variation_feature_before_mapping});
 
   #we need to create a seq_region table
   $self->{'dbVar'}->do(qq{CREATE TABLE IF NOT EXISTS seq_region(
@@ -157,10 +149,7 @@ and    at.code="toplevel" } );
           $new_seq_region_start,    # variation_feature.seq_region_start
           $new_seq_region_end,      # variation_feature.seq_region_end
           $strand,                  # variation_feature.seq_region_strand
-#          $rec{$ref_id},            # variation_feature.variation_id
           $ref_id,                  # variation_feature.variation_name
-#          $source{$ref_id},         # variation_feature.source_id
-#          $status{$ref_id}||'NULL', # variation_feature.validation_status
           ) . "\n";
 
     # Flag as processed
@@ -179,13 +168,10 @@ and    at.code="toplevel" } );
                    "seq_region_start i*",
                    "seq_region_end",
                    "seq_region_strand",
-                   #"variation_id i*",
                    "variation_name *", 
-                   #"source_id", 
-                   #"validation_status"
-		   );
+                   );
 
-# creating the temporary table with the genotyped variations
+  # Copy from tmp variation_feature to final variation_feature, think about multi-mapping
 
 
   $self->{'dbVar'}->do(qq{
@@ -200,6 +186,7 @@ SELECT DISTINCT variation_id FROM individual_genotype_multiple_bp});
 
 
   # Copy from tmp variation_feature to final variation_feature
+
   $self->{'dbVar'}->do(qq{
 INSERT INTO variation_feature
       (variation_id,
@@ -207,8 +194,7 @@ INSERT INTO variation_feature
        seq_region_start, 
        seq_region_end, 
        seq_region_strand,
-       variation_name, 
-       flags, 
+       variation_name,
        source_id, 
        validation_status)
 SELECT v.variation_id, 
@@ -217,13 +203,23 @@ SELECT v.variation_id,
        tv.seq_region_end,
        tv.seq_region_strand, 
        tv.variation_name, 
-       IF(tgv.variation_id,'genotyped',NULL), 
        v.source_id,
        v.validation_status
-FROM   variation v LEFT JOIN tmp_variation_feature tv
-ON v.name = tv.variation_name
-LEFT JOIN
-tmp_genotyped_var tgv ON v.variation_id = tgv.variation_id });
+FROM   variation v, tmp_variation_feature tv
+WHERE v.name = tv.variation_name
+AND   v.variation_id=vf.variation_id
+});
+
+
+  debug("copy allele_string,flags from table variation_feature_before_mapping if it's null");
+
+  $self->{'dbVar'}->do(qq{UPDATE variation_feature vf, variation_feature_before_mapping vfm 
+                          SET vf.allele_string = vfm.allele_string
+                          WHERE vf.variation_id=vfm.variation_id});
+
+  $self->{'dbVar'}->do(qq{UPDATE variation_feature vf, tmp_genotyped_var tgv
+                          SET vf.flags = 'genotyped'
+                          WHERE vf.variation_id=tgv.variation_id});
 
   #$self->{'dbVar'}->do(qq{DROP TABLE tmp_variation_feature});
   #$self->{'dbVar'}->do(qq{DROP TABLE tmp_genotyped_var});
