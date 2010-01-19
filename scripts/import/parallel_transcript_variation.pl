@@ -108,6 +108,10 @@ sub transcript_variation {
   my $slices = $sa->fetch_all('toplevel', undef, $inc_non_ref);
   #order the slices
   my @slices_ordered = sort {$a->seq_region_name cmp $b->seq_region_name }  @{$slices};
+  #
+  #my @slice_names = map {$_->seq_region_name}, @slices_ordered;
+  #my $name_string = join " ", @slice_names;
+  #debug("Slices are\n$name_string\n");
 
   my ($offset,$length) = split /,/,$LIMIT; #get the offset and length of the elements we have to get from the slice
   # assumes that variation features have already been pushed to toplevel
@@ -115,6 +119,8 @@ sub transcript_variation {
 
   my %done;
   foreach my $slice (splice (@slices_ordered,$offset,$length)) {
+	#next unless $slice->dbID =~ /27509|27515|27524|27527/;
+	
     debug("Processing transcript variations for ",
 	  $slice->seq_region_name(), "\n");
     #if it is human, $dbFunc is defined, therefore go through below to calculate regulatory feature
@@ -210,7 +216,7 @@ sub transcript_variation {
       my ($start,$end, $strand); #start, end and strand of the variation feature in the slice
 
       foreach my $row (@$rows) {
-	next if ($row->[4] =~ /LARGE/); #for LARGEINSERTION and LARGEDELETION alleles we don't calculate transcripts
+	next if ($row->[4] =~ /LARGE|INS|DEL/);#for LARGEINSERTION and LARGEDELETION alleles we don't calculate transcripts
 	# put variation in slice coordinates
 	$start = $row->[1] - $slice->start() + 1;
 	$end = $row->[2] - $slice->start() + 1;
@@ -221,7 +227,7 @@ sub transcript_variation {
 	if ($strand != $tr->strand()) {
 	  # flip feature onto same strand as transcript
 	  for (my $i = 0; $i < @alleles; $i++) {
-	    reverse_comp(\$alleles[$i]);
+	    reverse_comp(\$alleles[$i]) unless $alleles[$i] =~ /INS|DEL/;
 	  }
 	  $strand = $tr->strand();
 	}
@@ -237,6 +243,9 @@ sub transcript_variation {
 
 	my ($consequences);
 	if ($row->[4] !~ /\+/) {
+	  
+	  #print "Getting consequences for ", (join " ", @$row), " in transcript ", $tr->stable_id, " ", $tr->dbID;
+	  #print "\n";
 
 	  $consequences = type_variation($tr, "", $consequence_type);
 	}
