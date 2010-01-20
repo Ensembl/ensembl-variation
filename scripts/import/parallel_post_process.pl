@@ -6,7 +6,7 @@ use Getopt::Long;
 use ImportUtils qw(dumpSQL load create_and_load debug);
 use Bio::EnsEMBL::Utils::Exception qw(warning throw verbose);
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
-use DBH;
+#use DBH;
 use DBI qw(:sql_types);
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use FindBin qw( $Bin );
@@ -23,7 +23,8 @@ my ($vhost, $vport, $vdbname, $vuser, $vpass,
     $variation_feature, $flanking_sequence, $variation_group_feature,
     $transcript_variation, $ld_populations, $reverse_things, $make_allele_string_table,$merge_rs_features,
     $merge_ensembl_snps,$new_source_id,$merge_database,$remove_wrong_variations,$remove_multi_tables,$check_seq_region_id, 
-    $read_updated_files,$remove_duplicated_allele_in_allele_string,$merge_venter_gtype,$merge_multi_tables);
+    $read_updated_files,$remove_duplicated_allele_in_allele_string,$merge_venter_gtype,$merge_multi_tables,
+    $registry_file);
 
 $variation_feature = $flanking_sequence = $variation_group_feature = $transcript_variation = $ld_populations = $reverse_things = $merge_rs_features = $merge_database = $merge_ensembl_snps = $new_source_id = $remove_wrong_variations = $remove_multi_tables = $make_allele_string_table = $check_seq_region_id = $read_updated_files = $remove_duplicated_allele_in_allele_string = $merge_venter_gtype = $merge_multi_tables = '';
 
@@ -52,7 +53,8 @@ GetOptions('tmpdir=s'  => \$ImportUtils::TMP_DIR,
 	   'make_allele_string_table' => \$make_allele_string_table,
 	   'merge_venter_gtype' => \$merge_venter_gtype,
 	   'merge_multi_tables' => \$merge_multi_tables,
-	   'ld_populations' => \$ld_populations );
+	   'ld_populations' => \$ld_populations,
+	   'registry_file=s' => \$registry_file);
 
 $num_processes ||= 1;
 
@@ -71,7 +73,7 @@ usage('-species argument required') if(!$species);
 
 warn("Make sure you have a updated ensembl.registry file!\n");
 
-my $registry_file ||= $Bin . "/ensembl.registry";
+$registry_file ||= $Bin . "/ensembl.registry";
 
 Bio::EnsEMBL::Registry->load_all( $registry_file );
 
@@ -117,14 +119,14 @@ my $hap_id_string = "(". join ",", keys %hap_seq_id, .")";
 
 #we need to create a tmp table to store variations that we filter out
 #create_failed_variation_table($dbVar);
-parallel_variation_feature($dbVar, $top_level) if ($variation_feature);
-parallel_flanking_sequence($dbVar) if ($flanking_sequence);
+parallel_variation_feature($dbVar, $top_level, $Bin . '/parallel_variation_feature.pl') if ($variation_feature);
+parallel_flanking_sequence($dbVar, $Bin . '/parallel_flanking_sequence.pl') if ($flanking_sequence);
 parallel_variation_group_feature($dbVar) if ($variation_group_feature);
-parallel_transcript_variation($dbVar) if ($transcript_variation);
+parallel_transcript_variation($dbVar, $Bin . '/parallel_transcript_variation.pl', $registry_file) if ($transcript_variation);
 parallel_ld_populations($dbVar) if ($ld_populations);
 reverse_things($dbVar) if ($reverse_things);
 merge_rs_feature($dbVar) if ($merge_rs_features);
-remove_wrong_variations($dbVar) if ($remove_wrong_variations);
+remove_wrong_variations($dbVar, $Bin . '/../../sql') if ($remove_wrong_variations);
 remove_multi_tables($dbVar) if ($remove_multi_tables);
 #merge_database($dbVar,$dbVar_old) if ($merge_database);
 merge_ensembl_snps($dbVar,$new_source_id) if ($merge_ensembl_snps and $new_source_id);
@@ -138,7 +140,8 @@ remove_duplicated_allele_in_allele_string($dbVar) if $remove_duplicated_allele_i
 sub parallel_variation_feature{
     my $dbVar = shift;
     my $top_level = shift;
-
+    my $script = shift;
+    
     #before do anything, create a copy of old table
     $dbVar->do(qq{CREATE TABLE variation_feature_before_pp like variation_feature});
     $dbVar->do(qq{INSERT INTO variation_feature_before_pp select * from variation_feature});
@@ -199,7 +202,7 @@ sub parallel_variation_feature{
 	$limit = "AND variation_feature_id <= " . (($i+1) * $sub_variation + $min_variation-1) . " AND variation_feature_id >= " . ($i*$sub_variation + $min_variation) if ($i+1 < $num_processes);
 	$limit =  "AND variation_feature_id <= " .  $max_variation . " AND variation_feature_id >= " . ($i*$sub_variation + $min_variation) if ($i + 1 == $num_processes); #the last one takes the left rows
 
-	$call = "bsub -q long -J $dbname\_variation_job_$i -o $TMP_DIR/output_variation_feature_$i\_$$.txt $PERLBIN parallel_variation_feature.pl -chost $chost -cuser $cuser -cdbname $cdbname -vhost $vhost -vuser $vuser -vport $vport -vdbname $vdbname -limit '$limit' -tmpdir $TMP_DIR -tmpfile $TMP_FILE -num_processes $num_processes -status_file $variation_status_file ";
+	$call = "bsub -q normal -J $dbname\_variation_job_$i -o $TMP_DIR/output_variation_feature_$i\_$$.txt $PERLBIN $script -chost $chost -cuser $cuser -cdbname $cdbname -vhost $vhost -vuser $vuser -vport $vport -vdbname $vdbname -limit '$limit' -tmpdir $TMP_DIR -tmpfile $TMP_FILE -num_processes $num_processes -status_file $variation_status_file ";
 	$call .= "-cpass $cpass " if ($cpass);
 	$call .= "-cport $cport " if ($cport);
 	$call .= "-vpass $vpass " if ($vpass);
@@ -207,7 +210,7 @@ sub parallel_variation_feature{
 	#print $call,"\n";
 	system($call);      
     }
-    $call = "bsub -q long -K -w 'done($dbname\_variation_job*)' -J waiting_process sleep 1"; #waits until all variation features have finished to continue
+    $call = "bsub -q normal -K -w 'done($dbname\_variation_job*)' -J waiting_process sleep 1"; #waits until all variation features have finished to continue
     system($call);
 
 }
@@ -215,7 +218,8 @@ sub parallel_variation_feature{
 #Will take the number of processes, and divide the total number of entries in the flanking_sequence table by the number of processes
 #has to wait until the variation_feature table has been filled
 sub parallel_flanking_sequence{
-  my $dbVar = shift;  
+  my $dbVar = shift;
+  my $script = shift;
   my $call;
   my $flanking_status_file = "flanking_status_file_$$\.log";
 
@@ -276,7 +280,7 @@ sub parallel_flanking_sequence{
 
   for (my $i = 1;$i<=$num_processes;$i++){
 
-      $call = "bsub -q long -o $TMP_DIR/output_flanking_$i\_$$.txt $PERLBIN parallel_flanking_sequence.pl -chost $chost -cuser $cuser -cdbname $cdbname -vhost $vhost -vuser $vuser -vport $vport -vdbname $vdbname -tmpdir $TMP_DIR -tmpfile $TMP_FILE -num_processes $num_processes -status_file $flanking_status_file -file $i ";
+      $call = "bsub -q normal -o $TMP_DIR/output_flanking_$i\_$$.txt $PERLBIN $script -chost $chost -cuser $cuser -cdbname $cdbname -vhost $vhost -vuser $vuser -vport $vport -vdbname $vdbname -tmpdir $TMP_DIR -tmpfile $TMP_FILE -num_processes $num_processes -status_file $flanking_status_file -file $i ";
       $call .= "-cpass $cpass " if ($cpass);
       $call .= "-cport $cport " if ($cport);
       $call .= "-vpass $vpass " if ($vpass);
@@ -291,7 +295,7 @@ sub parallel_variation_group_feature{
     my $dbVar = shift;
 
     my $total_process = 0;
-    my $call = "bsub -q long  -o $TMP_DIR/output_group_feature_$$\.txt $PERLBIN parallel_variation_group_feature.pl -chost $chost -cuser $cuser -cdbname $cdbname -vhost $vhost -vuser $vuser -vport $vport -vdbname $vdbname -tmpdir $TMP_DIR -tmpfile $TMP_FILE ";
+    my $call = "bsub -q normal  -o $TMP_DIR/output_group_feature_$$\.txt $PERLBIN parallel_variation_group_feature.pl -chost $chost -cuser $cuser -cdbname $cdbname -vhost $vhost -vuser $vuser -vport $vport -vdbname $vdbname -tmpdir $TMP_DIR -tmpfile $TMP_FILE ";
     $call .= "-cpass $cpass " if ($cpass);
     $call .= "-cport $cport " if ($cport);
     $call .= "-vpass $vpass " if ($vpass);
@@ -303,7 +307,9 @@ sub parallel_variation_group_feature{
 # by the number of processes to make the subprocesses
 sub parallel_transcript_variation{
     my $dbVar = shift;
-
+    my $script = shift;
+    my $registry_file = shift;
+    
     my $total_process = 0;
 
     my $length_slices = 0; #number of entries in the variation_feature table
@@ -354,13 +360,15 @@ sub parallel_transcript_variation{
 	if ($i+1 == $num_processes and $num_processes != 1); #the last slice, get the left slices
 
       my $command = 
-          ( "$PERLBIN $Bin/parallel_transcript_variation.pl ".
+          ( "$PERLBIN $script ".
+	    "-registry_file $registry_file ".
             "-species $species ".
             "-limit $limit ".
             "-tmpdir $TMP_DIR ".
             "-tmpfile $TMP_FILE ".
             "-num_processes $num_processes ".
-            "-status_file $transcript_status_file" );
+            "-status_file $transcript_status_file "
+	    );
 
       my $outfile = "$TMP_DIR/output_transcript_$i\_$$.txt";
       my $errfile = "$TMP_DIR/error_transcript_$i\_$$.txt";
@@ -1138,11 +1146,12 @@ sub merge_rs_feature{
 sub remove_wrong_variations {
 
   my $dbVar = shift;
+  my $path = shift;
 
-  system("mysql -u$vuser -p$vpass -h$vhost $vdbname < /nfs/users/nfs_y/yuan/ensembl/src/ensembl-variation/sql/flag_novariation_alleles.sql");
-  system("mysql -u$vuser -p$vpass -h$vhost $vdbname < /nfs/users/nfs_y/yuan/ensembl/src/ensembl-variation/sql/flag_more_3_alleles.sql");
-  system("mysql -u$vuser -p$vpass -h$vhost $vdbname < /nfs/users/nfs_y/yuan/ensembl/src/ensembl-variation/sql/flag_no_vf_mappings.sql");
-  system("mysql -u$vuser -p$vpass -h$vhost $vdbname < /nfs/users/nfs_y/yuan/ensembl/src/ensembl-variation/sql/remove_wrong_variations.sql");
+  system("mysql -u$vuser -p$vpass -h$vhost $vdbname < $path/flag_novariation_alleles.sql");
+  system("mysql -u$vuser -p$vpass -h$vhost $vdbname < $path/flag_more_3_alleles.sql");
+  system("mysql -u$vuser -p$vpass -h$vhost $vdbname < $path/flag_no_vf_mappings.sql");
+  system("mysql -u$vuser -p$vpass -h$vhost $vdbname < $path/remove_wrong_variations.sql");
 
 }
 
