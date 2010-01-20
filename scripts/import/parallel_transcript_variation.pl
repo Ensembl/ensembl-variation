@@ -18,14 +18,15 @@ my ($TMP_DIR, $TMP_FILE, $LIMIT,$status_file);
 
 # {
 
-  my ($species,$limit,$num_processes);
+  my ($species,$limit,$num_processes,$registry_file);
 
   GetOptions('species=s'   => \$species,
 	     'tmpdir=s'  => \$ImportUtils::TMP_DIR,
 	     'tmpfile=s' => \$ImportUtils::TMP_FILE,
 	     'limit=s'   => \$limit,
  	     'num_processes=i' => \$num_processes,
- 	     'status_file=s' => \$status_file);
+ 	     'status_file=s' => \$status_file,
+	     'registry_file=s' => \$registry_file);
 
   $num_processes ||= 1;
 
@@ -34,7 +35,7 @@ my ($TMP_DIR, $TMP_FILE, $LIMIT,$status_file);
   usage('-num_processes must at least be 1') if ($num_processes == 0);
   usage('-status_file argument is required') if (!$status_file);
 
-  my $registry_file ||= $Bin . "/ensembl.registry";
+  $registry_file ||= $Bin . "/ensembl.registry";
 
   Bio::EnsEMBL::Registry->load_all( $registry_file );
 
@@ -112,15 +113,14 @@ sub transcript_variation {
   #my @slice_names = map {$_->seq_region_name}, @slices_ordered;
   #my $name_string = join " ", @slice_names;
   #debug("Slices are\n$name_string\n");
-
+  
   my ($offset,$length) = split /,/,$LIMIT; #get the offset and length of the elements we have to get from the slice
   # assumes that variation features have already been pushed to toplevel
 
 
   my %done;
   foreach my $slice (splice (@slices_ordered,$offset,$length)) {
-	#next unless $slice->dbID =~ /27509|27515|27524|27527/;
-	
+    #next unless $slice->dbID =~ /27509|27515|27524|27527/;
     debug("Processing transcript variations for ",
 	  $slice->seq_region_name(), "\n");
     #if it is human, $dbFunc is defined, therefore go through below to calculate regulatory feature
@@ -243,10 +243,8 @@ sub transcript_variation {
 
 	my ($consequences);
 	if ($row->[4] !~ /\+/) {
-	  
 	  #print "Getting consequences for ", (join " ", @$row), " in transcript ", $tr->stable_id, " ", $tr->dbID;
-	  #print "\n";
-
+          #print "\n";
 	  $consequences = type_variation($tr, "", $consequence_type);
 	}
 	foreach my $ct (@$consequences) {
@@ -434,8 +432,9 @@ sub update_meta_coord {
 
   my $cs = $csa->fetch_by_name($csname);
 
+# Added IGNORE to statement
   my $sth = $dbVar->prepare
-    ('INSERT INTO meta_coord set table_name = ?, coord_system_id = ?');
+    ('INSERT IGNORE INTO meta_coord set table_name = ?, coord_system_id = ?');
 
   $sth->execute($table_name, $cs->dbID());
 
