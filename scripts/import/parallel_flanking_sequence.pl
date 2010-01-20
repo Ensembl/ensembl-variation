@@ -72,7 +72,7 @@ my ($TMP_DIR, $TMP_FILE, $LIMIT,$status_file, $file_number);
   $TMP_FILE = $ImportUtils::TMP_FILE;
 
 
-  flanking_sequence($dbCore,$dbVar);
+  flanking_sequence($dbCore,$dbVar,$file_number);
   open STATUS, ">>$TMP_DIR/$status_file"
     or throw("Could not open tmp file: $TMP_DIR/$status_file\n"); 
   flock(STATUS,LOCK_EX);
@@ -96,13 +96,18 @@ my ($TMP_DIR, $TMP_FILE, $LIMIT,$status_file, $file_number);
 sub flanking_sequence {
   my $dbCore = shift;
   my $dbVar  = shift;
-
+  my $file_number = shift;
+  
   debug("Compressing storage of flanking sequence");
   my $slice_adaptor = $dbCore->get_SliceAdaptor();
 
   my $dbname = $dbVar->dbname(); #get the name of the database to create the file
 
-  my $call = "lsrcp ecs4a:$TMP_DIR/$dbname.flanking_sequence_$file_number\.txt /tmp/$dbname.flanking_sequence_$file_number\.txt";
+  my $hostname = `hostname`;
+  chomp($hostname);
+  
+  my $call = "lsrcp $hostname:$TMP_DIR/$dbname.flanking_sequence_$file_number\.txt /tmp/$dbname.flanking_sequence_$file_number\.txt";
+  
   system($call);
 
   open FH, ">/tmp/$dbname.flanking_sequence_out_$file_number\.txt" or throw("can't open flanking_output");
@@ -232,7 +237,7 @@ sub flanking_sequence {
   }
   close FH;
   close IN;
-  $call = "lsrcp /tmp/$dbname.flanking_sequence_out_$file_number\.txt ecs4a:$TMP_DIR/$dbname.flanking_sequence_out_$file_number\.txt";
+  $call = "lsrcp /tmp/$dbname.flanking_sequence_out_$file_number\.txt $hostname:$TMP_DIR/$dbname.flanking_sequence_out_$file_number\.txt";
   system($call);
   unlink("/tmp/$dbname.flanking_sequence_out_$file_number\.txt");
   unlink("/tmp/$dbname.flanking_sequence_$file_number\.txt");
