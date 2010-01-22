@@ -97,6 +97,105 @@ sub fetch_by_dbID {
   return $result->[0];
 }
 
+=head2 fetch_all_by_sub_VariationSet
+
+  Arg [1]    : Bio::EnsEMBL::Variation::VariationSet $sub
+  Arg [2]    : (optional) boolean $only_immediate
+               If true, only the direct supersets of this variation set will be fetched. The default behaviour is
+               to recursively fetch all supersets.
+  Example    : @vs_supersets = @{$vs_adaptor->fetch_all_by_sub_VariationSet($vs)};
+  Description: Retrieves all VariationSets that are direct supersets of the specified VariationSet.
+  Returntype : listref of Bio::EnsEMBL::Variation::VariationSet
+  Exceptions : throw if sub arg is not valid
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub fetch_all_by_sub_VariationSet {
+  my $self = shift;
+  my $set = shift;
+  my $only_immediate = shift;
+
+  if(!ref($set) || !$set->isa('Bio::EnsEMBL::Variation::VariationSet')) {
+    throw('Bio::EnsEMBL::Variation::VariationSet arg expected');
+  }
+
+# First, get all VariationSets that are direct supersets of this one
+
+  my $dbID = $set->dbID();
+  
+  my $stmt = qq{
+    SELECT
+      vss.variation_set_super
+    FROM
+      variation_set_structure vss
+    WHERE
+      vss.variation_set_sub = ?
+  };
+  my $sth = $self->prepare($stmt);
+  $sth->execute($dbID);
+
+  my @vs;
+  while (my $result = $sth->fetchrow_arrayref()) {
+# For each superset, fetch all of its supersets, unless specifically told not to
+    my $vs_super = $self->fetch_by_dbID($result->[0]);
+    push(@vs,$vs_super);
+    @vs = (@vs,@{$self->fetch_all_by_sub_VariationSet($vs_super)}) unless defined($only_immediate);
+  }
+  
+  return \@vs;
+}
+
+=head2 fetch_all_by_super_VariationSet
+
+  Arg [1]    : Bio::EnsEMBL::Variation::VariationSet $super
+  Arg [2]    : (optional) boolean $only_immediate
+               If true, only the direct subsets of this variation set will be fetched. The default behaviour is
+               to recursively fetch all subsets.
+  Example    : @vs_subsets = @{$vs_adaptor->fetch_all_by_super_VariationSet($vs)};
+  Description: Retrieves all VariationSets that are subsets of the specified VariationSet.
+  Returntype : listref of Bio::EnsEMBL::Variation::VariationSet
+  Exceptions : throw if super arg is not valid
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub fetch_all_by_super_VariationSet {
+  my $self = shift;
+  my $set = shift;
+  my $only_immediate = shift;
+  
+  if(!ref($set) || !$set->isa('Bio::EnsEMBL::Variation::VariationSet')) {
+    throw('Bio::EnsEMBL::Variation::VariationSet arg expected');
+  }
+  
+# First, get all VariationSets that are direct subsets of this one
+
+  my $dbID = $set->dbID();
+  
+  my $stmt = qq{
+    SELECT
+      vss.variation_set_sub
+    FROM
+      variation_set_structure vss
+    WHERE
+      vss.variation_set_super = ?
+  };
+  my $sth = $self->prepare($stmt);
+  $sth->execute($dbID);
+
+  my @vs;
+  while (my $result = $sth->fetchrow_arrayref()) {
+# For each subset, fetch all of its subsets unless specifically told not to
+    my $vs_sub = $self->fetch_by_dbID($result->[0]);
+    push(@vs,$vs_sub);
+    @vs = (@vs,@{$self->fetch_all_by_super_VariationSet($vs_sub)}) unless defined($only_immediate);
+  }
+  
+  return \@vs;
+}
 
 
 =head2 fetch_by_name
@@ -184,7 +283,18 @@ sub fetch_all_by_Variation {
   my $result = $self->_objs_from_sth($sth);
   $sth->finish();
 
-  return $result;
+# Fetch all supersets of the returned sets as well. Since a variation may occur at several places in a hierarchy
+# which will cause duplicated data, store variation sets in a hash with dbID as key.
+  my %sets;
+  foreach my $set (@{$result}) {
+    $sets{$set->dbID()} = $set;
+    foreach my $sup (@{$self->fetch_all_by_sub_VariationSet($set)}) {
+      $sets{$sup->dbID()} = $sup;
+    }
+  }
+  
+  my @res = values %sets;
+  return \@res;
 }
 
 

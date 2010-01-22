@@ -107,10 +107,56 @@ sub description {
   return $self->{'description'};
 }
 
+=head2 get_all_sub_VariationSets
+
+  Example    : print $vs->get_all_sub_VariationSets();
+  Description: Recursively gets all variation sets that are subsets of this variation set.
+  Returntype : reference to list of Bio::EnsEMBL::Variation::VariationSet
+  Exceptions : none
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub get_all_sub_VariationSets {
+  my $self = shift;
+  
+# A database adaptor must be attached to this object   
+  if(!$self->adaptor()) {
+    warning('Cannot get sub variation sets without attached adaptor');
+    return [];
+  }
+  
+  return $self->adaptor->fetch_all_by_super_VariationSet($self);
+}
+
+=head2 get_all_super_VariationSets
+
+  Example    : print $vs->get_all_super_VariationSets();
+  Description: Recursively gets all variation sets that are above this variation set.
+  Returntype : reference to list of Bio::EnsEMBL::Variation::VariationSet
+  Exceptions : none
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub get_all_super_VariationSets {
+  my $self = shift;
+  
+# A database adaptor must be attached to this object   
+  if(!$self->adaptor()) {
+    warning('Cannot get super variation sets without attached adaptor');
+    return [];
+  }
+  
+  return $self->adaptor->fetch_all_by_sub_VariationSet($self);
+}
+
 =head2 get_all_Variations
 
   Example    : print $vs->get_all_Variations();
-  Description: Gets all variations belonging to this variation set.
+  Description: Gets all variations belonging to this variation set and all of its subsets.
   Returntype : reference to list of Bio::EnsEMBL::Variation::Variation
   Exceptions : none
   Caller     : general
@@ -133,7 +179,8 @@ sub get_all_Variations {
     warning('Could not get variation adaptor from database');
     return [];
   }
-  
+
+ # Get all variations from this set (and its subsets)
   return $variation_adaptor->fetch_all_by_VariationSet($self);
 }
 

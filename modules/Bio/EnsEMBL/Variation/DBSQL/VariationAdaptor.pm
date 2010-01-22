@@ -523,7 +523,7 @@ sub fetch_all_by_Population {
   Arg [1]    : Bio::EnsEMBL::Variation::VariationSet
   Example    : @vars = @{$va_adaptor->fetch_all_by_VariationSet($vs)};
   Description: Retrieves all variations which are present in a specified
-               variation set.
+               variation set and its subsets.
   Returntype : listref of Bio::EnsEMBL::Variation::Variation
   Exceptions : throw on incorrect argument
   Caller     : general
@@ -543,6 +543,17 @@ sub fetch_all_by_VariationSet {
     warning("Cannot retrieve variations for variation set without a dbID");
     return [];
   }
+  
+#ÊFirst, get all immediate subsets of the specified VariationSet and get their variations.
+# Store in a hash to avoid duplicates.
+  my %vars;
+  foreach my $var_set (@{$set->adaptor->fetch_all_by_super_VariationSet($set,1)}) {
+    foreach my $var (@{$self->fetch_all_by_VariationSet($var_set)}) {
+      $vars{$var->dbID()} = $var;
+    }
+  }
+  
+# Then get all Variations belonging to this set  
   my $stmt = qq{
     SELECT
       v.variation_id,
@@ -584,7 +595,13 @@ sub fetch_all_by_VariationSet {
   my $results = $self->_objs_from_sth($sth);
   $sth->finish();
 
-  return $results;
+  foreach my $var (@{$results}) {
+    $vars{$var->dbID()} = $var;
+  }
+  
+  my @res = values(%vars);
+  
+  return \@res;
 }
 
 
