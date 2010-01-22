@@ -209,18 +209,27 @@ sub fetch_all_with_annotation_by_Slice{
 
 sub fetch_all_by_Slice_VariationSet{
 
-	my $self = shift;
-	my $slice = shift;
-	my $set = shift;
+  my $self = shift;
+  my $slice = shift;
+  my $set = shift;
 	
-	if(!ref($slice) || !$slice->isa('Bio::EnsEMBL::Slice')) {
-		throw('Bio::EnsEMBL::Slice arg expected');
-	}
-	if(!ref($set) || !$set->isa('Bio::EnsEMBL::Variation::VariationSet')) {
-		throw('Bio::EnsEMBL::Variation::VariationSet arg expected');
-	}
+  if(!ref($slice) || !$slice->isa('Bio::EnsEMBL::Slice')) {
+    throw('Bio::EnsEMBL::Slice arg expected');
+  }
+  if(!ref($set) || !$set->isa('Bio::EnsEMBL::Variation::VariationSet')) {
+    throw('Bio::EnsEMBL::Variation::VariationSet arg expected');
+  }
 
-    my $cols = join ",", $self->_columns();
+# First, get all VariationFeatures from the subsets of this VariationSet on this slice.
+# Store in a hash to avoid duplicates
+  my %var_feats;
+  foreach my $var_set (@{$set->adaptor->fetch_all_by_super_VariationSet($set,1)}) {
+    foreach my $var_feat (@{$self->fetch_all_by_Slice_VariationSet($slice,$var_set)}) {
+      $var_feats{$var_feat->dbID()} = $var_feat;
+    }
+  }
+  
+  my $cols = join ",", $self->_columns();
 
     my $sth = $self->prepare(qq{
 		SELECT $cols
@@ -236,7 +245,13 @@ sub fetch_all_by_Slice_VariationSet{
 
     $sth->execute($set->dbID, $slice->get_seq_region_id, $slice->start, $slice->end);
 
-    return $self->_objs_from_sth($sth);
+    foreach my $var_feat (@{$self->_objs_from_sth($sth)}) {
+      $var_feats{$var_feat->dbID()} = $var_feat;
+    }
+    
+    my @res = values(%var_feats);
+    
+    return \@res;
 }
 # method used by superclass to construct SQL
 sub _tables { return (['variation_feature', 'vf'],
