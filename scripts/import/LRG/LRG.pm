@@ -6,6 +6,7 @@ package LRG;
 use XML::Writer;
 use IO::File;
 use Data::Dumper;
+use List::Util qw{max};
 
 # ROOT OBJECT
 #############
@@ -96,7 +97,9 @@ sub newFromFile {
 		my $end = $pos;
 	
 		# this code searches for content between tags
-		if($prev_end >= 1 && $start - $prev_end >= 1) {
+# Changed Will's code because it couldn't handle cases where just a single character was between the tags (e.g. <label>1</label>)
+# Make sure nothing breaks because of this!
+		if($prev_end >= 1 && $start - $prev_end > 0) {
 	
 			# get substring from the XML string
 			my $temp = substr($xml_string, $prev_end, ($start - $prev_end));
@@ -380,6 +383,56 @@ sub findNode {
     return $found;
 }
 
+# find multiple nodes
+sub findNodeArray {
+    my $self = shift;
+    my $name = shift;
+    my $data = shift if @_;
+
+    # do a multi find if the name is delimited with "/"s
+    return $self->findNodeMultiArray($name, $data) if $name =~ /\//;
+    
+    my @found;
+    my $match;
+    
+    # look through the nodes
+    foreach my $node(@{$self->{'nodes'}}) {
+
+		# if the name matches
+		if(defined $node->name && defined $name && $node->name eq $name) {
+		
+			$match = 1;
+	
+			# if we are comparing data too
+			if(scalar keys %$data && scalar keys %{$node->data}) {
+				$match = 0;
+		
+				my $needed = scalar keys %$data;
+		
+				foreach my $key(keys %$data) {
+					next unless defined $node->data->{$key};
+		
+					$match++ if $node->data->{$key} eq $data->{$key};
+				}
+		
+				$match = ($match == $needed ? 1 : 0);
+			}
+			
+			if($match) {
+				push(@found,$node);
+			}
+		}
+			
+		# look recursively in any sub-nodes if not found
+		my $rec = $node->findNodeArray($name, $data);
+		if (defined($rec)) {
+		    @found = (@found,@{$rec});
+		}
+    }
+
+    return (scalar(@found) > 0 ? \@found : undef);
+}
+
 # find node given multiple levels
 sub findNodeMulti {
     my $self = shift;
@@ -396,7 +449,7 @@ sub findNodeMulti {
     else {
 		my $current = $self;
 		
-		while(@levels) {
+		while(@levels && defined($current)) {
 			my $level = shift @levels;
 	
 			if(scalar @levels >= 1) {
@@ -405,6 +458,38 @@ sub findNodeMulti {
 	
 			else {
 				$current = $current->findNode($level, $data);
+			}
+		}
+	
+		return $current;
+    }
+}
+
+# find node given multiple levels
+sub findNodeMultiArray {
+    my $self = shift;
+    my $name = shift;
+    my $data = shift if @_;
+
+    my @levels = split /\s*\/\s*/, $name;
+
+    # if only one level given, do a normal findNode
+    if(scalar @levels == 1) {
+		return $self->findNodeArray($name, $data);
+    }
+
+    else {
+		my $current = $self;
+		
+		while(@levels && defined($current)) {
+			my $level = shift @levels;
+	
+			if(scalar @levels >= 1) {
+				$current = $current->findNode($level);
+			}
+	
+			else {
+				$current = $current->findNodeArray($level, $data);
 			}
 		}
 	
@@ -490,10 +575,14 @@ sub printNode {
 		'chr_id' => 3,
 		'chr_start' => 4,
 		'chr_end' => 5,
+		'most_recent' => 6,
 		
 		# gene
 		'symbol' => 1,
 		'name' => 1,
+		
+		# transcript
+		'fixed_id' => 7,
 		
 		# other
 		'source' => 1,
@@ -512,6 +601,12 @@ sub printNode {
 		
 		# we only need to order when there is more than one set
 		if(scalar keys %{$self->data} > 1) {
+# If the key is not listed in the priority hash, add it with the lowest priority		    
+			foreach my $key (keys %{$self->data}) {
+			    if (!$priority{$key}) {
+				$priority{$key} = max(values(%{$self->data}))+1;
+			    }
+			}
 			@key_order = sort {$priority{$a} <=> $priority{$b}} keys %{$self->data};
 		}
 		
@@ -780,7 +875,18 @@ sub pfetch() {
     return $sequence;
 }
 
-
+# Remove a node
+sub remove() {
+    my $self = shift;
+    my $parent = $self->{'parent'};
+    
+    for (my $i=0; $i<scalar(@{$parent->{'nodes'}}); $i++) {
+	if ($parent->{'nodes'}[$i] == $self) {
+	    splice(@{$parent->{'nodes'}},$i,1);
+	    last;
+	}
+    }
+}
 
 # NODE
 ######
@@ -815,6 +921,36 @@ sub new {
     $node{'empty'} = 0;
 
     bless $node_ref, 'LRG::Node';
+    return $node_ref;
+}
+
+# Create a copy of a node.
+# The subtree beneath the source node will be copied recursively so this will be an entirely new subtree
+sub newFromNode {
+    my $source = shift;
+    my $parent = shift;
+    
+    my @nodes = ();
+    my %node = ();
+    my $node_ref = \%node;
+    
+    $node{'name'} = $source->{'name'};
+    $node{'content'} = $source->{'content'};
+    $node{'empty'} = $source->{'empty'};
+    $node{'xml'} = $source->{'xml'};
+    $node{'parent'} = (defined($parent) ? $parent : $source->{'parent'}); 
+    $node{'data'} = {};
+    while(my ($key,$value) = each(%{$source->{'data'}})) {
+	$node{'data'}->{$key} = $value;
+    }
+    
+    bless $node_ref, 'LRG::Node';
+    
+    foreach my $source_node (@{$source->{'nodes'}}) {
+	push(@nodes,LRG::Node::newFromNode($source_node,$node_ref));
+    }
+    $node{'nodes'} = \@nodes;
+    
     return $node_ref;
 }
 
