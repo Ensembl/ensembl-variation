@@ -1,5 +1,6 @@
 # Relax NG schema for LRG
-# Version $Revision: 1.4 $
+# Version $Revision: 1.5 $
+# Last modified: 02/12/09
 
 start = LRG
 LRG = element lrg { 
@@ -98,7 +99,7 @@ UPDATABLE_ANNOTATION = element updatable_annotation {
                }+
             }+
          }*
-      },
+      }?,
       
       # multiple mappings allowed e.g. to different assemblies
       element mapping {
@@ -107,6 +108,7 @@ UPDATABLE_ANNOTATION = element updatable_annotation {
          attribute chr_id { text }?,
          attribute chr_start { xsd:integer },
          attribute chr_end { xsd:integer },
+         attribute most_recent { xsd:integer }?,
          
          # a mapping span corresponds to a block of the LRG sequence that aligns with an assembly
          element mapping_span {
@@ -145,7 +147,12 @@ UPDATABLE_ANNOTATION = element updatable_annotation {
                }+
             }+
          }*
-      },
+      }?,
+      
+      element lrg_gene_name {
+         attribute source { text },
+         text
+      }?,
       
       element features {
          element gene {
@@ -170,6 +177,7 @@ UPDATABLE_ANNOTATION = element updatable_annotation {
                attribute start { xsd:integer },
                attribute end { xsd:integer },
                attribute transcript_id { text },
+               attribute fixed_id { text }?,
                
                element partial { '5-prime' | '3-prime' }*,
                element long_name { text }*,
@@ -191,7 +199,7 @@ UPDATABLE_ANNOTATION = element updatable_annotation {
             }*
             
          }*
-      },
+      }?,
     # / features
    
       element variation {
