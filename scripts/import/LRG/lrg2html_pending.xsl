@@ -597,12 +597,13 @@
 					  <!-- 5' UTR (partial)-->
 					  <xsl:when test="$cstart &gt; lrg_coords/@start and $cstart &lt; lrg_coords/@end">
 						<span class="utr">
-						  <xsl:value-of select="substring($seq,cdna_coords/@start,($cstart - lrg_coords/@start) + 1)"/>
+						  <xsl:value-of select="substring($seq,cdna_coords/@start,($cstart - lrg_coords/@start))"/>
 						</span>
 						<span class="startcodon" title="Start codon">
-						  <xsl:value-of select="substring($seq,cdna_coords/@start + ($cstart - lrg_coords/@start) + 1,3)"/>
+						  <xsl:value-of select="substring($seq,cdna_coords/@start + ($cstart - lrg_coords/@start),3)"/>
 						</span>
-						<xsl:value-of select="substring($seq,cdna_coords/@start + ($cstart - lrg_coords/@start)+4,cdna_coords/@end - (cdna_coords/@start + ($cstart - lrg_coords/@start))-3)"/>
+						<xsl:value-of 
+select="substring($seq,cdna_coords/@start + ($cstart - lrg_coords/@start)+3,cdna_coords/@end - (cdna_coords/@start + ($cstart - lrg_coords/@start))-3)"/>
 					  </xsl:when>
 					  
 					  <!-- 3' UTR (partial)-->
