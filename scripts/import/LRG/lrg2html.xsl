@@ -139,7 +139,7 @@
 		  font-family: monospace;
 		  text-transform: lowercase;
 		  color: #666666;
-		  //background: #CCCCCC;
+		  background: #CCCCCC;
 		}
 		
 		.startcodon {
@@ -276,9 +276,16 @@
 		
 	<xsl:variable name="lrg_id" select="fixed_annotation/id"/>
 	<h1>
-	  <xsl:value-of select="$lrg_id"/><br/>
-	  - <xsl:value-of select="updatable_annotation/annotation_set/features/gene/@symbol"/>
-	  <xsl:if test="updatable_annotation/annotation_set/features/gene/long_name"> : <xsl:value-of select="updatable_annotation/annotation_set/features/gene/long_name"/></xsl:if>
+	  <xsl:value-of select="$lrg_id"/><!--<br/>-->
+	  - <xsl:choose>
+		  <xsl:when test="updatable_annotation/annotation_set/hgnc_symbol">
+			<xsl:value-of select="updatable_annotation/annotation_set/hgnc_symbol"/>
+		  </xsl:when>
+		  <xsl:otherwise>
+			<xsl:value-of select="updatable_annotation/annotation_set/features/gene/@symbol"/>
+			<xsl:if test="updatable_annotation/annotation_set/features/gene/long_name"> : <xsl:value-of select="updatable_annotation/annotation_set/features/gene/long_name"/></xsl:if>
+		  </xsl:otherwise>
+		</xsl:choose>
 	<!--  <xsl:for-each select="updatable_annotation/annotation_set/features/gene">-->
 	<!--	- <xsl:value-of select="@symbol"/>-->
 	<!--	<xsl:if test="long_name"> : <xsl:value-of select="long_name"/></xsl:if>-->
@@ -313,9 +320,10 @@
 
 	<table>
 	  <tr>
-		<td style="border:0px;">
-		  <a name="genomic_sequence_anchor"/></td>
-		  <h4>- Genomic sequence</h4>
+		 <td style="border:0px;">
+		   <a name="genomic_sequence_anchor"/>
+		   <h4>- Genomic sequence</h4>
+		 </td>
 		<td style="border:0px;"><a><xsl:attribute name="href">javascript:showhide('sequence');</xsl:attribute>show/hide</a></td>
 	  </tr>
 	</table>
@@ -453,6 +461,15 @@
 		<xsl:value-of select="@start"/>-<xsl:value-of select="@end"/><br/>
 		<strong>Coding region: </strong>
 		<xsl:value-of select="coding_region/@start"/>-<xsl:value-of select="coding_region/@end"/><br/>
+		
+		<!-- get comments from the updatable layer-->
+		<xsl:for-each select="/*/updatable_annotation/annotation_set/features/gene/transcript">
+		  <xsl:if test="@corresponding_fixed_id=$transname">
+			<xsl:for-each select="comment">
+			  <strong>Comment: </strong><xsl:value-of select="."/><br/>
+			</xsl:for-each>
+		  </xsl:if>
+		</xsl:for-each>
 	  </p>
 	  <table>
 		<tr>
@@ -527,22 +544,28 @@
 					</xsl:choose>
 					<xsl:attribute name="id">cdna_exon_<xsl:value-of select="$transname"/>_<xsl:value-of select="$exon_number"/></xsl:attribute>
 					<xsl:attribute name="onclick">javascript:highlight_exon('<xsl:value-of select="$transname"/>_<xsl:value-of select="$exon_number"/>');</xsl:attribute>
-					<xsl:attribute name="title">Exon <xsl:value-of select="cdna_coords//@start"/>-<xsl:value-of select="cdna_coords/@end"/></xsl:attribute>
+					<xsl:attribute name="title">Exon <xsl:value-of select="cdna_coords//@start"/>-<xsl:value-of select="cdna_coords/@end"/>(<xsl:value-of select="lrg_coords/@start"/>-<xsl:value-of select="lrg_coords/@end"/>)</xsl:attribute>
 					
 					<xsl:choose>
+					  <!-- 5' UTR (complete)-->
+					  <xsl:when test="$cstart &gt; lrg_coords/@end">
+						<span class="utr">
+						  <xsl:value-of select="substring($seq,cdna_coords/@start,(cdna_coords/@end - cdna_coords/@start) + 1)"/>
+						</span>
+					  </xsl:when>
 					  
-					  <!-- 5' UTR -->
+					  <!-- 5' UTR (partial)-->
 					  <xsl:when test="$cstart &gt; lrg_coords/@start and $cstart &lt; lrg_coords/@end">
 						<span class="utr">
 						  <xsl:value-of select="substring($seq,cdna_coords/@start,($cstart - lrg_coords/@start))"/>
 						</span>
 						<span class="startcodon" title="Start codon">
-						  <xsl:value-of select="substring($seq,$cstart - $first_exon_start+1,3)"/>
+						  <xsl:value-of select="substring($seq,cdna_coords/@start + ($cstart - lrg_coords/@start),3)"/>
 						</span>
-						<xsl:value-of select="substring($seq,($cstart - lrg_coords/@start)+4,cdna_coords/@end - ($cstart - lrg_coords/@start)-3)"/>
+						<xsl:value-of select="substring($seq,cdna_coords/@start + ($cstart - lrg_coords/@start)+3,cdna_coords/@end - (cdna_coords/@start + ($cstart - lrg_coords/@start))-3)"/>
 					  </xsl:when>
 					  
-					  <!-- 3' UTR -->
+					  <!-- 3' UTR (partial)-->
 					  <xsl:when test="$cend &gt; lrg_coords/@start and $cend &lt; lrg_coords/@end">
 						<xsl:value-of select="substring($seq,cdna_coords/@start, ($cend - lrg_coords/@start)-2)"/>
 						<span class="stopcodon" title="Stop codon">
@@ -550,6 +573,13 @@
 						</span>
 						<span class="utr">
 						  <xsl:value-of select="substring($seq,($cend - lrg_coords/@start) + cdna_coords/@start + 1, (cdna_coords/@end - (($cend - lrg_coords/@start) + cdna_coords/@start)))"/>
+						</span>
+					  </xsl:when>
+				
+					  <!-- 3' UTR (complete)-->
+					  <xsl:when test="$cend &lt; lrg_coords/@start">
+						<span class="utr">
+						  <xsl:value-of select="substring($seq,cdna_coords/@start,(cdna_coords/@end - cdna_coords/@start) + 1)"/>
 						</span>
 					  </xsl:when>
 					  
@@ -606,14 +636,15 @@
 		  <td style="border:0px;">
 			<a><xsl:attribute name="name">exon_anchor_<xsl:value-of select="$transname"/></xsl:attribute></a>  
 			<h4>- Exons</h4></td>
-		  <td style="border:0px;"><a><xsl:attribute name="href">javascript:showhide('exons_<xsl:value-of select="$transname"/>');</xsl:attribute>show/hide</a></td>
+		  <!--<td style="border:0px;"><a><xsl:attribute name="href">javascript:showhide('exons');</xsl:attribute>show/hide</a></td>-->
+		  <td style="border:0px;"><a><xsl:attribute name="href">javascript:showhide('exontable_<xsl:value-of select="$transname"/>');</xsl:attribute>show/hide</a></td>
 		</tr>
 	  </table>
 	  
 	  
 	  <!-- EXONS -->
-	  <div id="exons" style="height:0px; display: none;">
-		<xsl:attribute name="id">exons_<xsl:value-of select="$transname"/></xsl:attribute>
+	  <div id="exons" style="height:0px; display:none;">
+		<xsl:attribute name="id">exontable_<xsl:value-of select="$transname"/></xsl:attribute>
 		
 		<table>
 		  <tr>
@@ -702,6 +733,7 @@
 					  </xsl:when>
 					  <xsl:otherwise>
 						<xsl:value-of select="cdna_coords/@start + $first_exon_start - ../coding_region/@start"/>
+						<!--<xsl:value-of select="cdna_coords/@start + n_start - ../coding_region/@start"/>-->
 					  </xsl:otherwise>
 					</xsl:choose>
 				  </td>
@@ -781,7 +813,7 @@
 		<p>
 		  <a>
 			<xsl:attribute name="href">#exon_anchor_<xsl:value-of select="$transname"/></xsl:attribute>
-			<xsl:attribute name="onclick">javascript:showhide('exons_<xsl:value-of select="$transname"/>');</xsl:attribute>^^ hide ^^
+			<xsl:attribute name="onclick">javascript:showhide('exontable_<xsl:value-of select="$transname"/>');</xsl:attribute>^^ hide ^^
 		  </a>
 		</p>
 	  </div>
