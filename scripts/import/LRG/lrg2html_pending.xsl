@@ -14,6 +14,7 @@
 	  <title>
 		<xsl:value-of select="fixed_annotation/id"/> -
 		<xsl:value-of select="updatable_annotation/annotation_set/lrg_gene_name"/>
+                *** PENDING APPROVAL ***
 	  </title>
 	  <style type="text/css">
 		body {
@@ -271,7 +272,12 @@
       </head>
       <body>
 		
-	<xsl:variable name="lrg_id" select="fixed_annotation/id"/>
+	 <xsl:variable name="lrg_id" select="fixed_annotation/id"/>
+	    <p style="text-align:center;background-color:#FF0000;color:#FFFFFF;font-size:40pt;font-weight:bold;">
+	       *** PENDING APPROVAL, DO NOT USE! ***
+	    </p>
+	    <p style="font-style:italic;">This LRG record is pending approval and subject to change. Do not use until it has passed final approval</p>
+
 	<h1>
 	  <xsl:value-of select="$lrg_id"/><!--<br/>-->
 	  - <xsl:choose>
