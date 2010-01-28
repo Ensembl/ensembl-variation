@@ -97,6 +97,49 @@ sub fetch_by_dbID {
   return $result->[0];
 }
 
+=head2 fetch_all_top_VariationSets
+
+  Example    : $vs = $vs_adaptor->fetch_all_top_VariationSets();
+  Description: Retrieves all VariationSet objects that are 'toplevel', 
+               i.e. they are not subsets of any other variation set.
+  Returntype : istref of Bio::EnsEMBL::Variation::VariationSet
+  Exceptions : none
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub fetch_all_top_VariationSets {
+  my $self = shift;
+
+  my $cols = join(',',$self->_columns());
+  
+  my $stmt = qq{
+    SELECT
+      $cols
+    FROM
+      variation_set vs
+    WHERE
+      NOT EXISTS (
+        SELECT
+          *
+        FROM
+          variation_set_structure vss
+        WHERE
+          vss.variation_set_sub = vs.variation_set_id
+      )
+  };
+  my $sth = $self->prepare($stmt);
+  $sth->execute();
+
+  my $result = $self->_objs_from_sth($sth);
+  $sth->finish();
+
+  return undef if(!@$result);
+
+  return $result;
+}
+
 =head2 fetch_all_by_sub_VariationSet
 
   Arg [1]    : Bio::EnsEMBL::Variation::VariationSet $sub
@@ -136,15 +179,21 @@ sub fetch_all_by_sub_VariationSet {
   my $sth = $self->prepare($stmt);
   $sth->execute($dbID);
 
-  my @vs;
+  my %vs;
   while (my $result = $sth->fetchrow_arrayref()) {
 # For each superset, fetch all of its supersets, unless specifically told not to
-    my $vs_super = $self->fetch_by_dbID($result->[0]);
-    push(@vs,$vs_super);
-    @vs = (@vs,@{$self->fetch_all_by_sub_VariationSet($vs_super)}) unless defined($only_immediate);
+    my $vs_sup = $self->fetch_by_dbID($result->[0]);
+    $vs{$vs_sup->dbID()} = $vs_sup;
+    if (!defined($only_immediate)) {
+      foreach my $v (@{$self->fetch_all_by_sub_VariationSet($vs_sup)}) {
+        $vs{$v->dbID()} = $v;
+      }
+    }
   }
   
-  return \@vs;
+  my @res = values(%vs);
+  
+  return \@res;
 }
 
 =head2 fetch_all_by_super_VariationSet
@@ -186,15 +235,21 @@ sub fetch_all_by_super_VariationSet {
   my $sth = $self->prepare($stmt);
   $sth->execute($dbID);
 
-  my @vs;
+  my %vs;
   while (my $result = $sth->fetchrow_arrayref()) {
 # For each subset, fetch all of its subsets unless specifically told not to
     my $vs_sub = $self->fetch_by_dbID($result->[0]);
-    push(@vs,$vs_sub);
-    @vs = (@vs,@{$self->fetch_all_by_super_VariationSet($vs_sub)}) unless defined($only_immediate);
+    $vs{$vs_sub->dbID()} = $vs_sub;
+    if (!defined($only_immediate)) {
+      foreach my $v (@{$self->fetch_all_by_super_VariationSet($vs_sub)}) {
+        $vs{$v->dbID()} = $v;
+      }
+    }
   }
   
-  return \@vs;
+  my @res = values(%vs);
+  
+  return \@res;
 }
 
 
