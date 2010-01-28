@@ -108,7 +108,9 @@ sub description {
 }
 
 =head2 get_all_sub_VariationSets
-
+  Arg [1]    : (optional) boolean $only_immediate
+               If true, will only get the direct subsets of this variation. The default behaviour is
+               to recursively get all subsets.
   Example    : print $vs->get_all_sub_VariationSets();
   Description: Recursively gets all variation sets that are subsets of this variation set.
   Returntype : reference to list of Bio::EnsEMBL::Variation::VariationSet
@@ -120,6 +122,7 @@ sub description {
 
 sub get_all_sub_VariationSets {
   my $self = shift;
+  my $only_immediate = shift;
   
 # A database adaptor must be attached to this object   
   if(!$self->adaptor()) {
@@ -127,11 +130,13 @@ sub get_all_sub_VariationSets {
     return [];
   }
   
-  return $self->adaptor->fetch_all_by_super_VariationSet($self);
+  return $self->adaptor->fetch_all_by_super_VariationSet($self,$only_immediate);
 }
 
 =head2 get_all_super_VariationSets
-
+  Arg [1]    : (optional) boolean $only_immediate
+               If true, will only get the direct supersets of this variation. The default behaviour is
+               to recursively get all supersets.
   Example    : print $vs->get_all_super_VariationSets();
   Description: Recursively gets all variation sets that are above this variation set.
   Returntype : reference to list of Bio::EnsEMBL::Variation::VariationSet
@@ -143,6 +148,7 @@ sub get_all_sub_VariationSets {
 
 sub get_all_super_VariationSets {
   my $self = shift;
+  my $only_immediate = shift;
   
 # A database adaptor must be attached to this object   
   if(!$self->adaptor()) {
@@ -150,7 +156,7 @@ sub get_all_super_VariationSets {
     return [];
   }
   
-  return $self->adaptor->fetch_all_by_sub_VariationSet($self);
+  return $self->adaptor->fetch_all_by_sub_VariationSet($self,$only_immediate);
 }
 
 =head2 get_all_Variations
