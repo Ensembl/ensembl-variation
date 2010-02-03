@@ -826,6 +826,18 @@ CREATE TABLE failed_variation(
     PRIMARY KEY(variation_id)
 );
 
+#
+# strain_gtype_poly
+#
+# This table is populated for mouse and rat only for mart to use. Mart build need this table in both staging sever in master_schema_variation database
+#
+
+CREATE TABLE strain_gtype_poly (
+  variation_id int(10) unsigned NOT NULL,
+  sample_name varchar(100) DEFAULT NULL,
+  
+  PRIMARY KEY (variation_id)
+);
 
 #possible values in the failed_description table
 INSERT INTO failed_description (failed_description_id,description) VALUES (1,'Variation maps to more than 3 different locations');
