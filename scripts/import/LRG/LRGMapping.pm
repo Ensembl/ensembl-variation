@@ -545,6 +545,9 @@ sub get_annotations {
   
   die("LRG name not defined\n") unless defined $lrg_name;
 
+# For now, just assume one mapping span so get the first element from the feature pair array argument
+  $fp = $fp->[0];
+
   my ($q_start,$q_end,$t_start,$t_end,$q_strand);
   my $slice = $fp->slice;
   $q_start = $fp->start;
@@ -559,173 +562,48 @@ sub get_annotations {
   
   my @nodes;
 
-  if ($full_match) {
-    $sub_slice->seq_region_name($lrg_name);
-    foreach my $gene (@{$sub_slice->get_all_Genes()}) {
-      my @new_nodes = @{get_gene_annotation($gene,$q_end)};
-	  
-      push @nodes, @new_nodes;
-    }
-  }
-  else {
-#    die('Not a full match, need to recheck this method!!');
-#    my $csa = $dbCore->get_CoordSystemAdaptor();
-#    my $cs = $csa->fetch_by_name('tmpLRG');
-#    my $cs_id = $cs->dbID();
-    my $clean_coord_system = 0;
-    my $lrg_coord_system = $lrg_name;
-    my $stmt = qq{
-      SELECT
-        coord_system_id
-      FROM
-	coord_system
-      WHERE
-	name = '$lrg_coord_system'
-      LIMIT 1
-    };
-    my $cs_id = $dbCore->dbc->db_handle->selectall_arrayref($stmt)->[0][0];
-    if (!defined($cs_id)) {
-      $stmt = qq{
-	SELECT
-	  MAX(rank)
-	FROM
-	  coord_system
-      };
-      my $rank = ($dbCore->dbc->db_handle->selectall_arrayref($stmt)->[0][0]+1);
-      $stmt = qq{
-	INSERT INTO
-	  coord_system (
-	    species_id,
-	    name,
-	    rank,
-	    attrib
-	  )
-	VALUES (
-	  1,
-	  '$lrg_coord_system',
-	  $rank,
-	  'default_version'
-	)
-      };
-      $dbCore->dbc->do($stmt);
-      $cs_id = $dbCore->dbc->db_handle->{'mysql_insertid'};
-      $clean_coord_system = 1;
-    }
+  # For consistency in the annotations, do transfer between LRG and chromosome coord systems
+  #Êeven if there is a perfect match
+  my $lrg_coord_system = $lrg_name;
+  my $additions = add_mapping($lrg_name,$lrg_coord_system,length($q_seq),$current_assembly,$slice->seq_region_name(),$pairs,$dbCore);
+  
+  Bio::EnsEMBL::Registry->clear();
+  Bio::EnsEMBL::Registry->load_all( $registry_file );
+  $dbCore = Bio::EnsEMBL::Registry->get_DBAdaptor('human','core');
+  
+  my $sa = $dbCore->get_SliceAdaptor();
+  my $lrg_slice = $sa->fetch_by_region($lrg_coord_system,$lrg_name);
 
-# In order to project the slice, we need to add an entry to the meta table (if not present)
-    my $clean_meta = 0;
-    my $meta_value = $lrg_coord_system . '#chromosome:' . $current_assembly;
-    $stmt = qq{
-      SELECT
-	meta_id
-      FROM
-	meta
-      WHERE
-	meta_key = 'assembly.mapping' AND
-	meta_value LIKE '$meta_value%'
-    };
-    my $ref = $dbCore->dbc->db_handle->selectall_arrayref($stmt);
-    my @meta_id;
-    foreach my $id (@{$ref}) {
-      push(@meta_id,$id->[0]);
-    }
-    if (scalar(@meta_id) == 0) {
-      foreach my $val (($meta_value, $meta_value . '#contig', $meta_value . '#supercontig')) {
-	$stmt = qq{
-	  INSERT INTO
-	    meta (
-	      species_id,
-	      meta_key,
-	      meta_value
-	    )
-	  VALUES (
-	    1,
-	    'assembly.mapping',
-	    '$val'
-	  )
-	};
-	$dbCore->dbc->do($stmt);
-	push(@meta_id,$dbCore->dbc->db_handle->{'mysql_insertid'});
-      }
-      $clean_meta = 1;
-    }
-    
-    my $clean_seq_region = 0;
-    my $q_seq_length = length($q_seq);
-    my $q_seq_region_id = $dbCore->dbc->db_handle->selectall_arrayref(qq{SELECT seq_region_id FROM seq_region WHERE name = '$lrg_name' AND coord_system_id = '$cs_id'})->[0][0];
-    if (!defined($q_seq_region_id)) {
-      $dbCore->dbc->do(qq{INSERT INTO seq_region(name,coord_system_id,length)values('$lrg_name',$cs_id,$q_seq_length)});
-      $q_seq_region_id = $dbCore->dbc->db_handle->{'mysql_insertid'};
-      $clean_seq_region = 1;
-    }
-    #we don't need dna sequence
-    #my $dna_ref = $dbCore->dbc->db_handle->selectall_arrayref(qq{SELECT seq_region_id from dna WHERE seq_region_id = $q_seq_region_id});
-    #if (! $dna_ref->[0][0]) {
-    #  $dbCore->dbc->do(qq{INSERT INTO dna(seq_region_id,sequence)values($q_seq_region_id,"$q_seq")});
-    #}
-    
-    Bio::EnsEMBL::Registry->clear();
-    Bio::EnsEMBL::Registry->load_all( $registry_file );
-    $dbCore = Bio::EnsEMBL::Registry->get_DBAdaptor('human','core');
-    my $sa = $dbCore->get_SliceAdaptor();
-    my $t_seq_region_id = $sa->get_seq_region_id($slice);
- 
- # This is a temporary workaround to avoid the project method that for some reason projects to a gap for LRG_13. Find out why!!
- # But looking at the code below, it should still produce the same results (?)
-    my $min = 9999999999;
-    my $max = -9999999999;
-    my $chrom = $slice->seq_region_name();
-    my $strand;
-    
-    foreach  my $pair (sort {$a->[3]<=>$b->[3]} @$pairs) {
-      #print "pairs are ",$pair->[0],'-',$pair->[1],'-',$pair->[2],'-',$pair->[3],'-',$pair->[4],'-', $pair->[5],'-',$pair->[6],'-',$pair->[7],"\n";
-      
-      $min = min($min,min($pair->[3],$pair->[4]));
-      $max = max($max,max($pair->[3],$pair->[4]));
-      $strand = $pair->[5];
-      
-      if ($pair->[0] eq 'DNA') {
-	if ($pair->[2]-$pair->[1] == $pair->[4]-$pair->[3]) {
-	  $dbCore->dbc->do(qq{INSERT IGNORE INTO assembly(asm_seq_region_id,cmp_seq_region_id,asm_start,asm_end,cmp_start,cmp_end,ori)values($t_seq_region_id,$q_seq_region_id,$pair->[3],$pair->[4],$pair->[1],$pair->[2],$q_strand)});
-	}
-	else {
-	  die("distance between query and target is not the same, there is a indel");
-	}
-      }
-    }
-    
-    my $lrg_slice = $sa->fetch_by_region($lrg_coord_system,$lrg_name);
+  my $min = 9999999999;
+  my $max = -9999999999;
+  my $chrom;
+  my $strand;
 
-#    my $min = 9999999999;
-#    my $max = -9999999999;
-#    my $chrom;
-#    my $strand;
+  foreach my $segment (@{$lrg_slice->project('chromosome',$current_assembly)}) {
+    my $from_start = $segment->from_start();
+    my $from_end    = $segment->from_end();
+    my $to_name    = $segment->to_Slice->seq_region_name();
+    $chrom = $to_name;
 
-    foreach my $segment (@{$lrg_slice->project('chromosome',$current_assembly)}) {
-      my $from_start = $segment->from_start();
-      my $from_end    = $segment->from_end();
-      my $to_name    = $segment->to_Slice->seq_region_name();
-      $chrom = $to_name;
-
-      my $to_start    = $segment->to_Slice->start();
-      my $to_end    = $segment->to_Slice->end();
-      if($to_start > $max){
+    my $to_start    = $segment->to_Slice->start();
+    my $to_end    = $segment->to_Slice->end();
+    if($to_start > $max){
 	$max = $to_start;
-      }
-      if($to_start < $min){
-	$min = $to_start;
-      }
-      if($to_end > $max){
-	$max = $to_end;
-      }
-      if($to_end <  $min){
-	$min = $to_end;
-      }
-      my $ori        = $segment->to_Slice->strand();
-      $strand = $ori;   
-    
-      #print "$from_start-$from_end  => $to_name $to_start-$to_end ($ori) \n";
     }
+    if($to_start < $min){
+	$min = $to_start;
+    }
+    if($to_end > $max){
+	$max = $to_end;
+    }
+    if($to_end <  $min){
+	$min = $to_end;
+    }
+    my $ori        = $segment->to_Slice->strand();
+    $strand = $ori;   
+  
+    #print "$from_start-$from_end  => $to_name $to_start-$to_end ($ori) \n";
+  }
 
    # foreach my $gene (@{$lrg_slice->get_all_Genes()}){
       #print "gene_name is ",$gene->stable_id,"\n";
@@ -742,60 +620,23 @@ sub get_annotations {
     #  #print "hseq is ",$lrg_slice->seq,"\n";
     #}
 
-    my $ref_slice = $sa->fetch_by_region("chromosome",$chrom, $min, $max, $strand);
-    my @genes = @{$ref_slice->get_all_Genes()};
+   my $ref_slice = $sa->fetch_by_region("chromosome",$chrom, $min, $max, $strand);
+   my @genes = @{$ref_slice->get_all_Genes()};
 	
-    foreach my $gene (@genes) {
-      next unless $gene->biotype eq 'protein_coding';
+   foreach my $gene (@genes) {
+#     next unless $gene->biotype() eq 'protein_coding';
 		
-      #print "before transfprm g start-end ",$gene->start,'-',$gene->end,"\n";
-      #my $new_gene = $gene->transform('LRG');
-      my $new_gene = $gene->transfer($lrg_slice);
-      #print "after transform g start-end ",$new_gene->start,'-',$new_gene->end,"\n" if $new_gene;
+     #print "before transfprm g start-end ",$gene->start,'-',$gene->end,"\n";
+     #my $new_gene = $gene->transform('LRG');
+     my $new_gene = $gene->transfer($lrg_slice);
+     #print "after transform g start-end ",$new_gene->start,'-',$new_gene->end,"\n" if $new_gene;
 	  
-      my @new_nodes = @{get_gene_annotation($new_gene,$lrg_slice->end)};
+     my @new_nodes = @{get_gene_annotation($new_gene,$lrg_slice->end)};
 	  
-      push @nodes, @new_nodes;
-    }
-    
-# Cleanup MySQL database
-    if ($clean_coord_system) {
-      $stmt = qq{
-	DELETE FROM
-	  coord_system
-	WHERE
-	  coord_system_id = $cs_id
-      };
-      $dbCore->dbc->do($stmt);
-    }
-    if ($clean_seq_region) {
-      $stmt = qq{
-	DELETE FROM
-	  seq_region
-	WHERE
-	  seq_region_id = $q_seq_region_id
-      };
-      $dbCore->dbc->do($stmt);
-    }
-    if ($clean_meta) {
-      foreach my $id (@meta_id) {
-	$stmt = qq{
-	  DELETE FROM
-	    meta
-	  WHERE
-	    meta_id = $id
-	};
-	$dbCore->dbc->do($stmt);
-      }
-    }
-    $stmt = qq{
-      DELETE FROM
-	assembly
-      WHERE
-	cmp_seq_region_id = $q_seq_region_id
-    };
-    $dbCore->dbc->do($stmt);
-  }
+     push @nodes, @new_nodes;
+   }
+ # }
+  clean_mapping($additions,$dbCore);
   
   return \@nodes;
 }
@@ -833,7 +674,7 @@ sub get_gene_annotation {
 	my $entries = $gene->get_all_DBEntries();
 
 	#print "\n\n>>> ", $gene->stable_id, " ", $gene->biotype, " ", $gene->status, "\n";
-
+	my $long_name;
 	while($entry = shift @$entries) {
 		
 		next unless $entry->dbname =~ /GI|RefSeq|HGNC$/;
@@ -841,16 +682,22 @@ sub get_gene_annotation {
 		
 		# get synonyms from HGNC entry
 		if($entry->dbname eq 'HGNC') {
-		        $gene_node->addNode('lrg_gene_name')->content($entry->display_id);
+		        $gene_node->addNode('lrg_gene_name',{'source' => $entry->dbname})->content($entry->display_id);
 			foreach my $synonym(@{$entry->get_all_synonyms}) {
 				$gene_node->addNode('synonym')->content($synonym);
 			}
-			
-			$gene_node->addNode('long_name')->content($entry->description) if length($entry->description) > 1;
+			if (length($entry->description) > 1) {
+			  $gene_node->addNode('long_name')->content($entry->description);
+			  $long_name = 1;
+			}
 		}
 		$gene_node->addExisting(xref($entry));
 		
 		#print $entry->dbname, " ", $entry->primary_id, ".", $entry->version, " ", $entry->description, "\n";
+	}
+	# If no HGNC reference was found, add the description from Ensembl as long_name
+	if (!defined($long_name)) {
+	  $gene_node->addNode('long_name')->content($gene->description()) if (length($gene->description()) > 0);
 	}
 	
 	$gene_node->addEmptyNode('db_xref', {'source' => 'Ensembl', 'accession' => $gene->stable_id});
@@ -879,14 +726,19 @@ sub get_gene_annotation {
 #ÊIf the transcript only partially overlaps the LRG, we need to set the end points of the transcript to the end point of the last exon that falls within the LRG record
 		if ($partial_5 || $partial_3) {
 		  my $exons = $trans->get_all_Exons();
-		  $feat_start = $slice_end;
-		  $feat_end = 1;
-		  foreach my $exon (@{$exons}) {
-		    if ($exon->end > 1) {
-		      $feat_start = min($feat_start,max(1,$exon->start));
+		  if (scalar(@{$exons}) > 0) {
+		    $feat_start = $slice_end;
+		    $feat_end = 1;
+		    foreach my $exon (@{$exons}) {
+		      if ($exon->end > 1) {
+			$feat_start = min($feat_start,max(1,$exon->start));
+		      }
+		      if ($exon->start < $slice_end) {
+			$feat_end = max($feat_end,min($slice_end,$exon->end));
+		      }
 		    }
-		    if ($exon->start < $slice_end) {
-		      $feat_end = max($feat_end,min($slice_end,$exon->end));
+		    if ($feat_start > $feat_end) {
+		      ($feat_start,$feat_end) = ($feat_end,$feat_start);
 		    }
 		  }
 		}
@@ -905,7 +757,7 @@ sub get_gene_annotation {
 		
 		while($entry = shift @$entries) {
 			
-			next unless $entry->dbname =~ /GI|RefSeq|MIM_GENE|Entrez/;
+			next unless $entry->dbname =~ /GI|RefSeq|MIM_GENE|Entrez|RFAM|miRBase/;
 			next if $entry->dbname =~ /RefSeq_peptide/;
 			
 			if ($entry->dbname !~ /MIM_GENE/) {
@@ -924,7 +776,7 @@ sub get_gene_annotation {
 		my $protein = $trans->translation;
 		
 		if($protein && length($protein) > 0) {
-		  
+		  		  
 # Check for partial overlaps
 		  $feat_start = max($trans->coding_region_start,$feat_start);
 		  $feat_end = min($trans->coding_region_end,$feat_end);
@@ -933,55 +785,55 @@ sub get_gene_annotation {
 		  if ($feat_strand < 0) {
 		    ($partial_5,$partial_3) = ($partial_3,$partial_5);
 		  }
-		
+# Some gene-level data (e.g. NCBI GeneID) is buried in the translation object. So before determining if we skip the transcript, parse the xrefs
+		  my $prot_node = LRG::Node->new('protein_product');
+		  $prot_node->data(
+		    {
+		      'source' => 'Ensembl',
+		      'accession' => $protein->stable_id,
+		      'cds_start' => $feat_start,
+		      'cds_end' => $feat_end
+		    }
+		  );
+		  
+		  $entries = $protein->get_all_DBEntries();
+			  
+		  while($entry = shift @$entries) {
+				  
+		    next unless $entry->dbname =~ /RefSeq|Uniprot|CCDS|MIM_GENE|Entrez/;
+				  
+		    if($entry->dbname eq 'RefSeq_peptide') {
+			      my $note_node = $prot_node->addNode('long_name');
+			      $note_node->content($entry->description);
+			      $note_node->moveTo(0);
+		    }
+		    
+		    if ($entry->dbname !~ /MIM_GENE|Entrez/) {
+		      $prot_node->addExisting(xref($entry));
+		    }
+		    else {
+		      my $xref = xref($entry);
+		      $gene_node->addExisting($xref) unless $gene_node->findNode($xref->name,$xref->data);
+		    }
+		  }
+
 # If the transcript falls entirely outside of the LRG it should be skipped
 		  unless ($feat_end < 1 || $feat_start > $slice_end) {
 	      
-		    my $prot_node = $cds_node->addNode(
-		      'protein_product',
-		      {
-		        'source' => 'Ensembl',
-		        'accession' => $protein->stable_id,
-		        'cds_start' => $feat_start,
-		        'cds_end' => $feat_end
-		      }
-		    );
-			  
 		    if ($partial_5) {
 		      $prot_node->addNode('partial')->content('5-prime');
 		    }
 		    if ($partial_3) {
 		      $prot_node->addNode('partial')->content('3-prime');
 		    }
-			  
-		    $entries = $protein->get_all_DBEntries();
-			  
-			  #print "\n\n>>> ", $protein->stable_id, "\n";
-		  
-		    while($entry = shift @$entries) {
-				  
-		      next unless $entry->dbname =~ /RefSeq|Uniprot|CCDS|MIM_GENE|Entrez/;
-				  
-		      if($entry->dbname eq 'RefSeq_peptide') {
-			      my $note_node = $prot_node->addNode('long_name');
-			      $note_node->content($entry->description);
-			      $note_node->moveTo(0);
-		      }
-		      
-		      if ($entry->dbname !~ /MIM_GENE|Entrez/) {
-			$prot_node->addExisting(xref($entry));
-		      }
-		      else {
-		        $gene_node->addExisting(xref($entry));
-		      }
-		      
-		      #print $entry->dbname, " ", $entry->primary_id, ".", $entry->version, " ", $entry->description, "\n";
-		    }
-		  }
-		  $gene_node->addExisting($cds_node);
 		
+		    $cds_node->addExisting($prot_node);
+			        
+		      #print $entry->dbname, " ", $entry->primary_id, ".", $entry->version, " ", $entry->description, "\n";
+		  }
 		}
-	}
+		$gene_node->addExisting($cds_node) unless ($gene->biotype eq 'protein_coding' && !$protein);
+	      }
 	
 	# finish the gene with xrefs
 	#$gene_node->addEmptyNode('db_xref', {'source' => 'GeneID', 'accession' => $ext{'EntrezGene'}}) if defined $ext{'EntrezGene'};
@@ -1009,4 +861,213 @@ sub xref {
 	$node->empty(1);
 	
 	return $node;
+}
+
+# Add all the necessary data to the db in order to project and transfer between the LRG and chromosome
+# Returns a hashref holding the tables affected and conditions for retrieving the changes
+sub add_mapping {
+  my $lrg_name = shift;
+  my $lrg_coord_system = shift;
+  my $q_seq_length = shift;
+  my $assembly = shift;
+  my $target_chr = shift;
+  my $pairs = shift;
+  my $dbCore = shift;
+
+  my %additions;
+  
+  # Get the coord system id for this LRG or add a new entry if not present
+  my $stmt = qq{
+    SELECT
+      coord_system_id
+    FROM
+      coord_system
+    WHERE
+      name = '$lrg_coord_system'
+    LIMIT 1
+  };
+  my $cs_id = $dbCore->dbc->db_handle->selectall_arrayref($stmt)->[0][0];
+  if (!defined($cs_id)) {
+    $stmt = qq{
+      SELECT
+	MAX(rank)
+      FROM
+	coord_system
+    };
+    my $rank = ($dbCore->dbc->db_handle->selectall_arrayref($stmt)->[0][0]+1);
+    $stmt = qq{
+      INSERT INTO
+	coord_system (
+	  species_id,
+	  name,
+	  rank,
+	  attrib
+	)
+      VALUES (
+	1,
+	'$lrg_coord_system',
+	$rank,
+	'default_version'
+      )
+    };
+    $dbCore->dbc->do($stmt);
+    $cs_id = $dbCore->dbc->db_handle->{'mysql_insertid'};
+    $additions{'coord_system'} = 'coord_system_id = ' . $cs_id;
+  }
+
+  # In order to project the slice, we need to add an entry to the meta table (if not present)
+  my $meta_value = $lrg_coord_system . '#chromosome:' . $assembly;
+  $stmt = qq{
+    SELECT
+      meta_id
+    FROM
+      meta
+    WHERE
+      meta_key = 'assembly.mapping' AND
+      meta_value LIKE '$meta_value%'
+  };
+  my $ref = $dbCore->dbc->db_handle->selectall_arrayref($stmt);
+  my @meta_id;
+  foreach my $id (@{$ref}) {
+    push(@meta_id,$id->[0]);
+  }
+  if (scalar(@meta_id) == 0) {
+    foreach my $val (($meta_value, $meta_value . '#contig', $meta_value . '#supercontig')) {
+      $stmt = qq{
+        INSERT INTO
+          meta (
+            species_id,
+            meta_key,
+            meta_value
+          )
+        VALUES (
+          1,
+          'assembly.mapping',
+          '$val'
+        )
+      };
+      $dbCore->dbc->do($stmt);
+      push(@meta_id,$dbCore->dbc->db_handle->{'mysql_insertid'});
+    }
+    $additions{'meta'} = 'meta_id = ' . join(' OR meta_id = ',@meta_id);
+  }
+
+  $stmt = qq{
+    SELECT
+      seq_region_id
+    FROM
+      seq_region
+    WHERE
+      name = '$lrg_name' AND
+      coord_system_id = '$cs_id'
+  };
+  my $q_seq_region_id = $dbCore->dbc->db_handle->selectall_arrayref($stmt)->[0][0];
+  if (!defined($q_seq_region_id)) {
+    $stmt = qq{
+      INSERT INTO
+	seq_region (
+	  name,
+	  coord_system_id,
+	  length
+	)
+      VALUES (
+	'$lrg_name',
+	$cs_id,
+	$q_seq_length
+      )
+    };
+    $dbCore->dbc->do($stmt);
+    $q_seq_region_id = $dbCore->dbc->db_handle->{'mysql_insertid'};
+    $additions{'seq_region'} = 'seq_region_id = ' . $q_seq_region_id;
+  }
+  
+  # Get the seq_region_id for the target chromsome
+  $stmt = qq{
+    SELECT
+      sr.seq_region_id
+    FROM
+      seq_region sr,
+      coord_system cs
+    WHERE
+      sr.name = '$target_chr' AND
+      sr.coord_system_id = cs.coord_system_id AND
+      cs.name = 'chromosome' AND
+      cs.version = '$assembly'
+    LIMIT 1
+  };
+  my $t_seq_region_id = $dbCore->dbc->db_handle->selectall_arrayref($stmt)->[0][0];
+  
+  # Add mappings between the LRG and chromosome coordinate systems
+  my @conditions;
+  foreach  my $pair (sort {$a->[3]<=>$b->[3]} @{$pairs}) {
+    if ($pair->[0] eq 'DNA') {
+      if ($pair->[2]-$pair->[1] == $pair->[4]-$pair->[3]) {
+	my $condition = qq{
+	  cmp_seq_region_id = $t_seq_region_id AND 
+	  asm_seq_region_id = $q_seq_region_id AND 
+	  cmp_start = $pair->[3] AND 
+	  cmp_end = $pair->[4] AND 
+	  asm_start = $pair->[1] AND 
+	  asm_end = $pair->[2] AND 
+	  ori = $pair->[5]
+	};
+	$stmt = qq{
+	  SELECT EXISTS (
+	    SELECT
+	      *
+	    FROM
+	      assembly
+	    WHERE
+	      $condition
+	  )
+	};
+	if (!$dbCore->dbc->db_handle->selectall_arrayref($stmt)->[0][0]) {
+	  $stmt = qq{
+	    INSERT IGNORE INTO
+	      assembly (
+	        cmp_seq_region_id,
+	        asm_seq_region_id,
+	        cmp_start,
+	        cmp_end,
+	        asm_start,
+	        asm_end,
+	        ori
+	      )
+	    VALUES (
+	      $t_seq_region_id,
+	      $q_seq_region_id,
+	      $pair->[3],
+	      $pair->[4],
+	      $pair->[1],
+	      $pair->[2],
+	      $pair->[5]
+	    )  
+	  };
+	  $dbCore->dbc->do($stmt);
+	  push(@conditions,$condition);
+	}
+      }
+      else {
+	die("distance between query and target is not the same, there is a indel");
+      }
+    }
+  }
+  $additions{'assembly'} = '(' . join(') OR (',@conditions) . ')';
+  return \%additions;
+}
+
+sub clean_mapping {
+  my $additions = shift;
+  my $dbCore = shift;
+  
+  foreach my $table (keys %{$additions}) {
+    next if ($additions->{$table} eq '()'); 
+    my $stmt = qq{
+      DELETE FROM
+	$table
+      WHERE
+	$additions->{$table}
+    };
+    $dbCore->dbc->do($stmt);
+  }
 }
