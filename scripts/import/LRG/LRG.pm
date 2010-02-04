@@ -654,6 +654,12 @@ sub printNode {
 		#}
     }
 
+    # Sort the subsequent nodes based on their
+    #  1) internal order as specified in the %tag_order hash position, if applicable
+    #  2) start and end positions if the tag names are equal and they have start and ens attributes
+    my @node_order = sort sort_nodes @{$self->{'nodes'}};
+    $self->{'nodes'} = \@node_order;
+    
     # recursive iteration
     foreach my $node(@{$self->{'nodes'}}) {
 		$node->printNode();
@@ -661,6 +667,76 @@ sub printNode {
 
     # end the tag
     $self->{'xml'}->endTag() unless $self->{'empty'};
+}
+
+sub sort_nodes {
+    
+    # If $a or $b are undefined we return 0
+    if (!defined($a) || !defined($b)) {
+	return 0;
+    }
+ 
+    # For tags that need to have their elements in a specific order
+    my %element_order = (
+        # Fixed annotation - exon
+        'lrg_coords' => 1,
+        'cdna_coords' => 2,
+        'peptide_coords' => 3,
+        
+	# Updatable annotation
+	'source' => 1,
+	'modification_date' => 5,
+	'other_exon_naming' => 6,
+	'alternate_amino_acid_numbering' => 7,
+	'features' => 8,
+	
+        # Updatable annotation - gene
+        'partial' => 1,
+        'synonym' => 2,
+        'long_name' => 3,
+        'comment' => 4,
+        'db_xref' => 5,
+        'transcript' => 6,
+        
+        # Updatable annotation - transcript
+        'protein_product' => 6,
+        
+        # Updatable annotation - db_xref
+        'accession' => 2	    
+    );
+   
+    # If a and b has the same element name we check if they have start and end attributes to sort them by
+    if ($a->name() eq $b->name()) {
+	
+	# However, first we need to check if they have a name attribute. If they do, they should be sorted by that instead
+	# (this is to make sure fixed transcripts are sorted according to the order they are specified and not their coordinates)
+	if (defined($a->data->{'name'}) && defined($b->data->{'name'})) {
+	    return ($a->data->{'name'} cmp $b->data->{'name'});
+	}
+	
+	# If not, sort by position if applicable
+	if (defined($a->data->{'start'}) && defined($b->data->{'start'})) {
+   
+	    my $a_s = $a->data->{'start'};
+	    my $a_e = $a->data->{'end'};
+	    my $b_s = $b->data->{'start'};
+	    my $b_e = $b->data->{'end'};
+	
+	    # Sort primarily by start and secondarily by end
+	    if ($a_s < $b_s || ($a_s == $b_s && $a_e <= $b_e)) {
+		return -1;
+	    }
+	
+	    return 1;
+	}
+    }
+    
+    # If a and b are both in the %element_order hash, order them accordingly. Otherwise do nothing (return 0)
+    if (exists($element_order{$a->name()}) && exists($element_order{$b->name()})) {
+	return ($element_order{$a->name()} <=> $element_order{$b->name()});
+    }
+    
+    return 0;
 }
 
 # print all
