@@ -16,7 +16,7 @@ use Bio::EnsEMBL::Registry;
 my $CURRENT_ASSEMBLY = 'GRCh37';
 my $CURRENT_SCHEMA_VERSION = '1.5';
 
-my ($template_file, $output_file, $registry_file, $config_file, $target_dir, $exon_file, $genomic_file, $cdna_file, $peptide_file, $lrg_id, $help, $skip_fixed, $skip_updatable, $skip_unbranded, $skip_transcript_matching, $use_existing_mapping, $replace_annotations);
+my ($template_file, $output_file, $registry_file, $config_file, $target_dir, $exon_file, $genomic_file, $cdna_file, $peptide_file, $lrg_id, $help, $skip_fixed, $skip_updatable, $skip_unbranded, $skip_transcript_matching, $use_existing_mapping, $replace_annotations, $skip_host_check);
 
 usage() unless scalar @ARGV;
 
@@ -39,6 +39,7 @@ GetOptions(
 	   'skip_transcript_matching!' => \$skip_transcript_matching,
 	   'use_existing_mapping!' => \$use_existing_mapping,
 	   'replace_annotations!' => \$replace_annotations,
+	   'skip_host_check!' => \$skip_host_check,
 );
 
 usage() if $help;
@@ -95,6 +96,10 @@ if (!$skip_updatable) {
 	$LRGMapping::registry_file = $registry_file;
 	Bio::EnsEMBL::Registry->load_all( $registry_file );
 	$LRGMapping::dbCore = Bio::EnsEMBL::Registry->get_DBAdaptor('human','core');
+	my $host = $LRGMapping::dbCore->dbc->host();
+	if ($host !~ m/variation/ && !$skip_host_check) {
+		die('Host is ' . $host . '! Changes will be written to the database, make sure you want to use the database on this host. If so, skip this check by using -skip_host_check on command line');
+	}
 
 # Get the assembly used to fetch annotations
 #	my $csa = Bio::EnsEMBL::Registry->get_adaptor('Human','Core','CoordSystem');
