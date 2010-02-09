@@ -496,12 +496,18 @@
 		<strong>Coding region: </strong>
 		<xsl:value-of select="coding_region/@start"/>-<xsl:value-of select="coding_region/@end"/><br/>
 		
-		<!-- get comments from the updatable layer-->
+		<!-- get comments and transcript info from the updatable layer-->
 		<xsl:for-each select="/*/updatable_annotation/annotation_set/features/gene/transcript">
-		  <xsl:if test="@corresponding_fixed_id=$transname">
-			<xsl:for-each select="comment">
-			  <strong>Comment: </strong><xsl:value-of select="."/><br/>
+		  
+		  <xsl:if test="@fixed_id=$transname">
+		     <p style="white-space:pre;">[<xsl:value-of select="../../../source/name" />]<br/>
+			<xsl:for-each select="long_name">
+			   <strong>  Long name: </strong><xsl:value-of select="."/><br/>
 			</xsl:for-each>
+			<xsl:for-each select="comment">
+			   <strong>  Comment: </strong><xsl:value-of select="."/><br/>
+			</xsl:for-each>
+		     </p>
 		  </xsl:if>
 		</xsl:for-each>
 	  </p>
