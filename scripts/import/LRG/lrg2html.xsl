@@ -295,57 +295,7 @@
 	<p><strong>Organism: </strong><xsl:value-of select="fixed_annotation/organism"/><br/><strong>Taxonomy ID: </strong><xsl:value-of select="fixed_annotation/organism/@taxon"/></p>
 
 	 <xsl:for-each select="fixed_annotation/source">
-	    <p>
-	    <strong>Original source: </strong>
-	    <xsl:value-of select="name"/><br/>
-	    <xsl:for-each select="url">
-	       <xsl:variable name="url" select="."/>
-	       <strong>URL: </strong>
-	       <a>
-		  <xsl:attribute name="href">
-		     <xsl:if test="not(contains($url, 'http'))">http://</xsl:if>
-		     <xsl:value-of select="$url"/>
-		  </xsl:attribute>
-		  <xsl:attribute name="target">_blank</xsl:attribute>
-		  <xsl:if test="not(contains($url, 'http'))">http://</xsl:if>
-		  <xsl:value-of select="$url"/>
-	       </a>
-	    </xsl:for-each>
-	    </p>
-	    <xsl:if test="contact">
-	       <p>
-	       <strong>Contact</strong>
-	       <xsl:for-each select="contact">
-		  <p style="white-space:pre;">
-		     <xsl:if test="name">
-			<strong>  Name: </strong><xsl:value-of select="name"/>
-		     </xsl:if>
-		     <xsl:if test="address">
-			<br/>
-			<strong>  Address: </strong><xsl:value-of select="address"/>
-		     </xsl:if>
-		     <xsl:if test="email">
-			<br/>
-			<strong>  Email: </strong><xsl:value-of select="email"/>
-		     </xsl:if>
-		     <xsl:for-each select="url">
-			<xsl:variable name="url" select="."/>
-			<br/>
-			<strong>  URL: </strong>
-			<a>
-			   <xsl:attribute name="href">
-			      <xsl:if test="not(contains($url, 'http'))">http://</xsl:if>
-			      <xsl:value-of select="$url"/>
-			   </xsl:attribute>
-			   <xsl:attribute name="target">_blank</xsl:attribute>
-			   <xsl:if test="not(contains($url, 'http'))">http://</xsl:if>
-			   <xsl:value-of select="$url"/>
-			</a>
-		     </xsl:for-each>
-		  </p>
-	       </xsl:for-each>
-	       </p>
-	    </xsl:if>
+	    <xsl:apply-templates select="."/>
 	 </xsl:for-each>
 
 	<p><strong>Molecule type: </strong><xsl:value-of select="fixed_annotation/mol_type"/></p>
@@ -501,6 +451,9 @@
 		  
 		  <xsl:if test="@fixed_id=$transname">
 		     <p style="white-space:pre;">[<xsl:value-of select="../../../source/name" />]<br/>
+			<xsl:for-each select="@transcript_id">
+			   <strong>  Transcript ID: </strong><xsl:value-of select="."/><br/>
+			</xsl:for-each>
 			<xsl:for-each select="long_name">
 			   <strong>  Long name: </strong><xsl:value-of select="."/><br/>
 			</xsl:for-each>
@@ -1058,63 +1011,12 @@ select="substring($seq,cdna_coords/@start + ($cstart - lrg_coords/@start)+3,cdna
 	  
 	  <xsl:if test="$setnum>1"><br/><hr/></xsl:if>
 	  
+	  <xsl:apply-templates select="source"/>
+	    
 	  <p>
-	    <h3><strong>Source: </strong><xsl:value-of select="source/name"/></h3>
+	    <strong>Modification date: </strong><xsl:value-of select="modification_date"/>
 	  </p>
-	  
-	  <p><strong>Modification date: </strong><xsl:value-of select="modification_date"/></p>
  
-
-	 <p>
-	    <xsl:for-each select="source/url">
-	       <xsl:variable name="url" select="."/>
-	       <strong>URL: </strong>
-	       <a>
-		  <xsl:attribute name="href">
-		     <xsl:if test="not(contains($url, 'http'))">http://</xsl:if>
-		     <xsl:value-of select="$url"/>
-		  </xsl:attribute>
-		  <xsl:attribute name="target">_blank</xsl:attribute>
-		  <xsl:if test="not(contains($url, 'http'))">http://</xsl:if>
-		  <xsl:value-of select="$url"/>
-	       </a>
-	    </xsl:for-each>
-	 </p>
-	 <xsl:if test="source/contact">
-	    <p>
-	       <strong>Contact</strong>
-	       <xsl:for-each select="source/contact">
-		  <p style="white-space:pre;">
-		     <xsl:if test="name">
-			<strong>  Name: </strong><xsl:value-of select="name"/>
-		     </xsl:if>
-		     <xsl:if test="address">
-			<br/>
-			<strong>  Address: </strong><xsl:value-of select="address"/>
-		     </xsl:if>
-		     <xsl:if test="email">
-			<br/>
-			<strong>  Email: </strong><xsl:value-of select="email"/>
-		     </xsl:if>
-		     <xsl:for-each select="url">
-			<xsl:variable name="url" select="."/>
-			<br/>
-			<strong>  URL: </strong>
-			<a>
-			   <xsl:attribute name="href">
-			      <xsl:if test="not(contains($url, 'http'))">http://</xsl:if>
-			      <xsl:value-of select="$url"/>
-			   </xsl:attribute>
-			   <xsl:attribute name="target">_blank</xsl:attribute>
-			   <xsl:if test="not(contains($url, 'http'))">http://</xsl:if>
-			   <xsl:value-of select="$url"/>
-			</a>
-		     </xsl:for-each>
-		  </p>
-	       </xsl:for-each>
-	    </p>
-	 </xsl:if>
-  
 	  <xsl:if test="other_exon_naming/*">
 		<h3>Alternate exon naming</h3>
 		<ul>
@@ -1321,89 +1223,13 @@ select="substring($seq,cdna_coords/@start + ($cstart - lrg_coords/@start)+3,cdna
 					  
 					  <strong>External identifiers:</strong>
 					  <xsl:choose>
-						<xsl:when test="db_xref">
-							<xsl:for-each select="db_xref">
-							  <br/>-
-								<strong><xsl:value-of select="@source"/>: </strong>
-							  
-								<xsl:choose>
-								  <xsl:when test="@source='RefSeq'">
-									<a>
-									  <xsl:attribute name="href">
-										<xsl:choose>
-										  <xsl:when test="contains(@accession,'NP')">http://www.ncbi.nlm.nih.gov/protein/<xsl:value-of select="@accession"/></xsl:when>
-										  <xsl:otherwise>http://www.ncbi.nlm.nih.gov/nuccore/<xsl:value-of select="@accession"/></xsl:otherwise>
-										</xsl:choose>
-									  </xsl:attribute>
-									  <xsl:attribute name="target">_blank</xsl:attribute>
-									  <xsl:value-of select="@accession"/>
-									</a>
-								  </xsl:when>
-								  <xsl:when test="@source='Ensembl'">
-									<a>
-									  <xsl:attribute name="href">
-										<xsl:choose>
-										  <xsl:when test="contains(@accession,'ENST')">http://www.ensembl.org/Homo_sapiens/Transcript/Summary?db=core;t=<xsl:value-of select="@accession"/></xsl:when>
-										  <xsl:when test="contains(@accession,'ENSG')">http://www.ensembl.org/Homo_sapiens/Gene/Summary?db=core;g=<xsl:value-of select="@accession"/></xsl:when>
-										  <xsl:when test="contains(@accession,'ENSP')">http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory/Protein?protein=<xsl:value-of select="@accession"/></xsl:when>
-										  <xsl:otherwise>http://www.ensembl.org/Homo_sapiens/<xsl:value-of select="@accession"/></xsl:otherwise>
-										</xsl:choose>
-									  </xsl:attribute>
-									  <xsl:attribute name="target">_blank</xsl:attribute>
-									  <xsl:value-of select="@accession"/>
-									</a>
-								  </xsl:when>
-								  <xsl:when test="@source='UniProtKB'">
-									<a>
-									  <xsl:attribute name="href">http://www.uniprot.org/uniprot/<xsl:value-of select="@accession"/></xsl:attribute>
-									  <xsl:attribute name="target">_blank</xsl:attribute>
-									  <xsl:value-of select="@accession"/>
-									</a>
-								  </xsl:when>
-								  <xsl:when test="@source='CCDS'">
-									<a>
-									  <xsl:attribute name="href">http://www.ncbi.nlm.nih.gov/projects/CCDS/CcdsBrowse.cgi?REQUEST=ALLFIELDS&amp;DATA=<xsl:value-of select="@accession"/></xsl:attribute>
-									  <xsl:attribute name="target">_blank</xsl:attribute>
-									  <xsl:value-of select="@accession"/>
-									</a>
-								  </xsl:when>
-								  <xsl:when test="@source='GeneID'">
-									<a>
-									  <xsl:attribute name="href">http://www.ncbi.nlm.nih.gov/sites/entrez?db=gene&amp;cmd=Retrieve&amp;dopt=Graphics&amp;list_uids=<xsl:value-of select="@accession"/></xsl:attribute>
-									  <xsl:attribute name="target">_blank</xsl:attribute>
-									  <xsl:value-of select="@accession"/>
-									</a>
-								  </xsl:when>
-								  <xsl:when test="@source='HGNC'">
-									<a>
-									  <xsl:attribute name="href">http://www.genenames.org/data/hgnc_data.php?hgnc_id=<xsl:value-of select="@accession"/></xsl:attribute>
-									  <xsl:attribute name="target">_blank</xsl:attribute>
-									  <xsl:value-of select="@accession"/>
-									</a>
-								  </xsl:when>
-								  <xsl:when test="@source='MIM'">
-									<a>
-									  <xsl:attribute name="href">http://www.ncbi.nlm.nih.gov/entrez/dispomim.cgi?id=<xsl:value-of select="@accession"/></xsl:attribute>
-									  <xsl:attribute name="target">_blank</xsl:attribute>
-									  <xsl:value-of select="@accession"/>
-									</a>
-								  </xsl:when>
-								  <xsl:when test="@source='GI'">
-									<a>
-									  <xsl:attribute name="href">http://www.ncbi.nlm.nih.gov/nuccore/<xsl:value-of select="@accession"/></xsl:attribute>
-									  <xsl:attribute name="target">_blank</xsl:attribute>
-									  <xsl:value-of select="@accession"/>
-									</a>
-								  </xsl:when>								  
-								  
-								  <xsl:otherwise>
-									<xsl:value-of select="@accession"/>
-								  </xsl:otherwise>
-								  
-								</xsl:choose>
-							</xsl:for-each>
-						</xsl:when>
-						<xsl:otherwise>-</xsl:otherwise>
+					     <xsl:when test="db_xref">
+						<xsl:for-each select="db_xref">
+						   <br/>-
+						   <xsl:apply-templates select="."/>
+						</xsl:for-each>
+					     </xsl:when>
+					     <xsl:otherwise>-</xsl:otherwise>
 					  </xsl:choose>
 					  <br/>
 					  
@@ -1423,9 +1249,29 @@ select="substring($seq,cdna_coords/@start + ($cstart - lrg_coords/@start)+3,cdna
 					  <xsl:when test="transcript">
 						<table width="100%">
 						  <tr><th>Transcript ID</th><th>Source</th><th>Start</th><th>End</th><th>External identifiers</th><th>Other</th></tr>
-						  <xsl:for-each select="transcript">
+						  <xsl:for-each select="transcript">						      
 							<tr valign="top">
-							  <td><xsl:value-of select="@transcript_id"/></td>
+							  <td>
+							    <xsl:choose>
+							       <xsl:when test="@source='RefSeq'">
+								  <a>
+								     <xsl:attribute name="href">http://www.ncbi.nlm.nih.gov/nuccore/<xsl:value-of select="@transcript_id"/></xsl:attribute>
+								     <xsl:attribute name="target">_blank</xsl:attribute>
+								     <xsl:value-of select="@transcript_id"/>
+								  </a>
+							       </xsl:when>
+							       <xsl:when test="@source='Ensembl'">
+								  <a>
+								     <xsl:attribute name="href">http://www.ensembl.org/Homo_sapiens/Transcript/Summary?db=core;t=<xsl:value-of select="@transcript_id"/></xsl:attribute>
+								     <xsl:attribute name="target">_blank</xsl:attribute>
+								     <xsl:value-of select="@transcript_id"/>
+								  </a>
+							       </xsl:when>
+							       <xsl:otherwise>
+								  <xsl:value-of select="@transcript_id"/>
+							       </xsl:otherwise>
+							    </xsl:choose>
+							  </td>
 							  <td><xsl:value-of select="@source"/></td>
 							  <td><xsl:value-of select="@start"/></td>
 							  <td><xsl:value-of select="@end"/></td>
@@ -1434,85 +1280,8 @@ select="substring($seq,cdna_coords/@start + ($cstart - lrg_coords/@start)+3,cdna
 								  <xsl:when test="db_xref">
 									
 									<xsl:for-each select="db_xref">
-									  <strong><xsl:value-of select="@source"/>: </strong>
-									  
-									  <xsl:choose>
-										<xsl:when test="@source='RefSeq'">
-										  <a>
-											<xsl:attribute name="href">
-											  <xsl:choose>
-												<xsl:when test="contains(@accession,'NP')">http://www.ncbi.nlm.nih.gov/protein/<xsl:value-of select="@accession"/></xsl:when>
-												<xsl:otherwise>http://www.ncbi.nlm.nih.gov/nuccore/<xsl:value-of select="@accession"/></xsl:otherwise>
-											  </xsl:choose>
-											</xsl:attribute>
-											<xsl:attribute name="target">_blank</xsl:attribute>
-											<xsl:value-of select="@accession"/>
-										  </a>
-										</xsl:when>
-										<xsl:when test="@source='Ensembl'">
-										  <a>
-											<xsl:attribute name="href">
-											  <xsl:choose>
-												<xsl:when test="contains(@accession,'ENST')">http://www.ensembl.org/Homo_sapiens/Transcript/Summary?db=core;t=<xsl:value-of select="@accession"/></xsl:when>
-												<xsl:when test="contains(@accession,'ENSG')">http://www.ensembl.org/Homo_sapiens/Gene/Summary?db=core;g=<xsl:value-of select="@accession"/></xsl:when>
-												<xsl:when test="contains(@accession,'ENSP')">http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory/Protein?protein=<xsl:value-of select="@accession"/></xsl:when>
-												<xsl:otherwise>http://www.ensembl.org/Homo_sapiens/<xsl:value-of select="@accession"/></xsl:otherwise>
-											  </xsl:choose>
-											</xsl:attribute>
-											<xsl:attribute name="target">_blank</xsl:attribute>
-											<xsl:value-of select="@accession"/>
-										  </a>
-										</xsl:when>
-										<xsl:when test="@source='UniProtKB'">
-										  <a>
-											<xsl:attribute name="href">http://www.uniprot.org/uniprot/<xsl:value-of select="@accession"/></xsl:attribute>
-											<xsl:attribute name="target">_blank</xsl:attribute>
-											<xsl:value-of select="@accession"/>
-										  </a>
-										</xsl:when>
-										<xsl:when test="@source='CCDS'">
-										  <a>
-											<xsl:attribute name="href">http://www.ncbi.nlm.nih.gov/projects/CCDS/CcdsBrowse.cgi?REQUEST=ALLFIELDS&amp;DATA=<xsl:value-of select="@accession"/></xsl:attribute>
-											<xsl:attribute name="target">_blank</xsl:attribute>
-											<xsl:value-of select="@accession"/>
-										  </a>
-										</xsl:when>
-										<xsl:when test="@source='GeneID'">
-										  <a>
-											<xsl:attribute name="href">http://www.ncbi.nlm.nih.gov/sites/entrez?db=gene&amp;cmd=Retrieve&amp;dopt=Graphics&amp;list_uids=<xsl:value-of select="@accession"/></xsl:attribute>
-											<xsl:attribute name="target">_blank</xsl:attribute>
-											<xsl:value-of select="@accession"/>
-										  </a>
-										</xsl:when>
-										<xsl:when test="@source='HGNC'">
-										  <a>
-											<xsl:attribute name="href">http://www.genenames.org/data/hgnc_data.php?hgnc_id=<xsl:value-of select="@accession"/></xsl:attribute>
-											<xsl:attribute name="target">_blank</xsl:attribute>
-											<xsl:value-of select="@accession"/>
-										  </a>
-										</xsl:when>
-										<xsl:when test="@source='MIM'">
-										  <a>
-											<xsl:attribute name="href">http://www.ncbi.nlm.nih.gov/entrez/dispomim.cgi?id=<xsl:value-of select="@accession"/></xsl:attribute>
-											<xsl:attribute name="target">_blank</xsl:attribute>
-											<xsl:value-of select="@accession"/>
-										  </a>
-										</xsl:when>
-										<xsl:when test="@source='GI'">
-										  <a>
-											<xsl:attribute name="href">http://www.ncbi.nlm.nih.gov/nuccore/<xsl:value-of select="@accession"/></xsl:attribute>
-											<xsl:attribute name="target">_blank</xsl:attribute>
-											<xsl:value-of select="@accession"/>
-										  </a>
-										</xsl:when>
-										  
-										<xsl:otherwise>
-										  <xsl:value-of select="@accession"/>
-										</xsl:otherwise>
-										
-									  </xsl:choose>
-									  
-									  <xsl:if test="position()!=last()"><br/></xsl:if>
+									   <xsl:apply-templates select="."/>
+									   <xsl:if test="position()!=last()"><br/></xsl:if>
 									</xsl:for-each>
 									
 								  </xsl:when>
@@ -1537,98 +1306,41 @@ select="substring($seq,cdna_coords/@start + ($cstart - lrg_coords/@start)+3,cdna
 						  <xsl:for-each select="transcript">
 							<xsl:for-each select="protein_product">
 							  <tr valign="top">
-								<td><xsl:value-of select="@accession"/></td>
+							    <td>
+							       <xsl:choose>
+								  <xsl:when test="@source='RefSeq'">
+								     <a>
+									<xsl:attribute name="href">http://www.ncbi.nlm.nih.gov/protein/<xsl:value-of select="@accession"/></xsl:attribute>
+									<xsl:attribute name="target">_blank</xsl:attribute>
+									<xsl:value-of select="@accession"/>
+								     </a>
+								  </xsl:when>
+								  <xsl:when test="@source='Ensembl'">
+								     <a>
+									<xsl:attribute name="href">http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory/Protein?protein=<xsl:value-of select="@accession"/></xsl:attribute>
+									<xsl:attribute name="target">_blank</xsl:attribute>
+									<xsl:value-of select="@accession"/>
+								     </a>
+								  </xsl:when>
+								  <xsl:otherwise>
+									<xsl:value-of select="@accession"/>
+								  </xsl:otherwise>
+							       </xsl:choose>
+							    </td>
 								<td><xsl:value-of select="@source"/></td>
 								<td><xsl:value-of select="@cds_start"/></td>
 								<td><xsl:value-of select="@cds_end"/></td>
 								<td>
 								  <xsl:choose>
-									<xsl:when test="db_xref">
+								     <xsl:when test="db_xref">
 									  
-									  <xsl:for-each select="db_xref">
-										<strong><xsl:value-of select="@source"/>: </strong>
-										
-										<xsl:choose>
-										  <xsl:when test="@source='RefSeq'">
-											<a>
-											  <xsl:attribute name="href">
-												<xsl:choose>
-												  <xsl:when test="contains(@accession,'NP')">http://www.ncbi.nlm.nih.gov/protein/<xsl:value-of select="@accession"/></xsl:when>
-												  <xsl:otherwise>http://www.ncbi.nlm.nih.gov/nuccore/<xsl:value-of select="@accession"/></xsl:otherwise>
-												</xsl:choose>
-											  </xsl:attribute>
-											  <xsl:attribute name="target">_blank</xsl:attribute>
-											  <xsl:value-of select="@accession"/>
-											</a>
-										  </xsl:when>
-										  <xsl:when test="@source='Ensembl'">
-											<a>
-											  <xsl:attribute name="href">
-												<xsl:choose>
-												  <xsl:when test="contains(@accession,'ENST')">http://www.ensembl.org/Homo_sapiens/Transcript/Summary?db=core;t=<xsl:value-of select="@accession"/></xsl:when>
-												  <xsl:when test="contains(@accession,'ENSG')">http://www.ensembl.org/Homo_sapiens/Gene/Summary?db=core;g=<xsl:value-of select="@accession"/></xsl:when>
-												  <xsl:when test="contains(@accession,'ENSP')">http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory/Protein?protein=<xsl:value-of select="@accession"/></xsl:when>
-												  <xsl:otherwise>http://www.ensembl.org/Homo_sapiens/<xsl:value-of select="@accession"/></xsl:otherwise>
-												</xsl:choose>
-											  </xsl:attribute>
-											  <xsl:attribute name="target">_blank</xsl:attribute>
-											  <xsl:value-of select="@accession"/>
-											</a>
-										  </xsl:when>
-										  <xsl:when test="@source='UniProtKB'">
-											<a>
-											  <xsl:attribute name="href">http://www.uniprot.org/uniprot/<xsl:value-of select="@accession"/></xsl:attribute>
-											  <xsl:attribute name="target">_blank</xsl:attribute>
-											  <xsl:value-of select="@accession"/>
-											</a>
-										  </xsl:when>
-										  <xsl:when test="@source='CCDS'">
-											<a>
-											  <xsl:attribute name="href">http://www.ncbi.nlm.nih.gov/projects/CCDS/CcdsBrowse.cgi?REQUEST=ALLFIELDS&amp;DATA=<xsl:value-of select="@accession"/></xsl:attribute>
-											  <xsl:attribute name="target">_blank</xsl:attribute>
-											  <xsl:value-of select="@accession"/>
-											</a>
-										  </xsl:when>
-										  <xsl:when test="@source='GeneID'">
-											<a>
-											  <xsl:attribute name="href">http://www.ncbi.nlm.nih.gov/sites/entrez?db=gene&amp;cmd=Retrieve&amp;dopt=Graphics&amp;list_uids=<xsl:value-of select="@accession"/></xsl:attribute>
-											  <xsl:attribute name="target">_blank</xsl:attribute>
-											  <xsl:value-of select="@accession"/>
-											</a>
-										  </xsl:when>
-										  <xsl:when test="@source='HGNC'">
-											<a>
-											  <xsl:attribute name="href">http://www.genenames.org/data/hgnc_data.php?hgnc_id=<xsl:value-of select="@accession"/></xsl:attribute>
-											  <xsl:attribute name="target">_blank</xsl:attribute>
-											  <xsl:value-of select="@accession"/>
-											</a>
-										  </xsl:when>
-										  <xsl:when test="@source='MIM'">
-											<a>
-											  <xsl:attribute name="href">http://www.ncbi.nlm.nih.gov/entrez/dispomim.cgi?id=<xsl:value-of select="@accession"/></xsl:attribute>
-											  <xsl:attribute name="target">_blank</xsl:attribute>
-											  <xsl:value-of select="@accession"/>
-											</a>
-										  </xsl:when>
-										  <xsl:when test="@source='GI'">
-											<a>
-											  <xsl:attribute name="href">http://www.ncbi.nlm.nih.gov/protein/<xsl:value-of select="@accession"/></xsl:attribute>
-											  <xsl:attribute name="target">_blank</xsl:attribute>
-											  <xsl:value-of select="@accession"/>
-											</a>
-										  </xsl:when>
-										  
-										  <xsl:otherwise>
-											<xsl:value-of select="@accession"/>
-										  </xsl:otherwise>
-										  
-										</xsl:choose>
-										
-										<xsl:if test="position()!=last()"><br/></xsl:if>
-									  </xsl:for-each>
+									<xsl:for-each select="db_xref">
+									   <xsl:apply-templates select="."/>
+									   <xsl:if test="position()!=last()"><br/></xsl:if>
+									</xsl:for-each>
 									  
-									</xsl:when>
-									<xsl:otherwise>-</xsl:otherwise>
+								     </xsl:when>
+								     <xsl:otherwise>-</xsl:otherwise>
 								  </xsl:choose>
 								</td>
 								<td>
@@ -1662,6 +1374,144 @@ select="substring($seq,cdna_coords/@start + ($cstart - lrg_coords/@start)+3,cdna
     </html>
   </xsl:template>
 
+   <xsl:template match="db_xref">	
+	<strong><xsl:value-of select="@source"/>: </strong>	
+	<xsl:choose>
+	   <xsl:when test="@source='RefSeq'">
+	      <a>
+	  <xsl:attribute name="href">
+	     <xsl:choose>
+		<xsl:when test="contains(@accession,'NP')">http://www.ncbi.nlm.nih.gov/protein/<xsl:value-of select="@accession"/></xsl:when>
+		<xsl:otherwise>http://www.ncbi.nlm.nih.gov/nuccore/<xsl:value-of select="@accession"/></xsl:otherwise>
+	     </xsl:choose>
+	  </xsl:attribute>
+	  <xsl:attribute name="target">_blank</xsl:attribute>
+	  <xsl:value-of select="@accession"/>
+	      </a>
+	   </xsl:when>
+	   <xsl:when test="@source='Ensembl'">
+	      <a>
+	  <xsl:attribute name="href">
+	     <xsl:choose>
+		<xsl:when test="contains(@accession,'ENST')">http://www.ensembl.org/Homo_sapiens/Transcript/Summary?db=core;t=<xsl:value-of select="@accession"/></xsl:when>
+		<xsl:when test="contains(@accession,'ENSG')">http://www.ensembl.org/Homo_sapiens/Gene/Summary?db=core;g=<xsl:value-of select="@accession"/></xsl:when>
+		<xsl:when test="contains(@accession,'ENSP')">http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory/Protein?protein=<xsl:value-of select="@accession"/></xsl:when>
+		<xsl:otherwise>http://www.ensembl.org/Homo_sapiens/<xsl:value-of select="@accession"/></xsl:otherwise>
+	     </xsl:choose>
+	  </xsl:attribute>
+	  <xsl:attribute name="target">_blank</xsl:attribute>
+	  <xsl:value-of select="@accession"/>
+	      </a>
+	   </xsl:when>
+	   <xsl:when test="@source='UniProtKB'">
+	      <a>
+	  <xsl:attribute name="href">http://www.uniprot.org/uniprot/<xsl:value-of select="@accession"/></xsl:attribute>
+	  <xsl:attribute name="target">_blank</xsl:attribute>
+	  <xsl:value-of select="@accession"/>
+	      </a>
+	   </xsl:when>
+	   <xsl:when test="@source='CCDS'">
+	      <a>
+	  <xsl:attribute name="href">http://www.ncbi.nlm.nih.gov/projects/CCDS/CcdsBrowse.cgi?REQUEST=ALLFIELDS&amp;DATA=<xsl:value-of select="@accession"/></xsl:attribute>
+	  <xsl:attribute name="target">_blank</xsl:attribute>
+	  <xsl:value-of select="@accession"/>
+	      </a>
+	   </xsl:when>
+	   <xsl:when test="@source='GeneID'">
+	      <a>
+	  <xsl:attribute name="href">http://www.ncbi.nlm.nih.gov/sites/entrez?db=gene&amp;cmd=Retrieve&amp;dopt=Graphics&amp;list_uids=<xsl:value-of select="@accession"/></xsl:attribute>
+	  <xsl:attribute name="target">_blank</xsl:attribute>
+	  <xsl:value-of select="@accession"/>
+	      </a>
+	   </xsl:when>
+	   <xsl:when test="@source='HGNC'">
+	      <a>
+	  <xsl:attribute name="href">http://www.genenames.org/data/hgnc_data.php?hgnc_id=<xsl:value-of select="@accession"/></xsl:attribute>
+	  <xsl:attribute name="target">_blank</xsl:attribute>
+	  <xsl:value-of select="@accession"/>
+	      </a>
+	   </xsl:when>
+	   <xsl:when test="@source='MIM'">
+	      <a>
+	  <xsl:attribute name="href">http://www.ncbi.nlm.nih.gov/entrez/dispomim.cgi?id=<xsl:value-of select="@accession"/></xsl:attribute>
+	  <xsl:attribute name="target">_blank</xsl:attribute>
+	  <xsl:value-of select="@accession"/>
+	      </a>
+	   </xsl:when>
+	   <xsl:when test="@source='GI'">
+	      <a>
+	  <xsl:attribute name="href">http://www.ncbi.nlm.nih.gov/protein/<xsl:value-of select="@accession"/></xsl:attribute>
+	  <xsl:attribute name="target">_blank</xsl:attribute>
+	  <xsl:value-of select="@accession"/>
+	      </a>
+	   </xsl:when>
+	 <xsl:when test="@source='miRBase'">
+	    <a>
+	       <xsl:attribute name="href">http://www.mirbase.org/cgi-bin/mirna_entry.pl?acc=<xsl:value-of select="@accession"/></xsl:attribute>
+	       <xsl:attribute name="target">_blank</xsl:attribute>
+	       <xsl:value-of select="@accession"/>
+	    </a>
+	 </xsl:when>
+	 <xsl:when test="@source='RFAM'">
+	    <a>
+	       <xsl:attribute name="href">http://rfam.sanger.ac.uk/family?acc=<xsl:value-of select="@accession"/></xsl:attribute>
+	       <xsl:attribute name="target">_blank</xsl:attribute>
+	       <xsl:value-of select="@accession"/>
+	    </a>
+	 </xsl:when>
+	   
+	   <xsl:otherwise>
+	      <xsl:value-of select="@accession"/>
+	   </xsl:otherwise>  
+	</xsl:choose>
+   </xsl:template>
+   
+   <xsl:template match="source">
+      <h3><strong>Source</strong></h3>
+      <p>
+         <xsl:value-of select="name"/>
+         <xsl:for-each select="url">
+	    <br/>
+	    <xsl:apply-templates select="."/>
+	 </xsl:for-each>
+      </p>
+      
+      <xsl:for-each select="contact">
+	    <p style="white-space:pre;">
+	       <strong>Contact</strong>
+	       <xsl:if test="name">
+		  <br/>
+		  <strong>  Name: </strong><xsl:value-of select="name"/>
+	       </xsl:if>
+	       <xsl:if test="address">
+		  <br/>
+		  <strong>  Address: </strong><xsl:value-of select="address"/>
+	       </xsl:if>
+	       <xsl:if test="email">
+		  <br/>
+		  <strong>  Email: </strong><xsl:value-of select="email"/>
+	       </xsl:if>
+	       <xsl:for-each select="url">
+		  <br/>
+		    <xsl:apply-templates select="."/>
+	       </xsl:for-each>
+	    </p>
+      </xsl:for-each>
+   </xsl:template>
+   
+   <xsl:template match="url">
+      <xsl:variable name="url" select="."/>
+      <a>
+	 <xsl:attribute name="href">
+	    <xsl:if test="not(contains($url, 'http'))">http://</xsl:if>
+	    <xsl:value-of select="$url"/>
+	 </xsl:attribute>
+	 <xsl:attribute name="target">_blank</xsl:attribute>
+	 <xsl:if test="not(contains($url, 'http'))">http://</xsl:if>
+	 <xsl:value-of select="$url"/>
+      </a>
+   </xsl:template>
+   
 <xslt:template xmlns:xslt="http://www.w3.org/1999/XSL/Transform" name="for-loop-d1e144"><xslt:param name="i"/><xslt:param name="tod1e144"/><xslt:param name="stepd1e144"/>
 		  <tr>
 			<td class="sequence"><xsl:value-of select="substring(fixed_annotation/sequence,$i,60)"/></td>
@@ -1675,4 +1525,6 @@ select="substring($seq,cdna_coords/@start + ($cstart - lrg_coords/@start)+3,cdna
 			  <!--<td class="coord"><xsl:value-of select="$i "/></td>-->
 			  <td class="sequence"><xsl:value-of select="substring(coding_region/translation/sequence,$i,60)"/></td>
 			</tr>
-		  <xslt:if test="$i+$stepd1e966 &lt;= $tod1e966"><xslt:call-template name="for-loop-d1e966"><xslt:with-param name="i" select="$i + $stepd1e966"/><xslt:with-param name="tod1e966" select="$tod1e966"/><xslt:with-param name="stepd1e966" select="$stepd1e966"/><xslt:with-param name="transname" select="$transname"/><xslt:with-param name="first_exon_start" select="$first_exon_start"/></xslt:call-template></xslt:if></xslt:template></xsl:stylesheet>
+		  <xslt:if test="$i+$stepd1e966 &lt;= $tod1e966"><xslt:call-template name="for-loop-d1e966"><xslt:with-param name="i" select="$i + $stepd1e966"/><xslt:with-param name="tod1e966" select="$tod1e966"/><xslt:with-param name="stepd1e966" select="$stepd1e966"/><xslt:with-param name="transname" select="$transname"/><xslt:with-param name="first_exon_start" select="$first_exon_start"/></xslt:call-template></xslt:if>
+</xslt:template>
+</xsl:stylesheet>
