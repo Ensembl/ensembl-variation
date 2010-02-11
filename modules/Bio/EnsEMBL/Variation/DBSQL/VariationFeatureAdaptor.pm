@@ -136,7 +136,7 @@ sub fetch_all_genotyped_by_Slice{
                a particular source.
 			   The optional $annotation_name argument can
                be used to retrieve only variation features associated with
-               that annotation.
+               that annotation - this can also be a phenotype's dbID.
   Returntype : reference to list Bio::EnsEMBL::Variation::VariationFeature
   Exceptions : throw on bad argument
   Caller     : general
