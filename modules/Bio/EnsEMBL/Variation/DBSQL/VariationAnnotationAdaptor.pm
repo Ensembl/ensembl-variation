@@ -216,7 +216,7 @@ sub _default_where_clause {
 }
 
 sub _columns {
-  return qw( va.variation_annotation_id va.variation_id p.name p.description
+  return qw( va.variation_annotation_id va.variation_id p.phenotype_id p.name p.description
              s.name va.study va.study_type va.local_stable_id
              va.associated_gene va.associated_variant_risk_allele
 	     va.variation_names va.risk_allele_freq_in_controls va.p_value
@@ -230,14 +230,15 @@ sub _objs_from_sth {
 
   my @features;
 
-  my ($variation_annotation_id,$var_id,$phenotype_name,$phenotype_description,$source_name,$study,$study_type,$local_stable_id,$associated_gene,$associated_variant_risk_allele,$variation_names,$risk_allele_freq_in_controls,$p_value);
-  $sth->bind_columns(\$variation_annotation_id,\$var_id,\$phenotype_name,\$phenotype_description,\$source_name,\$study,\$study_type,\$local_stable_id,\$associated_gene,\$associated_variant_risk_allele,\$variation_names,\$risk_allele_freq_in_controls, \$p_value);
+  my ($variation_annotation_id,$var_id,$phenotype_id,$phenotype_name,$phenotype_description,$source_name,$study,$study_type,$local_stable_id,$associated_gene,$associated_variant_risk_allele,$variation_names,$risk_allele_freq_in_controls,$p_value);
+  $sth->bind_columns(\$variation_annotation_id,\$var_id,\$phenotype_id,\$phenotype_name,\$phenotype_description,\$source_name,\$study,\$study_type,\$local_stable_id,\$associated_gene,\$associated_variant_risk_allele,\$variation_names,\$risk_allele_freq_in_controls, \$p_value);
 
   while($sth->fetch()) {
     push @features, $self->_create_feature_fast('Bio::EnsEMBL::Variation::VariationAnnotation',
 
     {'dbID' => $variation_annotation_id,
      '_variation_id'         => $var_id,
+	 '_phenotype_id'		 => $phenotype_id,
      'phenotype_name'        => $phenotype_name,
      'phenotype_description' => $phenotype_description,
      'source_name'           => $source_name,
