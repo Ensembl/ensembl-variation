@@ -125,14 +125,15 @@ sub new {
   my $class = ref($caller) || $caller;
   my $self = $class->SUPER::new(@_);
 
-  my ($dbID,$adaptor,$phenotype_name,$phenotype_description,$source_name,$study_type,$local_stable_id,$variation_id,$variation_names,$variation,$study,$associated_gene,$associated_variant_risk_allele,$risk_allele_freq_in_controls,$p_value) =
-    rearrange([qw(dbID ADAPTOR PHENOTYPE_NAME PHENOTYPE_DESCRIPTION SOURCE_NAME
+  my ($dbID,$adaptor,$phenotype_id,$phenotype_name,$phenotype_description,$source_name,$study_type,$local_stable_id,$variation_id,$variation_names,$variation,$study,$associated_gene,$associated_variant_risk_allele,$risk_allele_freq_in_controls,$p_value) =
+    rearrange([qw(dbID ADAPTOR _PHENOTYPE_ID PHENOTYPE_NAME PHENOTYPE_DESCRIPTION SOURCE_NAME
                   STUDY_TYPE LOCAL_STABLE_ID _VARIATION_ID VARIATION_NAMES VARIATION
 		  STUDY ASSOCIATED_GENE ASSOCIATED_VARIANT_RISK_ALLELE
 		 RISK_ALLELE_FREQ_IN_CONTROLS P_VALUE)],@_); 
 
   $self->{'dbID'} = $dbID;
   $self->{'adaptor'}    = $adaptor;
+  $self->{'_phenotype_id'} = $phenotype_id;
   $self->{'phenotype_name'}   = $phenotype_name;
   $self->{'phenotype_description'}  = $phenotype_description;
   $self->{'local_stable_id'} = $local_stable_id;
