@@ -167,7 +167,12 @@ sub fetch_all_with_annotation_by_Slice{
     }
     
     if(defined $annotation) {
-		$extra_sql .= qq{ AND (p.name = '$annotation' OR p.description LIKE '%$annotation%') };
+		if($annotation =~ /^[0-9]+$/) {
+		  $extra_sql .= qq{ AND p.phenotype_id = $annotation };
+		}
+		else {
+		  $extra_sql .= qq{ AND (p.name = '$annotation' OR p.description LIKE '%$annotation%') };
+		}
     }
     
     my $cols = join ",", $self->_columns();
