@@ -964,6 +964,65 @@ sub remove() {
     }
 }
 
+# Check if this node is identical to the supplied node. The node is identical if everything beneath it is identical
+sub identical {
+    my $self = shift;
+    my $subj = shift;
+    
+    # If name differs, the nodes are not identical
+    if ($self->{'name'} ne $subj->{'name'}) {
+	return 0;
+    }
+    # If content differs, the nodes are not identical
+    if ((defined($self->{'content'}) != defined($subj->{'content'})) || (defined($self->{'content'}) && $self->{'content'} ne $subj->{'content'})) {
+	return 0;
+    }
+    # If the number of attributes differs, the nodes are not identical
+    if (scalar(keys %{$self->{'data'}}) != scalar(keys %{$subj->{'data'}})) {
+	return 0;
+    }
+    # If the number of child nodes differs, the nodes are not identical
+    if (scalar(@{$self->{'nodes'}}) != scalar(@{$subj->{'nodes'}})) {
+	return 0;
+    }
+    # Check that all attributes are identical
+    foreach my $key (keys %{$self->{'data'}}) {
+	if (!exists($subj->{'data'}{$key}) || $self->{'data'}{$key} ne $subj->{'data'}{$key}) {
+	    return 0;
+	}
+    }
+    # Loop over all child nodes and make sure they are identical as well (but allow that they may occur in different order in the child node array)
+    foreach my $child (@{$self->{'nodes'}}) {
+	my $identical = 0;
+	foreach my $subj_child (@{$subj->{'nodes'}}) {
+	    $identical = $child->identical($subj_child);
+	    if ($identical) {
+		last;
+	    }
+	}
+	if (!$identical) {
+	    return 0;
+	}
+    }
+    # Now we've checked everything, the nodes must be identical
+    return 1;
+}
+
+# Check if the supplied node exists among the children of this node. If an optional second argument is supplied, the method will operate recursively on the subtree. The checking is done by the identical() method
+sub nodeExists {
+    my $self = shift;
+    my $subj = shift;
+    my $recursion = shift;
+    
+    foreach my $child (@{$self->{'nodes'}}) {
+	if ($child->identical($subj) || (defined($recursion) && $child->nodeExists($subj))) {
+	    return 1;
+	}
+    }
+    
+    return 0;
+}
+
 # NODE
 ######
 
