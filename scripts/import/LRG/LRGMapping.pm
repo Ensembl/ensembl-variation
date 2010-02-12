@@ -557,7 +557,7 @@ sub get_annotations {
   $q_strand = $fp->strand;
   my $pairs = $fp->type;
   
-  my $sub_slice = $slice->sub_Slice($t_start,$t_end,$q_strand);
+ # my $sub_slice = $slice->sub_Slice($t_start,$t_end,$q_strand);
   my $full_match = $fp->identical_matches;
   
   my @nodes;
@@ -628,10 +628,11 @@ sub get_annotations {
 		
      #print "before transfprm g start-end ",$gene->start,'-',$gene->end,"\n";
      #my $new_gene = $gene->transform('LRG');
-     my $new_gene = $gene->transfer($lrg_slice);
+#     my $new_gene = $gene->transfer($lrg_slice);
      #print "after transform g start-end ",$new_gene->start,'-',$new_gene->end,"\n" if $new_gene;
 	  
-     my @new_nodes = @{get_gene_annotation($new_gene,$lrg_slice->end)};
+    # Pass the gene as it is on the reference slice instead and do a transformation for each transcript separately in the subroutine	  
+     my @new_nodes = @{get_gene_annotation($gene,$lrg_slice)};
 	  
      push @nodes, @new_nodes;
    }
@@ -644,14 +645,18 @@ sub get_annotations {
 sub get_gene_annotation {
 
 	my $gene = shift;
-	my $slice_end = shift;
+	my $lrg_slice = shift;
+	my $slice_end = $lrg_slice->end;
 	my ($current, $entry);
 	my @nodes;
 	
-# Check if the boundaries of the gene extends beyond the mapped region, in which case the end points should be set to those of the mapped region and a flag indicating partial overlap should be set	
+	my $lrg_gene = $gene->transfer($lrg_slice);
+	
+# Check if the boundaries of the gene extends beyond the mapped region, in which case the end points should be set to those of the mapped region and a flag indicating partial overlap should be set
+
 	my $feat_start = max($gene->start,1);
 	my $feat_end = min($gene->end,$slice_end);
-	my $feat_strand = $gene->strand;
+	my $feat_strand = $lrg_gene->strand;
 	
 	my $partial_5 = ($feat_start != $gene->start);
 	my $partial_3 = ($feat_end != $gene->end);
@@ -687,8 +692,9 @@ sub get_gene_annotation {
 				$gene_node->addNode('synonym')->content($synonym);
 			}
 			if (length($entry->description) > 1) {
-			  $gene_node->addNode('long_name')->content($entry->description);
-			  $long_name = 1;
+			  $long_name = LRG::Node->new('long_name');
+			  $long_name->content($entry->description);
+			  $gene_node->addExisting($long_name) unless ($gene_node->nodeExists($long_name));
 			}
 		}
 		$gene_node->addExisting(xref($entry));
@@ -696,8 +702,10 @@ sub get_gene_annotation {
 		#print $entry->dbname, " ", $entry->primary_id, ".", $entry->version, " ", $entry->description, "\n";
 	}
 	# If no HGNC reference was found, add the description from Ensembl as long_name
-	if (!defined($long_name)) {
-	  $gene_node->addNode('long_name')->content($gene->description()) if (length($gene->description()) > 0);
+	if (!defined($long_name) && defined($gene->description()) && length($gene->description()) > 0) {
+	  $long_name = LRG::Node->new('long_name');
+	  $long_name->content($gene->description());
+	  $gene_node->addExisting($long_name);
 	}
 	
 	$gene_node->addEmptyNode('db_xref', {'source' => 'Ensembl', 'accession' => $gene->stable_id});
@@ -709,7 +717,12 @@ sub get_gene_annotation {
 	foreach my $trans(@{$gene->get_all_Transcripts}) {
 		
 		#print "Gene/Trans ", $gene->stable_id, " ", $trans->stable_id, "\n";
-
+		
+    ### There is still a problem with this in case sub-features (exons) are crossing the coord system border ###
+    ### Use Ian's suggestion instead? LRG_12 is an example of this (ENSG00000141698). 
+	  my $lrg_trans = $trans->transfer($lrg_slice);
+	  next if (!defined($lrg_trans));
+	  
 # Check for partial overlaps
 		$feat_start = max($trans->start,1);
 		$feat_end = min($trans->end,$slice_end);
@@ -724,12 +737,19 @@ sub get_gene_annotation {
 		next if ($feat_end < 1 || $feat_start > $slice_end);
 		
 #ÊIf the transcript only partially overlaps the LRG, we need to set the end points of the transcript to the end point of the last exon that falls within the LRG record
+		my $exon_overlap = 1;
+		
 		if ($partial_5 || $partial_3) {
 		  my $exons = $trans->get_all_Exons();
+		  $exon_overlap = 0;
 		  if (scalar(@{$exons}) > 0) {
 		    $feat_start = $slice_end;
 		    $feat_end = 1;
 		    foreach my $exon (@{$exons}) {
+		      my $lrg_exon = $exon->transfer($lrg_slice);
+		      next if (!defined($lrg_exon));
+# Set a flag to indicate that there is in fact an exon in this transcript within the scope of the LRG
+		      $exon_overlap = 1;
 		      if ($exon->end > 1) {
 			$feat_start = min($feat_start,max(1,$exon->start));
 		      }
@@ -757,8 +777,14 @@ sub get_gene_annotation {
 		
 		while($entry = shift @$entries) {
 			
-			next unless $entry->dbname =~ /GI|RefSeq|MIM_GENE|Entrez|RFAM|miRBase/;
+			next unless $entry->dbname =~ /GI|RefSeq|MIM_GENE|Entrez|CCDS|RFAM|miRBase/;
 			next if $entry->dbname =~ /RefSeq_peptide/;
+			
+			if($entry->dbname eq 'RefSeq_dna') {
+			  my $note_node = LRG::Node->new('long_name');
+			  $note_node->content($entry->description);
+			  $cds_node->addExisting($note_node) unless ($cds_node->nodeExists($note_node));
+			}
 			
 			if ($entry->dbname !~ /MIM_GENE/) {
 			  $cds_node->addExisting(xref($entry));
@@ -803,9 +829,9 @@ sub get_gene_annotation {
 		    next unless $entry->dbname =~ /RefSeq|Uniprot|CCDS|MIM_GENE|Entrez/;
 				  
 		    if($entry->dbname eq 'RefSeq_peptide') {
-			      my $note_node = $prot_node->addNode('long_name');
-			      $note_node->content($entry->description);
-			      $note_node->moveTo(0);
+		      my $note_node = LRG::Node->new('long_name');
+		      $note_node->content($entry->description);
+		      $prot_node->addExisting($note_node) unless ($prot_node->nodeExists($note_node));
 		    }
 		    
 		    if ($entry->dbname !~ /MIM_GENE|Entrez/) {
@@ -813,7 +839,7 @@ sub get_gene_annotation {
 		    }
 		    else {
 		      my $xref = xref($entry);
-		      $gene_node->addExisting($xref) unless $gene_node->findNode($xref->name,$xref->data);
+		      $gene_node->addExisting($xref) unless ($gene_node->nodeExists($xref));
 		    }
 		  }
 
@@ -832,7 +858,7 @@ sub get_gene_annotation {
 		      #print $entry->dbname, " ", $entry->primary_id, ".", $entry->version, " ", $entry->description, "\n";
 		  }
 		}
-		$gene_node->addExisting($cds_node) unless ($gene->biotype eq 'protein_coding' && !$protein);
+		$gene_node->addExisting($cds_node) unless ($gene->biotype eq 'protein_coding' && (!$protein || !$exon_overlap));
 	      }
 	
 	# finish the gene with xrefs
