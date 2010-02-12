@@ -276,7 +276,6 @@
 	    <p style="text-align:center;background-color:#FF0000;color:#FFFFFF;font-size:40pt;font-weight:bold;">
 	       *** PENDING APPROVAL, DO NOT USE! ***
 	    </p>
-	    <p style="font-style:italic;">This LRG record is pending approval and subject to change. Do not use until it has passed final approval</p>
 	<h1>
 	  <xsl:value-of select="$lrg_id"/><!--<br/>-->
 	  - <xsl:choose>
@@ -422,7 +421,11 @@
 			<td class="sequence">><xsl:value-of select="$lrg_id"/>|genomic</td>
 		  </tr>
 		  
-		  <xslt:call-template xmlns:xslt="http://www.w3.org/1999/XSL/Transform" name="for-loop-d1e144"><xslt:with-param name="i" select="1"/><xslt:with-param name="tod1e144" select="string-length(fixed_annotation/sequence)"/><xslt:with-param name="stepd1e144" select="60"/></xslt:call-template>
+		  <xslt:call-template xmlns:xslt="http://www.w3.org/1999/XSL/Transform" name="for-loop-d1e144">
+		     <xslt:with-param name="i" select="1"/>
+		     <xslt:with-param name="tod1e144" select="string-length(fixed_annotation/sequence)"/>
+		     <xslt:with-param name="stepd1e144" select="60"/>
+		  </xslt:call-template>
 		  <tr>
 			<td class="showhide">
 			  <a>
@@ -455,17 +458,23 @@
 		<xsl:for-each select="/*/updatable_annotation/annotation_set/features/gene/transcript">
 		  
 		  <xsl:if test="@fixed_id=$transname">
-		     <p style="white-space:pre;">[<xsl:value-of select="../../../source/name" />]<br/>
+		     <!--
 			<xsl:for-each select="@transcript_id">
-			   <strong>  Transcript ID: </strong><xsl:value-of select="."/><br/>
+			   <xsl:if test="string-length(.) &gt; 0">
+			      <strong>  Transcript ID: </strong><xsl:value-of select="."/><br/>
+			   </xsl:if>
 			</xsl:for-each>
 			<xsl:for-each select="long_name">
-			   <strong>  Long name: </strong><xsl:value-of select="."/><br/>
+			   <xsl:if test="string-length(.) &gt; 0">
+			      <strong>  Long name: </strong><xsl:value-of select="."/><br/>
+			   </xsl:if>
 			</xsl:for-each>
+		-->
 			<xsl:for-each select="comment">
-			   <strong>  Comment: </strong><xsl:value-of select="."/><br/>
+			   <xsl:if test="string-length(.) &gt; 0">
+			      <strong>  Comment: </strong><xsl:value-of select="."/> [<xsl:value-of select="../../../../source/name" />]<br/>
+			   </xsl:if>
 			</xsl:for-each>
-		     </p>
 		  </xsl:if>
 		</xsl:for-each>
 	  </p>
@@ -560,8 +569,25 @@
 						<span class="startcodon" title="Start codon">
 						  <xsl:value-of select="substring($seq,cdna_coords/@start + ($cstart - lrg_coords/@start),3)"/>
 						</span>
-						<xsl:value-of 
-select="substring($seq,cdna_coords/@start + ($cstart - lrg_coords/@start)+3,cdna_coords/@end - (cdna_coords/@start + ($cstart - lrg_coords/@start))-3)"/>
+						<!-- We need to handle the special case when start and end codon occur within the same exon -->
+						<xsl:choose>
+						   <xsl:when test="$cend &lt; lrg_coords/@end">
+						      <xsl:variable name="offset_start" select="cdna_coords/@start + ($cstart - lrg_coords/@start)+3"/>
+						      <xsl:variable name="stop_start" select="($cend - lrg_coords/@start) + cdna_coords/@start - 2"/>
+						      <xsl:value-of select="substring($seq,$offset_start,$stop_start - $offset_start)"/>
+						      <span class="stopcodon" title="Stop codon">
+							<xsl:value-of select="substring($seq,$stop_start,3)"/>
+						      </span>
+						      <span class="utr">
+							<xsl:value-of select="substring($seq,$stop_start + 3,(cdna_coords/@end - $stop_start - 3))"/>
+						      </span>
+						   </xsl:when>
+						   <xsl:otherwise>
+						      <xsl:if test="(cdna_coords/@end - (cdna_coords/@start + ($cstart - lrg_coords/@start))-3) &gt; 0">
+							 <xsl:value-of select="substring($seq,cdna_coords/@start + ($cstart - lrg_coords/@start)+3,cdna_coords/@end - (cdna_coords/@start + ($cstart - lrg_coords/@start))-3)"/>
+						      </xsl:if>
+						   </xsl:otherwise>
+						</xsl:choose>
 					  </xsl:when>
 					  
 					  <!-- 3' UTR (partial)-->
@@ -614,7 +640,13 @@ select="substring($seq,cdna_coords/@start + ($cstart - lrg_coords/@start)+3,cdna
 			<tr>
 			  <td class="sequence">><xsl:value-of select="$lrg_id"/>|<xsl:value-of select="$transname"/>|cdna</td>
 			</tr>
-			<xslt:call-template xmlns:xslt="http://www.w3.org/1999/XSL/Transform" name="for-loop-d1e417"><xslt:with-param name="i" select="1"/><xslt:with-param name="tod1e417" select="string-length(cdna/sequence)"/><xslt:with-param name="stepd1e417" select="60"/><xslt:with-param name="transname" select="$transname"/><xslt:with-param name="first_exon_start" select="$first_exon_start"/></xslt:call-template>
+			<xslt:call-template xmlns:xslt="http://www.w3.org/1999/XSL/Transform" name="for-loop-d1e417">
+			   <xslt:with-param name="i" select="1"/>
+			   <xslt:with-param name="tod1e417" select="string-length(cdna/sequence)"/>
+			   <xslt:with-param name="stepd1e417" select="60"/>
+			   <xslt:with-param name="transname" select="$transname"/>
+			   <xslt:with-param name="first_exon_start" select="$first_exon_start"/>
+			</xslt:call-template>
 			<tr>
 			  <td class="showhide">
 				<a>
@@ -707,6 +739,14 @@ select="substring($seq,cdna_coords/@start + ($cstart - lrg_coords/@start)+3,cdna
 			</xsl:for-each>
 		  </tr>
 		  
+		  <xsl:variable name="cds_offset">
+		     <xsl:for-each select="exon">
+			<xsl:if test="(lrg_coords/@start &lt; ../coding_region/@start or lrg_coords/@start = ../coding_region/@start) and (lrg_coords/@end &gt; ../coding_region/@start or lrg_coords/@end = ../coding_region/@start)">
+			   <xsl:value-of select="cdna_coords/@start + ../coding_region/@start - lrg_coords/@start"/>
+			</xsl:if>
+		     </xsl:for-each>
+		  </xsl:variable>
+		  
 		  <xsl:for-each select="exon">
 			<xsl:variable name="start" select="lrg_coords/@start"/>
 			<xsl:variable name="exon_number" select="position()"/>
@@ -728,38 +768,17 @@ select="substring($seq,cdna_coords/@start + ($cstart - lrg_coords/@start)+3,cdna
 			  <td><xsl:value-of select="cdna_coords/@start"/></td>
 			  <td><xsl:value-of select="cdna_coords/@end"/></td>
 			  
-			  <xsl:choose>
-				<xsl:when test="lrg_coords/@end &gt; ../coding_region/@start and lrg_coords/@start &lt; ../coding_region/@end">
-				  <td>
-					<xsl:choose>
-					  <xsl:when test="lrg_coords/@start &lt; ../coding_region/@start">
-						<xsl:attribute name="class">partial</xsl:attribute>
-						(<xsl:value-of select="../coding_region/@start - lrg_coords/@start"/>bp UTR) 1
-					  </xsl:when>
-					  <xsl:otherwise>
-						<xsl:value-of select="cdna_coords/@start + $first_exon_start - ../coding_region/@start"/>
-						<!--<xsl:value-of select="cdna_coords/@start + n_start - ../coding_region/@start"/>-->
-					  </xsl:otherwise>
-					</xsl:choose>
-				  </td>
-				  <td>
-					<xsl:choose>
-					  <xsl:when test="lrg_coords/@end &gt; ../coding_region/@end">
-						<xsl:attribute name="class">partial</xsl:attribute>
-						<xsl:value-of select="(../coding_region/@end - lrg_coords/@start) + (cdna_coords/@start + $first_exon_start - ../coding_region/@start)"/>
-						(<xsl:value-of select="lrg_coords/@end - ../coding_region/@end"/>bp UTR)
-					  </xsl:when>
-					  <xsl:otherwise>
-						<xsl:value-of select="cdna_coords/@end + $first_exon_start - ../coding_region/@start"/>
-					  </xsl:otherwise>
-					</xsl:choose>
-				  </td>
-				</xsl:when>
-				<xsl:otherwise>
-				  <td>-</td><td>-</td>
-				</xsl:otherwise>
-			  </xsl:choose>
-			  
+			<xslt:call-template xmlns:xslt="http://www.w3.org/1999/XSL/Transform" name="cds_exon_coords">
+			   <xslt:with-param name="lrg_start" select="lrg_coords/@start"/>
+			   <xslt:with-param name="lrg_end" select="lrg_coords/@end"/>
+			   <xslt:with-param name="cdna_start" select="cdna_coords/@start"/>
+			   <xslt:with-param name="cdna_end" select="cdna_coords/@end"/>
+			   <xslt:with-param name="cds_start" select="../coding_region/@start"/>
+			   <xslt:with-param name="cds_end" select="../coding_region/@end"/>
+			   <xslt:with-param name="cds_offset" select="$cds_offset"/>
+			</xslt:call-template>
+			
+  
 			  <xsl:choose>
 				<xsl:when test="lrg_coords/@end &gt; ../coding_region/@start and lrg_coords/@start &lt; ../coding_region/@end">
 				  <td>
@@ -778,7 +797,7 @@ select="substring($seq,cdna_coords/@start + ($cstart - lrg_coords/@start)+3,cdna
 			  
 			  <td>
 				<xsl:choose>
-				  <xsl:when test="following-sibling::intron[1]">
+				  <xsl:when test="name(following-sibling::*[1]) = 'intron'">
 					<xsl:value-of select="following-sibling::intron[1]/@phase"/>
 				  </xsl:when>
 				  <xsl:otherwise>-</xsl:otherwise>
@@ -992,7 +1011,13 @@ select="substring($seq,cdna_coords/@start + ($cstart - lrg_coords/@start)+3,cdna
 			<tr>
 			  <td class="sequence">><xsl:value-of select="$lrg_id"/>|<xsl:value-of select="$transname"/>|translated</td>
 			</tr>
-			<xslt:call-template xmlns:xslt="http://www.w3.org/1999/XSL/Transform" name="for-loop-d1e966"><xslt:with-param name="i" select="1"/><xslt:with-param name="tod1e966" select="string-length(coding_region/translation/sequence)"/><xslt:with-param name="stepd1e966" select="60"/><xslt:with-param name="transname" select="$transname"/><xslt:with-param name="first_exon_start" select="$first_exon_start"/></xslt:call-template>
+			<xslt:call-template xmlns:xslt="http://www.w3.org/1999/XSL/Transform" name="for-loop-d1e966">
+			   <xslt:with-param name="i" select="1"/>
+			   <xslt:with-param name="tod1e966" select="string-length(coding_region/translation/sequence)"/>
+			   <xslt:with-param name="stepd1e966" select="60"/>
+			   <xslt:with-param name="transname" select="$transname"/>
+			   <xslt:with-param name="first_exon_start" select="$first_exon_start"/>
+			</xslt:call-template>
 			<tr>
 			  <td class="showhide">
 				<a>
@@ -1188,7 +1213,7 @@ select="substring($seq,cdna_coords/@start + ($cstart - lrg_coords/@start)+3,cdna
 	  </xsl:if>
 	  
 	  
-	  <xsl:if test="features/*">
+	  <xsl:if test="features/* and features/gene/@start &gt; -1">
 		  <h3>Features</h3>
   
 		  <xsl:if test="features/gene/*">
@@ -1464,6 +1489,7 @@ select="substring($seq,cdna_coords/@start + ($cstart - lrg_coords/@start)+3,cdna
 	       <xsl:value-of select="@accession"/>
 	    </a>
 	 </xsl:when>
+	   
 	   <xsl:otherwise>
 	      <xsl:value-of select="@accession"/>
 	   </xsl:otherwise>  
@@ -1497,7 +1523,7 @@ select="substring($seq,cdna_coords/@start + ($cstart - lrg_coords/@start)+3,cdna
 	       </xsl:if>
 	       <xsl:for-each select="url">
 		  <br/>
-		    <xsl:apply-templates select="."/>
+		  <xsl:apply-templates select="."/>
 	       </xsl:for-each>
 	    </p>
       </xsl:for-each>
@@ -1516,19 +1542,110 @@ select="substring($seq,cdna_coords/@start + ($cstart - lrg_coords/@start)+3,cdna
       </a>
    </xsl:template>
    
-<xslt:template xmlns:xslt="http://www.w3.org/1999/XSL/Transform" name="for-loop-d1e144"><xslt:param name="i"/><xslt:param name="tod1e144"/><xslt:param name="stepd1e144"/>
-		  <tr>
-			<td class="sequence"><xsl:value-of select="substring(fixed_annotation/sequence,$i,60)"/></td>
-		  </tr>
-		<xslt:if test="$i+$stepd1e144 &lt;= $tod1e144"><xslt:call-template name="for-loop-d1e144"><xslt:with-param name="i" select="$i + $stepd1e144"/><xslt:with-param name="tod1e144" select="$tod1e144"/><xslt:with-param name="stepd1e144" select="$stepd1e144"/></xslt:call-template></xslt:if></xslt:template><xslt:template xmlns:xslt="http://www.w3.org/1999/XSL/Transform" name="for-loop-d1e417"><xslt:param name="i"/><xslt:param name="tod1e417"/><xslt:param name="stepd1e417"/><xslt:param name="transname"/><xslt:param name="first_exon_start"/>
-			<tr>
-			  <td class="sequence"><xsl:value-of select="substring(cdna/sequence,$i,60)"/></td>
-			</tr>
-		  <xslt:if test="$i+$stepd1e417 &lt;= $tod1e417"><xslt:call-template name="for-loop-d1e417"><xslt:with-param name="i" select="$i + $stepd1e417"/><xslt:with-param name="tod1e417" select="$tod1e417"/><xslt:with-param name="stepd1e417" select="$stepd1e417"/><xslt:with-param name="transname" select="$transname"/><xslt:with-param name="first_exon_start" select="$first_exon_start"/></xslt:call-template></xslt:if></xslt:template><xslt:template xmlns:xslt="http://www.w3.org/1999/XSL/Transform" name="for-loop-d1e966"><xslt:param name="i"/><xslt:param name="tod1e966"/><xslt:param name="stepd1e966"/><xslt:param name="transname"/><xslt:param name="first_exon_start"/>
-			<tr>
-			  <!--<td class="coord"><xsl:value-of select="$i "/></td>-->
-			  <td class="sequence"><xsl:value-of select="substring(coding_region/translation/sequence,$i,60)"/></td>
-			</tr>
-		  <xslt:if test="$i+$stepd1e966 &lt;= $tod1e966"><xslt:call-template name="for-loop-d1e966"><xslt:with-param name="i" select="$i + $stepd1e966"/><xslt:with-param name="tod1e966" select="$tod1e966"/><xslt:with-param name="stepd1e966" select="$stepd1e966"/><xslt:with-param name="transname" select="$transname"/><xslt:with-param name="first_exon_start" select="$first_exon_start"/></xslt:call-template></xslt:if>
+   <xslt:template xmlns:xslt="http://www.w3.org/1999/XSL/Transform" name="cds_exon_coords">
+      <xslt:param name="lrg_start"/>
+      <xslt:param name="lrg_end"/>
+      <xslt:param name="cdna_start"/>
+      <xslt:param name="cdna_end"/>
+      <xslt:param name="cds_start"/>
+      <xslt:param name="cds_end"/>
+      <xslt:param name="cds_offset"/>
+   
+      <xsl:choose>
+	 <xsl:when test="$lrg_end &gt; $cds_start and $lrg_start &lt; $cds_end">
+	    <td>
+	       <xsl:choose>
+		  <xsl:when test="$lrg_start &lt; $cds_start">
+		     <xsl:attribute name="class">partial</xsl:attribute>
+		     (<xsl:value-of select="$cds_offset - $cdna_start"/>bp UTR) 1
+		  </xsl:when>
+		  <xsl:otherwise>
+		     <xsl:value-of select="$cdna_start - $cds_offset + 1"/>
+		  </xsl:otherwise>
+	       </xsl:choose>
+	    </td>
+	    <td>
+	       <xsl:choose>
+		  <xsl:when test="$lrg_end &gt; $cds_end">
+		     <xsl:attribute name="class">partial</xsl:attribute>
+		     <xsl:value-of select="($cds_end - $lrg_start) + ($cdna_start - $cds_offset + 1)"/>
+		     (<xsl:value-of select="$lrg_end - $cds_end"/>bp UTR)
+		  </xsl:when>
+		  <xsl:otherwise>
+		     <xsl:value-of select="$cdna_end - $cds_offset + 1"/>
+		  </xsl:otherwise>
+	       </xsl:choose>
+	    </td>
+	 </xsl:when>
+	 <xsl:otherwise>
+	    <td>-</td>
+	    <td>-</td>
+	 </xsl:otherwise>
+      </xsl:choose>   
+   </xslt:template>
+   			
+<xslt:template xmlns:xslt="http://www.w3.org/1999/XSL/Transform" name="for-loop-d1e144">
+   <xslt:param name="i"/>
+   <xslt:param name="tod1e144"/>
+   <xslt:param name="stepd1e144"/>
+   
+   <tr>
+      <td class="sequence">
+	 <xsl:value-of select="substring(fixed_annotation/sequence,$i,60)"/>
+      </td>
+   </tr>
+   <xslt:if test="$i+$stepd1e144 &lt;= $tod1e144">
+      <xslt:call-template name="for-loop-d1e144">
+	 <xslt:with-param name="i" select="$i + $stepd1e144"/>
+	 <xslt:with-param name="tod1e144" select="$tod1e144"/>
+	 <xslt:with-param name="stepd1e144" select="$stepd1e144"/>
+      </xslt:call-template>
+   </xslt:if>
 </xslt:template>
+
+<xslt:template xmlns:xslt="http://www.w3.org/1999/XSL/Transform" name="for-loop-d1e417">
+   <xslt:param name="i"/>
+   <xslt:param name="tod1e417"/>
+   <xslt:param name="stepd1e417"/>
+   <xslt:param name="transname"/>
+   <xslt:param name="first_exon_start"/>
+   <tr>
+     <td class="sequence">
+      <xsl:value-of select="substring(cdna/sequence,$i,60)"/>
+     </td>
+   </tr>
+   <xslt:if test="$i+$stepd1e417 &lt;= $tod1e417">
+      <xslt:call-template name="for-loop-d1e417">
+	 <xslt:with-param name="i" select="$i + $stepd1e417"/>
+	 <xslt:with-param name="tod1e417" select="$tod1e417"/>
+	 <xslt:with-param name="stepd1e417" select="$stepd1e417"/>
+	 <xslt:with-param name="transname" select="$transname"/>
+	 <xslt:with-param name="first_exon_start" select="$first_exon_start"/>
+      </xslt:call-template>
+   </xslt:if>
+</xslt:template>
+
+<xslt:template xmlns:xslt="http://www.w3.org/1999/XSL/Transform" name="for-loop-d1e966">
+   <xslt:param name="i"/>
+   <xslt:param name="tod1e966"/>
+   <xslt:param name="stepd1e966"/>
+   <xslt:param name="transname"/>
+   <xslt:param name="first_exon_start"/>
+   <tr>
+     <!--<td class="coord"><xsl:value-of select="$i "/></td>-->
+     <td class="sequence">
+      <xsl:value-of select="substring(coding_region/translation/sequence,$i,60)"/>
+     </td>
+   </tr>
+   <xslt:if test="$i+$stepd1e966 &lt;= $tod1e966">
+      <xslt:call-template name="for-loop-d1e966">
+	 <xslt:with-param name="i" select="$i + $stepd1e966"/>
+	 <xslt:with-param name="tod1e966" select="$tod1e966"/>
+	 <xslt:with-param name="stepd1e966" select="$stepd1e966"/>
+	 <xslt:with-param name="transname" select="$transname"/>
+	 <xslt:with-param name="first_exon_start" select="$first_exon_start"/>
+      </xslt:call-template>
+   </xslt:if>
+</xslt:template>
+
 </xsl:stylesheet>
