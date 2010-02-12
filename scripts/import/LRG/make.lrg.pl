@@ -593,6 +593,7 @@ sub match_fixed_annotation_transcripts {
 # Get the annotation sets in the updatable section and loop through them to get the Ensembl and LRG sections	
 	my $annotation_sets = $root->findNode('lrg/updatable_annotation')->findNodeArray('annotation_set');	
 	my $ensembl_annotation;
+	my $ncbi_annotation;
 	my $lrg_annotation;
 	foreach my $as (@{$annotation_sets}) {
 		if ($as->findNode('source/name')->content() eq 'Ensembl') {
@@ -601,12 +602,18 @@ sub match_fixed_annotation_transcripts {
 		elsif ($as->findNode('source/name')->content() eq 'LRG') {
 			$lrg_annotation = $as;
 		}
+		elsif ($as->findNode('source/name')->content() =~ m/NCBI/i) {
+			$ncbi_annotation = $as;
+		}
 	}
 	die('Could not find Ensembl annotation set!') unless (defined($ensembl_annotation));
 #	die('Could not find LRG annotation set!') unless (defined($lrg_annotation));
 
 # Get the HGNC symbol so we can look at the transcripts for the correct gene	
 #	my $hgnc_symbol = $lrg_annotation->findNode('lrg_gene_name')->content();
+
+# Get the annotated NCBI genes
+	my $ncbi_genes = $ncbi_annotation->findNode('features')->findNodeArray('gene');
 
 # Get the annotated Ensembl genes	
 	my $ensembl_genes = $ensembl_annotation->findNode('features')->findNodeArray('gene');
@@ -636,6 +643,23 @@ sub match_fixed_annotation_transcripts {
 # If all exon coordinates match, add the "fixed_id" flag to the updatable transcript annotation
 					$ensembl_transcript->addData({'fixed_id' => $fixed_transcript->{'data'}{'name'}});
 					last;
+				}
+			}
+# If no match could be made, check if a cross-referenced NCBI transcript has a fixed id assigned and in that case use that.
+			if (!exists($ensembl_transcript->{'data'}{'fixed_id'})) {
+				my $refseq_xrefs = $ensembl_transcript->findNodeArray('db_xref',{'source' => 'RefSeq'});
+				foreach my $refseq_xref (@{$refseq_xrefs}) {
+					foreach my $ncbi_gene (@{$ncbi_genes}) {
+						my $ncbi_transcripts = $ncbi_gene->findNodeArray('transcript',{'transcript_id' => $refseq_xref->{'data'}{'accession'}});
+						foreach my $ncbi_transcript (@{$ncbi_transcripts}) {
+							if (exists($ncbi_transcript->{'data'}{'fixed_id'})) {
+								$ensembl_transcript->{'data'}{'fixed_id'} = $ncbi_transcript->{'data'}{'fixed_id'};
+								last;
+							}
+						}
+						last if (exists($ensembl_transcript->{'data'}{'fixed_id'}));
+					}
+					last if (exists($ensembl_transcript->{'data'}{'fixed_id'}));
 				}
 			}
 		}
