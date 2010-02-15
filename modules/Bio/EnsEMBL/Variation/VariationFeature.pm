@@ -980,4 +980,29 @@ sub ref_allele_string{
     my @alleles = split /[\|\\\/]/,$self->allele_string;
     return $alleles[0];
 }
+
+=head2 get_all_VariationSets
+
+    Args        : none
+    Example     : my @vs = @{$vf->get_all_VariationSets()};
+    Description : returns a reference to a list of all the VariationSets this
+                  VariationFeature is a member of
+    ReturnType  : reference to list of Bio::EnsEMBL::Variation::VariationSets
+    Exceptions  : if no adaptor is attached to this object
+    Caller      : general
+    Status      : At Risk
+=cut
+
+sub get_all_VariationSets {
+    my $self = shift;
+    
+    if (!$self->{'adaptor'}) {
+      throw('An adaptor must be attached in order to get all variation sets');
+    }
+    my $vs_adaptor = $self->{'adaptor'}->db()->get_VariationSetAdaptor();
+    my $variation_sets = $vs_adaptor->fetch_all_by_Variation($self->variation());
+    
+    return $variation_sets;
+}
+
 1;
