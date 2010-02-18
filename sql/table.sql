@@ -478,6 +478,8 @@ create table transcript_variation(
   variation_feature_id int(10) unsigned not null,
   cdna_start int,
   cdna_end   int,
+  cds_start  int,
+  cds_end    int,
   translation_start int,
   translation_end int,  
   peptide_allele_string varchar(255),
