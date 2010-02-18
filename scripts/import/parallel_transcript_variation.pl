@@ -63,13 +63,12 @@ my ($TMP_DIR, $TMP_FILE, $LIMIT,$status_file);
   #check if it is the last process
   my $processes = `cat $TMP_DIR/$status_file | wc -l`;
   if ($processes == $num_processes){
-#   if (1){
-      #if is the last process, finish it
+    #if is the last process, finish it
     debug("Last process: ready to import data");
     last_process($dbCore,$dbVar);
   }
 
-# }
+  #last_process($dbCore,$dbVar);#use it only as a single run for last_process
 
 #
 # Loads the transcript variation table.  Retrieves every transcript in the
@@ -123,7 +122,7 @@ sub transcript_variation {
     #next unless $slice->dbID =~ /27509|27515|27524|27527/;
     debug("Processing transcript variations for ",
 	  $slice->seq_region_name(), "\n");
-    #if it is human, $dbFunc is defined, therefore go through below to calculate regulatory feature
+    #if it is human, mouse $dbFunc is defined, therefore go through below to calculate regulatory feature
     if ($dbFunc) {
       my $efa = $dbFunc->get_ExternalFeatureAdaptor();
       my $rfa = $dbFunc->get_RegulatoryFeatureAdaptor();
@@ -139,7 +138,8 @@ sub transcript_variation {
       }
 
       print "slice name is ",$slice->name,"\n";
-      push @rf, @{$rfa->fetch_all_by_Slice($slice)};
+      my @rf_fg = @{$rfa->fetch_all_by_Slice($slice)};
+      push @rf, @rf_fg if @rf_fg >0;
       foreach my $rf (@rf) { 
 	# request all variations which lie in the region of a regulate feature
 	$sth->execute($slice->get_seq_region_id(),
@@ -166,7 +166,7 @@ sub transcript_variation {
 		next;
 	      }
 	      foreach my $tr (@{$g->get_all_Transcripts()}) {
-		my @arr = ($tr->dbID,$row->[0],'\N','\N','\N','\N','\N','REGULATORY_REGION');
+		my @arr = ($tr->dbID,$row->[0],'\N','\N','\N','\N','\N','\N','\N','REGULATORY_REGION');
 		if (! $done{$row->[0]}{$tr->dbID}) {#get rid of duplicated transcript entries
 		  print FH join("\t", @arr), "\n";
 		  $done{$row->[0]}{$tr->dbID}=1;
@@ -177,7 +177,7 @@ sub transcript_variation {
 	      my $tr = $transcript_adaptor->fetch_by_stable_id($dbEntry->primary_id); #get transcript for stable_id
 	      next if(!defined $tr); #some of the transcripts do not seem to be in the core database
 
-	      my @arr = ($tr->dbID,$row->[0],'\N','\N','\N','\N','\N','REGULATORY_REGION');
+	      my @arr = ($tr->dbID,$row->[0],'\N','\N','\N','\N','\N','\N','\N','REGULATORY_REGION');
 	      if (! $done{$row->[0]}{$tr->dbID}) {#get rid of duplicated transcript entries
 		print FH join("\t", @arr), "\n";
 		$done{$row->[0]}{$tr->dbID}=1;
@@ -232,7 +232,7 @@ sub transcript_variation {
 	  $strand = $tr->strand();
 	}
 	shift @alleles;		#remove reference allele
-
+	
 	my $consequence_type;
 
 	$consequence_type = Bio::EnsEMBL::Variation::ConsequenceType->new($tr->dbID,$row->[0],$start,$end,$strand,\@alleles);
@@ -256,6 +256,8 @@ sub transcript_variation {
 		     $ct->aa_end,
 		     $ct->cdna_start,
 		     $ct->cdna_end,
+		     $ct->cds_start,
+		     $ct->cds_end,
 		     $final_ct); 
 	  @arr = map {($_) ? ($_) = $_ =~ /^(.*)[,]*$/ : '\N'} @arr;
 	  print FH join("\t", @arr), "\n";
@@ -294,7 +296,7 @@ sub last_process{
     debug("Reimporting processed transcript variation");
     load($dbVar, qw(transcript_variation
  		    transcript_id variation_feature_id peptide_allele_string
- 		    translation_start translation_end cdna_start cdna_end consequence_type));
+ 		    translation_start translation_end cdna_start cdna_end cds_start cds_end consequence_type));
 
 
 
@@ -412,6 +414,7 @@ sub last_process{
     $dbVar->do(qq{UPDATE variation_feature vf, tmp_consequence_type tct 
 		      SET vf.consequence_type = tct.consequence_type
 		      WHERE vf.variation_feature_id = tct.variation_feature_id
+                      AND vf.consequence_type != 'NO_CONSEQUENCE'
                   });
     $dbVar->do(qq{DROP TABLE tmp_consequence_type});
     unlink("$TMP_DIR/$status_file");
