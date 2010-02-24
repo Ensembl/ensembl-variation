@@ -20,6 +20,8 @@ Bio::EnsEMBL::Variation::TranscriptVariation
      -pep_allele_string => 'N/K',
      -cdna_start        => 1127,
      -cdna_end          => 1127,
+     -cds_start         => 558,
+     -cds_end           => 558,
      -translation_start => 318,
      -translation_end   => 318,
      -consequence_type  => 'NON_SYNONYMOUS_CODING');
@@ -29,6 +31,7 @@ Bio::EnsEMBL::Variation::TranscriptVariation
   print "transcript: ", $tr_var->transcript->stable_id(), "\n";
   print "consequence type: ", (join ",", @{$tr_var->consequence_type()}), "\n";
   print "cdna coords: ", $tr_var->cdna_start(), '-', $tr_var->cdna_end(), "\n";
+  print "cds coords: ", $tr_var->cds_start(), '-', $tr_var->cds_end(), "\n";
   print "pep coords: ", $tr_var->translation_start(), '-',
         $tr_var->translation_end(), "\n";
   print "amino acid change: ", $tr_var->pep_allele_string(), "\n";
@@ -88,6 +91,13 @@ my %CONSEQUENCE_TYPES = %Bio::EnsEMBL::Variation::ConsequenceType::CONSEQUENCE_T
   Arg [-CDNA_END] :
     The end of this variation on the associated transcript in cdna coordinates
 
+  Arg [-CDS_START] :
+    The start of this variation on the associated transcript in cds
+    coordinates
+
+  Arg [-CDS_END] :
+    The end of this variation on the associated transcript in cds coordinates
+
   Arg [-TRANSLATION_START] :
     The start of this variation on the translation of the associated transcript
     in peptide coordinates
@@ -107,6 +117,8 @@ my %CONSEQUENCE_TYPES = %Bio::EnsEMBL::Variation::ConsequenceType::CONSEQUENCE_T
        -pep_allele_string => 'N/K',
        -cdna_start        => 1127,
        -cdna_end          => 1127,
+       -cds_start         => 558,
+       -cds_end           => 558,
        -translation_start => 318,
        -translation_end   => 318,
        -consequence_type  => 'NON_SYNONYMOUS_CODING');
@@ -123,10 +135,10 @@ my %CONSEQUENCE_TYPES = %Bio::EnsEMBL::Variation::ConsequenceType::CONSEQUENCE_T
 sub new {
   my $class = shift;
 
-  my ($vf, $tr, $pep_allele, $cdna_start,$cdna_end, $tl_start,$tl_end, $consequence_type,
+  my ($vf, $tr, $pep_allele, $cdna_start,$cdna_end, $cds_start, $cds_end, $tl_start,$tl_end, $consequence_type,
       $dbID, $adaptor, $transcript, $codons) =
     rearrange([qw(VARIATION_FEATURE TRANSCRIPT PEP_ALLELE_STRING CDNA_START
-                  CDNA_END TRANSLATION_START TRANSLATION_END CONSEQUENCE_TYPE
+                  CDNA_END CDS_START CDS_END TRANSLATION_START TRANSLATION_END CONSEQUENCE_TYPE
                   DBID ADAPTOR TRANSCRIPT CODONS)], @_);
 
   if(defined($consequence_type)) {
@@ -148,6 +160,14 @@ sub new {
     throw('CDNA end must be greater than or equal to 0');
   }
 
+  if(defined($cds_start) && ($cds_start !~ /^\d+$/ || $cds_start < 1)) {
+    throw('CDS start must be greater than or equal to 1');
+  }
+
+  if(defined($cds_end) && ($cds_end !~ /^\d+$/ || $cds_start < 0)) {
+    throw('CDS end must be greater than or equal to 0');
+  }
+
   if(defined($tl_start) && ($tl_start !~ /^\d+$/ || $tl_start < 1)) {
     throw('Translation start must be greater than or equal to 1');
   }
@@ -163,6 +183,8 @@ sub new {
                 'pep_allele_string' => $pep_allele,
                 'cdna_start'        => $cdna_start,
                 'cdna_end'          => $cdna_end,
+		'cds_start'         => $cds_start,
+                'cds_end'           => $cds_end,
                 'translation_start' => $tl_start,
                 'translation_end'   => $tl_end,
                 'consequence_type'  => $consequence_type,
@@ -289,6 +311,12 @@ sub cdna_start {
     }
     $self->{'cdna_start'} = $cdna_start;
   }
+  
+  # try and calculate the cdna coord if we don't have it in the DB
+  if(!defined($self->{'cdna_start'}) && defined($self->transcript)) {
+	$self->_calc_transcript_coords();
+  }
+  
   return $self->{'cdna_start'};
 }
 
@@ -318,10 +346,83 @@ sub cdna_end {
     }
     $self->{'cdna_end'} = $cdna_end;
   }
+  
+  # try and calculate the cdna coord if we don't have it in the DB
+  if(!defined($self->{'cdna_end'}) && defined($self->transcript)) {
+	$self->_calc_transcript_coords();
+  }
 
   return $self->{'cdna_end'};
 }
 
+
+=head2 cds_start
+
+  Arg [1]    : (optional) int $start
+  Example    : $cds_start = $trvar->cds_start();
+  Description: Getter/Setter for the start position of this variation on the
+               transcript in CDS coordinates.
+  Returntype : int
+  Exceptions : throw if $start is not an int
+               throw if $start < 1
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub cds_start {
+  my $self = shift;
+
+  if(@_) {
+    my $cds_start = shift;
+    if(defined($cds_start) && ($cds_start !~ /^\d+$/ || $cds_start < 1)) {
+      throw('cds start must be an integer greater than 0');
+    }
+    $self->{'cds_start'} = $cds_start;
+  }
+  
+  # try and calculate the cds coord if we don't have it in the DB
+  if(!defined($self->{'cds_start'}) && defined($self->transcript)) {
+	$self->_calc_transcript_coords();
+  }
+  
+  return $self->{'cds_start'};
+}
+
+
+
+=head2 cds_end
+
+  Arg [1]    : (optional) int $end
+  Example    : $cds_end = $trvar->cds_end();
+  Description: Getter/Setter for the end position of this variation on the
+               transcript in cds coordinates.
+  Returntype : int
+  Exceptions : throw if $end is not an int
+               throw if $end < 0
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub cds_end {
+  my $self = shift;
+
+  if(@_) {
+    my $cds_end = shift;
+    if(defined($cds_end) && ($cds_end !~ /^\d+$/ || $cds_end < 0)) {
+      throw('cds end must be an integer greater than or equal to 0');
+    }
+    $self->{'cds_end'} = $cds_end;
+  }
+  
+  # try and calculate the cds coord if we don't have it in the DB
+  if(!defined($self->{'cds_end'}) && defined($self->transcript)) {
+	$self->_calc_transcript_coords();
+  }
+
+  return $self->{'cds_end'};
+}
 
 
 =head2 translation_start
@@ -348,7 +449,12 @@ sub translation_start {
     }
     $self->{'translation_start'} = $tl_start;
   }
-
+  
+  # try and calculate the peptide coord if we don't have it in the DB
+  if(!defined($self->{'translation_start'}) && defined($self->transcript)) {
+	$self->_calc_transcript_coords();
+  }
+  
   return $self->{'translation_start'};
 }
 
@@ -376,6 +482,11 @@ sub translation_end {
       throw('translation end must be an integer greater than or equal to 0');
     }
     $self->{'translation_end'} = $tl_end;
+  }
+  
+  # try and calculate the peptide coord if we don't have it in the DB
+  if(!defined($self->{'translation_end'}) && defined($self->transcript)) {
+	$self->_calc_transcript_coords();
   }
 
   return $self->{'translation_end'};
@@ -543,6 +654,62 @@ sub codons {
   }
   
   return $self->{'codons'};
+}
+
+
+
+=head2 _calc_transcript_coords
+
+  Example    : $tv->_calc_transcript_coords
+  Description: Internal method for calculating absent transcript-relative coords
+  Returntype : none
+  Exceptions : none
+  Caller     : Internal
+  Status     : At Risk
+
+=cut
+
+sub _calc_transcript_coords {
+  my $self = shift;
+  
+  my $tr = $self->transcript;
+  
+  if(defined($tr)) {
+	
+	# get a transcript mapper
+	my $tm = $self->{'_transcript_mapper'} || $tr->get_TranscriptMapper();
+	$self->{'_transcript_mapper'} ||= $tm;
+	
+	# get the variation feature object
+	my $vf = $self->variation_feature;
+	
+	# do pep coords
+	unless(defined $self->{'translation_start'} && defined $self->{'translation_end'}) {
+	  my @pep_coords = $tm->genomic2pep($vf->start,$vf->end,$vf->strand);
+	  if(scalar @pep_coords == 1 && !$pep_coords[0]->isa('Bio::EnsEMBL::Mapper::Gap')) {
+		$self->{'translation_start'} ||= $pep_coords[0]->start;
+		$self->{'translation_end'} ||= $pep_coords[0]->end;
+	  }
+	}
+	
+	# do cdna coords
+	unless(defined $self->{'cdna_start'} && defined $self->{'cdna_end'}) {
+	  my @cdna_coords = $tm->genomic2cdna($vf->start,$vf->end,$vf->strand);
+	  if(scalar @cdna_coords == 1 && !$cdna_coords[0]->isa('Bio::EnsEMBL::Mapper::Gap')) {
+		$self->{'cdna_start'} ||= $cdna_coords[0]->start;
+		$self->{'cdna_end'} ||= $cdna_coords[0]->end;
+	  }
+	}
+	
+	# do cds coords
+	unless(defined $self->{'cds_start'} && defined $self->{'cds_end'}) {
+	  my @cds_coords = $tm->genomic2cds($vf->start,$vf->end,$vf->strand);
+	  if(scalar @cds_coords == 1 && !$cds_coords[0]->isa('Bio::EnsEMBL::Mapper::Gap')) {
+		$self->{'cds_start'} ||= $cds_coords[0]->start;
+		$self->{'cds_end'} ||= $cds_coords[0]->end;
+	  }
+	}
+  }
 }
 
 
