@@ -472,7 +472,7 @@ sub codons {
 	&& defined($self->transcript)
 	&& defined($self->translation_start)
 	&& defined($self->variation_feature)
-	&& ((join ',', @{$self->consequence_type}) =~ /SYN|STOP/)
+	&& ((join ',', @{$self->consequence_type}) =~ /SYN|STOP|PAR/)
   ) {
 	
 	my @codons;
