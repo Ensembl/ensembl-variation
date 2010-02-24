@@ -380,6 +380,12 @@ sub cds_start {
     }
     $self->{'cds_start'} = $cds_start;
   }
+  
+  # try and calculate the cds coord if we don't have it in the DB
+  if(!defined($self->{'cds_start'}) && defined($self->transcript)) {
+	$self->_calc_transcript_coords();
+  }
+  
   return $self->{'cds_start'};
 }
 
@@ -408,6 +414,11 @@ sub cds_end {
       throw('cds end must be an integer greater than or equal to 0');
     }
     $self->{'cds_end'} = $cds_end;
+  }
+  
+  # try and calculate the cds coord if we don't have it in the DB
+  if(!defined($self->{'cds_end'}) && defined($self->transcript)) {
+	$self->_calc_transcript_coords();
   }
 
   return $self->{'cds_end'};
@@ -666,7 +677,8 @@ sub _calc_transcript_coords {
   if(defined($tr)) {
 	
 	# get a transcript mapper
-	my $tm = $tr->get_TranscriptMapper();
+	my $tm = $self->{'_transcript_mapper'} || $tr->get_TranscriptMapper();
+	$self->{'_transcript_mapper'} ||= $tm;
 	
 	# get the variation feature object
 	my $vf = $self->variation_feature;
@@ -686,6 +698,15 @@ sub _calc_transcript_coords {
 	  if(scalar @cdna_coords == 1 && !$cdna_coords[0]->isa('Bio::EnsEMBL::Mapper::Gap')) {
 		$self->{'cdna_start'} ||= $cdna_coords[0]->start;
 		$self->{'cdna_end'} ||= $cdna_coords[0]->end;
+	  }
+	}
+	
+	# do cds coords
+	unless(defined $self->{'cds_start'} && defined $self->{'cds_end'}) {
+	  my @cds_coords = $tm->genomic2cds($vf->start,$vf->end,$vf->strand);
+	  if(scalar @cds_coords == 1 && !$cds_coords[0]->isa('Bio::EnsEMBL::Mapper::Gap')) {
+		$self->{'cds_start'} ||= $cds_coords[0]->start;
+		$self->{'cds_end'} ||= $cds_coords[0]->end;
 	  }
 	}
   }
