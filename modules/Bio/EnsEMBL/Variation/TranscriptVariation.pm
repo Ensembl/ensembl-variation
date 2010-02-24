@@ -311,6 +311,12 @@ sub cdna_start {
     }
     $self->{'cdna_start'} = $cdna_start;
   }
+  
+  # try and calculate the cdna coord if we don't have it in the DB
+  if(!defined($self->{'cdna_start'}) && defined($self->transcript)) {
+	$self->_calc_transcript_coords();
+  }
+  
   return $self->{'cdna_start'};
 }
 
@@ -339,6 +345,11 @@ sub cdna_end {
       throw('cdna end must be an integer greater than or equal to 0');
     }
     $self->{'cdna_end'} = $cdna_end;
+  }
+  
+  # try and calculate the cdna coord if we don't have it in the DB
+  if(!defined($self->{'cdna_end'}) && defined($self->transcript)) {
+	$self->_calc_transcript_coords();
   }
 
   return $self->{'cdna_end'};
@@ -427,7 +438,12 @@ sub translation_start {
     }
     $self->{'translation_start'} = $tl_start;
   }
-
+  
+  # try and calculate the peptide coord if we don't have it in the DB
+  if(!defined($self->{'translation_start'}) && defined($self->transcript)) {
+	$self->_calc_transcript_coords();
+  }
+  
   return $self->{'translation_start'};
 }
 
@@ -455,6 +471,11 @@ sub translation_end {
       throw('translation end must be an integer greater than or equal to 0');
     }
     $self->{'translation_end'} = $tl_end;
+  }
+  
+  # try and calculate the peptide coord if we don't have it in the DB
+  if(!defined($self->{'translation_end'}) && defined($self->transcript)) {
+	$self->_calc_transcript_coords();
   }
 
   return $self->{'translation_end'};
@@ -622,6 +643,52 @@ sub codons {
   }
   
   return $self->{'codons'};
+}
+
+
+
+=head2 _calc_transcript_coords
+
+  Example    : $tv->_calc_transcript_coords
+  Description: Internal method for calculating absent transcript-relative coords
+  Returntype : none
+  Exceptions : none
+  Caller     : Internal
+  Status     : At Risk
+
+=cut
+
+sub _calc_transcript_coords {
+  my $self = shift;
+  
+  my $tr = $self->transcript;
+  
+  if(defined($tr)) {
+	
+	# get a transcript mapper
+	my $tm = $tr->get_TranscriptMapper();
+	
+	# get the variation feature object
+	my $vf = $self->variation_feature;
+	
+	# do pep coords
+	unless(defined $self->{'translation_start'} && defined $self->{'translation_end'}) {
+	  my @pep_coords = $tm->genomic2pep($vf->start,$vf->end,$vf->strand);
+	  if(scalar @pep_coords == 1 && !$pep_coords[0]->isa('Bio::EnsEMBL::Mapper::Gap')) {
+		$self->{'translation_start'} ||= $pep_coords[0]->start;
+		$self->{'translation_end'} ||= $pep_coords[0]->end;
+	  }
+	}
+	
+	# do cdna coords
+	unless(defined $self->{'cdna_start'} && defined $self->{'cdna_end'}) {
+	  my @cdna_coords = $tm->genomic2cdna($vf->start,$vf->end,$vf->strand);
+	  if(scalar @cdna_coords == 1 && !$cdna_coords[0]->isa('Bio::EnsEMBL::Mapper::Gap')) {
+		$self->{'cdna_start'} ||= $cdna_coords[0]->start;
+		$self->{'cdna_end'} ||= $cdna_coords[0]->end;
+	  }
+	}
+  }
 }
 
 
