@@ -104,14 +104,15 @@ sub fetch_all_by_Transcripts{
       if (!$tr->isa('Bio::EnsEMBL::Transcript')){
 	throw('Bio::EnsEMBL::Transcript is expected');
       }
-      $tr_by_id{$tr->dbID()} = $tr;
+      $tr_by_id{$tr->stable_id()} = $tr;
     }
-    my $instr = join (",", keys( %tr_by_id));
-    my $transcript_variations = $self->generic_fetch( "tv.transcript_id in ( $instr )");
+
+    my $instr = join (",", map{"'$_'"} keys( %tr_by_id));
+    my $transcript_variations = $self->generic_fetch( "tv.transcript_stable_id in ( $instr )");
     for my $tv (@{$transcript_variations}){
 	#add to the TranscriptVariation object all the Transcripts
-	$tv->{'transcript'} = $tr_by_id{$tv->{'_transcript_id'}};
-	delete $tv->{'_transcript_id'}; #remove the transcript_id from the transcript_variation object
+	$tv->{'transcript'} = $tr_by_id{$tv->{'_transcript_stable_id'}};
+	delete $tv->{'_transcript_stable_id'}; #remove the transcript_id from the transcript_variation object
     }
     return $transcript_variations;
 }
@@ -379,8 +380,10 @@ sub fetch_all_by_VariationFeatures {
 				my $trv = Bio::EnsEMBL::Variation::TranscriptVariation->new_fast( {
 					'dbID' 				=> undef,
 					'adaptor' 			=> $self,
-					'cdna_start'		=> $con->cdna_start,
+					'cdna_start'		        => $con->cdna_start,
 					'cdna_end'			=> $con->cdna_end,
+					'cds_start'                     => $con->cds_start,
+                                        'cds_end'                       => $con->cds_end,
 					'translation_start' => $con->aa_start,
 					'translation_end'	=> $con->aa_end,
 					'pep_allele_string' => join("/", @{$con->aa_alleles || []}),
@@ -452,10 +455,10 @@ sub _objs_from_sth {
   my $self = shift;
   my $sth = shift;
 
-  my ($trv_id, $tr_id, $vf_id, $cdna_start, $cdna_end, $tl_start, $tl_end,
+  my ($trv_id, $tr_stable_id, $vf_id, $cdna_start, $cdna_end, $cds_start, $cds_end, $tl_start, $tl_end,
       $pep_allele, $consequence_type);
 
-  $sth->bind_columns(\$trv_id, \$tr_id, \$vf_id, \$cdna_start, \$cdna_end,
+  $sth->bind_columns(\$trv_id, \$tr_stable_id, \$vf_id, \$cdna_start, \$cdna_end, \$cds_start, \$cds_end,
                      \$tl_start, \$tl_end, \$pep_allele, \$consequence_type);
 
 
@@ -475,13 +478,15 @@ sub _objs_from_sth {
 	      'adaptor' => $self,
 	      'cdna_start' => $cdna_start,
 	      'cdna_end'   => $cdna_end,
+	      'cds_start'  => $cds_start,
+              'cds_end'    => $cds_end,
 	      'translation_start' => $tl_start,
 	      'translation_end' => $tl_end,
 	      'pep_allele_string' => $pep_allele,
 	      'consequence_type' => \@consequences} );
 
     $trv->{'_vf_id'} = $vf_id; #add the variation feature
-    $trv->{'_transcript_id'} = $tr_id; #add the transcript id
+    $trv->{'_transcript_stable_id'} = $tr_stable_id; #add the transcript stable id
     push @results, $trv;
   }
 
@@ -492,8 +497,8 @@ sub _objs_from_sth {
 sub _tables {return ['transcript_variation','tv'];}
 
 sub _columns {
-    return qw (tv.transcript_variation_id tv.transcript_id
-	       tv.variation_feature_id tv.cdna_start tv.cdna_end
+    return qw (tv.transcript_variation_id tv.transcript_stable_id
+	       tv.variation_feature_id tv.cdna_start tv.cdna_end tv.cds_start tv.cds_end
 	       tv.translation_start tv.translation_end
 	       tv.peptide_allele_string tv.consequence_type
 	       );
