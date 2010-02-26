@@ -776,7 +776,7 @@ sub merge_ensembl_snps {
                AND vf1.map_weight=1 and vf2.map_weight=1 
                $hap_line
                AND vf1.variation_id > vf2.variation_id
-               AND vf1.source_id =$new_source_id and  vf2.source_id!=$new_source_id
+               AND vf1.source_id =$new_source_id and  vf2.source_id != $new_source_id
  });
 
   $dbVar->do(qq{alter table tmp_ids_$new_source_id add index variation_idx1(variation_id1), add index variation_idx2(variation_id2)});
@@ -859,51 +859,6 @@ sub merge_ensembl_snps {
                 SET vs.variation_id=t.variation_id2 
                 WHERE vs.variation_id = t.variation_id1});
   #$dbVar->do(qq{DROP table tmp_ids_$source_id});
-
-}
-
-sub merge_venter_gtype {
-
-  #chicken have same problem, i.e same variation, two lines of genotypes:
-  #[ens-genomics2]yuan_chicken_var_49>select * from tmp_individual_genotype_single_bp where variation_id=332081;
-#+--------------+----------+----------+-----------+
-#| variation_id | allele_1 | allele_2 | sample_id |
-#+--------------+----------+----------+-----------+
-#|       332081 | -        | -        |        20 |
-#|       332081 | C        | C        |        20 |
-#|       332081 | C        | C        |        21 |
-#|       332081 | G        | G        |        21 |
-#+--------------+----------+----------+-----------+
-#4 rows in set (0.01 sec)
-#use similar method to get rid of multi line gtype, by order by variation_id,sample_id
-
-#[ens-genomics2]yuan_chicken_var_49>create table varid_one_allele_tmp_gtype select variation_id, sample_id,count(*) as count from tmp_gtype group by variation_id,sample_id having count=1;
-#Query OK, 6710537 rows affected (3 min 44.70 sec)
-#Records: 6710537  Duplicates: 0  Warnings: 0
-#
-#[ens-genomics2]yuan_chicken_var_49>insert ignore into tmp_individual_genotype_single_bp select t.variation_id,t.allele as allele_1,t.allele as allele_2,t.sample_id from tmp_gtype t, varid_one_allele_tmp_gtype v where t.variation_id=v.variation_id and t.sample_id=v.sample_id;Query OK, 6734834 rows affected (17 min 23.18 sec)
-#Records: 14284973  Duplicates: 7550139  Warnings: 0
-#
-#[ens-genomics2]yuan_chicken_var_49>insert into tmp_individual_genotype_single_bp select t.variation_id,substring(group_concat(t.allele),1,1) as allele_1,substring(group_concat(t.allele),3,1) as allele_2,t.sample_id from tmp_gtype t group by t.variation_id,sample_id having count(*) =2;
-#Query OK, 17207 rows affected (21.61 sec)
-#Records: 17207  Duplicates: 0  Warnings: 0
-
-
-  $dbVar = shift;
-  $dbVar->do(qq{CREATE TABLE tmp_gtype (variation_id int,allele varchar(5),unique index uniq_inx(variation_id,allele))});
-  $dbVar->do(qq{INSERT IGNORE INTO tmp_gtype select variation_id,allele_1 as allele from tmp_individual_genotype_single_bp_venter_uniq});
-  $dbVar->do(qq{INSERT IGNORE INTO tmp_gtype select variation_id,allele_2 as allele from tmp_individual_genotype_single_bp_venter_uniq});
-  $dbVar->do(qq{create table tmp_gtype_uniq like tmp_individual_genotype_single_bp_venter_uniq});
-  $dbVar->do(qq{create table varid_one_allele_tmp_gtype select variation_id, count(*) as count from tmp_gtype group by variation_id having count=1});
-  $dbVar->do(qq{alter table varid_one_allele_tmp_gtype add index variation_id(variation_id)});
-  $dbVar->do(qq{insert into tmp_gtype_uniq select t.variation_id,t.allele as allele_1,t.allele as allele_2,13269 as sample_id from tmp_gtype t, varid_one_allele_tmp_gtype v where t.variation_id=v.variation_id});
-  $dbVar->do(qq{insert into tmp_gtype_uniq select t.variation_id,substring(group_concat(t.allele),1,1) as allele_1,substring(group_concat(t.allele),3,1) as allele_2,13269 as sample_id from tmp_gtype t group by t.variation_id having count(*) =2}) ;
-  $dbVar->do(qq{create table tmp_gtype_venter_non_uniq like tmp_individual_genotype_single_bp_venter_uniq});
-  $dbVar->do(qq{insert into tmp_gtype_venter_non_uniq select * from tmp_individual_genotype_single_bp_venter_uniq});
-  $dbVar->do(qq{truncate table tmp_individual_genotype_single_bp_venter_uniq});
-  $dbVar->do(qq{flush tables});
-  $dbVar->do(qq{insert into tmp_individual_genotype_single_bp_venter_uniq select * from tmp_gtype_uniq});
-  $dbVar->do(qq{DROP TABLE tmp_gtype_uniq});
 
 }
 
@@ -1051,8 +1006,8 @@ sub remove_multi_tables {
 sub merge_multi_tables {
 
   my $dbVar = shift;
-  #foreach my $table ("SubInd_ch") { 
-  foreach my $table("tmp_individual_genotype_single_bp") {
+  foreach my $table ("tmp_individual_genotype_single_bp") { 
+  #foreach my $table("combine_feature","failed_flanking_qual","failed_gtype","flanking_qual","gtype_allele","snp_pos","tmp_individual_genotype_single_bp") {
     my $single_table_ref = $dbVar->selectall_arrayref(qq{SHOW tables like "$table%"});
     #my @tables = map {"yuan_hum_var_46a.".$_->[0] } @$single_table_ref;
     my @tables = map {$_->[0] } @$single_table_ref;
@@ -1093,7 +1048,7 @@ sub merge_rs_feature{
                Where vf1.seq_region_id=vf2.seq_region_id 
                AND vf1.seq_region_start = vf2.seq_region_start 
                AND vf1.seq_region_end = vf2.seq_region_end 
-               AND vf1.allele_string = vf2.allele_string 
+               #AND vf1.allele_string = vf2.allele_string  #merge alleles if they are different
                And vf1.map_weight=1 and vf2.map_weight=1
                AND vf1.source_id=1 and vf2.source_id=1
                $hap_line
@@ -1101,6 +1056,46 @@ sub merge_rs_feature{
  });
 
   $dbVar->do(qq{alter table tmp_ids_rs add index variation_idx1(variation_id1), add index variation_idx2(variation_id2)});
+
+  #added to merge allele_string for dbSNP variation, if not merging, two sets of genotype data associated to different variation_ids but with same location, this will confuse web display using table compressed_genotype_single_bp 
+  debug("Change allele_string if different..."); #added for merging allele_string for dbSNP variation
+  my ($variation_id1,$name1,$variation_id2,$name2,$allele_string1,$allele_string2,$variation_feature_id2);
+  $dbVar->do(qq{create table allele_string_diff_rs
+               SELECT t.variation_id1, t.name1, vf1.allele_string as allele_string1,t.variation_id2,t.name2, vf2.allele_string as allele_string2, vf2.variation_feature_id as variation_feature_id2
+               FROM tmp_ids_rs t, variation_feature vf1, variation_feature vf2
+               WHERE t.variation_id1 =vf1.variation_id 
+               AND t.variation_id2 =vf2.variation_id 
+               AND vf2.map_weight=1 ##vf2 is dbSNP
+               AND vf1.map_weight=1
+               AND vf1.allele_string != 'N/A'#cnv has 'N' in allele_string, not merge this
+               $hap_line
+               AND vf1.allele_string != vf2.allele_string
+ });
+
+  my $sth = $dbVar->prepare(qq{SELECT variation_id1,name1,allele_string1,variation_id2,name2,
+                                      allele_string2,variation_feature_id2
+                               FROM allele_string_diff_rs});
+  $sth->execute();
+  $sth->bind_columns(\$variation_id1,\$name1,\$allele_string1,\$variation_id2,\$name2,\$allele_string2,\$variation_feature_id2);
+
+  while($sth->fetch()) {
+    my @alleles1 = split /\//, $allele_string1; #dbSNP allele_string with bigger rsnumber
+    my @alleles2 = split /\//, $allele_string2; #dbSNP allele_string with small rsnumber
+
+    my %rec_allele = map {$_,1} @alleles2 ;
+    my $n=0;
+    while ( $n < @alleles1) {
+      if (! $rec_allele{$alleles1[$n]}) {
+	$allele_string2 .= "/$alleles1[$n]"; #in this way to make sure the last one is from deleted allele_string if it's not in allele_string already
+      }
+      $n++;
+    }
+    my $allele_string = $allele_string2;
+    $dbVar->do(qq{UPDATE variation_feature set allele_string = \"$allele_string\" 
+                  WHERE variation_id=$variation_id2
+                  AND variation_feature_id=$variation_feature_id2});
+  }
+  #upto here -- added to merge allele_string for dbSNP variation
 
   debug("Inserting into variation_synonym table...");
   $dbVar->do(qq{INSERT IGNORE INTO variation_synonym (variation_id,subsnp_id,source_id,name) 
