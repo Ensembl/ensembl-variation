@@ -165,7 +165,7 @@ sub new {
   $self->{'_variation_id'}    = $variation_id;
   $self->{'source'}           = $source;
   $self->{'validation_code'}  = $validation_code;
-  $self->{'consequence_type'} = $consequence_type || 'INTERGENIC';
+  $self->{'consequence_type'} = $consequence_type || ['INTERGENIC'];
  
   return $self;
 }
@@ -286,6 +286,9 @@ sub get_all_TranscriptVariations{
 	my $tva = $self->{'adaptor'}->db()->get_TranscriptVariationAdaptor();
 	$tva->fetch_all_by_VariationFeatures([$self]);
 	$self->{'transcriptVariations'} ||= [];
+	
+	# now set the highest priority one
+	$self->{'consequence_type'} = $self->_highest_priority($self->{'transcriptVariations'});
     }
     return $self->{'transcriptVariations'};
 }
