@@ -165,7 +165,7 @@ sub new {
   $self->{'_variation_id'}    = $variation_id;
   $self->{'source'}           = $source;
   $self->{'validation_code'}  = $validation_code;
-  $self->{'consequence_type'} = $consequence_type || 'INTERGENIC';
+  $self->{'consequence_type'} = $consequence_type || ['INTERGENIC'];
  
   return $self;
 }
@@ -271,7 +271,7 @@ sub map_weight{
 
   Example     : $vf->get_all_TranscriptVariations;
   Description : Getter a list with all the TranscriptVariations associated associated to the VariationFeature
-  Returntype  : ref to Bio::EnsEMBL::Variation::VariationFeature
+  Returntype  : ref to list of Bio::EnsEMBL::Variation::TranscriptVariation objects
   Exceptions  : None
   Caller      : general
   Status      : At Risk
@@ -286,6 +286,9 @@ sub get_all_TranscriptVariations{
 	my $tva = $self->{'adaptor'}->db()->get_TranscriptVariationAdaptor();
 	$tva->fetch_all_by_VariationFeatures([$self]);
 	$self->{'transcriptVariations'} ||= [];
+	
+	# now set the highest priority one
+	$self->{'consequence_type'} = $self->_highest_priority($self->{'transcriptVariations'});
     }
     return $self->{'transcriptVariations'};
 }
