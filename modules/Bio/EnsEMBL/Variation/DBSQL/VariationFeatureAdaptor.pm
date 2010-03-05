@@ -258,6 +258,74 @@ sub fetch_all_by_Slice_VariationSet{
     
     return \@res;
 }
+
+
+=head2 fetch_all_by_Slice_Population
+
+  Arg [1]	 : Bio::EnsEMBL::Slice
+  Arg [2]    : Bio::EnsEMBL::Variation::Population
+  Arg [3]	 : $minimum_frequency (optional)
+  Example    : $pop = $pop_adaptor->fetch_by_dbID(659);
+			  $slice = $slice_adaptor->fetch_by_region("chromosome", 1, 1, 1e6);
+              @vfs = @{$vf_adaptor->fetch_all_by_Slice_Population($pop,$slice)};
+  Description: Retrieves all variation features in a slice which are stored for
+			   a specified population. If $minimum_frequency is supplied, only
+			   variations with a minor allele frequency (MAF) greater than
+			   $minimum_frequency will be returned.
+  Returntype : listref of Bio::EnsEMBL::Variation::VariationFeature
+  Exceptions : throw on incorrect argument
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub fetch_all_by_Slice_Population {
+  my $self = shift;
+  
+  my $slice = shift;
+  
+  if(!ref($slice) || !$slice->isa('Bio::EnsEMBL::Slice')) {
+    throw('Bio::EnsEMBL::Slice arg expected');
+  }
+  
+  my $pop = shift;
+  
+  if(!ref($pop) || !$pop->isa('Bio::EnsEMBL::Variation::Population')) {
+	throw('Bio::EnsEMBL::Variation::Population arg expected');
+  }
+  
+  # default to 5% frequency
+  my $freq = shift;
+  my $extra_sql = '';
+  
+  if(defined $freq) {
+	
+	# adjust frequency if given a percentage
+	$freq /= 100 if $freq > 1;
+	$extra_sql = qq{ AND (IF(a.frequency > 0.5, 1-a.frequency, a.frequency) > $freq) }
+  }
+  
+  my $cols = join ",", $self->_columns();
+  
+  my $sth = $self->prepare(qq{
+	SELECT $cols
+	FROM variation_feature vf, source s, allele a
+	WHERE vf.source_id = s.source_id
+	AND vf.variation_id = a.variation_id
+	AND a.sample_id = ?
+	$extra_sql
+	AND vf.seq_region_id = ?
+	AND vf.seq_region_end > ?
+	AND vf.seq_region_start < ?
+    GROUP BY a.variation_id, a.subsnp_id
+  });
+  
+  $sth->execute($pop->dbID, $slice->get_seq_region_id, $slice->start, $slice->end);
+  
+  return $self->_objs_from_sth($sth);
+}
+
+
 # method used by superclass to construct SQL
 sub _tables { return (['variation_feature', 'vf'],
 		      [ 'source', 's']); }
