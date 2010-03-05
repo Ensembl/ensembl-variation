@@ -473,10 +473,13 @@ return $flanking_sequence;
 =head2 fetch_all_by_Population
 
   Arg [1]    : Bio::EnsEMBL::Variation::Population
+  Arg [2]	 : $minimum_frequency (optional)
   Example    : $pop = $pop_adaptor->fetch_by_dbID(1345);
                @vars = @{$va_adaptor->fetch_all_by_Population($pop)};
   Description: Retrieves all variations which are stored for a specified
-               population.
+               population. If $minimum_frequency is supplied, only variations
+			   with a minor allele frequency (MAF) greater than
+			   $minimum_frequency will be returned.
   Returntype : listref of Bio::EnsEMBL::Variation::Variation
   Exceptions : throw on incorrect argument
   Caller     : general
@@ -496,9 +499,19 @@ sub fetch_all_by_Population {
     warning("Cannot retrieve genotypes for population without set dbID");
     return [];
   }
-
+  
+  my $freq = shift;
+  my $extra_sql = '';
+  
+  if(defined $freq) {
+	
+	# adjust frequency if given a percentage
+	$freq /= 100 if $freq > 1;
+	$extra_sql = qq{ AND (IF(a.frequency > 0.5, 1-a.frequency, a.frequency) > $freq) }
+  }
+  
   my $sth = $self->prepare
-    (q{SELECT v.variation_id, v.name, v.validation_status, s1.name, s1.description, v.ancestral_allele,
+    (qq{SELECT v.variation_id, v.name, v.validation_status, s1.name, s1.description, v.ancestral_allele,
               a.allele_id, a.subsnp_id, a.allele, a.frequency, a.sample_id, vs.moltype,
               vs.name, s2.name, f.failed_description_id
 	    FROM   (variation v, source s1, allele a)
@@ -508,7 +521,8 @@ sub fetch_all_by_Population {
 	      LEFT JOIN failed_description f on fv.failed_description_id = f.failed_description_id
 	      WHERE  v.variation_id = a.variation_id
 	      AND    v.source_id = s1.source_id
-	      AND    a.sample_id = ?});
+	      AND    a.sample_id = ?
+		  $extra_sql});
   $sth->bind_param(1,$pop->dbID,SQL_INTEGER);
   $sth->execute();
 
