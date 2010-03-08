@@ -166,7 +166,7 @@ sub transcript_variation {
 		next;
 	      }
 	      foreach my $tr (@{$g->get_all_Transcripts()}) {
-		my @arr = ($tr->dbID,$row->[0],'\N','\N','\N','\N','\N','\N','\N','REGULATORY_REGION');
+		my @arr = ($tr->stable_id,$row->[0],'\N','\N','\N','\N','\N','\N','\N','REGULATORY_REGION');
 		if (! $done{$row->[0]}{$tr->dbID}) {#get rid of duplicated transcript entries
 		  print FH join("\t", @arr), "\n";
 		  $done{$row->[0]}{$tr->dbID}=1;
@@ -177,7 +177,7 @@ sub transcript_variation {
 	      my $tr = $transcript_adaptor->fetch_by_stable_id($dbEntry->primary_id); #get transcript for stable_id
 	      next if(!defined $tr); #some of the transcripts do not seem to be in the core database
 
-	      my @arr = ($tr->dbID,$row->[0],'\N','\N','\N','\N','\N','\N','\N','REGULATORY_REGION');
+	      my @arr = ($tr->stable_id,$row->[0],'\N','\N','\N','\N','\N','\N','\N','REGULATORY_REGION');
 	      if (! $done{$row->[0]}{$tr->dbID}) {#get rid of duplicated transcript entries
 		print FH join("\t", @arr), "\n";
 		$done{$row->[0]}{$tr->dbID}=1;
@@ -249,7 +249,8 @@ sub transcript_variation {
 	}
 	foreach my $ct (@$consequences) {
 	  my $final_ct = join(",",@{$ct->type});
-	  my @arr = ($ct->transcript_id,
+	  my @arr = (#$ct->transcript_id,
+		     $tr->stable_id,
 		     $ct->variation_feature_id,
 		     join("/", @{$ct->aa_alleles||[]}),
 		     $ct->aa_start,
@@ -295,7 +296,7 @@ sub last_process{
     #load transcript_variation data
     debug("Reimporting processed transcript variation");
     load($dbVar, qw(transcript_variation
- 		    transcript_id variation_feature_id peptide_allele_string
+ 		    transcript_stable_id variation_feature_id peptide_allele_string
  		    translation_start translation_end cdna_start cdna_end cds_start cds_end consequence_type));
 
 
@@ -417,6 +418,16 @@ sub last_process{
                       AND vf.consequence_type != 'NO_CONSEQUENCE'
                   });
     $dbVar->do(qq{DROP TABLE tmp_consequence_type});
+    
+    #set consequence_type to INTERGENIC if previous transcript has been removed from current release
+    $dbVar->do(qq{UPDATE variation_feature vf 
+	          SET vf.consequence_typ = 'INTERGENIC'
+		  WHERE NOT EXISTS
+		  (SELECT * FROM transcript_variation tv
+		  WHERE vf.variation_feature_id = tv.variation_feature_id)
+		  AND vf.consequence_type != 'INTERGENIC'
+		});
+    
     unlink("$TMP_DIR/$status_file");
     unlink("$TMP_DIR/$TMP_FILE.su");
     update_meta_coord($dbCore, $dbVar, 'transcript_variation');
