@@ -461,11 +461,13 @@ create table variation_group_feature(
 
 #
 # transcript_variation_id - primary key, internal identifier
-# transcript_id           - foreign key to core databases
-#                           unique internal id of related transcript
+# transcript_stable_id    - foreign key to core databases
+#                           unique stable id of related transcript
 # variation_feature_id    - foreign key ref variation_feature
 # cdna_start              - start position of variation in cdna coordinates
 # cdna_end                - end position of variation in cdna coordinates
+# cds_start               - start position of variation in cds coordinates
+# cds_end               - end position of variation in cds coordinates
 # translation_start       - start position of variation on peptide
 # translation_end         - end position of variation on peptide
 # peptide_allele_string   - allele string of '/' separated amino acids
@@ -474,7 +476,7 @@ create table variation_group_feature(
 
 create table transcript_variation(
   transcript_variation_id int(10) unsigned not null auto_increment,
-  transcript_id int(10) unsigned not null,
+  transcript_stable_id varchar(128) not null,
   variation_feature_id int(10) unsigned not null,
   cdna_start int,
   cdna_end   int,
