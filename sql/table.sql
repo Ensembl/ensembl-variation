@@ -491,7 +491,7 @@ create table transcript_variation(
 			     'DOWNSTREAM','WITHIN_NON_CODING_GENE') not null,	 
   primary key( transcript_variation_id ),
   key variation_idx( variation_feature_id ),
-  key transcript_idx( transcript_id ),
+  key transcript_stable_idx( transcript_stable_id ),
   key consequence_type_idx(consequence_type)
 	);
 	
