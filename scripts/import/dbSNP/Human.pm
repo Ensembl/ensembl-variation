@@ -15,7 +15,7 @@ use ImportUtils qw(debug load dumpSQL create_and_load);
 sub dump_dbSNP{
     my $self = shift;
     #first, dump all dbSNP data as usual
- #   $self->SUPER::dump_dbSNP();
+    $self->SUPER::dump_dbSNP();
     #then, get HGVbase IDs from Yuans file
     #$self->dump_HGVbaseIDs();
     #and finally, get TSC data from dbSNP
