@@ -18,7 +18,7 @@ GetOptions('tmpdir=s'  => \$ImportUtils::TMP_DIR,
 	   'tmpfile=s' => \$ImportUtils::TMP_FILE,
 	   'species=s' => \$species,
 	   'redo'      => \$redo, #if set -redo, will not load tables like sample/population/individual etc again
-	   'add_new_name' => \$add_new_name
+	   'add_new_name' => \$add_new_name #if add ENS name after current one
 	   );
 
 warn("Make sure you have a updated ensembl.registry file!\n");
@@ -56,17 +56,17 @@ import_Source_table($dbSanger, $dbVar, $old_new_source_id, $last_source_id);
 import_Population_table($dbSanger, $dbVar, $old_new_sample_id, $sanger_sample);
 import_Individual_table($dbSanger,$dbVar,$old_new_sample_id);
 import_Individual_Population_table($dbSanger,$dbVar,$old_new_sample_id);
-#import_Meta_table($dbSanger,$dbVar);
-#import_Meta_Coord_table($dbSanger,$dbVar);
+import_Meta_table($dbSanger,$dbVar);
+import_Meta_Coord_table($dbSanger,$dbVar);
 import_Variation_table($dbSanger,$dbVar,$old_new_variation_id,$last_variation_id, $old_new_source_id, $old_new_variation_name);
 import_Allele_table($dbSanger,$dbVar,$old_new_variation_id, $old_new_sample_id);
 import_Flanking_sequence_table($dbSanger,$dbVar,$old_new_variation_id);
-import_Variation_synonym_table($dbSanger, $dbVar, $old_new_variation_id, $old_new_source_id);
-import_Failed_variation_table($dbSanger, $dbVar, $old_new_variation_id);
+#import_Variation_synonym_table($dbSanger, $dbVar, $old_new_variation_id, $old_new_source_id);
+#import_Failed_variation_table($dbSanger, $dbVar, $old_new_variation_id);
 import_Variation_feature_table($dbSanger,$dbVar,$old_new_variation_feature_id,$last_variation_feature_id, $old_new_variation_id, $old_new_source_id, $old_new_variation_name);
 #import_Transcript_variation_table($dbSanger,$dbVar,$old_new_variation_feature_id);
 #import_Read_coverage_table($dbSanger,$dbVar, $old_new_sample_id);
-import_Tmp_individual_genotype_single_bp_table($dbSanger,$dbVar,$old_new_variation_id,$old_new_sample_id);
+#import_Tmp_individual_genotype_single_bp_table($dbSanger,$dbVar,$old_new_variation_id,$old_new_sample_id);
 
 sub load_existing_stable_id {
   my $dbSanger = shift;
@@ -187,11 +187,11 @@ sub import_Source_table{
     my $last_source_id = shift;
 
     debug("Loading Source table");
-    my ($source_id, $name, $version);
+    my ($source_id, $name, $version, $description);
     my $new_source_id;
-    my $sth = $dbSanger->dbc->db_handle->prepare(qq{SELECT source_id, name, version from source});
+    my $sth = $dbSanger->dbc->db_handle->prepare(qq{SELECT source_id, name, version, description from source});
     $sth->execute();
-    $sth->bind_columns(\$source_id, \$name, \$version);
+    $sth->bind_columns(\$source_id, \$name, \$version, \$description);
     while ($sth->fetch){
       #need to check if the source is already in the Variation database
       $new_source_id = get_source_variation_database($dbVar,$name);
@@ -199,9 +199,9 @@ sub import_Source_table{
 	#get the new id for the source in the variation table
 	$new_source_id = $last_source_id + 1;
 	$last_source_id++;
-	write_file($new_source_id,$name,$version);
+	write_file($new_source_id,$name,$version, $description);
 	#and finally import the table
-	load($dbVar->dbc,"source","source_id", "name", "version") if !$redo;
+	load($dbVar->dbc,"source","source_id", "name", "version", "description") if !$redo;
 	my $call = "$TMP_DIR/$TMP_FILE";
 	unlink ($call);  
       }
