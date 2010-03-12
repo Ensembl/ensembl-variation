@@ -304,7 +304,7 @@ create table variation_feature(
 	validation_status SET('cluster','freq','submitter','doublehit','hapmap'),
 	consequence_type SET ('ESSENTIAL_SPLICE_SITE','STOP_GAINED','STOP_LOST','COMPLEX_INDEL',
 	                      'FRAMESHIFT_CODING','NON_SYNONYMOUS_CODING','SPLICE_SITE','PARTIAL_CODON','SYNONYMOUS_CODING',
-				    'REGULATORY_REGION','WITHIN_MATURE_miRNA','5PRIME_UTR','3PRIME_UTR','INTRONIC','UPSTREAM','DOWNSTREAM',
+				    'REGULATORY_REGION','WITHIN_MATURE_miRNA','5PRIME_UTR','3PRIME_UTR','INTRONIC','NMD_TRANSCRIPT','UPSTREAM','DOWNSTREAM',
 				    'WITHIN_NON_CODING_GENE','NO_CONSEQUENCE','INTERGENIC')
 	default "INTERGENIC" not null ,	
 	primary key( variation_feature_id ),
@@ -487,7 +487,7 @@ create table transcript_variation(
   peptide_allele_string varchar(255),
   consequence_type SET ('ESSENTIAL_SPLICE_SITE','STOP_GAINED','STOP_LOST','COMPLEX_INDEL',
 			     'FRAMESHIFT_CODING', 'NON_SYNONYMOUS_CODING','SPLICE_SITE','PARTIAL_CODON','SYNONYMOUS_CODING',
-			     'REGULATORY_REGION','WITHIN_MATURE_miRNA','5PRIME_UTR','3PRIME_UTR','INTRONIC','UPSTREAM',
+			     'REGULATORY_REGION','WITHIN_MATURE_miRNA','5PRIME_UTR','3PRIME_UTR','INTRONIC','NMD_TRANSCRIPT','UPSTREAM',
 			     'DOWNSTREAM','WITHIN_NON_CODING_GENE') not null,	 
   primary key( transcript_variation_id ),
   key variation_idx( variation_feature_id ),
