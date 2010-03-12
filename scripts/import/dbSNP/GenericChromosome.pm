@@ -7,6 +7,7 @@ package dbSNP::GenericChromosome;
 use dbSNP::GenericContig;
 use vars qw(@ISA);
 use ImportUtils qw(debug load dumpSQL create_and_load);
+use Progress;
 
 @ISA = ('dbSNP::GenericContig');
 
@@ -27,6 +28,7 @@ sub variation_feature{
 
      debug(localtime() . "\tLoading seq_region data");
      load($self->{'dbVar'}, "seq_region", "seq_region_id", "name");
+  print Progress::location();
     
      debug(localtime() . "\tDumping SNPLoc data");
     
@@ -147,6 +149,7 @@ sub variation_feature{
     debug(localtime() . "\tLoading SNPLoc data");
     
      create_and_load($self->{'dbVar'}, "tmp_contig_loc_chrom", "snp_id i*", "ctg *", "ctg_start i", "ctg_end i", "chr *", "start i", "end i", "strand i");
+  print Progress::location();
 
     debug(localtime() . "\tCreating genotyped variations");
     #creating the temporary table with the genotyped variations
@@ -155,8 +158,11 @@ sub variation_feature{
     my $gtype_row = $gtype_ref->[0][0] if $gtype_ref;
     if ($gtype_row) {
       $self->{'dbVar'}->do(qq{CREATE TABLE tmp_genotyped_var SELECT DISTINCT variation_id FROM tmp_individual_genotype_single_bp});
+  print Progress::location();
       $self->{'dbVar'}->do(qq{CREATE UNIQUE INDEX variation_idx ON tmp_genotyped_var (variation_id)});
+  print Progress::location();
       $self->{'dbVar'}->do(qq{INSERT IGNORE INTO tmp_genotyped_var SELECT DISTINCT variation_id FROM individual_genotype_multiple_bp});
+  print Progress::location();
     }
     debug(localtime() . "\tCreating tmp_variation_feature_chrom data");
     #if tcl.end>1, this means we have coordinates for chromosome, we will use it
@@ -170,6 +176,7 @@ sub variation_feature{
     });
 
     create_and_load($self->{'dbVar'},'tmp_variation_feature_chrom',"variation_id *","seq_region_id", "seq_region_start", "seq_region_end", "seq_region_strand", "variation_name", "source_id", "validation_status");
+  print Progress::location();
     
     debug(localtime() . "\tCreating tmp_variation_feature_ctg data");
     #if tcl.start = 1 or tcl.end=1, this means we don't have mappings on chromosome, we take ctg coordinates if it is in toplevel
@@ -183,6 +190,7 @@ sub variation_feature{
    });
 
     create_and_load($self->{'dbVar'},'tmp_variation_feature_ctg',"variation_id *","seq_region_id", "seq_region_start", "seq_region_end", "seq_region_strand", "variation_name", "source_id", "validation_status");
+  print Progress::location();
 
     debug(localtime() . "\tDumping data into variation_feature table");
     if ($gtype_row) {
@@ -191,12 +199,14 @@ sub variation_feature{
 				  SELECT tvf.variation_id, tvf.seq_region_id, tvf.seq_region_start, tvf.seq_region_end, tvf.seq_region_strand,tvf.variation_name,IF(tgv.variation_id,'genotyped',NULL), tvf.source_id, tvf.validation_status
 				  FROM $table tvf LEFT JOIN tmp_genotyped_var tgv ON tvf.variation_id = tgv.variation_id
 				  });
+  print Progress::location();
       }
       #last fill in flags with genotyped
       $self->{'dbVar'}->do(qq{UPDATE variation_feature vf, tmp_genotyped_var tgv
                               SET vf.flags = "genotyped"
                               WHERE vf.variation_id = tgv.variation_id
                              });
+  print Progress::location();
 
     }
     else {
@@ -207,6 +217,7 @@ sub variation_feature{
  				  SELECT tvf.variation_id, tvf.seq_region_id, tvf.seq_region_start, tvf.seq_region_end, tvf.seq_region_strand,tvf.variation_name,NULL, tvf.source_id, tvf.validation_status
  				  FROM $table tvf
  				  });
+  print Progress::location();
       }
     }
 
@@ -218,6 +229,7 @@ sub variation_feature{
     #for the chicken, delete 13,000 SNPs that cannot be mapped to EnsEMBL coordinate
     if ($self->{'dbCore'}->species =~ /gga/i){
 	$self->{'dbVar'}->do("DELETE FROM variation_feature WHERE seq_region_end = -1");
+  print Progress::location();
     }
 }
 
