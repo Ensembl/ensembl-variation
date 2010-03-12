@@ -11,8 +11,8 @@ use DBI;
 use Getopt::Long;
 use Bio::EnsEMBL::Registry;
 use FindBin qw( $Bin );
+use Progress;
 
-use lib '/nfs/users/nfs_p/pl4/src/scripts/';
 $ENV{'SYBASE'} = '/software/freetds-0.82';
 
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
@@ -26,6 +26,7 @@ use dbSNP::GenericChromosome;
 use dbSNP::MappingChromosome;
 use dbSNP::Mosquito;
 use dbSNP::Human;
+use dbSNP::EnsemblIds;
 
 my ($TAX_ID, $LIMIT_SQL, $dbSNP_BUILD_VERSION, $TMP_DIR, $TMP_FILE, $MAPPING_FILE_DIR);
 
@@ -67,6 +68,8 @@ Bio::EnsEMBL::Registry->load_all( $registry_file );
 
 my $cdba = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'core');
 my $vdba = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'variation');
+$vdba->dbc->{mysql_auto_reconnect} = 1;
+$vdba->dbc->do("SET SESSION wait_timeout = 2678200");
 #my $sdba = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'dbsnp');
 
 $TAX_ID = $cdba->get_MetaContainer()->get_taxonomy_id();
@@ -100,9 +103,6 @@ $TMP_FILE = $ImportUtils::TMP_FILE;
 
 $LIMIT_SQL = $limit;
 
-#$dbSNP->{mysql_auto_reconnect} = 1;
-
-#$dbSNP->do("SET SESSION wait_timeout = 2678200");
 
 #my $my_species = $mc->get_Species();
 
@@ -112,6 +112,8 @@ my $ASSEMBLY_VERSION = $cs->version();
 #my $SPECIES_PREFIX = get_species_prefix($TAX_ID);
 
 #create the dbSNP object for the specie we want to dump the data
+
+my $start = time();
 if ($species =~ /fish/i){
   #danio rerio (zebra-fish)
 
@@ -231,7 +233,8 @@ elsif ($species =~ /dog/i){
 elsif ($species =~ /hum/i) {
   #homo sa/piens (human)
 
-  my $human = dbSNP::Human->new(-dbSNP => $dbSNP,
+  my $human = dbSNP::EnsemblIds->new(-dbSNP => $dbSNP,
+  #my $human = dbSNP::Human->new(-dbSNP => $dbSNP,
   #my $human = dbSNP::MappingChromosome->new(-dbSNP => $dbSNP,
 				-dbCore => $dbCore,
 				-dbVar => $dbVar,
@@ -279,7 +282,8 @@ elsif ($species =~ /platypus/i){
   #add_strains($dbVar); #add strain information
 }
 elsif ($species =~ /^pig$/i) {
-  my $pig = dbSNP::GenericChromosome->new(
+  my $pig = dbSNP::MappingChromosome->new(-dbSNP => $dbSNP,
+  #my $pig = dbSNP::GenericChromosome->new(
     -dbSNP => $dbSNP,
     -dbCore => $dbCore,
     -dbVar => $dbVar,
@@ -287,11 +291,15 @@ elsif ($species =~ /^pig$/i) {
     -tmpdir => $TMP_DIR,
     -tmpfile => $TMP_FILE,
     -limit => $LIMIT_SQL,
+    -mapping_file_dir => $MAPPING_FILE_DIR,
     -dbSNP_version => $dbSNP_BUILD_VERSION,
     -assembly_version => $ASSEMBLY_VERSION
   );
   $pig->dump_dbSNP();
 }
+my $end = time();
+my $duration = Progress::time_format($end-$start);
+print $duration->{'weeks'} . " weeks, " . $duration->{'days'} . " days, " . $duration->{'hours'} . " hours, " . $duration->{'minutes'} . " minutes and " . $duration->{'seconds'} . " seconds spent importing from dbSNP\n";
 
 debug(localtime() . "\tAll done!");
 
