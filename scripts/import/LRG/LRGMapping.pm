@@ -3,13 +3,15 @@ use warnings;
 
 package LRGMapping;
 
-use lib '/nfs/acari/dr2/projects/src/ensembl/ensembl/modules';
+#Êuse lib '/nfs/acari/dr2/projects/src/ensembl/ensembl/modules';
 
+use Bio::EnsEMBL::LRGSlice;
 use Bio::EnsEMBL::MappedSliceContainer;
 use Bio::EnsEMBL::DBSQL::DBConnection;
 use Bio::EnsEMBL::FeaturePair;
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
-use LRG;
+use LRG::LRG;
+use LRG::LRGImport;
 use List::Util qw (min max);
 
 
@@ -23,180 +25,182 @@ our $output_dir = '/lustre/scratch103/ensembl/pl4/tmp';
 our $target_dir = '/lustre/work1/ensembl/yuan/SARA/human/ref_seq_hash';
 our %rec_seq;
 
+#ÊKeep different db connections for a core db with write access to and one with read-only access
+our $dbCore_rw;
+our $dbCore_ro;
+
 our $lrg_name;
-our $dbCore;
 our $registry_file;
 our $current_assembly;
 
 our $mapping_num = 1;
 
-
 sub mapping {
-  my $sequence = shift;
-  my $seq_length = length($sequence);
-	
-  #print "LENGTH $seq_length\n";
-	
-  # if we need to split it
-  if($seq_length > 25000) {
-    my $split_size = 10000;
-		
-    my $current_start = 0;
-		
-    my @maps = ();
-	
-    while($current_start < $seq_length) {
-			
-      # split_size is conservative; if this is the penultimate split, just do a bigger
-      # one to make sure we don't try and map too small a sequence
-      if($seq_length - $current_start < (2 * $split_size)) {
-		$split_size = 2 * $split_size;
-      }
-		
-      #print "\nMapping from $current_start to ", $current_start + $split_size, "\n";
-      push @maps, mapping(substr($sequence, $current_start, $split_size));
-			
-      $current_start += $split_size;
+  my $lrg_seq = shift;
+  
+  my $maps = map_to_genome($lrg_seq);
+  my $mainmap = join_mappings($maps);
+  
+  return $mainmap;
+}
+
+sub map_to_genome {
+  my $q_seq = shift;
+  my $lrg_offset = shift;
+  
+  my $SPLIT_SIZE = 25000;
+  my $SPLIT_OVERLAP = 1000;
+  my $MIN_QUERY_LENGTH = 15000;
+  
+  my $q_len = length($q_seq);
+  $lrg_offset ||= 0;
+  
+  my @maps;
+  
+  # If the remainder of the split sequence will not be smaller than the minimum query length, it is ok to split the sequence
+  if ($q_len + $SPLIT_OVERLAP > $SPLIT_SIZE + $MIN_QUERY_LENGTH) {
+    # Chop off a split at the 5' end 
+    my $q_split = substr($q_seq,0,$SPLIT_SIZE);
+    #ÊAppend a small overlap to the remainder
+    my $q_rest = substr($q_split,-$SPLIT_OVERLAP) . substr($q_seq,$SPLIT_SIZE);
+    
+    # Map the split to the genome and add it to the array
+    @maps = (@maps,@{map_to_genome($q_split,$lrg_offset)});
+    #ÊSend the rest of the sequence back to this method to do a recursion
+    @maps = (@maps,@{map_to_genome($q_rest,$lrg_offset+($SPLIT_SIZE-$SPLIT_OVERLAP))});
+    
+    return \@maps;
+  }
+  # Else, we map the supplied piece
+  @maps = @{ssaha_mapping($q_seq)};
+  
+  # For all mappings, add the LRG offset to the LRG coordinates
+  foreach my $map (@maps) {
+    $map->{'lrg_start'} += $lrg_offset;
+    $map->{'lrg_end'} += $lrg_offset;
+    # Do this also for all pairs in the pairs array
+    foreach my $pair (@{$map->{'pairs'}}) {
+      $pair->[1] += $lrg_offset;
+      $pair->[2] += $lrg_offset;
     }
-	
-	#print "\n>>> Done running ssaha\n";
-
-	my $prev_end = 0;
-	my @dna_pairs = ();
-    my @pairs = ();
-	my @mis_pairs = ();
-    
-	my $full_match = 1;
-
-	# get all pairs from all maps into arrays
-	foreach my $map(@maps) {
-		
-		$full_match = 0 if ($map->identical_matches == 0);
-		
-		# sort by query start
-		foreach my $pair(sort {$a->[2] <=> $b->[2]} @{$map->type}) {
-			#print "full_match is $full_match and ",$map->identical_matches,'-',$pair->[0],'-',$pair->[1],'-',$pair->[2],'-',$pair->[3],'-',$pair->[4],'-',$pair->[5],'-',$pair->[6],'-',$pair->[7],"\n";
-			
-			#print "@$pair\n";
-			
-			# add the previous DNA end to each query coordinate
-			# since we split up the query sequence
-			$pair->[1] += $prev_end;
-			$pair->[2] += $prev_end;
-			
-			# put the DNA pairs in a separate array
-			if($pair->[0] eq 'DNA') {
-				push @dna_pairs, $pair;
-			}
-			
-			# put mismatch pairs in the @mis_pairs array
-			elsif(defined($pair->[6]) && defined($pair->[7]) && $pair->[6].$pair->[7] =~ /.+/) {
-				push @mis_pairs, $pair;
-			}
-			
-			# put the match pairs in the @pairs array
-			else {
-				push @pairs, $pair;
-			}
-		}
-		
-		# get prev_end from the last added DNA pair
-		$prev_end = $dna_pairs[-1]->[2];
-	}
-	
-	# now join the pairs using join_pairs subroutine
-	my @joined_pairs = (@{join_pairs(\@pairs)}, @{join_pairs(\@mis_pairs)}, @{join_pairs(\@dna_pairs)});
-	
-	# join the maps
-	my $main_map = shift @maps;
-	
-	my $prev_q_end = $main_map->end;
-	
-	foreach my $map(@maps) {
-		if($map->hend < $main_map->hend && $map->hstart < $main_map->hstart) {
-		  $main_map->hstart($map->hstart);
-		}
-		
-		else {
-		  $main_map->hend($map->hend);
-		}
-	  
-		$main_map->end( $map->end + $prev_q_end);
-		  
-		$prev_q_end = $main_map->end;
-	}
-	
-    $main_map->identical_matches($full_match);
-    my $seqname = $main_map->seqname;
-    chop($seqname);
-    $main_map->seqname($seqname);
-    
-	#print "main_map is ",$main_map->seqname,'-',$main_map->hseqname,'-',$main_map->start,'-',$main_map->end,'-',$main_map->hstart,'-',$main_map->hend,'-',$main_map->identical_matches,"\n";
-    
-	# add the pairs onto the joined map
-    $main_map->type(\@joined_pairs);
-
-    #foreach my $pair (@{$main_map->type}) {
-    #  print "checking DNA bit : ",$pair->[0],'-',$pair->[1],'-',$pair->[2],'-',$pair->[3],'-',$pair->[4],'-',$pair->[5],'-',$pair->[6],'-',$pair->[7],"\n";
-    #}
-	
-    return $main_map;
   }
-	
-  else {
-	
-    my $name = "temp$$".$mapping_num++;
-	#my $name = "temp19098".$mapping_num++;
-    #my $name = "temp214871".$mapping_num++;
-    #my $name = "temp_will";
-    my $input_file_name = $name.'.fa';
-		
-    open OUT, ">$input_dir/$name\.fa" or die $!;
-    #open OUT, ">$name\.fa" or die $!;
-    print OUT '>', $name, "\n", $sequence;
-    close OUT;
-		
-    my $queue = "-q normal -R'select[mem>4000] rusage[mem=4000]' -M4000000";
-		
-    my $output_file_name = "ssaha2_output\_$input_file_name";
-    my $input_file = "$input_dir/$input_file_name";
-    my $output_file ="$output_dir/$output_file_name";
-		
-    my ($subject, %rec_find, %input_length, %done);
-		
-    $subject = "$target_dir/ref";
-    $rec_seq{$name} = $sequence;
-    #print "q_seq length is ",length($sequence),"\n";			
-    my $seqobj = Bio::PrimarySeq->new(-id => $name, -seq => $rec_seq{$name});
-    $rec_seq{$name} = $seqobj;
-		
-    bsub_ssaha_job($queue,$input_file,$output_file,$subject);
+  
+  return \@maps;
+}
 
-    my $call = "bsub -o $input_dir/$$.waiting.out -P ensembl-variation -K -w 'done($input_file\_ssaha_job)' -J waiting_process sleep 1"; #waits until all ssaha jobs have finished to continue
-    system($call);
-	
-	#unlink $input_file;
-	
-	# check the output file
-	open IN, $output_file or die("Could not read from output file $output_file\n");
-	
-	my $ok = 0;
-	
-	while(<IN>) {
-	  if(/^Query/) {
-		$ok = 1;
-		last;
+# Join together overlapping mappings to one main map
+sub join_mappings {
+  my $mapref = shift;
+  
+  # Order the mappings in ascending LRG start coords order
+  my @mappings = sort {$a->{'lrg_start'} <=> $b->{'lrg_start'}} @{$mapref};
+  
+  my %mainmap;
+  while (my $submap = shift(@mappings)) {
+    #ÊInitialize the mainmap by setting it to the first mapped piece
+    if (!defined($mainmap{'lrg_id'})) {
+      %mainmap = %{$submap};
+      next;
+    }
+    #ÊCheck that this piece is overlapping the previous one (or possibly lying back-to-back in case of no overlap)
+    die("Mapped pieces are not overlapping!") unless ($submap->{'lrg_end'} > $mainmap{'lrg_end'} && $submap->{'lrg_start'} - $mainmap{'lrg_end'} <= 1);
+    # Do a check to make sure that the mappings are not on opposite strands
+    die("Mapped pieces are on opposite strands!") unless ($submap->{'strand'} == $mainmap{'strand'});
+    
+    #ÊSort the mainmap's pairs in descending LRG coord order
+    my @mainpairs = sort {$b->[2] <=> $a->[2]} @{$mainmap{'pairs'}};
+    
+    #ÊAdd pairs that fall on or beyond the mainmap's border to the mainmap's pair array
+    while (my $subpair = shift(@{$submap->{'pairs'}})) {
+      # Go to the next if the pair ends within the overlap with the main map
+      next if ($subpair->[2] <= $mainmap{'lrg_end'});
+      #ÊIf the pair starts within the overlap and extends beyond, it should be merged with an already existing pair
+      # In the special case of no overlap between mappings, 'DNA' pairs that lie back-to-back and have no gap in between should be joined
+      if (
+	  ($subpair->[1] <= $mainmap{'lrg_end'} && $subpair->[2] > $mainmap{'lrg_end'}) ||
+	  ($submap->{'lrg_start'} == ($mainmap{'lrg_end'} + 1) && $subpair->[0] eq 'DNA' && $subpair->[1] == $submap->{'lrg_start'})
+	 ) {
+	foreach my $mainpair (@mainpairs) {
+	  if (
+	      $subpair->[0] eq $mainpair->[0] &&
+	      (
+	       ($subpair->[1] <= $mainmap{'lrg_end'}) ||
+	       ($submap->{'lrg_start'} == ($mainmap{'lrg_end'} + 1) && $subpair->[1] == $submap->{'lrg_start'} && $mainpair->[2] == $mainmap{'lrg_end'})
+	      )
+	     ) {
+	    $mainpair->[2] = $subpair->[2];
+	    $mainpair->[3] = min($mainpair->[3],$subpair->[3]);
+	    $mainpair->[4] = max($mainpair->[4],$subpair->[4]);
+	    last;
 	  }
+	  # If the mainpair ends short of the end of the mainmap, we don't need to loop anymore (since they are sorted)
+	  last if ($mainpair->[2] < $mainmap{'lrg_end'});
 	}
-	
-	close IN;
-	
-	die "Error in mapping process - no data found in ssaha output file $output_file\n" unless $ok;
-	
-    my $mapping = parse_ssaha2_out($output_file);
-	
-    return $mapping->[0];
+      }
+      # If the pair starts beyond the mainmap, add it to the mainmap's pair array
+      push(@mainpairs,$subpair) if ($subpair->[1] > $mainmap{'lrg_end'} )
+    }
+    
+    # Update the mainmap's coordinates
+    $mainmap{'lrg_end'} = $submap->{'lrg_end'};
+    $mainmap{'chr_start'} = min($mainmap{'chr_start'},$submap->{'chr_start'});
+    $mainmap{'chr_end'} = max($mainmap{'chr_end'},$submap->{'chr_end'});
+    $mainmap{'score'} += $submap->{'score'};
+    
+    # Replace the mainmap's pair array
+    $mainmap{'pairs'} = \@mainpairs;
   }
+  
+  return \%mainmap;
+}
+
+# Map the supplied sequence to the genome using ssaha2 and return an arrayref with hashes containing mapping details as well as a pairs array
+sub ssaha_mapping {
+  my $sequence = shift;
+  
+  my $name = "temp$$".$mapping_num++;
+  my $input_file_name = $name.'.fa';
+  	
+  open OUT, ">$input_dir/$name\.fa" or die $!;
+  print OUT '>', $name, "\n", $sequence;
+  close OUT;
+  	
+  my $queue = "-q normal -R'select[mem>4000] rusage[mem=4000]' -M4000000";
+  	
+  my $output_file_name = "ssaha2_output\_$input_file_name";
+  my $input_file = "$input_dir/$input_file_name";
+  my $output_file ="$output_dir/$output_file_name";
+  	
+  my ($subject, %rec_find, %input_length, %done);
+  	
+  $subject = "$target_dir/ref";
+  $rec_seq{$name} = $sequence;
+  my $seqobj = Bio::PrimarySeq->new(-id => $name, -seq => $rec_seq{$name});
+  $rec_seq{$name} = $seqobj;
+  	
+  bsub_ssaha_job($queue,$input_file,$output_file,$subject);
+  
+  my $call = "bsub -o $input_dir/$$.waiting.out -P ensembl-variation -K -w 'done($input_file\_ssaha_job)' -J waiting_process sleep 1"; #waits until all ssaha jobs have finished to continue
+  system($call);
+  
+  # check the output file
+  open IN, $output_file or die("Could not read from output file $output_file\n");
+  
+  my $ok = 0;
+  
+  while(<IN>) {
+    if(/^Query/) {
+  	$ok = 1;
+  	last;
+    }
+  }
+  close IN;
+  
+  die "Error in mapping process - no data found in ssaha output file $output_file\n" unless $ok;
+  
+  my $mapping = parse_ssaha2_out($output_file);
+  
+  return $mapping;
 }
 
 # subroutine to submit a job to the farm
@@ -215,58 +219,6 @@ sub bsub_ssaha_job {
 #  print $call, "\n";
 }
 
-# subroutine to join mapping elements
-sub join_pairs {
-	my $pairs = shift;
-	my $prev_pair;
-	my @joined_pairs;
-	
-	foreach my $pair(@$pairs) {
-		if(defined $prev_pair) {
-			
-			# if the start of this pair is 1 more than the
-			# end of the previous one we want to join them
-			if($pair->[1] - $prev_pair->[2] == 1) {
-				
-				# copy this pair's query end to prev_pair
-				$prev_pair->[2] = $pair->[2];
-				
-				# add any bases that were in a mismatch pair
-				$prev_pair->[6] .= $pair->[6] unless (!defined($pair->[6]));
-				$prev_pair->[7] .= $pair->[7] unless (!defined($pair->[7]));
-				
-				# do the same with the target end
-				# but we have to work out which it is since target
-				# coords are always reported start < end
-				if($pair->[3] < $prev_pair->[3] && $pair->[4] < $prev_pair->[4]) {
-					$prev_pair->[3] = $pair->[3];
-				}
-				
-				else {
-					$prev_pair->[4] = $pair->[4];
-				}
-			}
-			
-			# if the two pairs shouldn't be joined
-			else {
-				push @joined_pairs, $prev_pair;
-				
-				# clear prev_pair so that code below works
-				$prev_pair = undef;
-			}
-		}
-		
-		# copy this pair to prev_pair if we're not joining to previous
-		$prev_pair = $pair unless defined $prev_pair;
-	}
-	
-	# clean up remaining prev_pair by adding to joined_pairs
-	# also allows for situation where there's only 1 pair
-	push @joined_pairs, $prev_pair if defined $prev_pair;
-	
-	return \@joined_pairs;
-}
-
 # subroutine to parse the output from ssaha2
 sub parse_ssaha2_out {
 
@@ -275,9 +227,58 @@ sub parse_ssaha2_out {
 
   open SSAHA, "$output_file" or die "can't open $output_file : $!\n";
   my @rec_find;
-	
+  
+  my $q_seq;
+  my $t_seq;
+  my $vulgar;
+  my $data;
+  
   while (<SSAHA>) {
+    chomp;
+    my $line = $_;
+    
+    # If the vulgar annotation line is encountered, store it. If one already is stored, parse it with the collected sequences  
+    if ($line =~ m/^vulgar\:/) {
+      if (defined($vulgar)) {
+	$data = parse_vulgar_string($vulgar,$q_seq,$t_seq);
+	if (defined($data)) {
+	  push(@rec_find,$data);
+	}
+	$q_seq = undef;
+	$t_seq = undef;
+      }
+      $vulgar = $line;
+    }
+    elsif ($line =~ m/^Query|Sbjct/) {
+      my ($id,$seq) = $line =~ m/^(Query|Sbjct)\s+\d+\s+([^\s]+)\s+\d+$/;
+      
+      # Remove gap characters
+      $seq =~ s/\-//g;
+      if ($id eq 'Query') {
+	$q_seq .= $seq;
+      }
+      else {
+	$t_seq .= $seq;
+      }
+    }
+  }
+  close SSAHA;
+
+  #ÊParse the stored vulgar string and sequences
+  if (defined($vulgar)) {  
+    $data = parse_vulgar_string($vulgar,$q_seq,$t_seq);
+    if (defined($data)) {
+      push(@rec_find,$data);
+    }
+  }
+  
+  # For now, die if we could not get exactly one mapping
+  die("The LRG sequence was not uniquely mapped!") unless (scalar(@rec_find) == 1);
+  
+  return \@rec_find;
+  
     #print ;
+=head    
     next if ($_ !~ /^vulgar/);
     if (/^vulgar\:\s+(\S+)\s+(\d+)\s+(\d+)\s+(\+|\-)\s+(\S+)\s+(\d+)\s+(\d+)\s+(\+|\-)\s+(\d+)\s+(.*)$/) {
       my $h = undef;
@@ -308,212 +309,138 @@ sub parse_ssaha2_out {
   }
   my $mapping = make_feature_pair($rec_find[0]);
   return $mapping;
+=cut
 }
 
-# processes and creates mapping pairs
-sub make_feature_pair {
-
-  my (@pairs,@fps);
-  my ($h) = @_;
-
-  my $q_id = $h->{'q_id'};
-  my $q_start = $h->{'q_start'};
-  my $q_end = $h->{'q_end'};
-  my $q_strand = $h->{'q_strand'};
-  my $t_id = $h->{'t_id'};
-  my $t_start = $h->{'t_start'};
-  my $t_end = $h->{'t_end'};
-  my $t_strand = $h->{'t_strand'};
-  my $score = $h->{'score'};
-  my $match = $h->{'match'};
-
-  #print "$q_id,$q_start,$q_end,$q_strand,$t_id,$t_start,$t_end,$t_strand,$score and match $match\n";
-  my ($f_q_start,$f_q_end) ;#feature start-end used to make feature_pairs
-  if ($q_strand ==1) {
-    ($f_q_start,$f_q_end) = ($q_start,$q_end);
-  }
-  else {
-    ($f_q_start,$f_q_end) = ($q_end,$q_start);
-  }
-
-  my ($seq_region_name) = split /\-/, $t_id;
+# Attempts to parse a vulgar string as outputted from ssaha2. Will return a reference to a hash with the following fields:
+#  lrg_id
+#  chr_name
+#  lrg_start
+#  lrg_end
+#Ê chr_start
+#Ê chr_end
+#  strand
+#  score
+#  pairs
+sub parse_vulgar_string {
+  my $vulgar = shift;
+  my $q_seq = shift;
+  my $t_seq = shift;
   
-  my $sa = $dbCore->get_SliceAdaptor();
-  my $slice = $sa->fetch_by_region('chromosome',$seq_region_name);
-
-  my $q_seqobj = $rec_seq{$q_id};
-
-  #warning that query_seq length != matched query_length
-  if ($q_seqobj and length($q_seqobj->seq) != abs($q_end - $q_start) + 1){
-    #print "q_start is $q_start and q_end is $q_end and length is ",length($q_seqobj->seq),"\n";
-    die("query sequence length not equal matched query sequence length");
+  my ($q_id,$q_start,$q_end,$q_strand,$t_id,$t_start,$t_end,$t_strand,$score,$match) = $vulgar =~ m/^vulgar\:\s+([^\s]+)\s+(\d+)\s+(\d+)\s+([\+\-])\s+([^\s]+)\s+(\d+)\s+(\d+)\s+([\+\-])\s+(\d+)\s+(.+)$/;
+  my %data;
+  
+  unless(
+    defined($q_id) &&
+    defined($q_start) &&
+    defined($q_end) &&
+    defined($q_strand) &&
+    defined($t_id) &&
+    defined($t_start) &&
+    defined($t_end) &&
+    defined($t_strand) &&
+    defined($score) &&
+    defined($match)
+  ) {
+    return undef;
   }
-
-  my @match_components = split /\s+/, $match;
-
-  my ($full_match,$new_q_start, $new_q_end, $new_t_start, $new_t_end);
-
-  $full_match=1; #initial full_match
-
-  while (@match_components) {
-
-    my $type = shift @match_components;
-    my $query_match_length = shift @match_components;
-    my $target_match_length = shift @match_components;
-    my ($tmp_q_start,$tmp_q_end);
+  
+  $q_strand = ($q_strand eq '+' ? 1 : -1);
+  $t_strand = ($t_strand eq '+' ? 1 : -1);
+  
+  # If the match is on the minus strand relative to the LRG, flip everything around
+  if ($q_strand < 0) {
+    ($q_start,$q_end) = ($q_end,$q_start);
+    $t_strand *= -1;
+    $match = join(" ",reverse(split(/\s+/,$match)));
+    reverse_comp(\$q_seq);
+    reverse_comp(\$t_seq);
+  }
+  
+  # Get the chromosome name
+  my ($t_name) = $t_id =~ m/^([^\-]+)\-/;
+  
+  $data{'lrg_id'} = $q_id;
+  $data{'chr_name'} = $t_name;
+  $data{'lrg_start'} = $q_start;
+  $data{'lrg_end'} = $q_end;
+  $data{'chr_start'} = $t_start;
+  $data{'chr_end'} = $t_end;
+  $data{'strand'} = $q_strand;
+  $data{'score'} = $score;
+  
+  my @pairs;
+  
+  #ÊA vulgar label 'M' means that the match is of equal length* while 'G' means an indel
+  # *At least this is what I think. I do an extra step to check this and if it's not true, the script will die.
+  my $q_offset = 0;
+  my $t_offset = 0;
+  while ($match =~ m/([MG\d]+)\s(\d+)\s([MG\d]+)/g) {
+    my ($lbl,$q_len,$t_len);
+    if ($q_strand < 0) {
+      ($lbl,$q_len,$t_len) = ($3,$2,$1);
+    }
+    else {
+      ($lbl,$q_len,$t_len) = ($1,$2,$3);
+    }
+    
+    my $pair;
+    if ($lbl eq 'M') {
+      die('The length of query and target in match pair is different!') unless ($q_len == $t_len);
       
-    if ($type eq 'M') {#go through each base to check SNP,target strand always 1
-      my ($q_seq);
-      if ($q_strand == 1) {
-	$new_q_start = $q_start + $query_match_length - 1 ;
-	$q_seq = substr($q_seqobj->seq,$q_start-1,$query_match_length);
-      }
-      else {
-	$new_q_start = $q_start - $query_match_length + 1;
-	$q_seq = substr($q_seqobj->seq,$new_q_start-1,$query_match_length);
-	reverse_comp(\$q_seq);
-      }
-      $new_t_start = $t_start + $target_match_length -1;
-      my $tmp_qs = ($q_strand ==1) ? $q_start : $new_q_start;
-      my $tmp_qe = ($q_strand ==1) ? $new_q_start : $q_start;
-      push @pairs, ['DNA',$tmp_qs,$tmp_qe,$t_start,$new_t_start,$q_strand];
-
-      #print "$q_start,$new_q_start,$t_start,$new_t_start\n";
-      #my $t_seq = substr($slice->seq,$t_start-1,$new_t_start-$t_start+1);
-	  
-	  my $t_end = $t_start + $target_match_length -1;
-	  my $t_seq = $slice->sub_Slice($t_start, $t_end)->seq;
-	  
-      #print "$q_start,$new_q_start,$t_start,$new_t_start and length of q_seq ",length($q_seq),'-',length($t_seq),"\n";
-      #print "q_seq_is $q_seq\n";
-      #print "t_seq is $t_seq\n";
-      my $q_count = 1;
-      my $t_count = 1;
-	  
-      my %q_seqs = map {$q_count++,$_} split '', $q_seq;
-      my %t_seqs = map {$t_count++,$_} split '', $t_seq;
-      my ($sub_q_end,$new_count);
-      my $sub_q_start = $q_start;#initial sub_q_start
-      my $sub_t_start = $t_start;
-      foreach my $count (sort {$a<=>$b} keys %q_seqs) {
-	if (defined $q_seqs{$count+1} and defined $t_seqs{$count+1} and $q_seqs{$count+1} !~ /$t_seqs{$count+1}/i and $q_seqs{$count} =~ /$t_seqs{$count}/i and $count < length($q_seq)) {
-	  push @pairs, [$type,$q_start,$q_start+$count-1,$t_start,$t_start+$count-1,$q_strand] if $q_strand==1;
-	  push @pairs, [$type,$q_start,$q_start-$count+1,$t_start,$t_start+$count-1,$q_strand] if $q_strand==-1;
+      # Store a coordinate pair with label 'DNA'. These can be used as mapping spans and chunks in the assembly mapping table
+      $pair = [
+		'DNA',
+		$q_start + $q_offset,
+		$q_start + $q_offset + $q_len - 1,
+		($t_strand > 0 ? $t_start + $t_offset : $t_end - $t_offset - $t_len + 1),
+		($t_strand > 0 ? $t_start + $t_offset + $t_len - 1 : $t_end - $t_offset),
+		$q_strand
+	      ];
+      push(@pairs,$pair);
+      
+      # Go through each nucleotide in the query and target and store SNPs
+      my $i = 0;
+      while ($i < $q_len) {
+	if (substr($q_seq,$q_start + $q_offset + $i - 1,1) ne substr($t_seq,1 + $t_offset + $i - 1,1)) {
+	  $pair = [
+	    $lbl,
+	    $q_start + $q_offset + $i,
+	    $q_start + $q_offset + $i,
+	    ($t_strand > 0 ? $t_start + $t_offset + $i : $t_end - $t_offset - $i),
+	    ($t_strand > 0 ? $t_start + $t_offset + $i : $t_end - $t_offset - $i),
+	    $q_strand,
+	    substr($q_seq,$q_start + $q_offset + $i - 1,1),
+	    substr($t_seq,1 + $t_offset + $i - 1,1)
+	  ];
+	  push(@pairs,$pair);
 	}
-	if ($q_seqs{$count} !~ /$t_seqs{$count}/i) {
-	  #if there is a mismatch, we need to record the base based on query sequence
-          if ($q_strand==-1) {
-            reverse_comp(\$q_seqs{$count});
-            reverse_comp(\$t_seqs{$count});
-          }
-
-	  #print "count is $count\n";
-	  $full_match =0;
-	  my $sub_t_end = $t_start + ($count) - 1;
-	  $sub_t_start = $sub_t_end ;
-
-	  if ($q_strand ==1) {
-	    $sub_q_end = $q_start + ($count -1) - 1;
-	  }
-	  else {
-	    $sub_q_end = $q_start - ($count -1) + 1;
-	  }
-	  if ($q_strand==1) {
-	    $tmp_q_start = $sub_q_end+1;#change start to end
-	    $tmp_q_end = $sub_q_end+1; #change start to end
-	    $sub_q_start = $sub_q_end+2;#+1 cover SNP base, +1 cover next base
-	  }
-	  else {
-	    $tmp_q_start = $sub_q_end-1;
-	    $tmp_q_end = $sub_q_end-1;
-	    $sub_q_start = $sub_q_end-2;
-	  }
-	
-	  ($tmp_q_start,$tmp_q_end) = ($tmp_q_end,$tmp_q_start) if($tmp_q_end<$tmp_q_start);
-	  push @pairs, [$type,$tmp_q_start,$tmp_q_end,$sub_t_start,$sub_t_end,$q_strand,uc($q_seqs{$count}),uc($t_seqs{$count})];
-
-	  #print "in Mismatch, q_start is $tmp_q_start and q_end is $tmp_q_end and t_start is $sub_t_start and t_end is $sub_t_end and q_base is,uc($q_seqs{$count}) and target_base is ,uc($t_seqs{$count}) \n";
-	  $sub_t_start = $sub_t_end+1;
-	}
+	$i++;
       }
-
-      $q_start = $sub_q_start;
-      $t_start = $sub_t_start;
-	
-      #print "q_start is $q_start and t_start is $t_start\n";
-      #print "in M, q_start is $q_start and q_end is $new_q_start and t_start is $t_start and t_end is $new_t_start\n";
-
-      if  ($q_strand==1) {
-	$tmp_q_start = $q_start;
-	$tmp_q_end = $new_q_start;
-      }
-      else {
-	$tmp_q_start = $new_q_start;
-	$tmp_q_end = $q_start;
-      }
-      ($tmp_q_start,$tmp_q_end) = ($tmp_q_end,$tmp_q_start) if($tmp_q_end<$tmp_q_start);
-      push @pairs, [$type,$tmp_q_start,$tmp_q_end,$t_start,$new_t_start,$q_strand];
     }
-    elsif ($type eq 'G') {
-    my ($q_seq);
-      if ($q_strand ==1) {
-	$new_q_start = $q_start + $query_match_length + 1;
-        $q_seq = substr($q_seqobj->seq,$q_start,$query_match_length);
-        $q_seq = ($q_seq) ? $q_seq : '-';
-      }
-      else {
-	$new_q_start = $q_start - $query_match_length - 1;
-        $q_seq = substr($q_seqobj->seq,$new_q_start,$query_match_length);
-        $q_seq = ($q_seq) ? $q_seq : '-';
-      }
-      $new_t_start = $t_start + $target_match_length +1;
-      my $t_seq = substr($slice->seq, $t_start, $target_match_length);
-      if ($q_strand ==-1) {
-        reverse_comp(\$t_seq) if $t_seq;
-      }
-      $t_seq = ($t_seq) ? $t_seq : '-';
-
-      #the following part just to make tmp start-end to put into pairs
-      if ($q_strand ==-1) {
-	$tmp_q_start = $new_q_start+1;
-	$tmp_q_end = $q_start-1;
-      }
-      else {
-	$tmp_q_start = $q_start+1;
-	$tmp_q_end = $new_q_start-1;
-      }
-      ($tmp_q_start,$tmp_q_end) = ($tmp_q_end,$tmp_q_start) if($tmp_q_end<$tmp_q_start);
-      push @pairs, [$type,$tmp_q_start,$tmp_q_end,$t_start+1,$new_t_start-1,$q_strand,uc($q_seq),uc($t_seq)];
-
-      #print "in G, q_start is $q_start and q_end is $new_q_start and t_start is $t_start and t_end is $new_t_start\n";
+    else {
+      my $gap_len = max($q_len,$t_len);
+      my $gap_string = '-' x $gap_len;
+      $pair = [
+	$lbl,
+	$q_start + $q_offset,
+	$q_start + $q_offset + $q_len - 1,
+	($t_strand > 0 ? $t_start + $t_offset : $t_end - $t_offset - $t_len + 1),
+	($t_strand > 0 ? $t_start + $t_offset + $t_len - 1 : $t_end - $t_offset),
+	$q_strand,
+	($q_len == 0 ? $gap_string : substr($q_seq,$q_start + $q_offset -1,$q_len)),
+	($t_len == 0 ? $gap_string : substr($t_seq,1 + $t_offset -1,$t_len))
+      ];
+      push(@pairs,$pair);
     }
-
-    $q_start = $new_q_start;
-    $t_start = $new_t_start;
+    $q_offset += $q_len;
+    $t_offset += $t_len;
   }
-
-  foreach  my $pair (sort {$a->[3]<=>$b->[3]} @pairs) {
-    print "pairs in ssaha_mapping are @$pair\n";
-  }
-  my $fp = Bio::EnsEMBL::FeaturePair->new(-start    => $f_q_start,
-					  -end      => $f_q_end,
-					  -strand   => $q_strand,
-					  -display_id => $h->{'q_id'},
-					  -hstart   => $h->{'t_start'},
-					  -hend     => $h->{'t_end'},
-					  -hstrand  => $h->{'t_strand'},
-					  -hseqname => $h->{'t_id'},
-					  -slice    => $slice,
-					 );
-  $fp->seqname($h->{'q_id'});
-  $fp->type(\@pairs);
-  $fp->identical_matches($full_match);
-
-  push @fps,$fp;
-
-  return \@fps;
+  
+  $data{'pairs'} = \@pairs;
+  
+  return \%data;
 }
-
 
 sub seqname {
 
@@ -540,134 +467,178 @@ sub identical_matches {
 }
 
 sub get_annotations {
-  my $fp = shift;
-  my $q_seq = shift;
+  my $lrg_name = shift;
+  my $lrg_coord_system = shift;
   
-  die("LRG name not defined\n") unless defined $lrg_name;
-
-# For now, just assume one mapping span so get the first element from the feature pair array argument
-  $fp = $fp->[0];
-
-  my ($q_start,$q_end,$t_start,$t_end,$q_strand);
-  my $slice = $fp->slice;
-  $q_start = $fp->start;
-  $q_end = $fp->end;
-  $t_start = $fp->hstart;
-  $t_end = $fp->hend;
-  $q_strand = $fp->strand;
-  my $pairs = $fp->type;
+  # These parameters need only be defined if we need to add an entry to core db
+  my $chr_name = shift;
+  my $lrg_len = shift;
+  my $pairs = shift;
   
- # my $sub_slice = $slice->sub_Slice($t_start,$t_end,$q_strand);
-  my $full_match = $fp->identical_matches;
+  #ÊTry to fetch a slice for the LRG (from the read-write db), this should be possible if an entry exists in the core db
+  my $sa_rw = $dbCore_rw->get_SliceAdaptor();
+  my $lrg_slice = $sa_rw->fetch_by_region($lrg_coord_system,$lrg_name);
+ 
+  # If it failed, insert mapping data to the core db
+  if (!defined($lrg_slice)) {
   
-  my @nodes;
-
-  # For consistency in the annotations, do transfer between LRG and chromosome coord systems
-  #Êeven if there is a perfect match
-  my $lrg_coord_system = $lrg_name;
-  my $additions = add_mapping($lrg_name,$lrg_coord_system,length($q_seq),$current_assembly,$slice->seq_region_name(),$pairs,$dbCore);
-  
-  Bio::EnsEMBL::Registry->clear();
-  Bio::EnsEMBL::Registry->load_all( $registry_file );
-  $dbCore = Bio::EnsEMBL::Registry->get_DBAdaptor('human','core');
-  
-  my $sa = $dbCore->get_SliceAdaptor();
-  my $lrg_slice = $sa->fetch_by_region($lrg_coord_system,$lrg_name);
-
-  my $min = 9999999999;
-  my $max = -9999999999;
-  my $chrom;
-  my $strand;
-
-  foreach my $segment (@{$lrg_slice->project('chromosome',$current_assembly)}) {
-    my $from_start = $segment->from_start();
-    my $from_end    = $segment->from_end();
-    my $to_name    = $segment->to_Slice->seq_region_name();
-    $chrom = $to_name;
-
-    my $to_start    = $segment->to_Slice->start();
-    my $to_end    = $segment->to_Slice->end();
-    if($to_start > $max){
-	$max = $to_start;
-    }
-    if($to_start < $min){
-	$min = $to_start;
-    }
-    if($to_end > $max){
-	$max = $to_end;
-    }
-    if($to_end <  $min){
-	$min = $to_end;
-    }
-    my $ori        = $segment->to_Slice->strand();
-    $strand = $ori;   
-  
-    #print "$from_start-$from_end  => $to_name $to_start-$to_end ($ori) \n";
-  }
-
-   # foreach my $gene (@{$lrg_slice->get_all_Genes()}){
-      #print "gene_name is ",$gene->stable_id,"\n";
-    #}
-    #print "q_seq from lrg_slice is ",$lrg_slice->start,'-'.$lrg_slice->end,"\n";
-    #print "length of q_seq is ",length($q_seq), " and length of hseq is ", length($lrg_slice->seq),"\n";
+    # Add a mapping between the LRG and chromosome to the core db
+    # For consistency in the annotations, do transfer between LRG and chromosome coord systemsÊeven if there is a perfect match
+    $LRGImport::dbCore = $dbCore_rw;
+    LRGImport::add_mapping($lrg_name,$lrg_coord_system,$lrg_len,$current_assembly,$chr_name,$pairs);
     
-    #if ($lrg_slice->seq eq $q_seq) {
-    #  print "hseq is same as q_seq\n";
-    #}
-    #else {
-    #  print "hseq is different from q_seq\n";
-    #  #print "q_seq is ",$q_seq,"\n";
-    #  #print "hseq is ",$lrg_slice->seq,"\n";
-    #}
-
-   my $ref_slice = $sa->fetch_by_region("chromosome",$chrom, $min, $max, $strand);
-   my @genes = @{$ref_slice->get_all_Genes()};
-	
-   foreach my $gene (@genes) {
-#     next unless $gene->biotype() eq 'protein_coding';
-		
-     #print "before transfprm g start-end ",$gene->start,'-',$gene->end,"\n";
-     #my $new_gene = $gene->transform('LRG');
-#     my $new_gene = $gene->transfer($lrg_slice);
-     #print "after transform g start-end ",$new_gene->start,'-',$new_gene->end,"\n" if $new_gene;
-	  
-    # Pass the gene as it is on the reference slice instead and do a transformation for each transcript separately in the subroutine	  
-     my @new_nodes = @{get_gene_annotation($gene,$lrg_slice)};
-	  
-     push @nodes, @new_nodes;
-   }
- # }
-  clean_mapping($additions,$dbCore);
+    # Reload the db connections to get rid of any caching (is this necessary?)
+    Bio::EnsEMBL::Registry->clear();
+    Bio::EnsEMBL::Registry->load_all( $registry_file );
+    $dbCore_rw = Bio::EnsEMBL::Registry->get_DBAdaptor('human','core_rw');
+    
+    # Now, try again to fetch the LRG slice
+    $sa_rw = $dbCore_rw->get_SliceAdaptor();
+    $lrg_slice = $sa_rw->fetch_by_region($lrg_coord_system,$lrg_name);
+    
+    die('Could not get LRG slice despite adding it to core db!') if (!defined($lrg_slice));
+  }  
   
-  return \@nodes;
+  my $genes = get_overlapping_genes($lrg_slice);
+  my @gene_features;
+  
+  foreach my $gene (@{$genes}) {
+    my $gene_feature = gene_2_feature($gene,$lrg_slice);
+    push(@gene_features,$gene_feature);
+  }
+  
+  return \@gene_features;
 }
 
-sub get_gene_annotation {
+# Get the outer limits of a feature when projected onto another slice or undef if the projection failed
+sub get_feature_limits {
+  my $feature = shift;
+  my $slice = shift;
+  
+  my %limits;
+  
+  #ÊGet the start position of the feature on the slice
+  my $lrg_position = lift_coordinate($feature->start(),$feature->slice(),$slice);
+  if (defined($lrg_position->{'position'})) {
+    $limits{'start'} = $lrg_position->{'position'};
+    $limits{'strand'} = $lrg_position->{'strand'};
+  }
+  else {
+    #ÊIf start position lies upstream of LRG slice, indicate that the feature is partial in its 3'-end
+    if ($lrg_position->{'reason'} eq 'upstream') {
+      $limits{'start'} = 1;
+      $limits{'partial_3'} = 1;
+    }
+    # If start position lies downstream of LRG, the entire feature must be downstream, so indicate that
+    elsif ($lrg_position->{'reason'} eq 'downstream') {
+      $limits{'downstream'} = 1;
+      $limits{'start'} = $slice->length() + 1;
+    }
+  }
+  
+  #ÊGet the end position of the feature on the slice
+  $lrg_position = lift_coordinate($feature->end(),$feature->slice(),$slice);
+  if (defined($lrg_position->{'position'})) {
+    $limits{'end'} = $lrg_position->{'position'};
+    $limits{'strand'} = $lrg_position->{'strand'};
+  }
+  else {
+    #ÊIf start position lies downstream of LRG slice, indicate that the feature is partial in its 5'-end
+    if ($lrg_position->{'reason'} eq 'downstream') {
+      $limits{'partial_5'} = 1;
+      $limits{'end'} = $slice->length();
+    }
+    # If end position lies upstream of LRG, the entire feature must be upstream, so indicate that
+    elsif ($lrg_position->{'reason'} eq 'upstream') {
+      $limits{'upstream'} = 1;
+      $limits{'end'} = -1;
+    }
+    
+  }
+  
+  return \%limits;
+}
+
+#ÊLift a specific coordinate from a source slice to another slice. Returns a hash with the new coordinate and a field for storing the reason why mapping failed
+sub lift_coordinate {
+  my $position = shift;
+  my $source_slice = shift;
+  my $target_slice = shift;
+  
+  my %mapping;
+  
+  #ÊProject the feature onto the target slice
+  my $projections = $source_slice->project_to_slice($target_slice);
+  
+  #ÊIf feature fails to project (lies entirely outside of the supplied slice), return with reason 'failed'
+  if (!defined($projections) || scalar(@{$projections}) == 0) {
+    $mapping{'reason'} = 'failed';
+    return \%mapping;
+  }
+  
+  # If position is 5' of what's been mapped
+  $mapping{'reason'} = 'upstream' if ($position < $projections->[0][0]);
+  #ÊIf position is 3' of what's been mapped
+  $mapping{'reason'} = 'downstream' if ($position > $projections->[-1][1]);
+  
+  # Return if position was outside of lrg_slice
+  return \%mapping if (defined($mapping{'reason'}));
+  
+  my $new_position = undef;
+  my $new_strand = undef;
+  # Go over the projected segments and find the coordinate liftover value
+  foreach my $segment (@{$projections}) {
+    
+    # If position falls outside of the segment, skip to the next
+    next if ($position < $segment->[0] || $position > $segment->[1]);
+    
+    # The offset of the coordinate within the segment
+    my $offset = $position - $segment->[0];
+    
+    # The liftover position
+    $new_position = $segment->[2]->start() + $offset;
+    $new_strand = $segment->[2]->strand();
+    
+    last;
+  }
+  
+  # If new coordinate still couldn't be determined, this must be because it is deleted in the target slice
+  $mapping{'reason'} = 'deleted' if (!defined($new_position));
+  
+  $mapping{'position'} = $new_position;
+  $mapping{'strand'} = $new_strand;
+  
+  return \%mapping;
+}
+
+sub gene_2_feature {
 
 	my $gene = shift;
 	my $lrg_slice = shift;
 	my $slice_end = $lrg_slice->end;
 	my ($current, $entry);
-	my @nodes;
 	
-	my $lrg_gene = $gene->transfer($lrg_slice);
+	# Check if the boundaries of the gene extends beyond the mapped region, in which case the end points should be set to those of the mapped region and a flag indicating partial overlap should be set
+	my $limits = get_feature_limits($gene,$lrg_slice);
 	
-# Check if the boundaries of the gene extends beyond the mapped region, in which case the end points should be set to those of the mapped region and a flag indicating partial overlap should be set
-
-	my $feat_start = max($gene->start,1);
-	my $feat_end = min($gene->end,$slice_end);
-	my $feat_strand = $lrg_gene->strand;
+	my $partial_5 = $limits->{'partial_5'};
+	my $partial_3 = $limits->{'partial_3'};
 	
-	my $partial_5 = ($feat_start != $gene->start);
-	my $partial_3 = ($feat_end != $gene->end);
-	if ($feat_strand < 0) {
-	  ($partial_5,$partial_3) = ($partial_3,$partial_5);
-	}
+	
+	my $feat_slice = $gene->feature_Slice();
+	
+	my $feat_start = $limits->{'start'};
+	my $feat_end = $limits->{'end'};
+	my $feat_strand = $limits->{'strand'};
+	
+#	if ($feat_strand < 0) {
+#	  ($partial_5,$partial_3) = ($partial_3,$partial_5);
+#	}
 	
 	# create the gene node
 	my $gene_node = LRG::Node->new("gene", undef, {'symbol' => $gene->external_name, 'start' => $feat_start, 'end' => $feat_end, 'strand' => $gene->strand});
  
- # If the gene partially overlaps, this should be indicated
+	# If the gene partially overlaps, this should be indicated
 	if ($partial_5) {
 	  $gene_node->addNode('partial')->content('5-prime');
 	}
@@ -713,162 +684,203 @@ sub get_gene_annotation {
 	# get the xrefs for the transcript
 	my %ext = ();
 	my %extdesc = ();
+	my $note_node;
 	
 	foreach my $trans(@{$gene->get_all_Transcripts}) {
-		
+	  
 		#print "Gene/Trans ", $gene->stable_id, " ", $trans->stable_id, "\n";
 		
     ### There is still a problem with this in case sub-features (exons) are crossing the coord system border ###
     ### Use Ian's suggestion instead? LRG_12 is an example of this (ENSG00000141698). 
-	  my $lrg_trans = $trans->transfer($lrg_slice);
-	  next if (!defined($lrg_trans));
+	  #my $lrg_trans = $trans->transfer($lrg_slice);
+	  #next if (!defined($lrg_trans));
 	  
 # Check for partial overlaps
-		$feat_start = max($trans->start,1);
-		$feat_end = min($trans->end,$slice_end);
-		$feat_strand = $trans->strand;
-		$partial_5 = ($feat_start != $trans->start);
-		$partial_3 = ($feat_end != $trans->end);
-		if ($feat_strand < 0) {
-		  ($partial_5,$partial_3) = ($partial_3,$partial_5);
-		}
-	      	
+	  $limits = get_feature_limits($trans,$lrg_slice);
 # If the transcript falls entirely outside of the LRG it should be skipped
-		next if ($feat_end < 1 || $feat_start > $slice_end);
+	  next if (!defined($limits) || $limits->{'upstream'} || $limits->{'downstream'});
+	  
+	  $feat_start = $limits->{'start'};
+	  $feat_end = $limits->{'end'};
+	  $feat_strand = $limits->{'strand'};
+	  $partial_5 = $limits->{'partial_5'};
+	  $partial_3 = $limits->{'partial_3'}; 	
 		
 #ÊIf the transcript only partially overlaps the LRG, we need to set the end points of the transcript to the end point of the last exon that falls within the LRG record
-		my $exon_overlap = 1;
-		
-		if ($partial_5 || $partial_3) {
-		  my $exons = $trans->get_all_Exons();
-		  $exon_overlap = 0;
-		  if (scalar(@{$exons}) > 0) {
-		    $feat_start = $slice_end;
-		    $feat_end = 1;
-		    foreach my $exon (@{$exons}) {
-		      my $lrg_exon = $exon->transfer($lrg_slice);
-		      next if (!defined($lrg_exon));
+	  my $exon_overlap = 1;
+	  
+	  if ($partial_5 || $partial_3) {
+	    my $exons = $trans->get_all_Exons();
+	    $exon_overlap = 0;
+	    if (scalar(@{$exons}) > 0) {
+	      $feat_start = $slice_end;
+	      $feat_end = 1;
+	      foreach my $exon (@{$exons}) {
+#	        my $lrg_exon = $exon->transfer($lrg_slice);
+#	        next if (!defined($lrg_exon));
+	        $limits = get_feature_limits($exon,$lrg_slice);
+	        next if (!defined($limits) || $limits->{'upstream'} || $limits->{'downstream'});
+	        
 # Set a flag to indicate that there is in fact an exon in this transcript within the scope of the LRG
-		      $exon_overlap = 1;
-		      if ($exon->end > 1) {
-			$feat_start = min($feat_start,max(1,$exon->start));
-		      }
-		      if ($exon->start < $slice_end) {
-			$feat_end = max($feat_end,min($slice_end,$exon->end));
-		      }
-		    }
-		    if ($feat_start > $feat_end) {
-		      ($feat_start,$feat_end) = ($feat_end,$feat_start);
-		    }
-		  }
+		$exon_overlap = 1;
+		if ($limits->{'end'} > 1) {
+		  $feat_start = min($feat_start,$limits->{'start'});
 		}
+		if ($limits->{'start'} < $slice_end) {
+		  $feat_end = max($feat_end,$limits->{'end'});
+		}
+	      }
+	      if ($feat_start > $feat_end) {
+	        ($feat_start,$feat_end) = ($feat_end,$feat_start);
+	      }
+	    }
+	  }
 		
-		my $cds_node = LRG::Node->new("transcript", undef, {'source' => 'Ensembl', 'start' => $feat_start, 'end' => $feat_end, 'transcript_id' => $trans->stable_id});
+	  my $cds_node = LRG::Node->new("transcript", undef, {'source' => 'Ensembl', 'start' => $feat_start, 'end' => $feat_end, 'transcript_id' => $trans->stable_id});
 		
 # If transcript partially overlaps, it should be indicated
-		if ($partial_5) {
-		  $cds_node->addNode('partial')->content('5-prime');
-		}
-		if ($partial_3) {
-		  $cds_node->addNode('partial')->content('3-prime');
-		}
-		
-		$entries = $trans->get_all_DBEntries();
-		
-		while($entry = shift @$entries) {
-			
-			next unless $entry->dbname =~ /GI|RefSeq|MIM_GENE|Entrez|CCDS|RFAM|miRBase/;
-			next if $entry->dbname =~ /RefSeq_peptide/;
-			
-			if($entry->dbname eq 'RefSeq_dna') {
-			  my $note_node = LRG::Node->new('long_name');
-			  $note_node->content($entry->description);
-			  $cds_node->addExisting($note_node) unless ($cds_node->nodeExists($note_node));
-			}
-			
-			if ($entry->dbname !~ /MIM_GENE/) {
-			  $cds_node->addExisting(xref($entry));
-			}
-			else {
-			  $gene_node->addExisting(xref($entry));
-			}
-			
-			#print $entry->dbname, " ", $entry->primary_id, ".", $entry->version, " ", $entry->description, "\n";
-			
-			$ext{$entry->dbname} = $entry->primary_id;
-			$extdesc{$entry->dbname} = $entry->description;
-		}
-		
-		my $protein = $trans->translation;
-		
-		if($protein && length($protein) > 0) {
-		  		  
-# Check for partial overlaps
-		  $feat_start = max($trans->coding_region_start,$feat_start);
-		  $feat_end = min($trans->coding_region_end,$feat_end);
-		  $partial_5 = ($feat_start != $trans->coding_region_start);
-		  $partial_3 = ($feat_end != $trans->coding_region_end);
-		  if ($feat_strand < 0) {
-		    ($partial_5,$partial_3) = ($partial_3,$partial_5);
-		  }
+	  if ($partial_5) {
+	    $cds_node->addNode('partial')->content('5-prime');
+	  }
+	  if ($partial_3) {
+	    $cds_node->addNode('partial')->content('3-prime');
+	  }
+	  
+	  $entries = $trans->get_all_DBEntries();
+	  
+	  while($entry = shift @$entries) {
+	  	
+	    next unless $entry->dbname =~ /GI|RefSeq|MIM_GENE|Entrez|CCDS|RFAM|miRBase/;
+	    next if $entry->dbname =~ /RefSeq_peptide/;
+	    
+	    if($entry->dbname eq 'RefSeq_dna') {
+	      $note_node = LRG::Node->new('long_name');
+	      $note_node->content($entry->description);
+	      $cds_node->addExisting($note_node) unless ($cds_node->nodeExists($note_node));
+	    }
+	    
+	    if ($entry->dbname !~ /MIM_GENE/) {
+	      $cds_node->addExisting(xref($entry));
+	    }
+	    else {
+	      $gene_node->addExisting(xref($entry));
+	    }
+	    
+	    #print $entry->dbname, " ", $entry->primary_id, ".", $entry->version, " ", $entry->description, "\n";
+	    
+	    $ext{$entry->dbname} = $entry->primary_id;
+	    $extdesc{$entry->dbname} = $entry->description;
+	  }
+	  
+	  my $protein = $trans->translation;
+	  
+	  if($protein && length($protein) > 0) {
+	    my $cds_start;
+	    my $cds_end;
+	    undef($partial_5);
+	    undef($partial_3);
+	    my $lift = lift_coordinate($trans->coding_region_start,$trans->slice(),$lrg_slice);
+	    # In case the position couldn't be found on the LRG slice, investigate why
+	    if (!defined($lift->{'position'})) {
+	      #ÊIf coding start lies downstream of LRG slice, the protein should be skipped
+	      if ($lift->{'reason'} eq 'downstream') {
+		$cds_start = $slice_end + 1;
+	      }
+	      #ÊIf coding start lies upstream of LRG slice, set start of protein to the closest exon start
+	      elsif ($lift->{'reason'} eq 'upstream') {
+		$cds_start = $feat_start;
+		$partial_3 = 1;
+	      }
+	      #ÊIf it is because of a deletion, don't know what to do... (set to closest, non-deleted position?)
+	      elsif ($lift->{'reason'} eq 'deleted') {}
+	      #ÊElse if it failed to project, this is likely to be because the transcript is entirely outside of LRG. Shouldn't have gotten this far in that case but still, skip protein in that case
+	      elsif ($lift->{'reason'} eq 'failed') {
+		$cds_start = $slice_end + 1;
+	      }
+	    }
+	    else {
+	      $cds_start = $lift->{'position'};
+	    }
+	    
+	    $lift = lift_coordinate($trans->coding_region_end,$trans->slice(),$lrg_slice);
+	    # In case the position couldn't be found on the LRG slice, investigate why
+	    if (!defined($lift->{'position'})) {
+	      #ÊIf coding end lies upstream of LRG slice, the protein should be skipped
+	      if ($lift->{'reason'} eq 'upstream') {
+		$cds_end = -1;
+	      }
+	      #ÊIf coding end lies downstream of LRG slice, set end of protein to the closest exon end
+	      elsif ($lift->{'reason'} eq 'downstream') {
+		$cds_end = $feat_end;
+		$partial_5 = 1;
+	      }
+	      #ÊIf it is because of a deletion, don't know what to do... (set to closest, non-deleted position?)
+	      elsif ($lift->{'reason'} eq 'deleted') {}
+	      #ÊElse if it failed to project, this is likely to be because the transcript is entirely outside of LRG. Shouldn't have gotten this far in that case but still, skip protein in that case
+	      elsif ($lift->{'reason'} eq 'failed') {
+		$cds_end = -1;
+	      }
+	    }
+	    else {
+	      $cds_end = $lift->{'position'};
+	    }
+
 # Some gene-level data (e.g. NCBI GeneID) is buried in the translation object. So before determining if we skip the transcript, parse the xrefs
-		  my $prot_node = LRG::Node->new('protein_product');
-		  $prot_node->data(
-		    {
-		      'source' => 'Ensembl',
-		      'accession' => $protein->stable_id,
-		      'cds_start' => $feat_start,
-		      'cds_end' => $feat_end
-		    }
-		  );
-		  
-		  $entries = $protein->get_all_DBEntries();
-			  
-		  while($entry = shift @$entries) {
-				  
-		    next unless $entry->dbname =~ /RefSeq|Uniprot|CCDS|MIM_GENE|Entrez/;
-				  
-		    if($entry->dbname eq 'RefSeq_peptide') {
-		      my $note_node = LRG::Node->new('long_name');
-		      $note_node->content($entry->description);
-		      $prot_node->addExisting($note_node) unless ($prot_node->nodeExists($note_node));
-		    }
-		    
-		    if ($entry->dbname !~ /MIM_GENE|Entrez/) {
-		      $prot_node->addExisting(xref($entry));
-		    }
-		    else {
-		      my $xref = xref($entry);
-		      $gene_node->addExisting($xref) unless ($gene_node->nodeExists($xref));
-		    }
-		  }
+	    my $prot_node = LRG::Node->new('protein_product');
+	    $prot_node->data(
+	      {
+	        'source' => 'Ensembl',
+	        'accession' => $protein->stable_id,
+	        'cds_start' => $cds_start,
+	        'cds_end' => $cds_end
+	      }
+	    );
+	    	    
+	    $entries = $protein->get_all_DBEntries();
+	      
+	    while($entry = shift @$entries) {
+	    	  
+	      next unless $entry->dbname =~ /RefSeq|Uniprot|CCDS|MIM_GENE|Entrez/;
+	    	  
+	      if($entry->dbname eq 'RefSeq_peptide') {
+	        $note_node = LRG::Node->new('long_name');
+	        $note_node->content($entry->description);
+	        $prot_node->addExisting($note_node) unless ($prot_node->nodeExists($note_node));
+	      }
+	      
+	      if ($entry->dbname !~ /MIM_GENE|Entrez/) {
+	        $prot_node->addExisting(xref($entry));
+	      }
+	      else {
+	        my $xref = xref($entry);
+	        $gene_node->addExisting($xref) unless ($gene_node->nodeExists($xref));
+	      }
+	    }
 
 # If the transcript falls entirely outside of the LRG it should be skipped
-		  unless ($feat_end < 1 || $feat_start > $slice_end) {
+	    unless ($cds_end < 1 || $cds_start > $slice_end) {
 	      
-		    if ($partial_5) {
-		      $prot_node->addNode('partial')->content('5-prime');
-		    }
-		    if ($partial_3) {
-		      $prot_node->addNode('partial')->content('3-prime');
-		    }
-		
-		    $cds_node->addExisting($prot_node);
-			        
-		      #print $entry->dbname, " ", $entry->primary_id, ".", $entry->version, " ", $entry->description, "\n";
-		  }
-		}
-		$gene_node->addExisting($cds_node) unless ($gene->biotype eq 'protein_coding' && (!$protein || !$exon_overlap));
+	      if ($partial_5) {
+		$prot_node->addNode('partial')->content('5-prime');
 	      }
+	      if ($partial_3) {
+		$prot_node->addNode('partial')->content('3-prime');
+	      }
+	      
+	      $cds_node->addExisting($prot_node);
+		      
+	      #print $entry->dbname, " ", $entry->primary_id, ".", $entry->version, " ", $entry->description, "\n";
+	    }
+	  }
+	  $gene_node->addExisting($cds_node) unless ($gene->biotype eq 'protein_coding' && (!$protein || !$exon_overlap));
+	}
 	
 	# finish the gene with xrefs
 	#$gene_node->addEmptyNode('db_xref', {'source' => 'GeneID', 'accession' => $ext{'EntrezGene'}}) if defined $ext{'EntrezGene'};
 	#$gene_node->addEmptyNode('db_xref', {'source' => 'HGNC', 'accession' => $ext{'HGNC'}}) if defined $ext{'HGNC'};
 	#$gene_node->addEmptyNode('db_xref', {'source' => 'MIM', 'accession' => $ext{'MIM_GENE'}}) if defined $ext{'MIM_GENE'};
 	
-	unshift @nodes, $gene_node;
-	
-	return \@nodes;
+	return $gene_node;
 }
 
 sub xref {
@@ -889,211 +901,371 @@ sub xref {
 	return $node;
 }
 
-# Add all the necessary data to the db in order to project and transfer between the LRG and chromosome
-# Returns a hashref holding the tables affected and conditions for retrieving the changes
-sub add_mapping {
-  my $lrg_name = shift;
-  my $lrg_coord_system = shift;
-  my $q_seq_length = shift;
-  my $assembly = shift;
-  my $target_chr = shift;
-  my $pairs = shift;
-  my $dbCore = shift;
+#ÊCreate an array of FeaturePair objects from a mapping tag, one for each mapping span
+sub mapping_2_feature_pair {
+	my $mapping = shift;
+	my $slice_adaptor = shift;
+	
+	my $hseqname = $mapping->data->{'chr_name'};
+	my $slice = $slice_adaptor->fetch_by_region('chromosome',$hseqname);
+	my @feature_pairs;
+	
+	foreach my $span (@{$mapping->findNodeArray('mapping_span')}) {
+		my $hstart = $span->data->{'start'};
+		my $hend = $span->data->{'end'};
+		my $hstrand = 1;
+		my $start = $span->data->{'lrg_start'};
+		my $end = $span->data->{'lrg_end'};
+		my $strand = $span->data->{'strand'};
+		my $identical_matches = 1;
+		
+		my @type;
+		push (@type,['DNA',$start,$end,$hstart,$hend,$strand]);
+		my ($s,$e,$hs,$he);
+		my $last_end = 0;
+		my $last_hend = ($strand > 0 ? ($hstart-1) : ($hend+1));
+		
+		my $diffs = $span->findNodeArray('diff');
+		if (defined($diffs)) {
+			foreach my $diff (@{$diffs}) {
+				$s = $last_end+1;
+				$e = $diff->data->{'lrg_start'}-1;
+				$hs = ($strand > 0 ? ($last_hend+1) : ($diff->data->{'end'}+1));
+				$he = ($strand > 0 ? ($diff->data->{'start'}-1) : ($last_hend-1));
+				push(@type,['M',$s,$e,$hs,$he,$strand]);
+				
+				$s = $diff->data->{'lrg_start'};
+				$e = $diff->data->{'lrg_end'};
+				$hs = $diff->data->{'start'};
+				$he = $diff->data->{'end'};
+				my $seq = $diff->data->{'lrg_sequence'};
+				my $hseq = $diff->data->{'genomic_sequence'};
+				push(@type,['M',$s,$e,$hs,$he,$strand,$seq,$hseq]);
+				
+				$last_end = $e;
+				$last_hend = ($strand > 0 ? $he : $hs);
+				$identical_matches = 0;
+			}
+		}
+		$s = $last_end+1;
+		$e = $end;
+		$hs = ($strand > 0 ? ($last_hend+1) : $hstart);
+		$he = ($strand > 0 ? $hend : ($last_hend-1));
+		push(@type,['M',$s,$e,$hs,$he,$strand]);
 
-  my %additions;
+		my $fp = Bio::EnsEMBL::FeaturePair->new(
+			-start    => $start,
+			-end      => $end,
+			-strand   => $strand,
+			-display_id => $hseqname,
+			-hstart   => $hstart,
+			-hend     => $hend,
+			-hstrand  => $hstrand,
+			-hseqname => $hseqname,
+			-slice    => $slice,
+		);
+		$fp->identical_matches($identical_matches);
+		$fp->type(\@type);
+		
+		push(@feature_pairs,$fp);		
+	}
+	return \@feature_pairs;
+}
+
+# Convert an XML mapping structure into a pair array. Needs all sequences to be in forward direction (will flip them on its own)
+sub mapping_2_pairs {
+  my $mapping_node = shift;
+  my $lrg_seq = shift;
+  my $chr_seq = shift;
   
-  # Get the coord system id for this LRG or add a new entry if not present
-  my $stmt = qq{
-    SELECT
-      coord_system_id
-    FROM
-      coord_system
-    WHERE
-      name = '$lrg_coord_system'
-    LIMIT 1
-  };
-  my $cs_id = $dbCore->dbc->db_handle->selectall_arrayref($stmt)->[0][0];
-  if (!defined($cs_id)) {
-    $stmt = qq{
-      SELECT
-	MAX(rank)
-      FROM
-	coord_system
-    };
-    my $rank = ($dbCore->dbc->db_handle->selectall_arrayref($stmt)->[0][0]+1);
-    $stmt = qq{
-      INSERT INTO
-	coord_system (
-	  species_id,
-	  name,
-	  rank,
-	  attrib
-	)
-      VALUES (
-	1,
-	'$lrg_coord_system',
-	$rank,
-	'default_version'
-      )
-    };
-    $dbCore->dbc->do($stmt);
-    $cs_id = $dbCore->dbc->db_handle->{'mysql_insertid'};
-    $additions{'coord_system'} = 'coord_system_id = ' . $cs_id;
-  }
-
-  # In order to project the slice, we need to add an entry to the meta table (if not present)
-  my $meta_value = $lrg_coord_system . '#chromosome:' . $assembly;
-  $stmt = qq{
-    SELECT
-      meta_id
-    FROM
-      meta
-    WHERE
-      meta_key = 'assembly.mapping' AND
-      meta_value LIKE '$meta_value%'
-  };
-  my $ref = $dbCore->dbc->db_handle->selectall_arrayref($stmt);
-  my @meta_id;
-  foreach my $id (@{$ref}) {
-    push(@meta_id,$id->[0]);
-  }
-  if (scalar(@meta_id) == 0) {
-    foreach my $val (($meta_value, $meta_value . '#contig', $meta_value . '#supercontig')) {
-      $stmt = qq{
-        INSERT INTO
-          meta (
-            species_id,
-            meta_key,
-            meta_value
-          )
-        VALUES (
-          1,
-          'assembly.mapping',
-          '$val'
-        )
-      };
-      $dbCore->dbc->do($stmt);
-      push(@meta_id,$dbCore->dbc->db_handle->{'mysql_insertid'});
+  # Loop over the mapping spans and create the pairs array
+  my @pairs;
+  my $mapping_spans = $mapping_node->findNodeArray('mapping_span');
+  my $last_lrg_start;
+  my $last_lrg_end;
+  my $last_chr_start;
+  my $last_chr_end;
+  my $last_strand = 1;
+  my $chr_name = $mapping_node->data->{'chr_name'};
+  my $chr_offset_start = $mapping_node->data->{'start'};
+  my $chr_offset_end = $mapping_node->data->{'end'};
+  my $lrg_offset_start = $mapping_node->data->{'lrg_start'};
+  my $lrg_offset_end = $mapping_node->data->{'lrg_end'};
+  
+  foreach my $span (@{$mapping_spans}) {
+    my $lrg_start = $span->data->{'lrg_start'};
+    my $lrg_end = $span->data->{'lrg_end'};
+    my $chr_start = $span->data->{'start'};
+    my $chr_end = $span->data->{'end'};
+    my $strand = $span->data->{'strand'};
+    
+    # If we have changed orientation since last span (or since start when sequence was forward), flip the sequence
+    if ($strand != $last_strand) {
+      reverse_comp(\$chr_seq);
+      $last_strand = $strand;
     }
-    $additions{'meta'} = 'meta_id = ' . join(' OR meta_id = ',@meta_id);
-  }
-
-  $stmt = qq{
-    SELECT
-      seq_region_id
-    FROM
-      seq_region
-    WHERE
-      name = '$lrg_name' AND
-      coord_system_id = '$cs_id'
-  };
-  my $q_seq_region_id = $dbCore->dbc->db_handle->selectall_arrayref($stmt)->[0][0];
-  if (!defined($q_seq_region_id)) {
-    $stmt = qq{
-      INSERT INTO
-	seq_region (
-	  name,
-	  coord_system_id,
-	  length
-	)
-      VALUES (
-	'$lrg_name',
-	$cs_id,
-	$q_seq_length
-      )
-    };
-    $dbCore->dbc->do($stmt);
-    $q_seq_region_id = $dbCore->dbc->db_handle->{'mysql_insertid'};
-    $additions{'seq_region'} = 'seq_region_id = ' . $q_seq_region_id;
-  }
-  
-  # Get the seq_region_id for the target chromsome
-  $stmt = qq{
-    SELECT
-      sr.seq_region_id
-    FROM
-      seq_region sr,
-      coord_system cs
-    WHERE
-      sr.name = '$target_chr' AND
-      sr.coord_system_id = cs.coord_system_id AND
-      cs.name = 'chromosome' AND
-      cs.version = '$assembly'
-    LIMIT 1
-  };
-  my $t_seq_region_id = $dbCore->dbc->db_handle->selectall_arrayref($stmt)->[0][0];
-  
-  # Add mappings between the LRG and chromosome coordinate systems
-  my @conditions;
-  foreach  my $pair (sort {$a->[3]<=>$b->[3]} @{$pairs}) {
-    if ($pair->[0] eq 'DNA') {
-      if ($pair->[2]-$pair->[1] == $pair->[4]-$pair->[3]) {
-	my $condition = qq{
-	  cmp_seq_region_id = $t_seq_region_id AND 
-	  asm_seq_region_id = $q_seq_region_id AND 
-	  cmp_start = $pair->[3] AND 
-	  cmp_end = $pair->[4] AND 
-	  asm_start = $pair->[1] AND 
-	  asm_end = $pair->[2] AND 
-	  ori = $pair->[5]
-	};
-	$stmt = qq{
-	  SELECT EXISTS (
-	    SELECT
-	      *
-	    FROM
-	      assembly
-	    WHERE
-	      $condition
+    
+    #ÊTwo mapping spans are separated by a gap, so check if we need to add that
+    if (defined($last_lrg_start)) {
+      my $lrgstring;
+      my $chrstring;
+      my $gaplen = max($lrg_start - $last_lrg_end,($strand > 0 ? $chr_start - $last_chr_end : $last_chr_start - $chr_end)) - 1;
+      # If the LRG has an insertion relative to the reference, get the string
+      if ($lrg_start - $last_lrg_end > 1 && defined($lrg_seq)) {
+	$lrgstring = substr($lrg_seq,$last_lrg_end,$lrg_start - $last_lrg_end - 1);
+      }
+      # Else, if the LRG has a deletion, create a gap string of the same length as the deletion
+      elsif ($lrg_start - $last_lrg_end == 1) {
+	$lrgstring = '-' x $gaplen;
+      }
+      
+      # If the reference has an insertion
+      if (
+	  defined($chr_seq) && (
+	    ($strand > 0 && ($chr_start - $last_chr_end) > 1) ||
+	    ($strand < 0 && ($last_chr_start - $chr_end) > 1)
 	  )
-	};
-	if (!$dbCore->dbc->db_handle->selectall_arrayref($stmt)->[0][0]) {
-	  $stmt = qq{
-	    INSERT IGNORE INTO
-	      assembly (
-	        cmp_seq_region_id,
-	        asm_seq_region_id,
-	        cmp_start,
-	        cmp_end,
-	        asm_start,
-	        asm_end,
-	        ori
-	      )
-	    VALUES (
-	      $t_seq_region_id,
-	      $q_seq_region_id,
-	      $pair->[3],
-	      $pair->[4],
-	      $pair->[1],
-	      $pair->[2],
-	      $pair->[5]
-	    )  
-	  };
-	  $dbCore->dbc->do($stmt);
-	  push(@conditions,$condition);
+	 ) {
+	if ($strand > 0) {
+	  $chrstring = substr($chr_seq,$last_chr_end-$chr_offset_start+1,$chr_start - $last_chr_end - 1);
+	}
+	else {
+	  $chrstring = substr($chr_seq,$chr_offset_end-$chr_end-1,$last_chr_start - $chr_end - 1);
 	}
       }
-      else {
-	die("distance between query and target is not the same, there is a indel");
+      #ÊElse, create a gap string
+      elsif (
+	      ($strand > 0 && ($chr_start - $last_chr_end) == 1) ||
+	      ($strand < 0 && ($last_chr_start - $chr_end) == 1)
+	    ) {
+	$chrstring = '-' x $gaplen;
       }
+      
+      my $gap_pair = [
+	'G',
+	$last_lrg_end + 1,
+	$lrg_start - 1,
+	($strand > 0 ? $last_chr_end + 1 : $chr_end + 1),
+	($strand > 0 ? $chr_start - 1 : $last_chr_start - 1),
+	$strand,
+	$lrgstring,
+	$chrstring
+      ];
+      
+      push(@pairs,$gap_pair);
+    }
+    
+    my $pair = [
+      'DNA',
+      $lrg_start,
+      $lrg_end,
+      $chr_start,
+      $chr_end,
+      $strand
+    ];
+    push(@pairs,$pair);
+    
+    # Store these coordinates in the last_* variables
+    $last_lrg_start = $lrg_start;
+    $last_lrg_end = $lrg_end;
+    $last_chr_start = $chr_start;
+    $last_chr_end = $chr_end;
+    
+    # Loop over any mismatch information and create pairs
+    my $diffs = $span->findNodeArray('diff');
+    foreach my $diff (@{$diffs}) {
+      # So far, can only handle mismatches, die with an error if something else is encountered
+      die("Can not handle diffs of type '" . $diff->data->{'type'} . "'!") unless ($diff->data->{'type'} eq 'mismatch');
+      
+      $lrg_start = $diff->data->{'lrg_start'};
+      $lrg_end = $diff->data->{'lrg_end'};
+      $chr_start = $diff->data->{'start'};
+      $chr_end = $diff->data->{'end'};
+      my $lrg_string = $diff->data->{'lrg_sequence'};
+      my $chr_string = $diff->data->{'genomic_sequence'};
+      
+      $pair = [
+	'M',
+	$lrg_start,
+	$lrg_end,
+	$chr_start,
+	$chr_end,
+	$strand,
+	$lrg_string,
+	$chr_string
+      ];
+      push(@pairs,$pair);
     }
   }
-  $additions{'assembly'} = '(' . join(') OR (',@conditions) . ')';
-  return \%additions;
+  
+  my %mapping = (
+    'lrg_start' => $lrg_offset_start,
+    'lrg_end' => $lrg_offset_end,
+    'chr_start' => $chr_offset_start,
+    'chr_end' => $chr_offset_end,
+    'chr_name' => $chr_name,
+    'strand' => $last_strand,
+    'pairs' => \@pairs
+  );
+  return \%mapping;
 }
 
-sub clean_mapping {
-  my $additions = shift;
-  my $dbCore = shift;
+# Convert a pair array structure into a XML structure
+sub pairs_2_mapping {
+  my $pairs = shift;
+  my $chr_assembly = shift;
+  my $chr_name = shift;
+  my $most_recent = shift;
+  my $chr_id = shift;
   
-  foreach my $table (keys %{$additions}) {
-    next if ($additions->{$table} eq '()'); 
-    my $stmt = qq{
-      DELETE FROM
-	$table
-      WHERE
-	$additions->{$table}
-    };
-    $dbCore->dbc->do($stmt);
+  # Create the top mapping node
+  my $mapping_node = LRG::Node->new('mapping');
+  $mapping_node->addData({'assembly' => $chr_assembly,'chr_name' => $chr_name});
+  $mapping_node->addData({'chr_id' => $chr_id}) if (defined($chr_id));
+  $mapping_node->addData({'most_recent' => $most_recent}) if (defined($most_recent));
+  
+  #ÊOrder the pairs array according to ascending LRG coordinates
+  my @sorted_pairs = sort {$a->[1] <=> $b->[1]} @{$pairs};
+  
+  # Separate the DNA chunks from mismatches in the pairs array. We will create a mapping span for each DNA chunk and include all mismatch information in this span
+  # Gaps can be discarded at this point since they are implicit between DNA chunks
+  my @dna_chunks;
+  my @mismatches;
+  while (my $pair = shift(@sorted_pairs)) {
+    push(@dna_chunks,$pair) if ($pair->[0] eq 'DNA');
+    push(@mismatches,$pair) if ($pair->[0] eq 'M');
   }
+  
+  # Loop over the DNA chunk array and create mapping spans and diffs as necessary 
+  my $chr_map_start = 1e11;
+  my $chr_map_end = -1;
+  while (my $chunk = shift(@dna_chunks)) {
+    my $lrg_start = $chunk->[1];
+    my $lrg_end = $chunk->[2];
+    my $chr_start = $chunk->[3];
+    my $chr_end = $chunk->[4];
+    my $strand = $chunk->[5];
+    
+    my $span_node = LRG::Node->new('mapping_span');
+    $span_node->addData(
+      {
+	'start' => $chr_start,
+	'end' => $chr_end,
+	'lrg_start' => $lrg_start,
+	'lrg_end' => $lrg_end,
+	'strand' => $strand
+      }
+    );
+    
+    # Loop over the mismatches and create diffs as necessary
+    foreach my $mismatch (@mismatches) {
+      next unless ($mismatch->[1] >= $lrg_start && $mismatch->[2] <= $lrg_end);
+      
+      my $diff_node = LRG::Node->newEmpty('diff');
+      $diff_node->addData(
+	{
+	  'type' => 'mismatch',
+	  'lrg_start' => $mismatch->[1],
+	  'lrg_end' => $mismatch->[2],
+	  'start' => $mismatch->[3],
+	  'end' => $mismatch->[4],
+	  'lrg_sequence' => $mismatch->[6],
+	  'genomic_sequence' => $mismatch->[7]
+	}
+      );
+      
+      $span_node->addExisting($diff_node);
+    }
+    $chr_map_start = min($chr_map_start,$chr_start);
+    $chr_map_end = max($chr_map_end,$chr_end);
+    
+    $mapping_node->addExisting($span_node);
+  }
+  # Lastly, add the mapping chromosomal start and end points as attributes to the mapping node
+  $mapping_node->addData({'chr_start' => $chr_map_start, 'chr_nd' => $chr_map_end});
+  
+  return $mapping_node;
 }
+
+# Convert a pair array structure into an array of FeaturePairs
+sub pairs_2_feature_pairs {
+  my $pairs = shift;
+  my $lrg_id = shift;
+  my $chr_id = shift;
+  my $chr_slice = shift;
+  
+  # Separate the DNA chunks from mismatch annotations in the pairs array. We will create a FeaturePair for each DNA chunk and include all mismatch information in this span
+  # Gaps can be discarded at this point since they are implicit between DNA chunks
+  my @dna_chunks;
+  my @mismatches;
+  while (my $pair = shift(@{$pairs})) {
+    push(@dna_chunks,$pair) if ($pair->[0] eq 'DNA');
+    push(@mismatches,$pair) if ($pair->[0] eq 'M');
+  }
+  
+  # Create a FeaturePair for each DNA chunk
+  my @feature_pairs;
+  foreach my $chunk (@dna_chunks) {
+    my $lrg_start = $chunk->[1];
+    my $lrg_end = $chunk->[2];
+    my $chr_start = $chunk->[3];
+    my $chr_end = $chunk->[4];
+    my $strand = $chunk->[5];
+    my @type;
+    
+    #ÊGet all the mismatch information that is spanned by this chunk
+    foreach my $mismatch (@mismatches) {
+      next unless($mismatch->[1] >= $lrg_start && $mismatch->[2] <= $lrg_end);
+      push(@type,$mismatch);
+    }
+
+    my $fp = Bio::EnsEMBL::FeaturePair->new(
+      -start    => $lrg_start,
+      -end      => $lrg_end,
+      -strand   => 1,
+      -display_id => $chr_id,
+      -hstart   => $chr_start,
+      -hend     => $chr_end,
+      -hstrand  => $strand,
+      -hseqname => $chr_id,
+      -slice    => $chr_slice
+    );
+    $fp->identical_matches((scalar(@type) == 0));
+    $fp->type(\@type);
+    
+    push(@feature_pairs,$fp);		    
+  }
+  
+  return \@feature_pairs;
+}
+
+sub get_overlapping_genes {
+  my $lrg_slice = shift;
+  
+  # Project the LRG slice to the chromosome coordinate system and get the extreme points in that coord system
+  my $segments = $lrg_slice->project('chromosome');
+  my $chr_name;
+  my $chr_start = 1e11;
+  my $chr_end = -1;
+  my $strand;
+  while (my $segment = shift(@{$segments})) {
+    $chr_start = min($chr_start,$segment->[2]->{'start'});
+    $chr_end = max($chr_end,$segment->[2]->{'end'});
+    # Check that one or more segments don't map to a different chromosome
+    die('The mapping spans are on different chromosomes!') if (defined($chr_name) && $chr_name ne $segment->[2]->{'seq_region_name'});
+    $chr_name = $segment->[2]->{'seq_region_name'};
+    # Do an extra check to make sure that one or more of the segments are not flipped (this could be valid but then we must modify the scripts to deal with it)
+    die('One or more mapping spans are flipped w.r.t. the others!') if (defined($strand) && $strand != $segment->[2]->{'strand'});
+    $strand = $segment->[2]->{'strand'};
+  }
+  
+  # Fetch a chromosome slice spanning the LRG from the reference (read-only db)
+  my $sa_ro = $dbCore_rw->get_SliceAdaptor();
+  my $ref_slice = $sa_ro->fetch_by_region("chromosome",$chr_name,$chr_start,$chr_end,$strand);
+  my $genes = $ref_slice->get_all_Genes();
+  
+  return $genes;
+}
+
+
+1;
