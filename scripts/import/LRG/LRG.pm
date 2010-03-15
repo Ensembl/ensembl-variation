@@ -714,13 +714,28 @@ sub sort_nodes {
 	    return ($a->data->{'name'} cmp $b->data->{'name'});
 	}
 	
-	# If not, sort by position if applicable
-	if (defined($a->data->{'start'}) && defined($b->data->{'start'})) {
+	# If not, sort by position if applicable.
+	if ((defined($a->data->{'start'}) && defined($b->data->{'start'})) || (defined($a->data->{'lrg_start'}) && defined($b->data->{'lrg_start'}))) {
    
-	    my $a_s = $a->data->{'start'};
-	    my $a_e = $a->data->{'end'};
-	    my $b_s = $b->data->{'start'};
-	    my $b_e = $b->data->{'end'};
+	    my $a_s;
+	    my $a_e;
+	    my $b_s;
+	    my $b_e;
+	    
+	    # Firstly by LRG coords if applicable
+	    if (defined($a->data->{'lrg_start'}) && defined($b->data->{'lrg_start'})) {
+		$a_s = $a->data->{'lrg_start'};
+		$a_e = $a->data->{'lrg_end'};
+		$b_s = $b->data->{'lrg_start'};
+		$b_e = $b->data->{'lrg_end'};
+	    }
+	    # Otherwise by general start and end positions
+	    else {
+		$a_s = $a->data->{'start'};
+		$a_e = $a->data->{'end'};
+		$b_s = $b->data->{'start'};
+		$b_e = $b->data->{'end'};
+	    }
 	
 	    # Sort primarily by start and secondarily by end
 	    if ($a_s < $b_s || ($a_s == $b_s && $a_e <= $b_e)) {
