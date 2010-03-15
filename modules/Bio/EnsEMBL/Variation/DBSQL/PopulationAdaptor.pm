@@ -252,6 +252,24 @@ sub fetch_default_LDPopulation{
 }
 
 
+=head2 fetch_all_LD_Populations
+
+    Example     : @populations = @{$pop_adaptor->fetch_all_LD Populations();
+    Description : Gets all populations that can be used in the LD display
+    ReturnType  : listref of Bio::EnsEMBL::Variation::Population objects
+    Exceptions  : none
+    Caller      : general
+    Status      : At Risk
+
+=cut
+
+sub fetch_all_LD_Populations{
+    my $self = shift;
+	
+	return $self->generic_fetch(qq{ s.display = 'LD' });
+}
+
+
 =head2 fetch_all_by_Individual
 
   Arg [1]     : Bio::EnsEMBL::Variation::Individual $ind
