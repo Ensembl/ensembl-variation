@@ -1,14 +1,11 @@
 #!/software/bin/perl
 
 use strict;
-use lib '/nfs/users/nfs_p/pl4/src/ensembl_head/ensembl-variation/scripts/import/LRG/';
-#use lib '/nfs/users/nfs_i/ianl/ensembl-live/ensembl/modules/';
-use lib '/nfs/users/nfs_p/pl4/src/ensembl_head/ensembl/modules/';
 
 use Getopt::Long;
 use List::Util qw(min max);
-use LRG;
-use LRGMapping qw(mapping get_annotations);
+use LRG::LRG;
+use LRG::LRGMapping qw(mapping get_annotations);
 use Bio::Seq;
 use Bio::EnsEMBL::Registry;
 
@@ -95,8 +92,9 @@ if (!$skip_updatable) {
 # get registry and a gene adaptor
 	$LRGMapping::registry_file = $registry_file;
 	Bio::EnsEMBL::Registry->load_all( $registry_file );
-	$LRGMapping::dbCore = Bio::EnsEMBL::Registry->get_DBAdaptor('human','core');
-	my $host = $LRGMapping::dbCore->dbc->host();
+	$LRGMapping::dbCore_ro = Bio::EnsEMBL::Registry->get_DBAdaptor('human','core_rw');
+	$LRGMapping::dbCore_rw = Bio::EnsEMBL::Registry->get_DBAdaptor('human','core_rw');
+	my $host = $LRGMapping::dbCore_rw->dbc->host();
 	if ($host !~ m/variation/ && !$skip_host_check) {
 		die('Host is ' . $host . '! Changes will be written to the database, make sure you want to use the database on this host. If so, skip this check by using -skip_host_check on command line');
 	}
@@ -121,13 +119,17 @@ create_fixed_annotation($root,$lrg_id,$genomic_file,$exon_file,$cdna_file,$pepti
 # UPDATABLE ANNOTATION SECTION #
 ################################
 
-create_updatable_annotation($root,$use_existing_mapping,$replace_annotations,$LRGMapping::dbCore->get_SliceAdaptor()) unless $skip_updatable;
+if (!$skip_updatable) {
 
-# Move annotations that should be "unbranded" to the LRG section and do consistency checking between these NCBI and Ensembl annotations
-move_to_unbranded($root) unless $skip_unbranded;
+	create_updatable_annotation($root,$use_existing_mapping,$replace_annotations,$LRGMapping::dbCore_rw->get_SliceAdaptor());
 
-# Find transcripts in the updatable section that correspond to transcripts in the fixed section (only for Ensembl annotations for now)
-match_fixed_annotation_transcripts($root,Bio::EnsEMBL::Registry->get_adaptor('Human','Core','Transcript')) unless $skip_transcript_matching;
+	# Move annotations that should be "unbranded" to the LRG section and do consistency checking between these NCBI and Ensembl annotations
+	move_to_unbranded($root) unless $skip_unbranded;
+	
+	# Find transcripts in the updatable section that correspond to transcripts in the fixed section (only for Ensembl annotations for now)
+	match_fixed_annotation_transcripts($root,$LRGMapping::dbCore_ro->get_TranscriptAdaptor()) unless $skip_transcript_matching;
+
+}
 
 # Dump XML to output_file
 $root->printAll();
@@ -145,10 +147,10 @@ sub create_fixed_annotation {
 	my $fixed = $root->findOrAdd("fixed_annotation");
 
 # add LRG ID
-	$fixed->findNode("id")->content($lrg_id);
+	$fixed->findOrAdd("id")->content($lrg_id);
 
 # add creation date
-	$fixed->findNode("creation_date")->content($root->date);
+	$fixed->findOrAdd("creation_date")->content($root->date);
 
 ## GENOMIC SEQUENCE
 	my $genomic_sequence;
@@ -422,7 +424,7 @@ sub create_updatable_annotation {
 	$current = $annotation_set_ensembl;
 	
 # Update the comment field to indicate which Ensembl release was used
-	$current->findOrAdd('comment')->content('Annotation is based on Ensembl release ' . $LRGMapping::dbCore->get_MetaContainerAdaptor()->get_schema_version());
+	$current->findOrAdd('comment')->content('Annotation is based on Ensembl release ' . $LRGMapping::dbCore_ro->get_MetaContainerAdaptor()->get_schema_version());
 	
 # update the modification date
 	$current->findOrAdd('modification_date')->content($root->date);
@@ -434,17 +436,33 @@ sub create_updatable_annotation {
 	$current->findOrAdd('alternate_amino_acid_numbering');
 
 # add a mapping node
-	my $mapping_node = $current->findOrAdd('mapping');
-
-# run the mapping sub-routine. unless we want to use the mapping already made
-	my $mappings;
+	my $mapping_node = $annotation_node->findOrAdd('mapping');
+	my $chr_id;
+# run the mapping sub-routine. unless we want to use the mapping already made, this should allow for multiple mappings. Only the most_recent mapping should be used for getting annotations though.
+	my $mapping;
 	if (!$use_existing_mapping) {
-		$mappings = LRGMapping::mapping($genomic_sequence);
+		# Run ssaha2 to map and the result is a reference to a hash
+		$mapping = LRGMapping::mapping($genomic_sequence);
+		my $pairs = $mapping->{'pairs'};
+		$chr_id = $mapping->{'chr_name'};
+		
+		# Create a mapping node from the pairs array
+		my $new_node = LRGMapping::pairs_2_mapping($pairs,$assembly,$chr_id,($assembly eq $CURRENT_ASSEMBLY));
+		# Remove the old one and replce it with the newly created one
+		my $parent = $mapping_node->parent();
+		$mapping_node->remove();
+		$parent->addExisting($new_node);
 	}
 	else {
-		$mappings = mapping_2_feature_pair($root->findNode('mapping'),$slice_adaptor);
+		$chr_id = $mapping_node->data->{'chr_name'};
+		my $chr_start = $mapping_node->data->{'start'};
+		my $chr_end = $mapping_node->data->{'end'};
+		my $chr_slice = $slice_adaptor->fetch_by_region('chromosome',$chr_id);
+		my $chr_seq = $chr_slice->subseq($chr_start,$chr_end);
+		$mapping = LRGMapping::mapping_2_pairs($mapping_node,$genomic_sequence,$chr_seq);
 	}
 	
+=head	
 	my $min_c_s = 1e11;
 	my $max_c_e = -1;
 	my $hseqname;
@@ -539,9 +557,10 @@ sub create_updatable_annotation {
 			'most_recent' => (($assembly eq $CURRENT_ASSEMBLY) ? 1 : 0)
 		}
 	);
+=cut
 	
 # get annotations
-	my @feature_nodes = @{LRGMapping::get_annotations($mappings,$genomic_sequence)};
+	my @feature_nodes = @{LRGMapping::get_annotations($LRGMapping::lrg_name,'LRG',$chr_id,length($genomic_sequence),$mapping->{'pairs'})};
 
 # add features node
 	if ($replace_annotations) {
@@ -553,7 +572,7 @@ sub create_updatable_annotation {
 	my $fixed_transcripts = $root->findNode('lrg/fixed_annotation')->findNodeArray('transcript');
 
 # add the features returned from get_annotations
-	foreach my $feature(@feature_nodes) {
+	foreach my $feature (@feature_nodes) {
 # Need to do an extra check to remove any lrg_gene_name tags that might have been set within genes that are not the ones that this LRG was created for. Determine this by looking for a transcript that has the same cds_start and cds_end as any of the transcripts in the fixed section
 		my $lrgs = $feature->findNodeArray('lrg_gene_name');
 		foreach my $tag (@{$lrgs}) {
@@ -613,10 +632,13 @@ sub match_fixed_annotation_transcripts {
 #	my $hgnc_symbol = $lrg_annotation->findNode('lrg_gene_name')->content();
 
 # Get the annotated NCBI genes
-	my $ncbi_genes = $ncbi_annotation->findNode('features')->findNodeArray('gene');
+	my $feature_node = $ncbi_annotation->findNode('features') unless (!defined($ncbi_annotation));
+	my $ncbi_genes = $feature_node->findNodeArray('gene') unless (!defined($feature_node));
 
 # Get the annotated Ensembl genes	
-	my $ensembl_genes = $ensembl_annotation->findNode('features')->findNodeArray('gene');
+	$feature_node = undef;
+	$feature_node = $ensembl_annotation->findNode('features') unless (!defined($ensembl_annotation));
+	my $ensembl_genes = $feature_node->findNodeArray('gene') unless (!defined($feature_node));
 
 # Loop over the genes, we are only interested in the one this LRG was created for
 	foreach my $ensembl_gene (@{$ensembl_genes}) {
@@ -858,77 +880,6 @@ sub make_cdna {
 	return $cdna;
 }
 
-
-#ÊCreate an array of FeaturePair objects from a mapping tag, one for each mapping span
-sub mapping_2_feature_pair {
-	my $mapping = shift;
-	my $slice_adaptor = shift;
-	
-	my $hseqname = $mapping->data->{'chr_name'};
-	my $slice = $slice_adaptor->fetch_by_region('chromosome',$hseqname);
-	my @feature_pairs;
-	
-	foreach my $span (@{$mapping->findNodeArray('mapping_span')}) {
-		my $hstart = $span->data->{'start'};
-		my $hend = $span->data->{'end'};
-		my $hstrand = 1;
-		my $start = $span->data->{'lrg_start'};
-		my $end = $span->data->{'lrg_end'};
-		my $strand = $span->data->{'strand'};
-		my $identical_matches = 1;
-		
-		my @type;
-		push (@type,['DNA',$start,$end,$hstart,$hend,$strand]);
-		my ($s,$e,$hs,$he);
-		my $last_end = 0;
-		my $last_hend = ($strand > 0 ? ($hstart-1) : ($hend+1));
-		
-		my $diffs = $span->findNodeArray('diff');
-		if (defined($diffs)) {
-			foreach my $diff (@{$diffs}) {
-				$s = $last_end+1;
-				$e = $diff->data->{'lrg_start'}-1;
-				$hs = ($strand > 0 ? ($last_hend+1) : ($diff->data->{'end'}+1));
-				$he = ($strand > 0 ? ($diff->data->{'start'}-1) : ($last_hend-1));
-				push(@type,['M',$s,$e,$hs,$he,$strand]);
-				
-				$s = $diff->data->{'lrg_start'};
-				$e = $diff->data->{'lrg_end'};
-				$hs = $diff->data->{'start'};
-				$he = $diff->data->{'end'};
-				my $seq = $diff->data->{'lrg_sequence'};
-				my $hseq = $diff->data->{'genomic_sequence'};
-				push(@type,['M',$s,$e,$hs,$he,$strand,$seq,$hseq]);
-				
-				$last_end = $e;
-				$last_hend = ($strand > 0 ? $he : $hs);
-				$identical_matches = 0;
-			}
-		}
-		$s = $last_end+1;
-		$e = $end;
-		$hs = ($strand > 0 ? ($last_hend+1) : $hstart);
-		$he = ($strand > 0 ? $hend : ($last_hend-1));
-		push(@type,['M',$s,$e,$hs,$he,$strand]);
-
-		my $fp = Bio::EnsEMBL::FeaturePair->new(
-			-start    => $start,
-			-end      => $end,
-			-strand   => $strand,
-			-display_id => $hseqname,
-			-hstart   => $hstart,
-			-hend     => $hend,
-			-hstrand  => $hstrand,
-			-hseqname => $hseqname,
-			-slice    => $slice,
-		);
-		$fp->identical_matches($identical_matches);
-		$fp->type(\@type);
-		
-		push(@feature_pairs,$fp);		
-	}
-	return \@feature_pairs;
-}
 
 sub usage() {
 	
