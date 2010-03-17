@@ -108,9 +108,10 @@ sub unambiguity_code {
 
 sub variation_class{
     my $alleles = shift;
-    return 'snp' if $alleles =~ /^[ACGT]([\|\\\/][ACGT])+$/i;
+    return 'snp' if $alleles =~ /^[ACGTN]([\|\\\/][ACGTN])+$/i;
     return 'cnv' if (($alleles eq 'cnv') || ($alleles eq 'CNV'));
 	return 'cnv probe' if $alleles =~ /CNV\_PROBE/i;
+	return 'hgmd mutation' if $alleles =~ /HGMD\_MUTATION/i;
 
     my @alleles = split /[\|\/\\]/, $alleles;
 
