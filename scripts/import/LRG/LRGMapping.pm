@@ -468,7 +468,7 @@ sub identical_matches {
 
 sub get_annotations {
   my $lrg_name = shift;
-  my $lrg_coord_system = shift;
+  my $lrg_coord_system_name = shift;
   
   # These parameters need only be defined if we need to add an entry to core db
   my $chr_name = shift;
@@ -477,7 +477,7 @@ sub get_annotations {
   
   #ÊTry to fetch a slice for the LRG (from the read-write db), this should be possible if an entry exists in the core db
   my $sa_rw = $dbCore_rw->get_SliceAdaptor();
-  my $lrg_slice = $sa_rw->fetch_by_region($lrg_coord_system,$lrg_name);
+  my $lrg_slice = $sa_rw->fetch_by_region($lrg_coord_system_name,$lrg_name);
  
   # If it failed, insert mapping data to the core db
   if (!defined($lrg_slice)) {
@@ -485,7 +485,7 @@ sub get_annotations {
     # Add a mapping between the LRG and chromosome to the core db
     # For consistency in the annotations, do transfer between LRG and chromosome coord systemsÊeven if there is a perfect match
     $LRGImport::dbCore = $dbCore_rw;
-    LRGImport::add_mapping($lrg_name,$lrg_coord_system,$lrg_len,$current_assembly,$chr_name,$pairs);
+    LRGImport::add_mapping($lrg_name,$lrg_coord_system_name,$lrg_len,$current_assembly,$chr_name,$pairs);
     
     # Reload the db connections to get rid of any caching (is this necessary?)
     Bio::EnsEMBL::Registry->clear();
@@ -494,7 +494,7 @@ sub get_annotations {
     
     # Now, try again to fetch the LRG slice
     $sa_rw = $dbCore_rw->get_SliceAdaptor();
-    $lrg_slice = $sa_rw->fetch_by_region($lrg_coord_system,$lrg_name);
+    $lrg_slice = $sa_rw->fetch_by_region($lrg_coord_system_name,$lrg_name);
     
     die('Could not get LRG slice despite adding it to core db!') if (!defined($lrg_slice));
   }  
@@ -524,10 +524,15 @@ sub get_feature_limits {
     $limits{'strand'} = $lrg_position->{'strand'};
   }
   else {
-    #ÊIf start position lies upstream of LRG slice, indicate that the feature is partial in its 3'-end
+    #ÊIf start position lies upstream of LRG slice, indicate that the feature is partial in its 3'-end or 5'-end
     if ($lrg_position->{'reason'} eq 'upstream') {
       $limits{'start'} = 1;
-      $limits{'partial_3'} = 1;
+      if ($feature->strand() > 0) {
+	$limits{'partial_5'} = 1;
+      }
+      else {
+	$limits{'partial_3'} = 1;
+      }
     }
     # If start position lies downstream of LRG, the entire feature must be downstream, so indicate that
     elsif ($lrg_position->{'reason'} eq 'downstream') {
@@ -543,9 +548,14 @@ sub get_feature_limits {
     $limits{'strand'} = $lrg_position->{'strand'};
   }
   else {
-    #ÊIf start position lies downstream of LRG slice, indicate that the feature is partial in its 5'-end
+    #ÊIf end position lies downstream of LRG slice, indicate that the feature is partial in its 5'-end or 3'-end
     if ($lrg_position->{'reason'} eq 'downstream') {
-      $limits{'partial_5'} = 1;
+      if ($feature->strand() > 0) {
+	$limits{'partial_3'} = 1;
+      }
+      else {
+	$limits{'partial_5'} = 1;
+      }
       $limits{'end'} = $slice->length();
     }
     # If end position lies upstream of LRG, the entire feature must be upstream, so indicate that
@@ -562,10 +572,26 @@ sub get_feature_limits {
 #ÊLift a specific coordinate from a source slice to another slice. Returns a hash with the new coordinate and a field for storing the reason why mapping failed
 sub lift_coordinate {
   my $position = shift;
-  my $source_slice = shift;
+  my $input_slice = shift;
   my $target_slice = shift;
   
   my %mapping;
+  
+  my $source_slice;
+  #ÊIf the source slice is fetched from the read-only database, get the corresponding slice from the read-write db instead
+  if ($input_slice->adaptor->dbc->host() eq $dbCore_rw->dbc->host() && $input_slice->adaptor->dbc->dbname() eq $dbCore_rw->dbc->dbname()) {
+    $source_slice = $input_slice;
+  }
+  else {
+    my $sa = $dbCore_rw->get_SliceAdaptor();
+    $source_slice = $sa->fetch_by_region(
+      $input_slice->coord_system_name(),
+      $input_slice->seq_region_name(),
+      $input_slice->start(),
+      $input_slice->end(),
+      $input_slice->strand()
+    );
+  }
   
   #ÊProject the feature onto the target slice
   my $projections = $source_slice->project_to_slice($target_slice);
@@ -687,14 +713,7 @@ sub gene_2_feature {
 	my $note_node;
 	
 	foreach my $trans(@{$gene->get_all_Transcripts}) {
-	  
-		#print "Gene/Trans ", $gene->stable_id, " ", $trans->stable_id, "\n";
 		
-    ### There is still a problem with this in case sub-features (exons) are crossing the coord system border ###
-    ### Use Ian's suggestion instead? LRG_12 is an example of this (ENSG00000141698). 
-	  #my $lrg_trans = $trans->transfer($lrg_slice);
-	  #next if (!defined($lrg_trans));
-	  
 # Check for partial overlaps
 	  $limits = get_feature_limits($trans,$lrg_slice);
 # If the transcript falls entirely outside of the LRG it should be skipped
@@ -750,7 +769,7 @@ sub gene_2_feature {
 	  
 	  while($entry = shift @$entries) {
 	  	
-	    next unless $entry->dbname =~ /GI|RefSeq|MIM_GENE|Entrez|CCDS|RFAM|miRBase/;
+	    next unless $entry->dbname =~ /GI|RefSeq|MIM_GENE|Entrez|CCDS|RFAM|miRBase|pseudogene.org/;
 	    next if $entry->dbname =~ /RefSeq_peptide/;
 	    
 	    if($entry->dbname eq 'RefSeq_dna') {
@@ -987,8 +1006,8 @@ sub mapping_2_pairs {
   my $last_chr_end;
   my $last_strand = 1;
   my $chr_name = $mapping_node->data->{'chr_name'};
-  my $chr_offset_start = $mapping_node->data->{'start'};
-  my $chr_offset_end = $mapping_node->data->{'end'};
+  my $chr_offset_start = $mapping_node->data->{'chr_start'};
+  my $chr_offset_end = $mapping_node->data->{'chr_end'};
   my $lrg_offset_start = $mapping_node->data->{'lrg_start'};
   my $lrg_offset_end = $mapping_node->data->{'lrg_end'};
   
@@ -1182,7 +1201,7 @@ sub pairs_2_mapping {
     $mapping_node->addExisting($span_node);
   }
   # Lastly, add the mapping chromosomal start and end points as attributes to the mapping node
-  $mapping_node->addData({'chr_start' => $chr_map_start, 'chr_nd' => $chr_map_end});
+  $mapping_node->addData({'chr_start' => $chr_map_start, 'chr_end' => $chr_map_end});
   
   return $mapping_node;
 }
@@ -1260,7 +1279,7 @@ sub get_overlapping_genes {
   }
   
   # Fetch a chromosome slice spanning the LRG from the reference (read-only db)
-  my $sa_ro = $dbCore_rw->get_SliceAdaptor();
+  my $sa_ro = $dbCore_ro->get_SliceAdaptor();
   my $ref_slice = $sa_ro->fetch_by_region("chromosome",$chr_name,$chr_start,$chr_end,$strand);
   my $genes = $ref_slice->get_all_Genes();
   
