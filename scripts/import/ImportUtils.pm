@@ -7,7 +7,7 @@ use Exporter;
 
 our @ISA = ('Exporter');
 
-our @EXPORT_OK = qw(dumpSQL debug create_and_load load);
+our @EXPORT_OK = qw(dumpSQL debug create_and_load load get_create_statement);
 
 our $TMP_DIR = "/ecs4/scratch4/yuan/tmp";
 our $TMP_FILE = 'tabledump.txt';
@@ -70,23 +70,23 @@ sub load {
   #need to find out if possible use the LOCAL option
 
   my $local_option = 'LOCAL'; #by default, use the LOCAL option
-  if( `hostname` =~ /^bc/ ){ # No LOCAL on bcs nodes
-    $local_option = '';
-  }
-  elsif( ! -e $table_file ){ # File is not on local filesystem
-    $local_option = '';
-  }
+#  if( `hostname` =~ /^bc/ ){ # No LOCAL on bcs nodes
+#    $local_option = '';
+#  }
+#  elsif( ! -e $table_file ){ # File is not on local filesystem
+#    $local_option = '';
+#  }
 
-#  my $host = `hostname`;
-#  chop $host;
-#   $host =~ /(ecs\d+)/; #get the machine, only use LOCAL in ecs machines (ecs2, ecs4)
-#   my $local_option = '';
-#   #the script is running in ecs machine, let's find out if the file is in the same machine, too
-#   if ($1){
-#       if ($table_file =~ /$1/){
-# 	  $local_option = 'LOCAL';
-#       }
-#   }
+  my $host = `hostname`;
+  chop $host;
+   $host =~ /(ecs\d+)/; #get the machine, only use LOCAL in ecs machines (ecs2, ecs4)
+   my $local_option = '';
+   #the script is running in ecs machine, let's find out if the file is in the same machine, too
+   if ($1){
+       if ($table_file =~ /$1/){
+ 	  $local_option = 'LOCAL';
+       }
+   }
 
   
    if ( @colnames ) {
@@ -162,6 +162,26 @@ sub create_and_load {
   load( $db, $tablename, @col_names );
 }
 
+#
+#ÊGets the create statement to create the desired table from the master_schema_variation database
+#
+sub get_create_statement {
+  my $dbc = shift;
+  my $table = shift;
+  my $db_name = shift;
+
+  if (defined($db_name)) {
+    $table = $db_name . '.' . $table;
+  }
+
+  my $stmt = qq{
+    SHOW CREATE TABLE
+      $table
+  };
+  my $result = $dbc->db_handle->selectall_arrayref($stmt)->[0][1];
+  
+  return $result;
+}
 
 sub debug {
   print STDERR @_, "\n";
