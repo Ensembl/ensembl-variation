@@ -69,7 +69,7 @@ sub load {
 
   #need to find out if possible use the LOCAL option
 
-  my $local_option = 'LOCAL'; #by default, use the LOCAL option
+#  my $local_option = 'LOCAL'; #by default, use the LOCAL option
 #  if( `hostname` =~ /^bc/ ){ # No LOCAL on bcs nodes
 #    $local_option = '';
 #  }
