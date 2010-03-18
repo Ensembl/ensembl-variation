@@ -10,7 +10,7 @@ use POSIX;
 use Bio::EnsEMBL::Utils::Argument qw(rearrange);
 use Bio::EnsEMBL::Utils::Exception qw(throw);
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
-use ImportUtils qw(dumpSQL debug create_and_load load);
+use ImportUtils qw(dumpSQL debug create_and_load load get_create_statement);
 use Progress;
 
 #creates the object and assign the attributes to it (connections, basically)
@@ -53,71 +53,65 @@ sub dump_dbSNP{
   print Progress::location();
   #$self->create_coredb() if ($self->{'dbCore'}->species =~ /homo/i);#this coredb is needed during build process in tagged_snp.pl
   print Progress::location();
-#  $self->source_table();
+  $self->source_table();
   print Progress::location();
   
   $start = time();
-#  $self->population_table();
+  $self->population_table();
   print Progress::location();
   $end = time();
   $duration = Progress::time_format($end-$start);
   print $duration->{'weeks'} . " weeks, " . $duration->{'days'} . " days, " . $duration->{'hours'} . " hours, " . $duration->{'minutes'} . " minutes and " . $duration->{'seconds'} . " seconds spent in population_table()\n";
   
   $start = time();
-#  $self->individual_table();
+  $self->individual_table();
   print Progress::location();
   $end = time();
   $duration = Progress::time_format($end-$start);
   print $duration->{'weeks'} . " weeks, " . $duration->{'days'} . " days, " . $duration->{'hours'} . " hours, " . $duration->{'minutes'} . " minutes and " . $duration->{'seconds'} . " seconds spent in individual_table()\n";
   
   $start = time();
-#  $self->variation_table();
+  $self->variation_table();
   print Progress::location();
   $end = time();
   $duration = Progress::time_format($end-$start);
   print $duration->{'weeks'} . " weeks, " . $duration->{'days'} . " days, " . $duration->{'hours'} . " hours, " . $duration->{'minutes'} . " minutes and " . $duration->{'seconds'} . " seconds spent in variation_table()\n";
   
   $start = time();
-#  $self->individual_genotypes();
+  $self->individual_genotypes();
   print Progress::location();
   $end = time();
   $duration = Progress::time_format($end-$start);
   print $duration->{'weeks'} . " weeks, " . $duration->{'days'} . " days, " . $duration->{'hours'} . " hours, " . $duration->{'minutes'} . " minutes and " . $duration->{'seconds'} . " seconds spent in individual_genotypes()\n";
   
   $start = time();
-#  $self->population_genotypes();
+  $self->population_genotypes();
   print Progress::location();
   $end = time();
   $duration = Progress::time_format($end-$start);
   print $duration->{'weeks'} . " weeks, " . $duration->{'days'} . " days, " . $duration->{'hours'} . " hours, " . $duration->{'minutes'} . " minutes and " . $duration->{'seconds'} . " seconds spent in population_genotypes()\n";
   
   $start = time();
-#  $self->allele_table();
+  $self->allele_table();
   print Progress::location();
   $end = time();
   $duration = Progress::time_format($end-$start);
   print $duration->{'weeks'} . " weeks, " . $duration->{'days'} . " days, " . $duration->{'hours'} . " hours, " . $duration->{'minutes'} . " minutes and " . $duration->{'seconds'} . " seconds spent in allele_table()\n";
   
   $start = time();
-#  $self->flanking_sequence_table();
+  $self->flanking_sequence_table();
   print Progress::location();
   $end = time();
   $duration = Progress::time_format($end-$start);
   print $duration->{'weeks'} . " weeks, " . $duration->{'days'} . " days, " . $duration->{'hours'} . " hours, " . $duration->{'minutes'} . " minutes and " . $duration->{'seconds'} . " seconds spent in flanking_sequence_table()\n";
   
   $start = time();
-#  $self->variation_feature();
+  $self->variation_feature();
   print Progress::location();
   $end = time();
   $duration = Progress::time_format($end-$start);
   print $duration->{'weeks'} . " weeks, " . $duration->{'days'} . " days, " . $duration->{'hours'} . " hours, " . $duration->{'minutes'} . " minutes and " . $duration->{'seconds'} . " seconds spent in variation_feature()\n";
   
-  #the following not run for human any more, not used and also don't have HapSet table in dbSNP_129_human_9606
-  #if ($self->{'dbCore'}->species =~ /homo/i) {
-  #  $self->variation_group();
-  #  $self->allele_group();
-  #}
-
   #try run this step when all above steps have finished
 #  $self->cleanup();
   print Progress::location();
