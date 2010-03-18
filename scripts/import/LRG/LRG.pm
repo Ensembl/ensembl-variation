@@ -6,7 +6,7 @@ package LRG;
 use XML::Writer;
 use IO::File;
 use Data::Dumper;
-use List::Util qw{max};
+use List::Util qw (min max);
 
 # ROOT OBJECT
 #############
@@ -604,7 +604,7 @@ sub printNode {
 # If the key is not listed in the priority hash, add it with the lowest priority		    
 			foreach my $key (keys %{$self->data}) {
 			    if (!$priority{$key}) {
-				$priority{$key} = max(values(%{$self->data}))+1;
+				$priority{$key} = List::Util::max(values(%priority))+1;
 			    }
 			}
 			@key_order = sort {$priority{$a} <=> $priority{$b}} keys %{$self->data};
