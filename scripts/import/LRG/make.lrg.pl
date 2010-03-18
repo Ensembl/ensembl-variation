@@ -92,7 +92,7 @@ if (!$skip_updatable) {
 # get registry and a gene adaptor
 	$LRGMapping::registry_file = $registry_file;
 	Bio::EnsEMBL::Registry->load_all( $registry_file );
-	$LRGMapping::dbCore_ro = Bio::EnsEMBL::Registry->get_DBAdaptor('human','core_rw');
+	$LRGMapping::dbCore_ro = Bio::EnsEMBL::Registry->get_DBAdaptor('human','core_ro');
 	$LRGMapping::dbCore_rw = Bio::EnsEMBL::Registry->get_DBAdaptor('human','core_rw');
 	my $host = $LRGMapping::dbCore_rw->dbc->host();
 	if ($host !~ m/variation/ && !$skip_host_check) {
@@ -462,103 +462,6 @@ sub create_updatable_annotation {
 		$mapping = LRGMapping::mapping_2_pairs($mapping_node,$genomic_sequence,$chr_seq);
 	}
 	
-=head	
-	my $min_c_s = 1e11;
-	my $max_c_e = -1;
-	my $hseqname;
-	
-# Loop over the mapping spans
-	foreach my $mapping (@{$mappings}) {
-		my $mapping_span = $mapping_node->addNode('mapping_span');
-		$hseqname = $mapping->hseqname;
-		
-# create three arrays to hold the different pair types
-		my (@dna_pairs, @match_pairs, @mis_pairs);
-
-# sort the pairs into the arrays
-		foreach my $pair(sort {$a->[1] <=> $b->[1]} @{$mapping->type}) {
-	
-# DNA pair (should be only 1)
-			if($pair->[0] eq 'DNA') {
-				push @dna_pairs, $pair;
-			}
-	
-# mismatch pairs - have bases in [6] and [7]
-			elsif($pair->[6].$pair->[7]) {
-				push @mis_pairs, $pair;
-			}
-	
-# normal align pairs
-			else {
-				push @match_pairs, $pair
-			}
-		}
-
-# go through DNA, then align, then mismatch pairs
-		foreach my $pair(@dna_pairs, @match_pairs, @mis_pairs) {
-		
-			my ($l_s, $l_e, $c_s, $c_e);
-	
-			($l_s, $l_e, $c_s, $c_e) = ($pair->[1], $pair->[2], $pair->[3], $pair->[4]);
-	
-# switch chromosome start/end if on negative strand
-			if($pair->[5] < 0 && $c_s < $c_e) {
-				($c_s, $c_e) = ($c_e, $c_s);
-			}
-	
-# switch LRG start/end if needed - start should _always_ be less than end since LRG-centric
-			($l_s, $l_e) = ($l_e, $l_s) if $l_s > $l_e;
-# switch chromosome start/end if needed - start should _always_ be less than end
-			($c_s, $c_e) = ($c_e, $c_s) if $c_s > $c_e;
-
-	
-# DNA pair - whole alignment
-			if($pair->[0] eq 'DNA') {
-		
-# this gets added as attributes to the mapping node
-				$min_c_s = min($min_c_s,$c_s);
-				$max_c_e = max($max_c_e,$c_e);
-				
-				$mapping_span->addData(
-					{
-						'start' => $c_s,
-						'end' => $c_e,
-						'lrg_start' => $l_s,
-						'lrg_end' => $l_e,
-						'strand' => $pair->[5],
-					}
-				);
-			}
-		
-# mismatch pair
-			elsif($pair->[6].$pair->[7] =~ /.+/) {
-				$mapping_span->addEmptyNode(
-					'diff',
-					{
-						'type' => 'mismatch',
-						'start' => $c_s,
-						'end' => $c_e,
-						'lrg_start' => $l_s,
-						'lrg_end' => $l_e,
-						'lrg_sequence' => $pair->[6],
-						'genomic_sequence' => $pair->[7],
-					}
-				);
-			}
-		}
-	}
-# Add the attributes to the mapping tag
-	$mapping_node->addData(
-		{
-			'assembly' => $assembly,
-			'chr_name' => $hseqname,
-			'chr_start' => $min_c_s,
-			'chr_end' => $max_c_e,
-			'most_recent' => (($assembly eq $CURRENT_ASSEMBLY) ? 1 : 0)
-		}
-	);
-=cut
-	
 # get annotations
 	my @feature_nodes = @{LRGMapping::get_annotations($LRGMapping::lrg_name,'LRG',$chr_id,length($genomic_sequence),$mapping->{'pairs'})};
 
@@ -711,9 +614,9 @@ sub move_to_unbranded {
 		}
 	}
 
+	my $old_annotation_set = LRG::Node::newFromNode($annotation_set_lrg);
+	
 # Add an LRG branded annotation_set if none is available
-
-# Source
 	if (!$annotation_set_lrg) {
 		$annotation_set_lrg = $annotation_node->addNode('annotation_set');
 		$current = $annotation_set_lrg->addNode('source');
@@ -723,10 +626,8 @@ sub move_to_unbranded {
 		$current->addNode('name')->content('Locus Reference Genomic');
 		$current->addNode('url')->content('http://www.lrg-sequence.org/page.php?page=contact');
 		$current->addNode('email')->content('feedback@lrg-sequence.org');
+		$annotation_set_lrg->addNode('modification_date')->content($root->date);
 	}
-	
-# update the modification date
-	$annotation_set_lrg->findOrAdd('modification_date')->content($root->date);
 
 # Attempt to get mapping data from annotation sets
 	
@@ -794,6 +695,11 @@ sub move_to_unbranded {
 		$annotation_set_lrg->addExisting(LRG::Node::newFromNode($hgnc_all[0]));
 	}
 	
+# Check if the annotations were changed, in that case, update the modification date
+	if (!$annotation_set_lrg->identical($old_annotation_set)) {
+# update the modification date
+		$annotation_set_lrg->findOrAdd('modification_date')->content($root->date);
+	}
 # Finally, move the LRG annotation set to be the first among the updatable annotations
 	$annotation_set_lrg->moveTo(0);
 }
