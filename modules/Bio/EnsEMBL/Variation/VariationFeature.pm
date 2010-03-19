@@ -981,6 +981,7 @@ sub ref_allele_string{
     return $alleles[0];
 }
 
+
 =head2 get_all_VariationSets
 
     Args        : none
@@ -1003,6 +1004,43 @@ sub get_all_VariationSets {
     my $variation_sets = $vs_adaptor->fetch_all_by_Variation($self->variation());
     
     return $variation_sets;
+}
+
+
+=head2 get_all_Alleles
+
+  Args       : none
+  Example    : @alleles = @{$vf->get_all_Alleles}
+  Description: Gets all Allele objects from the underlying variation object,
+			   with reference alleles first.
+  Returntype : listref of Bio::EnsEMBL::Variation::Allele objects
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub get_all_Alleles{
+    my $self = shift;
+	
+	my @alleles = @{$self->variation->get_all_Alleles};
+	
+	# put all alleles in a hash
+	my %order = ();
+	foreach my $allele(@alleles) {
+	  $order{$allele->allele} = 1;
+	}
+	
+	$order{$self->ref_allele_string} = 2;
+	
+	# now sort them by ssID, population, allele
+	my @new_alleles = sort {
+	  ($a->subsnp ? $a->subsnp : "") cmp ($b->subsnp ? $b->subsnp : "") ||
+	  ($a->population ? $a->population->name : "") cmp ($b->population ? $b->population->name : "") ||
+	  $order{$b->allele} <=> $order{$a->allele}
+	} @alleles;
+	
+	return \@new_alleles;
 }
 
 1;
