@@ -1503,26 +1503,17 @@ sub individual_genotypes {
 #     #individual_id already indexed on sample
 #     #$self->{'dbVar'}->do(qq{CREATE INDEX individual_id on sample(individual_id)});
 
-     $self->{'dbVar'}->do(
-      qq{
-	CREATE TABLE IF NOT EXISTS
-	  tmp_individual_genotype_single_bp (
-            variation_id int unsigned not null,
-	    subsnp_id int(15) unsigned not null,
-            allele_1 varchar(255),
-	    allele_2 varchar(255),
-	    sample_id int,
-            key variation_idx(variation_id),
-            key subsnp_idx(subsnp_id),
-            key sample_idx(sample_id)
-          )
-	  MAX_ROWS = 100000000
-      }
-    );
+  #ÊGet the create statement for tmp_individual_genotype_single_bp from master schema
+  my $ind_gty_stmt = get_create_statement($self->{'dbVar'},'tmp_individual_genotype_single_bp',$self->{'master_schema_db'});
   print Progress::location();
 
    my $insert = 'INSERT';
    if ($self->{'dbCore'}->species !~ /homo|hum/i) {
+    
+    #ÊCreate the tmp_individual_genotype_single_bp table
+    $self->{'dbVar'}->do($ind_gty_stmt);
+    print Progress::location();
+    
      ###only non human one needs unique index
      $insert = "INSERT IGNORE";
 #     $self->{'dbVar'}->do(qq{CREATE UNIQUE INDEX ind_genotype_idx ON tmp_individual_genotype_single_bp(variation_id,sample_id,allele_1,allele_2)});
@@ -1543,11 +1534,15 @@ sub individual_genotypes {
 
        #next unless $subind eq "SubInd_ch1";
        debug(localtime() . "\ttable1 is $table1 and table2 is $table2");
-       $self->{'dbVar'}->do(qq{CREATE TABLE $table2 like tmp_individual_genotype_single_bp});
-  print Progress::location();
        
-       $self->{'dbVar'}->do(qq{ALTER TABLE $table2 engine = innodb});
-  print Progress::location();
+      #ÊCreate a sub table for the genotypes
+      $stmt = $ind_gty_stmt;
+      $stmt =~ s/tmp_individual_genotype_single_bp/$table2/;
+      $self->{'dbVar'}->do($stmt);
+      print Progress::location();
+       
+      $self->{'dbVar'}->do(qq{ALTER TABLE $table2 engine = innodb});
+      print Progress::location();
 
        #need to fork to processce gtype data
        my $pid = fork;
@@ -1583,43 +1578,12 @@ sub individual_genotypes {
      $merge_gty_tables .= ",tmp_individual_genotype_single_bp_last_insert"; #to hold new insert from ensembl called SNPs
      my $merge_tmp2_gty_tables = join ',',@tmp2_gty_tables;
      #make a merge table for tmp_individual_genotype_single_bp
-     
-     # Changing storage engine to MERGE on an existing table is not permitted. Instead, create the table from scratch. For backwards compability, include any data already stored in the tmp_genotype.. table (should be empty)
-    $stmt = qq{
-      RENAME TABLE
-	tmp_individual_genotype_single_bp
-      TO
-	old_tmp_individual_genotype_single_bp
-    };
-    $self->{'dbVar'}->do($stmt);
-  print Progress::location();
-    # For the merge, the tables have to have identical column types. Otherwise, the resulting table will be corrupted
-    $stmt = qq{
-      CREATE TABLE
-	tmp_individual_genotype_single_bp (
-          variation_id int unsigned not null,
-	  subsnp_id int unsigned not null,
-          allele_1 varchar(255),
-	  allele_2 varchar(255),
-	  sample_id int,
-          KEY variation_idx(variation_id),
-          KEY subsnp_idx(subsnp_id),
-          KEY sample_idx(sample_id)
-        )
-	MAX_ROWS = 100000000,
-	ENGINE = MERGE,
-	UNION = ($merge_gty_tables,old_tmp_individual_genotype_single_bp),
-	INSERT_METHOD = LAST
-    };
-    $self->{'dbVar'}->do($stmt);
-  print Progress::location();
     
-    $stmt = qq{
-      DROP TABLE
-	old_tmp_individual_genotype_single_bp
-    };
+    # Merge all the sub tables into a big tmp_individual_single_bp table
+    $stmt = $ind_gty_stmt;
+    $stmt =~ s/MyISAM/MERGE INSERT_METHOD=LAST UNION=($merge_gty_tables)/;
     $self->{'dbVar'}->do($stmt);
-  print Progress::location();
+    print Progress::location();
     
     $stmt = qq{
       CREATE TABLE
