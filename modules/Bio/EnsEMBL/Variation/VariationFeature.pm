@@ -1033,10 +1033,10 @@ sub get_all_Alleles{
 	
 	$order{$self->ref_allele_string} = 2;
 	
-	# now sort them by ssID, population, allele
+	# now sort them by population, submitter, allele
 	my @new_alleles = sort {
-	  ($a->subsnp ? $a->subsnp : "") cmp ($b->subsnp ? $b->subsnp : "") ||
 	  ($a->population ? $a->population->name : "") cmp ($b->population ? $b->population->name : "") ||
+	  ($a->subsnp ? $a->subsnp_handle : "") cmp ($b->subsnp ? $b->subsnp_handle : "") ||
 	  $order{$b->allele} <=> $order{$a->allele}
 	} @alleles;
 	
