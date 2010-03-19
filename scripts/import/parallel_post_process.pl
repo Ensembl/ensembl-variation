@@ -158,37 +158,25 @@ sub parallel_variation_feature{
     $sth->finish();
     my $dbname = $vdbname; #get the name of the database to create the file    
 
-
-    #to get haplotype seq_region_id
-    my $sth1 = $dbCore->dbc->db_handle->prepare(qq{SELECT seq_region_id 
-                                                   FROM seq_region_attrib sa, attrib_type at 
-                                                   WHERE sa.attrib_type_id=at.attrib_type_id 
-                                                   AND at.code='non_ref'});
-    $sth1->execute();
-    my @hap_seq_region_ids;
-    while (my ($seq_region_id) = $sth1->fetchrow_array()) {
-      push @hap_seq_region_ids, $seq_region_id;
-    }
-
-    my $in_string = "(" . join (",",@hap_seq_region_ids) . ")";
-    if (scalar @hap_seq_region_ids <1) {
-      $in_string = "";
+    if ($hap_id_string !~ /\(\d+\)/) {
+      $hap_id_string = "";
     }
 
     #create a temporary table to store the map_weight, that will be deleted by the last process
     $dbVar->do(qq{CREATE TABLE tmp_map_weight
                 SELECT variation_id, count(*) as count
                 FROM   variation_feature
-                WHERE  seq_region_id not IN $in_string
+                WHERE  seq_region_id not IN $hap_id_string
                 #WHERE variation_id=37289
                 GROUP BY variation_id}
 	       );
     $dbVar->do(qq{ALTER TABLE tmp_map_weight 
 		      ADD UNIQUE INDEX variation_idx(variation_id)});
+    #add additional variation_ids only appear in haplotype chromosomes
     $dbVar->do(qq{INSERT IGNORE INTO tmp_map_weight
 		  SELECT variation_id, count(*) as count
 		  FROM   variation_feature
-		  WHERE  seq_region_id IN $in_string
+		  WHERE  seq_region_id IN $hap_id_string
 		  GROUP BY variation_id});
     
 
