@@ -28,7 +28,7 @@ use dbSNP::Mosquito;
 use dbSNP::Human;
 use dbSNP::EnsemblIds;
 
-my ($TAX_ID, $LIMIT_SQL, $dbSNP_BUILD_VERSION, $TMP_DIR, $TMP_FILE, $MAPPING_FILE_DIR);
+my ($TAX_ID, $LIMIT_SQL, $dbSNP_BUILD_VERSION, $TMP_DIR, $TMP_FILE, $MAPPING_FILE_DIR, $MASTER_SCHEMA_DB);
 
 my ($species,$limit);
 my($dshost, $dsuser, $dspass, $dsport, $dsdbname);
@@ -47,6 +47,7 @@ GetOptions('species=s'      => \$species,
 	   'tmpfile=s'      => \$ImportUtils::TMP_FILE,
 	   'limit=i'        => \$limit,
 	   'mapping_file_dir=s' => \$MAPPING_FILE_DIR,
+	   'master_schema_db=s' => \$MASTER_SCHEMA_DB,
 	   'dshost=s' => \$dshost,
 	   'dsuser=s' => \$dsuser,
 	   'dspass=s' => \$dspass,
@@ -59,6 +60,7 @@ warn("Make sure you have a updated ensembl.registry file!\n");
 
 # Set default option
 $registry_file ||= $Bin . "/ensembl.registry";
+$MASTER_SCHEMA_DB ||= 'master_schema_variation_57';
 $dshost = 'dbsnp';
 $dsuser = 'dbsnp_ro';
 $dspass = 'Dbsnpro55';
@@ -113,193 +115,52 @@ my $ASSEMBLY_VERSION = $cs->version();
 
 #create the dbSNP object for the specie we want to dump the data
 
+my @parameters = (
+  -dbSNP => $dbSNP,
+  -dbCore => $dbCore,
+  -dbVar => $dbVar,
+  -snp_dbname => $dsdbname,
+  -tmpdir => $TMP_DIR,
+  -tmpfile => $TMP_FILE,
+  -limit => $LIMIT_SQL,
+  -mapping_file_dir => $MAPPING_FILE_DIR,
+  -dbSNP_version => $dbSNP_BUILD_VERSION,
+  -assembly_version => $ASSEMBLY_VERSION  
+);
+my $import_object;
+if ($species =~ m/fish/i || $species =~ m/^pig$/i) {
+  $import_object = dbSNP::MappingChromosome->new(@parameters);
+}
+elsif ($species =~ m/chimp/i || $species =~ m/chicken/i || $species =~ m/rat/i || $species =~ m/horse/i || $species =~ m/platypus/i) {
+  $import_object = dbSNP::GenericChromosome->new(@parameters);
+}
+elsif ($species =~ m/mouse/i || $species =~ m/dog/i) {
+  $import_object = dbSNP::GenericContig->new(@parameters);
+}
+elsif ($species =~ m/mosquitos/i) {
+  $import_object = dbSNP::Mosquito->new(@parameters);
+}
+elsif ($species =~ m/human|homo/i) {
+  $import_object = dbSNP::EnsemblIds->new(@parameters);
+}
+$import_object->{'master_schema_db'} = $MASTER_SCHEMA_DB;
+
 my $start = time();
-if ($species =~ /fish/i){
-  #danio rerio (zebra-fish)
-
-  #my $zebrafish = dbSNP::GenericContig->new(-dbSNP => $dbSNP,
-  my $zebrafish = dbSNP::MappingChromosome->new(-dbSNP => $dbSNP,
-						-dbCore => $dbCore,
-						-dbVar => $dbVar,
-						-snp_dbname => $dsdbname,
-						-tmpdir => $TMP_DIR,
-						-tmpfile => $TMP_FILE,
-						-limit => $LIMIT_SQL,
-						-mapping_file_dir => $MAPPING_FILE_DIR,
-					        -dbSNP_version => $dbSNP_BUILD_VERSION,
-						-assembly_version => $ASSEMBLY_VERSION
-					       );
-  $zebrafish->dump_dbSNP();
-}
-elsif ($species =~ /chimp/i){
-  #Pan_troglodytes (chimpanzee)
-
-  my $chimp = dbSNP::GenericChromosome->new(-dbSNP => $dbSNP,
-  #my $chimp = dbSNP::MappingChromosome->new(-dbSNP => $dbSNP,
-					    -dbCore => $dbCore,
-					    -dbVar => $dbVar,
-					    -snp_dbname => $dsdbname,
-					    -tmpdir => $TMP_DIR,
-					    -tmpfile => $TMP_FILE,
-					    -limit => $LIMIT_SQL,
-					    -mapping_file_dir => $MAPPING_FILE_DIR,
-					    -dbSNP_version => $dbSNP_BUILD_VERSION,
-					    -assembly_version => $ASSEMBLY_VERSION
-					   );
-  $chimp->dump_dbSNP();
-}
-elsif ($species =~ /mouse/i){
-  #mus-musculus (mouse)
-
-  my $mouse = dbSNP::GenericContig->new(-dbSNP => $dbSNP,
-  #my $mouse = dbSNP::MappingChromosome->new(-dbSNP => $dbSNP,
-					    -dbCore => $dbCore,
-					    -dbVar => $dbVar,
-					    -snp_dbname => $dsdbname,
-					    -tmpdir => $TMP_DIR,
-					    -tmpfile => $TMP_FILE,
-					    -limit => $LIMIT_SQL,
-					    -mapping_file_dir => $MAPPING_FILE_DIR,
-					    -dbSNP_version => $dbSNP_BUILD_VERSION,
-					    -assembly_version => $ASSEMBLY_VERSION
-					   );
-  $mouse->dump_dbSNP();
-  add_strains($dbVar); #add strain information
-}
-elsif ($species =~ /chicken/i){
-  #gallus gallus (chicken)
-
-  my $chicken = dbSNP::GenericChromosome->new(-dbSNP => $dbSNP,
-					      -dbCore => $dbCore,
-					      -dbVar => $dbVar,
-					      -snp_dbname => $dsdbname,
-					      -tmpdir => $TMP_DIR,
-					      -tmpfile => $TMP_FILE,
-					      -limit => $LIMIT_SQL,
-					      -dbSNP_version => $dbSNP_BUILD_VERSION,
-					      -assembly_version => $ASSEMBLY_VERSION
-					     );
-  $chicken->dump_dbSNP();
-  add_strains($dbVar); #add strain information
-}
-elsif ($species =~ /rat/i){
-  #rattus norvegiccus (rat)
-
-  my $rat = dbSNP::GenericChromosome->new(-dbSNP => $dbSNP,
-					  -dbCore => $dbCore,
-					  -dbVar => $dbVar,
-					  -snp_dbname => $dsdbname,
-					  -tmpdir => $TMP_DIR,
-					  -tmpfile => $TMP_FILE,
-					  -limit => $LIMIT_SQL,
-					  -dbSNP_version => $dbSNP_BUILD_VERSION,
-					  -assembly_version => $ASSEMBLY_VERSION
-					 );
-  $rat->dump_dbSNP();
-#  add_strains($dbVar); #add strain information
-}
-elsif ($species =~ /mosquitos/i){
-  #(mosquito)
-
-  my $mosquito = dbSNP::Mosquito->new(-dbSNP => $dbSNP,
-				      -dbCore => $dbCore,
-				      -dbVar => $dbVar,
-				      -snp_dbname => $dsdbname,
-				      -tmpdir => $TMP_DIR,
-				      -tmpfile => $TMP_FILE,
-				      -limit => $LIMIT_SQL,
-				      -dbSNP_version => $dbSNP_BUILD_VERSION,
-				      -assembly_version => $ASSEMBLY_VERSION
-				      );
-  $mosquito->dump_dbSNP();
-}
-elsif ($species =~ /dog/i){
-  #cannis familiaris (dog)
-
-  my $dog = dbSNP::GenericContig->new(-dbSNP => $dbSNP,
-				      -dbCore => $dbCore,
-				      -dbVar => $dbVar,
-				      -snp_dbname => $dsdbname,
-				      -tmpdir => $TMP_DIR,
-				      -tmpfile => $TMP_FILE,
-				      -limit => $LIMIT_SQL,
-				      -dbSNP_version => $dbSNP_BUILD_VERSION,
-				      -assembly_version => $ASSEMBLY_VERSION
-				     );
-  $dog->dump_dbSNP();
-  add_strains($dbVar); #add strain information
-
-}
-elsif ($species =~ /hum/i) {
-  #homo sa/piens (human)
-
-  my $human = dbSNP::EnsemblIds->new(-dbSNP => $dbSNP,
-  #my $human = dbSNP::Human->new(-dbSNP => $dbSNP,
-  #my $human = dbSNP::MappingChromosome->new(-dbSNP => $dbSNP,
-				-dbCore => $dbCore,
-				-dbVar => $dbVar,
-				-snp_dbname => $dsdbname,
-				-tmpdir => $TMP_DIR,
-				-tmpfile => $TMP_FILE,
-				-limit => $LIMIT_SQL,
-				-mapping_file_dir => $MAPPING_FILE_DIR,
-				-dbSNP_version => $dbSNP_BUILD_VERSION,
-				-assembly_version => $ASSEMBLY_VERSION
-			       );
-  $human->dump_dbSNP();
-}
-elsif ($species =~ /horse/i){
-  #equus caballus (horse)
-
-  my $horse = dbSNP::GenericChromosome->new(-dbSNP => $dbSNP,
-                                              -dbCore => $dbCore,
-                                              -dbVar => $dbVar,
-                                              -snp_dbname => $dsdbname,
-                                              -tmpdir => $TMP_DIR,
-                                              -tmpfile => $TMP_FILE,
-                                              -limit => $LIMIT_SQL,
-                                              -dbSNP_version => $dbSNP_BUILD_VERSION,
-                                              -assembly_version => $ASSEMBLY_VERSION
-                                             );
-  $horse->dump_dbSNP();
-  #add_strains($dbVar); #add strain information
-}
-
-elsif ($species =~ /platypus/i){
-  #ornithorhyncus anatinus (platypus)
-
-  my $platypus = dbSNP::GenericChromosome->new(-dbSNP => $dbSNP,
-                                              -dbCore => $dbCore,
-                                              -dbVar => $dbVar,
-                                              -snp_dbname => $dsdbname,
-                                              -tmpdir => $TMP_DIR,
-                                              -tmpfile => $TMP_FILE,
-                                              -limit => $LIMIT_SQL,
-                                              -dbSNP_version => $dbSNP_BUILD_VERSION,
-                                              -assembly_version => $ASSEMBLY_VERSION
-                                             );
-  $platypus->dump_dbSNP();
-  #add_strains($dbVar); #add strain information
-}
-elsif ($species =~ /^pig$/i) {
-  my $pig = dbSNP::MappingChromosome->new(-dbSNP => $dbSNP,
-  #my $pig = dbSNP::GenericChromosome->new(
-    -dbSNP => $dbSNP,
-    -dbCore => $dbCore,
-    -dbVar => $dbVar,
-    -snp_dbname => $dsdbname,
-    -tmpdir => $TMP_DIR,
-    -tmpfile => $TMP_FILE,
-    -limit => $LIMIT_SQL,
-    -mapping_file_dir => $MAPPING_FILE_DIR,
-    -dbSNP_version => $dbSNP_BUILD_VERSION,
-    -assembly_version => $ASSEMBLY_VERSION
-  );
-  $pig->dump_dbSNP();
-}
+$import_object->dump_dbSNP();
 my $end = time();
+
 my $duration = Progress::time_format($end-$start);
 print $duration->{'weeks'} . " weeks, " . $duration->{'days'} . " days, " . $duration->{'hours'} . " hours, " . $duration->{'minutes'} . " minutes and " . $duration->{'seconds'} . " seconds spent importing from dbSNP\n";
+
+if ($species =~ m/mouse/i || $species =~ m/chicken/i || $species =~ m/rat/i || $species =~ m/dog/i) {
+  # Add strain information
+  $start = time();
+  add_strains($dbVar);
+  $end = time();
+  
+  $duration = Progress::time_format($end-$start);
+  print $duration->{'weeks'} . " weeks, " . $duration->{'days'} . " days, " . $duration->{'hours'} . " hours, " . $duration->{'minutes'} . " minutes and " . $duration->{'seconds'} . " seconds spent in add_strains\n";
+}
 
 debug(localtime() . "\tAll done!");
 
