@@ -22,11 +22,11 @@ my ($vhost, $vport, $vdbname, $vuser, $vpass,
     $limit, $num_processes, $top_level, $species,
     $variation_feature, $flanking_sequence, $variation_group_feature,
     $transcript_variation, $ld_populations, $reverse_things, $make_allele_string_table,$merge_rs_features,
-    $merge_ensembl_snps,$new_source_id,$merge_database,$remove_wrong_variations,$remove_multi_tables,$check_seq_region_id, 
-    $read_updated_files,$remove_duplicated_allele_in_allele_string,$merge_venter_gtype,$merge_multi_tables,
+    $merge_ensembl_snps,$new_source_id,$remove_wrong_variations,$remove_multi_tables,$check_seq_region_id, 
+    $read_updated_files,$merge_multi_tables,
     $registry_file);
 
-$variation_feature = $flanking_sequence = $variation_group_feature = $transcript_variation = $ld_populations = $reverse_things = $merge_rs_features = $merge_database = $merge_ensembl_snps = $new_source_id = $remove_wrong_variations = $remove_multi_tables = $make_allele_string_table = $check_seq_region_id = $read_updated_files = $remove_duplicated_allele_in_allele_string = $merge_venter_gtype = $merge_multi_tables = '';
+$variation_feature = $flanking_sequence = $variation_group_feature = $transcript_variation = $ld_populations = $reverse_things = $merge_rs_features = $merge_ensembl_snps = $new_source_id = $remove_wrong_variations = $remove_multi_tables = $make_allele_string_table = $check_seq_region_id = $read_updated_files = $merge_multi_tables = '';
 
 GetOptions('tmpdir=s'  => \$ImportUtils::TMP_DIR,
 	   'tmpfile=s' => \$ImportUtils::TMP_FILE,
@@ -42,16 +42,13 @@ GetOptions('tmpdir=s'  => \$ImportUtils::TMP_DIR,
 	   'transcript_variation' => \$transcript_variation,
 	   'reverse_things'       => \$reverse_things,
 	   'merge_rs_features'         => \$merge_rs_features,
-           'merge_database'          => \$merge_database,
            'remove_wrong_variations' => \$remove_wrong_variations,
 	   'remove_multi_tables'  => \$remove_multi_tables,
 	   'merge_ensembl_snps'   => \$merge_ensembl_snps,
 	   'new_source_id=n'      => \$new_source_id,
 	   'check_seq_region_id'  => \$check_seq_region_id,
            'read_updated_files'   => \$read_updated_files,
-	   'remove_duplicated_allele_in_allele_string' => \$remove_duplicated_allele_in_allele_string,
 	   'make_allele_string_table' => \$make_allele_string_table,
-	   'merge_venter_gtype' => \$merge_venter_gtype,
 	   'merge_multi_tables' => \$merge_multi_tables,
 	   'ld_populations' => \$ld_populations,
 	   'registry_file=s' => \$registry_file);
@@ -132,9 +129,7 @@ remove_multi_tables($dbVar) if ($remove_multi_tables);
 merge_ensembl_snps($dbVar,$new_source_id) if ($merge_ensembl_snps and $new_source_id);
 make_allele_string_table($dbVar) if $make_allele_string_table;
 read_updated_files($dbVar) if $read_updated_files;
-merge_venter_gtype($dbVar) if $merge_venter_gtype;
 merge_multi_tables($dbVar) if $merge_multi_tables;
-remove_duplicated_allele_in_allele_string($dbVar) if $remove_duplicated_allele_in_allele_string;
 
 #will take the number of processes, and divide the total number of entries in the variation_feature table by the number of processes
 sub parallel_variation_feature{
@@ -175,25 +170,55 @@ sub parallel_variation_feature{
       push @hap_seq_region_ids, $seq_region_id;
     }
 
-    my $in_string = "WHERE  seq_region_id not IN (" . join (",",@hap_seq_region_ids) . ")";
+    my $in_string = "(" . join (",",@hap_seq_region_ids) . ")";
     if (scalar @hap_seq_region_ids <1) {
       $in_string = "";
     }
+
     #create a temporary table to store the map_weight, that will be deleted by the last process
     $dbVar->do(qq{CREATE TABLE tmp_map_weight
                 SELECT variation_id, count(*) as count
                 FROM   variation_feature
-                $in_string
+                WHERE  seq_region_id not IN $in_string
                 #WHERE variation_id=37289
                 GROUP BY variation_id}
 	       );
     $dbVar->do(qq{ALTER TABLE tmp_map_weight 
-		      ADD INDEX variation_idx(variation_id,count)});
+		      ADD UNIQUE INDEX variation_idx(variation_id)});
+    $dbVar->do(qq{INSERT IGNORE INTO tmp_map_weight
+		  SELECT variation_id, count(*) as count
+		  FROM   variation_feature
+		  WHERE  seq_region_id IN $in_string
+		  GROUP BY variation_id});
+    
 
 
     $dbVar->do(qq{DELETE FROM variation_feature WHERE seq_region_start=1});
     $dbVar->do(qq{DELETE FROM variation_feature WHERE seq_region_end=1});
 
+    #if no allele_string table, create one from variation_feature table
+    my $as_ref = $dbVar->selectall_arrayref(qq{show tables like 'allele_string'});
+    my $as = $as_ref->[0][0];
+    if (! $as_ref->[0][0]) {
+      debug("There is no allele_string table, create one from variation_feature table ?");
+      $dbVar->do(qq{CREATE TABLE allele_string (
+        variation_id int(10) unsigned NOT NULL,
+        allele longtext,
+        UNIQUE KEY variation_allele_idx(variation_id,allele(4)))
+        });
+        $dbVar->do(qq{INSERT IGNORE INTO allele_string SELECT variation_id,substring_index(allele_string,'/',1) as allele
+                      FROM variation_feature
+                     });
+        $dbVar->do(qq{INSERT IGNORE INTO allele_string SELECT variation_id,substring_index(allele_string,'/',-1) as allele
+                      FROM variation_feature
+                     });
+	$dbVar->do(qq{INSERT IGNORE INTO allele_string SELECT variation_id,substring_index(substring_index(allele_string,'/',2),'/',-1) as allele
+                      FROM variation_feature
+		      });
+        $dbVar->do(qq{INSERT IGNORE INTO allele_string SELECT variation_id,substring_index(substring_index(allele_string,'/',3),'/',-1) as allele
+                      FROM variation_feature
+                     });
+    }
 
     my $sub_variation = int(($max_variation - $min_variation)/ $num_processes);
 
@@ -323,9 +348,7 @@ sub parallel_transcript_variation{
     my $sa = $dbCore->get_SliceAdaptor();
     my $inc_non_ref = 1;
     my $slices = $sa->fetch_all('toplevel', undef, $inc_non_ref);
-    #my $slices = $sa->fetch_by_region('chromosome','Y');
-    #my @slices_ordered;
-    #push @slices_ordered, $slices;
+    
     #order the slices by name
     my @slices_ordered = sort {$a->seq_region_name cmp $b->seq_region_name }  @{$slices};
     # assumes that variation features have already been pushed to toplevel
@@ -434,8 +457,7 @@ sub reverse_genotype{
   }
 
   foreach my $table ("variation","tmp_individual_genotype_single_bp","individual_genotype_multiple_bp","population_genotype","allele") {
-  #we only change things that have map_weight=1 that is vf.map_weight=1 and seq_region_id not in (226063,226064,226065,226066)
-  #foreach my $table ("tmp_individual_genotype_single_bp","allele") {
+  #we only change things that have map_weight=1 that is vf.map_weight=1 and seq_region_id not in (hap_id_string)
     debug("processling table $table");
     if ($table !~ /single/) {
       open OUT, ">$TMP_DIR/$table\.$vdbname" or die "can't open file $table\_out : $!";
@@ -447,20 +469,11 @@ sub reverse_genotype{
 
      my $sth = $dbVar->prepare(qq{select tg.*,vf.allele_string,vf.seq_region_id 
                                   FROM $table tg, variation_feature vf
-                                  #FROM $table tg, vf_GRCh37_Illumina_CytoSNP12v1 vf
                                   WHERE vf.variation_id=tg.variation_id
-                                  #and vf.variation_id in (13,14)
                                   AND vf.seq_region_strand = -1 
                                   AND map_weight=1
                                   $hap_line ##excluding haplotype chromosomes
-                                  #AND vf.allele_string like "%-%"
-                                  }, {mysql_use_result=>1} );
-
-  #  my $sth = $dbVar->prepare(qq{select tg.*,vf.allele_string,vf.seq_region_id 
-  #                               from $table tg, vf_5 vf
-  #                               where vf.variation_id=tg.variation_id
-  #                               and vf.seq_region_strand=-1}, {mysql_use_result=>1} );
-  
+                                  }, {mysql_use_result=>1} );  
 
     $sth->execute();
     if ($table =~ /pop/i) {
@@ -476,7 +489,6 @@ sub reverse_genotype{
       $sth->bind_columns(\$variation_id,\$ss_id,\$allele_1,\$allele_2,\$sample_id,\$allele_string,\$seq_region_id);
     }
     LINE : while ($sth->fetch()){
-      #print "allele_1 is $allele_1\n";
       next if (!$allele and $table =~/variation|allele/);
       my ($old_allele,$old_allele_1,$old_allele_2);
       my @alleles = split /\//, $allele_string;
@@ -494,7 +506,7 @@ sub reverse_genotype{
         }
       }  
       my $new_allele_string = join "/", @alleles;
-      #print "newallele_string is $new_allele_string and old_allele_string is $allele_string\n"; 
+      
       if ($table =~ /allele|variation/) {
 	next if ($allele =~ /\-|\+/);
 	next if ($allele =~ /N/);
@@ -508,12 +520,10 @@ sub reverse_genotype{
             $nu = $2;
           }
         } 
-        next LINE if ($al and $nu and $new_allele_string =~ /$al/);
+        next LINE if ($al and $nu and $new_allele_string =~ /$al/); #not change it if new_allele_string already match allele
         if ($new_allele_string !~ /$allele/ or ($new_allele_string =~ /$allele/ and $allele_string =~ /$allele/)) {
-         #if ($new_allele_string !~ /$allele/) {#added 11/08
             if ($allele =~ /\(|\)/g) {
             $allele =~ /\((\S+)\)(\d+)/; 
-            #print "match is $1 and num is $2\n";
             if ($1 and $2) {
               $allele = $1;
               reverse_comp(\$allele);
@@ -554,7 +564,6 @@ sub reverse_genotype{
 	  next LINE if ($al and $nu and $new_allele_string =~ /$al/);
 	}
 	if (($new_allele_string !~ /$allele_1|$allele_2/) or ($new_allele_string =~ /$allele_1|$allele_2/ and $allele_string =~ /$allele_1|$allele_2/)) {
-        #if ($new_allele_string !~ /$allele_1|$allele_2/) {#added 11/08
           if ($allele_1 =~ /\(|\)/g) {
             $allele_1 =~ /\((\S+)\)(\d+)/; 
             if ($1 and $2) {
@@ -600,7 +609,6 @@ sub reverse_genotype{
               "DELETE FROM $table_name WHERE variation_id=$variation_id and subsnp_id=$ss_id and sample_id=$sample_id;\n");
               print_buffered( $buffer, "$TMP_DIR/$table_name\.import",
               join ("\t",$variation_id,$ss_id,$new_allele_1,$new_allele_2,$sample_id)."\n");
-			      #"update ignore $table_name set allele_1 = \"$allele_1\", allele_2 = \"$allele_2\" where variation_id=$variation_id and sample_id=$sample_id and allele_1 = \"$old_allele_1\" and allele_2 = \"$old_allele_2\";\n");
 	    }
 	    else {
 	      print OUT "update ignore $table set allele_1 = \"$new_allele_1\", allele_2 = \"$new_allele_2\" where variation_id=$variation_id and subsnp_id=$ss_id and  sample_id=$sample_id and allele_1 = \"$old_allele_1\" and allele_2 = \"$old_allele_2\";\n";
@@ -679,9 +687,6 @@ sub reverse_flanking_sequence {
   $dbVar->do(qq{INSERT INTO flanking_sequence_before_re SELECT * FROM flanking_sequence});
 
   foreach my $table ("flanking_sequence") {
-    #my $table2 = $table;
-    #$table2 =~ s/flank/vf/;
-    #$table2 =~ s/\_new//;
     my $sth=$dbVar->prepare(qq{select fl.* from flanking_sequence fl, variation_feature_before_re vf 
                              where vf.map_weight=1
                              $hap_line 
@@ -723,18 +728,9 @@ sub reverse_flanking_sequence {
 	$up_seq_start = '\N';
 	$up_seq_end = '\N';
       }
-      #$seq_region_strand = 1 if ($seq_region_strand == -1);
       $seq_region_strand = 1;
-      #my $sth1 = $dbVar->prepare(qq{update flanking_sequence set up_seq = ?, down_seq = ?, up_seq_region_start = $up_seq_start, up_seq_region_end = $up_seq_end, down_seq_region_start=$down_seq_start, down_seq_region_end=$down_seq_end, seq_region_strand=1  where variation_id = $variation_id and seq_region_id = $seq_region_id and seq_region_strand = -1});
-      #print "up_seq is $up_seq and down_seq is $down_seq\n";
-      #$sth1->bind_param(1,$up_seq,SQL_VARCHAR) if ($up_seq ne '\N');
-      #$sth1->bind_param(1,'NULL',SQL_VARCHAR) if ($up_seq eq '\N');
-      #$sth1->bind_param(2,$down_seq,SQL_VARCHAR) if ($down_seq ne '\N');
-      #$sth1->bind_param(2,'NULL',SQL_VARCHAR) if ($down_seq eq '\N');
-      #$sth1->execute();
+
       $dbVar->do(qq{update $table set up_seq = "$up_seq", down_seq = "$down_seq", up_seq_region_start = $up_seq_start, up_seq_region_end = $up_seq_end, down_seq_region_start=$down_seq_start, down_seq_region_end=$down_seq_end, seq_region_strand=1  where variation_id = $variation_id and seq_region_id = $seq_region_id and seq_region_strand = -1});
-    #the following is for watson/venter flanking_sequence mapped to GRCh37
-    #$dbVar->do(qq{update $table set up_seq = "$up_seq", down_seq = "$down_seq", up_seq_region_start = $up_seq_start, up_seq_region_end = $up_seq_end, down_seq_region_start=$down_seq_start, down_seq_region_end=$down_seq_end, seq_region_strand=1  where variation_id = $variation_id});
     }
     $dbVar->do(qq{update $table set up_seq = null where up_seq = 'N'});
     $dbVar->do(qq{update $table set down_seq = null where down_seq = 'N'});
@@ -808,7 +804,7 @@ sub merge_ensembl_snps {
     my %rec_allele = map {$_,1} @alleles2 ;
     my $n=0;
     while ( $n < @alleles1) {
-      if (! $rec_allele{$alleles1[$n]}) {
+      if (! $rec_allele{$alleles1[$n]} and $alleles1[$n] !~ /MUTATION|CNV/) {#allele not seen and is a real allele
 	$allele_string2 .= "/$alleles1[$n]"; #in this way to make sure the last one is from deleted allele_string if it's not in allele_string already
       }
       $n++;
@@ -880,7 +876,6 @@ sub read_updated_files {
   my $num_process = 4;
   
   foreach my $file (@files) {
-    #next if $file =~ /ch13|ch10/;
     debug("Starting read file $file...");
     my $kid;
     my $pid = fork;
@@ -888,18 +883,6 @@ sub read_updated_files {
       throw("Not possible to fork: $!\n");
     }
     elsif ($pid ==0) {
-      #yuou are the child...
-      #my $dbh_child = $dbVar->clone;
-      #$dbVar->{'InactiveDestroy'} = 1;
-      #undef $dbVar;
-      
-      #open IN, "$TMP_DIR/$file";
-      #open OUT, ">$TMP_DIR/$file\_OUT";
-      #while(<IN>) {
-      #  my @all=split;
-      #  $all[2] =~ s/_SubInd_ch\S+//;
-      #  print OUT join " ", @all,"\n";
-      #}
       system("$command < $TMP_DIR/$file");
       my $file1 = $file;
       $file1 =~ s/\_del/\.import/;
@@ -929,54 +912,6 @@ sub read_updated_files {
     }
   } until keys %rec_pid1 <1;
 
-
-}
-
-sub remove_duplicated_allele_in_allele_string {
-
-  my $dbVar = shift;
-  my %rec_allele;
-=head
-  #get rid of duplicated alleles with null frequency and null sample_id after merge_ensembl_snps
-  $dbVar->do(qq{UPDATE allele set sample_id=null where frequency is null});
-  dumpSQL($dbVar,qq{select variation_id,allele,frequency,sample_id from allele});
-  system("sort $TMP_DIR/$TMP_FILE |uniq >$TMP_DIR/$TMP_FILE.su");
-  system("mv $TMP_DIR/$TMP_FILE.su $TMP_DIR/$TMP_FILE");
-  $dbVar->do(qq{RENAME TABLE allele TO allele_old});
-  $dbVar->do(qq{CREATE TABLE allele like allele_old});
-  load($dbVar,"allele","variation_id","allele","frequency","sample_id");
-=cut
-  debug("Remove duplicated alleles from allele_string");
-
-  open OUT, ">$TMP_DIR/update_vf_more_alleles";
-
-  $dbVar->do(qq{CREATE TABLE vf_more_alleles like variation_feature});
-  $dbVar->do(qq{insert ignore into vf_more_alleles  select vf.* from variation_feature vf, variation_synonym vs WHERE vf.variation_id = vs.variation_id and length(vf.allele_string) - length(REPLACE(vf.allele_string,'/','')) > 1;});
-  my ($variation_feature_id,$allele_string);
-  my $sth = $dbVar->prepare(qq{SELECT variation_feature_id,allele_string
-                               FROM vf_more_alleles
-                               #WHERE variation_feature_id=18
-                               });
-  $sth->execute();
-  $sth->bind_columns(\$variation_feature_id,\$allele_string);
-
-  while($sth->fetch()) {
-    my @alleles = split /\//, $allele_string;
-    my $reference_allele = shift @alleles;
-    %rec_allele = map {$_,1} @alleles;
-    my @new_alleles = keys %rec_allele;
-    #print "new_alleles @new_alleles and old alleles @alleles\n";
-    if (scalar @new_alleles < scalar @alleles) {
-      my $new_allele_string ;
-      foreach my $a (keys %rec_allele) {
-	next if ($a eq $reference_allele);
-	$new_allele_string .= "/$a" if $a;
-      }
-      $new_allele_string = $reference_allele.$new_allele_string;
-      print OUT "update variation_feature set allele_string = \"$new_allele_string\" where variation_feature_id=$variation_feature_id;\n";
-      #$dbVar->do(qq{update vf_more_alleles set allele_string = "$new_allele_string" where variation_feature_id=$variation_feature_id});
-    }
-  }
 }
 
 sub remove_multi_tables {
@@ -1006,10 +941,10 @@ sub remove_multi_tables {
 sub merge_multi_tables {
 
   my $dbVar = shift;
-  foreach my $table ("tmp_individual_genotype_single_bp") { 
-  #foreach my $table("combine_feature","failed_flanking_qual","failed_gtype","flanking_qual","gtype_allele","snp_pos","tmp_individual_genotype_single_bp") {
+   
+  foreach my $table("combine_feature","failed_flanking_qual","failed_gtype","flanking_qual","gtype_allele","snp_pos","tmp_individual_genotype_single_bp") {
     my $single_table_ref = $dbVar->selectall_arrayref(qq{SHOW tables like "$table%"});
-    #my @tables = map {"yuan_hum_var_46a.".$_->[0] } @$single_table_ref;
+    
     my @tables = map {$_->[0] } @$single_table_ref;
     my $table_names = join ',',@tables;
     #my $final_names = $table_names . ",tmp_individual_genotype_single_bp_last_insert";
@@ -1048,7 +983,6 @@ sub merge_rs_feature{
                Where vf1.seq_region_id=vf2.seq_region_id 
                AND vf1.seq_region_start = vf2.seq_region_start 
                AND vf1.seq_region_end = vf2.seq_region_end 
-               #AND vf1.allele_string = vf2.allele_string  #merge alleles if they are different
                And vf1.map_weight=1 and vf2.map_weight=1
                AND vf1.source_id=1 and vf2.source_id=1
                $hap_line
@@ -1132,9 +1066,10 @@ sub merge_rs_feature{
 
   $dbVar->do(qq{UPDATE IGNORE tmp_individual_genotype_single_bp vs, tmp_ids_rs t set vs.variation_id=t.variation_id2 
                 WHERE vs.variation_id = t.variation_id1});
-  #this command needs to be run after above update command been run twice, then delete the ones that before update, the new ones already in table, so been ignored
+  #the following command needs to be run after above update command been run twice, this is occationally three rsnames share same coordinates, so needs to update twice to keep the lowest rsnumbers before finally delete it.
+  #after above run, check rsname appear in rsname1 as well as rsname2, if so, need run update again, then finally do the delete below.
   #$dbVar->do(qq{DELETE FROM vs.* USING tmp_individual_genotype_single_bp vs, tmp_ids_rs t 
-                #WHERE vs.variation_id=t.variation_id1});
+  #              WHERE vs.variation_id=t.variation_id1});
   #$dbVar->do(qq{DROP table tmp_ids_rs});
 }
 
@@ -1179,6 +1114,7 @@ sub check_seq_region_id {
 
 sub make_allele_string_table {
 #after mapping, needs post processing which needs allele_string table
+#now in post-processing, it will check allele_string table exist? if not, will create one before run post_variation_feature check
   my $dbVar = shift;
   dumpSQL($dbVar,qq{SELECT variation_id,allele_string from variation_feature});
   open IN, "$TMP_DIR/$TMP_FILE";
@@ -1194,118 +1130,6 @@ sub make_allele_string_table {
 
   system("mv $TMP_DIR/allele_string.txt $TMP_DIR/$TMP_FILE");
   create_and_load($dbVar,"allele_string","variation_id i*","allele");
-}
-
-sub merge_database {
-
-    my $dbVar = shift;
-    my $dbVar_old = shift;
-    my (@sample_ids,$old_new_sample_ids,$old_new_individual_ids,$old_new_variation_ids);
-    $old_new_sample_ids = $old_new_individual_ids = $old_new_variation_ids = {};
-    
-    #my $sth = $dbVar_old->prepare(qq{select distinct(a.sample_id) from allele a, variation v WHERE v.variation_id=a.variation_id and v.source_id>3});
-    #$sth->execute();
-    #while (my ($sample_id) = $sth->fetchrow_array()) {
-    #  push @sample_ids,$sample_id if $sample_id;
-    #}
-
-    #my $id_str = "IN (".join(',',map{"'$_'"} @sample_ids).");";
-    
-    #$dbVar_old->do(qq{CREATE TABLE sample_merge select * from sample where sample_id $id_str});
-    #dumpSQL($dbVar_old,qq{SELECT * from sample_merge});
-    #$dbVar->do(qq{CREATE TABLE sample_merge like sample});
-    #load($dbVar,qw{sample_merge sample_id name size description});
-    #dumpSQL($dbVar_old,qq{SELECT i.* from individual i, individual_population ip where i.sample_id=ip.individual_sample_id and ip.population_sample_id $id_str});
-    #$dbVar->do(qq{CREATE TABLE individual_merge like individual});
-    #load($dbVar,qw{individual_merge sample_id gender father_individual_sample_id mother_individual_sample_id individual_type_id});
-    #dumpSQL($dbVar_old,qq{SELECT * from individual_population ip where population_sample_id $id_str});
-    #$dbVar->do(qq{CREATE TABLE individual_population_merge like individual_population});
-    #load($dbVar,qw{individual_population_merge individual_sample_id population_sample_id});
-    #my $id_res = $dbVar->selectall_arrayref(qq{SELECT sample_id from individual_merge});
-    #my @ind_sample_ids = map {$_->[0] } @$id_res;
-    #my $ind_sample_id_str = "IN (".join(',',map{"'$_'"} @ind_sample_ids).");";
-    #print "ind_sample_id_str is $ind_sample_id_str\n";
-    #dumpSQL($dbVar_old,qq{SELECT * from sample where sample_id $ind_sample_id_str});
-    #load($dbVar,qw{sample_merge sample_id name size description});
-    #dumpSQL($dbVar_old,qq{SELECT * FROM tmp_individual_genotype_single_bp where sample_id $ind_sample_id_str});
-    #$dbVar->do(qq{CREATE TABLE tmp_individual_genotype_single_bp_merge like tmp_individual_genotype_single_bp_SubInd_ch1});
-    #load($dbVar,qw{tmp_individual_genotype_single_bp_merge variation_id allele_1 allele_2 sample_id});
-    #dumpSQL($dbVar_old,qq{SELECT * FROM variation where source_id >3});#for human
-    #$dbVar->do(qq{CREATE TABLE variation_merge like variation});
-    #load($dbVar,qw{variation_merge variation_id source_id name validation_status ancestral_allele});
-    #dumpSQL($dbVar_old,qq{SELECT vf.* FROM variation v, variation_feature vf where v.variation_id = vf.variation_id and v.source_id >3});#for human
-    #$dbVar->do(qq{CREATE TABLE variation_feature_merge like variation_feature});
-    #load($dbVar,qw{variation_feature_merge variation_feature_id seq_region_id seq_region_start seq_region_end seq_region_strand variation_id allele_string variation_name map_weight flags source_id validation_status consequence_type});
-    #dumpSQL($dbVar_old,qq{SELECT * FROM variation_synonym where source_id>3});
-    #$dbVar->do(qq{CREATE TABLE variation_synonym_merge like variation_synonym});
-    #load($dbVar,qw{variation_synonym_merge variation_synonym_id variation_id source_id name moltype});
-    #dumpSQL($dbVar_old,qq{SELECT fl.* FROM flanking_sequence fl, variation v where v.variation_id=fl.variation_id and v.source_id >3});
-    #$dbVar->do(qq{CREATE TABLE flanking_sequence_merge like flanking_sequence});
-    #load($dbVar,qw{flanking_sequence_merge variation_id up_seq down_seq up_seq_region_start up_seq_region_end down_seq_region_start down_seq_region_end seq_region_id seq_region_strand});
-    #dumpSQL($dbVar_old,qq{SELECT a.* from allele a, variation v WHERE v.variation_id=a.variation_id and v.source_id>3});
-    #$dbVar->do(qq{CREATE TABLE allele_merge like allele});
-    #load($dbVar,qw{allele_merge allele_id variation_id allele frequency sample_id});
-    #for variation, we need whole old_variation_id mapped to new_variation_id, not just for source_id>3
-    #dumpSQL($dbVar_old,qq{SELECT variation_id,name FROM variation});
-    #$dbVar->do(qq{CREATE TABLE old_variation_id_name (variation_id int(11), name varchar(255), key variation_idx(variation_id), key name(name))});
-    #load($dbVar,qw{old_variation_id_name variation_id name});
-    #$dbVar->do(qq{CREATE TABLE new_variation_id_name like old_variation_id_name});
-    #$dbVar->do(qq{INSERT INTO new_variation_id_name select variation_id, name from variation});
-    #$dbVar->do(qq{CREATE TABLE old_new_variation_id_all like old_new_variation_id});
-    ####to make both unique IDs in this id table using left join and right join
-    #$dbVar->do(qq{INSERT INTO old_new_variation_id_all SELECT o.variation_id as old_variation_id,n.variation_id as new_variation_id from old_variation_id_name o LEFT JOIN new_variation_id_name n ON o.name=n.name});
-    #$dbVar->do(qq{INSERT INTO old_new_variation_id_all SELECT o.variation_id as old_variation_id,n.variation_id as new_variation_id from old_variation_id_name o RIGHT JOIN new_variation_id_name n ON o.name=n.name});
-    ##note some old variation_id is in new variation_synonym table rather than in new variation table, to correct this do:
-    #$dbVar->do(qq{update old_new_variation_id_all id, variation_synonym vs, old_variation_id_name old set id.new_variation_id =vs.variation_id where old.name=vs.name and old.variation_id = id.old_variation_id});
-    ##some variations have been merged to other variations by dbSNP, we need find them by positions
-
-    #find_old_new_ids($old_new_sample_ids, qw{sample sample_id name size description});
-    #find_old_new_ids($old_new_individual_ids, qw{individual sample_id gender father_individual_sample_id mother_individual_sample_id individual_type_id});
-    #find_old_new_ids($old_new_variation_ids, qw{variation variation_id source_id name validation_status ancestral_allele});
-    #foreach my $old_sample_id (keys %$old_new_individual_ids) {
-    #  print "$old_sample_id and $old_new_individual_ids->{$old_sample_id}\n";
-    #}
-
-    my (%old_new_sample_ids,%old_new_individual_ids,%old_new_variation_ids);
-      
-#     my $sth = $dbVar->prepare(qq{SELECT onid.old_sample_id,onid.new_sample_id from old_new_sample_id onid, sample s where onid.new_sample_id=s.sample_id and s.name = "ENSEMBL\:celera" });
-#     $sth->execute();
-#     while (my ($old_sample_id,$new_sample_id) = $sth->fetchrow_array()) {
-#       #print "old_sample_id is $old_sample_id and new_sample_id is $new_sample_id\n";
-#       #$dbVar->do(qq{INSERT INTO population (sample_id) values($new_sample_id)});
-#       my $sth1 = $dbVar->prepare(qq{SELECT old_sample_id,new_sample_id from old_new_sample_id});
-#       $sth1->execute();
-#       while (my ($old_ind_sample_id,$new_ind_sample_id) = $sth1->fetchrow_array()) {#individual_population should use individual_population_merge table
-#         $old_new_individual_ids{$old_ind_sample_id} = $new_ind_sample_id;
-#         print "old_ind_id is $old_ind_sample_id and new_ind_id is $new_ind_sample_id and new_sample_id is $new_sample_id\n";
-#         #$dbVar->do(qq{INSERT INTO individual_population (individual_sample_id,population_sample_id)values($new_ind_sample_id,$new_sample_id)});
-#       }
-#     }
-
-
-    my $sth2 = $dbVar->prepare(qq{SELECT old_variation_id,new_variation_id from old_new_variation_id_all});
-    $sth2->execute();
-    while (my ($old_var_id,$new_var_id) = $sth2->fetchrow_array()) {
-      #print "old_var_id is $old_var_id and new_var_id is $new_var_id\n";
-      #$dbVar->do(qq{CREATE TABLE variation_feature_merge_old select * from variation_feature_merge});
-      #$dbVar->do(qq{CREATE TABLE variation_synonym_merge_old select * from variation_synonym_merge});
-      #$dbVar->do(qq{CREATE TABLE flanking_sequence_merge_old select * from flanking_sequence_merge});
-      #$dbVar->do(qq{CREATE TABLE allele_merge_old select * from allele_merge});
-      #$dbVar->do(qq{CREATE TABLE tmp_individual_genotype_single_bp_merge_old select * from tmp_individual_genotype_single_bp_merge});
-      #$dbVar->do(qq{UPDATE variation_feature_merge SET variation_id=$new_var_id where variation_id = $old_var_id});
-      $dbVar->do(qq{UPDATE variation_synonym_merge SET variation_id=$new_var_id where variation_id = $old_var_id});
-      #$dbVar->do(qq{UPDATE flanking_sequence_merge SET variation_id=$new_var_id where variation_id = $old_var_id});
-      #$dbVar->do(qq{UPDATE allele_merge SET variation_id=$new_var_id where variation_id = $old_var_id});
-      $dbVar->do(qq{UPDATE tmp_individual_genotype_single_bp_merge SET variation_id=$new_var_id where variation_id = $old_var_id});
-    }
-
-    #foreach my $old_ind_sample_id (keys %old_new_individual_ids) {
-    #  if ($old_ind_sample_id) {
-    #	my $new_ind_sample_id = $old_new_individual_ids{$old_ind_sample_id};
-    #	#print "old_ind_sample_id is $old_ind_sample_id and new_ind_sample_id is $new_ind_sample_id\n";
-    #	$dbVar->do(qq{UPDATE tmp_individual_genotype_single_bp_merge SET sample_id=$new_ind_sample_id where sample_id = $old_ind_sample_id});
-    #  }
-    #}
 }
 
     
@@ -1478,16 +1302,8 @@ sub parallel_ld_populations {
     print "Time starting to submit jobs to queues: ",scalar(localtime(time)),"\n";
     #let's run a job array
     foreach my $file (keys %genotypes_file){
-#	if ($genotypes_file{$file} > MAX_GENOTYPES()){
-#	    &split_file($file,\%regions,$genotypes_file{$file},$dbname);
-#	    $call = "bsub -q normal -J '$dbname.pairwise_ld[1-".REGIONS()."]' -m 'bc_hosts' -o $TMP_DIR/output_pairwise_ld.txt $PERLBIN calc_genotypes.pl $file\_chunk.\\\$LSB_JOBINDEX $file\_chunk_out.\\\$LSB_JOBINDEX"; #create a job array
-#	    $call = "bsub -q normal -J '$dbname.pairwise_ld[1-".REGIONS()."]' -m 'bc_hosts' ./ld_wrapper.sh $file\_chunk.\\\$LSB_JOBINDEX $file\_chunk_out.\\\$LSB_JOBINDEX"; #create a job array
-#	}
-#	else{
-#	    $call = "bsub -q normal -J '$dbname.pairwise_ld' -m 'bc_hosts' -o $TMP_DIR/output_ld_populations\_$$.txt $PERLBIN calc_genotypes.pl $file $file\_out ";	    
-	    $call = "bsub -q normal -J '$dbname.pairwise_ld' -m 'bc_hosts' ./ld_wrapper.sh $file $file\_out";	    
-#	}
-	system($call);
+      $call = "bsub -q normal -J '$dbname.pairwise_ld' -m 'bc_hosts' ./ld_wrapper.sh $file $file\_out";	    
+      system($call);
     }
     $call = "bsub -q normal -w 'done($dbname.pairwise_ld)' -m 'ecs4_hosts' -o $TMP_DIR/output_ld_populations_import.txt $PERLBIN parallel_ld_populations.pl -chost $chost -cuser $cuser -cdbname $cdbname -vhost $vhost -vuser $vuser -vport $vport -vdbname $vdbname -tmpdir $TMP_DIR -tmpfile $TMP_FILE ";
     $call .= "-cpass $cpass " if ($cpass);
