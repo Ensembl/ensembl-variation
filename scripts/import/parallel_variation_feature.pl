@@ -169,13 +169,14 @@ sub variation_feature {
     (qq{SELECT STRAIGHT_JOIN vf.variation_feature_id, vf.seq_region_id,
                vf.seq_region_start, vf.seq_region_end, vf.seq_region_strand,
                vf.variation_id, a.allele, tmw.count, v.name, vf.flags, vf.source_id, vf.validation_status, vf.consequence_type
-        FROM   variation_feature vf FORCE INDEX(PRIMARY), allele_string a, tmp_map_weight tmw,
-               variation v
+        FROM   variation_feature vf FORCE INDEX(PRIMARY), variation v, tmp_map_weight tmw,
+               allele_string a
         WHERE  a.variation_id = vf.variation_id 
         AND    vf.variation_id = tmw.variation_id
         AND    vf.variation_id = v.variation_id 
-	$LIMIT 
+        $LIMIT
         ORDER BY vf.seq_region_id, vf.seq_region_start 
+        #limit 10
 	},{mysql_use_result=>1});
 
   $sth->execute();
@@ -186,7 +187,7 @@ sub variation_feature {
   $sth->bind_columns(\$vf_id, \$sr_id, \$sr_start, \$sr_end, \$sr_strand,
                      \$v_id, \$allele, \$map_weight, \$v_name, \$vf_flags, \$vf_source_id, \$vf_validation_status, \$vf_consequence_type);
 
-  my ($cur_vf_id, $cur_map_weight, $cur_v_id, $cur_v_name,
+  my ($cur_vf_id, $cur_map_weight, $cur_v_id, $cur_v_name, $cur_allele,
      $top_coord, $top_sr_id, $top_sr_start, $top_sr_end, $top_sr_strand, 
       $ref_allele,$cur_vf_flags, $cur_source_id, $cur_validation_status, $cur_consequence_type);
   my %alleles;
@@ -214,10 +215,14 @@ sub variation_feature {
           # make sure the reference allele is first. Remember to convert ref_allele (in expanded version) to a compressed allele
           delete $alleles{$alleles_expanded{$ref_allele}};
           $allele_str = join('/', ($alleles_expanded{$ref_allele}, keys %alleles));
-        } else {
+        }
+	elsif ($cur_allele =~ /MUTATION|CNV/) {
+	  $allele_str = "$cur_allele";
+	}
+	else {
 	  $allele_str = undef;
-          #warn("Reference allele $ref_allele for $cur_v_name not found in alleles: " .
-	    #join("/", keys %alleles), " discarding feature");
+          warn("Reference allele $ref_allele for $cur_v_name not found in alleles: " .
+	    join("/", keys %alleles), " discarding feature");
 	  $dbVar_write->do(qq{INSERT IGNORE INTO failed_variation (variation_id,failed_description_id) VALUES ($cur_v_id,2)}) if ($cur_map_weight ==1); #only put into failed_variation when map_weight==1
         }
 	
@@ -234,6 +239,9 @@ sub variation_feature {
 			  $cur_map_weight,$cur_vf_flags,$cur_source_id,$cur_validation_status,$cur_consequence_type), "\n";
 	  }
 	}
+      }
+      else {
+	print "vf_id is $vf_id is no top_coord\n";
       }
       
       %alleles = ();
@@ -255,7 +263,8 @@ sub variation_feature {
       $top_sr_end = $sr_end;
       $top_sr_strand = $sr_strand;
       $allele = uc $allele;    #convert allele to uppercase format
-
+      $cur_allele = $allele;
+      
       # map the variation coordinates to toplevel
 
       my $slice = $slice_adaptor->fetch_by_seq_region_id($sr_id);
@@ -327,7 +336,7 @@ sub variation_feature {
     $alleles{$allele} = 1;
     my $allele_copy = $allele;
     #make a copy of the allele, but in the expanded version
-    &expand(\$allele) if ($allele !~ /LARGE/); #only expand alleles with the (AG)5 format
+    &expand(\$allele) if ($allele !~ /LARGE|CNV|MUTA/); #only expand alleles with the (AG)5 format
     $alleles_expanded{$allele} = $allele_copy; 
   }
 
@@ -343,10 +352,14 @@ sub variation_feature {
       # make sure the reference allele is first
       delete $alleles{$ref_allele};
       $allele_str = join('/', ($ref_allele, keys %alleles));
-    } else {
+    }
+    elsif ($allele =~ /MUTATION|CNV/) {
+      $allele_str = "$allele";
+    }
+    else {
       $allele_str = undef;
-      #warn("Reference allele $ref_allele for $cur_v_name not found in alleles: " .
-      #     join("/", keys %alleles), " discarding feature\n");
+      warn("Reference allele $ref_allele for $cur_v_name not found in alleles: " .
+           join("/", keys %alleles), " discarding feature\n");
       #needs to be written to the failed_variation table
       $dbVar_write->do(qq{INSERT IGNORE INTO failed_variation (variation_id,failed_description_id) VALUES ($cur_v_id,2)}) if ($cur_map_weight==1);
     }
@@ -364,6 +377,9 @@ sub variation_feature {
       }
     }
   }
+  else {
+	print "again vf_id is $vf_id is no top_coord\n";
+  }
 
   close FH;
 }
@@ -374,9 +390,8 @@ sub last_process{
     my $dbVar = shift;
     
     debug("Deleting existing variation features");
-    
-    $dbVar->do("DELETE FROM variation_feature");
-    
+    $dbVar->do("TRUNCATE TABLE variation_feature");
+
     debug("Reimporting processed variation features");
     my $dbname = $dbVar->dbname(); #get the name of the database to create the file    
     #group all the fragments in 1 file
@@ -388,7 +403,7 @@ sub last_process{
 		    seq_region_start seq_region_end seq_region_strand variation_id
 		    allele_string variation_name map_weight flags source_id validation_status consequence_type));
 
-    #unlink(<$TMP_DIR/$dbname.variation_feature*>);
+    unlink(<$TMP_DIR/$dbname.variation_feature*>);
     $dbVar->do("DROP TABLE tmp_map_weight");
 
     #and delete the status file
