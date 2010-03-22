@@ -1,9 +1,29 @@
-#----------------------#
-# SNP EFFECT PREDICTOR #
-#----------------------#
-#
-# by Will McLaren (wm2@ebi.ac.uk)
-# Run "perl snp_effect_predictor.pl -h" for help
+=head1 LICENSE
+
+  Copyright (c) 1999-2010 The European Bioinformatics Institute and
+  Genome Research Limited.  All rights reserved.
+
+  This software is distributed under a modified Apache license.
+  For license details, please see
+
+    http://www.ensembl.org/info/about/code_licence.html
+
+=head1 CONTACT
+
+  Please email comments or questions to the public Ensembl
+  developers list at <ensembl-dev@ebi.ac.uk>.
+
+  Questions may also be sent to the Ensembl help desk at
+  <helpdesk@ensembl.org>.
+
+=cut
+
+=head1 NAME
+
+SNP Effect Predictor - a script to predict the consequences of variations
+
+by Will McLaren (wm2@ebi.ac.uk)
+=cut
 
 use strict;
 use Getopt::Long;
