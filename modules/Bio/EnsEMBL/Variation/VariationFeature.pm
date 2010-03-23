@@ -1043,4 +1043,43 @@ sub get_all_Alleles{
 	return \@new_alleles;
 }
 
+
+=head2 get_all_PopulationGenotypes
+
+  Args       : none
+  Example    : @pop_gens = @{$vf->get_all_PopulationGenotypes}
+  Description: Gets all PopulationGenotype objects from the underlying variation
+			   object, with reference genotypes first.
+  Returntype : listref of Bio::EnsEMBL::Variation::PopulationGenotype objects
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub get_all_PopulationGenotypes{
+    my $self = shift;
+	
+	my @gens = @{$self->variation->get_all_PopulationGenotypes};
+	
+	# put all alleles in a hash
+	my %order = ();
+	foreach my $gen(@gens) {
+	  # homs low priority, hets higher
+	  $order{$gen->allele1.$gen->allele2} = ($gen->allele1 eq $gen->allele2 ? 1 : 2);
+	}
+	
+	# ref hom highest priority
+	$order{$self->ref_allele_string x 2} = 3;
+	
+	# now sort them by population, submitter, genotype
+	my @new_gens = sort {
+	  ($a->population ? $a->population->name : "") cmp ($b->population ? $b->population->name : "") ||
+	  ($a->subsnp ? $a->subsnp_handle : "") cmp ($b->subsnp ? $b->subsnp_handle : "") ||
+	  $order{$b->allele1.$b->allele2} <=> $order{$a->allele1.$a->allele2}
+	} @gens;
+	
+	return \@new_gens;
+}
+
 1;
