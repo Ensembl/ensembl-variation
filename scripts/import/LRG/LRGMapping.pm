@@ -276,40 +276,7 @@ sub parse_ssaha2_out {
   die("The LRG sequence was not uniquely mapped!") unless (scalar(@rec_find) == 1);
   
   return \@rec_find;
-  
-    #print ;
-=head    
-    next if ($_ !~ /^vulgar/);
-    if (/^vulgar\:\s+(\S+)\s+(\d+)\s+(\d+)\s+(\+|\-)\s+(\S+)\s+(\d+)\s+(\d+)\s+(\+|\-)\s+(\d+)\s+(.*)$/) {
-      my $h = undef;
-      $h->{'q_id'} = $1;
-      $h->{'q_start'} = $2;
-      $h->{'q_end'} = $3;
-      $h->{'t_id'} = (split /\-/, $5)[0];
-      $h->{'t_start'} = $6;
-      $h->{'t_end'} = $7;
-      $h->{'score'} = $9;
-      $h->{'match'} = $10;
-      my $q_strand = $4;
-      my $t_strand = $8;
-      $q_strand = ($q_strand =~ /\-/) ? -1 : 1;
-      $t_strand = ($t_strand =~ /\-/) ? -1 : 1;
-      $h->{'q_strand'} = $q_strand;
-      $h->{'t_strand'} = $t_strand;
-      push @rec_find, $h if $h->{'q_id'};
-    }
-  }
-  close SSAHA;
-  
-  #unlink $output_file;
-  
-  # if we have more than one hit
-  if(scalar @rec_find > 1 && $rec_find[0]->{'score'} == $rec_find[1]->{'score'}) {
-    die "Mapped ",scalar @rec_find, "times\n";
-  }
-  my $mapping = make_feature_pair($rec_find[0]);
-  return $mapping;
-=cut
+
 }
 
 # Attempts to parse a vulgar string as outputted from ssaha2. Will return a reference to a hash with the following fields:
@@ -473,7 +440,8 @@ sub get_annotations {
   # These parameters need only be defined if we need to add an entry to core db
   my $chr_name = shift;
   my $lrg_len = shift;
-  my $pairs = shift;
+  my $mapping = shift;
+  my $pairs = $mapping->{'pairs'};
   
   #ÊTry to fetch a slice for the LRG (from the read-write db), this should be possible if an entry exists in the core db
   my $sa_rw = $dbCore_rw->get_SliceAdaptor();
@@ -485,7 +453,7 @@ sub get_annotations {
     # Add a mapping between the LRG and chromosome to the core db
     # For consistency in the annotations, do transfer between LRG and chromosome coord systemsÊeven if there is a perfect match
     $LRGImport::dbCore = $dbCore_rw;
-    LRGImport::add_mapping($lrg_name,$lrg_coord_system_name,$lrg_len,$current_assembly,$chr_name,$pairs);
+    LRGImport::add_mapping($lrg_name,$lrg_coord_system_name,$lrg_len,$mapping);
     
     # Reload the db connections to get rid of any caching (is this necessary?)
     Bio::EnsEMBL::Registry->clear();
@@ -1008,8 +976,8 @@ sub mapping_2_pairs {
   my $chr_name = $mapping_node->data->{'chr_name'};
   my $chr_offset_start = $mapping_node->data->{'chr_start'};
   my $chr_offset_end = $mapping_node->data->{'chr_end'};
-  my $lrg_offset_start = $mapping_node->data->{'lrg_start'};
-  my $lrg_offset_end = $mapping_node->data->{'lrg_end'};
+  my $lrg_offset_start = 1e11;
+  my $lrg_offset_end = -1;
   
   foreach my $span (@{$mapping_spans}) {
     my $lrg_start = $span->data->{'lrg_start'};
@@ -1017,6 +985,10 @@ sub mapping_2_pairs {
     my $chr_start = $span->data->{'start'};
     my $chr_end = $span->data->{'end'};
     my $strand = $span->data->{'strand'};
+    
+    # Store the extreme points of the LRG
+    $lrg_offset_start = min($lrg_offset_start,$lrg_start);
+    $lrg_offset_end = max($lrg_offset_end,$lrg_end);
     
     # If we have changed orientation since last span (or since start when sequence was forward), flip the sequence
     if ($strand != $last_strand) {
