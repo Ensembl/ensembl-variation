@@ -11,4 +11,5 @@ CREATE TABLE IF NOT EXISTS failed_variation(
 INSERT IGNORE INTO failed_variation (variation_id,failed_description_id) 
    SELECT variation_id, 3
    FROM  variation_feature
-   WHERE length(allele_string) - length(REPLACE(allele_string,'/','')) > 2;
+   WHERE length(allele_string) - length(REPLACE(allele_string,'/','')) > 2
+   AND allele_string not like '%-%';
