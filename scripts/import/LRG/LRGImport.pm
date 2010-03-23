@@ -384,10 +384,12 @@ sub add_mapping {
     my $lrg_name = shift;
     my $lrg_coord_system = shift;
     my $q_seq_length = shift;
+    my $mapping = shift;
     my $assembly = shift;
-    my $target_chr = shift;
-    my $pairs = shift;
-  
+    
+    $assembly ||= get_assembly();
+    
+    my $pairs = $mapping->{'pairs'};
     my %additions;
   
     # Get the coord system id for this LRG or add a new entry if not present
@@ -398,39 +400,81 @@ sub add_mapping {
 
     # In order to project the slice, we need to add an entry to the meta table (if not present)
     my $meta_key = 'assembly.mapping';
-    my $meta_value = $lrg_coord_system . '#chromosome:' . $assembly;
-    foreach my $append (('','#contig','#supercontig')) {
+
+    # Need the mapping to contig and also to chromosome via contig
+    my $meta_value = $lrg_coord_system . '#contig';
+    foreach my $append (('','#chromosome:' . $assembly)) {
 	my $id = add_meta_key_value($meta_key,$meta_value . $append);
 	push(@meta_id,$id);
     }
-
+    
     # Add a seq_region for the LRG if it doesn't exist
     my @seq_region_ids;
     my $q_seq_region_id = add_seq_region($lrg_name,$cs_id,$q_seq_length);
     push(@seq_region_ids,$q_seq_region_id);
   
-    # Get the seq_region_id for the target chromsome
-    my $chr_cs_id = get_coord_system_id('chromosome',$assembly);
-    my $t_seq_region_id = get_seq_region_id($target_chr,$chr_cs_id);
+  
+    # Get the seq_region_id for the target contig
+    my $ctg_cs_id = get_coord_system_id('contig');
     
     my $attrib_type_id;
     my $contig_csi;
-  
+    my $sa = $dbCore->get_SliceAdaptor();
+    
+    #ÊLoop over the pairs array. For each mapping span, first get a chromosomal slice and project this one to contigs
     foreach  my $pair (sort {$a->[3]<=>$b->[3]} @{$pairs}) {
     
 	# Each span is represented by a 'DNA' type
 	if ($pair->[0] eq 'DNA') {
-	    die("Distance between query and target is not the same, there is a indel which shouldn't be there. Check the code!") unless ($pair->[2]-$pair->[1] == $pair->[4]-$pair->[3]);
-	  
-	    add_assembly_mapping(
-		$q_seq_region_id,
-		$t_seq_region_id,
-		$pair->[1],
-		$pair->[2],
-		$pair->[3],
-		$pair->[4],
-		$pair->[5]
-	    );    
+	    die("Distance between query and target is not the same, there is an indel which shouldn't be there. Check the code!") unless ($pair->[2]-$pair->[1] == $pair->[4]-$pair->[3]);
+	    
+	    # Get a chromosomal slice. Always in the forward orientation
+	    my $chr_slice = $sa->fetch_by_region('chromosome',$mapping->{'chr_name'},$pair->[3],$pair->[4],1);
+	    
+	    #ÊProject the chromosomal slice to contig
+	    my $segments = $chr_slice->project('contig');
+	    
+	    # Die if the projection failed
+	    die("Could not project " . $chr_slice->description() . " to contigs!") if (!defined($segments) || scalar(@{$segments}) == 0);
+	    
+	    # Loop over the projection segments and insert the corresponding mapping between the LRG and contig
+	    foreach my $segment (@{$segments}) {
+		
+		#ÊThe projected slice on contig
+		my $ctg_slice = $segment->[2];
+		my $ctg_seq_region_id = $sa->get_seq_region_id($ctg_slice);
+		my $ctg_start = $ctg_slice->start();
+		my $ctg_end = $ctg_slice->end();
+		# The orientation of the contig relative to the LRG is the orientation relative to chromosome multiplied by the orientation of chromosome releative to LRG
+		my $ctg_strand = ($ctg_slice->strand() * $pair->[5]);
+		
+		# The offset of the chromosome mapping
+		my $chr_offset = $segment->[0] - 1;
+		my $chr_length = $segment->[1] - $segment->[0] + 1;
+		
+		my $lrg_start;
+		my $lrg_end;
+		
+		# The LRG->contig mapping is straightforward if LRG and chromosome is the same orientation
+		if ($pair->[5] > 0) {
+		    $lrg_start = $pair->[1] + $chr_offset;
+		    $lrg_end = $pair->[1] + $chr_length - 1;
+		}
+		#ÊIf the LRG and chromosome are different orientation, the hits are backwards
+		else {
+		    $lrg_start = $pair->[2] - ($chr_offset + $chr_length) + 1;
+		    $lrg_end = $pair->[2] - $chr_offset;    
+		}
+		add_assembly_mapping(
+		    $q_seq_region_id,
+		    $ctg_seq_region_id,
+		    $lrg_start,
+		    $lrg_end,
+		    $ctg_start,
+		    $ctg_end,
+		    $ctg_strand
+		);
+	    }
 	}
 	# Else if this is a mismatch, put an rna_edit entry into the seq_region_attrib table
 	elsif ($pair->[0] eq 'M') {
