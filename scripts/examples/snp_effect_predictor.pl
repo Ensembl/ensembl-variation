@@ -282,6 +282,9 @@ Options
 -s | --species        Species to use [default: "human"]
 -i | --input_file     Input file - if not specified, reads from STDIN
 -o | --output_file    Output file [default: "snp_effect_output.txt"]
+-b | --buffer_size    Sets the number of SNPs sent in each batch [default: 500]
+                      Increasing buffer size will retrieve results more quickly
+					  but requires more memory.
 
 -d | --db_host        Manually define database host [default: "ensembldb.ensembl.org"]
 -u | --user           Database username [default: "anonymous"]
