@@ -74,8 +74,6 @@ $registry_file ||= $Bin . "/ensembl.registry";
 
 Bio::EnsEMBL::Registry->load_all( $registry_file );
 
-my $vdba_old = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'variation_olddb') if $merge_database;
-
 my $cdba = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'core')
     || usage( "Cannot find core db for $species in $registry_file" );
 my $vdba = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'variation')
@@ -84,8 +82,6 @@ my $vdba = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'variation')
 
 my $dbVar = $vdba->dbc->db_handle;
 my $dbCore = $cdba;
-my $dbVar_old = $vdba_old->dbc->db_handle if $vdba_old;
-print "dbvarold is $dbVar_old\n" if $dbVar_old;
 
 #added default options
 $chost = $cdba->dbc->host; 
@@ -125,7 +121,6 @@ reverse_things($dbVar) if ($reverse_things);
 merge_rs_feature($dbVar) if ($merge_rs_features);
 remove_wrong_variations($dbVar, $Bin . '/../../sql') if ($remove_wrong_variations);
 remove_multi_tables($dbVar) if ($remove_multi_tables);
-#merge_database($dbVar,$dbVar_old) if ($merge_database);
 merge_ensembl_snps($dbVar,$new_source_id) if ($merge_ensembl_snps and $new_source_id);
 make_allele_string_table($dbVar) if $make_allele_string_table;
 read_updated_files($dbVar) if $read_updated_files;
@@ -755,8 +750,9 @@ sub merge_ensembl_snps {
                FROM variation_feature vf1, variation_feature vf2 
                WHERE vf1.seq_region_id=vf2.seq_region_id 
                AND vf1.seq_region_start = vf2.seq_region_start 
-               AND vf1.seq_region_end = vf2.seq_region_end 
-               #AND vf1.allele_string = vf2.allele_string 
+               AND vf1.seq_region_end = vf2.seq_region_end
+	       AND vf1.seq_region_strand = vf2.seq_region_strand
+               #AND vf1.allele_string = vf2.allele_string #if allele_string is different, we merge them
                AND vf1.map_weight=1 and vf2.map_weight=1 
                $hap_line
                AND vf1.variation_id > vf2.variation_id
@@ -970,7 +966,8 @@ sub merge_rs_feature{
                FROM variation_feature vf1, variation_feature vf2 
                Where vf1.seq_region_id=vf2.seq_region_id 
                AND vf1.seq_region_start = vf2.seq_region_start 
-               AND vf1.seq_region_end = vf2.seq_region_end 
+               AND vf1.seq_region_end = vf2.seq_region_end
+	       AND vf1.seq_region_strand = vf2.seq_region_strand  #only merge same strand
                And vf1.map_weight=1 and vf2.map_weight=1
                AND vf1.source_id=1 and vf2.source_id=1
                $hap_line
@@ -981,19 +978,16 @@ sub merge_rs_feature{
 
   #added to merge allele_string for dbSNP variation, if not merging, two sets of genotype data associated to different variation_ids but with same location, this will confuse web display using table compressed_genotype_single_bp 
   debug("Change allele_string if different..."); #added for merging allele_string for dbSNP variation
-  my ($variation_id1,$name1,$variation_id2,$name2,$allele_string1,$allele_string2,$variation_feature_id2);
+  
   $dbVar->do(qq{create table allele_string_diff_rs
                SELECT t.variation_id1, t.name1, vf1.allele_string as allele_string1,t.variation_id2,t.name2, vf2.allele_string as allele_string2, vf2.variation_feature_id as variation_feature_id2
                FROM tmp_ids_rs t, variation_feature vf1, variation_feature vf2
                WHERE t.variation_id1 =vf1.variation_id 
                AND t.variation_id2 =vf2.variation_id 
-               AND vf2.map_weight=1 ##vf2 is dbSNP
-               AND vf1.map_weight=1
-               AND vf1.allele_string != 'N/A'#cnv has 'N' in allele_string, not merge this
-               $hap_line
                AND vf1.allele_string != vf2.allele_string
  });
-
+ 
+  my ($variation_id1,$name1,$variation_id2,$name2,$allele_string1,$allele_string2,$variation_feature_id2);
   my $sth = $dbVar->prepare(qq{SELECT variation_id1,name1,allele_string1,variation_id2,name2,
                                       allele_string2,variation_feature_id2
                                FROM allele_string_diff_rs});
@@ -1020,11 +1014,11 @@ sub merge_rs_feature{
   #upto here -- added to merge allele_string for dbSNP variation
 
   debug("Inserting into variation_synonym table...");
-  $dbVar->do(qq{INSERT IGNORE INTO variation_synonym (variation_id,subsnp_id,source_id,name) 
-                SELECT t.variation_id2,vs.subsnp_id,v.source_id,v.name 
-                FROM  variation v, tmp_ids_rs t, variation_synonym vs
+  $dbVar->do(qq{INSERT IGNORE INTO variation_synonym (variation_id,source_id,name) 
+                SELECT t.variation_id2,v.source_id,v.name 
+                FROM  variation v, tmp_ids_rs t
                 WHERE t.variation_id1=v.variation_id
-                AND vs.variation_id=v.variation_id});
+                });
 
 
   debug("Deleting from tables ...");
@@ -1039,26 +1033,28 @@ sub merge_rs_feature{
                 WHERE vf.variation_feature_id is null});
 
   #start from here, run twice to delete middle one,
-  debug("Updating tables ...");
-  $dbVar->do(qq{UPDATE variation_synonym vs, tmp_ids_rs t set vs.variation_id=t.variation_id2 
-                WHERE vs.variation_id = t.variation_id1});
+  foreach my $count(1,2) {
+    debug("Updating tables count $count...");
+    $dbVar->do(qq{UPDATE variation_synonym vs, tmp_ids_rs t set vs.variation_id=t.variation_id2 
+		  WHERE vs.variation_id = t.variation_id1});
 
-  $dbVar->do(qq{UPDATE allele vs, tmp_ids_rs t set vs.variation_id=t.variation_id2 
+    $dbVar->do(qq{UPDATE allele vs, tmp_ids_rs t set vs.variation_id=t.variation_id2 
                   WHERE vs.variation_id = t.variation_id1});
 
-  $dbVar->do(qq{UPDATE population_genotype vs, tmp_ids_rs t set vs.variation_id=t.variation_id2 
-                WHERE vs.variation_id = t.variation_id1});
+    $dbVar->do(qq{UPDATE population_genotype vs, tmp_ids_rs t set vs.variation_id=t.variation_id2 
+                  WHERE vs.variation_id = t.variation_id1});
 
-  $dbVar->do(qq{UPDATE individual_genotype_multiple_bp vs, tmp_ids_rs t set vs.variation_id=t.variation_id2 
-                WHERE vs.variation_id = t.variation_id1});
+    $dbVar->do(qq{UPDATE individual_genotype_multiple_bp vs, tmp_ids_rs t set vs.variation_id=t.variation_id2 
+                  WHERE vs.variation_id = t.variation_id1});
 
-  $dbVar->do(qq{UPDATE IGNORE tmp_individual_genotype_single_bp vs, tmp_ids_rs t set vs.variation_id=t.variation_id2 
-                WHERE vs.variation_id = t.variation_id1});
+    $dbVar->do(qq{UPDATE IGNORE tmp_individual_genotype_single_bp vs, tmp_ids_rs t set vs.variation_id=t.variation_id2 
+                  WHERE vs.variation_id = t.variation_id1});
+  }
   #the following command needs to be run after above update command been run twice, this is occationally three rsnames share same coordinates, so needs to update twice to keep the lowest rsnumbers before finally delete it.
   #after above run, check rsname appear in rsname1 as well as rsname2, if so, need run update again, then finally do the delete below.
-  #$dbVar->do(qq{DELETE FROM vs.* USING tmp_individual_genotype_single_bp vs, tmp_ids_rs t 
-  #              WHERE vs.variation_id=t.variation_id1});
-  #$dbVar->do(qq{DROP table tmp_ids_rs});
+  $dbVar->do(qq{DELETE FROM vs USING tmp_individual_genotype_single_bp vs, tmp_ids_rs t 
+                WHERE vs.variation_id=t.variation_id1});
+  #$dbVar->do(qq{DROP table tmp_ids_rs}); #keep this table for future checking
 }
 
 sub remove_wrong_variations {
