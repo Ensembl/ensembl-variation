@@ -134,9 +134,7 @@ LRGImport::add_mapping(
   $lrg_name,
   $LRG_COORD_SYSTEM_NAME,
   length($lrg_seq),
-  $assembly,
-  $chr_name,
-  $pairs
+  $mapping
 );
 
 # Add the transcripts to the core db
