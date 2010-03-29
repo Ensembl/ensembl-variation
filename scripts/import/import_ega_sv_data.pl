@@ -22,7 +22,7 @@ GetOptions('species=s'         => \$species,
           );
 my $registry_file ||= $Bin . "/ensembl.registry";
 
-$num_gaps ||= 1;
+$num_gaps = 1 unless defined $num_gaps;
 $species ||= 'human';
 
 # set the target assembly
@@ -37,7 +37,7 @@ $TMP_FILE = $ImportUtils::TMP_FILE;
 # connect to databases
 Bio::EnsEMBL::Registry->load_all( $registry_file );
 my $cdb = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'core');
-my $vdb = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'variation2');
+my $vdb = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'variation');
 my $dbCore = $cdb->dbc->db_handle;
 my $dbVar = $vdb->dbc->db_handle;
 
@@ -63,9 +63,7 @@ else {
 
 read_file();
 source();
-variation();
-variation_feature();
-flanking_sequence();
+structural_variation();
 meta_coord();
 
 sub read_file{
@@ -86,67 +84,43 @@ sub read_file{
 
 sub source{
   debug("Inserting into source table");
-  $dbVar->do(qq{INSERT INTO source (name) SELECT distinct(concat('EGA:', study)) FROM temp_cnv;});
+  $dbVar->do(qq{INSERT INTO source (name) SELECT distinct(concat('DGVa:', study)) FROM temp_cnv;});
 }
 
-sub variation{
-  debug("Inserting into variation table");
-  $dbVar->do(qq{
-			  INSERT INTO variation (name, source_id)
-			  SELECT t.id, s.source_id FROM temp_cnv t, source s
-			  WHERE s.name = concat('EGA:', t.study)
-			 });
-}
-
-sub variation_feature{
+sub structural_variation{
   
-  debug("Inserting into structural_variation_feature table");
+  debug("Inserting into structural_variation table");
   
   # create table if it doesn't exist yet
-  $dbVar->do(qq{CREATE TABLE IF NOT EXISTS `structural_variation_feature` (
-	`structural_variation_feature_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  $dbVar->do(qq{CREATE TABLE IF NOT EXISTS `structural_variation` (
+	`structural_variation_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
 	`seq_region_id` int(10) unsigned NOT NULL,
 	`seq_region_start` int(11) NOT NULL,
 	`seq_region_end` int(11) NOT NULL,
 	`seq_region_strand` tinyint(4) NOT NULL,
-	`variation_id` int(10) unsigned NOT NULL,
 	`variation_name` varchar(255) DEFAULT NULL,
-	`map_weight` int(11) NOT NULL,
 	`source_id` int(10) unsigned NOT NULL,
 	`class` varchar(255) DEFAULT NULL,
 	`bound_start` int(11) DEFAULT NULL,
 	`bound_end` int(11) DEFAULT NULL,
-	PRIMARY KEY (`structural_variation_feature_id`),
-	KEY `pos_idx` (`seq_region_id`,`seq_region_start`),
-	KEY `variation_idx` (`variation_id`)
+	PRIMARY KEY (`structural_variation_id`),
+	KEY `pos_idx` (`seq_region_id`,`seq_region_start`)
   )});
   
   # now copy the data
   $dbVar->do(qq{
-			  INSERT INTO structural_variation_feature
-			  (seq_region_id, seq_region_start, seq_region_end, seq_region_strand,
-			  variation_id, variation_name, map_weight, source_id,
-			  class, bound_start, bound_end)
-			  SELECT q.seq_region_id, t.start, t.end, 1, v.variation_id,
-			  v.name, 1, v.source_id, t.type, t.outer_start, t.outer_end
-			  FROM seq_region q, temp_cnv t, variation v
-			  WHERE q.name = t.chr AND v.name = t.id;
-			 });
-}
-
-sub flanking_sequence{
-  debug("Inserting into flanking sequence table");
-  $dbVar->do(qq{
-			  INSERT INTO flanking_sequence (variation_id, up_seq_region_start,
-			  up_seq_region_end, down_seq_region_start, down_seq_region_end,
-			  seq_region_id, seq_region_strand)
-			  SELECT vf.variation_id,
-			  vf.seq_region_start - 100, vf.seq_region_start - 1,
-			  vf.seq_region_end + 1, vf.seq_region_end + 100,
-			  vf.seq_region_id, vf.seq_region_strand
-			  FROM structural_variation_feature vf, temp_cnv t
-			  WHERE t.id = vf.variation_name;
-			});
+	INSERT INTO structural_variation
+	(seq_region_id, seq_region_start, seq_region_end, seq_region_strand,
+	variation_name, source_id,
+	class, bound_start, bound_end)
+	SELECT q.seq_region_id, t.start, t.end, 1,
+	t.id, s.source_id, t.type, t.outer_start, t.outer_end
+	FROM seq_region q, temp_cnv t, source s
+	WHERE q.name = t.chr AND concat('DGVa:', t.study) = s.name;
+  });
+  
+  # cleanup
+  $dbVar->do(qq{DROP TABLE temp_cnv;});
 }
 
 
@@ -154,7 +128,7 @@ sub meta_coord{
   
   debug("Adding entry to meta_coord table");
   
-  $dbVar->do(qq{INSERT INTO meta_coord(table_name, coord_system_id, max_length) VALUES ('structural_variation_feature', 2, 500);});
+  $dbVar->do(qq{INSERT INTO meta_coord(table_name, coord_system_id, max_length) VALUES ('structural_variation', 2, 500);});
 }
 
 
@@ -236,7 +210,7 @@ sub mapping{
 	  $max_end = $to_end if $to_end > $max_end;
 	  
 	  # print this segment
-	  #print "$id\t$chr\t$from\t$to\t\-\>\t", $to_chr, "\t", $to_start, "\t", $to_end, "\n";
+	  #print "$id\t$chr\t$start\t$end\tsize ",($end - $start + 1), "\t\-\>\t", $to_chr, "\t", $to_start, "\t", $to_end, " size ", ($to_end - $to_start + 1), "\n";
 	  
 	  $count++;
 	}
