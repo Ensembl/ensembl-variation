@@ -194,7 +194,7 @@ sub fetch_all_with_annotation_by_Slice{
     
     $sth->execute($slice->get_seq_region_id, $slice->start, $slice->end);
     
-    return $self->_objs_from_sth($sth);
+    return $self->_objs_from_sth($sth, undef, $slice);
 }
 
 =head2 fetch_all_by_Slice_VariationSet
@@ -250,7 +250,7 @@ sub fetch_all_by_Slice_VariationSet{
 
     $sth->execute($set->dbID, $slice->get_seq_region_id, $slice->start, $slice->end);
 
-    foreach my $var_feat (@{$self->_objs_from_sth($sth)}) {
+    foreach my $var_feat (@{$self->_objs_from_sth($sth, undef, $slice)}) {
       $var_feats{$var_feat->dbID()} = $var_feat;
     }
     
