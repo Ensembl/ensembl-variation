@@ -367,6 +367,7 @@ sub get_default_strains{
     }
     $sth->finish;
     return \@strain_names;
+
 }
 
 
@@ -396,6 +397,17 @@ sub get_reference_strain_name{
     $sth->finish;
     
     return $name;
+#    
+#    my $sth = $self->prepare(qq{SELECT meta_value from meta where meta_key = ?
+#				});
+#    $sth->bind_param(1,'individual.reference_strain',SQL_VARCHAR);
+#    $sth->execute();
+#    $sth->bind_columns(\$name);
+#    $sth->fetch();
+#    $sth->finish;
+#
+#    return $name;
+
 }
 
 
