@@ -695,8 +695,6 @@ sub _objs_from_sth_temp_file {
   close IN;
 #  `calc_genotypes <$IN >$OUT`;
   `$bin <$file.in >$file.out`;
-  
-  warn "$bin <$file.in >$file.out\n";
   open OUT, "$file.out";
   while(<OUT>){
     my %ld_values = ();
@@ -720,8 +718,8 @@ sub _objs_from_sth_temp_file {
 	  $_pop_ids{$sample_id} = 1;	  
       }
       close OUT || die "Could not close filehandle: $!\n";
-  #unlink( "$file.in" );
-  #unlink( "$file.out" );
+  unlink( "$file.in" );
+  unlink( "$file.out" );
 OUT:
   my $t = Bio::EnsEMBL::Variation::LDFeatureContainer->new(
  							   '-ldContainer'=> \%feature_container,
