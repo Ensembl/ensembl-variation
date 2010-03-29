@@ -16,59 +16,55 @@ use ImportUtils qw(dumpSQL debug load create_and_load);
 
 my ($TMP_DIR, $TMP_FILE, $LIMIT,$status_file);
 
-# {
 
-  my ($species,$limit,$num_processes,$registry_file);
+my ($species,$limit,$num_processes,$registry_file);
 
-  GetOptions('species=s'   => \$species,
-	     'tmpdir=s'  => \$ImportUtils::TMP_DIR,
-	     'tmpfile=s' => \$ImportUtils::TMP_FILE,
-	     'limit=s'   => \$limit,
- 	     'num_processes=i' => \$num_processes,
- 	     'status_file=s' => \$status_file,
-	     'registry_file=s' => \$registry_file);
+GetOptions('species=s'   => \$species,
+           'tmpdir=s'  => \$ImportUtils::TMP_DIR,
+           'tmpfile=s' => \$ImportUtils::TMP_FILE,
+           'limit=s'   => \$limit,
+           'num_processes=i' => \$num_processes,
+           'status_file=s' => \$status_file,
+           'registry_file=s' => \$registry_file);
 
-  $num_processes ||= 1;
+$num_processes ||= 1;
 
-  $LIMIT = ($limit) ? " $limit " : ''; #the limit will refer to the slices the process must used (1,4-5,7,.....)
+$LIMIT = ($limit) ? " $limit " : ''; #the limit will refer to the slices the process must used (1,4-5,7,.....)
 
-  usage('-num_processes must at least be 1') if ($num_processes == 0);
-  usage('-status_file argument is required') if (!$status_file);
+usage('-num_processes must at least be 1') if ($num_processes == 0);
+usage('-status_file argument is required') if (!$status_file);
 
-  $registry_file ||= $Bin . "/ensembl.registry";
+$registry_file ||= $Bin . "/ensembl.registry";
 
-  Bio::EnsEMBL::Registry->load_all( $registry_file );
+Bio::EnsEMBL::Registry->load_all( $registry_file );
 
-  my $cdba = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'core');
-  my $vdba = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'variation');
-  my $fdba = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'funcgen') if $species =~ /hum|hom|mouse|mus/i;
-  my $species_name = $cdba->species();#used by funcg table
+my $cdba = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'core');
+my $vdba = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'variation');
+my $fdba = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'funcgen') if $species =~ /hum|hom|mouse|mus/i;
+my $species_name = $cdba->species();#used by funcg table
 
-  my $dbVar = $vdba->dbc;
-  my $dbCore = $cdba;
-  my $dbFunc = $fdba;
+my $dbVar = $vdba->dbc;
+my $dbCore = $cdba;
+my $dbFunc = $fdba;
 
-  $TMP_DIR  = $ImportUtils::TMP_DIR;
-  $TMP_FILE = $ImportUtils::TMP_FILE;
+$TMP_DIR  = $ImportUtils::TMP_DIR;
+$TMP_FILE = $ImportUtils::TMP_FILE;
 
-  transcript_variation($dbCore, $dbVar, $dbFunc);
+transcript_variation($dbCore, $dbVar, $dbFunc);
 
-  open STATUS, ">>$TMP_DIR/$status_file"
-    or throw("Could not open tmp file: $TMP_DIR/$status_file\n"); 
-  flock(STATUS,LOCK_EX);
-  seek(STATUS, 0, 2); #move to the end of the file
-  print STATUS "process finished\n";
-  flock(STATUS,LOCK_UN);
-  close STATUS;
-  #check if it is the last process
-  my $processes = `cat $TMP_DIR/$status_file | wc -l`;
-  if ($processes == $num_processes){
-    #if is the last process, finish it
-    debug("Last process: ready to import data");
-    last_process($dbCore,$dbVar);
-  }
-
-  #last_process($dbCore,$dbVar);#use it only as a single run for last_process
+open STATUS, ">>$TMP_DIR/$status_file" or throw("Could not open tmp file: $TMP_DIR/$status_file\n"); 
+flock(STATUS,LOCK_EX);
+seek(STATUS, 0, 2); #move to the end of the file
+print STATUS "process finished\n";
+flock(STATUS,LOCK_UN);
+close STATUS;
+#check if it is the last process
+my $processes = `cat $TMP_DIR/$status_file | wc -l`;
+if ($processes == $num_processes){
+  #if is the last process, finish it
+  debug("Last process: ready to import data");
+  last_process($dbCore,$dbVar);
+}
 
 #
 # Loads the transcript variation table.  Retrieves every transcript in the
@@ -137,7 +133,7 @@ sub transcript_variation {
 	}
       }
 
-      print "slice name is ",$slice->name,"\n";
+      #print "slice name is ",$slice->name,"\n";
       my @rf_fg = @{$rfa->fetch_all_by_Slice($slice)};
       push @rf, @rf_fg if @rf_fg >0;
       foreach my $rf (@rf) { 
@@ -162,7 +158,7 @@ sub transcript_variation {
               my $g = $gene_adaptor->fetch_by_stable_id($dbEntry->primary_id); #get the gene for the stable_id
 	      if(!defined $g) {
 		#some of the genes do not seem to be in the core database due to core gene update
-		print "Gene : ",$dbEntry->primary_id," is not in coredb\n";
+		#print "Gene : ",$dbEntry->primary_id," is not in coredb\n";
 		next;
 	      }
 	      foreach my $tr (@{$g->get_all_Transcripts()}) {
@@ -216,7 +212,7 @@ sub transcript_variation {
       my ($start,$end, $strand); #start, end and strand of the variation feature in the slice
 
       foreach my $row (@$rows) {
-	next if ($row->[4] =~ /LARGE|INS|DEL/);#for LARGEINSERTION and LARGEDELETION alleles we don't calculate transcripts
+	next if ($row->[4] =~ /LARGE|INS|DEL|CNV|MUTATION/);#for LARGEINSERTION and LARGEDELETION alleles we don't calculate transcripts
 	# put variation in slice coordinates
 	$start = $row->[1] - $slice->start() + 1;
 	$end = $row->[2] - $slice->start() + 1;
@@ -268,11 +264,7 @@ sub transcript_variation {
   }
 
   close FH;
-  #my $call = "lsrcp /tmp/$dbname.transcript_variation_$host\_$$\.txt $TMP_DIR/$dbname.transcript_variation_$host\_$$\.txt";
-  #print $call,"\n";
-  #system($call);
-
-  #unlink("/tmp/$dbname.transcript_variation_$host\_$$\.txt");
+ 
   return;
 }
 
@@ -303,11 +295,8 @@ sub last_process{
 
     debug("Preparing to update consequence type in variation feature table");
     # create a file which contains the var_feat_id and the max consequence type
-#     dumpSQL($dbVar,qq{SELECT STRAIGHT_JOIN vf.variation_feature_id, tv.consequence_type 
-# 		      FROM variation_feature vf LEFT JOIN transcript_variation tv ON 
-# 			   vf.variation_feature_id = tv.variation_feature_id}
-#                                );
-	dumpSQL($dbVar, qq{SELECT variation_feature_id, consequence_type FROM transcript_variation});
+
+    dumpSQL($dbVar, qq{SELECT variation_feature_id, consequence_type FROM transcript_variation});
  
     # sort the file
     system("sort $TMP_DIR/$TMP_FILE |uniq > $TMP_DIR/$TMP_FILE.su");
