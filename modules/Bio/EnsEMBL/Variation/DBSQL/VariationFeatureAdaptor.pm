@@ -317,12 +317,41 @@ sub fetch_all_by_Slice_Population {
 	AND vf.seq_region_id = ?
 	AND vf.seq_region_end > ?
 	AND vf.seq_region_start < ?
-    GROUP BY a.variation_id, a.subsnp_id
+    GROUP BY a.variation_id
   });
   
   $sth->execute($pop->dbID, $slice->get_seq_region_id, $slice->start, $slice->end);
+
+##### ALTERNATIVE USING SUB-QUERY - WORKS FOR MULTIALLELIC BUT TAKES FOREVER!!!
+#  my $cols = join ",", $self->_columns();
+#  
+#  my $sth = $self->prepare(qq{
+#	SELECT $cols
+#	FROM variation_feature vf, source s, allele a_outer
+#	WHERE
+#	  vf.source_id = s.source_id AND
+#	  vf.variation_id = a_outer.variation_id AND
+#	  a_outer.sample_id = ? AND
+#	  a_outer.frequency > ? AND
+#	  a_outer.frequency < 0.5 AND
+#	  vf.seq_region_id = ? AND
+#	  vf.seq_region_end > ? AND
+#	  vf.seq_region_start < ? AND
+#	  NOT EXISTS (
+#		SELECT
+#		  *
+#		FROM
+#		  allele a_inner
+#		WHERE
+#		  a_inner.variation_id = a_outer.variation_id AND
+#		  a_inner.sample_id = a_outer.sample_id AND
+#		  a_inner.frequency < a_outer.frequency
+#	  );
+#  });
   
-  return $self->_objs_from_sth($sth);
+  #$sth->execute($pop->dbID, $freq, $slice->get_seq_region_id, $slice->start, $slice->end);
+  
+  return $self->_objs_from_sth($sth, undef, $slice);
 }
 
 
