@@ -1057,6 +1057,10 @@ sub merge_rs_feature{
   debug("Updating tables using tmp_ids_rs_final ...");
   $dbVar->do(qq{UPDATE variation_synonym vs, tmp_ids_rs_final t set vs.variation_id=t.variation_id2 
       	  WHERE vs.variation_id = t.variation_id1});
+  #if t.variation_id2 is already exist in table vsv, then the update will be ignored, these ignored variation_id1 needs to be deleted
+  $dbVar->do(qq{DELETE vsv from variation_set_variation vsv
+	        LEFT JOIN variation v ON vsv.variation_id=v.variation_id
+		WHERE v.variation_id is null});
   
   $dbVar->do(qq{UPDATE IGNORE variation_set_variation vs, tmp_ids_rs_final t set vs.variation_id=t.variation_id2 
       	  WHERE vs.variation_id = t.variation_id1});
