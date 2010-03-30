@@ -437,6 +437,9 @@ sub get_annotations {
   my $lrg_name = shift;
   my $lrg_coord_system_name = shift;
   
+  # If not specified, use default value 'LRG' for coord_system_name
+  $lrg_coord_system_name ||= 'LRG';
+  
   # These parameters need only be defined if we need to add an entry to core db
   my $chr_name = shift;
   my $lrg_len = shift;
@@ -447,9 +450,12 @@ sub get_annotations {
   my $sa_rw = $dbCore_rw->get_SliceAdaptor();
   my $lrg_slice = $sa_rw->fetch_by_region($lrg_coord_system_name,$lrg_name);
  
-  # If it failed, insert mapping data to the core db
+  # If it failed, insert mapping data to the core db. 
   if (!defined($lrg_slice)) {
   
+    # Return undef if the parameters needed for mapping were not supplied
+    return undef unless (defined($chr_name) && defined($lrg_len) && defined($mapping));
+    
     # Add a mapping between the LRG and chromosome to the core db
     # For consistency in the annotations, do transfer between LRG and chromosome coord systems even if there is a perfect match
     $LRGImport::dbCore = $dbCore_rw;
