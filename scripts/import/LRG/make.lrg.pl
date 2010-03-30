@@ -11,7 +11,7 @@ use Bio::EnsEMBL::Registry;
 
 # This variable should indicate the name of the most recent assembly available
 my $CURRENT_ASSEMBLY = 'GRCh37';
-my $CURRENT_SCHEMA_VERSION = '1.5';
+my $CURRENT_SCHEMA_VERSION = '1.6';
 
 my ($template_file, $output_file, $registry_file, $config_file, $target_dir, $exon_file, $genomic_file, $cdna_file, $peptide_file, $lrg_id, $help, $skip_fixed, $skip_updatable, $skip_unbranded, $skip_transcript_matching, $use_existing_mapping, $replace_annotations, $skip_host_check);
 
