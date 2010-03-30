@@ -89,7 +89,7 @@ sub add_annotation {
   
     # Get the start and end coordinates of the cDNA from the first and last exon (are the exons sorted in the array?)
     my $cdna_start = $exons->[0]->findNode('cdna_coords')->data->{'start'};
-    my $cdna_end = $exons->[scalar(@{$exons})-1]->findNode('cdna_coords')->data->{'end'};
+    my $cdna_end = $exons->[-1]->findNode('cdna_coords')->data->{'end'};
 
     # Get the coding start and end coordinates
     my $cds_node = $transnode->findNode('coding_region');
@@ -334,6 +334,73 @@ sub add_exon_transcript {
     $dbCore->dbc->do($stmt);
 }
 
+#ÊAdds an external db if it does not exist
+sub add_external_db {
+    # Required arguments
+    my $dbname = shift;
+    my $status = shift;
+    my $priority = shift;
+    
+    # Optional arguments
+    my %args = (
+	'db_display_name' => shift,
+	'db_release' => shift,
+	'dbprimary_acc_linkable' => shift,
+	'display_label_linkable' => shift,
+	'type' => shift
+    );
+    
+    my $external_db_ids = get_rows($dbname,'db_name','external_db','external_db_id');
+    my $external_db_id;
+    
+    if (!defined($external_db_ids) || scalar(@{$external_db_ids}) == 0) {
+	# external_db_id column is not auto_increment => get maximum id and add one
+	my $stmt = qq{
+	    SELECT
+		MAX(external_db_id) + 1
+	    FROM
+		external_db
+	};
+	$external_db_id = $dbCore->dbc->db_handle->selectall_arrayref($stmt)->[0][0];
+	
+	$stmt = qq{
+	    INSERT INTO
+		external_db (
+		    external_db_id,
+		    db_name,
+		    status,
+		    priority
+		)
+	    VALUES (
+		$external_db_id,
+		'$dbname',
+		'$status',
+		$priority
+	    )
+	};
+	$dbCore->dbc->do($stmt);
+	
+	foreach my $field (keys %args) {
+	    if (defined($args{$field})) {
+		$stmt = qq{
+		    UPDATE
+			external_db
+		    SET
+			$field = '$args{$field}'
+		    WHERE
+			external_db_id = $external_db_id
+		};
+		$dbCore->dbc->do($stmt);
+	    }
+	}
+    }
+    else {
+	$external_db_id = $external_db_ids->[0][0];
+    }
+    
+    return $external_db_id;
+}
+
 # Add a gene
 sub add_gene {
     my $biotype = shift;
@@ -377,6 +444,23 @@ sub add_gene {
     my $gene_id = $dbCore->dbc->db_handle->{'mysql_insertid'};
     
     return $gene_id;
+}
+
+# Add a gene attribute indicating that the specified Ensembl gene is overlapped by a LRG record
+sub add_lrg_overlap {
+    my $gene_stable_id = shift;
+    my $lrg_name = shift;
+    my $partial = shift;
+    
+    # Get the gene id for the stable id
+    my $gene_id = get_object_id_by_stable_id('gene',$gene_stable_id);
+    
+    # Get the attrib type id to use
+    my $attrib_code = ($partial ? 'GeneOverlapLRG' : 'GeneInLRG');
+    my $attrib_type_id = get_attrib_type_id($attrib_code);
+    
+    # As value, use the LRG name
+    add_object_attrib($gene_id,$attrib_type_id,$lrg_name,'gene');
 }
 
 # Add all the necessary data to the db in order to project and transfer between the LRG and chromosome
@@ -458,7 +542,7 @@ sub add_mapping {
 		# The LRG->contig mapping is straightforward if LRG and chromosome is the same orientation
 		if ($pair->[5] > 0) {
 		    $lrg_start = $pair->[1] + $chr_offset;
-		    $lrg_end = $pair->[1] + $chr_length - 1;
+		    $lrg_end = $pair->[1] + $chr_offset + $chr_length - 1;
 		}
 		#ÊIf the LRG and chromosome are different orientation, the hits are backwards
 		else {
@@ -481,10 +565,10 @@ sub add_mapping {
       
 	    # Get the attrib_type_id for rna_edit
 	    if (!defined($attrib_type_id)) {
-		$attrib_type_id = get_attrib_type_id('rna_edit');
+		$attrib_type_id = get_attrib_type_id('_rna_edit');
 	    }
 	    my $value = $pair->[1] . ' ' . $pair->[2] . ' ' . $pair->[6];
-	    add_seq_region_attrib($q_seq_region_id,$attrib_type_id,$value);
+	    add_object_attrib($q_seq_region_id,$attrib_type_id,$value,'seq_region');
 	}
 	# Else if this is a gap,
 	elsif ($pair->[0] eq 'G') {
@@ -624,21 +708,25 @@ sub add_seq_region {
     return $seq_region_id;
 }
 
-# Add a seq_region_attrib to a seq_region
-sub add_seq_region_attrib {
-    my $seq_region_id = shift;
+# Add a *_attrib to an object
+sub add_object_attrib {
+    my $object_id = shift;
     my $attrib_type_id = shift;
     my $value = shift;
+    my $object_type = shift;
+    
+    my $table = $object_type . '_attrib';
+    my $key = $object_type . '_id';
     
     my $stmt = qq{
 	INSERT IGNORE INTO
-	    seq_region_attrib (
-		seq_region_id,
+	    $table (
+		$key,
 		attrib_type_id,
 		value
 	    )
 	VALUES (
-	    $seq_region_id,
+	    $object_id,
 	    $attrib_type_id,
 	    '$value'
 	)
@@ -796,6 +884,108 @@ sub add_translation {
     return $translation_id;  
 }
 
+sub add_xref {
+    my $external_db_name = shift;
+    my $db_primary_acc = shift;
+    my $display_label = shift;
+    
+    # Optional arguments
+    my %args = (
+	'version' => shift,
+	'description' => shift,
+	'info_type' => shift,
+	'info_text' => shift
+    );
+    
+    # Get external db id for database
+    my $external_db_ids = get_rows($external_db_name,'db_name','external_db','external_db_id');
+    if (!defined($external_db_ids) || scalar(@{$external_db_ids}) == 0) {
+	warn("No external db entry found for database $external_db_name\n");
+	return undef;
+    }
+    my $external_db_id = $external_db_ids->[0][0];
+    
+    # Check if xref entry already exists
+    my $stmt = qq{
+	SELECT
+	    xref_id
+	FROM
+	    xref
+	WHERE
+	    external_db_id = $external_db_id AND
+	    dbprimary_acc = '$db_primary_acc' AND
+	    display_label = '$display_label'
+	LIMIT 1
+    };
+    my $xref_id = $dbCore->dbc->db_handle->selectall_arrayref($stmt)->[0][0];
+    
+    # Otherwise add an entry
+    if (!$xref_id) {
+	$stmt = qq{
+	    INSERT INTO
+		xref (
+		    external_db_id,
+		    dbprimary_acc,
+		    display_label
+		)
+	    VALUES (
+		$external_db_id,
+		'$db_primary_acc',
+		'$display_label'
+	    )
+	};
+	$dbCore->dbc->do($stmt);
+	$xref_id = $dbCore->dbc->db_handle->{'mysql_insertid'};
+	
+	foreach my $field (keys %args) {
+	    if (defined($args{$field})) {
+		$stmt = qq{
+		    UPDATE
+			xref
+		    SET
+			$field = '$args{$field}'
+		    WHERE
+			xref_id = $xref_id
+		};
+		$dbCore->dbc->do($stmt);
+	    }
+	}
+    }
+    
+    return $xref_id;
+}
+
+sub add_object_xref {
+    my $ensembl_id = shift;
+    my $ensembl_object_type = shift;
+    my $xref_id = shift;
+    
+    # Optional arguments
+    my %args = (
+	'linkage_annotation' => shift,
+	'analysis_id' => shift
+    );
+    
+    my $stmt = qq{
+	INSERT IGNORE INTO
+	    object_xref (
+		ensembl_id,
+		ensembl_object_type,
+		xref_id
+	    )
+	VALUES (
+	    $ensembl_id,
+	    '$ensembl_object_type',
+	    $xref_id
+	)
+    };
+    
+    $dbCore->dbc->do($stmt);
+    my $object_xref_id = $dbCore->dbc->db_handle->{'mysql_insertid'};
+    
+    return $object_xref_id;
+}
+
 # Get the analysis_id for an analysis based on the logic_name
 sub get_analysis_id {
   my $logic_name = shift;
@@ -832,7 +1022,7 @@ sub get_assembly {
 
 # Get the attrib_type_id for a name
 sub get_attrib_type_id {
-    my $name = shift;
+    my $code = shift;
     
     my $stmt = qq{
 	SELECT
@@ -840,12 +1030,28 @@ sub get_attrib_type_id {
 	FROM
 	    attrib_type
 	WHERE
-	    name = '$name'
+	    code = '$code'
 	LIMIT 1
     };
     my $attrib_type_id = $dbCore->dbc->db_handle->selectall_arrayref($stmt)->[0][0];
     
     return $attrib_type_id;
+}
+
+#ÊGet a condition string for a hash joined by 'AND' by default or 'OR' if specified
+sub get_condition {
+    my $condition_hash = shift;
+    my $join = shift;
+    
+    $join ||= 'AND';
+    
+    my @conditions;
+    while (my ($field,$value) = each(%{$condition_hash})) {
+	push(@conditions,qq{$field = '$value'});
+    }
+    my $condition_string = join(qq{ $join },@conditions);
+    
+    return $condition_string;
 }
 
 # Get the coord_system_id for a species_id, name and version
@@ -958,6 +1164,23 @@ sub get_object_ids_by_seq_region_id {
     return \@ids;
 }
 
+# Get an object id by its stable_id
+sub get_object_id_by_stable_id {
+    my $object_type = shift;
+    my $stable_id = shift;
+    
+    my $key = 'stable_id';
+    my $table = $object_type . '_stable_id';
+    my $id_field = $object_type . '_id';
+    
+    my $rows = get_rows($stable_id,$key,$table,$id_field);
+    
+    my $object_id;
+    $object_id = $rows->[0][0] if (defined($rows) && scalar(@{$rows}) > 0);
+    
+    return $object_id;
+}
+
 # Get the seq_region_id for a seq_region name and coord_system_id
 sub get_seq_region_id {
     my $name = shift;
@@ -1013,7 +1236,7 @@ sub get_rows {
 	FROM
 	    $table
 	WHERE
-	    $key = $id
+	    $key = '$id'
     };
     my $result = $dbCore->dbc->db_handle->selectall_arrayref($stmt);
     
@@ -1066,7 +1289,7 @@ sub purge_db {
     my $lrg_coord_system = shift;
     
     # Get the coord system id
-    my $cs_id = get_coord_system_id($lrg_coord_system);
+    my $cs_id = get_coord_system_id($lrg_coord_system) or die("Could not find coordinate system $lrg_coord_system in core db!");
     # Get seq region ids for any seq regions associated with this LRG
     my @seq_region_ids = @{get_seq_region_ids($lrg_name . '_',$cs_id)};
     #ÊLastly, add the seq region id for this LRG itself
@@ -1074,6 +1297,7 @@ sub purge_db {
     
     # Delete entries from relevant tables
     foreach my $seq_region_id (@seq_region_ids) {
+	next if (!defined($seq_region_id));
 	# Delete from gene/transcript/exon/translation 
 	foreach my $object_type (('gene','exon','transcript')) {
 	    # Get the object_ids associated with this seq_region_id
@@ -1096,34 +1320,68 @@ sub purge_db {
 		    $dbCore->dbc->do($stmt);
 		}
 		# Remove rows with this object id (also from associated stable_id table)
-		remove_row($oid,$object_type . '_id',$object_type);
-		remove_row($oid,$object_type . '_id',$object_type . '_stable_id');
+		remove_row({$object_type . '_id' => $oid},[$object_type]);
+		remove_row({$object_type . '_id' => $oid},[$object_type . '_stable_id']);
+		
+		#ÊRemove xref objects linked to this object id. Does not remove the xref itself, just the row in object_xref
+		remove_row({'ensembl_object_type' => ucfirst($object_type), 'ensembl_id' => $oid},['object_xref']);
 	    }
 	}
 	# Delete from assembly
-	remove_row($seq_region_id,'asm_seq_region_id','assembly');
-	remove_row($seq_region_id,'cmp_seq_region_id','assembly');
+	remove_row({'asm_seq_region_id' => $seq_region_id},['assembly']);
+	remove_row({'cmp_seq_region_id' => $seq_region_id},['assembly']);
 	# Delete from seq_region_attrib
-	remove_row($seq_region_id,'seq_region_id','seq_region_attrib');
+	remove_row({'seq_region_id' => $seq_region_id},['seq_region_attrib']);
 	# Delete from dna
-	remove_row($seq_region_id,'seq_region_id','dna');
+	remove_row({'seq_region_id' => $seq_region_id},['dna']);
 	# Delete from seq_region
-	remove_row($seq_region_id,'seq_region_id','seq_region');
+	remove_row({'seq_region_id' => $seq_region_id},['seq_region']);
     }
+    
+    # Remove any gene attributes linked to this LRG
+    remove_row({'value' => $lrg_name},['gene_attrib']);
 }
 
+# Remove rows from tables using specified conditions hash (joined by AND)
 sub remove_row {
-    my $id = shift;
-    my $key = shift;
-    my $table = shift;
+    my $conditions = shift;
+    my $tables = shift;
+    
+    my $table = join(',',@{$tables});
+    my $condition_string = get_condition($conditions);
     
     my $stmt = qq{
 	DELETE FROM
 	    $table
 	WHERE
-	    $key = $id    
+	    $condition_string    
     };
     $dbCore->dbc->do($stmt);
 }
 
+#ÊUpdate a table where the specified conditions are fulfilled
+sub update_rows {
+    my $values = shift;
+    my $conditions = shift;
+    my $tables = shift;
+    
+    my $table = join(',',@{$tables});
+    my $condition_string = get_condition($conditions);
+    
+    my @value;
+    while (my ($field,$val) = each(%{$values})) {
+	push(@value,qq{$field = '$val'});
+    }
+    my $value_string = join(', ',@value);
+    
+    my $stmt = qq{
+	UPDATE
+	    $table
+	SET
+	    $value_string
+	WHERE
+	    $condition_string
+    };
+    $dbCore->dbc->do($stmt);
+}
 1;
