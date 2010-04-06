@@ -12,7 +12,7 @@ use Bio::Seq;
 use Bio::EnsEMBL::Registry;
 
 # Some constants
-my $LRG_COORD_SYSTEM_NAME = q{LRG};
+my $LRG_COORD_SYSTEM_NAME = q{lrg};
 my $LRG_BIOTYPE = q{LRG_gene};
 my $LRG_ANALYSIS_LOGIC_NAME = q{LRG_import};
 my $LRG_ANALYSIS_DESCRIPTION = q{Data from LRG database};
@@ -27,7 +27,16 @@ my $LRG_EXTERNAL_DB_RELEASE = 1;
 my $LRG_EXTERNAL_DB_ACC_LINKABLE = 1;
 my $LRG_EXTERNAL_DB_LABEL_LINKABLE = 0;
 my $LRG_EXTERNAL_TYPE = q{MISC};
-my $LRG_WEBSITE_XREF_ROOT_URL = q{ftp://ftp://ftp.ebi.ac.uk/pub/databases/lrgex/};
+my $LRG_WEBSITE_XREF_ROOT_URL = q{http://www.lrg-sequence.org/LRG/};
+my $LRG_ENSEMBL_DB_NAME = q{ENS_LRG};
+my $LRG_ENSEMBL_STATUS = q{KNOWN};
+my $LRG_ENSEMBL_PRIORITY = 10;
+my $LRG_ENSEMBL_DB_DISPLAY_NAME = q{LRG display in Ensembl};
+my $LRG_ENSEMBL_DB_RELEASE = 1;
+my $LRG_ENSEMBL_DB_ACC_LINKABLE = 1;
+my $LRG_ENSEMBL_DB_LABEL_LINKABLE = 0;
+my $LRG_ENSEMBL_TYPE = q{MISC};
+my $LRG_ENSEMBL_WEBSITE_XREF_ROOT_URL = q{http://www.ensembl.org/Homo_sapiens/};
 
 
 my $registry_file;
@@ -39,6 +48,8 @@ my $lrg_id;
 my $input_file;
 my $import;
 my $add_xrefs;
+my $max_values;
+my $revert;
 
 usage() unless scalar @ARGV;
 
@@ -52,7 +63,9 @@ GetOptions(
   'lrg_id=s' => \$lrg_id,
   'input_file=s' => \$input_file,
   'import!' => \$import,
-  'xrefs!' => \$add_xrefs
+  'xrefs!' => \$add_xrefs,
+  'max!' => \$max_values,
+  'revert!' => \$revert
 );
 
 usage() if $help;
@@ -60,6 +73,7 @@ usage() if $help;
 die("Supplied LRG id is not in the correct format ('LRG_NNN')") if (defined($lrg_id) && $lrg_id !~ m/^LRG\_[0-9]+$/);
 die("A LRG id needs to be specified via -lrg_id parameter!") if (!defined($lrg_id) && ($clean || $overlap));
 die("An input LRG XML file must be specified in order to import into core db!") if (defined($import) && !defined($input_file));
+die("A tab-separated input file with table, field and max_value columns must be specified in order to revert the core db!") if (defined($revert) && !defined($input_file));
 
 # Connect to core database
 print STDOUT localtime() . "\tLoading registry from $registry_file\n" if ($verbose);
@@ -72,6 +86,26 @@ $LRGImport::dbCore = $dbCore;
 #ÊGet a slice adaptor
 print STDOUT localtime() . "\tGetting slice adaptor\n" if ($verbose);
 my $sa = $dbCore->get_SliceAdaptor();
+
+# Get the maximum key field values if required and print them
+if ($max_values) {
+  my $max_values = LRGImport::get_max_key();
+  while (my ($field,$value) = each(%{$max_values})) {
+    my ($table,$fld) = split(/\./,$field);
+    print $table . "\t" . $fld . "\t" . $value . "\n";
+  }
+}
+
+# Revert the database tables by deleting all rows with the specified field value above the specified maximum
+if ($revert) {
+  open(MV,'<',$input_file);
+  while (<MV>) {
+    chomp;
+    my ($table,$field,$max_value) = split();
+    LRGImport::remove_row([qq{$field > $max_value}],[$table]);
+  }
+  close(MV);
+}
 
 # Clean up data in the database if required
 if ($clean) {
@@ -226,14 +260,85 @@ if ($import || $add_xrefs) {
       $LRG_EXTERNAL_TYPE
     );
     
-    # Add to xref table
-    $xref_id = LRGImport::add_xref($LRG_EXTERNAL_DB_NAME,$lrg_name . '.xml',$lrg_name,undef,'Locus Reference Genomic record for ' . $hgnc_name,'DIRECT');
+    #ÊAdd the Ensembl LRG display as an external db (if not already present). One each for Gene, Transcript
+    foreach my $type (('gene','transcript')) {
+      LRGImport::add_external_db(
+	$LRG_ENSEMBL_DB_NAME . '_' . $type,
+	$LRG_ENSEMBL_STATUS,
+	$LRG_ENSEMBL_PRIORITY,
+	$LRG_ENSEMBL_DB_DISPLAY_NAME,
+	$LRG_ENSEMBL_DB_RELEASE,
+	$LRG_ENSEMBL_DB_ACC_LINKABLE,
+	$LRG_ENSEMBL_DB_LABEL_LINKABLE,
+	$LRG_ENSEMBL_TYPE
+      );
+    }
+    
+    # Add external LRG link to xref table
+    $xref_id = LRGImport::add_xref($LRG_EXTERNAL_DB_NAME,$lrg_name,$lrg_name,undef,'Locus Reference Genomic record for ' . $hgnc_name,'DIRECT');
     
     #ÊAdd an object_xref for the LRG xref
     $object_xref_id = LRGImport::add_object_xref($gene_id,'Gene',$xref_id);
     
     #ÊUpdate the gene table to set the display_xref_id to the LRG xref
-    LRGImport::update_rows({'display_xref_id' => $xref_id},{'gene_id' => $gene_id},['gene']);
+    LRGImport::update_rows([qq{display_xref_id = $xref_id}],[qq{gene_id = $gene_id}],['gene']);
+    
+    #ÊAdd xrefs to the Ensembl coordinate system for the LRG gene
+    
+    #ÊGet the annotated Ensembl xrefs from the XML file for the LRG gene
+    my $lrg_gene_xrefs = $lrg_gene->findNodeArray('db_xref',{'source' => 'Ensembl'});
+    
+    # Add or get xref_ids for the Ensembl xrefs, the external_db name is Ens_Hs_gene
+    foreach my $lrg_gene_xref (@{$lrg_gene_xrefs}) {
+      my $stable_id = $lrg_gene_xref->data->{'accession'};
+      $xref_id = LRGImport::add_xref('Ens_Hs_gene',$stable_id,$stable_id);
+      #ÊAdd an object_xref for the LRG xref
+      $object_xref_id = LRGImport::add_object_xref($gene_id,'Gene',$xref_id);
+      
+      my $core_stable_id = $lrg_name . '_g1';
+      
+      #ÊDo the same for the Ensembl gene to the Ensembl LRG display
+      $xref_id = LRGImport::add_xref($LRG_ENSEMBL_DB_NAME . '_gene',$core_stable_id,$lrg_name);
+      # Get the gene_id for the Ensembl gene
+      my $core_id = LRGImport::get_object_id_by_stable_id('gene',$stable_id);
+      $object_xref_id = LRGImport::add_object_xref($core_id,'Gene',$xref_id);
+    }
+    
+    # Get Ensembl accessions for transcripts corresponding to transcripts in the fixed section
+    my $lrg_transcripts = $lrg_gene->findNodeArray('transcript',{'source' => 'Ensembl'});
+    foreach my $lrg_transcript (@{$lrg_transcripts}) {
+      my $fixed_id = $lrg_transcript->{'data'}{'fixed_id'};
+      my $core_accession = $lrg_transcript->{'data'}{'transcript_id'};
+      next unless(defined($fixed_id) && defined($core_accession));
+      
+      # Get the core db LRG transcript_id for this transcript
+      my $core_stable_id = $lrg_name . '_' . $fixed_id;
+      my $core_id = LRGImport::get_object_id_by_stable_id('transcript',$core_stable_id);
+      next unless(defined($core_id));
+      
+      $xref_id = LRGImport::add_xref('Ens_Hs_transcript',$core_accession,$core_accession);
+      #ÊAdd an object_xref for the LRG xref
+      $object_xref_id = LRGImport::add_object_xref($core_id,'Transcript',$xref_id);
+      
+      #ÊDo the same for the Ensembl transcript to the Ensembl LRG display
+      $xref_id = LRGImport::add_xref($LRG_ENSEMBL_DB_NAME . '_transcript',$core_stable_id,$core_stable_id);
+      # Get the gene_id for the Ensembl gene
+      my $core_id = LRGImport::get_object_id_by_stable_id('transcript',$core_accession);
+      $object_xref_id = LRGImport::add_object_xref($core_id,'Transcript',$xref_id);
+      
+      # Do the same for the translation
+      my $lrg_protein = $lrg_transcript->findNode('protein_product',{'source' => 'Ensembl'});
+      next unless(defined($lrg_protein));
+      $core_accession = $lrg_protein->{'data'}{'accession'};
+      next unless(defined($core_accession));
+      $core_id = LRGImport::get_translation_id($core_id);
+      
+      $xref_id = LRGImport::add_xref('Ens_Hs_translation',$core_accession,$core_accession);
+      #ÊAdd an object_xref for the LRG xref
+      $object_xref_id = LRGImport::add_object_xref($core_id,'Translation',$xref_id);
+      
+    }
+    
   }
 }
 
