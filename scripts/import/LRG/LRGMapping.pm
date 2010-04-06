@@ -437,8 +437,8 @@ sub get_annotations {
   my $lrg_name = shift;
   my $lrg_coord_system_name = shift;
   
-  # If not specified, use default value 'LRG' for coord_system_name
-  $lrg_coord_system_name ||= 'LRG';
+  # If not specified, use default value 'lrg' for coord_system_name
+  $lrg_coord_system_name ||= 'lrg';
   
   # These parameters need only be defined if we need to add an entry to core db
   my $chr_name = shift;

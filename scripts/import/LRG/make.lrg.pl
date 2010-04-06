@@ -463,7 +463,7 @@ sub create_updatable_annotation {
 	}
 	
 # get annotations
-	my @feature_nodes = @{LRGMapping::get_annotations($LRGMapping::lrg_name,'LRG',$chr_id,length($genomic_sequence),$mapping)};
+	my @feature_nodes = @{LRGMapping::get_annotations($LRGMapping::lrg_name,'lrg',$chr_id,length($genomic_sequence),$mapping)};
 
 # add features node
 	if ($replace_annotations) {
