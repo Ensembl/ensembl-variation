@@ -79,17 +79,12 @@ sub add_annotation {
   my $transnodes = $lrg->findNodeArray('fixed_annotation/transcript');
 
   foreach my $transnode (@{$transnodes}) {
-    # Get all exons belonging to the transcript
-    my $exons = $transnode->findNodeArray('exon');
 
     # Get the transcript start and end
     my $transcript_start = $transnode->data->{'start'};
     my $transcript_end = $transnode->data->{'end'};
     my $transcript_length = $transcript_end-$transcript_start+1;
-  
-    # Get the start and end coordinates of the cDNA from the first and last exon (are the exons sorted in the array?)
-    my $cdna_start = $exons->[0]->findNode('cdna_coords')->data->{'start'};
-    my $cdna_end = $exons->[-1]->findNode('cdna_coords')->data->{'end'};
+    my $transcript_name = $transnode->data->{'name'};
 
     # Get the coding start and end coordinates
     my $cds_node = $transnode->findNode('coding_region');
@@ -97,10 +92,10 @@ sub add_annotation {
     my $cds_end = $cds_node->data->{'end'};
   
     # Insert transcript entry into db
-    my $transcript_id = LRGImport::add_transcript(undef,$gene_id,$analysis_id,$seq_region_id,$transcript_start,$transcript_end,1,'$biotype',1);
+    my $transcript_id = LRGImport::add_transcript(undef,$gene_id,$analysis_id,$seq_region_id,$transcript_start,$transcript_end,1,$biotype,1);
 
-    # Get the next free transcript stable_id
-    my $transcript_stable_id = LRGImport::get_next_stable_id('transcript_stable_id',$lrg_name . '_t');
+    # Insert transcript_stable_id (we already know what it should be)
+    my $transcript_stable_id = $lrg_name . '_' . $transcript_name;
     LRGImport::add_stable_id($transcript_id,$transcript_stable_id,'transcript');
     
     # If we are processing the first transcript of the gene, the gene needs to be added to the database
@@ -114,7 +109,7 @@ sub add_annotation {
       print "Gene:\t" . $gene_id . "\t" . $gene_stable_id . "\n";
     }
   
-    print "Transcript:\t" . $transcript_id . "\t" . $transcript_stable_id . "\n";
+    print "\tTranscript:\t" . $transcript_id . "\t" . $transcript_stable_id . "\n";
   
     # Update transcript table to insert the gene id
     LRGImport::add_transcript($transcript_id,$gene_id);
@@ -123,44 +118,80 @@ sub add_annotation {
     my $end_exon_id;
     my $exon_id;
     my $exon_count = 0;
-    # Loop over the exons in the transcript and insert them into the database
-    print "Exon:";
-      
-    foreach my $exon (@{$exons}) {
-      $exon_count++;
-      my $lrg_coords = $exon->findNode('lrg_coords');
-      my $exon_start = $lrg_coords->data->{'start'};
-      my $exon_end = $lrg_coords->data->{'end'};
-      my $exon_length = ($exon_end-$exon_start+1);
-      $exon_id = LRGImport::add_exon($seq_region_id,$exon_start,$exon_end,1);
-      
-      print "\t" . $exon_id;			
     
-      # If the coding start is within this exon, save this exon id as start_exon_id and calculate the coding start offset within the exon
-      if (!defined($start_exon_id) && $exon_start <= $cds_start && $exon_end >= $cds_start) {
-	$start_exon_id = $exon_id;
-	$cds_start = $cds_start - $exon_start + 1;
-	print '[First coding]';
+    my $end_phase = -1;
+    my $phase;
+    
+    # Loop over the transcript nodes and pick out exon-intron pairs and insert the exons into the database
+    my @transcript_nodes = @{$transnode->{'nodes'}};
+    
+    while (my $tr_node = shift(@transcript_nodes)) {
+      if ($tr_node->{'name'} eq 'exon') {
+	my $exon = $tr_node;
+	
+	#ÊThe phase of this exon will be the same as the end_phase of the last exon
+	$phase = $end_phase;
+	
+	#ÊPeek at the next node, if it is an intron we extract the phase (end_phase of this exon). Otherwise, we put it back at the beginning of the array
+	$tr_node = shift(@transcript_nodes);
+	if (defined($tr_node) && $tr_node->{'name'} eq 'intron') {
+	    $end_phase = $tr_node->{'data'}{'phase'};
+	}
+	else {
+	    unshift(@transcript_nodes,$tr_node);
+	}
+	
+	$exon_count++;
+	my $lrg_coords = $exon->findNode('lrg_coords');
+	my $exon_start = $lrg_coords->data->{'start'};
+	my $exon_end = $lrg_coords->data->{'end'};
+	my $exon_length = ($exon_end-$exon_start+1);
+	$exon_id = LRGImport::add_exon($seq_region_id,$exon_start,$exon_end,1);
+	
+	# Get the next free exon stable id for this transcript
+	my $exon_stable_id = LRGImport::get_next_stable_id('exon_stable_id',$transcript_stable_id . '_e');
+	# Insert exon stable id into exon_stable_id table
+	LRGImport::add_stable_id($exon_id,$exon_stable_id,'exon');
+	
+	print "\t\tExon:\t" . $exon_id . "\t" . $exon_stable_id;
+      
+	# If the coding start is within this exon, save this exon id as start_exon_id and calculate the coding start offset within the exon
+	if (!defined($start_exon_id) && $exon_start <= $cds_start && $exon_end >= $cds_start) {
+	  $start_exon_id = $exon_id;
+	  $cds_start = $cds_start - $exon_start + 1;
+	  print "\t[First coding]";
+	}
+	# If the coding end is within this exon, save this exon id as end exon id and calculate end offset within the exon
+	if (!defined($end_exon_id) && $exon_start <= $cds_end && $exon_end >= $cds_end) {
+	  $end_exon_id = $exon_id;
+	  $cds_end = $cds_end - $exon_start + 1;
+	  # The end phase will be -1 since translation stops within this exon
+	  $end_phase = -1;
+	  print "\t[Last coding]";
+	}
+	
+	# Update the exon with the phases
+	LRGImport::update_rows([qq{phase = '$phase'},qq{end_phase = '$end_phase'}],[qq{exon_id = '$exon_id'}],['exon']);
+	#ÊLink the transcript and the exon
+	LRGImport::add_exon_transcript($exon_id,$transcript_id,$exon_count);
+	
+	print "\t" . $phase . "\t" . $end_phase . "\n";
       }
-      # If the coding end is within this exon, save this exon id as end exon id and calculate end offset within the exon
-      if (!defined($end_exon_id) && $exon_start <= $cds_end && $exon_end >= $cds_end) {
-	$end_exon_id = $exon_id;
-	$cds_end = $cds_end - $exon_start + 1;
-	print '[Last coding]';
-      }
-      LRGImport::add_exon_transcript($exon_id,$transcript_id,$exon_count);
     }
-    print "\n";
   
     # Insert translation into db (if available, the gene could be non-protein coding)
     if ($exon_count > 0) {
       my $translation_id = LRGImport::add_translation($transcript_id,$cds_start,$start_exon_id,$cds_end,$end_exon_id);
       
       # Get the next free translation stable_id
-      my $translation_stable_id = LRGImport::get_next_stable_id('translation_stable_id',$lrg_name . '_p');
+      my $translation_stable_id = $transcript_stable_id; #LRGImport::get_next_stable_id('translation_stable_id',$lrg_name . '_p');
+      $translation_stable_id =~ s/$lrg_name\_t/$lrg_name\_p/;
       # Insert translation stable id into translation_stable_id table
       LRGImport::add_stable_id($translation_id,$translation_stable_id,'translation');
-      print "Translation:\t" . $translation_id . "\t" . $translation_stable_id . "\n";
+      print "\tTranslation:\t" . $translation_id . "\t" . $translation_stable_id . "\n";
+      
+      # Set the translation_id as the canonical_translation_id in transcript table
+      LRGImport::update_rows([qq{canonical_translation_id = '$translation_id'}],[qq{transcript_id = '$transcript_id'}],['transcript']);
     }
   }
   
@@ -205,6 +236,20 @@ sub add_assembly_mapping {
 	)
     };
     $dbCore->dbc->do($stmt);
+}
+
+#ÊAdd an attrib_type, if the code does not exist
+sub add_attrib_type {
+    my $code = shift;
+    my $name = shift;
+    my $description = shift;
+    
+    my $attrib_type_id = LRGImport::get_attrib_type_id($code);
+    if (!defined($attrib_type_id)) {
+	$attrib_type_id = LRGImport::insert_row({'code' => $code, 'name' => $name, 'description' => $description},'attrib_type');
+    }
+    
+    return $attrib_type_id;
 }
 
 #ÊGets the coord_system_id of an existing coord_system or adds it as a new entry and returns the id
@@ -412,8 +457,10 @@ sub add_gene {
     my $source = shift;
     my $canonical_transcript_id = shift;
     my $is_current = shift;
+    my $status = shift;
     
     $is_current ||= 1;
+    $status ||= 'KNOWN';
     
     my $stmt = qq{
 	INSERT INTO
@@ -426,7 +473,8 @@ sub add_gene {
 		seq_region_strand,
 		source,
 		is_current,
-		canonical_transcript_id
+		canonical_transcript_id,
+		status
 	    )
 	VALUES (
 	    '$biotype',
@@ -437,7 +485,8 @@ sub add_gene {
 	    $seq_region_strand,
 	    '$source',
 	    $is_current,
-	    $canonical_transcript_id
+	    $canonical_transcript_id,
+	    '$status'
 	)
     };
     $dbCore->dbc->do($stmt);
@@ -456,8 +505,13 @@ sub add_lrg_overlap {
     my $gene_id = get_object_id_by_stable_id('gene',$gene_stable_id);
     
     # Get the attrib type id to use
-    my $attrib_code = ($partial ? 'GeneOverlapLRG' : 'GeneInLRG');
-    my $attrib_type_id = get_attrib_type_id($attrib_code);
+    my $attrib_type_id;
+    if ($partial) {
+	$attrib_type_id = add_attrib_type('GeneOverlapLRG','Gene overlaps LRG','This gene is partially overlapped by a LRG region (start or end outside LRG)');
+    }
+    else {
+	$attrib_type_id = add_attrib_type('GeneInLRG','Gene in LRG','This gene is contained within an LRG region');
+    }
     
     # As value, use the LRG name
     add_object_attrib($gene_id,$attrib_type_id,$lrg_name,'gene');
@@ -497,11 +551,14 @@ sub add_mapping {
     my $q_seq_region_id = add_seq_region($lrg_name,$cs_id,$q_seq_length);
     push(@seq_region_ids,$q_seq_region_id);
   
-  
+    #ÊAdd a seq_region_attrib indicating that it is toplevel
+    my $attrib_type_id = get_attrib_type_id('toplevel');
+    LRGImport::insert_row({'seq_region_id' => $q_seq_region_id, 'attrib_type_id' => $attrib_type_id, 'value' => 1},'seq_region_attrib',1);
+    
     # Get the seq_region_id for the target contig
     my $ctg_cs_id = get_coord_system_id('contig');
     
-    my $attrib_type_id;
+    $attrib_type_id = undef;
     my $contig_csi;
     my $sa = $dbCore->get_SliceAdaptor();
     
@@ -782,9 +839,11 @@ sub add_transcript {
     my $seq_region_strand = shift;
     my $biotype = shift;
     my $is_current = shift;
-  
+    my $status = shift;
+    
     $is_current ||= 1;
     $gene_id ||= 'NULL';
+    $status ||= 'KNOWN';
     
     my $stmt;
     
@@ -813,7 +872,8 @@ sub add_transcript {
 		seq_region_end,
 		seq_region_strand,
 		biotype,
-		is_current
+		is_current,
+		status
 	      )
 	    VALUES (
 	      $gene_id,
@@ -823,7 +883,8 @@ sub add_transcript {
 	      $seq_region_end,
 	      $seq_region_strand,
 	      '$biotype',
-	      $is_current
+	      $is_current,
+	      '$status'
 	    )
 	};
 	$dbCore->dbc->do($stmt);
@@ -1038,22 +1099,6 @@ sub get_attrib_type_id {
     return $attrib_type_id;
 }
 
-#ÊGet a condition string for a hash joined by 'AND' by default or 'OR' if specified
-sub get_condition {
-    my $condition_hash = shift;
-    my $join = shift;
-    
-    $join ||= 'AND';
-    
-    my @conditions;
-    while (my ($field,$value) = each(%{$condition_hash})) {
-	push(@conditions,qq{$field = '$value'});
-    }
-    my $condition_string = join(qq{ $join },@conditions);
-    
-    return $condition_string;
-}
-
 # Get the coord_system_id for a species_id, name and version
 sub get_coord_system_id {
     my $name = shift;
@@ -1090,6 +1135,53 @@ sub get_coord_system_id {
     return $coord_system_id;
 }
 
+#ÊGet the maximum field value from specified tables and fields
+sub get_max_key {
+    my $table_fields = shift;
+    
+    # By default, list the tables that are affected by LRGs
+    $table_fields ||= {
+	'analysis' => 'analysis_id',
+	'analysis_description' => 'analysis_id',
+	'assembly' => 'asm_seq_region_id',
+	'attrib_type' => 'attrib_type_id',
+	'coord_system' => 'coord_system_id',
+	'dna' => 'seq_region_id',
+	'exon' => 'exon_id',
+	'exon_stable_id' => 'exon_id',
+	'exon_transcript' => 'exon_id',
+	'external_db' => 'external_db_id',
+	'gene' => 'gene_id',
+	'gene_attrib' => 'gene_id',
+	'gene_stable_id' => 'gene_id',
+	'meta' => 'meta_id',
+	'meta_coord' => 'coord_system_id',
+	'object_xref' => 'object_xref_id',
+	'seq_region' => 'seq_region_id',
+	'seq_region_attrib' => 'seq_region_id',
+	'transcript' => 'transcript_id',
+	'transcript_stable_id' => 'transcript_id',
+	'translation' => 'translation_id',
+	'translation_stable_id' => 'translation_id',
+	'xref' => 'xref_id'
+    };
+    
+    my %max_values;
+    my $stmt;
+    while (my ($table,$field) = each(%{$table_fields})) {
+	$stmt = qq{
+	    SELECT
+		MAX($field)
+	    FROM
+		$table
+	};
+	my $val = $dbCore->dbc->db_handle->selectall_arrayref($stmt)->[0][0];
+	$max_values{$table . '.' . $field} = $val;
+    }
+    
+    return \%max_values;
+}
+
 # Get maximum length of a gene/transcript/translation on a seq_region
 sub get_max_length {
     my $seq_region_id = shift;
@@ -1114,24 +1206,20 @@ sub get_next_stable_id {
   my $prefix = shift;
   
   my $stable_id;
-  my $max = 0;
   my $suflength = 9;
+  my $prelength = length($prefix);
   
   my $stmt = qq{
     SELECT
-      MAX(stable_id)
+      MAX(CONVERT(SUBSTR(stable_id,$prelength+1),UNSIGNED INTEGER))
     FROM
       $table
     WHERE
       stable_id LIKE '$prefix%'
   };
-  my $max_stable_id = $dbCore->dbc->db_handle->selectall_arrayref($stmt)->[0][0];
- 
-  if ($max_stable_id) {
-    my ($suffix) = $max_stable_id =~ m/^$prefix([0-9]+)$/;
-    $suflength = length($suffix);
-    $max = int($suffix);
-  }
+  my $max = $dbCore->dbc->db_handle->selectall_arrayref($stmt)->[0][0];
+  $max ||= 0;
+
   $max++;
   $stable_id = $prefix . sprintf("%u",$max);
   
@@ -1318,28 +1406,65 @@ sub purge_db {
 			t.transcript_id = $oid
 		    };
 		    $dbCore->dbc->do($stmt);
+		    
+		    my $translation_id = LRGImport::get_translation_id($oid);
+		    # Remove from object_xref
+		    remove_row([qq{ensembl_object_type = 'Translation'}, qq{ensembl_id = $translation_id}],['object_xref']);
 		}
 		# Remove rows with this object id (also from associated stable_id table)
-		remove_row({$object_type . '_id' => $oid},[$object_type]);
-		remove_row({$object_type . '_id' => $oid},[$object_type . '_stable_id']);
+		remove_row([$object_type . '_id' . qq{ = $oid}],[$object_type]);
+		remove_row([$object_type . '_id' . qq{ = $oid}],[$object_type . '_stable_id']);
 		
 		#ÊRemove xref objects linked to this object id. Does not remove the xref itself, just the row in object_xref
-		remove_row({'ensembl_object_type' => ucfirst($object_type), 'ensembl_id' => $oid},['object_xref']);
+		remove_row([qq{ensembl_object_type = '} . ucfirst($object_type) . qq{'}, qq{ensembl_id = $oid}],['object_xref']);
 	    }
 	}
 	# Delete from assembly
-	remove_row({'asm_seq_region_id' => $seq_region_id},['assembly']);
-	remove_row({'cmp_seq_region_id' => $seq_region_id},['assembly']);
+	remove_row([qq{asm_seq_region_id = $seq_region_id}],['assembly']);
+	remove_row([qq{cmp_seq_region_id = $seq_region_id}],['assembly']);
 	# Delete from seq_region_attrib
-	remove_row({'seq_region_id' => $seq_region_id},['seq_region_attrib']);
+	remove_row([qq{seq_region_id => $seq_region_id}],['seq_region_attrib']);
 	# Delete from dna
-	remove_row({'seq_region_id' => $seq_region_id},['dna']);
+	remove_row([qq{seq_region_id => $seq_region_id}],['dna']);
 	# Delete from seq_region
-	remove_row({'seq_region_id' => $seq_region_id},['seq_region']);
+	remove_row([qq{seq_region_id => $seq_region_id}],['seq_region']);
     }
     
     # Remove any gene attributes linked to this LRG
-    remove_row({'value' => $lrg_name},['gene_attrib']);
+    remove_row([qq{value => '$lrg_name'}],['gene_attrib']);
+}
+
+# Insert row into table
+sub insert_row {
+    my $fields = shift;
+    my $table = shift;
+    my $ignore = shift;
+    
+    if ($ignore) {
+	$ignore = 'IGNORE';
+    }
+    else {
+	$ignore = '';
+    }
+    
+    # keys() and values() are guaranteed to return in the same order so the code below is fine
+    my $field_list = join(',',keys(%{$fields}));
+    my $value_list = qq{'} . join(qq{','},values(%{$fields})) . qq{'};
+    
+    my $stmt = qq{
+	INSERT $ignore INTO
+	    $table (
+		$field_list
+	    )
+	VALUES (
+	    $value_list
+	)
+    };
+    
+    $dbCore->dbc->do($stmt);
+    my $id = $dbCore->dbc->db_handle->{'mysql_insertid'};
+    
+    return $id;
 }
 
 # Remove rows from tables using specified conditions hash (joined by AND)
@@ -1348,7 +1473,7 @@ sub remove_row {
     my $tables = shift;
     
     my $table = join(',',@{$tables});
-    my $condition_string = get_condition($conditions);
+    my $condition_string = join(' AND ',@{$conditions});
     
     my $stmt = qq{
 	DELETE FROM
@@ -1366,13 +1491,8 @@ sub update_rows {
     my $tables = shift;
     
     my $table = join(',',@{$tables});
-    my $condition_string = get_condition($conditions);
-    
-    my @value;
-    while (my ($field,$val) = each(%{$values})) {
-	push(@value,qq{$field = '$val'});
-    }
-    my $value_string = join(', ',@value);
+    my $condition_string = join(' AND ',@{$conditions});
+    my $value_string = join(', ',@{$values});
     
     my $stmt = qq{
 	UPDATE
