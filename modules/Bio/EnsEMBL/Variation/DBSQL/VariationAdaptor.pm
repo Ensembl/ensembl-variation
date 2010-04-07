@@ -82,17 +82,22 @@ sub fetch_by_dbID {
 
   throw('dbID argument expected') if(!defined($dbID));
 
+  # NB flanking sequence table is joined here and in fetch_by_name
+  # so we can set flank_flag where the flanking sequence differs
+  # from the reference - it is just set to 0 when fetching variations
+  # by other methods since otherwise the join takes too long  
   my $sth = $self->prepare
     (q{SELECT v.variation_id, v.name, v.validation_status, s1.name, s1.description, v.ancestral_allele,
               a.allele_id, a.subsnp_id, a.allele, a.frequency, a.sample_id, vs.moltype,
-              vs.name, s2.name, f.description
-       FROM   (variation v, source s1)
+              vs.name, s2.name, f.description, (fs.up_seq is not null OR fs.down_seq is not null)
+       FROM   (variation v, source s1, flanking_sequence fs)
 	       LEFT JOIN allele a ON v.variation_id = a.variation_id
                 LEFT JOIN variation_synonym vs on v.variation_id = vs.variation_id 
    	            LEFT JOIN source s2 on  vs.source_id = s2.source_id
 		    LEFT JOIN failed_variation fv on v.variation_id = fv.variation_id
                     LEFT JOIN failed_description f on fv.failed_description_id = f.failed_description_id
        WHERE    v.source_id = s1.source_id
+	   AND v.variation_id = fs.variation_id
        AND    v.variation_id = ?});
   $sth->bind_param(1,$dbID,SQL_INTEGER);
   $sth->execute();
@@ -131,12 +136,16 @@ sub fetch_by_name {
     $extra_sql = qq(AND    s1.name = ?);
   }
 
+  # NB flanking sequence table is joined here and in fetch_by_dbID
+  # so we can set flank_flag where the flanking sequence differs
+  # from the reference - it is just set to 0 when fetching variations
+  # by other methods since otherwise the join takes too long
   my $sth = $self->prepare
     (qq{SELECT v.variation_id, v.name, v.validation_status, s1.name, s1.description, v.ancestral_allele,
               a.allele_id, a.subsnp_id, a.allele, a.frequency, a.sample_id, vs.moltype,
-              vs.name, s2.name, f.description
+              vs.name, s2.name, f.description, (fs.up_seq is not null OR fs.down_seq is not null)
 #       FROM   variation v, source s1, source s2, allele a, variation_synonym vs
-	  FROM   (variation v, source s1)
+	  FROM   (variation v, source s1, flanking_sequence fs)
 	     LEFT JOIN allele a on v.variation_id = a.variation_id 
 	      LEFT JOIN variation_synonym vs on v.variation_id = vs.variation_id 
               LEFT JOIN source s2 on  vs.source_id = s2.source_id
@@ -146,6 +155,7 @@ sub fetch_by_name {
 #       AND    v.variation_id = vs.variation_id
        WHERE    v.source_id = s1.source_id
 #       AND    vs.source_id = s2.source_id
+	   AND v.variation_id = fs.variation_id
        AND    v.name = ?
        $extra_sql  
        ORDER BY a.allele_id});
@@ -162,14 +172,15 @@ sub fetch_by_name {
     $sth = $self->prepare
       (qq{SELECT v.variation_id, v.name, v.validation_status, s1.name, s1.description, v.ancestral_allele,
                 a.allele_id, a.subsnp_id, a.allele, a.frequency, a.sample_id, vs1.moltype,
-                vs2.name, s2.name, NULL
+                vs2.name, s2.name, NULL, (fs.up_seq is not null OR fs.down_seq is not null)
          FROM variation v, source s1, source s2, allele a,
-                variation_synonym vs1, variation_synonym vs2
+                variation_synonym vs1, variation_synonym vs2, flanking_sequence fs
          WHERE  v.variation_id = a.variation_id
          AND    v.variation_id = vs1.variation_id
          AND    v.variation_id = vs2.variation_id
          AND    v.source_id = s1.source_id
          AND    vs2.source_id = s2.source_id
+		 AND    v.variation_id = fs.variation_id
          AND    vs1.name = ?
                 $extra_sql
          ORDER BY a.allele_id});
@@ -216,7 +227,7 @@ sub fetch_all_by_source {
   my $sth = $self->prepare
     (qq{SELECT v.variation_id, v.name, v.validation_status, s1.name, s1.description, v.ancestral_allele,
               a.allele_id, a.subsnp_id, a.allele, a.frequency, a.sample_id, vs.moltype,
-              vs.name, s2.name, f.description
+              vs.name, s2.name, f.description, 0
 	  FROM   (variation v, source s1)
 	     LEFT JOIN allele a on v.variation_id = a.variation_id 
 	      LEFT JOIN variation_synonym vs on v.variation_id = vs.variation_id 
@@ -240,7 +251,7 @@ sub fetch_all_by_source {
       $sth = $self->prepare
 	  (qq{SELECT v.variation_id, v.name, v.validation_status, s1.name, s1.description, v.ancestral_allele,
 	      a.allele_id, a.subsnp_id, a.allele, a.frequency, a.sample_id, vs1.moltype,
-	      vs1.name, s2.name, NULL
+	      vs1.name, s2.name, NULL, 0
 		  FROM   (variation v, source s1, source s2,  variation_synonym vs1)
 		  LEFT JOIN allele a ON v.variation_id = a.variation_id
 		  WHERE  v.variation_id = vs1.variation_id
@@ -298,7 +309,7 @@ sub fetch_all_by_dbID_list {
     my $sth = $self->prepare
       (qq{SELECT v.variation_id, v.name, v.validation_status, s1.name, s1.description, v.ancestral_allele,
                  a.allele_id, a.subsnp_id, a.allele, a.frequency, a.sample_id, vs.moltype,
-                 vs.name, s2.name, f.description
+                 vs.name, s2.name, f.description, 0
 	     FROM   (variation v, source s1)
 		  LEFT JOIN allele a on v.variation_id = a.variation_id
 		     LEFT JOIN variation_synonym vs on v.variation_id = vs.variation_id 
@@ -513,7 +524,7 @@ sub fetch_all_by_Population {
   my $sth = $self->prepare
     (qq{SELECT v.variation_id, v.name, v.validation_status, s1.name, s1.description, v.ancestral_allele,
               a.allele_id, a.subsnp_id, a.allele, a.frequency, a.sample_id, vs.moltype,
-              vs.name, s2.name, f.failed_description_id
+              vs.name, s2.name, f.failed_description_id, 0
 	    FROM   (variation v, source s1, allele a)
 	      LEFT JOIN variation_synonym vs on v.variation_id = vs.variation_id 
               LEFT JOIN source s2 on  vs.source_id = s2.source_id
@@ -584,7 +595,8 @@ sub fetch_all_by_VariationSet {
       vs.moltype,
       vs.name,
       s2.name,
-      f.description
+      f.description,
+	  0
     FROM
       (
 	variation v,
@@ -646,11 +658,11 @@ sub _objs_from_sth {
 
   my ($var_id, $name, $vstatus, $source, $source_desc, $ancestral_allele, $allele_id, $allele_ss_id, $allele, $allele_freq,
       $allele_sample_id, $moltype, $syn_name, $syn_source,
-      $cur_allele_id, $cur_var, $cur_var_id, $failed_description);
+      $cur_allele_id, $cur_var, $cur_var_id, $failed_description, $flank_flag);
 
   $sth->bind_columns(\$var_id, \$name, \$vstatus, \$source, \$source_desc, \$ancestral_allele, \$allele_id, \$allele_ss_id,
                      \$allele, \$allele_freq, \$allele_sample_id, \$moltype, \$syn_name,
-                     \$syn_source, \$failed_description);
+                     \$syn_source, \$failed_description, \$flank_flag);
 
   my @vars;
 
@@ -672,7 +684,8 @@ sub _objs_from_sth {
 	   -ANCESTRAL_ALLELE => $ancestral_allele,
 	   -MOLTYPE => $moltype,
          -VALIDATION_STATES => \@states,
-	   -FAILED_DESCRIPTION => $failed_description);
+	   -FAILED_DESCRIPTION => $failed_description,
+	   -FLANK_FLAG => $flank_flag,);
       push @vars, $cur_var;
       $cur_var_id = $var_id;
     }
