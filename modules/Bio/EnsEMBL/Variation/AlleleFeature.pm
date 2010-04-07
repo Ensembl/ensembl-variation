@@ -60,6 +60,9 @@ use Bio::EnsEMBL::Feature;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Utils::Argument  qw(rearrange);
 use Bio::EnsEMBL::Variation::Utils::Sequence qw(unambiguity_code);
+use Bio::EnsEMBL::Variation::ConsequenceType;
+
+my %CONSEQUENCE_TYPES = %Bio::EnsEMBL::Variation::ConsequenceType::CONSEQUENCE_TYPES;
 
 
 our @ISA = ('Bio::EnsEMBL::Feature');
@@ -102,6 +105,9 @@ our @ISA = ('Bio::EnsEMBL::Feature');
 
   Arg [-ALLELE_STRING] :
     string - the allele for this AlleleFeature object.
+  
+  Arg [-CONSEQUENCE_TYPE] :
+	string - the consequence type of this AlleleFeature object.
 
   Example    :
     $af = Bio::EnsEMBL::Variation::AlleleFeature->new
@@ -110,6 +116,7 @@ our @ISA = ('Bio::EnsEMBL::Feature');
         -strand  => 1,
         -slice   => $slice,
         -allele_string => 'A',
+		-consequence_type => 'NON_SYNONYMOUS_CODING',
         -variation_name => 'rs635421',
 	-source => 'Celera',
 	-sample_id  => $sample_id,
@@ -128,11 +135,12 @@ sub new {
   my $class = ref($caller) || $caller;
 
   my $self = $class->SUPER::new(@_);
-  my ($allele, $var_name, $variation, $variation_id,$population, $sample_id, $source) =
-    rearrange([qw(ALLELE_STRING VARIATION_NAME 
+  my ($allele, $cons, $var_name, $variation, $variation_id,$population, $sample_id, $source) =
+    rearrange([qw(ALLELE_STRING CONSEQUENCE_TYPE VARIATION_NAME 
                   VARIATION VARIATION_ID SAMPLE_ID SOURCE)], @_);
 
-  $self->{'allele_string'}           = $allele;
+  $self->{'allele_string'}    = $allele;
+  $self->{'consequence_type'} = $cons;
   $self->{'variation_name'}   = $var_name;
   $self->{'variation'}        = $variation;
   $self->{'_variation_id'}    = $variation_id;
@@ -171,6 +179,38 @@ sub allele_string{
   return $self->{'allele_string'} if ($self->{'_half_genotype'}); #for half genotypes
   return join('|',split (//,unambiguity_code($self->{'allele_string'}))); #for heterozygous alleles
 }
+
+
+=head2 consequence_type
+
+  Arg [1]    : string $newval (optional)
+               The new value to set the consequence_type attribute to
+  Example    : $con = $obj->consequence_type()
+  Description: Getter/Setter for the consequence_type attribute.
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub consequence_type{
+  my $self = shift;
+  my $con = shift;
+  
+  if(defined($con)) {
+	if($CONSEQUENCE_TYPES{$con}){
+	  $self->{'consequence_type'} = $con;
+    }
+	
+	else {
+	  warning("You are trying to set the consequence type to a non-allowed type. The allowed types are: ".(join ", ", keys %CONSEQUENCE_TYPES));
+	}
+  }
+  
+  return $self->{'consequence_type'};
+}
+
 
 =head2 variation_name
 
