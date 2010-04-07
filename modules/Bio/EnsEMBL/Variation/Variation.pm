@@ -301,7 +301,6 @@ sub get_all_VariationFeatures{
   }
 }
 
-
 =head2 get_VariationFeature_by_dbID
 
   Args        : None
@@ -331,8 +330,6 @@ sub get_VariationFeature_by_dbID{
 	# check defined
 	if(defined($vf)) {
 	  
-	  warn($vf->{_variation_id}, " ", $self->dbID);
-	  
 	  # check it is the same variation ID
 	  if($vf->{_variation_id} == $self->dbID) {
 		return $vf;
@@ -354,7 +351,6 @@ sub get_VariationFeature_by_dbID{
 	return undef;
   }  
 }
-
 
 
 
