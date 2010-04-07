@@ -302,6 +302,62 @@ sub get_all_VariationFeatures{
 }
 
 
+=head2 get_VariationFeature_by_dbID
+
+  Args        : None
+  Example     : $vf = $v->get_VariationFeature_by_dbID();
+  Description : Retrieves a VariationFeature for this Variation by it's internal
+				database identifier
+  ReturnType  : Bio::EnsEMBL::Variation::VariationFeature
+  Exceptions  : None
+  Caller      : general
+  Status      : At Risk
+
+=cut
+
+sub get_VariationFeature_by_dbID{
+  my $self = shift;
+  my $dbID = shift;
+  
+  throw("No dbID defined") unless defined $dbID;
+  
+  if(defined $self->adaptor) {
+	
+	# get variation feature adaptor
+	my $vf_adaptor = $self->adaptor()->db()->get_VariationFeatureAdaptor();
+	
+	my $vf = $vf_adaptor->fetch_by_dbID($dbID);
+	
+	# check defined
+	if(defined($vf)) {
+	  
+	  warn($vf->{_variation_id}, " ", $self->dbID);
+	  
+	  # check it is the same variation ID
+	  if($vf->{_variation_id} == $self->dbID) {
+		return $vf;
+	  }
+	  
+	  else {
+		warn("Variation dbID for Variation Feature does not match this Variation's dbID");
+		return undef;
+	  }
+	}
+	
+	else {
+	  return undef;
+	}
+  }
+  
+  else {
+	warn("No variation database attached");
+	return undef;
+  }  
+}
+
+
+
+
 =head2 get_all_synonyms
 
   Arg [1]    : (optional) string $source - the source of the synonyms to
