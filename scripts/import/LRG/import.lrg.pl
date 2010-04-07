@@ -1,3 +1,33 @@
+=pod
+
+SYNOPSIS
+
+  Script to perform various actions, related to LRGs, on a Core database
+
+DESCRIPTION
+
+  This script can be used to:
+    - Import a LRG into the Core database
+    - Add xrefs to genes on a LRG and to Ensembl genes, linking them to LRG genes
+    - Add gene_attribs to Ensembl genes, indicating that they are completely or partially overlapped by a LRG
+    - Remove a LRG from the Core database
+  
+EXAMPLE
+  
+  Display help message:
+    perl import.lrg.pl -help
+    
+  Import a LRG and add xrefs:
+    perl import.lrg.pl -host ens-genomics1 -port 3306 -user ******** -pass ********** -dbname homo_sapiens_core_58_37c -input_file LRG_1.xml -import -xrefs
+    
+  Add gene_attribs for Ensembl genes overlapping a LRG:
+    perl import.lrg.pl -host ens-genomics1 -port 3306 -user ******** -pass ********** -dbname homo_sapiens_core_58_37c -lrg_id LRG_1 -overlap
+    
+  Clean a LRG from the Core database:
+    perl import.lrg.pl -host ens-genomics1 -port 3306 -user ******** -pass ********** -dbname homo_sapiens_core_58_37c -lrg_id LRG_1 -clean
+    
+=cut
+
 #!/software/bin/perl
 
 use strict;
@@ -8,7 +38,6 @@ use LRG::LRG;
 use LRG::LRGImport;
 use LRG::LRGMapping;
 
-use Bio::Seq;
 use Bio::EnsEMBL::Registry;
 
 # Some constants
@@ -27,7 +56,6 @@ my $LRG_EXTERNAL_DB_RELEASE = 1;
 my $LRG_EXTERNAL_DB_ACC_LINKABLE = 1;
 my $LRG_EXTERNAL_DB_LABEL_LINKABLE = 0;
 my $LRG_EXTERNAL_TYPE = q{MISC};
-my $LRG_WEBSITE_XREF_ROOT_URL = q{http://www.lrg-sequence.org/LRG/};
 my $LRG_ENSEMBL_DB_NAME = q{ENS_LRG};
 my $LRG_ENSEMBL_STATUS = q{KNOWN};
 my $LRG_ENSEMBL_PRIORITY = 10;
@@ -36,10 +64,12 @@ my $LRG_ENSEMBL_DB_RELEASE = 1;
 my $LRG_ENSEMBL_DB_ACC_LINKABLE = 1;
 my $LRG_ENSEMBL_DB_LABEL_LINKABLE = 0;
 my $LRG_ENSEMBL_TYPE = q{MISC};
-my $LRG_ENSEMBL_WEBSITE_XREF_ROOT_URL = q{http://www.ensembl.org/Homo_sapiens/};
 
-
-my $registry_file;
+my $host;
+my $port;
+my $dbname;
+my $user;
+my $pass;
 my $help;
 my $clean;
 my $verbose;
@@ -51,36 +81,44 @@ my $add_xrefs;
 my $max_values;
 my $revert;
 
-usage() unless scalar @ARGV;
-
 # get options from command line
 GetOptions(
-  'registry_file=s' => \$registry_file,
-  'help' => \$help,
-  'verbose!' => \$verbose,
-  'clean!' => \$clean,
-  'overlap!' => \$overlap,
-  'lrg_id=s' => \$lrg_id,
-  'input_file=s' => \$input_file,
-  'import!' => \$import,
-  'xrefs!' => \$add_xrefs,
-  'max!' => \$max_values,
-  'revert!' => \$revert
+  'host=s'		=> \$host,
+  'port=i'		=> \$port,
+  'dbname=s'		=> \$dbname,
+  'user=s'		=> \$user,
+  'pass=s'		=> \$pass,
+  'help!' 		=> \$help,
+  'verbose!' 		=> \$verbose,
+  'clean!' 		=> \$clean,
+  'overlap!' 		=> \$overlap,
+  'lrg_id=s' 		=> \$lrg_id,
+  'input_file=s' 	=> \$input_file,
+  'import!' 		=> \$import,
+  'xrefs!' 		=> \$add_xrefs,
+  'max!' 		=> \$max_values,
+  'revert!' 		=> \$revert
 );
 
-usage() if $help;
+usage() if (defined($help) || !scalar(@ARGV));
 
+die("Database credentials (-host, -port, -dbname, -user) need to be specified!") unless (defined($host) && defined($port) && defined($dbname) && defined($user));
 die("Supplied LRG id is not in the correct format ('LRG_NNN')") if (defined($lrg_id) && $lrg_id !~ m/^LRG\_[0-9]+$/);
 die("A LRG id needs to be specified via -lrg_id parameter!") if (!defined($lrg_id) && ($clean || $overlap));
-die("An input LRG XML file must be specified in order to import into core db!") if (defined($import) && !defined($input_file));
+die("An input LRG XML file must be specified in order to import into core db!") if ((defined($import) || defined($add_xrefs)) && !defined($input_file));
 die("A tab-separated input file with table, field and max_value columns must be specified in order to revert the core db!") if (defined($revert) && !defined($input_file));
 
 # Connect to core database
-print STDOUT localtime() . "\tLoading registry from $registry_file\n" if ($verbose);
-Bio::EnsEMBL::Registry->load_all( $registry_file );
-
 print STDOUT localtime() . "\tGetting human core db adaptor\n" if ($verbose);
-my $dbCore = Bio::EnsEMBL::Registry->get_DBAdaptor('human','core_rw') or die("ERROR: Could not connect to core database");
+my $dbCore = new Bio::EnsEMBL::DBSQL::DBAdaptor(
+  -host => $host,
+  -user => $user,
+  -pass => $pass,
+  -port => $port,
+  -dbname => $dbname
+) or die("Could not get a database adaptor to $dbname on $host:$port");
+print STDOUT localtime() . "\tConnected to $dbname on $host:$port\n" if ($verbose);
+
 $LRGImport::dbCore = $dbCore;
 
 #ÊGet a slice adaptor
@@ -115,9 +153,7 @@ if ($clean) {
 if ($overlap) {
   # Set the db adaptors in the LRGMapping module
   $LRGMapping::dbCore_rw = $dbCore;
-  
-  print STDOUT localtime() . "\tGetting human read-only core db adaptor\n" if ($verbose);
-  $LRGMapping::dbCore_ro = Bio::EnsEMBL::Registry->get_DBAdaptor('human','core_ro') or die("ERROR: Could not connect to read-only core database");
+  $LRGMapping::dbCore_ro = $dbCore;
   
   #ÊGet a LRG slice
   print STDOUT localtime() . "\tGetting a slice for $lrg_id\n" if ($verbose);
@@ -344,16 +380,67 @@ if ($import || $add_xrefs) {
 
 sub usage() {
 	
-	print
-	"Usage:
+  print qq{
+  Usage: perl import.lrg.pl [OPTION]
+  
+  Import or update/remove a LRG record in a Core database
 	
-	perl import.lrg.pl [options] LRG.xml
-	
-	-r || --registry_file	registry file
-	-c || --clean LRG name	remove entries for this LRG from core db
-	-v || --verbose		display progress information
-	-h || --help		print this message\n";
-	
-	die;
+  Options:
+    
+    Database credentials are specified on the command line
+    
+      -host		Core database host name (Required)
+      -port		Core database port (Required)
+      -dbname		Core database name (Required)
+      -user		Core database user (Required)
+      -pass		Core database password (Optional)
+      
+    An input file can be specified. This is required when importing a LRG or when
+    reverting the Core database
+    
+      -input_file	LRG XML file when importing or adding xrefs
+			Tab-separated file with table, field and max-values when reverting database
+			to a previous state.
+			
+    A LRG identifier must be specified when cleaning a LRG from the database or when annotating
+    Ensembl genes that overlap LRG regions.
+    
+      -lrg_id		LRG identifier on the form LRG_N, where N is an integer
+      
+    What action the script will perform is dictated by the following flags:
+    
+      -import		The data in the supplied LRG XML file will be imported into the Core
+			database. This includes the mapping to the current assembly and the
+			transcripts in the fixed section
+			
+      -xrefs		This will add xrefs to HGNC, the external LRG website as well as to the
+			corresponding Ensembl genes for genes on the lrg coordinate system.
+			Will also add xrefs to the corresponding Ensembl genes, linking them to
+			the external LRG website and to the genes on the lrg coordinate system.
+			This should only need to be run for release 58. Subsequent releases will
+			take care of this through the normal xref pipeline, using HGNC data
+			
+      -overlap		For the LRG specified by the -lrg_id argument, find all Ensembl genes in the
+			chromosome coordinate system that overlap. Add a gene_attrib to these, indicating
+			that they overlap a LRG region, either partially or completely. Note that the LRG
+			must already be stored in the Core database
+      
+      -clean		Remove all entries in the Core database specifically relating to the
+			LRG that was specified with the -lrg_id argument
+			
+      -max		Dump a tab-separated list of table, field and max-values for tables
+			affected by a LRG import to stdout. If run before an import, this data can
+			be used to revert the database after an import
+			
+      -revert		Don't use this unless you are really sure of what it does! Will delete all rows having
+			field values greater than the max-value supplied via the tab-separated input file. These
+			should have been generated using the -max mode. Beware that this will delete all entries
+			added after the -max command was run, not necessarily just your own!
+			
+      -verbose		Progress information is printed
+      -help		Print this message
+      
+  };
+  exit(0);
 }
 
