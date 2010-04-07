@@ -246,11 +246,11 @@ sub _columns{
 
     return ('vf.variation_id' ,'ig.sample_id', 'CONCAT(ig.allele_1,"|",ig.allele_2) as alleles',
 	      'vf.seq_region_id', 'vf.seq_region_start', 'vf.seq_region_end', 
-	      'vf.seq_region_strand', 'vf.variation_name') if ($self->from_IndividualSlice());
+	      'vf.seq_region_strand', 'vf.variation_name', 'vf.consequence_type') if ($self->from_IndividualSlice());
 
     return qw(vf.variation_id 
 	      vf.seq_region_id vf.seq_region_start vf.seq_region_end 
-	      vf.seq_region_strand vf.variation_name s.name vf.variation_feature_id vf.allele_string);
+	      vf.seq_region_strand vf.variation_name s.name vf.variation_feature_id vf.allele_string vf.consequence_type);
 }
 
 sub _default_where_clause{
@@ -276,11 +276,11 @@ sub _objs_from_sth{
   my %sr_cs_hash;
 
   my ($variation_id, $seq_region_id,
-      $seq_region_start,$seq_region_end, $seq_region_strand, $variation_name, $source_name, $variation_feature_id, $allele_string );
+      $seq_region_start,$seq_region_end, $seq_region_strand, $variation_name, $source_name, $variation_feature_id, $allele_string, $cons );
 
   $sth->bind_columns(\$variation_id,
 		     \$seq_region_id,\$seq_region_start,\$seq_region_end,\$seq_region_strand,
-		     \$variation_name, \$source_name, \$variation_feature_id, \$allele_string);
+		     \$variation_name, \$source_name, \$variation_feature_id, \$allele_string, \$cons);
 
   my $asm_cs;
   my $cmp_cs;
@@ -375,6 +375,7 @@ sub _objs_from_sth{
 								      'strand'   => $seq_region_strand,
 								      'slice'    => $slice,
 								      'allele_string' => '',
+									  'consequence_type' => $cons,
 								      'variation_name' => $variation_name,
 								      'adaptor'  => $self,
 								      'source'   => $source_name,
