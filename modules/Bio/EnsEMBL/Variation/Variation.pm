@@ -302,61 +302,6 @@ sub get_all_VariationFeatures{
 }
 
 
-
-=head2 get_VariationFeature_by_dbID
-
-  Args        : None
-  Example     : $vf = $v->get_VariationFeature_by_dbID();
-  Description : Retrieves a VariationFeature for this Variation by it's internal
-				database identifier
-  ReturnType  : Bio::EnsEMBL::Variation::VariationFeature
-  Exceptions  : None
-  Caller      : general
-  Status      : At Risk
-
-=cut
-
-sub get_VariationFeature_by_dbID{
-  my $self = shift;
-  my $dbID = shift;
-  
-  throw("No dbID defined") unless defined $dbID;
-  
-  if(defined $self->adaptor) {
-	
-	# get variation feature adaptor
-	my $vf_adaptor = $self->adaptor()->db()->get_VariationFeatureAdaptor();
-	
-	my $vf = $vf_adaptor->fetch_by_dbID($dbID);
-	
-	# check defined
-	if(defined($vf)) {
-	  
-	  warn($vf->{_variation_id}, " ", $self->dbID);
-	  
-	  # check it is the same variation ID
-	  if($vf->{_variation_id} == $self->dbID) {
-		return $vf;
-	  }
-	  
-	  else {
-		warn("Variation dbID for Variation Feature does not match this Variation's dbID");
-		return undef;
-	  }
-	}
-	
-	else {
-	  return undef;
-	}
-  }
-  
-  else {
-	warn("No variation database attached");
-	return undef;
-  }  
-}
-
-
 =head2 get_all_synonyms
 
   Arg [1]    : (optional) string $source - the source of the synonyms to
@@ -679,60 +624,6 @@ sub three_prime_flanking_seq{
   return $self->{'three_prime_flanking_seq'};
 }
 
-
-=head2 ref_five_prime_flanking_seq
-  Arg [1]    : int $size (optional, default=100bp)
-  Example    : $five_prime_flanking_seq = $obj->ref_five_prime_flanking_seq()
-  Description: Gets  for the five_prime_flanking_seq attribute
-  Returntype : string
-  Exceptions : none
-  Caller     : general
-  Status     : Stable
-
-=cut
-
-sub ref_five_prime_flanking_seq{
-  my $self = shift;
-  my $size = shift;
-
-  #setter of the flanking sequence
-  return $self->{'five_prime_flanking_seq'} = shift if(@_);
-  #lazy-load the flanking sequence from the database
-  if (!defined $self->{'five_prime_flanking_seq'} && $self->{'adaptor'}){
-      my $variation_adaptor = $self->adaptor()->db()->get_VariationAdaptor();
-      ($self->{'three_prime_flanking_seq'},$self->{'five_prime_flanking_seq'}) = @{$variation_adaptor->get_flanking_sequence($self->{'dbID'})};
-  }
-  return $self->{'five_prime_flanking_seq'};
-}
-
-
-
-
-=head2 ref_three_prime_flanking_seq
-
-  Arg [1]    : string $newval (optional) 
-               The new value to set the three_prime_flanking_seq attribute to
-  Example    : $three_prime_flanking_seq = $obj->three_prime_flanking_seq()
-  Description: Getter/Setter for the three_prime_flanking_seq attribute
-  Returntype : string
-  Exceptions : none
-  Caller     : general
-  Status     : Stable
-
-=cut
-
-sub ref_three_prime_flanking_seq{
-  my $self = shift;
-
-  #setter of the flanking sequence
-  return $self->{'three_prime_flanking_seq'} = shift if(@_);
-  #lazy-load the flanking sequence from the database
-  if (!defined $self->{'three_prime_flanking_seq'} && $self->{'adaptor'}){
-      my $variation_adaptor = $self->adaptor()->db()->get_VariationAdaptor();
-      ($self->{'three_prime_flanking_seq'},$self->{'five_prime_flanking_seq'}) = @{$variation_adaptor->get_flanking_sequence($self->{'dbID'})};
-  }
-  return $self->{'three_prime_flanking_seq'};
-}
 
 =head2 get_all_IndividualGenotypes
 
