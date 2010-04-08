@@ -212,6 +212,26 @@ sub consequence_type{
 }
 
 
+
+=head2 display_consequence
+
+  Args	     : None
+  Example    : $con = $obj->display_consequence()
+  Description: Getter for the consequence_type attribute. Simply an alias for
+			   $obj->consequence_type()
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub display_consequence{
+  my $self = shift;
+  return $self->consequence_type();
+}
+
+
 =head2 variation_name
 
   Arg [1]    : string $newval (optional)
