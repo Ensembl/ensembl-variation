@@ -621,6 +621,7 @@ create table source(
 	name varchar(255),
 	version int,
 	description varchar(255),
+	url varchar(255),
 	
 	primary key( source_id )
 );
