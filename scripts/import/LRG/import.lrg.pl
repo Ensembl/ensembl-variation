@@ -17,8 +17,8 @@ EXAMPLE
   Display help message:
     perl import.lrg.pl -help
     
-  Import a LRG and add xrefs:
-    perl import.lrg.pl -host ens-genomics1 -port 3306 -user ******** -pass ********** -dbname homo_sapiens_core_58_37c -input_file LRG_1.xml -import -xrefs
+  Import a LRG and add xrefs, will download XML record from website:
+    perl import.lrg.pl -host ens-genomics1 -port 3306 -user ******** -pass ********** -dbname homo_sapiens_core_58_37c -lrg_id LRG_1 -import -xrefs
     
   Add gene_attribs for Ensembl genes overlapping a LRG:
     perl import.lrg.pl -host ens-genomics1 -port 3306 -user ******** -pass ********** -dbname homo_sapiens_core_58_37c -lrg_id LRG_1 -overlap
@@ -34,6 +34,7 @@ use strict;
 
 use Getopt::Long;
 use List::Util qw (min max);
+use LWP::UserAgent;
 use LRG::LRG;
 use LRG::LRGImport;
 use LRG::LRGMapping;
@@ -64,6 +65,7 @@ my $LRG_ENSEMBL_DB_RELEASE = 1;
 my $LRG_ENSEMBL_DB_ACC_LINKABLE = 1;
 my $LRG_ENSEMBL_DB_LABEL_LINKABLE = 0;
 my $LRG_ENSEMBL_TYPE = q{MISC};
+my $LRG_EXTERNAL_XML = q{ftp://ftp.ebi.ac.uk/pub/databases/lrgex/};#http://www.lrg-sequence.org/lrg.php};
 
 my $host;
 my $port;
@@ -80,6 +82,8 @@ my $import;
 my $add_xrefs;
 my $max_values;
 my $revert;
+
+usage() if (!scalar(@ARGV));
 
 # get options from command line
 GetOptions(
@@ -100,12 +104,40 @@ GetOptions(
   'revert!' 		=> \$revert
 );
 
-usage() if (defined($help) || !scalar(@ARGV));
+usage() if (defined($help));
 
 die("Database credentials (-host, -port, -dbname, -user) need to be specified!") unless (defined($host) && defined($port) && defined($dbname) && defined($user));
 die("Supplied LRG id is not in the correct format ('LRG_NNN')") if (defined($lrg_id) && $lrg_id !~ m/^LRG\_[0-9]+$/);
 die("A LRG id needs to be specified via -lrg_id parameter!") if (!defined($lrg_id) && ($clean || $overlap));
-die("An input LRG XML file must be specified in order to import into core db!") if ((defined($import) || defined($add_xrefs)) && !defined($input_file));
+
+# If lrg_id has been specified but not input_file and a XML file is required, try to fetch it from the LRG website to the /tmp directory
+if ((defined($import) || defined($add_xrefs)) && !defined($input_file) && defined($lrg_id)) {
+  
+  print STDOUT localtime() . "\tNo input XML file specified for $lrg_id, attempting to get it from the LRG server\n" if ($verbose);
+  
+  # Create a user agent object
+  my $ua = LWP::UserAgent->new;
+
+  # Create a request
+  my $req = HTTP::Request->new(GET => "$LRG_EXTERNAL_XML/$lrg_id\.xml");
+  #$req->content("id=$lrg_id");
+
+  # Pass request to the user agent and get a response back
+  my $res = $ua->request($req);
+
+  # Check the outcome of the response
+  die("Could not fetch XML file for $lrg_id from server. Server says: " . $res->message) unless ($res->is_success);
+  
+  # Write the XML to a temporary file
+  $input_file = '/tmp/' . $lrg_id . '.xml';
+  open(XML_OUT,'>',$input_file) or die("Could not open $input_file for writing");
+  print XML_OUT $res->content;
+  close(XML_OUT);
+  
+  print STDOUT localtime() . "\tSuccessfully downloaded XML file for $lrg_id and stored it in $input_file\n" if ($verbose);
+}
+
+die("An input LRG XML file (or a LRG identifier to fetch it) must be specified in order to import into core db!") if ((defined($import) || defined($add_xrefs)) && !defined($input_file));
 die("A tab-separated input file with table, field and max_value columns must be specified in order to revert the core db!") if (defined($revert) && !defined($input_file));
 
 # Connect to core database
@@ -395,21 +427,23 @@ sub usage() {
       -user		Core database user (Required)
       -pass		Core database password (Optional)
       
-    An input file can be specified. This is required when importing a LRG or when
-    reverting the Core database
+    A LRG identifier must be specified when cleaning a LRG from the database or when annotating
+    Ensembl genes that overlap LRG regions. If an identifier is specified when importing or adding
+    xrefs, the script will attempt to download the corresponding XML file from the LRG website.
+    
+      -lrg_id		LRG identifier on the form LRG_N, where N is an integer
+      
+    An input file can be specified. This is required when importing a LRG (unless the XML file can
+    be downloaded from the LRG website, using a supplied identifier) or when reverting the Core database
     
       -input_file	LRG XML file when importing or adding xrefs
 			Tab-separated file with table, field and max-values when reverting database
 			to a previous state.
 			
-    A LRG identifier must be specified when cleaning a LRG from the database or when annotating
-    Ensembl genes that overlap LRG regions.
-    
-      -lrg_id		LRG identifier on the form LRG_N, where N is an integer
       
     What action the script will perform is dictated by the following flags:
     
-      -import		The data in the supplied LRG XML file will be imported into the Core
+      -import		The data in the supplied, or downloaded, LRG XML file will be imported into the Core
 			database. This includes the mapping to the current assembly and the
 			transcripts in the fixed section
 			
