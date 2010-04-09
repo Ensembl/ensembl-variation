@@ -169,9 +169,9 @@ sub new {
   my $caller = shift;
   my $class = ref($caller) || $caller;
 
-  my ($dbID, $adaptor, $name, $src, $src_desc, $syns, $ancestral_allele,
+  my ($dbID, $adaptor, $name, $src, $src_desc, $src_url, $syns, $ancestral_allele,
       $alleles, $valid_states, $moltype, $five_seq, $three_seq, $failed_description, $flank_flag) =
-        rearrange([qw(dbID ADAPTOR NAME SOURCE SOURCE_DESCRIPTION SYNONYMS ANCESTRAL_ALLELE ALLELES
+        rearrange([qw(dbID ADAPTOR NAME SOURCE SOURCE_DESCRIPTION SOURCE_URL SYNONYMS ANCESTRAL_ALLELE ALLELES
                       VALIDATION_STATES MOLTYPE FIVE_PRIME_FLANKING_SEQ
                       THREE_PRIME_FLANKING_SEQ FAILED_DESCRIPTION FLANK_FLAG)],@_);
 
@@ -190,6 +190,7 @@ sub new {
                 'name'   => $name,
                 'source' => $src,
 				'source_description' => $src_desc,
+				'source_url' => $src_url,
                 'synonyms' => $syns || {},
 		    'ancestral_allele' => $ancestral_allele,
                 'alleles' => $alleles || [],
@@ -539,6 +540,27 @@ sub source_description{
   my $self = shift;
   return $self->{'source_description'} = shift if(@_);
   return $self->{'source_description'};
+}
+
+
+
+=head2 source_url
+
+  Arg [1]    : string $source_url (optional)
+               The new value to set the source URL attribute to
+  Example    : $source_url = $v->source_url()
+  Description: Getter/Setter for the source URL attribute
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub source_url{
+  my $self = shift;
+  return $self->{'source_url'} = shift if(@_);
+  return $self->{'source_url'};
 }
 
 =head2 get_all_Alleles
