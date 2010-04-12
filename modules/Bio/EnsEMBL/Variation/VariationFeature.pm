@@ -280,15 +280,25 @@ sub map_weight{
 
 sub get_all_TranscriptVariations{
     my $self = shift;
-    
-    if(!defined($self->{'transcriptVariations'}) && $self->{'adaptor'})    {
-	#lazy-load from database on demand
-	my $tva = $self->{'adaptor'}->db()->get_TranscriptVariationAdaptor();
-	$tva->fetch_all_by_VariationFeatures([$self]);
-	$self->{'transcriptVariations'} ||= [];
 	
-	# now set the highest priority one
-	$self->{'consequence_type'} = $self->_highest_priority($self->{'transcriptVariations'});
+    if(!defined($self->{'transcriptVariations'}) && $self->{'adaptor'})    {
+	 
+	  my $tva;
+	  
+	  if($self->{'adaptor'}->db()) {
+		$tva = $self->{'adaptor'}->db()->get_TranscriptVariationAdaptor();
+	  }
+	  
+	  elsif($self->{'adaptor'}) {
+		$tva = Bio::EnsEMBL::Variation::DBSQL::TranscriptVariationAdaptor->new_fake($self->{'adaptor'}->{'species'});
+	  }
+	  
+	  #lazy-load from database on demand
+	  $tva->fetch_all_by_VariationFeatures([$self]);
+	  $self->{'transcriptVariations'} ||= [];
+	  
+	  # now set the highest priority one
+	  $self->{'consequence_type'} = $self->_highest_priority($self->{'transcriptVariations'});
     }
     return $self->{'transcriptVariations'};
 }
