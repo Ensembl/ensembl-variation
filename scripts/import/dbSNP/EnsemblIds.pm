@@ -95,14 +95,12 @@ sub dump_ENSIDs{
 }
 
 
-# This method uses hardcoded databases on ens-genomics1
+# This method uses the pontus_affy_array_mapping database on ens-variation
 sub dump_AFFYIDs{
 
   my $self = shift;
   my ($source_name,$set_name);
     
-  debug(localtime() . "\tCreate separate db connection to ens-genomics\n");
-  my $dbh = DBI->connect("DBI:mysql:timeout=2678200;host=ens-genomics1","ensro","") or die("Could not connect to database $DBI::errstr");
   my $stmt;
   
   debug("Dumping AFFY information from dbSNP");
@@ -124,12 +122,8 @@ sub dump_AFFYIDs{
   create_and_load($self->{'dbVar'},"tmp_rs_AFFY","rsID *","AFFYid", "affy_name");
   print Progress::location();
   
-  foreach my $table ("yuan_aff_100k_var_46","yuan_aff_500k_var_46","yuan_aff_genome6_var_47") {
-    
-    $stmt = qq{
-	USE $table
-    };
-    $dbh->do($stmt);
+  my $db = "pontus_affy_array_mapping";
+  foreach my $table ("name_pair_100k","name_pair_500k","name_pair_g6") {
     
     if ($table =~ /100k/i) {
       $source_name = "Affy GeneChip 100K Array";
@@ -139,42 +133,35 @@ sub dump_AFFYIDs{
       $source_name = "Affy GeneChip 500K Array";
       $set_name = "Mapping250K";
     }
-    elsif ($table =~ /genome6/i) {
+    elsif ($table =~ /g6/i) {
       $source_name = "Affy GenomeWideSNP_6.0";
       $set_name = "6.0";
     }
 
-    debug(localtime() . "\tGet name_pair create statements\n");
-    $stmt = qq{
-	SHOW CREATE TABLE
-	    name_pair
-    };
-    my $create_stmt = $dbh->selectall_arrayref($stmt)->[0][1];
-
     debug(localtime() . "\tCreating name_pair table with source_name $source_name...");
-    $self->{'dbVar'}->do($create_stmt);
-    print Progress::location();
     $stmt = qq{
-	RENAME TABLE
-	    name_pair
-	TO
-	    $table\_name_pair
+	CREATE TABLE
+	    $table
+	LIKE
+	    $db\.$table
     };
     $self->{'dbVar'}->do($stmt);
     print Progress::location();
     
-    debug(localtime() . "\tDumping AFFY id name pairs from ens-genomics\n");
+    debug(localtime() . "\tDumping AFFY id name pairs from $db\.$table\n");
     $stmt = qq{
+	INSERT INTO
+	    $table (
+		affy_name,
+		rs_name
+	    )
 	SELECT
-	    *
+	    affy_name,
+	    rs_name
 	FROM
-	    name_pair
+	    $db\.$table
     };
-    dumpSQL($dbh,$stmt);
-    
-    debug(localtime() . "\tLoading AFFY id name pairs into $table\_name_pair\n");
-    load($self->{'dbVar'},"$table\_name_pair","affy_name","rs_name");
-    print Progress::location();
+    $self->{'dbVar'}->do($stmt);
     
     debug(localtime() . "\tCreating a temporary table for AFFY ids\n");
     $stmt = qq{
@@ -185,7 +172,7 @@ sub dump_AFFYIDs{
 	    a.rsID AS rs_name
 	FROM
 	    tmp_rs_AFFY a,
-	    $table\_name_pair c
+	    $table c
 	WHERE
 	    a.AFFYid = c.affy_name
     };
@@ -195,7 +182,7 @@ sub dump_AFFYIDs{
     debug(localtime() . "\tAdding AFFY ids from temporary table\n");
     $stmt = qq{
 	INSERT IGNORE INTO
-	    $table\_name_pair (
+	    $table (
 		affy_name,
 		rs_name
 	    )
@@ -225,11 +212,11 @@ sub dump_AFFYIDs{
     #                        from tmp_rs_AFFY a, $table.name_pair c 
     #                        where a.AFFYid=c.affy_name});
 
-    if ($table =~ /genome6/i) {
-	debug(localtime() . "\tUpdating $table\_name_pair\n");
+    if ($table =~ /g6/i) {
+	debug(localtime() . "\tUpdating $table\n");
 	$stmt = qq{
 	    UPDATE
-		$table\_name_pair
+		$table
 	    SET
 		affy_name = REPLACE(affy_name,'AFFY_6_1M_','')
 	};
@@ -247,10 +234,10 @@ sub dump_AFFYIDs{
       $source_id = $self->{'dbVar'}->db_handle->{'mysql_insertid'};
     }
 
-    debug("Inserting in variation_synonym table from $table\_name_pair...");
+    debug("Inserting in variation_synonym table from $table\...");
     $self->{'dbVar'}->do(qq{ INSERT IGNORE INTO variation_synonym (variation_id, source_id, name)
                                      SELECT v.variation_id, $source_id as source_id, t.affy_name as name 
-                                     FROM variation v, $table\_name_pair t
+                                     FROM variation v, $table t
                                      WHERE v.name = t.rs_name
                                 }
 			);
@@ -269,7 +256,8 @@ sub dump_AFFYIDs{
     print Progress::location();
 
    #and finally, remove the temporary table
-   #$self->{'dbVar'}->do(qq{DROP TABLE $table\_name_pair});
+    $self->{'dbVar'}->do(qq{DROP TABLE $table});
+    print Progress::location();
 
   }
 }
