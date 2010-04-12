@@ -85,7 +85,7 @@ my $dbCore = $cdba;
 
 #added default options
 $chost = $cdba->dbc->host; 
-$cuser $cdba->dbc->username;
+$cuser = $cdba->dbc->username;
 $cport = $cdba->dbc->port;
 $cdbname = $cdba->dbc->dbname;
 
