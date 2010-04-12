@@ -555,6 +555,10 @@ sub add_mapping {
     my $attrib_type_id = get_attrib_type_id('toplevel');
     LRGImport::insert_row({'seq_region_id' => $q_seq_region_id, 'attrib_type_id' => $attrib_type_id, 'value' => 1},'seq_region_attrib',1);
     
+    #ÊAdd a seq_region_attrib indicating that it is non-reference
+    $attrib_type_id = get_attrib_type_id('non_ref');
+    LRGImport::insert_row({'seq_region_id' => $q_seq_region_id, 'attrib_type_id' => $attrib_type_id, 'value' => 1},'seq_region_attrib',1);
+    
     # Get the seq_region_id for the target contig
     my $ctg_cs_id = get_coord_system_id('contig');
     
