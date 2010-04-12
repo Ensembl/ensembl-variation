@@ -85,13 +85,13 @@ my $dbCore = $cdba;
 
 #added default options
 $chost = $cdba->dbc->host; 
-$cuser    ||= 'ensro';
-$cport = $cdba->dbc->port ;
+$cuser $cdba->dbc->username;
+$cport = $cdba->dbc->port;
 $cdbname = $cdba->dbc->dbname;
 
 $vhost = $vdba->dbc->host;
 $vport = $vdba->dbc->port;
-$vuser    ||= 'ensadmin';
+$vuser =  $vdba->dbc->username;
 $vdbname = $vdba->dbc->dbname;
 $vpass = $vdba->dbc->password;
 
@@ -103,7 +103,6 @@ $TMP_FILE = $ImportUtils::TMP_FILE;
 if (! defined $top_level && $species !~ /mosquito|anoph/i) {
   $top_level=1;
 }
-
 #find out seq_region_id for haplotype chromosomes    
 my $sr_ref = $dbCore->dbc->db_handle->selectall_arrayref(qq{select sra.seq_region_id from seq_region_attrib sra, attrib_type at where sra.attrib_type_id=at.attrib_type_id and at.name="Non Reference"});
 
