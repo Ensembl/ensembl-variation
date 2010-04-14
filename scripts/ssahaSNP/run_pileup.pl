@@ -2,7 +2,7 @@
 
 use strict;
 use warnings;
-use lib '/nfs/team71/psg/wm2/Variation/scripts/import/';
+use lib '../import/';
 use Bio::EnsEMBL::Registry;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Variation::DBSQL::DBAdaptor;
@@ -34,7 +34,7 @@ $TMP_FILE = $ImportUtils::TMP_FILE;
 $strain_name ||="tg1";
 
 my $registry_file;
-$registry_file ||= $Bin . "/ensembl.registry";
+$registry_file ||= $Bin . "/../import/ensembl.registry";
 #$registry_file ||= $Bin . "/ensembl.registry" if ($TMP_FILE =~ /venter/);
 #$registry_file ||= $Bin . "/ensembl.registry2" if ($TMP_FILE =~ /watson/);
 
@@ -66,7 +66,7 @@ while (my ($seq_region_id,$seq_region_name) = $sth->fetchrow_array()) {
 #make_pileup_reads_file();
 #parse_pileup_snp_file();
 #merge_pileup_snp();
-# create_vdb();
+ #create_vdb();
 #PAR_regions();
 read_coverage();
 
@@ -323,7 +323,7 @@ sub parse_pileup_snp_file {
 
 sub merge_pileup_snp {
 
-  my $variation_name = "TEMP";
+  my $variation_name = "temptgu";
  
   debug("Create table pileup_snp_merge...");
   
@@ -396,7 +396,7 @@ sub create_vdb {
 
   my $source_name = "ENSEMBL"; #needs change everytime
   my $var_pre_name = "ENSEMBL";
-  my $variation_name = "ENSTNISNP";###needs change for different species
+  my $variation_name = "ENSTGUSNP";###needs change for different species
   my $length_name = length($variation_name);
 
     $dbVar->do(qq{INSERT INTO source (name) values ("$source_name")});
@@ -454,7 +454,7 @@ sub create_vdb {
   #$dbVar->do("DROP INDEX unique_allele_idx ON allele"); need it in the following par regions
 
   if ($pop_size == 1) {
-    $dbVar->do(qq{CREATE TABLE tmp_individual_genotype_single_bp (
+    $dbVar->do(qq{CREATE TABLE IF NOT EXISTS tmp_individual_genotype_single_bp (
                             variation_id int not null,allele_1 varchar(255),allele_2 varchar(255),sample_id int,
                             key variation_idx(variation_id),
                             key sample_idx(sample_id)
