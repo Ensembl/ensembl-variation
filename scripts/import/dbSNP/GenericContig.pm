@@ -273,7 +273,6 @@ sub variation_table {
     
     debug(localtime() . "\tDumping SubSNPs");
     
-    #$self->dump_subSNPs; #changed to get allele data from UniVariAllele and Allele, do not need this method anymore
 
    $stmt = "SELECT ";
    if ($self->{'limit'}) {
@@ -623,7 +622,7 @@ sub individual_table {
 			      });
   print Progress::location();
 
-  #decide which individual_type should this species be
+  #decide which individual_type should this species bem make sure it's correct when adding new speciesz
   my $individual_type_id;
   if ($self->{'dbCore'}->species =~ /homo|pan|anoph/i) {
     $individual_type_id = 3;
@@ -1500,8 +1499,7 @@ sub individual_genotypes {
 
 #     #we have truncated the individual_genotype table, one contains the genotypes single bp, and the other, the rest
 #     #necessary to create a unique index to remove duplicated genotypes
-#     #individual_id already indexed on sample
-#     #$self->{'dbVar'}->do(qq{CREATE INDEX individual_id on sample(individual_id)});
+
 
   #ÊGet the create statement for tmp_individual_genotype_single_bp from master schema
   my $ind_gty_stmt = get_create_statement($self->{'dbVar'},'tmp_individual_genotype_single_bp',$self->{'master_schema_db'});
@@ -1516,11 +1514,15 @@ sub individual_genotypes {
     
      ###only non human one needs unique index
      $insert = "INSERT IGNORE";
-#     $self->{'dbVar'}->do(qq{CREATE UNIQUE INDEX ind_genotype_idx ON tmp_individual_genotype_single_bp(variation_id,sample_id,allele_1,allele_2)});
+
+     $self->{'dbVar'}->do(qq{CREATE UNIQUE INDEX ind_genotype_idx ON tmp_individual_genotype_single_bp(variation_id,subsnp_id,sample_id,allele_1,allele_2)});
+
      calculate_gtype($self,$self->{'dbVar'},"SubInd_tmp_gty","tmp_individual_genotype_single_bp",$insert);
      $self->{'dbVar'}->do(qq{RENAME TABLE SubInd_tmp_gty TO tmp2_gty});
-  print Progress::location();
+
+    print Progress::location();
 #     $self->{'dbVar'}->do(qq{DROP INDEX ind_genotype_idx ON tmp_individual_genotype_single_bp});
+
    }
    else {
      my %rec_pid;
@@ -1795,7 +1797,8 @@ sub population_genotypes {
  			'allele_1', 'allele_2');
   print Progress::location();
 
-#   $self->{'dbVar'}->do(qq{CREATE UNIQUE INDEX pop_genotype_idx ON population_genotype(variation_id,frequency,sample_id,allele_1,allele_2)});
+   $self->{'dbVar'}->do(qq{CREATE UNIQUE INDEX pop_genotype_idx ON population_genotype(variation_id,subsnp_id,frequency,sample_id,allele_1,allele_2)});
+
 
     $self->{'dbVar'}->do(qq{INSERT IGNORE INTO population_genotype (variation_id,subsnp_id,allele_1, allele_2, frequency, sample_id)
 			                  SELECT vs.variation_id,vs.subsnp_id,tra1.rev_allele as allele_1,tra2.rev_allele as allele_2,tg.freq,s.sample_id
@@ -1883,17 +1886,12 @@ sub cleanup {
   print Progress::location();
 
     $self->{'dbVar'}->do('ALTER TABLE variation  DROP COLUMN snp_id');
-  print Progress::location();
-#     $self->{'dbVar'}->do('RENAME TABLE variation_synonym TO variation_synonym_old');
-#     $self->{'dbVar'}->do('CREATE TABLE variation_synonym LIKE variation_synonym_old');
-#     $self->{'dbVar'}->do('INSERT INTO variation_synonym SELECT * FROM variation_synonym_old WHERE source_id!=1');
-#     $self->{'dbVar'}->do('ALTER TABLE variation_synonym DROP COLUMN subsnp_id, DROP COLUMN substrand_reversed_flag');
+  print Progress::location();     $self->{'dbVar'}->do('RENAME TABLE variation_synonym TO variation_synonym_old');
     $self->{'dbVar'}->do('ALTER TABLE variation_synonym DROP COLUMN substrand_reversed_flag');
   print Progress::location();
     $self->{'dbVar'}->do('ALTER TABLE sample DROP COLUMN pop_class_id, DROP COLUMN pop_id, DROP COLUMN individual_id');
   print Progress::location();
-    #$self->{'dbVar'}->do('ALTER TABLE variation_group DROP COLUMN hapset_id') if ($self->{'dbCore'}->species =~ /homo|hum/i);
-    #$self->{'dbVar'}->do('ALTER TABLE allele_group DROP COLUMN hap_id') if ($self->{'dbCore'}->species =~ /homo|hum/i);
+    
 
 }
 
