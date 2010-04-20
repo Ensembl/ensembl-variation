@@ -81,6 +81,8 @@ use Bio::EnsEMBL::Variation::TranscriptVariation;
 
 our @ISA = ('Bio::EnsEMBL::DBSQL::BaseAdaptor');
 
+# size that we look either side of a variation for transcripts
+our $UP_DOWN_SIZE = 5000;
 
 =head2 fetch_all_by_Transcripts
 
