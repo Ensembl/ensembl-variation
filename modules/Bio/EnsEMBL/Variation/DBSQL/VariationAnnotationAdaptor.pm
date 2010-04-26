@@ -156,7 +156,7 @@ sub fetch_all_by_VariationFeature_list {
 
 =cut
 
-sub fetch_all_by_pheonotype_name_source_name {
+sub fetch_all_by_phenotype_name_source_name {
 
   my $self = shift;
   my $phenotype_name  = shift;
@@ -186,7 +186,7 @@ sub fetch_all_by_pheonotype_name_source_name {
 
 =cut
 
-sub fetch_all_by_pheonotype_description_source_name {
+sub fetch_all_by_phenotype_description_source_name {
 
   my $self = shift;
   my $phenotype_description  = shift;
