@@ -61,7 +61,7 @@ sub new {
 }
 
 # Check that the cDNA constructed from genomic sequence and exon coordinates is identical to the cDNA specified within the record
-sub check_cDNA {
+sub cDNA {
     my $self = shift;
     
     my $passed;
@@ -111,7 +111,7 @@ sub check_cDNA {
 }
 
 # Check that all other_exon_namings have a corresponding exon in the fixed section and that all or none of the exons have other_exon_namiong
-sub check_exon_labels {
+sub exon_labels {
     my $self = shift;
     my $passed = 1;
     
@@ -207,7 +207,7 @@ sub check_exon_labels {
 }
 
 # Check that the exon coordinates for each reference system make sense
-sub check_exons {
+sub exons {
     my $self = shift;
     my $passed = 1;
     
@@ -277,8 +277,8 @@ sub check_exons {
                 
                 # Calculate the length of the coding sequence within the exon
                 my $cds_length = $lrg_length;
-                my $first_exon = ($coding_start > $lrg_start && $coding_start <= $lrg_end);
-                my $last_exon = ($coding_end >= $lrg_start && $coding_end < $lrg_end);
+                my $first_exon = ($coding_start >= $lrg_start && $coding_start <= $lrg_end);
+                my $last_exon = ($coding_end >= $lrg_start && $coding_end <= $lrg_end);
                 $cds_length -= ($coding_start - $lrg_start) if ($first_exon);
                 $cds_length -= ($lrg_end - $coding_end) if ($last_exon);
                 
@@ -329,7 +329,7 @@ sub check_exons {
 }
 
 #ÊCheck that the LRG gene name is consistent
-sub check_gene_name {
+sub gene_name {
     my $self = shift;
     my $passed = 1;
     
@@ -361,7 +361,7 @@ sub check_gene_name {
 }
 
 # Check that the LRG identifier is on the correct format (LRG_N)
-sub check_id {
+sub id {
     my $self = shift;
     
     # Get the name of the check
@@ -389,7 +389,7 @@ sub check_id {
 }
 
 #ÊCheck if we have multiple mappings specified and compare mappings to the same assembly to see if they differ
-sub check_mappings {
+sub mappings {
     my $self = shift;
     my $passed = 1;
     
@@ -525,7 +525,7 @@ sub compare_tags {
 }
 
 #ÊCheck that the intron phases specified make sense
-sub check_phases {
+sub phases {
     my $self = shift;
     my $passed;
     
@@ -596,7 +596,7 @@ sub check_phases {
 }
 
 #ÊValidate the XML file against the RelaxNG Compact schema
-sub check_schema {
+sub schema {
     my $self = shift;
     my $passed;
     
@@ -671,7 +671,7 @@ sub check_schema {
 }
 
 #ÊCheck that the translated cDNA (constructed from genomic sequence + exon coordinates) is identical to the supplied translation
-sub check_translation {
+sub translation {
     my $self = shift;    
     my $passed;
     
