@@ -174,10 +174,8 @@ sub fetch_by_Slice{
 =head2 fetch_by_VariationFeature
 
   Arg [1]    : Bio::EnsEMBL:Variation::VariationFeature $vf
-  Arg [2]    : (optional) int $population_id. Population where we want to select the LD information
-  Example    : my $ldFeatureContainer = $ldFetureContainerAdaptor->fetch_by_VariationFeature($vf);  Description: Retrieves LDFeatureContainer for a given variation feature.  Most
-               variations should only hit the genome once and only a return
-               a single variation feature.
+  Arg [2]    : (optional) Bio::EnsEMBL::Variation::Population $pop
+  Example    : my $ldFeatureContainer = $ldFetureContainerAdaptor->fetch_by_VariationFeature($vf);  Description: Retrieves LDFeatureContainer for a given variation feature.  If optional population is supplied, values are only returned for that population.
   Returntype : reference to Bio::EnsEMBL::Variation::LDFeatureContainer
   Exceptions : throw on bad argument
   Caller     : general
