@@ -209,7 +209,11 @@ while(<$in_file_handle>) {
   }
 }
 
-&print_consequences(\@new_vfs, $out_file_handle);
+# clean up any remaining
+if(scalar @new_vfs) {
+	$tva->fetch_all_by_VariationFeatures(\@new_vfs);
+	&print_consequences(\@new_vfs, $out_file_handle);
+}
 
 sub print_consequences {
 	
