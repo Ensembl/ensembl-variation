@@ -187,13 +187,20 @@ sub fetch_all_by_VariationFeatures {
 		return [];
 	}
 	
-	# get functional genomics adaptors
-	my $rf_adaptor = Bio::EnsEMBL::DBSQL::MergedAdaptor->new(-species => $species, -type => "RegulatoryFeature");
-	my $ef_adaptor = Bio::EnsEMBL::DBSQL::MergedAdaptor->new(-species => $species, -type => "ExternalFeature");
+	my ($rf_adaptor, $ef_adaptor);
 	
-	unless(defined $rf_adaptor && defined $ef_adaptor) {
-		warn("Must have functional genomics database attached to consider regulatory features");
+	# get a feature set adaptor to check whether there is regulatory build
+	my $fs_adaptor = Bio::EnsEMBL::DBSQL::MergedAdaptor->new(-species => $species, -type => "FeatureSet");
+	if(defined $fs_adaptor && scalar @{$fs_adaptor->fetch_all_by_type('regulatory')}) {
+		
+		# get functional genomics adaptors
+		$rf_adaptor = Bio::EnsEMBL::DBSQL::MergedAdaptor->new(-species => $species, -type => "RegulatoryFeature");
+		$ef_adaptor = Bio::EnsEMBL::DBSQL::MergedAdaptor->new(-species => $species, -type => "ExternalFeature");
 	}
+	
+	#unless(defined $rf_adaptor && defined $ef_adaptor) {
+	#	warn("Must have functional genomics database attached to consider regulatory features");
+	#}
 	
 	# get a gene and transcript adaptor
 	my $gene_adaptor = Bio::EnsEMBL::DBSQL::MergedAdaptor->new(-species => $species, -type => "Gene");
