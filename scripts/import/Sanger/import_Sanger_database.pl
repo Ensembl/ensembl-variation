@@ -1,6 +1,5 @@
 #!/usr/local/bin/perl -w
 
-#use lib '/nfs/acari/dr2/projects/src/ensembl/ensembl-variation/scripts/import';
 use strict;
 use warnings;
 
