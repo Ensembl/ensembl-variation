@@ -566,7 +566,7 @@ sub source_url{
 =head2 get_all_Alleles
 
   Arg [1]    : none
-  Example    : @alleles = @{v->get_all_Alleles()};
+  Example    : @alleles = @{$v->get_all_Alleles()};
   Description: Retrieves all Alleles associated with this variation
   Returntype : reference to list of Bio::EnsEMBL::Variation::Allele objects
   Exceptions : none
