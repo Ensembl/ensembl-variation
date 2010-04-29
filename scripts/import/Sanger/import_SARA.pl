@@ -2,7 +2,6 @@
 use strict;
 use warnings;
 
-use lib '/nfs/acari/dr2/projects/src/ensembl/ensembl-variation/scripts/import';
 use Getopt::Long;
 use ImportUtils qw(debug load);
 use Bio::EnsEMBL::Utils::Exception qw(warning throw verbose);
