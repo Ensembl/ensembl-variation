@@ -28,13 +28,12 @@ EXAMPLE
     
 =cut
 
-#!/software/bin/perl
+#!perl -w
 
 use strict;
 
 use Getopt::Long;
 use List::Util qw (min max);
-use LWP::UserAgent;
 use LRG::LRG;
 use LRG::LRGImport;
 use LRG::LRGMapping;
@@ -65,7 +64,7 @@ my $LRG_ENSEMBL_DB_RELEASE = 1;
 my $LRG_ENSEMBL_DB_ACC_LINKABLE = 1;
 my $LRG_ENSEMBL_DB_LABEL_LINKABLE = 0;
 my $LRG_ENSEMBL_TYPE = q{MISC};
-my $LRG_EXTERNAL_XML = q{ftp://ftp.ebi.ac.uk/pub/databases/lrgex/};#http://www.lrg-sequence.org/lrg.php};
+my $LRG_EXTERNAL_XML = q{ftp://ftp.ebi.ac.uk/pub/databases/lrgex/};
 
 my $host;
 my $port;
@@ -114,27 +113,14 @@ die("A LRG id needs to be specified via -lrg_id parameter!") if (!defined($lrg_i
 if ((defined($import) || defined($add_xrefs)) && !defined($input_file) && defined($lrg_id)) {
   
   print STDOUT localtime() . "\tNo input XML file specified for $lrg_id, attempting to get it from the LRG server\n" if ($verbose);
-  
-  # Create a user agent object
-  my $ua = LWP::UserAgent->new;
-
-  # Create a request
-  my $req = HTTP::Request->new(GET => "$LRG_EXTERNAL_XML/$lrg_id\.xml");
-  #$req->content("id=$lrg_id");
-
-  # Pass request to the user agent and get a response back
-  my $res = $ua->request($req);
-
-  # Check the outcome of the response
-  die("Could not fetch XML file for $lrg_id from server. Server says: " . $res->message) unless ($res->is_success);
-  
-  # Write the XML to a temporary file
-  $input_file = '/tmp/' . $lrg_id . '.xml';
-  open(XML_OUT,'>',$input_file) or die("Could not open $input_file for writing");
-  print XML_OUT $res->content;
-  close(XML_OUT);
-  
-  print STDOUT localtime() . "\tSuccessfully downloaded XML file for $lrg_id and stored it in $input_file\n" if ($verbose);
+  my $result = LRGImport::fetch_remote_lrg($lrg_id,[$LRG_EXTERNAL_XML]);
+  if ($result->{'success'}) {
+    $input_file = $result->{'xmlfile'};
+    print STDOUT localtime() . "\tSuccessfully downloaded XML file for $lrg_id and stored it in $input_file\n" if ($verbose);
+  }
+  else {
+    die("Could not fetch XML file for $lrg_id from external db. Server said: " . $result->{$LRG_EXTERNAL_XML}{'message'});
+  }
 }
 
 die("An input LRG XML file (or a LRG identifier to fetch it) must be specified in order to import into core db!") if ((defined($import) || defined($add_xrefs)) && !defined($input_file));
@@ -410,7 +396,7 @@ if ($import || $add_xrefs) {
   }
 }
 
-sub usage() {
+sub usage {
 	
   print qq{
   Usage: perl import.lrg.pl [OPTION]

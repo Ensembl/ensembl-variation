@@ -14,19 +14,19 @@ EXAMPLE
         perl check.lrg.pl -list_checks
         
     Run all available checks on LRG_1:
-        perl check.lrg.pl -xml_file LRG_1.xml -java /software/jre1.6.0_01/bin/java
+        perl check.lrg.pl -xml_file LRG_1.xml
   
     Validate the schema of LRG_1 XML file:
-        perl check.lrg.pl -xml_file LRG_1.xml -java /software/jre1.6.0_01/bin/java -check schema
+        perl check.lrg.pl -xml_file LRG_1.xml -check schema
           
 =cut
 
-#!/software/bin/perl -w
+#!perl -w
 
 use strict;
 
 use Getopt::Long;
-use LRGHealthcheck;
+use LRG::LRGHealthcheck;
 
 usage() if (!scalar(@ARGV));
 
