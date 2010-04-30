@@ -12,9 +12,13 @@ use ImportUtils qw(dumpSQL debug create_and_load load);
 use FindBin qw($Bin);
 
 my ($TMP_DIR, $TMP_FILE, $LIMIT);
+our ($alias_file, $genotype_file, $species);
 
 GetOptions('tmpdir=s'  => \$ImportUtils::TMP_DIR,
            'tmpfile=s' => \$ImportUtils::TMP_FILE,
+		   'alias_file=s' => \$alias_file,
+		   'genotype_file=s' => \$genotype_file,
+		   'species=s' => \$species,
 	  );
 
 warn("Make sure you have a updated ensembl.registry file!\n");
@@ -24,7 +28,7 @@ my $registry_file ||= $Bin . "/ensembl.registry";
 $TMP_DIR  = $ImportUtils::TMP_DIR;
 $TMP_FILE = $ImportUtils::TMP_FILE;
 
-my $species = "rat";
+$species ||= "rat";
 
 Bio::EnsEMBL::Registry->load_all( $registry_file );
 
@@ -44,12 +48,12 @@ create_db(\%rec_mdc,\%rec_mdc_pop);
 sub import_strain_name {
 
   my $sym;
-  debug("Reading aliase file...");
+  
+  die "Alias file not defined (use -alias_file [alias file])\n" unless defined $alias_file;
+  
+  debug("Reading alias file...");
 
-  open IN, "/lustre/work1/ensembl/yuan/STAR_GTYPE/star_genotypes_070801/alias_070801.txt";
-  #open IN, "/lustre/work1/ensembl/yuan/STAR_GTYPE/star_genotypes_seq_070322/ilar_assigned_160507.txt";
-  #open IN, "/lustre/work1/ensembl/yuan/STAR_GTYPE/star_genotypes_seq_070322/added_ids";
-  #open IN, "/lustre/work1/ensembl/yuan/STAR_GTYPE/star_genotypes_seq_070322/STAR_strains_IDs_july132007.txt";
+  open IN, $alias_file or die "Could not read from alias file $alias_file\n";
 
   while (<IN>) {
     chomp;
@@ -162,8 +166,7 @@ sub create_db {
     $rec_source{$source} = $source_id;
   }
 
-  my $gtype_file = "/lustre/work1/ensembl/yuan/STAR_GTYPE/star_genotypes_070801/genotypes_070801.txt";
-  #my $gtype_file = "/lustre/work1/ensembl/yuan/STAR_GTYPE/star_genotypes_seq_070322/test_sub";
+  my $gtype_file = $genotype_file;
   open IN, "$gtype_file" or die "gtype_file is not exist\n";
   open OUT, ">$gtype_file\.err";
   open VAR, ">$TMP_DIR/variation.star";
