@@ -34,13 +34,6 @@ my ($species,$limit);
 my($dshost, $dsuser, $dspass, $dsport, $dsdbname);
 my $registry_file;
 
-#$dbSNP_BUILD_VERSION = 'b130';
-#$ImportUtils::TMP_DIR = '/lustre/scratch103/ensembl/pl4/tmp/dbsnp_import/mssql';
-#$ImportUtils::TMP_DIR = '/nfs/users/nfs_p/pl4/tmp/dbsnp_import/mssql';
-#$ImportUtils::TMP_FILE = 'tmpfile';
-#$MAPPING_FILE_DIR = '/lustre/scratch103/ensembl/pl4/tmp/dbsnp_import/mssql/mapping_dir';
-#$limit = 500;
-
 GetOptions('species=s'      => \$species,
 	   'dbSNP_version=s'=> \$dbSNP_BUILD_VERSION, ##such as b125
 	   'tmpdir=s'       => \$ImportUtils::TMP_DIR,
