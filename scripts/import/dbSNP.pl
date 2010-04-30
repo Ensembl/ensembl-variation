@@ -12,7 +12,6 @@ use Getopt::Long;
 use Bio::EnsEMBL::Registry;
 use FindBin qw( $Bin );
 
-use lib '/nfs/users/nfs_p/pl4/src/scripts/';
 $ENV{'SYBASE'} = '/software/freetds-0.82';
 
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
@@ -34,10 +33,9 @@ my($dshost, $dsuser, $dspass, $dsport, $dsdbname);
 my $registry_file;
 
 #$dbSNP_BUILD_VERSION = 'b130';
-#$ImportUtils::TMP_DIR = '/lustre/scratch103/ensembl/pl4/tmp/dbsnp_import/mssql';
-#$ImportUtils::TMP_DIR = '/nfs/users/nfs_p/pl4/tmp/dbsnp_import/mssql';
+#$ImportUtils::TMP_DIR = [tmp_dir];
 #$ImportUtils::TMP_FILE = 'tmpfile';
-#$MAPPING_FILE_DIR = '/lustre/scratch103/ensembl/pl4/tmp/dbsnp_import/mssql/mapping_dir';
+#$MAPPING_FILE_DIR = [mapping_dir];
 #$limit = 500;
 
 GetOptions('species=s'      => \$species,

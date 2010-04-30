@@ -1,6 +1,6 @@
 #! /usr/local/bin/perl
 
-#perl parse_ssahaSNP_new.pl -species human -input_file /lustre/work1/ensembl/dr2/data/Watson/output_ssaha/output_parse.txt -output_file /lustre/work1/ensembl/dr2/data/Watson/output_ssaha/watson_output.txt -align_file /lustre/work1/ensembl/dr2/data/Watson/output_ssaha/ALIGNMENT_file -tmpdir /lustre/scratch1/ensembl/dr2/resequencing -tmpfile temp_Watson.txt -individual 'Venter'
+#perl parse_ssahaSNP_new.pl -species human -input_file [ssaha_ooutput_dir]/output_parse.txt -output_file [ssaha_ooutput_dir]/watson_output.txt -align_file [ssaha_ooutput_dir]/ALIGNMENT_file -tmpdir [tmpdir] -tmpfile temp_Watson.txt -individual 'Venter'
 
 use strict;
 #use DBH;
