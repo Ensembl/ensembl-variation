@@ -1,5 +1,6 @@
 use strict;
 use warnings;
+use LWP::UserAgent;
 
 package LRGImport;
 
@@ -533,8 +534,9 @@ sub add_mapping {
     # Get the coord system id for this LRG or add a new entry if not present
     my $cs_id = add_coord_system($lrg_coord_system);
 
-    # Insert a general meta entry for 'LRG' if none is present
-    my @meta_id = (add_meta_key_value($lrg_coord_system,$lrg_coord_system));
+    my @meta_id;
+    # Insert a general meta entry for 'LRG' if none is present. This is not required??
+    # push(@meta_id,(add_meta_key_value($lrg_coord_system,$lrg_coord_system)));
 
     # In order to project the slice, we need to add an entry to the meta table (if not present)
     my $meta_key = 'assembly.mapping';
@@ -1051,6 +1053,56 @@ sub add_object_xref {
     return $object_xref_id;
 }
 
+#ÊAttempt to fetch the LRG XML file from the LRG server
+sub fetch_remote_lrg {
+  my $lrg_id = shift;
+  my $urls = shift;
+  my $destfile = shift;
+  
+  # This routine returns a hash with details of the request
+  my %result;
+  
+  #ÊIf no destination file was specified, create one in the tmp directory
+  $destfile ||= '/tmp/' . $lrg_id . '_' . time() . '.xml';
+  #ÊRemove the destfile if it exists
+  unlink($destfile);
+  
+  # Set the output file
+  $result{'xmlfile'} = $destfile;
+  
+  # Create a user agent object
+  my $ua = LWP::UserAgent->new;
+
+  # Cycle through the supplied URLs to try until one is succsessful
+  my $res;
+  while (my $url = shift(@{$urls})) {
+    # Create a request
+    my $req = HTTP::Request->new(GET => "$url/$lrg_id\.xml");
+
+    # Pass request to the user agent and get a response back
+    $res = $ua->request($req);
+    
+    $result{$url} = {
+	'message' => $res->message
+    };
+    $result{'success'} = $res->is_success;
+    
+    # Break if the request was successful
+    last if ($result{'success'});
+  }
+
+  # If nothing could be found, return the result hash
+  return \%result unless ($result{'success'});
+  
+  # Write the XML to a temporary file
+  open(XML_OUT,'>',$destfile) or die("Could not open $destfile for writing");
+  print XML_OUT $res->content;
+  close(XML_OUT);
+  
+  # Return the result hash
+  return \%result;
+}
+
 # Get the analysis_id for an analysis based on the logic_name
 sub get_analysis_id {
   my $logic_name = shift;
@@ -1382,8 +1434,9 @@ sub purge_db {
     
     # Get the coord system id
     my $cs_id = get_coord_system_id($lrg_coord_system) or die("Could not find coordinate system $lrg_coord_system in core db!");
-    # Get seq region ids for any seq regions associated with this LRG
-    my @seq_region_ids = @{get_seq_region_ids($lrg_name . '_',$cs_id)};
+    my $ctg_coord_system_id = get_coord_system_id('contig') or die("Could not find coordinate system contig in core db!");
+    # Get seq region ids on contigs for any seq regions associated with this LRG
+    my @seq_region_ids = @{get_seq_region_ids($lrg_name . '_',$ctg_coord_system_id)};
     #ÊLastly, add the seq region id for this LRG itself
     push(@seq_region_ids,get_seq_region_id($lrg_name,$cs_id));
     
@@ -1413,7 +1466,7 @@ sub purge_db {
 		    
 		    my $translation_id = LRGImport::get_translation_id($oid);
 		    # Remove from object_xref
-		    remove_row([qq{ensembl_object_type = 'Translation'}, qq{ensembl_id = $translation_id}],['object_xref']);
+		    remove_row([qq{ensembl_object_type = 'Translation'}, qq{ensembl_id = $translation_id}],['object_xref']) if defined($translation_id);
 		}
 		# Remove rows with this object id (also from associated stable_id table)
 		remove_row([$object_type . '_id' . qq{ = $oid}],[$object_type]);
@@ -1427,15 +1480,15 @@ sub purge_db {
 	remove_row([qq{asm_seq_region_id = $seq_region_id}],['assembly']);
 	remove_row([qq{cmp_seq_region_id = $seq_region_id}],['assembly']);
 	# Delete from seq_region_attrib
-	remove_row([qq{seq_region_id => $seq_region_id}],['seq_region_attrib']);
+	remove_row([qq{seq_region_id = $seq_region_id}],['seq_region_attrib']);
 	# Delete from dna
-	remove_row([qq{seq_region_id => $seq_region_id}],['dna']);
+	remove_row([qq{seq_region_id = $seq_region_id}],['dna']);
 	# Delete from seq_region
-	remove_row([qq{seq_region_id => $seq_region_id}],['seq_region']);
+	remove_row([qq{seq_region_id = $seq_region_id}],['seq_region']);
     }
     
     # Remove any gene attributes linked to this LRG
-    remove_row([qq{value => '$lrg_name'}],['gene_attrib']);
+    remove_row([qq{value = '$lrg_name'}],['gene_attrib']);
 }
 
 # Insert row into table
