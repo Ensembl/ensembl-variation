@@ -1,5 +1,4 @@
-#!/usr/local/ensembl/bin/perl
-use lib '/nfs/users/nfs_y/yuan/ensembl/src/ensembl-variation-55/modules';
+#!perl
 
 use strict;
 use warnings;
