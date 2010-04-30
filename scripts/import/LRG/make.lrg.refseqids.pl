@@ -1,7 +1,6 @@
-#!/software/bin/perl
+#!perl
 
 use strict;
-use lib '/nfs/acari/dr2/projects/src/ensembl/ensembl/modules';
 use Getopt::Long;
 use LRG;
 use Bio::EnsEMBL::Registry;
@@ -14,6 +13,8 @@ use FindBin qw( $Bin );
 use Bio::EnsEMBL::Variation::Utils::Sequence qw(unambiguity_code);
 use Bio::EnsEMBL::Utils::Sequence qw(expand reverse_comp);
 use Data::Dumper;
+
+our $SSAHA_BIN = 'ssaha2';
 
 # set default options
 my $out_file_stem;
@@ -35,11 +36,6 @@ GetOptions(
 	   'target_dir=s' => \$target_dir,
 );
 
-#$input_dir ||= "tempin";
-#$output_dir ||= "tempout";
-$input_dir ||= "/lustre/work1/ensembl/yuan/SARA/LRG/input_dir";
-$output_dir ||= "/lustre/work1/ensembl/yuan/SARA/LRG/output_dir";
-$target_dir ||= "/lustre/work1/ensembl/yuan/SARA/human/ref_seq_hash";
 our $template_file = $template_file_name;
 our $in_file = $in_file_name;
 our $mapping_num = 1;
@@ -553,9 +549,9 @@ sub join_pairs {
 sub bsub_ssaha_job {
   my ($queue, $input_file, $output_file, $subject) = @_;
 	
-  my $ssaha_command = "/nfs/acari/yuan/ensembl/src/ensembl-variation/scripts/ssahaSNP/ssaha2/ssaha2_v1.0.9_x86_64/ssaha2";
+  my $ssaha_command = "$SSAHA_BIN";
   $ssaha_command .= " -align 1 -kmer 12 -seeds 4 -cut 1000 -output vulgar -depth 10 -best 1 -save $subject $input_file";
-  my $call = "bsub -J $input_file\_ssaha_job -P ensembl-variation $queue -e $output_dir/error_ssaha -o $output_file $ssaha_command";
+  my $call = "bsub -J $input_file\_ssaha_job $queue -e $output_dir/error_ssaha -o $output_file $ssaha_command";
 	
   system ($call);
   print $call, "\n";

@@ -1,9 +1,6 @@
-#!/software/bin/perl
+#!perl
 
 use strict;
-use lib '/nfs/users/nfs_p/pl4/src/ensembl_head/ensembl-variation/scripts/import/LRG/';
-#use lib '/nfs/users/nfs_i/ianl/ensembl-live/ensembl/modules/';
-use lib '/nfs/users/nfs_p/pl4/src/ensembl_head/ensembl/modules/';
 
 use Getopt::Long;
 use List::Util qw(min max);

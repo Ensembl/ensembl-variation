@@ -1,10 +1,7 @@
-#!/software/bin/perl
+#!perl
 
 use strict;
 
-# since I haven't "installed" the module, I have to tell Perl where to find it
-#use lib '/nfs/users/nfs_w/wm2/Ensembl/CheckedOut/ensembl-variation/scripts/import/LRG/';
-use lib "$ENV{HOME}/src/ensembl_head/ensembl-variation/scripts/import/LRG/";
 use LRG;
 
 # get the files to read from and write to as three command-line arguments
