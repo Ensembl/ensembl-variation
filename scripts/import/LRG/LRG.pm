@@ -479,18 +479,25 @@ sub findNodeMultiArray {
     }
 
     else {
-		my $current = $self;
+		my $current = [$self];
 		
 		while(@levels && defined($current)) {
 			my $level = shift @levels;
-	
+			my @nodes;
 			if(scalar @levels >= 1) {
-				$current = $current->findNode($level);
+			    foreach my $cur (@{$current}) {
+				my $arr = $cur->findNodeArray($level);
+				push(@nodes,@{$arr}) if (defined($arr));
+			    }
 			}
 	
 			else {
-				$current = $current->findNodeArray($level, $data);
+			    foreach my $cur (@{$current}) {
+				my $arr = $cur->findNodeArray($level, $data);
+				push(@nodes,@{$arr}) if (defined($arr));
+			    }
 			}
+			$current = \@nodes;
 		}
 	
 		return $current;

@@ -1,4 +1,4 @@
-#!/software/bin/perl
+#!perl
 
 use strict;
 use Getopt::Long;
@@ -32,9 +32,6 @@ $LRGMapping::input_dir = $input_dir if defined $input_dir;
 $LRGMapping::output_dir = $output_dir if defined $output_dir;
 $LRGMapping::target_dir = $target_dir if defined $target_dir;
 
-#$input_dir ||= "/lustre/work1/ensembl/yuan/SARA/LRG/input_dir";
-#$output_dir ||= "/lustre/work1/ensembl/yuan/SARA/LRG/output_dir";
-#$target_dir ||= "/lustre/work1/ensembl/yuan/SARA/human/ref_seq_hash";
 our $template_file = $template_file_name;
 our $in_file = $in_file_name;
 our $mapping_num = 1;
