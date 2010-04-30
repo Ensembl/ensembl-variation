@@ -13,8 +13,6 @@ use Bio::EnsEMBL::Registry;
 use FindBin qw( $Bin );
 use Progress;
 
-$ENV{'SYBASE'} = '/software/freetds-0.82';
-
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Variation::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Utils::Exception qw(throw);
@@ -78,7 +76,7 @@ if (!$dsdbname) {
 
 my $source = 'DBI:Sybase:';
 
-# Note that the port is specified under [dbsnp] in the /software/freetds-0.82/etc/freetds.conf file!
+# Note that the port is specified under [dbsnp] in the freetds.conf file!
 # Server should be 'dbsnp' which then points the database driver to the corresponding entry in the freetds.conf file.
 # It can be overridden with a local .freetds.conf file in the user's home directory
 my $dbSNP = DBI->connect($source . 
