@@ -12,6 +12,19 @@ use Bio::EnsEMBL::Utils::Exception qw(throw);
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
 use ImportUtils qw(dumpSQL debug create_and_load load);
 use Time::HiRes qw(tv_interval gettimeofday);
+use Getopt::Long;
+
+# configure these before running!!!
+our $ssahabuild;
+our $ssaha2;
+our $getseqreads;
+our $ssahaSNP_cons;
+our $search_read;
+our $fastq_dir;
+our $output_dir;
+our $target_dir;
+
+die("Can't run without variables set - please edit script") unless defined($ssahaSNP_cons) and defined($getseqreads) and defined($search_read) and defined($fastq_dir) and defined($output_dir) and defined($target_dir);
 
 #creates the object and assign the attributes to it (connections, basically)
 sub new {
@@ -90,7 +103,7 @@ sub get_query_snp_pos {
   
   foreach my $seq_region_id (keys %$rec_seq_region_id) {
   #foreach my $seq_region_id (226032,226034) {
-    my $call = "bsub -q long -R'select[myens_genomics1 < 200] rusage[myens_genomics1=10]' -J $var_dbname\_ssaha_feature_job_$seq_region_id -o $tmp_dir/ssaha_feature_out\_$seq_region_id /usr/local/ensembl/bin/perl parallel_sara_zm.pl -species $species -source_id $source_id -seq_region_id $seq_region_id -job snp_pos -tmpdir $tmp_dir -tmpfile $tmp_file";
+    my $call = "bsub -q long -R'select[myens_genomics1 < 200] rusage[myens_genomics1=10]' -J $var_dbname\_ssaha_feature_job_$seq_region_id -o $tmp_dir/ssaha_feature_out\_$seq_region_id perl parallel_sara_zm.pl -species $species -source_id $source_id -seq_region_id $seq_region_id -job snp_pos -tmpdir $tmp_dir -tmpfile $tmp_file";
     $count++;
     
     print "call is $call $count\n";
@@ -114,12 +127,7 @@ sub get_flanking_seq_qual {
   my $count;
   my $defined_table_row = 100000;
   my $reads_dir;
-  #my $index_file = "/lustre/work1/ensembl/dr2/data/Watson/index_file";
-  #my $index_file = "/turing/mouse129_extra/yuan/human_celera/dani/reads_dir/watson/index_file";
-  #$reads_dir = "/lustre/scratch1/ensembl/yuan/tmp/mouse/reads_out" if $tmp_dir =~ /lustre/;
-  #$reads_dir = "/lustre/scratch1/ensembl/yuan/mouse/reads_dir/venter" if $tmp_dir =~ /lustre/;
-  $reads_dir = "/lustre/work1/ensembl/yuan/SARA/tetraodon/new_assembly/pileup_dir/reads_out";
-  #$reads_dir = "/turing/mouse129/yuan/mouse/sanger_mouse/input_dir/reads_dir" if $tmp_dir =~ /turing/;
+  $reads_dir = "[reads_dir]/reads_out";
   #job 1 somehow failed with memory 7 GB, so sent to turing, but only maxmem 3GB
 
   my %rec_id_name;
@@ -160,15 +168,12 @@ sub get_flanking_seq_qual {
 
 sub make_reads_file {
   ##use turing run all seq_region_ids
-  ##before run, run this first: /nfs/team71/psg/zn1/bin/tag.pl try.fastq > readname.tag
   my $self = shift;
   my $rec_seq_region_id = shift;
   my $queue = shift;
   my $tmp_dir = $self->{'tmpdir'};
   my $tmp_file = $self->{'tmpfile'};
-  #my $reads_dir = "/turing/mouse129/yuan/mouse/sanger_mouse/input_dir";
-  #my $reads_dir = "/turing/mouse129_extra/yuan/human_celera/dani/reads_dir/venter";
-  my $reads_dir = "/turing/mouse129_extra/yuan/tetraodon";
+  my $reads_dir = "[reads_dir]";
 
   my $defined_table_row = 100000;
   my (@big_seq_region_id,@small_seq_region_id);
@@ -195,13 +200,10 @@ sub make_reads_file {
     dumpSQL($self->{'dbSara'},qq{SELECT DISTINCT query_name FROM snp_pos_$seq_region_id});
 
     system("sort $tmp_dir/$tmp_file |uniq >$reads_dir/reads_dir/reads_name_$seq_region_id");
-    #system("/nfs/team71/psg/zn1/bin/tag.pl $reads_dir/*.fastq > $reads_dir/readname.tag");
 
     #my $seq_region_id="missed";
     ###needs 50GB memeory to run search_read (for any size of reads_name)
-    #system("bsub -q hugemem -R'select[mem>50000] rusage[mem=50000]' -J reads_file_$seq_region_id -o $reads_dir/reads_dir/out_reads_file_$seq_region_id /nfs/team71/psg/zn1/bin/search_read -fastq 1 $reads_dir/reads_dir/reads_name_$seq_region_id $reads_dir/reads_dir/reads_out_$seq_region_id $reads_dir/readname.tag $reads_dir/*fastq");
-
-    system("bsub -q hugemem -R'select[mem>50000] rusage[mem=50000]' -J reads_file_$seq_region_id -o $reads_dir/reads_dir/out_reads_file_$seq_region_id /nfs/acari/yuan/ensembl/src/ensembl-variation/scripts/ssahaSNP/ssaha_pileup/get_seqreads-turing $reads_dir/reads_dir/reads_name_$seq_region_id $reads_dir/genome-reads.fastq $reads_dir/reads_dir/reads_out_$seq_region_id");
+    system("bsub -q hugemem -R'select[mem>50000] rusage[mem=50000]' -J reads_file_$seq_region_id -o $reads_dir/reads_dir/out_reads_file_$seq_region_id $getseqreads $reads_dir/reads_dir/reads_name_$seq_region_id $reads_dir/genome-reads.fastq $reads_dir/reads_dir/reads_out_$seq_region_id");
     if ($? == -1) {
       print "failed to execute: $!\n";
     }
@@ -221,10 +223,9 @@ sub make_reads_file {
     system("sort $tmp_dir/$tmp_file |uniq >>$reads_dir/reads_dir/reads_name_small");
 
   }
-  ###needs 50GB memeory to run search_read (for any size of reads_name)    
-  #system("bsub -q hugemem -R'select[mem>130000] rusage[mem=130000]' -J reads_file_small -o $reads_dir/reads_dir/out_reads_file_small /nfs/team71/psg/zn1/bin/search_read -fastq 1 $reads_dir/reads_dir/reads_name_small $reads_dir/reads_dir/reads_out_small $reads_dir/readname.tag $reads_dir/*fastq");
+  ###needs 50GB memeory to run search_read (for any size of reads_name)
 
-  system("bsub -q hugemem -R'select[mem>50000] rusage[mem=50000]' -J reads_file_small -o $reads_dir/reads_dir/out_reads_file_small /nfs/acari/yuan/ensembl/src/ensembl-variation/scripts/ssahaSNP/ssaha_pileup/get_seqreads-turing $reads_dir/reads_dir/reads_name_small $reads_dir/genome-reads.fastq $reads_dir/reads_dir/reads_out_small");
+  system("bsub -q hugemem -R'select[mem>50000] rusage[mem=50000]' -J reads_file_small -o $reads_dir/reads_dir/out_reads_file_small $getseqreads $reads_dir/reads_dir/reads_name_small $reads_dir/genome-reads.fastq $reads_dir/reads_dir/reads_out_small");
   if ($? == -1) {
     print "failed to execute: $!\n";
   }
@@ -238,20 +239,16 @@ sub make_reads_file {
 
   my $call1 = "bsub -q hugemem -R'select[mem>100] rusage[mem=100]' -K -w 'done(reads_file*)' -J waiting_process sleep 1"; #waits until all variation features have finished to continue
   system($call1);
-  system("scp $reads_dir/reads_dir/reads_out_* farm-login:/lustre/scratch1/ensembl/yuan/tmp/tetraodon/reads_out");
+  system("scp $reads_dir/reads_dir/reads_out_* [reads_out_dir]");
   #return ("$reads_dir/reads_dir/reads_out_$seq_region_id$t\_000.fastq");
 
 }
 
 sub make_pileup_reads_file {
   ##use turing run all chromosomes
-  ##before run, run this first: /nfs/team71/psg/zn1/bin/tag.pl try.fastq > readname.tag
   my $self = shift;
   my $tmp_dir = $self->{'tmpdir'};
   my $tmp_file = $self->{'tmpfile'};
-  my $fastq_dir = "/turing/mouse129_extra/yuan/watson/fastq";
-  my $output_dir = "/turing/mouse129_extra/yuan/watson/output_dir";
-  my $target_dir = "/turing/mouse129_extra/yuan_watson/target_dir";
   
   opendir DIR, "$output_dir" or die "Failed to open dir : $!";
   my @reads_dirs = grep /dir$/, readdir(DIR);
@@ -263,7 +260,7 @@ sub make_pileup_reads_file {
     debug("chr is $chr Get reads fastq for $read_dir...");
 
     ###needs 50GB memeory to run search_read (for any size of reads_name)
-    system("bsub -q hugemem -R'select[mem>60000] rusage[mem=60000]' -J reads_file_$read_dir -o $output_dir/$read_dir/out_reads_file_$chr /nfs/team71/psg/zn1/bin/search_read -fastq 1 $output_dir/$read_dir/$chr\_read_name $output_dir/$read_dir/reads_out_$chr $fastq_dir/readname.tag $fastq_dir/*fastq");
+    system("bsub -q hugemem -R'select[mem>60000] rusage[mem=60000]' -J reads_file_$read_dir -o $output_dir/$read_dir/out_reads_file_$chr $search_read -fastq 1 $output_dir/$read_dir/$chr\_read_name $output_dir/$read_dir/reads_out_$chr $fastq_dir/readname.tag $fastq_dir/*fastq");
 
     if ($? == -1) {
       print "failed to execute: $!\n";
@@ -280,7 +277,7 @@ sub make_pileup_reads_file {
     if (! -e "$output_dir/$read_dir/reads_out_$chr\.fastq") {
       system("cat $output_dir/$read_dir/reads_out_$chr\_*.fastq >$output_dir/$read_dir/reads_out_$chr\.fastq");
     }
-    system("bsub -q hugemem -M20000000 -R'select[mem>20000] rusage[mem=20000]' -o $output_dir/$read_dir/out_$chr\_SNP /nfs/team71/psg/zn1/src/ssahaSNP2/parse_SNP/view_ssahaSNP/cons/ABI/ssahaSNP_cons $output_dir/$read_dir/$chr\_align $output_dir/$read_dir/$chr\_cigar $target_dir/$chr\.fa $output_dir/$read_dir/reads_out_$chr\.fastq");
+    system("bsub -q hugemem -M20000000 -R'select[mem>20000] rusage[mem=20000]' -o $output_dir/$read_dir/out_$chr\_SNP $ssahaSNP_cons $output_dir/$read_dir/$chr\_align $output_dir/$read_dir/$chr\_cigar $target_dir/$chr\.fa $output_dir/$read_dir/reads_out_$chr\.fastq");
   
   }
 }
@@ -431,8 +428,7 @@ sub read_coverage {
   my $species = $self->{'species'};
 
 
-  #my $alignment_file ="/turing/mouse129_extra/yuan/human_celera/analysis/chimp/ALIGNMENT_FILE";
-  my $alignment_file ="/lustre/work1/ensembl/yuan/rat/STAR/output_dir/ALIGNMENT_FILE";
+  my $alignment_file ="[alignment_file]";
   my $sth = $self->{'dbCore'}->prepare(qq{SELECT sr.seq_region_id,sr.name
                                  FROM   seq_region_attrib sra, attrib_type at, seq_region sr
                                  WHERE sra.attrib_type_id=at.attrib_type_id 
@@ -449,7 +445,7 @@ sub read_coverage {
 
   foreach my $seq_region_id (keys %rec_seq_region) {
     my $seq_region_name = $rec_seq_region{$seq_region_id};
-    my $call = "bsub -q bigmem -R'select[mem>3000] rusage[mem=3000]' -J $var_dbname\_read_coverage_job_$seq_region_id -o /$tmp_dir/read_coverage_out\_$seq_region_id /usr/local/bin/perl /nfs/acari/yuan/ensembl/src/ensembl-variation/scripts/import/parallel_sara_feature.pl -species $species -seq_region_name $seq_region_name -job read_coverage -alignment_file $alignment_file -tmpdir $tmp_dir -tmpfile $tmp_file";
+    my $call = "bsub -q bigmem -R'select[mem>3000] rusage[mem=3000]' -J $var_dbname\_read_coverage_job_$seq_region_id -o /$tmp_dir/read_coverage_out\_$seq_region_id perl parallel_sara_feature.pl -species $species -seq_region_name $seq_region_name -job read_coverage -alignment_file $alignment_file -tmpdir $tmp_dir -tmpfile $tmp_file";
     print "call is $call\n";
     system($call);
   }
