@@ -1,4 +1,4 @@
-#!/software/bin/perl
+#!perl -w
 
 use strict;
 
@@ -121,6 +121,7 @@ create_fixed_annotation($root,$lrg_id,$genomic_file,$exon_file,$cdna_file,$pepti
 
 if (!$skip_updatable) {
 
+	# This will always be called to update the modification date and Ensembl version info. If $use_existing_mapping is true and $replace_annotations is false, then those changes are the only ones that will be made
 	create_updatable_annotation($root,$use_existing_mapping,$replace_annotations,$LRGMapping::dbCore_rw->get_SliceAdaptor());
 
 	# Move annotations that should be "unbranded" to the LRG section and do consistency checking between these NCBI and Ensembl annotations
@@ -388,29 +389,32 @@ sub create_fixed_annotation {
 	$coding_region_node->addData({'start' => $coding_start_lrg, 'end' => $coding_end_lrg});
 }
 
+#ÊThis routine will create the updatable annotation section if necessary and the Ensembl annotation_set.
+# If second parameter is true, no mapping will be performed but the pre-existing one will be used. If it is false, a new mapping to the db assembly will be made
+#ÊIf the third parameter is true, new annotations will be fetched from the database and replace the existing ones
 sub create_updatable_annotation {
 	my $root = shift;
-	my $use_existing_mapping = defined(shift);
-	my $replace_annotations = defined(shift);
+	my $use_existing_mapping = shift;
+	my $replace_annotations = shift;
 	my $slice_adaptor = shift;
 	
 	my $genomic_sequence = $root->findNode('fixed_annotation/sequence')->content();
 	
 	my $current;
+	
+	#ÊAdd the updatable_annotation element if not present
 	my $annotation_node = $root->findOrAdd('updatable_annotation');
+	
+	#ÊGet the Ensembl annotation_set if it's present
 	my $annotation_set_nodes = $annotation_node->findNodeArray('annotation_set');
 	my $annotation_set_ensembl;
-	
 	foreach my $asn (@{$annotation_set_nodes}) {
 		my $src = $asn->findNode('source');
 		if ($src && $src->findNode('name')->content() eq 'Ensembl') {
 			$annotation_set_ensembl = $asn;
 		}
 	}
-	
-# Ensembl annotation_set	
-	
-# source
+	# If not, create it
 	if(!$annotation_set_ensembl) {
 		$annotation_set_ensembl = $annotation_node->addNode('annotation_set');
 		$current = $annotation_set_ensembl->addNode('source');	
@@ -419,27 +423,36 @@ sub create_updatable_annotation {
 		$current = $current->addNode('contact');
 		$current->addNode('name')->content('Ensembl Variation');
 		$current->addNode('address')->content('European Bioinformatics Institute');
-		$current->addNode('email')->content('ensembl-variation@ebi.ac.uk');
+		$current->addNode('email')->content('helpdesk@ensembl.org');
 	}
 	$current = $annotation_set_ensembl;
 	
 # Update the comment field to indicate which Ensembl release was used
-	$current->findOrAdd('comment')->content('Annotation is based on Ensembl release ' . $LRGMapping::dbCore_ro->get_MetaContainerAdaptor()->get_schema_version());
+	$annotation_set_ensembl->findOrAdd('comment')->content('Annotation is based on Ensembl release ' . $LRGMapping::dbCore_ro->get_MetaContainerAdaptor()->get_schema_version());
 	
-# update the modification date
-	$current->findOrAdd('modification_date')->content($root->date);
+# Update the modification date
+	$annotation_set_ensembl->findOrAdd('modification_date')->content($root->date);
 
-# other exon naming
-	$current->findOrAdd('other_exon_naming');
+# Add other exon naming element
+	$annotation_set_ensembl->findOrAdd('other_exon_naming');
 
-# other exon naming
-	$current->findOrAdd('alternate_amino_acid_numbering');
 
-# add a mapping node
-	my $mapping_node = $annotation_node->findOrAdd('mapping');
+	# If no annotations will be added and no new mapping will be performed, we should return here
+	if ($use_existing_mapping && !$replace_annotations) {
+		
+		# Add alternative amino acid numbering element
+		$annotation_set_ensembl->findOrAdd('alternate_amino_acid_numbering');
+		
+		return;
+	}
+
+# Get the mapping node corresponding to the db assembly if it exists
+	my $mapping_node = $annotation_set_ensembl->findNode('mapping',{'assembly' => $assembly});
 	my $chr_id;
-# run the mapping sub-routine. unless we want to use the mapping already made, this should allow for multiple mappings. Only the most_recent mapping should be used for getting annotations though.
+	
+# Run the mapping sub-routine. unless we want to use the mapping already made, this should allow for multiple mappings. Only the most_recent mapping should be used for getting annotations though.
 	my $mapping;
+	#ÊIf a new mapping should be made
 	if (!$use_existing_mapping) {
 		# Run ssaha2 to map and the result is a reference to a hash
 		$mapping = LRGMapping::mapping($genomic_sequence);
@@ -448,12 +461,17 @@ sub create_updatable_annotation {
 		
 		# Create a mapping node from the pairs array
 		my $new_node = LRGMapping::pairs_2_mapping($pairs,$assembly,$chr_id,($assembly eq $CURRENT_ASSEMBLY));
+		
 		# Remove the old one and replce it with the newly created one
-		my $parent = $mapping_node->parent();
-		$mapping_node->remove();
-		$parent->addExisting($new_node);
+		$mapping_node->remove() if (defined($mapping_node));
+		$annotation_set_ensembl->addExisting($new_node);
 	}
+	#ÊElse, get the already existing one, corresponding to the db assembly and parse it
 	else {
+		# Die if no existing mapping could be found
+		die("Could not find any pre-existing genomic mapping for " . $LRGMapping::lrg_name . " to $assembly assembly") unless (defined($mapping_node));
+		
+		# Else, parse the mapping
 		$chr_id = $mapping_node->data->{'chr_name'};
 		my $chr_start = $mapping_node->data->{'start'};
 		my $chr_end = $mapping_node->data->{'end'};
@@ -462,16 +480,20 @@ sub create_updatable_annotation {
 		$mapping = LRGMapping::mapping_2_pairs($mapping_node,$genomic_sequence,$chr_seq);
 	}
 	
-# get annotations
+	# Add alternative amino acid numbering element
+	$annotation_set_ensembl->findOrAdd('alternate_amino_acid_numbering');
+	
+	#ÊIf we will not fetch annotations, we're done
+	return if (!$replace_annotations);
+	
+	# Get annotations
 	my @feature_nodes = @{LRGMapping::get_annotations($LRGMapping::lrg_name,'lrg',$chr_id,length($genomic_sequence),$mapping)};
 
-# add features node
-	if ($replace_annotations) {
-		my $feat_node = $current->findNode('features');
-		$feat_node->remove() unless !defined($feat_node);
-	}
-	$current = $current->findOrAdd('features');
-
+	# add features node
+	my $feat_node = $annotation_set_ensembl->findNode('features');
+	$feat_node->remove() if(defined($feat_node));
+	$feat_node = LRG::Node->new('features');
+	
 	my $fixed_transcripts = $root->findNode('lrg/fixed_annotation')->findNodeArray('transcript');
 
 # add the features returned from get_annotations
@@ -499,10 +521,18 @@ sub create_updatable_annotation {
 					last if ($lrg_gene);
 				}
 			}
-			$tag->remove() unless ($lrg_gene);
+			# Move the lrg_gene_name tag to the annotation_set node
+			$tag->remove();
+			if ($lrg_gene) {
+				#ÊRemove any existing lrg_gene_name tag
+				my $old_tag = $annotation_set_ensembl->findNode('lrg_gene_name');
+				$old_tag->remove() if (defined($old_tag));
+				$annotation_set_ensembl->addExisting($tag);
+			}
 		}
-		$current->addExisting($feature);
+		$feat_node->addExisting($feature);
 	}
+	$annotation_set_ensembl->addExisting($feat_node);
 }
 
 sub match_fixed_annotation_transcripts {
