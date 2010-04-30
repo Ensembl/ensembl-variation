@@ -11,7 +11,7 @@ my $path;
 
 #
 # This is how I run it for version 44
-# bsub -q normal -W2:00 perl upgrade_resequencing_files.pl -path /lustre/scratch1/ensembl/dr2/release-44/homo_sapiens_variation_44_36f/ -version 44
+# bsub -q normal -W2:00 perl upgrade_resequencing_files.pl -path [path_dir] -version 44
 #
 
 GetOptions('path=s'     => \$path,

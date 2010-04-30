@@ -52,6 +52,6 @@ my $sthc = $dbCore->prepare(qq{select sr.seq_region_id
                               });
 $sthc->execute();
 while (my ($seq_region_id) = $sthc->fetchrow_array()) {
-  my $call = "bsub -q long -R'select[mem>2000] rusage[mem=2000]' -e $TMP_DIR/repeat_filter_err -o $TMP_DIR/repeat_filter_out /nfs/acari/yuan/ensembl/src/ensembl-variation/scripts/import/repeats_filter.pl -species $species -tmpdir $TMP_DIR -tmpfile $TMP_FILE -seq_region_id $seq_region_id";
+  my $call = "bsub -q long -R'select[mem>2000] rusage[mem=2000]' -e $TMP_DIR/repeat_filter_err -o $TMP_DIR/repeat_filter_out $Bin/repeats_filter.pl -species $species -tmpdir $TMP_DIR -tmpfile $TMP_FILE -seq_region_id $seq_region_id";
   system($call);
 }

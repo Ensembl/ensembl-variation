@@ -9,7 +9,7 @@ use FindBin qw( $Bin );
 
 
 ##
-##  run with bsub -q long -W14:00 -o /lustre/scratch1/ensembl/dr2/tag_snps/output_tag.txt perl create_ld_table.pl -tmpdir /lustre/scratch1/ensembl/dr2/tag_snps
+##  run with bsub -q long -W14:00 -o [tmpdir]/output_tag.txt perl create_ld_table.pl -tmpdir [tmpdir]
 ##  -tmpfile tag_snps.txt
 use constant MAX_SIZE => 500_000_000;
 my ($TMP_DIR, $TMP_FILE, $species);

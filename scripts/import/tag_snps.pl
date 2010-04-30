@@ -22,7 +22,7 @@ warn("Make sure you have a updated ensembl.registry file!\n");
 my $registry_file ||= $Bin . "/ensembl.registry";
 
 ##
-## bsub -q long -W12:00 -o /lustre/scratch1/ensembl/dr2/tag_snps/output_tag.txt perl tag_snps.pl -tmpdir /lustre/scratch1/ensembl/dr2/tag_snps -tmpfile tag_snps.txt
+## bsub -q long -W12:00 -o [tmpdir]/output_tag.txt perl tag_snps.pl -tmpdir [tmpdir]/tag_snps -tmpfile tag_snps.txt
 ##
 Bio::EnsEMBL::Registry->load_all( $registry_file );
 
