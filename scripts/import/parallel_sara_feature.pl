@@ -17,9 +17,7 @@ use Bio::EnsEMBL::Utils::Exception qw(warning throw verbose);
 use Bio::EnsEMBL::Utils::Sequence qw(expand reverse_comp);
 use ImportUtils qw(debug load create_and_load dumpSQL);
 
-our ($TMP_DIR, $TMP_FILE, $SEQ_REGION_ID, $SEQ_REGION_NAME, $species, $VAR_DBNAME, $JOB, $alignment_file,%CACHE);
-#my $index_filename = "/ecs2/scratch6/yuan/rat/CELERA/reads/index";
-#my $fastq_index = Bio::Index::Fastq->new(-filename => $index_filename);
+our ($TMP_DIR, $TMP_FILE, $SEQ_REGION_ID, $SEQ_REGION_NAME, $species, $VAR_DBNAME, $JOB, $alignment_file,%CACHE,$index_filename);
 
 {
 
@@ -30,6 +28,7 @@ our ($TMP_DIR, $TMP_FILE, $SEQ_REGION_ID, $SEQ_REGION_NAME, $species, $VAR_DBNAM
 	     'seq_region_name=s' => \$SEQ_REGION_NAME,
 	     'job=s'     => \$JOB,
 	     'alignment_file=s' =>\$alignment_file,
+		 'index_file=s' => \$index_filename,
 	     );
 
 
@@ -249,7 +248,7 @@ sub flanking_qual {
   #  debug("table flanking_qual_$SEQ_REGION_ID already exist");
   #  return;
   #}
-  my $index_file = "/lustre/work1/ensembl/yuan/SARA/tetraodon/fastq/index_file";
+  my $index_file = $index_filename;
   system("lsrcp $index_file\.pag /tmp/index_file\_$SEQ_REGION_ID\.pag");
   system("lsrcp $index_file\.dir /tmp/index_file\_$SEQ_REGION_ID\.dir");
   unlink "$TMP_DIR/flanking_qual_error" if (-e "$TMP_DIR/flanking_qual_error");
@@ -296,9 +295,6 @@ sub flanking_qual {
 sub get_pfetch_sequence_and_quality {
     my $query_name = shift;
     my $index_filename = "/tmp/index_file_$SEQ_REGION_ID";
-    #my $index_filename = "/turing/mouse129_extra/yuan/human_celera/fastq/index_file";
-    #my $index_filename = "/gvar/hum-snp5/yuan/fastq/index_file";
-    #my $index_filename = "/ecs2/scratch6/yuan/rat/CELERA/reads/index";
     my $fastq_index = Bio::Index::Fastq->new(-filename => $index_filename);
 
     if (! defined($fastq_index)) {

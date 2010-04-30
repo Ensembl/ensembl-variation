@@ -1,5 +1,5 @@
 #! /usr/local/bin/perl
-#example: ./fetch_base_qual.pl 19866807248411 -1 11
+#example: ./fetch_base_qual.pl -i [index_file] -r [reads_file] 19866807248411 -1 11
 
 use strict;
 use warnings;
@@ -7,6 +7,14 @@ use warnings;
 use Bio::EnsEMBL::Registry;
 use Bio::Index::Fastq;
 use Bio::EnsEMBL::Utils::Sequence qw(expand reverse_comp);
+use Getopt::Long;
+
+our ($index_file, $reads_file);
+
+GetOptions(
+    'index_file=s' => \$index_file,
+	'reads_file=s'  => \$reads_file
+);
 
 my ($query_name,$query_strand,$snp_pos,$new) = @ARGV;
 my $flank;
@@ -19,14 +27,8 @@ print "flanking_5_qual is @$flank_5_qual and flanking_3_qual is @$flank_3_qual, 
 
 sub get_pfetch_sequence_and_quality {
     my $query_name = shift;
-    #my $index_filename = "/tmp/index_file_$SEQ_REGION_ID";
-    #my $index_filename = "/turing/mouse129_extra/yuan/human_celera/fastq/index_file";
-    #my $index_filename = "/gvar/hum-snp5/yuan/fastq/index_file";
-    #my $index_filename = "/lustre/work1/ensembl/yuan/ecs2/scratch6/yuan/rat/CELERA/reads/index_file";
-    my $index_filename = "/lustre/work1/ensembl/yuan/SARA/human_celera/reads/index_tmp";
-    #my $index_filename = "/lustre/work1/ensembl/dr2/data/Venter/index_file";
-    #my $index_filename = "/lustre/work1/ensembl/yuan/SARA/mouse/sanger_mouse/input_dir/129X1-SvJ/index_file";
-    my $fastq_index = Bio::Index::Fastq->new(-filename => $index_filename);
+    
+    my $fastq_index = Bio::Index::Fastq->new(-filename => $index_file);
 
     my $seq = $fastq_index->fetch($query_name);
 
@@ -36,7 +38,6 @@ sub get_pfetch_sequence_and_quality {
 sub get_flanking_seq1 {
   my ($query_name,$query_strand,$snp_pos) = @_;
   my ($qual_5,$qual_3,$snp_base,$snp_qual,$start,$end);
-  my $reads_file = "/lustre/scratch1/ensembl/yuan/tmp/mouse/reads_out/reads_out_10_000.fastq";
   
   my ($REC_SEQ,$REC_QUAL) = make_seq_qual_hash($reads_file);
   my %REC_SEQ = %$REC_SEQ;
