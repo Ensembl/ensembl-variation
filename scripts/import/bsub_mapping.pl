@@ -1,6 +1,6 @@
 #! /usr/local/ensembl/bin/perl
 #
-#./bsub_mapping.pl -species mouse -job flank -tmpdir /lustre/scratch1/ensembl/yuan/tmp/mouse -tmpfile patric_mapping
+#./bsub_mapping.pl -species mouse -job flank -tmpdir [tmp_dir] -tmpfile patric_mapping
 
 use strict;
 #use DBH;
