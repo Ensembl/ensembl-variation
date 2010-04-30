@@ -1,4 +1,4 @@
-#!/software/bin/perl
+#!perl
 
 use strict;
 
@@ -7,7 +7,7 @@ use LRG::LRG;
 
 
 # Default options
-my $lrg_directory = '/ebi/ftp/pub/databases/lrgex/';
+my $lrg_directory;
 my $lrg_name;
 my $lrg_file;
 my $help;

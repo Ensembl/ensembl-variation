@@ -1,11 +1,6 @@
-#!/software/bin/perl
+#!perl
 
 use strict;
-#use lib '/homes/wm2/Ensembl/CheckedOut/ensembl-variation/scripts/import/LRG';
-#use lib '/homes/wm2/src/lib/perl5/site_perl/5.8.8/';
-#use lib '/nfs/users/nfs_i/ianl/ensembl-live/ensembl/modules/';
-use lib "$ENV{HOME}/src/ensembl_head/ensembl-variation/scripts/import/LRG/";
-use lib "$ENV{HOME}/src/ensembl_head/ensembl/modules/";
 
 use Getopt::Long;
 use LRG;
@@ -311,7 +306,6 @@ foreach  my $span(@{$mapping_node->{'nodes'}}) {
 }
 
 
-## This is based on Ian's script (/nfs/users/nfs_i/ianl/ensembl-LRG/LRG_1.pl) to get transcripts etc into core db
 my $analysis_id;
 my $analysis_description = q{
   Data from LRG database
