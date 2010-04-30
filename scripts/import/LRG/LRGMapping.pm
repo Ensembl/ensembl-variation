@@ -3,8 +3,6 @@ use warnings;
 
 package LRGMapping;
 
-#Êuse lib '/nfs/acari/dr2/projects/src/ensembl/ensembl/modules';
-
 use Bio::EnsEMBL::LRGSlice;
 use Bio::EnsEMBL::MappedSliceContainer;
 use Bio::EnsEMBL::DBSQL::DBConnection;
@@ -16,13 +14,15 @@ use List::Util qw (min max);
 
 
 # global variables
-#our $input_dir = '/tmp';
-#our $output_dir = '/tmp';
 
-our $input_dir = '/lustre/scratch103/ensembl/pl4/tmp';
-our $output_dir = '/lustre/scratch103/ensembl/pl4/tmp';
+our $MIN_GAP_BETWEEN_SPANS = 1000;
 
-our $target_dir = '/lustre/work1/ensembl/yuan/SARA/human/ref_seq_hash';
+our $SSAHA_BIN = 'ssaha2';
+
+our $input_dir;
+our $output_dir;
+
+our $target_dir;
 our %rec_seq;
 
 #ÊKeep different db connections for a core db with write access to and one with read-only access
@@ -34,6 +34,18 @@ our $registry_file;
 our $current_assembly;
 
 our $mapping_num = 1;
+
+our $FARM_MEMORY = 4000;
+our %SSAHA_PARAMETERS = (
+  '-align' 	=> '1',
+  '-kmer' 	=> '12',
+  '-seeds' 	=> '25',
+  '-cut' 	=> '1000',
+  '-output' 	=> 'vulgar',
+  '-depth'	=> '5',
+  '-best' 	=> '1',
+  '-memory'	=> '1000'
+);
 
 sub mapping {
   my $lrg_seq = shift;
@@ -165,12 +177,13 @@ sub ssaha_mapping {
   print OUT '>', $name, "\n", $sequence;
   close OUT;
   	
-  my $queue = "-q normal -R'select[mem>4000] rusage[mem=4000]' -M4000000";
+  my $queue = "-q normal -R'select[mem>" . $FARM_MEMORY . "] rusage[mem=" . $FARM_MEMORY . "]' -M" . $FARM_MEMORY . "000";
   	
   my $output_file_name = "ssaha2_output\_$input_file_name";
   my $input_file = "$input_dir/$input_file_name";
   my $output_file ="$output_dir/$output_file_name";
-  	
+  my $wait_output = "$input_dir/$$.waiting.out";
+  
   my ($subject, %rec_find, %input_length, %done);
   	
   $subject = "$target_dir/ref";
@@ -178,10 +191,25 @@ sub ssaha_mapping {
   my $seqobj = Bio::PrimarySeq->new(-id => $name, -seq => $rec_seq{$name});
   $rec_seq{$name} = $seqobj;
   	
-  bsub_ssaha_job($queue,$input_file,$output_file,$subject);
+  my $error_file = bsub_ssaha_job($queue,$input_file,$output_file,$subject);
   
-  my $call = "bsub -o $input_dir/$$.waiting.out -P ensembl-variation -K -w 'done($input_file\_ssaha_job)' -J waiting_process sleep 1"; #waits until all ssaha jobs have finished to continue
+  my $call = "bsub -o $wait_output -K -w 'done($input_file\_ssaha_job)' -J waiting_process sleep 1"; #waits until all ssaha jobs have finished to continue
   system($call);
+  
+  # Check the error file
+  my @error;
+  open(IN,"<",$error_file) or die ("Could not read from error file $error_file");
+  while (<IN>) {
+    chomp;
+    push(@error,$_);
+  }
+  close(IN);
+  
+  if (scalar(@error)) {
+    print STDERR "*** ERROR ***\nssaha2 generated the following error:\n";
+    print STDERR "\t" . join("\n\t",@error) . "\n";
+    print STDERR "*************\n";
+  }
   
   # check the output file
   open IN, $output_file or die("Could not read from output file $output_file\n");
@@ -200,6 +228,11 @@ sub ssaha_mapping {
   
   my $mapping = parse_ssaha2_out($output_file);
   
+  unlink($output_file);
+  unlink($input_file);
+  unlink($error_file);
+  unlink($wait_output);
+  
   return $mapping;
 }
 
@@ -210,13 +243,20 @@ sub bsub_ssaha_job {
   my $host = `hostname`;
   chomp $host;
   
-  my $ssaha_command = "/nfs/users/nfs_y/yuan/ensembl/src/ensembl-variation/scripts/ssahaSNP/ssaha2/ssaha2_v1.0.9_x86_64/ssaha2";
-  $ssaha_command .= " -align 1 -kmer 12 -seeds 4 -cut 1000 -output vulgar -depth 10 -best 1 -save $subject $input_file";
+  my $error_file = "$output_dir/error_ssaha";
+  unlink($error_file);
+  
+  my $ssaha_command = "$SSAHA_BIN";
+  while (my ($param,$val) = each(%SSAHA_PARAMETERS)) {
+    $ssaha_command .= " $param $val";
+  }
+  $ssaha_command .= " -save $subject $input_file";
 #  my $call = "echo '$ssaha_command; scp $output_file $host:$input_dir/' | bsub -E 'scp $host:$input_file $input_dir/' -J $input_file\_ssaha_job -P ensembl-variation $queue -e $output_dir/error_ssaha -o $output_file";
-  my $call = "echo '$ssaha_command' | bsub -J $input_file\_ssaha_job -P ensembl-variation $queue -e $output_dir/error_ssaha -o $output_file";
+  my $call = "echo '$ssaha_command' | bsub -J $input_file\_ssaha_job $queue -e $error_file -o $output_file";
 	
   system ($call);
 #  print $call, "\n";
+  return $error_file;
 }
 
 # subroutine to parse the output from ssaha2
@@ -395,8 +435,8 @@ sub parse_vulgar_string {
 	($t_strand > 0 ? $t_start + $t_offset : $t_end - $t_offset - $t_len + 1),
 	($t_strand > 0 ? $t_start + $t_offset + $t_len - 1 : $t_end - $t_offset),
 	$q_strand,
-	($q_len == 0 ? $gap_string : substr($q_seq,$q_start + $q_offset -1,$q_len)),
-	($t_len == 0 ? $gap_string : substr($t_seq,1 + $t_offset -1,$t_len))
+	($q_len == 0 ? '' : substr($q_seq,$q_start + $q_offset -1,$q_len)),
+	($t_len == 0 ? '' : substr($t_seq,1 + $t_offset -1,$t_len))
       ];
       push(@pairs,$pair);
     }
@@ -448,7 +488,14 @@ sub get_annotations {
   
   #ÊTry to fetch a slice for the LRG (from the read-write db), this should be possible if an entry exists in the core db
   my $sa_rw = $dbCore_rw->get_SliceAdaptor();
-  my $lrg_slice = $sa_rw->fetch_by_region($lrg_coord_system_name,$lrg_name);
+  # Since this method dies if not successful, wrap it in an eval block
+  my $lrg_slice;
+  eval {
+    $lrg_slice = $sa_rw->fetch_by_region($lrg_coord_system_name,$lrg_name);
+  };
+  if ($@) {
+    print "Could not create LRG slice, will add mapping to db\n";
+  }
  
   # If it failed, insert mapping data to the core db. 
   if (!defined($lrg_slice)) {
@@ -974,10 +1021,6 @@ sub mapping_2_pairs {
   # Loop over the mapping spans and create the pairs array
   my @pairs;
   my $mapping_spans = $mapping_node->findNodeArray('mapping_span');
-  my $last_lrg_start;
-  my $last_lrg_end;
-  my $last_chr_start;
-  my $last_chr_end;
   my $last_strand = 1;
   my $chr_name = $mapping_node->data->{'chr_name'};
   my $chr_offset_start = $mapping_node->data->{'chr_start'};
@@ -992,6 +1035,15 @@ sub mapping_2_pairs {
     my $chr_end = $span->data->{'end'};
     my $strand = $span->data->{'strand'};
     
+    my $dna_pair = [
+      'DNA',
+      $lrg_start,
+      $lrg_end,
+      $chr_start,
+      $chr_end,
+      $strand
+    ];
+    
     # Store the extreme points of the LRG
     $lrg_offset_start = min($lrg_offset_start,$lrg_start);
     $lrg_offset_end = max($lrg_offset_end,$lrg_end);
@@ -1002,97 +1054,58 @@ sub mapping_2_pairs {
       $last_strand = $strand;
     }
     
-    #ÊTwo mapping spans are separated by a gap, so check if we need to add that
-    if (defined($last_lrg_start)) {
-      my $lrgstring;
-      my $chrstring;
-      my $gaplen = max($lrg_start - $last_lrg_end,($strand > 0 ? $chr_start - $last_chr_end : $last_chr_start - $chr_end)) - 1;
-      # If the LRG has an insertion relative to the reference, get the string
-      if ($lrg_start - $last_lrg_end > 1 && defined($lrg_seq)) {
-	$lrgstring = substr($lrg_seq,$last_lrg_end,$lrg_start - $last_lrg_end - 1);
-      }
-      # Else, if the LRG has a deletion, create a gap string of the same length as the deletion
-      elsif ($lrg_start - $last_lrg_end == 1) {
-	$lrgstring = '-' x $gaplen;
-      }
-      
-      # If the reference has an insertion
-      if (
-	  defined($chr_seq) && (
-	    ($strand > 0 && ($chr_start - $last_chr_end) > 1) ||
-	    ($strand < 0 && ($last_chr_start - $chr_end) > 1)
-	  )
-	 ) {
-	if ($strand > 0) {
-	  $chrstring = substr($chr_seq,$last_chr_end-$chr_offset_start+1,$chr_start - $last_chr_end - 1);
-	}
-	else {
-	  $chrstring = substr($chr_seq,$chr_offset_end-$chr_end-1,$last_chr_start - $chr_end - 1);
-	}
-      }
-      #ÊElse, create a gap string
-      elsif (
-	      ($strand > 0 && ($chr_start - $last_chr_end) == 1) ||
-	      ($strand < 0 && ($last_chr_start - $chr_end) == 1)
-	    ) {
-	$chrstring = '-' x $gaplen;
-      }
-      
-      my $gap_pair = [
-	'G',
-	$last_lrg_end + 1,
-	$lrg_start - 1,
-	($strand > 0 ? $last_chr_end + 1 : $chr_end + 1),
-	($strand > 0 ? $chr_start - 1 : $last_chr_start - 1),
-	$strand,
-	$lrgstring,
-	$chrstring
-      ];
-      
-      push(@pairs,$gap_pair);
-    }
-    
-    my $pair = [
-      'DNA',
-      $lrg_start,
-      $lrg_end,
-      $chr_start,
-      $chr_end,
-      $strand
-    ];
-    push(@pairs,$pair);
-    
-    # Store these coordinates in the last_* variables
-    $last_lrg_start = $lrg_start;
-    $last_lrg_end = $lrg_end;
-    $last_chr_start = $chr_start;
-    $last_chr_end = $chr_end;
-    
-    # Loop over any mismatch information and create pairs
+    #ÊAt each indel in the alignment, a new DNA pair is added to the array and a G(ap) pair as well
     my $diffs = $span->findNodeArray('diff');
     foreach my $diff (@{$diffs}) {
-      # So far, can only handle mismatches, die with an error if something else is encountered
-      die("Can not handle diffs of type '" . $diff->data->{'type'} . "'!") unless ($diff->data->{'type'} eq 'mismatch');
-      
-      $lrg_start = $diff->data->{'lrg_start'};
-      $lrg_end = $diff->data->{'lrg_end'};
-      $chr_start = $diff->data->{'start'};
-      $chr_end = $diff->data->{'end'};
-      my $lrg_string = $diff->data->{'lrg_sequence'};
-      my $chr_string = $diff->data->{'genomic_sequence'};
-      
-      $pair = [
-	'M',
-	$lrg_start,
-	$lrg_end,
-	$chr_start,
-	$chr_end,
-	$strand,
-	$lrg_string,
-	$chr_string
-      ];
-      push(@pairs,$pair);
-    }
+      my $pair;
+      my $diff_lrg_start = $diff->data()->{'lrg_start'};
+      my $diff_lrg_end = $diff->data()->{'lrg_end'};
+      my $diff_chr_start = $diff->data()->{'start'};
+      my $diff_chr_end = $diff->data()->{'end'};
+      my $diff_lrg_seq = $diff->data()->{'lrg_sequence'};
+      my $diff_chr_seq = $diff->data()->{'genomic_sequence'};
+      if ($diff->data()->{'type'} eq 'mismatch') {
+	$pair = [
+	  'M',
+	  $diff_lrg_start,
+	  $diff_lrg_end,
+	  $diff_chr_start,
+	  $diff_chr_end,
+	  $strand,
+	  $diff_lrg_seq,
+	  $diff_chr_seq
+	];
+	push(@pairs,$pair);
+      }
+      elsif ($diff->data()->{'type'} =~ m/[lrg|genomic]_ins/) {
+	$pair = [
+	  'G',
+	  $diff_lrg_start,
+	  $diff_lrg_end,
+	  $diff_chr_start,
+	  $diff_chr_end,
+	  $strand,
+	  $diff_lrg_seq,
+	  $diff_chr_seq
+	];
+	push(@pairs,$pair);
+	
+	# End the current DNA pair, add it to the array and start a new one
+	$dna_pair->[2] = ($diff_lrg_start - 1);
+	$dna_pair->[4] = ($diff_chr_start - 1) if ($strand > 0);
+	$dna_pair->[3] = ($diff_chr_end + 1) if ($strand < 0);
+	push(@pairs,$dna_pair);
+	$dna_pair = [
+	  'DNA',
+	  ($diff_lrg_end + 1),
+	  $lrg_end,
+	  ($strand > 0 ? ($diff_chr_end + 1) : $chr_start),
+	  ($strand > 0 ? $chr_end : ($diff_chr_start - 1)),
+	  $strand
+	];
+      }
+    } 
+    push(@pairs,$dna_pair);
   }
   
   my %mapping = (
@@ -1121,21 +1134,62 @@ sub pairs_2_mapping {
   $mapping_node->addData({'chr_id' => $chr_id}) if (defined($chr_id));
   $mapping_node->addData({'most_recent' => $most_recent}) if (defined($most_recent));
   
+  #ÊCreate a local deep copy of the array so we won't mess up the elements
+  my @pairs_array;
+  foreach my $pair (@{$pairs}) {
+    my @copy;
+    foreach my $p (@{$pair}) {
+      push(@copy,$p);
+    }
+    push(@pairs_array,\@copy);
+  }
+  
   #ÊOrder the pairs array according to ascending LRG coordinates
-  my @sorted_pairs = sort {$a->[1] <=> $b->[1]} @{$pairs};
+  my @sorted_pairs = sort {$a->[1] <=> $b->[1]} @pairs_array;
   
   # Separate the DNA chunks from mismatches in the pairs array. We will create a mapping span for each DNA chunk and include all mismatch information in this span
   # Gaps can be discarded at this point since they are implicit between DNA chunks
+  # FIXME: Gaps should be annotated as diffs, only "large" gaps (on the kb-scale) should be represented by different spans
   my @dna_chunks;
   my @mismatches;
+  my @gaps;
   while (my $pair = shift(@sorted_pairs)) {
     push(@dna_chunks,$pair) if ($pair->[0] eq 'DNA');
     push(@mismatches,$pair) if ($pair->[0] eq 'M');
+    push(@gaps,$pair) if ($pair->[0] eq 'G');
   }
   
-  # Loop over the DNA chunk array and create mapping spans and diffs as necessary 
+  # Loop over the DNA chunk array and create mapping spans and diffs as necessary
+  # FIXME: If the DNA chunks are not sufficiently far apart, continue the same mapping span but add a diff 
   my $chr_map_start = 1e11;
   my $chr_map_end = -1;
+  my $last_chr_start;
+  my $last_chr_end;
+  my $last_lrg_start;
+  my $last_lrg_end;
+  my $span_node;
+  
+  # Loop over the dna chunks and join those that are not sufficiently far apart
+  for (my $i=1; $i<scalar(@dna_chunks); $i++) {
+    # Only join if the chunks are in the same direction (i.e. no inversion)
+    if ($dna_chunks[$i]->[5] == $dna_chunks[$i-1]->[5] && ($dna_chunks[$i]->[1] - $dna_chunks[$i-1]->[2]) < $MIN_GAP_BETWEEN_SPANS) {
+      # If the orientation is the same, compare start and end coordinates
+      if ($dna_chunks[$i]->[5] > 0 && ($dna_chunks[$i]->[3] - $dna_chunks[$i-1]->[4]) < $MIN_GAP_BETWEEN_SPANS) {
+	$dna_chunks[$i-1]->[2] = $dna_chunks[$i]->[2];
+	$dna_chunks[$i-1]->[4] = $dna_chunks[$i]->[4];
+	splice(@dna_chunks,$i,1);
+	$i--;
+      }
+      # If the orientation is reversed, compare the end and start coordinates
+      if ($dna_chunks[$i]->[5] < 0 && ($dna_chunks[$i-1]->[3] - $dna_chunks[$i]->[4]) < $MIN_GAP_BETWEEN_SPANS) {
+	$dna_chunks[$i-1]->[2] = $dna_chunks[$i]->[2];
+	$dna_chunks[$i-1]->[3] = $dna_chunks[$i]->[3];
+	splice(@dna_chunks,$i,1);
+	$i--;
+      }
+      
+    }
+  }
   while (my $chunk = shift(@dna_chunks)) {
     my $lrg_start = $chunk->[1];
     my $lrg_end = $chunk->[2];
@@ -1170,6 +1224,25 @@ sub pairs_2_mapping {
 	  'genomic_sequence' => $mismatch->[7]
 	}
       );
+      
+      $span_node->addExisting($diff_node);
+    }
+    # Loop over the gaps and create diffs as necessary
+    foreach my $gap (@gaps) {
+      next unless ($gap->[1] >= $lrg_start && $gap->[2] <= $lrg_end);
+      
+      my $diff_node = LRG::Node->newEmpty('diff');
+      $diff_node->addData(
+	{
+	  'type' => ((($gap->[2] - $gap->[1]) >= 0) ? 'lrg_ins' : 'genomic_ins'),
+	  'lrg_start' => $gap->[1],
+	  'lrg_end' => $gap->[2],
+	  'start' => $gap->[3],
+	  'end' => $gap->[4]
+	}
+      );
+      $diff_node->addData({'lrg_sequence' => $gap->[6]}) if (defined($gap->[6]) && length($gap->[6]));
+      $diff_node->addData({'genomic_sequence' => $gap->[7]}) if (defined($gap->[7]) && length($gap->[7]));
       
       $span_node->addExisting($diff_node);
     }
