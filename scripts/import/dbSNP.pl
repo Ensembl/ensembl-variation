@@ -31,6 +31,7 @@ my ($TAX_ID, $LIMIT_SQL, $dbSNP_BUILD_VERSION, $TMP_DIR, $TMP_FILE, $MAPPING_FIL
 my ($species,$limit);
 my($dshost, $dsuser, $dspass, $dsport, $dsdbname);
 my $registry_file;
+my $sql_driver;
 
 GetOptions('species=s'      => \$species,
 	   'dbSNP_version=s'=> \$dbSNP_BUILD_VERSION, ##such as b125
@@ -44,7 +45,8 @@ GetOptions('species=s'      => \$species,
 	   'dspass=s' => \$dspass,
 	   'dsport=i' => \$dsport,
 	   'dsdbname=s' => \$dsdbname,
-	   'registry_file=s' => \$registry_file
+	   'registry_file=s' => \$registry_file,
+	   'sql_driver' => \$sql_driver
 	  );
 
 # Checking that some necessary arguments have been provided
@@ -52,9 +54,13 @@ die("Must know the master schema database, use -master_schema_db option!") unles
 die("You must specify the dbSNP mirror host, user, pass, db and build version (-dshost, -dsuser, -dspass, -dsdbname and -dbSNP_version options)") unless (defined($dshost) && defined($dsuser) && defined($dspass) && defined($dsdbname) && defined($dbSNP_BUILD_VERSION));
 die("You must specify a temp dir and temp file (-tmpdir and -tmpfile options)") unless(defined($ImportUtils::TMP_DIR) && defined($ImportUtils::TMP_FILE));
 die("You must specify the species. Use -species option") unless (defined($species));
+die("You must specify the sql driver, either through an environment variable (SYBASE) or the -sql_driver option") unless (defined($sql_driver) || defined($ENV{'SYBASE'}));
 
 warn("Note that the port for the dbSNP mirror is overridden by the freetds configuration file!\n") if (defined($dsport));
 warn("Make sure you have a updated ensembl.registry file!\n");
+
+# Set the driver
+$ENV{'SYBASE'} = $sql_driver if (defined($sql_driver));
 
 # Set default option
 $registry_file ||= $Bin . "/ensembl.registry";
