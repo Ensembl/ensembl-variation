@@ -298,7 +298,15 @@ sub fetch_all_by_VariationFeatures {
 				
 				# now go via transcript
 				foreach my $dbEntry (@{$rf->get_all_DBEntries("$species\_core_Transcript")}) {
-					my $tr = $transcript_adaptor->fetch_by_stable_id($dbEntry->primary_id); #get transcript for stable_id
+					my $tr;
+					
+					# get the gene for the stable_id
+					foreach my $t(@{$transcript_adaptor->fetch_by_stable_id($dbEntry->primary_id)}) {
+						if(defined $t && $t->stable_id eq $dbEntry->primary_id) {
+							$tr = $t;
+							last;
+						}
+					}
 					
 					next unless defined $tr;
 					
