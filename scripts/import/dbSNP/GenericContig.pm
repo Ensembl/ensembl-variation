@@ -459,27 +459,32 @@ sub population_table {
 #    $self->{'dbSNP'}->do("SET SESSION group_concat_max_len = 10000");
 
   $stmt = qq{
-             SELECT DISTINCT 
-               p.handle+':'+p.loc_pop_id,
-	       p.pop_id, 
-	       pc.pop_class_id, 
-	       pl.line
-	     FROM   
-	       Population p LEFT JOIN 
-	       $self->{'dbSNP_share_db'}..PopClass pc ON p.pop_id = pc.pop_id LEFT JOIN 
-	       PopLine pl ON p.pop_id = pl.pop_id
+            SELECT DISTINCT 
+              p.handle+':'+p.loc_pop_id,
+	      p.pop_id, 
+	      pc.pop_class_id, 
+	      pl.line,
+	      pl.line_num
+	    FROM   
+	      Population p LEFT JOIN 
+	      $self->{'dbSNP_share_db'}..PopClass pc ON p.pop_id = pc.pop_id LEFT JOIN 
+	      PopLine pl ON p.pop_id = pl.pop_id
+	    ORDER BY
+	      p.pop_id ASC,
+	      pc.pop_class_id ASC,
+	      pl.line_num ASC
             };	 #table size is small, so no need to change
     dumpSQL($self->{'dbSNP'},$stmt);
 
     debug(localtime() . "\tLoading sample data");
 
-    create_and_load( $self->{'dbVar'}, "tmp_pop", "name", "pop_id i*", "pop_class_id i*", "description l" );
+    create_and_load( $self->{'dbVar'}, "tmp_pop", "name", "pop_id i*", "pop_class_id i*", "description l", "line_num i*" );
   print Progress::location();
                    
     #populate the Sample table with the populations
     $self->{'dbVar'}->do("SET SESSION group_concat_max_len = 10000");
     $self->{'dbVar'}->do(qq{INSERT INTO sample (name, pop_id,description)
-                 SELECT tp.name, tp.pop_id, GROUP_CONCAT(description)
+                 SELECT tp.name, tp.pop_id, GROUP_CONCAT(description ORDER BY tp.pop_class_id ASC, tp.line_num ASC)
                  FROM   tmp_pop tp
                  GROUP BY tp.pop_id
                  });	#table size is small, so no need to change
@@ -1886,7 +1891,7 @@ sub cleanup {
   print Progress::location();
 
     $self->{'dbVar'}->do('ALTER TABLE variation  DROP COLUMN snp_id');
-  print Progress::location();     $self->{'dbVar'}->do('RENAME TABLE variation_synonym TO variation_synonym_old');
+  print Progress::location();  
     $self->{'dbVar'}->do('ALTER TABLE variation_synonym DROP COLUMN substrand_reversed_flag');
   print Progress::location();
     $self->{'dbVar'}->do('ALTER TABLE sample DROP COLUMN pop_class_id, DROP COLUMN pop_id, DROP COLUMN individual_id');
