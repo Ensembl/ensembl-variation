@@ -47,15 +47,17 @@ GetOptions('species=s'      => \$species,
 	   'registry_file=s' => \$registry_file
 	  );
 
+# Checking that some necessary arguments have been provided
+die("Must know the master schema database, use -master_schema_db option!") unless (defined($MASTER_SCHEMA_DB));
+die("You must specify the dbSNP mirror host, user, pass, db and build version (-dshost, -dsuser, -dspass, -dsdbname and -dbSNP_version options)") unless (defined($dshost) && defined($dsuser) && defined($dspass) && defined($dsdbname) && defined($dbSNP_BUILD_VERSION));
+die("You must specify a temp dir and temp file (-tmpdir and -tmpfile options)") unless(defined($ImportUtils::TMP_DIR) && defined($ImportUtils::TMP_FILE));
+die("You must specify the species. Use -species option") unless (defined($species));
+
+warn("Note that the port for the dbSNP mirror is overridden by the freetds configuration file!\n") if (defined($dsport));
 warn("Make sure you have a updated ensembl.registry file!\n");
 
 # Set default option
 $registry_file ||= $Bin . "/ensembl.registry";
-$MASTER_SCHEMA_DB ||= 'master_schema_variation_57';
-$dshost = 'dbsnp';
-$dsuser = 'dbsnp_ro';
-$dspass = 'Dbsnpro55';
-$dsport = 1026; # This is overridden in the freetds.conf config file (see below)
 
 Bio::EnsEMBL::Registry->load_all( $registry_file );
 
