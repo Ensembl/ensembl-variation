@@ -3,8 +3,6 @@ use warnings;
 
 package LRGMapping;
 
-use lib '/nfs/acari/dr2/projects/src/ensembl/ensembl/modules';
-
 use Bio::EnsEMBL::MappedSliceContainer;
 use Bio::EnsEMBL::DBSQL::DBConnection;
 use Bio::EnsEMBL::FeaturePair;
@@ -14,13 +12,9 @@ use List::Util qw (min max);
 
 
 # global variables
-#our $input_dir = '/tmp';
-#our $output_dir = '/tmp';
-
-our $input_dir = '/lustre/scratch103/ensembl/pl4/tmp';
-our $output_dir = '/lustre/scratch103/ensembl/pl4/tmp';
-
-our $target_dir = '/lustre/work1/ensembl/yuan/SARA/human/ref_seq_hash';
+our $input_dir = '/tmp';
+our $output_dir = '/tmp';
+our $target_dir;
 our %rec_seq;
 
 our $lrg_name;
