@@ -64,16 +64,14 @@ Bio::EnsEMBL::DBSQL::DBAdaptor->new
 
 b) run e.g.:
 
-perl get_target_dna.pl --target_dir /lustre/scratch1/wm2/Traces/zfinch/target/
---species Taeniopygia_guttata
+perl get_target_dna.pl --target_dir [target_dir]/ --species Taeniopygia_guttata
 
 changing the --target_dir flag to the directory where you want the target
 sequences, and the --species flag to the relevant species.
 
 c) Concatenate the files together:
 
-cat /lustre/scratch1/wm2/Traces/zfinch/target/*.fa >
-/lustre/scratch1/wm2/Traces/zfinch/target/zfinch.fa
+cat [target_dir]/*.fa > [target_dir]/zfinch.fa
 
 
 
@@ -87,9 +85,6 @@ http://www.sanger.ac.uk/Software/analysis/SSAHA2/
 
 Choose the appropriate section according to the sequencing technology used to
 generate the traces and follow the steps detailed therein.
-
-ssaha2Build can be currently found at
-/software/varinf/bin/offline/ssaha2_v2.2.1/ssaha2Build
 
 The final two steps (get_seqreads and ssaha_pileup) require very large amounts
 of memory (~30gb for Taeniopygia guttata), and hence need to be run on Turing.
@@ -119,8 +114,8 @@ Bio::EnsEMBL::DBSQL::DBAdaptor->new
     '-group'   => "variation",
     '-port'    => 3306,
     '-host'    => 'ens-genomics2',
-    '-user'    => 'ensadmin',
-    '-pass'    => 'ensembl',
+    '-user'    => '******',
+    '-pass'    => '******',
     '-dbname'  => 'will_zebrafinch_var_54',
   );
 
@@ -146,8 +141,8 @@ debugging of any errors that occur.
 The script needs to be run with several parameters:
 
 perl run_pileup.pl --species Taeniopygia_guttata --input_file genome_SNP.out
---tmpdir /lustre/scratch1/ensembl/wm2/Traces/zfinch/temp/ --tmpfile temp
---strain_name tg1 --cigar_file genome_cigar.dat
+--tmpdir [tmp_dir] --tmpfile temp --strain_name tg1
+--cigar_file genome_cigar.dat
 
 where:
 
@@ -199,8 +194,8 @@ parallel_post_process.pl, found in ensembl-variation/scripts/import/
 The following command should be run:
 
 perl parallel_post_process.pl -species Taeniopygia_guttata -tmpdir
-/lustre/scratch1/ensembl/wm2/tmp/zfinch/ -tmpfile zfinch.txt -num_processes 10
--variation_feature -flanking_sequence -transcript_variation -top_level 1
+[tmp_dir] -tmpfile zfinch.txt -num_processes 10 -variation_feature
+-flanking_sequence -transcript_variation -top_level 1
 
 This will dispatch several processes to the farm, and populate the
 variation_feature, flanking_sequence and transcript_variation tables.
@@ -208,8 +203,7 @@ variation_feature, flanking_sequence and transcript_variation tables.
 A separate script needs to be run for read coverage, parallel_read_coverage.pl:
 
 perl parallel_read_coverage.pl --species Taeniopygia_guttata --tmpdir
-/lustre/scratch1/ensembl/wm2/tmp/zfinch/ --readdir
-/lustre/scratch1/ensembl/wm2/Traces/zfinch/temp/ --maxlevel 2
+[tmp_dir] --readdir [read_dir] --maxlevel 2
 
 where --readdir is the directory containing the previously generated read
 coverage files
