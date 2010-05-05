@@ -1,24 +1,20 @@
 #! /software/bin/perl
-#perl ./bsub_ssahaSNP.pl -reads_dir /turing//mouse129_extra/yuan/human_celera/fastq -output_dir /turing/mouse129_extra/yuan/human_celera/output_dir/chimp -target_file /turing//mouse129_extra/yuan/human_celera/target_dir/chimp_repeat_masked.fa
+#perl ./bsub_ssahaSNP.pl -reads_dir [reads_dir] -output_dir [out_dir] -target_file [target_dir]/chimp_repeat_masked.fa
 
 use strict;
 use Getopt::Long;
 
-our ($reads_dir, $output_dir, $target_file);
+our ($reads_dir, $output_dir, $target_file, $ssahaSNP);
 
 GetOptions('reads_dir=s'    => \$reads_dir,
 	   'output_dir=s'    => \$output_dir,
-	   'target_file=s'   => \$target_file
+	   'target_file=s'   => \$target_file,
+	   'ssahaSNP=s'		=> \$ssahaSNP,
 	  );
 
 ($reads_dir and $output_dir and $target_file) || die "We need reads_dir, output_dir and target_file defined\n";
 
 my $queue = "hugemem -R 'select[mem>6000] rusage[mem=6000]'";
-#my $queue = "normal -M6000000 -R 'select[mem>6000] rusage[mem=6000]'";
-#my $ssahaSNP = "/nfs/acari/yuan/ensembl/src/ensembl-variation/scripts/ssahaSNP/ssahaSNP_turing";
-#my $ssahaSNP = "/nfs/acari/yuan/ensembl/src/ensembl-variation/scripts/ssahaSNP/ssahaSNP_farmnew";
-#my $ssahaSNP = "~aws/bin/amd64_unstable/ssahaSNP";
-my $ssahaSNP = "~aws/bin/ia64_unstable/ssahaSNP";
 
 my @tar = split /\//, $target_file;
 my $tar_file = $tar[-1];
