@@ -1,24 +1,21 @@
 #! /software/bin/perl
 
+our $dir = shift @ARGV;
+
 #compFastq ();
 splitFastq();
 
 sub compFastq{
-#while (</turing/mouse129_extra/yuan/human_celera/fastq/cra-homo_sapiens-wgs*.fastq>) {
-#while (</lustre/work1/ensembl/yuan/rat/STAR/reads/fastq/*fastq>) {
-#while (</lustre/work1/ensembl/yuan/SARA/platypus/reads_dir/nisc/*fastq>) {
-while (</lustre/scratch1/ensembl/yuan/mouse/perlegen/115/*fastq>) {
+while (<$dir/*fastq>) {
   my $fastq_name = $_;
   $fastq_name =~ s/\.fasta//;
   print "fastq_name is $fastq_name\n";
-  #system("/nfs/acari/yuan/ensembl/src/ensembl-variation/scripts/ssahaSNP/compFastq $_ $fastq_name");
-  system("/nfs/acari/yuan/ensembl/src/ensembl-variation/scripts/ssahaSNP/compFastq_linux $_ $fastq_name");
-  #system("/nfs/team71/psg/zn1/phusion_pipeline/compFastq/compFastq $_ $fastq_name");
+  system("compFastq_linux $_ $fastq_name");
 }
 }
 
 sub splitFastq {
-  while (</lustre/scratch1/ensembl/yuan/mouse/perlegen/test/perl*.fastq>) {
+  while (<$dir/perl*.fastq>) {
     my $fastq_name = $_;
     open IN, "$fastq_name" or die "Can't open fastq file\n";
     open OUT,">$fastq_name\_split" or die "Can't open fastq split file\n";
