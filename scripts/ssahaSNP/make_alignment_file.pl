@@ -6,11 +6,12 @@ my %rec_name;
 use strict;
 use Getopt::Long;
 
-our ($input_dir, $output_dir, $individual_name);
+our ($input_dir, $output_dir, $individual_name, $file_dir);
 
 GetOptions('input_dir=s'    => \$input_dir,
            'output_dir=s'    => \$output_dir,
-           'individual_name=s'   => \$individual_name
+           'individual_name=s'   => \$individual_name,
+		   'filedir=s'			=> \$file_dir,
           );
 
 #($input_dir and $output_dir) || die "We need input_dir, output_dir defined\n";
@@ -33,7 +34,7 @@ make_alignment_file($input_dir,$output_dir,$individual_name);
 
 sub get_human_individual_name {
 
-  LINE : while (</nfs/disk69/ensembl/pub/traces/human/traceinfo/cra-homo_sapiens-wgs-*\.TRACEINFO.xml.gz>) {
+  LINE : while (<$file_dir/cra-homo_sapiens-wgs-*\.TRACEINFO.xml.gz>) {
     #print "my file is #$_#\n";
     $_ =~ /cra-homo_sapiens-wgs-(\d+)\.TRACEINFO.xml.gz/;
     my $file_number = $1;
@@ -58,7 +59,7 @@ sub get_human_individual_name {
 
 sub get_tetraodon_individual_name {
 
-  while (</nfs/disk69/ensembl/pub/traces/tetraodon/traceinfo/*gsc*\.TRACEINFO.xml.gz>) {
+  while (<$file_dir/*gsc*\.TRACEINFO.xml.gz>) {
     print "my file is #$_#\n";
     my $file = $_;
     my ($read_name,$insert_size,$lib_id);
@@ -80,7 +81,7 @@ sub get_tetraodon_individual_name {
 }
 sub get_tetraodon_pair_end {
 
-  LINE : while (</nfs/disk69/ensembl/pub/traces/tetraodon/traceinfo/*\.TRACEINFO.xml.gz>) {
+  LINE : while (<$file_dir/*\.TRACEINFO.xml.gz>) {
     print "my file is #$_#\n";
     my $file = $_;
     my ($read_name,$trace_end);

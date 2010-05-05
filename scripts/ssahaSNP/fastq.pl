@@ -1,6 +1,5 @@
 #!/usr/local/ensembl/bin/perl
-#/nfs/acari/yuan/ensembl/src/ensembl-variation/scripts/ssahaSNP/fastq.pl /nfs/disk69/ensembl/pub/traces/takifugu_rubripes/fasta /nfs/disk69/ensembl/pub/traces/takifugu_rubripes/qual
-#/nfs/acari/yuan/ensembl/src/ensembl-variation/scripts/ssahaSNP/compFastq jgi-frub-wgs-1021696420.fasta.fastq jgi-frub-wgs-1021696420.fasta.fastq
+#perl fastq.pl [fasta_dir] [qual_dir]
 
 
 use strict;
@@ -10,8 +9,6 @@ my ($ifname, $dname, $fin_unfin, $fname);
 
 my ($fasta_dir, $qual_dir) = @ARGV;
 
-#while (<$fasta_dir/wugsc-ornithorhynchus_anatinus-wgs-1100873637.fasta.gz>) {
-#while (<$fasta_dir/fasta.rattus_norvegicus*.gz>) {
 while (<$fasta_dir/*fasta.gz>) {
   my $file = $_;
   $file =~ s/$fasta_dir\///;
