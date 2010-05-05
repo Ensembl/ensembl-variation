@@ -14,7 +14,7 @@ use FindBin qw( $Bin );
 use Getopt::Long;
 use ImportUtils qw(dumpSQL debug create_and_load load);
 
-our ($species, $cigar_file, $match_file, $input_file, $output_dir, $align_file, $TMP_DIR, $TMP_FILE, $strain_name);
+our ($species, $cigar_file, $match_file, $input_file, $output_dir, $align_file, $TMP_DIR, $TMP_FILE, $strain_name, $ssaha_command_dir, $root_dir);
 
 GetOptions('species=s'    => \$species,
 	   'cigar_file=s' => \$cigar_file,
@@ -23,7 +23,9 @@ GetOptions('species=s'    => \$species,
            'output_dir=s' => \$output_dir,
            'tmpdir=s'     => \$ImportUtils::TMP_DIR,
            'tmpfile=s'    => \$ImportUtils::TMP_FILE,
-           'strain_name=s' => \$strain_name
+           'strain_name=s' => \$strain_name,
+		   'ssaha_dir=s' => $ssaha_command_dir,
+		   'rootdir=s' => $root_dir,
           );
 #my $registry_file ||= $Bin . "/ensembl.registry2";
 
@@ -47,7 +49,6 @@ my $dbVar = $vdb->dbc;
 my $slice_adaptor = $cdb->get_SliceAdaptor;
 my $buffer = {};
 
-my $ssaha_command_dir = "/nfs/acari/yuan/ensembl/src/ensembl-variation/scripts/ssahaSNP/ssaha_pileup";
 my %seq_region_ids;
 my $sth = $dbCore->prepare(qq{SELECT sr.seq_region_id, sr.name
    		              FROM   seq_region_attrib sra, attrib_type at, seq_region sr
@@ -149,13 +150,9 @@ sub read_match_file {
 
 sub make_pileup_reads_file {
 
-  ##use turing run all chromosomes
-  ##before run, run this first: /nfs/team71/psg/zn1/bin/tag.pl try.fastq > readname.tag
   my $self = shift;
   my $tmp_dir = $self->{'tmpdir'};
   my $tmp_file = $self->{'tmpfile'};
-  #my $root_dir = "/lustre/work1/ensembl/yuan/SARA/orangutan";
-  my $root_dir = "/lustre/work1/ensembl/yuan/SARA/tetraodon/new_assembly";
   my $fastq_dir = "$root_dir/fastq/$strain_name";
   my $output_dir = "$root_dir/output_dir/$strain_name";
   my $target_dir = "$root_dir/target_dir";
@@ -187,9 +184,6 @@ sub make_pileup_reads_file {
 
 sub parse_pileup_snp_file {
 
-  #my $input_file = "/turing/mouse129_extra/yuan/watson/output_dir/SNP_file";
-  #my $input_file = "/lustre/work1/ensembl/yuan/SARA/watson/output_dir/TEST_SNP";
-  $input_file ||= "/turing/mouse129_extra/yuan/orangutan/pileup/out_pileup_snp";
   
   my $snp_count;
   my $failed_count;
