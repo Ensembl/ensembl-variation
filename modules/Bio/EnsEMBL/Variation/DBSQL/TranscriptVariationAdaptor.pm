@@ -81,6 +81,9 @@ use Bio::EnsEMBL::Variation::TranscriptVariation;
 
 our @ISA = ('Bio::EnsEMBL::DBSQL::BaseAdaptor');
 
+# size that we look either side of a variation for transcripts
+our $UP_DOWN_SIZE = 5000;
+
 
 =head2 fetch_all_by_Transcripts
 
@@ -162,6 +165,7 @@ sub fetch_all_by_VariationFeatures {
 	}
   }
   
+  # already existing VFs - get TVs from the database
   if(scalar @have_dbID) {
 
 	%vf_by_id = map {$_->dbID(), $_ } @have_dbID;
@@ -174,13 +178,176 @@ sub fetch_all_by_VariationFeatures {
 	}
   }
   
+  # if we have some de novo VFs, we need to calculate
   if(scalar @no_dbID) {
 	
+	my $species;
+
+	if(defined $self->db) {
+		$species = $self->db()->species;
+	}
+	else {
+		$species = $self->{'species'};
+	}
+	
+	unless(defined $species) {
+		warn("No species defined in adaptor");
+		return $tvs;
+	}
+	
+	# get functional genomics adaptors
+	my $rf_adaptor = Bio::EnsEMBL::DBSQL::MergedAdaptor->new(-species => $species, -type => "RegulatoryFeature");
+	my $ef_adaptor = Bio::EnsEMBL::DBSQL::MergedAdaptor->new(-species => $species, -type => "ExternalFeature");
+	
+	unless(defined $rf_adaptor && defined $ef_adaptor) {
+		warn("Must have functional genomics database attached to consider regulatory features");
+	}
+	
+	# get a gene and transcript adaptor
+	my $gene_adaptor = Bio::EnsEMBL::DBSQL::MergedAdaptor->new(-species => $species, -type => "Gene");
+	my $transcript_adaptor = Bio::EnsEMBL::DBSQL::MergedAdaptor->new(-species => $species, -type => "Transcript");
+	
+	unless(defined $gene_adaptor && defined $transcript_adaptor) {
+		warn("Must have core database attached to consider regulatory features");
+	}
+	
+	# iterate through the VFs
 	foreach my $vf(@no_dbID) {
 		
-		my $slice = $vf->feature_Slice;
+		# sanity check the alleles
+		if($vf->allele_string =~ /INS|DEL|LARGE|CNV|PROBE|\(\)/) {
+			warn("Can't calculate consequences for alleles ".($vf->allele_string));
+			next;
+		}
 		
-		my @transcripts = @{$slice->get_all_Transcripts()};
+		my @this_vf_tvs;
+			
+		## REGULATORY FEATURES
+		######################
+		
+		if(defined $rf_adaptor && defined $ef_adaptor && defined $gene_adaptor && defined $transcript_adaptor) {
+			
+			# get the feature slice
+			my $slice = $vf->feature_Slice;
+			
+			# invert it if needed
+			if($slice->strand < 0) {
+				$slice = $slice->invert();
+			}
+			
+			# hash for storing IDs so we don't create the same TV twice
+			my %done;
+			
+			# array for storing RFs
+			my @rf;
+			
+			# first get external features
+			foreach my $f  (@{$ef_adaptor->fetch_all_by_Slice($slice)}) {
+				if ($f->feature_set->name =~ /miRanda/ or $f->feature_set->name =~ /VISTA\s+enhancer\s+set/i or $f->feature_set->name =~ /cisRED\s+motifs/i) {
+					push @rf, $f;
+				}
+			}
+			
+			# get all the regulatory features aswell into the same array
+			push @rf, @{$rf_adaptor->fetch_all_by_Slice($slice)};
+			
+			# now iterate through them all
+			foreach my $rf(@rf) {
+				
+				next unless defined $rf;
+				
+				# go via gene first
+				foreach my $dbEntry (@{$rf->get_all_DBEntries("$species\_core_Gene")}) {
+					my $gene;
+					
+					# get the gene for the stable_id
+					foreach my $g(@{$gene_adaptor->fetch_by_stable_id($dbEntry->primary_id)}) {
+						if(defined $g && $g->stable_id eq $dbEntry->primary_id) {
+							$gene = $g;
+							last;
+						}
+					}
+					
+					# skip it if no gene found
+					next unless defined $gene;
+					
+					# now get all of this gene's transcripts
+					foreach my $tr (@{$gene->get_all_Transcripts()}) {
+						
+						# skip if we've already seen this transcript
+						next if $done{$tr->dbID};
+						
+						# create a new TV
+						my $trv = Bio::EnsEMBL::Variation::TranscriptVariation->new_fast( {
+							'adaptor' 			=> $self,
+							'consequence_type'	=> ['REGULATORY_REGION'],
+							'transcript' 		=> $tr,
+							'_vf_id'			=> undef,
+						} );
+						
+						# add it to the list we're returning
+						push @this_vf_tvs, $trv;
+						
+						# add it to the VF object
+						$vf->add_TranscriptVariation($trv);
+						
+						# record this transcript as done so we don't do it twice
+						$done{$tr->dbID} = 1;
+					}
+				}
+				
+				
+				# now go via transcript
+				foreach my $dbEntry (@{$rf->get_all_DBEntries("$species\_core_Transcript")}) {
+					my $tr;
+					
+					# get the gene for the stable_id
+					foreach my $t(@{$transcript_adaptor->fetch_by_stable_id($dbEntry->primary_id)}) {
+						if(defined $t && $t->stable_id eq $dbEntry->primary_id) {
+							$tr = $t;
+							last;
+						}
+					}
+					
+					next unless defined $tr;
+					
+					next if $done{$tr->dbID};
+						
+					# create a new TV
+					my $trv = Bio::EnsEMBL::Variation::TranscriptVariation->new_fast( {
+						'adaptor' 			=> $self,
+						'consequence_type'	=> ['REGULATORY_REGION'],
+						'transcript' 		=> $tr,
+						'_vf_id' 			=> undef,
+					} );
+					
+					# add it to the list we're returning
+					push @this_vf_tvs, $trv;
+					
+					# add it to the VF object
+					$vf->add_TranscriptVariation($trv);
+						
+					# record this in done so we don't do it twice
+					$done{$tr->dbID} = 1;
+				}
+			}
+		}
+		
+		
+		
+		## TRANSCRIPTS
+		##############
+		
+		# get another slice, expanded to include up/down-stream regions
+		my $expanded_slice = $vf->feature_Slice->expand($UP_DOWN_SIZE,$UP_DOWN_SIZE);
+		
+		# invert it if needed
+		if($expanded_slice->strand < 0) {
+			$expanded_slice = $expanded_slice->invert();
+		}
+		
+		# get all the transcripts
+		my @transcripts = @{$expanded_slice->get_all_Transcripts()};
 		
 		while(my $transcript = shift @transcripts) {
 			
@@ -206,8 +373,8 @@ sub fetch_all_by_VariationFeatures {
 			shift @alleles;
 			
 			# convert the start and end to slice coords
-			my $start = $vf->start - $slice->start + 1;
-			my $end = $vf->end - $slice->start + 1;
+			my $start = $vf->start - $expanded_slice->start + 1;
+			my $end = $vf->end - $expanded_slice->start + 1;
 			
 			# create a consequence type object
 			my $consequence_type = Bio::EnsEMBL::Variation::ConsequenceType->new(
@@ -234,21 +401,62 @@ sub fetch_all_by_VariationFeatures {
 					'translation_start' => $con->aa_start,
 					'translation_end'	=> $con->aa_end,
 					'pep_allele_string' => join("/", @{$con->aa_alleles || []}),
-					'consequence_type'	=> $con->type
+					'consequence_type'	=> $con->type,
+					'transcript' 		=> $transcript,
+					'_vf_id'			=> undef,
 				} );
-		  
-				$trv->{'_vf_id'} = undef; #add the variation feature
-				$trv->{'_transcript_id'} = $transcript->dbID; #add the transcript id
 				
-				push @{$tvs}, $trv;
+				push @this_vf_tvs, $trv;
 				$vf->add_TranscriptVariation($trv);
 			}
 		}
+		
+		# if we didn't get any consequences, make an INTERGENIC
+		if(!(scalar @this_vf_tvs)) {
+			my $trv = Bio::EnsEMBL::Variation::TranscriptVariation->new_fast( {
+				'adaptor'			=> $self,
+				'consequence_type'	=> ['INTERGENIC'],
+			} );
+			
+			push @this_vf_tvs, $trv;
+			$vf->add_TranscriptVariation($trv);
+		}
+		
+		# add all TVs to the total list
+		push @{$tvs}, @this_vf_tvs;
 	}
   }
   
-  
   return $tvs;
+}
+
+
+=head2 new_fake
+
+  Arg [1]    : string $species
+  Example    :
+	$tva = Bio::EnsEMBL::Variation::TranscriptVariationAdaptor->new_fake('human');
+  Description: Creates a TranscriptVariationAdaptor with no underlying database
+			   attached. Should be used only when getting consequence types for
+			   species with no variation database available.
+  Returntype : Bio::EnsEMBL::Variation::TranscriptVariationAdaptor
+  Exceptions : throw if no species given
+  Caller     : called from Bio::EnsEMBL::VariationFeatureAdaptor
+  Status     : Stable
+
+=cut
+
+sub new_fake {
+  my $class = shift;
+  my $species = shift;
+  
+  throw("No species defined") unless defined $species;
+  
+  my $self = bless {}, $class;
+  
+  $self->{'species'} = $species;
+  
+  return $self;
 }
 
 
@@ -297,6 +505,8 @@ sub _objs_from_sth {
 
   return \@results;
 }
+
+
 
 sub _tables {return ['transcript_variation','tv'];}
 
