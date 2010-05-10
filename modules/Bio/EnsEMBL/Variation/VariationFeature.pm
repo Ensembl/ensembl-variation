@@ -1095,9 +1095,9 @@ sub get_all_PopulationGenotypes{
   Arg [3]    : string (Optional)
                A name to use for the reference can be supplied. By default the name returned by the display_id() method of the reference feature will be used. 
   Example    : print $vf->hgvs_notation();
-  Description: Returns a string with the HGVS notation of this VariationFeature. By default uses the
+  Description: Returns a string array with the HGVS notation for each allele of this VariationFeature. By default uses the
                slice it is plcaed on as reference but a different reference feature can be supplied.
-  Returntype : String
+  Returntype : String array
   Exceptions : Throws exception if VariationFeature can not be described relative to the feature_Slice of the supplied reference feature
   Caller     : general
   Status     : Experimental
@@ -1251,7 +1251,7 @@ sub hgvs_notation {
     foreach my $allele (keys %hgvs) {
       push(@strings,$hgvs{$allele}->{'hgvs'});
     }
-    return \@strings;
+    return @strings;
 }
 
 #ÊConvert a position on a transcript (in the forward orientation and relative to the start position of the slice the transcript is on) to a cDNA coordinate
