@@ -1118,9 +1118,9 @@ sub hgvs_notation {
     $reference_name ||= $ref_feature->display_id();
     
     # Check that the numbering scheme is compatible with the type of reference supplied
-    return ["HGVS $numbering notation is not available for $ref_feature"] if ($ref_feature->isa('Bio::EnsEMBL::Slice') && $numbering !~ m/[g]/); 
-    return ["HGVS $numbering notation is not available for $ref_feature"] if ($ref_feature->isa('Bio::EnsEMBL::Transcript') && $numbering !~ m/[gcp]/); 
-    return ["HGVS $numbering notation is not available for $ref_feature"] if ($ref_feature->isa('Bio::EnsEMBL::Gene') && $numbering !~ m/[g]/); 
+    return ("HGVS $numbering notation is not available for $ref_feature") if ($ref_feature->isa('Bio::EnsEMBL::Slice') && $numbering !~ m/[g]/); 
+    return ("HGVS $numbering notation is not available for $ref_feature") if ($ref_feature->isa('Bio::EnsEMBL::Transcript') && $numbering !~ m/[gcp]/); 
+    return ("HGVS $numbering notation is not available for $ref_feature") if ($ref_feature->isa('Bio::EnsEMBL::Gene') && $numbering !~ m/[g]/); 
       
     # Check that HGVS notation is implemented for the supplied feature type
     return ["HGVS notation has not been implemented for $ref_feature"] unless ($ref_feature->isa('Bio::EnsEMBL::Slice') || $ref_feature->isa('Bio::EnsEMBL::Transcript') || $ref_feature->isa('Bio::EnsEMBL::Gene'));
@@ -1246,7 +1246,7 @@ sub hgvs_notation {
     
     }
     
-    #ÊPush the HGVS strings into an array and return a reference to it
+    #ÊPush the HGVS strings into an array and return it
     my @strings;
     foreach my $allele (keys %hgvs) {
       push(@strings,$hgvs{$allele}->{'hgvs'});
