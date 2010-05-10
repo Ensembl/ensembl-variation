@@ -1083,7 +1083,7 @@ sub get_all_PopulationGenotypes{
 	return \@new_gens;
 }
 
-=head2 hgvs_notation
+=head2 get_all_hgvs_notations
 
   Arg [1]    : Bio::EnsEMBL::Feature $ref_feature (optional)
                Get the HGVS notation of this VariationFeature relative to the slice it is on. If an optional reference feature is supplied, returns the coordinates
@@ -1094,7 +1094,7 @@ sub get_all_PopulationGenotypes{
 	       'c' -> cDNA position numbering
   Arg [3]    : string (Optional)
                A name to use for the reference can be supplied. By default the name returned by the display_id() method of the reference feature will be used. 
-  Example    : print $vf->hgvs_notation();
+  Example    : print $vf->get_all_hgvs_notations();
   Description: Returns a string array with the HGVS notation for each allele of this VariationFeature. By default uses the
                slice it is plcaed on as reference but a different reference feature can be supplied.
   Returntype : String array
@@ -1104,7 +1104,7 @@ sub get_all_PopulationGenotypes{
 
 =cut
 
-sub hgvs_notation {
+sub get_all_hgvs_notations {
     my $self = shift;
     my $ref_feature = shift;
     my $numbering = shift;
@@ -1138,10 +1138,10 @@ sub hgvs_notation {
     my $tr_vf = $self->transfer($ref_slice);
     
     # Return undef if this VariationFeature could not be transferred
-    return undef if (!defined($tr_vf));
+    return [] if (!defined($tr_vf));
     
     #ÊReturn undef if this VariationFeature does not fall within the supplied feature
-    return undef if ($tr_vf->start < 1 || $tr_vf->end > ($ref_feature->end - $ref_feature->start + 1));
+    return [] if ($tr_vf->start < 1 || $tr_vf->end > ($ref_feature->end - $ref_feature->start + 1));
     
     # The variation should always be reported on the positive strand. So change the orientation of the feature if necessary. Use a flag to indicate this
     my $revcomp = 0;
@@ -1251,7 +1251,7 @@ sub hgvs_notation {
     foreach my $allele (keys %hgvs) {
       push(@strings,$hgvs{$allele}->{'hgvs'});
     }
-    return @strings;
+    return \@strings;
 }
 
 #ÊConvert a position on a transcript (in the forward orientation and relative to the start position of the slice the transcript is on) to a cDNA coordinate
