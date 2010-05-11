@@ -286,6 +286,40 @@ sub variation {
   return $self->{'variation'};
 }
 
+=head2 variation_feature
+
+  Arg [1]    : (optional) Bio::EnsEMBL::Variation::VariationFeature $vf
+  Example    : $vf = $af->variation_feature();
+  Description: Getter/Setter for the variation feature associated with this feature.
+               If not set, and this AlleleFeature has an associated adaptor
+               an attempt will be made to lazy-load the variation from the
+               database.
+  Returntype : Bio::EnsEMBL::Variation::VariationFeature
+  Exceptions : throw on incorrect argument
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub variation_feature {
+  my $self = shift;
+
+  if(@_) {
+    if(!ref($_[0]) || !$_[0]->isa('Bio::EnsEMBL::Variation::VariationFeature')) {
+      throw("Bio::EnsEMBL::Variation::VariationFeature argument expected");
+    }
+    $self->{'variation_feature'} = shift;
+  }
+  elsif(!defined($self->{'variation_feature'}) && $self->{'adaptor'} &&
+        defined($self->{'_variation_feature_id'})) {
+    # lazy-load from database on demand
+    my $va = $self->{'adaptor'}->db()->get_VariationFeatureAdaptor();
+    $self->{'variation_feature'} = $va->fetch_by_dbID($self->{'_variation_feature_id'});
+  }
+
+  return $self->{'variation_feature'};
+}
+
 =head2 individual
 
   Arg [1]    : (optional) Bio::EnsEMBL::Variation::Individual $individual
