@@ -240,7 +240,12 @@ sub subsnp_handle{
       
       my $sth = $self->{'adaptor'}->dbc->prepare(qq/SELECT handle FROM subsnp_handle WHERE subsnp_id = ?;/);
       $sth->execute($ss);
-      my $handle = $sth->fetchrow_arrayref->[0];
+      
+      my $row = $sth->fetchrow_arrayref();
+      
+      my $handle;
+      
+      $handle = $row->[0] if defined($row);
       
       return $self->{'subsnp_handle'} = $handle;
     }
