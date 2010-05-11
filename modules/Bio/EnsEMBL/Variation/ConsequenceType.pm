@@ -56,6 +56,16 @@ our %CONSEQUENCE_TYPES = ('ESSENTIAL_SPLICE_SITE' => 1,
 			  '_'          => 1048576,
 			  );
 
+# hash storing whether consequence affects peptide sequence
+our %AFFECTS_PEPTIDE = (
+  'STOP_GAINED'				=> 1,
+  'STOP_LOST'				=> 1,
+  'COMPLEX_INDEL'			=> 1,
+  'FRAMESHIFT_CODING'		=> 1,
+  'NON_SYNONYMOUS_CODING'	=> 1,
+  'PARTIAL_CODON'			=> 1,
+);
+
 
 =head2 new
 
