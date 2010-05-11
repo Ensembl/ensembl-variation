@@ -67,6 +67,7 @@ use Bio::EnsEMBL::Variation::ConsequenceType;
 our @ISA = ('Bio::EnsEMBL::Storable');
 
 my %CONSEQUENCE_TYPES = %Bio::EnsEMBL::Variation::ConsequenceType::CONSEQUENCE_TYPES;
+my %AFFECTS_PEPTIDE = %Bio::EnsEMBL::Variation::ConsequenceType::AFFECTS_PEPTIDE;
 
 =head2 new
 
@@ -654,6 +655,23 @@ sub codons {
   }
   
   return $self->{'codons'};
+}
+
+=head2 affects_transcript
+
+  Example    : if($tv->affects_transcript) { ... }
+  Description: Indicates if this transcript variation affects the protein
+               sequence of the affected transcript
+  Returntype : boolean
+  Exceptions : none
+  Caller     : Internal
+  Status     : At Risk
+
+=cut
+
+sub affects_transcript {
+  my $self = shift;
+  return defined($AFFECTS_PEPTIDE{$self->display_consequence});
 }
 
 
