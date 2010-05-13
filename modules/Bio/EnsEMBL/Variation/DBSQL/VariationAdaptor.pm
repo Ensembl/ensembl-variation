@@ -331,6 +331,67 @@ sub fetch_all_by_dbID_list {
 }
 
 
+=head2 fetch_all_by_name_list
+
+  Arg [1]    : reference to list of names $list
+  Example    : @vars = @{$va->fetch_all_by_dbID_list(["rs3", "rs1333049"])};
+  Description: Retrieves a set of variations via their names. This is faster
+               than repeatedly calling fetch_by_name if there are a large number
+			   of variations to retrieve
+  Returntype : reference to list of Bio::EnsEMBL::Variation::Variation objects
+  Exceptions : throw on bad argument
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+
+sub fetch_all_by_name_list {
+  my $self = shift;
+  my $list = shift;
+
+  if(!defined($list) || ref($list) ne 'ARRAY') {
+    throw("list reference argument is required");
+  }
+
+  return [] if(!@$list);
+
+  my @out;
+
+  # mysql is faster and we ensure that we do not exceed the max query size by
+  # splitting large queries into smaller queries of 200 ids
+  my $max = 200;
+
+  while(@$list) {
+    my @ids = (@$list > $max) ? splice(@$list, 0, $max) : splice(@$list, 0);
+
+    my $id_str = (@ids > 1)  ? " IN (".join(',', map {"'$_'"} @ids).")"   :   ' = '.$ids[0];
+
+    my $sth = $self->prepare
+      (qq{SELECT v.variation_id, v.name, v.validation_status, s1.name, s1.description, s1.url, v.ancestral_allele,
+                 a.allele_id, a.subsnp_id, a.allele, a.frequency, a.sample_id, vs.moltype,
+                 vs.name, s2.name, f.description, 0
+	     FROM   (variation v, source s1)
+		  LEFT JOIN allele a on v.variation_id = a.variation_id
+		     LEFT JOIN variation_synonym vs on v.variation_id = vs.variation_id 
+		       LEFT JOIN source s2 on  vs.source_id = s2.source_id
+		         LEFT JOIN failed_variation fv on v.variation_id = fv.variation_id
+			  LEFT JOIN failed_description f on fv.failed_description_id = f.failed_description_id
+          WHERE    v.source_id = s1.source_id
+          AND    v.name $id_str});
+    $sth->execute();
+
+    my $result = $self->_objs_from_sth($sth);
+
+    $sth->finish();
+
+    push @out, @$result if(@$result);
+  }
+
+  return \@out;
+}
+
+
 =head2 get_all_sources
 
   Args        : none
