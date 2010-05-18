@@ -27,7 +27,8 @@ our @CHECKS = (
     'phases',
     'exon_labels',
     'mappings',
-    'gene_name'
+    'gene_name',
+    'partial'
 );
 
 # Constructor
@@ -388,7 +389,8 @@ sub id {
     return $passed;
 }
 
-#ÊCheck if we have multiple mappings specified and compare mappings to the same assembly to see if they differ
+#ÊCheck if we have multiple mappings specified and compare mappings to the same assembly to see if they differ.
+#ÊAlso checks that the entire LRG sequence is mapped
 sub mappings {
     my $self = shift;
     my $passed = 1;
@@ -521,6 +523,78 @@ sub compare_tags {
         $self->{'check'}{$name}{'message'} = substr($self->{'check'}{$name}{'message'},0,-2) . ")//";
     }
     
+    return $passed;
+}
+
+#ÊCheck that all annotations that are only partial is consistent in the partial indications for transcripts and the respective protein product
+sub partial {
+    my $self = shift;
+    
+    my $passed = 1;
+    
+    # Get the name of the check
+    my $name = sub_name();
+    
+    #ÊGet the updatable annotation sets 
+    my $annotation_sets = $self->{'lrg'}->findNodeArray('updatable_annotation/annotation_set');
+    
+    # Loop over the annotation sets
+    foreach my $annotation_set (@{$annotation_sets}) {
+        
+        # Get the annotation source
+        my $source = $annotation_set->findNode('source/name')->content();
+        
+        # Grab the gene features
+        my $gene_sets = $annotation_set->findNodeArray('features/gene');
+        next if (!defined($gene_sets));
+        
+        foreach my $gene (@{$gene_sets}) {
+            my %partial;
+            
+            my $skip_gene = 0;
+            
+            # Set the flag for the partial type (if any) indicating that the gene is only partially contained within the LRG
+            #ÊDo this manually since we don't want the call to be recursive
+            foreach my $node (@{$gene->{'nodes'}}) {
+                $partial{$node->content()} = 1 if ($node->name() eq 'partial');
+            }
+            
+            #ÊGet the transcripts
+            my $transcripts = $gene->findNodeArray('transcript');
+            next if (!defined($transcripts));
+            
+            while (!$skip_gene && (my $transcript = shift(@{$transcripts}))) {
+                
+                my %transcript_partial;
+                foreach my $node (@{$transcript->{'nodes'}}) {
+                    if ($node->name() eq 'partial') {
+                        $transcript_partial{$node->content()} = 1;
+                        $skip_gene = 1 if (!exists($partial{$node->content()}));
+                        last;
+                    }
+                }
+                
+                # Get the protein product nodes
+                my $proteins = $transcript->findNodeArray('protein_product');
+                next if (!defined($proteins));
+                
+                while (!$skip_gene && (my $protein = shift(@{$proteins}))) {
+                    foreach my $node (@{$protein->{'nodes'}}) {
+                        if ($node->name() eq 'partial') {
+                            $skip_gene = 1 if (!exists($transcript_partial{$node->content()}));
+                            last;
+                        }
+                    }
+                }
+            }
+            
+            if ($skip_gene) {
+                $passed = 0;
+                $self->{'check'}{$name}{'message'} .= "Indication of partial overlap for gene " . $gene->data()->{'symbol'} . " in $source is not consistent//";
+            }
+        }
+    }
+    $self->{'check'}{$name}{'passed'} = $passed;
     return $passed;
 }
 
