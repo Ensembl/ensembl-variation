@@ -1,3 +1,5 @@
+#!/usr/bin/perl
+
 =head1 LICENSE
 
   Copyright (c) 1999-2010 The European Bioinformatics Institute and
@@ -35,6 +37,10 @@ use Bio::EnsEMBL::Variation::DBSQL::TranscriptVariationAdaptor;
 # get command-line options
 my ($in_file, $out_file, $buffer_size, $species, $registry_file, $help, $host, $user, $password);
 
+our ($most_severe);
+
+my $args = scalar @ARGV;
+
 GetOptions(
 	'input_file=s'  => \$in_file,
 	'output_file=s' => \$out_file,
@@ -44,6 +50,7 @@ GetOptions(
 	'db_host=s'		=> \$host,
 	'user=s'		=> \$user,
 	'password=s'	=> \$password,
+	'most_severe'	=> \$most_severe,
 	'help'			=> \$help,
 );
 
@@ -54,9 +61,9 @@ $buffer_size ||= 500;
 $host ||= 'ensembldb.ensembl.org';
 $user ||= 'anonymous';
 
-if(defined($help)) {
+# print usage message if requested or no args supplied
+if(defined($help) || !$args) {
 	&usage;
-	
 	exit(0);
 }
 
@@ -80,6 +87,13 @@ else {
 	}
 }
 
+# get a meta container adaptors to check version
+#my $core_mca = $reg->get_adaptor($species, 'core', 'metacontainer');
+#my $var_mca = $reg->get_adaptor($species, 'variation', 'metacontainer');
+#
+#print
+#	"Connected to core version ", $core_mca->get_schema_version, " database ",
+#	"and variation version ", $var_mca->get_schema_version, " database\n";
 
 
 # define the filehandle to read input from
@@ -135,21 +149,30 @@ die("ERROR: Could not connect to core database\n") unless defined $sa and define
 my %slice_hash = ();
 my @new_vfs;
 
-
+my $line_number = 0;
 
 # read the file
 while(<$in_file_handle>) {
   chomp;
   
-  my ($chr, $start, $end, $allele_string, $strand) = split /\s+|\,/, $_;
+  $line_number++;
+  
+  my ($chr, $start, $end, $allele_string, $strand, $var_name) = split /\s+|\,/, $_;
   
   # fix inputs
   $chr =~ s/chr//g;
   $strand = ($strand =~ /\-/ ? "-1" : "1");
   
   # sanity checks
-  die("ERROR: Start $start or end $end coordinate invalid\n") unless $start =~ /^\d+$/ && $end =~ /^\d+$/;
-  die("ERROR: Invalid allele string $allele_string\n") unless $allele_string =~ /([ACGT-]+\/*)+/;  
+  unless($start =~ /^\d+$/ && $end =~ /^\d+$/) {
+	warn("WARNING: Start $start or end $end coordinate invalid on line $line_number\n");
+	next;
+  }
+  
+  unless($allele_string =~ /([ACGT-]+\/*)+/) {
+	warn("WARNING: Invalid allele string $allele_string on line $line_number\n");
+	next;
+  }
   
   # now get the slice
   my $slice;
@@ -170,9 +193,10 @@ while(<$in_file_handle>) {
 		$slice = $sa->fetch_by_region(undef, $chr);
 	}
 	
-	# if failed, die
+	# if failed, warn and skip this line
 	if(!defined($slice)) {
-		die("ERROR: Could not fetch slice named $chr\n");
+		warn("WARNING: Could not fetch slice named $chr on line $line_number\n");
+		next;
 	}	
 	
 	# store the hash
@@ -188,7 +212,7 @@ while(<$in_file_handle>) {
     -strand => $strand,
     -map_weight => 1,
     -adaptor => $vfa,           # we must attach a variation feature adaptor
-    -variation_name => $chr.'_'.$start.'_'.$allele_string,
+    -variation_name => (defined $var_name ? $var_name : $chr.'_'.$start.'_'.$allele_string),
   );
   
   push @new_vfs, $new_vf;

@@ -132,6 +132,21 @@ whitespace) separated. The columns are:
 - Strand : the strand to which the variant maps. Possible values are 1 and -1;
   + and - can also be used.
 
+Examples:
+
+- Substitution of C for T at base 100 on forward strand of chromosome 1:
+1 100 100 T/C +
+
+- Substitution of CAT for GGC at base 100 on reverse strand of chromosome Y:
+Y 100 102 GGC/CAT -
+
+- Deletion of bases 100, 101 and 102 (CTG) on forward strand of chromosome 3:
+3 100 102 CTG/- +
+
+- Insertion of ACCG between bases 100 and 101 on reverse strand of chromosome X:
+X 101 100 -/ACCG -
+
+
 4.2 Output file
 ---------------
 
