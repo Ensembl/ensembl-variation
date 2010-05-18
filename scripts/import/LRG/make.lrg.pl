@@ -14,11 +14,15 @@ my $CURRENT_ASSEMBLY = 'GRCh37';
 my $CURRENT_SCHEMA_VERSION = '1.6';
 
 my ($template_file, $output_file, $registry_file, $config_file, $target_dir, $exon_file, $genomic_file, $cdna_file, $peptide_file, $lrg_id, $help, $skip_fixed, $skip_updatable, $skip_unbranded, $skip_transcript_matching, $use_existing_mapping, $replace_annotations, $skip_host_check);
+my $tmpdir;
+my $ssaha2_bin;
 
-usage() unless scalar @ARGV;
+&usage() if (!scalar(@ARGV));
 
 # get options from command line
 GetOptions(
+	   'tmpdir=s' => \$tmpdir, 
+	   'ssaha2=s' => \$ssaha2_bin, 
 	   'xml_template=s' => \$template_file,
 	   'registry_file=s' => \$registry_file,
 	   'target_dir=s' => \$target_dir,
@@ -39,7 +43,7 @@ GetOptions(
 	   'skip_host_check!' => \$skip_host_check,
 );
 
-usage() if $help;
+&usage() if $help;
 
 if(defined $config_file) {
 	open IN, $config_file or warn "Could not read from config file $config_file\...attempting to continue\n";
@@ -77,6 +81,9 @@ $output_file ||= 'make.lrg.xml';
 	
 
 $LRGMapping::current_assembly = $CURRENT_ASSEMBLY;
+$LRGMapping::input_dir = $tmpdir;
+$LRGMapping::output_dir = $tmpdir;
+$LRGMapping::SSAHA_BIN = $ssaha2_bin;
 
 # we need an ID
 die "No LRG ID supplied (-id) or ID in wrong format (LRG_[0-9]+)\n" unless $lrg_id =~ /LRG_[0-9]+|tmp_.+/;
@@ -121,7 +128,7 @@ create_fixed_annotation($root,$lrg_id,$genomic_file,$exon_file,$cdna_file,$pepti
 
 if (!$skip_updatable) {
 
-	# This will always be called to update the modification date and Ensembl version info. If $use_existing_mapping is true and $replace_annotations is false, then those changes are the only ones that will be made
+	# This will always be called to update the modification date and Ensembl version info. If $use_existing_mapping is true and $replace_annotations is false, immediately returns
 	create_updatable_annotation($root,$use_existing_mapping,$replace_annotations,$LRGMapping::dbCore_rw->get_SliceAdaptor());
 
 	# Move annotations that should be "unbranded" to the LRG section and do consistency checking between these NCBI and Ensembl annotations
@@ -398,6 +405,9 @@ sub create_updatable_annotation {
 	my $replace_annotations = shift;
 	my $slice_adaptor = shift;
 	
+	# If no annotations will be added and no new mapping will be performed, we should return here
+	return if ($use_existing_mapping && !$replace_annotations);
+	
 	my $genomic_sequence = $root->findNode('fixed_annotation/sequence')->content();
 	
 	my $current;
@@ -436,15 +446,8 @@ sub create_updatable_annotation {
 # Add other exon naming element
 	$annotation_set_ensembl->findOrAdd('other_exon_naming');
 
-
-	# If no annotations will be added and no new mapping will be performed, we should return here
-	if ($use_existing_mapping && !$replace_annotations) {
-		
-		# Add alternative amino acid numbering element
-		$annotation_set_ensembl->findOrAdd('alternate_amino_acid_numbering');
-		
-		return;
-	}
+# Add alternative amino acid numbering element
+	$annotation_set_ensembl->findOrAdd('alternate_amino_acid_numbering');
 
 # Get the mapping node corresponding to the db assembly if it exists
 	my $mapping_node = $annotation_set_ensembl->findNode('mapping',{'assembly' => $assembly});
@@ -458,6 +461,9 @@ sub create_updatable_annotation {
 		$mapping = LRGMapping::mapping($genomic_sequence);
 		my $pairs = $mapping->{'pairs'};
 		$chr_id = $mapping->{'chr_name'};
+		
+		# Warn if the mapping could not be found over the entire LRG region
+		warn("*** WARNING *** Could not map the entire LRG region to the $CURRENT_ASSEMBLY assembly!") if ($mapping->{'lrg_start'} > 1 || $mapping->{'lrg_end'} < length($genomic_sequence));
 		
 		# Create a mapping node from the pairs array
 		my $new_node = LRGMapping::pairs_2_mapping($pairs,$assembly,$chr_id,($assembly eq $CURRENT_ASSEMBLY));
@@ -473,8 +479,8 @@ sub create_updatable_annotation {
 		
 		# Else, parse the mapping
 		$chr_id = $mapping_node->data->{'chr_name'};
-		my $chr_start = $mapping_node->data->{'start'};
-		my $chr_end = $mapping_node->data->{'end'};
+		my $chr_start = $mapping_node->data->{'chr_start'};
+		my $chr_end = $mapping_node->data->{'chr_end'};
 		my $chr_slice = $slice_adaptor->fetch_by_region('chromosome',$chr_id);
 		my $chr_seq = $chr_slice->subseq($chr_start,$chr_end);
 		$mapping = LRGMapping::mapping_2_pairs($mapping_node,$genomic_sequence,$chr_seq);
@@ -573,20 +579,24 @@ sub match_fixed_annotation_transcripts {
 	$feature_node = $ensembl_annotation->findNode('features') unless (!defined($ensembl_annotation));
 	my $ensembl_genes = $feature_node->findNodeArray('gene') unless (!defined($feature_node));
 
-# Loop over the genes, we are only interested in the one this LRG was created for
-	foreach my $ensembl_gene (@{$ensembl_genes}) {
-#		next unless ($ensembl_gene->{'data'}{'symbol'} eq $hgnc_symbol);
+# Keep track of which transcript has been matched to which fixed_id
+	my %matched;
+	
+# Loop over the transcripts in the fixed annotation and see if the exon coordinates match for any of the updatabale transcripts
+	foreach my $fixed_transcript (@{$fixed_transcripts}) {
+		my $fixed_id = $fixed_transcript->data()->{'name'};
+		my $fixed_exons = $fixed_transcript->findNodeArray('exon');
+	
+# Loop over the updatable genes
+		foreach my $ensembl_gene (@{$ensembl_genes}) {
 		
 # Get the annotated transcripts		
-		my $ensembl_transcripts = $ensembl_gene->findNodeArray('transcript');
-		foreach my $ensembl_transcript (@{$ensembl_transcripts}) {
+			my $ensembl_transcripts = $ensembl_gene->findNodeArray('transcript');
+			foreach my $ensembl_transcript (@{$ensembl_transcripts}) {
 # Fetch the transcript from the Core database using the annotated stable id
-			my $core_transcript = $transcript_adaptor->fetch_by_stable_id($ensembl_transcript->{'data'}{'transcript_id'});
+				my $core_transcript = $transcript_adaptor->fetch_by_stable_id($ensembl_transcript->{'data'}{'transcript_id'});
 # Get the exons for the transcript from the Core database			
-			my $core_exons = $core_transcript->get_all_Exons();
-# Loop over the transcripts in the fixed annotation and see if the exon coordinates match
-			foreach my $fixed_transcript (@{$fixed_transcripts}) {
-				my $fixed_exons = $fixed_transcript->findNodeArray('exon');
+				my $core_exons = $core_transcript->get_all_Exons();
 # Check if the number of exons is equal
                                 next unless (scalar(@{$core_exons}) == scalar(@{$fixed_exons}));
 # Loop until no more exons or the coordinates don't match
@@ -595,29 +605,42 @@ sub match_fixed_annotation_transcripts {
 					$i++;
 				}
 				if ($i == scalar(@{$core_exons})) {
-# If all exon coordinates match, add the "fixed_id" flag to the updatable transcript annotation
-					$ensembl_transcript->addData({'fixed_id' => $fixed_transcript->{'data'}{'name'}});
+# If all exon coordinates match, store the transcript as the match for this fixed id
+					$matched{$fixed_id} = $ensembl_transcript;
 					last;
 				}
 			}
+			last if (exists($matched{$fixed_id}));
+		}
+		
 # If no match could be made, check if a cross-referenced NCBI transcript has a fixed id assigned and in that case use that.
-			if (!exists($ensembl_transcript->{'data'}{'fixed_id'})) {
-				my $refseq_xrefs = $ensembl_transcript->findNodeArray('db_xref',{'source' => 'RefSeq'});
-				foreach my $refseq_xref (@{$refseq_xrefs}) {
-					foreach my $ncbi_gene (@{$ncbi_genes}) {
-						my $ncbi_transcripts = $ncbi_gene->findNodeArray('transcript',{'transcript_id' => $refseq_xref->{'data'}{'accession'}});
-						foreach my $ncbi_transcript (@{$ncbi_transcripts}) {
-							if (exists($ncbi_transcript->{'data'}{'fixed_id'})) {
-								$ensembl_transcript->{'data'}{'fixed_id'} = $ncbi_transcript->{'data'}{'fixed_id'};
-								last;
-							}
+		if (!exists($matched{$fixed_id})) {
+			
+#ÊGet the NCBI transcript for this fixed_id
+			my $ncbi_transcript;
+			foreach my $ncbi_gene (@{$ncbi_genes}) {
+				$ncbi_transcript = $ncbi_gene->findNode('transcript',{'fixed_id' => $fixed_id}) or next;
+				last;
+			}
+			
+# Loop over the updatable genes
+			if (defined($ncbi_transcript)) {
+				foreach my $ensembl_gene (@{$ensembl_genes}) {
+		
+# Get the annotated transcripts		
+					my $ensembl_transcripts = $ensembl_gene->findNodeArray('transcript');
+					foreach my $ensembl_transcript (@{$ensembl_transcripts}) {
+						# Skip to next if the transcript is not xref:d to the NCBI transcript for this fixed id
+						my $refseq_xref = $ensembl_transcript->findNode('db_xref',{'source' => 'RefSeq', 'accession' => $ncbi_transcript->data()->{'transcript_id'}}) or next;
+# It is possible for several Ensembl transcripts to be xref:d to the same NCBI transcript. So in that case, pick the longest one
+						if (!exists($matched{$fixed_id}) || ($ncbi_transcript->{'data'}{'end'} - $ncbi_transcript->{'data'}{'start'}) > ($matched{$fixed_id}->{'data'}{'end'} - $matched{$fixed_id}->{'data'}{'start'})) {
+							$matched{$fixed_id} = $ensembl_transcript;
 						}
-						last if (exists($ensembl_transcript->{'data'}{'fixed_id'}));
 					}
-					last if (exists($ensembl_transcript->{'data'}{'fixed_id'}));
 				}
 			}
 		}
+		$matched{$fixed_id}->addData({'fixed_id' => $fixed_id}) if (exists($matched{$fixed_id}));
 	}
 }
 
@@ -726,7 +749,7 @@ sub move_to_unbranded {
 	}
 	
 # Check if the annotations were changed, in that case, update the modification date
-	if (!$annotation_set_lrg->identical($old_annotation_set)) {
+	if (!$old_annotation_set || !$annotation_set_lrg->identical($old_annotation_set)) {
 # update the modification date
 		$annotation_set_lrg->findOrAdd('modification_date')->content($root->date);
 	}
