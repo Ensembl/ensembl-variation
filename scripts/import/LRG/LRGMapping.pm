@@ -35,6 +35,7 @@ our $current_assembly;
 
 our $mapping_num = 1;
 
+our $SSAHA_RUNTIME_LIMIT = 5;
 our $FARM_MEMORY = 4000;
 our %SSAHA_PARAMETERS = (
   '-align' 	=> '1',
@@ -193,8 +194,11 @@ sub ssaha_mapping {
   	
   my $error_file = bsub_ssaha_job($queue,$input_file,$output_file,$subject);
   
-  my $call = "bsub -o $wait_output -K -w 'done($input_file\_ssaha_job)' -J waiting_process sleep 1"; #waits until all ssaha jobs have finished to continue
+  my $call = "bsub -o $wait_output -K -w 'done($input_file\_ssaha_job)' -J waiting_process -c $SSAHA_RUNTIME_LIMIT sleep 1"; #waits until all ssaha jobs have finished to continue (but maximum $SSAHA_RUNTIME_LIMIT minutes)
   system($call);
+  
+  # Check that the waiting process wasn't killed by the runtime limit
+  die("*** ERROR *** SSAHA2 mapping process didn't finish in time. This is probably because ssaha2 crashed.") if (`grep 'TERM_CPULIMIT' $wait_output`);
   
   # Check the error file
   my @error;
@@ -409,7 +413,7 @@ sub parse_vulgar_string {
       # Go through each nucleotide in the query and target and store SNPs
       my $i = 0;
       while ($i < $q_len) {
-	if (substr($q_seq,$q_start + $q_offset + $i - 1,1) ne substr($t_seq,1 + $t_offset + $i - 1,1)) {
+	if (substr($q_seq,1 + $q_offset + $i - 1,1) ne substr($t_seq,1 + $t_offset + $i - 1,1)) {
 	  $pair = [
 	    $lbl,
 	    $q_start + $q_offset + $i,
@@ -417,7 +421,7 @@ sub parse_vulgar_string {
 	    ($t_strand > 0 ? $t_start + $t_offset + $i : $t_end - $t_offset - $i),
 	    ($t_strand > 0 ? $t_start + $t_offset + $i : $t_end - $t_offset - $i),
 	    $q_strand,
-	    substr($q_seq,$q_start + $q_offset + $i - 1,1),
+	    substr($q_seq,1 + $q_offset + $i - 1,1),
 	    substr($t_seq,1 + $t_offset + $i - 1,1)
 	  ];
 	  push(@pairs,$pair);
@@ -435,7 +439,7 @@ sub parse_vulgar_string {
 	($t_strand > 0 ? $t_start + $t_offset : $t_end - $t_offset - $t_len + 1),
 	($t_strand > 0 ? $t_start + $t_offset + $t_len - 1 : $t_end - $t_offset),
 	$q_strand,
-	($q_len == 0 ? '' : substr($q_seq,$q_start + $q_offset -1,$q_len)),
+	($q_len == 0 ? '' : substr($q_seq,1 + $q_offset -1,$q_len)),
 	($t_len == 0 ? '' : substr($t_seq,1 + $t_offset -1,$t_len))
       ];
       push(@pairs,$pair);
@@ -819,7 +823,7 @@ sub gene_2_feature {
 	    my $cds_end;
 	    undef($partial_5);
 	    undef($partial_3);
-	    my $lift = lift_coordinate($trans->coding_region_start,$trans->slice(),$lrg_slice);
+	    my $lift = lift_coordinate(($trans->strand > 0 ? $trans->coding_region_start : $trans->coding_region_end),$trans->slice(),$lrg_slice);
 	    # In case the position couldn't be found on the LRG slice, investigate why
 	    if (!defined($lift->{'position'})) {
 	      #ÊIf coding start lies downstream of LRG slice, the protein should be skipped
@@ -829,7 +833,7 @@ sub gene_2_feature {
 	      #ÊIf coding start lies upstream of LRG slice, set start of protein to the closest exon start
 	      elsif ($lift->{'reason'} eq 'upstream') {
 		$cds_start = $feat_start;
-		$partial_3 = 1;
+		$partial_5 = 1;
 	      }
 	      #ÊIf it is because of a deletion, don't know what to do... (set to closest, non-deleted position?)
 	      elsif ($lift->{'reason'} eq 'deleted') {}
@@ -842,7 +846,7 @@ sub gene_2_feature {
 	      $cds_start = $lift->{'position'};
 	    }
 	    
-	    $lift = lift_coordinate($trans->coding_region_end,$trans->slice(),$lrg_slice);
+	    $lift = lift_coordinate(($trans->strand > 0 ? $trans->coding_region_end : $trans->coding_region_start),$trans->slice(),$lrg_slice);
 	    # In case the position couldn't be found on the LRG slice, investigate why
 	    if (!defined($lift->{'position'})) {
 	      #ÊIf coding end lies upstream of LRG slice, the protein should be skipped
@@ -852,7 +856,7 @@ sub gene_2_feature {
 	      #ÊIf coding end lies downstream of LRG slice, set end of protein to the closest exon end
 	      elsif ($lift->{'reason'} eq 'downstream') {
 		$cds_end = $feat_end;
-		$partial_5 = 1;
+		$partial_3 = 1;
 	      }
 	      #ÊIf it is because of a deletion, don't know what to do... (set to closest, non-deleted position?)
 	      elsif ($lift->{'reason'} eq 'deleted') {}
@@ -864,7 +868,7 @@ sub gene_2_feature {
 	    else {
 	      $cds_end = $lift->{'position'};
 	    }
-
+	    
 # Some gene-level data (e.g. NCBI GeneID) is buried in the translation object. So before determining if we skip the transcript, parse the xrefs
 	    my $prot_node = LRG::Node->new('protein_product');
 	    $prot_node->data(
@@ -1160,7 +1164,6 @@ sub pairs_2_mapping {
   }
   
   # Loop over the DNA chunk array and create mapping spans and diffs as necessary
-  # FIXME: If the DNA chunks are not sufficiently far apart, continue the same mapping span but add a diff 
   my $chr_map_start = 1e11;
   my $chr_map_end = -1;
   my $last_chr_start;
