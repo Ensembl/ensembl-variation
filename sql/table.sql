@@ -305,7 +305,7 @@ create table variation_feature(
 	consequence_type SET ('ESSENTIAL_SPLICE_SITE','STOP_GAINED','STOP_LOST','COMPLEX_INDEL',
 	                      'FRAMESHIFT_CODING','NON_SYNONYMOUS_CODING','SPLICE_SITE','PARTIAL_CODON','SYNONYMOUS_CODING',
 				    'REGULATORY_REGION','WITHIN_MATURE_miRNA','5PRIME_UTR','3PRIME_UTR','INTRONIC','NMD_TRANSCRIPT','UPSTREAM','DOWNSTREAM',
-				    'WITHIN_NON_CODING_GENE','NO_CONSEQUENCE','INTERGENIC')
+				    'WITHIN_NON_CODING_GENE','NO_CONSEQUENCE','INTERGENIC','HGMD_MUTATION')
 	default "INTERGENIC" not null ,	
 	primary key( variation_feature_id ),
 	key pos_idx( seq_region_id, seq_region_start ),
@@ -488,7 +488,7 @@ create table transcript_variation(
   consequence_type SET ('ESSENTIAL_SPLICE_SITE','STOP_GAINED','STOP_LOST','COMPLEX_INDEL',
 			     'FRAMESHIFT_CODING', 'NON_SYNONYMOUS_CODING','SPLICE_SITE','PARTIAL_CODON','SYNONYMOUS_CODING',
 			     'REGULATORY_REGION','WITHIN_MATURE_miRNA','5PRIME_UTR','3PRIME_UTR','INTRONIC','NMD_TRANSCRIPT','UPSTREAM',
-			     'DOWNSTREAM','WITHIN_NON_CODING_GENE') not null,	 
+			     'DOWNSTREAM','WITHIN_NON_CODING_GENE','HGMD_MUTATION') not null,	 
   primary key( transcript_variation_id ),
   key variation_idx( variation_feature_id ),
   key transcript_stable_idx( transcript_stable_id ),
