@@ -51,9 +51,10 @@ our %CONSEQUENCE_TYPES = ('ESSENTIAL_SPLICE_SITE' => 1,
 			  'WITHIN_NON_CODING_GENE' => 32768,
 			  'UPSTREAM' => 65536,
 			  'DOWNSTREAM' => 131072,
-			  'NO_CONSEQUENCE' => 262144,
-			  'INTERGENIC' => 524288,
-			  '_'          => 1048576,
+			  'HGMD_MUTATION' => 262144,
+			  'NO_CONSEQUENCE' => 524288,
+			  'INTERGENIC' => 1048576,
+			  '_'          => 2097152,
 			  );
 
 # hash storing whether consequence affects peptide sequence
