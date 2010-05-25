@@ -102,18 +102,35 @@ sub fetch_all_by_Transcripts{
 
     foreach my $tr (@{$transcript_ref}) {
       if (!$tr->isa('Bio::EnsEMBL::Transcript')){
-	throw('Bio::EnsEMBL::Transcript is expected');
+		throw('Bio::EnsEMBL::Transcript is expected');
       }
       $tr_by_id{$tr->stable_id()} = $tr;
     }
+	
+	# hack if LRG transcript
+	my @lrg_trs;
+	foreach my $tr(values %tr_by_id) {
+		if($tr->stable_id =~ /^LRG\_\d+/) {
+			my $slice = $tr->feature_Slice;
+			$slice = $slice->expand($UP_DOWN_SIZE, $UP_DOWN_SIZE);
+			
+			foreach my $vf(@{$slice->get_all_VariationFeatures}) {
+				push @lrg_trs, @{$self->_calc_consequences($slice, $tr, $vf)};
+			}
+		}
+	}
 
     my $instr = join (",", map{"'$_'"} keys( %tr_by_id));
     my $transcript_variations = $self->generic_fetch( "tv.transcript_stable_id in ( $instr )");
     for my $tv (@{$transcript_variations}){
-	#add to the TranscriptVariation object all the Transcripts
-	$tv->{'transcript'} = $tr_by_id{$tv->{'_transcript_stable_id'}};
-	delete $tv->{'_transcript_stable_id'}; #remove the transcript_id from the transcript_variation object
+		#add to the TranscriptVariation object all the Transcripts
+		$tv->{'transcript'} = $tr_by_id{$tv->{'_transcript_stable_id'}};
+		delete $tv->{'_transcript_stable_id'}; #remove the transcript_id from the transcript_variation object
     }
+	
+	# add hacked LRG ones
+	push @$transcript_variations, @lrg_trs;
+	
     return $transcript_variations;
 }
 
@@ -146,9 +163,14 @@ sub fetch_all_by_VariationFeatures {
   
   my @have_dbID;
   my @no_dbID;
+  my @lrg_vfs;
   
   foreach my $vf(@$vf_ref) {
-	if(defined $vf->dbID) {
+	if($vf->seq_region_name =~ /^LRG\_\d+/) {
+		push @lrg_vfs, $vf;
+	}
+	
+	elsif(defined $vf->dbID) {
 		push @have_dbID, $vf;
 	}
 	
@@ -156,6 +178,9 @@ sub fetch_all_by_VariationFeatures {
 		push @no_dbID, $vf;
 	}
   }
+  
+  # try lrgs as no_dbIDs
+  push @no_dbID, @lrg_vfs;
   
   # already existing VFs - get TVs from the database
   if(scalar @have_dbID) {
@@ -224,7 +249,7 @@ sub fetch_all_by_VariationFeatures {
 		## REGULATORY FEATURES
 		######################
 		
-		if(defined $rf_adaptor && defined $ef_adaptor && defined $gene_adaptor && defined $transcript_adaptor) {
+		if(defined $rf_adaptor && defined $ef_adaptor && defined $gene_adaptor && defined $transcript_adaptor && $vf->seq_region_name !~ /^LRG\_\d+/) {
 			
 			# get the feature slice
 			my $slice = $vf->feature_Slice;
@@ -348,68 +373,11 @@ sub fetch_all_by_VariationFeatures {
 		# get all the transcripts
 		my @transcripts = @{$expanded_slice->get_all_Transcripts()};
 		
+		# iterate through them
 		while(my $transcript = shift @transcripts) {
 			
-			# expand the allele string
-			my $allele_string = $vf->allele_string;
-			expand(\$allele_string);
-			
-			my @alleles = split /\//, $allele_string;
-			my $strand = $vf->strand;
-			
-			# if we need to flip strand to match the transcript
-			if ($strand != $transcript->strand()) {
-				
-				# flip feature onto same strand as transcript
-				for (my $i = 0; $i < @alleles; $i++) {
-				  reverse_comp(\$alleles[$i]);
-				}
-				
-				$strand = $transcript->strand();
-			}
-			
-			# shift off the reference allele
-			shift @alleles;
-			
-			# convert the start and end to slice coords
-			my $start = $vf->start - $expanded_slice->start + 1;
-			my $end = $vf->end - $expanded_slice->start + 1;
-			
-			# create a consequence type object
-			my $consequence_type = Bio::EnsEMBL::Variation::ConsequenceType->new(
-				$transcript->dbID,
-				undef,				# this is the VF dbID, we don't have one
-				$start,
-				$end,
-				$strand,
-				\@alleles
-			);
-			
-			my $consequences;
-			
-			if($allele_string !~ /\+/) {
-				$consequences = type_variation($transcript, "", $consequence_type);
-			}
-			
-			foreach my $con(@$consequences) {
-				my $trv = Bio::EnsEMBL::Variation::TranscriptVariation->new_fast( {
-					'dbID' 				=> undef,
-					'adaptor' 			=> $self,
-					'cdna_start'		        => $con->cdna_start,
-					'cdna_end'			=> $con->cdna_end,
-					'cds_start'                     => $con->cds_start,
-                                        'cds_end'                       => $con->cds_end,
-					'translation_start' => $con->aa_start,
-					'translation_end'	=> $con->aa_end,
-					'pep_allele_string' => join("/", @{$con->aa_alleles || []}),
-					'consequence_type'	=> $con->type,
-					'transcript' 		=> $transcript,
-					'variation_feature' => $vf,
-				} );
-				
-				push @this_vf_tvs, $trv;
-				$vf->add_TranscriptVariation($trv);
-			}
+			# use _calc_consequences to get the TVs
+			push @this_vf_tvs, @{$self->_calc_consequences($expanded_slice, $transcript, $vf)};
 		}
 		
 		# if we didn't get any consequences, make an INTERGENIC
@@ -460,6 +428,96 @@ sub new_fake {
   return $self;
 }
 
+
+
+=head2 _calc_consequences
+
+  Arg [1]    : Bio::EnsEMBL::Slice $slice
+  Arg [2]    : Bio::EnsEMBL::Transcript $transcript
+  Arg [3]    : Bio::EnsEMBL::Variation::VariationFeature $vf
+  Example    : my $tvs = $tva->_calc_consequences($slice, $transcript, $vf);
+  Description: Internal method used by SNP Effect Predictor to calculate
+               consqeuences on the fly. Not intended for external use.
+  Returntype : listref of Bio::EnsEMBL::Variation::TranscriptVariation
+  Exceptions : none
+  Caller     : internal
+  Status     : at risk
+
+=cut
+
+sub _calc_consequences {
+	my $self = shift;
+	my $expanded_slice = shift;
+	my $transcript = shift;
+	my $vf = shift;
+	
+	my @tvs;
+	
+	# expand the allele string
+	my $allele_string = $vf->allele_string;
+	expand(\$allele_string);
+	
+	my @alleles = split /\//, $allele_string;
+	my $strand = $vf->strand;
+	
+	# if we need to flip strand to match the transcript
+	if ($strand != $transcript->strand()) {
+		
+		# flip feature onto same strand as transcript
+		for (my $i = 0; $i < @alleles; $i++) {
+		  reverse_comp(\$alleles[$i]);
+		}
+		
+		$strand = $transcript->strand();
+	}
+	
+	# shift off the reference allele
+	shift @alleles;
+	
+	# convert the start and end to slice coords
+	my $start = $vf->seq_region_start - $expanded_slice->start + 1;
+	my $end = $vf->seq_region_end - $expanded_slice->start + 1;
+	
+	# create a consequence type object
+	my $consequence_type = Bio::EnsEMBL::Variation::ConsequenceType->new(
+		$transcript->dbID,
+		$vf->dbID || undef,
+		$start,
+		$end,
+		$strand,
+		\@alleles
+	);
+	
+	my $consequences;
+	
+	if($allele_string !~ /\+/) {
+		$consequences = type_variation($transcript, "", $consequence_type);
+	}
+	
+	foreach my $con(@$consequences) {
+		my $trv = Bio::EnsEMBL::Variation::TranscriptVariation->new_fast( {
+			'dbID' 				=> undef,
+			'adaptor' 			=> $self,
+			'cdna_start'	    => $con->cdna_start,
+			'cdna_end'			=> $con->cdna_end,
+			'cds_start'         => $con->cds_start,
+			'cds_end'           => $con->cds_end,
+			'translation_start' => $con->aa_start,
+			'translation_end'	=> $con->aa_end,
+			'pep_allele_string' => join("/", @{$con->aa_alleles || []}),
+			'consequence_type'	=> $con->type,
+			'transcript' 		=> $transcript,
+			'variation_feature' => $vf,
+			'_transcript_stable_id' => $transcript->stable_id,
+			'_variation_feature_id' => $vf->dbID,
+		} );
+		
+		push @tvs, $trv;
+		$vf->add_TranscriptVariation($trv);
+	}
+	
+	return \@tvs;
+}
 
 #
 # internal method responsible for constructing transcript variation objects
