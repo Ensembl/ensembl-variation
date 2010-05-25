@@ -452,9 +452,26 @@ sub _calc_consequences {
 	my $vf = shift;
 	
 	my @tvs;
+	my $allele_string = $vf->allele_string;
+	
+	# HGMD
+	if($allele_string eq 'HGMD_MUTATION') {
+		my $trv = Bio::EnsEMBL::Variation::TranscriptVariation->new_fast( {
+			'dbID' 				=> undef,
+			'adaptor' 			=> $self,
+			'consequence_type'	=> ['HGMD_MUTATION'],
+			'transcript' 		=> $transcript,
+			'variation_feature' => $vf,
+			'_transcript_stable_id' => $transcript->stable_id,
+			'_variation_feature_id' => $vf->dbID,
+		} );
+		
+		push @tvs, $trv;
+		$vf->add_TranscriptVariation($trv);
+		return \@tvs;
+	}
 	
 	# expand the allele string
-	my $allele_string = $vf->allele_string;
 	expand(\$allele_string);
 	
 	my @alleles = split /\//, $allele_string;
