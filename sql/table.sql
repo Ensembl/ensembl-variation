@@ -15,7 +15,7 @@ create table variation (
 	variation_id int(10) unsigned not null auto_increment, # PK
 	source_id int(10) unsigned not null, 
 	name varchar(255),
-	validation_status SET('cluster','freq','submitter','doublehit','hapmap','failed'),
+	validation_status SET('cluster','freq','submitter','doublehit','hapmap','failed','precious'),
 	ancestral_allele text,
 
 	primary key( variation_id ),
@@ -301,7 +301,7 @@ create table variation_feature(
 	map_weight int not null,
 	flags SET('genotyped'),
 	source_id int(10) unsigned not null, 
-	validation_status SET('cluster','freq','submitter','doublehit','hapmap'),
+	validation_status SET('cluster','freq','submitter','doublehit','hapmap','precious'),
 	consequence_type SET ('ESSENTIAL_SPLICE_SITE','STOP_GAINED','STOP_LOST','COMPLEX_INDEL',
 	                      'FRAMESHIFT_CODING','NON_SYNONYMOUS_CODING','SPLICE_SITE','PARTIAL_CODON','SYNONYMOUS_CODING',
 				    'REGULATORY_REGION','WITHIN_MATURE_miRNA','5PRIME_UTR','3PRIME_UTR','INTRONIC','NMD_TRANSCRIPT','UPSTREAM','DOWNSTREAM',
