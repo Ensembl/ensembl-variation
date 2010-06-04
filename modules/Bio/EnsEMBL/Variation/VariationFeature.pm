@@ -270,11 +270,13 @@ sub map_weight{
 
 
 =head2 get_all_TranscriptVariations
-
+  Arg [1]     : (optional) listref of Bio::EnsEMBL::Transcript $transcripts
   Example     : $vf->get_all_TranscriptVariations;
-  Description : Getter a list with all the TranscriptVariations associated associated to the VariationFeature
+  Description : Getter a list with all the TranscriptVariations associated associated to the VariationFeature.
+                If an optional listref to Transcript objects is supplied, get only TranscriptVariations
+		associated with those Transcripts.
   Returntype  : ref to list of Bio::EnsEMBL::Variation::TranscriptVariation objects
-  Exceptions  : None
+  Exceptions  : Thrown on wrong argument type
   Caller      : general
   Status      : At Risk
 
@@ -282,7 +284,12 @@ sub map_weight{
 
 sub get_all_TranscriptVariations{
     my $self = shift;
-	
+    my $tr_ref = shift;
+    
+    if(defined($tr_ref) && ref($tr_ref) ne 'ARRAY') {
+      throw('Array Bio::EnsEMBL::Transcript expected');
+    }
+    
     if(!defined($self->{'transcriptVariations'}) && $self->{'adaptor'})    {
 	 
 	  my $tva;
@@ -296,7 +303,7 @@ sub get_all_TranscriptVariations{
 	  }
 	  
 	  #lazy-load from database on demand
-	  $tva->fetch_all_by_VariationFeatures([$self]);
+	  $tva->fetch_all_by_VariationFeatures([$self],$tr_ref);
 	  $self->{'transcriptVariations'} ||= [];
 	  
 	  # now set the highest priority one
