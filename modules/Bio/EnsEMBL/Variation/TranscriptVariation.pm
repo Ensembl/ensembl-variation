@@ -199,6 +199,27 @@ sub new_fast {
 }
 
 
+=head2 transcript_stable_id
+
+  Example    : print $trvar->transcript_stable_id(), "\n";
+  Description: Get the stable_id of the Transcript that is affected by this
+               TranscriptVariation. This will NOT trigger lazy-loading of
+	       the transcript.
+  Returntype : string
+  Exceptions : throw on bad argument
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub transcript_stable_id {
+  my $self = shift;
+
+  # If the transcript object has been loaded, get the stable_id from it. Otherwise, return the stable_id that is stored in this TranscriptVariation  
+  return $self->{'transcript'}->stable_id() if (defined($self->{'transcript'}));
+  return $self->{'_transcript_stable_id'};
+}
+
 =head2 transcript
 
   Arg [1]    : (optional) Bio::EnsEMBL::Transcript $transcript
