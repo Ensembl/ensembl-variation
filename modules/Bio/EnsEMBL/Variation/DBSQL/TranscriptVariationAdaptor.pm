@@ -137,12 +137,15 @@ sub fetch_all_by_Transcripts{
 =head2 fetch_all_by_VariationFeatures
 
   Arg [1]    : Bio::EnsEMBL::Variation::VariationFeature $vf
+  Arg [2]    : (optional) Bio::EnsEMBL::Transcript $trs
   Example    :
      $vf = $vf_adaptor->fetch_by_dbID(1234);
      @tr_vars = @{$tr_var_adaptor->fetch_all_by_VariationFeatures([$vf])});
   Description: Retrieves all TranscriptVariation objects associated with
                provided Ensembl variation features. Attaches them to the given variation
-               features.
+               features. If a ref to an array of transcripts is specified as a second
+	       argument, returns only the TranscriptVariations associated with those
+	       transcripts.
   Returntype : ref to list of Bio::EnsEMBL::Variation::TranscriptVariations
   Exceptions : throw on bad argument
   Caller     : general
@@ -153,9 +156,13 @@ sub fetch_all_by_Transcripts{
 sub fetch_all_by_VariationFeatures {
   my $self = shift;
   my $vf_ref = shift;
+  my $tr_ref = shift;
 
   if(ref($vf_ref) ne 'ARRAY') {
     throw('Array Bio::EnsEMBL::Variation::VariationFeature expected');
+  }
+  if(defined($tr_ref) && ref($tr_ref) ne 'ARRAY') {
+    throw('Array Bio::EnsEMBL::Transcript expected');
   }
 
   my %vf_by_id;
@@ -187,7 +194,15 @@ sub fetch_all_by_VariationFeatures {
 
 	%vf_by_id = map {$_->dbID(), $_ } @have_dbID;
 	my $instr = join (",",keys( %vf_by_id));
-	$tvs = $self->generic_fetch( "tv.variation_feature_id in ( $instr )" );
+	
+	# If a list of transcripts was specified, get the stable_ids to restrict the query by
+	my $tr_condition = "";
+	if (defined($tr_ref)) {
+	    my @stable_ids = map($_->stable_id(),@{$tr_ref});
+	    $tr_condition = " AND tv.transcript_stable_id in ( '" . join("','",@stable_ids) . "' )";
+	}
+	
+	$tvs = $self->generic_fetch( "tv.variation_feature_id in ( $instr )" . $tr_condition);
 	for my $tv ( @$tvs ) {
 	  #add to the variation feature object all the transcript variations
 	  $vf_by_id{ $tv->{'_vf_id'} }->add_TranscriptVariation( $tv );
@@ -392,7 +407,18 @@ sub fetch_all_by_VariationFeatures {
 		}
 		
 		# add all TVs to the total list
-		push @{$tvs}, @this_vf_tvs;
+		
+		# FIXME: Extremely ugly fix to limit the TranscriptVariations to a supplied list of transcripts. Just temporary to make the
+		#Êfunctionality consistent when looking at de novo vfs. The filtering should be performed within the code above instead.
+		if (!defined($tr_ref)) {
+		    push @{$tvs}, @this_vf_tvs;
+		}
+		else {
+		    while (my $tv = shift(@this_vf_tvs)) {
+			next unless (grep($_ eq $tv->transcript_stable_id(),@{$tr_ref}));
+			push(@{$tvs},$tv);
+		    }
+		}
 	}
   }
   
