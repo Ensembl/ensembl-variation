@@ -306,9 +306,28 @@ sub get_all_TranscriptVariations{
 	  $tva->fetch_all_by_VariationFeatures([$self],$tr_ref);
 	  $self->{'transcriptVariations'} ||= [];
 	  
-	  # now set the highest priority one
-	  $self->{'consequence_type'} = $self->_highest_priority($self->{'transcriptVariations'});
+	  # If a transcript array was specified, make sure the fetched TranscriptVariations aren't stored
+	  # so that a subsequent call to this function will load all TranscriptVariations
+	  if (defined($tr_ref)) {
+	    my $trvs = $self->{'transcriptVariations'};
+	    $self->{'transcriptVariations'} = undef;
+	    return $trvs;
+	  }
+	  # Only set the consequence type if no transcript list was specified
+	  else {
+	    # now set the highest priority one
+	    $self->{'consequence_type'} = $self->_highest_priority($self->{'transcriptVariations'});  
+	  }
     }
+    # If TranscriptVariations have already been loaded, return only the ones corresponding to the desired transcripts
+    elsif (defined($self->{'transcriptVariations'}) && defined($tr_ref)) {
+      my @trvs;
+      foreach my $tv (@{$self->{'transcriptVariations'}}) {
+	push(@trvs,$tv) if (grep($_->stable_id() eq $tv->transcript_stable_id(),@{$tr_ref}));
+      }
+      return \@trvs;
+    }
+    
     return $self->{'transcriptVariations'};
 }
 
