@@ -554,11 +554,15 @@ sub add_mapping {
     push(@seq_region_ids,$q_seq_region_id);
   
     #ÊAdd a seq_region_attrib indicating that it is toplevel
-    my $attrib_type_id = get_attrib_type_id('toplevel');
+    my $attrib_type_id = get_attrib_type_id('toplevel') or warn("Could not get attrib_type_id for toplevel attribute!\n");
     LRGImport::insert_row({'seq_region_id' => $q_seq_region_id, 'attrib_type_id' => $attrib_type_id, 'value' => 1},'seq_region_attrib',1);
     
     #ÊAdd a seq_region_attrib indicating that it is non-reference
-    $attrib_type_id = get_attrib_type_id('non_ref');
+    $attrib_type_id = get_attrib_type_id('non_ref') or warn("Could not get attrib_type_id for non_ref attribute!\n");
+    LRGImport::insert_row({'seq_region_id' => $q_seq_region_id, 'attrib_type_id' => $attrib_type_id, 'value' => 1},'seq_region_attrib',1);
+    
+    #ÊAdd a seq_region_attrib indicating that it is a LRG
+    $attrib_type_id = get_attrib_type_id('LRG') or warn("Could not get attrib_type_id for LRG attribute!\n");
     LRGImport::insert_row({'seq_region_id' => $q_seq_region_id, 'attrib_type_id' => $attrib_type_id, 'value' => 1},'seq_region_attrib',1);
     
     # Get the seq_region_id for the target contig
@@ -1051,6 +1055,39 @@ sub add_object_xref {
     my $object_xref_id = $dbCore->dbc->db_handle->{'mysql_insertid'};
     
     return $object_xref_id;
+}
+
+# Get a listing of available remote files from a supplied url
+sub fetch_remote_lrg_ids {
+  my $urls = shift;
+  
+  #ÊA hash holding the results
+  my %result;
+  
+  # Create a user agent object
+  my $ua = LWP::UserAgent->new;
+  
+  # Loop over the supplied URLs
+  while (my $url = shift(@{$urls})) {
+    # Create a request
+    my $req = HTTP::Request->new(GET => $url);
+    # Pass request to the user agent and get a response back
+    my $res = $ua->request($req);
+  
+    # Store data on the request in the hash
+    $result{$url} = {
+      'success' => $res->is_success,
+      'message' => $res->message
+    };
+  
+    #ÊGet the listing if the request was successful
+    if ($result{$url}{'success'}) {
+      my @lrgs = ($res->content =~ m/(LRG\_\d+)\.xml/g);
+      $result{$url}{'lrg_id'} = \@lrgs;
+    }
+  }
+  
+  return \%result;
 }
 
 #ÊAttempt to fetch the LRG XML file from the LRG server
