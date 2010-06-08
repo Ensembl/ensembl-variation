@@ -152,7 +152,7 @@ sub parallel_variation_feature{
     $sth->finish();
     my $dbname = $vdbname; #get the name of the database to create the file    
 
-    if ($hap_id_string !~ /\(\d+\)/) {
+    if ($hap_id_string !~ /\([\,\d]+\)/) {
       $hap_id_string = "";
     }
 
@@ -431,7 +431,7 @@ sub reverse_genotype{
   }
 
   my $hap_line;
-  if ($hap_id_string =~ /\(\d+\)/) {
+  if ($hap_id_string =~ /\([\,\d]+\)/) {
     $hap_line = "AND seq_region_id not in $hap_id_string";
   }
   else {
@@ -612,7 +612,7 @@ sub reverse_variation_feature{
   my ($variation_feature_id,$allele_string);
 
   my $hap_line;
-  if ($hap_id_string =~ /\(\d+\)/) {
+  if ($hap_id_string =~ /\([\,\d]+\)/) {
     $hap_line = "AND seq_region_id not in $hap_id_string";
   }
   else {
@@ -658,7 +658,7 @@ sub reverse_flanking_sequence {
   debug("Processing flanking_sequence reverse strand");
 
   my $hap_line;
-  if ($hap_id_string =~ /\(\d+\)/) {
+  if ($hap_id_string =~ /\([\,\d]+\)/) {
     $hap_line = "AND vf.seq_region_id not in $hap_id_string";
   }
   else {
@@ -726,7 +726,7 @@ sub merge_ensembl_snps {
   my $new_source_id = shift ;
 
   my $hap_line;
-  if ($hap_id_string =~ /\(\d+\)/) {
+  if ($hap_id_string =~ /\([\,\d]+\)/) {
       $hap_line = "AND vf1.seq_region_id not in $hap_id_string
                    AND vf2.seq_region_id not in $hap_id_string";
   }
@@ -952,7 +952,7 @@ sub merge_rs_feature{
   my $dbVar = shift;
 
   my $hap_line;
-  if ($hap_id_string =~ /\(\d+\)/) {
+  if ($hap_id_string =~ /\([\,\d]+\)/) {
     $hap_line = "AND vf1.seq_region_id not in $hap_id_string
                  AND vf2.seq_region_id not in $hap_id_string";
   }
