@@ -102,8 +102,8 @@ sub add_annotation {
     # If we are processing the first transcript of the gene, the gene needs to be added to the database
     if (!defined($gene_id)) {
       $gene_id = LRGImport::add_gene($biotype,$analysis_id,$seq_region_id,$transcript_start,$transcript_end,1,'LRG database',$transcript_id);
-      # Get the next free gene stable_id
-      my $gene_stable_id = LRGImport::get_next_stable_id('gene_stable_id',$lrg_name . '_g');
+      # For genes, use the LRG identifier as gene name
+      my $gene_stable_id = $lrg_name;
       # Insert gene stable id into gene_stable_id table
       LRGImport::add_stable_id($gene_id,$gene_stable_id,'gene');
       
