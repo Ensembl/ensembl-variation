@@ -600,7 +600,7 @@ sub reverse_genotype{
       }
     }
     print_buffered( $buffer);
-    #system("mysql -uensadmin -pensembl -h $vhost $vdbname <$TMP_DIR/$table\_out");
+    #system("mysql  -u$vuser -p$vpass  -h $vhost $vdbname <$TMP_DIR/$table\_out");
   }
 }
 
