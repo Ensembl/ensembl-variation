@@ -354,7 +354,7 @@ while (my $lrg_id = shift(@lrg_ids)) {
       die("Adding xrefs is no longer done from this script. Exiting!");
       
       #ÊGet the Ensembl gene_id for the LRG gene
-      my $gene_id = LRGImport::get_object_id_by_stable_id('gene',$lrg_name . '_g1') or die ("Could not find gene with stable id $lrg_name\_g1 in core database!");
+      my $gene_id = LRGImport::get_object_id_by_stable_id('gene',$lrg_name) or die ("Could not find gene with stable id $lrg_name in core database!");
       
       # Get the HGNC identifier from the XML 
       my $lrg_gene_name_node = $lrg->findNode("updatable_annotation/annotation_set/lrg_gene_name",{'source' => 'HGNC'}) or die ("Could not find HGNC identifier in XML file!");
@@ -425,7 +425,7 @@ while (my $lrg_id = shift(@lrg_ids)) {
 	#ÊAdd an object_xref for the LRG xref
 	$object_xref_id = LRGImport::add_object_xref($gene_id,'Gene',$xref_id);
 	
-	my $core_stable_id = $lrg_name . '_g1';
+	my $core_stable_id = $lrg_name;
 	
 	#ÊDo the same for the Ensembl gene to the Ensembl LRG display
 	$xref_id = LRGImport::add_xref($LRG_ENSEMBL_DB_NAME . '_gene',$core_stable_id,$lrg_name);
