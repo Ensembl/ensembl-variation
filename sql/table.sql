@@ -751,6 +751,11 @@ CREATE TABLE meta (
 
 );
 
+
+# insert schema type row
+INSERT INTO meta (meta_key, meta_value) VALUES ('schema_type', 'variation');
+
+
 ###############
 #
 #  Table structure for table tagged_variation_features
