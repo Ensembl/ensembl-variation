@@ -32,6 +32,7 @@ my ($species,$limit);
 my($dshost, $dsuser, $dspass, $dsport, $dsdbname);
 my $registry_file;
 my $sql_driver;
+my @skip_routines;
 my $logfile;
 
 GetOptions('species=s'      => \$species,
@@ -48,6 +49,7 @@ GetOptions('species=s'      => \$species,
 	   'dsdbname=s' => \$dsdbname,
 	   'registry_file=s' => \$registry_file,
 	   'sql_driver=s' => \$sql_driver,
+	   'skip_routine=s' => \@skip_routines,
 	   'logfile=s' => \$logfile
 	  );
 
@@ -144,6 +146,7 @@ my @parameters = (
   -mapping_file_dir => $MAPPING_FILE_DIR,
   -dbSNP_version => $dbSNP_BUILD_VERSION,
   -assembly_version => $ASSEMBLY_VERSION,
+  -skip_routines => \@skip_routines,
   -log => $logh
 );
 my $import_object;
