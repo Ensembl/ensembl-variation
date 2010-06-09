@@ -32,6 +32,7 @@ my ($species,$limit);
 my($dshost, $dsuser, $dspass, $dsport, $dsdbname);
 my $registry_file;
 my $sql_driver;
+my $logfile;
 
 GetOptions('species=s'      => \$species,
 	   'dbSNP_version=s'=> \$dbSNP_BUILD_VERSION, ##such as b125
@@ -46,12 +47,16 @@ GetOptions('species=s'      => \$species,
 	   'dsport=i' => \$dsport,
 	   'dsdbname=s' => \$dsdbname,
 	   'registry_file=s' => \$registry_file,
-	   'sql_driver' => \$sql_driver
+	   'sql_driver=s' => \$sql_driver,
+	   'logfile=s' => \$logfile
 	  );
+
+debug("\n######### " . localtime() . " #########\n\tImport script launched\n");
+print STDOUT "\n######### " . localtime() . " #########\n\tImport script launched\n";
 
 # Checking that some necessary arguments have been provided
 die("Must know the master schema database, use -master_schema_db option!") unless (defined($MASTER_SCHEMA_DB));
-die("You must specify the dbSNP mirror host, user, pass, db and build version (-dshost, -dsuser, -dspass, -dsdbname and -dbSNP_version options)") unless (defined($dshost) && defined($dsuser) && defined($dspass) && defined($dsdbname) && defined($dbSNP_BUILD_VERSION));
+die("You must specify the dbSNP mirror host, user, pass, db and build version (-dshost, -dsuser, -dspass, and -dbSNP_version options)") unless (defined($dshost) && defined($dsuser) && defined($dspass) && defined($dbSNP_BUILD_VERSION));
 die("You must specify a temp dir and temp file (-tmpdir and -tmpfile options)") unless(defined($ImportUtils::TMP_DIR) && defined($ImportUtils::TMP_FILE));
 die("You must specify the species. Use -species option") unless (defined($species));
 die("You must specify the sql driver, either through an environment variable (SYBASE) or the -sql_driver option") unless (defined($sql_driver) || defined($ENV{'SYBASE'}));
@@ -65,10 +70,24 @@ $ENV{'SYBASE'} = $sql_driver if (defined($sql_driver));
 # Set default option
 $registry_file ||= $Bin . "/ensembl.registry";
 
+# Open a file handle to the logfile. If it's not defined, use STDOUT
+my $logh = *STDOUT;
+if (defined($logfile)) {
+  open(LOG,'>>',$logfile) or die ("Could not open logfile $logfile for writing");
+  #ÊTurn on autoflush for the logfile
+  {
+    my $ofh = select LOG;
+    $| = 1;
+    select $ofh;
+  }
+  $logh = *LOG;
+  print $logh "\n######### " . localtime() . " #########\n\tImport script launched\n";
+}
+
 Bio::EnsEMBL::Registry->load_all( $registry_file );
 
-my $cdba = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'core');
-my $vdba = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'variation');
+my $cdba = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'core') or die ("Could not get core DBadaptor");
+my $vdba = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'variation') or die ("Could not get DBadaptor to destination variation database");
 $vdba->dbc->{mysql_auto_reconnect} = 1;
 $vdba->dbc->do("SET SESSION wait_timeout = 2678200");
 #my $sdba = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'dbsnp');
@@ -124,7 +143,8 @@ my @parameters = (
   -limit => $LIMIT_SQL,
   -mapping_file_dir => $MAPPING_FILE_DIR,
   -dbSNP_version => $dbSNP_BUILD_VERSION,
-  -assembly_version => $ASSEMBLY_VERSION  
+  -assembly_version => $ASSEMBLY_VERSION,
+  -log => $logh
 );
 my $import_object;
 if ($species =~ m/fish/i || $species =~ m/^pig$/i) {
@@ -144,24 +164,28 @@ elsif ($species =~ m/human|homo/i) {
 }
 $import_object->{'master_schema_db'} = $MASTER_SCHEMA_DB;
 
-my $start = time();
-$import_object->dump_dbSNP();
-my $end = time();
+my $clock = Progress->new();
+$clock->checkpoint('start_dump');
 
-my $duration = Progress::time_format($end-$start);
-print $duration->{'weeks'} . " weeks, " . $duration->{'days'} . " days, " . $duration->{'hours'} . " hours, " . $duration->{'minutes'} . " minutes and " . $duration->{'seconds'} . " seconds spent importing from dbSNP\n";
+$import_object->dump_dbSNP();
+
+$clock->checkpoint('end_dump');
+print $logh $clock->duration('start_dump','end_dump');
 
 if ($species =~ m/mouse/i || $species =~ m/chicken/i || $species =~ m/rat/i || $species =~ m/dog/i) {
   # Add strain information
-  $start = time();
-  add_strains($dbVar);
-  $end = time();
+  $clock->checkpoint('add_strains');
   
-  $duration = Progress::time_format($end-$start);
-  print $duration->{'weeks'} . " weeks, " . $duration->{'days'} . " days, " . $duration->{'hours'} . " hours, " . $duration->{'minutes'} . " minutes and " . $duration->{'seconds'} . " seconds spent in add_strains\n";
+  add_strains($dbVar);
+  
+  print $logh $clock->duration();
 }
 
 debug(localtime() . "\tAll done!");
+
+#ÊClose the filehandle to the logfile if one was specified
+close($logh) if (defined($logfile));
+  
 
 #gets all the individuals and copies the data in the Population table as strain, and the individual_genotype as allele
 sub add_strains{
