@@ -76,7 +76,7 @@ sub dump_dbSNP{
     #ÊCheck if this subroutine should be skipped
     if (grep($_ eq $subroutine,@{$self->{'skip_routines'}})) {
       debug(localtime() . "\tSkipping $subroutine");
-      print $logh localtime() . "\tSkipping $subroutine";
+      print $logh localtime() . "\tSkipping $subroutine\n";
       next;
     }
     
