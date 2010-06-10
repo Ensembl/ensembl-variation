@@ -94,6 +94,12 @@ sub variation_feature{
 
      #my $tablename = $self->{'species_prefix'} . 'SNPContigLoc';
 
+    # In the query below, the pre-131 syntax was ref-assembly. In 131 it is GRCh37 for human. What is it for other species??
+    my $group_term = 'ref_';
+    my ($release) = $self->{'dbSNP_version'} =~ m/^b?(\d+)$/;
+    $group_term = 'GRCh' if ($self->{'dbCore'}->species =~ m/homo|human/i && $release > 130);
+    
+	#	     t2.group_term LIKE 'ref_%'
      $stmt = "SELECT ";
      if ($self->{'limit'}) {
        $stmt .= "TOP $self->{'limit'} ";
@@ -103,7 +109,7 @@ sub variation_feature{
                    t2.contig_acc,
                    t1.lc_ngbr+2,t1.rc_ngbr,
 		   CASE WHEN
-		     t2.group_term LIKE 'ref_%'
+		     t2.group_term LIKE '$group_term%'
 		   THEN
 		     t2.contig_chr
 		   ELSE
