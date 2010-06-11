@@ -284,6 +284,20 @@ sub get_all_synonym_sources{
     return \@sources;
 }
 
+=head2 fetch_by_name
+
+    Args[1]     : string $name
+    Example     : my $structural_variation = $sv_adaptor->fetch_by_name('esv263');
+    Description : returns the structural variation with the given variation name (or undef if one isn't found).
+                  If the name argument is undef this will be converted to NULL in the SQL statement generated.
+    ReturnType  : Bio::EnsEMBL::Variation::StructuralVariation
+    Exceptions  : thrown if there are multiple objects found with the same variation name
+    Caller      : general
+    Status      : At Risk
+                : Variation database is under development.
+
+=cut
+
 sub fetch_by_name {
     my ($self, $name) = @_;
     
