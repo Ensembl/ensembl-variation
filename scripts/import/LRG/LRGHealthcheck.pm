@@ -1,4 +1,3 @@
-
 # Module containing methods for checking LRG XML files prior to release
 
 use strict;
@@ -28,7 +27,8 @@ our @CHECKS = (
     'exon_labels',
     'mappings',
     'gene_name',
-    'partial'
+    'partial',
+    'coordinates'
 );
 
 # Constructor
@@ -111,6 +111,37 @@ sub cDNA {
     return $passed;
 }
 
+# Check that all coordinates are specified with start less than end
+sub coordinates {
+    my $self = shift;
+    
+    my $passed = 1;
+    
+    # Name of this check
+    my $name = sub_name();
+    
+    #ÊGet all elements in the LRG XML
+    my $nodes = $self->{'lrg'}->getAllNodes();
+    
+    #ÊLoop over all nodes and check the data attributes for coordinates
+    my $prefix;
+    foreach my $node (@{$nodes}) {
+        my $data = $node->data() or next;
+        foreach my $key (keys(%{$data})) {
+            if ($key =~ m/^(.*\_?)start$/) {
+                $prefix = $1;
+                if (exists($data->{$prefix . 'end'}) && $data->{$key} > $data->{$prefix . 'end'}) {
+                    $passed = 0;
+                    $self->{'check'}{$name}{'message'} .= $prefix . "start coordinate is greater than " . $prefix . "end coordinate in " . $node->name() . " tag//";
+                }
+            }
+        }
+    }
+    
+    $self->{'check'}{$name}{'passed'} = $passed;
+    return $passed;
+}
+  
 # Check that all other_exon_namings have a corresponding exon in the fixed section and that all or none of the exons have other_exon_namiong
 sub exon_labels {
     my $self = shift;
