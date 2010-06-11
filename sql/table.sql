@@ -349,7 +349,8 @@ CREATE TABLE structural_variation (
   bound_start int(11) DEFAULT NULL,
   bound_end int(11) DEFAULT NULL,
   PRIMARY KEY (structural_variation_id),
-  KEY pos_idx (seq_region_id,seq_region_start)
+  KEY pos_idx (seq_region_id,seq_region_start),
+  KEY name_idx (variation_name)
 );
 
 
