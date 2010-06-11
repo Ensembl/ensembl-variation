@@ -283,4 +283,14 @@ sub get_all_synonym_sources{
     @sources = keys(%sources); 
     return \@sources;
 }
+
+sub fetch_by_name {
+    my ($self, $name) = @_;
+    
+    my $constraint = sprintf('variation_name = %s', $self->dbc->db_handle->quote( $name, SQL_VARCHAR ) );
+    my $objs = $self->generic_fetch($constraint);
+    throw("Multiple structural variations found with the same name: '$name'") if @$objs > 1;
+    return $objs->[0] if @$objs == 1;
+}
+
 1;
