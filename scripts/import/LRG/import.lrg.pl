@@ -81,6 +81,7 @@ my $import;
 my $add_xrefs;
 my $max_values;
 my $revert;
+my $verify;
 
 usage() if (!scalar(@ARGV));
 
@@ -100,7 +101,8 @@ GetOptions(
   'import!' 		=> \$import,
   'xrefs!' 		=> \$add_xrefs,
   'max!' 		=> \$max_values,
-  'revert!' 		=> \$revert
+  'revert!' 		=> \$revert,
+  'verify!'		=> \$verify
 );
 
 usage() if (defined($help));
@@ -127,8 +129,8 @@ if (defined($import) && defined($input_file)) {
 # Check that the LRG id is on the correct format
 die("Supplied LRG id is not in the correct format ('LRG_NNN')") if (grep($_ !~ m/^LRG\_[0-9]+$/,@lrg_ids));
 
-# If doing an import, overlap or cleaning db but without specified input XML file or LRG ids, get a listing of published LRGs available at the ftp site
-if ((defined($import) || defined($clean) || defined($overlap)) && !scalar(@lrg_ids)) {
+# If doing something requiring the XML file but without specified input XML file or LRG ids, get a listing of published LRGs available at the ftp site
+if ((defined($import) || defined($clean) || defined($overlap) || defined($verify)) && !scalar(@lrg_ids)) {
   
   print STDOUT localtime() . "\tNo input XML file and no LRG id specified, fetching a LRG listing from the LRG server\n" if ($verbose);
   my $result = LRGImport::fetch_remote_lrg_ids([$LRG_EXTERNAL_XML]);
@@ -237,7 +239,7 @@ while (my $lrg_id = shift(@lrg_ids)) {
     }
   }
   
-  if ($import || $add_xrefs) {
+  if ($import || $add_xrefs || $verify) {
     
   # If lrg_id has been specified but not input_file and a XML file is required, try to fetch it from the LRG website to the /tmp directory
     if (!defined($input_file)) {
@@ -470,7 +472,87 @@ while (my $lrg_id = shift(@lrg_ids)) {
       }
       
     }
+    
+    #ÊCheck that the mapping stored in the database give the same sequences as those stored in the XML file
+    if ($verify) {
+      #ÊA flag to inddicate if everything is ok
+      my $passed = 1;
+      
+      # Get the genomic sequence from the XML file
+      my $genomic_seq_xml = $lrg->findNode("fixed_annotation/sequence")->content();
+      # Get a slice from the database corresponding to the LRG
+      my $lrg_slice = $sa->fetch_by_region($LRG_COORD_SYSTEM_NAME,$lrg_id);
+      if (!defined($lrg_slice)) {
+	warn("Could not fetch a slice object for " . $LRG_COORD_SYSTEM_NAME . ":" . $lrg_id);
+	$passed = 0;
+      }
+      else {
+	# Get the genomic sequence of the slice
+	my $genomic_seq_db = $lrg_slice->seq();
+	
+	# Compare the sequences
+	if ($genomic_seq_xml ne $genomic_seq_db) {
+	  warn("Genomic sequence from core db is different from genomic sequence in XML file for $lrg_id");
+	  $passed = 0;  
+	}
+	
+	#ÊCompare each transcript
+	my $transcripts_xml = $lrg->findNodeArray('fixed_annotation/transcript');
+	my $transcripts_db = $lrg_slice->get_all_Transcripts(undef,$LRG_ANALYSIS_LOGIC_NAME);
+	foreach my $transcript_xml (@{$transcripts_xml}) {
+	  # Get the fixed id
+	  my $fixed_id = $transcript_xml->{'data'}{'name'};
+	  #ÊThe expected transcript_stable_id based on the XML fixed id
+	  my $stable_id = $lrg_id . '_' . $fixed_id;
+	  # Get the ensembl transcript with the corresponding stable_id
+	  my @db_tr = grep {$_->stable_id() eq $stable_id} @{$transcripts_db};
+	  # Check that we got one transcript back
+	  if (!defined(@db_tr) || scalar(@db_tr) != 1) {
+	    warn("Could not unambiguously get the correct Ensembl transcript corresponding to $lrg_id $fixed_id");
+	    $passed = 0;
+	    next;
+	  }
+	  
+	  my $transcript_db = $db_tr[0];
+	  
+	  #ÊGet the cDNA sequence from the XML file
+	  my $cDNA_xml = $transcript_xml->findNode('cdna/sequence')->content();
+	  # Get the cDNA sequence from the db
+	  my $cDNA_db = $transcript_db->spliced_seq();
+	  # Compare the sequences
+	  if ($cDNA_xml ne $cDNA_db) {
+	    warn("cDNA sequence from core db is different from cDNA sequence in XML file for $lrg_id transcript $fixed_id");
+	    $passed = 0;
+	    next;
+	  }
+	  
+	  #ÊGet the translation from the XML file
+	  my $translation_xml = $transcript_xml->findNode('coding_region/translation/sequence')->content();
+	  #ÊGet the translation from the db
+	  my $translation_db = $transcript_db->translation()->seq();
+	  # Remove any terminal stop codons
+	  $translation_xml =~ s/\*$//;
+	  $translation_db =~ s/\*$//;
+	  
+	  # Compare the sequences
+	  if ($translation_xml ne $translation_db) {
+	    warn("Peptide sequence from core db is different from peptide sequence in XML file for $lrg_id transcript $fixed_id");
+	    $passed = 0;
+	    next;
+	  }	
+	}
+      }
+      
+      if ($passed) {
+	print STDOUT "$lrg_id is consistent between XML file and core db\n";
+      }
+      else {
+	print STDOUT "$lrg_id has inconsistencies between XML file and core db\n";
+      }
+    }
   }
+  #ÊUndefine the input_file so that the next one will be fetched
+  undef($input_file);
 }
 
 sub usage {
@@ -491,28 +573,32 @@ sub usage {
       -pass		Core database password (Optional)
       
     An input file can be specified. This is required when reverting the Core database. If an input file is
-    specified when importing, cleaning, adding xrefs or annotating overlaps, all specified LRG identifiers
-    are overridden and only the LRG in the input XML file is processed.
+    specified when importing, verifying, cleaning, adding xrefs or annotating overlaps, all specified LRG
+    identifiers are overridden and only the LRG in the input XML file is processed.
     
       -input_file	LRG XML file when importing or adding xrefs
 			Tab-separated file with table, field and max-values when reverting database
 			to a previous state.
 			
     Any number of LRG identifiers can be specified. Each LRG will then be processed in turn. If an identifier is
-    specified when importing or adding xrefs, the script will attempt to download the corresponding XML file
-    from the LRG website.
+    specified when importing, verifying or adding xrefs, the script will attempt to download the corresponding XML
+    file from the LRG website.
     
       -lrg_id		LRG identifier on the form LRG_N, where N is an integer
       
     If neither input file nor lrg identifiers are specified, the script will obtain a list of publicly available
-    LRGs from the LRG public ftp site and the user can interactively choose which LRGs to process.
+    LRGs from the LRG ftp site and the user can interactively choose which LRGs to process.
     
     What action the script will perform is dictated by the following flags:
     
       -import		The data in the supplied, or downloaded, LRG XML file will be imported into the Core
 			database. This includes the mapping to the current assembly and the
 			transcripts in the fixed section
-			
+      
+      -verify		Verify the consistency between the sequences stored in the LRG XML file and what the
+			API gets when accessing the core db. Will check genomic sequence, cDNA (spliced transcript)
+			and peptide translation.
+      
       -xrefs		This will add xrefs to HGNC, the external LRG website as well as to the
 			corresponding Ensembl genes for genes on the lrg coordinate system.
 			Will also add xrefs to the corresponding Ensembl genes, linking them to
