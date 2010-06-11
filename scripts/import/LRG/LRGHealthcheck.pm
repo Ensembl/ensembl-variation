@@ -128,11 +128,16 @@ sub coordinates {
     foreach my $node (@{$nodes}) {
         my $data = $node->data() or next;
         foreach my $key (keys(%{$data})) {
+            #ÊCheck if the attribute name contains start
             if ($key =~ m/^(.*\_?)start$/) {
                 $prefix = $1;
+                # See if a matching end attribute exists and if so, whether it is greater than the start attribute
                 if (exists($data->{$prefix . 'end'}) && $data->{$key} > $data->{$prefix . 'end'}) {
-                    $passed = 0;
-                    $self->{'check'}{$name}{'message'} .= $prefix . "start coordinate is greater than " . $prefix . "end coordinate in " . $node->name() . " tag//";
+                    #ÊDiff elements that denote insertions are actually allowed to have start coordinates greater than start coordinates
+                    if ($node->name() ne 'diff' || $data->{'type'} !~ m/\_ins$/) {
+                        $passed = 0;
+                        $self->{'check'}{$name}{'message'} .= $prefix . "start coordinate is greater than " . $prefix . "end coordinate in " . $node->name() . " tag//";
+                    }
                 }
             }
         }
