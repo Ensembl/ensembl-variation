@@ -1045,6 +1045,20 @@ sub nodeExists {
     return 0;
 }
 
+#ÊGet an array containing all the nodes in the xml tree (below this one)
+sub getAllNodes {
+    my $self = shift;
+    
+    my @arr;
+    # Recursively call this function on all child nodes and push the results into the array
+    foreach my $child (@{$self->{'nodes'}}) {
+	push(@arr,@{$child->getAllNodes()});
+    }
+    #ÊPush this node itself into the array and return it
+    push(@arr,$self);
+    return \@arr;
+}
+
 # NODE
 ######
 
