@@ -82,6 +82,10 @@ my $add_xrefs;
 my $max_values;
 my $revert;
 my $verify;
+my $otherfeaturesdb;
+my $cdnadb;
+my $vegadb;
+my $purge;
 
 usage() if (!scalar(@ARGV));
 
@@ -95,6 +99,7 @@ GetOptions(
   'help!' 		=> \$help,
   'verbose!' 		=> \$verbose,
   'clean!' 		=> \$clean,
+  'purge!'		=> \$purge,
   'overlap!' 		=> \$overlap,
   'lrg_id=s' 		=> \@lrg_ids,
   'input_file=s' 	=> \$input_file,
@@ -102,7 +107,10 @@ GetOptions(
   'xrefs!' 		=> \$add_xrefs,
   'max!' 		=> \$max_values,
   'revert!' 		=> \$revert,
-  'verify!'		=> \$verify
+  'verify!'		=> \$verify,
+  'otherfeatures=s'	=> \$otherfeaturesdb,
+  'cdna=s'		=> \$cdnadb,
+  'vega=s'		=> \$vegadb,
 );
 
 usage() if (defined($help));
@@ -181,6 +189,47 @@ print STDOUT localtime() . "\tConnected to $dbname on $host:$port\n" if ($verbos
 
 $LRGImport::dbCore = $dbCore;
 
+# If specified, connect to otherfeatures and cdna database
+my $dbOther;
+my $dbcDNA;
+my $dbVega;
+if (defined($otherfeaturesdb)) {
+  print STDOUT localtime() . "\tGetting db adaptor for $otherfeaturesdb\n" if ($verbose);
+  $dbOther = new Bio::EnsEMBL::DBSQL::DBAdaptor(
+    -host => $host,
+    -user => $user,
+    -pass => $pass,
+    -port => $port,
+    -dbname => $otherfeaturesdb
+  ) or die("Could not get a database adaptor to $otherfeaturesdb on $host:$port");
+  print STDOUT localtime() . "\tConnected to $otherfeaturesdb on $host:$port\n" if ($verbose);
+}
+if (defined($cdnadb)) {
+  print STDOUT localtime() . "\tGetting db adaptor for $cdnadb\n" if ($verbose);
+  $dbcDNA = new Bio::EnsEMBL::DBSQL::DBAdaptor(
+    -host => $host,
+    -user => $user,
+    -pass => $pass,
+    -port => $port,
+    -dbname => $cdnadb
+  ) or die("Could not get a database adaptor to $cdnadb on $host:$port");
+  print STDOUT localtime() . "\tConnected to $cdnadb on $host:$port\n" if ($verbose);
+}
+if (defined($vegadb)) {
+  print STDOUT localtime() . "\tGetting db adaptor for $vegadb\n" if ($verbose);
+  $dbVega = new Bio::EnsEMBL::DBSQL::DBAdaptor(
+    -host => $host,
+    -user => $user,
+    -pass => $pass,
+    -port => $port,
+    -dbname => $vegadb
+  ) or die("Could not get a database adaptor to $vegadb on $host:$port");
+  print STDOUT localtime() . "\tConnected to $vegadb on $host:$port\n" if ($verbose);
+}
+
+# Put the db adaptors into an array
+my @db_adaptors = ($dbCore,$dbOther,$dbcDNA,$dbVega);
+
 #ÊGet a slice adaptor
 print STDOUT localtime() . "\tGetting slice adaptor\n" if ($verbose);
 my $sa = $dbCore->get_SliceAdaptor();
@@ -206,6 +255,53 @@ if ($revert) {
   close(MV);
 }
 
+#ÊIf doing an import, check that the tables affected for adding the mapping information are sync'd across the relevant databases
+if ($import) {
+  my %max_increment = (
+  'analysis' 		=> 0,
+  'coord_system' 	=> 0,
+  'meta'		=> 0,
+  'seq_region'		=> 0
+  );
+  foreach my $table (keys(%max_increment)) {
+  
+    print STDOUT localtime() . "\tChecking Auto_increment value for $table\n" if ($verbose);
+    #ÊCheck each db adaptor
+    my $do_sync = 0;
+    foreach my $dba (@db_adaptors) {
+      # Skip this db adaptor if it's not defined
+      next unless(defined($dba));
+      
+      my $stmt = qq{
+        SHOW TABLE STATUS LIKE '$table'
+      };
+      my @current = keys(%{$dba->dbc->db_handle->selectall_hashref($stmt,'Auto_increment')}) or die("Could not get AUTO_INCREMENT value for " . $dba->dbc()->dbname() . ".$table");
+      if ($max_increment{$table} > 0 && $max_increment{$table} != $current[0]) {
+        $do_sync = 1;
+      }
+      print STDOUT localtime() . "\t\tAuto_increment value for " . $dba->dbc()->dbname() . ".$table is " . $current[0] . ($do_sync ? " => Needs to be sync'd!" : "") . "\n" if ($verbose);
+      $max_increment{$table} = max($max_increment{$table},$current[0]);
+    }
+    # If the table needs to be sync'd, loop over the db adaptors and do this
+    next unless($do_sync);
+    
+    foreach my $dba (@db_adaptors) {
+      # Skip this db adaptor if it's not defined
+      next unless(defined($dba));
+      
+      print STDOUT localtime() . "\tSyncing " . $dba->dbc()->dbname() . ".$table\n" if ($verbose);
+      
+      my $val = $max_increment{$table};
+      my $stmt = qq{
+        ALTER TABLE
+          $table
+        AUTO_INCREMENT = $val
+      };
+      $dba->dbc()->do($stmt) or die("Could not set AUTO_INCREMENT value for " . $dba->dbc()->dbname() . ".$table");
+    }
+  }
+}
+  
 #ÊLoop over the specified LRG identifiers and process each one
 while (my $lrg_id = shift(@lrg_ids)) {
   
@@ -213,8 +309,19 @@ while (my $lrg_id = shift(@lrg_ids)) {
   
   # Clean up data in the database if required
   if ($clean) {
-    print STDOUT localtime() . "\tCleaning $lrg_id from core db\n" if ($verbose);
-    LRGImport::purge_db($lrg_id,$LRG_COORD_SYSTEM_NAME);
+    # Loop over all db adaptors
+    foreach my $dba (@db_adaptors) {
+      # Skip this db adaptor if it's not defined
+      next unless(defined($dba));
+	
+      # Set the dbCore variable in LRGImport to the current db adaptor
+      $LRGImport::dbCore = $dba;
+      
+      print STDOUT localtime() . "\tCleaning $lrg_id from " . $dba->dbc()->dbname() . "\n" if ($verbose);
+      LRGImport::purge_db($lrg_id,$LRG_COORD_SYSTEM_NAME,$purge);
+    }
+    # Set the db adaptor in LRGImport back to the core adaptor
+    $LRGImport::dbCore = $dbCore;
   }
   
   # Annotate Ensembl genes that overlap this LRG region
@@ -272,9 +379,15 @@ while (my $lrg_id = shift(@lrg_ids)) {
     if ($import) {
       
       # Check if the LRG already exists in the database (if the seq_region exists), in which case it should first be deleted
-      my $cs_id = LRGImport::get_coord_system_id($LRG_COORD_SYSTEM_NAME);
+      my $cs_id = LRGImport::add_coord_system($LRG_COORD_SYSTEM_NAME);
       my $seq_region_id = LRGImport::get_seq_region_id($lrg_id,$cs_id);
-      die("ERROR: $lrg_id already exists in $dbname\. Delete it first using the -clean parameter") if (defined($seq_region_id));
+      if (defined($seq_region_id)) {
+	warn("$lrg_id already exists in $dbname\. If you want to replace it, delete it first using the -clean parameter. Will skip it for now");
+	#ÊUndefine the input_file so that the next one will be fetched
+	undef($input_file);
+	#ÊNote, this will also skip xref and verify methods for this LRG
+        next;
+      }
       
       # Get the assembly that the database uses
       print STDOUT localtime() . "\tGetting assembly name from core db\n" if ($verbose);
@@ -291,11 +404,15 @@ while (my $lrg_id = shift(@lrg_ids)) {
 	last unless !$mapping_node;
       }
       
-      # Die if the correct mapping could not be fetched
-      die("Could not find the LRG->Genome mapping corresponding to the core assembly ($db_assembly)") unless (defined($mapping_node));
+      # Warn and skip if the correct mapping could not be fetched
+      if (!defined($mapping_node)) {
+	warn("Could not find the LRG->Genome mapping corresponding to the core assembly ($db_assembly) for $lrg_id Skipping!");
+	#ÊNote, this will also skip xref and verify methods for this LRG
+	next;
+      }
       
       #ÊWarn if the assembly used is not flagged as the most recent
-      warn("Assembly $db_assembly is currently not flagged as the most recent in the XML file!") unless ($mapping_node->{'data'}{'most_recent'} == 1);
+      warn("Assembly $db_assembly is currently not flagged as the most recent in the $lrg_id XML file!") unless ($mapping_node->{'data'}{'most_recent'} == 1);
       
       my $assembly = $mapping_node->data->{'assembly'};
       print STDOUT localtime() . "\tMapped assembly is $assembly\n" if ($verbose);
@@ -317,26 +434,43 @@ while (my $lrg_id = shift(@lrg_ids)) {
       );
       my $pairs = $mapping->{'pairs'};
       
-      # Insert entries for the analysis
-      print STDOUT localtime() . "\tAdding analysis data for LRG to core db\n" if ($verbose);
-      my $analysis_id = LRGImport::add_analysis($LRG_ANALYSIS_LOGIC_NAME);
+      #ÊLoop over the db adaptors where information will be mirrored and insert in the ones that are defined
+      my $analysis_id;
+      foreach my $dba (@db_adaptors) {
+	# Skip this db adaptor if it's not defined
+	next unless(defined($dba));
+	
+	# Set the dbCore variable in LRGImport to the current db adaptor
+	$LRGImport::dbCore = $dba;
+	
+	my $dbname = $dba->dbc()->dbname();
+	# Insert entries for the analysis
+	print STDOUT localtime() . "\tAdding analysis data for LRG to $dbname\n" if ($verbose);
+	my $new_analysis_id = LRGImport::add_analysis($LRG_ANALYSIS_LOGIC_NAME);
+	# Check whether the analysis id returned was fifferent from the other databases
+	warn("Analysis id returned from $dbname ($new_analysis_id) is different than what was inserted in another db ($analysis_id)") if (defined($analysis_id) && $new_analysis_id != $analysis_id);
+	$analysis_id = $new_analysis_id;
+	
+	LRGImport::add_analysis_description(
+	  $analysis_id,
+	  $LRG_ANALYSIS_DESCRIPTION,
+	  $LRG_ANALYSIS_DISPLAY_LABEL,
+	  1,
+	  $LRG_ANALYSIS_WEB_DATA
+	);
       
-      LRGImport::add_analysis_description(
-	$analysis_id,
-	$LRG_ANALYSIS_DESCRIPTION,
-	$LRG_ANALYSIS_DISPLAY_LABEL,
-	1,
-	$LRG_ANALYSIS_WEB_DATA
-      );
+	#ÊAdd mapping between the LRG and chromosome coordinate systems to the core db
+	print STDOUT localtime() . "\tAdding mapping between $LRG_COORD_SYSTEM_NAME and chromosome coordinate system to $dbname for $lrg_name\n" if ($verbose);
+	LRGImport::add_mapping(
+	  $lrg_name,
+	  $LRG_COORD_SYSTEM_NAME,
+	  length($lrg_seq),
+	  $mapping
+	);
+      }
       
-      #ÊAdd mapping between the LRG and chromosome coordinate systems to the core db
-      print STDOUT localtime() . "\tAdding mapping between $LRG_COORD_SYSTEM_NAME and chromosome coordinate system to core db for $lrg_name\n" if ($verbose);
-      LRGImport::add_mapping(
-	$lrg_name,
-	$LRG_COORD_SYSTEM_NAME,
-	length($lrg_seq),
-	$mapping
-      );
+      # Set the dbCore variable in LRGImport back to the db adaptor for the core db
+      $LRGImport::dbCore = $dbCore;
       
       # Add the transcripts to the core db
       print STDOUT localtime() . "\tAdding transcripts for $lrg_name to core db\n" if ($verbose);
@@ -475,6 +609,10 @@ while (my $lrg_id = shift(@lrg_ids)) {
     
     #ÊCheck that the mapping stored in the database give the same sequences as those stored in the XML file
     if ($verify) {
+      
+      # Needs to flush the db adaptor when doing an import before verifying content. Not sure how to do this, so will only print a warning
+      warn("Verifying the import now will probably tell you that there are inconsistencies because the db adaptor haven't been flushed. You should re-run the script doing verification after the import has finished") if ($import);
+      
       #ÊA flag to inddicate if everything is ok
       my $passed = 1;
       
@@ -571,6 +709,15 @@ sub usage {
       -dbname		Core database name (Required)
       -user		Core database user (Required)
       -pass		Core database password (Optional)
+    
+    In addition, names for otherfeatures, cdna and vega databases can be specified on the command line. If so,
+    the mapping data will be inserted into those databases as well. They are assumed to reside on the same host as
+    the core database and be accessed with the same credentials. Before doing an import, will try to sync the
+    analysis, coord_system, meta and seq_region tables w.r.t. their Auto_increment values.
+    
+      -otherfeatures	Otherfeatures database name
+      -cdna		cDNA database name
+      -vega		vega database name
       
     An input file can be specified. This is required when reverting the Core database. If an input file is
     specified when importing, verifying, cleaning, adding xrefs or annotating overlaps, all specified LRG
@@ -613,6 +760,9 @@ sub usage {
       
       -clean		Remove all entries in the Core database specifically relating to the
 			LRG that was specified with the -lrg_id argument
+			
+      -purge		If specified, will remove EVERYTHING LRG related from the database(s) (e.g. coord_system, analysis)
+			once all LRG seq_regions have been removed. Will not remove anything if seq_regions still exist.
 			
       -max		Dump a tab-separated list of table, field and max-values for tables
 			affected by a LRG import to stdout. If run before an import, this data can
