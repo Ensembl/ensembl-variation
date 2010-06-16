@@ -410,7 +410,7 @@ sub last_process{
     
     #set consequence_type to INTERGENIC if previous transcript has been removed from current release
     $dbVar->do(qq{UPDATE variation_feature vf 
-	          SET vf.consequence_typ = 'INTERGENIC'
+	          SET vf.consequence_type = 'INTERGENIC'
 		  WHERE NOT EXISTS
 		  (SELECT * FROM transcript_variation tv
 		  WHERE vf.variation_feature_id = tv.variation_feature_id)
