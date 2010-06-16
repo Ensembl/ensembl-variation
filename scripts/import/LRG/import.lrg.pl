@@ -68,7 +68,6 @@ my $LRG_EXTERNAL_XML = q{ftp://ftp.ebi.ac.uk/pub/databases/lrgex/};
 
 my $host;
 my $port;
-my $dbname;
 my $user;
 my $pass;
 my $help;
@@ -82,6 +81,7 @@ my $add_xrefs;
 my $max_values;
 my $revert;
 my $verify;
+my $coredb;
 my $otherfeaturesdb;
 my $cdnadb;
 my $vegadb;
@@ -93,7 +93,7 @@ usage() if (!scalar(@ARGV));
 GetOptions(
   'host=s'		=> \$host,
   'port=i'		=> \$port,
-  'dbname=s'		=> \$dbname,
+  'core=s'		=> \$coredb,
   'user=s'		=> \$user,
   'pass=s'		=> \$pass,
   'help!' 		=> \$help,
@@ -115,7 +115,7 @@ GetOptions(
 
 usage() if (defined($help));
 
-die("Database credentials (-host, -port, -dbname, -user) need to be specified!") unless (defined($host) && defined($port) && defined($dbname) && defined($user));
+die("Database credentials (-host, -port, -dbname, -user) need to be specified!") unless (defined($host) && defined($port) && defined($coredb) && defined($user));
 
 # If an input XML file was specified, this will override any specified lrg_id. So get the identifier from within the file
 if (defined($import) && defined($input_file)) {
@@ -183,9 +183,9 @@ my $dbCore = new Bio::EnsEMBL::DBSQL::DBAdaptor(
   -user => $user,
   -pass => $pass,
   -port => $port,
-  -dbname => $dbname
-) or die("Could not get a database adaptor to $dbname on $host:$port");
-print STDOUT localtime() . "\tConnected to $dbname on $host:$port\n" if ($verbose);
+  -dbname => $coredb
+) or die("Could not get a database adaptor to $coredb on $host:$port");
+print STDOUT localtime() . "\tConnected to $coredb on $host:$port\n" if ($verbose);
 
 $LRGImport::dbCore = $dbCore;
 
@@ -382,7 +382,7 @@ while (my $lrg_id = shift(@lrg_ids)) {
       my $cs_id = LRGImport::add_coord_system($LRG_COORD_SYSTEM_NAME);
       my $seq_region_id = LRGImport::get_seq_region_id($lrg_id,$cs_id);
       if (defined($seq_region_id)) {
-	warn("$lrg_id already exists in $dbname\. If you want to replace it, delete it first using the -clean parameter. Will skip it for now");
+	warn("$lrg_id already exists in $coredb\. If you want to replace it, delete it first using the -clean parameter. Will skip it for now");
 	#ÊUndefine the input_file so that the next one will be fetched
 	undef($input_file);
 	#ÊNote, this will also skip xref and verify methods for this LRG
