@@ -185,8 +185,7 @@ sub add_annotation {
       my $translation_id = LRGImport::add_translation($transcript_id,$cds_start,$start_exon_id,$cds_end,$end_exon_id);
       
       # Get the next free translation stable_id
-      my $translation_stable_id = $transcript_stable_id; #LRGImport::get_next_stable_id('translation_stable_id',$lrg_name . '_p');
-      $translation_stable_id =~ s/$lrg_name\_t/$lrg_name\_p/;
+      my $translation_stable_id = LRGImport::get_next_stable_id('translation_stable_id',$transcript_stable_id . '_p');
       # Insert translation stable id into translation_stable_id table
       LRGImport::add_stable_id($translation_id,$translation_stable_id,'translation');
       print "\tTranslation:\t" . $translation_id . "\t" . $translation_stable_id . "\n";
@@ -535,8 +534,8 @@ sub add_mapping {
     my $cs_id = add_coord_system($lrg_coord_system);
 
     my @meta_id;
-    # Insert a general meta entry for 'LRG' if none is present. This is not required??
-    # push(@meta_id,(add_meta_key_value($lrg_coord_system,$lrg_coord_system)));
+    # Insert a general meta entry for 'LRG' if none is present (Eugene mentioned this, used to determine if a species has LRGS (?))
+    push(@meta_id,(add_meta_key_value($lrg_coord_system,$lrg_coord_system)));
 
     # In order to project the slice, we need to add an entry to the meta table (if not present)
     my $meta_key = 'assembly.mapping';
@@ -1405,23 +1404,42 @@ sub get_seq_region_ids {
     return \@seq_region_ids;
 }
 
+sub fetch_rows {
+  my $fields = shift;
+  my $tables = shift;
+  my $conditions = shift;
+  my $orders = shift;
+  
+  $orders ||= ["NULL"];
+  
+  my $field_string = join(', ',@{$fields});
+  my $table_string = join(', ',@{$tables});
+  # This will throw a MySQL error if no condition was given, which is good to prevent something nasty happening to the db
+  my $condition_string = "(" . join(') AND (',@{$conditions}) . ")";
+  my $order_string = join(", ",@{$orders});
+  
+  my $stmt = qq{
+    SELECT
+      $field_string
+    FROM
+      $table_string
+    WHERE
+      $condition_string
+    ORDER BY
+      $order_string
+  };
+  my $result = $dbCore->dbc->db_handle->selectall_arrayref($stmt);
+  
+  return $result;
+}
+
 sub get_rows {
     my $id = shift;
     my $key = shift;
     my $table = shift;
-    my $fields = join(',',@_);
+    my $fields = \@_;
     
-    my $stmt = qq{
-	SELECT
-	    $fields
-	FROM
-	    $table
-	WHERE
-	    $key = '$id'
-    };
-    my $result = $dbCore->dbc->db_handle->selectall_arrayref($stmt);
-    
-    return $result;
+    return fetch_rows($fields,[$table],["$key = '$id'"]);
 }
 
 # Get stable id for an object type and object id
@@ -1464,14 +1482,25 @@ sub get_translation_id {
     return $translation_id;
 }
 
-# Remove all traces of a LRG from database
+# Remove all traces of a LRG from database. If last argument is defined, will even remove coord_system, analysis and meta entries unless
+# there still exists LRGs in the database
 sub purge_db {
     my $lrg_name = shift;
     my $lrg_coord_system = shift;
+    my $purge_all = shift;
     
     # Get the coord system id
-    my $cs_id = get_coord_system_id($lrg_coord_system) or die("Could not find coordinate system $lrg_coord_system in core db!");
-    my $ctg_coord_system_id = get_coord_system_id('contig') or die("Could not find coordinate system contig in core db!");
+    my $cs_id = get_coord_system_id($lrg_coord_system);
+    if (!defined($cs_id)) {
+      warn("Could not find coordinate system $lrg_coord_system in " . $dbCore->dbc()->dbname());
+      $cs_id = -1;
+    }
+    my $ctg_coord_system_id = get_coord_system_id('contig');
+    if (!defined($ctg_coord_system_id)) {
+      warn("Could not find coordinate system contig in " . $dbCore->dbc()->dbname());
+      $ctg_coord_system_id = -1;
+    }
+    
     # Get seq region ids on contigs for any seq regions associated with this LRG
     my @seq_region_ids = @{get_seq_region_ids($lrg_name . '_',$ctg_coord_system_id)};
     #ÊLastly, add the seq region id for this LRG itself
@@ -1503,29 +1532,48 @@ sub purge_db {
 		    
 		    my $translation_id = LRGImport::get_translation_id($oid);
 		    # Remove from object_xref
-		    remove_row([qq{ensembl_object_type = 'Translation'}, qq{ensembl_id = $translation_id}],['object_xref']) if defined($translation_id);
+		    remove_row([qq{ensembl_object_type = 'Translation'}, qq{ensembl_id = $translation_id}],'object_xref') if defined($translation_id);
 		}
 		# Remove rows with this object id (also from associated stable_id table)
-		remove_row([$object_type . '_id' . qq{ = $oid}],[$object_type]);
-		remove_row([$object_type . '_id' . qq{ = $oid}],[$object_type . '_stable_id']);
+		remove_row([$object_type . '_id' . qq{ = $oid}],$object_type);
+		remove_row([$object_type . '_id' . qq{ = $oid}],$object_type . '_stable_id');
 		
 		#ÊRemove xref objects linked to this object id. Does not remove the xref itself, just the row in object_xref
-		remove_row([qq{ensembl_object_type = '} . ucfirst($object_type) . qq{'}, qq{ensembl_id = $oid}],['object_xref']);
+		remove_row([qq{ensembl_object_type = '} . ucfirst($object_type) . qq{'}, qq{ensembl_id = $oid}],'object_xref');
 	    }
 	}
 	# Delete from assembly
-	remove_row([qq{asm_seq_region_id = $seq_region_id}],['assembly']);
-	remove_row([qq{cmp_seq_region_id = $seq_region_id}],['assembly']);
+	remove_row([qq{asm_seq_region_id = $seq_region_id}],'assembly');
+	remove_row([qq{cmp_seq_region_id = $seq_region_id}],'assembly');
 	# Delete from seq_region_attrib
-	remove_row([qq{seq_region_id = $seq_region_id}],['seq_region_attrib']);
+	remove_row([qq{seq_region_id = $seq_region_id}],'seq_region_attrib');
 	# Delete from dna
-	remove_row([qq{seq_region_id = $seq_region_id}],['dna']);
+	remove_row([qq{seq_region_id = $seq_region_id}],'dna');
 	# Delete from seq_region
-	remove_row([qq{seq_region_id = $seq_region_id}],['seq_region']);
+	remove_row([qq{seq_region_id = $seq_region_id}],'seq_region');
     }
     
     # Remove any gene attributes linked to this LRG
-    remove_row([qq{value = '$lrg_name'}],['gene_attrib']);
+    remove_row([qq{value = '$lrg_name'}],'gene_attrib');
+    
+    # If specified, remove EVERYTHING LRG-related unless there still are LRG entries left
+    if ($purge_all) {
+      my $seq_regions = get_rows($cs_id,'coord_system_id','seq_region','seq_region_id');
+      if (scalar(@{$seq_regions})) {
+	warn("Seq regions belonging to LRG coordinate system still exist in database, will not clear LRG data!");
+	return;
+      }
+      
+      # Remove coord_system entry
+      remove_row([qq{coord_system_id = $cs_id}],'coord_system');
+      #ÊRemove meta table entries
+      my $ids = fetch_rows(["meta_id"],["meta"],["meta_key = 'assembly.mapping' OR meta_key = 'lrg'","meta_value LIKE '%lrg%'"]);
+      remove_row(["meta_id = '" . join("' OR meta_id = '",map($_->[0],@{$ids})) . "'"],"meta");
+      # Remove analysis entries
+      $ids = fetch_rows(["analysis_id"],["analysis"],["logic_name LIKE 'LRG_%'"]);
+      remove_row(["analysis_id = '" . join("' OR analysis_id = '",map($_->[0],@{$ids})) . "'"],"analysis_description");
+      remove_row(["analysis_id = '" . join("' OR analysis_id = '",map($_->[0],@{$ids})) . "'"],"analysis");
+    }
 }
 
 # Insert row into table
@@ -1564,10 +1612,10 @@ sub insert_row {
 # Remove rows from tables using specified conditions hash (joined by AND)
 sub remove_row {
     my $conditions = shift;
-    my $tables = shift;
+    my $table = shift;
     
-    my $table = join(',',@{$tables});
-    my $condition_string = join(' AND ',@{$conditions});
+    # This will throw a MySQL error if no condition was given, which is good to prevent something nasty happening to the db
+    my $condition_string = "(" . join(') AND (',@{$conditions}) . ")";
     
     my $stmt = qq{
 	DELETE FROM
@@ -1585,7 +1633,8 @@ sub update_rows {
     my $tables = shift;
     
     my $table = join(',',@{$tables});
-    my $condition_string = join(' AND ',@{$conditions});
+    # This will throw a MySQL error if no condition was given, which is good to prevent something nasty happening to the db
+    my $condition_string = "(" . join(') AND (',@{$conditions}) . ")";
     my $value_string = join(', ',@{$values});
     
     my $stmt = qq{
