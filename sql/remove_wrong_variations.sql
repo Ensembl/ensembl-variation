@@ -2,7 +2,8 @@
 #by the Ensembl team, and to update the Variation table to reflect the reason
 #start delete here normally
 #
-DELETE fv FROM failed_variation fv, variation_feature vf WHERE fv.variation_id = vf.variation_id AND vf.map_weight != 1;
+DELETE fv FROM failed_variation fv, variation v WHERE v.variation_id = fv.variation_id AND v.validation_status LIKE '%precious%';
+#DELETE fv FROM failed_variation fv, variation_feature vf WHERE fv.variation_id = vf.variation_id AND vf.map_weight != 1;
 DELETE fv FROM failed_variation fv, variation_set vst, variation_set_variation vsv WHERE fv.variation_id = vsv.variation_id AND vst.variation_set_id = vsv.variation_set_id AND vst.name = 'Clinical/LSDB variations from dbSNP' ;
 UPDATE variation v, failed_variation w set v.validation_status = 'failed', v.ancestral_allele = NULL WHERE v.variation_id = w.variation_id;
 DELETE a FROM allele a, failed_variation v WHERE a.variation_id = v.variation_id;
