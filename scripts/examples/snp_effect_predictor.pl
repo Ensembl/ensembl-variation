@@ -157,10 +157,13 @@ while(<$in_file_handle>) {
   
   $line_number++;
   
-  my ($chr, $start, $end, $allele_string, $strand, $var_name) = split /\s+|\,/, $_;
+  # header line?
+  next if /^\#/;
+  
+  my ($chr, $start, $end, $allele_string, $strand, $var_name) = parse_line($_);
   
   # fix inputs
-  $chr =~ s/chr//g;
+  $chr =~ s/chr//ig;
   $strand = ($strand =~ /\-/ ? "-1" : "1");
   
   # sanity checks
@@ -292,6 +295,31 @@ sub print_consequences {
 	}
 }
 
+
+sub parse_line {
+	my $line = shift;
+	
+	my @data = (split /\s+/, $_);
+	
+	# pileup: chr1 60 T A
+	if($data[0] =~ /(chr)?\w+/ && $data[1] =~ /\d+/ && $data[2] =~ /[ACGTN-]+/ && $data[3] =~ /[ACGTN-]+/) {
+		return ($data[0], $data[1], $data[1], $data[2]."/".$data[3], 1, (defined $data[4] ? $data[4] : undef));
+	}
+	
+	# VCF: 20      14370   rs6054257 G     A      29    0       NS=58;DP=258;AF=0.786;DB;H2          GT:GQ:DP:HQ
+	elsif($data[0] =~ /(chr)?\w+/ && $data[1] =~ /\d+/ && $data[3] =~ /[ACGTN-]+/ && $data[4] =~ /([ACGTN-]+\,?)+/) {
+		my $alt = $data[4];
+		$alt =~ s/\,/\//g;
+		return ($data[0], $data[1], $data[1], $data[3]."/".$alt, 1, ($data[2] eq '.' ? undef : $data[2]));
+	}
+	
+	# our format
+	else {
+		# we allow commas as delimiter so re-split
+		@data = (split /\s+|\,/, $_);
+		return @data;
+	}
+}
 
 sub usage {
 	my $usage =<<END;
