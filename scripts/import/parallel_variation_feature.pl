@@ -2,7 +2,7 @@ use strict;
 use warnings;
 
 use Getopt::Long;
-use Data::Dumper;
+#use Data::Dumper;
 use Fcntl ':flock';
 use DBI;
 use DBH;
@@ -216,7 +216,7 @@ sub variation_feature {
           delete $alleles{$alleles_expanded{$ref_allele}};
           $allele_str = join('/', ($alleles_expanded{$ref_allele}, keys %alleles));
         }
-	elsif ($cur_allele =~ /MUTATION|CNV/) {
+	elsif ($cur_allele =~ /LARGE|INS|DEL|MUTATION|CNV/) {
 	  $allele_str = "$cur_allele";
 	}
 	else {
@@ -336,7 +336,7 @@ sub variation_feature {
     $alleles{$allele} = 1;
     my $allele_copy = $allele;
     #make a copy of the allele, but in the expanded version
-    &expand(\$allele) if ($allele !~ /LARGE|CNV|MUTA/); #only expand alleles with the (AG)5 format
+    &expand(\$allele) if ($allele !~ /LARGE|INS|DEL|CNV|MUTA/); #only expand alleles with the (AG)5 format
     $alleles_expanded{$allele} = $allele_copy; 
   }
 
@@ -353,7 +353,7 @@ sub variation_feature {
       delete $alleles{$ref_allele};
       $allele_str = join('/', ($ref_allele, keys %alleles));
     }
-    elsif ($allele =~ /MUTATION|CNV/) {
+    elsif ($allele =~ /LARGE|INS|DEL|MUTATION|CNV/) {
       $allele_str = "$allele";
     }
     else {
