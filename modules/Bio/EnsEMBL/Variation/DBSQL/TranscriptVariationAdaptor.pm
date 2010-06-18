@@ -64,35 +64,22 @@ use warnings;
 
 package Bio::EnsEMBL::Variation::DBSQL::TranscriptVariationAdaptor;
 
-use Bio::EnsEMBL::DBSQL::BaseAdaptor;
+use Bio::EnsEMBL::Variation::DBSQL::BaseVariationAdaptor;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp expand);
 use Bio::EnsEMBL::Utils::TranscriptAlleles qw(type_variation);
 
 use Bio::EnsEMBL::Variation::TranscriptVariation;
 
-our @ISA = ('Bio::EnsEMBL::DBSQL::BaseAdaptor');
+our @ISA = ('Bio::EnsEMBL::Variation::DBSQL::BaseVariationAdaptor');
 
 # size that we look either side of a variation for transcripts
 our $UP_DOWN_SIZE = 5000;
 
-=head2 fetch_all_by_Transcripts
-
-    Arg[1]      : listref of Bio::EnsEMBL::Transcript
-    Example     : $tr = $ta->fetch_by_stable_id('ENST00000278995');
-                  @tr_vars = @{$tr_var_adaptor->fetch_all_by_Transcripts([$tr])};
-    Description : Retrieves all TranscriptVariation objects associated with
-                  provided Ensembl Transcript. Attaches them to the TranscriptVariation
-    ReturnType  : ref to list of Bio::EnsEMBL::Variation::TranscriptVariations
-    Exceptions  : throw on bad argument
-    Caller      : general
-    Status      : Stable
-
-=cut
-
-sub fetch_all_by_Transcripts{
+sub _internal_fetch_all_by_Transcripts{
     my $self = shift;
     my $transcript_ref = shift;
+    my $extra_constraint = shift;
 
     if (ref($transcript_ref) ne 'ARRAY' or ! $transcript_ref->[0]->isa('Bio::EnsEMBL::Transcript')){
       throw('Array Bio::EnsEMBL::Transcript expected');
@@ -121,7 +108,9 @@ sub fetch_all_by_Transcripts{
 	}
 
     my $instr = join (",", map{"'$_'"} keys( %tr_by_id));
-    my $transcript_variations = $self->generic_fetch( "tv.transcript_stable_id in ( $instr )");
+    my $constraint = "tv.transcript_stable_id in ( $instr )";
+    $constraint .= " AND $extra_constraint" if $extra_constraint; 
+    my $transcript_variations = $self->generic_fetch($constraint);
     for my $tv (@{$transcript_variations}){
 		#add to the TranscriptVariation object all the Transcripts
 		$tv->{'transcript'} = $tr_by_id{$tv->{'_transcript_stable_id'}};
@@ -132,6 +121,48 @@ sub fetch_all_by_Transcripts{
 	push @$transcript_variations, @lrg_trs;
 	
     return $transcript_variations;
+}
+
+=head2 fetch_all_by_Transcripts
+
+    Arg[1]      : listref of Bio::EnsEMBL::Transcript
+    Example     : $tr = $ta->fetch_by_stable_id('ENST00000278995');
+                  @tr_vars = @{$tr_var_adaptor->fetch_all_by_Transcripts([$tr])};
+    Description : Retrieves all germline TranscriptVariation objects associated with
+                  provided Ensembl Transcript. Attaches them to the TranscriptVariation.
+    ReturnType  : ref to list of Bio::EnsEMBL::Variation::TranscriptVariations
+    Exceptions  : throw on bad argument
+    Caller      : general
+    Status      : Stable
+
+=cut
+
+sub fetch_all_by_Transcripts {
+    my $self = shift;
+    my $transcripts = shift;
+    my $constraint = 's.somatic = 0';
+    return $self->_internal_fetch_all_by_Transcripts($transcripts, $constraint);
+}
+
+=head2 fetch_all_somatic_by_Transcripts
+
+    Arg[1]      : listref of Bio::EnsEMBL::Transcript
+    Example     : $tr = $ta->fetch_by_stable_id('ENST00000372348');
+                  @tr_vars = @{$tr_var_adaptor->fetch_all_by_Transcripts([$tr])};
+    Description : Retrieves all somatic TranscriptVariation objects associated with
+                  provided Ensembl Transcript. Attaches them to the TranscriptVariation.
+    ReturnType  : ref to list of Bio::EnsEMBL::Variation::TranscriptVariations
+    Exceptions  : throw on bad argument
+    Caller      : general
+    Status      : Stable
+
+=cut
+
+sub fetch_all_somatic_by_Transcripts {
+    my $self = shift;
+    my $transcripts = shift;
+    my $constraint = 's.somatic = 1';
+    return $self->_internal_fetch_all_by_Transcripts($transcripts, $constraint);
 }
 
 =head2 fetch_all_by_VariationFeatures
@@ -610,7 +641,17 @@ sub _objs_from_sth {
   return \@results;
 }
 
-sub _tables {return ['transcript_variation','tv'];}
+sub _tables {
+    return (
+        ['transcript_variation','tv'],
+        ['variation_feature', 'vf'],
+        ['source', 's']
+    );
+}
+
+sub _default_where_clause {
+  return 'tv.variation_feature_id = vf.variation_feature_id AND vf.source_id = s.source_id';
+}
 
 sub _columns {
     return qw (tv.transcript_variation_id tv.transcript_stable_id
