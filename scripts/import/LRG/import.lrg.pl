@@ -118,7 +118,7 @@ usage() if (defined($help));
 die("Database credentials (-host, -port, -dbname, -user) need to be specified!") unless (defined($host) && defined($port) && defined($coredb) && defined($user));
 
 # If an input XML file was specified, this will override any specified lrg_id. So get the identifier from within the file
-if (defined($import) && defined($input_file)) {
+if ((defined($import) || defined($verify)) && defined($input_file)) {
 
   die("ERROR: Input file $input_file does not exist!") unless(-e $input_file);
   
@@ -258,7 +258,6 @@ if ($revert) {
 #ÊIf doing an import, check that the tables affected for adding the mapping information are sync'd across the relevant databases
 if ($import) {
   my %max_increment = (
-  'analysis' 		=> 0,
   'coord_system' 	=> 0,
   'meta'		=> 0,
   'seq_region'		=> 0
@@ -341,7 +340,7 @@ while (my $lrg_id = shift(@lrg_ids)) {
     # For each overlapping gene, create an XML feature node and check if the overlap is partial or not
     foreach my $gene (@{$genes}) {
       my $feature_node = LRGMapping::gene_2_feature($gene,$lrg_slice);
-      print STDOUT localtime() . "\tAdding $lrg_id " . (defined($feature_node->findNode('partial')) ? 'partial ' : '') . "overlap attribute for gene $gene->stable_id ($gene->description)\n" if ($verbose);
+      print STDOUT localtime() . "\tAdding $lrg_id " . (defined($feature_node->findNode('partial')) ? 'partial ' : '') . "overlap attribute for gene " . $gene->stable_id . " (" . $gene->description . ")\n" if ($verbose);
       LRGImport::add_lrg_overlap($gene->stable_id,$lrg_id,defined($feature_node->findNode('partial')));
     }
   }
@@ -434,8 +433,19 @@ while (my $lrg_id = shift(@lrg_ids)) {
       );
       my $pairs = $mapping->{'pairs'};
       
+      # Insert entries for the analysis
+      print STDOUT localtime() . "\tAdding analysis data for LRG to $coredb\n" if ($verbose);
+      my $analysis_id = LRGImport::add_analysis($LRG_ANALYSIS_LOGIC_NAME);
+	
+      LRGImport::add_analysis_description(
+        $analysis_id,
+        $LRG_ANALYSIS_DESCRIPTION,
+        $LRG_ANALYSIS_DISPLAY_LABEL,
+        1,
+        $LRG_ANALYSIS_WEB_DATA
+      );
+      
       #ÊLoop over the db adaptors where information will be mirrored and insert in the ones that are defined
-      my $analysis_id;
       foreach my $dba (@db_adaptors) {
 	# Skip this db adaptor if it's not defined
 	next unless(defined($dba));
@@ -444,21 +454,7 @@ while (my $lrg_id = shift(@lrg_ids)) {
 	$LRGImport::dbCore = $dba;
 	
 	my $dbname = $dba->dbc()->dbname();
-	# Insert entries for the analysis
-	print STDOUT localtime() . "\tAdding analysis data for LRG to $dbname\n" if ($verbose);
-	my $new_analysis_id = LRGImport::add_analysis($LRG_ANALYSIS_LOGIC_NAME);
-	# Check whether the analysis id returned was fifferent from the other databases
-	warn("Analysis id returned from $dbname ($new_analysis_id) is different than what was inserted in another db ($analysis_id)") if (defined($analysis_id) && $new_analysis_id != $analysis_id);
-	$analysis_id = $new_analysis_id;
 	
-	LRGImport::add_analysis_description(
-	  $analysis_id,
-	  $LRG_ANALYSIS_DESCRIPTION,
-	  $LRG_ANALYSIS_DISPLAY_LABEL,
-	  1,
-	  $LRG_ANALYSIS_WEB_DATA
-	);
-      
 	#ÊAdd mapping between the LRG and chromosome coordinate systems to the core db
 	print STDOUT localtime() . "\tAdding mapping between $LRG_COORD_SYSTEM_NAME and chromosome coordinate system to $dbname for $lrg_name\n" if ($verbose);
 	LRGImport::add_mapping(
