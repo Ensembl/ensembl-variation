@@ -162,6 +162,9 @@ while(<$in_file_handle>) {
   
   my ($chr, $start, $end, $allele_string, $strand, $var_name) = parse_line($_);
   
+  # non-variant line from VCF
+  next if $chr eq 'non-variant';
+  
   # fix inputs
   $chr =~ s/chr//ig;
   $strand = ($strand =~ /\-/ ? "-1" : "1");
@@ -307,7 +310,13 @@ sub parse_line {
 	}
 	
 	# VCF: 20      14370   rs6054257 G     A      29    0       NS=58;DP=258;AF=0.786;DB;H2          GT:GQ:DP:HQ
-	elsif($data[0] =~ /(chr)?\w+/ && $data[1] =~ /\d+/ && $data[3] =~ /[ACGTN-]+/ && $data[4] =~ /([ACGTN-]+\,?)+/) {
+	elsif($data[0] =~ /(chr)?\w+/ && $data[1] =~ /\d+/ && $data[3] =~ /[ACGTN-]+/ && $data[4] =~ /([\.ACGTN-]+\,?)+/) {
+		
+		# non-variant line in VCF, return dummy line
+		if($data[4] eq '.') {
+			return ('non-variant');
+		}
+		
 		my $alt = $data[4];
 		$alt =~ s/\,/\//g;
 		return ($data[0], $data[1], $data[1], $data[3]."/".$alt, 1, ($data[2] eq '.' ? undef : $data[2]));
