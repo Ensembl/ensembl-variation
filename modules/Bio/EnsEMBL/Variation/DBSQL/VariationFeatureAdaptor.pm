@@ -60,11 +60,112 @@ use warnings;
 package Bio::EnsEMBL::Variation::DBSQL::VariationFeatureAdaptor;
 
 use Bio::EnsEMBL::Variation::VariationFeature;
+use Bio::EnsEMBL::Variation::DBSQL::BaseVariationAdaptor;
 use Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 
-our @ISA = ('Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor');
+our @ISA = ('Bio::EnsEMBL::Variation::DBSQL::BaseVariationAdaptor');
 
+=head2 fetch_all_by_Slice_constraint
+
+  Arg [1]    : Bio::EnsEMBL::Slice $slice
+               the slice from which to obtain features
+  Arg [2]    : (optional) string $constraint
+               An SQL query constraint (i.e. part of the WHERE clause)
+  Description: Returns a listref of germline variation features created 
+               from the database which are on the Slice defined by $slice 
+               and fulfill the SQL constraint defined by $constraint.
+  Returntype : listref of VariationFeatures
+  Exceptions : thrown if $slice is not defined
+  Caller     : Bio::EnsEMBL::Slice
+  Status     : Stable
+
+=cut
+
+sub fetch_all_by_Slice_constraint {
+    my ($self, $slice, $constraint) = @_;
+    
+    # by default, filter out somatic mutations
+    my $somatic_constraint = 's.somatic = 0';
+    
+    if ($constraint) {
+        $constraint .= " AND $somatic_constraint";
+    }
+    else {
+        $constraint = $somatic_constraint;
+    }
+    
+    return $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint);
+}
+
+=head2 fetch_all_somatic_by_Slice_constraint
+
+  Arg [1]    : Bio::EnsEMBL::Slice $slice
+               the slice from which to obtain features
+  Arg [2]    : (optional) string $constraint
+               An SQL query constraint (i.e. part of the WHERE clause)
+  Description: Returns a listref of somatic variation features created 
+               from the database which are on the Slice defined by $slice 
+               and fulfill the SQL constraint defined by $constraint.
+  Returntype : listref of VariationFeatures
+  Exceptions : thrown if $slice is not defined
+  Caller     : Bio::EnsEMBL::Slice
+  Status     : Stable
+
+=cut
+
+sub fetch_all_somatic_by_Slice_constraint {
+    my ($self, $slice, $constraint) = @_;
+    
+    my $somatic_constraint = 's.somatic = 1';
+    
+    if ($constraint) {
+        $constraint .= " AND $somatic_constraint";
+    }
+    else {
+        $constraint = $somatic_constraint;
+    }
+    
+    return $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint);
+}
+
+=head2 fetch_all_by_Slice
+
+  Arg [1]    : Bio::EnsEMBL::Slice $slice
+               the slice from which to obtain features
+  Example    : my $vfs = $vfa->fetch_all_by_Slice($slice);
+  Description: Retrieves all variation features on the given Slice.
+               NOTE: only germline variations will be returned, if you want 
+               somatic mutations use the fetch_all_somatic_by_Slice method.
+  Returntype : listref of Bio::EnsEMBL::VariationFeatures
+  Exceptions : none
+  Caller     : Bio::EnsEMBL::Slice
+  Status     : Stable
+
+=cut
+
+sub fetch_all_by_Slice {
+  my ($self, $slice) = @_;
+  return $self->fetch_all_by_Slice_constraint($slice, '');
+}
+
+=head2 fetch_all_somatic_by_Slice
+
+  Arg [1]    : Bio::EnsEMBL::Slice $slice
+               the slice from which to obtain features
+  Example    : my $svfs = $vfa->fetch_all_somatic_by_Slice($slice);
+  Description: Retrieves a list of variation features representing somatic mutations on the given Slice.
+  Returntype : listref of Bio::EnsEMBL::VariationFeatures
+  Exceptions : none
+  Caller     : Bio::EnsEMBL::Slice
+  Status     : Stable
+
+=cut
+
+sub fetch_all_somatic_by_Slice {
+  my ($self, $slice) = @_;
+  return $self->fetch_all_somatic_by_Slice_constraint($slice, '');
+}
 
 =head2 fetch_all_by_Variation
 
@@ -114,43 +215,19 @@ sub fetch_all_genotyped_by_Slice{
     my $self = shift;
     my $slice = shift;
 
-    my $constraint = "vf.flags & 1";
+    my $constraint = "vf.flags & 1 AND s.somatic = 0";
     #call the method fetch_all_by_Slice_constraint with the genotyped constraint
     return $self->fetch_all_by_Slice_constraint($slice,$constraint);
 }
 
-
-=head2 fetch_all_with_annotation_by_Slice
-
-  Arg [1]    : Bio::EnsEMBL:Variation::Slice $slice
-  Arg [2]    : $variation_feature_source [optional]
-  Arg [3]    : $annotation_source [optional]
-  Arg [4]    : $annotation_name [optional]
-  Example    : my @vfs = @{$vfa->fetch_all_with_annotation_by_Slice($slice)};
-  Description: Retrieves all variation features associated with annotations for
-               a given slice.
-			   The optional $variation_feature_source argument can be used to
-			   retrieve only variation features from a paricular source.
-			   The optional $annotation source argument can be used to
-               retrieve only variation features with annotations provided by
-               a particular source.
-			   The optional $annotation_name argument can
-               be used to retrieve only variation features associated with
-               that annotation - this can also be a phenotype's dbID.
-  Returntype : reference to list Bio::EnsEMBL::Variation::VariationFeature
-  Exceptions : throw on bad argument
-  Caller     : general
-  Status     : Stable
-
-=cut
-
-sub fetch_all_with_annotation_by_Slice{
+sub _internal_fetch_all_with_annotation_by_Slice{
 
 	my $self = shift;
 	my $slice = shift;
 	my $v_source = shift;
 	my $p_source = shift;
 	my $annotation = shift;
+	my $constraint = shift;
 	
 	if(!ref($slice) || !$slice->isa('Bio::EnsEMBL::Slice')) {
 		throw('Bio::EnsEMBL::Slice arg expected');
@@ -175,6 +252,10 @@ sub fetch_all_with_annotation_by_Slice{
 		}
     }
     
+    if ($constraint) {
+        $extra_sql .= qq{ AND $constraint };
+    }
+    
     my $cols = join ",", $self->_columns();
     
     my $sth = $self->prepare(qq{
@@ -195,6 +276,62 @@ sub fetch_all_with_annotation_by_Slice{
     $sth->execute($slice->get_seq_region_id, $slice->start, $slice->end);
     
     return $self->_objs_from_sth($sth, undef, $slice);
+}
+
+=head2 fetch_all_with_annotation_by_Slice
+
+  Arg [1]    : Bio::EnsEMBL:Variation::Slice $slice
+  Arg [2]    : $variation_feature_source [optional]
+  Arg [3]    : $annotation_source [optional]
+  Arg [4]    : $annotation_name [optional]
+  Example    : my @vfs = @{$vfa->fetch_all_with_annotation_by_Slice($slice)};
+  Description: Retrieves all germline variation features associated with annotations for
+               a given slice.
+               The optional $variation_feature_source argument can be used to
+               retrieve only variation features from a paricular source.
+               The optional $annotation source argument can be used to
+               retrieve only variation features with annotations provided by
+               a particular source.
+               The optional $annotation_name argument can
+               be used to retrieve only variation features associated with
+               that annotation - this can also be a phenotype's dbID.
+  Returntype : reference to list Bio::EnsEMBL::Variation::VariationFeature
+  Exceptions : throw on bad argument
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub fetch_all_with_annotation_by_Slice {
+    my $self = shift;
+    my ($slice, $v_source, $p_source, $annotation) = @_;
+    my $constraint = 's.somatic = 0';
+    return $self->_internal_fetch_all_with_annotation_by_Slice($slice, $v_source, $p_source, $annotation, $constraint);
+}
+
+=head2 fetch_all_somatic_with_annotation_by_Slice
+
+  Arg [1]    : Bio::EnsEMBL:Variation::Slice $slice
+  Arg [2]    : $variation_feature_source [optional]
+  Arg [3]    : $annotation_source [optional]
+  Arg [4]    : $annotation_name [optional]
+  Example    : my @vfs = @{$vfa->fetch_all_somatic_with_annotation_by_Slice($slice)};
+  Description: Retrieves all somatic variation features associated with annotations for
+               a given slice.
+               (see fetch_all_with_annotation_by_Slice documentation for description of
+               the other parameters)
+  Returntype : reference to list Bio::EnsEMBL::Variation::VariationFeature
+  Exceptions : throw on bad argument
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub fetch_all_somatic_with_annotation_by_Slice {
+    my $self = shift;
+    my ($slice, $v_source, $p_source, $annotation) = @_;
+    my $constraint = 's.somatic = 1';
+    return $self->_internal_fetch_all_with_annotation_by_Slice($slice, $v_source, $p_source, $annotation, $constraint);
 }
 
 =head2 fetch_all_by_Slice_VariationSet
