@@ -579,13 +579,13 @@ sub add_mapping {
 	    die("Distance between query and target is not the same, there is an indel which shouldn't be there. Check the code!") unless ($pair->[2]-$pair->[1] == $pair->[4]-$pair->[3]);
 	    
 	    # Get a chromosomal slice. Always in the forward orientation
-	    my $chr_slice = $sa->fetch_by_region('chromosome',$mapping->{'chr_name'},$pair->[3],$pair->[4],1);
+	    my $chr_slice = $sa->fetch_by_region('chromosome',$mapping->{'chr_name'},$pair->[3],$pair->[4],1,$assembly);
 	    
 	    #ÊProject the chromosomal slice to contig
 	    my $segments = $chr_slice->project('contig');
 	    
 	    # Die if the projection failed
-	    die("Could not project " . $chr_slice->description() . " to contigs!") if (!defined($segments) || scalar(@{$segments}) == 0);
+	    die("Could not project " . $chr_slice->name() . " to contigs!") if (!defined($segments) || scalar(@{$segments}) == 0);
 	    
 	    # Loop over the projection segments and insert the corresponding mapping between the LRG and contig
 	    foreach my $segment (@{$segments}) {
@@ -653,8 +653,8 @@ sub add_mapping {
 		# Get or add a seq_region for this contig
 		my $contig_sri = add_seq_region($contig_name,$contig_csi,$contig_len);
 	    
-		# Add DNA for this seq_region
-		add_dna($contig_sri,$contig_seq);
+		# Add DNA for this seq_region unless the database is not core. Ugly regexp to determine this
+		add_dna($contig_sri,$contig_seq) if ($dbCore->dbc()->dbname() =~ m/\_core\_\d+\_\d+\s/);
 		
 		# Add a mapping between the LRG and the contig
 		add_assembly_mapping(
@@ -1533,7 +1533,10 @@ sub purge_db {
 		    my $translation_id = LRGImport::get_translation_id($oid);
 		    # Remove from object_xref
 		    remove_row([qq{ensembl_object_type = 'Translation'}, qq{ensembl_id = $translation_id}],'object_xref') if defined($translation_id);
+		    #ÊRemove entries in the exon_transcript table
+		    remove_row([qq{transcript_id = '$oid'}],'exon_transcript');
 		}
+		
 		# Remove rows with this object id (also from associated stable_id table)
 		remove_row([$object_type . '_id' . qq{ = $oid}],$object_type);
 		remove_row([$object_type . '_id' . qq{ = $oid}],$object_type . '_stable_id');
@@ -1553,6 +1556,16 @@ sub purge_db {
 	remove_row([qq{seq_region_id = $seq_region_id}],'seq_region');
     }
     
+    #ÊGet any xrefs for this LRG
+    my $xref_ids = fetch_rows([qq{x.xref_id}],[qq{xref x},qq{external_db edb}],[qq{x.external_db_id = edb.external_db_id},qq{edb.db_name = 'LRG' OR edb.db_name = 'ENS_LRG_transcript' OR edb.db_name = 'ENS_LRG_gene'},qq{x.display_label = '$lrg_name' OR x.display_label LIKE '$lrg_name\_t%' OR x.display_label LIKE '$lrg_name\_g%'}]);
+    while (my $row = shift(@{$xref_ids})) {
+      my $xref_id = $row->[0];
+      # Remove from object_xref
+      remove_row([qq{xref_id = '$xref_id'}],'object_xref');
+      # Remove from xref
+      remove_row([qq{xref_id = '$xref_id'}],'xref');
+    }
+    
     # Remove any gene attributes linked to this LRG
     remove_row([qq{value = '$lrg_name'}],'gene_attrib');
     
@@ -1566,6 +1579,8 @@ sub purge_db {
       
       # Remove coord_system entry
       remove_row([qq{coord_system_id = $cs_id}],'coord_system');
+      # Remove meta_coord entries
+      remove_row([qq{coord_system_id = $cs_id}],'meta_coord');
       #ÊRemove meta table entries
       my $ids = fetch_rows(["meta_id"],["meta"],["meta_key = 'assembly.mapping' OR meta_key = 'lrg'","meta_value LIKE '%lrg%'"]);
       remove_row(["meta_id = '" . join("' OR meta_id = '",map($_->[0],@{$ids})) . "'"],"meta");
