@@ -574,6 +574,14 @@ sub partial {
     #ÊGet the updatable annotation sets 
     my $annotation_sets = $self->{'lrg'}->findNodeArray('updatable_annotation/annotation_set');
     
+    #ÊAlso do a check to make sure that all annotations on the LRG gene are contained within the LRG region. Need the lrg_gene_name for that
+    my $lrg_gene_name;
+    foreach my $annotation_set (@{$annotation_sets}) {
+        my $lrg_gene_node = $annotation_set->findNode('lrg_gene_name',{'source' => 'HGNC'}) or next;
+        $lrg_gene_name = $lrg_gene_node->content();
+        last;
+    }
+    
     # Loop over the annotation sets
     foreach my $annotation_set (@{$annotation_sets}) {
         
@@ -593,6 +601,12 @@ sub partial {
             #ÊDo this manually since we don't want the call to be recursive
             foreach my $node (@{$gene->{'nodes'}}) {
                 $partial{$node->content()} = 1 if ($node->name() eq 'partial');
+            }
+            
+            # Check if the gene symbol corresponds to the lrg_gene_name and if partial is indicated 
+            if (scalar(keys(%partial)) > 0 && defined($lrg_gene_name) && exists($gene->data()->{'symbol'}) && $gene->data()->{'symbol'} eq $lrg_gene_name) {
+                $passed = 0;
+                $self->{'check'}{$name}{'message'} .= "The LRG gene $lrg_gene_name itself is indicated as partial in the $source updatable annotation//";                
             }
             
             #ÊGet the transcripts
@@ -630,6 +644,8 @@ sub partial {
             }
         }
     }
+    
+    
     $self->{'check'}{$name}{'passed'} = $passed;
     return $passed;
 }
