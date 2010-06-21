@@ -616,6 +616,8 @@ create table httag(
 # source_id 	- primary key, internal identifier
 # name      	- the name of the source.  e.g. 'dbSNP'
 # description	- description of the source for ContigView
+# url           - URL for the source
+# somatic       - flag to indicate somatic mutations
 
 create table source(
 	source_id int(10) unsigned not null auto_increment,
@@ -623,6 +625,7 @@ create table source(
 	version int,
 	description varchar(255),
 	url varchar(255),
+	somatic tinyint(1) DEFAULT '0',
 	
 	primary key( source_id )
 );
