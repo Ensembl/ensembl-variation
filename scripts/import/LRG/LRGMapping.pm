@@ -45,7 +45,7 @@ our %SSAHA_PARAMETERS = (
   '-output' 	=> 'vulgar',
   '-depth'	=> '5',
   '-best' 	=> '1',
-  '-memory'	=> '1000'
+  '-memory'	=> '4000'
 );
 
 sub mapping {
@@ -477,6 +477,14 @@ sub identical_matches {
 
 }
 
+sub clear_mapping {
+  my $lrg_name = shift;
+  my $lrg_coord_system_name = shift;
+  
+  $LRGImport::dbCore = $dbCore_rw;
+  LRGImport::purge_db($lrg_name,$lrg_coord_system_name);
+}
+
 sub get_annotations {
   my $lrg_name = shift;
   my $lrg_coord_system_name = shift;
@@ -875,8 +883,8 @@ sub gene_2_feature {
 	      {
 	        'source' => 'Ensembl',
 	        'accession' => $protein->stable_id,
-	        'cds_start' => $cds_start,
-	        'cds_end' => $cds_end
+	        'cds_start' => min($cds_start,$cds_end),
+	        'cds_end' => max($cds_start,$cds_end)
 	      }
 	    );
 	    	    
