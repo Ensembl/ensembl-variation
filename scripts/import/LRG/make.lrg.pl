@@ -446,17 +446,18 @@ sub create_updatable_annotation {
 # Add other exon naming element
 	$annotation_set_ensembl->findOrAdd('other_exon_naming');
 
-# Add alternative amino acid numbering element
-	$annotation_set_ensembl->findOrAdd('alternate_amino_acid_numbering');
-
 # Get the mapping node corresponding to the db assembly if it exists
-	my $mapping_node = $annotation_set_ensembl->findNode('mapping',{'assembly' => $assembly});
+	my $mapping_node = $annotation_node->findNode('mapping',{'assembly' => $assembly});
 	my $chr_id;
 	
 # Run the mapping sub-routine. unless we want to use the mapping already made, this should allow for multiple mappings. Only the most_recent mapping should be used for getting annotations though.
 	my $mapping;
 	#ÊIf a new mapping should be made
 	if (!$use_existing_mapping) {
+		
+		# Clear the old mapping from db
+		LRGMapping::clear_mapping($LRGMapping::lrg_name,'lrg');
+		
 		# Run ssaha2 to map and the result is a reference to a hash
 		$mapping = LRGMapping::mapping($genomic_sequence);
 		my $pairs = $mapping->{'pairs'};
