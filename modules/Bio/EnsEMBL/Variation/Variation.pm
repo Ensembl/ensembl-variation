@@ -169,9 +169,9 @@ sub new {
   my $caller = shift;
   my $class = ref($caller) || $caller;
 
-  my ($dbID, $adaptor, $name, $src, $src_desc, $src_url, $syns, $ancestral_allele,
+  my ($dbID, $adaptor, $name, $src, $src_desc, $src_url, $is_somatic, $syns, $ancestral_allele,
       $alleles, $valid_states, $moltype, $five_seq, $three_seq, $failed_description, $flank_flag) =
-        rearrange([qw(dbID ADAPTOR NAME SOURCE SOURCE_DESCRIPTION SOURCE_URL SYNONYMS ANCESTRAL_ALLELE ALLELES
+        rearrange([qw(dbID ADAPTOR NAME SOURCE SOURCE_DESCRIPTION SOURCE_URL IS_SOMATIC SYNONYMS ANCESTRAL_ALLELE ALLELES
                       VALIDATION_STATES MOLTYPE FIVE_PRIME_FLANKING_SEQ
                       THREE_PRIME_FLANKING_SEQ FAILED_DESCRIPTION FLANK_FLAG)],@_);
 
@@ -191,15 +191,16 @@ sub new {
                 'source' => $src,
 				'source_description' => $src_desc,
 				'source_url' => $src_url,
+				'is_somatic' => $is_somatic,
                 'synonyms' => $syns || {},
-		    'ancestral_allele' => $ancestral_allele,
+		        'ancestral_allele' => $ancestral_allele,
                 'alleles' => $alleles || [],
                 'validation_code' => $vcode,
-		    'moltype' => $moltype,
+		        'moltype' => $moltype,
                 'five_prime_flanking_seq' => $five_seq,
                 'three_prime_flanking_seq' => $three_seq,
-	          'failed_description' => $failed_description,
-			  'flank_flag' => $flank_flag}, $class;
+	            'failed_description' => $failed_description,
+			    'flank_flag' => $flank_flag}, $class;
 }
 
 
@@ -561,6 +562,25 @@ sub source_url{
   my $self = shift;
   return $self->{'source_url'} = shift if(@_);
   return $self->{'source_url'};
+}
+
+=head2 is_somatic
+
+  Arg [1]    : boolean $is_somatic (optional)
+               The new value to set the is_somatic flag to
+  Example    : $is_somatic = $v->is_somatic
+  Description: Getter/Setter for the is_somatic flag, which identifies this variation as either somatic or germline
+  Returntype : boolean
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub is_somatic {
+  my ($self, $is_somatic) = @_;
+  $self->{is_somatic} = $is_somatic if defined $is_somatic;
+  return $self->{is_somatic};
 }
 
 =head2 get_all_Alleles
