@@ -1360,7 +1360,7 @@
 								  </xsl:when>
 								  <xsl:when test="@source='Ensembl'">
 								     <a>
-									<xsl:attribute name="href">http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory/Protein?protein=<xsl:value-of select="@accession"/></xsl:attribute>
+									<xsl:attribute name="href">http://www.ensembl.org/Homo_sapiens/Transcript/ProteinSummary?db=core;protein=<xsl:value-of select="@accession"/></xsl:attribute>
 									<xsl:attribute name="target">_blank</xsl:attribute>
 									<xsl:value-of select="@accession"/>
 								     </a>
@@ -1438,7 +1438,7 @@
 	     <xsl:choose>
 		<xsl:when test="contains(@accession,'ENST')">http://www.ensembl.org/Homo_sapiens/Transcript/Summary?db=core;t=<xsl:value-of select="@accession"/></xsl:when>
 		<xsl:when test="contains(@accession,'ENSG')">http://www.ensembl.org/Homo_sapiens/Gene/Summary?db=core;g=<xsl:value-of select="@accession"/></xsl:when>
-		<xsl:when test="contains(@accession,'ENSP')">http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory/Protein?protein=<xsl:value-of select="@accession"/></xsl:when>
+		<xsl:when test="contains(@accession,'ENSP')">http://www.ensembl.org/Homo_sapiens/Transcript/ProteinSummary?db=core;protein=<xsl:value-of select="@accession"/></xsl:when>
 		<xsl:otherwise>http://www.ensembl.org/Homo_sapiens/<xsl:value-of select="@accession"/></xsl:otherwise>
 	     </xsl:choose>
 	  </xsl:attribute>
