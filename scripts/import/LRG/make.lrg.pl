@@ -101,6 +101,7 @@ if (!$skip_updatable) {
 	Bio::EnsEMBL::Registry->load_all( $registry_file );
 	$LRGMapping::dbCore_ro = Bio::EnsEMBL::Registry->get_DBAdaptor('human','core_ro');
 	$LRGMapping::dbCore_rw = Bio::EnsEMBL::Registry->get_DBAdaptor('human','core_rw');
+	$LRGMapping::dbFuncGen = Bio::EnsEMBL::Registry->get_DBAdaptor('human','funcgen');
 	my $host = $LRGMapping::dbCore_rw->dbc->host();
 	if ($host !~ m/variation/ && !$skip_host_check) {
 		die('Host is ' . $host . '! Changes will be written to the database, make sure you want to use the database on this host. If so, skip this check by using -skip_host_check on command line');
