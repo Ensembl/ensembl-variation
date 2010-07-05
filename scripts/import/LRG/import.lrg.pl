@@ -46,7 +46,7 @@ my $LRG_BIOTYPE = q{LRG_gene};
 my $LRG_ANALYSIS_LOGIC_NAME = q{LRG_import};
 my $LRG_ANALYSIS_DESCRIPTION = q{Data from LRG database};
 my $LRG_ANALYSIS_DISPLAY_LABEL = q{LRG Genes};
-my $LRG_ANALYSIS_WEB_DATA = qq{{'colour_key' => 'rna_[status]','caption' => 'LRG gene','label_key' => '[text_label] [display_label]','name' => 'LRG Genes','default' => {'MultiTop' => 'gene_label','contigviewbottom' => 'transcript_label','MultiBottom' => 'collapsed_label','contigviewtop' => 'gene_label','alignsliceviewbottom' => 'as_collapsed_label','cytoview' => 'gene_label'},'multi_caption' => 'LRG genes','key' => 'ensembl'}};
+my $LRG_ANALYSIS_WEB_DATA = qq{{'colour_key' => 'rna_[status]','caption' => 'LRG gene','label_key' => '[text_label] [display_label]','name' => 'LRG Genes','default' => {'MultiTop' => 'gene_label','contigviewbottom' => 'transcript_label','MultiBottom' => 'collapsed_label','contigviewtop' => 'gene_label','alignsliceviewbottom' => 'as_collapsed_label','cytoview' => 'gene_label'},'multi_caption' => 'LRG genes'}};
 my $HGNC_EXTERNAL_DB_NAME = q{HGNC};
 my $LRG_EXTERNAL_DB_NAME = q{LRG};
 my $LRG_EXTERNAL_STATUS = q{KNOWN};
@@ -443,7 +443,7 @@ while (my $lrg_id = shift(@lrg_ids)) {
         $analysis_id,
         $LRG_ANALYSIS_DESCRIPTION,
         $LRG_ANALYSIS_DISPLAY_LABEL,
-        1,
+        0,
         $LRG_ANALYSIS_WEB_DATA
       );
       
