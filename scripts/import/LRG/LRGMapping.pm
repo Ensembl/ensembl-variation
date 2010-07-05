@@ -28,6 +28,7 @@ our %rec_seq;
 #ÊKeep different db connections for a core db with write access to and one with read-only access
 our $dbCore_rw;
 our $dbCore_ro;
+our $dbFuncGen;
 
 our $lrg_name;
 our $registry_file;
@@ -532,7 +533,7 @@ sub get_annotations {
     die('Could not get LRG slice despite adding it to core db!') if (!defined($lrg_slice));
   }  
   
-  my $genes = get_overlapping_genes($lrg_slice);
+  my $genes = get_overlapping_features($lrg_slice,'gene');
   my @gene_features;
   
   foreach my $gene (@{$genes}) {
@@ -540,6 +541,14 @@ sub get_annotations {
     push(@gene_features,$gene_feature);
   }
   
+=head Will not go live with this yet
+  my $reg_features = get_overlapping_features($lrg_slice,'regulatory');
+  foreach my $reg_feature (@{$reg_features}) {
+    my $node = regulatory_feature_2_feature($reg_feature,$lrg_slice);
+    push(@gene_features,$node);
+  }
+=cut
+
   return \@gene_features;
 }
 
@@ -550,8 +559,13 @@ sub get_feature_limits {
   
   my %limits;
   
+  my $feat_start = $feature->start();
+  my $feat_end = $feature->end();
+  my $feat_slice = $feature->slice();
+  my $feat_strand = $feature->strand();
+  
   #ÊGet the start position of the feature on the slice
-  my $lrg_position = lift_coordinate($feature->start(),$feature->slice(),$slice);
+  my $lrg_position = lift_coordinate($feat_start,$feat_slice,$slice);
   if (defined($lrg_position->{'position'})) {
     $limits{'start'} = $lrg_position->{'position'};
     $limits{'strand'} = $lrg_position->{'strand'};
@@ -560,7 +574,7 @@ sub get_feature_limits {
     #ÊIf start position lies upstream of LRG slice, indicate that the feature is partial in its 3'-end or 5'-end
     if ($lrg_position->{'reason'} eq 'upstream') {
       $limits{'start'} = 1;
-      if ($feature->strand() > 0) {
+      if ($feat_strand > 0) {
 	$limits{'partial_5'} = 1;
       }
       else {
@@ -575,7 +589,7 @@ sub get_feature_limits {
   }
   
   #ÊGet the end position of the feature on the slice
-  $lrg_position = lift_coordinate($feature->end(),$feature->slice(),$slice);
+  $lrg_position = lift_coordinate($feat_end,$feat_slice,$slice);
   if (defined($lrg_position->{'position'})) {
     $limits{'end'} = $lrg_position->{'position'};
     $limits{'strand'} = $lrg_position->{'strand'};
@@ -583,7 +597,7 @@ sub get_feature_limits {
   else {
     #ÊIf end position lies downstream of LRG slice, indicate that the feature is partial in its 5'-end or 3'-end
     if ($lrg_position->{'reason'} eq 'downstream') {
-      if ($feature->strand() > 0) {
+      if ($feat_strand > 0) {
 	$limits{'partial_3'} = 1;
       }
       else {
@@ -608,6 +622,8 @@ sub lift_coordinate {
   my $input_slice = shift;
   my $target_slice = shift;
   
+  return {'reason' => 'failed'} if (!defined($position));
+  
   my %mapping;
   
   my $source_slice;
@@ -631,8 +647,13 @@ sub lift_coordinate {
   
   #ÊIf feature fails to project (lies entirely outside of the supplied slice), return with reason 'failed'
   if (!defined($projections) || scalar(@{$projections}) == 0) {
-    $mapping{'reason'} = 'failed';
-    return \%mapping;
+    warn("Failed to do a project_to_slice from " . $source_slice->coord_system_name() . ":" . $source_slice->seq_region_name() . ":" . $source_slice->start() . "-" . $source_slice->end() . ":" . $source_slice->strand() . " to " . $target_slice->coord_system_name() . ":" . $target_slice->seq_region_name() . ":" . $target_slice->start() . "-" . $target_slice->end() . ":" . $target_slice->strand() . ", will try again...");
+    $projections = $source_slice->project_to_slice($target_slice);
+    if (!defined($projections) || scalar(@{$projections}) == 0) {
+      warn("Still failed!");
+      $mapping{'reason'} = 'failed';
+      return \%mapping;
+    }
   }
   
   # If position is 5' of what's been mapped
@@ -670,269 +691,325 @@ sub lift_coordinate {
   return \%mapping;
 }
 
+sub attach_protein {
+  my $transcript = shift;
+  my $lrg_slice = shift;
+  my $transcript_node = shift;
+  
+  # Get the gene node that is the parent of the transcript node
+  my $gene_node = $transcript_node->parent();
+  
+  # Get the translation of this transcript
+  my $protein = $transcript->translation();
+  
+  if (!defined($protein) || length($protein->seq()) == 0) {
+    return;
+  }
+  
+  my $cds_start;
+  my $cds_end;
+  my $partial_5;
+  my $partial_3;
+  my $slice_end = $lrg_slice->end();
+  # Flag to indicate if protein coding region is entirely outside of the LRG
+  my $outside = 0;
+  
+  # Get the coding region start coordinates in LRG coordinates.
+  #ÊNote that this is always the lowest coordinate, so the coding_region_start on a transcript is the stop codon position if the transcript is on the negative strand
+  my $lift = lift_coordinate($transcript->coding_region_start(),$transcript->slice(),$lrg_slice);
+  
+  # In case the position couldn't be found on the LRG slice, investigate why
+  if (!defined($lift->{'position'})) {
+    
+    #ÊIf coding start lies downstream of LRG slice, just set the start to the first position outside of the slice (no coding part is within the LRG)
+    if ($lift->{'reason'} eq 'downstream') {
+      $cds_start = $slice_end + 1;
+      $outside = 1;
+    }
+    
+    #ÊIf coding start lies upstream of LRG slice, set start of protein to the closest exon start
+    elsif ($lift->{'reason'} eq 'upstream') {
+      $partial_5 = 1;
+    }
+    
+    #ÊIf it is because of a deletion, don't know what to do... (set to closest, non-deleted position?)
+    elsif ($lift->{'reason'} eq 'deleted') {}
+    
+    #ÊElse if it failed to project, this is likely to be because the transcript is entirely outside of LRG. Shouldn't have gotten this far in that case but still, sset start outside of LRG slice
+    elsif ($lift->{'reason'} eq 'failed') {
+      $cds_start = $slice_end + 1;
+    }
+  }
+  else {
+    $cds_start = $lift->{'position'};
+  }
+  
+  # Get the coding region end coordinates in LRG coordinates  
+  $lift = lift_coordinate($transcript->coding_region_end(),$transcript->slice(),$lrg_slice);
+  
+  # In case the position couldn't be found on the LRG slice, investigate why
+  if (!defined($lift->{'position'})) {
+    #ÊIf coding end lies upstream of LRG slice, set the end to be negative
+    if ($lift->{'reason'} eq 'upstream') {
+      $cds_end = -1;
+      $outside = 1;
+    }
+    
+    #ÊIf coding end lies downstream of LRG slice, set end of protein to the closest exon end
+    elsif ($lift->{'reason'} eq 'downstream') {
+      $partial_3 = 1;
+    }
+    
+    #ÊIf it is because of a deletion, don't know what to do... (set to closest, non-deleted position?)
+    elsif ($lift->{'reason'} eq 'deleted') {}
+   
+    #ÊElse if it failed to project, this is likely to be because the transcript is entirely outside of LRG. Shouldn't have gotten this far in that case but still, skip protein in that case
+    elsif ($lift->{'reason'} eq 'failed') {
+      $cds_end = -1;
+    }
+  }
+  else {
+    $cds_end = $lift->{'position'};
+  }
+  
+  # Create a node for the protein 
+  my $protein_node = LRG::Node->new('protein_product');
+
+  my $name_content = "";
+  
+  # Get all DBEntries
+  my $entries = $protein->get_all_DBEntries();
+  while(my $entry = shift(@{$entries})) {
+    
+    # We are only interested in a subset of the possible xrefs	  
+    next unless $entry->dbname =~ /RefSeq|Uniprot|CCDS|MIM_GENE|Entrez/;
+    	  
+    if($entry->dbname eq 'RefSeq_peptide' && defined($entry->description())) {
+      $name_content = $entry->description();
+    }
+    
+    # Create an xref node
+    my $xref = xref($entry);
+    
+    #ÊAttach the xref node to the protein if applicable 
+    if ($entry->dbname() !~ /MIM_GENE|Entrez/) {
+      $protein_node->addExisting($xref);
+    }
+    # For xrefs that should be attached to the gene node rather than the protein node, do that unless the xref already exists
+    else {
+      $gene_node->addExisting($xref) unless ($gene_node->nodeExists($xref));
+    }
+  }
+  
+  # Create a node for the long name to use if one was found
+  if (length($name_content) > 0) {
+    my $name_node = LRG::Node->new('long_name');
+    $name_node->content($name_content);
+    $protein_node->addExisting($name_node);
+  }
+  
+  # Only add the protein node to the transcript if there is a coding exon within the LRG slice
+  if ($outside) {
+    return;
+  }
+    
+  #ÊIf part of the protein falls outside the LRG slice, adjust the cds_start and cds_end to the closest coding exons
+  if ($partial_5 || $partial_3) {
+    my $feat_start = $transcript_node->data()->{'start'};
+    my $feat_end = $transcript_node->data()->{'end'};
+    my $exons = $transcript->get_all_Exons();
+    my $exon_overlap = 0;
+    if (scalar(@{$exons}) > 0) {
+      $feat_start = $slice_end;
+      $feat_end = 1;
+      foreach my $exon (@{$exons}) {
+        my $limits = get_feature_limits($exon,$lrg_slice);
+        next if (!defined($limits) || $limits->{'upstream'} || $limits->{'downstream'});
+	
+	#ÊGet the position of the coding sequence start and end within the exon.
+	# On the exon (as opposed to the transcript), coding_region_start ALWAYS referes to the start codon, so we need to pass coding_region_end if the exon is on the negative strand
+	$lift = lift_coordinate(($exon->strand > 0 ? $exon->coding_region_start($transcript) : $exon->coding_region_end($transcript)),$exon->slice(),$lrg_slice);
+	if ($lift->{'position'}) {
+	  $feat_start = min($feat_start,$lift->{'position'});
+	}
+	$lift = lift_coordinate(($exon->strand > 0 ? $exon->coding_region_end($transcript) : $exon->coding_region_start($transcript)),$exon->slice(),$lrg_slice);
+	if ($lift->{'position'}) {
+	  $feat_end = max($feat_end,$lift->{'position'});
+	}
+      }
+      if ($feat_start > $feat_end) {
+        ($feat_start,$feat_end) = ($feat_end,$feat_start);
+      }
+    }
+    $cds_start = $feat_start if ($partial_5);
+    $cds_end = $feat_end if ($partial_3);
+  }
+  
+  #ÊIn case the transcript is on the opposite strand relative to the LRG, flip the partial flags
+  ($partial_5,$partial_3) = ($partial_3,$partial_5) if ($transcript->strand() < 0);
+    
+  # Add partial nodes if necessary
+  $protein_node->addNode('partial')->content('5-prime') if ($partial_5);
+  $protein_node->addNode('partial')->content('3-prime') if ($partial_3);
+  
+  # Add the cds data to the protein node
+  $protein_node->addData(
+    {
+      'source' => 'Ensembl',
+      'accession' => $protein->stable_id(),
+      'cds_start' => $cds_start,
+      'cds_end' => $cds_end
+    }
+  );
+  
+  $transcript_node->addExisting($protein_node);
+}
+
+sub attach_transcripts {
+  my $gene = shift;
+  my $lrg_slice = shift;
+  my $gene_node = shift;
+  
+  #ÊGet the transcripts from the gene object
+  my $transcripts = $gene->get_all_Transcripts();
+  
+  # Loop over the transcripts
+  foreach my $transcript (@{$transcripts}) {
+
+    # Check for partial overlaps
+    my $limits = get_feature_limits($transcript,$lrg_slice);
+    
+    # If the transcript falls entirely outside of the LRG it should be skipped
+    next if (!defined($limits) || $limits->{'upstream'} || $limits->{'downstream'});
+    
+    my $feat_start = $limits->{'start'};
+    my $feat_end = $limits->{'end'};
+    my $feat_strand = $limits->{'strand'};
+    my $partial_5 = $limits->{'partial_5'};
+    my $partial_3 = $limits->{'partial_3'}; 
+		
+    my $transcript_node = LRG::Node->new("transcript", undef, {'source' => 'Ensembl', 'start' => $feat_start, 'end' => $feat_end, 'transcript_id' => $transcript->stable_id()});
+		
+    # If transcript partially overlaps, it should be indicated
+    $transcript_node->addNode('partial')->content('5-prime') if ($partial_5);
+    $transcript_node->addNode('partial')->content('3-prime') if ($partial_3);
+	  
+    my $name_content = "";
+	  
+    # Extract xref information
+    my $entries = $transcript->get_all_DBEntries();
+    while (my $entry = shift(@{$entries})) {
+  
+      #ÊSkip the xref if the source is not one of the allowed ones	  	
+      next unless $entry->dbname =~ /GI|RefSeq|MIM_GENE|Entrez|CCDS|RFAM|miRBase|pseudogene.org/;
+      next if $entry->dbname =~ /RefSeq_peptide/;
+	
+      # Get the long name from RefSeq if it's available    
+      if ($entry->dbname() eq 'RefSeq_dna' && defined($entry->description())) {
+	$name_content = $entry->description();
+      }
+      
+      # Create an xref node
+      my $xref = xref($entry);
+      # Watch out for the OMIM xrefs, they should go to the gene node      
+      if ($entry->dbname !~ /MIM_GENE/) {
+	$transcript_node->addExisting($xref);
+      }
+      else {
+	$gene_node->addExisting($xref);
+      }
+    }
+	  
+    # Make sure to fill in something in the long_name element
+    if (length($name_content) == 0 && defined($transcript->description())) {
+      $name_content = $transcript->description();
+    }
+    if (length($name_content) == 0 && defined($transcript->external_name())) {
+      $name_content = $transcript->external_name();
+    }
+    $name_content .= " (" . $transcript->biotype() . ")";
+    
+    # Create the long name node
+    my $name_node = LRG::Node->new('long_name');
+    $name_node->content($name_content);
+    $transcript_node->addExisting($name_node);
+	
+    # Attach the transcript node to the gene node before attaching proteins  
+    $gene_node->addExisting($transcript_node);
+    attach_protein($transcript,$lrg_slice,$transcript_node);
+  }
+}
+
 sub gene_2_feature {
 
-	my $gene = shift;
-	my $lrg_slice = shift;
-	my $slice_end = $lrg_slice->end;
-	my ($current, $entry);
-	
-	# Check if the boundaries of the gene extends beyond the mapped region, in which case the end points should be set to those of the mapped region and a flag indicating partial overlap should be set
-	my $limits = get_feature_limits($gene,$lrg_slice);
-	
-	my $partial_5 = $limits->{'partial_5'};
-	my $partial_3 = $limits->{'partial_3'};
-	
-	
-	my $feat_slice = $gene->feature_Slice();
-	
-	my $feat_start = $limits->{'start'};
-	my $feat_end = $limits->{'end'};
-	my $feat_strand = $limits->{'strand'};
-	
-#	if ($feat_strand < 0) {
-#	  ($partial_5,$partial_3) = ($partial_3,$partial_5);
-#	}
-	
-	# create the gene node
-	my $gene_node = LRG::Node->new("gene", undef, {'symbol' => $gene->external_name, 'start' => $feat_start, 'end' => $feat_end, 'strand' => $gene->strand});
- 
-	# If the gene partially overlaps, this should be indicated
-	if ($partial_5) {
-	  $gene_node->addNode('partial')->content('5-prime');
-	}
-	if ($partial_3) {
-	  $gene_node->addNode('partial')->content('3-prime');
-	}
-	
-	# get xrefs for the gene
-	my $entries = $gene->get_all_DBEntries();
-
-	#print "\n\n>>> ", $gene->stable_id, " ", $gene->biotype, " ", $gene->status, "\n";
-	my $long_name;
-	while($entry = shift @$entries) {
-		
-		next unless $entry->dbname =~ /GI|RefSeq|HGNC$/;
-		next if $entry->dbname =~ /RefSeq_peptide/;
-		
-		# get synonyms from HGNC entry
-		if($entry->dbname eq 'HGNC') {
-		        $gene_node->addNode('lrg_gene_name',{'source' => $entry->dbname})->content($entry->display_id);
-			foreach my $synonym(@{$entry->get_all_synonyms}) {
-				$gene_node->addNode('synonym')->content($synonym);
-			}
-			if (length($entry->description) > 1) {
-			  $long_name = LRG::Node->new('long_name');
-			  $long_name->content($entry->description);
-			  $gene_node->addExisting($long_name) unless ($gene_node->nodeExists($long_name));
-			}
-		}
-		$gene_node->addExisting(xref($entry));
-		
-		#print $entry->dbname, " ", $entry->primary_id, ".", $entry->version, " ", $entry->description, "\n";
-	}
-	# If no HGNC reference was found, add the description from Ensembl as long_name
-	if (!defined($long_name) && defined($gene->description()) && length($gene->description()) > 0) {
-	  $long_name = LRG::Node->new('long_name');
-	  $long_name->content($gene->description());
-	  $gene_node->addExisting($long_name);
-	}
-	
-	$gene_node->addEmptyNode('db_xref', {'source' => 'Ensembl', 'accession' => $gene->stable_id});
-
-	# get the xrefs for the transcript
-	my %ext = ();
-	my %extdesc = ();
-	my $note_node;
-	
-	foreach my $trans(@{$gene->get_all_Transcripts}) {
-		
-# Check for partial overlaps
-	  $limits = get_feature_limits($trans,$lrg_slice);
-# If the transcript falls entirely outside of the LRG it should be skipped
-	  next if (!defined($limits) || $limits->{'upstream'} || $limits->{'downstream'});
-	  
-	  $feat_start = $limits->{'start'};
-	  $feat_end = $limits->{'end'};
-	  $feat_strand = $limits->{'strand'};
-	  $partial_5 = $limits->{'partial_5'};
-	  $partial_3 = $limits->{'partial_3'}; 	
-		
-#ÊIf the transcript only partially overlaps the LRG, we need to set the end points of the transcript to the end point of the last exon that falls within the LRG record
-	  my $exon_overlap = 1;
-	  
-	  if ($partial_5 || $partial_3) {
-	    my $exons = $trans->get_all_Exons();
-	    $exon_overlap = 0;
-	    if (scalar(@{$exons}) > 0) {
-	      $feat_start = $slice_end;
-	      $feat_end = 1;
-	      foreach my $exon (@{$exons}) {
-#	        my $lrg_exon = $exon->transfer($lrg_slice);
-#	        next if (!defined($lrg_exon));
-	        $limits = get_feature_limits($exon,$lrg_slice);
-	        next if (!defined($limits) || $limits->{'upstream'} || $limits->{'downstream'});
-	        
-# Set a flag to indicate that there is in fact an exon in this transcript within the scope of the LRG
-		$exon_overlap = 1;
-		if ($limits->{'end'} > 1) {
-		  $feat_start = min($feat_start,$limits->{'start'});
-		}
-		if ($limits->{'start'} < $slice_end) {
-		  $feat_end = max($feat_end,$limits->{'end'});
-		}
-	      }
-	      if ($feat_start > $feat_end) {
-	        ($feat_start,$feat_end) = ($feat_end,$feat_start);
-	      }
-	    }
-	  }
-		
-	  my $cds_node = LRG::Node->new("transcript", undef, {'source' => 'Ensembl', 'start' => $feat_start, 'end' => $feat_end, 'transcript_id' => $trans->stable_id});
-		
-# If transcript partially overlaps, it should be indicated
-	  if ($partial_5) {
-	    $cds_node->addNode('partial')->content('5-prime');
-	  }
-	  if ($partial_3) {
-	    $cds_node->addNode('partial')->content('3-prime');
-	  }
-	  
-	  $entries = $trans->get_all_DBEntries();
-	  
-	  while($entry = shift @$entries) {
-	  	
-	    next unless $entry->dbname =~ /GI|RefSeq|MIM_GENE|Entrez|CCDS|RFAM|miRBase|pseudogene.org/;
-	    next if $entry->dbname =~ /RefSeq_peptide/;
-	    
-	    if($entry->dbname eq 'RefSeq_dna') {
-	      $note_node = LRG::Node->new('long_name');
-	      $note_node->content($entry->description);
-	      $cds_node->addExisting($note_node) unless ($cds_node->nodeExists($note_node));
-	    }
-	    
-	    if ($entry->dbname !~ /MIM_GENE/) {
-	      $cds_node->addExisting(xref($entry));
-	    }
-	    else {
-	      $gene_node->addExisting(xref($entry));
-	    }
-	    
-	    #print $entry->dbname, " ", $entry->primary_id, ".", $entry->version, " ", $entry->description, "\n";
-	    
-	    $ext{$entry->dbname} = $entry->primary_id;
-	    $extdesc{$entry->dbname} = $entry->description;
-	  }
-	  
-	  my $protein = $trans->translation;
-	  
-	  if($protein && length($protein) > 0) {
-	    my $cds_start;
-	    my $cds_end;
-	    undef($partial_5);
-	    undef($partial_3);
-	    my $lift = lift_coordinate(($trans->strand > 0 ? $trans->coding_region_start : $trans->coding_region_end),$trans->slice(),$lrg_slice);
-	    # In case the position couldn't be found on the LRG slice, investigate why
-	    if (!defined($lift->{'position'})) {
-	      #ÊIf coding start lies downstream of LRG slice, the protein should be skipped
-	      if ($lift->{'reason'} eq 'downstream') {
-		$cds_start = $slice_end + 1;
-	      }
-	      #ÊIf coding start lies upstream of LRG slice, set start of protein to the closest exon start
-	      elsif ($lift->{'reason'} eq 'upstream') {
-		$cds_start = $feat_start;
-		$partial_5 = 1;
-	      }
-	      #ÊIf it is because of a deletion, don't know what to do... (set to closest, non-deleted position?)
-	      elsif ($lift->{'reason'} eq 'deleted') {}
-	      #ÊElse if it failed to project, this is likely to be because the transcript is entirely outside of LRG. Shouldn't have gotten this far in that case but still, skip protein in that case
-	      elsif ($lift->{'reason'} eq 'failed') {
-		$cds_start = $slice_end + 1;
-	      }
-	    }
-	    else {
-	      $cds_start = $lift->{'position'};
-	    }
-	    
-	    $lift = lift_coordinate(($trans->strand > 0 ? $trans->coding_region_end : $trans->coding_region_start),$trans->slice(),$lrg_slice);
-	    # In case the position couldn't be found on the LRG slice, investigate why
-	    if (!defined($lift->{'position'})) {
-	      #ÊIf coding end lies upstream of LRG slice, the protein should be skipped
-	      if ($lift->{'reason'} eq 'upstream') {
-		$cds_end = -1;
-	      }
-	      #ÊIf coding end lies downstream of LRG slice, set end of protein to the closest exon end
-	      elsif ($lift->{'reason'} eq 'downstream') {
-		$cds_end = $feat_end;
-		$partial_3 = 1;
-	      }
-	      #ÊIf it is because of a deletion, don't know what to do... (set to closest, non-deleted position?)
-	      elsif ($lift->{'reason'} eq 'deleted') {}
-	      #ÊElse if it failed to project, this is likely to be because the transcript is entirely outside of LRG. Shouldn't have gotten this far in that case but still, skip protein in that case
-	      elsif ($lift->{'reason'} eq 'failed') {
-		$cds_end = -1;
-	      }
-	    }
-	    else {
-	      $cds_end = $lift->{'position'};
-	    }
-	    
-# Some gene-level data (e.g. NCBI GeneID) is buried in the translation object. So before determining if we skip the transcript, parse the xrefs
-	    my $prot_node = LRG::Node->new('protein_product');
-	    $prot_node->data(
-	      {
-	        'source' => 'Ensembl',
-	        'accession' => $protein->stable_id,
-	        'cds_start' => min($cds_start,$cds_end),
-	        'cds_end' => max($cds_start,$cds_end)
-	      }
-	    );
-	    	    
-	    $entries = $protein->get_all_DBEntries();
-	      
-	    while($entry = shift @$entries) {
-	    	  
-	      next unless $entry->dbname =~ /RefSeq|Uniprot|CCDS|MIM_GENE|Entrez/;
-	    	  
-	      if($entry->dbname eq 'RefSeq_peptide') {
-	        $note_node = LRG::Node->new('long_name');
-	        $note_node->content($entry->description);
-	        $prot_node->addExisting($note_node) unless ($prot_node->nodeExists($note_node));
-	      }
-	      
-	      if ($entry->dbname !~ /MIM_GENE|Entrez/) {
-	        $prot_node->addExisting(xref($entry));
-	      }
-	      else {
-	        my $xref = xref($entry);
-	        $gene_node->addExisting($xref) unless ($gene_node->nodeExists($xref));
-	      }
-	    }
-
-# If the transcript falls entirely outside of the LRG it should be skipped
-	    unless ($cds_end < 1 || $cds_start > $slice_end) {
-	      
-	      if ($partial_5) {
-		$prot_node->addNode('partial')->content('5-prime');
-	      }
-	      if ($partial_3) {
-		$prot_node->addNode('partial')->content('3-prime');
-	      }
-	      
-	      $cds_node->addExisting($prot_node);
-		      
-	      #print $entry->dbname, " ", $entry->primary_id, ".", $entry->version, " ", $entry->description, "\n";
-	    }
-	  }
-	  $gene_node->addExisting($cds_node) unless ($gene->biotype eq 'protein_coding' && (!$protein || !$exon_overlap));
-	}
-	
-	# finish the gene with xrefs
-	#$gene_node->addEmptyNode('db_xref', {'source' => 'GeneID', 'accession' => $ext{'EntrezGene'}}) if defined $ext{'EntrezGene'};
-	#$gene_node->addEmptyNode('db_xref', {'source' => 'HGNC', 'accession' => $ext{'HGNC'}}) if defined $ext{'HGNC'};
-	#$gene_node->addEmptyNode('db_xref', {'source' => 'MIM', 'accession' => $ext{'MIM_GENE'}}) if defined $ext{'MIM_GENE'};
-	
-	return $gene_node;
+  my $gene = shift;
+  my $lrg_slice = shift;
+  
+  # Check if the boundaries of the gene extends beyond the mapped region, in which case the end points should be set to those of the mapped region and a flag indicating partial overlap should be set
+  my $limits = get_feature_limits($gene,$lrg_slice);
+  
+  my $partial_5 = $limits->{'partial_5'};
+  my $partial_3 = $limits->{'partial_3'};
+  
+  my $feat_slice = $gene->feature_Slice();
+  
+  my $feat_start = $limits->{'start'};
+  my $feat_end = $limits->{'end'};
+  my $feat_strand = $limits->{'strand'};
+  
+  # Create the gene node
+  my $gene_node = LRG::Node->new("gene", undef, {'symbol' => $gene->external_name(), 'start' => $feat_start, 'end' => $feat_end, 'strand' => $gene->strand()});
+  
+  # If the gene partially overlaps, this should be indicated
+  $gene_node->addNode('partial')->content('5-prime') if ($partial_5);
+  $gene_node->addNode('partial')->content('3-prime') if ($partial_3);
+  
+  my $name_content = "";
+  
+  # Get xrefs for the gene
+  my $entries = $gene->get_all_DBEntries();
+  while(my $entry = shift(@{$entries})) {
+    	
+    # Skip if the xref source is not one of the allowed ones
+    next unless $entry->dbname =~ /GI|RefSeq|HGNC$/;
+    next if $entry->dbname =~ /RefSeq_peptide/;
+    
+    # Get synonyms from HGNC entry
+    if($entry->dbname() eq 'HGNC') {
+      
+      # Add a lrg_gene_name node. This should be moved in a later processing step to the LRG branded section
+      $gene_node->addNode('lrg_gene_name',{'source' => $entry->dbname()})->content($entry->display_id());
+      
+      foreach my $synonym (@{$entry->get_all_synonyms()}) {
+        $gene_node->addNode('synonym')->content($synonym);
+      }
+      if (defined($entry->description())) {
+        $name_content = $entry->description();
+      }
+    }
+    
+    # Add a xref node
+    $gene_node->addExisting(xref($entry));
+  }
+  # Add a xref to Ensembl as well
+  $gene_node->addEmptyNode('db_xref', {'source' => 'Ensembl', 'accession' => $gene->stable_id()});
+  
+  # Make sure to fill in something in the long_name element
+  if (length($name_content) == 0 && defined($gene->description())) {
+    $name_content = $gene->description();
+  }
+  if (length($name_content) == 0 && defined($gene->external_name())) {
+    $name_content = $gene->external_name();
+  }
+  $name_content .= " (" . $gene->biotype() . ")";
+  my $name_node = LRG::Node->new('long_name');
+  $name_node->content($name_content);
+  $gene_node->addExisting($name_node);
+  
+  # Attach the transcripts
+  attach_transcripts($gene,$lrg_slice,$gene_node);
+  
+  return $gene_node;
 }
 
 sub xref {
@@ -1321,7 +1398,14 @@ sub pairs_2_feature_pairs {
 }
 
 sub get_overlapping_genes {
+  return get_overlapping_features(@_,'gene');
+}
+
+sub get_overlapping_features {
   my $lrg_slice = shift;
+  my $feature_type = shift;
+  
+  $feature_type ||= 'gene';
   
   # Project the LRG slice to the chromosome coordinate system and get the extreme points in that coord system
   my $segments = $lrg_slice->project('chromosome');
@@ -1343,10 +1427,96 @@ sub get_overlapping_genes {
   # Fetch a chromosome slice spanning the LRG from the reference (read-only db)
   my $sa_ro = $dbCore_ro->get_SliceAdaptor();
   my $ref_slice = $sa_ro->fetch_by_region("chromosome",$chr_name,$chr_start,$chr_end,$strand);
-  my $genes = $ref_slice->get_all_Genes();
+  my $features;
+  if ($feature_type eq 'gene') {
+    $features = $ref_slice->get_all_Genes();
+  }
+  elsif ($feature_type eq 'regulatory') {
   
-  return $genes;
+    # Get a FeatureSet adaptor to get the feature sets
+    my $feature_set_adaptor = $dbFuncGen->get_FeatureSetAdaptor();
+    #ÊGet all Feature Sets (might want to limit these?)
+    my $fsets = $feature_set_adaptor->fetch_all();
+    my @reg_features;
+    # Loop over all Feature Sets
+    while (my $fset = shift(@{$fsets})) {
+      # Get all Regulatory Features in the set on the LRG slice
+      push(@reg_features,@{$fset->get_Features_by_Slice($ref_slice)});
+    }
+    $features = \@reg_features;
+  }
+	
+  
+  return $features;
 }
 
+sub regulatory_feature_2_feature {
+  my $reg_feature = shift;
+  my $lrg_slice = shift;
+  
+  # Create a new node for this regulatory feature
+  my $reg_feature_node = LRG::Node->new('regulatory_element');
+  
+  # FIXME: Need to translate coordinates to LRG, for now, use chromosome coordinates
+  $reg_feature_node->addData({'name' => $reg_feature->feature_type()->name(),'start' => $reg_feature->start(), 'end' => $reg_feature->end(), 'strand' => $reg_feature->strand()});
+  
+  # FIXME: Check if there is partial overlap
+  
+  #ÊAdd an element with the Regulatory Feature class
+  if (length($reg_feature->feature_type()->class()) > 0) {
+    my $class_node = LRG::Node->new('class');
+    $class_node->content($reg_feature->feature_type()->class());
+    $reg_feature_node->addExisting($class_node);
+  }
+  #ÊAdd an element with the Regulatory Feature display label
+  if (length($reg_feature->display_label()) > 0) {
+    my $label_node = LRG::Node->new('label');
+    $label_node->content($reg_feature->display_label());
+    $reg_feature_node->addExisting($label_node);
+  }
+  #ÊAdd an element with the Regulatory Feature description
+  if (length($reg_feature->feature_type()->description()) > 0) {
+    my $desc_node = LRG::Node->new('description');
+    $desc_node->content($reg_feature->feature_type()->description());
+    $reg_feature_node->addExisting($desc_node);
+  }
+  
+  # Add cell type data if available
+  if (defined($reg_feature->cell_type())) {
+    my $ct = $reg_feature->cell_type();
+    my $ct_node = LRG::Node->new('cell_type');
+    $ct_node->addData({'name' => $ct->name()});
+    
+    # Add gender information if available
+    if (defined($ct->gender())) {
+      my $node = LRG::Node->new('gender');
+      $node->content($ct->gender());
+      $ct_node->addExisting($node);
+    }
+    # Add label if available
+    if (defined($ct->display_label())) {
+      my $node = LRG::Node->new('label');
+      $node->content($ct->display_label());
+      $ct_node->addExisting($node);
+    }
+    # Add description if available
+    if (defined($ct->description())) {
+      my $node = LRG::Node->new('description');
+      $node->content($ct->description());
+      $ct_node->addExisting($node);
+    }
+    
+    $reg_feature_node->addExisting($ct_node);
+  }
+  
+  # If this is a RegulatoryFeature object which have an Ensembl stable id, store this as a xref
+  if ($reg_feature->isa('Bio::EnsEMBL::Funcgen::RegulatoryFeature')) {
+    my $xref_node = LRG::Node->new('db_xref');
+    $xref_node->addData({'source' => 'Ensembl', 'accession' => $reg_feature->stable_id()});
+    $reg_feature_node->addExisting($xref_node);
+  }
+  
+  return $reg_feature_node;
+}
 
 1;
