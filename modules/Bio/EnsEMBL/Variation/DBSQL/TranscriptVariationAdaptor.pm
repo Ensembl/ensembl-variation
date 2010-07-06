@@ -319,7 +319,7 @@ sub fetch_all_by_VariationFeatures {
 			}
 			
 			# get all the regulatory features aswell into the same array
-			push @rf, @{$rf_adaptor->fetch_all_by_Slice($slice)};
+			#push @rf, @{$rf_adaptor->fetch_all_by_Slice($slice)};
 			
 			# now iterate through them all
 			foreach my $rf(@rf) {
@@ -520,7 +520,7 @@ sub _calc_consequences {
 			'transcript' 		=> $transcript,
 			'variation_feature' => $vf,
 			'_transcript_stable_id' => $transcript->stable_id,
-			'_variation_feature_id' => $vf->dbID,
+			'_vf_id' => $vf->dbID,
 		} );
 		
 		push @tvs, $trv;
@@ -583,7 +583,7 @@ sub _calc_consequences {
 			'transcript' 		=> $transcript,
 			'variation_feature' => $vf,
 			'_transcript_stable_id' => $transcript->stable_id,
-			'_variation_feature_id' => $vf->dbID,
+			'_vf_id'            => $vf->dbID,
 		} );
 		
 		push @tvs, $trv;
@@ -626,7 +626,7 @@ sub _objs_from_sth {
 	      'cdna_start' => $cdna_start,
 	      'cdna_end'   => $cdna_end,
 	      'cds_start'  => $cds_start,
-              'cds_end'    => $cds_end,
+		  'cds_end'    => $cds_end,
 	      'translation_start' => $tl_start,
 	      'translation_end' => $tl_end,
 	      'pep_allele_string' => $pep_allele,
