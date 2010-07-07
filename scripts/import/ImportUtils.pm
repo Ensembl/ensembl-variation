@@ -77,16 +77,18 @@ sub load {
 #    $local_option = '';
 #  }
 
-  my $host = `hostname`;
-  chop $host;
-   $host =~ /(ecs\d+)/; #get the machine, only use LOCAL in ecs machines (ecs2, ecs4)
-   my $local_option = '';
-   #the script is running in ecs machine, let's find out if the file is in the same machine, too
-   if ($1){
-       if ($table_file =~ /$1/){
- 	  $local_option = 'LOCAL';
-       }
-   }
+  my $local_option = 'LOCAL';
+
+ # my $host = `hostname`;
+ # chop $host;
+ #  $host =~ /(ecs\d+)/; #get the machine, only use LOCAL in ecs machines (ecs2, ecs4)
+ #  my $local_option = '';
+ #  #the script is running in ecs machine, let's find out if the file is in the same machine, too
+ #  if ($1){
+ #      if ($table_file =~ /$1/){
+ #	  $local_option = 'LOCAL';
+ #      }
+ #  }
 
   
    if ( @colnames ) {
