@@ -47,7 +47,7 @@ while (<IN>){
     ($allele_1, $allele_2, $seq_region_start) = split;
     #when we change variation_feature, calculate the MAF
     if (($previous_seq_region_start != $seq_region_start) && $previous_seq_region_start != 0){
-	$MAF_snps->{$previous_seq_region_start} = &calculate_MAF($genotypes_snp) . '-' . $previous_seq_region_start;
+	$MAF_snps->{$previous_seq_region_start} = &calculate_MAF($genotypes_snp);
 	$genotypes_snp = {};
 	$previous_seq_region_start = $seq_region_start;
 	$last_snp = 1;
@@ -74,11 +74,24 @@ chop $host;
 my $LD_values = &get_LD_chromosome($dbVariation,$seq_region_id,$r2,$population_id, $pos_to_vf);
 #do the algorithm
 my $remove_snps = {}; #hash containing the snps that must be removed from the entry, they have been ruled out
-foreach $seq_region_start (sort {$MAF_snps->{$b} cmp $MAF_snps->{$a}} keys %{$MAF_snps}){
+foreach $seq_region_start (sort {$MAF_snps->{$b} <=> $MAF_snps->{$a} || $a <=> $b} keys %{$MAF_snps}){
     if (!defined $remove_snps->{$seq_region_start}){
-	#add the SNPs that should be removed in future iterations
-	#and delete from the hash with the MAF_snps, the ones that have a r2 greater than r2 with $variation_feature_id
-	map {$remove_snps->{$_}++;delete $MAF_snps->{$_}} @{$LD_values->{$seq_region_start}};
+		#add the SNPs that should be removed in future iterations
+		#and delete from the hash with the MAF_snps, the ones that have a r2 greater than r2 with $variation_feature_id
+		#map {$remove_snps->{$_}++;delete $MAF_snps->{$_}} @{$LD_values->{$seq_region_start}};
+		if(defined($LD_values->{$seq_region_start})) {
+			foreach(@{$LD_values->{$seq_region_start}}) {
+				$remove_snps->{$_}++;
+				delete $MAF_snps->{$_};
+			}
+		}
+		
+		# also delete the ones that don't exist in $LD_values
+		# since they can't be tag SNPs
+		else {
+			$remove_snps->{$seq_region_start}++;
+			delete $MAF_snps->{$seq_region_start};
+		}
     }
 }
 my $genotype_without_vf = 0;
