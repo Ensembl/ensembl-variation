@@ -16,13 +16,14 @@ my $CURRENT_SCHEMA_VERSION = '1.6';
 my ($template_file, $output_file, $registry_file, $config_file, $target_dir, $exon_file, $genomic_file, $cdna_file, $peptide_file, $lrg_id, $help, $skip_fixed, $skip_updatable, $skip_unbranded, $skip_transcript_matching, $use_existing_mapping, $replace_annotations, $skip_host_check);
 my $tmpdir;
 my $ssaha2_bin;
-
+my $exonerate_bin;
 &usage() if (!scalar(@ARGV));
 
 # get options from command line
 GetOptions(
 	   'tmpdir=s' => \$tmpdir, 
 	   'ssaha2=s' => \$ssaha2_bin, 
+	   'exonerate=s' => \$exonerate_bin, 
 	   'xml_template=s' => \$template_file,
 	   'registry_file=s' => \$registry_file,
 	   'target_dir=s' => \$target_dir,
@@ -84,6 +85,7 @@ $LRGMapping::current_assembly = $CURRENT_ASSEMBLY;
 $LRGMapping::input_dir = $tmpdir;
 $LRGMapping::output_dir = $tmpdir;
 $LRGMapping::SSAHA_BIN = $ssaha2_bin;
+$LRGMapping::EXONERATE_BIN = $exonerate_bin;
 
 # we need an ID
 die "No LRG ID supplied (-id) or ID in wrong format (LRG_[0-9]+)\n" unless $lrg_id =~ /LRG_[0-9]+|tmp_.+/;
@@ -134,6 +136,8 @@ if (!$skip_updatable) {
 
 	# Move annotations that should be "unbranded" to the LRG section and do consistency checking between these NCBI and Ensembl annotations
 	move_to_unbranded($root) unless $skip_unbranded;
+	
+	align_updatable_to_fixed_transcripts($root,$LRGMapping::dbCore_ro->get_TranscriptAdaptor()) unless $skip_transcript_matching;
 	
 	# Find transcripts in the updatable section that correspond to transcripts in the fixed section (only for Ensembl annotations for now)
 	match_fixed_annotation_transcripts($root,$LRGMapping::dbCore_ro->get_TranscriptAdaptor()) unless $skip_transcript_matching;
@@ -543,6 +547,77 @@ sub create_updatable_annotation {
 	$annotation_set_ensembl->addExisting($feat_node);
 }
 
+sub get_annotation_set {
+	my $root = shift;
+	my $source = shift;
+	
+	# Get the annotation sets in the updatable section and loop through them to get the desired section
+	my $annotation_sets = $root->findNodeArray('lrg/updatable_annotation/annotation_set');
+	my $desired_set = undef;
+	foreach my $annotation_set (@{$annotation_sets}) {
+		next if ($annotation_set->findNode('source/name')->content() ne $source);
+		$desired_set = $annotation_set;
+		last;
+	}
+	
+	return $desired_set;
+}
+
+sub get_gene {
+	my $annotation_set = shift;
+	my $gene_symbol = shift;
+	
+	# Get the gene corresponding to the gene symbol
+	my $gene = $annotation_set->findNode('features/gene',{'symbol' => $gene_symbol});
+	
+	return $gene;
+}
+
+sub align_updatable_to_fixed_transcripts {
+	my $root = shift;
+	my $transcript_adaptor = shift;
+	
+	# Get the HGNC gene symbol for this LRG record
+	my $hgnc_symbol_node = get_annotation_set($root,'LRG')->findNode('lrg_gene_name',{'source' => 'HGNC'});
+	my $hgnc_symbol;
+	if (!defined($hgnc_symbol_node)) {
+		warn("Could not find lrg_gene_name node with source 'HGNC' in LRG-branded annotation set");
+		return;
+	}
+	my $hgnc_symbol = $hgnc_symbol_node->content();
+	
+	# Get the transcripts in the fixed annotation section		
+	my $fixed_transcripts = $root->findNode('lrg/fixed_annotation')->findNodeArray('transcript');
+	
+	# Get the Ensembl annotation set
+	my $annotation_set = get_annotation_set($root,'Ensembl') or die("Could not get the Ensembl annotation_set");
+	
+	# Get the gene corresponding to the LRG record
+	my $gene = get_gene($annotation_set,$hgnc_symbol);
+	my $q_transcripts = $gene->findNodeArray('transcript',{'source' => 'Ensembl'});
+	
+	# Loop over the transcripts and align each one to each of the fixed transcripts
+	foreach my $q_transcript (@{$q_transcripts}) {
+		# Get the transcript object from Ensembl API
+		my $stable_id = $q_transcript->data()->{'transcript_id'};
+		my $ens_transcript = $transcript_adaptor->fetch_by_stable_id($stable_id) or warn("Could not fetch Ensembl transcript with stable id $stable_id");
+		my $q_seq = $ens_transcript->spliced_seq();
+		
+		# Loop over the fixed transcripts
+		foreach my $t_transcript (@{$fixed_transcripts}) {
+			my $t_seq = $t_transcript->findNode('cdna/sequence')->content();
+			
+			my $o_file = LRGMapping::exonerate_align($q_seq,$t_seq);
+			my $data = LRGMapping::parse_exonerate($o_file);
+			#unlink($o_file);
+			$data->{'chr_name'} = $t_transcript->data()->{'name'};
+			$data->{'lrg_id'} = $stable_id;
+			my $alignment = LRGMapping::pairs_2_alignment($data);
+			$q_transcript->addExisting($alignment);
+		}
+	}
+}
+	
 sub match_fixed_annotation_transcripts {
 	my $root = shift;
 	my $transcript_adaptor = shift;
@@ -840,7 +915,6 @@ sub make_cdna {
 	}
 	return $cdna;
 }
-
 
 sub usage() {
 	
