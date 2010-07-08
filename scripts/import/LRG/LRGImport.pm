@@ -46,18 +46,28 @@ sub add_analysis_description {
 	analysis_id,
 	description,
 	display_label,
-	displayable,
-	web_data
+	displayable
       )
     VALUES (
       $analysis_id,
       '$description',
       '$display_label',
-      $displayable,
-      "$web_data"
+      $displayable
     )
   };
   $dbCore->dbc->do($stmt);
+  
+  if (defined($web_data)) {
+    $stmt = qq{
+      UPDATE TABLE
+	analysis_description
+      SET
+	web_data = "$web_data"
+      WHERE
+	analysis_id = $analysis_id
+    };
+    $dbCore->dbc->do($stmt);
+  }
 }
 
 #ÊAdd gene/transcript/translation annotation to a LRG
