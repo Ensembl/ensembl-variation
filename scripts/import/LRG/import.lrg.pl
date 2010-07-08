@@ -443,8 +443,7 @@ while (my $lrg_id = shift(@lrg_ids)) {
         $analysis_id,
         $LRG_ANALYSIS_DESCRIPTION,
         $LRG_ANALYSIS_DISPLAY_LABEL,
-        0,
-        $LRG_ANALYSIS_WEB_DATA
+        0
       );
       
       #ÊLoop over the db adaptors where information will be mirrored and insert in the ones that are defined
