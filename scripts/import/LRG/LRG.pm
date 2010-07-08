@@ -591,6 +591,18 @@ sub printNode {
 		# transcript
 		'fixed_id' => 7,
 		
+		# Alignment elements
+		'query_name' => 2,
+		'target_name' => 3,
+		'similarity' => 4,
+		'query_start' => 5,
+		'query_end' => 6,
+		'target_start' => 7,
+		'target_end' => 8,
+		'query_sequence' => 10,
+		'target_sequence' => 11,
+		'method' => 12,
+	
 		# other
 		'source' => 1,
 		'accession' => 2,
@@ -709,7 +721,7 @@ sub sort_nodes {
         'protein_product' => 6,
         
         # Updatable annotation - db_xref
-        'accession' => 2	    
+        'accession' => 2,
     );
    
     # If a and b has the same element name we check if they have start and end attributes to sort them by
@@ -1100,6 +1112,9 @@ sub new {
 sub newFromNode {
     my $source = shift;
     my $parent = shift;
+    
+    # If the source node is undefined, this method will return undef as well
+    return undef if (!defined($source));
     
     my @nodes = ();
     my %node = ();
