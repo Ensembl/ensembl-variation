@@ -49,6 +49,17 @@ our %SSAHA_PARAMETERS = (
   '-memory'	=> '4000'
 );
 
+our $EXONERATE_BIN = 'exonerate';
+our %EXONERATE_PARAMETERS = (
+  '--model'		=>	'affine:global',
+  '--exhaustive'	=>	'1',
+  '--showvulgar'	=>	'1',
+  '--showcigar'		=>	'0',
+  '--showsugar'		=>	'0',
+  '--showalignment'	=>	'1',
+  '--bestn'		=>	'1'
+);
+
 sub mapping {
   my $lrg_seq = shift;
   
@@ -324,6 +335,103 @@ sub parse_ssaha2_out {
 
 }
 
+# Align two input sequences using exonerate. Does not use LSF as this method is only expected to be used for cDNA (=> quick)
+sub exonerate_align {
+  my $q_seq = shift;
+  my $t_seq = shift;
+  
+  # Temp files in the temp directory for input and output files to exonerate
+  my $q_file = $output_dir . "/query_" . time() . ".fa"; 
+  my $t_file = $output_dir . "/target_" . time() . ".fa";
+  my $o_file = $output_dir . "/exonerate_" . time() . ".out";
+  
+  # The command that will be executed
+  my $cmd = $EXONERATE_BIN . " --query $q_file --target $t_file";
+  while (my ($key,$val) = each(%EXONERATE_PARAMETERS)) {
+    $cmd .= " $key $val";
+  }
+  
+  # Write the input sequences to the temp files in fasta format
+  open(OUT,'>',$q_file) or die("Could not write input sequence to temporary file $q_file");
+  print OUT ">query\n$q_seq\n";
+  close(OUT);
+  open(OUT,'>',$t_file) or die("Could not write input sequence to temporary file $t_file");
+  print OUT ">target\n$t_seq\n";
+  close(OUT);
+  
+  # Open the output file for writing
+  open(OUT,'>',$o_file) or die("Could not open temporary exonerate output file $o_file");
+  
+  # Execute exonerate and write the output to the tempfile
+  print OUT `$cmd`;
+  close(OUT);
+  
+  return $o_file;
+}
+
+#ÊParse the exonerate output
+sub parse_exonerate {
+  my $output_file = shift;
+  
+  # Open the output file for reading
+  open(IN,'<',$output_file) or die("Could not open exonerate output file $output_file for reading");
+  
+  my $q_seq = "";
+  my $q_start;
+  my $q_end;
+  my $t_seq = "";
+  my $t_start;
+  my $t_end;
+  my $vulgar = "";
+  my $lines = 0;
+  
+  # Parse the output and concatenate the aligned sequences. Also store the ranges
+  while (<IN>) {
+    chomp;
+    if ($_ =~ m/^\s*\d+\s+\:\s+(\S+)\s+\:\s+\d+\s*$/) {
+      $lines++;
+      # Odd alignment lines correspond to the query, even to the target
+      if ($lines%2 == 0) {
+	$t_seq .= $1;
+      }
+      else {
+	$q_seq .= $1;
+      }
+    }
+    elsif ($_ =~ m/Query range\:\s+(\d+)\s+\-\>\s+(\d+)/) {
+      $q_start = $1;  
+      $q_end = $2;  
+    }
+    elsif ($_ =~ m/Target range\:\s+(\d+)\s+\-\>\s+(\d+)/) {
+      $t_start = $1;  
+      $t_end = $2;  
+    }
+    elsif ($_ =~ m/^\s*(vulgar\:.+)$/) {
+      $vulgar = $1;
+      last;
+    }
+  }
+  close(IN);
+  
+  my $align_length = length($q_seq);
+  
+  # Remove gap characters from the sequences (i.e. revert to unaligned sequences)
+  $q_seq =~ s/\-//g;
+  $t_seq =~ s/\-//g;
+  
+  # The parsing requires 1-based indices. The exonerate output is 0-based, so increment the start offsets
+  $vulgar =~ s/^(vulgar\:\s+[^\s]+\s+)(\d+)(\s+\d+\s+\+\s+[^\s]+\s+)(\d+)(\s+\d+\s+\+\s+\d+\s+.+)$/$1@{[$2+1]}$3@{[$4+1]}$5/;
+  
+  # Use the method for parsing the vulgar string to get a pairs hash
+  my $data = parse_vulgar_string($vulgar,$q_seq,$t_seq);
+  
+  #ÊAdd the alignment length to the data hash
+  $data->{'length'} = $align_length;
+  
+  return $data;
+}
+
+# 
 # Attempts to parse a vulgar string as outputted from ssaha2. Will return a reference to a hash with the following fields:
 #  lrg_id
 #  chr_name
@@ -334,6 +442,7 @@ sub parse_ssaha2_out {
 #  strand
 #  score
 #  pairs
+# The input sequences should be unaligned
 sub parse_vulgar_string {
   my $vulgar = shift;
   my $q_seq = shift;
@@ -370,7 +479,7 @@ sub parse_vulgar_string {
   }
   
   # Get the chromosome name
-  my ($t_name) = $t_id =~ m/^([^\-]+)\-/;
+  my ($t_name) = $t_id =~ m/^([^\-]+)/;
   
   $data{'lrg_id'} = $q_id;
   $data{'chr_name'} = $t_name;
@@ -1207,6 +1316,52 @@ sub mapping_2_pairs {
     'pairs' => \@pairs
   );
   return \%mapping;
+}
+
+#ÊConvert a pair array structure to an XML alignment structure
+sub pairs_2_alignment {
+  my $data = shift;
+  
+  #ÊA counter for the number of identical nucleotides in the alignment
+  my $matches = 0;
+  
+  my $alignment_node = LRG::Node->new('alignment');
+  # Should add the LRG and genomic offset to the coordinates?
+  $alignment_node->addData({'query_start' => $data->{'lrg_start'}, 'query_end' => $data->{'lrg_end'}, 'target_start' => $data->{'chr_start'}, 'target_end' => $data->{'chr_end'}});
+  my $span_node = LRG::Node->new('alignment_span',undef,$alignment_node->data());
+  $span_node->addData({'strand' => $data->{'strand'}});
+  $alignment_node->addExisting($span_node);
+  
+  my $pairs = $data->{'pairs'};
+  foreach my $pair (@{$pairs}) {
+    if ($pair->[0] eq 'DNA') {
+      # Add the length of this alignment block to the count of identical nucleotides
+      $matches += ($pair->[2] - $pair->[1] + 1);
+    }
+    else {
+      my $diff_node = LRG::Node->newEmpty('diff');
+      if ($pair->[0] eq 'M') {
+	$diff_node->addData({'type' => 'mismatch'});
+      }
+      elsif ($pair->[0] eq 'G') {
+	if ($pair->[2] >= $pair->[1]) {
+	  $diff_node->addData({'type' => 'query_ins','query_sequence' => $pair->[6]});
+	}
+	else {
+	  $diff_node->addData({'type' => 'target_ins','target_sequence' => $pair->[7]});
+	}
+      }
+      $diff_node->addData({'query_start' => $pair->[1], 'query_end' => $pair->[2], 'target_start' => $pair->[3], 'target_end' => $pair->[4]});
+      $span_node->addExisting($diff_node);
+    }
+  }
+  
+  # Calculate the similarity (#matches / total alignment length)
+  my $similarity = sprintf("%.1f",(100*$matches)/$data->{'length'}) . "%";
+  
+  $alignment_node->addData({'query_name' => $data->{'lrg_id'}, 'target_name' => $data->{'chr_name'}, 'similarity' => $similarity, 'method' => 'exonerate-' . $EXONERATE_PARAMETERS{'--model'}});
+  
+  return $alignment_node;
 }
 
 # Convert a pair array structure into a XML structure
