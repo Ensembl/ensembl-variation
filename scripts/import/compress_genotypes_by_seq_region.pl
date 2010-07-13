@@ -21,12 +21,13 @@ use constant MAX_SHORT => 2**16 -1;
 my %Printable = ( "\\"=>'\\', "\r"=>'r', "\n"=>'n', "\t"=>'t', "\""=>'"' );
 
 
-my ($TMP_DIR, $TMP_FILE, $species);
+my ($TMP_DIR, $TMP_FILE, $species, $allow_nulls);
 
 
 GetOptions(   'tmpdir=s'  => \$TMP_DIR,
 	      'tmpfile=s' => \$TMP_FILE,
 	      'species=s' => \$species,
+	      'allownulls' => \$allow_nulls,
 		   );
 
 warn("Make sure you have an updated ensembl.registry file!\n");
@@ -47,13 +48,15 @@ my $dbVar = $vdba->dbc->db_handle;
 $ImportUtils::TMP_DIR = $TMP_DIR;
 $ImportUtils::TMP_FILE = $TMP_FILE;
 
-compress_genotypes($dbCore,$dbVar);
+compress_genotypes($dbCore,$dbVar, $allow_nulls);
 update_meta_coord($dbCore,$dbVar,"compressed_genotype_single_bp");
 
 #reads the genotype and variation_feature data and compress it in one table with blob field
 sub compress_genotypes{
   my $dbCore = shift;
   my $dbVar = shift;
+  my $allow_nulls = shift;
+
   my $buffer;
   my $genotypes = {};		#hash containing all the genotypes
   my $blob = '';
@@ -79,21 +82,34 @@ sub compress_genotypes{
     $dbVar->do(qq{TRUNCATE TABLE $table});
   }
   print "Time starting to dump data from database: ",scalar(localtime(time)),"\n";
+
+  my $sql;
+
   foreach my $seq_region_id (keys %rec_seq_region) {
     if (! -e "$TMP_DIR/genotype_dump\_$seq_region_id") {
       ##for small amount of SNPs and a lot of seq_region_ids, such as zfish, it's slower to use this method
       debug("Dumping seq_region_id $seq_region_id...");
-      dumpSQL($dbVar,qq{SELECT vf.seq_region_id, vf.seq_region_start, vf.seq_region_end, vf.seq_region_strand, ig.allele_1, ig.allele_2, ig.sample_id, vf.allele_string
-				     FROM variation_feature vf, tmp_individual_genotype_single_bp ig
-				     WHERE ig.variation_id = vf.variation_id
-				     AND vf.map_weight = 1
-				     AND ig.allele_1 <> 'N'
-				     #AND ig.allele_2 <> 'N'
-                                     AND vf.seq_region_id = $seq_region_id
-                                     #AND ig.sample_id=11346
-                                     ORDER BY vf.seq_region_start
-				     #ORDER BY vf.seq_region_id, vf.seq_region_start
-              });
+
+      $sql = qq{SELECT vf.seq_region_id, vf.seq_region_start, vf.seq_region_end, vf.seq_region_strand, ig.allele_1, ig.allele_2, ig.sample_id, vf.allele_string
+	     FROM variation_feature vf, tmp_individual_genotype_single_bp ig
+	     WHERE ig.variation_id = vf.variation_id
+	     AND vf.map_weight = 1
+             };
+
+      if (!$allow_nulls)
+      {
+        $sql .= qq{AND ig.allele_1 <> 'N'
+	         #AND ig.allele_2 <> 'N'
+                 };
+      }
+
+      $sql .= qq{AND vf.seq_region_id = $seq_region_id
+              #AND ig.sample_id=11346
+              ORDER BY vf.seq_region_start
+	      #ORDER BY vf.seq_region_id, vf.seq_region_start
+              };
+
+      dumpSQL($dbVar, $sql);
 
       
       #information dumping from database
