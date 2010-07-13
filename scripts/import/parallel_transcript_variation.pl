@@ -18,6 +18,7 @@ my ($TMP_DIR, $TMP_FILE, $LIMIT,$status_file);
 
 
 my ($species,$limit,$num_processes,$registry_file);
+my $run_as_last;
 
 GetOptions('species=s'   => \$species,
            'tmpdir=s'  => \$ImportUtils::TMP_DIR,
@@ -25,7 +26,8 @@ GetOptions('species=s'   => \$species,
            'limit=s'   => \$limit,
            'num_processes=i' => \$num_processes,
            'status_file=s' => \$status_file,
-           'registry_file=s' => \$registry_file);
+           'registry_file=s' => \$registry_file,
+           'run_as_last' => \$run_as_last);
 
 $num_processes ||= 1;
 
@@ -50,20 +52,29 @@ my $dbFunc = $fdba;
 $TMP_DIR  = $ImportUtils::TMP_DIR;
 $TMP_FILE = $ImportUtils::TMP_FILE;
 
-transcript_variation($dbCore, $dbVar, $dbFunc);
+if ($run_as_last)
+{
+  last_process($dbCore,$dbVar, $run_as_last);
+}
+else
+{
+  transcript_variation($dbCore, $dbVar, $dbFunc);
 
-open STATUS, ">>$TMP_DIR/$status_file" or throw("Could not open tmp file: $TMP_DIR/$status_file\n"); 
-flock(STATUS,LOCK_EX);
-seek(STATUS, 0, 2); #move to the end of the file
-print STATUS "process finished\n";
-flock(STATUS,LOCK_UN);
-close STATUS;
-#check if it is the last process
-my $processes = `cat $TMP_DIR/$status_file | wc -l`;
-if ($processes == $num_processes){
-  #if is the last process, finish it
-  debug("Last process: ready to import data");
-  last_process($dbCore,$dbVar);
+  open STATUS, ">>$TMP_DIR/$status_file"
+    or throw("Could not open tmp file: $TMP_DIR/$status_file\n"); 
+  flock(STATUS,LOCK_EX);
+  seek(STATUS, 0, 2); #move to the end of the file
+  print STATUS "process finished\n";
+  flock(STATUS,LOCK_UN);
+  close STATUS;
+
+  #check if it is the last process
+  my $processes = `cat $TMP_DIR/$status_file | wc -l`;
+  if ($processes == $num_processes){
+    #if is the last process, finish it
+    debug("Last process: ready to import data");
+    last_process($dbCore,$dbVar);
+  }
 }
 
 #
@@ -264,7 +275,6 @@ sub transcript_variation {
   }
 
   close FH;
- 
   return;
 }
 
@@ -272,14 +282,18 @@ sub transcript_variation {
 sub last_process{
     my $dbCore = shift;
     my $dbVar = shift;
+    my $run_as_last = shift;
 
 
 
     my $dbname = $dbVar->dbname(); #get the name of the database to create the file
-    my $call = "cat $TMP_DIR/$dbname.transcript_variation*.txt > $TMP_DIR/$TMP_FILE";
-    system($call);
+    if (!$run_as_last)
+    {
+      my $call = "cat $TMP_DIR/$dbname.transcript_variation*.txt > $TMP_DIR/$TMP_FILE";
+      system($call);
 
-    unlink(<$TMP_DIR/$dbname.transcript_variation*.txt>);
+      unlink(<$TMP_DIR/$dbname.transcript_variation*.txt>);
+    }
 
     debug("Deleting existing transcript variation");
 
@@ -295,7 +309,6 @@ sub last_process{
 
     debug("Preparing to update consequence type in variation feature table");
     # create a file which contains the var_feat_id and the max consequence type
-
     dumpSQL($dbVar, qq{SELECT variation_feature_id, consequence_type FROM transcript_variation});
  
     # sort the file
