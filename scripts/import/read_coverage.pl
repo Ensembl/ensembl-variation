@@ -15,33 +15,11 @@ my ($TMP_DIR, $TMP_FILE); #global variables for the tmp files and folder
 my $range_registry = []; #reference to an array containing an rr for each of the possible levels (from 1-6)
 #hash that, for a given individual_name, returns the individual_id in the database, if present. The last 4 samples are defined individuals in dbSNP
 #with a predefined id that do not change
-my %individual_id = (#'Fosmid'  => '',
-		     #'NA11321' => '',
-		     #'TSC'     => '',
-		     #'NA10470' => '',
-		     #'Unknown' => '',
-		     #'NA07340' => '', ##1063, ##115,
-		     #'NA17109' => '', ##1703, ##840,
-		     #'NA17119' => '', ##1713  ##850
-		     'GK/Ox'   => 5,
-		     'SS/Jr'   => 4,
-                     'SHRSP/mdc' => 3,
-		     'WKY/mdc' => 2,
-		     'BN/Crl'  => 3,
-		     'SD'   =>4,
-                     'GSC'  =>2,
-		     'WIBR' =>3,
-		     'C57BL/6J' =>2,
-		     '129X1/SvJ' =>4,
-		     'A/J' =>6,
-		     'DBA/2J' =>8,
-		     '129S1/SvImJ' =>10,
-		     'MSM' =>12,
-		     'NOD' =>14,
-		     );
+my %individual_id = ();
 my ($chost, $cport, $cdbname, $cuser, $cpass,
     $vhost, $vport, $vdbname, $vuser, $vpass,
-    $read_file, $max_level);
+    $read_file, $max_level,
+    $ind_file);
 
   GetOptions('chost=s'     => \$chost,
              'cuser=s'     => \$cuser,
@@ -55,8 +33,9 @@ my ($chost, $cport, $cdbname, $cuser, $cpass,
              'vdbname=s'   => \$vdbname,
              'tmpdir=s'    => \$ImportUtils::TMP_DIR,
              'tmpfile=s'   => \$ImportUtils::TMP_FILE,
-	     'readfile=s' => \$read_file,
-	     'maxlevel=i'  => \$max_level);
+	     'readfile=s'  => \$read_file,
+	     'maxlevel=i'  => \$max_level,
+	     'indfile=s'   => \$ind_file);
 
 #added default options
 $chost    ||= 'ecs2';
@@ -87,10 +66,28 @@ my $dbVar = Bio::EnsEMBL::Variation::DBSQL::DBAdaptor->new
 $TMP_DIR  = $ImportUtils::TMP_DIR;
 $TMP_FILE = $ImportUtils::TMP_FILE;
 
+if ($ind_file)
+{
+    open IND, $ind_file;
+
+    my ($ind_name, $ind_id);
+
+    foreach my $ind_line (<IND>)
+    {
+        chomp $ind_line;
+
+        ($ind_name, $ind_id) = split /\t/, $ind_line;
+
+        $individual_id{$ind_name} = $ind_id;
+    }
+
+    close IND;
+}
+
 &load_individuals($dbVar,\%individual_id); #first of all, load the hash with the individual_id
 &initialize_range_registry($range_registry, $max_level);
 my $pair; #reference to an array with id,start,end format
-$read_file =~ /^.*\/((\d+)|X|Y|MT|\S+\_random)\.mapped$/;  #extract the chromosome from the file name
+$read_file =~ /^.*\/(.*)\.mapped$/;  #extract the chromosome from the file name
 my $region = $1;print "the region is $region\n";
 my $individuals = {}; #reference to a hash containing all individuals present in the chromosome
 open IN, "$read_file" or die "Could not open file $read_file with read information in the format seq_region_id\tstart\tend:$!\n";
