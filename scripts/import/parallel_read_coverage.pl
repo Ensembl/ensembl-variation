@@ -15,7 +15,8 @@ my ($TMP_DIR, $TMP_FILE); #global variables for the tmp files and folder
 
 my ($vhost, $vport, $vdbname, $vuser, $vpass,
     $chost, $cport, $cdbname, $cuser, $cpass,
-    $species, $read_dir, $max_level);
+    $species, $read_dir, $max_level,
+    $ind_file, $bsub_wait_status);
 
   GetOptions(#'chost=s'     => \$chost,
              #'cuser=s'     => \$cuser,
@@ -23,7 +24,7 @@ my ($vhost, $vport, $vdbname, $vuser, $vpass,
              #'cport=i'     => \$cport,
              #'cdbname=s'   => \$cdbname,
              #'vhost=s'     => \$vhost,
-             #'vuser=s'     => \$vuser,
+             'vuser=s'     => \$vuser,
              #'vpass=s'     => \$vpass,
              #'vport=i'     => \$vport,
              #'vdbname=s'   => \$vdbname,
@@ -31,7 +32,9 @@ my ($vhost, $vport, $vdbname, $vuser, $vpass,
              'tmpdir=s'    => \$ImportUtils::TMP_DIR,
              'tmpfile=s'   => \$ImportUtils::TMP_FILE,
              'maxlevel=i'  => \$max_level,
-	     'readdir=s' => \$read_dir);
+	     'readdir=s' => \$read_dir,
+	     'indfile=s' => \$ind_file,
+             'bsubwaitstatus=s' => \$bsub_wait_status);
 
 warn("Make sure you have a updated ensembl.registry file!\n");
 
@@ -61,15 +64,23 @@ $vpass = $vdba->dbc->password;
 $TMP_DIR  = $ImportUtils::TMP_DIR;
 $TMP_FILE = $ImportUtils::TMP_FILE;
 
+$bsub_wait_status ||= 'done';
+
 my $call;
 my $i = 0;
 foreach my $read_file (glob("$read_dir/*.mapped")){
-    $call = "bsub -J read_coverage_job_$i -o $TMP_DIR/output_reads.txt -q normal /software/bin/perl read_coverage.pl -chost $chost -cuser $cuser -cport $cport -cdbname $cdbname -vhost $vhost -vuser $vuser -vpass $vpass -vport $vport -vdbname $vdbname -tmpdir $TMP_DIR -tmpfile read_coverage_$i.txt -maxlevel $max_level -readfile $read_file";
+    $call = "bsub -J read_coverage_job_$i -o $TMP_DIR/output_reads_$i.txt -q research /sw/arch/bin/perl read_coverage.pl -chost $chost -cuser $cuser -cport $cport -cdbname $cdbname -vhost $vhost -vuser $vuser -vpass $vpass -vport $vport -vdbname $vdbname -tmpdir $TMP_DIR -tmpfile read_coverage_$i.txt -maxlevel $max_level -readfile $read_file";
+
+    if ($ind_file)
+    {
+        $call .= " -indfile $ind_file";
+    }
+
     system($call);
     $i++;
 }
 debug("Waiting for read_coverage jobs to finish");
-$call = "bsub -K -w 'done(read_coverage_job_*)' -J waiting_process sleep 1"; #waits until all reads have succesfully finished
+$call = "bsub -K -w '$bsub_wait_status(read_coverage_job_*)' -J waiting_process sleep 1"; #waits until all reads have succesfully finished
 system($call);
  debug("Ready to import coverage data");
  $call = "cat $TMP_DIR/read_coverage_* > $TMP_DIR/$TMP_FILE"; #concat all files 
