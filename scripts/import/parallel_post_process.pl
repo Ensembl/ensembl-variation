@@ -24,7 +24,7 @@ my ($vhost, $vport, $vdbname, $vuser, $vpass,
     $transcript_variation, $ld_populations, $reverse_things, $make_allele_string_table,$merge_rs_features,
     $merge_ensembl_snps,$new_source_id,$remove_wrong_variations,$remove_multi_tables,$check_seq_region_id, 
     $read_updated_files,$merge_multi_tables,
-    $registry_file);
+    $registry_file, $bsub_queue_name);
 
 $variation_feature = $flanking_sequence = $variation_group_feature = $transcript_variation = $ld_populations = $reverse_things = $merge_rs_features = $merge_ensembl_snps = $new_source_id = $remove_wrong_variations = $remove_multi_tables = $make_allele_string_table = $check_seq_region_id = $read_updated_files = $merge_multi_tables = '';
 
@@ -51,7 +51,8 @@ GetOptions('tmpdir=s'  => \$ImportUtils::TMP_DIR,
 	   'make_allele_string_table' => \$make_allele_string_table,
 	   'merge_multi_tables' => \$merge_multi_tables,
 	   'ld_populations' => \$ld_populations,
-	   'registry_file=s' => \$registry_file);
+	   'registry_file=s' => \$registry_file,
+           'bsub_queue_name=s' => \$bsub_queue_name);
 
 $num_processes ||= 1;
 
@@ -111,11 +112,11 @@ my $hap_id_string = "(". join ",", keys %hap_seq_id, .")";
 
 #we need to create a tmp table to store variations that we filter out
 #create_failed_variation_table($dbVar);
-parallel_variation_feature($dbVar, $top_level, $Bin . '/parallel_variation_feature.pl') if ($variation_feature);
-parallel_flanking_sequence($dbVar, $Bin . '/parallel_flanking_sequence.pl') if ($flanking_sequence);
-parallel_variation_group_feature($dbVar) if ($variation_group_feature);
-parallel_transcript_variation($dbVar, $Bin . '/parallel_transcript_variation.pl', $registry_file) if ($transcript_variation);
-parallel_ld_populations($dbVar) if ($ld_populations);
+parallel_variation_feature($dbVar, $top_level, $Bin . '/parallel_variation_feature.pl', $bsub_queue_name) if ($variation_feature);
+parallel_flanking_sequence($dbVar, $Bin . '/parallel_flanking_sequence.pl', $bsub_queue_name) if ($flanking_sequence);
+parallel_variation_group_feature($dbVar, $bsub_queue_name) if ($variation_group_feature);
+parallel_transcript_variation($dbVar, $Bin . '/parallel_transcript_variation.pl', $registry_file, $bsub_queue_name) if ($transcript_variation);
+parallel_ld_populations($dbVar, $bsub_queue_name) if ($ld_populations);
 reverse_things($dbVar) if ($reverse_things);
 merge_rs_feature($dbVar) if ($merge_rs_features);
 remove_wrong_variations($dbVar, $Bin . '/../../sql') if ($remove_wrong_variations);
@@ -130,6 +131,7 @@ sub parallel_variation_feature{
     my $dbVar = shift;
     my $top_level = shift;
     my $script = shift;
+    my $bsub_queue_name = shift;
     
     #before do anything, create a copy of old table
     $dbVar->do(qq{CREATE TABLE variation_feature_before_pp like variation_feature});
@@ -204,12 +206,14 @@ sub parallel_variation_feature{
 
     my $sub_variation = int(($max_variation - $min_variation)/ $num_processes);
 
+    $bsub_queue_name ||= 'normal';
+
     #the limit will be (AND variation_feature_id > min and variation_feature_id < max)
     for (my $i = 0; $i < $num_processes ; $i++){
 	$limit = "AND variation_feature_id <= " . (($i+1) * $sub_variation + $min_variation-1) . " AND variation_feature_id >= " . ($i*$sub_variation + $min_variation) if ($i+1 < $num_processes);
 	$limit =  "AND variation_feature_id <= " .  $max_variation . " AND variation_feature_id >= " . ($i*$sub_variation + $min_variation) if ($i + 1 == $num_processes); #the last one takes the left rows
 
-	$call = "bsub -q normal -J $dbname\_variation_job_$i -o $TMP_DIR/output_variation_feature_$i\_$$.txt $PERLBIN $script -chost $chost -cuser $cuser -cdbname $cdbname -vhost $vhost -vuser $vuser -vport $vport -vdbname $vdbname -limit '$limit' -tmpdir $TMP_DIR -tmpfile $TMP_FILE -num_processes $num_processes -status_file $variation_status_file ";
+	$call = "bsub -q $bsub_queue_name -J $dbname\_variation_job_$i -o $TMP_DIR/output_variation_feature_$i\_$$.txt $PERLBIN $script -chost $chost -cuser $cuser -cdbname $cdbname -vhost $vhost -vuser $vuser -vport $vport -vdbname $vdbname -limit '$limit' -tmpdir $TMP_DIR -tmpfile $TMP_FILE -num_processes $num_processes -status_file $variation_status_file ";
 	$call .= "-cpass $cpass " if ($cpass);
 	$call .= "-cport $cport " if ($cport);
 	$call .= "-vpass $vpass " if ($vpass);
@@ -217,7 +221,7 @@ sub parallel_variation_feature{
 	#print $call,"\n";
 	system($call);      
     }
-    $call = "bsub -q normal -K -w 'done($dbname\_variation_job*)' -J waiting_process sleep 1"; #waits until all variation features have finished to continue
+    $call = "bsub -q $bsub_queue_name -K -w 'done($dbname\_variation_job*)' -J waiting_process sleep 1"; #waits until all variation features have finished to continue
     system($call);
 
 }
@@ -227,6 +231,8 @@ sub parallel_variation_feature{
 sub parallel_flanking_sequence{
   my $dbVar = shift;
   my $script = shift;
+  my $bsub_queue_name = shift;
+
   my $call;
   my $flanking_status_file = "flanking_status_file_$$\.log";
 
@@ -285,9 +291,11 @@ sub parallel_flanking_sequence{
   $sth->finish();  
   &print_buffered($buffer);
 
+  $bsub_queue_name ||= 'normal';
+
   for (my $i = 1;$i<=$num_processes;$i++){
 
-      $call = "bsub -q normal -o $TMP_DIR/output_flanking_$i\_$$.txt $PERLBIN $script -chost $chost -cuser $cuser -cdbname $cdbname -vhost $vhost -vuser $vuser -vport $vport -vdbname $vdbname -tmpdir $TMP_DIR -tmpfile $TMP_FILE -num_processes $num_processes -status_file $flanking_status_file -file $i ";
+      $call = "bsub -q $bsub_queue_name -o $TMP_DIR/output_flanking_$i\_$$.txt $PERLBIN $script -chost $chost -cuser $cuser -cdbname $cdbname -vhost $vhost -vuser $vuser -vport $vport -vdbname $vdbname -tmpdir $TMP_DIR -tmpfile $TMP_FILE -num_processes $num_processes -status_file $flanking_status_file -file $i ";
       $call .= "-cpass $cpass " if ($cpass);
       $call .= "-cport $cport " if ($cport);
       $call .= "-vpass $vpass " if ($vpass);
@@ -300,9 +308,13 @@ sub parallel_flanking_sequence{
 #when the variation_feature table has been filled up, run the variation_group_feature. Not necessary to parallelize as fas as I know....
 sub parallel_variation_group_feature{
     my $dbVar = shift;
+    my $bsub_queue_name = shift;
 
     my $total_process = 0;
-    my $call = "bsub -q normal  -o $TMP_DIR/output_group_feature_$$\.txt $PERLBIN parallel_variation_group_feature.pl -chost $chost -cuser $cuser -cdbname $cdbname -vhost $vhost -vuser $vuser -vport $vport -vdbname $vdbname -tmpdir $TMP_DIR -tmpfile $TMP_FILE ";
+
+    $bsub_queue_name ||= 'normal';
+
+    my $call = "bsub -q $bsub_queue_name  -o $TMP_DIR/output_group_feature_$$\.txt $PERLBIN parallel_variation_group_feature.pl -chost $chost -cuser $cuser -cdbname $cdbname -vhost $vhost -vuser $vuser -vport $vport -vdbname $vdbname -tmpdir $TMP_DIR -tmpfile $TMP_FILE ";
     $call .= "-cpass $cpass " if ($cpass);
     $call .= "-cport $cport " if ($cport);
     $call .= "-vpass $vpass " if ($vpass);
@@ -316,6 +328,7 @@ sub parallel_transcript_variation{
     my $dbVar = shift;
     my $script = shift;
     my $registry_file = shift;
+    my $bsub_queue_name = shift;
     
     my $total_process = 0;
 
@@ -350,6 +363,9 @@ sub parallel_transcript_variation{
     my $sub_slice = int($length_slices / $num_processes);
     my $slice_max; #the number of slices in the chunk
     my $slice_min = 0; #first slice in the chunk
+
+    $bsub_queue_name ||= 'long';
+
     for (my $i = 0; $i < $num_processes ; $i++){
       $length_slices = 0;
       $slice_max = 0;
@@ -389,7 +405,7 @@ sub parallel_transcript_variation{
         
       }
       else{ # Use default LSF/bsub
-        $call = "bsub -a normal -o $outfile -q long $command";
+        $call = "bsub -a normal -o $outfile -q $bsub_queue_name $command";
 	#print $call,"\n";
         system($call);
       }
@@ -1185,6 +1201,8 @@ sub find_old_new_ids {
 #will have to wait until the variation_feature has finished. Then, select all the genotype, and split the data into files (1 per population)
 sub parallel_ld_populations {
     my $dbVar = shift;    
+    my $bsub_queue_name = shift;
+
     my $call;
 
     my %seq_region; #hash containing the mapping between seq_region_id->name region
@@ -1306,12 +1324,14 @@ sub parallel_ld_populations {
 
     print_buffered( $buffer );
     print "Time starting to submit jobs to queues: ",scalar(localtime(time)),"\n";
+
+    $bsub_queue_name ||= 'normal';
     #let's run a job array
     foreach my $file (keys %genotypes_file){
-      $call = "bsub -q normal -J '$dbname.pairwise_ld' -m 'bc_hosts' ./ld_wrapper.sh $file $file\_out";	    
+      $call = "bsub -q $bsub_queue_name -J '$dbname.pairwise_ld' -m 'bc_hosts' ./ld_wrapper.sh $file $file\_out";	    
       system($call);
     }
-    $call = "bsub -q normal -w 'done($dbname.pairwise_ld)' -m 'ecs4_hosts' -o $TMP_DIR/output_ld_populations_import.txt $PERLBIN parallel_ld_populations.pl -chost $chost -cuser $cuser -cdbname $cdbname -vhost $vhost -vuser $vuser -vport $vport -vdbname $vdbname -tmpdir $TMP_DIR -tmpfile $TMP_FILE ";
+    $call = "bsub -q $bsub_queue_name -w 'done($dbname.pairwise_ld)' -m 'ecs4_hosts' -o $TMP_DIR/output_ld_populations_import.txt $PERLBIN parallel_ld_populations.pl -chost $chost -cuser $cuser -cdbname $cdbname -vhost $vhost -vuser $vuser -vport $vport -vdbname $vdbname -tmpdir $TMP_DIR -tmpfile $TMP_FILE ";
     $call .= "-cpass $cpass " if ($cpass);
     $call .= "-cport $cport " if ($cport);
     $call .= "-vpass $vpass " if ($vpass);
