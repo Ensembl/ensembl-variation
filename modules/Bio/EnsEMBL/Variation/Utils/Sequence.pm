@@ -281,9 +281,6 @@ sub hgvs_variant_notation {
     if (!$alt_length) {
 	$notation{'type'} = 'del';
         
-	# The string for this notation
-	$notation{'hgvs'} = $notation{'start'} . ($notation{'end'} != $notation{'start'} ? '_' . $notation{'end'} : '') . $notation{'type'} . $notation{'ref'};
-	
         # Return the notation
         return \%notation;
     }
@@ -294,7 +291,6 @@ sub hgvs_variant_notation {
 	# If length is 1 it's a single substitution
         if ($ref_length == 1) {
 	    $notation{'type'} = '>';
-	    $notation{'hgvs'} = $notation{'start'} . $notation{'ref'} . $notation{'type'} . $notation{'alt'};
 	    return \%notation;
         }
         
@@ -303,13 +299,11 @@ sub hgvs_variant_notation {
         reverse_comp(\$rev_ref);
         if ($alt_allele eq $rev_ref) {
 	    $notation{'type'} = 'inv';
-	    $notation{'hgvs'} = $notation{'start'} . '_' . $notation{'end'} . $notation{'type'} . $notation{'ref'};
 	    return \%notation;
         }
         
 	$notation{'type'} = 'delins';
 	
-        $notation{'hgvs'} = $notation{'start'} . '_' . $notation{'end'} . 'del' . $notation{'ref'} . 'ins' . $notation{'alt'};
         return \%notation;
     }
     
@@ -324,7 +318,6 @@ sub hgvs_variant_notation {
 	    $notation{'start'} = ($display_end - $alt_length + 1);
 	    $notation{'type'} = 'dup';
 	    $notation{'ref'} = $prev_str;
-            $notation{'hgvs'} = $notation{'start'} . ($notation{'end'} != $notation{'start'} ? '_' . $notation{'end'} : '') . $notation{'type'} . $notation{'ref'};
             # Return the notation
 	    return \%notation;
         }
@@ -333,7 +326,6 @@ sub hgvs_variant_notation {
 	$notation{'start'} = $display_end;
 	$notation{'end'} = $display_start;
 	$notation{'type'} = 'ins';
-        $notation{'hgvs'} = $notation{'start'} . '_' . $notation{'end'} . $notation{'type'} . $notation{'alt'};
         
         return \%notation;
     }
@@ -350,14 +342,12 @@ sub hgvs_variant_notation {
             else {
 		$notation{'type'} = '[' . $multiple . ']';
             }
-	    $notation{'hgvs'} = $notation{'start'} . ($notation{'end'} != $notation{'start'} ? '_' . $notation{'end'} : '') . $notation{'type'} . $notation{'ref'};
 	    return \%notation;
         }
     }
     
     # Else, it's gotta be a delins
     $notation{'type'} = 'delins';
-    $notation{'hgvs'} = $notation{'start'} . ($notation{'end'} != $notation{'start'} ? '_' . $notation{'end'} : '') . 'del' . $notation{'ref'} . 'ins' . $notation{'alt'};
     
     return \%notation;
 }
