@@ -1439,7 +1439,7 @@ sub get_all_hgvs_notations {
       }
       
       # Construct the HGVS notation from the data in the hash
-      if ($hgvs_notation->{'numbering'} =~ m/[gc]/) {
+      if ($hgvs_notation->{'numbering'} =~ m/[gc]*/) {
 	$hgvs_notation->{'hgvs'} = $hgvs_notation->{'name'} . ':' . (length($hgvs_notation->{'numbering'}) > 0 ? $hgvs_notation->{'numbering'} . '.' : '') . $hgvs_notation->{'start'} . ($hgvs_notation->{'end'} ne $hgvs_notation->{'start'} ? '_' . $hgvs_notation->{'end'} : '');
 	if ($hgvs_notation->{'type'} eq '>') {
 	  $hgvs_notation->{'hgvs'} .= $hgvs_notation->{'ref'} . $hgvs_notation->{'type'} . $hgvs_notation->{'alt'};
