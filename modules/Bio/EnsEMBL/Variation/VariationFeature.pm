@@ -1168,7 +1168,7 @@ sub get_all_hgvs_notations {
     # In case protein numbering is desired, get the translation and transcript variation for this feature and transcript
     my $codon_up;
     my $cds_down;
-    my $cds;
+    my $peptide;
     my $ref_peptide;
     my $peptide_start;
     if ($ref_feature->isa('Bio::EnsEMBL::Transcript') && $numbering =~ m/p/) {
@@ -1192,17 +1192,23 @@ sub get_all_hgvs_notations {
       my $end_phase = ($cds_end - 1)%3;
       
       # Get the complete, affected codons. Break it apart into the upstream piece, the allele and the downstream piece
-      $cds = $ref_feature->translateable_seq();
+      my $cds = $ref_feature->translateable_seq();
       my $codon_ref = substr($cds,($cds_start - 1),($cds_end - $cds_start + 1));
       my $codon_down = substr($cds,$cds_end,(2-$end_phase));
       $codon_up = substr($cds,($cds_start - $start_phase - 1),$start_phase);
+      # For the cds down, we should use the cDNA sequence rather than the CDS, since frame shifts and stop codon losses can cause us to translate beyond the normal CDS
       $cds_down = substr($cds,$cds_end);
+      
+      # FIXME: If sequence starts or ends with partial codons, how should we handle that? Example: rs71969613, ENST00000389639
       
       # Create the cds starting from the affected codon and continuing down
       my $ref_cds = Bio::PrimarySeq->new(-seq => $codon_up . $codon_ref . $cds_down, -id => 'ref_cds', -alphabet => 'dna');
       $ref_peptide = $ref_cds->translate()->seq();
       # Store the offset in peptide coordinates
       $peptide_start = (($cds_start - $start_phase - 1)/3 + 1);
+      
+      # Get the complete reference peptide (needed for checking for duplications)
+      $peptide = $ref_feature->translation()->seq() . '*';
       
       # If necessary, get the name and version of the translation for the transcript
       if (!defined($reference_name)) {
@@ -1326,8 +1332,12 @@ sub get_all_hgvs_notations {
             $hgvs_notation->{'ref'} = substr($ref_peptide,$first_offset,1);
             $hgvs_notation->{'alt'} = substr($alt_peptide,$first_offset,1);
 	    
+	    # Now, we need to append the UTR to the alternative CDS since translation can extend beyond the stop codon
+	    my $utr = $ref_feature->three_prime_utr();
+	    $alt_cds->seq($alt_cds->seq() . $utr->seq()) if (defined($utr));
+	    
 	    # Count the number of AA's until a stop codon is encountered
-	    substr($alt_peptide,$first_offset) =~ m/\*/;
+	    substr($alt_cds->translate()->seq(),$first_offset) =~ m/\*/;
 	    # A special case is if the first aa is a stop codon, then we won't display the number of residues until the stop codon
 	    if ($+[0] > 1) {
 	      $hgvs_notation->{'suffix'} = 'X' . $+[0];
@@ -1346,31 +1356,37 @@ sub get_all_hgvs_notations {
             }
             # Else, this is an indel. We need to find the index where the peptide sequences start to match again (this is not a frame shift so they will)
             else {
+	      # We need to separate the first offset for ref and alt since an insertion requires them to be different
+	      my $ref_first = $first_offset;
+	      my $alt_first = $first_offset;
 	      # Match from the end, stop when the peptides differ or when we reach the aa's already compared from the start
 	      my $ref_last = length($ref_peptide);
 	      my $alt_last = length($alt_peptide);
-	      while ($ref_last > $first_offset && $alt_last > $first_offset && substr($ref_peptide,($ref_last-1),1) eq substr($alt_peptide,($alt_last-1),1)) {
+	      while ($ref_last > $ref_first && $alt_last > $alt_first && substr($ref_peptide,($ref_last-1),1) eq substr($alt_peptide,($alt_last-1),1)) {
 		$ref_last--;
 		$alt_last--;
 	      }
 	      # If the first and last offsets for the reference are the same, this is an insertion
-	      if ($first_offset == $ref_last) {
+	      if ($ref_first == $ref_last) {
 		$hgvs_notation->{'type'} = 'ins';
 		$hgvs_notation->{'end'} = $hgvs_notation->{'start'};
 		$hgvs_notation->{'start'}--;
+		# We need to adjust the first_offset and ref_last so that we get the AA's flanking the insertion
+		$ref_last = $ref_first+1;
+		$ref_first--;
 	      }
 	      # Else, if the first and last offsets for the alternative are the same, this is a deletion
 	      elsif ($first_offset == $alt_last) {
 		$hgvs_notation->{'type'} = 'del';
-		$hgvs_notation->{'end'} = $hgvs_notation->{'start'} + ($ref_last - $first_offset - 1);		
+		$hgvs_notation->{'end'} = $hgvs_notation->{'start'} + ($ref_last - $ref_first - 1);		
 	      }
 	      # Else, it is an indel
 	      else {
 		$hgvs_notation->{'type'} = 'delins';
-		$hgvs_notation->{'end'} = $hgvs_notation->{'start'} + ($ref_last - $first_offset - 1);
+		$hgvs_notation->{'end'} = $hgvs_notation->{'start'} + ($ref_last - $ref_first - 1);
 	      }
-	      $hgvs_notation->{'ref'} = substr($ref_peptide,$first_offset,($ref_last - $first_offset));
-	      $hgvs_notation->{'alt'} = substr($alt_peptide,$first_offset,($alt_last - $first_offset));
+	      $hgvs_notation->{'ref'} = substr($ref_peptide,$ref_first,($ref_last - $ref_first));
+	      $hgvs_notation->{'alt'} = substr($alt_peptide,$alt_first,($alt_last - $alt_first));
 	      
 	      ###
 	      ### A few rules we have to observe: 
@@ -1379,7 +1395,7 @@ sub get_all_hgvs_notations {
 	      # An insertion where the inserted sequence occur before the point of insertion should be indicated as a duplication instead
 	      if ($hgvs_notation->{'type'} eq 'ins') {
 		# Check if this is a duplication
-		if (($hgvs_notation->{'start'} - length($hgvs_notation->{'alt'})) >= 0 && substr($cds,($hgvs_notation->{'start'} - length($hgvs_notation->{'alt'})),length($hgvs_notation->{'alt'})) eq $hgvs_notation->{'alt'}) {
+		if (($hgvs_notation->{'start'} - length($hgvs_notation->{'alt'})) >= 0 && substr($peptide,($hgvs_notation->{'start'} - length($hgvs_notation->{'alt'})),length($hgvs_notation->{'alt'})) eq $hgvs_notation->{'alt'}) {
 		  $hgvs_notation->{'type'} = 'dup';
 		  $hgvs_notation->{'end'} = $hgvs_notation->{'start'};
 		  $hgvs_notation->{'start'} -= (length($hgvs_notation->{'alt'}) - 1);
@@ -1400,6 +1416,8 @@ sub get_all_hgvs_notations {
           # If the change affects the initiator methionine, the consequence of the change should be indicated as unknown
           if ($hgvs_notation->{'start'} == 1) {
             $hgvs_notation->{'alt'} = "?";
+	    $hgvs_notation->{'type'} = '>';
+	    $hgvs_notation->{'suffix'} = '';
           }
           
           #ÊIf the stop codon is lost, investigate if another stop codon can be detected downstream
