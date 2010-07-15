@@ -1196,7 +1196,6 @@ sub get_all_hgvs_notations {
       my $codon_ref = substr($cds,($cds_start - 1),($cds_end - $cds_start + 1));
       my $codon_down = substr($cds,$cds_end,(2-$end_phase));
       $codon_up = substr($cds,($cds_start - $start_phase - 1),$start_phase);
-      # For the cds down, we should use the cDNA sequence rather than the CDS, since frame shifts and stop codon losses can cause us to translate beyond the normal CDS
       $cds_down = substr($cds,$cds_end);
       
       # FIXME: If sequence starts or ends with partial codons, how should we handle that? Example: rs71969613, ENST00000389639
@@ -1341,6 +1340,10 @@ sub get_all_hgvs_notations {
 	    # A special case is if the first aa is a stop codon, then we won't display the number of residues until the stop codon
 	    if ($+[0] > 1) {
 	      $hgvs_notation->{'suffix'} = 'X' . $+[0];
+	    }
+	    # In case the first frame shifted AA is a stop codon, annotate this as a substitution rather than a frame shift
+	    elsif ($+[0] == 1) {
+	      $hgvs_notation->{'type'} = '>';
 	    }
 	    
           }
