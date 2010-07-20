@@ -227,7 +227,7 @@ sub fetch_all_by_phenotype_id_source_name {
   my $extra_sql = sprintf('p.phenotype_id = %s', $self->dbc->db_handle->quote( $phenotype_id, SQL_INTEGER ) );
 
   if (defined $source_name ) {
-    $extra_sql .= sprintf('s.name = %s', $self->dbc->db_handle->quote( $source_name, SQL_VARCHAR ) );
+    $extra_sql .= sprintf(' AND s.name = %s', $self->dbc->db_handle->quote( $source_name, SQL_VARCHAR ) );
   }
   
   return $self->generic_fetch("$extra_sql");
