@@ -203,6 +203,37 @@ sub fetch_all_by_phenotype_description_source_name {
   
 }
 
+=head2 fetch_all_by_phenotype_id_source_name
+
+  Arg [1]    : integer $phenotype_id
+  Arg [2]    : string $source_name (optional)
+  Example    : $vaa = $va_adaptor->fetch_by_phenotype_id_source_name(999,'EGA');
+  Description: Retrieves a variation annotation object via its phenotype id/source name
+  Returntype : list of ref of Bio::EnsEMBL::Variation::VariationAnnotation
+  Exceptions : throw if phenotype id argument is not defined
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub fetch_all_by_phenotype_id_source_name {
+
+  my $self = shift;
+  my $phenotype_id  = shift;
+  my $source_name = shift;
+
+  throw('phenotype_id argument expected') if(!defined($phenotype_id));
+
+  my $extra_sql = sprintf('p.phenotype_id = %s', $self->dbc->db_handle->quote( $phenotype_id, SQL_INTEGER ) );
+
+  if (defined $source_name ) {
+    $extra_sql .= sprintf('s.name = %s', $self->dbc->db_handle->quote( $source_name, SQL_VARCHAR ) );
+  }
+  
+  return $self->generic_fetch("$extra_sql");
+  
+}
+
 # method used by superclass to construct SQL
 sub _tables { return (['variation_annotation', 'va'],
                        [ 'phenotype', 'p'],
