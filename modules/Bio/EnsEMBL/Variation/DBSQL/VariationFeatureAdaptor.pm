@@ -491,6 +491,110 @@ sub fetch_all_by_Slice_Population {
   return $self->_objs_from_sth($sth, undef, $slice);
 }
 
+sub _internal_fetch_all_with_annotation {
+    
+    my ($self, $v_source, $p_source, $annotation, $constraint) = @_;
+    
+    my $extra_sql = '';
+    
+    if(defined $v_source) {
+        $extra_sql .= qq{ AND s.name = '$v_source' };
+    }
+    
+    if(defined $p_source) {
+        $extra_sql .= qq{ AND ps.name = '$p_source' };
+    }
+    
+    if(defined $annotation) {
+        if($annotation =~ /^[0-9]+$/) {
+          $extra_sql .= qq{ AND p.phenotype_id = $annotation };
+        }
+        else {
+          $extra_sql .= qq{ AND (p.name = '$annotation' OR p.description LIKE '%$annotation%') };
+        }
+    }
+    
+    if ($constraint) {
+        $extra_sql .= qq{ AND $constraint };
+    }
+    
+    my $cols = join ",", $self->_columns();
+    
+    my $sth = $self->prepare(qq{
+        SELECT $cols
+        FROM variation_feature vf, variation_annotation va,
+        phenotype p, source s, source ps # need to link twice to source
+        WHERE va.source_id = ps.source_id
+        AND vf.source_id = s.source_id
+        AND vf.variation_id = va.variation_id
+        AND va.phenotype_id = p.phenotype_id
+        $extra_sql
+        GROUP BY vf.variation_feature_id
+    });
+    
+    $sth->execute;
+    
+    return $self->_objs_from_sth($sth);
+}
+
+=head2 fetch_all_with_annotation
+
+  Arg [1]    : $variation_feature_source [optional]
+  Arg [2]    : $annotation_source [optional]
+  Arg [3]    : $annotation_name [optional]
+  Example    : my @vfs = @{$vfa->fetch_all_with_annotation('EGA', undef, 123)};
+  Description: Retrieves all germline variation features associated with the given annotation
+  Returntype : reference to list Bio::EnsEMBL::Variation::VariationFeature
+  Caller     : webcode
+  Status     : Experimental
+
+=cut
+
+sub fetch_all_with_annotation {
+    
+    my ($self, $v_source, $p_source, $annotation, $constraint) = @_;
+    
+    my $somatic_constraint = 's.somatic = 0';
+    
+    if ($constraint) {
+        $constraint .= " AND $somatic_constraint";
+    }
+    else {
+        $constraint = $somatic_constraint;
+    }
+    
+    return $self->_internal_fetch_all_with_annotation($v_source, $p_source, $annotation, $constraint);
+}
+
+=head2 fetch_all_somatic_with_annotation
+
+  Arg [1]    : $variation_feature_source [optional]
+  Arg [2]    : $annotation_source [optional]
+  Arg [3]    : $annotation_name [optional]
+  Example    : my @vfs = @{$vfa->fetch_all_somatic_with_annotation('COSMIC', undef, 807)};
+  Description: Retrieves all somatic variation features associated with the given annotation
+  Returntype : reference to list Bio::EnsEMBL::Variation::VariationFeature
+  Caller     : webcode
+  Status     : Experimental
+
+=cut
+
+sub fetch_all_somatic_with_annotation {
+    
+    my ($self, $v_source, $p_source, $annotation, $constraint) = @_;
+    
+    my $somatic_constraint = 's.somatic = 1';
+    
+    if ($constraint) {
+        $constraint .= " AND $somatic_constraint";
+    }
+    else {
+        $constraint = $somatic_constraint;
+    }
+    
+    return $self->_internal_fetch_all_with_annotation($v_source, $p_source, $annotation, $constraint);
+}
+
 
 # method used by superclass to construct SQL
 sub _tables { return (['variation_feature', 'vf'],
@@ -514,7 +618,7 @@ sub _columns {
 sub _objs_from_sth {
   my ($self, $sth, $mapper, $dest_slice) = @_;
 
-  #
+  # 
   # This code is ugly because an attempt has been made to remove as many
   # function calls as possible for speed purposes.  Thus many caches and
   # a fair bit of gymnastics is used.
