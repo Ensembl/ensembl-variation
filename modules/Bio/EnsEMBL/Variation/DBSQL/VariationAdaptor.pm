@@ -89,7 +89,7 @@ sub fetch_by_dbID {
   my $sth = $self->prepare
     (q{SELECT v.variation_id, v.name, v.validation_status, s1.name, s1.description, s1.url, s1.somatic, v.ancestral_allele,
               a.allele_id, a.subsnp_id, a.allele, a.frequency, a.sample_id, vs.moltype,
-              vs.name, s2.name, f.description, (fs.up_seq is not null OR fs.down_seq is not null)
+              vs.name, s2.name, f.description, ((fs.up_seq != 'NULL' AND fs.up_seq is not null) OR (fs.down_seq is not null AND fs.down_seq != 'NULL'))
        FROM   (variation v, source s1, flanking_sequence fs)
 	       LEFT JOIN allele a ON v.variation_id = a.variation_id
                 LEFT JOIN variation_synonym vs on v.variation_id = vs.variation_id 
@@ -143,7 +143,7 @@ sub fetch_by_name {
   my $sth = $self->prepare
     (qq{SELECT v.variation_id, v.name, v.validation_status, s1.name, s1.description, s1.url, s1.somatic, v.ancestral_allele, 
                a.allele_id, a.subsnp_id, a.allele, a.frequency, a.sample_id, vs.moltype,
-              vs.name, s2.name, f.description, (fs.up_seq is not null OR fs.down_seq is not null)
+              vs.name, s2.name, f.description, ((fs.up_seq != 'NULL' AND fs.up_seq is not null) OR (fs.down_seq is not null AND fs.down_seq != 'NULL'))
 #       FROM   variation v, source s1, source s2, allele a, variation_synonym vs
 	  FROM   (variation v, source s1, flanking_sequence fs)
 	     LEFT JOIN allele a on v.variation_id = a.variation_id 
@@ -172,7 +172,7 @@ sub fetch_by_name {
     $sth = $self->prepare
       (qq{SELECT v.variation_id, v.name, v.validation_status, s1.name, s1.description, s1.url, s1.somatic, v.ancestral_allele, 
                  a.allele_id, a.subsnp_id, a.allele, a.frequency, a.sample_id, vs1.moltype,
-                vs2.name, s2.name, NULL, (fs.up_seq is not null OR fs.down_seq is not null)
+                vs2.name, s2.name, NULL, ((fs.up_seq != 'NULL' AND fs.up_seq is not null) OR (fs.down_seq is not null AND fs.down_seq != 'NULL'))
          FROM variation v, source s1, source s2, allele a,
                 variation_synonym vs1, variation_synonym vs2, flanking_sequence fs
          WHERE  v.variation_id = a.variation_id
@@ -511,35 +511,41 @@ sub get_flanking_sequence{
   $sth->bind_param(1,$variationID,SQL_INTEGER);
   $sth->execute(); #retrieve the flank from the variation database
   $sth->bind_columns(\($seq_region_id, $seq_region_strand, $up_seq, $down_seq, $up_seq_region_start, $up_seq_region_end, $down_seq_region_start, $down_seq_region_end));
-$sth->fetch();
-$sth->finish();
-
-if (!defined $down_seq){
-  if( $seq_region_id){
-    $down_seq = $self->_get_flank_from_core($seq_region_id, 
-                                            $down_seq_region_start, 
-                                            $down_seq_region_end, 
-                                            $seq_region_strand);
-  } else {
-    warn( "*****[ERROR]: No seq_region_id for SNP with dbID: $variationID. ".
-          "Cannot retrieve flanking region******\n" );    
+  $sth->fetch();
+  $sth->finish();
+  
+  # HACKS - REMOVE WHEN HGMD DATA FIXED
+  $up_seq = undef if $up_seq eq 'NULL';
+  $down_seq = undef if $down_seq eq 'NULL';
+  $down_seq_region_end = $down_seq_region_start + 99 if $down_seq_region_end == $down_seq_region_start;
+  # END HACKS
+  
+  if (!defined $down_seq){
+	if( $seq_region_id){
+	  $down_seq = $self->_get_flank_from_core($seq_region_id, 
+											  $down_seq_region_start, 
+											  $down_seq_region_end, 
+											  $seq_region_strand);
+	} else {
+	  warn( "*****[ERROR]: No seq_region_id for SNP with dbID: $variationID. ".
+			"Cannot retrieve flanking region******\n" );    
+	}
   }
-}
-if (!defined $up_seq){
-  if( $seq_region_id){
-    $up_seq = $self->_get_flank_from_core($seq_region_id, 
-                                          $up_seq_region_start, 
-                                          $up_seq_region_end, 
-                                          $seq_region_strand);
-  } else {
-    warn( "*****[ERROR]: No seq_region_id for SNP with dbID: $variationID. ".
-          "Cannot retrieve flanking region******\n" );
+  if (!defined $up_seq){
+	if( $seq_region_id){
+	  $up_seq = $self->_get_flank_from_core($seq_region_id, 
+											$up_seq_region_start, 
+											$up_seq_region_end, 
+											$seq_region_strand);
+	} else {
+	  warn( "*****[ERROR]: No seq_region_id for SNP with dbID: $variationID. ".
+			"Cannot retrieve flanking region******\n" );
+	}
   }
-}
-
-push @{$flanking_sequence},$down_seq,$up_seq; #add to the array the 3 and 5 prime sequences
-
-return $flanking_sequence;
+  
+  push @{$flanking_sequence},$down_seq,$up_seq; #add to the array the 3 and 5 prime sequences
+  
+  return $flanking_sequence;
 }
 
 =head2 fetch_all_by_Population
