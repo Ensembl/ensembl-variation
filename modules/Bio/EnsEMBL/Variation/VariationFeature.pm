@@ -1109,6 +1109,9 @@ sub get_all_hgvs_notations {
     my $reference_name = shift;
     my $use_allele = shift;
     
+	# don't get them for HGMD mutations or CNV probes
+	return {} if $self->allele_string =~ /INS|DEL|HGMD|CNV/ig;
+	
     # If no reference feature is supplied, set it to the slice underlying this VariationFeature
     $ref_feature ||= $self->slice();
     #ÊBy default, use genomic position numbering
