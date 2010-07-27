@@ -69,6 +69,8 @@ use warnings;
 
 package Bio::EnsEMBL::Variation::VariationFeature;
 
+use Scalar::Util qw(weaken);
+
 use Bio::EnsEMBL::Feature;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Utils::Argument  qw(rearrange);
@@ -369,8 +371,15 @@ sub add_TranscriptVariation{
 	if(!ref($_[0]) || !$_[0]->isa('Bio::EnsEMBL::Variation::TranscriptVariation')) {
 	    throw("Bio::EnsEMBL::Variation::TranscriptVariation argument expected");
 	}
+	
+	my $tv = shift;
+	
+	# we need to weaken the TranscriptVariation object's reference to the VariationFeature
+	# to allow garbage collection to work (as this is a circular reference)
+	weaken($tv->{variation_feature});
+	
 	#a variation feature can have multiple transcript Variations
-	push @{$self->{'transcriptVariations'}},shift;
+	push @{$self->{'transcriptVariations'}},$tv;
     }
 }
 
