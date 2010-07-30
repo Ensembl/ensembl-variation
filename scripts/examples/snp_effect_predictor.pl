@@ -37,21 +37,25 @@ use Bio::EnsEMBL::Variation::DBSQL::TranscriptVariationAdaptor;
 # get command-line options
 my ($in_file, $out_file, $buffer_size, $species, $registry_file, $help, $host, $user, $password);
 
-our ($most_severe);
+our ($most_severe, $check_ref, $check_existing, $hgnc, $input_format);
 
 my $args = scalar @ARGV;
 
 GetOptions(
-	'input_file=s'  => \$in_file,
-	'output_file=s' => \$out_file,
-	'species=s'		=> \$species,
-	'buffer_size=s'	=> \$buffer_size,
-	'registry=s'	=> \$registry_file,
-	'db_host=s'		=> \$host,
-	'user=s'		=> \$user,
-	'password=s'	=> \$password,
-	'most_severe'	=> \$most_severe,
-	'help'			=> \$help,
+	'input_file=s'     => \$in_file,
+	'output_file=s'    => \$out_file,
+	'species=s'		   => \$species,
+	'buffer_size=s'	   => \$buffer_size,
+	'registry=s'	   => \$registry_file,
+	'db_host=s'		   => \$host,
+	'user=s'		   => \$user,
+	'password=s'	   => \$password,
+	'most_severe'	   => \$most_severe,
+	'check_ref'        => \$check_ref,
+	'check_existing=i' => \$check_existing,
+	'hgnc'             => \$hgnc,
+	'help'			   => \$help,
+	'format=s'         => \$input_format,
 );
 
 # set defaults
@@ -60,6 +64,14 @@ $species ||= "human";
 $buffer_size ||= 500;
 $host ||= 'ensembldb.ensembl.org';
 $user ||= 'anonymous';
+$check_existing = 1 unless defined $check_existing;
+
+# check file format
+if(defined $input_format) {
+	die "ERROR: Unrecognised input format specified $input_format\n" unless $input_format =~ /pileup|vcf/i;
+}
+
+$input_format ||= 'guess';
 
 # print usage message if requested or no args supplied
 if(defined($help) || !$args) {
@@ -165,6 +177,9 @@ while(<$in_file_handle>) {
   # non-variant line from VCF
   next if $chr eq 'non-variant';
   
+  #print "$line_number ", (join " ", ($chr, $start, $end, $allele_string, $strand, $var_name));
+  #print "\n";
+  
   # fix inputs
   $chr =~ s/chr//ig;
   $strand = ($strand =~ /\-/ ? "-1" : "1");
@@ -207,6 +222,40 @@ while(<$in_file_handle>) {
 	
 	# store the hash
 	$slice_hash{$chr} = $slice;
+  }
+  
+  # check reference allele if requested
+  if($check_ref) {
+	my $ref_allele = (split /\//, $allele_string)[0];
+	
+	my $ok = 0;
+	my $slice_ref_allele;
+	
+	# insertion, therefore no ref allele to check
+	if($ref_allele eq '-') {
+		$ok = 1;
+	}
+	else {
+		my $slice_ref = $slice->sub_Slice($start, $end, $strand);
+		
+		if(!defined($slice_ref)) {
+			warn "WARNING: Could not fetch sub-slice from $start\-$end\($strand\) on line $line_number";
+		}
+		
+		else {
+			$slice_ref_allele = $slice_ref->seq;
+			$ok = ($slice_ref_allele eq $ref_allele ? 1 : 0);
+		}
+	}
+	
+	if(!$ok) {
+		warn
+			"WARNING: Specified reference allele $ref_allele ",
+			"could not be matched",
+			($slice_ref_allele ? " to $slice_ref_allele" : ""),
+			" on line $line_number";
+		next;
+	}
   }
  
   # create a new VariationFeature object
@@ -253,9 +302,9 @@ sub print_consequences {
 	foreach my $new_vf(@$vfs) {
 		
 		# find any co-located existing VFs
-		my $existing_vf = "N/A";
+		my $existing_vf = "-";
 		
-		if(defined($new_vf->adaptor->db)) {
+		if(defined($new_vf->adaptor->db) && $check_existing == 1) {
 			my $fs = $new_vf->feature_Slice;
 			if($fs->start > $fs->end) {
 				($fs->{'start'}, $fs->{'end'}) = ($fs->{'end'}, $fs->{'start'});
@@ -281,17 +330,25 @@ sub print_consequences {
 				($con->{'translation_start'}, $con->{'translation_end'}) = ($con->{'translation_end'}, $con->{'translation_start'});
 			  }
 			  
+			  my $gene = $ga->fetch_by_transcript_stable_id($con->transcript->stable_id);
+			  
+			  my $hgnc_name;
+			  if($hgnc) {
+				my @entries = grep {$_->database eq 'HGNC'} @{$gene->get_all_DBEntries()};
+				$hgnc_name = $entries[0]->display_id || undef;
+			  }
+			  
 			  print $out_file_handle
 				$new_vf->variation_name, "\t",
 				$new_vf->seq_region_name, ":",
 				$new_vf->seq_region_start,
 				($new_vf->seq_region_end == $new_vf->seq_region_start ? "" : "-".$new_vf->seq_region_end), "\t".
-				($con->transcript ? $ga->fetch_by_transcript_stable_id($con->transcript->stable_id)->stable_id : "N/A"), "\t",
-				($con->transcript ? $con->transcript->stable_id : "N/A"), "\t",
+				($con->transcript ? $gene->stable_id.(defined $hgnc_name ? ";$hgnc_name" : "") : "-"), "\t",
+				($con->transcript ? $con->transcript->stable_id : "-"), "\t",
 				$string, "\t",
-				($con->cdna_start ? $con->cdna_start.($con->cdna_end eq $con->cdna_start ? "" : "-".$con->cdna_end) : "N/A"), "\t",
-				($con->translation_start ? $con->translation_start.($con->translation_end eq $con->translation_start ? "" : "-".$con->translation_end) : "N/A"), "\t",
-				($con->pep_allele_string ? $con->pep_allele_string : "N/A"), "\t",
+				($con->cdna_start ? $con->cdna_start.($con->cdna_end eq $con->cdna_start ? "" : "-".$con->cdna_end) : "-"), "\t",
+				($con->translation_start ? $con->translation_start.($con->translation_end eq $con->translation_start ? "" : "-".$con->translation_end) : "-"), "\t",
+				($con->pep_allele_string ? $con->pep_allele_string : "-"), "\t",
 				$existing_vf, "\n";
 			}
 		}
@@ -305,21 +362,45 @@ sub parse_line {
 	my @data = (split /\s+/, $_);
 	
 	# pileup: chr1 60 T A
-	if($data[0] =~ /(chr)?\w+/ && $data[1] =~ /\d+/ && $data[2] =~ /[ACGTN-]+/ && $data[3] =~ /[ACGTN-]+/) {
+	if(($input_format =~ /pileup/i) || ($data[0] =~ /(chr)?\w+/ && $data[1] =~ /\d+/ && $data[2] =~ /^[ACGTN-]+$/ && $data[3] =~ /^[ACGTN-]+$/)) {
 		return ($data[0], $data[1], $data[1], $data[2]."/".$data[3], 1, (defined $data[4] ? $data[4] : undef));
 	}
 	
 	# VCF: 20      14370   rs6054257 G     A      29    0       NS=58;DP=258;AF=0.786;DB;H2          GT:GQ:DP:HQ
-	elsif($data[0] =~ /(chr)?\w+/ && $data[1] =~ /\d+/ && $data[3] =~ /[ACGTN-]+/ && $data[4] =~ /([\.ACGTN-]+\,?)+/) {
+	elsif(($input_format =~ /vcf/i) || ($data[0] =~ /(chr)?\w+/ && $data[1] =~ /\d+/ && $data[3] =~ /^[ACGTN-]+$/ && $data[4] =~ /^([\.ACGTN-]+\,?)+$/)) {
 		
 		# non-variant line in VCF, return dummy line
 		if($data[4] eq '.') {
 			return ('non-variant');
 		}
 		
-		my $alt = $data[4];
+		my ($start, $end, $alt) = ($data[1], $data[1], $data[4]);
+		
+		# indel?
+		if($alt =~ /D|I/) {
+			if($alt =~ /\,/) {
+				warn "WARNING: can't deal with multiple different indel types in one variation";
+				return ('non-variant');
+			}
+			
+			# deletion
+			if($alt =~ /D/) {
+				my $num_deleted = $alt;
+				$num_deleted =~ s/\D+//g;
+				$end += $num_deleted - 1;
+				$alt = "-";
+			}
+			
+			# insertion
+			else {
+				$data[3] = '-';
+				$alt =~ s/^I//g;
+				$start++;
+			}
+		}
+		
 		$alt =~ s/\,/\//g;
-		return ($data[0], $data[1], $data[1], $data[3]."/".$alt, 1, ($data[2] eq '.' ? undef : $data[2]));
+		return ($data[0], $start, $end, $data[3]."/".$alt, 1, ($data[2] eq '.' ? undef : $data[2]));
 	}
 	
 	# our format
@@ -342,20 +423,28 @@ Usage:
 perl snp_effect_predictor.pl [arguments]
 
 Options
--h | --help           Display this message and quit
+--help                 Display this message and quit
 
--s | --species        Species to use [default: "human"]
--i | --input_file     Input file - if not specified, reads from STDIN
--o | --output_file    Output file [default: "snp_effect_output.txt"]
--b | --buffer_size    Sets the number of SNPs sent in each batch [default: 500]
-                      Increasing buffer size will retrieve results more quickly
-					  but requires more memory.
+-i | --input_file      Input file - if not specified, reads from STDIN
+-o | --output_file     Output file [default: "snp_effect_output.txt"]
+-f | --format          Input file format - one of "pileup", "vcf" [default: auto-detect]
 
--d | --db_host        Manually define database host [default: "ensembldb.ensembl.org"]
--u | --user           Database username [default: "anonymous"]
--p | --password       Database password [default: not used]
--r | --registry_file  Registry file to use defines DB connections [default: not used]
-                      Defining a registry file overrides above connection settings.
+-s | --species         Species to use [default: "human"]
+-b | --buffer_size     Sets the number of SNPs sent in each batch [default: 500]
+                       Increasing buffer size will retrieve results more quickly
+                       but requires more memory.
+--check_ref            If specified, checks supplied reference allele against stored
+                       entry in Ensembl Core database [default: not used]
+--check_existing=[0|1] If set to 1, checks for existing co-located variations in the
+                       Ensembl Variation database [default: 1]
+--hgnc                 If specified, HGNC gene identifiers are output alongside the
+                       Ensembl Gene identifier [default: not used]
+
+-d | --db_host         Manually define database host [default: "ensembldb.ensembl.org"]
+-u | --user            Database username [default: "anonymous"]
+-p | --password        Database password [default: not used]
+-r | --registry_file   Registry file to use defines DB connections [default: not used]
+                       Defining a registry file overrides above connection settings.
 END
 
 	print $usage;

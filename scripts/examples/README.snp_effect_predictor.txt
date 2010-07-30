@@ -48,9 +48,9 @@ The script is run on the command line as follows:
 perl snp_effect_predictor.pl [options]
 
 where [options] represent a set of flags and options to the script. These can be
-listed using the flag -h:
+listed using the flag --help:
 
-perl snp_effect_predictor.pl -h
+perl snp_effect_predictor.pl --help
 
 By default the script connects to the public Ensembl database server at
 ensembldb.ensembl.org; other connection options are available.
@@ -60,13 +60,17 @@ ensembldb.ensembl.org; other connection options are available.
 
 Long form shown in parentheses.
 
--h (--help) : display help message and quit
+--help : display help message and quit
 
 -s (--species) : species for your data. This can be the latin name
    e.g. "homo_sapiens" or any Ensembl alias e.g. "mouse". Default = "human"
    
 -i (--input_file) : input file name. If not specified, the script will attempt
    to read from STDIN.
+
+-f (--format) : input file format. By default, the script auto-detects the input
+   file format. Using this option you can force the script to read the input
+   file as VCF or pileup format. Not used by default.
    
 -o (--output_file) : output file name. Default = "snp_effect_output.txt"
 
@@ -74,6 +78,17 @@ Long form shown in parentheses.
    of variations that are used to query the database simultaneously. Set this
    lower to use less memory at the expense of longer run time, and higher to use
    more memory with a faster run time. Default = 500
+   
+--check_ref : force the script to check the supplied reference allele against
+   the sequence stored in the Ensembl Core database. Lines that do not match are
+   skipped. Not used by default.
+   
+--check_exisiting [0|1] : by default the script checks for the existence of
+   variants that are co-located with your input. Disabling this by specifying
+   --check_existing=0 will bypass this and provide a speed boost. Default : 1
+   
+--hgnc : adds the HGNC gene identifer (where available) to the output e.g.
+    ENSG00000001626;CFTR. Not used by default
    
 -d (--db_host) : manually define the database host to connect to.
    Default = "ensembldb.ensembl.org"
@@ -93,7 +108,7 @@ Long form shown in parentheses.
 
 perl snp_effect_predictor.pl -i snps.txt -o snps_consequences.txt
 
-perl snp_effect_predictor.pl -i snps.txt -o snps_consequences.txt -b 1000
+perl snp_effect_predictor.pl -i snps.txt -o snps_consequences.txt -b 1000 -hgnc
 
 perl snp_effect_predictor.pl -i snps.txt -r ensembl.registry
 
@@ -109,8 +124,8 @@ The SNP Effect Predictor script uses plain text files both as input and output.
 4.1 Input file
 --------------
 
-The input file consists of five columns; these can be comma, tab (or any
-whitespace) separated. The columns are:
+The default input file format consists of five columns; these can be comma, tab
+(or any whitespace) separated. The columns are:
 
 - Chromosome name : the name of the chromosome to which the variant maps e.g. 1
   for chromosome 1. This can also be the name of a contig or other seq_region
@@ -131,6 +146,9 @@ whitespace) separated. The columns are:
   checked by the script, so if unknown can be set to anything).
 - Strand : the strand to which the variant maps. Possible values are 1 and -1;
   + and - can also be used.
+- Variant name : optionally, a sixth column can be specified containing an
+  identifier for the variant. If not specified, the name is derived from the
+  coordinates as described below.
 
 Examples:
 
@@ -146,6 +164,11 @@ Y 100 102 GGC/CAT -
 - Insertion of ACCG between bases 100 and 101 on reverse strand of chromosome X:
 X 101 100 -/ACCG -
 
+Other input formats are also supported; VCF (see
+http://1000genomes.org/wiki/doku.php?id=1000_genomes:analysis:vcfv3.2) and
+pileup. These should be auto-detected by the script; if they are not, you can
+force the script to use either with the -f|--format command line flags.
+
 
 4.2 Output file
 ---------------
@@ -155,11 +178,11 @@ falls in more than one transcript it may produce more than one line. The output
 file is a tab-delimited file with the following columns:
 
 - Uploaded Variation : a temporary name assigned to the variant, based on the
-  position and alleles
+  position and alleles, or the optional name if specified
 - Location : string corresponding to the variant's location, represented as
   Chr:Start-End
 - Gene : the Ensembl stable ID of the gene where the variant is located (where
-  applicable)
+  applicable), with the HGNC name if specified using the --hgnc flag
 - Transcript : the Ensembl stabled ID of the transcript where the variant is
   located (where applicable)
 - Consequence : the consequence type predicted. See
@@ -193,7 +216,7 @@ Bio::EnsEMBL::DBSQL::DBAdaptor->new(
   '-host'    => 'ensembldb.ensembl.org',
   '-user'    => 'anonymous',
   '-pass'    => '',
-  '-dbname'  => 'homo_sapiens_core_57_37b'
+  '-dbname'  => 'homo_sapiens_core_59_37d'
 );
 
 
@@ -204,11 +227,11 @@ Bio::EnsEMBL::Variation::DBSQL::DBAdaptor->new(
   '-host'    => 'ensembldb.ensembl.org',
   '-user'    => 'anonymous',
   '-pass'    => '',
-  '-dbname'  => 'homo_sapiens_variation_57_37b'
+  '-dbname'  => 'homo_sapiens_variation_59_37d'
 );
 
 The minimum requirement is a connection to a core database for your species,
-such as homo_sapiens_core_57_37b in the example above. A variation database is
+such as homo_sapiens_core_59_37d in the example above. A variation database is
 required to find existing co-located variations, and a function genomics
 database is required to assess if variations fall in regulatory regions.
 
@@ -236,3 +259,7 @@ in the input file. Other dependent factors include:
   numbers of variations. Using a larger buffer size increases the number of
   simultaneous database transactions and reduces the number of transactions
   overall.
+  
+- checking for existing variations. If not interested in existing co-located
+  variations, this process can be bypassed using the --check_existing=0 command
+  line flag.
