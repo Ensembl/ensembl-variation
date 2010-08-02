@@ -610,7 +610,8 @@ sub _default_where_clause {
 sub _columns {
   return qw( vf.variation_feature_id vf.seq_region_id vf.seq_region_start
              vf.seq_region_end vf.seq_region_strand vf.variation_id
-             vf.allele_string vf.variation_name vf.map_weight s.name vf.validation_status vf.consequence_type);
+             vf.allele_string vf.variation_name vf.map_weight s.name s.somatic 
+             vf.validation_status vf.consequence_type);
 }
 
 
@@ -633,12 +634,12 @@ sub _objs_from_sth {
 
   my ($variation_feature_id, $seq_region_id, $seq_region_start,
       $seq_region_end, $seq_region_strand, $variation_id,
-      $allele_string, $variation_name, $map_weight, $source_name, $validation_status, $consequence_type );
+      $allele_string, $variation_name, $map_weight, $source_name, $is_somatic, $validation_status, $consequence_type );
 
   $sth->bind_columns(\$variation_feature_id, \$seq_region_id,
                      \$seq_region_start, \$seq_region_end, \$seq_region_strand,
                      \$variation_id, \$allele_string, \$variation_name,
-                     \$map_weight, \$source_name, \$validation_status, \$consequence_type);
+                     \$map_weight, \$source_name, \$is_somatic, \$validation_status, \$consequence_type);
 
   my $asm_cs;
   my $cmp_cs;
@@ -745,6 +746,7 @@ sub _objs_from_sth {
        'dbID'     => $variation_feature_id,
        'map_weight' => $map_weight,
        'source'   => $source_name,
+       'is_somatic' => $is_somatic,
        'validation_code' => \@states,
        'consequence_type' => \@types || ['INTERGENIC'],
        '_variation_id' => $variation_id});

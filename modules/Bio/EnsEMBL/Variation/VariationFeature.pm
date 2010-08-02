@@ -159,9 +159,9 @@ sub new {
   my $class = ref($caller) || $caller;
 
   my $self = $class->SUPER::new(@_);
-  my ($allele_str, $var_name, $map_weight, $variation, $variation_id, $source, $validation_code, $consequence_type) =
+  my ($allele_str, $var_name, $map_weight, $variation, $variation_id, $source, $is_somatic, $validation_code, $consequence_type) =
     rearrange([qw(ALLELE_STRING VARIATION_NAME 
-                  MAP_WEIGHT VARIATION _VARIATION_ID SOURCE VALIDATION_CODE 
+                  MAP_WEIGHT VARIATION _VARIATION_ID SOURCE IS_SOMATIC VALIDATION_CODE 
 		  CONSEQUENCE_TYPE)], @_);
 
   $self->{'allele_string'}    = $allele_str;
@@ -170,6 +170,7 @@ sub new {
   $self->{'variation'}        = $variation;
   $self->{'_variation_id'}    = $variation_id;
   $self->{'source'}           = $source;
+  $self->{'is_somatic'}       = $is_somatic;
   $self->{'validation_code'}  = $validation_code;
   $self->{'consequence_type'} = $consequence_type || ['INTERGENIC'];
   
@@ -843,6 +844,25 @@ sub source{
   my $self = shift;
   return $self->{'source'} = shift if(@_);
   return $self->{'source'};
+}
+
+=head2 is_somatic
+
+  Arg [1]    : boolean $is_somatic (optional)
+               The new value to set the is_somatic flag to
+  Example    : $is_somatic = $vf->is_somatic
+  Description: Getter/Setter for the is_somatic flag, which identifies this variation feature as either somatic or germline
+  Returntype : boolean
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub is_somatic {
+  my ($self, $is_somatic) = @_;
+  $self->{'is_somatic'} = $is_somatic if defined $is_somatic;
+  return $self->{'is_somatic'};
 }
 
 =head2 is_tagged
