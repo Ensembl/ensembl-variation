@@ -706,8 +706,10 @@ sub sort_nodes {
 	'source' => 1,
 	'modification_date' => 5,
 	'other_exon_naming' => 6,
-	'alternate_amino_acid_numbering' => 7,
-	'features' => 8,
+	'mapping' => 7,
+	'alternate_amino_acid_numbering' => 8,
+	'lrg_gene_name' => 9,
+	'features' => 10,
 	
         # Updatable annotation - gene
         'partial' => 1,
