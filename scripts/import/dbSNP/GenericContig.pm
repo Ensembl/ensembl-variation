@@ -151,6 +151,10 @@ sub variation_table {
              };
   my $count = $self->{'dbSNP'}->selectall_arrayref($stmt);
    ###if we have data in table SNPAncestralAllele, like human, will use it, otherwise goto else
+   ## Note that in setting the validation_status below, the elements from the validation_status are
+   ## chosen according to their bitmapped decimal values. Therefore, when updating the set, new values
+   ## cannot just be appended, they have to be added in the same order as they are in the dbSNP
+   ## SnpValidationCode table 
    if ($count->[0][0]) {
      $stmt = "SELECT ";
      if ($self->{'limit'}) {
