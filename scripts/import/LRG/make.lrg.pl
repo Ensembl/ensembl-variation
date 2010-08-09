@@ -137,7 +137,7 @@ if (!$skip_updatable) {
 	# Move annotations that should be "unbranded" to the LRG section and do consistency checking between these NCBI and Ensembl annotations
 	move_to_unbranded($root) unless $skip_unbranded;
 	
-	align_updatable_to_fixed_transcripts($root,$LRGMapping::dbCore_ro->get_TranscriptAdaptor()) unless $skip_transcript_matching;
+	# align_updatable_to_fixed_transcripts($root,$LRGMapping::dbCore_ro->get_TranscriptAdaptor()) unless $skip_transcript_matching;
 	
 	# Find transcripts in the updatable section that correspond to transcripts in the fixed section (only for Ensembl annotations for now)
 	match_fixed_annotation_transcripts($root,$LRGMapping::dbCore_ro->get_TranscriptAdaptor()) unless $skip_transcript_matching;
@@ -584,7 +584,7 @@ sub align_updatable_to_fixed_transcripts {
 		warn("Could not find lrg_gene_name node with source 'HGNC' in LRG-branded annotation set");
 		return;
 	}
-	my $hgnc_symbol = $hgnc_symbol_node->content();
+	$hgnc_symbol = $hgnc_symbol_node->content();
 	
 	# Get the transcripts in the fixed annotation section		
 	my $fixed_transcripts = $root->findNode('lrg/fixed_annotation')->findNodeArray('transcript');
