@@ -1192,6 +1192,7 @@ sub get_all_hgvs_notations {
     my $codon_up;
     my $cds_down;
     my $peptide;
+    my $ref_cds;
     my $ref_peptide;
     my $peptide_start;
     if ($ref_feature->isa('Bio::EnsEMBL::Transcript') && $numbering =~ m/p/) {
@@ -1224,7 +1225,7 @@ sub get_all_hgvs_notations {
       # FIXME: If sequence starts or ends with partial codons, how should we handle that? Example: rs71969613, ENST00000389639
       
       # Create the cds starting from the affected codon and continuing down
-      my $ref_cds = Bio::PrimarySeq->new(-seq => $codon_up . $codon_ref . $cds_down, -id => 'ref_cds', -alphabet => 'dna');
+      $ref_cds = Bio::PrimarySeq->new(-seq => $codon_up . $codon_ref . $cds_down, -id => 'ref_cds', -alphabet => 'dna');
       $ref_peptide = $ref_cds->translate()->seq();
       # Store the offset in peptide coordinates
       $peptide_start = (($cds_start - $start_phase - 1)/3 + 1);
@@ -1347,7 +1348,8 @@ sub get_all_hgvs_notations {
           $hgvs_notation->{'start'} = $peptide_start + $first_offset;
           
           # The reference cds length will always be a multiple of 3. If the alternative cds length is not a multiple of 3, this is a frame shift
-          if (($alt_cds->length())%3 != 0) {
+	  #ÊFIXME: This is not always true, we might have truncated reading frames (e.g. rs80357327 ENST00000476777) where this will give the wrong result. Need a different method to check frame shifts
+          if (($ref_cds->length() - $alt_cds->length())%3 != 0) {
             $hgvs_notation->{'type'} = 'fs';
       
             # Indicate a frame shift on the first affected reference AA
@@ -1440,7 +1442,7 @@ sub get_all_hgvs_notations {
 	  ###
           
           # If the change affects the initiator methionine, the consequence of the change should be indicated as unknown
-          if ($hgvs_notation->{'start'} == 1) {
+          if ($hgvs_notation->{'start'} == 1 && ($hgvs_notation->{'type'} eq '>' || $hgvs_notation->{'type'} eq 'fs' || $hgvs_notation->{'type'} =~ m/del/)) {
             $hgvs_notation->{'alt'} = "?";
 	    $hgvs_notation->{'type'} = '>';
 	    $hgvs_notation->{'suffix'} = '';
