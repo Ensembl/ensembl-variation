@@ -101,11 +101,12 @@ sub unambiguity_code {
 =head2 variation_class
 
   Arg[1]      : string $alleles
+  Arg[2]      : boolean $is_somatic - flag that this variation is somatic
   Example     : use Bio::EnsEMBL::Variation::Utils::Sequence qw (variation_class)
                 my $alleles = 'A|C';    
                 my $variation_class = variation_class($alleles);
                 print "the variation class for the alleles $alleles is: ",$variation_class;
-  Description : return the class of the alleles according to dbSNP classification(SNP,indel,mixed,mnp...)
+  Description : return the class of the alleles according to dbSNP classification(SNP,indel,mixed,substitution...)
   ReturnType  : String. The class of the alleles
   Exceptions  : none
   Caller      : Variation, VariationFeature
@@ -113,55 +114,86 @@ sub unambiguity_code {
 =cut
 
 sub variation_class{
-    my $alleles = shift;
-    return 'snp' if $alleles =~ /^[ACGTN]([\|\\\/][ACGTN])+$/i;
-    return 'cnv' if (($alleles eq 'cnv') || ($alleles eq 'CNV'));
-	return 'cnv probe' if $alleles =~ /CNV\_PROBE/i;
-	return 'hgmd_mutation' if $alleles =~ /HGMD\_MUTATION/i;
-
-    my @alleles = split /[\|\/\\]/, $alleles;
-
-    if (@alleles == 1){       
-	#(HETEROZYGOUS) 1 allele
-	return 'het'
+    
+    my ($alleles, $is_somatic) = @_;
+     
+    my $class;
+    
+    if ($alleles =~ /^[ACGTN]([\|\\\/][ACGTN])+$/i) {
+        $class = 'snp';
     }
-    elsif(@alleles == 2){
-	if ((($alleles[0] =~ tr/ACTGN//)== length($alleles[0]) && ($alleles[1] =~ tr/-//) == 1) || (($alleles[0] =~ tr/-//) == 1 && ($alleles[1] =~ tr/ACTGN//) == length($alleles[1]))){
-	    #A/- 2 alleles
-	    return 'in-del'
-	    }
-	elsif (($alleles[0] =~ /LARGE|INS|DEL/) || ($alleles[1] =~ /LARGE|INS|DEL/)){
-	    #(LARGEDELETION) 2 alleles
-	    return 'named'
-	    }
-	elsif (($alleles[0] =~ tr/ACTG//) > 1 || ($alleles[1] =~ tr/ACTG//) > 1){
-	    #AA/GC 2 alleles
-	    return 'mnp'
-	    }
-	else{
-	    warning("not possible to determine class for  @alleles");
-	    return '';
-	}
+    elsif (($alleles eq 'cnv') || ($alleles eq 'CNV')) {
+        $class = 'cnv';
     }
-    elsif(@alleles > 2){
-	if ($alleles[0] =~ /\d+/){ 
-	    #(CA)14/15/16/17 > 2 alleles, all of them contain the number of repetitions of the allele
-	    return 'microsat'
-	    }
+    elsif ($alleles =~ /CNV\_PROBE/i) {
+        $class = 'cnv probe';
+    }
+    elsif ($alleles =~ /HGMD\_MUTATION/i) {
+        $class = 'hgmd_mutation';
+    }
+    else {
+        my @alleles = split /[\|\/\\]/, $alleles;
+
+        if (@alleles == 1) {
+            #(HETEROZYGOUS) 1 allele
+	        $class =  'het';
+        }
+        elsif(@alleles == 2) {
+	       if ((($alleles[0] =~ tr/ACTGN//)== length($alleles[0]) && ($alleles[1] =~ tr/-//) == 1) || 
+	           (($alleles[0] =~ tr/-//) == 1 && ($alleles[1] =~ tr/ACTGN//) == length($alleles[1])) ){
+	           #A/- 2 alleles
+	           $class =  'in-del'
+	       }
+	       elsif (($alleles[0] =~ /LARGE|INS|DEL/) || ($alleles[1] =~ /LARGE|INS|DEL/)){
+	           #(LARGEDELETION) 2 alleles
+	           $class = 'named'
+	       }
+	       elsif (($alleles[0] =~ tr/ACTG//) > 1 || ($alleles[1] =~ tr/ACTG//) > 1){
+	           #AA/GC 2 alleles
+	           $class = 'substitution'
+	       }
+	       else {
+	           warning("not possible to determine class for  @alleles");
+	           $class = '';
+	       }
+        }
+        elsif (@alleles > 2) {
+	       
+	       if ($alleles[0] =~ /\d+/) { 
+	           #(CA)14/15/16/17 > 2 alleles, all of them contain the number of repetitions of the allele
+	           $class = 'microsat'
+	       }
 	
-	elsif ((grep {/-/} @alleles) > 0){
-	    #-/A/T/TTA > 2 alleles
-	    return 'mixed'
-	    }
-	else{
-	  #  warning("not possible to determine class of alleles " . @alleles);
-	    return '';
-	}
+	       elsif ((grep {/-/} @alleles) > 0) {
+	           #-/A/T/TTA > 2 alleles
+	           $class = 'mixed'
+	       }
+	       else {
+	           #  warning("not possible to determine class of alleles " . @alleles);
+	           $class = '';
+	       }
+        }
+        else{
+	       warning("no alleles available ");
+	       $class = '';
+        }
     }
-    else{
-	warning("no alleles available ");
-	return '';
+    
+    if ($is_somatic) {
+        if ($class eq '') {
+            # for undetermined classes just call it somatic
+            $class = 'somatic';
+        }
+        else {       
+            # somatic mutations aren't polymorphisms, so change SNPs to SNVs
+            $class = 'snv' if $class eq 'snp'; 
+ 
+            # and prefix the class with 'somatic' 
+            $class = 'somatic_'.$class; 
+        }
     }
+    
+    return $class;
 }
 
 =head2 sequence_with_ambiguity
