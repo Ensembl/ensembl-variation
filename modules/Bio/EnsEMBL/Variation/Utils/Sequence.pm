@@ -60,7 +60,12 @@ use vars qw(@ISA @EXPORT_OK);
 sub ambiguity_code {
     my $alleles = shift;
     my %duplicates; #hash containing all alleles to remove duplicates
-    map {$duplicates{$_}++} split /[\|\/\\]/, $alleles;
+	
+	foreach my $a(split /[\|\/\\]/, $alleles) {
+		# convert Ns
+		my @a = ($a eq 'N' ? qw(A C G T) : ($a));
+		map {$duplicates{$_}++} @a;
+	}
     $alleles = uc( join '', sort keys %duplicates );
     #my %ambig = qw(AC M ACG V ACGT N ACT H AG R AGT D AT W CG S CGT B CT Y 
 #GT K C C A A T T G G - - -A -A -C -C -G -G -T -T A- A- C- C- G- G- T- T-); #for now just make e.g. 'A-' -> 'A-'
