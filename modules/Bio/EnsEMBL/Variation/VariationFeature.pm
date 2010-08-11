@@ -747,7 +747,7 @@ sub ambig_code{
 
 sub var_class{
     my $self = shift;
-    return &variation_class($self->allele_string());
+    return &variation_class($self->allele_string, $self->is_somatic);
 }
 
 
