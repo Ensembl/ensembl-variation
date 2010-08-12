@@ -829,11 +829,17 @@ sub ambig_code{
 
 sub var_class{
     my $self = shift;
+    
+    # for now, just return a class of 'somatic' if we are a somatic mutation
+    if ($self->is_somatic) {
+        return 'somatic';
+    }
+    
     my $alleles = $self->get_all_Alleles(); #get all Allele objects
     my %alleles; #to get all the different alleles in the Variation
     map {$alleles{$_->allele}++} @{$alleles};
     my $allele_string = join "|",keys %alleles;
-    return &variation_class($allele_string);
+    return &variation_class($allele_string, $self->is_somatic);
 }
 
 =head2 failed_description
