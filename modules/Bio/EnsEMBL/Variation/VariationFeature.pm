@@ -892,7 +892,7 @@ sub is_tagged{
   Args        : None
   Example     : my $snp = $vf->convert_to_SNP()
   Description : Creates a Bio::EnsEMBL::SNP object from Bio::EnsEMBL::VariationFeature. Mainly used for
-                backwards comnpatibility
+                backwards compatibility
   ReturnType  : Bio::EnsEMBL::SNP
   Exceptions  : None
   Caller      : general      
