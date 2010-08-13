@@ -619,6 +619,11 @@ sub _objs_from_sth {
   while($sth->fetch()) {
 
       my @consequences = split /,/,$consequence_type;
+	  
+	  # hack for broken HGMD data in 59
+	  if(defined($pep_allele)) {
+		$pep_allele = undef if $pep_allele eq 'NULL';
+	  }
     
       my $trv = Bio::EnsEMBL::Variation::TranscriptVariation->new_fast
 	  ( { 'dbID' => $trv_id,
