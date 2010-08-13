@@ -90,14 +90,14 @@ sub fetch_by_dbID {
     (q{SELECT v.variation_id, v.name, v.validation_status, s1.name, s1.description, s1.url, s1.somatic, v.ancestral_allele,
               a.allele_id, a.subsnp_id, a.allele, a.frequency, a.sample_id, vs.moltype,
               vs.name, s2.name, f.description, ((fs.up_seq != 'NULL' AND fs.up_seq is not null) OR (fs.down_seq is not null AND fs.down_seq != 'NULL'))
-       FROM   (variation v, source s1, flanking_sequence fs)
+       FROM   (variation v, source s1)
 	       LEFT JOIN allele a ON v.variation_id = a.variation_id
+		   LEFT JOIN flanking_sequence fs ON v.variation_id = fs.variation_id
                 LEFT JOIN variation_synonym vs on v.variation_id = vs.variation_id 
    	            LEFT JOIN source s2 on  vs.source_id = s2.source_id
 		    LEFT JOIN failed_variation fv on v.variation_id = fv.variation_id
                     LEFT JOIN failed_description f on fv.failed_description_id = f.failed_description_id
        WHERE    v.source_id = s1.source_id
-	   AND v.variation_id = fs.variation_id
        AND    v.variation_id = ?});
   $sth->bind_param(1,$dbID,SQL_INTEGER);
   $sth->execute();
@@ -144,18 +144,14 @@ sub fetch_by_name {
     (qq{SELECT v.variation_id, v.name, v.validation_status, s1.name, s1.description, s1.url, s1.somatic, v.ancestral_allele, 
                a.allele_id, a.subsnp_id, a.allele, a.frequency, a.sample_id, vs.moltype,
               vs.name, s2.name, f.description, ((fs.up_seq != 'NULL' AND fs.up_seq is not null) OR (fs.down_seq is not null AND fs.down_seq != 'NULL'))
-#       FROM   variation v, source s1, source s2, allele a, variation_synonym vs
-	  FROM   (variation v, source s1, flanking_sequence fs)
-	     LEFT JOIN allele a on v.variation_id = a.variation_id 
+	  FROM   (variation v, source s1)
+	     LEFT JOIN allele a on v.variation_id = a.variation_id
+		 LEFT JOIN flanking_sequence fs on v.variation_id = fs.variation_id
 	      LEFT JOIN variation_synonym vs on v.variation_id = vs.variation_id 
               LEFT JOIN source s2 on  vs.source_id = s2.source_id
 	      LEFT JOIN failed_variation fv on v.variation_id = fv.variation_id
 	         LEFT JOIN failed_description f on fv.failed_description_id = f.failed_description_id
-#       WHERE  v.variation_id = a.variation_id
-#       AND    v.variation_id = vs.variation_id
        WHERE    v.source_id = s1.source_id
-#       AND    vs.source_id = s2.source_id
-	   AND v.variation_id = fs.variation_id
        AND    v.name = ?
        $extra_sql  
        ORDER BY a.allele_id});
@@ -173,9 +169,9 @@ sub fetch_by_name {
       (qq{SELECT v.variation_id, v.name, v.validation_status, s1.name, s1.description, s1.url, s1.somatic, v.ancestral_allele, 
                  a.allele_id, a.subsnp_id, a.allele, a.frequency, a.sample_id, vs1.moltype,
                 vs2.name, s2.name, NULL, ((fs.up_seq != 'NULL' AND fs.up_seq is not null) OR (fs.down_seq is not null AND fs.down_seq != 'NULL'))
-         FROM variation v, source s1, source s2, allele a,
-                variation_synonym vs1, variation_synonym vs2, flanking_sequence fs
-         WHERE  v.variation_id = a.variation_id
+         FROM (variation v, source s1, source s2,
+                variation_synonym vs1, variation_synonym vs2, flanking_sequence fs)
+		 LEFT JOIN allele a ON v.variation_id = a.variation_id
          AND    v.variation_id = vs1.variation_id
          AND    v.variation_id = vs2.variation_id
          AND    v.source_id = s1.source_id
