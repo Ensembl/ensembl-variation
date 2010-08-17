@@ -596,8 +596,8 @@
 						      </span>
 						   </xsl:when>
 						   <xsl:otherwise>
-						      <xsl:if test="(cdna_coords/@end - (cdna_coords/@start + ($cstart - lrg_coords/@start))-3) &gt; 0">
-							 <xsl:value-of select="substring($seq,cdna_coords/@start + ($cstart - lrg_coords/@start)+3,cdna_coords/@end - (cdna_coords/@start + ($cstart - lrg_coords/@start))-3)"/>
+						      <xsl:if test="(cdna_coords/@end - (cdna_coords/@start + ($cstart - lrg_coords/@start))-3 + 1) &gt; 0">
+							 <xsl:value-of select="substring($seq,cdna_coords/@start + ($cstart - lrg_coords/@start)+3,cdna_coords/@end - (cdna_coords/@start + ($cstart - lrg_coords/@start))-3 + 1)"/>
 						      </xsl:if>
 						   </xsl:otherwise>
 						</xsl:choose>
