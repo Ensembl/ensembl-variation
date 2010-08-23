@@ -33,6 +33,7 @@ use FileHandle;
 use Bio::EnsEMBL::Registry;
 use Bio::EnsEMBL::Variation::DBSQL::VariationFeatureAdaptor;
 use Bio::EnsEMBL::Variation::DBSQL::TranscriptVariationAdaptor;
+use Bio::EnsEMBL::Variation::Utils::Sequence qw(unambiguity_code);
 
 # get command-line options
 my ($in_file, $out_file, $buffer_size, $species, $registry_file, $help, $host, $user, $password);
@@ -172,119 +173,124 @@ while(<$in_file_handle>) {
   # header line?
   next if /^\#/;
   
-  my ($chr, $start, $end, $allele_string, $strand, $var_name) = parse_line($_);
-  
-  # non-variant line from VCF
-  next if $chr eq 'non-variant';
-  
-  #print "$line_number ", (join " ", ($chr, $start, $end, $allele_string, $strand, $var_name));
-  #print "\n";
-  
-  # fix inputs
-  $chr =~ s/chr//ig;
-  $strand = ($strand =~ /\-/ ? "-1" : "1");
-  
-  # sanity checks
-  unless($start =~ /^\d+$/ && $end =~ /^\d+$/) {
-	warn("WARNING: Start $start or end $end coordinate invalid on line $line_number\n");
-	next;
-  }
-  
-  unless($allele_string =~ /([ACGT-]+\/*)+/) {
-	warn("WARNING: Invalid allele string $allele_string on line $line_number\n");
-	next;
-  }
-  
-  # now get the slice
-  my $slice;
- 
-  # check if we have fetched this slice already
-  if(defined $slice_hash{$chr}) {
-    $slice = $slice_hash{$chr};
-  }
- 
-  # if not create a new one
-  else {
+  # some lines (pileup) may actually parse out into more than one variant)
+  foreach my $sub_line(@{parse_line($_)}) {
 	
-	# first try to get a chromosome
-    eval { $slice = $sa->fetch_by_region('chromosome', $chr); };
+	# get the sub-line into named variables
+	my ($chr, $start, $end, $allele_string, $strand, $var_name) = @{$sub_line};
 	
-	# if failed, try to get any seq region
-	if(!defined($slice)) {
-		$slice = $sa->fetch_by_region(undef, $chr);
+	# non-variant line from VCF
+	next if $chr eq 'non-variant';
+	
+	#print "$line_number ", (join " ", ($chr, $start, $end, $allele_string, $strand, $var_name));
+	#print "\n";
+	
+	# fix inputs
+	$chr =~ s/chr//ig;
+	$strand = ($strand =~ /\-/ ? "-1" : "1");
+	
+	# sanity checks
+	unless($start =~ /^\d+$/ && $end =~ /^\d+$/) {
+	  warn("WARNING: Start $start or end $end coordinate invalid on line $line_number\n");
+	  next;
 	}
 	
-	# if failed, warn and skip this line
-	if(!defined($slice)) {
-		warn("WARNING: Could not fetch slice named $chr on line $line_number\n");
-		next;
-	}	
-	
-	# store the hash
-	$slice_hash{$chr} = $slice;
-  }
-  
-  # check reference allele if requested
-  if($check_ref) {
-	my $ref_allele = (split /\//, $allele_string)[0];
-	
-	my $ok = 0;
-	my $slice_ref_allele;
-	
-	# insertion, therefore no ref allele to check
-	if($ref_allele eq '-') {
-		$ok = 1;
+	unless($allele_string =~ /([ACGT-]+\/*)+/) {
+	  warn("WARNING: Invalid allele string $allele_string on line $line_number\n");
+	  next;
 	}
+	
+	# now get the slice
+	my $slice;
+   
+	# check if we have fetched this slice already
+	if(defined $slice_hash{$chr}) {
+	  $slice = $slice_hash{$chr};
+	}
+   
+	# if not create a new one
 	else {
-		my $slice_ref = $slice->sub_Slice($start, $end, $strand);
-		
-		if(!defined($slice_ref)) {
-			warn "WARNING: Could not fetch sub-slice from $start\-$end\($strand\) on line $line_number";
-		}
-		
-		else {
-			$slice_ref_allele = $slice_ref->seq;
-			$ok = ($slice_ref_allele eq $ref_allele ? 1 : 0);
-		}
+	  
+	  # first try to get a chromosome
+	  eval { $slice = $sa->fetch_by_region('chromosome', $chr); };
+	  
+	  # if failed, try to get any seq region
+	  if(!defined($slice)) {
+		  $slice = $sa->fetch_by_region(undef, $chr);
+	  }
+	  
+	  # if failed, warn and skip this line
+	  if(!defined($slice)) {
+		  warn("WARNING: Could not fetch slice named $chr on line $line_number\n");
+		  next;
+	  }	
+	  
+	  # store the hash
+	  $slice_hash{$chr} = $slice;
 	}
 	
-	if(!$ok) {
-		warn
-			"WARNING: Specified reference allele $ref_allele ",
-			"could not be matched",
-			($slice_ref_allele ? " to $slice_ref_allele" : ""),
-			" on line $line_number";
-		next;
+	# check reference allele if requested
+	if($check_ref) {
+	  my $ref_allele = (split /\//, $allele_string)[0];
+	  
+	  my $ok = 0;
+	  my $slice_ref_allele;
+	  
+	  # insertion, therefore no ref allele to check
+	  if($ref_allele eq '-') {
+		  $ok = 1;
+	  }
+	  else {
+		  my $slice_ref = $slice->sub_Slice($start, $end, $strand);
+		  
+		  if(!defined($slice_ref)) {
+			  warn "WARNING: Could not fetch sub-slice from $start\-$end\($strand\) on line $line_number";
+		  }
+		  
+		  else {
+			  $slice_ref_allele = $slice_ref->seq;
+			  $ok = ($slice_ref_allele eq $ref_allele ? 1 : 0);
+		  }
+	  }
+	  
+	  if(!$ok) {
+		  warn
+			  "WARNING: Specified reference allele $ref_allele ",
+			  "could not be matched",
+			  ($slice_ref_allele ? " to $slice_ref_allele" : ""),
+			  " on line $line_number";
+		  next;
+	  }
 	}
-  }
- 
-  # create a new VariationFeature object
-  my $new_vf = Bio::EnsEMBL::Variation::VariationFeature->new(
-    -start => $start,
-    -end => $end,
-    -slice => $slice,           # the variation must be attached to a slice
-    -allele_string => $allele_string,
-    -strand => $strand,
-    -map_weight => 1,
-    -adaptor => $vfa,           # we must attach a variation feature adaptor
-    -variation_name => (defined $var_name ? $var_name : $chr.'_'.$start.'_'.$allele_string),
-  );
-  
-  push @new_vfs, $new_vf;
-  
-  # if the array is "full" or there are no more items in @list
-  if(scalar @new_vfs == $buffer_size) {
+   
+	# create a new VariationFeature object
+	my $new_vf = Bio::EnsEMBL::Variation::VariationFeature->new(
+	  -start => $start,
+	  -end => $end,
+	  -slice => $slice,           # the variation must be attached to a slice
+	  -allele_string => $allele_string,
+	  -strand => $strand,
+	  -map_weight => 1,
+	  -adaptor => $vfa,           # we must attach a variation feature adaptor
+	  -variation_name => (defined $var_name ? $var_name : $chr.'_'.$start.'_'.$allele_string),
+	);
 	
-	# get consequences
-	# results are stored attached to reference VF objects
-	# so no need to capture return value here
-	$tva->fetch_all_by_VariationFeatures(\@new_vfs);
+	push @new_vfs, $new_vf;
 	
-	# now print the results to the file handle
-	&print_consequences(\@new_vfs, $out_file_handle);
-	
-	# clear the array
-	@new_vfs = ();
+	# if the array is "full" or there are no more items in @list
+	if(scalar @new_vfs == $buffer_size) {
+	  
+	  # get consequences
+	  # results are stored attached to reference VF objects
+	  # so no need to capture return value here
+	  $tva->fetch_all_by_VariationFeatures(\@new_vfs);
+	  
+	  # now print the results to the file handle
+	  &print_consequences(\@new_vfs, $out_file_handle);
+	  
+	  # clear the array
+	  @new_vfs = ();
+	}
   }
 }
 
@@ -330,10 +336,10 @@ sub print_consequences {
 				($con->{'translation_start'}, $con->{'translation_end'}) = ($con->{'translation_end'}, $con->{'translation_start'});
 			  }
 			  
-			  my $gene = $ga->fetch_by_transcript_stable_id($con->transcript->stable_id);
+			  my $gene = ($con->transcript ? $ga->fetch_by_transcript_stable_id($con->transcript->stable_id) : undef);
 			  
 			  my $hgnc_name;
-			  if($hgnc) {
+			  if($hgnc && $gene) {
 				my @entries = grep {$_->database eq 'HGNC'} @{$gene->get_all_DBEntries()};
 				$hgnc_name = $entries[0]->display_id || undef;
 			  }
@@ -362,8 +368,36 @@ sub parse_line {
 	my @data = (split /\s+/, $_);
 	
 	# pileup: chr1 60 T A
-	if(($input_format =~ /pileup/i) || ($data[0] =~ /(chr)?\w+/ && $data[1] =~ /\d+/ && $data[2] =~ /^[ACGTN-]+$/ && $data[3] =~ /^[ACGTN-]+$/)) {
-		return ($data[0], $data[1], $data[1], $data[2]."/".$data[3], 1, (defined $data[4] ? $data[4] : undef));
+	if(($input_format =~ /pileup/i) || ($data[0] =~ /(chr)?\w+/ && $data[1] =~ /\d+/ && $data[2] =~ /^[ACGTN-]+$/ && $data[3] =~ /^[ACGTNRYSWKM*+\/-]+$/)) {
+		my @return = ();
+		
+		if($data[2] ne "*"){
+			(my $var = unambiguity_code($data[3])) =~ s/$data[2]//ig;
+			if(length($var)==1){
+				push @return, [$data[0], $data[1], $data[1], $data[2]."/".$var, 1, undef];
+			}
+			else{
+				for my $nt(split //,$var){
+					push @return, [$data[0], $data[1], $data[1], $data[2]."/".$nt, 1, undef];
+				}
+			}
+		}
+		else{ #indel
+			my @genotype=split /\//,$data[3];
+			foreach my $allele(@genotype){
+				if(substr($allele,0,1) eq "+") { #ins
+					push @return, [$data[0], $data[1]+1, $data[1], "-/".substr($allele,1), 1, undef];
+				}
+				elsif(substr($allele,0,1) eq "-"){ #del
+					push @return, [$data[0], $data[1], $data[1]+length($data[3])-4, substr($allele,1)."/-", 1, undef];			
+				}
+				elsif($allele ne "*"){
+					warn("WARNING: invalid pileup indel genotype: $line\n");
+					push @return, ['non-variant'];
+				}
+			}
+		}
+		return \@return;
 	}
 	
 	# VCF: 20      14370   rs6054257 G     A      29    0       NS=58;DP=258;AF=0.786;DB;H2          GT:GQ:DP:HQ
@@ -371,7 +405,7 @@ sub parse_line {
 		
 		# non-variant line in VCF, return dummy line
 		if($data[4] eq '.') {
-			return ('non-variant');
+			return [['non-variant']];
 		}
 		
 		my ($start, $end, $alt) = ($data[1], $data[1], $data[4]);
@@ -380,7 +414,7 @@ sub parse_line {
 		if($alt =~ /D|I/) {
 			if($alt =~ /\,/) {
 				warn "WARNING: can't deal with multiple different indel types in one variation";
-				return ('non-variant');
+				return [['non-variant']];
 			}
 			
 			# deletion
@@ -400,14 +434,14 @@ sub parse_line {
 		}
 		
 		$alt =~ s/\,/\//g;
-		return ($data[0], $start, $end, $data[3]."/".$alt, 1, ($data[2] eq '.' ? undef : $data[2]));
+		return [[$data[0], $start, $end, $data[3]."/".$alt, 1, ($data[2] eq '.' ? undef : $data[2])]];
 	}
 	
 	# our format
 	else {
 		# we allow commas as delimiter so re-split
 		@data = (split /\s+|\,/, $_);
-		return @data;
+		return [\@data];
 	}
 }
 
