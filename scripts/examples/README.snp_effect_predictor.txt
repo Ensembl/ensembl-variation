@@ -205,6 +205,7 @@ Ensembl Registry file. This should be considered an option for advanced users -
 most users should use the default connection options. The file is a perl file
 containing an object for each database connection. An example is shown below:
 
+
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Variation::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Registry;
@@ -219,7 +220,6 @@ Bio::EnsEMBL::DBSQL::DBAdaptor->new(
   '-dbname'  => 'homo_sapiens_core_59_37d'
 );
 
-
 Bio::EnsEMBL::Variation::DBSQL::DBAdaptor->new(
   '-species' => "Homo_sapiens",
   '-group'   => "variation",
@@ -229,6 +229,7 @@ Bio::EnsEMBL::Variation::DBSQL::DBAdaptor->new(
   '-pass'    => '',
   '-dbname'  => 'homo_sapiens_variation_59_37d'
 );
+
 
 The minimum requirement is a connection to a core database for your species,
 such as homo_sapiens_core_59_37d in the example above. A variation database is
@@ -254,7 +255,7 @@ in the input file. Other dependent factors include:
   approximately linearly with the number of transcripts annotated in your
   species of interest.
 
-- buffer size : if large amounts of memory are avaiable, increasing the buffer
+- buffer size : if large amounts of memory are available, increasing the buffer
   size using the "-b" flag may provide significant speed benefits for large
   numbers of variations. Using a larger buffer size increases the number of
   simultaneous database transactions and reduces the number of transactions
