@@ -50,14 +50,6 @@ sub newFromFile {
 
     my $outfile = shift if @_;
 
-    # create a new LRG root - this can be a specific file
-    # or just a temporary file if one is not specified
-    my $lrg = LRG::LRG::new(defined $outfile ? $outfile : undef);
-
-    # set the current node to the root
-    my $current = $lrg;
-    my $name;
-
     # open the file
     open IN, $file or die("Could not read from file $file\n");
 
@@ -80,6 +72,25 @@ sub newFromFile {
 
     close IN;
 
+    my $lrg = LRG::LRG::newFromString($xml_string,$outfile);
+    
+    return $lrg;
+}
+
+sub newFromString {
+    my $xml_string = shift;
+    my $outfile = shift;
+    
+    # create a new LRG root - this can be a specific file
+    # or just a temporary file if one is not specified
+    my $lrg = LRG::LRG::new(defined $outfile ? $outfile : undef);
+    
+    # Stop here if xml_string is empty
+    return $lrg if (!defined($xml_string));
+    
+    my $current = $lrg;
+    my $name;
+    
     # get rid of newline and carriage return characters
     $xml_string =~ s/\r+//g;
     $xml_string =~ s/\n+//g;
