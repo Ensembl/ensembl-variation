@@ -128,6 +128,41 @@ sub fetch_by_name {
 }
 
 
+=head2 fetch_all_by_name_search
+
+  Arg [1]    : string $name
+  Example    : $pop = $pop_adaptor->fetch_all_by_name_search('CEU');
+  Description: Retrieves a list of population objects whose name matches the
+               search term.
+  Returntype : Listref of Bio::EnsEMBL::Variation::Population objects
+  Exceptions : throw if name argument is not defined
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub fetch_all_by_name_search {
+  my $self = shift;
+  my $name = shift;
+
+  throw('name argument expected') if(!defined($name));
+
+  my $sth = $self->prepare(q{SELECT p.sample_id, s.name, s.size, s.description
+                             FROM   population p, sample s
+                             WHERE  s.name like concat('%', ?, '%')
+			     AND    s.sample_id = p.sample_id});
+
+  $sth->bind_param(1,$name,SQL_VARCHAR);
+  $sth->execute();
+
+  my $result = $self->_objs_from_sth($sth);
+
+  $sth->finish();
+
+  return $result;
+}
+
+
 =head2 fetch_all_by_super_Population
 
   Arg [1]    : Bio::EnsEMBL::Variation::Population $pop
