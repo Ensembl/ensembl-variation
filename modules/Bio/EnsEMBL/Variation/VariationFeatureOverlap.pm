@@ -4,12 +4,12 @@ use strict;
 use warnings;
 
 sub new {
-    my ($class) = @;
+    my ($class) = @_;
     return bless {}, $class;
 }
 
 sub new_fast {
-    my ($class, $hashref) = @;
+    my ($class, $hashref) = @_;
     return bless $hashref, $class;
 }
 
@@ -110,12 +110,12 @@ use strict;
 use warnings;
 
 sub new {
-    my ($class) = @;
+    my ($class) = @_;
     return bless {}, $class;
 }
 
 sub new_fast {
-    my ($class, $hashref) = @;
+    my ($class, $hashref) = @_;
     return bless $hashref, $class;
 }
 
@@ -139,12 +139,12 @@ use strict;
 use warnings;
 
 sub new {
-    my ($class) = @;
+    my ($class) = @_;
     return bless {}, $class;
 }
 
 sub new_fast {
-    my ($class, $hashref) = @;
+    my ($class, $hashref) = @_;
     return bless $hashref, $class;
 }
 
@@ -184,7 +184,7 @@ sub affects_cds {
         if (@{ $vfo->pep_coords } != 1) {
             $self->{affects_cds} = 0;
         }
-        elsif @{ $vfo->pep_coords}[0]->isa('Bio::EnsEMBL::Mapper::Gap') {
+        elsif (@{ $vfo->pep_coords}[0]->isa('Bio::EnsEMBL::Mapper::Gap')) {
             $self->{affects_cds} = 0;
         }
         else {
