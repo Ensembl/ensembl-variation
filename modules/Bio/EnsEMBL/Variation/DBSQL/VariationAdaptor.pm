@@ -89,7 +89,7 @@ sub fetch_by_dbID {
   my $sth = $self->prepare
     (q{SELECT v.variation_id, v.name, v.validation_status, s1.name, s1.description, s1.url, s1.somatic, v.ancestral_allele,
               a.allele_id, a.subsnp_id, a.allele, a.frequency, a.sample_id, vs.moltype,
-              vs.name, s2.name, f.description, ((fs.up_seq != 'NULL' AND fs.up_seq is not null) OR (fs.down_seq is not null AND fs.down_seq != 'NULL'))
+              vs.name, s2.name, f.description, (fs.up_seq is not null OR fs.down_seq is not null)
        FROM   (variation v, source s1)
 	       LEFT JOIN allele a ON v.variation_id = a.variation_id
 		   LEFT JOIN flanking_sequence fs ON v.variation_id = fs.variation_id
@@ -143,7 +143,7 @@ sub fetch_by_name {
   my $sth = $self->prepare
     (qq{SELECT v.variation_id, v.name, v.validation_status, s1.name, s1.description, s1.url, s1.somatic, v.ancestral_allele, 
                a.allele_id, a.subsnp_id, a.allele, a.frequency, a.sample_id, vs.moltype,
-              vs.name, s2.name, f.description, ((fs.up_seq != 'NULL' AND fs.up_seq is not null) OR (fs.down_seq is not null AND fs.down_seq != 'NULL'))
+              vs.name, s2.name, f.description, (fs.up_seq is not null OR fs.down_seq is not null)
 	  FROM   (variation v, source s1)
 	     LEFT JOIN allele a on v.variation_id = a.variation_id
 		 LEFT JOIN flanking_sequence fs on v.variation_id = fs.variation_id
@@ -168,7 +168,7 @@ sub fetch_by_name {
     $sth = $self->prepare
       (qq{SELECT v.variation_id, v.name, v.validation_status, s1.name, s1.description, s1.url, s1.somatic, v.ancestral_allele, 
                  a.allele_id, a.subsnp_id, a.allele, a.frequency, a.sample_id, vs1.moltype,
-                vs2.name, s2.name, NULL, ((fs.up_seq != 'NULL' AND fs.up_seq is not null) OR (fs.down_seq is not null AND fs.down_seq != 'NULL'))
+                vs2.name, s2.name, NULL, (fs.up_seq is not null OR fs.down_seq is not null)
          FROM variation v, source s1, source s2, allele a,
                 variation_synonym vs1, variation_synonym vs2, flanking_sequence fs
          WHERE  v.variation_id = a.variation_id
@@ -300,7 +300,7 @@ sub fetch_all_by_dbID_list {
   while(@$list) {
     my @ids = (@$list > $max) ? splice(@$list, 0, $max) : splice(@$list, 0);
 
-    my $id_str = (@ids > 1)  ? " IN (".join(',',@ids).")"   :   ' = '.$ids[0];
+    my $id_str = (@ids > 1)  ? " IN (".join(',',@ids).")"   :   ' = \''.$ids[0].'\'';
 
     my $sth = $self->prepare
       (qq{SELECT v.variation_id, v.name, v.validation_status, s1.name, s1.description, s1.url, s1.somatic, v.ancestral_allele,
@@ -361,8 +361,7 @@ sub fetch_all_by_name_list {
   while(@$list) {
     my @ids = (@$list > $max) ? splice(@$list, 0, $max) : splice(@$list, 0);
 
-    my $id_str = (@ids > 1)  ? " IN (".join(',', map {"'$_'"} @ids).")"   :   ' = '.$ids[0];
-
+    my $id_str = (@ids > 1)  ? " IN (".join(',', map {"'$_'"} @ids).")"   :   ' = \''.$ids[0].'\'';
     my $sth = $self->prepare
       (qq{SELECT v.variation_id, v.name, v.validation_status, s1.name, s1.description, s1.url, s1.somatic, v.ancestral_allele,
                  a.allele_id, a.subsnp_id, a.allele, a.frequency, a.sample_id, vs.moltype,
@@ -381,9 +380,41 @@ sub fetch_all_by_name_list {
 
     $sth->finish();
 
+    # Implementing the alias search functionality in fetch_by_name
+    
+    ## Finding which elements in $list yielded no results above
+    my %missing_variations_temp=();
+    @missing_variations_temp{@ids}=();
+    foreach(@$result){
+      delete $missing_variations_temp{$_->name};
+  }
+    my @missing_names=keys(%missing_variations_temp);
+
+    ## A near-verbatim copy of the code in fetch_by_name, changing only for execution method
+    if(@missing_names) {
+      my $missing_id_str = (@missing_names > 1)  ? " IN (".join(',', map {"'$_'"} @missing_names).")"   :   ' = \''.$missing_names[0].'\'';
+      $sth = $self->prepare
+        (qq{SELECT v.variation_id, v.name, v.validation_status, s1.name, s1.description, s1.url, s1.somatic, v.ancestral_allele, 
+                   a.allele_id, a.subsnp_id, a.allele, a.frequency, a.sample_id, vs1.moltype,
+                  vs2.name, s2.name, NULL, 0
+           FROM variation v, source s1, source s2, allele a,
+                  variation_synonym vs1, variation_synonym vs2, flanking_sequence fs
+           WHERE  v.variation_id = a.variation_id
+           AND    v.variation_id = vs1.variation_id
+           AND    v.variation_id = vs2.variation_id
+           AND    v.source_id = s1.source_id
+           AND    vs2.source_id = s2.source_id
+	  AND    v.variation_id = fs.variation_id
+	    AND    vs1.name $missing_id_str
+	    ORDER BY a.allele_id
+        });
+      $sth->execute();
+      my $missing_result = $self->_objs_from_sth($sth);
+      push @out, @$missing_result if (@$missing_result);
+      $sth->finish();
+      }
     push @out, @$result if(@$result);
   }
-
   return \@out;
 }
 
@@ -509,13 +540,7 @@ sub get_flanking_sequence{
   $sth->bind_columns(\($seq_region_id, $seq_region_strand, $up_seq, $down_seq, $up_seq_region_start, $up_seq_region_end, $down_seq_region_start, $down_seq_region_end));
   $sth->fetch();
   $sth->finish();
-  
-  # HACKS - REMOVE WHEN HGMD DATA FIXED
-  $up_seq = undef if $up_seq eq 'NULL';
-  $down_seq = undef if $down_seq eq 'NULL';
-  $down_seq_region_end = $down_seq_region_start + 99 if $down_seq_region_end == $down_seq_region_start;
-  # END HACKS
-  
+ 
   if (!defined $down_seq){
 	if( $seq_region_id){
 	  $down_seq = $self->_get_flank_from_core($seq_region_id, 
