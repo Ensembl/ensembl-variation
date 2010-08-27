@@ -3,6 +3,10 @@ package Bio::EnsEMBL::Variation::Utils::VariationEffect;
 use strict;
 use warnings;
 
+use Bio::EnsEMBL::Variation::VariationFeatureOverlap;
+use Bio::EnsEMBL::Variation::VariationFeatureOverlapAllele;
+use Bio::EnsEMBL::Variation::OverlapConsequence;
+
 use vars qw(@ISA @EXPORT_OK);
 
 @ISA = qw(Exporter);
@@ -90,7 +94,24 @@ sub within_nmd_transcript {
     my $vf      = $vfoa->variation_feature_overlap->variation_feature;
     my $tran    = $vfoa->variation_feature_overlap->feature; 
 
-    return (within_transcript($vf, $tran) and $tran->biotype eq 'nonsense_mediated_decay');
+    return (within_transcript($vfoa) and $tran->biotype eq 'nonsense_mediated_decay');
+}
+
+sub within_non_coding_gene {
+    my $vfoa    = shift;
+    my $vf      = $vfoa->variation_feature_overlap->variation_feature;
+    my $tran    = $vfoa->variation_feature_overlap->feature;
+    
+    return 0 if within_miRNA($vfoa);
+    
+    return (within_transcript($vfoa) and (not $tran->translation));
+}
+
+sub within_miRNA {
+    my $vfoa    = shift;
+    my $tran    = $vfoa->variation_feature_overlap->feature;
+    
+    return 0;
 }
 
 sub _start_splice_site {
@@ -205,158 +226,123 @@ sub complex_indel {
     return @{ $vfoa->variation_feature_overlap->cds_coords } > 1;
 }
 
-my $_coding_effect_cache = {};
-
-sub _calc_coding_effect {
-    
-    my $vfoa = shift;
-
-    my $allele_effects = $_coding_effect_cache->{$tran}->{$vf} ||= {};
-
-    unless (keys %$allele_effects) {
-
-        my @pep_coords = _map_coords($vf, $tran, 'pep');
-        my @cds_coords = _map_coords($vf, $tran, 'cds');
-    
-        return unless @pep_coords == 1;
-
-        my $pep_coord = shift @pep_coords;
-        my $cds_coord = shift @cds_coords;
-
-        return if $pep_coord->isa('Bio::EnsEMBL::Mapper::Gap');
-
-        my $peptide = $tran->translate->seq;
-        my $cds     = $tran->translateable_seq;
-
-        my $var_pep_len = $pep_coord->end - $pep_coord->start + 1;
-
-        my $ref_aa = substr($peptide, $pep_coord->start - 1, $var_pep_len);
-
-        print "peptide:\n$peptide\nvar_pep_len: $var_pep_len\nref aa: $ref_aa \n";
-        print "pep_coords: ",$pep_coord->start," - ", $pep_coord->end, "\n";
-
-        my @alleles = split /\//, $vf->allele_string;
-
-        unless ($vf->strand == $tran->strand) {
-            map { reverse_comp(\$_) } @alleles;
-        }
-
-        my $var_nt_len = $cds_coord->end - $cds_coord->start + 1;
-
-        my $codon_cds_start = $pep_coord->start * 3 - 2;
-        my $codon_cds_end   = $pep_coord->end * 3;
-        my $codon_len       = $codon_cds_ends - $codon_cds_start + 1;
-
-        my $ref_codon = substr($cds, $codon_cds_start-1, $codon_len);
-
-        for my $allele (@alleles) {
-            $allele =~ s/-//; # replace insertions with an empty string
-
-            my $allele_len = length($allele);
-
-            if (abs($allele_len - $var_nt_len) % 3) {
-                # frameshift_coding
-            }
-
-            my $new_cds = $cds;
-
-            substr($new_cds, $cds_coord->start-1, $allele_len) = $allele;
-
-            my $new_codon = substr($new_cds, $codon_cds_start-1, $codon_len + ($allele_len - $var_nt_len));
-
-            my $new_codon_seq = Bio::Seq->new(
-                -seq        => $new_codon,
-                -moltype    => 'dna',
-                -alphabet   => 'dna'
-            );
-
-            my $new_aa = $new_codon_seq->translate;
-
-            $new_aa = '-' if length($new_aa) < 1;
-
-            if (lc($new_aa) ne lc($ref_aa)) {
-                if ($new_aa =~ /\*/ and $ref_aa !~ /\*/) {
-                    # stop gained
-                }
-                elsif ($ref_aa =~ /\*/ and $ref)
-            }
-            else {
-                # synonymous coding
-                return 1;
-            }
-        }
-    }
-
-    return $allele ? $allele_effect->{$allele} : $allele_effect;
-}
-
 sub synonymous_coding {
     my $vfoa = shift;
 
     return 0 unless $vfoa->affects_cds;
     
-    return $vfoa->aa eq $vfoa->variation_feature_overlap->reference_allele->aa;
+    my $alt_aa = $vfoa->aa;
+    my $ref_aa = $vfoa->variation_feature_overlap->reference_allele->aa;
+    
+    print "ref_aa: $ref_aa alt_aa: $alt_aa\n";
+    
+    return 0 if ($alt_aa eq '-' or $ref_aa eq '-');
+    
+    return $alt_aa eq $ref_aa;
 }
 
-sub non_synonynmous_coding {
+sub non_synonymous_coding {
     my $vfoa = shift;
 
     return 0 unless $vfoa->affects_cds;
 
-    return $vfoa->aa ne $vfoa->variation_feature_overlap->reference_allele->aa;
+    my $alt_aa = $vfoa->aa;
+    my $ref_aa = $vfoa->variation_feature_overlap->reference_allele->aa;
+    
+    return 0 if ($alt_aa eq '-' or $ref_aa eq '-');
+    
+    return $alt_aa ne $ref_aa;
 }
 
 sub stop_gained {
     my $vfoa = shift;
 
     return 0 unless $vfoa->affects_cds;
+    
+    my $alt_aa = $vfoa->aa;
+    my $ref_aa = $vfoa->variation_feature_overlap->reference_allele->aa;
+    
+    return 0 unless $alt_aa and $ref_aa;
 
-    return $vfoa->aa =~ /\*/ and $vfoa->variation_feature_overlap->reference_allele->aa !~ /\*/;
+    return ($alt_aa =~ /\*/ and $ref_aa !~ /\*/);
 }
 
 sub stop_lost {
     my $vfoa = shift;
 
     return 0 unless $vfoa->affects_cds;
+    
+    my $alt_aa = $vfoa->aa;
+    my $ref_aa = $vfoa->variation_feature_overlap->reference_allele->aa;
+    
+    return 0 unless $alt_aa and $ref_aa;
 
-    return $vfoa->aa !~ /\*/ and $vfoa->variation_feature_overlap->reference_allele->aa =~ /\*/;
+    return ($alt_aa !~ /\*/ and $ref_aa =~ /\*/);
 }
 
 sub frameshift {
     my $vfoa = shift;
 
     return 0 unless $vfoa->affects_cds;
+    
+    return 0 if partial_codon($vfoa);
 
     my $vfo = $vfoa->variation_feature_overlap;
     my $var_len = $vfo->cds_end - $vfo->cds_start + 1;
 
-    return abs( length($vfoa->seq) - $var_len ) % 3;
+    my $seq = $vfoa->seq;
+    
+    $seq = '' if $seq eq '-';
+
+    return abs( length($seq) - $var_len ) % 3;
 }
 
-# NB: most specific rules should go first
+sub partial_codon {
+    my $vfoa = shift;
+    
+    return 0 unless $vfoa->affects_cds;
 
-my $effect_rules = {
-    '5KB_upstream_variant'          => \&upstream_5KB,
-    '5KB_downstream_variant'        => \&downstream_5KB,
-    '2KB_upstream_variant'          => \&upstream_2KB,
-    '2KB_downstream_variant'        => \&downstream_2KB,
-    'splice_donor_variant'          => \&donor_splice_site,
-    'splice_acceptor_variant'       => \&acceptor_splice_site,
-    'splice_region_variant'         => \&splice_region,
-    'intron_variant'                => \&within_intron,
-    '5_prime_UTR_variant'           => \&within_5_prime_utr,
-    '3_prime_UTR_variant'           => \&within_3_prime_utr,
-    'complex_change_in_transcript'  => \&complex_indel,
-    'synonymous_codon'              => \&synonymous_coding,
-    'non_synonymous_codon'          => \&non_synonymous_coding,
-    'frameshift_variant'            => \&frameshift,
+    my $vfo = $vfoa->variation_feature_overlap;
+
+    my $cds_length = length($vfo->feature->translateable_seq);
+
+    my $codon_cds_start = ($vfo->pep_start * 3) - 2;
+
+    my $last_codon_length = $cds_length - ($codon_cds_start - 1);
+    
+    return ($last_codon_length < 3 and $last_codon_length > 0);
+}
+
+my $effect_rules = { 
+    '5KB_upstream_variant'              => \&upstream_5KB,
+    '5KB_downstream_variant'            => \&downstream_5KB,
+    '2KB_upstream_variant'              => \&upstream_2KB,
+    '2KB_downstream_variant'            => \&downstream_2KB,
+    'splice_donor_variant'              => \&donor_splice_site,
+    'splice_acceptor_variant'           => \&acceptor_splice_site,
+    'splice_site_variant'               => \&essential_splice_site,
+    'splice_region_variant'             => \&splice_region,
+    'intron_variant'                    => \&within_intron,
+    '5_prime_UTR_variant'               => \&within_5_prime_utr,
+    '3_prime_UTR_variant'               => \&within_3_prime_utr,
+    'complex_change_in_transcript'      => \&complex_indel,
+    'synonymous_codon'                  => \&synonymous_coding,
+    'non_synonymous_codon'              => \&non_synonymous_coding,
+    'stop_gained'                       => \&stop_gained,
+    'stop_lost'                         => \&stop_lost,
+    'frameshift_variant'                => \&frameshift,
+    'incomplete_terminal_codon_variant' => \&partial_codon,
+    'NMD_transcript_variant'            => \&within_nmd_transcript,
+    'non_coding_RNA_variant'            => \&within_non_coding_gene,
+    'mature_miRNA_variant'              => \&within_miRNA,
+    
 };
 
 my @consequences;
 
 for my $effect (keys %$effect_rules) {
     my $predicate = $effect_rules->{$effect};
-    push @consequences, Bio::EnsEMBL::Variation::Consequence->new_fast({
+    push @consequences, Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
             SO_term     => $effect,
             predicate   => $predicate,
         });
@@ -377,7 +363,7 @@ sub transcript_effect {
 
         my $vfo = Bio::EnsEMBL::Variation::VariationFeatureOverlap->new_fast({            
             variation_feature  => $vf,
-            feature            => $transcript,
+            feature            => $tran,
             feature_type       => 'transcript',
         });
         
@@ -389,19 +375,26 @@ sub transcript_effect {
 
         my @alleles = split /\//, $vf->allele_string;
 
+        # if the strands differ we need to reverse complement the alleles from the allele_string
+        unless ($tran->strand == $vf->strand) {
+            map { reverse_comp(\$_) } @alleles;
+        }
+
         my $ref_allele = shift @alleles;
 
         my $ref_vfoa = Bio::EnsEMBL::Variation::VariationFeatureOverlapAllele->new_fast({
-            variation_feature_overlap   => $vfo
+            variation_feature_overlap   => $vfo,
             seq                         => $ref_allele,
             is_reference                => 1,
         });
 
         $vfo->reference_allele($ref_vfoa);
+        $vfo->alleles($ref_vfoa);
 
         for my $allele (@alleles) {
+            
             my $vfoa = Bio::EnsEMBL::Variation::VariationFeatureOverlapAllele->new_fast({
-                variation_feature_overlap   => $vfo
+                variation_feature_overlap   => $vfo,
                 seq                         => $allele,
             });
             $vfoa->calc_consequences(\@consequences);
