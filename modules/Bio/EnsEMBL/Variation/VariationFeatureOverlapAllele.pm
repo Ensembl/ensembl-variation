@@ -3,6 +3,8 @@ package Bio::EnsEMBL::Variation::VariationFeatureOverlapAllele;
 use strict;
 use warnings;
 
+use Scalar::Util qw(weaken);
+
 sub new {
     my ($class) = @_;
     return bless {}, $class;
@@ -10,12 +12,19 @@ sub new {
 
 sub new_fast {
     my ($class, $hashref) = @_;
-    return bless $hashref, $class;
+    my $self = bless $hashref, $class;
+    # avoid a memory leak, because the vfo also has a reference to us
+    weaken $self->{variation_feature_overlap} if $self->{variation_feature_overlap};
+    return $self;
 }
 
 sub variation_feature_overlap {
     my ($self, $variation_feature_overlap) = @_;
-    $self->{variation_feature_overlap} = $variation_feature_overlap if $variation_feature_overlap;
+    if ($variation_feature_overlap) {
+        $self->{variation_feature_overlap} = $variation_feature_overlap;
+        # avoid a memory leak, because the vfo also has a reference to us
+        weaken $self->{variation_feature_overlap}
+    }
     return $self->{variation_feature_overlap};
 }
 
@@ -91,7 +100,7 @@ sub affects_cds {
         
             $ref_aa = '-' unless $ref_aa;
 
-            print "PEPTIDE:\n$peptide\nstart: ".$vfo->pep_start." end: ".$vfo->pep_end." len: ".$var_pep_len."\nREFERENCE AA: $ref_aa\n";
+            #print "PEPTIDE:\n$peptide\nstart: ".$vfo->pep_start." end: ".$vfo->pep_end." len: ".$var_pep_len."\nREFERENCE AA: $ref_aa\n";
 
             $vfo->reference_allele->aa($ref_aa);
 
@@ -169,7 +178,7 @@ sub calc_consequences {
     for my $consequence (@$consequences) {
         if ($consequence->predicate->($self)) {
             $self->consequences($consequence);
-            #last if $consequence->is_definitive;
+            last if $consequence->is_definitive;
         }
     }
 }

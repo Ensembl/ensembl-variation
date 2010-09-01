@@ -112,6 +112,17 @@ sub alleles {
     return $alleles;
 }
 
+sub tran_introns {
+    my $self = shift;
+    
+    unless ($self->{_tran_introns}) {
+        $self->{_tran_introns} = $self->feature->get_all_Introns;
+    }
+    
+    return $self->{_tran_introns};
+}
+
+
 1;
 
 
