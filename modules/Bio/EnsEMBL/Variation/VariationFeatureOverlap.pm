@@ -91,15 +91,25 @@ sub reference_allele {
     return $self->{reference_allele};
 }
 
-sub alleles {
-    my ($self, $allele) = @_;
+sub alt_alleles {
+    my ($self, @new_alt_alleles) = @_;
 
-    if ($allele) {
-        my $alleles = $self->{alleles} ||= [];
-        push @$alleles, $allele
+    if (@new_alt_alleles) {
+        my $alt_alleles = $self->{alt_alleles} ||= [];
+        push @$alt_alleles, @new_alt_alleles;
     }
 
-    return $self->{alleles};
+    return $self->{alt_alleles};
+}
+
+sub alleles {
+    my ($self) = @_;
+
+    my $alleles = $self->alt_alleles || [];
+    
+    unshift @$alleles, $self->reference_allele;
+
+    return $alleles;
 }
 
 1;
