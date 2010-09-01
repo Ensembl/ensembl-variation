@@ -330,30 +330,6 @@ sub partial_codon {
     return ( $last_codon_length < 3 and $last_codon_length > 0 );
 }
 
-my $effect_rules = { 
-    '5KB_upstream_variant'              => \&upstream_5KB,
-    '5KB_downstream_variant'            => \&downstream_5KB,
-    '2KB_upstream_variant'              => \&upstream_2KB,
-    '2KB_downstream_variant'            => \&downstream_2KB,
-    'splice_donor_variant'              => \&donor_splice_site,
-    'splice_acceptor_variant'           => \&acceptor_splice_site,
-    'splice_site_variant'               => \&essential_splice_site,
-    'splice_region_variant'             => \&splice_region,
-    'intron_variant'                    => \&within_intron,
-    '5_prime_UTR_variant'               => \&within_5_prime_utr,
-    '3_prime_UTR_variant'               => \&within_3_prime_utr,
-    'complex_change_in_transcript'      => \&complex_indel,
-    'synonymous_codon'                  => \&synonymous_coding,
-    'non_synonymous_codon'              => \&non_synonymous_coding,
-    'stop_gained'                       => \&stop_gained,
-    'stop_lost'                         => \&stop_lost,
-    'frameshift_variant'                => \&frameshift,
-    'incomplete_terminal_codon_variant' => \&partial_codon,
-    'NMD_transcript_variant'            => \&within_nmd_transcript,
-    'non_coding_RNA_variant'            => \&within_non_coding_gene,
-    'mature_miRNA_variant'              => \&within_miRNA,
-};
-
 my @conseq_hashes = ( 
     {
         SO_term         => '5KB_upstream_variant',
