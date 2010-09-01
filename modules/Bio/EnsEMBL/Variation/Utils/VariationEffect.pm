@@ -25,24 +25,28 @@ sub overlap {
 
 sub overlaps_transcript {
     my ($vf, $tran) = @_;
+    
+    return 0 unless $tran->isa('Bio::EnsEMBL::Transcript');
+    
     return overlap($vf->start, $vf->end, $tran->start - 5000, $tran->end + 5000);
 }
 
 sub within_transcript {
     my $vfoa    = shift;
     my $vf      = $vfoa->variation_feature_overlap->variation_feature;
-    my $tran    = $vfoa->variation_feature_overlap->feature; 
+    my $tran    = $vfoa->variation_feature_overlap->feature;
+    
     return overlap($vf->start, $vf->end, $tran->start, $tran->end);
 }
 
 sub _before_start {
     my ($vf, $tran, $dist) = @_;
-    return ($vf->end >= ($tran->start - $dist) and $vf->end < $tran->start);
+    return ( ($vf->end >= ($tran->start - $dist)) and ($vf->end < $tran->start) );
 }
 
 sub _after_end {
     my ($vf, $tran, $dist) = @_;
-    return ($vf->start <= ($tran->end + $dist) and $vf->start > $tran->end);
+    return ( ($vf->start <= ($tran->end + $dist)) and ($vf->start > $tran->end) );
 }
 
 sub _upstream {
@@ -59,8 +63,6 @@ sub upstream_5KB {
     my $vfoa    = shift;
     my $vf      = $vfoa->variation_feature_overlap->variation_feature;
     my $tran    = $vfoa->variation_feature_overlap->feature; 
-   
-    return 0 unless $tran->isa('Bio::EnsEMBL::Transcript');
 
     return _upstream($vf, $tran, 5000);
 }
@@ -91,25 +93,38 @@ sub downstream_2KB {
 
 sub within_nmd_transcript {
     my $vfoa    = shift;
-    my $vf      = $vfoa->variation_feature_overlap->variation_feature;
     my $tran    = $vfoa->variation_feature_overlap->feature; 
 
-    return (within_transcript($vfoa) and $tran->biotype eq 'nonsense_mediated_decay');
+    return ( within_transcript($vfoa) and ($tran->biotype eq 'nonsense_mediated_decay') );
 }
 
 sub within_non_coding_gene {
     my $vfoa    = shift;
-    my $vf      = $vfoa->variation_feature_overlap->variation_feature;
     my $tran    = $vfoa->variation_feature_overlap->feature;
     
     return 0 if within_miRNA($vfoa);
     
-    return (within_transcript($vfoa) and (not $tran->translation));
+    return ( within_transcript($vfoa) and (not $tran->translation) );
 }
 
 sub within_miRNA {
     my $vfoa    = shift;
+    my $vf      = $vfoa->variation_feature_overlap->variation_feature;
     my $tran    = $vfoa->variation_feature_overlap->feature;
+    
+    if ($tran->biotype eq 'miRNA') {
+        my ($attribute) = @{ $tran->get_all_Attributes('miRNA') };
+        
+        if (defined $attribute && $attribute->value =~ /(\d+)-(\d+)/) { 
+            for my $coord ($tran->get_TranscriptMapper->cdna2genomic($1, $2, $tran->strand)) {
+                if ($coord->isa('Bio::EnsEMBL::Mapper::Coordinate')) {
+                    if (overlap($vf->start, $vf->end, $coord->start, $coord->end)) {
+                        return 1;
+                    }
+                }
+            }
+        }
+    }
     
     return 0;
 }
@@ -156,7 +171,7 @@ sub acceptor_splice_site {
 
 sub essential_splice_site {
     my $vfoa    = shift;
-    return (acceptor_splice_site($vfoa) or donor_splice_site($vfoa));
+    return ( acceptor_splice_site($vfoa) or donor_splice_site($vfoa) );
 }
 
 sub splice_region {
@@ -234,11 +249,12 @@ sub synonymous_coding {
     my $alt_aa = $vfoa->aa;
     my $ref_aa = $vfoa->variation_feature_overlap->reference_allele->aa;
     
-    print "ref_aa: $ref_aa alt_aa: $alt_aa\n";
+    my $alt_seq = $vfoa->seq;
+    my $ref_seq = $vfoa->variation_feature_overlap->reference_allele->seq;
     
-    return 0 if ($alt_aa eq '-' or $ref_aa eq '-');
+    return 0 if ($alt_seq eq '-' or $ref_seq eq '-');
     
-    return $alt_aa eq $ref_aa;
+    return ( $alt_aa eq $ref_aa );
 }
 
 sub non_synonymous_coding {
@@ -249,9 +265,12 @@ sub non_synonymous_coding {
     my $alt_aa = $vfoa->aa;
     my $ref_aa = $vfoa->variation_feature_overlap->reference_allele->aa;
     
-    return 0 if ($alt_aa eq '-' or $ref_aa eq '-');
+    my $alt_seq = $vfoa->seq;
+    my $ref_seq = $vfoa->variation_feature_overlap->reference_allele->seq;
     
-    return $alt_aa ne $ref_aa;
+    return 0 if ($alt_seq eq '-' or $ref_seq eq '-');
+    
+    return ( $alt_aa ne $ref_aa );
 }
 
 sub stop_gained {
@@ -261,10 +280,8 @@ sub stop_gained {
     
     my $alt_aa = $vfoa->aa;
     my $ref_aa = $vfoa->variation_feature_overlap->reference_allele->aa;
-    
-    return 0 unless $alt_aa and $ref_aa;
 
-    return ($alt_aa =~ /\*/ and $ref_aa !~ /\*/);
+    return ( ($alt_aa =~ /\*/) and ($ref_aa !~ /\*/) );
 }
 
 sub stop_lost {
@@ -274,10 +291,8 @@ sub stop_lost {
     
     my $alt_aa = $vfoa->aa;
     my $ref_aa = $vfoa->variation_feature_overlap->reference_allele->aa;
-    
-    return 0 unless $alt_aa and $ref_aa;
 
-    return ($alt_aa !~ /\*/ and $ref_aa =~ /\*/);
+    return ( ($alt_aa !~ /\*/) and ($ref_aa =~ /\*/) );
 }
 
 sub frameshift {
@@ -304,13 +319,15 @@ sub partial_codon {
 
     my $vfo = $vfoa->variation_feature_overlap;
 
-    my $cds_length = length($vfo->feature->translateable_seq);
+    my $tran = $vfo->feature; 
+
+    my $cds_length = length $tran->translateable_seq;
 
     my $codon_cds_start = ($vfo->pep_start * 3) - 2;
 
     my $last_codon_length = $cds_length - ($codon_cds_start - 1);
     
-    return ($last_codon_length < 3 and $last_codon_length > 0);
+    return ( $last_codon_length < 3 and $last_codon_length > 0 );
 }
 
 my $effect_rules = { 
@@ -335,77 +352,216 @@ my $effect_rules = {
     'NMD_transcript_variant'            => \&within_nmd_transcript,
     'non_coding_RNA_variant'            => \&within_non_coding_gene,
     'mature_miRNA_variant'              => \&within_miRNA,
-    
 };
 
-my @consequences;
+my @conseq_hashes = ( 
+    {
+        SO_term         => '5KB_upstream_variant',
+        predicate       => \&upstream_5KB,
+        ensembl_term    => 'UPSTREAM',
+        SO_id           => 'SO:0001635',
+        is_definitive   => 1,
+        rank            => 1,
+    },
+    {
+        SO_term         => '5KB_downstream_variant',
+        predicate       => \&downstream_5KB,
+        ensembl_term    => 'DOWNSTREAM',
+        SO_id           => 'SO:0001633',
+        is_definitive   => 1,
+    },
+    {
+        SO_term         => '2KB_upstream_variant',
+        predicate       => \&upstream_2KB,
+        ensembl_term    => 'UPSTREAM',
+        SO_id           => 'SO:0001636',
+        NCBI_term       => 'near-gene-5',
+        is_definitive   => 1,
+    },
+    {
+        SO_term         => '2KB_downstream_variant',
+        predicate       => \&downstream_2KB,
+        ensembl_term    => 'DOWNSTREAM',
+        SO_id           => 'SO:0001634',
+        NCBI_term       => 'near-gene-3',
+        is_definitive   => 1,
+    },
+    {
+        SO_term         => 'splice_donor_variant',
+        predicate       => \&donor_splice_site,
+        ensembl_term    => 'ESSENTIAL_SPLICE_SITE',
+        SO_id           => 'SO:0001575',
+        NCBI_term       => 'splice-5',
+        is_definitive   => 0,
+    },
+    {
+        SO_term         => 'splice_acceptor_variant',
+        predicate       => \&acceptor_splice_site,
+        ensembl_term    => 'ESSENTIAL_SPLICE_SITE',
+        SO_id           => 'SO:0001574',
+        NCBI_term       => 'splice-3',
+        is_definitive   => 0,
+    },
+    {
+        SO_term         => 'splice_region_variant',
+        predicate       => \&splice_region,
+        ensembl_term    => 'SPLICE_SITE',
+        SO_id           => 'SO:0001630',
+        is_definitive   => 0,
+    },
+    {
+        SO_term         => 'intron_variant',
+        predicate       => \&within_intron,
+        ensembl_term    => 'INTRONIC',
+        SO_id           => 'SO:0001627',
+        NCBI_term       => 'intron',
+        is_definitive   => 0,
+    },
+    {
+        SO_term         => '5_prime_UTR_variant',
+        predicate       => \&within_5_prime_utr,
+        ensembl_term    => '5PRIME_UTR',
+        SO_id           => 'SO:0001623',
+        NCBI_term       => 'untranslated-5',
+        is_definitive   => 0,
+    }, 
+    {
+        SO_term         => '3_prime_UTR_variant',
+        predicate       => \&within_3_prime_utr,
+        ensembl_term    => '3PRIME_UTR',
+        SO_id           => 'SO:0001624',
+        NCBI_term       => 'untranslated-3',
+        is_definitive   => 0,
+    },
+    {
+        SO_term         => 'complex_change_in_transcript',
+        predicate       => \&complex_indel,
+        ensembl_term    => 'COMPLEX_INDEL',
+        SO_id           => 'SO:0001577',
+        is_definitive   => 0,
+    },
+    {
+        SO_term         => 'synonymous_codon',
+        predicate       => \&synonymous_coding,
+        ensembl_term    => 'SYNONYMOUS_CODING',
+        SO_id           => 'SO:0001588',
+        NCBI_term       => 'cds-synon',
+        is_definitive   => 1,
+    },
+    {
+        SO_term         => 'non_synonymous_codon',
+        predicate       => \&non_synonymous_coding,
+        ensembl_term    => 'NON_SYNONYMOUS_CODING',
+        SO_id           => 'SO:0001583',
+        NCBI_term       => 'missense',
+        is_definitive   => 1,
+    },
+    {
+        SO_term         => 'stop_gained',
+        predicate       => \&stop_gained,
+        ensembl_term    => 'STOP_GAINED',
+        SO_id           => 'SO:0001587',
+        NCBI_term       => 'nonsense',
+        is_definitive   => 1,
+    },
+    {
+        SO_term         => 'stop_lost',
+        predicate       => \&stop_lost,
+        ensembl_term    => 'STOP_LOST',
+        SO_id           => 'SO:0001578',
+        is_definitive   => 1,
+    },
+    {
+        SO_term         => 'frameshift_variant',
+        predicate       => \&frameshift,
+        ensembl_term    => 'FRAMESHIFT_CODING',
+        SO_id           => 'SO:0001589',
+        NCBI_term       => 'frameshift',
+        is_definitive   => 1,
+    },
+    {
+        SO_term         => 'incomplete_terminal_codon_variant',
+        predicate       => \&partial_codon,
+        ensembl_term    => 'PARTIAL_CODON',
+        SO_id           => 'SO:0001626',
+        is_definitive   => 1,
+    },
+    {
+        SO_term         => 'NMD_transcript_variant',
+        predicate       => \&within_nmd_transcript,
+        ensembl_term    => 'NMD_TRANSCRIPT',
+        SO_id           => 'SO:0001621',
+        is_definitive   => 1,
+    },
+    {
+        SO_term         => 'non_coding_RNA_variant',
+        predicate       => \&within_non_coding_gene,
+        ensembl_term    => 'WITHIN_NON_CODING_GENE',
+        SO_id           => 'SO:0001619',
+        is_definitive   => 1,
+    },
+    {
+        SO_term         => 'mature_miRNA_variant',
+        predicate       => \&within_miRNA,
+        ensembl_term    => 'WITHIN_MATURE_miRNA',
+        SO_id           => 'SO:0001620',
+        is_definitive   => 1,
+    },
+);
 
-for my $effect (keys %$effect_rules) {
-    my $predicate = $effect_rules->{$effect};
-    push @consequences, Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
-            SO_term     => $effect,
-            predicate   => $predicate,
-        });
-}
+my @consequences = map {
+    Bio::EnsEMBL::Variation::OverlapConsequence->new_fast($_);
+} @conseq_hashes;
 
 sub transcript_effect {
 
     my ($vf, $tran) = @_;
 
-    my $result = {};
+    return undef unless overlaps_transcript($vf, $tran);
 
-    print "T: ",$tran->start, "-", $tran->end," ",$tran->strand,"\n";
-    print "V: ",$vf->start, "-", $vf->end," ",$vf->strand,"\n";
-    print $tran->stable_id,"\n";
-    print $vf->variation_name,"\n";
+    my $vfo = Bio::EnsEMBL::Variation::VariationFeatureOverlap->new_fast({            
+        variation_feature  => $vf,
+        feature            => $tran,
+        feature_type       => 'transcript',
+    });
+       
+    # map the variation coords to cDNA, CDS and peptide coords
+    
+    my $tm = $tran->get_TranscriptMapper;
 
-    if (overlaps_transcript($vf, $tran)) {
+    $vfo->cdna_coords([$tm->genomic2cdna($vf->start, $vf->end, $tran->strand)]);
+    $vfo->cds_coords([$tm->genomic2cds($vf->start, $vf->end, $tran->strand)]);
+    $vfo->pep_coords([$tm->genomic2pep($vf->start, $vf->end, $tran->strand)]);
 
-        my $vfo = Bio::EnsEMBL::Variation::VariationFeatureOverlap->new_fast({            
-            variation_feature  => $vf,
-            feature            => $tran,
-            feature_type       => 'transcript',
+    my @alleles = split /\//, $vf->allele_string;
+
+    # if the strands differ we need to reverse complement the alleles from the allele_string
+    unless ($tran->strand == $vf->strand) {
+        map { reverse_comp(\$_) } @alleles;
+    }
+
+    my $ref_allele = shift @alleles;
+
+    my $ref_vfoa = Bio::EnsEMBL::Variation::VariationFeatureOverlapAllele->new_fast({
+        variation_feature_overlap   => $vfo,
+        seq                         => $ref_allele,
+        is_reference                => 1,
+    });
+
+    $vfo->reference_allele($ref_vfoa);
+    
+    for my $allele (@alleles) {
+        
+        my $vfoa = Bio::EnsEMBL::Variation::VariationFeatureOverlapAllele->new_fast({
+            variation_feature_overlap   => $vfo,
+            seq                         => $allele,
         });
         
-        my $tm = $tran->get_TranscriptMapper;
-
-        $vfo->cdna_coords([$tm->genomic2cdna($vf->start, $vf->end, $tran->strand)]);
-        $vfo->cds_coords([$tm->genomic2cds($vf->start, $vf->end, $tran->strand)]);
-        $vfo->pep_coords([$tm->genomic2pep($vf->start, $vf->end, $tran->strand)]);
-
-        my @alleles = split /\//, $vf->allele_string;
-
-        # if the strands differ we need to reverse complement the alleles from the allele_string
-        unless ($tran->strand == $vf->strand) {
-            map { reverse_comp(\$_) } @alleles;
-        }
-
-        my $ref_allele = shift @alleles;
-
-        my $ref_vfoa = Bio::EnsEMBL::Variation::VariationFeatureOverlapAllele->new_fast({
-            variation_feature_overlap   => $vfo,
-            seq                         => $ref_allele,
-            is_reference                => 1,
-        });
-
-        $vfo->reference_allele($ref_vfoa);
-        $vfo->alleles($ref_vfoa);
-
-        for my $allele (@alleles) {
-            
-            my $vfoa = Bio::EnsEMBL::Variation::VariationFeatureOverlapAllele->new_fast({
-                variation_feature_overlap   => $vfo,
-                seq                         => $allele,
-            });
-            $vfoa->calc_consequences(\@consequences);
-            $vfo->alleles($vfoa);
-        }
-
-        return $vfo;
+        $vfoa->calc_consequences(\@consequences);
+        $vfo->alt_alleles($vfoa);
     }
-    else {
-        return undef;
-    }
+
+    return $vfo;
 }
 
 sub regulatory_region_effect {
