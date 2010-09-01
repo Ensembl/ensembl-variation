@@ -49,7 +49,7 @@ sub affects_cds {
         if (not $vfo->feature->isa('Bio::EnsEMBL::Transcript')) {
             $self->{affects_cds} = 0;
         }
-        if (@pep_coords != 1) {
+        elsif (@pep_coords != 1) {
             $self->{affects_cds} = 0;
         }
         elsif ($pep_coords[0]->isa('Bio::EnsEMBL::Mapper::Gap')) {
@@ -169,6 +169,7 @@ sub calc_consequences {
     for my $consequence (@$consequences) {
         if ($consequence->predicate->($self)) {
             $self->consequences($consequence);
+            #last if $consequence->is_definitive;
         }
     }
 }
