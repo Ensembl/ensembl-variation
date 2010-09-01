@@ -130,9 +130,9 @@ sub within_miRNA {
 }
 
 sub _start_splice_site {
-    my ($vf, $tran) = @_;
+    my ($vf, $introns) = @_;
 
-    for my $intron (@{ $tran->get_all_Introns }) {
+    for my $intron (@$introns) {
         if (overlap($vf->start, $vf->end, $intron->start, $intron->start+2)) {
             return 1;
         }
@@ -142,9 +142,9 @@ sub _start_splice_site {
 }
 
 sub _end_splice_site {
-    my ($vf, $tran) = @_;
+    my ($vf, $introns) = @_;
     
-    for my $intron (@{ $tran->get_all_Introns }) {
+    for my $intron (@$introns) {
         if (overlap($vf->start, $vf->end, $intron->end-2, $intron->end)) {
             return 1;
         }
@@ -156,21 +156,23 @@ sub _end_splice_site {
 sub donor_splice_site {
     my $vfoa    = shift;
     my $vf      = $vfoa->variation_feature_overlap->variation_feature;
-    my $tran    = $vfoa->variation_feature_overlap->feature; 
+    my $tran    = $vfoa->variation_feature_overlap->feature;
+    my $introns = $vfoa->variation_feature_overlap->tran_introns; 
     
-    return $tran->strand == 1 ? _start_splice_site($vf, $tran) : _end_splice_site($vf, $tran);
+    return $tran->strand == 1 ? _start_splice_site($vf, $introns) : _end_splice_site($vf, $introns);
 }
 
 sub acceptor_splice_site {
     my $vfoa    = shift;
     my $vf      = $vfoa->variation_feature_overlap->variation_feature;
-    my $tran    = $vfoa->variation_feature_overlap->feature; 
+    my $tran    = $vfoa->variation_feature_overlap->feature;
+    my $introns = $vfoa->variation_feature_overlap->tran_introns; 
     
-    return $tran->strand == 1 ? _end_splice_site($vf, $tran) : _start_splice_site($vf, $tran); 
+    return $tran->strand == 1 ? _end_splice_site($vf, $introns) : _start_splice_site($vf, $introns); 
 }
 
 sub essential_splice_site {
-    my $vfoa    = shift;
+    my $vfoa = shift;
     return ( acceptor_splice_site($vfoa) or donor_splice_site($vfoa) );
 }
 
@@ -179,7 +181,7 @@ sub splice_region {
     my $vf      = $vfoa->variation_feature_overlap->variation_feature;
     my $tran    = $vfoa->variation_feature_overlap->feature; 
 
-    for my $intron (@{ $tran->get_all_Introns }) {
+    for my $intron (@{ $vfoa->variation_feature_overlap->tran_introns }) {
 
         if ( overlap($vf->start, $vf->end, $intron->start-3, $intron->start+8) or
              overlap($vf->start, $vf->end, $intron->end-8, $intron->end+3) ) {
@@ -195,7 +197,7 @@ sub within_intron {
     my $vf      = $vfoa->variation_feature_overlap->variation_feature;
     my $tran    = $vfoa->variation_feature_overlap->feature; 
 
-    for my $intron (@{ $tran->get_all_Introns }) {
+    for my $intron (@{ $vfoa->variation_feature_overlap->tran_introns }) {
         if (overlap($vf->start, $vf->end, $intron->start, $intron->end)) {
             return 1;
         }
@@ -422,7 +424,7 @@ my @conseq_hashes = (
         ensembl_term    => 'SYNONYMOUS_CODING',
         SO_id           => 'SO:0001588',
         NCBI_term       => 'cds-synon',
-        is_definitive   => 1,
+        is_definitive   => 0,
     },
     {
         SO_term         => 'non_synonymous_codon',
@@ -430,7 +432,7 @@ my @conseq_hashes = (
         ensembl_term    => 'NON_SYNONYMOUS_CODING',
         SO_id           => 'SO:0001583',
         NCBI_term       => 'missense',
-        is_definitive   => 1,
+        is_definitive   => 0,
     },
     {
         SO_term         => 'stop_gained',
@@ -438,14 +440,14 @@ my @conseq_hashes = (
         ensembl_term    => 'STOP_GAINED',
         SO_id           => 'SO:0001587',
         NCBI_term       => 'nonsense',
-        is_definitive   => 1,
+        is_definitive   => 0,
     },
     {
         SO_term         => 'stop_lost',
         predicate       => \&stop_lost,
         ensembl_term    => 'STOP_LOST',
         SO_id           => 'SO:0001578',
-        is_definitive   => 1,
+        is_definitive   => 0,
     },
     {
         SO_term         => 'frameshift_variant',
@@ -485,7 +487,7 @@ my @conseq_hashes = (
     },
 );
 
-my @consequences = map {
+my @consequences = sort { $b->is_definitive <=> $a->is_definitive } map {
     Bio::EnsEMBL::Variation::OverlapConsequence->new_fast($_);
 } @conseq_hashes;
 

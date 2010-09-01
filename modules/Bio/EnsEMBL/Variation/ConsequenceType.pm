@@ -357,6 +357,26 @@ sub type {
   return $self->{'type'}
 }
 
+sub allele_type {
+    my $self = shift;
+    
+    if (@_ == 2) {
+        my ($allele, $type) = @_;
+        
+        if (defined $CONSEQUENCE_TYPES{$type} || $type eq 'SARA') {
+            $self->{allele_type}->{$allele} = $type;
+        }
+        else {
+            warning("Invalid consequence type: $type\n");
+        }
+    }
+    else {
+        warning("Need to specify both allele and type to allele_type method");
+    }
+    
+    return $self->{allele_type};
+}
+
 
 =head2 aa_alleles
 
