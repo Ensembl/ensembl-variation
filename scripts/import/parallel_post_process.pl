@@ -435,7 +435,7 @@ sub reverse_genotype{
   my (%rec_seq_region_ids,%rec_table_name,$table_name);
 
   #create rec_seq_region_ids hash to contain chromosomes that appear in SubIndch_chromosome_name, so can write output file separatly for human genotype
-  if ($vdbname =~ /hum|homo/i and $dbsnp) {
+  if (($species =~ /hum|homo/i or $vdbname =~/hum|homo/i) and $dbsnp) {
     my $sth1 = $dbCore->dbc->prepare(qq{SELECT sr.seq_region_id, sr.name
                                        FROM seq_region sr, coord_system cs 
                                        WHERE sr.coord_system_id=cs.coord_system_id 
