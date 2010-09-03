@@ -56,6 +56,8 @@ GetOptions('tmpdir=s'  => \$ImportUtils::TMP_DIR,
 
 $num_processes ||= 1;
 
+$bsub_queue_name ||= 'long';
+
 $LIMIT = ($limit) ? " $limit " : ''; #will refer to position in a slice
 $PERLBIN   ||= '/usr/local/ensembl/bin/perl'; # Could use $^X?
 -x $PERLBIN or usage("Perl interpretor at $PERLBIN is not suitable. " .
@@ -405,7 +407,7 @@ sub parallel_transcript_variation{
         
       }
       else{ # Use default LSF/bsub
-        $call = "bsub -a normal -o $outfile -q $bsub_queue_name $command";
+        $call = "bsub -a normal -o $outfile -q $bsub_queue_name ".($species =~ /human|homo/ ? "-M8000000 -R'select[mem>8000] rusage[mem=8000]'" : "")." $command";
 	#print $call,"\n";
         system($call);
       }
@@ -591,7 +593,7 @@ sub reverse_genotype{
 	      print OUT "update ignore $table set allele_1 = \"$new_allele_1\", allele_2 = \"$new_allele_2\" where population_genotype_id = $population_genotype_id;\n";
 	    }
 	    elsif ($table =~ /single/) {
-	      if ($vdbname =~/hum|homo/i and $dbsnp) {
+	      if (($species =~ /hum|homo/i or $vdbname =~/hum|homo/i) and $dbsnp) {
 		my $chr_name = $rec_seq_region_ids{$seq_region_id};
 		if ($chr_name) {
 		  $table_name = "$table\_SubInd_ch$chr_name";
@@ -648,18 +650,19 @@ sub reverse_variation_feature{
     while ($sth->fetch()){
       my @alleles = split /\//,$allele_string;
       foreach my $allele (@alleles) {
-	next if $allele =~ /^\(.*\)$/;
-	if ($allele =~ /\(|\)/g) {
-	  $allele =~ /\((\S+)\)(\d+)/; 
-	  if ($1 and $2) {
-	    $allele = $1;
-	    reverse_comp(\$allele);
-	    $allele = "($allele)$2";
-	  }
-	}
-	else {
-	  reverse_comp(\$allele);
-	}
+		next if $allele =~ /^\(.*\)$/;
+		next if $allele =~ /CNV|INS|DEL/;
+		if ($allele =~ /\(|\)/g) {
+		  $allele =~ /\((\S+)\)(\d+)/; 
+		  if ($1 and $2) {
+			$allele = $1;
+			reverse_comp(\$allele);
+			$allele = "($allele)$2";
+		  }
+		}
+		else {
+		  reverse_comp(\$allele);
+		}
       }
       my $new_allele_string = join "/",@alleles;
       $dbVar->do(qq{update $table set allele_string = "$new_allele_string", seq_region_strand =1 where variation_feature_id=$variation_feature_id});
@@ -768,13 +771,17 @@ sub merge_ensembl_snps {
                AND vf1.seq_region_end = vf2.seq_region_end
 	       AND vf1.seq_region_strand = vf2.seq_region_strand
                #AND vf1.allele_string = vf2.allele_string #if allele_string is different, we merge them
-               AND vf1.map_weight=1 and vf2.map_weight=1 
+               AND vf1.map_weight=1 and vf2.map_weight=1
+			   AND vf1.allele_string != 'CNV_PROBE'
+			   AND vf2.allele_string != 'CNV_PROBE'
                $hap_line
                AND vf1.variation_id > vf2.variation_id
-               AND vf1.source_id =$new_source_id and  vf2.source_id != $new_source_id
+               AND vf1.source_id =$new_source_id and  vf2.source_id < $new_source_id
  });
 
   $dbVar->do(qq{alter table tmp_ids_$new_source_id add index variation_idx1(variation_id1), add index variation_idx2(variation_id2)});
+  
+  #die "FINITO\n";
 
   debug("Change allele_string if different...");
   my ($variation_id1,$name1,$variation_id2,$name2,$allele_string1,$allele_string2,$variation_feature_id2);
@@ -786,6 +793,9 @@ sub merge_ensembl_snps {
                AND vf2.map_weight=1 ##vf2 is dbSNP
                AND vf1.map_weight=1
                AND vf1.allele_string != 'N/A'#cnv has 'N' in allele_string, not merge this
+               AND vf2.allele_string != 'N/A'#cnv has 'N' in allele_string, not merge this
+			   AND vf1.allele_string != 'CNV_PROBE'
+			   AND vf2.allele_string != 'CNV_PROBE'
                $hap_line
                AND vf1.allele_string != vf2.allele_string
  });
@@ -827,7 +837,7 @@ sub merge_ensembl_snps {
 
   $dbVar->do(qq{DELETE from v using flanking_sequence v, tmp_ids_$new_source_id t where t.variation_id1=v.variation_id});
 
-  $dbVar->do(qq{DELETE from v using allele v, tmp_ids_$new_source_id t where t.variation_id1=v.variation_id});
+  #$dbVar->do(qq{DELETE from v using allele v, tmp_ids_$new_source_id t where t.variation_id1=v.variation_id});
 
 
   $dbVar->do(qq{DELETE from tv using transcript_variation tv 
@@ -1078,6 +1088,9 @@ sub merge_rs_feature{
 		WHERE v.variation_id is null});
   
   $dbVar->do(qq{UPDATE IGNORE variation_set_variation vs, tmp_ids_rs_final t set vs.variation_id=t.variation_id2 
+      	  WHERE vs.variation_id = t.variation_id1});
+  
+  $dbVar->do(qq{UPDATE IGNORE variation_annotation vs, tmp_ids_rs_final t set vs.variation_id=t.variation_id2 
       	  WHERE vs.variation_id = t.variation_id1});
 
   $dbVar->do(qq{UPDATE allele vs, tmp_ids_rs_final t set vs.variation_id=t.variation_id2 
