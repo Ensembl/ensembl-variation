@@ -200,6 +200,7 @@ sub variation_feature {
     or throw("Could not open tmp file: $TMP_DIR/variation_feature_$$\n");
 
   while($sth->fetch()) {
+	
     #excluding SNPs with map_weight>3
     if ($map_weight>3) {	
       #needs to be written to the failed_variation table
@@ -207,41 +208,50 @@ sub variation_feature {
       next;
     }
     if(!defined($cur_vf_id) || $cur_vf_id != $vf_id) {
-      if($top_coord) {
-        my $allele_str;
+      
+	  # check top level coord status
+	  if($top_coord) {
+        
+		my $allele_str;
+		
         # construct an allele string. Remember to check the expanded version
-
         if($alleles_expanded{$ref_allele}) {
           # make sure the reference allele is first. Remember to convert ref_allele (in expanded version) to a compressed allele
           delete $alleles{$alleles_expanded{$ref_allele}};
           $allele_str = join('/', ($alleles_expanded{$ref_allele}, keys %alleles));
         }
-	elsif ($cur_allele =~ /LARGE|INS|DEL|MUTATION|CNV/) {
-	  $allele_str = "$cur_allele";
-	}
-	else {
-	  $allele_str = undef;
-          warn("Reference allele $ref_allele for $cur_v_name not found in alleles: " .
-	    join("/", keys %alleles), " discarding feature");
-	  $dbVar_write->do(qq{INSERT IGNORE INTO failed_variation (variation_id,failed_description_id) VALUES ($cur_v_id,2)}) if ($cur_map_weight ==1); #only put into failed_variation when map_weight==1
-        }
-	
-	if($allele_str) {
-	  if ($top_level) {
-	    print FH join("\t", $cur_vf_id, $top_sr_id, $top_sr_start, $top_sr_end, $top_sr_strand,
-			  $cur_v_id, $allele_str, $cur_v_name,
-			  $cur_map_weight,$cur_vf_flags,$cur_source_id, $cur_validation_status,$cur_consequence_type), "\n";
-	  }
-	  else {
-	    print FH join("\t", $cur_vf_id, $top_sr_id, $top_coord->start(),
-			  $top_coord->end(), $top_coord->strand(),
-			  $cur_v_id, $allele_str, $cur_v_name,
-			  $cur_map_weight,$cur_vf_flags,$cur_source_id,$cur_validation_status,$cur_consequence_type), "\n";
-	  }
-	}
+		elsif ($cur_allele =~ /LARGE|INS|DEL|MUTATION|CNV|\-/) {
+		  my $special;
+		  
+		  foreach my $a(keys %alleles) {
+			$special = $a if $a =~ /LARGE|INS|DEL|MUTATION|CNV/;
+		  }
+		  
+		  $allele_str = $special || $cur_allele;
+		}
+		else {
+		  $allele_str = undef;
+			  warn("Reference allele $ref_allele for $cur_v_name not found in alleles: " .
+			join("/", keys %alleles), " discarding feature cur_allele was $cur_allele");
+		  $dbVar_write->do(qq{INSERT IGNORE INTO failed_variation (variation_id,failed_description_id) VALUES ($cur_v_id,2)}) if ($cur_map_weight ==1); #only put into failed_variation when map_weight==1
+		}
+		
+		if($allele_str) {
+		  if ($top_level) {
+			print FH join("\t", $cur_vf_id, $top_sr_id, $top_sr_start, $top_sr_end, $top_sr_strand,
+				  $cur_v_id, $allele_str, $cur_v_name,
+				  $cur_map_weight,$cur_vf_flags,$cur_source_id, $cur_validation_status,$cur_consequence_type), "\n";
+		  }
+		  else {
+			print FH join("\t", $cur_vf_id, $top_sr_id, $top_coord->start(),
+				  $top_coord->end(), $top_coord->strand(),
+				  $cur_v_id, $allele_str, $cur_v_name,
+				  $cur_map_weight,$cur_vf_flags,$cur_source_id,$cur_validation_status,$cur_consequence_type), "\n";
+		  }
+		}
       }
       else {
-	print "vf_id is $vf_id is no top_coord\n";
+		print "vf_id is $vf_id is no top_coord\n";
       }
       
       %alleles = ();
@@ -266,75 +276,80 @@ sub variation_feature {
       $cur_allele = $allele;
       
       # map the variation coordinates to toplevel
-
       my $slice = $slice_adaptor->fetch_by_seq_region_id($sr_id);
       
       if(!$slice) {
         warning("Could not locate seq_region with id=$sr_id");
         next;
       }
+	  
       if ($slice->seq_region_name() eq MITHOCONDRIAL_CONTIG()){$mithocondrial = 1} #the human mithocondrial conigs are already top_level
       else{$mithocondrial = 0} #for the res
-      ###if it is a toplevel coordinates already, we need find ref_allele for it
+      
+	  ###if it is a toplevel coordinates already, we need find ref_allele for it
       if ($top_level || $mithocondrial) {
-	$top_coord = $slice->sub_Slice($sr_start, $sr_end,$sr_strand);
-	if (!$top_coord) {
-	  ###if start = end+1, this indicate a indel
-	  if ($sr_start == $sr_end+1) {
-	    $ref_allele = '-';
-	    $top_sr_id = $sr_id;
-	    $top_coord=1;
-	    #warning("Could not locate $sr_id, $sr_start, $sr_end, $sr_strand, maybe indels");
+		$top_coord = $slice->sub_Slice($sr_start, $sr_end,$sr_strand);
+		if (!$top_coord) {
+		  ###if start = end+1, this indicate a indel
+		  if ($sr_start == $sr_end+1) {
+			$ref_allele = '-';
+			$top_sr_id = $sr_id;
+			$top_coord=1;
+			#warning("Could not locate $sr_id, $sr_start, $sr_end, $sr_strand, maybe indels");
+		  }
+		  else {
+			next;
+		  }
+		}
+		else {
+		  $ref_allele = $top_coord->seq();
+		  $ref_allele = '-' if(!$ref_allele);
+		  $ref_allele = uc $ref_allele;   #convert reference allele to uppercase
+		  $top_sr_id = $sr_id;
+		  debug ("ref_allele is '-' for $sr_id, $sr_start, $sr_end, $sr_strand") if ($ref_allele eq '-');
+		}
 	  }
-	  else {
-	    next;
-	  }
-	}
-	else {
-	  $ref_allele = $top_coord->seq();
-	  $ref_allele = '-' if(!$ref_allele);
-	  $ref_allele = uc $ref_allele;   #convert reference allele to uppercase
-	  $top_sr_id = $sr_id;
-	  debug ("ref_allele is '-' for $sr_id, $sr_start, $sr_end, $sr_strand") if ($ref_allele eq '-');
-	}
-      }
-      else {
-	#debug("seq_region_name is ",$slice->seq_region_name(),"$sr_start, $sr_end, $sr_strand\n");
-	my @coords = $mapper->map($slice->seq_region_name(), $sr_start, $sr_end,
-				  $sr_strand, $sctg_cs);
-	
-	if (@coords != 1 || $coords[0]->isa('Bio::EnsEMBL::Mapper::Gap')) {
-	  $top_coord = undef;
-	  warn ("top_coord is not found for $vf_id\n");
-	} else {
 	  
-	  # obtain the seq_region_id of the seq_region we mapped to
-	  # and the reference allele from the genome sequence
-	  ($top_coord) = @coords;
-
-	  $slice = $slice_adaptor->fetch_by_seq_region_id
-	    ($top_coord->id(),
-	     $top_coord->start(),$top_coord->end(), $top_coord->strand(),
-	     $top_coord->coord_system()->version());
-	  if (! $slice) {
-	    print "$cur_v_id ",join " ", $top_coord->coord_system()->name(),$top_coord->id(),
-	      $top_coord->start(),$top_coord->end(), $top_coord->strand(),
-		$top_coord->coord_system()->version(),"\n";
-	    $ref_allele = "";
-	  }
 	  else {
-            $ref_allele = $slice->seq();
-	    $ref_allele = '-' if(!$ref_allele);
-	    $ref_allele = uc $ref_allele;   #convert reference allele to uppercase
-            $top_sr_id = $top_coord->id();
-#	    $top_sr_id = $slice->get_seq_region_id();
-	  }
-	}
+		#debug("seq_region_name is ",$slice->seq_region_name(),"$sr_start, $sr_end, $sr_strand\n");
+		my @coords = $mapper->map($slice->seq_region_name(), $sr_start, $sr_end,
+					  $sr_strand, $sctg_cs);
+		
+		if (@coords != 1 || $coords[0]->isa('Bio::EnsEMBL::Mapper::Gap')) {
+		  $top_coord = undef;
+		  warn ("top_coord is not found for $vf_id\n");
+		}
+		
+		else {
+		  
+		  # obtain the seq_region_id of the seq_region we mapped to
+		  # and the reference allele from the genome sequence
+		  ($top_coord) = @coords;
+	
+		  $slice = $slice_adaptor->fetch_by_seq_region_id
+			($top_coord->id(),
+			 $top_coord->start(),$top_coord->end(), $top_coord->strand(),
+			 $top_coord->coord_system()->version());
+		  if (! $slice) {
+			print "$cur_v_id ",join " ", $top_coord->coord_system()->name(),$top_coord->id(),
+			  $top_coord->start(),$top_coord->end(), $top_coord->strand(),
+			$top_coord->coord_system()->version(),"\n";
+			$ref_allele = "";
+		  }
+		  else {
+			$ref_allele = $slice->seq();
+			$ref_allele = '-' if(!$ref_allele);
+			$ref_allele = uc $ref_allele;   #convert reference allele to uppercase
+			$top_sr_id = $top_coord->id();
+		    #$top_sr_id = $slice->get_seq_region_id();
+		  }
+		}
       }
     }
 
     $alleles{$allele} = 1;
     my $allele_copy = $allele;
+	
     #make a copy of the allele, but in the expanded version
     &expand(\$allele) if ($allele !~ /LARGE|INS|DEL|CNV|MUTA/); #only expand alleles with the (AG)5 format
     $alleles_expanded{$allele} = $allele_copy; 
@@ -347,33 +362,40 @@ sub variation_feature {
   # print the last row
   if($top_coord ) {
     my $allele_str;
-
+	
     if($alleles{$ref_allele}) {
       # make sure the reference allele is first
       delete $alleles{$ref_allele};
       $allele_str = join('/', ($ref_allele, keys %alleles));
     }
-    elsif ($allele =~ /LARGE|INS|DEL|MUTATION|CNV/) {
-      $allele_str = "$allele";
-    }
+	elsif ($allele =~ /LARGE|INS|DEL|MUTATION|CNV|\-/) {
+	  my $special;
+	  
+	  foreach my $a(keys %alleles) {
+		$special = $a if $a =~ /LARGE|INS|DEL|MUTATION|CNV/;
+	  }
+	  
+	  $allele_str = $special || $allele;
+	}
     else {
       $allele_str = undef;
       warn("Reference allele $ref_allele for $cur_v_name not found in alleles: " .
-           join("/", keys %alleles), " discarding feature\n");
-      #needs to be written to the failed_variation table
+      join("/", keys %alleles), " discarding feature\n");
+      
+	  #needs to be written to the failed_variation table
       $dbVar_write->do(qq{INSERT IGNORE INTO failed_variation (variation_id,failed_description_id) VALUES ($cur_v_id,2)}) if ($cur_map_weight==1);
     }
     
     if($allele_str) {
       if ($top_level) {
-	print FH join("\t", $cur_vf_id, $top_sr_id, $top_sr_start, $top_sr_end, $top_sr_strand,
-		      $cur_v_id, $allele_str, $cur_v_name,
-		      $cur_map_weight,$cur_vf_flags, $cur_source_id,$cur_validation_status,$cur_consequence_type), "\n";
+		print FH join("\t", $cur_vf_id, $top_sr_id, $top_sr_start, $top_sr_end, $top_sr_strand,
+		$cur_v_id, $allele_str, $cur_v_name,
+		$cur_map_weight,$cur_vf_flags, $cur_source_id,$cur_validation_status,$cur_consequence_type), "\n";
       }
       else {
-	print FH join("\t", $cur_vf_id, $top_sr_id, $top_coord->start(),
-		      $top_coord->end(), $top_coord->strand(),
-		      $cur_v_id, $allele_str, $cur_v_name, $cur_map_weight, $cur_vf_flags, $cur_source_id, $cur_validation_status,$cur_consequence_type), "\n";
+		print FH join("\t", $cur_vf_id, $top_sr_id, $top_coord->start(),
+		$top_coord->end(), $top_coord->strand(),
+		$cur_v_id, $allele_str, $cur_v_name, $cur_map_weight, $cur_vf_flags, $cur_source_id, $cur_validation_status,$cur_consequence_type), "\n";
       }
     }
   }
@@ -426,7 +448,7 @@ sub update_meta_coord {
   my $cs = $csa->fetch_by_name($csname);
 
   my $sth = $dbVar->prepare
-    ('INSERT INTO meta_coord set table_name = ?, coord_system_id = ?, max_length =500');
+    ('INSERT IGNORE INTO meta_coord set table_name = ?, coord_system_id = ?, max_length =500');
 
   $sth->execute($table_name, $cs->dbID());
 
