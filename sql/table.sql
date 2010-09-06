@@ -147,6 +147,7 @@ create table allele(
 	allele varchar(255),
 	frequency float,
 	sample_id int(10) unsigned,
+	count int(10) unsigned DEFAULT NULL,
 
 	primary key( allele_id ),
         key subsnp_idx(subsnp_id),
@@ -654,6 +655,7 @@ create table population_genotype (
 	allele_2 varchar(255),
 	frequency float,
  	sample_id int(10) unsigned,
+	count int(10) unsigned DEFAULT NULL,
 
 	primary key( population_genotype_id ),
  	key variation_idx(variation_id),
