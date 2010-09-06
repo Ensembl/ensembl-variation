@@ -189,7 +189,7 @@ sub variation_feature {
 
   my ($cur_vf_id, $cur_map_weight, $cur_v_id, $cur_v_name, $cur_allele,
      $top_coord, $top_sr_id, $top_sr_start, $top_sr_end, $top_sr_strand, 
-      $ref_allele,$cur_vf_flags, $cur_source_id, $cur_validation_status, $cur_consequence_type);
+      $ref_allele,$cur_vf_flags, $cur_source_id, $cur_validation_status, $cur_consequence_type, $special);
   my %alleles;
   my %alleles_expanded; #same hash as before, but with the expanded alleles: $alleles_expanded{AGAGAG} = (AG)3
 
@@ -220,14 +220,8 @@ sub variation_feature {
           delete $alleles{$alleles_expanded{$ref_allele}};
           $allele_str = join('/', ($alleles_expanded{$ref_allele}, keys %alleles));
         }
-		elsif ($cur_allele =~ /LARGE|INS|DEL|MUTATION|CNV|\-/) {
-		  my $special;
-		  
-		  foreach my $a(keys %alleles) {
-			$special = $a if $a =~ /LARGE|INS|DEL|MUTATION|CNV/;
-		  }
-		  
-		  $allele_str = $special || $cur_allele;
+		elsif (defined($special) && scalar keys %alleles <= 2) {		  
+		  $allele_str = $special;
 		}
 		else {
 		  $allele_str = undef;
@@ -345,10 +339,14 @@ sub variation_feature {
 		  }
 		}
       }
+	  
+	  $special = undef;
     }
 
     $alleles{$allele} = 1;
     my $allele_copy = $allele;
+	
+	$special = $allele if $allele =~ /LARGE|INS|DEL|CNV|MUTA/;
 	
     #make a copy of the allele, but in the expanded version
     &expand(\$allele) if ($allele !~ /LARGE|INS|DEL|CNV|MUTA/); #only expand alleles with the (AG)5 format
@@ -368,14 +366,8 @@ sub variation_feature {
       delete $alleles{$ref_allele};
       $allele_str = join('/', ($ref_allele, keys %alleles));
     }
-	elsif ($allele =~ /LARGE|INS|DEL|MUTATION|CNV|\-/) {
-	  my $special;
-	  
-	  foreach my $a(keys %alleles) {
-		$special = $a if $a =~ /LARGE|INS|DEL|MUTATION|CNV/;
-	  }
-	  
-	  $allele_str = $special || $allele;
+	elsif (defined($special) && scalar keys %alleles <= 2) {		  
+	  $allele_str = $special;
 	}
     else {
       $allele_str = undef;
