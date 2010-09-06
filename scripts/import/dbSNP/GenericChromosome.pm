@@ -107,7 +107,8 @@ sub variation_feature{
      $stmt .= qq{
                    t1.snp_id AS sorting_id, 
                    t2.contig_acc,
-                   t1.lc_ngbr+2,t1.rc_ngbr,
+                   t1.lc_ngbr+2,
+		   t1.rc_ngbr,
 		   CASE WHEN
 		     t2.group_term LIKE '$group_term%'
 		   THEN
@@ -191,7 +192,12 @@ sub variation_feature{
                                       tcl.strand, v.name, v.source_id, v.validation_status
 				      FROM variation v, tmp_contig_loc_chrom tcl, seq_region ts
 				      WHERE v.snp_id = tcl.snp_id
-				      AND (tcl.start = 1 or tcl.end=1)
+				      AND (
+					tcl.start = 1 OR
+					tcl.end = 1 OR
+					tcl.start IS NULL OR
+					tcl.end IS NULL
+				      )
                                       AND tcl.ctg = ts.name
    });
 
