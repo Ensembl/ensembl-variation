@@ -3,6 +3,16 @@ package Bio::EnsEMBL::Variation::VariationFeatureOverlap;
 use strict;
 use warnings;
 
+#use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(overlap);
+
+use Inline C => <<'END_C';
+
+int overlap (int f1_start, int f1_end, int f2_start, int f2_end) {
+    return (f1_end >= f2_start && f1_start <= f2_end);
+}
+
+END_C
+
 sub new {
     my ($class) = @_;
     return bless {}, $class;
@@ -68,20 +78,38 @@ sub pep_end {
 }
 
 sub cdna_coords {
-    my ($self, $cdna_coords) = @_;
-    $self->{cdna_coords} = $cdna_coords if $cdna_coords;
+    my ($self) = @_;
+    
+    unless ($self->{cdna_coords}) {
+        my $vf   = $self->variation_feature;
+        my $tran = $self->feature; 
+        $self->{cdna_coords} = [ $self->mapper->genomic2cdna($vf->start, $vf->end, $tran->strand) ];
+    }
+    
     return $self->{cdna_coords};
 }
 
 sub cds_coords {
-    my ($self, $cds_coords) = @_;
-    $self->{cds_coords} = $cds_coords if $cds_coords;
+    my ($self) = @_;
+    
+    unless ($self->{cds_coords}) {
+        my $vf   = $self->variation_feature;
+        my $tran = $self->feature; 
+        $self->{cds_coords} = [ $self->mapper->genomic2cds($vf->start, $vf->end, $tran->strand) ];
+    }
+    
     return $self->{cds_coords};
 }
 
 sub pep_coords {
-    my ($self, $pep_coords) = @_;
-    $self->{pep_coords} = $pep_coords if $pep_coords;
+    my ($self) = @_;
+    
+    unless ($self->{pep_coords}) {
+        my $vf   = $self->variation_feature;
+        my $tran = $self->feature; 
+        $self->{pep_coords} = [ $self->mapper->genomic2pep($vf->start, $vf->end, $tran->strand) ];
+    }
+    
     return $self->{pep_coords};
 }
 
@@ -93,9 +121,11 @@ sub reference_allele {
 
 sub alt_alleles {
     my ($self, @new_alt_alleles) = @_;
+    
+    $self->{alt_alleles} ||= [];
 
     if (@new_alt_alleles) {
-        my $alt_alleles = $self->{alt_alleles} ||= [];
+        my $alt_alleles = $self->{alt_alleles};
         push @$alt_alleles, @new_alt_alleles;
     }
 
@@ -105,23 +135,132 @@ sub alt_alleles {
 sub alleles {
     my ($self) = @_;
 
-    my $alleles = $self->alt_alleles || [];
+    my $alleles = $self->alt_alleles;
     
     unshift @$alleles, $self->reference_allele;
 
     return $alleles;
 }
 
-sub tran_introns {
-    my $self = shift;
+sub intron_effects {
+    my ($self) = @_;
     
-    unless ($self->{_tran_introns}) {
-        $self->{_tran_introns} = $self->feature->get_all_Introns;
+    # this method is a major bottle neck in the effect calculation code so 
+    # we cache results and use local variables instead of method calls where
+    # possible to speed things up - caveat bug-fixer!
+    
+    unless ($self->{intron_effects}) {
+        
+        my $vf = $self->variation_feature;
+        
+        my $intron_effects = {};
+        
+        my $found_effect = 0;
+        
+        my $vf_start = $vf->start;
+        my $vf_end   = $vf->end;
+
+        for my $intron (@{ $self->introns }) {
+            
+            my $intron_start = $intron->start;
+            my $intron_end   = $intron->end;
+            
+            # under various circumstances the genebuild process can introduce
+            # artificial short (<= 12 nucleotide) introns into transcripts
+            # (e.g. to deal with errors in the reference sequence etc.), we
+            # don't want to categorise variations that fall in these introns
+            # as intronic, or as any kind of splice variant
+            
+            my $frameshift_intron = ( abs($intron_end - $intron_start) <= 12 );
+            
+            # the order of these checks is deliberately designed to minimise the number
+            # of calls we make to overlap because we can sometimes establish several
+            # intron effects within one call and then break out of the loop with last
+            
+            if (overlap($vf_start, $vf_end, $intron_start, $intron_start+2)) {
+                
+                if ($frameshift_intron) {
+                    $intron_effects->{within_frameshift_intron} = 1;
+                }
+                else {
+                    $intron_effects->{start_splice_site} = 1;
+                    $intron_effects->{splice_region} = 1;
+                    $intron_effects->{intronic} = 1;
+                }
+                
+                last;
+            }
+            
+            if (overlap($vf_start, $vf_end, $intron_end-2, $intron_end)) {
+                
+                if ($frameshift_intron) {
+                    $intron_effects->{within_frameshift_intron} = 1;
+                }
+                else {
+                    $intron_effects->{end_splice_site} = 1;
+                    $intron_effects->{splice_region} = 1;
+                    $intron_effects->{intronic} = 1;
+                }
+                
+                last;
+            }
+            
+            # we don't last out of this check, because a variation can be both
+            # intronic and splice_region, so we just set a flag
+            
+            if (overlap($vf_start, $vf_end, $intron_start, $intron_end)) {
+                
+                if ($frameshift_intron) {
+                    $intron_effects->{within_frameshift_intron} = 1;
+                }
+                else {
+                    $intron_effects->{intronic} = 1;
+                }
+                
+                $found_effect = 1;
+            }
+            
+            if ( ( overlap($vf_start, $vf_end, $intron_start-3, $intron_start+8) or
+                   overlap($vf_start, $vf_end, $intron_end-8, $intron_end+3) ) and 
+                   not $frameshift_intron ) {
+                   
+                $intron_effects->{splice_region} = 1;
+                
+                $found_effect = 1;
+            }
+                
+            last if $found_effect;
+        }
+        
+        $self->{intron_effects} = $intron_effects;       
     }
-    
-    return $self->{_tran_introns};
+
+    return $self->{intron_effects};
 }
 
+sub introns {
+    my ($self, $introns) = @_;
+    $self->{introns} = $introns if $introns;
+    return $self->{introns};
+}
+
+sub translateable_seq {
+    my ($self, $translateable_seq) = @_;
+    $self->{translateable_seq} = $translateable_seq if $translateable_seq;
+    return $self->{translateable_seq};
+}
+
+sub peptide {
+    my ($self, $peptide) = @_;
+    $self->{peptide} = $peptide if $peptide;
+    return $self->{peptide};
+}
+
+sub mapper {
+    my ($self, $mapper) = @_;
+    $self->{mapper} = $mapper if $mapper;
+    return $self->{mapper};
+}
 
 1;
 
