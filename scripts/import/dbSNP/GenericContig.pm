@@ -268,7 +268,8 @@ sub variation_table {
                  b.pop_id, 
                  a.allele,
 	         subsnplink.substrand_reversed_flag, 
-	         b.moltype
+	         b.moltype,
+		 uv.allele_id
 	       FROM 
 	         SubSNP subsnp, 
 	         SNPSubSNPLink subsnplink, 
@@ -290,7 +291,7 @@ sub variation_table {
 	         };
     }
    dumpSQL($self->{'dbSNP'},$stmt);
-   create_and_load( $self->{'dbVar'}, "tmp_var_allele", "subsnp_id i*", "refsnp_id i*","pop_id i", "allele", "substrand_reversed_flag i", "moltype");
+   create_and_load( $self->{'dbVar'}, "tmp_var_allele", "subsnp_id i*", "refsnp_id i*","pop_id i", "allele", "substrand_reversed_flag i", "moltype", "allele_id i");
   print $logh Progress::location();
     
     # load the synonym table with the subsnp identifiers
@@ -822,6 +823,16 @@ sub allele_table {
   print $logh Progress::location();
     }
     
+  # PL: To speed things up a little bit, create an index on the allele_id column in the tmp_rev_allele table. Preferrably, we should be consistent in the reference to alleles but for the moment, the code is quite fragmented and we leave it as is
+  $stmt = qq{
+    CREATE INDEX
+      tmp_rev_allele_id_idx
+    ON
+      tmp_rev_allele (allele_id)
+  };
+  $self->{'dbVar'}->do($stmt);
+  print $logh Progress::location();
+    
     #first load the allele data for alleles that we have population and
     #frequency data for
 
@@ -860,6 +871,7 @@ sub allele_table {
   $self->{'dbVar'}->do(qq{CREATE UNIQUE INDEX unique_allele_idx ON allele (variation_id,allele(2),frequency,sample_id)});
   print $logh Progress::location();
 
+  # PL: This is a slow query (~5h), should we try to parallelize it? Perhaps split it in chunks by subsnp_id? Is there any point in doing that when all threads still has to access the same db/table?
    $self->{'dbVar'}->do(qq(INSERT IGNORE INTO allele (variation_id, subsnp_id,allele,frequency, sample_id)
                SELECT vs.variation_id,vs.subsnp_id,
                       IF(vs.substrand_reversed_flag,
@@ -904,10 +916,11 @@ sub allele_table {
    $self->{'dbVar'}->do("CREATE TABLE tmp_allele (refsnp_id int, subsnp_id int, allele text, primary key (refsnp_id,allele(10)))");
   print $logh Progress::location();
 
+  # PL: Another slow query (~5h), parallelize?
    $self->{'dbVar'}->do(qq{INSERT IGNORE INTO tmp_allele
-				      SELECT tva.refsnp_id, tua.subsnp_id, IF (tva.substrand_reversed_flag, tra.rev_allele,tva.allele) as allele
+				      SELECT tva.refsnp_id, tua.subsnp_id, IF (tva.substrand_reversed_flag, tra.rev_allele,tra.allele) as allele
 				      FROM tmp_var_allele tva, tmp_rev_allele tra, tmp_unique_allele tua
-				      WHERE tva.allele = tra.allele
+				      WHERE tva.allele_id = tra.allele_id
 				      AND tua.snp_id = tva.refsnp_id
 				  });
   print $logh Progress::location();
@@ -933,22 +946,46 @@ sub allele_table {
    # already has frequency
    
    debug(localtime() . "\tLoading other allele data");
-
-   $self->{'dbVar'}->do(qq{CREATE TABLE tmp_allele
-		   SELECT vs.variation_id as variation_id, vs.subsnp_id as subsnp_id, tva.pop_id,
-                         IF(vs.substrand_reversed_flag,
-                            tra.rev_allele, tra.allele) as allele
-		   FROM   variation_synonym vs, tmp_var_allele tva,
-                         tmp_rev_allele tra
-		   WHERE  tva.subsnp_id = vs.subsnp_id
-                   AND    tva.allele = tra.allele 
-                   AND    NOT EXISTS ## excluding alleles that already in allele table
-                       (SELECT * FROM allele a where a.variation_id = vs.variation_id
-                        AND a.allele = IF(tva.substrand_reversed_flag,tra.rev_allele, tra.allele))});
+  
+  #ÊPL: This query is really slow (~12h), I split it up a bit to speed up but perhaps parallelize as well?
+  # PL: First load everything into a new tmp_allele table
+  $stmt = qq{
+    CREATE TABLE
+      tmp_allele
+    SELECT
+      vs.variation_id AS variation_id,
+      vs.subsnp_id AS subsnp_id,
+      tva.pop_id,
+      IF(
+	vs.substrand_reversed_flag,
+        tra.rev_allele,
+	tra.allele
+      ) AS allele
+    FROM
+      variation_synonym vs,
+      tmp_var_allele tva,
+      tmp_rev_allele tra
+    WHERE
+      tva.subsnp_id = vs.subsnp_id AND
+      tva.allele_id = tra.allele_id
+  };
+  $self->{'dbVar'}->do($stmt);
   print $logh Progress::location();
-
-
-   $self->{'dbVar'}->do("ALTER TABLE tmp_allele ADD INDEX pop_id(pop_id)");
+  
+  # PL: Second, delete alleles that have already been imported into the allele table
+  $stmt = qq{
+    DELETE FROM
+      ta
+    USING
+      tmp_allele ta JOIN
+      allele a ON (
+	ta.variation_id = a.variation_id AND
+	ta.allele = a.allele
+  };
+  $self->{'dbVar'}->do($stmt);
+  print $logh Progress::location();
+  
+  $self->{'dbVar'}->do("ALTER TABLE tmp_allele ADD INDEX pop_id(pop_id)");
   print $logh Progress::location();
 
    $self->{'dbVar'}->do(qq{INSERT INTO allele (variation_id, subsnp_id, allele,
@@ -1606,7 +1643,17 @@ sub individual_genotypes {
       dumpSQL($self->{'dbSNP'},$stmt);
 
       create_and_load($self->{'dbVar'}, "tmp_rev_allele", "allele_id i*","allele *", "rev_allele");
-  print $logh Progress::location();
+      print $logh Progress::location();
+      
+      # PL: To speed things up a little bit, create an index on the allele_id column in the tmp_rev_allele table. Preferrably, we should be consistent in the reference to alleles but for the moment, the code is quite fragmented and we leave it as is
+      $stmt = qq{
+	CREATE INDEX
+	  tmp_rev_allele_id_idx
+	ON
+	  tmp_rev_allele (allele_id)
+      };
+      $self->{'dbVar'}->do($stmt);
+      print $logh Progress::location();  
     }
 
 #     #we have truncated the individual_genotype table, one contains the genotypes single bp, and the other, the rest
@@ -1896,7 +1943,17 @@ sub population_genotypes {
       dumpSQL($self->{'dbSNP'},$stmt);
 
       create_and_load($self->{'dbVar'}, "tmp_rev_allele", "allele_id i*","allele *", "rev_allele");
-  print $logh Progress::location();
+      print $logh Progress::location();
+      
+      # PL: To speed things up a little bit, create an index on the allele_id column in the tmp_rev_allele table. Preferrably, we should be consistent in the reference to alleles but for the moment, the code is quite fragmented and we leave it as is
+      $stmt = qq{
+	CREATE INDEX
+	  tmp_rev_allele_id_idx
+	ON
+	  tmp_rev_allele (allele_id)
+      };
+      $self->{'dbVar'}->do($stmt);
+      print $logh Progress::location();  
     }
     debug(localtime() . "\tDumping GtyFreqBySsPop and UniGty data");
  
