@@ -1347,8 +1347,7 @@ sub get_all_hgvs_notations {
           
           $hgvs_notation->{'start'} = $peptide_start + $first_offset;
           
-          # The reference cds length will always be a multiple of 3. If the alternative cds length is not a multiple of 3, this is a frame shift
-	  #ÊFIXME: This is not always true, we might have truncated reading frames (e.g. rs80357327 ENST00000476777) where this will give the wrong result. Need a different method to check frame shifts
+          # If the difference in cds lengths between reference and alternative, this is a frame shift
           if (($ref_cds->length() - $alt_cds->length())%3 != 0) {
             $hgvs_notation->{'type'} = 'fs';
       
