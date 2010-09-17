@@ -7,7 +7,7 @@
 
    -->
    
-   <!-- Last modified on 2010-06-30 by Pontus Larsson -->
+   <!-- Last modified on 2010-09-16 by Pontus Larsson -->
    
    <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -1204,10 +1204,14 @@
 	 
 	  <xsl:apply-templates select="source" />
 	    
-	  <p>
+	 <p>
 	    <strong>Modification date: </strong><xsl:value-of select="modification_date"/>
-	  </p>
- 
+	    <xsl:if test="comment">
+	       <br/>
+	       <strong>Comment: </strong><xsl:value-of select="comment" />
+	    </xsl:if>
+	 </p>
+	 
 	  <xsl:if test="other_exon_naming/*">
 		<h3>Alternate exon naming</h3>
 		<ul>
@@ -1579,8 +1583,17 @@
 								  </xsl:for-each>
 								  <xsl:if test="partial">
 								     <xsl:for-each select="partial">
+									<xsl:variable name="part" select="." />
 									<strong>Note: </strong>
-									<xsl:value-of select="."/> end of this protein lies outside of the LRG
+									<xsl:choose>
+									   <xsl:when test="substring($part,0,1)='5'">
+									      N-terminal
+									   </xsl:when>
+									   <xsl:otherwise>
+									      C-terminal
+									   </xsl:otherwise>
+									</xsl:choose>
+									of this protein lies outside of the LRG
 									<br/>	
 								     </xsl:for-each>
 								  </xsl:if>
@@ -1765,7 +1778,7 @@
 			</xsl:if>
 			<xsl:if test="address">
 			   <tr>
-			      <td class="contact_lbl">Address:</td>
+			      <td class="contact_lbl">Affiliation:</td>
 			      <td class="contact_val"><xsl:value-of select="address"/></td>
 			   </tr>
 			</xsl:if>
