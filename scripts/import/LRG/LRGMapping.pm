@@ -1077,29 +1077,49 @@ sub gene_2_feature {
   
   # Get xrefs for the gene
   my $entries = $gene->get_all_DBEntries();
+  #ÊMake an exception to use 'HGNC (curated)' in case no 'HGNC' exists
+  my @hgnc;
+  my @hgnc_curated;
   while(my $entry = shift(@{$entries})) {
     	
     # Skip if the xref source is not one of the allowed ones
-    next unless $entry->dbname =~ /GI|RefSeq|HGNC$/;
+    next unless $entry->dbname =~ /GI|RefSeq|HGNC/;
     next if $entry->dbname =~ /RefSeq_peptide/;
     
     # Get synonyms from HGNC entry
-    if($entry->dbname() eq 'HGNC') {
-      
-      # Add a lrg_gene_name node. This should be moved in a later processing step to the LRG branded section
-      $gene_node->addNode('lrg_gene_name',{'source' => $entry->dbname()})->content($entry->display_id());
-      
-      foreach my $synonym (@{$entry->get_all_synonyms()}) {
-        $gene_node->addNode('synonym')->content($synonym);
+    if($entry->dbname() =~ m/HGNC/) {
+      if ($entry->dbname() =~ m/^HGNC$/) {
+	push(@hgnc,$entry);
       }
-      if (defined($entry->description())) {
-        $name_content = $entry->description();
+      else {
+	push(@hgnc_curated,$entry)
       }
+    }
+    else {
+      # Add a xref node
+      $gene_node->addExisting(xref($entry));
+    }
+  }
+  # Use the @hgnc entries primarily, but in case those are missing, use the @hgnc_curated
+  my @arr = (@hgnc,@hgnc_curated);
+  while (my $entry = shift(@arr)) {
+    # If we have @hgnc entries, skip @hgnc_curated ones
+    next if (scalar(@hgnc) && $entry->dbname() !~ m/^HGNC$/);
+    
+    # Add a lrg_gene_name node. This should be moved in a later processing step to the LRG branded section
+    $gene_node->addNode('lrg_gene_name',{'source' => $entry->dbname()})->content($entry->display_id());
+    
+    foreach my $synonym (@{$entry->get_all_synonyms()}) {
+      $gene_node->addNode('synonym')->content($synonym);
+    }
+    if (defined($entry->description())) {
+      $name_content = $entry->description();
     }
     
     # Add a xref node
     $gene_node->addExisting(xref($entry));
   }
+  
   # Add a xref to Ensembl as well
   $gene_node->addEmptyNode('db_xref', {'source' => 'Ensembl', 'accession' => $gene->stable_id()});
   
@@ -1130,6 +1150,7 @@ sub xref {
 	$db =~ s/Uniprot.*/UniProtKB/;
 	$db =~ s/RefSeq.*/RefSeq/;
 	$db =~ s/MIM.*/MIM/;
+	$db =~ s/HGNC.*/HGNC/;
 	
 	my $id = $entry->primary_id.($entry->version > 0 ? ".".$entry->version : "");
 	
