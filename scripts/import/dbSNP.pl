@@ -26,35 +26,66 @@ use dbSNP::Mosquito;
 use dbSNP::Human;
 use dbSNP::EnsemblIds;
 
-my ($TAX_ID, $LIMIT_SQL, $dbSNP_BUILD_VERSION, $TMP_DIR, $TMP_FILE, $MAPPING_FILE_DIR, $MASTER_SCHEMA_DB);
+# If a config file was specified, parse it and override any specified options
+my @opts;
+if (scalar(@ARGV) == 1) {
+  my $configfile = $ARGV[0];
+  print STDOUT "Reading configuration file $configfile\n";
+  open(CFG,'<',$configfile) or die("Could not open configuration file $configfile for reading");
+  while (<CFG>) {
+    chomp;
+    my ($name,$val) = $_ =~ m/^\s*(\S+)\s+([^\s]+)/;
+    push(@opts,('-' . $name,$val));
+  }
+  close(CFG);
+  @ARGV = @opts;
+}
+  
+my %options = ();
+my @option_defs = (
+  'species=s',
+  'dbSNP_version=s',
+  'tmpdir=s',
+  'tmpfile=s',
+  'limit=i',
+  'mapping_file_dir=s',
+  'master_schema_db=s',
+  'dshost=s',
+  'dsuser=s',
+  'dspass=s',
+  'dsport=i',
+  'dsdbname=s',
+  'registry_file=s',
+  'mssql_driver=s',
+  'skip_routine=s@',
+  'logfile=s'
+);
 
-my ($species,$limit);
-my($dshost, $dsuser, $dspass, $dsport, $dsdbname);
-my $registry_file;
-my $mssql_driver;
-my @skip_routines;
-my $logfile;
-
-GetOptions('species=s'      => \$species,
-	   'dbSNP_version=s'=> \$dbSNP_BUILD_VERSION, ##such as b125
-	   'tmpdir=s'       => \$ImportUtils::TMP_DIR,
-	   'tmpfile=s'      => \$ImportUtils::TMP_FILE,
-	   'limit=i'        => \$limit,
-	   'mapping_file_dir=s' => \$MAPPING_FILE_DIR,
-	   'master_schema_db=s' => \$MASTER_SCHEMA_DB,
-	   'dshost=s' => \$dshost,
-	   'dsuser=s' => \$dsuser,
-	   'dspass=s' => \$dspass,
-	   'dsport=i' => \$dsport,
-	   'dsdbname=s' => \$dsdbname,
-	   'registry_file=s' => \$registry_file,
-	   'mssql_driver=s' => \$mssql_driver,
-	   'skip_routine=s' => \@skip_routines,
-	   'logfile=s' => \$logfile
-	  );
+GetOptions(\%options,@option_defs);
 
 debug("\n######### " . localtime() . " #########\n\tImport script launched\n");
 print STDOUT "\n######### " . localtime() . " #########\n\tImport script launched\n";
+
+my $TAX_ID;
+my $LIMIT_SQL = $options{'limit'};
+my $dbSNP_BUILD_VERSION = $options{'dbSNP_version'};
+my $TMP_DIR = $options{'tmpdir'};
+my $TMP_FILE = $options{'tmpfile'};
+my $MAPPING_FILE_DIR = $options{'mapping_file_dir'};
+my $MASTER_SCHEMA_DB = $options{'master_schema_db'};
+my $species = $options{'species'};
+my $dshost = $options{'dshost'};
+my $dsuser = $options{'dsuser'};
+my $dspass = $options{'dspass'};
+my $dsport = $options{'dsport'};
+my $dsdbname = $options{'dsdbname'};
+my $registry_file = $options{'registry_file'};
+my $mssql_driver = $options{'mssql_driver'};
+my @skip_routines = @{$options{'skip_routine'}};
+my $logfile = $options{'logfile'};
+
+$ImportUtils::TMP_DIR = $TMP_DIR;
+$ImportUtils::TMP_FILE = $TMP_FILE;
 
 # Checking that some necessary arguments have been provided
 die("Must know the master schema database, use -master_schema_db option!") unless (defined($MASTER_SCHEMA_DB));
@@ -131,13 +162,6 @@ my $dbSNP = Bio::EnsEMBL::DBSQL::DBConnection->new(
 $dbSNP->disconnect_when_inactive(1);
 my $dbVar = $vdba->dbc;
 my $dbCore = $cdba;
-
-###find a large tmp directory to contain the tmp file
-$TMP_DIR  = $ImportUtils::TMP_DIR;
-$TMP_FILE = $ImportUtils::TMP_FILE;
-
-$LIMIT_SQL = $limit;
-
 
 #my $my_species = $mc->get_Species();
 
