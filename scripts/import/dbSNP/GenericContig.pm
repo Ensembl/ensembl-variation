@@ -12,6 +12,7 @@ use Bio::EnsEMBL::Utils::Exception qw(throw);
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
 use ImportUtils qw(dumpSQL debug create_and_load load get_create_statement);
 use Progress;
+use DBI qw(:sql_types);
 
 #creates the object and assign the attributes to it (connections, basically)
 sub new {
@@ -1854,6 +1855,50 @@ sub calculate_gtype {
   #ÊPut the log filehandle in a local variable
   my $logh = $self->{'log'};
 
+  #ÊThe different cases for reversed alleles were split into 4 different queries. As a first step towards optimizing,
+  #ÊI combine these into two queries based on the value of substrand_reversed_flag + submitted_strand
+  # An even value means that we'll get the forward allele. An odd value means the reverse allele
+  
+  my $stmt = qq{
+    $insert INTO
+      $table2 (
+	variation_id,
+	subsnp_id,
+	sample_id,
+	allele_1,
+	allele_2
+      )
+      SELECT
+	vs.variation_id,
+	vs.subsnp_id,
+	s.sample_id,
+	tra1.allele,
+	tra2.allele
+      FROM
+	$table1 tg,
+	variation_synonym vs,
+	tmp_rev_allele tra1,
+	tmp_rev_allele tra2,
+	sample s
+      WHERE
+        MOD(tg.submitted_strand+vs.substrand_reversed_flag,2) = ? AND
+	tg.subsnp_id = vs.subsnp_id AND
+	tra1.allele = tg.allele_1 AND
+	tra2.allele = tg.allele_2 AND
+	tg.length_pat = 3 AND
+	tg.ind_id = s.individual_id
+  };
+  my $sth = $dbVariation->prepare($stmt);
+  
+  my %dirs = (0 => 'forward', '1' => 'reverse');
+  while (my ($rem,$dir) = each(%dirs)) {
+    debug(localtime() . "\tTime starting to insert $dir alleles into $table2 : ",scalar(localtime(time)));
+    $sth->bind_params(1,$rem,SQL_INTEGER);
+    $sth->execute();
+    print $logh Progress::location();
+  }
+  
+=head
   debug(localtime() . "\tTime starting to insert into $table2 : ",scalar(localtime(time)));
   $dbVariation->do(qq{$insert INTO $table2 (variation_id, subsnp_id, sample_id, allele_1, allele_2) 
 				 SELECT vs.variation_id, vs.subsnp_id, s.sample_id, tra1.allele, tra2.allele
@@ -1909,6 +1954,7 @@ sub calculate_gtype {
 				 AND tg.length_pat = 3
 				 AND tg.ind_id = s.individual_id});
   print $logh Progress::location();
+=cut
 
   $dbVariation->do(qq{alter TABLE $table2 engine = MyISAM}) if ($self->{'dbCore'}->species =~ /homo|hum/i);
   print $logh Progress::location();
