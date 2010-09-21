@@ -663,8 +663,9 @@ sub add_mapping {
 		# Get or add a seq_region for this contig
 		my $contig_sri = add_seq_region($contig_name,$contig_csi,$contig_len);
 	    
-		# Add DNA for this seq_region unless the database is not core. Ugly regexp to determine this
-		add_dna($contig_sri,$contig_seq) if ($dbCore->dbc()->dbname() =~ m/\_core\_\d+\_\d+\s/);
+		# Add DNA for this seq_region unless the database is not core.
+		my $is_core = (fetch_rows(['meta_value'],['meta'],["meta_key='schema_type'"])->[0][0] eq 'core');
+		add_dna($contig_sri,$contig_seq) if ($is_core);
 		
 		# Add a mapping between the LRG and the contig
 		add_assembly_mapping(
@@ -1176,7 +1177,7 @@ sub get_assembly {
       FROM
 	meta
       WHERE
-	meta_key = 'assembly.name'
+	meta_key = 'assembly.default'
     };
     my $assembly = $dbCore->dbc->db_handle->selectall_arrayref($stmt)->[0][0];
     
