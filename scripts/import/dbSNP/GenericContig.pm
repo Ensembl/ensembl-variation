@@ -1856,7 +1856,7 @@ sub calculate_gtype {
   my $logh = $self->{'log'};
 
   #ÊThe different cases for reversed alleles were split into 4 different queries. As a first step towards optimizing,
-  #ÊI combine these into two queries based on the value of substrand_reversed_flag + submitted_strand
+  #ÊI combine these into one query with a conditional based on the value of substrand_reversed_flag + submitted_strand
   # An even value means that we'll get the forward allele. An odd value means the reverse allele
   
   my $stmt = qq{
@@ -1872,8 +1872,16 @@ sub calculate_gtype {
 	vs.variation_id,
 	vs.subsnp_id,
 	s.sample_id,
-	tra1.allele,
-	tra2.allele
+	IF (
+	  MOD(tg.submitted_strand+vs.substrand_reversed_flag,2) = 0,
+	  tra1.allele,
+	  tra1.rev_allele
+	),
+	IF (
+	  MOD(tg.submitted_strand+vs.substrand_reversed_flag,2) = 0,
+	  tra2.allele,
+	  tra2.rev_allele
+	)
       FROM
 	$table1 tg,
 	variation_synonym vs,
@@ -1881,22 +1889,18 @@ sub calculate_gtype {
 	tmp_rev_allele tra2,
 	sample s
       WHERE
-        MOD(tg.submitted_strand+vs.substrand_reversed_flag,2) = ? AND
 	tg.subsnp_id = vs.subsnp_id AND
 	tra1.allele = tg.allele_1 AND
 	tra2.allele = tg.allele_2 AND
+	tg.ind_id = s.individual_id AND
 	tg.length_pat = 3 AND
-	tg.ind_id = s.individual_id
+	tg.submitted_strand <= 5
   };
   my $sth = $dbVariation->prepare($stmt);
-  
-  my %dirs = (0 => 'forward', '1' => 'reverse');
-  while (my ($rem,$dir) = each(%dirs)) {
-    debug(localtime() . "\tTime starting to insert $dir alleles into $table2 : ",scalar(localtime(time)));
-    $sth->bind_params(1,$rem,SQL_INTEGER);
-    $sth->execute();
-    print $logh Progress::location();
-  }
+
+  debug(localtime() . "\tTime starting to insert alleles from $table1 into $table2 : ",scalar(localtime(time)));
+  $sth->execute();
+  print $logh Progress::location();
   
 =head
   debug(localtime() . "\tTime starting to insert into $table2 : ",scalar(localtime(time)));
