@@ -118,7 +118,7 @@ usage() if (defined($help));
 die("Database credentials (-host, -port, -core, -user) need to be specified!") unless (defined($host) && defined($port) && defined($coredb) && defined($user));
 
 # If an input XML file was specified, this will override any specified lrg_id. So get the identifier from within the file
-if ((defined($import) || defined($verify) || defined($add_xrefs)) && defined($input_file)) {
+if ((defined($import) || defined($verify) || defined($add_xrefs) || defined($overlap) || defined($clean)) && defined($input_file)) {
 
   die("ERROR: Input file $input_file does not exist!") unless(-e $input_file);
   
@@ -250,7 +250,7 @@ if ($revert) {
   while (<MV>) {
     chomp;
     my ($table,$field,$max_value) = split();
-    LRGImport::remove_row([qq{$field > $max_value}],[$table]);
+    LRGImport::remove_row([qq{$field > $max_value}],$table);
   }
   close(MV);
 }
@@ -630,6 +630,8 @@ Skip this, this is done by the external data files
     #ÊCheck that the mapping stored in the database give the same sequences as those stored in the XML file
     if ($verify) {
       
+      my $msg;
+      
       # Needs to flush the db adaptor when doing an import before verifying content. Not sure how to do this, so will only print a warning
       warn("Verifying the import now will probably tell you that there are inconsistencies because the db adaptor haven't been flushed. You should re-run the script doing verification after the import has finished") if ($import);
       
@@ -641,7 +643,9 @@ Skip this, this is done by the external data files
       # Get a slice from the database corresponding to the LRG
       my $lrg_slice = $sa->fetch_by_region($LRG_COORD_SYSTEM_NAME,$lrg_id);
       if (!defined($lrg_slice)) {
-	warn("Could not fetch a slice object for " . $LRG_COORD_SYSTEM_NAME . ":" . $lrg_id);
+	$msg = "Could not fetch a slice object for $LRG_COORD_SYSTEM_NAME\: $lrg_id";
+	warn($msg);
+	print STDOUT "$msg\n" if ($verbose);
 	$passed = 0;
       }
       else {
@@ -650,7 +654,10 @@ Skip this, this is done by the external data files
 	
 	# Compare the sequences
 	if ($genomic_seq_xml ne $genomic_seq_db) {
-	  warn("Genomic sequence from core db is different from genomic sequence in XML file for $lrg_id");
+	  $msg = "Genomic sequence from core db is different from genomic sequence in XML file for $lrg_id";
+	  warn($msg);
+	  print STDOUT "$msg\n" if ($verbose);
+	  print ">genomic_seq_in_xml\n$genomic_seq_xml\n>genomic_seq_in_db\n$genomic_seq_db\n" if ($verbose);
 	  $passed = 0;  
 	}
 	
@@ -666,7 +673,9 @@ Skip this, this is done by the external data files
 	  my @db_tr = grep {$_->stable_id() eq $stable_id} @{$transcripts_db};
 	  # Check that we got one transcript back
 	  if (!defined(@db_tr) || scalar(@db_tr) != 1) {
-	    warn("Could not unambiguously get the correct Ensembl transcript corresponding to $lrg_id $fixed_id");
+	    $msg = "Could not unambiguously get the correct Ensembl transcript corresponding to $lrg_id $fixed_id";
+	    warn($msg);
+	    print STDOUT "$msg\n" if ($verbose);
 	    $passed = 0;
 	    next;
 	  }
@@ -679,7 +688,10 @@ Skip this, this is done by the external data files
 	  my $cDNA_db = $transcript_db->spliced_seq();
 	  # Compare the sequences
 	  if ($cDNA_xml ne $cDNA_db) {
-	    warn("cDNA sequence from core db is different from cDNA sequence in XML file for $lrg_id transcript $fixed_id");
+	    $msg = "cDNA sequence from core db is different from cDNA sequence in XML file for $lrg_id transcript $fixed_id";
+	    warn($msg);
+	    print STDOUT "$msg\n" if ($verbose);
+	    print ">cDNA_seq_in_xml\n$cDNA_xml\n>cDNA_seq_in_db\n$cDNA_db\n" if ($verbose);
 	    $passed = 0;
 	    next;
 	  }
@@ -694,7 +706,10 @@ Skip this, this is done by the external data files
 	  
 	  # Compare the sequences
 	  if ($translation_xml ne $translation_db) {
-	    warn("Peptide sequence from core db is different from peptide sequence in XML file for $lrg_id transcript $fixed_id");
+	    $msg = "Peptide sequence from core db is different from peptide sequence in XML file for $lrg_id transcript $fixed_id";
+	    warn($msg);
+	    print STDOUT "$msg\n" if ($verbose);
+	    print ">peptide_seq_in_xml\n$translation_xml\n>peptide_seq_in_db\n$translation_db\n" if ($verbose);
 	    $passed = 0;
 	    next;
 	  }	
