@@ -185,12 +185,68 @@ sub fetch_by_name {
     $sth->execute();
     $result = $self->_objs_from_sth($sth);
 
-    return undef if(!@$result);
-
     $sth->finish();
   }
+  
+  if(!@$result && $name =~ /^ss\d+/i) {
+	# try again if the ID looks like a subsnp ID
+	push @{$result}, $self->fetch_by_subsnp_id($name);
+  }
+  
+  return undef if(!@$result);
+  
   return $result->[0];
 }
+
+
+=head2 fetch_by_subsnp_id
+
+  Arg [1]    : string $subsnp_id
+  Example    : $var = $var_adaptor->fetch_by_subsnp_id('ss123');
+  Description: Retrieves a variation object via a component subsnp ID
+  Returntype : Bio::EnsEMBL::Variation::Variation
+  Exceptions : throw if name argument is not defined
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub fetch_by_subsnp_id {
+  my $self = shift;
+  my $name = shift;
+  
+  $name =~ s/^ss//gi;
+
+  throw('name argument expected') if(!defined($name));
+
+  # NB flanking sequence table is joined here and in fetch_by_dbID
+  # so we can set flank_flag where the flanking sequence differs
+  # from the reference - it is just set to 0 when fetching variations
+  # by other methods since otherwise the join takes too long
+  my $sth = $self->prepare
+    (qq{SELECT v.variation_id, v.name, v.validation_status, s1.name, s1.description, s1.url, s1.somatic, v.ancestral_allele, 
+               a.allele_id, a.subsnp_id, a.allele, a.frequency, a.sample_id, vs.moltype,
+              vs.name, s2.name, f.description, (fs.up_seq is not null OR fs.down_seq is not null)
+	  FROM   (variation v, source s1)
+	     LEFT JOIN allele a on v.variation_id = a.variation_id
+		 LEFT JOIN flanking_sequence fs on v.variation_id = fs.variation_id
+	     LEFT JOIN variation_synonym vs on v.variation_id = vs.variation_id 
+         LEFT JOIN source s2 on  vs.source_id = s2.source_id
+	     LEFT JOIN failed_variation fv on v.variation_id = fv.variation_id
+	     LEFT JOIN failed_description f on fv.failed_description_id = f.failed_description_id
+       WHERE    v.source_id = s1.source_id
+       AND    a.subsnp_id = ?
+       ORDER BY a.allele_id});
+
+  $sth->bind_param(1,$name,SQL_VARCHAR);
+  $sth->execute();
+
+  my $result = $self->_objs_from_sth($sth);
+  $sth->finish();
+  
+  return $result->[0];
+}
+
 
 
 =head2 fetch_all_by_source
