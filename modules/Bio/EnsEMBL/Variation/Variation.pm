@@ -808,11 +808,26 @@ sub add_PopulationGenotype{
 
 sub ambig_code{
     my $self = shift;
-    my $alleles = $self->get_all_Alleles(); #get all Allele objects
-    my %alleles; #to get all the different alleles in the Variation
-    map {$alleles{$_->allele}++} @{$alleles};
-    my $allele_string = join "|",keys %alleles;
-    return &ambiguity_code($allele_string);
+	
+	my $code;
+	
+	# first try via VF
+	if(my @vfs = @{$self->get_all_VariationFeatures}) {
+	  if(scalar @vfs) {
+		$code = $vfs[0]->ambig_code;
+	  }
+	}
+	
+	# otherwise get it via alleles attatched to this object already
+	if(!defined($code)) {
+	  my $alleles = $self->get_all_Alleles(); #get all Allele objects
+	  my %alleles; #to get all the different alleles in the Variation
+	  map {$alleles{$_->allele}++} @{$alleles};
+	  my $allele_string = join "|",keys %alleles;
+	  $code = &ambiguity_code($allele_string);
+	}
+	
+	return $code;
 }
 
 =head2 var_class
