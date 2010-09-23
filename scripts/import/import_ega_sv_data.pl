@@ -63,7 +63,8 @@ else {
   
   while(<IN>) {
 	next if /STUDY_ID/;		# skip header line
-	print OUT $_;
+	chomp;
+	print OUT $_ . "\t\n";
   }
   
   close IN;
@@ -83,8 +84,8 @@ sub read_file{
   $dbVar->do("DROP TABLE IF EXISTS temp_cnv;");
   
   create_and_load(
-	$dbVar, "temp_cnv", "study", "id *", "tax_id i", "organism", "chr", "outer_start i", "inner_start i",
-	"start i", "end i", "inner_end i", "outer_end i", "assembly", "type");
+	$dbVar, "temp_cnv", "study", "pmid i", "author", "year", "title l", "id *", "tax_id i", "organism", "chr", "outer_start i", "inner_start i",
+	"start i", "end i", "inner_end i", "outer_end i", "assembly", "type", "comment");
   
   # fix nulls
   foreach my $coord('outer_start', 'inner_start', 'inner_end', 'outer_end') {
@@ -97,7 +98,76 @@ sub read_file{
 
 sub source{
   debug("Inserting into source table");
-  $dbVar->do(qq{INSERT INTO source (name) SELECT distinct(concat('DGVa:', study)) FROM temp_cnv ORDER BY length(substr(study, 4)), substr(study, 4);});
+  
+  #ÊAn ugly construct, but let's create a unique key on the source name in order to avoid duplicates but still update the URLs
+  # BTW, perhaps we actually should have a unique constraint on the name column??
+  my $stmt = qq{
+    ALTER TABLE
+      source
+    ADD CONSTRAINT
+      UNIQUE KEY
+	name_key (name)
+  };
+  $dbVar->do($stmt);
+  
+  # Then insert "new" sources. Update the URL field in case of duplicates
+  $stmt = qq{
+    INSERT INTO
+      source (
+	name,
+	description,
+	url
+      )
+    SELECT DISTINCT
+      CONCAT(
+	'DGVa:',
+	study
+      ),
+      CONCAT(
+	author,
+	' ',
+	year,
+	' "',
+	title,
+	'" PMID:',
+	pmid,
+	' ',
+	comment
+      ),
+      CONCAT(
+	'http://www.ncbi.nlm.nih.gov/pubmed/',
+	pmid
+      )
+    FROM
+      temp_cnv
+    ORDER BY
+      LENGTH(
+	SUBSTR(
+	  study,
+	  4
+	)
+      ),
+      SUBSTR(
+	study,
+	4
+      )
+    ON DUPLICATE KEY UPDATE
+      url = CONCAT(
+	'http://www.ncbi.nlm.nih.gov/pubmed/',
+	pmid
+      )
+  };
+  $dbVar->do($stmt);
+  
+  # And then drop the name key again
+  $stmt = qq{
+    ALTER TABLE
+      source
+    DROP KEY
+      name_key
+  };
+  $dbVar->do($stmt);
+  
 }
 
 sub structural_variation{
@@ -120,19 +190,59 @@ sub structural_variation{
 	KEY `pos_idx` (`seq_region_id`,`seq_region_start`)
   )});
   
-  # now copy the data
-  $dbVar->do(qq{
-	INSERT INTO structural_variation
-	(seq_region_id, seq_region_start, seq_region_end, seq_region_strand,
-	variation_name, source_id,
-	class, bound_start, bound_end)
-	SELECT q.seq_region_id, t.start, t.end, 1,
-	t.id, s.source_id, t.type, t.outer_start, t.outer_end
-	FROM seq_region q, temp_cnv t, source s
-	WHERE q.name = t.chr AND concat('DGVa:', t.study) = s.name;
-  });
+  #ÊThe variation name should be unique so for the insert, create a unique key for this column.
+  # Should there perhaps in fact be a unique constraint on this column?
+  my $stmt = qq{
+    ALTER TABLE
+      structural_variation
+    ADD CONSTRAINT
+      UNIQUE KEY
+	name_key (variation_name)
+  };
+  $dbVar->do($stmt);
+  
+  # now copy the data. If the variation is duplicated, replace the old data
+  $stmt = qq{
+    REPLACE INTO
+      structural_variation (
+	seq_region_id,
+	seq_region_start,
+	seq_region_end,
+	seq_region_strand,
+	variation_name,
+	source_id,
+	class,
+	bound_start,
+	bound_end
+      )
+    SELECT
+      q.seq_region_id,
+      t.start,
+      t.end,
+      1,
+      t.id,
+      s.source_id,
+      t.type,
+      t.outer_start,
+      t.outer_end
+    FROM
+      seq_region q,
+      temp_cnv t,
+      source s
+    WHERE
+      q.name = t.chr AND
+      concat('DGVa:', t.study) = s.name
+  };
+  $dbVar->do($stmt);
   
   # cleanup
+  $stmt = qq{
+    ALTER TABLE
+      structural_variation
+    DROP KEY
+      name_key
+  };
+  $dbVar->do($stmt);
   $dbVar->do(qq{DROP TABLE temp_cnv;});
 }
 
@@ -174,7 +284,7 @@ sub mapping{
 	chomp;
 	
 	# input file has these columns
-	my ($study, $id, $tax_id, $organism, $chr, $outer_start, $inner_start, $start, $end, $inner_end, $outer_end, $assembly, $type) = split /\t/, $_;
+	my ($study, $pmid, $author, $year, $title, $id, $tax_id, $organism, $chr, $outer_start, $inner_start, $start, $end, $inner_end, $outer_end, $assembly, $type) = split /\t/, $_;
 	
 	next unless $tax_id == $connected_tax_id;
 	
@@ -196,7 +306,7 @@ sub mapping{
 	  }
 	  elsif($assembly =~ /$cs_version_number/) {
 		# no need to map if it's already on the latest assembly
-		print OUT "$_\n";
+		print OUT "$_\t\n";
 		next;
 	  }
 	  else {
@@ -217,7 +327,7 @@ sub mapping{
 	  }
 	  elsif($assembly =~ /$cs_version_number/) {
 		# no need to map if it's already on the latest assembly
-		print OUT "$_\n";
+		print OUT "$_\t\n";
 		$no_mapping_needed++;
 		next;
 	  }
@@ -283,15 +393,13 @@ sub mapping{
 	  
 	  $num_mapped{$assembly}++;
 	  
-	  $assembly = $target_assembly;
-	  
 	  # calculate inner/outer coords
 	  $outer_start = $min_start - ($start - $outer_start) if $outer_start >= 1;
 	  $inner_start = $min_start + ($inner_start - $start) if $inner_start >= 1;
 	  $inner_end = $max_end - ($end - $inner_end) if $inner_end >= 1;
 	  $outer_end = $max_end + ($outer_end - $end) if $outer_end >= 1;
 	  
-	  print OUT (join "\t", ($study, $id, $tax_id, $organism, $to_chr, $outer_start, $inner_start, $min_start, $max_end, $inner_end, $outer_end, $assembly, $type));
+	  print OUT (join "\t", ($study, $pmid, $author, $year, $title, $id, $tax_id, $organism, $to_chr, $outer_start, $inner_start, $min_start, $max_end, $inner_end, $outer_end, $target_assembly, $type, "[remapped from build $assembly]"));
 	  print OUT "\n";
 	}
 	
