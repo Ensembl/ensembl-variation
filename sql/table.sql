@@ -310,7 +310,7 @@ create table variation_feature(
 				    'WITHIN_NON_CODING_GENE','NO_CONSEQUENCE','INTERGENIC','HGMD_MUTATION')
 	default "INTERGENIC" not null ,	
 	primary key( variation_feature_id ),
-	key pos_idx( seq_region_id, seq_region_start ),
+	key pos_idx( seq_region_id, seq_region_start, seq_region_end ),
 	key variation_idx( variation_id )
 );
 
@@ -351,7 +351,7 @@ CREATE TABLE structural_variation (
   bound_start int(11) DEFAULT NULL,
   bound_end int(11) DEFAULT NULL,
   PRIMARY KEY (structural_variation_id),
-  KEY pos_idx (seq_region_id,seq_region_start),
+  KEY pos_idx (seq_region_id,seq_region_start,seq_region_end),
   KEY name_idx (variation_name)
 );
 
