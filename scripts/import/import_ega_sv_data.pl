@@ -251,7 +251,20 @@ sub meta_coord{
   
   debug("Adding entry to meta_coord table");
   
-  my $max_length_ref = $dbVar->selectall_arrayref(qq{SELECT max(seq_region_end - seq_region_start+1) from structural_variation});
+  my $max_length_ref = $dbVar->selectall_arrayref(qq{
+    SELECT GREATEST(
+      (
+	SELECT
+	  MAX(seq_region_end - seq_region_start + 1)
+	FROM structural_variation
+      ),
+      (
+	SELECT
+	  MAX(bound_end - bound_start + 1)
+	FROM structural_variation
+      )
+    )
+  });
   my $max_length = $max_length_ref->[0][0];
   
   my $cs = $default_cs->dbID;
