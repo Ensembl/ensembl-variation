@@ -7,7 +7,7 @@
 
    -->
    
-   <!-- Last modified on 2010-09-16 by Pontus Larsson -->
+   <!-- Last modified on 2010-10-01 by Pontus Larsson -->
    
    <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -128,10 +128,12 @@
 		}
 		
 		.upstream {
+		  text-transform: lowercase;
 		  font-family: monospace;
 		  color: #000000;
 		}
 		.downstream {
+		  text-transform: lowercase;
 		  font-family: monospace;
 		  color: #000000;
 		}
@@ -150,6 +152,16 @@
 		.exon {
 		  font-family: monospace;
 		  color: #003399;
+		}
+		
+		.exon_odd {
+		  font-family: monospace;
+		  color: #003399;
+		}
+		
+		.exon_even {
+		  font-family: monospace;
+		  color: #000000;
 		}
 		
 		.exonselect {
@@ -661,7 +673,7 @@
 		  </tr>
 		  <tr valign="middle">
 			<td style="border:0px;"><strong>Key: </strong></td>
-			<td style="border:0px;">Colours indicate alternate exons e.g. <span class="sequence"><span class="intron">EXON_1</span> / <span class="exon">EXON_2</span></span></td>
+			<td style="border:0px;">Colours indicate alternate exons e.g. <span class="sequence"><span class="exon_odd">EXON_1</span> / <span class="exon_even">EXON_2</span></span></td>
 		  </tr>
 		  <tr valign="middle">
 			<td style="border:0px;"> </td>
@@ -695,14 +707,16 @@
 				<xsl:for-each select="exon">
 				  <xsl:variable name="exon_number" select="position()"/>
 				  <span>
+				    
 					<xsl:choose>
 					  <xsl:when test="round(position() div 2) = (position() div 2)">
-						<xsl:attribute name="class">exon</xsl:attribute>
+						<xsl:attribute name="class">exon_even</xsl:attribute>
 					  </xsl:when>
 					  <xsl:otherwise>
-						<xsl:attribute name="class">intron</xsl:attribute>
+						<xsl:attribute name="class">exon_odd</xsl:attribute>
 					  </xsl:otherwise>
 					</xsl:choose>
+				    
 					<xsl:attribute name="id">cdna_exon_<xsl:value-of select="$transname"/>_<xsl:value-of select="$exon_number"/></xsl:attribute>
 					<xsl:attribute name="onclick">javascript:highlight_exon('<xsl:value-of select="$transname"/>_<xsl:value-of select="$exon_number"/>');</xsl:attribute>
 					<xsl:attribute name="title">Exon <xsl:value-of select="cdna_coords//@start"/>-<xsl:value-of select="cdna_coords/@end"/>(<xsl:value-of select="lrg_coords/@start"/>-<xsl:value-of select="lrg_coords/@end"/>)</xsl:attribute>
@@ -738,7 +752,7 @@
 						   </xsl:when>
 						   <xsl:otherwise>
 						      <xsl:if test="(cdna_coords/@end - (cdna_coords/@start + ($cstart - lrg_coords/@start))-3+1) &gt; 0">
-							 <xsl:value-of select="substring($seq,cdna_coords/@start + ($cstart - lrg_coords/@start)+3,cdna_coords/@end - (cdna_coords/@start + ($cstart - lrg_coords/@start))-3)"/>
+							 <xsl:value-of select="substring($seq,cdna_coords/@start + ($cstart - lrg_coords/@start)+3,cdna_coords/@end - (cdna_coords/@start + ($cstart - lrg_coords/@start))-3+1)"/>
 						      </xsl:if>
 						   </xsl:otherwise>
 						</xsl:choose>
@@ -1025,7 +1039,7 @@
 		  </tr>
 		  <tr>
 			<td style="border:0px; padding:0px;"><strong>Key: </strong></td>
-			<td style="border:0px;">Colours indicate alternate exons e.g. <span class="intron">EXON_1</span> / <span class="exon">EXON_2</span></td>
+			<td style="border:0px;">Colours indicate alternate exons e.g. <span class="exon_odd">EXON_1</span> / <span class="exon_even">EXON_2</span></td>
 		  </tr>
 		  <tr>
 			<td style="border:0px;"> </td>
@@ -1060,10 +1074,10 @@
 					<span>
 					  <xsl:choose>
 						<xsl:when test="round(position() div 2) = (position() div 2)">
-						  <xsl:attribute name="class">exon</xsl:attribute>
+						  <xsl:attribute name="class">exon_even</xsl:attribute>
 						</xsl:when>
 						<xsl:otherwise>
-						  <xsl:attribute name="class">intron</xsl:attribute>
+						  <xsl:attribute name="class">exon_odd</xsl:attribute>
 						</xsl:otherwise>
 					  </xsl:choose>
 					  <xsl:attribute name="id">peptide_exon_<xsl:value-of select="$transname"/>_<xsl:value-of select="$exon_number"/></xsl:attribute>
