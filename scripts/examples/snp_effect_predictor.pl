@@ -122,7 +122,7 @@ if(defined($in_file)) {
 
 # no file specified - try to read data off command line
 else {
-	$in_file_handle->open(<STDIN>);
+	$in_file_handle = 'STDIN';
 }
 
 # define filehandle to write to
