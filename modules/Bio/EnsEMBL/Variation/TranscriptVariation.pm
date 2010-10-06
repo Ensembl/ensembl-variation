@@ -334,11 +334,6 @@ sub cdna_start {
     $self->{'cdna_start'} = $cdna_start;
   }
   
-  # try and calculate the cdna coord if we don't have it in the DB
-  if(!defined($self->{'cdna_start'}) && defined($self->transcript)) {
-	$self->_calc_transcript_coords();
-  }
-  
   return $self->{'cdna_start'};
 }
 
@@ -367,11 +362,6 @@ sub cdna_end {
       throw('cdna end must be an integer greater than or equal to 0');
     }
     $self->{'cdna_end'} = $cdna_end;
-  }
-  
-  # try and calculate the cdna coord if we don't have it in the DB
-  if(!defined($self->{'cdna_end'}) && defined($self->transcript)) {
-	$self->_calc_transcript_coords();
   }
 
   return $self->{'cdna_end'};
@@ -403,11 +393,6 @@ sub cds_start {
     $self->{'cds_start'} = $cds_start;
   }
   
-  # try and calculate the cds coord if we don't have it in the DB
-  if(!defined($self->{'cds_start'}) && defined($self->transcript)) {
-	$self->_calc_transcript_coords();
-  }
-  
   return $self->{'cds_start'};
 }
 
@@ -436,11 +421,6 @@ sub cds_end {
       throw('cds end must be an integer greater than or equal to 0');
     }
     $self->{'cds_end'} = $cds_end;
-  }
-  
-  # try and calculate the cds coord if we don't have it in the DB
-  if(!defined($self->{'cds_end'}) && defined($self->transcript)) {
-	$self->_calc_transcript_coords();
   }
 
   return $self->{'cds_end'};
@@ -472,11 +452,6 @@ sub translation_start {
     $self->{'translation_start'} = $tl_start;
   }
   
-  # try and calculate the peptide coord if we don't have it in the DB
-  if(!defined($self->{'translation_start'}) && defined($self->transcript)) {
-	$self->_calc_transcript_coords();
-  }
-  
   return $self->{'translation_start'};
 }
 
@@ -504,11 +479,6 @@ sub translation_end {
       throw('translation end must be an integer greater than or equal to 0');
     }
     $self->{'translation_end'} = $tl_end;
-  }
-  
-  # try and calculate the peptide coord if we don't have it in the DB
-  if(!defined($self->{'translation_end'}) && defined($self->transcript)) {
-	$self->_calc_transcript_coords();
   }
 
   return $self->{'translation_end'};
