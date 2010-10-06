@@ -1129,32 +1129,58 @@ sub get_all_hgvs_notations {
     my $reference_name = shift;
     my $use_allele = shift;
     
-	# don't get them for HGMD mutations or CNV probes
-	return {} if $self->allele_string =~ /INS|DEL|HGMD|CNV/ig;
+    # Feature type & notation
+    my $ft_type;
+    
+    # First of all, if this will get protein notation, check that the variation falls within the CDS. This will drop the majority of queries.
+    if ($ref_feature->isa('Bio::EnsEMBL::Transcript')) {
+      $ft_type = 'Transcript';
+      
+      if ($numbering eq 'p') {
+	
+	# Get a TranscriptVariation object for this VariationFeature and the supplied Transcript if it wasn't passed in the call
+	$transcript_variation = $self->get_all_TranscriptVariations([$ref_feature])->[0] if (!defined($transcript_variation));
+	
+	#ÊTypically, if the variation is intronic, the fields in transcript_variation for positions are undefined
+	# We cannot get protein notation for an intronic SNP, so return an empty list
+	return {} if (!defined($transcript_variation->translation_start()) || !defined($transcript_variation->translation_end()));
+      }
+    }
+    elsif ($ref_feature->isa('Bio::EnsEMBL::Slice')) {
+      $ft_type = 'Slice';
+    }
+    elsif ($ref_feature->isa('Bio::EnsEMBL::Gene')) {
+      $ft_type = 'Gene';
+    }
+    
+    # don't get them for HGMD mutations or CNV probes
+    return {} if $self->allele_string =~ /INS|DEL|HGMD|CNV/ig;
+	
+    # Check that HGVS notation is implemented for the supplied feature type
+    if (!defined($ft_type)) {
+      warn("HGVS notation has not been implemented for $ref_feature");
+      return {};
+    }
+    # Check that the numbering scheme is compatible with the type of reference supplied
+    if ($numbering !~ m/[gcp]/ || ($ft_type ne 'Transcript' && $numbering ne 'g')) {
+      warn("HGVS $numbering notation is not available for $ref_feature");
+      return {};
+    }
 	
     # If no reference feature is supplied, set it to the slice underlying this VariationFeature
     $ref_feature ||= $self->slice();
     #ÊBy default, use genomic position numbering
     $numbering ||= 'g';
     
-    # Check that the numbering scheme is compatible with the type of reference supplied
-    if (($ref_feature->isa('Bio::EnsEMBL::Slice') && $numbering !~ m/[g]/) || ($ref_feature->isa('Bio::EnsEMBL::Transcript') && $numbering !~ m/[gcp]/) || ($ref_feature->isa('Bio::EnsEMBL::Gene') && $numbering !~ m/[g]/)) {
-      warn("HGVS $numbering notation is not available for $ref_feature");
-      return {};
-    }
-    # Check that HGVS notation is implemented for the supplied feature type
-    if (!($ref_feature->isa('Bio::EnsEMBL::Slice') || $ref_feature->isa('Bio::EnsEMBL::Transcript') || $ref_feature->isa('Bio::EnsEMBL::Gene'))) {
-      warn("HGVS notation has not been implemented for $ref_feature");
-      return {};
-    }
-    
     #ÊIf the reference feature is a slice, set the ref_slice to the feature, otherwise to the feature_Slice
     my $ref_slice;
-    if ($ref_feature->isa('Bio::EnsEMBL::Slice')) {
+    if ($ft_type eq 'Slice') {
       $ref_slice = $ref_feature;
     }
     else {
-      $ref_slice = $ref_feature->feature_Slice;
+      #ÊMake a subslice instead of getting the feature_slice since it's faster
+      # $ref_slice = $ref_feature->feature_Slice;
+      $ref_slice = $ref_feature->slice()->sub_Slice($ref_feature->start(),$ref_feature->end(),$ref_feature->strand());
     }
     
     # Transfer this VariationFeature onto the slice of the reference feature
@@ -1181,9 +1207,9 @@ sub get_all_hgvs_notations {
       $tr_vf->strand(1);
     }
     
-    # Get the underlying slice
+    # Get the underlying slice and sequence
     $ref_slice = $tr_vf->slice();
-    
+    my $ref_slice_seq = $ref_slice->seq();
     #ÊCoordinates to use in the notation
     my $display_start = $tr_vf->start();
     my $display_end = $tr_vf->end();
@@ -1195,14 +1221,7 @@ sub get_all_hgvs_notations {
     my $ref_cds;
     my $ref_peptide;
     my $peptide_start;
-    if ($ref_feature->isa('Bio::EnsEMBL::Transcript') && $numbering =~ m/p/) {
-      
-      # Get a TranscriptVariation object for this VariationFeature and the supplied Transcript
-      my $transcript_variation = $self->get_all_TranscriptVariations([$ref_feature])->[0];
-      
-      #ÊTypically, if the variation is intronic, the fields in transcript_variation for positions are undefined
-      # We cannot get protein notation for an intronic SNP, so return an empty list
-      return {} if (!defined($transcript_variation->translation_start()) || !defined($transcript_variation->translation_end()));
+    if ($ft_type eq 'Transcript' && $numbering =~ m/p/) {
       
       #ÊFIXME: Check if the variation spans across an exon-intron or intron-exon border, in which case we probably just want to return an unknown effect (p.?)
       #ÊActually, in case it does (rs71949117, ENST00000342930 is an example of this), the cds_start, translation_start etc. will be null and this method will
@@ -1273,7 +1292,7 @@ sub get_all_hgvs_notations {
 	$ref_end += $seq_start;
 	$seq_start = 0;
       }
-      my $ref_seq = substr($ref_slice->seq(),$seq_start,$ref_end);
+      my $ref_seq = substr($ref_slice_seq,$seq_start,$ref_end);
       my $hgvs_notation = hgvs_variant_notation((length($t_allele) > 0 ? $t_allele : '-'),$ref_seq,$ref_start,$ref_end,$display_start,$display_end);
       
       # Skip if e.g. allele is identical to the reference slice
