@@ -93,19 +93,19 @@ use vars qw(@ISA);
 
 
 # List of validation states. Order must match that of set in database
-our @VSTATES = ('cluster','freq','submitter','doublehit','hapmap', 'failed', 'non-polymorphic', 'observed');
+our @VSTATES = ('cluster','freq','submitter','doublehit','hapmap','1000Genome','failed','precious');
 
 # Conversion of validation state to bit value
-our %VSTATE2BIT = ('cluster'   => 1,   # 00000001
-                   'freq'      => 2,   # 00000010
-                   'submitter' => 4,   # 00000100
-                   'doublehit' => 8,   # 00001000
-                   'hapmap'    => 16,  # 00010000
-		   'failed'    => 32,
-		   'non-polymorphic' => 64, # 00100000
-		   'observed'  => 128   # 01000000
-		   
-		   ); 
+our %VSTATE2BIT = (
+  'cluster'    => 1,   # 00000001
+  'freq'       => 2,   # 00000010
+  'submitter'  => 4,   # 00000100
+  'doublehit'  => 8,   # 00001000
+  'hapmap'     => 16,  # 00010000
+  '1000Genome' => 32,
+  'failed'     => 64,
+  'precious'   => 128,
+); 
 
 
 =head2 new
