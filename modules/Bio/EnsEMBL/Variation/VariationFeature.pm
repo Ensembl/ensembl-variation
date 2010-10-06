@@ -1128,6 +1128,7 @@ sub get_all_hgvs_notations {
     my $numbering = shift;
     my $reference_name = shift;
     my $use_allele = shift;
+    my $transcript_variation;
     
     # Feature type & notation
     my $ft_type;
