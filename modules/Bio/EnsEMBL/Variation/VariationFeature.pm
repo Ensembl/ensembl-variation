@@ -768,24 +768,24 @@ sub var_class{
 sub get_all_validation_states {
   my $self = shift;
 
-  my @VSTATES = @Bio::EnsEMBL::Variation::Variation::VSTATES;
+  my $VSTATES = \@Bio::EnsEMBL::Variation::Variation::VSTATES;
 
   my $code = $self->{'validation_code'};
   # convert the validation state strings into a bit field
   # this preserves the same order and representation as in the database
   # and filters out invalid states
 
-  my %VSTATE2BIT = %Bio::EnsEMBL::Variation::Variation::VSTATE2BIT;
+  my $VSTATE2BIT = \%Bio::EnsEMBL::Variation::Variation::VSTATE2BIT;
   my $vcode = 0;
   $code ||= [];
   foreach my $vstate (@$code) {
-    $vcode |= $VSTATE2BIT{lc($vstate)} || 0;
+    $vcode |= $VSTATE2BIT->{lc($vstate)} || 0;
   }
 
   # convert the bit field into an ordered array
   my @states;
-  for(my $i = 0; $i < @VSTATES; $i++) {
-    push @states, $VSTATES[$i] if((1 << $i) & $vcode);
+  for(my $i = 0; $i < @$VSTATES; $i++) {
+    push @states, $VSTATES->[$i] if((1 << $i) & $vcode);
   }
   return \@states;
 }
