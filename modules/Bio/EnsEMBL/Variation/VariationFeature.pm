@@ -1124,11 +1124,15 @@ sub get_all_PopulationGenotypes{
 
 sub get_all_hgvs_notations {
     my $self = shift;
-    my $ref_feature = shift;
+    my $feature = shift;
     my $numbering = shift;
     my $reference_name = shift;
     my $use_allele = shift;
-    my $transcript_variation;
+    my $transcript_variation = shift;
+    
+    # If no reference feature is supplied, set it to the slice underlying this VariationFeature
+    my $ref_feature = $feature;
+    $ref_feature ||= $self->slice();
     
     # Feature type & notation
     my $ft_type;
@@ -1168,8 +1172,6 @@ sub get_all_hgvs_notations {
       return {};
     }
 	
-    # If no reference feature is supplied, set it to the slice underlying this VariationFeature
-    $ref_feature ||= $self->slice();
     #ÊBy default, use genomic position numbering
     $numbering ||= 'g';
     
@@ -1184,8 +1186,14 @@ sub get_all_hgvs_notations {
       $ref_slice = $ref_feature->slice()->sub_Slice($ref_feature->start(),$ref_feature->end(),$ref_feature->strand());
     }
     
-    # Transfer this VariationFeature onto the slice of the reference feature
-    my $tr_vf = $self->transfer($ref_slice);
+    # Transfer this VariationFeature onto the slice of the reference feature (unless the reference feature is the slice the VF is on)
+    my $tr_vf;
+    if (defined($feature)) {
+      $tr_vf = $self->transfer($ref_slice);
+    }
+    else {
+      $tr_vf = $self;
+    }
     
     # Split the allele_string into distinct alleles
     my @alleles = split(/\//,$tr_vf->allele_string());
@@ -1210,7 +1218,6 @@ sub get_all_hgvs_notations {
     
     # Get the underlying slice and sequence
     $ref_slice = $tr_vf->slice();
-    my $ref_slice_seq = $ref_slice->seq();
     #ÊCoordinates to use in the notation
     my $display_start = $tr_vf->start();
     my $display_end = $tr_vf->end();
@@ -1266,6 +1273,9 @@ sub get_all_hgvs_notations {
     # Store them in a hash with the allele as keys to avoid duplicates
     # First, get the notation in genomic coordinate numbering for all
     my %hgvs;
+    my $ref_seq;
+    my $last_seq_start;
+    my $last_ref_end;
     foreach my $allele (@alleles) {
       
       # Skip if the allele contains weird characters
@@ -1293,7 +1303,11 @@ sub get_all_hgvs_notations {
 	$ref_end += $seq_start;
 	$seq_start = 0;
       }
-      my $ref_seq = substr($ref_slice_seq,$seq_start,$ref_end);
+      if (!defined($ref_seq) || $seq_start != $last_seq_start || $ref_end != $last_ref_end) {
+	$ref_seq = $ref_slice->subseq($seq_start + 1,$seq_start + $ref_end,1);
+	$last_seq_start = $seq_start;
+	$last_ref_end = $ref_end;
+      }
       my $hgvs_notation = hgvs_variant_notation((length($t_allele) > 0 ? $t_allele : '-'),$ref_seq,$ref_start,$ref_end,$display_start,$display_end);
       
       # Skip if e.g. allele is identical to the reference slice
