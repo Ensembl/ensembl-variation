@@ -366,8 +366,6 @@ use warnings;
                 }
             }
             
-            
-            
             $allele_index++;
         }
         
@@ -393,6 +391,11 @@ use warnings;
         $gff->{attributes}->{Reference_seq} = $self->end > $self->start+50 ? '~' : $self->get_reference_sequence;
         
         return $gff;
+    }
+    
+    sub to_gvf {
+        my $self = shift;
+        return $self->to_gff(@_);
     }
     
 }
