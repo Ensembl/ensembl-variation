@@ -341,7 +341,7 @@ sub print_consequences {
 			  my $hgnc_name;
 			  if($hgnc && $gene) {
 				my @entries = grep {$_->database eq 'HGNC'} @{$gene->get_all_DBEntries()};
-				$hgnc_name = $entries[0]->display_id || undef;
+				$hgnc_name = (scalar @entries ? $entries[0]->display_id : undef);
 			  }
 			  
 			  print $out_file_handle
