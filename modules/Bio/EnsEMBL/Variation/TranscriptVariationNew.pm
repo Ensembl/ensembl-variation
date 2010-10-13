@@ -184,7 +184,7 @@ sub intron_effects {
 }
 # NB: the methods below all cache their data in the associated transcript itself, this
 # gives a significant speed up when you are calculating the effect of all variations
-# on a transcript, and means that the cache will be removed when the transcript itself
+# on a transcript, and means that the cache will be freed when the transcript itself
 # is garbage collected rather than us having to maintain a transcript feature cache 
 # ourselves
 
