@@ -37,11 +37,11 @@ sub affects_cds {
 
     unless (defined $self->{affects_cds}) {
         
-        my $vfo = $self->variation_feature_overlap;
+        my $tv = $self->transcript_variation;
        
-        my @pep_coords = @{ $vfo->pep_coords };
+        my @pep_coords = @{ $tv->pep_coords };
        
-        if (not $vfo->feature->isa('Bio::EnsEMBL::Transcript')) {
+        if (not $tv->feature->isa('Bio::EnsEMBL::Transcript')) {
             $self->{affects_cds} = 0;
         }
         elsif (@pep_coords != 1) {
@@ -55,21 +55,21 @@ sub affects_cds {
             # by now we have established that the vf falls entirely in the CDS, 
             # so store the various start and end coords we need
 
-            my $tran = $vfo->feature;
+            my $tran = $tv->feature;
             
             my ($cds, $codon_cds_start, $codon_cds_end, $codon_len);
             
             # there's some stuff we only need to calculate once per vf, rather
             # than once per allele
             
-            if (defined $vfo->pep_start) {
+            if (defined $tv->pep_start) {
                 
                 # but we do need these in any case
                 
-                $codon_cds_start = $vfo->pep_start * 3 - 2;
-                $codon_cds_end   = $vfo->pep_end * 3;
+                $codon_cds_start = $tv->pep_start * 3 - 2;
+                $codon_cds_end   = $tv->pep_end * 3;
                 $codon_len       = $codon_cds_end - $codon_cds_start + 1;
-                $cds             = $vfo->translateable_seq;
+                $cds             = $tv->translateable_seq;
             }
             else {
                 
@@ -77,47 +77,47 @@ sub affects_cds {
                 
                 my $exon_phase = $tran->start_Exon->phase;
     
-                my $pep_coord = $vfo->pep_coords->[0];
-                $vfo->pep_start($pep_coord->start);
-                $vfo->pep_end($pep_coord->end);
+                my $pep_coord = $tv->pep_coords->[0];
+                $tv->pep_start($pep_coord->start);
+                $tv->pep_end($pep_coord->end);
     
-                my $cds_coord = $vfo->cds_coords->[0];
-                $vfo->cds_start($cds_coord->start + ($exon_phase > 0 ? $exon_phase : 0));
-                $vfo->cds_end($cds_coord->end + ($exon_phase > 0 ? $exon_phase : 0));
+                my $cds_coord = $tv->cds_coords->[0];
+                $tv->cds_start($cds_coord->start + ($exon_phase > 0 ? $exon_phase : 0));
+                $tv->cds_end($cds_coord->end + ($exon_phase > 0 ? $exon_phase : 0));
     
-                my $cdna_coord = $vfo->cdna_coords->[0];
-                $vfo->cdna_start($cdna_coord->start);
-                $vfo->cdna_end($cdna_coord->end);
+                my $cdna_coord = $tv->cdna_coords->[0];
+                $tv->cdna_start($cdna_coord->start);
+                $tv->cdna_end($cdna_coord->end);
                 
                 # find the reference amino acid and codon
     
-                my $peptide = $vfo->peptide;
-                $cds        = $vfo->translateable_seq;
+                my $peptide = $tv->peptide;
+                $cds        = $tv->translateable_seq;
  
-                my $var_pep_len = $vfo->pep_end - $vfo->pep_start + 1;
+                my $var_pep_len = $tv->pep_end - $tv->pep_start + 1;
     
-                my $ref_aa = substr($peptide, $vfo->pep_start - 1, $var_pep_len);
+                my $ref_aa = substr($peptide, $tv->pep_start - 1, $var_pep_len);
             
                 $ref_aa = '-' unless $ref_aa;
     
                 #print "PEPTIDE:\n$peptide\nstart: ".$vfo->pep_start." end: ".$vfo->pep_end." len: ".$var_pep_len."\nREFERENCE AA: $ref_aa\n";
     
-                $vfo->reference_allele->amino_acid($ref_aa);
+                $tv->reference_allele->amino_acid($ref_aa);
     
-                $codon_cds_start = $vfo->pep_start * 3 - 2;
-                $codon_cds_end   = $vfo->pep_end * 3;
+                $codon_cds_start = $tv->pep_start * 3 - 2;
+                $codon_cds_end   = $tv->pep_end * 3;
                 $codon_len       = $codon_cds_end - $codon_cds_start + 1;
     
                 my $ref_codon = substr($cds, $codon_cds_start-1, $codon_len);
                 
                 $ref_codon = '-' unless $ref_codon;
                 
-                $vfo->reference_allele->codon($ref_codon);
+                $tv->reference_allele->codon($ref_codon);
             }
             
             # everything else does need to be calculated for each allele
             
-            my $vf_nt_len = $vfo->cds_end - $vfo->cds_start + 1;
+            my $vf_nt_len = $tv->cds_end - $tv->cds_start + 1;
             
             # calculate the effect this allele has on the reference
 
@@ -130,7 +130,7 @@ sub affects_cds {
                 
                 my $allele_len = length($seq);
     
-                substr($new_cds, $vfo->cds_start-1, $allele_len) = $seq;
+                substr($new_cds, $tv->cds_start-1, $allele_len) = $seq;
                 
                 my $new_codon = substr($new_cds, $codon_cds_start-1, $codon_len + ($allele_len - $vf_nt_len));
     
