@@ -845,7 +845,8 @@ sub allele_table {
                   afsp.subsnp_id AS sorting_id, 
                   afsp.pop_id, 
                   afsp.allele_id, 
-                  afsp.freq
+                  afsp.freq,
+		  afsp.cnt
 		FROM   
 		  AlleleFreqBySsPop afsp, 
 		  SubSNP ss
@@ -862,8 +863,7 @@ sub allele_table {
 
    debug(localtime() . "\tLoading allele frequency data");
 
-   create_and_load($self->{'dbVar'}, "tmp_allele", "subsnp_id i*", "pop_id i*",
-		    "allele_id i*", "freq");
+   create_and_load($self->{'dbVar'}, "tmp_allele", "subsnp_id i*", "pop_id i*","allele_id i*", "freq","cnt i");
   print $logh Progress::location();
 
     debug(localtime() . "\tCreating allele table");
@@ -873,11 +873,11 @@ sub allele_table {
   print $logh Progress::location();
 
   # PL: This is a slow query (~5h), should we try to parallelize it? Perhaps split it in chunks by subsnp_id? Is there any point in doing that when all threads still has to access the same db/table?
-   $self->{'dbVar'}->do(qq(INSERT IGNORE INTO allele (variation_id, subsnp_id,allele,frequency, sample_id)
+   $self->{'dbVar'}->do(qq(INSERT IGNORE INTO allele (variation_id, subsnp_id,allele,frequency, sample_id, count)
                SELECT vs.variation_id,vs.subsnp_id,
                       IF(vs.substrand_reversed_flag,
                          tra.rev_allele,tra.allele) as allele,
-                      ta.freq, s.sample_id
+                      ta.freq, s.sample_id, ta.cnt
                FROM   tmp_allele ta, tmp_rev_allele tra, variation_synonym vs,
                       sample s
                WHERE  ta.subsnp_id = vs.subsnp_id
