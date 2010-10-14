@@ -887,6 +887,29 @@ sub is_tagged{
     }
 }
 
+
+
+=head2 is_reference
+  Arg        : none
+  Example    : my $reference = $vf->is_reference()
+  Description: Returns 1 if VF's slice is a reference slice else 0
+  Returntype : int
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub is_reference {
+  my ($self) = @_;
+  my $slice = $self->slice;
+
+  if ( !defined( $self->{'is_reference'} ) ) {
+    $self->{'is_reference'} = $slice->is_reference();
+  }
+
+  return $self->{'is_reference'};
+}
+
 =head2 convert_to_SNP
 
   Args        : None
