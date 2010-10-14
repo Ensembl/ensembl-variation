@@ -1,4 +1,4 @@
-#!perl -w
+#!/software/bin/perl
 
 use strict;
 
@@ -55,10 +55,13 @@ $outfile = $xmlfile . '.gff' if (!defined($outfile));
 #ÊGet a LRG object from the xmlfile
 my $root = LRG::LRG::newFromFile($xmlfile) or die("Could not create LRG object from $xmlfile");
 
+#ÊGet the LRG id
+my $lrgid = $root->findNode('fixed_annotation/id')->content();
+
 # In order to get the correct coordinates relative to the assembly, we need to get the mapping
-my $mapping = $root->findNodeArray('updatable_annotation/annotation_set/mapping',{'assembly' => $ASSEMBLY}) or die("Could not get mapping between $lrgid and ASSEMBLY");
+my $mapping = $root->findNodeArray('updatable_annotation/annotation_set/mapping',{'assembly' => $ASSEMBLY}) or die("Could not get mapping between $lrgid and $ASSEMBLY");
 # Get the first mapping (should only be one anyway)
-$mapping = $mapping->[0];
+$mapping = $mapping->[0] or die("Could not get mapping between $lrgid and $ASSEMBLY");
 
 # For now, we will ignore any mapping spans etc. and just assume that the mapping is linear.
 # FIXME: Do a finer mapping, this could be done by (temporarily) inserting the LRG into the core db via the LRGMapping.pm module
@@ -102,8 +105,8 @@ foreach my $transcript (@{$transcripts}) {
     $gene_end = max($gene_end,$transcript->data()->{'end'});
     
     my $tr_name = $transcript->data()->{'name'};
-    $row[2] = 'exon';
-    $row[8] = $lrgid . '_' . $tr_name;
+    @row[2] = 'exon';
+    @row[8] = $lrgid . '_' . $tr_name;
     
     # Loop over the exons and print them to the GFF
     my $nodes = $transcript->{'nodes'};
@@ -127,24 +130,24 @@ foreach my $transcript (@{$transcripts}) {
         if ($nodes->[$i]->name() eq 'exon') {
             my $exon_start = $nodes->[$i]->findNode('lrg_coords')->data()->{'start'};
             my $exon_end = $nodes->[$i]->findNode('lrg_coords')->data()->{'end'};
-            $row[3] = ($strand > 0 ? ($chr_start + $exon_start - 1) : ($chr_end - $exon_end + 1));
-            $row[4] = ($strand > 0 ? ($chr_start + $exon_end - 1) : ($chr_end - $exon_start + 1));
-            $row[7] = $phase;
+            @row[3] = ($strand > 0 ? ($chr_start + $exon_start - 1) : ($chr_end - $exon_end + 1));
+            @row[4] = ($strand > 0 ? ($chr_start + $exon_end - 1) : ($chr_end - $exon_start + 1));
+            @row[7] = $phase;
             push(@output,join("\t",@row));
         }
     }
 }
 #ÊShift off the first element (the LRG region)
 my $lrgrow = shift(@output);
-$row[2] = 'gene';
-$row[3] = ($strand > 0 ? ($chr_start + $gene_start - 1) : ($chr_end - $gene_end + 1));
-$row[4] = ($strand > 0 ? ($chr_start + $gene_end - 1) : ($chr_end - $gene_start + 1));
-$row[8] = $lrgid . '_g1';
+@row[2] = 'gene';
+@row[3] = ($strand > 0 ? ($chr_start + $gene_start - 1) : ($chr_end - $gene_end + 1));
+@row[4] = ($strand > 0 ? ($chr_start + $gene_end - 1) : ($chr_end - $gene_start + 1));
+@row[8] = $lrgid . '_g1';
 # Add the gene entry to the top of the array
-unshift(@output,join("\t",@row));
+#unshift(@output,join("\t",@row));
 # Add a track line for the LRG gene entry
-$track_line = "track name=\"$lrgid" . "_g1" . "\" description=\"Genomic region spanned by gene of $lrgid\" color=128,128,255";
-unshift(@output,$track_line);
+#$track_line = "track name=\"$lrgid" . "_g1" . "\" description=\"Genomic region spanned by gene of $lrgid\" color=128,128,255";
+#unshift(@output,$track_line);
 
 #ÊAdd the LRG region entry to the top
 unshift(@output,$lrgrow);
