@@ -373,13 +373,18 @@ sub fetch_all_by_Slice_VariationSet{
   
   my $cols = join ",", $self->_columns();
 
+    # Use an index hint for quicker lookup in the variation_set_variation table
     my $sth = $self->prepare(qq{
 		SELECT $cols
-		FROM variation_feature vf,
-		variation_set_variation vsv, source s
-		WHERE vf.source_id = s.source_id
-		AND vf.variation_id = vsv.variation_id
-		AND vsv.variation_set_id = ?
+		FROM
+		variation_set_variation vsv USE INDEX (variation_set_idx) JOIN
+		variation_feature vf ON (
+		    vsv.variation_id = vf.variation_id
+		) JOIN
+		source s ON (
+		    s.source_id = vf.source_id
+		)
+		WHERE vsv.variation_set_id = ?
 		AND vf.seq_region_id = ?
 		AND vf.seq_region_end > ?
 		AND vf.seq_region_start < ?
