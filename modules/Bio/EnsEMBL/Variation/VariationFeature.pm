@@ -1205,8 +1205,8 @@ sub get_all_hgvs_notations {
     }
     else {
       #ÊMake a subslice instead of getting the feature_slice since it's faster
-      # $ref_slice = $ref_feature->feature_Slice;
-      $ref_slice = $ref_feature->slice()->sub_Slice($ref_feature->start(),$ref_feature->end(),$ref_feature->strand());
+      $ref_slice = $ref_feature->feature_Slice;
+      #Ê$ref_slice = $ref_feature->slice()->sub_Slice($ref_feature->start(),$ref_feature->end(),$ref_feature->strand());
     }
     
     # Transfer this VariationFeature onto the slice of the reference feature (unless the reference feature is the slice the VF is on)
