@@ -1182,7 +1182,7 @@ sub get_all_hgvs_notations {
     }
     
     # don't get them for HGMD mutations or CNV probes
-    return {} if $self->allele_string =~ /INS|DEL|HGMD|CNV/ig;
+    return {} if ($self->allele_string =~ /INS|DEL|HGMD|CNV/ig || $self->var_class() =~ /microsat/i);
 	
     # Check that HGVS notation is implemented for the supplied feature type
     if (!defined($ft_type)) {
