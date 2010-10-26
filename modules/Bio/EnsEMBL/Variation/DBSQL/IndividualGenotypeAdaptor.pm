@@ -17,19 +17,14 @@ Bio::EnsEMBL::Variation::DBSQL::IndividualGenotypeAdaptor
   $reg->load_registry_from_db(-host => 'ensembldb.ensembl.org',-user => 'anonymous');
   
   $iga = $reg->get_adaptor("human","variation","individualgenotype");
-  $ia = $reg->get_adaptor("human","variation","individual");
-
-  # Get an IndividualGenotype by its internal identifier
-  $igtype = $ia->fetch_by_dbID(145);
-
-  # Get all individual genotypes for an individual
-  $ind = $ia->fetch_all_by_Individual(1219);
-
-  foreach $igtype (@{$iga->fetch_all_by_Individual($ind)}) {
-    print $igtype->variation()->name(),  ' ',
-          $igtype->allele1(), '/', $igtype->allele2(), "\n";
+  $sa = $reg->get_adaptor("human","core","slice");
+  
+  $slice = $sa->fetch_by_region("chromosome", 6, 133088927, 133089926);
+  
+  foreach my $ig(@{$iga->fetch_all_by_Slice($slice}) {
+    print $ig->allele1, "|", $ig->allele2;
   }
-
+  
 
 
 =head1 DESCRIPTION
@@ -61,29 +56,6 @@ use Bio::EnsEMBL::Variation::DBSQL::BaseGenotypeAdaptor;
 
 @ISA = ('Bio::EnsEMBL::Variation::DBSQL::BaseGenotypeAdaptor');
 
-=head2 fetch_all_by_Individual
-
-  Arg [1]    : Bio::EnsEMBL::Variation::Individual
-  Example    : $ind = $ind_adaptor->fetch_by_dbID(1345);
-               @gtys = $igty_adaptor->fetch_all_by_Individual($ind);
-  Description: Retrieves all genotypes which are stored for a specified
-               individual.
-  Returntype : Bio::EnsEMBL::Variation::IndividualGenotype
-  Exceptions : throw on incorrect argument
-  Caller     : general
-  Status     : At Risk
-
-=cut
-
-sub fetch_all_by_Individual {
-  my $self = shift;
-  my $ind = shift;
-  
-
-  $self->_multiple(0); #to return data from single and multiple genotype table
-  return $self->SUPER::fetch_all_by_Individual($ind);
-}
-
 
 =head2 fetch_all_by_Variation
 
@@ -107,6 +79,19 @@ sub fetch_all_by_Variation {
     return $self->SUPER::fetch_all_by_Variation($variation);
 
 }
+
+=head2 fetch_all_by_Slice
+
+  Arg [1]    : Bio::EnsEMBL::Slice $slice
+  Example    : $igtypes = $igtype_adaptor->fetch_all_by_Slice( $slice )
+  Description: Retrieves a list of individual genotypes in a given Slice.
+               If none are available an empty listref is returned.
+  Returntype : listref Bio::EnsEMBL::Variation::IndividualGenotype 
+  Exceptions : none
+  Caller     : general
+  Status     : At Risk
+
+=cut
 
 sub fetch_all_by_Slice{
     my $self = shift;
