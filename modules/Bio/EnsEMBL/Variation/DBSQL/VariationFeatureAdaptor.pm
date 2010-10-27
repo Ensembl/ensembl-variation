@@ -362,43 +362,43 @@ sub fetch_all_by_Slice_VariationSet{
     throw('Bio::EnsEMBL::Variation::VariationSet arg expected');
   }
 
-# First, get all VariationFeatures from the subsets of this VariationSet on this slice.
-# Store in a hash to avoid duplicates
+  #ÊIt's quite quick to get all variation features for a slice so do that and then use those ids to limit the variation set query
+  my $vfs = $self->fetch_all_by_Slice($slice);
+  return [] if (!scalar(@{$vfs}));
+  
+  # Create a hash with variation_id to variation_feature mappings
   my %var_feats;
-  foreach my $var_set (@{$set->adaptor->fetch_all_by_super_VariationSet($set,1)}) {
-    foreach my $var_feat (@{$self->fetch_all_by_Slice_VariationSet($slice,$var_set)}) {
-      $var_feats{$var_feat->dbID()} = $var_feat;
-    }
+  #ÊShould not reference the private field directly but will do that for now
+  map {$var_feats{$_->{'_variation_id'}} = $_} @{$vfs};
+  
+  my $var_id_constraint = "variation_id IN (" . join(",",keys(%var_feats)) . ")";
+  
+  # Get all sub variation sets
+  my $subsets = $set->adaptor->fetch_all_by_super_VariationSet($set);
+  my @set_ids = map{$_->dbID()} @{$subsets};
+  
+  #ÊCreate a constraint on the variation_set_id
+  my $set_id_constraint = "variation_set_id IN (" . join(",",($set->dbID(),@set_ids)) . ")";
+  
+  my $stmt = qq{
+    SELECT
+	variation_id 
+    FROM
+	variation_set_variation 
+    WHERE
+	$var_id_constraint AND 
+	$set_id_constraint
+    };
+  my $sth = $self->prepare($stmt);
+  $sth->execute();
+  my $var_id;
+  $sth->bind_columns(\$var_id);
+  my @vfs;
+  while ($sth->fetch()) {
+    push(@vfs,$var_feats{$var_id});
   }
   
-  my $cols = join ",", $self->_columns();
-
-    # Use an index hint for quicker lookup in the variation_set_variation table
-    my $sth = $self->prepare(qq{
-		SELECT $cols
-		FROM
-		variation_set_variation vsv USE INDEX (variation_set_idx) JOIN
-		variation_feature vf ON (
-		    vsv.variation_id = vf.variation_id
-		) JOIN
-		source s ON (
-		    s.source_id = vf.source_id
-		)
-		WHERE vsv.variation_set_id = ?
-		AND vf.seq_region_id = ?
-		AND vf.seq_region_end > ?
-		AND vf.seq_region_start < ?
-    });
-
-    $sth->execute($set->dbID, $slice->get_seq_region_id, $slice->start, $slice->end);
-
-    foreach my $var_feat (@{$self->_objs_from_sth($sth, undef, $slice)}) {
-      $var_feats{$var_feat->dbID()} = $var_feat;
-    }
-    
-    my @res = values(%var_feats);
-    
-    return \@res;
+  return \@vfs;
 }
 
 
