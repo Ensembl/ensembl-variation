@@ -1067,7 +1067,9 @@ sub gene_2_feature {
   my $feat_strand = $limits->{'strand'};
   
   # Create the gene node
-  my $gene_node = LRG::Node->new("gene", undef, {'symbol' => $gene->external_name(), 'start' => $feat_start, 'end' => $feat_end, 'strand' => $gene->strand()});
+  my $strand = $gene->strand();
+  $strand =~ s/\+//;
+  my $gene_node = LRG::Node->new("gene", undef, {'symbol' => $gene->external_name(), 'start' => $feat_start, 'end' => $feat_end, 'strand' => $strand});
   
   # If the gene partially overlaps, this should be indicated
   $gene_node->addNode('partial')->content('5-prime') if ($partial_5);
