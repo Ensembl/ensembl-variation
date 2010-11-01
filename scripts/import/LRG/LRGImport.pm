@@ -205,6 +205,35 @@ sub add_annotation {
     }
   }
   
+  #ÊUpdate the gene table to give the outermost coordinates of any transcript belonging to this gene
+  my $stmt = qq{
+    UPDATE
+      gene g
+    SET
+      g.seq_region_start = (
+	SELECT
+	  MIN(t.seq_region_start)
+	FROM
+	  transcript t
+	WHERE
+	  t.gene_id = g.gene_id AND
+	  t.seq_region_id = g.seq_region_id
+      ),
+      g.seq_region_end = (
+	SELECT
+	  MAX(t.seq_region_end)
+	FROM
+	  transcript t
+	WHERE
+	  t.gene_id = g.gene_id AND
+	  t.seq_region_id = g.seq_region_id
+      )
+    WHERE
+      g.seq_region_id = $seq_region_id AND
+      g.gene_id = $gene_id
+  };
+  $dbCore->dbc->do($stmt);
+  
   #ÊIf necessary, update meta_coord entries for maximum lengths of tables
   foreach my $table (('gene','transcript','exon')) {
     my $max_length = LRGImport::get_max_length($seq_region_id,$table);
