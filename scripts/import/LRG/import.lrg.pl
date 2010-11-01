@@ -258,8 +258,6 @@ if ($revert) {
 #ÊIf doing an import, check that the tables affected for adding the mapping information are sync'd across the relevant databases
 if ($import) {
   my %max_increment = (
-  'coord_system' 	=> 0,
-  'meta'		=> 0,
   'seq_region'		=> 0
   );
   foreach my $table (keys(%max_increment)) {
