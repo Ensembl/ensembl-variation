@@ -305,6 +305,42 @@ sub fetch_all_LD_Populations{
 }
 
 
+=head2 fetch_all_HapMap_populations
+
+    Example     : @populations = @{$pop_adaptor->fetch_all_HapMap_populations();
+    Description : Gets all populations from the HapMap project (human only!)
+    ReturnType  : listref of Bio::EnsEMBL::Variation::Population objects
+    Exceptions  : none
+    Caller      : general
+    Status      : At Risk
+
+=cut
+
+sub fetch_all_HapMap_Populations{
+    my $self = shift;
+	
+	return $self->generic_fetch(qq{ s.name like 'cshl-hapmap%' });
+}
+
+
+=head2 fetch_all_1KG_populations
+
+    Example     : @populations = @{$pop_adaptor->fetch_all_1KG_populations();
+    Description : Gets all populations from the 1000 genomes project (human only!)
+    ReturnType  : listref of Bio::EnsEMBL::Variation::Population objects
+    Exceptions  : none
+    Caller      : general
+    Status      : At Risk
+
+=cut
+
+sub fetch_all_1KG_Populations{
+    my $self = shift;
+	
+	return $self->generic_fetch(qq{ s.name like '1000GENOMES%' });
+}
+
+
 =head2 fetch_all_by_Individual
 
   Arg [1]     : Bio::EnsEMBL::Variation::Individual $ind
