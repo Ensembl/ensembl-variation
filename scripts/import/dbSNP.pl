@@ -45,6 +45,7 @@ my %options = ();
 my @option_defs = (
   'species=s',
   'dbSNP_version=s',
+  'shared_db=s',
   'tmpdir=s',
   'tmpfile=s',
   'limit=i',
@@ -66,9 +67,9 @@ GetOptions(\%options,@option_defs);
 debug("\n######### " . localtime() . " #########\n\tImport script launched\n");
 print STDOUT "\n######### " . localtime() . " #########\n\tImport script launched\n";
 
-my $TAX_ID;
 my $LIMIT_SQL = $options{'limit'};
 my $dbSNP_BUILD_VERSION = $options{'dbSNP_version'};
+my $shared_db = $options{'shared_db'};
 my $TMP_DIR = $options{'tmpdir'};
 my $TMP_FILE = $options{'tmpfile'};
 my $MAPPING_FILE_DIR = $options{'mapping_file_dir'};
@@ -81,17 +82,20 @@ my $dsport = $options{'dsport'};
 my $dsdbname = $options{'dsdbname'};
 my $registry_file = $options{'registry_file'};
 my $mssql_driver = $options{'mssql_driver'};
-my @skip_routines = @{$options{'skip_routine'}};
 my $logfile = $options{'logfile'};
+my @skip_routines;
+@skip_routines = @{$options{'skip_routine'}} if (defined($options{'skip_routine'}));
 
 $ImportUtils::TMP_DIR = $TMP_DIR;
 $ImportUtils::TMP_FILE = $TMP_FILE;
 
 # Checking that some necessary arguments have been provided
 die("Must know the master schema database, use -master_schema_db option!") unless (defined($MASTER_SCHEMA_DB));
-die("You must specify the dbSNP mirror host, port, user, pass, db and build version (-dshost, -dsport, -dsuser, -dspass, and -dbSNP_version options)") unless (defined($dshost) && defined($dsport) && defined($dsuser) && defined($dspass) && defined($dbSNP_BUILD_VERSION));
+# die("You must specify the dbSNP mirror host, port, user, pass, db and build version (-dshost, -dsport, -dsuser, -dspass, and -dbSNP_version options)") unless (defined($dshost) && defined($dsport) && defined($dsuser) && defined($dspass) && defined($dbSNP_BUILD_VERSION));
 die("You must specify a temp dir and temp file (-tmpdir and -tmpfile options)") unless(defined($ImportUtils::TMP_DIR) && defined($ImportUtils::TMP_FILE));
 die("You must specify the species. Use -species option") unless (defined($species));
+die("You must specify the dbSNP build. Use -dbSNP_version option") unless (defined($dbSNP_BUILD_VERSION));
+die("You must specify the dbSNP shared database. Use -shared_db option") unless (defined($shared_db));
 die("You must specify the sql driver, either through an environment variable (SYBASE) or the -sql_driver option") unless (defined($mssql_driver) || defined($ENV{'SYBASE'}));
 
 warn("Note that the port for the dbSNP mirror is overridden by the freetds configuration file!\n") if (defined($dsport));
@@ -121,45 +125,27 @@ Bio::EnsEMBL::Registry->load_all( $registry_file );
 
 my $cdba = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'core') or die ("Could not get core DBadaptor");
 my $vdba = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'variation') or die ("Could not get DBadaptor to destination variation database");
+my $snpdba = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'dbsnp') or die ("Could not get DBadaptor to dbSNP source database");
 # Set the disconnect_when_inactive property
 $cdba->dbc->disconnect_when_inactive(1);
 $vdba->dbc->disconnect_when_inactive(1);
+$snpdba->dbc->disconnect_when_inactive(1);
 
-#$vdba->dbc->{mysql_auto_reconnect} = 1;
-#$vdba->dbc->do("SET SESSION wait_timeout = 2678200");
-#my $sdba = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'dbsnp');
-
-$TAX_ID = $cdba->get_MetaContainer()->get_taxonomy_id();
-throw("Unable to determine taxonomy id from core database for species $species.") unless $TAX_ID;
+# Set some variables on the MySQL server that can speed up table read/write/loads
+my $stmt = qq{
+  SET SESSION
+    bulk_insert_buffer_size=512*1024*1024
+};
+$vdba->dbc->do($stmt);
 
 if (!$dsdbname) {
+  my $TAX_ID = $cdba->get_MetaContainer()->get_taxonomy_id() or throw("Unable to determine taxonomy id from core database for species $species.");
   my $version = $dbSNP_BUILD_VERSION;
   $version =~ s/^b//;
   $dsdbname = "$species\_$TAX_ID\_$version";
 }
 
-#my $source = 'DBI:Sybase:';
-
-# Note that the port is specified under [dbsnp] in the freetds.conf file!
-# Server should be 'dbsnp' which then points the database driver to the corresponding entry in the freetds.conf file.
-# It can be overridden with a local .freetds.conf file in the user's home directory
-#my $dbSNP = DBI->connect($source . 
-#                         "database=$dsdbname;".
-#                         "server=$dshost",
-#                          $dsuser,
-#                          $dspass
-#                        ) or die("Could not connect to database $DBI::errstr");
-
-# Connect to the MSSQL dbSNP mirror using the Ensembl API's DBConnection
-my $dbSNP = Bio::EnsEMBL::DBSQL::DBConnection->new(
-  -user => $dsuser,
-  -pass => $dspass,
-  -host => $dshost,
-  -dbname => $dsdbname,
-  -port => $dsport,
-  -driver => $mssql_driver
-);
-$dbSNP->disconnect_when_inactive(1);
+my $dbSNP = $snpdba->dbc;
 my $dbVar = $vdba->dbc;
 my $dbCore = $cdba;
 
@@ -182,6 +168,7 @@ my @parameters = (
   -limit => $LIMIT_SQL,
   -mapping_file_dir => $MAPPING_FILE_DIR,
   -dbSNP_version => $dbSNP_BUILD_VERSION,
+  -shared_db => $shared_db,
   -assembly_version => $ASSEMBLY_VERSION,
   -skip_routines => \@skip_routines,
   -log => $logh
