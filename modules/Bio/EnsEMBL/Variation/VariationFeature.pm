@@ -1674,4 +1674,9 @@ sub _get_cDNA_position {
   
   return $cdna_position;
 }
+
+sub length {
+  my $self = shift;
+  return $self->{'end'} - $self->{'start'} + 1;
+}
 1;
