@@ -88,8 +88,8 @@ sub new {
   my $caller = shift;
   my $class = ref($caller) || $caller;
 
-  my ($dbID, $adaptor, $allele, $freq, $pop, $ss_id) =
-    rearrange(['dbID', 'ADAPTOR', 'ALLELE', 'FREQUENCY', 'POPULATION', 'SUBSNP'], @_);
+  my ($dbID, $adaptor, $allele, $freq, $count, $pop, $ss_id) =
+    rearrange(['dbID', 'ADAPTOR', 'ALLELE', 'FREQUENCY', 'COUNT', 'POPULATION', 'SUBSNP'], @_);
   
   # set subsnp_id to undefined if it's 0 in the DB
   $ss_id = undef if (defined $ss_id && $ss_id == 0);
@@ -101,6 +101,7 @@ sub new {
                 'adaptor' => $adaptor,
                 'allele'  => $allele,
                 'frequency' => $freq,
+                'count'   => $count,
                 'population' => $pop,
                 'subsnp'  => $ss_id}, $class;
 }
@@ -153,6 +154,26 @@ sub frequency{
   my $self = shift;
   return $self->{'frequency'} = shift if(@_);
   return $self->{'frequency'};
+}
+
+=head2 count
+
+  Arg [1]    : int $count (optional)
+               The new value to set the count attribute to
+  Example    : $frequency = $allele->count()
+  Description: Getter/Setter for the observed count of this allele
+               within its associated population.
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub count{
+  my $self = shift;
+  return $self->{'count'} = shift if(@_);
+  return $self->{'count'};
 }
 
 
