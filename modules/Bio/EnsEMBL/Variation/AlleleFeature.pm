@@ -423,6 +423,12 @@ sub length_diff  {
 
 }
 
+
+sub length {
+  my $self = shift;
+  return $self->{'end'} - $self->{'start'} + 1;
+}
+
 =head2 source
 
   Arg [1]    : string $source (optional)
