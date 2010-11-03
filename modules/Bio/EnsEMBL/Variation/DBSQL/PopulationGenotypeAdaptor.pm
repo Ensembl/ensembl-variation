@@ -161,7 +161,7 @@ sub fetch_all_by_Variation {
 sub _tables{return ['population_genotype','pg']}
 
 sub _columns{
-    return qw(pg.population_genotype_id pg.variation_id pg.subsnp_id pg.sample_id pg.allele_1 pg.allele_2 pg.frequency, pg.count)
+    return qw(pg.population_genotype_id pg.variation_id pg.subsnp_id pg.sample_id pg.allele_1 pg.allele_2 pg.frequency pg.count)
 }
 
 sub _objs_from_sth{
