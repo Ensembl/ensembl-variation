@@ -78,9 +78,9 @@ use vars qw(@ISA);
 sub new {
   my $class = shift;
 
-  my ($dbID, $adaptor, $allele1, $allele2, $var, $pop, $freq, $ss_id) =
+  my ($dbID, $adaptor, $allele1, $allele2, $var, $pop, $freq, $count, $ss_id) =
     rearrange([qw(dbID adaptor allele1 allele2 
-                  variation population frequency subsnp)],@_);
+                  variation population frequency count subsnp)],@_);
 
   if(defined($var) &&
      (!ref($var) || !$var->isa('Bio::EnsEMBL::Variation::Variation'))) {
@@ -105,6 +105,7 @@ sub new {
                 'variation' => $var,
                 'population' => $pop,
                 'frequency' => $freq,
+                'count'   => $count,
                 'subsnp' => $ss_id}, $class;
 }
 
@@ -159,6 +160,27 @@ sub frequency{
   return $self->{'frequency'} = shift if(@_);
   return $self->{'frequency'};
 }
+
+=head2 count
+
+  Arg [1]    : int $count (optional)
+               The new value to set the count attribute to
+  Example    : $frequency = $pop_gtype->count()
+  Description: Getter/Setter for the observed count of this genotype
+               within its associated population.
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub count{
+  my $self = shift;
+  return $self->{'count'} = shift if(@_);
+  return $self->{'count'};
+}
+
 
 
 =head2 variation
