@@ -4,6 +4,7 @@ use strict;
 use Getopt::Long;
 use DBI qw(:sql_types);
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
+use ImportUtils;
 
 my $infile;
 my $host;
@@ -69,6 +70,9 @@ my $source_url;
     reference to an array of synonyms for the rs-id.
 
 =cut
+
+#ÊMake sure that the input file is XML compliant
+ImportUtils::make_xml_compliant($infile);
 
 #ÊParse the input files into a hash
 if ($source =~ m/uniprot/i) {
@@ -156,6 +160,8 @@ sub parse_uniprot {
             my $phenotype = $5;
             
             push(@{$synonym{$rs_id}},$uniprot_id);
+            
+            $phenotype ||= '-';
             
             # Try to further split the phenotype into a short name, description and possibly MIM id
             if ($phenotype ne '-') {
