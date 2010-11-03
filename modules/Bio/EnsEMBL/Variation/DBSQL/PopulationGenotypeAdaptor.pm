@@ -181,7 +181,7 @@ sub _objs_from_sth{
 			-allele1 => $allele_1,
 			-allele2 => $allele_2,
 			-subsnp => $ss_id,
-			-frequency => $frequency
+			-frequency => $frequency,
 			-count => $count);
 		$population_hash{$sample_id} ||= [];
 		$variation_hash{$variation_id} ||= [];
