@@ -14,26 +14,29 @@ our $TMP_FILE = 'tabledump.txt';
 
 #ÊThis will strip non-xml-compliant characters from an infile, saving a backup in {infile name}.bak
 # If no infile was specified, will use the tempfile but no backup will be kept. If no xml version was specified, will default to 1.1
+# A replacement character or string can be passed
 # If the xml version was not recognized, will do nothing.
 sub make_xml_compliant {
   my $infile = shift;
   my $version = shift;
+  my $replacement = shift;
   
   my $keep_backup = defined($infile);
   
   $infile ||= $TMP_DIR . "/" . $TMP_FILE;
   $version ||= "1.1";
+  $replacement ||= "";
   
   my @ARGV_bak = @ARGV;
   @ARGV = ($infile);
-  $^I = '.bak';
+  $^I = ".bak";
   while (<>) {
     if ($version =~ m/1\.1/) {
-      s/[^\x01-\x{D7FF}\x{E000}-\x{FFFD}\x{10000}-\x{10FFFF}]//go;
-      s/[\x01-\x08\x0B-\x0C\x0E-\x1F\x7F-\x84\x86-\x9F]//go;
+      s/[^\x01-\x{D7FF}\x{E000}-\x{FFFD}\x{10000}-\x{10FFFF}]/$replacement/go;
+      s/[\x01-\x08\x0B-\x0C\x0E-\x1F\x7F-\x84\x86-\x9F]/$replacement/go;
     }
     elsif ($version =~ m/1\.0/) {
-      s/[^\x09\x0A\x0D\x20-\x{D7FF}\x{E000}-\x{FFFD}\x{10000}-\x{10FFFF}]//go;
+      s/[^\x09\x0A\x0D\x20-\x{D7FF}\x{E000}-\x{FFFD}\x{10000}-\x{10FFFF}]/$replacement/go;
     }
     print;
   }
