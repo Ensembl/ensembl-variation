@@ -1160,6 +1160,9 @@ sub get_all_hgvs_notations {
     # Feature type & notation
     my $ft_type;
     
+    # don't get them for HGMD mutations or CNV probes
+    return {} if ($self->allele_string =~ /INS|DEL|HGMD|CNV/ig || $self->var_class() =~ /microsat/i);
+	
     # First of all, if this will get protein notation, check that the variation falls within the CDS. This will drop the majority of queries.
     if ($ref_feature->isa('Bio::EnsEMBL::Transcript')) {
       $ft_type = 'Transcript';
@@ -1171,7 +1174,7 @@ sub get_all_hgvs_notations {
 	
 	#ÊTypically, if the variation is intronic, the fields in transcript_variation for positions are undefined
 	# We cannot get protein notation for an intronic SNP, so return an empty list
-	return {} if (!defined($transcript_variation->translation_start()) || !defined($transcript_variation->translation_end()));
+	return {} if (!defined($transcript_variation) || !defined($transcript_variation->translation_start()) || !defined($transcript_variation->translation_end()));
       }
     }
     elsif ($ref_feature->isa('Bio::EnsEMBL::Slice')) {
@@ -1181,22 +1184,21 @@ sub get_all_hgvs_notations {
       $ft_type = 'Gene';
     }
     
-    # don't get them for HGMD mutations or CNV probes
-    return {} if ($self->allele_string =~ /INS|DEL|HGMD|CNV/ig || $self->var_class() =~ /microsat/i);
-	
     # Check that HGVS notation is implemented for the supplied feature type
     if (!defined($ft_type)) {
       warn("HGVS notation has not been implemented for $ref_feature");
       return {};
     }
+    
+    #ÊBy default, use genomic position numbering
+    $numbering ||= 'g';
+    
     # Check that the numbering scheme is compatible with the type of reference supplied
     if ($numbering !~ m/[gcp]/ || ($ft_type ne 'Transcript' && $numbering ne 'g')) {
       warn("HGVS $numbering notation is not available for $ref_feature");
       return {};
     }
 	
-    #ÊBy default, use genomic position numbering
-    $numbering ||= 'g';
     
     #ÊIf the reference feature is a slice, set the ref_slice to the feature, otherwise to the feature_Slice
     my $ref_slice;
