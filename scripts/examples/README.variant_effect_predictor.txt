@@ -130,22 +130,33 @@ The default input file format consists of five columns; these can be comma, tab
 - Chromosome name : the name of the chromosome to which the variant maps e.g. 1
   for chromosome 1. This can also be the name of a contig or other seq_region
   for species with unassembled genomes.
+  
 - Start position
+
 - End position : along with start position, defines the location of the variant.
-  These are 1-indexed (i.e. the first base of the chromosome is base 1). For a
-  SNP, start should be the same as end. For a multi-basepair substitution, start
-  should be the first and end should be the last base affected (e.g. for a 3
-  base substitution, end = start + 2). For an insertion relative to the
-  reference, start = end + 1, regardless of its length. This means that in this
-  instance the start coordinate will be greater than the end coordinate; end
-  represents the base immediately 5' of the insertion site, and start the base
-  immediately 3'. For a deletion relative to the reference, follow the same
-  rules for a multi-basepair substitution.
+  These are 1-indexed (i.e. the first base of the chromosome is base 1), and
+  should be defined according to the following rules:
+  
+  * For a SNP, start should be the same as end
+  * For a multi-basepair substitution, start should be the first and end should
+    be the last base affected (e.g. for a 3 base substitution, end = start + 2).
+    This also applies to any unbalanced substitution - for example replacing 3
+    bases with 5, the coordinates should reflect the 3 bases spanned by the
+    reference allele.
+  * For an insertion relative to the reference, start = end + 1, regardless of
+    its length. This means that in this instance the start coordinate will be
+    greater than the end coordinate; end represents the base immediately 5' of
+    the insertion site, and start the base immediately 3'.
+  * For a deletion relative to the reference, follow the same rules for a
+    multi-basepair substitution.
+  
 - Allele string : a "/"-separated string of alleles. The first of these is
   assumed to be the reference allele (although this is not interpreted or
   checked by the script, so if unknown can be set to anything).
+
 - Strand : the strand to which the variant maps. Possible values are 1 and -1;
   + and - can also be used.
+
 - Variant name : optionally, a sixth column can be specified containing an
   identifier for the variant. If not specified, the name is derived from the
   coordinates as described below.
@@ -155,8 +166,8 @@ Examples:
 - Substitution of C for T at base 100 on forward strand of chromosome 1:
 1 100 100 T/C +
 
-- Substitution of CAT for GGC at base 100 on reverse strand of chromosome Y:
-Y 100 102 GGC/CAT -
+- Substitution of CATTCC for GGC at base 100 on reverse strand of chromosome Y:
+Y 100 102 GGC/CATTCC -
 
 - Deletion of bases 100, 101 and 102 (CTG) on forward strand of chromosome 3:
 3 100 102 CTG/- +
@@ -179,20 +190,28 @@ file is a tab-delimited file with the following columns:
 
 - Uploaded Variation : a temporary name assigned to the variant, based on the
   position and alleles, or the optional name if specified
+
 - Location : string corresponding to the variant's location, represented as
   Chr:Start-End
+
 - Gene : the Ensembl stable ID of the gene where the variant is located (where
   applicable), with the HGNC name if specified using the --hgnc flag
+
 - Transcript : the Ensembl stabled ID of the transcript where the variant is
   located (where applicable)
+
 - Consequence : the consequence type predicted. See
   http://www.ensembl.org/info/docs/variation/index.html for a description of
   these
+
 - Position in cDNA : the position of the variant in the transcript's cDNA
   sequence (if applicable)
+
 - Position in protein : the position of the variant in the resultant protein
+
 - Amino acid change : a "/"-separated string of possible amino acids generated
   by the variant, with the reference amino acid first
+
 - Corresponding Variation : if an existing variant is found in the Ensembl
   Variation database whose position matches exactly that of the entered
   variation, its identifier appears here
