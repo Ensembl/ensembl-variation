@@ -1,8 +1,8 @@
-########################
-#                      #
-# SNP Effect Predictor #
-#                      #
-########################
+############################
+#                          #
+# Variant Effect Predictor #
+#                          #
+############################
 
 Copyright (c) 1999-2010 The European Bioinformatics Institute and
 Genome Research Limited.  All rights reserved.
@@ -45,12 +45,12 @@ database; using this script it is possible to do the same for novel variants.
 
 The script is run on the command line as follows:
 
-perl snp_effect_predictor.pl [options]
+perl variant_effect_predictor.pl [options]
 
 where [options] represent a set of flags and options to the script. These can be
 listed using the flag --help:
 
-perl snp_effect_predictor.pl --help
+perl variant_effect_predictor.pl --help
 
 By default the script connects to the public Ensembl database server at
 ensembldb.ensembl.org; other connection options are available.
@@ -72,7 +72,7 @@ Long form shown in parentheses.
    file format. Using this option you can force the script to read the input
    file as VCF or pileup format. Not used by default.
    
--o (--output_file) : output file name. Default = "snp_effect_output.txt"
+-o (--output_file) : output file name. Default = "variant_effect_output.txt"
 
 -b (--buffer_size) : sets the internal buffer size, corresponding to the number
    of variations that are used to query the database simultaneously. Set this
@@ -106,20 +106,20 @@ Long form shown in parentheses.
 3.2 Examples
 ------------
 
-perl snp_effect_predictor.pl -i snps.txt -o snps_consequences.txt
+perl variant_effect_predictor.pl -i variants.txt -o consequences.txt
 
-perl snp_effect_predictor.pl -i snps.txt -o snps_consequences.txt -b 1000 -hgnc
+perl variant_effect_predictor.pl -i variants.txt -o consequences.txt -b 1000 -hgnc
 
-perl snp_effect_predictor.pl -i snps.txt -r ensembl.registry
+perl variant_effect_predictor.pl -i variants.txt -r ensembl.registry
 
-perl snp_effect_predictor.pl -i snps.txt -d mydbserver -u user -p password
+perl variant_effect_predictor.pl -i variants.txt -d mydbserver -u user -p password
 
 
 
 4.0 File formats
 ================
 
-The SNP Effect Predictor script uses plain text files both as input and output.
+The Variant Effect Predictor script uses plain text files both as input and output.
 
 4.1 Input file
 --------------
