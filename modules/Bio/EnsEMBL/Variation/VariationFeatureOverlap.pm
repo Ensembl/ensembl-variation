@@ -13,15 +13,40 @@ sub new_fast {
     return bless $hashref, $class;
 }
 
+sub dbID {
+    my ($self, $dbID) = @_;
+    $self->{dbID} = $dbID if defined $dbID;
+    return $self->{dbID};
+}
+
+sub feature_type_id {
+    my ($self, $feature_type_id) = @_;
+    $self->{feature_type_id} = $feature_type_id if defined $feature_type_id;
+    # XXX: find the correct feature type id
+    return $self->{feature_type_id} || 1;
+}
+
 sub variation_feature {
     my ($self, $variation_feature) = @_;
+    
     $self->{variation_feature} = $variation_feature if $variation_feature;
+    
+    if ($self->{_vf_id}) {
+        # TODO: lazy load the variation feature
+    }
+    
     return $self->{variation_feature};
 }
 
 sub feature {
     my ($self, $feature) = @_;
+    
     $self->{feature} = $feature if $feature;
+    
+    if ($self->{_feature_stable_id}) {
+        # TODO: lazy load the feature
+    }
+    
     return $self->{feature};
 }
 

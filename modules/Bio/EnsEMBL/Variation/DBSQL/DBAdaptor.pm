@@ -68,7 +68,9 @@ sub get_available_adaptors{
 		 #'VariationFeatureCollection' => 'Bio::EnsEMBL::Variation::Collection::VariationFeature',
 		 'VariationAnnotation' => 'Bio::EnsEMBL::Variation::DBSQL::VariationAnnotationAdaptor',
 		 'ReadCoverageCollection' => 'Bio::EnsEMBL::Variation::DBSQL::ReadCoverageCollectionAdaptor',
-                 'VariationSet' => 'Bio::EnsEMBL::Variation::DBSQL::VariationSetAdaptor',
+         'VariationSet' => 'Bio::EnsEMBL::Variation::DBSQL::VariationSetAdaptor',
+         'OverlapConsequence' => 'Bio::EnsEMBL::Variation::DBSQL::OverlapConsequenceAdaptor',
+         'TranscriptVariationNew' => 'Bio::EnsEMBL::Variation::DBSQL::TranscriptVariationNewAdaptor',
                  );
     return (\%pairs);
 }

@@ -20,18 +20,18 @@ use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp expand);
 
 use Data::Dumper;
 
-use Inline C => <<'END_C';
-
-int overlap (int f1_start, int f1_end, int f2_start, int f2_end) {
-    return (f1_end >= f2_start && f1_start <= f2_end);
-}
-
-END_C
-
-#sub overlap {
-#    my ( $f1_start, $f1_end, $f2_start, $f2_end ) = @_;
-#    return ($f1_end >= $f2_start and $f1_start <= $f2_end);
+#use Inline C => <<'END_C';
+#
+#int overlap (int f1_start, int f1_end, int f2_start, int f2_end) {
+#    return (f1_end >= f2_start && f1_start <= f2_end);
 #}
+#
+#END_C
+
+sub overlap {
+    my ( $f1_start, $f1_end, $f2_start, $f2_end ) = @_;
+    return ($f1_end >= $f2_start and $f1_start <= $f2_end);
+}
 
 sub overlaps_transcript {
     my ($vf, $tran) = @_;
@@ -101,6 +101,14 @@ sub downstream_2KB {
     return _downstream($vf, $tran, 2000);
 }
 
+sub downstream_500B {
+    my $tva     = shift;
+    my $vf      = $tva->variation_feature;
+    my $tran    = $tva->transcript; 
+
+    return _downstream($vf, $tran, 500);
+}
+
 sub within_nmd_transcript {
     my $tva     = shift;
     my $tran    = $tva->transcript; 
@@ -158,6 +166,7 @@ sub acceptor_splice_site {
 
 sub essential_splice_site {
     my $tva = shift;
+    
     return ( acceptor_splice_site($tva) or donor_splice_site($tva) );
 }
 
@@ -174,7 +183,7 @@ sub within_intron {
 }
 
 sub within_coding_region {
-    my $tva    = shift;
+    my $tva     = shift;
     my $vf      = $tva->variation_feature;
     my $tran    = $tva->transcript;
     
@@ -236,14 +245,14 @@ sub synonymous_coding {
 
     return 0 unless $tva->affects_cds;
     
-    my $alt_aa = $tva->amino_acid;
-    my $ref_aa = $tv->reference_allele->amino_acid;
-    
     my $alt_seq = $tva->seq;
     my $ref_seq = $tv->reference_allele->seq;
     
     return 0 if ($alt_seq eq '-' or $ref_seq eq '-');
     
+    my $alt_aa = $tva->amino_acid;
+    my $ref_aa = $tv->reference_allele->amino_acid;
+
     return ( $alt_aa eq $ref_aa );
 }
 
@@ -252,14 +261,14 @@ sub non_synonymous_coding {
     my $tv  = $tva->transcript_variation;
 
     return 0 unless $tva->affects_cds;
-
-    my $alt_aa = $tva->amino_acid;
-    my $ref_aa = $tv->reference_allele->amino_acid;
     
     my $alt_seq = $tva->seq;
     my $ref_seq = $tv->reference_allele->seq;
     
     return 0 if ($alt_seq eq '-' or $ref_seq eq '-');
+
+    my $alt_aa = $tva->amino_acid;
+    my $ref_aa = $tv->reference_allele->amino_acid;
     
     return ( $alt_aa ne $ref_aa );
 }
@@ -328,182 +337,9 @@ sub within_coding_frameshift_intron {
         $tva->transcript_variation->intron_effects->{within_frameshift_intron});
 }
 
-my @conseq_hashes = ( 
-    {
-        SO_term         => '5KB_upstream_variant',
-        predicate       => \&upstream_5KB,
-        ensembl_term    => 'UPSTREAM',
-        SO_id           => 'SO:0001635',
-        is_definitive   => 1,
-        rank            => 1,
-    },
-    {
-        SO_term         => '5KB_downstream_variant',
-        predicate       => \&downstream_5KB,
-        ensembl_term    => 'DOWNSTREAM',
-        SO_id           => 'SO:0001633',
-        is_definitive   => 1,
-    },
-    {
-        SO_term         => '2KB_upstream_variant',
-        predicate       => \&upstream_2KB,
-        ensembl_term    => 'UPSTREAM',
-        SO_id           => 'SO:0001636',
-        NCBI_term       => 'near-gene-5',
-        is_definitive   => 1,
-    },
-    {
-        SO_term         => '2KB_downstream_variant',
-        predicate       => \&downstream_2KB,
-        ensembl_term    => 'DOWNSTREAM',
-        SO_id           => 'SO:0001634',
-        NCBI_term       => 'near-gene-3',
-        is_definitive   => 1,
-    },
-    {
-        SO_term         => 'splice_donor_variant',
-        predicate       => \&donor_splice_site,
-        ensembl_term    => 'ESSENTIAL_SPLICE_SITE',
-        SO_id           => 'SO:0001575',
-        NCBI_term       => 'splice-5',
-        is_definitive   => 0,
-    },
-    {
-        SO_term         => 'splice_acceptor_variant',
-        predicate       => \&acceptor_splice_site,
-        ensembl_term    => 'ESSENTIAL_SPLICE_SITE',
-        SO_id           => 'SO:0001574',
-        NCBI_term       => 'splice-3',
-        is_definitive   => 0,
-    },
-    {
-        SO_term         => 'splice_region_variant',
-        predicate       => \&splice_region,
-        ensembl_term    => 'SPLICE_SITE',
-        SO_id           => 'SO:0001630',
-        is_definitive   => 0,
-    },
-    {
-        SO_term         => 'intron_variant',
-        predicate       => \&within_intron,
-        ensembl_term    => 'INTRONIC',
-        SO_id           => 'SO:0001627',
-        NCBI_term       => 'intron',
-        is_definitive   => 0,
-    },
-    {
-        SO_term         => '5_prime_UTR_variant',
-        predicate       => \&within_5_prime_utr,
-        ensembl_term    => '5PRIME_UTR',
-        SO_id           => 'SO:0001623',
-        NCBI_term       => 'untranslated-5',
-        is_definitive   => 0,
-    }, 
-    {
-        SO_term         => '3_prime_UTR_variant',
-        predicate       => \&within_3_prime_utr,
-        ensembl_term    => '3PRIME_UTR',
-        SO_id           => 'SO:0001624',
-        NCBI_term       => 'untranslated-3',
-        is_definitive   => 0,
-    },
-    {
-        SO_term         => 'complex_change_in_transcript',
-        predicate       => \&complex_indel,
-        ensembl_term    => 'COMPLEX_INDEL',
-        SO_id           => 'SO:0001577',
-        is_definitive   => 0,
-    },
-    {
-        SO_term         => 'synonymous_codon',
-        predicate       => \&synonymous_coding,
-        ensembl_term    => 'SYNONYMOUS_CODING',
-        SO_id           => 'SO:0001588',
-        NCBI_term       => 'cds-synon',
-        is_definitive   => 0,
-    },
-    {
-        SO_term         => 'non_synonymous_codon',
-        predicate       => \&non_synonymous_coding,
-        ensembl_term    => 'NON_SYNONYMOUS_CODING',
-        SO_id           => 'SO:0001583',
-        NCBI_term       => 'missense',
-        is_definitive   => 0,
-    },
-    {
-        SO_term         => 'stop_gained',
-        predicate       => \&stop_gained,
-        ensembl_term    => 'STOP_GAINED',
-        SO_id           => 'SO:0001587',
-        NCBI_term       => 'nonsense',
-        is_definitive   => 0,
-    },
-    {
-        SO_term         => 'stop_lost',
-        predicate       => \&stop_lost,
-        ensembl_term    => 'STOP_LOST',
-        SO_id           => 'SO:0001578',
-        is_definitive   => 0,
-    },
-    {
-        SO_term         => 'frameshift_variant',
-        predicate       => \&frameshift,
-        ensembl_term    => 'FRAMESHIFT_CODING',
-        SO_id           => 'SO:0001589',
-        NCBI_term       => 'frameshift',
-        is_definitive   => 0,
-    },
-    {
-        SO_term         => 'incomplete_terminal_codon_variant',
-        predicate       => \&partial_codon,
-        ensembl_term    => 'PARTIAL_CODON',
-        SO_id           => 'SO:0001626',
-        is_definitive   => 1,
-    },
-    {
-        SO_term         => 'NMD_transcript_variant',
-        predicate       => \&within_nmd_transcript,
-        ensembl_term    => 'NMD_TRANSCRIPT',
-        SO_id           => 'SO:0001621',
-        is_definitive   => 1,
-    },
-    {
-        SO_term         => 'nc_transcript_variant',
-        predicate       => \&within_non_coding_gene,
-        ensembl_term    => 'WITHIN_NON_CODING_GENE',
-        SO_id           => 'SO:0001619',
-        is_definitive   => 0,
-    },
-    {
-        SO_term         => 'mature_miRNA_variant',
-        predicate       => \&within_miRNA,
-        ensembl_term    => 'WITHIN_MATURE_miRNA',
-        SO_id           => 'SO:0001620',
-        is_definitive   => 0,
-    },
-    {
-        SO_term         => 'coding_sequence_variant',
-        predicate       => \&within_coding_frameshift_intron,
-        ensembl_term    => 'CODING_UNKNOWN',
-        SO_id           => 'SO:0001580',
-        is_definitive   => 0,
-    },
-);
-
-# create OverlapConsequence objects which store details about each consequence of
-# interest along with a predicate that can be used to test if the consequence holds
-# for a particular VariationFeatureOverlapAllele
-
-# sort the list so that definitive consequences (i.e. those that rule out all other
-# consequences) are tested first, to minimise redundant tests
-
-my @consequences = sort { $b->is_definitive <=> $a->is_definitive } map {
-    Bio::EnsEMBL::Variation::OverlapConsequence->new_fast($_)
-} @conseq_hashes;
-
 sub transcript_effect {
 
-    my ($vf, $tran) = @_;
+    my ($vf, $tran, $consequences) = @_;
 
     # unless this vf overlaps the transcript, it has no effect
 
@@ -555,7 +391,15 @@ sub transcript_effect {
             seq                         => $allele,
         });
         
-        $tva->calc_consequences(\@consequences);
+        # run each consequence predicate on the allele and if it holds, add the
+        # consequence to the allele's list of consequences
+        
+        for my $consequence (@$consequences) {
+            if ($consequence->predicate->($tva)) {
+                $tva->consequences($consequence);
+                last if $consequence->is_definitive;
+            }
+        }
        
         $tv->alt_alleles($tva);
     }
