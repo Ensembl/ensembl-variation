@@ -23,7 +23,7 @@ sub variation_feature_overlap {
     if ($variation_feature_overlap) {
         $self->{variation_feature_overlap} = $variation_feature_overlap;
         # avoid a memory leak, because the vfo also has a reference to us
-        weaken $self->{variation_feature_overlap}
+        weaken $self->{variation_feature_overlap};
     }
     return $self->{variation_feature_overlap};
 }
@@ -34,18 +34,28 @@ sub seq {
     return $self->{seq};
 }
 
-
 sub consequences {
     my ($self, @new_consequences) = @_;
     
     $self->{consequences} ||= [];
-
+    
     if (@new_consequences) {
-        my $consequences = $self->{consequences};
-        push @$consequences, @new_consequences; 
+        push @{ $self->{consequences} }, @new_consequences;
     }
     
     return $self->{consequences};
+    
+#    # store the list of consequences in a hash keyed by SO_id, to ensure 
+#    # that we only ever include a single instance of each consequence type
+#    
+#    $self->{consequences} ||= {};
+#
+#    if (@new_consequences) {
+#        my $consequences = $self->{consequences};
+#        map { $consequences->{$_->SO_id} = $_ } @new_consequences; 
+#    }
+#    
+#    return [ values %{ $self->{consequences} } ];
 }
 
 sub is_reference {
@@ -54,15 +64,10 @@ sub is_reference {
     return $self->{is_reference};
 }
 
-sub calc_consequences {
-    my ($self, $consequences) = @_;
-
-    for my $consequence (@$consequences) {
-        if ($consequence->predicate->($self)) {
-            $self->consequences($consequence);
-            last if $consequence->is_definitive;
-        }
-    }
+sub dbID {
+    my ($self, $dbID) = @_;
+    $self->{dbID} = $dbID if defined $dbID;
+    return $self->{dbID};
 }
 
 1;

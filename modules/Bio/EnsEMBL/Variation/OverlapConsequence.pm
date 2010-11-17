@@ -13,15 +13,36 @@ sub new_fast {
     return bless $hashref, $class;
 }
 
+sub dbID {
+    my ($self, $dbID) = @_;
+    $self->{dbID} = $dbID if $dbID;
+    return $self->{dbID};
+}
+
 sub SO_term {
     my ($self, $SO_term) = @_;
     $self->{SO_term} = $SO_term if $SO_term;
     return $self->{SO_term};
 }
 
+sub feature_SO_term {
+    my ($self, $feature_SO_term) = @_;
+    $self->{feature_SO_term} = $feature_SO_term if $feature_SO_term;
+    return $self->{feature_SO_term};
+}
+
 sub predicate {
     my ($self, $predicate) = @_;
+    
     $self->{predicate} = $predicate if $predicate;
+    
+    if ($self->{predicate} && ref $self->{predicate} ne 'CODE') {
+        my $name = $self->{predicate};
+        if (defined &$name && $name =~ /^Bio::EnsEMBL::Variation::Utils::VariationEffect/) {
+            $self->{predicate} = \&$name;
+        }
+    }
+    
     return $self->{predicate};
 }
 

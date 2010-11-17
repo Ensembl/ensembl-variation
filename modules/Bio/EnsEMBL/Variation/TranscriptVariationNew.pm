@@ -7,47 +7,104 @@ use base qw(Bio::EnsEMBL::Variation::VariationFeatureOverlap);
 
 #use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(overlap);
 
-use Inline C => <<'END_C';
+#use Inline C => <<'END_C';
+#
+#int overlap (int f1_start, int f1_end, int f2_start, int f2_end) {
+#    return (f1_end >= f2_start && f1_start <= f2_end);
+#}
+#
+#END_C
 
-int overlap (int f1_start, int f1_end, int f2_start, int f2_end) {
-    return (f1_end >= f2_start && f1_start <= f2_end);
+sub overlap {
+    my ( $f1_start, $f1_end, $f2_start, $f2_end ) = @_;
+    return ($f1_end >= $f2_start and $f1_start <= $f2_end);
 }
 
-END_C
+sub transcript {
+    my $self = shift;
+    return $self->feature(@_);
+}
 
 sub cdna_start {
     my ($self, $cdna_start) = @_;
+    
     $self->{cdna_start} = $cdna_start if $cdna_start;
+    
+    unless ($self->{cdna_start}) {
+        my $cdna_coords = $self->cdna_coords;
+        
+        return undef if @$cdna_coords != 1;
+        
+        $self->{cdna_start} = $cdna_coords->[0]->start;
+        $self->{cdna_end} = $cdna_coords->[0]->end;
+    }
+    
     return $self->{cdna_start};
 }
 
 sub cdna_end {
     my ($self, $cdna_end) = @_;
+    
     $self->{cdna_end} = $cdna_end if $cdna_end;
+    
+    $self->cdna_start unless $self->{cdna_end};
+    
     return $self->{cdna_end};
 }
 
 sub cds_start {
     my ($self, $cds_start) = @_;
+    
     $self->{cds_start} = $cds_start if $cds_start;
+    
+    unless ($self->{cds_start}) {
+        my $cds_coords = $self->cds_coords;
+        
+        return undef if @$cds_coords != 1;
+        
+        my $exon_phase = $self->transcript->start_Exon->phase;
+        
+        $self->{cds_start} = $cds_coords->[0]->start + ($exon_phase > 0 ? $exon_phase : 0);
+        $self->{cds_end} = $cds_coords->[0]->end + ($exon_phase > 0 ? $exon_phase : 0);;
+    }
+    
     return $self->{cds_start};
 }
 
 sub cds_end {
     my ($self, $cds_end) = @_;
+    
     $self->{cds_end} = $cds_end if $cds_end;
+    
+    $self->cds_start unless $self->{cds_end};
+    
     return $self->{cds_end};
 }
 
 sub pep_start {
     my ($self, $pep_start) = @_;
+    
     $self->{pep_start} = $pep_start if $pep_start;
+    
+    unless ($self->{pep_start}) {
+        my $pep_coords = $self->pep_coords;
+        
+        return undef if @$pep_coords != 1;
+        
+        $self->{pep_start} = $pep_coords->[0]->start;
+        $self->{pep_end} = $pep_coords->[0]->end;
+    }
+    
     return $self->{pep_start};
 }
 
 sub pep_end {
     my ($self, $pep_end) = @_;
+    
     $self->{pep_end} = $pep_end if $pep_end;
+    
+    $self->pep_start unless $self->{pep_end};
+    
     return $self->{pep_end};
 }
 
@@ -182,6 +239,7 @@ sub intron_effects {
 
     return $self->{intron_effects};
 }
+
 # NB: the methods below all cache their data in the associated transcript itself, this
 # gives a significant speed up when you are calculating the effect of all variations
 # on a transcript, and means that the cache will be freed when the transcript itself
