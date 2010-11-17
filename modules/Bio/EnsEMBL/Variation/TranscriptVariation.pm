@@ -258,9 +258,9 @@ sub transcript {
 
 =head2 variation_feature
 
-  Args       : none
+  Arg [1]    : (optional) Bio::EnsEMBL::Variation::VariationFeature $vf
   Example    : print $trvar->variation_feature()->variation_name(), "\n";
-  Description: Getter for the VariationFeature associated with this
+  Description: Getter/Setter for the VariationFeature associated with this
                transcript variation.
   Returntype : Bio::EnsEMBL::Variation::VariationFeature
   Exceptions : none
@@ -272,10 +272,20 @@ sub transcript {
 sub variation_feature {
   my $self = shift;
 
-  if(defined($self->{'_vf_id'}) && $self->{'adaptor'}){
+  if (@_) {
+    my $vf = shift;
+    if (!ref($vf) || !$vf->isa('Bio::EnsEMBL::Variation::VariationFeature')) {
+      throw('Bio::EnsEMBL::Variation::VariationFeature argument expected');
+    }
+    $self->{'variation_feature'} = $vf;
+    #Êdelete($self->{'_vf_id'});
+  }
+  if(!defined($self->{'variation_feature'}) && defined($self->{'_vf_id'}) && $self->{'adaptor'}){
       #lazy-load  from database on demand
       my $vf = $self->{'adaptor'}->db()->get_VariationFeatureAdaptor();
-      return $vf->fetch_by_dbID($self->{'_vf_id'});
+      # Store the variation feature on the object (this is ok since we weaken the vf->tv link) and delete the _vf_id
+      $self->{'variation_feature'} = $vf->fetch_by_dbID($self->{'_vf_id'});
+      #Êdelete($self->{'_vf_id'});
   }
   return $self->{'variation_feature'};
 }
