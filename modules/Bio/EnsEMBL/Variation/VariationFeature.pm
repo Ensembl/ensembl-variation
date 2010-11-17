@@ -340,7 +340,7 @@ sub get_all_TranscriptVariations{
 
    Arg [1]     : Bio::EnsEMBL::Variation::TranscriptVariation
    Example     : $vf->add_TranscriptVariation($tv);
-   Description : Adds another Transcript variation to the variation feature object
+   Description : Adds another Transcript variation to the variation feature object. Adds itself to the supplied transcript variation object.
    Exceptions  : thrown on bad argument
    Caller      : Bio::EnsEMBL::Variation::TranscriptVariationAdaptor
    Status     : At Risk
@@ -355,6 +355,9 @@ sub add_TranscriptVariation {
 	}
 	
 	my $tv = shift;
+	
+	# Adds itself to the TranscriptVariation's VariationFeature cache
+	$tv->variation_feature($self);
 	
 	# we need to weaken the TranscriptVariation object's reference to the VariationFeature
 	# to allow garbage collection to work (as this is a circular reference)
