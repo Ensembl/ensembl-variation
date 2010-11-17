@@ -154,111 +154,9 @@ use warnings;
 
 {
     package Bio::EnsEMBL::Variation::VariationFeature;
-
-    my %EnsEMBL2SO_consequence = (
-        'ESSENTIAL_SPLICE_SITE' => { 
-            term            => 'splice_site_variant', 
-            id              => 'SO:0001629', 
-            feature_type    => 'mRNA',
-        },
-        'STOP_GAINED' => { 
-            term            => 'stop_gained', 
-            id              => 'SO:0001587',
-            feature_type    => 'mRNA',
-        },
-        'STOP_LOST' => { 
-            term            => 'stop_lost', 
-            id              => 'SO:0001578',
-            feature_type    => 'mRNA',
-        },
-        'COMPLEX_INDEL' => { 
-            term            => 'Complex_change_in_transcript', 
-            id              => 'SO:0001577',
-            feature_type    => 'mRNA',
-        },
-        'FRAMESHIFT_CODING' => { 
-            term            => 'Frameshift_variant', 
-            id              => 'SO:0001589', 
-            feature_type    => 'mRNA',
-        },
-        'NON_SYNONYMOUS_CODING' => { 
-            term            => 'Non_synonymous_codon', 
-            id              => 'SO:0001583', 
-            feature_type    => 'mRNA',
-        },
-        'SPLICE_SITE' => { 
-            term            => 'splice_region_variant', 
-            id              => 'SO:0001630', 
-            feature_type    => 'mRNA',
-        },
-        'PARTIAL_CODON' => { 
-            term            => 'incomplete_terminal_codon_variant', 
-            id              => 'SO:0001626',
-            feature_type    => 'mRNA',
-        },
-        'SYNONYMOUS_CODING' => { 
-            term            => 'Synonymous_codon', 
-            id              => 'SO:0001588',
-            feature_type    => 'mRNA',
-        },
-        'REGULATORY_REGION' => { 
-            term            => 'regulatory_region_variant', 
-            id              => 'SO:0001566',
-            feature_type    => 'genomic',
-        },
-        'WITHIN_MATURE_miRNA' => { 
-            term            => 'Mature_miRNA_variant', 
-            id              => 'SO:0001620',
-            feature_type    => 'miRNA',
-        },
-        '5PRIME_UTR' => { 
-            term            => '5_prime_UTR_variant', 
-            id              => 'SO:0001623',
-            feature_type    => 'mRNA'
-        },
-        '3PRIME_UTR' => { 
-            term            => '3_prime_UTR_variant', 
-            id              => 'SO:0001624',
-            feature_type    => 'mRNA',
-        },
-        'UTR' => {},
-        'INTRONIC' => { 
-            term            => 'Intron_variant', 
-            id              => 'SO:0001627',
-            feature_type    => 'mRNA',
-        },
-        'NMD_TRANSCRIPT' => { 
-            term            => 'NMD_transcript_variant', 
-            id              => 'SO:0001621',
-            feature_type    => 'mRNA',
-        },
-        'WITHIN_NON_CODING_GENE' => { 
-            term            => 'Non_coding_RNA_variant', 
-            id              => 'SO:0001619',
-            feature_type    => 'ncRNA'
-        },
-        'UPSTREAM' => { 
-            term            => '5KB_upstream_variant', 
-            id              => 'SO:0001635',
-            feature_type    => 'mRNA',
-        },
-        'DOWNSTREAM' => { 
-            term            => '5KB_downstream_variant',
-            id              => 'SO:0001633',
-            feature_type    => 'mRNA',
-        },
-        'HGMD_MUTATION' => {},
-        'NO_CONSEQUENCE' => { 
-            term            => 'Sequence_variant', 
-            id              => 'SO:0001060',
-            feature_type    => 'genomic',
-        },
-        'INTERGENIC' => { 
-            term            => 'Intergenic_variant', 
-            id              => 'SO:0001628',
-            feature_type    => 'genomic',
-        },
-    );
+    
+    use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(transcript_effect);
+    use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
     
     sub to_gvf {
         my $self = shift;
@@ -266,9 +164,14 @@ use warnings;
     }
     
     sub _gff_hash {
+   
         my $self = shift;
         
         my $gff = $self->SUPER::_gff_hash(@_);
+        
+        my %args = @_;
+        
+        my $consequences = $args{consequences};
 
         $gff->{source} = $self->source;
         
@@ -289,14 +192,7 @@ use warnings;
             $gff->{attributes}->{Reference_seq} = '~';
             $gff->{attributes}->{Variant_seq} = '~';
             
-            for my $ens_cons (@{ $self->get_consequence_type }) {
-                my $effect          = $EnsEMBL2SO_consequence{$ens_cons}->{term};
-                my $feature_type    = $EnsEMBL2SO_consequence{$ens_cons}->{feature_type};
-                my $features        = $gff->{seqid};
-                        
-                my $effect_string = join ' ', ($effect, 0, $feature_type, $features);
-                push @{ $gff->{attributes}->{Variant_effect} }, $effect_string;
-            }
+            # Pontus says I can't meaningfully calculate the consequence of these variations
             
             return $gff;
         }
@@ -316,57 +212,55 @@ use warnings;
 
         my @alleles = split '/', $self->allele_string;
         my $ref_seq = shift @alleles; # shift off the reference allele
-        
+       
         $gff->{attributes}->{Variant_seq} = join ',', @alleles;
+
+        my $index = 0;
+        my %allele_index = map { $_ => $index++ } @alleles;
 
         # the reference sequence should be set to '~' if the sequence is longer than 50 nucleotides
 
         $ref_seq = '~' if length($ref_seq) > 50;
         $gff->{attributes}->{Reference_seq} = $ref_seq;
+        
+        return $gff;
 
-        my $allele_index = 0;
+        if (my $db = $self->{adaptor}->db) {
+            print "got a dba\n";
+            my $tvna = $db->get_TranscriptVariationNewAdaptor;
+            print "got a tvna\n" if $tvna;
+            my $tvns = $tvna->fetch_all_by_VariationFeatures([$self]);
+            print "Got ".scalar(@$tvns)." tvns\n";
+            die;
+        }
+
+        my @transcripts = map { $_->transcript } @{ $self->get_all_TranscriptVariations };
         
-        for my $allele (@alleles) {
-            
-            my @tvs = @{ $self->get_all_TranscriptVariations };
-            
-            if (@tvs) {
-                
-                # this variation affects some transcripts
+        for my $transcript (@transcripts) {
         
-                for my $tv (@tvs) {
-                    
-                    for my $ens_cons (@{ $tv->consequence_type }) {
-                    
-                        my $effect          = $EnsEMBL2SO_consequence{$ens_cons}->{term};
-                        my $feature_type    = $EnsEMBL2SO_consequence{$ens_cons}->{feature_type};
-                        my $features        = $tv->transcript->stable_id;
-                        
-                        my $effect_string = join ' ', ($effect, $allele_index, $feature_type, $features);
-                
+            my $tv = transcript_effect($self, $transcript, $consequences);
+           
+            if ($tv) {
+
+                for my $tva (@{ $tv->alt_alleles }) {
+
+                    for my $cons (@{ $tva->consequences }) {
+
+                        my $allele = $tva->seq;
+
+                        reverse_comp(\$allele) unless $self->strand == $transcript->strand;
+
+                        my $effect_string = join ' ', (
+                            $cons->SO_term, 
+                            $allele_index{$allele},
+                            $cons->feature_SO_term,
+                            $transcript->stable_id,
+                        );
+    
                         push @{ $gff->{attributes}->{Variant_effect} }, $effect_string;
                     }
                 }
             }
-            else { 
-                
-                # no TranscriptVariations, so the effect of all alleles will just be the
-                # effect of the VariationFeature
-                
-                for my $ens_cons (@{ $self->get_consequence_type }) {
-                    
-                    my $effect          = $EnsEMBL2SO_consequence{$ens_cons}->{term};
-                    my $feature_type    = $EnsEMBL2SO_consequence{$ens_cons}->{feature_type};
-                    # XXX: I guess the feature affected by this variation is the slice?
-                    my $features        = $gff->{seqid};
-                    
-                    my $effect_string = join ' ', ($effect, $allele_index, $feature_type, $features);
-                
-                    push @{ $gff->{attributes}->{Variant_effect} }, $effect_string;
-                }
-            }
-            
-            $allele_index++;
         }
         
         return $gff;
