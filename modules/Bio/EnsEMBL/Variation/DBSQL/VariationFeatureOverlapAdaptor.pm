@@ -226,7 +226,7 @@ sub fetch_all_by_Features_with_constraint {
 
 sub fetch_by_dbID {
     my $self= shift;
-    return $self->_fetch_alleles([$self->SUPER::generic_fetch(@_)])->[0];
+    return $self->_fetch_alleles([$self->SUPER::fetch_by_dbID(@_)])->[0];
 }
 
 sub fetch_all_by_Features {
