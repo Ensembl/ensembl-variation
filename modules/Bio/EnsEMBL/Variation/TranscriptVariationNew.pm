@@ -307,4 +307,49 @@ sub peptide {
     return $peptide;
 }
 
+sub hgvs_genomic {
+    return _hgvs_generic(@_,'genomic');
+}
+sub hgvs_coding {
+    return _hgvs_generic(@_,'coding');
+}
+sub hgvs_protein {
+    return _hgvs_generic(@_,'protein');
+}
+sub hgvs_rna {
+    return _hgvs_generic(@_,'rna');
+}
+sub hgvs_mitochondrial {
+    return _hgvs_generic(@_,'mitochondrial');
+}
+
+sub _hgvs_generic {
+    my $self = shift;
+    my $reference = pop;
+    my $hgvs = shift;
+    
+    # The HGVS subroutine
+    my $sub = qq{hgvs_$reference};
+    
+    # If the HGVS hash was not defined and the HGVS notation has not been calculated for this TV, get the notation from the VariationFeature
+    if (!defined($hgvs) && !grep($_->$sub(),@{$self->alt_alleles()})) {
+        $hgvs = $self->variation_feature->get_all_hgvs_notations($self->transcript,substr($reference,0,1));
+    }
+    
+    # Loop over the TranscriptVariationAllele objects associated with this TranscriptVariation
+    foreach my $tv_allele (@{$self->alt_alleles()}) {
+        
+        #ÊIf an HGVS hash was supplied and the allele exists as key, set the HGVS notation for this allele
+        if (defined($hgvs) && (my $notation = $hgvs->{$tv_allele->seq()})) {
+            $tv_allele->$sub($notation);
+        }
+        # Else, add the HGVS notation for this allele to the HGVS hash
+        else {
+            $hgvs->{$tv_allele->seq()} = $tv_allele->$sub();
+        }
+    }
+    
+    return $hgvs;
+}
+
 1;
