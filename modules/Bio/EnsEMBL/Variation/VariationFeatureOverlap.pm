@@ -36,7 +36,7 @@ sub variation_feature {
         # lazy-load the VariationFeature
         
         if (my $adap = $self->{adaptor}) {
-            if (my $vfa = $adap->db->get_VariationFeatureAdapter) {
+            if (my $vfa = $adap->db->get_VariationFeatureAdaptor) {
                 if (my $vf = $vfa->fetch_by_dbID($vf_id)) {
                     $self->{variation_feature} = $vf;
                     delete $self->{_vf_id};
