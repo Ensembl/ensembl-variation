@@ -31,8 +31,18 @@ sub variation_feature {
     
     $self->{variation_feature} = $variation_feature if $variation_feature;
     
-    if ($self->{_vf_id}) {
-        # TODO: lazy load the variation feature
+    if (my $vf_id = $self->{_vf_id}) {
+        
+        # lazy-load the VariationFeature
+        
+        if (my $adap = $self->{adaptor}) {
+            if (my $vfa = $adap->db->get_VariationFeatureAdapter) {
+                if (my $vf = $vfa->fetch_by_dbID($vf_id)) {
+                    $self->{variation_feature} = $vf;
+                    delete $self->{_vf_id};
+                }
+            }
+        }
     }
     
     return $self->{variation_feature};
@@ -45,6 +55,8 @@ sub feature {
     
     if ($self->{_feature_stable_id}) {
         # TODO: lazy load the feature
+        # actually, the subclasses should be fetching
+        # their own features as they know what they are...
     }
     
     return $self->{feature};

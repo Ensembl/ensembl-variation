@@ -22,6 +22,21 @@ sub overlap {
 
 sub transcript {
     my $self = shift;
+    
+    if (my $tran_id = $self->{_feature_stable_id}) {
+        
+        # lazy-load the Transcript
+        
+        if (my $adap = $self->{adaptor}) {
+            if (my $ta = $adap->db->dnadb->get_TranscriptAdapter) {
+                if (my $tran = $ta->fetch_by_stable_id($tran_id)) {
+                    $self->{feature} = $tran;
+                    delete $self->{_feature_stable_id};
+                }
+            }
+        }
+    }
+    
     return $self->feature(@_);
 }
 
