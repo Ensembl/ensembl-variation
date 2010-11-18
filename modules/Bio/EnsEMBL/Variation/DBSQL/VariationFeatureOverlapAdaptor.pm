@@ -113,7 +113,7 @@ sub _attrib_code_for_id {
 }
 
 # fetch the associated  VariationFeatureOverlapAlleles for a list of 
-# VariationFeatureOverlap objects fetched by one of the various fetch_all* methods
+# VariationFeatureOverlap objects fetched by one of the various fetch* methods
 sub _fetch_alleles {
     
     my ($self, $vfos) = @_;
@@ -225,7 +225,7 @@ sub fetch_all_by_Features_with_constraint {
 }
 
 sub fetch_by_dbID {
-    my $self= shift;
+    my $self = shift;
     return $self->_fetch_alleles([$self->SUPER::fetch_by_dbID(@_)])->[0];
 }
 
@@ -276,6 +276,7 @@ sub _objs_from_sth {
            _vf_id               => $vf_id,
            _feature_stable_id   => $feat_stable_id,
            feature_type_id      => $feat_type_id,
+           adaptor              => $self,
         });
         
         push @results, $vfo;
