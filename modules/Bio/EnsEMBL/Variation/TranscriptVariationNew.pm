@@ -338,8 +338,9 @@ sub _hgvs_generic {
     foreach my $tv_allele (@{$self->alt_alleles()}) {
         
         #ÊIf an HGVS hash was supplied and the allele exists as key, set the HGVS notation for this allele
-        if (defined($hgvs) && (my $notation = $hgvs->{$tv_allele->seq()})) {
-            $tv_allele->$sub($notation);
+        if (defined($hgvs)) {
+            my $notation = $hgvs->{$tv_allele->seq()};
+            $tv_allele->$sub($notation) if defined $notation;
         }
         # Else, add the HGVS notation for this allele to the HGVS hash
         else {
