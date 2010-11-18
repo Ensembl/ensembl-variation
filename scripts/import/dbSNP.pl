@@ -189,7 +189,7 @@ my $import_object;
 if ($species =~ m/fish/i || $species =~ m/^pig$/i) {
   $import_object = dbSNP::MappingChromosome->new(@parameters);
 }
-elsif ($species =~ m/chimp/i || $species =~ m/chicken/i || $species =~ m/rat/i || $species =~ m/horse/i || $species =~ m/platypus/i) {
+elsif ($species =~ m/chimp/i || $species =~ m/chicken/i || $species =~ m/rat/i || $species =~ m/horse/i || $species =~ m/platypus/i || $species =~ m/opossum/i) {
   $import_object = dbSNP::GenericChromosome->new(@parameters);
 }
 elsif ($species =~ m/mouse/i || $species =~ m/dog/i) {
