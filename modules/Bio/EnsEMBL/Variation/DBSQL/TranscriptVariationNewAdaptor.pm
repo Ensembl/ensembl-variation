@@ -67,7 +67,17 @@ sub store {
             push @types, $self->_attrib_id_for_code('SO_id');
             push @values, $cons->SO_id;
         }
-        
+     
+        #ÊHGVS notation
+        for my $ref (qw( genomic coding protein rna mitochondrial )) {
+            my $attrib = qq{hgvs_$ref};
+            if (my $val = $tva->$attrib) {
+                push @ids, $tva->dbID;
+                push @types, $self->_attrib_id_for_code($attrib);
+                push @values, $val;
+            }
+        }
+           
         $vfoa_attrib_sth->execute_array({}, \@ids, \@types, \@values);
     }
 }
@@ -83,6 +93,11 @@ sub _attrib_codes {
         codon
         amino_acid
         SO_id
+        hgvs_genomic
+        hgvs_coding
+        hgvs_protein
+        hgvs_rna
+        hgvs_mitochondrial
     );
 }
 
@@ -255,6 +270,9 @@ sub _vfos_to_tvs {
             }
             elsif ($attrib eq 'SO_id') {
                 $allele->consequences($self->_overlap_consequences->{$vfoa_value});
+            }
+            elsif ($attrib =~ m/hgvs_/) {
+                $allele->$attrib($vfoa_value);
             }
             else {
                 warn "Unexpected attribute: $attrib";
