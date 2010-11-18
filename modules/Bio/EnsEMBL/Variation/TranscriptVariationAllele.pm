@@ -115,4 +115,34 @@ sub affects_cds {
     return $self->{affects_cds};
 }
 
+sub hgvs_genomic {
+    return _hgvs_generic(@_,'genomic');
+}
+sub hgvs_coding {
+    return _hgvs_generic(@_,'coding');
+}
+sub hgvs_protein {
+    return _hgvs_generic(@_,'protein');
+}
+sub hgvs_rna {
+    return _hgvs_generic(@_,'rna');
+}
+sub hgvs_mitochondrial {
+    return _hgvs_generic(@_,'mitochondrial');
+}
+
+sub _hgvs_generic {
+    my $self = shift;
+    my $reference = pop;
+    my $notation = shift;
+    
+    $self->{qq{hgvs_$reference}} = $notation if defined $notation;
+    
+    unless ($self->{qq{hgvs_$reference}}) {
+        # TODO: calculate the HGVS notation on-the-fly
+    }
+    
+    return $self->{qq{hgvs_$reference}};
+}
+
 1;
