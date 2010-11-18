@@ -28,7 +28,7 @@ sub transcript {
         # lazy-load the Transcript
         
         if (my $adap = $self->{adaptor}) {
-            if (my $ta = $adap->db->dnadb->get_TranscriptAdapter) {
+            if (my $ta = $adap->db->dnadb->get_TranscriptAdaptor) {
                 if (my $tran = $ta->fetch_by_stable_id($tran_id)) {
                     $self->{feature} = $tran;
                     delete $self->{_feature_stable_id};
