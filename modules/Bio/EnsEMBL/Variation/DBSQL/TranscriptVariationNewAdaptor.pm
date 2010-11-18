@@ -12,6 +12,8 @@ use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp expand);
 
 use base qw(Bio::EnsEMBL::Variation::DBSQL::VariationFeatureOverlapAdaptor);
 
+our $AUTOLOAD;
+
 sub store {
     my ($self, $tv) = @_;
     
@@ -203,58 +205,60 @@ sub _vfos_to_tvs {
     }
 
     # fetch the TranscriptVariation specific attributes
-
-    my $vfo_id_str = join ',', keys %vfos_by_id;
     
-    my $tv_attrib_sth = $dbh->prepare(qq{
-        SELECT  vf_overlap_id, attrib_type_id, value 
-        FROM    vf_overlap_attrib 
-        WHERE   vf_overlap_id IN ( $vfo_id_str )
-    });
-    
-    $tv_attrib_sth->execute;
-    
-    my ($vfo_id, $vfo_attrib_id, $vfo_value);
-    
-    $tv_attrib_sth->bind_columns(\$vfo_id, \$vfo_attrib_id, \$vfo_value);
-    
-    while ($tv_attrib_sth->fetch) {
-        my $attrib = $self->_attrib_code_for_id($vfo_attrib_id);
-        $vfos_by_id{$vfo_id}->$attrib($vfo_value);
+    if (my $vfo_id_str = join ',', keys %vfos_by_id) {
+        
+        my $tv_attrib_sth = $dbh->prepare(qq{
+            SELECT  vf_overlap_id, attrib_type_id, value 
+            FROM    vf_overlap_attrib 
+            WHERE   vf_overlap_id IN ( $vfo_id_str )
+        });
+        
+        $tv_attrib_sth->execute;
+        
+        my ($vfo_id, $vfo_attrib_id, $vfo_value);
+        
+        $tv_attrib_sth->bind_columns(\$vfo_id, \$vfo_attrib_id, \$vfo_value);
+        
+        while ($tv_attrib_sth->fetch) {
+            my $attrib = $self->_attrib_code_for_id($vfo_attrib_id);
+            $vfos_by_id{$vfo_id}->$attrib($vfo_value);
+        }
     }
     
     # and the TranscriptVariationAllele specific attributes
     
-    my $vfoa_id_str = join ',', keys %vfoas_by_id;
+    if (my $vfoa_id_str = join ',', keys %vfoas_by_id) {
     
-    my $tva_attrib_sth = $dbh->prepare(qq{
-        SELECT  vf_overlap_allele_id, attrib_type_id, value 
-        FROM    vf_overlap_allele_attrib 
-        WHERE   vf_overlap_allele_id IN ( $vfoa_id_str ) 
-    });
-    
-    my ($vfoa_id, $vfoa_attrib_id, $vfoa_value);
-    
-    $tva_attrib_sth->execute;
-    
-    $tva_attrib_sth->bind_columns(\$vfoa_id, \$vfoa_attrib_id, \$vfoa_value);
-    
-    while ($tva_attrib_sth->fetch) {
-        my $attrib = $self->_attrib_code_for_id($vfoa_attrib_id);
+        my $tva_attrib_sth = $dbh->prepare(qq{
+            SELECT  vf_overlap_allele_id, attrib_type_id, value 
+            FROM    vf_overlap_allele_attrib 
+            WHERE   vf_overlap_allele_id IN ( $vfoa_id_str ) 
+        });
         
-        my $allele = $vfoas_by_id{$vfoa_id};
-                
-        if ($attrib eq 'codon') {
-            $allele->codon($vfoa_value);
-        }
-        elsif ($attrib eq 'amino_acid') {
-            $allele->amino_acid($vfoa_value);
-        }
-        elsif ($attrib eq 'SO_id') {
-            $allele->consequences($self->_overlap_consequences->{$vfoa_value});
-        }
-        else {
-            warn "Unexpected attribute: $attrib";
+        my ($vfoa_id, $vfoa_attrib_id, $vfoa_value);
+        
+        $tva_attrib_sth->execute;
+        
+        $tva_attrib_sth->bind_columns(\$vfoa_id, \$vfoa_attrib_id, \$vfoa_value);
+        
+        while ($tva_attrib_sth->fetch) {
+            my $attrib = $self->_attrib_code_for_id($vfoa_attrib_id);
+            
+            my $allele = $vfoas_by_id{$vfoa_id};
+                    
+            if ($attrib eq 'codon') {
+                $allele->codon($vfoa_value);
+            }
+            elsif ($attrib eq 'amino_acid') {
+                $allele->amino_acid($vfoa_value);
+            }
+            elsif ($attrib eq 'SO_id') {
+                $allele->consequences($self->_overlap_consequences->{$vfoa_value});
+            }
+            else {
+                warn "Unexpected attribute: $attrib";
+            }
         }
     }
     
@@ -279,6 +283,17 @@ sub fetch_all_by_Transcripts {
 sub fetch_all_somatic_by_Transcripts {
     my ($self, $transcripts) = @_;
     return $self->_vfos_to_tvs($self->SUPER::fetch_all_somatic_by_Features($transcripts));
+}
+
+sub AUTOLOAD {
+    my $self = shift;
+    my $method = $AUTOLOAD;
+    $method =~ s/.*://;
+    
+    if ($self->SUPER::can($method)) {
+        $method = 'SUPER::'.$method;
+        return $self->_vfos_to_tvs($self->$method(@_));
+    }
 }
 
 1;
