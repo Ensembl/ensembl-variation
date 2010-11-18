@@ -7,9 +7,9 @@ use Exporter;
 
 our @ISA = ('Exporter');
 
-our @EXPORT_OK = qw(dumpSQL debug create_and_load load get_create_statement make_xml_compliant);
+our @EXPORT_OK = qw(dumpSQL debug create_and_load load loadfile get_create_statement make_xml_compliant);
 
-our $TMP_DIR = "/ecs4/scratch4/yuan/tmp";
+our $TMP_DIR = "/tmp";
 our $TMP_FILE = 'tabledump.txt';
 
 #ÊThis will strip non-xml-compliant characters from an infile, saving a backup in {infile name}.bak
@@ -78,14 +78,19 @@ sub dumpPreparedSQL {
 # load imports a table, optionally not all columns
 # if table doesnt exist, create a varchar(255) for each column
 sub load {
+  loadfile("$TMP_DIR/$TMP_FILE",@_);
+}
+
+sub loadfile {
+  my $loadfile = shift;
   my $db = shift;
   my $tablename = shift;
   my @colnames = @_;
-
+  
   my $cols = join( ",", @colnames );
 
   my $table_file = "$TMP_DIR/$tablename\_$$\.txt";
-  rename("$TMP_DIR/$TMP_FILE", $table_file);
+  rename($loadfile, $table_file);
    
 #  my $host = $db->host();
 #  my $user = $db->user();
@@ -204,7 +209,7 @@ sub create_and_load {
 #
 #ÊGets the create statement to create the desired table from the master_schema_variation database
 #
-sub get_create_statement {
+sub get_create_statement_from_db {
   my $dbc = shift;
   my $table = shift;
   my $db_name = shift;
@@ -220,6 +225,32 @@ sub get_create_statement {
   my $result = $dbc->db_handle->selectall_arrayref($stmt)->[0][1];
   
   return $result;
+}
+
+#ÊGet the create statement for a table from e.g. the table.sql schema definition file
+sub get_create_statement {
+  my $table = shift;
+  my $sql_file = shift;
+  
+  # Parse the file
+  open(FH,'<',$sql_file) or die("Could not open $sql_file for reading");
+  
+  # Parse the file into a string
+  my $contents = "";
+  while (<FH>) {
+    chomp;
+    $contents .= "$_ ";
+  }
+  close(FH);
+  
+  # Grab the correct create statement
+  my ($stmt) = $contents =~ m/(create table $table [^\;]+)\;/i;
+  
+  if (!$stmt) {
+    warn("Could not find CREATE TABLE statement for $table");
+  }
+  
+  return $stmt;
 }
 
 sub debug {
