@@ -25,6 +25,7 @@ use dbSNP::MappingChromosome;
 use dbSNP::Mosquito;
 use dbSNP::Human;
 use dbSNP::EnsemblIds;
+use dbSNP::DBManager;
 
 # If a config file was specified, parse it and override any specified options
 my @opts;
@@ -50,7 +51,7 @@ my @option_defs = (
   'tmpfile=s',
   'limit=i',
   'mapping_file_dir=s',
-  'master_schema_db=s',
+  'schema_file=s',
   'dshost=s',
   'dsuser=s',
   'dspass=s',
@@ -59,6 +60,7 @@ my @option_defs = (
   'registry_file=s',
   'mssql_driver=s',
   'skip_routine=s@',
+  'scriptdir=s', 
   'logfile=s'
 );
 
@@ -73,7 +75,7 @@ my $shared_db = $options{'shared_db'};
 my $TMP_DIR = $options{'tmpdir'};
 my $TMP_FILE = $options{'tmpfile'};
 my $MAPPING_FILE_DIR = $options{'mapping_file_dir'};
-my $MASTER_SCHEMA_DB = $options{'master_schema_db'};
+my $SCHEMA_FILE = $options{'schema_file'};
 my $species = $options{'species'};
 my $dshost = $options{'dshost'};
 my $dsuser = $options{'dsuser'};
@@ -82,6 +84,7 @@ my $dsport = $options{'dsport'};
 my $dsdbname = $options{'dsdbname'};
 my $registry_file = $options{'registry_file'};
 my $mssql_driver = $options{'mssql_driver'};
+my $scriptdir = $options{'scriptdir'};
 my $logfile = $options{'logfile'};
 my @skip_routines;
 @skip_routines = @{$options{'skip_routine'}} if (defined($options{'skip_routine'}));
@@ -90,7 +93,7 @@ $ImportUtils::TMP_DIR = $TMP_DIR;
 $ImportUtils::TMP_FILE = $TMP_FILE;
 
 # Checking that some necessary arguments have been provided
-die("Must know the master schema database, use -master_schema_db option!") unless (defined($MASTER_SCHEMA_DB));
+die("Please provide a current schema definition file for the variation database, use -schema_file option!") unless (-e $SCHEMA_FILE);
 # die("You must specify the dbSNP mirror host, port, user, pass, db and build version (-dshost, -dsport, -dsuser, -dspass, and -dbSNP_version options)") unless (defined($dshost) && defined($dsport) && defined($dsuser) && defined($dspass) && defined($dbSNP_BUILD_VERSION));
 die("You must specify a temp dir and temp file (-tmpdir and -tmpfile options)") unless(defined($ImportUtils::TMP_DIR) && defined($ImportUtils::TMP_FILE));
 die("You must specify the species. Use -species option") unless (defined($species));
@@ -121,17 +124,24 @@ if (defined($logfile)) {
   print $logh "\n######### " . localtime() . " #########\n\tImport script launched\n";
 }
 
+=head
 Bio::EnsEMBL::Registry->load_all( $registry_file );
 
 my $cdba = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'core') or die ("Could not get core DBadaptor");
 my $vdba = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'variation') or die ("Could not get DBadaptor to destination variation database");
 my $snpdba = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'dbsnp') or die ("Could not get DBadaptor to dbSNP source database");
 # Set the disconnect_when_inactive property
-$cdba->dbc->disconnect_when_inactive(1);
-$vdba->dbc->disconnect_when_inactive(1);
-$snpdba->dbc->disconnect_when_inactive(1);
+#$cdba->dbc->disconnect_when_inactive(1);
+#$vdba->dbc->disconnect_when_inactive(1);
+#$snpdba->dbc->disconnect_when_inactive(1);
 
-# Set some variables on the MySQL server that can speed up table read/write/loads
+$vdba->dbc->{mysql_auto_reconnect} = 1;
+$cdba->dbc->{mysql_auto_reconnect} = 1;
+
+$vdba->dbc->do("SET SESSION wait_timeout = 2678200");
+$cdba->dbc->do("SET SESSION wait_timeout = 2678200");
+
+ Set some variables on the MySQL server that can speed up table read/write/loads
 my $stmt = qq{
   SET SESSION
     bulk_insert_buffer_size=512*1024*1024
@@ -142,7 +152,7 @@ if (!$dsdbname) {
   my $TAX_ID = $cdba->get_MetaContainer()->get_taxonomy_id() or throw("Unable to determine taxonomy id from core database for species $species.");
   my $version = $dbSNP_BUILD_VERSION;
   $version =~ s/^b//;
-  $dsdbname = "$species\_$TAX_ID\_$version";
+ $dsdbname = "$species\_$TAX_ID\_$version";
 }
 
 my $dbSNP = $snpdba->dbc;
@@ -150,6 +160,11 @@ my $dbVar = $vdba->dbc;
 my $dbCore = $cdba;
 
 #my $my_species = $mc->get_Species();
+=cut
+
+my $dbm = dbSNP::DBManager->new($registry_file,$species);
+$dbm->dbSNP_shared($shared_db);
+my $dbCore = $dbm->dbCore();
 
 my ($cs) = @{$dbCore->get_CoordSystemAdaptor->fetch_all};
 my $ASSEMBLY_VERSION = $cs->version();
@@ -159,18 +174,15 @@ my $ASSEMBLY_VERSION = $cs->version();
 #create the dbSNP object for the specie we want to dump the data
 
 my @parameters = (
-  -dbSNP => $dbSNP->db_handle(),
-  -dbCore => $dbCore,
-  -dbVar => $dbVar,
-  -snp_dbname => $dsdbname,
+  -DBManager => $dbm,
   -tmpdir => $TMP_DIR,
   -tmpfile => $TMP_FILE,
   -limit => $LIMIT_SQL,
   -mapping_file_dir => $MAPPING_FILE_DIR,
   -dbSNP_version => $dbSNP_BUILD_VERSION,
-  -shared_db => $shared_db,
   -assembly_version => $ASSEMBLY_VERSION,
   -skip_routines => \@skip_routines,
+  -scriptdir => $scriptdir,
   -log => $logh
 );
 my $import_object;
@@ -189,7 +201,11 @@ elsif ($species =~ m/mosquitos/i) {
 elsif ($species =~ m/human|homo/i) {
   $import_object = dbSNP::EnsemblIds->new(@parameters);
 }
-$import_object->{'master_schema_db'} = $MASTER_SCHEMA_DB;
+else {
+  die("The species needs to have a module to use for import hardcoded into this script");
+}
+
+$import_object->{'schema_file'} = $SCHEMA_FILE;
 
 my $clock = Progress->new();
 $clock->checkpoint('start_dump');
@@ -203,7 +219,7 @@ if ($species =~ m/mouse/i || $species =~ m/chicken/i || $species =~ m/rat/i || $
   # Add strain information
   $clock->checkpoint('add_strains');
   
-  add_strains($dbVar);
+  add_strains($dbm->dbVar());
   
   print $logh $clock->duration();
 }
