@@ -136,13 +136,19 @@ sub _hgvs_generic {
     my $reference = pop;
     my $notation = shift;
     
-    $self->{qq{hgvs_$reference}} = $notation if defined $notation;
+    #ÊThe rna and mitochondrial modes have not yet been implemented, so return undef in case we get a call to these
+    return undef if ($reference =~ m/rna|mitochondrial/);
     
-    unless ($self->{qq{hgvs_$reference}}) {
-        # TODO: calculate the HGVS notation on-the-fly
+    my $sub = qq{hgvs_$reference};
+    
+    $self->{$sub} = $notation if defined $notation;
+    
+    unless ($self->{$sub}) {
+        # Calculate the HGVS notation on-the-fly and pass it to the TranscriptVariation in order to distribute the result to the other alleles
+        $self->transcript_variation->$sub($self->variation_feature->get_all_hgvs_notations($self->transcript,substr($reference,0,1)));
     }
     
-    return $self->{qq{hgvs_$reference}};
+    return $self->{$sub};
 }
 
 1;
