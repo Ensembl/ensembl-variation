@@ -285,6 +285,11 @@ sub fetch_all_somatic_by_Transcripts {
     return $self->_vfos_to_tvs($self->SUPER::fetch_all_somatic_by_Features($transcripts));
 }
 
+sub fetch_by_dbID {
+    my $self = shift;
+    return $self->_vfos_to_tvs($self->SUPER::fetch_by_dbID(@_));
+}
+
 sub AUTOLOAD {
     my $self = shift;
     my $method = $AUTOLOAD;
