@@ -44,15 +44,29 @@ sub variation_feature{
                    FROM 
                      $self->{'snp_dbname'}..sysobjects 
                    WHERE 
-                     name LIKE '$self->{'dbSNP_version'}\_SNPContigLoc\_$assembly_version\_%'
+                     name LIKE '$self->{'dbSNP_version'}\_SNPContigLoc\_%'
+		    ORDER BY
+			name DESC
                   };
      my $sth = $self->{'dbSNP'}->prepare($stmt);
      $sth->execute();
 
+    my $genome_build;
+    my @genome_builds;
      while($row = $sth->fetchrow_arrayref()) {
-       $tablename1 = $row->[0];
+	($genome_build) = $row->[0] =~ m/SNPContigLoc\_(.+)$/;
+	push(@genome_builds,$genome_build);
      }
 
+    if (scalar(@genome_builds) != 1) {
+	if (!scalar(@genome_builds)) {
+	    die("Could not find the " . $self->{'dbSNP_version'} . "_SNPContigLoc_NNN table!");
+	}
+	warn("SNPContigLoc tables for multiple builds found, guessing that the one to use is " . $genome_builds[0]);
+    }
+    $genome_build = shift(@genome_builds);
+    $tablename1 = $self->{'dbSNP_version'} . "_SNPContigLoc_" . $genome_build;
+    
      $stmt = qq{
                 SELECT 
                   name 
@@ -67,7 +81,10 @@ sub variation_feature{
      while($row = $sth1->fetchrow_arrayref()) {
        $tablename2 = $row->[0];
      }
-     print "table_name1 is $tablename1 table_name2 is $tablename2\n";
+     
+    $tablename2 = $self->{'dbSNP_version'} . "_ContigInfo_" . $genome_build;
+    
+     print "SNPContigLoc table is $tablename1 and ContigInfo table is $tablename2\n";
     if (!$tablename1) {
       debug("core db has assembly version : $assembly_version, which is different from dbsnp");
       $stmt = qq{
