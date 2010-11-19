@@ -12,8 +12,6 @@ use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp expand);
 
 use base qw(Bio::EnsEMBL::Variation::DBSQL::VariationFeatureOverlapAdaptor);
 
-our $AUTOLOAD;
-
 sub store {
     my ($self, $tv) = @_;
     
@@ -26,7 +24,7 @@ sub store {
     if ($tv->cds_start) {
         
         my $vfo_attrib_sth = $dbh->prepare_cached(q{
-           INSERT INTO vf_overlap_attrib (vf_overlap_id, attrib_type_id, value) 
+           INSERT INTO variation_feature_overlap_attrib (variation_feature_overlap_id, attrib_type_id, value) 
            VALUES (?,?,?)
         });
         
@@ -46,7 +44,7 @@ sub store {
     for my $tva (@{ $tv->alleles }) {
        
         my $vfoa_attrib_sth = $dbh->prepare_cached(q{
-           INSERT INTO vf_overlap_allele_attrib (vf_overlap_allele_id, attrib_type_id, value) 
+           INSERT INTO variation_feature_overlap_allele_attrib (variation_feature_overlap_allele_id, attrib_type_id, value) 
            VALUES (?,?,?)
         });
         
@@ -115,13 +113,13 @@ sub fetch_all_by_Transcripts2 {
     my $id_str = join ',', map { "'".$_->stable_id."'" } @$transcripts;
     
     my $sth = $dbh->prepare(qq{
-        SELECT vfo.vf_overlap_id, vfo.variation_feature_id, vfo.feature_stable_id, 
-            vfo.feature_type_id, vfo_att.code, vfoat.value, vfoa.vf_overlap_allele_id, 
+        SELECT vfo.variation_feature_overlap_id, vfo.variation_feature_id, vfo.feature_stable_id, 
+            vfo.feature_type_id, vfo_att.code, vfoat.value, vfoa.variation_feature_overlap_allele_id, 
             vfoa.allele, vfoa_att.code, vfoaa.value
-        FROM vf_overlap vfo 
-        LEFT JOIN vf_overlap_allele vfoa         ON vfo.vf_overlap_id = vfoa.vf_overlap_id 
-        LEFT JOIN vf_overlap_attrib vfoat        ON vfo.vf_overlap_id = vfoat.vf_overlap_id 
-        LEFT JOIN vf_overlap_allele_attrib vfoaa ON vfoa.vf_overlap_allele_id = vfoaa.vf_overlap_allele_id
+        FROM variation_feature_overlap vfo 
+        LEFT JOIN variation_feature_overlap_allele vfoa         ON vfo.variation_feature_overlap_id = vfoa.variation_feature_overlap_id 
+        LEFT JOIN variation_feature_overlap_attrib vfoat        ON vfo.variation_feature_overlap_id = vfoat.variation_feature_overlap_id 
+        LEFT JOIN variation_feature_overlap_allele_attrib vfoaa ON vfoa.variation_feature_overlap_allele_id = vfoaa.variation_feature_overlap_allele_id
         LEFT JOIN attrib_type vfo_att            ON vfo_att.attrib_type_id = vfoat.attrib_type_id 
         LEFT JOIN attrib_type vfoa_att           ON vfoa_att.attrib_type_id = vfoaa.attrib_type_id
         JOIN variation_feature vf                ON vf.variation_feature_id = vfo.variation_feature_id
@@ -147,10 +145,10 @@ sub fetch_all_by_Transcripts2 {
         
         unless ($vfo) {
             $vfo = Bio::EnsEMBL::Variation::TranscriptVariationNew->new_fast({
-                dbID                => $vfo_id,
-                _vf_id              => $vf_id,
-                _feature_stable_id  => $tran_stable_id,
-                feature_type_id     => $feat_type_id,
+                dbID                    => $vfo_id,
+                _variation_feature_id   => $vf_id,
+                _feature_stable_id      => $tran_stable_id,
+                feature_type_id         => $feat_type_id,
             });
             
             $vfos_by_id{$vfo_id} = $vfo
@@ -180,6 +178,9 @@ sub fetch_all_by_Transcripts2 {
                 elsif ($vfoa_attrib eq 'SO_id') {
                     $vfoa->consequences($self->_overlap_consequences->{$vfoa_value});
                 }
+                elsif ($vfoa_attrib =~ m/hgvs_/) {
+                    $allele->$vfoa_attrib($vfoa_value);
+                }
                 else {
                     warn "Unexpected attribute: $vfoa_attrib";
                 }
@@ -191,8 +192,8 @@ sub fetch_all_by_Transcripts2 {
 }
 
 # converts VariationFeatureOverlap objects into TranscriptVariation 
-# objects, fetching any relevant attributes from the vf_overlap_attrib 
-# and vf_overlap_allele_attrib tables
+# objects, fetching any relevant attributes from the variation_feature_overlap_attrib 
+# and variation_feature_overlap_allele_attrib tables
 sub _vfos_to_tvs {
     
     my ($self, $vfos) = @_;
@@ -224,9 +225,9 @@ sub _vfos_to_tvs {
     if (my $vfo_id_str = join ',', keys %vfos_by_id) {
         
         my $tv_attrib_sth = $dbh->prepare(qq{
-            SELECT  vf_overlap_id, attrib_type_id, value 
-            FROM    vf_overlap_attrib 
-            WHERE   vf_overlap_id IN ( $vfo_id_str )
+            SELECT  variation_feature_overlap_id, attrib_type_id, value 
+            FROM    variation_feature_overlap_attrib 
+            WHERE   variation_feature_overlap_id IN ( $vfo_id_str )
         });
         
         $tv_attrib_sth->execute;
@@ -246,9 +247,9 @@ sub _vfos_to_tvs {
     if (my $vfoa_id_str = join ',', keys %vfoas_by_id) {
     
         my $tva_attrib_sth = $dbh->prepare(qq{
-            SELECT  vf_overlap_allele_id, attrib_type_id, value 
-            FROM    vf_overlap_allele_attrib 
-            WHERE   vf_overlap_allele_id IN ( $vfoa_id_str ) 
+            SELECT  variation_feature_overlap_allele_id, attrib_type_id, value 
+            FROM    variation_feature_overlap_allele_attrib 
+            WHERE   variation_feature_overlap_allele_id IN ( $vfoa_id_str ) 
         });
         
         my ($vfoa_id, $vfoa_attrib_id, $vfoa_value);
@@ -306,17 +307,6 @@ sub fetch_all_somatic_by_Transcripts {
 sub fetch_by_dbID {
     my $self = shift;
     return $self->_vfos_to_tvs([$self->SUPER::fetch_by_dbID(@_)])->[0];
-}
-
-sub AUTOLOAD {
-    my $self = shift;
-    my $method = $AUTOLOAD;
-    $method =~ s/.*://;
-    
-    if ($self->SUPER::can($method)) {
-        $method = 'SUPER::'.$method;
-        return $self->_vfos_to_tvs($self->$method(@_));
-    }
 }
 
 1;

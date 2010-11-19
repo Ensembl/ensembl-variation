@@ -26,7 +26,10 @@ sub amino_acid {
     $self->{amino_acid} = $amino_acid if $amino_acid;
     
     unless ($self->{amino_acid}) {
-        # just translate the codon sequence to establish the amino acid
+        # translate the codon sequence to establish the amino acid
+        
+        # for mithocondrial dna we need to to use a different codon table
+        my $codon_table = $self->transcript_variation->codon_table;
         
         my $codon_seq = Bio::Seq->new(
             -seq        => $self->codon,
@@ -34,7 +37,7 @@ sub amino_acid {
             -alphabet   => 'dna',
         );
     
-        $self->{amino_acid} = $codon_seq->translate->seq;
+        $self->{amino_acid} = $codon_seq->translate(undef, undef, undef, $codon_table)->seq;
     }
     
     return $self->{amino_acid};
@@ -49,7 +52,7 @@ sub codon {
         
         # calculate the codon sequence
     
-        my $seq = $self->seq;
+        my $seq = $self->feature_seq;
         
         if ($seq eq '-') {
             $self->{amino_acid} = $seq;
@@ -90,6 +93,31 @@ sub codon_position {
     }
     
     return $self->{codon_position};
+}
+
+sub consequences {
+    my ($self, @consequences) = @_;
+    
+    my $cons = $self->{consequences} ||= [];
+    
+    if (@consequences) {
+        push @$cons, @consequences;
+    }
+    
+    unless (@$cons) {
+        
+        # calculate consequences on the fly
+        
+        if (my $overlap_cons = $self->transcript_variation->overlap_consequences) {
+            for my $oc (@$overlap_cons) {
+                if ($oc->predicate->($self)) {
+                    push @$cons, $oc;
+                }
+            }
+        }
+    }
+    
+    return $cons;
 }
 
 sub affects_cds {

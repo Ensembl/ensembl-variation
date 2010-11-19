@@ -3,6 +3,8 @@ package Bio::EnsEMBL::Variation::TranscriptVariationNew;
 use strict;
 use warnings;
 
+use Bio::EnsEMBL::Variation::TranscriptVariationAllele;
+
 use base qw(Bio::EnsEMBL::Variation::VariationFeatureOverlap);
 
 #use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(overlap);
@@ -15,6 +17,19 @@ use base qw(Bio::EnsEMBL::Variation::VariationFeatureOverlap);
 #
 #END_C
 
+sub new {
+    my $class = shift;
+    
+    # call the superclass constructor
+    my $self = $class->SUPER::new(@_);
+    
+    # rebless the alleles from vfoas to tvas
+    map { bless $_, 'Bio::EnsEMBL::Variation::TranscriptVariationAllele' } @{ $self->alleles };
+    
+    return $self;
+}
+
+# NB: not a method
 sub overlap {
     my ( $f1_start, $f1_end, $f2_start, $f2_end ) = @_;
     return ($f1_end >= $f2_start and $f1_start <= $f2_end);
@@ -40,6 +55,29 @@ sub transcript {
     return $self->feature(@_);
 }
 
+sub overlap_consequences {
+    my ($self, $overlap_consequences) = @_;
+    
+    $self->{overlap_consequences} = $overlap_consequences if $overlap_consequences;
+    
+    unless ($self->{overlap_consequences}) {
+        
+        # try to load the consequence objects from the database
+        
+        # get an adaptor either from us, or from the associated variation feature
+        if (my $adap = $self->{adaptor} || $self->variation_feature->{adaptor}) {
+            if (my $overlap_cons = $adap->db->get_OverlapConsequenceAdaptor->fetch_all) {
+                $self->{overlap_consequences} = $overlap_cons;
+            }
+        }
+        else {
+            warn "Can't load OverlapConsequence objects without an adaptor";
+        }
+    }
+    
+    return $self->{overlap_consequences};
+}
+
 sub cdna_start {
     my ($self, $cdna_start) = @_;
     
@@ -62,6 +100,7 @@ sub cdna_end {
     
     $self->{cdna_end} = $cdna_end if $cdna_end;
     
+    # call cdna_start to calculate the start and end
     $self->cdna_start unless $self->{cdna_end};
     
     return $self->{cdna_end};
@@ -91,6 +130,7 @@ sub cds_end {
     
     $self->{cds_end} = $cds_end if $cds_end;
     
+    # call cds_start to calculate the start and end
     $self->cds_start unless $self->{cds_end};
     
     return $self->{cds_end};
@@ -118,6 +158,7 @@ sub pep_end {
     
     $self->{pep_end} = $pep_end if $pep_end;
     
+    # call pep_start to calculate the start and end
     $self->pep_start unless $self->{pep_end};
     
     return $self->{pep_end};
@@ -307,6 +348,26 @@ sub peptide {
     return $peptide;
 }
 
+sub codon_table {
+    my ($self) = @_;
+    
+    my $tran = $self->feature;
+    
+    my $codon_table = $tran->{_variation_effect_feature_cache}->{codon_table};
+    
+    unless ($codon_table) {
+        # for mithocondrial dna we need to to use a different codon table
+        my $attrib = $tran->slice->get_all_Attributes('codon_table')->[0]; 
+        
+        # default to the vertebrate codon table 
+        my $codon_table = $attrib ? $attrib->value : 1;
+        
+        $tran->{_variation_effect_feature_cache}->{codon_table} = $codon_table
+    }
+    
+    return $codon_table;
+}
+
 sub hgvs_genomic {
     return _hgvs_generic(@_,'genomic');
 }
@@ -339,12 +400,12 @@ sub _hgvs_generic {
         
         #ÊIf an HGVS hash was supplied and the allele exists as key, set the HGVS notation for this allele
         if (defined($hgvs)) {
-            my $notation = $hgvs->{$tv_allele->seq()};
+            my $notation = $hgvs->{$tv_allele->variation_feature_seq()};
             $tv_allele->$sub($notation) if defined $notation;
         }
         # Else, add the HGVS notation for this allele to the HGVS hash
         else {
-            $hgvs->{$tv_allele->seq()} = $tv_allele->$sub();
+            $hgvs->{$tv_allele->variation_feature_seq()} = $tv_allele->$sub();
         }
     }
     
