@@ -3,21 +3,6 @@ package Bio::EnsEMBL::Variation::Utils::VariationEffect;
 use strict;
 use warnings;
 
-use Bio::EnsEMBL::Variation::VariationFeatureOverlap;
-use Bio::EnsEMBL::Variation::TranscriptVariationNew;
-use Bio::EnsEMBL::Variation::VariationFeatureOverlapAllele;
-use Bio::EnsEMBL::Variation::TranscriptVariationAllele;
-use Bio::EnsEMBL::Variation::OverlapConsequence;
-
-use vars qw(@ISA @EXPORT_OK);
-
-@ISA = qw(Exporter);
-
-@EXPORT_OK = qw(&transcript_effect &regulatory_region_effect &get_all_variation_effects &overlap);
-
-use Bio::EnsEMBL::Utils::Exception qw(throw warning);
-use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp expand);
-
 use Data::Dumper;
 
 #use Inline C => <<'END_C';
@@ -245,8 +230,8 @@ sub synonymous_coding {
 
     return 0 unless $tva->affects_cds;
     
-    my $alt_seq = $tva->seq;
-    my $ref_seq = $tv->reference_allele->seq;
+    my $alt_seq = $tva->feature_seq;
+    my $ref_seq = $tv->reference_allele->feature_seq;
     
     return 0 if ($alt_seq eq '-' or $ref_seq eq '-');
     
@@ -262,8 +247,8 @@ sub non_synonymous_coding {
 
     return 0 unless $tva->affects_cds;
     
-    my $alt_seq = $tva->seq;
-    my $ref_seq = $tv->reference_allele->seq;
+    my $alt_seq = $tva->feature_seq;
+    my $ref_seq = $tv->reference_allele->feature_seq;
     
     return 0 if ($alt_seq eq '-' or $ref_seq eq '-');
 
@@ -307,7 +292,7 @@ sub frameshift {
     my $tv = $tva->transcript_variation;
     my $var_len = $tv->cds_end - $tv->cds_start + 1;
 
-    my $seq = $tva->seq;
+    my $seq = $tva->feature_seq;
     
     $seq = '' if $seq eq '-';
 
@@ -335,93 +320,6 @@ sub within_coding_frameshift_intron {
     
     return (within_coding_region($tva) and 
         $tva->transcript_variation->intron_effects->{within_frameshift_intron});
-}
-
-sub transcript_effect {
-
-    my ($vf, $tran, $consequences) = @_;
-
-    # unless this vf overlaps the transcript, it has no effect
-
-    return undef unless overlaps_transcript($vf, $tran);
- 
-    # create a TranscriptVariation object representing this overlap
- 
-    my $tv = Bio::EnsEMBL::Variation::TranscriptVariationNew->new_fast({            
-        variation_feature  => $vf,
-        feature            => $tran,
-    });
-    
-    # we now look at each allele of the VariationFeature in turn and calculate
-    # its effect on the transcript
-    
-    # get the allele string, expand it, and split it into separate alleles
-    
-    my $allele_string = $vf->allele_string;
-    
-    expand(\$allele_string);
-    
-    my @alleles = split /\//, $allele_string;
-
-    # if the strands differ we need to reverse complement the allele sequences
-    
-    unless ($tran->strand == $vf->strand) {
-        map { reverse_comp(\$_) } @alleles;
-    }
-    
-    # create an object representing the reference allele
-    
-    my $ref_allele = shift @alleles;
-
-    my $ref_tva = Bio::EnsEMBL::Variation::TranscriptVariationAllele->new_fast({
-        variation_feature_overlap   => $tv,
-        seq                         => $ref_allele,
-        is_reference                => 1,
-    });
-    
-    $tv->reference_allele($ref_tva);
-
-    # create objects representing the alternate alleles, and calculate their 
-    # effect on the transcript using the rules above
-
-    for my $allele (@alleles) {
-        
-        my $tva = Bio::EnsEMBL::Variation::TranscriptVariationAllele->new_fast({
-            variation_feature_overlap   => $tv,
-            seq                         => $allele,
-        });
-        
-        # run each consequence predicate on the allele and if it holds, add the
-        # consequence to the allele's list of consequences
-        
-        for my $consequence (@$consequences) {
-            if ($consequence->predicate->($tva)) {
-                $tva->consequences($consequence);
-                last if $consequence->is_definitive;
-            }
-        }
-       
-        $tv->alt_alleles($tva);
-    }
-
-    # finally, return the TranscriptVariation object that now stores all of this information
-
-    return $tv;
-}
-
-sub regulatory_region_effect {
-    my ($reg_region, $vf) = @_;
-
-}
-
-sub get_all_variation_effects {
-
-    my ($vf) = @_;
-
-    # get all features that overlap this variation
-    #
-    #
-
 }
 
 1;

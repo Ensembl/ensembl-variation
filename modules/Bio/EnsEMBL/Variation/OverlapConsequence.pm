@@ -3,6 +3,8 @@ package Bio::EnsEMBL::Variation::OverlapConsequence;
 use strict;
 use warnings;
 
+use Bio::EnsEMBL::Variation::Utils::VariationEffect;
+
 sub new {
     my ($class) = @_;
     return bless {}, $class;

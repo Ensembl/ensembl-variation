@@ -26,7 +26,7 @@ sub store {
     my $dbh = $self->dbc->db_handle;
     
     my $vfo_sth = $dbh->prepare_cached(qq{
-       INSERT INTO vf_overlap (variation_feature_id, feature_type_id, feature_stable_id)
+       INSERT INTO variation_feature_overlap (variation_feature_id, feature_type_id, feature_stable_id)
        VALUES (?,?,?) 
     });
     
@@ -45,11 +45,11 @@ sub store {
     for my $vfoa (@{ $vfo->alleles }) {
         
         my $vfoa_sth = $dbh->prepare_cached(qq{
-            INSERT INTO vf_overlap_allele (vf_overlap_id, allele, is_reference)
+            INSERT INTO variation_feature_overlap_allele (variation_feature_overlap_id, variation_feature_allele, is_reference)
             VALUES (?,?,?)
         });
         
-        $vfoa_sth->execute($vfo_db_id, $vfoa->seq, $vfoa->is_reference);
+        $vfoa_sth->execute($vfo_db_id, $vfoa->variation_feature_seq, $vfoa->is_reference);
         
         my $vfoa_db_id = $vfoa_sth->{mysql_insertid};
         
@@ -125,16 +125,16 @@ sub _fetch_alleles {
     my $vfo_id_str = join ',', keys %vfos_by_id;
     
     my $allele_sth = $dbh->prepare(qq{
-        SELECT  vf_overlap_id, vf_overlap_allele_id, allele, is_reference
-        FROM    vf_overlap_allele 
-        WHERE   vf_overlap_id IN ( $vfo_id_str )
+        SELECT  variation_feature_overlap_id, variation_feature_overlap_allele_id, variation_feature_allele, is_reference
+        FROM    variation_feature_overlap_allele 
+        WHERE   variation_feature_overlap_id IN ( $vfo_id_str )
     });
     
     $allele_sth->execute;
     
-    my ($vfo_id, $vfoa_id, $seq, $is_ref);
+    my ($vfo_id, $vfoa_id, $vf_seq, $is_ref);
     
-    $allele_sth->bind_columns(\$vfo_id, \$vfoa_id, \$seq, \$is_ref);
+    $allele_sth->bind_columns(\$vfo_id, \$vfoa_id, \$vf_seq, \$is_ref);
     
     while ($allele_sth->fetch) {
         
@@ -143,7 +143,7 @@ sub _fetch_alleles {
         my $vfoa = Bio::EnsEMBL::Variation::VariationFeatureOverlapAllele->new_fast({
             variation_feature_overlap   => $vfo,
             dbID                        => $vfoa_id,
-            seq                         => $seq,
+            variation_feature_seq       => $vf_seq,
             is_reference                => $is_ref,
         });
         
@@ -181,8 +181,8 @@ sub fetch_all_by_VariationFeatures_with_constraint {
     # lazy-loaded)
     
     for my $vfo (@$vfos) {
-        if ($vfo->{_vf_id}) {
-            my $vf_id = delete $vfo->{_vf_id};
+        if ($vfo->{_variation_feature_id}) {
+            my $vf_id = delete $vfo->{_variation_feature_id};
             $vfo->variation_feature($vfs_by_id{$vf_id});
         }
     }
@@ -272,11 +272,11 @@ sub _objs_from_sth {
     
     while ($sth->fetch) {
         my $vfo = Bio::EnsEMBL::Variation::VariationFeatureOverlap->new_fast({
-           dbID                 => $vfo_id,
-           _vf_id               => $vf_id,
-           _feature_stable_id   => $feat_stable_id,
-           feature_type_id      => $feat_type_id,
-           adaptor              => $self,
+           dbID                     => $vfo_id,
+           _variation_feature_id    => $vf_id,
+           _feature_stable_id       => $feat_stable_id,
+           feature_type_id          => $feat_type_id,
+           adaptor                  => $self,
         });
         
         push @results, $vfo;
@@ -287,7 +287,7 @@ sub _objs_from_sth {
 
 sub _tables {
     return (
-        ['vf_overlap','vfo'],
+        ['variation_feature_overlap','vfo'],
         ['variation_feature', 'vf'],
         ['source', 's']
     );
@@ -299,7 +299,7 @@ sub _default_where_clause {
 
 sub _columns {
     return qw(
-        vfo.vf_overlap_id
+        vfo.variation_feature_overlap_id
         vfo.variation_feature_id 
         vfo.feature_stable_id 
         vfo.feature_type_id

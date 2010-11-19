@@ -3,9 +3,56 @@ package Bio::EnsEMBL::Variation::VariationFeatureOverlap;
 use strict;
 use warnings;
 
+use Bio::EnsEMBL::Utils::Sequence qw(expand);
+use Bio::EnsEMBL::Variation::VariationFeatureOverlapAllele;
+
 sub new {
-    my ($class) = @_;
-    return bless {}, $class;
+    my ($class, $hashref) = @_;
+    
+    my $self = bless $hashref, $class;
+    
+    # now look at each allele of the VariationFeature in turn
+    
+    # get the allele string, expand it, and split it into separate alleles
+    
+    my $vf   = $self->{variation_feature};
+    my $tran = $self->{transcript};
+    
+    my $allele_string = $vf->allele_string;
+    
+    expand(\$allele_string);
+    
+    my @alleles = split /\//, $allele_string;
+  
+    # create an object representing the reference allele
+    
+    my $ref_allele = shift @alleles;
+
+    my $ref_vfoa = Bio::EnsEMBL::Variation::VariationFeatureOverlapAllele->new_fast({
+        variation_feature_overlap   => $self,
+        variation_feature_seq       => $ref_allele,
+        is_reference                => 1,
+    });
+    
+    $self->reference_allele($ref_vfoa);
+
+    # create objects representing the alternate alleles
+    
+    my @alt_alleles;
+    
+    for my $allele (@alleles) {
+        
+        my $vfoa = Bio::EnsEMBL::Variation::VariationFeatureOverlapAllele->new_fast({
+            variation_feature_overlap   => $self,
+            variation_feature_seq       => $allele,
+        });
+        
+        push @alt_alleles, $vfoa,
+    }
+    
+    $self->alt_alleles(@alt_alleles);
+    
+    return $self;
 }
 
 sub new_fast {
@@ -31,7 +78,7 @@ sub variation_feature {
     
     $self->{variation_feature} = $variation_feature if $variation_feature;
     
-    if (my $vf_id = $self->{_vf_id}) {
+    if (my $vf_id = $self->{_variation_feature_id}) {
         
         # lazy-load the VariationFeature
         
@@ -39,7 +86,7 @@ sub variation_feature {
             if (my $vfa = $adap->db->get_VariationFeatureAdaptor) {
                 if (my $vf = $vfa->fetch_by_dbID($vf_id)) {
                     $self->{variation_feature} = $vf;
-                    delete $self->{_vf_id};
+                    delete $self->{_variation_feature_id};
                 }
             }
         }
@@ -53,12 +100,10 @@ sub feature {
     
     $self->{feature} = $feature if $feature;
     
-    if ($self->{_feature_stable_id}) {
-        # TODO: lazy load the feature
-        # actually, the subclasses should be fetching
-        # their own features as they know what they are...
-    }
-    
+    # we can't lazy-load the feature here because only sub-classes
+    # know which class their feature is, so the lazy-loading has to
+    # be implemented in the subclass method
+ 
     return $self->{feature};
 }
 
@@ -71,24 +116,16 @@ sub reference_allele {
 sub alt_alleles {
     my ($self, @new_alt_alleles) = @_;
     
-    $self->{alt_alleles} ||= [];
+    my $alt_alleles = $self->{alt_alleles} ||= [];
 
-    if (@new_alt_alleles) {
-        my $alt_alleles = $self->{alt_alleles};
-        push @$alt_alleles, @new_alt_alleles;
-    }
+    push @$alt_alleles, @new_alt_alleles if @new_alt_alleles;
 
-    return $self->{alt_alleles};
+    return $alt_alleles;
 }
 
 sub alleles {
     my ($self) = @_;
-
-    my $alleles = $self->alt_alleles;
-    
-    unshift @$alleles, $self->reference_allele;
-
-    return $alleles;
+    return [ $self->reference_allele, @{ $self->alt_alleles } ];
 }
 
 1;
