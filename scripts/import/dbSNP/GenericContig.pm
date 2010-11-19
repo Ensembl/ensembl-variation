@@ -146,6 +146,8 @@ sub dump_dbSNP{
   # When resuming after a crash, put already finished modules into this array 
   push(@{$self->{'skip_routines'}},());
   
+  my $resume;
+  
   my $clock = Progress->new();
   
   # Loop over the subroutines and run each one
@@ -160,7 +162,7 @@ sub dump_dbSNP{
     
     $clock->checkpoint($subroutine);
     print $logh $clock->to_string($subroutine);
-    $self->$subroutine();
+    $self->$subroutine($resume);
     print $logh $clock->duration();
   }
 
@@ -195,7 +197,12 @@ sub run_on_farm {
   my $array_options = "";
   #ÊIf just the start was defined, it should be a list of subtasks that should be re-run
   if (defined($start) && defined($end)) {
-    $array_options = qq{[$start-$end]%$max_jobs};
+    if ($start < $end) {
+      $array_options = qq{[$start-$end]%$max_jobs};
+    }
+    else {
+      $array_options = qq{[$start]%$max_jobs};
+    }
   }
   elsif (defined($start)) {
     $array_options = "[" . join(",",@{$start}) . qq{]%$max_jobs}; 
@@ -1045,7 +1052,7 @@ sub parallelized_allele_table {
   # Sample file is used for caching the samples
   my $samplefile = $file_prefix . '_population_samples.txt';
   # Allele file is used for caching the alleles
-  my $allelefile = $self->{'file_prefix'} . '_alleles.txt';
+  my $allelefile = $file_prefix . '_alleles.txt';
   
   #ÊFirst, get the population_id -> sample_id mapping and write it to the file. The subroutine can also get it but it's faster to get all at once since we expect many to be used. 
   $stmt = qq{
@@ -2172,6 +2179,7 @@ sub allele_group {
 #Êto determine the best way to chunk up the individuals in order to get an even distribution of the workload
 sub parallelized_individual_genotypes {
   my $self = shift;
+  my $load_only = shift;
   
   #ÊPut the log filehandle in a local variable
   my $logh = $self->{'log'};
@@ -2183,16 +2191,8 @@ sub parallelized_individual_genotypes {
   my $ind_gty_stmt = get_create_statement($genotype_table,$self->{'schema_file'});
   print $logh Progress::location();
   
-  #ÊDrop the tmp_individual.. table if it exists
-  my $stmt = qq{
-    DROP TABLE IF EXISTS
-      $genotype_table
-  };
-  $self->{'dbVar'}->do($stmt);
-  print $logh Progress::location();
-  
   # Get the SubInd tables that may be split by chromosomes
-  $stmt = qq{
+  my $stmt = qq{
     SELECT 
       name 
     FROM 
@@ -2245,6 +2245,9 @@ sub parallelized_individual_genotypes {
       next;
     }
     
+    #ÊIf we are skipping ahead directly to the loading of the genotypes, skip to the next iteration here
+    next if ($load_only);
+    
     $stmt = qq{
       SELECT
 	submitted_ind_id,
@@ -2281,55 +2284,62 @@ sub parallelized_individual_genotypes {
     print $logh Progress::location();
   }
   
-  # Print the job parameters to a file
-  my $task_manager_file = $file_prefix . '_task_management.txt';
-  my $jobindex = 0;
-  open(MGMT,'>',$task_manager_file);
-  foreach my $params (keys(%job_data)) {
-    $jobindex++;
-    my @arr = split(/\s+/,$params);
-    print MGMT qq{$jobindex $arr[0] $gty_tables{$arr[0]}->[1] $multi_bp_gty_file $arr[1] $arr[2] $gty_tables{$arr[0]}->[2]\n};
-  }
-  close(MGMT);
+  #ÊIf we are only doing the load (when resuming after a crash), do not run any job on the farm
+  unless ($load_only) {
   
-  # Run the job on the farm
-  print $logh Progress::location() . "\tSubmitting the importing of the genotypes to the farm\n";
-  my $jobname = 'individual_genotypes';
-  my $result = $self->run_on_farm($jobname,$file_prefix,'calculate_gtype',$task_manager_file,1,$jobindex);
-  my $jobid = $result->{'jobid'};
+    # If there are no genotypes at all to be imported, just return here
+    return unless (scalar(keys(%job_data)));
     
-  # Check if any subtasks generated errors
-  if ((my @error_subtasks = grep($result->{'subtask_details'}{$_}{'generated_error'},keys(%{$result->{'subtask_details'}})))) {
-    warn($result->{'message'});
-    print $logh Progress::location() . "\t " . $result->{'message'};
-    print $logh Progress::location() . "\tThe following subtasks generated errors for job $jobid:\n";
-    foreach my $index (@error_subtasks) {
-      print $logh qq{\t\t$jobname\[$index\] ($jobid\[$index\])\n};
+    # Print the job parameters to a file
+    my $task_manager_file = $file_prefix . '_task_management.txt';
+    my $jobindex = 0;
+    open(MGMT,'>',$task_manager_file);
+    foreach my $params (keys(%job_data)) {
+      $jobindex++;
+      my @arr = split(/\s+/,$params);
+      print MGMT qq{$jobindex $arr[0] $gty_tables{$arr[0]}->[1] $multi_bp_gty_file $arr[1] $arr[2] $gty_tables{$arr[0]}->[2]\n};
     }
-  }
+    close(MGMT);
     
-  # Check the result, if anything failed
-  if (!$result->{'success'}) {
-    warn($result->{'message'});
-    print $logh Progress::location() . "\t " . $result->{'message'};
-    print $logh Progress::location() . "\tThe following subtasks failed for unknown reasons for job $jobid:\n";
-    foreach my $index (grep($result->{'subtask_details'}{$_}{'fail_reason'} =~ m/UNKNOWN/,keys(%{$result->{'subtask_details'}}))) {
-      print $logh qq{\t\t$jobname\[$index\] ($jobid\[$index\])\n};
+    # Run the job on the farm
+    print $logh Progress::location() . "\tSubmitting the importing of the genotypes to the farm\n";
+    my $jobname = 'individual_genotypes';
+    my $result = $self->run_on_farm($jobname,$file_prefix,'calculate_gtype',$task_manager_file,1,$jobindex);
+    my $jobid = $result->{'jobid'};
+      
+    # Check if any subtasks generated errors
+    if ((my @error_subtasks = grep($result->{'subtask_details'}{$_}{'generated_error'},keys(%{$result->{'subtask_details'}})))) {
+      warn($result->{'message'});
+      print $logh Progress::location() . "\t " . $result->{'message'};
+      print $logh Progress::location() . "\tThe following subtasks generated errors for job $jobid:\n";
+      foreach my $index (@error_subtasks) {
+	print $logh qq{\t\t$jobname\[$index\] ($jobid\[$index\])\n};
+      }
     }
-  
-    print $logh Progress::location() . "\tThe following subtasks failed because they ran out of resources for job $jobid:\n";
-    foreach my $index (grep($result->{'subtask_details'}{$_}{'fail_reason'} =~ m/OUT_OF_[MEMORY|TIME]/,keys(%{$result->{'subtask_details'}}))) {
-      print $logh qq{\t\t$jobname\[$index\] ($jobid\[$index\])\n};
+      
+    # Check the result, if anything failed
+    if (!$result->{'success'}) {
+      warn($result->{'message'});
+      print $logh Progress::location() . "\t " . $result->{'message'};
+      print $logh Progress::location() . "\tThe following subtasks failed for unknown reasons for job $jobid:\n";
+      foreach my $index (grep($result->{'subtask_details'}{$_}{'fail_reason'} =~ m/UNKNOWN/,keys(%{$result->{'subtask_details'}}))) {
+	print $logh qq{\t\t$jobname\[$index\] ($jobid\[$index\])\n};
+      }
+    
+      print $logh Progress::location() . "\tThe following subtasks failed because they ran out of resources for job $jobid:\n";
+      foreach my $index (grep($result->{'subtask_details'}{$_}{'fail_reason'} =~ m/OUT_OF_[MEMORY|TIME]/,keys(%{$result->{'subtask_details'}}))) {
+	print $logh qq{\t\t$jobname\[$index\] ($jobid\[$index\])\n};
+      }
     }
+    
+    # If we still have subtasks that fail, this needs to be resolved before proceeding
+    die("Some subtasks are failing (see log output). This needs to be resolved before proceeding with the loading of genotypes!") unless ($result->{'success'});
   }
-  
-  # If we still have subtasks that fail, this needs to be resolved before proceeding
-  die("Some subtasks are failing (see log output). This needs to be resolved before proceeding with the loading of genotypes!") unless ($result->{'success'});
   
   # Loop over the subtables and load each of them
   my @subtables;
-  $jobindex = 0;
-  $task_manager_file = $file_prefix . '_task_management_load.txt';
+  my $jobindex = 0;
+  my $task_manager_file = $file_prefix . '_task_management_load.txt';
   open(MGMT,'>',$task_manager_file);
   foreach my $subind_table (keys(%gty_tables)) {
     
@@ -2360,9 +2370,9 @@ sub parallelized_individual_genotypes {
   
   # Run the job on the farm
   print $logh Progress::location() . "\tSubmitting loading of the genotypes to the farm\n";
-  $jobname = 'individual_genotypes_load';
-  $result = $self->run_on_farm($jobname,$file_prefix,'load_data_infile',$task_manager_file,1,$jobindex);
-  $jobid = $result->{'jobid'};
+  my $jobname = 'individual_genotypes_load';
+  my $result = $self->run_on_farm($jobname,$file_prefix,'load_data_infile',$task_manager_file,1,$jobindex);
+  my $jobid = $result->{'jobid'};
   
   # Check if any subtasks generated errors
   if ((my @error_subtasks = grep($result->{'subtask_details'}{$_}{'generated_error'},keys(%{$result->{'subtask_details'}})))) {
@@ -2389,6 +2399,14 @@ sub parallelized_individual_genotypes {
   }
   # If we still have subtasks that fail, this needs to be resolved before proceeding
   die("Some subtasks are failing (see log output). This needs to be resolved before proceeding with the loading of genotypes!") unless ($result->{'success'});
+  
+  #ÊDrop the tmp_individual.. table if it exists
+  $stmt = qq{
+    DROP TABLE IF EXISTS
+      $genotype_table
+  };
+  $self->{'dbVar'}->do($stmt);
+  print $logh Progress::location();
   
   # Merge all the subtables into the final table, or if there is just one subtable, rename it to the final table name
   print $logh Progress::location() . "\tMerging the genotype subtables into a big $genotype_table table\n";
