@@ -1294,6 +1294,9 @@ sub get_all_hgvs_notations {
       }
     }
     
+    #ÊIf the reference is a slice, use the seq_region_name as identifier
+    $reference_name = $ref_feature->seq_region_name if ($ref_feature->isa('Bio::EnsEMBL::Slice'));
+      
     #ÊUse the feature's display id as reference name unless specified otherwise. If the feature is a transcript or translation, append the version number as well
     $reference_name ||= $ref_feature->display_id() . ($ref_feature->isa('Bio::EnsEMBL::Transcript') ? '.' . $ref_feature->version() : '');
     
