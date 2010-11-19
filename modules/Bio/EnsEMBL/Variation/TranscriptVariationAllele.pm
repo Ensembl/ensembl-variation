@@ -173,7 +173,9 @@ sub _hgvs_generic {
     
     unless ($self->{$sub}) {
         # Calculate the HGVS notation on-the-fly and pass it to the TranscriptVariation in order to distribute the result to the other alleles
-        $self->transcript_variation->$sub($self->variation_feature->get_all_hgvs_notations($self->transcript,substr($reference,0,1)));
+        my $reference_feature;
+        $reference_feature = $self->transcript unless ($reference eq 'genomic');
+        $self->transcript_variation->$sub($self->variation_feature->get_all_hgvs_notations($reference_feature,substr($reference,0,1)));
     }
     
     return $self->{$sub};
