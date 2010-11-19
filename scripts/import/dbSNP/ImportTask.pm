@@ -155,7 +155,7 @@ sub allele_table {
   %alleles = %{read_alleles($allelefile)} if (defined($allelefile) && -e $allelefile);
   print $logh Progress::location();
   # The allele_id = 0 is a replacement for NULL but since it's used for a key in the hash below, we need it to have an actual numerical value
-  $alleles{0} = '\N';
+  $alleles{0} = ['\N','\N'];
   # Keep track if we did any new lookups
   my $new_alleles = 0;
   
