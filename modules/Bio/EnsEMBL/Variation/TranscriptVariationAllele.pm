@@ -172,9 +172,11 @@ sub _hgvs_generic {
     $self->{$sub} = $notation if defined $notation;
     
     unless ($self->{$sub}) {
+        # Use the transcript this VF is on as the reference feature
+        my $reference_feature = $self->transcript;
+        # If we want genomic coordinates, the reference_feature should actually be the slice for the underlying seq_region
+        $reference_feature = $reference_feature->slice->seq_region_Slice if ($reference eq 'genomic');
         # Calculate the HGVS notation on-the-fly and pass it to the TranscriptVariation in order to distribute the result to the other alleles
-        my $reference_feature;
-        $reference_feature = $self->transcript unless ($reference eq 'genomic');
         $self->transcript_variation->$sub($self->variation_feature->get_all_hgvs_notations($reference_feature,substr($reference,0,1)));
     }
     
