@@ -17,7 +17,7 @@ sub variation_feature{
      debug(localtime() . "\tDumping seq_region data");
 
      #only take toplevel coordinates
-     dumpSQL($self->{'dbCore'}->dbc()->db_handle, qq{SELECT sr.seq_region_id, 
+     dumpSQL($self->{'dbCore'}->db_handle, qq{SELECT sr.seq_region_id, 
   				      if (sr.name like "E%", CONCAT("LG",sr.name),sr.name) ##add LG for chicken
   				      FROM   seq_region_attrib sra, attrib_type at, seq_region sr
   				      WHERE sra.attrib_type_id=at.attrib_type_id 
@@ -55,7 +55,7 @@ sub variation_feature{
     my @genome_builds;
      while($row = $sth->fetchrow_arrayref()) {
 	($genome_build) = $row->[0] =~ m/SNPContigLoc\_(.+)$/;
-	push(@genome_builds,$genome_build);
+	push(@genome_builds,$genome_build) if ($genome_build);
      }
 
     if (scalar(@genome_builds) != 1) {
@@ -114,7 +114,7 @@ sub variation_feature{
     # In the query below, the pre-131 syntax was ref-assembly. In 131 it is GRCh37 for human. What is it for other species??
     my $group_term = 'ref_';
     my ($release) = $self->{'dbSNP_version'} =~ m/^b?(\d+)$/;
-    $group_term = 'GRCh' if ($self->{'dbCore'}->species =~ m/homo|human/i && $release > 130);
+    $group_term = 'GRCh' if ($self->{'dbm'}->dbCore()->species =~ m/homo|human/i && $release > 130);
     
 	#	     t2.group_term LIKE 'ref_%'
      $stmt = "SELECT ";
@@ -256,7 +256,7 @@ sub variation_feature{
     #$self->{'dbVar'}->do("DROP TABLE tmp_variation_feature_chrom");
     #$self->{'dbVar'}->do("DROP TABLE tmp_variation_feature_ctg");
     #for the chicken, delete 13,000 SNPs that cannot be mapped to EnsEMBL coordinate
-    if ($self->{'dbCore'}->species =~ /gga/i){
+    if ($self->{'dbm'}->dbCore()->species =~ /gga/i){
 	$self->{'dbVar'}->do("DELETE FROM variation_feature WHERE seq_region_end = -1");
   print Progress::location();
     }
