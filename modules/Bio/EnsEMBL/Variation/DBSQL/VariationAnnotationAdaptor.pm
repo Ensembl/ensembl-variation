@@ -164,9 +164,9 @@ sub fetch_all_by_phenotype_name_source_name {
 
   throw('phenotype_name argument expected') if(!defined($phenotype_name));
 
-  my $extra_sql = " p.name = ? ";
+  my $extra_sql = " p.name = $phenotype_name ";
   if (defined $source_name ) {
-    $extra_sql .= qq( AND s.name = ?);
+    $extra_sql .= qq( AND s.name = $source_name);
   }
   
   return $self->generic_fetch("$extra_sql");
@@ -194,9 +194,9 @@ sub fetch_all_by_phenotype_description_source_name {
 
   throw('phenotype_description argument expected') if(!defined($phenotype_description));
 
-  my $extra_sql = qq( p.description like '%?%' );
+  my $extra_sql = qq( p.description like '%$phenotype_description%' );
   if (defined $source_name ) {
-    $extra_sql .= qq( AND s.name = ?);
+    $extra_sql .= qq( AND s.name = $source_name);
   }
   
   return $self->generic_fetch("$extra_sql");
