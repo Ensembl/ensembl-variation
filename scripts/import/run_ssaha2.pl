@@ -192,7 +192,7 @@ sub parse_ssaha2_out {
 
   open INPUT, "$input_file" or die "can't open $input_file : $!\n";
   open OUT, ">$output_dir/mapping_file_$start" or die "can't open output_file : $!\n";
-  open OUT1, ">$output_dir/out_mapping"  or die "can't open out_mapping file : $!\n";
+  open OUT1, ">$output_dir/out_mapping_$start"  or die "can't open out_mapping file : $!\n";
 
   my ($name,%rec_seq,%rec_find);
 
@@ -211,7 +211,7 @@ sub parse_ssaha2_out {
     my ($fseq,$lseq) = split /[NWACTG\-\_]+/,$rec_seq{$name};
     my $snp_posf = length($fseq)+1;
     my $snp_posl = length($lseq)+1;
-    my $tot_length = $snp_posf + $snp_posl-2;
+    #my $tot_length = $snp_posf + $snp_posl-2;
     my $tot_length = length($rec_seq{$name});
     $snp_pos{$name} = "$snp_posf\_$snp_posl";
     $snp_pos{$name} = "$snp_posf\_$snp_posl";
@@ -247,6 +247,13 @@ sub parse_ssaha2_out {
     my @h = sort {$b->{'score'}<=>$a->{'score'}} @{$rec_find{$q_id}};
     #print "There are ",scalar @h," hits and q_id is $q_id\n";
     
+    # Get rid of mappings that score less than the best scoring mapping
+    my @mappings = grep {$_->{'score'} == $h[0]->{'score'}} @h;
+    
+    find_results(@mappings);
+
+    # Comment out the old code checking number of mappings etc. This should be done by the post-processing scripts
+=head
     if (scalar @h==1) {
       find_results($h[0]);
     }
@@ -273,6 +280,7 @@ sub parse_ssaha2_out {
       #needs to be written to the failed_variation table
       print MAP "$q_id\n";
     }
+=cut
   }
 
   my ($total_seq,$no);
