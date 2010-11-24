@@ -1516,12 +1516,14 @@ sub get_all_hgvs_notations {
           if ($hgvs_notation->{'ref'} =~ m/Ter/) {
             #ÊGet the remaining transcript sequence
             my $utr = $ref_feature->three_prime_utr();
-            my $utr_trans = $utr->translate();
-            # Find the number of residues that are translated until a termination codon is encountered
-            $utr_trans->seq() =~ m/\*/;
-            if ($+[0]) {
-              $hgvs_notation->{'suffix'} = $+[0];
-            }
+	    if (defined($utr)) {
+	      my $utr_trans = $utr->translate();
+	      # Find the number of residues that are translated until a termination codon is encountered
+	      $utr_trans->seq() =~ m/\*/;
+	      if ($+[0]) {
+		$hgvs_notation->{'suffix'} = $+[0];
+	      }
+	    }
           }
           
         }
