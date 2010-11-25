@@ -1040,11 +1040,11 @@ sub individual_table {
 
 sub parallelized_allele_table {
   my $self = shift;
+  my $load_only = shift;
   
   #ÊPut the log filehandle in a local variable
   my $logh = $self->{'log'};
   my $stmt;
-  
   
   # The tempfile to be used for loading
   my $file_prefix = $self->{'tmpdir'} . '/allele_table';
@@ -1054,87 +1054,95 @@ sub parallelized_allele_table {
   # Allele file is used for caching the alleles
   my $allelefile = $file_prefix . '_alleles.txt';
   
-  #ÊFirst, get the population_id -> sample_id mapping and write it to the file. The subroutine can also get it but it's faster to get all at once since we expect many to be used. 
-  $stmt = qq{
-    SELECT DISTINCT
-      s.pop_id,
-      s.sample_id
-    FROM
-      sample s
-    WHERE
-      s.pop_id IS NOT NULL AND
-      s.pop_id > 0
-  };
-  my $sth = $self->{'dbVar'}->prepare($stmt);
-  $sth->execute();
-  my @samples;
-  while (my @row = $sth->fetchrow_array()) {
-    push(@samples,@row);
-  }
-  my %s = (@samples);
-  dbSNP::ImportTask::write_samples($samplefile,\%s);
-  print $logh Progress::location();
-
-  #ÊProcess the alleles in chunks based on the SubSNP id. This number should be kept at a reasonable level, ideally so that we don't need to request more than 4GB memory on the farm. If so, we'll have access to the most machines.
-  #ÊThe limitation is that the results from the dbSNP query is read into memory. If necessary, we can dump it to a file (if the results are sorted)
-  my $chunksize = 5e5;
+  # Do the extraction of the alleles unless we're resuming and will only load the alleles
+  my $task_manager_file;
+  my $jobindex;
+  my $jobid;
+  my $jobname;
+  my $result;
+  unless ($load_only) {
+    #ÊFirst, get the population_id -> sample_id mapping and write it to the file. The subroutine can also get it but it's faster to get all at once since we expect many to be used. 
+    $stmt = qq{
+      SELECT DISTINCT
+	s.pop_id,
+	s.sample_id
+      FROM
+	sample s
+      WHERE
+	s.pop_id IS NOT NULL AND
+	s.pop_id > 0
+    };
+    my $sth = $self->{'dbVar'}->prepare($stmt);
+    $sth->execute();
+    my @samples;
+    while (my @row = $sth->fetchrow_array()) {
+      push(@samples,@row);
+    }
+    my %s = (@samples);
+    dbSNP::ImportTask::write_samples($samplefile,\%s);
+    print $logh Progress::location();
   
-  $stmt = qq{
-    SELECT
-      MIN(ss.subsnp_id),
-      MAX(ss.subsnp_id)
-    FROM
-      SubSNP ss
-  };
-  my ($min_ss,$max_ss) = @{$self->{'dbSNP'}->db_handle()->selectall_arrayref($stmt)->[0]};
-  my $ss_offset = ($min_ss - 1);
-  
-  my $task_manager_file = $file_prefix . '_task_management.txt';
-  my $jobindex = 0;
-  
-  #ÊLoop over all subtask intervals and write the parameters to the manager file
-  open(MGMT,'>',$task_manager_file);
-  while ($ss_offset < $max_ss) {
+    #ÊProcess the alleles in chunks based on the SubSNP id. This number should be kept at a reasonable level, ideally so that we don't need to request more than 4GB memory on the farm. If so, we'll have access to the most machines.
+    #ÊThe limitation is that the results from the dbSNP query is read into memory. If necessary, we can dump it to a file (if the results are sorted)
+    my $chunksize = 5e5;
     
-    $jobindex++;
-    my $start = ($ss_offset + 1);
-    my $end = $ss_offset + $chunksize;
-    $ss_offset = $end;
+    $stmt = qq{
+      SELECT
+	MIN(ss.subsnp_id),
+	MAX(ss.subsnp_id)
+      FROM
+	SubSNP ss
+    };
+    my ($min_ss,$max_ss) = @{$self->{'dbSNP'}->db_handle()->selectall_arrayref($stmt)->[0]};
+    my $ss_offset = ($min_ss - 1);
     
-    print MGMT qq{$jobindex $loadfile $start $end $allelefile $samplefile\n};
-  }
-  close(MGMT);
-  
-  # Run the job on the farm
-  my $jobname = 'allele_table';
-  my $result = $self->run_on_farm($jobname,$file_prefix,'allele_table',$task_manager_file,1,$jobindex);
-  my $jobid = $result->{'jobid'};
-  
-  # Check if any subtasks generated errors
-  if ((my @error_subtasks = grep($result->{'subtask_details'}{$_}{'generated_error'},keys(%{$result->{'subtask_details'}})))) {
-    warn($result->{'message'});
-    print $logh Progress::location() . "\t " . $result->{'message'};
-    print $logh Progress::location() . "\tThe following subtasks generated errors for job $jobid:\n";
-    foreach my $index (@error_subtasks) {
-      print $logh qq{\t\t$jobname\[$index\] ($jobid\[$index\])\n};
+    $task_manager_file = $file_prefix . '_task_management.txt';
+    $jobindex = 0;
+    
+    #ÊLoop over all subtask intervals and write the parameters to the manager file
+    open(MGMT,'>',$task_manager_file);
+    while ($ss_offset < $max_ss) {
+      
+      $jobindex++;
+      my $start = ($ss_offset + 1);
+      my $end = $ss_offset + $chunksize;
+      $ss_offset = $end;
+      
+      print MGMT qq{$jobindex $loadfile $start $end $allelefile $samplefile\n};
     }
-  }
-  # Check the result, if anything failed
-  if (!$result->{'success'}) {
-    warn($result->{'message'});
-    print $logh Progress::location() . "\t " . $result->{'message'};
-    print $logh Progress::location() . "\tThe following subtasks failed for unknown reasons for job $jobid:\n";
-    foreach my $index (grep($result->{'subtask_details'}{$_}{'fail_reason'} =~ m/UNKNOWN/,keys(%{$result->{'subtask_details'}}))) {
-      print $logh qq{\t\t$jobname\[$index\] ($jobid\[$index\])\n};
+    close(MGMT);
+    
+    # Run the job on the farm
+    $jobname = 'allele_table';
+    $result = $self->run_on_farm($jobname,$file_prefix,'allele_table',$task_manager_file,1,$jobindex);
+    $jobid = $result->{'jobid'};
+    
+    # Check if any subtasks generated errors
+    if ((my @error_subtasks = grep($result->{'subtask_details'}{$_}{'generated_error'},keys(%{$result->{'subtask_details'}})))) {
+      warn($result->{'message'});
+      print $logh Progress::location() . "\t " . $result->{'message'};
+      print $logh Progress::location() . "\tThe following subtasks generated errors for job $jobid:\n";
+      foreach my $index (@error_subtasks) {
+	print $logh qq{\t\t$jobname\[$index\] ($jobid\[$index\])\n};
+      }
     }
-  
-    print $logh Progress::location() . "\tThe following subtasks failed because they ran out of resources for job $jobid:\n";
-    foreach my $index (grep($result->{'subtask_details'}{$_}{'fail_reason'} =~ m/OUT_OF_[MEMORY|TIME]/,keys(%{$result->{'subtask_details'}}))) {
-      print $logh qq{\t\t$jobname\[$index\] ($jobid\[$index\])\n};
+    # Check the result, if anything failed
+    if (!$result->{'success'}) {
+      warn($result->{'message'});
+      print $logh Progress::location() . "\t " . $result->{'message'};
+      print $logh Progress::location() . "\tThe following subtasks failed for unknown reasons for job $jobid:\n";
+      foreach my $index (grep($result->{'subtask_details'}{$_}{'fail_reason'} =~ m/UNKNOWN/,keys(%{$result->{'subtask_details'}}))) {
+	print $logh qq{\t\t$jobname\[$index\] ($jobid\[$index\])\n};
+      }
+    
+      print $logh Progress::location() . "\tThe following subtasks failed because they ran out of resources for job $jobid:\n";
+      foreach my $index (grep($result->{'subtask_details'}{$_}{'fail_reason'} =~ m/OUT_OF_[MEMORY|TIME]/,keys(%{$result->{'subtask_details'}}))) {
+	print $logh qq{\t\t$jobname\[$index\] ($jobid\[$index\])\n};
+      }
     }
+    # If we still have subtasks that fail, this needs to be resolved before proceeding
+    die("Some subtasks are failing (see log output). This needs to be resolved before proceeding with the loading of genotypes!") unless ($result->{'success'});
   }
-  # If we still have subtasks that fail, this needs to be resolved before proceeding
-  die("Some subtasks are failing (see log output). This needs to be resolved before proceeding with the loading of genotypes!") unless ($result->{'success'});
   
   $task_manager_file = $file_prefix . '_task_management_load.txt';
   open(MGMT,'>',$task_manager_file);
