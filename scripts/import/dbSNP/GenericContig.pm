@@ -3237,6 +3237,7 @@ sub population_genotypes {
                   gtfsp.subsnp_id AS sorting_id, 
                   gtfsp.pop_id, 
                   gtfsp.freq,
+                  ROUND(gtfsp.cnt,0),
                   a1.allele, 
                   a2.allele
 	       	FROM   
@@ -3259,15 +3260,14 @@ sub population_genotypes {
 
      debug(localtime() . "\tloading population_genotype data");
 
-     create_and_load($self->{'dbVar'}, "tmp_pop_gty", 'subsnp_id i*', 'pop_id i*', 'freq',
- 			'allele_1', 'allele_2');
+     create_and_load($self->{'dbVar'}, "tmp_pop_gty", 'subsnp_id i*', 'pop_id i*', 'freq','count','allele_1', 'allele_2');
   print $logh Progress::location();
 
    $self->{'dbVar'}->do(qq{CREATE UNIQUE INDEX pop_genotype_idx ON population_genotype(variation_id,subsnp_id,frequency,sample_id,allele_1,allele_2)});
 
 
-    $self->{'dbVar'}->do(qq{INSERT IGNORE INTO population_genotype (variation_id,subsnp_id,allele_1, allele_2, frequency, sample_id)
-			                  SELECT vs.variation_id,vs.subsnp_id,tra1.rev_allele as allele_1,tra2.rev_allele as allele_2,tg.freq,s.sample_id
+    $self->{'dbVar'}->do(qq{INSERT IGNORE INTO population_genotype (variation_id,subsnp_id,allele_1, allele_2, frequency, sample_id, count)
+			                  SELECT vs.variation_id,vs.subsnp_id,tra1.rev_allele as allele_1,tra2.rev_allele as allele_2,tg.freq,s.sample_id, tg.count
 					  FROM   variation_synonym vs, tmp_pop_gty tg,tmp_rev_allele tra1,tmp_rev_allele tra2, sample s
 					  WHERE  vs.subsnp_id = tg.subsnp_id
                                           AND    tg.allele_1 = tra1.allele
@@ -3276,8 +3276,8 @@ sub population_genotypes {
 					  AND    s.pop_id = tg.pop_id});
   print $logh Progress::location();
 
-    $self->{'dbVar'}->do(qq{INSERT IGNORE INTO population_genotype (variation_id,subsnp_id,allele_1, allele_2, frequency, sample_id)
-					  SELECT vs.variation_id,vs.subsnp_id,tg.allele_1,tg.allele_2,tg.freq,s.sample_id
+    $self->{'dbVar'}->do(qq{INSERT IGNORE INTO population_genotype (variation_id,subsnp_id,allele_1, allele_2, frequency, sample_id, count)
+					  SELECT vs.variation_id,vs.subsnp_id,tg.allele_1,tg.allele_2,tg.freq,s.sample_id, tg.count
 					  FROM   variation_synonym vs, tmp_pop_gty tg,sample s
 					  WHERE  vs.subsnp_id = tg.subsnp_id
                                           AND    vs.substrand_reversed_flag = 0
