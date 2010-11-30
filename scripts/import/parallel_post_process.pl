@@ -59,7 +59,7 @@ $num_processes ||= 1;
 $bsub_queue_name ||= 'long';
 
 $LIMIT = ($limit) ? " $limit " : ''; #will refer to position in a slice
-$PERLBIN   ||= '/usr/local/ensembl/bin/perl'; # Could use $^X?
+$PERLBIN   ||= '/software/bin/perl'; # Could use $^X?
 -x $PERLBIN or usage("Perl interpretor at $PERLBIN is not suitable. " .
                      "See the -perlbin argument" );
 $SCHEDULER ||= 'LSF';
@@ -71,7 +71,7 @@ $valid_schedulers{$SCHEDULER} || usage("-scheduler $SCHEDULER is invalid");
 usage('-num_processes must at least be 1') if ($num_processes == 0);
 usage('-species argument required') if(!$species);
 
-warn("Make sure you have a updated ensembl.registry file!\n");
+warn("Make sure you have an updated ensembl.registry file!\n");
 
 $registry_file ||= $Bin . "/ensembl.registry";
 
@@ -111,6 +111,8 @@ my $sr_ref = $dbCore->dbc->db_handle->selectall_arrayref(qq{select sra.seq_regio
 
 my %hap_seq_id = map {$_->[0],1} @$sr_ref;
 my $hap_id_string = "(". join ",", keys %hap_seq_id, .")";
+
+$hap_id_string = '(0)' if $hap_id_string eq '()';
 
 #we need to create a tmp table to store variations that we filter out
 #create_failed_variation_table($dbVar);
@@ -277,13 +279,14 @@ sub parallel_flanking_sequence{
       $count++; #counting the total number of entries in the table
       $curr_variation_id = $row->[0]; #get the current variation_id
       if ($previous_variation_id == 0){ #initialize the first time
-	  $previous_variation_id = $curr_variation_id;
+		$previous_variation_id = $curr_variation_id;
       }
       if ($curr_variation_id ne $previous_variation_id){
-	  if((($sub_sequences * $process) <= $count) && ($process < $num_processes)){ #need to write in a new file
-	      $process++;
-	  }
+		if((($sub_sequences * $process) <= $count) && ($process < $num_processes)){ #need to write in a new file
+			$process++;
+		}
       }
+	  
       my @a = map {defined($_) ? $_ : '\N'} @$row;
       
       &print_buffered($buffer,"$TMP_DIR/$dbname.flanking_sequence_$process\.txt",join("\t",@a) . "\n");
@@ -420,9 +423,30 @@ sub parallel_transcript_variation{
 sub reverse_things {
 
   my $dbVar = shift;
+  
+  # create a table of things to be reversed
+  my $hap_line;
+  if ($hap_id_string =~ /\([\,\d]+\)/) {
+    $hap_line = "AND seq_region_id not in $hap_id_string";
+  }
+  else {
+    $hap_line ='';
+  }
+  
+  $dbVar->do(qq{
+	CREATE TABLE IF NOT EXISTS variations_to_reverse
+	SELECT variation_id FROM variation_feature
+	WHERE map_weight = 1 AND seq_region_strand = -1 $hap_line;
+  });
+  
+  $dbVar->do(qq{create index variation_idx on variations_to_reverse(variation_id);});
+  
   reverse_genotype($dbVar);#run genotype/allele first, then run variation_feature and flanking_sequence
   reverse_variation_feature($dbVar);
   reverse_flanking_sequence($dbVar);
+  
+  $dbVar->do(qq{update variation v, variations_to_reverse vr set v.flipped = 1 where vr.variation_id = v.variation_id;});
+  $dbVar->do(qq{update variation set flipped = 0 where flipped != 1;});
 }
 
 sub reverse_genotype{
@@ -430,23 +454,23 @@ sub reverse_genotype{
   my $buffer = {}; #hash containing all the files to be parallelized
   my $dbsnp = 0; #for non-dbsnp data
   
-  my ($source_id,$name,$validation_status,$ancestral_allele,$population_genotype_id,$variation_id,$ss_id,$allele_id,$allele,$allele_1,$allele_2,$frequency,$sample_id,$allele_string,$seq_region_id);
+  my ($source_id,$name,$validation_status,$ancestral_allele,$flipped,$count,$population_genotype_id,$variation_id,$ss_id,$allele_id,$allele,$allele_1,$allele_2,$frequency,$sample_id,$allele_string,$seq_region_id);
   
   my (%rec_seq_region_ids,%rec_table_name,$table_name);
 
-  #create rec_seq_region_ids hash to contain chromosomes that appear in SubIndch_chromosome_name, so can write output file separatly for human genotype
-  if (($species =~ /hum|homo/i or $vdbname =~/hum|homo/i) and $dbsnp) {
-    my $sth1 = $dbCore->dbc->prepare(qq{SELECT sr.seq_region_id, sr.name
-                                       FROM seq_region sr, coord_system cs 
-                                       WHERE sr.coord_system_id=cs.coord_system_id 
-                                       AND cs.name='chromosome'
-                                       AND cs.attrib = 'default_version'});
-    $sth1->execute();
-
-    while (my ($seq_reg_id,$name) = $sth1->fetchrow_array()) {
-      $rec_seq_region_ids{$seq_reg_id}=$name;
-    }
-  }
+  ##create rec_seq_region_ids hash to contain chromosomes that appear in SubIndch_chromosome_name, so can write output file separatly for human genotype
+  #if (($species =~ /hum|homo/i or $vdbname =~/hum|homo/i) and $dbsnp) {
+  #  my $sth1 = $dbCore->dbc->prepare(qq{SELECT sr.seq_region_id, sr.name
+  #                                     FROM seq_region sr, coord_system cs 
+  #                                     WHERE sr.coord_system_id=cs.coord_system_id 
+  #                                     AND cs.name='chromosome'
+  #                                     AND cs.attrib = 'default_version'});
+  #  $sth1->execute();
+  #
+  #  while (my ($seq_reg_id,$name) = $sth1->fetchrow_array()) {
+  #    $rec_seq_region_ids{$seq_reg_id}=$name;
+  #  }
+  #}
 
   my $hap_line;
   if ($hap_id_string =~ /\([\,\d]+\)/) {
@@ -455,10 +479,25 @@ sub reverse_genotype{
   else {
     $hap_line ='';
   }
+  
+  my @table_list = ("variation","individual_genotype_multiple_bp","population_genotype","allele");
+  
+  if($species =~ /hum|homo/i or $vdbname =~/hum|homo/i) {
+	my $sth1 = $dbVar->prepare(qq{SHOW TABLES LIKE 'tmp_individual_genotype_single_bp_%'});
+	$sth1->execute;
+	
+	while(my ($table_name) = $sth1->fetchrow_array()) {
+	  push @table_list, $table_name;
+	}
+  }
+  
+  else {
+	push @table_list, "tmp_individual_genotype_single_bp";
+  }
 
-  foreach my $table ("variation","tmp_individual_genotype_single_bp","individual_genotype_multiple_bp","population_genotype","allele") {
+  foreach my $table (@table_list) {
   #we only change things that have map_weight=1 that is vf.map_weight=1 and seq_region_id not in (hap_id_string)
-    debug("processling table $table");
+    debug("processing table $table");
     if ($table !~ /single/) {
       open OUT, ">$TMP_DIR/$table\.$vdbname" or die "can't open file $table\_out : $!";
     }
@@ -477,13 +516,13 @@ sub reverse_genotype{
 
     $sth->execute();
     if ($table =~ /pop/i) {
-      $sth->bind_columns(\$population_genotype_id,\$variation_id,\$ss_id,\$allele_1,\$allele_2,\$frequency,\$sample_id,\$allele_string,\$seq_region_id);
+      $sth->bind_columns(\$population_genotype_id,\$variation_id,\$ss_id,\$allele_1,\$allele_2,\$frequency,\$sample_id,\$count,\$allele_string,\$seq_region_id);
     }
     elsif($table =~ /allele/i) {
-      $sth->bind_columns(\$allele_id,\$variation_id,\$ss_id,\$allele,\$frequency,\$sample_id,\$allele_string,\$seq_region_id);
+      $sth->bind_columns(\$allele_id,\$variation_id,\$ss_id,\$allele,\$frequency,\$sample_id,\$count,\$allele_string,\$seq_region_id);
     }
     elsif($table =~ /variation/) {
-      $sth->bind_columns(\$allele_id,\$source_id,\$name,\$validation_status,\$allele,\$allele_string,\$seq_region_id);
+      $sth->bind_columns(\$allele_id,\$source_id,\$name,\$validation_status,\$allele,\$flipped,\$allele_string,\$seq_region_id);
     }
     else {
       $sth->bind_columns(\$variation_id,\$ss_id,\$allele_1,\$allele_2,\$sample_id,\$allele_string,\$seq_region_id);
@@ -593,17 +632,17 @@ sub reverse_genotype{
 	      print OUT "update ignore $table set allele_1 = \"$new_allele_1\", allele_2 = \"$new_allele_2\" where population_genotype_id = $population_genotype_id;\n";
 	    }
 	    elsif ($table =~ /single/) {
-	      if (($species =~ /hum|homo/i or $vdbname =~/hum|homo/i) and $dbsnp) {
-		my $chr_name = $rec_seq_region_ids{$seq_region_id};
-		if ($chr_name) {
-		  $table_name = "$table\_SubInd_ch$chr_name";
-		}
-	      }
-	      else {
-		$table_name = "$table";
-	      }
+	#      if (($species =~ /hum|homo/i or $vdbname =~/hum|homo/i) and $dbsnp) {
+	#	my $chr_name = $rec_seq_region_ids{$seq_region_id};
+	#	if ($chr_name) {
+	#	  $table_name = "$table\_SubInd_ch$chr_name";
+	#	}
+	#      }
+	#      else {
+	#	$table_name = "$table";
+	#      }
 		  
-		  $table_name = 'tmp_individual_genotype_single_bp';
+		  $table_name = $table;
 		  
 	      print_buffered($buffer, "$TMP_DIR/$table_name\_del", 
               "DELETE FROM $table_name WHERE variation_id=$variation_id and subsnp_id=$ss_id and sample_id=$sample_id;\n");
@@ -730,6 +769,8 @@ sub reverse_flanking_sequence {
 	$up_seq_end = '\N';
       }
       $seq_region_strand = 1;
+	  
+	  #warn qq{update $table set up_seq = "$up_seq", down_seq = "$down_seq", up_seq_region_start = $up_seq_start, up_seq_region_end = $up_seq_end, down_seq_region_start=$down_seq_start, down_seq_region_end=$down_seq_end, seq_region_strand=1  where variation_id = $variation_id and seq_region_id = $seq_region_id and seq_region_strand = -1};
 
       $dbVar->do(qq{update $table set up_seq = "$up_seq", down_seq = "$down_seq", up_seq_region_start = $up_seq_start, up_seq_region_end = $up_seq_end, down_seq_region_start=$down_seq_start, down_seq_region_end=$down_seq_end, seq_region_strand=1  where variation_id = $variation_id and seq_region_id = $seq_region_id and seq_region_strand = -1});
     }
@@ -765,7 +806,9 @@ sub merge_ensembl_snps {
 
   debug("Creat table tmp_ids...");#check for same position,different alleles as well
   $dbVar->do(qq{CREATE table tmp_ids_$new_source_id SELECT vf1.variation_id as variation_id1, vf1.variation_name as name1,vf2.variation_id as variation_id2,vf2.variation_name as name2 
-               FROM variation_feature vf1, variation_feature vf2 
+               FROM (variation_feature vf1, variation_feature vf2)
+			   LEFT JOIN failed_variation f1 on vf1.variation_id = f1.variation_id
+			   LEFT JOIN failed_variation f2 on vf2.variation_id = f2.variation_id 
                WHERE vf1.seq_region_id=vf2.seq_region_id 
                AND vf1.seq_region_start = vf2.seq_region_start 
                AND vf1.seq_region_end = vf2.seq_region_end
@@ -790,6 +833,8 @@ sub merge_ensembl_snps {
                FROM tmp_ids_$new_source_id t, variation_feature vf1, variation_feature vf2
                WHERE t.variation_id1 =vf1.variation_id 
                AND t.variation_id2 =vf2.variation_id 
+			   AND f1.variation_id IS NULL
+			   AND f2.variation_id IS NULL
                AND vf2.map_weight=1 ##vf2 is dbSNP
                AND vf1.map_weight=1
                AND vf1.allele_string != 'N/A'#cnv has 'N' in allele_string, not merge this
@@ -988,8 +1033,12 @@ sub merge_rs_feature{
 
   debug("Creat table tmp_ids...");
   $dbVar->do(qq{CREATE table tmp_ids_rs SELECT vf1.variation_id as variation_id1, vf1.variation_name as name1,vf2.variation_id as variation_id2,vf2.variation_name as name2
-               FROM variation_feature vf1, variation_feature vf2 
+               FROM (variation_feature vf1, variation_feature vf2)
+			   LEFT JOIN failed_variation f1 on vf1.variation_id = f1.variation_id
+			   LEFT JOIN failed_variation f2 on vf2.variation_id = f2.variation_id
                Where vf1.seq_region_id=vf2.seq_region_id 
+			   AND f1.variation_id IS NULL
+			   AND f2.variation_id IS NULL
                AND vf1.seq_region_start = vf2.seq_region_start 
                AND vf1.seq_region_end = vf2.seq_region_end
 	       AND vf1.seq_region_strand = vf2.seq_region_strand  #only merge same strand
