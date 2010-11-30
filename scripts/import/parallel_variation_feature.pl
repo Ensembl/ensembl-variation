@@ -205,7 +205,7 @@ sub variation_feature {
     if ($map_weight>3) {	
       #needs to be written to the failed_variation table
       $dbVar_write->do(qq{INSERT IGNORE INTO failed_variation (variation_id,failed_description_id) VALUES ($v_id,1)});
-      next;
+      #next; # don't skip now we are flagging not failing
     }
     if(!defined($cur_vf_id) || $cur_vf_id != $vf_id) {
       
@@ -224,13 +224,16 @@ sub variation_feature {
 		  $allele_str = $special;
 		}
 		else {
-		  $allele_str = undef;
+		  #$allele_str = undef;  # don't delete allele string now that we're flagging not failing
+		  $allele_str = join("/", keys %alleles);
 			  warn("Reference allele $ref_allele for $cur_v_name not found in alleles: " .
-			join("/", keys %alleles), " discarding feature cur_allele was $cur_allele");
+			  $allele_str, " flagging feature cur_allele was $cur_allele");
 		  $dbVar_write->do(qq{INSERT IGNORE INTO failed_variation (variation_id,failed_description_id) VALUES ($cur_v_id,2)}) if ($cur_map_weight ==1); #only put into failed_variation when map_weight==1
 		}
 		
-		if($allele_str) {
+		#if($allele_str) {
+		  $allele_str ||= '\N';
+		
 		  if ($top_level) {
 			print FH join("\t", $cur_vf_id, $top_sr_id, $top_sr_start, $top_sr_end, $top_sr_strand,
 				  $cur_v_id, $allele_str, $cur_v_name,
@@ -242,7 +245,7 @@ sub variation_feature {
 				  $cur_v_id, $allele_str, $cur_v_name,
 				  $cur_map_weight,$cur_vf_flags,$cur_source_id,$cur_validation_status,$cur_consequence_type), "\n";
 		  }
-		}
+		#}
       }
       else {
 		print "vf_id is $vf_id is no top_coord\n";
@@ -370,15 +373,17 @@ sub variation_feature {
 	  $allele_str = $special;
 	}
     else {
-      $allele_str = undef;
-      warn("Reference allele $ref_allele for $cur_v_name not found in alleles: " .
-      join("/", keys %alleles), " discarding feature\n");
+      #$allele_str = undef; # don't delete allele string now that we're flagging not failing
+	  $allele_str = join("/", keys %alleles);
+      warn("Reference allele $ref_allele for $cur_v_name not found in alleles: $allele_str flagging feature\n");
       
 	  #needs to be written to the failed_variation table
       $dbVar_write->do(qq{INSERT IGNORE INTO failed_variation (variation_id,failed_description_id) VALUES ($cur_v_id,2)}) if ($cur_map_weight==1);
     }
     
-    if($allele_str) {
+    #if($allele_str) {
+	  $allele_str ||= '\N';
+	
       if ($top_level) {
 		print FH join("\t", $cur_vf_id, $top_sr_id, $top_sr_start, $top_sr_end, $top_sr_strand,
 		$cur_v_id, $allele_str, $cur_v_name,
@@ -389,7 +394,7 @@ sub variation_feature {
 		$top_coord->end(), $top_coord->strand(),
 		$cur_v_id, $allele_str, $cur_v_name, $cur_map_weight, $cur_vf_flags, $cur_source_id, $cur_validation_status,$cur_consequence_type), "\n";
       }
-    }
+    #}
   }
   else {
 	print "again vf_id is $vf_id is no top_coord\n";
