@@ -21,7 +21,7 @@ sub new {
     my $class = shift;
     
     # call the superclass constructor
-    my $self = $class->SUPER::new(@_);
+    my $self = $class->SUPER::new(@_) || return undef;
     
     # rebless the alleles from vfoas to tvas
     map { bless $_, 'Bio::EnsEMBL::Variation::TranscriptVariationAllele' } @{ $self->alleles };
@@ -32,7 +32,7 @@ sub new {
 # NB: not a method
 sub overlap {
     my ( $f1_start, $f1_end, $f2_start, $f2_end ) = @_;
-    return ($f1_end >= $f2_start and $f1_start <= $f2_end);
+    return ( ($f1_end >= $f2_start) and ($f1_start <= $f2_end) );
 }
 
 sub transcript {
@@ -51,7 +51,7 @@ sub transcript {
             }
         }
     }
-    
+   
     return $self->feature(@_);
 }
 
@@ -78,6 +78,18 @@ sub overlap_consequences {
     return $self->{overlap_consequences};
 }
 
+sub codon_position {
+    my ($self, $codon_pos) = @_;
+    
+    $self->{codon_position} = $codon_pos if defined $codon_pos;
+    
+    unless ($self->{codon_position}) {
+        $self->{codon_position} = (($self->cdna_start - $self->transcript->cdna_coding_start) % 3) + 1;
+    }
+    
+    return $self->{codon_position};
+}
+
 sub cdna_start {
     my ($self, $cdna_start) = @_;
     
@@ -86,10 +98,10 @@ sub cdna_start {
     unless ($self->{cdna_start}) {
         my $cdna_coords = $self->cdna_coords;
         
-        return undef if @$cdna_coords != 1;
+        return undef if (@$cdna_coords != 1 || $cdna_coords->[0]->isa('Bio::EnsEMBL::Mapper::Gap'));
         
         $self->{cdna_start} = $cdna_coords->[0]->start;
-        $self->{cdna_end} = $cdna_coords->[0]->end;
+        $self->{cdna_end}   = $cdna_coords->[0]->end;
     }
     
     return $self->{cdna_start};
@@ -114,12 +126,12 @@ sub cds_start {
     unless ($self->{cds_start}) {
         my $cds_coords = $self->cds_coords;
         
-        return undef if @$cds_coords != 1;
+        return undef if (@$cds_coords != 1 || $cds_coords->[0]->isa('Bio::EnsEMBL::Mapper::Gap'));
         
         my $exon_phase = $self->transcript->start_Exon->phase;
         
         $self->{cds_start} = $cds_coords->[0]->start + ($exon_phase > 0 ? $exon_phase : 0);
-        $self->{cds_end} = $cds_coords->[0]->end + ($exon_phase > 0 ? $exon_phase : 0);;
+        $self->{cds_end}   = $cds_coords->[0]->end   + ($exon_phase > 0 ? $exon_phase : 0);
     }
     
     return $self->{cds_start};
@@ -144,10 +156,10 @@ sub pep_start {
     unless ($self->{pep_start}) {
         my $pep_coords = $self->pep_coords;
         
-        return undef if @$pep_coords != 1;
+        return undef if (@$pep_coords != 1 || $pep_coords->[0]->isa('Bio::EnsEMBL::Mapper::Gap'));
         
         $self->{pep_start} = $pep_coords->[0]->start;
-        $self->{pep_end} = $pep_coords->[0]->end;
+        $self->{pep_end}   = $pep_coords->[0]->end;
     }
     
     return $self->{pep_start};
@@ -170,7 +182,7 @@ sub cdna_coords {
     unless ($self->{cdna_coords}) {
         my $vf   = $self->variation_feature;
         my $tran = $self->feature; 
-        $self->{cdna_coords} = [ $self->mapper->genomic2cdna($vf->start, $vf->end, $tran->strand) ];
+        $self->{cdna_coords} = [ $self->mapper->genomic2cdna($vf->seq_region_start, $vf->seq_region_end, $tran->strand) ];
     }
     
     return $self->{cdna_coords};
@@ -182,7 +194,7 @@ sub cds_coords {
     unless ($self->{cds_coords}) {
         my $vf   = $self->variation_feature;
         my $tran = $self->feature; 
-        $self->{cds_coords} = [ $self->mapper->genomic2cds($vf->start, $vf->end, $tran->strand) ];
+        $self->{cds_coords} = [ $self->mapper->genomic2cds($vf->seq_region_start, $vf->seq_region_end, $tran->strand) ];
     }
     
     return $self->{cds_coords};
@@ -194,7 +206,7 @@ sub pep_coords {
     unless ($self->{pep_coords}) {
         my $vf   = $self->variation_feature;
         my $tran = $self->feature; 
-        $self->{pep_coords} = [ $self->mapper->genomic2pep($vf->start, $vf->end, $tran->strand) ];
+        $self->{pep_coords} = [ $self->mapper->genomic2pep($vf->seq_region_start, $vf->seq_region_end, $tran->strand) ];
     }
     
     return $self->{pep_coords};
@@ -215,13 +227,13 @@ sub intron_effects {
         
         my $found_effect = 0;
         
-        my $vf_start = $vf->start;
-        my $vf_end   = $vf->end;
+        my $vf_start = $vf->seq_region_start;
+        my $vf_end   = $vf->seq_region_end;
 
         for my $intron (@{ $self->introns }) {
             
-            my $intron_start = $intron->start;
-            my $intron_end   = $intron->end;
+            my $intron_start = $intron->seq_region_start;
+            my $intron_end   = $intron->seq_region_end;
             
             # under various circumstances the genebuild process can introduce
             # artificial short (<= 12 nucleotide) introns into transcripts
@@ -235,29 +247,29 @@ sub intron_effects {
             # of calls we make to overlap because we can sometimes establish several
             # intron effects within one call and then break out of the loop with last
             
-            if (overlap($vf_start, $vf_end, $intron_start, $intron_start+2)) {
+            if (overlap($vf_start, $vf_end, $intron_start, $intron_start+1)) {
                 
                 if ($frameshift_intron) {
                     $intron_effects->{within_frameshift_intron} = 1;
                 }
                 else {
                     $intron_effects->{start_splice_site} = 1;
-                    $intron_effects->{splice_region} = 1;
-                    $intron_effects->{intronic} = 1;
+                    #$intron_effects->{splice_region} = 1;
+                    #$intron_effects->{intronic} = 1;
                 }
                 
                 last;
             }
             
-            if (overlap($vf_start, $vf_end, $intron_end-2, $intron_end)) {
+            if (overlap($vf_start, $vf_end, $intron_end-1, $intron_end)) {
                 
                 if ($frameshift_intron) {
                     $intron_effects->{within_frameshift_intron} = 1;
                 }
                 else {
                     $intron_effects->{end_splice_site} = 1;
-                    $intron_effects->{splice_region} = 1;
-                    $intron_effects->{intronic} = 1;
+                    #$intron_effects->{splice_region} = 1;
+                    #$intron_effects->{intronic} = 1;
                 }
                 
                 last;
@@ -278,8 +290,15 @@ sub intron_effects {
                 $found_effect = 1;
             }
             
-            if ( ( overlap($vf_start, $vf_end, $intron_start-3, $intron_start+8) or
-                   overlap($vf_start, $vf_end, $intron_end-8, $intron_end+3) ) and 
+            # the definition of splice_region (SO:0001630) is "within 1-3 bases 
+            # of the exon or 3-8 bases of the intron", the intron start is the 
+            # first base of the intron so we only need to add or subtract 7 from 
+            # it to get the correct coordinate (we don't check if it falls in the
+            # donor or acceptor splice sites because that would have been 
+            # established above)
+            
+            if ( ( overlap($vf_start, $vf_end, $intron_start-3, $intron_start+7) or
+                   overlap($vf_start, $vf_end, $intron_end-7,   $intron_end+3) ) and 
                    not $frameshift_intron ) {
                    
                 $intron_effects->{splice_region} = 1;
@@ -359,8 +378,8 @@ sub codon_table {
         # for mithocondrial dna we need to to use a different codon table
         my $attrib = $tran->slice->get_all_Attributes('codon_table')->[0]; 
         
-        # default to the vertebrate codon table 
-        my $codon_table = $attrib ? $attrib->value : 1;
+        # default to the vertebrate codon table which is denoted as 1
+        $codon_table = $attrib ? $attrib->value : 1;
         
         $tran->{_variation_effect_feature_cache}->{codon_table} = $codon_table
     }
