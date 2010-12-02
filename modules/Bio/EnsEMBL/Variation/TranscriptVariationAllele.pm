@@ -20,27 +20,63 @@ sub variation_feature {
     return $self->variation_feature_overlap->variation_feature;
 }
 
-sub amino_acid {
-    my ($self, $amino_acid) = @_;
+sub pep_allele_string {
+    my ($self) = @_;
     
-    $self->{amino_acid} = $amino_acid if $amino_acid;
+    my $pep = $self->peptide;
     
-    unless ($self->{amino_acid}) {
-        # translate the codon sequence to establish the amino acid
+    return undef unless $pep;
+    
+    my $ref_pep = $self->transcript_variation->reference_allele->peptide;
+    
+    return $ref_pep ne $pep ? $ref_pep.'/'.$pep : $pep;
+}
+
+sub codon_allele_string {
+    my ($self) = @_;
+    
+    my $codon = $self->codon;
+    
+    return undef unless $codon;
+    
+    my $ref_codon = $self->transcript_variation->reference_allele->codon;
+    
+    return $ref_codon.'/'.$codon;
+}
+
+sub peptide {
+    my ($self, $peptide) = @_;
+    
+    $self->{peptide} = $peptide if $peptide;
+    
+    unless ($self->{peptide}) {
         
-        # for mithocondrial dna we need to to use a different codon table
-        my $codon_table = $self->transcript_variation->codon_table;
+        if (my $codon = $self->codon) {
+            
+            # the codon method can set the peptide in some circumstances 
+            # so check here before we try an (expensive) translation
+            return $self->{peptide} if $self->{peptide};
+            
+            # translate the codon sequence to establish the peptide allele
+            
+            # for mithocondrial dna we need to to use a different codon table
+            my $codon_table = $self->transcript_variation->codon_table;
+            
+            my $codon_seq = Bio::Seq->new(
+                -seq        => $codon,
+                -moltype    => 'dna',
+                -alphabet   => 'dna',
+            );
         
-        my $codon_seq = Bio::Seq->new(
-            -seq        => $self->codon,
-            -moltype    => 'dna',
-            -alphabet   => 'dna',
-        );
-    
-        $self->{amino_acid} = $codon_seq->translate(undef, undef, undef, $codon_table)->seq;
+            my $pep = $codon_seq->translate(undef, undef, undef, $codon_table)->seq;
+            
+            $pep = '-' if length($pep) < 1;
+            
+            $self->{peptide} = $pep;
+        }
     }
     
-    return $self->{amino_acid};
+    return $self->{peptide};
 }
 
 sub codon {
@@ -48,65 +84,76 @@ sub codon {
     
     $self->{codon} = $codon if $codon;
     
+    my $tv = $self->transcript_variation;      
+    
+    return undef unless $tv->pep_start;
+    
+    return undef if $self->variation_feature_seq =~ /[^ACGT\-]/i;
+    
     unless ($self->{codon}) {
-        
+      
         # calculate the codon sequence
     
         my $seq = $self->feature_seq;
         
-        if ($seq eq '-') {
-            $self->{amino_acid} = $seq;
-            $self->{codon} = $seq;
+        $seq = '' if $seq eq '-';
+        
+        my $cds = $tv->translateable_seq;
+        
+        # calculate necessary coords and lengths
+        
+        my $codon_cds_start = $tv->pep_start * 3 - 2;
+        my $codon_cds_end   = $tv->pep_end * 3;
+        my $codon_len       = $codon_cds_end - $codon_cds_start + 1;
+        my $vf_nt_len       = $tv->cds_end - $tv->cds_start + 1;
+        my $allele_len      = length($seq);
+        
+        if ($allele_len != $vf_nt_len) {
+            if (abs($allele_len - $vf_nt_len) % 3) {
+                # this is a frameshift variation, we don't attempt to 
+                # calculate the resulting codon or peptide change as this 
+                # could get quite complicated 
+                return undef;
+            }
+        }
+        
+        # splice the allele sequence into the CDS
+    
+        substr($cds, $tv->cds_start-1, $vf_nt_len) = $seq;
+        
+        # and extract the codon sequence
+        
+        my $codon = substr($cds, $codon_cds_start-1, $codon_len + ($allele_len - $vf_nt_len));
+        
+        if (length($codon) < 1) {
+            $self->{codon}   = '-';
+            $self->{peptide} = '-';
         }
         else {
-            my $tv = $self->transcript_variation;         
-            my $cds = $tv->translateable_seq;
-            
-            # calculate necessary coords and lengths
-            
-            my $codon_cds_start = $tv->pep_start * 3 - 2;
-            my $codon_cds_end   = $tv->pep_end * 3;
-            my $codon_len       = $codon_cds_end - $codon_cds_start + 1;
-            my $vf_nt_len       = $tv->cds_end - $tv->cds_start + 1;
-            my $allele_len      = length($seq);
-            
-            # splice the allele sequence into the CDS
-        
-            substr($cds, $tv->cds_start-1, $allele_len) = $seq;
-            
-            # and extract the codon sequence
-            
-            $self->{codon} = substr($cds, $codon_cds_start-1, $codon_len + ($allele_len - $vf_nt_len));
+             $self->{codon} = $codon;
         }
     }
     
     return $self->{codon};
 }
 
-sub codon_position {
-    my ($self, $codon_pos) = @_;
+sub consequence_types {
+    my ($self, @new_consequences) = @_;
     
-    $self->{codon_position} = $codon_pos if defined $codon_pos;
+    my $cons = $self->{consequence_types};
     
-    unless ($self->{codon_position}) {
-        # TODO: calculate the codon position (or store it in the DB?)
+    if (@new_consequences) {
+        $cons ||= [];
+        push @$cons, @new_consequences;
     }
     
-    return $self->{codon_position};
-}
-
-sub consequences {
-    my ($self, @consequences) = @_;
-    
-    my $cons = $self->{consequences} ||= [];
-    
-    if (@consequences) {
-        push @$cons, @consequences;
-    }
-    
-    unless (@$cons) {
+    unless (defined $cons) {
+        
+        print "OTF consequences...\n";
         
         # calculate consequences on the fly
+        
+        $cons = [];
         
         if (my $overlap_cons = $self->transcript_variation->overlap_consequences) {
             for my $oc (@$overlap_cons) {
@@ -117,30 +164,9 @@ sub consequences {
         }
     }
     
+    $self->{consequence_types} = $cons;
+    
     return $cons;
-}
-
-sub affects_cds {
-    my ($self) = @_;
-
-    unless (defined $self->{affects_cds}) {
-        
-        my $tv = $self->transcript_variation;
-       
-        my @pep_coords = @{ $tv->pep_coords };
-       
-        if (@pep_coords != 1) {
-            $self->{affects_cds} = 0;
-        }
-        elsif ($pep_coords[0]->isa('Bio::EnsEMBL::Mapper::Gap')) {
-            $self->{affects_cds} = 0;
-        }
-        else {
-            $self->{affects_cds} = 1;
-        }
-    }
-
-    return $self->{affects_cds};
 }
 
 sub hgvs_genomic {
@@ -177,7 +203,7 @@ sub _hgvs_generic {
         # If we want genomic coordinates, the reference_feature should actually be the slice for the underlying seq_region
         $reference_feature = $reference_feature->slice->seq_region_Slice if ($reference eq 'genomic');
         # Calculate the HGVS notation on-the-fly and pass it to the TranscriptVariation in order to distribute the result to the other alleles
-        $self->transcript_variation->$sub($self->variation_feature->get_all_hgvs_notations($reference_feature,substr($reference,0,1)));
+        $self->transcript_variation->$sub($self->variation_feature->get_all_hgvs_notations($reference_feature,substr($reference,0,1),undef,undef,$self->transcript_variation));
     }
     
     return $self->{$sub};
