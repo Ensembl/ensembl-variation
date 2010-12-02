@@ -15,7 +15,7 @@ use Data::Dumper;
 
 sub overlap {
     my ( $f1_start, $f1_end, $f2_start, $f2_end ) = @_;
-    return ($f1_end >= $f2_start and $f1_start <= $f2_end);
+    return ( ($f1_end >= $f2_start) and ($f1_start <= $f2_end) );
 }
 
 sub overlaps_transcript {
@@ -23,7 +23,8 @@ sub overlaps_transcript {
     
     return 0 unless $tran->isa('Bio::EnsEMBL::Transcript');
     
-    return overlap($vf->start, $vf->end, $tran->start - 5000, $tran->end + 5000);
+    return overlap($vf->seq_region_start, $vf->seq_region_end,
+        $tran->seq_region_start - 5000, $tran->seq_region_end + 5000);
 }
 
 sub within_transcript {
@@ -31,27 +32,34 @@ sub within_transcript {
     my $vf      = $tva->variation_feature;
     my $tran    = $tva->transcript;
     
-    return overlap($vf->start, $vf->end, $tran->start, $tran->end);
+    return overlap($vf->seq_region_start, $vf->seq_region_end,
+        $tran->seq_region_start, $tran->seq_region_end);
 }
 
 sub _before_start {
     my ($vf, $tran, $dist) = @_;
-    return ( ($vf->end >= ($tran->start - $dist)) and ($vf->end < $tran->start) );
+    return ( ($vf->seq_region_end >= ($tran->seq_region_start - $dist)) and 
+        ($vf->seq_region_end < $tran->seq_region_start) );
 }
 
 sub _after_end {
     my ($vf, $tran, $dist) = @_;
-    return ( ($vf->start <= ($tran->end + $dist)) and ($vf->start > $tran->end) );
+    return ( ($vf->seq_region_start <= ($tran->seq_region_end + $dist)) 
+            and ($vf->seq_region_start > $tran->seq_region_end) );
 }
 
 sub _upstream {
     my ($vf, $tran, $dist) = @_;
-    return $tran->strand == 1 ? _before_start($vf, $tran, $dist) : _after_end($vf, $tran, $dist);
+    return $tran->strand == 1 ? 
+        _before_start($vf, $tran, $dist) : 
+        _after_end($vf, $tran, $dist);
 }
 
 sub _downstream {
     my ($vf, $tran, $allele, $dist) = @_;
-    return $tran->strand == 1 ? _after_end($vf, $tran, $allele, $dist) : _before_start($vf, $tran, $allele, $dist);
+    return $tran->strand == 1 ? 
+        _after_end($vf, $tran, $allele, $dist) : 
+        _before_start($vf, $tran, $allele, $dist);
 }
 
 sub upstream_5KB {
@@ -59,7 +67,7 @@ sub upstream_5KB {
     my $vf      = $tva->variation_feature;
     my $tran    = $tva->transcript;
 
-    return _upstream($vf, $tran, 5000);
+    return (_upstream($vf, $tran, 5000) and not upstream_2KB($tva));
 }
 
 sub downstream_5KB {
@@ -67,7 +75,7 @@ sub downstream_5KB {
     my $vf      = $tva->variation_feature;
     my $tran    = $tva->transcript; 
 
-    return _downstream($vf, $tran, 5000);
+    return (_downstream($vf, $tran, 5000) and not downstream_500B($tva));
 }
 
 sub upstream_2KB {
@@ -120,7 +128,8 @@ sub within_miRNA {
         if (defined $attribute && $attribute->value =~ /(\d+)-(\d+)/) { 
             for my $coord ($tv->mapper->cdna2genomic($1, $2, $tran->strand)) {
                 if ($coord->isa('Bio::EnsEMBL::Mapper::Coordinate')) {
-                    if (overlap($vf->start, $vf->end, $coord->start, $coord->end)) {
+                    if (overlap($vf->seq_region_start, $vf->seq_region_end, 
+                            $coord->start, $coord->end)) {
                         return 1;
                     }
                 }
@@ -174,19 +183,22 @@ sub within_coding_region {
     
     return 0 unless $tran->translation;
     
-    return overlap($vf->start, $vf->end, $tran->coding_region_start, $tran->coding_region_end);
+    return overlap($vf->seq_region_start, $vf->seq_region_end, 
+        $tran->coding_region_start, $tran->coding_region_end);
 }
 
 sub _before_coding {
     my ($vf, $tran) = @_;
     return 0 unless defined $tran->translation;
-    return overlap($vf->start, $vf->end, $tran->start, $tran->coding_region_start-1);    
+    return overlap($vf->seq_region_start, $vf->seq_region_end,
+        $tran->seq_region_start, $tran->coding_region_start-1);    
 }
 
 sub _after_coding {
     my ($vf, $tran) = @_;
     return 0 unless defined $tran->translation;
-    return overlap($vf->start, $vf->end, $tran->coding_region_end+1, $tran->end);    
+    return overlap($vf->seq_region_start, $vf->seq_region_end, 
+        $tran->coding_region_end+1, $tran->seq_region_end);    
 }
 
 sub within_5_prime_utr {
@@ -228,15 +240,11 @@ sub synonymous_coding {
     my $tva = shift;
     my $tv  = $tva->transcript_variation;
 
-    return 0 unless $tva->affects_cds;
+    my $alt_aa = $tva->peptide;
+
+    return 0 unless defined $alt_aa;
     
-    my $alt_seq = $tva->feature_seq;
-    my $ref_seq = $tv->reference_allele->feature_seq;
-    
-    return 0 if ($alt_seq eq '-' or $ref_seq eq '-');
-    
-    my $alt_aa = $tva->amino_acid;
-    my $ref_aa = $tv->reference_allele->amino_acid;
+    my $ref_aa = $tv->reference_allele->peptide;
 
     return ( $alt_aa eq $ref_aa );
 }
@@ -244,16 +252,15 @@ sub synonymous_coding {
 sub non_synonymous_coding {
     my $tva = shift;
     my $tv  = $tva->transcript_variation;
-
-    return 0 unless $tva->affects_cds;
     
-    my $alt_seq = $tva->feature_seq;
-    my $ref_seq = $tv->reference_allele->feature_seq;
-    
-    return 0 if ($alt_seq eq '-' or $ref_seq eq '-');
+    return 0 if frameshift($tva);
+    return 0 if stop_gained($tva);
 
-    my $alt_aa = $tva->amino_acid;
-    my $ref_aa = $tv->reference_allele->amino_acid;
+    my $alt_aa = $tva->peptide;
+    
+    return 0 unless defined $alt_aa;
+
+    my $ref_aa = $tv->reference_allele->peptide;
     
     return ( $alt_aa ne $ref_aa );
 }
@@ -262,10 +269,11 @@ sub stop_gained {
     my $tva = shift;
     my $tv  = $tva->transcript_variation;
 
-    return 0 unless $tva->affects_cds;
+    my $alt_aa = $tva->peptide;
+
+    return 0 unless defined $alt_aa;
     
-    my $alt_aa = $tva->amino_acid;
-    my $ref_aa = $tv->reference_allele->amino_acid;
+    my $ref_aa = $tv->reference_allele->peptide;
 
     return ( ($alt_aa =~ /\*/) and ($ref_aa !~ /\*/) );
 }
@@ -274,10 +282,11 @@ sub stop_lost {
     my $tva = shift;
     my $tv  = $tva->transcript_variation;
 
-    return 0 unless $tva->affects_cds;
+    my $alt_aa = $tva->peptide;
+
+    return 0 unless defined $alt_aa;
     
-    my $alt_aa = $tva->amino_acid;
-    my $ref_aa = $tv->reference_allele->amino_acid;
+    my $ref_aa = $tv->reference_allele->peptide;
 
     return ( ($alt_aa !~ /\*/) and ($ref_aa =~ /\*/) );
 }
@@ -285,11 +294,12 @@ sub stop_lost {
 sub frameshift {
     my $tva = shift;
 
-    return 0 unless $tva->affects_cds;
-    
     return 0 if partial_codon($tva);
 
     my $tv = $tva->transcript_variation;
+
+    return 0 unless defined $tv->cds_start;
+    
     my $var_len = $tv->cds_end - $tv->cds_start + 1;
 
     my $seq = $tva->feature_seq;
@@ -302,9 +312,9 @@ sub frameshift {
 sub partial_codon {
     my $tva = shift;
     
-    return 0 unless $tva->affects_cds;
-
     my $tv = $tva->transcript_variation;
+    
+    return 0 unless defined $tv->pep_start;
 
     my $cds_length = length $tv->translateable_seq;
 
