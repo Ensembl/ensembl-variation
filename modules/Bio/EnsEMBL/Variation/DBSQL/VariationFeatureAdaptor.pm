@@ -65,6 +65,7 @@ use Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 
 our @ISA = ('Bio::EnsEMBL::Variation::DBSQL::BaseVariationAdaptor');
+our $MAX_VARIATION_SET_ID = 64;
 
 =head2 fetch_all_by_Slice_constraint
 
@@ -362,43 +363,25 @@ sub fetch_all_by_Slice_VariationSet{
     throw('Bio::EnsEMBL::Variation::VariationSet arg expected');
   }
 
-  #ÊIt's quite quick to get all variation features for a slice so do that and then use those ids to limit the variation set query
-  my $vfs = $self->fetch_all_by_Slice($slice);
-  return [] if (!scalar(@{$vfs}));
+  #ÊStore the dbIDs of the set and its subsets in an array
+  my @dbIDs = map {$_->dbID()} ($set,@{$set->adaptor->fetch_all_by_super_VariationSet($set)});
   
-  # Create a hash with variation_id to variation_feature mappings
-  my %var_feats;
-  #ÊShould not reference the private field directly but will do that for now
-  map {$var_feats{$_->{'_variation_id'}} = $_} @{$vfs};
-  
-  my $var_id_constraint = "variation_id IN (" . join(",",keys(%var_feats)) . ")";
-  
-  # Get all sub variation sets
-  my $subsets = $set->adaptor->fetch_all_by_super_VariationSet($set);
-  my @set_ids = map{$_->dbID()} @{$subsets};
-  
-  #ÊCreate a constraint on the variation_set_id
-  my $set_id_constraint = "variation_set_id IN (" . join(",",($set->dbID(),@set_ids)) . ")";
-  
-  my $stmt = qq{
-    SELECT
-	variation_id 
-    FROM
-	variation_set_variation 
-    WHERE
-	$var_id_constraint AND 
-	$set_id_constraint
-    };
-  my $sth = $self->prepare($stmt);
-  $sth->execute();
-  my $var_id;
-  $sth->bind_columns(\$var_id);
-  my @vfs;
-  while ($sth->fetch()) {
-    push(@vfs,$var_feats{$var_id});
+  #ÊDo a quick check that none of the dbIDs are too large for being stored in the set construct. In that case, warn about this.
+  my @non_compatible = grep {$_ > $MAX_VARIATION_SET_ID} @dbIDs;
+  if (scalar(@non_compatible)) {
+    warn ("Variation set(s) with dbID " . join(", ",@non_compatible) . " cannot be stored in the variation_feature table so variation features in this set won't be returned");
   }
   
-  return \@vfs;
+  #ÊAdd the bitvalues of the dbIDs in the set together to get the constraint, use only the ones that fit within the $MAX_VARIATION_SET_ID limit
+  my $bitvalue = 0;
+  map {$bitvalue += (2 ** ($_ - 1))} grep {$_ <= $MAX_VARIATION_SET_ID} @dbIDs;
+  
+  # Add a constraint to only return VariationFeatures having the primary keys of the supplied VariationSet or its subsets in the variation_set_id column
+  my $constraint = " vf.variation_set_id & $bitvalue ";
+  
+  #ÊGet the VariationFeatures by calling fetch_all_by_Slice_constraint
+  return $self->fetch_all_by_Slice_constraint($slice,$constraint);
+  
 }
 
 
