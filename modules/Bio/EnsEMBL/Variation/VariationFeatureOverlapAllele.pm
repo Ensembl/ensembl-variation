@@ -64,30 +64,6 @@ sub variation_feature_seq {
     return $self->{variation_feature_seq};
 }
 
-sub consequences {
-    my ($self, @new_consequences) = @_;
-    
-    $self->{consequences} ||= [];
-    
-    if (@new_consequences) {
-        push @{ $self->{consequences} }, @new_consequences;
-    }
-    
-    return $self->{consequences};
-    
-#    # store the list of consequences in a hash keyed by SO_id, to ensure 
-#    # that we only ever include a single instance of each consequence type
-#    
-#    $self->{consequences} ||= {};
-#
-#    if (@new_consequences) {
-#        my $consequences = $self->{consequences};
-#        map { $consequences->{$_->SO_id} = $_ } @new_consequences; 
-#    }
-#    
-#    return [ values %{ $self->{consequences} } ];
-}
-
 sub is_reference {
     my ($self, $is_reference) = @_;
     $self->{is_reference} = $is_reference if defined $is_reference;
