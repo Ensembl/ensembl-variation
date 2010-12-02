@@ -22,6 +22,11 @@ sub new {
     
     expand(\$allele_string);
     
+    unless ($allele_string =~ /\//) {
+        warn "Passed an allele string with only one allele?";
+        return undef;
+    }
+    
     my @alleles = split /\//, $allele_string;
   
     # create an object representing the reference allele
