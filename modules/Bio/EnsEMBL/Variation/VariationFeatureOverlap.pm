@@ -23,8 +23,9 @@ sub new {
     expand(\$allele_string);
     
     unless ($allele_string =~ /\//) {
-        warn "Passed an allele string with only one allele?";
-        return undef;
+        # for the HGMDs and CNV probes just set the alt allele 
+        # to the reference allele
+        $allele_string .= "/$allele_string";
     }
     
     my @alleles = split /\//, $allele_string;

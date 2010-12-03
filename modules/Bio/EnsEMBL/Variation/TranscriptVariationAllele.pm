@@ -32,6 +32,22 @@ sub pep_allele_string {
     return $ref_pep ne $pep ? $ref_pep.'/'.$pep : $pep;
 }
 
+sub allele_string {
+    my ($self) = @_;
+    
+    my $ref = $self->transcript_variation->reference_allele->variation_feature_seq;
+    
+    # for the HGMDs and CNV probes where the alleles are artificially set to be
+    # the same, just return the reference sequence
+    
+    if ($ref eq $self->variation_feature_seq) {
+        return $ref;
+    }
+    else {
+        return $ref.'/'.$self->variation_feature_seq;
+    }
+}
+
 sub codon_allele_string {
     my ($self) = @_;
     
@@ -89,6 +105,8 @@ sub codon {
     return undef unless $tv->pep_start;
     
     return undef if $self->variation_feature_seq =~ /[^ACGT\-]/i;
+    
+    return undef if $tv->variation_feature->variation_name =~ /^CN_/;
     
     unless ($self->{codon}) {
       
@@ -148,8 +166,6 @@ sub consequence_types {
     }
     
     unless (defined $cons) {
-        
-        print "OTF consequences...\n";
         
         # calculate consequences on the fly
         
