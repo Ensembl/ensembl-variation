@@ -38,11 +38,11 @@ sub store {
     });
 
     for my $allele (@{ $tv->alt_alleles }) {
-          
+        
         $sth->execute(
             $tv->variation_feature->dbID,
             $tv->feature->stable_id,
-            $tv->reference_allele->variation_feature_seq.'/'.$allele->variation_feature_seq,
+            $allele->allele_string,
             $tv->variation_feature->is_somatic,
             (join ",", map { $_->SO_id } @{ $allele->consequence_types }),
             $tv->cds_start, 
@@ -492,6 +492,9 @@ sub _objs_from_sth {
         my ($ref_allele, $alt_allele)   = split /\//, $allele_string;
         my ($ref_codon, $alt_codon)     = split /\//, $codon_allele_string;
         my ($ref_pep, $alt_pep)         = split /\//, $peptide_allele_string;
+        
+        # for HGMD mutations just set the alt allele to the ref allele
+        $alt_allele ||= $ref_allele;
         
         # for synonymous mutations the peptides are the same and 
         # there is no / in the string
