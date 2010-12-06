@@ -350,6 +350,7 @@ CREATE TABLE structural_variation (
   class varchar(255) DEFAULT NULL,
   bound_start int(11) DEFAULT NULL,
   bound_end int(11) DEFAULT NULL,
+  allele_string longtext,
   PRIMARY KEY (structural_variation_id),
   KEY pos_idx (seq_region_id,seq_region_start,seq_region_end),
   KEY name_idx (variation_name)
