@@ -32,23 +32,23 @@ create table variation (
 #
 
 create table variation_annotation (
-        variation_annotation_id int(10) unsigned not null auto_increment,
-        variation_id int(10) unsigned not null,
-        phenotype_id int(10) unsigned not null,
-        source_id int(10) unsigned not null,
+	variation_annotation_id int(10) unsigned not null auto_increment,
+	variation_id int(10) unsigned not null,
+	phenotype_id int(10) unsigned not null,
+	source_id int(10) unsigned not null,
 	study varchar(30) default NULL,
-        study_type set('GWAS'),
-        local_stable_id varchar(255),
-        associated_gene varchar(255) default NULL,
-        associated_variant_risk_allele varchar(255) default NULL,
-        variation_names varchar(255) default NULL,
-  	risk_allele_freq_in_controls varchar(30) default NULL,
-  	p_value varchar(20) default NULL,
-        
+	study_type set('GWAS'),
+	local_stable_id varchar(255),
+	associated_gene varchar(255) default NULL,
+	associated_variant_risk_allele varchar(255) default NULL,
+	variation_names varchar(255) default NULL,
+	risk_allele_freq_in_controls double default NULL,
+	p_value varchar(20) default NULL,
+	
 	primary key (variation_annotation_id),
-        key variation_idx(variation_id),
-        key phenotype_idx(phenotype_id),
-        key source_idx(source_id)
+	key variation_idx(variation_id),
+	key phenotype_idx(phenotype_id),
+	key source_idx(source_id)
 );
 
 #
@@ -58,12 +58,12 @@ create table variation_annotation (
 #
 
 create table phenotype (
-        phenotype_id int(10) unsigned not null auto_increment,
-        name varchar(50),
-        description varchar(255),
+	phenotype_id int(10) unsigned not null auto_increment,
+	name varchar(50),
+	description varchar(255),
 
-        primary key (phenotype_id),
-        unique key name_idx(name)
+	primary key (phenotype_id),
+	unique key name_idx(name)
 );
 
 #
@@ -687,7 +687,7 @@ create table individual_population (
 CREATE TABLE tmp_individual_genotype_single_bp (
                             variation_id int(10) not null,
 			    subsnp_id int(15) unsigned,   
-	                    allele_1 varchar(255),allele_2 varchar(255),sample_id int,
+	                    allele_1 char(1),allele_2 char(1),sample_id int,
                             key variation_idx(variation_id),
                             key subsnp_idx(subsnp_id),
                             key sample_idx(sample_id)
@@ -832,15 +832,20 @@ CREATE TABLE failed_description(
 # failed_variation
 #
 # Contains all variations that did not pass the Ensembl filters
-# variation_id - primary key
+# failed_variation_id - primary key
+# variation_id - foreign key to variation table
+# subsnp_id - foreign key to allele, population_genotype tables
 # failed_descriptin_id - foreign key to failed_description table
 #
 
-CREATE TABLE failed_variation(
-    variation_id int(10) unsigned not null,
-    failed_description_id int(10) unsigned not null,
-
-    PRIMARY KEY(variation_id)
+CREATE TABLE failed_variation (
+  failed_variation_id int(11) NOT NULL AUTO_INCREMENT,
+  variation_id int(10) unsigned NOT NULL,
+  subsnp_id int(10) unsigned DEFAULT NULL,
+  failed_description_id int(10) unsigned NOT NULL,
+  PRIMARY KEY (failed_variation_id),
+  KEY variation_idx (variation_id),
+  KEY subsnp_idx (subsnp_id)
 );
 
 #
@@ -861,4 +866,5 @@ INSERT INTO failed_description (failed_description_id,description) VALUES (1,'Va
 INSERT INTO failed_description (failed_description_id,description) VALUES (2,'None of the variant alleles match the reference allele');
 INSERT INTO failed_description (failed_description_id,description) VALUES (3,'Variation has more than 3 different alleles');
 INSERT INTO failed_description (failed_description_id,description) VALUES (4,'Loci with no observed variant alleles in dbSNP');
-INSERT INTO failed_description (failed_description_id,description) VALUES (5,'Variation does not map to the genome'); 
+INSERT INTO failed_description (failed_description_id,description) VALUES (5,'Variation does not map to the genome');
+INSERT INTO failed_description (failed_description_id,description) VALUES (6,'Variation has no genotypes');
