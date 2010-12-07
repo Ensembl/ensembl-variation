@@ -308,10 +308,21 @@ create table variation_feature(
 	                      'FRAMESHIFT_CODING','NON_SYNONYMOUS_CODING','SPLICE_SITE','PARTIAL_CODON','SYNONYMOUS_CODING',
 				    'REGULATORY_REGION','WITHIN_MATURE_miRNA','5PRIME_UTR','3PRIME_UTR','INTRONIC','NMD_TRANSCRIPT','UPSTREAM','DOWNSTREAM',
 				    'WITHIN_NON_CODING_GENE','NO_CONSEQUENCE','INTERGENIC','HGMD_MUTATION')
-	default "INTERGENIC" not null ,	
+	default "INTERGENIC" not null,	
+        variation_set_id SET (
+            '1','2','3','4','5','6','7','8',
+            '9','10','11','12','13','14','15','16',
+            '17','18','19','20','21','22','23','24',
+            '25','26','27','28','29','30','31','32',
+            '33','34','35','36','37','38','39','40',
+            '41','42','43','44','45','46','47','48',
+            '49','50','51','52','53','54','55','56',
+            '57','58','59','60','61','62','63','64',
+        ) DEFAULT 0,
 	primary key( variation_feature_id ),
 	key pos_idx( seq_region_id, seq_region_start, seq_region_end ),
-	key variation_idx( variation_id )
+	key variation_idx( variation_id ),
+        key variation_set_idx ( variation_set_id )
 );
 
 
