@@ -834,7 +834,7 @@ CREATE TABLE compressed_genotype_single_bp(
 
 CREATE TABLE failed_description(
 
- failed_description_id int(10) unsigned not null,
+ failed_description_id int(10) unsigned not null AUTO_INCREMENT,
  description  text not null,
 
  PRIMARY KEY (failed_description_id)
