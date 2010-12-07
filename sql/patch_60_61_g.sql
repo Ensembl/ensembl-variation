@@ -5,4 +5,4 @@ ALTER TABLE `variation_feature` ADD `variation_set_id` SET
 ALTER TABLE `variation_feature` ADD INDEX `variation_set_idx` (`variation_set_id`);
 
 # patch identifier
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL,'patch', 'patch_60_61_b.sql|add variation_set_id column to variation_feature table');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL,'patch', 'patch_60_61_g.sql|add variation_set_id column to variation_feature table');
