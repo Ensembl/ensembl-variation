@@ -108,7 +108,7 @@ my %AFFECTS_PEPTIDE = %Bio::EnsEMBL::Variation::ConsequenceType::AFFECTS_PEPTIDE
     in peptide coordinates
 
   Arg [-CONSEQUENCE_TYPE] :
-    The type of this TranscriptVariation.  Must be one of:
+    Reference to a list describing the type(s) of this TranscriptVariation.  Each type must be one of:
     'INTRONIC', 'UPSTREAM', 'DOWNSTREAM', 'SYNONYMOUS_CODING',
     'NON_SYNONYMOUS_CODING', 'FRAMESHIFT_CODING', '5PRIME_UTR', '3PRIME_UTR'
 
@@ -122,7 +122,7 @@ my %AFFECTS_PEPTIDE = %Bio::EnsEMBL::Variation::ConsequenceType::AFFECTS_PEPTIDE
        -cds_end           => 558,
        -translation_start => 318,
        -translation_end   => 318,
-       -consequence_type  => 'NON_SYNONYMOUS_CODING');
+       -consequence_type  => ['NON_SYNONYMOUS_CODING']);
 
   Description: Constructor. Instantiates a
                Bio::EnsEMBL::Variation::TranscriptVariation object
@@ -143,8 +143,7 @@ sub new {
                   DBID ADAPTOR TRANSCRIPT CODONS)], @_);
 
   if(defined($consequence_type)) {
-      my @consequences = split /,/,@{$consequence_type};
-      foreach my $consequence (@consequences){
+      foreach my $consequence (@{$consequence_type}) {
 	  $consequence = uc($consequence);  
 	  if(!$CONSEQUENCE_TYPES{$consequence}) {
 	      my $valid = join(',',map({"'$_'"} keys(%CONSEQUENCE_TYPES)));
