@@ -18,6 +18,17 @@ create table variation (
 	validation_status SET('cluster','freq','submitter','doublehit','hapmap','1000Genome','failed','precious'),
 	ancestral_allele text,
 	flipped tinyint(1) unsigned NULL DEFAULT NULL,
+    class_so_id ENUM(
+        'SO:0001483', # SNV
+        'SO:1000002', # substitution
+        'SO:0000667', # insertion
+        'SO:0000159', # deletion
+        'SO:0000705', # tandem_repeat
+        'SO:1000032', # indel
+        'SO:0001059', # sequence_alteration
+        'SO:0001019'  # copy_number_variation
+    ) DEFAULT 'SO:0001059', # default to sequence_alteration, the highest level SO term
+
 
 	primary key( variation_id ),
 	unique ( name ),
@@ -309,7 +320,7 @@ create table variation_feature(
 				    'REGULATORY_REGION','WITHIN_MATURE_miRNA','5PRIME_UTR','3PRIME_UTR','INTRONIC','NMD_TRANSCRIPT','UPSTREAM','DOWNSTREAM',
 				    'WITHIN_NON_CODING_GENE','NO_CONSEQUENCE','INTERGENIC','HGMD_MUTATION')
 	default "INTERGENIC" not null,	
-        variation_set_id SET (
+    variation_set_id SET (
             '1','2','3','4','5','6','7','8',
             '9','10','11','12','13','14','15','16',
             '17','18','19','20','21','22','23','24',
@@ -318,11 +329,22 @@ create table variation_feature(
             '41','42','43','44','45','46','47','48',
             '49','50','51','52','53','54','55','56',
             '57','58','59','60','61','62','63','64'
-        ) NOT NULL DEFAULT '',
+    ) NOT NULL DEFAULT '',
+    class_so_id ENUM(
+        'SO:0001483', # SNV
+        'SO:1000002', # substitution
+        'SO:0000667', # insertion
+        'SO:0000159', # deletion
+        'SO:0000705', # tandem_repeat
+        'SO:1000032', # indel
+        'SO:0001059', # sequence_alteration
+        'SO:0001019'  # copy_number_variation
+    ) DEFAULT 'SO:0001059', # default to sequence_alteration, the highest level SO term
+
 	primary key( variation_feature_id ),
 	key pos_idx( seq_region_id, seq_region_start, seq_region_end ),
 	key variation_idx( variation_id ),
-        key variation_set_idx ( variation_set_id )
+    key variation_set_idx ( variation_set_id )
 );
 
 
@@ -880,3 +902,53 @@ INSERT INTO failed_description (failed_description_id,description) VALUES (3,'Va
 INSERT INTO failed_description (failed_description_id,description) VALUES (4,'Loci with no observed variant alleles in dbSNP');
 INSERT INTO failed_description (failed_description_id,description) VALUES (5,'Variation does not map to the genome');
 INSERT INTO failed_description (failed_description_id,description) VALUES (6,'Variation has no genotypes');
+
+# create a table that maps the SO variation class ID to the ensembl display term and SO term
+
+CREATE TABLE variation_class (
+    so_id               VARCHAR(128) NOT NULL,
+    so_term             VARCHAR(128),
+    display_term        VARCHAR(128),
+    
+    PRIMARY KEY (so_id)
+);
+
+INSERT INTO variation_class (
+        so_id,
+        so_term,
+        display_term
+    )
+    VALUES (
+        'SO:0001483',
+        'SNV',
+        'SNP'
+    ), (
+        'SO:0001019',
+        'copy_number_variaton',
+        'CNV'
+    ), (
+        'SO:0000667',
+        'insertion',
+        'indel'
+    ), (
+        'SO:0000159',
+        'deletion',
+        'indel'
+    ), (
+        'SO:1000032',
+        'indel',
+        'indel'
+    ), (
+        'SO:0001059',
+        'sequence_alteration',
+        'sequence_alteration'
+    ), (
+        'SO:1000002',
+        'substitution',
+        'substitution'
+    ), (
+        'SO:0000705',
+        'tandem_repeat',
+        'tandem_repeat'
+    )
+;
