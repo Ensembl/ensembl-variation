@@ -902,7 +902,8 @@ INSERT INTO failed_description (failed_description_id,description) VALUES (3,'Va
 INSERT INTO failed_description (failed_description_id,description) VALUES (4,'Loci with no observed variant alleles in dbSNP');
 INSERT INTO failed_description (failed_description_id,description) VALUES (5,'Variation does not map to the genome');
 INSERT INTO failed_description (failed_description_id,description) VALUES (6,'Variation has no genotypes');
-INSERT INTO failed_description (failed_description_Id,description) VALUES (7,'Genotype frequencies do not add up to 1')
+INSERT INTO failed_description (failed_description_id,description) VALUES (7,'Genotype frequencies do not add up to 1');
+INSERT INTO failed_description (failed_description_id,description) VALUES (8,'Variation has no associated sequence');
 
 # create a table that maps the SO variation class ID to the ensembl display term and SO term
 
