@@ -931,11 +931,11 @@ INSERT INTO variation_class (
     ), (
         'SO:0000667',
         'insertion',
-        'indel'
+        'insertion'
     ), (
         'SO:0000159',
         'deletion',
-        'indel'
+        'deletion'
     ), (
         'SO:1000032',
         'indel',
