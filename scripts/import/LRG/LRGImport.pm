@@ -693,7 +693,7 @@ sub add_mapping {
 		my $contig_sri = add_seq_region($contig_name,$contig_csi,$contig_len);
 	    
 		# Add DNA for this seq_region unless the database is not core.
-		my $is_core = (fetch_rows(['meta_value'],['meta'],["meta_key='schema_type'"])->[0][0] eq 'core');
+		my $is_core = ($dbCore->dbc->dbname() =~ m/_core_/); #(fetch_rows(['meta_value'],['meta'],["meta_key='schema_type'"])->[0][0] eq 'core');
 		add_dna($contig_sri,$contig_seq) if ($is_core);
 		
 		# Add a mapping between the LRG and the contig
