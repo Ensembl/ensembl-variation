@@ -122,8 +122,8 @@ sub new {
   my $class = ref($caller) || $caller;
 
   my $self = $class->SUPER::new(@_);
-  my ($var_name, $source, $source_description, $sv_class, $bound_start, $bound_end) =
-    rearrange([qw(VARIATION_NAME SOURCE SOURCE_DESCRIPTION TYPE BOUND_START BOUND_END)], @_);
+  my ($var_name, $source, $source_description, $sv_class, $bound_start, $bound_end, $allele_string) =
+    rearrange([qw(VARIATION_NAME SOURCE SOURCE_DESCRIPTION TYPE BOUND_START BOUND_END ALLELE_STRING)], @_);
 
   $self->{'variation_name'}   = $var_name;
   $self->{'source'}           = $source;
@@ -131,6 +131,7 @@ sub new {
   $self->{'class'}  = $sv_class;
   $self->{'bound_start'} = $bound_start;
   $self->{'bound_end'} = $bound_end;
+  $self->{'allele_string'} = $allele_string;
  
   return $self;
 }
@@ -183,6 +184,26 @@ sub variation_name{
   my $self = shift;
   return $self->{'variation_name'} = shift if(@_);
   return $self->{'variation_name'};
+}
+
+=head2 allele_string
+
+  Arg [1]    : string $newval (optional)
+               The new value to set the allele_string attribute to
+  Example    : $allele_string = $obj->allele_string()
+  Description: Getter/Setter for the allele_string attribute. This is the
+               genomic sequence represented by this feature.
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub allele_string{
+  my $self = shift;
+  return $self->{'allele_string'} = shift if(@_);
+  return $self->{'allele_string'};
 }
 
 
