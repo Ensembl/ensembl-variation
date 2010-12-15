@@ -54,7 +54,7 @@ create table variation_annotation (
 	associated_variant_risk_allele varchar(255) default NULL,
 	variation_names varchar(255) default NULL,
 	risk_allele_freq_in_controls double default NULL,
-	p_value varchar(20) default NULL,
+	p_value double default NULL,
 	
 	primary key (variation_annotation_id),
 	key variation_idx(variation_id),
