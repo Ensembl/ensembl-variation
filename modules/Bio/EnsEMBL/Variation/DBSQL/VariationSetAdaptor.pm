@@ -257,8 +257,7 @@ sub fetch_all_by_super_VariationSet {
 
   Arg [1]    : string $name
   Example    : $vg = $vga->fetch_by_name('Phenotype-associated variations');
-  Description: Retrieves a variation set by its name. Name lookup is done with
-              MySQL's LIKE function, allowing for partial matches.
+  Description: Retrieves a variation set by its name.
   Returntype : Bio::EnsEMBL::Variation::VariationSet
   Exceptions : throw if name argument is not provided
   Caller     : general
@@ -284,7 +283,7 @@ sub fetch_by_name {
   };
 
   my $sth = $self->prepare($stmt);
-  $sth->bind_param(1,'%' . $name . '%',SQL_VARCHAR);
+  $sth->bind_param(1,$name,SQL_VARCHAR);
   $sth->execute();
 
   my $result = $self->_objs_from_sth($sth);
