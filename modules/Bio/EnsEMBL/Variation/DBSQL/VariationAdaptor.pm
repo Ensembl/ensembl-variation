@@ -713,70 +713,46 @@ sub fetch_all_by_VariationSet {
     return [];
   }
   
-#ÊFirst, get all immediate subsets of the specified VariationSet and get their variations.
-# Store in a hash to avoid duplicates.
-  my %vars;
+  # Get the unique dbIDs for all variations in this set and all of its subsets
+  my $dbid_list = $self->_fetch_all_dbIDs_by_VariationSet($set);
+  
+  # Use the dbIDs to get all variations and return them
+  return $self->fetch_all_by_dbID_list($dbid_list);
+}
+
+sub _fetch_all_dbIDs_by_VariationSet {
+  my $self = shift;
+  my $set = shift;
+  
+  # First, get all ids for subsets. Store in a hash to avoid duplicates
+  my %dbIDs;
   foreach my $var_set (@{$set->adaptor->fetch_all_by_super_VariationSet($set,1)}) {
-    foreach my $var (@{$self->fetch_all_by_VariationSet($var_set)}) {
-      $vars{$var->dbID()} = $var;
-    }
+    map {$dbIDs{$_}++} @{$self->_fetch_all_dbIDs_by_VariationSet($var_set)};
   }
   
-# Then get all Variations belonging to this set  
+  # Then get the dbIDs for this variation set
   my $stmt = qq{
     SELECT
-      v.variation_id,
-      v.name,
-      v.validation_status,
-      s1.name,
-      s1.description,
-	  s1.url,
-	  s1.somatic,
-      v.ancestral_allele,
-      a.allele_id,
-      a.subsnp_id,
-      a.allele,
-      a.frequency,
-	  a.count,
-      a.sample_id,
-      vs.moltype,
-      vs.name,
-      s2.name,
-      f.description,
-	  0
+      variation_id
     FROM
-      (
-	variation v,
-	source s1,
-	variation_set_variation vsv
-      ) LEFT JOIN
-      allele a ON v.variation_id = a.variation_id LEFT JOIN
-      variation_synonym vs ON v.variation_id = vs.variation_id LEFT JOIN
-      source s2 ON vs.source_id = s2.source_id LEFT JOIN
-      failed_variation fv ON v.variation_id = fv.variation_id LEFT JOIN
-      failed_description f ON fv.failed_description_id = f.failed_description_id
+      variation_set_variation
     WHERE
-      vsv.variation_set_id = ? AND
-      v.variation_id = vsv.variation_id AND
-      v.source_id = s1.source_id      
+      variation_set_id = ?
   };
   my $sth = $self->prepare($stmt);
   
   $sth->bind_param(1,$set->dbID(),SQL_INTEGER);
   $sth->execute();
-
-  my $results = $self->_objs_from_sth($sth);
-  $sth->finish();
-
-  foreach my $var (@{$results}) {
-    $vars{$var->dbID()} = $var;
+  my $dbID;
+  $sth->bind_columns(\$dbID);
+  while ($sth->fetch()) {
+    $dbIDs{$dbID}++;
   }
   
-  my @res = values(%vars);
+  my @result = keys(%dbIDs);
   
-  return \@res;
+  return \@result;
 }
-
 
 sub _get_flank_from_core{
     my $self = shift;
