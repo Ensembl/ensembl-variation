@@ -320,8 +320,8 @@ sub get_all_TranscriptVariations{
 	  }
 	  # Only set the consequence type if no transcript list was specified
 	  else {
-	    # now set the highest priority one
-	    $self->{'consequence_type'} = $self->_highest_priority($self->{'transcriptVariations'});  
+		# now set the highest priority one
+	    $self->{'consequence_type'} = $self->_highest_priority($self->{'transcriptVariations'}); 
 	  }
     }
     # If TranscriptVariations have already been loaded, return only the ones corresponding to the desired transcripts
@@ -420,6 +420,8 @@ sub variation {
 sub display_consequence{
     my $self = shift;
     my $gene = shift;
+  
+	$self->_update_consequence if $self->{'consequence_type'}->[0] eq 'INTERGENIC' and defined $self->{'transcriptVariations'};
  
     my $highest_priority;
     if (!defined $gene){
@@ -502,6 +504,8 @@ sub add_consequence_type{
 sub get_consequence_type {
   my $self = shift;
   my $gene = shift;
+  
+  $self->_update_consequence if $self->{'consequence_type'}->[0] eq 'INTERGENIC' and defined $self->{'transcriptVariations'};
     
   if(!defined $gene){
     return $self->{'consequence_type'};
@@ -716,6 +720,14 @@ sub _highest_priority{
     push @highest_priority, $highest_type;
     
     return \@highest_priority;
+}
+
+
+# internal sub-routine used to update the consequence type
+# when it has been calculated on the fly
+sub _update_consequence {
+  my $self = shift;
+  $self->{'consequence_type'} = $self->_highest_priority($self->{'transcriptVariations'}) || ['INTERGENIC'];
 }
 
 =head2 ambig_code
