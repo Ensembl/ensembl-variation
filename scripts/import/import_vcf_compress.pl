@@ -41,7 +41,7 @@ use constant MAX_SHORT => 2**16 -1;
 my %Printable = ( "\\"=>'\\', "\r"=>'r', "\n"=>'n', "\t"=>'t', "\""=>'"' );
 
 # get command-line options
-my ($in_file, $species, $registry_file, $help, $host, $user, $password, $source, $population, $flank_size, $TMP_DIR, $TMP_FILE);
+my ($in_file, $species, $registry_file, $help, $host, $user, $password, $source, $population, $flank_size, $TMP_DIR, $TMP_FILE, $skip_multi, $use_gp, $sample_prefix);
 
 my $args = scalar @ARGV;
 
@@ -56,12 +56,16 @@ GetOptions(
 	'population=s'  => \$population,
 	'flank=s'       => \$flank_size,
 	'tmpdir=s'      => \$TMP_DIR,
-	'tmpfile=s'      => \$TMP_FILE,
+	'tmpfile=s'     => \$TMP_FILE,
+	'skip_multi'    => \$skip_multi,
+	'gp'            => \$use_gp,
+	'prefix=s'      => \$sample_prefix,
 );
 
 # set defaults
 $species ||= "human";
 $flank_size ||= 200;
+$sample_prefix ||= "";
 
 # print usage message if requested or no args supplied
 if(defined($help) || !$args) {
@@ -152,6 +156,18 @@ if(!defined($pop_id)) {
 }
 
 
+# create tmp table for indel/multibp genotypes
+$sth = $dbVar->do(qq{
+	CREATE TABLE IF NOT EXISTS `individual_genotype_multiple_bp_named` (
+		`name` varchar(255) NOT NULL,
+		`allele_1` varchar(255) DEFAULT NULL,
+		`allele_2` varchar(255) DEFAULT NULL,
+		`sample_id` int(10) unsigned DEFAULT NULL,
+		KEY `variation_idx` (`name`),
+		KEY `sample_idx` (`sample_id`)
+	);
+});
+
 
 
 my (%headers, $first_sample_col, @sample_ids, $region_start, $region_end, $prev_region_end, $prev_seq_region, $genotypes);
@@ -184,13 +200,14 @@ while(<$in_file_handle>) {
 	
 	for my $i($first_sample_col..$#split) {
 		
+		my $sample_name = $sample_prefix.$split[$i];
 		my $sample_id;
-		$sth4->execute($split[$i]);
+		$sth4->execute($sample_name);
 		$sth4->bind_columns(\$sample_id);
 		$sth4->fetch;
 		
 		if(!$sample_id) {
-			$sth->execute($split[$i]);
+			$sth->execute($sample_name);
 			$sample_id = $dbVar->last_insert_id(undef, undef, qw(sample sample_id));
 			$sth2->execute($pop_id, $sample_id);
 			$sth3->execute($sample_id, 3);
@@ -218,11 +235,34 @@ while(<$in_file_handle>) {
 	#next if $data{ALT} eq '.';	
 	
 	# positions
-	my ($start, $end) = ($data{POS}, $data{POS});
-	my $seq_region = $seq_region_ids{$data{'#CHROM'}};
+	my ($start, $end, $chr, $seq_region);
 	
-	# work out if this is an indel or not
+	if($use_gp) {
+		foreach my $pair(split /\;/, $data{INFO}) {
+			my ($key, $value) = split /\=/, $pair;
+			if($key eq 'GP') {
+				($chr,$start) = split /\:/, $value;
+				$seq_region = $seq_region_ids{$chr};
+				$end = $start;
+			}
+		}
+		
+		next unless defined($seq_region) and defined($start);
+	}
+	
+	else {
+		($start, $end) = ($data{POS}, $data{POS});
+		$seq_region = $seq_region_ids{$data{'#CHROM'}};
+	}
+	
+	# work out if this is an indel or multi-bp
 	my $is_indel = 0;
+	my $is_multi = 0;
+	
+	$is_multi = 1 if length($data{REF}) > 1;
+	foreach my $alt(split /\,/, $data{REF}) {
+		$is_multi = 1 if length($alt) > 1;
+	}
 	
 	if($data{ALT} =~ /D|I/) {
 		$is_indel = 1;
@@ -254,18 +294,7 @@ while(<$in_file_handle>) {
 		}
 	}
 	
-	next if $is_indel;
-	
-	($region_start, $region_end) = ($start, $end) unless defined $region_start;
-	
-	# write previous data?
-	#compare with the beginning of the region if it is within the DISTANCE of compression
-	if ((abs($region_start - $start) > DISTANCE()) || (abs($start - $region_end) > MAX_SHORT) || ($seq_region != $prev_seq_region)) {
-	    #snp outside the region, print the region for the sample we have already visited and start a new one
-	    print_file("$TMP_DIR/compressed_genotype.txt",$genotypes, $prev_seq_region, $region_start, $region_end);
-	    %$genotypes = (); #and remove the printed entry
-	    $region_start = $start;
-	}
+	next if $skip_multi && ($is_indel || $is_multi);
 	
 	# get alleles
 	my @alleles = ($data{REF}, split /\,/, $data{ALT});
@@ -280,42 +309,77 @@ while(<$in_file_handle>) {
 		my $sample_id = $sample_ids[$i-$first_sample_col];
 		
 		my @bits;
-		
-		if(scalar @genotypes) {
-			@bits = split /\|/, $genotypes[$i-$first_sample_col];
+		my $gt = (split /\:/, $split[$i])[0];
+		foreach my $bit(split /\||\/|\\/, $gt) {
+			push @bits, $alleles[$bit] unless $bit eq '.';
 		}
 		
-		else {
-			push @bits, $alleles[$_] for split /\||\/|\\/, (split /\:/, $split[$i])[0];
+		# for indels, write directly to temp table
+		if($is_indel || $is_multi) {
+			push @rows,
+				"(".
+					(join ",",
+						(
+							'"'.$data{ID}.'"',
+							'"'.($bits[0] || '.').'"',
+							'"'.($bits[1] || '.').'"',
+							$sample_id
+						)
+					).
+				")";
 		}
 		
-		# not first genotype
-		if ($start != $region_start){
-			#compress information
-			my $blob = pack ("n",$start - $region_end - 1);
-			$genotypes->{$sample_id} .= &escape($blob).$bits[0].$bits[1];
+		# otherwise add to compress hash for writing later
+		elsif(scalar @bits) {
+			
+			if (!defined $genotypes->{$sample_id}->{region_start}){
+				$genotypes->{$sample_id}->{region_start} = $start;
+				$genotypes->{$sample_id}->{region_end} = $end;
+			}
+			
+			# write previous data?
+			#compare with the beginning of the region if it is within the DISTANCE of compression
+			if (
+				(abs($genotypes->{$sample_id}->{region_start} - $start) > DISTANCE()) ||
+				(abs($start - $genotypes->{$sample_id}->{region_end}) > MAX_SHORT) ||
+				(defined($prev_seq_region) && $seq_region != $prev_seq_region)
+			) {
+				#snp outside the region, print the region for the sample we have already visited and start a new one
+				print_file("$TMP_DIR/compressed_genotype.txt",$genotypes, $prev_seq_region, $sample_id);
+				delete $genotypes->{$sample_id}; #and remove the printed entry
+				$genotypes->{$sample_id}->{region_start} = $start;
+			}
+			
+			# not first genotype
+			if ($start != $genotypes->{$sample_id}->{region_start}){
+				#compress information
+				my $blob = pack ("n",$start - $genotypes->{$sample_id}->{region_end} - 1);
+				$genotypes->{$sample_id}->{genotypes} .= &escape($blob).($bits[0] || '-').($bits[1] || '0');
+			}
+			# first genotype
+			else{
+				$genotypes->{$sample_id}->{genotypes} = ($bits[0] || '-').($bits[1] || '0');
+			}
+			
+			$genotypes->{$sample_id}->{region_end} = $start;
 		}
-		# first genotype
-		else{
-			$genotypes->{$sample_id} .= $bits[0].$bits[1];
-		}
+	}	
+	
+	# write indel/multibp genotypes
+	if(scalar @rows) {
+		my $vals = join ",", @rows;	
+		$sth = $dbVar->prepare(qq{INSERT INTO individual_genotype_multiple_bp_named(name, allele_1, allele_2, sample_id) values$vals});
+		$sth->execute;
 	}
 	
-	#my $vals = join ",", @rows;
-	#
-	#my $table = ($is_indel ? 'individual_genotype_multiple_bp' : 'tmp_individual_genotype_single_bp');
-	#
-	#$sth = $dbVar->prepare(qq{INSERT INTO $table(variation_id, allele_1, allele_2, sample_id) values$vals});
-	#$sth->execute;
-	
-	$prev_region_end = $region_end;
-	$region_end = $start;    #to avoid nasty effects of indels coordinates
 	$prev_seq_region = $seq_region;
   }
 }
 
-print_file("$TMP_DIR/compressed_genotype.txt",$genotypes, $prev_seq_region, $region_start, $region_end);
+print_file("$TMP_DIR/compressed_genotype.txt",$genotypes, $prev_seq_region);
 &import_genotypes($dbVar);
+
+$dbVar->do(qq{DELETE FROM individual_genotype_multiple_bp_named WHERE allele_1 = '.' AND allele_2 = '.';});
 
 &end(10000);
 print "Took ", time() - $start_time, " to run\n";
@@ -332,6 +396,9 @@ Options
 -i | --input_file     Input file - if not specified, reads from STDIN
 --species             Species to use [default: "human"]
 --population          Name of population [required]
+--skip_multi          Do not import multi bp or indel genotypes
+--gp                  Use the GP info tag to extract location information
+--prefix              String to add as a prefix to sample names
 
 -d | --db_host        Manually define database host [default: "ensembldb.ensembl.org"]
 -u | --user           Database username [default: "anonymous"]
@@ -356,15 +423,34 @@ sub end {
 }
 
 sub print_file{
-    my ($file, $genotypes, $seq_region_id, $region_start, $region_end) = @_;
+    my $file = shift;
+    my $genotypes = shift;
+    my $seq_region_id = shift;
+    my $sample_id = shift;
 
     open( FH, ">>$file") or die "Could not add compressed information: $!\n";
-	
-	#new chromosome, print all the genotypes and flush the hash
-	foreach my $sample_id (keys %{$genotypes}){
-	    print FH join("\t",$sample_id,$seq_region_id, $region_start, $region_end, 1, $genotypes->{$sample_id}) . "\n";
-	}
-	
+    if (!defined $sample_id){
+		#new chromosome, print all the genotypes and flush the hash
+		foreach my $sample_id (keys %{$genotypes}){
+			print FH join("\t",
+				$sample_id,
+				$seq_region_id,
+				$genotypes->{$sample_id}->{region_start},
+				$genotypes->{$sample_id}->{region_end},
+				1,
+				$genotypes->{$sample_id}->{genotypes}) . "\n";
+		}
+    }
+    else{
+		#only print the region corresponding to sample_id
+		print FH join("\t",
+			$sample_id,
+			$seq_region_id,
+			$genotypes->{$sample_id}->{region_start},
+			$genotypes->{$sample_id}->{region_end},
+			1,
+			$genotypes->{$sample_id}->{genotypes}) . "\n";
+    }
     close FH;
 }
 
