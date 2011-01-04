@@ -20,7 +20,7 @@ $TMP_FILE = $ImportUtils::TMP_FILE;
 
 #first of all, sort the file by position
 
-`sort -n -k 1 -o $ld_file $ld_file`; #order snps by position
+`sort -n -k 1 -o $ld_file $ld_file` unless $ld_file =~ /gz$/; #order snps by position
 
 #now, read the file, and convert it to the AA,Aa or aa format
 my $seq_region_start;
@@ -38,10 +38,19 @@ my %alleles_information = (); #hash containing a record of alleles in the variat
 my $buffer = {};
 #2 alleles per variation, genotype will be discarded
 #get the seq_region_id and population_id from the file name
-open IN,"<$ld_file" or die "Could not open input file: $ld_file\n";
+if($ld_file =~ /gz$/) {
+	open IN, "gzip -dc $ld_file |";
+}
+else {
+	open IN,"<$ld_file" or die "Could not open input file: $ld_file\n";
+}
+
 while (<IN>){
     chomp;
     ($seq_region_start,$individual_id, $population_id,$allele_1,$allele_2) = split; #get all the fields in the file
+	
+	next unless $seq_region_start and $individual_id and $population_id and $allele_1 and $allele_2;
+	
     if ($previous_seq_region_start == 0 or $seq_region_start == $previous_seq_region_start){
 	$previous_seq_region_start = $seq_region_start;
 	if ($allele_1 ne 'N' and $allele_2 ne 'N'){
