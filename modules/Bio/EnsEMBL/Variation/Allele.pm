@@ -108,7 +108,7 @@ sub new {
     rearrange(['dbID', 'ADAPTOR', 'ALLELE', 'FREQUENCY', 'COUNT', 'POPULATION', 'SUBSNP'], @_);
   
   # set subsnp_id to undefined if it's 0 in the DB
-  $ss_id = undef if (defined $ss_id && $ss_id == 0);
+  #$ss_id = undef if (defined $ss_id && $ss_id == 0);
   
   # add ss to the subsnp_id
   $ss_id = 'ss'.$ss_id if defined $ss_id && $ss_id !~ /^ss/;
