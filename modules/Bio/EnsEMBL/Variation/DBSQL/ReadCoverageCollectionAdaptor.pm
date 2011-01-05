@@ -1,3 +1,23 @@
+=head1 LICENSE
+
+ Copyright (c) 1999-2011 The European Bioinformatics Institute and
+ Genome Research Limited.  All rights reserved.
+
+ This software is distributed under a modified Apache license.
+ For license details, please see
+
+   http://www.ensembl.org/info/about/code_licence.html
+
+=head1 CONTACT
+
+ Please email comments or questions to the public Ensembl
+ developers list at <dev@ensembl.org>.
+
+ Questions may also be sent to the Ensembl help desk at
+ <helpdesk@ensembl.org>.
+
+=cut
+
 #
 # Ensembl module for Bio::EnsEMBL::Variation::DBSQL::ReadCoverageCollectionAdaptor
 #
@@ -34,12 +54,6 @@ Bio::EnsEMBL::Variation::DBSQL::ReadCoverageCollectionAdaptor
 This adaptor provides database connectivity for ReadCoverageCollection objects.
 Coverage information for reads can be obtained from the database using this
 adaptor.  See the base class BaseFeatureAdaptor for more information.
-
-=head1 AUTHOR - Yuan Chen
-
-=head1 CONTACT
-
-Post questions to the Ensembl development list ensembl-dev@ebi.ac.uk
 
 =head1 METHODS
 

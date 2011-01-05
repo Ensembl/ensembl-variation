@@ -1,3 +1,23 @@
+=head1 LICENSE
+
+ Copyright (c) 1999-2011 The European Bioinformatics Institute and
+ Genome Research Limited.  All rights reserved.
+
+ This software is distributed under a modified Apache license.
+ For license details, please see
+
+   http://www.ensembl.org/info/about/code_licence.html
+
+=head1 CONTACT
+
+ Please email comments or questions to the public Ensembl
+ developers list at <dev@ensembl.org>.
+
+ Questions may also be sent to the Ensembl help desk at
+ <helpdesk@ensembl.org>.
+
+=cut
+
 #
 # Ensembl module for Bio::EnsEMBL::Variation::DBSQL::SampleAdaptor
 #
@@ -28,12 +48,6 @@ $sample = $sample_adaptor->fetch_sample_by_synonym($sample_synonym_id);
 
 This is a base class implementing common methods in population, individual and strain. This base
 class is simply a way of merging similar concepts that should have the same ID
-
-=head1 AUTHOR - Daniel Rios
-
-=head1 CONTACT
-
-Post questions to the Ensembl development list ensembl-dev@ebi.ac.uk
 
 =head1 METHODS
 
