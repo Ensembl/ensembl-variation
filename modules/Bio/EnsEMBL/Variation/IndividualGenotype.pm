@@ -209,8 +209,15 @@ sub variation {
 		  foreach my $vf(@$vfs) {
 			  #print "VF: ", $vf->variation_name, " ", $vf->seq_region_start, "-", $vf->seq_region_end, "\n";
 			  
+			  if(defined($self->{_table} && ($self->{_table} eq 'compressed'))) {
+				next unless $vf->var_class =~ /mixed|sn[p|v]/;
+			  }
+			  
 			  # only attach if the seq_region_start/end match the feature slice's
-			  $self->{'variation'} = $vf->variation if $vf->seq_region_start == $self->feature_Slice->start and $vf->seq_region_end == $self->feature_Slice->end;
+			  if($vf->seq_region_start == $self->feature_Slice->start and $vf->seq_region_end == $self->feature_Slice->end) {
+				$self->{'variation'} = $vf->variation;
+				last;
+			  }
 		  }
 		}
 		
@@ -232,8 +239,10 @@ sub variation {
 		  # otherwise we need to check start coord matches start coord of original feature slice
 		  else {
 			foreach my $vf(@$new_vfs) {
-				#print "VF: ", $vf->variation_name, " ", $vf->seq_region_start, "-", $vf->seq_region_end, "\n";
-				$self->{'variation'} = $vf->variation if $vf->seq_region_start == $self->feature_Slice->start;
+				if($vf->seq_region_start == $self->feature_Slice->start) {
+					$self->{'variation'} = $vf->variation;
+					last;
+				}
 			}
 		  }
 		}
