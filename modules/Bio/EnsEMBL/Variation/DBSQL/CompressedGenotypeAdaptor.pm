@@ -89,6 +89,7 @@ use Data::Dumper;
 sub fetch_all_by_Variation {
     my $self = shift;
     my $variation = shift;
+	my $individual = shift;
 
     my $res;
     if(!ref($variation) || !$variation->isa('Bio::EnsEMBL::Variation::Variation')) {
@@ -125,20 +126,22 @@ sub fetch_all_by_Variation {
 		}
 		
 		# get the IGs
-		my @igs = @{$self->fetch_all_by_Slice($fs)};
+		my @igs = @{$self->fetch_all_by_Slice($fs, $individual)};
 		
 		#print "fS: ", $fs->start, " ", $fs->end, "\n";
 		
 		# iterate through to check
 		foreach my $ig(@igs) {
+			#print $ig->variation->dbID, " ", $variation->dbID, "\n";
+			
 			# skip this if the variation attached to the IG does not match the query
-			next unless $ig->variation->dbID == $variation->dbID;
+			#next unless $ig->variation->dbID == $variation->dbID;
 			
 			# get the alleles
 			my ($a1, $a2) = ($ig->allele1, $ig->allele2);
 			
 			# skip if the returned alleles are not in the allele_string for the VF
-			next unless $vf->allele_string =~ /^$a1\/|\/$a1\/|\/$a1$|^$a1$/ and $vf->allele_string =~ /^$a2\/|\/$a2\/|\/$a2$|^$a2$/;
+			#next unless $vf->allele_string =~ /^$a1\/|\/$a1\/|\/$a1$|^$a1$/ and $vf->allele_string =~ /^$a2\/|\/$a2\/|\/$a2$|^$a2$/;
 			
 			#$ig->variation($variation);
 			push @{$res}, $ig;
@@ -152,7 +155,7 @@ sub fetch_all_by_Variation {
 	
     #and include the genotypes from the multiple genotype table
     $self->_multiple(1);
-    push @{$res}, @{$self->SUPER::fetch_all_by_Variation($variation)};
+    push @{$res}, @{$self->SUPER::fetch_all_by_Variation($variation, $individual)};
     $self->_multiple(0);
 	
 	#print "Now have ", scalar @{$res}, " including multiple bp\n";
@@ -182,9 +185,21 @@ sub fetch_all_by_Slice{
     my $features;
     my $constraint;
     if (!$self->_multiple){
-	#if passed inividual, add constraint
+	#if passed inividual or population, add constraint
 	if (defined $individual && defined $individual->dbID){
-	  $constraint = ' c.sample_id = ' . $individual->dbID;
+	  my $instr;
+	  
+	  if($individual->isa("Bio::EnsEMBL::Variation::Population")) {
+		my $inds = $individual->get_all_Individuals;
+		my @list;
+		push @list, $_->dbID foreach @$inds;
+		$instr = (@list > 1)  ? " IN (".join(',',@list).")"   :   ' = \''.$list[0].'\'';
+		$constraint = " c.sample_id $instr";
+	  }
+	  else {
+		$constraint = ' c.sample_id = ' . $individual->dbID;
+	  }
+	  
 	 # $constraint = ' c.sample_id = ?';
 	 # $self->bind_param_generic_fetch($individual->dbID,SQL_INTEGER);
 	  $features = $self->SUPER::fetch_all_by_Slice_constraint($slice,$constraint);
@@ -239,10 +254,10 @@ sub fetch_all_by_Slice{
 	#and include the genotypes from the multiple genotype table
 	push @results, $features;
     }
+	
     return \@results;
     
 }
-
 
 sub _tables{
     my $self = shift;
@@ -259,6 +274,8 @@ sub _columns{
 
 sub _objs_from_sth{
     my ($self, $sth, $mapper, $dest_slice) = @_;
+	
+	#warn "SQL ", $sth->sql;
     
     return $self->SUPER::_objs_from_sth($sth,$mapper,$dest_slice) if ($self->_multiple);
     #
@@ -369,44 +386,78 @@ sub _objs_from_sth{
 	$slice = $dest_slice;
     }
     #create the different Features for all the Genotypes compressed in the genotype field
-    my $blob = substr($genotypes,2);
-    my @genotypes = unpack("naa" x (length($blob)/4),$blob);
+#    my $blob = substr($genotypes,2);
+#    my @genotypes = unpack("naa" x (length($blob)/4),$blob);
+#
+#    unshift @genotypes, substr($genotypes,1,1); #add the second allele of the first genotype
+#    unshift @genotypes, substr($genotypes,0,1); #add the first allele of the first genotype
+#    unshift @genotypes, 0; #the first SNP is in the position indicated by the seq_region1
+#    my ($snp_start, $allele_1, $allele_2);
+# 
+#    for (my $i=0; $i < @genotypes -1;$i+=3){
+#	#number of gaps
+#	if ($i == 0){
+#	    $snp_start = $seq_region_start; #first SNP is in the beginning of the region
+#	}
+#	else{
+#	    if ($genotypes[$i] == -1){ #remove duplicates !!
+#		$snp_start += 1;
+#		next;
+#	    }
+#	    $snp_start += ($genotypes[$i] +1);
+#	}
+#	#genotype
+#	$allele_1 = $genotypes[$i+1];
+#	$allele_2 = $genotypes[$i+2];
+#	my $igtype = Bio::EnsEMBL::Variation::IndividualGenotype->new_fast({
+#	    'start'    => $snp_start,
+#	    'end'      => $snp_start,
+#	    'strand'   => $seq_region_strand,
+#	    'slice'    => $slice,	    
+#	    'allele1'  => $allele_1,
+#	    'allele2' => $allele_2,
+#	    'adaptor' => $self
+#	});
+#	$individual_hash{$sample_id} ||= [];
+#	push @{$individual_hash{$sample_id}}, $igtype;
+#	push @results, $igtype;
+	
+	
+	
+	my @genotypes = unpack '(aan)*', $genotypes;
+	my $snp_start = $seq_region_start;
+  
+	while( my( $allele_1, $allele_2, $gap ) = splice @genotypes, 0, 3 ) {
+		
+		#warn "GT ", $allele_1, $allele_2, " ", $snp_start + $slice->start - 1;
+		
+		# check the things
+		#if(defined($gap)) {
+		#	die "$gap is not numeric. Sample $sample_id sr $seq_region_start data $gap $allele_1 $allele_2 @genotypes\n" unless $gap =~ /[0-9]+/ || !$gap;
+		#}
+		#die "$allele_1 is not a bp. Sample $sample_id sr $seq_region_start data $gap $allele_1 $allele_2 @genotypes\n" unless $allele_1 =~ /[ACGT]|\-/i;
+		#die "$allele_2 is not a bp. Sample $sample_id sr $seq_region_start data $gap $allele_1 $allele_2 @genotypes\n" unless $allele_2 =~ /[ACGT]|\-/i;
+		
+		my $igtype  = Bio::EnsEMBL::Variation::IndividualGenotype->new_fast({
+			'start'   => $snp_start,
+			'end'     => $snp_start,
+			'strand'  => $seq_region_strand,
+			'slice'   => $slice,
+			'allele1' => $allele_1,
+			'allele2' => $allele_2,
+			'adaptor' => $self
+		});
+		
+		$igtype->{_table} = 'compressed';
+		
+		$individual_hash{$sample_id} ||= [];
+		push @{$individual_hash{$sample_id}}, $igtype;
+		push @results, $igtype;
+		$snp_start += $gap + 1 if defined $gap;
 
-    unshift @genotypes, substr($genotypes,1,1); #add the second allele of the first genotype
-    unshift @genotypes, substr($genotypes,0,1); #add the first allele of the first genotype
-    unshift @genotypes, 0; #the first SNP is in the position indicated by the seq_region1
-    my ($snp_start, $allele_1, $allele_2);
- 
-    for (my $i=0; $i < @genotypes -1;$i+=3){
-	#number of gaps
-	if ($i == 0){
-	    $snp_start = $seq_region_start; #first SNP is in the beginning of the region
-	}
-	else{
-	    if ($genotypes[$i] == -1){ #remove duplicates !!
-		$snp_start += 1;
-		next;
-	    }
-	    $snp_start += ($genotypes[$i] +1);
-	}
-	#genotype
-	$allele_1 = $genotypes[$i+1];
-	$allele_2 = $genotypes[$i+2];
-	my $igtype = Bio::EnsEMBL::Variation::IndividualGenotype->new_fast({
-	    'start'    => $snp_start,
-	    'end'      => $snp_start,
-	    'strand'   => $seq_region_strand,
-	    'slice'    => $slice,	    
-	    'allele1'  => $allele_1,
-	    'allele2' => $allele_2,
-	    'adaptor' => $self
-	});
-	$individual_hash{$sample_id} ||= [];
-	push @{$individual_hash{$sample_id}}, $igtype;
-	push @results, $igtype;
     }
 
-}
+	}
      # get all individual in one query (faster)
      # and add to already created genotypes
      my @ind_ids = keys %individual_hash;
