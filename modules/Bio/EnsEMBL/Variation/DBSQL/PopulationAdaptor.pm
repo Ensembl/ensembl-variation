@@ -141,6 +141,44 @@ sub fetch_by_name {
   return $result->[0];
 }
 
+=head2 fetch_all_by_dbID_list
+
+  Arg [1]    : listref $list
+  Example    : $pops = $pop_adaptor->fetch_all_by_dbID_list([907,1132]);
+  Description: Retrieves a listref of population objects via a list of internal
+               dbID identifiers
+  Returntype : listref of Bio::EnsEMBL::Variation::Population objects
+  Exceptions : throw if list argument is not defined
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub fetch_all_by_dbID_list {
+  my $self = shift;
+  my $list = shift;
+
+  if(!defined($list) || ref($list) ne 'ARRAY') {
+    throw("list reference argument is required");
+  }
+  
+  my $id_str = (@$list > 1)  ? " IN (".join(',',@$list).")"   :   ' = \''.$list->[0].'\'';
+
+  my $sth = $self->prepare(qq{SELECT p.sample_id, s.name, s.size, s.description
+                             FROM   population p, sample s
+                             WHERE  s.sample_id $id_str
+			     AND    s.sample_id = p.sample_id});
+  $sth->execute();
+
+  my $result = $self->_objs_from_sth($sth);
+
+  $sth->finish();
+
+  return undef if(!@$result);
+
+  return $result;
+}
+
 
 =head2 fetch_all_by_name_search
 
