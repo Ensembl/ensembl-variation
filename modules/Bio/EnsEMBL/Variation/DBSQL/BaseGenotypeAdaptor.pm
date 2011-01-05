@@ -88,21 +88,40 @@ use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
 sub fetch_all_by_Variation {
     my $self = shift;
     my $variation = shift;
+	my $individual = shift;
 
     if(!ref($variation) || !$variation->isa('Bio::EnsEMBL::Variation::Variation')) {
-	throw('Bio::EnsEMBL::Variation::Variation argument expected');
+		throw('Bio::EnsEMBL::Variation::Variation argument expected');
     }
 
     if(!defined($variation->dbID())) {
-	warning("Cannot retrieve genotypes for variation without set dbID");
-	return [];
-    }	  
+		warning("Cannot retrieve genotypes for variation without set dbID");
+		return [];
+    }
+	
+	my $constraint = '';
+	
+	# individual can be an individual or a population
+	if (defined $individual && defined $individual->dbID){
+	  
+	  if($individual->isa("Bio::EnsEMBL::Variation::Population")) {
+		my $inds = $individual->get_all_Individuals;
+		my @list;
+		push @list, $_->dbID foreach @$inds;
+		my $instr = (@list > 1)  ? " IN (".join(',',@list).")"   :   ' = \''.$list[0].'\'';
+		$constraint = " ig.sample_id $instr AND ";
+	  }
+	  else {
+		$constraint = ' ig.sample_id = '.$individual->dbID.' AND ';
+	  }
+	}
+	
     my $res;
     if (!$self->_multiple){
-	push @{$res},@{$self->generic_fetch("ig.variation_id = " . $variation->dbID())}; #to select data from individual_genotype_single_bp
+	push @{$res},@{$self->generic_fetch($constraint."ig.variation_id = " . $variation->dbID())}; #to select data from individual_genotype_single_bp
 	$self->_multiple(1);
     }
-    push @{$res}, @{$self->generic_fetch("ig.variation_id = " . $variation->dbID())}; #to select data from individual_genotype_multiple_bp
+    push @{$res}, @{$self->generic_fetch($constraint."ig.variation_id = " . $variation->dbID())}; #to select data from individual_genotype_multiple_bp
     return $res;
 }
 
