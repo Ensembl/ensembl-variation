@@ -750,10 +750,11 @@ sub three_prime_flanking_seq{
 
 sub get_all_IndividualGenotypes {
     my $self = shift;
+	my $individual = shift;
     if (defined ($self->{'adaptor'})){
 	my $igtya = $self->{'adaptor'}->db()->get_IndividualGenotypeAdaptor();
 	
-	return $igtya->fetch_all_by_Variation($self);
+	return $igtya->fetch_all_by_Variation($self, $individual);
     }
     return [];
 }
