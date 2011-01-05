@@ -1,3 +1,23 @@
+=head1 LICENSE
+
+ Copyright (c) 1999-2011 The European Bioinformatics Institute and
+ Genome Research Limited.  All rights reserved.
+
+ This software is distributed under a modified Apache license.
+ For license details, please see
+
+   http://www.ensembl.org/info/about/code_licence.html
+
+=head1 CONTACT
+
+ Please email comments or questions to the public Ensembl
+ developers list at <dev@ensembl.org>.
+
+ Questions may also be sent to the Ensembl help desk at
+ <helpdesk@ensembl.org>.
+
+=cut
+
 # Ensembl module for Bio::EnsEMBL::Variation::Variation
 #
 # Copyright (c) 2004 Ensembl
@@ -68,10 +88,6 @@ object describe the nucleotide change that Variation represents.
 A Variation object has an associated identifier and 0 or more additional
 synonyms.  The position of a Variation object on the Genome is represented
 by the B<Bio::EnsEMBL::Variation::VariationFeature> class.
-
-=head1 CONTACT
-
-Post questions to the Ensembl development list: ensembl-dev@ebi.ac.uk
 
 =head1 METHODS
 

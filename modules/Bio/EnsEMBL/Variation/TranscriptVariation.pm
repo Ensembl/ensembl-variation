@@ -1,3 +1,23 @@
+=head1 LICENSE
+
+ Copyright (c) 1999-2011 The European Bioinformatics Institute and
+ Genome Research Limited.  All rights reserved.
+
+ This software is distributed under a modified Apache license.
+ For license details, please see
+
+   http://www.ensembl.org/info/about/code_licence.html
+
+=head1 CONTACT
+
+ Please email comments or questions to the public Ensembl
+ developers list at <dev@ensembl.org>.
+
+ Questions may also be sent to the Ensembl help desk at
+ <helpdesk@ensembl.org>.
+
+=cut
+
 #
 # Ensembl module for Bio::EnsEMBL::Variation::TranscriptVariation
 #
@@ -42,12 +62,6 @@ Bio::EnsEMBL::Variation::TranscriptVariation
 A TranscriptVariation object represents a variation feature which is in close
 proximity to an Ensembl transcript.  A TranscriptVariation object has several
 attributes which define the relationship of the variation to the transcript.
-
-=head1 AUTHOR - Graham McVicker
-
-=head1 CONTACT
-
-Post questions to the Ensembl development list ensembl-dev@ebi.ac.uk
 
 =head1 METHODS
 
