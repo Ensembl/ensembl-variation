@@ -775,7 +775,14 @@ sub _generic_fetch_by_VariationSet {
   
     # Get the unique dbIDs for all variations in this set and all of its subsets
     my $dbid_list = $self->_fetch_all_dbIDs_by_VariationSet($set);
-  
+ 
+    my $num_vars = @$dbid_list;
+
+    if ($num_vars > 100_000 && !$want_iterator) {
+        warn "This set contains a large number ($num_vars) of variations, these may not fit".
+            "into memory at once, considering using fetch_iterator_by_VariationSet instead";
+    }
+
     # Use the dbIDs to get all variations and return them
     return $want_iterator ? 
         $self->fetch_iterator_by_dbID_list($dbid_list) : 
