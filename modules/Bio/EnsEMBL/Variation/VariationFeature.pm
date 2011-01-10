@@ -998,6 +998,56 @@ sub get_all_LD_values{
     return {};
 }
 
+=head2 get_all_LD_pops
+
+    Args        : none
+    Description : returns a list of populations that could produces LD values
+	              for this VariationFeature
+    ReturnType  : listref of Bio::EnsEMBL::Variation::Population objects
+    Exceptions  : none
+    Caller      : snpview
+    Status      : At Risk
+
+=cut
+
+sub get_all_LD_pops{
+    my $self = shift;
+    
+	my $pa = $self->adaptor->db->get_PopulationAdaptor;
+	return [] unless $pa;
+	
+	my $ld_pops = $pa->fetch_all_LD_Populations;
+	return [] unless $ld_pops;
+	
+	my @list = map {$_->dbID} @$ld_pops;
+	my $id_str = (@list > 1)  ? " IN (".join(',',@list).")"   :   ' = \''.$list[0].'\'';
+	
+	my $sth = $self->adaptor->db->prepare(qq{
+	  SELECT distinct(ip.population_sample_id)
+	  FROM compressed_genotype_single_bp c, individual_population ip
+	  WHERE c.sample_id = ip.individual_sample_id
+	  AND c.seq_region_id = ?
+	  AND c.seq_region_start < ?
+	  AND c.seq_region_end > ?
+	  AND ip.population_sample_id $id_str;
+	});
+	
+	$sth->bind_param(1, $self->feature_Slice->get_seq_region_id);
+	$sth->bind_param(2, $self->seq_region_end);
+	$sth->bind_param(3, $self->seq_region_start);
+	
+	$sth->execute;
+	
+	my $sample_id;
+	$sth->bind_columns(\$sample_id);
+	my %have_genotypes = ();
+	$have_genotypes{$sample_id} = 1 while $sth->fetch();
+	
+	my @final_list = grep {$have_genotypes{$_->dbID}} @$ld_pops;
+	
+	return \@final_list;
+}
+
 =head2 get_all_sources
 
     Args        : none
