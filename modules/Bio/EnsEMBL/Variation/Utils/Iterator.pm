@@ -6,8 +6,9 @@
 
   my $variation_iterator = $variation_adaptor->fetch_iterator_by_VariationSet($1kg_set);
 
-  while (my $var = $variation_iterator->next) {
+  while (my $variation = $variation_iterator->next) {
     # operate on variation object
+    print $variation->name, "\n";
   }
 
 
@@ -44,32 +45,21 @@ package Bio::EnsEMBL::Variation::Utils::Iterator;
 use strict;
 use warnings;
 
-use Bio::EnsEMBL::Utils::Argument qw(rearrange);
-
-my $DEFAULT_CACHE_SIZE = 1000;
-
 =head2 new
 
-  Arg [dbIDs] :
-    a listref of dbIDs of the objects you want this iterator to fetch
-
-  Arg [adaptor] :
-    Bio::EnsEMBL::Variation::DBSQL::*Adaptor
-
-  Arg [cache_size] :
-     The number of objects to fetch and store in memory at once
+  Arg 1 : a coderef representing the iterator, this anonymous subroutine
+          is assumed to return the next object in the set when called,
+          and to return undef when the set is exhausted
 
   Example    :
 
     my $iterator = Bio::EnsEMBL::Variation::Utils::Iterator->new(
-        -dbIDS      => [1234, 2345, 3456],
-        -adaptor    => $variation_adaptor,
-        -cache_size => 1000,
+        sub { return $self->fetch_by_dbID(shift @dbIDs) }
     );
 
   Description: Constructor, creates a new iterator object
   Returntype : Bio::EnsEMBL::Variation::Utils::Iterator
-  Exceptions : dies if the supplied adaptor does not have a fetch_all_by_dbID_list method
+  Exceptions : dies if the supplied argument is not a coderef
   Caller     : general
   Status     : Experimental
 
@@ -78,20 +68,12 @@ my $DEFAULT_CACHE_SIZE = 1000;
 sub new {
     my $class = shift;
 
-    my %args = @_;
+    my $coderef = shift;
 
-    my ($dbids, $adaptor, $cache_size) = rearrange([qw(dbids adaptor cache_size)], @_);
+    die "The supplied argument does not look like an anonymous subroutine"
+        unless ref $coderef eq 'CODE';
 
-    unless ($adaptor->can('fetch_all_by_dbID_list')) {
-        die "The supplied adaptor does not implement the required fetch_all_by_dbID_list method";
-    }
-
-    my $self = {
-        dbids       => $dbids,
-        adaptor     => $adaptor,
-        cache_size  => $cache_size || $DEFAULT_CACHE_SIZE,
-        objs        => []
-    };
+    my $self = {sub => $coderef};
 
     return bless $self, $class;
 }
@@ -111,15 +93,14 @@ sub new {
 sub next {
     my $self = shift;
 
-    my @objs  = @{ $self->{objs} };
-    my @dbids = @{ $self->{dbids} };
+    # if someone has called has_next, there might be a cached value we can return
 
-    if (@{ $self->{objs} } == 0 && @{ $self->{dbids} } > 0 ) {
-        my @dbids = splice @{ $self->{dbids} }, 0, $self->{cache_size};
-        $self->{objs} = $self->{adaptor}->fetch_all_by_dbID_list(\@dbids);
+    if ($self->{next}) {
+        return delete $self->{next};
     }
-
-    return shift @{ $self->{objs} };
+    else {
+        return $self->{sub}->();
+    }
 }
 
 =head2 has_next
@@ -135,7 +116,10 @@ sub next {
 
 sub has_next {
     my $self = shift;
-    return $self->num_remaining > 0;
+
+    $self->{next} = $self->{sub}->();
+
+    return defined $self->{next}; 
 }
 
 1;
