@@ -613,10 +613,8 @@ sub _columns {
   return qw( vf.variation_feature_id vf.seq_region_id vf.seq_region_start
              vf.seq_region_end vf.seq_region_strand vf.variation_id
              vf.allele_string vf.variation_name vf.map_weight s.name s.somatic 
-             vf.validation_status vf.consequence_type);
+             vf.validation_status vf.consequence_type vf.class_so_id);
 }
-
-
 
 sub _objs_from_sth {
   my ($self, $sth, $mapper, $dest_slice) = @_;
@@ -636,12 +634,14 @@ sub _objs_from_sth {
 
   my ($variation_feature_id, $seq_region_id, $seq_region_start,
       $seq_region_end, $seq_region_strand, $variation_id,
-      $allele_string, $variation_name, $map_weight, $source_name, $is_somatic, $validation_status, $consequence_type );
+      $allele_string, $variation_name, $map_weight, $source_name, 
+      $is_somatic, $validation_status, $consequence_type, $class_so_id);
 
   $sth->bind_columns(\$variation_feature_id, \$seq_region_id,
                      \$seq_region_start, \$seq_region_end, \$seq_region_strand,
                      \$variation_id, \$allele_string, \$variation_name,
-                     \$map_weight, \$source_name, \$is_somatic, \$validation_status, \$consequence_type);
+                     \$map_weight, \$source_name, \$is_somatic, \$validation_status, 
+                     \$consequence_type, \$class_so_id);
 
   my $asm_cs;
   my $cmp_cs;
@@ -732,7 +732,7 @@ sub _objs_from_sth {
     my @states = split(',',$validation_status);
  
     my @types = split(',',$consequence_type); #get the different consequence types
- 
+    
     # consequence_type
     push @features, $self->_create_feature_fast('Bio::EnsEMBL::Variation::VariationFeature',
     #push @features, Bio::EnsEMBL::Variation::VariationFeature->new_fast(
@@ -751,7 +751,10 @@ sub _objs_from_sth {
        'is_somatic' => $is_somatic,
        'validation_code' => \@states,
        'consequence_type' => \@types || ['INTERGENIC'],
-       '_variation_id' => $variation_id});
+       '_variation_id' => $variation_id,
+       'class_SO_id' => $class_so_id,
+      }
+    );
   }
 
   return \@features;
