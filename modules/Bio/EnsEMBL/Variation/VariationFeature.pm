@@ -998,7 +998,7 @@ sub get_all_LD_values{
     return {};
 }
 
-=head2 get_all_LD_pops
+=head2 get_all_LD_populations
 
     Args        : none
     Description : returns a list of populations that could produces LD values
@@ -1010,7 +1010,7 @@ sub get_all_LD_values{
 
 =cut
 
-sub get_all_LD_pops{
+sub get_all_LD_populations{
     my $self = shift;
     
 	my $pa = $self->adaptor->db->get_PopulationAdaptor;
@@ -1019,9 +1019,6 @@ sub get_all_LD_pops{
 	my $ld_pops = $pa->fetch_all_LD_Populations;
 	return [] unless $ld_pops;
 	
-	my @list = map {$_->dbID} @$ld_pops;
-	my $id_str = (@list > 1)  ? " IN (".join(',',@list).")"   :   ' = \''.$list[0].'\'';
-	
 	my $sth = $self->adaptor->db->prepare(qq{
 	  SELECT distinct(ip.population_sample_id)
 	  FROM compressed_genotype_single_bp c, individual_population ip
@@ -1029,7 +1026,6 @@ sub get_all_LD_pops{
 	  AND c.seq_region_id = ?
 	  AND c.seq_region_start < ?
 	  AND c.seq_region_end > ?
-	  AND ip.population_sample_id $id_str;
 	});
 	
 	$sth->bind_param(1, $self->feature_Slice->get_seq_region_id);
