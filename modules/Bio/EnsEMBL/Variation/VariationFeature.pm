@@ -998,7 +998,7 @@ sub get_all_LD_values{
     return {};
 }
 
-=head2 get_all_LD_populations
+=head2 get_all_LD_Populations
 
     Args        : none
     Description : returns a list of populations that could produces LD values
@@ -1010,7 +1010,7 @@ sub get_all_LD_values{
 
 =cut
 
-sub get_all_LD_populations{
+sub get_all_LD_Populations{
     my $self = shift;
     
 	my $pa = $self->adaptor->db->get_PopulationAdaptor;
