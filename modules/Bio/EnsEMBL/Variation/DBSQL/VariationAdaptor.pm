@@ -73,6 +73,7 @@ use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 
 use Bio::EnsEMBL::Variation::Variation;
 use Bio::EnsEMBL::Variation::Allele;
+use Bio::EnsEMBL::Variation::Utils::Iterator;
 
 our @ISA = ('Bio::EnsEMBL::DBSQL::BaseAdaptor');
 
@@ -350,7 +351,6 @@ sub fetch_all_by_source {
 
 =cut
 
-
 sub fetch_all_by_dbID_list {
   my $self = shift;
   my $list = shift;
@@ -396,6 +396,27 @@ sub fetch_all_by_dbID_list {
   return \@out;
 }
 
+=head2 fetch_iterator_by_dbID_list
+
+  Arg [1]    : reference to list of ints $list
+  Example    : $variation_iterator = $va->fetch_iterator_by_dbID_list([124, 56, 90]);
+  Description: Retrieves an itertor over a set of variations via their internal identifiers.
+  Returntype : Bio::EnsEMBL::Variation::Utils::Iterator
+  Exceptions : throw on bad argument
+  Caller     : general
+  Status     : Experimental
+
+=cut
+
+sub fetch_iterator_by_dbID_list {
+    my ($self, $dbid_list, $cache_size) = @_;
+
+    return Bio::EnsEMBL::Variation::Utils::Iterator->new(
+        -dbids      => $dbid_list,
+        -adaptor    => $self,
+        -cache_size => $cache_size || 1000
+    ); 
+}
 
 =head2 fetch_all_by_name_list
 
@@ -715,56 +736,90 @@ sub fetch_all_by_Population {
 =cut
 
 sub fetch_all_by_VariationSet {
-  my $self = shift;
-  my $set = shift;
+    my $self = shift;
+    return $self->_generic_fetch_by_VariationSet(0, @_);
+}
 
-  if(!ref($set) || !$set->isa('Bio::EnsEMBL::Variation::VariationSet')) {
-    throw('Bio::EnsEMBL::Variation::VariationSet argument expected');
-  }
+=head2 fetch_iterator_by_VariationSet
 
-  if(!defined($set->dbID())) {
-    warning("Cannot retrieve variations for variation set without a dbID");
-    return [];
-  }
+  Arg [1]    : Bio::EnsEMBL::Variation::VariationSet
+  Example    : $var_iterator = $va_adaptor->fetch_iterator_by_VariationSet($vs);
+  Description: Retrieves an iterator for all variations which are present in a specified
+               variation set and its subsets.
+  Returntype : Bio::EnsEMBL::Variation::Utils::Iterator object
+  Exceptions : throw on incorrect argument
+  Caller     : general
+  Status     : Experimental
+
+=cut
+
+
+sub fetch_iterator_by_VariationSet {
+    my $self = shift;
+    return $self->_generic_fetch_by_VariationSet(1, @_);
+}
+
+sub _generic_fetch_by_VariationSet {
+    my $self = shift;
+    my $want_iterator = shift;
+    my $set = shift;
+    
+    if(!ref($set) || !$set->isa('Bio::EnsEMBL::Variation::VariationSet')) {
+        throw('Bio::EnsEMBL::Variation::VariationSet argument expected');
+    }
+
+    if(!defined($set->dbID())) {
+        warning("Cannot retrieve variations for variation set without a dbID");
+        return [];
+    }
   
-  # Get the unique dbIDs for all variations in this set and all of its subsets
-  my $dbid_list = $self->_fetch_all_dbIDs_by_VariationSet($set);
+    # Get the unique dbIDs for all variations in this set and all of its subsets
+    my $dbid_list = $self->_fetch_all_dbIDs_by_VariationSet($set);
   
-  # Use the dbIDs to get all variations and return them
-  return $self->fetch_all_by_dbID_list($dbid_list);
+    # Use the dbIDs to get all variations and return them
+    return $want_iterator ? 
+        $self->fetch_iterator_by_dbID_list($dbid_list) : 
+        $self->fetch_all_by_dbID_list($dbid_list);
 }
 
 sub _fetch_all_dbIDs_by_VariationSet {
   my $self = shift;
   my $set = shift;
   
-  # First, get all ids for subsets. Store in a hash to avoid duplicates
-  my %dbIDs;
-  foreach my $var_set (@{$set->adaptor->fetch_all_by_super_VariationSet($set,1)}) {
-    map {$dbIDs{$_}++} @{$self->_fetch_all_dbIDs_by_VariationSet($var_set)};
+  # First, get ids for all subsets,
+  
+  my @var_set_ids = ($set->dbID);
+  
+  foreach my $var_set (@{$set->adaptor->fetch_all_by_super_VariationSet($set)}) {
+    push @var_set_ids, $var_set->dbID;
   }
   
-  # Then get the dbIDs for this variation set
+  my $set_str = '('.join(',',@var_set_ids).')';
+
+  # Then get the dbIDs for all these sets
   my $stmt = qq{
     SELECT
-      variation_id
+      DISTINCT(variation_id)
     FROM
       variation_set_variation
     WHERE
-      variation_set_id = ?
+      variation_set_id in $set_str
   };
+
   my $sth = $self->prepare($stmt);
   
-  $sth->bind_param(1,$set->dbID(),SQL_INTEGER);
   $sth->execute();
+  
+  my @result;
+
   my $dbID;
+  
   $sth->bind_columns(\$dbID);
+  
   while ($sth->fetch()) {
-    $dbIDs{$dbID}++;
+    push @result, $dbID;
   }
-  
-  my @result = keys(%dbIDs);
-  
+
   return \@result;
 }
 
