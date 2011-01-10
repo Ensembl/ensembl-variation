@@ -156,7 +156,7 @@ sub fetch_by_name {
   # from the reference - it is just set to 0 when fetching variations
   # by other methods since otherwise the join takes too long
   my $sth = $self->prepare
-    (qq{SELECT v.variation_id, v.name, v.validation_status, s1.name, s1.description, s1.url, s1.somatic, v.ancestral_allele, 
+    (qq{SELECT v.variation_id, v.name, v.validation_status, v.class_so_id, s1.name, s1.description, s1.url, s1.somatic, v.ancestral_allele, 
                a.allele_id, a.subsnp_id, a.allele, a.frequency, a.count, a.sample_id, vs.moltype,
               vs.name, s2.name, f.description, (fs.up_seq is not null OR fs.down_seq is not null)
 	  FROM   (variation v, source s1)
@@ -181,7 +181,7 @@ sub fetch_by_name {
   if(!@$result) {
     # try again if nothing found, but check synonym table instead
     $sth = $self->prepare
-      (qq{SELECT v.variation_id, v.name, v.validation_status, s1.name, s1.description, s1.url, s1.somatic, v.ancestral_allele, 
+      (qq{SELECT v.variation_id, v.name, v.validation_status, v.class_so_id, s1.name, s1.description, s1.url, s1.somatic, v.ancestral_allele, 
                  a.allele_id, a.subsnp_id, a.allele, a.frequency, a.count, a.sample_id, vs1.moltype,
                 vs2.name, s2.name, NULL, (fs.up_seq is not null OR fs.down_seq is not null)
          FROM variation v, source s1, source s2, allele a,
@@ -239,7 +239,7 @@ sub fetch_by_subsnp_id {
   # from the reference - it is just set to 0 when fetching variations
   # by other methods since otherwise the join takes too long
   my $sth = $self->prepare
-    (qq{SELECT v.variation_id, v.name, v.validation_status, s1.name, s1.description, s1.url, s1.somatic, v.ancestral_allele, 
+    (qq{SELECT v.variation_id, v.name, v.validation_status, v.class_so_id, s1.name, s1.description, s1.url, s1.somatic, v.ancestral_allele, 
                a.allele_id, a.subsnp_id, a.allele, a.frequency, a.count, a.sample_id, vs.moltype,
               vs.name, s2.name, f.description, (fs.up_seq is not null OR fs.down_seq is not null)
 	  FROM   (variation v, source s1)
@@ -292,7 +292,7 @@ sub fetch_all_by_source {
   throw('name argument expected') if(!defined($source_name));
 
   my $sth = $self->prepare
-    (qq{SELECT v.variation_id, v.name, v.validation_status, s1.name, s1.description, s1.url, s1.somatic, v.ancestral_allele, 
+    (qq{SELECT v.variation_id, v.name, v.validation_status, v.class_so_id, s1.name, s1.description, s1.url, s1.somatic, v.ancestral_allele, 
                a.allele_id, a.subsnp_id, a.allele, a.frequency, a.count, a.sample_id, vs.moltype,
               vs.name, s2.name, f.description, 0
 	  FROM   (variation v, source s1)
@@ -316,7 +316,7 @@ sub fetch_all_by_source {
   #we need to include variation_synonym as well, where the variation was merged with dbSNP
   if (!$primary){
       $sth = $self->prepare
-	  (qq{SELECT v.variation_id, v.name, v.validation_status, s1.name, s1.description, s1.url, s1.somatic, v.ancestral_allele,
+	  (qq{SELECT v.variation_id, v.name, v.validation_status, v.class_so_id, s1.name, s1.description, s1.url, s1.somatic, v.ancestral_allele,
 	      a.allele_id, a.subsnp_id, a.allele, a.frequency, a.count, a.sample_id, vs1.moltype,
 	      vs1.name, s2.name, NULL, 0
 		  FROM   (variation v, source s1, source s2,  variation_synonym vs1)
@@ -373,7 +373,7 @@ sub fetch_all_by_dbID_list {
     my $id_str = (@ids > 1)  ? " IN (".join(',',@ids).")"   :   ' = \''.$ids[0].'\'';
 
     my $sth = $self->prepare
-      (qq{SELECT v.variation_id, v.name, v.validation_status, s1.name, s1.description, s1.url, s1.somatic, v.ancestral_allele,
+      (qq{SELECT v.variation_id, v.name, v.validation_status, v.class_so_id, s1.name, s1.description, s1.url, s1.somatic, v.ancestral_allele,
                  a.allele_id, a.subsnp_id, a.allele, a.frequency, a.count, a.sample_id, vs.moltype,
                  vs.name, s2.name, f.description, 0
 	     FROM   (variation v, source s1)
@@ -411,11 +411,23 @@ sub fetch_all_by_dbID_list {
 sub fetch_iterator_by_dbID_list {
     my ($self, $dbid_list, $cache_size) = @_;
 
-    return Bio::EnsEMBL::Variation::Utils::Iterator->new(
-        -dbids      => $dbid_list,
-        -adaptor    => $self,
-        -cache_size => $cache_size || 1000
-    ); 
+    $cache_size ||= 1000;
+
+    # create an iterator that fetches variations in blocks of
+    # $cache_size and returns them in turn
+
+    my @object_cache;
+
+    return Bio::EnsEMBL::Variation::Utils::Iterator->new(sub {
+
+            if (@object_cache == 0 && @$dbid_list > 0 ) {
+                my @dbids = splice @$dbid_list, 0, $cache_size;
+                @object_cache = @{ $self->fetch_all_by_dbID_list(\@dbids) };
+            }
+
+            return shift @object_cache;
+        }
+    );
 }
 
 =head2 fetch_all_by_name_list
@@ -454,7 +466,7 @@ sub fetch_all_by_name_list {
 
     my $id_str = (@ids > 1)  ? " IN (".join(',', map {"'$_'"} @ids).")"   :   ' = \''.$ids[0].'\'';
     my $sth = $self->prepare
-      (qq{SELECT v.variation_id, v.name, v.validation_status, s1.name, s1.description, s1.url, s1.somatic, v.ancestral_allele,
+      (qq{SELECT v.variation_id, v.name, v.validation_status, v.class_so_id, s1.name, s1.description, s1.url, s1.somatic, v.ancestral_allele,
                  a.allele_id, a.subsnp_id, a.allele, a.frequency, a.count, a.sample_id, vs.moltype,
                  vs.name, s2.name, f.description, 0
 	     FROM   (variation v, source s1)
@@ -485,7 +497,7 @@ sub fetch_all_by_name_list {
     if(@missing_names) {
       my $missing_id_str = (@missing_names > 1)  ? " IN (".join(',', map {"'$_'"} @missing_names).")"   :   ' = \''.$missing_names[0].'\'';
       $sth = $self->prepare
-        (qq{SELECT v.variation_id, v.name, v.validation_status, s1.name, s1.description, s1.url, s1.somatic, v.ancestral_allele, 
+        (qq{SELECT v.variation_id, v.name, v.validation_status, v.class_so_id, s1.name, s1.description, s1.url, s1.somatic, v.ancestral_allele, 
                    a.allele_id, a.subsnp_id, a.allele, a.frequency, a.count, a.sample_id, vs1.moltype,
                   vs2.name, s2.name, NULL, 0
            FROM variation v, source s1, source s2, allele a,
@@ -701,7 +713,7 @@ sub fetch_all_by_Population {
   }
   
   my $sth = $self->prepare
-    (qq{SELECT v.variation_id, v.name, v.validation_status, s1.name, s1.description, s1.url, s1.somatic, v.ancestral_allele,
+    (qq{SELECT v.variation_id, v.name, v.validation_status, v.class_so_id, s1.name, s1.description, s1.url, s1.somatic, v.ancestral_allele,
                a.allele_id, a.subsnp_id, a.allele, a.frequency, a.count, a.sample_id, vs.moltype,
               vs.name, s2.name, f.failed_description_id, 0
 	    FROM   (variation v, source s1, allele a)
@@ -855,11 +867,11 @@ sub _objs_from_sth {
   my $self = shift;
   my $sth = shift;
 
-  my ($var_id, $name, $vstatus, $source, $source_desc, $source_url, $is_somatic, $ancestral_allele, 
+  my ($var_id, $name, $vstatus, $class_so_id, $source, $source_desc, $source_url, $is_somatic, $ancestral_allele, 
       $allele_id, $allele_ss_id, $allele, $allele_freq, $allele_count, $allele_sample_id, $moltype, $syn_name, 
       $syn_source, $cur_allele_id, $cur_var, $cur_var_id, $failed_description, $flank_flag);
 
-  $sth->bind_columns(\$var_id, \$name, \$vstatus, \$source, \$source_desc, \$source_url, \$is_somatic, 
+  $sth->bind_columns(\$var_id, \$name, \$vstatus, \$class_so_id, \$source, \$source_desc, \$source_url, \$is_somatic, 
                      \$ancestral_allele, \$allele_id, \$allele_ss_id, \$allele, \$allele_freq, \$allele_count,
                      \$allele_sample_id, \$moltype, \$syn_name, \$syn_source, \$failed_description, \$flank_flag);
 
@@ -886,7 +898,8 @@ sub _objs_from_sth {
 	     -MOLTYPE => $moltype,
          -VALIDATION_STATES => \@states,
 	     -FAILED_DESCRIPTION => $failed_description,
-	     -FLANK_FLAG => $flank_flag,);
+	     -FLANK_FLAG => $flank_flag,
+	     -CLASS_SO_ID => $class_so_id);
       push @vars, $cur_var;
       $cur_var_id = $var_id;
     }
