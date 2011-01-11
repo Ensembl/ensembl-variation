@@ -124,7 +124,11 @@ sub _internal_fetch_all_by_Transcripts{
 
     my $instr = join (",", map{"'$_'"} keys( %tr_by_id));
     my $constraint = "tv.transcript_stable_id in ( $instr )";
-    $constraint .= " AND $extra_constraint" if $extra_constraint; 
+    $constraint .= " AND $extra_constraint" if $extra_constraint;
+    
+    # Add the constraint for failed variations
+    $constraint .= " AND " . $self->db->_exclude_failed_variations_constraint();
+    
     my $transcript_variations = $self->generic_fetch($constraint);
     for my $tv (@{$transcript_variations}){
 		#add to the TranscriptVariation object all the Transcripts
@@ -660,6 +664,7 @@ sub _tables {
     return (
         ['transcript_variation','tv'],
         ['variation_feature', 'vf'],
+        ['failed_variation', 'fv'],
         ['source', 's']
     );
 }
@@ -667,6 +672,9 @@ sub _tables {
 sub _default_where_clause {
   return 'tv.variation_feature_id = vf.variation_feature_id AND vf.source_id = s.source_id';
 }
+
+#ÊAdd a left join to the failed_variation table
+sub _left_join { return ([ 'failed_variation', 'fv.variation_id = vf.variation_id']); }
 
 sub _columns {
     return qw (tv.transcript_variation_id tv.transcript_stable_id
