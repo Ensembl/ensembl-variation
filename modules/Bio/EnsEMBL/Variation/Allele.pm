@@ -104,8 +104,8 @@ sub new {
   my $caller = shift;
   my $class = ref($caller) || $caller;
 
-  my ($dbID, $adaptor, $allele, $freq, $count, $pop, $ss_id) =
-    rearrange(['dbID', 'ADAPTOR', 'ALLELE', 'FREQUENCY', 'COUNT', 'POPULATION', 'SUBSNP'], @_);
+  my ($dbID, $adaptor, $allele, $freq, $count, $pop, $ss_id, $variation) =
+    rearrange(['dbID', 'ADAPTOR', 'ALLELE', 'FREQUENCY', 'COUNT', 'POPULATION', 'SUBSNP', 'VARIATION'], @_);
   
   # set subsnp_id to undefined if it's 0 in the DB
   #$ss_id = undef if (defined $ss_id && $ss_id == 0);
@@ -119,7 +119,8 @@ sub new {
                 'frequency' => $freq,
                 'count'   => $count,
                 'population' => $pop,
-                'subsnp'  => $ss_id}, $class;
+                'subsnp'  => $ss_id,
+                'variation' => $variation}, $class;
 }
 
 
@@ -242,6 +243,47 @@ sub subsnp{
 }
 
 
+=head2 variation
+
+  Arg [1]    : Bio::EnsEMBL::Variation::Variation $newval (optional) 
+               The new value to set the variation attribute to
+  Example    : print $a->variation->name();
+  Description: Getter/Setter for the variation attribute.
+  Returntype : Bio::EnsEMBL::Variation::Variation
+  Exceptions : throw on incorrect argument
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub variation {
+  my $self = shift;
+  
+  if(@_) {
+    if(!ref($_[0]) || !$_[0]->isa('Bio::EnsEMBL::Variation::Variation')) {
+      throw('Bio::EnsEMBL::Variation::Variation argument expected.');
+    }
+    $self->{'variation'} = shift;
+  }
+
+  return $self->{'variation'};
+}
+
+=head2 is_failed
+
+  Example    : print $a->is_failed();
+  Description: Gets the failed attribute.
+  Returntype : int
+  Exceptions : none
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub is_failed {
+  my $self = shift;
+  return $self->variation->is_failed($self->subsnp());
+}
 
 
 =head2 subsnp_handle
