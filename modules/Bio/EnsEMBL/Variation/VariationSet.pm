@@ -54,6 +54,7 @@ package Bio::EnsEMBL::Variation::VariationSet;
 use Bio::EnsEMBL::Storable;
 use Bio::EnsEMBL::Utils::Argument qw(rearrange);
 use Bio::EnsEMBL::Utils::Exception qw(throw deprecate warning);
+use Bio::EnsEMBL::Utils::Iterator;
 
 use vars qw(@ISA);
 
@@ -204,6 +205,27 @@ sub get_all_Variations {
 
  # Get all variations from this set (and its subsets)
   return $variation_adaptor->fetch_all_by_VariationSet($self);
+}
+
+sub get_Variation_Iterator {
+    my $self = shift;
+  
+    # A database adaptor must be attached to this object   
+    unless ($self->adaptor) {
+        warning('Cannot get variations without attached adaptor');
+        return Bio::EnsEMBL::Utils::Iterator->new;
+    }
+  
+    # Call the method in VariationAdaptor that will handle this
+    my $variation_adaptor = $self->adaptor->db->get_VariationAdaptor();
+    
+    unless ($variation_adaptor) {
+        warning('Could not get variation adaptor from database');
+        return Bio::EnsEMBL::Utils::Iterator->new;
+    }
+
+    # Get an iterator over variations from this set (and its subsets)
+    return $variation_adaptor->fetch_Iterator_by_VariationSet($self);
 }
 
 =head2 get_all_VariationFeatures_by_Slice
