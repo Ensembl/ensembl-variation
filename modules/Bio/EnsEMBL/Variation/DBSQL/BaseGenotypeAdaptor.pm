@@ -128,10 +128,13 @@ sub fetch_all_by_Variation {
 sub _tables{
     my $self = shift;
 
-    return (['individual_genotype_single_bp','ig'],['variation_feature','vf']) if (!$self->_multiple);
-    return (['individual_genotype_multiple_bp','ig'],['variation_feature','vf']) if ($self->_multiple);
+    return (['individual_genotype_single_bp','ig'],['variation_feature','vf'],['failed_variation','fv']) if (!$self->_multiple);
+    return (['individual_genotype_multiple_bp','ig'],['variation_feature','vf'],['failed_variation','fv']) if ($self->_multiple);
     
 }
+
+#ÊAdd a left join to the failed_variation table
+sub _left_join { return ([ 'failed_variation', 'fv.variation_id = vf.variation_id']); }
 
 sub _columns{
     return qw(ig.sample_id ig.variation_id ig.allele_1 ig.allele_2 vf.seq_region_id vf.seq_region_start vf.seq_region_end vf.seq_region_strand);
