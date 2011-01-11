@@ -43,12 +43,14 @@ Bio::EnsEMBL::Variation::DBSQL::VariationFeatureAdaptor
   # Get a VariationFeature by its internal identifier
   $vf = $va->fetch_by_dbID(145);
 
+  # Include the variations that have been flagged as failed in the fetch
+  $vfa->db->include_failed_variations(1);
+  
   # get all VariationFeatures in a region
   $slice = $sa->fetch_by_region('chromosome', 'X', 1e6, 2e6);
   foreach $vf (@{$vfa->fetch_all_by_Slice($slice)}) {
     print $vf->start(), '-', $vf->end(), ' ', $vf->allele_string(), "\n";
   }
-
 
   # fetch all genome hits for a particular variation
   $v = $va->fetch_by_name('rs56');
@@ -62,7 +64,10 @@ Bio::EnsEMBL::Variation::DBSQL::VariationFeatureAdaptor
 
 This adaptor provides database connectivity for VariationFeature objects.
 Genomic locations of variations can be obtained from the database using this
-adaptor.  See the base class BaseFeatureAdaptor for more information.
+adaptor. See the base class BaseFeatureAdaptor for more information.
+By default, the 'fetch_all_by_...'-methods will not return variations
+that have been flagged as failed in the Ensembl QC. This behaviour can be modified
+by setting the include_failed_variations flag in Bio::EnsEMBL::Variation::DBSQL::DBAdaptor.
 
 =head1 METHODS
 
@@ -110,6 +115,9 @@ sub fetch_all_by_Slice_constraint {
         $constraint = $somatic_constraint;
     }
     
+    # Add the constraint for failed variations
+    $constraint .= " AND " . $self->db->_exclude_failed_variations_constraint();
+    
     return $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint);
 }
 
@@ -140,6 +148,9 @@ sub fetch_all_somatic_by_Slice_constraint {
     else {
         $constraint = $somatic_constraint;
     }
+    
+    # Add the constraint for failed variations
+    $constraint .= " AND " . $self->db->_exclude_failed_variations_constraint();
     
     return $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint);
 }
@@ -271,12 +282,16 @@ sub _internal_fetch_all_with_annotation_by_Slice{
         $extra_sql .= qq{ AND $constraint };
     }
     
+    # Add the constraint for failed variations
+    $extra_sql .= " AND " . $self->db->_exclude_failed_variations_constraint();
+    
     my $cols = join ",", $self->_columns();
     
     my $sth = $self->prepare(qq{
 		SELECT $cols
 		FROM variation_feature vf, variation_annotation va,
 		phenotype p, source s, source ps # need to link twice to source
+		LEFT JOIN failed_variation fv ON (fv.variation_id = vf.variation_id)
 		WHERE va.source_id = ps.source_id
 		AND vf.source_id = s.source_id
 		AND vf.variation_id = va.variation_id
@@ -444,11 +459,15 @@ sub fetch_all_by_Slice_Population {
 	$extra_sql = qq{ AND (IF(a.frequency > 0.5, 1-a.frequency, a.frequency) > $freq) }
   }
   
+  # Add the constraint for failed variations
+  $extra_sql .= " AND " . $self->db->_exclude_failed_variations_constraint();
+
   my $cols = join ",", $self->_columns();
   
   my $sth = $self->prepare(qq{
 	SELECT $cols
 	FROM variation_feature vf, source s, allele a
+	LEFT JOIN failed_variation fv ON (fv.variation_id = vf.variation_id)
 	WHERE vf.source_id = s.source_id
 	AND vf.variation_id = a.variation_id
 	AND a.sample_id = ?
@@ -520,12 +539,16 @@ sub _internal_fetch_all_with_annotation {
         $extra_sql .= qq{ AND $constraint };
     }
     
+    # Add the constraint for failed variations
+    $extra_sql .= " AND " . $self->db->_exclude_failed_variations_constraint();
+    
     my $cols = join ",", $self->_columns();
     
     my $sth = $self->prepare(qq{
         SELECT $cols
         FROM variation_feature vf, variation_annotation va,
         phenotype p, source s, source ps # need to link twice to source
+	LEFT JOIN failed_variation fv ON (fv.variation_id = vf.variation_id)
         WHERE va.source_id = ps.source_id
         AND vf.source_id = s.source_id
         AND vf.variation_id = va.variation_id
@@ -600,8 +623,13 @@ sub fetch_all_somatic_with_annotation {
 
 # method used by superclass to construct SQL
 sub _tables { return (['variation_feature', 'vf'],
-		      [ 'source', 's']); }
+		      [ 'source', 's'],
+		      [ 'failed_variation', 'fv']
+		      );
+}
 
+#ÊAdd a left join to the failed_variation table
+sub _left_join { return ([ 'failed_variation', 'fv.variation_id = vf.variation_id']); }
 
 sub _default_where_clause {
   my $self = shift;
@@ -635,7 +663,7 @@ sub _objs_from_sth {
   my ($variation_feature_id, $seq_region_id, $seq_region_start,
       $seq_region_end, $seq_region_strand, $variation_id,
       $allele_string, $variation_name, $map_weight, $source_name, 
-      $is_somatic, $validation_status, $consequence_type, $class_so_id);
+      $is_somatic, $validation_status, $consequence_type, $class_so_id, $last_vf_id);
 
   $sth->bind_columns(\$variation_feature_id, \$seq_region_id,
                      \$seq_region_start, \$seq_region_end, \$seq_region_strand,
@@ -670,6 +698,10 @@ sub _objs_from_sth {
   }
 
   FEATURE: while($sth->fetch()) {
+    
+    # Skip if we are getting multiple rows because of the left join to failed variation
+    next if (defined($last_vf_id) && $last_vf_id == $variation_feature_id);
+    
     #get the slice object
     my $slice = $slice_hash{"ID:".$seq_region_id};
     if(!$slice) {
