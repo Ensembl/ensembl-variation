@@ -91,7 +91,7 @@ use Bio::EnsEMBL::Feature;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Utils::Argument  qw(rearrange);
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp); 
-use Bio::EnsEMBL::Variation::Utils::Sequence qw(ambiguity_code variation_class hgvs_variant_notation);
+use Bio::EnsEMBL::Variation::Utils::Sequence qw(ambiguity_code hgvs_variant_notation SO_variation_class);
 use Bio::EnsEMBL::Variation::ConsequenceType;
 use Bio::EnsEMBL::Variation::Variation;
 use Bio::EnsEMBL::Slice;
@@ -173,12 +173,13 @@ my %CONSEQUENCE_TYPES = %Bio::EnsEMBL::Variation::ConsequenceType::CONSEQUENCE_T
 sub new {
   my $caller = shift;
   my $class = ref($caller) || $caller;
-
+    
   my $self = $class->SUPER::new(@_);
-  my ($allele_str, $var_name, $map_weight, $variation, $variation_id, $source, $is_somatic, $validation_code, $consequence_type) =
+  my ($allele_str, $var_name, $map_weight, $variation, $variation_id, $source, 
+    $is_somatic, $validation_code, $consequence_type, $class_so_id) =
     rearrange([qw(ALLELE_STRING VARIATION_NAME 
                   MAP_WEIGHT VARIATION _VARIATION_ID SOURCE IS_SOMATIC VALIDATION_CODE 
-		  CONSEQUENCE_TYPE)], @_);
+		  CONSEQUENCE_TYPE CLASS_SO_ID)], @_);
 
   $self->{'allele_string'}    = $allele_str;
   $self->{'variation_name'}   = $var_name;
@@ -189,6 +190,7 @@ sub new {
   $self->{'is_somatic'}       = $is_somatic;
   $self->{'validation_code'}  = $validation_code;
   $self->{'consequence_type'} = $consequence_type || ['INTERGENIC'];
+  $self->{'class_so_id'}      = $class_so_id;
   
   return $self;
 }
@@ -778,7 +780,26 @@ sub ambig_code{
 
 sub var_class{
     my $self = shift;
-    return &variation_class($self->allele_string, $self->is_somatic);
+    
+    unless ($self->{class_display_term}) {
+        
+        # convert the SO_id to the ensembl display term
+        if (my $display_term = $self->{adaptor}->_display_term_for_SO_id($self->{class_SO_id})) {
+            $self->{class_display_term} = $display_term;
+        }
+        else {
+            # work out the term from the allele string
+            my $SO_term = SO_variation_class($self->allele_string);
+            if (my $display_term = $self->{adaptor}->_display_term_for_SO_term($SO_term)) {
+                $self->{class_display_term} = $display_term;
+            }
+            else {
+                die "Unrecognised SO term: $SO_term";
+            }
+        }
+    }
+    
+    return $self->{class_display_term};
 }
 
 
@@ -1251,7 +1272,7 @@ sub get_all_hgvs_notations {
 	
 	#ÊTypically, if the variation is intronic, the fields in transcript_variation for positions are undefined
 	# We cannot get protein notation for an intronic SNP, so return an empty list
-	return {} if (!defined($transcript_variation) || !defined($transcript_variation->translation_start()) || !defined($transcript_variation->translation_end()));
+	return {} if (!defined($transcript_variation) || !defined($transcript_variation->pep_start()) || !defined($transcript_variation->pep_end()));
       }
     }
     elsif ($ref_feature->isa('Bio::EnsEMBL::Slice')) {
@@ -1345,7 +1366,8 @@ sub get_all_hgvs_notations {
       my $end_phase = ($cds_end - 1)%3;
       
       # Get the complete, affected codons. Break it apart into the upstream piece, the allele and the downstream piece
-      my $cds = $ref_feature->translateable_seq();
+      #my $cds = $ref_feature->translateable_seq();
+      my $cds = $transcript_variation->translateable_seq();
       my $codon_ref = substr($cds,($cds_start - 1),($cds_end - $cds_start + 1));
       my $codon_down = substr($cds,$cds_end,(2-$end_phase));
       $codon_up = substr($cds,($cds_start - $start_phase - 1),$start_phase);
