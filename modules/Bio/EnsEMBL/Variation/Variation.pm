@@ -101,7 +101,7 @@ package Bio::EnsEMBL::Variation::Variation;
 
 use Bio::EnsEMBL::Storable;
 use Bio::EnsEMBL::Utils::Argument qw(rearrange);
-use Bio::EnsEMBL::Variation::Utils::Sequence qw(ambiguity_code variation_class);
+use Bio::EnsEMBL::Variation::Utils::Sequence qw(ambiguity_code SO_variation_class);
 use Bio::EnsEMBL::Utils::Exception qw(throw deprecate warning);
 use vars qw(@ISA);
 
@@ -185,12 +185,11 @@ sub new {
   my $caller = shift;
   my $class = ref($caller) || $caller;
 
-  my ($dbID, $adaptor, $name, $src, $src_desc, $src_url, $is_somatic, $syns, $ancestral_allele,
+  my ($dbID, $adaptor, $name, $class_so_id, $src, $src_desc, $src_url, $is_somatic, $syns, $ancestral_allele,
       $alleles, $valid_states, $moltype, $five_seq, $three_seq, $failed_description, $flank_flag) =
-        rearrange([qw(dbID ADAPTOR NAME SOURCE SOURCE_DESCRIPTION SOURCE_URL IS_SOMATIC SYNONYMS ANCESTRAL_ALLELE ALLELES
-                      VALIDATION_STATES MOLTYPE FIVE_PRIME_FLANKING_SEQ
+        rearrange([qw(dbID ADAPTOR NAME CLASS_SO_ID SOURCE SOURCE_DESCRIPTION SOURCE_URL IS_SOMATIC 
+                      SYNONYMS ANCESTRAL_ALLELE ALLELES VALIDATION_STATES MOLTYPE FIVE_PRIME_FLANKING_SEQ
                       THREE_PRIME_FLANKING_SEQ FAILED_DESCRIPTION FLANK_FLAG)],@_);
-
 
   # convert the validation state strings into a bit field
   # this preserves the same order and representation as in the database
@@ -204,6 +203,7 @@ sub new {
   return bless {'dbID' => $dbID,
                 'adaptor' => $adaptor,
                 'name'   => $name,
+                'class_so_id' => $class_so_id,
                 'source' => $src,
 				'source_description' => $src_desc,
 				'source_url' => $src_url,
@@ -862,11 +862,32 @@ sub ambig_code{
 sub var_class{
     my $self = shift;
     
-    my $alleles = $self->get_all_Alleles(); #get all Allele objects
-    my %alleles; #to get all the different alleles in the Variation
-    map {$alleles{$_->allele}++} @{$alleles};
-    my $allele_string = join "|",keys %alleles;
-    return &variation_class($allele_string, $self->is_somatic);
+    unless ($self->{class_display_term}) {
+        
+        # convert the SO_id to the ensembl display term
+        if (my $display_term = $self->{adaptor}->_display_term_for_SO_id($self->{class_SO_id}, $self->is_somatic)) {
+            $self->{class_display_term} = $display_term;
+        }
+        else {
+            # work out the term from the alleles
+            
+            my $alleles = $self->get_all_Alleles(); #get all Allele objects
+            my %alleles; #to get all the different alleles in the Variation
+            map {$alleles{$_->allele}++} @{$alleles};
+            my $allele_string = join '/',keys %alleles;
+            
+            my $SO_term = SO_variation_class($self->allele_string);
+            
+            if (my $display_term = $self->{adaptor}->_display_term_for_SO_term($SO_term, $self->is_somatic)) {
+                $self->{class_display_term} = $display_term;
+            }
+            else {
+                die "Unrecognised SO term: $SO_term";
+            }
+        }
+    }
+    
+    return $self->{class_display_term};
 }
 
 =head2 failed_description
