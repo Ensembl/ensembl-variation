@@ -59,7 +59,7 @@ use vars qw(@ISA @EXPORT_OK);
 
 @ISA = qw(Exporter);
 
-@EXPORT_OK = qw(&ambiguity_code &variation_class &unambiguity_code &sequence_with_ambiguity &hgvs_variant_notation);
+@EXPORT_OK = qw(&ambiguity_code &variation_class &unambiguity_code &sequence_with_ambiguity &hgvs_variant_notation &SO_variation_class);
 
 
 =head2 ambiguity_code
@@ -214,6 +214,86 @@ sub variation_class{
     }
     
     return $class;
+}
+
+=head2 SO_variation_class
+
+  Arg[1]      : string $alleles
+  Example     : use Bio::EnsEMBL::Variation::Utils::Sequence qw (SO_variation_class)
+                my $alleles = 'A/C';    
+                my $SO_term = SO_variation_class($alleles);
+                print "the SO term for the alleles $alleles is: ",$SO_term;
+  Description : return the SO term for the class of the alleles
+  ReturnType  : String. The SO term for the class of the alleles
+  Exceptions  : none
+  Caller      : Variation, VariationFeature
+
+=cut
+
+sub SO_variation_class {
+    
+     my $alleles = shift;
+
+    if ($alleles =~ /^[ACGTN](\/[ACGTN])+$/) {
+        # A/T, A/T/G
+        return 'SNV';
+    }
+    elsif ($alleles =~ /^[ACTGN]+(\/[ACTGN]+)+$/) {
+        # AA/TTT
+        return 'substitution';
+    }
+    elsif ($alleles =~ /\)\d+/) {
+        # (CAG)8/(CAG)9
+        return 'tandem_repeat';
+    }
+    else {
+        my @alleles = split /\//, $alleles;
+
+        if (@alleles > 1) {
+
+            my $ref = shift @alleles;
+
+            if ($ref eq '-') {
+
+                if (@alleles == 1 && $alleles[0] =~ /DEL/) {
+                    # -/(LARGEDELETION) (rather oddly!)
+                    return 'deletion';
+                }
+
+                unless (grep { $_ !~ /^[ACGTN]+$|INS/ } @alleles) {
+                    # -/ATT, -/(LARGEINSERTION)
+                    return 'insertion';
+                }
+
+                # else must be mixed insertion and deletion, so just called sequence_alteration
+            }
+            elsif ($ref =~ /^[ACGTN]+$/) {
+                unless (grep { $_ !~ /-|DEL/ } @alleles) {
+                    # A/-, A/(LARGEDELETION)
+                    return 'deletion';
+                }
+            }
+            elsif ($ref =~ /DEL/) {
+                unless (grep { $_ !~ /-/ } @alleles) {
+                    # (LARGEDELETION)/-, (2345 BP DELETION)/-
+                    return 'deletion';
+                }
+            }
+        }
+        elsif (@alleles == 1) {
+            if ($alleles[0] =~ /INS/) {
+                # (LARGEINSERTION)
+                return 'insertion';
+            }
+            elsif($alleles[0] =~ /DEL/) {
+                # (308 BP DELETION)
+                return 'deletion';
+            }
+        }
+    }
+
+    # default to sequence_alteration
+    return 'sequence_alteration';
 }
 
 =head2 sequence_with_ambiguity
