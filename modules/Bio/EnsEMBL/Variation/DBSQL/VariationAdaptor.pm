@@ -68,15 +68,16 @@ use warnings;
 
 package Bio::EnsEMBL::Variation::DBSQL::VariationAdaptor;
 
-use Bio::EnsEMBL::DBSQL::BaseAdaptor;
+use Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 
 use Bio::EnsEMBL::Variation::Variation;
 use Bio::EnsEMBL::Variation::Allele;
 use Bio::EnsEMBL::Utils::Iterator;
 
-our @ISA = ('Bio::EnsEMBL::DBSQL::BaseAdaptor');
+use DBI qw(:sql_types);
 
+our @ISA = ('Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor');
 
 =head2 fetch_by_dbID
 
