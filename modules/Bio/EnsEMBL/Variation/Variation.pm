@@ -203,7 +203,7 @@ sub new {
   return bless {'dbID' => $dbID,
                 'adaptor' => $adaptor,
                 'name'   => $name,
-                'class_so_id' => $class_so_id,
+                'class_SO_id' => $class_so_id,
                 'source' => $src,
 				'source_description' => $src_desc,
 				'source_url' => $src_url,
@@ -876,7 +876,7 @@ sub var_class{
             map {$alleles{$_->allele}++} @{$alleles};
             my $allele_string = join '/',keys %alleles;
             
-            my $SO_term = SO_variation_class($self->allele_string);
+            my $SO_term = SO_variation_class($allele_string);
             
             if (my $display_term = $self->{adaptor}->_display_term_for_SO_term($SO_term, $self->is_somatic)) {
                 $self->{class_display_term} = $display_term;
