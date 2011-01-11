@@ -104,6 +104,7 @@ use Bio::EnsEMBL::Utils::Argument qw(rearrange);
 use Bio::EnsEMBL::Variation::Utils::Sequence qw(ambiguity_code SO_variation_class);
 use Bio::EnsEMBL::Utils::Exception qw(throw deprecate warning);
 use vars qw(@ISA);
+use Scalar::Util qw(weaken);
 
 @ISA = qw(Bio::EnsEMBL::Storable);
 
@@ -165,9 +166,6 @@ our %VSTATE2BIT = (
   Arg [-THREE_PRIME_FLANKING_SEQ] :
     string - the three prime flanking nucleotide sequence
 
-  Arg [-FAILED_DESCRIPTION] :
-    string - description why the variation failed Ensembl pipeline
-
   Example    : $v = Bio::EnsEMBL::Variation::Variation->new
                     (-name   => 'rs123',
                      -source => 'dbSNP');
@@ -186,10 +184,10 @@ sub new {
   my $class = ref($caller) || $caller;
 
   my ($dbID, $adaptor, $name, $class_so_id, $src, $src_desc, $src_url, $is_somatic, $syns, $ancestral_allele,
-      $alleles, $valid_states, $moltype, $five_seq, $three_seq, $failed_description, $flank_flag) =
+      $alleles, $valid_states, $moltype, $five_seq, $three_seq, $flank_flag) =
         rearrange([qw(dbID ADAPTOR NAME CLASS_SO_ID SOURCE SOURCE_DESCRIPTION SOURCE_URL IS_SOMATIC 
                       SYNONYMS ANCESTRAL_ALLELE ALLELES VALIDATION_STATES MOLTYPE FIVE_PRIME_FLANKING_SEQ
-                      THREE_PRIME_FLANKING_SEQ FAILED_DESCRIPTION FLANK_FLAG)],@_);
+                      THREE_PRIME_FLANKING_SEQ FLANK_FLAG)],@_);
 
   # convert the validation state strings into a bit field
   # this preserves the same order and representation as in the database
@@ -199,27 +197,175 @@ sub new {
   foreach my $vstate (@$valid_states) {
     $vcode |= $VSTATE2BIT{lc($vstate)} || 0;
   }
+  
+  my $self;
+  
+  if (defined($alleles)) {
+    # Loop over the supplied alleles and weaken the link in order to prevent circular references. Also add a reference to this variation object to each of the alleles
+    foreach my $allele (@{$alleles}) {
+      $allele->variation($self);
+      weaken($allele->{'variation'});
+    }
+  }
 
-  return bless {'dbID' => $dbID,
-                'adaptor' => $adaptor,
-                'name'   => $name,
-                'class_SO_id' => $class_so_id,
-                'source' => $src,
-				'source_description' => $src_desc,
-				'source_url' => $src_url,
-				'is_somatic' => $is_somatic,
-                'synonyms' => $syns || {},
-		        'ancestral_allele' => $ancestral_allele,
-                'alleles' => $alleles || [],
-                'validation_code' => $vcode,
-		        'moltype' => $moltype,
-                'five_prime_flanking_seq' => $five_seq,
-                'three_prime_flanking_seq' => $three_seq,
-	            'failed_description' => $failed_description,
-			    'flank_flag' => $flank_flag}, $class;
+  $self = {
+    'dbID' => $dbID,
+    'adaptor' => $adaptor,
+    'name'   => $name,
+    'class_SO_id' => $class_so_id,
+    'source' => $src,
+    'source_description' => $src_desc,
+    'source_url' => $src_url,
+    'is_somatic' => $is_somatic,
+    'synonyms' => $syns || {},
+    'ancestral_allele' => $ancestral_allele,
+    'alleles' => $alleles || [],
+    'validation_code' => $vcode,
+    'moltype' => $moltype,
+    'five_prime_flanking_seq' => $five_seq,
+    'three_prime_flanking_seq' => $three_seq,
+    'flank_flag' => $flank_flag
+  };
+  
+  return bless $self, $class;
 }
 
 
+=head2 is_failed
+
+  Arg [1]    : string $subsnp_id (optional)
+               The particular subsnp id to check the failed attribute for
+  Example    : $failed = $obj->is_failed('ss123456');
+  Description: Gets the failed attribute for this variation. If a subsnp_id is specified,
+               the failed attribute refers to that subsnp. The failed attributes
+	       are lazy-loaded from the database.
+  Returntype : int
+  Exceptions : none
+  Caller     : general
+  Status     : At risk
+
+=cut
+
+sub is_failed {
+  my $self = shift;
+  my $subsnp_id = shift;
+  
+  return defined($self->failed_description(undef,$subsnp_id));
+}
+
+=head2 has_failed_subsnps
+
+  Example    : $has_failed = $obj->has_failed_subsnps();
+  Description: Returns true if this variation has subsnps that are flagged as failed
+  Returntype : int
+  Exceptions : none
+  Caller     : general
+  Status     : At risk
+
+=cut
+
+sub has_failed_subsnps {
+  my $self = shift;
+  
+  return $self->adaptor->has_failed_subsnps($self->dbID());
+}
+
+=head2 failed_description
+
+  Arg [1]    : string $failed_description (optional)
+	       The new value to set the failed_description attribute to 
+  Arg [2]    : string $subsnp_id (optional)
+               The particular subsnp id to check the failed attribute for
+  Example    : $failed_str = $obj->failed_description(undef,'ss123456');
+  Description: Get/Sets the failed attribute for this variation. If a subsnp_id is specified,
+               the failed description refers only to that subsnp. The failed
+	       descriptions are lazy-loaded from the database.
+  Returntype : int
+  Exceptions : none
+  Caller     : general
+  Status     : At risk
+
+=cut
+
+sub failed_description {
+  my $self = shift;
+  my $description = shift;
+  my $subsnp_id = shift;
+  
+  #ÊIf the failed description for the entire variation is desired, use 0 for subsnp_id
+  $subsnp_id ||= 0;
+  
+  #ÊStrip any non-integer prefixes
+  $subsnp_id =~ s/^[^\d]*(\d+)/$1/;
+  
+  #ÊIf a description was specified, set the value. Also clear the '_all_failed_descriptions' cache.
+  if (defined($description)) {
+    $self->{'_failed_description'}{$subsnp_id} = $description;
+    delete($self->{'_all_failed_descriptions'}) if (exists($self->{'_all_failed_descriptions'}));
+  }
+  #ÊIf we don't know the description, lazy-load it from the database
+  elsif (!exists($self->{'_failed_description'}{$subsnp_id})) {
+    $self->{'_failed_description'}{$subsnp_id} = $self->adaptor->get_failed_description($self->{'dbID'},$subsnp_id);
+  }
+  
+  return $self->{'_failed_description'}{$subsnp_id};
+}
+
+=head2 get_all_failed_descriptions
+
+  Example     : my $failed_descriptions = $v->get_all_failed_descriptions();
+		print "The variation " . $v->name() . " and its subsnps have been failed with descriptions '" . join(",",@{$failed_descriptions}) . "'\n";
+		
+  Description : Gets the unique descriptions for the reasons why this variation and any failed subsnps have failed.
+  ReturnType  : reference to a list of strings
+  Exceptions  : none
+  Caller      : general
+  Status      : At Risk
+
+=cut
+
+sub get_all_failed_descriptions {
+  my $self = shift;
+  
+  #ÊIf we don't know the descriptions, lazy-load them from the database
+  if (!exists($self->{'_all_failed_descriptions'})) {
+    $self->{'_all_failed_descriptions'} = $self->adaptor->get_all_failed_descriptions($self->{'dbID'});
+  }
+  
+  return $self->{'_all_failed_descriptions'};
+}
+
+
+=head2 add_Allele
+
+  Arg [1]    : Bio::EnsEMBL::Variation::Allele $allele
+  Example    : $v->add_Allele(Bio::EnsEMBL::Variation::Alelele->new(...));
+  Description: Associates an Allele with this variation
+  Returntype : none
+  Exceptions : throw on incorrect argument
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub add_Allele {
+  my $self = shift;
+  my $allele = shift;
+
+  if(!ref($allele) || !$allele->isa('Bio::EnsEMBL::Variation::Allele')) {
+    throw("Bio::EnsEMBL::Variation::Allele argument expected");
+  }
+
+  #ÊAdd a reference to ourself to the allele object
+  $allele->variation($self);
+  #ÊWe need to weaken this reference since it is circular
+  weaken($allele->{'variation'});
+  
+  # If we add an allele, we need to empty the '_all_failed_descriptions'-cache
+  delete($self->{'_all_failed_descriptions'}) if (exists($self->{'_all_failed_descriptions'}));
+  
+  push @{$self->{'alleles'}}, $allele;
+}
 
 =head2 name
 
@@ -618,28 +764,6 @@ sub get_all_Alleles {
 
 
 
-=head2 add_Allele
-
-  Arg [1]    : Bio::EnsEMBL::Variation::Allele $allele
-  Example    : $v->add_Allele(Bio::EnsEMBL::Variation::Alelele->new(...));
-  Description: Associates an Allele with this variation
-  Returntype : none
-  Exceptions : throw on incorrect argument
-  Caller     : general
-  Status     : At Risk
-
-=cut
-
-sub add_Allele {
-  my $self = shift;
-  my $allele = shift;
-
-  if(!ref($allele) || !$allele->isa('Bio::EnsEMBL::Variation::Allele')) {
-    throw("Bio::EnsEMBL::Variation::Allele argument expected");
-  }
-
-  push @{$self->{'alleles'}}, $allele;
-}
 
 =head2 ancestral_allele
 
@@ -888,25 +1012,6 @@ sub var_class{
     }
     
     return $self->{class_display_term};
-}
-
-=head2 failed_description
-
-  Arg [1]    : string $failed_description (optional)
-               The new value to set the failed_description attribute to
-  Example    : $failed_description = $v->failed_description()
-  Description: Getter/Setter for the failed_description attribute
-  Returntype : string
-  Exceptions : none
-  Caller     : general
-  Status     : Stable
-
-=cut
-
-sub failed_description{
-  my $self = shift;
-  return $self->{'failed_description'} = shift if(@_);
-  return $self->{'failed_description'};
 }
 
 =head2 derived_allele_frequency
