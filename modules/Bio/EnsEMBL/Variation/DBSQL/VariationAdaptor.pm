@@ -397,10 +397,10 @@ sub fetch_all_by_dbID_list {
   return \@out;
 }
 
-=head2 fetch_iterator_by_dbID_list
+=head2 fetch_Iterator_by_dbID_list
 
   Arg [1]    : reference to list of ints $list
-  Example    : $variation_iterator = $va->fetch_iterator_by_dbID_list([124, 56, 90]);
+  Example    : $variation_iterator = $va->fetch_Iterator_by_dbID_list([124, 56, 90]);
   Description: Retrieves an iterator over a set of variations via their internal identifiers.
   Returntype : Bio::EnsEMBL::Utils::Iterator
   Exceptions : throw on bad argument
@@ -409,7 +409,7 @@ sub fetch_all_by_dbID_list {
 
 =cut
 
-sub fetch_iterator_by_dbID_list {
+sub fetch_Iterator_by_dbID_list {
     my ($self, $dbid_list, $cache_size) = @_;
     
     unless ((defined $dbid_list) && (ref $dbid_list eq 'ARRAY')) {
@@ -757,10 +757,10 @@ sub fetch_all_by_VariationSet {
     return $self->_generic_fetch_by_VariationSet(0, @_);
 }
 
-=head2 fetch_iterator_by_VariationSet
+=head2 fetch_Iterator_by_VariationSet
 
   Arg [1]    : Bio::EnsEMBL::Variation::VariationSet
-  Example    : $var_iterator = $va_adaptor->fetch_iterator_by_VariationSet($vs);
+  Example    : $var_iterator = $va_adaptor->fetch_Iterator_by_VariationSet($vs);
   Description: Retrieves an iterator for all variations which are present in a specified
                variation set and its subsets.
   Returntype : Bio::EnsEMBL::Utils::Iterator object
@@ -770,8 +770,7 @@ sub fetch_all_by_VariationSet {
 
 =cut
 
-
-sub fetch_iterator_by_VariationSet {
+sub fetch_Iterator_by_VariationSet {
     my $self = shift;
     return $self->_generic_fetch_by_VariationSet(1, @_);
 }
@@ -797,12 +796,12 @@ sub _generic_fetch_by_VariationSet {
 
     if ($num_vars > 100_000 && !$want_iterator) {
         warn "This set contains a large number ($num_vars) of variations, these may not fit".
-            "into memory at once, considering using fetch_iterator_by_VariationSet instead";
+            "into memory at once, considering using fetch_Iterator_by_VariationSet instead";
     }
 
     # Use the dbIDs to get all variations and return them
     return $want_iterator ? 
-        $self->fetch_iterator_by_dbID_list($dbid_list) : 
+        $self->fetch_Iterator_by_dbID_list($dbid_list) : 
         $self->fetch_all_by_dbID_list($dbid_list);
 }
 
