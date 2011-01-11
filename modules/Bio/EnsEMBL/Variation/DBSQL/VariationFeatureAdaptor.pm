@@ -74,11 +74,11 @@ use warnings;
 package Bio::EnsEMBL::Variation::DBSQL::VariationFeatureAdaptor;
 
 use Bio::EnsEMBL::Variation::VariationFeature;
-use Bio::EnsEMBL::Variation::DBSQL::BaseVariationAdaptor;
+use Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor;
 use Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 
-our @ISA = ('Bio::EnsEMBL::Variation::DBSQL::BaseVariationAdaptor');
+our @ISA = ('Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor', 'Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor');
 our $MAX_VARIATION_SET_ID = 64;
 
 =head2 fetch_all_by_Slice_constraint
