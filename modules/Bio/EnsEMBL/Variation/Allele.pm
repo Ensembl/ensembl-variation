@@ -282,9 +282,41 @@ sub variation {
 
 sub is_failed {
   my $self = shift;
+  
+  #ÊCheck that this allele has a reference to the variation
+  if (!defined($self->variation())) {
+    throw('The allele object must have a reference to a Bio::EnsEMBL::Variation::Variation object in order to get the failed attribute.');
+  }
+  
   return $self->variation->is_failed($self->subsnp());
 }
 
+
+=head2 failed_description
+
+  Arg [1]    : string $failed_description (optional)
+	       The new value to set the failed_description attribute to 
+  Example    : $failed_str = $allele->failed_description();
+  Description: Get/Sets the failed attribute for this allele. The failed
+	       descriptions are lazy-loaded from the database.
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : At risk
+
+=cut
+
+sub failed_description {
+  my $self = shift;
+  my $description = shift;
+  
+  #ÊCheck that this allele has a reference to the variation
+  if (!defined($self->variation())) {
+    throw('The allele object must have a reference to a Bio::EnsEMBL::Variation::Variation object in order to use the failed description.');
+  }
+  
+  return $self->variation->failed_description($description,$self->subsnp);
+}
 
 =head2 subsnp_handle
 
