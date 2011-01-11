@@ -246,14 +246,16 @@ sub _tables{
     my $self = shift;
 
     if ($self->from_IndividualSlice){	
-	return (['variation_feature','vf'], ['individual_genotype_single_bp','ig']) if (!$self->_multiple_bp());
-	return (['variation_feature','vf'], ['individual_genotype_multiple_bp','ig']) if ($self->_multiple_bp());
+	return (['variation_feature','vf'], ['individual_genotype_single_bp','ig'], [ 'failed_variation', 'fv']) if (!$self->_multiple_bp());
+	return (['variation_feature','vf'], ['individual_genotype_multiple_bp','ig'], [ 'failed_variation', 'fv']) if ($self->_multiple_bp());
     }
     else{
-	return (['variation_feature','vf'],  ['source','s FORCE INDEX(PRIMARY)']);
+	return (['variation_feature','vf'],  ['source','s FORCE INDEX(PRIMARY)'], [ 'failed_variation', 'fv']);
     }
-
 }
+
+#ÊAdd a left join to the failed_variation table
+sub _left_join { return ([ 'failed_variation', 'fv.variation_id = vf.variation_id']); }
 
 sub _columns{
     my $self = shift;
