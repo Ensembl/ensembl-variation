@@ -190,7 +190,7 @@ sub new {
   $self->{'is_somatic'}       = $is_somatic;
   $self->{'validation_code'}  = $validation_code;
   $self->{'consequence_type'} = $consequence_type || ['INTERGENIC'];
-  $self->{'class_so_id'}      = $class_so_id;
+  $self->{'class_SO_id'}      = $class_so_id;
   
   return $self;
 }
@@ -784,13 +784,13 @@ sub var_class{
     unless ($self->{class_display_term}) {
         
         # convert the SO_id to the ensembl display term
-        if (my $display_term = $self->{adaptor}->_display_term_for_SO_id($self->{class_SO_id})) {
+        if (my $display_term = $self->{adaptor}->_display_term_for_SO_id($self->{class_SO_id}, $self->is_somatic)) {
             $self->{class_display_term} = $display_term;
         }
         else {
             # work out the term from the allele string
             my $SO_term = SO_variation_class($self->allele_string);
-            if (my $display_term = $self->{adaptor}->_display_term_for_SO_term($SO_term)) {
+            if (my $display_term = $self->{adaptor}->_display_term_for_SO_term($SO_term, $self->is_somatic)) {
                 $self->{class_display_term} = $display_term;
             }
             else {
