@@ -1366,8 +1366,8 @@ sub get_all_hgvs_notations {
       my $end_phase = ($cds_end - 1)%3;
       
       # Get the complete, affected codons. Break it apart into the upstream piece, the allele and the downstream piece
-      #my $cds = $ref_feature->translateable_seq();
-      my $cds = $transcript_variation->translateable_seq();
+      my $cds = $ref_feature->translateable_seq();
+      #my $cds = $transcript_variation->translateable_seq();
       my $codon_ref = substr($cds,($cds_start - 1),($cds_end - $cds_start + 1));
       my $codon_down = substr($cds,$cds_end,(2-$end_phase));
       $codon_up = substr($cds,($cds_start - $start_phase - 1),$start_phase);
