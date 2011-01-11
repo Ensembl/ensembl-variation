@@ -78,14 +78,15 @@ use warnings;
 
 package Bio::EnsEMBL::Variation::DBSQL::TranscriptVariationAdaptor;
 
-use Bio::EnsEMBL::Variation::DBSQL::BaseVariationAdaptor;
+use Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor;
+use Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp expand);
 use Bio::EnsEMBL::Utils::TranscriptAlleles qw(type_variation);
 
 use Bio::EnsEMBL::Variation::TranscriptVariation;
 
-our @ISA = ('Bio::EnsEMBL::Variation::DBSQL::BaseVariationAdaptor');
+our @ISA = ('Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor', 'Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor');
 
 # size that we look either side of a variation for transcripts
 our $UP_DOWN_SIZE = 5000;
