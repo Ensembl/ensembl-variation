@@ -89,4 +89,95 @@ sub get_available_adaptors{
     return (\%pairs);
 }
 
+
+=head2 include_failed_variations
+
+  Arg [1]    : int $newval (optional)
+  Example    :
+		#ÊGet a DBAdaptor for the human variation database
+		my $dba = $registry->get_DBAdaptor('human','variation');
+		
+		#ÊConfigure the DBAdaptor to return failed variations when using
+		#Êfetch methods in the various object adaptors
+		$dba->include_failed_variations(1);
+		
+		#ÊGet a variation set adaptor
+		my $vs_adaptor = $dba->get_VariationSetAdaptor();
+		
+		#ÊGet a variation set for the 1000 genomes high coverage Yoruba trio data
+		my $vs = $vs_adaptor->fetch_by_name('1000 genomes - High coverage - Trios - YRI');
+		
+		# Get the iterator for the variations belonging to this variation set.
+		#ÊThis will now include variations that has been flagged as being failed.
+		#ÊThe default behaviour is not to return these.
+		my $it = $vs->get_Variation_Iterator();
+		
+		# Iterate over the variations
+		while ($it->has_next()) {
+		
+		    # Get the next variation object in the iterator
+		    my $v = $it->next();
+		    
+		    # Check if the variation is flagged as failed
+		    if ($v->is_failed()) {
+			# Do something...
+		    }
+		    # If not, check if any of its subsnps have been flagged as failed
+		    elsif ($v->has_failed_subsnps()) {
+			#ÊDo something else...
+		    }
+		    else {
+			#ÊDo something else...
+		    }
+		}
+		Ê
+  Description: Getter/Setter for the behaviour of the adaptors connected through this
+	       DBAdaptor when it comes to variations that have been flagged as failed.
+	       The default behaviour is not to return these variations in e.g. the
+	       'fetch_all_by...'-type methods. If this flag is set, those methods will
+	       instead also return failed variations. Note that a variation is considered
+	       failed when the variation itself is failed. If only some subsnps belonging
+	       to the variation are failed, the entire variation will not be considered
+	       to be failed.
+  Returntype : int
+  Exceptions : none
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub include_failed_variations {
+    my $self = shift;
+    my $include = shift;
+    
+    if (defined($include)) {$self->{'include_failed_variations'} = $include;}
+    
+    return $self->{'include_failed_variations'};
+}
+
+# API-internal method for getting the constraint to filter out failed variations. Assumes that the
+# failed_variation table has been (left) joined to the query and that the table alias is either supplied
+# or equals 'fv'
+sub _exclude_failed_variations_constraint {
+    my $self = shift;
+    my $failed_variation_alias = shift;
+    
+    # If not specified, assume that the failed_variation table alias is 'fv'
+    $failed_variation_alias ||= 'fv';
+    
+    #ÊIf we should include failed variations, no extra condition is needed
+    return qq{ 1 } if ($self->include_failed_variations());
+    
+    # Otherwise, add a constraint on the failed_variation table to have variation_id NULL or to have subsnp_id NOT NULL. Note that this assumes that there won't be any entries having subsnp_id both set and NULL for the same variation_id.
+    #ÊThis should be something for the post-processing/HCs to ensure 
+    my $constraint = qq{
+	(
+	    fv.variation_id IS NULL OR
+	    fv.subsnp_id IS NOT NULL
+	)
+    };
+    
+    return $constraint;
+}
+
 1;
