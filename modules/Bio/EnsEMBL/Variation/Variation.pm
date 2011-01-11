@@ -293,7 +293,7 @@ sub failed_description {
   my $subsnp_id = shift;
   
   #ÊIf the failed description for the entire variation is desired, use 0 for subsnp_id
-  $subsnp_id ||= 0;
+  $subsnp_id ||= 'rs';
   
   #ÊStrip any non-integer prefixes
   $subsnp_id =~ s/^[^\d]*(\d+)/$1/;
