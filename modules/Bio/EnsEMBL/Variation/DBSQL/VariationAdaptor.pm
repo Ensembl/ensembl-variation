@@ -103,7 +103,7 @@ sub fetch_by_dbID {
   # from the reference - it is just set to 0 when fetching variations
   # by other methods since otherwise the join takes too long  
   my $sth = $self->prepare
-    (q{SELECT v.variation_id, v.name, v.validation_status, s1.name, s1.description, s1.url, s1.somatic, v.ancestral_allele,
+    (q{SELECT v.variation_id, v.name, v.validation_status, v.class_so_id, s1.name, s1.description, s1.url, s1.somatic, v.ancestral_allele,
               a.allele_id, a.subsnp_id, a.allele, a.frequency, a.count, a.sample_id, vs.moltype,
               vs.name, s2.name, f.description, (fs.up_seq is not null OR fs.down_seq is not null)
        FROM   (variation v, source s1)
