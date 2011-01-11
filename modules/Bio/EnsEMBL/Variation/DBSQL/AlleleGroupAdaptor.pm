@@ -177,16 +177,21 @@ sub fetch_all_by_VariationGroup {
     throw('Variation group argument expected');
   }
 
+  # Add the constraint for failed variations
+  my $constraint = " AND " . $self->db->exclude_failed_variations_condition();
+    
   # left join allows allele groups without any alleles to be fetched
 
   my $sth = $self->prepare
-    (q{SELECT ag.allele_group_id, ag.variation_group_id, ag.sample_id,
+    (qq{SELECT ag.allele_group_id, ag.variation_group_id, ag.sample_id,
               ag.name, s.name, ag.frequency, aga.allele, aga.variation_id
        FROM   (allele_group ag, source s)
        LEFT JOIN allele_group_allele aga
        ON     aga.allele_group_id = ag.allele_group_id
+       LEFT JOIN failed_variation fv ON (fv.variation_id = aga.variation_id)
        WHERE  ag.source_id = s.source_id
        AND    ag.variation_group_id = ?
+       $constraint
        ORDER BY ag.allele_group_id});
   $sth->bind_param(1,$vg->dbID,SQL_INTEGER);
   $sth->execute();
