@@ -207,16 +207,25 @@ sub get_all_Variations {
   return $variation_adaptor->fetch_all_by_VariationSet($self);
 }
 
+=head2 get_Variation_Iterator
+
+  Example    : my $var_iterator = $vs->get_Variation_Iterator;
+  Description: Gets an iterator over  all variations belonging to this variation set and all of its subsets.
+  Returntype : Bio::EnsEMBL::Utils::Iterator
+  Exceptions : none
+  Caller     : general
+  Status     : Experimental
+
+=cut
+
 sub get_Variation_Iterator {
     my $self = shift;
   
-    # A database adaptor must be attached to this object   
     unless ($self->adaptor) {
         warning('Cannot get variations without attached adaptor');
         return Bio::EnsEMBL::Utils::Iterator->new;
     }
   
-    # Call the method in VariationAdaptor that will handle this
     my $variation_adaptor = $self->adaptor->db->get_VariationAdaptor();
     
     unless ($variation_adaptor) {
