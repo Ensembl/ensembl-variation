@@ -105,14 +105,13 @@ sub fetch_by_dbID {
   my $sth = $self->prepare
     (q{SELECT v.variation_id, v.name, v.validation_status, v.class_so_id, s1.name, s1.description, s1.url, s1.somatic, v.ancestral_allele,
               a.allele_id, a.subsnp_id, a.allele, a.frequency, a.count, a.sample_id, vs.moltype,
-              vs.name, s2.name, f.description, (fs.up_seq is not null OR fs.down_seq is not null)
+              vs.name, s2.name, (fs.up_seq is not null OR fs.down_seq is not null)
        FROM   (variation v, source s1)
 	       LEFT JOIN allele a ON v.variation_id = a.variation_id
 		   LEFT JOIN flanking_sequence fs ON v.variation_id = fs.variation_id
                 LEFT JOIN variation_synonym vs on v.variation_id = vs.variation_id 
    	            LEFT JOIN source s2 on  vs.source_id = s2.source_id
 		    LEFT JOIN failed_variation fv on v.variation_id = fv.variation_id
-                    LEFT JOIN failed_description f on fv.failed_description_id = f.failed_description_id
        WHERE    v.source_id = s1.source_id
        AND    v.variation_id = ?});
   $sth->bind_param(1,$dbID,SQL_INTEGER);
@@ -159,14 +158,13 @@ sub fetch_by_name {
   my $sth = $self->prepare
     (qq{SELECT v.variation_id, v.name, v.validation_status, v.class_so_id, s1.name, s1.description, s1.url, s1.somatic, v.ancestral_allele, 
                a.allele_id, a.subsnp_id, a.allele, a.frequency, a.count, a.sample_id, vs.moltype,
-              vs.name, s2.name, f.description, (fs.up_seq is not null OR fs.down_seq is not null)
+              vs.name, s2.name, (fs.up_seq is not null OR fs.down_seq is not null)
 	  FROM   (variation v, source s1)
 	     LEFT JOIN allele a on v.variation_id = a.variation_id
 		 LEFT JOIN flanking_sequence fs on v.variation_id = fs.variation_id
 	      LEFT JOIN variation_synonym vs on v.variation_id = vs.variation_id 
               LEFT JOIN source s2 on  vs.source_id = s2.source_id
 	      LEFT JOIN failed_variation fv on v.variation_id = fv.variation_id
-	         LEFT JOIN failed_description f on fv.failed_description_id = f.failed_description_id
        WHERE    v.source_id = s1.source_id
        AND    v.name = ?
        $extra_sql  
@@ -184,7 +182,7 @@ sub fetch_by_name {
     $sth = $self->prepare
       (qq{SELECT v.variation_id, v.name, v.validation_status, v.class_so_id, s1.name, s1.description, s1.url, s1.somatic, v.ancestral_allele, 
                  a.allele_id, a.subsnp_id, a.allele, a.frequency, a.count, a.sample_id, vs1.moltype,
-                vs2.name, s2.name, NULL, (fs.up_seq is not null OR fs.down_seq is not null)
+                vs2.name, s2.name, (fs.up_seq is not null OR fs.down_seq is not null)
          FROM variation v, source s1, source s2, allele a,
                 variation_synonym vs1, variation_synonym vs2, flanking_sequence fs
          WHERE  v.variation_id = a.variation_id
@@ -242,14 +240,13 @@ sub fetch_by_subsnp_id {
   my $sth = $self->prepare
     (qq{SELECT v.variation_id, v.name, v.validation_status, v.class_so_id, s1.name, s1.description, s1.url, s1.somatic, v.ancestral_allele, 
                a.allele_id, a.subsnp_id, a.allele, a.frequency, a.count, a.sample_id, vs.moltype,
-              vs.name, s2.name, f.description, (fs.up_seq is not null OR fs.down_seq is not null)
+              vs.name, s2.name, (fs.up_seq is not null OR fs.down_seq is not null)
 	  FROM   (variation v, source s1)
 	     LEFT JOIN allele a on v.variation_id = a.variation_id
 		 LEFT JOIN flanking_sequence fs on v.variation_id = fs.variation_id
 	     LEFT JOIN variation_synonym vs on v.variation_id = vs.variation_id 
          LEFT JOIN source s2 on  vs.source_id = s2.source_id
 	     LEFT JOIN failed_variation fv on v.variation_id = fv.variation_id
-	     LEFT JOIN failed_description f on fv.failed_description_id = f.failed_description_id
        WHERE    v.source_id = s1.source_id
        AND    a.subsnp_id = ?
        ORDER BY a.allele_id});
@@ -292,18 +289,21 @@ sub fetch_all_by_source {
 
   throw('name argument expected') if(!defined($source_name));
 
+  #ÊAdd the constraint for failed variations
+  my $constraint = " AND " . $self->db->_exclude_failed_variations_constraint();
+  
   my $sth = $self->prepare
     (qq{SELECT v.variation_id, v.name, v.validation_status, v.class_so_id, s1.name, s1.description, s1.url, s1.somatic, v.ancestral_allele, 
                a.allele_id, a.subsnp_id, a.allele, a.frequency, a.count, a.sample_id, vs.moltype,
-              vs.name, s2.name, f.description, 0
+              vs.name, s2.name, 0
 	  FROM   (variation v, source s1)
 	     LEFT JOIN allele a on v.variation_id = a.variation_id 
 	      LEFT JOIN variation_synonym vs on v.variation_id = vs.variation_id 
               LEFT JOIN source s2 on  vs.source_id = s2.source_id
 	      LEFT JOIN failed_variation fv on v.variation_id = fv.variation_id
-	         LEFT JOIN failed_description f on fv.failed_description_id = f.failed_description_id
        WHERE    v.source_id = s1.source_id
        AND    s1.name = ?
+       $constraint
    });
 
   $sth->bind_param(1,$source_name,SQL_VARCHAR);
@@ -319,13 +319,15 @@ sub fetch_all_by_source {
       $sth = $self->prepare
 	  (qq{SELECT v.variation_id, v.name, v.validation_status, v.class_so_id, s1.name, s1.description, s1.url, s1.somatic, v.ancestral_allele,
 	      a.allele_id, a.subsnp_id, a.allele, a.frequency, a.count, a.sample_id, vs1.moltype,
-	      vs1.name, s2.name, NULL, 0
+	      vs1.name, s2.name, 0
 		  FROM   (variation v, source s1, source s2,  variation_synonym vs1)
 		  LEFT JOIN allele a ON v.variation_id = a.variation_id
+		  LEFT JOIN failed_variation fv on v.variation_id = fv.variation_id
 		  WHERE  v.variation_id = vs1.variation_id
 		  AND    v.source_id = s1.source_id
 		  AND    vs1.source_id = s2.source_id
 		  AND    s2.name = ?
+		  $constraint
 		  ORDER BY v.variation_id
 	      });
     $sth->bind_param(1,$source_name,SQL_VARCHAR);
@@ -376,13 +378,12 @@ sub fetch_all_by_dbID_list {
     my $sth = $self->prepare
       (qq{SELECT v.variation_id, v.name, v.validation_status, v.class_so_id, s1.name, s1.description, s1.url, s1.somatic, v.ancestral_allele,
                  a.allele_id, a.subsnp_id, a.allele, a.frequency, a.count, a.sample_id, vs.moltype,
-                 vs.name, s2.name, f.description, 0
+                 vs.name, s2.name, 0
 	     FROM   (variation v, source s1)
 		  LEFT JOIN allele a on v.variation_id = a.variation_id
 		     LEFT JOIN variation_synonym vs on v.variation_id = vs.variation_id 
 		       LEFT JOIN source s2 on  vs.source_id = s2.source_id
 		         LEFT JOIN failed_variation fv on v.variation_id = fv.variation_id
-			  LEFT JOIN failed_description f on fv.failed_description_id = f.failed_description_id
           WHERE    v.source_id = s1.source_id
           AND    v.variation_id $id_str});
     $sth->execute();
@@ -473,13 +474,12 @@ sub fetch_all_by_name_list {
     my $sth = $self->prepare
       (qq{SELECT v.variation_id, v.name, v.validation_status, v.class_so_id, s1.name, s1.description, s1.url, s1.somatic, v.ancestral_allele,
                  a.allele_id, a.subsnp_id, a.allele, a.frequency, a.count, a.sample_id, vs.moltype,
-                 vs.name, s2.name, f.description, 0
+                 vs.name, s2.name, 0
 	     FROM   (variation v, source s1)
 		  LEFT JOIN allele a on v.variation_id = a.variation_id
 		     LEFT JOIN variation_synonym vs on v.variation_id = vs.variation_id 
 		       LEFT JOIN source s2 on  vs.source_id = s2.source_id
 		         LEFT JOIN failed_variation fv on v.variation_id = fv.variation_id
-			  LEFT JOIN failed_description f on fv.failed_description_id = f.failed_description_id
           WHERE    v.source_id = s1.source_id
           AND    v.name $id_str});
     $sth->execute();
@@ -504,7 +504,7 @@ sub fetch_all_by_name_list {
       $sth = $self->prepare
         (qq{SELECT v.variation_id, v.name, v.validation_status, v.class_so_id, s1.name, s1.description, s1.url, s1.somatic, v.ancestral_allele, 
                    a.allele_id, a.subsnp_id, a.allele, a.frequency, a.count, a.sample_id, vs1.moltype,
-                  vs2.name, s2.name, NULL, 0
+                  vs2.name, s2.name, 0
            FROM variation v, source s1, source s2, allele a,
                   variation_synonym vs1, variation_synonym vs2, flanking_sequence fs
            WHERE  v.variation_id = a.variation_id
@@ -717,15 +717,17 @@ sub fetch_all_by_Population {
 	$extra_sql = qq{ AND (IF(a.frequency > 0.5, 1-a.frequency, a.frequency) > $freq) }
   }
   
+  #ÊAdd the constraint for failed variations
+  $extra_sql .= " AND " . $self->db->_exclude_failed_variations_constraint();
+  
   my $sth = $self->prepare
     (qq{SELECT v.variation_id, v.name, v.validation_status, v.class_so_id, s1.name, s1.description, s1.url, s1.somatic, v.ancestral_allele,
                a.allele_id, a.subsnp_id, a.allele, a.frequency, a.count, a.sample_id, vs.moltype,
-              vs.name, s2.name, f.failed_description_id, 0
+              vs.name, s2.name, 0
 	    FROM   (variation v, source s1, allele a)
 	      LEFT JOIN variation_synonym vs on v.variation_id = vs.variation_id 
               LEFT JOIN source s2 on  vs.source_id = s2.source_id
 	      LEFT JOIN failed_variation fv on v.variation_id = fv.variation_id
-	      LEFT JOIN failed_description f on fv.failed_description_id = f.failed_description_id
 	      WHERE  v.variation_id = a.variation_id
 	      AND    v.source_id = s1.source_id
 	      AND    a.sample_id = ?
@@ -819,14 +821,21 @@ sub _fetch_all_dbIDs_by_VariationSet {
   
   my $set_str = '('.join(',',@var_set_ids).')';
 
+  #ÊAdd the constraint for failed variations
+  my $constraint = " AND " . $self->db->_exclude_failed_variations_constraint();
+  
   # Then get the dbIDs for all these sets
   my $stmt = qq{
     SELECT
-      DISTINCT(variation_id)
+      DISTINCT(vsv.variation_id)
     FROM
-      variation_set_variation
+      variation_set_variation vsv LEFT JOIN
+      failed_variation fv ON (
+	fv.variation_id = vsv.variation_id
+      )
     WHERE
-      variation_set_id in $set_str
+      vsv.variation_set_id in $set_str
+      $constraint
   };
 
   my $sth = $self->prepare($stmt);
@@ -844,6 +853,149 @@ sub _fetch_all_dbIDs_by_VariationSet {
   }
 
   return \@result;
+}
+
+=head2 is_failed
+
+  Arg[1]      : int $dbID
+	        The internal database identifier for the variation to query
+  Arg[2]      : string $subsnp_id (optional)
+	        The ssId of the subsnp to query
+  Example     : $is_failed = $va->get_failed_status(100,'ss123456');
+  Description : Retrieves the failed flag for the specified variaiton (or, if specified, its subsnp_id)
+                from the database
+  ReturnType  : int
+  Exceptions  : none
+  Caller      : general
+  Status      : At Risk
+
+=cut
+
+sub is_failed {
+  my $self = shift;
+  my $dbID = shift;
+  my $subsnp_id = shift;
+  
+  return defined($self->get_failed_description($dbID,$subsnp_id));
+}
+
+=head2 has_failed_subsnps
+
+  Arg[1]      : int $dbID
+	        The internal database identifier for the variation to query
+  Example     : $has_failed = $va->has_failed_subsnps(100);
+  Description : Checks the database to see if any subsnps belonging to the specified variation
+		have been flagged as failed.
+  ReturnType  : int
+  Exceptions  : none
+  Caller      : general
+  Status      : At Risk
+
+=cut
+
+sub has_failed_subsnps {
+  my $self = shift;
+  my $dbID = shift;
+  
+  my $constraint = qq{ fv.subsnp_id IS NOT NULL };
+  my $description = $self->_internal_get_failed_descriptions($dbID,$constraint);
+  
+  return scalar(keys(%{$description}));
+}
+
+=head2 get_all_failed_descriptions
+
+  Arg[1]      : int $dbID
+	        The internal database identifier for the variation to query
+  Example     : my $failed_descriptions = $va->get_all_failed_descriptions(100);
+		print "The variation with dbID $dbID and its subsnps have been failed with descriptions '" . join(",",@{$failed_descriptions}) . "'\n";
+		
+  Description : Gets the unique descriptions for the reasons why the supplied variation and any failed subsnps have failed.
+  ReturnType  : reference to a list of strings
+  Exceptions  : none
+  Caller      : general
+  Status      : At Risk
+
+=cut
+
+sub get_all_failed_descriptions {
+    my $self = shift;
+    my $dbID = shift;
+    
+    my $description = $self->_internal_get_failed_descriptions($dbID);
+    
+    #ÊPut all the descriptions into a hash
+    my %descriptions;
+    map {$descriptions{$description->{$dbID}{$_}{'description'}}++} keys(%{$description->{$dbID}});
+    my @ret = keys(%descriptions);
+    
+    return \@ret;
+}
+
+
+=head2 get_failed_description
+
+  Arg[1]      : int $dbID
+	        The internal database identifier for the variation to query
+  Arg[2]      : string $subsnp_id (optional)
+	        The ssId of the subsnp to query
+  Example     : my $failed_description = $va->get_failed_descriptions(100,'ss123456');
+		print "The subsnp $subsnp_id, belonging to the variation with dbID $dbID, has been failed because $failed_description\n";
+		
+  Description : Gets the description for the reasons why the supplied variation (or, if specified, the subsnp) has been flagged as failed.
+  ReturnType  : string
+  Exceptions  : none
+  Caller      : general
+  Status      : At Risk
+
+=cut
+
+sub get_failed_description {
+    my $self = shift;
+    my $dbID = shift;
+    my $subsnp_id = shift;
+    
+    my $constraint;
+    if (defined($subsnp_id) && $subsnp_id ne 'rs') {
+      #ÊStrip away any prefixes
+      $subsnp_id =~ s/^[^\d]*(\d+)/$1/;
+      $constraint = qq{ fv.subsnp_id = '$subsnp_id' };
+    }
+    else {
+      $constraint = qq{ fv.subsnp_id IS NULL };
+      $subsnp_id = 'rs';
+    }
+    my $description = $self->_internal_get_failed_descriptions($dbID,$constraint);
+    
+    return $description->{$dbID}{$subsnp_id}{'description'};
+}
+
+#ÊAPI-internal method for getting failed descriptions for a variation
+sub _internal_get_failed_descriptions {
+    my $self = shift;
+    my $dbID = shift;
+    my $constraint = shift;
+    
+    my $stmt = qq{
+      SELECT
+        fv.variation_id,
+	IFNULL(fv.subsnp_id,'rs') AS subsnp_id,
+	fd.description
+      FROM
+        failed_variation fv JOIN
+	failed_description fd ON (
+	  fd.failed_description_id = fv.failed_description_id
+	)
+      WHERE
+        fv.variation_id = ?
+    };
+    
+    $stmt .= qq{ AND $constraint } if (defined($constraint));
+    
+    my $sth = $self->prepare($stmt);
+    $sth->execute($dbID);
+    
+    return $sth->fetchall_hashref(['variation_id','subsnp_id']);
 }
 
 sub _get_flank_from_core{
@@ -873,11 +1025,11 @@ sub _objs_from_sth {
 
   my ($var_id, $name, $vstatus, $class_so_id, $source, $source_desc, $source_url, $is_somatic, $ancestral_allele, 
       $allele_id, $allele_ss_id, $allele, $allele_freq, $allele_count, $allele_sample_id, $moltype, $syn_name, 
-      $syn_source, $cur_allele_id, $cur_var, $cur_var_id, $failed_description, $flank_flag);
+      $syn_source, $cur_allele_id, $cur_var, $cur_var_id, $flank_flag);
 
   $sth->bind_columns(\$var_id, \$name, \$vstatus, \$class_so_id, \$source, \$source_desc, \$source_url, \$is_somatic, 
                      \$ancestral_allele, \$allele_id, \$allele_ss_id, \$allele, \$allele_freq, \$allele_count,
-                     \$allele_sample_id, \$moltype, \$syn_name, \$syn_source, \$failed_description, \$flank_flag);
+                     \$allele_sample_id, \$moltype, \$syn_name, \$syn_source, \$flank_flag);
 
   my @vars;
 
@@ -901,7 +1053,6 @@ sub _objs_from_sth {
 	     -ANCESTRAL_ALLELE => $ancestral_allele,
 	     -MOLTYPE => $moltype,
          -VALIDATION_STATES => \@states,
-	     -FAILED_DESCRIPTION => $failed_description,
 	     -FLANK_FLAG => $flank_flag,
 	     -CLASS_SO_ID => $class_so_id);
       push @vars, $cur_var;
@@ -940,8 +1091,5 @@ sub _objs_from_sth {
 	
   return \@vars;
 }
-
-
-
 
 1;
