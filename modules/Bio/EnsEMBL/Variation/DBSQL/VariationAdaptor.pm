@@ -79,6 +79,82 @@ use DBI qw(:sql_types);
 
 our @ISA = ('Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor');
 
+my $DEFAULT_ITERATOR_CACHE_SIZE = 1000;
+
+=head2 fetch_Iterator
+
+  Arg [1]    : int $cache_size (optional)
+  Example    : $var_iterator = $var_adaptor->fetch_Iterator;
+  Description: returns an iterator over all Variations in the database
+  Returntype : Bio::EnsEMBL::Utils::Iterator
+  Exceptions : none
+  Caller     : general
+  Status     : Experimental
+
+=cut
+
+sub fetch_Iterator {
+
+    my ($self, $cache_size) = @_;
+
+    # prepare and execute a query to fetch all dbIDs
+
+    my $sth = $self->prepare(qq{SELECT variation_id FROM variation});
+
+    $sth->execute;
+
+    my $var_id;
+
+    $sth->bind_columns(\$var_id);
+
+    # we probably can't fit all of these into memory at once though, 
+    # so create an iterator that fetches $cache_size dbIDs from the
+    # statement handle at a time and then fetches these objects, 
+    # storing them in a cache. We then return variation objects 
+    # from this cache one by one, before filling it again if 
+    # necessary
+
+    $cache_size ||= $DEFAULT_ITERATOR_CACHE_SIZE;
+    
+    my @cache;
+
+    my $items_to_fetch = 1;
+
+    return Bio::EnsEMBL::Utils::Iterator->new(sub{
+
+        if (@cache == 0 && $items_to_fetch) {
+            
+            # our cache is empty, and there are still items to fetch, so
+            # fetch the next chunk of dbIDs and create objects from them
+
+            my @dbIDs;
+
+            my $item_count = 0;
+
+            while( $sth->fetch ) {
+
+                push @dbIDs, $var_id;
+                
+                if (++$item_count == $cache_size) {
+                    # we have fetched a cache's worth of dbIDs, so flag that
+                    # there are still items to fetch and last out of the loop
+                    $items_to_fetch = 1;
+                    last;
+                }
+                
+                # if this is the last row, this flag will be 0 outside the loop
+                $items_to_fetch = 0;
+            }
+
+            $sth->finish unless $items_to_fetch;
+            
+            @cache = @{ $self->fetch_all_by_dbID_list(\@dbIDs) } if @dbIDs;
+        }
+
+        return shift @cache;
+    });
+}
+
 =head2 fetch_by_dbID
 
   Arg [1]    : int $dbID
@@ -417,7 +493,7 @@ sub fetch_Iterator_by_dbID_list {
         throw("list reference argument is required");
     }
 
-    $cache_size ||= 1000;
+    $cache_size ||= $DEFAULT_ITERATOR_CACHE_SIZE;
 
     # create an iterator that fetches variations in blocks of
     # $cache_size and returns them in turn
