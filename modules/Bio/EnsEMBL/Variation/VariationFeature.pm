@@ -1272,7 +1272,7 @@ sub get_all_hgvs_notations {
 	
 	#ÊTypically, if the variation is intronic, the fields in transcript_variation for positions are undefined
 	# We cannot get protein notation for an intronic SNP, so return an empty list
-	return {} if (!defined($transcript_variation) || !defined($transcript_variation->pep_start()) || !defined($transcript_variation->pep_end()));
+	return {} if (!defined($transcript_variation) || !defined($transcript_variation->translation_start()) || !defined($transcript_variation->translation_end()));
       }
     }
     elsif ($ref_feature->isa('Bio::EnsEMBL::Slice')) {
