@@ -73,7 +73,7 @@ use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 
 use Bio::EnsEMBL::Variation::Variation;
 use Bio::EnsEMBL::Variation::Allele;
-use Bio::EnsEMBL::Variation::Utils::Iterator;
+use Bio::EnsEMBL::Utils::Iterator;
 
 our @ISA = ('Bio::EnsEMBL::DBSQL::BaseAdaptor');
 
@@ -400,8 +400,8 @@ sub fetch_all_by_dbID_list {
 
   Arg [1]    : reference to list of ints $list
   Example    : $variation_iterator = $va->fetch_iterator_by_dbID_list([124, 56, 90]);
-  Description: Retrieves an itertor over a set of variations via their internal identifiers.
-  Returntype : Bio::EnsEMBL::Variation::Utils::Iterator
+  Description: Retrieves an iterator over a set of variations via their internal identifiers.
+  Returntype : Bio::EnsEMBL::Utils::Iterator
   Exceptions : throw on bad argument
   Caller     : general
   Status     : Experimental
@@ -410,6 +410,10 @@ sub fetch_all_by_dbID_list {
 
 sub fetch_iterator_by_dbID_list {
     my ($self, $dbid_list, $cache_size) = @_;
+    
+    unless ((defined $dbid_list) && (ref $dbid_list eq 'ARRAY')) {
+        throw("list reference argument is required");
+    }
 
     $cache_size ||= 1000;
 
@@ -418,7 +422,7 @@ sub fetch_iterator_by_dbID_list {
 
     my @object_cache;
 
-    return Bio::EnsEMBL::Variation::Utils::Iterator->new(sub {
+    return Bio::EnsEMBL::Utils::Iterator->new(sub {
 
             if (@object_cache == 0 && @$dbid_list > 0 ) {
                 my @dbids = splice @$dbid_list, 0, $cache_size;
@@ -758,7 +762,7 @@ sub fetch_all_by_VariationSet {
   Example    : $var_iterator = $va_adaptor->fetch_iterator_by_VariationSet($vs);
   Description: Retrieves an iterator for all variations which are present in a specified
                variation set and its subsets.
-  Returntype : Bio::EnsEMBL::Variation::Utils::Iterator object
+  Returntype : Bio::EnsEMBL::Utils::Iterator object
   Exceptions : throw on incorrect argument
   Caller     : general
   Status     : Experimental
