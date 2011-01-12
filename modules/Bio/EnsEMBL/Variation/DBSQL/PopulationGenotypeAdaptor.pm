@@ -76,7 +76,7 @@ use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 
 use Bio::EnsEMBL::Variation::PopulationGenotype;
 
-our @ISA = ('Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor');
+our @ISA = ('Bio::EnsEMBL::DBSQL::BaseAdaptor');
 
 
 
@@ -173,6 +173,26 @@ sub fetch_all_by_Variation {
 
     return $self->generic_fetch("variation_id = " . $variation->dbID());
 
+}
+
+=head2 fetch_all
+
+  Description: Retrieves a list of all population genotypes.
+  Returntype : listref Bio::EnsEMBL::Variation::PopulationGenotype 
+  Exceptions : throw on bad argument
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+
+sub fetch_all {
+    my $self = shift;
+
+    # Add the constraint for failed variations
+    my $constraint = $self->db->_exclude_failed_variations_constraint();
+    
+    return $self->generic_fetch($constraint);
 }
 
 sub _tables{return (['population_genotype','pg'],['failed_variation','fv'])}
