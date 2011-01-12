@@ -292,7 +292,7 @@ sub _objs_from_sth{
   my %sr_cs_hash;
 
   my ($variation_id, $seq_region_id,
-      $seq_region_start,$seq_region_end, $seq_region_strand, $variation_name, $source_name, $variation_feature_id, $allele_string, $cons );
+      $seq_region_start,$seq_region_end, $seq_region_strand, $variation_name, $source_name, $variation_feature_id, $allele_string, $cons, $last_vf_id );
 
   $sth->bind_columns(\$variation_id,
 		     \$seq_region_id,\$seq_region_start,\$seq_region_end,\$seq_region_strand,
@@ -325,6 +325,10 @@ sub _objs_from_sth{
   }
 
   FEATURE: while($sth->fetch()) {
+    
+    next if (defined($last_vf_id) && $last_vf_id == $variation_feature_id);
+    $last_vf_id = $variation_feature_id;
+    
     #get the slice object
     my $slice = $slice_hash{"ID:".$seq_region_id};
     if(!$slice) {
