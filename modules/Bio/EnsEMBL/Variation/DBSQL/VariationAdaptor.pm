@@ -85,7 +85,7 @@ my $DEFAULT_ITERATOR_CACHE_SIZE = 1000;
 
   Arg [1]    : int $cache_size (optional)
   Example    : $var_iterator = $var_adaptor->fetch_Iterator;
-  Description: returns an iterator over all Variations in the database
+  Description: returns an iterator over all germline variations in the database
   Returntype : Bio::EnsEMBL::Utils::Iterator
   Exceptions : none
   Caller     : general
@@ -94,12 +94,44 @@ my $DEFAULT_ITERATOR_CACHE_SIZE = 1000;
 =cut
 
 sub fetch_Iterator {
-
     my ($self, $cache_size) = @_;
+    return $self->_generic_fetch_Iterator($cache_size, 's.somatic = 0');
+}
+
+=head2 fetch_Iterator_somatic
+
+  Arg [1]    : int $cache_size (optional)
+  Example    : $var_iterator = $var_adaptor->fetch_Iterator;
+  Description: returns an iterator over all somatic variations in the database
+  Returntype : Bio::EnsEMBL::Utils::Iterator
+  Exceptions : none
+  Caller     : general
+  Status     : Experimental
+
+=cut
+
+sub fetch_Iterator_somatic {
+    my ($self, $cache_size) = @_;
+    return $self->_generic_fetch_Iterator($cache_size, 's.somatic = 1');
+}
+
+sub _generic_fetch_Iterator {
+
+    my ($self, $cache_size, $constraint) = @_;
+
+    my $full_constraint = $constraint ?
+        $constraint.' AND '.$self->db->_exclude_failed_variations_constraint :
+        $self->db->_exclude_failed_variations_constraint;
 
     # prepare and execute a query to fetch all dbIDs
 
-    my $sth = $self->prepare(qq{SELECT variation_id FROM variation});
+    my $sth = $self->prepare(qq{
+        SELECT      v.variation_id 
+        FROM        (variation v, source s)
+        LEFT JOIN   failed_variation fv on v.variation_id = fv.variation_id
+        WHERE       v.source_id = s.source_id
+        AND         $full_constraint
+    });
 
     $sth->execute;
 
