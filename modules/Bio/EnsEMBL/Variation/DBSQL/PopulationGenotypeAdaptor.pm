@@ -76,7 +76,7 @@ use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 
 use Bio::EnsEMBL::Variation::PopulationGenotype;
 
-our @ISA = ('Bio::EnsEMBL::DBSQL::BaseAdaptor');
+our @ISA = ('Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor');
 
 
 
@@ -135,6 +135,9 @@ sub fetch_all_by_Population {
     return [];
   }
 
+  # Add the constraint for failed variations
+  $constraint .= " AND " . $self->db->_exclude_failed_variations_constraint();
+    
   return $self->generic_fetch("sample_id = " . $pop->dbID());
 }
 
@@ -172,7 +175,10 @@ sub fetch_all_by_Variation {
 
 }
 
-sub _tables{return ['population_genotype','pg']}
+sub _tables{return (['population_genotype','pg'],['failed_variation','fv'])}
+
+#ÊAdd a left join to the failed_variation table
+sub _left_join { return ([ 'failed_variation', 'fv.variation_id = pg.variation_id']); }
 
 sub _columns{
     return qw(pg.population_genotype_id pg.variation_id pg.subsnp_id pg.sample_id pg.allele_1 pg.allele_2 pg.frequency pg.count)

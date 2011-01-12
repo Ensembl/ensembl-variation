@@ -64,6 +64,10 @@ our @ISA = ('Bio::EnsEMBL::DBSQL::BaseAdaptor');
 sub fetch_all {
     my $self = shift;
     my $constraint = 's.somatic = 0';
+    
+    # Add the constraint for failed variations
+    $constraint .= ' AND ' . $self->db->_exclude_failed_variations_constraint();
+    
     return $self->generic_fetch($constraint);
 }
 
@@ -78,6 +82,10 @@ sub fetch_all {
 sub fetch_all_somatic {
     my $self = shift;
     my $constraint = 's.somatic = 1';
+    
+    # Add the constraint for failed variations
+    $constraint .= ' AND ' . $self->db->_exclude_failed_variations_constraint();
+    
     return $self->generic_fetch($constraint);
 }
 
