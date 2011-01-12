@@ -101,7 +101,7 @@ sub fetch_by_dbID {
   if (! $dbID){
       throw('no dbID argument provided');
   }
-  return shift @{$self->generic_fetch("population_genotype_id = " . $dbID)};
+  return shift @{$self->generic_fetch("pg.population_genotype_id = " . $dbID)};
 
 }
 
@@ -135,7 +135,7 @@ sub fetch_all_by_Population {
     return [];
   }
 
-  my $constraint = "sample_id = " . $pop->dbID();
+  my $constraint = "pg.sample_id = " . $pop->dbID();
   
   # Add the constraint for failed variations
   $constraint .= " AND " . $self->db->_exclude_failed_variations_constraint();
@@ -173,7 +173,7 @@ sub fetch_all_by_Variation {
 	return [];
     }
 
-    return $self->generic_fetch("variation_id = " . $variation->dbID());
+    return $self->generic_fetch("pg.variation_id = " . $variation->dbID());
 
 }
 
