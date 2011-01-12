@@ -183,6 +183,9 @@ sub fetch_all_by_phenotype_name_source_name {
     $extra_sql .= qq( AND s.name = $source_name);
   }
   
+  # Add the constraint for failed variations
+  $extra_sql .= " AND " . $self->db->_exclude_failed_variations_constraint();
+  
   return $self->generic_fetch("$extra_sql");
   
 }
@@ -212,6 +215,9 @@ sub fetch_all_by_phenotype_description_source_name {
   if (defined $source_name ) {
     $extra_sql .= qq( AND s.name = $source_name);
   }
+  
+  # Add the constraint for failed variations
+  $extra_sql .= " AND " . $self->db->_exclude_failed_variations_constraint();
   
   return $self->generic_fetch("$extra_sql");
   
@@ -244,15 +250,42 @@ sub fetch_all_by_phenotype_id_source_name {
     $extra_sql .= sprintf(' AND s.name = %s', $self->dbc->db_handle->quote( $source_name, SQL_VARCHAR ) );
   }
   
+  # Add the constraint for failed variations
+  $extra_sql .= " AND " . $self->db->_exclude_failed_variations_constraint();
+  
+  return $self->generic_fetch("$extra_sql");
+  
+}
+
+=head2 fetch_all
+
+  Description: Retrieves all available variation annotation objects
+  Returntype : list of ref of Bio::EnsEMBL::Variation::VariationAnnotation
+  Exceptions : none
+  Caller     : general
+
+=cut
+
+sub fetch_all {
+
+  my $self = shift;
+  
+  # Add the constraint for failed variations
+  my $extra_sql = $self->db->_exclude_failed_variations_constraint();
+  
   return $self->generic_fetch("$extra_sql");
   
 }
 
 # method used by superclass to construct SQL
 sub _tables { return (['variation_annotation', 'va'],
+                       [ 'failed_variation', 'fv'],
                        [ 'phenotype', 'p'],
                        [ 'source', 's']); 
 }
+
+#ÊAdd a left join to the failed_variation table
+sub _left_join { return ([ 'failed_variation', 'fv.variation_id = va.variation_id']); }
 
 sub _default_where_clause {
   my $self = shift;
