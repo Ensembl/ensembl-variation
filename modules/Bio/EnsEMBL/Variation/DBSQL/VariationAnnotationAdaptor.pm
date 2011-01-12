@@ -308,10 +308,14 @@ sub _objs_from_sth {
 
   my @features;
 
-  my ($variation_annotation_id,$var_id,$phenotype_id,$phenotype_name,$phenotype_description,$source_name,$study,$study_type,$local_stable_id,$associated_gene,$associated_variant_risk_allele,$variation_names,$risk_allele_freq_in_controls,$p_value);
+  my ($variation_annotation_id,$var_id,$phenotype_id,$phenotype_name,$phenotype_description,$source_name,$study,$study_type,$local_stable_id,$associated_gene,$associated_variant_risk_allele,$variation_names,$risk_allele_freq_in_controls,$p_value, $last_va_id);
   $sth->bind_columns(\$variation_annotation_id,\$var_id,\$phenotype_id,\$phenotype_name,\$phenotype_description,\$source_name,\$study,\$study_type,\$local_stable_id,\$associated_gene,\$associated_variant_risk_allele,\$variation_names,\$risk_allele_freq_in_controls, \$p_value);
 
   while($sth->fetch()) {
+    
+    next if (defined($last_va_id) && $last_va_id == $variation_annotation_id);
+    $last_va_id = $variation_annotation_id;
+    
     push @features, $self->_create_feature_fast('Bio::EnsEMBL::Variation::VariationAnnotation',
 
     {'dbID' => $variation_annotation_id,
