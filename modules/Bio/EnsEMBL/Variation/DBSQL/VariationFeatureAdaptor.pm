@@ -701,6 +701,7 @@ sub _objs_from_sth {
     
     # Skip if we are getting multiple rows because of the left join to failed variation
     next if (defined($last_vf_id) && $last_vf_id == $variation_feature_id);
+    $last_vf_id = $variation_feature_id;
     
     #get the slice object
     my $slice = $slice_hash{"ID:".$seq_region_id};
