@@ -135,10 +135,12 @@ sub fetch_all_by_Population {
     return [];
   }
 
+  my $constraint = "sample_id = " . $pop->dbID();
+  
   # Add the constraint for failed variations
   $constraint .= " AND " . $self->db->_exclude_failed_variations_constraint();
     
-  return $self->generic_fetch("sample_id = " . $pop->dbID());
+  return $self->generic_fetch($constraint);
 }
 
 
