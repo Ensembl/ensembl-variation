@@ -289,8 +289,8 @@ sub _internal_fetch_all_with_annotation_by_Slice{
     
     my $sth = $self->prepare(qq{
 		SELECT $cols
-		FROM variation_feature vf, variation_annotation va,
-		phenotype p, source s, source ps # need to link twice to source
+		FROM (variation_feature vf, variation_annotation va,
+		phenotype p, source s, source ps) # need to link twice to source
 		LEFT JOIN failed_variation fv ON (fv.variation_id = vf.variation_id)
 		WHERE va.source_id = ps.source_id
 		AND vf.source_id = s.source_id
@@ -466,7 +466,7 @@ sub fetch_all_by_Slice_Population {
   
   my $sth = $self->prepare(qq{
 	SELECT $cols
-	FROM variation_feature vf, source s, allele a
+	FROM (variation_feature vf, source s, allele a)
 	LEFT JOIN failed_variation fv ON (fv.variation_id = vf.variation_id)
 	WHERE vf.source_id = s.source_id
 	AND vf.variation_id = a.variation_id
@@ -546,8 +546,8 @@ sub _internal_fetch_all_with_annotation {
     
     my $sth = $self->prepare(qq{
         SELECT $cols
-        FROM variation_feature vf, variation_annotation va,
-        phenotype p, source s, source ps # need to link twice to source
+        FROM (variation_feature vf, variation_annotation va,
+        phenotype p, source s, source ps) # need to link twice to source
 	LEFT JOIN failed_variation fv ON (fv.variation_id = vf.variation_id)
         WHERE va.source_id = ps.source_id
         AND vf.source_id = s.source_id
