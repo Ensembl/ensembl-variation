@@ -622,7 +622,7 @@ sub _objs_from_sth {
   my $sth = shift;
 
   my ($trv_id, $tr_stable_id, $vf_id, $cdna_start, $cdna_end, $cds_start, $cds_end, $tl_start, $tl_end,
-      $pep_allele, $consequence_type);
+      $pep_allele, $consequence_type, $last_tv_id);
 
   $sth->bind_columns(\$trv_id, \$tr_stable_id, \$vf_id, \$cdna_start, \$cdna_end, \$cds_start, \$cds_end,
                      \$tl_start, \$tl_end, \$pep_allele, \$consequence_type);
@@ -637,6 +637,9 @@ sub _objs_from_sth {
 
   while($sth->fetch()) {
 
+      next if (defined($last_tv_id) && $last_tv_id == $trv_id);
+      $last_tv_id = $trv_id;
+      
       my @consequences = split /,/,$consequence_type;
     
       my $trv = Bio::EnsEMBL::Variation::TranscriptVariation->new_fast

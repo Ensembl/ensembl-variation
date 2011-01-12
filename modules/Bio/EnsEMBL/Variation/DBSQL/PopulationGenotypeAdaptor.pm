@@ -211,12 +211,16 @@ sub _objs_from_sth{
     my $sth = shift;
 
     my @results;
-    my ($dbID, $variation_id, $ss_id, $sample_id, $allele_1, $allele_2, $frequency, $count);
+    my ($dbID, $variation_id, $ss_id, $sample_id, $allele_1, $allele_2, $frequency, $count, $last_dbID);
     $sth->bind_columns(\$dbID, \$variation_id, \$ss_id, \$sample_id, \$allele_1, \$allele_2, \$frequency, \$count);
     
     my %population_hash;
     my %variation_hash;
     while($sth->fetch()){
+      
+      next if (defined($last_dbID) && $last_dbID == $dbID);
+      $last_dbID = $dbID;
+      
 		my $pgtype = Bio::EnsEMBL::Variation::PopulationGenotype->new
 			(-dbID => $dbID,
 			-adaptor => $self,
