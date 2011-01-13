@@ -58,6 +58,8 @@ use Bio::EnsEMBL::Utils::Argument qw(rearrange);
 
 our @ISA = ('Bio::EnsEMBL::DBSQL::DBAdaptor');
 
+our $DEFAULT_INCLUDE_FAILED_VARIATIONS = 0;
+
 sub get_available_adaptors{
     my %pairs = (
 		 'Population' => 'Bio::EnsEMBL::Variation::DBSQL::PopulationAdaptor',
@@ -150,7 +152,11 @@ sub include_failed_variations {
     my $self = shift;
     my $include = shift;
     
+    #ÊIf the flag should be modified, do that
     if (defined($include)) {$self->{'include_failed_variations'} = $include;}
+    
+    #ÊIn case the flag has not been set at all, set it to the default value
+    unless (exists($self->{'include_failed_variations'})) {$self->{'include_failed_variations'} = $DEFAULT_INCLUDE_FAILED_VARIATIONS;}
     
     return $self->{'include_failed_variations'};
 }
