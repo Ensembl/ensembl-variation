@@ -82,219 +82,6 @@ sub store {
             $allele->sift_prediction
         );
     }
-
-}
-
-sub store_normalised {
-    my ($self, $tv) = @_;
-    
-    # must call the superclass first to set the dbID
-    
-    $self->SUPER::store($tv);
-    
-    my $dbh = $self->dbc->db_handle;
-    
-    if (defined $tv->cds_start) {
-        
-        my $vfo_attrib_sth = $dbh->prepare_cached(q{
-           INSERT INTO variation_feature_overlap_attrib (variation_feature_overlap_id, attrib_type_id, value) 
-           VALUES (?,?,?)
-        });
-        
-        my @ids;
-        my @types;
-        my @values;
-        
-        for my $attrib (qw(cds_start cds_end cdna_start cdna_end pep_start pep_end)) {
-            if (defined $tv->$attrib) {
-                push @ids, $tv->dbID;
-                push @types, $self->_attrib_id_for_code($attrib);
-                push @values, $tv->$attrib;
-            }
-        }
-        
-        $vfo_attrib_sth->execute_array({}, \@ids, \@types, \@values);
-    }
-    
-    for my $tva (@{ $tv->alt_alleles }) {
-       
-        my $vfoa_attrib_sth = $dbh->prepare_cached(q{
-           INSERT INTO variation_feature_overlap_allele_attrib (variation_feature_overlap_allele_id, attrib_type_id, value) 
-           VALUES (?,?,?)
-        });
-        
-        my @ids;
-        my @types;
-        my @values;
-        
-        if ($tva->codon) { 
-            for my $attrib (qw(codon peptide)) {
-                push @ids, $tva->dbID;
-                push @types, $self->_attrib_id_for_code($attrib);
-                push @values, $tva->$attrib;
-            }
-        }
-        
-        for my $cons (@{ $tva->consequences }) {
-            push @ids, $tva->dbID;
-            push @types, $self->_attrib_id_for_code('SO_id');
-            push @values, $cons->SO_id;
-        }
-     
-        #ÊHGVS notation
-        for my $ref (qw( genomic coding protein rna mitochondrial )) {
-            my $attrib = qq{hgvs_$ref};
-            if (my $val = $tva->$attrib) {
-                push @ids, $tva->dbID;
-                push @types, $self->_attrib_id_for_code($attrib);
-                push @values, $val;
-            }
-        }
-           
-        $vfoa_attrib_sth->execute_array({}, \@ids, \@types, \@values);
-    }
-}
-
-sub _get_nsSNP_prediction {
-    my ($self, $program, $tva) = @_;
-    
-    return undef unless ($program eq 'polyphen' || $program eq 'sift');
-    
-    return undef unless ($tva->peptide && length($tva->peptide) == 1);
-    
-    my $dbh = $self->dbc->db_handle;
-    
-    my $sth = $dbh->prepare_cached(qq{
-        SELECT  p.prediction
-        FROM    ${program}_prediction pred, protein_position pp
-        WHERE   pred.protein_position_id = pp.protein_position_id
-        AND     pp.transcript_stable_id = ?
-        AND     pp.transcript_version = ?
-        AND     pp.position = ?
-        AND     pred.amino_acid = ?
-    });
-    
-    $sth->execute(
-        $tva->transcript->stable_id,
-        $tva->transcript->version,
-        $tva->pep_start,
-        $tva->peptide,
-    );
-    
-    my ($prediction) = $sth->fetchrow_array;
-    
-    return $prediction;
-}
-
-sub _attrib_codes {
-    return qw(
-        cds_start
-        cds_end
-        cdna_start
-        cdna_end
-        pep_start
-        pep_end
-        codon
-        peptide
-        SO_id
-        hgvs_genomic
-        hgvs_coding
-        hgvs_protein
-        hgvs_rna
-        hgvs_mitochondrial
-    );
-}
-
-sub fetch_all_by_Transcripts2 {
-    
-    # another version of fetch_all_by_Transcripts that tries to get all
-    # data needed in a single SQL query, but it's currently slower than
-    # the simpler way calling the superclass and fetching the alleles
-    # separately
-    
-    my ($self, $transcripts) = @_;
-      
-    my $dbh = $self->dbc->db_handle;
-    
-    my $id_str = join ',', map { "'".$_->stable_id."'" } @$transcripts;
-    
-    my $sth = $dbh->prepare(qq{
-        SELECT vfo.variation_feature_overlap_id, vfo.variation_feature_id, vfo.feature_stable_id, 
-            vfo.feature_type_id, vfo_att.code, vfoat.value, vfoa.variation_feature_overlap_allele_id, 
-            vfoa.allele, vfoa_att.code, vfoaa.value
-        FROM variation_feature_overlap vfo 
-        LEFT JOIN variation_feature_overlap_allele vfoa         ON vfo.variation_feature_overlap_id = vfoa.variation_feature_overlap_id 
-        LEFT JOIN variation_feature_overlap_attrib vfoat        ON vfo.variation_feature_overlap_id = vfoat.variation_feature_overlap_id 
-        LEFT JOIN variation_feature_overlap_allele_attrib vfoaa ON vfoa.variation_feature_overlap_allele_id = vfoaa.variation_feature_overlap_allele_id
-        LEFT JOIN attrib_type vfo_att            ON vfo_att.attrib_type_id = vfoat.attrib_type_id 
-        LEFT JOIN attrib_type vfoa_att           ON vfoa_att.attrib_type_id = vfoaa.attrib_type_id
-        JOIN variation_feature vf                ON vf.variation_feature_id = vfo.variation_feature_id
-        JOIN source s                            ON s.source_id = vf.source_id
-        WHERE vfo.feature_stable_id IN ( $id_str )
-        AND s.somatic = 0
-    });
-    
-    $sth->execute;
-    
-    my ($vfo_id, $vf_id, $tran_stable_id, $feat_type_id, $vfo_attrib, $vfo_value, 
-        $vfoa_id, $allele, $vfoa_attrib, $vfoa_value);
-    
-    $sth->bind_columns(\$vfo_id, \$vf_id, \$tran_stable_id, \$feat_type_id, \$vfo_attrib, \$vfo_value, 
-        \$vfoa_id, \$allele, \$vfoa_attrib, \$vfoa_value);
-    
-    my %vfos_by_id;
-    my %vfoas_by_id;
-    
-    while ($sth->fetch) {
-        
-        my $vfo = $vfos_by_id{$vfo_id};
-        
-        unless ($vfo) {
-            $vfo = Bio::EnsEMBL::Variation::TranscriptVariationNew->new_fast({
-                dbID                    => $vfo_id,
-                _variation_feature_id   => $vf_id,
-                _feature_stable_id      => $tran_stable_id,
-                feature_type_id         => $feat_type_id,
-            });
-            
-            $vfos_by_id{$vfo_id} = $vfo
-        }
-        
-        $vfo->$vfo_attrib($vfo_value) if $vfo_attrib;
-        
-        if ($vfoa_id) {
-            my $vfoa = $vfoas_by_id{$vfoa_id};
-            
-            unless ($vfoa) {
-                 $vfoa = Bio::EnsEMBL::Variation::TranscriptVariationAllele->new_fast({
-                    variation_feature_overlap   => $vfo,
-                    dbID                        => $vfoa_id,
-                    seq                         => $allele,
-                });
-                
-                $vfo->alt_alleles($vfoa);
-                
-                $vfoas_by_id{$vfoa_id} = $vfoa;
-            }
-            
-            if ($vfoa_attrib) {
-                if ($vfoa_attrib =~ /codon|peptide/) {
-                    $vfoa->$vfoa_attrib($vfoa_value);
-                }
-                elsif ($vfoa_attrib eq 'SO_id') {
-                    $vfoa->consequences($self->_overlap_consequences->{$vfoa_value});
-                }
-                elsif ($vfoa_attrib =~ m/hgvs_/) {
-                    $allele->$vfoa_attrib($vfoa_value);
-                }
-                else {
-                    warn "Unexpected attribute: $vfoa_attrib";
-                }
-            }
-        }
-    }
-    
-    return [values %vfos_by_id];
 }
 
 # converts VariationFeatureOverlap objects into TranscriptVariation 
@@ -388,31 +175,6 @@ sub _vfos_to_tvs {
     }
     
     return $vfos;
-}
-
-sub fetch_all_by_VariationFeatures_normalised {  
-    my ($self, $vfs) = @_;
-    return $self->_vfos_to_tvs($self->SUPER::fetch_all_by_VariationFeatures($vfs));
-}
-
-sub fetch_all_somatic_by_VariationFeatures_normalised {   
-    my ($self, $vfs) = @_;
-    return $self->_vfos_to_tvs($self->SUPER::fetch_all_somatic_by_VariationFeatures($vfs));
-}
-
-sub fetch_all_by_Transcripts_normalised {   
-    my ($self, $transcripts) = @_;
-    return $self->_vfos_to_tvs($self->SUPER::fetch_all_by_Features($transcripts));
-}
-
-sub fetch_all_somatic_by_Transcripts_normalised {
-    my ($self, $transcripts) = @_;
-    return $self->_vfos_to_tvs($self->SUPER::fetch_all_somatic_by_Features($transcripts));
-}
-
-sub fetch_by_dbID_normalised {
-    my $self = shift;
-    return $self->_vfos_to_tvs([$self->SUPER::fetch_by_dbID(@_)])->[0];
 }
 
 sub fetch_by_dbID {
@@ -577,8 +339,7 @@ sub _objs_from_sth {
             });
         }
         
-        my @cons_types = map { $self->_overlap_consequences->{$_} } split /,/, $consequence_types;
-        
+        my @cons_types = map { $self->_overlap_consequences->{$_} } split /,/, $consequence_types; # / comment exists to satisfy eclipse!
         my $allele = Bio::EnsEMBL::Variation::TranscriptVariationAllele->new_fast({
             is_reference                => 0,
             variation_feature_allele    => $alt_allele,
@@ -641,6 +402,41 @@ sub _overlap_consequences {
     }
     
     return $self->{_overlap_consequences};
+}
+
+# looks in the (sift|polyphen)_prediction table to see if there is 
+# a prediction for the given non-synonymous TranscriptVariationAllele
+sub _get_nsSNP_prediction {
+    my ($self, $program, $tva) = @_;
+    
+    return undef unless ($program eq 'polyphen' || $program eq 'sift');
+    
+    # we can only deal with single amino acid substitutions
+    
+    return undef unless ($tva->peptide && length($tva->peptide) == 1);
+    
+    my $dbh = $self->dbc->db_handle;
+    
+    my $sth = $dbh->prepare_cached(qq{
+        SELECT  pred.prediction
+        FROM    ${program}_prediction pred, protein_position pp
+        WHERE   pred.protein_position_id = pp.protein_position_id
+        AND     pp.transcript_stable_id = ?
+        AND     pp.transcript_version = ?
+        AND     pp.position = ?
+        AND     pred.amino_acid = ?
+    });
+    
+    $sth->execute(
+        $tva->transcript->stable_id,
+        $tva->transcript->version,
+        $tva->transcript_variation->pep_start,
+        $tva->peptide,
+    );
+    
+    my ($prediction) = $sth->fetchrow_array;
+    
+    return $prediction;
 }
 
 1;
