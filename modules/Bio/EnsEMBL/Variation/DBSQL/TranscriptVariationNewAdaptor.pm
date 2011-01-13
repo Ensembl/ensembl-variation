@@ -53,8 +53,10 @@ sub store {
             peptide_allele_string,
             hgvs_genomic,
             hgvs_coding,
-            hgvs_protein
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            hgvs_protein,
+            polyphen_prediction,
+            sift_prediction
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     });
 
     for my $allele (@{ $tv->alt_alleles }) {
@@ -75,7 +77,9 @@ sub store {
             $allele->pep_allele_string,
             $allele->hgvs_genomic,
             $allele->hgvs_coding,
-            $allele->hgvs_protein
+            $allele->hgvs_protein,
+            $allele->polyphen_prediction,
+            $allele->sift_prediction
         );
     }
 
@@ -149,6 +153,37 @@ sub store_normalised {
            
         $vfoa_attrib_sth->execute_array({}, \@ids, \@types, \@values);
     }
+}
+
+sub _get_nsSNP_prediction {
+    my ($self, $program, $tva) = @_;
+    
+    return undef unless ($program eq 'polyphen' || $program eq 'sift');
+    
+    return undef unless ($tva->peptide && length($tva->peptide) == 1);
+    
+    my $dbh = $self->dbc->db_handle;
+    
+    my $sth = $dbh->prepare_cached(qq{
+        SELECT  p.prediction
+        FROM    ${program}_prediction pred, protein_position pp
+        WHERE   pred.protein_position_id = pp.protein_position_id
+        AND     pp.transcript_stable_id = ?
+        AND     pp.transcript_version = ?
+        AND     pp.position = ?
+        AND     pred.amino_acid = ?
+    });
+    
+    $sth->execute(
+        $tva->transcript->stable_id,
+        $tva->transcript->version,
+        $tva->pep_start,
+        $tva->peptide,
+    );
+    
+    my ($prediction) = $sth->fetchrow_array;
+    
+    return $prediction;
 }
 
 sub _attrib_codes {
@@ -406,16 +441,6 @@ sub fetch_all_somatic_by_Transcripts {
     return $self->fetch_all_by_Transcripts_with_constraint($transcripts,'tva.is_somatic = 1');
 }
 
-sub fetch_all_by_VariationFeatures {
-    my ($self, $vfs) = @_;
-    return $self->fetch_all_by_Transcripts_with_constraint($vfs, 'tva.is_somatic = 0');
-}
-
-sub fetch_all_somatic_by_VariationFeatures {
-    my ($self, $vfs) = @_;
-    return $self->fetch_all_by_Transcripts_with_constraint($vfs, 'tva.is_somatic = 1');
-}
-
 sub fetch_all_by_Transcripts_with_constraint {
     
     my ($self, $transcripts, $constraint) = @_;
@@ -434,15 +459,16 @@ sub fetch_all_by_Transcripts_with_constraint {
     for my $tv (@$tvs) {
         if ($tv->{_feature_stable_id}) {
             my $tran_id = delete $tv->{_feature_stable_id};
+            $tv->{feature} = $trans_by_id{$tran_id};
         }
     }
     
     return $tvs;
 }
 
-sub fetch_all_by_VariationFeatures_with_constraint {
+sub fetch_all_by_VariationFeatures {
     
-    my ($self, $transcripts, $constraint) = @_;
+    my ($self, $transcripts) = @_;
     
     my $dbh = $self->dbc->db_handle;
    
@@ -451,7 +477,6 @@ sub fetch_all_by_VariationFeatures_with_constraint {
     my $id_str = join',', map {"'".$_."'"} keys %trans_by_id;
     
     my $full_constraint = "feature_stable_id in ( $id_str )";
-    $full_constraint .= " AND $constraint" if $constraint;
     
     my $tvs = $self->generic_fetch($full_constraint);
     
@@ -483,7 +508,9 @@ sub _objs_from_sth {
         $peptide_allele_string,
         $hgvs_genomic,
         $hgvs_coding,
-        $hgvs_protein
+        $hgvs_protein,
+        $polyphen_prediction,
+        $sift_prediction,
     );
     
     $sth->bind_columns(
@@ -502,7 +529,9 @@ sub _objs_from_sth {
         \$peptide_allele_string,
         \$hgvs_genomic,
         \$hgvs_coding,
-        \$hgvs_protein
+        \$hgvs_protein,
+        \$polyphen_prediction,
+        \$sift_prediction,
     );
     
     my %tvs;
@@ -510,10 +539,10 @@ sub _objs_from_sth {
     while ($sth->fetch) {
         
         my ($ref_allele, $alt_allele)   = split /\//, $allele_string;
-        my ($ref_codon, $alt_codon)     = split /\//, $codon_allele_string;
-        my ($ref_pep, $alt_pep)         = split /\//, $peptide_allele_string;
+        my ($ref_codon, $alt_codon)     = split /\//, $codon_allele_string || '';
+        my ($ref_pep, $alt_pep)         = split /\//, $peptide_allele_string || '';
         
-        # for HGMD mutations just set the alt allele to the ref allele
+        # for HGMD mutations etc. just set the alt allele to the ref allele
         $alt_allele ||= $ref_allele;
         
         # for synonymous mutations the peptides are the same and 
@@ -535,6 +564,7 @@ sub _objs_from_sth {
                 cdna_end                => $cdna_end,
                 pep_start               => $pep_start,
                 pep_end                 => $pep_end,
+                adaptor                 => $self,
             });
             
             $tvs{$key} = $tv;
@@ -557,7 +587,9 @@ sub _objs_from_sth {
             hgvs_genomic                => $hgvs_genomic,
             hgvs_coding                 => $hgvs_coding,
             hgvs_protein                => $hgvs_protein,
-            consequence_types           => \@cons_types,  
+            consequence_types           => \@cons_types, 
+            polyphen_prediction         => $polyphen_prediction,
+            sift_prediction             => $sift_prediction, 
         });
         
         $tv->alt_alleles($allele);
