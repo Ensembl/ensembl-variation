@@ -1041,7 +1041,7 @@ sub get_all_LD_Populations{
 	return [] unless $ld_pops;
 	
 	my $sth = $self->adaptor->db->prepare(qq{
-	  SELECT distinct(ip.population_sample_id)
+	  SELECT ip.population_sample_id, c.seq_region_start, c.genotypes
 	  FROM compressed_genotype_single_bp c, individual_population ip
 	  WHERE c.sample_id = ip.individual_sample_id
 	  AND c.seq_region_id = ?
@@ -1049,16 +1049,39 @@ sub get_all_LD_Populations{
 	  AND c.seq_region_end > ?
 	});
 	
+	my $this_vf_start = $self->seq_region_start;
+	
 	$sth->bind_param(1, $self->feature_Slice->get_seq_region_id);
 	$sth->bind_param(2, $self->seq_region_end);
-	$sth->bind_param(3, $self->seq_region_start);
+	$sth->bind_param(3, $this_vf_start);
 	
 	$sth->execute;
 	
-	my $sample_id;
-	$sth->bind_columns(\$sample_id);
+	my ($sample_id, $seq_region_start, $genotypes);
+	$sth->bind_columns(\$sample_id, \$seq_region_start, \$genotypes);
+	
 	my %have_genotypes = ();
-	$have_genotypes{$sample_id} = 1 while $sth->fetch();
+	
+	while($sth->fetch()) {
+	  
+	  next if $have_genotypes{$sample_id};
+	  
+	  if($seq_region_start == $this_vf_start) {
+		$have_genotypes{$sample_id} = 1;
+		next;
+	  }
+	  
+	  my @genotypes = unpack '(aan)*', $genotypes;
+	  my $gt_start = $seq_region_start;
+	  
+	  while(my( $allele_1, $allele_2, $gap ) = splice @genotypes, 0, 3 ) {
+		if($gt_start == $this_vf_start) {
+		  $have_genotypes{$sample_id} = 1;
+		  last;
+		}
+		$gt_start += $gap + 1 if defined $gap;
+	  }
+	}
 	
 	my @final_list = grep {$have_genotypes{$_->dbID}} @$ld_pops;
 	
