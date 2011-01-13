@@ -48,11 +48,21 @@ Bio::EnsEMBL::Variation::DBSQL::VariationAdaptor
   # fetch a variation by its name
   $var = $va->fetch_by_name('rs100');
 
+  #Êcheck if the variation is failed and if so, get the failed description
+  if ($var->is_failed()) {
+    $desc = $var->failed_description();
+  }
 
   # fetch all variations from a population
   $pop = $pa->fetch_by_name('PACIFIC');
   @vars = {$va->fetch_all_by_Population($pop)};
-
+  
+  #ÊModify the include_failed_variations flag in DBAdaptor to also return variations that have been flagged as failed
+  $va->db->include_failed_variations(1);
+  
+  # Fetch all variations from a population, including variations flagged as failed
+  @vars = {$va->fetch_all_by_Population($pop)};
+  
 =head1 DESCRIPTION
 
 This adaptor provides database connectivity for Variation objects.
