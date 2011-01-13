@@ -32,7 +32,7 @@ sub transcript_variation {
 
 sub transcript {
     my $self = shift;
-    return $self->variation_feature_overlap->feature;
+    return $self->transcript_variation->transcript;
 }
 
 sub variation_feature {
@@ -203,6 +203,51 @@ sub consequence_types {
     $self->{consequence_types} = $cons;
     
     return $cons;
+}
+
+sub polyphen_prediction {
+    my ($self, $polyphen_prediction) = @_;
+    
+    $self->{polyphen_prediction} = $polyphen_prediction if $polyphen_prediction;
+    
+    $self->{polyphen_prediction} = $self->_nsSNP_prediction('polyphen')
+        unless $self->{polyphen_prediction};
+    
+    return $self->{polyphen_prediction};
+}
+
+sub sift_prediction {
+    my ($self, $sift_prediction) = @_;
+    
+    $self->{sift_prediction} = $sift_prediction if $sift_prediction;
+    
+    $self->{sift_prediction} = $self->_nsSNP_prediction('sift')
+        unless $self->{sift_prediction};
+    
+    return $self->{sift_prediction};
+}
+
+sub _nsSNP_prediction {
+    my ($self, $program) = @_;
+    
+    if (grep { $_->SO_term eq 'non_synonymous_codon' } @{ $self->consequence_types }) {
+        if (my $adap = $self->transcript_variation->{adaptor}) {
+            return $adap->_get_nsSNP_prediction($program, $self);
+        }
+    }
+    
+    return undef;
+}
+
+sub SO_isa {
+    my ($self, $query) = @_;
+    
+    for my $cons (@{ $self->consequence_types }) {
+        if ($cons->SO_term eq $query) {
+            return 1;
+        }
+        
+    } 
 }
 
 sub hgvs_genomic {
