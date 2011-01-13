@@ -246,7 +246,6 @@ sub SO_isa {
         if ($cons->SO_term eq $query) {
             return 1;
         }
-        
     } 
 }
 
