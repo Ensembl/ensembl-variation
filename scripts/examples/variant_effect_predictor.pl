@@ -35,10 +35,17 @@ use Bio::EnsEMBL::Variation::DBSQL::VariationFeatureAdaptor;
 use Bio::EnsEMBL::Variation::DBSQL::TranscriptVariationAdaptor;
 use Bio::EnsEMBL::Variation::Utils::Sequence qw(unambiguity_code);
 
-# get command-line options
-my ($in_file, $out_file, $buffer_size, $species, $registry_file, $help, $host, $user, $password);
+# debug
+#use Devel::Size qw(total_size);
+use Time::HiRes qw(gettimeofday tv_interval);
+our %times;
 
-our ($most_severe, $check_ref, $check_existing, $hgnc, $input_format);
+
+
+# get command-line options
+my ($in_file, $out_file, $buffer_size, $species, $registry_file, $help, $host, $user, $password, $tmpdir, $db_version, $regulation, $include_failed);
+
+our ($most_severe, $check_ref, $check_existing, $hgnc, $input_format, $whole_genome, $chunk_size);
 
 my $args = scalar @ARGV;
 
@@ -46,7 +53,7 @@ GetOptions(
 	'input_file=s'     => \$in_file,
 	'output_file=s'    => \$out_file,
 	'species=s'		   => \$species,
-	'buffer_size=s'	   => \$buffer_size,
+	'buffer_size=i'	   => \$buffer_size,
 	'registry=s'	   => \$registry_file,
 	'db_host=s'		   => \$host,
 	'user=s'		   => \$user,
@@ -54,18 +61,29 @@ GetOptions(
 	'most_severe'	   => \$most_severe,
 	'check_ref'        => \$check_ref,
 	'check_existing=i' => \$check_existing,
+	'failed=i'         => \$include_failed,
 	'hgnc'             => \$hgnc,
 	'help'			   => \$help,
 	'format=s'         => \$input_format,
+	'whole_genome'     => \$whole_genome,
+	'tmp_dir=s'        => \$tmpdir,
+	'version=i'        => \$db_version,
+	'chunk_size=s'     => \$chunk_size,
 );
 
 # set defaults
-$out_file ||= "variant_effect_output.txt";
-$species ||= "human";
+$out_file    ||= "variant_effect_output.txt";
+$species     ||= "human";
 $buffer_size ||= 500;
-$host ||= 'ensembldb.ensembl.org';
-$user ||= 'anonymous';
-$check_existing = 1 unless defined $check_existing;
+$chunk_size  ||= '50kb';
+$host        ||= 'ensembldb.ensembl.org';
+$user        ||= 'anonymous';
+$tmpdir      ||= '/tmp';
+
+$include_failed = 1 unless defined $include_failed;
+$check_existing = 1 unless (defined $check_existing || defined $whole_genome);
+$chunk_size =~ s/mb?/000000/i;
+$chunk_size =~ s/kb?/000/i;
 
 # check file format
 if(defined $input_format) {
@@ -91,16 +109,15 @@ if(defined($registry_file)) {
 
 # otherwise manually connect to DB server
 else {
-	if(defined($password)) {
-		$reg->load_registry_from_db(-host => $host,-user => $user, -pass => $password);
-	}
-	
-	else {
-		$reg->load_registry_from_db(-host => $host,-user => $user);
-	}
+	$reg->load_registry_from_db(
+		-host       => $host,
+		-user       => $user,
+		-pass       => $password,
+		-db_version => $db_version,
+	);
 }
 
-# get a meta container adaptors to check version
+## get a meta container adaptors to check version
 #my $core_mca = $reg->get_adaptor($species, 'core', 'metacontainer');
 #my $var_mca = $reg->get_adaptor($species, 'variation', 'metacontainer');
 #
@@ -136,10 +153,9 @@ print $out_file_handle
 	"Amino acid change\tCorresponding Variation\n";
 
 
-
 # get adaptors
-my $vfa = $reg->get_adaptor($species, 'variation', 'variationfeature');
-my $tva = $reg->get_adaptor($species, 'variation', 'transcriptvariation');
+our $vfa = $reg->get_adaptor($species, 'variation', 'variationfeature');
+our $tva = $reg->get_adaptor($species, 'variation', 'transcriptvariation');
 
 # get fake ones for species with no var DB
 if(!defined($vfa)) {
@@ -150,19 +166,40 @@ if(!defined($tva)) {
 	$tva = Bio::EnsEMBL::Variation::DBSQL::TranscriptVariationAdaptor->new_fake($species);
 }
 
-my $sa = $reg->get_adaptor($species, 'core', 'slice');
+$vfa->db->include_failed_variations($include_failed) if $vfa->db->can('include_failed_variations');
+
+our $sa = $reg->get_adaptor($species, 'core', 'slice');
 our $ga = $reg->get_adaptor($species, 'core', 'gene');
 
 # check we got slice adaptor - can't continue without a core DB
 die("ERROR: Could not connect to core database\n") unless defined $sa and defined $ga;
 
+# regulatory stuff
+our ($fsa, $mfa, $fss);
+if($regulation) {
+	$fsa = $reg->get_adaptor($species, 'funcgen', 'featureset');
+	$mfa = $reg->get_adaptor($species, 'funcgen', 'motiffeature');
+	
+	if(defined $fsa and defined $mfa) {
+		$fss = $fsa->fetch_all();
+	}
+	
+	else {
+		warn("WARNING: Could not get functgenomics adaptors");
+		$regulation = undef;
+	}
+}
 
 
 # create a hash to hold slices so we don't get the same one twice
 my %slice_hash = ();
 my @new_vfs;
+my %vf_hash;
+
+our $transcript_cache;
 
 my $line_number = 0;
+my $vf_count;
 
 # read the file
 while(<$in_file_handle>) {
@@ -275,21 +312,46 @@ while(<$in_file_handle>) {
 	  -variation_name => (defined $var_name ? $var_name : $chr.'_'.$start.'_'.$allele_string),
 	);
 	
-	push @new_vfs, $new_vf;
+	$vf_count++;
 	
-	# if the array is "full" or there are no more items in @list
-	if(scalar @new_vfs == $buffer_size) {
+	if($whole_genome) {
+		push @{$vf_hash{$chr}{int($start / $chunk_size)}{$start}}, $new_vf;
+	}
+	else {
+		push @new_vfs, $new_vf;
+	}
+	
+	# process if buffer "full"
+	if($vf_count == $buffer_size) {
 	  
-	  # get consequences
-	  # results are stored attached to reference VF objects
-	  # so no need to capture return value here
-	  $tva->fetch_all_by_VariationFeatures(\@new_vfs);
+	  if($whole_genome) {
+		&print_consequences(&whole_genome_fetch(\%vf_hash), $out_file_handle);
+		%vf_hash = ();
+	  }
 	  
-	  # now print the results to the file handle
-	  &print_consequences(\@new_vfs, $out_file_handle);
+	  else {
+		# get consequences
+		# results are stored attached to reference VF objects
+		# so no need to capture return value here
+		$tva->fetch_all_by_VariationFeatures(\@new_vfs);
+		
+		# now print the results to the file handle
+		&print_consequences(\@new_vfs, $out_file_handle);
+		
+		# do regulation stuff
+		if($regulation) {
+			foreach my $vf(@new_vfs) {
+				foreach my $mf(@{$mfa->fetch_all_by_Slice_FeatureSets($vf->feature_Slice, $fss)}) {
+					print $vf->variation_name, " ", $mf->display_label, "\n";
+				}
+			}
+		}
+		
+		# clear the array
+		@new_vfs = ();
+	  }
 	  
-	  # clear the array
-	  @new_vfs = ();
+	  $vf_count = 0;
 	}
   }
 }
@@ -298,6 +360,11 @@ while(<$in_file_handle>) {
 if(scalar @new_vfs) {
 	$tva->fetch_all_by_VariationFeatures(\@new_vfs);
 	&print_consequences(\@new_vfs, $out_file_handle);
+}
+
+# if in whole-genome mode
+if($whole_genome && %vf_hash) {
+	&print_consequences(&whole_genome_fetch(\%vf_hash), $out_file_handle);
 }
 
 sub print_consequences {
@@ -336,7 +403,7 @@ sub print_consequences {
 				($con->{'translation_start'}, $con->{'translation_end'}) = ($con->{'translation_end'}, $con->{'translation_start'});
 			  }
 			  
-			  my $gene = ($con->transcript ? $ga->fetch_by_transcript_stable_id($con->transcript->stable_id) : undef);
+			  my $gene = ($con->transcript ? $ga->fetch_by_transcript_stable_id($con->transcript->stable_id) : undef) unless $whole_genome;
 			  
 			  my $hgnc_name;
 			  if($hgnc && $gene) {
@@ -349,7 +416,7 @@ sub print_consequences {
 				$new_vf->seq_region_name, ":",
 				$new_vf->seq_region_start,
 				($new_vf->seq_region_end == $new_vf->seq_region_start ? "" : "-".$new_vf->seq_region_end), "\t".
-				($con->transcript ? $gene->stable_id.(defined $hgnc_name ? ";$hgnc_name" : "") : "-"), "\t",
+				($gene ? $gene->stable_id.(defined $hgnc_name ? ";$hgnc_name" : "") : "-"), "\t",
 				($con->transcript ? $con->transcript->stable_id : "-"), "\t",
 				$string, "\t",
 				($con->cdna_start ? $con->cdna_start.($con->cdna_end eq $con->cdna_start ? "" : "-".$con->cdna_end) : "-"), "\t",
@@ -408,33 +475,105 @@ sub parse_line {
 			return [['non-variant']];
 		}
 		
-		my ($start, $end, $alt) = ($data[1], $data[1], $data[4]);
+		# get relevant data
+		my ($start, $end, $ref, $alt) = ($data[1], $data[1], $data[3], $data[4]);
 		
-		# indel?
-		if($alt =~ /D|I/) {
-			if($alt =~ /\,/) {
-				warn "WARNING: can't deal with multiple different indel types in one variation";
-				return [['non-variant']];
+		# adjust end coord
+		$end += (length($ref) - 1);
+		
+		# find out if any of the alt alleles make this an insertion or a deletion
+		my ($is_indel, $is_sub, $ins_count, $total_count);
+		foreach my $alt_allele(split /\,/, $alt) {
+			$is_indel = 1 if $alt_allele =~ /D|I/;
+			$is_indel = 1 if length($alt_allele) != length($ref);
+			$is_sub = 1 if length($alt_allele) == length($ref);
+			$ins_count++ if length($alt_allele) > length($ref);
+			$total_count++;
+		}
+		
+		# multiple alt alleles?
+		if($alt =~ /\,/) {
+			if($is_indel) {
+				
+				my @alts;
+				
+				if($alt =~ /D|I/) {
+					foreach my $alt_allele(split /\,/, $alt) {
+						# deletion (VCF <4)
+						if($alt_allele =~ /D/) {
+							push @alts, '-';
+						}
+						
+						elsif($alt_allele =~ /I/) {
+							$alt_allele =~ s/^I//g;
+							push @alts, $alt_allele;
+						}
+					}
+				}
+				
+				else {
+					$ref = substr($ref, 1);
+					$ref = '-' if $ref eq '';
+					$start++;
+					
+					foreach my $alt_allele(split /\,/, $alt) {
+						$alt_allele = substr($alt_allele, 1);
+						$alt_allele = '-' if $alt_allele eq '';
+						push @alts, $alt_allele;
+					}
+				}
+				
+				$alt = join "/", @alts;
 			}
 			
-			# deletion
-			if($alt =~ /D/) {
-				my $num_deleted = $alt;
-				$num_deleted =~ s/\D+//g;
-				$end += $num_deleted - 1;
-				$alt = "-";
-			}
-			
-			# insertion
 			else {
-				$data[3] = '-';
-				$alt =~ s/^I//g;
-				$start++;
+				# for substitutions we just need to replace ',' with '/' in $alt
+				$ref =~ s/\,/\//;
 			}
 		}
 		
-		$alt =~ s/\,/\//g;
-		return [[$data[0], $start, $end, $data[3]."/".$alt, 1, ($data[2] eq '.' ? undef : $data[2])]];
+		else {
+			if($is_indel) {
+				# deletion (VCF <4)
+				if($alt =~ /D/) {
+					my $num_deleted = $alt;
+					$num_deleted =~ s/\D+//g;
+					$end += $num_deleted - 1;
+					$alt = "-";
+					$ref .= ("N" x ($num_deleted - 1)) unless length($ref) > 1;
+				}
+				
+				# insertion (VCF <4)
+				elsif($alt =~ /I/) {
+					$ref = '-';
+					$alt =~ s/^I//g;
+					$start++;
+				}
+				
+				# insertion or deletion (VCF 4+)
+				else {
+					# chop off first base
+					$ref = substr($ref, 1);
+					$alt = substr($alt, 1);
+					
+					$start++;
+					
+					if($ref eq '') {
+						# make ref '-' if no ref allele left
+						$ref = '-';
+						
+						# extra adjustment required for Ensembl
+						$start++;
+					}
+					
+					# make alt '-' if no alt allele left
+					$alt = '-' if $alt eq '';
+				}
+			}
+		}
+		
+		return [[$data[0], $start, $end, $ref."/".$alt, 1, ($data[2] eq '.' ? undef : $data[2])]];
+		
 	}
 	
 	# our format
@@ -443,6 +582,77 @@ sub parse_line {
 		@data = (split /\s+|\,/, $_);
 		return [\@data];
 	}
+}
+
+
+sub whole_genome_fetch {
+	my $vf_hash = shift;
+	
+	my $up_down_size = $Bio::EnsEMBL::Variation::DBSQL::TranscriptVariationAdaptor::UP_DOWN_SIZE;
+	
+	my %vf_done;
+	my @return;
+	
+	&start("transcripts");
+	
+	foreach my $chr(keys %$vf_hash) {
+		my $slice = $sa->fetch_by_region('chromosome', $chr);
+		
+		warn "Analyzing chromosome $chr";
+		
+		if(defined($transcript_cache->{$chr})) {
+			warn " - USING CACHE";
+		}
+		
+		$transcript_cache->{$chr} = $slice->get_all_Transcripts() unless defined($transcript_cache->{$chr});
+		
+		my $tr_count = scalar @{$transcript_cache->{$chr}};
+		
+		warn " - fetched $tr_count transcripts";
+		
+		my $tr_counter;
+		
+		while($tr_counter < $tr_count) {
+			
+			my $tr = $transcript_cache->{$chr}->[$tr_counter++];
+			
+			if($tr_counter =~ /(5|0)00$/) {
+				warn " - analysed $tr_counter\/$tr_count transcripts on chr $chr";
+				&end("transcripts");
+				&start("transcripts");
+			}
+			
+			# do each overlapping VF
+			my $chr = $tr->seq_region_name;
+			my $s = $tr->seq_region_start - $up_down_size;
+			my $e = $tr->seq_region_end + $up_down_size;
+			
+			# get the chunks this transcript overlaps
+			my %chunks;
+			$chunks{$_} = 1 for (int($s/$chunk_size)..int($e/$chunk_size));
+			map {delete $chunks{$_} unless defined($vf_hash{$chr}{$_})} keys %chunks;
+			
+			foreach my $chunk(keys %chunks) {				
+				foreach my $pos(grep {$_ >= $s && $_ <= $e} keys %{$vf_hash{$chr}{$chunk}}) {
+					foreach my $vf(@{$vf_hash{$chr}{$chunk}{$pos}}) {
+						$tva->_calc_consequences($slice, $tr, $vf);
+						
+						if(!defined($vf_done{$vf->{'variation_name'}.'_'.$vf->{'start'}})) {
+							push @return, $vf;
+							$vf_done{$vf->{'variation_name'}.'_'.$vf->{'start'}} = 1;
+						}
+					}
+				}
+			}
+		}
+		
+		# clean hash
+		delete $vf_hash{$chr};
+	}
+	
+	&end("transcripts");
+	
+	return \@return;
 }
 
 sub usage {
@@ -471,6 +681,10 @@ Options
                        entry in Ensembl Core database [default: not used]
 --check_existing=[0|1] If set to 1, checks for existing co-located variations in the
                        Ensembl Variation database [default: 1]
+--failed=[0|1]         If set to 1, includes variations flagged as failed when checking
+                       for co-located variations. Only applies in Ensembl 61 or later
+					   [default: 1]
+					   
 --hgnc                 If specified, HGNC gene identifiers are output alongside the
                        Ensembl Gene identifier [default: not used]
 
@@ -479,7 +693,29 @@ Options
 -p | --password        Database password [default: not used]
 -r | --registry_file   Registry file to use defines DB connections [default: not used]
                        Defining a registry file overrides above connection settings.
+					   
+-w | --whole_genome    EXPERIMENTAL! Run in whole genome mode [default: not used]
+                       Should only be used with data covering a whole genome or
+					   chromosome e.g. from resequencing. For better performance,
+					   set --buffer_size higher (>10000 if memory allows).
+					   Disables --check_existing option and gene column by default.
+--chunk_size           Sets the chunk size of internal data structure [default: 50kb]
+                       Setting this lower may improve speed for variant-dense
+					   datasets. Only applies to whole genome mode.
 END
 
 	print $usage;
+}
+
+
+sub start {
+	my $id = shift;
+	$id ||= '-';
+	$times{$id} = [gettimeofday];
+}
+
+sub end {
+	my $id = shift;
+	$id ||= '-';
+	warn "Time for $id : ", tv_interval($times{$id}), "\n";
 }
