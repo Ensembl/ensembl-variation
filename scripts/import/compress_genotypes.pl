@@ -21,12 +21,13 @@ use constant MAX_SHORT => 2**16 -1;
 my %Printable = ( "\\"=>'\\', "\r"=>'r', "\n"=>'n', "\t"=>'t', "\""=>'"' );
 
 
-my ($TMP_DIR, $TMP_FILE, $species);
+my ($TMP_DIR, $TMP_FILE, $species, $selected_seq_region);
 
 
 GetOptions(   'tmpdir=s'  => \$TMP_DIR,
 	      'tmpfile=s' => \$TMP_FILE,
 	      'species=s' => \$species,
+		  'seq_region=i' => \$selected_seq_region,
 		   );
 
 warn("Make sure you have an updated ensembl.registry file!\n");
@@ -59,12 +60,16 @@ sub compress_genotypes{
     my $genotypes = {}; #hash containing all the genotypes
     my $blob = '';
     my $count = 0;
+	
+	my $extra_sql = ($selected_seq_region ? " AND vf.seq_region_id = $selected_seq_region " : "");
+	
     my $sth = $dbVar->prepare(qq{SELECT STRAIGHT_JOIN vf.seq_region_id, vf.seq_region_start, vf.seq_region_end, vf.seq_region_strand, ig.allele_1, ig.allele_2, ig.sample_id, vf.allele_string
 				     FROM variation_feature vf FORCE INDEX(pos_idx), tmp_individual_genotype_single_bp ig
 				     WHERE ig.variation_id = vf.variation_id
 				     AND vf.map_weight = 1
 				     AND ig.allele_1 <> 'N'
 				     AND ig.allele_2 <> 'N'
+					 $extra_sql
 				     ORDER BY vf.seq_region_id, vf.seq_region_start}, {mysql_use_result => 1});
 
     print "Time starting to dump data from database: ",scalar(localtime(time)),"\n";
@@ -178,7 +183,7 @@ sub update_meta_coord {
     my $cs = $csa->fetch_by_name($csname);
 
     my $sth = $dbVar->prepare
-	('INSERT INTO meta_coord (table_name,coord_system_id,max_length) VALUES (?,?,?)');
+	('INSERT IGNORE INTO meta_coord (table_name,coord_system_id,max_length) VALUES (?,?,?)');
 
     $sth->execute($table_name, $cs->dbID(),DISTANCE+1);
     
