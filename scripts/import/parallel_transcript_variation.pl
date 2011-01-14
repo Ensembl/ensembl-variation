@@ -145,7 +145,7 @@ sub transcript_variation {
       }
 
       #print "slice name is ",$slice->name,"\n";
-      my @rf_fg = @{$rfa->fetch_all_by_Slice($slice)};
+      my @rf_fg;# = @{$rfa->fetch_all_by_Slice($slice)};
       push @rf, @rf_fg if @rf_fg >0;
       foreach my $rf (@rf) { 
 	# request all variations which lie in the region of a regulate feature
@@ -223,6 +223,12 @@ sub transcript_variation {
       my ($start,$end, $strand); #start, end and strand of the variation feature in the slice
 
       foreach my $row (@$rows) {
+		# HGMD MUTATION
+		if($row->[4] eq 'HGMD_MUTATION') {
+		  print FH $tr->stable_id, "\t", $row->[0], (('\N'."\t") x 8), 'HGMD_MUTATION', "\n";
+		  next;
+		}
+		
 	next if ($row->[4] =~ /LARGE|INS|DEL|CNV|MUTATION/);#for LARGEINSERTION and LARGEDELETION alleles we don't calculate transcripts
 	# put variation in slice coordinates
 	$start = $row->[1] - $slice->start() + 1;
