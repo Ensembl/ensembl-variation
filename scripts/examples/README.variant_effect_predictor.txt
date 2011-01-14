@@ -87,6 +87,10 @@ Long form shown in parentheses.
    variants that are co-located with your input. Disabling this by specifying
    --check_existing=0 will bypass this and provide a speed boost. Default : 1
    
+--failed [0|1] : when checking for co-located variants, by default the script
+  will include variants that have been flagged as failed. Set this flag to 0 to
+  exclude such variants. Default : 1
+   
 --hgnc : adds the HGNC gene identifer (where available) to the output e.g.
     ENSG00000001626;CFTR. Not used by default
    
@@ -102,6 +106,15 @@ Long form shown in parentheses.
 -r (--registry_file) : defining a registry file (see 4.3 below) overwrites other
    connection settings and uses those found in the specified registry file to
    connect.
+   
+-w (--whole_genome) : EXPERIMENTAL. Setting this flag forces the script to run
+  in whole-genome mode. This should only be used for appropriate datasets - see
+  section on whole-genome mode for more details. Not used by default
+  
+--chunk_size : Sets the chunk size of the internal data structure used in
+  whole-genome mode. Only change this if you know what you are doing!
+  Default : 50kb
+  
    
 3.2 Examples
 ------------
@@ -123,6 +136,10 @@ The Variant Effect Predictor script uses plain text files both as input and outp
 
 4.1 Input file
 --------------
+
+The script now supports VCF version 4 as input - see the URL below for details:
+
+http://www.1000genomes.org/wiki/Analysis/variant-call-format
 
 The default input file format consists of five columns; these can be comma, tab
 (or any whitespace) separated. The columns are:
@@ -257,7 +274,66 @@ database is required to assess if variations fall in regulatory regions.
 
 
 
-5.0 Notes
+5.0 Whole-genome mode
+=====================
+
+Whole-genome mode allows the analysis of dense datasets that cover an entire
+genome, such as those produced from resequencing projects. This mode should be
+considered BETA, and therefore only for use by those willing to accept the risks
+inherent in this!
+
+In "standard" mode the script, for each variant, finds any transcripts that
+overlap and works out the consequences of the variant on each of these
+transcripts.
+
+In whole-genome mode, the script takes the opposite approach - it retrieves all
+transcripts for a chromosome (or contig as appropriate), then finds overlapping
+variants and works out the consequences. This approach is much faster for dense
+datasets since much of the data calculated on the fly per transcript can be
+cached and reused for each variant that overlaps it.
+
+The restriction of this approach is that it depends on having a database-like
+approach to retrieving the variants that overlap each transcript. To this end,
+the script implements a chunked, or stratified, internal data structure to store
+the variants. It is also strongly recommended that the input file(s) be sorted
+by chromosome and position before running the script.
+
+By default, the script stores variants in chunks of 50kb (roughly the average
+length of a transcript in human). This means that generally only between 1 and 3
+"chunks" of variants need to be checked for overlap per transcript. This chunk
+size can be modified via the --chunk_size option.
+
+To make the most of this, the --buffer_size option should be set much higher
+than usual - depending on memory available this should be as high as possible.
+Memory use is also dependent on the number of chromosomes represented by the
+input file, since data calculated on the fly per transcript is cached.
+
+Setting the buffer size to 10000 is more than adequate to use whole-genome mode,
+and should use <1GB of memory for human. Setting the buffer size higher still
+will yield faster performance but will use more memory.
+
+Using a locally installed core database will also dramatically improve
+performance versus connecting to the public Ensembl MySQL server.
+
+By default, checking for existing variants is disabled, as is output of the
+Ensembl Gene identifier.
+
+Summary of recommendations for using whole-genome mode:
+
+- sort your data by chromosome and position
+
+- install a local copy of the relevant core database to connect to
+
+- increase --buffer_size to 10000 or more
+
+- ensure your system has a large amount of free memory (1GB+ recommended)
+
+- if possible, run in parallel - divide the data by chromosome and run one
+  parallel process per chromosome
+
+
+
+6.0 Notes
 =========
 
 Run time of the script is generally proportional to the number of variants given
