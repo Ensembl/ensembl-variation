@@ -786,10 +786,14 @@ sub var_class{
         # convert the SO_id to the ensembl display term
         if (my $display_term = $self->{adaptor}->_display_term_for_SO_id($self->{class_SO_id}, $self->is_somatic)) {
             $self->{class_display_term} = $display_term;
+            $self->{class_SO_term} = $self->{adaptor}->_SO_term_for_SO_id($self->{class_SO_id});
         }
         else {
             # work out the term from the allele string
             my $SO_term = SO_variation_class($self->allele_string);
+            
+            $self->{class_SO_term} = $SO_term;
+            
             if (my $display_term = $self->{adaptor}->_display_term_for_SO_term($SO_term, $self->is_somatic)) {
                 $self->{class_display_term} = $display_term;
             }
@@ -802,6 +806,29 @@ sub var_class{
     return $self->{class_display_term};
 }
 
+=head2 class_SO_term
+
+    Args         : None
+    Example      : my $SO_variation_class = $vf->class_SO_term()
+    Description  : returns the SO term for the class for the variation
+    ReturnType   : String $SO_term
+    Exceptions   : none
+    Caller       : General
+    Status       : At Risk
+
+=cut
+
+sub class_SO_term {
+    my $self = shift;
+    
+    unless ($self->{class_SO_term}) {
+        # the logic for working this stuff out is in the var_class method, so just 
+        # call it to set the class_SO_term 
+        $self->var_class;
+    }
+    
+    return $self->{class_SO_term};
+}
 
 =head2 get_all_validation_states
 
