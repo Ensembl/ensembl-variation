@@ -30,6 +30,8 @@ GetOptions(   'tmpdir=s'  => \$TMP_DIR,
 		  'seq_region=i' => \$selected_seq_region,
 		   );
 
+$selected_seq_region ||= $ENV{LSB_JOBINDEX} if defined($ENV{LSB_JOBINDEX});
+
 warn("Make sure you have an updated ensembl.registry file!\n");
 
 usage('-TMP_DIR argument is required') if(!$TMP_DIR);
