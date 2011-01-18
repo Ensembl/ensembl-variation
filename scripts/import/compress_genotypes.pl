@@ -32,6 +32,11 @@ GetOptions(   'tmpdir=s'  => \$TMP_DIR,
 
 $selected_seq_region ||= $ENV{LSB_JOBINDEX} if defined($ENV{LSB_JOBINDEX});
 
+$TMP_FILE .= "_".$selected_seq_region if defined($selected_seq_region);
+
+my $dump_file = 'compressed_genotype.txt';
+$dump_file .= "_".$selected_seq_region if defined($selected_seq_region);
+
 warn("Make sure you have an updated ensembl.registry file!\n");
 
 usage('-TMP_DIR argument is required') if(!$TMP_DIR);
@@ -85,7 +90,7 @@ sub compress_genotypes{
     while ($sth->fetch){
 	#new chromosome, print all remaining genotypes and upload the file
 	if ($previous_seq_region_id != $seq_region_id && $previous_seq_region_id != 0){
-	    print_file("$TMP_DIR/compressed_genotype.txt",$genotypes, $previous_seq_region_id);
+	    print_file("$TMP_DIR/$dump_file",$genotypes, $previous_seq_region_id);
 	    $genotypes = {}; #and flush the hash
 	    #need to fork for upload the data
 	    my $pid = fork;
@@ -112,7 +117,7 @@ sub compress_genotypes{
 	#compare with the beginning of the region if it is within the DISTANCE of compression
 	if ((abs($genotypes->{$sample_id}->{region_start} - $seq_region_start) > DISTANCE()) || (abs($seq_region_start - $genotypes->{$sample_id}->{region_end}) > MAX_SHORT)){
 	    #snp outside the region, print the region for the sample we have already visited and start a new one
-	    print_file("$TMP_DIR/compressed_genotype.txt",$genotypes, $seq_region_id, $sample_id);
+	    print_file("$TMP_DIR/$dump_file",$genotypes, $seq_region_id, $sample_id);
 	    delete $genotypes->{$sample_id}; #and remove the printed entry
 	    $genotypes->{$sample_id}->{region_start} = $seq_region_start;
 	}
@@ -136,7 +141,7 @@ sub compress_genotypes{
     $sth->finish();
     print "Time finishing dumping data: ",scalar(localtime(time)),"\n";
     #print last region
-    print_file("$TMP_DIR/compressed_genotype.txt",$genotypes, $previous_seq_region_id);
+    print_file("$TMP_DIR/$dump_file",$genotypes, $previous_seq_region_id);
     #and import remainig genotypes
     &import_genotypes($dbVar);
 }
@@ -166,7 +171,7 @@ sub import_genotypes{
     my $dbVar = shift;
 
     debug("Importing compressed genotype data");
-    my $call = "mv $TMP_DIR/compressed_genotype.txt $TMP_DIR/$TMP_FILE";
+    my $call = "mv $TMP_DIR/$dump_file $TMP_DIR/$TMP_FILE";
     system($call);
     load($dbVar,qw(compressed_genotype_single_bp sample_id seq_region_id seq_region_start seq_region_end seq_region_strand genotypes));
 }
