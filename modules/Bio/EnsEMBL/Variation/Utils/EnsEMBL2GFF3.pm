@@ -205,11 +205,17 @@ use warnings;
         
         $gff->{type} = $self->class_SO_term;
 
-        # Use the variation name (rsID etc.) as the ID
-        
-        my $gvf_id = $self->variation_name;
+        $gff->{attributes}->{Dbxref} = $self->source.':'.$self->variation_name;
 
-        $gff->{attributes}->{ID} = $gvf_id;
+        # Use the variation name (rsID etc.) concatenated with the seq_region_name and positions as the ID
+
+        $gff->{attributes}->{ID} = join(':', 
+            $self->variation_name,
+            $gff->{seqid},
+            $gff->{start},
+            $gff->{end},
+            $gff->{strand}
+        );
 
         $gff->{attributes}->{Variant_effect} = [];
 
