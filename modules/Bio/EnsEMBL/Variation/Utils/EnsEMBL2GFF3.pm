@@ -135,7 +135,15 @@ use warnings;
         my $seqid = $rebase ? $gff_seqid.'_'.$self->slice->start.'-'.$self->slice->end : $gff_seqid;
         my $start = $rebase ? $self->start : $self->seq_region_start;
         my $end = $rebase ? $self->end : $self->seq_region_end;
-
+        
+        # GFF3 does not allow start > end, and mandates that for zero-length features (e.g. insertions) 
+        # start = end and the implied insertion site is to the right of the specified base, so we use the
+        # smaller of the two values
+        
+        if ($start > $end) {
+            $start = $end;
+        }
+        
         my $gff = {
             seqid   => $gff_seqid,
             source  => $gff_source,
@@ -195,7 +203,7 @@ use warnings;
 
         $gff->{source} = $self->source;
         
-        $gff->{type} = $self->var_class;
+        $gff->{type} = $self->class_SO_term;
 
         # Use the variation name (rsID etc.) as the ID
         
