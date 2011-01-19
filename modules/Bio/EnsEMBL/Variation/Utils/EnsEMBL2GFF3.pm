@@ -50,7 +50,7 @@ use warnings;
             "##gff-version 3\n"
           . "##date $date\n"
           . "##sequence-region $region $start $end\n"
-          . "##genome-build $assembly\n";
+          . "##genome-build ensembl $assembly\n";
     
         return $hdr;
     }
