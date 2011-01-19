@@ -48,13 +48,14 @@ use warnings;
         
         my $mca = $self->adaptor->db->get_MetaContainerAdaptor;
         my $schema_version = $mca->get_schema_version;
+        my $url = 'http://e'.$schema_version.'.ensembl.org';
         
         my $hdr =
             "##gff-version 3\n"
           . "##file-date $date\n"
           . "##sequence-region $region $start $end\n"
           . "##genome-build ensembl $assembly\n"
-          . "##ensembl-release $schema_version\n";
+          . "##data-source Source=ensembl;version=$schema_version;url=$url\n";
             
         return $hdr;
     }
