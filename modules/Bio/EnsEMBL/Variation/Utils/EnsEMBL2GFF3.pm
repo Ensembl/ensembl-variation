@@ -66,7 +66,7 @@ use warnings;
         my $hdr = $self->gff_header(@_);
         
         $hdr .= "##gvf-version 1.04\n";
-        $hdr .= "##feature-ontology http://song.cvs.sourceforge.net/viewvc/song/ontology/so.obo?revision=1.263\n";
+        $hdr .= "##feature-ontology http://song.cvs.sourceforge.net/viewvc/song/ontology/so.obo?revision=1.283\n";
     
         return $hdr;
     }
