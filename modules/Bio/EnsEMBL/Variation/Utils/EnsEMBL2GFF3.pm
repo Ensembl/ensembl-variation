@@ -32,7 +32,9 @@ use warnings;
     
     sub gff_header {
         my $self = shift;
-      
+        
+        my %args = @_;
+        
         # build up a date string in the format specified by the GFF spec
     
         my ( $sec, $min, $hr, $mday, $mon, $year ) = localtime;
@@ -46,17 +48,13 @@ use warnings;
         my $end         = $self->end;
         my $assembly    = $self->coord_system->version;
         
-        my $mca = $self->adaptor->db->get_MetaContainerAdaptor;
-        my $schema_version = $mca->get_schema_version;
-        my $url = 'http://e'.$schema_version.'.ensembl.org';
-        
         my $hdr =
             "##gff-version 3\n"
           . "##file-date $date\n"
-          . "##sequence-region $region $start $end\n"
-          . "##genome-build ensembl $assembly\n"
-          . "##data-source Source=ensembl;version=$schema_version;url=$url\n";
-            
+          . "##genome-build ensembl $assembly\n";
+        
+        $hdr .= "##sequence-region $region $start $end\n" unless $args{no_sequence_region};
+        
         return $hdr;
     }
     
@@ -65,9 +63,14 @@ use warnings;
         
         my $hdr = $self->gff_header(@_);
         
+        my $mca = $self->adaptor->db->get_MetaContainerAdaptor;
+        my $schema_version = $mca->get_schema_version;
+        my $url = 'http://e'.$schema_version.'.ensembl.org';
+        
         $hdr .= "##gvf-version 1.04\n";
         $hdr .= "##feature-ontology http://song.cvs.sourceforge.net/viewvc/song/ontology/so.obo?revision=1.283\n";
-    
+        $hdr .= "##data-source Source=ensembl;version=$schema_version;url=$url\n";
+        
         return $hdr;
     }
 }
