@@ -209,13 +209,7 @@ use warnings;
 
         # Use the variation name (rsID etc.) concatenated with the seq_region_name and positions as the ID
 
-        $gff->{attributes}->{ID} = join(':', 
-            $self->variation_name,
-            $gff->{seqid},
-            $gff->{start},
-            $gff->{end},
-            $gff->{strand}
-        );
+        $gff->{attributes}->{ID} = $self->dbID;
 
         $gff->{attributes}->{Variant_effect} = [];
 
