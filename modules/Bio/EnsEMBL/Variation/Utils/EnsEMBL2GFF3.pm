@@ -46,12 +46,16 @@ use warnings;
         my $end         = $self->end;
         my $assembly    = $self->coord_system->version;
         
+        my $mca = $self->adaptor->db->get_MetaContainerAdaptor;
+        my $schema_version = $mca->get_schema_version;
+        
         my $hdr =
             "##gff-version 3\n"
           . "##file-date $date\n"
           . "##sequence-region $region $start $end\n"
-          . "##genome-build ensembl $assembly\n";
-    
+          . "##genome-build ensembl $assembly\n"
+          . "##ensembl-release $schema_version\n";
+            
         return $hdr;
     }
     
@@ -60,7 +64,7 @@ use warnings;
         
         my $hdr = $self->gff_header(@_);
         
-        $hdr .= "##gvf-version 1.02\n";
+        $hdr .= "##gvf-version 1.04\n";
         $hdr .= "##feature-ontology http://song.cvs.sourceforge.net/viewvc/song/ontology/so.obo?revision=1.263\n";
     
         return $hdr;
