@@ -48,7 +48,7 @@ use warnings;
         
         my $hdr =
             "##gff-version 3\n"
-          . "##date $date\n"
+          . "##file-date $date\n"
           . "##sequence-region $region $start $end\n"
           . "##genome-build ensembl $assembly\n";
     
