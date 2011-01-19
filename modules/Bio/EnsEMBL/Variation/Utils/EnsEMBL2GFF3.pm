@@ -39,7 +39,7 @@ use warnings;
         $year += 1900;    # correct the year
         $mon++;           # correct the month
         
-        my $date = "$year-$mon-$mday";
+        my $date = sprintf "%4d-%02d-%02d", $year, $mon, $mday;
         
         my $region      = $self->seq_region_name;
         my $start       = $self->start;
