@@ -528,7 +528,7 @@ sub parse_line {
 			
 			else {
 				# for substitutions we just need to replace ',' with '/' in $alt
-				$ref =~ s/\,/\//;
+				$alt =~ s/\,/\//;
 			}
 		}
 		
