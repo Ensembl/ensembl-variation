@@ -122,43 +122,44 @@ sub variation_feature{
        $stmt .= "TOP $self->{'limit'} ";
      }
      $stmt .= qq{
-                   t1.snp_id AS sorting_id, 
-                   t2.contig_acc,
-                   t1.lc_ngbr+2,
-		   t1.rc_ngbr,
+                   loc.snp_id AS sorting_id, 
+                   ctg.contig_acc,
+		   ctg.contig_gi,
+                   loc.lc_ngbr+2,
+		   loc.rc_ngbr,
 		   CASE WHEN
-		     t2.group_term LIKE '$group_term%'
+		     ctg.group_term LIKE '$group_term%'
 		   THEN
-		     t2.contig_chr
+		     ctg.contig_chr
 		   ELSE
-		     t2.contig_label
+		     ctg.contig_label
 		   END, 
 		   CASE WHEN
-		     t1.loc_type = 3
+		     loc.loc_type = 3
 		   THEN
-		     t1.phys_pos_from+2
+		     loc.phys_pos_from+2
 		   ELSE
-		     t1.phys_pos_from+1
+		     loc.phys_pos_from+1
 		   END,
 		   CASE WHEN
-		     t1.loc_type = 3
+		     loc.loc_type = 3
 		   THEN
-		     t1.phys_pos_from+1
+		     loc.phys_pos_from+1
 		   ELSE
-		     t1.phys_pos_from+LEN(t1.allele)
+		     loc.phys_pos_from+LEN(loc.allele)
 		   END,
 		   CASE WHEN
-		     t1.orientation = 1
+		     loc.orientation = 1
 		   THEN
 		     -1
 		   ELSE
 		     1
 		   END
 		 FROM 
-		   $tablename1 t1, 
-		   $tablename2 t2 
-		 WHERE 
-		   t1.ctg_id = t2.ctg_id
+		   $tablename1 loc JOIN 
+		   $tablename2 ctg ON (
+		     ctg.ctg_id = loc.ctg_id
+		   )
 	        };
      if ($self->{'limit'}) {
        $stmt .= qq{    
@@ -172,21 +173,60 @@ sub variation_feature{
     
     debug(localtime() . "\tLoading SNPLoc data");
     
-     create_and_load($self->{'dbVar'}, "tmp_contig_loc_chrom", "snp_id i*", "ctg *", "ctg_start i", "ctg_end i", "chr *", "start i", "end i", "strand i");
+     create_and_load($self->{'dbVar'}, "tmp_contig_loc_chrom", "snp_id i*", "ctg *", "ctg_gi i", "ctg_start i", "ctg_end i", "chr *", "start i", "end i", "strand i");
   print Progress::location();
 
+    #ÊAs a correction for the human haplotypes that dbSNP actually reported on the chromosome 6 (and 4 & 17), cross-check the ctg_gi against the pontus_dbsnp_import_external_data.refseq_to_ensembl table and replace the chr if necessary
+    if ($self->{'dbm'}->dbCore()->species() =~ m/homo_sapiens|human/i) {
+	
+	#ÊAdd an index on contig_gi to the tmp_contig_loc_chrom table
+	$stmt = qq{
+	    CREATE INDEX
+		ctg_gi_idx
+	    ON
+		tmp_contig_loc_chrom (
+		    ctg_gi ASC
+		)
+	};
+	$self->{'dbVar'}->do($stmt);
+	print Progress::location();
+	
+	# Replace the chr name with the haplotype name if necessary
+	$stmt = qq{
+	    UPDATE
+		tmp_contig_loc_chrom loc,
+		pontus_dbsnp_import_external_data.refseq_to_ensembl hap
+	    SET
+		loc.chr = hap.ensembl_id
+	    WHERE
+		loc.ctg_gi = hap.gi
+	};
+	$self->{'dbVar'}->do($stmt);
+	print Progress::location();
+	
+	# Drop the contig_gi index again since we don't need it anymore
+	$stmt = qq{
+	    DROP INDEX
+		ctg_gi_idx
+	    ON
+		tmp_contig_loc_chrom
+	};
+	$self->{'dbVar'}->do($stmt);
+	print Progress::location();
+    }
+    
     debug(localtime() . "\tCreating genotyped variations");
     #creating the temporary table with the genotyped variations
 
     my $gtype_ref = $self->{'dbVar'}->db_handle->selectall_arrayref(qq{SELECT COUNT(*) FROM  tmp_individual_genotype_single_bp});
     my $gtype_row = $gtype_ref->[0][0] if $gtype_ref;
     if ($gtype_row) {
-      $self->{'dbVar'}->do(qq{CREATE TABLE tmp_genotyped_var SELECT DISTINCT variation_id FROM tmp_individual_genotype_single_bp});
-  print Progress::location();
-      $self->{'dbVar'}->do(qq{CREATE UNIQUE INDEX variation_idx ON tmp_genotyped_var (variation_id)});
-  print Progress::location();
-      $self->{'dbVar'}->do(qq{INSERT IGNORE INTO tmp_genotyped_var SELECT DISTINCT variation_id FROM individual_genotype_multiple_bp});
-  print Progress::location();
+	$self->{'dbVar'}->do(qq{CREATE TABLE tmp_genotyped_var SELECT DISTINCT variation_id FROM tmp_individual_genotype_single_bp});
+	print Progress::location();
+	$self->{'dbVar'}->do(qq{CREATE UNIQUE INDEX variation_idx ON tmp_genotyped_var (variation_id)});
+	print Progress::location();
+	$self->{'dbVar'}->do(qq{INSERT IGNORE INTO tmp_genotyped_var SELECT DISTINCT variation_id FROM individual_genotype_multiple_bp});
+	print Progress::location();
     }
     debug(localtime() . "\tCreating tmp_variation_feature_chrom data");
     #if tcl.end>1, this means we have coordinates for chromosome, we will use it
