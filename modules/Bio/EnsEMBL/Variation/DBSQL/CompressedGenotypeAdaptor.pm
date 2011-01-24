@@ -105,57 +105,62 @@ sub fetch_all_by_Variation {
 	throw("Cannot retrieve genotypes for variation without adaptor set");
 	return [];
     }
-    my $variation_features = $vfa->fetch_all_by_Variation($variation);
-    #foreach of the hitting variation Features, get the Genotype information
-    foreach my $vf (@{$variation_features}){
-		
-		# skip this VF if the start and end are >1 apart
-		# they should not be in the compressed table
-		next if abs($vf->end - $vf->start) > 1;
-		
-		# get the feature slice for this VF
-		my $fs = $vf->feature_Slice();
-		
-		# if the feature slice is start > end
-		if($fs->start > $fs->end) {
+	
+	# only get compressed genotypes if this is a SNP
+	if($variation->var_class =~ /snp/i) {
+	
+		my $variation_features = $vfa->fetch_all_by_Variation($variation);
+		#foreach of the hitting variation Features, get the Genotype information
+		foreach my $vf (@{$variation_features}){
 			
-			# get a new slice with the start and end the right way round
-			# otherwise the call won't pick any variations up
-			my $new_fs = $fs->{'adaptor'}->fetch_by_region($fs->coord_system->name,$fs->seq_region_name,$fs->end,$fs->start);
-			$fs = $new_fs;
+			# skip this VF if the start and end are >1 apart
+			# they should not be in the compressed table
+			next if abs($vf->end - $vf->start) > 1;
+			
+			# get the feature slice for this VF
+			my $fs = $vf->feature_Slice();
+			
+			# if the feature slice is start > end
+			if($fs->start > $fs->end) {
+				
+				# get a new slice with the start and end the right way round
+				# otherwise the call won't pick any variations up
+				my $new_fs = $fs->{'adaptor'}->fetch_by_region($fs->coord_system->name,$fs->seq_region_name,$fs->end,$fs->start);
+				$fs = $new_fs;
+			}
+			
+			# get the IGs
+			my @igs = @{$self->fetch_all_by_Slice($fs, $individual)};
+			
+			#print "fS: ", $fs->start, " ", $fs->end, "\n";
+			
+			# iterate through to check
+			foreach my $ig(@igs) {
+				#print $ig->variation->dbID, " ", $variation->dbID, "\n";
+				
+				# skip this if the variation attached to the IG does not match the query
+				#next unless $ig->variation->dbID == $variation->dbID;
+				
+				# get the alleles
+				my ($a1, $a2) = ($ig->allele1, $ig->allele2);
+				
+				# skip if the returned alleles are not in the allele_string for the VF
+				#next unless $vf->allele_string =~ /^$a1\/|\/$a1\/|\/$a1$|^$a1$/ and $vf->allele_string =~ /^$a2\/|\/$a2\/|\/$a2$|^$a2$/;
+				
+				#$ig->variation($variation);
+				push @{$res}, $ig;
+			}
+			
+			# old code without checks
+			#map {$_->variation($variation); push @{$res}, $_} @{$self->fetch_all_by_Slice($vf->feature_Slice)};
 		}
-		
-		# get the IGs
-		my @igs = @{$self->fetch_all_by_Slice($fs, $individual)};
-		
-		#print "fS: ", $fs->start, " ", $fs->end, "\n";
-		
-		# iterate through to check
-		foreach my $ig(@igs) {
-			#print $ig->variation->dbID, " ", $variation->dbID, "\n";
-			
-			# skip this if the variation attached to the IG does not match the query
-			#next unless $ig->variation->dbID == $variation->dbID;
-			
-			# get the alleles
-			my ($a1, $a2) = ($ig->allele1, $ig->allele2);
-			
-			# skip if the returned alleles are not in the allele_string for the VF
-			#next unless $vf->allele_string =~ /^$a1\/|\/$a1\/|\/$a1$|^$a1$/ and $vf->allele_string =~ /^$a2\/|\/$a2\/|\/$a2$|^$a2$/;
-			
-			#$ig->variation($variation);
-			push @{$res}, $ig;
-		}
-		
-		# old code without checks
-		#map {$_->variation($variation); push @{$res}, $_} @{$self->fetch_all_by_Slice($vf->feature_Slice)};
-    }
+	}
 	
 	#print "Got ", (defined $res ? scalar @{$res} : 0), " from single bp\n";
 	
     #and include the genotypes from the multiple genotype table
     $self->_multiple(1);
-    push @{$res}, @{$self->SUPER::fetch_all_by_Variation($variation, $individual)};
+    push @{$res}, @{$self->SUPER::fetch_all_by_Variation($variation, $individual)} unless $variation->var_class =~ /snp/i;
     $self->_multiple(0);
 	
 	#print "Now have ", scalar @{$res}, " including multiple bp\n";
