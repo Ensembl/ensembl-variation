@@ -685,7 +685,7 @@ create table source(
 create table population_genotype (
 	population_genotype_id int(10) unsigned not null auto_increment,
 	variation_id int(10) unsigned not null,
-        subsnp_id int(15) unsigned not null,
+	subsnp_id int(15) unsigned DEFAULT NULL,
 	allele_1 varchar(255),
 	allele_2 varchar(255),
 	frequency float,
