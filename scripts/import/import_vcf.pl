@@ -32,9 +32,15 @@ use Getopt::Long;
 use FileHandle;
 use Data::Dumper;
 use Time::HiRes qw(gettimeofday tv_interval);
+use ImportUtils qw(debug load);
+
+use constant DISTANCE => 100_000;
+use constant MAX_SHORT => 2**16 -1;
+
+my %Printable = ( "\\"=>'\\', "\r"=>'r', "\n"=>'n', "\t"=>'t', "\""=>'"' );
 
 # get command-line options
-my ($in_file, $species, $registry_file, $help, $host, $user, $password, $source, $population, $flank_size);
+my ($in_file, $species, $registry_file, $help, $host, $user, $password, $source, $population, $flank_size, $TMP_DIR, $TMP_FILE, $skip_multi, $use_gp, $sample_prefix, $variation_prefix, $disable_keys);
 
 my $args = scalar @ARGV;
 
@@ -49,6 +55,13 @@ GetOptions(
 	'source=s'      => \$source,
 	'population=s'  => \$population,
 	'flank=s'       => \$flank_size,
+	'tmpdir=s'      => \$TMP_DIR,
+	'tmpfile=s'     => \$TMP_FILE,
+	'skip_multi'    => \$skip_multi,
+	'gp'            => \$use_gp,
+	'ind_prefix=s'  => \$sample_prefix,
+	'var_prefix=s'  => \$variation_prefix,
+	'disable_keys'  => \$disable_keys,
 );
 
 # set defaults
@@ -63,6 +76,13 @@ if(defined($help) || !$args) {
 	exit(0);
 }
 
+die "ERROR: tmpdir not specified" unless defined $TMP_DIR;
+
+$TMP_FILE ||= 'compress.txt';
+
+
+$ImportUtils::TMP_DIR = $TMP_DIR;
+$ImportUtils::TMP_FILE = $TMP_FILE;
 
 # get registry
 my $reg = 'Bio::EnsEMBL::Registry';
@@ -96,7 +116,7 @@ if(defined($in_file)) {
 
 # no file specified - try to read data off command line
 else {
-	$in_file_handle->open(<STDIN>);
+	$in_file_handle = 'STDIN';
 }
 
 # connect to DB
@@ -154,15 +174,20 @@ if(!defined($pop_id)) {
 }
 
 
+# disable keys if requested
+if($disable_keys) {
+	foreach my $table(qw/allele population_genotype individual_genotype_multiple_bp variation_feature/) {
+		$sth = $dbVar->do(qq{ALTER TABLE $table DISABLE KEYS;})
+	}
+}
 
-
-my (%headers, $first_sample_col, @sample_ids);
+my (%headers, $first_sample_col, @sample_ids, $region_start, $region_end, $prev_region_end, $prev_seq_region, $genotypes);
 
 my $start_time = time();
 
 my $var_counter = 0;
 our %times;
-&start(5000);
+&start(1000);
 
 # read the file
 while(<$in_file_handle>) {
@@ -186,13 +211,14 @@ while(<$in_file_handle>) {
 	
 	for my $i($first_sample_col..$#split) {
 		
+		my $sample_name = $sample_prefix.$split[$i];
 		my $sample_id;
-		$sth4->execute($split[$i]);
+		$sth4->execute($sample_name);
 		$sth4->bind_columns(\$sample_id);
 		$sth4->fetch;
 		
 		if(!$sample_id) {
-			$sth->execute($split[$i]);
+			$sth->execute($sample_name);
 			$sample_id = $dbVar->last_insert_id(undef, undef, qw(sample sample_id));
 			$sth2->execute($pop_id, $sample_id);
 			$sth3->execute($sample_id, 3);
@@ -208,8 +234,8 @@ while(<$in_file_handle>) {
 	$var_counter++;
 	if($var_counter =~ /000$/) {
 		warn "COUNTER $var_counter";
-		&end(5000);
-		&start(5000);
+		&end(1000);
+		&start(1000);
 	}
 	
 	# parse into a hash
@@ -221,80 +247,184 @@ while(<$in_file_handle>) {
 	
 	# make a var name if none exists
 	if($data{ID} eq '.') {
-		$data{ID} = 'test_'.$data{'#CHROM'}.'_'.$data{POS};
+		$data{ID} =
+			($variation_prefix ? $variation_prefix : 'tmp').
+			'_'.$data{'#CHROM'}.'_'.$data{POS};
 	}
 	
-	# populate variation
-	$sth = $dbVar->prepare(qq{INSERT INTO variation(source_id, name) VALUES (?,?);});
-	$sth->execute($source_id, $data{ID});
-	my $var_id = $dbVar->last_insert_id(undef, undef, qw(variation variation_id));
+	# check if variation exists
+	my ($variation_already_exists, $var_id);
+	
+	$sth = $dbVar->prepare(qq{SELECT variation_id FROM variation WHERE name = ?;});
+	$sth->execute($data{ID});
+	$sth->bind_columns(\$var_id);
+	$sth->fetch;
+	
+	if(defined($var_id)) {
+		$variation_already_exists = 1;
+	}
+	
+	else {
+		# populate variation
+		$sth = $dbVar->prepare(qq{INSERT INTO variation(source_id, name) VALUES (?,?);});
+		$sth->execute($source_id, $data{ID});
+		$var_id = $dbVar->last_insert_id(undef, undef, qw(variation variation_id));
+	}
 	
 	
 	# positions
-	my ($start, $end) = ($data{POS}, $data{POS});
+	my ($start, $end, $chr, $seq_region);
 	
-	# work out if this is an indel or not
+	if($use_gp) {
+		foreach my $pair(split /\;/, $data{INFO}) {
+			my ($key, $value) = split /\=/, $pair;
+			if($key eq 'GP') {
+				($chr,$start) = split /\:/, $value;
+				$seq_region = $seq_region_ids{$chr};
+				$end = $start;
+			}
+		}
+		
+		next unless defined($seq_region) and defined($start);
+	}
+	
+	else {
+		($start, $end) = ($data{POS}, $data{POS});
+		$seq_region = $seq_region_ids{$data{'#CHROM'}};
+	}
+	
+	# work out if this is an indel or multi-bp
 	my $is_indel = 0;
+	my $is_multi = 0;
 	
-	if($data{ALT} =~ /D|I/) {
-		$is_indel = 1;
-		
-		if($data{ALT} =~ /\,/) {
-			warn "WARNING: can't deal with multiple different indel types in one variation";
-			next;
+	$is_multi = 1 if length($data{REF}) > 1;
+	foreach my $alt(split /\,/, $data{ALT}) {
+		$is_multi = 1 if length($alt) > 1;
+	}
+	
+	# adjust end coord
+	$end += (length($data{REF}) - 1);
+	
+	# find out if any of the alt alleles make this an insertion or a deletion
+	foreach my $alt_allele(split /\,/, $data{ALT}) {
+		$is_indel = 1 if $alt_allele =~ /D|I/;
+		$is_indel = 1 if length($alt_allele) != length($data{REF});
+	}
+	
+	# multiple alt alleles?
+	if($data{ALT} =~ /\,/) {
+		if($is_indel) {
+			
+			my @alts;
+			
+			if($data{ALT} =~ /D|I/) {
+				foreach my $alt_allele(split /\,/, $data{ALT}) {
+					# deletion (VCF <4)
+					if($alt_allele =~ /D/) {
+						push @alts, '-';
+					}
+					
+					elsif($alt_allele =~ /I/) {
+						$alt_allele =~ s/^I//g;
+						push @alts, $alt_allele;
+					}
+				}
+			}
+			
+			else {
+				$data{REF} = substr($data{REF}, 1);
+				$data{REF} = '-' if $data{REF} eq '';
+				$start++;
+				
+				foreach my $alt_allele(split /\,/, $data{ALT}) {
+					$alt_allele = substr($alt_allele, 1);
+					$alt_allele = '-' if $alt_allele eq '';
+					push @alts, $alt_allele;
+				}
+			}
+			
+			$data{ALT} = join "/", @alts;
 		}
 		
-		# deletion
-		if($data{ALT} =~ /D/) {
-			my $num_deleted = $data{ALT};
-			$num_deleted =~ s/\D+//g;
-			
-			$end += $num_deleted - 1;
-			
-			$data{ALT} = "-";
-		}
-		
-		# insertion
 		else {
-			$data{REF} = '-';
-			
-			my $insert = $data{ALT};
-			$insert =~ s/^I//g;
-			
-			$data{ALT} = $insert;
-			$start++;
+			# for substitutions we just need to replace ',' with '/' in $alt
+			$data{ALT} =~ s/\,/\//;
 		}
 	}
 	
+	else {
+		if($is_indel) {
+			# deletion (VCF <4)
+			if($data{ALT} =~ /D/) {
+				my $num_deleted = $data{ALT};
+				$num_deleted =~ s/\D+//g;
+				$end += $num_deleted - 1;
+				$data{ALT} = "-";
+				$data{REF} .= ("N" x ($num_deleted - 1)) unless length($data{REF}) > 1;
+			}
+			
+			# insertion (VCF <4)
+			elsif($data{ALT} =~ /I/) {
+				$data{REF} = '-';
+				$data{ALT} =~ s/^I//g;
+				$start++;
+			}
+			
+			# insertion or deletion (VCF 4+)
+			else {
+				# chop off first base
+				$data{REF} = substr($data{REF}, 1);
+				$data{ALT} = substr($data{ALT}, 1);
+				
+				$start++;
+				
+				if($data{REF} eq '') {
+					# make ref '-' if no ref allele left
+					$data{REF} = '-';
+					
+					# extra adjustment required for Ensembl
+					$start++;
+				}
+				
+				# make alt '-' if no alt allele left
+				$data{ALT} = '-' if $data{ALT} eq '';
+			}
+		}
+	}
+	
+	
 	# get alleles
-	my @alleles = ($data{REF}, split /\,/, $data{ALT});
+	my @alleles = ($data{REF}, split /\,|\//, $data{ALT});
 	
 	
-	# populate flanking_sequence
-	$sth = $dbVar->prepare(qq{INSERT INTO flanking_sequence(variation_id, up_seq_region_start, up_seq_region_end, down_seq_region_start, down_seq_region_end, seq_region_id, seq_region_strand) VALUES (?,?,?,?,?,?,?);});
-	$sth->execute(
-		$var_id,
-		$start - $flank_size,
-		$start - 1,
-		$end + 1,
-		$end + $flank_size,
-		$seq_region_ids{$data{'#CHROM'}},
-		1
-	);
-	
-	# populate variation_feature
-	$sth = $dbVar->prepare(qq{INSERT INTO variation_feature(variation_id, seq_region_id, seq_region_start, seq_region_end, seq_region_strand, variation_name, allele_string, map_weight, source_id) VALUES (?,?,?,?,?,?,?,?,?);});
-	$sth->execute(
-		$var_id,
-		$seq_region_ids{$data{'#CHROM'}},
-		$data{POS},
-		$data{POS},
-		1,
-		$data{ID},
-		(join "/", @alleles),
-		1,
-		$source_id #needs changing
-	);
+	unless($variation_already_exists) {
+		
+		# populate flanking_sequence
+		$sth = $dbVar->prepare(qq{INSERT INTO flanking_sequence(variation_id, up_seq_region_start, up_seq_region_end, down_seq_region_start, down_seq_region_end, seq_region_id, seq_region_strand) VALUES (?,?,?,?,?,?,?);});
+		$sth->execute(
+			$var_id,
+			$start - $flank_size,
+			$start - 1,
+			$end + 1,
+			$end + $flank_size,
+			$seq_region_ids{$data{'#CHROM'}},
+			1
+		);
+		
+		# populate variation_feature
+		$sth = $dbVar->prepare(qq{INSERT INTO variation_feature(variation_id, seq_region_id, seq_region_start, seq_region_end, seq_region_strand, variation_name, allele_string, map_weight, source_id) VALUES (?,?,?,?,?,?,?,?,?);});
+		$sth->execute(
+			$var_id,
+			$seq_region_ids{$data{'#CHROM'}},
+			$data{POS},
+			$data{POS},
+			1,
+			$data{ID},
+			(join "/", @alleles),
+			1,
+			$source_id #needs changing
+		);
+	}
 	
 	# parse info column
 	my %info;	
@@ -323,14 +453,20 @@ while(<$in_file_handle>) {
 		for my $i($first_sample_col..$#split) {
 			my $gt;
 			my @bits;
-			push @bits, $alleles[$_] for split /\||\/|\\/, (split /\:/, $split[$i])[0];
-			$gt = join '|', sort @bits;
+			my $gt = (split /\:/, $split[$i])[0];
+			foreach my $bit(split /\||\/|\\/, $gt) {
+				push @bits, $alleles[$bit] unless $bit eq '.';
+			}
 			
-			# store genotypes for later
-			push @genotypes, $gt;
-			
-			$counts{$gt}++;
-			$total_count++;
+			if(scalar @bits) {
+				$gt = join '|', sort @bits;
+				
+				# store genotypes for later
+				push @genotypes, $gt;
+				
+				$counts{$gt}++;
+				$total_count++;
+			}
 		}
 		
 		# now calculate frequencies
@@ -350,48 +486,117 @@ while(<$in_file_handle>) {
 	}
 	
 	# populate allele table
-	$sth = $dbVar->prepare(qq{INSERT INTO allele(variation_id, allele, frequency, sample_id) VALUES (?,?,?,?)});
+	$sth = $dbVar->prepare(qq{INSERT IGNORE INTO allele(variation_id, allele, frequency, sample_id) VALUES (?,?,?,?)});
 	$sth->execute($var_id, $alleles[$_], $freqs[$_], $pop_id) for (0..$#alleles);
 	
-	# populate population_genotype table
-	if(scalar keys %gt_freqs) {
-		$sth = $dbVar->prepare(qq{INSERT INTO population_genotype(variation_id, allele_1, allele_2, frequency, sample_id) VALUES (?,?,?,?,?)});
-		
-		foreach my $gt(keys %gt_freqs) {
-			my @bits = split /\|/, $gt;
-			$sth->execute($var_id, $bits[0], $bits[1], $gt_freqs{$gt}, $pop_id);
-		}
-	}
-	
 	# now do genotypes
-	my @rows;
+	my (@multi_rows, $total_count, %counts);
 	
 	for my $i($first_sample_col..$#split) {
 		my $sample_id = $sample_ids[$i-$first_sample_col];
 		
 		my @bits;
-		
-		if(scalar @genotypes) {
-			@bits = split /\|/, $genotypes[$i-$first_sample_col];
+		my $gt = (split /\:/, $split[$i])[0];
+		foreach my $bit(split /\||\/|\\/, $gt) {
+			push @bits, $alleles[$bit] unless $bit eq '.';
 		}
 		
-		else {
-			push @bits, $alleles[$_] for split /\||\/|\\/, (split /\:/, $split[$i])[0];
+		if(scalar @bits && !(scalar keys %gt_freqs)) {
+			$counts{$bits[0].$bits[1]}++;
+			$total_count++;
 		}
 		
-		push @rows, "(".(join ",", ($var_id, '"'.$bits[0].'"', '"'.$bits[1].'"', $sample_id)).")";
+		# for indels, write directly to temp table
+		if($is_indel || $is_multi) {
+			push @multi_rows,
+				"(".
+					(join ",",
+						(
+							$var_id,
+							'"'.($bits[0] || '.').'"',
+							'"'.($bits[1] || '.').'"',
+							$sample_id
+						)
+					).
+				")";
+		}
+		
+		# otherwise add to compress hash for writing later
+		elsif(scalar @bits) {
+			
+			if (!defined $genotypes->{$sample_id}->{region_start}){
+				$genotypes->{$sample_id}->{region_start} = $start;
+				$genotypes->{$sample_id}->{region_end} = $end;
+			}
+			
+			# write previous data?
+			#compare with the beginning of the region if it is within the DISTANCE of compression
+			if (
+				(abs($genotypes->{$sample_id}->{region_start} - $start) > DISTANCE()) ||
+				(abs($start - $genotypes->{$sample_id}->{region_end}) > MAX_SHORT) ||
+				(defined($prev_seq_region) && $seq_region != $prev_seq_region)
+			) {
+				#snp outside the region, print the region for the sample we have already visited and start a new one
+				print_file("$TMP_DIR/compressed_genotype_".$$.".txt",$genotypes, $prev_seq_region, $sample_id);
+				delete $genotypes->{$sample_id}; #and remove the printed entry
+				$genotypes->{$sample_id}->{region_start} = $start;
+			}
+			
+			# not first genotype
+			if ($start != $genotypes->{$sample_id}->{region_start}){
+				#compress information
+				my $blob = pack ("n",$start - $genotypes->{$sample_id}->{region_end} - 1);
+				$genotypes->{$sample_id}->{genotypes} .= &escape($blob).($bits[0] || '-').($bits[1] || '0');
+			}
+			# first genotype
+			else{
+				$genotypes->{$sample_id}->{genotypes} = ($bits[0] || '-').($bits[1] || '0');
+			}
+			
+			$genotypes->{$sample_id}->{region_end} = $start;
+		}
+	}	
+	
+	# write indel/multibp genotypes
+	if(scalar @multi_rows) {
+		my $vals = join ",", @multi_rows;	
+		$sth = $dbVar->prepare(qq{INSERT IGNORE INTO individual_genotype_multiple_bp(variation_id, allele_1, allele_2, sample_id) values$vals});
+		$sth->execute;
 	}
 	
-	my $vals = join ",", @rows;
+	if(!(scalar keys %gt_freqs)) {
+		foreach my $gt(keys %counts) {
+			$gt_freqs{$gt} = $counts{$gt}/$total_count;
+		}
+	}
 	
-	my $table = ($is_indel ? 'individual_genotype_multiple_bp' : 'tmp_individual_genotype_single_bp');
+	# populate population_genotype table
+	if(scalar keys %gt_freqs) {
+		$sth = $dbVar->prepare(qq{INSERT IGNORE INTO population_genotype(variation_id, subsnp_id, allele_1, allele_2, frequency, sample_id) VALUES (?,NULL,?,?,?,?)});
+		
+		foreach my $gt(keys %gt_freqs) {
+			my @bits = split /\||\/|\\/, $gt;
+			$sth->execute($var_id, $bits[0], $bits[1], $gt_freqs{$gt}, $pop_id);
+		}
+	}
 	
-	$sth = $dbVar->prepare(qq{INSERT INTO $table(variation_id, allele_1, allele_2, sample_id) values$vals});
-	$sth->execute;
+	$prev_seq_region = $seq_region;
   }
 }
 
-&end(5000);
+print_file("$TMP_DIR/compressed_genotype_".$$.".txt",$genotypes, $prev_seq_region);
+&import_genotypes($dbVar);
+
+$dbVar->do(qq{DELETE FROM individual_genotype_multiple_bp WHERE allele_1 = '.' AND allele_2 = '.';});
+
+# re-enable keys if requested
+if($disable_keys) {
+	foreach my $table(qw/allele population_genotype individual_genotype_multiple_bp variation_feature/) {
+		$sth = $dbVar->do(qq{ALTER TABLE $table ENABLE KEYS;})
+	}
+}
+
+&end(1000);
 print "Took ", time() - $start_time, " to run\n";
 
 sub usage {
@@ -404,10 +609,18 @@ Options
 
 
 -i | --input_file     Input file - if not specified, reads from STDIN
+--tmpdir              Temporary directory to write genotype dumpfile. Required.
+--tmpfile             Name for temporary file [default: compress.txt]
+
 --species             Species to use [default: "human"]
 --source              Name of source [required]
 --population          Name of population [required]
+--ind_prefix          Prefix added to sample names [default: not used]
+--var_prefix          Prefix added to constructed variation names [default: not used]
 -f | --flank          Size of flanking sequence [default: 200]
+--gp                  Use GP tag from INFO column to get locations [default: not used]
+
+--disable_keys        Disable MySQL keys during inserts [default: not used]
 
 -d | --db_host        Manually define database host [default: "ensembldb.ensembl.org"]
 -u | --user           Database username [default: "anonymous"]
@@ -429,4 +642,53 @@ sub end {
 	my $id = shift;
 	$id ||= '-';
 	warn "Time for $id : ", tv_interval($times{$id}), "\n";
+}
+
+
+sub print_file{
+    my $file = shift;
+    my $genotypes = shift;
+    my $seq_region_id = shift;
+    my $sample_id = shift;
+
+    open( FH, ">>$file") or die "Could not add compressed information: $!\n";
+    if (!defined $sample_id){
+		#new chromosome, print all the genotypes and flush the hash
+		foreach my $sample_id (keys %{$genotypes}){
+			print FH join("\t",
+				$sample_id,
+				$seq_region_id,
+				$genotypes->{$sample_id}->{region_start},
+				$genotypes->{$sample_id}->{region_end},
+				1,
+				$genotypes->{$sample_id}->{genotypes}) . "\n";
+		}
+    }
+    else{
+		#only print the region corresponding to sample_id
+		print FH join("\t",
+			$sample_id,
+			$seq_region_id,
+			$genotypes->{$sample_id}->{region_start},
+			$genotypes->{$sample_id}->{region_end},
+			1,
+			$genotypes->{$sample_id}->{genotypes}) . "\n";
+    }
+    close FH;
+}
+
+# $special_characters_escaped = printable( $source_string );
+sub escape ($) {
+  local $_ = ( defined $_[0] ? $_[0] : '' );
+  s/([\r\n\t\\\"])/\\$Printable{$1}/sg;
+  return $_;
+}
+
+sub import_genotypes{
+    my $dbVar = shift;
+
+    warn("Importing compressed genotype data");
+    my $call = "mv $TMP_DIR/compressed_genotype_".$$.".txt $TMP_DIR/$TMP_FILE";
+    system($call);
+    load($dbVar,qw(compressed_genotype_single_bp sample_id seq_region_id seq_region_start seq_region_end seq_region_strand genotypes));
 }
