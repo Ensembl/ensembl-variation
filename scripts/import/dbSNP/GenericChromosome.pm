@@ -195,7 +195,7 @@ sub variation_feature{
 	$stmt = qq{
 	    UPDATE
 		tmp_contig_loc_chrom loc,
-		pontus_dbsnp_import_external_data.refseq_to_ensembl hap
+		pontus_dbsnp132_human_external_data.refseq_to_ensembl hap
 	    SET
 		loc.chr = hap.ensembl_id
 	    WHERE
