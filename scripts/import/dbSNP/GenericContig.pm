@@ -2420,6 +2420,15 @@ sub parallelized_individual_genotypes {
   print $logh Progress::location() . "\tMerging the genotype subtables into a big $genotype_table table\n";
   my $merge_subtables = join(",",map {$gty_tables{$_}->[0]} keys(%gty_tables));
   if (scalar(keys(%gty_tables)) > 1) {
+    
+    #ÊAdd an empty table where any subsequent inserts will end up
+    my $extra_table = $genotype_table . '_extra';
+    $stmt = $ind_gty_stmt;
+    $stmt =~ s/$genotype_table/$extra_table/;
+    $self->{'dbVar'}->do($stmt);
+    print $logh Progress::location();
+    $merge_subtables .= ",$extra_table";
+    
     $stmt = $ind_gty_stmt;
     $stmt .= " ENGINE=MERGE INSERT_METHOD=LAST UNION=($merge_subtables)";
   }
@@ -2433,6 +2442,63 @@ sub parallelized_individual_genotypes {
   }
   $self->{'dbVar'}->do($stmt);
   print $logh Progress::location();
+  
+  #ÊMove multiple bp genotypes into the multiple bp table
+  $stmt = qq{
+      SELECT DISTINCT
+          variation_id
+      FROM
+          $multi_bp_gty_table
+  };
+  dumpSQL($self->{'dbVar'},$stmt);
+  print $logh Progress::location();
+  
+  create_and_load($self->{'dbVar'},"tmp_multiple_bp_gty_variations","variation_id");
+  print $logh Progress::location();
+  
+  $stmt = qq{
+      INSERT INTO
+          $multi_bp_gty_table (
+              variation_id,
+              subsnp_id,
+              sample_id,
+              allele_1,
+              allele_2
+          )
+      SELECT
+          s.variation_id,
+          s.subsnp_id,
+          s.sample_id,
+          s.allele_1,
+          s.allele_2
+      FROM
+          tmp_multiple_bp_gty_variations t JOIN
+          $genotype_table s ON (
+              s.variation_id = t.variation_id
+          )
+  };
+  $self->{'dbVar'}->do($stmt);
+  print $logh Progress::location();
+  
+  $stmt = qq{
+      DELETE FROM
+          s
+      USING
+          tmp_multiple_bp_gty_variations t JOIN
+          $genotype_table s ON (
+              s.variation_id = t.variation_id
+          )
+  };
+  $self->{'dbVar'}->do($stmt);
+  print $logh Progress::location();
+  
+  $stmt = qq{
+      DROP TABLE
+          tmp_multiple_bp_gty_variations
+  };
+  $self->{'dbVar'}->do($stmt);
+  print $logh Progress::location();
+  
 }
 
 #
