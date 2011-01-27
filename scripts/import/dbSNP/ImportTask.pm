@@ -455,8 +455,10 @@ sub calculate_gtype {
     $allele_1 = $alleles{$allele_1}->[$reverse];
     $allele_2 = $alleles{$allele_2}->[$reverse];
     
-    # Also change the order of the alleles if they were flipped
-    ($allele_1,$allele_2) = ($allele_2,$allele_1) if ($reverse);
+    # Order the alleles in alphabetical order
+    ($allele_1,$allele_2) = sort {uc($a) cmp uc($b)} ($allele_1,$allele_2);
+    # Then in length order
+    ($allele_1,$allele_2) = sort {length($a) <=> length($b)} ($allele_1,$allele_2);
     
     #ÊSkip this genotype if the alleles are N
     next if ($allele_1 eq 'N' && $allele_2 eq 'N');
@@ -467,7 +469,7 @@ sub calculate_gtype {
     $row_md5s{$md5}++;
     
     # Determine if this should go into the single or multiple genotype table
-    if (length($allele_1) == 1 && length($allele_2) == 1 && $allele_1 ne '-' && $allele_2 ne '-') {
+    if (length($allele_2) == 1 && length($allele_2) == 1 && $allele_1 ne '-' && $allele_2 ne '-') {
       push(@single_bp_gty,$row);
     }
     else {
