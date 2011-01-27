@@ -30,14 +30,14 @@ sub dump_dbSNP{
     
     #then, get ENS IDs from dbSNP
     $start = time();
-    $self->dump_ENSIDs() if $self->{'dbCore'}->species =~ /hum|homo|rat|mouse|platypus|tetraodon/i;
+    #$self->dump_ENSIDs() if $self->{'dbCore'}->species =~ /hum|homo|rat|mouse|platypus|tetraodon/i;
     print Progress::location();
     $end = time();
     $duration = Progress::time_format($end-$start);
     print $duration->{'weeks'} . " weeks, " . $duration->{'days'} . " days, " . $duration->{'hours'} . " hours, " . $duration->{'minutes'} . " minutes and " . $duration->{'seconds'} . " seconds spent in dump_ENSIDs()\n";
     
     $start = time();
-    $self->dump_AFFYIDs() if $self->{'dbCore'}->species =~ /hum|homo/i;
+    $self->dump_AFFYIDs() if $self->{'dbm'}->dbCore()->species =~ /hum|homo/i;
     print Progress::location();
     $end = time();
     $duration = Progress::time_format($end-$start);
@@ -122,7 +122,7 @@ sub dump_AFFYIDs{
   create_and_load($self->{'dbVar'},"tmp_rs_AFFY","rsID *","AFFYid", "affy_name");
   print Progress::location();
   
-  my $db = "pontus_affy_array_mapping";
+  my $db = "pontus_dbsnp132_human_external_data";
   foreach my $table ("name_pair_100k","name_pair_500k","name_pair_g6") {
     
     if ($table =~ /100k/i) {
