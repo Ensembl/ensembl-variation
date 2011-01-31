@@ -12,16 +12,17 @@ use FindBin qw( $Bin );
 ##  run with bsub -q long -W14:00 -o [tmpdir]/output_tag.txt perl create_ld_table.pl -tmpdir [tmpdir]
 ##  -tmpfile tag_snps.txt
 use constant MAX_SIZE => 500_000_000;
-my ($TMP_DIR, $TMP_FILE, $species);
+my ($TMP_DIR, $TMP_FILE, $species, $registry_file);
 
 
 GetOptions('species=s' => \$species,
 	   'tmpdir=s'  => \$ImportUtils::TMP_DIR,
-	   'tmpfile=s' => \$ImportUtils::TMP_FILE);
+	   'tmpfile=s' => \$ImportUtils::TMP_FILE
+	   'registry_file=s' => \$registry_file);
 
 warn("Make sure you have a updated ensembl.registry file!\n");
 
-my $registry_file ||= $Bin . "/ensembl.registry";
+$registry_file ||= $Bin . "/ensembl.registry";
 
 $TMP_DIR = $ImportUtils::TMP_DIR;
 $TMP_FILE = $ImportUtils::TMP_FILE;
