@@ -8,16 +8,17 @@ use Bio::EnsEMBL::Variation::DBSQL::LDFeatureContainerAdaptor;
 use FindBin qw( $Bin );
 use Data::Dumper;
 
-my ($TMP_DIR, $population_id, $species);
+my ($TMP_DIR, $population_id, $species, $registry_file);
 
 
 GetOptions('species=s' => \$species,
 	   'tmpdir=s'  => \$TMP_DIR,
-	   'population_id=i' => \$population_id);
+	   'population_id=i' => \$population_id,
+	   'registry_file=s' => \$registry_file);
 
 warn("Make sure you have a updated ensembl.registry file!\n");
 
-my $registry_file ||= $Bin . "/ensembl.registry";
+$registry_file ||= $Bin . "/ensembl.registry";
 
 #added default options
 $species ||= 'human';
@@ -45,6 +46,8 @@ while (<IN>){
     chomp;
     /^\#/ && next;
     ($allele_1, $allele_2, $seq_region_start) = split;
+	next unless $allele_1 and $allele_2 and $seq_region_start;
+	
     #when we change variation_feature, calculate the MAF
     if (($previous_seq_region_start != $seq_region_start) && $previous_seq_region_start != 0){
 	$MAF_snps->{$previous_seq_region_start} = &calculate_MAF($genotypes_snp);
@@ -108,7 +111,7 @@ foreach my $position_vf (keys %{$MAF_snps}){
 	$genotype_without_vf++;
     }
 }
-#print "Genotypes without vf $genotype_without_vf\n";
+print "Genotypes without vf $genotype_without_vf\n";
 close OUT or die ("Could not close output file with tagged SNPs");
 unlink($file);
 
@@ -138,7 +141,7 @@ sub calculate_MAF{
     if (keys %{$genotypes_snp} == 2){
 	foreach (values %{$genotypes_snp}){
 	    $total_genotypes += $_;
-	    $allele_freq = ($_ / $total_genotypes) if ($total_genotypes != $_);
+	    $allele_freq = ($_ / $total_genotypes) if ($total_genotypes != $_);;
 	}
 	return $allele_freq if ($allele_freq <= (1 - $allele_freq));
 	return 1 - $allele_freq if ($allele_freq > (1 - $allele_freq));
