@@ -10,16 +10,17 @@ use FindBin qw( $Bin );
 
 use constant MAX_SIZE => 30_000_000;
 
-my ($TMP_DIR, $TMP_FILE, $species);
+my ($TMP_DIR, $TMP_FILE, $species, $registry_file);
 
 
 GetOptions('species=s' => \$species,
 	   'tmpdir=s'  => \$ImportUtils::TMP_DIR,
-	   'tmpfile=s' => \$ImportUtils::TMP_FILE);
+	   'tmpfile=s' => \$ImportUtils::TMP_FILE
+	   'registry_file=s' => $registry_file);
 
 warn("Make sure you have a updated ensembl.registry file!\n");
 
-my $registry_file ||= $Bin . "/ensembl.registry";
+$registry_file ||= $Bin . "/ensembl.registry";
 
 ##
 ## bsub -q long -W12:00 -o [tmpdir]/output_tag.txt perl tag_snps.pl -tmpdir [tmpdir]/tag_snps -tmpfile tag_snps.txt
@@ -40,7 +41,8 @@ my $population_name;
 my $sth = $dbVariation->dbc->prepare(qq{SELECT s.sample_id, s.name
 					    FROM population p, sample s
 					    WHERE (s.name like 'PERLEGEN:AFD%'
-					    OR s.name like 'CSHL-HAPMAP%')
+					    OR s.name like 'CSHL-HAPMAP%'
+						OR s.name like '1000GENOMES:low_coverage%')
 					    AND s.sample_id = p.sample_id
 					});
 
@@ -50,9 +52,9 @@ $sth->bind_columns(\$population_id,\$population_name);
 my $siblings = {}; # hash {$individual_id} ,where the individual is sibling of another one
 my @pops;
 while($sth->fetch){
-    if($population_name =~ /CEU|YRI|MEX/){
+    #if($population_name =~ /CEU|YRI|MEX/){
 	&get_siblings($dbVariation,$population_id,$siblings);
-    }
+    #}
     push @pops, $population_id;
 }
 
@@ -118,10 +120,11 @@ foreach my $file (keys %{$buffer}){
 foreach my $file (sort {$files_size->{$b} <=> $files_size->{$a}} keys %{$files_size}){
     $file =~ /tag_snps_(\d+)\-.*/; #extract the population_id from the name of the file
     if ($files_size->{$file} > MAX_SIZE){
-	$call = "bsub -W2:00 -J tag_snps_$1 -R'select[myens_genomics1 < 200] rusage[myens_genomics1=10]' ";
+	$call = "bsub -q long -J tag_snps_$1 -R'select[mem>15000] rusage[mem=15000]' -M15000000 ";
     }
-    $call .= "/usr/local/ensembl/bin/perl select_tag_snps.pl $file ";
+    $call .= "/software/bin/perl select_tag_snps.pl $file ";
     $call .= " -tmpdir $TMP_DIR -population_id $1 -species $species";
+	$call .= " -registry_file $registry_file" if defined($registry_file);
     
 #   print $call,"\n";
     system($call); #send the job to one queue
@@ -193,7 +196,7 @@ sub import_tagg_snps{
     unlink(<$TMP_DIR/snps_tagged_*>);
     #and finally, load the information
     load($dbVariation->dbc(), qw(tagged_variation_feature variation_feature_id sample_id));
-#    unlink(<$TMP_DIR/tag_snps_*>);
+    #unlink(<$TMP_DIR/tag_snps_*>);
    
 }
 sub usage {
