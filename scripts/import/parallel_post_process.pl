@@ -494,19 +494,21 @@ sub reverse_genotype{
   }
   
   my @table_list = ("variation","individual_genotype_multiple_bp","population_genotype","allele");
-  
-  if($species =~ /hum|homo/i or $vdbname =~/hum|homo/i) {
-	my $sth1 = $dbVar->prepare(qq{SHOW TABLES LIKE 'tmp_individual_genotype_single_bp_SubInd%'});
-	$sth1->execute;
-	
-	while(my ($table_name) = $sth1->fetchrow_array()) {
-	  push @table_list, $table_name;
-	}
-  }
-  
-  else {
-	push @table_list, "tmp_individual_genotype_single_bp";
-  }
+
+## this section adds the genotype tables
+## we are not doing this anymore as compress_genotypes.pl will cope with strands
+#  if($species =~ /hum|homo/i or $vdbname =~/hum|homo/i) {
+#	my $sth1 = $dbVar->prepare(qq{SHOW TABLES LIKE 'tmp_individual_genotype_single_bp_SubInd%'});
+#	$sth1->execute;
+#	
+#	while(my ($table_name) = $sth1->fetchrow_array()) {
+#	  push @table_list, $table_name;
+#	}
+#  }
+#  
+#  else {
+#	push @table_list, "tmp_individual_genotype_single_bp";
+#  }
 
   foreach my $table (@table_list) {
   #we only change things that have map_weight=1 that is vf.map_weight=1 and seq_region_id not in (hap_id_string)
@@ -832,7 +834,7 @@ sub merge_ensembl_snps {
     $hap_line ='';
   }
 
-  debug("Note there are venter and celera variation_name are sheared, so if celera variation name is in first, then venter name can't be imported into variation,i.e variation_id for those variation with same name are not in variation table, but in all other tables, should put those names in variation_synonym table with source_id=venter, then delete/change those variation_id in other tables see table vf_share_name_same_vf in both celera and venter databases");
+  debug("Note there are venter and celera variation_name are shared, so if celera variation name is in first, then venter name can't be imported into variation,i.e variation_id for those variation with same name are not in variation table, but in all other tables, should put those names in variation_synonym table with source_id=venter, then delete/change those variation_id in other tables see table vf_share_name_same_vf in both celera and venter databases");
   die ("You need to provide the new source_id that you want the data to merge") if !$new_source_id;
 
   if (! $new_source_id) {
@@ -935,18 +937,43 @@ sub merge_ensembl_snps {
     LEFT JOIN variation_feature vf on tv.variation_feature_id=vf.variation_feature_id 
     WHERE vf.variation_feature_id is null
   });
+  
+  
+
+  # get rid of duplicated middle variation_id/names
+  $dbVar->do(qq{
+	CREATE TABLE IF NOT EXISTS tmp_ids_$new_source_id\_final
+	SELECT variation_id1,name1,min(variation_id2) as variation_id2, 'placeholder' as name2
+	FROM tmp_ids_$new_source_id
+	GROUP BY variation_id1
+  });
+  $dbVar->do(qq{alter table tmp_ids_$new_source_id\_final add index name2(name2)});
+  $dbVar->do(qq{alter table tmp_ids_$new_source_id\_final add index variation_idx1(variation_id1), add index variation_idx2(variation_id2)});
+  $dbVar->do(qq{
+	UPDATE tmp_ids_$new_source_id\_final f, tmp_ids_$new_source_id o
+	SET f.name2 = o.name2
+	WHERE f.variation_id2=o.variation_id2
+  });
+
+  debug("Updating tables using tmp_ids_$new_source_id\_final ...");
+  $dbVar->do(qq{UPDATE variation_synonym vs, tmp_ids_$new_source_id\_final t set vs.variation_id=t.variation_id2 
+      	  WHERE vs.variation_id = t.variation_id1});
+  #if t.variation_id2 is already exist in table vsv, then the update will be ignored, these ignored variation_id1 needs to be deleted
+  $dbVar->do(qq{DELETE vsv from variation_set_variation vsv
+	        LEFT JOIN variation v ON vsv.variation_id=v.variation_id
+		WHERE v.variation_id is null});
 
   debug("Updating tables...");
   
   foreach my $table(qw(allele population_genotype variation_set_variation variation_annotation individual_genotype_multiple_bp tmp_individual_genotype_single_bp variation_synonym)) {
 	debug("Updating $table");
-	$dbVar->do(qq{UPDATE IGNORE $table a, tmp_ids_$new_source_id t SET a.variation_id = t.variation_id2 where t.variation_id1 = a.variation_id});
+	$dbVar->do(qq{UPDATE IGNORE $table a, tmp_ids_$new_source_id\_final t SET a.variation_id = t.variation_id2 where t.variation_id1 = a.variation_id});
   }
   
   # when insert ignore, if the entry is already exist, it will do nothing,
   # i.e leave the one unchanged, so need to delete them
   $dbVar->do(qq{
-	DELETE FROM vs USING tmp_individual_genotype_single_bp vs, tmp_ids_$new_source_id t 
+	DELETE FROM vs USING tmp_individual_genotype_single_bp vs, tmp_ids_$new_source_id\_final t 
 	WHERE vs.variation_id=t.variation_id1
   });
   
@@ -1160,7 +1187,8 @@ sub merge_rs_feature{
 	FROM tmp_ids_rs
 	GROUP BY variation_id1
   });
-  $dbVar->do(qq{alter table tmp_ids_rs_final add index name2(name2)});		
+  $dbVar->do(qq{alter table tmp_ids_rs_final add index name2(name2)});
+  $dbVar->do(qq{alter table tmp_ids_rs_final add index variation_idx1(variation_id1), add index variation_idx2(variation_id2)});
   $dbVar->do(qq{
 	UPDATE tmp_ids_rs_final f, tmp_ids_rs o
 	SET f.variation_id2 = o.variation_id2
@@ -1174,6 +1202,34 @@ sub merge_rs_feature{
   $dbVar->do(qq{DELETE vsv from variation_set_variation vsv
 	        LEFT JOIN variation v ON vsv.variation_id=v.variation_id
 		WHERE v.variation_id is null});
+  
+  ## we need to deal with the situation where one of the variants has been flipped and the other hasn't
+  
+  # first create a flipper table to flip the genotypes
+  $dbVar->do(qq{CREATE TABLE flipper (a char(1) NOT NULL, b char(1) NOT NULL);});
+  $dbVar->do(qq{INSERT INTO flipper VALUES('A','T');});
+  $dbVar->do(qq{INSERT INTO flipper VALUES('C','G');});
+  $dbVar->do(qq{INSERT INTO flipper VALUES('G','C');});
+  $dbVar->do(qq{INSERT INTO flipper VALUES('T','A');});
+  
+  debug("Flipping genotypes in cases where variation to be merged has different flipped state");
+  
+  # flip the genotypes where the flipped column does not match
+  # otherwise we will get some genotypes on + and some on -
+  # when we update variation_id below
+  $dbVar->do(qq{
+	UPDATE tmp_individual_genotype_single_bp tg, tmp_ids_rs_final t, variation v1, variation v2, flipper f1, flipper f2
+	SET tg.allele_1 = f1.b, tg.allele_2 = f2.b
+	WHERE tg.variation_id = t.variation_id1
+	AND t.variation_id1 = v1.variation_id
+	AND t.variation_id2 = v2.variation_id
+	AND v1.flipped != v2.flipped
+	AND tg.allele_1 = f1.a
+	AND tg.allele_2 = f2.a
+  });
+  
+  # drop the flipper table
+  $dbVar->do(qq{DROP TABLE flipper;});
   
   foreach my $table(qw(variation_set_variation variation_annotation allele population_genotype individual_genotype_multiple_bp tmp_individual_genotype_single_bp)) {
 	debug("Updating $table");
