@@ -96,7 +96,7 @@ my $species_config = {
     'Saccharomyces_cerevisiae'	=> {},
 };
 
-unless (-e $toplevel_dir) {
+unless (-e $toplevel_dir || $test) {
     make_path($toplevel_dir) or die "Failed to create toplevel output directory '$toplevel_dir': $!";
 }
 
@@ -115,7 +115,7 @@ for my $species_name (@species) {
 
     my $dir = $toplevel_dir.'/'.$species_name;
     
-    unless (-e $dir) {
+    unless (-e $dir || $test) {
         make_path($dir) or die "Failed to create output dir '$dir': $!";
     }
 

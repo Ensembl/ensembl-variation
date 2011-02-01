@@ -34,7 +34,7 @@ for my $species (@species_dirs) {
     next unless $species;
     my $dir = "$toplevel_dir/$species";
     die "$dir doesn't look like a GVF dump directory\n" 
-        unless grep {/.gvf.gz/} `ls $dir`;
+        unless grep {/\.gvf\.gz/} `ls $dir`;
     `rm -f $dir/*.out`;
     `rm -f $dir/*.err`;
     open README, ">$dir/README" or die "Failed to create README file\n";
