@@ -129,7 +129,7 @@ sub _tables{
     my $self = shift;
 
     return (['individual_genotype_single_bp','ig'],['variation_feature','vf'],['failed_variation','fv']) if (!$self->_multiple);
-    return (['individual_genotype_multiple_bp','ig'],['variation_feature','vf'],['failed_variation','fv']) if ($self->_multiple);
+    return (['variation_feature','vf'],['individual_genotype_multiple_bp','ig'],['failed_variation','fv']) if ($self->_multiple);
     
 }
 
@@ -156,7 +156,9 @@ sub _objs_from_sth{
     # function calls as possible for speed purposes.  Thus many caches and
     # a fair bit of gymnastics is used.
     #
-    
+
+    #warn $sth->sql;
+
     my $sa = $self->db()->dnadb()->get_SliceAdaptor();
     
     my @results;
@@ -245,9 +247,10 @@ sub _objs_from_sth{
 		$seq_region_end   = $seq_region_end   - $dest_slice_start + 1;
 	    } else {
 		my $tmp_seq_region_start = $seq_region_start;
-		$seq_region_start = $dest_slice_end - $seq_region_end + 1;
+        #$seq_region_start = $dest_slice_end - $seq_region_end + 1;
+        $seq_region_start = $seq_region_start - $dest_slice_start + 1;
 		$seq_region_end   = $dest_slice_end - $tmp_seq_region_start + 1;
-		$seq_region_strand *= -1;
+		#$seq_region_strand *= -1;
 	    }
 	    
 	    #throw away features off the end of the requested slice
@@ -262,7 +265,7 @@ sub _objs_from_sth{
 	$seq_region_strand = 1;
 	reverse_comp(\$allele_1);
 	reverse_comp(\$allele_2);
-	$slice->{'strand'} = -1;
+    #$slice->{'strand'} = -1;
     }
     my $igtype = Bio::EnsEMBL::Variation::IndividualGenotypeFeature->new_fast({
 	'start'    => $seq_region_start,
@@ -273,7 +276,7 @@ sub _objs_from_sth{
 	'allele2' => $allele_2,
     });
     $individual_hash{$sample_id} ||= [];
-    $variation_hash{$sample_id} ||=[];
+    $variation_hash{$variation_id} ||=[];
     push @{$individual_hash{$sample_id}}, $igtype;
     push @{$variation_hash{$variation_id}},$igtype;
     push @results, $igtype;
