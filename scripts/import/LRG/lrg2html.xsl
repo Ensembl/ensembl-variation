@@ -624,6 +624,7 @@
 		<xsl:for-each select="/*/updatable_annotation/annotation_set/features/gene/transcript">
 		  
 		  <xsl:if test="@fixed_id=$transname">
+		     
 		     <!--
 			<xsl:for-each select="@transcript_id">
 			   <xsl:if test="string-length(.) &gt; 0">
@@ -636,11 +637,24 @@
 			   </xsl:if>
 			</xsl:for-each>
 		-->
+		
+			<!-- Display the NCBI accession for the transcript -->
+			<xsl:if test="../../../source/name='NCBI RefSeqGene' and @fixed_id=$transname">
+			   <strong>  Comment: </strong>This transcript is based on RefSeq transcript 
+			      <a>
+				 <xsl:attribute name="href">http://www.ncbi.nlm.nih.gov/nuccore/<xsl:value-of select="@transcript_id" /></xsl:attribute>
+				 <xsl:attribute name="target">_blank</xsl:attribute>
+				    <xsl:value-of select="@transcript_id" />
+			      </a>
+			   <br />
+			</xsl:if>
+			
 			<xsl:for-each select="comment">
 			   <xsl:if test="string-length(.) &gt; 0">
 			      <strong>  Comment: </strong><xsl:value-of select="."/>  (comment sourced from <xsl:value-of select="../../../../source/name" />)<br/>
 			   </xsl:if>
 			</xsl:for-each>
+			
 		  </xsl:if>
 		</xsl:for-each>
 	  </p>
