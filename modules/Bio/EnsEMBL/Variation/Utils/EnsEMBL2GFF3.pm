@@ -60,17 +60,30 @@ use warnings;
     
     sub gvf_header {
         my $self = shift;
-        
+       
+        my %args = @_;
+
         my $hdr = $self->gff_header(@_);
         
         my $mca = $self->adaptor->db->get_MetaContainerAdaptor;
         my $schema_version = $mca->get_schema_version;
-        my $url = 'http://e'.$schema_version.'.ensembl.org';
+        my $species_name = $mca->get_scientific_name;
+        $species_name =~ s/ /_/g;
+        my $url = 'http://e'.$schema_version.'.ensembl.org/'.$species_name;
         
-        $hdr .= "##gvf-version 1.04\n";
+        $hdr .= "##gvf-version 1.05\n";
         $hdr .= "##feature-ontology http://song.cvs.sourceforge.net/viewvc/song/ontology/so.obo?revision=1.283\n";
         $hdr .= "##data-source Source=ensembl;version=$schema_version;url=$url\n";
+        $hdr .= "##file-version $schema_version\n";
         
+        if (my $individual = $args{individual}) {
+            $hdr .= "##individual-id ".$individual->to_gvf."\n";
+        }
+
+        if (my $population = $args{population}) {
+            $hdr .= "##attribute-method ".$population->to_gvf."\n";
+        }
+
         return $hdr;
     }
 }
@@ -330,7 +343,73 @@ use warnings;
     
 }
 
+{
+    package Bio::EnsEMBL::Variation::Individual;
+        
+    sub _gff_hash {
+        
+        my $self = shift;
+
+        my $gff;
+
+        $gff->{Gender} = $self->gender;
+
+        $gff->{Display_name} = $self->name;
+
+        $gff->{ensembl_description} = $self->description;
+
+        $gff->{Type} = $self->type_description;
+
+        $gff->{Population} = join ',', map { $_->name } @{ $self->get_all_Populations };
+       
+        return $gff;
+    }
+
+    sub to_gvf {
+        my $self = shift;
+       
+        my $attrs = $self->_gff_hash(@_);
+
+        # get rid of any empty attributes 
+        map { delete $attrs->{$_} unless $attrs->{$_} } keys %$attrs;
+        
+        return join ';', map { $_.'='.$attrs->{$_} } keys %$attrs; 
+    }
+    
+}
+
+{
+    package Bio::EnsEMBL::Variation::Population;
+        
+    sub _gff_hash {
+        
+        my $self = shift;
+
+        my $gff;
+
+        $gff->{Attribute} = 'Variant_freq';
+
+        $gff->{population} = $self->name;
+        
+        $gff->{population_size} = $self->size;
+
+        $gff->{Comment} = $self->description;
+      
+        return $gff;
+    }
+
+    sub to_gvf {
+        my $self = shift;
+       
+        my $attrs = $self->_gff_hash(@_);
+
+        # get rid of any empty attributes 
+        map { delete $attrs->{$_} unless $attrs->{$_} } keys %$attrs;
+        
+        return join ';', map { $_.'='.$attrs->{$_} } keys %$attrs; 
+    }
+    
+}
 
 1;
-
 
