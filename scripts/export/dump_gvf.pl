@@ -487,7 +487,7 @@ dump_gvf.pl --species NAME [options]
 
   dump_gvf.pl --species mouse --registry ensembl.registry --include_failed
 
-    dump all variation features, inclusing failed variations from the mouse 
+    dump all variation features, including failed variations, from the mouse 
     database to the default mouse.gvf file
 
   dump_gvf.pl --species human --registry ensembl.registry --individual Watson \
