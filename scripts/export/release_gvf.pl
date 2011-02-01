@@ -36,7 +36,7 @@ pod2usage(1) if $help;
 die "--output_dir argument is required, try --help for usage" 
     unless $toplevel_dir;
 
-$script ||= '$Bin/dump_gvf.pl';
+$script ||= "$Bin/dump_gvf.pl";
 
 my $default_rc = '-q long';
 
@@ -174,7 +174,7 @@ for my $species_name (@species) {
 }
 
 for my $cmd (@cmds) {
-    warn "Submitting: $cmd\n";
+    warn "Submitting:\n$cmd\n\n";
     unless ($test) {
         system($cmd) == 0 or die "Failed to submit last command";
     }
