@@ -240,15 +240,15 @@ sub fetch_all_by_Slice{
 		#}
 	}
 	
-	#$self->_multiple(1);
-	#push @results, @{$self->fetch_all_by_Slice($slice,$individual)};
-	#$self->_multiple(0);
+	$self->_multiple(1);
+	push @results, @{$self->fetch_all_by_Slice($slice,$individual)};
+	$self->_multiple(0);
 	
     }
     else{
 	#if passed inividual, add constraint
 	if (defined $individual && defined $individual->dbID){
-	  $constraint = ' c.sample_id = ' . $individual->dbID;
+	  $constraint = ' ig.sample_id = ' . $individual->dbID;
 	 # $constraint = ' c.sample_id = ?';
 	 # $self->bind_param_generic_fetch($individual->dbID,SQL_INTEGER);
 	  $features = $self->SUPER::fetch_all_by_Slice_constraint($slice,$constraint);
@@ -257,7 +257,7 @@ sub fetch_all_by_Slice{
 	    $features = $self->SUPER::fetch_all_by_Slice($slice);
 	}
 	#and include the genotypes from the multiple genotype table
-	push @results, $features;
+	push @results, @$features;
     }
 	
     return \@results;
@@ -279,8 +279,8 @@ sub _columns{
 
 sub _objs_from_sth{
     my ($self, $sth, $mapper, $dest_slice) = @_;
-	
-	#warn "SQL ", $sth->sql;
+
+    #warn "SQL ", $sth->sql;
     
     return $self->SUPER::_objs_from_sth($sth,$mapper,$dest_slice) if ($self->_multiple);
     #
