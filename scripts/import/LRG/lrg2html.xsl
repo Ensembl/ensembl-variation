@@ -639,7 +639,7 @@
 		-->
 		
 			<!-- Display the NCBI accession for the transcript -->
-			<xsl:if test="../../../source/name='NCBI RefSeqGene' and @fixed_id=$transname">
+			<xsl:if test="../../../source/name='NCBI RefSeqGene' and @fixed_id=$transname and string-length(comment) = 0">
 			   <strong>  Comment: </strong>This transcript is based on RefSeq transcript 
 			      <a>
 				 <xsl:attribute name="href">http://www.ncbi.nlm.nih.gov/nuccore/<xsl:value-of select="@transcript_id" /></xsl:attribute>
