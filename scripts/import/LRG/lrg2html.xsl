@@ -645,7 +645,10 @@
 				 <xsl:attribute name="href">http://www.ncbi.nlm.nih.gov/nuccore/<xsl:value-of select="@transcript_id" /></xsl:attribute>
 				 <xsl:attribute name="target">_blank</xsl:attribute>
 				    <xsl:value-of select="@transcript_id" />
-			      </a>
+			      </a> 
+			      <xsl:if test="protein_product/long_name">
+				  (encodes <xsl:value-of select="protein_product/long_name" />)
+			      </xsl:if>
 			   <br />
 			</xsl:if>
 			
@@ -1549,8 +1552,20 @@
 								  <strong>Name: </strong><xsl:value-of select="long_name"/><br/>
 								</xsl:if>
 								<xsl:for-each select="comment">
-								  <strong>Comment: </strong><xsl:value-of select="."/><br/>
+								  <xsl:if test="string-length(.) &gt; 0">
+								     <strong>Comment: </strong><xsl:value-of select="."/><br/>
+								  </xsl:if>
 								</xsl:for-each>
+							       <xsl:if test="(@fixed_id and @source='RefSeq')">
+								  <strong>Comment: </strong>This transcript was used for 
+								  <a>
+								     <xsl:attribute name="href">
+									#transcript_<xsl:value-of select="@fixed_id"/>
+								     </xsl:attribute>
+								     LRG transcript <xsl:value-of select="@fixed_id"/>
+								  </a>
+								  <br/>
+							       </xsl:if>
 								<xsl:if test="partial">
 								  <xsl:for-each select="partial">
 								     <strong>Note: </strong>
