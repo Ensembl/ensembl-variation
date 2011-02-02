@@ -315,6 +315,7 @@ sub frameshift {
     my $tva = shift;
 
     return 0 if partial_codon($tva);
+    return 0 if coding_unknown($tva);
 
     my $tv = $tva->transcript_variation;
 
@@ -350,6 +351,16 @@ sub within_coding_frameshift_intron {
     
     return (within_coding_region($tva) and 
         $tva->transcript_variation->intron_effects->{within_frameshift_intron});
+}
+
+sub coding_unknown {
+    my $tva = shift;
+    
+    return (
+        within_coding_region($tva)
+        and (not within_intron($tva))
+        and ($tva->allele_string !~ /\//)
+    );
 }
 
 1;
