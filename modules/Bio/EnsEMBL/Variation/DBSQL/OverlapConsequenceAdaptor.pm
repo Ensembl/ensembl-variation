@@ -59,6 +59,9 @@ sub _objs_from_sth {
         $row->{dbID} = $row->{overlap_consequence_id};
         delete $row->{overlap_consequence_id};
         
+        # and add ourself as the adaptor
+        $row->{adaptor} = $self;
+        
         push @objs, Bio::EnsEMBL::Variation::OverlapConsequence->new_fast($row);
     }
     
