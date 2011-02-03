@@ -186,7 +186,7 @@ my @parameters = (
   -log => $logh
 );
 my $import_object;
-if ($species =~ m/fish/i || $species =~ m/^pig$/i) {
+if ($species =~ m/zebrafish/i || $species =~ m/^pig$/i || $species eq 'cat' || $species =~ m/zebrafinch/i || $species =~ m/tetraodon/i) {
   $import_object = dbSNP::MappingChromosome->new(@parameters);
 }
 elsif ($species =~ m/chimp/i || $species =~ m/chicken/i || $species =~ m/rat/i || $species =~ m/horse/i || $species =~ m/platypus/i || $species =~ m/opossum/i) {
