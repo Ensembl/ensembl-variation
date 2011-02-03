@@ -22,6 +22,10 @@ my $UNIPROT_SOURCE_NAME = "Uniprot";
 my $UNIPROT_SOURCE_DESCRIPTION = "Variants with protein annotation imported from Uniprot";
 my $UNIPROT_SOURCE_URL = "http://www.uniprot.org/";
 
+my $OMIM_SOURCE_NAME = "OMIM";
+my $OMIM_SOURCE_DESCRIPTION = "Variations linked to entries in the Online Mendelian Inheritance in Man (OMIM) database";
+my $OMIM_SOURCE_URL = "http://www.ncbi.nlm.nih.gov/omim/";
+
 my $NHGRI_SOURCE_NAME = "NHGRI_GWAS_catalog";
 my $NHGRI_SOURCE_DESCRIPTION = "Variants associated with phenotype data from the NHGRI GWAS catalog";
 my $NHGRI_SOURCE_URL = "http://www.genome.gov/gwastudies/";
@@ -87,6 +91,12 @@ elsif ($source =~ m/nhgri/i) {
     $source_description = $NHGRI_SOURCE_DESCRIPTION;
     $source_url = $NHGRI_SOURCE_URL;
 }
+elsif ($source =~ m/omim/i) {
+    $result = parse_dbsnp_omim($infile);
+    $source_name = $OMIM_SOURCE_NAME;
+    $source_description = $OMIM_SOURCE_DESCRIPTION;
+    $source_url = $OMIM_SOURCE_URL;
+}
 else {
     die("Source $source is not recognized");
 }
@@ -128,7 +138,11 @@ add_phenotypes(\@phenotypes,$variation_ids,$source_id,$db_adaptor) unless ($skip
 # Loop over the remaining rsids (the ones that could not be find in the db) and print them out
 while (my ($rs_id,$var_id) = each(%{$variation_ids})) {
     next if (defined($var_id->[0]));
-    print STDOUT "$rs_id could not be found in $dbname (Synonyms: " . join(", ",@{$synonym{$rs_id}}) . ")\n";
+    print STDOUT "$rs_id could not be found in $dbname";
+    if (defined($synonym{$rs_id})) {
+        print STDOUT " (Synonyms: " . join(", ",@{$synonym{$rs_id}}) . ")";
+    }
+    print STDOUT "\n";
 }
 
 
@@ -151,7 +165,7 @@ sub parse_uniprot {
         }
         
         #ÊMain regexp to extract relevant variation information
-        if ($_ =~ m/^(\S+)\s+(?:\w+\s+){2}(VAR\_\d+)\s+\d+\s+\w+ \-> \w+\s+(Disease|Polymorphism|Unclassified)\s+(rs\d+)\s+(.+)$/) {
+        if ($_ =~ m/^(\S+)\s+(?:\w+\s+){2}(VAR\_\d+)\s+\d+\s+\w+ \-> \w+\s+(Disease|Polymorphism|Unclassified)\s+(\-|rs\d*)\s+(.+)$/) {
             
             #ÊGet the data that was caught by the regexp
             my $gene = $1;
@@ -159,7 +173,13 @@ sub parse_uniprot {
             my $rs_id = $4;
             my $phenotype = $5;
             
-            push(@{$synonym{$rs_id}},$uniprot_id);
+            # If no rsId was given, will attempt to get one by looking up the Uniprot id in the synonym table
+            if ($rs_id ne '-') {
+                push(@{$synonym{$rs_id}},$uniprot_id);
+            }
+            else {
+                $rs_id = $uniprot_id;
+            }
             
             $phenotype ||= '-';
             
@@ -270,8 +290,63 @@ sub parse_nhgri {
     return \%result;
 }
 
+sub parse_dbsnp_omim {
+    my $infile = shift;
+    
+    my @phenotypes;
+    my @attribute_keys = (
+        'ID',
+        'Phenotype_study',
+        'Phenotype_associated_variant_risk_seq',
+        'Omim_title',
+        'Allele_title',
+        'Gene_names'
+    );
+    
+    #ÊOpen the input file for reading
+    open(IN,'<',$infile) or die ("Could not open $infile for reading");
+    
+    # Read through the file and parse out the desired fields
+    while (<IN>) {
+        chomp;
+        
+        my @attributes = split(/\t/);
+        
+        #ÊSkip the risk allele if the variant is "0000"
+        my $data = {
+            'rsid' => 'rs' . $attributes[0],
+            'study' => 'MIM:' . $attributes[1],
+            'associated_variant_risk_allele' => ($attributes[2] !~ m/^\s*0+\s*$/ ? $attributes[2] : undef),
+            'associated_gene' => $attributes[5],
+            'variation_names' => 'rs' . $attributes[0]
+        };
+        
+        #ÊIf available, use the variant title, else use the omim record title
+        if (defined($data->{'associated_variant_risk_allele'})) {
+            $data->{'description'} = $attributes[4];
+        }
+        else {
+            $data->{'description'} = $attributes[3];
+        }
+        
+        #ÊIf possible, try to extract the last comma-separated word as this should be the short name for the phenotype
+        @attributes = split(/;/,$data->{'description'});
+        if (scalar(@attributes) > 1) {
+            ($data->{'name'}) = pop(@attributes) =~ m/(\S+)/;
+            $data->{'description'} = join(';',@attributes);
+        }
+        
+        push(@phenotypes,$data);
+    }
+    
+    close(IN);
+    
+    my %result = ('phenotypes' => \@phenotypes);
+    return \%result;
+}
+
 sub parse_ega {
-    my $infile;
+    my $infile = shift;
     
     #ÊOpen the input file for reading
     open(IN,'<',$infile) or die ("Could not open $infile for reading");
