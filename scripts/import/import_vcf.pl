@@ -33,6 +33,7 @@ use FileHandle;
 use Data::Dumper;
 use Time::HiRes qw(gettimeofday tv_interval);
 use ImportUtils qw(debug load);
+use FindBin qw( $Bin );
 
 use constant DISTANCE => 100_000;
 use constant MAX_SHORT => 2**16 -1;
