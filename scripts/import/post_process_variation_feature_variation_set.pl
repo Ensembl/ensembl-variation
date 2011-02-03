@@ -26,8 +26,7 @@ my $VARIATION_FEATURE_TABLE = 'variation_feature';
 my @option_defs = (
   'species=s',
   'registry_file=s',
-  'variation_set_name=s@',
-  'variation_set_id=i@',
+  'chromosome=s@',
   'verbose!'
 );
 
@@ -47,6 +46,74 @@ $registry->load_all($registry_file);
 
 #ÊGet a dbadaptor to the variation database
 my $dbVar = $registry->get_DBAdaptor($species,"variation") or die ("Could not get variation DBAdaptor for $species");
+
+#ÊIf no chromosomes were specified, get all available in the database
+my @chromosomes;
+if (defined($options{'chromosome'})) {
+    @chromosomes = @{$options{'chromosome'}};
+}
+else {
+    my $stmt = qq{
+        SELECT DISTINCT
+            name
+        FROM
+            seq_region;
+    };
+    @chromosomes = @{$dbVar->dbc->db_handle->selectcol_arrayref($stmt)};
+}
+
+# This statement will set the variation_set_id column for the sets that are explicitly set in the variation_set_variation table
+my $stmt = qq{
+    UPDATE
+        variation_feature vf USE INDEX (pos_idx) JOIN
+        seq_region sr ON (
+            sr.seq_region_id = vf.seq_region_id
+        )
+    SET
+        vf.variation_set_id = (
+            SELECT
+                GROUP_CONCAT(vsv.variation_set_id)
+            FROM
+                variation_set_variation vsv USE INDEX (PRIMARY)
+            WHERE
+                vsv.variation_id = vf.variation_id
+            GROUP BY
+                vsv.variation_id
+        )
+    WHERE
+        sr.name = ?
+};
+my $set_explicit_sets = $dbVar->dbc->prepare($stmt);
+
+#ÊThis statment will update the variation_set_id column to also contain the parent set in case there is a subset structure
+$stmt = qq{
+    UPDATE
+        variation_feature vf USE INDEX (pos_idx) JOIN
+        seq_region sr ON (
+            sr.seq_region_id = vf.seq_region_id
+        ),
+        variation_set_structure vss
+    SET
+        vf.variation_set_id = (vf.variation_set_id | POW(2,(vss.variation_set_super - 1)))
+    WHERE
+        sr.name = ? AND
+        FIND_IN_SET(vss.variation_set_sub,vf.variation_set_id)
+};
+my $set_inherited_sets = $dbVar->dbc->prepare($stmt);
+
+# Loop over the chromosomes
+foreach my $chromosome (@chromosomes) {
+    
+    #ÊFirst, get the explicit sets
+    my $updated = $set_explicit_sets->execute($chromosome);
+    
+    #ÊThen set the implicit sets by looping until no more rows are updated
+    while ($updated) {
+        
+        $updated = $set_inherited_sets->execute($chromosome);
+        
+    }
+}
 
 #ÊGet a VariationSetAdaptor
 my $vs_adaptor = $dbVar->get_VariationSetAdaptor() or die ("Could not get a VariationSetAdaptor from variation db");
@@ -107,7 +174,7 @@ $stmt = qq{
         `$VARIATION_FEATURE_TABLE`
     DISABLE KEYS
 };
-$dbVar->dbc->do($stmt);
+#$dbVar->dbc->do($stmt);
 
 #print STDOUT qq{ Done!\n} if (defined($options{'verbose'}));
 
@@ -155,7 +222,7 @@ $stmt = qq{
         `$VARIATION_FEATURE_TABLE`
     ENABLE KEYS
 };
-$dbVar->dbc->do($stmt);
+#$dbVar->dbc->do($stmt);
 
 #print STDOUT qq{ Done!\n} if (defined($options{'verbose'}));
 
