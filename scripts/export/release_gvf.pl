@@ -113,7 +113,8 @@ for my $species_name (@species) {
     my $config = $species_config->{$species_name};
     my $rc = $config->{rc} || $default_rc;
 
-    my $dir = $toplevel_dir.'/'.$species_name;
+    # the webteam want the toplevel species directory to be lower case
+    my $dir = $toplevel_dir.'/'.lc($species_name);
     
     unless (-e $dir || $test) {
         make_path($dir) or die "Failed to create output dir '$dir': $!";
