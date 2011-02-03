@@ -83,9 +83,8 @@ if(defined($help) || !$args) {
 
 # set defaults
 $species ||= "human";
-$host ||= 'ensembldb.ensembl.org';
-$user ||= 'anonymous';
 $flank_size ||= 200;
+$registry_file ||= $Bin . "/ensembl.registry";
 
 # set default list of tables to write to
 my $tables = {
@@ -153,19 +152,19 @@ $ImportUtils::TMP_FILE = $TMP_FILE;
 # get registry
 my $reg = 'Bio::EnsEMBL::Registry';
 
-# load DB options from registry file if given
-if(defined($registry_file)) {
+# manually connect to DB server if specs given
+if(defined($host) && defined($user)) {
+	$reg->load_registry_from_db(-host => $host, -user => $user, -pass => $password);
+}
+
+# otherwise load DB options from registry file
+else {
 	if(-e $registry_file) {
 		$reg->load_all($registry_file);
 	}
 	else {
 		die "ERROR: could not read from registry file $registry_file\n";
 	}
-}
-
-# otherwise manually connect to DB server
-else {
-	$reg->load_registry_from_db(-host => $host,-user => $user, -pass => $password);
 }
 
 # connect to DB
@@ -483,6 +482,9 @@ while(<$in_file_handle>) {
 
 # clean up remaining genotypes and import
 if($tables->{compressed_genotype_single_bp}) {
+
+    debug("Importing compressed genotype data");
+	
 	print_file("$TMP_DIR/compressed_genotype_".$$.".txt",$genotypes, $prev_seq_region);
 	&import_genotypes($dbVar);
 }
@@ -641,8 +643,6 @@ sub escape ($) {
 # imports genotypes from tmp file to compressed_genotype_single_bp
 sub import_genotypes{
     my $dbVar = shift;
-
-    debug("Importing compressed genotype data");
     my $call = "mv $TMP_DIR/compressed_genotype_".$$.".txt $TMP_DIR/$TMP_FILE";
     system($call);
     load($dbVar,qw(compressed_genotype_single_bp sample_id seq_region_id seq_region_start seq_region_end seq_region_strand genotypes));
