@@ -868,18 +868,15 @@ CREATE TABLE failed_description(
 # Contains all variations that did not pass the Ensembl filters
 # failed_variation_id - primary key
 # variation_id - foreign key to variation table
-# subsnp_id - foreign key to allele, population_genotype tables
 # failed_descriptin_id - foreign key to failed_description table
 #
 
 CREATE TABLE failed_variation (
   failed_variation_id int(11) NOT NULL AUTO_INCREMENT,
   variation_id int(10) unsigned NOT NULL,
-  subsnp_id int(10) unsigned DEFAULT NULL,
   failed_description_id int(10) unsigned NOT NULL,
   PRIMARY KEY (failed_variation_id),
-  KEY variation_idx (variation_id),
-  KEY subsnp_idx (subsnp_id)
+  KEY variation_idx (variation_id)
 );
 
 #
