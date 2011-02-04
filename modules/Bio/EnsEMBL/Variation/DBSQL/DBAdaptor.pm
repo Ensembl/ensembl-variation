@@ -87,6 +87,7 @@ sub get_available_adaptors{
          'VariationSet' => 'Bio::EnsEMBL::Variation::DBSQL::VariationSetAdaptor',
          'OverlapConsequence' => 'Bio::EnsEMBL::Variation::DBSQL::OverlapConsequenceAdaptor',
          'TranscriptVariationNew' => 'Bio::EnsEMBL::Variation::DBSQL::TranscriptVariationNewAdaptor',
+         'RegulatoryVariation' => 'Bio::EnsEMBL::Variation::DBSQL::RegulatoryVariationAdaptor',
                  );
     return (\%pairs);
 }
@@ -149,7 +150,7 @@ sub get_available_adaptors{
 =cut
 
 sub include_failed_variations {
-    my $self = shift;
+    my $self = shift;   
     my $include = shift;
     
     #ÊIf the flag should be modified, do that

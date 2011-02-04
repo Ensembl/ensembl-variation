@@ -23,15 +23,9 @@ package Bio::EnsEMBL::Variation::Utils::VariationEffect;
 use strict;
 use warnings;
 
-use Data::Dumper;
+use base qw(Exporter);
 
-#use Inline C => <<'END_C';
-#
-#int overlap (int f1_start, int f1_end, int f2_start, int f2_end) {
-#    return (f1_end >= f2_start && f1_start <= f2_end);
-#}
-#
-#END_C
+our @EXPORT_OK = qw(overlap affects_peptide);
 
 sub overlap {
     my ( $f1_start, $f1_end, $f2_start, $f2_end ) = @_;
@@ -47,79 +41,88 @@ sub overlaps_transcript {
         $tran->seq_region_start - 5000, $tran->seq_region_end + 5000);
 }
 
-sub within_transcript {
-    my $tva     = shift;
-    my $vf      = $tva->variation_feature;
-    my $tran    = $tva->transcript;
+sub within_feature {
+    my $vfoa    = shift;
+    my $vf      = $vfoa->variation_feature;
+    my $feat    = $vfoa->feature;
     
-    return overlap($vf->seq_region_start, $vf->seq_region_end,
-        $tran->seq_region_start, $tran->seq_region_end);
+    return overlap(
+        $vf->seq_region_start, 
+        $vf->seq_region_end,
+        $feat->seq_region_start, 
+        $feat->seq_region_end
+    );
+}
+
+sub within_transcript {
+    my $tva = shift;
+    return within_feature($tva);
 }
 
 sub _before_start {
-    my ($vf, $tran, $dist) = @_;
-    return ( ($vf->seq_region_end >= ($tran->seq_region_start - $dist)) and 
-        ($vf->seq_region_end < $tran->seq_region_start) );
+    my ($vf, $feat, $dist) = @_;
+    return ( ($vf->seq_region_end >= ($feat->seq_region_start - $dist)) and 
+        ($vf->seq_region_end < $feat->seq_region_start) );
 }
 
 sub _after_end {
-    my ($vf, $tran, $dist) = @_;
-    return ( ($vf->seq_region_start <= ($tran->seq_region_end + $dist)) 
-            and ($vf->seq_region_start > $tran->seq_region_end) );
+    my ($vf, $feat, $dist) = @_;
+    return ( ($vf->seq_region_start <= ($feat->seq_region_end + $dist)) 
+            and ($vf->seq_region_start > $feat->seq_region_end) );
 }
 
 sub _upstream {
-    my ($vf, $tran, $dist) = @_;
-    return $tran->strand == 1 ? 
-        _before_start($vf, $tran, $dist) : 
-        _after_end($vf, $tran, $dist);
+    my ($vf, $feat, $dist) = @_;
+    return $feat->strand == 1 ? 
+        _before_start($vf, $feat, $dist) : 
+        _after_end($vf, $feat, $dist);
 }
 
 sub _downstream {
-    my ($vf, $tran, $allele, $dist) = @_;
-    return $tran->strand == 1 ? 
-        _after_end($vf, $tran, $allele, $dist) : 
-        _before_start($vf, $tran, $allele, $dist);
+    my ($vf, $feat, $dist) = @_;
+    return $feat->strand == 1 ? 
+        _after_end($vf, $feat, $dist) : 
+        _before_start($vf, $feat, $dist);
 }
 
 sub upstream_5KB {
-    my $tva    = shift;
-    my $vf      = $tva->variation_feature;
-    my $tran    = $tva->transcript;
+    my $vfo     = shift;
+    my $vf      = $vfo->variation_feature;
+    my $feat    = $vfo->feature;
 
-    return (_upstream($vf, $tran, 5000) and not upstream_2KB($tva));
+    return (_upstream($vf, $feat, 5000) and not upstream_2KB($vfo));
 }
 
 sub downstream_5KB {
-    my $tva     = shift;
-    my $vf      = $tva->variation_feature;
-    my $tran    = $tva->transcript; 
+    my $vfo     = shift;
+    my $vf      = $vfo->variation_feature;
+    my $feat    = $vfo->feature;
 
-    return (_downstream($vf, $tran, 5000) and not downstream_500B($tva));
+    return (_downstream($vf, $feat, 5000) and not downstream_500B($vfo));
 }
 
 sub upstream_2KB {
-    my $tva     = shift;
-    my $vf      = $tva->variation_feature;
-    my $tran    = $tva->transcript; 
+    my $vfo     = shift;
+    my $vf      = $vfo->variation_feature;
+    my $feat    = $vfo->feature; 
 
-    return _upstream($vf, $tran, 2000);
+    return _upstream($vf, $feat, 2000);
 }
 
 sub downstream_2KB {
-    my $tva     = shift;
-    my $vf      = $tva->variation_feature;
-    my $tran    = $tva->transcript; 
+    my $vfo     = shift;
+    my $vf      = $vfo->variation_feature;
+    my $feat    = $vfo->feature; 
 
-    return _downstream($vf, $tran, 2000);
+    return _downstream($vf, $feat, 2000);
 }
 
 sub downstream_500B {
-    my $tva     = shift;
-    my $vf      = $tva->variation_feature;
-    my $tran    = $tva->transcript; 
+    my $vfo     = shift;
+    my $vf      = $vfo->variation_feature;
+    my $feat    = $vfo->feature;
 
-    return _downstream($vf, $tran, 500);
+    return _downstream($vf, $feat, 500);
 }
 
 sub within_nmd_transcript {
@@ -157,6 +160,12 @@ sub within_miRNA {
         }
     }
     
+    return 0;
+}
+
+sub within_miRNA_target {
+    my $tva = shift;
+    # XXX: implement me!
     return 0;
 }
 
@@ -251,7 +260,7 @@ sub complex_indel {
     my $tva     = shift;
     my $vf      = $tva->variation_feature;
     
-    return 0 unless $vf->var_class eq 'in-del';
+    return 0 unless $vf->var_class =~ /^(in|del)/;
 
     return @{ $tva->transcript_variation->cds_coords } > 1;
 }
@@ -335,11 +344,11 @@ sub partial_codon {
     
     my $tv = $tva->transcript_variation;
     
-    return 0 unless defined $tv->pep_start;
+    return 0 unless defined $tv->translation_start;
 
     my $cds_length = length $tv->translateable_seq;
 
-    my $codon_cds_start = ($tv->pep_start * 3) - 2;
+    my $codon_cds_start = ($tv->translation_start * 3) - 2;
 
     my $last_codon_length = $cds_length - ($codon_cds_start - 1);
     
@@ -353,14 +362,34 @@ sub within_coding_frameshift_intron {
         $tva->transcript_variation->intron_effects->{within_frameshift_intron});
 }
 
+sub affects_peptide {
+    my $tva     = shift;
+    return (within_coding_region($tva) and (not within_intron($tva)));
+}
+
 sub coding_unknown {
     my $tva = shift;
-    
-    return (
-        within_coding_region($tva)
-        and (not within_intron($tva))
-        and ($tva->allele_string !~ /\//)
-    );
+    return (affects_peptide($tva) and ($tva->allele_string !~ /\//));
+}
+
+sub within_regulatory_feature {
+    my $rfva = shift;
+    return within_feature($rfva);
+}
+
+sub within_motif_feature {
+    my $mfva = shift;
+    return within_feature($mfva);
+}
+
+sub increased_binding_affinity {
+    my $mfva = shift;
+    return (within_motif_feature($mfva) and ($mfva->binding_affinity_change > 0));
+}
+
+sub decreased_binding_affinity {
+    my $mfva = shift;
+    return (within_motif_feature($mfva) and ($mfva->binding_affinity_change < 0));   
 }
 
 1;
