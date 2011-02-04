@@ -52,22 +52,6 @@ sub pep_allele_string {
     return $ref_pep ne $pep ? $ref_pep.'/'.$pep : $pep;
 }
 
-sub allele_string {
-    my ($self) = @_;
-    
-    my $ref = $self->transcript_variation->reference_allele->variation_feature_seq;
-    
-    # for the HGMDs and CNV probes where the alleles are artificially set to be
-    # the same, just return the reference sequence
-    
-    if ($ref eq $self->variation_feature_seq) {
-        return $ref;
-    }
-    else {
-        return $ref.'/'.$self->variation_feature_seq;
-    }
-}
-
 sub codon_allele_string {
     my ($self) = @_;
     
@@ -122,7 +106,7 @@ sub codon {
     
     my $tv = $self->transcript_variation;      
     
-    return undef unless $tv->pep_start;
+    return undef unless $tv->translation_start;
     
     return undef if $self->variation_feature_seq =~ /[^ACGT\-]/i;
     
@@ -140,8 +124,8 @@ sub codon {
         
         # calculate necessary coords and lengths
         
-        my $codon_cds_start = $tv->pep_start * 3 - 2;
-        my $codon_cds_end   = $tv->pep_end * 3;
+        my $codon_cds_start = $tv->translation_start * 3 - 2;
+        my $codon_cds_end   = $tv->translation_end * 3;
         my $codon_len       = $codon_cds_end - $codon_cds_start + 1;
         my $vf_nt_len       = $tv->cds_end - $tv->cds_start + 1;
         my $allele_len      = length($seq);
@@ -173,36 +157,6 @@ sub codon {
     }
     
     return $self->{codon};
-}
-
-sub consequence_types {
-    my ($self, @new_consequences) = @_;
-    
-    my $cons = $self->{consequence_types};
-    
-    if (@new_consequences) {
-        $cons ||= [];
-        push @$cons, @new_consequences;
-    }
-    
-    unless (defined $cons) {
-        
-        # calculate consequences on the fly
-        
-        $cons = [];
-        
-        if (my $overlap_cons = $self->transcript_variation->overlap_consequences) {
-            for my $oc (@$overlap_cons) {
-                if ($oc->predicate->($self)) {
-                    push @$cons, $oc;
-                }
-            }
-        }
-    }
-    
-    $self->{consequence_types} = $cons;
-    
-    return $cons;
 }
 
 sub polyphen_prediction {
@@ -237,16 +191,6 @@ sub _nsSNP_prediction {
     }
     
     return undef;
-}
-
-sub SO_isa {
-    my ($self, $query) = @_;
-    
-    for my $cons (@{ $self->consequence_types }) {
-        if ($cons->SO_term eq $query) {
-            return 1;
-        }
-    } 
 }
 
 sub hgvs_genomic {

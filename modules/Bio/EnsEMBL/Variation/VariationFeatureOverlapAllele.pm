@@ -51,6 +51,16 @@ sub variation_feature_overlap {
     return $self->{variation_feature_overlap};
 }
 
+sub variation_feature {
+    my $self = shift;
+    return $self->variation_feature_overlap->variation_feature;
+}
+
+sub feature {
+    my $self = shift;
+    return $self->variation_feature_overlap->feature;
+}
+
 sub feature_seq {
     # the sequence of this allele relative to the feature
     my ($self, $feature_seq) = @_;
@@ -94,6 +104,65 @@ sub dbID {
     my ($self, $dbID) = @_;
     $self->{dbID} = $dbID if defined $dbID;
     return $self->{dbID};
+}
+
+sub allele_string {
+    my ($self) = @_;
+    
+    my $ref = $self->variation_feature_overlap->reference_allele->variation_feature_seq;
+    
+    # for the HGMDs and CNV probes where the alleles are artificially set to be
+    # the same, just return the reference sequence
+    
+    if ($ref eq $self->variation_feature_seq) {
+        return $ref;
+    }
+    else {
+        return $ref.'/'.$self->variation_feature_seq;
+    }
+}
+
+sub consequence_types {
+    my ($self, @new_consequences) = @_;
+    
+    my $cons = $self->{consequence_types};
+    
+    if (@new_consequences) {
+        $cons ||= [];
+        push @$cons, @new_consequences;
+    }
+    
+    unless (defined $cons) {
+        
+        # calculate consequences on the fly
+        
+        $cons = [];
+        
+        if (my $adap = $self->variation_feature_overlap->{adaptor} || 
+            $self->variation_feature_overlap->variation_feature->{adaptor}) {
+            if (my $overlap_cons = $self->variation_feature_overlap->overlap_consequences) {
+                for my $oc (@$overlap_cons) {
+                    if ($oc->predicate->($self)) {
+                        push @$cons, $oc;
+                    }
+                }
+            }
+        }
+    }
+    
+    $self->{consequence_types} = $cons;
+    
+    return $cons;
+}
+
+sub SO_isa {
+    my ($self, $query) = @_;
+    
+    for my $cons (@{ $self->consequence_types }) {
+        if ($cons->SO_term eq $query) {
+            return 1;
+        }
+    } 
 }
 
 1;

@@ -82,6 +82,7 @@ use Bio::EnsEMBL::Variation::VariationFeature;
 use Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor;
 use Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
+use Bio::EnsEMBL::Utils::Iterator;
 
 our @ISA = ('Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor', 'Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor');
 our $MAX_VARIATION_SET_ID = 64;
@@ -120,6 +121,15 @@ sub fetch_all_by_Slice_constraint {
     
     return $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint);
 }
+
+sub fetch_all_by_Slice_constraint_with_Variations {
+    my $self = shift;
+    $self->{_get_variations} = 1;
+    my $vfs = $self->fetch_all_by_Slice_constraint(@_);
+    $self->{_get_variations} = 0;
+    return $vfs;
+}
+
 
 =head2 fetch_all_somatic_by_Slice_constraint
 
@@ -385,6 +395,8 @@ sub fetch_all_by_Slice_VariationSet{
   my $slice = shift;
   my $set = shift;
 	
+  #$self->{_get_variations} = 1;
+
   if(!ref($slice) || !$slice->isa('Bio::EnsEMBL::Slice')) {
     throw('Bio::EnsEMBL::Slice arg expected');
   }
@@ -409,8 +421,12 @@ sub fetch_all_by_Slice_VariationSet{
   my $constraint = " vf.variation_set_id & $bitvalue ";
   
   #ÊGet the VariationFeatures by calling fetch_all_by_Slice_constraint
-  return $self->fetch_all_by_Slice_constraint($slice,$constraint);
+  my $vfs = $self->fetch_all_by_Slice_constraint($slice,$constraint);
   
+
+  $self->{_get_variations} = 0;
+
+  return $vfs;
 }
 
 
@@ -620,6 +636,17 @@ sub fetch_all_somatic_with_annotation {
     return $self->_internal_fetch_all_with_annotation($v_source, $p_source, $annotation, $constraint);
 }
 
+sub fetch_Iterator_by_Slice_constraint {
+    my ($self, $slice, $constraint) = @_;
+    
+    $self->{_iterator} = 1;
+    
+    my $iterator = $self->fetch_all_by_Slice_constraint($slice, $constraint);
+
+    $self->{_iterator} = 0;
+    
+    return $iterator;
+}
 
 # method used by superclass to construct SQL
 sub _tables { return (['variation_feature', 'vf'],
@@ -645,154 +672,186 @@ sub _columns {
 }
 
 sub _objs_from_sth {
-  my ($self, $sth, $mapper, $dest_slice) = @_;
+    my ($self, $sth, $mapper, $dest_slice) = @_;
 
-  # 
-  # This code is ugly because an attempt has been made to remove as many
-  # function calls as possible for speed purposes.  Thus many caches and
-  # a fair bit of gymnastics is used.
-  #
+    #warn $sth->sql;
 
-  my $sa = $self->db()->dnadb()->get_SliceAdaptor();
+    # 
+    # This code is ugly because an attempt has been made to remove as many
+    # function calls as possible for speed purposes.  Thus many caches and
+    # a fair bit of gymnastics is used.
+    #
 
-  my @features;
-  my %slice_hash;
-  my %sr_name_hash;
-  my %sr_cs_hash;
+    my $sa = $self->db()->dnadb()->get_SliceAdaptor();
 
-  my ($variation_feature_id, $seq_region_id, $seq_region_start,
+    my @features;
+    my %slice_hash;
+    my %sr_name_hash;
+    my %sr_cs_hash;
+
+    my ($variation_feature_id, $seq_region_id, $seq_region_start,
       $seq_region_end, $seq_region_strand, $variation_id,
       $allele_string, $variation_name, $map_weight, $source_name, 
       $is_somatic, $validation_status, $consequence_type, $class_so_id, $last_vf_id);
 
-  $sth->bind_columns(\$variation_feature_id, \$seq_region_id,
+    $sth->bind_columns(\$variation_feature_id, \$seq_region_id,
                      \$seq_region_start, \$seq_region_end, \$seq_region_strand,
                      \$variation_id, \$allele_string, \$variation_name,
                      \$map_weight, \$source_name, \$is_somatic, \$validation_status, 
                      \$consequence_type, \$class_so_id);
 
-  my $asm_cs;
-  my $cmp_cs;
-  my $asm_cs_vers;
-  my $asm_cs_name;
-  my $cmp_cs_vers;
-  my $cmp_cs_name;
-  if($mapper) {
-    $asm_cs = $mapper->assembled_CoordSystem();
-    $cmp_cs = $mapper->component_CoordSystem();
-    $asm_cs_name = $asm_cs->name();
-    $asm_cs_vers = $asm_cs->version();
-    $cmp_cs_name = $cmp_cs->name();
-    $cmp_cs_vers = $cmp_cs->version();
-  }
-
-  my $dest_slice_start;
-  my $dest_slice_end;
-  my $dest_slice_strand;
-  my $dest_slice_length;
-  if($dest_slice) {
-    $dest_slice_start  = $dest_slice->start();
-    $dest_slice_end    = $dest_slice->end();
-    $dest_slice_strand = $dest_slice->strand();
-    $dest_slice_length = $dest_slice->length();
-  }
-
-  FEATURE: while($sth->fetch()) {
+    my $asm_cs;
+    my $cmp_cs;
+    my $asm_cs_vers;
+    my $asm_cs_name;
+    my $cmp_cs_vers;
+    my $cmp_cs_name;
     
-    # Skip if we are getting multiple rows because of the left join to failed variation
-    next if (defined($last_vf_id) && $last_vf_id == $variation_feature_id);
-    $last_vf_id = $variation_feature_id;
-    
-    #get the slice object
-    my $slice = $slice_hash{"ID:".$seq_region_id};
-    if(!$slice) {
-      $slice = $sa->fetch_by_seq_region_id($seq_region_id);
-      $slice_hash{"ID:".$seq_region_id} = $slice;
-      $sr_name_hash{$seq_region_id} = $slice->seq_region_name();
-      $sr_cs_hash{$seq_region_id} = $slice->coord_system();
-    }
-    #
-    # remap the feature coordinates to another coord system
-    # if a mapper was provided
-    #
     if($mapper) {
-      my $sr_name = $sr_name_hash{$seq_region_id};
-      my $sr_cs   = $sr_cs_hash{$seq_region_id};
-
-      ($sr_name,$seq_region_start,$seq_region_end,$seq_region_strand) =
-        $mapper->fastmap($sr_name, $seq_region_start, $seq_region_end,
-                          $seq_region_strand, $sr_cs);
-
-      #skip features that map to gaps or coord system boundaries
-      next FEATURE if(!defined($sr_name));
-
-      #get a slice in the coord system we just mapped to
-      if($asm_cs == $sr_cs || ($cmp_cs != $sr_cs && $asm_cs->equals($sr_cs))) {
-        $slice = $slice_hash{"NAME:$sr_name:$cmp_cs_name:$cmp_cs_vers"} ||=
-          $sa->fetch_by_region($cmp_cs_name, $sr_name,undef, undef, undef,
-                               $cmp_cs_vers);
-      } else {
-        $slice = $slice_hash{"NAME:$sr_name:$asm_cs_name:$asm_cs_vers"} ||=
-          $sa->fetch_by_region($asm_cs_name, $sr_name, undef, undef, undef,
-                               $asm_cs_vers);
-      }
+        $asm_cs = $mapper->assembled_CoordSystem();
+        $cmp_cs = $mapper->component_CoordSystem();
+        $asm_cs_name = $asm_cs->name();
+        $asm_cs_vers = $asm_cs->version();
+        $cmp_cs_name = $cmp_cs->name();
+        $cmp_cs_vers = $cmp_cs->version();
     }
 
-    #
-    # If a destination slice was provided convert the coords
-    # If the dest_slice starts at 1 and is foward strand, nothing needs doing
-    #
-    if($dest_slice) {
-      if($dest_slice_start != 1 || $dest_slice_strand != 1) {
-        if($dest_slice_strand == 1) {
-          $seq_region_start = $seq_region_start - $dest_slice_start + 1;
-          $seq_region_end   = $seq_region_end   - $dest_slice_start + 1;
-        } else {
-          my $tmp_seq_region_start = $seq_region_start;
-          $seq_region_start = $dest_slice_end - $seq_region_end + 1;
-          $seq_region_end   = $dest_slice_end - $tmp_seq_region_start + 1;
-          $seq_region_strand *= -1;
-        }
-
-        #throw away features off the end of the requested slice
-        if($seq_region_end < 1 || $seq_region_start > $dest_slice_length) {
-          next FEATURE;
-        }
-      }
-      $slice = $dest_slice;
-    }
-    $validation_status = 0 if (!defined $validation_status);
-    my @states = split(',',$validation_status);
- 
-    my @types = split(',',$consequence_type); #get the different consequence types
+    my $dest_slice_start;
+    my $dest_slice_end;
+    my $dest_slice_strand;
+    my $dest_slice_length;
     
-    # consequence_type
-    push @features, $self->_create_feature_fast('Bio::EnsEMBL::Variation::VariationFeature',
-    #push @features, Bio::EnsEMBL::Variation::VariationFeature->new_fast(
-    #if use new_fast, then do not need "-" infront of key, i.e 'start' => $seq_region_start,
+    if($dest_slice) {
+        $dest_slice_start  = $dest_slice->start();
+        $dest_slice_end    = $dest_slice->end();
+        $dest_slice_strand = $dest_slice->strand();
+        $dest_slice_length = $dest_slice->length();
+    }
 
-      {'start'    => $seq_region_start,
-       'end'      => $seq_region_end,
-       'strand'   => $seq_region_strand,
-       'slice'    => $slice,
-       'allele_string' => $allele_string,
-       'variation_name' => $variation_name,
-       'adaptor'  => $self,
-       'dbID'     => $variation_feature_id,
-       'map_weight' => $map_weight,
-       'source'   => $source_name,
-       'is_somatic' => $is_somatic,
-       'validation_code' => \@states,
-       'consequence_type' => \@types || ['INTERGENIC'],
-       '_variation_id' => $variation_id,
-       'class_SO_id' => $class_so_id,
-      }
-    );
-  }
+    my $finished = 0;
+    
+    my $iterator = Bio::EnsEMBL::Utils::Iterator->new(sub{    
+        
+        return undef if $finished;
 
-  return \@features;
-
-
+        FEATURE: while( $sth->fetch ) {
+        
+            # Skip if we are getting multiple rows because of the left join to failed variation
+            next if (defined($last_vf_id) && $last_vf_id == $variation_feature_id);
+            $last_vf_id = $variation_feature_id;
+    
+            #get the slice object
+            my $slice = $slice_hash{"ID:".$seq_region_id};
+            if(!$slice) {
+                $slice = $sa->fetch_by_seq_region_id($seq_region_id);
+                $slice_hash{"ID:".$seq_region_id} = $slice;
+                $sr_name_hash{$seq_region_id} = $slice->seq_region_name();
+                $sr_cs_hash{$seq_region_id} = $slice->coord_system();
+            }
+            
+            # remap the feature coordinates to another coord system
+            # if a mapper was provided
+            
+            if($mapper) {
+                my $sr_name = $sr_name_hash{$seq_region_id};
+                my $sr_cs   = $sr_cs_hash{$seq_region_id};
+        
+                ($sr_name,$seq_region_start,$seq_region_end,$seq_region_strand) =
+                    $mapper->fastmap($sr_name, $seq_region_start, $seq_region_end,
+                                        $seq_region_strand, $sr_cs);
+        
+                #skip features that map to gaps or coord system boundaries
+                next FEATURE if(!defined($sr_name));
+        
+                #get a slice in the coord system we just mapped to
+                if($asm_cs == $sr_cs || ($cmp_cs != $sr_cs && $asm_cs->equals($sr_cs))) {
+                    $slice = $slice_hash{"NAME:$sr_name:$cmp_cs_name:$cmp_cs_vers"} ||=
+                    $sa->fetch_by_region($cmp_cs_name, $sr_name,undef, undef, undef,
+                                        $cmp_cs_vers);
+                } else {
+                    $slice = $slice_hash{"NAME:$sr_name:$asm_cs_name:$asm_cs_vers"} ||=
+                    $sa->fetch_by_region($asm_cs_name, $sr_name, undef, undef, undef,
+                                        $asm_cs_vers);
+                }
+            }
+        
+            #
+            # If a destination slice was provided convert the coords
+            # If the dest_slice starts at 1 and is foward strand, nothing needs doing
+            #
+            if($dest_slice) {
+                if($dest_slice_start != 1 || $dest_slice_strand != 1) {
+                    if($dest_slice_strand == 1) {
+                        $seq_region_start = $seq_region_start - $dest_slice_start + 1;
+                        $seq_region_end   = $seq_region_end   - $dest_slice_start + 1;
+                    } else {
+                        my $tmp_seq_region_start = $seq_region_start;
+                        $seq_region_start = $dest_slice_end - $seq_region_end + 1;
+                        $seq_region_end   = $dest_slice_end - $tmp_seq_region_start + 1;
+                        $seq_region_strand *= -1;
+                    }
+        
+                    #throw away features off the end of the requested slice
+                    if($seq_region_end < 1 || $seq_region_start > $dest_slice_length) {
+                        next FEATURE;
+                    }
+                }
+                $slice = $dest_slice;
+            }
+            $validation_status = 0 if (!defined $validation_status);
+            my @states = split(',',$validation_status);
+            
+            my @types = split(',',$consequence_type); #get the different consequence types
+            
+            # consequence_type
+            return $self->_create_feature_fast('Bio::EnsEMBL::Variation::VariationFeature',
+            #push @features, Bio::EnsEMBL::Variation::VariationFeature->new_fast(
+            #if use new_fast, then do not need "-" infront of key, i.e 'start' => $seq_region_start,
+        
+                {'start'    => $seq_region_start,
+                'end'      => $seq_region_end,
+                'strand'   => $seq_region_strand,
+                'slice'    => $slice,
+                'allele_string' => $allele_string,
+                'variation_name' => $variation_name,
+                'adaptor'  => $self,
+                'dbID'     => $variation_feature_id,
+                'map_weight' => $map_weight,
+                'source'   => $source_name,
+                'is_somatic' => $is_somatic,
+                'validation_code' => \@states,
+                'consequence_type' => \@types || ['INTERGENIC'],
+                '_variation_id' => $variation_id,
+                'class_SO_id' => $class_so_id,
+                }
+            );
+        }
+        
+        unless ($finished) {
+            $sth->finish;
+            $finished = 1;
+        }
+        
+        return undef;
+    });
+    
+    if ($self->{_iterator}) {
+        return $iterator;
+    }
+    else {
+        if ($self->{_get_variations}) {
+            my $vfs = $iterator->to_arrayref;
+            my @v_ids = map { $_->{_variation_id} } @$vfs;
+            my $vs = $self->db->get_VariationAdaptor->fetch_all_by_dbID_list(\@v_ids);
+            my %vs_by_id = map { $_->dbID => $_ } @$vs;
+            #warn "Got variations";
+            map { $_->variation( $vs_by_id{ $_->{_variation_id} }) } @$vfs;
+            return $vfs;
+        }
+        else {
+            return $iterator->to_arrayref;
+        }
+    }   
 }
 
 

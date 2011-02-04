@@ -24,18 +24,9 @@ use strict;
 use warnings;
 
 use Bio::EnsEMBL::Variation::TranscriptVariationAllele;
+use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(overlap affects_peptide);
 
 use base qw(Bio::EnsEMBL::Variation::VariationFeatureOverlap);
-
-#use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(overlap);
-
-#use Inline C => <<'END_C';
-#
-#int overlap (int f1_start, int f1_end, int f2_start, int f2_end) {
-#    return (f1_end >= f2_start && f1_start <= f2_end);
-#}
-#
-#END_C
 
 sub new {
     my $class = shift;
@@ -49,53 +40,14 @@ sub new {
     return $self;
 }
 
-# NB: not a method
-sub overlap {
-    my ( $f1_start, $f1_end, $f2_start, $f2_end ) = @_;
-    return ( ($f1_end >= $f2_start) and ($f1_start <= $f2_end) );
+sub transcript_stable_id {
+    my $self = shift;
+    return $self->SUPER::feature_stable_id(@_);
 }
 
 sub transcript {
-    my $self = shift;
-    
-    if (my $tran_id = $self->{_feature_stable_id}) {
-        
-        # lazy-load the Transcript
-        
-        if (my $adap = $self->{adaptor}) {
-            if (my $ta = $adap->db->dnadb->get_TranscriptAdaptor) {
-                if (my $tran = $ta->fetch_by_stable_id($tran_id)) {
-                    $self->{feature} = $tran;
-                    delete $self->{_feature_stable_id};
-                }
-            }
-        }
-    }
-   
-    return $self->feature(@_);
-}
-
-sub overlap_consequences {
-    my ($self, $overlap_consequences) = @_;
-    
-    $self->{overlap_consequences} = $overlap_consequences if $overlap_consequences;
-    
-    unless ($self->{overlap_consequences}) {
-        
-        # try to load the consequence objects from the database
-        
-        # get an adaptor either from us, or from the associated variation feature
-        if (my $adap = $self->{adaptor} || $self->variation_feature->{adaptor}) {
-            if (my $overlap_cons = $adap->db->get_OverlapConsequenceAdaptor->fetch_all) {
-                $self->{overlap_consequences} = $overlap_cons;
-            }
-        }
-        else {
-            warn "Can't load OverlapConsequence objects without an adaptor";
-        }
-    }
-    
-    return $self->{overlap_consequences};
+    my ($self, $transcript) = @_;
+    return $self->SUPER::feature($transcript, 'Transcript');
 }
 
 sub codon_position {
@@ -168,32 +120,32 @@ sub cds_end {
     return $self->{cds_end};
 }
 
-sub pep_start {
-    my ($self, $pep_start) = @_;
+sub translation_start {
+    my ($self, $translation_start) = @_;
     
-    $self->{pep_start} = $pep_start if $pep_start;
+    $self->{translation_start} = $translation_start if $translation_start;
     
-    unless ($self->{pep_start}) {
-        my $pep_coords = $self->pep_coords;
+    unless ($self->{translation_start}) {
+        my $translation_coords = $self->translation_coords;
         
-        return undef if (@$pep_coords != 1 || $pep_coords->[0]->isa('Bio::EnsEMBL::Mapper::Gap'));
+        return undef if (@$translation_coords != 1 || $translation_coords->[0]->isa('Bio::EnsEMBL::Mapper::Gap'));
         
-        $self->{pep_start} = $pep_coords->[0]->start;
-        $self->{pep_end}   = $pep_coords->[0]->end;
+        $self->{translation_start} = $translation_coords->[0]->start;
+        $self->{translation_end}   = $translation_coords->[0]->end;
     }
     
-    return $self->{pep_start};
+    return $self->{translation_start};
 }
 
-sub pep_end {
-    my ($self, $pep_end) = @_;
+sub translation_end {
+    my ($self, $translation_end) = @_;
     
-    $self->{pep_end} = $pep_end if $pep_end;
+    $self->{translation_end} = $translation_end if $translation_end;
     
-    # call pep_start to calculate the start and end
-    $self->pep_start unless $self->{pep_end};
+    # call translation_start to calculate the start and end
+    $self->translation_start unless $self->{translation_end};
     
-    return $self->{pep_end};
+    return $self->{translation_end};
 }
 
 sub cdna_coords {
@@ -220,16 +172,16 @@ sub cds_coords {
     return $self->{cds_coords};
 }
 
-sub pep_coords {
+sub translation_coords {
     my ($self) = @_;
     
-    unless ($self->{pep_coords}) {
+    unless ($self->{translation_coords}) {
         my $vf   = $self->variation_feature;
         my $tran = $self->feature; 
-        $self->{pep_coords} = [ $self->mapper->genomic2pep($vf->seq_region_start, $vf->seq_region_end, $tran->strand) ];
+        $self->{translation_coords} = [ $self->mapper->genomic2pep($vf->seq_region_start, $vf->seq_region_end, $tran->strand) ];
     }
     
-    return $self->{pep_coords};
+    return $self->{translation_coords};
 }
 
 sub intron_effects {
@@ -449,6 +401,40 @@ sub _hgvs_generic {
     }
     
     return $hgvs;
+}
+
+### 
+# the methods below are only implemented to be backwards compatible
+# with the previous (non-allele specific) version of the
+# TranscriptVariation class, they are now deprecated and may 
+# be removed in the future
+###
+
+sub pep_allele_string {
+    my $self = shift;
+    
+    unless ($self->{_pep_allele_string}) {
+        $self->{_pep_allele_string} = 
+            join '/', map { $_->peptide } @{ $self->alleles };
+    }
+    
+    return $self->{_pep_allele_string};
+}
+
+sub codons {
+    my $self = shift;
+    
+    unless ($self->{_codon_allele_string}) {
+        $self->{_codon_allele_string} = 
+            join '/', map { $_->codon } @{ $self->alleles };
+    }
+    
+    return $self->{_codon_allele_string};
+}
+
+sub affects_transcript {
+    my $self = shift;
+    return scalar grep { affects_peptide($_) } @{ $self->alt_alleles }; 
 }
 
 1;
