@@ -1010,7 +1010,7 @@ sub attach_transcripts {
     while (my $entry = shift(@{$entries})) {
   
       #ÊSkip the xref if the source is not one of the allowed ones	  	
-      next unless $entry->dbname =~ /GI|RefSeq|MIM_GENE|Entrez|CCDS|RFAM|miRBase|pseudogene.org/;
+      next unless $entry->dbname =~ /GI|RefSeq|MIM_GENE|Entrez|CCDS|RFAM$|miRBase|pseudogene.org/;
       next if $entry->dbname =~ /RefSeq_peptide/;
 	
       # Get the long name from RefSeq if it's available    
