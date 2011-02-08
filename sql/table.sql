@@ -1,21 +1,34 @@
-#
-# variation
-#
-# Central table containing actual variations (indels, SNPs etc.)  
-#
+/**
+@table variation
 
-# variation_id        - primary key, internal identifier
-# source_id           - foreign key ref source
-# name                - identifier for the variation such as the dbSNP
-#                       refSNP id (rs#) or SubSNP id (ss#)
-# SNPAncestralAllele  - taken from dbSNP to show ancestral allele for the variation
-# failed_description_id - foreign key to failed_description table
+@desc This is the schema's generic representation of a variation, defined as a genetic feature that varies between individuals of the same species.The most common type is the single nucleotide variation (SNP) though the schema also accommodates copy number variations (CNVs) and structural variations (SVs).A variation is defined by its flanking sequence rather than its mapped location on a chromosome; a variation may in fact have multiple mappings across a genome.This table stores a variation's name (commonly an ID of the form e.g. rs123456, assigned by dbSNP), along with a validation status and ancestral (or reference) allele.
+
+@column variation_id			Primary key, internal identifier.
+@column source_id					Foreign key references to the @link source table.
+@column name							Name of the variation. e.g. "rs1333049".
+@column validation_status	Variant discovery method and validation from dbSNP.
+@column ancestral_allele	Taken from dbSNP to show ancestral allele for the variation.
+@column flipped						This is set to 1 if the variant is flipped from the negative to the positive strand during import.
+@column class_so_id				Class of the variation, based on the Sequence Ontology.
+
+@see variation_synonym
+@see flanking_sequence
+@see failed_variation
+@see variation_feature
+@see variation_group_variation
+@see allele
+@see allele_group_allele
+@see individual_genotype_multiple_bp
+*/
 
 create table variation (
 	variation_id int(10) unsigned not null auto_increment, # PK
 	source_id int(10) unsigned not null, 
 	name varchar(255),
-	validation_status SET('cluster','freq','submitter','doublehit','hapmap','1000Genome','failed','precious'),
+	validation_status SET('cluster','freq',
+								 'submitter','doublehit',
+								 'hapmap','1000Genome',
+								 'failed','precious'),
 	ancestral_allele text,
 	flipped tinyint(1) unsigned NULL DEFAULT NULL,
     class_so_id ENUM(
@@ -35,12 +48,29 @@ create table variation (
 	key source_idx (source_id)
 );
 
-#
-# variation_annotation
-#
-# Table containing annotation associated with the variation
-# such as GWAS
-#
+
+/**
+@table variation_annotation
+
+@desc This table stores information linking genotypes and phenotypes. It stores various fields pertaining to the study conducted, along with the associated gene, risk allele frequency and a p-value.
+
+@column variation_annotation_id					Primary key, internal identifier.
+@column variation_id										Foreign key references to the @link variation table.
+@column phenotype_id										Foreign key references to the @link phenotype table.
+@column source_id												Foreign key references to the @link source table.
+@column study														The pubmed/id or project name associated with this study.
+@column study_type											Displays if a study come from a genome-wide association study or not.
+@column local_stable_id									EGA IDs. e.g. "EGAS00000000001".
+@column associated_gene									Common gene(s) name(s) associated to the variation.
+@column associated_variant_risk_allele	Allele associated to the phenotype.
+@column variation_names									Name of the variation. e.g. "rs1333049".
+@column risk_allele_freq_in_controls		Risk allele frequency.
+@column p_value													P value of the association phenotype/variation.
+
+@see variation
+@see phenotype
+@see source
+*/
 
 create table variation_annotation (
 	variation_annotation_id int(10) unsigned not null auto_increment,
@@ -62,11 +92,18 @@ create table variation_annotation (
 	key source_idx(source_id)
 );
 
-#
-# phenotype
-# containing phenotype name and description, from GWAS so far
-#
-#
+
+/**
+@table phenotype
+
+@desc This table stores details of the phenotypes associated with variation annotations.
+
+@column phenotype_id	Primary key, internal identifier.
+@column name					Phenotype short name. e.g. "CAD".
+@column description	varchar		Phenotype long name. e.g. "Coronary Artery Disease".
+
+@see variation_annotation
+*/
 
 create table phenotype (
 	phenotype_id int(10) unsigned not null auto_increment,
@@ -77,13 +114,23 @@ create table phenotype (
 	unique key name_idx(name)
 );
 
-#
-# variation_synonym
-#
-# Table containing alternate identifiers for the same variation.
-# For example this might be subsnp identifiers for the refsnp.
-#
-#
+
+/**
+@table variation_synonym
+
+@desc This table allows for a variation to have multiple IDs, generally given by multiple sources.
+
+@column variation_synonym_id	Primary key, internal identifier.
+@column variation_id					Foreign key references to the variation table.
+@column subsnp_id							Foreign key references to the subsnp_handle table.
+@column source_id							Foreign key references to the source table.
+@column name									Name of the synonym variation. e.g. 'rs1333049'. The corresponding variation ID of this variation is different from the one stored in the column variation_id.
+@column moltype								...
+
+@see source
+@see variation
+@see subsnp_handle
+*/
 
 create table variation_synonym (
   variation_synonym_id int(10) unsigned not null auto_increment,
@@ -101,14 +148,20 @@ create table variation_synonym (
 );
 
 
-#
-# sample_synonym
-#
-# Table containing alternate identifiers for the same sample.
-# For example this might be pop_id identifiers for the population in dbSNP
-# or individual id identifiers for the individual in dbSNP.
-#
-#
+/**
+@table sample_synonym
+
+@desc Used to store alternative names for populations when data comes from multiple sources.
+
+@column sample_synonym_id	Primary key, internal identifier.
+@column sample_id					Foreign key references to the @link sample table.
+@column source_id					Foreign key references to the @link source table.
+@column name							Name of the synonym (a different <b>sample_id</b>).
+
+@see sample
+@see population
+@see source
+*/
 
 create table sample_synonym (
   sample_synonym_id int(10) unsigned not null auto_increment,
@@ -121,11 +174,21 @@ create table sample_synonym (
   key (name, source_id)
 );
 
-#
-# subsnp_handle
-#
-# Table containing information about subsnp_id and submitter handle
-#
+
+/**
+@table subsnp_handle
+
+@desc This table contains the SubSNP(ss) ID and the name of the submitter handle of dbSNP.
+
+@column subsnp_id	Primary key. It corresponds to the subsnp identifier (ssID) from dbSNP.<br />This ssID is stored in this table without the "ss" prefix. e.g. "120258606" instead of "ss120258606".
+@column handle		The name of the dbSNP handler who submitted the ssID.<br />Name of the synonym (a different <b>sample_id</b>).
+
+@see allele
+@see failed_variation
+@see population_genotype
+@see sample
+@see variation_synonym
+*/
 
 create table subsnp_handle (
   subsnp_id int(11) unsigned not null,
@@ -134,72 +197,87 @@ create table subsnp_handle (
   primary key(subsnp_id)
 );
 
-#
-# allele
-#
-# Every allele for every variation in the database has a row in this table.
-# Alleles are repeated in this table as often as necessary.  For example
-# a variation may have alleles 'A' and 'T'. This would be represented by
-# two rows in this table.  A different variation which also had an 'A'
-# allele would require another row in this table. This way it is 
-# simple to track frequency and population for each allele and hopefully not 
-# too much space is wasted on the actual allele strings.
-#
 
-# allele_id     - primary key, internal identifier
-# variation_id  - foreign key ref variation
-# allele        - string representing an allele.  E.g. 'A', 'T'
-# frequency     - the frequency of this allele in population 
-# sample_id     - foreign key ref population
+/**
+@table allele
+
+@desc This table stores information about each of a variation's alleles, along with population frequencies.
+
+@column allele_id		Primary key, internal identifier.
+@column variation_id	Foreign key references to the @link variation table.
+@column subsnp_id		Foreign key references to the @link subsnp_handle table.
+@column allele			Allele found at the variation location, for the sample. e.g. "A".
+@column frequency		Frequency of this allele in the sample.
+@column sample_id		Foreign key references to the @link sample table.
+@column count			Number of individuals in the sample where this allele is found.
+
+@see variation
+@see population
+@see subsnp_handle
+*/
 
 create table allele(
 	allele_id int(10) unsigned not null auto_increment,
 	variation_id int(10) unsigned not null,
-        subsnp_id int(15) unsigned,
+   subsnp_id int(15) unsigned,
 	allele varchar(255),
 	frequency float,
 	sample_id int(10) unsigned,
 	count int(10) unsigned DEFAULT NULL,
 
 	primary key( allele_id ),
-        key subsnp_idx(subsnp_id),
+   key subsnp_idx(subsnp_id),
 	key variation_idx( variation_id,allele(10) )
 );
 
-#
-# sample
-#
-# A base class to merge the individual and population or assay in a more general]
-# concept, basically to have a unique sample_id
 
-# sample_id      - primary key, internal identifier
-# name           - name or identifier of the sample
-# size           - if the size is NULL its not known or not relevant for this sample
-#                  eg. "european" would not have a size 
-# description    - free text that describes the sample
-# display		 - determines whether the sample appears by default, optionally or not at all
+/**
+@table sample
+
+@desc Sample is used as a generic catch-all term to cover individuals, populations and strains; it contains a name and description, as well as a size if applicable to the population.
+
+@column sample_id		Primary key, internal identifier.
+@column name			Name of the sample (can be an individual or a population name).
+@column size			Number of individual in the sample.
+@column description	Description of the sample.
+@column display		Information used by the website: samples with little information are filtered from some web displays.
+
+@see individual
+@see population
+*/
 
 create table sample(
 	sample_id int(10) unsigned not null auto_increment,
 	name varchar(255) not null,
 	size int,
 	description text,
-	display enum('REFERENCE','DEFAULT','DISPLAYABLE','UNDISPLAYABLE','LD') default 'UNDISPLAYABLE',
+	display enum('REFERENCE',
+					 'DEFAULT',
+					 'DISPLAYABLE',
+					 'UNDISPLAYABLE',
+					 'LD') default 'UNDISPLAYABLE',
 
 	primary key( sample_id ),
 	key name_idx( name )
 );
 
-#
-# population
-#
-# A population may be an ethnic group (e.g. caucasian, hispanic), assay group (e.g. 24 europeans),
-# strain, phenotypic group (e.g. blue eyed, diabetes) etc. 
-# Populations may be composed of other populations by defining relationships in the 
-# population_structure table.
-#
 
-# sample_id            - primary key, internal identifier
+/**
+@table population
+
+@desc A table consisting simply of sample_ids representing populations; all data relating to the populations are stored in separate tables (see below).<br />A population may be an ethnic group (e.g. caucasian, hispanic), assay group (e.g. 24 europeans), strain, phenotypic group (e.g. blue eyed, diabetes) etc. Populations may be composed of other populations by defining relationships in the population_structure table.
+
+@column sample_id	int	Foreign key references to the @link sample table. Corresponds to the population ID.
+
+@see sample
+@see sample_synonym
+@see individual_population
+@see  population_structure
+@see population_genotype
+@see allele
+@see allele_group
+@see tagged_variation_feature
+*/
 
 create table population(
 	sample_id int(10) unsigned not null,
@@ -208,13 +286,17 @@ create table population(
 );
 
 
-#
-# population_structure
-#
-# Defines sub/super population relationships.  For example an assay used to determine
-# allele frequency may be represented by a superpopulation of caucasions and a sub population 
-# of the group of people used in the assay.
-#
+/**
+@table population_structure
+
+@desc This table stores hierarchical relationships between populations by relating them as populations and sub-populations.
+
+@column super_population_sample_id	Foreign key references to the population table.
+@column sub_population_sample_id		Foreign key references to the population table.
+
+@see population
+*/
+
 create table population_structure (
   super_population_sample_id int(10) unsigned not null,
   sub_population_sample_id int(10) unsigned not null,
@@ -224,17 +306,24 @@ create table population_structure (
 );
 
 
-#
-# individual
-#
-# Table containing individuals.  An individual is a single member of a population.
-#
-#  sample_id             - PK, unique internal identifier
-#  gender                - the sex of this individual
-#  father_individual_id  - self referential id, the father of this individual if known
-#  mother_individual_id  - self referential id, the mother of this individual if known
-#  
-#
+/**
+@table individual
+
+@desc Stores information about an identifiable individual, including gender and the identifiers of the individual's parents (if known).
+
+@column sample_id							Primary key, internal identifier. See the @link sample table. Corresponds to the individual ID.
+@column gender								The sex of this individual.
+@column father_individual_sample_id	Self referential ID, the father of this individual if known.
+@column mother_individual_sample_id	Self referential ID, the mother of this individual if known.
+@column individual_type_id				Foreign key references to the @link individual_type table.
+
+
+@see sample
+@see individual_type
+@see individual_population
+@see individual_genotype_multiple_bp
+@see compressed_genotype_single_bp
+*/
 
 create table individual(
   sample_id int(10) unsigned not null,
@@ -246,11 +335,19 @@ create table individual(
   primary key(sample_id)
 );
 
-#
-# individual_type
-#
-# Table containing the different types of individuals depending on the specie
-#
+
+/**
+@table individual_type
+
+@desc This table resolves the many-to-many relationship between the individual and population tables; i.e. samples may belong to more than one population. Hence it is composed of rows of individual and population identifiers.
+
+@column individual_type_id	Primary key, internal identifier.
+@column name					Short name of the individual type. e.g. "fully_inbred","mutant".
+@column description			Long name of the individual type.
+
+
+@see individual
+*/
 
 create table individual_type(
   individual_type_id int(0) unsigned not null auto_increment,
@@ -267,40 +364,33 @@ INSERT INTO individual_type (name,description) VALUES ('partly_inbred','single o
 INSERT INTO individual_type (name,description) VALUES ('outbred','a single organism which breeds freely');
 INSERT INTO individual_type (name,description) VALUES ('mutant','a single or multiple organisms with the same genome sequence that have a natural or experimentally induced mutation');
 
-#
-# variation_feature
-#
-# This is a feature table similar to the feature tables in the core database.
-# The seq_region_id references a seq_region in the core database and the
-# seq_region_start, seq_region_end and seq_region_strand represent a 
-# variation position on that seq_region.  This table incorporates some 
-# denormalisation, taking fields from other tables so that information
-# needed for feature creation can be quickly retrieved.
-#
-# variation_feature_id  - primary key, internal identifier
-# seq_region_id         - foreign key references seq_region in core db
-#                         This refers to the seq_region which this snp is
-#                         on, which may be a chromosome or clone etc.
-# seq_region_start      - the start position of the variation on the seq_region
-# seq_region_end        - the end position of the variation on the seq_region
-# seq_region_strand     - the orientation of the variation on the seq_region
-# variation_id          - foreign key refs variation, the variation associated
-#                         with this position
-# allele_string         - this is a denormalised string taken from the 
-#                         alleles in the allele table associated with this
-#                         variation.  The reference allele (i.e. one on the
-#                         reference genome comes first).
-# variation_name        - a denormalisation taken from the variation table
-#                         this is the name or identifier that is used for
-#                         displaying the feature.
-# map_weight            - the number of times that this variation has mapped 
-#                         to the genome.  This is a denormalisation as this
-#                         particular feature is one example of a mapped 
-#                         location.  This can be used to limit the 
-#                         the features that come back from a query.
-# flags                 - possible values genotyped, to filter the selection of
-#			  variations
 
+/**
+@table variation_feature
+
+@desc This table represents mappings of variations to genomic locations. It stores an allele string representing the different possible alleles that are found at that locus e.g. "A/T" for a SNP, as well as a "worst case" consequence of the mutation. It also acts as part of the relationship between variations and transcripts.
+
+@column variation_feature_id	Primary key, internal identifier.
+@column seq_region_id			Foreign key references @link seq_region in core db. Refers to the seq_region which this variant is on, which may be a chromosome, a clone, etc...
+@column seq_region_start		The start position of the variation on the @link seq_region.
+@column seq_region_end			The end position of the variation on the @link seq_region.
+@column seq_region_strand		The orientation of the variation on the @link seq_region.
+@column variation_id				Foreign key references to the @link variation table.
+@column allele_string			This is a denormalised string taken from the alleles in the allele table associated with this variation. The reference allele (i.e. one on the reference genome comes first).
+@column variation_name			A denormalisation taken from the variation table. This is the name or identifier that is used for displaying the feature.
+@column map_weight				The number of times that this variation has mapped to the genome. This is a denormalisation as this particular feature is one example of a mapped location. This can be used to limit the the features that come back from a query.
+@column flags						Flag to filter the selection of variations.
+@column source_id					Foreign key references to the source table.
+@column validation_status		SET('cluster', 'freq', 'submitter', 'doublehit', 'hapmap', '1000Genome', 'precious')	Variant discovery method and validation from dbSNP.
+@column consequence_type		The consequence of the variation.
+@column variation_set_id		The variation feature can belong to a @link variation_set.
+@column class_so_id				Class of the variation, based on the <a href="http://www.sequenceontology.org">Sequence Ontology</a>.
+
+@see variation
+@see tagged_variation_feature
+@see transcript_variation
+@see seq_region
+*/
 
 create table variation_feature(
 	variation_feature_id int(10) unsigned not null auto_increment,
@@ -310,15 +400,25 @@ create table variation_feature(
 	seq_region_strand tinyint not null,
 	variation_id int(10) unsigned not null,
 	allele_string text,
-        variation_name varchar(255),
+   variation_name varchar(255),
 	map_weight int not null,
 	flags SET('genotyped'),
 	source_id int(10) unsigned not null, 
-	validation_status SET('cluster','freq','submitter','doublehit','hapmap','1000Genome','precious'),
-	consequence_type SET ('ESSENTIAL_SPLICE_SITE','STOP_GAINED','STOP_LOST','COMPLEX_INDEL',
-	                      'FRAMESHIFT_CODING','NON_SYNONYMOUS_CODING','SPLICE_SITE','PARTIAL_CODON','SYNONYMOUS_CODING',
-				    'REGULATORY_REGION','WITHIN_MATURE_miRNA','5PRIME_UTR','3PRIME_UTR','INTRONIC','NMD_TRANSCRIPT','UPSTREAM','DOWNSTREAM',
-				    'WITHIN_NON_CODING_GENE','NO_CONSEQUENCE','INTERGENIC','HGMD_MUTATION')
+	validation_status SET('cluster','freq',
+								 'submitter','doublehit',
+								 'hapmap','1000Genome',
+								 'precious'),
+	consequence_type SET ('ESSENTIAL_SPLICE_SITE','STOP_GAINED',
+								 'STOP_LOST','COMPLEX_INDEL',
+	                      'FRAMESHIFT_CODING','NON_SYNONYMOUS_CODING',
+	                      'SPLICE_SITE','PARTIAL_CODON',
+	                      'SYNONYMOUS_CODING','REGULATORY_REGION',
+	                      'WITHIN_MATURE_miRNA','5PRIME_UTR',
+	                      '3PRIME_UTR','INTRONIC',
+	                      'NMD_TRANSCRIPT','UPSTREAM',
+	                      'DOWNSTREAM','WITHIN_NON_CODING_GENE',
+	                      'NO_CONSEQUENCE','INTERGENIC',
+	                      'HGMD_MUTATION')
 	default "INTERGENIC" not null,	
     variation_set_id SET (
             '1','2','3','4','5','6','7','8',
@@ -348,29 +448,26 @@ create table variation_feature(
 );
 
 
-#
-# structural_variation
-#
-# This is a feature table similar to the variation_feature table above.
-# It specifically stores structural variations, and has several
-# differences with the columns seen in the variation_feature table.
-# The seq_region_id references a seq_region in the core database and the
-# seq_region_start, seq_region_end and seq_region_strand represent a 
-# variation position on that seq_region. This table also has columns for
-# bound_start and bound_end, which represent the outermost boundaries of the
-# feature submitted. This table is not linked to variation as above.
-#
-# structural_variation_id  - primary key, internal identifier
-# seq_region_id         - foreign key references seq_region in core db
-#                         This refers to the seq_region which this snp is
-#                         on, which may be a chromosome or clone etc.
-# seq_region_start      - the start position of the variation on the seq_region
-# seq_region_end        - the end position of the variation on the seq_region
-# seq_region_strand     - the orientation of the variation on the seq_region
-# bound_start           - the 5'-most bound defined for the feature
-# bound_end             - the 3'-most bound defined for the feature
-# variation_name        - the external identifier or name of the variation
-# class                 - the type of structural variation feature e.g. 'CNV'
+/**
+@table structural_variation
+
+@desc This table stores information about structural variation features.
+
+@column structural_variation_id	int	Primary key, internal identifier.
+@column seq_region_id		Foreign key references @link seq_region in core db. Refers to the seq_region which this variant is on, which may be a chromosome, a clone, etc...
+@column seq_region_start	The start position of the variation on the @link seq_region.
+@column seq_region_end		The end position of the variation on the @link seq_region.
+@column seq_region_strand	The orientation of the variation on the @link seq_region.
+@column variation_name		The external identifier or name of the variation. e.g. "esv9549".
+@column source_id				Foreign key references to the @link source table.
+@column class					The type of structural variation feature e.g. "SV"
+@column bound_start			The 5'-most bound defined for the feature.
+@column bound_end				The 3'-most bound defined for the feature.
+@column allele_string		The variant allele, where known.
+
+@see source
+@see seq_region
+*/
 
 CREATE TABLE structural_variation (
   structural_variation_id int(10) unsigned NOT NULL AUTO_INCREMENT,
@@ -390,7 +487,18 @@ CREATE TABLE structural_variation (
 );
 
 
-# A table for mapping variations to variation_sets
+/**
+@table variation_set_variation
+
+@desc A table for mapping variations to variation_sets.
+
+@column variation_id			Primary key. Foreign key references to the @link variation table.
+@column variation_set_id	Primary key. Foreign key references to the @link variation_set table.
+
+@see variation
+@see variation_set
+*/
+
 CREATE TABLE IF NOT EXISTS variation_set_variation (
 	variation_id int(10) unsigned NOT NULL,
 	variation_set_id int(10) unsigned NOT NULL,
@@ -398,7 +506,19 @@ CREATE TABLE IF NOT EXISTS variation_set_variation (
 	KEY variation_set_idx (variation_set_id,variation_id)
 );
 
-# A table containing variation_set information  
+/**
+@table variation_set
+
+@desc This table containts the name of sets and subsets of variations stored in the database. It usually represents the name of the project or subproject where a group of variations has been identified.
+
+@column variation_set_id	Primary key, internal identifier.
+@column name					Name of the set e.g. "Phenotype-associated variations".
+@column description			Description of the set.
+
+@see variation_set_variation
+@see variation_set_structure
+*/
+ 
 CREATE TABLE IF NOT EXISTS variation_set (
 	variation_set_id int(10) unsigned NOT NULL AUTO_INCREMENT,
 	name VARCHAR(255),
@@ -407,8 +527,18 @@ CREATE TABLE IF NOT EXISTS variation_set (
 	KEY name_idx (name)
 );
 
- 
-# A table containing relashionship between variation sets
+
+/**
+@table variation_set_structure
+
+@desc This table stores hierarchical relationships between variation sets by relating them as variation sets and variation subsets.
+
+@column variation_set_super	Primary key. Foreign key references to the @link variation_set table.
+@column variation_set_sub		Primary key. Foreign key references to the @link variation_set table.
+
+@see variation_set
+*/
+
 CREATE TABLE IF NOT EXISTS variation_set_structure (
 	variation_set_super int(10) unsigned NOT NULL,
 	variation_set_sub int(10) unsigned NOT NULL,
@@ -417,36 +547,45 @@ CREATE TABLE IF NOT EXISTS variation_set_structure (
 );
 
 
+/**
+@table variation_group
 
-#
-# variation_group
-# 
-# This table defines a variation group.  Allele groups can 
-# be classed into a variation_group when they are comprised
-# of the same set of variations.  This is equivalent to 
-# HapSets in dbSNP.
-#
-# variation_group_id   - primary_key, internal identifier
-# name                 - the code or name of this variation_group
-# source_id            - foreign key ref source
-#
+@desc This table represents the equivalent of a variation for a multi-marker variation.
+
+@column variation_group_id	Primary key, internal identifier.
+@column name					The code or name of this variation_group.
+@column source_id				Foreign key references to the @link source table.
+@column type					Type of the variation group.
+
+@see variation_group_variation
+@see allele_group
+@see variation
+@see source
+@see httag
+*/
 
 create table variation_group (
 	variation_group_id int(10) unsigned not null auto_increment,
 	name varchar(255),
 	source_id int(10) unsigned not null,
-  type enum('haplotype', 'tag'),
+  	type enum('haplotype', 'tag'),
 
 	primary key (variation_group_id),
   unique(name)
 );
 
-#
-# variation_group_variation
-# Keeps all the variations stored in a group (normalisation of the n..n relationship between variation and variation_group)
-# variation_id - foreign key references variation
-# variation_group_id - foreign key references variation_group
-#
+
+/**
+@table variation_group_variation
+
+@desc This table represents an individual variation that makes up a multi-marker variation, and resolves the many-to-many relationship between variation and variation_group.
+
+@column variation_id				Foreign key references to the @link variation table.
+@column variation_group_id		Foreign key references to the @link variation_group table.
+
+@see variation_group
+@see variation
+*/
 
 create table variation_group_variation (
 	variation_id int(10) unsigned not null,
@@ -456,21 +595,23 @@ create table variation_group_variation (
 	key variation_idx( variation_id, variation_group_id )
 );
 
-#
-# variation_group_feature
-#
-# Places a variation_group (i.e. group of associated haplotypes) on the genome
-# as a feature.
-#
-# variation_group_feature_id - primary key, internal identifier
-# seq_region_id              - foreign key references seq_region in core db
-# seq_region_start           - start position of the variation_group_feature
-#                              on the referenced seq_region
-# seq_region_end             - end position of the variation_group_feature
-# seq_region_strand          - orientation of feature on seq_region
-# variation_group_id         - foreign key references variation_group
-# variation_group_name       - name of the variation_group
-#
+
+/**
+@table variation_group_feature
+
+@desc This table represents the equivalent of a variation_feature for multi-marker variations, mapping a haplotype to a chromosomal coordinate system.
+
+@column variation_group_feature_id	Primary key, internal identifier.
+@column seq_region_id					Foreign key references @link seq_region in core db. Refers to the seq_region which this variant is on, which may be a chromosome, a clone, etc...
+@column seq_region_start				The start position of the variation on the @link seq_region.
+@column seq_region_end					The end position of the variation on the @link seq_region.
+@column seq_region_strand				The orientation of the variation on the @link seq_region.
+@column variation_group_id				Foreign key references to the @link variation_group table.
+@column variation_group_name			Name of the variation group.
+
+@see variation_group
+@see seq_region
+*/
 
 create table variation_group_feature(
   variation_group_feature_id int(10) unsigned not null auto_increment,
@@ -486,30 +627,26 @@ create table variation_group_feature(
   key variation_group_idx(variation_group_id)
 );
 
-#
-# transcript_variation
-# 
-# This table contains a classification of variation features based on Ensembl
-# predicted transcripts.  Variation features which fall into Ensembl 
-# transcript regions are classified as 'ESSENTIAL_SPLICE_SITE','SPLICE_SITE',
-# 'FRAMESHIFT_CODING','STOP_GAINED','STOP_LOST','NON_SYNONYMOUS_CODING','PARTIAL_CODON',
-# 'SYNONYMOUS_CODING','REGULATORY_REGION','WITHIN_MATURE_miRNA','5PRIME_UTR','3PRIME_UTR','INTRONIC','UPSTREAM','DOWNSTREAM'
-# 'WITHIN_NON_CODING_GENE', 'COMPLEX_INDEL'
 
-#
-# transcript_variation_id - primary key, internal identifier
-# transcript_stable_id    - foreign key to core databases
-#                           unique stable id of related transcript
-# variation_feature_id    - foreign key ref variation_feature
-# cdna_start              - start position of variation in cdna coordinates
-# cdna_end                - end position of variation in cdna coordinates
-# cds_start               - start position of variation in cds coordinates
-# cds_end               - end position of variation in cds coordinates
-# translation_start       - start position of variation on peptide
-# translation_end         - end position of variation on peptide
-# peptide_allele_string   - allele string of '/' separated amino acids
-# consequence_type        - reference allele is first
-# 
+/**
+@table transcript_variation
+
+@desc This table relates a variation_feature to a transcript (see Core documentation). It contains the consequence of the variation e.g. intronic, non-synonymous coding, stop etc, along with the change in amino acid in the resulting protein if applicable.
+
+@column transcript_variation_id	Primary key, internal identifier.
+@column transcript_stable_id		Foreign key to core databases. Unique stable id of related transcript.
+@column variation_feature_id		Foreign key references to the @link variation_feature table.
+@column cdna_start					The start position of variation in cdna coordinates.
+@column cdna_end						The end position of variation in cdna coordinates.
+@column cds_start						The start position of variation in cds coordinates.
+@column cds_end						The end position of variation in cds coordinates.
+@column translation_start			The start position of variation on peptide.
+@column translation_end				The end position of variation on peptide.
+@column peptide_allele_string		Allele string of the "reference/altenative" amino acids.
+@column consequence_type			The consequence of the variation.
+
+@see variation_feature
+*/
 
 create table transcript_variation(
   transcript_variation_id int(10) unsigned not null auto_increment,
@@ -520,18 +657,39 @@ create table transcript_variation(
   cds_start  int,
   cds_end    int,
   translation_start int,
-  translation_end int,  
+  translation_end int,
   peptide_allele_string varchar(255),
-  consequence_type SET ('ESSENTIAL_SPLICE_SITE','STOP_GAINED','STOP_LOST','COMPLEX_INDEL',
-			     'FRAMESHIFT_CODING', 'NON_SYNONYMOUS_CODING','SPLICE_SITE','PARTIAL_CODON','SYNONYMOUS_CODING',
-			     'REGULATORY_REGION','WITHIN_MATURE_miRNA','5PRIME_UTR','3PRIME_UTR','INTRONIC','NMD_TRANSCRIPT','UPSTREAM',
-			     'DOWNSTREAM','WITHIN_NON_CODING_GENE','HGMD_MUTATION') not null,	 
+  consequence_type SET ('ESSENTIAL_SPLICE_SITE','STOP_GAINED',
+  								'STOP_LOST','COMPLEX_INDEL',
+  								'FRAMESHIFT_CODING', 'NON_SYNONYMOUS_CODING',
+  								'SPLICE_SITE','PARTIAL_CODON',
+  								'SYNONYMOUS_CODING','REGULATORY_REGION',
+  								'WITHIN_MATURE_miRNA','5PRIME_UTR',
+  								'3PRIME_UTR','INTRONIC',
+  								'NMD_TRANSCRIPT','UPSTREAM',
+  								'DOWNSTREAM','WITHIN_NON_CODING_GENE',
+  								'HGMD_MUTATION') not null,	 
   primary key( transcript_variation_id ),
   key variation_idx( variation_feature_id ),
   key transcript_stable_idx( transcript_stable_id ),
   key consequence_type_idx(consequence_type)
 	);
 	
+	
+/**
+@table seq_region
+
+@desc This table stores the relationship between Ensembl's internal coordinate system identifiers and traditional chromosome names.
+
+@column seq_region_id	Primary key. Foreign key references seq_region in core db. Refers to the seq_region which this variant is on, which may be a chromosome, a clone, etc...
+@column name				The name of this sequence region.
+
+@see variation_feature
+@see variation_group_feature
+@see flanking_sequence
+@see compressed_genotype_single_bp
+@see read_coverage
+*/
 
 CREATE TABLE seq_region (
 
@@ -544,21 +702,23 @@ CREATE TABLE seq_region (
 ) ;
 
 
-#
-# allele_group
-#
-# This table defines haplotypes - groups of
-# polymorphisms which are found together in a block.
-# This is equivalent to Haps in dbSNP
-#
-# allele_group_id    - primary_key, internal identifier
-# variation_group_id - foreign key, ref variation_group
-# sample_id          - foreign key, ref population
-# name               - the name of this allele group
-# frequency          - the frequency of this allele_group
-#                      within the referenced population
-#
-#
+/**
+@table allele_group
+
+@desc This table, along with allele_group_allele, represents a particular multi-marker allele of a given multi-marker variation, or haplotype. It stores an associated population frequency.
+
+@column allele_group_id			Primary key, internal identifier.
+@column variation_group_id		Foreign key references to the @link variation_group table.
+@column sample_id					Foreign key references to the @link population table.
+@column name						The name of this allele group.
+@column source_id				Foreign key references to the @link source table.
+@column frequency					The frequency of this allele_group within the referenced population.
+
+@see allele_group_allele
+@see variation_group
+@see population
+@see source
+*/
 
 create table allele_group(
 	allele_group_id int(10) unsigned not null auto_increment,
@@ -573,17 +733,18 @@ create table allele_group(
 );
 
 
-#
-# allele_group_allele
-#
-# Defines which alleles make up an allele group.  
-# There is no direct link to the allele table because the allele table has 
-# population and frequency data which may not correspond to this allele group
-#
-# allele_group_id - primary key, internal identifier
-# allele - base present in the group
-# variation_id - foreign key, references variation
+/**
+@table allele_group_allele
 
+@desc This table represents an allele of one variation in a multi-marker variation, or haplotype. It stores a string of the allele.
+
+@column allele_group_id	Primary key, internal identifier.
+@column allele				Nucleotid presents in the group.
+@column variation_id		Foreign key references to the @link variation table.
+
+@see allele_group
+@see variation
+*/
 create table allele_group_allele (
 	allele_group_id int(10) unsigned not null,
 	allele varchar(255) not null,
@@ -594,18 +755,24 @@ create table allele_group_allele (
 );
 
 
-#
-# flanking_sequence
-#
-# table that stores the flanking sequences from th core database. To reduce space used, takes coordinates from the sequences in the core database
-# variation_id - primary key, internal identifier
-# up_seq - upstream sequence, used to initially store the sequence from the core database, and in a later process get from here the position
-# down_seq - similiar the one before, but for the downstream
-# up_seq_region_start, down_seq_region_start - position of the starting of the sequence in the region
-# up_seq_region_end, down_seq_region_end - position of the end of the sequence in the region
-# seq_region_id - foreign key, references the sequence table in the core database
-# seq_region_stran - strand of the seq_region in the core database
-#
+/**
+@table flanking_sequence
+
+@desc This table contains the upstream and downstream sequence surrounding a variation. Since each variation is defined by its flanking sequence, this table has a one-to-one relationship with the variation table.
+
+@column variation_id				Primary key. Foreign key references to the variation table.
+@column up_seq						Upstream sequence, used to initially store the sequence from the core database, and in a later process get from here the position.
+@column down_seq					Downstream sequence, used to initially store the sequence from the core database, and in a later process get from here the position.
+@column up_seq_region_start	Position of the starting of the sequence in the region.
+@column up_seq_region_end		Position of the end of the sequence in the region.
+@column down_seq_region_start	Position of the starting of the sequence in the region.
+@column down_seq_region_end	Position of the end of the sequence in the region.
+@column seq_region_id			Foreign key references @link seq_region in core db. Refers to the seq_region which this variant is on, which may be a chromosome or clone etc..
+@column seq_region_strand		The orientation of the variation on the seq_region.
+
+@see variation
+@see seq_region
+*/
 
 create table flanking_sequence (
 	variation_id int(10) unsigned not null,
@@ -623,16 +790,19 @@ create table flanking_sequence (
 ) MAX_ROWS = 100000000;
 
 
-#
-# httag
-#
-# this table contains the tags of a haplotype: bases of the haplotypes that uniquely identify it
-#
-# httag_id - primary key, internal identifier
-# variation_group_id - foreign key, references variation_group
-# name - name of the tag, for web purposes
-# source_id - foreign key, references source
-#
+/**
+@table httag
+
+@desc This table represents the equivalent of a tagged_variation_feature for multi-marker variations, representing an instance where a haplotype is tagged by or tags another marker.
+
+@column httag_id				Primary key, internal identifier.
+@column variation_group_id	Foreign key references to the @link variation_group table.
+@column name					The name of the tag, for web purposes.
+@column source_id				Foreign key references to the @link source table.
+
+@see variation_group
+@see source
+*/
 
 create table httag(
 	httag_id int(10) unsigned not null auto_increment,
@@ -644,16 +814,28 @@ create table httag(
 	key variation_group_idx( variation_group_id )
 );
 
-#
-# source
-#
-# this table contains sources of snps. this might be dbSNP, TSC, HGBase, etc. 
-#
-# source_id 	- primary key, internal identifier
-# name      	- the name of the source.  e.g. 'dbSNP'
-# description	- description of the source for ContigView
-# url           - URL for the source
-# somatic       - flag to indicate somatic mutations
+
+/**
+@table source
+
+@desc This table contains details of the source from which a variation is derived. Most commonly this is NCBI's dbSNP; other sources include SNPs called by Ensembl.
+
+@column source_id		Primary key, internal identifier.
+@column name			Name of the source. e.g. "dbSNP"
+@column version		Version number of the source (if available). e.g. "132"
+@column description	Description of the source.
+@column url				URL of the source.
+@column somatic		Flag to indicate if the source contains somatic mutations
+
+@see variation
+@see  variation_synonym
+@see variation_feature
+@see variation_annotation
+@see variation_group
+@see allele_group
+@see sample_synonym
+@see httag
+*/
 
 create table source(
 	source_id int(10) unsigned not null auto_increment,
@@ -667,25 +849,29 @@ create table source(
 );
 
 
+/**
+@table population_genotype
 
-#
-# population_genotype
-#
-# This table contains genotype frequencies estimated for populations or calculated on
-# a set of individuals.
-#
-# population_genotype_id - primary key, internal identifier
-# variation_id - foreign key, references variation table
-# allele_1 - first allele in the genotype
-# allele_2 - second allele in the genotype
-# frequency - frequency of the genotype in the population
-# sample_id - foreign key, references population table
-#
+@desc This table stores alleles and frequencies for variations in given populations.
+
+@column population_genotype_id	Primary key, internal identifier.
+@column variation_id					Foreign key references to the @link variation table.
+@column subsnp_id						Foreign key references to the subsnp_handle table.
+@column allele_1						First allele in the genotype.
+@column allele_2						Second allele in the genotype.
+@column frequency						Frequency of the genotype in the population.
+@column sample_id						Foreign key references to the @link population table.
+@column count							Number of individuals who have this genotype, in this population.
+
+@see population
+@see variation
+@see subsnp_handle
+*/
 
 create table population_genotype (
 	population_genotype_id int(10) unsigned not null auto_increment,
 	variation_id int(10) unsigned not null,
-	subsnp_id int(15) unsigned DEFAULT NULL,
+   subsnp_id int(15) unsigned DEFAULT NULL,
 	allele_1 varchar(255),
 	allele_2 varchar(255),
 	frequency float,
@@ -694,17 +880,22 @@ create table population_genotype (
 
 	primary key( population_genotype_id ),
  	key variation_idx(variation_id),
-        key subsnp_idx(subsnp_id),
+   key subsnp_idx(subsnp_id),
 	key sample_idx(sample_id)
 );
 
-#
-# individual_population
-#
-# This table contains the relations between individuals and populations (n to n relationship)
-#
-# individual_sample_id - FK to individual table
-# population_sample_id - FK to population table
+
+/**
+@table individual_population
+
+@desc This table resolves the many-to-many relationship between the individual and population tables; i.e. samples may belong to more than one population. Hence it is composed of rows of individual and population identifiers.
+
+@column individual_sample_id	Foreign key references to the @link individual table.
+@column population_sample_id	Foreign key references to the @link population table.
+
+@see individual
+@see population
+*/
 
 create table individual_population (
   individual_sample_id int(10) unsigned not null,
@@ -715,28 +906,51 @@ create table individual_population (
 
 );
 
-#This table is only needed for create master schema when run healthcheck system
-#needed for other species, but human, so keep it
+
+/**
+@table tmp_individual_genotype_single_bp
+
+@desc his table is only needed for create master schema when run healthcheck system. Needed for other species, but human, so keep it.
+
+@column variation_id	Primary key. Foreign key references to the @link variation table.
+@column subsnp_id		Foreign key references to the @link subsnp_handle table.
+@column allele_1		One of the alleles of the genotype, e.g. "TAG".
+@column allele_2		The other allele of the genotype.
+@column sample_id		Foreign key references to the @link individual table.
+
+@see individual
+@see variation
+@see subsnp_handle
+*/
 
 CREATE TABLE tmp_individual_genotype_single_bp (
-                            variation_id int(10) not null,
-			    subsnp_id int(15) unsigned,   
-	                    allele_1 char(1),allele_2 char(1),sample_id int,
-                            key variation_idx(variation_id),
-                            key subsnp_idx(subsnp_id),
-                            key sample_idx(sample_id)
-                            ) MAX_ROWS = 100000000
-;
+	variation_id int(10) not null,
+	subsnp_id int(15) unsigned,   
+	allele_1 char(1),
+	allele_2 char(1),
+	sample_id int,
 
-#
-# individual_genotype_multiple_bp
-#
-# This table contains genotypes of individuals with more than 1 bp in the alleles.
-#
-# variation_id	- FK to variation table
-# allele_1	- One of the alleles of the genotype
-# allele_2	- The other allele of the genotype
-# sample_id     - foreign key, references individual table
+	key variation_idx(variation_id),
+   key subsnp_idx(subsnp_id),
+   key sample_idx(sample_id)
+) MAX_ROWS = 100000000;
+
+
+/**
+@table individual_genotype_multiple_bp
+
+@desc This table holds uncompressed genotypes for given variations.
+
+@column variation_id	Primary key. Foreign key references to the @link variation table.
+@column subsnp_id		Foreign key references to the @link subsnp_handle table.
+@column allele_1		One of the alleles of the genotype, e.g. "TAG".
+@column allele_2		The other allele of the genotype.
+@column sample_id		Foreign key references to the @link individual table.
+
+@see individual
+@see variation
+@see subsnp_handle
+*/
 
 create table individual_genotype_multiple_bp (
   variation_id int(10) unsigned not null,
@@ -751,17 +965,15 @@ create table individual_genotype_multiple_bp (
 );
 
 
-#
-# meta_coord
-#
-# Same table structure as in core database. Contains info about what coord
-# systems features can be found in.
-#
-# table_name - name of the feature table
-# coord_system_id - foreign key to core database coord_system table
-#                   refers to coord system that features from this table can
-#                   be found in
-#
+/**
+@table meta_coord
+
+@desc This table gives the coordinate system used by various tables in the database.
+
+@column table_name			Name of the feature table, e.g. "variation_feature".
+@column coord_system_id		Foreign key to core database coord_system table refers to coordinate system that features from this table can be found in.
+@column max_length			Maximun length of the feature. 
+*/
 
 CREATE TABLE meta_coord (
 
@@ -774,10 +986,16 @@ CREATE TABLE meta_coord (
 ) TYPE=MyISAM;
 
 
-################################################################################
-#
-# Table structure for table 'meta' 
-#
+/**
+@table meta
+
+@desc This table stores various metadata relating to the database, generally used by the Ensembl web code.
+
+@column meta_id		Primary key, internal identifier.
+@column species_id	...
+@column meta_key		Name of the meta entry, e.g. "schema_version".
+@column meta_value	Corresponding value of the key, e.g. "61".
+*/
 
 CREATE TABLE meta (
 
@@ -797,11 +1015,17 @@ CREATE TABLE meta (
 INSERT INTO meta (meta_key, meta_value) VALUES ('schema_type', 'variation');
 
 
-###############
-#
-#  Table structure for table tagged_variation_features
-#
-###############
+/**
+@table tagged_variation_feature
+
+@desc This table lists variation features that are tagged by another variation feature. Tag pairs are defined as having an r<sup>2</sup> &gt; 0.99.
+
+@column variation_feature_id	Primary key. Foreign key references to the @link variation_feature table.
+@column sample_id					Primary key. Foreign key references to the @link sample table.
+
+@see variation_feature
+@see population
+*/
 
 CREATE TABLE tagged_variation_feature (
 
@@ -811,11 +1035,21 @@ CREATE TABLE tagged_variation_feature (
   PRIMARY KEY(variation_feature_id, sample_id)
 );
 
-###############
-#
-# Table structure for table read_coverage
-#
-###############
+
+/**
+@table read_coverage
+
+@desc This table stores the read coverage in the resequencing of individuals. Each row contains an individual ID, chromosomal coordinates and a read coverage level.
+
+@column seq_region_id		Foreign key references @link seq_region in core db. ers to the seq_region which this variant is on, which may be a chromosome, a clone, etc...
+@column seq_region_start	The start position of the variation on the @link seq_region.
+@column seq_region_end		The end position of the variation on the @link seq_region.
+@column level					Minimum number of reads.
+@column sample_id				Foreign key references to the @link individual table.
+
+@see individual
+@see seq_region
+*/
 
 CREATE TABLE read_coverage (
    seq_region_id int(10) unsigned not null,
@@ -827,11 +1061,21 @@ CREATE TABLE read_coverage (
    key seq_region_idx(seq_region_id,seq_region_start)   
 );
 
-################
-#
-# Table structure for table compressed_genotype_single_bp
-#
-################
+/**
+@table compressed_genotype_single_bp
+
+@desc This table holds genotypes compressed using the pack() method in Perl. These genotypes are mapped to particular genomic locations rather than variation objects. The data have been compressed to reduce table size and increase the speed of the web code.
+
+@column sample_id				Primary key. Foreign key references to the sample table.
+@column seq_region_id		Foreign key references @link seq_region in core db. ers to the seq_region which this variant is on, which may be a chromosome, a clone, etc...
+@column seq_region_start	The start position of the variation on the @link seq_region.
+@column seq_region_end		The end position of the variation on the @link seq_region.
+@column seq_region_strand	The orientation of the variation on the @link seq_region.
+@column genotypes				Encoded representation of the genotype data:<br />Each row in the compressed table stores genotypes from one individual in one fixed-size region of the genome (arbitrarily defined as 100 Kb). The compressed string (using Perl's pack method) consisting of a repeating triplet of elements: a distance in base pairs from the previous genotype followed by a pair of alleles.<br />For example, a given row may have a start position of 1000, indicating the chromosomal position of the first genotype in this row. The unpacked genotypes field then may contain the following elements:<br />0, A, G, 20, C, C, 35, G, T, 320, A, A, ...<br />The first genotype has a position of 1000 + 0 = 1000 and alleles A and G.<br />The second genotype has a position of 1000 + 20 = 1020 and alleles C and C.<br />The third genotype similarly has a position of 1055 and alleles G and T, and so on.
+
+@see individual
+@see seq_region
+*/
 
 CREATE TABLE compressed_genotype_single_bp(
   sample_id int(10) unsigned not null,
@@ -844,15 +1088,17 @@ CREATE TABLE compressed_genotype_single_bp(
   key pos_idx(seq_region_id,seq_region_start)
 ) MAX_ROWS = 100000000;
 
-#
-# failed_description
-#
-# Contains reasons for removing some variations from the Variation database
-#
-# failed_description_id  - primary key, internal identifier
-# description - text containing the reason why the Variation information has been removed from the 
-#               Variation databse except in the Variation table
-#
+
+/**
+@table failed_description
+
+@desc This table contains descriptions of reasons for a variation being flagged as failed.
+
+@column failed_description_id	Primary key, internal identifier.
+@column description				Text containing the reason why the Variation has been flagged as failed. e.g. "Variation does not map to the genome".
+
+@see failed_variation
+*/
 
 CREATE TABLE failed_description(
 
@@ -862,14 +1108,19 @@ CREATE TABLE failed_description(
  PRIMARY KEY (failed_description_id)
 );
 
-#
-# failed_variation
-#
-# Contains all variations that did not pass the Ensembl filters
-# failed_variation_id - primary key
-# variation_id - foreign key to variation table
-# failed_descriptin_id - foreign key to failed_description table
-#
+
+/**
+@table failed_variation
+
+@desc For various reasons it may be necessary to store information about a variation that has failed quality checks in the Variation pipeline. This table acts as a flag for such failures.
+
+@column failed_variation_id		Primary key, internal identifier.
+@column variation_id					Foreign key references to the @link variation table.
+@column failed_description_id		Foreign key references to the @link failed_description table.
+
+@see failed_description
+@see variation
+*/
 
 CREATE TABLE failed_variation (
   failed_variation_id int(11) NOT NULL AUTO_INCREMENT,
@@ -879,14 +1130,19 @@ CREATE TABLE failed_variation (
   KEY variation_idx (variation_id)
 );
 
-#
-# failed_allele
-#
-# Contains alleles that did not pass the Ensembl filters
-# failed_allele_id - primary key
-# allele_id - foreign key to allele table
-# failed_descriptin_id - foreign key to failed_description table
-#
+
+/**
+@table failed_allele
+
+@desc Contains alleles that did not pass the Ensembl filters
+
+@column failed_allele_id			Primary key, internal identifier.
+@column allele_id						Foreign key references to the @link allele table.
+@column failed_description_id		Foreign key references to the @link failed_description table.
+
+@see failed_description
+@see allele
+*/
 
 CREATE TABLE failed_allele (
   failed_allele_id int(11) NOT NULL AUTO_INCREMENT,
@@ -895,6 +1151,7 @@ CREATE TABLE failed_allele (
   PRIMARY KEY (failed_allele_id),
   KEY allele_idx (allele_id)
 );
+
 
 #
 # strain_gtype_poly
@@ -919,7 +1176,19 @@ INSERT INTO failed_description (failed_description_id,description) VALUES (6,'Va
 INSERT INTO failed_description (failed_description_id,description) VALUES (7,'Genotype frequencies do not add up to 1');
 INSERT INTO failed_description (failed_description_id,description) VALUES (8,'Variation has no associated sequence');
 
-# create a table that maps the SO variation class ID to the ensembl display term and SO term
+
+/**
+@table variation_class
+
+@desc This table contains the different classes of variation, based on the <a href="http://www.sequenceontology.org/">Sequence Ontology</a> project.
+
+@column so_id			Primary key, external identifier. The identifier comes from the Sequence Ontology database (e.g. "SO:0001483").
+@column so_term		The corresponding Sequence Ontology term (e.g. "SNV").
+@column display_term	The Ensembl term displayed on the website (e.g. "SNP").
+
+@see variation
+@see variation_feature
+*/
 
 CREATE TABLE variation_class (
     so_id               VARCHAR(128) NOT NULL,
