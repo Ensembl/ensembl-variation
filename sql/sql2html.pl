@@ -1,0 +1,381 @@
+#!/bin/perl
+# 1st Feb 2011
+# Generate an HTML documentation page from an sql file.
+#
+# Argument 1 : the SQL file
+# Argument 2 : the HTML/output file
+#
+# It needs to have a "javascript like" documentation above each table. e.g.:
+####################################################################################
+#/**
+#@table variation
+
+#@desc This is the schema's generic representation of a variation.
+
+#@column variation_id				Primary key, internal identifier.
+#@column source_id					Foreign key references to the @link source table.
+#@column name								Name of the variation. e.g. "rs1333049".
+#@column validation_status	Variant discovery method and validation from dbSNP.
+#@column ancestral_allele		Taken from dbSNP to show ancestral allele for the variation.
+#@column flipped						This is set to 1 if the variant is flipped.
+#@column class_so_id				Class of the variation, based on the Sequence Ontology.
+
+#@see variation_synonym
+#@see flanking_sequence
+#@see failed_variation
+#@see variation_feature
+#@see variation_group_variation
+#@see allele
+#@see allele_group_allele
+#@see individual_genotype_multiple_bp
+#*/
+#
+#
+#create table variation (
+#		variation_id int(10) unsigned not null auto_increment, # PK
+#		source_id int(10) unsigned not null, 
+#		name varchar(255),
+#		validation_status SET('cluster','freq','submitter','doublehit','hapmap','1000Genome','failed','precious'),
+#		ancestral_allele text,
+#		flipped tinyint(1) unsigned NULL DEFAULT NULL,
+#		class_so_id ENUM('SO:0001483','SO:1000002','SO:0000667') DEFAULT 'SO:0001059', # default to sequence_alteration
+#
+#		primary key( variation_id ),
+#		unique ( name ),
+#		key source_idx (source_id)
+#);
+########################################################################################
+#
+# /** and */ : begin and end of the document block
+# @table     : name of the sql table
+# @desc      : description of the role/content of the table
+# @column    : column_name [tab(s)] Column description. Note: 1 ligne = 1 column
+# @see       : tables names linked to the described table
+# @link      : Internal link to an other table description. The format is ... @link table_name ...
+
+
+use strict;
+use POSIX;
+
+my $sql_file  = $ARGV[0];
+my $html_file = $ARGV[1];
+
+if (!$sql_file) {
+	print "Error! Please give a sql file as first argument\n";
+	exit;
+}
+if (!$html_file) {
+	print "Error! Please give an output file as second argument\n";
+	exit;
+}
+
+
+##############
+### Header  ##
+##############
+my $header = qq{
+<html>
+<head>
+<meta http-equiv="CONTENT-TYPE" content="text/html; charset=utf-8" />
+<title>e! Variation schema </title>
+</head>
+
+<body>
+<h1>Ensembl Variation Schema Documentation</h1>
+
+<h2>Introduction</h2>
+
+<p>
+This document gives a high-level description of the tables that
+make up the Ensembl variation schema. Tables are grouped into logical
+groups, and the purpose of each table is explained. It is intended to
+allow people to familiarise themselves with the schema when
+encountering it for the first time, or when they need to use some
+tables that they have not used before. Note that this document
+makes no attempt to enumerate all of the names, types and contents of
+every single table.
+</p>
+
+<p>
+This document refers to version <strong>61</strong> of the Ensembl
+variation schema. 
+</p>
+
+<p>
+A PDF document of the schema is available <a href="variation-database-schema.pdf">here</a>.
+</p>
+};
+
+
+##############
+### Footer  ##
+##############
+my $footer = qq{
+</body>
+</html>};
+
+
+
+################
+### Settings  ##
+################
+my $documentation = {};
+my @tables_names = ();
+
+my $in_doc = 0;
+my $in_table = 0;
+my $table = '';
+my $nb_by_col = 15;
+my $count_sql_col = 0;
+
+
+#############
+## Parser  ##
+#############
+
+open SQLFILE, "< $sql_file" or die "Can't open $sql_file : $!";
+while (<SQLFILE>) {
+	
+	# Verifications
+	if ($_ =~ /^\/\*\*/)  { $in_doc=1; next; }  # start of a table documentation
+	if ($_ =~ /^\s*create\stable\s(if\snot\sexists\s)?(\w+)/i) { # start to parse the content of the table
+		if ($2 eq $table) { 
+			$in_table=1; 
+		}
+		else { 
+			print STDERR "The documentation of the table $2 has not be found!\n";
+		}
+		next;
+	}	
+	next if ($in_doc==0 and $in_table==0);
+	
+	chomp $_;
+	my $doc = $_;
+	
+	## Parsing of the documentation ##
+	if ($in_doc==1) {
+		# Table name
+		if ($doc =~ /^\@table\s*(\w+)/i) {
+			$table = $1;
+			push(@tables_names,$table);
+			$documentation->{$table} = { 'desc' => '', 'column' => [], 'see' => [] };		
+		}
+		# Description
+		elsif ($doc =~ /^\@desc\s*(.+)$/i) {
+			$documentation->{$table}{desc} = $1;		
+		}
+		# Column
+		elsif ($doc =~ /^\@column\s*(.+)$/i) {
+			push(@{$documentation->{$table}{column}},$1);		
+		}
+		# See other tables
+		elsif ($doc =~ /^\@see\s*(.+)$/i) {
+			push(@{$documentation->{$table}{see}},$1);		
+		}
+		# End of documentation
+		elsif ($doc =~ /^\*\//) { 
+			$in_doc=0; 
+			next; 
+		}
+	}
+	
+	## Parsing of the SQL table to fetch the columns types ##
+	elsif ($in_table==1) {
+		next if ($doc =~ /^\s*primary\skey\s*\(/i or $doc =~ /^\s*unique\s*\(/i or $doc =~ /^\s*(unique\s)?key\s\w+\s*\(/i); # Keys and indexes
+		my $col_name = '';
+		my $col_type = '';
+		my $col_def  = '';
+		
+		# All the type is contained in the same line (type followed by parenthesis)
+		if ($doc =~ /^\s*(\w+)\s+(\w+\s?\(.*\))/ ){
+			$col_name = $1;
+			$col_type = $2;
+			if ($doc =~ /default\s*([^,\s]+)\s*.*(,|#).*/i) { $col_def = $1; } # Default value
+			add_column_type_and_default_value($col_name,$col_type,$col_def);
+		}
+		
+		# The type is written in several lines
+		elsif ($doc =~ /^\s*(\w+)\s+(enum|set)(\s?\(.*)/i){ # The content is split in several lines
+			$col_name=$1;
+			$col_type="$2$3<br />";
+			my $end_type = 0;
+			while ($end_type != 1){
+				my $line = <SQLFILE>;
+				chomp $line;
+				
+				if ($line =~ /\)/) { # Close parenthesis
+					$end_type=1; 
+					$line =~ /^\s*(.+)\)/;
+					$col_type .= "$1)"; 
+				}
+				else { # Add the content of the line
+					$line =~ /^\s*(.+)/;
+					$col_type .= $1.'<br />';
+				}
+				if ($line =~ /default\s*([^,\s]+)\s*.*(,|#).*/i) { $col_def = $1; } # Default value
+			}
+			add_column_type_and_default_value($col_name,$col_type,$col_def);
+		}
+		
+		# All the type is contained in the same line (type without parenthesis)
+		elsif ($doc =~ /^\s*(\w+)\s+(\w+)/ ){
+			$col_name = $1;
+			$col_type = $2;
+			if ($doc =~ /default\s*([^,\s]+)\s*.*(,|#).*/i) { $col_def = $1;} # Default value
+			add_column_type_and_default_value($col_name,$col_type,$col_def);
+		}
+		
+		elsif ($doc =~ /\).*;/) { # End of the sql table definition
+			if (scalar @{$documentation->{$table}{column}} > $count_sql_col) {
+				print STDERR "Description of a non existant column in the table $table!\n";
+			}
+			$in_table=0;
+			$count_sql_col = 0;
+			$table='';
+		}
+	}
+}
+close(SQLFILE);
+
+
+############
+### Core  ##
+############
+
+@tables_names = sort(@tables_names);
+
+my $html_content = display_tables_list();
+my $table_count = 1;
+my $col_count = 1;
+
+foreach my $t_name (@tables_names) {
+	$html_content .= add_table_name($t_name);
+	$html_content .= add_description($documentation->{$t_name}{desc});
+	$html_content .= add_columns(@{$documentation->{$t_name}{column}});
+	$html_content .= add_see(@{$documentation->{$t_name}{see}});
+}
+
+
+## HTML/output file ##
+open  HTML, "> $html_file" or die "Can't open $html_file : $!";
+print HTML $header."\n";
+print HTML $html_content."\n";
+print HTML $footer."\n";
+close(HTML);
+
+
+
+
+###############
+##  Methods  ##
+###############
+
+sub display_tables_list {
+	my $count = scalar @tables_names;
+	my $nb_col = ceil($count/$nb_by_col);
+	my $table_count = 0;
+	my $col_count = 1;
+	my $html = '';
+	
+	if ($nb_col>3) { 
+		while ($nb_col>3) {
+			$nb_by_col += 5;
+			$nb_col = ceil($count/$nb_by_col);
+		}
+		$nb_col = 3;
+	}
+
+	my $html = qq{<p>List of the tables:</p>\n<table><tr><td>\n <ul>\n};
+
+	foreach my $t_name (@tables_names) {
+		if ($table_count == $nb_by_col and $col_count<$nb_col and $nb_col>1){
+			$html .= qq{	</ul></td><td><ul>\n};
+			$table_count = 0;
+		}
+		$html .= add_table_name_to_list($t_name);
+		$table_count ++;
+	}
+	$html .= qq{		</ul>\n</td></tr></table>\n<hr />\n};
+	
+	return $html;
+}
+
+
+sub add_table_name_to_list {
+	my $t_name = shift;
+	
+	my $html = qq{		<li><a href="#$t_name"><b>$t_name</b></a></li>\n};
+	return $html;
+}
+
+sub add_table_name {
+	my $t_name = shift;
+	
+	my $html = qq{\n<br />\n<h3 id="$t_name">$t_name</h3>\n};
+	return $html;
+}
+
+
+sub add_description {
+	my $desc = shift;
+	
+	return qq{<p>$desc<\p><br />};
+}
+
+
+sub add_columns {
+	my @cols = @_;
+	
+	my $html = qq{
+	<table style="border:1px outset #222222">
+		<tr class="bg3 center"><th style="width:200px">Column</th><th style="width:150px">Type</th><th style="width:100px">Default value</th><th style="width:400px">Description</th></tr>\n};
+	my $bg = 1;
+	foreach my $col (@cols) {
+		$col =~ /\@link\s?(\w+)/;
+		my $table_to_link = qq{<a href="#$1">$1</a>};
+		$col =~ s/\@link\s?\w+/$table_to_link/;
+		$col =~ /^\s*(\w+)[\s\t]+(.+)\t+(.+)\t(.*)/;
+		$html .= qq{		<tr class="bg$bg"><td><b>$1</b></td><td>$3</td><td>$4</td><td>$2</td></tr>\n};
+		if ($bg==1) { $bg=2; }
+		else { $bg=1; }
+	}
+	$html .= qq {</table>\n};
+	return $html;
+}
+
+sub add_see {
+	my @sees = @_;
+	my $html = '';
+	
+	if (scalar @sees) {
+		$html .= qq{<p><b>See also:</b></p>\n<ul>\n};
+		foreach my $see (@sees) {
+			$html .= qq{	<li><a href="#$see">$see</a></li>\n};
+		}
+		$html .= qq{</ul>\n};
+	}
+	return $html;
+}
+
+
+sub add_column_type_and_default_value {
+	my $c_name    = shift;
+	my $c_type    = shift;
+	my $c_default = shift;
+	$count_sql_col ++;
+	
+	my $is_found = 0;
+	foreach my $col (@{$documentation->{$table}{column}}) {
+		if ($col =~ /^$c_name\s/) {
+			$col .= "\t$c_type\t";
+			$col .= "$c_default" if ($c_default ne ''); # Add the default value
+			$is_found = 1;
+			last;
+		}
+	}
+	# Description missing
+	if ($is_found==0) {
+		print STDERR "The description of the column '$c_name' is missing in the table $table!\n";
+	}
+}
+
