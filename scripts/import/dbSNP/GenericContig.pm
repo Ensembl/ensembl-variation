@@ -472,6 +472,42 @@ sub variation_table {
   
   $self->{'dbVar'}->do( "ALTER TABLE variation ADD INDEX snpidx( snp_id )" ) unless ($resume_at_subsnp_id > 0);
   print $logh Progress::location();
+
+	#ÊGet somatic flag from dbSNP
+	$stmt = qq{
+		SELECT DISTINCT
+			sssl.snp_id
+		FROM
+			SubSNP ss JOIN
+			SNPSubSNPLink sssl ON (
+				sssl.subsnp_id = ss.subsnp_id
+			)
+		WHERE
+			ss.SOMATIC_ind = 'Y' 
+	};
+	my $sth = $self->{'dbSNP'}->prepare($stmt);
+  	print $logh Progress::location();
+    $sth->execute();
+  	print $logh Progress::location();
+    
+    my $snp_id;
+    $sth->bind_columns(\$snp_id);
+    
+    # Loop over the somatic SNPs and set the flag in the variation table
+    $stmt = qq{
+    	UPDATE
+    		variation
+    	SET
+    		somatic = 1
+    	WHERE
+    		snp_id = ?
+    };
+    my $up_sth = $self->{'dbVar'}->prepare($stmt);
+    while ($sth->fetch()) {
+    	$up_sth->execute($snp_id);
+    }
+    $sth->finish();
+    $up_sth->finish();
     
 # create table rsHist to store rs history
 # Table vwRsMergeArch only exists for human. Filter this as a temporary solution and talk to Yuan about it
