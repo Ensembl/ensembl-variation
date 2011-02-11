@@ -929,18 +929,14 @@ sub _fetch_all_dbIDs_by_VariationSet {
   my $self = shift;
   my $set = shift;
   
-  # First, get ids for all subsets,
+  # First, the bitvalue for the variation_set and its subsets
+  my $bitvalue = $set->_get_bitvalue();
   
-  my @var_set_ids = ($set->dbID);
+  #ÊAdd the constraint for the variation_set_id
+  my $constraint = qq{ vsv.variation_set_id & $bitvalue };
   
-  foreach my $var_set (@{$set->adaptor->fetch_all_by_super_VariationSet($set)}) {
-    push @var_set_ids, $var_set->dbID;
-  }
-  
-  my $set_str = '('.join(',',@var_set_ids).')';
-
   #ÊAdd the constraint for failed variations
-  my $constraint = " AND " . $self->db->_exclude_failed_variations_constraint();
+  $constraint .= " AND " . $self->db->_exclude_failed_variations_constraint();
   
   # Then get the dbIDs for all these sets
   my $stmt = qq{
@@ -952,7 +948,6 @@ sub _fetch_all_dbIDs_by_VariationSet {
 	fv.variation_id = vsv.variation_id
       )
     WHERE
-      vsv.variation_set_id in $set_str
       $constraint
   };
 
@@ -1017,6 +1012,29 @@ sub has_failed_subsnps {
   
   my $constraint = qq{ fv.subsnp_id IS NOT NULL };
   my $description = $self->_internal_get_failed_descriptions($dbID,$constraint);
+  
+  return scalar(keys(%{$description}));
+}
+
+=head2 has_failed_alleles
+
+  Arg[1]      : int $dbID
+	        The internal database identifier for the variation to query
+  Example     : $has_failed = $va->has_failed_alleles(100);
+  Description : Checks the database to see if any alleles belonging to the specified variation
+		have been flagged as failed.
+  ReturnType  : int
+  Exceptions  : none
+  Caller      : general
+  Status      : At Risk
+
+=cut
+
+sub has_failed_alleles {
+  my $self = shift;
+  my $dbID = shift;
+  
+  my $description = $self->_internal_get_failed_descriptions($dbID,'failed_allele');
   
   return scalar(keys(%{$description}));
 }
@@ -1092,28 +1110,27 @@ sub get_failed_description {
 sub _internal_get_failed_descriptions {
     my $self = shift;
     my $dbID = shift;
-    my $constraint = shift;
+    my $table = shift;
+    
+    my $key = ($table eq 'failed_allele' ? 'allele_id' : 'variation_id');
     
     my $stmt = qq{
       SELECT
-        fv.variation_id,
-	IFNULL(fv.subsnp_id,'rs') AS subsnp_id,
-	fd.description
+        ft.$key,
+		fd.description
       FROM
-        failed_variation fv JOIN
-	failed_description fd ON (
-	  fd.failed_description_id = fv.failed_description_id
-	)
+        $table ft JOIN
+		failed_description fd ON (
+	  		fd.failed_description_id = ft.failed_description_id
+		)
       WHERE
-        fv.variation_id = ?
+        ft.$key = ?
     };
-    
-    $stmt .= qq{ AND $constraint } if (defined($constraint));
     
     my $sth = $self->prepare($stmt);
     $sth->execute($dbID);
     
-    return $sth->fetchall_hashref(['variation_id','subsnp_id']);
+    return $sth->fetchall_hashref([$key]);
 }
 
 sub _get_flank_from_core{
