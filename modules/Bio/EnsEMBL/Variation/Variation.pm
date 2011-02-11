@@ -112,14 +112,14 @@ use Scalar::Util qw(weaken);
 # List of validation states. Order must match that of set in database
 our @VSTATES = ('cluster','freq','submitter','doublehit','hapmap','1000Genome','failed','precious');
 
-# Conversion of validation state to bit value
+# Conversion of validation state to bit value. The states must be in lower-case here, regardless of what they are in the database!
 our %VSTATE2BIT = (
   'cluster'    => 1,   # 00000001
   'freq'       => 2,   # 00000010
   'submitter'  => 4,   # 00000100
   'doublehit'  => 8,   # 00001000
   'hapmap'     => 16,  # 00010000
-  '1000Genome' => 32,
+  '1000genome' => 32,
   'failed'     => 64,
   'precious'   => 128,
 ); 
@@ -280,7 +280,7 @@ sub has_failed_subsnps {
   Description: Get/Sets the failed attribute for this variation. If a subsnp_id is specified,
                the failed description refers only to that subsnp. The failed
 	       descriptions are lazy-loaded from the database.
-  Returntype : int
+  Returntype : string
   Exceptions : none
   Caller     : general
   Status     : At risk
