@@ -828,7 +828,7 @@ create table httag(
 @column somatic		Flag to indicate if the source contains somatic mutations
 
 @see variation
-@see  variation_synonym
+@see variation_synonym
 @see variation_feature
 @see variation_annotation
 @see variation_group
@@ -844,6 +844,7 @@ create table source(
 	description varchar(255),
 	url varchar(255),
 	somatic tinyint(1) DEFAULT '0',
+	type ENUM('database','chip','archive') DEFAULT 'database',
 	
 	primary key( source_id )
 );
