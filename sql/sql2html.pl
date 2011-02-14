@@ -1,6 +1,6 @@
 #!/bin/perl
 # 1st Feb 2011
-# Generate an HTML documentation page from an sql file.
+# Generate an HTML documentation page from an SQL file.
 #
 # Argument 1 : the SQL file
 # Argument 2 : the HTML/output file
@@ -78,6 +78,25 @@ my $header = qq{
 <head>
 <meta http-equiv="CONTENT-TYPE" content="text/html; charset=utf-8" />
 <title>e! Variation schema </title>
+
+<script language="Javascript" type="text/javascript">
+	// Function to show/hide the columns table
+	function show_hide (param) {
+		div   = document.getElementById('div_'+param);
+		alink = document.getElementById('a_'+param);
+		if (div.style.display=='inline') {
+			div.style.display='none';
+			alink.innerHTML='Show';
+		}
+		else {
+			if (div.style.display=='none') {
+				div.style.display='inline';
+				alink.innerHTML='Hide';
+			}
+		}
+	}
+</script>
+
 </head>
 
 <body>
@@ -119,6 +138,7 @@ my $footer = qq{
 ################
 ### Settings  ##
 ################
+my %display_col = ('Show' => 'none', 'Hide' => 'inline');
 my $documentation = {};
 my @tables_names = ();
 
@@ -127,6 +147,9 @@ my $in_table = 0;
 my $table = '';
 my $nb_by_col = 15;
 my $count_sql_col = 0;
+my $tag_content = '';
+my $tag = '';
+my $display = 'Show';
 
 
 #############
@@ -135,6 +158,8 @@ my $count_sql_col = 0;
 
 open SQLFILE, "< $sql_file" or die "Can't open $sql_file : $!";
 while (<SQLFILE>) {
+	chomp $_;
+	next if ($_ eq '');
 	
 	# Verifications
 	if ($_ =~ /^\/\*\*/)  { $in_doc=1; next; }  # start of a table documentation
@@ -149,7 +174,6 @@ while (<SQLFILE>) {
 	}	
 	next if ($in_doc==0 and $in_table==0);
 	
-	chomp $_;
 	my $doc = $_;
 	
 	## Parsing of the documentation ##
@@ -158,24 +182,29 @@ while (<SQLFILE>) {
 		if ($doc =~ /^\@table\s*(\w+)/i) {
 			$table = $1;
 			push(@tables_names,$table);
-			$documentation->{$table} = { 'desc' => '', 'column' => [], 'see' => [] };		
+			$documentation->{$table} = { 'desc' => '', 'column' => [], 'see' => [] };
+			$tag = $tag_content = '';		
 		}
 		# Description
-		elsif ($doc =~ /^\@desc\s*(.+)$/i) {
-			$documentation->{$table}{desc} = $1;		
+		elsif ($doc =~ /^\@(desc)\s*(.+)$/i) {
+			fill_documentation ($1,$2);
 		}
 		# Column
-		elsif ($doc =~ /^\@column\s*(.+)$/i) {
-			push(@{$documentation->{$table}{column}},$1);		
+		elsif ($doc =~ /^\@(column)\s*(.+)$/i) {
+			fill_documentation ($1,$2);
 		}
 		# See other tables
-		elsif ($doc =~ /^\@see\s*(.+)$/i) {
-			push(@{$documentation->{$table}{see}},$1);		
+		elsif ($doc =~ /^\@(see)\s*(.+)$/i) {
+			fill_documentation ($1,$2);	
 		}
 		# End of documentation
-		elsif ($doc =~ /^\*\//) { 
-			$in_doc=0; 
+		elsif ($doc =~ /^\*\//) { # End of the documentation block
+			fill_documentation (); # Add the last tag content to the documentation hash
+			$in_doc=0;
 			next; 
+		}
+		elsif ($doc =~ /^\s*(.+)$/) { # If a tag content is splitted in several lines
+			$tag_content .= " $1";
 		}
 	}
 	
@@ -251,7 +280,7 @@ my $col_count = 1;
 foreach my $t_name (@tables_names) {
 	$html_content .= add_table_name($t_name);
 	$html_content .= add_description($documentation->{$t_name}{desc});
-	$html_content .= add_columns(@{$documentation->{$t_name}{column}});
+	$html_content .= add_columns($t_name,@{$documentation->{$t_name}{column}});
 	$html_content .= add_see(@{$documentation->{$t_name}{see}});
 }
 
@@ -301,6 +330,28 @@ sub display_tables_list {
 }
 
 
+# If the line starts by a @<tag>, the previous tag content is added to the documentation hash.
+# This method allows to describe the content of a tag in several lines.
+sub fill_documentation {
+	my $t1 = shift;
+	my $t2 = shift;
+	
+	if ($tag ne '') {
+		if ($tag eq 'desc') {
+			$documentation->{$table}{$tag} = $tag_content;
+		}
+		else {
+			push(@{$documentation->{$table}{$tag}},$tag_content);
+		}
+	}
+	# New tag initialized
+	if ($t1) {
+		$tag = $t1;
+		$tag_content = $t2;
+	}
+}
+ 
+
 sub add_table_name_to_list {
 	my $t_name = shift;
 	
@@ -325,8 +376,10 @@ sub add_description {
 
 sub add_columns {
 	my @cols = @_;
-	
-	my $html = qq{
+	my $table = shift @cols;
+	my $display_style = $display_col{$display};
+	my $html = qq{\n<a id="a_$table" style="cursor:pointer" onclick="show_hide('$table')">$display</a> columns\n
+	<div id="div_$table" style="display:$display_style">\n
 	<table style="border:1px outset #222222">
 		<tr class="bg3 center"><th style="width:200px">Column</th><th style="width:150px">Type</th><th style="width:100px">Default value</th><th style="width:400px">Description</th></tr>\n};
 	my $bg = 1;
@@ -339,7 +392,7 @@ sub add_columns {
 		if ($bg==1) { $bg=2; }
 		else { $bg=1; }
 	}
-	$html .= qq {</table>\n};
+	$html .= qq {</table>\n</div>\n};
 	return $html;
 }
 
@@ -378,4 +431,3 @@ sub add_column_type_and_default_value {
 		print STDERR "The description of the column '$c_name' is missing in the table $table!\n";
 	}
 }
-
