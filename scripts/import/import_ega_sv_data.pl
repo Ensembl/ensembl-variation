@@ -52,8 +52,9 @@ my $meta_container = Bio::EnsEMBL::Registry->get_adaptor( $species, 'Core', 'Met
 our $connected_tax_id = $meta_container->get_taxonomy_id;
 
 # run the mapping sub-routine if the data needs mapping
+my $failed = [];
 if($mapping) {
-  mapping();
+  $failed = mapping();
 }
 
 # otherwise parse the file into the temp file
@@ -74,7 +75,7 @@ else {
 
 read_file();
 source();
-structural_variation();
+structural_variation($failed);
 meta_coord();
 
 sub read_file{
@@ -94,6 +95,7 @@ sub read_file{
   
   # remove those that are of different species
   $dbVar->do(qq{DELETE FROM temp_cnv WHERE tax_id != $connected_tax_id;});
+  
 }
 
 sub source{
@@ -171,6 +173,7 @@ sub source{
 }
 
 sub structural_variation{
+  my $failed = shift;
   
   debug("Inserting into structural_variation table");
   
@@ -243,6 +246,41 @@ sub structural_variation{
       name_key
   };
   $dbVar->do($stmt);
+  
+  #ÊWarn about variations that are on chromosomes for which we don't have a seq region entry. Also, delete them from the structural variation table if they are already present there
+  $stmt = qq{
+    SELECT
+      t.id,
+      t.chr,
+      t.study,
+      t.author,
+      t.year
+    FROM
+      temp_cnv t LEFT JOIN
+      seq_region sr ON (
+	sr.name = t.chr
+      )
+    WHERE
+      sr.seq_region_id IS NULL
+  };
+  my $rows = $dbVar->selectall_arrayref($stmt);
+  while (my $row = shift(@{$rows})) {
+    warn ("Structural variant '" . $row->[0] . "' from study '" . $row->[2] . "' (" . $row->[3] . " (" . $row->[4] . ")) is placed on chromosome '" . $row->[1] . "', which could not be found in Ensembl. It will not be imported, if it is already imported with a different (and outdated) location, it will be removed from the database");
+    push(@{$failed},qq{'$row->[0]'});
+  }
+  
+  #ÊRemove any variants that have an updated position that could not be determined
+  my $condition = join(",",@{$failed});
+  $stmt = qq{
+    DELETE FROM
+      sv
+    USING
+      structural_variation sv
+    WHERE
+      sv.variation_name IN ( $condition )
+  };
+  $dbVar->do($stmt);
+  
   $dbVar->do(qq{DROP TABLE temp_cnv;});
 }
 
@@ -292,6 +330,9 @@ sub mapping{
   # get the default CS version
   my $cs_version_number = $target_assembly;
   $cs_version_number =~ s/\D//g;
+  
+  #ÊStore and return the variant ids that we could not map. In case these already exist in the database with a different (and thus assumingly outdated) position, we will delete them
+  my @failed = ();
   
   while(<IN>) {
 	chomp;
@@ -417,6 +458,8 @@ sub mapping{
 	}
 	
 	else {
+	  warn ("Structural variant '$id' from study '$study' ($author ($year)) has location '$assembly:$chr:$start\-$end' , which could not be re-mapped to $target_assembly. This variant will not be imported, if it is already present with a different (and outdated) location, it will be removed from the database");
+	  push(@failed,qq{'$id'});
 	  $num_not_mapped{$assembly}++;
 	}
   }
@@ -425,6 +468,8 @@ sub mapping{
   close OUT;
   
   debug("Finished mapping\n\tSuccess: ".(join " ", %num_mapped)." not required $no_mapping_needed\n\tFailed: ".(join " ", %num_not_mapped)." skipped $skipped");
+  
+  return \@failed;
 }
 
 
