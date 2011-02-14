@@ -37,10 +37,10 @@ our $current_assembly;
 our $mapping_num = 1;
 
 our $SSAHA_RUNTIME_LIMIT = 5;
-our $FARM_MEMORY = 4000;
+our $FARM_MEMORY = 5000;
 our %SSAHA_PARAMETERS = (
   '-align' 	=> '1',
-  '-kmer' 	=> '12',
+  '-kmer' 	=> '14',
   '-seeds' 	=> '25',
   '-cut' 	=> '1000',
   '-output' 	=> 'vulgar',
@@ -48,6 +48,12 @@ our %SSAHA_PARAMETERS = (
   '-best' 	=> '1',
   '-memory'	=> '4000'
 );
+
+our $use_smalt = 1;
+our %SMALT_PARAMETERS = (
+  '-a' 	=> ''
+);
+our $SMALT_HASH = 'GRCh37_k20_s13';
 
 our $EXONERATE_BIN = 'exonerate';
 our %EXONERATE_PARAMETERS = (
@@ -63,10 +69,70 @@ our %EXONERATE_PARAMETERS = (
 sub mapping {
   my $lrg_seq = shift;
   
-  my $maps = map_to_genome($lrg_seq);
-  my $mainmap = join_mappings($maps);
+  my $mainmap;
+  unless ($use_smalt) {
+  	my $maps = map_to_genome($lrg_seq);
+  	$mainmap = join_mappings($maps);
+  }
+  else {
+  	$mainmap = smalt_map($lrg_seq);
+  	$mainmap = $mainmap->[0];
+  }
   
   return $mainmap;
+}
+
+sub smalt_map {
+	my $lrg_seq = shift;
+	
+	#ÊDump the sequence to a fasta file
+	my $PID = $$;
+	my $name = 'temp' . $PID . '.fa';
+	my $input_file = $input_dir . '/' . $name;
+	open(FA,'>',$input_file) or die ("Could not write to temporary file $input_file");
+	print FA ">$name\n$lrg_seq\n";
+	close(FA);
+	
+	#ÊConstruct the SMALT command
+	my $smalt_cmd = "smalt map ";
+	while (my ($p,$v) = each(%SMALT_PARAMETERS)) {
+		$smalt_cmd .= "$p $v ";
+	}  
+	$smalt_cmd .= "$target_dir/$SMALT_HASH $input_file";
+	
+	# Construct the bsub command
+	my $output_file = $input_file . ".out";
+	my $error_file = $input_file . ".err";
+	my $resource = "-R'select[mem>$FARM_MEMORY] rusage[mem=$FARM_MEMORY]' -M" . $FARM_MEMORY . "000";
+	my $bsub_cmd = "bsub -K -J smalt_$name -o $output_file -e $error_file $resource $smalt_cmd";
+	
+	#ÊSubmit the job to the farm and wait for it to finish
+	# print $bsub_cmd . "\n";
+	system($bsub_cmd);
+
+  	# Check the error file
+  	unless (-z $error_file) {
+  		print STDERR "*** ERROR ***\nSMALT generated the following error(s):\n";
+  		
+  		open (ERR,'<',$error_file);
+  		while (<ERR>) {
+  			chomp;
+  			print STDERR "\t$_\n";
+  		}
+  		close(ERR);
+  		
+    	print STDERR "*************\n";
+  	}
+  	
+  	#ÊParse the output.
+  	my $mapping = parse_ssaha2_out($output_file);
+    
+    # Clean up temporary files
+    unlink($input_file);
+    unlink($output_file);
+    unlink($error_file);
+    
+  	return $mapping;
 }
 
 sub map_to_genome {
@@ -199,7 +265,7 @@ sub ssaha_mapping {
   
   my ($subject, %rec_find, %input_length, %done);
   	
-  $subject = "$target_dir/ref";
+  $subject = "$target_dir/kmer14_skip14";
   $rec_seq{$name} = $sequence;
   my $seqobj = Bio::PrimarySeq->new(-id => $name, -seq => $rec_seq{$name});
   $rec_seq{$name} = $seqobj;
@@ -271,13 +337,13 @@ sub bsub_ssaha_job {
   my $call = "echo '$ssaha_command' | bsub -J $input_file\_ssaha_job $queue -e $error_file -o $output_file";
 	
   system ($call);
-#  print $call, "\n";
+  # print $call, "\n";
   return $error_file;
 }
 
 # subroutine to parse the output from ssaha2
 sub parse_ssaha2_out {
-
+	
 #   open OUT, ">$output_dir/mapping_file_$input_file_name" or die "can't open output_file : $!\n";
   my $output_file = shift;
 
@@ -294,27 +360,29 @@ sub parse_ssaha2_out {
     my $line = $_;
     
     # If the vulgar annotation line is encountered, store it. If one already is stored, parse it with the collected sequences  
-    if ($line =~ m/^vulgar\:/) {
+    if ($line =~ m/^vulgar|^cigar/) {
       if (defined($vulgar)) {
-	$data = parse_vulgar_string($vulgar,$q_seq,$t_seq);
-	if (defined($data)) {
-	  push(@rec_find,$data);
-	}
-	$q_seq = undef;
-	$t_seq = undef;
-      }
+		$data = parse_vulgar_string($vulgar,$q_seq,$t_seq);
+		if (defined($data)) {
+		  push(@rec_find,$data);
+		}
+		$q_seq = undef;
+		$t_seq = undef;
+	  }
       $vulgar = $line;
     }
-    elsif ($line =~ m/^Query|Sbjct/) {
-      my ($id,$seq) = $line =~ m/^(Query|Sbjct)\s+\d+\s+([^\s]+)\s+\d+$/;
+    elsif ($line =~ m/^\s*(Query|Sbjct|Reference)/i) {
+      my ($id,$seq) = $line =~ m/(Reference|Query|Sbjct).+?\d+\s+(\S+)\s+\d+/i;
+      
+      next unless (defined($seq) && defined($id));
       
       # Remove gap characters
       $seq =~ s/\-//g;
-      if ($id eq 'Query') {
-	$q_seq .= $seq;
+      if ($id =~ m/Query/i) {
+		$q_seq .= $seq;
       }
       else {
-	$t_seq .= $seq;
+		$t_seq .= $seq;
       }
     }
   }
@@ -322,6 +390,12 @@ sub parse_ssaha2_out {
 
   #ÊParse the stored vulgar string and sequences
   if (defined($vulgar)) {  
+  	
+  	#ÊConvert cigar to vulgar if necessary
+  	if ($vulgar =~ m/cigar/i) {
+  		$vulgar = cigar_to_vulgar($vulgar);
+  	}
+  	
     $data = parse_vulgar_string($vulgar,$q_seq,$t_seq);
     if (defined($data)) {
       push(@rec_find,$data);
@@ -431,6 +505,43 @@ sub parse_exonerate {
   return $data;
 }
 
+# Converts a cigar string to vulgar
+sub cigar_to_vulgar {
+	my $cigar = shift;
+	
+	# The prefix is the same so separate out the necessary information
+	my ($format,$static,$match) = $cigar =~ m/^\s*(cigar\S*)\s+(\S+\s+\d+\s+\d+\s+[\+\-]\s+\S+\s+\d+\s+\d+\s+[\+\-]\s+\d+)\s+(.+)$/;
+	
+	#ÊDie if we couldn't parse the cigar string properly
+	die ("Could not parse the cigar string: $cigar") unless (defined($format) && defined($static) && defined($match));
+	
+	#ÊConstruct the vulgar string
+	my $vulgar = "vulgar $static";
+	
+	# Basically, insertions and deletions are just annotated as gaps with the lengths indicating I or D. All annotations are given as pairs of lengths for query and subject.
+	while ($match =~ m/([MDI])\s+(\d+)/g) {
+		
+		#ÊIf it is a 'M', just report a pair of lengths
+		if ($1 eq 'M') {
+			$vulgar .= " M $2 $2";
+		}
+		#ÊElse, if it is a insertion (gap in subject)
+		elsif ($1 eq 'I') {
+			$vulgar .= " G $2 0";
+		}
+		#ÊElse, if it is a deletion (gap in query)
+		elsif ($1 eq 'D') {
+			$vulgar .= " G 0 $2";
+		}
+		# Else, we don't know what this is...
+		else {
+			warn("Unknown characters in cigar string: $1 $2");	
+		}
+	}
+	
+	return $vulgar;
+}
+
 # 
 # Attempts to parse a vulgar string as outputted from ssaha2. Will return a reference to a hash with the following fields:
 #  lrg_id
@@ -448,7 +559,7 @@ sub parse_vulgar_string {
   my $q_seq = shift;
   my $t_seq = shift;
   
-  my ($q_id,$q_start,$q_end,$q_strand,$t_id,$t_start,$t_end,$t_strand,$score,$match) = $vulgar =~ m/^vulgar\:\s+([^\s]+)\s+(\d+)\s+(\d+)\s+([\+\-])\s+([^\s]+)\s+(\d+)\s+(\d+)\s+([\+\-])\s+(\d+)\s+(.+)$/;
+  my ($q_id,$q_start,$q_end,$q_strand,$t_id,$t_start,$t_end,$t_strand,$score,$match) = $vulgar =~ m/^vulgar\S*\s+([^\s]+)\s+(\d+)\s+(\d+)\s+([\+\-])\s+([^\s]+)\s+(\d+)\s+(\d+)\s+([\+\-])\s+(\d+)\s+(.+)$/;
   my %data;
   
   unless(
