@@ -221,7 +221,7 @@ sub fetch_by_dbID {
   # from the reference - it is just set to 0 when fetching variations
   # by other methods since otherwise the join takes too long  
   my $sth = $self->prepare
-    (q{SELECT v.variation_id, v.name, v.validation_status, v.class_so_id, s1.name, s1.description, s1.url, s1.somatic, s1.type, v.ancestral_allele,
+    (q{SELECT v.variation_id, v.name, v.validation_status, v.class_so_id, s1.name, s1.description, s1.url, s1.somatic, v.ancestral_allele,
               a.allele_id, a.subsnp_id, a.allele, a.frequency, a.count, a.sample_id, vs.moltype,
               vs.name, s2.name, (fs.up_seq is not null OR fs.down_seq is not null)
        FROM   (variation v, source s1)
@@ -274,7 +274,7 @@ sub fetch_by_name {
   # from the reference - it is just set to 0 when fetching variations
   # by other methods since otherwise the join takes too long
   my $sth = $self->prepare
-    (qq{SELECT v.variation_id, v.name, v.validation_status, v.class_so_id, s1.name, s1.description, s1.url, s1.somatic, s1.type, v.ancestral_allele, 
+    (qq{SELECT v.variation_id, v.name, v.validation_status, v.class_so_id, s1.name, s1.description, s1.url, s1.somatic, v.ancestral_allele, 
                a.allele_id, a.subsnp_id, a.allele, a.frequency, a.count, a.sample_id, vs.moltype,
               vs.name, s2.name, (fs.up_seq is not null OR fs.down_seq is not null)
 	  FROM   (variation v, source s1)
@@ -298,7 +298,7 @@ sub fetch_by_name {
   if(!@$result) {
     # try again if nothing found, but check synonym table instead
     $sth = $self->prepare
-      (qq{SELECT v.variation_id, v.name, v.validation_status, v.class_so_id, s1.name, s1.description, s1.url, s1.somatic, s1.type, v.ancestral_allele, 
+      (qq{SELECT v.variation_id, v.name, v.validation_status, v.class_so_id, s1.name, s1.description, s1.url, s1.somatic, v.ancestral_allele, 
                  a.allele_id, a.subsnp_id, a.allele, a.frequency, a.count, a.sample_id, vs1.moltype,
                 vs2.name, s2.name, (fs.up_seq is not null OR fs.down_seq is not null)
          FROM variation v, source s1, source s2, allele a,
@@ -356,7 +356,7 @@ sub fetch_by_subsnp_id {
   # from the reference - it is just set to 0 when fetching variations
   # by other methods since otherwise the join takes too long
   my $sth = $self->prepare
-    (qq{SELECT v.variation_id, v.name, v.validation_status, v.class_so_id, s1.name, s1.description, s1.url, s1.somatic, s1.type, v.ancestral_allele, 
+    (qq{SELECT v.variation_id, v.name, v.validation_status, v.class_so_id, s1.name, s1.description, s1.url, s1.somatic, v.ancestral_allele, 
                a.allele_id, a.subsnp_id, a.allele, a.frequency, a.count, a.sample_id, vs.moltype,
               vs.name, s2.name, (fs.up_seq is not null OR fs.down_seq is not null)
 	  FROM   (variation v, source s1)
@@ -411,7 +411,7 @@ sub fetch_all_by_source {
   my $constraint = " AND " . $self->db->_exclude_failed_variations_constraint();
   
   my $sth = $self->prepare
-    (qq{SELECT v.variation_id, v.name, v.validation_status, v.class_so_id, s1.name, s1.description, s1.url, s1.somatic, s1.type, v.ancestral_allele, 
+    (qq{SELECT v.variation_id, v.name, v.validation_status, v.class_so_id, s1.name, s1.description, s1.url, s1.somatic, v.ancestral_allele, 
                a.allele_id, a.subsnp_id, a.allele, a.frequency, a.count, a.sample_id, vs.moltype,
               vs.name, s2.name, 0
 	  FROM   (variation v, source s1)
@@ -435,7 +435,7 @@ sub fetch_all_by_source {
   #we need to include variation_synonym as well, where the variation was merged with dbSNP
   if (!$primary){
       $sth = $self->prepare
-	  (qq{SELECT v.variation_id, v.name, v.validation_status, v.class_so_id, s1.name, s1.description, s1.url, s1.somatic, s1.type, v.ancestral_allele,
+	  (qq{SELECT v.variation_id, v.name, v.validation_status, v.class_so_id, s1.name, s1.description, s1.url, s1.somatic, v.ancestral_allele,
 	      a.allele_id, a.subsnp_id, a.allele, a.frequency, a.count, a.sample_id, vs1.moltype,
 	      vs1.name, s2.name, 0
 		  FROM   (variation v, source s1, source s2,  variation_synonym vs1)
@@ -457,50 +457,6 @@ sub fetch_all_by_source {
   }
   return \@out;
 }
-
-
-=head2 fetch_all_by_source_type
-
-  Arg [1]    : string $source_type
-  Arg [2]    : int $primary
-  Example    : $var = $var_adaptor->fetch_all_by_source_type('chip');
-  Description: Retrieves all Variation objects associated with a type of source. By default ($primary=0)
-               returns variations that have the source or variation_synonym that have the source.
-               If primary set to 1, it returns only variations where the primary name is associated
-               with the source
-  Returntype : listref of Bio::EnsEMBL::Variation::Variation
-  Exceptions : thrown if source_type not provided
-  Caller     : general
-  Status     : At risk
-
-=cut
-
-sub fetch_all_by_source_type {
-  my $self = shift;
-  my $source_type = shift;
-  my $primary = shift;
-  
-  my @out;
-  $primary ||= 0; #by default, returns ALL variation and variation_synonyms where source_type = $source_type
-  
-  throw('name argument expected') if(!defined($source_type));
-	
-  my $sth = $self->prepare (qq{SELECT name FROM source WHERE type = ?});
-
-  $sth->bind_param(1,$source_type,SQL_VARCHAR);
-  $sth->execute();
-
-  my $result = $self->_objs_from_sth($sth);
-  $sth->finish();
-  
-	# Loop to get all the variations by source
-  foreach my $source_name (@{$result}) {
-		my $var_list = $self->fetch_all_by_source($source_name,$primary);
-		push @out, @{$var_list};
-	}
-	return \@out;
-}
-
 
 
 =head2 fetch_all_by_dbID_list
@@ -539,7 +495,7 @@ sub fetch_all_by_dbID_list {
     my $id_str = (@ids > 1)  ? " IN (".join(',',@ids).")"   :   ' = \''.$ids[0].'\'';
 
     my $sth = $self->prepare
-      (qq{SELECT v.variation_id, v.name, v.validation_status, v.class_so_id, s1.name, s1.description, s1.url, s1.somatic, s1.type, v.ancestral_allele,
+      (qq{SELECT v.variation_id, v.name, v.validation_status, v.class_so_id, s1.name, s1.description, s1.url, s1.somatic, v.ancestral_allele,
                  a.allele_id, a.subsnp_id, a.allele, a.frequency, a.count, a.sample_id, vs.moltype,
                  vs.name, s2.name, 0
 	     FROM   (variation v, source s1)
@@ -635,7 +591,7 @@ sub fetch_all_by_name_list {
 
     my $id_str = (@ids > 1)  ? " IN (".join(',', map {"'$_'"} @ids).")"   :   ' = \''.$ids[0].'\'';
     my $sth = $self->prepare
-      (qq{SELECT v.variation_id, v.name, v.validation_status, v.class_so_id, s1.name, s1.description, s1.url, s1.somatic, s1.type, v.ancestral_allele,
+      (qq{SELECT v.variation_id, v.name, v.validation_status, v.class_so_id, s1.name, s1.description, s1.url, s1.somatic, v.ancestral_allele,
                  a.allele_id, a.subsnp_id, a.allele, a.frequency, a.count, a.sample_id, vs.moltype,
                  vs.name, s2.name, 0
 	     FROM   (variation v, source s1)
@@ -665,7 +621,7 @@ sub fetch_all_by_name_list {
     if(@missing_names) {
       my $missing_id_str = (@missing_names > 1)  ? " IN (".join(',', map {"'$_'"} @missing_names).")"   :   ' = \''.$missing_names[0].'\'';
       $sth = $self->prepare
-        (qq{SELECT v.variation_id, v.name, v.validation_status, v.class_so_id, s1.name, s1.description, s1.url, s1.somatic, s1.type, v.ancestral_allele, 
+        (qq{SELECT v.variation_id, v.name, v.validation_status, v.class_so_id, s1.name, s1.description, s1.url, s1.somatic, v.ancestral_allele, 
                    a.allele_id, a.subsnp_id, a.allele, a.frequency, a.count, a.sample_id, vs1.moltype,
                   vs2.name, s2.name, 0
            FROM variation v, source s1, source s2, allele a,
@@ -884,7 +840,7 @@ sub fetch_all_by_Population {
   $extra_sql .= " AND " . $self->db->_exclude_failed_variations_constraint();
   
   my $sth = $self->prepare
-    (qq{SELECT v.variation_id, v.name, v.validation_status, v.class_so_id, s1.name, s1.description, s1.url, s1.somatic, s1.type, v.ancestral_allele,
+    (qq{SELECT v.variation_id, v.name, v.validation_status, v.class_so_id, s1.name, s1.description, s1.url, s1.somatic, v.ancestral_allele,
                a.allele_id, a.subsnp_id, a.allele, a.frequency, a.count, a.sample_id, vs.moltype,
               vs.name, s2.name, 0
 	    FROM   (variation v, source s1, allele a)
@@ -1186,12 +1142,12 @@ sub _objs_from_sth {
   my $self = shift;
   my $sth = shift;
 
-  my ($var_id, $name, $vstatus, $class_so_id, $source, $source_desc, $source_url, $is_somatic, $source_type, $ancestral_allele, 
+  my ($var_id, $name, $vstatus, $class_so_id, $source, $source_desc, $source_url, $is_somatic, $ancestral_allele, 
       $allele_id, $allele_ss_id, $allele, $allele_freq, $allele_count, $allele_sample_id, $moltype, $syn_name, 
       $syn_source, $cur_allele_id, $cur_var, $cur_var_id, $flank_flag);
 
   $sth->bind_columns(\$var_id, \$name, \$vstatus, \$class_so_id, \$source, \$source_desc, \$source_url, \$is_somatic, 
-                     \$source_type, \$ancestral_allele, \$allele_id, \$allele_ss_id, \$allele, \$allele_freq, \$allele_count,
+                     \$ancestral_allele, \$allele_id, \$allele_ss_id, \$allele, \$allele_freq, \$allele_count,
                      \$allele_sample_id, \$moltype, \$syn_name, \$syn_source, \$flank_flag);
 
   my @vars;
@@ -1213,7 +1169,6 @@ sub _objs_from_sth {
 		 -SOURCE_DESCRIPTION => $source_desc,
 		 -SOURCE_URL => $source_url,
 		 -IS_SOMATIC => $is_somatic,
-		 -SOURCE_TYPE => $source_type,
 	     -ANCESTRAL_ALLELE => $ancestral_allele,
 	     -MOLTYPE => $moltype,
          -VALIDATION_STATES => \@states,
