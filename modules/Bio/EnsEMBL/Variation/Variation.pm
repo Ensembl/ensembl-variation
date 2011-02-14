@@ -138,10 +138,13 @@ our %VSTATE2BIT = (
     string - the name of this SNP
 
   Arg [-SOURCE] :
-    string - the source of this SNP
+    string - the source of this SNP	
 
   Arg [-SOURCE_DESCRIPTION] :
     string - description of the SNP source
+		
+	Arg [-SOURCE_TYPE] :
+		string - the source type of this variant
 
   Arg [-SYNONYMS] :
     reference to hash with list reference values -  keys are source
@@ -183,9 +186,9 @@ sub new {
   my $caller = shift;
   my $class = ref($caller) || $caller;
 
-  my ($dbID, $adaptor, $name, $class_so_id, $src, $src_desc, $src_url, $is_somatic, $syns, $ancestral_allele,
+  my ($dbID, $adaptor, $name, $class_so_id, $src, $src_desc, $src_url, $src_type, $is_somatic, $syns, $ancestral_allele,
       $alleles, $valid_states, $moltype, $five_seq, $three_seq, $flank_flag) =
-        rearrange([qw(dbID ADAPTOR NAME CLASS_SO_ID SOURCE SOURCE_DESCRIPTION SOURCE_URL IS_SOMATIC 
+        rearrange([qw(dbID ADAPTOR NAME CLASS_SO_ID SOURCE SOURCE_DESCRIPTION SOURCE_URL SOURCE_TYPE IS_SOMATIC 
                       SYNONYMS ANCESTRAL_ALLELE ALLELES VALIDATION_STATES MOLTYPE FIVE_PRIME_FLANKING_SEQ
                       THREE_PRIME_FLANKING_SEQ FLANK_FLAG)],@_);
 
@@ -216,6 +219,7 @@ sub new {
     'source' => $src,
     'source_description' => $src_desc,
     'source_url' => $src_url,
+		'source_type'=> $src_type,
     'is_somatic' => $is_somatic,
     'synonyms' => $syns || {},
     'ancestral_allele' => $ancestral_allele,
@@ -684,6 +688,25 @@ sub source{
   return $self->{'source'};
 }
 
+
+=head2 source_type
+
+  Arg [1]    : string $source_type (optional)
+               The new value to set the source type attribute to
+  Example    : $source_type = $v->source_type()
+  Description: Getter/Setter for the source type attribute
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : At risk
+
+=cut
+
+sub source_type{
+  my $self = shift;
+  return $self->{'source_type'} = shift if(@_);
+  return $self->{'source_type'};
+}
 
 
 =head2 source_description
