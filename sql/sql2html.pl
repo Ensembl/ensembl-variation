@@ -362,15 +362,18 @@ sub add_table_name_to_list {
 sub add_table_name {
 	my $t_name = shift;
 	
-	my $html = qq{\n<br />\n<h3 id="$t_name">$t_name</h3>\n};
+	my $html = qq{\n<br />\n<table style="border: 2px groove #CCCCCC;height:10px;background-color:#FAFAFF"><tr style="vertical-align:middle;height:10px">
+<td style="width:500px;text-align:left;height:10px"><span id="$t_name" style="font-size:11pt;font-weight:bold">$t_name</span></td>
+<td style="width:100px;text-align:right"><a id="a_$t_name" style="cursor:pointer;text-decoration:underline" onclick="show_hide('$t_name')">Show</a> columns</td>
+</tr></table>\n};
+	
 	return $html;
 }
 
 
 sub add_description {
 	my $desc = shift;
-	
-	return qq{<p>$desc<\p><br />};
+	return qq{<p>$desc<\p>};
 }
 
 
@@ -378,8 +381,8 @@ sub add_columns {
 	my @cols = @_;
 	my $table = shift @cols;
 	my $display_style = $display_col{$display};
-	my $html = qq{\n<a id="a_$table" style="cursor:pointer" onclick="show_hide('$table')">$display</a> columns\n
-	<div id="div_$table" style="display:$display_style">\n
+	
+	my $html = qq{\n	<div id="div_$table" style="display:$display_style">\n
 	<table style="border:1px outset #222222">
 		<tr class="bg3 center"><th style="width:200px">Column</th><th style="width:150px">Type</th><th style="width:100px">Default value</th><th style="width:400px">Description</th></tr>\n};
 	my $bg = 1;
@@ -393,6 +396,7 @@ sub add_columns {
 		else { $bg=1; }
 	}
 	$html .= qq {</table>\n</div>\n};
+	
 	return $html;
 }
 
@@ -407,6 +411,7 @@ sub add_see {
 		}
 		$html .= qq{</ul>\n};
 	}
+	
 	return $html;
 }
 
@@ -431,3 +436,4 @@ sub add_column_type_and_default_value {
 		print STDERR "The description of the column '$c_name' is missing in the table $table!\n";
 	}
 }
+
