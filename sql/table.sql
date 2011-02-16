@@ -60,7 +60,7 @@ create table variation (
 @column source_id												Foreign key references to the @link source table.
 @column study														The pubmed/id or project name associated with this study.
 @column study_type											Displays if a study come from a genome-wide association study or not.
-@column local_stable_id									EGA IDs. e.g. "EGAS00000000001".
+@column local_study_id									Foreign key references to the @link study table.
 @column associated_gene									Common gene(s) name(s) associated to the variation.
 @column associated_variant_risk_allele	Allele associated to the phenotype.
 @column variation_names									Name of the variation. e.g. "rs1333049".
@@ -79,7 +79,7 @@ create table variation_annotation (
 	source_id int(10) unsigned not null,
 	study varchar(30) default NULL,
 	study_type set('GWAS'),
-	local_stable_id varchar(255),
+	local_study_id int(10) default NULL,
 	associated_gene varchar(255) default NULL,
 	associated_variant_risk_allele varchar(255) default NULL,
 	variation_names varchar(255) default NULL,
@@ -89,7 +89,8 @@ create table variation_annotation (
 	primary key (variation_annotation_id),
 	key variation_idx(variation_id),
 	key phenotype_idx(phenotype_id),
-	key source_idx(source_id)
+	key source_idx(source_id),
+	key local_study_idx (local_study_id)
 );
 
 
@@ -453,19 +454,21 @@ create table variation_feature(
 
 @desc This table stores information about structural variation features.
 
-@column structural_variation_id	int	Primary key, internal identifier.
-@column seq_region_id		Foreign key references @link seq_region in core db. Refers to the seq_region which this variant is on, which may be a chromosome, a clone, etc...
-@column seq_region_start	The start position of the variation on the @link seq_region.
-@column seq_region_end		The end position of the variation on the @link seq_region.
-@column seq_region_strand	The orientation of the variation on the @link seq_region.
-@column variation_name		The external identifier or name of the variation. e.g. "esv9549".
-@column source_id				Foreign key references to the @link source table.
-@column class					The type of structural variation feature e.g. "SV"
-@column bound_start			The 5'-most bound defined for the feature.
-@column bound_end				The 3'-most bound defined for the feature.
-@column allele_string		The variant allele, where known.
+@column structural_variation_id	Primary key, internal identifier.
+@column seq_region_id						Foreign key references @link seq_region in core db. Refers to the seq_region which this variant is on, which may be a chromosome, a clone, etc...
+@column seq_region_start				The start position of the variation on the @link seq_region.
+@column seq_region_end					The end position of the variation on the @link seq_region.
+@column seq_region_strand				The orientation of the variation on the @link seq_region.
+@column variation_name					The external identifier or name of the variation. e.g. "esv9549".
+@column source_id								Foreign key references to the @link source table.
+@column study_id								Foreign key references to the @link study table.	
+@column class										The type of structural variation feature e.g. "SV"
+@column bound_start							The 5'-most bound defined for the feature.
+@column bound_end								The 3'-most bound defined for the feature.
+@column allele_string						The variant allele, where known.
 
 @see source
+@see study
 @see seq_region
 */
 
@@ -477,13 +480,39 @@ CREATE TABLE structural_variation (
   seq_region_strand tinyint(4) NOT NULL,
   variation_name varchar(255) DEFAULT NULL,
   source_id int(10) unsigned NOT NULL,
-  class varchar(255) DEFAULT NULL,
+  study_id int(10) DEFAULT NULL,
+	class varchar(255) DEFAULT NULL,
   bound_start int(11) DEFAULT NULL,
   bound_end int(11) DEFAULT NULL,
   allele_string longtext,
+	
   PRIMARY KEY (structural_variation_id),
   KEY pos_idx (seq_region_id,seq_region_start,seq_region_end),
-  KEY name_idx (variation_name)
+  KEY name_idx (variation_name),
+	KEY study_idx (study_id)
+);
+
+
+/**
+@table supporting_structural_variation
+
+@desc This table stores the name of the supporting evidence for the structural variants (e.g. DGVa structural variants).
+
+@column supporting_structural_variation_id	Primary key, internal identifier.
+@column name																The identifier or name of the supporting evidence.
+@column structural_variation_id							Foreign key references to the @link structural_variation table.
+
+@see structural_variation
+*/
+
+create table supporting_structural_variation (
+	supporting_structural_variation_id int(10) unsigned not null auto_increment,
+	name varchar(255) not null,
+	structural_variation_id int(10) unsigned not null,
+	
+	primary key( supporting_structural_variation_id ),
+	unique key name_idx(name),
+	key structural_variation_idx (structural_variation_id)
 );
 
 
@@ -826,6 +855,7 @@ create table httag(
 @column description	Description of the source.
 @column url				URL of the source.
 @column somatic		Flag to indicate if the source contains somatic mutations
+@column type			Define the type of the source, e.g. 'chip'
 
 @see variation
 @see variation_synonym
@@ -835,6 +865,8 @@ create table httag(
 @see allele_group
 @see sample_synonym
 @see httag
+@see structural_variation
+@see study
 */
 
 create table source(
@@ -847,6 +879,38 @@ create table source(
 	type ENUM('database','chip','archive') DEFAULT 'database',
 	
 	primary key( source_id )
+);
+
+
+/**
+@table study
+
+@desc This table contains details of some published studies. Most commonly the studies
+      information comes from the DGVa or EGA sources.
+
+@column study_id		Primary key, internal identifier.
+@column source_id		Foreign key references to the source table.
+@column name				Name of the study. e.g. "EGAS00000000001"
+@column description	Description of the study.
+@column url					URL to find the study data (http or ftp).
+@column study				The pubmed/id or project name associated with this study.
+
+@see source
+@see variation_annotation
+@see structural_variation
+*/
+
+create table study (
+	study_id int(10) unsigned not null auto_increment,
+	source_id int(10) unsigned not null,
+	name varchar(255) not null,
+	description varchar(255) DEFAULT NULL,
+	url varchar(255) DEFAULT NULL,
+	study varchar(255) DEFAULT NULL,
+	
+	primary key( study_id ),
+	unique key name_idx(name),
+	key source_idx (source_id)
 );
 
 
