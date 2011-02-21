@@ -81,7 +81,7 @@ sub fetch_all_somatic {
     return $self->generic_fetch($constraint);
 }
 
-# returns a hash mapping SO ids to SO and ensembl display terms
+# returns a hash mapping SO accessions to SO and ensembl display terms
 sub _variation_classes {
     my $self = shift;
     
@@ -92,25 +92,25 @@ sub _variation_classes {
         my $dbh = $self->dbc->db_handle;
         
         my $sth = $dbh->prepare(qq{
-            SELECT so_id, so_term, display_term FROM variation_class
+            SELECT so_accession, so_term, display_term FROM variation_class
         });
         
         $sth->execute;
         
-        while (my ($SO_id, $SO_term, $display_term) = $sth->fetchrow_array) {
-            $self->{_variation_classes}->{$SO_id}->{SO_term}        = $SO_term;
-            $self->{_variation_classes}->{$SO_id}->{display_term}   = $display_term;
-            $self->{_variation_classes}->{$SO_term}->{SO_id}        = $SO_id;
+        while (my ($SO_accession, $SO_term, $display_term) = $sth->fetchrow_array) {
+            $self->{_variation_classes}->{$SO_accession}->{SO_term}      = $SO_term;
+            $self->{_variation_classes}->{$SO_accession}->{display_term} = $display_term;
+            $self->{_variation_classes}->{$SO_term}->{SO_accession}      = $SO_accession;
         }
     }
     
     return $self->{_variation_classes};
 }
 
-sub _display_term_for_SO_id {
-    my ($self, $SO_id, $is_somatic) = @_;
+sub _display_term_for_SO_accession {
+    my ($self, $SO_accession, $is_somatic) = @_;
     
-    my $term = $self->_variation_classes->{$SO_id}->{display_term};
+    my $term = $self->_variation_classes->{$SO_accession}->{display_term};
     
     if ($is_somatic) {
         $term = 'SNV' if $term eq 'SNP';
@@ -120,15 +120,15 @@ sub _display_term_for_SO_id {
     return $term;
 }
 
-sub _SO_term_for_SO_id {
-    my ($self, $SO_id, $is_somatic) = @_;
-    return $self->_variation_classes->{$SO_id}->{SO_term}
+sub _SO_term_for_SO_accession {
+    my ($self, $SO_accession, $is_somatic) = @_;
+    return $self->_variation_classes->{$SO_accession}->{SO_term}
 }
 
 sub _display_term_for_SO_term {
     my ($self, $SO_term, $is_somatic) = @_;
-    my $SO_id = $self->_variation_classes->{$SO_term}->{SO_id};
-    return $self->_display_term_for_SO_id($SO_id, $is_somatic);
+    my $SO_accession = $self->_variation_classes->{$SO_term}->{SO_accession};
+    return $self->_display_term_for_SO_accession($SO_accession, $is_somatic);
 }
 
 1;
