@@ -40,7 +40,7 @@ sub store {
             variation_feature_id,
             feature_stable_id,
             allele_string,
-            is_somatic,
+            somatic,
             consequence_types,
             cds_start,
             cds_end,

@@ -29,12 +29,12 @@ use base qw(Bio::EnsEMBL::DBSQL::BaseAdaptor);
 
 sub fetch_all_by_Features {
     my ($self, $features) = @_;
-    return $self->fetch_all_by_Features_with_constraint($features,'is_somatic = 0');
+    return $self->fetch_all_by_Features_with_constraint($features,'somatic = 0');
 }
 
 sub fetch_all_somatic_by_Features {
     my ($self, $features) = @_;
-    return $self->fetch_all_by_Features_with_constraint($features,'is_somatic = 1');
+    return $self->fetch_all_by_Features_with_constraint($features,'somatic = 1');
 }
 
 sub fetch_all_by_Features_with_constraint {
@@ -43,7 +43,7 @@ sub fetch_all_by_Features_with_constraint {
     
     my $dbh = $self->dbc->db_handle;
    
-    my %feats_by_id = map { ($_->can('stable_id') ? $_->stable_id : $_->_stable_id) => $_ } @$features;
+    my %feats_by_id = map { $_->stable_id => $_ } @$features;
     
     my $id_str = join',', map {"'$_'"} keys %feats_by_id;
     
@@ -86,24 +86,24 @@ sub fetch_all_by_VariationFeatures {
     return $vfos;
 }
 
-sub ensembl_class_for_SO_term {
+sub ensembl_classes_for_SO_term {
     my ($self, $SO_term) = @_;
-    return $self->_feature_types->{$SO_term}->{ensembl_feature_type};
+    return [keys %{ $self->_feature_types->{$SO_term}->{ensembl_feature_class} } ];
 }
 
-sub ensembl_biotype_for_SO_term {
+sub ensembl_subtypes_for_SO_term {
     my ($self, $SO_term) = @_;
-    return $self->_feature_types->{$SO_term}->{ensembl_biotype};
+    return [keys %{ $self->_feature_types->{$SO_term}->{ensembl_subtype} } ];
 }
 
-sub ensembl_variant_class_for_SO_term {
+sub ensembl_variant_classes_for_SO_term {
     my ($self, $SO_term) = @_;
-    return $self->_feature_types->{$SO_term}->{ensembl_variant_type};
+    return [keys %{ $self->_feature_types->{$SO_term}->{ensembl_variant_class} } ];
 }
 
-sub SO_term_for_ensembl_feature {
+sub SO_terms_for_ensembl_feature {
     my ($self, $feature) = @_;
-    return $self->_feature_types->{ref $feature}->{SO_term};
+    return [keys %{ $self->_feature_types->{ref $feature}->{SO_term} } ];
 }
 
 sub _feature_types {
@@ -122,15 +122,16 @@ sub _feature_types {
         my $mapping = {};
         
         while (my ($SO_term, $ens_type, $ens_biotype, $var_type) = $sth->fetchrow_array) {
-            $mapping->{$SO_term} = {
-                ensembl_feature_type    => $ens_type,
-                ensembl_biotype         => $ens_biotype,
-                ensembl_variant_type    => $var_type,
-            };
             
-            $mapping->{$ens_type} = {
-                SO_term => $SO_term,
-            };
+            my $so2ens = $mapping->{$SO_term} ||= {};
+            
+            $so2ens->{ensembl_feature_type}->{$ens_type} = 1 if $ens_type;
+            $so2ens->{ensembl_biotype}->{$ens_biotype}   = 1 if $ens_biotype;
+            $so2ens->{ensembl_variant_type}->{$var_type} = 1 if $var_type;
+            
+            my $ens2so = $mapping->{$ens_type} ||= {};
+            
+            $ens2so->{SO_term}->{$SO_term} = 1 if $SO_term;
         }
         
         $self->{_feature_types} = $mapping;
