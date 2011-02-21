@@ -155,8 +155,20 @@ sub consequence_types {
     return $cons;
 }
 
+sub _is_redundant {
+    
+    
+}
+
 sub SO_isa {
     my ($self, $query) = @_;
+    
+    if (my $adap = $self->variation_feature_overlap->{adaptor}) {
+        if (my $ota = $adap->db->dnadb->get_OntologyTermAdaptor) {
+            my $term = $ota->fetch_by_accession();
+            my @parents = $ota->fetch_by_child_term($term);
+        }
+    }
     
     for my $cons (@{ $self->consequence_types }) {
         if ($cons->SO_term eq $query) {

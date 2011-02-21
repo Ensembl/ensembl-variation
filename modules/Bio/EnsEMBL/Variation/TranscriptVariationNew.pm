@@ -24,7 +24,7 @@ use strict;
 use warnings;
 
 use Bio::EnsEMBL::Variation::TranscriptVariationAllele;
-use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(overlap affects_peptide);
+use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(overlap within_cds);
 
 use base qw(Bio::EnsEMBL::Variation::VariationFeatureOverlap);
 
@@ -403,19 +403,14 @@ sub _hgvs_generic {
     return $hgvs;
 }
 
-### 
-# the methods below are only implemented to be backwards compatible
-# with the previous (non-allele specific) version of the
-# TranscriptVariation class, they are now deprecated and may 
-# be removed in the future
-###
-
 sub pep_allele_string {
     my $self = shift;
     
     unless ($self->{_pep_allele_string}) {
-        $self->{_pep_allele_string} = 
-            join '/', map { $_->peptide } @{ $self->alleles };
+        
+        my @peptides = grep {defined $_} map { $_->peptide } @{ $self->alleles };
+        
+        $self->{_pep_allele_string} = join '/', @peptides;
     }
     
     return $self->{_pep_allele_string};
@@ -425,8 +420,10 @@ sub codons {
     my $self = shift;
     
     unless ($self->{_codon_allele_string}) {
-        $self->{_codon_allele_string} = 
-            join '/', map { $_->codon } @{ $self->alleles };
+        
+        my @codons = grep {defined $_} map { $_->codon } @{ $self->alleles };
+        
+        $self->{_codon_allele_string} = join '/', @codons;
     }
     
     return $self->{_codon_allele_string};
@@ -434,7 +431,7 @@ sub codons {
 
 sub affects_transcript {
     my $self = shift;
-    return scalar grep { affects_peptide($_) } @{ $self->alt_alleles }; 
+    return scalar grep { within_cds($_) } @{ $self->alt_alleles }; 
 }
 
 1;
