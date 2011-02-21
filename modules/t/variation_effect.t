@@ -7,6 +7,7 @@ use Data::Dumper;
 
 use Bio::EnsEMBL::Registry;
 use Bio::EnsEMBL::Variation::VariationFeature;
+use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
 
 BEGIN {
     use_ok('Bio::EnsEMBL::Variation::TranscriptVariationNew');
@@ -68,13 +69,13 @@ $transcript_tests->{$tf->stable_id}->{tests} = [
         effects => [ qw(2KB_upstream_variant) ],
     }, {
         comment => 'an insertion just before the start is upstream',
-        alleles => '-/A',
+        alleles => 'A',
         start   => $t_start,
         end     => $t_start - 1,
         effects => [ qw(2KB_upstream_variant) ],
     }, {
         comment => 'an insertion just after the end is downstream',
-        alleles => '-/A',
+        alleles => 'A',
         start   => $t_end+1,
         end     => $t_end,
         effects => [ qw(500B_downstream_variant) ],
@@ -108,7 +109,7 @@ $transcript_tests->{$tf->stable_id}->{tests} = [
         effects => [qw(5_prime_UTR_variant)],
     }, {
         comment => 'an insertion between the first 2 bases is UTR',
-        alleles => '-/A',
+        alleles => 'A',
         start   => $t_start + 1,
         end     => $t_start,
         effects => [ qw(5_prime_UTR_variant) ],
@@ -118,13 +119,13 @@ $transcript_tests->{$tf->stable_id}->{tests} = [
         effects => [qw(5_prime_UTR_variant)],
     }, {
         comment => 'an insertion just before the cds start is UTR',
-        alleles => '-/A',
+        alleles => 'A',
         start   => $cds_start, 
         end     => $cds_start-1,
         effects => [qw(5_prime_UTR_variant)],
     }, {
         comment => 'an insertion just after the cds end is UTR',
-        alleles => '-/A',
+        alleles => 'A',
         start   => $cds_end+1, 
         end     => $cds_end,
         effects => [qw(3_prime_UTR_variant)],
@@ -170,31 +171,31 @@ $transcript_tests->{$tf->stable_id}->{tests} = [
         effects => [qw(intron_variant)],
     }, {
         comment => 'an insertion between the last exon base and the first intron base is not essential',
-        alleles => '-/A',
+        alleles => 'A',
         start   => $intron_start,
         end     => $intron_start-1,
         effects => [qw(splice_region_variant frameshift_variant)],
     }, {
         comment => 'an insertion between the first two bases of an intron is in the donor',
-        alleles => '-/A',
+        alleles => 'A',
         start   => $intron_start+1,
         end     => $intron_start,
         effects => [qw(splice_donor_variant)],
     }, {
         comment => 'insertion between bases 2 & 3 of an intron is splice_region',
-        alleles => '-/A',
+        alleles => 'A',
         start   => $intron_start+2,
         end     => $intron_start+1,
         effects => [qw(splice_region_variant intron_variant)],
     }, {
         comment => 'insertion between bases 7 & 8 is still splice_region',
-        alleles => '-/A',
+        alleles => 'A',
         start   => $intron_start+7,
         end     => $intron_start+6,
         effects => [qw(splice_region_variant intron_variant)],
     }, {
         comment => 'insertion between bases 8 & 9 is just an intron_variant',
-        alleles => '-/A',
+        alleles => 'A',
         start   => $intron_start+8,
         end     => $intron_start+7,
         effects => [qw(intron_variant)],
@@ -229,34 +230,34 @@ $transcript_tests->{$tf->stable_id}->{tests} = [
     }, {
         start   => $intron_end+4,
         end     => $intron_end+4,
-        effects => [qw(synonymous_codon)],
+        effects => [qw(non_synonymous_codon stop_gained)],
     }, {
         comment => 'an insertion between the last intron base and the first exon base is not essential',
-        alleles => '-/A',
+        alleles => 'A',
         start   => $intron_end+1,
         end     => $intron_end,
         effects => [qw(splice_region_variant frameshift_variant)],
     }, {
         comment => 'an insertion between the last two bases of an intron is in the acceptor',
-        alleles => '-/A',
+        alleles => 'A',
         start   => $intron_end,
         end     => $intron_end-1,
         effects => [qw(splice_acceptor_variant)],
     }, {
         comment => 'insertion between last bases 2 & 3 of an intron is splice_region',
-        alleles => '-/A',
+        alleles => 'A',
         start   => $intron_end-1,
         end     => $intron_end-2,
         effects => [qw(splice_region_variant intron_variant)],
     }, {
         comment => 'insertion between last bases 7 & 8 is still splice_region',
-        alleles => '-/A',
+        alleles => 'A',
         start   => $intron_end-6,
         end     => $intron_end-7,
         effects => [qw(splice_region_variant intron_variant)],
     }, {
         comment => 'insertion between last bases 8 & 9 is just an intron_variant',
-        alleles => '-/A',
+        alleles => 'A',
         start   => $intron_end-7,
         end     => $intron_end-8,
         effects => [qw(intron_variant)],
@@ -265,120 +266,120 @@ $transcript_tests->{$tf->stable_id}->{tests} = [
     # check the CDS 
 
     {
-        alleles => 'A/G',
+        alleles => 'G',
         start   => $cds_start,
         end     => $cds_start,
         effects => [qw(initiator_codon_change)],
     }, {
-        alleles => 'T/G',
+        alleles => 'G',
         start   => $cds_start+1,
         end     => $cds_start+1,
         effects => [qw(initiator_codon_change)],
     }, {
-        alleles => 'G/C',
+        alleles => 'C',
         start   => $cds_start+2,
         end     => $cds_start+2,
         effects => [qw(initiator_codon_change)],
     },  {
-        alleles => 'A/G',
+        alleles => 'C',
         start   => $cds_start+3,
         end     => $cds_start+3,
         effects => [qw(non_synonymous_codon)],
     }, {
-        alleles => '-/GGG',
+        alleles => 'GGG',
         start   => $cds_start+3,
         end     => $cds_start+2,
         effects => [qw(inframe_codon_gain)],
     }, {
-        alleles => '-/GGG',
+        alleles => 'GGG',
         start   => $cds_start+2,
         end     => $cds_start+1,
         effects => [qw(inframe_codon_gain)],
     }, {
-        alleles => '-/AGG',
+        alleles => 'AGG',
         start   => $cds_start+2,
         end     => $cds_start+1,
         effects => [qw(inframe_codon_gain initiator_codon_change)],
     }, {
-        alleles => 'GAC/-',
+        alleles => '-',
         start   => $cds_start+3,
         end     => $cds_start+5,
         effects => [qw(inframe_codon_loss)],
         pep_alleles => 'D/-',
     }, {
-        alleles => 'GAC/GAT',
+        alleles => 'GAT',
         start   => $cds_start+3,
         end     => $cds_start+5,
         effects => [qw(synonymous_codon)],
         pep_alleles => 'D/D',
     }, {
-        alleles => 'GACGCA/GATACA',
+        alleles => 'GATACA',
         start   => $cds_start+3,
-        end     => $cds_start+5,
+        end     => $cds_start+8,
         effects => [qw(non_synonymous_codon)],
         pep_alleles => 'DA/DT',
     }, {
-        alleles => '-/G',
+        alleles => 'G',
         start   => $cds_start+4,
         end     => $cds_start+3,
         effects => [qw(frameshift_variant)],
     }, {
-        alleles => '-/GT',
+        alleles => 'GT',
         start   => $cds_start+4,
         end     => $cds_start+3,
         effects => [qw(frameshift_variant)],
     }, {
-        alleles => '-/GTAG',
+        alleles => 'GTAG',
         start   => $cds_start+4,
         end     => $cds_start+3,
         effects => [qw(frameshift_variant)],
     }, {
-        alleles => 'G/-',
+        alleles => '-',
         start   => $cds_start+3,
         end     => $cds_start+3,
         effects => [qw(frameshift_variant)],
     }, {
-        alleles => 'GT/-',
+        alleles => '-',
         start   => $cds_start+3,
         end     => $cds_start+4,
         effects => [qw(frameshift_variant)],
     }, {
-        alleles => 'GTAG/-',
+        alleles => '-',
         start   => $cds_start+3,
         end     => $cds_start+6,
         effects => [qw(frameshift_variant)],
     }, {
-        alleles => 'T/G',
+        alleles => 'G',
         start   => $cds_end-2,
         end     => $cds_end-2,
         effects => [qw(stop_lost)],
     }, {
-        alleles => 'G/A',
+        alleles => 'A',
         start   => $cds_end-1,
         end     => $cds_end-1,
         effects => [qw(stop_retained_variant)],
     }, {
-        alleles => 'A/C',
+        alleles => 'C',
         start   => $cds_end,
         end     => $cds_end,
         effects => [qw(stop_lost)],
     }, {
-        alleles => '-/AAG',
+        alleles => 'AAG',
         start   => $cds_end-1,
         end     => $cds_end-2,
         effects => [qw(stop_retained_variant inframe_codon_gain)],
     }, {
-        alleles => 'TGA/-',
+        alleles => '-',
         start   => $cds_end-2,
         end     => $cds_end,
         effects => [qw(stop_lost inframe_codon_loss)],
     }, {
-        alleles => 'TGA/TAA',
+        alleles => 'TAA',
         start   => $cds_end-2,
         end     => $cds_end,
         effects => [qw(stop_retained_variant)],
     }, {
-        alleles => 'TGA/GGG',
+        alleles => 'GGG',
         start   => $cds_end-2,
         end     => $cds_end,
         effects => [qw(stop_lost)],
@@ -390,7 +391,7 @@ $transcript_tests->{$tf->stable_id}->{tests} = [
         effects => [qw(coding_sequence_variant)],
     }, {
         comment => 'an ambiguous allele string',
-        alleles => 'C/W',
+        alleles => 'W',
         start   => $cds_end-10,
         end     => $cds_end-10,
         effects => [qw(coding_sequence_variant)],
@@ -399,22 +400,22 @@ $transcript_tests->{$tf->stable_id}->{tests} = [
     # check the complex calls
     
     {
-        alleles => 'AAAAAA/-',
+        alleles => '-',
         start   => $intron_start-3,
         end     => $intron_start+2,
         effects => [qw(complex_change_in_transcript splice_donor_variant coding_sequence_variant)],
     }, {
-        alleles => 'AAAAAA/-',
+        alleles => '-',
         start   => $intron_end-2,
         end     => $intron_end+3,
         effects => [qw(complex_change_in_transcript splice_acceptor_variant coding_sequence_variant)],
     }, {
-        alleles => 'AAAAAA/-',
+        alleles => '-',
         start   => $cds_start-3,
         end     => $cds_start+2,
         effects => [qw(complex_change_in_transcript 5_prime_UTR_variant coding_sequence_variant)],
     },  {
-        alleles => 'AAAAAA/-',
+        alleles => '-',
         start   => $cds_end-2,
         end     => $cds_end+3,
         effects => [qw(complex_change_in_transcript 3_prime_UTR_variant coding_sequence_variant)],
@@ -467,13 +468,13 @@ $transcript_tests->{$tr->stable_id}->{tests} = [
         effects => [ qw(2KB_upstream_variant) ],
     }, {
         comment => 'an insertion just before the start is upstream',
-        alleles => '-/A',
+        alleles => 'A',
         start   => $t_end + 1,
         end     => $t_end,
         effects => [ qw(2KB_upstream_variant) ],
     }, {
         comment => 'an insertion just after the end is downstream',
-        alleles => '-/A',
+        alleles => 'A',
         start   => $t_start,
         end     => $t_start - 1,
         effects => [ qw(500B_downstream_variant) ],
@@ -507,7 +508,7 @@ $transcript_tests->{$tr->stable_id}->{tests} = [
         effects => [qw(5_prime_UTR_variant)],
     }, {
         comment => 'an insertion between the first 2 bases is UTR',
-        alleles => '-/A',
+        alleles => 'A',
         start   => $t_end,
         end     => $t_end - 1,
         effects => [ qw(5_prime_UTR_variant) ],
@@ -517,13 +518,13 @@ $transcript_tests->{$tr->stable_id}->{tests} = [
         effects => [qw(5_prime_UTR_variant)],
     }, {
         comment => 'an insertion just before the cds start is UTR',
-        alleles => '-/A',
+        alleles => 'A',
         start   => $cds_end + 1, 
         end     => $cds_end,
         effects => [qw(5_prime_UTR_variant)],
     }, {
         comment => 'an insertion just after the cds end is UTR',
-        alleles => '-/A',
+        alleles => 'A',
         start   => $cds_start, 
         end     => $cds_start - 1,
         effects => [qw(3_prime_UTR_variant)],
@@ -569,31 +570,31 @@ $transcript_tests->{$tr->stable_id}->{tests} = [
         effects => [qw(intron_variant)],
     }, {
         comment => 'an insertion between the last exon base and the first intron base is not essential',
-        alleles => '-/A',
+        alleles => 'A',
         start   => $intron_end + 1,
         end     => $intron_end,
         effects => [qw(splice_region_variant frameshift_variant)],
     }, {
         comment => 'an insertion between the first two bases of an intron is in the donor',
-        alleles => '-/A',
+        alleles => 'A',
         start   => $intron_end,
         end     => $intron_end - 1,
         effects => [qw(splice_donor_variant)],
     }, {
         comment => 'insertion between bases 2 & 3 of an intron is splice_region',
-        alleles => '-/A',
+        alleles => 'A',
         start   => $intron_end - 1,
         end     => $intron_end - 2,
         effects => [qw(splice_region_variant intron_variant)],
     }, {
         comment => 'insertion between bases 7 & 8 is still splice_region',
-        alleles => '-/A',
+        alleles => 'A',
         start   => $intron_end - 6,
         end     => $intron_end - 7,
         effects => [qw(splice_region_variant intron_variant)],
     }, {
         comment => 'insertion between bases 8 & 9 is just an intron_variant',
-        alleles => '-/A',
+        alleles => 'A',
         start   => $intron_end - 7,
         end     => $intron_end - 8,
         effects => [qw(intron_variant)],
@@ -631,31 +632,31 @@ $transcript_tests->{$tr->stable_id}->{tests} = [
         effects => [qw(non_synonymous_codon)],
     }, {
         comment => 'an insertion between the last intron base and the first exon base is not essential',
-        alleles => '-/A',
+        alleles => 'A',
         start   => $intron_start,
         end     => $intron_start - 1,
         effects => [qw(splice_region_variant frameshift_variant)],
     }, {
         comment => 'an insertion between the last two bases of an intron is in the acceptor',
-        alleles => '-/A',
+        alleles => 'A',
         start   => $intron_start + 1,
         end     => $intron_start,
         effects => [qw(splice_acceptor_variant)],
     }, {
         comment => 'insertion between last bases 2 & 3 of an intron is splice_region',
-        alleles => '-/A',
+        alleles => 'A',
         start   => $intron_start + 2,
         end     => $intron_start + 1,
         effects => [qw(splice_region_variant intron_variant)],
     }, {
         comment => 'insertion between last bases 7 & 8 is still splice_region',
-        alleles => '-/A',
+        alleles => 'A',
         start   => $intron_start + 7,
         end     => $intron_start + 6,
         effects => [qw(splice_region_variant intron_variant)],
     }, {
         comment => 'insertion between last bases 8 & 9 is just an intron_variant',
-        alleles => '-/A',
+        alleles => 'A',
         start   => $intron_start + 8,
         end     => $intron_start + 7,
         effects => [qw(intron_variant)],
@@ -664,142 +665,142 @@ $transcript_tests->{$tr->stable_id}->{tests} = [
     # check the CDS 
 
     {
-        alleles => 'A/G',
+        alleles => 'C',
         strand  => -1,
         start   => $cds_end,
         end     => $cds_end,
         effects => [qw(initiator_codon_change)],
     }, {
-        alleles => 'T/G',
+        alleles => 'G',
         strand  => -1,
         start   => $cds_end - 1,
         end     => $cds_end - 1,
         effects => [qw(initiator_codon_change)],
     }, {
-        alleles => 'G/C',
+        alleles => 'C',
         strand  => -1,
         start   => $cds_end - 2,
         end     => $cds_end - 2,
         effects => [qw(initiator_codon_change)],
     },  {
-        alleles => 'A/G',
+        alleles => 'G',
         strand  => -1,
         start   => $cds_end - 3,
         end     => $cds_end - 3,
         effects => [qw(non_synonymous_codon)],
     }, {
-        alleles => '-/GGG',
+        alleles => 'GGG',
         strand  => -1,
         start   => $cds_end - 2,
         end     => $cds_end - 3,
         effects => [qw(inframe_codon_gain)],
     }, {
-        alleles => '-/GGG',
+        alleles => 'GGG',
         strand  => -1,
         start   => $cds_end - 1,
         end     => $cds_end - 2,
         effects => [qw(inframe_codon_gain)],
     }, {
-        alleles => '-/AGG',
+        alleles => 'AGG',
         strand  => -1,
         start   => $cds_end - 1,
         end     => $cds_end - 2,
         effects => [qw(inframe_codon_gain initiator_codon_change)],
     }, {
-        alleles => 'GAC/-',
+        alleles => '-',
         strand  => -1,
         start   => $cds_end - 5,
         end     => $cds_end - 3,
         effects => [qw(inframe_codon_loss)],
-        pep_alleles => 'D/-',
+        pep_alleles => 'L/-',
     }, {
-        alleles => 'GAC/GAT',
+        alleles => 'CTT',
         strand  => -1,
         start   => $cds_end - 5,
         end     => $cds_end - 3,
         effects => [qw(synonymous_codon)],
-        pep_alleles => 'D/D',
+        pep_alleles => 'L/L',
     }, {
-        alleles => 'GACGCA/GATACA',
+        alleles => 'GATACA',
         strand  => -1,
-        start   => $cds_end - 5,
+        start   => $cds_end - 8,
         end     => $cds_end - 3,
         effects => [qw(non_synonymous_codon)],
-        pep_alleles => 'DA/DT',
+        pep_alleles => 'LT/DT',
     }, {
-        alleles => '-/G',
+        alleles => 'G',
         strand  => -1,
         start   => $cds_end - 3,
         end     => $cds_end - 4,
         effects => [qw(frameshift_variant)],
     }, {
-        alleles => '-/GT',
+        alleles => 'GT',
         strand  => -1,
         start   => $cds_end - 3,
         end     => $cds_end - 4,
         effects => [qw(frameshift_variant)],
     }, {
-        alleles => '-/GTAG',
+        alleles => 'GTAG',
         strand  => -1,
         start   => $cds_end - 3,
         end     => $cds_end - 4,
         effects => [qw(frameshift_variant)],
     }, {
-        alleles => 'G/-',
+        alleles => '-',
         strand  => -1,
         start   => $cds_end - 3,
         end     => $cds_end - 3,
         effects => [qw(frameshift_variant)],
     }, {
-        alleles => 'GT/-',
+        alleles => '-',
         strand  => -1,
         start   => $cds_end - 4,
         end     => $cds_end - 3,
         effects => [qw(frameshift_variant)],
     }, {
-        alleles => 'GTAG/-',
+        alleles => '-',
         strand  => -1,
         start   => $cds_end - 6,
         end     => $cds_end - 3,
         effects => [qw(frameshift_variant)],
     }, {
-        alleles => 'T/G',
+        alleles => 'G',
         strand  => -1,
         start   => $cds_start + 2,
         end     => $cds_start + 2,
         effects => [qw(stop_lost)],
     }, {
-        alleles => 'G/A',
+        alleles => 'A',
         strand  => -1,
         start   => $cds_start + 1,
         end     => $cds_start + 1,
         effects => [qw(stop_retained_variant)],
     }, {
-        alleles => 'A/C',
+        alleles => 'C',
         strand  => -1,
         start   => $cds_start,
         end     => $cds_start,
         effects => [qw(stop_lost)],
     }, {
-        alleles => '-/AAG',
+        alleles => 'AAG',
         strand  => -1,
         start   => $cds_start + 2,
         end     => $cds_start + 1,
         effects => [qw(stop_retained_variant inframe_codon_gain)],
     }, {
-        alleles => 'TGA/-',
+        alleles => '-',
         strand  => -1,
         start   => $cds_start,
         end     => $cds_start + 2,
         effects => [qw(stop_lost inframe_codon_loss)],
     }, {
-        alleles => 'TGA/TAA',
+        alleles => 'TAA',
         strand  => -1,
         start   => $cds_start,
         end     => $cds_start + 2,
         effects => [qw(stop_retained_variant)],
     }, {
-        alleles => 'TGA/GGG',
+        alleles => 'GGG',
         strand  => -1,
         start   => $cds_start,
         end     => $cds_start + 2,
@@ -809,22 +810,22 @@ $transcript_tests->{$tr->stable_id}->{tests} = [
     # check the complex calls
     
     {
-        alleles => 'AAAAAA/-',
+        alleles => '-',
         start   => $intron_end - 2,
         end     => $intron_end + 3,
         effects => [qw(complex_change_in_transcript splice_donor_variant coding_sequence_variant)],
     }, {
-        alleles => 'AAAAAA/-',
+        alleles => '-',
         start   => $intron_start - 3,
         end     => $intron_start + 2,
         effects => [qw(complex_change_in_transcript splice_acceptor_variant coding_sequence_variant)],
     }, {
-        alleles => 'AAAAAA/-',
+        alleles => '-',
         start   => $cds_end - 2,
         end     => $cds_end + 3,
         effects => [qw(complex_change_in_transcript 5_prime_UTR_variant coding_sequence_variant)],
     },  {
-        alleles => 'AAAAAA/-',
+        alleles => '-',
         start   => $cds_start - 3,
         end     => $cds_start + 2,
         effects => [qw(complex_change_in_transcript 3_prime_UTR_variant coding_sequence_variant)],
@@ -844,6 +845,8 @@ $first_intron = $t3->get_all_Introns->[0];
 
 $intron_start = $first_intron->seq_region_start;
 $intron_end   = $first_intron->seq_region_end;
+
+$cds_start = $t3->coding_region_start;
 
 $transcript_tests->{$t3->stable_id}->{tests} = [
     {
@@ -878,6 +881,13 @@ $transcript_tests->{$t3->stable_id}->{tests} = [
         start   => $intron_end + 1,
         end     => $intron_end + 1,
         effects => [qw(splice_region_variant 5_prime_UTR_variant)],
+    }, {
+        comment => 'a variation with an incorrect reference allele',
+        ref     => 'G',
+        alleles => 'T',
+        start   => $cds_start + 3,
+        end     => $cds_start + 3,
+        effects => [qw(non_synonymous_codon non_synonymous_codon)],
     },
 
 ];
@@ -924,11 +934,11 @@ $transcript_tests->{$mirna->stable_id}->{tests} = [
     {
         start   => $t_start,
         end     => $t_start,
-        effects => [qw(nc_transcript_variant)],
+        effects => [qw(nc_transcript_variant pre_miRNA_variant)],
     }, {
         start   => $t_start + 40,
         end     => $t_start + 40,
-        effects => [qw(nc_transcript_variant mature_miRNA_variant)],
+        effects => [qw(nc_transcript_variant mature_miRNA_variant pre_miRNA_variant)],
     }, 
 ];
 
@@ -951,11 +961,9 @@ $transcript_tests->{$t4->stable_id}->{tests} = [
 
 my $test_count = 1;
 
-my $def_alleles = 'C/T';
 my $def_strand  = 1;
 
 my $reverse = 0;
-my $tran = $tf;
 
 for my $stable_id (keys %$transcript_tests) {
     
@@ -963,15 +971,26 @@ for my $stable_id (keys %$transcript_tests) {
 
     for my $test (@{ $transcript_tests->{$stable_id}->{tests} }) {
 
-        $test->{alleles} ||= $def_alleles;
+        my $ref = $test->{ref} || $tran->slice->subseq($test->{start}, $test->{end}, $test->{strand});
+       
+        $ref = '-' unless $ref;
+
+        unless ($test->{alleles}) {
+            my $alt = $ref;
+            reverse_comp(\$alt);
+            $test->{alleles} = $alt;
+        }
+
         $test->{strand} = $def_strand unless defined $test->{strand};
+
+        my $allele_string = $ref.'/'.$test->{alleles};
 
         my $vf = Bio::EnsEMBL::Variation::VariationFeature->new(
             -start          => $test->{start},
             -end            => $test->{end},
             -strand         => $test->{strand},
-            -slice          => $tf->slice,
-            -allele_string  => $test->{alleles},
+            -slice          => $tran->slice,
+            -allele_string  => $ref.'/'.$test->{alleles},
             -variation_name => 'test'.$test_count,
             -adaptor        => $vfa,
         );
@@ -981,6 +1000,10 @@ for my $stable_id (keys %$transcript_tests) {
             feature             => $tran,
             adaptor             => $tva,
         });
+
+        warn "# alleles: $allele_string\n";
+        warn '# codons: ', $tv->codons, "\n";
+        warn '# peptides: ', $tv->pep_allele_string, "\n";
 
         my @effects = map {
             map { $_->SO_term } @{ $_->consequence_types }
@@ -999,7 +1022,7 @@ for my $stable_id (keys %$transcript_tests) {
                 $tv->pep_allele_string, 
                 $expected_pep_alleles, 
                 "peptide allele string is correct (expected $expected_pep_alleles)"
-            );
+            ) || die;
         }
 
         $test_count++;
