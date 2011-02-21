@@ -624,7 +624,15 @@ sub whole_genome_fetch {
 	&start("transcripts");
 	
 	foreach my $chr(keys %$vf_hash) {
-		my $slice = $sa->fetch_by_region('chromosome', $chr);
+		my $slice;
+		
+ 		# first try to get a chromosome
+ 		eval { $slice = $sa->fetch_by_region('chromosome', $chr); };
+ 		
+ 		# if failed, try to get any seq region
+ 		if(!defined($slice)) {
+ 			$slice = $sa->fetch_by_region(undef, $chr);
+ 		}
 		
 		warn "Analyzing chromosome $chr";
 		
