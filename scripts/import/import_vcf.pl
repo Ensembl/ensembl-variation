@@ -46,7 +46,7 @@ my %Printable = ( "\\"=>'\\', "\r"=>'r', "\n"=>'n', "\t"=>'t', "\""=>'"' );
 ######################
 
 # get command-line options
-my ($in_file, $species, $registry_file, $help, $host, $user, $password, $source, $population, $flank_size, $TMP_DIR, $TMP_FILE, $skip_multi, $use_gp, $sample_prefix, $variation_prefix, $disable_keys, $include_tables, $merge_vfs, $skip_tables, $compressed_only, $only_existing, $merge_alleles);
+my ($in_file, $species, $registry_file, $help, $host, $user, $password, $source, $population, $flank_size, $TMP_DIR, $TMP_FILE, $skip_multi, $use_gp, $sample_prefix, $variation_prefix, $disable_keys, $include_tables, $merge_vfs, $skip_tables, $compressed_only, $only_existing, $merge_alleles, $new_var_name);
 
 my $args = scalar @ARGV;
 
@@ -73,6 +73,7 @@ GetOptions(
 	'merge_vfs'     => \$merge_vfs,
 	'only_existing' => \$only_existing,
 	'merge_alleles' => \$merge_alleles,
+	'create_name'   => \$new_var_name,
 );
 
 
@@ -308,7 +309,7 @@ while(<$in_file_handle>) {
 		############
 		
 		# make a var name if none exists
-		if($data->{ID} eq '.') {
+		if($data->{ID} eq '.' || $new_var_name) {
 			$data->{ID} =
 				($variation_prefix ? $variation_prefix : 'tmp').
 				'_'.$data->{'#CHROM'}.'_'.$data->{POS};
@@ -530,6 +531,8 @@ Options
 --population          Name of population [required]
 --ind_prefix          Prefix added to sample names [default: not used]
 --var_prefix          Prefix added to constructed variation names [default: not used]
+--create_name         Always create a new variation name i.e. don't use ID column
+                      [default: not used]
 
 -f | --flank          Size of flanking sequence [default: 200]
 --gp                  Use GP tag from INFO column to get coords [default: not used]
@@ -1036,6 +1039,10 @@ sub merge_variation_features {
 		$row_count++;
 		
 		my @existing_alleles = split /\//, $allele_string;
+		
+		# compare ref alleles - we don't want to merge if they differ
+		return unless $exisiting_alleles[0] eq $data->{alleles}->[0];
+		
 		my %new_alleles = ();
 		$new_alleles{$_}++ for @existing_alleles;
 		$new_alleles{$_}++ for @{$data->{alleles}};
@@ -1064,7 +1071,7 @@ sub merge_variation_features {
 				SET allele_string = ?
 				WHERE variation_feature_id = ?
 			});
-			$sth->execute($new_allele_string);
+			$sth->execute($new_allele_string, $vf_id);
 			$sth->finish;
 		}
 		
