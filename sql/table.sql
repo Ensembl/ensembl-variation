@@ -10,6 +10,7 @@
 @column ancestral_allele	Taken from dbSNP to show ancestral allele for the variation.
 @column flipped						This is set to 1 if the variant is flipped from the negative to the positive strand during import.
 @column class_so_id				Class of the variation, based on the Sequence Ontology.
+@column somatic             flags whether this variation is known to be somatic or not
 
 @see variation_synonym
 @see flanking_sequence
@@ -41,7 +42,7 @@ create table variation (
         'SO:0001059', # sequence_alteration
         'SO:0001019'  # copy_number_variation
     ) DEFAULT 'SO:0001059', # default to sequence_alteration, the highest level SO term
-
+    somatic tinyint(1) DEFAULT 0,
 
 	primary key( variation_id ),
 	unique ( name ),
@@ -854,7 +855,6 @@ create table httag(
 @column version		Version number of the source (if available). e.g. "132"
 @column description	Description of the source.
 @column url				URL of the source.
-@column somatic		Flag to indicate if the source contains somatic mutations
 @column type			Define the type of the source, e.g. 'chip'
 
 @see variation
@@ -875,7 +875,6 @@ create table source(
 	version int,
 	description varchar(255),
 	url varchar(255),
-	somatic tinyint(1) DEFAULT '0',
 	type ENUM('database','chip','archive') DEFAULT 'database',
 	
 	primary key( source_id )
