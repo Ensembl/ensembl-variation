@@ -1028,8 +1028,8 @@ sub merge_variation_features {
 	});
 	
 	my ($vf_id, $variation_id, $allele_string, $new_allele_string);
-	$sth->bind_columns(\$vf_id, \$variation_id, \$allele_string);
 	$sth->execute($data->{seq_region}, $data->{start}, $data->{end});
+	$sth->bind_columns(\$vf_id, \$variation_id, \$allele_string);
 	
 	my ($row_count);
 	
@@ -1256,8 +1256,8 @@ sub multi_bp_genotype {
 					(join ",",
 						(
 							$data->{var_id},
-							$a1,
-							$a2,
+							"'$a1'",
+							"'$a2'",
 							$sample_id
 						)
 					).
