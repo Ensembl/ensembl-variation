@@ -26,21 +26,6 @@ use warnings;
 use Bio::EnsEMBL::Utils::Sequence qw(expand);
 use Bio::EnsEMBL::Variation::VariationFeatureOverlapAllele;
 
-my $feature_SO_term_to_ensembl_type = {
-    'mRNA'                  =>  {
-        feature_type    => 'Bio::EnsEMBL::Transcript',
-        variant_type    => 'Bio::EnsEMBL::Variation::TranscriptVariationNew',
-    },
-    'regulatory_region'     => {
-        feature_type    => 'Bio::EnsEMBL::Funcgen::RegulatoryFeature',
-        variant_type    => 'Bio::EnsEMBL::Variation::RegualtoryFeatureVariation',
-    },
-    'binding_site'     => {
-        feature_type    => 'Bio::EnsEMBL::Funcgen::MotifFeature',
-        variant_type    => 'Bio::EnsEMBL::Variation::MotifFeatureVariation',
-    },
-};
-
 sub new {
     my ($class, $hashref) = @_;
     
@@ -50,25 +35,22 @@ sub new {
     
     # get the allele string, expand it, and split it into separate alleles
     
-    my $vf   = $self->{variation_feature};
-    my $tran = $self->{transcript};
+    my $vf          = $self->{variation_feature};
+    my $tran        = $self->{transcript};
+    my $ref_feature = $self->{ref_feature} || $vf->slice;
     
+    my $ref_allele = $ref_feature->subseq($vf->start, $vf->end, $vf->strand);
+    
+    $ref_allele = '-' unless $ref_allele;
+        
     my $allele_string = $vf->allele_string;
     
     expand(\$allele_string);
-    
-    unless ($allele_string =~ /\//) {
-        # for the HGMDs and CNV probes just set the alt allele 
-        # to the reference allele
-        $allele_string .= "/$allele_string";
-    }
     
     my @alleles = split /\//, $allele_string;
   
     # create an object representing the reference allele
     
-    my $ref_allele = shift @alleles;
-
     my $ref_vfoa = Bio::EnsEMBL::Variation::VariationFeatureOverlapAllele->new_fast({
         variation_feature_overlap   => $self,
         variation_feature_seq       => $ref_allele,
@@ -82,6 +64,8 @@ sub new {
     my @alt_alleles;
     
     for my $allele (@alleles) {
+        
+        next if $allele eq $ref_allele;
         
         my $vfoa = Bio::EnsEMBL::Variation::VariationFeatureOverlapAllele->new_fast({
             variation_feature_overlap   => $self,
@@ -105,13 +89,6 @@ sub dbID {
     my ($self, $dbID) = @_;
     $self->{dbID} = $dbID if defined $dbID;
     return $self->{dbID};
-}
-
-sub feature_type_id {
-    my ($self, $feature_type_id) = @_;
-    $self->{feature_type_id} = $feature_type_id if defined $feature_type_id;
-    # XXX: find the correct feature type id
-    return $self->{feature_type_id} || 1;
 }
 
 sub variation_feature {
@@ -138,8 +115,9 @@ sub variation_feature {
 
 sub variation_feature_id {
     my $self = shift;
-    if (my $tran = $self->{variation_feature}) {
-        return $tran->stable_id;
+    
+    if (my $vf = $self->{variation_feature}) {
+        return $vf->dbID;
     }
     elsif (my $id = $self->{_variation_feature_id}) {
         return $id;
@@ -154,7 +132,7 @@ sub feature {
     
     $self->{feature} = $feature if $feature;
  
-    if (my $rf_id = $self->{_feature_stable_id} && $type) {
+    if ($type && !$self->{feature}) {
     
         # try to lazy load the feature
         
@@ -164,9 +142,19 @@ sub feature {
             
             if ($adap->db->dnadb->can($get_method)) {
                 if (my $fa = $adap->db->dnadb->$get_method) {
-                    if (my $f = $fa->fetch_by_stable_id($rf_id)) {
-                        $self->{feature} = $f;
-                        delete $self->{_feature_stable_id};
+                    
+                    # if we have a stable id for the feature use that
+                    if (my $feature_stable_id = $self->{_feature_stable_id}) {
+                        if (my $f = $fa->fetch_by_stable_id($feature_stable_id)) {
+                            $self->{feature} = $f;
+                            delete $self->{_feature_stable_id};
+                        }
+                    }
+                    elsif (my $feature_label = $self->{_feature_label}) {
+                        # get a slice covering the vf
+                        
+                        
+                        #for my $f ($fa->fetch_all_by_Slice_constraint)
                     }
                 }
             }
@@ -175,14 +163,63 @@ sub feature {
             }
         }
     }
- 
+    
     return $self->{feature};
+}
+
+sub _fetch_feature_for_stable_id {
+    my ($self, $feature_stable_id) = @_;
+    
+    my $type_lookup = {
+        G   => { type => 'Gene',                 group => 'core' },
+        T   => { type => 'Transcript',           group => 'core'  },
+        R   => { type => 'RegulatoryFeature',    group => 'funcgen' },
+    };
+    
+    if ($feature_stable_id =~ /^ENS[A-Z]*([G|R|T])\d+$/) {
+        
+        my $type  = $type_lookup->{$1}->{type};
+        my $group = $type_lookup->{$1}->{group};
+        
+        if (my $adap = $self->{adaptor}) {
+            
+            my $get_method = 'get_'.$type.'Adaptor';
+            
+            if ($adap->db->dnadb->can($get_method)) {
+                if (my $fa = $adap->db->dnadb->$get_method) {
+                    
+                    # if we have a stable id for the feature use that
+                    if (my $feature_stable_id = $self->{_feature_stable_id}) {
+                        if (my $f = $fa->fetch_by_stable_id($feature_stable_id)) {
+                            $self->{feature} = $f;
+                            delete $self->{_feature_stable_id};
+                        }
+                    }
+                    elsif (my $feature_label = $self->{_feature_label}) {
+                        # get a slice covering the vf
+                        
+                        
+                        #for my $f ($fa->fetch_all_by_Slice_constraint)
+                    }
+                }
+            }
+            else {
+                warn "Cannot get an adaptor for type: $type";
+            }
+    }
+    }
+}
+
+sub _fetch_adaptor_for_group {
+    my ($self, $group) = @_;
+    
+    
 }
 
 sub feature_stable_id {
     my $self = shift;
-    if (my $f = $self->{feature}) {
-        return $f->stable_id;
+    if ($self->{feature} && $self->{feature}->can('stable_id')) {
+        return $self->{feature}->stable_id;
     }
     elsif (my $id = $self->{_feature_stable_id}) {
         return $id;
@@ -231,16 +268,18 @@ sub overlap_consequences {
             for my $cons (@{ $adap->db->get_OverlapConsequenceAdaptor->fetch_all }) {
                 
                 # check that this consequence type applies to this feature type
-                my $ens_class = $adap->ensembl_class_for_SO_term($cons->feature_SO_term);
+                my $ens_classes = $adap->ensembl_classes_for_SO_term($cons->feature_SO_term);
                 
-                if ($ens_class eq ref $self->feature) {
+                my $feat_class = ref $self->feature;
+                
+                if (grep { $_ eq $feat_class } @{ $ens_classes }) {
                     
-                    # also check if the biotypes match (or if the biotype is not defined)
-                    my $biotype = $adap->ensembl_biotype_for_SO_term($cons->feature_SO_term);
-                    
-                    if (defined $biotype && $self->feature->can('biotype')) {
-                        next unless $self->feature->biotype eq $biotype;
-                    }
+#                    # also check if the biotypes match (or if the biotype is not defined)
+#                    my $biotype = $adap->ensembl_biotype_for_SO_term($cons->feature_SO_term);
+#                    
+#                    if (defined $biotype && $self->feature->can('biotype')) {
+#                        #next unless $self->feature->biotype eq $biotype;
+#                    }
                     
                     # OK, this consequence type applies to this feature
                     push @cons, $cons;

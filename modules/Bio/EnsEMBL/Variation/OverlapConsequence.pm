@@ -60,8 +60,12 @@ sub predicate {
     
     if ($self->{predicate} && ref $self->{predicate} ne 'CODE') {
         my $name = $self->{predicate};
+
         if (defined &$name && $name =~ /^Bio::EnsEMBL::Variation::Utils::VariationEffect/) {
             $self->{predicate} = \&$name;
+        }
+        else {
+            die "Can't find a subroutine called $name in the VariationEffect module?";
         }
     }
     
@@ -77,7 +81,7 @@ sub rank {
 sub ensembl_term {
     my ($self, $ensembl_term) = @_;
     $self->{ensembl_term} = $ensembl_term if $ensembl_term;
-    return $self->{ensembl_term};
+    return $self->{ensembl_term} || $self->SO_term;
 }
 
 sub SO_id {

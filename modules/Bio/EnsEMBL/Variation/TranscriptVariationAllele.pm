@@ -90,8 +90,15 @@ sub peptide {
         
             my $pep = $codon_seq->translate(undef, undef, undef, $codon_table)->seq;
             
-            $pep = '-' if length($pep) < 1;
-            
+            if (length($pep) < 1) {
+                if (length($codon) % 3) {
+                    $pep = 'X';
+                }
+                else {
+                    $pep = '-';
+                }
+            }
+           
             $self->{peptide} = $pep;
         }
     }
@@ -138,6 +145,8 @@ sub codon {
                 return undef;
             }
         }
+        
+        
         
         # splice the allele sequence into the CDS
     
