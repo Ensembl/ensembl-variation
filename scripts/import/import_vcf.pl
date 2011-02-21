@@ -906,9 +906,6 @@ sub get_alleles {
 				if($data->{REF} eq '') {
 					# make ref '-' if no ref allele left
 					$data->{REF} = '-';
-					
-					# extra adjustment required for Ensembl
-					$data->{start}++;
 				}
 				
 				# make alt '-' if no alt allele left
