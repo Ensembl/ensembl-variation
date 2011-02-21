@@ -445,7 +445,14 @@ sub parse_line {
 		my @return = ();
 		
 		if($data[2] ne "*"){
-			(my $var = unambiguity_code($data[3])) =~ s/$data[2]//ig;
+			my $var;
+			
+			if($data[2] =~ /^[A|C|G|T]$/) {
+				$var = $data[2];
+			}
+			else {
+				($var = unambiguity_code($data[3])) =~ s/$data[2]//ig;
+			}
 			if(length($var)==1){
 				push @return, [$data[0], $data[1], $data[1], $data[2]."/".$var, 1, undef];
 			}
