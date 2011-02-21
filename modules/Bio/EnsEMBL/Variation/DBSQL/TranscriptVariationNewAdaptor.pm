@@ -36,7 +36,7 @@ sub store {
     my $dbh = $self->dbc->db_handle;
     
     my $sth = $dbh->prepare_cached(q{
-        INSERT INTO transcript_variation_allele (
+        INSERT INTO transcript_variation (
             variation_feature_id,
             feature_stable_id,
             allele_string,
@@ -65,7 +65,7 @@ sub store {
             $tv->feature->stable_id,
             $allele->allele_string,
             $tv->variation_feature->is_somatic,
-            (join ",", map { $_->SO_id } @{ $allele->consequence_types }),
+            (join ',', map { $_->SO_id } @{ $allele->consequence_types }),
             $tv->cds_start, 
             $tv->cds_end,
             $tv->cdna_start,
@@ -102,7 +102,7 @@ sub _objs_from_sth {
     my ($self, $sth) = @_;
     
     my (
-        $transcript_variation_allele_id,
+        $transcript_variation_id,
         $variation_feature_id, 
         $feature_stable_id, 
         $allele_string,
@@ -123,7 +123,7 @@ sub _objs_from_sth {
     );
     
     $sth->bind_columns(
-        \$transcript_variation_allele_id,
+        \$transcript_variation_id,
         \$variation_feature_id, 
         \$feature_stable_id, 
         \$allele_string,
@@ -209,13 +209,13 @@ sub _objs_from_sth {
 
 sub _tables {
     return (
-        ['transcript_variation_allele']
+        ['transcript_variation']
     );
 }
 
 sub _columns {
     return qw(
-        transcript_variation_allele_id 
+        transcript_variation_id 
         variation_feature_id 
         feature_stable_id 
         allele_string 
@@ -267,7 +267,9 @@ sub _get_nsSNP_prediction {
     );
     
     my ($prediction) = $sth->fetchrow_array;
-    
+   
+    $sth->finish;
+
     return $prediction;
 }
 
