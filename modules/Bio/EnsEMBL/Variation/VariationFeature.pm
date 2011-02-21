@@ -176,21 +176,21 @@ sub new {
     
   my $self = $class->SUPER::new(@_);
   my ($allele_str, $var_name, $map_weight, $variation, $variation_id, $source, 
-    $is_somatic, $validation_code, $consequence_type, $class_so_id) =
+    $is_somatic, $validation_code, $consequence_type, $class_so_accession) =
     rearrange([qw(ALLELE_STRING VARIATION_NAME 
                   MAP_WEIGHT VARIATION _VARIATION_ID SOURCE IS_SOMATIC VALIDATION_CODE 
-		  CONSEQUENCE_TYPE CLASS_SO_ID)], @_);
+		  CONSEQUENCE_TYPE CLASS_SO_ACCESSION)], @_);
 
-  $self->{'allele_string'}    = $allele_str;
-  $self->{'variation_name'}   = $var_name;
-  $self->{'map_weight'}       = $map_weight;
-  $self->{'variation'}        = $variation;
-  $self->{'_variation_id'}    = $variation_id;
-  $self->{'source'}           = $source;
-  $self->{'is_somatic'}       = $is_somatic;
-  $self->{'validation_code'}  = $validation_code;
-  $self->{'consequence_type'} = $consequence_type || ['INTERGENIC'];
-  $self->{'class_SO_id'}      = $class_so_id;
+  $self->{'allele_string'}      = $allele_str;
+  $self->{'variation_name'}     = $var_name;
+  $self->{'map_weight'}         = $map_weight;
+  $self->{'variation'}          = $variation;
+  $self->{'_variation_id'}      = $variation_id;
+  $self->{'source'}             = $source;
+  $self->{'is_somatic'}         = $is_somatic;
+  $self->{'validation_code'}    = $validation_code;
+  $self->{'consequence_type'}   = $consequence_type || ['INTERGENIC'];
+  $self->{'class_SO_accession'} = $class_so_accession;
   
   return $self;
 }
@@ -783,10 +783,12 @@ sub var_class{
     
     unless ($self->{class_display_term}) {
         
-        # convert the SO_id to the ensembl display term
-        if (my $display_term = $self->{adaptor}->_display_term_for_SO_id($self->{class_SO_id}, $self->is_somatic)) {
+        # convert the SO accession to the ensembl display term
+         
+        if ($self->{class_SO_accession}) {
+            my $display_term = $self->{adaptor}->_display_term_for_SO_accession($self->{class_SO_accession}, $self->is_somatic);
             $self->{class_display_term} = $display_term;
-            $self->{class_SO_term} = $self->{adaptor}->_SO_term_for_SO_id($self->{class_SO_id});
+            $self->{class_SO_term} = $self->{adaptor}->_SO_term_for_SO_accession($self->{class_SO_accession});
         }
         else {
             # work out the term from the allele string

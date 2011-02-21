@@ -186,9 +186,9 @@ sub new {
   my $caller = shift;
   my $class = ref($caller) || $caller;
 
-  my ($dbID, $adaptor, $name, $class_so_id, $src, $src_desc, $src_url, $src_type, $is_somatic, $syns, $ancestral_allele,
+  my ($dbID, $adaptor, $name, $class_so_accession, $src, $src_desc, $src_url, $src_type, $is_somatic, $syns, $ancestral_allele,
       $alleles, $valid_states, $moltype, $five_seq, $three_seq, $flank_flag) =
-        rearrange([qw(dbID ADAPTOR NAME CLASS_SO_ID SOURCE SOURCE_DESCRIPTION SOURCE_URL SOURCE_TYPE IS_SOMATIC 
+        rearrange([qw(dbID ADAPTOR NAME CLASS_SO_ACCESSION SOURCE SOURCE_DESCRIPTION SOURCE_URL SOURCE_TYPE IS_SOMATIC 
                       SYNONYMS ANCESTRAL_ALLELE ALLELES VALIDATION_STATES MOLTYPE FIVE_PRIME_FLANKING_SEQ
                       THREE_PRIME_FLANKING_SEQ FLANK_FLAG)],@_);
 
@@ -215,7 +215,7 @@ sub new {
     'dbID' => $dbID,
     'adaptor' => $adaptor,
     'name'   => $name,
-    'class_SO_id' => $class_so_id,
+    'class_SO_accession' => $class_so_accession,
     'source' => $src,
     'source_description' => $src_desc,
     'source_url' => $src_url,
@@ -1011,8 +1011,8 @@ sub var_class{
     
     unless ($self->{class_display_term}) {
         
-        # convert the SO_id to the ensembl display term
-        if (my $display_term = $self->{adaptor}->_display_term_for_SO_id($self->{class_SO_id}, $self->is_somatic)) {
+        # convert the SO accession to the ensembl display term
+        if (my $display_term = $self->{adaptor}->_display_term_for_SO_accession($self->{class_SO_accession}, $self->is_somatic)) {
             $self->{class_display_term} = $display_term;
         }
         else {
