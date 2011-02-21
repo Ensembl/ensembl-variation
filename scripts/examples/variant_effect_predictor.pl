@@ -45,7 +45,7 @@ our %times;
 # get command-line options
 my ($in_file, $out_file, $buffer_size, $species, $registry_file, $help, $host, $user, $password, $tmpdir, $db_version, $regulation, $include_failed);
 
-our ($most_severe, $check_ref, $check_existing, $hgnc, $input_format, $whole_genome, $chunk_size);
+our ($most_severe, $check_ref, $check_existing, $hgnc, $input_format, $whole_genome, $chunk_size, $use_gp);
 
 my $args = scalar @ARGV;
 
@@ -69,11 +69,12 @@ GetOptions(
 	'tmp_dir=s'        => \$tmpdir,
 	'version=i'        => \$db_version,
 	'chunk_size=s'     => \$chunk_size,
+	'gp'               => \$use_gp,
 );
 
 # set defaults
 $out_file    ||= "variant_effect_output.txt";
-$species     ||= "human";
+$species     ||= "homo_sapiens";
 $buffer_size ||= 500;
 $chunk_size  ||= '50kb';
 $host        ||= 'ensembldb.ensembl.org';
@@ -114,8 +115,11 @@ else {
 		-user       => $user,
 		-pass       => $password,
 		-db_version => $db_version,
+		-species    => ($species =~ /^[a-z]+\_[a-z]+/i ? $species : undef),
 	);
 }
+
+$reg->set_disconnect_when_inactive();
 
 ## get a meta container adaptors to check version
 #my $core_mca = $reg->get_adaptor($species, 'core', 'metacontainer');
@@ -161,12 +165,13 @@ our $tva = $reg->get_adaptor($species, 'variation', 'transcriptvariation');
 if(!defined($vfa)) {
 	$vfa = Bio::EnsEMBL::Variation::DBSQL::VariationFeatureAdaptor->new_fake($species);
 }
+else {
+	$vfa->db->include_failed_variations($include_failed) if $vfa->db->can('include_failed_variations');
+}
 
 if(!defined($tva)) {
 	$tva = Bio::EnsEMBL::Variation::DBSQL::TranscriptVariationAdaptor->new_fake($species);
 }
-
-$vfa->db->include_failed_variations($include_failed) if $vfa->db->can('include_failed_variations');
 
 our $sa = $reg->get_adaptor($species, 'core', 'slice');
 our $ga = $reg->get_adaptor($species, 'core', 'gene');
@@ -225,6 +230,7 @@ while(<$in_file_handle>) {
 	# fix inputs
 	$chr =~ s/chr//ig;
 	$strand = ($strand =~ /\-/ ? "-1" : "1");
+	$allele_string =~ tr/acgt/ACGT/;
 	
 	# sanity checks
 	unless($start =~ /^\d+$/ && $end =~ /^\d+$/) {
@@ -476,7 +482,25 @@ sub parse_line {
 		}
 		
 		# get relevant data
-		my ($start, $end, $ref, $alt) = ($data[1], $data[1], $data[3], $data[4]);
+		my ($chr, $start, $end, $ref, $alt) = ($data[0], $data[1], $data[1], $data[3], $data[4]);
+		
+		if($use_gp) {
+			$chr = undef;
+			$start = undef;
+			
+			foreach my $pair(split /\;/, $data[7]) {
+				my ($key, $value) = split /\=/, $pair;
+				if($key eq 'GP') {
+					($chr,$start) = split /\:/, $value;
+					$end = $start;
+				}
+			}
+			
+			unless(defined($chr) and defined($start)) {
+				warn "No GP flag found in INFO column";
+				return [['non-variant']];
+			}
+		}
 		
 		# adjust end coord
 		$end += (length($ref) - 1);
@@ -561,9 +585,6 @@ sub parse_line {
 					if($ref eq '') {
 						# make ref '-' if no ref allele left
 						$ref = '-';
-						
-						# extra adjustment required for Ensembl
-						$start++;
 					}
 					
 					# make alt '-' if no alt allele left
@@ -572,7 +593,7 @@ sub parse_line {
 			}
 		}
 		
-		return [[$data[0], $start, $end, $ref."/".$alt, 1, ($data[2] eq '.' ? undef : $data[2])]];
+		return [[$chr, $start, $end, $ref."/".$alt, 1, ($data[2] eq '.' ? undef : $data[2])]];
 		
 	}
 	
@@ -684,6 +705,9 @@ Options
 --failed=[0|1]         If set to 1, includes variations flagged as failed when checking
                        for co-located variations. Only applies in Ensembl 61 or later
 					   [default: 1]
+--gp                   If specified, tries to read GRCh37 position from GP field in the
+                       INFO column of a VCF file. Only applies when VCF is the input
+					   format [default: not used]
 					   
 --hgnc                 If specified, HGNC gene identifiers are output alongside the
                        Ensembl Gene identifier [default: not used]
