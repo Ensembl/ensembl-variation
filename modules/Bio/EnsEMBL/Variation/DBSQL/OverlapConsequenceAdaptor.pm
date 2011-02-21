@@ -39,7 +39,7 @@ sub _columns {
     return qw (
         overlap_consequence_id
         SO_term
-        SO_id
+        SO_accession
         ensembl_term
         NCBI_term
         feature_SO_term

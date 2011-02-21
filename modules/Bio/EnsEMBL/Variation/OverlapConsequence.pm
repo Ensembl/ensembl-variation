@@ -84,10 +84,10 @@ sub ensembl_term {
     return $self->{ensembl_term} || $self->SO_term;
 }
 
-sub SO_id {
-    my ($self, $SO_id) = @_;
-    $self->{SO_id} = $SO_id if $SO_id;
-    return $self->{SO_id};
+sub SO_accession {
+    my ($self, $SO_accession) = @_;
+    $self->{SO_accession} = $SO_accession if $SO_accession;
+    return $self->{SO_accession};
 }
 
 sub NCBI_term {
