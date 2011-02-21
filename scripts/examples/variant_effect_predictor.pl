@@ -735,12 +735,12 @@ Options
 					   
 -w | --whole_genome    EXPERIMENTAL! Run in whole genome mode [default: not used]
                        Should only be used with data covering a whole genome or
-					   chromosome e.g. from resequencing. For better performance,
-					   set --buffer_size higher (>10000 if memory allows).
-					   Disables --check_existing option and gene column by default.
+                       chromosome e.g. from resequencing. For better performance,
+                       set --buffer_size higher (>10000 if memory allows).
+                       Disables --check_existing option and gene column by default.
 --chunk_size           Sets the chunk size of internal data structure [default: 50kb]
                        Setting this lower may improve speed for variant-dense
-					   datasets. Only applies to whole genome mode.
+                       datasets. Only applies to whole genome mode.
 END
 
 	print $usage;
