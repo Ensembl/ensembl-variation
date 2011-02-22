@@ -43,7 +43,7 @@ our %times;
 
 
 # get command-line options
-my ($in_file, $out_file, $buffer_size, $species, $registry_file, $help, $host, $user, $password, $tmpdir, $db_version, $regulation, $include_failed);
+my ($in_file, $out_file, $buffer_size, $species, $registry_file, $help, $host, $user, $port, $password, $tmpdir, $db_version, $regulation, $include_failed, $genomes);
 
 our ($most_severe, $check_ref, $check_existing, $hgnc, $input_format, $whole_genome, $chunk_size, $use_gp);
 
@@ -55,9 +55,11 @@ GetOptions(
 	'species=s'		   => \$species,
 	'buffer_size=i'	   => \$buffer_size,
 	'registry=s'	   => \$registry_file,
-	'db_host=s'		   => \$host,
+	'host=s'		   => \$host,
 	'user=s'		   => \$user,
+	'port=s'		   => \$port,
 	'password=s'	   => \$password,
+	'genomes'          => \$genomes,
 	'most_severe'	   => \$most_severe,
 	'check_ref'        => \$check_ref,
 	'check_existing=i' => \$check_existing,
@@ -72,13 +74,24 @@ GetOptions(
 	'gp'               => \$use_gp,
 );
 
+# connection settings for Ensembl Genomes
+if($genomes) {
+	$host    ||= 'mysql.ebi.ac.uk';
+	$port    ||= 4157;
+}
+
+# connection settings for main Ensembl
+else {
+	$species ||= "homo_sapiens";
+	$host    ||= 'ensembldb.ensembl.org';
+	$port    ||= 5306;
+}
+
 # set defaults
-$out_file    ||= "variant_effect_output.txt";
-$species     ||= "homo_sapiens";
+$user    ||= 'anonymous';
 $buffer_size ||= 500;
 $chunk_size  ||= '50kb';
-$host        ||= 'ensembldb.ensembl.org';
-$user        ||= 'anonymous';
+$out_file    ||= "variant_effect_output.txt";
 $tmpdir      ||= '/tmp';
 
 $include_failed = 1 unless defined $include_failed;
@@ -114,6 +127,7 @@ else {
 		-host       => $host,
 		-user       => $user,
 		-pass       => $password,
+		-port       => $port,
 		-db_version => $db_version,
 		-species    => ($species =~ /^[a-z]+\_[a-z]+/i ? $species : undef),
 	);
@@ -727,9 +741,11 @@ Options
 --hgnc                 If specified, HGNC gene identifiers are output alongside the
                        Ensembl Gene identifier [default: not used]
 
--d | --db_host         Manually define database host [default: "ensembldb.ensembl.org"]
+--host                 Manually define database host [default: "ensembldb.ensembl.org"]
 -u | --user            Database username [default: "anonymous"]
--p | --password        Database password [default: not used]
+--port                 Database port [default: 5306]
+--password             Database password [default: not used]
+--genomes              Sets DB connection params for Ensembl Genomes [default: not used]
 -r | --registry_file   Registry file to use defines DB connections [default: not used]
                        Defining a registry file overrides above connection settings.
 					   
