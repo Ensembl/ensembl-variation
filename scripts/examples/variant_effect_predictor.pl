@@ -43,7 +43,7 @@ our %times;
 
 
 # get command-line options
-my ($in_file, $out_file, $buffer_size, $species, $registry_file, $help, $host, $user, $password, $tmpdir, $db_version, $regulation, $include_failed);
+my ($in_file, $out_file, $buffer_size, $species, $registry_file, $help, $host, $user, $port, $password, $tmpdir, $db_version, $regulation, $include_failed, $genomes);
 
 our ($most_severe, $check_ref, $check_existing, $hgnc, $input_format, $whole_genome, $chunk_size, $use_gp);
 
@@ -55,9 +55,11 @@ GetOptions(
 	'species=s'		   => \$species,
 	'buffer_size=i'	   => \$buffer_size,
 	'registry=s'	   => \$registry_file,
-	'db_host=s'		   => \$host,
+	'host=s'		   => \$host,
 	'user=s'		   => \$user,
+	'port=s'		   => \$port,
 	'password=s'	   => \$password,
+	'genomes'          => \$genomes,
 	'most_severe'	   => \$most_severe,
 	'check_ref'        => \$check_ref,
 	'check_existing=i' => \$check_existing,
@@ -72,13 +74,24 @@ GetOptions(
 	'gp'               => \$use_gp,
 );
 
+# connection settings for Ensembl Genomes
+if($genomes) {
+	$host    ||= 'mysql.ebi.ac.uk';
+	$port    ||= 4157;
+}
+
+# connection settings for main Ensembl
+else {
+	$species ||= "homo_sapiens";
+	$host    ||= 'ensembldb.ensembl.org';
+	$port    ||= 5306;
+}
+
 # set defaults
-$out_file    ||= "variant_effect_output.txt";
-$species     ||= "homo_sapiens";
+$user    ||= 'anonymous';
 $buffer_size ||= 500;
 $chunk_size  ||= '50kb';
-$host        ||= 'ensembldb.ensembl.org';
-$user        ||= 'anonymous';
+$out_file    ||= "variant_effect_output.txt";
 $tmpdir      ||= '/tmp';
 
 $include_failed = 1 unless defined $include_failed;
@@ -114,6 +127,7 @@ else {
 		-host       => $host,
 		-user       => $user,
 		-pass       => $password,
+		-port       => $port,
 		-db_version => $db_version,
 		-species    => ($species =~ /^[a-z]+\_[a-z]+/i ? $species : undef),
 	);
@@ -445,7 +459,14 @@ sub parse_line {
 		my @return = ();
 		
 		if($data[2] ne "*"){
-			(my $var = unambiguity_code($data[3])) =~ s/$data[2]//ig;
+			my $var;
+			
+			if($data[2] =~ /^[A|C|G|T]$/) {
+				$var = $data[2];
+			}
+			else {
+				($var = unambiguity_code($data[3])) =~ s/$data[2]//ig;
+			}
 			if(length($var)==1){
 				push @return, [$data[0], $data[1], $data[1], $data[2]."/".$var, 1, undef];
 			}
@@ -617,7 +638,15 @@ sub whole_genome_fetch {
 	&start("transcripts");
 	
 	foreach my $chr(keys %$vf_hash) {
-		my $slice = $sa->fetch_by_region('chromosome', $chr);
+		my $slice;
+		
+ 		# first try to get a chromosome
+ 		eval { $slice = $sa->fetch_by_region('chromosome', $chr); };
+ 		
+ 		# if failed, try to get any seq region
+ 		if(!defined($slice)) {
+ 			$slice = $sa->fetch_by_region(undef, $chr);
+ 		}
 		
 		warn "Analyzing chromosome $chr";
 		
@@ -712,20 +741,22 @@ Options
 --hgnc                 If specified, HGNC gene identifiers are output alongside the
                        Ensembl Gene identifier [default: not used]
 
--d | --db_host         Manually define database host [default: "ensembldb.ensembl.org"]
+--host                 Manually define database host [default: "ensembldb.ensembl.org"]
 -u | --user            Database username [default: "anonymous"]
--p | --password        Database password [default: not used]
+--port                 Database port [default: 5306]
+--password             Database password [default: not used]
+--genomes              Sets DB connection params for Ensembl Genomes [default: not used]
 -r | --registry_file   Registry file to use defines DB connections [default: not used]
                        Defining a registry file overrides above connection settings.
 					   
 -w | --whole_genome    EXPERIMENTAL! Run in whole genome mode [default: not used]
                        Should only be used with data covering a whole genome or
-					   chromosome e.g. from resequencing. For better performance,
-					   set --buffer_size higher (>10000 if memory allows).
-					   Disables --check_existing option and gene column by default.
+                       chromosome e.g. from resequencing. For better performance,
+                       set --buffer_size higher (>10000 if memory allows).
+                       Disables --check_existing option and gene column by default.
 --chunk_size           Sets the chunk size of internal data structure [default: 50kb]
                        Setting this lower may improve speed for variant-dense
-					   datasets. Only applies to whole genome mode.
+                       datasets. Only applies to whole genome mode.
 END
 
 	print $usage;
