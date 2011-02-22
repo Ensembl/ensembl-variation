@@ -1041,7 +1041,7 @@ sub merge_variation_features {
 		my @existing_alleles = split /\//, $allele_string;
 		
 		# compare ref alleles - we don't want to merge if they differ
-		return unless $exisiting_alleles[0] eq $data->{alleles}->[0];
+		return unless $existing_alleles[0] eq $data->{alleles}->[0];
 		
 		my %new_alleles = ();
 		$new_alleles{$_}++ for @existing_alleles;
