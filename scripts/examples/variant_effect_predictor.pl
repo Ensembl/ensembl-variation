@@ -43,9 +43,9 @@ our %times;
 
 
 # get command-line options
-my ($in_file, $out_file, $buffer_size, $species, $registry_file, $help, $host, $user, $password, $tmpdir, $db_version, $regulation, $include_failed);
+my ($in_file, $out_file, $buffer_size, $species, $registry_file, $help, $host, $user, $port, $password, $tmpdir, $db_version, $regulation, $include_failed, $genomes);
 
-our ($most_severe, $check_ref, $check_existing, $hgnc, $input_format, $whole_genome, $chunk_size);
+our ($most_severe, $check_ref, $check_existing, $hgnc, $input_format, $whole_genome, $chunk_size, $use_gp);
 
 my $args = scalar @ARGV;
 
@@ -55,9 +55,11 @@ GetOptions(
 	'species=s'		   => \$species,
 	'buffer_size=i'	   => \$buffer_size,
 	'registry=s'	   => \$registry_file,
-	'db_host=s'		   => \$host,
+	'host=s'		   => \$host,
 	'user=s'		   => \$user,
+	'port=s'		   => \$port,
 	'password=s'	   => \$password,
+	'genomes'          => \$genomes,
 	'most_severe'	   => \$most_severe,
 	'check_ref'        => \$check_ref,
 	'check_existing=i' => \$check_existing,
@@ -69,15 +71,27 @@ GetOptions(
 	'tmp_dir=s'        => \$tmpdir,
 	'version=i'        => \$db_version,
 	'chunk_size=s'     => \$chunk_size,
+	'gp'               => \$use_gp,
 );
 
+# connection settings for Ensembl Genomes
+if($genomes) {
+	$host    ||= 'mysql.ebi.ac.uk';
+	$port    ||= 4157;
+}
+
+# connection settings for main Ensembl
+else {
+	$species ||= "homo_sapiens";
+	$host    ||= 'ensembldb.ensembl.org';
+	$port    ||= 5306;
+}
+
 # set defaults
-$out_file    ||= "variant_effect_output.txt";
-$species     ||= "human";
+$user    ||= 'anonymous';
 $buffer_size ||= 500;
 $chunk_size  ||= '50kb';
-$host        ||= 'ensembldb.ensembl.org';
-$user        ||= 'anonymous';
+$out_file    ||= "variant_effect_output.txt";
 $tmpdir      ||= '/tmp';
 
 $include_failed = 1 unless defined $include_failed;
@@ -113,9 +127,13 @@ else {
 		-host       => $host,
 		-user       => $user,
 		-pass       => $password,
+		-port       => $port,
 		-db_version => $db_version,
+		-species    => ($species =~ /^[a-z]+\_[a-z]+/i ? $species : undef),
 	);
 }
+
+$reg->set_disconnect_when_inactive();
 
 ## get a meta container adaptors to check version
 #my $core_mca = $reg->get_adaptor($species, 'core', 'metacontainer');
@@ -161,12 +179,13 @@ our $tva = $reg->get_adaptor($species, 'variation', 'transcriptvariation');
 if(!defined($vfa)) {
 	$vfa = Bio::EnsEMBL::Variation::DBSQL::VariationFeatureAdaptor->new_fake($species);
 }
+else {
+	$vfa->db->include_failed_variations($include_failed) if $vfa->db->can('include_failed_variations');
+}
 
 if(!defined($tva)) {
 	$tva = Bio::EnsEMBL::Variation::DBSQL::TranscriptVariationAdaptor->new_fake($species);
 }
-
-$vfa->db->include_failed_variations($include_failed) if $vfa->db->can('include_failed_variations');
 
 our $sa = $reg->get_adaptor($species, 'core', 'slice');
 our $ga = $reg->get_adaptor($species, 'core', 'gene');
@@ -225,6 +244,7 @@ while(<$in_file_handle>) {
 	# fix inputs
 	$chr =~ s/chr//ig;
 	$strand = ($strand =~ /\-/ ? "-1" : "1");
+	$allele_string =~ tr/acgt/ACGT/;
 	
 	# sanity checks
 	unless($start =~ /^\d+$/ && $end =~ /^\d+$/) {
@@ -439,7 +459,14 @@ sub parse_line {
 		my @return = ();
 		
 		if($data[2] ne "*"){
-			(my $var = unambiguity_code($data[3])) =~ s/$data[2]//ig;
+			my $var;
+			
+			if($data[2] =~ /^[A|C|G|T]$/) {
+				$var = $data[2];
+			}
+			else {
+				($var = unambiguity_code($data[3])) =~ s/$data[2]//ig;
+			}
 			if(length($var)==1){
 				push @return, [$data[0], $data[1], $data[1], $data[2]."/".$var, 1, undef];
 			}
@@ -476,7 +503,25 @@ sub parse_line {
 		}
 		
 		# get relevant data
-		my ($start, $end, $ref, $alt) = ($data[1], $data[1], $data[3], $data[4]);
+		my ($chr, $start, $end, $ref, $alt) = ($data[0], $data[1], $data[1], $data[3], $data[4]);
+		
+		if($use_gp) {
+			$chr = undef;
+			$start = undef;
+			
+			foreach my $pair(split /\;/, $data[7]) {
+				my ($key, $value) = split /\=/, $pair;
+				if($key eq 'GP') {
+					($chr,$start) = split /\:/, $value;
+					$end = $start;
+				}
+			}
+			
+			unless(defined($chr) and defined($start)) {
+				warn "No GP flag found in INFO column";
+				return [['non-variant']];
+			}
+		}
 		
 		# adjust end coord
 		$end += (length($ref) - 1);
@@ -561,9 +606,6 @@ sub parse_line {
 					if($ref eq '') {
 						# make ref '-' if no ref allele left
 						$ref = '-';
-						
-						# extra adjustment required for Ensembl
-						$start++;
 					}
 					
 					# make alt '-' if no alt allele left
@@ -572,7 +614,7 @@ sub parse_line {
 			}
 		}
 		
-		return [[$data[0], $start, $end, $ref."/".$alt, 1, ($data[2] eq '.' ? undef : $data[2])]];
+		return [[$chr, $start, $end, $ref."/".$alt, 1, ($data[2] eq '.' ? undef : $data[2])]];
 		
 	}
 	
@@ -596,7 +638,15 @@ sub whole_genome_fetch {
 	&start("transcripts");
 	
 	foreach my $chr(keys %$vf_hash) {
-		my $slice = $sa->fetch_by_region('chromosome', $chr);
+		my $slice;
+		
+ 		# first try to get a chromosome
+ 		eval { $slice = $sa->fetch_by_region('chromosome', $chr); };
+ 		
+ 		# if failed, try to get any seq region
+ 		if(!defined($slice)) {
+ 			$slice = $sa->fetch_by_region(undef, $chr);
+ 		}
 		
 		warn "Analyzing chromosome $chr";
 		
@@ -684,24 +734,29 @@ Options
 --failed=[0|1]         If set to 1, includes variations flagged as failed when checking
                        for co-located variations. Only applies in Ensembl 61 or later
 					   [default: 1]
+--gp                   If specified, tries to read GRCh37 position from GP field in the
+                       INFO column of a VCF file. Only applies when VCF is the input
+					   format [default: not used]
 					   
 --hgnc                 If specified, HGNC gene identifiers are output alongside the
                        Ensembl Gene identifier [default: not used]
 
--d | --db_host         Manually define database host [default: "ensembldb.ensembl.org"]
+--host                 Manually define database host [default: "ensembldb.ensembl.org"]
 -u | --user            Database username [default: "anonymous"]
--p | --password        Database password [default: not used]
+--port                 Database port [default: 5306]
+--password             Database password [default: not used]
+--genomes              Sets DB connection params for Ensembl Genomes [default: not used]
 -r | --registry_file   Registry file to use defines DB connections [default: not used]
                        Defining a registry file overrides above connection settings.
 					   
 -w | --whole_genome    EXPERIMENTAL! Run in whole genome mode [default: not used]
                        Should only be used with data covering a whole genome or
-					   chromosome e.g. from resequencing. For better performance,
-					   set --buffer_size higher (>10000 if memory allows).
-					   Disables --check_existing option and gene column by default.
+                       chromosome e.g. from resequencing. For better performance,
+                       set --buffer_size higher (>10000 if memory allows).
+                       Disables --check_existing option and gene column by default.
 --chunk_size           Sets the chunk size of internal data structure [default: 50kb]
                        Setting this lower may improve speed for variant-dense
-					   datasets. Only applies to whole genome mode.
+                       datasets. Only applies to whole genome mode.
 END
 
 	print $usage;
