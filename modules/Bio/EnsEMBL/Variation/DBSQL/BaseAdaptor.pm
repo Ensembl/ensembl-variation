@@ -82,36 +82,21 @@ sub fetch_all_somatic {
 }
 
 # returns a hash mapping SO accessions to SO and ensembl display terms
-sub _variation_classes {
+sub _SO_mappings {
     my $self = shift;
     
-    unless ($self->{_variation_classes}) {
-        
-        # fetch the mapping from the database
-        
-        my $dbh = $self->dbc->db_handle;
-        
-        my $sth = $dbh->prepare(qq{
-            SELECT so_accession, so_term, display_term FROM variation_class
-        });
-        
-        $sth->execute;
-        
-        while (my ($SO_accession, $SO_term, $display_term) = $sth->fetchrow_array) {
-            $self->{_variation_classes}->{$SO_accession}->{SO_term}      = $SO_term;
-            $self->{_variation_classes}->{$SO_accession}->{display_term} = $display_term;
-            $self->{_variation_classes}->{$SO_term}->{SO_accession}      = $SO_accession;
-        }
+    unless ($self->{_SO_mappings}) {
+        $self->{_SO_mappings} = $self->db->get_AttributeAdaptor->fetch_SO_mappings;
     }
     
-    return $self->{_variation_classes};
+    return $self->{_SO_mappings};
 }
 
 sub _display_term_for_SO_accession {
     my ($self, $SO_accession, $is_somatic) = @_;
-    
-    my $term = $self->_variation_classes->{$SO_accession}->{display_term};
-    
+   
+    my $term = $self->_SO_mappings->{$SO_accession}->{display_term};
+   
     if ($is_somatic) {
         $term = 'SNV' if $term eq 'SNP';
         $term = 'somatic_'.$term;
@@ -122,12 +107,12 @@ sub _display_term_for_SO_accession {
 
 sub _SO_term_for_SO_accession {
     my ($self, $SO_accession, $is_somatic) = @_;
-    return $self->_variation_classes->{$SO_accession}->{SO_term}
+    return $self->_SO_mappings->{$SO_accession}->{SO_term}
 }
 
 sub _display_term_for_SO_term {
     my ($self, $SO_term, $is_somatic) = @_;
-    my $SO_accession = $self->_variation_classes->{$SO_term}->{SO_accession};
+    my $SO_accession = $self->_SO_mappings->{$SO_term}->{SO_accession};
     return $self->_display_term_for_SO_accession($SO_accession, $is_somatic);
 }
 
