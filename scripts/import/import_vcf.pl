@@ -1250,7 +1250,7 @@ sub multi_bp_genotype {
 		
 		my @multi_rows;
 		
-		for my $i(0..(scalar @{$data->{sample_ids}})) {
+		for my $i(0..(scalar @{$data->{sample_ids}}) - 1) {
 			my $sample_id = $data->{sample_ids}->[$i];
 			my ($a1, $a2) = split /\|/, $data->{genotypes}->[$i];
 			next if $a1 eq '.' || $a2 eq '.';
