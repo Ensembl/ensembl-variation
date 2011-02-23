@@ -88,17 +88,17 @@ sub fetch_all_by_VariationFeatures {
 
 sub ensembl_classes_for_SO_term {
     my ($self, $SO_term) = @_;
-    return [keys %{ $self->_feature_types->{$SO_term}->{ensembl_feature_class} } ];
+    return [keys %{ $self->_feature_types->{$SO_term}->{ens_feature_class} } ];
 }
 
 sub ensembl_subtypes_for_SO_term {
     my ($self, $SO_term) = @_;
-    return [keys %{ $self->_feature_types->{$SO_term}->{ensembl_subtype} } ];
+    return [keys %{ $self->_feature_types->{$SO_term}->{ens_feature_subtype} } ];
 }
 
 sub ensembl_variant_classes_for_SO_term {
     my ($self, $SO_term) = @_;
-    return [keys %{ $self->_feature_types->{$SO_term}->{ensembl_variant_class} } ];
+    return [keys %{ $self->_feature_types->{$SO_term}->{ens_variant_class} } ];
 }
 
 sub SO_terms_for_ensembl_feature {
@@ -110,30 +110,7 @@ sub _feature_types {
     my $self = shift;
     
     unless ($self->{_feature_types}) {
-        my $dbh = $self->dbc->db_handle;
-        
-        my $sth = $dbh->prepare_cached(qq{
-            SELECT  feature_so_term, ensembl_feature_type, ensembl_biotype, ensembl_variant_type
-            FROM    feature_types
-        });
-        
-        $sth->execute;
-        
-        my $mapping = {};
-        
-        while (my ($SO_term, $ens_type, $ens_biotype, $var_type) = $sth->fetchrow_array) {
-            
-            my $so2ens = $mapping->{$SO_term} ||= {};
-            
-            $so2ens->{ensembl_feature_type}->{$ens_type} = 1 if $ens_type;
-            $so2ens->{ensembl_biotype}->{$ens_biotype}   = 1 if $ens_biotype;
-            $so2ens->{ensembl_variant_type}->{$var_type} = 1 if $var_type;
-            
-            my $ens2so = $mapping->{$ens_type} ||= {};
-            
-            $ens2so->{SO_term}->{$SO_term} = 1 if $SO_term;
-        }
-        
+        my $mapping = $self->db->get_AttributeAdaptor->fetch_feature_type_mapping;
         $self->{_feature_types} = $mapping;
     }
     
@@ -144,7 +121,7 @@ sub _overlap_consequences {
     my $self = shift;
     
     unless ($self->{_overlap_consequences}) {
-        my $cons = $self->db->get_OverlapConsequenceAdaptor->fetch_all;
+        my $cons = $self->db->get_AttributeAdaptor->fetch_all_OverlapConsequences;
         $self->{_overlap_consequences} = { map { $_->SO_id => $_ } @$cons };
     }
     
