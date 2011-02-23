@@ -1001,9 +1001,9 @@ for my $stable_id (keys %$transcript_tests) {
             adaptor             => $tva,
         });
 
-        warn "# alleles: $allele_string\n";
-        warn '# codons: ', $tv->codons, "\n";
-        warn '# peptides: ', $tv->pep_allele_string, "\n";
+        #warn "# alleles: $allele_string\n";
+        #warn '# codons: ', $tv->codons, "\n";
+        #warn '# peptides: ', $tv->pep_allele_string, "\n";
 
         my @effects = map {
             map { $_->SO_term } @{ $_->consequence_types }
