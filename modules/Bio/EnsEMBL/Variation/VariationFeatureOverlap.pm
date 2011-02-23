@@ -265,7 +265,7 @@ sub overlap_consequences {
         if (my $adap = $self->{adaptor} || $self->variation_feature->{adaptor}) {
             
             # get the list of possible overlap consequences
-            for my $cons (@{ $adap->db->get_OverlapConsequenceAdaptor->fetch_all }) {
+            for my $cons (@{ $adap->db->get_AttributeAdaptor->fetch_all_OverlapConsequences }) {
                 
                 # check that this consequence type applies to this feature type
                 my $ens_classes = $adap->ensembl_classes_for_SO_term($cons->feature_SO_term);
@@ -310,21 +310,31 @@ sub consequence_type {
     return $self->{_consequence_type};
 }
 
-sub display_consequence {
+sub most_severe_consequence {
     my $self = shift;
     
-    my $highest;
-    
-    for my $allele (@{ $self->alt_alleles }) {
-        for my $cons (@{ $allele->consequence_types }) {
-            $highest ||= $cons;
-            if ($cons->rank < $highest->rank) {
-                $highest = $cons;
+    unless ($self->{_most_severe_consequence}) {
+        
+        my $highest;
+        
+        for my $allele (@{ $self->alt_alleles }) {
+            for my $cons (@{ $allele->consequence_types }) {
+                $highest ||= $cons;
+                if ($cons->rank < $highest->rank) {
+                    $highest = $cons;
+                }
             }
         }
+        
+        $self->{_most_severe_consequence} = $highest;
     }
     
-    return $highest->ensembl_term;
+    return $self->{_most_severe_consequence};
+}
+
+sub display_consequence {
+    my $self = shift;
+    return $self->most_severe_consequence->ensembl_term;
 }
 
 1;
