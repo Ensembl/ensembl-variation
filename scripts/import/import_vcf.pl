@@ -185,11 +185,20 @@ debug("Connected to database ", $vdba->dbc->dbname, " on ", $vdba->dbc->host, " 
 my $in_file_handle = new FileHandle;
 
 if(defined($in_file)) {
-	
+
 	# check defined input file exists
 	die("ERROR: Could not find input file ", $in_file, "\n") unless -e $in_file;
 	
-	$in_file_handle->open($in_file) or die("ERROR: Could not read from input file ", $in_file, "\n");
+	if ($in_file =~ /\.gz$/){
+		$in_file_handle->open("zcat ". $in_file . " | " ) or die("ERROR: Could not read from input file ", $in_file, "\n");
+	}
+	elsif ($in_file =~ /\.vcf$/){
+		$in_file_handle->open( $in_file ) or die("ERROR: Could not read from input file ", $in_file, "\n");
+	}
+	else{
+		die "ERROR: Not sure how to handle file type of ", $in_file, "\n";
+	}
+
 	debug("Reading from file ", $in_file);
 }
 
