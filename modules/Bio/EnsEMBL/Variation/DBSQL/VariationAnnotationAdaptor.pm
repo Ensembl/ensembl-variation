@@ -46,7 +46,7 @@ Bio::EnsEMBL::Variation::DBSQL::VariationAnnotationAdaptor
   $v = $va->fetch_by_name('rs56');
 
   foreach $va (@{$vaa->fetch_all_by_Variation($v)}) {
-    print $va->phenotype_name(), $va->phenotype_description(), $va->source_name(), $va->study_type(), $va->local_stable_id(),"\n";
+    print $va->phenotype_name(), $va->phenotype_description(), $va->source_name(), $va->study_type(),"\n";
   }
 
 =head1 DESCRIPTION
@@ -279,26 +279,32 @@ sub fetch_all {
 
 # method used by superclass to construct SQL
 sub _tables { return (['variation_annotation', 'va'],
-                       [ 'failed_variation', 'fv'],
-                       [ 'phenotype', 'p'],
-                       [ 'source', 's']); 
+                      [ 'failed_variation', 'fv'],
+                      [ 'phenotype', 'p'],
+											[ 'study', 'st'],
+                      [ 'source', 's'],
+						 					[ 'study st2', ''],
+											[ 'source s2', '']); 
 }
 
 #ÊAdd a left join to the failed_variation table
-sub _left_join { return ([ 'failed_variation', 'fv.variation_id = va.variation_id']); }
+sub _left_join { return ([ 'failed_variation', 'fv.variation_id = va.variation_id'],
+                         [ 'study st2', 'st2.study_id = va.local_study_id'],
+						 						 [ 'source s2', 's2.source_id = st2.source_id'],); }
 
 sub _default_where_clause {
   my $self = shift;
 
-  return 'va.phenotype_id = p.phenotype_id AND va.source_id = s.source_id';
+  return 'va.phenotype_id = p.phenotype_id AND st.source_id = s.source_id AND va.study_id=st.study_id';
 }
 
 sub _columns {
   return qw( va.variation_annotation_id va.variation_id p.phenotype_id p.name p.description
-             s.name va.study va.study_type va.local_stable_id
+             s.name st.external_reference st.study_type 
              va.associated_gene va.associated_variant_risk_allele
-	     va.variation_names va.risk_allele_freq_in_controls va.p_value
-             );
+	         	 va.variation_names va.risk_allele_freq_in_controls va.p_value
+		     		 st2.name st2.description st2.url s2.name
+           );
 }
 
 
@@ -308,8 +314,15 @@ sub _objs_from_sth {
 
   my @features;
 
-  my ($variation_annotation_id,$var_id,$phenotype_id,$phenotype_name,$phenotype_description,$source_name,$study,$study_type,$local_stable_id,$associated_gene,$associated_variant_risk_allele,$variation_names,$risk_allele_freq_in_controls,$p_value, $last_va_id);
-  $sth->bind_columns(\$variation_annotation_id,\$var_id,\$phenotype_id,\$phenotype_name,\$phenotype_description,\$source_name,\$study,\$study_type,\$local_stable_id,\$associated_gene,\$associated_variant_risk_allele,\$variation_names,\$risk_allele_freq_in_controls, \$p_value);
+  my ($variation_annotation_id,$var_id,$phenotype_id,$phenotype_name,$phenotype_description,$source_name,
+      $external_reference,$study_type,$associated_gene,$associated_variant_risk_allele,$variation_names,
+	  	$risk_allele_freq_in_controls,$p_value,$local_study_name,$local_study_description,$local_study_url,
+			$local_study_source,$last_va_id);
+  $sth->bind_columns(\$variation_annotation_id,\$var_id,\$phenotype_id,\$phenotype_name,
+                     \$phenotype_description,\$source_name,\$external_reference,\$study_type,
+					 					 \$associated_gene,\$associated_variant_risk_allele,\$variation_names,
+					 					 \$risk_allele_freq_in_controls,\$p_value,\$local_study_name,\$local_study_description,
+										 \$local_study_url,\$local_study_source);
 
   while($sth->fetch()) {
     
@@ -320,19 +333,22 @@ sub _objs_from_sth {
 
     {'dbID' => $variation_annotation_id,
      '_variation_id'         => $var_id,
-	 '_phenotype_id'		 => $phenotype_id,
+	   '_phenotype_id'		     => $phenotype_id,
      'phenotype_name'        => $phenotype_name,
      'phenotype_description' => $phenotype_description,
      'source_name'           => $source_name,
-     'study'                 => $study,
+     'external_reference'    => $external_reference,
      'study_type'            => $study_type,
-     'local_stable_id'       => $local_stable_id,
      'associated_gene'       => $associated_gene,
      'associated_variant_risk_allele' => $associated_variant_risk_allele,
      'variation_names'       => $variation_names,
      'risk_allele_freq_in_controls'   => $risk_allele_freq_in_controls,
      'p_value'               => $p_value,
      'adaptor'  => $self,
+	   'local_study_name' => $local_study_name, 
+	   'local_study_description' => $local_study_description,
+	   'local_study_url' => $local_study_url, 
+	   'local_study_source_name' => $local_study_source,
     });
   }
 
