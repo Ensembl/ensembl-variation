@@ -186,9 +186,9 @@ sub new {
   my $caller = shift;
   my $class = ref($caller) || $caller;
 
-  my ($dbID, $adaptor, $name, $class_so_accession, $src, $src_desc, $src_url, $src_type, $is_somatic, $syns, $ancestral_allele,
+  my ($dbID, $adaptor, $name, $class_so_term, $src, $src_desc, $src_url, $src_type, $is_somatic, $syns, $ancestral_allele,
       $alleles, $valid_states, $moltype, $five_seq, $three_seq, $flank_flag) =
-        rearrange([qw(dbID ADAPTOR NAME CLASS_SO_ACCESSION SOURCE SOURCE_DESCRIPTION SOURCE_URL SOURCE_TYPE IS_SOMATIC 
+        rearrange([qw(dbID ADAPTOR NAME CLASS_SO_TERM SOURCE SOURCE_DESCRIPTION SOURCE_URL SOURCE_TYPE IS_SOMATIC 
                       SYNONYMS ANCESTRAL_ALLELE ALLELES VALIDATION_STATES MOLTYPE FIVE_PRIME_FLANKING_SEQ
                       THREE_PRIME_FLANKING_SEQ FLANK_FLAG)],@_);
 
@@ -215,7 +215,7 @@ sub new {
     'dbID' => $dbID,
     'adaptor' => $adaptor,
     'name'   => $name,
-    'class_SO_accession' => $class_so_accession,
+    'class_SO_term' => $class_so_term,
     'source' => $src,
     'source_description' => $src_desc,
     'source_url' => $src_url,
@@ -1010,12 +1010,8 @@ sub var_class{
     my $self = shift;
     
     unless ($self->{class_display_term}) {
-        
-        # convert the SO accession to the ensembl display term
-        if (my $display_term = $self->{adaptor}->_display_term_for_SO_accession($self->{class_SO_accession}, $self->is_somatic)) {
-            $self->{class_display_term} = $display_term;
-        }
-        else {
+       
+        unless ($self->{class_SO_term}) {
             # work out the term from the alleles
             
             my $alleles = $self->get_all_Alleles(); #get all Allele objects
@@ -1023,14 +1019,18 @@ sub var_class{
             map {$alleles{$_->allele}++} @{$alleles};
             my $allele_string = join '/',keys %alleles;
             
-            my $SO_term = SO_variation_class($allele_string);
+            $self->{class_SO_term} = SO_variation_class($allele_string);
+        }
+        
+        if (my $display_term = $self->{adaptor}->_display_term_for_SO_term(
+                $self->{class_SO_term}, 
+                $self->is_somatic
+            ) ) {
             
-            if (my $display_term = $self->{adaptor}->_display_term_for_SO_term($SO_term, $self->is_somatic)) {
-                $self->{class_display_term} = $display_term;
-            }
-            else {
-                die "Unrecognised SO term: $SO_term";
-            }
+            $self->{class_display_term} = $display_term;
+        }
+        else {
+            die "Unrecognised SO term: ".$self->{class_SO_term};
         }
     }
     
