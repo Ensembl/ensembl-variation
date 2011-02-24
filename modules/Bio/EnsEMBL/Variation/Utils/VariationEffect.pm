@@ -456,10 +456,16 @@ sub within_coding_frameshift_intron {
         $tva->transcript_variation->intron_effects->{within_frameshift_intron});
 }
 
+sub coding_other {
+    my $tva = shift;
+
+    return (within_cds($tva) and (not $tva->peptide) and (not frameshift($tva)));
+}
+
 sub coding_unknown {
     my $tva = shift;
-      
-    return (within_cds($tva) and (not $tva->peptide) and (not frameshift($tva)));
+
+    return (within_coding_frameshift_intron($tva) or coding_other($tva));
 }
 
 
