@@ -176,10 +176,10 @@ sub new {
     
   my $self = $class->SUPER::new(@_);
   my ($allele_str, $var_name, $map_weight, $variation, $variation_id, $source, 
-    $is_somatic, $validation_code, $consequence_type, $class_so_accession) =
+    $is_somatic, $validation_code, $consequence_type, $class_so_term) =
     rearrange([qw(ALLELE_STRING VARIATION_NAME 
                   MAP_WEIGHT VARIATION _VARIATION_ID SOURCE IS_SOMATIC VALIDATION_CODE 
-		  CONSEQUENCE_TYPE CLASS_SO_ACCESSION)], @_);
+		  CONSEQUENCE_TYPE CLASS_SO_TERM)], @_);
 
   $self->{'allele_string'}      = $allele_str;
   $self->{'variation_name'}     = $var_name;
@@ -190,7 +190,7 @@ sub new {
   $self->{'is_somatic'}         = $is_somatic;
   $self->{'validation_code'}    = $validation_code;
   $self->{'consequence_type'}   = $consequence_type || ['INTERGENIC'];
-  $self->{'class_SO_accession'} = $class_so_accession;
+  $self->{'class_SO_term'}      = $class_so_term;
   
   return $self;
 }
@@ -784,24 +784,23 @@ sub var_class{
     unless ($self->{class_display_term}) {
         
         # convert the SO accession to the ensembl display term
-         
-        if ($self->{class_SO_accession}) {
-            my $display_term = $self->{adaptor}->_display_term_for_SO_accession($self->{class_SO_accession}, $self->is_somatic);
+        
+        $self->{class_SO_term} = SO_variation_class($self->allele_string);
+        
+        unless ($self->{class_SO_term}) {
+            # work out the term from the allele string
+            $self->{class_SO_term} = SO_variation_class($self->allele_string);
+        }
+        
+        if (my $display_term = $self->{adaptor}->_display_term_for_SO_term(
+                $self->{class_SO_term}, 
+                $self->is_somatic
+            ) ) {
+            
             $self->{class_display_term} = $display_term;
-            $self->{class_SO_term} = $self->{adaptor}->_SO_term_for_SO_accession($self->{class_SO_accession});
         }
         else {
-            # work out the term from the allele string
-            my $SO_term = SO_variation_class($self->allele_string);
-            
-            $self->{class_SO_term} = $SO_term;
-            
-            if (my $display_term = $self->{adaptor}->_display_term_for_SO_term($SO_term, $self->is_somatic)) {
-                $self->{class_display_term} = $display_term;
-            }
-            else {
-                die "Unrecognised SO term: $SO_term";
-            }
+            die "Unrecognised SO term: ".$self->{class_SO_term};
         }
     }
     
@@ -821,14 +820,12 @@ sub var_class{
 =cut
 
 sub class_SO_term {
-    my $self = shift;
-    
-    unless ($self->{class_SO_term}) {
-        # the logic for working this stuff out is in the var_class method, so just 
-        # call it to set the class_SO_term 
-        $self->var_class;
-    }
-    
+    my ($self, $class_SO_term) = @_;
+   
+    $self->{class_SO_term} = $class_SO_term if $class_SO_term;
+
+    $self->{class_SO_term} = SO_variation_class($self->allele_string);
+
     return $self->{class_SO_term};
 }
 
@@ -1418,8 +1415,8 @@ sub get_all_hgvs_notations {
       my $end_phase = ($cds_end - 1)%3;
       
       # Get the complete, affected codons. Break it apart into the upstream piece, the allele and the downstream piece
-      my $cds = $ref_feature->translateable_seq();
-      #my $cds = $transcript_variation->translateable_seq();
+      #my $cds = $ref_feature->translateable_seq();
+      my $cds = $transcript_variation->translateable_seq();
       my $codon_ref = substr($cds,($cds_start - 1),($cds_end - $cds_start + 1));
       my $codon_down = substr($cds,$cds_end,(2-$end_phase));
       $codon_up = substr($cds,($cds_start - $start_phase - 1),$start_phase);
