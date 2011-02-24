@@ -541,14 +541,14 @@ Options
                       [default: all tables included]
 --skip_tables         Comma-separated list of tables to exclude when writing to DB.
                       Takes precedence over --tables (i.e. any tables named in --tables
-					  and --skip_tables will be skipped) [default: not used]
+                      and --skip_tables will be skipped) [default: not used]
 
 --merge_vfs           Attempt to merge VCF variants with existing variation features.
                       Default behaviour is to create a new variation feature entry.
                       [default: not used]
 --only_existing       Only write to tables when an existing variant is found. Existing
                       can be a variation with the same name, or from a successful merge
-					  using --merge_vfs [default: not used]
+                      using --merge_vfs [default: not used]
 
 --disable_keys        Disable MySQL keys during inserts [default: not used]
 
@@ -1154,10 +1154,10 @@ sub parse_info {
 		
 		foreach my $gt(keys %counts) {
 			$c_ab += $counts{$gt} if $gt =~ /$a/ and $gt ne $a.'|'.$a;
-			$gt_freqs{$gt} = $counts{$gt}/$total_count;
+			$gt_freqs{$gt} = ($total_count ? $counts{$gt}/$total_count : 0);
 		}
 		
-		push @freqs, (((2*$c_aa) + $c_ab) / (2*$total_count)) unless defined($info{AF});
+		push @freqs, ($total_count ? (((2*$c_aa) + $c_ab) / (2*$total_count)) : 0) unless defined($info{AF});
 	}
 	
 	$data->{freqs} = \@freqs;
