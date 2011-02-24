@@ -67,7 +67,7 @@ sub store {
             $self->SO_term_for_ensembl_feature($vfo->feature),
             $allele->allele_string,
             $vfo->variation_feature->is_somatic,
-            (join ",", map { $_->SO_id } @{ $allele->consequence_types }),
+            (join ",", map { $_->SO_term } @{ $allele->consequence_types }),
         );
     }
 }
