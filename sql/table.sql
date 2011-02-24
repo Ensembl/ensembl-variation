@@ -3,13 +3,13 @@
 
 @desc This is the schema's generic representation of a variation, defined as a genetic feature that varies between individuals of the same species.The most common type is the single nucleotide variation (SNP) though the schema also accommodates copy number variations (CNVs) and structural variations (SVs).A variation is defined by its flanking sequence rather than its mapped location on a chromosome; a variation may in fact have multiple mappings across a genome.This table stores a variation's name (commonly an ID of the form e.g. rs123456, assigned by dbSNP), along with a validation status and ancestral (or reference) allele.
 
-@column variation_id			Primary key, internal identifier.
-@column source_id					Foreign key references to the @link source table.
-@column name							Name of the variation. e.g. "rs1333049".
+@column variation_id		Primary key, internal identifier.
+@column source_id			Foreign key references to the @link source table.
+@column name				Name of the variation. e.g. "rs1333049".
 @column validation_status	Variant discovery method and validation from dbSNP.
 @column ancestral_allele	Taken from dbSNP to show ancestral allele for the variation.
-@column flipped						This is set to 1 if the variant is flipped from the negative to the positive strand during import.
-@column class_so_id				Class of the variation, based on the Sequence Ontology.
+@column flipped				This is set to 1 if the variant is flipped from the negative to the positive strand during import.
+@column class_attrib_id		Class of the variation, key into the @link attrib table
 @column somatic             flags whether this variation is known to be somatic or not
 
 @see variation_synonym
@@ -20,6 +20,7 @@
 @see allele
 @see allele_group_allele
 @see individual_genotype_multiple_bp
+@see attrib
 */
 
 create table variation (
@@ -32,17 +33,8 @@ create table variation (
 								 'failed','precious'),
 	ancestral_allele text,
 	flipped tinyint(1) unsigned NULL DEFAULT NULL,
-    class_so_id ENUM(
-        'SO:0001483', # SNV
-        'SO:1000002', # substitution
-        'SO:0000667', # insertion
-        'SO:0000159', # deletion
-        'SO:0000705', # tandem_repeat
-        'SO:1000032', # indel
-        'SO:0001059', # sequence_alteration
-        'SO:0001019'  # copy_number_variation
-    ) DEFAULT 'SO:0001059', # default to sequence_alteration, the highest level SO term
-    somatic tinyint(1) DEFAULT 0,
+    class_attrib_id int(10) unsigned not null default 0,
+    somatic tinyint(1) DEFAULT 0 NOT NULL,
 
 	primary key( variation_id ),
 	unique ( name ),
@@ -384,14 +376,16 @@ INSERT INTO individual_type (name,description) VALUES ('mutant','a single or mul
 @column flags						Flag to filter the selection of variations.
 @column source_id					Foreign key references to the source table.
 @column validation_status		SET('cluster', 'freq', 'submitter', 'doublehit', 'hapmap', '1000Genome', 'precious')	Variant discovery method and validation from dbSNP.
-@column consequence_type		The consequence of the variation.
+@column consequence_type		The SO accession(s) representing the 'worst' consequence(s) of the variation in a transcript or regulatory region
 @column variation_set_id		The variation feature can belong to a @link variation_set.
-@column class_so_id				Class of the variation, based on the <a href="http://www.sequenceontology.org">Sequence Ontology</a>.
+@column class_attrib_id			Class of the variation, key in the @link attrib table
+@column somatic                 Flags whether this variation_feature is somatic or germline
 
 @see variation
 @see tagged_variation_feature
 @see transcript_variation
 @see seq_region
+@see attrib
 */
 
 create table variation_feature(
@@ -402,26 +396,53 @@ create table variation_feature(
 	seq_region_strand tinyint not null,
 	variation_id int(10) unsigned not null,
 	allele_string text,
-   variation_name varchar(255),
+    variation_name varchar(255),
 	map_weight int not null,
 	flags SET('genotyped'),
 	source_id int(10) unsigned not null, 
-	validation_status SET('cluster','freq',
-								 'submitter','doublehit',
-								 'hapmap','1000Genome',
-								 'precious'),
-	consequence_type SET ('ESSENTIAL_SPLICE_SITE','STOP_GAINED',
-								 'STOP_LOST','COMPLEX_INDEL',
-	                      'FRAMESHIFT_CODING','NON_SYNONYMOUS_CODING',
-	                      'SPLICE_SITE','PARTIAL_CODON',
-	                      'SYNONYMOUS_CODING','REGULATORY_REGION',
-	                      'WITHIN_MATURE_miRNA','5PRIME_UTR',
-	                      '3PRIME_UTR','INTRONIC',
-	                      'NMD_TRANSCRIPT','UPSTREAM',
-	                      'DOWNSTREAM','WITHIN_NON_CODING_GENE',
-	                      'NO_CONSEQUENCE','INTERGENIC',
-	                      'HGMD_MUTATION')
-	default "INTERGENIC" not null,	
+	validation_status SET(
+        'cluster',
+        'freq',
+		'submitter',
+        'doublehit',
+		'hapmap',
+        '1000Genome',
+		'precious'
+    ),
+    consequence_type SET (
+        'intergenic_variant',
+        'splice_acceptor_variant',
+        'splice_donor_variant',
+        'complex_change_in_transcript', 
+        'stop_lost',
+        'coding_sequence_variant',
+        'non_synonymous_codon',
+        'stop_gained',
+        'synonymous_codon',
+        'frameshift_variant',
+        'nc_transcript_variant',
+        'mature_miRNA_variant',
+        'NMD_transcript_variant',
+        '5_prime_UTR_variant',
+        '3_prime_UTR_variant',
+        'incomplete_terminal_codon_variant',
+        'intron_variant',
+        'splice_region_variant',
+        '5KB_downstream_variant',
+        '500B_downstream_variant',
+        '5KB_upstream_variant',
+        '2KB_upstream_variant',
+        'initiator_codon_change',
+        'stop_retained_variant',
+        'inframe_codon_gain',
+        'inframe_codon_loss',
+        'miRNA_target_site_variant',
+        'pre_miRNA_variant',
+        'regulatory_region_variant',
+        'increased_binding_affinity',
+        'decreased_binding_affinity',
+        'binding_site_variant'
+    ) DEFAULT 'intergenic_variant' NOT NULL,
     variation_set_id SET (
             '1','2','3','4','5','6','7','8',
             '9','10','11','12','13','14','15','16',
@@ -432,18 +453,10 @@ create table variation_feature(
             '49','50','51','52','53','54','55','56',
             '57','58','59','60','61','62','63','64'
     ) NOT NULL DEFAULT '',
-    class_so_id ENUM(
-        'SO:0001483', # SNV
-        'SO:1000002', # substitution
-        'SO:0000667', # insertion
-        'SO:0000159', # deletion
-        'SO:0000705', # tandem_repeat
-        'SO:1000032', # indel
-        'SO:0001059', # sequence_alteration
-        'SO:0001019'  # copy_number_variation
-    ) DEFAULT 'SO:0001059', # default to sequence_alteration, the highest level SO term
+    class_attrib_id int(10) unsigned not null default 0,
+    somatic tinyint(1) DEFAULT 0 NOT NULL,
 
-	primary key( variation_feature_id ),
+   	primary key( variation_feature_id ),
 	key pos_idx( seq_region_id, seq_region_start, seq_region_end ),
 	key variation_idx( variation_id ),
     key variation_set_idx ( variation_set_id )
@@ -1241,63 +1254,4 @@ INSERT INTO failed_description (failed_description_id,description) VALUES (7,'Ge
 INSERT INTO failed_description (failed_description_id,description) VALUES (8,'Variation has no associated sequence');
 
 
-/**
-@table variation_class
 
-@desc This table contains the different classes of variation, based on the <a href="http://www.sequenceontology.org/">Sequence Ontology</a> project.
-
-@column so_id			Primary key, external identifier. The identifier comes from the Sequence Ontology database (e.g. "SO:0001483").
-@column so_term		The corresponding Sequence Ontology term (e.g. "SNV").
-@column display_term	The Ensembl term displayed on the website (e.g. "SNP").
-
-@see variation
-@see variation_feature
-*/
-
-CREATE TABLE variation_class (
-    so_id               VARCHAR(128) NOT NULL,
-    so_term             VARCHAR(128),
-    display_term        VARCHAR(128),
-    
-    PRIMARY KEY (so_id)
-);
-
-INSERT INTO variation_class (
-        so_id,
-        so_term,
-        display_term
-    )
-    VALUES (
-        'SO:0001483',
-        'SNV',
-        'SNP'
-    ), (
-        'SO:0001019',
-        'copy_number_variaton',
-        'CNV'
-    ), (
-        'SO:0000667',
-        'insertion',
-        'insertion'
-    ), (
-        'SO:0000159',
-        'deletion',
-        'deletion'
-    ), (
-        'SO:1000032',
-        'indel',
-        'indel'
-    ), (
-        'SO:0001059',
-        'sequence_alteration',
-        'sequence_alteration'
-    ), (
-        'SO:1000002',
-        'substitution',
-        'substitution'
-    ), (
-        'SO:0000705',
-        'tandem_repeat',
-        'tandem_repeat'
-    )
-;
