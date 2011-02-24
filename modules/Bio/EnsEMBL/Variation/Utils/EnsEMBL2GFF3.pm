@@ -328,6 +328,7 @@ use warnings;
         $gff->{attributes}->{ID} = $self->variation_name;
         
         $gff->{source} = $self->source;
+				if ($self->study_name) { $gff->{source} .= ':'.$self->study_name; }
         
         $gff->{type} = $self->class;
         
