@@ -193,7 +193,8 @@ sub sift_prediction {
 sub _nsSNP_prediction {
     my ($self, $program) = @_;
     
-    if (grep { $_->SO_term eq 'non_synonymous_codon' } @{ $self->consequence_types }) {
+    if (grep { $_->SO_term eq 'non_synonymous_codon' || $_->SO_term eq 'initiator_codon_change' } 
+        @{ $self->consequence_types }) {
         if (my $adap = $self->transcript_variation->{adaptor}) {
             return $adap->_get_nsSNP_prediction($program, $self);
         }
