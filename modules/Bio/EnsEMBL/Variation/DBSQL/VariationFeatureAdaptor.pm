@@ -87,6 +87,34 @@ use Bio::EnsEMBL::Utils::Iterator;
 our @ISA = ('Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor', 'Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor');
 our $MAX_VARIATION_SET_ID = 64;
 
+=head2 fetch_all
+
+  Description: Returns a listref of all germline variation features
+  Returntype : listref of VariationFeatures
+  Status     : At risk
+
+=cut
+
+sub fetch_all {
+    my $self = shift;
+    my $constraint = 'vf.somatic = 0';
+    return $self->generic_fetch($constraint);
+}
+
+=head2 fetch_all_somatic
+
+  Description: Returns a listref of all somatic variation features
+  Returntype : listref of VariationFeatures
+  Status     : At risk
+
+=cut
+
+sub fetch_all_somatic {
+    my $self = shift;
+    my $constraint = 'vf.somatic = 1';
+    return $self->generic_fetch($constraint);
+}
+
 =head2 fetch_all_by_Slice_constraint
 
   Arg [1]    : Bio::EnsEMBL::Slice $slice
@@ -106,8 +134,8 @@ our $MAX_VARIATION_SET_ID = 64;
 sub fetch_all_by_Slice_constraint {
     my ($self, $slice, $constraint) = @_;
     
-    # by default, filter out somatic mutations
-    my $somatic_constraint = 's.somatic = 0';
+    # by default, filter outsomatic mutations
+    my $somatic_constraint = 'vf.somatic = 0';
     
     if ($constraint) {
         $constraint .= " AND $somatic_constraint";
@@ -150,7 +178,7 @@ sub fetch_all_by_Slice_constraint_with_Variations {
 sub fetch_all_somatic_by_Slice_constraint {
     my ($self, $slice, $constraint) = @_;
     
-    my $somatic_constraint = 's.somatic = 1';
+    my $somatic_constraint = 'vf.somatic = 1';
     
     if ($constraint) {
         $constraint .= " AND $somatic_constraint";
@@ -251,7 +279,7 @@ sub fetch_all_genotyped_by_Slice{
     my $self = shift;
     my $slice = shift;
 
-    my $constraint = "vf.flags & 1 AND s.somatic = 0";
+    my $constraint = "vf.flags & 1 AND vf.somatic = 0";
     #call the method fetch_all_by_Slice_constraint with the genotyped constraint
     return $self->fetch_all_by_Slice_constraint($slice,$constraint);
 }
@@ -345,7 +373,7 @@ sub _internal_fetch_all_with_annotation_by_Slice{
 sub fetch_all_with_annotation_by_Slice {
     my $self = shift;
     my ($slice, $v_source, $p_source, $annotation) = @_;
-    my $constraint = 's.somatic = 0';
+    my $constraint = 'vf.somatic = 0';
     return $self->_internal_fetch_all_with_annotation_by_Slice($slice, $v_source, $p_source, $annotation, $constraint);
 }
 
@@ -370,7 +398,7 @@ sub fetch_all_with_annotation_by_Slice {
 sub fetch_all_somatic_with_annotation_by_Slice {
     my $self = shift;
     my ($slice, $v_source, $p_source, $annotation) = @_;
-    my $constraint = 's.somatic = 1';
+    my $constraint = 'vf.somatic = 1';
     return $self->_internal_fetch_all_with_annotation_by_Slice($slice, $v_source, $p_source, $annotation, $constraint);
 }
 
@@ -595,7 +623,7 @@ sub fetch_all_with_annotation {
     
     my ($self, $v_source, $p_source, $annotation, $constraint) = @_;
     
-    my $somatic_constraint = 's.somatic = 0';
+    my $somatic_constraint = 'vf.somatic = 0';
     
     if ($constraint) {
         $constraint .= " AND $somatic_constraint";
@@ -624,7 +652,7 @@ sub fetch_all_somatic_with_annotation {
     
     my ($self, $v_source, $p_source, $annotation, $constraint) = @_;
     
-    my $somatic_constraint = 's.somatic = 1';
+    my $somatic_constraint = 'vf.somatic = 1';
     
     if ($constraint) {
         $constraint .= " AND $somatic_constraint";
@@ -667,8 +695,8 @@ sub _default_where_clause {
 sub _columns {
   return qw( vf.variation_feature_id vf.seq_region_id vf.seq_region_start
              vf.seq_region_end vf.seq_region_strand vf.variation_id
-             vf.allele_string vf.variation_name vf.map_weight s.name s.somatic 
-             vf.validation_status vf.consequence_type vf.class);
+             vf.allele_string vf.variation_name vf.map_weight s.name vf.somatic 
+             vf.validation_status vf.consequence_type vf.class_attrib_id);
 }
 
 sub _objs_from_sth {
@@ -684,6 +712,8 @@ sub _objs_from_sth {
 
     my $sa = $self->db()->dnadb()->get_SliceAdaptor();
 
+    my $aa = $self->db->get_AttributeAdaptor;
+
     my @features;
     my %slice_hash;
     my %sr_name_hash;
@@ -692,13 +722,13 @@ sub _objs_from_sth {
     my ($variation_feature_id, $seq_region_id, $seq_region_start,
       $seq_region_end, $seq_region_strand, $variation_id,
       $allele_string, $variation_name, $map_weight, $source_name, 
-      $is_somatic, $validation_status, $consequence_type, $class_so_accession, $last_vf_id);
+      $is_somatic, $validation_status, $consequence_type, $class_attrib_id, $last_vf_id);
 
     $sth->bind_columns(\$variation_feature_id, \$seq_region_id,
                      \$seq_region_start, \$seq_region_end, \$seq_region_strand,
                      \$variation_id, \$allele_string, \$variation_name,
                      \$map_weight, \$source_name, \$is_somatic, \$validation_status, 
-                     \$consequence_type, \$class_so_accession);
+                     \$consequence_type, \$class_attrib_id);
 
     my $asm_cs;
     my $cmp_cs;
@@ -822,7 +852,7 @@ sub _objs_from_sth {
                 'validation_code' => \@states,
                 'consequence_type' => \@types || ['INTERGENIC'],
                 '_variation_id' => $variation_id,
-                'class_SO_accession' => $class_so_accession,
+                'class_SO_term' => $aa->fetch_attrib_for_id($class_attrib_id),
                 }
             );
         }
