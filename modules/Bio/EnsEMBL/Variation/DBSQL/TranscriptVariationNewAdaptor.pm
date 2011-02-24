@@ -65,7 +65,7 @@ sub store {
             $tv->feature->stable_id,
             $allele->allele_string,
             $tv->variation_feature->is_somatic,
-            (join ',', map { $_->SO_id } @{ $allele->consequence_types }),
+            (join ',', map { $_->SO_term } @{ $allele->consequence_types }),
             $tv->cds_start, 
             $tv->cds_end,
             $tv->cdna_start,
@@ -251,10 +251,11 @@ sub _get_nsSNP_prediction {
     
     my $sth = $dbh->prepare_cached(qq{
         SELECT  pred.prediction
-        FROM    ${program}_prediction pred, protein_position pp
+        FROM    ${program}_prediction pred, protein_position pp, protein_info pi
         WHERE   pred.protein_position_id = pp.protein_position_id
-        AND     pp.transcript_stable_id = ?
-        AND     pp.transcript_version = ?
+        AND     pp.protein_info_id = pi.protein_info_id
+        AND     pi.transcript_stable_id = ?
+        AND     pi.transcript_version = ?
         AND     pp.position = ?
         AND     pred.amino_acid = ?
     });
