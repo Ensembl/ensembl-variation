@@ -6,10 +6,10 @@ create table study (
 	name varchar(255),
 	description varchar(255),
 	url varchar(255),
-	study varchar(255),
+	external_reference varchar(255),
+	study_type set('GWAS'),
 	
 	primary key( study_id ),
-	unique key name_idx(name),
 	key source_idx (source_id)
 );
 
