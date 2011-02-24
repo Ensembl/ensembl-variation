@@ -39,7 +39,7 @@ Bio::EnsEMBL::Variation::DBSQL::SupportingStructuralVariationAdaptor
   $ssva = $reg->get_adaptor("human","variation","supportingstructuralvariation");
 
   # fetch a supporting structural variation by its name
-  $ssv = $ssva->fetch_by_name('????????????????'); 
+  $ssv = $ssva->fetch_by_name('nssv133'); 
 
   # fetch all supporting evidences for a structural variation
   $sva = $reg->get_adaptor("human","variation","structuralvariation");
@@ -72,7 +72,7 @@ use base qw{Bio::EnsEMBL::DBSQL::BaseAdaptor};
 =head2 fetch_by_name
 
   Arg [1]    : string $name
-  Example    : $ssv = $ssv_adaptor->fetch_by_name('???????????????????????????');
+  Example    : $ssv = $ssv_adaptor->fetch_by_name('nssv133');
   Description: Retrieves a supporting evidence object via its name
   Returntype : Bio::EnsEMBL::Variation::SupportingStructuralVariation
   Exceptions : throw if name argument is not defined
