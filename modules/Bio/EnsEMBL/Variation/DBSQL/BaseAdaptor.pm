@@ -53,34 +53,6 @@ use Bio::EnsEMBL::DBSQL::BaseAdaptor;
 
 our @ISA = ('Bio::EnsEMBL::DBSQL::BaseAdaptor');
 
-=head2 fetch_all
-
-  Description: Returns a listref of all germline variation features
-  Returntype : listref of VariationFeatures
-  Status     : At risk
-
-=cut
-
-sub fetch_all {
-    my $self = shift;
-    my $constraint = 's.somatic = 0';
-    return $self->generic_fetch($constraint);
-}
-
-=head2 fetch_all_somatic
-
-  Description: Returns a listref of all somatic variation features
-  Returntype : listref of VariationFeatures
-  Status     : At risk
-
-=cut
-
-sub fetch_all_somatic {
-    my $self = shift;
-    my $constraint = 's.somatic = 1';
-    return $self->generic_fetch($constraint);
-}
-
 # returns a hash mapping SO accessions to SO and ensembl display terms
 sub _SO_mappings {
     my $self = shift;
