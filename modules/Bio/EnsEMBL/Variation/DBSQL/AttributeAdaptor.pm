@@ -29,6 +29,35 @@ use Bio::EnsEMBL::Variation::OverlapConsequence;
 
 use base qw(Bio::EnsEMBL::DBSQL::BaseAdaptor);
 
+sub fetch_attrib_for_id {
+
+    my ($self, $attrib_id) = @_;
+
+    unless ($self->{attribs}) {
+        
+        my $attribs;
+
+        my $sql = qq{
+            SELECT  a.attrib_id, t.code, a.value
+            FROM    attrib a, attrib_type t
+            WHERE   a.attrib_type_id = t.attrib_type_id
+        };
+
+        my $sth = $self->prepare($sql);
+
+        $sth->execute;
+
+        while (my ($attrib_id, $type, $value) = $sth->fetchrow_array) {
+            $attribs->{$attrib_id}->{type}  = $type;
+            $attribs->{$attrib_id}->{value} = $value;
+        }
+
+        $self->{attribs} = $attribs;
+    }
+
+    return $self->{attribs}->{$attrib_id}->{value};
+}
+
 sub fetch_all_OverlapConsequences {
     my ($self) = @_;
     
