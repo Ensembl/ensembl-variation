@@ -67,6 +67,7 @@ sub get_available_adaptors{
 		 'Variation' => 'Bio::EnsEMBL::Variation::DBSQL::VariationAdaptor',
 		 'VariationFeature' => 'Bio::EnsEMBL::Variation::DBSQL::VariationFeatureAdaptor',
 		 'StructuralVariation' => 'Bio::EnsEMBL::Variation::DBSQL::StructuralVariationAdaptor',
+		 'SupportingStructuralVariation' => 'Bio::EnsEMBL::Variation::DBSQL::SupportingStructuralVariationAdaptor',
 		 'VariationAnnotation' => 'Bio::EnsEMBL::Variation::DBSQL::VariationAnnotationAdaptor',
 		 'AlleleFeature' => 'Bio::EnsEMBL::Variation::DBSQL::AlleleFeatureAdaptor',
 		 'LDFeatureContainer' => 'Bio::EnsEMBL::Variation::DBSQL::LDFeatureContainerAdaptor',
@@ -134,7 +135,7 @@ sub get_available_adaptors{
 			#ÊDo something else...
 		    }
 		}
-		Ê
+		
   Description: Getter/Setter for the behaviour of the adaptors connected through this
 	       DBAdaptor when it comes to variations that have been flagged as failed.
 	       The default behaviour is not to return these variations in e.g. the
@@ -151,7 +152,7 @@ sub get_available_adaptors{
 =cut
 
 sub include_failed_variations {
-    my $self = shift;   
+    my $self = shift;
     my $include = shift;
     
     #ÊIf the flag should be modified, do that
