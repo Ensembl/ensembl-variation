@@ -37,7 +37,13 @@ Bio::EnsEMBL::Variation::StructuralVariation - A genomic position for a structur
         -strand  => 1,
         -slice   => $slice,
         -variation_name => 'esv25480',
-		-class     => 'CNV');
+		-class => 'SV',
+		-source => 'DGVa',
+		-source_description => 'Database of Genomic Variants Archive',
+		-study_name => 'estd20',
+		-study_description => 'Conrad 2009 "Origins and functional impact of copy number variation in the human genome." PMID:19812545 [remapped from build NCBI36]',
+		-study_url => 'ftp://ftp.ebi.ac.uk/pub/databases/dgva/estd20_Conrad_et_al_2009',
+		-external_reference => 'pubmed/19812545');
 
     ...
 
@@ -109,13 +115,20 @@ our @ISA = ('Bio::EnsEMBL::Feature');
 	string - description of the source
 
   Arg [-TYPE] :
-     string - the class of structural variation e.g. 'CNV'
+     string - the class of structural variation e.g. 'SV'
 
-  Arg [-VARIATION_ID] :
-    int - the internal id of the variation object associated with this
-    identifier. This may be provided instead of a variation object so that
-    the variation may be lazy-loaded from the database on demand.
+  Arg [-STUDY_NAME] :
+    string - the name of the study where the variation comes from
+	
+  Arg [-STUDY_DESCRIPTION] :
+	string - description of the study
+	
+  Arg [-STUDY_URL] :
+	string - url of the database/file where the data are stored
 
+  Arg [-EXTERNAL_REFERENCE] :
+	string - the pubmed/ids or project/study names
+	
   Example    :
     $svf = Bio::EnsEMBL::Variation::StructuralVariation->new
        (-start   => 100,
@@ -123,7 +136,13 @@ our @ISA = ('Bio::EnsEMBL::Feature');
         -strand  => 1,
         -slice   => $slice,
         -variation_name => 'esv25480',
-		-class => 'CNV');
+		-class => 'SV',
+		-source => 'DGVa',
+		-source_description => 'Database of Genomic Variants Archive',
+		-study_name => 'estd20',
+		-study_description => 'Conrad 2009 "Origins and functional impact of copy number variation in the human genome." PMID:19812545 [remapped from build NCBI36]',
+		-study_url => 'ftp://ftp.ebi.ac.uk/pub/databases/dgva/estd20_Conrad_et_al_2009',
+		-external_reference => 'pubmed/19812545');
 
   Description: Constructor. Instantiates a new StructuralVariation object.
   Returntype : Bio::EnsEMBL::Variation::StructuralVariation
@@ -138,8 +157,10 @@ sub new {
   my $class = ref($caller) || $caller;
 
   my $self = $class->SUPER::new(@_);
-  my ($var_name, $source, $source_description, $sv_class, $bound_start, $bound_end, $allele_string) =
-    rearrange([qw(VARIATION_NAME SOURCE SOURCE_DESCRIPTION TYPE BOUND_START BOUND_END ALLELE_STRING)], @_);
+  my ($var_name, $source, $source_description, $sv_class, $bound_start, $bound_end, $allele_string, $study_name, 
+      $study_description, $study_url, $external_reference) =
+    rearrange([qw(VARIATION_NAME SOURCE SOURCE_DESCRIPTION TYPE BOUND_START BOUND_END ALLELE_STRING STUDY_NAME STUDY_DESCRIPTION 
+                  STUDY_URL EXTERNAL_REFERENCE)], @_);
 
   $self->{'variation_name'}   = $var_name;
   $self->{'source'}           = $source;
@@ -148,7 +169,10 @@ sub new {
   $self->{'bound_start'} = $bound_start;
   $self->{'bound_end'} = $bound_end;
   $self->{'allele_string'} = $allele_string;
- 
+  $self->{'study_name'} = $study_name;
+  $self->{'study_description'} = $study_description;
+  $self->{'study_url'} = $study_url;
+  $self->{'external_reference'} = $external_reference;
   return $self;
 }
 
@@ -221,6 +245,31 @@ sub allele_string{
   return $self->{'allele_string'} = shift if(@_);
   return $self->{'allele_string'};
 }
+
+
+=head2 get_all_SupportingStructuralVariants
+
+  Example     : $svf->get_all_SupportingStructuralVariants();
+  Description : Retrieves all SupportingStructuralVariation associated with this structural variation.
+                Return empty list if there are none.
+  Returntype  : reference to list of Bio::EnsEMBL::Variation::SupportingStructuralVariation objects
+  Exceptions  : None
+  Caller      : general
+  Status      : At Risk
+
+=cut
+
+sub get_all_SupportingStructuralVariants {
+	my $self = shift;
+	
+	if (defined ($self->{'adaptor'})){
+		my $ssv_adaptor = $self->{'adaptor'}->db()->get_SupportingStructuralVariationAdaptor();
+		return $ssv_adaptor->fetch_all_by_StructuralVariation($self);
+    }
+    return [];
+}
+
+
 
 
 =head2 get_nearest_Gene
@@ -438,4 +487,84 @@ sub _fix_bounds {
   }
 }
 
+
+=head2 study_name
+
+  Arg [1]    : string $study (optional)
+               The new value to set the study attribute to
+  Example    : $study = $svf->study()
+  Description: Getter/Setter for the study attribute
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub study_name{
+  my $self = shift;
+  return $self->{'study_name'} = shift if(@_);
+  return $self->{'study_name'};
+}
+
+
+
+=head2 study_description
+
+  Arg [1]    : string $study_description (optional)
+               The new value to set the study_description attribute to
+  Example    : $study_description = $svf->study_description()
+  Description: Getter/Setter for the study_description attribute
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub study_description{
+  my $self = shift;
+  return $self->{'study_description'} = shift if(@_);
+  return $self->{'study_description'};
+}
+
+=head2 study_url
+
+  Arg [1]    : string $newval (optional)
+               The new value to set the study_url attribute to
+  Example    : $paper = $obj->study_url()
+  Description: Getter/Setter for the study_url attribute.This is the link to the website where the data are stored.
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub study_url{
+  my $self = shift;
+  return $self->{'study_url'} = shift if(@_);
+  return $self->{'study_url'};
+}
+
+
+=head2 external_reference
+
+  Arg [1]    : string $newval (optional)
+               The new value to set the external reference attribute to
+  Example    : $paper = $obj->external_reference()
+  Description: Getter/Setter for the external reference attribute. This is the
+               pubmed/id or project name associated with this study.
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub external_reference{
+  my $self = shift;
+  return $self->{'external_reference'} = shift if(@_);
+  return $self->{'external_reference'};
+}
 1;
