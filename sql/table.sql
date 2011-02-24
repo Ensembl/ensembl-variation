@@ -50,9 +50,7 @@ create table variation (
 @column variation_annotation_id					Primary key, internal identifier.
 @column variation_id										Foreign key references to the @link variation table.
 @column phenotype_id										Foreign key references to the @link phenotype table.
-@column source_id												Foreign key references to the @link source table.
-@column study														The pubmed/id or project name associated with this study.
-@column study_type											Displays if a study come from a genome-wide association study or not.
+@column study_id												Foreign key references to the @link study table.
 @column local_study_id									Foreign key references to the @link study table.
 @column associated_gene									Common gene(s) name(s) associated to the variation.
 @column associated_variant_risk_allele	Allele associated to the phenotype.
@@ -69,9 +67,7 @@ create table variation_annotation (
 	variation_annotation_id int(10) unsigned not null auto_increment,
 	variation_id int(10) unsigned not null,
 	phenotype_id int(10) unsigned not null,
-	source_id int(10) unsigned not null,
-	study varchar(30) default NULL,
-	study_type set('GWAS'),
+	study_id int(10) unsigned not null,
 	local_study_id int(10) default NULL,
 	associated_gene varchar(255) default NULL,
 	associated_variant_risk_allele varchar(255) default NULL,
@@ -82,7 +78,7 @@ create table variation_annotation (
 	primary key (variation_annotation_id),
 	key variation_idx(variation_id),
 	key phenotype_idx(phenotype_id),
-	key source_idx(source_id),
+	key study_idx(study_id),
 	key local_study_idx (local_study_id)
 );
 
@@ -897,15 +893,16 @@ create table source(
 /**
 @table study
 
-@desc This table contains details of some published studies. Most commonly the studies
-      information comes from the DGVa or EGA sources.
+@desc This table contains details of the studies.
+			The studies information can come from internal studies (DGVa, EGA) or from external studies (Uniprot, NHGRI, ...).
 
-@column study_id		Primary key, internal identifier.
-@column source_id		Foreign key references to the source table.
-@column name				Name of the study. e.g. "EGAS00000000001"
-@column description	Description of the study.
-@column url					URL to find the study data (http or ftp).
-@column study				The pubmed/id or project name associated with this study.
+@column study_id						Primary key, internal identifier.
+@column source_id						Foreign key references to the @link source table.
+@column name								Name of the study. e.g. "EGAS00000000001"
+@column description					Description of the study.
+@column url									URL to find the study data (http or ftp).
+@column external_reference	The pubmed/id or project name associated with this study.
+@column study_type					Displays if a study comes from a genome-wide association study or not.
 
 @see source
 @see variation_annotation
@@ -918,10 +915,10 @@ create table study (
 	name varchar(255) not null,
 	description varchar(255) DEFAULT NULL,
 	url varchar(255) DEFAULT NULL,
-	study varchar(255) DEFAULT NULL,
+	external_reference varchar(255) DEFAULT NULL,
+	study_type set('GWAS'),
 	
 	primary key( study_id ),
-	unique key name_idx(name),
 	key source_idx (source_id)
 );
 
