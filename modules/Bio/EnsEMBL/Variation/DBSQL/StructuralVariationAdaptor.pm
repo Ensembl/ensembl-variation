@@ -47,7 +47,7 @@ Bio::EnsEMBL::Variation::DBSQL::StructuralVariationAdaptor
   foreach $sv (@{$sva->fetch_all_by_Slice($slice)}) {
     print $sv->start(), '-', $sv->end(), ' ', $svf->class(), "\n";
   }
-
+ 
 =head1 DESCRIPTION
 
 This adaptor provides database connectivity for StructuralVariation objects.
@@ -72,7 +72,12 @@ our @ISA = ('Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor');
 
 # method used by superclass to construct SQL
 sub _tables { return (['structural_variation', 'sv'],
-		      [ 'source', 's']); }
+		              ['source', 's'],
+					  ['study', 'st']);
+			}
+
+# Add a left join to the study table
+sub _left_join { return (['study', 'st.study_id = sv.study_id']);}
 
 
 sub _default_where_clause {
@@ -81,11 +86,14 @@ sub _default_where_clause {
   return 'sv.source_id = s.source_id';
 }
 
+
+
 sub _columns {
   return qw( sv.structural_variation_id sv.seq_region_id sv.seq_region_start
              sv.seq_region_end sv.seq_region_strand
              sv.variation_name s.name s.description sv.class
-			 sv.bound_start sv.bound_end sv.allele_string);
+			 sv.bound_start sv.bound_end sv.allele_string
+			 st.name st.description st.url st.external_reference);
 }
 
 
@@ -109,12 +117,14 @@ sub _objs_from_sth {
   my ($struct_variation_id, $seq_region_id, $seq_region_start,
       $seq_region_end, $seq_region_strand,
       $variation_name, $source_name, $source_description, $sv_class,
-	  $bound_start, $bound_end, $allele_string);
+	  $bound_start, $bound_end, $allele_string, $study_name, $study_description,
+	  $study_url, $external_reference);
 
   $sth->bind_columns(\$struct_variation_id, \$seq_region_id,
                      \$seq_region_start, \$seq_region_end, \$seq_region_strand,
                      \$variation_name, \$source_name, \$source_description,
-					 \$sv_class, \$bound_start, \$bound_end, \$allele_string);
+					 \$sv_class, \$bound_start, \$bound_end, \$allele_string, \$study_name, 
+					 \$study_description, \$study_url, \$external_reference);
 
   my $asm_cs;
   my $cmp_cs;
@@ -214,13 +224,17 @@ sub _objs_from_sth {
        'adaptor'  => $self,
        'dbID'     => $struct_variation_id,
        'source'   => $source_name,
-	   'source_description' => $source_description,
-	   'class'     => $sv_class,
-	   'bound_start' => $bound_start,
-	   'bound_end'   => $bound_end,
-	   'allele_string' => $allele_string,});
+	     'source_description' => $source_description,
+	     'class'     => $sv_class,
+	     'bound_start' => $bound_start,
+	     'bound_end'   => $bound_end,
+	     'allele_string' => $allele_string,
+	     'study_name' => $study_name, 
+	     'study_description' => $study_description,
+	     'study_url' => $study_url, 
+	     'external_reference' => $external_reference,
+  	  });
   }
-
   return \@features;
 
 
