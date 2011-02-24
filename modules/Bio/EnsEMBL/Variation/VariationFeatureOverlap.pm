@@ -46,7 +46,7 @@ sub new {
     my $allele_string = $vf->allele_string;
     
     expand(\$allele_string);
-    
+
     my @alleles = split /\//, $allele_string;
   
     # create an object representing the reference allele
@@ -262,10 +262,12 @@ sub overlap_consequences {
         my @cons;
         
         # get an adaptor either from us, or from the associated variation feature
-        if (my $adap = $self->{adaptor} || $self->variation_feature->{adaptor}) {
+        #if (my $adap = $self->{adaptor} || $self->variation_feature->{adaptor}) {
+        if (my $adap = $self->{adaptor}) {
             
             # get the list of possible overlap consequences
-            for my $cons (@{ $adap->db->get_AttributeAdaptor->fetch_all_OverlapConsequences }) {
+            #for my $cons (@{ $adap->db->get_AttributeAdaptor->fetch_all_OverlapConsequences }) {
+            for my $cons (values %{ $adap->_overlap_consequences }) {
                 
                 # check that this consequence type applies to this feature type
                 my $ens_classes = $adap->ensembl_classes_for_SO_term($cons->feature_SO_term);
