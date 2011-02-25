@@ -302,11 +302,16 @@ sub consequence_type {
     my $self = shift;
     
     unless ($self->{_consequence_type}) {
-        my @cons = map { 
-            map { $_->ensembl_term } @{ $_->consequence_types } 
-        } @{ $self->alt_alleles };
         
-        $self->{_consequence_type} = \@cons;
+        my %cons_types;
+
+        for my $allele (@{ $self->alt_alleles }) {
+            for my $cons (@{ $allele->consequence_types }) {
+                $cons_types{$cons->ensembl_term}++
+            }
+        }
+        
+        $self->{_consequence_type} = [ keys %cons_types ];
     }
     
     return $self->{_consequence_type};
