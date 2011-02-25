@@ -36,6 +36,7 @@ sub dump_dbSNP{
     $duration = Progress::time_format($end-$start);
     print $duration->{'weeks'} . " weeks, " . $duration->{'days'} . " days, " . $duration->{'hours'} . " hours, " . $duration->{'minutes'} . " minutes and " . $duration->{'seconds'} . " seconds spent in dump_ENSIDs()\n";
     
+    #ÊNote that the dump_AFFIDs routine has some database/table names hard-coded within!!
     $start = time();
     $self->dump_AFFYIDs() if $self->{'dbm'}->dbCore()->species =~ /hum|homo/i;
     print Progress::location();
@@ -99,9 +100,10 @@ sub dump_ENSIDs{
 sub dump_AFFYIDs{
 
   my $self = shift;
-  my ($source_name,$set_name);
+  my ($source_name,$source_description,$source_url,$set_name);
     
   my $stmt;
+  $source_url = "http://www.affymetrix.com/";
   
   debug("Dumping AFFY information from dbSNP");
   $stmt = qq{
@@ -123,18 +125,21 @@ sub dump_AFFYIDs{
   print Progress::location();
   
   my $db = "pontus_dbsnp132_human_external_data";
-  foreach my $table ("name_pair_100k","name_pair_500k","name_pair_g6") {
+  foreach my $table ("affy_array_name_pair_100k","affy_array_name_pair_500k","affy_array_name_pair_g6") {
     
     if ($table =~ /100k/i) {
       $source_name = "Affy GeneChip 100K Array";
+      $source_description = "Variants from the Affymetrix GeneChip Human Mapping 100K Array Set";
       $set_name = "Mapping50K";
     }
     elsif ($table =~ /500k/i) {
       $source_name = "Affy GeneChip 500K Array";
+      $source_description = "Variants from the Affymetrix GeneChip Human Mapping 500K Array Set";
       $set_name = "Mapping250K";
     }
     elsif ($table =~ /g6/i) {
       $source_name = "Affy GenomeWideSNP_6.0";
+      $source_description = "Variants from the Affymetrix Genome-Wide Human SNP Array 6.0";
       $set_name = "6.0";
     }
 
@@ -229,7 +234,7 @@ sub dump_AFFYIDs{
     my $source_id = $source_id_ref->[0][0];
 
     if (!$source_id) {
-      $self->{'dbVar'}->do(qq{insert into source (name) values("$source_name")});
+      $self->{'dbVar'}->do(qq{insert into source (name,description,url) values("$source_name,$source_description,$source_url")});
 	print Progress::location();
       $source_id = $self->{'dbVar'}->db_handle->{'mysql_insertid'};
     }
