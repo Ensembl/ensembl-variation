@@ -473,17 +473,30 @@ sub variation_table {
   $self->{'dbVar'}->do( "ALTER TABLE variation ADD INDEX snpidx( snp_id )" ) unless ($resume_at_subsnp_id > 0);
   print $logh Progress::location();
 
-	#ÊGet somatic flag from dbSNP
+	#ÊGet somatic flag from dbSNP but only if the snp exclusively has somatic subsnps
 	$stmt = qq{
 		SELECT DISTINCT
 			sssl.snp_id
 		FROM
 			SubSNP ss JOIN
 			SNPSubSNPLink sssl ON (
-				sssl.subsnp_id = ss.subsnp_id
+				sssl.subsnp_id = ss.subsnp_id AND
+				ss.SOMATIC_ind = 'Y'
 			)
 		WHERE
-			ss.SOMATIC_ind = 'Y' 
+		  NOT EXISTS (
+		      SELECT 
+		          * 
+		      FROM 
+		          SNPSubSNPLink sssl2 JOIN 
+                  SubSNP ss2 ON (
+                    sssl2.snp_id = sssl.snp_id AND 
+                    sssl2.subsnp_id != sssl.subsnp_id AND 
+                    ss2.subsnp_id = sssl.subsnp_id
+                  ) 
+              WHERE 
+                ss2.SOMATIC_ind != ss.SOMATIC_ind
+         )
 	};
 	my $sth = $self->{'dbSNP'}->prepare($stmt);
   	print $logh Progress::location();
