@@ -238,7 +238,6 @@ sub parallel_flanking_sequence{
   my $script = shift;
   my $bsub_queue_name = shift;
 
-  my $call;
   my $flanking_status_file = "flanking_status_file_$$\.log";
 
   #before do anything, create a copy of old table, this is done in post_flanking_sequence.pl
@@ -278,45 +277,57 @@ sub parallel_flanking_sequence{
   my $curr_variation_id;
   my $buffer = {}; #hash containing all the files to be parallelized
   
+  # Open a new file
+  my $file = $TMP_DIR . "/" . $dbname . ".flanking_sequence." . $$ . "." . $process . ".txt";
+  open(SEQ,">",$file) or die ("Could not open sequence dumpfile for writing");
+  
   #create the files to send to parallelize
   while (my $row = $sth->fetch()){
       $count++; #counting the total number of entries in the table
       $curr_variation_id = $row->[0]; #get the current variation_id
-      if ($previous_variation_id == 0){ #initialize the first time
-		$previous_variation_id = $curr_variation_id;
-      }
+
       if ($curr_variation_id ne $previous_variation_id){
 		if((($sub_sequences * $process) <= $count) && ($process < $num_processes)){ #need to write in a new file
+		  
+		  # Close the current file 
+		  close(SEQ);
+		  
+		  #ÊSend this job off to the farm
+		  my $log_out = $TMP_DIR . "/output_flanking." . $$ . "." . $process . ".txt";		  
+		  my $call = qq{bsub -q $bsub_queue_name -o $log_out $PERLBIN $script -tmpdir $TMP_DIR -tmpfile $TMP_FILE.$process -num_processes $num_processes -status_file $flanking_status_file -file $process -chost $chost -cuser $cuser -cdbname $cdbname -vhost $vhost -vuser $vuser -vport $vport -vdbname $vdbname };
+          $call .= "-cpass $cpass " if ($cpass);
+          $call .= "-cport $cport " if ($cport);
+          $call .= "-vpass $vpass " if ($vpass);
+          system($call);
+      
 		  $process++;
+		  
+		  # Open a new file
+		  $file = $TMP_DIR . "/" . $dbname . ".flanking_sequence." . $$ . "." . $process . ".txt";
+		  open(SEQ,">",$file) or die ("Could not open sequence dumpfile for writing");
 		}
       }
 	  
       my @a = map {defined($_) ? $_ : '\N'} @$row;
       
-      &print_buffered($buffer,"$TMP_DIR/$dbname.flanking_sequence_$process\.txt",join("\t",@a) . "\n");
+      print SEQ join("\t",@a) . "\n";
+      
       $previous_variation_id = $curr_variation_id;
   }
-  $sth->finish();  
-  &print_buffered($buffer);
-
-  $bsub_queue_name ||= 'normal';
-
-  for (my $i = 1;$i<=$num_processes;$i++){
-
-      $call =
-		"bsub -q $bsub_queue_name -o $TMP_DIR/output_flanking_$i\_$$.txt ".
-		"$PERLBIN $script -chost $chost -cuser $cuser -cdbname $cdbname ".
-		"-vhost $vhost -vuser $vuser -vport $vport -vdbname $vdbname ".
-		"-tmpdir $TMP_DIR -tmpfile $TMP_FILE -num_processes $num_processes ".
-		"-status_file $flanking_status_file -file $i ";
+  
+	  # Close the current file 
+	  close(SEQ);
 	  
+	  #ÊSend this job off to the farm
+	  my $log_out = $TMP_DIR . "/output_flanking." . $$ . "." . $process . ".txt";		  
+	  my $call = qq{bsub -q $bsub_queue_name -o $log_out $PERLBIN $script -tmpdir $TMP_DIR -tmpfile $TMP_FILE.$process -num_processes $num_processes -status_file $flanking_status_file -file $process -chost $chost -cuser $cuser -cdbname $cdbname -vhost $vhost -vuser $vuser -vport $vport -vdbname $vdbname };
       $call .= "-cpass $cpass " if ($cpass);
       $call .= "-cport $cport " if ($cport);
       $call .= "-vpass $vpass " if ($vpass);
-      #print $call,"\n";
       system($call);
-
-  }
+  
+  $sth->finish();  
+  
 }
 
 #when the variation_feature table has been filled up, run the variation_group_feature. Not necessary to parallelize as fas as I know....
@@ -850,20 +861,15 @@ sub merge_ensembl_snps {
 	SELECT vf1.variation_id as variation_id1, vf1.variation_name as name1,
 	vf2.variation_id as variation_id2,vf2.variation_name as name2 
 	FROM (variation_feature vf1, variation_feature vf2)
-	LEFT JOIN failed_variation f1 on vf1.variation_id = f1.variation_id
-	LEFT JOIN failed_variation f2 on vf2.variation_id = f2.variation_id 
 	WHERE vf1.seq_region_id=vf2.seq_region_id 
 	AND vf1.seq_region_start = vf2.seq_region_start 
 	AND vf1.seq_region_end = vf2.seq_region_end
-	AND f1.variation_id IS NULL
-	AND f2.variation_id IS NULL
 	AND vf1.seq_region_strand = vf2.seq_region_strand
 	AND vf1.map_weight=1 and vf2.map_weight=1
-	AND vf1.allele_string != 'CNV_PROBE'
-	AND vf2.allele_string != 'CNV_PROBE'
 	$hap_line
 	AND vf1.variation_id > vf2.variation_id
 	AND vf1.source_id =$new_source_id and  vf2.source_id < $new_source_id
+	AND vf1.somatic = vf2.somatic
  });
 
   $dbVar->do(qq{alter table tmp_ids_$new_source_id add index variation_idx1(variation_id1), add index variation_idx2(variation_id2)});
@@ -874,8 +880,8 @@ sub merge_ensembl_snps {
   my ($variation_id1,$name1,$variation_id2,$name2,$allele_string1,$allele_string2,$variation_feature_id2);
   $dbVar->do(qq{
 	CREATE table allele_string_diff_$new_source_id
-	SELECT t.variation_id1, t.name1, vf1.allele_string as allele_string1,
-	t.variation_id2, t.name2, vf2.allele_string as allele_string2,
+	SELECT t.variation_id1, t.name1, SUBSTR(vf1.allele_string,1,25000) as allele_string1,
+	t.variation_id2, t.name2, SUBSTR(vf2.allele_string,1,25000) as allele_string2,
 	vf2.variation_feature_id as variation_feature_id2
 	FROM tmp_ids_$new_source_id t, variation_feature vf1, variation_feature vf2
 	WHERE t.variation_id1 =vf1.variation_id 
@@ -884,8 +890,6 @@ sub merge_ensembl_snps {
 	AND vf1.map_weight=1
 	AND vf1.allele_string != 'N/A'#cnv has 'N' in allele_string, not merge this
 	AND vf2.allele_string != 'N/A'#cnv has 'N' in allele_string, not merge this
-	AND vf1.allele_string != 'CNV_PROBE'
-	AND vf2.allele_string != 'CNV_PROBE'
 	$hap_line
 	AND vf1.allele_string != vf2.allele_string
  });
@@ -1084,12 +1088,8 @@ sub merge_rs_feature{
 	CREATE table tmp_ids_rs
 	SELECT vf1.variation_id as variation_id1, vf1.variation_name as name1,
 	vf2.variation_id as variation_id2,vf2.variation_name as name2
-	FROM (variation_feature vf1, variation_feature vf2)
-	LEFT JOIN failed_variation f1 on vf1.variation_id = f1.variation_id
-	LEFT JOIN failed_variation f2 on vf2.variation_id = f2.variation_id
-	Where vf1.seq_region_id=vf2.seq_region_id 
-	AND f1.variation_id IS NULL
-	AND f2.variation_id IS NULL
+	FROM variation_feature vf1, variation_feature vf2
+	WHERE vf1.seq_region_id=vf2.seq_region_id 
 	AND vf1.seq_region_start = vf2.seq_region_start 
 	AND vf1.seq_region_end = vf2.seq_region_end
 	AND vf1.seq_region_strand = vf2.seq_region_strand  #only merge same strand
@@ -1100,7 +1100,8 @@ sub merge_rs_feature{
 	AND vf1.allele_string like '%/%'
 	AND vf2.allele_string like '%/%'
 	$hap_line
-	and round(substring(vf1.variation_name,3)) > round(substring(vf2.variation_name,3))
+	AND round(substring(vf1.variation_name,3)) > round(substring(vf2.variation_name,3))
+	AND vf1.somatic = vf2.somatic
   });
 
   $dbVar->do(qq{alter table tmp_ids_rs add index variation_idx1(variation_id1), add index variation_idx2(variation_id2)});
@@ -1109,10 +1110,11 @@ sub merge_rs_feature{
   # added to merge allele_string for dbSNP variation, if not merging, two sets of genotype data associated to different variation_ids but with same location, this will confuse web display using table compressed_genotype_single_bp 
   debug("Change allele_string if different..."); #added for merging allele_string for dbSNP variation
   
+  # Modified the query to only select a substring of each allele_string since the total row length will otherwise exceed the maximum
   $dbVar->do(qq{
 	CREATE table allele_string_diff_rs
-	SELECT t.variation_id1, t.name1, vf1.allele_string as allele_string1,
-	t.variation_id2,t.name2, vf2.allele_string as allele_string2,
+	SELECT t.variation_id1, t.name1, SUBSTR(vf1.allele_string,1,25000) as allele_string1,
+	t.variation_id2,t.name2, SUBSTR(vf2.allele_string,1,25000) as allele_string2,
 	vf2.variation_feature_id as variation_feature_id2
 	FROM tmp_ids_rs t, variation_feature vf1, variation_feature vf2
 	WHERE t.variation_id1 =vf1.variation_id 
@@ -1268,14 +1270,13 @@ sub remove_wrong_variations {
   
   # flag N allele subsnps
   $dbVar->do(qq{
-	INSERT INTO failed_variation (variation_id, subsnp_id, failed_description_id)
-	SELECT a.variation_id, a.subsnp_id, fd.failed_description_id
+	INSERT INTO failed_allele (allele_id, failed_description_id)
+	SELECT a.allele_id, fd.failed_description_id
 	FROM allele a, failed_description fd
 	WHERE a.allele = 'N'
 	AND fd.description = 'Variation contains N alleles'
-	GROUP BY a.variation_id, a.subsnp_id;
   });
-  
+    
   # now check for variations with >3 alleles
   my $sth = $dbVar->prepare(qq{
 	SELECT variation_id, allele_string
@@ -1299,7 +1300,7 @@ sub remove_wrong_variations {
 	  $ok = 1 if length($a) > 1 or $a eq "-";
 	}
 	
-	$failed{$variation_id} = 1;
+	$failed{$variation_id} = 1 unless ($ok);
   }
   
   $sth->finish();
