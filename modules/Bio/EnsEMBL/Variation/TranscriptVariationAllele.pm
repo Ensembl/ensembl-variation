@@ -92,6 +92,7 @@ sub peptide {
             
             if (length($pep) < 1) {
                 if (length($codon) % 3) {
+                    # partial codon
                     $pep = 'X';
                 }
                 else {
@@ -146,8 +147,6 @@ sub codon {
             }
         }
         
-        
-        
         # splice the allele sequence into the CDS
     
         substr($cds, $tv->cds_start-1, $vf_nt_len) = $seq;
@@ -193,8 +192,10 @@ sub sift_prediction {
 sub _nsSNP_prediction {
     my ($self, $program) = @_;
     
-    if (grep { $_->SO_term eq 'non_synonymous_codon' || $_->SO_term eq 'initiator_codon_change' } 
-        @{ $self->consequence_types }) {
+    # we can only get results for variants that cause a single amino acid substitution, 
+    # so check the peptide allele string first
+
+    if ($self->peptide_allele_string =~ /^[A-Z]\/[A-Z]$/) {
         if (my $adap = $self->transcript_variation->{adaptor}) {
             return $adap->_get_nsSNP_prediction($program, $self);
         }
