@@ -30,12 +30,12 @@ use Bio::EnsEMBL::Variation::OverlapConsequence;
 use base qw(Bio::EnsEMBL::DBSQL::BaseAdaptor);
 
 sub fetch_attrib_for_id {
-
     my ($self, $attrib_id) = @_;
 
     unless ($self->{attribs}) {
         
         my $attribs;
+        my $attrib_ids;
 
         my $sql = qq{
             SELECT  a.attrib_id, t.code, a.value
@@ -50,12 +50,27 @@ sub fetch_attrib_for_id {
         while (my ($attrib_id, $type, $value) = $sth->fetchrow_array) {
             $attribs->{$attrib_id}->{type}  = $type;
             $attribs->{$attrib_id}->{value} = $value;
+            $attrib_ids->{$type}->{$value} = $attrib_id;
         }
 
-        $self->{attribs} = $attribs;
+        $self->{attribs}    = $attribs;
+        $self->{attrib_ids} = $attrib_ids;
     }
 
-    return $self->{attribs}->{$attrib_id}->{value};
+    return defined $attrib_id ? 
+        $self->{attribs}->{$attrib_id}->{value} : 
+        undef;
+}
+
+sub get_attrid_id_for_type_value {
+    my ($self, $type, $value) = @_;
+    
+    unless ($self->{attrib_ids}) {
+        # call this method to populate the attrib hash
+        $self->fetch_attrib_for_id;
+    }
+    
+    return $self->{attrib_ids}->{$type}->{$value};
 }
 
 sub fetch_all_OverlapConsequences {
