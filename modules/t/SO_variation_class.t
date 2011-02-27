@@ -1,7 +1,7 @@
 use strict;
 use warnings;
 
-use Test::More qw(no_plan);
+use Test::More;
 
 BEGIN {
     use_ok('Bio::EnsEMBL::Variation::Utils::Sequence', qw(SO_variation_class));
@@ -22,6 +22,7 @@ my %tests = (
     '-/(LARGEDELETION)'     => 'deletion', # dbSNP stylee
     '(1657 BP DELETION)/-'  => 'deletion', # COSMIC stylee
     'ATTAGC/-'              => 'deletion',
+    'A/-'                   => 'deletion',
     '(LARGEDELETION)'       => 'deletion',
     'DELETION/-'            => 'deletion',
     '(LARGEDELETION)/-/AT'  => 'sequence_alteration',
@@ -34,6 +35,11 @@ my %tests = (
 
 for my $allele_string (keys %tests) {
     my $expected = $tests{$allele_string};
-    is(SO_variation_class($allele_string), $expected, "$allele_string => $expected");
+    is(SO_variation_class($allele_string, 1), $expected, "$allele_string => $expected") ;
+    if ($expected =~ /insertion|deletion/) {
+        is(SO_variation_class($allele_string, 0), 'indel', "$allele_string => indel if ref_correct = 0") ;
+    }
 }
+
+done_testing();
 
