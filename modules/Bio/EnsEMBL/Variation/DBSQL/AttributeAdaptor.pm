@@ -62,7 +62,7 @@ sub fetch_attrib_for_id {
         undef;
 }
 
-sub get_attrid_id_for_type_value {
+sub get_attrib_id_for_type_value {
     my ($self, $type, $value) = @_;
     
     unless ($self->{attrib_ids}) {
