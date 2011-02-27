@@ -218,7 +218,11 @@ sub variation_class{
 
 =head2 SO_variation_class
 
-  Arg[1]      : string $alleles
+  Arg[1]      : string $alleles - a slash ()'/') separated list of alleles, the first allele is 
+                assumed to be the reference unless the $ref_correct argument is false
+  Arg[2]      : boolean $ref_correct - flags that the first allele is not known to be the 
+                reference sequence (so we can't call insertions or deletions and have to
+                resort to 'indel')
   Example     : use Bio::EnsEMBL::Variation::Utils::Sequence qw (SO_variation_class)
                 my $alleles = 'A/C';    
                 my $SO_term = SO_variation_class($alleles);
@@ -232,19 +236,25 @@ sub variation_class{
 
 sub SO_variation_class {
     
-     my $alleles = shift;
+    my $alleles     = shift;
+    my $ref_correct = shift;
+    
+    $ref_correct = 1 unless defined $ref_correct;
+
+    # default to sequence_alteration
+    my $class = 'sequence_alteration';
 
     if ($alleles =~ /^[ACGTN](\/[ACGTN])+$/) {
         # A/T, A/T/G
-        return 'SNV';
+        $class = 'SNV';
     }
     elsif ($alleles =~ /^[ACTGN]+(\/[ACTGN]+)+$/) {
         # AA/TTT
-        return 'substitution';
+        $class = 'substitution';
     }
     elsif ($alleles =~ /\)\d+/) {
         # (CAG)8/(CAG)9
-        return 'tandem_repeat';
+        $class = 'tandem_repeat';
     }
     else {
         my @alleles = split /\//, $alleles;
@@ -257,12 +267,12 @@ sub SO_variation_class {
 
                 if (@alleles == 1 && $alleles[0] =~ /DEL/) {
                     # -/(LARGEDELETION) (rather oddly!)
-                    return 'deletion';
+                    $class = $ref_correct ? 'deletion' : 'indel';
                 }
 
                 unless (grep { $_ !~ /^[ACGTN]+$|INS/ } @alleles) {
                     # -/ATT, -/(LARGEINSERTION)
-                    return 'insertion';
+                    $class = $ref_correct ? 'insertion' : 'indel';
                 }
 
                 # else must be mixed insertion and deletion, so just called sequence_alteration
@@ -270,30 +280,29 @@ sub SO_variation_class {
             elsif ($ref =~ /^[ACGTN]+$/) {
                 unless (grep { $_ !~ /-|DEL/ } @alleles) {
                     # A/-, A/(LARGEDELETION)
-                    return 'deletion';
+                    $class = $ref_correct ? 'deletion' : 'indel';
                 }
             }
             elsif ($ref =~ /DEL/) {
                 unless (grep { $_ !~ /-/ } @alleles) {
                     # (LARGEDELETION)/-, (2345 BP DELETION)/-
-                    return 'deletion';
+                    $class = $ref_correct ? 'deletion' : 'indel';
                 }
             }
         }
         elsif (@alleles == 1) {
             if ($alleles[0] =~ /INS/) {
                 # (LARGEINSERTION)
-                return 'insertion';
+                $class = $ref_correct ? 'insertion' : 'indel';
             }
             elsif($alleles[0] =~ /DEL/) {
                 # (308 BP DELETION)
-                return 'deletion';
+                $class = $ref_correct ? 'deletion' : 'indel';
             }
         }
     }
 
-    # default to sequence_alteration
-    return 'sequence_alteration';
+    return $class;
 }
 
 =head2 sequence_with_ambiguity
