@@ -46,34 +46,35 @@ my %Printable = ( "\\"=>'\\', "\r"=>'r', "\n"=>'n', "\t"=>'t', "\""=>'"' );
 ######################
 
 # get command-line options
-my ($in_file, $species, $registry_file, $help, $host, $user, $password, $source, $population, $flank_size, $TMP_DIR, $TMP_FILE, $skip_multi, $use_gp, $sample_prefix, $variation_prefix, $disable_keys, $include_tables, $merge_vfs, $skip_tables, $compressed_only, $only_existing, $merge_alleles, $new_var_name);
+my ($in_file, $species, $registry_file, $help, $host, $user, $password, $source, $population, $flank_size, $TMP_DIR, $TMP_FILE, $skip_multi, $use_gp, $sample_prefix, $variation_prefix, $disable_keys, $include_tables, $merge_vfs, $skip_tables, $compressed_only, $only_existing, $merge_alleles, $new_var_name, $chrom_regexp);
 
 my $args = scalar @ARGV;
 
 GetOptions(
-	'input_file=s'  => \$in_file,
-	'species=s'		=> \$species,
-	'registry=s'	=> \$registry_file,
-	'db_host=s'		=> \$host,
-	'user=s'		=> \$user,
-	'password=s'	=> \$password,
-	'help'			=> \$help,
-	'source=s'      => \$source,
-	'population=s'  => \$population,
-	'flank=s'       => \$flank_size,
-	'tmpdir=s'      => \$TMP_DIR,
-	'tmpfile=s'     => \$TMP_FILE,
-	'skip_multi'    => \$skip_multi,
-	'gp'            => \$use_gp,
-	'ind_prefix=s'  => \$sample_prefix,
-	'var_prefix=s'  => \$variation_prefix,
-	'disable_keys'  => \$disable_keys,
-	'tables=s'      => \$include_tables,
-	'skip_tables=s' => \$skip_tables,
-	'merge_vfs'     => \$merge_vfs,
-	'only_existing' => \$only_existing,
-	'merge_alleles' => \$merge_alleles,
-	'create_name'   => \$new_var_name,
+	'input_file=s'   => \$in_file,
+	'species=s'      => \$species,
+	'registry=s'     => \$registry_file,
+	'db_host=s'      => \$host,
+	'user=s'         => \$user,
+	'password=s'     => \$password,
+	'help'           => \$help,
+	'source=s'       => \$source,
+	'population=s'   => \$population,
+	'flank=s'        => \$flank_size,
+	'tmpdir=s'       => \$TMP_DIR,
+	'tmpfile=s'      => \$TMP_FILE,
+	'skip_multi'     => \$skip_multi,
+	'gp'             => \$use_gp,
+	'ind_prefix=s'   => \$sample_prefix,
+	'var_prefix=s'   => \$variation_prefix,
+	'disable_keys'   => \$disable_keys,
+	'tables=s'       => \$include_tables,
+	'skip_tables=s'  => \$skip_tables,
+	'merge_vfs'      => \$merge_vfs,
+	'only_existing'  => \$only_existing,
+	'merge_alleles'  => \$merge_alleles,
+	'create_name'    => \$new_var_name,
+	'chrom_regexp=s' => \$chrom_regexp,
 );
 
 
@@ -312,7 +313,8 @@ while(<$in_file_handle>) {
 		# skip non-variant lines
 		next if $data->{ALT} eq '.';
 		
-		
+		# skip unwanted chromosomes
+		next if defined($chrom_regexp) && $data->{'#CHROM'} !~ m/$chrom_regexp/;
 		
 		## VARIATION
 		############
@@ -541,6 +543,8 @@ Options
 --ind_prefix          Prefix added to sample names [default: not used]
 --var_prefix          Prefix added to constructed variation names [default: not used]
 --create_name         Always create a new variation name i.e. don't use ID column
+                      [default: not used]
+--chrom_regexp        Limit processing to CHROM columns matching regexp
                       [default: not used]
 
 -f | --flank          Size of flanking sequence [default: 200]
