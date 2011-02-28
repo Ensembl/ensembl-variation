@@ -922,7 +922,7 @@ create table source(
 	version int,
 	description varchar(255),
 	url varchar(255),
-	type ENUM('database','chip','archive') DEFAULT 'database',
+	type ENUM('chip') DEFAULT 'database',
 	
 	primary key( source_id )
 );
