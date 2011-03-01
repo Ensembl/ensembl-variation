@@ -532,17 +532,21 @@ sub within_regulatory_feature {
 
 sub within_motif_feature {
     my $mfva = shift;
-    return within_feature($mfva);
+    return (
+        within_feature($mfva) and
+        !increased_binding_affinity($mfva) and
+        !decreased_binding_affinity($mfva) 
+    );
 }
 
 sub increased_binding_affinity {
     my $mfva = shift;
-    return (within_motif_feature($mfva) and ($mfva->binding_affinity_change > 0));
+    return (within_feature($mfva) and ($mfva->binding_affinity_change > 0));
 }
 
 sub decreased_binding_affinity {
     my $mfva = shift;
-    return (within_motif_feature($mfva) and ($mfva->binding_affinity_change < 0));   
+    return (within_feature($mfva) and ($mfva->binding_affinity_change < 0));   
 }
 
 1;
