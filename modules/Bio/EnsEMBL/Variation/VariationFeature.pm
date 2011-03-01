@@ -792,7 +792,7 @@ sub var_class{
             $self->{class_SO_term} = SO_variation_class($self->allele_string);
         }
         
-        if (my $display_term = $self->{adaptor}->_display_term_for_SO_term(
+        if (my $display_term = $self->{adaptor}->AttributeAdaptor->display_term_for_SO_term(
                 $self->{class_SO_term}, 
                 $self->is_somatic
             ) ) {

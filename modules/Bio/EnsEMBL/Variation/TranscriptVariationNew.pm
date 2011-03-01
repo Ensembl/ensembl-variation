@@ -215,34 +215,29 @@ sub intron_effects {
             
             my $frameshift_intron = ( abs($intron_end - $intron_start) <= 12 );
             
+            if ($frameshift_intron) {
+                if (overlap($vf_start, $vf_end, $intron_start, $intron_end)) {
+                    $intron_effects->{within_frameshift_intron} = 1;
+                    last;
+                }
+            }
+            
             # the order of these checks is deliberately designed to minimise the number
             # of calls we make to overlap because we can sometimes establish several
             # intron effects within one call and then break out of the loop with last
             
             if (overlap($vf_start, $vf_end, $intron_start, $intron_start+1)) {
-                
-                if ($frameshift_intron) {
-                    $intron_effects->{within_frameshift_intron} = 1;
-                }
-                else {
-                    $intron_effects->{start_splice_site} = 1;
-                    #$intron_effects->{splice_region} = 1;
-                    #$intron_effects->{intronic} = 1;
-                }
+                $intron_effects->{start_splice_site} = 1;
+                #$intron_effects->{splice_region} = 1;
+                #$intron_effects->{intronic} = 1;
                 
                 last;
             }
             
             if (overlap($vf_start, $vf_end, $intron_end-1, $intron_end)) {
-                
-                if ($frameshift_intron) {
-                    $intron_effects->{within_frameshift_intron} = 1;
-                }
-                else {
-                    $intron_effects->{end_splice_site} = 1;
-                    #$intron_effects->{splice_region} = 1;
-                    #$intron_effects->{intronic} = 1;
-                }
+                $intron_effects->{end_splice_site} = 1;
+                #$intron_effects->{splice_region} = 1;
+                #$intron_effects->{intronic} = 1;
                 
                 last;
             }
@@ -251,13 +246,7 @@ sub intron_effects {
             # intronic and splice_region, so we just set a flag
             
             if (overlap($vf_start, $vf_end, $intron_start, $intron_end)) {
-                
-                if ($frameshift_intron) {
-                    $intron_effects->{within_frameshift_intron} = 1;
-                }
-                else {
-                    $intron_effects->{intronic} = 1;
-                }
+                $intron_effects->{intronic} = 1;
                 
                 $found_effect = 1;
             }

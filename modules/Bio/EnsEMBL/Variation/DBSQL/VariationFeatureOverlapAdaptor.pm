@@ -25,7 +25,7 @@ package Bio::EnsEMBL::Variation::DBSQL::VariationFeatureOverlapAdaptor;
 
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 
-use base qw(Bio::EnsEMBL::DBSQL::BaseAdaptor);
+use base qw(Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor);
 
 sub fetch_all_by_Features {
     my ($self, $features) = @_;
@@ -84,48 +84,6 @@ sub fetch_all_by_VariationFeatures {
     }
     
     return $vfos;
-}
-
-sub ensembl_classes_for_SO_term {
-    my ($self, $SO_term) = @_;
-    return [keys %{ $self->_feature_types->{$SO_term}->{ens_feature_class} } ];
-}
-
-sub ensembl_subtypes_for_SO_term {
-    my ($self, $SO_term) = @_;
-    return [keys %{ $self->_feature_types->{$SO_term}->{ens_feature_subtype} } ];
-}
-
-sub ensembl_variant_classes_for_SO_term {
-    my ($self, $SO_term) = @_;
-    return [keys %{ $self->_feature_types->{$SO_term}->{ens_variant_class} } ];
-}
-
-sub SO_terms_for_ensembl_feature {
-    my ($self, $feature) = @_;
-    return [keys %{ $self->_feature_types->{ref $feature}->{SO_term} } ];
-}
-
-sub _feature_types {
-    my $self = shift;
-    
-    unless ($self->{_feature_types}) {
-        my $mapping = $self->db->get_AttributeAdaptor->fetch_feature_type_mapping;
-        $self->{_feature_types} = $mapping;
-    }
-    
-    return $self->{_feature_types};
-}
-
-sub _overlap_consequences {
-    my $self = shift;
-    
-    unless ($self->{_overlap_consequences}) {
-        my $cons = $self->db->get_AttributeAdaptor->fetch_all_OverlapConsequences;
-        $self->{_overlap_consequences} = { map { $_->SO_term => $_ } @$cons };
-    }
-    
-    return $self->{_overlap_consequences};
 }
 
 1;

@@ -852,7 +852,7 @@ sub _objs_from_sth {
                 'validation_code' => \@states,
                 'consequence_type' => \@types || ['INTERGENIC'],
                 '_variation_id' => $variation_id,
-                'class_SO_term' => $aa->fetch_attrib_for_id($class_attrib_id),
+                'class_SO_term' => $aa->attrib_value_for_id($class_attrib_id),
                 }
             );
         }

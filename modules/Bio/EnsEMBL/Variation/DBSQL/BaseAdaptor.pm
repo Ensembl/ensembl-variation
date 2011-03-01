@@ -53,39 +53,14 @@ use Bio::EnsEMBL::DBSQL::BaseAdaptor;
 
 our @ISA = ('Bio::EnsEMBL::DBSQL::BaseAdaptor');
 
-# returns a hash mapping SO accessions to SO and ensembl display terms
-sub _SO_mappings {
+sub AttributeAdaptor {
     my $self = shift;
     
-    unless ($self->{_SO_mappings}) {
-        $self->{_SO_mappings} = $self->db->get_AttributeAdaptor->fetch_SO_mappings;
+    unless ($self->{_attribute_adaptor}) {
+        $self->{_attribute_adaptor} = $self->db->get_AttributeAdaptor;
     }
     
-    return $self->{_SO_mappings};
-}
-
-sub _display_term_for_SO_accession {
-    my ($self, $SO_accession, $is_somatic) = @_;
-   
-    my $term = $self->_SO_mappings->{$SO_accession}->{display_term};
-   
-    if ($is_somatic) {
-        $term = 'SNV' if $term eq 'SNP';
-        $term = 'somatic_'.$term;
-    }
-    
-    return $term;
-}
-
-sub _SO_term_for_SO_accession {
-    my ($self, $SO_accession, $is_somatic) = @_;
-    return $self->_SO_mappings->{$SO_accession}->{SO_term}
-}
-
-sub _display_term_for_SO_term {
-    my ($self, $SO_term, $is_somatic) = @_;
-    my $SO_accession = $self->_SO_mappings->{$SO_term}->{SO_accession};
-    return $self->_display_term_for_SO_accession($SO_accession, $is_somatic);
+    return $self->{_attribute_adaptor};
 }
 
 1;
