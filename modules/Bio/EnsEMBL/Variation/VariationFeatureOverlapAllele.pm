@@ -138,14 +138,12 @@ sub consequence_types {
         
         $cons = [];
         
-        if (my $adap = $self->variation_feature_overlap->{adaptor} || 
-            $self->variation_feature_overlap->variation_feature->{adaptor}) {
-            if (my $overlap_cons = $self->variation_feature_overlap->overlap_consequences) {
-                for my $oc (@$overlap_cons) {
-                    if ($oc->predicate->($self)) {
-                        push @$cons, $oc;
-                    }
-                }
+        my $possible_cons = $self->variation_feature_overlap->{adaptor}->
+            AttributeAdaptor->OverlapConsequences_for_feature($self->feature);
+        
+        for my $oc (@$possible_cons) {
+            if ($oc->predicate->($self)) {
+                push @$cons, $oc;
             }
         }
     }

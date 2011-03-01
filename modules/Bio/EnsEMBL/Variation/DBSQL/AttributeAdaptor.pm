@@ -73,7 +73,48 @@ sub attrib_id_for_type_value {
     return $self->{attrib_ids}->{$type}->{$value};
 }
 
-sub get_OverlapConsequences {
+sub OverlapConsequence_for_SO_term {
+    my ($self, $SO_term) = @_;
+    
+    unless ($self->{_overlap_consequences_by_SO_term}) {
+        $self->{_overlap_consequences_by_SO_term} = {
+            map { $_->SO_term => $_ } @{ $self->OverlapConsequences }
+        };
+    }
+    
+    return $self->{_overlap_consequences_by_SO_term}->{$SO_term}
+}
+
+sub OverlapConsequences_for_feature {
+    my ($self, $feature) = @_;
+    
+    my $feature_class = ref $feature;
+    
+    unless ($self->{_overlap_consequences_for_feature_class}->{$feature_class}) {
+    
+        my @possible_cons;
+        
+        for my $cons (@{ $self->OverlapConsequences }) {
+            
+            # check that this consequence type applies to this feature type
+            my $ens_classes = $self->ensembl_classes_for_SO_term($cons->feature_SO_term);
+            
+            if (grep { $_ eq $feature_class } @$ens_classes) {
+                
+                # TODO: also check the subtypes match
+                
+                # OK, this consequence type applies to this feature
+                push @possible_cons, $cons;
+            }   
+        }
+        
+        $self->{_overlap_consequences_for_feature_class}->{$feature_class} = \@possible_cons;
+    }
+    
+    return $self->{_overlap_consequences_for_feature_class}->{$feature_class};
+}
+
+sub OverlapConsequences {
     my ($self) = @_;
     
     unless ($self->{_overlap_consequences}) {
@@ -99,10 +140,35 @@ sub get_OverlapConsequences {
     return $self->{_overlap_consequences};
 }
 
-sub feature_type_mapping {
+sub ensembl_classes_for_SO_term {
+    my ($self, $SO_term) = @_;
+    return [keys %{ $self->_type_mapping->{SO_terms}->{$SO_term}->{ens_feature_class} } ];
+}
+
+sub ensembl_subtypes_for_SO_term {
+    my ($self, $SO_term) = @_;
+    return [keys %{ $self->_type_mapping->{SO_terms}->{$SO_term}->{ens_feature_subtype} } ];
+}
+
+sub ensembl_variant_classes_for_SO_term {
+    my ($self, $SO_term) = @_;
+    return [keys %{ $self->_type_mapping->{SO_terms}->{$SO_term}->{ens_variant_class} } ];
+}
+
+sub SO_terms_for_ensembl_feature {
+    my ($self, $feature) = @_;
+    return [keys %{ $self->_type_mapping->{ensembl_classes}->{ref $feature}->{SO_term} } ];
+}
+
+sub ensembl_variant_class_for_feature_class {
+    my ($self, $feature_class) = @_;
+    return $self->_type_mapping->{feature_classes}->{$feature_class}->{ensembl_variant_class};
+}
+
+sub _type_mapping {
     my ($self) = @_;
     
-    unless ($self->{feature_type_mapping}) {
+    unless ($self->{_type_mapping}) {
         
         my $mapping = {};
      
@@ -113,35 +179,60 @@ sub feature_type_mapping {
             my $subtype     = $set->{ens_feature_subtype};
             my $var_type    = $set->{ens_variant_class};
             
-            my $so2ens = $mapping->{$SO_term} ||= {};
-                
+            my $so2ens = $mapping->{SO_terms}->{$SO_term} ||= {};
+            
             $so2ens->{ens_feature_class}->{$class}      = 1 if $class;
             $so2ens->{ens_feature_subtype}->{$subtype}  = 1 if $subtype;
             $so2ens->{ens_variant_class}->{$var_type}   = 1 if $var_type;
                 
-            my $ens2so = $mapping->{$class} ||= {};
+            my $ens2so = $mapping->{ensembl_classes}->{$class} ||= {};
                 
             $ens2so->{SO_term}->{$SO_term} = 1 if $SO_term;
+            
+            my $class_mapping = $mapping->{feature_classes}->{$class} ||= {};
+            
+            $class_mapping->{ensembl_variant_class} = $var_type;
         }
         
-        $self->{feature_type_mapping} = $mapping;
+        $self->{_type_mapping} = $mapping;
     }
     
-    return $self->{feature_type_mapping};
+    return $self->{_type_mapping};
 }
 
-sub SO_mappings {
+sub display_term_for_SO_term {
+    my ($self, $SO_term) = @_;
+    return $self->_SO_mappings->{SO_terms}->{$SO_term}->{display_term};
+}
+
+sub SO_accession_for_SO_term {
+    my ($self, $SO_term) = @_;
+    return $self->_SO_mappings->{SO_terms}->{$SO_term}->{SO_accession};
+}
+
+sub SO_term_for_SO_accession {
+    my ($self, $SO_accession) = @_;
+    return $self->_SO_mappings->{SO_accessions}->{$SO_accession}->{SO_term};
+}
+
+sub display_term_for_SO_accession {
+    my ($self, $SO_accession) = @_;
+    return $self->_SO_mappings->{SO_accessions}->{$SO_accession}->{display_term};
+}
+
+sub _SO_mappings {
     my ($self) = @_;
     
     unless ($self->{SO_mappings}) {
         my $mapping;
         
         for my $set (@{ $self->_fetch_sets_by_type('SO_term') }) {
-            my $term_map = $mapping->{$set->{SO_term}} ||= {};
+            
+            my $term_map = $mapping->{SO_terms}->{$set->{SO_term}} ||= {};
             $term_map->{display_term} = $set->{display_term} || $set->{SO_term};
             $term_map->{SO_accession} = $set->{SO_accession};
             
-            my $acc_map = $mapping->{$set->{SO_accession}} ||= {};
+            my $acc_map = $mapping->{SO_accessions}->{$set->{SO_accession}} ||= {};
             $acc_map->{SO_term} = $set->{SO_term};
             $acc_map->{display_term} = $set->{display_term} || $set->{SO_term};
         }
