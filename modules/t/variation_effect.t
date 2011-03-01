@@ -230,7 +230,7 @@ $transcript_tests->{$tf->stable_id}->{tests} = [
     }, {
         start   => $intron_end+4,
         end     => $intron_end+4,
-        effects => [qw(non_synonymous_codon stop_gained)],
+        effects => [qw(stop_gained)],
     }, {
         comment => 'an insertion between the last intron base and the first exon base is not essential',
         alleles => 'A',
@@ -286,26 +286,32 @@ $transcript_tests->{$tf->stable_id}->{tests} = [
         end     => $cds_start+3,
         effects => [qw(non_synonymous_codon)],
     }, {
-        alleles => 'GGG',
+        alleles => 'CCC',
         start   => $cds_start+3,
         end     => $cds_start+2,
         effects => [qw(inframe_codon_gain)],
     }, {
-        alleles => 'GGG',
+        alleles => 'CCC',
         start   => $cds_start+2,
         end     => $cds_start+1,
-        effects => [qw(inframe_codon_gain)],
+        effects => [qw(initiator_codon_change)],
     }, {
         alleles => 'AGG',
         start   => $cds_start+2,
         end     => $cds_start+1,
-        effects => [qw(inframe_codon_gain initiator_codon_change)],
+        effects => [qw(initiator_codon_change)],
     }, {
         alleles => '-',
         start   => $cds_start+3,
         end     => $cds_start+5,
         effects => [qw(inframe_codon_loss)],
         pep_alleles => 'D/-',
+    }, {
+        alleles => '-',
+        start   => $cds_start+4,
+        end     => $cds_start+6,
+        effects => [qw(inframe_codon_loss)],
+        pep_alleles => 'DA/A',
     }, {
         alleles => 'GAT',
         start   => $cds_start+3,
@@ -367,7 +373,7 @@ $transcript_tests->{$tf->stable_id}->{tests} = [
         alleles => 'AAG',
         start   => $cds_end-1,
         end     => $cds_end-2,
-        effects => [qw(stop_retained_variant inframe_codon_gain)],
+        effects => [qw(stop_retained_variant non_synonymous_codon)],
     }, {
         alleles => '-',
         start   => $cds_end-2,
@@ -705,7 +711,7 @@ $transcript_tests->{$tr->stable_id}->{tests} = [
         strand  => -1,
         start   => $cds_end - 1,
         end     => $cds_end - 2,
-        effects => [qw(inframe_codon_gain initiator_codon_change)],
+        effects => [qw(initiator_codon_change)],
     }, {
         alleles => '-',
         strand  => -1,
@@ -786,7 +792,7 @@ $transcript_tests->{$tr->stable_id}->{tests} = [
         strand  => -1,
         start   => $cds_start + 2,
         end     => $cds_start + 1,
-        effects => [qw(stop_retained_variant inframe_codon_gain)],
+        effects => [qw(stop_retained_variant non_synonymous_codon)],
     }, {
         alleles => '-',
         strand  => -1,
@@ -934,11 +940,11 @@ $transcript_tests->{$mirna->stable_id}->{tests} = [
     {
         start   => $t_start,
         end     => $t_start,
-        effects => [qw(nc_transcript_variant pre_miRNA_variant)],
+        effects => [qw(nc_transcript_variant)],
     }, {
         start   => $t_start + 40,
         end     => $t_start + 40,
-        effects => [qw(nc_transcript_variant mature_miRNA_variant pre_miRNA_variant)],
+        effects => [qw(nc_transcript_variant mature_miRNA_variant)],
     }, 
 ];
 
@@ -1001,9 +1007,9 @@ for my $stable_id (keys %$transcript_tests) {
             adaptor             => $tva,
         });
 
-        #warn "# alleles: $allele_string\n";
-        #warn '# codons: ', $tv->codons, "\n";
-        #warn '# peptides: ', $tv->pep_allele_string, "\n";
+        warn "# alleles: $allele_string\n";
+        warn '# codons: ', $tv->codons, "\n";
+        warn '# peptides: ', $tv->pep_allele_string, "\n";
 
         my @effects = map {
             map { $_->SO_term } @{ $_->consequence_types }

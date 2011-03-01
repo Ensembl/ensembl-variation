@@ -149,17 +149,21 @@ sub within_miRNA {
     my $tva     = shift;
     my $tran    = $tva->transcript;
     
+    # don't call this for now
+    
+    return 0;
+    
     return ( within_transcript($tva) and ($tran->biotype eq 'miRNA') );
 }
 
 sub within_mature_miRNA {
     my $tva     = shift;
     
-    return 0 unless within_miRNA($tva);
-    
     my $tv      = $tva->transcript_variation;
     my $vf      = $tva->variation_feature;
     my $tran    = $tva->transcript;
+        
+    return 0 unless ( within_transcript($tva) and ($tran->biotype eq 'miRNA') );
         
     my ($attribute) = @{ $tran->get_all_Attributes('miRNA') };
     
@@ -220,26 +224,43 @@ sub within_cds {
     my $tva     = shift;
     my $vf      = $tva->variation_feature;
     my $tran    = $tva->transcript;
+    my $tv      = $tva->transcript_variation;
     
     my $cds_coords = $tva->transcript_variation->cds_coords;
     
-    return ( 
-        (@$cds_coords > 0) and 
-        ( grep {$_->isa('Bio::EnsEMBL::Mapper::Coordinate')} @$cds_coords )
-    );
+    if (@$cds_coords > 0) {
+        for my $coord (@$cds_coords) {
+            if ($coord->isa('Bio::EnsEMBL::Mapper::Coordinate')) {
+                if ($coord->end > 0 && $coord->start <= length($tv->translateable_seq)) { 
+                    return 1;
+                }
+            }
+        }
+    }
+    
+    return 0;
 }
 
 sub within_cdna {
     my $tva     = shift;
     my $vf      = $tva->variation_feature;
     my $tran    = $tva->transcript;
+    my $tv      = $tva->transcript_variation;
     
-    my $cdna_coords = $tva->transcript_variation->cdna_coords;
     
-    return ( 
-        (@$cdna_coords > 0) and 
-        ( grep {$_->isa('Bio::EnsEMBL::Mapper::Coordinate')} @$cdna_coords )
-    );
+    my $cdna_coords = $tv->cdna_coords;
+    
+    if (@$cdna_coords > 0) {
+        for my $coord (@$cdna_coords) {
+            if ($coord->isa('Bio::EnsEMBL::Mapper::Coordinate')) {
+                if ($coord->end > 0 && $coord->start <= $tran->length) {
+                    return 1;
+                }
+            }
+        }
+    }
+    
+    return 0;
 }
 
 sub _before_coding {
@@ -251,11 +272,13 @@ sub _before_coding {
     my $t_s   = $tran->seq_region_start;
     my $cds_s = $tran->coding_region_start;
     
+    print "vfs: $vf_s vfe: $vf_e ts: $t_s cdss: $cds_s\n";
+    
     # we need to special case insertions just before the CDS start
     if ($vf_s == $vf_e+1 && $vf_s == $cds_s) {
         return 1;
     }
-    
+   
     return overlap($vf_s, $vf_e, $t_s, $cds_s-1);    
 }
 
@@ -329,6 +352,24 @@ sub _get_peptide_alleles {
     return ($ref_pep, $alt_pep);
 }
 
+sub _get_codon_alleles {
+    my $tva = shift;
+    my $tv  = $tva->transcript_variation;
+    
+    return () if frameshift($tva);
+
+    my $alt_codon = $tva->codon;
+    
+    return () unless defined $alt_codon;
+    
+    my $ref_codon = $tv->reference_allele->codon;
+    
+    $ref_codon = '' if $ref_codon eq '-';
+    $alt_codon = '' if $alt_codon eq '-';
+    
+    return ($ref_codon, $alt_codon);
+}
+
 sub stop_retained {
     my $tva = shift;
     
@@ -369,29 +410,38 @@ sub non_synonymous_codon {
     
     return 0 if affects_start_codon($tva);
     return 0 if stop_lost($tva);
+    return 0 if stop_gained($tva);
     return 0 if partial_codon($tva);
+    return 0 if inframe_codon_loss($tva);
+    return 0 if inframe_codon_gain($tva);
     
-    return ( ($ref_pep ne $alt_pep) and (length($ref_pep) == length($alt_pep)) );
+    return ( $ref_pep ne $alt_pep );
 }
 
 sub inframe_codon_gain {
     my $tva = shift;
     
-    my ($ref_pep, $alt_pep) = _get_peptide_alleles($tva);
+    my ($ref_codon, $alt_codon) = _get_codon_alleles($tva);
     
-    return 0 unless defined $ref_pep;
+    return 0 unless defined $ref_codon;
     
-    return (length($ref_pep) < length($alt_pep));
+    return ( 
+        (length($alt_codon) > length ($ref_codon)) &&
+        ( ($alt_codon =~ /^\Q$ref_codon\E/) || ($alt_codon =~ /\Q$ref_codon\E$/) )
+    );
 }
 
 sub inframe_codon_loss {
     my $tva = shift;
     
-    my ($ref_pep, $alt_pep) = _get_peptide_alleles($tva);
+    my ($ref_codon, $alt_codon) = _get_codon_alleles($tva);
     
-    return 0 unless defined $ref_pep;
-    
-    return (length($ref_pep) > length($alt_pep));
+    return 0 unless defined $ref_codon;
+  
+    return ( 
+        (length($alt_codon) < length ($ref_codon)) &&
+        ( ($ref_codon =~ /^\Q$alt_codon\E/) || ($ref_codon =~ /\Q$alt_codon\E$/) )
+    );
 }
 
 sub stop_gained {
