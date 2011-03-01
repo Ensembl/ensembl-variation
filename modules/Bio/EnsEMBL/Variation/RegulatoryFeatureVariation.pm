@@ -26,7 +26,7 @@ use warnings;
 use Bio::EnsEMBL::Variation::RegulatoryFeatureVariationAllele;
 use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(overlap);
 
-use base qw(Bio::EnsEMBL::Variation::FuncgenFeatureVariation);
+use base qw(Bio::EnsEMBL::Variation::RegulationVariation);
 
 sub new {
     my $class = shift;
