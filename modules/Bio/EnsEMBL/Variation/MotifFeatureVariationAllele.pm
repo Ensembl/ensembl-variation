@@ -32,6 +32,11 @@ sub motif_feature_variation {
     return $self->variation_feature_overlap;
 }
 
+sub motif_feature {
+    my $self = shift;
+    return $self->variation_feature_overlap->feature;
+}
+
 sub binding_affinity_change {
     my $self    = shift;
     my $linear  = shift;
