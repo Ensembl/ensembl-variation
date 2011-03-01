@@ -210,7 +210,18 @@ while (<SQLFILE>) {
 	
 	## Parsing of the SQL table to fetch the columns types ##
 	elsif ($in_table==1) {
-		next if ($doc =~ /^\s*primary\skey\s*\(/i or $doc =~ /^\s*unique\s*\(/i or $doc =~ /^\s*(unique\s)?key\s\w+\s*\(/i); # Keys and indexes
+	
+		## INDEXES ##
+		if ($doc =~ /^\s*(primary\skey)\s*\((.+)\)/i or $doc =~ /^\s*(unique)\s*\((.+)\)/i){ # Primary or unique
+			add_column_index($1,$2);
+			next;
+		}
+		elsif ($doc =~ /^\s*(unique\s)?(key)\s(\w+)\s*\((.+)\)/i) { # Keys and indexes
+			add_column_index("$1$2",$4,$3);
+			next;
+		}
+		
+		## TYPES & DEFAULT VALUES ##
 		my $col_name = '';
 		my $col_type = '';
 		my $col_def  = '';
@@ -340,7 +351,18 @@ sub fill_documentation {
 		if ($tag eq 'desc') {
 			$documentation->{$table}{$tag} = $tag_content;
 		}
-		else {
+		elsif ($tag eq 'column') {
+			$tag_content =~ /(\w+)[\s\t]+(.+)/;
+			
+			my $column = { 'name' => $1,
+										 'type' => '',
+			               'default' => '',
+										 'index' =>'',
+										 'desc' => $2
+									 };
+			push(@{$documentation->{$table}{$tag}},$column);
+		}
+		else{
 			push(@{$documentation->{$table}{$tag}},$tag_content);
 		}
 	}
@@ -384,14 +406,20 @@ sub add_columns {
 	
 	my $html = qq{\n	<div id="div_$table" style="display:$display_style">\n
 	<table style="border:1px outset #222222">
-		<tr class="bg3 center"><th style="width:200px">Column</th><th style="width:150px">Type</th><th style="width:100px">Default value</th><th style="width:400px">Description</th></tr>\n};
+		<tr class="bg3 center"><th style="width:180px">Column</th><th style="width:150px">Type</th><th style="width:100px">Default value</th><th style="width:400px">Description</th><th style="width:150px">Index</th></tr>\n};
 	my $bg = 1;
 	foreach my $col (@cols) {
-		$col =~ /\@link\s?(\w+)/;
+		my $name    = $col->{name};
+		my $type    = $col->{type};
+		my $default = $col->{default};
+		my $desc    = $col->{desc};
+		my $index   = $col->{index};
+		$desc =~ /\@link\s?(\w+)/;
 		my $table_to_link = qq{<a href="#$1">$1</a>};
-		$col =~ s/\@link\s?\w+/$table_to_link/;
-		$col =~ /^\s*(\w+)[\s\t]+(.+)\t+(.+)\t(.*)/;
-		$html .= qq{		<tr class="bg$bg"><td><b>$1</b></td><td>$3</td><td>$4</td><td>$2</td></tr>\n};
+		$desc =~ s/\@link\s?\w+/$table_to_link/;
+		
+		#$col =~ /^\s*(\w+)[\s\t]+(.+)\t+(.+)\t(.*)/;
+		$html .= qq{		<tr class="bg$bg"><td><b>$name</b></td><td>$type</td><td>$default</td><td>$desc</td><td>$index</td></tr>\n};
 		if ($bg==1) { $bg=2; }
 		else { $bg=1; }
 	}
@@ -416,6 +444,44 @@ sub add_see {
 }
 
 
+sub add_column_index {
+	my $idx_type = shift;
+	my $idx_col  = shift;
+	my $idx_name = shift;
+	
+	my $index = $idx_type;
+	if (defined($idx_name)) {
+		$index .= ": $idx_name";
+	}
+	
+	my @idx_cols = split(',',$idx_col); # The index can involve several columns
+	
+	my %is_found = ();
+	foreach my $i_col (@idx_cols) {
+		$i_col =~ s/^\s+//; # Remove white spaces
+		$i_col =~ s/\s+$//;
+		
+		$is_found{$i_col} = 0;
+		foreach my $col (@{$documentation->{$table}{column}}) {
+			if ($col->{name} eq $i_col) {
+				if ($col->{index} ne '') {
+					$col->{index} .= '<br />';
+				}
+				$col->{index} .= lc($index);
+				$is_found{$i_col} = 1;
+				last;
+			}
+		}
+	}
+	# Description missing
+	while (my ($k,$v) = each(%is_found)) {
+		if ($v==0) {
+			print STDERR "The description of the column '$k' is missing in the table $table!\n";
+		}
+	}
+}
+
+
 sub add_column_type_and_default_value {
 	my $c_name    = shift;
 	my $c_type    = shift;
@@ -424,9 +490,11 @@ sub add_column_type_and_default_value {
 	
 	my $is_found = 0;
 	foreach my $col (@{$documentation->{$table}{column}}) {
-		if ($col =~ /^$c_name\s/) {
-			$col .= "\t$c_type\t";
-			$col .= "$c_default" if ($c_default ne ''); # Add the default value
+		if ($col->{name} eq $c_name) {
+			#$col .= "\t$c_type\t";
+			#$col .= "$c_default" if ($c_default ne ''); # Add the default value
+			$col->{type} = $c_type;
+			$col->{default} = $c_default if ($c_default ne '');
 			$is_found = 1;
 			last;
 		}
