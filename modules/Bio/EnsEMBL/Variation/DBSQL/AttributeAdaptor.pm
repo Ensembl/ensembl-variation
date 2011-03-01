@@ -29,7 +29,7 @@ use Bio::EnsEMBL::Variation::OverlapConsequence;
 
 use base qw(Bio::EnsEMBL::DBSQL::BaseAdaptor);
 
-sub fetch_attrib_for_id {
+sub attrib_value_for_id {
     my ($self, $attrib_id) = @_;
 
     unless ($self->{attribs}) {
@@ -62,7 +62,7 @@ sub fetch_attrib_for_id {
         undef;
 }
 
-sub get_attrib_id_for_type_value {
+sub attrib_id_for_type_value {
     my ($self, $type, $value) = @_;
     
     unless ($self->{attrib_ids}) {
@@ -73,68 +73,84 @@ sub get_attrib_id_for_type_value {
     return $self->{attrib_ids}->{$type}->{$value};
 }
 
-sub fetch_all_OverlapConsequences {
+sub get_OverlapConsequences {
     my ($self) = @_;
     
-    my @cons;
+    unless ($self->{_overlap_consequences}) {
     
-    for my $set (@{ $self->_fetch_sets_by_type('conseq_predicate') }) {
-        push @cons, Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
-            SO_accession    => $set->{SO_accession},
-            SO_term         => $set->{SO_term},
-            ensembl_term    => $set->{display_term},
-            NCBI_term       => $set->{ncbi_term},
-            feature_SO_term => $set->{feature_SO_term},
-            rank            => $set->{conseq_rank},
-            predicate       => $set->{conseq_predicate}
-        });
+        my @cons;
+        
+        for my $set (@{ $self->_fetch_sets_by_type('conseq_predicate') }) {
+            push @cons, Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
+                SO_accession    => $set->{SO_accession},
+                SO_term         => $set->{SO_term},
+                ensembl_term    => $set->{display_term},
+                NCBI_term       => $set->{ncbi_term},
+                feature_SO_term => $set->{feature_SO_term},
+                rank            => $set->{conseq_rank},
+                predicate       => $set->{conseq_predicate}
+            });
+        }
+        
+        $self->{_overlap_consequences} = \@cons;
+    
     }
     
-    return \@cons;
+    return $self->{_overlap_consequences};
 }
 
-sub fetch_feature_type_mapping {
+sub feature_type_mapping {
     my ($self) = @_;
     
-    my $mapping = {};
- 
-    for my $set (@{ $self->_fetch_sets_by_type('ens_variant_class') }) {
+    unless ($self->{feature_type_mapping}) {
         
-        my $SO_term     = $set->{SO_term};
-        my $class       = $set->{ens_feature_class};
-        my $subtype     = $set->{ens_feature_subtype};
-        my $var_type    = $set->{ens_variant_class};
+        my $mapping = {};
+     
+        for my $set (@{ $self->_fetch_sets_by_type('ens_variant_class') }) {
+            
+            my $SO_term     = $set->{SO_term};
+            my $class       = $set->{ens_feature_class};
+            my $subtype     = $set->{ens_feature_subtype};
+            my $var_type    = $set->{ens_variant_class};
+            
+            my $so2ens = $mapping->{$SO_term} ||= {};
+                
+            $so2ens->{ens_feature_class}->{$class}      = 1 if $class;
+            $so2ens->{ens_feature_subtype}->{$subtype}  = 1 if $subtype;
+            $so2ens->{ens_variant_class}->{$var_type}   = 1 if $var_type;
+                
+            my $ens2so = $mapping->{$class} ||= {};
+                
+            $ens2so->{SO_term}->{$SO_term} = 1 if $SO_term;
+        }
         
-        my $so2ens = $mapping->{$SO_term} ||= {};
-            
-        $so2ens->{ens_feature_class}->{$class}      = 1 if $class;
-        $so2ens->{ens_feature_subtype}->{$subtype}  = 1 if $subtype;
-        $so2ens->{ens_variant_class}->{$var_type}   = 1 if $var_type;
-            
-        my $ens2so = $mapping->{$class} ||= {};
-            
-        $ens2so->{SO_term}->{$SO_term} = 1 if $SO_term;
+        $self->{feature_type_mapping} = $mapping;
     }
     
-    return $mapping;
+    return $self->{feature_type_mapping};
 }
 
-sub fetch_SO_mappings {
+sub SO_mappings {
     my ($self) = @_;
     
-    my $mapping;
-    
-    for my $set (@{ $self->_fetch_sets_by_type('SO_term') }) {
-        my $term_map = $mapping->{$set->{SO_term}} ||= {};
-        $term_map->{display_term} = $set->{display_term} || $set->{SO_term};
-        $term_map->{SO_accession} = $set->{SO_accession};
+    unless ($self->{SO_mappings}) {
+        my $mapping;
         
-        my $acc_map = $mapping->{$set->{SO_accession}} ||= {};
-        $acc_map->{SO_term} = $set->{SO_term};
-        $acc_map->{display_term} = $set->{display_term} || $set->{SO_term};
+        for my $set (@{ $self->_fetch_sets_by_type('SO_term') }) {
+            my $term_map = $mapping->{$set->{SO_term}} ||= {};
+            $term_map->{display_term} = $set->{display_term} || $set->{SO_term};
+            $term_map->{SO_accession} = $set->{SO_accession};
+            
+            my $acc_map = $mapping->{$set->{SO_accession}} ||= {};
+            $acc_map->{SO_term} = $set->{SO_term};
+            $acc_map->{display_term} = $set->{display_term} || $set->{SO_term};
+        }
+        
+        $self->{SO_mappings} = $mapping
+    
     }
     
-    return $mapping;
+    return $self->{SO_mappings};
 }
 
 sub _fetch_sets_by_type {
