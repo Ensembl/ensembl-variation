@@ -4,7 +4,7 @@ ALTER TABLE structural_variation ADD COLUMN study_id int(10);
 ALTER TABLE structural_variation ADD INDEX study_idx (study_id);
 
 ALTER TABLE variation_annotation ADD COLUMN study_id int(10);
-ALTER TABLE variation_annotation INDEX study_idx (study_id);
+ALTER TABLE variation_annotation ADD INDEX study_idx (study_id);
 ALTER TABLE variation_annotation ADD COLUMN local_study_id int(10);
 ALTER TABLE variation_annotation ADD INDEX local_study_idx (local_study_id);
 
