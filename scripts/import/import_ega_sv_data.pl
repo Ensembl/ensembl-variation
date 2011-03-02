@@ -13,14 +13,14 @@ use ImportUtils qw(dumpSQL debug create_and_load load);
 our ($species, $input_file, $source_name, $TMP_DIR, $TMP_FILE, $mapping, $num_gaps, $target_assembly, $size_diff);
 
 GetOptions('species=s'         => \$species,
-		   'source_name=s'     => \$source_name,
-		   'input_file=s'	   => \$input_file,
+		  		 'source_name=s'     => \$source_name,
+		   		 'input_file=s'	   	 => \$input_file,
            'tmpdir=s'          => \$ImportUtils::TMP_DIR,
            'tmpfile=s'         => \$ImportUtils::TMP_FILE,
-		   'mapping'		   => \$mapping,
-		   'gaps=i'			   => \$num_gaps,
-		   'target_assembly=s' => \$target_assembly,
-		   'size_diff=i'       => \$size_diff,
+		   		 'mapping'		   		 => \$mapping,
+		   		 'gaps=i'			   		 => \$num_gaps,
+		   		 'target_assembly=s' => \$target_assembly,
+		   		 'size_diff=i'       => \$size_diff,
           );
 my $registry_file ||= $Bin . "/ensembl.registry";
 
@@ -32,6 +32,10 @@ usage('-input_file argument is required') if (!$input_file);
 
 $TMP_DIR  = $ImportUtils::TMP_DIR;
 $TMP_FILE = $ImportUtils::TMP_FILE;
+
+my $study_table = 'study';
+my $sv_table = 'structural_variation';
+my $ssv_table = 'supporting_structural_variation';
 
 # connect to databases
 Bio::EnsEMBL::Registry->load_all( $registry_file );
@@ -55,6 +59,7 @@ our $connected_tax_id = $meta_container->get_taxonomy_id;
 my $failed = [];
 if($mapping) {
   $failed = mapping();
+	print join(',',@{$failed})."\n";
 }
 
 # otherwise parse the file into the temp file
@@ -74,8 +79,10 @@ else {
 
 
 read_file();
-source();
+my $source_id = source();
+study_table();
 structural_variation($failed);
+supporting_evidence();
 meta_coord();
 
 sub read_file{
@@ -86,7 +93,7 @@ sub read_file{
   
   create_and_load(
 	$dbVar, "temp_cnv", "study", "pmid i", "author", "year", "title l", "id *", "tax_id i", "organism", "chr", "outer_start i", "inner_start i",
-	"start i", "end i", "inner_end i", "outer_end i", "assembly", "type", "comment");
+	"start i", "end i", "inner_end i", "outer_end i", "assembly", "type", "ssv l");
   
   # fix nulls
   foreach my $coord('outer_start', 'inner_start', 'inner_end', 'outer_end') {
@@ -95,34 +102,50 @@ sub read_file{
   
   # remove those that are of different species
   $dbVar->do(qq{DELETE FROM temp_cnv WHERE tax_id != $connected_tax_id;});
-  
+  $dbVar->do(qq{DELETE FROM temp_cnv WHERE chr like '%_random';});
 }
+
 
 sub source{
   debug("Inserting into source table");
+	
+	# Check if the DGVa source already exists, else it create the entry
+	if ($dbVar->selectrow_arrayref(qq{SELECT source_id FROM source WHERE name='DGVa';})) {
+		$dbVar->do(qq{UPDATE IGNORE source SET description='Database of Genomic Variants Archive',url='http://www.ebi.ac.uk/dgva/',version=201101 where name='DGVa';});
+	}
+	else {
+		$dbVar->do(qq{INSERT INTO source (name,description,url,version) VALUES ('DGVa','Database of Genomic Variants Archive','http://www.ebi.ac.uk/dgva/',201102);});
+	}
+	my @source_id = @{$dbVar->selectrow_arrayref(qq{SELECT source_id FROM source WHERE name='DGVa';})};
+	return $source_id[0];
+}
+
+sub study_table{
+  debug("Inserting into study table");
   
-  #ÊAn ugly construct, but let's create a unique key on the source name in order to avoid duplicates but still update the URLs
+  # An ugly construct, but let's create a unique key on the study name in order to avoid duplicates but still update the URLs
   # BTW, perhaps we actually should have a unique constraint on the name column??
   my $stmt = qq{
     ALTER TABLE
-      source
+      $study_table
     ADD CONSTRAINT
       UNIQUE KEY
 	name_key (name)
   };
   $dbVar->do($stmt);
   
-  # Then insert "new" sources. Update the URL field in case of duplicates
+  # Then insert "new" studys. Update the URL field in case of duplicates
   $stmt = qq{
     INSERT INTO
-      source (
+      $study_table (
 	name,
 	description,
-	url
+	url,
+	source_id,
+	external_reference
       )
     SELECT DISTINCT
       CONCAT(
-	'DGVa:',
 	study
       ),
       CONCAT(
@@ -132,14 +155,20 @@ sub source{
 	' "',
 	title,
 	'" PMID:',
-	pmid,
-	' ',
-	comment
+	pmid
       ),
       CONCAT(
-	'http://www.ncbi.nlm.nih.gov/pubmed/',
-	pmid
-      )
+	'ftp://ftp.ebi.ac.uk/pub/databases/dgva/',
+	study,
+	'_',
+	author,
+	'_et_al_',
+	year
+      ),
+			$source_id,
+			CONCAT(
+			'pubmed/',
+			pmid) 
     FROM
       temp_cnv
     ORDER BY
@@ -164,13 +193,14 @@ sub source{
   # And then drop the name key again
   $stmt = qq{
     ALTER TABLE
-      source
+      $study_table
     DROP KEY
       name_key
   };
   $dbVar->do($stmt);
   
 }
+
 
 sub structural_variation{
   my $failed = shift;
@@ -186,18 +216,21 @@ sub structural_variation{
 	`seq_region_strand` tinyint(4) NOT NULL,
 	`variation_name` varchar(255) DEFAULT NULL,
 	`source_id` int(10) unsigned NOT NULL,
+	`study_id` int(10) unsigned NOT NULL,
 	`class` varchar(255) DEFAULT NULL,
 	`bound_start` int(11) DEFAULT NULL,
 	`bound_end` int(11) DEFAULT NULL,
 	PRIMARY KEY (`structural_variation_id`),
-	KEY `pos_idx` (`seq_region_id`,`seq_region_start`)
+	KEY `pos_idx` (`seq_region_id`,`seq_region_start`),
+	KEY `name_idx` (`variation_name`),
+	KEY `study_idx` (`study_id`) 
   )});
   
-  #ÊThe variation name should be unique so for the insert, create a unique key for this column.
+  # The variation name should be unique so for the insert, create a unique key for this column.
   # Should there perhaps in fact be a unique constraint on this column?
-  my $stmt = qq{
+	my $stmt = qq{
     ALTER TABLE
-      structural_variation
+      $sv_table
     ADD CONSTRAINT
       UNIQUE KEY
 	name_key (variation_name)
@@ -207,13 +240,14 @@ sub structural_variation{
   # now copy the data. If the variation is duplicated, replace the old data
   $stmt = qq{
     REPLACE INTO
-      structural_variation (
+      $sv_table (
 	seq_region_id,
 	seq_region_start,
 	seq_region_end,
 	seq_region_strand,
 	variation_name,
 	source_id,
+	study_id,
 	class,
 	bound_start,
 	bound_end
@@ -225,29 +259,33 @@ sub structural_variation{
       1,
       t.id,
       s.source_id,
+			st.study_id,
       t.type,
       t.outer_start,
       t.outer_end
     FROM
       seq_region q,
       temp_cnv t,
-      source s
+      source s,
+			$study_table st 
     WHERE
       q.name = t.chr AND
-      concat('DGVa:', t.study) = s.name
+      st.source_id=$source_id AND
+			st.source_id=s.source_id AND
+			st.name=t.study
   };
   $dbVar->do($stmt);
   
   # cleanup
   $stmt = qq{
     ALTER TABLE
-      structural_variation
+      $sv_table
     DROP KEY
       name_key
   };
   $dbVar->do($stmt);
-  
-  #ÊWarn about variations that are on chromosomes for which we don't have a seq region entry. Also, delete them from the structural variation table if they are already present there
+
+	#	Warn about variations that are on chromosomes for which we don't have a seq region entry. Also, delete them from the structural variation table if they are already present there
   $stmt = qq{
     SELECT
       t.id,
@@ -258,7 +296,7 @@ sub structural_variation{
     FROM
       temp_cnv t LEFT JOIN
       seq_region sr ON (
-	sr.name = t.chr
+				sr.name = t.chr
       )
     WHERE
       sr.seq_region_id IS NULL
@@ -269,18 +307,49 @@ sub structural_variation{
     push(@{$failed},qq{'$row->[0]'});
   }
   
-  #ÊRemove any variants that have an updated position that could not be determined
+  # Remove any variants that have an updated position that could not be determined
   my $condition = join(",",@{$failed});
-  $stmt = qq{
-    DELETE FROM
-      sv
-    USING
-      structural_variation sv
+  if ($condition ne '') {
+		$stmt = qq{
+    	DELETE FROM
+    	  sv
+    	USING
+      	$sv_table sv
+    	WHERE
+      	sv.variation_name IN ( $condition )
+  	};
+  	$dbVar->do($stmt);
+	}
+}
+
+
+sub supporting_evidence {
+	
+	debug("Inserting into supporting_structural_variation table");
+	
+	my $stmt = qq{
+    SELECT
+      sv.structural_variation_id, 
+      t.ssv 
+    FROM
+      temp_cnv t, $sv_table sv
     WHERE
-      sv.variation_name IN ( $condition )
+      sv.variation_name=t.id
   };
-  $dbVar->do($stmt);
+	$dbVar->do($stmt);
+	my %count= ();
+  my $rows = $dbVar->selectall_arrayref($stmt);
+  while (my $row = shift(@{$rows})) {
+		my $sv_id = $row->[0];
+		my $ssv_ids = $row->[1];
+		my @ssv = split(':',$ssv_ids);
+		foreach my $ssv_name (@ssv) {
+		# now copy the data. If the variation is duplicated, replace the old data
+			$dbVar->do(qq{INSERT INTO $ssv_table (name,structural_variation_id) VALUES ('$ssv_name',$sv_id);});
+		}
+	}
   
+  $dbVar->do($stmt);
   $dbVar->do(qq{DROP TABLE temp_cnv;});
 }
 
@@ -294,13 +363,13 @@ sub meta_coord{
       (
 	SELECT
 	  MAX(seq_region_end - seq_region_start + 1)
-	FROM structural_variation
+	FROM $sv_table
       ),
       (
 	SELECT
 	  MAX(bound_end - bound_start + 1)
-	FROM structural_variation
-      )
+	FROM $sv_table
+	     )
     )
   });
   my $max_length = $max_length_ref->[0][0];
@@ -331,7 +400,7 @@ sub mapping{
   my $cs_version_number = $target_assembly;
   $cs_version_number =~ s/\D//g;
   
-  #ÊStore and return the variant ids that we could not map. In case these already exist in the database with a different (and thus assumingly outdated) position, we will delete them
+  # Store and return the variant ids that we could not map. In case these already exist in the database with a different (and thus assumingly outdated) position, we will delete them
   my @failed = ();
   
   while(<IN>) {
