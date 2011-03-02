@@ -6,7 +6,7 @@ CREATE TABLE attrib_type (
 
     attrib_type_id    SMALLINT(5) UNSIGNED NOT NULL DEFAULT 0,
     code              VARCHAR(20) NOT NULL DEFAULT '',
-    name              VARCHAR(255),
+    name              VARCHAR(255) NOT NULL DEFAULT '',
     description       TEXT,
 
     PRIMARY KEY (attrib_type_id),
