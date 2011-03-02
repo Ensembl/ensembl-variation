@@ -24,7 +24,7 @@ my ($vhost, $vport, $vdbname, $vuser, $vpass,
     $transcript_variation, $ld_populations, $reverse_things, $make_allele_string_table,$merge_rs_features,
     $merge_ensembl_snps,$new_source_id,$remove_wrong_variations,$remove_multi_tables,$check_seq_region_id, 
     $read_updated_files,$merge_multi_tables,
-    $registry_file, $bsub_queue_name);
+    $registry_file, $bsub_queue_name,@into_source_id);
 
 $variation_feature = $flanking_sequence = $variation_group_feature = $transcript_variation = $ld_populations = $reverse_things = $merge_rs_features = $merge_ensembl_snps = $new_source_id = $remove_wrong_variations = $remove_multi_tables = $make_allele_string_table = $check_seq_region_id = $read_updated_files = $merge_multi_tables = '';
 
@@ -47,6 +47,7 @@ GetOptions(
   'remove_multi_tables'  => \$remove_multi_tables,
   'merge_ensembl_snps'   => \$merge_ensembl_snps,
   'new_source_id=n'      => \$new_source_id,
+  'into_source_id=i'      => \@into_source_id,
   'check_seq_region_id'  => \$check_seq_region_id,
   'read_updated_files'   => \$read_updated_files,
   'make_allele_string_table' => \$make_allele_string_table,
@@ -127,7 +128,7 @@ reverse_things($dbVar) if ($reverse_things);
 merge_rs_feature($dbVar) if ($merge_rs_features);
 remove_wrong_variations($dbVar, $Bin . '/../../sql') if ($remove_wrong_variations);
 remove_multi_tables($dbVar) if ($remove_multi_tables);
-merge_ensembl_snps($dbVar,$new_source_id) if ($merge_ensembl_snps and $new_source_id);
+merge_ensembl_snps($dbVar,$new_source_id,\@into_source_id) if ($merge_ensembl_snps and $new_source_id);
 make_allele_string_table($dbVar) if $make_allele_string_table;
 read_updated_files($dbVar) if $read_updated_files;
 merge_multi_tables($dbVar) if $merge_multi_tables;
@@ -835,7 +836,11 @@ sub merge_ensembl_snps {
   #this one is used to merge ENSEMBL SNPs with dbSNP SNPs and other SNPs
   my $dbVar = shift;
   my $new_source_id = shift ;
-
+  
+  #ÊOptional listref to a list of source_ids that the new source_id will be merged with 
+  my $into_source_id = shift;
+  $into_source_id ||= [];
+  
   my $hap_line;
   if ($hap_id_string =~ /\([\,\d]+\)/) {
       $hap_line = "AND vf1.seq_region_id not in $hap_id_string
@@ -852,9 +857,17 @@ sub merge_ensembl_snps {
     my $new_source_id_ref = $dbVar->selectall_arrayref(qq{select max(source_id) from source});
     $new_source_id = $new_source_id_ref->[0][0];
   }
-  debug("new source_id is $new_source_id, is this correct???\n");
+  # The default behaviour is to merge with source_ids less than the new source id, so get a list of all source_ids less than the new id from db.
+  unless (scalar(@{$into_source_id})) {
+      $into_source_id = $dbVar->selectcol_arrayref(qq{SELECT source_id FROM source WHERE source_id < $new_source_id});
+  }
+  
+  debug("new source_id is $new_source_id and it will be merged with source_ids " . join(",",@{$into_source_id}) . ", is this correct???\n");
   sleep(20);
 
+  #ÊCreate a condition on the source_ids to merge with
+  my $source_id_constraint = " (vf1.source_id = $new_source_id AND vf2.source_id IN (" . join(",",@{$into_source_id}) . ")) ";
+  
   debug("Creat table tmp_ids...");#check for same position,different alleles as well
   $dbVar->do(qq{
 	CREATE table tmp_ids_$new_source_id
@@ -868,7 +881,7 @@ sub merge_ensembl_snps {
 	AND vf1.map_weight=1 and vf2.map_weight=1
 	$hap_line
 	AND vf1.variation_id > vf2.variation_id
-	AND vf1.source_id =$new_source_id and  vf2.source_id < $new_source_id
+	AND $source_id_constraint 
 	AND vf1.somatic = vf2.somatic
  });
 
@@ -969,17 +982,19 @@ sub merge_ensembl_snps {
 
   debug("Updating tables...");
   
-  foreach my $table(qw(allele population_genotype variation_set_variation variation_annotation individual_genotype_multiple_bp tmp_individual_genotype_single_bp variation_synonym)) {
+  foreach my $table(qw(allele population_genotype variation_set_variation variation_annotation individual_genotype_multiple_bp tmp_individual_genotype_single_bp variation_synonym failed_variation)) {
 	debug("Updating $table");
 	$dbVar->do(qq{UPDATE IGNORE $table a, tmp_ids_$new_source_id\_final t SET a.variation_id = t.variation_id2 where t.variation_id1 = a.variation_id});
   }
   
   # when insert ignore, if the entry is already exist, it will do nothing,
   # i.e leave the one unchanged, so need to delete them
-  $dbVar->do(qq{
-	DELETE FROM vs USING tmp_individual_genotype_single_bp vs, tmp_ids_$new_source_id\_final t 
-	WHERE vs.variation_id=t.variation_id1
-  });
+  foreach my $table (qw(tmp_individual_genotype_single_bp failed_variation)) {
+    $dbVar->do(qq{
+	   DELETE FROM vs USING $table vs, tmp_ids_$new_source_id\_final t 
+	   WHERE vs.variation_id=t.variation_id1
+    });
+  }
   
   #$dbVar->do(qq{DROP table tmp_ids_$source_id});
 }
@@ -1233,7 +1248,7 @@ sub merge_rs_feature{
   # drop the flipper table
   $dbVar->do(qq{DROP TABLE flipper;});
   
-  foreach my $table(qw(variation_set_variation variation_annotation allele population_genotype individual_genotype_multiple_bp tmp_individual_genotype_single_bp)) {
+  foreach my $table(qw(variation_set_variation variation_annotation allele population_genotype individual_genotype_multiple_bp tmp_individual_genotype_single_bp failed_variation)) {
 	debug("Updating $table");
 	$dbVar->do(qq{
 	  UPDATE IGNORE $table vs, tmp_ids_rs_final t
@@ -1242,6 +1257,9 @@ sub merge_rs_feature{
 	});
   }
 
+  #ÊDelete rows from failed_variation that were ignored in the update statement due to duplication of keys
+  $dbVar->do(qq{DELETE FROM fv USING tmp_ids_rs_final t JOIN failed_variation fv ON (fv.variation_id = t.variation_id1)});
+   
   #$dbVar->do(qq{DROP table tmp_ids_rs}); #keep this table for future checking
 }
 
