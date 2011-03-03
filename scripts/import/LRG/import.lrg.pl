@@ -85,6 +85,7 @@ my $coredb;
 my $otherfeaturesdb;
 my $cdnadb;
 my $vegadb;
+my $rnaseqdb;
 my $purge;
 
 usage() if (!scalar(@ARGV));
@@ -111,6 +112,7 @@ GetOptions(
   'otherfeatures=s'	=> \$otherfeaturesdb,
   'cdna=s'		=> \$cdnadb,
   'vega=s'		=> \$vegadb,
+  'rnaseq=s'		=> \$rnaseqdb,
 );
 
 usage() if (defined($help));
@@ -193,6 +195,7 @@ $LRGImport::dbCore = $dbCore;
 my $dbOther;
 my $dbcDNA;
 my $dbVega;
+my $dbRNAseq;
 if (defined($otherfeaturesdb)) {
   print STDOUT localtime() . "\tGetting db adaptor for $otherfeaturesdb\n" if ($verbose);
   $dbOther = new Bio::EnsEMBL::DBSQL::DBAdaptor(
@@ -226,9 +229,20 @@ if (defined($vegadb)) {
   ) or die("Could not get a database adaptor to $vegadb on $host:$port");
   print STDOUT localtime() . "\tConnected to $vegadb on $host:$port\n" if ($verbose);
 }
+if (defined($rnaseqdb)) {
+  print STDOUT localtime() . "\tGetting db adaptor for $rnaseqdb\n" if ($verbose);
+  $dbRNAseq = new Bio::EnsEMBL::DBSQL::DBAdaptor(
+    -host => $host,
+    -user => $user,
+    -pass => $pass,
+    -port => $port,
+    -dbname => $rnaseqdb
+  ) or die("Could not get a database adaptor to $rnaseqdb on $host:$port");
+  print STDOUT localtime() . "\tConnected to $rnaseqdb on $host:$port\n" if ($verbose);
+}
 
 # Put the db adaptors into an array
-my @db_adaptors = ($dbCore,$dbOther,$dbcDNA,$dbVega);
+my @db_adaptors = ($dbCore,$dbOther,$dbcDNA,$dbVega,$dbRNAseq);
 
 #ÊGet a slice adaptor
 print STDOUT localtime() . "\tGetting slice adaptor\n" if ($verbose);
