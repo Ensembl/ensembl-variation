@@ -963,17 +963,17 @@ create table study (
 
 @desc This table contains identifiers of associated studies (e.g. NHGRI and EGA studies with the same pubmed identifier).
 
-@column study_id_1		Primary key. Foreign key references to the @link study table.
-@column study_id_2		Primary key. Foreign key references to the @link study table.
+@column study1_id		Primary key. Foreign key references to the @link study table.
+@column study2_id		Primary key. Foreign key references to the @link study table.
 
 @see study
 */
 create table associate_study (
-	study_id_1 int(10) unsigned not null,
-	study_id_2 int(10) unsigned not null,
+	study1_id int(10) unsigned not null,
+	study2_id int(10) unsigned not null,
 	
-	primary key( study_id_1,study_id_2 ),
-	key study_idx (study_id_1,study_id_2)
+	primary key( study1_id,study2_id ),
+	key study_idx (study1_id,study2_id)
 );
 
 
