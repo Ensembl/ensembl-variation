@@ -51,7 +51,6 @@ create table variation (
 @column variation_id										Foreign key references to the @link variation table.
 @column phenotype_id										Foreign key references to the @link phenotype table.
 @column study_id												Foreign key references to the @link study table.
-@column local_study_id									Foreign key references to the @link study table.
 @column associated_gene									Common gene(s) name(s) associated to the variation.
 @column associated_variant_risk_allele	Allele associated to the phenotype.
 @column variation_names									Name of the variation. e.g. "rs1333049".
@@ -68,7 +67,6 @@ create table variation_annotation (
 	variation_id int(10) unsigned not null,
 	phenotype_id int(10) unsigned not null,
 	study_id int(10) unsigned not null,
-	local_study_id int(10) default NULL,
 	associated_gene varchar(255) default NULL,
 	associated_variant_risk_allele varchar(255) default NULL,
 	variation_names varchar(255) default NULL,
@@ -957,6 +955,25 @@ create table study (
 	
 	primary key( study_id ),
 	key source_idx (source_id)
+);
+
+
+/**
+@table associate_study
+
+@desc This table contains identifiers of associated studies (e.g. NHGRI and EGA studies with the same pubmed identifier).
+
+@column study_id_1		Primary key. Foreign key references to the @link study table.
+@column study_id_2		Primary key. Foreign key references to the @link study table.
+
+@see study
+*/
+create table associate_study (
+	study_id_1 int(10) unsigned not null,
+	study_id_2 int(10) unsigned not null,
+	
+	primary key( study_id_1,study_id_2 ),
+	key study_idx (study_id_1,study_id_2)
 );
 
 
