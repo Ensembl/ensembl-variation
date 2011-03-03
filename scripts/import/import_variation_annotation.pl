@@ -369,7 +369,7 @@ sub parse_ega {
         SELECT
           study_id
         FROM
-          study_nhgri
+          study
         WHERE
           name=? AND source_id=$source_id
         LIMIT 1
@@ -378,7 +378,7 @@ sub parse_ega {
         SELECT
           st.study_id,st.study_type
         FROM
-          study_nhgri st, source s
+          study st, source s
         WHERE
           external_reference=? AND s.name like '%nhgri%'
 					AND s.source_id=st.source_id
@@ -386,7 +386,7 @@ sub parse_ega {
     };
 		my $study_ins_stmt = qq{
 				INSERT INTO
-          study_nhgri (
+          study (
             name,
 						source_id,
 						external_reference,
@@ -406,7 +406,7 @@ sub parse_ega {
         SELECT
           study1_id
         FROM
-          associate_study_nhgri
+          associate_study
         WHERE
           (study2_id = ? AND study1_id = ?) 
 					or 
@@ -415,7 +415,7 @@ sub parse_ega {
     };
 		my $asso_study_ins_stmt = qq{
 				INSERT INTO
-          associate_study_nhgri (study1_id,study2_id)
+          associate_study (study1_id,study2_id)
         VALUES (?,?)
 		};
 		
@@ -591,14 +591,14 @@ sub add_phenotypes {
         SELECT
             phenotype_id
         FROM
-            phenotype_nhgri
+            phenotype
         WHERE
             description = ?
         LIMIT 1
     };
     my $phen_ins_stmt = qq{
         INSERT INTO
-            phenotype_nhgri (
+            phenotype (
                 name,
                 description
             )
@@ -611,7 +611,7 @@ sub add_phenotypes {
         SELECT
             study_id
         FROM
-            study_nhgri
+            study
         WHERE
             source_id = $source_id AND
             external_reference = ? AND
@@ -620,7 +620,7 @@ sub add_phenotypes {
     };
 		my $st_ins_stmt = qq{
         INSERT INTO
-            study_nhgri (
+            study (
                 source_id,
                 external_reference,
 		            study_type,
@@ -637,7 +637,7 @@ sub add_phenotypes {
         SELECT
             variation_annotation_id
         FROM
-            variation_annotation_nhgri
+            variation_annotation
         WHERE
             variation_id = ? AND
             phenotype_id = ? AND
@@ -646,7 +646,7 @@ sub add_phenotypes {
     };
     my $va_ins_stmt = qq{
         INSERT INTO
-            variation_annotation_nhgri (
+            variation_annotation (
                 variation_id,
                 phenotype_id,
                 study_id,
