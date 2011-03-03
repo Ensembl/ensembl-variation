@@ -757,7 +757,7 @@ sub usage {
       -user		Core database user (Required)
       -pass		Core database password (Optional)
     
-    In addition, names for otherfeatures, cdna and vega databases can be specified on the command line. If so,
+    In addition, names for otherfeatures, cdna, rnaseq and vega databases can be specified on the command line. If so,
     the mapping data will be inserted into those databases as well. They are assumed to reside on the same host as
     the core database and be accessed with the same credentials. Before doing an import, will try to sync the
     analysis, coord_system, meta and seq_region tables w.r.t. their Auto_increment values.
@@ -765,6 +765,7 @@ sub usage {
       -otherfeatures	Otherfeatures database name
       -cdna		cDNA database name
       -vega		vega database name
+      -rnaseq	rnaseq database name
       
     An input file can be specified. This is required when reverting the Core database. If an input file is
     specified when importing, verifying, cleaning, adding xrefs or annotating overlaps, all specified LRG
