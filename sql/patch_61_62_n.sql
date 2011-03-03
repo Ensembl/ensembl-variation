@@ -4,8 +4,7 @@ create table associate_study (
 	study1_id int(10) unsigned not null,
 	study2_id int(10) unsigned not null,
 	
-	primary key( study1_id,study2_id ),
-	key study_idx (study1_id,study2_id)
+	primary key( study1_id,study2_id )
 );
 
 # patch identifier
