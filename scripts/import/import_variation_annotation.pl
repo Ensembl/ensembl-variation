@@ -30,6 +30,10 @@ my $NHGRI_SOURCE_NAME = "NHGRI_GWAS_catalog";
 my $NHGRI_SOURCE_DESCRIPTION = "Variants associated with phenotype data from the NHGRI GWAS catalog";
 my $NHGRI_SOURCE_URL = "http://www.genome.gov/gwastudies/";
 
+my $EGA_SOURCE_NAME = "EGA";
+my $EGA_SOURCE_DESCRIPTION = "Variants imported from the European Genome-phenome Archive with phenotype association";
+my $EGA_SOURCE_URL = "http://www.ebi.ac.uk/ega/";
+
 usage() if (!scalar(@ARGV));
  
 GetOptions(
@@ -78,6 +82,19 @@ my $source_url;
 #ÊMake sure that the input file is XML compliant
 ImportUtils::make_xml_compliant($infile);
 
+# Connect to the variation database
+print STDOUT localtime() . "\tConnecting to database $dbname\n" if ($verbose);
+my $db_adaptor = new Bio::EnsEMBL::DBSQL::DBAdaptor(
+  -host => $host,
+  -user => $user,
+  -pass => $pass,
+  -port => $port,
+  -dbname => $dbname
+) or die("Could not get a database adaptor for $dbname on $host:$port");
+print STDOUT localtime() . "\tConnected to $dbname on $host:$port\n" if ($verbose);
+
+
+
 #ÊParse the input files into a hash
 if ($source =~ m/uniprot/i) {
     $result = parse_uniprot($infile);
@@ -97,6 +114,15 @@ elsif ($source =~ m/omim/i) {
     $source_description = $OMIM_SOURCE_DESCRIPTION;
     $source_url = $OMIM_SOURCE_URL;
 }
+elsif ($source =~ m/ega/i) {
+		$source_name = $EGA_SOURCE_NAME;
+    $source_description = $EGA_SOURCE_DESCRIPTION;
+    $source_url = $EGA_SOURCE_URL;
+		my $source_id = get_or_add_source($source_name,$source_description,$source_url,$db_adaptor);
+		print STDOUT "$source source_id is $source_id\n" if ($verbose);
+    parse_ega($infile,$source_id);
+		exit(0);
+}
 else {
     die("Source $source is not recognized");
 }
@@ -110,17 +136,6 @@ if (exists($result->{'phenotypes'})) {
     @phenotypes = @{$result->{'phenotypes'}};
 }
 
-# Connect to the variation database
-print STDOUT localtime() . "\tConnecting to database $dbname\n" if ($verbose);
-my $db_adaptor = new Bio::EnsEMBL::DBSQL::DBAdaptor(
-  -host => $host,
-  -user => $user,
-  -pass => $pass,
-  -port => $port,
-  -dbname => $dbname
-) or die("Could not get a database adaptor for $dbname on $host:$port");
-print STDOUT localtime() . "\tConnected to $dbname on $host:$port\n" if ($verbose);
-
 # Get internal variation ids for the rsIds
 my @rsids = map {$_->{'rsid'}} @phenotypes;
 my $variation_ids = get_dbIDs(\@rsids,$db_adaptor);
@@ -129,7 +144,7 @@ my $variation_ids = get_dbIDs(\@rsids,$db_adaptor);
 my $source_id = get_or_add_source($source_name,$source_description,$source_url,$db_adaptor);
 print STDOUT "$source source_id is $source_id\n" if ($verbose);
 
-#ÊAdd the synonyms if required
+# Add the synonyms if required
 add_synonyms(\%synonym,$variation_ids,$source_id,$db_adaptor) unless ($skip_synonyms);
 
 # Now, insert phenotypes
@@ -262,6 +277,7 @@ sub parse_nhgri {
             'associated_variant_risk_allele' => $rs_risk_allele,
             'risk_allele_freq_in_controls' => $risk_frequency,
             'p_value' => $pvalue,
+						'study_description' => $study,
         );
         
         # Parse the rsids
@@ -303,7 +319,7 @@ sub parse_dbsnp_omim {
         'Gene_names'
     );
     
-    #ÊOpen the input file for reading
+    # Open the input file for reading
     open(IN,'<',$infile) or die ("Could not open $infile for reading");
     
     # Read through the file and parse out the desired fields
@@ -312,7 +328,7 @@ sub parse_dbsnp_omim {
         
         my @attributes = split(/\t/);
         
-        #ÊSkip the risk allele if the variant is "0000"
+        # Skip the risk allele if the variant is "0000"
         my $data = {
             'rsid' => 'rs' . $attributes[0],
             'study' => 'MIM:' . $attributes[1],
@@ -321,7 +337,7 @@ sub parse_dbsnp_omim {
             'variation_names' => 'rs' . $attributes[0]
         };
         
-        #ÊIf available, use the variant title, else use the omim record title
+        # If available, use the variant title, else use the omim record title
         if (defined($data->{'associated_variant_risk_allele'})) {
             $data->{'description'} = $attributes[4];
         }
@@ -329,7 +345,7 @@ sub parse_dbsnp_omim {
             $data->{'description'} = $attributes[3];
         }
         
-        #ÊIf possible, try to extract the last comma-separated word as this should be the short name for the phenotype
+        # If possible, try to extract the last comma-separated word as this should be the short name for the phenotype
         @attributes = split(/;/,$data->{'description'});
         if (scalar(@attributes) > 1) {
             ($data->{'name'}) = pop(@attributes) =~ m/(\S+)/;
@@ -347,20 +363,128 @@ sub parse_dbsnp_omim {
 
 sub parse_ega {
     my $infile = shift;
+		my $source_id = shift;
     
-    #ÊOpen the input file for reading
+		my $study_check_stmt = qq{
+        SELECT
+          study_id
+        FROM
+          study_nhgri
+        WHERE
+          name=? AND source_id=$source_id
+        LIMIT 1
+    };
+		my $nhgri_check_stmt = qq{
+        SELECT
+          st.study_id,st.study_type
+        FROM
+          study_nhgri st, source s
+        WHERE
+          external_reference=? AND s.name like '%nhgri%'
+					AND s.source_id=st.source_id
+        LIMIT 1
+    };
+		my $study_ins_stmt = qq{
+				INSERT INTO
+          study_nhgri (
+            name,
+						source_id,
+						external_reference,
+						url,
+						study_type
+          )
+        VALUES (
+            ?,
+            $source_id,
+            ?,
+            ?,
+            ?
+        )
+		};
+		# NHGRI and EGA associated studies
+    my $asso_study_check_stmt = qq{
+        SELECT
+          study1_id
+        FROM
+          associate_study_nhgri
+        WHERE
+          (study2_id = ? AND study1_id = ?) 
+					or 
+					(study1_id = ? AND study2_id = ?) 
+        LIMIT 1
+    };
+		my $asso_study_ins_stmt = qq{
+				INSERT INTO
+          associate_study_nhgri (study1_id,study2_id)
+        VALUES (?,?)
+		};
+		
+		my $nhgri_check_sth = $db_adaptor->dbc->prepare($nhgri_check_stmt);
+		my $study_check_sth = $db_adaptor->dbc->prepare($study_check_stmt);
+		my $study_ins_sth = $db_adaptor->dbc->prepare($study_ins_stmt);
+		my $asso_study_check_sth = $db_adaptor->dbc->prepare($asso_study_check_stmt);
+		my $asso_study_ins_sth = $db_adaptor->dbc->prepare($asso_study_ins_stmt);
+		
+    # Open the input file for reading
     open(IN,'<',$infile) or die ("Could not open $infile for reading");
     
     # Read through the file and parse out the desired fields
     while (<IN>) {
         chomp;
+				my @attributes = split("\t");
+				next if ($attributes[1] eq '');
+				
+				my ($name,$pubmed,$url) = @attributes;
+				$pubmed = "pubmed/$pubmed";
+				
+				# NHGRI study
+				my $nhgri_study_id;
+				my $study_type;
+        $nhgri_check_sth->bind_param(1,$pubmed,SQL_VARCHAR);
+        $nhgri_check_sth->execute();
+        $nhgri_check_sth->bind_columns(\$nhgri_study_id,\$study_type);
+        $nhgri_check_sth->fetch();
+				
+				if (!defined($nhgri_study_id)) {
+					print "No NHGRI study found for the EGA $name | $pubmed !\n";
+					next;
+				}
+				
+				# EGA study
+				my $study_id;
+        $study_check_sth->bind_param(1,$name,SQL_VARCHAR);
+        $study_check_sth->execute();
+        $study_check_sth->bind_columns(\$study_id);
+        $study_check_sth->fetch();
+				if (!defined($study_id)) {
+        	$study_ins_sth->bind_param(1,$name,SQL_VARCHAR);
+        	$study_ins_sth->bind_param(2,$pubmed,SQL_VARCHAR);
+					$study_ins_sth->bind_param(3,$url,SQL_VARCHAR);
+					$study_ins_sth->bind_param(4,$study_type,SQL_VARCHAR);
+        	$study_ins_sth->execute();
+					
+					$study_check_sth->bind_param(1,$name,SQL_VARCHAR);
+        	$study_check_sth->execute();
+        	$study_check_sth->bind_columns(\$study_id);
+        	$study_check_sth->fetch();
+				}
+				
+				my $is_associated;
+        $asso_study_check_sth->bind_param(1,$nhgri_study_id,SQL_INTEGER);
+				$asso_study_check_sth->bind_param(2,$study_id,SQL_INTEGER);
+        $asso_study_check_sth->execute();
+        $asso_study_check_sth->bind_columns(\$is_associated);
+        $asso_study_check_sth->fetch();
+				
+				if (!defined($is_associated)) {
+					$asso_study_ins_sth->bind_param(1,$nhgri_study_id,SQL_INTEGER);
+        	$asso_study_ins_sth->bind_param(2,$study_id,SQL_INTEGER);
+        	$asso_study_ins_sth->execute();
+				}
     }
     close(IN);
-    
-    my %result;
-    
-    return\%result;
 }
+
 sub get_dbIDs {
     my $rs_ids = shift;
     my $db_adaptor = shift;
@@ -467,14 +591,14 @@ sub add_phenotypes {
         SELECT
             phenotype_id
         FROM
-            phenotype
+            phenotype_nhgri
         WHERE
             description = ?
         LIMIT 1
     };
     my $phen_ins_stmt = qq{
         INSERT INTO
-            phenotype (
+            phenotype_nhgri (
                 name,
                 description
             )
@@ -483,25 +607,49 @@ sub add_phenotypes {
             ?
         )
     };
+		my $st_check_stmt = qq{
+        SELECT
+            study_id
+        FROM
+            study_nhgri
+        WHERE
+            source_id = $source_id AND
+            external_reference = ? AND
+						study_type = ?
+        LIMIT 1
+    };
+		my $st_ins_stmt = qq{
+        INSERT INTO
+            study_nhgri (
+                source_id,
+                external_reference,
+		            study_type,
+								description
+            )
+        VALUES (
+            $source_id,
+            ?,
+	          ?,
+						?
+        )
+    };
     my $va_check_stmt = qq{
         SELECT
             variation_annotation_id
         FROM
-            variation_annotation
+            variation_annotation_nhgri
         WHERE
             variation_id = ? AND
             phenotype_id = ? AND
-            source_id = $source_id
+            study_id = ?
         LIMIT 1
     };
     my $va_ins_stmt = qq{
         INSERT INTO
-            variation_annotation (
+            variation_annotation_nhgri (
                 variation_id,
                 phenotype_id,
-                source_id,
-                study,
-                study_type,
+                study_id,
                 associated_gene,
                 associated_variant_risk_allele,
                 variation_names,
@@ -510,8 +658,6 @@ sub add_phenotypes {
             )
         VALUES (
             ?,
-            ?,
-            $source_id,
             ?,
             ?,
             ?,
@@ -523,19 +669,42 @@ sub add_phenotypes {
     };
     my $phen_check_sth = $db_adaptor->dbc->prepare($phen_check_stmt);
     my $phen_ins_sth = $db_adaptor->dbc->prepare($phen_ins_stmt);
-    my $va_check_sth = $db_adaptor->dbc->prepare($va_check_stmt);
+    my $st_check_sth = $db_adaptor->dbc->prepare($st_check_stmt);
+    my $st_ins_sth = $db_adaptor->dbc->prepare($st_ins_stmt);
+		my $va_check_sth = $db_adaptor->dbc->prepare($va_check_stmt);
     my $va_ins_sth = $db_adaptor->dbc->prepare($va_ins_stmt);
 
     # First, sort the array according to the phenotype description
     my @sorted = sort {$a->{"description"} cmp $b->{"description"}} @{$phenotypes};
     my $current = "";
     my $phenotype_id;
+		my $study_count = 0;
     my $phenotype_count = 0;
     my $annotation_count = 0;
     
     while (my $phenotype = shift(@sorted)) {
-        
-        #ÊIf the rs could not be mapped to a variation id, skip it
+        my $study_id;
+        $st_check_sth->bind_param(1,$phenotype->{"study"},SQL_VARCHAR);
+				$st_check_sth->bind_param(2,$phenotype->{"study_type"},SQL_VARCHAR);
+        $st_check_sth->execute();
+        $st_check_sth->bind_columns(\$study_id);
+        $st_check_sth->fetch();
+				
+        if (!defined($study_id)) {
+        	$st_ins_sth->bind_param(1,$phenotype->{"study"},SQL_VARCHAR);
+        	$st_ins_sth->bind_param(2,$phenotype->{"study_type"},SQL_VARCHAR);
+					$st_ins_sth->bind_param(3,$phenotype->{"study_description"},SQL_VARCHAR);
+        	$st_ins_sth->execute();
+					$study_count++;
+					
+        	$st_check_sth->bind_param(1,$phenotype->{"study"},SQL_VARCHAR);
+					$st_check_sth->bind_param(2,$phenotype->{"study_type"},SQL_VARCHAR);
+        	$st_check_sth->execute();
+        	$st_check_sth->bind_columns(\$study_id);
+        	$st_check_sth->fetch();
+				}
+				
+				# If the rs could not be mapped to a variation id, skip it
         next if (!defined($variation_ids->{$phenotype->{"rsid"}}[0]));
         
         # If we have a new phenotype we need to see if it exists in the database and otherwise add it
@@ -562,24 +731,25 @@ sub add_phenotypes {
         my $va_id;
         $va_check_sth->bind_param(1,$variation_ids->{$phenotype->{"rsid"}}[0],SQL_INTEGER);
         $va_check_sth->bind_param(2,$phenotype_id,SQL_INTEGER);
-        $va_check_sth->execute();
+        $va_check_sth->bind_param(3,$study_id,SQL_INTEGER);
+				$va_check_sth->execute();
         $va_check_sth->bind_columns(\$va_id);
         $va_check_sth->fetch();
         next if (defined($va_id));
-        
+				
         # Else, insert this phenotype.
         $va_ins_sth->bind_param(1,$variation_ids->{$phenotype->{"rsid"}}[0],SQL_INTEGER);
         $va_ins_sth->bind_param(2,$phenotype_id,SQL_INTEGER);
-        $va_ins_sth->bind_param(3,$phenotype->{"study"},SQL_VARCHAR);
-        $va_ins_sth->bind_param(4,$phenotype->{"study_type"},SQL_VARCHAR);
-        $va_ins_sth->bind_param(5,$phenotype->{"associated_gene"},SQL_VARCHAR);
-        $va_ins_sth->bind_param(6,$phenotype->{"associated_variant_risk_allele"},SQL_VARCHAR);
-        $va_ins_sth->bind_param(7,$phenotype->{"variation_names"},SQL_VARCHAR);
-        $va_ins_sth->bind_param(8,$phenotype->{"risk_allele_frequency_in_controls"},SQL_VARCHAR);
-        $va_ins_sth->bind_param(9,$phenotype->{"p_value"},SQL_VARCHAR);
+        $va_ins_sth->bind_param(3,$study_id,SQL_INTEGER);
+        $va_ins_sth->bind_param(4,$phenotype->{"associated_gene"},SQL_VARCHAR);
+        $va_ins_sth->bind_param(5,$phenotype->{"associated_variant_risk_allele"},SQL_VARCHAR);
+        $va_ins_sth->bind_param(6,$phenotype->{"variation_names"},SQL_VARCHAR);
+        $va_ins_sth->bind_param(7,$phenotype->{"risk_allele_frequency_in_controls"},SQL_VARCHAR);
+        $va_ins_sth->bind_param(8,$phenotype->{"p_value"},SQL_VARCHAR);
         $va_ins_sth->execute();
         $annotation_count++;
     }
+		print STDOUT "$study_count new studies added\n" if ($verbose);
     print STDOUT "$phenotype_count new phenotypes added\n" if ($verbose);
     print STDOUT "$annotation_count variations were annoteted with phenotypes\n" if ($verbose);
 }
