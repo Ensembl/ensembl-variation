@@ -59,7 +59,7 @@ use vars qw(@ISA @EXPORT_OK);
 
 @ISA = qw(Exporter);
 
-@EXPORT_OK = qw(&ambiguity_code &variation_class &unambiguity_code &sequence_with_ambiguity &hgvs_variant_notation &SO_variation_class);
+@EXPORT_OK = qw(&ambiguity_code &variation_class &unambiguity_code &sequence_with_ambiguity &hgvs_variant_notation &SO_variation_class &align_seqs &strain_ambiguity_code);
 
 
 =head2 ambiguity_code
@@ -91,6 +91,68 @@ sub ambiguity_code {
 #GT K C C A A T T G G - - -A -A -C -C -G -G -T -T A- A- C- C- G- G- T- T-); #for now just make e.g. 'A-' -> 'A-'
 	my %ambig = qw(AC M ACG V ACGT N ACT H AG R AGT D AT W CG S CGT B CT Y GT K C C A A T T G G - -);
     return $ambig{$alleles};
+}
+
+=head2 strain_ambiguity_code
+
+  Arg[1]      : string $alleles (separated by "/", "\" or "|")
+  Example     :  use Bio::EnsEMBL::Variation::Utils::Sequence qw(strain_ambiguity_code)
+                 my $alleles = 'A|C';
+                 my $ambig_code = strain_ambiguity_code($alleles);
+                print "the ambiguity code for $alleles is: ",$ambig_code;
+  Description : returns the ambiguity code for a strain genotype
+  ReturnType  : String
+  Exceptions  : None
+  Caller      : AlleleFeatureAdaptor
+
+=cut
+
+sub strain_ambiguity_code {
+    my $alleles = shift;
+	
+	# return normal ambiguity code for a SNP
+	return ambiguity_code($alleles) if($alleles =~ /^[ACGT][\|\/\\][ACGT]$/);
+	
+	# get alleles
+	my ($a1, $a2) = split /[\|\/\\]/, $alleles;
+	
+	# pad
+	if(length($a1) > length($a2)) {
+		$a2 .= '-' x (length($a1) - length($a2));
+	}
+	else {
+		$a1 .= '-' x (length($a2) - length($a1));
+	}
+	
+	# build ambiguity code base by base
+	my $ambig = '';
+	
+	for my $i(0..(length($a1) - 1)) {
+		my $b1 = substr($a1, $i, 1);
+		my $b2 = substr($a2, $i, 1);
+		
+		# -/- = -
+		if($b1 eq '-' && $b2 eq '-') {
+			$ambig .= '-';
+		}
+		
+		# G/- = g
+		elsif($b1 eq '-') {
+			$ambig .= lc($b2);
+		}
+		
+		# -/G = g
+		elsif($b2 eq '-') {
+			$ambig .= lc($b1);
+		}
+		
+		# A/G = R
+		else {
+			$ambig .= ambiguity_code($b1.'|'.$b2);
+		}
+	}
+	
+	return $ambig;
 }
 
 =head2 unambiguity_code
@@ -496,6 +558,106 @@ sub hgvs_variant_notation {
     $notation{'type'} = 'delins';
     
     return \%notation;
+}
+
+
+=head2 align_seqs
+
+  Arg[1]      : string $seq1
+  Arg[2]      : string $seq2
+  Example     : my $aligned_seqs = align_seqs($seq1, $seq2);
+  Description : Does a simple NW align of two sequence strings. Best used on
+                short (<1000bp) sequences, otherwise runtime will be long
+  ReturnType  : arrayref to a pair of strings
+  Exceptions  : none
+  Caller      : web flanking sequence display
+
+=cut
+
+sub align_seqs {
+	my $seq1 = shift;
+	my $seq2 = shift;
+
+	# align parameters
+	my $match    = 10;
+	my $mismatch = -10;
+	my $gep      = -10;
+	
+	# split sequences into arrays
+	my @split1 = split //, $seq1;
+	my @split2 = split //, $seq2;
+	
+	# evaluate substitutions
+	my $len1 = length($seq1);
+	my $len2 = length($seq2);
+	
+	my (@smat, @tb);
+	
+	for (my $i=0; $i<=$len1; $i++) {
+		$smat[$i][0] = $i * $gep;
+		$tb[$i][0] = 1;
+	}
+	for (my $j=0; $j<=$len2; $j++) {
+		$smat[0][$j] = $j * $gep;
+		$tb[0][$j] = -1;
+	}
+	
+	my ($s, $sub, $del, $ins);
+	
+	for (my $i=1; $i<=$len1; $i++) {
+		for (my $j=1; $j<=$len2; $j++)	{
+			
+			# calculate score
+			if($split1[$i-1] eq $split2[$j-1]) {
+				$s = $match;
+			}
+			else {
+				$s = $mismatch;
+			}
+			
+			$sub = $smat[$i-1][$j-1] + $s;
+			$del = $smat[$i][$j-1] + $gep;
+			$ins = $smat[$i-1][$j] + $gep;
+			
+			if($sub > $del && $sub > $ins) {
+				$smat[$i][$j] = $sub;
+				$tb[$i][$j] = 0;
+			}
+			elsif($del > $ins) {
+				$smat[$i][$j] = $del;
+				$tb[$i][$j] = -1;
+			}
+			else {
+				$smat[$i][$j] = $ins;
+				$tb[$i][$j] = 1;
+			}
+		}
+	}
+	
+	
+	my $i = $len1;
+	my $j = $len2;
+	my $aln_len = 0;
+	my (@aln1, @aln2);
+	
+	while(!($i == 0 && $j == 0)) {
+		if($tb[$i][$j] == 0) {
+			$aln1[$aln_len] = $split1[--$i];
+			$aln2[$aln_len] = $split2[--$j];
+		}
+		elsif($tb[$i][$j] == -1) {
+			$aln1[$aln_len] = '-';
+			$aln2[$aln_len] = $split2[--$j];
+		}
+		elsif($tb[$i][$j] == 1) {
+			$aln1[$aln_len] = $split1[--$i];
+			$aln2[$aln_len] = '-';
+		}
+		
+		$aln_len++;
+	}
+	
+	return [(join "", reverse @aln1), (join "", reverse @aln2)];
 }
 
 1;
