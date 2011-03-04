@@ -68,7 +68,7 @@ use Bio::EnsEMBL::Variation::AlleleFeature;
 use Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor;
 use Bio::EnsEMBL::Utils::Exception qw(throw);
 use Bio::EnsEMBL::Utils::Sequence qw(expand);
-use Bio::EnsEMBL::Variation::Utils::Sequence qw(ambiguity_code);
+use Bio::EnsEMBL::Variation::Utils::Sequence qw(strain_ambiguity_code);
 
 our @ISA = ('Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor');
 
@@ -153,7 +153,7 @@ sub fetch_all_by_Slice{
 			}
 			
 			#we need to check the genotypes are within the alleles of the variation
-			if ($genotypes->[$i]->start == $af->seq_region_start && (exists $alleles->{$string1} || exists $alleles->{$string2})){
+			if ($genotypes->[$i]->seq_region_start == $af->seq_region_start && (exists $alleles->{$string1} || exists $alleles->{$string2})){
 				
 				# create a clone of the AF to work with
 				my $new_af = { %$af };
@@ -173,16 +173,24 @@ sub fetch_all_by_Slice{
 					if($genotypes->[$i]->allele1 eq '-' and $genotypes->[$i]->allele1 eq '-'){
 					1;
 					}
-					$new_af->allele_string(ambiguity_code($genotypes->[$i]->allele1  . '/' . $genotypes->[$i]->allele2)); #for heterozigous alleles
+					$new_af->allele_string(strain_ambiguity_code($genotypes->[$i]->allele1  . '/' . $genotypes->[$i]->allele2)); #for heterozigous alleles
 				}
 			#	$af->allele_string($genotypes->[$i]->allele1); #if it is strain, both alleles should be the same, might be changed in the future
 				$new_af->individual($genotypes->[$i]->individual);		
 				$last_position++;
 				
+				# skip duplicates
+				if(scalar @{$new_afs}) {
+					next if
+					  $new_afs->[-1]->individual->dbID eq $new_af->individual->dbID &&
+					  $new_afs->[-1]->allele_string eq $new_af->allele_string &&
+					  $new_afs->[-1]->{_variation_feature_id} eq $new_af->{_variation_feature_id};
+				}
+				
 				push @{$new_afs},$new_af;
 			}
 			
-			elsif ($genotypes->[$i]->start < $af->seq_region_start){
+			elsif ($genotypes->[$i]->seq_region_start < $af->seq_region_start){
 				$last_position++; #this should not happen, it means the genotype has no allele feature 
 			}
 			
