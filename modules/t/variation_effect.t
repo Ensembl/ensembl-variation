@@ -894,8 +894,13 @@ $transcript_tests->{$t3->stable_id}->{tests} = [
         start   => $cds_start + 3,
         end     => $cds_start + 3,
         effects => [qw(non_synonymous_codon non_synonymous_codon)],
+    }, {
+        comment => 'a TA(3) allele string',
+        alleles => 'TA(3)',
+        start   => $intron_start + 10,
+        end     => $intron_start + 15,
+        effects => [qw(intron_variant)],
     },
-
 ];
 
 # a forward strand NMD transcript with an intron in the 3 prime UTR
