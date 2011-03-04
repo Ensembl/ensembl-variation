@@ -27,23 +27,12 @@ use base qw(Exporter);
 
 our @EXPORT_OK = qw(overlap within_cds);
 
+#package Bio::EnsEMBL::Variation::VariationFeatureOverlapAllele;
+
 sub overlap {
     my ( $f1_start, $f1_end, $f2_start, $f2_end ) = @_;
    
     return ( ($f1_end >= $f2_start) and ($f1_start <= $f2_end) );
-}
-
-sub affects_transcript {
-    my ($vf, $tran) = @_;
-    
-    return 0 unless $tran->isa('Bio::EnsEMBL::Transcript');
-    
-    return overlap(
-        $vf->seq_region_start, 
-        $vf->seq_region_end,
-        $tran->seq_region_start - 5000, 
-        $tran->seq_region_end + 5000
-    );
 }
 
 sub within_feature {
@@ -57,11 +46,6 @@ sub within_feature {
         $feat->seq_region_start, 
         $feat->seq_region_end
     );
-}
-
-sub within_transcript {
-    my $tva = shift;
-    return within_feature($tva);
 }
 
 sub _before_start {
@@ -90,6 +74,8 @@ sub _downstream {
         _after_end($vf, $feat, $dist) : 
         _before_start($vf, $feat, $dist);
 }
+
+#package Bio::EnsEMBL::Variation::TranscriptVariationAllele;
 
 sub upstream_5KB {
     my $vfo     = shift;
@@ -129,6 +115,24 @@ sub downstream_500B {
     my $feat    = $vfo->feature;
 
     return _downstream($vf, $feat, 500);
+}
+
+sub affects_transcript {
+    my ($vf, $tran) = @_;
+    
+    return 0 unless $tran->isa('Bio::EnsEMBL::Transcript');
+    
+    return overlap(
+        $vf->seq_region_start, 
+        $vf->seq_region_end,
+        $tran->seq_region_start - 5000, 
+        $tran->seq_region_end + 5000
+    );
+}
+
+sub within_transcript {
+    my $tva = shift;
+    return within_feature($tva);
 }
 
 sub within_nmd_transcript {
@@ -518,6 +522,14 @@ sub coding_unknown {
     return (within_coding_frameshift_intron($tva) or coding_other($tva));
 }
 
+#package Bio::EnsEMBL::Variation::RegulatoryFeatureAllele;
+
+sub within_regulatory_feature {
+    my $rfva = shift;
+    return within_feature($rfva);
+}
+
+#package Bio::EnsEMBL::Variation::ExternalFeatureVariationAllele;
 
 sub within_miRNA_target_site {
     my $tva = shift;
@@ -525,10 +537,7 @@ sub within_miRNA_target_site {
     return 0;
 }
 
-sub within_regulatory_feature {
-    my $rfva = shift;
-    return within_feature($rfva);
-}
+#package Bio::EnsEMBL::Variation::MotifFeatureVariationAllele;
 
 sub within_motif_feature {
     my $mfva = shift;
