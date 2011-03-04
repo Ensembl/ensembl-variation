@@ -30,18 +30,18 @@ Bio::EnsEMBL::Variation::Study - Ensembl representation of a study.
 
 =head1 SYNOPSIS
 
-    # Structural variation feature representing a CNV
-    $ssv = Bio::EnsEMBL::Variation::StructuralVariation->new
-       (-supporting_structural_evidence => 'ssv001'
-        -structural_variation   => $structural_variation);
-
+    # Study
+		$study = Bio::EnsEMBL::Variation::Study->new
+       (-name => 'EGAS00000000001',
+        -external_reference   => 'pubmed/17554300',
+				-url => 'http://www.ebi.ac.uk/ega/page.php?page=study&study=EGAS00000000001&cat=www.wtccc.studies.xml.ega&subcat=BD'
+				);
     ...
 
 
 =head1 DESCRIPTION
 
-This is a class representing the supporting evidence of a structural variation
-from the ensembl-variation database.
+This is a class representing a study from the ensembl-variation database.
 
 =head1 METHODS
 
@@ -63,24 +63,33 @@ our @ISA = ('Bio::EnsEMBL::Storable');
 
   Arg [-dbID] :
     see superclass constructor
-
   Arg [-ADAPTOR] :
     see superclass constructor
-
   Arg [-NAME] :
-    see superclass constructor
-    
-  Arg [-STRUCTURAL_VARIATION_ID] :
-    see superclass constructor
-
+    name of the study 
+  Arg [-DESCRIPTION] :
+    study description
+	Arg [-URL] :
+    string - url of the database/file where the data are stored
+	Arg [-EXTERNAL_REFERENCE] :
+    string - the pubmed/ids or project/study names
+	Arg [-TYPE] :
+    string - type of the study (e.g. GWAS)
+	Arg [-SOURCE] :
+    string - name of the source
+	Arg [-ASSOCIATE] :
+    array ref - list of the study objects associated with the current study
+			
   Example    :
 		
-    $svv = Bio::EnsEMBL::Variation::SupportingStructuralVariation->new
-       (-name => 'esv25480',
-        -structural_variation_id   => $structural_variation->dbID);
+    $study = Bio::EnsEMBL::Variation::Study->new
+       (-name => 'EGAS00000000001',
+        -external_reference   => 'pubmed/17554300',
+				-url => 'http://www.ebi.ac.uk/ega/page.php?page=study&study=EGAS00000000001&cat=www.wtccc.studies.xml.ega&subcat=BD'
+				);
 
-  Description: Constructor. Instantiates a new StructuralVariation object.
-  Returntype : Bio::EnsEMBL::Variation::StructuralVariation
+  Description: Constructor. Instantiates a new Study object.
+  Returntype : Bio::EnsEMBL::Variation::Study
   Exceptions : none
   Caller     : general
   Status     : At Risk

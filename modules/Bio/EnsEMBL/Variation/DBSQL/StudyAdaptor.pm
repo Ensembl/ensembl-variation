@@ -36,7 +36,7 @@ Bio::EnsEMBL::Variation::DBSQL::StudyAdaptor
   
   $reg->load_registry_from_db(-host => 'ensembldb.ensembl.org',-user => 'anonymous');
   
-  $ssva = $reg->get_adaptor("human","variation","supportingstructuralvariation");
+  $ssva = $reg->get_adaptor("human","variation","study");
 
   # fetch a study by its name
   $ssv = $ssva->fetch_by_name('nssv133'); 
