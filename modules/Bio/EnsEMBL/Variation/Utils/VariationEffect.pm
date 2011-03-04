@@ -416,6 +416,7 @@ sub non_synonymous_codon {
     return 0 if stop_lost($tva);
     return 0 if stop_gained($tva);
     return 0 if partial_codon($tva);
+
     return 0 if inframe_codon_loss($tva);
     return 0 if inframe_codon_gain($tva);
     
@@ -532,9 +533,13 @@ sub within_regulatory_feature {
 #package Bio::EnsEMBL::Variation::ExternalFeatureVariationAllele;
 
 sub within_miRNA_target_site {
-    my $tva = shift;
-    # XXX: implement me!
+    my $efva = shift;
+    
     return 0;
+
+    my $fset = $efva->variation_feature_overlap->feature->feature_set;
+
+    return ($fset && $fset->name eq 'miRanda miRNA targets');
 }
 
 #package Bio::EnsEMBL::Variation::MotifFeatureVariationAllele;
@@ -550,12 +555,14 @@ sub within_motif_feature {
 
 sub increased_binding_affinity {
     my $mfva = shift;
-    return (within_feature($mfva) and ($mfva->binding_affinity_change > 0));
+    my $change = $mfva->binding_affinity_change;
+    return (within_feature($mfva) and (defined $change) and ($change > 0));
 }
 
 sub decreased_binding_affinity {
     my $mfva = shift;
-    return (within_feature($mfva) and ($mfva->binding_affinity_change < 0));   
+    my $change = $mfva->binding_affinity_change;
+    return (within_feature($mfva) and (defined $change) and ($change < 0));
 }
 
 1;
