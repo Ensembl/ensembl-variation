@@ -76,7 +76,7 @@ create table variation_annotation (
 	primary key (variation_annotation_id),
 	key variation_idx(variation_id),
 	key phenotype_idx(phenotype_id),
-	key study_idx(study_id),
+	key study_idx(study_id)
 );
 
 
