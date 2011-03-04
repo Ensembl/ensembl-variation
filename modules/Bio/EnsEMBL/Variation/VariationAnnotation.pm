@@ -34,13 +34,7 @@ Bio::EnsEMBL::Variation::VariationAnnotation - A genotype phenotype annotation f
     $va = Bio::EnsEMBL::Variation::VariationAnnotation->new
        (_variation_id   => 8,
         -phenotype_name     => 'BD',
-        -phenotype_description => 'Bipolar Disorder',
-        -source_name  => 'EGA',
-        -study_type   => 'GWAS',
-				-external_reference        => 'pubmed/17293876',
-        -local_study_name => 'EGAS00000000001',
-		    -local_study_description='Variants imported from the European Genome-phenome Archive with phenotype association',
-        -local_study_url='http://www.ebi.ac.uk/ega/',
+        -phenotype_description => 'Bipolar Disorder',,
         -associated_gene => 'HHEX',
         -associated_variant_risk_allele => 'rs13266634-C',
         -variation_names => 'rs13266634',
@@ -51,7 +45,7 @@ Bio::EnsEMBL::Variation::VariationAnnotation - A genotype phenotype annotation f
     ...
 
     print $va->phenotype_name(),'-',$va->phenotype_description,"\n";
-    print "From source ",$va->source_name,'-',$va->local_study_name,"\n";
+    print "From source ",$va->source_name,'-',$va->study_name,"\n";
     print " With study_type ", $va->study_type(),"\n";
 
     ...
@@ -95,8 +89,6 @@ use vars qw(@ISA);
     string - name of the phenotype
   Arg [-PHENOTYPE_DESCRIPTION] :
     string - description of the phenotype
-  Arg [-SOURCE_NAME] :
-    string - name of the source
   Arg [-VARIATION_NAMES] :
     string - name of the associated variations
   Arg [-VARIATION] :
@@ -105,8 +97,6 @@ use vars qw(@ISA);
     int _ the internal id of the variation object associated with this
     identifier. This may be provided instead of a variation object so that
     the variation may be lazy-loaded from the database on demand.
-  Arg [-EXTERNAL_REFERENCE] :
-    string - the pubmed/ids or project/study names
   Arg [-ASSOCIATED_GENE] :
     string - the gene names associated with this annotation/variant.
   Arg [-ASSOCIATED_VARIANT_RISK_ALLELE] :
@@ -115,26 +105,15 @@ use vars qw(@ISA);
     string - the risk allele frequency in controls associated with this annotation.
   Arg [-P_VALUE] :
     string - the p_value associated with this annotation.
-  Arg [-LOCAL_STUDY_NAME] :
-    string - the name of the study where the variation comes from
-  Arg [-LOCAL_STUDY_DESCRIPTION] :
-	string - description of the study	
-  Arg [-LOCAL_STUDY_URL] :
-	string - url of the database/file where the data are stored
+  Arg [-STUDY] :
+    object ref - the study object describing where the annotated variation comes from
 	
   Example    :
     $va = Bio::EnsEMBL::Variation::VariationAnnotation->new
        (-phenotype_name => 'BD',
-        -phenotype_description => 'Bipolar Disorder', 
-        -souce_name  => 'EGA',
+        -phenotype_description => 'Bipolar Disorder',
         -variation_names => 'rs123',
-        -local_stable_id => 'EGAS00000000001',
         _variation_id => 10,
-		-local_study_name => 'EGAS00000000001',
-		-local_study_description='Variants imported from the European Genome-phenome Archive with phenotype association',
-        -local_study_url='http://www.ebi.ac.uk/ega/',
-		-local_study_source_name='EGA',
-        -study        => 'pubmed/17293876',
         -associated_gene => 'HHEX',
         -associated_variant_risk_allele => 'rs13266634-C',
         -risk_allele_freq_in_controls => '0.3',
@@ -154,15 +133,12 @@ sub new {
   my $class = ref($caller) || $caller;
   my $self = $class->SUPER::new(@_);
 
-  my ($dbID,$adaptor,$phenotype_id,$phenotype_name,$phenotype_description,$source_name,$study_type,
-      $variation_id,$variation_names,$variation,$external_reference,$associated_gene,$associated_variant_risk_allele,
-	  	$risk_allele_freq_in_controls,$p_value,$local_study_name,$local_study_description,$local_study_url, 
-			$local_study_source_name) =
-    rearrange([qw(dbID ADAPTOR _PHENOTYPE_ID PHENOTYPE_NAME PHENOTYPE_DESCRIPTION SOURCE_NAME
-                  STUDY_TYPE VARIATION_ID VARIATION_NAMES VARIATION
-		          		EXTERNAL_REFERENCE ASSOCIATED_GENE ASSOCIATED_VARIANT_RISK_ALLELE
-		          		RISK_ALLELE_FREQ_IN_CONTROLS P_VALUE LOCAL_STUDY_NAME LOCAL_STUDY_DESCRIPTION 
-									LOCAL_STUDY_URL LOCAL_STUDY_SOURCE_NAME)],@_); 
+  my ($dbID,$adaptor,$phenotype_id,$phenotype_name,$phenotype_description,$variation_id,$variation_names,
+			$variation,$associated_gene,$associated_variant_risk_allele,$risk_allele_freq_in_controls,$p_value,
+			$study) =
+    rearrange([qw(dbID ADAPTOR _PHENOTYPE_ID PHENOTYPE_NAME PHENOTYPE_DESCRIPTION
+                  VARIATION_ID VARIATION_NAMES VARIATION ASSOCIATED_GENE ASSOCIATED_VARIANT_RISK_ALLELE
+		          		RISK_ALLELE_FREQ_IN_CONTROLS P_VALUE STUDY)],@_); 
 
   $self->{'dbID'} = $dbID;
   $self->{'adaptor'}    = $adaptor;
@@ -171,18 +147,12 @@ sub new {
   $self->{'phenotype_description'}  = $phenotype_description;
   $self->{'variation'}        = $variation;
   $self->{'_variation_id'}    = $variation_id;
-  $self->{'source_name'}      = $source_name;
   $self->{'variation_names'}   = $variation_names;
-  $self->{'study_type'}  = $study_type;
-  $self->{'external_reference'} = $external_reference;
   $self->{'associated_gene'} = $associated_gene;
   $self->{'associated_variant_risk_allele'} = $associated_variant_risk_allele;
   $self->{'risk_allele_freq_in_controls'} = $risk_allele_freq_in_controls;
   $self->{'p_value'} = $p_value;
-  $self->{'local_study_name'} => $local_study_name, 
-  $self->{'local_study_description'} => $local_study_description,
-  $self->{'local_study_url'} => $local_study_url, 
-  $self->{'local_study_source_name'} => $local_study_source_name,
+  $self->{'study'} => $study,
   return $self;
 }
 
@@ -248,8 +218,8 @@ sub phenotype_description{
 
 sub source_name{
   my $self = shift;
-  return $self->{'source_name'} = shift if(@_);
-  return $self->{'source_name'};
+  return $self->{'study'}->source = shift if(@_);
+  return $self->{'study'}->source;
 }
 
 =head2 study_type  
@@ -267,8 +237,8 @@ sub source_name{
 
 sub study_type{  
   my $self = shift;  
-  return $self->{'study_type'} = shift if(@_);  
-  return $self->{'study_type'};
+  return $self->{'study'}->type = shift if(@_);  
+  return $self->{'study'}->type;
 }
 
 =head2 local_stable_id  
@@ -280,9 +250,12 @@ sub study_type{
 sub local_stable_id{  
 
   my $self = shift; 
-  deprecate('Use local_study_name instead.');
-  return $self->local_study_name(@_);
-  
+  deprecate('Use the associated_studies method instead, which returns a reference list of Study objects.');
+	my @list;
+	foreach my $study (@{$self->associated_studies}) {
+		push (@list,$study->name);
+	}
+  return join(',',@list);
 }
 
 =head2 variation
@@ -348,14 +321,54 @@ sub variation_names{
 sub study{
   my $self = shift;
 	deprecate('Use external_reference instead.');
-  return $self->external_reference(@_);
+  return $self->{'study'}->external_reference(@_);
 }
+
+=head2 study_name
+
+  Arg [1]    : string $study_name (optional)
+               The new value to set the study_name attribute to
+  Example    : $study = $sva->study_name()
+  Description: Getter/Setter for the study_name attribute
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub study_name{
+  my $self = shift;
+  return $self->{'study'}->name = shift if(@_);
+  return $self->{'study'}->name;
+}
+
+
+=head2 study_description
+
+  Arg [1]    : string $study_description (optional)
+               The new value to set the study_description attribute to
+  Example    : $study_description = $obj->study_description()
+  Description: Getter/Setter for the study_description attribute
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub study_description{
+  my $self = shift;
+  return $self->{'study'}->description = shift if(@_);
+  return $self->{'study'}->description;
+}
+
 
 =head2 external_reference
 
   Arg [1]    : string $newval (optional)
                The new value to set the external reference attribute to
-  Example    : $variation_names = $obj->external_reference()
+  Example    : $external_reference = $obj->external_reference()
   Description: Getter/Setter for the external reference attribute.  This is the
                pubmed/id or project name associated with this study.
   Returntype : string
@@ -367,9 +380,47 @@ sub study{
 
 sub external_reference{
   my $self = shift;
-  return $self->{'external_reference'} = shift if(@_);
-  return $self->{'external_reference'};
+  return $self->{'study'}->external_reference = shift if(@_);
+  return $self->{'study'}->external_reference;
 }
+
+
+=head2 study_url
+
+  Arg [1]    : string $newval (optional)
+               The new value to set the study_url attribute to
+  Example    : $url = $obj->study_url()
+  Description: Getter/Setter for the study_url attribute. This is the link to the website where the data are stored.
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub study_url{
+  my $self = shift;
+  return $self->{'study'}->url = shift if(@_);
+  return $self->{'study'}->url;
+}
+
+
+=head2 associated_studies
+  Example    : $name = $obj->associate_studies()
+  Description: Getter/Setter for the associated_studies attribute 
+	            (e.g. EGA studies can be associated to NHGRI studies). 
+  Returntype : reference to list of Bio::EnsEMBL::Variation::Study
+  Exceptions : none
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub associated_studies{
+  my $self = shift;
+	return $self->{'study'}->associated_studies;
+}
+
 
 =head2 associated_gene
 
@@ -449,85 +500,5 @@ sub p_value{
   my $self = shift;
   return $self->{'p_value'} = shift if(@_);
   return $self->{'p_value'};
-}
-
-
-=head2 local_study_name
-
-  Arg [1]    : string $local_study (optional)
-               The new value to set the local_study_name attribute to
-  Example    : $study = $svf->local_study_name()
-  Description: Getter/Setter for the local_study_name attribute
-  Returntype : string
-  Exceptions : none
-  Caller     : general
-  Status     : At Risk
-
-=cut
-
-sub local_study_name{
-  my $self = shift;
-  return $self->{'local_study_name'} = shift if(@_);
-  return $self->{'local_study_name'};
-}
-
-
-
-=head2 local_study_description
-
-  Arg [1]    : string $local_study_description (optional)
-               The new value to set the local_study_description attribute to
-  Example    : $study_description = $svf->local_study_description()
-  Description: Getter/Setter for the local_study_description attribute
-  Returntype : string
-  Exceptions : none
-  Caller     : general
-  Status     : At Risk
-
-=cut
-
-sub local_study_description{
-  my $self = shift;
-  return $self->{'local_study_description'} = shift if(@_);
-  return $self->{'local_study_description'};
-}
-
-=head2 local_study_url
-
-  Arg [1]    : string $newval (optional)
-               The new value to set the local_study_url attribute to
-  Example    : $paper = $obj->local_study_url()
-  Description: Getter/Setter for the local_study_url attribute.This is the link to the website where the data are stored.
-  Returntype : string
-  Exceptions : none
-  Caller     : general
-  Status     : At Risk
-
-=cut
-
-sub local_study_url{
-  my $self = shift;
-  return $self->{'local_study_url'} = shift if(@_);
-  return $self->{'local_study_url'};
-}
-
-
-=head2 local_study_source_name
-
-  Arg [1]    : string $newval (optional)
-               The new value to set the local_study_source_name attribute to
-  Example    : $paper = $obj->local_study_source_name()
-  Description: Getter/Setter for the local_study_source_name attribute.This is the link to the website where the data are stored.
-  Returntype : string
-  Exceptions : none
-  Caller     : general
-  Status     : At Risk
-
-=cut
-
-sub local_study_source_name{
-  my $self = shift;
-  return $self->{'local_study_source_name'} = shift if(@_);
-  return $self->{'local_study_source_name'};
 }
 1;
