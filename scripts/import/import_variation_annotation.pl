@@ -145,7 +145,7 @@ my $source_id = get_or_add_source($source_name,$source_description,$source_url,$
 print STDOUT "$source source_id is $source_id\n" if ($verbose);
 
 # Add the synonyms if required
-add_synonyms(\%synonym,$variation_ids,$source_id,$db_adaptor) unless ($skip_synonyms);
+##########add_synonyms(\%synonym,$variation_ids,$source_id,$db_adaptor) unless ($skip_synonyms);
 
 # Now, insert phenotypes
 add_phenotypes(\@phenotypes,$variation_ids,$source_id,$db_adaptor) unless ($skip_phenotypes);
@@ -180,7 +180,7 @@ sub parse_uniprot {
         }
         
         #ÊMain regexp to extract relevant variation information
-        if ($_ =~ m/^(\S+)\s+(?:\w+\s+){2}(VAR\_\d+)\s+\d+\s+\w+ \-> \w+\s+(Disease|Polymorphism|Unclassified)\s+(\-|rs\d*)\s+(.+)$/) {
+        if ($_ =~ m/^(\S+)\s+(\S+)\s+VAR\_\d+\s+\w\.\S+\s+(Disease|Polymorphism|Unclassified)\s+(\-|rs\d*)\s+(.+)$/) {
             
             #ÊGet the data that was caught by the regexp
             my $gene = $1;
@@ -338,7 +338,7 @@ sub parse_dbsnp_omim {
         };
         
         # If available, use the variant title, else use the omim record title
-        if (defined($data->{'associated_variant_risk_allele'})) {
+        if (defined($data->{'associated_variant_risk_allele'}) and $attributes[4] ne '') {
             $data->{'description'} = $attributes[4];
         }
         else {
@@ -351,7 +351,7 @@ sub parse_dbsnp_omim {
             ($data->{'name'}) = pop(@attributes) =~ m/(\S+)/;
             $data->{'description'} = join(';',@attributes);
         }
-        
+				
         push(@phenotypes,$data);
     }
     
@@ -607,17 +607,6 @@ sub add_phenotypes {
             ?
         )
     };
-		my $st_check_stmt = qq{
-        SELECT
-            study_id
-        FROM
-            study
-        WHERE
-            source_id = $source_id AND
-            external_reference = ? AND
-						study_type = ?
-        LIMIT 1
-    };
 		my $st_ins_stmt = qq{
         INSERT INTO
             study (
@@ -669,7 +658,7 @@ sub add_phenotypes {
     };
     my $phen_check_sth = $db_adaptor->dbc->prepare($phen_check_stmt);
     my $phen_ins_sth = $db_adaptor->dbc->prepare($phen_ins_stmt);
-    my $st_check_sth = $db_adaptor->dbc->prepare($st_check_stmt);
+    #my $st_check_sth = $db_adaptor->dbc->prepare($st_check_stmt);
     my $st_ins_sth = $db_adaptor->dbc->prepare($st_ins_stmt);
 		my $va_check_sth = $db_adaptor->dbc->prepare($va_check_stmt);
     my $va_ins_sth = $db_adaptor->dbc->prepare($va_ins_stmt);
@@ -683,51 +672,76 @@ sub add_phenotypes {
     my $annotation_count = 0;
     
     while (my $phenotype = shift(@sorted)) {
-        my $study_id;
-        $st_check_sth->bind_param(1,$phenotype->{"study"},SQL_VARCHAR);
-				$st_check_sth->bind_param(2,$phenotype->{"study_type"},SQL_VARCHAR);
+		
+			# If the rs could not be mapped to a variation id, skip it
+      next if (!defined($variation_ids->{$phenotype->{"rsid"}}[0]));
+		
+			my $sql_study = '= ?';
+			my $sql_type = '= ?';
+      
+			# To avoid duplication of study entries
+			if (!defined $phenotype->{"study"}) {$sql_study = 'IS NULL'; }
+			if (!defined $phenotype->{"study_type"}) {$sql_type = 'IS NULL'; }
+				
+			my $st_check_stmt = qq{
+        	SELECT
+            study_id
+        	FROM
+            study
+        	WHERE
+            source_id = $source_id AND
+            external_reference $sql_study AND
+						study_type $sql_type
+        	LIMIT 1
+    	};
+			my $st_check_sth = $db_adaptor->dbc->prepare($st_check_stmt);
+			my $second_param_num = 2;
+				
+			my $study_id;
+			if (defined $phenotype->{"study"}) {
+       	$st_check_sth->bind_param(1,$phenotype->{"study"},SQL_VARCHAR) if (defined $phenotype->{"study"});
+			}
+			else { $second_param_num = 1; }
+			$st_check_sth->bind_param($second_param_num,$phenotype->{"study_type"},SQL_VARCHAR) if (defined $phenotype->{"study_type"});
+       $st_check_sth->execute();
+       $st_check_sth->bind_columns(\$study_id);
+       $st_check_sth->fetch();
+				
+      if (!defined($study_id)) {
+        $st_ins_sth->bind_param(1,$phenotype->{"study"},SQL_VARCHAR);
+        $st_ins_sth->bind_param(2,$phenotype->{"study_type"},SQL_VARCHAR);
+				$st_ins_sth->bind_param(3,$phenotype->{"study_description"},SQL_VARCHAR);
+        $st_ins_sth->execute();
+				$study_count++;
+					
+        $st_check_sth->bind_param(1,$phenotype->{"study"},SQL_VARCHAR) if (defined $phenotype->{"study"}); ;
+				$st_check_sth->bind_param($second_param_num,$phenotype->{"study_type"},SQL_VARCHAR) if (defined $phenotype->{"study_type"});
         $st_check_sth->execute();
         $st_check_sth->bind_columns(\$study_id);
         $st_check_sth->fetch();
-				
-        if (!defined($study_id)) {
-        	$st_ins_sth->bind_param(1,$phenotype->{"study"},SQL_VARCHAR);
-        	$st_ins_sth->bind_param(2,$phenotype->{"study_type"},SQL_VARCHAR);
-					$st_ins_sth->bind_param(3,$phenotype->{"study_description"},SQL_VARCHAR);
-        	$st_ins_sth->execute();
-					$study_count++;
-					
-        	$st_check_sth->bind_param(1,$phenotype->{"study"},SQL_VARCHAR);
-					$st_check_sth->bind_param(2,$phenotype->{"study_type"},SQL_VARCHAR);
-        	$st_check_sth->execute();
-        	$st_check_sth->bind_columns(\$study_id);
-        	$st_check_sth->fetch();
-				}
-				
-				# If the rs could not be mapped to a variation id, skip it
-        next if (!defined($variation_ids->{$phenotype->{"rsid"}}[0]));
+			}
         
-        # If we have a new phenotype we need to see if it exists in the database and otherwise add it
-        if ($phenotype->{"description"} ne $current) {
-            undef($phenotype_id);
-            $phen_check_sth->bind_param(1,$phenotype->{"description"},SQL_VARCHAR);
-            $phen_check_sth->execute();
-            $phen_check_sth->bind_columns(\$phenotype_id);
-            $phen_check_sth->fetch();
+      # If we have a new phenotype we need to see if it exists in the database and otherwise add it
+      if (defined($phenotype->{"description"}) and $phenotype->{"description"} ne $current) {
+      	undef($phenotype_id);
+        $phen_check_sth->bind_param(1,$phenotype->{"description"},SQL_VARCHAR);
+        $phen_check_sth->execute();
+        $phen_check_sth->bind_columns(\$phenotype_id);
+        $phen_check_sth->fetch();
             
-            # If no phenotype was found, we need to add it
-            if (!defined($phenotype_id)) {
-                #$phen_ins_sth->bind_param(1,$phenotype->{"name"},SQL_VARCHAR);
-                $phen_ins_sth->bind_param(1,undef,SQL_VARCHAR);
-                $phen_ins_sth->bind_param(2,$phenotype->{"description"},SQL_VARCHAR);
-                $phen_ins_sth->execute();
-                $phenotype_id = $db_adaptor->dbc->db_handle->{'mysql_insertid'};
-                $phenotype_count++;
-            }
-            $current = $phenotype->{"description"};
+        # If no phenotype was found, we need to add it
+        if (!defined($phenotype_id)) {
+					$phenotype->{"name"} ne '' ? $phenotype->{"name"} : undef;
+          $phen_ins_sth->bind_param(1,$phenotype->{"name"},SQL_VARCHAR);
+          $phen_ins_sth->bind_param(2,$phenotype->{"description"},SQL_VARCHAR);
+          $phen_ins_sth->execute();
+          $phenotype_id = $db_adaptor->dbc->db_handle->{'mysql_insertid'};
+          $phenotype_count++;
         }
+        $current = $phenotype->{"description"};
+      }
         
-        #ÊCheck if this phenotype already exists for this variation and source, in that case we probably want to skip it
+        # Check if this phenotype already exists for this variation and source, in that case we probably want to skip it
         my $va_id;
         $va_check_sth->bind_param(1,$variation_ids->{$phenotype->{"rsid"}}[0],SQL_INTEGER);
         $va_check_sth->bind_param(2,$phenotype_id,SQL_INTEGER);
@@ -738,7 +752,7 @@ sub add_phenotypes {
         next if (defined($va_id));
 				
         # Else, insert this phenotype.
-        $va_ins_sth->bind_param(1,$variation_ids->{$phenotype->{"rsid"}}[0],SQL_INTEGER);
+				$va_ins_sth->bind_param(1,$variation_ids->{$phenotype->{"rsid"}}[0],SQL_INTEGER);
         $va_ins_sth->bind_param(2,$phenotype_id,SQL_INTEGER);
         $va_ins_sth->bind_param(3,$study_id,SQL_INTEGER);
         $va_ins_sth->bind_param(4,$phenotype->{"associated_gene"},SQL_VARCHAR);
