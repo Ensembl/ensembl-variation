@@ -1254,7 +1254,7 @@ CREATE TABLE failed_variation (
   variation_id int(10) unsigned NOT NULL,
   failed_description_id int(10) unsigned NOT NULL,
   PRIMARY KEY (failed_variation_id),
-  KEY variation_idx (variation_id)
+  UNIQUE KEY variation_idx (variation_id,failed_description_id)
 );
 
 
@@ -1276,7 +1276,7 @@ CREATE TABLE failed_allele (
   allele_id int(10) unsigned NOT NULL,
   failed_description_id int(10) unsigned NOT NULL,
   PRIMARY KEY (failed_allele_id),
-  KEY allele_idx (allele_id)
+  UNIQUE KEY allele_idx (allele_id,failed_description_id)
 );
 
 
