@@ -60,13 +60,14 @@ use Getopt::Long;
 ###############
 ### Options ###
 ###############
-my ($sql_file,$html_file,$header_flag,$sort_tables,$help);
+my ($sql_file,$html_file,$db_team,$header_flag,$sort_tables,$help);
 
 usage() if (!scalar(@ARGV));
  
 GetOptions(
     'i=s' => \$sql_file,
     'o=s' => \$html_file,
+		'd=s' => \$db_team,
     'show_header=i' => \$header_flag,
     'sort=i' => \$sort_tables,
 		'help!' => \$help
@@ -95,7 +96,7 @@ my $html_header = qq{
 <html>
 <head>
 <meta http-equiv="CONTENT-TYPE" content="text/html; charset=utf-8" />
-<title>e! Variation schema </title>
+<title>e! $db_team schema </title>
 
 <script language="Javascript" type="text/javascript">
 	// Function to show/hide the columns table
@@ -118,29 +119,14 @@ my $html_header = qq{
 </head>
 
 <body>
-<h1>Ensembl Variation Schema Documentation</h1>
+<h1>Ensembl $db_team Schema Documentation</h1>
 
 <h2>Introduction</h2>
 
-<p>
-This document gives a high-level description of the tables that
-make up the Ensembl variation schema. Tables are grouped into logical
-groups, and the purpose of each table is explained. It is intended to
-allow people to familiarise themselves with the schema when
-encountering it for the first time, or when they need to use some
-tables that they have not used before. Note that this document
-makes no attempt to enumerate all of the names, types and contents of
-every single table.
-</p>
-
-<p>
-This document refers to version <strong>61</strong> of the Ensembl
-variation schema. 
-</p>
-
-<p>
-A PDF document of the schema is available <a href="variation-database-schema.pdf">here</a>.
-</p>
+<p><i>
+&lt;please, insert your introduction here&gt;
+</i></p>
+<br />
 };
 
 
@@ -159,6 +145,8 @@ my $html_footer = qq{
 my %display_col = ('Show' => 'none', 'Hide' => 'inline');
 my $documentation = {};
 my $tables_names = {'default' => []};
+my @header_names = ('default');
+
 
 my $in_doc = 0;
 my $in_table = 0;
@@ -198,9 +186,10 @@ while (<SQLFILE>) {
 	
 	## Parsing of the documentation ##
 	if ($in_doc==1) {
-		# Set of tables name
-		if ($doc =~ /^\@header\s*(\w+)/i and $header_flag == 1) {
+		# Header name
+		if ($doc =~ /^\@header\s*(.+)$/i and $header_flag == 1) {
 			$header = $1;
+			push (@header_names,$header);
 			$tables_names->{$header} = [];
 			next;
 		}		
@@ -316,6 +305,7 @@ close(SQLFILE);
 
 # Sort the tables names by alphabetic order
 if ($sort_tables == 1) {
+	@header_names = sort(@header_names);
 	while ( my($header_name,$tables) = each (%{$tables_names})) {
 		@{$tables} = sort(@{$tables});
 	}
@@ -326,13 +316,20 @@ my $html_content = display_tables_list();
 my $table_count = 1;
 my $col_count = 1;
 
-while ( my ($header_name,$tables) = each (%{$tables_names})) {
+foreach my $header_name (@header_names) {
+	my $tables = $tables_names->{$header_name};
+	
 	# Header display	
 	if ($header_flag == 1 and $header_name ne 'default') {
-		$html_content .= qq{<hr />\n<h2>$header_name</h2>\n};
+		$html_content .= qq{<br />\n<hr />\n<h2>$header_name</h2>\n};
 		my $header_desc = $documentation->{$header_name}{'desc'};		
 		$html_content .= qq{<p>$header_desc</p>} if (defined($header_desc));
 	}
+	else {
+		$html_content .= qq{<hr />\n};
+	}
+	
+	# Additional information
 	if ($header_name eq 'default' and defined($documentation->{$header_name}{'info'})) {
 		$html_content .= qq{<h2>Additional information about the schema</h2>\n};
 	}	
@@ -365,7 +362,9 @@ close(HTML);
 
 sub display_tables_list {
 	my $html = qq{<p>List of the tables:</p>\n};
-	while ( my ($header_name,$tables) = each (%{$tables_names})) {
+	foreach my $header_name (@header_names) {
+	#while ( my ($header_name,$tables) = each (%{$tables_names})) {
+		my $tables = $tables_names->{$header_name};
 		my $count = scalar @{$tables};
 		my $nb_col = ceil($count/$nb_by_col);
 		my $table_count = 0;
@@ -396,7 +395,6 @@ sub display_tables_list {
 		}
 		$html .= qq{		</ul>\n</td></tr></table>\n};
 	}
-	$html .= qq{<hr />\n};
 	return $html;
 }
 
@@ -623,7 +621,8 @@ sub usage {
     http://www.ebi.ac.uk/seqdb/confluence/display/EV/SQL+documentation
 
     -i             A SQL file name (Required)
-    -o             An HTML output file name (Required) 
+    -o             An HTML output file name (Required)
+		-d             The name of the database (e.g Core, Variation, Functional Genomics, ...)
     -show_header   A flag to display headers for a group of tables (1) or not (0). 
                    By default, the value is set to 1.
     -sort          A flag to sort (1) or not (0) the tables by alphabetic order.
