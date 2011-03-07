@@ -178,12 +178,10 @@ sub _exclude_failed_variations_constraint {
     #ÊIf we should include failed variations, no extra condition is needed
     return qq{ 1 } if ($self->include_failed_variations());
     
-    # Otherwise, add a constraint on the failed_variation table to have variation_id NULL or to have subsnp_id NOT NULL. Note that this assumes that there won't be any entries having subsnp_id both set and NULL for the same variation_id.
-    #ÊThis should be something for the post-processing/HCs to ensure 
+    # Otherwise, add a constraint on the failed_variation table to have variation_id NULL
     my $constraint = qq{
 	(
-	    fv.variation_id IS NULL OR
-	    fv.subsnp_id IS NOT NULL
+	    fv.variation_id IS NULL
 	)
     };
     
