@@ -6,9 +6,6 @@ ALTER TABLE variation CHANGE ancestral_allele ancestral_allele varchar(25000);
 # allele_string in variation_feature - this is necessarily longer as it contains more than one allele
 ALTER TABLE variation_feature CHANGE allele_string allele_string varchar(50000);
 
-# drop an index that includes the allele as it would be too long
-DROP INDEX pop_genotype_idx ON population_genotype;
-
 # allele_1 and allele_2 in population_genotype
 ALTER TABLE population_genotype CHANGE allele_1 allele_1 varchar(25000);
 ALTER TABLE population_genotype CHANGE allele_2 allele_2 varchar(25000);
