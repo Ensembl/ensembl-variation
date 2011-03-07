@@ -36,4 +36,4 @@ ALTER TABLE variation_feature MODIFY consequence_type SET (
 ) DEFAULT 'intergenic_variant' NOT NULL;
 
 # patch identifier
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL,'patch', 'patch_61_62_h.sql|change the consequence_type column in variation_feature to use SO terms');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL,'patch', 'patch_61_62_i.sql|change the consequence_type column in variation_feature to use SO terms');
