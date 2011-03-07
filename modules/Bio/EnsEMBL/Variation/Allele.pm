@@ -74,6 +74,7 @@ package Bio::EnsEMBL::Variation::Allele;
 
 use Bio::EnsEMBL::Storable;
 use Bio::EnsEMBL::Utils::Argument qw(rearrange);
+use Bio::EnsEMBL::Utils::Exception qw(throw deprecate warning);
 
 our @ISA = ('Bio::EnsEMBL::Storable');
 
