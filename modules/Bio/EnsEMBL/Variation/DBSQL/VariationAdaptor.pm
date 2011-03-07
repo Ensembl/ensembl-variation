@@ -1248,7 +1248,7 @@ sub _objs_from_sth {
 	     -MOLTYPE => $moltype,
          -VALIDATION_STATES => \@states,
 	     -FLANK_FLAG => $flank_flag,
-	     -CLASS_SO_TERM => $aa->fetch_attrib_for_id($class_attrib_id));
+	     -CLASS_SO_TERM => $aa->attrib_value_for_id($class_attrib_id));
       push @vars, $cur_var;
       $cur_var_id = $var_id;
     }
