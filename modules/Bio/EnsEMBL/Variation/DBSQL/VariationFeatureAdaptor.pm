@@ -431,19 +431,9 @@ sub fetch_all_by_Slice_VariationSet{
   if(!ref($set) || !$set->isa('Bio::EnsEMBL::Variation::VariationSet')) {
     throw('Bio::EnsEMBL::Variation::VariationSet arg expected');
   }
-
-  #ÊStore the dbIDs of the set and its subsets in an array
-  my @dbIDs = map {$_->dbID()} ($set,@{$set->adaptor->fetch_all_by_super_VariationSet($set)});
   
-  #ÊDo a quick check that none of the dbIDs are too large for being stored in the set construct. In that case, warn about this.
-  my @non_compatible = grep {$_ > $MAX_VARIATION_SET_ID} @dbIDs;
-  if (scalar(@non_compatible)) {
-    warn ("Variation set(s) with dbID " . join(", ",@non_compatible) . " cannot be stored in the variation_feature table so variation features in this set won't be returned");
-  }
-  
-  #ÊAdd the bitvalues of the dbIDs in the set together to get the constraint, use only the ones that fit within the $MAX_VARIATION_SET_ID limit
-  my $bitvalue = 0;
-  map {$bitvalue += (2 ** ($_ - 1))} grep {$_ <= $MAX_VARIATION_SET_ID} @dbIDs;
+  #ÊGet the bitvalue for this set and its subsets
+  my $bitvalue = $set->_get_bitvalue();
   
   # Add a constraint to only return VariationFeatures having the primary keys of the supplied VariationSet or its subsets in the variation_set_id column
   my $constraint = " vf.variation_set_id & $bitvalue ";
@@ -985,5 +975,126 @@ sub new_fake {
   return $self;
 }
 
+
+=head2 fetch_by_hgvs_notation
+
+    Arg[1]      : String $hgvs
+    Example     : my $hgvs = 'LRG_8t1:c.3891A>T';
+		  $vf = $vf_adaptor->fetch_by_hgvs_notation($hgvs);
+    Description : Parses an HGVS notation and tries to create a VariationFeature object
+		  based on the notation. The object will have a Variation
+		  and Alleles attached.
+    ReturnType  : Bio::EnsEMBL::Variation::VariationFeature, undef on failure
+    Exceptions  : thrown on error
+    Caller      : general
+    Status      : Stable
+
+=cut
+
+sub fetch_by_hgvs_notation {
+    my $self = shift;
+    my $hgvs = shift;
+    
+    #ÊSplit the HGVS notation into the reference, notation type and variation description
+    my ($reference,$type,$description) = $hgvs =~ m/^([^\:]+)\s*\:.*?([cgmrp]?)\.?([0-9]+.*)$/i;
+    
+    #ÊIf any of the fields are unknown, return undef
+    return undef unless (defined($reference) && defined($type) && defined($description));
+    
+    my ($start,$end,$ref_allele,$alt_allele);
+    
+    #ÊParse differently depending on the type of the notation and the type of the variation
+    if ($type =~ m/[gcrm]/i) {
+	
+	# A single nt substitution
+	if ($description =~ m/>/) {
+	    ($start,$ref_allele,$alt_allele) = $description =~ m/^([0-9]+)([A-Z]+)>([A-Z]+)$/i;
+	}
+	#ÊAn inversion, the actual allele sequences will be looked up from the slice
+	elsif ($description =~ m/inv/i) {
+	    ($start,$end) = $description =~ m/^([0-9]+)_?([0-9]*)inv/i;
+	}
+	#ÊA delins, the reference allele will be fetched from the slice
+	elsif ($description =~ m/del.*ins/i) {
+	    ($start,$end,$alt_allele) = $description =~ m/^([0-9]+)_?([0-9]*)del.*?ins([A-Z]+)$/i;
+	}
+	$end ||= $start;
+    }
+    # Else, it is protein notation
+    else {
+	throw ("Parsing of HGVS protein notation has not yet been implemented");
+    }
+    
+    #ÊGet a slice representing this variation
+    my $slice_adaptor = $self->db()->dnadb()->get_SliceAdaptor();
+    my $slice;
+    my $strand;
+    if ($type =~ m/c/i) {
+	
+	#ÊA small fix in case the reference is a LRG and there is no underscore between name and transcript
+	$reference =~ s/^(LRG_[0-9]+)_?(t[0-9]+)$/$1\_$2/i;
+	
+	#ÊGet the Transcript object for this variation
+	my $transcript_adaptor = $self->db()->dnadb()->get_TranscriptAdaptor();
+	my $transcript = $transcript_adaptor->fetch_by_stable_id($reference) or throw ("Could not get a Transcript object for '$reference'");
+	
+	# Get the TranscriptMapper
+	my $tr_mapper = $transcript->get_TranscriptMapper();
+	
+	#ÊThe mapper can only convert cDNA coordinates, but we have CDS (relative to the start codon), so we need to convert them
+	my ($cds_start,$cds_end) = (($start + $transcript->cdna_coding_start() - 1),($end + $transcript->cdna_coding_start() - 1));
+	
+	# Convert the cDNA coordinates to genomic coordinates.
+	my @coords = $tr_mapper->cdna2genomic($cds_start,$cds_end);
+	
+	#ÊThrow an error if we didn't get an unambiguous coordinate back
+	throw ("Unable to map the cDNA coordinates $start\-$end to genomic coordinates for Transcript $reference") if (scalar(@coords) != 1 || !$coords[0]->isa('Bio::EnsEMBL::Mapper::Coordinate'));
+	
+	$start = $coords[0]->start();
+	$end = $coords[0]->end();
+	$strand = $coords[0]->strand();
+	
+	#ÊGet a slice for this variation
+	$slice = $slice_adaptor->fetch_by_region($transcript->coord_system_name(),$transcript->seq_region_name());
+    }
+    
+    #ÊGet the alleles if necessary
+    $ref_allele = $slice->subseq($start,$end,$strand) if (!defined($ref_allele));
+    
+    # If the variation type is an inversion, the alt allele is the reverse complement of the ref_allele
+    if ($description =~ m/inv/i) {
+	
+	$alt_allele = $ref_allele;
+	reverse_comp(\$alt_allele);
+    }
+    
+    #ÊCreate Allele objects
+    my @allele_objs;
+    foreach my $allele ($ref_allele,$alt_allele) {
+	push(@allele_objs,Bio::EnsEMBL::Variation::Allele->new('-allele' => $allele));
+    }
+    
+    #ÊCreate a variation object. Use the HGVS string as its name
+    my $variation = Bio::EnsEMBL::Variation::Variation->new(
+	'-adaptor' => $self->db()->get_VariationAdaptor(),
+	'-name' => $hgvs,
+	'-source' => 'Parsed from HGVS notation',
+	'-alleles' => \@allele_objs
+    );
+    
+    #ÊCreate a variation feature object
+    my $variation_feature = Bio::EnsEMBL::Variation::VariationFeature->new(
+	'-adaptor' => $self,
+	'-start' => $start,
+	'-end' => $end,
+	'-strand' => $strand,
+	'-slice' => $slice,
+	'-map_weight' => 1,
+	'-variation' => $variation,
+	'-allele_string' => "$ref_allele/$alt_allele"
+    );
+    
+    return $variation_feature;
+}
 
 1;
