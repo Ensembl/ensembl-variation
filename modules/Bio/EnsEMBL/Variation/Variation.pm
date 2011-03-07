@@ -201,17 +201,7 @@ sub new {
     $vcode |= $VSTATE2BIT{lc($vstate)} || 0;
   }
   
-  my $self;
-  
-  if (defined($alleles)) {
-    # Loop over the supplied alleles and weaken the link in order to prevent circular references. Also add a reference to this variation object to each of the alleles
-    foreach my $allele (@{$alleles}) {
-      $allele->variation($self);
-      weaken($allele->{'variation'});
-    }
-  }
-
-  $self = {
+  my $self = bless {
     'dbID' => $dbID,
     'adaptor' => $adaptor,
     'name'   => $name,
@@ -219,7 +209,7 @@ sub new {
     'source' => $src,
     'source_description' => $src_desc,
     'source_url' => $src_url,
-		'source_type'=> $src_type,
+	'source_type'=> $src_type,
     'is_somatic' => $is_somatic,
     'synonyms' => $syns || {},
     'ancestral_allele' => $ancestral_allele,
@@ -229,9 +219,17 @@ sub new {
     'five_prime_flanking_seq' => $five_seq,
     'three_prime_flanking_seq' => $three_seq,
     'flank_flag' => $flank_flag
-  };
+  }, $class;
   
-  return bless $self, $class;
+  if (defined($alleles)) {
+    # Loop over the supplied alleles and weaken the link in order to prevent circular references. Also add a reference to this variation object to each of the alleles
+    foreach my $allele (@{$alleles}) {
+      $allele->variation($self);
+      weaken($allele->{'variation'});
+    }
+  }
+  
+  return $self;
 }
 
 
