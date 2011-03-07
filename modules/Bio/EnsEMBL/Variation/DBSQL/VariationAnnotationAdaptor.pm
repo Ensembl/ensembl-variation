@@ -180,7 +180,7 @@ sub fetch_all_by_phenotype_name_source_name {
 
   my $extra_sql = " p.name = $phenotype_name ";
   if (defined $source_name ) {
-    $extra_sql .= qq( AND s.name = $source_name);
+    $extra_sql .= qq( AND s.name = '$source_name' );
   }
   
   # Add the constraint for failed variations
@@ -213,7 +213,7 @@ sub fetch_all_by_phenotype_description_source_name {
 
   my $extra_sql = qq( p.description like '%$phenotype_description%' );
   if (defined $source_name ) {
-    $extra_sql .= qq( AND s.name = $source_name);
+    $extra_sql .= qq( AND s.name = '$source_name' );
   }
   
   # Add the constraint for failed variations
@@ -247,7 +247,7 @@ sub fetch_all_by_phenotype_id_source_name {
   my $extra_sql = sprintf('p.phenotype_id = %s', $self->dbc->db_handle->quote( $phenotype_id, SQL_INTEGER ) );
 
   if (defined $source_name ) {
-    $extra_sql .= sprintf(' AND s.name = %s', $self->dbc->db_handle->quote( $source_name, SQL_VARCHAR ) );
+    $extra_sql .= sprintf(" AND s.name = '%s'", $self->dbc->db_handle->quote( $source_name, SQL_VARCHAR ) );
   }
   
   # Add the constraint for failed variations
