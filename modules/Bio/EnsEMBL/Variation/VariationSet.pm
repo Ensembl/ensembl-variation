@@ -97,6 +97,9 @@ sub new {
   my ($dbID, $adaptor, $name, $description) =
     rearrange([qw(DBID ADAPTOR NAME DESCRIPTION)], @_);
   
+  #ÊCheck that the dbID does not exceed the maximum dbID that can be stored in the variation_set_id SET construct in variation_set_variation
+  warn("Primary key variation_set_id $dbID for variation set '$name' exceeds " . $Bio::EnsEMBL::Variation::DBSQL::VariationSetAdaptor::MAX_VARIATION_SET_ID . ". Therefore, this variation set cannot be properly referenced in variation_set_variation") if ($dbID > $Bio::EnsEMBL::Variation::DBSQL::VariationSetAdaptor::MAX_VARIATION_SET_ID);
+  
   return bless {'dbID' => $dbID,
                 'adaptor' => $adaptor,
                 'name' => $name,
@@ -221,11 +224,13 @@ sub get_all_Variations {
 sub get_Variation_Iterator {
     my $self = shift;
   
+    # A database adaptor must be attached to this object   
     unless ($self->adaptor) {
         warning('Cannot get variations without attached adaptor');
         return Bio::EnsEMBL::Utils::Iterator->new;
     }
   
+    # Call the method in VariationAdaptor that will handle this
     my $variation_adaptor = $self->adaptor->db->get_VariationAdaptor();
     
     unless ($variation_adaptor) {
@@ -287,6 +292,25 @@ sub name {
   $self->{'name'} = $name if (defined($name));
   
   return $self->{'name'};
+}
+
+#ÊAPI-internal subroutine to get the bitvalue of this set's id and all of its subsets (unless specifically indicated not to)
+sub _get_bitvalue {
+  my $self = shift;
+  my @args = @_;
+  
+  #ÊIf the subsets should be exluded, call the subroutine in the adaptor and return the result. No caching.
+  if (@args) {
+    return $self->adaptor->_get_bitvalue($self,@args);
+  }
+  
+  # Check if we have cached the bitvalue (including subsets), otherwise get it and cache it
+  unless (exists($self->{'_bitvalue'})) {
+    $self->{'_bitvalue'} = $self->adaptor->_get_bitvalue($self);
+  }
+  
+  # Return the cached value
+  return $self->{'_bitvalue'};
 }
 
 1;
