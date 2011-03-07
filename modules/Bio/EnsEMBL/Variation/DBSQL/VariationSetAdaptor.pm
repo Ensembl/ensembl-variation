@@ -64,11 +64,13 @@ package Bio::EnsEMBL::Variation::DBSQL::VariationSetAdaptor;
 
 use Bio::EnsEMBL::DBSQL::BaseAdaptor;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
+use Bio::EnsEMBL::Utils::Scalar qw(assert_ref);
 
 use Bio::EnsEMBL::Variation::VariationSet;
 
 our @ISA = ('Bio::EnsEMBL::DBSQL::BaseAdaptor');
 
+our $MAX_VARIATION_SET_ID = 64;
 
 =head2 fetch_by_dbID
 
@@ -174,10 +176,9 @@ sub fetch_all_by_sub_VariationSet {
   my $set = shift;
   my $only_immediate = shift;
 
-  if(!ref($set) || !$set->isa('Bio::EnsEMBL::Variation::VariationSet')) {
-    throw('Bio::EnsEMBL::Variation::VariationSet arg expected');
-  }
-
+  #ÊCheck the input set
+  assert_ref($set,'Bio::EnsEMBL::Variation::VariationSet');
+  
 # First, get all VariationSets that are direct supersets of this one
 
   my $dbID = $set->dbID();
@@ -230,9 +231,8 @@ sub fetch_all_by_super_VariationSet {
   my $set = shift;
   my $only_immediate = shift;
   
-  if(!ref($set) || !$set->isa('Bio::EnsEMBL::Variation::VariationSet')) {
-    throw('Bio::EnsEMBL::Variation::VariationSet arg expected');
-  }
+  #ÊCheck the input set
+  assert_ref($set,'Bio::EnsEMBL::Variation::VariationSet');
   
 # First, get all VariationSets that are direct subsets of this one
 
@@ -327,12 +327,9 @@ sub fetch_all_by_Variation {
   my $self = shift;
   my $var  = shift;
 
-  if(!ref($var) || !$var->isa('Bio::EnsEMBL::Variation::Variation')) {
-    throw('Bio::EnsEMBL::Variation::Variation argument expected');
-  }
+  assert_ref($var,'Bio::EnsEMBL::Variation::Variation');
 
   my $cols = join(',',$self->_columns());
-  
   my $stmt = qq{
     SELECT
       $cols
@@ -365,6 +362,33 @@ sub fetch_all_by_Variation {
   return \@res;
 }
 
+# An API-internal subroutine for getting the bitvalue of the specified variation_set and (unless specifically indicated) its subsets
+sub _get_bitvalue {
+  my $self = shift;
+  my $set = shift;
+  my $no_subsets = shift;
+  
+  #ÊCheck the input set
+  assert_ref($set,'Bio::EnsEMBL::Variation::VariationSet');
+  
+  #ÊStore the dbIDs of the set and its subsets in an array
+  my @dbIDs = ($set->dbID());
+  unless ($no_subsets) {
+    map {push(@dbIDs,$_->dbID())} @{$set->adaptor->fetch_all_by_super_VariationSet($set)};
+  }
+  
+  #ÊDo a quick check that none of the dbIDs are too large for being stored in the set construct. In that case, warn about this.
+  my @non_compatible = grep {$_ > $MAX_VARIATION_SET_ID} @dbIDs;
+  if (scalar(@non_compatible)) {
+    warn ("Variation set(s) with dbID " . join(", ",@non_compatible) . " cannot be stored in the variation_set_id SET construct. Entries for these sets won't be returned");
+  }
+  
+  #ÊAdd the bitvalues of the dbIDs in the set together to get the bitvalue, use only the ones that fit within the $MAX_VARIATION_SET_ID limit
+  my $bitvalue = 0;
+  map {$bitvalue += (2 ** ($_ - 1))} grep {$_ <= $MAX_VARIATION_SET_ID} @dbIDs;
+  
+  return $bitvalue;
+}
 
 sub _columns {
   return qw( vs.variation_set_id vs.name vs.description );
