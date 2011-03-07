@@ -78,6 +78,7 @@ use warnings;
 
 package Bio::EnsEMBL::Variation::DBSQL::VariationFeatureAdaptor;
 
+use Bio::EnsEMBL::Variation::Allele;
 use Bio::EnsEMBL::Variation::VariationFeature;
 use Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor;
 use Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor;
