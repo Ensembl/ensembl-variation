@@ -598,6 +598,7 @@ sub _calc_consequences {
 			'translation_start' => $con->aa_start,
 			'translation_end'	=> $con->aa_end,
 			'pep_allele_string' => join("/", @{$con->aa_alleles || []}),
+			'codons'            => join("/", @{$con->codons || []}),
 			'consequence_type'	=> $con->type,
 			'transcript' 		=> $transcript,
 			'variation_feature' => $vf,
