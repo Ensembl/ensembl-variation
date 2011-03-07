@@ -44,7 +44,7 @@
 ########################################################################################
 #
 # /** and */ : begin and end of the document block
-# @set       : tag to create a set of tables
+# @header    : tag to create a group of tables
 # @table     : name of the sql table
 # @desc      : description of the role/content of the table, set or info tags
 # @column    : column_name [tab(s)] Column description. Note: 1 ligne = 1 column
@@ -60,14 +60,14 @@ use Getopt::Long;
 ###############
 ### Options ###
 ###############
-my ($sql_file,$html_file,$set_flag,$sort_tables,$help);
+my ($sql_file,$html_file,$header_flag,$sort_tables,$help);
 
 usage() if (!scalar(@ARGV));
  
 GetOptions(
     'i=s' => \$sql_file,
     'o=s' => \$html_file,
-    'show_set=i' => \$set_flag,
+    'show_header=i' => \$header_flag,
     'sort=i' => \$sort_tables,
 		'help!' => \$help
 );
@@ -83,15 +83,15 @@ if (!$html_file) {
 	exit;
 }
 
-#$set_flag ||= 1;
-$set_flag = 1 if (!defined($set_flag));
+#$header_flag ||= 1;
+$header_flag = 1 if (!defined($header_flag));
 $sort_tables = 1 if (!defined($sort_tables));
 
 
 ##############
 ### Header ###
 ##############
-my $header = qq{
+my $html_header = qq{
 <html>
 <head>
 <meta http-equiv="CONTENT-TYPE" content="text/html; charset=utf-8" />
@@ -147,7 +147,7 @@ A PDF document of the schema is available <a href="variation-database-schema.pdf
 ##############
 ### Footer  ##
 ##############
-my $footer = qq{
+my $html_footer = qq{
 </body>
 </html>};
 
@@ -162,7 +162,7 @@ my $tables_names = {'default' => []};
 
 my $in_doc = 0;
 my $in_table = 0;
-my $set = 'default';
+my $header = 'default';
 my $table = '';
 my $info = '';
 my $nb_by_col = 15;
@@ -199,16 +199,16 @@ while (<SQLFILE>) {
 	## Parsing of the documentation ##
 	if ($in_doc==1) {
 		# Set of tables name
-		if ($doc =~ /^\@set\s*(\w+)/i and $set_flag == 1) {
-			$set = $1;
-			$tables_names->{$set} = [];
+		if ($doc =~ /^\@header\s*(\w+)/i and $header_flag == 1) {
+			$header = $1;
+			$tables_names->{$header} = [];
 			next;
 		}		
 		# Table name
 		elsif ($doc =~ /^\@table\s*(\w+)/i) {
 			$table = $1;
-			push(@{$tables_names->{$set}},$table);
-			$documentation->{$set}{'tables'}{$table} = { 'desc' => '', 'column' => [], 'see' => [], 'info' => [] };
+			push(@{$tables_names->{$header}},$table);
+			$documentation->{$header}{'tables'}{$table} = { 'desc' => '', 'column' => [], 'see' => [], 'info' => [] };
 			$tag = $tag_content = '';		
 		}
 		# Description (used for both set, table and info tags)
@@ -298,7 +298,7 @@ while (<SQLFILE>) {
 		}
 		
 		elsif ($doc =~ /\).*;/) { # End of the sql table definition
-			if (scalar @{$documentation->{$set}{'tables'}{$table}{column}} > $count_sql_col) {
+			if (scalar @{$documentation->{$header}{'tables'}{$table}{column}} > $count_sql_col) {
 				print STDERR "Description of a non existant column in the table $table!\n";
 			}
 			$in_table=0;
@@ -316,7 +316,7 @@ close(SQLFILE);
 
 # Sort the tables names by alphabetic order
 if ($sort_tables == 1) {
-	while ( my($set_name,$tables) = each (%{$tables_names})) {
+	while ( my($header_name,$tables) = each (%{$tables_names})) {
 		@{$tables} = sort(@{$tables});
 	}
 }
@@ -326,34 +326,34 @@ my $html_content = display_tables_list();
 my $table_count = 1;
 my $col_count = 1;
 
-while ( my ($set_name,$tables) = each (%{$tables_names})) {
-	# Set display	
-	if ($set_flag == 1 and $set_name ne 'default') {
-		$html_content .= qq{<hr />\n<h2>Set $set_name</h2>\n};
-		my $set_desc = $documentation->{$set_name}{'desc'};		
-		$html_content .= qq{<p>$set_desc</p>} if (defined($set_desc));
+while ( my ($header_name,$tables) = each (%{$tables_names})) {
+	# Header display	
+	if ($header_flag == 1 and $header_name ne 'default') {
+		$html_content .= qq{<hr />\n<h2>$header_name</h2>\n};
+		my $header_desc = $documentation->{$header_name}{'desc'};		
+		$html_content .= qq{<p>$header_desc</p>} if (defined($header_desc));
 	}
-	if ($set_name eq 'default' and defined($documentation->{$set_name}{'info'})) {
+	if ($header_name eq 'default' and defined($documentation->{$header_name}{'info'})) {
 		$html_content .= qq{<h2>Additional information about the schema</h2>\n};
 	}	
-	$html_content .= add_info($documentation->{$set_name}{'info'});
+	$html_content .= add_info($documentation->{$header_name}{'info'});
 	
 	# Tables display
 	foreach my $t_name (@{$tables}) {
 		$html_content .= add_table_name($t_name);
-		$html_content .= add_description($documentation->{$set_name}{'tables'}{$t_name}{desc});
-		$html_content .= add_info($documentation->{$set_name}{'tables'}{$t_name}{info});	
-		$html_content .= add_columns($t_name,@{$documentation->{$set_name}{'tables'}{$t_name}{column}});
-		$html_content .= add_see(@{$documentation->{$set_name}{'tables'}{$t_name}{see}});
+		$html_content .= add_description($documentation->{$header_name}{'tables'}{$t_name}{desc});
+		$html_content .= add_info($documentation->{$header_name}{'tables'}{$t_name}{info});	
+		$html_content .= add_columns($t_name,@{$documentation->{$header_name}{'tables'}{$t_name}{column}});
+		$html_content .= add_see(@{$documentation->{$header_name}{'tables'}{$t_name}{see}});
 	}
 }	
 
 
 ## HTML/output file ##
 open  HTML, "> $html_file" or die "Can't open $html_file : $!";
-print HTML $header."\n";
+print HTML $html_header."\n";
 print HTML $html_content."\n";
-print HTML $footer."\n";
+print HTML $html_footer."\n";
 close(HTML);
 
 
@@ -365,7 +365,7 @@ close(HTML);
 
 sub display_tables_list {
 	my $html = qq{<p>List of the tables:</p>\n};
-	while ( my ($set_name,$tables) = each (%{$tables_names})) {
+	while ( my ($header_name,$tables) = each (%{$tables_names})) {
 		my $count = scalar @{$tables};
 		my $nb_col = ceil($count/$nb_by_col);
 		my $table_count = 0;
@@ -378,12 +378,14 @@ sub display_tables_list {
 			}
 			$nb_col = 3;
 		}
-
-		if ($set_flag == 1 and $set_name ne 'default') {
-			$html .= qq{<h2>Set $set_name</h2>\n};
+		
+		# Header
+		if ($header_flag == 1 and $header_name ne 'default') {
+			$html .= qq{<h2>$header_name</h2>\n};
 		}
 		$html .= qq{<table><tr><td>\n <ul>\n};
 
+		# Table
 		foreach my $t_name (@{$tables}) {
 			if ($table_count == $nb_by_col and $col_count<$nb_col and $nb_col>1){
 				$html .= qq{	</ul></td><td><ul>\n};
@@ -406,46 +408,46 @@ sub fill_documentation {
 	my $t2 = shift;
 	
 	if ($tag ne '') {
-		# Description tag (info, table or set)
+		# Description tag (info, table or header)
 		if ($tag eq 'desc') {
 			# Additional description
 			if ($info ne '') {
 				$tag_content = $info.'@info@'.$tag_content;
 				# Table: additional information				
 				if ($table ne '') {
-					push(@{$documentation->{$set}{'tables'}{$table}{'info'}},$tag_content);
+					push(@{$documentation->{$header}{'tables'}{$table}{'info'}},$tag_content);
 				}
-				# Set of tables: additional information
+				# Header: additional information
 				else {
-					if (!$documentation->{$set}{'info'}) {
-						$documentation->{$set}{'info'} = [];
+					if (!$documentation->{$header}{'info'}) {
+						$documentation->{$header}{'info'} = [];
 					}
-					push(@{$documentation->{$set}{'info'}},$tag_content);
+					push(@{$documentation->{$header}{'info'}},$tag_content);
 				}
 				$info = '';
 			}
 			# Table description
 			elsif ($table ne '') {
-				$documentation->{$set}{'tables'}{$table}{$tag} = $tag_content;
+				$documentation->{$header}{'tables'}{$table}{$tag} = $tag_content;
 			}
-			# Set description
+			# Header description
 			else {
-				$documentation->{$set}{'desc'} = $tag_content;
+				$documentation->{$header}{'desc'} = $tag_content;
 			}
 		}
 		elsif ($tag eq 'column') {
 			$tag_content =~ /(\w+)[\s\t]+(.+)/;
 			
 			my $column = { 'name'    => $1,
-								'type'    => '',
+								     'type'    => '',
 			               'default' => '',
-								'index'   => '',
-						      'desc'    => $2
-							 };
-			push(@{$documentation->{$set}{'tables'}{$table}{$tag}},$column);
+								     'index'   => '',
+						         'desc'    => $2
+							     };
+			push(@{$documentation->{$header}{'tables'}{$table}{$tag}},$column);
 		}
 		else{
-			push(@{$documentation->{$set}{'tables'}{$table}{$tag}},$tag_content);
+			push(@{$documentation->{$header}{'tables'}{$table}{$tag}},$tag_content);
 		}
 	}
 	# New tag initialized
@@ -490,9 +492,11 @@ sub add_info {
 	foreach my $inf (@{$infos}) {
 		my ($title,$content) = split('@info@', $inf);
 		$html .= qq{	<table>
-		<tr><td class="bg3">$title</td><td class="bg1">$content</td></tr>
+		<tr class="bg3"><th>$title</th></tr>
+    <tr class="bg1"><td>$content</td></tr>
 	</table>\n};
 	}
+	
 	return $html;
 }
 
@@ -559,7 +563,7 @@ sub add_column_index {
 		$i_col =~ s/\s+$//;
 		
 		$is_found{$i_col} = 0;
-		foreach my $col (@{$documentation->{$set}{tables}{$table}{column}}) {
+		foreach my $col (@{$documentation->{$header}{tables}{$table}{column}}) {
 			if ($col->{name} eq $i_col) {
 				if ($col->{index} ne '') {
 					$col->{index} .= '<br />';
@@ -586,7 +590,7 @@ sub add_column_type_and_default_value {
 	$count_sql_col ++;
 	
 	my $is_found = 0;
-	foreach my $col (@{$documentation->{$set}{'tables'}{$table}{column}}) {
+	foreach my $col (@{$documentation->{$header}{'tables'}{$table}{column}}) {
 		if ($col->{name} eq $c_name) {
 			#$col .= "\t$c_type\t";
 			#$col .= "$c_default" if ($c_default ne ''); # Add the default value
@@ -612,18 +616,18 @@ sub usage {
 	
   Options:
 
-    -help		Print this message
+    -help          Print this message
       
     An input file must be specified. This file must be a SQL file, with the "Java-doc like documentation". 
     For more information, please visit the following page: 
     http://www.ebi.ac.uk/seqdb/confluence/display/EV/SQL+documentation
 
-    -i          A SQL file name (Required)
-    -o          An HTML output file name (Required) 
-    -show_set   A flag to take into account the set of tables (1) or not (0). 
-                By default, the value is set to 1.
-    -sort       A flag to sort (1) or not (0) the tables by alphabetic order.
-                By default, the value is set to 1.
+    -i             A SQL file name (Required)
+    -o             An HTML output file name (Required) 
+    -show_header   A flag to display headers for a group of tables (1) or not (0). 
+                   By default, the value is set to 1.
+    -sort          A flag to sort (1) or not (0) the tables by alphabetic order.
+                   By default, the value is set to 1.
   } . "\n";
   exit(0);
 }
