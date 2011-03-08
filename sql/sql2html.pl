@@ -42,7 +42,7 @@
 #		key source_idx (source_id)
 #);
 ########################################################################################
-#
+# Tags description:
 # /** and */ : begin and end of the document block
 # @header    : tag to create a group of tables
 # @table     : name of the sql table
@@ -60,7 +60,7 @@ use Getopt::Long;
 ###############
 ### Options ###
 ###############
-my ($sql_file,$html_file,$db_team,$header_flag,$sort_tables,$help);
+my ($sql_file,$html_file,$db_team,$header_flag,$sort_headers,$sort_tables,$help);
 
 usage() if (!scalar(@ARGV));
  
@@ -69,7 +69,8 @@ GetOptions(
     'o=s' => \$html_file,
 		'd=s' => \$db_team,
     'show_header=i' => \$header_flag,
-    'sort=i' => \$sort_tables,
+		'sort_headers=i' => \$sort_headers,
+    'sort_tables=i' => \$sort_tables,
 		'help!' => \$help
 );
 
@@ -85,8 +86,9 @@ if (!$html_file) {
 }
 
 #$header_flag ||= 1;
-$header_flag = 1 if (!defined($header_flag));
-$sort_tables = 1 if (!defined($sort_tables));
+$header_flag  = 1 if (!defined($header_flag));
+$sort_headers = 1 if (!defined($sort_headers));
+$sort_tables  = 1 if (!defined($sort_tables));
 
 
 ##############
@@ -303,15 +305,18 @@ close(SQLFILE);
 ### Core  ##
 ############
 
+# Sort the headers names by alphabetic order
+if ($sort_headers == 1) {
+	@header_names = sort(@header_names);
+}
 # Sort the tables names by alphabetic order
 if ($sort_tables == 1) {
-	@header_names = sort(@header_names);
 	while ( my($header_name,$tables) = each (%{$tables_names})) {
 		@{$tables} = sort(@{$tables});
 	}
 }
 
-# List of tables by set of tables
+# List of tables by header
 my $html_content = display_tables_list();
 my $table_count = 1;
 my $col_count = 1;
@@ -325,7 +330,7 @@ foreach my $header_name (@header_names) {
 		my $header_desc = $documentation->{$header_name}{'desc'};		
 		$html_content .= qq{<p>$header_desc</p>} if (defined($header_desc));
 	}
-	else {
+	elsif ($header_flag == 0) {
 		$html_content .= qq{<hr />\n};
 	}
 	
@@ -363,9 +368,11 @@ close(HTML);
 sub display_tables_list {
 	my $html = qq{<p>List of the tables:</p>\n};
 	foreach my $header_name (@header_names) {
-	#while ( my ($header_name,$tables) = each (%{$tables_names})) {
+		
 		my $tables = $tables_names->{$header_name};
 		my $count = scalar @{$tables};
+		next if ($count == 0);
+		
 		my $nb_col = ceil($count/$nb_by_col);
 		my $table_count = 0;
 		my $col_count = 1;
@@ -614,19 +621,21 @@ sub usage {
 	
   Options:
 
-    -help          Print this message
+    -help           Print this message
       
     An input file must be specified. This file must be a SQL file, with the "Java-doc like documentation". 
     For more information, please visit the following page: 
     http://www.ebi.ac.uk/seqdb/confluence/display/EV/SQL+documentation
 
-    -i             A SQL file name (Required)
-    -o             An HTML output file name (Required)
-		-d             The name of the database (e.g Core, Variation, Functional Genomics, ...)
-    -show_header   A flag to display headers for a group of tables (1) or not (0). 
-                   By default, the value is set to 1.
-    -sort          A flag to sort (1) or not (0) the tables by alphabetic order.
-                   By default, the value is set to 1.
+    -i              A SQL file name (Required)
+    -o              An HTML output file name (Required)
+		-d              The name of the database (e.g Core, Variation, Functional Genomics, ...)
+    -show_header    A flag to display headers for a group of tables (1) or not (0). 
+                    By default, the value is set to 1.
+    -sort_headers   A flag to sort (1) or not (0) the headers by alphabetic order.
+                    By default, the value is set to 1.
+		-sort_tables    A flag to sort (1) or not (0) the tables by alphabetic order.
+                    By default, the value is set to 1.							 
   } . "\n";
   exit(0);
 }
