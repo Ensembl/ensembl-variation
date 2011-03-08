@@ -129,30 +129,33 @@ sub fetch_all_by_Variation {
 				$fs = $new_fs;
 			}
 			
+			my $include_multi = 1;
+			$include_multi = 0 if $variation->var_class =~ /snp/i;
+			
 			# get the IGs
-			my @igs = @{$self->fetch_all_by_Slice($fs, $individual)};
+			#my @igs = @{$self->fetch_all_by_Slice($fs, $individual, $include_multi)};
 			
 			#print "fS: ", $fs->start, " ", $fs->end, "\n";
 			
 			# iterate through to check
-			foreach my $ig(@igs) {
-				#print $ig->variation->dbID, " ", $variation->dbID, "\n";
-				
-				# skip this if the variation attached to the IG does not match the query
-				#next unless $ig->variation->dbID == $variation->dbID;
-				
-				# get the alleles
-				my ($a1, $a2) = ($ig->allele1, $ig->allele2);
-				
-				# skip if the returned alleles are not in the allele_string for the VF
-				#next unless $vf->allele_string =~ /^$a1\/|\/$a1\/|\/$a1$|^$a1$/ and $vf->allele_string =~ /^$a2\/|\/$a2\/|\/$a2$|^$a2$/;
-				
-				#$ig->variation($variation);
-				push @{$res}, $ig;
-			}
+			#foreach my $ig(@igs) {
+			#	#print $ig->variation->dbID, " ", $variation->dbID, "\n";
+			#	
+			#	# skip this if the variation attached to the IG does not match the query
+			#	#next unless $ig->variation->dbID == $variation->dbID;
+			#	
+			#	# get the alleles
+			#	my ($a1, $a2) = ($ig->allele1, $ig->allele2);
+			#	
+			#	# skip if the returned alleles are not in the allele_string for the VF
+			#	#next unless $vf->allele_string =~ /^$a1\/|\/$a1\/|\/$a1$|^$a1$/ and $vf->allele_string =~ /^$a2\/|\/$a2\/|\/$a2$|^$a2$/;
+			#	
+			#	#$ig->variation($variation);
+			#	push @{$res}, $ig;
+			#}
 			
 			# old code without checks
-			#map {$_->variation($variation); push @{$res}, $_} @{$self->fetch_all_by_Slice($vf->feature_Slice)};
+			map {$_->variation($variation); push @{$res}, $_} @{$self->fetch_all_by_Slice($fs, $individual, $include_multi)};
 		}
 	}
 	
@@ -186,6 +189,7 @@ sub fetch_all_by_Slice{
     my $self = shift;
     my $slice = shift;
     my $individual = shift;
+	my $include_multi = shift;
     my @results;
     my $features;
     my $constraint;
@@ -241,7 +245,7 @@ sub fetch_all_by_Slice{
 	}
 	
 	$self->_multiple(1);
-	push @results, @{$self->fetch_all_by_Slice($slice,$individual)};
+	push @results, @{$self->fetch_all_by_Slice($slice,$individual)} if $include_multi;
 	$self->_multiple(0);
 	
     }
@@ -279,8 +283,8 @@ sub _columns{
 
 sub _objs_from_sth{
     my ($self, $sth, $mapper, $dest_slice) = @_;
-
-    #warn "SQL ", $sth->sql;
+	
+	#warn "SQL ", $sth->sql;
     
     return $self->SUPER::_objs_from_sth($sth,$mapper,$dest_slice) if ($self->_multiple);
     #
