@@ -97,7 +97,7 @@ my $db_adaptor = new Bio::EnsEMBL::DBSQL::DBAdaptor(
 ) or die("Could not get a database adaptor for $dbname on $host:$port");
 print STDOUT localtime() . "\tConnected to $dbname on $host:$port\n" if ($verbose);
 
-
+my @rsids;
 
 # Parse the input files into a hash
 if ($source =~ m/uniprot/i) {
@@ -105,6 +105,7 @@ if ($source =~ m/uniprot/i) {
     $source_name = $UNIPROT_SOURCE_NAME;
     $source_description = $UNIPROT_SOURCE_DESCRIPTION;
     $source_url = $UNIPROT_SOURCE_URL;
+		
 }
 elsif ($source =~ m/nhgri/i) {
     $result = parse_nhgri($infile);
@@ -141,16 +142,17 @@ my %synonym;
 my @phenotypes;
 if (exists($result->{'synonyms'})) {
     %synonym = %{$result->{'synonyms'}};
+		# To get all the rsids of the source (Uniprot)
+		@rsids = keys(%synonym);
 }
 if (exists($result->{'phenotypes'})) {
     @phenotypes = @{$result->{'phenotypes'}};
 }
 
 # Get internal variation ids for the rsIds
-# To get all the rsids of the source (Uniprot)
-my @rsids = keys(%synonym);
-# To get only the rsids of the variations which have a phenotype description
-#my @rsids = map {$_->{'rsid'}} @phenotypes;
+if (scalar @rsids == 0) {
+	@rsids = map {$_->{'rsid'}} @phenotypes;
+}
 my $variation_ids = get_dbIDs(\@rsids,$db_adaptor);
 
 # Get or add a source
@@ -313,7 +315,7 @@ sub parse_nhgri {
         } @rsids;
     }
     close(IN);
-    
+
     my %result = ('phenotypes' => \@phenotypes);
     
     return \%result;
@@ -678,10 +680,10 @@ sub add_phenotypes {
         WHERE
             variation_id = ? AND
             phenotype_id = ? AND
-            study_id = ? AND
-						variation_names = ? 
+            study_id = ? 
         LIMIT 1
     };
+		#AND variation_names = ? 
     my $va_ins_stmt = qq{
         INSERT INTO
             variation_annotation (
@@ -801,8 +803,7 @@ sub add_phenotypes {
        	$va_check_sth->bind_param(2,$phenotype_id,SQL_INTEGER);
        	$va_check_sth->bind_param(3,$study_id,SQL_INTEGER);
 				# For uniprot data
-				$va_check_sth->bind_param(4,$phenotype->{"variation_names"},SQL_VARCHAR);
-					
+				#$va_check_sth->bind_param(4,$phenotype->{"variation_names"},SQL_VARCHAR);
 				$va_check_sth->execute();
         $va_check_sth->bind_columns(\$va_id);
         $va_check_sth->fetch();
