@@ -34,6 +34,10 @@ my $EGA_SOURCE_NAME = "EGA";
 my $EGA_SOURCE_DESCRIPTION = "Variants imported from the European Genome-phenome Archive with phenotype association";
 my $EGA_SOURCE_URL = "http://www.ebi.ac.uk/ega/";
 
+my $GWAS_SOURCE_NAME = "Open Access GWAS Database";
+my $GWAS_SOURCE_DESCRIPTION = 'Johnson & O\'Donnell "An Open Access Database of Genome-wide Association Results" PMID:19161620';
+my $GWAS_SOURCE_URL = "http://www.biomedcentral.com/1471-2350/10/6";
+
 usage() if (!scalar(@ARGV));
  
 GetOptions(
@@ -79,7 +83,7 @@ my $source_url;
 
 =cut
 
-#ÊMake sure that the input file is XML compliant
+# Make sure that the input file is XML compliant
 ImportUtils::make_xml_compliant($infile);
 
 # Connect to the variation database
@@ -95,7 +99,7 @@ print STDOUT localtime() . "\tConnected to $dbname on $host:$port\n" if ($verbos
 
 
 
-#ÊParse the input files into a hash
+# Parse the input files into a hash
 if ($source =~ m/uniprot/i) {
     $result = parse_uniprot($infile);
     $source_name = $UNIPROT_SOURCE_NAME;
@@ -113,6 +117,12 @@ elsif ($source =~ m/omim/i) {
     $source_name = $OMIM_SOURCE_NAME;
     $source_description = $OMIM_SOURCE_DESCRIPTION;
     $source_url = $OMIM_SOURCE_URL;
+}
+elsif ($source =~ m/gwas/i) {
+    $result = parse_gwasdb();
+    $source_name = $GWAS_SOURCE_NAME;
+    $source_description = $GWAS_SOURCE_DESCRIPTION;
+    $source_url = $GWAS_SOURCE_URL;
 }
 elsif ($source =~ m/ega/i) {
 		$source_name = $EGA_SOURCE_NAME;
@@ -137,7 +147,10 @@ if (exists($result->{'phenotypes'})) {
 }
 
 # Get internal variation ids for the rsIds
-my @rsids = map {$_->{'rsid'}} @phenotypes;
+# To get all the rsids of the source (Uniprot)
+my @rsids = keys(%synonym);
+# To get only the rsids of the variations which have a phenotype description
+#my @rsids = map {$_->{'rsid'}} @phenotypes;
 my $variation_ids = get_dbIDs(\@rsids,$db_adaptor);
 
 # Get or add a source
@@ -145,7 +158,7 @@ my $source_id = get_or_add_source($source_name,$source_description,$source_url,$
 print STDOUT "$source source_id is $source_id\n" if ($verbose);
 
 # Add the synonyms if required
-##########add_synonyms(\%synonym,$variation_ids,$source_id,$db_adaptor) unless ($skip_synonyms);
+add_synonyms(\%synonym,$variation_ids,$source_id,$db_adaptor) unless ($skip_synonyms);
 
 # Now, insert phenotypes
 add_phenotypes(\@phenotypes,$variation_ids,$source_id,$db_adaptor) unless ($skip_phenotypes);
@@ -167,7 +180,7 @@ sub parse_uniprot {
     my %synonym;
     my @phenotypes;
 
-    #ÊOpen the input file for reading
+    # Open the input file for reading
     open(IN,'<',$infile) or die ("Could not open $infile for reading");
     
     # Read through the file and parse out the desired fields
@@ -179,10 +192,10 @@ sub parse_uniprot {
             print STDOUT $_ . "\n";
         }
         
-        #ÊMain regexp to extract relevant variation information
-        if ($_ =~ m/^(\S+)\s+(\S+)\s+VAR\_\d+\s+\w\.\S+\s+(Disease|Polymorphism|Unclassified)\s+(\-|rs\d*)\s+(.+)$/) {
+        # Main regexp to extract relevant variation information
+        if ($_ =~ m/^(\S+)\s+\S+\s+(VAR\_\d+)\s+\w\.\S+\s+(Disease|Polymorphism|Unclassified)\s+(\-|rs\d*)\s*(.*)$/) {
             
-            #ÊGet the data that was caught by the regexp
+            # Get the data that was caught by the regexp
             my $gene = $1;
             my $uniprot_id = $2;
             my $rs_id = $4;
@@ -206,10 +219,10 @@ sub parse_uniprot {
                 
                 ($description,$mim_id) = $phenotype =~ m/^([^\[]+)(?:\[(MIM\:.+?)\])?$/;
                 ($description,$name) = $description =~ m/^(.+?)\s*(?:\((.+?)\))?\s*$/;
-                
+								
                 $mim_id &&= join(",MIM:",split(",",$mim_id));
                 $mim_id =~ s/\s+//g if (defined($mim_id));
-                
+								
                 push(
                     @phenotypes,
                     {
@@ -239,7 +252,7 @@ sub parse_nhgri {
     
     my @phenotypes;
     
-    #ÊOpen the input file for reading
+    # Open the input file for reading
     open(IN,'<',$infile) or die ("Could not open $infile for reading");
     
     # Read through the file and parse out the desired fields
@@ -361,6 +374,41 @@ sub parse_dbsnp_omim {
     return \%result;
 }
 
+sub parse_gwasdb {
+	my @phenotypes;
+	my ($v_rs,$ext_ref,$a_gene,$v_name,$pval,$phen);
+	my $data_fetch_stmt = qq{
+		SELECT distinct
+		       v.v62,
+		       va.study,
+					 va.associated_gene,
+					 va.variation_names,
+					 va.p_value,
+					 p.description
+		FROM pontus_liftover_61.variation_annotation_61 va, pontus_liftover_61.phenotype_61 p, 
+		     will_human_62.variation_61_to_62 v
+		WHERE va.phenotype_id=p.phenotype_id and va.source_id=14 and v.v61=va.variation_id
+	};
+	my $data_fetch_sth = $db_adaptor->dbc->prepare($data_fetch_stmt);
+	$data_fetch_sth->execute();
+  $data_fetch_sth->bind_columns(\$v_rs,\$ext_ref,\$a_gene,\$v_name,\$pval,\$phen);
+	while($data_fetch_sth->fetch()) {
+		my $data = {
+            'rsid' => $v_rs,
+            'study' => $ext_ref,
+            'associated_gene' => $a_gene,
+            'variation_names' => $v_name,
+						'description' => $phen,
+						'p_value' => $pval
+        };
+		print "$ext_ref,$a_gene,$v_name,$pval,$phen\n";
+		push(@phenotypes,$data);
+	}
+	my %result = ('phenotypes' => \@phenotypes);
+  return \%result;
+}
+
+
 sub parse_ega {
     my $infile = shift;
 		my $source_id = shift;
@@ -430,12 +478,12 @@ sub parse_ega {
     
     # Read through the file and parse out the desired fields
     while (<IN>) {
-        chomp;
-				my @attributes = split("\t");
+        chomp $_;
+				my @attributes = split("\t",$_);
 				next if ($attributes[1] eq '');
-				
-				my ($name,$pubmed,$url) = @attributes;
-				$pubmed = "pubmed/$pubmed";
+				my $name = $attributes[0];
+				my $pubmed = 'pubmed/'.$attributes[1];
+				my $url = $attributes[2];
 				
 				# NHGRI study
 				my $nhgri_study_id;
@@ -630,7 +678,8 @@ sub add_phenotypes {
         WHERE
             variation_id = ? AND
             phenotype_id = ? AND
-            study_id = ?
+            study_id = ? AND
+						variation_names = ? 
         LIMIT 1
     };
     my $va_ins_stmt = qq{
@@ -674,15 +723,18 @@ sub add_phenotypes {
     while (my $phenotype = shift(@sorted)) {
 		
 			# If the rs could not be mapped to a variation id, skip it
-      next if (!defined($variation_ids->{$phenotype->{"rsid"}}[0]));
-		
+			if ($source !~ m/gwas/i) {
+				next if (!defined($variation_ids->{$phenotype->{"rsid"}}[0]));
+			}
+			
 			my $sql_study = '= ?';
 			my $sql_type = '= ?';
+			my $sql_names = '= ?';
       
 			# To avoid duplication of study entries
 			if (!defined $phenotype->{"study"}) {$sql_study = 'IS NULL'; }
-			if (!defined $phenotype->{"study_type"}) {$sql_type = 'IS NULL'; }
-				
+			if (!defined $phenotype->{"study_type"}) {$sql_type = 'IS NULL'; }	
+			
 			my $st_check_stmt = qq{
         	SELECT
             study_id
@@ -702,10 +754,10 @@ sub add_phenotypes {
        	$st_check_sth->bind_param(1,$phenotype->{"study"},SQL_VARCHAR) if (defined $phenotype->{"study"});
 			}
 			else { $second_param_num = 1; }
-			$st_check_sth->bind_param($second_param_num,$phenotype->{"study_type"},SQL_VARCHAR) if (defined $phenotype->{"study_type"});
-       $st_check_sth->execute();
-       $st_check_sth->bind_columns(\$study_id);
-       $st_check_sth->fetch();
+			 	$st_check_sth->bind_param($second_param_num,$phenotype->{"study_type"},SQL_VARCHAR) if (defined $phenotype->{"study_type"});
+       	$st_check_sth->execute();
+       	$st_check_sth->bind_columns(\$study_id);
+       	$st_check_sth->fetch();
 				
       if (!defined($study_id)) {
         $st_ins_sth->bind_param(1,$phenotype->{"study"},SQL_VARCHAR);
@@ -731,9 +783,10 @@ sub add_phenotypes {
             
         # If no phenotype was found, we need to add it
         if (!defined($phenotype_id)) {
-					$phenotype->{"name"} ne '' ? $phenotype->{"name"} : undef;
-          $phen_ins_sth->bind_param(1,$phenotype->{"name"},SQL_VARCHAR);
-          $phen_ins_sth->bind_param(2,$phenotype->{"description"},SQL_VARCHAR);
+					#$phenotype->{"name"} = ($phenotype->{"name"} ne '' ? $phenotype->{"name"} : undef);
+          #$phen_ins_sth->bind_param(1,$phenotype->{"name"},SQL_VARCHAR);
+          $phen_ins_sth->bind_param(1,undef,SQL_VARCHAR);
+					$phen_ins_sth->bind_param(2,$phenotype->{"description"},SQL_VARCHAR);
           $phen_ins_sth->execute();
           $phenotype_id = $db_adaptor->dbc->db_handle->{'mysql_insertid'};
           $phenotype_count++;
@@ -741,27 +794,37 @@ sub add_phenotypes {
         $current = $phenotype->{"description"};
       }
         
-        # Check if this phenotype already exists for this variation and source, in that case we probably want to skip it
-        my $va_id;
-        $va_check_sth->bind_param(1,$variation_ids->{$phenotype->{"rsid"}}[0],SQL_INTEGER);
-        $va_check_sth->bind_param(2,$phenotype_id,SQL_INTEGER);
-        $va_check_sth->bind_param(3,$study_id,SQL_INTEGER);
+      # Check if this phenotype already exists for this variation and source, in that case we probably want to skip it
+			if ($source !~ m/gwas/i) {
+				my $va_id;
+				$va_check_sth->bind_param(1,$variation_ids->{$phenotype->{"rsid"}}[0],SQL_INTEGER);
+       	$va_check_sth->bind_param(2,$phenotype_id,SQL_INTEGER);
+       	$va_check_sth->bind_param(3,$study_id,SQL_INTEGER);
+				# For uniprot data
+				$va_check_sth->bind_param(4,$phenotype->{"variation_names"},SQL_VARCHAR);
+					
 				$va_check_sth->execute();
         $va_check_sth->bind_columns(\$va_id);
         $va_check_sth->fetch();
-        next if (defined($va_id));
+       	next if (defined($va_id));
+			}	
 				
-        # Else, insert this phenotype.
+      # Else, insert this phenotype.
+			if ($source =~ m/gwas/i) {
+				$va_ins_sth->bind_param(1,$phenotype->{"rsid"},SQL_INTEGER);
+			}
+			else {
 				$va_ins_sth->bind_param(1,$variation_ids->{$phenotype->{"rsid"}}[0],SQL_INTEGER);
-        $va_ins_sth->bind_param(2,$phenotype_id,SQL_INTEGER);
-        $va_ins_sth->bind_param(3,$study_id,SQL_INTEGER);
-        $va_ins_sth->bind_param(4,$phenotype->{"associated_gene"},SQL_VARCHAR);
-        $va_ins_sth->bind_param(5,$phenotype->{"associated_variant_risk_allele"},SQL_VARCHAR);
-        $va_ins_sth->bind_param(6,$phenotype->{"variation_names"},SQL_VARCHAR);
-        $va_ins_sth->bind_param(7,$phenotype->{"risk_allele_frequency_in_controls"},SQL_VARCHAR);
-        $va_ins_sth->bind_param(8,$phenotype->{"p_value"},SQL_VARCHAR);
-        $va_ins_sth->execute();
-        $annotation_count++;
+			}
+      $va_ins_sth->bind_param(2,$phenotype_id,SQL_INTEGER);
+      $va_ins_sth->bind_param(3,$study_id,SQL_INTEGER);
+      $va_ins_sth->bind_param(4,$phenotype->{"associated_gene"},SQL_VARCHAR);
+      $va_ins_sth->bind_param(5,$phenotype->{"associated_variant_risk_allele"},SQL_VARCHAR);
+      $va_ins_sth->bind_param(6,$phenotype->{"variation_names"},SQL_VARCHAR);
+      $va_ins_sth->bind_param(7,$phenotype->{"risk_allele_frequency_in_controls"},SQL_VARCHAR);
+      $va_ins_sth->bind_param(8,$phenotype->{"p_value"},SQL_VARCHAR);
+      $va_ins_sth->execute();
+      $annotation_count++;
     }
 		print STDOUT "$study_count new studies added\n" if ($verbose);
     print STDOUT "$phenotype_count new phenotypes added\n" if ($verbose);
@@ -774,10 +837,10 @@ sub add_synonyms {
     my $source_id = shift;
     my $db_adaptor = shift;
     
-    #ÊIf we actually didn't get any synonyms, just return
+    # If we actually didn't get any synonyms, just return
     return if (!defined($synonyms) || !scalar(keys(%{$synonyms})));
     
-    #ÊSome prepeared statements needed for inserting the synonyms into database
+    # Some prepeared statements needed for inserting the synonyms into database
     my $ins_stmt = qq{
         INSERT IGNORE INTO
           variation_synonym (
@@ -800,14 +863,14 @@ sub add_synonyms {
         
         my $var_id = $variation_ids->{$rs_id}[0];
         
-        #ÊIf we have a variation id, we can proceed
+        # If we have a variation id, we can proceed
         if (defined($var_id)) {
             
             $variation_count++;
             
             $ins_sth->bind_param(1,$var_id,SQL_INTEGER);
             
-            #ÊHandle all synonym ids for this rs_id
+            # Handle all synonym ids for this rs_id
             while (my $alt_id = shift(@{$synonyms->{$rs_id}})) {
             
                 # Add the id as synonym, if it is already present, it will just be ignored
@@ -815,7 +878,6 @@ sub add_synonyms {
                 $ins_sth->execute();
                 $alt_count++;
             }
-            
         }
     }
     
@@ -831,16 +893,19 @@ sub usage {
 	
   Options:
     
-      -verbose		Progress information is printed
-      -help		Print this message
+      -verbose		       Progress information is printed
+      -help		           Print this message
+			
+			-skip_phenotypes   Skip the study, variation_annotation and phenotype tables insertions.
+			-skip_synonyms     Skip the variation_synonym table insertion.
       
     Database credentials are specified on the command line
     
-      -host		Variation database host name (Required)
+      -host		  Variation database host name (Required)
       -dbname		Variation database name (Required)
-      -user		Variation database user (Required)
-      -pass		Variation database password (Required)
-      -port		Variation database port (Default: 3306)
+      -user		  Variation database user (Required)
+      -pass		  Variation database password (Required)
+      -port		  Variation database port (Default: 3306)
       
     An input file must be specified. This file contains the data that will be imported, typically tab-delimited
     and obtained from the UniProt or NHGRI GWAS catalog. If a new source is required, a method for parsing the
@@ -851,7 +916,7 @@ sub usage {
     The source of the data must be specified so that the correct parser and source table entry will be used. Currently
     supported sources are 'uniprot' and 'nhgri'.
     
-      -source		String indicating the source of the data (Required)
+      -source		         String indicating the source of the data (Required)
   } . "\n";
   exit(0);
 }
