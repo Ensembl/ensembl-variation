@@ -689,6 +689,24 @@ sub affects_transcript {
 }
 
 
+=head2 is_coding
+
+  Example    : if($tv->is_coding) { ... }
+  Description: Indicates if this transcript variation falls within the coding
+               region of the transcript
+  Returntype : boolean
+  Exceptions : none
+  Caller     : Internal
+  Status     : At Risk
+
+=cut
+
+sub is_coding {
+  my $self = shift;
+  return defined($self->cds_start) || defined($self->cds_end);
+}
+
+
 
 =head2 _calc_transcript_coords
 
