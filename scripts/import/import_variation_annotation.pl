@@ -34,10 +34,6 @@ my $EGA_SOURCE_NAME = "EGA";
 my $EGA_SOURCE_DESCRIPTION = "Variants imported from the European Genome-phenome Archive with phenotype association";
 my $EGA_SOURCE_URL = "http://www.ebi.ac.uk/ega/";
 
-my $GWAS_SOURCE_NAME = "Open Access GWAS Database";
-my $GWAS_SOURCE_DESCRIPTION = 'Johnson & O\'Donnell "An Open Access Database of Genome-wide Association Results" PMID:19161620';
-my $GWAS_SOURCE_URL = "http://www.biomedcentral.com/1471-2350/10/6";
-
 usage() if (!scalar(@ARGV));
  
 GetOptions(
@@ -118,12 +114,6 @@ elsif ($source =~ m/omim/i) {
     $source_name = $OMIM_SOURCE_NAME;
     $source_description = $OMIM_SOURCE_DESCRIPTION;
     $source_url = $OMIM_SOURCE_URL;
-}
-elsif ($source =~ m/gwas/i) {
-    $result = parse_gwasdb();
-    $source_name = $GWAS_SOURCE_NAME;
-    $source_description = $GWAS_SOURCE_DESCRIPTION;
-    $source_url = $GWAS_SOURCE_URL;
 }
 elsif ($source =~ m/ega/i) {
 		$source_name = $EGA_SOURCE_NAME;
@@ -374,40 +364,6 @@ sub parse_dbsnp_omim {
     
     my %result = ('phenotypes' => \@phenotypes);
     return \%result;
-}
-
-sub parse_gwasdb {
-	my @phenotypes;
-	my ($v_rs,$ext_ref,$a_gene,$v_name,$pval,$phen);
-	my $data_fetch_stmt = qq{
-		SELECT distinct
-		       v.v62,
-		       va.study,
-					 va.associated_gene,
-					 va.variation_names,
-					 va.p_value,
-					 p.description
-		FROM pontus_liftover_61.variation_annotation_61 va, pontus_liftover_61.phenotype_61 p, 
-		     will_human_62.variation_61_to_62 v
-		WHERE va.phenotype_id=p.phenotype_id and va.source_id=14 and v.v61=va.variation_id
-	};
-	my $data_fetch_sth = $db_adaptor->dbc->prepare($data_fetch_stmt);
-	$data_fetch_sth->execute();
-  $data_fetch_sth->bind_columns(\$v_rs,\$ext_ref,\$a_gene,\$v_name,\$pval,\$phen);
-	while($data_fetch_sth->fetch()) {
-		my $data = {
-            'rsid' => $v_rs,
-            'study' => $ext_ref,
-            'associated_gene' => $a_gene,
-            'variation_names' => $v_name,
-						'description' => $phen,
-						'p_value' => $pval
-        };
-		print "$ext_ref,$a_gene,$v_name,$pval,$phen\n";
-		push(@phenotypes,$data);
-	}
-	my %result = ('phenotypes' => \@phenotypes);
-  return \%result;
 }
 
 
@@ -725,9 +681,7 @@ sub add_phenotypes {
     while (my $phenotype = shift(@sorted)) {
 		
 			# If the rs could not be mapped to a variation id, skip it
-			if ($source !~ m/gwas/i) {
-				next if (!defined($variation_ids->{$phenotype->{"rsid"}}[0]));
-			}
+			next if (!defined($variation_ids->{$phenotype->{"rsid"}}[0]));
 			
 			my $sql_study = '= ?';
 			my $sql_type = '= ?';
@@ -797,26 +751,20 @@ sub add_phenotypes {
       }
         
       # Check if this phenotype already exists for this variation and source, in that case we probably want to skip it
-			if ($source !~ m/gwas/i) {
-				my $va_id;
-				$va_check_sth->bind_param(1,$variation_ids->{$phenotype->{"rsid"}}[0],SQL_INTEGER);
-       	$va_check_sth->bind_param(2,$phenotype_id,SQL_INTEGER);
-       	$va_check_sth->bind_param(3,$study_id,SQL_INTEGER);
-				# For uniprot data
-				#$va_check_sth->bind_param(4,$phenotype->{"variation_names"},SQL_VARCHAR);
-				$va_check_sth->execute();
-        $va_check_sth->bind_columns(\$va_id);
-        $va_check_sth->fetch();
-       	next if (defined($va_id));
-			}	
+			my $va_id;
+			$va_check_sth->bind_param(1,$variation_ids->{$phenotype->{"rsid"}}[0],SQL_INTEGER);
+      $va_check_sth->bind_param(2,$phenotype_id,SQL_INTEGER);
+      $va_check_sth->bind_param(3,$study_id,SQL_INTEGER);
+			# For uniprot data
+			$va_check_sth->bind_param(4,$phenotype->{"variation_names"},SQL_VARCHAR);
+					
+			$va_check_sth->execute();
+      $va_check_sth->bind_columns(\$va_id);
+      $va_check_sth->fetch();
+      next if (defined($va_id));
 				
       # Else, insert this phenotype.
-			if ($source =~ m/gwas/i) {
-				$va_ins_sth->bind_param(1,$phenotype->{"rsid"},SQL_INTEGER);
-			}
-			else {
-				$va_ins_sth->bind_param(1,$variation_ids->{$phenotype->{"rsid"}}[0],SQL_INTEGER);
-			}
+			$va_ins_sth->bind_param(1,$variation_ids->{$phenotype->{"rsid"}}[0],SQL_INTEGER);
       $va_ins_sth->bind_param(2,$phenotype_id,SQL_INTEGER);
       $va_ins_sth->bind_param(3,$study_id,SQL_INTEGER);
       $va_ins_sth->bind_param(4,$phenotype->{"associated_gene"},SQL_VARCHAR);
