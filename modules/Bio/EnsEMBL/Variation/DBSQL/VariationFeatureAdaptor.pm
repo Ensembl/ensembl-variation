@@ -329,9 +329,10 @@ sub _internal_fetch_all_with_annotation_by_Slice{
     my $sth = $self->prepare(qq{
 		SELECT $cols
 		FROM (variation_feature vf, variation_annotation va,
-		phenotype p, source s, source ps) # need to link twice to source
+		phenotype p, source s, source ps, study st) # need to link twice to source
 		LEFT JOIN failed_variation fv ON (fv.variation_id = vf.variation_id)
-		WHERE va.source_id = ps.source_id
+		WHERE va.study_id = st.study_id
+		AND st.source_id = ps.source_id
 		AND vf.source_id = s.source_id
 		AND vf.variation_id = va.variation_id
 		AND va.phenotype_id = p.phenotype_id
@@ -582,9 +583,10 @@ sub _internal_fetch_all_with_annotation {
     my $sth = $self->prepare(qq{
         SELECT $cols
         FROM (variation_feature vf, variation_annotation va,
-        phenotype p, source s, source ps) # need to link twice to source
+        phenotype p, source s, source ps, study st) # need to link twice to source
 	LEFT JOIN failed_variation fv ON (fv.variation_id = vf.variation_id)
-        WHERE va.source_id = ps.source_id
+        WHERE va.study_id = st.study_id
+				AND st.source_id = ps.source_id 
         AND vf.source_id = s.source_id
         AND vf.variation_id = va.variation_id
         AND va.phenotype_id = p.phenotype_id
