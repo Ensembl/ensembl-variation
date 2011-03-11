@@ -919,6 +919,7 @@ create table source(
 	description varchar(255),
 	url varchar(255),
 	type ENUM('chip') DEFAULT NULL,
+    somatic_status ENUM ('germline','somatic','mixed') DEFAULT 'germline',
 	
 	primary key( source_id )
 );
@@ -1006,7 +1007,7 @@ create table population_genotype (
 
 	primary key( population_genotype_id ),
  	key variation_idx(variation_id),
-   key subsnp_idx(subsnp_id),
+    key subsnp_idx(subsnp_id),
 	key sample_idx(sample_id)
 );
 
