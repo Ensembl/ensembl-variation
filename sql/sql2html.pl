@@ -77,12 +77,12 @@ GetOptions(
 usage() if ($help);
 
 if (!$sql_file) {
-	print "Error! Please give a sql file using the option '-i' \n";
-	exit;
+	print "> Error! Please give a sql file using the option '-i' \n";
+	usage();
 }
 if (!$html_file) {
-	print "Error! Please give an output file using the option '-o'\n";
-	exit;
+	print "> Error! Please give an output file using the option '-o'\n";
+	usage();
 }
 
 #$header_flag ||= 1;
@@ -330,7 +330,7 @@ foreach my $header_name (@header_names) {
 		my $header_desc = $documentation->{$header_name}{'desc'};		
 		$html_content .= qq{<p>$header_desc</p>} if (defined($header_desc));
 	}
-	elsif ($header_flag == 0) {
+	elsif ($header_flag == 0 or scalar @header_names == 1) {
 		$html_content .= qq{<hr />\n};
 	}
 	
@@ -366,7 +366,7 @@ close(HTML);
 ###############
 
 sub display_tables_list {
-	my $html = qq{<p>List of the tables:</p>\n};
+	my $html = qq{<h3>List of the tables:</h3>\n};
 	foreach my $header_name (@header_names) {
 		
 		my $tables = $tables_names->{$header_name};
@@ -566,7 +566,10 @@ sub add_column_index {
 	foreach my $i_col (@idx_cols) {
 		$i_col =~ s/^\s+//; # Remove white spaces
 		$i_col =~ s/\s+$//;
-		
+		# In case of index using a number characters for a column
+		if ($i_col =~ /(.+)\(\d+\)/) {
+			$i_col = $1;
+		} 
 		$is_found{$i_col} = 0;
 		foreach my $col (@{$documentation->{$header}{tables}{$table}{column}}) {
 			if ($col->{name} eq $i_col) {
@@ -582,7 +585,7 @@ sub add_column_index {
 	# Description missing
 	while (my ($k,$v) = each(%is_found)) {
 		if ($v==0) {
-			print STDERR "The description of the column '$k' is missing in the table $table!\n";
+			print STDERR "INDEX: The description of the column '$k' is missing in the table $table!\n";
 		}
 	}
 }
@@ -597,8 +600,6 @@ sub add_column_type_and_default_value {
 	my $is_found = 0;
 	foreach my $col (@{$documentation->{$header}{'tables'}{$table}{column}}) {
 		if ($col->{name} eq $c_name) {
-			#$col .= "\t$c_type\t";
-			#$col .= "$c_default" if ($c_default ne ''); # Add the default value
 			$col->{type} = $c_type;
 			$col->{default} = $c_default if ($c_default ne '');
 			$is_found = 1;
@@ -607,7 +608,7 @@ sub add_column_type_and_default_value {
 	}
 	# Description missing
 	if ($is_found==0) {
-		print STDERR "The description of the column '$c_name' is missing in the table $table!\n";
+		print STDERR "COLUMN: The description of the column '$c_name' is missing in the table $table!\n";
 	}
 }
 
@@ -629,12 +630,12 @@ sub usage {
 
     -i              A SQL file name (Required)
     -o              An HTML output file name (Required)
-		-d              The name of the database (e.g Core, Variation, Functional Genomics, ...)
+    -d              The name of the database (e.g Core, Variation, Functional Genomics, ...)
     -show_header    A flag to display headers for a group of tables (1) or not (0). 
                     By default, the value is set to 1.
     -sort_headers   A flag to sort (1) or not (0) the headers by alphabetic order.
                     By default, the value is set to 1.
-		-sort_tables    A flag to sort (1) or not (0) the tables by alphabetic order.
+    -sort_tables    A flag to sort (1) or not (0) the tables by alphabetic order.
                     By default, the value is set to 1.							 
   } . "\n";
   exit(0);
