@@ -46,7 +46,7 @@ my %Printable = ( "\\"=>'\\', "\r"=>'r', "\n"=>'n', "\t"=>'t', "\""=>'"' );
 ######################
 
 # get command-line options
-my ($in_file, $species, $registry_file, $help, $host, $user, $password, $source, $population, $flank_size, $TMP_DIR, $TMP_FILE, $skip_multi, $use_gp, $sample_prefix, $variation_prefix, $disable_keys, $include_tables, $merge_vfs, $skip_tables, $compressed_only, $only_existing, $merge_alleles, $new_var_name, $chrom_regexp);
+my ($in_file, $species, $registry_file, $help, $host, $user, $password, $source, $population, $flank_size, $TMP_DIR, $TMP_FILE, $skip_multi, $use_gp, $sample_prefix, $variation_prefix, $disable_keys, $include_tables, $merge_vfs, $skip_tables, $compressed_only, $only_existing, $merge_alleles, $new_var_name, $chrom_regexp, $check_synonyms);
 
 my $args = scalar @ARGV;
 
@@ -75,6 +75,7 @@ GetOptions(
 	'merge_alleles'  => \$merge_alleles,
 	'create_name'    => \$new_var_name,
 	'chrom_regexp=s' => \$chrom_regexp,
+	'check_synonyms' => \$check_synonyms,
 );
 
 
@@ -132,7 +133,7 @@ if($tables->{sample}) {
 }
 
 # force population if user wants allele or population_genotype
-if($tables->{allele} || $tables->{population_genotype} || $tables->{compressed_genotype_single_bp}) {
+if($tables->{allele} || $tables->{population_genotype} || $tables->{compressed_genotype_single_bp} || $tables->{individual_genotype_multiple_bp}) {
 	$tables->{population} = 1;
 	$tables->{sample} = 1;
 }
@@ -319,6 +320,9 @@ while(<$in_file_handle>) {
 		## VARIATION
 		############
 		
+		# sometimes ID has many IDs separated by ";", just take the first
+		$data->{ID} = (split /\;/, $data->{ID})[0];
+		
 		# make a var name if none exists
 		if($data->{ID} eq '.' || $new_var_name) {
 			$data->{ID} =
@@ -327,7 +331,7 @@ while(<$in_file_handle>) {
 		}
 		
 		# get/set the variation_id
-		&variation($dbVar, $data, $tables->{variation});
+		&variation($dbVar, $data, $tables->{variation}, $check_synonyms) unless $compressed_only;
 		
 		
 		
@@ -370,7 +374,8 @@ while(<$in_file_handle>) {
 			   !$only_existing &&
 			   defined($data->{seq_region}) &&
 			   defined($data->{start}) &&
-			   (!$data->{variation_already_exists} || !$data->{merged})
+			   !$data->{variation_already_exists} &&
+			   !$data->{merged}
 			) {
 				&variation_feature($dbVar, $data);
 			}
@@ -453,7 +458,7 @@ while(<$in_file_handle>) {
 				my @bits = split /\|/, $data->{genotypes}->[$i-$data->{first_sample_col}];
 				
 				# otherwise add to compress hash for writing later
-				if(scalar @bits) {
+				if(scalar @bits && $bits[0] ne '.' and $bits[1] ne '.') {
 					
 					if (!defined $genotypes->{$sample_id}->{region_start}){
 						$genotypes->{$sample_id}->{region_start} = $data->{start};
@@ -556,6 +561,8 @@ Options
                       Takes precedence over --tables (i.e. any tables named in --tables
                       and --skip_tables will be skipped) [default: not used]
 
+--check_synonyms      When looking up variants, also check in variation_synonym.name
+                      [default: not used]
 --merge_vfs           Attempt to merge VCF variants with existing variation features.
                       Default behaviour is to create a new variation feature entry.
                       [default: not used]
@@ -781,6 +788,7 @@ sub variation {
 	my $dbVar = shift;
 	my $data = shift;
 	my $add_new_variations = shift;
+	my $check_synonyms = shift;
 	
 	# check if variation exists
 	my $sth = $dbVar->prepare(qq{SELECT variation_id FROM variation WHERE name = ?;});
@@ -788,6 +796,14 @@ sub variation {
 	$sth->bind_columns(\$data->{var_id});
 	$sth->fetch;
 	$sth->finish;
+	
+	if(!defined($data->{var_id}) && $check_synonyms) {
+		$sth = $dbVar->prepare(qq{SELECT variation_id FROM variation_synonym WHERE name = ?;});
+		$sth->execute($data->{ID});
+		$sth->bind_columns(\$data->{var_id});
+		$sth->fetch;
+		$sth->finish;
+	}
 	
 	# exists
 	if(defined($data->{var_id})) {
@@ -1031,7 +1047,7 @@ sub merge_variation_features {
 		defined($data->{seq_region});
 		
 	my $sth = $dbVar->prepare(qq{
-		SELECT variation_feature_id, variation_id, allele_string
+		SELECT variation_feature_id, variation_id, allele_string, variation_name
 		FROM variation_feature
 		WHERE seq_region_id = ?
 		AND seq_region_start = ?
@@ -1040,9 +1056,9 @@ sub merge_variation_features {
 		AND map_weight = 1
 	});
 	
-	my ($vf_id, $variation_id, $allele_string, $new_allele_string);
+	my ($vf_id, $variation_id, $allele_string, $variation_name, $new_allele_string);
 	$sth->execute($data->{seq_region}, $data->{start}, $data->{end});
-	$sth->bind_columns(\$vf_id, \$variation_id, \$allele_string);
+	$sth->bind_columns(\$vf_id, \$variation_id, \$allele_string, \$variation_name);
 	
 	my ($row_count);
 	
@@ -1064,7 +1080,7 @@ sub merge_variation_features {
 			$new_allele_string =
 				$allele_string.
 				'/'.
-				(join /\//, grep {$new_alleles{$_} > 1} keys %new_alleles);
+				(join /\//, grep {$new_alleles{$_} == 1} @{$data->{alleles}});
 		}
 	}
 	$sth->finish;
@@ -1089,17 +1105,19 @@ sub merge_variation_features {
 		}
 		
 		# add entry to variation_synonym
-		$sth = $dbVar->prepare(qq{
-			INSERT IGNORE INTO variation_synonym(
-				variation_id,
-				source_id,
-				name
-			)
-			VALUES(?, ?, ?)
-		});
-		
-		$sth->execute($data->{var_id}, $data->{source_id}, $data->{ID});
-		$sth->finish;
+		if ($variation_name ne $data->{ID}) {
+			$sth = $dbVar->prepare(qq{
+				INSERT IGNORE INTO variation_synonym(
+					variation_id,
+					source_id,
+					name
+				)
+				VALUES(?, ?, ?)
+			});
+			
+			$sth->execute($data->{var_id}, $data->{source_id}, $data->{ID});
+			$sth->finish;
+		}
 	}
 }
 
