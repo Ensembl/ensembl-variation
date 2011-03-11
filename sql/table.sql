@@ -899,6 +899,7 @@ create table httag(
 @column description	Description of the source.
 @column url				URL of the source.
 @column type			Define the type of the source, e.g. 'chip'
+@column somatic_status  Indicates if this source includes somatic or germline mutations, or a mixture
 
 @see variation
 @see variation_synonym
