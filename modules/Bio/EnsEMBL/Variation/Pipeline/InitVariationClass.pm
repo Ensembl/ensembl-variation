@@ -1,4 +1,4 @@
-package Bio::EnsEMBL::Variation::Pipeline::InitVarClass;
+package Bio::EnsEMBL::Variation::Pipeline::InitVariationClass;
 
 use strict;
 
@@ -114,8 +114,8 @@ sub fetch_input {
 sub write_output {
     my $self = shift;
 
-    $self->dataflow_output_id($self->param('chunk_output_ids'), 2);
     $self->dataflow_output_id($self->param('finish_var_class'), 1);
+    $self->dataflow_output_id($self->param('chunk_output_ids'), 2);
 }
 
 1;
