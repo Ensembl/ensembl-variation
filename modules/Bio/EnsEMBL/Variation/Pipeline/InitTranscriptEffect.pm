@@ -49,10 +49,14 @@ sub fetch_input {
     my $var_dba = $reg->get_DBAdaptor($species, 'variation')
         or die "failed to get variation DBA for $species";
 
+    my $dbh = $var_dba->dbc->db_handle;
+
+    # truncate the table because we don't want duplicates
+
+    $dbh->do("TRUNCATE TABLE transcript_variation");
+   
     # disable the indexes on the table we're going to insert into as
     # this significantly speeds up the TranscriptEffect process
-    
-    my $dbh = $var_dba->dbc->db_handle;
 
     $dbh->do("ALTER TABLE transcript_variation DISABLE KEYS")
         or warn "Failed to disable keys on transcript_variation: ".$dbh->errstr;
