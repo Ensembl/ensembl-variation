@@ -32,10 +32,12 @@ sub default_options {
 
         'pipeline_name' => 'variation_consequence',
 
-        'output_dir'    => '/lustre/scratch103/ensembl/gr5/variation_consequence/hive_output',
+        'output_dir'    => '/lustre/scratch101/ensembl/gr5/variation_consequence/hive_output',
+        
+        'reg_file'      => '/lustre/scratch101/ensembl/gr5/variation_consequence/ensembl.registry',
 
         'pipeline_db' => {
-            -host   => 'ens-variation',
+            -host   => 'ens-genomics2',
             -port   => 3306,
             -user   => 'ensadmin',
             -pass   => $self->o('password'),            
@@ -58,24 +60,28 @@ sub resource_classes {
     return {
         0 => { -desc => 'default',  'LSF' => '' },
         1 => { -desc => 'urgent',   'LSF' => '-q yesterday' },
-        2 => { -desc => 'highmem',  'LSF' => '-R"select[mem>5000] rusage[mem=5000]" -M5000000'}
+        2 => { -desc => 'highmem',  'LSF' => '-R"select[mem>15000] rusage[mem=15000]" -M15000000'},
+        3 => { -desc => 'long',     'LSF' => '-q long' },
     };
 }
 
 sub pipeline_analyses {
     my ($self) = @_;
+
     return [
-        {   -logic_name => 'init_jobs',
-            -module     => 'Bio::EnsEMBL::Variation::Pipeline::InitJobs',
+        {   -logic_name => 'init_transcript_effect',
+            -module     => 'Bio::EnsEMBL::Variation::Pipeline::InitTranscriptEffect',
             -parameters => {},
             -input_ids  => [{
-                pph_dir => '/lustre/scratch103/ensembl/gr5/polyphen',
-                ensembl_registry => '/lustre/scratch103/ensembl/gr5/variation_consequence/ensembl.registry',
-                species => 'Human',
+                    ensembl_registry    => $self->o('reg_file'),
+                    species             => $self->o('species'),
             }],
-            -rc_id      => 0,
+            -rc_id      => 1,
             -flow_into  => {
-                2 => [ 'transcript_effect' ],
+                1 => [ 'rebuild_consequence_indexes' ],
+                2 => [ 'update_variation_feature' ],
+                3 => [ 'init_variation_class' ],
+                4 => [ 'transcript_effect' ],
             },
         },
 
@@ -83,31 +89,62 @@ sub pipeline_analyses {
             -module         => 'Bio::EnsEMBL::Variation::Pipeline::TranscriptEffect',
             -parameters     => {},
             -input_ids      => [],
-            -hive_capacity  => 200,
+            -hive_capacity  => 50,
             -rc_id          => 0,
-            -flow_into      => {
-                #2 => [ 'run_polyphen' ],
-            },
+            -flow_into      => {},
         },
 
-#        {   -logic_name     => 'run_polyphen',
-#            -module         => 'Bio::EnsEMBL::Variation::Pipeline::RunPolyPhen',
-#            -parameters     => {},
-#            -input_ids      => [],
-#            -hive_capacity  => 100,
-#            -rc_id          => 2,
-#            -flow_into      => {
-#                3   => [ 'run_weka' ],
-#            },
-#        },
-#        
-#        {   -logic_name => 'run_weka',
-#            -module     => 'Bio::EnsEMBL::Variation::Pipeline::RunWeka',
-#            -parameters => {},
-#            -input_ids  => [],
-#            -rc_id      => 0,
-#            -flow_into  => {},
-#        },
+        {   -logic_name     => 'rebuild_transcript_variation_indexes',
+            -module         => 'Bio::EnsEMBL::Variation::Pipeline::RebuildIndexes',
+            -parameters     => {},
+            -input_ids      => [],
+            -hive_capacity  => 1,
+            -rc_id          => 1,
+            -wait_for       => [ 'transcript_effect' ],
+            -flow_into      => {},
+        },
+        
+        {   -logic_name     => 'update_variation_feature',
+            -module         => 'Bio::EnsEMBL::Variation::Pipeline::UpdateVariationFeature',
+            -parameters     => {},
+            -input_ids      => [],
+            -hive_capacity  => 1,
+            -rc_id          => 1,
+            -wait_for       => [ 'rebuild_transcript_variation_indexes' ],
+            -flow_into      => {},
+        },
+        
+        {   -logic_name     => 'init_variation_class',
+            -module         => 'Bio::EnsEMBL::Variation::Pipeline::InitVarClass',
+            -parameters     => {num_chunks => 50},
+            -input_ids      => [],
+            -hive_capacity  => 1,
+            -rc_id          => 2,
+            -wait_for       => [ 'update_variation_feature' ],
+            -flow_into      => {
+                1 => [ 'finish_variation_class' ],
+                2 => [ 'set_variation_class' ],
+            },
+        },
+        
+        {   -logic_name     => 'set_variation_class',
+            -module         => 'Bio::EnsEMBL::Variation::Pipeline::SetVariationClass',
+            -parameters     => {},
+            -input_ids      => [],
+            -hive_capacity  => 10,
+            -rc_id          => 0,
+            -flow_into      => {},
+        },
+
+        {   -logic_name     => 'finish_variation_class',
+            -module         => 'Bio::EnsEMBL::Variation::Pipeline::FinishVariationClass',
+            -parameters     => {},
+            -input_ids      => [],
+            -hive_capacity  => 1,
+            -rc_id          => 1,
+            -wait_for       => [ 'set_variation_class' ],
+            -flow_into      => {},
+        },
     ];
 }
 
