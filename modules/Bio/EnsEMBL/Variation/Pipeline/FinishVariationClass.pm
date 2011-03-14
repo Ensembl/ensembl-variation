@@ -1,4 +1,4 @@
-package Bio::EnsEMBL::Variation::Pipeline::FinishVarClass;
+package Bio::EnsEMBL::Variation::Pipeline::FinishVariationClass;
 
 use strict;
 

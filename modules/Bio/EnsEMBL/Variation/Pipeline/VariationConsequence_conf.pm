@@ -49,7 +49,7 @@ sub default_options {
 sub pipeline_create_commands {
     my ($self) = @_;
     return [
-        'mysql '.$self->dbconn_2_mysql('pipeline_db', 1).q{-e 'DROP DATABASE IF EXISTS }.$self->o('pipeline_db', '-dbname').q{'},
+        'mysql '.$self->dbconn_2_mysql('pipeline_db', 0).q{-e 'DROP DATABASE IF EXISTS }.$self->o('pipeline_db', '-dbname').q{'},
         @{$self->SUPER::pipeline_create_commands}, 
         'mysql '.$self->dbconn_2_mysql('pipeline_db', 1).q{-e 'INSERT INTO meta (meta_key, meta_value) VALUES ("hive_output_dir", "}.$self->o('output_dir').q{")'},
     ];
@@ -78,7 +78,7 @@ sub pipeline_analyses {
             }],
             -rc_id      => 1,
             -flow_into  => {
-                1 => [ 'rebuild_consequence_indexes' ],
+                1 => [ 'rebuild_tv_indexes' ],
                 2 => [ 'update_variation_feature' ],
                 3 => [ 'init_variation_class' ],
                 4 => [ 'transcript_effect' ],
@@ -94,7 +94,7 @@ sub pipeline_analyses {
             -flow_into      => {},
         },
 
-        {   -logic_name     => 'rebuild_transcript_variation_indexes',
+        {   -logic_name     => 'rebuild_tv_indexes',
             -module         => 'Bio::EnsEMBL::Variation::Pipeline::RebuildIndexes',
             -parameters     => {},
             -input_ids      => [],
@@ -110,12 +110,12 @@ sub pipeline_analyses {
             -input_ids      => [],
             -hive_capacity  => 1,
             -rc_id          => 1,
-            -wait_for       => [ 'rebuild_transcript_variation_indexes' ],
+            -wait_for       => [ 'rebuild_tv_indexes' ],
             -flow_into      => {},
         },
         
         {   -logic_name     => 'init_variation_class',
-            -module         => 'Bio::EnsEMBL::Variation::Pipeline::InitVarClass',
+            -module         => 'Bio::EnsEMBL::Variation::Pipeline::InitVariationClass',
             -parameters     => {num_chunks => 50},
             -input_ids      => [],
             -hive_capacity  => 1,
