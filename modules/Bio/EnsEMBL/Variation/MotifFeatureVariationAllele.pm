@@ -73,17 +73,11 @@ sub binding_affinity_change {
         # get the binding affinity of the reference sequence
         my $ref_affinity = $matrix->relative_affinity($mf_seq, $linear);
         
-        warn "seq: $mf_seq\n";
-        
         # splice in the variant sequence
         substr($mf_seq, $mf_start, $var_len) = $allele_seq;
         
-        warn "seq: $mf_seq\n";
-        
         # and get the affinity of the variant sequence
         my $var_affinity = $matrix->relative_affinity($mf_seq, $linear);
-        
-        warn "ref aff: $ref_affinity var aff: $var_affinity\n";
         
         $self->{binding_affinity_change} = ($var_affinity - $ref_affinity);
     }
