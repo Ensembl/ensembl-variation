@@ -24,7 +24,7 @@ use strict;
 
 use Bio::EnsEMBL::Registry;
 
-use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(transcript_effect);
+use Bio::EnsEMBL::Variation::TranscriptVariation;
 
 use base ('Bio::EnsEMBL::Hive::ProcessWithParams');
 
@@ -33,8 +33,8 @@ my $DEBUG   = 0;
 sub run {
     my $self = shift;
 
-    my $gene_id = $self->param('gene_stable_id') 
-        or die "gene_stable_id is a required parameter";
+    my $transcript_id = $self->param('transcript_stable_id') 
+        or die "transcript_stable_id is a required parameter";
 
     my $reg_file = $self->param('ensembl_registry')
         or die "ensembl_registry is a required parameter";
@@ -45,74 +45,45 @@ sub run {
     my $reg = 'Bio::EnsEMBL::Registry';
     
     $reg->load_all($reg_file, 0, 1);
-
-    my $core_dba = $reg->get_DBAdaptor($species, 'core')
-        or die "failed to get core DBA for $species";
-
+    
     my $var_dba = $reg->get_DBAdaptor($species, 'variation')
         or die "failed to get variation DBA for $species";
-  
-    my $ga = $core_dba->get_GeneAdaptor 
-        or die "failed to get gene adaptor";
 
-    my $sa = $core_dba->get_SliceAdaptor 
+    my $ta = $reg->get_adaptor($species, 'core', 'Transcript') 
+        or die "failed to get transcript adaptor";
+
+    my $sa = $reg->get_adaptor($species, 'core', 'Slice')
         or die "failed to get slice adaptor";
 
-    my $tva = $var_dba->get_TranscriptVariationNewAdaptor
+    my $tva = $reg->get_adaptor($species, 'variation', 'TranscriptVariation')
         or die "failed to get transcript variation adaptor";
 
-    my $oca = $reg->get_adaptor('human', 'variation', 'OverlapConsequence')
-        or die "failed to get consequence adaptor";
-    
-    my $cons = $oca->fetch_all or die "Failed to get consequences";
+    my $transcript = $ta->fetch_by_stable_id($transcript_id) 
+        or die "failed to fetch transcript for stable id: $transcript_id";
 
-    my $gene = $ga->fetch_by_stable_id($gene_id) 
-        or die "failed to fetch gene for stable id: $gene_id";
+    # we need to include failed variations
 
-    my $slice = $sa->fetch_by_gene_stable_id($gene_id, 5000)
-        or die "failed to get slice around gene: $gene_id";
+    $tva->db->include_failed_variations(1);
 
-    my @transcripts = @{ $gene->get_all_Transcripts };
-    
-    for my $tran (@transcripts) {
-    
-        # we have to transfer the transcript to the slice the
-        # vfs live on or everything goes wrong...
-        
-        $tran = $tran->transfer($slice);
+    my $slice = $sa->fetch_by_transcript_stable_id($transcript->stable_id, 5000)
+        or die "failed to get slice around transcript: ".$transcript->stable_id;
 
-        for my $vf ( @{ $slice->get_all_VariationFeatures }, 
-            @{ $slice->get_all_somatic_VariationFeatures} ) {
-            
-            # pass the OverlapConsequences to the constructor to avoid
-            # fetching it each time
-            
-            my $tv = Bio::EnsEMBL::Variation::TranscriptVariationNew->new({
-                feature                 => $tran,
-                variation_feature       => $vf,
-                overlap_consequences    => $cons,
-            });
+    for my $vf ( @{ $slice->get_all_VariationFeatures }, 
+                 @{ $slice->get_all_somatic_VariationFeatures } ) {
+#    for my $vf ( @{ $slice->get_all_VariationFeatures } ) { 
 
-            # only store the tv if this vf actually affects the transcript
-        
-            $tva->store($tv) if $tv->consequences;
+        my $tv = Bio::EnsEMBL::Variation::TranscriptVariation->new(
+            -feature                 => $transcript,
+            -variation_feature       => $vf,
+            -adaptor                 => $tva,
+        );
 
-            # TODO: update variation feature table with worst consequence
+        # if the variation has no effect on the transcript $tv will be undef
 
-#            my $worst_conseq_rank = 1000;
-#            my @worst_conseqs;
-#
-#            for my $allele (@{ $tv->alt_alleles }) {
-#                for my $conseq (@{ $allele->consequences }) {
-#                    if ($conseq->rank < $worst_conseq_rank) {
-#                        $worst_conseqs{$conseq->SO_term}++;
-#                        $worst_conseq_rank = $conseq->rank;
-#                    }
-#                }
-#            }
-        }  
+        if ($tv && ( scalar(@{ $tv->consequence_type }) > 0) ) {
+            $tva->store($tv);
+        }
     }
-
 }
 
 sub write_output {
