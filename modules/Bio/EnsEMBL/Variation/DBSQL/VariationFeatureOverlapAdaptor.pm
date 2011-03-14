@@ -24,8 +24,19 @@ use warnings;
 package Bio::EnsEMBL::Variation::DBSQL::VariationFeatureOverlapAdaptor;
 
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
+use Bio::EnsEMBL::Variation::Utils::Constants qw(@OVERLAP_CONSEQUENCES);
 
 use base qw(Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor);
+
+sub _overlap_consequence_for_SO_term {
+    my ($self, $SO_term) = @_;
+
+    unless ($self->{_oc_hash}) {
+        $self->{_oc_hash} = { map {$_->SO_term => $_} @OVERLAP_CONSEQUENCES };
+    }
+
+    return $self->{_oc_hash}->{$SO_term};
+}
 
 sub fetch_all_by_Features {
     my ($self, $features) = @_;
@@ -45,7 +56,7 @@ sub fetch_all_by_Features_with_constraint {
    
     my %feats_by_id = map { $_->stable_id => $_ } @$features;
     
-    my $id_str = join',', map {"'$_'"} keys %feats_by_id;
+    my $id_str = join ',', map {"'$_'"} keys %feats_by_id;
     
     my $full_constraint = "feature_stable_id in ( $id_str )";
     $full_constraint .= " AND $constraint" if $constraint;
@@ -70,7 +81,7 @@ sub fetch_all_by_VariationFeatures {
    
     my %vfs_by_id = map { $_->dbID => $_ } @$vfs;
     
-    my $id_str = join',', map {"'$_'"} keys %vfs_by_id;
+    my $id_str = join ',', keys %vfs_by_id;
     
     my $full_constraint = "variation_feature_id in ( $id_str )";
     
