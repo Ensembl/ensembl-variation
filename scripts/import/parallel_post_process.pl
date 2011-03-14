@@ -239,8 +239,18 @@ sub parallel_flanking_sequence{
   my $script = shift;
   my $bsub_queue_name = shift;
 
-  my $flanking_status_file = "flanking_status_file_$$\.log";
+  my $pid = $$;
+  my $flanking_status_file = "flanking_status_file_$pid\.log";
 
+  # To avoid any confusion regarding the haplotypes and reversing etc, only attempt to map to non-haplotype seq regions 
+  my $hap_line;
+  if ($hap_id_string =~ /\([\,\d]+\)/) {
+    $hap_line = "seq_region_id NOT IN $hap_id_string";
+  }
+  else {
+    $hap_line ='';
+  }
+  
   #before do anything, create a copy of old table, this is done in post_flanking_sequence.pl
   $dbVar->do(qq{CREATE TABLE flanking_sequence_before_pp like flanking_sequence});
   $dbVar->do(qq{INSERT INTO flanking_sequence_before_pp select * from flanking_sequence});
@@ -254,8 +264,7 @@ sub parallel_flanking_sequence{
 
   #find out the total number of variations to split the into the files
   my $sequences; #total number of flanking sequences in table
-  my $sth_variations = $dbVar->prepare(qq{SELECT COUNT(*) from flanking_sequence
- 					  });
+  my $sth_variations = $dbVar->prepare(qq{SELECT COUNT(*) from flanking_sequence});
   $sth_variations->execute();
   ($sequences) = $sth_variations->fetch();
   $sth_variations->finish();
@@ -266,6 +275,7 @@ sub parallel_flanking_sequence{
 	vf.seq_region_end, vf.seq_region_strand
 	FROM flanking_sequence fs FORCE INDEX (PRIMARY) LEFT JOIN variation_feature vf
 	ON vf.variation_id = fs.variation_id
+	WHERE $hap_line
 	ORDER BY fs.variation_id
 	$LIMIT
   }, {mysql_use_result => 1});
@@ -279,7 +289,7 @@ sub parallel_flanking_sequence{
   my $buffer = {}; #hash containing all the files to be parallelized
   
   # Open a new file
-  my $file = $TMP_DIR . "/" . $dbname . ".flanking_sequence." . $$ . "." . $process . ".txt";
+  my $file = $TMP_DIR . "/" . $dbname . ".flanking_sequence." . $pid . "." . $process . ".txt";
   open(SEQ,">",$file) or die ("Could not open sequence dumpfile for writing");
   
   #create the files to send to parallelize
@@ -299,12 +309,13 @@ sub parallel_flanking_sequence{
           $call .= "-cpass $cpass " if ($cpass);
           $call .= "-cport $cport " if ($cport);
           $call .= "-vpass $vpass " if ($vpass);
+          $call .= "-pid $pid ";
           system($call);
       
 		  $process++;
 		  
 		  # Open a new file
-		  $file = $TMP_DIR . "/" . $dbname . ".flanking_sequence." . $$ . "." . $process . ".txt";
+		  $file = $TMP_DIR . "/" . $dbname . ".flanking_sequence." . $pid . "." . $process . ".txt";
 		  open(SEQ,">",$file) or die ("Could not open sequence dumpfile for writing");
 		}
       }
@@ -320,11 +331,12 @@ sub parallel_flanking_sequence{
 	  close(SEQ);
 	  
 	  #ÊSend this job off to the farm
-	  my $log_out = $TMP_DIR . "/output_flanking." . $$ . "." . $process . ".txt";		  
+	  my $log_out = $TMP_DIR . "/output_flanking." . $pid . "." . $process . ".txt";		  
 	  my $call = qq{bsub -q $bsub_queue_name -o $log_out $PERLBIN $script -tmpdir $TMP_DIR -tmpfile $TMP_FILE.$process -num_processes $num_processes -status_file $flanking_status_file -file $process -chost $chost -cuser $cuser -cdbname $cdbname -vhost $vhost -vuser $vuser -vport $vport -vdbname $vdbname };
       $call .= "-cpass $cpass " if ($cpass);
       $call .= "-cport $cport " if ($cport);
       $call .= "-vpass $vpass " if ($vpass);
+      $call .= "-pid $pid ";
       system($call);
   
   $sth->finish();  
@@ -1248,7 +1260,54 @@ sub merge_rs_feature{
   # drop the flipper table
   $dbVar->do(qq{DROP TABLE flipper;});
   
-  foreach my $table(qw(variation_set_variation variation_annotation allele population_genotype individual_genotype_multiple_bp tmp_individual_genotype_single_bp failed_variation)) {
+  #ÊFor the tables that need updating and have primary keys, create temp tables rather than join directly
+  foreach my $table (qw(variation_annotation allele population_genotype failed_variation)) {
+    debug("Updating $table");
+	
+	#ÊDrop the temp table if it already exists
+	my $stmt = qq{
+	    DROP TABLE IF EXISTS
+	       tmp_merge
+	};
+	$dbVar->do($stmt);
+	
+	#ÊCreate the temp table to map the entries that needs updating
+	$stmt = qq{
+	    CREATE TABLE
+	       tmp_merge
+	    SELECT
+	       tbl.$table\_id
+	       m.variation_id2 AS variation_id
+	    FROM
+	       tmp_ids_rs_final m JOIN
+	       $table tbl ON (
+	           tbl.variation_id = m.variation_id1
+	       )
+	};
+	$dbVar->do($stmt);
+	
+	#ÊUpdate the table
+	$stmt = qq{
+	    UPDATE IGNORE
+	       $table tbl,
+	       tmp_merge m
+	    SET
+	       tbl.variation_id = m.variation_id
+	    WHERE
+	       tbl.$table\_id = m.$table\_id
+	};
+	$dbVar->do($stmt);
+	
+	#ÊDrop the temp table
+	$stmt = qq{
+	    DROP TABLE
+	       tmp_merge
+	};
+	$dbVar->do($stmt);
+  }
+	
+  #ÊFor the tables that don't have a straightforward primary key, join on variation_id and update
+  foreach my $table(qw(variation_set_variation individual_genotype_multiple_bp tmp_individual_genotype_single_bp)) {
 	debug("Updating $table");
 	$dbVar->do(qq{
 	  UPDATE IGNORE $table vs, tmp_ids_rs_final t
