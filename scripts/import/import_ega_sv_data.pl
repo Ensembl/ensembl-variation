@@ -93,7 +93,7 @@ sub read_file{
   
   create_and_load(
 	$dbVar, "temp_cnv", "study", "pmid i", "author", "year", "title l", "id *", "tax_id i", "organism", "chr", "outer_start i", "inner_start i",
-	"start i", "end i", "inner_end i", "outer_end i", "assembly", "type", "ssv l");
+	"start i", "end i", "inner_end i", "outer_end i", "assembly", "type", "ssv l", "comment");
   
   # fix nulls
   foreach my $coord('outer_start', 'inner_start', 'inner_end', 'outer_end') {
@@ -302,14 +302,15 @@ sub structural_variation{
       sr.seq_region_id IS NULL
   };
   my $rows = $dbVar->selectall_arrayref($stmt);
+	
   while (my $row = shift(@{$rows})) {
     warn ("Structural variant '" . $row->[0] . "' from study '" . $row->[2] . "' (" . $row->[3] . " (" . $row->[4] . ")) is placed on chromosome '" . $row->[1] . "', which could not be found in Ensembl. It will not be imported, if it is already imported with a different (and outdated) location, it will be removed from the database");
     push(@{$failed},qq{'$row->[0]'});
   }
   
   # Remove any variants that have an updated position that could not be determined
-  my $condition = join(",",@{$failed});
-  if ($condition ne '') {
+	my $condition = join(",",@{$failed});
+ 	if ($condition ne '') {
 		$stmt = qq{
     	DELETE FROM
     	  sv
@@ -373,11 +374,13 @@ sub meta_coord{
     )
   });
   my $max_length = $max_length_ref->[0][0];
-  
+	if (!defined($max_length)) { $max_length = 0; }
+	
   my $cs = $default_cs->dbID;
   
   $dbVar->do(qq{DELETE FROM meta_coord where table_name = 'structural_variation';});
-  $dbVar->do(qq{INSERT INTO meta_coord(table_name, coord_system_id, max_length) VALUES ('structural_variation', $cs, $max_length);});
+  print "INSERT INTO meta_coord(table_name, coord_system_id, max_length) VALUES ('structural_variation', $cs, $max_length);\n";
+	$dbVar->do(qq{INSERT INTO meta_coord(table_name, coord_system_id, max_length) VALUES ('structural_variation', $cs, $max_length);});
 }
 
 
@@ -407,7 +410,7 @@ sub mapping{
 	chomp;
 	
 	# input file has these columns
-	my ($study, $pmid, $author, $year, $title, $id, $tax_id, $organism, $chr, $outer_start, $inner_start, $start, $end, $inner_end, $outer_end, $assembly, $type) = split /\t/, $_;
+	my ($study, $pmid, $author, $year, $title, $id, $tax_id, $organism, $chr, $outer_start, $inner_start, $start, $end, $inner_end, $outer_end, $assembly, $type, $ssv) = split /\t/, $_;
 	
 	next unless $tax_id == $connected_tax_id;
 	
@@ -522,7 +525,7 @@ sub mapping{
 	  $inner_end = $max_end - ($end - $inner_end) if $inner_end >= 1;
 	  $outer_end = $max_end + ($outer_end - $end) if $outer_end >= 1;
 	  
-	  print OUT (join "\t", ($study, $pmid, $author, $year, $title, $id, $tax_id, $organism, $to_chr, $outer_start, $inner_start, $min_start, $max_end, $inner_end, $outer_end, $target_assembly, $type, "[remapped from build $assembly]"));
+	  print OUT (join "\t", ($study, $pmid, $author, $year, $title, $id, $tax_id, $organism, $to_chr, $outer_start, $inner_start, $min_start, $max_end, $inner_end, $outer_end, $target_assembly, $type, $ssv, "[remapped from build $assembly]"));
 	  print OUT "\n";
 	}
 	
