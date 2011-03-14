@@ -23,27 +23,39 @@ package Bio::EnsEMBL::Variation::VariationFeatureOverlap;
 use strict;
 use warnings;
 
+use Bio::EnsEMBL::Utils::Argument qw(rearrange);
 use Bio::EnsEMBL::Utils::Sequence qw(expand);
 use Bio::EnsEMBL::Variation::VariationFeatureOverlapAllele;
 
 sub new {
-    my ($class, $hashref) = @_;
-    
-    my $self = bless $hashref, $class;
+
+    my $class = shift;
+
+    my ($variation_feature, $feature, $adaptor, $ref_feature) = 
+        rearrange([qw(VARIATION_FEATURE FEATURE ADAPTOR REF_FEATURE)], @_);
+
+    $ref_feature ||= $variation_feature->slice;
+
+    my $self = bless {
+        variation_feature   => $variation_feature,
+        feature             => $feature,
+        adaptor             => $adaptor,
+        ref_feature         => $ref_feature,
+    }, $class;
     
     # now look at each allele of the VariationFeature in turn
     
     # get the allele string, expand it, and split it into separate alleles
     
-    my $vf          = $self->{variation_feature};
-    my $tran        = $self->{transcript};
-    my $ref_feature = $self->{ref_feature} || $vf->slice;
-    
-    my $ref_allele = $ref_feature->subseq($vf->start, $vf->end, $vf->strand);
+    my $ref_allele = $ref_feature->subseq(
+        $variation_feature->start, 
+        $variation_feature->end, 
+        $variation_feature->strand
+    );
     
     $ref_allele = '-' unless $ref_allele;
         
-    my $allele_string = $vf->allele_string;
+    my $allele_string = $variation_feature->allele_string;
     
     expand(\$allele_string);
 
@@ -259,7 +271,7 @@ sub consequence_type {
 
         for my $allele (@{ $self->alt_alleles }) {
             for my $cons (@{ $allele->consequence_types }) {
-                $cons_types{$cons->ensembl_term}++
+                $cons_types{$cons->display_term}++
             }
         }
         
@@ -293,7 +305,7 @@ sub most_severe_consequence {
 
 sub display_consequence {
     my $self = shift;
-    return $self->most_severe_consequence->ensembl_term;
+    return $self->most_severe_consequence->display_term;
 }
 
 1;
