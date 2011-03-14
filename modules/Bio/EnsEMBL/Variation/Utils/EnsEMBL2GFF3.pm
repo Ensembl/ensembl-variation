@@ -276,9 +276,9 @@ use warnings;
 
         if (my $db = $self->{adaptor}->db) {
             print "got a dba\n";
-            my $tvna = $db->get_TranscriptVariationNewAdaptor;
+            my $tva = $db->get_TranscriptVariationAdaptor;
             print "got a tvna\n" if $tvna;
-            my $tvns = $tvna->fetch_all_by_VariationFeatures([$self]);
+            my $tvs = $tva->fetch_all_by_VariationFeatures([$self]);
             print "Got ".scalar(@$tvns)." tvns\n";
             die;
         }

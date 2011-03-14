@@ -18,749 +18,409 @@
 
 =cut
 
-#
-# Ensembl module for Bio::EnsEMBL::Variation::TranscriptVariation
-#
-# Copyright (c) 2004 Ensembl
-#
-# You may distribute this module under the same terms as perl itself
-#
-#
-
-=head1 NAME
-
-Bio::EnsEMBL::Variation::TranscriptVariation
-
-=head1 SYNOPSIS
-
-  use Bio::EnsEMBL::Variation::TranscriptVariation;
-
-  $tr_var = Bio::EnsEMBL::Variation::TranscriptVariation->new
-    (-transcript        => $transcript,
-     -pep_allele_string => 'N/K',
-     -cdna_start        => 1127,
-     -cdna_end          => 1127,
-     -cds_start         => 558,
-     -cds_end           => 558,
-     -translation_start => 318,
-     -translation_end   => 318,
-     -consequence_type  => 'NON_SYNONYMOUS_CODING');
-
-
-  print "variation: ", $tr_var->variation_feature()->variation_name(), "\n";
-  print "transcript: ", $tr_var->transcript->stable_id(), "\n";
-  print "consequence type: ", (join ",", @{$tr_var->consequence_type()}), "\n";
-  print "cdna coords: ", $tr_var->cdna_start(), '-', $tr_var->cdna_end(), "\n";
-  print "cds coords: ", $tr_var->cds_start(), '-', $tr_var->cds_end(), "\n";
-  print "pep coords: ", $tr_var->translation_start(), '-',
-        $tr_var->translation_end(), "\n";
-  print "amino acid change: ", $tr_var->pep_allele_string(), "\n";
-
-
-=head1 DESCRIPTION
-
-A TranscriptVariation object represents a variation feature which is in close
-proximity to an Ensembl transcript.  A TranscriptVariation object has several
-attributes which define the relationship of the variation to the transcript.
-
-=head1 METHODS
-
-=cut
+package Bio::EnsEMBL::Variation::TranscriptVariation;
 
 use strict;
 use warnings;
 
-package Bio::EnsEMBL::Variation::TranscriptVariation;
+use Bio::EnsEMBL::Variation::TranscriptVariationAllele;
+use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(overlap within_cds);
 
-use Bio::EnsEMBL::Utils::Exception qw(throw warning);
-use Bio::EnsEMBL::Utils::Argument qw(rearrange);
-use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp expand);
-use Bio::EnsEMBL::Storable;
-use Bio::EnsEMBL::Variation::ConsequenceType;
-
-our @ISA = ('Bio::EnsEMBL::Storable');
-
-my %CONSEQUENCE_TYPES = %Bio::EnsEMBL::Variation::ConsequenceType::CONSEQUENCE_TYPES;
-my %AFFECTS_PEPTIDE = %Bio::EnsEMBL::Variation::ConsequenceType::AFFECTS_PEPTIDE;
-
-=head2 new
-
-  Arg [-ADAPTOR] :
-    Bio::EnsEMBL::Variation::DBSQL::TranscriptVariationAdaptor
-
-  Arg [-DBID] :
-    int the unique internal identifier for this TranscriptVariation
-
-  Arg [-TRANSCRIPT] :
-    Bio::EnsEMBL::Transcript - The transcript affected by this
-    TranscriptVariation
-
-  Arg [-PEP_ALLELE_STRING] :
-    string - A '/' delimited string representing amino acids altered by this
-    variation
-
-  Arg [-CDNA_START] :
-    The start of this variation on the associated transcript in cdna
-    coordinates
-
-  Arg [-CDNA_END] :
-    The end of this variation on the associated transcript in cdna coordinates
-
-  Arg [-CDS_START] :
-    The start of this variation on the associated transcript in cds
-    coordinates
-
-  Arg [-CDS_END] :
-    The end of this variation on the associated transcript in cds coordinates
-
-  Arg [-TRANSLATION_START] :
-    The start of this variation on the translation of the associated transcript
-    in peptide coordinates
-
-  Arg [-TRANSLATION_END] :
-    The end of this variation on the translation of the associated transcript
-    in peptide coordinates
-
-  Arg [-CONSEQUENCE_TYPE] :
-    Reference to a list describing the type(s) of this TranscriptVariation.  Each type must be one of:
-    'INTRONIC', 'UPSTREAM', 'DOWNSTREAM', 'SYNONYMOUS_CODING',
-    'NON_SYNONYMOUS_CODING', 'FRAMESHIFT_CODING', '5PRIME_UTR', '3PRIME_UTR'
-
-  Example    : 
-    $tr_var = Bio::EnsEMBL::Variation::TranscriptVariation->new
-      (-transcript        => $transcript,
-       -pep_allele_string => 'N/K',
-       -cdna_start        => 1127,
-       -cdna_end          => 1127,
-       -cds_start         => 558,
-       -cds_end           => 558,
-       -translation_start => 318,
-       -translation_end   => 318,
-       -consequence_type  => ['NON_SYNONYMOUS_CODING']);
-
-  Description: Constructor. Instantiates a
-               Bio::EnsEMBL::Variation::TranscriptVariation object
-  Returntype : Bio::EnsEMBL::Variation::TranscriptVariation
-  Exceptions : throw on bad argument
-  Caller     : general, TranscriptVariationAdaptor
-  Status     : At Risk
-
-=cut
+use base qw(Bio::EnsEMBL::Variation::VariationFeatureOverlap);
 
 sub new {
-  my $class = shift;
-
-  my ($vf, $tr, $pep_allele, $cdna_start,$cdna_end, $cds_start, $cds_end, $tl_start,$tl_end, $consequence_type,
-      $dbID, $adaptor, $transcript, $codons) =
-    rearrange([qw(VARIATION_FEATURE TRANSCRIPT PEP_ALLELE_STRING CDNA_START
-                  CDNA_END CDS_START CDS_END TRANSLATION_START TRANSLATION_END CONSEQUENCE_TYPE
-                  DBID ADAPTOR TRANSCRIPT CODONS)], @_);
-
-  if(defined($consequence_type)) {
-      foreach my $consequence (@{$consequence_type}) {
-	  $consequence = uc($consequence);  
-	  if(!$CONSEQUENCE_TYPES{$consequence}) {
-	      my $valid = join(',',map({"'$_'"} keys(%CONSEQUENCE_TYPES)));
-	      throw("Type argument must be one of: $valid");
-	  } 
-      }   
-  }
-
-  if(defined($cdna_start) && ($cdna_start !~ /^\d+$/ || $cdna_start < 1)) {
-    throw('CDNA start must be greater than or equal to 1');
-  }
-
-  if(defined($cdna_end) && ($cdna_end !~ /^\d+$/ || $cdna_start < 0)) {
-    throw('CDNA end must be greater than or equal to 0');
-  }
-
-  if(defined($cds_start) && ($cds_start !~ /^\d+$/ || $cds_start < 1)) {
-    throw('CDS start must be greater than or equal to 1');
-  }
-
-  if(defined($cds_end) && ($cds_end !~ /^\d+$/ || $cds_start < 0)) {
-    throw('CDS end must be greater than or equal to 0');
-  }
-
-  if(defined($tl_start) && ($tl_start !~ /^\d+$/ || $tl_start < 1)) {
-    throw('Translation start must be greater than or equal to 1');
-  }
-
-  if(defined($tl_end) && ($tl_end !~ /^\d+$/ || $tl_start < 0)) {
-    throw('Translation end must be greater than or equal to 0');
-  }
-
-  return bless {'dbID'              => $dbID,
-                'adaptor'           => $adaptor,
-                'variation_feature' => $vf,
-                'transcript'        => $tr,
-                'pep_allele_string' => $pep_allele,
-                'cdna_start'        => $cdna_start,
-                'cdna_end'          => $cdna_end,
-		'cds_start'         => $cds_start,
-                'cds_end'           => $cds_end,
-                'translation_start' => $tl_start,
-                'translation_end'   => $tl_end,
-                'consequence_type'  => $consequence_type,
-				'codons'				=> $codons,}, $class;
+    my $class = shift;
+    
+    # call the superclass constructor
+    my $self = $class->SUPER::new(@_) || return undef;
+    
+    # rebless the alleles from vfoas to tvas
+    map { bless $_, 'Bio::EnsEMBL::Variation::TranscriptVariationAllele' } @{ $self->alleles };
+    
+    return $self;
 }
-
-sub new_fast {
-  my $class = shift;
-  my $hashref = shift;
-  return bless $hashref, $class;
-}
-
-
-=head2 transcript_stable_id
-
-  Example    : print $trvar->transcript_stable_id(), "\n";
-  Description: Get the stable_id of the Transcript that is affected by this
-               TranscriptVariation. This will NOT trigger lazy-loading of
-	       the transcript.
-  Returntype : string
-  Exceptions : throw on bad argument
-  Caller     : general
-  Status     : At Risk
-
-=cut
 
 sub transcript_stable_id {
-  my $self = shift;
-
-  # If the transcript object has been loaded, get the stable_id from it. Otherwise, return the stable_id that is stored in this TranscriptVariation  
-  return $self->{'transcript'}->stable_id() if (defined($self->{'transcript'}));
-  return $self->{'_transcript_stable_id'};
+    my $self = shift;
+    return $self->SUPER::feature_stable_id(@_);
 }
-
-=head2 transcript
-
-  Arg [1]    : (optional) Bio::EnsEMBL::Transcript $transcript
-  Example    : print $trvar->transcript()->stable_id(), "\n";
-  Description: Getter/Setter for the Transcript that is affected by this
-               TranscriptVariation.
-  Returntype : Bio::EnsEMBL::Transcript
-  Exceptions : throw on bad argument
-  Caller     : general
-  Status     : At Risk
-
-=cut
 
 sub transcript {
-  my $self = shift;
+    my ($self, $transcript) = @_;
+    return $self->SUPER::feature($transcript, 'Transcript');
+}
 
-  if(@_) {
-    my $tr = shift;
-    if(defined($tr) && (!ref($tr) || !$tr->isa('Bio::EnsEMBL::Transcript'))) {
-      throw('Bio::EnsEMBL::Transcript argument expected');
+sub codon_position {
+    my ($self, $codon_pos) = @_;
+    
+    $self->{codon_position} = $codon_pos if defined $codon_pos;
+    
+    unless ($self->{codon_position}) {
+        $self->{codon_position} = (($self->cdna_start - $self->transcript->cdna_coding_start) % 3) + 1;
     }
-    $self->{'transcript'} = $tr;
-  }
-  else{
-      #lazy-load the transcript object into the transcript_variation, and return it
-      if (!defined $self->{'transcript'} && $self->{'adaptor'} && defined($self->{'_transcript_stable_id'})){
-	  my $transcript_adaptor = $self->{'adaptor'}->db()->dnadb()->get_TranscriptAdaptor();
-	  $self->transcript($transcript_adaptor->fetch_by_stable_id($self->{'_transcript_stable_id'}));
-	  delete $self->{'_transcript_stable_id'};
-      }
-  }
-
-  return $self->{'transcript'};
+    
+    return $self->{codon_position};
 }
-
-
-=head2 variation_feature
-
-  Arg [1]    : (optional) Bio::EnsEMBL::Variation::VariationFeature $vf
-  Example    : print $trvar->variation_feature()->variation_name(), "\n";
-  Description: Getter/Setter for the VariationFeature associated with this
-               transcript variation.
-  Returntype : Bio::EnsEMBL::Variation::VariationFeature
-  Exceptions : none
-  Caller     : general
-  Status     : At Risk
-
-=cut
-
-sub variation_feature {
-  my $self = shift;
-
-  if (@_) {
-    my $vf = shift;
-    if (!ref($vf) || !$vf->isa('Bio::EnsEMBL::Variation::VariationFeature')) {
-      throw('Bio::EnsEMBL::Variation::VariationFeature argument expected');
-    }
-    $self->{'variation_feature'} = $vf;
-    #Êdelete($self->{'_vf_id'});
-  }
-  if(!defined($self->{'variation_feature'}) && defined($self->{'_vf_id'}) && $self->{'adaptor'}){
-      #lazy-load  from database on demand
-      my $vf = $self->{'adaptor'}->db()->get_VariationFeatureAdaptor();
-      # Store the variation feature on the object (this is ok since we weaken the vf->tv link) and delete the _vf_id
-      $self->{'variation_feature'} = $vf->fetch_by_dbID($self->{'_vf_id'});
-      #Êdelete($self->{'_vf_id'});
-  }
-  return $self->{'variation_feature'};
-}
-
-
-
-
-=head2 pep_allele_string
-
-  Arg [1]    : string $allele (optional) 
-               The new value to set the pep_allele_string attribute to
-  Example    : $pep_allele_string = $obj->pep_allele_string()
-  Description: Getter/Setter for the pep_allele_string attribute.  The
-               pep allele string is a '/' delimited string of amino acid
-               codes representing the change to the peptide made by this
-               variation.  A '-' represents one half of a insertion/deletion.
-               The reference allele (the one found in the ensembl peptide)
-               should be first.
-  Returntype : string
-  Exceptions : none
-  Caller     : general
-  Status     : Stable
-
-=cut
-
-sub pep_allele_string{
-  my $self = shift;
-  return $self->{'pep_allele_string'} = shift if(@_);
-  return $self->{'pep_allele_string'};
-}
-
-
-
-=head2 cdna_start
-
-  Arg [1]    : (optional) int $start
-  Example    : $cdna_start = $trvar->cdna_start();
-  Description: Getter/Setter for the start position of this variation on the
-               transcript in CDNA coordinates.
-  Returntype : int
-  Exceptions : throw if $start is not an int
-               throw if $start < 1
-  Caller     : general
-  Status     : Stable
-
-=cut
 
 sub cdna_start {
-  my $self = shift;
-
-  if(@_) {
-    my $cdna_start = shift;
-    if(defined($cdna_start) && ($cdna_start !~ /^\d+$/ || $cdna_start < 1)) {
-      throw('cdna start must be an integer greater than 0');
+    my ($self, $cdna_start) = @_;
+    
+    $self->{cdna_start} = $cdna_start if $cdna_start;
+    
+    unless ($self->{cdna_start}) {
+        my $cdna_coords = $self->cdna_coords;
+        
+        return undef if (@$cdna_coords != 1 || $cdna_coords->[0]->isa('Bio::EnsEMBL::Mapper::Gap'));
+        
+        $self->{cdna_start} = $cdna_coords->[0]->start;
+        $self->{cdna_end}   = $cdna_coords->[0]->end;
     }
-    $self->{'cdna_start'} = $cdna_start;
-  }
-  
-  return $self->{'cdna_start'};
+    
+    return $self->{cdna_start};
 }
-
-
-
-=head2 cdna_end
-
-  Arg [1]    : (optional) int $end
-  Example    : $cdna_end = $trvar->cdna_end();
-  Description: Getter/Setter for the end position of this variation on the
-               transcript in cdna coordinates.
-  Returntype : int
-  Exceptions : throw if $end is not an int
-               throw if $end < 0
-  Caller     : general
-  Status     : Stable
-
-=cut
 
 sub cdna_end {
-  my $self = shift;
-
-  if(@_) {
-    my $cdna_end = shift;
-    if(defined($cdna_end) && ($cdna_end !~ /^\d+$/ || $cdna_end < 0)) {
-      throw('cdna end must be an integer greater than or equal to 0');
-    }
-    $self->{'cdna_end'} = $cdna_end;
-  }
-
-  return $self->{'cdna_end'};
+    my ($self, $cdna_end) = @_;
+    
+    $self->{cdna_end} = $cdna_end if $cdna_end;
+    
+    # call cdna_start to calculate the start and end
+    $self->cdna_start unless $self->{cdna_end};
+    
+    return $self->{cdna_end};
 }
-
-
-=head2 cds_start
-
-  Arg [1]    : (optional) int $start
-  Example    : $cds_start = $trvar->cds_start();
-  Description: Getter/Setter for the start position of this variation on the
-               transcript in CDS coordinates.
-  Returntype : int
-  Exceptions : throw if $start is not an int
-               throw if $start < 1
-  Caller     : general
-  Status     : Stable
-
-=cut
 
 sub cds_start {
-  my $self = shift;
-
-  if(@_) {
-    my $cds_start = shift;
-    if(defined($cds_start) && ($cds_start !~ /^\d+$/ || $cds_start < 1)) {
-      throw('cds start must be an integer greater than 0');
+    my ($self, $cds_start) = @_;
+    
+    $self->{cds_start} = $cds_start if $cds_start;
+    
+    unless ($self->{cds_start}) {
+        my $cds_coords = $self->cds_coords;
+        
+        return undef if (@$cds_coords != 1 || $cds_coords->[0]->isa('Bio::EnsEMBL::Mapper::Gap'));
+        
+        my $exon_phase = $self->transcript->start_Exon->phase;
+        
+        $self->{cds_start} = $cds_coords->[0]->start + ($exon_phase > 0 ? $exon_phase : 0);
+        $self->{cds_end}   = $cds_coords->[0]->end   + ($exon_phase > 0 ? $exon_phase : 0);
     }
-    $self->{'cds_start'} = $cds_start;
-  }
-  
-  return $self->{'cds_start'};
+    
+    return $self->{cds_start};
 }
-
-
-
-=head2 cds_end
-
-  Arg [1]    : (optional) int $end
-  Example    : $cds_end = $trvar->cds_end();
-  Description: Getter/Setter for the end position of this variation on the
-               transcript in cds coordinates.
-  Returntype : int
-  Exceptions : throw if $end is not an int
-               throw if $end < 0
-  Caller     : general
-  Status     : Stable
-
-=cut
 
 sub cds_end {
-  my $self = shift;
-
-  if(@_) {
-    my $cds_end = shift;
-    if(defined($cds_end) && ($cds_end !~ /^\d+$/ || $cds_end < 0)) {
-      throw('cds end must be an integer greater than or equal to 0');
-    }
-    $self->{'cds_end'} = $cds_end;
-  }
-
-  return $self->{'cds_end'};
+    my ($self, $cds_end) = @_;
+    
+    $self->{cds_end} = $cds_end if $cds_end;
+    
+    # call cds_start to calculate the start and end
+    $self->cds_start unless $self->{cds_end};
+    
+    return $self->{cds_end};
 }
-
-
-=head2 translation_start
-
-  Arg [1]    : (optional) int $tl_start
-  Example    : $tl_start = $trvar->translation_start();
-  Description: Getter/Setter for the start position of this variation on the
-               translation of the associated transcript in peptide coordinates.
-  Returntype : int
-  Exceptions : throw if $start is not an int
-               throw if $start < 0
-  Caller     : general
-  Status     : Stable
-
-=cut
 
 sub translation_start {
-  my $self = shift;
-
-  if(@_) {
-    my $tl_start = shift;
-    if(defined($tl_start) && ($tl_start !~ /^\d+$/ || $tl_start < 1)) {
-      throw('translation start must be an integer greater than or equal to 1');
+    my ($self, $translation_start) = @_;
+    
+    $self->{translation_start} = $translation_start if $translation_start;
+    
+    unless ($self->{translation_start}) {
+        my $translation_coords = $self->translation_coords;
+        
+        return undef if (@$translation_coords != 1 || $translation_coords->[0]->isa('Bio::EnsEMBL::Mapper::Gap'));
+        
+        $self->{translation_start} = $translation_coords->[0]->start;
+        $self->{translation_end}   = $translation_coords->[0]->end;
     }
-    $self->{'translation_start'} = $tl_start;
-  }
-  
-  return $self->{'translation_start'};
+    
+    return $self->{translation_start};
 }
-
-
-=head2 translation_end
-
-  Arg [1]    : (optional) int $tl_end
-  Example    : $tl_end = $trvar->translation_end();
-  Description: Getter/Setter for the end position of this variation on the
-               translation of the associated transcript in peptide coordinates.
-  Returntype : int
-  Exceptions : throw if $end is not an int
-               throw if $end < 0
-  Caller     : general
-  Status     : Stable
-
-=cut
 
 sub translation_end {
-  my $self = shift;
-
-  if(@_) {
-    my $tl_end = shift;
-    if(defined($tl_end) && ($tl_end !~ /^\d+$/ || $tl_end < 0)) {
-      throw('translation end must be an integer greater than or equal to 0');
-    }
-    $self->{'translation_end'} = $tl_end;
-  }
-
-  return $self->{'translation_end'};
+    my ($self, $translation_end) = @_;
+    
+    $self->{translation_end} = $translation_end if $translation_end;
+    
+    # call translation_start to calculate the start and end
+    $self->translation_start unless $self->{translation_end};
+    
+    return $self->{translation_end};
 }
 
+sub cdna_coords {
+    my ($self) = @_;
+    
+    unless ($self->{cdna_coords}) {
+        my $vf   = $self->variation_feature;
+        my $tran = $self->feature; 
+        $self->{cdna_coords} = [ $self->mapper->genomic2cdna($vf->seq_region_start, $vf->seq_region_end, $tran->strand) ];
+    }
+    
+    return $self->{cdna_coords};
+}
 
-=head2 consequence_type
+sub cds_coords {
+    my ($self) = @_;
+    
+    unless ($self->{cds_coords}) {
+        my $vf   = $self->variation_feature;
+        my $tran = $self->feature; 
+        $self->{cds_coords} = [ $self->mapper->genomic2cds($vf->seq_region_start, $vf->seq_region_end, $tran->strand) ];
+    }
+    
+    return $self->{cds_coords};
+}
 
-  Arg [1]    : (optional) string $consequence_type
-  Example    : if($tr_var->consequence_type()->[0] eq 'INTRONIC') { do_something(); }
-  Description: Getter/Setter for the consequence type of this transcript variation.
-               Allowed values are: 'ESSENTIAL_SPLICE_SITE','STOP_GAINED','STOP_LOST','FRAMESHIFT_CODING',
-		  'NON_SYNONYMOUS_CODING','SPLICE_SITE','SYNONYMOUS_CODING','REGULATORY_REGION',
-		  '5PRIME_UTR','3PRIME_UTR','INTRONIC','UPSTREAM','DOWNSTREAM'
-  Returntype : ref to array of strings
-  Exceptions : throw if provided argument is not one of the valid strings
-  Caller     : general
-  Status     : At Risk
+sub translation_coords {
+    my ($self) = @_;
+    
+    unless ($self->{translation_coords}) {
+        my $vf   = $self->variation_feature;
+        my $tran = $self->feature; 
+        $self->{translation_coords} = [ $self->mapper->genomic2pep($vf->seq_region_start, $vf->seq_region_end, $tran->strand) ];
+    }
+    
+    return $self->{translation_coords};
+}
 
-=cut
+sub intron_effects {
+    my ($self) = @_;
+    
+    # this method is a major bottle neck in the effect calculation code so 
+    # we cache results and use local variables instead of method calls where
+    # possible to speed things up - caveat bug-fixer!
+    
+    unless ($self->{intron_effects}) {
+        
+        my $vf = $self->variation_feature;
+        
+        my $intron_effects = {};
+        
+        my $found_effect = 0;
+        
+        my $vf_start = $vf->seq_region_start;
+        my $vf_end   = $vf->seq_region_end;
 
-sub consequence_type {
-  my $self = shift;
- 
-  if(@_) {
-      my $consequence_type = shift;
-      if(defined($consequence_type)) {
-	  $consequence_type = uc($consequence_type);  
-	  if(!$CONSEQUENCE_TYPES{$consequence_type}) {
-	      my $valid = join(',',map({"'$_'"} keys(%CONSEQUENCE_TYPES)));
-	      throw("Type argument must be one of: $valid");
-	  } 
-	    
-      }
-      push @{$self->{'consequence_type'}}, $consequence_type;
-  }
+        for my $intron (@{ $self->introns }) {
+            
+            my $intron_start = $intron->seq_region_start;
+            my $intron_end   = $intron->seq_region_end;
+            
+            # under various circumstances the genebuild process can introduce
+            # artificial short (<= 12 nucleotide) introns into transcripts
+            # (e.g. to deal with errors in the reference sequence etc.), we
+            # don't want to categorise variations that fall in these introns
+            # as intronic, or as any kind of splice variant
+            
+            my $frameshift_intron = ( abs($intron_end - $intron_start) <= 12 );
+            
+            if ($frameshift_intron) {
+                if (overlap($vf_start, $vf_end, $intron_start, $intron_end)) {
+                    $intron_effects->{within_frameshift_intron} = 1;
+                    last;
+                }
+            }
+            
+            # the order of these checks is deliberately designed to minimise the number
+            # of calls we make to overlap because we can sometimes establish several
+            # intron effects within one call and then break out of the loop with last
+            
+            if (overlap($vf_start, $vf_end, $intron_start, $intron_start+1)) {
+                $intron_effects->{start_splice_site} = 1;
+                #$intron_effects->{splice_region} = 1;
+                #$intron_effects->{intronic} = 1;
+                
+                last;
+            }
+            
+            if (overlap($vf_start, $vf_end, $intron_end-1, $intron_end)) {
+                $intron_effects->{end_splice_site} = 1;
+                #$intron_effects->{splice_region} = 1;
+                #$intron_effects->{intronic} = 1;
+                
+                last;
+            }
+            
+            # we don't last out of this check, because a variation can be both
+            # intronic and splice_region, so we just set a flag
+            
+            if (overlap($vf_start, $vf_end, $intron_start, $intron_end)) {
+                $intron_effects->{intronic} = 1;
+                
+                $found_effect = 1;
+            }
+            
+            # the definition of splice_region (SO:0001630) is "within 1-3 bases 
+            # of the exon or 3-8 bases of the intron", the intron start is the 
+            # first base of the intron so we only need to add or subtract 7 from 
+            # it to get the correct coordinate (we don't check if it falls in the
+            # donor or acceptor splice sites because that would have been 
+            # established above)
+            
+            if ( ( overlap($vf_start, $vf_end, $intron_start-3, $intron_start+7) or
+                   overlap($vf_start, $vf_end, $intron_end-7,   $intron_end+3) ) and 
+                   not $frameshift_intron ) {
+                   
+                $intron_effects->{splice_region} = 1;
+                
+                $found_effect = 1;
+            }
+                
+            last if $found_effect;
+        }
+        
+        $self->{intron_effects} = $intron_effects;       
+    }
+
+    return $self->{intron_effects};
+}
+
+# NB: the methods below all cache their data in the associated transcript itself, this
+# gives a significant speed up when you are calculating the effect of all variations
+# on a transcript, and means that the cache will be freed when the transcript itself
+# is garbage collected rather than us having to maintain a transcript feature cache 
+# ourselves
+
+sub introns {
+    my ($self) = @_;
+    
+    my $tran = $self->feature;
+    
+    my $introns = $tran->{_variation_effect_feature_cache}->{introns} ||= $tran->get_all_Introns;
+    
+    return $introns;
+}
+
+sub translateable_seq {
+    my ($self) = @_;
+    
+    my $tran = $self->feature;
+    
+    my $tran_seq = $tran->{_variation_effect_feature_cache}->{translateable_seq} ||= $tran->translateable_seq;
+    
+    return $tran_seq;
+}
+
+sub mapper {
+    my ($self) = @_;
+    
+    my $tran = $self->feature;
+    
+    my $mapper = $tran->{_variation_effect_feature_cache}->{mapper} ||= $tran->get_TranscriptMapper;
+    
+    return $mapper;
+}
   
-  return $self->{'consequence_type'};
-}
-
-=head2 display_consequence
-
-  Args       : none
-  Example    : $display_consequence = $tv->display_consequence();
-  Description: Getter for the consequence type to display,
-               when more than one
-  Returntype : string
-  Exceptions : throw on incorrect argument
-  Caller     : webteam
-  Status     : At Risk
-
-=cut
-
-sub display_consequence{
-    my $self = shift;
-
-    my $highest_priority;
-
-    #get the value to display from the consequence_type attribute
-    $highest_priority = 'INTERGENIC';
-    foreach my $ct (@{$self->consequence_type}){
-	if ($CONSEQUENCE_TYPES{$ct} < $CONSEQUENCE_TYPES{$highest_priority}){
-	    $highest_priority = $ct;
-	}
+sub peptide {
+    my ($self) = @_;
+    
+    my $tran = $self->feature;
+    
+    my $peptide = $tran->{_variation_effect_feature_cache}->{peptide};
+    
+    unless ($peptide) {
+        my $translation = $tran->translate;
+        $peptide = $translation ? $translation->seq : undef;
+        $tran->{_variation_effect_feature_cache}->{peptide} = $peptide;
     }
     
-    
-    return $highest_priority;
+    return $peptide;
 }
 
+sub codon_table {
+    my ($self) = @_;
+    
+    my $tran = $self->feature;
+    
+    my $codon_table = $tran->{_variation_effect_feature_cache}->{codon_table};
+    
+    unless ($codon_table) {
+        # for mithocondrial dna we need to to use a different codon table
+        my $attrib = $tran->slice->get_all_Attributes('codon_table')->[0]; 
+        
+        # default to the vertebrate codon table which is denoted as 1
+        $codon_table = $attrib ? $attrib->value : 1;
+        
+        $tran->{_variation_effect_feature_cache}->{codon_table} = $codon_table
+    }
+    
+    return $codon_table;
+}
 
+sub hgvs_genomic {
+    return _hgvs_generic(@_,'genomic');
+}
+sub hgvs_coding {
+    return _hgvs_generic(@_,'coding');
+}
+sub hgvs_protein {
+    return _hgvs_generic(@_,'protein');
+}
+sub hgvs_rna {
+    return _hgvs_generic(@_,'rna');
+}
+sub hgvs_mitochondrial {
+    return _hgvs_generic(@_,'mitochondrial');
+}
 
-=head2 codons
+sub _hgvs_generic {
+    my $self = shift;
+    my $reference = pop;
+    my $hgvs = shift;
+    
+    #ÊThe rna and mitochondrial modes have not yet been implemented, so return undef in case we get a call to these
+    return undef if ($reference =~ m/rna|mitochondrial/);
+    
+    # The HGVS subroutine
+    my $sub = qq{hgvs_$reference};
+    
+    # Loop over the TranscriptVariationAllele objects associated with this TranscriptVariation
+    foreach my $tv_allele (@{$self->alt_alleles()}) {
+        
+        #ÊIf an HGVS hash was supplied and the allele exists as key, set the HGVS notation for this allele
+        if (defined($hgvs)) {
+            my $notation = $hgvs->{$tv_allele->variation_feature_seq()};
+            $tv_allele->$sub($notation) if defined $notation;
+        }
+        # Else, add the HGVS notation for this allele to the HGVS hash
+        else {
+            $hgvs->{$tv_allele->variation_feature_seq()} = $tv_allele->$sub();
+        }
+    }
+    
+    return $hgvs;
+}
 
-  Arg [1]    : (optional) string $codons
-  Example    : $codons = $consequence_type->codons
-  Description: Getter/Setter for the possible codons created in this transcript
-  Returntype : "/"-separated string
-  Exceptions : none
-  Caller     : general
-  Status     : At Risk
-
-=cut
+sub pep_allele_string {
+    my $self = shift;
+    
+    unless ($self->{_pep_allele_string}) {
+        
+        my @peptides = grep {defined $_} map { $_->peptide } @{ $self->alleles };
+        
+        $self->{_pep_allele_string} = join '/', @peptides;
+    }
+    
+    return $self->{_pep_allele_string};
+}
 
 sub codons {
-  my $self = shift;
-
-  if(@_) {
-    $self->{'codons'} = shift;
-  }
-  
-  elsif(
-	!(defined($self->{'codons'}))
-	&& defined($self->transcript)
-	&& defined($self->translation_start)
-	&& defined($self->variation_feature)
-	&& ((join ',', @{$self->consequence_type}) =~ /SYN|STOP|PAR/)
-  ) {
-	
-	my @codons;
-	
-	# get the transcript and its translateable sequence
-	my $tr = $self->transcript;
-	my $cds = $tr->translateable_seq();
-	
-	$cds = "\L$cds";
-	
-	# get the VF
-	my $vf = $self->variation_feature;
-	
-	# get codon start end and length in CDS terms
-	my $codon_cds_start = $self->translation_start * 3 - 2;
-	my $codon_cds_end   = $self->translation_end   * 3;
-	my $codon_len = $codon_cds_end - $codon_cds_start + 1;
-	
-	# add reference codon to codon list
-	#push @codons, substr($cds, $codon_cds_start-1, $codon_len);
-	
-	my $var_len = $vf->length;
-	
-	# fetch and expand the allele string
-	my $allele_string = $vf->allele_string;
-	expand(\$allele_string);
-	
-	my @alleles = split /\//, $allele_string;
-	my $strand = $vf->strand;
-	
-	# if we need to flip strand to match the transcript
-	if ($strand != $tr->strand()) {
-		
-		# flip feature onto same strand as transcript
-		for (my $i = 0; $i < @alleles; $i++) {
-		  reverse_comp(\$alleles[$i]);
-		}
-		
-		$strand = $tr->strand();
-	}
-	
-	# first allele is reference
-	#shift @alleles;
-	
-	# iterate through remaining alleles
-	foreach my $a(@alleles) {
-	  
-	  # make a copy of the cds
-	  my $tmp_cds = $cds;
-	  
-	  # work out which coord to edit
-	  my $exon_phase = $tr->start_Exon->phase;
-	  
-	  my $edit_coord = ($self->cdna_start - $tr->cdna_coding_start) + ($exon_phase > 0 ? $exon_phase : 0);
-	  
-	  # do the edit
-	  substr($tmp_cds, $edit_coord, $var_len) = $a;
-	  
-	  # get the new codon
-	  my $codon_str = substr($tmp_cds, $codon_cds_start-1, $codon_len + length($a)-$var_len);
-	  
-	  # add it to the list
-	  push @codons, $codon_str;
-	}
-	
-	# create slash-separated codon string
-	$self->{'codons'} = join '/', @codons;
-  }
-  
-  return $self->{'codons'};
+    my $self = shift;
+    
+    unless ($self->{_codon_allele_string}) {
+        
+        my @codons = grep {defined $_} map { $_->codon } @{ $self->alleles };
+        
+        $self->{_codon_allele_string} = join '/', @codons;
+    }
+    
+    return $self->{_codon_allele_string};
 }
-
-=head2 affects_transcript
-
-  Example    : if($tv->affects_transcript) { ... }
-  Description: Indicates if this transcript variation affects the protein
-               sequence of the affected transcript
-  Returntype : boolean
-  Exceptions : none
-  Caller     : Internal
-  Status     : At Risk
-
-=cut
 
 sub affects_transcript {
-  my $self = shift;
-  return defined($AFFECTS_PEPTIDE{$self->display_consequence});
+    my $self = shift;
+    return scalar grep { within_cds($_) } @{ $self->alt_alleles }; 
 }
-
-
-=head2 is_coding
-
-  Example    : if($tv->is_coding) { ... }
-  Description: Indicates if this transcript variation falls within the coding
-               region of the transcript
-  Returntype : boolean
-  Exceptions : none
-  Caller     : Internal
-  Status     : At Risk
-
-=cut
-
-sub is_coding {
-  my $self = shift;
-  return defined($self->cds_start) || defined($self->cds_end);
-}
-
-
-
-=head2 _calc_transcript_coords
-
-  Example    : $tv->_calc_transcript_coords
-  Description: Internal method for calculating absent transcript-relative coords
-  Returntype : none
-  Exceptions : none
-  Caller     : Internal
-  Status     : At Risk
-
-=cut
-
-sub _calc_transcript_coords {
-  my $self = shift;
-  
-  my $tr = $self->transcript;
-  
-  if(defined($tr)) {
-	
-	# get a transcript mapper
-	my $tm = $self->{'_transcript_mapper'} || $tr->get_TranscriptMapper();
-	$self->{'_transcript_mapper'} ||= $tm;
-	
-	# get the variation feature object
-	my $vf = $self->variation_feature;
-	
-	# do pep coords
-	unless(defined $self->{'translation_start'} && defined $self->{'translation_end'}) {
-	  my @pep_coords = $tm->genomic2pep($vf->start,$vf->end,$vf->strand);
-	  if(scalar @pep_coords == 1 && !$pep_coords[0]->isa('Bio::EnsEMBL::Mapper::Gap')) {
-		$self->{'translation_start'} ||= $pep_coords[0]->start;
-		$self->{'translation_end'} ||= $pep_coords[0]->end;
-	  }
-	}
-	
-	# do cdna coords
-	unless(defined $self->{'cdna_start'} && defined $self->{'cdna_end'}) {
-	  my @cdna_coords = $tm->genomic2cdna($vf->start,$vf->end,$vf->strand);
-	  if(scalar @cdna_coords == 1 && !$cdna_coords[0]->isa('Bio::EnsEMBL::Mapper::Gap')) {
-		$self->{'cdna_start'} ||= $cdna_coords[0]->start;
-		$self->{'cdna_end'} ||= $cdna_coords[0]->end;
-	  }
-	}
-	
-	# do cds coords
-	unless(defined $self->{'cds_start'} && defined $self->{'cds_end'}) {
-	  my @cds_coords = $tm->genomic2cds($vf->start,$vf->end,$vf->strand);
-	  if(scalar @cds_coords == 1 && !$cds_coords[0]->isa('Bio::EnsEMBL::Mapper::Gap')) {
-		$self->{'cds_start'} ||= $cds_coords[0]->start;
-		$self->{'cds_end'} ||= $cds_coords[0]->end;
-	  }
-	}
-  }
-}
-
 
 1;

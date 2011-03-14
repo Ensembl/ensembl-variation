@@ -70,7 +70,9 @@ sub store {
             'ens_feature_class', 
             ref $allele->feature
         );
-        
+       
+        die "No feature class for ".(ref $allele->feature) unless $feat_class_attrib_id;
+
         $sth->execute(
             $vfo->variation_feature_id,
             $feat_stable_id,

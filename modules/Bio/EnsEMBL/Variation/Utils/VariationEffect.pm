@@ -146,7 +146,7 @@ sub within_non_coding_gene {
     my $tva     = shift;
     my $tran    = $tva->transcript;
     
-    return ( within_transcript($tva) and (not $tran->translation) );
+    return ( within_transcript($tva) and (not $tran->translation) and (not within_mature_miRNA($tva)));
 }
 
 sub within_miRNA {
@@ -276,7 +276,7 @@ sub _before_coding {
     my $t_s   = $tran->seq_region_start;
     my $cds_s = $tran->coding_region_start;
     
-    print "vfs: $vf_s vfe: $vf_e ts: $t_s cdss: $cds_s\n";
+    #print "vfs: $vf_s vfe: $vf_e ts: $t_s cdss: $cds_s\n";
     
     # we need to special case insertions just before the CDS start
     if ($vf_s == $vf_e+1 && $vf_s == $cds_s) {
@@ -332,8 +332,12 @@ sub within_3_prime_utr {
 sub complex_indel {
     my $tva     = shift;
     my $vf      = $tva->variation_feature;
-    
-    return 0 unless $vf->var_class =~ /^(in|del)/;
+   
+    # pass the no_db flag to var_class to ensure we don't rely on the database for it 
+    # as it may not have been set at this stage in the pipeline
+    my $class = $vf->var_class(1);
+
+    return 0 unless $class =~ /^(in|del)/;
 
     return @{ $tva->transcript_variation->cds_coords } > 1;
 }

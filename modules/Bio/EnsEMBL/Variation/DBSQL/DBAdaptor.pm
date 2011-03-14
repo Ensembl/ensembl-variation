@@ -88,8 +88,6 @@ sub get_available_adaptors{
 		 'ReadCoverageCollection' => 'Bio::EnsEMBL::Variation::DBSQL::ReadCoverageCollectionAdaptor',
          'VariationSet' => 'Bio::EnsEMBL::Variation::DBSQL::VariationSetAdaptor',
          'OverlapConsequence' => 'Bio::EnsEMBL::Variation::DBSQL::OverlapConsequenceAdaptor',
-         'TranscriptVariationNew' => 'Bio::EnsEMBL::Variation::DBSQL::TranscriptVariationNewAdaptor',
-         'RegulationVariation' => 'Bio::EnsEMBL::Variation::DBSQL::RegulationVariationAdaptor',
          'Attribute' => 'Bio::EnsEMBL::Variation::DBSQL::AttributeAdaptor',
                  );
     return (\%pairs);
