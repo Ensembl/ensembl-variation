@@ -26,7 +26,7 @@ use warnings;
 use Bio::EnsEMBL::Variation::Utils::VariationEffect;
 
 sub new {
-    my ($class) = @_;
+    my $class = shift;
     return bless {}, $class;
 }
 
@@ -35,10 +35,10 @@ sub new_fast {
     return bless $hashref, $class;
 }
 
-sub dbID {
-    my ($self, $dbID) = @_;
-    $self->{dbID} = $dbID if $dbID;
-    return $self->{dbID};
+sub SO_accession {
+    my ($self, $SO_accession) = @_;
+    $self->{SO_accession} = $SO_accession if $SO_accession;
+    return $self->{SO_accession};
 }
 
 sub SO_term {
@@ -51,6 +51,12 @@ sub feature_SO_term {
     my ($self, $feature_SO_term) = @_;
     $self->{feature_SO_term} = $feature_SO_term if $feature_SO_term;
     return $self->{feature_SO_term};
+}
+
+sub feature_class {
+    my ($self, $feature_class) = @_;
+    $self->{feature_class} = $feature_class if $feature_class;
+    return $self->{feature_class} || '';
 }
 
 sub predicate {
@@ -78,16 +84,10 @@ sub rank {
     return $self->{rank};
 }
 
-sub ensembl_term {
-    my ($self, $ensembl_term) = @_;
-    $self->{ensembl_term} = $ensembl_term if $ensembl_term;
-    return $self->{ensembl_term} || $self->SO_term;
-}
-
-sub SO_accession {
-    my ($self, $SO_accession) = @_;
-    $self->{SO_accession} = $SO_accession if $SO_accession;
-    return $self->{SO_accession};
+sub display_term {
+    my ($self, $display_term) = @_;
+    $self->{display_term} = $display_term if $display_term;
+    return $self->{display_term} || $self->SO_term;
 }
 
 sub NCBI_term {

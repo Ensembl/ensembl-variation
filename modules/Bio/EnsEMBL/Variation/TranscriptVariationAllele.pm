@@ -191,11 +191,11 @@ sub sift_prediction {
 
 sub _nsSNP_prediction {
     my ($self, $program) = @_;
-    
+
     # we can only get results for variants that cause a single amino acid substitution, 
     # so check the peptide allele string first
 
-    if ($self->pep_allele_string =~ /^[A-Z]\/[A-Z]$/) {
+    if ($self->pep_allele_string && $self->pep_allele_string =~ /^[A-Z]\/[A-Z]$/) {
         if (my $adap = $self->transcript_variation->{adaptor}) {
             return $adap->_get_nsSNP_prediction($program, $self);
         }

@@ -767,8 +767,8 @@ sub ambig_code{
 }
 
 =head2 var_class
-
-    Args         : None
+    Args[1]      : (optional) no_db - don't use the term from the database, always calculate it from the allele string 
+                   (used by the ensembl variation pipeline)
     Example      : my $variation_class = $vf->var_class()
     Description  : returns the class for the variation, according to dbSNP classification
     ReturnType   : String $variation_class
@@ -778,19 +778,16 @@ sub ambig_code{
 
 =cut
 
-sub var_class{
+sub var_class {
+
     my $self = shift;
+    my $no_db = shift;
     
     unless ($self->{class_display_term}) {
         
-        # convert the SO accession to the ensembl display term
-        
-        $self->{class_SO_term} = SO_variation_class($self->allele_string);
-        
-        unless ($self->{class_SO_term}) {
-            # work out the term from the allele string
-            $self->{class_SO_term} = SO_variation_class($self->allele_string);
-        }
+        my $so_term = $self->class_SO_term(undef, $no_db);
+
+        # convert the SO term to the ensembl display term
         
         if (my $display_term = $self->{adaptor}->AttributeAdaptor->display_term_for_SO_term(
                 $self->{class_SO_term}, 
@@ -809,7 +806,9 @@ sub var_class{
 
 =head2 class_SO_term
 
-    Args         : None
+    Args[1]      : (optional) class_SO_term - the SO term for the class of this variation feature
+    Args[2]      : (optional) no_db - don't use the term from the database, always calculate it from the allele string 
+                   (used by the ensembl variation pipeline)
     Example      : my $SO_variation_class = $vf->class_SO_term()
     Description  : returns the SO term for the class for the variation
     ReturnType   : String $SO_term
@@ -820,11 +819,13 @@ sub var_class{
 =cut
 
 sub class_SO_term {
-    my ($self, $class_SO_term) = @_;
+    my ($self, $class_SO_term, $no_db) = @_;
    
     $self->{class_SO_term} = $class_SO_term if $class_SO_term;
 
-    $self->{class_SO_term} = SO_variation_class($self->allele_string);
+    if ($no_db || !$self->{class_SO_term}) {
+        $self->{class_SO_term} = SO_variation_class($self->allele_string);
+    }
 
     return $self->{class_SO_term};
 }

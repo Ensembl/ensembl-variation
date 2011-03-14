@@ -24,6 +24,7 @@ use strict;
 use warnings;
 
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
+use Bio::EnsEMBL::Variation::Utils::Constants qw(@OVERLAP_CONSEQUENCES);
 use Scalar::Util qw(weaken);
 
 sub new {
@@ -138,12 +139,11 @@ sub consequence_types {
         
         $cons = [];
         
-        my $possible_cons = $self->variation_feature_overlap->{adaptor}->
-            AttributeAdaptor->OverlapConsequences_for_feature($self->feature);
-        
-        for my $oc (@$possible_cons) {
-            if ($oc->predicate->($self)) {
-                push @$cons, $oc;
+        for my $oc (@OVERLAP_CONSEQUENCES) {
+            if ($oc->feature_class eq ref $self->feature) {
+                if ($oc->predicate->($self)) {
+                    push @$cons, $oc;
+                }
             }
         }
     }
