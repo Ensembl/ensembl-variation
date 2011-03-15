@@ -45,6 +45,8 @@ sub run {
     my $disambiguate_sn_alleles = 
         $self->param('disambiguate_single_nucleotide_alleles'); 
  
+    $self->dbc->disconnect_when_inactive(1);
+    
     my $reg = 'Bio::EnsEMBL::Registry';
     
     $reg->load_all($reg_file, 0, 1);
@@ -87,6 +89,8 @@ sub run {
             $tva->store($tv);
         }
     }
+
+    $self->dbc->disconnect_when_inactive(0);
 }
 
 sub write_output {

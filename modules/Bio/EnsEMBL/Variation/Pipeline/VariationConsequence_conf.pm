@@ -43,11 +43,18 @@ sub default_options {
         'highmem_lsf_options'   => '-R"select[mem>15000] rusage[mem=15000]" -M15000000',
         'long_lsf_options'      => '-q long',
 
+        'transcript_effect_capacity'    => 50,
+        'set_variation_class_capacity'  => 10,
+
+        'hive_db_host'    => 'ens-genomics2',
+        'hive_db_port'    => 3306,
+        'hive_db_user'    => 'ensadmin',
+
         'pipeline_db' => {
-            -host   => 'ens-genomics2',
-            -port   => 3306,
-            -user   => 'ensadmin',
-            -pass   => $self->o('password'),            
+            -host   => $self->o('hive_db_host'),
+            -port   => $self->o('hive_db_port'),
+            -user   => $self->o('hive_db_user'),
+            -pass   => $self->o('hive_db_password'),            
             -dbname => $ENV{'USER'}.'_'.$self->o('pipeline_name'),
         },
     };
@@ -96,7 +103,7 @@ sub pipeline_analyses {
             -module         => 'Bio::EnsEMBL::Variation::Pipeline::TranscriptEffect',
             -parameters     => { disambiguate_single_nucleotide_alleles => $self->o('disambiguate_single_nucleotide_alleles') },
             -input_ids      => [],
-            -hive_capacity  => 50,
+            -hive_capacity  => $self->o('transcript_effect_capacity'),
             -rc_id          => 0,
             -flow_into      => {},
         },
@@ -138,7 +145,7 @@ sub pipeline_analyses {
             -module         => 'Bio::EnsEMBL::Variation::Pipeline::SetVariationClass',
             -parameters     => {},
             -input_ids      => [],
-            -hive_capacity  => 10,
+            -hive_capacity  => $self->o('set_variation_class_capacity'),
             -rc_id          => 0,
             -flow_into      => {},
         },
