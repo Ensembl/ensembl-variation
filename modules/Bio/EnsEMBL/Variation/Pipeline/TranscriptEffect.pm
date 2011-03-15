@@ -41,6 +41,10 @@ sub run {
     
     my $species = $self->param('species')
         or die "species is a required parameter";
+
+    my $disambiguate_sn_alleles = 
+        $self->param('disambiguate_single_nucleotide_alleles') 
+            or die "missing disambiguation parameter";
  
     my $reg = 'Bio::EnsEMBL::Registry';
     
@@ -70,12 +74,12 @@ sub run {
 
     for my $vf ( @{ $slice->get_all_VariationFeatures }, 
                  @{ $slice->get_all_somatic_VariationFeatures } ) {
-#    for my $vf ( @{ $slice->get_all_VariationFeatures } ) { 
 
         my $tv = Bio::EnsEMBL::Variation::TranscriptVariation->new(
             -feature                 => $transcript,
             -variation_feature       => $vf,
             -adaptor                 => $tva,
+            -disambiguate_single_nucleotide_alleles => $disambiguate_sn_alleles,
         );
 
         # if the variation has no effect on the transcript $tv will be undef
