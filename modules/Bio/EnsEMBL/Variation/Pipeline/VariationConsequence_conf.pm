@@ -36,12 +36,19 @@ sub default_options {
         
         'reg_file'      => '/lustre/scratch101/ensembl/gr5/variation_consequence/ensembl.registry',
 
+        'disambiguate_single_nucleotide_alleles'    => 0,
+
+        'default_lsf_options'   => '',
+        'urgent_lsf_options'    => '-q yesterday',
+        'highmem_lsf_options'   => '-R"select[mem>15000] rusage[mem=15000]" -M15000000',
+        'long_lsf_options'      => '-q long',
+
         'pipeline_db' => {
             -host   => 'ens-genomics2',
             -port   => 3306,
             -user   => 'ensadmin',
             -pass   => $self->o('password'),            
-            -dbname => 'grsr_'.$self->o('pipeline_name'),
+            -dbname => $ENV{'USER'}.'_'.$self->o('pipeline_name'),
         },
     };
 }
@@ -58,10 +65,10 @@ sub pipeline_create_commands {
 sub resource_classes {
     my ($self) = @_;
     return {
-        0 => { -desc => 'default',  'LSF' => '' },
-        1 => { -desc => 'urgent',   'LSF' => '-q yesterday' },
-        2 => { -desc => 'highmem',  'LSF' => '-R"select[mem>15000] rusage[mem=15000]" -M15000000'},
-        3 => { -desc => 'long',     'LSF' => '-q long' },
+        0 => { -desc => 'default',  'LSF' => $self->o('default_lsf_options') },
+        1 => { -desc => 'urgent',   'LSF' => $self->o('urgent_lsf_options')  },
+        2 => { -desc => 'highmem',  'LSF' => $self->o('highmem_lsf_options') },
+        3 => { -desc => 'long',     'LSF' => $self->o('long_lsf_options')    },
     };
 }
 
@@ -87,7 +94,7 @@ sub pipeline_analyses {
 
         {   -logic_name     => 'transcript_effect',
             -module         => 'Bio::EnsEMBL::Variation::Pipeline::TranscriptEffect',
-            -parameters     => {},
+            -parameters     => { disambiguate_single_nucleotide_alleles => $self->o('disambiguate_single_nucleotide_alleles') },
             -input_ids      => [],
             -hive_capacity  => 50,
             -rc_id          => 0,
