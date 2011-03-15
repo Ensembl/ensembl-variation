@@ -25,14 +25,15 @@ use warnings;
 
 use Bio::EnsEMBL::Utils::Argument qw(rearrange);
 use Bio::EnsEMBL::Utils::Sequence qw(expand);
+use Bio::EnsEMBL::Variation::Utils::Sequence qw(unambiguity_code);
 use Bio::EnsEMBL::Variation::VariationFeatureOverlapAllele;
 
 sub new {
 
     my $class = shift;
 
-    my ($variation_feature, $feature, $adaptor, $ref_feature) = 
-        rearrange([qw(VARIATION_FEATURE FEATURE ADAPTOR REF_FEATURE)], @_);
+    my ($variation_feature, $feature, $adaptor, $ref_feature, $disambiguate_sn_alleles) = 
+        rearrange([qw(VARIATION_FEATURE FEATURE ADAPTOR REF_FEATURE DISAMBIGUATE_SINGLE_NUCLEOTIDE_ALLELES)], @_);
 
     $ref_feature ||= $variation_feature->slice;
 
@@ -61,6 +62,37 @@ sub new {
 
     my @alleles = split /\//, $allele_string;
   
+    if ($disambiguate_sn_alleles) {
+        
+        # if this flag is set, disambiguate any ambiguous single nucleotide alleles, so  
+        # e.g. an allele string like T/M would be equivalent to an allele string of T/A/C
+        # we only do this for single nucleotide alleles to avoid the combinatorial explosion
+        # of long allele strings with potentially many ambiguous bases (because ensembl 
+        # genomes want this functionality)
+
+        my @possible_alleles;
+
+        for my $allele (@alleles) {
+            
+            if ($allele !~ /^[ACGT-]+$/ && length($allele) == 1) {
+                for my $possible ( split //, unambiguity_code($allele) ) {
+                    push @possible_alleles, $possible;
+                }
+            }
+            else {
+                # the allele is either unambiguous or longer than 1 nucleotide, so add it unaltered
+                push @possible_alleles, $allele;
+            }
+        }
+
+        @alleles = @possible_alleles;
+    }
+
+
+    # make sure the alleles are unique
+    
+    @alleles = keys %{ { map { $_ => 1 } @alleles } };
+
     # create an object representing the reference allele
     
     my $ref_vfoa = Bio::EnsEMBL::Variation::VariationFeatureOverlapAllele->new_fast({
