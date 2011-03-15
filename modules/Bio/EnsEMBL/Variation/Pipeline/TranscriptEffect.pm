@@ -43,8 +43,7 @@ sub run {
         or die "species is a required parameter";
 
     my $disambiguate_sn_alleles = 
-        $self->param('disambiguate_single_nucleotide_alleles') 
-            or die "missing disambiguation parameter";
+        $self->param('disambiguate_single_nucleotide_alleles'); 
  
     my $reg = 'Bio::EnsEMBL::Registry';
     
