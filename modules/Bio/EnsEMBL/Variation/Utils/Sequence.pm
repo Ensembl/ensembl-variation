@@ -61,7 +61,6 @@ use vars qw(@ISA @EXPORT_OK);
 
 @EXPORT_OK = qw(&ambiguity_code &variation_class &unambiguity_code &sequence_with_ambiguity &hgvs_variant_notation &SO_variation_class &align_seqs &strain_ambiguity_code);
 
-
 =head2 ambiguity_code
 
   Arg[1]      : string $alleles
@@ -303,14 +302,17 @@ sub SO_variation_class {
     
     $ref_correct = 1 unless defined $ref_correct;
 
+    # this string defines the character class allowable as an allele
+    my $allele_class = '[A-Z]';
+
     # default to sequence_alteration
     my $class = 'sequence_alteration';
 
-    if ($alleles =~ /^[ACGTN](\/[ACGTN])+$/) {
+    if ($alleles =~ /^$allele_class(\/$allele_class)+$/) {
         # A/T, A/T/G
         $class = 'SNV';
     }
-    elsif ($alleles =~ /^[ACTGN]+(\/[ACTGN]+)+$/) {
+    elsif ($alleles =~ /^$allele_class+(\/$allele_class+)+$/) {
         # AA/TTT
         $class = 'substitution';
     }
@@ -332,14 +334,14 @@ sub SO_variation_class {
                     $class = $ref_correct ? 'deletion' : 'indel';
                 }
 
-                unless (grep { $_ !~ /^[ACGTN]+$|INS/ } @alleles) {
+                unless (grep { $_ !~ /^$allele_class+$|INS/ } @alleles) {
                     # -/ATT, -/(LARGEINSERTION)
                     $class = $ref_correct ? 'insertion' : 'indel';
                 }
 
                 # else must be mixed insertion and deletion, so just called sequence_alteration
             }
-            elsif ($ref =~ /^[ACGTN]+$/) {
+            elsif ($ref =~ /^$allele_class+$/) {
                 unless (grep { $_ !~ /-|DEL/ } @alleles) {
                     # A/-, A/(LARGEDELETION)
                     $class = $ref_correct ? 'deletion' : 'indel';
