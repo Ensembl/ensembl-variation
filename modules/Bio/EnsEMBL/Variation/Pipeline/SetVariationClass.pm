@@ -29,6 +29,8 @@ sub run {
     
     my $temp_var_feat_table = $self->param('temp_var_feat_table')
         or die "temp_var_feat_table is required";
+ 
+    $self->dbc->disconnect_when_inactive(1);
 
     my $reg = 'Bio::EnsEMBL::Registry';
     
@@ -149,6 +151,8 @@ sub run {
             $v_insert_sth->execute($v_id, $attrib_id);
         }
     }
+
+    $self->dbc->disconnect_when_inactive(0);
 }
 
 1;
