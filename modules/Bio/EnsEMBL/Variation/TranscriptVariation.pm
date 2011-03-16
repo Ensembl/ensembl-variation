@@ -18,6 +18,44 @@
 
 =cut
 
+=head1 NAME
+
+Bio::EnsEMBL::Variation::TranscriptVariation
+
+=head1 SYNOPSIS
+
+    use Bio::EnsEMBL::Variation::TranscriptVariation;
+
+    my $tv = Bio::EnsEMBL::Variation::TranscriptVariation->new(
+        -transcript        => $transcript,
+        -cdna_start        => 1127,
+        -cdna_end          => 1127,
+        -cds_start         => 558,
+        -cds_end           => 558,
+        -translation_start => 318,
+        -translation_end   => 318,
+        -consequence_type  => 'NON_SYNONYMOUS_CODING'
+    );
+
+    print "variation: ", $tv->variation_feature->variation_name(), "\n";
+    print "transcript: ", $tv->transcript->stable_id, "\n";
+    print "consequence type: ", (join ",", @{$tv->consequence_type}), "\n";
+    print "cdna coords: ", $tv->cdna_start(), '-', $tv->cdna_end, "\n";
+    print "cds coords: ", $tv->cds_start, '-', $tv->cds_end, "\n";
+    print "pep coords: ", $tv->translation_start, '-',$tv->translation_end(), "\n";
+    print "amino acid change: ", $tv->pep_allele_string, "\n";
+    print "codon change: ", $tv->codons, "\n";
+
+=head1 DESCRIPTION
+
+A TranscriptVariation object represents a variation feature which is in close
+proximity to an Ensembl transcript. A TranscriptVariation object has several
+attributes which define the relationship of the variation to the transcript.
+
+=head1 METHODS
+
+=cut
+
 package Bio::EnsEMBL::Variation::TranscriptVariation;
 
 use strict;
@@ -27,6 +65,10 @@ use Bio::EnsEMBL::Variation::TranscriptVariationAllele;
 use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(overlap within_cds);
 
 use base qw(Bio::EnsEMBL::Variation::VariationFeatureOverlap);
+
+=head2 new
+
+=cut 
 
 sub new {
     my $class = shift;
@@ -58,20 +100,6 @@ sub transcript_stable_id {
 sub transcript {
     my ($self, $transcript) = @_;
     return $self->SUPER::feature($transcript, 'Transcript');
-}
-
-sub codon_position {
-    my ($self, $codon_pos) = @_;
-    
-    $self->{codon_position} = $codon_pos if defined $codon_pos;
-    
-    unless ($self->{codon_position}) {
-        if (defined $self->cdna_start) {
-            $self->{codon_position} = (($self->cdna_start - $self->transcript->cdna_coding_start) % 3) + 1;
-        }
-    }
-    
-    return $self->{codon_position};
 }
 
 sub cdna_start {
@@ -161,49 +189,49 @@ sub translation_end {
 }
 
 sub cdna_coords {
-    my ($self) = @_;
+    my $self = shift;
     
-    unless ($self->{cdna_coords}) {
+    unless ($self->{_cdna_coords}) {
         my $vf   = $self->variation_feature;
         my $tran = $self->transcript; 
-        $self->{cdna_coords} = [ $self->mapper->genomic2cdna($vf->seq_region_start, $vf->seq_region_end, $tran->strand) ];
+        $self->{_cdna_coords} = [ $self->mapper->genomic2cdna($vf->seq_region_start, $vf->seq_region_end, $tran->strand) ];
     }
     
-    return $self->{cdna_coords};
+    return $self->{_cdna_coords};
 }
 
 sub cds_coords {
-    my ($self) = @_;
+    my $self = shift;
     
-    unless ($self->{cds_coords}) {
+    unless ($self->{_cds_coords}) {
         my $vf   = $self->variation_feature;
         my $tran = $self->transcript; 
-        $self->{cds_coords} = [ $self->mapper->genomic2cds($vf->seq_region_start, $vf->seq_region_end, $tran->strand) ];
+        $self->{_cds_coords} = [ $self->mapper->genomic2cds($vf->seq_region_start, $vf->seq_region_end, $tran->strand) ];
     }
     
-    return $self->{cds_coords};
+    return $self->{_cds_coords};
 }
 
 sub translation_coords {
-    my ($self) = @_;
+    my $self = shift;
     
-    unless ($self->{translation_coords}) {
+    unless ($self->{_translation_coords}) {
         my $vf   = $self->variation_feature;
         my $tran = $self->transcript; 
-        $self->{translation_coords} = [ $self->mapper->genomic2pep($vf->seq_region_start, $vf->seq_region_end, $tran->strand) ];
+        $self->{_translation_coords} = [ $self->mapper->genomic2pep($vf->seq_region_start, $vf->seq_region_end, $tran->strand) ];
     }
     
-    return $self->{translation_coords};
+    return $self->{_translation_coords};
 }
 
-sub intron_effects {
-    my ($self) = @_;
+sub _intron_effects {
+    my $self = shift;
     
     # this method is a major bottle neck in the effect calculation code so 
     # we cache results and use local variables instead of method calls where
     # possible to speed things up - caveat bug-fixer!
     
-    unless ($self->{intron_effects}) {
+    unless ($self->{_intron_effects}) {
         
         my $vf = $self->variation_feature;
         
@@ -282,11 +310,29 @@ sub intron_effects {
             last if $found_effect;
         }
         
-        $self->{intron_effects} = $intron_effects;       
+        $self->{_intron_effects} = $intron_effects;       
     }
 
-    return $self->{intron_effects};
+    return $self->{_intron_effects};
 }
+
+sub codon_position {
+    my $self = shift;
+    
+    unless ($self->{_codon_position}) {
+
+        my $cdna_start = $self->cdna_start;
+        
+        my $tran_cdna_start = $self->transcript->cdna_coding_start;
+        
+        if (defined $cdna_start && defined $tran_cdna_start) {
+            $self->{_codon_position} = (($cdna_start - $tran_cdna_start) % 3) + 1;
+        }
+    }
+    
+    return $self->{_codon_position};
+}
+
 
 # NB: the methods below all cache their data in the associated transcript itself, this
 # gives a significant speed up when you are calculating the effect of all variations
@@ -295,7 +341,7 @@ sub intron_effects {
 # ourselves
 
 sub introns {
-    my ($self) = @_;
+    my $self = shift;
     
     my $tran = $self->transcript;
     
@@ -305,7 +351,7 @@ sub introns {
 }
 
 sub translateable_seq {
-    my ($self) = @_;
+    my $self = shift;
     
     my $tran = $self->transcript;
     
@@ -315,7 +361,7 @@ sub translateable_seq {
 }
 
 sub mapper {
-    my ($self) = @_;
+    my $self = shift;
     
     my $tran = $self->transcript;
     
@@ -325,7 +371,7 @@ sub mapper {
 }
   
 sub peptide {
-    my ($self) = @_;
+    my $self = shift;
     
     my $tran = $self->transcript;
     
@@ -341,7 +387,7 @@ sub peptide {
 }
 
 sub codon_table {
-    my ($self) = @_;
+    my $self = shift;
     
     my $tran = $self->transcript;
     
@@ -360,18 +406,53 @@ sub codon_table {
     return $codon_table;
 }
 
+sub pep_allele_string {
+    my $self = shift;
+    
+    unless ($self->{_pep_allele_string}) {
+        
+        my @peptides = grep { defined } map { $_->peptide } @{ $self->alleles };
+        
+        $self->{_pep_allele_string} = join '/', @peptides;
+    }
+    
+    return $self->{_pep_allele_string};
+}
+
+sub codons {
+    my $self = shift;
+    
+    unless ($self->{_display_codon_allele_string}) {
+  
+        my @display_codons = grep { defined } map { $_->display_codon } @{ $self->alleles }; 
+
+        $self->{_display_codon_allele_string} = join '/', @display_codons;
+    }
+
+    return $self->{_display_codon_allele_string};
+}
+
+sub affects_transcript {
+    my $self = shift;
+    return scalar grep { within_cds($_) } @{ $self->alt_alleles }; 
+}
+
 sub hgvs_genomic {
     return _hgvs_generic(@_,'genomic');
 }
+
 sub hgvs_coding {
     return _hgvs_generic(@_,'coding');
 }
+
 sub hgvs_protein {
     return _hgvs_generic(@_,'protein');
 }
+
 sub hgvs_rna {
     return _hgvs_generic(@_,'rna');
 }
+
 sub hgvs_mitochondrial {
     return _hgvs_generic(@_,'mitochondrial');
 }
@@ -402,51 +483,6 @@ sub _hgvs_generic {
     }
     
     return $hgvs;
-}
-
-sub pep_allele_string {
-    my $self = shift;
-    
-    unless ($self->{_pep_allele_string}) {
-        
-        my @peptides = grep {defined $_} map { $_->peptide } @{ $self->alleles };
-        
-        $self->{_pep_allele_string} = join '/', @peptides;
-    }
-    
-    return $self->{_pep_allele_string};
-}
-
-sub codons {
-    my $self = shift;
-    
-    unless ($self->{_codon_allele_string}) {
-   
-        if (defined $self->codon_position) {
-            
-            my @codons;
-
-            # codon_position is 1-based, while substr assumes the string starts at 0
-            my $pos = $self->codon_position - 1;
-            
-            for my $allele (@{ $self->alleles }) {
-                next unless $allele->codon;
-                my $codon = lc $allele->codon;
-                my $len = length $allele->feature_seq;
-                substr($codon, $pos, $len) = uc substr($codon, $pos, $len);
-                push @codons, $codon;
-            }
-
-            $self->{_codon_allele_string} = join '/', @codons;
-        }
-    }
-
-    return $self->{_codon_allele_string};
-}
-
-sub affects_transcript {
-    my $self = shift;
-    return scalar grep { within_cds($_) } @{ $self->alt_alleles }; 
 }
 
 1;
