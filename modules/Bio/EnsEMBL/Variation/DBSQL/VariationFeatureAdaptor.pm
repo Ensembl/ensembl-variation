@@ -690,7 +690,7 @@ sub _columns {
   return qw( vf.variation_feature_id vf.seq_region_id vf.seq_region_start
              vf.seq_region_end vf.seq_region_strand vf.variation_id
              vf.allele_string vf.variation_name vf.map_weight s.name vf.somatic 
-             vf.validation_status vf.consequence_type vf.class_attrib_id);
+             vf.validation_status vf.consequence_type+0 vf.class_attrib_id);
 }
 
 sub _objs_from_sth {
@@ -825,7 +825,7 @@ sub _objs_from_sth {
             $validation_status = 0 if (!defined $validation_status);
             my @states = split(',',$validation_status);
             
-            my @types = split(',',$consequence_type); #get the different consequence types
+            my $cons_types = $self->_transcript_variation_consequences_for_set_number($consequence_type);
             
             # consequence_type
             return $self->_create_feature_fast('Bio::EnsEMBL::Variation::VariationFeature',
@@ -844,7 +844,7 @@ sub _objs_from_sth {
                 'source'   => $source_name,
                 'is_somatic' => $is_somatic,
                 'validation_code' => \@states,
-                'consequence_type' => \@types || ['INTERGENIC'],
+                'consequence_type_objects' => $cons_types,
                 '_variation_id' => $variation_id,
                 'class_SO_term' => $aa->attrib_value_for_id($class_attrib_id),
                 }

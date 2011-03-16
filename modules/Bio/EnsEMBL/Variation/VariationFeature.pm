@@ -176,21 +176,21 @@ sub new {
     
   my $self = $class->SUPER::new(@_);
   my ($allele_str, $var_name, $map_weight, $variation, $variation_id, $source, 
-    $is_somatic, $validation_code, $consequence_type, $class_so_term) =
+    $is_somatic, $validation_code, $consequence_type_objects, $class_so_term) =
     rearrange([qw(ALLELE_STRING VARIATION_NAME 
                   MAP_WEIGHT VARIATION _VARIATION_ID SOURCE IS_SOMATIC VALIDATION_CODE 
-		  CONSEQUENCE_TYPE CLASS_SO_TERM)], @_);
+		  CONSEQUENCE_TYPE_OBJECTS CLASS_SO_TERM)], @_);
 
-  $self->{'allele_string'}      = $allele_str;
-  $self->{'variation_name'}     = $var_name;
-  $self->{'map_weight'}         = $map_weight;
-  $self->{'variation'}          = $variation;
-  $self->{'_variation_id'}      = $variation_id;
-  $self->{'source'}             = $source;
-  $self->{'is_somatic'}         = $is_somatic;
-  $self->{'validation_code'}    = $validation_code;
-  $self->{'consequence_type'}   = $consequence_type || ['INTERGENIC'];
-  $self->{'class_SO_term'}      = $class_so_term;
+  $self->{'allele_string'}              = $allele_str;
+  $self->{'variation_name'}             = $var_name;
+  $self->{'map_weight'}                 = $map_weight;
+  $self->{'variation'}                  = $variation;
+  $self->{'_variation_id'}              = $variation_id;
+  $self->{'source'}                     = $source;
+  $self->{'is_somatic'}                 = $is_somatic;
+  $self->{'validation_code'}            = $validation_code;
+  $self->{'consequence_type_objects'}   = $consequence_type_objects;
+  $self->{'class_SO_term'}              = $class_so_term;
   
   return $self;
 }
@@ -324,7 +324,7 @@ sub get_all_TranscriptVariations {
 
                 my $tva = $db->get_TranscriptVariationAdaptor;
 
-                my $tvs = $tva->fetch_all_by_VariationFeatures([$self],$transcripts);
+                my $tvs = $tva->fetch_all_by_VariationFeatures([$self], $transcripts);
                    
                 $self->{transcript_variations} = $tvs;
             }
@@ -426,6 +426,73 @@ sub variation {
   return $self->{'variation'};
 }
 
+sub consequence_type {
+    
+    my ($self, $consequence_type) = @_;
+
+    $self->{consequence_type} = $consequence_type if $consequence_type;
+
+    unless ($self->{consequence_type}) {
+
+        # set it using the consequence type objects
+        
+        my @terms = map { $_->display_term } @{ $self->consequence_type_objects };
+
+        # XXX: FIXME as a last resort set the consequence_type to intergenic
+        
+        $self->{consequence_type} = @terms ? \@terms : ['INTERGENIC'];
+    }
+    
+    return $self->{consequence_type};
+}
+
+sub consequence_type_objects {
+    my ($self, $consequence_type_objects) = @_;
+
+    $self->{consequence_type_objects} = $consequence_type_objects 
+        if $consequence_type_objects;
+
+    unless ($self->{consequence_type_objects}) {
+        
+        # work them out from the TranscriptVariations
+
+        # store them in a hash as we don't want duplicates from different TVs
+
+        my %cons_types;
+
+        for my $tv (@{ $self->get_all_TranscriptVariations }) {
+            for my $allele ($tv->alt_alleles) {
+                for my $cons ($allele->consequence_types) {
+                    $cons_types{$cons->SO_term} = $cons;
+                }
+            }
+        }
+
+        $self->{consequence_type_objects} = [ values %cons_types ];
+    }
+
+    return $self->{consequence_type_objects}
+}
+
+sub most_severe_consequence {
+    my $self = shift;
+    
+    unless ($self->{_most_severe_consequence}) {
+        
+        my $highest;
+        
+        for my $cons (@{ $self->consequence_type_objects }) {
+            $highest ||= $cons;
+            if ($cons->rank < $highest->rank) {
+                $highest = $cons;
+            }
+        }
+        
+        $self->{_most_severe_consequence} = $highest;
+    }
+    
+    return $self->{_most_severe_consequence};
+}
 
 =head2 display_consequence
 
@@ -440,45 +507,9 @@ sub variation {
 
 =cut
 
-sub display_consequence{
+sub display_consequence {
     my $self = shift;
-    my $gene = shift;
-  
-	$self->_update_consequence if $self->{'consequence_type'}->[0] eq 'INTERGENIC' and defined $self->{'transcriptVariations'};
- 
-    my $highest_priority;
-    if (!defined $gene){
-	#get the value to display from the consequence_type attribute
-	$highest_priority = 'INTERGENIC';
-	foreach my $ct (@{$self->get_consequence_type}){
-	    if ($CONSEQUENCE_TYPES{$ct} < $CONSEQUENCE_TYPES{$highest_priority}){
-		$highest_priority = $ct;
-	    }
-	}
-    }
-    else{
-	#first, get all the transcripts, if any
-	my $transcript_variations = $self->get_all_TranscriptVariations();
-	#if no transcripts, return INTERGENIC type
-	if (!defined $transcript_variations){
-	    return 'INTERGENIC';
-	}
-	if (!ref $gene || !$gene->isa("Bio::EnsEMBL::Gene")){
-	    throw("$gene is not a Bio::EnsEMBL::Gene type!");
-	}
-	my $transcripts = $gene->get_all_Transcripts();
-	my %transcripts_genes;
-	my @new_transcripts;
-	map {$transcripts_genes{$_->dbID()}++} @{$transcripts};
-	foreach my $transcript_variation (@{$transcript_variations}){
-	    if (exists $transcripts_genes{$transcript_variation->transcript->dbID()}){
-		push @new_transcripts,$transcript_variation;
-	    }
-	}
-	$highest_priority = $self->_highest_priority(\@new_transcripts);	
-    }
-
-    return $highest_priority;
+    return $self->most_severe_consequence->display_term;
 }
 
 =head2 add_consequence_type
@@ -498,14 +529,8 @@ sub display_consequence{
 
 sub add_consequence_type{
     my $self = shift;
-    my $consequence_type = shift;
 
-    if ($CONSEQUENCE_TYPES{$consequence_type}){
-	push @{$self->{'consequence_type'}}, $consequence_type;
-	return $self->{'consequence_type'};
-    }
-    warning("You are trying to set the consequence type to a non-allowed type. The allowed types are: ", keys %CONSEQUENCE_TYPES);
-    return '';
+    warning('Deprecated method');
 }
 
 =head2 get_consequence_type
@@ -525,232 +550,11 @@ sub add_consequence_type{
 =cut
 
 sub get_consequence_type {
-  my $self = shift;
-  my $gene = shift;
-  
-  $self->_update_consequence if $self->{'consequence_type'}->[0] eq 'INTERGENIC' and defined $self->{'transcriptVariations'};
-    
-  if(!defined $gene){
-    return $self->{'consequence_type'};
-  } 
-  else{
-      my $highest_priority;
-    #first, get all the transcripts, if any
-      my $transcript_variations = $self->get_all_TranscriptVariations();
-      #if no transcripts, return INTERGENIC type
-      if (!defined $transcript_variations){
-	  return ['INTERGENIC'];
-      }
-      if (!ref $gene || !$gene->isa("Bio::EnsEMBL::Gene")){
-	  throw("$gene is not a Bio::EnsEMBL::Gene type!");
-      }
-      my $transcripts = $gene->get_all_Transcripts();
-      my %transcripts_genes;
-      my @new_transcripts;
-      map {$transcripts_genes{$_->dbID()}++} @{$transcripts};
-      foreach my $transcript_variation (@{$transcript_variations}){
-	  if (exists $transcripts_genes{$transcript_variation->transcript->dbID()}){
-	    push @new_transcripts,$transcript_variation;
-	}
-      }
-      $highest_priority = $self->_highest_priority(\@new_transcripts);	
-      return $highest_priority;
-  }
-}
-
-
-=head2 add_splice_site
-
-    Arg [1]     : string $splice_site
-    Example     : $vf->add_splice_site('ESSENTIAL_SPLICE_SITE')
-    Description : Setter for the splice site type of this VariationFeature
-                  Allowed values are: 'ESSENTIAL_SPLICE_SITE', 'SPLICE_SITE'
-    ReturnType  : string
-    Exceptions  : none
-    Caller      : general
-
-
-sub add_splice_site{
     my $self = shift;
-    my $splice_site = shift;
 
-    return $self->{'splice_site'} = $splice_site if ($SPLICE_SITES{$splice_site});
-    warning("You are trying to set the splice site to a non-allowed type. The allowed types are: ", keys %SPLICE_SITES);
-    return '';
-}
+    warning('Deprecated method');
 
-=head2 get_splice_site
-
-   Arg[1]      : (optional) Bio::EnsEMBL::Gene $g
-   Example     : if($vf->get_splice_site eq 'SPLICE_SITE'){do_something();}
-   Description : Getter for the splice site of this variation, which is the highest of the transcripts that has.
-                 If an argument provided, gets the highest of the transcripts where the gene appears
-                 Allowed values are:'ESSENTIAL_SPLICE_SITES','SPLICE_SITE'
-   Returntype : string
-   Exceptions : throw if provided argument not a gene
-   Caller     : general
-
-
-sub get_splice_site{
-  my $self = shift;
-  my $gene = shift;
-    
-  if(!defined $gene){
-    return $self->{'splice_site'};
-  } 
-  else{
-      my $highest_priority;
-      #first, get all the transcripts, if any
-      my $transcript_variations = $self->get_all_TranscriptVariations();
-      #if no transcripts, return INTERGENIC type
-      if (!defined $transcript_variations){
-	  return '';
-      }
-      if (!ref $gene || !$gene->isa("Bio::EnsEMBL::Gene")){
-	  throw("$gene is not a Bio::EnsEMBL::Gene type!");
-      }
-      my $transcripts = $gene->get_all_Transcripts();
-      my %transcripts_genes;
-      my @new_transcripts;
-      map {$transcripts_genes{$_->dbID()}++} @{$transcripts};
-      foreach my $transcript_variation (@{$transcript_variations}){
-	  if (exists $transcripts_genes{$transcript_variation->transcript->dbID()}){
-	      push @new_transcripts,$transcript_variation;
-	  }
-      }
-      #get the highest type in the splice site
-      foreach my $tv (@new_transcripts){
-	  if ((defined $tv->splice_site) and ($SPLICE_SITES{$tv->splice_site} < $SPLICE_SITES{$highest_priority})){
-	      $highest_priority = $tv->splice_site;
-	  }
-      }      
-      return $highest_priority;      
-  }
-}
-
-=head2 add_regulatory_region
-
-    Arg [1]     : string $regulatory_region
-    Example     : $vf->add_regulatory_region('REGULATORY_REGION')
-    Description : Setter for the regulatory region type of this VariationFeature
-                  Allowed value is: 'REGULATORY_REGION'
-    ReturnType  : string
-    Exceptions  : none
-    Caller      : general
-
-
-sub add_regulatory_region{
-    my $self = shift;
-    my $regulatory_region = shift;
-
-    return $self->{'regulatory_region'} = $regulatory_region if ($REGULATORY_REGION{$regulatory_region});
-    warning("You are trying to set the regulatory_region to a non-allowed type. The allowed type is: ", keys %REGULATORY_REGION);
-    return '';
-}
-
-=head2 get_regulatory_region
-
-   Arg[1]      : (optional) Bio::EnsEMBL::Gene $g
-   Example     : if($vf->get_regulatory_region eq 'REGULATORY_REGION'){do_something();}
-   Description : Getter for the regulatory region of this variation
-                 If an argument provided, gets the highest of the transcripts where the gene appears
-                 Allowed value is :'REGULATORY_REGION'
-   Returntype : string
-   Exceptions : throw if provided argument is not a gene
-   Caller     : general
-
-
-sub get_regulatory_region{
-  my $self = shift;
-  my $gene = shift;
-    
-  if(!defined $gene){
-    return $self->{'regulatory_region'};
-  } 
-  else{
-      my $regulatory_region;
-      #first, get all the transcripts, if any
-      my $transcript_variations = $self->get_all_TranscriptVariations();
-      #if no transcripts, return INTERGENIC type
-      if (!defined $transcript_variations){
-	  return '';
-      }
-      if (!ref $gene || !$gene->isa("Bio::EnsEMBL::Gene")){
-	  throw("$gene is not a Bio::EnsEMBL::Gene type!");
-      }
-      my $transcripts = $gene->get_all_Transcripts();
-      my %transcripts_genes;
-      my @new_transcripts;
-      map {$transcripts_genes{$_->dbID()}++} @{$transcripts};
-      foreach my $transcript_variation (@{$transcript_variations}){
-	  if (exists $transcripts_genes{$transcript_variation->transcript->dbID()}){
-	      push @new_transcripts,$transcript_variation;
-	  }
-      }
-
-      foreach my $tv (@new_transcripts){
-	if (defined $tv->regulatory_region ()){
-	  $regulatory_region = $tv->regulatory_region();
-	  last;
-	}
-      }
-      return $regulatory_region;
-  }
-}
-
-=cut
-
-#for a list of transcript variations, gets the one with highest priority
-sub _highest_priority{
-    my $self= shift;
-    my $transcript_variations = shift;
-    my $highest_type = 'INTERGENIC';
-    my $highest_splice = '';
-    my $highest_regulatory = '';
-    my @highest_priority;
-    my %splice_site = ( 'ESSENTIAL_SPLICE_SITE' => 1,
-			'SPLICE_SITE'           => 2);
-    my %regulatory_region = ( 'REGULATORY_REGION' => 1);
-
-    foreach my $tv (@{$transcript_variations}){
- 	#with a frameshift coding, return, is the highest value
-	my $consequences = $tv->consequence_type; #returns a ref to array
-	foreach my $consequence_type (@{$consequences}){
-	    if (defined $splice_site{$consequence_type}){
-		if ((!defined $splice_site{$highest_splice}) || (defined $splice_site{$highest_splice} && $splice_site{$consequence_type} < $splice_site{$highest_splice})){
-		    $highest_splice = $consequence_type;
-		}
-	    }
-	    else{
-		if (defined $regulatory_region{$consequence_type}){
-		    if ((!defined $regulatory_region{$highest_regulatory}) || (defined $regulatory_region{$highest_regulatory} && $regulatory_region{$consequence_type} < $regulatory_region{$highest_regulatory})){
-			$highest_regulatory = $consequence_type;
-		    }
-		}
-		else{
-		    if (defined $CONSEQUENCE_TYPES{$consequence_type} && $CONSEQUENCE_TYPES{$consequence_type} < $CONSEQUENCE_TYPES{$highest_type}){
-			$highest_type = $consequence_type;
-		    }
-		}
-	    }
-	    
-	}
-	
-    }   
-    return ['INTERGENIC'] if (!defined $transcript_variations);
-    push @highest_priority, $highest_regulatory if ($highest_regulatory ne '');
-    push @highest_priority, $highest_splice if ($highest_splice ne '');
-    push @highest_priority, $highest_type;
-    
-    return \@highest_priority;
-}
-
-
-# internal sub-routine used to update the consequence type
-# when it has been calculated on the fly
-sub _update_consequence {
-  my $self = shift;
-  $self->{'consequence_type'} = $self->_highest_priority($self->{'transcriptVariations'}) || ['INTERGENIC'];
+    return $self->consequence_type;
 }
 
 =head2 ambig_code
