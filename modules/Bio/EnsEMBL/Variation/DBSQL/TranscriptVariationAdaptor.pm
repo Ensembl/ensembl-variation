@@ -223,7 +223,7 @@ sub _columns {
         variation_feature_id 
         feature_stable_id 
         allele_string 
-        consequence_types+0 
+        consequence_types 
         cds_start 
         cds_end 
         cdna_start 
