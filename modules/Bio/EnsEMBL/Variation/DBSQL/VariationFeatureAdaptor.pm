@@ -690,7 +690,7 @@ sub _columns {
   return qw( vf.variation_feature_id vf.seq_region_id vf.seq_region_start
              vf.seq_region_end vf.seq_region_strand vf.variation_id
              vf.allele_string vf.variation_name vf.map_weight s.name vf.somatic 
-             vf.validation_status vf.consequence_type+0 vf.class_attrib_id);
+             vf.validation_status vf.consequence_type vf.class_attrib_id);
 }
 
 sub _objs_from_sth {
@@ -825,8 +825,11 @@ sub _objs_from_sth {
             $validation_status = 0 if (!defined $validation_status);
             my @states = split(',',$validation_status);
             
-            my $cons_types = $self->_transcript_variation_consequences_for_set_number($consequence_type);
+            #my $cons_types = $self->_variation_feature_consequences_for_set_number($consequence_type);
             
+            my $cons_types = [ map { $self->_overlap_consequence_for_SO_term($_) } 
+                split /,/, $consequence_type ];
+
             # consequence_type
             return $self->_create_feature_fast('Bio::EnsEMBL::Variation::VariationFeature',
             #push @features, Bio::EnsEMBL::Variation::VariationFeature->new_fast(
