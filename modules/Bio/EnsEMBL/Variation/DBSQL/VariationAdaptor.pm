@@ -1150,10 +1150,10 @@ sub get_failed_description {
     if (defined($subsnp_id) && $subsnp_id ne 'rs') {
       #ÊStrip away any prefixes
       $subsnp_id =~ s/^[^\d]*(\d+)/$1/;
-      $constraint = qq{ fv.subsnp_id = '$subsnp_id' };
+      #$constraint = qq{ fv.subsnp_id = '$subsnp_id' };
     }
     else {
-      $constraint = qq{ fv.subsnp_id IS NULL };
+      #$constraint = qq{ fv.subsnp_id IS NULL };
       $subsnp_id = 'rs';
     }
     my $description = $self->_internal_get_failed_descriptions($dbID,$constraint);
@@ -1170,7 +1170,7 @@ sub _internal_get_failed_descriptions {
     my $stmt = qq{
       SELECT
         fv.variation_id,
-	IFNULL(fv.subsnp_id,'rs') AS subsnp_id,
+	#IFNULL(fv.subsnp_id,'rs') AS subsnp_id,
 	fd.description
       FROM
         failed_variation fv JOIN
