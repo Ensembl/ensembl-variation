@@ -27,14 +27,28 @@ use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(overlap);
 
 use base qw(Bio::EnsEMBL::Variation::VariationFeatureOverlapAllele);
 
+sub new_fast {
+    my ($self, $hashref) = @_;
+    
+    # swap a motif_feature_variation argument for a variation_feature_overlap one
+
+    if ($hashref->{motif_feature_variation}) {
+        $hashref->{variation_feature_overlap} = delete $hashref->{motif_feature_variation};
+    }
+    
+    # and call the superclass
+
+    return $self->SUPER::new_fast($hashref);
+}
+
 sub motif_feature_variation {
     my $self = shift;
-    return $self->variation_feature_overlap;
+    return $self->variation_feature_overlap(@_);
 }
 
 sub motif_feature {
     my $self = shift;
-    return $self->variation_feature_overlap->feature;
+    return $self->motif_feature_variation->motif_feature;
 }
 
 sub binding_affinity_change {
@@ -44,7 +58,7 @@ sub binding_affinity_change {
     unless ($self->{binding_affinity_change}) {
         
         my $vf = $self->motif_feature_variation->variation_feature;
-        my $mf = $self->motif_feature_variation->motif_feature;;
+        my $mf = $self->motif_feature;
         
         my $allele_seq      = $self->feature_seq;
         my $ref_allele_seq  = $self->motif_feature_variation->reference_allele->feature_seq;

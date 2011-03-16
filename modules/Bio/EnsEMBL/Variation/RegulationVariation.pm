@@ -25,11 +25,6 @@ use warnings;
 
 use base qw(Bio::EnsEMBL::Variation::VariationFeatureOverlap);
 
-sub new {
-    my $class = shift;
-    return $class->SUPER::new(@_);
-}
-
 sub feature_label {
     my ($self, $feature_label) = @_;
     $self->{feature_label} = $feature_label if $feature_label;
@@ -44,13 +39,6 @@ sub target_feature_stable_id {
     my ($self, $target_feature_stable_id) = @_;
     $self->{target_feature_stable_id} = $target_feature_stable_id if $target_feature_stable_id;
     return $self->{target_feature_stable_id};
-}
-
-sub _fake_stable_id {
-    my $self = shift;
-    my $f = $self->feature;
-    return $f->stable_id if $f->can('stable_id');
-    return join '_', $f->display_label, $f->seq_region_start, $f->seq_region_end
 }
 
 1;
