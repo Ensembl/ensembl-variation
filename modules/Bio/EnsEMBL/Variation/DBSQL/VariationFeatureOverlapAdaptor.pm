@@ -24,18 +24,16 @@ use warnings;
 package Bio::EnsEMBL::Variation::DBSQL::VariationFeatureOverlapAdaptor;
 
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
-use Bio::EnsEMBL::Variation::Utils::Constants qw(@OVERLAP_CONSEQUENCES);
 
 use base qw(Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor);
 
-sub _overlap_consequence_for_SO_term {
-    my ($self, $SO_term) = @_;
+sub new_fake {
+    my $class = shift;
+    my $species = shift;
 
-    unless ($self->{_oc_hash}) {
-        $self->{_oc_hash} = { map {$_->SO_term => $_} @OVERLAP_CONSEQUENCES };
-    }
+    my $self = bless {}, $class;
 
-    return $self->{_oc_hash}->{$SO_term};
+    return $self;
 }
 
 sub fetch_all_by_Features {
@@ -76,13 +74,13 @@ sub fetch_all_by_Features_with_constraint {
 sub fetch_all_by_VariationFeatures {
     
     my ($self, $vfs) = @_;
-    
+
     my $dbh = $self->dbc->db_handle;
    
     my %vfs_by_id = map { $_->dbID => $_ } @$vfs;
-    
+   
     my $id_str = join ',', keys %vfs_by_id;
-    
+
     my $full_constraint = "variation_feature_id in ( $id_str )";
     
     my $vfos = $self->generic_fetch($full_constraint);
