@@ -1216,7 +1216,7 @@ sub get_all_Alleles{
 	# now sort them by population, submitter, allele
 	my @new_alleles = sort {
 	  ($a->population ? $a->population->name : "") cmp ($b->population ? $b->population->name : "") ||
-	  ($a->subsnp ? $a->subsnp_handle : "") cmp ($b->subsnp ? $b->subsnp_handle : "") ||
+	  ($a->subsnp ? $a->subsnp : "") cmp ($b->subsnp ? $b->subsnp : "") ||
 	  $order{$b->allele} <=> $order{$a->allele}
 	} @alleles;
 	
@@ -1255,7 +1255,7 @@ sub get_all_PopulationGenotypes{
 	# now sort them by population, submitter, genotype
 	my @new_gens = sort {
 	  ($a->population ? $a->population->name : "") cmp ($b->population ? $b->population->name : "") ||
-	  ($a->subsnp ? $a->subsnp_handle : "") cmp ($b->subsnp ? $b->subsnp_handle : "") ||
+	  ($a->subsnp ? $a->subsnp : "") cmp ($b->subsnp ? $b->subsnp : "") ||
 	  $order{$b->allele1.$b->allele2} <=> $order{$a->allele1.$a->allele2}
 	} @gens;
 	
