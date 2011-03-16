@@ -193,8 +193,8 @@ sub donor_splice_site {
     my $tran    = $tva->transcript;
     
     return $tran->strand == 1 ? 
-        $tva->transcript_variation->intron_effects->{start_splice_site} :
-        $tva->transcript_variation->intron_effects->{end_splice_site};
+        $tva->transcript_variation->_intron_effects->{start_splice_site} :
+        $tva->transcript_variation->_intron_effects->{end_splice_site};
 }
 
 sub acceptor_splice_site {
@@ -202,8 +202,8 @@ sub acceptor_splice_site {
     my $tran    = $tva->transcript;
     
     return $tran->strand == 1 ? 
-        $tva->transcript_variation->intron_effects->{end_splice_site} :
-        $tva->transcript_variation->intron_effects->{start_splice_site};
+        $tva->transcript_variation->_intron_effects->{end_splice_site} :
+        $tva->transcript_variation->_intron_effects->{start_splice_site};
 }
 
 sub essential_splice_site {
@@ -215,13 +215,13 @@ sub essential_splice_site {
 sub splice_region {
     my $tva    = shift;
 
-    return $tva->transcript_variation->intron_effects->{splice_region};
+    return $tva->transcript_variation->_intron_effects->{splice_region};
 }
 
 sub within_intron {
     my $tva    = shift;
 
-    return $tva->transcript_variation->intron_effects->{intronic};
+    return $tva->transcript_variation->_intron_effects->{intronic};
 }
 
 sub within_cds {
@@ -512,7 +512,7 @@ sub within_coding_frameshift_intron {
     my $tva = shift;
     
     return (within_cds($tva) and 
-        $tva->transcript_variation->intron_effects->{within_frameshift_intron});
+        $tva->transcript_variation->_intron_effects->{within_frameshift_intron});
 }
 
 sub coding_other {
