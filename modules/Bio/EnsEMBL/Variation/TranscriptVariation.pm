@@ -163,7 +163,7 @@ sub cdna_coords {
     
     unless ($self->{cdna_coords}) {
         my $vf   = $self->variation_feature;
-        my $tran = $self->feature; 
+        my $tran = $self->transcript; 
         $self->{cdna_coords} = [ $self->mapper->genomic2cdna($vf->seq_region_start, $vf->seq_region_end, $tran->strand) ];
     }
     
@@ -175,7 +175,7 @@ sub cds_coords {
     
     unless ($self->{cds_coords}) {
         my $vf   = $self->variation_feature;
-        my $tran = $self->feature; 
+        my $tran = $self->transcript; 
         $self->{cds_coords} = [ $self->mapper->genomic2cds($vf->seq_region_start, $vf->seq_region_end, $tran->strand) ];
     }
     
@@ -187,7 +187,7 @@ sub translation_coords {
     
     unless ($self->{translation_coords}) {
         my $vf   = $self->variation_feature;
-        my $tran = $self->feature; 
+        my $tran = $self->transcript; 
         $self->{translation_coords} = [ $self->mapper->genomic2pep($vf->seq_region_start, $vf->seq_region_end, $tran->strand) ];
     }
     
@@ -295,7 +295,7 @@ sub intron_effects {
 sub introns {
     my ($self) = @_;
     
-    my $tran = $self->feature;
+    my $tran = $self->transcript;
     
     my $introns = $tran->{_variation_effect_feature_cache}->{introns} ||= $tran->get_all_Introns;
     
@@ -305,7 +305,7 @@ sub introns {
 sub translateable_seq {
     my ($self) = @_;
     
-    my $tran = $self->feature;
+    my $tran = $self->transcript;
     
     my $tran_seq = $tran->{_variation_effect_feature_cache}->{translateable_seq} ||= $tran->translateable_seq;
     
@@ -315,7 +315,7 @@ sub translateable_seq {
 sub mapper {
     my ($self) = @_;
     
-    my $tran = $self->feature;
+    my $tran = $self->transcript;
     
     my $mapper = $tran->{_variation_effect_feature_cache}->{mapper} ||= $tran->get_TranscriptMapper;
     
@@ -325,7 +325,7 @@ sub mapper {
 sub peptide {
     my ($self) = @_;
     
-    my $tran = $self->feature;
+    my $tran = $self->transcript;
     
     my $peptide = $tran->{_variation_effect_feature_cache}->{peptide};
     
@@ -341,7 +341,7 @@ sub peptide {
 sub codon_table {
     my ($self) = @_;
     
-    my $tran = $self->feature;
+    my $tran = $self->transcript;
     
     my $codon_table = $tran->{_variation_effect_feature_cache}->{codon_table};
     
