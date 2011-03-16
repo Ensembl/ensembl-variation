@@ -180,6 +180,7 @@ sub _objs_from_sth {
             my $ref_allele = Bio::EnsEMBL::Variation::TranscriptVariationAllele->new_fast({
                 is_reference                => 1,
                 variation_feature_allele    => $ref_allele,
+                transcript_variation        => $tv, 
                 codon                       => $ref_codon,
                 peptide                     => $ref_pep, 
             });
@@ -195,6 +196,7 @@ sub _objs_from_sth {
         my $allele = Bio::EnsEMBL::Variation::TranscriptVariationAllele->new_fast({
             is_reference                => 0,
             variation_feature_allele    => $alt_allele,
+            transcript_variation        => $tv, 
             codon                       => $alt_codon,
             peptide                     => $alt_pep,
             hgvs_genomic                => $hgvs_genomic,
