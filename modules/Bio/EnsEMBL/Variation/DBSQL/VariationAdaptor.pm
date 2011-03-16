@@ -1088,7 +1088,7 @@ sub has_failed_subsnps {
   my $self = shift;
   my $dbID = shift;
   
-  my $constraint = qq{ fv.subsnp_id IS NOT NULL };
+  my $constraint = qq{ EXISTS (SELECT 1 FROM allele a JOIN failed_allele fa ON (fa.allele_id = a.allele_id) WHERE a.variation_id = fv.variation_id) };
   my $description = $self->_internal_get_failed_descriptions($dbID,$constraint);
   
   return scalar(keys(%{$description}));
