@@ -82,6 +82,7 @@ use Bio::EnsEMBL::Variation::Allele;
 use Bio::EnsEMBL::Variation::VariationFeature;
 use Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor;
 use Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor;
+use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Utils::Iterator;
 
