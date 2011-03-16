@@ -51,6 +51,8 @@ package Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor;
 
 use Bio::EnsEMBL::DBSQL::BaseAdaptor;
 
+use Bio::EnsEMBL::Variation::Utils::Constants qw(@OVERLAP_CONSEQUENCES);
+
 our @ISA = ('Bio::EnsEMBL::DBSQL::BaseAdaptor');
 
 sub AttributeAdaptor {
@@ -61,6 +63,121 @@ sub AttributeAdaptor {
     }
     
     return $self->{_attribute_adaptor};
+}
+
+sub class_display_term_for_SO_term {
+    my ($self, $SO_term, $somatic) = @_;
+
+    my $display_term = $self->AttributeAdaptor->display_term_for_SO_term($SO_term);
+
+    if ($somatic) {
+        if ($display_term eq 'SNP') {
+            $display_term = 'SNV';
+        }
+
+        $display_term = 'somatic_'.$display_term;
+    }
+
+    return $display_term;
+}
+
+sub _overlap_consequence_for_SO_term {
+    my ($self, $SO_term) = @_;
+
+    unless ($self->{_oc_hash}) {
+        $self->{_oc_hash} = { map {$_->SO_term => $_} @OVERLAP_CONSEQUENCES };
+    }
+
+    return $self->{_oc_hash}->{$SO_term};
+}
+
+sub _consequence_type_map {
+    
+    # return a hash mapping between the string terms of a mysql set and
+    # the equivalent numerical values
+
+    my ($self, $table, $column) = @_;
+    
+    my $key = $table.'_'.$column.'_map';
+
+    unless ($self->{$key}) {
+
+        my $map_sth = $self->prepare(qq{SHOW COLUMNS FROM $table LIKE '$column'});
+        
+        $map_sth->execute;
+
+        my $types = $map_sth->fetchrow_hashref->{Type};
+
+        # Type will look like set('type1','type2'), so tidy it up a bit before splitting
+        
+        $types =~ s/set\(//;
+        $types =~ s/\)//;
+        $types =~ s/'//g;
+
+        my $map;
+
+        my $pow = 0;
+
+        # mysql assigns the set values in consecutive powers of 2, so so shall we
+
+        for my $type (split /,/, $types) {
+            $map->{$type} = 2**$pow++;
+        }
+
+        $self->{$key} = $map;
+    }
+    
+    return $self->{$key};
+}
+
+sub _consequences_for_set_number {
+    my ($self, $set_number, $map) = @_;
+
+    my @consequences;
+
+    for my $term (keys %$map) {
+        if ($set_number & $map->{$term}) {
+            push @consequences, $self->_overlap_consequence_for_SO_term($term);
+        }
+    }
+
+    return \@consequences;
+}
+
+sub _set_number_for_consequences {
+    my ($self, $cons_list, $map) = @_;
+
+    my $val = 0;
+
+    for my $cons (@$cons_list) {
+        $val |= $map->{$cons->SO_term};
+    }
+
+    return $val;
+}
+
+sub _transcript_variation_consequences_for_set_number {
+    my ($self, $set_number) = @_;
+    my $map = $self->_consequence_type_map('transcript_variation', 'consequence_types');
+    return $self->_consequences_for_set_number($set_number, $map);
+}
+
+sub _variation_feature_consequences_for_set_number {
+    my ($self, $set_number) = @_;
+    my $map = $self->_consequence_type_map('variation_feature', 'consequence_type');
+    return $self->_consequences_for_set_number($set_number, $map);
+}
+
+sub _transcript_variation_set_number_for_consequences {
+    my ($self, $cons) = @_;
+    my $map = $self->_consequence_type_map('transcript_variation', 'consequence_types');
+    return $self->_set_number_for_consequences($cons, $map);
+}
+
+sub _variation_feature_set_number_for_consequences {
+    my ($self, $cons) = @_;
+    my $map = $self->_consequence_type_map('variation_feature', 'consequence_type');
+    return $self->_set_number_for_consequences($cons, $map);
 }
 
 1;
