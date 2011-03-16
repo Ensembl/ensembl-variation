@@ -164,7 +164,6 @@ sub _objs_from_sth {
         
         unless ($tv) {
             $tv = Bio::EnsEMBL::Variation::TranscriptVariation->new_fast({
-                dbID                    => $variation_feature_id.','.$feature_stable_id,
                 _variation_feature_id   => $variation_feature_id,
                 _feature_stable_id      => $feature_stable_id,
                 cds_start               => $cds_start,
@@ -184,11 +183,15 @@ sub _objs_from_sth {
                 codon                       => $ref_codon,
                 peptide                     => $ref_pep, 
             });
+
+            $tv->reference_allele($ref_allele);
         }
-        
-        my @cons_types = map { $self->_overlap_consequence_for_SO_term($_) } 
-            split /,/, $consequence_types; # / comment exists to satisfy eclipse!
-        
+       
+        my $cons_types = $self->_transcript_variation_consequences_for_set_number($consequence_types);
+
+#        my $cons_types = [ map { $self->_overlap_consequence_for_SO_term($_) } 
+#            split /,/, $consequence_types ]; # / comment exists to satisfy eclipse!
+#        
         my $allele = Bio::EnsEMBL::Variation::TranscriptVariationAllele->new_fast({
             is_reference                => 0,
             variation_feature_allele    => $alt_allele,
@@ -197,7 +200,7 @@ sub _objs_from_sth {
             hgvs_genomic                => $hgvs_genomic,
             hgvs_coding                 => $hgvs_coding,
             hgvs_protein                => $hgvs_protein,
-            consequence_types           => \@cons_types, 
+            consequence_types           => $cons_types, 
             polyphen_prediction         => $polyphen_prediction,
             sift_prediction             => $sift_prediction, 
         });
@@ -220,7 +223,7 @@ sub _columns {
         variation_feature_id 
         feature_stable_id 
         allele_string 
-        consequence_types 
+        consequence_types+0 
         cds_start 
         cds_end 
         cdna_start 
