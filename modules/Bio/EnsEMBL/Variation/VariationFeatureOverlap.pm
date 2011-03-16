@@ -32,8 +32,22 @@ sub new {
 
     my $class = shift;
 
-    my ($variation_feature, $feature, $adaptor, $ref_feature, $disambiguate_sn_alleles) = 
-        rearrange([qw(VARIATION_FEATURE FEATURE ADAPTOR REF_FEATURE DISAMBIGUATE_SINGLE_NUCLEOTIDE_ALLELES)], @_);
+    my (
+        $variation_feature, 
+        $feature, 
+        $adaptor, 
+        $ref_feature, 
+        $disambiguate_sn_alleles
+    ) = rearrange([qw(
+            VARIATION_FEATURE 
+            FEATURE 
+            ADAPTOR 
+            REF_FEATURE 
+            DISAMBIGUATE_SINGLE_NUCLEOTIDE_ALLELES
+        )], @_);
+
+    die "Bio::EnsEMBL::Variation::VariationFeature argument required" unless $variation_feature;
+    die "Bio::EnsEMBL::Feature argument required" unless $feature;
 
     $ref_feature ||= $variation_feature->slice;
 
@@ -184,7 +198,7 @@ sub feature {
             
             my $get_method = 'get_'.$type.'Adaptor';
            
-            # XXX: this can doesn't work because the method is AUTOLOADed, need to rething this
+            # XXX: this can doesn't work because the method is AUTOLOADed, need to rethink this...
             #if ($adap->db->dnadb->can($get_method)) {
                 if (my $fa = $adap->db->dnadb->$get_method) {
                     
@@ -197,7 +211,6 @@ sub feature {
                     }
                     elsif (my $feature_label = $self->{_feature_label}) {
                         # get a slice covering the vf
-                        
                         
                         #for my $f ($fa->fetch_all_by_Slice_constraint)
                     }
@@ -258,7 +271,6 @@ sub _fetch_feature_for_stable_id {
 sub _fetch_adaptor_for_group {
     my ($self, $group) = @_;
     
-    
 }
 
 sub feature_stable_id {
@@ -300,6 +312,9 @@ sub consequence_type {
     
     unless ($self->{_consequence_type}) {
         
+        # find a unique list of all the consequence display terms
+        # of this VariationFeatureOverlap's alleles
+
         my %cons_types;
 
         for my $allele (@{ $self->alt_alleles }) {
