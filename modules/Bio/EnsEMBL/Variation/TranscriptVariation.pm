@@ -37,8 +37,7 @@ sub new {
 
     for my $arg (keys %args) {
         if (lc($arg) eq '-transcript') {
-            $args{'-feature'} = $args{$arg};
-            delete $args{$arg};
+            $args{'-feature'} = delete $args{$arg};
         }
     }
 
