@@ -66,7 +66,9 @@ sub codon_position {
     $self->{codon_position} = $codon_pos if defined $codon_pos;
     
     unless ($self->{codon_position}) {
-        $self->{codon_position} = (($self->cdna_start - $self->transcript->cdna_coding_start) % 3) + 1;
+        if (defined $self->cdna_start) {
+            $self->{codon_position} = (($self->cdna_start - $self->transcript->cdna_coding_start) % 3) + 1;
+        }
     }
     
     return $self->{codon_position};
@@ -419,22 +421,26 @@ sub codons {
     my $self = shift;
     
     unless ($self->{_codon_allele_string}) {
-        
-        my @codons,
-       
-        # codon_position is 1-based, while substr assumes the string starts at 0
-        my $pos = $self->codon_position - 1;
-        
-        for my $allele (@{ $self->alleles }) {
-            my $codon = lc $allele->codon;
-            my $len = length $allele->feature_seq;
-            substr($codon, $pos, $len) = uc substr($codon, $pos, $len);
-            push @codons, $codon;
-        }
+   
+        if (defined $self->codon_position) {
+            
+            my @codons;
 
-        $self->{_codon_allele_string} = join '/', @codons;
+            # codon_position is 1-based, while substr assumes the string starts at 0
+            my $pos = $self->codon_position - 1;
+            
+            for my $allele (@{ $self->alleles }) {
+                next unless $allele->codon;
+                my $codon = lc $allele->codon;
+                my $len = length $allele->feature_seq;
+                substr($codon, $pos, $len) = uc substr($codon, $pos, $len);
+                push @codons, $codon;
+            }
+
+            $self->{_codon_allele_string} = join '/', @codons;
+        }
     }
-    
+
     return $self->{_codon_allele_string};
 }
 
