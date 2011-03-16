@@ -30,9 +30,19 @@ use base qw(Bio::EnsEMBL::Variation::RegulationVariation);
 
 sub new {
     my $class = shift;
-    
+
+    my %args = @_;
+
+    # swap a '-regulatory_feature' argument for a '-feature' one for the superclass
+
+    for my $arg (keys %args) {
+        if (lc($arg) eq '-regulatory_feature') {
+            $args{'-feature'} = delete $args{$arg};
+        }
+    }
+   
     # call the superclass constructor
-    my $self = $class->SUPER::new(@_) || return undef;
+    my $self = $class->SUPER::new(%args) || return undef;
     
     # rebless the alleles from vfoas to rfvas
     map { bless $_, 'Bio::EnsEMBL::Variation::RegulatoryFeatureVariationAllele' } @{ $self->alleles };

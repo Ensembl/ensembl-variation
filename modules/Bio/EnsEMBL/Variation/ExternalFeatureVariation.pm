@@ -30,9 +30,19 @@ use base qw(Bio::EnsEMBL::Variation::RegulationVariation);
 
 sub new {
     my $class = shift;
-    
+
+    my %args = @_;
+
+    # swap a '-external_feature' argument for a '-feature' one for the superclass
+
+    for my $arg (keys %args) {
+        if (lc($arg) eq '-external_feature') {
+            $args{'-feature'} = delete $args{$arg};
+        }
+    }   
+
     # call the superclass constructor
-    my $self = $class->SUPER::new(@_) || return undef;
+    my $self = $class->SUPER::new(%args) || return undef;
     
     # rebless the alleles from vfoas to efvas
     map { bless $_, 'Bio::EnsEMBL::Variation::ExternalFeatureVariationAllele' } @{ $self->alleles };
@@ -57,18 +67,24 @@ sub target_feature_stable_id {
     
     unless ($self->{target_feature_stable_id}) {
         
+        # try to fetch it from the funcgen database
+
         if (my $species = $self->{adaptor}->db->species) {
             for my $entry (
-                @{ $self->feature->get_all_DBEntries($species.'_core_Transcript') }, 
-                @{ $self->feature->get_all_DBEntries($species.'_core_Gene') } ) {
+                @{ $self->external_feature->get_all_DBEntries($species.'_core_Transcript') }, 
+                @{ $self->external_feature->get_all_DBEntries($species.'_core_Gene') } ) {
                 if (my $id = $entry->primary_id) {
+
                     $self->{target_feature_stable_id} = $id;
+
+                    # there should never be more than one, so we last out of the loop
+                    
                     last;
                 }
             }
         }
         else {
-            warn "No ad"
+            warn "Failed to get species from adaptor";
         }
     }
     
