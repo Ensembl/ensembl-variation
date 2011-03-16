@@ -1364,6 +1364,15 @@ CREATE TABLE attrib_set (
 @table  protein_info
 
 @desc   Contains information about each translation in the ensembl proteome, used by the nsSNP prediction tables
+
+@column protein_position_id     Primary key
+@column transcript_stable_id    The stable ID of the transcript from which this protein is translated
+@column transcript_version      The version of the transcript
+@column translation_md5         A hexidecimal string representing the MD5 hash of the protein sequence
+
+@see    protein_position
+@see    sift_prediction
+@see    polyphen_prediction
 */
 CREATE TABLE protein_info (
     protein_info_id         int(10) unsigned NOT NULL AUTO_INCREMENT,
@@ -1379,6 +1388,17 @@ CREATE TABLE protein_info (
 @table  protein_position
 
 @desc   Table with a row for each position in every ensembl translation, used by the nsSNP prediction tables
+
+@column protein_position_id             Primary key
+@column protein_info_id                 Foreign key into the @link protein_info table, identifying the relevant protein
+@column position                        The coordinate in the protein sequence
+@column amino_acid                      The amino acid at this position
+@column sift_median_conservation        The median conservation at this position, as calculated by SIFT
+@column sift_num_sequences_represented  The number of sequences that SIFT found at this position in its multiple alignment
+
+@see    protein_info
+@see    sift_prediction
+@see    polyphen_prediction
 */
 CREATE TABLE protein_position (
     protein_position_id             int(10) unsigned NOT NULL AUTO_INCREMENT,
@@ -1395,7 +1415,18 @@ CREATE TABLE protein_position (
 /**
 @table  polyphen_prediction
 
-@desc   Stores the polyphen prediction for every possible amino acid substitution in the ensembl proteome
+@desc   Stores the PolyPhen 2 prediction for every possible amino acid substitution in the ensembl proteome
+
+@column polyphen_prediction_id  Primary key
+@column protein_position_id     Foreign key into the @link protein_position table identifying the protein and position that this prediction applies to
+@column amino_acid              The substituted amino acid
+@column prediction              The qualitative PolyPhen prediction for this substitution
+@column probability             The PolyPhen probability that this substitution is damaging
+@column compressed_result_hash  A compressed string representation of a Perl hash with further results from PolyPhen (not released)
+
+@see    protein_info
+@see    protein_position
+@see    sift_prediction
 */
 
 CREATE TABLE polyphen_prediction (
@@ -1413,7 +1444,17 @@ CREATE TABLE polyphen_prediction (
 /**
 @table  sift_prediction
 
-@desc   Stores the sift prediction for every possible amino acid substitution in the ensembl proteome
+@desc   Stores the SIFT prediction for every possible amino acid substitution in the ensembl proteome
+
+@column sift_prediction_id  Primary key
+@column protein_position_id Foreign key into the @link protein_position table identifying the protein and position that this prediction applies to
+@column amino_acid          The substituted amino acid
+@column prediction          The qualitative SIFT prediction for this substitution
+@column score               The SIFT score for this substitution
+
+@see    protein_info
+@see    protein_position
+@see    polyphen_prediction
 */
 CREATE table sift_prediction (
     sift_prediction_id      int(10) unsigned NOT NULL AUTO_INCREMENT,
