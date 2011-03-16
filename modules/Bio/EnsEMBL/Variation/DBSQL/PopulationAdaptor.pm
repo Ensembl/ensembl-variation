@@ -499,10 +499,6 @@ sub _objs_from_sth {
   $sth->bind_columns(\$pop_id, \$name, \$size, \$desc);
 
   while($sth->fetch()) {
-	### HACK FOR BROKEN 1KG DESCRIPTIONS ###
-	$desc = 'Pilot 2 trio study: Utah residents (CEPH) with Northern and Western European ancestry (CEU)' if $name eq '1000GENOMES:trio:CEU';
-	$desc = 'Pilot 2 trio study: Yoruba in Ibadan, Nigeria (YRI)' if $name eq '1000GENOMES:trio:YRI';
-	### END HACK ###
 	
     push @pops, Bio::EnsEMBL::Variation::Population->new
       (-dbID => $pop_id,
