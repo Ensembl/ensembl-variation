@@ -1016,11 +1016,11 @@ sub var_class{
             my %alleles; #to get all the different alleles in the Variation
             map {$alleles{$_->allele}++} @{$alleles};
             my $allele_string = join '/',keys %alleles;
-            
+
             $self->{class_SO_term} = SO_variation_class($allele_string);
         }
         
-        if (my $display_term = $self->{adaptor}->_display_term_for_SO_term(
+        if (my $display_term = $self->{adaptor}->class_display_term_for_SO_term(
                 $self->{class_SO_term}, 
                 $self->is_somatic
             ) ) {
