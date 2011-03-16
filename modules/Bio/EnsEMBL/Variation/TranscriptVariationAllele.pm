@@ -181,6 +181,35 @@ sub codon {
     return $self->{codon};
 }
 
+sub display_codon {
+    my $self = shift;
+
+    unless ($self->{_display_codon}) {
+
+        if ($self->codon && defined $self->transcript_variation->codon_position) {
+            
+            my $display_codon = lc $self->codon;
+
+            # if this allele is an indel then just return all lowercase
+            
+            if ($self->feature_seq ne '-') {
+                
+                # codon_position is 1-based, while substr assumes the string starts at 0
+                
+                my $pos = $self->transcript_variation->codon_position - 1;
+
+                my $len = length $self->feature_seq;
+
+                substr($display_codon, $pos, $len) = uc substr($display_codon, $pos, $len);
+            }
+
+            $self->{_display_codon} = $display_codon;
+        }
+    }
+
+    return $self->{_display_codon};
+}
+
 sub polyphen_prediction {
     my ($self, $polyphen_prediction) = @_;
     
