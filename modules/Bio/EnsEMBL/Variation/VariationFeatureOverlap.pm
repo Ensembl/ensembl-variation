@@ -183,8 +183,9 @@ sub feature {
         if (my $adap = $self->{adaptor}) {
             
             my $get_method = 'get_'.$type.'Adaptor';
-            
-            if ($adap->db->dnadb->can($get_method)) {
+           
+            # XXX: this can doesn't work because the method is AUTOLOADed, need to rething this
+            #if ($adap->db->dnadb->can($get_method)) {
                 if (my $fa = $adap->db->dnadb->$get_method) {
                     
                     # if we have a stable id for the feature use that
@@ -201,7 +202,7 @@ sub feature {
                         #for my $f ($fa->fetch_all_by_Slice_constraint)
                     }
                 }
-            }
+            #}
             else {
                 warn "Cannot get an adaptor for type: $type";
             }
