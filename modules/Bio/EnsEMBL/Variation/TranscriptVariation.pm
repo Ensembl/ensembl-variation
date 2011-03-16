@@ -30,10 +30,21 @@ use base qw(Bio::EnsEMBL::Variation::VariationFeatureOverlap);
 
 sub new {
     my $class = shift;
-    
+
+    my %args = @_;
+
+    # swap a '-transcript' argument for a '-feature' one for the superclass
+
+    for my $arg (keys %args) {
+        if (lc($arg) eq '-transcript') {
+            $args{'-feature'} = $args{$arg};
+            delete $args{$arg};
+        }
+    }
+
     # call the superclass constructor
-    my $self = $class->SUPER::new(@_) || return undef;
-    
+    my $self = $class->SUPER::new(%args) || return undef;
+
     # rebless the alleles from vfoas to tvas
     map { bless $_, 'Bio::EnsEMBL::Variation::TranscriptVariationAllele' } @{ $self->alleles };
     
