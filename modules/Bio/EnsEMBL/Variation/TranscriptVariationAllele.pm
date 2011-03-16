@@ -51,7 +51,7 @@ sub transcript {
 
 sub variation_feature {
     my $self = shift;
-    return $self->variation_feature_overlap->variation_feature;
+    return $self->transcript_variation->variation_feature;
 }
 
 sub pep_allele_string {
