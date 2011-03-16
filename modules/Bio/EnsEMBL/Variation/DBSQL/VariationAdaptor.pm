@@ -1170,6 +1170,7 @@ sub _internal_get_failed_descriptions {
     my $stmt = qq{
       SELECT
         fv.variation_id,
+        'rs' AS subsnp_id,
 	#IFNULL(fv.subsnp_id,'rs') AS subsnp_id,
 	fd.description
       FROM
