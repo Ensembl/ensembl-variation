@@ -305,53 +305,58 @@ sub map_weight{
 
 =cut
 
-sub get_all_TranscriptVariations{
+sub get_all_TranscriptVariations {
+    
     my $self = shift;
-    my $tr_ref = shift;
-    
-    if(defined($tr_ref) && ref($tr_ref) ne 'ARRAY') {
-      throw('Array Bio::EnsEMBL::Transcript expected');
+    my $transcripts = shift;
+
+    if(defined($transcripts) && ref($transcripts) ne 'ARRAY') {
+        throw('Arrayref of Bio::EnsEMBL::Transcripts expected');
     }
-    
-    if(!defined($self->{'transcriptVariations'}) && $self->{'adaptor'})    {
-	 
-	  my $tva;
-	  
-	  if($self->{'adaptor'}->db()) {
-		$tva = $self->{'adaptor'}->db()->get_TranscriptVariationAdaptor();
-	  }
-	  
-	  elsif($self->{'adaptor'}) {
-		$tva = Bio::EnsEMBL::Variation::DBSQL::TranscriptVariationAdaptor->new_fake($self->{'adaptor'}->{'species'});
-	  }
-	  
-	  #lazy-load from database on demand
-	  $tva->fetch_all_by_VariationFeatures([$self],$tr_ref);
-	  $self->{'transcriptVariations'} ||= [];
-	  
-	  # If a transcript array was specified, make sure the fetched TranscriptVariations aren't stored
-	  # so that a subsequent call to this function will load all TranscriptVariations
-	  if (defined($tr_ref)) {
-	    my $trvs = $self->{'transcriptVariations'};
-	    $self->{'transcriptVariations'} = undef;
-	    return $trvs;
-	  }
-	  # Only set the consequence type if no transcript list was specified
-	  else {
-		# now set the highest priority one
-	    $self->{'consequence_type'} = $self->_highest_priority($self->{'transcriptVariations'}); 
-	  }
+
+    unless ($self->{transcript_variations}) {
+        
+        if (my $db = $self->{adaptor}->db) {
+        
+            if($self->dbID) {
+        
+                # we can just fetch them from the database
+
+                my $tva = $db->get_TranscriptVariationAdaptor;
+
+                my $tvs = $tva->fetch_all_by_VariationFeatures([$self],$transcripts);
+                   
+                $self->{transcript_variations} = $tvs;
+            }
+            else {
+
+                # we have to build them ourselves
+            
+                unless ($transcripts) {
+                    $transcripts = $self->feature_Slice->expand(5000,5000)->get_all_Transcripts;
+                    my $tmp_trans;
+                    my $ta = $self->{adaptor}->db->dnadb->get_TranscriptAdaptor;
+                    for my $tran (@$transcripts) {
+                        push @$tmp_trans, $ta->fetch_by_stable_id($tran->stable_id);
+                    }
+                    $transcripts = $tmp_trans;
+                }
+
+                my $tvs;
+
+                for my $transcript (@$transcripts) {
+                    push @$tvs, Bio::EnsEMBL::Variation::TranscriptVariation->new(
+                        -variation_feature  => $self,
+                        -transcript         => $transcript,
+                    );
+                }
+
+                $self->{transcript_variations} = $tvs;
+            }
+        }
     }
-    # If TranscriptVariations have already been loaded, return only the ones corresponding to the desired transcripts
-    elsif (defined($self->{'transcriptVariations'}) && defined($tr_ref)) {
-      my @trvs;
-      foreach my $tv (@{$self->{'transcriptVariations'}}) {
-	push(@trvs,$tv) if (grep($_->stable_id() eq $tv->transcript_stable_id(),@{$tr_ref}));
-      }
-      return \@trvs;
-    }
-    
-    return $self->{'transcriptVariations'};
+
+    return $self->{transcript_variations};
 }
 
 =head2 add_TranscriptVariation
@@ -767,6 +772,7 @@ sub ambig_code{
 }
 
 =head2 var_class
+
     Args[1]      : (optional) no_db - don't use the term from the database, always calculate it from the allele string 
                    (used by the ensembl variation pipeline)
     Example      : my $variation_class = $vf->var_class()
