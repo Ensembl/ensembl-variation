@@ -682,13 +682,13 @@ create table variation_group_feature(
 @column cdna_end					The end position of variation in cdna coordinates.
 @column translation_start			The start position of variation on peptide.
 @column translation_end				The end position of variation on peptide.
-@codon_allele_string                The reference and variant codonds
-@pep_allele_string                  The reference and variant peptides
-@hgvs_genomic                       HGVS representation of this allele with respect to the genomic sequence
-@hgvs_coding                        HGVS representation of this allele with respect to the CDS
-@hgvs_protein                       HGVS representation of this allele with respect to the protein
-@polyphen_prediction                The PolyPhen prediction for the effect of this allele on the protein
-@sift_prediction                    The SIFT prediction for the effect of this allele on the protein 
+@column codon_allele_string                The reference and variant codons
+@column pep_allele_string                  The reference and variant peptides
+@column hgvs_genomic                       HGVS representation of this allele with respect to the genomic sequence
+@column hgvs_coding                        HGVS representation of this allele with respect to the CDS
+@column hgvs_protein                       HGVS representation of this allele with respect to the protein
+@column polyphen_prediction                The PolyPhen prediction for the effect of this allele on the protein
+@column sift_prediction                    The SIFT prediction for the effect of this allele on the protein 
 
 @see variation_feature
 */
@@ -1365,7 +1365,7 @@ CREATE TABLE attrib_set (
 
 @desc   Contains information about each translation in the ensembl proteome, used by the nsSNP prediction tables
 
-@column protein_position_id     Primary key
+@column protein_info_id     Primary key
 @column transcript_stable_id    The stable ID of the transcript from which this protein is translated
 @column transcript_version      The version of the transcript
 @column translation_md5         A hexidecimal string representing the MD5 hash of the protein sequence
