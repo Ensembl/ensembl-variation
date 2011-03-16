@@ -25,9 +25,23 @@ use warnings;
 
 use base qw(Bio::EnsEMBL::Variation::VariationFeatureOverlapAllele);
 
+sub new_fast {
+    my ($self, $hashref) = @_;
+    
+    # swap a transcript_variation argument for a variation_feature_overlap one
+
+    if ($hashref->{transcript_variation}) {
+        $hashref->{variation_feature_overlap} = delete $hashref->{transcript_variation};
+    }
+    
+    # and call the superclass
+
+    return $self->SUPER::new_fast($hashref);
+}
+
 sub transcript_variation {
     my $self = shift;
-    return $self->variation_feature_overlap;
+    return $self->variation_feature_overlap(@_);
 }
 
 sub transcript {
