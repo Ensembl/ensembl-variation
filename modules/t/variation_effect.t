@@ -5,24 +5,27 @@ use Test::More;
 
 use Data::Dumper;
 
+use FindBin qw($Bin);
+
 use Bio::EnsEMBL::Registry;
 use Bio::EnsEMBL::Variation::VariationFeature;
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
 
 BEGIN {
-    use_ok('Bio::EnsEMBL::Variation::TranscriptVariationNew');
+    use_ok('Bio::EnsEMBL::Variation::TranscriptVariation');
 }
 
 my $reg = 'Bio::EnsEMBL::Registry';
 
-$reg->load_all;
+$reg->load_all("$Bin/test.ensembl.registry");
+#$reg->load_all;
 
 my $cdba = $reg->get_DBAdaptor('human', 'core');
 my $vdba = $reg->get_DBAdaptor('human', 'variation');
 
 my $ta = $cdba->get_TranscriptAdaptor;
 my $vfa = $vdba->get_VariationFeatureAdaptor;
-my $tva = $vdba->get_TranscriptVariationNewAdaptor;
+my $tva = $vdba->get_TranscriptVariationAdaptor;
 
 my $transcript_tests;
 
@@ -949,7 +952,7 @@ $transcript_tests->{$mirna->stable_id}->{tests} = [
     }, {
         start   => $t_start + 40,
         end     => $t_start + 40,
-        effects => [qw(nc_transcript_variant mature_miRNA_variant)],
+        effects => [qw(mature_miRNA_variant)],
     }, 
 ];
 
@@ -1006,15 +1009,15 @@ for my $stable_id (keys %$transcript_tests) {
             -adaptor        => $vfa,
         );
 
-        my $tv = Bio::EnsEMBL::Variation::TranscriptVariationNew->new({
-            variation_feature   => $vf,
-            feature             => $tran,
-            adaptor             => $tva,
-        });
+        my $tv = Bio::EnsEMBL::Variation::TranscriptVariation->new(
+            -variation_feature  => $vf,
+            -transcript         => $tran,
+            -adaptor            => $tva,
+        );
 
         warn "# alleles: $allele_string\n";
-        warn '# codons: ', $tv->codons, "\n";
-        warn '# peptides: ', $tv->pep_allele_string, "\n";
+        warn '# codons: ', $tv->codons, "\n" if $tv->codons;
+        warn '# peptides: ', $tv->pep_allele_string, "\n" if $tv->pep_allele_string;
 
         my @effects = map {
             map { $_->SO_term } @{ $_->consequence_types }
@@ -1024,8 +1027,10 @@ for my $stable_id (keys %$transcript_tests) {
 
         #print "Got: ", (join ',', @effects), "\n";
 
+        my $strand = $tv->transcript->strand;
+
         # sort so that the order doesn't matter
-        is_deeply( [sort @effects], [sort @{ $test->{effects} }], "VF $test_count: $comment") 
+        is_deeply( [sort @effects], [sort @{ $test->{effects} }], "VF $test_count (strand $strand): $comment") 
             || (diag "Actually got: ", explain \@effects)  || die;
 
         if (my $expected_pep_alleles = $test->{pep_alleles}) {
