@@ -420,8 +420,18 @@ sub codons {
     
     unless ($self->{_codon_allele_string}) {
         
-        my @codons = grep {defined $_} map { $_->codon } @{ $self->alleles };
+        my @codons,
+       
+        # codon_position is 1-based, while substr assumes the string starts at 0
+        my $pos = $self->codon_position - 1;
         
+        for my $allele (@{ $self->alleles }) {
+            my $codon = lc $allele->codon;
+            my $len = length $allele->feature_seq;
+            substr($codon, $pos, $len) = uc substr($codon, $pos, $len);
+            push @codons, $codon;
+        }
+
         $self->{_codon_allele_string} = join '/', @codons;
     }
     
