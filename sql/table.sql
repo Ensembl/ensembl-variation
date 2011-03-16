@@ -31,7 +31,7 @@ create table variation (
 								 'submitter','doublehit',
 								 'hapmap','1000Genome',
 								 'failed','precious'),
-	ancestral_allele varchar(25000) DEFAULT NULL,
+	ancestral_allele varchar(255) DEFAULT NULL,
 	flipped tinyint(1) unsigned NULL DEFAULT NULL,
     class_attrib_id int(10) unsigned not null default 0,
     somatic tinyint(1) DEFAULT 0 NOT NULL,
