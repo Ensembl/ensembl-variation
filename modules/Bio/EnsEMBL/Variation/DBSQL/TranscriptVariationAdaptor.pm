@@ -187,11 +187,11 @@ sub _objs_from_sth {
             $tv->reference_allele($ref_allele);
         }
        
-        my $cons_types = $self->_transcript_variation_consequences_for_set_number($consequence_types);
+        #my $cons_types = $self->_transcript_variation_consequences_for_set_number($consequence_types);
 
-#        my $cons_types = [ map { $self->_overlap_consequence_for_SO_term($_) } 
-#            split /,/, $consequence_types ]; # / comment exists to satisfy eclipse!
-#        
+        my $cons_types = [ map { $self->_overlap_consequence_for_SO_term($_) } 
+            split /,/, $consequence_types ]; # / comment exists to satisfy eclipse!
+        
         my $allele = Bio::EnsEMBL::Variation::TranscriptVariationAllele->new_fast({
             is_reference                => 0,
             variation_feature_allele    => $alt_allele,
