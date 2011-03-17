@@ -76,6 +76,8 @@ our @OVERLAP_CONSEQUENCES = (
         SO_term => 'intergenic_variant',
         display_term => 'INTERGENIC',
         rank => '100',
+        description => 'More than 5 kb either upstream or downstream of a transcript',
+        label => 'Intergenic',
     },
     {
         SO_accession => 'SO:0001635',
@@ -85,6 +87,8 @@ our @OVERLAP_CONSEQUENCES = (
         feature_class => 'Bio::EnsEMBL::Transcript',
         rank => '20',
         predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::upstream_5KB',
+        description => 'Within 5 kb upstream of the 5 prime end of a transcript',
+        label => 'Upstream',
     },
     {
         SO_accession => 'SO:0001633',
@@ -94,6 +98,8 @@ our @OVERLAP_CONSEQUENCES = (
         feature_class => 'Bio::EnsEMBL::Transcript',
         rank => '21',
         predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::downstream_5KB',
+        description => 'Within 5 kb downstream of the 3 prime end of a transcript',
+        label => 'Downstream',
     },
     {
         SO_accession => 'SO:0001636',
@@ -104,6 +110,8 @@ our @OVERLAP_CONSEQUENCES = (
         feature_class => 'Bio::EnsEMBL::Transcript',
         rank => '18',
         predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::upstream_2KB',
+        description => 'Within 5 kb upstream of the 5 prime end of a transcript',
+        label => 'Upstream',
     },
     {
         SO_accession => 'SO:0001634',
@@ -114,6 +122,8 @@ our @OVERLAP_CONSEQUENCES = (
         feature_class => 'Bio::EnsEMBL::Transcript',
         rank => '19',
         predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::downstream_500B',
+        description => 'Within 5 kb downstream of the 3 prime end of a transcript',
+        label => 'Downstream',
     },
     {
         SO_accession => 'SO:0001575',
@@ -124,6 +134,8 @@ our @OVERLAP_CONSEQUENCES = (
         feature_class => 'Bio::EnsEMBL::Transcript',
         rank => '1',
         predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::donor_splice_site',
+        description => 'In the first 2 or the last 2 basepairs of an intron',
+        label => 'Essential splice site',
     },
     {
         SO_accession => 'SO:0001574',
@@ -134,6 +146,8 @@ our @OVERLAP_CONSEQUENCES = (
         feature_class => 'Bio::EnsEMBL::Transcript',
         rank => '1',
         predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::acceptor_splice_site',
+        description => 'In the first 2 or the last 2 basepairs of an intron',
+        label => 'Essential splice site',
     },
     {
         SO_accession => 'SO:0001630',
@@ -143,6 +157,8 @@ our @OVERLAP_CONSEQUENCES = (
         feature_class => 'Bio::EnsEMBL::Transcript',
         rank => '8',
         predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::splice_region',
+        description => '1-3 bps into an exon or 3-8 bps into an intron',
+        label => 'Essential splice site',
     },
     {
         SO_accession => 'SO:0001627',
@@ -153,6 +169,8 @@ our @OVERLAP_CONSEQUENCES = (
         feature_class => 'Bio::EnsEMBL::Transcript',
         rank => '15',
         predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::within_intron',
+        description => 'In intron',
+        label => 'Intronic',
     },
     {
         SO_accession => 'SO:0001623',
@@ -163,6 +181,8 @@ our @OVERLAP_CONSEQUENCES = (
         feature_class => 'Bio::EnsEMBL::Transcript',
         rank => '13',
         predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::within_5_prime_utr',
+        description => 'In 5 prime untranslated region',
+        label => '5 prime UTR',
     },
     {
         SO_accession => 'SO:0001624',
@@ -173,6 +193,8 @@ our @OVERLAP_CONSEQUENCES = (
         feature_class => 'Bio::EnsEMBL::Transcript',
         rank => '14',
         predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::within_3_prime_utr',
+        description => 'In 3 prime untranslated region',
+        label => '3 prime UTR',
     },
     {
         SO_accession => 'SO:0001577',
@@ -182,6 +204,8 @@ our @OVERLAP_CONSEQUENCES = (
         feature_class => 'Bio::EnsEMBL::Transcript',
         rank => '5',
         predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::complex_indel',
+        description => 'Insertion or deletion that spans an exon/intron or coding sequence/UTR border',
+        label => 'Complex in/del',
     },
     {
         SO_accession => 'SO:0001588',
@@ -192,6 +216,8 @@ our @OVERLAP_CONSEQUENCES = (
         feature_class => 'Bio::EnsEMBL::Transcript',
         rank => '10',
         predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::synonymous_codon',
+        description => 'In coding sequence, not resulting in an amino acid change (silent mutation)',
+        label => 'Synonymous coding',
     },
     {
         SO_accession => 'SO:0001583',
@@ -202,6 +228,8 @@ our @OVERLAP_CONSEQUENCES = (
         feature_class => 'Bio::EnsEMBL::Transcript',
         rank => '7',
         predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::non_synonymous_codon',
+        description => 'In coding sequence and results in an amino acid change in the encoded peptide sequence',
+        label => 'Non-synonymous coding',
     },
     {
         SO_accession => 'SO:0001651',
@@ -211,6 +239,8 @@ our @OVERLAP_CONSEQUENCES = (
         feature_class => 'Bio::EnsEMBL::Transcript',
         rank => '6',
         predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::inframe_codon_gain',
+        description => 'In coding sequence and results in an amino acid change in the encoded peptide sequence',
+        label => 'Non-synonymous coding',
     },
     {
         SO_accession => 'SO:0001652',
@@ -220,6 +250,8 @@ our @OVERLAP_CONSEQUENCES = (
         feature_class => 'Bio::EnsEMBL::Transcript',
         rank => '6',
         predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::inframe_codon_loss',
+        description => 'In coding sequence and results in an amino acid change in the encoded peptide sequence',
+        label => 'Non-synonymous coding',
     },
     {
         SO_accession => 'SO:0001587',
@@ -230,6 +262,8 @@ our @OVERLAP_CONSEQUENCES = (
         feature_class => 'Bio::EnsEMBL::Transcript',
         rank => '3',
         predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::stop_gained',
+        description => 'In coding sequence, resulting in the gain of a stop codon',
+        label => 'Stop gained',
     },
     {
         SO_accession => 'SO:0001578',
@@ -239,6 +273,8 @@ our @OVERLAP_CONSEQUENCES = (
         feature_class => 'Bio::EnsEMBL::Transcript',
         rank => '4',
         predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::stop_lost',
+        description => 'In coding sequence, resulting in the loss of a stop codon',
+        label => 'Stop lost',
     },
     {
         SO_accession => 'SO:0001567',
@@ -248,6 +284,8 @@ our @OVERLAP_CONSEQUENCES = (
         feature_class => 'Bio::EnsEMBL::Transcript',
         rank => '10',
         predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::stop_retained',
+        description => 'In coding sequence, not resulting in an amino acid change (silent mutation)',
+        label => 'Synonymous coding',
     },
     {
         SO_accession => 'SO:0001582',
@@ -257,6 +295,8 @@ our @OVERLAP_CONSEQUENCES = (
         feature_class => 'Bio::EnsEMBL::Transcript',
         rank => '7',
         predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::affects_start_codon',
+        description => 'In coding sequence and results in an amino acid change in the encoded peptide sequence',
+        label => 'Non-synonymous coding',
     },
     {
         SO_accession => 'SO:0001589',
@@ -267,6 +307,8 @@ our @OVERLAP_CONSEQUENCES = (
         feature_class => 'Bio::EnsEMBL::Transcript',
         rank => '6',
         predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::frameshift',
+        description => 'In coding sequence, resulting in a frameshift',
+        label => 'Frameshift coding',
     },
     {
         SO_accession => 'SO:0001626',
@@ -276,6 +318,8 @@ our @OVERLAP_CONSEQUENCES = (
         feature_class => 'Bio::EnsEMBL::Transcript',
         rank => '9',
         predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::partial_codon',
+        description => 'Located within the final, incomplete codon of a transcript whose end coordinate is unknown',
+        label => 'Partial codon',
     },
     {
         SO_accession => 'SO:0001621',
@@ -285,6 +329,8 @@ our @OVERLAP_CONSEQUENCES = (
         feature_class => 'Bio::EnsEMBL::Transcript',
         rank => '16',
         predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::within_nmd_transcript',
+        description => 'Located within a transcript predicted to undergo nonsense-mediated decay',
+        label => 'NMD transcript',
     },
     {
         SO_accession => 'SO:0001619',
@@ -294,6 +340,8 @@ our @OVERLAP_CONSEQUENCES = (
         feature_class => 'Bio::EnsEMBL::Transcript',
         rank => '17',
         predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::within_non_coding_gene',
+        description => 'Located within a gene that does not code for a protein',
+        label => 'Within non-coding gene',
     },
     {
         SO_accession => 'SO:0001620',
@@ -303,6 +351,8 @@ our @OVERLAP_CONSEQUENCES = (
         feature_class => 'Bio::EnsEMBL::Transcript',
         rank => '12',
         predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::within_mature_miRNA',
+        description => 'Located within a microRNA',
+        label => 'Within mature miRNA',
     },
     {
         SO_accession => 'SO:0001580',
@@ -312,6 +362,8 @@ our @OVERLAP_CONSEQUENCES = (
         feature_class => 'Bio::EnsEMBL::Transcript',
         rank => '11',
         predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::coding_unknown',
+        description => 'In coding sequence with indeterminate effect',
+        label => 'Coding unknown',
     },
     {
         SO_accession => 'SO:0001566',
@@ -321,6 +373,8 @@ our @OVERLAP_CONSEQUENCES = (
         feature_class => 'Bio::EnsEMBL::Funcgen::RegulatoryFeature',
         rank => '50',
         predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::within_regulatory_feature',
+        description => 'In regulatory region annotated by Ensembl',
+        label => 'Regulatory region',
     },
 #    {
 #        SO_accession => 'SO:X000005',
@@ -339,6 +393,8 @@ our @OVERLAP_CONSEQUENCES = (
         feature_class => 'Bio::EnsEMBL::Funcgen::ExternalFeature',
         rank => '13',
         predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::within_miRNA_target_site',
+        description => 'In regulatory region annotated by Ensembl',
+        label => 'Regulatory region',
     },
     {
         SO_accession => 'SO:X000003',
@@ -348,6 +404,8 @@ our @OVERLAP_CONSEQUENCES = (
         feature_class => 'Bio::EnsEMBL::Funcgen::MotifFeature',
         rank => '49',
         predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::within_motif_feature',
+        description => 'In regulatory region annotated by Ensembl',
+        label => 'Regulatory region',
     },
 
 #    {
