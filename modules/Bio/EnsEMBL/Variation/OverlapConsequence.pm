@@ -96,6 +96,18 @@ sub NCBI_term {
     return $self->{NCBI_term};
 }
 
+sub description {
+    my ($self, $description) = @_;
+    $self->{description} = $description if $description;
+    return $self->{description};
+}
+
+sub label {
+    my ($self, $label) = @_;
+    $self->{label} = $label if $label;
+    return $self->{label};
+}
+
 sub is_definitive {
     my ($self, $is_definitive) = @_;
     $self->{is_definitive} = $is_definitive if defined $is_definitive;
