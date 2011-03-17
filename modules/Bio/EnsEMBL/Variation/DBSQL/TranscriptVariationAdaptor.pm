@@ -18,6 +18,47 @@
 
 =cut
 
+=head1 NAME
+
+Bio::EnsEMBL::Variation::DBSQL::TranscriptVariationAdaptor
+
+=head1 SYNOPSIS
+    my $reg = 'Bio::EnsEMBL::Registry';
+  
+    $reg->load_registry_from_db(-host => 'ensembldb.ensembl.org',-user => 'anonymous');
+  
+    my $tva = $reg->get_adaptor('human','variation','TranscriptVariation');
+  
+    my $ta = $reg->get_adaptor('human','core','Transcript');
+    my $va = $reg->get_adaptor('human','variation','Variation');
+    my $vfa = $reg->get_adaptor('human','variation','VariationFeature');
+
+    # fetch all TranscriptVariations related to a Transcript
+    my $tran = $ta->fetch_by_stable_id('ENST00000380152');
+
+    for my $tv (@{ $tva->fetch_all_by_Transcripts([$tran]) }) {
+        print $tv->consequence_type, "\n";
+        print $tv->cdna_start, '-', $tv->cdna_end, "\n";
+    }
+    
+    # fetch all TranscriptVariations related to a VariationFeature
+    my $vf = $vfa->fetch_all_by_Variation($va->fetch_by_name('rs669'))->[0];
+
+    for my $tv (@{ $tva->fetch_all_by_VariationFeatures([$vf]) }) {
+        print $tv->transcript->stable_id, "\n";
+        print $tv->translation_start, '-', $tv->translation_end, "\n";
+    }
+    
+=head1 DESCRIPTION
+
+This adaptor allows you to fetch TranscriptVariation objects either by the Transcripts
+the associated VariationFeature falls in, or by VariationFeature directly. Storing
+TranscriptVariation objects in a variation schema database is also supported. In the
+database there will a separate row for each alternative allele of a TranscriptVariation, 
+but the methods here will fetch all alleles associated with the TranscriptVariation
+at once.
+
+=cut
 
 use strict;
 use warnings;
@@ -29,6 +70,14 @@ use Bio::EnsEMBL::Variation::TranscriptVariationAllele;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 
 use base qw(Bio::EnsEMBL::Variation::DBSQL::VariationFeatureOverlapAdaptor);
+
+=head2 store
+
+  Arg [1]    : Bio::EnsEMBL::Variation::TranscriptVariation $tv
+  Description: Store the TranscriptVariation in the database
+  Status     : At risk
+
+=cut
 
 sub store {
     my ($self, $tv) = @_;
@@ -83,15 +132,47 @@ sub store {
     }
 }
 
+=head2 fetch_all_by_Transcripts
+
+  Arg [1]    : listref of Bio::EnsEMBL::Transcripts
+  Description: Fetch all germline TranscriptVariations associated with the
+               given list of Transcripts
+  Returntype : listref of Bio::EnsEMBL::Variation::TranscriptVariations
+  Status     : At risk
+
+=cut
+
 sub fetch_all_by_Transcripts {
     my $self = shift;
     return $self->SUPER::fetch_all_by_Features(@_);
 }
 
+=head2 fetch_all_somatic_by_Transcripts
+
+  Arg [1]    : listref of Bio::EnsEMBL::Transcripts
+  Description: Fetch all somatic TranscriptVariations associated with the
+               given list of Transcripts
+  Returntype : listref of Bio::EnsEMBL::Variation::TranscriptVariations
+  Status     : At risk
+
+=cut
+
 sub fetch_all_somatic_by_Transcripts {
     my $self = shift;
     return $self->SUPER::fetch_all_somatic_by_Features(@_);
 }
+
+=head2 fetch_all_by_Transcripts_with_constraint
+
+  Arg [1]    : listref of Bio::EnsEMBL::Transcripts
+  Arg [2]    : extra SQL constraint for the query
+  Description: Fetch all TranscriptVariations associated with the
+               given list of Transcripts
+  Returntype : listref of Bio::EnsEMBL::Variation::TranscriptVariations
+  Status     : At risk
+
+=cut
+
 
 sub fetch_all_by_Transcripts_with_constraint {
     my $self = shift;
@@ -158,6 +239,13 @@ sub _objs_from_sth {
         # there is no / in the string
         $alt_pep ||= $ref_pep;
         
+        # for TranscriptVariations with multiple alternative alleles
+        # there will be multiple rows in the database, so we construct
+        # the TV object and the reference alleles object  when we see 
+        # the first row, but then only add extra allele objects when 
+        # we see further rows, we track existing TVs in the %tvs hash, 
+        # keyed by variation_feature_id and feature_stable_id
+
         my $key = $variation_feature_id.'_'.$feature_stable_id;
         
         my $tv = $tvs{$key};
@@ -242,10 +330,11 @@ sub _columns {
     );
 }
 
-# looks in the (sift|polyphen)_prediction table to see if there is 
-# a prediction for the given non-synonymous TranscriptVariationAllele
 sub _get_nsSNP_prediction {
     my ($self, $program, $tva) = @_;
+    
+    # look in the sift or polyphen prediction table to see if there is 
+    # a prediction for the given non-synonymous TranscriptVariationAllele
     
     return undef unless ($program eq 'polyphen' || $program eq 'sift');
     
