@@ -18,6 +18,20 @@
 
 =cut
 
+=head1 NAME
+
+Bio::EnsEMBL::Variation::DBSQL::VariationFeatureOverlapAdaptor
+
+=head1 DESCRIPTION
+
+This is the superclass of all Adaptors that fetch VariationFeatureOverlap
+objects and their various subclasses, and it provides methods common to
+all such adaptors, such as fetching by VariationFeature. You should not
+generally use this class directly, but instead use one of the feature
+specific adaptors such as the TranscriptVariationAdaptor.
+
+=cut
+ 
 use strict;
 use warnings;
 
@@ -36,15 +50,46 @@ sub new_fake {
     return $self;
 }
 
+=head2 fetch_all_by_Features
+
+  Arg [1]    : listref of Bio::EnsEMBL::Features, or subclasses
+  Description: Fetch all germline VariationFeatureOverlap objects associated 
+               with the given list of Features
+  Returntype : listref of Bio::EnsEMBL::Variation::VariationFeatureOverlap objects
+  Status     : At risk
+
+=cut
+
 sub fetch_all_by_Features {
     my ($self, $features) = @_;
     return $self->fetch_all_by_Features_with_constraint($features,'somatic = 0');
 }
 
+=head2 fetch_all_somatic_by_Features
+
+  Arg [1]    : listref of Bio::EnsEMBL::Features, or subclasses
+  Description: Fetch all somatic VariationFeatureOverlap objects associated 
+               with the given list of Features
+  Returntype : listref of Bio::EnsEMBL::Variation::VariationFeatureOverlap objects
+  Status     : At risk
+
+=cut
+
 sub fetch_all_somatic_by_Features {
     my ($self, $features) = @_;
     return $self->fetch_all_by_Features_with_constraint($features,'somatic = 1');
 }
+
+=head2 fetch_all_by_Features_with_constraint
+
+  Arg [1]    : listref of Bio::EnsEMBL::Features, or subclasses
+  Arg [2]    : extra SQL constraint for the query 
+  Description: Fetch all VariationFeatureOverlap objects associated 
+               with the given list of Features
+  Returntype : listref of Bio::EnsEMBL::Variation::VariationFeatureOverlap objects
+  Status     : At risk
+
+=cut
 
 sub fetch_all_by_Features_with_constraint {
     
@@ -70,6 +115,16 @@ sub fetch_all_by_Features_with_constraint {
     
     return $vfos;
 }
+
+=head2 fetch_all_by_VariationFeatures
+
+  Arg [1]    : listref of Bio::EnsEMBL::Variation::VariationFeatures
+  Description: Fetch all VariationFeatureOverlap objects associated 
+               with the given list of VariationFeatures
+  Returntype : listref of Bio::EnsEMBL::Variation::VariationFeatureOverlap objects
+  Status     : At risk
+
+=cut
 
 sub fetch_all_by_VariationFeatures {
     
