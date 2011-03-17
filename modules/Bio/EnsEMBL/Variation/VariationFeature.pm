@@ -446,6 +446,16 @@ sub consequence_type {
     return $self->{consequence_type};
 }
 
+# internal convenience method used by web code
+sub _list_all_consequences {
+  my $self = shift;
+  
+  my @list = ();
+  push @list, @{$_->consequence_type} foreach @{$self->get_all_TranscriptVariations};
+  
+  return \@list;
+}
+
 sub consequence_type_objects {
     my ($self, $consequence_type_objects) = @_;
 
