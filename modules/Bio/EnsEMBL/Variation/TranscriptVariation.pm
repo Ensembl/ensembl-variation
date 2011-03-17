@@ -85,7 +85,7 @@ use base qw(Bio::EnsEMBL::Variation::VariationFeatureOverlap);
                and a Transcript, most of the work is done in the VariationFeatureOverlap
                superclass - see there for more documentation.
   Returntype : A new Bio::EnsEMBL::Variation::TranscriptVariation instance 
-  Exceptions : dies unless both VARIATION_FEATURE and TRANSCRIPT are supplied
+  Exceptions : throws unless both VARIATION_FEATURE and TRANSCRIPT are supplied
   Status     : At Risk
 
 =cut 
