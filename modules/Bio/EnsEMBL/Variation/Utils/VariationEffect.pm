@@ -172,7 +172,7 @@ sub within_mature_miRNA {
     my ($attribute) = @{ $tran->get_all_Attributes('miRNA') };
     
     if (defined $attribute && $attribute->value =~ /(\d+)-(\d+)/) { 
-        for my $coord ($tv->mapper->cdna2genomic($1, $2, $tran->strand)) {
+        for my $coord ($tv->_mapper->cdna2genomic($1, $2, $tran->strand)) {
             if ($coord->isa('Bio::EnsEMBL::Mapper::Coordinate')) {
                 if (overlap(
                         $vf->seq_region_start, 
@@ -235,7 +235,7 @@ sub within_cds {
     if (@$cds_coords > 0) {
         for my $coord (@$cds_coords) {
             if ($coord->isa('Bio::EnsEMBL::Mapper::Coordinate')) {
-                if ($coord->end > 0 && $coord->start <= length($tv->translateable_seq)) { 
+                if ($coord->end > 0 && $coord->start <= length($tv->_translateable_seq)) { 
                     return 1;
                 }
             }
@@ -499,7 +499,7 @@ sub partial_codon {
     
     return 0 unless defined $tv->translation_start;
 
-    my $cds_length = length $tv->translateable_seq;
+    my $cds_length = length $tv->_translateable_seq;
 
     my $codon_cds_start = ($tv->translation_start * 3) - 2;
 
