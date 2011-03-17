@@ -46,8 +46,8 @@ sub new {
             DISAMBIGUATE_SINGLE_NUCLEOTIDE_ALLELES
         )], @_);
 
-    die "Bio::EnsEMBL::Variation::VariationFeature argument required" unless $variation_feature;
-    die "Bio::EnsEMBL::Feature argument required" unless $feature;
+    die "VariationFeature argument required" unless $variation_feature;
+    die "Feature argument required" unless $feature;
 
     $ref_feature ||= $variation_feature->slice;
 
@@ -58,9 +58,7 @@ sub new {
         ref_feature         => $ref_feature,
     }, $class;
     
-    # now look at each allele of the VariationFeature in turn
-    
-    # get the allele string, expand it, and split it into separate alleles
+    # we take the reference allele sequence from the reference sequence, not from the allele string 
     
     my $ref_allele = $ref_feature->subseq(
         $variation_feature->start, 
@@ -69,7 +67,9 @@ sub new {
     );
     
     $ref_allele = '-' unless $ref_allele;
-        
+
+    # get the variation feature allele string, expand it, and split it into separate alleles
+    
     my $allele_string = $variation_feature->allele_string;
     
     expand(\$allele_string);
@@ -102,18 +102,17 @@ sub new {
         @alleles = @possible_alleles;
     }
 
-
     # make sure the alleles are unique
     
     @alleles = keys %{ { map { $_ => 1 } @alleles } };
 
     # create an object representing the reference allele
     
-    my $ref_vfoa = Bio::EnsEMBL::Variation::VariationFeatureOverlapAllele->new_fast({
-        variation_feature_overlap   => $self,
-        variation_feature_seq       => $ref_allele,
-        is_reference                => 1,
-    });
+    my $ref_vfoa = Bio::EnsEMBL::Variation::VariationFeatureOverlapAllele->new(
+        -variation_feature_overlap   => $self,
+        -variation_feature_seq       => $ref_allele,
+        -is_reference                => 1,
+    );
     
     $self->reference_allele($ref_vfoa);
 
@@ -125,10 +124,11 @@ sub new {
         
         next if $allele eq $ref_allele;
         
-        my $vfoa = Bio::EnsEMBL::Variation::VariationFeatureOverlapAllele->new_fast({
-            variation_feature_overlap   => $self,
-            variation_feature_seq       => $allele,
-        });
+        my $vfoa = Bio::EnsEMBL::Variation::VariationFeatureOverlapAllele->new(
+            -variation_feature_overlap  => $self,
+            -variation_feature_seq      => $allele,
+            -is_reference               => 0,
+        );
         
         push @alt_alleles, $vfoa,
     }
@@ -226,6 +226,11 @@ sub feature {
 }
 
 sub _fetch_feature_for_stable_id {
+    
+    # we shouldn't actually need this method as there will apparently
+    # soon be core support for fetching any feature by its stable id, 
+    # but I'm waiting for core to add this...
+
     my ($self, $feature_stable_id) = @_;
     
     my $type_lookup = {
@@ -275,8 +280,8 @@ sub _fetch_adaptor_for_group {
 
 sub feature_stable_id {
     my $self = shift;
-    if ($self->{feature} && $self->{feature}->can('stable_id')) {
-        return $self->{feature}->stable_id;
+    if ($self->feature && $self->feature->can('stable_id')) {
+        return $self->feature->stable_id;
     }
     elsif (my $id = $self->{_feature_stable_id}) {
         return $id;
@@ -312,7 +317,7 @@ sub consequence_type {
     
     unless ($self->{_consequence_type}) {
         
-        # find a unique list of all the consequence display terms
+        # build up a unique list of all the consequence display terms
         # of this VariationFeatureOverlap's alleles
 
         my %cons_types;
