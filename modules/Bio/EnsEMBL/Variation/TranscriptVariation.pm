@@ -28,17 +28,9 @@ Bio::EnsEMBL::Variation::TranscriptVariation
 
     my $tv = Bio::EnsEMBL::Variation::TranscriptVariation->new(
         -transcript        => $transcript,
-        -cdna_start        => 1127,
-        -cdna_end          => 1127,
-        -cds_start         => 558,
-        -cds_end           => 558,
-        -translation_start => 318,
-        -translation_end   => 318,
-        -consequence_type  => 'NON_SYNONYMOUS_CODING'
+        -variation_feature => $var_feat
     );
 
-    print "variation: ", $tv->variation_feature->variation_name(), "\n";
-    print "transcript: ", $tv->transcript->stable_id, "\n";
     print "consequence type: ", (join ",", @{$tv->consequence_type}), "\n";
     print "cdna coords: ", $tv->cdna_start(), '-', $tv->cdna_end, "\n";
     print "cds coords: ", $tv->cds_start, '-', $tv->cds_end, "\n";
@@ -61,12 +53,42 @@ package Bio::EnsEMBL::Variation::TranscriptVariation;
 use strict;
 use warnings;
 
+use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Variation::TranscriptVariationAllele;
 use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(overlap within_cds);
 
 use base qw(Bio::EnsEMBL::Variation::VariationFeatureOverlap);
 
 =head2 new
+
+  Arg [-TRANSCRIPT] : 
+    The Bio::EnsEMBL::Transcript associated with the given VariationFeature
+
+  Arg [-VARIATION_FEATURE] :
+    The Bio::EnsEMBL::VariationFeature associated with the given Transcript
+
+  Arg [-ADAPTOR] :
+    A Bio::EnsEMBL::Variation::DBSQL::TranscriptVariationAdaptor
+
+  Arg [-DISAMBIGUATE_SINGLE_NUCLEOTIDE_ALLELES] :
+    A flag indiciating if ambiguous single nucleotide alleles should be disambiguated
+    when constructing the TranscriptVariationAllele objects, e.g. a Variationfeature
+    with an allele string like 'T/M' would be treated as if it were 'T/A/C'. We limit
+    ourselves to single nucleotide alleles to avoid the combinatorial explosion if we
+    allowed longer alleles with potentially many ambiguous bases.
+
+  Example : 
+    my $tv = Bio::EnsEMBL::Variation::TranscriptVariation->new(
+        -transcript        => $transcript,
+        -variation_feature => $var_feat
+    );
+
+  Description: Constructs a new TranscriptVariation instance given a VariationFeature
+               and a Transcript, most of the work is done in the VariationFeatureOverlap
+               superclass - see there for more documentation.
+  Returntype : A new Bio::EnsEMBL::Variation::TranscriptVariation instance 
+  Exceptions : dies unless both VARIATION_FEATURE and TRANSCRIPT are supplied
+  Status     : At Risk
 
 =cut 
 
@@ -92,15 +114,46 @@ sub new {
     return $self;
 }
 
+=head2 transcript_stable_id
+
+  Description: Returns the stable_id of the associated Transcript
+  Returntype : string
+  Exceptions : none
+  Status     : At Risk
+
+=cut
+
 sub transcript_stable_id {
     my $self = shift;
     return $self->SUPER::feature_stable_id(@_);
 }
 
+=head2 transcript
+
+  Description: Returns the associated Transcript
+  Returntype : Bio::EnsEMBL:Transcript
+  Exceptions : none
+  Status     : At Risk
+
+=cut
+
 sub transcript {
     my ($self, $transcript) = @_;
     return $self->SUPER::feature($transcript, 'Transcript');
 }
+
+=head2 cdna_start
+
+  Arg [1]    : (optional) int $start
+  Example    : $cdna_start = $tv->cdna_start;
+  Description: Getter/Setter for the start position of this variation on the
+               transcript in cDNA coordinates.
+  Returntype : int
+  Exceptions : None
+  Caller     : general
+  Status     : Stable
+
+=cut
 
 sub cdna_start {
     my ($self, $cdna_start) = @_;
@@ -119,6 +172,19 @@ sub cdna_start {
     return $self->{cdna_start};
 }
 
+=head2 cdna_end
+
+  Arg [1]    : (optional) int $end
+  Example    : $cdna_end = $tv->cdna_end;
+  Description: Getter/Setter for the end position of this variation on the
+               transcript in cDNA coordinates.
+  Returntype : int
+  Exceptions : None
+  Caller     : general
+  Status     : Stable
+
+=cut
+
 sub cdna_end {
     my ($self, $cdna_end) = @_;
     
@@ -129,6 +195,19 @@ sub cdna_end {
     
     return $self->{cdna_end};
 }
+
+=head2 cds_start
+
+  Arg [1]    : (optional) int $start
+  Example    : $cds_start = $tv->cds_start;
+  Description: Getter/Setter for the start position of this variation on the
+               transcript in CDS coordinates.
+  Returntype : int
+  Exceptions : None
+  Caller     : general
+  Status     : Stable
+
+=cut
 
 sub cds_start {
     my ($self, $cds_start) = @_;
@@ -149,6 +228,19 @@ sub cds_start {
     return $self->{cds_start};
 }
 
+=head2 cds_end
+
+  Arg [1]    : (optional) int $end
+  Example    : $cds_end = $tv->cds_end;
+  Description: Getter/Setter for the end position of this variation on the
+               transcript in CDS coordinates.
+  Returntype : int
+  Exceptions : None
+  Caller     : general
+  Status     : Stable
+
+=cut
+
 sub cds_end {
     my ($self, $cds_end) = @_;
     
@@ -159,6 +251,19 @@ sub cds_end {
     
     return $self->{cds_end};
 }
+
+=head2 translation_start
+
+  Arg [1]    : (optional) int $start
+  Example    : $translation_start = $tv->translation_start;
+  Description: Getter/Setter for the start position of this variation on the
+               transcript in peptide coordinates.
+  Returntype : int
+  Exceptions : None
+  Caller     : general
+  Status     : Stable
+
+=cut
 
 sub translation_start {
     my ($self, $translation_start) = @_;
@@ -177,6 +282,19 @@ sub translation_start {
     return $self->{translation_start};
 }
 
+=head2 translation_end
+
+  Arg [1]    : (optional) int $end
+  Example    : $transaltion_end = $tv->translation_end;
+  Description: Getter/Setter for the end position of this variation on the
+               transcript in peptide coordinates.
+  Returntype : int
+  Exceptions : None
+  Caller     : general
+  Status     : Stable
+
+=cut
+
 sub translation_end {
     my ($self, $translation_end) = @_;
     
@@ -188,17 +306,39 @@ sub translation_end {
     return $self->{translation_end};
 }
 
+=head2 cdna_coords
+
+  Description: Use the TranscriptMapper to calculate the cDNA 
+               coordinates of this variation
+  Returntype : listref of Bio::EnsEMBL::Coordinate and Bio::EnsEMBL::Gap objects
+  Exceptions : None
+  Caller     : general
+  Status     : Stable
+
+=cut
+
 sub cdna_coords {
     my $self = shift;
     
     unless ($self->{_cdna_coords}) {
         my $vf   = $self->variation_feature;
         my $tran = $self->transcript; 
-        $self->{_cdna_coords} = [ $self->mapper->genomic2cdna($vf->seq_region_start, $vf->seq_region_end, $tran->strand) ];
+        $self->{_cdna_coords} = [ $self->_mapper->genomic2cdna($vf->seq_region_start, $vf->seq_region_end, $tran->strand) ];
     }
     
     return $self->{_cdna_coords};
 }
+
+=head2 cds_coords
+
+  Description: Use the TranscriptMapper to calculate the CDS 
+               coordinates of this variation
+  Returntype : listref of Bio::EnsEMBL::Coordinate and Bio::EnsEMBL::Gap objects
+  Exceptions : None
+  Caller     : general
+  Status     : Stable
+
+=cut
 
 sub cds_coords {
     my $self = shift;
@@ -206,11 +346,22 @@ sub cds_coords {
     unless ($self->{_cds_coords}) {
         my $vf   = $self->variation_feature;
         my $tran = $self->transcript; 
-        $self->{_cds_coords} = [ $self->mapper->genomic2cds($vf->seq_region_start, $vf->seq_region_end, $tran->strand) ];
+        $self->{_cds_coords} = [ $self->_mapper->genomic2cds($vf->seq_region_start, $vf->seq_region_end, $tran->strand) ];
     }
     
     return $self->{_cds_coords};
 }
+
+=head2 translation_coords
+
+  Description: Use the TranscriptMapper to calculate the peptide
+               coordinates of this variation
+  Returntype : listref of Bio::EnsEMBL::Coordinate and Bio::EnsEMBL::Gap objects
+  Exceptions : None
+  Caller     : general
+  Status     : Stable
+
+=cut
 
 sub translation_coords {
     my $self = shift;
@@ -218,14 +369,110 @@ sub translation_coords {
     unless ($self->{_translation_coords}) {
         my $vf   = $self->variation_feature;
         my $tran = $self->transcript; 
-        $self->{_translation_coords} = [ $self->mapper->genomic2pep($vf->seq_region_start, $vf->seq_region_end, $tran->strand) ];
+        $self->{_translation_coords} = [ $self->_mapper->genomic2pep($vf->seq_region_start, $vf->seq_region_end, $tran->strand) ];
     }
     
     return $self->{_translation_coords};
 }
 
+=head2 pep_allele_string
+
+  Description: Return a '/' delimited string of amino acid codes representing
+               all the possible changes made to the peptide by this variation
+  Returntype : string
+  Exceptions : None
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub pep_allele_string {
+    my $self = shift;
+    
+    unless ($self->{_pep_allele_string}) {
+        
+        my @peptides = grep { defined } map { $_->peptide } @{ $self->alleles };
+        
+        $self->{_pep_allele_string} = join '/', @peptides;
+    }
+    
+    return $self->{_pep_allele_string};
+}
+
+=head2 codons
+
+  Description: Return a '/' delimited string of all possible codon sequences  
+               The variant sequence within the codon is be capitalised while 
+               the rest of the codon sequence is in lower case
+  Returntype : string
+  Exceptions : None
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub codons {
+    my $self = shift;
+    
+    unless ($self->{_display_codon_allele_string}) {
+  
+        my @display_codons = grep { defined } map { $_->display_codon } @{ $self->alleles }; 
+
+        $self->{_display_codon_allele_string} = join '/', @display_codons;
+    }
+
+    return $self->{_display_codon_allele_string};
+}
+
+=head2 codon_position
+
+  Description: For variations that fall in the CDS, returns the base in the
+               codon that this variation falls in
+  Returntype : int - 1, 2 or 3
+  Exceptions : None
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub codon_position {
+    my $self = shift;
+    
+    unless ($self->{_codon_position}) {
+
+        my $cdna_start = $self->cdna_start;
+        
+        my $tran_cdna_start = $self->transcript->cdna_coding_start;
+        
+        if (defined $cdna_start && defined $tran_cdna_start) {
+            $self->{_codon_position} = (($cdna_start - $tran_cdna_start) % 3) + 1;
+        }
+    }
+    
+    return $self->{_codon_position};
+}
+
+=head2 affects_transcript
+
+  Description: Check if any of this TranscriptVariation's alleles lie within
+               the CDS of the Transcript
+  Returntype : boolean
+  Exceptions : None
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub affects_transcript {
+    my $self = shift;
+    return scalar grep { within_cds($_) } @{ $self->alt_alleles }; 
+}
+
 sub _intron_effects {
     my $self = shift;
+
+    # internal method used by Bio::EnsEMBL::Variation::Utils::VariationEffect
+    # when calculating various consequence types
     
     # this method is a major bottle neck in the effect calculation code so 
     # we cache results and use local variables instead of method calls where
@@ -242,7 +489,7 @@ sub _intron_effects {
         my $vf_start = $vf->seq_region_start;
         my $vf_end   = $vf->seq_region_end;
 
-        for my $intron (@{ $self->introns }) {
+        for my $intron (@{ $self->_introns }) {
             
             my $intron_start = $intron->seq_region_start;
             my $intron_end   = $intron->seq_region_end;
@@ -316,31 +563,13 @@ sub _intron_effects {
     return $self->{_intron_effects};
 }
 
-sub codon_position {
-    my $self = shift;
-    
-    unless ($self->{_codon_position}) {
-
-        my $cdna_start = $self->cdna_start;
-        
-        my $tran_cdna_start = $self->transcript->cdna_coding_start;
-        
-        if (defined $cdna_start && defined $tran_cdna_start) {
-            $self->{_codon_position} = (($cdna_start - $tran_cdna_start) % 3) + 1;
-        }
-    }
-    
-    return $self->{_codon_position};
-}
-
-
 # NB: the methods below all cache their data in the associated transcript itself, this
 # gives a significant speed up when you are calculating the effect of all variations
 # on a transcript, and means that the cache will be freed when the transcript itself
 # is garbage collected rather than us having to maintain a transcript feature cache 
 # ourselves
 
-sub introns {
+sub _introns {
     my $self = shift;
     
     my $tran = $self->transcript;
@@ -350,7 +579,7 @@ sub introns {
     return $introns;
 }
 
-sub translateable_seq {
+sub _translateable_seq {
     my $self = shift;
     
     my $tran = $self->transcript;
@@ -360,7 +589,7 @@ sub translateable_seq {
     return $tran_seq;
 }
 
-sub mapper {
+sub _mapper {
     my $self = shift;
     
     my $tran = $self->transcript;
@@ -370,7 +599,7 @@ sub mapper {
     return $mapper;
 }
   
-sub peptide {
+sub _peptide {
     my $self = shift;
     
     my $tran = $self->transcript;
@@ -386,7 +615,7 @@ sub peptide {
     return $peptide;
 }
 
-sub codon_table {
+sub _codon_table {
     my $self = shift;
     
     my $tran = $self->transcript;
@@ -404,37 +633,6 @@ sub codon_table {
     }
     
     return $codon_table;
-}
-
-sub pep_allele_string {
-    my $self = shift;
-    
-    unless ($self->{_pep_allele_string}) {
-        
-        my @peptides = grep { defined } map { $_->peptide } @{ $self->alleles };
-        
-        $self->{_pep_allele_string} = join '/', @peptides;
-    }
-    
-    return $self->{_pep_allele_string};
-}
-
-sub codons {
-    my $self = shift;
-    
-    unless ($self->{_display_codon_allele_string}) {
-  
-        my @display_codons = grep { defined } map { $_->display_codon } @{ $self->alleles }; 
-
-        $self->{_display_codon_allele_string} = join '/', @display_codons;
-    }
-
-    return $self->{_display_codon_allele_string};
-}
-
-sub affects_transcript {
-    my $self = shift;
-    return scalar grep { within_cds($_) } @{ $self->alt_alleles }; 
 }
 
 sub hgvs_genomic {
