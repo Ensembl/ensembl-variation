@@ -44,8 +44,6 @@ A TranscriptVariation object represents a variation feature which is in close
 proximity to an Ensembl transcript. A TranscriptVariation object has several
 attributes which define the relationship of the variation to the transcript.
 
-=head1 METHODS
-
 =cut
 
 package Bio::EnsEMBL::Variation::TranscriptVariation;
@@ -401,9 +399,9 @@ sub pep_allele_string {
 
 =head2 codons
 
-  Description: Return a '/' delimited string of all possible codon sequences  
-               The variant sequence within the codon is be capitalised while 
-               the rest of the codon sequence is in lower case
+  Description: Return a '/' delimited string of all possible codon sequences.  
+               The variant sequence within the codon will be capitalised while 
+               the rest of the codon sequence will be in lower case
   Returntype : string
   Exceptions : None
   Caller     : general
