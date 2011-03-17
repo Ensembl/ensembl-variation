@@ -23,6 +23,7 @@ package Bio::EnsEMBL::Variation::VariationFeatureOverlap;
 use strict;
 use warnings;
 
+use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Utils::Argument qw(rearrange);
 use Bio::EnsEMBL::Utils::Sequence qw(expand);
 use Bio::EnsEMBL::Variation::Utils::Sequence qw(unambiguity_code);
@@ -46,8 +47,8 @@ sub new {
             DISAMBIGUATE_SINGLE_NUCLEOTIDE_ALLELES
         )], @_);
 
-    die "VariationFeature argument required" unless $variation_feature;
-    die "Feature argument required" unless $feature;
+    throw("VariationFeature argument required") unless $variation_feature;
+    throw("Feature argument required") unless $feature;
 
     $ref_feature ||= $variation_feature->slice;
 
