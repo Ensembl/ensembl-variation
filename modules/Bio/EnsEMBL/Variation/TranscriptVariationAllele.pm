@@ -94,7 +94,7 @@ sub peptide {
             # translate the codon sequence to establish the peptide allele
             
             # for mithocondrial dna we need to to use a different codon table
-            my $codon_table = $self->transcript_variation->codon_table;
+            my $codon_table = $self->transcript_variation->_codon_table;
             
             my $codon_seq = Bio::Seq->new(
                 -seq        => $codon,
@@ -124,7 +124,7 @@ sub peptide {
 sub codon {
     my ($self, $codon) = @_;
     
-    $self->{codon} = $codon if $codon;
+    $self->{codon} = $codon if defined $codon;
     
     my $tv = $self->transcript_variation;      
     
@@ -132,17 +132,13 @@ sub codon {
     
     return undef if $self->variation_feature_seq =~ /[^ACGT\-]/i;
     
-    return undef if $tv->variation_feature->variation_name =~ /^CN_/;
-    
     unless ($self->{codon}) {
       
-        # calculate the codon sequence
+        # try to calculate the codon sequence
     
         my $seq = $self->feature_seq;
         
         $seq = '' if $seq eq '-';
-        
-        my $cds = $tv->translateable_seq;
         
         # calculate necessary coords and lengths
         
@@ -160,8 +156,10 @@ sub codon {
                 return undef;
             }
         }
-        
+
         # splice the allele sequence into the CDS
+        
+        my $cds = $tv->_translateable_seq;
     
         substr($cds, $tv->cds_start-1, $vf_nt_len) = $seq;
         
