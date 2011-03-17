@@ -23,13 +23,34 @@ package Bio::EnsEMBL::Variation::VariationFeatureOverlapAllele;
 use strict;
 use warnings;
 
+use Bio::EnsEMBL::Utils::Argument qw(rearrange);
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
 use Bio::EnsEMBL::Variation::Utils::Constants qw(@OVERLAP_CONSEQUENCES);
 use Scalar::Util qw(weaken);
 
 sub new {
-    my ($class) = @_;
-    return bless {}, $class;
+    my $class = shift;
+
+    my (
+        $variation_feature_overlap, 
+        $variation_feature_seq, 
+        $is_reference, 
+    ) = rearrange([qw(
+            VARIATION_FEATURE_OVERLAP 
+            VARIATION_FEATURE_SEQ 
+            IS_REFERENCE
+        )], @_);
+
+    die "VariationFeatureOverlap argument required" unless $variation_feature_overlap;
+    die "Allele sequence required" unless $variation_feature_seq;
+
+    my $self = bless {
+        variation_feature_overlap   => $variation_feature_overlap,
+        variation_feature_seq       => $variation_feature_seq,
+        is_reference                => $is_reference,
+    }, $class;
+
+    return $self;
 }
 
 sub new_fast {
