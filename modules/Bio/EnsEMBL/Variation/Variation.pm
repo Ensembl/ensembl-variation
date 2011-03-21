@@ -235,12 +235,9 @@ sub new {
 
 =head2 is_failed
 
-  Arg [1]    : string $subsnp_id (optional)
-               The particular subsnp id to check the failed attribute for
-  Example    : $failed = $obj->is_failed('ss123456');
-  Description: Gets the failed attribute for this variation. If a subsnp_id is specified,
-               the failed attribute refers to that subsnp. The failed attributes
-	       are lazy-loaded from the database.
+  Example    : print "Variation '" . $var->name() . "' has " . ($var->is_failed() ? "" : "not ") . "been flagged as failed\n";
+  Description: Gets the failed attribute for this variation. The failed attribute
+	           is lazy-loaded from the database.
   Returntype : int
   Exceptions : none
   Caller     : general
@@ -250,15 +247,28 @@ sub new {
 
 sub is_failed {
   my $self = shift;
-  my $subsnp_id = shift;
   
-  return defined($self->failed_description(undef,$subsnp_id));
+  return (length($self->failed_description()) > 0);
 }
 
 =head2 has_failed_subsnps
 
-  Example    : $has_failed = $obj->has_failed_subsnps();
-  Description: Returns true if this variation has subsnps that are flagged as failed
+  Description: DEPRECATED: Use has_failed_alleles instead.
+  Status     : DEPRECATED
+
+=cut
+
+sub has_failed_subsnps {
+    my $self = shift;
+  
+    deprecate("has_failed_subsnps should no longer be used, use has_failed_alleles instead\n");
+    return $self->has_failed_alleles();
+}
+
+=head2 has_failed_alleles
+
+  Example    : print "Variation '" . $var->name() . "' has " . ($var->has_failed_alleles() ? "" : "no ") . " failed alleles\n";
+  Description: Returns true if this variation has alleles that are flagged as failed
   Returntype : int
   Exceptions : none
   Caller     : general
@@ -266,77 +276,90 @@ sub is_failed {
 
 =cut
 
-sub has_failed_subsnps {
-  my $self = shift;
+sub has_failed_alleles {
+    my $self = shift;
   
-  return $self->adaptor->has_failed_subsnps($self->dbID());
+    map {return 1 if ($_->is_failed())} @{$self->get_all_Alleles()};
+    return 0;
 }
 
 =head2 failed_description
 
-  Arg [1]    : string $failed_description (optional)
-	       The new value to set the failed_description attribute to 
-  Arg [2]    : string $subsnp_id (optional)
-               The particular subsnp id to check the failed attribute for
-  Example    : $failed_str = $obj->failed_description(undef,'ss123456');
-  Description: Get/Sets the failed attribute for this variation. If a subsnp_id is specified,
-               the failed description refers only to that subsnp. The failed
-	       descriptions are lazy-loaded from the database.
-  Returntype : string
-  Exceptions : none
+  Arg [1]    : $failed_description (optional)
+	           The new value to set the failed_description attribute to. Should 
+	           be a reference to a list of strings, alternatively a string can
+	           be passed. If multiple failed descriptions are specified, they should
+	           be separated with semi-colons.  
+  Example    : $failed_str = $var->failed_description();
+  Description: Get/Sets the failed description for this variation. The failed
+	           descriptions are lazy-loaded from the database.
+  Returntype : Semi-colon separated string 
+  Exceptions : Thrown on illegal argument.
   Caller     : general
   Status     : At risk
 
 =cut
 
 sub failed_description {
-  my $self = shift;
-  my $description = shift;
-  my $subsnp_id = shift;
+    my $self = shift;
+    my $description = shift;
   
-  #ÊIf the failed description for the entire variation is desired, use 0 for subsnp_id
-  $subsnp_id ||= 'rs';
-  
-  #ÊStrip any non-integer prefixes
-  $subsnp_id =~ s/^[^\d]*(\d+)/$1/;
-  
-  #ÊIf a description was specified, set the value. Also clear the '_all_failed_descriptions' cache.
-  if (defined($description)) {
-    $self->{'_failed_description'}{$subsnp_id} = $description;
-    delete($self->{'_all_failed_descriptions'}) if (exists($self->{'_all_failed_descriptions'}));
-  }
-  #ÊIf we don't know the description, lazy-load it from the database
-  elsif (!exists($self->{'_failed_description'}{$subsnp_id})) {
-    $self->{'_failed_description'}{$subsnp_id} = $self->adaptor->get_failed_description($self->{'dbID'},$subsnp_id);
-  }
-  
-  return $self->{'_failed_description'}{$subsnp_id};
+    # Update the description if necessary
+    if (defined($description)) {
+        
+        # If the description is a string, split it by semi-colon and take the reference
+        if (check_ref($description,'STRING')) {
+            my @pcs = split(/;/,$description);
+            $description = \@pcs;
+        }
+        # Throw an error if the description is not an arrayref
+        assert_ref($description.'ARRAY');
+        
+        # Update the cached failed_description
+        $self->{'failed_description'} = $description;
+    }
+    #ÊElse, fetch it from the db if it's not cached
+    elsif (!defined($self->{'failed_description'})) {
+        $self->{'failed_description'} = $self->get_all_failed_descriptions();
+    }
+    
+    # Return a semi-colon separated string of descriptions
+    return join(";",@{$self->{'failed_description'}});
 }
 
 =head2 get_all_failed_descriptions
 
-  Example     : my $failed_descriptions = $v->get_all_failed_descriptions();
-		print "The variation " . $v->name() . " and its subsnps have been failed with descriptions '" . join(",",@{$failed_descriptions}) . "'\n";
-		
-  Description : Gets the unique descriptions for the reasons why this variation and any failed subsnps have failed.
-  ReturnType  : reference to a list of strings
-  Exceptions  : none
-  Caller      : general
-  Status      : At Risk
+  Example    :  
+                if ($var->is_failed()) {
+                    my $descriptions = $var->get_all_failed_descriptions();
+                    print "Variation " . $var->name() . " has been flagged as failed because '";
+                    print join("' and '",@{$descriptions}) . "'\n";
+                }
+                
+  Description: Gets all failed descriptions associated with this Variation.
+  Returntype : Reference to a list of strings 
+  Exceptions : Thrown if an adaptor is not attached to this object.
+  Caller     : general
+  Status     : At risk
 
 =cut
 
 sub get_all_failed_descriptions {
   my $self = shift;
   
-  #ÊIf we don't know the descriptions, lazy-load them from the database
-  if (!exists($self->{'_all_failed_descriptions'})) {
-    $self->{'_all_failed_descriptions'} = $self->adaptor->get_all_failed_descriptions($self->{'dbID'});
-  }
-  
-  return $self->{'_all_failed_descriptions'};
+    #ÊIf the failed descriptions haven't been cached yet, load them from db
+    unless (defined($self->{'failed_description'})) {
+        
+        #ÊCheck that this allele has an adaptor attached
+        unless (defined($self->adaptor())) {
+            throw('An adaptor must be attached to the ' . ref($self)  . ' object');
+        }
+    
+        $self->{'failed_description'} = $self->adaptor->get_all_failed_descriptions($self);
+    }
+    
+    return $self->{'failed_description'};
 }
-
 
 =head2 add_Allele
 
