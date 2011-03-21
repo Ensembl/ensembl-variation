@@ -122,3 +122,40 @@ sub name{
   return $self->{'name'};
 }
 
+
+=head2 get_StructuralVariation
+  Example    : $sv = $obj->get_StructuralVariation()
+  Description: Getter of the structural variation supported by the supporting evidence. 
+  Returntype : Bio::EnsEMBL::Variation::StructuralVariation
+  Exceptions : none
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub get_StructuralVariation{
+  my $self = shift;
+
+	my $sva = $self->{'adaptor'}->db()->get_StructuralVariationAdaptor();
+	return $sva->fetch_by_dbID($self->{'structural_variation_id'});
+}
+
+
+=head2 is_structural_variation
+  Example    : $sv = $obj->is_structural_variation()
+  Description: Getter to determine if the supporting evidence is also a structural variant 
+  Returntype : Bio::EnsEMBL::Variation::StructuralVariation
+  Exceptions : none
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub is_structural_variation{
+  my $self = shift;
+
+	my $sva = $self->{'adaptor'}->db()->get_StructuralVariationAdaptor();
+	return $sva->fetch_by_name($self->{'name'});
+}
+1;
+
