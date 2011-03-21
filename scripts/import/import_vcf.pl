@@ -290,13 +290,20 @@ while(<$in_file_handle>) {
 		if($tables->{sample}) {
 			
 			# set location of first sample col
-			$first_sample_col = $headers{FORMAT} + 1;
-			$data->{first_sample_col} = $first_sample_col;
+			if(defined($headers{FORMAT})) {
+				$first_sample_col = $headers{FORMAT} + 1;
+				$data->{first_sample_col} = $first_sample_col;
+				
+				# populate sample tables and get sample_ids
+				&sample_tables($dbVar, $data, \@split);
+				
+				$sample_ids = $data->{sample_ids}
+			}
 			
-			# populate sample tables and get sample_ids
-			&sample_tables($dbVar, $data, \@split);
-			
-			$sample_ids = $data->{sample_ids}
+			# if no sample data
+			else {
+				delete $tables->{$_} foreach qw(individual_genotype_multiple_bp compressed_genotype_single_bp population_genotype);
+			}
 		}
 	}
 	
