@@ -80,6 +80,7 @@ package Bio::EnsEMBL::Variation::DBSQL::VariationAdaptor;
 
 use Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
+use Bio::EnsEMBL::Utils::Scalar qw(assert_ref);
 
 use Bio::EnsEMBL::Variation::Variation;
 use Bio::EnsEMBL::Variation::Allele;
@@ -1048,60 +1049,43 @@ sub _fetch_all_dbIDs_by_VariationSet {
 
 =head2 is_failed
 
-  Arg[1]      : int $dbID
-	        The internal database identifier for the variation to query
-  Arg[2]      : string $subsnp_id (optional)
-	        The ssId of the subsnp to query
-  Example     : $is_failed = $va->get_failed_status(100,'ss123456');
-  Description : Retrieves the failed flag for the specified variaiton (or, if specified, its subsnp_id)
-                from the database
-  ReturnType  : int
-  Exceptions  : none
-  Caller      : general
-  Status      : At Risk
+  Description : DEPRECATED. The appropriate subroutine on the Variation/Allele object should be used instead.
+  Exceptions  : Thrown on invocation.
+  Status      : DEPRECATED
 
 =cut
 
 sub is_failed {
   my $self = shift;
-  my $dbID = shift;
-  my $subsnp_id = shift;
   
-  return defined($self->get_failed_description($dbID,$subsnp_id));
+    throw("The is_failed subroutine in VariationAdaptor is deprecated. Use the appropriate subroutine on the Variation/Allele object instead");
 }
 
 =head2 has_failed_subsnps
 
-  Arg[1]      : int $dbID
-	        The internal database identifier for the variation to query
-  Example     : $has_failed = $va->has_failed_subsnps(100);
-  Description : Checks the database to see if any subsnps belonging to the specified variation
-		have been flagged as failed.
-  ReturnType  : int
-  Exceptions  : none
-  Caller      : general
-  Status      : At Risk
+  Description : DEPRECATED. Use has_failed_alleles on the Variation object instead.
+  Exceptions  : Thrown on invocation.
+  Status      : DEPRECATED
 
 =cut
 
 sub has_failed_subsnps {
-  my $self = shift;
-  my $dbID = shift;
+    my $self = shift;
   
-  my $constraint = qq{ EXISTS (SELECT 1 FROM allele a JOIN failed_allele fa ON (fa.allele_id = a.allele_id) WHERE a.variation_id = fv.variation_id) };
-  my $description = $self->_internal_get_failed_descriptions($dbID,$constraint);
-  
-  return scalar(keys(%{$description}));
+    throw("The has_failed_subsnps subroutine in VariationAdaptor is deprecated. Use has_failed_alleles on the Variation object instead");
 }
 
 =head2 get_all_failed_descriptions
 
-  Arg[1]      : int $dbID
-	        The internal database identifier for the variation to query
-  Example     : my $failed_descriptions = $va->get_all_failed_descriptions(100);
-		print "The variation with dbID $dbID and its subsnps have been failed with descriptions '" . join(",",@{$failed_descriptions}) . "'\n";
+  Arg[1]      : Bio::EnsEMBL::Variation::Variation $variation
+	               The variation object to get the failed descriptions for
+  Example     : 
+                my $failed_descriptions = $adaptor->get_all_failed_descriptions($var);
+                if (scalar(@{$failed_descriptions})) {
+		          print "The variation '" . $var->name() . "' has been flagged as failed because '" . join("' and '",@{$failed_descriptions}) . "'\n";
+                }
 		
-  Description : Gets the unique descriptions for the reasons why the supplied variation and any failed subsnps have failed.
+  Description : Gets the unique descriptions for the reasons why the supplied variation has failed.
   ReturnType  : reference to a list of strings
   Exceptions  : none
   Caller      : general
@@ -1111,83 +1095,55 @@ sub has_failed_subsnps {
 
 sub get_all_failed_descriptions {
     my $self = shift;
-    my $dbID = shift;
+    my $variation = shift;
     
-    my $description = $self->_internal_get_failed_descriptions($dbID);
+    #ÊCall the internal get method without any constraints
+    my $description = $self->_internal_get_failed_descriptions($variation) || [];
     
-    #ÊPut all the descriptions into a hash
-    my %descriptions;
-    map {$descriptions{$description->{$dbID}{$_}{'description'}}++} keys(%{$description->{$dbID}});
-    my @ret = keys(%descriptions);
-    
-    return \@ret;
+    return $description;
 }
 
 
 =head2 get_failed_description
 
-  Arg[1]      : int $dbID
-	        The internal database identifier for the variation to query
-  Arg[2]      : string $subsnp_id (optional)
-	        The ssId of the subsnp to query
-  Example     : my $failed_description = $va->get_failed_descriptions(100,'ss123456');
-		print "The subsnp $subsnp_id, belonging to the variation with dbID $dbID, has been failed because $failed_description\n";
-		
-  Description : Gets the description for the reasons why the supplied variation (or, if specified, the subsnp) has been flagged as failed.
-  ReturnType  : string
-  Exceptions  : none
-  Caller      : general
-  Status      : At Risk
+  Description : DEPRECATED. The appropriate subroutine on the Variation/Allele object should be used instead.
+  Exceptions  : Thrown on invocation.
+  Status      : DEPRECATED
 
 =cut
 
 sub get_failed_description {
     my $self = shift;
-    my $dbID = shift;
-    my $subsnp_id = shift;
     
-    my $constraint;
-    if (defined($subsnp_id) && $subsnp_id ne 'rs') {
-      #ÊStrip away any prefixes
-      $subsnp_id =~ s/^[^\d]*(\d+)/$1/;
-      #$constraint = qq{ fv.subsnp_id = '$subsnp_id' };
-    }
-    else {
-      #$constraint = qq{ fv.subsnp_id IS NULL };
-      $subsnp_id = 'rs';
-    }
-    my $description = $self->_internal_get_failed_descriptions($dbID,$constraint);
-    
-    return $description->{$dbID}{$subsnp_id}{'description'};
+    throw("The get_failed_description subroutine in VariationAdaptor is deprecated. Use the appropriate subroutine on the Variation/Allele object instead");
 }
 
 #ÊAPI-internal method for getting failed descriptions for a variation
 sub _internal_get_failed_descriptions {
     my $self = shift;
-    my $dbID = shift;
+    my $variation = shift;
     my $constraint = shift;
     
-    my $stmt = qq{
-      SELECT
-        fv.variation_id,
-        'rs' AS subsnp_id,
-	#IFNULL(fv.subsnp_id,'rs') AS subsnp_id,
-	fd.description
-      FROM
-        failed_variation fv JOIN
-	failed_description fd ON (
-	  fd.failed_description_id = fv.failed_description_id
-	)
-      WHERE
-        fv.variation_id = ?
-    };
+    # Assert that the object passed is a Variation
+    assert_ref($variation,'Bio::EnsEMBL::Variation::Variation');
     
+    my $stmt = qq{
+        SELECT DISTINCT
+            fd.description
+        FROM
+            failed_variation fv JOIN
+            failed_description fd ON (
+                fd.failed_description_id = fv.failed_description_id
+            )
+        WHERE
+            fv.variation_id = ?
+    };
     $stmt .= qq{ AND $constraint } if (defined($constraint));
     
     my $sth = $self->prepare($stmt);
-    $sth->execute($dbID);
+    $sth->execute($variation->dbID());
     
-    return $sth->fetchall_hashref(['variation_id','subsnp_id']);
+    return $sth->fetchall_arrayref([0]);
 }
 
 sub _get_flank_from_core{
