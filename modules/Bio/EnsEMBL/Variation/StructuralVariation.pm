@@ -567,4 +567,28 @@ sub external_reference{
   return $self->{'external_reference'} = shift if(@_);
   return $self->{'external_reference'};
 }
+
+
+
+=head2 is_supporting_structural_variation
+  Example    : $sv = $obj->is_supporting_structural_variation()
+  Description: Getter of the structural variation object for which this structural variant 
+	             is a supporting evidence. 
+  Returntype : A different Bio::EnsEMBL::Variation::StructuralVariation
+  Exceptions : none
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub is_supporting_structural_variation{
+  my $self = shift;
+
+	my $ssva = $self->{'adaptor'}->db()->get_SupportingStructuralVariationAdaptor();
+	my $ssv  = $ssva->fetch_by_name($self->{'variation_name'});
+	if (defined($ssv)) {
+		return $ssv->get_StructuralVariation;
+	}
+	else { return undef; }
+}
 1;
