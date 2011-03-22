@@ -25,7 +25,9 @@ use warnings;
 
 use base qw(Exporter);
 
-our @EXPORT_OK = qw(overlap within_cds);
+our @EXPORT_OK = qw(overlap within_cds MAX_DISTANCE_FROM_TRANSCRIPT);
+
+use constant MAX_DISTANCE_FROM_TRANSCRIPT => 5000;
 
 #package Bio::EnsEMBL::Variation::VariationFeatureOverlapAllele;
 
@@ -352,7 +354,7 @@ sub _get_peptide_alleles {
     
     return () unless defined $alt_pep;
     
-    my $ref_pep = $tv->reference_allele->peptide;
+    my $ref_pep = $tv->get_reference_TranscriptVariationAllele->peptide;
     
     $ref_pep = '' if $ref_pep eq '-';
     $alt_pep = '' if $alt_pep eq '-';
@@ -370,7 +372,7 @@ sub _get_codon_alleles {
     
     return () unless defined $alt_codon;
     
-    my $ref_codon = $tv->reference_allele->codon;
+    my $ref_codon = $tv->get_reference_TranscriptVariationAllele->codon;
     
     $ref_codon = '' if $ref_codon eq '-';
     $alt_codon = '' if $alt_codon eq '-';
@@ -527,7 +529,7 @@ sub coding_unknown {
     return (within_coding_frameshift_intron($tva) or coding_other($tva));
 }
 
-#package Bio::EnsEMBL::Variation::RegulatoryFeatureAllele;
+#package Bio::EnsEMBL::Variation::RegulatoryFeatureVariationAllele;
 
 sub within_regulatory_feature {
     my $rfva = shift;
@@ -536,10 +538,13 @@ sub within_regulatory_feature {
 
 #package Bio::EnsEMBL::Variation::ExternalFeatureVariationAllele;
 
+sub within_external_feature {
+    my $efva = shift;
+    return (within_feature($efva) and (not within_miRNA_target_site($efva)));
+}
+
 sub within_miRNA_target_site {
     my $efva = shift;
-    
-    return 0;
 
     my $fset = $efva->variation_feature_overlap->feature->feature_set;
 
@@ -548,13 +553,18 @@ sub within_miRNA_target_site {
 
 #package Bio::EnsEMBL::Variation::MotifFeatureVariationAllele;
 
+#sub within_motif_feature {
+#    my $mfva = shift;
+#    return (
+#        within_feature($mfva) and
+#        !increased_binding_affinity($mfva) and
+#        !decreased_binding_affinity($mfva) 
+#    );
+#}
+
 sub within_motif_feature {
     my $mfva = shift;
-    return (
-        within_feature($mfva) and
-        !increased_binding_affinity($mfva) and
-        !decreased_binding_affinity($mfva) 
-    );
+    return within_feature($mfva);
 }
 
 sub increased_binding_affinity {
