@@ -45,7 +45,8 @@ sub new {
     my $self = $class->SUPER::new(%args) || return undef;
     
     # rebless the alleles from vfoas to efvas
-    map { bless $_, 'Bio::EnsEMBL::Variation::ExternalFeatureVariationAllele' } @{ $self->alleles };
+    map { bless $_, 'Bio::EnsEMBL::Variation::ExternalFeatureVariationAllele' } 
+        @{ $self->get_all_ExternalFeatureVariationAlleles };
     
     return $self;
 }
@@ -58,6 +59,26 @@ sub external_feature_stable_id {
 sub external_feature {
     my ($self, $ef) = @_;
     return $self->SUPER::feature($ef, 'ExternalFeature');
+}
+
+sub add_ExternalFeatureVariationAllele {
+    my $self = shift;
+    return $self->SUPER::add_VariationFeatureOverlapAllele(@_);
+}
+
+sub get_reference_ExternalFeatureVariationAllele {
+    my $self = shift;
+    return $self->SUPER::get_reference_VariationFeatureOverlapAllele(@_);
+}
+
+sub get_all_alternate_ExternalFeatureVariationAlleles {
+    my $self = shift;
+    return $self->SUPER::get_all_alternate_VariationFeatureOverlapAlleles(@_);
+}
+
+sub get_all_ExternalFeatureVariationAlleles {
+    my $self = shift;
+    return $self->SUPER::get_all_VariationFeatureOverlapAlleles(@_);
 }
 
 sub target_feature_stable_id {

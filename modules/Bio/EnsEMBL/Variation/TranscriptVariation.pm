@@ -107,9 +107,30 @@ sub new {
     my $self = $class->SUPER::new(%args) || return undef;
 
     # rebless the alleles from vfoas to tvas
-    map { bless $_, 'Bio::EnsEMBL::Variation::TranscriptVariationAllele' } @{ $self->alleles };
+    map { bless $_, 'Bio::EnsEMBL::Variation::TranscriptVariationAllele' } 
+        @{ $self->get_all_TranscriptVariationAlleles };
     
     return $self;
+}
+
+sub add_TranscriptVariationAllele {
+    my $self = shift;
+    return $self->SUPER::add_VariationFeatureOverlapAllele(@_);
+}
+
+sub get_reference_TranscriptVariationAllele {
+    my $self = shift;
+    return $self->SUPER::get_reference_VariationFeatureOverlapAllele(@_);
+}
+
+sub get_all_alternate_TranscriptVariationAlleles {
+    my $self = shift;
+    return $self->SUPER::get_all_alternate_VariationFeatureOverlapAlleles(@_);
+}
+
+sub get_all_TranscriptVariationAlleles {
+    my $self = shift;
+    return $self->SUPER::get_all_VariationFeatureOverlapAlleles(@_);
 }
 
 =head2 transcript_stable_id
@@ -389,7 +410,7 @@ sub pep_allele_string {
     
     unless ($self->{_pep_allele_string}) {
         
-        my @peptides = grep { defined } map { $_->peptide } @{ $self->alleles };
+        my @peptides = grep { defined } map { $_->peptide } @{ $self->get_all_TranscriptVariationAlleles };
         
         $self->{_pep_allele_string} = join '/', @peptides;
     }
@@ -414,7 +435,7 @@ sub codons {
     
     unless ($self->{_display_codon_allele_string}) {
   
-        my @display_codons = grep { defined } map { $_->display_codon } @{ $self->alleles }; 
+        my @display_codons = grep { defined } map { $_->display_codon } @{ $self->get_all_TranscriptVariationAlleles }; 
 
         $self->{_display_codon_allele_string} = join '/', @display_codons;
     }
@@ -463,7 +484,7 @@ sub codon_position {
 
 sub affects_transcript {
     my $self = shift;
-    return scalar grep { within_cds($_) } @{ $self->alt_alleles }; 
+    return scalar grep { within_cds($_) } @{ $self->get_all_alternate_TranscriptVariationAlleles }; 
 }
 
 sub _intron_effects {
@@ -658,6 +679,8 @@ sub _hgvs_generic {
     my $reference = pop;
     my $hgvs = shift;
     
+    warn "GETTING HGVS";
+    
     #ÊThe rna and mitochondrial modes have not yet been implemented, so return undef in case we get a call to these
     return undef if ($reference =~ m/rna|mitochondrial/);
     
@@ -665,7 +688,7 @@ sub _hgvs_generic {
     my $sub = qq{hgvs_$reference};
     
     # Loop over the TranscriptVariationAllele objects associated with this TranscriptVariation
-    foreach my $tv_allele (@{$self->alt_alleles()}) {
+    foreach my $tv_allele (@{ $self->get_all_alternate_TranscriptVariationAlleles }) {
         
         #ÊIf an HGVS hash was supplied and the allele exists as key, set the HGVS notation for this allele
         if (defined($hgvs)) {

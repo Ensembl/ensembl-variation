@@ -45,7 +45,8 @@ sub new {
     my $self = $class->SUPER::new(%args) || return undef;
     
     # rebless the alleles from vfoas to rfvas
-    map { bless $_, 'Bio::EnsEMBL::Variation::RegulatoryFeatureVariationAllele' } @{ $self->alleles };
+    map { bless $_, 'Bio::EnsEMBL::Variation::RegulatoryFeatureVariationAllele' } 
+        @{ $self->get_all_RegulatoryFeatureVariationAlleles };
     
     return $self;
 }
@@ -58,6 +59,26 @@ sub regulatory_feature_stable_id {
 sub regulatory_feature {
     my ($self, $rf) = @_;
     return $self->SUPER::feature($rf, 'RegulatoryFeature');
+}
+
+sub add_RegulatoryFeatureVariationAllele {
+    my $self = shift;
+    return $self->SUPER::add_VariationFeatureOverlapAllele(@_);
+}
+
+sub get_reference_RegulatoryFeatureVariationAllele {
+    my $self = shift;
+    return $self->SUPER::get_reference_VariationFeatureOverlapAllele(@_);
+}
+
+sub get_all_alternate_RegulatoryFeatureVariationAlleles {
+    my $self = shift;
+    return $self->SUPER::get_all_alternate_VariationFeatureOverlapAlleles(@_);
+}
+
+sub get_all_RegulatoryFeatureVariationAlleles {
+    my $self = shift;
+    return $self->SUPER::get_all_VariationFeatureOverlapAlleles(@_);
 }
 
 1;

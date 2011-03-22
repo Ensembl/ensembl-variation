@@ -45,7 +45,8 @@ sub new {
     my $self = $class->SUPER::new(%args) || return undef;
     
     # rebless the alleles from vfoas to mfvas
-    map { bless $_, 'Bio::EnsEMBL::Variation::MotifFeatureVariationAllele' } @{ $self->alleles };
+    map { bless $_, 'Bio::EnsEMBL::Variation::MotifFeatureVariationAllele' } 
+        @{ $self->get_all_MotifFeatureVariationAlleles };
     
     return $self;
 }
@@ -58,6 +59,26 @@ sub motif_feature_stable_id {
 sub motif_feature {
     my ($self, $mf) = @_;
     return $self->SUPER::feature($mf, 'MotifFeature');
+}
+
+sub add_MotifFeatureVariationAllele {
+    my $self = shift;
+    return $self->SUPER::add_VariationFeatureOverlapAllele(@_);
+}
+
+sub get_reference_MotifFeatureVariationAllele {
+    my $self = shift;
+    return $self->SUPER::get_reference_VariationFeatureOverlapAllele(@_);
+}
+
+sub get_all_alternate_MotifFeatureVariationAlleles {
+    my $self = shift;
+    return $self->SUPER::get_all_alternate_VariationFeatureOverlapAlleles(@_);
+}
+
+sub get_all_MotifFeatureVariationAlleles {
+    my $self = shift;
+    return $self->SUPER::get_all_VariationFeatureOverlapAlleles(@_);
 }
 
 1;
