@@ -61,7 +61,7 @@ sub pep_allele_string {
     
     return undef unless $pep;
     
-    my $ref_pep = $self->transcript_variation->reference_allele->peptide;
+    my $ref_pep = $self->transcript_variation->get_reference_TranscripVariationAllele->peptide;
     
     return $ref_pep ne $pep ? $ref_pep.'/'.$pep : $pep;
 }
@@ -73,7 +73,7 @@ sub codon_allele_string {
     
     return undef unless $codon;
     
-    my $ref_codon = $self->transcript_variation->reference_allele->codon;
+    my $ref_codon = $self->transcript_variation->get_reference_TranscripVariationAllele->codon;
     
     return $ref_codon.'/'.$codon;
 }

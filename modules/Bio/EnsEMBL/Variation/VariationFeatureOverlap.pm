@@ -115,11 +115,9 @@ sub new {
         -is_reference                => 1,
     );
     
-    $self->reference_allele($ref_vfoa);
+    $self->add_VariationFeatureOverlapAllele($ref_vfoa);
 
     # create objects representing the alternate alleles
-    
-    my @alt_alleles;
     
     for my $allele (@alleles) {
         
@@ -130,11 +128,9 @@ sub new {
             -variation_feature_seq      => $allele,
             -is_reference               => 0,
         );
-        
-        push @alt_alleles, $vfoa,
+       
+        $self->add_VariationFeatureOverlapAllele($vfoa);
     }
-    
-    $self->alt_alleles(@alt_alleles);
     
     return $self;
 }
@@ -292,25 +288,38 @@ sub feature_stable_id {
     }
 }
 
-sub reference_allele {
-    my ($self, $reference_allele) = @_;
-    $self->{reference_allele} = $reference_allele if $reference_allele;
+sub add_VariationFeatureOverlapAllele {
+    my ($self, $vfoa) = @_;
+
+    unless ($vfoa && ref $vfoa && $vfoa->isa('Bio::EnsEMBL::Variation::VariationFeatureOverlapAllele')) {
+        throw("Argument must be a VariationFeatureOverlapAllele");
+    }
+
+    if ($vfoa->is_reference) {
+        $self->{reference_allele} = $vfoa;
+    }
+    else {
+        my $alt_alleles = $self->{alt_alleles} ||= [];
+        push @$alt_alleles, $vfoa;
+    }
+}
+
+sub get_reference_VariationFeatureOverlapAllele {
+    my $self = shift;
     return $self->{reference_allele};
 }
 
-sub alt_alleles {
-    my ($self, @new_alt_alleles) = @_;
-    
-    my $alt_alleles = $self->{alt_alleles} ||= [];
-
-    push @$alt_alleles, @new_alt_alleles if @new_alt_alleles;
-
-    return $alt_alleles;
+sub get_all_alternate_VariationFeatureOverlapAlleles {
+    my $self = shift;
+    return $self->{alt_alleles};
 }
 
-sub alleles {
-    my ($self) = @_;
-    return [ $self->reference_allele, @{ $self->alt_alleles } ];
+sub get_all_VariationFeatureOverlapAlleles {
+    my $self = shift;
+    return [ 
+        $self->get_reference_VariationFeatureOverlapAllele, 
+        @{ $self->get_all_alternate_VariationFeatureOverlapAlleles } 
+    ];
 }
 
 sub consequence_type {
@@ -323,7 +332,7 @@ sub consequence_type {
 
         my %cons_types;
 
-        for my $allele (@{ $self->alt_alleles }) {
+        for my $allele (@{ $self->get_all_alternate_VariationFeatureOverlapAlleles }) {
             for my $cons (@{ $allele->consequence_types }) {
                 $cons_types{$cons->display_term}++
             }
@@ -342,7 +351,7 @@ sub most_severe_consequence {
         
         my $highest;
         
-        for my $allele (@{ $self->alt_alleles }) {
+        for my $allele (@{ $self->get_all_alternate_VariationFeatureOverlapAlleles }) {
             for my $cons (@{ $allele->consequence_types }) {
                 $highest ||= $cons;
                 if ($cons->rank < $highest->rank) {

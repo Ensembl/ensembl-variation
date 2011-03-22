@@ -291,7 +291,7 @@ use warnings;
            
             if ($tv) {
 
-                for my $tva (@{ $tv->alt_alleles }) {
+                for my $tva (@{ $tv->get_all_alternate_TranscriptVariationAlleles }) {
 
                     for my $cons (@{ $tva->consequences }) {
 

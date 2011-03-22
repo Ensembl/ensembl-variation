@@ -61,7 +61,7 @@ sub binding_affinity_change {
         my $mf = $self->motif_feature;
         
         my $allele_seq      = $self->feature_seq;
-        my $ref_allele_seq  = $self->motif_feature_variation->reference_allele->feature_seq;
+        my $ref_allele_seq  = $self->motif_feature_variation->get_reference_MotifFeatureVariationAllele->feature_seq;
         
         if ($allele_seq eq '-' || 
             $ref_allele_seq eq '-' || 

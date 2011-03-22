@@ -131,7 +131,7 @@ sub dbID {
 sub allele_string {
     my ($self) = @_;
     
-    my $ref = $self->variation_feature_overlap->reference_allele->variation_feature_seq;
+    my $ref = $self->variation_feature_overlap->get_reference_VariationFeatureOverlapllele->variation_feature_seq;
     
     # for the HGMDs and CNV probes where the alleles are artificially set to be
     # the same, just return the reference sequence
