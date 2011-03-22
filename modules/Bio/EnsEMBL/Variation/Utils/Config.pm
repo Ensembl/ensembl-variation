@@ -407,6 +407,17 @@ our @OVERLAP_CONSEQUENCES = (
         description => 'In regulatory region annotated by Ensembl',
         label => 'Regulatory region',
     },
+    {
+        SO_accession => 'SO:0001566',
+        SO_term => 'regulatory_region_variant',
+        display_term => 'REGULATORY_REGION',
+        feature_SO_term => 'regulatory_region',
+        feature_class => 'Bio::EnsEMBL::Funcgen::ExternalFeature',
+        rank => '50',
+        predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::within_external_feature',
+        description => 'In regulatory region annotated by Ensembl',
+        label => 'Regulatory region',
+    },
 
 #    {
 #        SO_accession => 'SO:X000002',
