@@ -89,6 +89,7 @@ sub get_available_adaptors{
          'VariationSet' => 'Bio::EnsEMBL::Variation::DBSQL::VariationSetAdaptor',
          'OverlapConsequence' => 'Bio::EnsEMBL::Variation::DBSQL::OverlapConsequenceAdaptor',
          'Attribute' => 'Bio::EnsEMBL::Variation::DBSQL::AttributeAdaptor',
+         'Allele' => 'Bio::EnsEMBL::Variation::DBSQL::AlleleAdaptor',
                  );
     return (\%pairs);
 }
