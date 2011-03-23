@@ -1227,7 +1227,7 @@ sub _objs_from_sth {
 			 -POPULATION => $pop,
 			 -SUBSNP    => $allele_ss_id);
 			
-		$cur_var->add_Allele($allele);
+		$cur_var->_add_Allele($allele);
 		
 		$cur_allele_id = $allele_id;
       }
