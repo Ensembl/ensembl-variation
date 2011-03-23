@@ -180,7 +180,7 @@ sub _exclude_failed_variations_constraint {
 # API-internal method for getting the constraint to filter out failed alleles. Assumes that the
 # failed_allele table has been (left) joined to the query and that the table alias is either supplied
 # or equals 'fa'
-sub _exclude_failed_variations_constraint {
+sub _exclude_failed_alleles_constraint {
     my $self = shift;
     my $table_alias = shift;
     

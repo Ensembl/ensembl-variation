@@ -134,6 +134,9 @@ sub fetch_all_by_Variation {
     my $variation_id = $variation->dbID();
     my $constraint = qq{ a.variation_id = $variation_id };
     
+    #ÊAdd the constraint for failed alleles
+    $constraint .= " AND " . $self->db->_exclude_failed_alleles_constraint();
+  
     my $alleles = $self->generic_fetch($constraint);
     
     #ÊIterate over the alleles and add the Variation object to each one of them. This will also add the Allele to the variation object and weaken the variations link back to the allele 
