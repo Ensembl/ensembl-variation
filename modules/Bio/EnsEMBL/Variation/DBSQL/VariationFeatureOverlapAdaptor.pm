@@ -94,8 +94,6 @@ sub fetch_all_somatic_by_Features {
 sub fetch_all_by_Features_with_constraint {
     
     my ($self, $features, $constraint) = @_;
-    
-    my $dbh = $self->dbc->db_handle;
    
     my %feats_by_id = map { $_->stable_id => $_ } @$features;
     
@@ -119,6 +117,7 @@ sub fetch_all_by_Features_with_constraint {
 =head2 fetch_all_by_VariationFeatures
 
   Arg [1]    : listref of Bio::EnsEMBL::Variation::VariationFeatures
+  Arg [2]    : (optional) listref of Bio::EnsEMBL::Features to further limit the query
   Description: Fetch all VariationFeatureOverlap objects associated 
                with the given list of VariationFeatures
   Returntype : listref of Bio::EnsEMBL::Variation::VariationFeatureOverlap objects
@@ -128,25 +127,33 @@ sub fetch_all_by_Features_with_constraint {
 
 sub fetch_all_by_VariationFeatures {
     
-    my ($self, $vfs) = @_;
-
-    my $dbh = $self->dbc->db_handle;
+    my ($self, $vfs, $features) = @_;
    
     my %vfs_by_id = map { $_->dbID => $_ } @$vfs;
    
     my $id_str = join ',', keys %vfs_by_id;
 
-    my $full_constraint = "variation_feature_id in ( $id_str )";
-    
-    my $vfos = $self->generic_fetch($full_constraint);
-    
+    my $constraint = "variation_feature_id in ( $id_str )";
+
+    my $vfos;
+
+    if ($features) {
+        # if we're passed some features, fetch by features with the VF ids as an 
+        # extra constraint
+        $vfos = $self->fetch_all_by_Features_with_constraint($features, $constraint);
+    }
+    else {
+        # otherwise just fetch the VFs directly
+        $vfos = $self->generic_fetch($constraint);
+    }
+
     for my $vfo (@$vfos) {
         if ($vfo->{_variation_feature_id}) {
             my $vf_id = delete $vfo->{_variation_feature_id};
             $vfo->{variation_feature} = $vfs_by_id{$vf_id};
         }
     }
-    
+   
     return $vfos;
 }
 

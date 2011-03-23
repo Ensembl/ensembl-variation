@@ -80,43 +80,44 @@ sub _downstream {
 #package Bio::EnsEMBL::Variation::TranscriptVariationAllele;
 
 sub upstream_5KB {
-    my $vfo     = shift;
-    my $vf      = $vfo->variation_feature;
-    my $feat    = $vfo->feature;
+    my $vfoa    = shift;
+    my $vf      = $vfoa->variation_feature;
+    my $feat    = $vfoa->feature;
 
-    return (_upstream($vf, $feat, 5000) and not upstream_2KB($vfo));
+    return (_upstream($vf, $feat, 5000) and not upstream_2KB($vfoa));
 }
 
 sub downstream_5KB {
-    my $vfo     = shift;
-    my $vf      = $vfo->variation_feature;
-    my $feat    = $vfo->feature;
+    my $vfoa    = shift;
+    my $vf      = $vfoa->variation_feature;
+    my $feat    = $vfoa->feature;
 
-    return (_downstream($vf, $feat, 5000) and not downstream_500B($vfo));
+    return (_downstream($vf, $feat, 5000) and not downstream_500B($vfoa));
 }
 
 sub upstream_2KB {
-    my $vfo     = shift;
-    my $vf      = $vfo->variation_feature;
-    my $feat    = $vfo->feature; 
+    my $vfoa    = shift;
+    my $vf      = $vfoa->variation_feature;
+    my $feat    = $vfoa->feature; 
 
     return _upstream($vf, $feat, 2000);
 }
 
 sub downstream_2KB {
-    my $vfo     = shift;
-    my $vf      = $vfo->variation_feature;
-    my $feat    = $vfo->feature; 
+    my $vfoa    = shift;
+    my $vf      = $vfoa->variation_feature;
+    my $feat    = $vfoa->feature; 
 
     return _downstream($vf, $feat, 2000);
 }
 
 sub downstream_500B {
-    my $vfo     = shift;
-    my $vf      = $vfo->variation_feature;
-    my $feat    = $vfo->feature;
+    my $vfoa    = shift;
+    my $vf      = $vfoa->variation_feature;
+    my $feat    = $vfoa->feature;
 
     return _downstream($vf, $feat, 500);
+
 }
 
 sub affects_transcript {

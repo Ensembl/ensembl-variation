@@ -18,6 +18,44 @@
 
 =cut
 
+=head1 NAME
+
+Bio::EnsEMBL::Variation::TranscriptVariationAllele
+
+=head1 SYNOPSIS
+
+    use Bio::EnsEMBL::Variation::TranscriptVariationAllele;
+    
+    my $tva = Bio::EnsEMBL::Variation::TranscriptVariationAllele->new(
+        -transcript_variation   => $tv,
+        -variation_feature_seq  => 'A',
+        -is_reference           => 0,
+    );
+
+    print "sequence with respect to the transcript: ", $tva->feature_seq, "\n";
+    print "sequence with respect to the variation feature: ", $tva->variation_feature_seq, "\n";
+    print "consequence SO terms: ", (join ",", map { $_->SO_term } @{ $tva->get_all_OverlapConsequences }), "\n";
+    print "amino acid change: ", $tva->peptide_allele_string, "\n";
+    print "resulting codon: ", $tva->codon, "\n";
+    print "reference codon: ", $tva->transcript_variation->get_reference_TranscriptVariationAllele->codon, "\n";
+    print "PolyPhen prediction: ", $tva->polyphen_prediction, "\n";
+    print "SIFT prediction: ", $tva->sift_prediction, "\n";
+
+=head1 DESCRIPTION
+
+A TranscriptVariationAllele object represents a single allele of a TranscriptVariation.
+It provides methods that are specific to the sequence of the allele, such as codon,
+peptide etc. Methods that depend only on position (e.g. CDS start) will be found in 
+the associated TranscriptVariation. Ordinarily you will not create these objects 
+yourself, but instead you would create a TranscriptVariation object which will then 
+construct TranscriptVariationAlleles based on the allele string of the associated
+VariationFeature. 
+
+Note that any methods that are not specific to Transcripts will be found in the 
+VariationFeatureOverlapAllele superclass.
+
+=cut
+
 package Bio::EnsEMBL::Variation::TranscriptVariationAllele;
 
 use strict;
@@ -39,20 +77,59 @@ sub new_fast {
     return $self->SUPER::new_fast($hashref);
 }
 
+=head2 transcript_variation
+
+  Description: Get/set the associated TranscriptVariation
+  Returntype : Bio::EnsEMBL::Variation::TranscriptVariation
+  Exceptions : throws if the argument is the wrong type
+  Status     : At Risk
+
+=cut
+
 sub transcript_variation {
-    my $self = shift;
-    return $self->variation_feature_overlap(@_);
+    my ($self, $tv) = @_;
+    assert_ref($tv, 'Bio::EnsEMBL::Variation::TranscriptVariation') if $tv;
+    return $self->variation_feature_overlap($tv);
 }
+
+=head2 transcript
+
+  Description: Get the associated Transcript
+  Returntype : Bio::EnsEMBL::Transcript
+  Exceptions : none
+  Status     : At Risk
+
+=cut
 
 sub transcript {
     my $self = shift;
     return $self->transcript_variation->transcript;
 }
 
+=head2 variation_feature
+
+  Description: Get the associated VariationFeature
+  Returntype : Bio::EnsEMBL::Variation::VariationFeature
+  Exceptions : none
+  Status     : At Risk
+
+=cut
+
 sub variation_feature {
     my $self = shift;
     return $self->transcript_variation->variation_feature;
 }
+
+=head2 pep_allele_string
+
+  Description: Return a '/' delimited string of the reference peptide and the 
+               peptide resulting from this allele, or a single peptide if this
+               allele does not change the peptide (e.g. because it is synonymous)
+  Returntype : string or undef if this allele is not in the CDS
+  Exceptions : none
+  Status     : At Risk
+
+=cut
 
 sub pep_allele_string {
     my ($self) = @_;
@@ -66,6 +143,16 @@ sub pep_allele_string {
     return $ref_pep ne $pep ? $ref_pep.'/'.$pep : $pep;
 }
 
+=head2 codon_allele_string
+
+  Description: Return a '/' delimited string of the reference codon and the 
+               codon resulting from this allele 
+  Returntype : string or undef if this allele is not in the CDS
+  Exceptions : none
+  Status     : At Risk
+
+=cut
+
 sub codon_allele_string {
     my ($self) = @_;
     
@@ -78,6 +165,18 @@ sub codon_allele_string {
     return $ref_codon.'/'.$codon;
 }
 
+=head2 display_codon_allele_string
+
+  Description: Return a '/' delimited string of the reference display_codon and the 
+               display_codon resulting from this allele. The display_codon identifies
+               the nucleotides affected by this variant in UPPER CASE and other 
+               nucleotides in lower case
+  Returntype : string or undef if this allele is not in the CDS
+  Exceptions : none
+  Status     : At Risk
+
+=cut
+
 sub display_codon_allele_string {
     my ($self) = @_;
     
@@ -89,6 +188,15 @@ sub display_codon_allele_string {
     
     return $ref_display_codon.'/'.$display_codon;
 }
+
+=head2 peptide
+
+  Description: Return the amino acid sequence that this allele is predicted to result in
+  Returntype : string or undef if this allele is not in the CDS or is a frameshift
+  Exceptions : none
+  Status     : At Risk
+
+=cut
 
 sub peptide {
     my ($self, $peptide) = @_;
@@ -132,6 +240,15 @@ sub peptide {
     
     return $self->{peptide};
 }
+
+=head2 codon
+
+  Description: Return the codon sequence that this allele is predicted to result in
+  Returntype : string or undef if this allele is not in the CDS or is a frameshift
+  Exceptions : none
+  Status     : At Risk
+
+=cut
 
 sub codon {
     my ($self, $codon) = @_;
@@ -191,6 +308,17 @@ sub codon {
     return $self->{codon};
 }
 
+=head2 display_codon
+
+  Description: Return the codon sequence that this allele is predicted to result in
+               with the affected nucleotides identified in UPPER CASE and other 
+               nucleotides in lower case
+  Returntype : string or undef if this allele is not in the CDS or is a frameshift
+  Exceptions : none
+  Status     : At Risk
+
+=cut
+
 sub display_codon {
     my $self = shift;
 
@@ -220,6 +348,19 @@ sub display_codon {
     return $self->{_display_codon};
 }
 
+=head2 polyphen_prediction
+
+  Description: Return the qualitative PolyPhen prediction for the effect of this allele.
+               (Note that we currently only have PolyPhen predictions for variants that 
+               result in single amino acid substitutions in human)
+  Returntype : string (one of 'probably damaging', 'possibly damaging', 'benign', 'unknown')
+               if this is a non-synonymous mutation and a prediction is available, undef
+               otherwise
+  Exceptions : none
+  Status     : At Risk
+
+=cut
+
 sub polyphen_prediction {
     my ($self, $polyphen_prediction) = @_;
     
@@ -230,6 +371,18 @@ sub polyphen_prediction {
     
     return $self->{polyphen_prediction};
 }
+
+=head2 sift_prediction
+
+  Description: Return the qualitative SIFT prediction for the effect of this allele.
+               (Note that we currently only have SIFT predictions for variants that 
+               result in single amino acid substitutions in human)
+  Returntype : string (one of 'tolerated', 'deleterious') if this is a non-synonymous 
+               mutation and a prediction is available, undef otherwise
+  Exceptions : none
+  Status     : At Risk
+
+=cut
 
 sub sift_prediction {
     my ($self, $sift_prediction) = @_;
@@ -257,21 +410,58 @@ sub _nsSNP_prediction {
     return undef;
 }
 
+=head2 hgvs_genomic
+
+  Description: Return a string representing the genomic-level effect of this allele in HGVS format
+  Returntype : string 
+  Exceptions : none
+  Status     : At Risk
+
+=cut
+
 sub hgvs_genomic {
     return _hgvs_generic(@_,'genomic');
 }
+
+=head2 hgvs_coding
+
+  Description: Return a string representing the CDS-level effect of this allele in HGVS format
+  Returntype : string or undef if this allele is not in the CDS 
+  Exceptions : none
+  Status     : At Risk
+
+=cut
+
 sub hgvs_coding {
     return _hgvs_generic(@_,'coding');
 }
+
+=head2 hgvs_protein
+
+  Description: Return a string representing the protein-level effect of this allele in HGVS format
+  Returntype : string or undef if this allele is not in the CDS 
+  Exceptions : none
+  Status     : At Risk
+
+=cut
+
 sub hgvs_protein {
     return _hgvs_generic(@_,'protein');
 }
+
+=head
+
+# We haven't implemented support for these methods yet
+
 sub hgvs_rna {
     return _hgvs_generic(@_,'rna');
 }
+
 sub hgvs_mitochondrial {
     return _hgvs_generic(@_,'mitochondrial');
 }
+
+=cut
 
 sub _hgvs_generic {
     my $self = shift;

@@ -276,10 +276,10 @@ sub _objs_from_sth {
             $tv->add_TranscriptVariationAllele($ref_allele);
         }
        
-        #my $cons_types = $self->_transcript_variation_consequences_for_set_number($consequence_types);
+        #my $overlap_consequences = $self->_transcript_variation_consequences_for_set_number($consequence_types);
 
-        my $cons_types = [ map { $self->_overlap_consequence_for_SO_term($_) } 
-            split /,/, $consequence_types ]; # / comment exists to satisfy eclipse!
+        my $overlap_consequences = [ map { $self->_overlap_consequence_for_SO_term($_) } 
+            split /,/, $consequence_types ];
         
         my $allele = Bio::EnsEMBL::Variation::TranscriptVariationAllele->new_fast({
             is_reference                => 0,
@@ -290,7 +290,7 @@ sub _objs_from_sth {
             hgvs_genomic                => $hgvs_genomic,
             hgvs_coding                 => $hgvs_coding,
             hgvs_protein                => $hgvs_protein,
-            consequence_types           => $cons_types, 
+            overlap_consequences        => $overlap_consequences, 
             polyphen_prediction         => $polyphen_prediction,
             sift_prediction             => $sift_prediction, 
         });

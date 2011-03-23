@@ -18,15 +18,75 @@
 
 =cut
 
+=head1 NAME
+
+Bio::EnsEMBL::Variation::VariationFeatureOverlapAllele
+
+=head1 SYNOPSIS
+
+    use Bio::EnsEMBL::Variation::VariationFeatureOverlapAllele;
+    
+    my $vfoa = Bio::EnsEMBL::Variation::VariationFeatureOverlapAllele->new(
+        -variation_feature_overlap  => $vfo,
+        -variation_feature_seq      => 'A',
+        -is_reference               => 0,
+    );
+
+    print "sequence with respect to the feature: ", $vfoa->feature_seq, "\n";
+    print "sequence with respect to the variation feature: ", $vfoa->variation_feature_seq, "\n";
+    print "consequence SO terms: ", (join ",", map { $_->SO_term } @{ $vfoa->get_all_OverlapConsequences }), "\n";
+
+=head1 DESCRIPTION
+
+A VariationFeatureOverlapAllele object represents a single allele of a 
+VariationFeatureOverlap. It is the super-class of various feature-specific allele
+classes such as TranscriptVariationAllele and RegulatoryFeatureVariationAllele and 
+contains methods not specific to any particular feature type. Ordinarily you will 
+not create these objects yourself, but instead you would create e.g. a 
+TranscriptVariation object which will then VariationFeatureOverlapAlleles based on the 
+allele string of the associated VariationFeature. 
+
+=cut
+
 package Bio::EnsEMBL::Variation::VariationFeatureOverlapAllele;
 
 use strict;
 use warnings;
 
 use Bio::EnsEMBL::Utils::Argument qw(rearrange);
+use Bio::EnsEMBL::Utils::Scalar qw(assert_ref check_ref);
+use Bio::EnsEMBL::Utils::Exception qw(throw);
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
 use Bio::EnsEMBL::Variation::Utils::Constants qw(@OVERLAP_CONSEQUENCES);
 use Scalar::Util qw(weaken);
+
+=head2 new
+
+  Arg [-VARIATION_FEATURE_OVERLAP] : 
+    The Bio::EnsEMBL::VariationFeatureOverlap with which this allele is 
+    associated
+
+  Arg [-VARIATION_FEATURE_SEQ] :
+    The allele sequence with respect to the associated VariationFeature
+
+  Arg [-IS_REFERENCE] :
+    A flag indicating if this allele is the reference allele or not
+
+  Example : 
+    my $vfoa = Bio::EnsEMBL::Variation::VariationFeatureOverlapAllele->new(
+        -variation_feature_ovelap   => $vfo,
+        -variation_feature_seq      => 'A',
+        -is_reference               => 0
+    );
+
+  Description: Constructs a new VariationFeatureOverlapAllele instance given a 
+               VariationFeatureOverlap and the sequence of the allele
+  Returntype : A new Bio::EnsEMBL::Variation::VariationFeatureOverlapAllele instance 
+  Exceptions : throws unless both VARIATION_FEATURE_OVERLAP and VARIATION_FEATURE_SEQ 
+               are supplied
+  Status     : At Risk
+
+=cut 
 
 sub new {
     my $class = shift;
@@ -41,14 +101,18 @@ sub new {
             IS_REFERENCE
         )], @_);
 
-    die "VariationFeatureOverlap argument required" unless $variation_feature_overlap;
-    die "Allele sequence required" unless $variation_feature_seq;
+    assert_ref($variation_feature_overlap, 'Bio::EnsEMBL::Variation::VariationFeatureOverlap');
+
+    throw("Allele sequence required") unless $variation_feature_seq;
 
     my $self = bless {
         variation_feature_overlap   => $variation_feature_overlap,
         variation_feature_seq       => $variation_feature_seq,
         is_reference                => $is_reference,
     }, $class;
+    
+    # avoid a memory leak, because the vfo also has a reference to us
+    weaken $self->{variation_feature_overlap};
 
     return $self;
 }
@@ -61,10 +125,20 @@ sub new_fast {
     return $self;
 }
 
+=head2 variation_feature_overlap
+
+  Description: Get/set the associated VariationFeatureOverlap
+  Returntype : Bio::EnsEMBL::Variation::VariationFeatureOverlap
+  Exceptions : throws if the argument is the wrong type
+  Status     : At Risk
+
+=cut
+
 sub variation_feature_overlap {
     my ($self, $variation_feature_overlap) = @_;
     
     if ($variation_feature_overlap) {
+        assert_ref($variation_feature_overlap, 'Bio::EnsEMBL::Variation::VariationFeatureOverlap');
         $self->{variation_feature_overlap} = $variation_feature_overlap;
         # avoid a memory leak, because the vfo also has a reference to us
         weaken $self->{variation_feature_overlap};
@@ -73,21 +147,48 @@ sub variation_feature_overlap {
     return $self->{variation_feature_overlap};
 }
 
+=head2 variation_feature
+
+  Description: Get the associated VariationFeature
+  Returntype : Bio::EnsEMBL::Variation::VariationFeature
+  Exceptions : none
+  Status     : At Risk
+
+=cut
+
 sub variation_feature {
     my $self = shift;
     return $self->variation_feature_overlap->variation_feature;
 }
+
+=head2 transcript
+
+  Description: Get the associated Feature
+  Returntype : Bio::EnsEMBL::Feature
+  Exceptions : none
+  Status     : At Risk
+
+=cut
 
 sub feature {
     my $self = shift;
     return $self->variation_feature_overlap->feature;
 }
 
+=head2 feature_seq
+
+  Description: Get the sequence of this allele relative to the associated Feature.
+               This will be the same as the variation_feature_seq when the associated
+               VariationFeature is on the same strand as the Feature, or the reverse
+               complement when the strands differ.
+  Returntype : string
+  Exceptions : none
+  Status     : At Risk
+
+=cut
+
 sub feature_seq {
-    # the sequence of this allele relative to the feature
-    my ($self, $feature_seq) = @_;
-    
-    $self->{feature_seq} = $feature_seq if $feature_seq;
+    my $self = shift;
     
     unless ($self->{feature_seq}) {
         
@@ -109,6 +210,16 @@ sub feature_seq {
     return $self->{feature_seq};
 }
 
+=head2 variation_feature_seq
+
+  Args [1]   : The allele sequence relative to the VariationFeature
+  Description: Get/set the sequence of this allele relative to the associated VariationFeature.
+  Returntype : string
+  Exceptions : none
+  Status     : At Risk
+
+=cut
+
 sub variation_feature_seq {
     # the sequence of this allele relative to the variation feature
     my ($self, $variation_feature_seq) = @_;
@@ -116,20 +227,34 @@ sub variation_feature_seq {
     return $self->{variation_feature_seq};
 }
 
+=head2 is_reference
+
+  Args [1]   : A boolean value 
+  Description: Get/set a flag indicating if this allele is the reference allele
+  Returntype : bool
+  Exceptions : none
+  Status     : At Risk
+
+=cut
+
 sub is_reference {
     my ($self, $is_reference) = @_;
     $self->{is_reference} = $is_reference if defined $is_reference;
     return $self->{is_reference};
 }
 
-sub dbID {
-    my ($self, $dbID) = @_;
-    $self->{dbID} = $dbID if defined $dbID;
-    return $self->{dbID};
-}
+=head2 allele_string
+
+  Description: Return a '/' delimited string of the reference allele variation_feature_seq 
+               and the variation_feature_seq of this allele
+  Returntype : string
+  Exceptions : none
+  Status     : At Risk
+
+=cut
 
 sub allele_string {
-    my ($self) = @_;
+    my $self = shift;
     
     my $ref = $self->variation_feature_overlap->get_reference_VariationFeatureOverlapllele->variation_feature_seq;
     
@@ -144,21 +269,24 @@ sub allele_string {
     }
 }
 
+=head2 get_all_OverlapConsequences
+
+  Description: Get a list of all the OverlapConsequences of this allele, calculating them 
+               on the fly if necessary
+  Returntype : listref of Bio::EnsEMBL::Variation::OverlapConsequence objects
+  Exceptions : none
+  Status     : At Risk
+
+=cut
+
 sub get_all_OverlapConsequences {
-    my ($self, @new_consequences) = @_;
+    my $self = shift;
     
-    my $cons = $self->{consequence_types};
-    
-    if (@new_consequences) {
-        $cons ||= [];
-        push @$cons, @new_consequences;
-    }
-    
-    unless (defined $cons) {
-        
+    unless ($self->{overlap_consequences}) {
+
         # calculate consequences on the fly
         
-        $cons = [];
+        my $cons = [];
         
         for my $oc (@OVERLAP_CONSEQUENCES) {
             if ($oc->feature_class eq ref $self->feature) {
@@ -167,11 +295,28 @@ sub get_all_OverlapConsequences {
                 }
             }
         }
+
+        $self->{overlap_consequences} = $cons;
     }
     
-    $self->{consequence_types} = $cons;
-    
-    return $cons;
+    return $self->{overlap_consequences};
+}
+
+=head2 add_OverlapConsequence
+
+  Arg [1]    : Bio::EnsEMBL::Variation::OverlapConsequence instance
+  Description: Add an OverlapConsequence to this allele's list 
+  Returntype : none
+  Exceptions : throws if the argument is the wrong type
+  Status     : At Risk
+
+=cut
+
+sub add_OverlapConsequence {
+    my ($self, $oc) = @_;
+    assert_ref($oc, 'Bio::EnsEMBL::Variation::OverlapConsequence');
+    $self->{overlap_consequences} ||= [];
+    push @{ $self->{overlap_consequences} }, $oc;
 }
 
 sub _is_redundant {
