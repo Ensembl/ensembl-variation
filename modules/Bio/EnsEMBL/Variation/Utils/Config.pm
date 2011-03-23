@@ -78,6 +78,7 @@ our @OVERLAP_CONSEQUENCES = (
         rank => '100',
         description => 'More than 5 kb either upstream or downstream of a transcript',
         label => 'Intergenic',
+        is_default => 1,
     },
     {
         SO_accession => 'SO:0001635',
