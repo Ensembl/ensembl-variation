@@ -78,6 +78,18 @@ sub codon_allele_string {
     return $ref_codon.'/'.$codon;
 }
 
+sub display_codon_allele_string {
+    my ($self) = @_;
+    
+    my $display_codon = $self->display_codon;
+    
+    return undef unless $display_codon;
+    
+    my $ref_display_codon = $self->transcript_variation->get_reference_TranscriptVariationAllele->display_codon;
+    
+    return $ref_display_codon.'/'.$display_codon;
+}
+
 sub peptide {
     my ($self, $peptide) = @_;
     
