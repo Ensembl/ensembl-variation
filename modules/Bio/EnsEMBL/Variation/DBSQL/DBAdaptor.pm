@@ -137,11 +137,11 @@ sub get_available_adaptors{
 		}
 		
   Description: Getter/Setter for the behaviour of the adaptors connected through this
-	       DBAdaptor when it comes to variations that have been flagged as failed.
-	       The default behaviour is not to return these variations in e.g. the
+	       DBAdaptor when it comes to variations and alleles that have been flagged as failed.
+	       The default behaviour is not to return these variations or alleles in e.g. the
 	       'fetch_all_by...'-type methods. If this flag is set, those methods will
-	       instead also return failed variations. Note that a variation is considered
-	       failed when the variation itself is failed. If only some subsnps belonging
+	       instead also return failed variations and alleles. Note that a variation is considered
+	       failed when the variation itself is failed. If only some alleles belonging
 	       to the variation are failed, the entire variation will not be considered
 	       to be failed.
   Returntype : int
@@ -169,18 +169,39 @@ sub include_failed_variations {
 # or equals 'fv'
 sub _exclude_failed_variations_constraint {
     my $self = shift;
-    my $failed_variation_alias = shift;
+    my $table_alias = shift;
     
     # If not specified, assume that the failed_variation table alias is 'fv'
-    $failed_variation_alias ||= 'fv';
+    $table_alias ||= 'fv';
     
-    #ÊIf we should include failed variations, no extra condition is needed
+    return $self->_exclude_failed_constraint('variation_id',$table_alias);
+}
+
+# API-internal method for getting the constraint to filter out failed alleles. Assumes that the
+# failed_allele table has been (left) joined to the query and that the table alias is either supplied
+# or equals 'fa'
+sub _exclude_failed_variations_constraint {
+    my $self = shift;
+    my $table_alias = shift;
+    
+    # If not specified, assume that the failed_variation table alias is 'fv'
+    $table_alias ||= 'fa';
+    
+    return $self->_exclude_failed_constraint('allele_id',$table_alias);
+}
+
+sub _exclude_failed_constraint {
+    my $self = shift;
+    my $key_column = shift;
+    my $table_alias = shift;
+    
+    #ÊIf we should include failed objects, no extra condition is needed
     return qq{ 1 } if ($self->include_failed_variations());
     
-    # Otherwise, add a constraint on the failed_variation table to have variation_id NULL
+    # Otherwise, add a constraint on the alias table to have the key_column NULL
     my $constraint = qq{
 	(
-	    fv.variation_id IS NULL
+	    $table_alias.$key_column IS NULL
 	)
     };
     
