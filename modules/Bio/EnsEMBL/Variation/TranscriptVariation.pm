@@ -190,9 +190,10 @@ sub transcript_stable_id {
 
 =head2 transcript
 
-  Description: Returns the associated Transcript
+  Arg [1]    : (optional) Bio::EnsEMBL::Transcript
+  Description: Get/set the associated Transcript
   Returntype : Bio::EnsEMBL::Transcript
-  Exceptions : none
+  Exceptions : throws if argument is wrong type
   Status     : At Risk
 
 =cut
