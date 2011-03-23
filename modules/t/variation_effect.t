@@ -1020,8 +1020,8 @@ for my $stable_id (keys %$transcript_tests) {
         warn '# peptides: ', $tv->pep_allele_string, "\n" if $tv->pep_allele_string;
 
         my @effects = map {
-            map { $_->SO_term } @{ $_->consequence_types }
-        } @{ $tv->alt_alleles };
+            map { $_->SO_term } @{ $_->get_all_OverlapConsequences }
+        } @{ $tv->get_all_alternate_TranscriptVariationAlleles };
 
         my $comment = $test->{comment} || (join ',', @{ $test->{effects} }) || 'no effect';
 
