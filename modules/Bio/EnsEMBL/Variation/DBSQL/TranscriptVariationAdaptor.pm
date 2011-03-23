@@ -107,14 +107,14 @@ sub store {
         ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     });
 
-    for my $allele (@{ $tv->alt_alleles }) {
+    for my $allele (@{ $tv->get_all_alternative_TranscriptVariationAlleles }) {
         
         $sth->execute(
             $tv->variation_feature->dbID,
             $tv->feature->stable_id,
             $allele->allele_string,
             $tv->variation_feature->is_somatic,
-            (join ',', map { $_->SO_term } @{ $allele->consequence_types }),
+            (join ',', map { $_->SO_term } @{ $allele->get_all_OverlapConsequences }),
             $tv->cds_start, 
             $tv->cds_end,
             $tv->cdna_start,
@@ -273,7 +273,7 @@ sub _objs_from_sth {
                 peptide                     => $ref_pep, 
             });
 
-            $tv->reference_allele($ref_allele);
+            $tv->add_TranscriptVariationAllele($ref_allele);
         }
        
         #my $cons_types = $self->_transcript_variation_consequences_for_set_number($consequence_types);
@@ -295,7 +295,7 @@ sub _objs_from_sth {
             sift_prediction             => $sift_prediction, 
         });
         
-        $tv->alt_alleles($allele);
+        $tv->add_TranscriptVariationAllele($allele);
     }
     
     return [values %tvs];
