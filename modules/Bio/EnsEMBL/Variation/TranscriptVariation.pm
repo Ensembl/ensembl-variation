@@ -679,8 +679,6 @@ sub _hgvs_generic {
     my $reference = pop;
     my $hgvs = shift;
     
-    warn "GETTING HGVS";
-    
     #ÊThe rna and mitochondrial modes have not yet been implemented, so return undef in case we get a call to these
     return undef if ($reference =~ m/rna|mitochondrial/);
     
