@@ -94,6 +94,10 @@ use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
 use Bio::EnsEMBL::Variation::Utils::Sequence qw(ambiguity_code hgvs_variant_notation SO_variation_class);
 use Bio::EnsEMBL::Variation::ConsequenceType;
 use Bio::EnsEMBL::Variation::Variation;
+use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(MAX_DISTANCE_FROM_TRANSCRIPT);
+use Bio::EnsEMBL::Variation::RegulatoryFeatureVariation;
+use Bio::EnsEMBL::Variation::MotifFeatureVariation;
+use Bio::EnsEMBL::Variation::ExternalFeatureVariation;
 use Bio::EnsEMBL::Slice;
 use Bio::EnsEMBL::Variation::DBSQL::TranscriptVariationAdaptor;
 use Bio::PrimarySeq;
@@ -307,56 +311,121 @@ sub map_weight{
 
 sub get_all_TranscriptVariations {
     
-    my $self = shift;
-    my $transcripts = shift;
+    my ($self, $transcripts) = @_;
 
     if(defined($transcripts) && ref($transcripts) ne 'ARRAY') {
         throw('Arrayref of Bio::EnsEMBL::Transcripts expected');
     }
 
-    unless ($self->{transcript_variations}) {
-        
-        if (my $db = $self->{adaptor}->db) {
-        
-            if($self->dbID) {
-        
-                # we can just fetch them from the database
+    unless ($transcripts) {
+        # if the caller didn't supply some transcripts fetch those around this VariationFeature
+
+        # get a slice around this transcript twice as large as the defined maximum distance from 
+        # a transcript
+
+        my $slice = $self->feature_Slice->expand(
+            MAX_DISTANCE_FROM_TRANSCRIPT, 
+            MAX_DISTANCE_FROM_TRANSCRIPT
+        );
+
+        # fetch all transcripts on this slice, we also need to transfer the transcripts to the same slice 
+        # as the VariationFeature for the consequence stuff to work
+
+        $transcripts = [ map { $_->transfer($self->slice) } @{ $slice->get_all_Transcripts } ];
+    }
+
+    my @unfetched_transcripts = grep { 
+        not exists $self->{transcript_variations}->{$_->stable_id} 
+    } @$transcripts;
+
+    if (@unfetched_transcripts) {
+
+        if($self->dbID) {
+            if (my $db = $self->{adaptor}->db) {
+                # this VariationFeature is from the database, so we can just fetch the 
+                # TranscriptVariations from the database as well
 
                 my $tva = $db->get_TranscriptVariationAdaptor;
 
-                my $tvs = $tva->fetch_all_by_VariationFeatures([$self], $transcripts);
-                   
-                $self->{transcript_variations} = $tvs;
-            }
-            else {
-
-                # we have to build them ourselves
+                my $tvs = $tva->fetch_all_by_VariationFeatures([$self], \@unfetched_transcripts);
             
-                unless ($transcripts) {
-                    $transcripts = $self->feature_Slice->expand(5000,5000)->get_all_Transcripts;
-                    my $tmp_trans;
-                    my $ta = $self->{adaptor}->db->dnadb->get_TranscriptAdaptor;
-                    for my $tran (@$transcripts) {
-                        push @$tmp_trans, $ta->fetch_by_stable_id($tran->stable_id);
-                    }
-                    $transcripts = $tmp_trans;
+                for my $tv (@$tvs) {
+                    $self->{transcript_variations}->{$tv->transcript->stable_id} = $tv;
                 }
+            }
+        }
+        else {
+            # this VariationFeature is not in the database so we have to build the 
+            # TranscriptVariations ourselves
 
-                my $tvs;
-
-                for my $transcript (@$transcripts) {
-                    push @$tvs, Bio::EnsEMBL::Variation::TranscriptVariation->new(
+            for my $transcript (@unfetched_transcripts) {
+                $self->{transcript_variations}->{$transcript->stable_id} =
+                    Bio::EnsEMBL::Variation::TranscriptVariation->new(
                         -variation_feature  => $self,
                         -transcript         => $transcript,
                     );
-                }
-
-                $self->{transcript_variations} = $tvs;
             }
         }
     }
 
-    return $self->{transcript_variations};
+    # and just return TranscriptVariations for the requested Transcripts
+
+    return [ map { $self->{transcript_variations}->{$_->stable_id} } @$transcripts ];
+}
+
+sub get_all_RegulatoryFeatureVariations {
+    my $self = shift;
+    return $self->_get_all_RegulationVariations('RegulatoryFeature', @_);
+}
+
+sub get_all_MotifFeatureVariations {
+    my $self = shift;
+    return $self->_get_all_RegulationVariations('MotifFeature', @_);
+}
+
+sub get_all_ExternalFeatureVariations {
+    my $self = shift;
+    return $self->_get_all_RegulationVariations('ExternalFeature', @_);
+}
+
+sub _get_all_RegulationVariations {
+    my ($self, $type) = @_;
+
+    unless ($self->{regulation_variations}->{$type}) {
+    
+        my $fg_adaptor;
+
+        if (my $adap = $self->adaptor) {
+            $fg_adaptor = Bio::EnsEMBL::DBSQL::MergedAdaptor->new(
+                -species  => $adap->db->species, 
+                -type     => $type,
+            );
+            
+            unless ($fg_adaptor) {
+                warning("Failed to get adaptor for $type");
+                return undef;
+            }
+        }
+        else {
+            warning('Cannot get variation features without attached adaptor');
+            return undef;
+        }
+
+        my $slice = $self->feature_Slice;
+                
+        my $constructor = 'Bio::EnsEMBL::Variation::'.$type.'Variation';
+
+        $self->{regulation_variations}->{$type} = [ 
+            map {  
+                $constructor->new(
+                    -variation_feature  => $self,
+                    -feature            => $_,
+                );
+            } map { $_->transfer($self->slice) } @{ $fg_adaptor->fetch_all_by_Slice($slice) } 
+        ];
+    }
+
+    return $self->{regulation_variations}->{$type};
 }
 
 =head2 add_TranscriptVariation
@@ -371,24 +440,8 @@ sub get_all_TranscriptVariations {
 =cut
 
 sub add_TranscriptVariation {
-    my $self= shift;
-    if (@_){
-	if(!ref($_[0]) || !$_[0]->isa('Bio::EnsEMBL::Variation::TranscriptVariation')) {
-	    throw("Bio::EnsEMBL::Variation::TranscriptVariation argument expected");
-	}
-	
-	my $tv = shift;
-	
-	# Adds itself to the TranscriptVariation's VariationFeature cache
-	$tv->variation_feature($self);
-	
-	# we need to weaken the TranscriptVariation object's reference to the VariationFeature
-	# to allow garbage collection to work (as this is a circular reference)
-	weaken($tv->{variation_feature});
-	
-	#a variation feature can have multiple transcript Variations
-	push @{$self->{'transcriptVariations'}},$tv;
-    }
+    my $self = shift;
+    warning('Deprecated method');
 }
 
 
@@ -471,7 +524,7 @@ sub consequence_type_objects {
         my %cons_types;
 
         for my $tv (@{ $self->get_all_TranscriptVariations }) {
-            for my $allele ($tv->alt_alleles) {
+            for my $allele ($tv->get_all_alternate_TranscriptVariationAlleles) {
                 for my $cons ($allele->consequence_types) {
                     $cons_types{$cons->SO_term} = $cons;
                 }
@@ -1237,7 +1290,7 @@ sub get_all_hgvs_notations {
       
       # Get the complete, affected codons. Break it apart into the upstream piece, the allele and the downstream piece
       #my $cds = $ref_feature->translateable_seq();
-      my $cds = $transcript_variation->translateable_seq();
+      my $cds = $transcript_variation->_translateable_seq();
       my $codon_ref = substr($cds,($cds_start - 1),($cds_end - $cds_start + 1));
       my $codon_down = substr($cds,$cds_end,(2-$end_phase));
       $codon_up = substr($cds,($cds_start - $start_phase - 1),$start_phase);
