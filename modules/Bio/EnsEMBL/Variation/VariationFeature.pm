@@ -143,8 +143,8 @@ our @ISA = ('Bio::EnsEMBL::Feature');
   Arg [-VALIDATION_CODE] :
      reference to list of strings
 
-  Arg [-CONSEQUENCE_TYPE] :
-     string - highest consequence type for the transcripts of the VariationFeature
+  Arg [-OVERLAP_CONSEQUENCES] :
+     listref of Bio::EnsEMBL::Variation::OverlapConsequences - all the consequences of this VariationFeature
 
   Arg [-VARIATION_ID] :
     int - the internal id of the variation object associated with this
@@ -152,18 +152,18 @@ our @ISA = ('Bio::EnsEMBL::Feature');
     the variation may be lazy-loaded from the database on demand.
 
   Example    :
-    $vf = Bio::EnsEMBL::Variation::VariationFeature->new
-       (-start   => 100,
+    $vf = Bio::EnsEMBL::Variation::VariationFeature->new(
+        -start   => 100,
         -end     => 100,
         -strand  => 1,
         -slice   => $slice,
         -allele_string => 'A/T',
         -variation_name => 'rs635421',
         -map_weight  => 1,
-	-source  => 'dbSNP',
-	-validation_code => ['cluster','doublehit'],
-	-consequence_type => 'INTRONIC',
-        -variation => $v);
+	    -source  => 'dbSNP',
+	    -validation_code => ['cluster','doublehit'],
+        -variation => $v
+    );
 
   Description: Constructor. Instantiates a new VariationFeature object.
   Returntype : Bio::EnsEMBL::Variation::Variation
