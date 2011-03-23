@@ -144,7 +144,7 @@ sub allele_string {
     }
 }
 
-sub consequence_types {
+sub get_all_OverlapConsequences {
     my ($self, @new_consequences) = @_;
     
     my $cons = $self->{consequence_types};
@@ -189,7 +189,7 @@ sub SO_isa {
         }
     }
     
-    for my $cons (@{ $self->consequence_types }) {
+    for my $cons (@{ $self->get_all_OverlapConsequences }) {
         if ($cons->SO_term eq $query) {
             return 1;
         }

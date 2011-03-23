@@ -333,7 +333,7 @@ sub consequence_type {
         my %cons_types;
 
         for my $allele (@{ $self->get_all_alternate_VariationFeatureOverlapAlleles }) {
-            for my $cons (@{ $allele->consequence_types }) {
+            for my $cons (@{ $allele->get_all_OverlapConsequences }) {
                 $cons_types{$cons->display_term}++
             }
         }
@@ -352,7 +352,7 @@ sub most_severe_consequence {
         my $highest;
         
         for my $allele (@{ $self->get_all_alternate_VariationFeatureOverlapAlleles }) {
-            for my $cons (@{ $allele->consequence_types }) {
+            for my $cons (@{ $allele->get_all_OverlapConsequences }) {
                 $highest ||= $cons;
                 if ($cons->rank < $highest->rank) {
                     $highest = $cons;
