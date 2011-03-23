@@ -20,41 +20,111 @@
 
 =head1 NAME
 
-Bio::EnsEMBL::Variation::Overlap
+Bio::EnsEMBL::Variation::OverlapConsequence
 
 =head1 SYNOPSIS
 
-    use Bio::EnsEMBL::Variation::VariationFeatureOverlapAllele;
+    use Bio::EnsEMBL::Variation::OverlapConsequence;
     
-    my $vfoa = Bio::EnsEMBL::Variation::VariationFeatureOverlapAllele->new(
-        -variation_feature_overlap  => $vfo,
-        -variation_feature_seq      => 'A',
-        -is_reference               => 0,
+    my $oc = Bio::EnsEMBL::Variation::OverlapConsequence->new(
+        -display_term       => 'NON_SYNONYMOUS_CODING',
+        -SO_term            => 'non_synonymous_codon',
+        -SO_accession       => 'SO:0001583',
+        -NCBI_term          => 'missense',
+        -feature_SO_term    => 'mRNA',
+        -description        => 'In coding sequence and results in an amino acid change in the encoded peptide sequence',
+        -predicate          => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::non_synonymous_codon',
+        -label              => 'Non-synonymous coding',
+        -rank               => 7,
+        -feature_class      => 'Bio::EnsEMBL::Transcript',
     );
 
-    print "sequence with respect to the feature: ", $vfoa->feature_seq, "\n";
-    print "sequence with respect to the variation feature: ", $vfoa->variation_feature_seq, "\n";
-    print "consequence SO terms: ", (join ",", map { $_->SO_term } @{ $vfoa->get_all_OverlapConsequences }), "\n";
+    if ($oc->predicate($transcript_variation_allele)) {
+        print "This allele is: ", $oc->display_term, "\n";
+    }
 
 =head1 DESCRIPTION
 
-A VariationFeatureOverlapAllele object represents a single allele of a 
-VariationFeatureOverlap. It is the super-class of various feature-specific allele
-classes such as TranscriptVariationAllele and RegulatoryFeatureVariationAllele and 
-contains methods not specific to any particular feature type. Ordinarily you will 
-not create these objects yourself, but instead you would create e.g. a 
-TranscriptVariation object which will then VariationFeatureOverlapAlleles based on the 
-allele string of the associated VariationFeature. 
+An OverlapConsequence represents the consequence of an allele of a VariationFeature overlapping
+some other Ensembl Feature (and therefore applies to VariationFeatureOverlapAllele objects as these
+represent just such an event). It contains various values that represent the consequence type, such
+as the Sequence Ontology (SO) term and accession (which should always be unique), the Ensembl
+display_term (which will not always be unique), the relative rank of this consequence when compared 
+to other consequences etc. It also contains a reference to a subroutine, referred to as the 
+'predicate' which if a called with a VariationFeatureOverlapAllele (or a subclass) as the first and
+only argument, will return a true or false value if this consequence type applies to this allele.
+
+The list of OverlapConsequences used by Ensembl is defined in the Bio::EnsEMBL::Variation::Utils::Constants
+module, and can be imported from there.
 
 =cut
-
 
 package Bio::EnsEMBL::Variation::OverlapConsequence;
 
 use strict;
 use warnings;
 
+use Bio::EnsEMBL::Utils::Exception qw(throw);
 use Bio::EnsEMBL::Variation::Utils::VariationEffect;
+
+=head2 new
+    
+  Arg [-SO_ACCESSION] : 
+    The Sequence Ontology accession for this consequence type
+  
+  Arg [-SO_TERM] : 
+    The Sequence Ontology term for this consequence type
+  
+  Arg [-FEATURE_SO_TERM] : 
+    The Sequence Ontology term for the feature affected by this consequence type
+  
+  Arg [-FEATURE_CLASS] : 
+    The Ensembl class that represents the feature affected by this consequence type
+  
+  Arg [-PREDICATE] : 
+    A reference to a subroutine that checks if this consequence type holds for
+    a given VariationFeatureOverlapAllele (or the name of such a subroutine)
+  
+  Arg [-RANK] : 
+    The relative rank of this consequence type when compred to other OverlapConsequence
+    objects
+  
+  Arg [-DISPLAY_TERM] : 
+    The Ensembl display term for this consequence type (used by default on the website)
+
+  Arg [-NCBI_TERM] : 
+    The NCBI term for this consequence type
+  
+  Arg [-DESCRIPTION] : 
+    A freetext description of this consequence type (used on the website)
+  
+  Arg [-LABEL] : 
+    A freetext label briefly describing this consequence type (used on the website)
+  
+  Arg [-IS_DEFAULT] : 
+    A flag indicating if this is the default consequence type used when none other applies
+    (in Ensembl this represents an intergenic variant)
+  
+  Example : 
+    my $oc = Bio::EnsEMBL::Variation::OverlapConsequence->new(
+        -display_term       => 'NON_SYNONYMOUS_CODING',
+        -SO_term            => 'non_synonymous_codon',
+        -SO_accession       => 'SO:0001583',
+        -NCBI_term          => 'missense',
+        -feature_SO_term    => 'mRNA',
+        -description        => 'In coding sequence and results in an amino acid change in the encoded peptide sequence',
+        -predicate          => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::non_synonymous_codon',
+        -label              => 'Non-synonymous coding',
+        -rank               => 7,
+        -feature_class      => 'Bio::EnsEMBL::Transcript',
+    );
+  
+  Description: Constructs a new OverlapConsequence instance
+  Returntype : A new Bio::EnsEMBL::Variation::OverlapConsequence instance 
+  Exceptions : none
+  Status     : At Risk
+
+=cut 
 
 sub new {
     my $class = shift;
@@ -78,6 +148,7 @@ sub new {
             FEATURE_CLASS
             PREDICATE
             RANK
+            DISPLAY_TERM
             NCBI_TERM
             DESCRIPTION
             LABEL
@@ -106,11 +177,31 @@ sub new_fast {
     return bless $hashref, $class;
 }
 
+=head2 SO_accession
+
+  Arg [1]    : (optional) accession to set
+  Description: Get/set the Sequence Ontology accession for this consequence type
+  Returntype : string
+  Exceptions : none
+  Status     : At Risk
+
+=cut
+
 sub SO_accession {
     my ($self, $SO_accession) = @_;
     $self->{SO_accession} = $SO_accession if $SO_accession;
     return $self->{SO_accession};
 }
+
+=head2 SO_term
+
+  Arg [1]    : (optional) term to set
+  Description: Get/set the Sequence Ontology term for this consequence type
+  Returntype : string
+  Exceptions : none
+  Status     : At Risk
+
+=cut
 
 sub SO_term {
     my ($self, $SO_term) = @_;
@@ -118,11 +209,31 @@ sub SO_term {
     return $self->{SO_term};
 }
 
+=head2 feature_SO_term
+
+  Arg [1]    : (optional) term to set
+  Description: Get/set the Sequence Ontology term for the feature affected by this consequence type
+  Returntype : string
+  Exceptions : none
+  Status     : At Risk
+
+=cut
+
 sub feature_SO_term {
     my ($self, $feature_SO_term) = @_;
     $self->{feature_SO_term} = $feature_SO_term if $feature_SO_term;
     return $self->{feature_SO_term};
 }
+
+=head2 feature_class
+
+  Arg [1]    : (optional) class to set
+  Description: Get/set the Ensembl class representing the feature affected by this consequence type
+  Returntype : string
+  Exceptions : none
+  Status     : At Risk
+
+=cut
 
 sub feature_class {
     my ($self, $feature_class) = @_;
@@ -130,6 +241,20 @@ sub feature_class {
     return $self->{feature_class} || '';
 }
 
+=head2 predicate
+
+  Arg [1]    : (optional) reference to subroutine (or the name of a subroutine)
+  Description: Get/set the predicate used to check if this consequence type applies 
+               to a given VariationFeatureOverlapAllele. Currently, if you supply 
+               a name (rather than a coderef), this subroutine must be found in the
+               Bio::EnsEMBL::Variation::Utils::VariationEffect module.
+  Returntype : coderef
+  Exceptions : throws if a name is supplied and the subroutine cannot be found in 
+               the expected module
+  Status     : At Risk
+
+=cut
+ 
 sub predicate {
     my ($self, $predicate) = @_;
     
@@ -142,12 +267,24 @@ sub predicate {
             $self->{predicate} = \&$name;
         }
         else {
-            die "Can't find a subroutine called $name in the VariationEffect module?";
+            throw("Can't find a subroutine called $name in the VariationEffect module?");
         }
     }
     
     return $self->{predicate};
 }
+
+=head2 rank
+
+  Arg [1]    : (optional) rank to set
+  Description: Get/set the relative rank of this OverlapConsequence when compared to other
+               OverlapConsequence objects. This is used, for example, to determine the most 
+               severe consequence of a VariationFeature. 
+  Returntype : string
+  Exceptions : none
+  Status     : At Risk
+
+=cut
 
 sub rank {
     my ($self, $rank) = @_;
@@ -155,11 +292,32 @@ sub rank {
     return $self->{rank};
 }
 
+=head2 display_term
+
+  Arg [1]    : (optional) term to set
+  Description: Get/set the Ensembl display term for this consequence type. This is
+               used by default on the website.
+  Returntype : string
+  Exceptions : none
+  Status     : At Risk
+
+=cut
+
 sub display_term {
     my ($self, $display_term) = @_;
     $self->{display_term} = $display_term if $display_term;
     return $self->{display_term} || $self->SO_term;
 }
+
+=head2 NCBI_term
+
+  Arg [1]    : (optional) term to set
+  Description: Get/set the NCBI term for this consequence type
+  Returntype : string
+  Exceptions : none
+  Status     : At Risk
+
+=cut
 
 sub NCBI_term {
     my ($self, $NCBI_term) = @_;
@@ -167,17 +325,51 @@ sub NCBI_term {
     return $self->{NCBI_term};
 }
 
+=head2 description
+
+  Arg [1]    : (optional) description to set
+  Description: Get/set the description for this consequence type. This is used on the
+               website and is intended to be a freetext description of this consequence.
+  Returntype : string
+  Exceptions : none
+  Status     : At Risk
+
+=cut
+
 sub description {
     my ($self, $description) = @_;
     $self->{description} = $description if $description;
     return $self->{description};
 }
 
+=head2 label
+
+  Arg [1]    : (optional) label to set
+  Description: Get/set the label for this consequence type. This is used on the
+               website and is intended to be a short description of this consequence.
+  Returntype : string
+  Exceptions : none
+  Status     : At Risk
+
+=cut
+
 sub label {
     my ($self, $label) = @_;
     $self->{label} = $label if $label;
     return $self->{label};
 }
+
+=head2 is_default
+
+  Arg [1]    : (optional) flag
+  Description: Get/set a flag indicating if this is the default consequence type.
+               There should only be one default OverlapConsequence, in Ensembl this
+               flag is only set on the INTERGENIC OverlapConsequence object.
+  Returntype : bool
+  Exceptions : none
+  Status     : At Risk
+
+=cut
 
 sub is_default {
     my ($self, $is_default) = @_;
