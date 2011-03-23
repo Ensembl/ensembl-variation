@@ -525,7 +525,7 @@ sub consequence_type_objects {
 
         for my $tv (@{ $self->get_all_TranscriptVariations }) {
             for my $allele ($tv->get_all_alternate_TranscriptVariationAlleles) {
-                for my $cons ($allele->consequence_types) {
+                for my $cons ($allele->get_all_OverlapConsequences) {
                     $cons_types{$cons->SO_term} = $cons;
                 }
             }
