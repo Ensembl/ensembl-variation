@@ -317,7 +317,7 @@ sub map_weight{
 
   Arg [1]     : (optional) listref of Bio::EnsEMBL::Transcript objects
   Example     : $vf->get_all_TranscriptVariations;
-  Description : Get a list of all the TranscriptVariations associated with this VariationFeature.
+  Description : Get all the TranscriptVariations associated with this VariationFeature.
                 If the optional list of Transcripts is supplied, get only TranscriptVariations
 		        associated with those Transcripts.
   Returntype  : listref of Bio::EnsEMBL::Variation::TranscriptVariation objects
@@ -368,6 +368,8 @@ sub get_all_TranscriptVariations {
 
                 my $tvs = $tva->fetch_all_by_VariationFeatures([$self], \@unfetched_transcripts);
             
+                # store the TVs by their associated transcript stable id
+
                 for my $tv (@$tvs) {
                     $self->{transcript_variations}->{$tv->transcript->stable_id} = $tv;
                 }
@@ -387,20 +389,47 @@ sub get_all_TranscriptVariations {
         }
     }
 
-    # and just return TranscriptVariations for the requested Transcripts
+    # just return TranscriptVariations for the requested Transcripts
 
     return [ map { $self->{transcript_variations}->{$_->stable_id} } @$transcripts ];
 }
+
+=head2 get_all_RegulatoryFeatureVariations
+
+  Description : Get all the RegulatoryFeatureVariations associated with this VariationFeature.
+  Returntype  : listref of Bio::EnsEMBL::Variation::RegulatoryFeatureVariation objects
+  Exceptions  : none
+  Status      : At Risk
+
+=cut
 
 sub get_all_RegulatoryFeatureVariations {
     my $self = shift;
     return $self->_get_all_RegulationVariations('RegulatoryFeature', @_);
 }
 
+=head2 get_all_MotifFeatureVariations
+
+  Description : Get all the MotifFeatureVariations associated with this VariationFeature.
+  Returntype  : listref of Bio::EnsEMBL::Variation::MotifFeatureVariation objects
+  Exceptions  : none
+  Status      : At Risk
+
+=cut
+
 sub get_all_MotifFeatureVariations {
     my $self = shift;
     return $self->_get_all_RegulationVariations('MotifFeature', @_);
 }
+
+=head2 get_all_ExternalFeatureVariations
+
+  Description : Get all the ExternalFeatureVariations associated with this VariationFeature.
+  Returntype  : listref of Bio::EnsEMBL::Variation::ExternalFeatureVariation objects
+  Exceptions  : none
+  Status      : At Risk
+
+=cut
 
 sub get_all_ExternalFeatureVariations {
     my $self = shift;
@@ -409,6 +438,10 @@ sub get_all_ExternalFeatureVariations {
 
 sub _get_all_RegulationVariations {
     my ($self, $type) = @_;
+
+    unless ($type && ($type eq 'RegulatoryFeature' || $type eq 'MotifFeature' || $type eq 'ExternalFeature')) {
+        throw("Invalid Ensembl Regulation type '$type'");
+    }
 
     unless ($self->{regulation_variations}->{$type}) {
     
@@ -553,7 +586,8 @@ sub get_all_OverlapConsequences {
             }
         }
 
-        # if we don't have any consequences we use a default from Constants.pm
+        # if we don't have any consequences we use a default from Constants.pm 
+        # (currently set to the intergenic consequence)
 
         $self->{overlap_consequences} = [ 
             %overlap_cons ? values %overlap_cons : $DEFAULT_OVERLAP_CONSEQUENCE
@@ -641,7 +675,7 @@ sub add_consequence_type{
 
 =head2 get_consequence_type
 
-    Status : Deprecated, use add_OverlapConsequence instead
+    Status : Deprecated, use consequence_type instead
 
 =cut
 
@@ -673,7 +707,7 @@ sub ambig_code{
 
     Args[1]      : (optional) no_db - don't use the term from the database, always calculate it from the allele string 
                    (used by the ensembl variation pipeline)
-    Example      : my $variation_class = $vf->var_class()
+    Example      : my $variation_class = $vf->var_class
     Description  : returns the class for the variation, according to dbSNP classification
     ReturnType   : String $variation_class
     Exceptions   : none
@@ -684,8 +718,8 @@ sub ambig_code{
 
 sub var_class {
 
-    my $self = shift;
-    my $no_db = shift;
+    my $self    = shift;
+    my $no_db   = shift;
     
     unless ($self->{class_display_term}) {
         
@@ -694,14 +728,14 @@ sub var_class {
         # convert the SO term to the ensembl display term
         
         if (my $display_term = $self->{adaptor}->AttributeAdaptor->display_term_for_SO_term(
-                $self->{class_SO_term}, 
+                $so_term, 
                 $self->is_somatic
             ) ) {
             
             $self->{class_display_term} = $display_term;
         }
         else {
-            die "Unrecognised SO term: ".$self->{class_SO_term};
+            die "Unable to get display term for SO term: ".$so_term;
         }
     }
     
