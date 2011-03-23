@@ -101,6 +101,7 @@ package Bio::EnsEMBL::Variation::Variation;
 
 use Bio::EnsEMBL::Storable;
 use Bio::EnsEMBL::Utils::Argument qw(rearrange);
+use Bio::EnsEMBL::Utils::Scalar qw(assert_ref);
 use Bio::EnsEMBL::Variation::Utils::Sequence qw(ambiguity_code SO_variation_class);
 use Bio::EnsEMBL::Utils::Exception qw(throw deprecate warning);
 use vars qw(@ISA);
@@ -213,7 +214,6 @@ sub new {
     'is_somatic' => $is_somatic,
     'synonyms' => $syns || {},
     'ancestral_allele' => $ancestral_allele,
-    'alleles' => $alleles || [],
     'validation_code' => $vcode,
     'moltype' => $moltype,
     'five_prime_flanking_seq' => $five_seq,
@@ -221,13 +221,8 @@ sub new {
     'flank_flag' => $flank_flag
   }, $class;
   
-  if (defined($alleles)) {
-    # Loop over the supplied alleles and weaken the link in order to prevent circular references. Also add a reference to this variation object to each of the alleles
-    foreach my $allele (@{$alleles}) {
-      $allele->variation($self);
-      weaken($allele->{'variation'});
-    }
-  }
+    # Add the alleles to this Variation object
+    map {$self->_add_Allele($_)} @{$alleles} if (defined($alleles));
   
   return $self;
 }
@@ -361,11 +356,37 @@ sub get_all_failed_descriptions {
     return $self->{'failed_description'};
 }
 
-=head2 add_Allele
+=head2 _add_Allele
 
   Arg [1]    : Bio::EnsEMBL::Variation::Allele $allele
   Example    : $v->add_Allele(Bio::EnsEMBL::Variation::Alelele->new(...));
-  Description: Associates an Allele with this variation
+  Description: Associates an Allele with this variation. Should only be called from within the variation module
+  Returntype : none
+  Exceptions : throw on incorrect argument
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub _add_Allele {
+    my $self = shift;
+    my $allele = shift;
+
+    #ÊAdd (or replace) the allele to the hash
+    $self->add_Allele($allele);
+    
+    #ÊAdd a reference to ourself to the allele object
+    $allele->variation($self);
+  
+    #ÊWeaken the allele's reference back to this variation object
+    $allele->_weaken();
+}
+
+=head2 allele
+
+  Arg [1]    : Bio::EnsEMBL::Variation::Allele $allele (Optional)
+  Example    : $v->allele(Bio::EnsEMBL::Variation::Alelele->new(...));
+  Description: Add an Allele to this variation.
   Returntype : none
   Exceptions : throw on incorrect argument
   Caller     : general
@@ -374,22 +395,14 @@ sub get_all_failed_descriptions {
 =cut
 
 sub add_Allele {
-  my $self = shift;
-  my $allele = shift;
-
-  if(!ref($allele) || !$allele->isa('Bio::EnsEMBL::Variation::Allele')) {
-    throw("Bio::EnsEMBL::Variation::Allele argument expected");
-  }
-
-  #ÊAdd a reference to ourself to the allele object
-  $allele->variation($self);
-  #ÊWe need to weaken this reference since it is circular
-  weaken($allele->{'variation'});
+    my $self = shift;
+    my $allele = shift;
   
-  # If we add an allele, we need to empty the '_all_failed_descriptions'-cache
-  delete($self->{'_all_failed_descriptions'}) if (exists($self->{'_all_failed_descriptions'}));
-  
-  push @{$self->{'alleles'}}, $allele;
+    assert_ref($allele,'Bio::EnsEMBL::Variation::Allele');
+    
+    #ÊStore the allele in our private hash using the allele_id as key. This is primarily in order to quickly update allele objects that are created later and needs to be properly linked to the variation
+    $self->{'alleles'}{$allele->dbID()} = $allele;
+    
 }
 
 =head2 name
@@ -803,9 +816,10 @@ sub is_somatic {
 
 sub get_all_Alleles {
   my $self = shift;
-  return $self->{'alleles'};
+  
+  my @alleles = values(%{$self->{'alleles'}});
+  return \@alleles;
 }
-
 
 
 
@@ -1157,6 +1171,20 @@ sub derived_allele {
          }
      }
      return $derived_allele_str;
+}
+
+sub _weaken {
+    my $self = shift;
+    my $allele = shift;
+    
+    #ÊAssert the allele reference
+    assert_ref($allele,'Bio::EnsEMBL::Variation::Allele');
+    
+    #ÊIf the allele does not exist in our allele hash, do nothing
+    return unless (defined($self->{'alleles'}) && exists($self->{'alleles'}{$allele->dbID()}));
+    
+    #ÊWeaken the link from this variation to the allele
+    weaken($self->{'alleles'}{$allele->dbID()});
 }
 
 1;
