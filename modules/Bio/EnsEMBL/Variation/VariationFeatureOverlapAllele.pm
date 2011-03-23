@@ -192,13 +192,10 @@ sub feature_seq {
     
     unless ($self->{feature_seq}) {
         
-        # check if we need to reverse complement the vf_seq
+        # check if we need to reverse complement the variation_feature_seq
         
-        my $vf = $self->variation_feature_overlap->variation_feature;
-        my $feature = $self->variation_feature_overlap->feature;
-        
-        if ($vf->strand != $feature->strand) {
-            my $vf_seq = $self->{variation_feature_seq};
+        if ($self->variation_feature->strand != $self->feature->strand) {
+            my $vf_seq = $self->variation_feature_seq;
             reverse_comp(\$vf_seq);
             $self->{feature_seq} = $vf_seq;
         }
