@@ -825,9 +825,9 @@ sub _objs_from_sth {
             $validation_status = 0 if (!defined $validation_status);
             my @states = split(',',$validation_status);
             
-            #my $cons_types = $self->_variation_feature_consequences_for_set_number($consequence_type);
+            #my $overlap_consequences = $self->_variation_feature_consequences_for_set_number($consequence_type);
             
-            my $cons_types = [ map { $self->_overlap_consequence_for_SO_term($_) } 
+            my $overlap_consequences = [ map { $self->_overlap_consequence_for_SO_term($_) } 
                 split /,/, $consequence_type ];
 
             # consequence_type
@@ -847,7 +847,7 @@ sub _objs_from_sth {
                 'source'   => $source_name,
                 'is_somatic' => $is_somatic,
                 'validation_code' => \@states,
-                'consequence_type_objects' => $cons_types,
+                'overlap_consequences' => $overlap_consequences,
                 '_variation_id' => $variation_id,
                 'class_SO_term' => $aa->attrib_value_for_id($class_attrib_id),
                 }

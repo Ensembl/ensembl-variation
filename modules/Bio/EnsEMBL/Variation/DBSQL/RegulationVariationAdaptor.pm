@@ -52,7 +52,7 @@ sub store {
         ) VALUES (?,?,?,?,?,?,?,?)
     });
     
-    for my $allele (@{ $vfo->alt_alleles }) {
+    for my $allele (@{ $vfo->get_all_alternate_VariationFeatureOverlapAlleles }) {
         
         my ($feat_stable_id, $interdb_stable_id);
         
@@ -227,6 +227,8 @@ sub _objs_from_sth {
                 is_reference                => 1,
                 variation_feature_allele    => $ref_allele,
             });
+
+            $fgv->add_VariationFeatureOverlapAllele($reference_allele);
         }
         
         my @cons_types = map { $self->AttributeAdaptor->OverlapConsequence_for_SO_term($_) } 
@@ -238,7 +240,7 @@ sub _objs_from_sth {
             consequence_types           => \@cons_types,
         });
         
-        $fgv->alt_alleles($allele);
+        $fgv->add_VariationFeatureOverlapAllele($allele);
     }
     
     return [values %fgvs];

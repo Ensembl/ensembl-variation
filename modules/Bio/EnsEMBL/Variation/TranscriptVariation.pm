@@ -37,6 +37,8 @@ Bio::EnsEMBL::Variation::TranscriptVariation
     print "pep coords: ", $tv->translation_start, '-',$tv->translation_end(), "\n";
     print "amino acid change: ", $tv->pep_allele_string, "\n";
     print "codon change: ", $tv->codons, "\n";
+    print "allele sequences: ", (join ",", map { $_->variation_feature_seq } 
+        @{ $tv->get_all_TranscriptVariationAlleles }, "\n";
 
 =head1 DESCRIPTION
 
@@ -51,7 +53,7 @@ package Bio::EnsEMBL::Variation::TranscriptVariation;
 use strict;
 use warnings;
 
-use Bio::EnsEMBL::Utils::Exception qw(throw warning);
+use Bio::EnsEMBL::Utils::Scalar qw(assert_ref check_ref);
 use Bio::EnsEMBL::Variation::TranscriptVariationAllele;
 use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(overlap within_cds);
 
@@ -113,20 +115,59 @@ sub new {
     return $self;
 }
 
+=head2 add_TranscriptVariationAllele
+
+  Arg [1]    : A Bio::EnsEMBL::Variation::TranscriptVariationAllele instance
+  Description: Add an allele to this TranscriptVariation
+  Returntype : none
+  Exceptions : throws if the argument is not the expected type
+  Status     : At Risk
+
+=cut
+
 sub add_TranscriptVariationAllele {
-    my $self = shift;
-    return $self->SUPER::add_VariationFeatureOverlapAllele(@_);
+    my ($self, $tva) = @_;
+    assert_ref($tva, 'Bio::EnsEMBL::Variation::TranscriptVariationAllele');
+    return $self->SUPER::add_VariationFeatureOverlapAllele($tva);
 }
+
+=head2 get_reference_TranscriptVariationAllele
+
+  Description: Get the object representing the reference allele of this TranscriptVariation
+  Returntype : Bio::EnsEMBL::Variation::TranscriptVariationAllele instance
+  Exceptions : none
+  Status     : At Risk
+
+=cut
 
 sub get_reference_TranscriptVariationAllele {
     my $self = shift;
     return $self->SUPER::get_reference_VariationFeatureOverlapAllele(@_);
 }
 
+=head2 get_all_alternate_TranscriptVariationAlleles
+
+  Description: Get a list of the alternate alleles of this TranscriptVariation
+  Returntype : listref of Bio::EnsEMBL::Variation::TranscriptVariationAllele objects
+  Exceptions : none
+  Status     : At Risk
+
+=cut
+
 sub get_all_alternate_TranscriptVariationAlleles {
     my $self = shift;
     return $self->SUPER::get_all_alternate_VariationFeatureOverlapAlleles(@_);
 }
+
+=head2 get_all_TranscriptVariationAlleles
+
+  Description: Get a list of the all the alleles, both reference and alternate, of 
+               this TranscriptVariation
+  Returntype : listref of Bio::EnsEMBL::Variation::TranscriptVariationAllele objects
+  Exceptions : none
+  Status     : At Risk
+
+=cut
 
 sub get_all_TranscriptVariationAlleles {
     my $self = shift;
@@ -150,7 +191,7 @@ sub transcript_stable_id {
 =head2 transcript
 
   Description: Returns the associated Transcript
-  Returntype : Bio::EnsEMBL:Transcript
+  Returntype : Bio::EnsEMBL::Transcript
   Exceptions : none
   Status     : At Risk
 
@@ -158,6 +199,7 @@ sub transcript_stable_id {
 
 sub transcript {
     my ($self, $transcript) = @_;
+    assert_ref($transcript, 'Bio::EnsEMBL::Transcript') if $transcript;
     return $self->SUPER::feature($transcript, 'Transcript');
 }
 
@@ -177,9 +219,9 @@ sub transcript {
 sub cdna_start {
     my ($self, $cdna_start) = @_;
     
-    $self->{cdna_start} = $cdna_start if $cdna_start;
+    $self->{cdna_start} = $cdna_start if defined $cdna_start;
     
-    unless ($self->{cdna_start}) {
+    unless (defined $self->{cdna_start}) {
         my $cdna_coords = $self->cdna_coords;
         
         return undef if (@$cdna_coords != 1 || $cdna_coords->[0]->isa('Bio::EnsEMBL::Mapper::Gap'));
@@ -207,10 +249,10 @@ sub cdna_start {
 sub cdna_end {
     my ($self, $cdna_end) = @_;
     
-    $self->{cdna_end} = $cdna_end if $cdna_end;
+    $self->{cdna_end} = $cdna_end if defined $cdna_end;
     
     # call cdna_start to calculate the start and end
-    $self->cdna_start unless $self->{cdna_end};
+    $self->cdna_start unless defined $self->{cdna_end};
     
     return $self->{cdna_end};
 }
@@ -231,9 +273,9 @@ sub cdna_end {
 sub cds_start {
     my ($self, $cds_start) = @_;
     
-    $self->{cds_start} = $cds_start if $cds_start;
+    $self->{cds_start} = $cds_start if defined $cds_start;
     
-    unless ($self->{cds_start}) {
+    unless (defined $self->{cds_start}) {
         my $cds_coords = $self->cds_coords;
         
         return undef if (@$cds_coords != 1 || $cds_coords->[0]->isa('Bio::EnsEMBL::Mapper::Gap'));
@@ -263,10 +305,10 @@ sub cds_start {
 sub cds_end {
     my ($self, $cds_end) = @_;
     
-    $self->{cds_end} = $cds_end if $cds_end;
+    $self->{cds_end} = $cds_end if defined $cds_end;
     
     # call cds_start to calculate the start and end
-    $self->cds_start unless $self->{cds_end};
+    $self->cds_start unless defined $self->{cds_end};
     
     return $self->{cds_end};
 }
@@ -287,9 +329,9 @@ sub cds_end {
 sub translation_start {
     my ($self, $translation_start) = @_;
     
-    $self->{translation_start} = $translation_start if $translation_start;
+    $self->{translation_start} = $translation_start if defined $translation_start;
     
-    unless ($self->{translation_start}) {
+    unless (defined $self->{translation_start}) {
         my $translation_coords = $self->translation_coords;
         
         return undef if (@$translation_coords != 1 || $translation_coords->[0]->isa('Bio::EnsEMBL::Mapper::Gap'));
@@ -317,10 +359,10 @@ sub translation_start {
 sub translation_end {
     my ($self, $translation_end) = @_;
     
-    $self->{translation_end} = $translation_end if $translation_end;
+    $self->{translation_end} = $translation_end if defined $translation_end;
     
     # call translation_start to calculate the start and end
-    $self->translation_start unless $self->{translation_end};
+    $self->translation_start unless defined $self->{translation_end};
     
     return $self->{translation_end};
 }
@@ -654,17 +696,51 @@ sub _codon_table {
     return $codon_table;
 }
 
+=head2 hgvs_genomic
+
+  Description: Return the strings representing the genomic-level effect of each of the alleles 
+               of this variation in HGVS format
+  Returntype : hashref where the key is the allele sequence and then value is the HGVS string 
+  Exceptions : none
+  Status     : At Risk
+
+=cut
+
 sub hgvs_genomic {
     return _hgvs_generic(@_,'genomic');
 }
+
+=head2 hgvs_coding
+
+  Description: Return the strings representing the CDS-level effect of each of the alleles 
+               of this variation in HGVS format
+  Returntype : hashref where the key is the allele sequence and then value is the HGVS string 
+  Exceptions : none
+  Status     : At Risk
+
+=cut
 
 sub hgvs_coding {
     return _hgvs_generic(@_,'coding');
 }
 
+=head2 hgvs_protein
+
+  Description: Return the strings representing the protein-level effect of each of the alleles 
+               of this variation in HGVS format
+  Returntype : hashref where the key is the allele sequence and then value is the HGVS string 
+  Exceptions : none
+  Status     : At Risk
+
+=cut
+
 sub hgvs_protein {
     return _hgvs_generic(@_,'protein');
 }
+
+=head 
+
+# We haven't implemented support for these methods yet
 
 sub hgvs_rna {
     return _hgvs_generic(@_,'rna');
@@ -673,6 +749,7 @@ sub hgvs_rna {
 sub hgvs_mitochondrial {
     return _hgvs_generic(@_,'mitochondrial');
 }
+=cut
 
 sub _hgvs_generic {
     my $self = shift;

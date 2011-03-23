@@ -89,12 +89,13 @@ use Scalar::Util qw(weaken);
 
 use Bio::EnsEMBL::Feature;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
+use Bio::EnsEMBL::Utils::Scalar qw(assert_ref);
 use Bio::EnsEMBL::Utils::Argument  qw(rearrange);
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp); 
 use Bio::EnsEMBL::Variation::Utils::Sequence qw(ambiguity_code hgvs_variant_notation SO_variation_class);
-use Bio::EnsEMBL::Variation::ConsequenceType;
 use Bio::EnsEMBL::Variation::Variation;
 use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(MAX_DISTANCE_FROM_TRANSCRIPT);
+use Bio::EnsEMBL::Variation::Utils::Constants qw($DEFAULT_OVERLAP_CONSEQUENCE); 
 use Bio::EnsEMBL::Variation::RegulatoryFeatureVariation;
 use Bio::EnsEMBL::Variation::MotifFeatureVariation;
 use Bio::EnsEMBL::Variation::ExternalFeatureVariation;
@@ -104,8 +105,6 @@ use Bio::PrimarySeq;
 use Bio::SeqUtils;
 
 our @ISA = ('Bio::EnsEMBL::Feature');
-
-my %CONSEQUENCE_TYPES = %Bio::EnsEMBL::Variation::ConsequenceType::CONSEQUENCE_TYPES;
 
 =head2 new
 
@@ -179,22 +178,41 @@ sub new {
   my $class = ref($caller) || $caller;
     
   my $self = $class->SUPER::new(@_);
-  my ($allele_str, $var_name, $map_weight, $variation, $variation_id, $source, 
-    $is_somatic, $validation_code, $consequence_type_objects, $class_so_term) =
-    rearrange([qw(ALLELE_STRING VARIATION_NAME 
-                  MAP_WEIGHT VARIATION _VARIATION_ID SOURCE IS_SOMATIC VALIDATION_CODE 
-		  CONSEQUENCE_TYPE_OBJECTS CLASS_SO_TERM)], @_);
 
-  $self->{'allele_string'}              = $allele_str;
-  $self->{'variation_name'}             = $var_name;
-  $self->{'map_weight'}                 = $map_weight;
-  $self->{'variation'}                  = $variation;
-  $self->{'_variation_id'}              = $variation_id;
-  $self->{'source'}                     = $source;
-  $self->{'is_somatic'}                 = $is_somatic;
-  $self->{'validation_code'}            = $validation_code;
-  $self->{'consequence_type_objects'}   = $consequence_type_objects;
-  $self->{'class_SO_term'}              = $class_so_term;
+  my (
+      $allele_str, 
+      $var_name, 
+      $map_weight, 
+      $variation,
+      $variation_id, 
+      $source, 
+      $is_somatic, 
+      $validation_code, 
+      $overlap_consequences,
+      $class_so_term
+  ) = rearrange([qw(
+          ALLELE_STRING 
+          VARIATION_NAME 
+          MAP_WEIGHT 
+          VARIATION 
+          _VARIATION_ID 
+          SOURCE 
+          IS_SOMATIC 
+          VALIDATION_CODE 
+		  OVERLAP_CONSEQUENCES 
+          CLASS_SO_TERM
+        )], @_);
+
+  $self->{'allele_string'}          = $allele_str;
+  $self->{'variation_name'}         = $var_name;
+  $self->{'map_weight'}             = $map_weight;
+  $self->{'variation'}              = $variation;
+  $self->{'_variation_id'}          = $variation_id;
+  $self->{'source'}                 = $source;
+  $self->{'is_somatic'}             = $is_somatic;
+  $self->{'validation_code'}        = $validation_code;
+  $self->{'overlap_consequences'}   = $overlap_consequences;
+  $self->{'class_SO_term'}          = $class_so_term;
   
   return $self;
 }
@@ -228,7 +246,6 @@ sub allele_string{
   return $self->{'allele_string'} = shift if(@_);
   return $self->{'allele_string'};
 }
-
 
 
 =head2 display_id
@@ -297,12 +314,13 @@ sub map_weight{
 
 
 =head2 get_all_TranscriptVariations
-  Arg [1]     : (optional) listref of Bio::EnsEMBL::Transcript $transcripts
+
+  Arg [1]     : (optional) listref of Bio::EnsEMBL::Transcript objects
   Example     : $vf->get_all_TranscriptVariations;
-  Description : Getter a list with all the TranscriptVariations associated associated to the VariationFeature.
-                If an optional listref to Transcript objects is supplied, get only TranscriptVariations
-		associated with those Transcripts. In that case, the loaded TVs and associated consequences will not be stored.
-  Returntype  : ref to list of Bio::EnsEMBL::Variation::TranscriptVariation objects
+  Description : Get a list of all the TranscriptVariations associated with this VariationFeature.
+                If the optional list of Transcripts is supplied, get only TranscriptVariations
+		        associated with those Transcripts.
+  Returntype  : listref of Bio::EnsEMBL::Variation::TranscriptVariation objects
   Exceptions  : Thrown on wrong argument type
   Caller      : general
   Status      : At Risk
@@ -313,8 +331,9 @@ sub get_all_TranscriptVariations {
     
     my ($self, $transcripts) = @_;
 
-    if(defined($transcripts) && ref($transcripts) ne 'ARRAY') {
-        throw('Arrayref of Bio::EnsEMBL::Transcripts expected');
+    if ($transcripts) {
+        assert_ref($transcripts, 'ARRAY');
+        map { assert_ref($_, 'Bio::EnsEMBL::Transcript') } @$transcripts;
     }
 
     unless ($transcripts) {
@@ -479,72 +498,105 @@ sub variation {
   return $self->{'variation'};
 }
 
+=head2 consequence_type
+
+  Description: Get a list of all the unique display_terms of the OverlapConsequences 
+               of this VariationFeature
+  Returntype : listref of strings
+  Exceptions : none
+  Status     : At Risk
+
+=cut
+
 sub consequence_type {
     
-    my ($self, $consequence_type) = @_;
-
-    $self->{consequence_type} = $consequence_type if $consequence_type;
+    my $self = shift;
 
     unless ($self->{consequence_type}) {
 
-        # set it using the consequence type objects
+        # work out the terms from the OverlapConsequence objects
         
-        my @terms = map { $_->display_term } @{ $self->consequence_type_objects };
-
-        # XXX: FIXME as a last resort set the consequence_type to intergenic
-        
-        $self->{consequence_type} = @terms ? \@terms : ['INTERGENIC'];
+        $self->{consequence_type} = 
+            [ map { $_->display_term } @{ $self->get_all_OverlapConsequences } ];
     }
     
     return $self->{consequence_type};
 }
 
-# internal convenience method used by web code
-sub _list_all_consequences {
-  my $self = shift;
-  
-  my @list = ();
-  push @list, @{$_->consequence_type} foreach @{$self->get_all_TranscriptVariations};
-  
-  return \@list;
-}
+=head2 get_all_OverlapConsequences
 
-sub consequence_type_objects {
-    my ($self, $consequence_type_objects) = @_;
+  Description: Get a list of all the unique OverlapConsequences of this VariationFeature, 
+               calculating them on the fly from the TranscriptVariations if necessary
+  Returntype : listref of Bio::EnsEMBL::Variation::OverlapConsequence objects
+  Exceptions : none
+  Status     : At Risk
 
-    $self->{consequence_type_objects} = $consequence_type_objects 
-        if $consequence_type_objects;
+=cut
 
-    unless ($self->{consequence_type_objects}) {
+sub get_all_OverlapConsequences {
+    my $self = shift;
+
+    unless ($self->{overlap_consequences}) {
         
         # work them out from the TranscriptVariations
 
-        # store them in a hash as we don't want duplicates from different TVs
+        # store them in a hash keyed by SO_term as we don't want duplicates from 
+        # different TranscriptVariations
 
-        my %cons_types;
+        my %overlap_cons;
 
         for my $tv (@{ $self->get_all_TranscriptVariations }) {
             for my $allele ($tv->get_all_alternate_TranscriptVariationAlleles) {
                 for my $cons ($allele->get_all_OverlapConsequences) {
-                    $cons_types{$cons->SO_term} = $cons;
+                    $overlap_cons{$cons->SO_term} = $cons;
                 }
             }
         }
 
-        $self->{consequence_type_objects} = [ values %cons_types ];
+        # if we don't have any consequences we use a default from Constants.pm
+
+        $self->{overlap_consequences} = [ 
+            %overlap_cons ? values %overlap_cons : $DEFAULT_OVERLAP_CONSEQUENCE
+        ];
     }
 
-    return $self->{consequence_type_objects}
+    return $self->{overlap_consequences}
 }
 
-sub most_severe_consequence {
+=head2 add_OverlapConsequence
+
+  Arg [1]    : Bio::EnsEMBL::Variation::OverlapConsequence instance
+  Description: Add an OverlapConsequence to this VariationFeature's list 
+  Returntype : none
+  Exceptions : throws if the argument is the wrong type
+  Status     : At Risk
+
+=cut
+
+sub add_OverlapConsequence {
+    my ($self, $oc);
+    assert_ref($oc, 'Bio::EnsEMBL::Variation::OverlapConsequence');
+    push @{ $self->{overlap_consequences} ||= [] }, $oc;
+}
+
+=head2 most_severe_OverlapConsequence
+
+  Description: Get the OverlapConsequence considered (by Ensembl) to be the most severe 
+               consequence of all the alleles of this VariationFeature 
+  Returntype : Bio::EnsEMBL::Variation::OverlapConsequence
+  Exceptions : none
+  Status     : At Risk
+
+=cut
+
+sub most_severe_OverlapConsequence {
     my $self = shift;
     
     unless ($self->{_most_severe_consequence}) {
         
         my $highest;
         
-        for my $cons (@{ $self->consequence_type_objects }) {
+        for my $cons (@{ $self->get_all_OverlapConsequences }) {
             $highest ||= $cons;
             if ($cons->rank < $highest->rank) {
                 $highest = $cons;
@@ -564,7 +616,7 @@ sub most_severe_consequence {
   Description: Getter for the consequence type to display,
                when more than one
   Returntype : string
-  Exceptions : throw on incorrect argument
+  Exceptions : none
   Caller     : webteam
   Status     : At Risk
 
@@ -572,51 +624,30 @@ sub most_severe_consequence {
 
 sub display_consequence {
     my $self = shift;
-    return $self->most_severe_consequence->display_term;
+    return $self->most_severe_OverlapConsequence->display_term;
 }
 
 =head2 add_consequence_type
 
-    Arg [1]     : string $consequence_type
-    Example     : $vf->add_consequence_type("UPSTREAM")
-    Description : Setter for the consequence type of this VariationFeature
-                  Allowed values are: 'ESSENTIAL_SPLICE_SITE','STOP_GAINED','STOP_LOST','FRAMESHIFT_CODING',
-		  'NON_SYNONYMOUS_CODING','SPLICE_SITE','SYNONYMOUS_CODING','REGULATORY_REGION',
-		  '5PRIME_UTR','3PRIME_UTR','INTRONIC','UPSTREAM','DOWNSTREAM','INTERGENIC'
-    ReturnType  : string
-    Exceptions  : none
-    Caller      : general
-    Status      : At Risk
+    Status : Deprecated, use add_OverlapConsequence instead
 
 =cut
 
 sub add_consequence_type{
     my $self = shift;
-
-    warning('Deprecated method');
+    warning('Deprecated method, use add_OverlapConsequence instead');
+    return $self->add_OverlapConsequence(@_);
 }
 
 =head2 get_consequence_type
 
-   Arg[1]      : (optional) Bio::EnsEMBL::Gene $g
-   Example     : if($vf->get_consequence_type eq 'INTRONIC'){do_something();}
-   Description : Getter for the consequence type of this variation, which is the highest of the transcripts that has.
-                 If an argument provided, gets the highest of the transcripts where the gene appears
-                 Allowed values are:'ESSENTIAL_SPLICE_SITE','STOP_GAINED','STOP_LOST','FRAMESHIFT_CODING',
-		  'NON_SYNONYMOUS_CODING','SPLICE_SITE','SYNONYMOUS_CODING','REGULATORY_REGION',
-		  '5PRIME_UTR','3PRIME_UTR','INTRONIC','UPSTREAM','DOWNSTREAM','INTERGENIC'
-   Returntype : ref to array of strings
-   Exceptions : throw if provided argument not a gene
-   Caller     : general
-   Status     : At Risk
+    Status : Deprecated, use add_OverlapConsequence instead
 
 =cut
 
 sub get_consequence_type {
     my $self = shift;
-
-    warning('Deprecated method');
-
+    warning('Deprecated method, use consequence_type instead');
     return $self->consequence_type;
 }
 

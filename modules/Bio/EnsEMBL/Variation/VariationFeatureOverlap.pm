@@ -18,16 +18,75 @@
 
 =cut
 
+=head1 NAME
+
+Bio::EnsEMBL::Variation::VariationFeatureOverlap
+
+=head1 SYNOPSIS
+
+    use Bio::EnsEMBL::Variation::VariationFeatureOverlap;
+
+    my $vfo = Bio::EnsEMBL::Variation::VariationFeatureOverlap->new(
+        -feature            => $feature,
+        -variation_feature  => $var_feat
+    );
+
+    print "consequence type: ", (join ",", @{ $vfo->consequence_type }), "\n";
+    print "most severe consequence: ", $vfo->display_consequence, "\n";
+
+=head1 DESCRIPTION
+
+A VariationFeatureOverlap represents a VariationFeature which is in close
+proximity to another Ensembl Feature. It is the superclass of feature-specific
+objects such as TranscriptVariation and RegulatoryFeatureVariation, and has
+methods common to all such objects. You will not normally instantiate this
+class directly, instead instantiating one of the feature-specific subclasses.
+
+=cut
+
 package Bio::EnsEMBL::Variation::VariationFeatureOverlap;
 
 use strict;
 use warnings;
 
-use Bio::EnsEMBL::Utils::Exception qw(throw warning);
+use Bio::EnsEMBL::Utils::Scalar qw(assert_ref);
 use Bio::EnsEMBL::Utils::Argument qw(rearrange);
 use Bio::EnsEMBL::Utils::Sequence qw(expand);
 use Bio::EnsEMBL::Variation::Utils::Sequence qw(unambiguity_code);
 use Bio::EnsEMBL::Variation::VariationFeatureOverlapAllele;
+
+=head2 new
+
+  Arg [-FEATURE] : 
+    The Bio::EnsEMBL::Feature associated with the given VariationFeature
+
+  Arg [-VARIATION_FEATURE] :
+    The Bio::EnsEMBL::VariationFeature associated with the given Feature
+
+  Arg [-ADAPTOR] :
+    A Bio::EnsEMBL::Variation::DBSQL::VariationFeatureOverlapAdaptor
+
+  Arg [-DISAMBIGUATE_SINGLE_NUCLEOTIDE_ALLELES] :
+    A flag indiciating if ambiguous single nucleotide alleles should be disambiguated
+    when constructing the VariationFeatureOverlapAllele objects, e.g. a Variationfeature
+    with an allele string like 'T/M' would be treated as if it were 'T/A/C'. We limit
+    ourselves to single nucleotide alleles to avoid the combinatorial explosion if we
+    allowed longer alleles with potentially many ambiguous bases.
+
+  Example : 
+    my $vfo = Bio::EnsEMBL::Variation::VariationFeatureOverlap->new(
+        -feature           => $feature,
+        -variation_feature => $var_feat
+    );
+
+  Description: Constructs a new VariationFeatureOverlap instance given a VariationFeature
+               and a Feature
+  Returntype : A new Bio::EnsEMBL::Variation::VariationFeatureOverlap instance 
+  Exceptions : throws unless both VARIATION_FEATURE and FEATURE are supplied, or if the
+               supplied ADAPTOR is the wrong class
+  Status     : At Risk
+
+=cut 
 
 sub new {
 
@@ -47,8 +106,9 @@ sub new {
             DISAMBIGUATE_SINGLE_NUCLEOTIDE_ALLELES
         )], @_);
 
-    throw("VariationFeature argument required") unless $variation_feature;
-    throw("Feature argument required") unless $feature;
+    assert_ref($variation_feature, 'Bio::EnsEMBL::Variation::VariationFeature');
+    assert_ref($feature, 'Bio::EnsEMBL::Feature');
+    assert_ref($adaptor, 'Bio::EnsEMBL::Variation::DBSQL::VariationFeatureOverlapAdaptor') if $adaptor;
 
     $ref_feature ||= $variation_feature->slice;
 
@@ -140,16 +200,23 @@ sub new_fast {
     return bless $hashref, $class;
 }
 
-sub dbID {
-    my ($self, $dbID) = @_;
-    $self->{dbID} = $dbID if defined $dbID;
-    return $self->{dbID};
-}
+=head2 variation_feature
+
+  Arg [1]    : (optional) A Bio::EnsEMBL::Variation::VariationFeature
+  Description: Get/set the associated VariationFeature, lazy-loading it if required
+  Returntype : Bio::EnsEMBL::Variation::VariationFeature
+  Exceptions : throws if the argument is the wrong type
+  Status     : At Risk
+
+=cut
 
 sub variation_feature {
     my ($self, $variation_feature) = @_;
-    
-    $self->{variation_feature} = $variation_feature if $variation_feature;
+
+    if ($variation_feature) {
+        assert_ref($variation_feature, 'Bio::EnsEMBL::Variation::VariationFeature');
+        $self->{variation_feature} = $variation_feature;
+    }
     
     if (my $vf_id = $self->{_variation_feature_id}) {
         
@@ -168,7 +235,11 @@ sub variation_feature {
     return $self->{variation_feature};
 }
 
-sub variation_feature_id {
+sub _variation_feature_id {
+
+    # get the dbID of the variation feature, using the VariationFeature object 
+    # if we have one, or the internal hash value if we don't
+    
     my $self = shift;
     
     if (my $vf = $self->{variation_feature}) {
@@ -182,10 +253,23 @@ sub variation_feature_id {
     }
 }
 
+=head2 feature
+
+  Arg [1]    : (optional) A Bio::EnsEMBL::Feature
+  Description: Get/set the associated Feature, lazy-loading it if required
+  Returntype : Bio::EnsEMBL::Feature
+  Exceptions : throws isf the argument is the wrong type
+  Status     : At Risk
+
+=cut
+
 sub feature {
     my ($self, $feature, $type) = @_;
     
-    $self->{feature} = $feature if $feature;
+    if ($feature) {
+        assert_ref($feature, 'Bio::EnsEMBL::Feature');
+        $self->{feature} = $feature;
+    }
  
     if ($type && !$self->{feature}) {
     
@@ -275,7 +359,7 @@ sub _fetch_adaptor_for_group {
     
 }
 
-sub feature_stable_id {
+sub _feature_stable_id {
     my $self = shift;
     if ($self->feature && $self->feature->can('stable_id')) {
         return $self->feature->stable_id;
@@ -288,12 +372,20 @@ sub feature_stable_id {
     }
 }
 
+=head2 add_VariationFeatureOverlapAllele
+
+  Arg [1]    : A Bio::EnsEMBL::Variation::VariationFeatureOverlapAllele instance
+  Description: Add an allele to this VariationFeatureOverlap
+  Returntype : none
+  Exceptions : throws if the argument is not the expected type
+  Status     : At Risk
+
+=cut
+
 sub add_VariationFeatureOverlapAllele {
     my ($self, $vfoa) = @_;
 
-    unless ($vfoa && ref $vfoa && $vfoa->isa('Bio::EnsEMBL::Variation::VariationFeatureOverlapAllele')) {
-        throw("Argument must be a VariationFeatureOverlapAllele");
-    }
+    assert_ref($vfoa, 'Bio::EnsEMBL::Variation::VariationFeatureOverlapAllele');
 
     if ($vfoa->is_reference) {
         $self->{reference_allele} = $vfoa;
@@ -304,15 +396,43 @@ sub add_VariationFeatureOverlapAllele {
     }
 }
 
+=head2 get_reference_VariationFeatureOverlapAllele
+
+  Description: Get the object representing the reference allele of this VariationFeatureOverlapAllele
+  Returntype : Bio::EnsEMBL::Variation::VariationFeatureOverlapAllele instance
+  Exceptions : none
+  Status     : At Risk
+
+=cut
+
 sub get_reference_VariationFeatureOverlapAllele {
     my $self = shift;
     return $self->{reference_allele};
 }
 
+=head2 get_all_alternate_VariationFeatureOverlapAlleles
+
+  Description: Get a list of the alternate alleles of this VariationFeatureOverlapAllele
+  Returntype : listref of Bio::EnsEMBL::Variation::VariationFeatureOverlapAllele objects
+  Exceptions : none
+  Status     : At Risk
+
+=cut
+
 sub get_all_alternate_VariationFeatureOverlapAlleles {
     my $self = shift;
     return $self->{alt_alleles};
 }
+
+=head2 get_all_VariationFeatureOverlapAlleles
+
+  Description: Get a list of the all the alleles, both reference and alternate, of this
+               VariationFeatureOverlap
+  Returntype : listref of Bio::EnsEMBL::Variation::VariationFeatureOverlapAllele objects
+  Exceptions : none
+  Status     : At Risk
+
+=cut
 
 sub get_all_VariationFeatureOverlapAlleles {
     my $self = shift;
@@ -322,13 +442,23 @@ sub get_all_VariationFeatureOverlapAlleles {
     ];
 }
 
+=head2 consequence_type
+
+  Description: Get a list of all the unique display_terms of the alleles of this 
+               VariationFeatureOverlap
+  Returntype : listref of strings
+  Exceptions : none
+  Status     : At Risk
+
+=cut
+
 sub consequence_type {
     my $self = shift;
     
     unless ($self->{_consequence_type}) {
         
-        # build up a unique list of all the consequence display terms
-        # of this VariationFeatureOverlap's alleles
+        # use a hash to ensure we don't include redundant terms (because more than one
+        # allele may have the same consequence display_term)
 
         my %cons_types;
 
@@ -344,7 +474,17 @@ sub consequence_type {
     return $self->{_consequence_type};
 }
 
-sub most_severe_consequence {
+=head2 most_severe_OverlapConsequence
+
+  Description: Get the OverlapConsequence considered (by Ensembl) to be the most severe 
+               consequence of all the alleles of this VariationFeatureOverlap 
+  Returntype : Bio::EnsEMBL::Variation::OverlapConsequence
+  Exceptions : none
+  Status     : At Risk
+
+=cut
+
+sub most_severe_OverlapConsequence {
     my $self = shift;
     
     unless ($self->{_most_severe_consequence}) {
@@ -366,9 +506,18 @@ sub most_severe_consequence {
     return $self->{_most_severe_consequence};
 }
 
+=head2 display_consequence
+
+  Description: Get the display_term of the most severe OverlapConsequence 
+  Returntype : string
+  Exceptions : none
+  Status     : At Risk
+
+=cut
+
 sub display_consequence {
     my $self = shift;
-    return $self->most_severe_consequence->display_term;
+    return $self->most_severe_OverlapConsequence->display_term;
 }
 
 1;
