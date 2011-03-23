@@ -53,13 +53,23 @@ package Bio::EnsEMBL::Variation::Utils::Sequence;
 
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp); 
+use Bio::EnsEMBL::Variation::Utils::Constants qw(:SO_class_terms);
 use Exporter;
 
 use vars qw(@ISA @EXPORT_OK);
 
 @ISA = qw(Exporter);
 
-@EXPORT_OK = qw(&ambiguity_code &variation_class &unambiguity_code &sequence_with_ambiguity &hgvs_variant_notation &SO_variation_class &align_seqs &strain_ambiguity_code);
+@EXPORT_OK = qw(
+    &ambiguity_code 
+    &variation_class 
+    &unambiguity_code 
+    &sequence_with_ambiguity 
+    &hgvs_variant_notation 
+    &SO_variation_class 
+    &align_seqs 
+    &strain_ambiguity_code
+);
 
 =head2 ambiguity_code
 
@@ -302,23 +312,22 @@ sub SO_variation_class {
     
     $ref_correct = 1 unless defined $ref_correct;
 
-    # this string defines the character class allowable as an allele
     my $allele_class = '[A-Z]';
 
     # default to sequence_alteration
-    my $class = 'sequence_alteration';
+    my $class = SO_TERM_SEQUENCE_ALTERATION;
 
     if ($alleles =~ /^$allele_class(\/$allele_class)+$/) {
         # A/T, A/T/G
-        $class = 'SNV';
+        $class = SO_TERM_SNV;
     }
     elsif ($alleles =~ /^$allele_class+(\/$allele_class+)+$/) {
         # AA/TTT
-        $class = 'substitution';
+        $class = SO_TERM_SUBSTITUTION;
     }
     elsif ($alleles =~ /\)\d+/) {
         # (CAG)8/(CAG)9
-        $class = 'tandem_repeat';
+        $class = SO_TERM_TANDEM_REPEAT;
     }
     else {
         my @alleles = split /\//, $alleles;
@@ -331,12 +340,12 @@ sub SO_variation_class {
 
                 if (@alleles == 1 && $alleles[0] =~ /DEL/) {
                     # -/(LARGEDELETION) (rather oddly!)
-                    $class = $ref_correct ? 'deletion' : 'indel';
+                    $class = $ref_correct ? SO_TERM_DELETION : SO_TERM_INDEL;
                 }
 
                 unless (grep { $_ !~ /^$allele_class+$|INS/ } @alleles) {
                     # -/ATT, -/(LARGEINSERTION)
-                    $class = $ref_correct ? 'insertion' : 'indel';
+                    $class = $ref_correct ? SO_TERM_INSERTION : SO_TERM_INDEL;
                 }
 
                 # else must be mixed insertion and deletion, so just called sequence_alteration
@@ -344,24 +353,24 @@ sub SO_variation_class {
             elsif ($ref =~ /^$allele_class+$/) {
                 unless (grep { $_ !~ /-|DEL/ } @alleles) {
                     # A/-, A/(LARGEDELETION)
-                    $class = $ref_correct ? 'deletion' : 'indel';
+                    $class = $ref_correct ? SO_TERM_DELETION : SO_TERM_INDEL;
                 }
             }
             elsif ($ref =~ /DEL/) {
                 unless (grep { $_ !~ /-/ } @alleles) {
                     # (LARGEDELETION)/-, (2345 BP DELETION)/-
-                    $class = $ref_correct ? 'deletion' : 'indel';
+                    $class = $ref_correct ? SO_TERM_DELETION : SO_TERM_INDEL;
                 }
             }
         }
         elsif (@alleles == 1) {
             if ($alleles[0] =~ /INS/) {
                 # (LARGEINSERTION)
-                $class = $ref_correct ? 'insertion' : 'indel';
+                $class = $ref_correct ? SO_TERM_INSERTION : SO_TERM_INDEL;
             }
             elsif($alleles[0] =~ /DEL/) {
                 # (308 BP DELETION)
-                $class = $ref_correct ? 'deletion' : 'indel';
+                $class = $ref_correct ? SO_TERM_DELETION : SO_TERM_INDEL;
             }
         }
     }
