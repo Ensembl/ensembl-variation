@@ -51,7 +51,7 @@ represent just such an event). It contains various values that represent the con
 as the Sequence Ontology (SO) term and accession (which should always be unique), the Ensembl
 display_term (which will not always be unique), the relative rank of this consequence when compared 
 to other consequences etc. It also contains a reference to a subroutine, referred to as the 
-'predicate' which if a called with a VariationFeatureOverlapAllele (or a subclass) as the first and
+'predicate', which if a called with a VariationFeatureOverlapAllele (or a subclass) as the first and
 only argument, will return a true or false value if this consequence type applies to this allele.
 
 The list of OverlapConsequences used by Ensembl is defined in the Bio::EnsEMBL::Variation::Utils::Constants
@@ -103,7 +103,7 @@ use Bio::EnsEMBL::Variation::Utils::VariationEffect;
   
   Arg [-IS_DEFAULT] : 
     A flag indicating if this is the default consequence type used when none other applies
-    (in Ensembl this represents an intergenic variant)
+    (in Ensembl this currently set on the intergenic OverlapConsequence)
   
   Example : 
     my $oc = Bio::EnsEMBL::Variation::OverlapConsequence->new(
