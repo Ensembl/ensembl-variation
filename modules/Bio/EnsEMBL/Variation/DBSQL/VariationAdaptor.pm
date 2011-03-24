@@ -1143,7 +1143,7 @@ sub _internal_get_failed_descriptions {
     my $sth = $self->prepare($stmt);
     $sth->execute($variation->dbID());
     
-    return $sth->fetchall_arrayref([0]);
+    return [map {$_->[0]} @{$sth->fetchall_arrayref([0])}];
 }
 
 sub _get_flank_from_core{
