@@ -37,7 +37,9 @@ This module provides a single subroutine get_condel_prediction which calculates 
 SIFT and PolyPhen-2 score. Condel is developed by the Biomedical Genomics Group of the 
 Universitat Pompeu Fabra, at the Barcelona Biomedical Research Park (bg.upf.edu/Condel).
 The code in this module is based on a script provided by this group and slightly
-reformatted to fit into the Ensembl system.
+reformatted to fit into the Ensembl API.
+
+Various constants used by Condel can be found in Bio::EnsEMBL::Variation::Utils::CondelConstants.
 
 =cut
 
@@ -67,21 +69,20 @@ use Bio::EnsEMBL::Variation::Utils::CondelConstants qw($CONDEL_CONFIG $CONDEL_SI
 
 sub get_condel_prediction {
 
-    my ($original_sift_score, $original_polyphen_score) = @_;
+    my ($sift_score, $polyphen_score) = @_;
     
     my %config      = %$CONDEL_CONFIG;
     my %sift        = %$CONDEL_SIFT_DATA;
     my %polyphen    = %$CONDEL_POLYPHEN_DATA;
 
-    my %WAS;
     my %class;
     
-    $WAS{'sift'} = $original_sift_score;
-    $WAS{'pph2'} = $original_polyphen_score;
-   
     my $base = 0;
     my $int_score = 0;
-    my $sift_score = sprintf("%.3f", $WAS{'sift'});
+
+    $sift_score     = sprintf("%.3f", $sift_score);
+    $polyphen_score = sprintf("%.3f", $polyphen_score);
+    
     if ($sift_score <= $config{'cutoff.HumVar.sift'}){
       $int_score += sprintf("%.3f", (1 - $sift_score/$config{'max.HumVar.sift'})*(1-$sift{'tn'}{"$sift_score"}));
       $base += 1-$sift{'tn'}{"$sift_score"};
@@ -91,8 +92,9 @@ sub get_condel_prediction {
       $int_score += sprintf("%.3f", (1 - $sift_score/$config{'max.HumVar.sift'})*(1-$sift{'tp'}{"$sift_score"}));
       $base += 1-$sift{'tp'}{"$sift_score"};
       $class{'sift'} = 'neutral';
+    
     }
-    my $polyphen_score = sprintf("%.3f", $WAS{'pph2'});
+    
     if ($polyphen_score >= $config{'cutoff.HumVar.polyphen'}){
       $int_score += sprintf("%.3f", $polyphen_score/$config{'max.HumVar.polyphen'}*(1-$polyphen{'tn'}{"$polyphen_score"}));
       $base += 1-$polyphen{'tn'}{"$polyphen_score"};
@@ -103,6 +105,7 @@ sub get_condel_prediction {
       $base += 1-$polyphen{'tp'}{"$polyphen_score"};
       $class{'polyphen'} = 'neutral';
     }
+
     if ($base == 0){
       $int_score = -1;
       $class{'condel'} = 'not_computable_was';
@@ -117,11 +120,10 @@ sub get_condel_prediction {
     elsif ($int_score > 0 && $int_score < 0.469) {
       $class{'condel'} = 'neutral';
     }
-    
-    my $score = $int_score;
-    my $class = $class{'condel'};
 
-    return wantarray ?  ($class, $score) : $class;
+    # if the user wants an array, return the class and score, otherwise just return the class
+        
+    return wantarray ?  ($class{'condel'}, $int_score) : $class{'condel'};
 }
 
 1;
