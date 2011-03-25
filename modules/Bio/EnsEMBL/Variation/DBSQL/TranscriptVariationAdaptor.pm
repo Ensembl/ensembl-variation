@@ -344,8 +344,10 @@ sub _get_nsSNP_prediction {
     
     my $dbh = $self->dbc->db_handle;
     
+    my $score_col = $program eq 'polyphen' ? 'probability' : 'score';
+
     my $sth = $dbh->prepare_cached(qq{
-        SELECT  pred.prediction
+        SELECT  pred.prediction, pred.${score_col}
         FROM    ${program}_prediction pred, protein_position pp, protein_info pi
         WHERE   pred.protein_position_id = pp.protein_position_id
         AND     pp.protein_info_id = pi.protein_info_id
@@ -360,11 +362,11 @@ sub _get_nsSNP_prediction {
         $tva->peptide,
     );
     
-    my ($prediction) = $sth->fetchrow_array;
+    my ($prediction, $score) = $sth->fetchrow_array;
    
     $sth->finish;
 
-    return $prediction;
+    return wantarray ? ($prediction, $score) : $prediction;
 }
 
 1;
