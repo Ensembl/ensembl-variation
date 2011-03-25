@@ -34,8 +34,9 @@ Bio::EnsEMBL::Variation::Utils::Condel
 
 This module provides a single subroutine get_condel_prediction which calculates the Condel
 (Consensus Deleteriousness) weighted average score for a missense mutation that has both a 
-SIFT and PolyPhen-2 score. Condel is developed by Abel Gonzalez Perez from the University 
-Pompeu Fabra. The code in this module is based on a script written by Dr. Perez and slightly
+SIFT and PolyPhen-2 score. Condel is developed by the Biomedical Genomics Group of the 
+Universitat Pompeu Fabra, at the Barcelona Biomedical Research Park (bg.upf.edu/Condel).
+The code in this module is based on a script provided by this group and slightly
 reformatted to fit into the Ensembl system.
 
 =cut
