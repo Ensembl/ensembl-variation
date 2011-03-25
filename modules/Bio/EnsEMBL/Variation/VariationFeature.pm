@@ -186,6 +186,7 @@ sub new {
       $variation,
       $variation_id, 
       $source, 
+      $source_version, 
       $is_somatic, 
       $validation_code, 
       $overlap_consequences,
@@ -197,6 +198,7 @@ sub new {
           VARIATION 
           _VARIATION_ID 
           SOURCE 
+          SOURCE_VERSION
           IS_SOMATIC 
           VALIDATION_CODE 
 		  OVERLAP_CONSEQUENCES 
@@ -209,6 +211,7 @@ sub new {
   $self->{'variation'}              = $variation;
   $self->{'_variation_id'}          = $variation_id;
   $self->{'source'}                 = $source;
+  $self->{'source_version'}         = $source_version;
   $self->{'is_somatic'}             = $is_somatic;
   $self->{'validation_code'}        = $validation_code;
   $self->{'overlap_consequences'}   = $overlap_consequences;
@@ -336,62 +339,67 @@ sub get_all_TranscriptVariations {
         map { assert_ref($_, 'Bio::EnsEMBL::Transcript') } @$transcripts;
     }
 
-    unless ($transcripts) {
-        # if the caller didn't supply some transcripts fetch those around this VariationFeature
+    if ($self->dbID && !$self->{transcript_variations}) {
+        # this VariationFeature is from the database, so we can just fetch the 
+        # TranscriptVariations from the database as well
 
-        # get a slice around this transcript twice as large as the defined maximum distance from 
-        # a transcript
+        if (my $db = $self->{adaptor}->db) {
+            my $tva = $db->get_TranscriptVariationAdaptor;
 
-        my $slice = $self->feature_Slice->expand(
-            MAX_DISTANCE_FROM_TRANSCRIPT, 
-            MAX_DISTANCE_FROM_TRANSCRIPT
-        );
+            # just fetch TVs for all Transcripts because that's more efficient,
+            # we'll only return those asked for later on
 
-        # fetch all transcripts on this slice, we also need to transfer the transcripts to the same slice 
-        # as the VariationFeature for the consequence stuff to work
+            my $tvs = $tva->fetch_all_by_VariationFeatures([$self]);
 
-        $transcripts = [ map { $_->transfer($self->slice) } @{ $slice->get_all_Transcripts } ];
-    }
+            # store the TVs by their associated transcript stable id
 
-    my @unfetched_transcripts = grep { 
-        not exists $self->{transcript_variations}->{$_->stable_id} 
-    } @$transcripts;
-
-    if (@unfetched_transcripts) {
-
-        if($self->dbID) {
-            if (my $db = $self->{adaptor}->db) {
-                # this VariationFeature is from the database, so we can just fetch the 
-                # TranscriptVariations from the database as well
-
-                my $tva = $db->get_TranscriptVariationAdaptor;
-
-                my $tvs = $tva->fetch_all_by_VariationFeatures([$self], \@unfetched_transcripts);
-            
-                # store the TVs by their associated transcript stable id
-
-                for my $tv (@$tvs) {
-                    $self->{transcript_variations}->{$tv->transcript->stable_id} = $tv;
-                }
-            }
-        }
-        else {
-            # this VariationFeature is not in the database so we have to build the 
-            # TranscriptVariations ourselves
-
-            for my $transcript (@unfetched_transcripts) {
-                $self->{transcript_variations}->{$transcript->stable_id} =
-                    Bio::EnsEMBL::Variation::TranscriptVariation->new(
-                        -variation_feature  => $self,
-                        -transcript         => $transcript,
-                    );
+            for my $tv (@$tvs) {
+                $self->{transcript_variations}->{$tv->transcript_stable_id} = $tv;
             }
         }
     }
+    elsif (!$self->{transcript_variations}) {
+        # this VariationFeature is not in the database so we have to build the 
+        # TranscriptVariations ourselves
 
-    # just return TranscriptVariations for the requested Transcripts
+        unless ($transcripts) {
+            # if the caller didn't supply some transcripts fetch those around this VariationFeature
 
-    return [ map { $self->{transcript_variations}->{$_->stable_id} } @$transcripts ];
+            # get a slice around this transcript twice as large as the defined maximum distance from 
+            # a transcript
+
+            my $slice = $self->feature_Slice->expand(
+                MAX_DISTANCE_FROM_TRANSCRIPT, 
+                MAX_DISTANCE_FROM_TRANSCRIPT
+            );
+
+            # fetch all transcripts on this slice, we also need to transfer the transcripts to the same slice 
+            # as the VariationFeature for the consequence stuff to work
+
+            $transcripts = [ map { $_->transfer($self->slice) } @{ $slice->get_all_Transcripts } ];
+        }
+
+        my @unfetched_transcripts = grep { 
+            not exists $self->{transcript_variations}->{$_->stable_id} 
+        } @$transcripts;
+
+        for my $transcript (@unfetched_transcripts) {
+            $self->{transcript_variations}->{$transcript->stable_id} =
+                Bio::EnsEMBL::Variation::TranscriptVariation->new(
+                    -variation_feature  => $self,
+                    -transcript         => $transcript,
+                );
+        }
+    }
+
+    if ($transcripts) {
+        # just return TranscriptVariations for the requested Transcripts
+        return [ map { $self->{transcript_variations}->{$_->stable_id} } @$transcripts ];
+    }
+    else {
+        # return all TranscriptVariations
+        return [ values %{ $self->{transcript_variations} } ];
+    }
 }
 
 =head2 get_all_RegulatoryFeatureVariations
@@ -708,9 +716,9 @@ sub ambig_code{
     Args[1]      : (optional) no_db - don't use the term from the database, always calculate it from the allele string 
                    (used by the ensembl variation pipeline)
     Example      : my $variation_class = $vf->var_class
-    Description  : returns the class for the variation, according to dbSNP classification
-    ReturnType   : String $variation_class
-    Exceptions   : none
+    Description  : returns the Ensembl term for the class of this variation
+    ReturnType   : string
+    Exceptions   : throws if we can't find a corresponding display term for an SO term
     Caller       : General
     Status       : At Risk
 
@@ -735,7 +743,7 @@ sub var_class {
             $self->{class_display_term} = $display_term;
         }
         else {
-            die "Unable to get display term for SO term: ".$so_term;
+            throw("Didn't find display term for SO term '$so_term'");
         }
     }
     
@@ -748,8 +756,8 @@ sub var_class {
     Args[2]      : (optional) no_db - don't use the term from the database, always calculate it from the allele string 
                    (used by the ensembl variation pipeline)
     Example      : my $SO_variation_class = $vf->class_SO_term()
-    Description  : returns the SO term for the class for the variation
-    ReturnType   : String $SO_term
+    Description  : Get/set the SO term for the class of this variation
+    ReturnType   : string
     Exceptions   : none
     Caller       : General
     Status       : At Risk
@@ -846,11 +854,12 @@ sub add_validation_state {
 
 =head2 source
 
-  Arg [1]    : string $source (optional)
-               The new value to set the source attribute to
-  Example    : $source = $vf->source()
-  Description: Getter/Setter for the source attribute
-  Returntype : string
+  Arg [1]    : string $source_name (optional) - the new value to set the source attribute to
+  Arg [2]    : string $source_version (optional) - the new value to set the source version attribute to
+  Example    : $source = $vf->source; ($name, $version) = $vf->source;
+  Description: Getter/Setter for the source and source version attribute
+  Returntype : if called in scalar context, the source name as a string, 
+               if called in list context a 2 element list with the source name as a string and the source version as an int
   Exceptions : none
   Caller     : general
   Status     : At Risk
@@ -858,9 +867,10 @@ sub add_validation_state {
 =cut
 
 sub source{
-  my $self = shift;
-  return $self->{'source'} = shift if(@_);
-  return $self->{'source'};
+  my ($self, $source_name, $source_version) = @_;
+  $self->{source} = $source_name if $source_name;
+  $self->{source_version} = $source_version if $source_version;
+  return wantarray ? ($self->{source}, $self->{source_version}) : $self->{source};
 }
 
 =head2 is_somatic
