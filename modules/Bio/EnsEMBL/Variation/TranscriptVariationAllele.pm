@@ -452,8 +452,8 @@ sub sift_score {
 
   Description: Return the Condel (Consensus Deleteriousness) prediction for this allele that integrates
                the SIFT and Polyphen-2 scores when these are available
-  Returntype : string (one of 'neutral', 'deleterious') if this is a non-synonymous mutation and a 
-               prediction is available, undef otherwise
+  Returntype : string (one of 'neutral', 'deleterious', 'non_computable_was') if this is a non-synonymous 
+               mutation and a prediction is available, undef otherwise
   Exceptions : none
   Status     : At Risk
 
@@ -482,7 +482,8 @@ sub condel_prediction {
   Description: Return the Condel (Consensus Deleteriousness) score for this allele that integrates
                the SIFT and Polyphen-2 score when these are available
   Returntype : float between 0 and 1 if this is a non-synonymous mutation and a prediction is 
-               available, undef otherwise
+               computable, -1 if SIFT and PolyPhen scores are available but  Condel is unable to 
+               compute a WAS, and undef otherwise
   Exceptions : none
   Status     : At Risk
 
