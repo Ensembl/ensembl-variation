@@ -225,7 +225,7 @@ use warnings;
 
         $gff->{type} = $self->class_SO_term;
 
-        $gff->{attributes}->{Dbxref} = (join '_', $self->source).':'.$self->variation_name;
+        $gff->{attributes}->{Dbxref} = $self->source.'_'.$self->source_version.':'.$self->variation_name;
 
         # Use the variation name (rsID etc.) concatenated with the seq_region_name and positions as the ID
 

@@ -1,3 +1,45 @@
+=head1 LICENSE
+
+ Copyright (c) 1999-2011 The European Bioinformatics Institute and
+ Genome Research Limited.  All rights reserved.
+
+ This software is distributed under a modified Apache license.
+ For license details, please see
+
+   http://www.ensembl.org/info/about/code_licence.html
+
+=head1 CONTACT
+
+ Please email comments or questions to the public Ensembl
+ developers list at <dev@ensembl.org>.
+
+ Questions may also be sent to the Ensembl help desk at
+ <helpdesk@ensembl.org>.
+
+=cut
+
+=head1 NAME
+
+Bio::EnsEMBL::Variation::Utils::Condel
+
+=head1 SYNOPSIS
+
+    use Bio::EnsEMBL::Variation::Utils::Condel qw(get_condel_prediction);
+    
+    my ($prediction, $score) = get_condel_prediction($sift_score, $polyphen_score);
+
+    print "condel prediction: $prediction score: $score\n";
+
+=head1 DESCRIPTION
+
+This module provides a single subroutine get_condel_prediction which calculates the Condel
+(Consensus Deleteriousness) weighted average score for a missense mutation that has both a 
+SIFT and PolyPhen-2 score. Condel is developed by Abel Gonzalez Perez from the University 
+Pompeu Fabra. The code in this module is based on a script written by Dr. Perez and slightly
+reformatted to fit into the Ensembl system.
+
+=cut
+
 package Bio::EnsEMBL::Variation::Utils::Condel;
 
 use strict;
@@ -8,6 +50,19 @@ use base qw(Exporter);
 our @EXPORT_OK = qw(get_condel_prediction);
 
 use Bio::EnsEMBL::Variation::Utils::CondelConstants qw($CONDEL_CONFIG $CONDEL_SIFT_DATA $CONDEL_POLYPHEN_DATA);
+
+=head2 get_condel_prediction
+
+  Arg[1]      : float SIFT score
+  Arg[2]      : float PolyPhen score
+  Example     : my ($prediction, $score) = get_condel_prediction($sift_score, $polyphen_score);
+  Description : returns the Condel consensus prediction given SIFT and PolyPhen scores for a 
+                missense mutation
+  ReturnType  : if called in scalar context, the qualitative Condel prediction (as a string which
+                will be either 'neutral' or 'deleterious'), if called in list context a 2 element
+                list of the qualitative prediction and the Condel score as a float between 0 and 1
+
+=cut
 
 sub get_condel_prediction {
 
