@@ -505,11 +505,14 @@ sub codon_position {
         my $cdna_start = $self->cdna_start;
         
         my $tran_cdna_start = $self->transcript->cdna_coding_start;
-        
+       
+        # we need to take into account the exon phase
         my $exon_phase = $self->transcript->start_Exon->phase;
 
+        my $phase_offset = $exon_phase > 0 ? $exon_phase : 0;
+
         if (defined $cdna_start && defined $tran_cdna_start) {
-            $self->{_codon_position} = (($cdna_start - $tran_cdna_start + ($exon_phase > 0 ? $exon_phase : 0)) % 3) + 1;
+            $self->{_codon_position} = (($cdna_start - $tran_cdna_start + $phase_offset) % 3) + 1;
         }
     }
     
