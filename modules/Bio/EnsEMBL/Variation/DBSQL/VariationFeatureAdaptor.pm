@@ -160,6 +160,13 @@ sub fetch_all_by_Slice_constraint_with_Variations {
     return $vfs;
 }
 
+sub fetch_all_somatic_by_Slice_constraint_with_TranscriptVariations {
+    my $self = shift;
+    $self->{_get_transcript_variations} = 1;
+    my $vfs = $self->fetch_all_somatic_by_Slice_constraint(@_);
+    $self->{_get_transcript_variations} = 0;
+    return $vfs;
+}
 
 =head2 fetch_all_somatic_by_Slice_constraint
 
@@ -689,7 +696,7 @@ sub _default_where_clause {
 sub _columns {
   return qw( vf.variation_feature_id vf.seq_region_id vf.seq_region_start
              vf.seq_region_end vf.seq_region_strand vf.variation_id
-             vf.allele_string vf.variation_name vf.map_weight s.name vf.somatic 
+             vf.allele_string vf.variation_name vf.map_weight s.name s.version vf.somatic 
              vf.validation_status vf.consequence_type vf.class_attrib_id);
 }
 
@@ -715,13 +722,13 @@ sub _objs_from_sth {
 
     my ($variation_feature_id, $seq_region_id, $seq_region_start,
       $seq_region_end, $seq_region_strand, $variation_id,
-      $allele_string, $variation_name, $map_weight, $source_name, 
+      $allele_string, $variation_name, $map_weight, $source_name, $source_version,
       $is_somatic, $validation_status, $consequence_type, $class_attrib_id, $last_vf_id);
 
     $sth->bind_columns(\$variation_feature_id, \$seq_region_id,
                      \$seq_region_start, \$seq_region_end, \$seq_region_strand,
                      \$variation_id, \$allele_string, \$variation_name,
-                     \$map_weight, \$source_name, \$is_somatic, \$validation_status, 
+                     \$map_weight, \$source_name, \$source_version, \$is_somatic, \$validation_status, 
                      \$consequence_type, \$class_attrib_id);
 
     my $asm_cs;
@@ -845,6 +852,7 @@ sub _objs_from_sth {
                 'dbID'     => $variation_feature_id,
                 'map_weight' => $map_weight,
                 'source'   => $source_name,
+                'source_version' => $source_version,
                 'is_somatic' => $is_somatic,
                 'validation_code' => \@states,
                 'overlap_consequences' => $overlap_consequences,
@@ -873,6 +881,16 @@ sub _objs_from_sth {
             my %vs_by_id = map { $_->dbID => $_ } @$vs;
             #warn "Got variations";
             map { $_->variation( $vs_by_id{ $_->{_variation_id} }) } @$vfs;
+            return $vfs;
+        }
+        if ($self->{_get_transcript_variations}) {
+            my $vfs = $iterator->to_arrayref;
+            return $vfs unless @$vfs;
+            warn "getting transcript variations";
+            my $tvs = $self->db->get_TranscriptVariationAdaptor->fetch_all_by_VariationFeatures($vfs);
+            for my $tv (@$tvs) {
+                $tv->variation_feature->{transcript_variations}->{$tv->transcript_stable_id} = $tv;
+            }
             return $vfs;
         }
         else {
