@@ -204,7 +204,6 @@ use warnings;
 {
     package Bio::EnsEMBL::Variation::VariationFeature;
     
-    use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(transcript_effect);
     use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
     
     sub to_gvf {
@@ -220,13 +219,13 @@ use warnings;
         
         my %args = @_;
         
-        my $consequences = $args{consequences};
+        my $include_consequences = $args{include_consequences};
 
         $gff->{source} = $self->source;
-        
+
         $gff->{type} = $self->class_SO_term;
 
-        $gff->{attributes}->{Dbxref} = $self->source.':'.$self->variation_name;
+        $gff->{attributes}->{Dbxref} = (join '_', $self->source).':'.$self->variation_name;
 
         # Use the variation name (rsID etc.) concatenated with the seq_region_name and positions as the ID
 
@@ -272,41 +271,22 @@ use warnings;
         $ref_seq = '~' if length($ref_seq) > 50;
         $gff->{attributes}->{Reference_seq} = $ref_seq;
         
-        return $gff;
-
-        if (my $db = $self->{adaptor}->db) {
-            print "got a dba\n";
-            my $tva = $db->get_TranscriptVariationAdaptor;
-            print "got a tvna\n" if $tvna;
-            my $tvs = $tva->fetch_all_by_VariationFeatures([$self]);
-            print "Got ".scalar(@$tvns)." tvns\n";
-            die;
-        }
-
-        my @transcripts = map { $_->transcript } @{ $self->get_all_TranscriptVariations };
-        
-        for my $transcript (@transcripts) {
-        
-            my $tv = transcript_effect($self, $transcript, $consequences);
-           
-            if ($tv) {
-
+        if ($include_consequences) {
+            for my $tv (@{ $self->get_all_TranscriptVariations }) {
                 for my $tva (@{ $tv->get_all_alternate_TranscriptVariationAlleles }) {
+                    my $allele_idx = $allele_index{$tva->variation_feature_seq};
+                    if (defined $allele_idx) {
+                        for my $oc (@{ $tva->get_all_OverlapConsequences }) {
 
-                    for my $cons (@{ $tva->consequences }) {
+                            my $effect_string = join ' ', (
+                                $oc->SO_term, 
+                                $allele_idx,
+                                $oc->feature_SO_term,
+                                $tv->transcript_stable_id,
+                            );
 
-                        my $allele = $tva->seq;
-
-                        reverse_comp(\$allele) unless $self->strand == $transcript->strand;
-
-                        my $effect_string = join ' ', (
-                            $cons->SO_term, 
-                            $allele_index{$allele},
-                            $cons->feature_SO_term,
-                            $transcript->stable_id,
-                        );
-    
-                        push @{ $gff->{attributes}->{Variant_effect} }, $effect_string;
+                            push @{ $gff->{attributes}->{Variant_effect} }, $effect_string;
+                        }
                     }
                 }
             }
