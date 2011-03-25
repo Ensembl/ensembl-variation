@@ -139,6 +139,9 @@ our @ISA = ('Bio::EnsEMBL::Feature');
 
   Arg [-SOURCE] :
     string - the name of the source where the SNP comes from
+  
+  Arg [-SOURCE_VERSION] :
+    number - the version of the source where the SNP comes from
 
   Arg [-VALIDATION_CODE] :
      reference to list of strings
@@ -850,27 +853,40 @@ sub add_validation_state {
   return;
 }
 
-
-
 =head2 source
 
   Arg [1]    : string $source_name (optional) - the new value to set the source attribute to
-  Arg [2]    : string $source_version (optional) - the new value to set the source version attribute to
-  Example    : $source = $vf->source; ($name, $version) = $vf->source;
-  Description: Getter/Setter for the source and source version attribute
-  Returntype : if called in scalar context, the source name as a string, 
-               if called in list context a 2 element list with the source name as a string and the source version as an int
+  Example    : $source = $vf->source;
+  Description: Getter/Setter for the source attribute
+  Returntype : the source name as a string, 
   Exceptions : none
   Caller     : general
   Status     : At Risk
 
 =cut
 
-sub source{
-  my ($self, $source_name, $source_version) = @_;
-  $self->{source} = $source_name if $source_name;
+sub source {
+  my ($self, $source) = @_;
+  $self->{source} = $source if $source;
+  return $self->{source};
+}
+
+=head2 source_version
+
+  Arg [1]    : number $source_version (optional) - the new value to set the source version attribute to
+  Example    : $source_version = $vf->source_version;
+  Description: Getter/Setter for the source version attribute
+  Returntype : the source version as a number 
+  Exceptions : none
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub source_version {
+  my ($self, $source_version) = @_;
   $self->{source_version} = $source_version if $source_version;
-  return wantarray ? ($self->{source}, $self->{source_version}) : $self->{source};
+  return $self->{source_version};
 }
 
 =head2 is_somatic
