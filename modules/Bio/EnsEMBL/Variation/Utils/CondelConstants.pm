@@ -26,9 +26,9 @@ Bio::EnsEMBL::Variation::Utils::CondelConstants
 
 This module defines various constants used by the Bio::EnsEMBL::Variation::Utils::Condel
 module to calculate the Condel (Consensus Deleteriousness) weighted average score for a 
-missense mutation that has both a SIFT and PolyPhen-2 score. Condel is developed by Abel 
-Gonzalez Perez from the University Pompeu Fabra. The values in this module were provided 
-by Dr. Perez.
+missense mutation that has both a SIFT and PolyPhen-2 score. Condel is developed by the 
+Biomedical Genomics Group of the Universitat Pompeu Fabra, at the Barcelona Biomedical 
+Research Park (bg.upf.edu/Condel). The values in this module were provided by this group.
 
 =cut
 
