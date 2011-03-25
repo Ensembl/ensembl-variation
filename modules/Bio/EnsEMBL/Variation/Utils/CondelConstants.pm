@@ -1,3 +1,37 @@
+=head1 LICENSE
+
+ Copyright (c) 1999-2011 The European Bioinformatics Institute and
+ Genome Research Limited.  All rights reserved.
+
+ This software is distributed under a modified Apache license.
+ For license details, please see
+
+   http://www.ensembl.org/info/about/code_licence.html
+
+=head1 CONTACT
+
+ Please email comments or questions to the public Ensembl
+ developers list at <dev@ensembl.org>.
+
+ Questions may also be sent to the Ensembl help desk at
+ <helpdesk@ensembl.org>.
+
+=cut
+
+=head1 NAME
+
+Bio::EnsEMBL::Variation::Utils::CondelConstants
+
+=head1 DESCRIPTION
+
+This module defines various constants used by the Bio::EnsEMBL::Variation::Utils::Condel
+module to calculate the Condel (Consensus Deleteriousness) weighted average score for a 
+missense mutation that has both a SIFT and PolyPhen-2 score. Condel is developed by Abel 
+Gonzalez Perez from the University Pompeu Fabra. The values in this module were provided 
+by Dr. Perez.
+
+=cut
+
 package Bio::EnsEMBL::Variation::Utils::CondelConstants;
 
 use strict;

@@ -18,6 +18,26 @@
 
 =cut
 
+=head1 NAME
+
+Bio::EnsEMBL::Variation::Utils::VariationEffect
+
+=head1 DESCRIPTION
+
+This module defines a set of predicate subroutines that check the effect of a
+Bio::EnsEMBL::Variation::VariationFeature on some other Bio::EnsEMBL::Feature. 
+All of these predicates take a VariationFeatureOverlapAllele as their first and
+only argument and return a true or false value depending on whether the effect
+being checked for holds or not. The link between these predicates and the 
+specific effect is configured in the Bio::EnsEMBL::Variation::Utils::Config 
+module and a list of OverlapConsequence objects that represent a link between,
+for example, a Sequence Ontology consequence term, and the predicate that
+checks for it is provided in the Bio::EnsEMBL::Variation::Utils::Constants
+module. If you want to add a new consequence you should write a predicate in 
+this module and then add an entry in the configuration file.
+
+=cut
+
 package Bio::EnsEMBL::Variation::Utils::VariationEffect;
 
 use strict;
