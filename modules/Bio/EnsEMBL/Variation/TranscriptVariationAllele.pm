@@ -61,6 +61,8 @@ package Bio::EnsEMBL::Variation::TranscriptVariationAllele;
 use strict;
 use warnings;
 
+use Bio::EnsEMBL::Variation::Utils::Condel qw(get_condel_prediction);
+
 use base qw(Bio::EnsEMBL::Variation::VariationFeatureOverlapAllele);
 
 sub new_fast {
@@ -350,7 +352,7 @@ sub display_codon {
 
 =head2 polyphen_prediction
 
-  Description: Return the qualitative PolyPhen prediction for the effect of this allele.
+  Description: Return the qualitative PolyPhen-2 prediction for the effect of this allele.
                (Note that we currently only have PolyPhen predictions for variants that 
                result in single amino acid substitutions in human)
   Returntype : string (one of 'probably damaging', 'possibly damaging', 'benign', 'unknown')
@@ -370,6 +372,32 @@ sub polyphen_prediction {
         unless $self->{polyphen_prediction};
     
     return $self->{polyphen_prediction};
+}
+
+=head2 polyphen_score
+
+  Description: Return the PolyPhen-2 probability that this allele is deleterious (Note that we 
+               currently only have PolyPhen predictions for variants that result in single 
+               amino acid substitutions in human)
+  Returntype : float between 0 and 1 if this is a non-synonymous mutation and a prediction is 
+               available, undef otherwise
+  Exceptions : none
+  Status     : At Risk
+
+=cut
+
+sub polyphen_score {
+    my ($self, $polyphen_score) = @_;
+
+    $self->{polyphen_score} = $polyphen_score if defined $polyphen_score;
+
+    unless ($self->{polyphen_score}) {
+        my ($prediction, $score) = $self->_nsSNP_prediction('polyphen');
+        $self->{polyphen_score} = $score;
+        $self->{polyphen_prediction} = $prediction unless $self->{polyphen_prediction};
+    }
+
+    return $self->{polyphen_score};
 }
 
 =head2 sift_prediction
@@ -395,6 +423,82 @@ sub sift_prediction {
     return $self->{sift_prediction};
 }
 
+=head2 sift_score
+
+  Description: Return the SIFT score for this allele (Note that we currently only have SIFT 
+               predictions for variants that result in single amino acid substitutions in human)
+  Returntype : float between 0 and 1 if this is a non-synonymous mutation and a prediction is 
+               available, undef otherwise
+  Exceptions : none
+  Status     : At Risk
+
+=cut
+
+sub sift_score {
+    my ($self, $sift_score) = @_;
+
+    $self->{sift_score} = $sift_score if defined $sift_score;
+
+    unless ($self->{sift_score}) {
+        my ($prediction, $score) = $self->_nsSNP_prediction('sift');
+        $self->{sift_score} = $score;
+        $self->{sift_prediction} = $prediction unless $self->{sift_prediction};
+    }
+
+    return $self->{sift_score};
+}
+
+=head2 condel_prediction
+
+  Description: Return the Condel (Consensus Deleteriousness) prediction for this allele that integrates
+               the SIFT and Polyphen-2 scores when these are available
+  Returntype : string (one of 'neutral', 'deleterious') if this is a non-synonymous mutation and a 
+               prediction is available, undef otherwise
+  Exceptions : none
+  Status     : At Risk
+
+=cut
+
+sub condel_prediction {
+    my ($self, $condel_prediction) = @_;
+
+    $self->{condel_prediction} = $condel_prediction if $condel_prediction;
+
+    unless ($self->{condel_prediction}) {
+        my $sift_score = $self->sift_score;
+        my $polyphen_score = $self->polyphen_score;
+        if (defined $polyphen_score && defined $sift_score) {
+            my ($prediction, $score) = get_condel_prediction($self->sift_score, $self->polyphen_score);
+            $self->{condel_prediction} = $prediction;
+            $self->{condel_score} = $score;
+        }
+    }
+
+    return $self->{condel_prediction};
+}
+
+=head2 condel_score
+
+  Description: Return the Condel (Consensus Deleteriousness) score for this allele that integrates
+               the SIFT and Polyphen-2 score when these are available
+  Returntype : float between 0 and 1 if this is a non-synonymous mutation and a prediction is 
+               available, undef otherwise
+  Exceptions : none
+  Status     : At Risk
+
+=cut
+
+sub condel_score {
+    my ($self, $condel_score) = @_;
+
+    $self->{condel_score} = $condel_score if defined $condel_score;
+
+    # call condel_prediction to set the score if we need it
+    $self->condel_prediction unless $self->{condel_score};
+
+    return $self->{condel_score};
+}
+
 sub _nsSNP_prediction {
     my ($self, $program) = @_;
 
@@ -403,7 +507,8 @@ sub _nsSNP_prediction {
 
     if ($self->pep_allele_string && $self->pep_allele_string =~ /^[A-Z]\/[A-Z]$/) {
         if (my $adap = $self->transcript_variation->{adaptor}) {
-            return $adap->_get_nsSNP_prediction($program, $self);
+            my ($prediction, $score) = $adap->_get_nsSNP_prediction($program, $self);
+            return wantarray ? ($prediction, $score) : $prediction;
         }
     }
     
