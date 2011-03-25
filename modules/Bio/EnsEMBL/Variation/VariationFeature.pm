@@ -391,6 +391,7 @@ sub get_all_TranscriptVariations {
                 Bio::EnsEMBL::Variation::TranscriptVariation->new(
                     -variation_feature  => $self,
                     -transcript         => $transcript,
+                    -adaptor            => $self->adaptor->db->get_TranscriptVariationAdaptor,
                 );
         }
     }
