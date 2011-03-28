@@ -144,8 +144,8 @@ sub store {
 =cut
 
 sub fetch_all_by_Transcripts {
-    my $self = shift;
-    return $self->SUPER::fetch_all_by_Features(@_);
+    my ($self, $transcripts) = @_;
+    return $self->fetch_all_by_Transcripts_with_constraint($transcripts, 'somatic = 0');
 }
 
 =head2 fetch_all_somatic_by_Transcripts
@@ -159,8 +159,8 @@ sub fetch_all_by_Transcripts {
 =cut
 
 sub fetch_all_somatic_by_Transcripts {
-    my $self = shift;
-    return $self->SUPER::fetch_all_somatic_by_Features(@_);
+    my ($self, $transcripts) = @_;
+    return $self->fetch_all_by_Transcripts_with_constraint($transcripts, 'somatic = 1');
 }
 
 =head2 fetch_all_by_Transcripts_with_constraint
