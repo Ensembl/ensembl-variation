@@ -173,10 +173,34 @@ sub fetch_all_somatic_by_Transcripts {
 
 =cut
 
-
 sub fetch_all_by_Transcripts_with_constraint {
-    my $self = shift;
-    return $self->SUPER::fetch_all_by_Features_with_constraint(@_);
+    my ($self, $transcripts, $constraint) = @_;
+    
+    my $tvs = $self->SUPER::fetch_all_by_Features_with_constraint($transcripts, $constraint);
+    
+    # we need to create some TVs for any LRG transcripts we're passed as 
+    # these aren't stored in the database
+
+    for my $tran (@$transcripts) {
+
+        if ($tran->stable_id =~ /LRG\_\d+/) {
+            
+            my $slice = $tran->feature_Slice->expand(
+                MAX_DISTANCE_FROM_TRANSCRIPT,
+                MAX_DISTANCE_FROM_TRANSCRIPT
+            );
+           
+            for my $vf (@{ $slice->get_all_VariationFeatures }) {
+                push @$tvs, Bio::EnsEMBL::Variation::TranscriptVariation->new(
+                   -variation_feature   => $vf,
+                   -transcript          => $tran,
+                   -adaptor             => $self,
+                );
+            }
+        }
+    }
+
+    return $tvs;
 }
 
 sub _objs_from_sth {
