@@ -113,9 +113,11 @@ sub fetch_all_by_subsnp_id {
 =head2 fetch_all_by_Variation
 
   Arg [1]    : Bio::EnsEMBL::Variation::Variation
+  Arg [2]    : Bio::EnsEMBL::Variation::Population (optional)
   Example    : @alleles = @{$allele_adaptor->fetch_all_by_Variation($var)};
   Description: Retrieves all alleles which are associated with a specified
-               variation.
+               variation. If the optional population argument is specified, only retrieve
+               alleles for that population.
   Returntype : listref of Bio::EnsEMBL::Variation::Allele
   Exceptions : throw on incorrect argument
   Caller     : general
@@ -126,13 +128,23 @@ sub fetch_all_by_subsnp_id {
 sub fetch_all_by_Variation {
     my $self = shift;
     my $variation = shift;
+    my $population = shift;
     
     # Make sure that we are passed a Variation object
     assert_ref($variation,'Bio::EnsEMBL::Variation::Variation');
     
+    # If we got a population argument, make sure that it is a Population object
+    assert_ref($population,'Bio::EnsEMBL::Variation::Population') if (defined($population));
+    
     #ÊAdd a constraint on the variation_id column and pass to generic fetch
     my $variation_id = $variation->dbID();
     my $constraint = qq{ a.variation_id = $variation_id };
+    
+    #ÊIf required, add a constraint on the sample id
+    if (defined($population)) {
+        my $sample_id = $population->dbID();
+        $constraint .= qq{ AND a.sample_id = $sample_id };
+    }
     
     #ÊAdd the constraint for failed alleles
     $constraint .= " AND " . $self->db->_exclude_failed_alleles_constraint();
@@ -140,7 +152,13 @@ sub fetch_all_by_Variation {
     my $alleles = $self->generic_fetch($constraint);
     
     #ÊIterate over the alleles and add the Variation object to each one of them. This will also add the Allele to the variation object and weaken the variations link back to the allele 
-    map {$_->_add_Variation($variation)} @{$alleles};
+    #ÊIf a population object was specified, add this object to the allele as well
+    map {
+        $_->_add_Variation($variation);
+        if (defined($population)) {
+            $_->population($population);
+        }
+    } @{$alleles};
     
     # Return the alleles
     return $alleles;
