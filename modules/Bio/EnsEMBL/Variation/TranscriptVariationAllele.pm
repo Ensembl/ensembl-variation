@@ -451,9 +451,10 @@ sub sift_score {
 =head2 condel_prediction
 
   Description: Return the Condel (Consensus Deleteriousness) prediction for this allele that integrates
-               the SIFT and Polyphen-2 scores when these are available
+               the SIFT and Polyphen-2 scores
   Returntype : string (one of 'neutral', 'deleterious', 'non_computable_was') if this is a non-synonymous 
-               mutation and a prediction is available, undef otherwise
+               mutation and predictions for this substitution are available from both SIFT and PolyPhen, 
+               undef otherwise
   Exceptions : none
   Status     : At Risk
 
@@ -465,12 +466,18 @@ sub condel_prediction {
     $self->{condel_prediction} = $condel_prediction if $condel_prediction;
 
     unless ($self->{condel_prediction}) {
+
         my $sift_score = $self->sift_score;
-        my $polyphen_score = $self->polyphen_score;
-        if (defined $polyphen_score && defined $sift_score) {
-            my ($prediction, $score) = get_condel_prediction($self->sift_score, $self->polyphen_score);
-            $self->{condel_prediction} = $prediction;
-            $self->{condel_score} = $score;
+        my $pph_score  = $self->polyphen_score;
+        my $pph_pred   = $self->polyphen_prediction;
+
+        # we can only run Condel when we have predictions from both sift and polyphen
+
+        if (defined $pph_score && defined $sift_score && ($pph_pred ne 'unknown') ) {
+            my ($prediction, $score) = get_condel_prediction($sift_score, $pph_score);
+
+            $self->{condel_prediction}  = $prediction;
+            $self->{condel_score}       = $score;
         }
     }
 
@@ -480,10 +487,10 @@ sub condel_prediction {
 =head2 condel_score
 
   Description: Return the Condel (Consensus Deleteriousness) score for this allele that integrates
-               the SIFT and Polyphen-2 score when these are available
-  Returntype : float between 0 and 1 if this is a non-synonymous mutation and a prediction is 
-               computable, -1 if SIFT and PolyPhen scores are available but  Condel is unable to 
-               compute a WAS, and undef otherwise
+               the SIFT and Polyphen-2 scores
+  Returntype : float between 0 and 1 if this is a missense mutation and a prediction is 
+               computable, -1 if SIFT and PolyPhen scores are available but Condel is unable 
+               to compute a weighted average score, and undef otherwise
   Exceptions : none
   Status     : At Risk
 
