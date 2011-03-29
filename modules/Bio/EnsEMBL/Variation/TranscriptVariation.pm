@@ -115,6 +115,11 @@ sub new {
     return $self;
 }
 
+sub get_TranscriptVariationAllele_for_allele_seq {
+    my ($self, $allele_seq) = @_;
+    return $self->SUPER::get_VariationFeatureOverlapAllele_for_allele_seq($allele_seq);
+}
+
 =head2 add_TranscriptVariationAllele
 
   Arg [1]    : A Bio::EnsEMBL::Variation::TranscriptVariationAllele instance
