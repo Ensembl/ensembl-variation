@@ -595,8 +595,8 @@ sub get_all_OverlapConsequences {
         my %overlap_cons;
 
         for my $tv (@{ $self->get_all_TranscriptVariations }) {
-            for my $allele ($tv->get_all_alternate_TranscriptVariationAlleles) {
-                for my $cons ($allele->get_all_OverlapConsequences) {
+            for my $allele (@{ $tv->get_all_alternate_TranscriptVariationAlleles }) {
+                for my $cons (@{ $allele->get_all_OverlapConsequences }) {
                     $overlap_cons{$cons->SO_term} = $cons;
                 }
             }
