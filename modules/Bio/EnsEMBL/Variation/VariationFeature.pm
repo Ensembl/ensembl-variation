@@ -342,9 +342,13 @@ sub get_all_TranscriptVariations {
         map { assert_ref($_, 'Bio::EnsEMBL::Transcript') } @$transcripts;
     }
 
-    if ($self->dbID && !$self->{transcript_variations}) {
+    #die unless $self->{transcript_variations};
+
+    if ($self->dbID && not defined $self->{transcript_variations}) {
         # this VariationFeature is from the database, so we can just fetch the 
         # TranscriptVariations from the database as well
+
+        #die;
 
         if (my $db = $self->{adaptor}->db) {
             my $tva = $db->get_TranscriptVariationAdaptor;
@@ -354,14 +358,10 @@ sub get_all_TranscriptVariations {
 
             my $tvs = $tva->fetch_all_by_VariationFeatures([$self]);
 
-            # store the TVs by their associated transcript stable id
-
-            for my $tv (@$tvs) {
-                $self->{transcript_variations}->{$tv->transcript_stable_id} = $tv;
-            }
+            map { $self->add_TranscriptVariation($_) } @$tvs;
         }
     }
-    elsif (!$self->{transcript_variations}) {
+    elsif (not defined $self->{transcript_variations}) {
         # this VariationFeature is not in the database so we have to build the 
         # TranscriptVariations ourselves
 
@@ -387,12 +387,13 @@ sub get_all_TranscriptVariations {
         } @$transcripts;
 
         for my $transcript (@unfetched_transcripts) {
-            $self->{transcript_variations}->{$transcript->stable_id} =
+            $self->add_TranscriptVariation(
                 Bio::EnsEMBL::Variation::TranscriptVariation->new(
                     -variation_feature  => $self,
                     -transcript         => $transcript,
                     -adaptor            => $self->adaptor->db->get_TranscriptVariationAdaptor,
-                );
+                )
+            );
         }
     }
 
@@ -496,16 +497,19 @@ sub _get_all_RegulationVariations {
 
    Arg [1]     : Bio::EnsEMBL::Variation::TranscriptVariation
    Example     : $vf->add_TranscriptVariation($tv);
-   Description : Adds another Transcript variation to the variation feature object. Adds itself to the supplied transcript variation object.
+   Description : Adds a TranscriptVariation to the variation feature object.
    Exceptions  : thrown on bad argument
    Caller      : Bio::EnsEMBL::Variation::TranscriptVariationAdaptor
-   Status     : At Risk
+   Status      : At Risk
 
 =cut
 
 sub add_TranscriptVariation {
-    my $self = shift;
-    warning('Deprecated method');
+    my ($self, $tv) = @_;
+    assert_ref($tv, 'Bio::EnsEMBL::Variation::TranscriptVariation');
+    # we need to weaken the reference back to us to avoid a circular reference
+    weaken($tv->{variation_feature});
+    $self->{transcript_variations}->{$tv->transcript_stable_id} = $tv;
 }
 
 
