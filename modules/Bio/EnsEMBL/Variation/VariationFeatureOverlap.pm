@@ -372,6 +372,11 @@ sub _feature_stable_id {
     }
 }
 
+sub get_VariationFeatureOverlapAllele_for_allele_seq {
+    my ($self, $allele_seq) = @_;
+    return $self->{_alleles_by_seq}->{$allele_seq};
+}
+
 =head2 add_VariationFeatureOverlapAllele
 
   Arg [1]    : A Bio::EnsEMBL::Variation::VariationFeatureOverlapAllele instance
@@ -394,6 +399,8 @@ sub add_VariationFeatureOverlapAllele {
         my $alt_alleles = $self->{alt_alleles} ||= [];
         push @$alt_alleles, $vfoa;
     }
+
+    $self->{_alleles_by_seq}->{ $vfoa->variation_feature_seq } = $vfoa;
 }
 
 =head2 get_reference_VariationFeatureOverlapAllele
