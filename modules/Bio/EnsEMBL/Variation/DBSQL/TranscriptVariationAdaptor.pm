@@ -328,7 +328,7 @@ sub _objs_from_sth {
 
 sub _tables {
     return (
-        ['transcript_variation']
+        ['transcript_variation', 'tv']
     );
 }
 
