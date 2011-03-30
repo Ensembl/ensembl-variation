@@ -686,8 +686,8 @@ sub _tables {
 		[ 'source', 's']
 	);
 	
-	#ÊIf we are excluding failed_variations, add that table
-	push(@tables,['failed_variation', 'fv']) if ($self->db->include_failed_variations());
+	#ÊIf we are including failed_variations, add that table
+	push(@tables,['failed_variation', 'fv']) unless ($self->db->include_failed_variations());
 	
 	return @tables;
 }
@@ -697,7 +697,7 @@ sub _left_join {
     my $self = shift;
     
     # If we are including failed variations, skip the left join
-    return () unless ($self->db->include_failed_variations());
+    return () if ($self->db->include_failed_variations());
     return ([ 'failed_variation', 'fv.variation_id = vf.variation_id']); 
 }
 
