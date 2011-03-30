@@ -678,14 +678,28 @@ sub fetch_Iterator_by_Slice_constraint {
 }
 
 # method used by superclass to construct SQL
-sub _tables { return (['variation_feature', 'vf'],
-		      [ 'source', 's'],
-		      [ 'failed_variation', 'fv']
-		      );
+sub _tables { 
+    my $self = shift;
+    
+    my @tables = (
+        ['variation_feature', 'vf'],
+		[ 'source', 's']
+	);
+	
+	#ÊIf we are excluding failed_variations, add that table
+	push(@tables,['failed_variation', 'fv']) if ($self->db->include_failed_variations());
+	
+	return @tables;
 }
 
 #ÊAdd a left join to the failed_variation table
-sub _left_join { return ([ 'failed_variation', 'fv.variation_id = vf.variation_id']); }
+sub _left_join { 
+    my $self = shift;
+    
+    # If we are including failed variations, skip the left join
+    return () unless ($self->db->include_failed_variations());
+    return ([ 'failed_variation', 'fv.variation_id = vf.variation_id']); 
+}
 
 sub _default_where_clause {
   my $self = shift;
