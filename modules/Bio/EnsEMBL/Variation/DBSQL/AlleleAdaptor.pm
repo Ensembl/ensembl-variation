@@ -306,10 +306,27 @@ sub _objs_from_sth {
 }
 
 # method used by superclass to construct SQL
-sub _tables { return (['allele', 'a'], ['failed_allele', 'fa']); }
+sub _tables { 
+    my $self = shift;
+    
+    my @tables = (
+        ['allele', 'a']
+    );
+    
+	#ÊIf we are excluding failed_alleles, add that table
+	push(@tables,['failed_allele', 'fa']) unless ($self->db->include_failed_variations());
+	
+	return @tables;
+}
 
 #ÊAdd a left join to the failed_variation table
-sub _left_join { return ([ 'failed_allele', 'fa.allele_id = a.allele_id']); }
+sub _left_join { 
+    my $self = shift;
+    
+    # If we are including failed variations, skip the left join
+    return () if ($self->db->include_failed_variations());
+    return ([ 'failed_allele', 'fa.allele_id = a.allele_id']); 
+}
 
 sub _columns {
   return qw( a.allele_id a.variation_id a.subsnp_id a.allele a.frequency a.sample_id a.count );
