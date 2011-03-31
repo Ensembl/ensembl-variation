@@ -162,6 +162,8 @@ sub fetch_all_by_dbID_list {
     throw("list reference argument is required");
   }
   
+  return [] unless scalar @$list >= 1;
+  
   my $id_str = (@$list > 1)  ? " IN (".join(',',@$list).")"   :   ' = \''.$list->[0].'\'';
 
   my $sth = $self->prepare(qq{SELECT p.sample_id, s.name, s.size, s.description
