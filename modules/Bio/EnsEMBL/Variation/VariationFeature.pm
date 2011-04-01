@@ -391,7 +391,7 @@ sub get_all_TranscriptVariations {
                 Bio::EnsEMBL::Variation::TranscriptVariation->new(
                     -variation_feature  => $self,
                     -transcript         => $transcript,
-                    -adaptor            => $self->adaptor->db->get_TranscriptVariationAdaptor,
+                    -adaptor            => ($self->adaptor->db ? $self->adaptor->db->get_TranscriptVariationAdaptor : undef),
                 )
             );
         }
@@ -743,16 +743,20 @@ sub var_class {
 
         # convert the SO term to the ensembl display term
         
-        if (my $display_term = $self->{adaptor}->AttributeAdaptor->display_term_for_SO_term(
-                $so_term, 
-                $self->is_somatic
-            ) ) {
-            
-            $self->{class_display_term} = $display_term;
-        }
-        else {
-            throw("Didn't find display term for SO term '$so_term'");
-        }
+		if ($self->{adaptor}->AttributeAdaptor) {
+			if (my $display_term = $self->{adaptor}->AttributeAdaptor->display_term_for_SO_term(
+				$so_term, 
+				$self->is_somatic
+			) ) {
+			  $self->{class_display_term} = $display_term;
+			}
+			else {
+				throw("Didn't find display term for SO term '$so_term'");
+			}
+		}
+		else {
+			$self->{class_display_term}= $so_term;
+		}
     }
     
     return $self->{class_display_term};

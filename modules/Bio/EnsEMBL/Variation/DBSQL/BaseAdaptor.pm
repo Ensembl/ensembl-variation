@@ -59,7 +59,7 @@ sub AttributeAdaptor {
     my $self = shift;
     
     unless ($self->{_attribute_adaptor}) {
-        $self->{_attribute_adaptor} = $self->db->get_AttributeAdaptor;
+        $self->{_attribute_adaptor} = $self->db->get_AttributeAdaptor if $self->db;
     }
     
     return $self->{_attribute_adaptor};
