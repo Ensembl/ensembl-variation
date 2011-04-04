@@ -19,8 +19,18 @@ ALTER TABLE allele_group ADD FOREIGN KEY (sample_id) REFERENCES population(sampl
 ALTER TABLE allele_group_allele ADD FOREIGN KEY (variation_id) REFERENCES variation(variation_id);
 ALTER TABLE allele_group_allele ADD FOREIGN KEY (allele_group_id) REFERENCES allele_group(allele_group_id);
 
+ALTER TABLE associate_study ADD FOREIGN KEY (study1_id) REFERENCES study(study_id);
+ALTER TABLE associate_study ADD FOREIGN KEY (study2_id) REFERENCES study(study_id);
+
+ALTER TABLE attrib ADD FOREIGN KEY (attrib_type_id) REFERENCES attrib_type(attrib_type_id);
+
+ALTER TABLE attrib_set ADD FOREIGN KEY (attrib_id) REFERENCES attrib(attrib_id);
+
 ALTER TABLE compressed_genotype_single_bp ADD FOREIGN KEY (sample_id) REFERENCES individual(sample_id);
 ALTER TABLE compressed_genotype_single_bp ADD FOREIGN KEY (seq_region_id) REFERENCES seq_region(seq_region_id);
+
+ALTER TABLE failed_allele ADD FOREIGN KEY (allele_id) REFERENCES allele(allele_id);
+ALTER TABLE failed_allele ADD FOREIGN KEY (failed_description_id) REFERENCES failed_description(failed_description_id);
 
 ALTER TABLE failed_variation ADD FOREIGN KEY (variation_id) REFERENCES variation(variation_id);
 ALTER TABLE failed_variation ADD FOREIGN KEY (failed_description_id) REFERENCES failed_description(failed_description_id);
@@ -32,8 +42,8 @@ ALTER TABLE httag ADD FOREIGN KEY (source_id) REFERENCES source(source_id);
 ALTER TABLE httag ADD FOREIGN KEY (variation_group_id) REFERENCES variation_group(variation_group_id);
 
 ALTER TABLE individual ADD FOREIGN KEY (sample_id) REFERENCES sample(sample_id);
-ALTER TABLE individual ADD FOREIGN KEY (father_individual_sample_id) REFERENCES sample(sample_id);
-ALTER TABLE individual ADD FOREIGN KEY (mother_individual_sample_id) REFERENCES sample(sample_id);
+ALTER TABLE individual ADD FOREIGN KEY (father_individual_sample_id) REFERENCES individual(sample_id);
+ALTER TABLE individual ADD FOREIGN KEY (mother_individual_sample_id) REFERENCES individual(sample_id);
 ALTER TABLE individual ADD FOREIGN KEY (individual_type_id) REFERENCES individual_type(individual_type_id);
 
 ALTER TABLE individual_genotype_multiple_bp ADD FOREIGN KEY (subsnp_id) REFERENCES subsnp_handle(subsnp_id);
@@ -42,6 +52,8 @@ ALTER TABLE individual_genotype_multiple_bp ADD FOREIGN KEY (sample_id) REFERENC
 
 ALTER TABLE individual_population ADD FOREIGN KEY (individual_sample_id) REFERENCES individual(sample_id);
 ALTER TABLE individual_population ADD FOREIGN KEY (population_sample_id) REFERENCES population(sample_id);
+
+ALTER TABLE polyphen_prediction ADD FOREIGN KEY (protein_position_id) REFERENCES protein_position(protein_position_id);
 
 ALTER TABLE population ADD FOREIGN KEY (sample_id) REFERENCES sample(sample_id);
 
@@ -52,14 +64,23 @@ ALTER TABLE population_genotype ADD FOREIGN KEY (sample_id) REFERENCES populatio
 ALTER TABLE population_structure ADD FOREIGN KEY (super_population_sample_id) REFERENCES population(sample_id);
 ALTER TABLE population_structure ADD FOREIGN KEY (sub_population_sample_id) REFERENCES population(sample_id);
 
+ALTER TABLE protein_position ADD FOREIGN KEY (protein_info_id) REFERENCES protein_info(protein_info_id);
+
 ALTER TABLE read_coverage ADD FOREIGN KEY (sample_id) REFERENCES individual(sample_id);
 ALTER TABLE read_coverage ADD FOREIGN KEY (seq_region_id) REFERENCES seq_region(seq_region_id);
 
 ALTER TABLE sample_synonym ADD FOREIGN KEY (source_id) REFERENCES source(source_id);
 ALTER TABLE sample_synonym ADD FOREIGN KEY (sample_id) REFERENCES sample(sample_id);
 
+ALTER TABLE sift_prediction ADD FOREIGN KEY (protein_position_id) REFERENCES protein_position(protein_position_id);
+
 ALTER TABLE structural_variation ADD FOREIGN KEY (source_id) REFERENCES source(source_id);
 ALTER TABLE structural_variation ADD FOREIGN KEY (seq_region_id) REFERENCES seq_region(seq_region_id);
+ALTER TABLE structural_variation ADD FOREIGN KEY (study_id) REFERENCES study(study_id);
+
+ALTER TABLE study ADD FOREIGN KEY (source) REFERENCES source(source_id);
+
+ALTER TABLE supporting_structural_variation ADD FOREIGN KEY (structural_variation_id) REFERENCES structural_variation(structural_variation_id);
 
 ALTER TABLE tagged_variation_feature ADD FOREIGN KEY (variation_feature_id) REFERENCES variation_feature(variation_feature_id);
 ALTER TABLE tagged_variation_feature ADD FOREIGN KEY (sample_id) REFERENCES sample(sample_id);
@@ -67,14 +88,16 @@ ALTER TABLE tagged_variation_feature ADD FOREIGN KEY (sample_id) REFERENCES samp
 ALTER TABLE transcript_variation ADD FOREIGN KEY (variation_feature_id) REFERENCES variation_feature(variation_feature_id);
 
 ALTER TABLE variation ADD FOREIGN KEY (source_id) REFERENCES source(source_id);
+ALTER TABLE variation ADD FOREIGN KEY (class_attrib_id) REFERENCES attrib(attrib_id);
 
-ALTER TABLE variation_annotation ADD FOREIGN KEY (source_id) REFERENCES source(source_id);
+ALTER TABLE variation_annotation ADD FOREIGN KEY (study_id) REFERENCES study(study_id);
 ALTER TABLE variation_annotation ADD FOREIGN KEY (variation_id) REFERENCES variation(variation_id);
 ALTER TABLE variation_annotation ADD FOREIGN KEY (phenotype_id) REFERENCES phenotype(phenotype_id);
 
 ALTER TABLE variation_feature ADD FOREIGN KEY (source_id) REFERENCES source(source_id);
 ALTER TABLE variation_feature ADD FOREIGN KEY (variation_id) REFERENCES variation(variation_id);
 ALTER TABLE variation_feature ADD FOREIGN KEY (seq_region_id) REFERENCES seq_region(seq_region_id);
+ALTER TABLE variation_feature ADD FOREIGN KEY (class_attrib_id) REFERENCES attrib(attrib_id);
 
 ALTER TABLE variation_group ADD FOREIGN KEY (source_id) REFERENCES source(source_id);
 
