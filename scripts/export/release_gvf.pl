@@ -36,6 +36,9 @@ pod2usage(1) if $help;
 die "--output_dir argument is required, try --help for usage" 
     unless $toplevel_dir;
 
+die "--registry argument is required, try --help for usage" 
+    unless $registry;
+
 $script ||= "$Bin/dump_gvf.pl";
 
 my $default_rc = '-q long';
@@ -49,18 +52,18 @@ my $species_config = {
             Venter  => 'ENSEMBL:Venter',
         },
         populations     => {
-            '1000GENOMES:low_coverage:CEU'      => '1000 genomes - Low coverage - CEU',
-            '1000GENOMES:low_coverage:CHBJPT'   => '1000 genomes - Low coverage - CHB+JPT',
-            '1000GENOMES:low_coverage:YRI'      => '1000 genomes - Low coverage - YRI',
-            '1000GENOMES:trio:CEU'              => '1000 genomes - High coverage - Trios - CEU', 
-            '1000GENOMES:trio:YRI'              => '1000 genomes - High coverage - Trios - YRI',
-            '1000GENOMES:exon:CEU'              => '1000 genomes - High coverage exons - CEU',
-            '1000GENOMES:exon:CHB'              => '1000 genomes - High coverage exons - CHB',
-            '1000GENOMES:exon:CHD'              => '1000 genomes - High coverage exons - CHD',
-            '1000GENOMES:exon:JPT'              => '1000 genomes - High coverage exons - JPT',
-            '1000GENOMES:exon:LWK'              => '1000 genomes - High coverage exons - LWK',
-            '1000GENOMES:exon:TSI'              => '1000 genomes - High coverage exons - TSI',
-            '1000GENOMES:exon:YRI'              => '1000 genomes - High coverage exons - YRI',
+            '1000GENOMES:pilot_1_CEU_low_coverage_panel'    => '1000 genomes - Low coverage - CEU',
+            '1000GENOMES:pilot_1_CHB+JPT_low_coverage_panel'=> '1000 genomes - Low coverage - CHB+JPT',
+            '1000GENOMES:pilot_1_YRI_low_coverage_panel'    => '1000 genomes - Low coverage - YRI',
+            '1000GENOMES:1000GENOMES_pilot_2_CEU_trio'      => '1000 genomes - High coverage - Trios - CEU', 
+            '1000GENOMES:1000GENOMES_pilot_2_YRI_trio'      => '1000 genomes - High coverage - Trios - YRI',
+            '1000GENOMES:pilot_3_CEU_exon_capture_panel'    => '1000 genomes - High coverage exons - CEU',
+            '1000GENOMES:pilot_3_CHB_exon_capture_panel'    => '1000 genomes - High coverage exons - CHB',
+            '1000GENOMES:pilot_3_CHD_exon_capture_panel'    => '1000 genomes - High coverage exons - CHD',
+            '1000GENOMES:pilot_3_JPT_exon_capture_panel'    => '1000 genomes - High coverage exons - JPT',
+            '1000GENOMES:pilot_3_LWK_exon_capture_panel'    => '1000 genomes - High coverage exons - LWK',
+            '1000GENOMES:pilot_3_TSI_exon_capture_panel'    => '1000 genomes - High coverage exons - TSI',
+            '1000GENOMES:pilot_3_YRI_exon_capture_panel'    => '1000 genomes - High coverage exons - YRI',
             'CSHL-HAPMAP:HapMap-CEU'            => '',
             'CSHL-HAPMAP:HapMap-HCB'            => '',
             'CSHL-HAPMAP:HapMap-JPT'            => '',
@@ -74,22 +77,23 @@ my $species_config = {
             'CSHL-HAPMAP:HAPMAP-MKK'            => '',
             'CSHL-HAPMAP:HAPMAP-TSI'            => '',
         },
-        rc              => '-q long -R"select[mem>15000] rusage[mem=15000]" -M15000000',
-        somatic         => 1,
+        rc                      => '-q long -R"select[mem>15000] rusage[mem=15000]" -M15000000',
+        somatic                 => 1,
+        structural_variations   => 1,
     },
-    'Mus_musculus'	            => {},
+    'Mus_musculus'	            => {structural_variations => 1},
     'Danio_rerio'	            => {},
     'Felis_catus'	            => {},
     'Bos_taurus'	            => {},
-    'Canis_familiaris'	        => {},
+    'Canis_familiaris'	        => {structural_variations => 1},
     'Equus_caballus'	        => {},
     'Taeniopygia_guttata'	    => {},
     'Tetraodon_nigroviridis'    => {},
     'Monodelphis_domestica'	    => {},
-    'Sus_scrofa'	            => {},
+    'Sus_scrofa'	            => {structural_variations => 1},
     'Ornithorhynchus_anatinus'	=> {},
     'Pan_troglodytes'	        => {},
-    'Pongo_pygmaeus'	        => {},
+    'Pongo_abelii'	            => {},
     'Rattus_norvegicus'	        => {},
     'Gallus_gallus'	            => {},
     'Drosophila_melanogaster'	=> {},
@@ -120,7 +124,7 @@ for my $species_name (@species) {
         make_path($dir) or die "Failed to create output dir '$dir': $!";
     }
 
-    my $opts = sprintf($normal_opts, $species_name, $registry);    
+    my $opts = sprintf $normal_opts, $species_name, $registry;    
 
     my $cmd_root =  "bsub $rc perl $script $opts --output";
 
@@ -147,6 +151,10 @@ for my $species_name (@species) {
 
     push @cmds, $make_cmd->();
 
+    # then the complete dump with consequences
+    
+    push @cmds, $make_cmd->('_incl_consequences', '--include_consequences');
+
     # then the failed variations
 
     push @cmds, $make_cmd->('_failed', '--just_failed');
@@ -155,6 +163,11 @@ for my $species_name (@species) {
 
     if ($config->{somatic}) {
         push @cmds, $make_cmd->('_somatic', '--somatic');
+        push @cmds, $make_cmd->('_somatic_incl_consequences', '--somatic --include_consequences');
+    }
+    
+    if ($config->{structural_variations}) {
+        push @cmds, $make_cmd->('_structural_variations', '--just_structural_variations');
     }
 
     for my $ind (keys %{ $config->{individuals} || {} }) {
@@ -192,7 +205,7 @@ release_gvf.pl
 Create GVF dumps for an ensembl release, submitting a farm job for each
 file to be created (possibly several per species, especially for human).
 
-You can control which individuals an populations etc. to create files for
+You can control which individuals and populations etc. to create files for
 by editing the $species_config hash at the top of this script.
 
 =head1 SYNOPSIS
@@ -239,7 +252,7 @@ Don't actually submit the farm jobs, just show the bsub command generated for ea
 
 =item B<--species NAME>
 
-Only create files for the specifies species, defaults to all in the $species_config
+Only create files for the specified species, defaults to all in the $species_config
 hash at the top of this script. You can specify multiple species by supplying multiple
 options for each.
 
