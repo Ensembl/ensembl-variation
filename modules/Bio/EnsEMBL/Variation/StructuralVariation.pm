@@ -157,22 +157,48 @@ sub new {
   my $class = ref($caller) || $caller;
 
   my $self = $class->SUPER::new(@_);
-  my ($var_name, $source, $source_description, $sv_class, $bound_start, $bound_end, $allele_string, $study_name, 
-      $study_description, $study_url, $external_reference) =
-    rearrange([qw(VARIATION_NAME SOURCE SOURCE_DESCRIPTION TYPE BOUND_START BOUND_END ALLELE_STRING STUDY_NAME STUDY_DESCRIPTION 
-                  STUDY_URL EXTERNAL_REFERENCE)], @_);
+  
+  my (
+    $var_name, 
+    $source, 
+    $source_version, 
+    $source_description, 
+    $sv_class, 
+    $bound_start, 
+    $bound_end, 
+    $allele_string, 
+    $study_name, 
+    $study_description, 
+    $study_url, 
+    $external_reference
+  ) = rearrange([qw(
+          VARIATION_NAME 
+          SOURCE 
+          SOURCE_VERSION
+          SOURCE_DESCRIPTION 
+          TYPE 
+          BOUND_START 
+          BOUND_END 
+          ALLELE_STRING 
+          STUDY_NAME 
+          STUDY_DESCRIPTION 
+          STUDY_URL 
+          EXTERNAL_REFERENCE
+    )], @_);
 
-  $self->{'variation_name'}   = $var_name;
-  $self->{'source'}           = $source;
-  $self->{'source_description'}           = $source_description;
-  $self->{'class'}  = $sv_class;
-  $self->{'bound_start'} = $bound_start;
-  $self->{'bound_end'} = $bound_end;
-  $self->{'allele_string'} = $allele_string;
-  $self->{'study_name'} = $study_name;
-  $self->{'study_description'} = $study_description;
-  $self->{'study_url'} = $study_url;
+  $self->{'variation_name'}     = $var_name;
+  $self->{'source'}             = $source;
+  $self->{'source_version'}     = $source_version;
+  $self->{'source_description'} = $source_description;
+  $self->{'class'}              = $sv_class;
+  $self->{'bound_start'}        = $bound_start;
+  $self->{'bound_end'}          = $bound_end;
+  $self->{'allele_string'}      = $allele_string;
+  $self->{'study_name'}         = $study_name;
+  $self->{'study_description'}  = $study_description;
+  $self->{'study_url'}          = $study_url;
   $self->{'external_reference'} = $external_reference;
+
   return $self;
 }
 
@@ -363,7 +389,24 @@ sub source{
   return $self->{'source'};
 }
 
+=head2 source_version
 
+  Arg [1]    : string $source_version (optional)
+               The new value to set the source_version attribute to
+  Example    : $source_version = $svf->source_version()
+  Description: Getter/Setter for the source_version attribute
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub source_version {
+  my $self = shift;
+  return $self->{'source_version'} = shift if(@_);
+  return $self->{'source_version'};
+}
 
 =head2 source_description
 
