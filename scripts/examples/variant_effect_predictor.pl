@@ -237,7 +237,7 @@ sub print_consequences {
 			foreach my $tva(@{$tv->get_all_alternate_TranscriptVariationAlleles}) {
 				
 				my $method_name = $config->{terms}.'_term';
-				my $type = join ",", map {$_->$method_name} @{$tva->get_all_OverlapConsequences};
+				my $type = join ",", map {$_->$method_name || $_->display_term} @{$tva->get_all_OverlapConsequences};
 				
 				my $gene = ($tv->transcript ? $config->{ga}->fetch_by_transcript_stable_id($tv->transcript->stable_id) : undef) unless defined $config->{whole_genome};
 				
@@ -495,6 +495,7 @@ perl variant_effect_predictor.pl [arguments]
 Options
 --help                 Display this message and quit
 --verbose              Display verbose output as the script runs [default: off]
+--quiet                Suppress status and warning messages [default: off]
 
 --config               Load configuration from file. Any command line options
                        specified overwrite those in the file [default: off]
