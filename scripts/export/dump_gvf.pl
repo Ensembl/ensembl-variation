@@ -29,26 +29,32 @@ my $individual_name;
 my $population_name;
 my $set_name;
 my $chunk_size;
+my $include_consequences;
 my @seq_region_names;
+my $include_svs;
+my $just_svs;
 my $help;
 
 GetOptions(
-    "species|s=s"       => \$species,
-    "output|o=s"        => \$output_file,
-    "registry|r=s"      => \$registry,
-    "host=s"            => \$host,
-    "user=s"            => \$user,
-    "individual|i=s"    => \$individual_name,
-    "population|p=s"    => \$population_name,
-    "set=s"             => \$set_name,
-    "somatic"           => \$somatic,
-    "compress|c"        => \$compress,
-    "use_iterator"      => \$use_iterator,
-    "include_failed"    => \$include_failed,
-    "just_failed"       => \$just_failed,
-    "chunk_size|cs=i"   => \$chunk_size,
-    "seq_region|sr=s"   => \@seq_region_names,
-    "help|h"            => \$help,
+    "species|s=s"                   => \$species,
+    "output|o=s"                    => \$output_file,
+    "registry|r=s"                  => \$registry,
+    "host=s"                        => \$host,
+    "user=s"                        => \$user,
+    "individual|i=s"                => \$individual_name,
+    "population|p=s"                => \$population_name,
+    "set=s"                         => \$set_name,
+    "somatic"                       => \$somatic,
+    "compress|c"                    => \$compress,
+    "use_iterator"                  => \$use_iterator,
+    "include_failed"                => \$include_failed,
+    "just_failed"                   => \$just_failed,
+    "chunk_size|cs=i"               => \$chunk_size,
+    "include_consequences"          => \$include_consequences,
+    "seq_region|sr=s"               => \@seq_region_names,
+    "include_structural_variations" => \$include_svs,
+    "just_structural_variations"    => \$just_svs,
+    "help|h"                        => \$help,
 ) or die pod2usage(1);
 
 pod2usage(1) if $help;
@@ -59,8 +65,11 @@ die "species argument required, try --help for usage instructions\n" unless $spe
 die "Can't fetch for a population and an individual at once" 
     if $population_name && $individual_name;
 
-# chunk size is in mega-bases
+# chunk size is in kilobases
 $chunk_size *= 1000 if defined $chunk_size;
+
+# if the user wants just structural variants that implies that SVs should be included
+$include_svs = 1 if $just_svs;
 
 # default to a sensible file name
 $output_file ||= "$species.gvf";
@@ -95,7 +104,8 @@ if ($include_failed || $just_failed) {
     # joining to variation and failed variation is too slow, so
     # we cache the entire failed_variation table in memory, just 
     # storing the failed_description_id to save memory. We also 
-    # keep an in-memory cache mapping these ids to the description
+    # store the failed_description table in memory to map these 
+    # ids to the description
 
     my $dbh = $vdba->dbc->db_handle;
 
@@ -127,9 +137,6 @@ if ($include_failed || $just_failed) {
     }
 }
 
-my $sa   = $cdba->get_SliceAdaptor;
-my $vfa  = $vdba->get_VariationFeatureAdaptor;
-my $igta = $vdba->get_IndividualGenotypeAdaptor;
 
 my $individual;
 
@@ -187,6 +194,8 @@ open GVF, ">$output_file" or die $!;
 
 my $slices;
 
+my $sa = $cdba->get_SliceAdaptor;
+
 if (@seq_region_names) {
     for my $name (@seq_region_names) {
         my $slice = $sa->fetch_by_region('toplevel', $name) 
@@ -195,6 +204,47 @@ if (@seq_region_names) {
     }
 }
 else {
+
+#    # find all the unique seq_region_ids in the database
+#    # and fetch a slice for each of them
+#
+#    my $dbh = $vdba->dbc->db_handle;
+#   
+#    my %sr_ids;
+#
+#    if ($include_svs) {
+#        my $sth = $dbh->prepare(qq{
+#            SELECT  DISTINCT(seq_region_id)
+#            FROM    structural_variation
+#        });
+#
+#        $sth->execute;
+#
+#        while (my ($sr_id) = $sth->fetchrow_array) {
+#            $sr_ids{$sr_id} = 1;
+#        }
+#    }
+#
+#    unless ($just_svs) {
+#        my $sth = $dbh->prepare(qq{
+#            SELECT  DISTINCT(seq_region_id)
+#            FROM    variation_feature
+#        });
+#
+#        $sth->execute;
+#        
+#        while (my ($sr_id) = $sth->fetchrow_array) {
+#            $sr_ids{$sr_id} = 1;
+#        }
+#    }
+#
+#    for my $sr_id (keys %sr_ids) {
+#        my $slice = $sa->fetch_by_seq_region_id($sr_id);
+#        die "seq_region_id $sr_id found in variation database but not in core?" unless $slice;
+#        push @$slices, $slice;
+#    }
+    
+    #$slices = $sa->fetch_all('toplevel', undef, 1, 0);
     $slices = $sa->fetch_all('toplevel');
     die "Didn't find any toplevel slices for $species?" unless @$slices;
 }
@@ -202,7 +252,7 @@ else {
 # print the GVF header for the first slice, without sequence_region information
 # because we add that for all slices later, but include details of the individual
 # or population as necessary
-#
+
 print GVF $slices->[0]->gvf_header(
     no_sequence_region  => 1, 
     individual          => $individual,
@@ -218,6 +268,8 @@ for my $slice (@$slices) {
 # just use a file-wide count for the ID attribute
 my $id_count = 0;
 
+my $prev_svs;
+
 while (my $slice = shift @$slices) {
 
     # only operate on chunk_size sub slices to avoid running out of memory
@@ -226,6 +278,8 @@ while (my $slice = shift @$slices) {
 
     $chunk_size ||= $slice->end;
 
+    #warn "Fetching by slice: ".$slice->name." chunk size: ".$chunk_size;
+    
     while ($sub_slice_start < $slice->end) {
 
         my $sub_slice_end = $sub_slice_start + $chunk_size - 1;
@@ -237,228 +291,267 @@ while (my $slice = shift @$slices) {
         
         $sub_slice_start = $sub_slice_end + 1;
 
-        my $vfs;
+        unless ($just_svs) {
 
-        if ($use_iterator) {
-            $vfs = $vfa->fetch_Iterator_by_Slice_constraint($sub_slice, '');
-        }
-        elsif ($somatic) {
-            $vfs = $vfa->fetch_all_somatic_by_Slice($sub_slice);
-        }
-        elsif ($set) {
-            $vfs = $vfa->fetch_all_by_Slice_VariationSet($sub_slice, $set);
-        }
-        else {
-            $vfs = $vfa->fetch_all_by_Slice($sub_slice);
-        }
+            my $vfa  = $vdba->get_VariationFeatureAdaptor;
 
-        # we pre-fetch all the genotypes for this slice and individual to 
-        # speed things up below
+            my $vfs;
 
-        my $gt_hash;
+            if ($use_iterator) {
+                $vfs = $vfa->fetch_Iterator_by_Slice_constraint($sub_slice, '');
+            }
+            elsif ($somatic) {
+                $vfs = $vfa->fetch_all_somatic_by_Slice_constraint_with_TranscriptVariations($sub_slice);
+            }
+            elsif ($set) {
+                $vfs = $vfa->fetch_all_by_Slice_VariationSet($sub_slice, $set);
+            }
+            elsif ($include_consequences) {
+                $vfs = $vfa->fetch_all_by_Slice_constraint_with_TranscriptVariations($sub_slice);
+            }
+            else {
+                $vfs = $vfa->fetch_all_by_Slice($sub_slice);
+            }
 
-        if ($individual) {
+            # we pre-fetch all the genotypes for this slice and individual to 
+            # speed things up below
 
-            my $igts = $igta->fetch_all_by_Slice($sub_slice, $individual);
-            
-            for my $igt (@$igts) {
+            my $gt_hash;
 
-                my $key = join('_', 
-                    $igt->slice->seq_region_name,
-                    $igt->seq_region_start,
-                    $igt->seq_region_end,
-                );
-                
-                my $gts = $gt_hash->{$key} ||= [];
+            if ($individual) {
 
-                my $seen = 0;
+                my $igta = $vdba->get_IndividualGenotypeAdaptor;
 
-                if (@$gts) {
-                    for my $gt (@$gts) {
-                        if (($gt->allele1 eq $igt->allele1 && $gt->allele2 eq $igt->allele2) ||
-                            ($gt->allele1 eq $igt->allele2 && $gt->allele2 eq $igt->allele1)) {
-                            $seen++;
-                            last;
+                my $igts = $igta->fetch_all_by_Slice($sub_slice, $individual);
+
+                for my $igt (@$igts) {
+
+                    my $key = join('_', 
+                        $igt->slice->seq_region_name,
+                        $igt->seq_region_start,
+                        $igt->seq_region_end,
+                    );
+
+                    my $gts = $gt_hash->{$key} ||= [];
+
+                    my $seen = 0;
+
+                    if (@$gts) {
+                        for my $gt (@$gts) {
+                            if (($gt->allele1 eq $igt->allele1 && $gt->allele2 eq $igt->allele2) ||
+                                ($gt->allele1 eq $igt->allele2 && $gt->allele2 eq $igt->allele1)) {
+                                $seen++;
+                                last;
+                            }
                         }
                     }
-                }
 
-                push @$gts, $igt unless $seen;
-            }
-        }
-
-        # iterate over our variation_features
-
-        VF : while (my $vf = ($use_iterator ? $vfs->next : shift @$vfs)) {
-
-            my $attrs;
-
-            my $comment = '';
-
-            if ($individual) { 
-
-                # we're making a file for an individual, so fetch the genotypes
-
-                my $key = join('_',
-                    $vf->slice->seq_region_name,
-                    $vf->seq_region_start,
-                    $vf->seq_region_end,
-                );
-              
-                my @gts = @{ $gt_hash->{$key} || [] };
-
-                GT : for my $gt (@gts) { 
-
-                    my $gt1 = $gt->allele1;
-                    my $gt2 = $gt->allele2;
-                    
-                    unless ($vf->strand == $gt->strand) {
-                        reverse_comp(\$gt1);
-                        reverse_comp(\$gt2);
-                    }
-
-                    my @alleles = split /\//, $vf->allele_string;
-
-                    my $ref_allele = shift @alleles;
-
-                    my $hom = $gt1 eq $gt2;
-
-                    my $gt1_is_ref = $gt1 eq $ref_allele;
-                    my $gt2_is_ref = $gt2 eq $ref_allele;
-
-                    my $gt1_in_alt;
-                    my $gt2_in_alt;
-
-                    if ($hom && $gt1_is_ref) {
-                        # homozygous for the reference, don't include
-                        next VF;
-                    }
-
-                    my $variant_seq;
-
-                    for my $allele (@alleles) {
-                        $gt1_in_alt = 1 if $allele eq $gt1;
-                        $gt2_in_alt = 1 if $allele eq $gt2;
-                        last if ($gt1_in_alt && $gt2_in_alt);
-                    }
-
-                    if ($hom && $gt1_in_alt) {
-                        # homozygous for alt
-                        $variant_seq = "$gt1";
-                    }
-                    elsif ($gt1_is_ref && $gt2_in_alt) {
-                        # het for ref and alt
-                        $variant_seq = "$gt1,$gt2";
-                    }
-                    elsif ($gt2_is_ref && $gt1_in_alt) {
-                        # het for ref and alt
-                        $variant_seq = "$gt2,$gt1";
-                    }
-                    elsif ($gt1_in_alt && $gt2_in_alt) {
-                        # het for 2 alts
-                        $variant_seq = "$gt1,$gt2";
-                    }
-                    else {
-                        
-                        # the genotype sequence isn't in the allele string
-                        
-                        # first check if the classes match
-
-                        my $gt_incl_indel = ($gt1 eq '-' || $gt eq '-');
-                        my $vf_is_indel = ($vf->var_class eq 'deletion' || $vf->var_class eq 'insertion');
-
-                        next GT unless $gt_incl_indel == $vf_is_indel;
-                        
-                        my $vf_is_sub = $vf->var_class eq 'substitution';
-                        my $gt_is_sub = (length $gt1 > 1) || (length $gt2 > 1);
-
-                        next GT unless $vf_is_sub == $gt_is_sub;
-
-                        # sometimes there are multiple genotypes at the same location,
-                        # but this only seems to happen when the associated variation
-                        # differs
-
-                        next GT if ($gt->variation->name ne $vf->variation_name);
-
-                        # otherwise sometimes the variations match, but the alleles
-                        # don't match the genotype e.g. rs55844409 has allele string 
-                        # T/C but Watson has a G/G genotype. We suspect these are dbSNP 
-                        # bugs, but we still include them
-                      
-                        $variant_seq = $hom ? $gt1 : "$gt1,$gt2";
-                    }
-
-                    $attrs->{Variant_seq} = $variant_seq;
-
-                    $attrs->{Genotype} = $hom ? 'homozygous' : 'heterozygous';
-
-                    #$comment .= "real genotype: $gt1/$gt2"
-                }
-
-                unless ($attrs->{Genotype}) {
-                    # this vf isn't in this individual, so don't output it
-                    next VF;
+                    push @$gts, $igt unless $seen;
                 }
             }
-            
-            if ($population) {
 
-                # we're making a file for a population, so look up the alleles and their frequencies
+            # iterate over our variation_features
 
-                my @vf_alleles = split /\//, $vf->allele_string;
-                
-                my $found = 0;
-            
-                my @alleles;
-                my @freqs;
-                
-                if (my $allele_hash = $alleles_by_variation_id->{$vf->{_variation_id}}) {
-                    for my $allele (keys %$allele_hash) {
-                        my $freq = $allele_hash->{$allele};
-                        if ($allele eq $vf_alleles[0]) {
-                            $attrs->{Reference_seq} = $allele;
+            VF : while (my $vf = ($use_iterator ? $vfs->next : shift @$vfs)) {
+
+                my $attrs;
+
+                my $comment = '';
+
+                if ($individual) { 
+
+                    # we're making a file for an individual, so fetch the genotypes
+
+                    my $key = join('_',
+                        $vf->slice->seq_region_name,
+                        $vf->seq_region_start,
+                        $vf->seq_region_end,
+                    );
+
+                    my @gts = @{ $gt_hash->{$key} || [] };
+
+                    GT : for my $gt (@gts) { 
+
+                        my $gt1 = $gt->allele1;
+                        my $gt2 = $gt->allele2;
+
+                        unless ($vf->strand == $gt->strand) {
+                            reverse_comp(\$gt1);
+                            reverse_comp(\$gt2);
+                        }
+
+                        my @alleles = split /\//, $vf->allele_string;
+
+                        my $ref_allele = shift @alleles;
+
+                        my $hom = $gt1 eq $gt2;
+
+                        my $gt1_is_ref = $gt1 eq $ref_allele;
+                        my $gt2_is_ref = $gt2 eq $ref_allele;
+
+                        my $gt1_in_alt;
+                        my $gt2_in_alt;
+
+                        if ($hom && $gt1_is_ref) {
+                            # homozygous for the reference, don't include
+                            next VF;
+                        }
+
+                        my $variant_seq;
+
+                        for my $allele (@alleles) {
+                            $gt1_in_alt = 1 if $allele eq $gt1;
+                            $gt2_in_alt = 1 if $allele eq $gt2;
+                            last if ($gt1_in_alt && $gt2_in_alt);
+                        }
+
+                        if ($hom && $gt1_in_alt) {
+                            # homozygous for alt
+                            $variant_seq = "$gt1";
+                        }
+                        elsif ($gt1_is_ref && $gt2_in_alt) {
+                            # het for ref and alt
+                            $variant_seq = "$gt1,$gt2";
+                        }
+                        elsif ($gt2_is_ref && $gt1_in_alt) {
+                            # het for ref and alt
+                            $variant_seq = "$gt2,$gt1";
+                        }
+                        elsif ($gt1_in_alt && $gt2_in_alt) {
+                            # het for 2 alts
+                            $variant_seq = "$gt1,$gt2";
                         }
                         else {
-                            push @alleles, $allele;
-                            push @freqs, $freq;
-                            $found = 1;
+
+                            # the genotype sequence isn't in the allele string
+
+                            # first check if the classes match
+
+                            my $gt_incl_indel = ($gt1 eq '-' || $gt eq '-');
+                            my $vf_is_indel = ($vf->var_class eq 'deletion' || $vf->var_class eq 'insertion');
+
+                            next GT unless $gt_incl_indel == $vf_is_indel;
+
+                            my $vf_is_sub = $vf->var_class eq 'substitution';
+                            my $gt_is_sub = (length $gt1 > 1) || (length $gt2 > 1);
+
+                            next GT unless $vf_is_sub == $gt_is_sub;
+
+                            # sometimes there are multiple genotypes at the same location,
+                            # but this only seems to happen when the associated variation
+                            # differs
+
+                            next GT if ($gt->variation->name ne $vf->variation_name);
+
+                            # otherwise sometimes the variations match, but the alleles
+                            # don't match the genotype e.g. rs55844409 has allele string 
+                            # T/C but Watson has a G/G genotype. We suspect these are dbSNP 
+                            # bugs, but we still include them
+
+                            $variant_seq = $hom ? $gt1 : "$gt1,$gt2";
+                        }
+
+                        $attrs->{Variant_seq} = $variant_seq;
+
+                        $attrs->{Genotype} = $hom ? 'homozygous' : 'heterozygous';
+
+                        #$comment .= "real genotype: $gt1/$gt2"
+                    }
+
+                    unless ($attrs->{Genotype}) {
+                        # this vf isn't in this individual, so don't output it
+                        next VF;
+                    }
+                }
+
+                if ($population) {
+
+                    # we're making a file for a population, so look up the alleles and their frequencies
+
+                    my @vf_alleles = split /\//, $vf->allele_string;
+
+                    my $found = 0;
+
+                    my @alleles;
+                    my @freqs;
+
+                    if (my $allele_hash = $alleles_by_variation_id->{$vf->{_variation_id}}) {
+                        for my $allele (keys %$allele_hash) {
+                            my $freq = $allele_hash->{$allele};
+                            if ($allele eq $vf_alleles[0]) {
+                                $attrs->{Reference_seq} = $allele;
+                            }
+                            else {
+                                push @alleles, $allele;
+                                push @freqs, $freq;
+                                $found = 1;
+                            }
                         }
                     }
-                }
-               
-                if ($found) {
-                    $attrs->{Variant_seq}   = join ',', @alleles;
-                    
-                    if (grep {$_ =~ /\d/} @freqs) {
-                        $attrs->{Variant_freq}  = join ',', @freqs;
+
+                    if ($found) {
+                        $attrs->{Variant_seq}   = join ',', @alleles;
+
+                        if (grep {$_ =~ /\d/} @freqs) {
+                            $attrs->{Variant_freq}  = join ',', @freqs;
+                        }
+
+                        #warn $vf->to_gvf(extra_attrs => $attrs)."\n";
                     }
-                    
-                    #warn $vf->to_gvf(extra_attrs => $attrs)."\n";
+                    else {
+                        next VF;
+                    }
                 }
-                else {
-                    next VF;
-                }
-            }
 
-            if ($include_failed || $just_failed) {
+                if ($include_failed || $just_failed) {
+
+                    # we're including failed variations, so look up the description and add to the output
+
+                    if (my $desc_id = $failed_ids->{$vf->{_variation_id}}) {
+                        my $desc = $failed_descs->{$desc_id};
+                        $attrs->{ensembl_failure_reason} = $desc;
+                    }
+                    else {
+                        next VF if $just_failed;
+                    }
+                }
+
+                # if we get here, we want this vf included in the dump, so convert
+                # it to GVF including any extra attributes defined above
+
+                $attrs->{ID} = ++$id_count;
+
+                my $gvf_line = $vf->to_gvf(extra_attrs => $attrs, include_consequences => $include_consequences);
+
+                print GVF $gvf_line, ($comment ? " # $comment" : ''), "\n" if $gvf_line;
+            }
+        }
+
+        if ($include_svs) {
+
+            my $sva = $vdba->get_StructuralVariationAdaptor;
+            
+            my $svs = $sva->fetch_all_by_Slice($sub_slice);
+            
+            for my $sv (@$svs) {
+               
+                # ignore CNV probes
+
+                next if $sv->class eq 'CNV_PROBE';
+
+                my $coords = join '-', $sv->seq_region_start, $sv->seq_region_end; 
                 
-                # we're including failed variations, so look up the description and add to the output
+                if (my $prev_coords = $prev_svs->{$sv->variation_name}) {
+                    warn "repeated SV: ".$sv->variation_name." coords 1: $prev_coords, coords 2: $coords\n" if $prev_coords ne $coords;
+                    next;
+                }
 
-                if (my $desc_id = $failed_ids->{$vf->{_variation_id}}) {
-                    my $desc = $failed_descs->{$desc_id};
-                    $attrs->{ensembl_failure_reason} = $desc;
-                }
-                else {
-                    next VF if $just_failed;
-                }
+                my $gvf_line = $sv->to_gvf;
+                    
+                print GVF "$gvf_line\n" if $gvf_line;
+
+                $prev_svs->{$sv->variation_name} = $coords;
             }
-
-            # if we get here, we want this vf included in the dump, so convert
-            # it to GVF including any extra attributes defined above
-
-            $attrs->{ID} = ++$id_count;
-
-            print GVF $vf->to_gvf(extra_attrs => $attrs), ($comment ? " # $comment" : ''), "\n";
         }
     }
 }
@@ -491,20 +584,20 @@ dump_gvf.pl --species NAME [options]
     database to the default mouse.gvf file
 
   dump_gvf.pl --species human --registry ensembl.registry --individual Watson \
-    --seq_region 1 --seq_region 2 --output w1.gvf
+    --seq_region 1 --seq_region 2 --output watson.gvf
 
     dump all variations, including genotypes, found in Watson's chromosomes 
-    1 & 2 to the w1.gvf file
+    1 & 2 to the watson.gvf file
 
   dump_gvf.pl --species human --population '1000GENOMES:low_coverage:CEU' \
     --output 1kg_pilot1_CEU.gvf --compress
 
     dump all variations, including allele frequencies, found in the specified
-    population and then compress the file to 1fk_pilot1_CEU.gvf.gz
+    population and then compress the file to 1kg_pilot1_CEU.gvf.gz
 
-  dump_gvf.pl --specoes human --somatic --output human_somatic.gvf
+  dump_gvf.pl --species human --somatic --output human_somatic.gvf
 
-    dump somatic mutations
+    dump somatic mutations from human
 
 =head1 OPTIONS
 
@@ -541,6 +634,10 @@ Include variations flagged as failed in the GVF file
 
 Only include variations flagged as failed
 
+=item B<--include_consequences>
+
+Include the consequences of variations on transcripts and regulatory regions etc.
+
 =item B<--individual NAME>
 
 Only include variations found in this individual, including genotypes if available.
@@ -563,6 +660,14 @@ Fetch features from slices this number of kilobases long to avoid excessive memo
 
 Only include variations from this toplevel seq_region (normally chromosome name, e.g. 4 or X).
 You can specify several seq_regions by repeating this option for each name.
+
+=item B<--include_structural_variations>
+
+Include structural variations in the output
+
+=item B<--just_structural_variations>
+
+Only include structural variations in the output
 
 =item B<--help>
 
