@@ -91,7 +91,7 @@ sub _default_where_clause {
 sub _columns {
   return qw( sv.structural_variation_id sv.seq_region_id sv.seq_region_start
              sv.seq_region_end sv.seq_region_strand
-             sv.variation_name s.name s.description sv.class
+             sv.variation_name s.name s.version s.description sv.class
 			 sv.bound_start sv.bound_end sv.allele_string
 			 st.name st.description st.url st.external_reference);
 }
@@ -116,13 +116,13 @@ sub _objs_from_sth {
 
   my ($struct_variation_id, $seq_region_id, $seq_region_start,
       $seq_region_end, $seq_region_strand,
-      $variation_name, $source_name, $source_description, $sv_class,
+      $variation_name, $source_name, $source_version, $source_description, $sv_class,
 	  $bound_start, $bound_end, $allele_string, $study_name, $study_description,
 	  $study_url, $external_reference);
 
   $sth->bind_columns(\$struct_variation_id, \$seq_region_id,
                      \$seq_region_start, \$seq_region_end, \$seq_region_strand,
-                     \$variation_name, \$source_name, \$source_description,
+                     \$variation_name, \$source_name, \$source_version, \$source_description,
 					 \$sv_class, \$bound_start, \$bound_end, \$allele_string, \$study_name, 
 					 \$study_description, \$study_url, \$external_reference);
 
@@ -224,6 +224,7 @@ sub _objs_from_sth {
        'adaptor'  => $self,
        'dbID'     => $struct_variation_id,
        'source'   => $source_name,
+       'source_version'   => $source_version,
 	     'source_description' => $source_description,
 	     'class'     => $sv_class,
 	     'bound_start' => $bound_start,
