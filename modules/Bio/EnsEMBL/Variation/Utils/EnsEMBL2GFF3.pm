@@ -104,12 +104,18 @@ use warnings;
 
         my $gff = $self->_gff_hash(@_);
 
+        return undef unless defined $gff;
+
         $gff->{score}  = '.' unless defined $gff->{score};
         $gff->{strand} = '.' unless defined $gff->{strand};
         $gff->{phase}  = '.' unless defined $gff->{phase};
 
         # order as per GFF3 spec: http://www.sequenceontology.org/gff3.shtml 
 
+        for my $req (qw(source type start end)) {
+            die "'$req' attribute required for GFF" unless $gff->{$req};
+        }
+ 
         my $gff_str = join( "\t",
             $gff->{seqid}, $gff->{source}, $gff->{type}, $gff->{start},
             $gff->{end}, $gff->{score}, $gff->{strand}, $gff->{phase},
@@ -204,7 +210,7 @@ use warnings;
 {
     package Bio::EnsEMBL::Variation::VariationFeature;
     
-    use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
+    use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp expand);
     
     sub to_gvf {
         my $self = shift;
@@ -225,7 +231,11 @@ use warnings;
 
         $gff->{type} = $self->class_SO_term;
 
-        $gff->{attributes}->{Dbxref} = $self->source.'_'.$self->source_version.':'.$self->variation_name;
+        my $source = $self->source;
+
+        $source .= '_'.$self->source_version if defined $self->source_version;
+
+        $gff->{attributes}->{Dbxref} = "$source:".$self->variation_name;
 
         # Use the variation name (rsID etc.) concatenated with the seq_region_name and positions as the ID
 
@@ -233,29 +243,6 @@ use warnings;
 
         $gff->{attributes}->{Variant_effect} = [];
 
-        # CNV probes and HGMD mutations are special cases, so deal with them first
-
-        if ($self->allele_string eq 'CNV_PROBE') {
-            
-            $gff->{attributes}->{Reference_seq} = '~';
-            $gff->{attributes}->{Variant_seq} = '~';
-            
-            # Pontus says I can't meaningfully calculate the consequence of these variations
-            
-            return $gff;
-        }
-        
-        if ($self->allele_string eq 'HGMD_MUTATION') {
-            
-            $gff->{attributes}->{Reference_seq} = '~';
-            $gff->{attributes}->{Variant_seq} = '~';
-            
-            # there's not really anything useful to put in the Variant_effect 
-            # attribute, so we don't add one
-            
-            return $gff;
-        }
-        
         # the Variant_seq attribute requires a comma separated list of alleles
 
         my @alleles = split '/', $self->allele_string;
@@ -264,17 +251,40 @@ use warnings;
         $gff->{attributes}->{Variant_seq} = join ',', @alleles;
 
         my $index = 0;
-        my %allele_index = map { $_ => $index++ } @alleles;
 
+        # expand tandem repeat alleles, because TranscriptVariationAlleles use the expanded sequence
+        
+        map { expand(\$_) } @alleles; 
+
+        # if you expand e.g. (T)0 you get an empty string, which we treat as a deletion, so default to '-'
+
+        my %allele_index = map { ($_ || '-') => $index++ } @alleles;
+        
         # the reference sequence should be set to '~' if the sequence is longer than 50 nucleotides
 
-        $ref_seq = '~' if length($ref_seq) > 50;
+        $ref_seq = '~' if CORE::length($ref_seq) > 50;
         $gff->{attributes}->{Reference_seq} = $ref_seq;
+        
+        # Hack for HGMD mutations
+       
+        if ($self->allele_string eq 'HGMD_MUTATION') {
+            $gff->{attributes}->{Reference_seq} = '~';
+            $gff->{attributes}->{Variant_seq}   = '~';
+            $allele_index{$self->allele_string} = 0;
+        }
         
         if ($include_consequences) {
             for my $tv (@{ $self->get_all_TranscriptVariations }) {
+
+                unless ($tv->get_all_alternate_TranscriptVariationAlleles) {
+                    warn $self->variation_name." has no alternate alleles?";
+                    next;
+                }
+
                 for my $tva (@{ $tv->get_all_alternate_TranscriptVariationAlleles }) {
+
                     my $allele_idx = $allele_index{$tva->variation_feature_seq};
+                    
                     if (defined $allele_idx) {
                         for my $oc (@{ $tva->get_all_OverlapConsequences }) {
 
@@ -287,6 +297,10 @@ use warnings;
 
                             push @{ $gff->{attributes}->{Variant_effect} }, $effect_string;
                         }
+                    }
+                    else {
+                        warn "No allele_index entry for allele: ".$tva->variation_feature_seq.
+                            " of ".$self->variation_name."?\n";
                     }
                 }
             }
@@ -308,12 +322,41 @@ use warnings;
         $gff->{attributes}->{ID} = $self->variation_name;
         
         $gff->{source} = $self->source;
-				if ($self->study_name) { $gff->{source} .= ':'.$self->study_name; }
         
-        $gff->{type} = $self->class;
+        my $source = $self->source;
+
+        $source .= ':'.$self->study_name if $self->study_name;
+
+        $gff->{attributes}->{Dbxref} = $source;
+
+        # XXX: for now, just resort to the highest level SO class term as we don't have 
+        # accurate class information in the database
+
+        $gff->{type} = 'sequence_alteration';
         
-        $gff->{attributes}->{Reference_seq} = $self->end > $self->start+50 ? '~' : $self->get_reference_sequence;
-        
+        #$gff->{attributes}->{Reference_seq} = $self->end > $self->start+50 ? '~' : $self->get_reference_sequence;
+      
+        if ( (defined $self->bound_start) && ($self->bound_start != $self->seq_region_start) ) {
+            
+            if ($self->bound_start > $self->seq_region_start) {
+                warn "Invalid bound_start for ".$self->variation_name.": ".$self->bound_start." > ".$self->seq_region_start."\n";
+                return undef;
+            }
+
+            $gff->{attributes}->{Start_range} = join ',', $self->bound_start, $self->seq_region_start;
+        }
+
+        if ( (defined $self->bound_end) && ($self->bound_end != $self->seq_region_end) ) {
+           
+            if ($self->bound_end < $self->seq_region_end) {
+                warn "Invalid bound_end for ".$self->variation_name.": ".$self->bound_end." < ".$self->seq_region_end."\n";
+                return undef;
+            }
+
+
+            $gff->{attributes}->{End_range}   = join ',', $self->seq_region_end, $self->bound_end;
+        }
+
         return $gff;
     }
     
