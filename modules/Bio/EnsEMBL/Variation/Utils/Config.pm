@@ -159,7 +159,7 @@ our @OVERLAP_CONSEQUENCES = (
         rank => '8',
         predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::splice_region',
         description => '1-3 bps into an exon or 3-8 bps into an intron',
-        label => 'Essential splice site',
+        label => 'Splice site',
     },
     {
         SO_accession => 'SO:0001627',
