@@ -78,7 +78,7 @@ ALTER TABLE structural_variation ADD FOREIGN KEY (source_id) REFERENCES source(s
 ALTER TABLE structural_variation ADD FOREIGN KEY (seq_region_id) REFERENCES seq_region(seq_region_id);
 ALTER TABLE structural_variation ADD FOREIGN KEY (study_id) REFERENCES study(study_id);
 
-ALTER TABLE study ADD FOREIGN KEY (source) REFERENCES source(source_id);
+ALTER TABLE study ADD FOREIGN KEY (source_id) REFERENCES source(source_id);
 
 ALTER TABLE supporting_structural_variation ADD FOREIGN KEY (structural_variation_id) REFERENCES structural_variation(structural_variation_id);
 
