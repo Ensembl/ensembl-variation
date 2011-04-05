@@ -631,7 +631,7 @@ sub fetch_Iterator_by_dbID_list {
 =head2 fetch_all_by_name_list
 
   Arg [1]    : reference to list of names $list
-  Example    : @vars = @{$va->fetch_all_by_dbID_list(["rs3", "rs1333049"])};
+  Example    : @vars = @{$va->fetch_all_by_name_list(["rs3", "rs1333049"])};
   Description: Retrieves a set of variations via their names. This is faster
                than repeatedly calling fetch_by_name if there are a large number
 			   of variations to retrieve
