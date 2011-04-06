@@ -108,7 +108,7 @@ sub store {
         ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     });
 
-    for my $allele (@{ $tv->get_all_alternative_TranscriptVariationAlleles }) {
+    for my $allele (@{ $tv->get_all_alternate_TranscriptVariationAlleles }) {
         
         $sth->execute(
             $tv->variation_feature->dbID,
