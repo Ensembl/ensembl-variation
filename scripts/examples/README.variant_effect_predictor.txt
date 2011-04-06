@@ -24,8 +24,8 @@ Questions may also be sent to the Ensembl help desk at
 ==============
 
 Version 2.0 of the Variant Effect Predictor script (VEP) constitutes a complete
-overhaul of both the script and the API behind it. Here follows a summary of the
-changes:
+overhaul of both the script and the API behind it. It requires at least version
+62 of the Ensembl API to function. Here follows a summary of the changes:
 
 - support for SIFT, PolyPhen and Condel non-synonymous predictions in human
 
@@ -55,10 +55,10 @@ changes:
 1.0 Requirements
 ================
 
-This script requires the Ensembl Core and Variation APIs and their relevant
-dependencies to be installed. See
+Version 2.0 of the script requires at least version 62 of the Ensembl Core and
+Variation APIs and their relevant dependencies to be installed. See
 http://www.ensembl.org/info/docs/api/index.html for details. No explicit
-installation is required.
+installation of the script is required.
 
 
 
@@ -184,7 +184,7 @@ only
 --condel [p|s|b] : Condel (https://bg.upf.edu/forge/wiki/condel/Condel) computes
 a weighed average of the scores (WAS) of several computational tools aimed at
 classifying missense mutations as likely deleterious or likely neutral. The VEP
-currently presents a condel WAS from SIFT and PolyPhen. The VEP can output the
+currently presents a Condel WAS from SIFT and PolyPhen. The VEP can output the
 [p]rediction term, [s]core or [b]oth. Using this may increase the run time of
 the script. Not used by default. Human only
 
@@ -239,6 +239,7 @@ Default : 50kb
 ------------
 
 - Read input from STDIN, run in verbose mode
+
 perl variant_effect_predictor.pl -v
 
 
@@ -358,7 +359,7 @@ appropriate):
 - the time and date that the output file was started (not finished!)
 - the name of the database and server connected to
 - the API and database versions
-- the key descriptions for the key/value pairs found in the Inf
+- the key descriptions for the key/value pairs found in the Extra column
 
 4.2.2 Main section
 ''''''''''''''''''
