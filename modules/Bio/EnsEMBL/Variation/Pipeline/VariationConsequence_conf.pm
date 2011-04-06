@@ -27,30 +27,73 @@ use base ('Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf');
 
 sub default_options {
     my ($self) = @_;
+
+    # the hash returned from this function is used to configure the pipeline, you can supply
+    # any of these options on the command line to override these default values
+    
+    # you shouldn't need to edit anything in this file other than these values, if you
+    # find you do need to then we should probably make it an option here, contact
+    # the variation team
+
     return {
-        'ensembl_cvs_root_dir' => $ENV{'HOME'}.'/workspace',
 
-        'pipeline_name' => 'variation_consequence',
-
-        'output_dir'    => '/lustre/scratch101/ensembl/gr5/variation_consequence/hive_output',
+        # general pipeline options that you should change to suit your environment
         
-        'reg_file'      => '/lustre/scratch101/ensembl/gr5/variation_consequence/ensembl.registry',
+        # the location of your checkout of the ensembl API
+        
+        ensembl_cvs_root_dir    => $ENV{'HOME'}.'/workspace',
 
-        'disambiguate_single_nucleotide_alleles'    => 0,
+        # a name for your pipeline (will also be used in the name of the hive database)
+        
+        pipeline_name           => 'variation_consequence',
 
-        'default_lsf_options'   => '',
-        'urgent_lsf_options'    => '-q yesterday',
-        'highmem_lsf_options'   => '-R"select[mem>15000] rusage[mem=15000]" -M15000000',
-        'long_lsf_options'      => '-q long',
+        # a directory where hive workers will dump STDOUT and STDERR for their jobs
+        # if you use lots of workers this direcotry can get quite big, so it's
+        # a good idea to keep it on lustre, or some other place where you have a 
+        # healthy quota!
+        
+        output_dir              => '/lustre/scratch101/ensembl/gr5/variation_consequence/hive_output',
 
-        'transcript_effect_capacity'    => 50,
-        'set_variation_class_capacity'  => 10,
+        # a standard ensembl registry file containing connection parameters
+        # for your target database(s) (and also possibly aliases for your species
+        # of interest that you can then supply to init_pipeline.pl with the -species
+        # option)
+        
+        reg_file                => '/lustre/scratch101/ensembl/gr5/variation_consequence/ensembl.registry',
 
-        'hive_db_host'    => 'ens-genomics2',
-        'hive_db_port'    => 3306,
-        'hive_db_user'    => 'ensadmin',
+        # if set to 1 this option tells the transcript_effect analysis to disambiguate
+        # ambiguity codes in single nucleotide alleles, so e.g. an allele string like
+        # 'T/M' will be treated as if it were 'T/A/C' (this was a request from ensembl
+        # genomes)
+        
+        disambiguate_single_nucleotide_alleles => 0,
 
-        'pipeline_db' => {
+        # configuration for the various resource options used in the pipeline
+        # EBI users should either change these here, or override them on the
+        # command line to suit the EBI farm
+
+        default_lsf_options => '',
+        urgent_lsf_options  => '-q yesterday',
+        highmem_lsf_options => '-R"select[mem>15000] rusage[mem=15000]" -M15000000',
+        long_lsf_options    => '-q long',
+
+        # options controlling the number of workers used for the parallelisable analyses
+        # these default values work for most species, for human a value of 300 for
+        # transcript_effect_capacity seems to work OK (though can use a lot of database
+        # connections)
+
+        transcript_effect_capacity      => 50,
+        set_variation_class_capacity    => 10,
+
+        # connection parameters for the hive database, you should supply the hive_db_pass
+        # option on the command line to init_pipeline.pl (parameters for the target database
+        # should be set in the registry file defined above)
+
+        hive_db_host    => 'ens-genomics2',
+        hive_db_port    => 3306,
+        hive_db_user    => 'ensadmin',
+
+        pipeline_db => {
             -host   => $self->o('hive_db_host'),
             -port   => $self->o('hive_db_port'),
             -user   => $self->o('hive_db_user'),
