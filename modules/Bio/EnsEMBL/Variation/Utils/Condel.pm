@@ -92,7 +92,6 @@ sub get_condel_prediction {
       $int_score += sprintf("%.3f", (1 - $sift_score/$config{'max.HumVar.sift'})*(1-$sift{'tp'}{"$sift_score"}));
       $base += 1-$sift{'tp'}{"$sift_score"};
       $class{'sift'} = 'neutral';
-    
     }
     
     if ($polyphen_score >= $config{'cutoff.HumVar.polyphen'}){
