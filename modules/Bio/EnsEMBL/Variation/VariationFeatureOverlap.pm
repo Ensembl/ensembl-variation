@@ -428,6 +428,9 @@ sub get_reference_VariationFeatureOverlapAllele {
 
 sub get_all_alternate_VariationFeatureOverlapAlleles {
     my $self = shift;
+
+    $self->{alt_alleles} ||= [];
+    
     return $self->{alt_alleles};
 }
 
