@@ -1507,7 +1507,7 @@
 						  <tr><th>Transcript ID</th><th>Source</th><th>Start</th><th>End</th><th>External identifiers</th><th>Other</th></tr>
 						  <xsl:for-each select="transcript">
 						   <xsl:variable name="transcript_idx" select="position()"/>
-							<tr valign="top">
+						   <tr valign="top">
 							 <xsl:attribute name="class">trans_prot</xsl:attribute>
 							 <xsl:attribute name="id">up_trans_<xsl:value-of select="$setnum"/>_<xsl:value-of select="$gene_idx"/>_<xsl:value-of select="$transcript_idx"/></xsl:attribute>
 							 <xsl:attribute name="onClick">toggle_transcript_highlight(<xsl:value-of select="$setnum"/>,<xsl:value-of select="$gene_idx"/>,<xsl:value-of select="$transcript_idx"/>)</xsl:attribute>
@@ -1577,8 +1577,10 @@
 							</tr>
 						  </xsl:for-each>
 						  
-						  <tr><th>Protein ID</th><th>Source</th><th>CDS start</th><th>CDS end</th><th>External identifiers</th><th>Other</th></tr>
-						  <xsl:for-each select="transcript">
+						  <xsl:choose>
+						  	<xsl:when test="transcript[protein_product]">
+							  <tr><th>Protein ID</th><th>Source</th><th>CDS start</th><th>CDS end</th><th>External identifiers</th><th>Other</th></tr>
+							  <xsl:for-each select="transcript">
 						      <xsl:variable name="transcript_idx" select="position()"/>
 							<xsl:for-each select="protein_product">
 							  <tr valign="top">
@@ -1629,7 +1631,7 @@
 									<xsl:variable name="part" select="." />
 									<strong>Note: </strong>
 									<xsl:choose>
-									   <xsl:when test="substring($part,0,1)='5'">
+									   <xsl:when test="substring($part,1,1)='5'">
 									      N-terminal
 									   </xsl:when>
 									   <xsl:otherwise>
@@ -1645,6 +1647,13 @@
 							</xsl:for-each> 
 						  </xsl:for-each>
 						  
+						  	</xsl:when>
+						  	<xsl:otherwise>
+						  		<xsl:if test="long_name and not(contains(long_name,'RNA)'))">
+						  			<tr><th colspan="6" style="text-align:center; ">No proteins identified for this gene in this source</th></tr>
+						  		</xsl:if>
+						  	</xsl:otherwise>
+						  </xsl:choose>
 						  <tr><td colspan="6" style="border:0px;"> </td></tr>
 						</table>
 					  </xsl:when>
