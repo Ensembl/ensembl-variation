@@ -86,7 +86,7 @@ sub store {
     my $dbh = $self->dbc->db_handle;
     
     my $sth = $dbh->prepare_cached(q{
-        INSERT INTO transcript_variation (
+        INSERT DELAYED INTO transcript_variation (
             variation_feature_id,
             feature_stable_id,
             allele_string,
