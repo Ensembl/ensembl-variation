@@ -21,11 +21,9 @@
 package Bio::EnsEMBL::Variation::Pipeline::InitTranscriptEffect;
 
 use strict;
+use warnings;
 
-use Bio::EnsEMBL::Registry;
-use Bio::EnsEMBL::Hive::Process;
-
-use base ('Bio::EnsEMBL::Hive::Process');
+use base qw(Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess);
 
 my $DEBUG = 0;
 
@@ -33,33 +31,24 @@ sub fetch_input {
    
     my $self = shift;
 
-    my $reg_file = $self->param('ensembl_registry')
-        or die "ensembl_registry is a required parameter";
-
-    my $species = $self->param('species')
-        or die "species is a required parameter";
+    my $core_dba = $self->get_species_adaptor('core');
+    my $var_dba = $self->get_species_adaptor('variation');
     
-    my $reg = 'Bio::EnsEMBL::Registry';
-    
-    $reg->load_all($reg_file, 0, 1);
-  
-    my $core_dba = $reg->get_DBAdaptor($species, 'core')
-        or die "failed to get core DBA for $species";
-   
-    my $var_dba = $reg->get_DBAdaptor($species, 'variation')
-        or die "failed to get variation DBA for $species";
+    my %default_params = (
+        ensembl_registry    => $self->param('ensembl_registry'),
+        species             => $self->param('species'),
+    );
 
-    my $dbh = $var_dba->dbc->db_handle;
+    my $dbc = $var_dba->dbc();
 
     # truncate the table because we don't want duplicates
 
-    $dbh->do("TRUNCATE TABLE transcript_variation");
+    $dbc->do("TRUNCATE TABLE transcript_variation");
    
     # disable the indexes on the table we're going to insert into as
     # this significantly speeds up the TranscriptEffect process
 
-    $dbh->do("ALTER TABLE transcript_variation DISABLE KEYS")
-        or warn "Failed to disable keys on transcript_variation: ".$dbh->errstr;
+    $dbc->do("ALTER TABLE transcript_variation DISABLE KEYS");
     
     my $ga = $core_dba->get_GeneAdaptor
         or die "Failed to get slice adaptor";
@@ -74,9 +63,8 @@ sub fetch_input {
         for my $transcript (@{ $gene->get_all_Transcripts }) {
 
             push @transcript_output_ids, {
-                transcript_stable_id    => $transcript->stable_id,
-                ensembl_registry        => $reg_file,
-                species                 => $species,
+                transcript_stable_id  => $transcript->stable_id,
+                %default_params
             };
         }            
         if ($DEBUG) {
@@ -88,24 +76,17 @@ sub fetch_input {
 
     $self->param(
         'rebuild_indexes', [{
-            ensembl_registry    => $reg_file, 
-            species             => $species, 
+            %default_params,
             tables              => ['transcript_variation'],
         }]
     );
     
     $self->param(
-        'update_vf', [{
-            ensembl_registry    => $reg_file, 
-            species             => $species, 
-        }]
+        'update_vf', [{%default_params}]
     );
     
     $self->param(
-        'set_var_class', [{
-            ensembl_registry    => $reg_file, 
-            species             => $species, 
-        }]
+        'set_var_class', [{%default_params}]
     );
 
 }

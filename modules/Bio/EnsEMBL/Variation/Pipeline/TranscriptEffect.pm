@@ -21,12 +21,11 @@
 package Bio::EnsEMBL::Variation::Pipeline::TranscriptEffect;
 
 use strict;
-
-use Bio::EnsEMBL::Registry;
+use warnings;
 
 use Bio::EnsEMBL::Variation::TranscriptVariation;
 
-use base ('Bio::EnsEMBL::Hive::ProcessWithParams');
+use base qw(Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess);
 
 my $DEBUG   = 0;
 
@@ -36,32 +35,16 @@ sub run {
     my $transcript_id = $self->param('transcript_stable_id') 
         or die "transcript_stable_id is a required parameter";
 
-    my $reg_file = $self->param('ensembl_registry')
-        or die "ensembl_registry is a required parameter";
-    
-    my $species = $self->param('species')
-        or die "species is a required parameter";
-
     my $disambiguate_sn_alleles = 
         $self->param('disambiguate_single_nucleotide_alleles'); 
- 
-    $self->dbc->disconnect_when_inactive(1);
-    
-    my $reg = 'Bio::EnsEMBL::Registry';
-    
-    $reg->load_all($reg_file, 0, 1);
-    
-    my $var_dba = $reg->get_DBAdaptor($species, 'variation')
-        or die "failed to get variation DBA for $species";
 
-    my $ta = $reg->get_adaptor($species, 'core', 'Transcript') 
-        or die "failed to get transcript adaptor";
-
-    my $sa = $reg->get_adaptor($species, 'core', 'Slice')
-        or die "failed to get slice adaptor";
-
-    my $tva = $reg->get_adaptor($species, 'variation', 'TranscriptVariation')
-        or die "failed to get transcript variation adaptor";
+    my $core_dba = $self->get_species_adaptor('core');
+    my $var_dba = $self->get_species_adaptor('variation');
+    
+    my $ta = $core_dba->get_TranscriptAdaptor();
+    my $sa = $core_dba->get_SliceAdaptor();
+    
+    my $tva = $var_dba->get_TranscriptVariationAdaptor();
 
     my $transcript = $ta->fetch_by_stable_id($transcript_id) 
         or die "failed to fetch transcript for stable id: $transcript_id";
@@ -90,7 +73,7 @@ sub run {
         }
     }
 
-    $self->dbc->disconnect_when_inactive(0);
+    return;
 }
 
 sub write_output {
