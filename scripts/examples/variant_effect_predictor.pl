@@ -281,24 +281,31 @@ sub print_consequences {
 						my $pred_meth   = $lc_tool.'_prediction';
 						my $score_meth  = $lc_tool.'_score';
 						
-						if ($want_pred) {
-							my $pred = $tva->$pred_meth;
-							
-							if($pred) {
-								$pred =~ s/\s+/\_/;
-								$extra .= "$tool=$pred";
-							}
-						}
-							
-						if ($want_score) {
-							my $score = $tva->$score_meth;
-							
-							if(defined $score) {
-								$extra .= "($score)";
-							}
-						}
+						my $pred = $tva->$pred_meth;
 						
-						$extra .= ';';
+						if($pred) {
+							$extra .= "$tool=";
+							
+							if ($want_pred) {
+								$pred =~ s/\s+/\_/;
+								$extra .= $pred;
+							}
+								
+							if ($want_score) {
+								my $score = $tva->$score_meth;
+								
+								if(defined $score) {
+									if($want_pred) {
+										$extra .= "($score)";
+									}
+									else {
+										$extra .= $score;
+									}
+								}
+							}
+							
+							$extra .= ';';
+						}
 					}
 				}
 				
