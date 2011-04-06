@@ -130,7 +130,7 @@ sub fetch_all_by_VariationFeatures {
     my ($self, $vfs, $features) = @_;
    
     my %vfs_by_id = map { $_->dbID => $_ } @$vfs;
-   
+  
     my $id_str = join ',', keys %vfs_by_id;
 
     my $constraint = "variation_feature_id in ( $id_str )";
@@ -147,10 +147,11 @@ sub fetch_all_by_VariationFeatures {
         $vfos = $self->generic_fetch($constraint);
     }
 
+    # attach the VariationFeatures to the VariationFeatureOverlaps because we have them already
+
     for my $vfo (@$vfos) {
         if ($vfo->{_variation_feature_id}) {
-            my $vf_id = delete $vfo->{_variation_feature_id};
-            $vfo->{variation_feature} = $vfs_by_id{$vf_id};
+            $vfo->{variation_feature} = $vfs_by_id{delete $vfo->{_variation_feature_id}};
         }
     }
    
