@@ -24,6 +24,7 @@ use strict;
 use warnings;
 
 use Bio::EnsEMBL::Variation::TranscriptVariation;
+use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(MAX_DISTANCE_FROM_TRANSCRIPT);
 
 use base qw(Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess);
 
@@ -41,10 +42,10 @@ sub run {
     my $core_dba = $self->get_species_adaptor('core');
     my $var_dba = $self->get_species_adaptor('variation');
     
-    my $ta = $core_dba->get_TranscriptAdaptor();
-    my $sa = $core_dba->get_SliceAdaptor();
+    my $ta = $core_dba->get_TranscriptAdaptor;
+    my $sa = $core_dba->get_SliceAdaptor;
     
-    my $tva = $var_dba->get_TranscriptVariationAdaptor();
+    my $tva = $var_dba->get_TranscriptVariationAdaptor;
 
     my $transcript = $ta->fetch_by_stable_id($transcript_id) 
         or die "failed to fetch transcript for stable id: $transcript_id";
@@ -53,8 +54,10 @@ sub run {
 
     $tva->db->include_failed_variations(1);
 
-    my $slice = $sa->fetch_by_transcript_stable_id($transcript->stable_id, 5000)
-        or die "failed to get slice around transcript: ".$transcript->stable_id;
+    my $slice = $sa->fetch_by_transcript_stable_id(
+        $transcript->stable_id, 
+        MAX_DISTANCE_FROM_TRANSCRIPT
+    ) or die "failed to get slice around transcript: ".$transcript->stable_id;
 
     for my $vf ( @{ $slice->get_all_VariationFeatures }, 
                  @{ $slice->get_all_somatic_VariationFeatures } ) {
