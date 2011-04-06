@@ -377,12 +377,6 @@ sub is_default {
     return $self->{is_default};
 }
 
-sub is_definitive {
-    my ($self, $is_definitive) = @_;
-    $self->{is_definitive} = $is_definitive if defined $is_definitive;
-    return $self->{is_definitive};
-}
-
 sub get_all_parent_SO_terms {
     my ($self) = @_;
     
