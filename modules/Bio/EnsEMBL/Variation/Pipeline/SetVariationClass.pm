@@ -1,23 +1,17 @@
 package Bio::EnsEMBL::Variation::Pipeline::SetVariationClass;
 
 use strict;
+use warnings;
 
-use Bio::EnsEMBL::Registry;
-use Bio::EnsEMBL::Hive::Process;
+use base qw(Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess);
+
 use Bio::EnsEMBL::Variation::Utils::Sequence qw(SO_variation_class);
 
-use base ('Bio::EnsEMBL::Hive::Process');
 
 sub run {
 
     my $self = shift;
-
-    my $reg_file = $self->param('ensembl_registry')
-        or die "ensembl_registry is a required parameter";
     
-    my $species = $self->param('species')
-        or die "species is a required parameter";
-
     my $var_id_start = $self->param('variation_id_start')
         or die "variation_id_start is required";
 
@@ -29,23 +23,16 @@ sub run {
     
     my $temp_var_feat_table = $self->param('temp_var_feat_table')
         or die "temp_var_feat_table is required";
- 
-    $self->dbc->disconnect_when_inactive(1);
-
-    my $reg = 'Bio::EnsEMBL::Registry';
-    
-    $reg->load_all($reg_file, 0, 1);
   
-    my $var_dba = $reg->get_DBAdaptor($species, 'variation')
-        or die "failed to get variation DBA for $species";
+    my $var_dba = $self->get_species_adaptor('variation');
 
     my $aa = $var_dba->get_AttributeAdaptor;
 
-    my $dbh = $var_dba->dbc->db_handle;
+    my $dbc = $var_dba->dbc();
 
     # fetch the failed_descriptions to avoid a join
 
-    my $fds_sth = $dbh->prepare(qq{
+    my $fds_sth = $dbc->prepare(qq{
         SELECT  failed_description_id, description
         FROM    failed_description
     });
@@ -57,8 +44,11 @@ sub run {
     while (my ($fd_id, $desc) = $fds_sth->fetchrow_array) {
         $fds{$fd_id} = $desc;
     }
+    
+    $fds_sth->finish();
 
-    my $all_sth = $dbh->prepare_cached(qq{
+    #TODO removed a prepare_cached as DBConnection does not support it
+    my $all_sth = $dbc->prepare(qq{
         SELECT  v.variation_id, vf.variation_feature_id, vf.allele_string, fv.failed_description_id
         FROM    (variation v LEFT JOIN variation_feature vf ON v.variation_id = vf.variation_id) 
                 LEFT JOIN failed_variation fv ON v.variation_id = fv.variation_id
@@ -66,12 +56,12 @@ sub run {
         AND     v.variation_id <= ?
     });
    
-    my $vf_insert_sth = $dbh->prepare(qq{
+    my $vf_insert_sth = $dbc->prepare(qq{
         INSERT IGNORE INTO $temp_var_feat_table (variation_feature_id, class_attrib_id)
         VALUES (?,?)
     });
     
-    my $v_insert_sth = $dbh->prepare(qq{
+    my $v_insert_sth = $dbc->prepare(qq{
         INSERT IGNORE INTO $temp_var_table (variation_id, class_attrib_id)
         VALUES (?,?)
     });
@@ -111,6 +101,8 @@ sub run {
         
         $v_insert_sth->execute($v_id, $attrib_id);
     }
+    
+    $all_sth->finish();
 
     # now we need to fetch the alleles for any variations that are not mapped
     # and work out their class
@@ -119,7 +111,7 @@ sub run {
         
         my $id_str = join ',', @unmapped_v_ids;
 
-        my $unmapped_sth = $dbh->prepare(qq{
+        my $unmapped_sth = $dbc->prepare(qq{
             SELECT  variation_id, allele
             FROM    allele
             WHERE   variation_id IN ($id_str)
@@ -133,6 +125,8 @@ sub run {
         while (my ($v_id, $allele) = $unmapped_sth->fetchrow_array) {
             push @{ $unmapped_alleles->{$v_id} ||= [] }, $allele; 
         }
+        
+        $unmapped_sth->finish();
 
         for my $v_id (keys %$unmapped_alleles) {
 
@@ -151,8 +145,9 @@ sub run {
             $v_insert_sth->execute($v_id, $attrib_id);
         }
     }
-
-    $self->dbc->disconnect_when_inactive(0);
+    
+    $vf_insert_sth->finish();
+    $v_insert_sth->finish();
 }
 
 1;
