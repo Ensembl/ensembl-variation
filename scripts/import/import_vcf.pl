@@ -46,7 +46,7 @@ my %Printable = ( "\\"=>'\\', "\r"=>'r', "\n"=>'n', "\t"=>'t', "\""=>'"' );
 ######################
 
 # get command-line options
-my ($in_file, $species, $registry_file, $help, $host, $user, $password, $source, $population, $flank_size, $TMP_DIR, $TMP_FILE, $skip_multi, $use_gp, $sample_prefix, $variation_prefix, $disable_keys, $include_tables, $merge_vfs, $skip_tables, $compressed_only, $only_existing, $merge_alleles, $new_var_name, $chrom_regexp, $check_synonyms);
+my ($in_file, $species, $registry_file, $help, $host, $user, $password, $source, $source_desc, $population, $flank_size, $TMP_DIR, $TMP_FILE, $skip_multi, $use_gp, $sample_prefix, $variation_prefix, $disable_keys, $include_tables, $merge_vfs, $skip_tables, $compressed_only, $only_existing, $merge_alleles, $new_var_name, $chrom_regexp, $check_synonyms);
 
 my $args = scalar @ARGV;
 
@@ -59,6 +59,7 @@ GetOptions(
 	'password=s'     => \$password,
 	'help'           => \$help,
 	'source=s'       => \$source,
+	'source_desc=s'  => \$source_desc,
 	'population=s'   => \$population,
 	'flank=s'        => \$flank_size,
 	'tmpdir=s'       => \$TMP_DIR,
@@ -221,7 +222,7 @@ die("ERROR: seq_region not populated\n") unless scalar keys %$seq_region_ids;
 
 # get/set source_id
 die("ERROR: no source specified\n") if !(defined $source) && !$only_existing;
-my $source_id = &get_source_id($dbVar, $source);
+my $source_id = &get_source_id($dbVar, $source, $source_desc);
 
 # now do population
 my $pop_id;
@@ -699,8 +700,9 @@ sub get_seq_region_ids{
 
 # gets source_id - retrieves if name already exists, otherwise inserts
 sub get_source_id{
-	my $dbVar = shift;
+	my $dbVar  = shift;
 	my $source = shift;
+	my $desc   = shift;
 	
 	my $source_id;
 	
@@ -712,8 +714,8 @@ sub get_source_id{
 	$sth->finish;
 	
 	if(!defined($source_id)) {
-		$sth = $dbVar->prepare(qq{insert into source(name) values(?)});
-		$sth->execute($source);
+		$sth = $dbVar->prepare(qq{insert into source(name, description) values(?,?)});
+		$sth->execute($source, $desc);
 		$sth->finish();
 		$source_id = $dbVar->last_insert_id(undef, undef, qw(source source_id));
 	}
