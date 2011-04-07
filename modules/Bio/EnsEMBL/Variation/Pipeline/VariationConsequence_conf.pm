@@ -33,7 +33,7 @@ sub default_options {
     
     # you shouldn't need to edit anything in this file other than these values, if you
     # find you do need to then we should probably make it an option here, contact
-    # the variation team
+    # the variation team to discuss this - patches are welcome!
 
     return {
 
@@ -70,16 +70,18 @@ sub default_options {
 
         # configuration for the various resource options used in the pipeline
         # EBI users should either change these here, or override them on the
-        # command line to suit the EBI farm
-
+        # command line to suit the EBI farm. The names if each option hopefully
+        # reflect their usage, but you may want to change the details (memory
+        # requirements, queue parameters etc.) to suit your own data
+        
         default_lsf_options => '',
         urgent_lsf_options  => '-q yesterday',
-        highmem_lsf_options => '-R"select[mem>15000] rusage[mem=15000]" -M15000000',
+        highmem_lsf_options => '-R"select[mem>15000] rusage[mem=15000]" -M15000000', # this is Sanger LSF speak for "give me 15GB of memory"
         long_lsf_options    => '-q long',
 
         # options controlling the number of workers used for the parallelisable analyses
         # these default values work for most species, for human a value of 300 for
-        # transcript_effect_capacity seems to work OK (though can use a lot of database
+        # transcript_effect_capacity seems to work well (though can use a lot of database
         # connections)
 
         transcript_effect_capacity      => 50,
@@ -88,6 +90,10 @@ sub default_options {
         # connection parameters for the hive database, you should supply the hive_db_pass
         # option on the command line to init_pipeline.pl (parameters for the target database
         # should be set in the registry file defined above)
+
+        # init_pipeline.pl will create the hive database on this machine, naming it
+        # <username>_<pipeline_name>, and will drop any existing database with this
+        # name
 
         hive_db_host    => 'ens-genomics2',
         hive_db_port    => 3306,
