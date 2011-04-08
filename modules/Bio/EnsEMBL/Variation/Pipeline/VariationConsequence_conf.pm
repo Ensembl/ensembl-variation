@@ -48,7 +48,7 @@ sub default_options {
         pipeline_name           => 'variation_consequence',
 
         # a directory where hive workers will dump STDOUT and STDERR for their jobs
-        # if you use lots of workers this direcotry can get quite big, so it's
+        # if you use lots of workers this directory can get quite big, so it's
         # a good idea to keep it on lustre, or some other place where you have a 
         # healthy quota!
         
@@ -70,7 +70,7 @@ sub default_options {
 
         # configuration for the various resource options used in the pipeline
         # EBI users should either change these here, or override them on the
-        # command line to suit the EBI farm. The names if each option hopefully
+        # command line to suit the EBI farm. The names of each option hopefully
         # reflect their usage, but you may want to change the details (memory
         # requirements, queue parameters etc.) to suit your own data
         
@@ -80,9 +80,9 @@ sub default_options {
         long_lsf_options    => '-q long',
 
         # options controlling the number of workers used for the parallelisable analyses
-        # these default values work for most species, for human a value of 300 for
-        # transcript_effect_capacity seems to work well (though can use a lot of database
-        # connections)
+        # these default values seem to work for most species, for human I up the
+        # transcript_effect_capacity to 300 which improves runtime (though can use a lot 
+        # of database connections)
 
         transcript_effect_capacity      => 50,
         set_variation_class_capacity    => 10,
