@@ -63,9 +63,9 @@ sub run {
                  @{ $slice->get_all_somatic_VariationFeatures } ) {
 
         my $tv = Bio::EnsEMBL::Variation::TranscriptVariation->new(
-            -feature                 => $transcript,
-            -variation_feature       => $vf,
-            -adaptor                 => $tva,
+            -transcript         => $transcript,
+            -variation_feature  => $vf,
+            -adaptor            => $tva,
             -disambiguate_single_nucleotide_alleles => $disambiguate_sn_alleles,
         );
 
