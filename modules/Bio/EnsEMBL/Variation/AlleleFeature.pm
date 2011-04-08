@@ -78,9 +78,6 @@ use Bio::EnsEMBL::Utils::Argument  qw(rearrange);
 use Bio::EnsEMBL::Variation::Utils::Sequence qw(unambiguity_code);
 use Bio::EnsEMBL::Variation::ConsequenceType;
 
-my %CONSEQUENCE_TYPES = %Bio::EnsEMBL::Variation::ConsequenceType::CONSEQUENCE_TYPES;
-
-
 our @ISA = ('Bio::EnsEMBL::Feature');
 
 =head2 new
@@ -122,8 +119,8 @@ our @ISA = ('Bio::EnsEMBL::Feature');
   Arg [-ALLELE_STRING] :
     string - the allele for this AlleleFeature object.
   
-  Arg [-CONSEQUENCE_TYPE] :
-	string - the consequence type of this AlleleFeature object.
+  Arg [-OVERLAP_CONSEQUENCES] :
+	listref of Bio::EnsEMBL::Variation::OverlapConsequence objects.
 
   Example    :
     $af = Bio::EnsEMBL::Variation::AlleleFeature->new
@@ -151,17 +148,17 @@ sub new {
   my $class = ref($caller) || $caller;
 
   my $self = $class->SUPER::new(@_);
-  my ($allele, $cons, $var_name, $variation, $variation_id,$population, $sample_id, $source) =
-    rearrange([qw(ALLELE_STRING CONSEQUENCE_TYPE VARIATION_NAME 
+  my ($allele, $overlap_consequences, $var_name, $variation, $variation_id, $population, $sample_id, $source) =
+    rearrange([qw(ALLELE_STRING OVERLAP_CONSEQUENCES VARIATION_NAME 
                   VARIATION VARIATION_ID SAMPLE_ID SOURCE)], @_);
 
-  $self->{'allele_string'}    = $allele;
-  $self->{'consequence_type'} = $cons;
-  $self->{'variation_name'}   = $var_name;
-  $self->{'variation'}        = $variation;
-  $self->{'_variation_id'}    = $variation_id;
-  $self->{'_sample_id'}       = $sample_id;
-  $self->{'source'}           = $source;
+  $self->{'allele_string'}          = $allele;
+  $self->{'overlap_consequences'}   = $overlap_consequences;
+  $self->{'variation_name'}         = $var_name;
+  $self->{'variation'}              = $variation;
+  $self->{'_variation_id'}          = $variation_id;
+  $self->{'_sample_id'}             = $sample_id;
+  $self->{'source'}                 = $source;
 
   return $self;
 }
@@ -199,52 +196,92 @@ sub allele_string{
 
 =head2 consequence_type
 
-  Arg [1]    : string $newval (optional)
-               The new value to set the consequence_type attribute to
-  Example    : $con = $obj->consequence_type()
-  Description: Getter/Setter for the consequence_type attribute.
-  Returntype : string
+  Description: Get a list of all the unique display_terms of the OverlapConsequences 
+               of this AlleleFeature
+  Returntype : listref of strings
   Exceptions : none
-  Caller     : general
   Status     : At Risk
 
 =cut
 
-sub consequence_type{
-  my $self = shift;
-  my $con = shift;
-  
-  if(defined($con)) {
-	if($CONSEQUENCE_TYPES{$con}){
-	  $self->{'consequence_type'} = $con;
+sub consequence_type {
+    
+    my $self = shift;
+
+    unless ($self->{consequence_type}) {
+
+        # work out the terms from the OverlapConsequence objects
+        
+        $self->{consequence_type} = 
+            [ map { $_->display_term } @{ $self->get_all_OverlapConsequences } ];
     }
-	
-	else {
-	  warning("You are trying to set the consequence type to a non-allowed type. The allowed types are: ".(join ", ", keys %CONSEQUENCE_TYPES));
-	}
-  }
-  
-  return $self->{'consequence_type'};
+    
+    return $self->{consequence_type};
 }
 
+
+=head2 get_all_OverlapConsequences
+
+  Description: Get a list of all the unique OverlapConsequences of this AlleleFeature 
+  Returntype : listref of Bio::EnsEMBL::Variation::OverlapConsequence objects
+  Exceptions : none
+  Status     : At Risk
+
+=cut
+
+sub get_all_OverlapConsequences {
+    my $self = shift;
+    return $self->{overlap_consequences}
+}
+
+
+=head2 most_severe_OverlapConsequence
+
+  Description: Get the OverlapConsequence considered (by Ensembl) to be the most severe 
+               consequence of all the alleles of this AlleleFeature 
+  Returntype : Bio::EnsEMBL::Variation::OverlapConsequence
+  Exceptions : none
+  Status     : At Risk
+
+=cut
+
+sub most_severe_OverlapConsequence {
+    my $self = shift;
+    
+    unless ($self->{_most_severe_consequence}) {
+        
+        my $highest;
+        
+        for my $cons (@{ $self->get_all_OverlapConsequences }) {
+            $highest ||= $cons;
+            if ($cons->rank < $highest->rank) {
+                $highest = $cons;
+            }
+        }
+        
+        $self->{_most_severe_consequence} = $highest;
+    }
+    
+    return $self->{_most_severe_consequence};
+}
 
 
 =head2 display_consequence
 
-  Args	     : None
-  Example    : $con = $obj->display_consequence()
-  Description: Getter for the consequence_type attribute. Simply an alias for
-			   $obj->consequence_type()
+  Args       : none
+  Example    : $display_consequence = $af->display_consequence();
+  Description: Getter for the consequence type to display,
+               when more than one
   Returntype : string
   Exceptions : none
-  Caller     : general
+  Caller     : webteam
   Status     : At Risk
 
 =cut
 
-sub display_consequence{
-  my $self = shift;
-  return $self->consequence_type();
+sub display_consequence {
+    my $self = shift;
+    return $self->most_severe_OverlapConsequence->display_term;
 }
 
 
