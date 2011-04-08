@@ -66,6 +66,7 @@ package Bio::EnsEMBL::Variation::DBSQL::AlleleFeatureAdaptor;
 
 use Bio::EnsEMBL::Variation::AlleleFeature;
 use Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor;
+use Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor;
 use Bio::EnsEMBL::Utils::Exception qw(throw);
 use Bio::EnsEMBL::Utils::Sequence qw(expand);
 use Bio::EnsEMBL::Variation::Utils::Sequence qw(strain_ambiguity_code);
