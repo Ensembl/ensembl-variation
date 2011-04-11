@@ -76,11 +76,11 @@ several means using this module.
 use strict;
 use warnings;
 
-package Bio::EnsEMBL::Variation::DBSQL::VariationAdaptor;
+package Bio::EnsEMBL::Variation::DBSQL::VariationAdaptor_clean;
 
 use Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
-use Bio::EnsEMBL::Utils::Scalar qw(assert_ref);
+use Bio::EnsEMBL::Utils::Scalar qw(assert_ref check_ref wrap_array);
 
 use Bio::EnsEMBL::Variation::Variation;
 use Bio::EnsEMBL::Variation::Allele;
@@ -240,39 +240,85 @@ sub _generic_fetch_Iterator {
 =cut
 
 sub fetch_by_dbID {
-  my $self = shift;
-  my $dbID = shift;
+    my $self = shift;
+    my $dbID = shift;
 
-  throw('dbID argument expected') if(!defined($dbID));
-
-  # NB flanking sequence table is joined here and in fetch_by_name
-  # so we can set flank_flag where the flanking sequence differs
-  # from the reference - it is just set to 0 when fetching variations
-  # by other methods since otherwise the join takes too long  
-  my $sth = $self->prepare
-    (q{SELECT v.variation_id, v.name, v.validation_status, v.class_attrib_id, s1.name, s1.description, s1.url, s1.type, v.somatic, v.ancestral_allele,
-              a.allele_id, a.subsnp_id, a.allele, a.frequency, a.count, a.sample_id, vs.moltype,
-              vs.name, s2.name, (fs.up_seq is not null OR fs.down_seq is not null)
-       FROM   (variation v, source s1)
-	       LEFT JOIN allele a ON v.variation_id = a.variation_id
-		   LEFT JOIN flanking_sequence fs ON v.variation_id = fs.variation_id
-                LEFT JOIN variation_synonym vs on v.variation_id = vs.variation_id 
-   	            LEFT JOIN source s2 on  vs.source_id = s2.source_id
-		    LEFT JOIN failed_variation fv on v.variation_id = fv.variation_id
-       WHERE    v.source_id = s1.source_id
-       AND    v.variation_id = ?});
-  $sth->bind_param(1,$dbID,SQL_INTEGER);
-  $sth->execute();
-
-  my $result = $self->_objs_from_sth($sth);
-  $sth->finish();
-  return undef if(!@$result);
-
-  return $result->[0];
+    #ÊThis method uses the flanking_sequence table
+    $self->{'_check_flanking'} = 1;
+    
+    #ÊNow, it should be fine to just use the superclass method
+    my $result = $self->SUPER::fetch_by_dbID($dbID);
+    
+    # Unset the flanking flag
+    delete($self->{'_check_flanking'});
+    
+    return $result;
+    
 }
 
+sub _columns {
+    my $self = shift;
+  
+    my @cols = qw(v.variation_id v.name v.validation_status v.class_attrib_id s1.name s1.description s1.url s1.type v.somatic v.ancestral_allele a.allele_id a.subsnp_id a.allele a.frequency a.count a.sample_id vs.moltype vs.name s2.name);
+    if ($self->{'_check_flanking'}) {
+        push(@cols,qq{(fs.up_seq is not null OR fs.down_seq is not null) AS flank_flag});
+    }
+    else {
+        push(@cols,qq{0 AS flank_flag});  
+    }
+    return @cols;
+}
 
+sub _tables {
+    my $self = shift;
+    
+    my @tables = (
+        ['variation', 'v'],
+        ['source', 's1'],
+        ['allele', 'a'],
+        ['variation_synonym', 'vs'],
+        ['source', 's2']
+    );
+    
+    # Add the flanking_sequence table if we are checking that
+    push(@tables,['flanking_sequence', 'fs']) if ($self->{'_check_flanking'});
+    # Add the failed_variation table if we are filtering on those
+    push(@tables,['failed_variation', 'fv']) unless ($self->db->include_failed_variations());
+    
+    return @tables;
+}
+ 
+sub _left_join {
+    my $self = shift;
+    
+    my @left_join = (
+        ['variation_synonym', 'v.variation_id = vs.variation_id'],
+        ['source s2', 'vs.source_id = s2.source_id']
+    );
+    
+    # Unless we are constraining on sample_id, left join to the allele table
+    push(@left_join,['allele', 'v.variation_id = a.variation_id']) unless ($self->{'_constrain_sample'});
+    # If we are checking flanking_sequences, left join to that table
+    push(@left_join,['flanking_sequence', 'v.variation_id = fs.variation_id']) if ($self->{'_check_flanking'});
+    # If we are filtering on failed variations, left join
+    push(@left_join,['failed_variation', 'v.variation_id = fv.variation_id']) unless ($self->db->include_failed_variations());
+ 
+    return @left_join;
+}
 
+sub _default_where_clause {
+    my $self = shift;
+    
+    my $constraint = qq{
+        s1.source_id = v.source_id
+    };
+    
+    #ÊIf we are constraining on sample_id, we should have a constraint on the allele tables as well
+    $constraint .= qq{ AND a.variation_id = v.variation_id } if ($self->{'_constrain_sample'});
+    
+    return $constraint;
+}
+ 
 =head2 fetch_by_name
 
   Arg [1]    : string $name
@@ -287,76 +333,165 @@ sub fetch_by_dbID {
 =cut
 
 sub fetch_by_name {
-  my $self = shift;
-  my $name = shift;
-  my $source = shift;
+    my $self = shift;
+    my $name = shift;
+    my $source = shift;
 
-  throw('name argument expected') if(!defined($name));
-  my $extra_sql = "";
+    throw('name argument expected') if(!defined($name));
+  
+    # This method will need to left join to the flanking sequence table so set that flag
+    $self->{'_check_flanking'} = 1;
+    
+    #ÊAdd a constraint on the name
+    my $constraint = qq{v.name = ?};
 
-  if ( defined $source ) {
-    $extra_sql = qq(AND    s1.name = ?);
-  }
+    #ÊIf a source is given, add a constraint on the source  
+    $constraint .= qq{ AND s1.name = ?} if ( defined $source );
+    
+    # Bind the parameters
+    $self->bind_param_generic_fetch($name,SQL_VARCHAR);
+    $self->bind_param_generic_fetch($source,SQL_VARCHAR) if ( defined $source );
+    
+    #ÊGet the results from generic fetch method
+    my $result = $self->generic_fetch($constraint);
+    
+    #ÊUnset the check flanking flag again
+    delete($self->{'_check_flanking'});
+    
+    # We need to check the synonym table in case the name was not found in the variation table
+    unless (scalar(@{$result})) {
+        
+        # Call the fetch by synonym method
+        $result = wrap_array($self->fetch_by_synonym($name,$source));
+        
+    }
+    
+    #ÊIf we still can't find any result and the name looks like an ssId, try fetching by subsnp_id instead
+    unless (scalar(@{$result}) || $name !~ m/^ss\d+$/) {
+        
+        $result = wrap_array($self->fetch_by_subsnp_id($name));
+        
+    }
+        
+    # Return the result
+    return undef unless (scalar(@{$result}));
+    return $result->[0];
+}
 
-  # NB flanking sequence table is joined here and in fetch_by_dbID
-  # so we can set flank_flag where the flanking sequence differs
-  # from the reference - it is just set to 0 when fetching variations
-  # by other methods since otherwise the join takes too long
-  my $sth = $self->prepare
-    (qq{SELECT v.variation_id, v.name, v.validation_status, v.class_attrib_id, s1.name, s1.description, s1.url, s1.type, v.somatic, v.ancestral_allele, 
-               a.allele_id, a.subsnp_id, a.allele, a.frequency, a.count, a.sample_id, vs.moltype,
-              vs.name, s2.name, (fs.up_seq is not null OR fs.down_seq is not null)
-	  FROM   (variation v, source s1)
-	     LEFT JOIN allele a on v.variation_id = a.variation_id
-		 LEFT JOIN flanking_sequence fs on v.variation_id = fs.variation_id
-	      LEFT JOIN variation_synonym vs on v.variation_id = vs.variation_id 
-              LEFT JOIN source s2 on  vs.source_id = s2.source_id
-	      LEFT JOIN failed_variation fv on v.variation_id = fv.variation_id
-       WHERE    v.source_id = s1.source_id
-       AND    v.name = ?
-       $extra_sql  
-       ORDER BY a.allele_id});
+#ÊInternal method for getting the internal dbIDs for a list of names. Will also query the variation_synonym and allele (for subsnp_ids) tables
+sub _name_to_dbID {
+    my $self = shift;
+    my $name_list = shift;
+    my $synonym = shift;
+    my $subsnp = shift;
+    
+    $name_list = wrap_array($name_list);
+    throw ("A list of names is required") unless (scalar(@{$name_list}));
+    
+    #ÊUse a hash to store the name to dbID mapping
+    my %dbIDs;
+    
+    # Determine which columns we are returning
+    my $cols = ($synonym && $subsnp ? "CONCAT('ss',v.subsnp_id) AS name, v.variation_id" : "v.name, v.variation_id");
+    
+    # Determine which table we are querying
+    my $table = ($synonym ? ($subsnp ? 'allele' : 'variation_synonym') : 'variation');
+    
+    # Statement to get the dbIDs from variation or variation_synonym
+    my $stmt = qq{
+        SELECT
+            $cols
+        FROM
+            $table v
+        WHERE 
+    };
+    my $sth;
+    
+    #ÊWork on batches of $batch_size;
+    my $batch_size = 200;
+    #ÊMake a local copy of the list to work on
+    my $local_list = [@{$name_list}];
+    while (scalar(@{$local_list})) {
+        
+        #ÊGet the next batch and construct the constraint
+        my @names = splice(@{$local_list},0,$batch_size);
+        my $constraint = "('" . join("','",@names) . "')";
+        $constraint = ($synonym && $subsnp ? "v.subsnp_id" : "v.name") . qq{ IN $constraint};
+        
+        #ÊPrepare a statement
+        $sth = $self->prepare($stmt . qq{ $constraint });
+        $sth->execute();
+        
+        # Fetch the results and populate the hash
+        my ($name,$dbID);
+        $sth->bind_columns(\$name,\$dbID);
+        while ($sth->fetch()) {
+            $dbIDs{$name} = $dbID;
+        }
+        
+    }
+    
+    # If we are querying variation and have unmapped names, also query variation_synonym and allele
+    if (!$synonym || !$subsnp) {
+        
+        # Get the unmapped names
+        my @unmapped = grep {!exists($dbIDs{$_})} @{$name_list};
+        
+        #ÊIf we are going to query for subsnp_ids, get the names that look like ssIds and strip the ss prefix
+        if ($synonym) {
+            @unmapped = grep {$_ =~ s/^ss(\d+)$/$1/} @unmapped;
+        }
+        
+        # Get the dbID mapping from the synonym table and add them to the hash if there are unmapped
+        if (scalar(@unmapped)) {
+            my $names = $self->_name_to_dbID(\@unmapped,1,$synonym); 
+            map {$dbIDs{$_} = $names->{$_}} keys(%{$names});
+        }
+    }
+        
+    # Return a hashref with the name -> dbID mapping
+    return \%dbIDs;
+}
 
-  $sth->bind_param(1,$name,SQL_VARCHAR);
-  $sth->bind_param(2,$source,SQL_VARCHAR) if defined $source;
-  $sth->execute();
-
-  my $result = $self->_objs_from_sth($sth);
-  $sth->finish();
-
-  if(!@$result) {
-    # try again if nothing found, but check synonym table instead
-    $sth = $self->prepare
-      (qq{SELECT v.variation_id, v.name, v.validation_status, v.class_attrib_id, s1.name, s1.description, s1.url, s1.type, v.somatic, v.ancestral_allele, 
-                 a.allele_id, a.subsnp_id, a.allele, a.frequency, a.count, a.sample_id, vs1.moltype,
-                vs2.name, s2.name, (fs.up_seq is not null OR fs.down_seq is not null)
-         FROM variation v, source s1, source s2, allele a,
-                variation_synonym vs1, variation_synonym vs2, flanking_sequence fs
-         WHERE  v.variation_id = a.variation_id
-         AND    v.variation_id = vs1.variation_id
-         AND    v.variation_id = vs2.variation_id
-         AND    v.source_id = s1.source_id
-         AND    vs2.source_id = s2.source_id
-		 AND    v.variation_id = fs.variation_id
-         AND    vs1.name = ?
-                $extra_sql
-         ORDER BY a.allele_id});
+sub fetch_by_synonym {
+    my $self = shift;
+    my $name = shift;
+    my $source = shift;
+    
+    # Do a query to get the current variation for the synonym and call a fetch method on this variation
+    my $constraint = qq{vs.name = ?};
+    $constraint .= qq{ AND s.name = ?} if (defined($source));
+    
+    # This statement will only return 1 row which is consistent with the behaviour of fetch_by_name.
+    #ÊHowever, the synonym name is only guaranteed to be unique in combination with the source 
+    my $stmt = qq{
+        SELECT
+            vs.variation_id
+        FROM
+            variation_synonym vs JOIN
+            source s ON (
+                s.source_id = vs.source_id
+            )
+        WHERE
+            $constraint
+        LIMIT 1
+    };
+    my $sth = $self->prepare($stmt);
     $sth->bind_param(1,$name,SQL_VARCHAR);
-    $sth->bind_param(2,$source,SQL_VARCHAR) if defined $source;
+    $sth->bind_param(2,$source,SQL_VARCHAR) if (defined($source));
     $sth->execute();
-    $result = $self->_objs_from_sth($sth);
-
-    $sth->finish();
-  }
-  
-  if(!@$result && $name =~ /^ss\d+/i) {
-	# try again if the ID looks like a subsnp ID
-	push @{$result}, $self->fetch_by_subsnp_id($name);
-  }
-  
-  return undef if(!@$result);
-  
-  return $result->[0];
+    
+    # Bind the results
+    my $dbID;
+    $sth->bind_columns(\$dbID);
+    # Fetch the results
+    $sth->fetch();
+    
+    #ÊReturn undef in case no data could be found
+    return undef unless (defined($dbID));
+    
+    #ÊCall the fetch_by_name method using the updated name for the synonym
+    return $self->fetch_by_dbID($dbID);
 }
 
 
@@ -373,38 +508,33 @@ sub fetch_by_name {
 =cut
 
 sub fetch_by_subsnp_id {
-  my $self = shift;
-  my $name = shift;
+    my $self = shift;
+    my $name = shift;
   
-  $name =~ s/^ss//gi;
-
-  throw('name argument expected') if(!defined($name));
-
-  # NB flanking sequence table is joined here and in fetch_by_dbID
-  # so we can set flank_flag where the flanking sequence differs
-  # from the reference - it is just set to 0 when fetching variations
-  # by other methods since otherwise the join takes too long
-  my $sth = $self->prepare
-    (qq{SELECT v.variation_id, v.name, v.validation_status, v.class_attrib_id, s1.name, s1.description, s1.url, s1.type, v.somatic, v.ancestral_allele, 
-               a.allele_id, a.subsnp_id, a.allele, a.frequency, a.count, a.sample_id, vs.moltype,
-              vs.name, s2.name, (fs.up_seq is not null OR fs.down_seq is not null)
-	  FROM   (variation v, source s1)
-	     LEFT JOIN allele a on v.variation_id = a.variation_id
-		 LEFT JOIN flanking_sequence fs on v.variation_id = fs.variation_id
-	     LEFT JOIN variation_synonym vs on v.variation_id = vs.variation_id 
-         LEFT JOIN source s2 on  vs.source_id = s2.source_id
-	     LEFT JOIN failed_variation fv on v.variation_id = fv.variation_id
-       WHERE    v.source_id = s1.source_id
-       AND    a.subsnp_id = ?
-       ORDER BY a.allele_id});
-
-  $sth->bind_param(1,$name,SQL_VARCHAR);
-  $sth->execute();
-
-  my $result = $self->_objs_from_sth($sth);
-  $sth->finish();
+    throw('name argument expected') if(!defined($name));
   
-  return $result->[0];
+    # Strip away any ss prefix
+    $name =~ s/^ss//gi;
+
+    # This method will need to left join to the flanking sequence table so set that flag
+    $self->{'_check_flanking'} = 1;
+    
+    #ÊAdd a constraint on the subsnp_id
+    my $constraint = qq{a.subsnp_id = ?};
+    
+    # Bind the parameters
+    $self->bind_param_generic_fetch($name,SQL_INTEGER);
+    
+    #ÊGet the results from generic fetch method
+    my $result = $self->generic_fetch($constraint);
+    
+    #ÊUnset the check flanking flag again
+    delete($self->{'_check_flanking'});
+    
+    #ÊReturn the result
+    return undef unless (scalar(@{$result}));
+    return $result->[0];
+    
 }
 
 
@@ -426,65 +556,29 @@ sub fetch_by_subsnp_id {
 =cut
 
 sub fetch_all_by_source {
-  my $self = shift;
-  my $source_name = shift;
-  my $primary = shift;
+    my $self = shift;
+    my $source_name = shift;
+    my $primary = shift;
 
-  my @out;
+    throw('name argument expected') unless (defined($source_name));
+    
+    # By default, returns ALL variation and variation_synonyms where source = $name
+    $primary ||= 0; 
 
-  $primary ||= 0; #by default, returns ALL variation and variation_synonyms where source = $name
-
-  throw('name argument expected') if(!defined($source_name));
-
-  #ÊAdd the constraint for failed variations
-  my $constraint = " AND " . $self->db->_exclude_failed_variations_constraint();
+    #ÊAdd the constraint on the source name. If primary is true, only the variation source will be queried, otherwise the variation_synonym source will be as well
+    my $constraint = qq{s1.name = ?};
+    $constraint = qq{($constraint OR s2.name = ?)} unless ($primary);
+    
+    # If necessary, add the constraint for filtering failed variations
+    $constraint .= qq{ AND } . $self->db->_exclude_failed_variations_constraint();
   
-  my $sth = $self->prepare
-    (qq{SELECT v.variation_id, v.name, v.validation_status, v.class_attrib_id, s1.name, s1.description, s1.url, s1.type, v.somatic, v.ancestral_allele, 
-               a.allele_id, a.subsnp_id, a.allele, a.frequency, a.count, a.sample_id, vs.moltype,
-              vs.name, s2.name, 0
-	  FROM   (variation v, source s1)
-	     LEFT JOIN allele a on v.variation_id = a.variation_id 
-	      LEFT JOIN variation_synonym vs on v.variation_id = vs.variation_id 
-              LEFT JOIN source s2 on  vs.source_id = s2.source_id
-	      LEFT JOIN failed_variation fv on v.variation_id = fv.variation_id
-       WHERE    v.source_id = s1.source_id
-       AND    s1.name = ?
-       $constraint
-   });
+    # Bind the source name parameter
+    $self->bind_param_generic_fetch($source_name,SQL_VARCHAR);
+    $self->bind_param_generic_fetch($source_name,SQL_VARCHAR);
 
-  $sth->bind_param(1,$source_name,SQL_VARCHAR);
-  $sth->execute();
+    # Execute the superclass generic fetch
+    return $self->generic_fetch($constraint);
 
-  my $result = $self->_objs_from_sth($sth);
-  $sth->finish();
-  
-  push @out, @{$result};
-
-  #we need to include variation_synonym as well, where the variation was merged with dbSNP
-  if (!$primary){
-      $sth = $self->prepare
-	  (qq{SELECT v.variation_id, v.name, v.validation_status, v.class_attrib_id, s1.name, s1.description, s1.url, s1.type, v.somatic, v.ancestral_allele,
-	      a.allele_id, a.subsnp_id, a.allele, a.frequency, a.count, a.sample_id, vs1.moltype,
-	      vs1.name, s2.name, 0
-		  FROM   (variation v, source s1, source s2,  variation_synonym vs1)
-		  LEFT JOIN allele a ON v.variation_id = a.variation_id
-		  LEFT JOIN failed_variation fv on v.variation_id = fv.variation_id
-		  WHERE  v.variation_id = vs1.variation_id
-		  AND    v.source_id = s1.source_id
-		  AND    vs1.source_id = s2.source_id
-		  AND    s2.name = ?
-		  $constraint
-		  ORDER BY v.variation_id
-	      });
-    $sth->bind_param(1,$source_name,SQL_VARCHAR);
-    $sth->execute();
-    $result = $self->_objs_from_sth($sth);
-    $sth->finish();      
-     #need to merge both lists, trying to avoid duplicates
-      push @out, @{$result};
-  }
-  return \@out;
 }
 
 
@@ -505,31 +599,42 @@ sub fetch_all_by_source {
 =cut
 
 sub fetch_all_by_source_type {
-  my $self = shift;
-  my $source_type = shift;
-  my $primary = shift;
+    my $self = shift;
+    my $source_type = shift;
+    my $primary = shift;
   
-  my @out;
-  $primary ||= 0; #by default, returns ALL variation and variation_synonyms where source_type = $source_type
-  
-  throw('name argument expected') if(!defined($source_type));
+    throw('name argument expected') unless (defined($source_type));
 	
-  my $sth = $self->prepare (qq{SELECT name FROM source WHERE type = ?});
-
-  $sth->bind_param(1,$source_type,SQL_VARCHAR);
-  $sth->execute();
-
-  my $result = $self->_objs_from_sth($sth);
-  $sth->finish();
-  
-	# Loop to get all the variations by source
-  foreach my $source_name (@{$result}) {
-		my $var_list = $self->fetch_all_by_source($source_name,$primary);
-		push @out, @{$var_list};
-	}
-	return \@out;
+    # Get the source names that match the type
+    my $stmt = qq{
+        SELECT
+            name
+        FROM
+            source
+        WHERE
+            type = ?
+    };
+    my $sth = $self->prepare($stmt);
+    $sth->bind_param(1,$source_type,SQL_VARCHAR);
+    $sth->execute();
+    
+    #ÊFetch the results from one source at a time. This should probably be implemented in a more efficient manner.
+    my $name;
+    $sth->bind_columns(\$name);
+    # Store in a hash to avoid duplicates
+    my %out;
+    while ($sth->fetch()) {
+        
+        my $result = $self->fetch_all_by_source($name,$primary);
+        next unless (scalar(@{$result}));
+        
+        # Add the fetched results to the total hash
+        map {$out{$_->dbID()} = $_} @{$result};        
+    }
+    
+    # Return the reference to the list of variations
+    return [values(%out)];
 }
-
 
 
 =head2 fetch_all_by_dbID_list
@@ -547,47 +652,16 @@ sub fetch_all_by_source_type {
 =cut
 
 sub fetch_all_by_dbID_list {
-  my $self = shift;
-  my $list = shift;
+    my $self = shift;
+    my $list = shift;
 
-  if(!defined($list) || ref($list) ne 'ARRAY') {
-    throw("list reference argument is required");
-  }
-
-  return [] if(!@$list);
-
-  my @out;
-
-  # mysql is faster and we ensure that we do not exceed the max query size by
-  # splitting large queries into smaller queries of 200 ids
-  my $max = 200;
-
-  while(@$list) {
-    my @ids = (@$list > $max) ? splice(@$list, 0, $max) : splice(@$list, 0);
-
-    my $id_str = (@ids > 1)  ? " IN (".join(',',@ids).")"   :   ' = \''.$ids[0].'\'';
-
-    my $sth = $self->prepare
-      (qq{SELECT v.variation_id, v.name, v.validation_status, v.class_attrib_id, s1.name, s1.description, s1.url, s1.type, v.somatic, v.ancestral_allele,
-                 a.allele_id, a.subsnp_id, a.allele, a.frequency, a.count, a.sample_id, vs.moltype,
-                 vs.name, s2.name, 0
-	     FROM   (variation v, source s1)
-		  LEFT JOIN allele a on v.variation_id = a.variation_id
-		     LEFT JOIN variation_synonym vs on v.variation_id = vs.variation_id 
-		       LEFT JOIN source s2 on  vs.source_id = s2.source_id
-		         LEFT JOIN failed_variation fv on v.variation_id = fv.variation_id
-          WHERE    v.source_id = s1.source_id
-          AND    v.variation_id $id_str});
-    $sth->execute();
-
-    my $result = $self->_objs_from_sth($sth);
-
-    $sth->finish();
-
-    push @out, @$result if(@$result);
-  }
-
-  return \@out;
+    # Get an Iterator for the list
+    my $iterator = $self->fetch_Iterator_by_dbID_list($list);
+    
+    #ÊGet an arrayref representing the contents of the Iterator
+    my $result = $iterator->to_arrayref();
+    
+    return $result;
 }
 
 =head2 fetch_Iterator_by_dbID_list
@@ -620,7 +694,12 @@ sub fetch_Iterator_by_dbID_list {
 
             if (@object_cache == 0 && @$dbid_list > 0 ) {
                 my @dbids = splice @$dbid_list, 0, $cache_size;
-                @object_cache = @{ $self->fetch_all_by_dbID_list(\@dbids) };
+                
+                #ÊCreate a constraint on the dbIDs
+                my $id_str = "(" . join(",",@dbids) . ")";
+                my $constraint = qq{v.variation_id IN $id_str};
+                
+                @object_cache = @{ $self->generic_fetch($constraint) };
             }
 
             return shift @object_cache;
@@ -644,80 +723,16 @@ sub fetch_Iterator_by_dbID_list {
 
 
 sub fetch_all_by_name_list {
-  my $self = shift;
-  my $list = shift;
+    my $self = shift;
+    my $list = shift;
 
-  if(!defined($list) || ref($list) ne 'ARRAY') {
-    throw("list reference argument is required");
-  }
-
-  return [] if(!@$list);
-
-  my @out;
-
-  # mysql is faster and we ensure that we do not exceed the max query size by
-  # splitting large queries into smaller queries of 200 ids
-  my $max = 200;
-
-  while(@$list) {
-    my @ids = (@$list > $max) ? splice(@$list, 0, $max) : splice(@$list, 0);
-
-    my $id_str = (@ids > 1)  ? " IN (".join(',', map {"'$_'"} @ids).")"   :   ' = \''.$ids[0].'\'';
-    my $sth = $self->prepare
-      (qq{SELECT v.variation_id, v.name, v.validation_status, v.class_attrib_id, s1.name, s1.description, s1.url, s1.type, v.somatic, v.ancestral_allele,
-                 a.allele_id, a.subsnp_id, a.allele, a.frequency, a.count, a.sample_id, vs.moltype,
-                 vs.name, s2.name, 0
-	     FROM   (variation v, source s1)
-		  LEFT JOIN allele a on v.variation_id = a.variation_id
-		     LEFT JOIN variation_synonym vs on v.variation_id = vs.variation_id 
-		       LEFT JOIN source s2 on  vs.source_id = s2.source_id
-		         LEFT JOIN failed_variation fv on v.variation_id = fv.variation_id
-          WHERE    v.source_id = s1.source_id
-          AND    v.name $id_str});
-    $sth->execute();
-
-    my $result = $self->_objs_from_sth($sth);
-
-    $sth->finish();
-
-    # Implementing the alias search functionality in fetch_by_name
+    #ÊGet a list of dbIDs for the names
+    my $dbIDs = $self->_name_to_dbID($list);
     
-    ## Finding which elements in $list yielded no results above
-    my %missing_variations_temp=();
-    @missing_variations_temp{@ids}=();
-    foreach(@$result){
-      delete $missing_variations_temp{$_->name};
-  }
-    my @missing_names=keys(%missing_variations_temp);
-
-    ## A near-verbatim copy of the code in fetch_by_name, changing only for execution method
-    if(@missing_names) {
-      my $missing_id_str = (@missing_names > 1)  ? " IN (".join(',', map {"'$_'"} @missing_names).")"   :   ' = \''.$missing_names[0].'\'';
-      $sth = $self->prepare
-        (qq{SELECT v.variation_id, v.name, v.validation_status, v.class_attrib_id, s1.name, s1.description, s1.url, s1.type, v.somatic, v.ancestral_allele, 
-                   a.allele_id, a.subsnp_id, a.allele, a.frequency, a.count, a.sample_id, vs1.moltype,
-                  vs2.name, s2.name, 0
-           FROM variation v, source s1, source s2, allele a,
-                  variation_synonym vs1, variation_synonym vs2, flanking_sequence fs
-           WHERE  v.variation_id = a.variation_id
-           AND    v.variation_id = vs1.variation_id
-           AND    v.variation_id = vs2.variation_id
-           AND    v.source_id = s1.source_id
-           AND    vs2.source_id = s2.source_id
-	  AND    v.variation_id = fs.variation_id
-	    AND    vs1.name $missing_id_str
-	    ORDER BY a.allele_id
-        });
-      $sth->execute();
-      my $missing_result = $self->_objs_from_sth($sth);
-      push @out, @$missing_result if (@$missing_result);
-      $sth->finish();
-      }
-    push @out, @$result if(@$result);
-  }
-  return \@out;
+    #ÊThen fetch the variations by dbID list instead
+    my @dbID_list = values(%{$dbIDs});
+    return $self->fetch_all_by_dbID_list(\@dbID_list);
 }
-
 
 =head2 get_all_sources
 
@@ -887,50 +902,44 @@ sub get_flanking_sequence{
 =cut
 
 sub fetch_all_by_Population {
-  my $self = shift;
-  my $pop = shift;
+    my $self = shift;
+    my $pop = shift;
+    my $freq = shift;
+    
+    assert_ref($pop,'Bio::EnsEMBL::Variation::Population');
 
-  if(!ref($pop) || !$pop->isa('Bio::EnsEMBL::Variation::Population')) {
-    throw('Bio::EnsEMBL::Variation::Population argument expected');
-  }
-
-  if(!defined($pop->dbID())) {
-    warning("Cannot retrieve genotypes for population without set dbID");
-    return [];
-  }
+    if(!defined($pop->dbID())) {
+        warning("Cannot retrieve genotypes for population without set dbID");
+        return [];
+    }
   
-  my $freq = shift;
-  my $extra_sql = '';
-  
-  if(defined $freq) {
+    # Constraint the query using the sample_id for the population
+    my $constraint = qq{a.sample_id = ?};
+    
+    # adjust frequency if given a percentage
+    if (defined($freq)) {
 	
-	# adjust frequency if given a percentage
-	$freq /= 100 if $freq > 1;
-	$extra_sql = qq{ AND (IF(a.frequency > 0.5, 1-a.frequency, a.frequency) > $freq) }
-  }
+	   $freq /= 100 if $freq > 1;
+	   $constraint .= qq{ AND (IF(a.frequency > 0.5, 1-a.frequency, a.frequency) > ?) };
+    }
   
-  #ÊAdd the constraint for failed variations
-  $extra_sql .= " AND " . $self->db->_exclude_failed_variations_constraint();
+    #ÊAdd the constraint for failed variations
+    $constraint .= " AND " . $self->db->_exclude_failed_variations_constraint();
   
-  my $sth = $self->prepare
-    (qq{SELECT v.variation_id, v.name, v.validation_status, v.class_attrib_id, s1.name, s1.description, s1.url, s1.type, v.somatic, v.ancestral_allele,
-               a.allele_id, a.subsnp_id, a.allele, a.frequency, a.count, a.sample_id, vs.moltype,
-              vs.name, s2.name, 0
-	    FROM   (variation v, source s1, allele a)
-	      LEFT JOIN variation_synonym vs on v.variation_id = vs.variation_id 
-              LEFT JOIN source s2 on  vs.source_id = s2.source_id
-	      LEFT JOIN failed_variation fv on v.variation_id = fv.variation_id
-	      WHERE  v.variation_id = a.variation_id
-	      AND    v.source_id = s1.source_id
-	      AND    a.sample_id = ?
-		  $extra_sql});
-  $sth->bind_param(1,$pop->dbID,SQL_INTEGER);
-  $sth->execute();
-
-  my $results = $self->_objs_from_sth($sth);
-  $sth->finish();
-
-  return $results;
+    # Bind the parameters
+    $self->bind_param_generic_fetch($pop->dbID(),SQL_INTEGER);
+    $self->bind_param_generic_fetch($freq,SQL_DOUBLE) if (defined($freq));
+    
+    # Set the flag to indicate that we are constraining on population and should not left join to allele
+    $self->{'_constrain_sample'} = 1;
+    
+    # Execute the generic fetch
+    my $result = $self->generic_fetch($constraint);
+    
+    # Unset the flag
+    delete($self->{'_constrain_sample'});
+    
+    return $result;
 }
 
 =head2 fetch_all_by_VariationSet
@@ -974,9 +983,7 @@ sub _generic_fetch_by_VariationSet {
     my $want_iterator = shift;
     my $set = shift;
     
-    if(!ref($set) || !$set->isa('Bio::EnsEMBL::Variation::VariationSet')) {
-        throw('Bio::EnsEMBL::Variation::VariationSet argument expected');
-    }
+    assert_ref($set,'Bio::EnsEMBL::Variation::VariationSet');
 
     if(!defined($set->dbID())) {
         warning("Cannot retrieve variations for variation set without a dbID");
@@ -1011,7 +1018,7 @@ sub _fetch_all_dbIDs_by_VariationSet {
     push @var_set_ids, $var_set->dbID;
   }
   
-  my $set_str = '('.join(',',@var_set_ids).')';
+  my $set_str = "(" . join(",",@var_set_ids) .")";
 
   #ÊAdd the constraint for failed variations
   my $constraint = " AND " . $self->db->_exclude_failed_variations_constraint();
@@ -1183,64 +1190,84 @@ sub _objs_from_sth {
 
   my %seen_syns;
   my %seen_pops;
-
+    my %seen_vars;
+    my %seen_alleles;
+    
   my $pa = $self->db()->get_PopulationAdaptor();
 
   my $aa = $self->db->get_AttributeAdaptor;
 
-  while($sth->fetch()) {
-    if(!defined($cur_var) || $cur_var_id != $var_id) {
-	$vstatus = 0 if (!defined $vstatus);
-      my @states = split(',',$vstatus);
-      $cur_var = Bio::EnsEMBL::Variation::Variation->new
-        (-dbID   => $var_id,
-         -ADAPTOR => $self,
-         -NAME   => $name,
-         -SOURCE => $source,
-		 -SOURCE_DESCRIPTION => $source_desc,
-		 -SOURCE_URL => $source_url,
-		 -SOURCE_TYPE => $source_type,
-		 -IS_SOMATIC => $is_somatic,
-	     -ANCESTRAL_ALLELE => $ancestral_allele,
-	     -MOLTYPE => $moltype,
-         -VALIDATION_STATES => \@states,
-	     -FLANK_FLAG => $flank_flag,
-	     -CLASS_SO_TERM => $aa->attrib_value_for_id($class_attrib_id));
-      push @vars, $cur_var;
-      $cur_var_id = $var_id;
+    while($sth->fetch()) {
+      
+        my $var = $seen_vars{$var_id};
+        unless (defined($var)) {
+            
+            # Reset the cached variation-specific data
+            %seen_alleles = ();      
+            %seen_syns = ();
+            
+            #ÊGet the validation status
+            $vstatus ||= 0;
+            my @states = split(/,/,$vstatus);
+            
+            #ÊCreate the variation object
+            $var = Bio::EnsEMBL::Variation::Variation->new(
+                -dbID   => $var_id,
+                -ADAPTOR => $self,
+                -NAME   => $name,
+                -SOURCE => $source,
+		        -SOURCE_DESCRIPTION => $source_desc,
+		        -SOURCE_URL => $source_url,
+		        -SOURCE_TYPE => $source_type,
+		        -IS_SOMATIC => $is_somatic,
+	            -ANCESTRAL_ALLELE => $ancestral_allele,
+	            -MOLTYPE => $moltype,
+                -VALIDATION_STATES => \@states,
+	            -FLANK_FLAG => $flank_flag,
+	            -CLASS_SO_TERM => $aa->attrib_value_for_id($class_attrib_id)
+	        );
+	        
+	        #ÊStore the variation object in the %seen_vars hash using the dbID as key
+	        $seen_vars{$var_id} = $var;
+        }
+      
+        # Create an allele object and attach it to the variation unless that has already been done
+        #ÊShould use the AlleleAdaptor module here but for now, create the object directly    
+        unless (!defined($allele_id) || exists($seen_alleles{$allele_id})) {
+            
+            #ÊGet the population object from the cache or fetch and cache it
+            my $pop;
+            if (defined($allele_sample_id)) {
+                $pop = $seen_pops{$allele_sample_id};
+                unless (defined($pop)) {
+                    $pop = $pa->fetch_by_dbID($allele_sample_id);
+                    $seen_pops{$allele_sample_id} = $pop;
+                }
+            }
+            
+            my $allele = Bio::EnsEMBL::Variation::Allele->new(
+                -dbID      => $allele_id,
+                -ADAPTOR   => $self,
+                -ALLELE    => $allele,
+                -FREQUENCY => $allele_freq,
+                -COUNT     => $allele_count,
+                -POPULATION => $pop,
+                -SUBSNP    => $allele_ss_id
+            );
+            $var->_add_Allele($allele);
+            $seen_alleles{$allele_id} = 1;
+        }
+        
+        #ÊAdd any synonym that haven't been added
+        if (defined ($syn_source) && !$seen_syns{"$syn_source:$syn_name"}) {
+            $seen_syns{"$syn_source:$syn_name"} = 1;
+            $var->add_synonym($syn_source, $syn_name);
+        }
     }
 
-    if(!defined($cur_allele_id) || $cur_allele_id != $allele_id) {
-	  my $pop;
-	  if($allele_sample_id) { 
-		$pop = $seen_pops{$allele_sample_id} ||=
-		  $pa->fetch_by_dbID($allele_sample_id);
-	  }
-	  
-      if (defined $allele_id){
-		my $allele = Bio::EnsEMBL::Variation::Allele->new
-			(-dbID      => $allele_id,
-			 -ADAPTOR   => $self,
-			 -ALLELE    => $allele,
-			 -FREQUENCY => $allele_freq,
-			 -COUNT     => $allele_count,
-			 -POPULATION => $pop,
-			 -SUBSNP    => $allele_ss_id);
-			
-		$cur_var->_add_Allele($allele);
-		
-		$cur_allele_id = $allele_id;
-      }
-    }
-
-    if(defined ($syn_source) && !$seen_syns{"$syn_source:$syn_name"}) {
-      $seen_syns{"$syn_source:$syn_name"} = 1;
-      $cur_var->add_synonym($syn_source, $syn_name);
-    }
-  }
-
-	
-  return \@vars;
+    # Return the variation objects
+    @vars = values(%seen_vars);
+    return \@vars;
 }
 
 1;
