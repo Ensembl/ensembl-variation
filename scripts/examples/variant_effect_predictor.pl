@@ -507,8 +507,9 @@ Options
 --config               Load configuration from file. Any command line options
                        specified overwrite those in the file [default: off]
 
--i | --input_file      Input file - if not specified, reads from STDIN
--f | --format          Alternative input file format - one of "pileup", "vcf"
+-i | --input_file      Input file - if not specified, reads from STDIN. Files
+                       may be gzip compressed.
+--format               Alternative input file format - one of "pileup", "vcf"
 -o | --output_file     Output file [default: "variant_effect_output.txt"]
 
 -t | --terms           Type of consequence terms to output - one of "ensembl", "SO",

@@ -41,6 +41,8 @@ overhaul of both the script and the API behind it. It requires at least version
   - option to output Ensembl protein identifiers
   - option to output HGVS nomenclature for variants
   
+- support for gzipped input files
+  
 - enhanced configuration options, including the ability to read configuration
   from a file
 
@@ -124,7 +126,7 @@ available database aliases on the server. Default = "human"
 -i (--input_file) : input file name. If not specified, the script will attempt
 to read from STDIN.
 
--f (--format) : input file format. By default, the script auto-detects the input
+--format : input file format. By default, the script auto-detects the input
 file format. Using this option you can force the script to read the input
 file as VCF or pileup format. Not used by default.
  
@@ -209,7 +211,7 @@ skipped. Not used by default.
 --coding_only : only return consequences that fall in the coding regions of
 transcripts. Not used by default
 
---check_exisiting [0|1] : by default the script checks for the existence of
+--check_existing [0|1] : by default the script checks for the existence of
 variants that are co-located with your input. Disabling this by specifying
 --check_existing=0 will bypass this and provide a large speed boost. Default : 1
 
@@ -279,7 +281,9 @@ perl variant_effect_predictor.pl -c vep.ini -i variants.vcf.txt -q
 4.0 File formats
 ================
 
-The Variant Effect Predictor script uses plain text files both as input and output.
+The Variant Effect Predictor script uses plain text files both as input and
+output. Input files can be gzip compressed - the zcat utility must be in your
+path to use gzipped files.
 
 4.1 Input file
 --------------
