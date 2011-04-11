@@ -76,7 +76,7 @@ several means using this module.
 use strict;
 use warnings;
 
-package Bio::EnsEMBL::Variation::DBSQL::VariationAdaptor_clean;
+package Bio::EnsEMBL::Variation::DBSQL::VariationAdaptor;
 
 use Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
