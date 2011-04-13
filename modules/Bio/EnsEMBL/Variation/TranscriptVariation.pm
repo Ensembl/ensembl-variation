@@ -695,18 +695,11 @@ sub _codon_table {
     my $codon_table = $tran->{_variation_effect_feature_cache}->{codon_table};
     
     unless ($codon_table) {
-        if ($tran->slice->seq_region_name eq 'MT') {
-
-            # for mithocondrial dna we need to to use a different codon table
-            my $attrib = $tran->slice->get_all_Attributes('codon_table')->[0]; 
-            
-            # default to the vertebrate codon table which is denoted as 1
-            
-            $codon_table = $attrib ? $attrib->value : 1;
-        }
-        else {
-            $codon_table = 1;
-        }
+        # for mithocondrial dna we need to to use a different codon table
+        my $attrib = $tran->slice->get_all_Attributes('codon_table')->[0]; 
+        
+        # default to the vertebrate codon table which is denoted as 1
+        $codon_table = $attrib ? $attrib->value : 1;
         
         $tran->{_variation_effect_feature_cache}->{codon_table} = $codon_table
     }
