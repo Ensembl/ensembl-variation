@@ -7,7 +7,7 @@
 
    -->
    
-   <!-- Last modified on 2010-10-01 by Pontus Larsson -->
+   <!-- Last modified on 2011-04-14 by Pontus Larsson -->
    
    <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
@@ -1649,8 +1649,8 @@
 						  
 						  	</xsl:when>
 						  	<xsl:otherwise>
-						  		<xsl:if test="long_name and not(contains(long_name,'RNA)'))">
-						  			<tr><th colspan="6" style="text-align:center; ">No proteins identified for this gene in this source</th></tr>
+						  		<xsl:if test="long_name and contains(long_name,'(protein_coding)')">
+						  			<tr><th colspan="6" style="text-align:center; ">No protein products identified for this gene in this source</th></tr>
 						  		</xsl:if>
 						  	</xsl:otherwise>
 						  </xsl:choose>
