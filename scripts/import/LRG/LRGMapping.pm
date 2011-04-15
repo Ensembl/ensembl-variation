@@ -53,6 +53,7 @@ our $use_smalt = 1;
 our %SMALT_PARAMETERS = (
   '-a' 	=> ''
 );
+our $SSAHA_HASH = 'kmer14_skip14';
 our $SMALT_HASH = 'GRCh37_k20_s13';
 
 our $EXONERATE_BIN = 'exonerate';
@@ -265,7 +266,7 @@ sub ssaha_mapping {
   
   my ($subject, %rec_find, %input_length, %done);
   	
-  $subject = "$target_dir/kmer14_skip14";
+  $subject = "$target_dir/$SSAHA_HASH";
   $rec_seq{$name} = $sequence;
   my $seqobj = Bio::PrimarySeq->new(-id => $name, -seq => $rec_seq{$name});
   $rec_seq{$name} = $seqobj;
@@ -1013,7 +1014,8 @@ sub attach_protein {
     
     #ÊAttach the xref node to the protein if applicable 
     if ($entry->dbname() !~ /MIM_GENE|Entrez/) {
-      $protein_node->addExisting($xref);
+        
+      $protein_node->addExisting($xref) unless ($protein_node->nodeExists($xref));
     }
     # For xrefs that should be attached to the gene node rather than the protein node, do that unless the xref already exists
     else {
@@ -1133,10 +1135,12 @@ sub attach_transcripts {
       my $xref = xref($entry);
       # Watch out for the OMIM xrefs, they should go to the gene node      
       if ($entry->dbname !~ /MIM_GENE/) {
-	$transcript_node->addExisting($xref);
+
+	       $transcript_node->addExisting($xref) unless ($transcript_node->nodeExists($xref));
       }
       else {
-	$gene_node->addExisting($xref);
+          
+	$gene_node->addExisting($xref) unless ($gene_node->nodeExists($xref));
       }
     }
 	  
@@ -1230,7 +1234,8 @@ sub gene_2_feature {
     }
     
     # Add a xref node
-    $gene_node->addExisting(xref($entry));
+    my $xref = xref($entry);
+    $gene_node->addExisting($xref) unless ($gene_node->nodeExists($xref));
   }
   
   # Add a xref to Ensembl as well
