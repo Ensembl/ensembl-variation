@@ -526,7 +526,7 @@ sub source{
    }
    else{
        #we have a Strain or IndividualSlice, get the reference sequence from the method
-       $reference_allele = $self->slice->ref_subseq($self->start,$self->end,$self->strand);
+       $reference_allele = $self->slice->ref_subseq($self->start,$self->end,$self->strand) || '-';
    }
 
    return $reference_allele;
