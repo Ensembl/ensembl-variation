@@ -11,6 +11,7 @@
 use strict;
 use warnings;
 use Getopt::Long;
+use DBI;
 
 use Bio::EnsEMBL::Registry;
 
@@ -114,9 +115,20 @@ sub post_process {
             $tmp_table t,
             variation_set_structure vss
         SET
-            t.variation_set_id = (t.variation_set_id | POW(vss.variation_set_super-1,2))
+            t.variation_set_id = CONCAT(
+                t.variation_set_id,
+                ',',
+                vss.variation_set_super
+            )
         WHERE
-            t.variation_set_id & vss.variation_set_sub
+            FIND_IN_SET(
+                vss.variation_set_sub,
+                t.variation_set_id
+            ) AND 
+            NOT FIND_IN_SET(
+                vss.variation_set_super,
+                t.variation_set_id
+            )
     };
     my $upd_impl_sth = $dbVar->dbc->prepare($stmt);
     
