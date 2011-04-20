@@ -103,6 +103,8 @@ sub post_process {
             GROUP_CONCAT(vsv.variation_set_id)
         FROM
             variation_set_variation vsv
+        GROUP BY
+            vsv.variation_id
     };
     my $ins_expl_sth = $dbVar->dbc->prepare($stmt);
     
