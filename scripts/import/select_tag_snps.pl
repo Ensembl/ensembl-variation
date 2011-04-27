@@ -13,7 +13,6 @@ my ($TMP_DIR, $population_id, $species, $registry_file);
 
 GetOptions('species=s' => \$species,
 	   'tmpdir=s'  => \$TMP_DIR,
-	   'population_id=i' => \$population_id,
 	   'registry_file=s' => \$registry_file);
 
 warn("Make sure you have a updated ensembl.registry file!\n");
@@ -31,30 +30,28 @@ my $dbCore = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'core');
 my $file = "$ARGV[0]" if (defined @ARGV);
 die "Not possible to calculate SNP tagging without file with SNPs" if (!defined @ARGV);
 
-`sort -k 3 -o $file $file`; #order snps by position
-
 open IN, "<$file" or die("Could not open input file: $file\n");
 
 my $r2 = 0.99; #default value for r2
 
 my $previous_seq_region_start = 0;
-my ($allele_1, $allele_2, $seq_region_start);
+my ($allele_1, $allele_2, $seq_region_start, $ind_id);
 my $genotypes_snp = {};
 my $last_snp = 0; #to indicate if there is a last snp that needs the MAF calculation
 my $MAF_snps = {};
 while (<IN>){
     chomp;
     /^\#/ && next;
-    ($allele_1, $allele_2, $seq_region_start) = split;
+    ($seq_region_start, $ind_id, $allele_1, $allele_2) = split;
 	next unless $allele_1 and $allele_2 and $seq_region_start;
 	
     #when we change variation_feature, calculate the MAF
     if (($previous_seq_region_start != $seq_region_start) && $previous_seq_region_start != 0){
-	$MAF_snps->{$previous_seq_region_start} = &calculate_MAF($genotypes_snp);
-	$genotypes_snp = {};
-	$previous_seq_region_start = $seq_region_start;
-	$last_snp = 1;
-
+		$MAF_snps->{$previous_seq_region_start} = &calculate_MAF($genotypes_snp);
+		
+		$genotypes_snp = {};
+		$previous_seq_region_start = $seq_region_start;
+		$last_snp = 1;
     }
     if ($previous_seq_region_start == 0){ #initialize the variables
 	$previous_seq_region_start = $seq_region_start;
@@ -66,11 +63,13 @@ while (<IN>){
 close IN;
 
 #calculate the MAF for the last SNP, if necessary
-$MAF_snps->{$previous_seq_region_start} = &calculate_MAF($genotypes_snp) . '-' . $previous_seq_region_start if ($last_snp == 0);
+$MAF_snps->{$previous_seq_region_start} = &calculate_MAF($genotypes_snp)  if ($last_snp == 0);
 
 #get LD values for the chromosome
-$file =~/.*-(\d+)\.txt/; #extract the seq_region_id from the name of the file
-my $seq_region_id = $1;
+$file =~/.*(\d+)_(\d+)\.txt/; #extract the seq_region_id from the name of the file
+$population_id = $1;
+my $seq_region_id = $2;
+
 my $pos_to_vf = {};
 my $host = `hostname`;
 chop $host;
@@ -98,53 +97,74 @@ foreach $seq_region_start (sort {$MAF_snps->{$b} <=> $MAF_snps->{$a} || $a <=> $
     }
 }
 my $genotype_without_vf = 0;
+my $genotype_with_vf = 0;
 open OUT, ">$TMP_DIR/snps_tagged_$population_id\_$host\-$$\.txt" or die ("Could not open output file");
 foreach my $position_vf (keys %{$MAF_snps}){
     if (! defined $pos_to_vf->{$position_vf}){ #some variations might not have LD, get dbID from database
-	#get it from the database
-	$pos_to_vf->{$position_vf} = &get_vf_id_from_position($dbCore,$dbVariation,$seq_region_id,$position_vf);
+		#get it from the database
+		$pos_to_vf->{$position_vf} = &get_vf_id_from_position($dbVariation,$seq_region_id,$position_vf);
     }
     if ($pos_to_vf->{$position_vf} ne ''){
-	print OUT join("\t",$pos_to_vf->{$position_vf},$population_id),"\n";
+		print OUT join("\t",$pos_to_vf->{$position_vf},$population_id),"\n";
+		$genotype_with_vf++;
     }
     else{
-	$genotype_without_vf++;
+		$genotype_without_vf++;
     }
 }
-print "Genotypes without vf $genotype_without_vf\n";
 close OUT or die ("Could not close output file with tagged SNPs");
 unlink($file);
 
 #for a given position retrieve the vf_id from the database
 sub get_vf_id_from_position{
-    my $dbCore = shift;
-    my $dbVariation = shift;
+	my $dbVar = shift;
     my $seq_region_id = shift;
     my $seq_region_start = shift;
-
-    my $slice_adaptor = $dbCore->get_SliceAdaptor;
-    my $vf_adaptor = $dbVariation->get_VariationFeatureAdaptor;
-    my $slice = $slice_adaptor->fetch_by_seq_region_id($seq_region_id); #get the Slice
-    my $sub_Slice = $slice->sub_Slice($seq_region_start,$seq_region_start,1); 
-    my $vfs = $vf_adaptor->fetch_all_by_Slice($sub_Slice) if (defined $sub_Slice);
-    #there should be just one
-    return $vfs->[0]->dbID if defined $vfs->[0];
-    return ''; #no vf in the position ??
+	
+	my $sth = $dbVar->dbc->prepare(qq{
+	  SELECT variation_feature_id, source_id
+	  FROM variation_feature
+	  WHERE seq_region_id = ?
+	  AND seq_region_start = ?
+	  AND seq_region_end = seq_region_start
+	});
+	
+	$sth->execute($seq_region_id, $seq_region_start);
+	
+	my ($vf_id, $source);
+	$sth->bind_columns(\$vf_id, \$source);
+	
+	my %by_source;
+	
+	push @{$by_source{$source}}, $vf_id while $sth->fetch;
+	$sth->finish;
+	
+	if(scalar keys %by_source) {
+		foreach my $s(sort {$a <=> $b} keys %by_source) {
+			return shift @{$by_source{$s}};
+		}
+	}
+	
+	return '';
 }
+
+
+
 #for a list of genotypes, get the MAF
 sub calculate_MAF{
     my $genotypes_snp = shift;
     my $MAF;
-    my $total_genotypes = 0;
+    my $total = 0;
     my $allele_freq;
 
     if (keys %{$genotypes_snp} == 2){
-	foreach (values %{$genotypes_snp}){
-	    $total_genotypes += $_;
-	    $allele_freq = ($_ / $total_genotypes) if ($total_genotypes != $_);;
-	}
-	return $allele_freq if ($allele_freq <= (1 - $allele_freq));
-	return 1 - $allele_freq if ($allele_freq > (1 - $allele_freq));
+		$total += $_ for values %{$genotypes_snp};
+		
+		foreach (values %{$genotypes_snp}){
+			$allele_freq = $_ / $total;
+			last;
+		}
+		return ($allele_freq < 0.5 ? $allele_freq : 1 - $allele_freq);
     }    
     return 0;
 #    die "genotype with more than 2 alleles!!";
