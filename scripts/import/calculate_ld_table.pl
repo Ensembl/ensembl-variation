@@ -31,8 +31,9 @@ my $allele_1;
 my $allele_2;
 my $previous_seq_region_start = 0;
 
-$ld_file =~ /dump_data_(\d+)/;
-$seq_region_id = $1;
+$ld_file =~ /dump_data_(\d+)\_(\d+)/;
+$population_id = $1;
+$seq_region_id = $2;
 my %individual_information = (); #hash containing relation snps->individuals
 my %alleles_information = (); #hash containing a record of alleles in the variation. A will be the major and a the minor. When more than
 my $buffer = {};
@@ -47,7 +48,7 @@ else {
 
 while (<IN>){
     chomp;
-    ($seq_region_start,$individual_id, $population_id,$allele_1,$allele_2) = split; #get all the fields in the file
+    ($seq_region_start,$individual_id, $allele_1,$allele_2) = split; #get all the fields in the file
 	
 	next unless $seq_region_start and $individual_id and $population_id and $allele_1 and $allele_2;
 	
@@ -67,7 +68,7 @@ while (<IN>){
 	    next if (keys %{$alleles_information{$population}} > 2); #skip variations with 3 alleles
 	    convert_genotype($alleles_information{$population},$individual_information{$population});
 	    #print all individuals to a file
-	    map {print_buffered ($buffer,"$TMP_DIR/$TMP_FILE\.$seq_region_id",
+	    map {print_buffered ($buffer,"$TMP_DIR/$TMP_FILE\.$population_id\.$seq_region_id",
 				 join("\t",$seq_region_id,$previous_seq_region_start, $previous_seq_region_start,
 				      $population, $_,
 				      $individual_information{$population}{$_}{genotype})."\n")} keys %{$individual_information{$population}};
@@ -91,7 +92,7 @@ foreach my $population (keys %alleles_information){
     if (keys %{$alleles_information{$population}} <= 2){
 	convert_genotype($alleles_information{$population},$individual_information{$population});
 	#print all individuals to a file
-	map {print_buffered ($buffer,"$TMP_DIR/$TMP_FILE\.$seq_region_id",
+	map {print_buffered ($buffer,"$TMP_DIR/$TMP_FILE\.$population_id\.$seq_region_id",
 			     join("\t",$seq_region_id,$previous_seq_region_start, $previous_seq_region_start,
 				  $population, $_,
 				  $individual_information{$population}{$_}{genotype})."\n")} keys %{$individual_information{$population}};
@@ -99,13 +100,12 @@ foreach my $population (keys %alleles_information){
 }
 print_buffered($buffer);
 #and run ld calculation
-my $file = "$TMP_DIR/$TMP_FILE\.$seq_region_id"; #file containing the genotype in the AA format
+my $file = "$TMP_DIR/$TMP_FILE\.$population_id\.$seq_region_id"; #file containing the genotype in the AA format
 #once the files are created, we have to calculate the ld
 my $call .= "calc_genotypes $file $file\.out";
 #print $call,"\n";
 system($call);
-unlink($ld_file);
-unlink("$TMP_DIR/$TMP_FILE\.$seq_region_id");
+unlink("$TMP_DIR/$TMP_FILE\.$population_id\.$seq_region_id");
 
 #
 # Converts the genotype into the required format for the calculation of the pairwise_ld value: AA, Aa or aa
