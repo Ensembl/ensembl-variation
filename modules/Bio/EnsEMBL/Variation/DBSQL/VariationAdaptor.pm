@@ -1259,7 +1259,7 @@ sub _objs_from_sth {
         }
         
         #ÊAdd any synonym that haven't been added
-        if (defined ($syn_source) && !$seen_syns{"$syn_source:$syn_name"}) {
+        if (defined ($syn_source) && defined($syn_name) && !$seen_syns{"$syn_source:$syn_name"}) {
             $seen_syns{"$syn_source:$syn_name"} = 1;
             $var->add_synonym($syn_source, $syn_name);
         }
