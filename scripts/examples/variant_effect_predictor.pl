@@ -101,7 +101,7 @@ sub main {
 		next if $chr eq 'non-variant';
 		
 		# fix inputs
-		$chr =~ s/chr//ig;
+		$chr =~ s/chr//ig unless $chr =~ /^chromosome$/i;
 		$strand = ($strand =~ /\-/ ? "-1" : "1");
 		$allele_string =~ tr/acgt/ACGT/;
 		
@@ -722,8 +722,8 @@ sub parse_line {
 		if($data[2] ne "*"){
 			my $var;
 			
-			if($data[2] =~ /^[A|C|G|T]$/) {
-				$var = $data[2];
+			if($data[3] =~ /^[A|C|G|T]$/) {
+				$var = $data[3];
 			}
 			else {
 				($var = unambiguity_code($data[3])) =~ s/$data[2]//ig;
