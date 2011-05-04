@@ -248,7 +248,7 @@ perl variant_effect_predictor.pl -v
 - Input file variants.vcf.txt, input file format VCF, add HGNC gene identifiers,
   output SO consequence terms
 
-perl variant_effect_predictor.pl -i variants.vcf.txt -f vcf -hgnc -t so
+perl variant_effect_predictor.pl -i variants.vcf.txt -format vcf -hgnc -t so
 
 
 - Output file variants_output.txt, don't check for existing co-located variants,
