@@ -624,7 +624,7 @@ sub get_all_OverlapConsequences {
 =cut
 
 sub add_OverlapConsequence {
-    my ($self, $oc);
+    my ($self, $oc) = @_;
     assert_ref($oc, 'Bio::EnsEMBL::Variation::OverlapConsequence');
     push @{ $self->{overlap_consequences} ||= [] }, $oc;
 }
