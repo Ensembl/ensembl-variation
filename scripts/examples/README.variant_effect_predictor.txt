@@ -145,7 +145,7 @@ database host. Default = "anonymous"
 -p (--password) : manually define the database password used when connecting to
 the database host. Not used by default
 
--r (--registry_file) : defining a registry file (see 4.3 below) overwrites other
+-r (--registry) : defining a registry file (see 4.3 below) overwrites other
 connection settings and uses those found in the specified registry file to
 connect.
   
