@@ -547,7 +547,7 @@ NB: SIFT, PolyPhen and Condel predictions are currently available for human only
 --port                 Database port [default: 5306]
 --password             Database password [default: no password]
 --genomes              Sets DB connection params for Ensembl Genomes [default: off]
--r | --registry_file   Registry file to use defines DB connections [default: off]
+-r | --registry        Registry file to use defines DB connections [default: off]
                        Defining a registry file overrides above connection settings.
 --db_version=[number]  Force script to load DBs from a specific Ensembl version. Not
                        advised due to likely incompatibilities between API and DB
@@ -598,7 +598,7 @@ sub connect_to_dbs {
 	
 	$reg->set_disconnect_when_inactive();
 	
-	if($config->{verbose}) {
+	if(defined($config->{verbose})) {
 		# get a meta container adaptors to check version
 		my $core_mca = $reg->get_adaptor($config->{species}, 'core', 'metacontainer');
 		my $var_mca = $reg->get_adaptor($config->{species}, 'variation', 'metacontainer');
