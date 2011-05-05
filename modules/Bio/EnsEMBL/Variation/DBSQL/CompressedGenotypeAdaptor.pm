@@ -217,6 +217,8 @@ sub fetch_all_by_Slice{
 	    $features = $self->SUPER::fetch_all_by_Slice($slice);
 	}
 	#need to check the feature is within the Slice
+	
+	my $seq_region_slice = $slice->seq_region_Slice;
 
 	foreach my $indFeature (@{$features}){
 	  #print "feature_start ",$indFeature->start," slice_end ",$slice->end," slice_start ",$slice->start," feature_end ",$indFeature->end, " a: ", $indFeature->allele1, "|", $indFeature->allele2, " in ", $indFeature->individual->name, "\n" if ($indFeature->end==1);
@@ -229,14 +231,14 @@ sub fetch_all_by_Slice{
 
 		  # Position will change if the strand is negative so change the strand to 1 temporarily
 		    $indFeature->slice->{'strand'} = 1;
-		    my $newFeature = $indFeature->transfer($slice->seq_region_Slice); 
+		    my $newFeature = $indFeature->transfer($seq_region_slice); 
 		    $indFeature->slice->{'strand'} = -1;
 		    $newFeature->slice->{'strand'} = -1;
                     $newFeature->variation($indFeature->variation);
 		    push @results, $newFeature;
 		}
 		else{
-		    push @results,$indFeature->transfer($slice->seq_region_Slice);
+		    push @results,$indFeature->transfer($seq_region_slice);
 		}
 	    }
 		#else {
@@ -283,8 +285,6 @@ sub _columns{
 
 sub _objs_from_sth{
     my ($self, $sth, $mapper, $dest_slice) = @_;
-	
-	#warn "SQL ", $sth->sql;
     
     return $self->SUPER::_objs_from_sth($sth,$mapper,$dest_slice) if ($self->_multiple);
     #
@@ -343,6 +343,7 @@ sub _objs_from_sth{
       $sr_name_hash{$seq_region_id} = $slice->seq_region_name();
       $sr_cs_hash{$seq_region_id} = $slice->coord_system();
     }
+	
     #
     # remap the feature coordinates to another coord system
     # if a mapper was provided
@@ -393,60 +394,12 @@ sub _objs_from_sth{
 	    }
 	}
 	$slice = $dest_slice;
-    }
-    #create the different Features for all the Genotypes compressed in the genotype field
-#    my $blob = substr($genotypes,2);
-#    my @genotypes = unpack("naa" x (length($blob)/4),$blob);
-#
-#    unshift @genotypes, substr($genotypes,1,1); #add the second allele of the first genotype
-#    unshift @genotypes, substr($genotypes,0,1); #add the first allele of the first genotype
-#    unshift @genotypes, 0; #the first SNP is in the position indicated by the seq_region1
-#    my ($snp_start, $allele_1, $allele_2);
-# 
-#    for (my $i=0; $i < @genotypes -1;$i+=3){
-#	#number of gaps
-#	if ($i == 0){
-#	    $snp_start = $seq_region_start; #first SNP is in the beginning of the region
-#	}
-#	else{
-#	    if ($genotypes[$i] == -1){ #remove duplicates !!
-#		$snp_start += 1;
-#		next;
-#	    }
-#	    $snp_start += ($genotypes[$i] +1);
-#	}
-#	#genotype
-#	$allele_1 = $genotypes[$i+1];
-#	$allele_2 = $genotypes[$i+2];
-#	my $igtype = Bio::EnsEMBL::Variation::IndividualGenotype->new_fast({
-#	    'start'    => $snp_start,
-#	    'end'      => $snp_start,
-#	    'strand'   => $seq_region_strand,
-#	    'slice'    => $slice,	    
-#	    'allele1'  => $allele_1,
-#	    'allele2' => $allele_2,
-#	    'adaptor' => $self
-#	});
-#	$individual_hash{$sample_id} ||= [];
-#	push @{$individual_hash{$sample_id}}, $igtype;
-#	push @results, $igtype;
-	
-	
+    }	
 	
 	my @genotypes = unpack '(aan)*', $genotypes;
 	my $snp_start = $seq_region_start;
   
 	while( my( $allele_1, $allele_2, $gap ) = splice @genotypes, 0, 3 ) {
-		
-		#warn "GT ", $allele_1, $allele_2, " ", $snp_start + $slice->start - 1;
-		
-		# check the things
-		#if(defined($gap)) {
-		#	die "$gap is not numeric. Sample $sample_id sr $seq_region_start data $gap $allele_1 $allele_2 @genotypes\n" unless $gap =~ /[0-9]+/ || !$gap;
-		#}
-		#die "$allele_1 is not a bp. Sample $sample_id sr $seq_region_start data $gap $allele_1 $allele_2 @genotypes\n" unless $allele_1 =~ /[ACGT]|\-/i;
-		#die "$allele_2 is not a bp. Sample $sample_id sr $seq_region_start data $gap $allele_1 $allele_2 @genotypes\n" unless $allele_2 =~ /[ACGT]|\-/i;
-		
 		my $igtype  = Bio::EnsEMBL::Variation::IndividualGenotype->new_fast({
 			'start'   => $snp_start,
 			'end'     => $snp_start,
