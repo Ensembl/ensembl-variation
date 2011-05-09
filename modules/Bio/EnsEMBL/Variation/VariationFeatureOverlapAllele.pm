@@ -193,7 +193,6 @@ sub feature_seq {
     unless ($self->{feature_seq}) {
         
         # check if we need to reverse complement the variation_feature_seq
-        
         if ($self->variation_feature->strand != $self->feature->strand) {
             my $vf_seq = $self->variation_feature_seq;
             reverse_comp(\$vf_seq);
@@ -336,6 +335,23 @@ sub SO_isa {
             return 1;
         }
     } 
+}
+
+
+sub _convert_to_sara {
+    my $self = shift;
+    
+    my $oc = Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
+        'label'        => 'SARA',
+        'description'  => 'Same as reference allele',
+        'rank'         => '99',
+        'display_term' => 'SARA',
+        'SO_term'      => 'SARA',
+    });
+    
+    $self->add_OverlapConsequence($oc);
+    
+    return $self;
 }
 
 1;
