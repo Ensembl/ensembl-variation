@@ -194,10 +194,15 @@ sub allele_string{
 }
 
 
+
 =head2 consequence_type
 
-  Description: Get a list of all the unique display_terms of the OverlapConsequences 
-               of this AlleleFeature
+  Arg [1]    : (optional) String $term_type
+  Description: Get a list of all the unique consequence terms of this 
+               AlleleFeature. By default returns Ensembl display terms
+               (e.g. 'NON_SYNONYMOUS_CODING'). $term_type can also be 'label'
+               (e.g. 'Non-synonymous coding'), 'SO' (Sequence Ontology, e.g.
+               'non_synonymous_codon') or 'NCBI' (e.g. 'missense')
   Returntype : listref of strings
   Exceptions : none
   Status     : At Risk
@@ -206,17 +211,28 @@ sub allele_string{
 
 sub consequence_type {
     
-    my $self = shift;
-
-    unless ($self->{consequence_type}) {
-
-        # work out the terms from the OverlapConsequence objects
-        
-        $self->{consequence_type} = 
-            [ map { $_->display_term } @{ $self->get_all_OverlapConsequences } ];
-    }
-    
-    return $self->{consequence_type};
+  my $self = shift;
+  my $term_type = shift;
+  
+  if($self->_is_sara) {
+	return ['SARA'];
+  }
+  else {
+	delete $self->{consequence_type} if defined($term_type);
+	
+	unless ($self->{consequence_type}) {
+	
+	  $term_type ||= 'display';
+	  my $method_name = $term_type.($term_type eq 'label' ? '' : '_term');
+	  $method_name = 'display_term' unless $self->most_severe_OverlapConsequence->can($method_name);
+	  
+	  # work out the terms from the OverlapConsequence objects
+	  $self->{consequence_type} = 
+		[ $self->_is_sara ? 'SARA' : map { $_->$method_name } @{ $self->get_all_OverlapConsequences } ];
+		
+	  return $self->{consequence_type};
+	}
+  }
 }
 
 
@@ -265,13 +281,14 @@ sub most_severe_OverlapConsequence {
     return $self->{_most_severe_consequence};
 }
 
-
 =head2 display_consequence
 
-  Args       : none
-  Example    : $display_consequence = $af->display_consequence();
-  Description: Getter for the consequence type to display,
-               when more than one
+  Arg [1]    : (optional) String $term_type
+  Description: Get the term for the most severe consequence of this 
+               AlleleFeature. By default returns Ensembl display terms
+               (e.g. 'NON_SYNONYMOUS_CODING'). $term_type can also be 'label'
+               (e.g. 'Non-synonymous coding'), 'SO' (Sequence Ontology, e.g.
+               'non_synonymous_codon') or 'NCBI' (e.g. 'missense')
   Returntype : string
   Exceptions : none
   Caller     : webteam
@@ -280,10 +297,58 @@ sub most_severe_OverlapConsequence {
 =cut
 
 sub display_consequence {
-    my $self = shift;
-    return $self->most_severe_OverlapConsequence->display_term;
+  my $self = shift;
+  my $term_type = shift;
+  
+  if($self->_is_sara) {
+	return 'SARA';
+  }
+  else {
+	$term_type ||= 'display';
+	my $method_name = $term_type.($term_type eq 'label' ? '' : '_term');
+	$method_name = 'display_term' unless $self->most_severe_OverlapConsequence->can($method_name);
+	
+	return $self->most_severe_OverlapConsequence->$method_name;
+  }
 }
 
+
+=head2 get_all_TranscriptVariations
+
+  Arg [1]     : (optional) listref of Bio::EnsEMBL::Transcript objects
+  Example     : $af->get_all_TranscriptVariations;
+  Description : Get all the TranscriptVariations associated with this AlleleFeature.
+                If the optional list of Transcripts is supplied, get only TranscriptVariations
+                associated with those Transcripts.
+  Returntype  : listref of Bio::EnsEMBL::Variation::TranscriptVariation objects
+  Exceptions  : Thrown on wrong argument type
+  Caller      : general
+  Status      : At Risk
+
+=cut
+
+sub get_all_TranscriptVariations {
+  my $self = shift;
+  my $trs = shift;
+  
+  my $cons = $self->variation_feature->get_all_TranscriptVariations($trs);
+  
+  # convert the TV to a SARA one if this is a SARA genotype
+  if($self->_is_sara) {
+	$_->_convert_to_sara foreach @$cons;
+  }
+  
+  # otherwise we need to rearrange the TranscriptVariationAlleles based
+  # on the alleles of this genotype
+  else {
+	my %alleles;
+	$alleles{$_} = 1 foreach split /\||\/|\\/, $self->allele_string;
+	
+	$_->_rearrange_alleles(\%alleles) foreach @$cons;
+  }
+  
+  return $cons;
+}
 
 =head2 variation_name
 
@@ -558,4 +623,24 @@ sub get_all_sources{
     }
     return \@sources;
 }
+
+sub _is_sara{
+  my $self = shift;
+  
+  if(!defined($self->{_is_sara})) {
+	my $allele_string = $self->allele_string;
+	my $ref = $self->ref_allele_string;
+	
+	my $is_sara = 1;
+	
+	foreach my $a(split /\/|\||\\/, $allele_string) {
+	  $is_sara = 0 if $ref !~ /$a/i;
+	}
+	
+	$self->{_is_sara} = $is_sara;
+  }
+  
+  return $self->{_is_sara};
+}
+
 1;
