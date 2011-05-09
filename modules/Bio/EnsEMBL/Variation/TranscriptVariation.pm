@@ -209,6 +209,11 @@ sub transcript {
     return $self->SUPER::feature($transcript, 'Transcript');
 }
 
+sub feature {
+    my $self = shift;
+    return $self->transcript(@_);
+}
+
 =head2 cdna_start
 
   Arg [1]    : (optional) int $start
