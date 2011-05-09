@@ -454,8 +454,12 @@ sub get_all_VariationFeatureOverlapAlleles {
 
 =head2 consequence_type
 
-  Description: Get a list of all the unique display_terms of the alleles of this 
-               VariationFeatureOverlap
+  Arg [1]    : (optional) String $term_type
+  Description: Get a list of all the unique consequence terms of the alleles of this 
+               VariationFeatureOverlap. By default returns Ensembl display terms
+               (e.g. 'NON_SYNONYMOUS_CODING'). $term_type can also be 'label'
+               (e.g. 'Non-synonymous coding'), 'SO' (Sequence Ontology, e.g.
+               'non_synonymous_codon') or 'NCBI' (e.g. 'missense')
   Returntype : listref of strings
   Exceptions : none
   Status     : At Risk
@@ -464,6 +468,16 @@ sub get_all_VariationFeatureOverlapAlleles {
 
 sub consequence_type {
     my $self = shift;
+	my $term_type = shift;
+	
+    # delete cached term
+    if(defined($term_type)) {
+        delete $self->{_consequence_type};
+    }
+    
+	$term_type ||= 'display';
+	my $method_name = $term_type.($term_type eq 'label' ? '' : '_term');
+    $method_name = 'display_term' unless $self->most_severe_OverlapConsequence->can($method_name);
     
     unless ($self->{_consequence_type}) {
         
@@ -474,7 +488,7 @@ sub consequence_type {
 
         for my $allele (@{ $self->get_all_alternate_VariationFeatureOverlapAlleles }) {
             for my $cons (@{ $allele->get_all_OverlapConsequences }) {
-                $cons_types{$cons->display_term}++
+                $cons_types{$cons->$method_name}++
             }
         }
         
@@ -518,7 +532,12 @@ sub most_severe_OverlapConsequence {
 
 =head2 display_consequence
 
-  Description: Get the display_term of the most severe OverlapConsequence 
+  Arg [1]    : (optional) String $term_type
+  Description: Get the term for the most severe OverlapConsequence of this 
+               VariationFeatureOverlap. By default returns Ensembl display terms
+               (e.g. 'NON_SYNONYMOUS_CODING'). $term_type can also be 'label'
+               (e.g. 'Non-synonymous coding'), 'SO' (Sequence Ontology, e.g.
+               'non_synonymous_codon') or 'NCBI' (e.g. 'missense')
   Returntype : string
   Exceptions : none
   Status     : At Risk
@@ -527,7 +546,36 @@ sub most_severe_OverlapConsequence {
 
 sub display_consequence {
     my $self = shift;
-    return $self->most_severe_OverlapConsequence->display_term;
+	my $term_type = shift;
+	
+	$term_type ||= 'display';
+	my $method_name = $term_type.($term_type eq 'label' ? '' : '_term');
+	$method_name = 'display_term' unless $self->most_severe_OverlapConsequence->can($method_name);
+    
+    return $self->most_severe_OverlapConsequence->$method_name;
 }
+
+sub _convert_to_sara {
+    my $self = shift;
+    
+    my $ref_allele = $self->{reference_allele};
+    $ref_allele->_convert_to_sara;
+    
+    $self->{alt_alleles} = [$ref_allele];
+}
+
+sub _rearrange_alleles {
+    my $self = shift;
+    my $keep_alleles = shift;
+    
+    # fix alt alleles
+    my $alt_alleles = $self->{alt_alleles};
+    my @new_alleles = grep {$keep_alleles->{$_->variation_feature_seq}} @$alt_alleles;
+    $self->{alt_alleles} = scalar @new_alleles ? \@new_alleles : $alt_alleles;
+    
+    # copy to ref allele if homozygous non-ref
+    $self->{reference_allele} = $self->{alt_alleles}->[0] if scalar keys %$keep_alleles == 1;
+}
+
 
 1;
