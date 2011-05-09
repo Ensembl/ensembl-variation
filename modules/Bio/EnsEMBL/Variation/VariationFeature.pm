@@ -549,8 +549,12 @@ sub variation {
 
 =head2 consequence_type
 
-  Description: Get a list of all the unique display_terms of the OverlapConsequences 
-               of this VariationFeature
+  Arg [1]    : (optional) String $term_type
+  Description: Get a list of all the unique consequence terms of this 
+               VariationFeature. By default returns Ensembl display terms
+               (e.g. 'NON_SYNONYMOUS_CODING'). $term_type can also be 'label'
+               (e.g. 'Non-synonymous coding'), 'SO' (Sequence Ontology, e.g.
+               'non_synonymous_codon') or 'NCBI' (e.g. 'missense')
   Returntype : listref of strings
   Exceptions : none
   Status     : At Risk
@@ -560,13 +564,23 @@ sub variation {
 sub consequence_type {
     
     my $self = shift;
+	my $term_type = shift;
+	
+    # delete cached term
+    if(defined($term_type)) {
+        delete $self->{_consequence_type};
+    }
+	
+	$term_type ||= 'display';
+	my $method_name = $term_type.($term_type eq 'label' ? '' : '_term');
+	$method_name = 'display_term' unless $self->most_severe_OverlapConsequence->can($method_name);
 
     unless ($self->{consequence_type}) {
 
         # work out the terms from the OverlapConsequence objects
         
         $self->{consequence_type} = 
-            [ map { $_->display_term } @{ $self->get_all_OverlapConsequences } ];
+            [ map { $_->$method_name } @{ $self->get_all_OverlapConsequences } ];
     }
     
     return $self->{consequence_type};
@@ -661,20 +675,27 @@ sub most_severe_OverlapConsequence {
 
 =head2 display_consequence
 
-  Args       : none
-  Example    : $display_consequence = $vf->display_consequence();
-  Description: Getter for the consequence type to display,
-               when more than one
+  Arg [1]    : (optional) String $term_type
+  Description: Get the term for the most severe consequence of this 
+               VariationFeature. By default returns Ensembl display terms
+               (e.g. 'NON_SYNONYMOUS_CODING'). $term_type can also be 'label'
+               (e.g. 'Non-synonymous coding'), 'SO' (Sequence Ontology, e.g.
+               'non_synonymous_codon') or 'NCBI' (e.g. 'missense')
   Returntype : string
   Exceptions : none
-  Caller     : webteam
   Status     : At Risk
 
 =cut
 
 sub display_consequence {
     my $self = shift;
-    return $self->most_severe_OverlapConsequence->display_term;
+	my $term_type = shift;
+	
+	$term_type ||= 'display';
+	my $method_name = $term_type.($term_type eq 'label' ? '' : '_term');
+	$method_name = 'display_term' unless $self->most_severe_OverlapConsequence->can($method_name);
+	
+    return $self->most_severe_OverlapConsequence->$method_name;
 }
 
 =head2 add_consequence_type
