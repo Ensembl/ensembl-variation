@@ -189,10 +189,10 @@ my $import_object;
 if ($species =~ m/zebrafish/i || $species =~ m/^pig$/i || $species eq 'cat' || $species =~ m/zebrafinch/i || $species =~ m/tetraodon/i) {
   $import_object = dbSNP::MappingChromosome->new(@parameters);
 }
-elsif ($species =~ m/chimp/i || $species =~ m/chicken/i || $species =~ m/rat/i || $species =~ m/horse/i || $species =~ m/platypus/i || $species =~ m/opossum/i) {
+elsif ($species =~ m/chimp/i || $species =~ m/chicken/i || $species =~ m/rat/i || $species =~ m/horse/i || $species =~ m/platypus/i || $species =~ m/opossum/i || $species =~ m/mouse/i) {
   $import_object = dbSNP::GenericChromosome->new(@parameters);
 }
-elsif ($species =~ m/mouse/i || $species =~ m/dog/i) {
+elsif ($species =~ m/dog/i) {
   $import_object = dbSNP::GenericContig->new(@parameters);
 }
 elsif ($species =~ m/mosquitos/i) {
