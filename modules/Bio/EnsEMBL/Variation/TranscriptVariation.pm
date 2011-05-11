@@ -209,6 +209,16 @@ sub transcript {
     return $self->SUPER::feature($transcript, 'Transcript');
 }
 
+=head2 feature
+
+  Arg [1]    : (optional) Bio::EnsEMBL::Transcript
+  Description: Get/set the associated Transcript (overriding the superclass feature method)
+  Returntype : Bio::EnsEMBL::Transcript
+  Exceptions : throws if argument is wrong type
+  Status     : At Risk
+
+=cut
+
 sub feature {
     my $self = shift;
     return $self->transcript(@_);
