@@ -209,33 +209,19 @@ sub fetch_by_VariationFeature {
   if(!defined($vf->dbID())) {
     throw("VariationFeature arg must have defined dbID");
   }
+  
+  # cache the position so objs_from_sth picks it up later to filter
+  $self->{_vf_pos} = $vf->seq_region_start;
+  
+  # fetch by slice using expanded feature slice
   my $ldFeatureContainer = $self->fetch_by_Slice($vf->feature_Slice->expand(MAX_SNP_DISTANCE,MAX_SNP_DISTANCE),$pop);
-  #we need to filter and only return LD with the vf associated
-  my %feature_container = ();
-  my %vf_objects = ();
-  my %pop_ids = ();
-  my $vf_id = $vf->dbID;
-  #iterate all the LD container looking for values related to this variation Feature
-  foreach my $ld_key (keys %{$ldFeatureContainer->{'ldContainer'}}){
-      if ($ld_key =~ /$vf_id/){
-	  #add the value to the new hash
-	  my ($vf_id1,$vf_id2) = split /-/,$ld_key;
-
-	  $feature_container{$vf_id1 . '-' . $vf_id2} = $ldFeatureContainer->{'ldContainer'}->{$ld_key};
-	  $vf_objects{$vf_id1} = $ldFeatureContainer->{'variationFeatures'}->{$vf_id1};
-	  $vf_objects{$vf_id2} = $ldFeatureContainer->{'variationFeatures'}->{$vf_id2};
-
-	  map {$pop_ids{$_}++} keys %{$ldFeatureContainer->{'ldContainer'}->{$ld_key}};	  
-      }
-  }
-
-  my $new_ldFeatureContainer =  Bio::EnsEMBL::Variation::LDFeatureContainer->new(
- 							   '-ldContainer'=> \%feature_container,
-							   '-name' => $vf->dbID,
-							   '-variationFeatures' => \%vf_objects
-										 );
-  $new_ldFeatureContainer->{'_pop_ids'} = \%pop_ids;
-  return $new_ldFeatureContainer;
+  
+  # delete the cached pos
+  delete $self->{_vf_pos};
+  
+  $ldFeatureContainer->name($vf->dbID);
+  
+  return $ldFeatureContainer;
   
  
 }
@@ -374,134 +360,6 @@ sub get_populations_by_Slice{
 }
 
 
-#
-# private method, creates ldfeatureContainer objects from an executed statement handle
-# ordering of columns must be consistant
-#
-sub _objs_from_sth {
-  my $self = shift;
-  return $self->_objs_from_sth_temp_file( @_ );
-  my $sth  = shift;
-  my $slice = shift;
-  my $siblings = shift;
-
-  my ($sample_id,$ld_region_id,$ld_region_start,$ld_region_end,$d_prime,$r2,$sample_count);
-  my ($vf_id1,$vf_id2);
-
-  my %feature_container = ();
-  my %vf_objects = ();
-
-  #get all Variation Features in Slice
-  my $vfa = $self->db->get_VariationFeatureAdaptor();
-  my $variations = $vfa->fetch_all_by_Slice($slice); #retrieve all variation features
-  #create a hash that maps the position->vf_id
-  my %pos_vf = ();
-  my $region_Slice = $slice->seq_region_Slice();
-  map {$pos_vf{$_->seq_region_start} = $_->transfer($region_Slice)} @{$variations};
-
-  my %alleles_variation = (); #will contain a record of the alleles in the variation. A will be the major, and a the minor. When more than 2 alleles
-  #, the genotypes for that variation will be discarded
-  my %individual_information = (); #to store the relation of snps->individuals
-  my %regions; #will contain all the regions in the population and the number of genotypes in each one
-  my $previous_seq_region_id = 0;
-
-  my %_pop_ids;
-
-  my ($individual_id, $seq_region_id, $seq_region_start,$seq_region_end,$genotypes, $population_id);
-  my $bin = $self->executable;
-  #open the pipe between processes if the binary file exists in the PATH
-  if( ! $bin ) {
-    warning("Binary file calc_genotypes not found. Please, read the ensembl-variation/C_code/README.txt file if you want to use LD calculation\n");
-    goto OUT;
-  }
-  my $pid;
-  eval "require IPC::Run"; #check wether the IPC::Run module it is installed
-  if( $@ ){
-    warning("IPC::Run it is not installed in you system. Please, read ensembl-variation/C_code/README.txt if you want to use the LD calculation");
-    goto OUT;
-  } else{
-    use IPC::Run qw(start finish);
-    $pid = start [$bin], '<pipe', \*IN, '>pipe', \*OUT, '2>pipe', \*ERR || die "returned $?" ;
-  }
-    
-  #set autoflush
-  my $piid = fork;
-  if (!defined $piid){
-    throw("Not possible to fork: $!\n");
-  }
-  elsif ($piid !=0){
-      close IN || die "Could not close writer filehandle: $!\n";
-      #you are the father, read from the pipe
-      while(<OUT>){
-	  my %ld_values = ();
-#     936	965891	164284	166818	0.628094	0.999996	120 
-	  #get the ouput into the hashes
-	  chomp;
-	  ($sample_id,$ld_region_id,$ld_region_start,$ld_region_end,$r2,$d_prime,$sample_count) = split /\s/;
-	  $ld_values{'d_prime'} = $d_prime;
-	  $ld_values{'r2'} = $r2;
-	  $ld_values{'sample_count'} = $sample_count;
-	  $vf_id1 = $pos_vf{$ld_region_start}->dbID();
-	  $vf_id2 = $pos_vf{$ld_region_end}->dbID();
-
-	  $feature_container{$vf_id1 . '-' . $vf_id2}->{$sample_id} = \%ld_values;
-	  $vf_objects{$vf_id1} = $pos_vf{$ld_region_start};
-	  $vf_objects{$vf_id2} = $pos_vf{$ld_region_end};
-
-	  $_pop_ids{$sample_id} = 1;	  
-      }
-      waitpid($piid,0);
-      close OUT || die "Could not close filehandle: $!\n";
-      finish $pid || die "Could not finish fork..: $!\n";
-  }
-  else{
-      close OUT || die "Could not close filehandle: $!\n";
-      #the parent dumps the data from the database and writes in the pipe
-
-      $sth->bind_columns(\$individual_id, \$seq_region_id, \$seq_region_start, \$seq_region_end, \$genotypes, \$population_id); 
-  
-      while($sth->fetch()) {
-	  #only print genotypes without parents genotyped
-	  if (!exists $siblings->{$population_id . '-' . $individual_id}){ #necessary to use the population_id
-	      $self->_store_genotype(\%individual_information,\%alleles_variation, $individual_id, $seq_region_start, $genotypes, $population_id, $slice);
-	      $previous_seq_region_id = $seq_region_id;
-	  }      
-      }
-
-      $sth->finish();
-      select(IN); #necessary to flush the pipe
-      $| = 1;
-      #we have to print the variations
-      foreach my $snp_start (sort{$a<=>$b} keys %alleles_variation){
-	  foreach my $population (keys %{$alleles_variation{$snp_start}}){
-	      #if the variation has 2 alleles, print all the genotypes to the file
-	      if (keys %{$alleles_variation{$snp_start}{$population}} == 2){		
-		  $self->_convert_genotype($alleles_variation{$snp_start}{$population},$individual_information{$population}{$snp_start});		  
-		  foreach my $individual_id (keys %{$individual_information{$population}{$snp_start}}){
-		      print IN join("\t",$previous_seq_region_id,$snp_start, $snp_start,
-				      $population, $individual_id,  
-				      $individual_information{$population}{$snp_start}{$individual_id}{genotype})."\n" || warn $!;
-		  
-		  }
-	      }
-	  }	
-      }
-      close IN || die "Could not close filehandle: $! and $?\n";
-    POSIX:_exit(0);
-  }
-
-OUT:
-  my $t = Bio::EnsEMBL::Variation::LDFeatureContainer->new(
- 							   '-ldContainer'=> \%feature_container,
-							   '-name' => '',
-							   '-variationFeatures' => \%vf_objects
-							   );
-
-  $t->{'_pop_ids'} =\%_pop_ids;
-
-  return $t;      
-}
-
 #for a given population, gets all individuals that are children (have father or mother)
 sub _get_siblings{
     my $self = shift;
@@ -638,7 +496,7 @@ sub _get_LD_populations{
 }
 
 
-sub _objs_from_sth_temp_file {
+sub _objs_from_sth {
   my $self = shift;
   my $sth  = shift;
   my $slice = shift;
@@ -677,9 +535,8 @@ sub _objs_from_sth_temp_file {
     goto OUT;
   }
 
-  my $pid;
-  my $file= $self->temp_path."/".sprintf( "ld%08x%08x%08x", $$, time, rand( 0x7fffffff) );
-  open IN, ">$file.in";
+  #my $file= $self->temp_path."/".sprintf( "ld%08x%08x%08x", $$, time, rand( 0x7fffffff) );
+  #open IN, ">$file.in";
   $sth->bind_columns(\$individual_id, \$seq_region_id, \$seq_region_start, \$seq_region_end, \$genotypes, \$population_id);
   while($sth->fetch()) {
     #only print genotypes without parents genotyped
@@ -689,55 +546,90 @@ sub _objs_from_sth_temp_file {
     }
   }
   $sth->finish();
-      #we have to print the variations
-      foreach my $snp_start (sort{$a<=>$b} keys %alleles_variation){
-          foreach my $population (keys %{$alleles_variation{$snp_start}}){
-              #if the variation has 2 alleles, print all the genotypes to the file
-              if (keys %{$alleles_variation{$snp_start}{$population}} == 2){
-                  $self->_convert_genotype($alleles_variation{$snp_start}{$population},$individual_information{$population}{$snp_start});
-                  foreach my $individual_id (keys %{$individual_information{$population}{$snp_start}}){
-                      print IN join("\t",$previous_seq_region_id,$snp_start, $snp_start,
-                                      $population, $individual_id,
-                                      $individual_information{$population}{$snp_start}{$individual_id}{genotype})."\n" || warn $!;
-
-                  }
-              }
-          }
-      }
-  close IN;
-#  `calc_genotypes <$IN >$OUT`;
-  `$bin <$file.in >$file.out`;
-  open OUT, "$file.out";
-  while(<OUT>){
-    my %ld_values = ();
-#     936	965891	164284	166818	0.628094	0.999996	120 
+  
+  #we have to print the variations
+  my (%in_files, %in_file_names);
+  
+  foreach my $snp_start (sort{$a<=>$b} keys %alleles_variation){
+	foreach my $population (keys %{$alleles_variation{$snp_start}}){
+	  
+	  my $fh;
+	  
+	  # create file handles in hash
+	  if(!defined($in_files{$population})) {
+		$fh = FileHandle->new;
+		my $f_name = $self->temp_path."/".sprintf( "ld%08x%08x%08x%08x", $population, $$, time, rand( 0x7fffffff));		
+		$in_file_names{$population} = $f_name;
+		$fh->open(">".$f_name.".in");
+		$in_files{$population} = $fh;
+	  }
+	  
+	  else {
+		$fh = $in_files{$population};
+	  }
+	  
+	  #if the variation has 2 alleles, print all the genotypes to the file
+	  if (keys %{$alleles_variation{$snp_start}{$population}} == 2){
+		$self->_convert_genotype($alleles_variation{$snp_start}{$population},$individual_information{$population}{$snp_start});
+		foreach my $individual_id (keys %{$individual_information{$population}{$snp_start}}){
+		  print $fh join("\t",$previous_seq_region_id,$snp_start, $snp_start,
+		  $population, $individual_id,
+		  $individual_information{$population}{$snp_start}{$individual_id}{genotype})."\n" || warn $!;
+		}
+	  }
+	}
+  }
+  
+  # close file handles
+  $_->close for values %in_files;
+  
+  # run LD binary
+  `$bin <$_\.in >$_\.out` for values %in_file_names;
+  
+  
+  foreach my $file(values %in_file_names) {
+	open OUT, "$file.out";
+	while(<OUT>){
+	  my %ld_values = ();
+	  
+	  #     936	965891	164284	166818	0.628094	0.999996	120 
 	  #get the ouput into the hashes
 	  chomp;
+	  
 	  ($sample_id,$ld_region_id,$ld_region_start,$ld_region_end,$r2,$d_prime,$sample_count) = split /\s/;
+	  
+	  if(defined($self->{_vf_pos})) {
+		next unless $ld_region_start == $self->{_vf_pos} || $ld_region_end == $self->{_vf_pos};
+	  }
+	  
 	  $ld_values{'d_prime'} = $d_prime;
 	  $ld_values{'r2'} = $r2;
 	  $ld_values{'sample_count'} = $sample_count;
-          if (!defined $pos_vf{$ld_region_start} || !defined $pos_vf{$ld_region_end}){
-	       next; #problem to fix in the compressed genotype table: some of the positions seem to be wrong
-	   }
+	  
+	  if (!defined $pos_vf{$ld_region_start} || !defined $pos_vf{$ld_region_end}){
+		next; #problem to fix in the compressed genotype table: some of the positions seem to be wrong
+	  }
 	  $vf_id1 = $pos_vf{$ld_region_start}->dbID();
 	  $vf_id2 = $pos_vf{$ld_region_end}->dbID();
-
+	  
 	  $feature_container{$vf_id1 . '-' . $vf_id2}->{$sample_id} = \%ld_values;
 	  $vf_objects{$vf_id1} = $pos_vf{$ld_region_start};
 	  $vf_objects{$vf_id2} = $pos_vf{$ld_region_end};
-
+	  
 	  $_pop_ids{$sample_id} = 1;	  
-      }
-      close OUT || die "Could not close filehandle: $!\n";
-  unlink( "$file.in" );
-  unlink( "$file.out" );
+	}
+	close OUT || die "Could not close filehandle: $!\n";
+	
+	unlink( "$file.in" );
+	unlink( "$file.out" );
+  }
+  
 OUT:
   my $t = Bio::EnsEMBL::Variation::LDFeatureContainer->new(
- 							   '-ldContainer'=> \%feature_container,
-							   '-name' => '',
-							   '-variationFeatures' => \%vf_objects
-							   );
+	'-ldContainer'=> \%feature_container,
+	'-name' => '',
+	'-variationFeatures' => \%vf_objects
+  );
 
   $t->{'_pop_ids'} =\%_pop_ids;
 
