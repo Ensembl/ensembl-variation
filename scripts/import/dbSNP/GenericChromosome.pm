@@ -111,10 +111,49 @@ sub variation_feature{
 
      #my $tablename = $self->{'species_prefix'} . 'SNPContigLoc';
 
+    #ÊThe group term (the name of the reference assembly in the dbSNP b[version]_SNPContigInfo_[assembly]_[assembly version] table) is either specified via the config file or, if not, attempted to automatically determine from the data
+    my $group_term = $self->{'group_term'};
+    unless (defined($group_term)) {
+        
+        #ÊIf no group term was specified, use the one with the most entries in the dbSNP table. This may be wrong though so warn about it.
+        $stmt = qq{
+            SELECT
+                ctg.group_term,
+                COUNT(*) AS N
+            FROM
+                $tablename1 loc JOIN 
+		        $tablename2 ctg ON (
+		            ctg.ctg_id = loc.ctg_id
+		        )
+            ORDER BY
+                N DESC
+        };
+        $group_term = $self->{'dbSNP'}->selectall_arrayref($stmt)->[0][0];
+        print Progress::location();
+        
+        #ÊWarn about the group_term we settled for
+        debug(
+            qq{
+                There was no 'group_term' specified in the config file. 
+                What this means is that dbSNP maps variations to multiple assemblies. These
+                are indicated by the 'group_term' column in the $tablename2 table. We only import
+                chromosome labels for the mappings to the reference assembly we have in Ensembl and
+                for the other mappings we import the contig label. For example, in human dbSNP132, the
+                group_term for GRCh37 is 'GRCh'. You can specify this with the 'group_term' option in
+                the configuration file.
+                However, in order to save you the trouble, for now we'll just take the group_term with the
+                most entries in the current dbSNP table and hope that it is the correct one. If it's not you'll
+                have to truncate the variation_feature table and re-run the variation_feature subroutine.
+                
+                Based on this approach, we'll use the group term '$group_term'.
+            }
+        );
+    }
+    
     # In the query below, the pre-131 syntax was ref-assembly. In 131 it is GRCh37 for human. What is it for other species??
-    my $group_term = 'ref_';
-    my ($release) = $self->{'dbSNP_version'} =~ m/^b?(\d+)$/;
-    $group_term = 'GRCh' if ($self->{'dbm'}->dbCore()->species =~ m/homo|human/i && $release > 130);
+    #my $group_term = 'ref_';
+    #my ($release) = $self->{'dbSNP_version'} =~ m/^b?(\d+)$/;
+    #$group_term = 'GRCh' if ($self->{'dbm'}->dbCore()->species =~ m/homo|human/i && $release > 130);
     
 	#	     t2.group_term LIKE 'ref_%'
      $stmt = "SELECT ";
