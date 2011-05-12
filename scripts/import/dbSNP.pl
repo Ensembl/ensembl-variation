@@ -61,7 +61,8 @@ my @option_defs = (
   'mssql_driver=s',
   'skip_routine=s@',
   'scriptdir=s', 
-  'logfile=s'
+  'logfile=s',
+  'group_term=s'
 );
 
 GetOptions(\%options,@option_defs);
@@ -76,6 +77,7 @@ my $TMP_DIR = $options{'tmpdir'};
 my $TMP_FILE = $options{'tmpfile'};
 my $MAPPING_FILE_DIR = $options{'mapping_file_dir'};
 my $SCHEMA_FILE = $options{'schema_file'};
+my $GROUP_TERM = $options{'group_term'};
 my $species = $options{'species'};
 my $dshost = $options{'dshost'};
 my $dsuser = $options{'dsuser'};
@@ -181,6 +183,7 @@ my @parameters = (
   -mapping_file_dir => $MAPPING_FILE_DIR,
   -dbSNP_version => $dbSNP_BUILD_VERSION,
   -assembly_version => $ASSEMBLY_VERSION,
+  -group_term => $GROUP_TERM,
   -skip_routines => \@skip_routines,
   -scriptdir => $scriptdir,
   -log => $logh
