@@ -125,10 +125,12 @@ sub variation_feature{
 		        $tablename2 ctg ON (
 		            ctg.ctg_id = loc.ctg_id
 		        )
+		    GROUP BY
+		        ctg.group_term
             ORDER BY
                 N DESC
         };
-        $group_term = $self->{'dbSNP'}->selectall_arrayref($stmt)->[0][0];
+        $group_term = $self->{'dbSNP'}->db_handle->selectall_arrayref($stmt)->[0][0];
         print Progress::location();
         
         #ÊWarn about the group_term we settled for
