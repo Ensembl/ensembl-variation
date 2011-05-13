@@ -156,6 +156,14 @@ sub fetch_all_by_Slice{
 			#we need to check the genotypes are within the alleles of the variation
 			if ($genotypes->[$i]->seq_region_start == $af->seq_region_start && (exists $alleles->{$string1} || exists $alleles->{$string2})){
 				
+				# compressed genotypes can only be SNPs
+				if($genotypes->[$i]->{_table} eq 'compressed') {
+					next unless $af->seq_region_start == $af->seq_region_end;
+					
+					# this should filter out indels (A/-, -/G) but keep in mixed class (A/T/-)
+					next if $af->{_vf_allele_string} =~ /\-/ && $af->{_vf_allele_string} !~ /.+\/.+\/.+/;
+				}
+				
 				# create a clone of the AF to work with
 				my $new_af = { %$af };
 				bless $new_af, ref $af;
