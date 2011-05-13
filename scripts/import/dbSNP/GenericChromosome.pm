@@ -113,12 +113,14 @@ sub variation_feature{
 
     #ÊThe group term (the name of the reference assembly in the dbSNP b[version]_SNPContigInfo_[assembly]_[assembly version] table) is either specified via the config file or, if not, attempted to automatically determine from the data
     my $group_term = $self->{'group_term'};
-    unless (defined($group_term)) {
+    my $group_label = $self->{'group_label'};
+    unless (defined($group_term) && defined($group_label)) {
         
         #ÊIf no group term was specified, use the one with the most entries in the dbSNP table. This may be wrong though so warn about it.
         $stmt = qq{
             SELECT
                 ctg.group_term,
+                ctg.group_label,
                 COUNT(*) AS N
             FROM
                 $tablename1 loc JOIN 
@@ -126,11 +128,14 @@ sub variation_feature{
 		            ctg.ctg_id = loc.ctg_id
 		        )
 		    GROUP BY
-		        ctg.group_term
+		        ctg.group_term,
+		        ctg.group_label
             ORDER BY
                 N DESC
         };
-        $group_term = $self->{'dbSNP'}->db_handle->selectall_arrayref($stmt)->[0][0];
+        my $result = $self->{'dbSNP'}->db_handle->selectall_arrayref($stmt);
+        $group_term = $result->[0][0];
+        $group_label = $result->[0][1];
         print Progress::location();
         
         #ÊWarn about the group_term we settled for
@@ -141,13 +146,13 @@ sub variation_feature{
                 are indicated by the 'group_term' column in the $tablename2 table. We only import
                 chromosome labels for the mappings to the reference assembly we have in Ensembl and
                 for the other mappings we import the contig label. For example, in human dbSNP132, the
-                group_term for GRCh37 is 'GRCh'. You can specify this with the 'group_term' option in
+                group_term for GRCh37 is 'GRCh37'. You can specify this with the 'group_term' option in
                 the configuration file.
                 However, in order to save you the trouble, for now we'll just take the group_term with the
                 most entries in the current dbSNP table and hope that it is the correct one. If it's not you'll
                 have to truncate the variation_feature table and re-run the variation_feature subroutine.
                 
-                Based on this approach, we'll use the group term '$group_term'.
+                Based on this approach, we'll use the group term '$group_term' and group label '$group_label'.
             }
         );
     }
@@ -169,7 +174,8 @@ sub variation_feature{
                    loc.lc_ngbr+2,
 		   loc.rc_ngbr,
 		   CASE WHEN
-		     ctg.group_term LIKE '$group_term%'
+		     ctg.group_term LIKE '$group_term' AND
+		     ctg.group_label LIKE '$group_label'
 		   THEN
 		     ctg.contig_chr
 		   ELSE
