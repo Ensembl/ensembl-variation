@@ -16,7 +16,7 @@ my ($TMP_DIR, $TMP_FILE, $LIMIT,$status_file, $file_number);
 {
   my ($vhost, $vport, $vdbname, $vuser, $vpass,
       $chost, $cport, $cdbname, $cuser, $cpass,
-      $limit, $num_processes);
+      $limit, $num_processes,$pid);
 
   GetOptions('chost=s'   => \$chost,
              'cuser=s'   => \$cuser,
@@ -33,7 +33,8 @@ my ($TMP_DIR, $TMP_FILE, $LIMIT,$status_file, $file_number);
              'limit=s'   => \$limit,
 	     'num_processes=i' => \$num_processes,
 	     'status_file=s' => \$status_file,
-	     'file=i'  => \$file_number);
+	     'file=i'  => \$file_number,
+	     'pid=i' => \$pid);
 
   #added default options
   $chost    ||= 'ecs2';
@@ -71,8 +72,10 @@ my ($TMP_DIR, $TMP_FILE, $LIMIT,$status_file, $file_number);
   $TMP_DIR  = $ImportUtils::TMP_DIR;
   $TMP_FILE = $ImportUtils::TMP_FILE;
 
-
-  flanking_sequence($dbCore,$dbVar,$file_number);
+  $file_number ||= $ENV{'LSB_JOBINDEX'};
+  $TMP_FILE .= ".$file_number";
+  
+  flanking_sequence($dbCore,$dbVar,$file_number,$pid);
   open STATUS, ">>$TMP_DIR/$status_file"
     or throw("Could not open tmp file: $TMP_DIR/$status_file\n"); 
   flock(STATUS,LOCK_EX);
@@ -97,6 +100,7 @@ sub flanking_sequence {
   my $dbCore = shift;
   my $dbVar  = shift;
   my $file_number = shift;
+  my $pid = shift;
   
   debug("Compressing storage of flanking sequence");
   my $slice_adaptor = $dbCore->get_SliceAdaptor();
@@ -108,10 +112,10 @@ sub flanking_sequence {
   
   my $call = "lsrcp $hostname:$TMP_DIR/$dbname.flanking_sequence_$file_number\.txt /tmp/$dbname.flanking_sequence_$file_number\.txt";
   
-  system($call);
+  #system($call);
 
-  open FH, ">/tmp/$dbname.flanking_sequence_out_$file_number\.txt" or throw("can't open flanking_output");
-  open IN, "</tmp/$dbname.flanking_sequence_$file_number\.txt" or throw("can't open flanking input");
+  open FH, ">$TMP_DIR/$dbname.flanking_sequence_out.$pid\.$file_number\.txt" or throw("can't open flanking_output");
+  open IN, "<$TMP_DIR/$dbname.flanking_sequence.$pid\.$file_number\.txt" or throw("can't open flanking input");
 
   my ($var_id,$up_seq, $dn_seq, $sr_id, $sr_start, $sr_end, $sr_strand);
   my $previous_var_id = 0; #to know when we change variation
@@ -170,7 +174,7 @@ sub flanking_sequence {
 		  my $up = $slice->subseq($up_sr_start+$w, $up_sr_end+$w, $sr_strand);
 		  $up_seq = undef if(uc($up) eq uc($up_seq));
 		  if($w && !defined($up_seq)){
-		      print STDERR "*";
+		      print STDERR "uw $var_id\n";
 		      $up_sr_start += $w;
 		      $up_sr_end += $w;
 		  }
@@ -180,7 +184,7 @@ sub flanking_sequence {
 		  my $dn = $slice->subseq($dn_sr_start+$w, $dn_sr_end+$w, $sr_strand);
 		  $dn_seq = undef if(uc($dn) eq uc($dn_seq));
 		  if($w && !defined($dn_seq)){
-		      print STDERR "*";
+		      print STDERR "dw $var_id\n";
 		      $dn_sr_start += $w;
 		      $dn_sr_end += $w;
 		  }
@@ -238,9 +242,9 @@ sub flanking_sequence {
   close FH;
   close IN;
   $call = "lsrcp /tmp/$dbname.flanking_sequence_out_$file_number\.txt $hostname:$TMP_DIR/$dbname.flanking_sequence_out_$file_number\.txt";
-  system($call);
-  unlink("/tmp/$dbname.flanking_sequence_out_$file_number\.txt");
-  unlink("/tmp/$dbname.flanking_sequence_$file_number\.txt");
+  #system($call);
+  #unlink("/tmp/$dbname.flanking_sequence_out_$file_number\.txt");
+  #unlink("/tmp/$dbname.flanking_sequence_$file_number\.txt");
   return;
 }
 
@@ -257,13 +261,13 @@ sub last_process{
     #group all the fragments in 1 file
     my $dbname = $dbVar->dbname(); #get the name of the database to create the file
     my $call = "cat $TMP_DIR/$dbname.flanking_sequence_out*.txt > $TMP_DIR/$TMP_FILE";
-    system($call);
+    #system($call);
     #delete the files
     #unlink(<$TMP_DIR/$dbname.flanking_sequence*.txt>);
     #and upload all the information to the flanking_sequence table
-    load ($dbVar,qw(flanking_sequence variation_id up_seq down_seq up_seq_region_start up_seq_region_end down_seq_region_start down_seq_region_end seq_region_id seq_region_strand));
+    #load ($dbVar,qw(flanking_sequence variation_id up_seq down_seq up_seq_region_start up_seq_region_end down_seq_region_start down_seq_region_end seq_region_id seq_region_strand));
 
-    unlink("$TMP_DIR/$status_file");
+    #unlink("$TMP_DIR/$status_file");
     update_meta_coord($dbCore, $dbVar, 'flanking_sequence');
 }
 
