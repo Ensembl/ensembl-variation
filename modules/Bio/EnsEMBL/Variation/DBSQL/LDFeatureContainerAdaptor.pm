@@ -580,8 +580,18 @@ sub _objs_from_sth {
 	}
   }
   
-  # close file handles
-  $_->close for values %in_files;
+  # close file handles and check file sizes
+  foreach my $key(keys %in_files) {
+	my $f = $in_files{$key};
+	
+	my @stats = stat $f;
+	$f->close;
+	if($stats[7] == 0) {
+	  unlink($in_file_names{$key}.'.in');
+	  delete $in_file_names{$key};
+	  delete $in_files{$key};
+	}
+  }
   
   # run LD binary
   `$bin <$_\.in >$_\.out` for values %in_file_names;
@@ -598,6 +608,7 @@ sub _objs_from_sth {
 	  
 	  ($sample_id,$ld_region_id,$ld_region_start,$ld_region_end,$r2,$d_prime,$sample_count) = split /\s/;
 	  
+	  # skip entries unrelated to selected vf if doing fetch_all_by_VariationFeature
 	  if(defined($self->{_vf_pos})) {
 		next unless $ld_region_start == $self->{_vf_pos} || $ld_region_end == $self->{_vf_pos};
 	  }
