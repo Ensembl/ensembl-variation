@@ -41,6 +41,7 @@ use LRG::LRGMapping;
 use Bio::EnsEMBL::Registry;
 
 # Some constants
+my $SPECIES = q{human};
 my $LRG_COORD_SYSTEM_NAME = q{lrg};
 my $LRG_BIOTYPE = q{LRG_gene};
 my $LRG_ANALYSIS_LOGIC_NAME = q{LRG_import};
