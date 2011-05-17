@@ -51,6 +51,11 @@ our @ATTRIB_TYPES = (
         code => 'sift_prediction',
         description => 'SIFT prediction',
     },
+    {
+        code => 'short_name',
+        name => 'Short name',
+        description => 'A shorter name for an instance, e.g. a VariationSet',
+    },
 );
 
 our @VARIATION_CLASSES = (
