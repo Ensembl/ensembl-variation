@@ -1,9 +1,7 @@
 use Bio::EnsEMBL::Variation::Utils::Config qw(
     @ATTRIB_TYPES
-    @VARIATION_CLASSES 
-    @OVERLAP_CONSEQUENCES 
-    @FEATURE_TYPES
-    %PROTEIN_FUNCTION_PREDICTIONS
+    @ATTRIB_SETS
+    %ATTRIBS
 );
 
 my %attrib_ids;
@@ -45,59 +43,45 @@ for my $attrib_type (@ATTRIB_TYPES) {
     $attrib_type_ids->{$code} = $attrib_type_id;
 }
 
-# now define the SO term mappings
-
-my $seen_SO_mappings;
-
-$SQL .= "\n";
-
-for my $class_set (@VARIATION_CLASSES, @OVERLAP_CONSEQUENCES, @FEATURE_TYPES) {
-
-    my $set_sql;
-
-    my @SO_mappings;
-
-    for my $type (qw(SO_accession SO_term display_term)) {
+# second, take the entries from the ATTRIBS and add them as single-element hashes to the @ATTRIB_SETS array
+while (my ($type,$values) = each(%ATTRIBS)) {
     
-        my $attrib_type_id = $attrib_type_ids->{$type} or die "Unrecognised attrib_type: $type";
+    map {push(@ATTRIB_SETS,{$type => $_})} @{$values};
+} 
 
-        my $value = $class_set->{$type};
+# third, loop over the ATTRIB_SETS array and add attribs and assign them to attrib_sets as necessary
+for my $set (@ATTRIB_SETS) {
+    
+    #ÊKeep the attrib_ids
+    my @attr_ids;
+    
+    # Iterate over the type => value entries in the set
+    while (my ($type,$value) = each(%{$set})) {
         
-        next unless $value;
+        # Lookup the attrib_type
+        my $attrib_type_id = $attrib_type_ids->{$type} or next;
+        
+        # insert a new attrib if we haven't seen it before
+        my $attrib_id = $attrib_ids{$attrib_type_ids . "_" . $value};
+        
+        unless (defined($attrib_id)) {
             
-        push @SO_mappings, $value;
-
-        my $attrib_id_key = $type.'_'.$value;
-        
-        my $attrib_id = $attrib_ids{$attrib_id_key};
-        
-        unless ($attrib_id) {
             $attrib_id = $last_attrib_id++;
-            $SQL .= sprintf($attrib_fmt, $attrib_id, $attrib_type_id, $value)."\n";
-            $attrib_ids{$attrib_id_key} = $attrib_id;
+            $SQL .= sprintf($attrib_fmt, $attrib_id, $attrib_type_id, $value)."\n"; 
+            $attrib_ids{$attrib_type_ids . "_" . $value} = $attrib_id;
+            
         }
-
-        $set_sql .= (sprintf $set_fmt, $last_attrib_set_id, $attrib_id)."\n";
+        
+        push(@attr_ids,$attrib_id);   
     }
-
-    $SQL .= $set_sql."\n" unless $seen_SO_mappings->{join '_', @SO_mappings}++;
-
-    $last_attrib_set_id++;
-}
-
-# now the protein function prediction string
-
-for my $tool (keys %PROTEIN_FUNCTION_PREDICTIONS) {
-
-    my $attrib_type_id = $attrib_type_ids->{$tool};
     
-    for my $value (@{ $PROTEIN_FUNCTION_PREDICTIONS{$tool} }) {
-        my $attrib_id = $last_attrib_id++;
-        $SQL .= sprintf($attrib_fmt, $attrib_id, $attrib_type_id, $value);
-        $SQL .= "\n";
+    # If the set had more than one attribute, group them into a set
+    if (scalar(@attr_ids) > 1) {
+        
+        my $attrib_set_id = $last_attrib_set_id++;
+        map {$SQL .= sprintf($set_fmt, $attrib_set_id, $_)."\n"} @attr_ids;
+        
     }
-
-    $SQL .= "\n";
 }
 
-print $SQL;
+print $SQL . "\n";
