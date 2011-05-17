@@ -5,6 +5,8 @@ use base qw(Exporter);
 our @EXPORT_OK = qw(
     %PROTEIN_FUNCTION_PREDICTIONS 
     @ATTRIB_TYPES 
+    %ATTRIBS
+    @ATTRIB_SETS
     @VARIATION_CLASSES 
     @OVERLAP_CONSEQUENCES 
     @FEATURE_TYPES 
@@ -18,45 +20,14 @@ our %PROTEIN_FUNCTION_PREDICTIONS = (
     sift_prediction     => ['tolerated', 'deleterious'],
 );
 
-our @ATTRIB_TYPES = (
-    {
-        code => 'SO_accession',
-        description => 'Sequence Ontology accession',
-    }, 
-    {
-        code => 'SO_term',
-        description => 'Sequence Ontology term',
-    },
-    {
-        code => 'display_term',
-        description => 'Ensembl display term',
-    },
-    {
-        code => 'NCBI_term',
-        description => 'NCBI term',
-    },
-    {
-        code => 'feature_SO_term',
-        description => 'Sequence Ontology term for the associated feature',
-    },
-    {
-        code => 'rank',
-        description => 'Relative severity of this variation consequence',
-    },
-    {
-        code => 'polyphen_prediction',
-        description => 'PolyPhen-2 prediction',
-    },
-    {
-        code => 'sift_prediction',
-        description => 'SIFT prediction',
-    },
-    {
-        code => 'short_name',
-        name => 'Short name',
-        description => 'A shorter name for an instance, e.g. a VariationSet',
-    },
-);
+our @short_names = qw(1kg_hct 1kg_hct_ceu 1kg_hct_yri 1kg_hce 1kg_hce_ceu 1kg_hce_chb
+                      1kg_hce_chd 1kg_hce_jpt 1kg_hce_lwk 1kg_hce_tsi 1kg_hce_yri 1kg_lc
+                      1kg_lc_ceu 1kg_lc_chb_jpt 1kg_lc_yri hapmap ind_venter ind_watson
+                      fail_all fail_nonref fail_ambig fail_gt_fq fail_incons_map fail_mult_map
+                      fail_no_alleles fail_no_gt fail_no_map fail_no_seq fail_non_nt fail_mult_alleles
+                      ph_hgmd_pub ph_johnson_et_al ph_nhgri ph_omim ph_variants ph_uniprot
+                      ph_cosmic ph_ega precious
+                     );
 
 our @VARIATION_CLASSES = (
     {
@@ -531,5 +502,62 @@ our @FEATURE_TYPES = (
         ens_variant_class => 'Bio::EnsEMBL::Variation::ExternalFeatureVariation',
         ens_feature_subtype => 'miRanda miRNA target',
     },
+);
+
+# attrib_types are specified as hashrefs in the @ATTRIB_TYPES array. Each hashref should have a value for the key 'code' and optionally values for the keys 'name' and 'description'
+our @ATTRIB_TYPES = (
+    {
+        code => 'SO_accession',
+        description => 'Sequence Ontology accession',
+    }, 
+    {
+        code => 'SO_term',
+        description => 'Sequence Ontology term',
+    },
+    {
+        code => 'display_term',
+        description => 'Ensembl display term',
+    },
+    {
+        code => 'NCBI_term',
+        description => 'NCBI term',
+    },
+    {
+        code => 'feature_SO_term',
+        description => 'Sequence Ontology term for the associated feature',
+    },
+    {
+        code => 'rank',
+        description => 'Relative severity of this variation consequence',
+    },
+    {
+        code => 'polyphen_prediction',
+        description => 'PolyPhen-2 prediction',
+    },
+    {
+        code => 'sift_prediction',
+        description => 'SIFT prediction',
+    },
+    {
+        code => 'short_name',
+        name => 'Short name',
+        description => 'A shorter name for an instance, e.g. a VariationSet',
+    },
+);
+
+# attribs are specified in the %ATTRIBS hash, having the attrib_type code as hash key and a listref containing the attribs that will be loaded as value
+our %ATTRIBS = (
+   
+   'short_name' => \@short_names,
+   'polyphen_prediction' => $PROTEIN_FUNCTION_PREDICTION->{'polyphen_prediction'},
+   'sift_prediction' => $PROTEIN_FUNCTION_PREDICTION->{'sift_prediction'},
+   
+);
+
+#Êattrib sets are specified by putting a hashref in the @ATTRIB_SETS array having the attrib_type code as key and the attrib as value. new attrib entries will be inserted as necessary
+our @ATTRIB_SETS = (
+    @VARIATION_CLASSES,
+    @OVERLAP_CONSEQUENCES,
+    @FEATURE_TYPES
 );
 
