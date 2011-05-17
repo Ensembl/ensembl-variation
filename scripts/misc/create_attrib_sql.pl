@@ -3,6 +3,7 @@ use Bio::EnsEMBL::Variation::Utils::Config qw(
     @VARIATION_CLASSES 
     @OVERLAP_CONSEQUENCES 
     @FEATURE_TYPES
+    %PROTEIN_FUNCTION_PREDICTIONS
 );
 
 my %attrib_ids;
@@ -82,6 +83,21 @@ for my $class_set (@VARIATION_CLASSES, @OVERLAP_CONSEQUENCES, @FEATURE_TYPES) {
     $SQL .= $set_sql."\n" unless $seen_SO_mappings->{join '_', @SO_mappings}++;
 
     $last_attrib_set_id++;
+}
+
+# now the protein function prediction string
+
+for my $tool (keys %PROTEIN_FUNCTION_PREDICTIONS) {
+
+    my $attrib_type_id = $attrib_type_ids->{$tool};
+    
+    for my $value (@{ $PROTEIN_FUNCTION_PREDICTIONS{$tool} }) {
+        my $attrib_id = $last_attrib_id++;
+        $SQL .= sprintf($attrib_fmt, $attrib_id, $attrib_type_id, $value);
+        $SQL .= "\n";
+    }
+
+    $SQL .= "\n";
 }
 
 print $SQL;

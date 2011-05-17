@@ -2,9 +2,21 @@ package Bio::EnsEMBL::Variation::Utils::Config;
 
 use base qw(Exporter); 
 
-our @EXPORT_OK = qw(@ATTRIB_TYPES @VARIATION_CLASSES @OVERLAP_CONSEQUENCES @FEATURE_TYPES $OVERLAP_CONSEQUENCE_CLASS);
+our @EXPORT_OK = qw(
+    %PROTEIN_FUNCTION_PREDICTIONS 
+    @ATTRIB_TYPES 
+    @VARIATION_CLASSES 
+    @OVERLAP_CONSEQUENCES 
+    @FEATURE_TYPES 
+    $OVERLAP_CONSEQUENCE_CLASS
+);
 
 our $OVERLAP_CONSEQUENCE_CLASS = 'Bio::EnsEMBL::Variation::OverlapConsequence';
+
+our %PROTEIN_FUNCTION_PREDICTIONS = (
+    polyphen_prediction => ['probably damaging', 'possibly damaging', 'benign', 'unknown'],
+    sift_prediction     => ['tolerated', 'deleterious'],
+);
 
 our @ATTRIB_TYPES = (
     {
@@ -30,6 +42,14 @@ our @ATTRIB_TYPES = (
     {
         code => 'rank',
         description => 'Relative severity of this variation consequence',
+    },
+    {
+        code => 'polyphen_prediction',
+        description => 'PolyPhen-2 prediction',
+    },
+    {
+        code => 'sift_prediction',
+        description => 'SIFT prediction',
     },
 );
 
