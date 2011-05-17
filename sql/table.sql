@@ -1337,7 +1337,7 @@ CREATE TABLE attrib (
     value               TEXT NOT NULL,
 
     PRIMARY KEY (attrib_id),
-    KEY type_val_idx (attrib_type_id, value(40))
+    UNIQUE KEY type_val_idx (attrib_type_id, value(40))
 );
 
 /**
