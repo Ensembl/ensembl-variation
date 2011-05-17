@@ -368,6 +368,7 @@ sub configure {
 		
 		# output options
 		'output_file=s',
+		'force_overwrite',
 		'terms=s',
 		'verbose',
 		'quiet',
@@ -420,6 +421,12 @@ sub configure {
 	# check nsSNP tools
 	foreach my $tool(grep {defined $config->{lc($_)}} qw(SIFT PolyPhen Condel)) {
 		die "ERROR: Unrecognised option for $tool \"", $config->{lc($tool)}, "\" - must be one of p (prediction), s (score) or b (both)\n" unless $config->{lc($tool)} =~ /^(s|p|b)/;
+	}
+	
+	# force quiet if outputting to STDOUT
+	if(defined($config->{output_file}) && $config->{output_file} =~ /stdout/i) {
+		delete $config->{verbose} if defined($config->{verbose});
+		$config->{quiet} = 1;
 	}
 	
 	# summarise options if verbose
@@ -510,7 +517,10 @@ Options
 -i | --input_file      Input file - if not specified, reads from STDIN. Files
                        may be gzip compressed.
 --format               Alternative input file format - one of "pileup", "vcf"
--o | --output_file     Output file [default: "variant_effect_output.txt"]
+-o | --output_file     Output file. Write to STDOUT by specifying -o STDOUT - this
+                       will force --quiet [default: "variant_effect_output.txt"]
+--force_overwrite      Force overwriting of output file [default: quit if file
+                       exists]
 
 -t | --terms           Type of consequence terms to output - one of "ensembl", "SO",
                        "NCBI" [default: ensembl]
@@ -649,7 +659,18 @@ sub get_out_file_handle {
 	
 	# define filehandle to write to
 	my $out_file_handle = new FileHandle;
-	$out_file_handle->open(">".$config->{output_file}) or die("ERROR: Could not write to output file ", $config->{output_file}, "\n");
+	
+	# check if file exists
+	if(-e $config->{output_file} && !defined($config->{force_overwrite})) {
+		die("ERROR: Output file ", $config->{output_file}, " already exists. Specify a different output file with --output_file or overwrite existing file with --force_overwrite\n");
+	}
+	
+	if($config->{output_file} =~ /stdout/i) {
+		$out_file_handle = *STDOUT;
+	}
+	else {
+		$out_file_handle->open(">".$config->{output_file}) or die("ERROR: Could not write to output file ", $config->{output_file}, "\n");
+	}
 	
 	# make header
 	my $time = &get_time;
