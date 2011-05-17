@@ -245,7 +245,7 @@ sub parallel_flanking_sequence{
   # To avoid any confusion regarding the haplotypes and reversing etc, only attempt to map to non-haplotype seq regions 
   my $hap_line;
   if ($hap_id_string =~ /\([\,\d]+\)/) {
-    $hap_line = "fs.seq_region_id NOT IN $hap_id_string";
+    $hap_line = "vf.seq_region_id NOT IN $hap_id_string";
   }
   else {
     $hap_line ='';
