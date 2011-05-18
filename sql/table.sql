@@ -470,14 +470,16 @@ create table variation_feature(
 @column variation_name					The external identifier or name of the variation. e.g. "esv9549".
 @column source_id								Foreign key references to the @link source table.
 @column study_id								Foreign key references to the @link study table.	
-@column class										The type of structural variation feature e.g. "SV"
-@column bound_start							The 5'-most bound defined for the feature.
-@column bound_end								The 3'-most bound defined for the feature.
+@column class_attrib_id					Foreign key references to the @link attrib table. Defines the type of structural variant. 
+@column inner_start							The 5' inner bound defined for the feature on the @link seq_region.
+@column inner_end								The 3' inner bound defined for the feature on the @link seq_region.
 @column allele_string						The variant allele, where known.
+@column validation_status				Validation status of the variant.
 
 @see source
 @see study
 @see seq_region
+@see attrib
 */
 
 CREATE TABLE structural_variation (
@@ -489,15 +491,17 @@ CREATE TABLE structural_variation (
   variation_name varchar(255) DEFAULT NULL,
   source_id int(10) unsigned NOT NULL,
   study_id int(10) DEFAULT NULL,
-	class varchar(255) DEFAULT NULL,
-  bound_start int(11) DEFAULT NULL,
-  bound_end int(11) DEFAULT NULL,
+	class_attrib_id int(10) unsigned not null default 0,
+  inner_start int(11) DEFAULT NULL,
+  inner_end int(11) DEFAULT NULL,
   allele_string longtext,
+  validation_status ENUM('validated','not validated'),
 	
   PRIMARY KEY (structural_variation_id),
   KEY pos_idx (seq_region_id,seq_region_start,seq_region_end),
   KEY name_idx (variation_name),
-	KEY study_idx (study_id)
+	KEY study_idx (study_id),
+	KEY attrib_idx (class_attrib_id)
 );
 
 
