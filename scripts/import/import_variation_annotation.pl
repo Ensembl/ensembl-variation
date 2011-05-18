@@ -628,6 +628,11 @@ sub add_phenotypes {
 						?
         )
     };
+		
+		my $var_names = '';
+		if ($source =~ m/uniprot/i) {
+			$var_names = 'AND variation_names = ? ';
+		}
     my $va_check_stmt = qq{
         SELECT
             variation_annotation_id
@@ -637,6 +642,7 @@ sub add_phenotypes {
             variation_id = ? AND
             phenotype_id = ? AND
             study_id = ? 
+						$var_names
         LIMIT 1
     };
 		#AND variation_names = ? 
@@ -756,12 +762,18 @@ sub add_phenotypes {
       $va_check_sth->bind_param(2,$phenotype_id,SQL_INTEGER);
       $va_check_sth->bind_param(3,$study_id,SQL_INTEGER);
 			# For uniprot data
-			$va_check_sth->bind_param(4,$phenotype->{"variation_names"},SQL_VARCHAR);
+			if ($source =~ m/uniprot/i) {
+				$va_check_sth->bind_param(4,$phenotype->{"variation_names"},SQL_VARCHAR);
+			}
 					
 			$va_check_sth->execute();
       $va_check_sth->bind_columns(\$va_id);
       $va_check_sth->fetch();
       next if (defined($va_id));
+			
+			if (defined($phenotype->{"p_value"})) {
+				$phenotype->{"p_value"} = convert_p_value($phenotype->{"p_value"});
+			}
 				
       # Else, insert this phenotype.
 			$va_ins_sth->bind_param(1,$variation_ids->{$phenotype->{"rsid"}}[0],SQL_INTEGER);
@@ -832,6 +844,46 @@ sub add_synonyms {
     
     print STDOUT "Added $alt_count synonyms for $variation_count rs-ids\n" if ($verbose);
 }
+
+
+sub convert_p_value {
+
+	my $pval = shift;
+	
+	my $sci_pval = '';
+	# If a scientific format is not found, then ...
+	if ($pval !~ /^\d+.*e.+$/i) {	
+		# If a range format is found (e.g. 10^-2 > p > 10^-3)
+		if ($pval =~ /^\d+\^(-\d+)/) {
+			if (length("$1")==1) { $1 = "0$1"; } 
+			$sci_pval = "1.00e$1"; # e.g 10^-2 > p > 10^-3 => 1.00e-2
+		}
+		# If a decimal format is found (e.g. 0.0023)
+		elsif ($pval =~ /^\d+/){
+			$sci_pval = $pval;
+		#$sci_pval = sprintf("%.2e",$pval); # e.g. 0.002 => 2,30e-3
+		}
+		elsif ($pval =~ /^\w+/) {
+			$sci_pval = "NULL";
+		}
+		
+	}
+	else {
+		$pval =~ tr/E/e/;
+		if ($pval =~ /^(\d+)(e-?\d+)/) {
+			$pval="$1.00$2";	
+		}
+		if ($pval =~ /^(\d+\.\d{1})(e-?\d+)/) {
+			$pval="$1"."0$2";	
+		}
+		if ($pval =~ /^(\d+\.\d+e-?)(\d{1})$/) {
+			$pval = "$1"."0$2";
+		}
+		$sci_pval = $pval;
+	}
+	return $sci_pval;
+}
+
 
 sub usage {
 	
