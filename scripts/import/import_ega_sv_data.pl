@@ -92,14 +92,25 @@ sub read_file{
   $dbVar->do("DROP TABLE IF EXISTS temp_cnv;");
   
   create_and_load(
-	$dbVar, "temp_cnv", "study", "pmid i", "author", "year", "title l", "id *", "tax_id i", "organism", "chr", "outer_start i", "inner_start i",
-	"start i", "end i", "inner_end i", "outer_end i", "assembly", "type", "ssv l", "comment");
+	$dbVar, "temp_cnv", "study", "pmid i", "author", "year", "title l", "organism", "id *", "tax_id i", "type", "chr", "outer_start i", "start i", "inner_start i",
+	"inner_end i", "end i", "outer_end i", "assembly", "ssv l", "comment");
   
   # fix nulls
   foreach my $coord('outer_start', 'inner_start', 'inner_end', 'outer_end') {
 	$dbVar->do(qq{UPDATE temp_cnv SET $coord = NULL WHERE $coord = 0;});
   }
   
+	# Replace the coordinates (4 coordinates)
+	$dbVar->do(qq{UPDATE temp_cnv SET inner_start=start, start=outer_start 
+								WHERE outer_start!=0 and inner_start=0;});
+	$dbVar->do(qq{UPDATE temp_cnv SET inner_end=end, end=outer_end 
+								WHERE outer_end!=0 and inner_end=0;});							
+	$dbVar->do(qq{UPDATE temp_cnv SET start=outer_start WHERE start=0;});
+	$dbVar->do(qq{UPDATE temp_cnv SET end=outer_end WHERE end=0;});						
+								
+								
+	
+	
   # remove those that are of different species
   $dbVar->do(qq{DELETE FROM temp_cnv WHERE tax_id != $connected_tax_id;});
   $dbVar->do(qq{DELETE FROM temp_cnv WHERE chr like '%_random';});
@@ -111,7 +122,7 @@ sub source{
 	
 	# Check if the DGVa source already exists, else it create the entry
 	if ($dbVar->selectrow_arrayref(qq{SELECT source_id FROM source WHERE name='DGVa';})) {
-		$dbVar->do(qq{UPDATE IGNORE source SET description='Database of Genomic Variants Archive',url='http://www.ebi.ac.uk/dgva/',version=201101 where name='DGVa';});
+		$dbVar->do(qq{UPDATE IGNORE source SET description='Database of Genomic Variants Archive',url='http://www.ebi.ac.uk/dgva/',version=201105 where name='DGVa';});
 	}
 	else {
 		$dbVar->do(qq{INSERT INTO source (name,description,url,version) VALUES ('DGVa','Database of Genomic Variants Archive','http://www.ebi.ac.uk/dgva/',201102);});
@@ -155,7 +166,11 @@ sub study_table{
 	' "',
 	title,
 	'" PMID:',
-	pmid
+	pmid,
+	' ',
+	'[remapped from build ',
+	assembly,
+	']'
       ),
       CONCAT(
 	'ftp://ftp.ebi.ac.uk/pub/databases/dgva/',
@@ -208,23 +223,30 @@ sub structural_variation{
   debug("Inserting into structural_variation table");
   
   # create table if it doesn't exist yet
-  $dbVar->do(qq{CREATE TABLE IF NOT EXISTS `structural_variation` (
-	`structural_variation_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-	`seq_region_id` int(10) unsigned NOT NULL,
-	`seq_region_start` int(11) NOT NULL,
-	`seq_region_end` int(11) NOT NULL,
-	`seq_region_strand` tinyint(4) NOT NULL,
-	`variation_name` varchar(255) DEFAULT NULL,
-	`source_id` int(10) unsigned NOT NULL,
-	`study_id` int(10) unsigned NOT NULL,
-	`class` varchar(255) DEFAULT NULL,
-	`bound_start` int(11) DEFAULT NULL,
-	`bound_end` int(11) DEFAULT NULL,
-	PRIMARY KEY (`structural_variation_id`),
-	KEY `pos_idx` (`seq_region_id`,`seq_region_start`),
-	KEY `name_idx` (`variation_name`),
-	KEY `study_idx` (`study_id`) 
+	$dbVar->do(qq{CREATE TABLE IF NOT EXISTS structural_variation (
+	structural_variation_id int(10) unsigned NOT NULL AUTO_INCREMENT,
+	seq_region_id int(10) unsigned NOT NULL,
+	seq_region_start int(11) NOT NULL,
+	seq_region_end int(11) NOT NULL,
+	seq_region_strand tinyint(4) NOT NULL,
+	variation_name varchar(255) DEFAULT NULL,
+	source_id int(10) unsigned NOT NULL,
+	study_id int(10) unsigned NOT NULL,
+	class_attrib_id int(11) NOT NULL,
+	inner_start int(11) DEFAULT NULL,
+	inner_end int(11) DEFAULT NULL,
+	allele_string longtext,
+	validation_status ENUM('validated','not validated'),
+	tmp_class_name varchar(255),
+	PRIMARY KEY (structural_variation_id),
+	KEY pos_idx (seq_region_id,seq_region_start),
+	KEY name_idx (variation_name),
+	KEY study_idx (study_id) 
   )});
+
+	if ($dbVar->do(qq{show columns from structural_variation like 'tmp_class_name';}) != 1){
+		$dbVar->do(qq{ALTER TABLE structural_variation ADD COLUMN tmp_class_name varchar(255);});
+	}
   
   # The variation name should be unique so for the insert, create a unique key for this column.
   # Should there perhaps in fact be a unique constraint on this column?
@@ -248,9 +270,9 @@ sub structural_variation{
 	variation_name,
 	source_id,
 	study_id,
-	class,
-	bound_start,
-	bound_end
+	tmp_class_name,
+	inner_start,
+	inner_end
       )
     SELECT
       q.seq_region_id,
@@ -261,8 +283,8 @@ sub structural_variation{
       s.source_id,
 			st.study_id,
       t.type,
-      t.outer_start,
-      t.outer_end
+      t.inner_start,
+      t.inner_end
     FROM
       seq_region q,
       temp_cnv t,
@@ -360,18 +382,9 @@ sub meta_coord{
   debug("Adding entry to meta_coord table");
   
   my $max_length_ref = $dbVar->selectall_arrayref(qq{
-    SELECT GREATEST(
-      (
 	SELECT
 	  MAX(seq_region_end - seq_region_start + 1)
 	FROM $sv_table
-      ),
-      (
-	SELECT
-	  MAX(bound_end - bound_start + 1)
-	FROM $sv_table
-	     )
-    )
   });
   my $max_length = $max_length_ref->[0][0];
 	if (!defined($max_length)) { $max_length = 0; }
@@ -410,7 +423,7 @@ sub mapping{
 	chomp;
 	
 	# input file has these columns
-	my ($study, $pmid, $author, $year, $title, $id, $tax_id, $organism, $chr, $outer_start, $inner_start, $start, $end, $inner_end, $outer_end, $assembly, $type, $ssv) = split /\t/, $_;
+	my ($study, $pmid, $author, $year, $title, $organism, $id, $tax_id, $type, $chr, $outer_start, $start, $inner_start, $inner_end, $end, $outer_end, $assembly, $ssv) = split /\t/, $_;
 	
 	next unless $tax_id == $connected_tax_id;
 	
@@ -462,6 +475,11 @@ sub mapping{
 	# get a slice on the old assembly
 	my $slice;
 	
+	if (!$start) {
+		$start = $outer_start;
+		$end   = $outer_end;
+	}
+	
 	eval { $slice = $sa->fetch_by_region('chromosome', $chr, $start, $end, 1, $assembly); };
 	
 	# check got the slice OK
@@ -510,7 +528,7 @@ sub mapping{
 	  $count++;
 	}
 	
-	my $diff = abs(100 - (100 * (($end - $start + 1) / ($max_end - $min_start + 1))));
+	#my $diff = abs(100 - (100 * (($end - $start + 1) / ($max_end - $min_start + 1))));
 	
 	#print "Before ",($end - $start + 1), " After ", ($max_end - $min_start + 1), " Diff $diff count $count\n";
 	
@@ -525,7 +543,7 @@ sub mapping{
 	  $inner_end = $max_end - ($end - $inner_end) if $inner_end >= 1;
 	  $outer_end = $max_end + ($outer_end - $end) if $outer_end >= 1;
 	  
-	  print OUT (join "\t", ($study, $pmid, $author, $year, $title, $id, $tax_id, $organism, $to_chr, $outer_start, $inner_start, $min_start, $max_end, $inner_end, $outer_end, $target_assembly, $type, $ssv, "[remapped from build $assembly]"));
+	  print OUT (join "\t", ($study, $pmid, $author, $year, $title, $organism, $id, $tax_id, $type, $to_chr, $outer_start, $min_start, $inner_start, $inner_end, $max_end, $outer_end, $target_assembly, $ssv, "[remapped from build $assembly]"));
 	  print OUT "\n";
 	}
 	
