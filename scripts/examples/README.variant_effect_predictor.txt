@@ -130,13 +130,15 @@ to read from STDIN.
 file format. Using this option you can force the script to read the input
 file as VCF or pileup format. Not used by default.
  
--o (--output_file) : output file name. Default = "variant_effect_output.txt"
+-o (--output_file) : output file name. The script can write to STDOUT by
+specifying STDOUT as the output file name - this will force --quiet mode.
+Default = "variant_effect_output.txt"
 
 
 3.3 Database options
 --------------------
 
--d (--db_host) : manually define the database host to connect to.
+--host : manually define the database host to connect to.
 Default = "ensembldb.ensembl.org"
 
 -u (--user) : manually define the database username used when connecting to the
