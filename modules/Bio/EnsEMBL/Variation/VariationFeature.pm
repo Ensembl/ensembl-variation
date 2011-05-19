@@ -1393,7 +1393,14 @@ sub get_all_hgvs_notations {
       my $cds = $transcript_variation->_translateable_seq();
       my $codon_ref = substr($cds,($cds_start - 1),($cds_end - $cds_start + 1));
       my $codon_down = substr($cds,$cds_end,(2-$end_phase));
-      $codon_up = substr($cds,($cds_start - $start_phase - 1),$start_phase);
+      
+      #ÊInclude one codon upstream of the affected position (if possible) in order to correctly specify insertions
+      my $codon_up_start = ($cds_start - $start_phase - 1);
+      my $codon_up_length = $start_phase;
+      $codon_up_length += 3 * ($codon_up_start >= 3);
+      $codon_up_start -= 3 * ($codon_up_start >= 3);
+      
+      $codon_up = substr($cds,($codon_up_start),$codon_up_length);
       $cds_down = substr($cds,$cds_end);
       
       # FIXME: If sequence starts or ends with partial codons, how should we handle that? Example: rs71969613, ENST00000389639
@@ -1402,7 +1409,7 @@ sub get_all_hgvs_notations {
       $ref_cds = Bio::PrimarySeq->new(-seq => $codon_up . $codon_ref . $cds_down, -id => 'ref_cds', -alphabet => 'dna');
       $ref_peptide = $ref_cds->translate()->seq();
       # Store the offset in peptide coordinates
-      $peptide_start = (($cds_start - $start_phase - 1)/3 + 1);
+      $peptide_start = ($codon_up_start/3 + 1);
       
       # Get the complete reference peptide (needed for checking for duplications)
       $peptide = $ref_feature->translation()->seq() . '*';
