@@ -952,7 +952,7 @@ create table source(
 create table study (
 	study_id int(10) unsigned not null auto_increment,
 	source_id int(10) unsigned not null,
-	name varchar(255) not null,
+	name varchar(255) DEFAULT null,
 	description varchar(255) DEFAULT NULL,
 	url varchar(255) DEFAULT NULL,
 	external_reference varchar(255) DEFAULT NULL,
