@@ -470,14 +470,16 @@ sub consequence_type {
     my $self = shift;
 	my $term_type = shift;
 	
+	my $method_name;
+	
     # delete cached term
     if(defined($term_type)) {
         delete $self->{_consequence_type};
+		$method_name = $term_type.($term_type eq 'label' ? '' : '_term');
+		$method_name = 'display_term' unless defined $self->most_severe_OverlapConsequence && $self->most_severe_OverlapConsequence->can($method_name);
     }
-    
-	$term_type ||= 'display';
-	my $method_name = $term_type.($term_type eq 'label' ? '' : '_term');
-    $method_name = 'display_term' unless $self->most_severe_OverlapConsequence->can($method_name);
+	
+	$method_name ||= 'display_term';
     
     unless ($self->{_consequence_type}) {
         
@@ -548,9 +550,15 @@ sub display_consequence {
     my $self = shift;
 	my $term_type = shift;
 	
-	$term_type ||= 'display';
-	my $method_name = $term_type.($term_type eq 'label' ? '' : '_term');
-	$method_name = 'display_term' unless $self->most_severe_OverlapConsequence->can($method_name);
+	my $method_name;
+	
+    # delete cached term
+    if(defined($term_type)) {
+		$method_name = $term_type.($term_type eq 'label' ? '' : '_term');
+		$method_name = 'display_term' unless @{$self->get_all_OverlapConsequences} && $self->get_all_OverlapConsequences->[0]->can($method_name);
+    }
+	
+	$method_name ||= 'display_term';
     
     return $self->most_severe_OverlapConsequence->$method_name;
 }
@@ -576,6 +584,5 @@ sub _rearrange_alleles {
     # copy to ref allele if homozygous non-ref
     $self->{reference_allele} = $self->{alt_alleles}->[0] if scalar keys %$keep_alleles == 1;
 }
-
 
 1;
