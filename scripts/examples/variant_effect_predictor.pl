@@ -102,6 +102,13 @@ sub main {
 		
 		# fix inputs
 		$chr =~ s/chr//ig unless $chr =~ /^chromosome$/i;
+        
+        # check for valid strand
+        unless ($strand =~ /^(\+|-|1|-1)$/) {
+            warn("WARNING: Invalid strand '$strand' on line $line_number\n") unless defined $config->{quiet};
+            next;
+        }
+
 		$strand = ($strand =~ /\-/ ? "-1" : "1");
 		$allele_string =~ tr/acgt/ACGT/;
 		
@@ -229,7 +236,7 @@ sub print_consequences {
 		my $existing_vf;
 		$existing_vf = &find_existing($new_vf) if defined $config->{check_existing} && $config->{check_existing} == 1;
 		$existing_vf ||= '-';
-		
+	
 		foreach my $tv(@{$new_vf->get_all_TranscriptVariations}) {
 			
 			next if(defined $config->{coding_only} && !($tv->affects_transcript));
