@@ -4,14 +4,14 @@ use warnings;
 use DBI;
 use Getopt::Long;
 
-my $host = 'ens-staging';
+my $host;
 my $port = 3306;
-my $user = 'ensro';
-my $pass = '';
-my $pattern = '%_variation_%';
-my $attrib_file = 'attrib_entries.sql';
-my $dry_run = 0;
-my $help = 0;
+my $user;
+my $pass;
+my $pattern;
+my $attrib_file;
+my $dry_run;
+my $help;
 
 GetOptions(
     "host=s"        => \$host,
@@ -24,8 +24,13 @@ GetOptions(
     "help|h"        => \$help,
 );
 
+unless ($host && $user && $pattern && $attrib_file) {
+    print "Missing required parameter...\n";
+    $help = 1;
+}
+
 if ($help) {
-    print "Usage: $0 --host <host> --port <port> --user <user> --pass <pass> --pattern <pattern> --attrib_file <attrib_sql_file> --dry_run <flag> --help <flag>\n";
+    print "Usage: $0 --host <host> --port <port> --user <user> --pass <pass> --pattern <pattern> --attrib_file <attrib_sql_file> --dry_run --help\n";
     exit(0);
 }
 
