@@ -495,7 +495,7 @@ CREATE TABLE structural_variation (
   inner_start int(11) DEFAULT NULL,
   inner_end int(11) DEFAULT NULL,
   allele_string longtext,
-  validation_status ENUM('validated','not validated'),
+  validation_status ENUM('validated','not validated','high quality'),
 	
   PRIMARY KEY (structural_variation_id),
   KEY pos_idx (seq_region_id,seq_region_start,seq_region_end),
@@ -523,7 +523,6 @@ create table supporting_structural_variation (
 	structural_variation_id int(10) unsigned not null,
 	
 	primary key( supporting_structural_variation_id ),
-	unique key name_idx(name),
 	key structural_variation_idx (structural_variation_id)
 );
 
