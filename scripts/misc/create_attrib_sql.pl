@@ -27,12 +27,12 @@ GetOptions(
 );
 
 unless ($host && $user && $db) {
-    print "Missing required parameter...\n";
+    print "Missing required parameter...\n" unless $help;
     $help = 1;
 }
 
 if ($help) {
-    print "Usage: $0 --host <host> --port <port> --user <user> --pass <pass> --db <database> --help\n";
+    print "Usage: $0 --host <host> --port <port> --user <user> --pass <pass> --db <database> --help > attrib_entries.sql\n";
     exit(0);
 }
 
