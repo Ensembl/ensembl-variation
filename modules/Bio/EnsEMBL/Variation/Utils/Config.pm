@@ -65,14 +65,14 @@ our @VARIATION_CLASSES = (
         SO_term => 'sequence_alteration',
     },
     # Structural variation classes
-     {
+    {
         SO_accession => 'SO:0001537',
         SO_term => 'structural_variant',
         display_term => 'SV',
     },
-     {
+    {
         SO_accession => 'SO:0000051',
-        SO_term => 'structural_variant', 'probe',
+        SO_term => 'probe',
         display_term => 'CNV_PROBE',
     },
     
@@ -394,22 +394,22 @@ our @OVERLAP_CONSEQUENCES = (
 #        rank => '13',
 #        predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::within_miRNA',
 #    },
+#    {
+#        SO_accession => 'SO:X000004',
+#        SO_term => 'miRNA_target_site_variant',
+#        display_term => 'REGULATORY_REGION',
+#        feature_SO_term => 'binding_site',
+#        feature_class => 'Bio::EnsEMBL::Funcgen::ExternalFeature',
+#        rank => '13',
+#        predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::within_miRNA_target_site',
+#        description => 'In regulatory region annotated by Ensembl',
+#        label => 'Regulatory region',
+#    },
     {
-        SO_accession => 'SO:X000004',
-        SO_term => 'miRNA_target_site_variant',
+        SO_accession => 'SO:0001782',
+        SO_term => 'TF_binding_site_variant',
         display_term => 'REGULATORY_REGION',
-        feature_SO_term => 'binding_site',
-        feature_class => 'Bio::EnsEMBL::Funcgen::ExternalFeature',
-        rank => '13',
-        predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::within_miRNA_target_site',
-        description => 'In regulatory region annotated by Ensembl',
-        label => 'Regulatory region',
-    },
-    {
-        SO_accession => 'SO:X000003',
-        SO_term => 'binding_site_variant',
-        display_term => 'REGULATORY_REGION',
-        feature_SO_term => 'binding_site',
+        feature_SO_term => 'TF_binding_site',
         feature_class => 'Bio::EnsEMBL::Funcgen::MotifFeature',
         rank => '49',
         predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::within_motif_feature',
@@ -573,3 +573,4 @@ our @ATTRIB_SETS = (
     @FEATURE_TYPES
 );
 
+1;
