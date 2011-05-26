@@ -136,7 +136,7 @@ sub new {
     expand(\$allele_string);
 
     my @alleles = split /\//, $allele_string;
-  
+ 
     if ($disambiguate_sn_alleles) {
         
         # if this flag is set, disambiguate any ambiguous single nucleotide alleles, so  
@@ -165,7 +165,12 @@ sub new {
 
     # make sure the alleles are unique
     
-    @alleles = keys %{ { map { $_ => 1 } @alleles } };
+    # we also want to deal with alleles like (T)0 which expand into 
+    # an empty string and we want to treat this as a deletion, so 
+    # we replace
+    # any empty strings with '-'
+    
+    @alleles = keys %{ { map { ($_ || '-') => 1 } @alleles } };
 
     # create an object representing the reference allele
     
@@ -193,6 +198,18 @@ sub new {
     }
     
     return $self;
+}
+
+sub dbID {
+    my $self = shift;
+    
+    unless ($self->{dbID}) {
+        # we don't really have a dbID, so concatenate all the dbIDs of our alleles
+
+        $self->{dbID} = join '_', map { $_->dbID } @{ $self->get_all_alternate_VariationFeatureOverlapAlleles };
+    }
+
+    return $self->{dbID};
 }
 
 sub new_fast {
