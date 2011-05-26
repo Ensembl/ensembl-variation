@@ -25,7 +25,7 @@ GetOptions(
 );
 
 unless ($host && $user && $pattern && $attrib_file) {
-    print "Missing required parameter...\n";
+    print "Missing required parameter...\n" unless $help;
     $help = 1;
 }
 
