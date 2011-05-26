@@ -508,11 +508,13 @@ sub frameshift {
     
     my $var_len = $tv->cds_end - $tv->cds_start + 1;
 
-    my $seq = $tva->feature_seq;
-    
-    $seq = '' if $seq eq '-';
+    my $len = $tva->seq_length;
 
-    return abs( length($seq) - $var_len ) % 3;
+    # if the length is undefined then we can't call a frameshift
+
+    return 0 unless defined $len;
+
+    return abs( $len - $var_len ) % 3;
 }
 
 sub partial_codon {
