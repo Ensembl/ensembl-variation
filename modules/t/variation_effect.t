@@ -396,7 +396,7 @@ $transcript_tests->{$tf->stable_id}->{tests} = [
         comment => 'a wierd allele string',
         alleles => 'HGMD_MUTATION',
         start   => $cds_end-10,
-        end     => $cds_end-10,
+        end     => $cds_end-11,
         effects => [qw(coding_sequence_variant)],
     }, {
         comment => 'an ambiguous allele string',
