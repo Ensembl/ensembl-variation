@@ -64,6 +64,18 @@ our @VARIATION_CLASSES = (
         SO_accession => 'SO:0001059',
         SO_term => 'sequence_alteration',
     },
+    # Structural variation classes
+     {
+        SO_accession => 'SO:0001537',
+        SO_term => 'structural_variant',
+        display_term => 'SV',
+    },
+     {
+        SO_accession => 'SO:0000051',
+        SO_term => 'structural_variant', 'probe',
+        display_term => 'CNV_PROBE',
+    },
+    
 );
 
 our @OVERLAP_CONSEQUENCES = (
