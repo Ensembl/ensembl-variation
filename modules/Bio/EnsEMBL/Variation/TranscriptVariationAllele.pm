@@ -260,8 +260,8 @@ sub codon {
     my $tv = $self->transcript_variation;      
     
     return undef unless $tv->translation_start;
-    
-    return undef if $self->variation_feature_seq =~ /[^ACGT\-]/i;
+   
+    return undef unless $self->seq_is_dna;
     
     unless ($self->{codon}) {
       
