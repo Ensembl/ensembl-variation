@@ -60,6 +60,10 @@ use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
 use Bio::EnsEMBL::Variation::Utils::Constants qw(@OVERLAP_CONSEQUENCES);
 use Scalar::Util qw(weaken);
 
+our $VALID_NUCLEOTIDES = qr/^[ACGT-]+$/i;
+
+#our $VALID_NUCLEOTIDES = qr/^[ACGTUMRWSYKVHDBXN-]+$/i;
+
 =head2 new
 
   Arg [-VARIATION_FEATURE_OVERLAP] : 
@@ -103,7 +107,8 @@ sub new {
 
     assert_ref($variation_feature_overlap, 'Bio::EnsEMBL::Variation::VariationFeatureOverlap');
 
-    throw("Allele sequence required") unless $variation_feature_seq;
+    throw("Allele sequence required (variation "+$variation_feature_overlap->variation_feature->variation_name+")") 
+        unless $variation_feature_seq;
 
     my $self = bless {
         variation_feature_overlap   => $variation_feature_overlap,
@@ -123,6 +128,12 @@ sub new_fast {
     # avoid a memory leak, because the vfo also has a reference to us
     weaken $self->{variation_feature_overlap} if $self->{variation_feature_overlap};
     return $self;
+}
+
+sub dbID {
+    my ($self, $dbID) = @_;
+    $self->{dbID} = $dbID if defined $dbID;
+    return $self->{dbID};
 }
 
 =head2 variation_feature_overlap
@@ -193,7 +204,7 @@ sub feature_seq {
     unless ($self->{feature_seq}) {
         
         # check if we need to reverse complement the variation_feature_seq
-        if ($self->variation_feature->strand != $self->feature->strand) {
+        if (($self->variation_feature->strand != $self->feature->strand) && $self->seq_is_dna) {
             my $vf_seq = $self->variation_feature_seq;
             reverse_comp(\$vf_seq);
             $self->{feature_seq} = $vf_seq;
@@ -221,6 +232,32 @@ sub variation_feature_seq {
     my ($self, $variation_feature_seq) = @_;
     $self->{variation_feature_seq} = $variation_feature_seq if $variation_feature_seq;
     return $self->{variation_feature_seq};
+}
+
+sub seq_is_dna {
+    my $self = shift;
+
+    unless (defined $self->{seq_is_dna}) {
+        $self->{seq_is_dna} = $self->{variation_feature_seq} =~ /$VALID_NUCLEOTIDES/ ? 1 : 0;
+    }
+    
+    return $self->{seq_is_dna};
+}
+
+sub seq_length {
+    my $self = shift;
+
+    if ($self->seq_is_dna) {
+        my $seq = $self->variation_feature_seq;
+        if ($seq eq '-') {
+            return 0;
+        }
+        else {
+            return length($seq);
+        }
+    }
+    
+    return undef;
 }
 
 =head2 is_reference
