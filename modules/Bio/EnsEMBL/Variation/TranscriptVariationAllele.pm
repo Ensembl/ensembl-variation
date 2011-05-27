@@ -206,6 +206,8 @@ sub peptide {
     $self->{peptide} = $peptide if $peptide;
     
     unless ($self->{peptide}) {
+
+        return undef unless $self->seq_is_unambiguous_dna;
         
         if (my $codon = $self->codon) {
             
@@ -277,7 +279,7 @@ sub codon {
         my $codon_cds_end   = $tv->translation_end * 3;
         my $codon_len       = $codon_cds_end - $codon_cds_start + 1;
         my $vf_nt_len       = $tv->cds_end - $tv->cds_start + 1;
-        my $allele_len      = length($seq);
+        my $allele_len      = $self->seq_length;
         
         if ($allele_len != $vf_nt_len) {
             if (abs($allele_len - $vf_nt_len) % 3) {
