@@ -404,6 +404,24 @@ $transcript_tests->{$tf->stable_id}->{tests} = [
         start   => $cds_end-10,
         end     => $cds_end-10,
         effects => [qw(coding_sequence_variant)],
+    }, {
+        comment => 'an ambiguous insertion',
+        alleles => 'W',
+        start   => $cds_end-9,
+        end     => $cds_end-10,
+        effects => [qw(frameshift_variant)],
+    }, {
+        comment => 'a specified length insertion',
+        alleles => '2 BP INSERTION',
+        start   => $cds_end-9,
+        end     => $cds_end-10,
+        effects => [qw(frameshift_variant)],
+    }, {
+        comment => 'an inframe specified length insertion',
+        alleles => '3 BP INSERTION',
+        start   => $cds_end-9,
+        end     => $cds_end-10,
+        effects => [qw(coding_sequence_variant)],
     }, 
 
     # check the complex calls
@@ -814,6 +832,36 @@ $transcript_tests->{$tr->stable_id}->{tests} = [
         start   => $cds_start,
         end     => $cds_start + 2,
         effects => [qw(stop_lost)],
+    }, {
+        comment => 'a wierd allele string',
+        alleles => 'HGMD_MUTATION',
+        start   => $cds_start + 10,
+        end     => $cds_start + 11,
+        effects => [qw(coding_sequence_variant)],
+    }, {
+        comment => 'an ambiguous allele string',
+        alleles => 'W',
+        start   => $cds_start + 10,
+        end     => $cds_start + 10,
+        effects => [qw(coding_sequence_variant)],
+    }, {
+        comment => 'an ambiguous insertion',
+        alleles => 'W',
+        start   => $cds_start + 10,
+        end     => $cds_start + 9,
+        effects => [qw(frameshift_variant)],
+    }, {
+        comment => 'a specified length insertion',
+        alleles => '2 BP INSERTION',
+        start   => $cds_start + 10,
+        end     => $cds_start + 9,
+        effects => [qw(frameshift_variant)],
+    }, {
+        comment => 'an inframe specified length insertion',
+        alleles => '3 BP INSERTION',
+        start   => $cds_start + 10,
+        end     => $cds_start + 9,
+        effects => [qw(coding_sequence_variant)],
     }, 
 
     # check the complex calls
