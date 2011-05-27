@@ -47,19 +47,24 @@ sub default_options {
         
         pipeline_name           => 'variation_consequence',
 
+        # a directory to keep hive output files and your registry file, you should
+        # create this if it doesn't exist
+
+        pipeline_dir            => '/lustre/scratch103/ensembl/gr5/'.$self->o('pipeline_name'),
+
         # a directory where hive workers will dump STDOUT and STDERR for their jobs
         # if you use lots of workers this directory can get quite big, so it's
         # a good idea to keep it on lustre, or some other place where you have a 
         # healthy quota!
         
-        output_dir              => '/lustre/scratch101/ensembl/gr5/variation_consequence/hive_output',
+        output_dir              => $self->o('pipeline_dir').'/hive_output',
 
         # a standard ensembl registry file containing connection parameters
         # for your target database(s) (and also possibly aliases for your species
         # of interest that you can then supply to init_pipeline.pl with the -species
         # option)
         
-        reg_file                => '/lustre/scratch101/ensembl/gr5/variation_consequence/ensembl.registry',
+        reg_file                => $self->o('pipeline_dir').'/ensembl.registry',
 
         # if set to 1 this option tells the transcript_effect analysis to disambiguate
         # ambiguity codes in single nucleotide alleles, so e.g. an allele string like
