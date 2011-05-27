@@ -94,6 +94,7 @@ else {
         $sth->execute($id);
         $sth->bind_columns(\$id);
         $sth->fetch();
+        next unless defined($id);
         $ids{$id}++;
     }
     @variation_ids = keys(%ids);
