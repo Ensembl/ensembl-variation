@@ -15,15 +15,16 @@ use FindBin qw( $Bin );
 use Getopt::Long;
 use ImportUtils qw(dumpSQL debug create_and_load load);
 
-our ($species,$TMP_DIR,$TMP_FILE);
+our ($species,$TMP_DIR,$TMP_FILE,$registry_file);
 
 
 GetOptions('species=s'          => \$species,
            'tmpdir=s'           => \$ImportUtils::TMP_DIR,
            'tmpfile=s'          => \$ImportUtils::TMP_FILE,
+		   'registry=s'         => \$registry_file,
 );
 
-my $registry_file ||= $Bin . "/ensembl.registry";
+$registry_file ||= $Bin . "/ensembl.registry";
 $TMP_DIR  = $ImportUtils::TMP_DIR;
 $TMP_FILE = $ImportUtils::TMP_FILE;
 Bio::EnsEMBL::Registry->load_all( $registry_file );
@@ -58,7 +59,7 @@ sub get_gtype_poly {
   my $sth;
 
   #get rid of duplicated sample names first
-  my $name_ref = $dbVar->db_handle->selectall_arrayref(qq{select name from (select name,count(*) as count from sample group by name having count >1) as name_count});
+  my $name_ref = $dbVar->db_handle->selectall_arrayref(qq{select name from (select s.name,count(*) as count from sample s, individual i where s.sample_id = i.sample_id group by s.name having count >1) as name_count});
   my @names = map{$_->[0]} @$name_ref;
   my $name_string = (@names) ? "AND s.name NOT IN (".join(',',map{"'$_'"} @names).");" : '';
   $sth = $dbVar->prepare(qq{SELECT s.sample_id,s.name from sample s, individual i where s.sample_id=i.sample_id $name_string});
@@ -89,7 +90,7 @@ sub get_gtype_poly {
                     AND tg.variation_id = vf.variation_id
                     #LIMIT 10
                   });
-
+  
   `sort -k 1 -g -o $TMP_DIR/$TMP_FILE\_s $TMP_DIR/$TMP_FILE`;
   system("mv $TMP_DIR/$TMP_FILE\_s $TMP_DIR/$TMP_FILE");
 
@@ -104,9 +105,9 @@ sub get_gtype_poly {
     
     if ($previous_varid != $variation_id and $previous_varid != 0) {
       foreach my $num (sort {$a<=>$b} keys %sample_id) {
-	my $sampleid = $sample_id{$num};
-	my $allele = ($rec{$sampleid}) ? $rec{$sampleid} : '';
-	push @alleles, $allele;
+		my $sampleid = $sample_id{$num};
+		my $allele = ($rec{$sampleid}) ? $rec{$sampleid} : '';
+		push @alleles, $allele;
       }
       push @alleles, $previous_ref_allele;
       print OUT join ("\t", $previous_varid,@alleles)."\n";
@@ -122,7 +123,7 @@ sub get_gtype_poly {
       $done{$sample_id}=1;
     }
     else {#for more than one allele per sample_id, give it as "?"
-      $rec{$sample_id} = "?";
+      $rec{$sample_id} = "?" if $allele ne $rec{$sample_id};
     }
   }
  
