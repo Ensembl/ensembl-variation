@@ -60,9 +60,11 @@ use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
 use Bio::EnsEMBL::Variation::Utils::Constants qw(@OVERLAP_CONSEQUENCES);
 use Scalar::Util qw(weaken);
 
-our $VALID_NUCLEOTIDES = qr/^[ACGT-]+$/i;
+our $UNAMBIGUOUS_NUCLEOTIDES = qr/^[ACGT-]+$/i;
 
-#our $VALID_NUCLEOTIDES = qr/^[ACGTUMRWSYKVHDBXN-]+$/i;
+our $ALL_NUCLEOTIDES = qr/^[ACGTUMRWSYKVHDBXN-]+$/i;
+
+our $SPECIFIED_LENGTH = qr /(\d+) BP (INSERTION|DELETION)/i;
 
 =head2 new
 
@@ -204,6 +206,7 @@ sub feature_seq {
     unless ($self->{feature_seq}) {
         
         # check if we need to reverse complement the variation_feature_seq
+        
         if (($self->variation_feature->strand != $self->feature->strand) && $self->seq_is_dna) {
             my $vf_seq = $self->variation_feature_seq;
             reverse_comp(\$vf_seq);
@@ -234,27 +237,75 @@ sub variation_feature_seq {
     return $self->{variation_feature_seq};
 }
 
+=head2 seq_is_unambiguous_dna
+
+  Description: identify if the sequence of this allele is unambiguous DNA 
+               i.e. if it is translateable
+  Returntype : bool
+  Exceptions : none
+  Status     : At Risk
+
+=cut
+
+sub seq_is_unambiguous_dna {
+    my $self = shift;
+
+    unless (defined $self->{seq_is_unambiguous_dna}) {
+        $self->{seq_is_unambiguous_dna} = 
+            $self->{variation_feature_seq} =~ /$UNAMBIGUOUS_NUCLEOTIDES/ ? 1 : 0;
+    }
+    
+    return $self->{seq_is_unambiguous_dna};
+}
+
+=head2 seq_is_dna
+
+  Description: identify if the sequence of this allele is DNA, and may 
+               include ambiguity codes
+  Returntype : bool
+  Exceptions : none
+  Status     : At Risk
+
+=cut
+
 sub seq_is_dna {
     my $self = shift;
 
     unless (defined $self->{seq_is_dna}) {
-        $self->{seq_is_dna} = $self->{variation_feature_seq} =~ /$VALID_NUCLEOTIDES/ ? 1 : 0;
+        $self->{seq_is_dna} = 
+            $self->{variation_feature_seq} =~ /$ALL_NUCLEOTIDES/ ? 1 : 0;
     }
     
     return $self->{seq_is_dna};
 }
 
+=head2 seq_length
+
+  Description: return the length of this allele sequence, this is better than
+               just using length($vfoa->feature_seq) because we check if the
+               sequence is valid DNA, and also look for allele strings like 
+               "(3 BP INSERTION)" to determine the length
+  Returntype : int or undef if we cannot determine the length
+  Exceptions : none
+  Status     : At Risk
+
+=cut
+
 sub seq_length {
     my $self = shift;
 
+    my $seq = $self->variation_feature_seq;
+
     if ($self->seq_is_dna) {
-        my $seq = $self->variation_feature_seq;
         if ($seq eq '-') {
             return 0;
         }
         else {
             return length($seq);
         }
+    }
+    elsif ($seq =~ /$SPECIFIED_LENGTH/) {
+        return $1;
     }
     
     return undef;
