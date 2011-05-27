@@ -31,14 +31,11 @@ sub fetch_input {
    
     my $self = shift;
 
+    my $include_lrg = $self->param('include_lrg');
+
     my $core_dba = $self->get_species_adaptor('core');
     my $var_dba = $self->get_species_adaptor('variation');
     
-    my %default_params = (
-        ensembl_registry    => $self->param('ensembl_registry'),
-        species             => $self->param('species'),
-    );
-
     my $dbc = $var_dba->dbc();
 
     # truncate the table because we don't want duplicates
@@ -57,6 +54,8 @@ sub fetch_input {
     
     my $gene_count = 0;
 
+    # fetch all the regular genes
+
     for my $gene (@{ $ga->fetch_all }) {
         $gene_count++;
         
@@ -64,7 +63,6 @@ sub fetch_input {
 
             push @transcript_output_ids, {
                 transcript_stable_id  => $transcript->stable_id,
-                %default_params
             };
         }            
         if ($DEBUG) {
@@ -72,21 +70,37 @@ sub fetch_input {
         }
     }
 
+    if ($include_lrg) {
+        
+        # fetch the LRG genes as well 
+
+        for my $lrg_gene (@{ $ga->generic_fetch('ig.biotype = "LRG_gene" and g.is_current = 1') }) {
+            for my $transcript (@{ $lrg_gene->get_all_Transcripts }) {
+
+                push @transcript_output_ids, {
+                    transcript_stable_id  => $transcript->stable_id,
+                };
+            } 
+        }
+    }
+
     $self->param('transcript_output_ids', \@transcript_output_ids);
 
     $self->param(
         'rebuild_indexes', [{
-            %default_params,
             tables              => ['transcript_variation'],
         }]
     );
-    
+   
+    # we need to kick off the update_vf and set_var_class analyses as well, 
+    # but they don't have any parameters we need to set here
+        
     $self->param(
-        'update_vf', [{%default_params}]
+        'update_vf', [{}]
     );
     
     $self->param(
-        'set_var_class', [{%default_params}]
+        'set_var_class', [{}]
     );
 
 }

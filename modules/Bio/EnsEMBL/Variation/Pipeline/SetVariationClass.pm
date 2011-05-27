@@ -12,23 +12,19 @@ sub run {
 
     my $self = shift;
     
-    my $var_id_start = $self->param('variation_id_start')
-        or die "variation_id_start is required";
+    my $var_id_start = $self->param('variation_id_start');
 
-    my $var_id_stop  = $self->param('variation_id_stop')
-        or die "variation_id_stop is required";
+    my $var_id_stop  = $self->param('variation_id_stop');
 
-    my $temp_var_table = $self->param('temp_var_table')
-        or die "temp_var_table is required";
+    my $temp_var_table = $self->param('temp_var_table');
     
-    my $temp_var_feat_table = $self->param('temp_var_feat_table')
-        or die "temp_var_feat_table is required";
+    my $temp_var_feat_table = $self->param('temp_var_feat_table');
   
     my $var_dba = $self->get_species_adaptor('variation');
 
     my $aa = $var_dba->get_AttributeAdaptor;
 
-    my $dbc = $var_dba->dbc();
+    my $dbc = $var_dba->dbc;
 
     # fetch the failed_descriptions to avoid a join
 
@@ -47,7 +43,6 @@ sub run {
     
     $fds_sth->finish();
 
-    #TODO removed a prepare_cached as DBConnection does not support it
     my $all_sth = $dbc->prepare(qq{
         SELECT  v.variation_id, vf.variation_feature_id, vf.allele_string, fv.failed_description_id
         FROM    (variation v LEFT JOIN variation_feature vf ON v.variation_id = vf.variation_id) 

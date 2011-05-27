@@ -13,13 +13,7 @@ sub fetch_input {
     
     my $self = shift;
 
-    my $num_chunks = $self->param('num_chunks')
-        or die "num_chunks is a required parameter";
-        
-    my %default_params = (
-      ensembl_registry    => $self->param('ensembl_registry'),
-      species             => $self->param('species'),
-    );
+    my $num_chunks = $self->param('num_chunks');
     
     my $var_dba = $self->get_species_adaptor('variation');
         
@@ -82,7 +76,6 @@ sub fetch_input {
         splice(@var_ids, 0, $chunk_size);
 
         push @output_ids, {
-            %default_params,
             variation_id_start  => $start,
             variation_id_stop   => $stop,
             temp_var_table      => $temp_var_table,
@@ -94,7 +87,6 @@ sub fetch_input {
 
     $self->param(
         'finish_var_class', [{
-            %default_params,
             temp_var_table      => $temp_var_table,
             temp_var_feat_table => $temp_var_feat_table,
         }]

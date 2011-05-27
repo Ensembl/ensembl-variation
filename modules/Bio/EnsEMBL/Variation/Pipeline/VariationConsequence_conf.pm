@@ -68,6 +68,10 @@ sub default_options {
         
         disambiguate_single_nucleotide_alleles => 0,
 
+        # set this flag to 1 to include LRG transcripts in the transcript effect analysis
+
+        include_lrg => 0,
+
         # configuration for the various resource options used in the pipeline
         # EBI users should either change these here, or override them on the
         # command line to suit the EBI farm. The names of each option hopefully
@@ -84,7 +88,7 @@ sub default_options {
         # transcript_effect_capacity to 300 which improves runtime (though can use a lot 
         # of database connections)
 
-        transcript_effect_capacity      => 50,
+        transcript_effect_capacity      => 100,
         set_variation_class_capacity    => 10,
 
         # connection parameters for the hive database, you should supply the hive_db_pass
@@ -131,14 +135,19 @@ sub resource_classes {
 sub pipeline_analyses {
     my ($self) = @_;
 
+    my @common_params = (
+        ensembl_registry    => $self->o('reg_file'),
+        species             => $self->o('species'),
+    );
+
     return [
         {   -logic_name => 'init_transcript_effect',
             -module     => 'Bio::EnsEMBL::Variation::Pipeline::InitTranscriptEffect',
-            -parameters => {},
-            -input_ids  => [{
-                    ensembl_registry    => $self->o('reg_file'),
-                    species             => $self->o('species'),
-            }],
+            -parameters => {
+                include_lrg => $self->o('include_lrg'),
+                @common_params,
+            },
+            -input_ids  => [{}],
             -rc_id      => 1,
             -flow_into  => {
                 1 => [ 'rebuild_tv_indexes' ],
@@ -150,7 +159,10 @@ sub pipeline_analyses {
 
         {   -logic_name     => 'transcript_effect',
             -module         => 'Bio::EnsEMBL::Variation::Pipeline::TranscriptEffect',
-            -parameters     => { disambiguate_single_nucleotide_alleles => $self->o('disambiguate_single_nucleotide_alleles') },
+            -parameters     => { 
+                disambiguate_single_nucleotide_alleles => $self->o('disambiguate_single_nucleotide_alleles'), 
+                @common_params,
+            },
             -input_ids      => [],
             -hive_capacity  => $self->o('transcript_effect_capacity'),
             -rc_id          => 0,
@@ -159,7 +171,9 @@ sub pipeline_analyses {
 
         {   -logic_name     => 'rebuild_tv_indexes',
             -module         => 'Bio::EnsEMBL::Variation::Pipeline::RebuildIndexes',
-            -parameters     => {},
+            -parameters     => {
+                @common_params,
+            },
             -input_ids      => [],
             -hive_capacity  => 1,
             -rc_id          => 1,
@@ -169,7 +183,9 @@ sub pipeline_analyses {
         
         {   -logic_name     => 'update_variation_feature',
             -module         => 'Bio::EnsEMBL::Variation::Pipeline::UpdateVariationFeature',
-            -parameters     => {},
+            -parameters     => {
+                @common_params,
+            },
             -input_ids      => [],
             -hive_capacity  => 1,
             -rc_id          => 1,
@@ -179,7 +195,10 @@ sub pipeline_analyses {
         
         {   -logic_name     => 'init_variation_class',
             -module         => 'Bio::EnsEMBL::Variation::Pipeline::InitVariationClass',
-            -parameters     => {num_chunks => 50},
+            -parameters     => {
+                num_chunks => 50,
+                @common_params,
+            },
             -input_ids      => [],
             -hive_capacity  => 1,
             -rc_id          => 2,
@@ -192,7 +211,9 @@ sub pipeline_analyses {
         
         {   -logic_name     => 'set_variation_class',
             -module         => 'Bio::EnsEMBL::Variation::Pipeline::SetVariationClass',
-            -parameters     => {},
+            -parameters     => {
+                @common_params,
+            },
             -input_ids      => [],
             -hive_capacity  => $self->o('set_variation_class_capacity'),
             -rc_id          => 0,
@@ -201,7 +222,9 @@ sub pipeline_analyses {
 
         {   -logic_name     => 'finish_variation_class',
             -module         => 'Bio::EnsEMBL::Variation::Pipeline::FinishVariationClass',
-            -parameters     => {},
+            -parameters     => {
+                @common_params,
+            },
             -input_ids      => [],
             -hive_capacity  => 1,
             -rc_id          => 1,
