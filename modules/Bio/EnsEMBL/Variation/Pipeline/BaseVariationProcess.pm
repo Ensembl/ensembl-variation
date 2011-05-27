@@ -23,7 +23,31 @@ package Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess;
 use strict;
 use warnings;
 
+use Bio::EnsEMBL::Variation::Pipeline::TranscriptFileAdaptor;
+
 use base qw(Bio::EnsEMBL::Hive::Process);
+
+sub param {
+    my $self        = shift;
+    my $param_name  = shift;
+    
+    my $param_value = $self->SUPER::param($param_name, @_) 
+        or die "$param_name is a required parameter";
+    
+    return $param_value;
+}
+
+sub get_transcript_file_adaptor {
+    my $self = shift;
+    
+    unless ($self->{tfa}) {
+        $self->{tfa} = Bio::EnsEMBL::Variation::Pipeline::TranscriptFileAdaptor->new(
+            fasta_file => $self->param('proteins_fasta'),
+        );
+    }
+
+    return $self->{tfa};
+}
 
 sub get_species_adaptor {
     my ($self, $group) = @_;
@@ -40,7 +64,7 @@ sub get_adaptor {
     my $dba = Bio::EnsEMBL::Registry->get_DBAdaptor($species, $group);
     
     unless (defined $dba) {
-        $self->_load_registry;
+        $self->_load_registry();
         $dba = Bio::EnsEMBL::Registry->get_DBAdaptor($species, $group);
     }
     

@@ -9,8 +9,7 @@ sub run {
 
     my $self = shift;
     
-    my $tables = $self->param('tables')
-        or die "tables is a required parameter";
+    my $tables = $self->param('tables');
 
     my $var_dba = $self->get_species_adaptor('variation');
 
