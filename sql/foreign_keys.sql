@@ -107,6 +107,8 @@ ALTER TABLE variation_group_feature ADD FOREIGN KEY (seq_region_id) REFERENCES s
 ALTER TABLE variation_group_variation ADD FOREIGN KEY (variation_group_id) REFERENCES variation_group(variation_group_id);
 ALTER TABLE variation_group_variation ADD FOREIGN KEY (variation_id) REFERENCES variation(variation_id);
 
+ALTER TABLE variation_set ADD FOREIGN KEY (short_name_attrib_id) REFERENCES attrib(attrib_id);
+
 ALTER TABLE variation_set_structure ADD FOREIGN KEY (variation_set_super) REFERENCES variation_set(variation_set_id);
 ALTER TABLE variation_set_structure ADD FOREIGN KEY (variation_set_sub) REFERENCES variation_set(variation_set_id);
 
