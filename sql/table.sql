@@ -563,6 +563,7 @@ CREATE TABLE IF NOT EXISTS variation_set (
 	variation_set_id int(10) unsigned NOT NULL AUTO_INCREMENT,
 	name VARCHAR(255),
 	description TEXT,
+	short_name_attrib_id INT(10) UNSIGNED DEFAULT NULL,
 	PRIMARY KEY (variation_set_id),
 	KEY name_idx (name)
 );
