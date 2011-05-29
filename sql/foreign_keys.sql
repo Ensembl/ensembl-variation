@@ -77,6 +77,7 @@ ALTER TABLE sift_prediction ADD FOREIGN KEY (protein_position_id) REFERENCES pro
 ALTER TABLE structural_variation ADD FOREIGN KEY (source_id) REFERENCES source(source_id);
 ALTER TABLE structural_variation ADD FOREIGN KEY (seq_region_id) REFERENCES seq_region(seq_region_id);
 ALTER TABLE structural_variation ADD FOREIGN KEY (study_id) REFERENCES study(study_id);
+ALTER TABLE structural_variation ADD FOREIGN KEY (class_attrib_id) REFERENCES attrib(attrib_id);
 
 ALTER TABLE study ADD FOREIGN KEY (source_id) REFERENCES source(source_id);
 
