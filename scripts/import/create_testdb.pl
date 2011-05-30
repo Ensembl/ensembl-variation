@@ -8,7 +8,7 @@ use warnings;
 use Bio::EnsEMBL::Registry;
 
 # The default number of variations to build the test database from
-my $VARIATION_SIZE = 100;
+my $VARIATION_SIZE = 300000;
 
 # Get the registry configuration file from the command line
 my $registry_file = shift;
@@ -65,7 +65,7 @@ if (defined($variation_id_file)) {
 # Otherwise, get some random variation ids from the source database
 else {
     
-    warn ("Will extract $VARIATION_SIZE random variations from source database");
+    warn (localtime() . "\tWill extract $VARIATION_SIZE random variations from source database");
     
     # Get the min and max variation_ids
     my $stmt = qq{
@@ -158,7 +158,7 @@ sub add_foreign_data {
     my $source_db = shift;
     my $foreign_keys = shift;
     
-    warn ("Processing foreign relationship between $table ($column) and $foreign_table ($foreign_column)");
+    warn (localtime() . "\tProcessing foreign relationship between $table ($column) and $foreign_table ($foreign_column)");
     
     # Get the columns of the foreign table
     my $cols = get_table_columns($dba,$foreign_table);
