@@ -64,16 +64,17 @@ use warnings;
 package Bio::EnsEMBL::Variation::DBSQL::StructuralVariationAdaptor;
 
 use Bio::EnsEMBL::Variation::StructuralVariation;
+use Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor;
 use Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 
-our @ISA = ('Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor');
+our @ISA = ('Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor','Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor');
 
 
 # method used by superclass to construct SQL
 sub _tables { return (['structural_variation', 'sv'],
-		              ['source', 's'],
-					  ['study', 'st']);
+		              		['source', 's'],
+					  					['study', 'st']);
 			}
 
 # Add a left join to the study table
@@ -89,11 +90,10 @@ sub _default_where_clause {
 
 
 sub _columns {
-  return qw( sv.structural_variation_id sv.seq_region_id sv.seq_region_start
-             sv.seq_region_end sv.seq_region_strand
-             sv.variation_name s.name s.version s.description sv.class
-			 sv.bound_start sv.bound_end sv.allele_string
-			 st.name st.description st.url st.external_reference);
+  return qw( sv.structural_variation_id sv.seq_region_id sv.seq_region_start sv.seq_region_end 
+						 sv.seq_region_strand sv.variation_name sv.validation_status s.name s.version s.description 
+						 sv.class_attrib_id sv.inner_start sv.inner_end sv.allele_string st.name st.description 
+						 st.url st.external_reference);
 }
 
 
@@ -114,17 +114,16 @@ sub _objs_from_sth {
   my %sr_name_hash;
   my %sr_cs_hash;
 
-  my ($struct_variation_id, $seq_region_id, $seq_region_start,
-      $seq_region_end, $seq_region_strand,
-      $variation_name, $source_name, $source_version, $source_description, $sv_class,
-	  $bound_start, $bound_end, $allele_string, $study_name, $study_description,
-	  $study_url, $external_reference);
+  my ($struct_variation_id, $seq_region_id, $seq_region_start, $seq_region_end, $seq_region_strand,
+      $variation_name, $validation_status, $source_name, $source_version, $source_description, 
+			$class_attrib_id, $inner_start, $inner_end, $allele_string, $study_name, $study_description,
+	  	$study_url, $external_reference);
 
-  $sth->bind_columns(\$struct_variation_id, \$seq_region_id,
-                     \$seq_region_start, \$seq_region_end, \$seq_region_strand,
-                     \$variation_name, \$source_name, \$source_version, \$source_description,
-					 \$sv_class, \$bound_start, \$bound_end, \$allele_string, \$study_name, 
-					 \$study_description, \$study_url, \$external_reference);
+  $sth->bind_columns(\$struct_variation_id, \$seq_region_id,\$seq_region_start, \$seq_region_end, 
+										 \$seq_region_strand, \$variation_name, \$validation_status, \$source_name, 
+										 \$source_version, \$source_description, \$class_attrib_id, \$inner_start, 
+										 \$inner_end, \$allele_string, \$study_name, \$study_description, \$study_url, 
+										 \$external_reference);
 
   my $asm_cs;
   my $cmp_cs;
@@ -211,6 +210,13 @@ sub _objs_from_sth {
       }
       $slice = $dest_slice;
     }
+		
+		my $aa = $self->db->get_AttributeAdaptor;
+	
+		# Get the validation status
+    $validation_status ||= 0;
+    my @states = split(/,/,$validation_status);
+	
 	
     push @features, $self->_create_feature_fast('Bio::EnsEMBL::Variation::StructuralVariation',
     #push @features, Bio::EnsEMBL::Variation::StructuralVariation->new_fast(
@@ -221,14 +227,15 @@ sub _objs_from_sth {
        'strand'   => $seq_region_strand,
        'slice'    => $slice,
        'variation_name' => $variation_name,
+			 'validation_status' => \@states,
        'adaptor'  => $self,
        'dbID'     => $struct_variation_id,
        'source'   => $source_name,
        'source_version'   => $source_version,
 	     'source_description' => $source_description,
-	     'class'     => $sv_class,
-	     'bound_start' => $bound_start,
-	     'bound_end'   => $bound_end,
+	     'class_SO_term'     => $aa->attrib_value_for_id($class_attrib_id),
+	     'inner_start' => $inner_start,
+	     'inner_end'   => $inner_end,
 	     'allele_string' => $allele_string,
 	     'study_name' => $study_name, 
 	     'study_description' => $study_description,

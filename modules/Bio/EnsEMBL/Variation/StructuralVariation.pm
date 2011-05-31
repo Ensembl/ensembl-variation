@@ -37,13 +37,13 @@ Bio::EnsEMBL::Variation::StructuralVariation - A genomic position for a structur
         -strand  => 1,
         -slice   => $slice,
         -variation_name => 'esv25480',
-		-class => 'SV',
-		-source => 'DGVa',
-		-source_description => 'Database of Genomic Variants Archive',
-		-study_name => 'estd20',
-		-study_description => 'Conrad 2009 "Origins and functional impact of copy number variation in the human genome." PMID:19812545 [remapped from build NCBI36]',
-		-study_url => 'ftp://ftp.ebi.ac.uk/pub/databases/dgva/estd20_Conrad_et_al_2009',
-		-external_reference => 'pubmed/19812545');
+				-class_so_term => 'structural_variant',
+				-source => 'DGVa',
+				-source_description => 'Database of Genomic Variants Archive',
+				-study_name => 'estd20',
+				-study_description => 'Conrad 2009 "Origins and functional impact of copy number variation in the human genome." PMID:19812545 [remapped from build NCBI36]',
+				-study_url => 'ftp://ftp.ebi.ac.uk/pub/databases/dgva/estd20_Conrad_et_al_2009',
+				-external_reference => 'pubmed/19812545');
 
     ...
 
@@ -72,7 +72,7 @@ use warnings;
 package Bio::EnsEMBL::Variation::StructuralVariation;
 
 use Bio::EnsEMBL::Feature;
-use Bio::EnsEMBL::Utils::Exception qw(throw warning);
+use Bio::EnsEMBL::Utils::Exception qw(throw warning deprecate);
 use Bio::EnsEMBL::Utils::Argument  qw(rearrange);
 use Bio::EnsEMBL::Variation::Variation;
 use Bio::EnsEMBL::Slice;
@@ -98,16 +98,19 @@ our @ISA = ('Bio::EnsEMBL::Feature');
   Arg [-SLICE] :
     see superclass constructor
 	
-  Arg [-BOUND_START] :
-	int - the 5'-most coordinate of the underlying structural variation
+  Arg [-INNER_START] :
+	int - the 5'-less coordinate of the underlying structural variation
 	
-  Arg [-BOUND_END] :
-	int - the 3'-most coordinate of the underlying structural variation
+  Arg [-INNER_END] :
+	int - the 3'-less coordinate of the underlying structural variation
 
   Arg [-VARIATION_NAME] :
     string - the name of the variation this feature is for (denormalisation
     from Variation object).
 
+	Arg [-CLASS_SO_TERM] :
+		string - the sequence ontology term defining the class of the structural variation.
+		
   Arg [-SOURCE] :
     string - the name of the source where the variation comes from
 	
@@ -129,6 +132,10 @@ our @ISA = ('Bio::EnsEMBL::Feature');
   Arg [-EXTERNAL_REFERENCE] :
 	string - the pubmed/ids or project/study names
 	
+	Arg [-VALIDATION_STATUS] :
+	string - the status of the structural variation (e.g. validated, not validated, ...)
+	
+	
   Example    :
     $svf = Bio::EnsEMBL::Variation::StructuralVariation->new
        (-start   => 100,
@@ -136,7 +143,7 @@ our @ISA = ('Bio::EnsEMBL::Feature');
         -strand  => 1,
         -slice   => $slice,
         -variation_name => 'esv25480',
-		-class => 'SV',
+		-class_so_term => 'structural_variant',
 		-source => 'DGVa',
 		-source_description => 'Database of Genomic Variants Archive',
 		-study_name => 'estd20',
@@ -163,22 +170,23 @@ sub new {
     $source, 
     $source_version, 
     $source_description, 
-    $sv_class, 
-    $bound_start, 
-    $bound_end, 
+    $class_so_term, 
+    $inner_start, 
+    $inner_end, 
     $allele_string, 
     $study_name, 
     $study_description, 
     $study_url, 
-    $external_reference
+    $external_reference,
+		$validation_status
   ) = rearrange([qw(
           VARIATION_NAME 
           SOURCE 
           SOURCE_VERSION
           SOURCE_DESCRIPTION 
-          TYPE 
-          BOUND_START 
-          BOUND_END 
+          CLASS_SO_TERM
+          INNER_START 
+          INNER_END 
           ALLELE_STRING 
           STUDY_NAME 
           STUDY_DESCRIPTION 
@@ -186,18 +194,20 @@ sub new {
           EXTERNAL_REFERENCE
     )], @_);
 
+
   $self->{'variation_name'}     = $var_name;
   $self->{'source'}             = $source;
   $self->{'source_version'}     = $source_version;
   $self->{'source_description'} = $source_description;
-  $self->{'class'}              = $sv_class;
-  $self->{'bound_start'}        = $bound_start;
-  $self->{'bound_end'}          = $bound_end;
+  $self->{'class_SO_term'}      = $class_so_term;
+  $self->{'inner_start'}        = $inner_start;
+  $self->{'inner_end'}          = $inner_end;
   $self->{'allele_string'}      = $allele_string;
   $self->{'study_name'}         = $study_name;
   $self->{'study_description'}  = $study_description;
   $self->{'study_url'}          = $study_url;
   $self->{'external_reference'} = $external_reference;
+	$self->{'validation_status'}  = $validation_status;
 
   return $self;
 }
@@ -360,12 +370,24 @@ sub get_nearest_Gene{
 
 =cut
 
+
 sub class{
-  my $self = shift;
-  
-  $self->{'class'} = shift if @_;
-  
-  return $self->{'class'};
+	my $self = shift;
+    
+	unless ($self->{class_display_term}) {
+		
+		# convert the SO term to the ensembl display term
+		if (my $display_term = $self->{adaptor}->AttributeAdaptor->display_term_for_SO_term(
+				$self->{class_SO_term}) ) {
+            
+			$self->{class_display_term} = $display_term;
+		}
+		else {
+       die "Unrecognised SO term: ".$self->{class_SO_term};
+		}
+	}
+    
+	return $self->{class_display_term};
 }
 
 
@@ -430,6 +452,8 @@ sub source_description{
 
 =head2 bound_start
 
+
+
 	Arg [1]    : int $bound_start (optional)
 				The new value to set the bound_start attribute to
     Example     : my $bound_start = $svf->bound_start();
@@ -437,13 +461,14 @@ sub source_description{
     ReturnType  : int
     Exceptions  : none
     Caller      : general
-    Status      : At Risk
+    Status      : DEPRECATED - Use the method seq_region_start
 =cut
 
 sub bound_start{
   my $self = shift;
-  return $self->{'bound_start'} = shift if(@_);
-  return $self->{'bound_start'};
+	deprecate('Use the seq_region_start method instead.');
+  return $self->{'start'} = shift if(@_);
+  return $self->{'start'};
 }
 
 
@@ -456,14 +481,76 @@ sub bound_start{
     ReturnType  : int
     Exceptions  : none
     Caller      : general
-    Status      : At Risk
+    Status      : DEPRECATED - Use the method seq_region_end
 =cut
 
 sub bound_end{
   my $self = shift;
-  return $self->{'bound_end'} = shift if(@_);
-  return $self->{'bound_end'};
+	deprecate('Use the seq_region_end method instead.');
+  return $self->{'end'} = shift if(@_);
+  return $self->{'end'};
 }
+
+
+
+=head2 inner_start
+
+	Arg [1]    : int $inner_start (optional)
+				The new value to set the inner_start attribute to
+    Example     : my $inner_start = $svf->inner_start();
+    Description : Getter/setter for the 5'-less coordinate defined for this StructuralVariation
+    ReturnType  : int
+    Exceptions  : none
+    Caller      : general
+    Status      : At Risk
+=cut
+
+sub inner_start{
+  my $self = shift;
+  return $self->{'inner_start'} = shift if(@_);
+  return $self->{'inner_start'};
+}
+
+
+=head2 inner_end
+
+	Arg [1]    : int $inner_end (optional)
+				The new value to set the bound_end attribute to
+    Example     : my $inner_end = $svf->inner_end();
+    Description : Getter/setter for the 3'-less coordinate defined for this StructuralVariation
+    ReturnType  : int
+    Exceptions  : none
+    Caller      : general
+    Status      : At Risk
+=cut
+
+sub inner_end{
+  my $self = shift;
+  return $self->{'inner_end'} = shift if(@_);
+  return $self->{'inner_end'};
+}
+
+
+=head2 get_all_validation_states
+
+  Arg [1]    : none
+  Example    : my @vstates = @{$v->get_all_validation_states()};
+  Description: Retrieves all validation states for this structural variation.  Current
+               possible validation statuses are 'validated','not validated',
+               'high quality'
+  Returntype : reference to list of strings
+  Exceptions : none
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub get_all_validation_states {
+  my $self = shift;
+
+  return $self->{'validation_status'} || [];
+}
+
 
 =head2 get_reference_sequence
 
