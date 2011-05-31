@@ -579,7 +579,7 @@ sub transform {
   
   if(defined $transformed) {
 	
-	# fit the bound_start and bound_end coords to the new coords
+	# fit the start and end coords to the new coords
 	$transformed->_fix_bounds($self);
   }
   
@@ -595,7 +595,7 @@ sub transfer {
   
   if(defined $transferred) {
 	
-	# fit the bound_start and bound_end coords to the new coords
+	# fit the start and end coords to the new coords
 	$transferred->_fix_bounds($self);
   }
   
@@ -608,12 +608,12 @@ sub _fix_bounds {
   my $self = shift;
   my $old = shift;
   
-  if(defined $old->{'bound_start'}) {
-	$self->{'bound_start'} = $self->start - ($old->start - $old->{'bound_start'});
+  if(defined $old->{'start'}) {
+	$self->{'start'} = $self->start - ($old->start - $old->{'start'});
   }
   
-  if(defined $old->{'bound_end'}) {
-	$self->{'bound_end'} = $self->end + ($old->{'bound_end'} - $old->end);
+  if(defined $old->{'end'}) {
+	$self->{'end'} = $self->end + ($old->{'end'} - $old->end);
   }
 }
 
