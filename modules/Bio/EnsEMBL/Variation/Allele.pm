@@ -124,8 +124,8 @@ sub new {
       # Verify that we could get the AlleleAdaptor
         assert_ref($adaptor,'Bio::EnsEMBL::Variation::DBSQL::AlleleAdaptor');
   }
-        
-  return bless {'dbID'    => $dbID,
+  
+  my $self = {'dbID'    => $dbID,
                 'adaptor' => $adaptor,
                 'allele'  => $allele,
                 'frequency' => $freq,
@@ -135,10 +135,25 @@ sub new {
                 'variation' => $variation,
                 '_variation_id' => $variation_id,
                 '_population_id' => $population_id
-  }, $class;
+  };
+  bless $self, $class;
+  
+  return $self;
 }
 
-
+#ÊAn internal method for getting a unique hash key identifier, used by the Variation module 
+sub _hash_key {
+    my $self = shift;
+    
+    # By default, return the dbID
+    my $dbID = $self->dbID();
+    return $dbID if (defined($dbID));
+     
+    #ÊIf no dbID is specified, e.g. if we are creating a 'custom' object, return a fake dbID. This is necessary since e.g. Variation stores
+    #Êits alleles in a hash with dbID as key. To create fake dbIDs, use the string representing the memory address.
+    ($dbID) = sprintf('%s',$self) =~ m/\(([0-9a-fx]+)\)/i;
+    return $dbID;
+}
 
 =head2 allele
 
