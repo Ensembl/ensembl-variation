@@ -1038,7 +1038,7 @@ sub fetch_by_hgvs_notation {
     my ($reference,$type,$description) = $hgvs =~ m/^([^\:]+)\s*\:.*?([cgmrp]?)\.?([0-9]+.*)$/i;
     
     #ÊIf any of the fields are unknown, return undef
-    return undef unless (defined($reference) && defined($type) && defined($description));
+    throw ("Could not parse the HGVS notation $hgvs") unless (defined($reference) && defined($type) && defined($description));
     
     my ($start,$end,$ref_allele,$alt_allele);
     
@@ -1055,7 +1055,9 @@ sub fetch_by_hgvs_notation {
 	}
 	#ÊA delins, the reference allele will be fetched from the slice
 	elsif ($description =~ m/del.*ins/i) {
-	    ($start,$end,$alt_allele) = $description =~ m/^([0-9]+)_?([0-9]*)del.*?ins([A-Z]+)$/i;
+	    ($start,$end,$ref_allele,$alt_allele) = $description =~ m/^([0-9]+)_?([0-9]*)del(.*?)ins([A-Z]+)$/i;
+	    # If the reference allele was omitted, set it to undef
+	    $ref_allele = undef unless (length($ref_allele));
 	}
 	$end ||= $start;
     }
@@ -1097,8 +1099,14 @@ sub fetch_by_hgvs_notation {
 	$slice = $slice_adaptor->fetch_by_region($transcript->coord_system_name(),$transcript->seq_region_name());
     }
     
-    #ÊGet the alleles if necessary
-    $ref_allele = $slice->subseq($start,$end,$strand) if (!defined($ref_allele));
+    #ÊGet the reference allele based on the coordinates
+    my $refseq_allele = $slice->subseq($start,$end,$strand);
+    
+    # If the reference from the sequence does not correspond to the reference given in the HGVS notation, throw an exception 
+    throw ("Reference allele extracted from $reference:$start-$end ($refseq_allele) does not match reference allele given by HGVS notation ($ref_allele)") if (defined($ref_allele) && $ref_allele ne $refseq_allele);
+    
+    # Use the reference allele from the sequence if none was specified in the notation
+    $ref_allele ||= $refseq_allele;
     
     # If the variation type is an inversion, the alt allele is the reverse complement of the ref_allele
     if ($description =~ m/inv/i) {
@@ -1110,7 +1118,7 @@ sub fetch_by_hgvs_notation {
     #ÊCreate Allele objects
     my @allele_objs;
     foreach my $allele ($ref_allele,$alt_allele) {
-	push(@allele_objs,Bio::EnsEMBL::Variation::Allele->new('-allele' => $allele));
+	push(@allele_objs,Bio::EnsEMBL::Variation::Allele->new('-adaptor' => $self, '-allele' => $allele));
     }
     
     #ÊCreate a variation object. Use the HGVS string as its name
