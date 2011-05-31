@@ -63,7 +63,7 @@ use warnings;
 package Bio::EnsEMBL::Variation::DBSQL::SupportingStructuralVariationAdaptor;
 
 use Bio::EnsEMBL::DBSQL::BaseAdaptor;
-use Bio::EnsEMBL::Utils::Exception qw(throw warning);
+use Bio::EnsEMBL::Utils::Exception qw(throw warning deprecated);
 use Bio::EnsEMBL::Variation::SupportingStructuralVariation;
 
 use base qw{Bio::EnsEMBL::DBSQL::BaseAdaptor};
@@ -77,11 +77,29 @@ use base qw{Bio::EnsEMBL::DBSQL::BaseAdaptor};
   Returntype : Bio::EnsEMBL::Variation::SupportingStructuralVariation
   Exceptions : throw if name argument is not defined
   Caller     : general
-  Status     : At Risk
+  Status     : DEPRECATED: use the fetch_all_by_name method
 
 =cut
 
 sub fetch_by_name {
+  my $self = shift;
+	deprecatred('The supporting structural variation name is no more unique: please use the fetch_all_by_name method instead');
+}
+
+
+=head2 fetch_all_by_name
+
+  Arg [1]    : string $name
+  Example    : $ssv = $ssv_adaptor->fetch_by_name('nssv133');
+  Description: Retrieves a supporting evidence object via its name
+  Returntype : listref of Bio::EnsEMBL::Variation::SupportingStructuralVariation
+  Exceptions : throw if name argument is not defined
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub fetch_all_by_name {
   my $self = shift;
   my $name = shift;
 
@@ -100,7 +118,7 @@ sub fetch_by_name {
 
   return undef if(!@$result);
 
-  return $result->[0];
+  return $result;
 }
 
 	
