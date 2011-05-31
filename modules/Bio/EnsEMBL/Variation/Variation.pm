@@ -401,7 +401,7 @@ sub add_Allele {
     assert_ref($allele,'Bio::EnsEMBL::Variation::Allele');
     
     #ÊStore the allele in our private hash using the allele_id as key. This is primarily in order to quickly update allele objects that are created later and needs to be properly linked to the variation
-    $self->{'alleles'}{$allele->dbID()} = $allele;
+    $self->{'alleles'}{$allele->_hash_key()} = $allele;
     
 }
 
@@ -1181,10 +1181,10 @@ sub _weaken {
     assert_ref($allele,'Bio::EnsEMBL::Variation::Allele');
     
     #ÊIf the allele does not exist in our allele hash, do nothing
-    return unless (defined($self->{'alleles'}) && exists($self->{'alleles'}{$allele->dbID()}));
+    return unless (defined($self->{'alleles'}) && exists($self->{'alleles'}{$allele->_hash_key()}));
     
     #ÊWeaken the link from this variation to the allele
-    weaken($self->{'alleles'}{$allele->dbID()});
+    weaken($self->{'alleles'}{$allele->_hash_key()});
 }
 
 1;
