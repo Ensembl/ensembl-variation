@@ -551,9 +551,10 @@ CREATE TABLE IF NOT EXISTS variation_set_variation (
 
 @desc This table containts the name of sets and subsets of variations stored in the database. It usually represents the name of the project or subproject where a group of variations has been identified.
 
-@column variation_set_id	Primary key, internal identifier.
-@column name					Name of the set e.g. "Phenotype-associated variations".
-@column description			Description of the set.
+@column variation_set_id			Primary key, internal identifier.
+@column name									Name of the set e.g. "Phenotype-associated variations".
+@column description						Description of the set.
+@column short_name_attrib_id	Foreign key references to the @link attrib table. Short name used for web purpose.
 
 @see variation_set_variation
 @see variation_set_structure
