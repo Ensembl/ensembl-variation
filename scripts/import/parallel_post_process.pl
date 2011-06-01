@@ -505,7 +505,8 @@ sub reverse_genotype{
   my $buffer = {}; #hash containing all the files to be parallelized
   my $dbsnp = 0; #for non-dbsnp data
   
-  my ($source_id,$name,$validation_status,$ancestral_allele,$flipped,$count,$population_genotype_id,$variation_id,$ss_id,$allele_id,$allele,$allele_1,$allele_2,$frequency,$sample_id,$allele_string,$seq_region_id,$class_so_id);
+  my ($source_id,$name,$validation_status,$ancestral_allele,$flipped,$count,$population_genotype_id,$variation_id,$ss_id,
+      $allele_id,$allele,$allele_1,$allele_2,$frequency,$sample_id,$allele_string,$seq_region_id,$class_so_id,$is_somatic);
   
   my (%rec_seq_region_ids,%rec_table_name,$table_name);
 
@@ -566,7 +567,7 @@ sub reverse_genotype{
       $sth->bind_columns(\$allele_id,\$variation_id,\$ss_id,\$allele,\$frequency,\$sample_id,\$count,\$allele_string,\$seq_region_id);
     }
     elsif($table =~ /variation/) {
-      $sth->bind_columns(\$allele_id,\$source_id,\$name,\$validation_status,\$allele,\$flipped,\$class_so_id,\$allele_string,\$seq_region_id);
+      $sth->bind_columns(\$allele_id,\$source_id,\$name,\$validation_status,\$allele,\$flipped,\$class_so_id,\$is_somatic,\$allele_string,\$seq_region_id);
     }
     else {
       $sth->bind_columns(\$variation_id,\$ss_id,\$allele_1,\$allele_2,\$sample_id,\$allele_string,\$seq_region_id);
