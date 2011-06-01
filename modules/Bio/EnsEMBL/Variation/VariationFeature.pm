@@ -99,6 +99,7 @@ use Bio::EnsEMBL::Variation::Utils::Constants qw($DEFAULT_OVERLAP_CONSEQUENCE);
 use Bio::EnsEMBL::Variation::RegulatoryFeatureVariation;
 use Bio::EnsEMBL::Variation::MotifFeatureVariation;
 use Bio::EnsEMBL::Variation::ExternalFeatureVariation;
+use Bio::EnsEMBL::Variation::Utils::Sequence;
 use Bio::EnsEMBL::Slice;
 use Bio::EnsEMBL::Variation::DBSQL::TranscriptVariationAdaptor;
 use Bio::PrimarySeq;
@@ -216,7 +217,7 @@ sub new {
   $self->{'source'}                 = $source;
   $self->{'source_version'}         = $source_version;
   $self->{'is_somatic'}             = $is_somatic;
-  $self->{'validation_code'}        = $validation_code;
+  $self->{'validation_code'}        = Bio::EnsEMBL::Variation::Utils::Sequence::get_validation_code($validation_code);
   $self->{'overlap_consequences'}   = $overlap_consequences;
   $self->{'class_SO_term'}          = $class_so_term;
   
@@ -832,31 +833,9 @@ sub class_SO_term {
 =cut
 
 sub get_all_validation_states {
-  my $self = shift;
-
-  my $VSTATES = \@Bio::EnsEMBL::Variation::Variation::VSTATES;
-
-  my $code = $self->{'validation_code'};
-  # convert the validation state strings into a bit field
-  # this preserves the same order and representation as in the database
-  # and filters out invalid states
-
-  my $VSTATE2BIT = \%Bio::EnsEMBL::Variation::Variation::VSTATE2BIT;
-  my $vcode = 0;
-  $code ||= [];
-  foreach my $vstate (@$code) {
-    $vcode |= $VSTATE2BIT->{lc($vstate)} || 0;
-  }
-
-  # convert the bit field into an ordered array
-  my @states;
-  for(my $i = 0; $i < @$VSTATES; $i++) {
-    push @states, $VSTATES->[$i] if((1 << $i) & $vcode);
-  }
-  return \@states;
+    my $self = shift;
+    return Bio::EnsEMBL::Variation::Utils::Sequence::get_all_validation_states($self->{'validation_code'});
 }
-
-
 
 
 =head2 add_validation_state
@@ -872,23 +851,7 @@ sub get_all_validation_states {
 =cut
 
 sub add_validation_state {
-  my $self  = shift;
-  my $state = shift;
-
-  my %VSTATE2BIT = %Bio::EnsEMBL::Variation::Variation::VSTATE2BIT;
-  my @VSTATES = @Bio::EnsEMBL::Variation::Variation::VSTATES;
-  # convert string to bit value and add it to the existing bitfield
-  my $bitval = $VSTATE2BIT{lc($state)};
-
-  if(!$bitval) {
-    warning("$state is not a recognised validation status. Recognised " .
-            "validation states are: @VSTATES");
-    return;
-  }
-
-  $self->{'validation_code'} |= $bitval;
-
-  return;
+    Bio::EnsEMBL::Variation::Utils::Sequence::add_validation_state(@_);
 }
 
 =head2 source
