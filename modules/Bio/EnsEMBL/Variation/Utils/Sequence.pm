@@ -54,6 +54,7 @@ package Bio::EnsEMBL::Variation::Utils::Sequence;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp); 
 use Bio::EnsEMBL::Variation::Utils::Constants qw(:SO_class_terms);
+use Bio::EnsEMBL::Utils::Scalar qw(wrap_array);
 use Exporter;
 
 use vars qw(@ISA @EXPORT_OK);
@@ -69,7 +70,13 @@ use vars qw(@ISA @EXPORT_OK);
     &SO_variation_class 
     &align_seqs 
     &strain_ambiguity_code
+    &get_all_validation_states
+    &get_validation_code
+    &add_validation_state
 );
+
+# List of validation states. Order must match that of set in database
+our @VALIDATION_STATES = qw(cluster freq submitter doublehit hapmap 1000Genome failed precious);
 
 =head2 ambiguity_code
 
@@ -669,6 +676,139 @@ sub align_seqs {
 	}
 	
 	return [(join "", reverse @aln1), (join "", reverse @aln2)];
+}
+
+
+=head2 array_to_bitval
+
+  Arg[1]      : arrayref $arr
+  Arg[2]      : arrayref $ref
+  Example     : my $bitval = array_to_bitval(['hapmap','precious'],['cluster','freq','submitter','doublehit','hapmap','1000Genome','failed','precious']);
+  Description : Takes a reference to an array as input and return a bit value representing the 
+                combination of elements from a reference array. c.f. the SET datatype in MySQL 
+  ReturnType  : bitvalue that represents the combination of elements in the reference array specified in the given array
+  Exceptions  : none
+  Caller      : get_validation_code
+
+=cut
+
+sub array_to_bitval {
+    my $arr = shift;
+    my $ref = shift;
+    
+    #ÊEnsure that we have array references
+    $arr = wrap_array($arr);
+    $ref = wrap_array($ref);
+    
+    #ÊTurn the reference array into a hash, the values will correspond to 2 raised to the power of the position in the array
+    my $i=0;
+    my %ref_hash = map {lc($_) => $i++;} @{$ref}; 
+    
+    #ÊSet the bitval
+    my $bitval = 0;
+    foreach my $a (@{$arr}) {
+        
+        my $pos = $ref_hash{lc($a)};
+        if (defined($pos)) {
+            $bitval |= 2**$pos;    
+        }
+        # Warn if the element is not present in the reference array
+        else {
+            warning("$a is not a recognised element. Recognised elements are: " . join(",",@{$ref}));
+        }
+    }
+    
+    return $bitval;      
+}
+
+=head2 bitval_to_array
+
+  Arg [1]    : int $bitval
+  Arg [2]    : arrayref $ref
+  Example    : my $arr = bitval_to_array(6,['cluster','freq','submitter','doublehit','hapmap','1000Genome','failed','precious']);
+             : print join(",",@{$arr}); #ÊWill print 'freq,submitter'
+  Description: Returns an array with the combination of elements from the reference array specified by the supplied bitvalue. 
+               c.f. the SET datatype in MySQL
+  Returntype : reference to list of strings
+  Exceptions : none
+  Caller     : get_all_validation_states
+
+=cut
+
+sub bitval_to_array {
+    my $bitval = shift || 0;
+    my $ref = shift;
+
+    #ÊEnsure that we have array references
+    $ref = wrap_array($ref);
+    
+    # convert the bit value into an ordered array
+    my @arr;
+    for (my $i = 0; $i < @{$ref}; $i++) {
+        push(@arr,$ref->[$i]) if ((1 << $i) & $bitval);
+    }
+
+    return \@arr;
+}
+
+
+=head2 add_to_bitval
+
+  Arg [1]    : string $state
+  Example    : add_validation_state('cluster');
+  Description: Adds a validation state to this variation.
+  Returntype : none
+  Exceptions : warning if validation state is not a recognised type
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub add_validation_state {
+  my $obj = shift;
+  my $state = shift;
+  
+  #ÊGet the bitvalue for the new state 
+  my $newbit = get_validation_code($state) || 0;
+  
+  #ÊBit-add it to the current validation_code
+  my $oldbit = $obj->{'validation_code'} || 0;
+  $newbit |= $oldbit;
+  
+  # Set the validation_code
+  $obj->{'validation_code'} = $newbit;
+  
+  return;
+}
+
+=head2 get_all_validation_states
+
+  Arg [1]    : int $bitval
+  Example    : my @vstates = @{get_all_validation_states($var->{'validation_code'})};
+  Description: Retrieves all validation states for a specified bit value.
+  Returntype : reference to list of strings
+  Exceptions : none
+  Caller     : general
+
+=cut
+
+sub get_all_validation_states {
+    return bitval_to_array(shift,\@VALIDATION_STATES);
+}
+
+=head2 get_validation_code
+
+  Arg [1]    : arrayref $validation_status
+  Example    : $var->{'validation_code'} = get_validation_code(['submitter','precious']);
+  Description: Retrieves the bit value for a combination of validation statuses.
+  Returntype : int
+  Exceptions : none
+  Caller     : Variation::new
+
+=cut
+
+sub get_validation_code {
+    return array_to_bitval(shift,\@VALIDATION_STATES);
 }
 
 1;
