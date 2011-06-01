@@ -1207,8 +1207,10 @@ sub _objs_from_sth {
             %seen_syns = ();
             
             #ÊGet the validation status
-            $vstatus ||= 0;
-            my @states = split(/,/,$vstatus);
+            my @states;
+            if (defined($vstatus)) {
+                @states = split(/,/,$vstatus); 
+            } 
             
             #ÊCreate the variation object
             $var = Bio::EnsEMBL::Variation::Variation->new(
