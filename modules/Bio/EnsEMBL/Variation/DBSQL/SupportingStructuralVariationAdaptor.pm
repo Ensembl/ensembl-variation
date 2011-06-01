@@ -63,7 +63,7 @@ use warnings;
 package Bio::EnsEMBL::Variation::DBSQL::SupportingStructuralVariationAdaptor;
 
 use Bio::EnsEMBL::DBSQL::BaseAdaptor;
-use Bio::EnsEMBL::Utils::Exception qw(throw warning deprecated);
+use Bio::EnsEMBL::Utils::Exception qw(throw warning deprecate);
 use Bio::EnsEMBL::Variation::SupportingStructuralVariation;
 
 use base qw{Bio::EnsEMBL::DBSQL::BaseAdaptor};
@@ -83,7 +83,7 @@ use base qw{Bio::EnsEMBL::DBSQL::BaseAdaptor};
 
 sub fetch_by_name {
   my $self = shift;
-	deprecatred('The supporting structural variation name is no more unique: please use the fetch_all_by_name method instead');
+	deprecate('The supporting structural variation name is no more unique: please use the fetch_all_by_name method instead');
 }
 
 
