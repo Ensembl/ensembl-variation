@@ -25,7 +25,7 @@ my $aliases = {
     "Sus_scrofa"                => "pig",
     "Ornithorhynchus_anatinus"  => "platypus",
     "Pan_troglodytes"           => "chimp",
-    "Pongo_pygmaeus"            => "orangutan",
+    "Pongo_abelii"              => "orangutan",
     "Rattus_norvegicus"         => "rat",
     "Gallus_gallus"             => "chicken",
     "Drosophila_melanogaster"   => "fly",
@@ -39,7 +39,7 @@ my $groups = {
     },
     funcgen => {
         user    => 'ensro',
-        adaptor => 'Bio::EnsEMBL::Variation::DBSQL::DBAdaptor',
+        adaptor => 'Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor',
     },
     variation => {
         user    => 'ensadmin',
@@ -66,13 +66,16 @@ Bio::EnsEMBL::Registry->add_alias('%s', '%s');
 
 print <<END;
 #!/usr/bin/env perl
-use Bio::EnsEMBL::DBSQL::DBAdaptor;
-use Bio::EnsEMBL::Variation::DBSQL::DBAdaptor;
-use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Registry;
 END
 
-my @species;
+for my $group (keys %$groups) {
+    print "use ".$groups->{$group}->{adaptor}.";\n";
+}
+
+print "\n";
+
+my $dbs;
 
 for my $server (@servers) {
 
@@ -81,42 +84,47 @@ for my $server (@servers) {
         'ensro',
         '',
     );
-    
-    my $sth = $dbh->prepare(qq{
-        SHOW DATABASES like '%_variation_${release}_%'
-    });#'
-    
-    $sth->execute;
+   
+    for my $group (keys %$groups) {
 
-    while (my ($db) = $sth->fetchrow_array) {
+        my $pattern = '%_'.$group.'_'.$release.'_%';
 
-        my ($species) = $db =~ /(.+)_variation/;
+        my $sth = $dbh->prepare(qq{SHOW DATABASES like '$pattern'});
         
-        $species =~ s/^(.)/uc($1)/e;
-        
-        for my $group (qw(core variation)) {
-            
-            my $group_db = $db;
-            
-            $group_db =~ s/_variation_/_${group}_/;
-            
-            printf $fmt,
+        $sth->execute;
+
+        while (my ($db) = $sth->fetchrow_array) {
+            next if $db =~ /master_schema/i;
+            my ($species) = $db =~ /(.+)_$group/;
+            $species =~ s/^(.)/uc($1)/e;
+            $dbs->{$species}->{$group}->{db} = $db;
+            $dbs->{$species}->{$group}->{server} = $server;
+        }
+    }
+}
+
+for my $species (keys %$dbs) {
+    next unless $dbs->{$species}->{variation};
+
+    for my $group (keys %{ $dbs->{$species} }) {
+        printf $fmt,
                 $groups->{$group}->{adaptor},
                 $species,
                 $group,
                 $default_port,
-                $server,
+                $dbs->{$species}->{$group}->{server},
                 $groups->{$group}->{user},
                 $groups->{$group}->{pass} || '',
-                $group_db;
-        }
+                $dbs->{$species}->{$group}->{db};
         
-        if (my $alias = $aliases->{$species}) {
-            printf $alias_fmt, $species, $alias;
-        }
-        else {
-            warn "No alias for species '$species'";
-        }
+        
+    }
+    
+    if (my $alias = $aliases->{$species}) {
+        printf $alias_fmt, $species, $alias;
+    }
+    else {
+        warn "No alias for species '$species'";
     }
 }
 
