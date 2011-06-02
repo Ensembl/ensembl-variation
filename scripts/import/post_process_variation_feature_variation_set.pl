@@ -23,6 +23,7 @@ my @option_defs = (
   'species=s',
   'group=s',
   'registry_file=s',
+  'clean!',
   'quiet!',
   'help!'
 );
@@ -33,6 +34,7 @@ GetOptions(\%options,@option_defs);
 my $species = $options{'species'};
 my $group = $options{'group'} || q{variation};
 my $registry_file = $options{'registry_file'};
+my $clean = $options{'clean'};
 my $quiet = $options{'quiet'};
 my $help = $options{'help'};
 
@@ -50,10 +52,11 @@ $registry->load_all($registry_file);
 my $dbVar = $registry->get_DBAdaptor($species,$group) or die ("Could not get variation DBAdaptor for $species and $group");
 
 #ÊCall the post-processing subroutine
-post_process($dbVar,$quiet);
+post_process($dbVar,$clean,$quiet);
 
 sub post_process {
     my $dbVar = shift;
+    my $clean = shift;
     my $quiet = shift;
     
     my $stmt; 
@@ -132,6 +135,15 @@ sub post_process {
     };
     my $upd_impl_sth = $dbVar->dbc->prepare($stmt);
     
+    #ÊClean the variation_feature table
+    $stmt = qq{
+        UPDATE
+            $VARIATION_FEATURE_TABLE vf
+        SET
+            vf.variation_set_id = ''
+    };
+    my $clean_vf_sth = $dbVar->dbc->prepare($stmt);
+    
     #ÊUpdate the variation_feature table
     $stmt = qq{
         UPDATE
@@ -153,16 +165,16 @@ sub post_process {
         DROP TABLE IF EXISTS
             $tmp_table
     };
-    print STDOUT "Dropping temp table $tmp_table if it exists..." unless ($quiet);
+    print STDOUT localtime() . "\tDropping temp table $tmp_table if it exists..." unless ($quiet);
     $dbVar->dbc->do($stmt);
     print STDOUT "done!\n" unless ($quiet);
     
-    print STDOUT "Creating temp table $tmp_table..." unless ($quiet);
+    print STDOUT localtime() . "\tCreating temp table $tmp_table..." unless ($quiet);
     $tmp_tbl_sth->execute();
     print STDOUT "done!\n" unless ($quiet);
     
     # Next, insert the explicitly assigned variation_set_ids
-    print STDOUT "Adding explicitly assigned variation_set primary keys to $tmp_table..." unless ($quiet);
+    print STDOUT localtime() . "\tAdding explicitly assigned variation_set primary keys to $tmp_table..." unless ($quiet);
     $ins_expl_sth->execute();
     print STDOUT "done!\n" unless ($quiet);
     
@@ -170,21 +182,30 @@ sub post_process {
     my $update_count = 1;
     while ($update_count) {
         
-        print STDOUT "Adding implicitly assigned variation_set primary keys to $tmp_table..." unless ($quiet);
+        print STDOUT localtime() . "\tAdding implicitly assigned variation_set primary keys to $tmp_table..." unless ($quiet);
         $upd_impl_sth->execute();
         print STDOUT "done!\n" unless ($quiet);
         $update_count = $upd_impl_sth->rows();
-        print STDOUT "$update_count rows were updated, will " . ($update_count ? "" : "NOT ") . "repeat the statement\n" unless ($quiet);
+        print STDOUT "\t$update_count rows were updated, will " . ($update_count ? "" : "NOT ") . "repeat the statement\n" unless ($quiet);
+        
+    }
+    
+    #ÊIf specified, truncate all pre-existing variation_set_id entries in variation_feature
+    if ($clean) {
+        
+        print STDOUT localtime() . "\tTruncating pre-existing variation_set_id columns in variation_feature..." unless ($quiet);
+        $clean_vf_sth->execute();
+        print STDOUT "done!\n" unless ($quiet);
         
     }
     
     # Finally, update the variation_set_id column in variation_feature
-    print STDOUT "Updating variation_feature with the variation_set_id column from $tmp_table..." unless ($quiet);
+    print STDOUT localtime() . "\tUpdating variation_feature with the variation_set_id column from $tmp_table..." unless ($quiet);
     $upd_vf_sth->execute();
     print STDOUT "done!\n" unless ($quiet);
     
     # ...and lastly, drop the temporary table
-    print STDOUT "Dropping the temp table $tmp_table..." unless ($quiet);
+    print STDOUT localtime() . "\tDropping the temp table $tmp_table..." unless ($quiet);
     $stmt = qq{
         DROP TABLE
             $tmp_table
@@ -193,7 +214,7 @@ sub post_process {
     print STDOUT "done!\n" unless ($quiet);
     
     # And that's it
-    print STDOUT "Post-processing complete!\n" unless ($quiet);
+    print STDOUT localtime() . "\tPost-processing complete!\n" unless ($quiet);
 }
 
 sub usage {
@@ -225,6 +246,9 @@ Command line switches:
                     The group identifier for the database to post-process as it is specified
                     in the registry configuration file. Defaults to 'variation'.
                   
+  -clean            (Optional)
+                    If specified, all pre-existing variation_set_id entries in variation_feature are truncated. 
+                    
   -quiet            (Optional)
                     Suppresses output.
                     
