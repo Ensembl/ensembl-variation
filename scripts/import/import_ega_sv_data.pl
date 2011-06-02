@@ -102,13 +102,15 @@ sub read_file{
   
 	# Replace the coordinates (4 coordinates)
 	$dbVar->do(qq{UPDATE temp_cnv SET inner_start=start, start=outer_start 
-								WHERE outer_start!=0 and inner_start=0;});
+								WHERE outer_start is not NULL and inner_start is NULL;});
 	$dbVar->do(qq{UPDATE temp_cnv SET inner_end=end, end=outer_end 
-								WHERE outer_end!=0 and inner_end=0;});							
-	$dbVar->do(qq{UPDATE temp_cnv SET start=outer_start WHERE start=0;});
-	$dbVar->do(qq{UPDATE temp_cnv SET end=outer_end WHERE end=0;});						
-								
-								
+								WHERE outer_end is not NULL and inner_end is null;});							
+	$dbVar->do(qq{UPDATE temp_cnv SET start=outer_start WHERE start is NULL;});
+	$dbVar->do(qq{UPDATE temp_cnv SET end=outer_end WHERE end is NULL;});	
+	
+	$dbVar->do(qq{UPDATE temp_cnv SET start=inner_start WHERE start is NULL;});
+	$dbVar->do(qq{UPDATE temp_cnv SET end=inner_end WHERE end is NULL;});
+											
 	
 	
   # remove those that are of different species
@@ -125,25 +127,26 @@ sub source{
 		$dbVar->do(qq{UPDATE IGNORE source SET description='Database of Genomic Variants Archive',url='http://www.ebi.ac.uk/dgva/',version=201105 where name='DGVa';});
 	}
 	else {
-		$dbVar->do(qq{INSERT INTO source (name,description,url,version) VALUES ('DGVa','Database of Genomic Variants Archive','http://www.ebi.ac.uk/dgva/',201102);});
+		$dbVar->do(qq{INSERT INTO source (name,description,url,version) VALUES ('DGVa','Database of Genomic Variants Archive','http://www.ebi.ac.uk/dgva/',201105);});
 	}
 	my @source_id = @{$dbVar->selectrow_arrayref(qq{SELECT source_id FROM source WHERE name='DGVa';})};
 	return $source_id[0];
 }
 
 sub study_table{
-  debug("Inserting into study table");
+  debug("Inserting into $study_table table");
   
   # An ugly construct, but let's create a unique key on the study name in order to avoid duplicates but still update the URLs
   # BTW, perhaps we actually should have a unique constraint on the name column??
-  my $stmt = qq{
-    ALTER TABLE
-      $study_table
-    ADD CONSTRAINT
-      UNIQUE KEY
-	name_key (name)
-  };
-  $dbVar->do($stmt);
+	my $stmt;
+# my $stmt = qq{
+#    ALTER TABLE
+#      $study_table
+#    ADD CONSTRAINT
+#      UNIQUE KEY
+#	name_key (name)
+#  };
+#  $dbVar->do($stmt);
   
   # Then insert "new" studys. Update the URL field in case of duplicates
   $stmt = qq{
@@ -206,24 +209,30 @@ sub study_table{
   $dbVar->do($stmt);
   
   # And then drop the name key again
-  $stmt = qq{
-    ALTER TABLE
-      $study_table
-    DROP KEY
-      name_key
-  };
-  $dbVar->do($stmt);
+#  $stmt = qq{
+#    ALTER TABLE
+#      $study_table
+#    DROP KEY
+#      name_key
+#  };
+#  $dbVar->do($stmt);
   
+	# Special case for the De Smith url study
+	if ($species eq 'human') {
+		my @s_data = @{$dbVar->selectrow_arrayref(qq{SELECT study_id,url FROM $study_table WHERE name='estd24';})};
+		$s_data[1] =~ s/de\sSmith/De_Smith/;
+		$dbVar->do(qq{UPDATE $study_table SET url='$s_data[1]' where study_id=$s_data[0];});
+	}
 }
 
 
 sub structural_variation{
   my $failed = shift;
   
-  debug("Inserting into structural_variation table");
+  debug("Inserting into $sv_table table");
   
   # create table if it doesn't exist yet
-	$dbVar->do(qq{CREATE TABLE IF NOT EXISTS structural_variation (
+	$dbVar->do(qq{CREATE TABLE IF NOT EXISTS $sv_table (
 	structural_variation_id int(10) unsigned NOT NULL AUTO_INCREMENT,
 	seq_region_id int(10) unsigned NOT NULL,
 	seq_region_start int(11) NOT NULL,
@@ -244,8 +253,8 @@ sub structural_variation{
 	KEY study_idx (study_id) 
   )});
 
-	if ($dbVar->do(qq{show columns from structural_variation like 'tmp_class_name';}) != 1){
-		$dbVar->do(qq{ALTER TABLE structural_variation ADD COLUMN tmp_class_name varchar(255);});
+	if ($dbVar->do(qq{show columns from $sv_table like 'tmp_class_name';}) != 1){
+		$dbVar->do(qq{ALTER TABLE $sv_table ADD COLUMN tmp_class_name varchar(255);});
 	}
   
   # The variation name should be unique so for the insert, create a unique key for this column.
@@ -348,7 +357,7 @@ sub structural_variation{
 
 sub supporting_evidence {
 	
-	debug("Inserting into supporting_structural_variation table");
+	debug("Inserting into $ssv_table table");
 	
 	my $stmt = qq{
     SELECT
@@ -476,8 +485,20 @@ sub mapping{
 	my $slice;
 	
 	if (!$start) {
-		$start = $outer_start;
-		$end   = $outer_end;
+		if ($outer_start) {
+			$start = $outer_start;
+		}
+		else {
+			$start = $inner_start;
+		}
+	}
+	if (!$end) {
+		if ($outer_end) {
+			$end = $outer_end;
+		}
+		else {
+			$end = $inner_end;
+		}
 	}
 	
 	eval { $slice = $sa->fetch_by_region('chromosome', $chr, $start, $end, 1, $assembly); };
