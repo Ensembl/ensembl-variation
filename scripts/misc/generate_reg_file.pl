@@ -104,6 +104,8 @@ for my $server (@servers) {
 }
 
 for my $species (keys %$dbs) {
+
+    # we only care about species with variation databases!
     next unless $dbs->{$species}->{variation};
 
     for my $group (keys %{ $dbs->{$species} }) {
@@ -116,8 +118,6 @@ for my $species (keys %$dbs) {
                 $groups->{$group}->{user},
                 $groups->{$group}->{pass} || '',
                 $dbs->{$species}->{$group}->{db};
-        
-        
     }
     
     if (my $alias = $aliases->{$species}) {
