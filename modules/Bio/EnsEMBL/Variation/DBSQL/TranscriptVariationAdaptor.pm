@@ -69,6 +69,7 @@ use Bio::EnsEMBL::Variation::TranscriptVariation;
 use Bio::EnsEMBL::Variation::TranscriptVariationAllele;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(MAX_DISTANCE_FROM_TRANSCRIPT);
+use Bio::EnsEMBL::Variation::Utils::Constants qw(%OVERLAP_CONSEQUENCES);
 
 use base qw(Bio::EnsEMBL::Variation::DBSQL::VariationFeatureOverlapAdaptor);
 
@@ -206,7 +207,9 @@ sub fetch_all_by_Transcripts_with_constraint {
 
 sub _objs_from_sth {
     my ($self, $sth) = @_;
-    
+
+    #warn $sth->sql;
+
     my (
         $transcript_variation_id,
         $variation_feature_id, 
@@ -266,7 +269,7 @@ sub _objs_from_sth {
         
         # for TranscriptVariations with multiple alternative alleles
         # there will be multiple rows in the database, so we construct
-        # the TV object and the reference alleles object  when we see 
+        # the TV object and the reference allele object when we see 
         # the first row, but then only add extra allele objects when 
         # we see further rows, we track existing TVs in the %tvs hash, 
         # keyed by variation_feature_id and feature_stable_id
@@ -296,6 +299,7 @@ sub _objs_from_sth {
                 transcript_variation        => $tv, 
                 codon                       => $ref_codon,
                 peptide                     => $ref_pep, 
+                dbID                        => $transcript_variation_id,
             });
 
             $tv->add_TranscriptVariationAllele($ref_allele);
@@ -303,8 +307,7 @@ sub _objs_from_sth {
        
         #my $overlap_consequences = $self->_transcript_variation_consequences_for_set_number($consequence_types);
 
-        my $overlap_consequences = [ map { $self->_overlap_consequence_for_SO_term($_) } 
-            split /,/, $consequence_types ];
+        my $overlap_consequences = [ map { $OVERLAP_CONSEQUENCES{$_} } split /,/, $consequence_types ];
         
         my $allele = Bio::EnsEMBL::Variation::TranscriptVariationAllele->new_fast({
             is_reference                => 0,
@@ -318,6 +321,7 @@ sub _objs_from_sth {
             overlap_consequences        => $overlap_consequences, 
             polyphen_prediction         => $polyphen_prediction,
             sift_prediction             => $sift_prediction, 
+            dbID                        => $transcript_variation_id,
         });
         
         $tv->add_TranscriptVariationAllele($allele);

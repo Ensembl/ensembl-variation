@@ -85,6 +85,7 @@ use Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor;
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Utils::Iterator;
+use Bio::EnsEMBL::Variation::Utils::Constants qw(%OVERLAP_CONSEQUENCES);
 
 our @ISA = ('Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor', 'Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor');
 our $MAX_VARIATION_SET_ID = 64;
@@ -157,6 +158,14 @@ sub fetch_all_by_Slice_constraint_with_Variations {
     $self->{_get_variations} = 1;
     my $vfs = $self->fetch_all_by_Slice_constraint(@_);
     $self->{_get_variations} = 0;
+    return $vfs;
+}
+
+sub fetch_all_by_Slice_constraint_with_TranscriptVariations {
+    my $self = shift;
+    $self->{_get_transcript_variations} = 1;
+    my $vfs = $self->fetch_all_by_Slice_constraint(@_);
+    $self->{_get_transcript_variations} = 0;
     return $vfs;
 }
 
@@ -850,8 +859,7 @@ sub _objs_from_sth {
             
             #my $overlap_consequences = $self->_variation_feature_consequences_for_set_number($consequence_type);
             
-            my $overlap_consequences = [ map { $self->_overlap_consequence_for_SO_term($_) } 
-                split /,/, $consequence_type ];
+            my $overlap_consequences = [ map { $OVERLAP_CONSEQUENCES{$_} } split /,/, $consequence_type ];
 
             # consequence_type
             return $self->_create_feature_fast('Bio::EnsEMBL::Variation::VariationFeature',
@@ -902,15 +910,18 @@ sub _objs_from_sth {
         if ($self->{_get_transcript_variations}) {
             my $vfs = $iterator->to_arrayref;
             return $vfs unless @$vfs;
-            warn "getting transcript variations";
+            #warn "getting transcript variations";
             my $tvs = $self->db->get_TranscriptVariationAdaptor->fetch_all_by_VariationFeatures($vfs);
             for my $tv (@$tvs) {
-                $tv->variation_feature->{transcript_variations}->{$tv->transcript_stable_id} = $tv;
+                $tv->variation_feature->add_TranscriptVariation($tv);
+                #$tv->variation_feature->{transcript_variations}->{$tv->transcript_stable_id} = $tv;
             }
             return $vfs;
         }
         else {
-            return $iterator->to_arrayref;
+            my $vfs = $iterator->to_arrayref;
+            #warn "Got ".scalar(@$vfs). "VFs";
+            return $vfs;
         }
     }   
 }
