@@ -72,47 +72,6 @@ our @ISA = ('Bio::EnsEMBL::DBSQL::BaseAdaptor');
 
 our $MAX_VARIATION_SET_ID = 64;
 
-=head2 fetch_by_dbID
-
-  Arg [1]    : int $dbID
-  Example    : $vs = $vs_adaptor->fetch_by_dbID(2);
-  Description: Retrieves a VariationSet object via its internal identifier.
-               If no such variation set exists undef is returned.
-  Returntype : Bio::EnsEMBL::Variation::VariationSet
-  Exceptions : throw if dbID arg is not defined
-  Caller     : general
-  Status     : At Risk
-
-=cut
-
-sub fetch_by_dbID {
-  my $self = shift;
-  my $dbID = shift;
-
-  throw('dbID argument expected') unless (defined($dbID));
-
-  my $cols = join(',',$self->_columns());
-  
-  my $stmt = qq{
-    SELECT
-      $cols
-    FROM
-      variation_set vs
-    WHERE
-      vs.variation_set_id = ?
-  };
-  my $sth = $self->prepare($stmt);
-  $sth->bind_param(1,$dbID,SQL_INTEGER);
-  $sth->execute();
-
-  my $result = $self->_objs_from_sth($sth);
-  $sth->finish();
-
-  return undef if(!@$result);
-
-  return $result->[0];
-}
-
 =head2 fetch_all_top_VariationSets
 
   Example    : $vs = $vs_adaptor->fetch_all_top_VariationSets();
@@ -126,34 +85,23 @@ sub fetch_by_dbID {
 =cut
 
 sub fetch_all_top_VariationSets {
-  my $self = shift;
+    my $self = shift;
 
-  my $cols = join(',',$self->_columns());
-  
-  my $stmt = qq{
-    SELECT
-      $cols
-    FROM
-      variation_set vs
-    WHERE
-      NOT EXISTS (
-        SELECT
-          *
-        FROM
-          variation_set_structure vss
-        WHERE
-          vss.variation_set_sub = vs.variation_set_id
-      )
-  };
-  my $sth = $self->prepare($stmt);
-  $sth->execute();
-
-  my $result = $self->_objs_from_sth($sth);
-  $sth->finish();
-
-  return undef if(!@$result);
-
-  return $result;
+    #ÊAdd a constraint to only get the sets that don't have any parent sets
+    my $constraint = qq{
+        NOT EXISTS (
+            SELECT
+                *
+            FROM
+                variation_set_structure vss
+            WHERE
+                vss.variation_set_sub = vs.variation_set_id
+        )
+    };
+    
+    #ÊGet the results from generic fetch method
+    return $self->generic_fetch($constraint);
+    
 }
 
 =head2 fetch_all_by_sub_VariationSet
@@ -280,34 +228,48 @@ sub fetch_all_by_super_VariationSet {
 =cut
 
 sub fetch_by_name {
-  my $self = shift;
-  my $name = shift;
+    my $self = shift;
+    my $name = shift;
 
-  throw('name argument expected') unless (defined($name));
+    throw('name argument expected') unless (defined($name));
 
-  my $cols = join(',',$self->_columns());
-  
-  my $stmt = qq{
-    SELECT
-      $cols
-    FROM
-      variation_set vs
-    WHERE
-      vs.name LIKE ?
-  };
-
-  my $sth = $self->prepare($stmt);
-  $sth->bind_param(1,$name,SQL_VARCHAR);
-  $sth->execute();
-
-  my $result = $self->_objs_from_sth($sth);
-  $sth->finish();
-
-  return undef if(!@$result);
-
-  return $result->[0];
+    # Add a constraint on the name column and bind the name to it
+    my $constraint = qq{ vs.name LIKE ? };
+    $self->bind_param_generic_fetch($name,SQL_VARCHAR);
+    
+    #ÊCall the generic fetch method
+    return $self->generic_fetch($constraint);
 }
 
+=head2 fetch_by_short_name
+
+  Arg [1]    : string $name
+  Example    : $vg = $vga->fetch_by_short_name('ph_variants');
+  Description: Retrieves a variation set by its short name.
+  Returntype : Bio::EnsEMBL::Variation::VariationSet
+  Exceptions : throw if short name argument is not provided
+  Caller     : general
+
+=cut
+
+sub fetch_by_short_name {
+    my $self = shift;
+    my $name = shift;
+
+    throw('short name argument expected') unless (defined($name));
+
+    #ÊGet the attrib_id corresponding to the 'short_name' type and specified name
+    my $aa = $self->db->get_AttributeAdaptor();
+    my $attrib_id = $aa->attrib_id_for_type_value($self->_short_name_attrib_type_code(),$name);
+    return undef unless (defined($attrib_id));
+    
+    # Add a constraint on the short_name_attrib_id column and bind the name to it
+    my $constraint = qq{ vs.short_name_attrib_id = ? };
+    $self->bind_param_generic_fetch($attrib_id,SQL_INTEGER);
+    
+    #ÊCall the generic fetch method
+    return $self->generic_fetch($constraint);
+}
 
 
 =head2 fetch_all_by_Variation
@@ -324,10 +286,10 @@ sub fetch_by_name {
 =cut
 
 sub fetch_all_by_Variation {
-  my $self = shift;
-  my $var  = shift;
+    my $self = shift;
+    my $var  = shift;
 
-  assert_ref($var,'Bio::EnsEMBL::Variation::Variation');
+    assert_ref($var,'Bio::EnsEMBL::Variation::Variation');
 
   my $cols = join(',',$self->_columns());
   my $stmt = qq{
@@ -390,8 +352,13 @@ sub _get_bitvalue {
   return $bitvalue;
 }
 
+# API-internal method for getting the attrib_type code used for short names
+sub _short_name_attrib_type_code {
+    return q{ short_name };
+}
+
 sub _columns {
-  return qw( vs.variation_set_id vs.name vs.description );
+  return qw( vs.variation_set_id vs.name vs.description vs.short_name_attrib_id );
 }
 sub _tables {
   return ( ['variation_set','vs'] );
@@ -404,12 +371,13 @@ sub _objs_from_sth {
   my $self = shift;
   my $sth  = shift;
 
-  my ($vs_id, $name, $description);
-  $sth->bind_columns(\$vs_id, \$name, \$description);
+  my ($vs_id, $name, $description, $short_name_attrib_id);
+  $sth->bind_columns(\$vs_id, \$name, \$description, \$short_name_attrib_id);
 
   my @results;
   my ($cur_vs, $cur_vs_id);
-
+    my $aa = $self->db->get_AttributeAdaptor();
+    
 # Construct all variation sets
 
   while($sth->fetch()) {
@@ -419,7 +387,8 @@ sub _objs_from_sth {
           -dbID => $vs_id,
           -adaptor => $self,
           -name    => $name,
-          -description    => $description
+          -description  => $description,
+          -short_name   => $aa->attrib_value_for_id($short_name_attrib_id)
         );
       $cur_vs_id = $vs_id;
       push(@results,$cur_vs);

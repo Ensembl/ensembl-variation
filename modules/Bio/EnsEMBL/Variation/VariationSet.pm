@@ -75,13 +75,17 @@ use vars qw(@ISA);
   Arg [DESCRIPTION] :
     string - A description explaining the charcteristics of this variation set
 
+  Arg [SHORT_NAME] :
+    string - the short name of this variation set
+
   Example    :
     $ag = Bio::EnsEMBL::Variation::VariationSet->new
       (
        -dbID => 12,
        -adaptor => $var_set_adaptor,
        -name   => 'Phenotype-associated variations',
-       -description => 'Variations that have been associated with a phenotype'
+       -description => 'Variations that have been associated with a phenotype',
+       -short_name => 'ph_variants'
       );
   Description: Constructor.  Instantiates a new VariationSet
   Returntype : Bio::EnsEMBL::Variation::VariationSet
@@ -94,8 +98,8 @@ use vars qw(@ISA);
 sub new {
   my $class = shift;
 
-  my ($dbID, $adaptor, $name, $description) =
-    rearrange([qw(DBID ADAPTOR NAME DESCRIPTION)], @_);
+  my ($dbID, $adaptor, $name, $description, $short_name) =
+    rearrange([qw(DBID ADAPTOR NAME DESCRIPTION SHORT_NAME)], @_);
   
   #ÊCheck that the dbID does not exceed the maximum dbID that can be stored in the variation_set_id SET construct in variation_set_variation
   warn("Primary key variation_set_id $dbID for variation set '$name' exceeds " . $Bio::EnsEMBL::Variation::DBSQL::VariationSetAdaptor::MAX_VARIATION_SET_ID . ". Therefore, this variation set cannot be properly referenced in variation_set_variation") if ($dbID > $Bio::EnsEMBL::Variation::DBSQL::VariationSetAdaptor::MAX_VARIATION_SET_ID);
@@ -103,7 +107,8 @@ sub new {
   return bless {'dbID' => $dbID,
                 'adaptor' => $adaptor,
                 'name' => $name,
-                'description' => $description}, $class;
+                'description' => $description,
+                'short_name' => $short_name}, $class;
 }
 
 =head2 description
@@ -292,6 +297,26 @@ sub name {
   $self->{'name'} = $name if (defined($name));
   
   return $self->{'name'};
+}
+
+=head2 short_name
+
+  Arg [1]    : string $short_name
+  Example    : print $vs->short_name();
+  Description: Getter/Setter for the short name of this VariationSet
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+
+=cut
+
+sub short_name {
+  my $self = shift;
+  my $short_name = shift;
+  
+  $self->{'short_name'} = $short_name if (defined($short_name));
+  
+  return $self->{'short_name'};
 }
 
 #ÊAPI-internal subroutine to get the bitvalue of this set's id and all of its subsets (unless specifically indicated not to)
