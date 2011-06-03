@@ -105,6 +105,7 @@ use Bio::EnsEMBL::Utils::Scalar qw(assert_ref);
 use Bio::EnsEMBL::Variation::Utils::Sequence qw(ambiguity_code SO_variation_class);
 use Bio::EnsEMBL::Utils::Exception qw(throw deprecate warning);
 use Bio::EnsEMBL::Variation::Utils::Sequence;
+use Bio::EnsEMBL::Variation::Utils::Constants qw(%VARIATION_CLASSES); 
 
 use vars qw(@ISA);
 use Scalar::Util qw(weaken);
@@ -1014,17 +1015,12 @@ sub var_class{
 
             $self->{class_SO_term} = SO_variation_class($allele_string);
         }
-        
-        if (my $display_term = $self->{adaptor}->class_display_term_for_SO_term(
-                $self->{class_SO_term}, 
-                $self->is_somatic
-            ) ) {
-            
-            $self->{class_display_term} = $display_term;
-        }
-        else {
-            die "Unrecognised SO term: ".$self->{class_SO_term};
-        }
+
+        # convert the SO term to the ensembl display term
+
+        $self->{class_display_term} = $self->is_somatic ? 
+            $VARIATION_CLASSES{$self->{class_SO_term}}->{somatic_display_term} : 
+            $VARIATION_CLASSES{$self->{class_SO_term}}->{display_term};
     }
     
     return $self->{class_display_term};

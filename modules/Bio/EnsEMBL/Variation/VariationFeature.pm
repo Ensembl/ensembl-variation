@@ -95,7 +95,7 @@ use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
 use Bio::EnsEMBL::Variation::Utils::Sequence qw(ambiguity_code hgvs_variant_notation SO_variation_class);
 use Bio::EnsEMBL::Variation::Variation;
 use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(MAX_DISTANCE_FROM_TRANSCRIPT);
-use Bio::EnsEMBL::Variation::Utils::Constants qw($DEFAULT_OVERLAP_CONSEQUENCE); 
+use Bio::EnsEMBL::Variation::Utils::Constants qw($DEFAULT_OVERLAP_CONSEQUENCE %VARIATION_CLASSES); 
 use Bio::EnsEMBL::Variation::RegulatoryFeatureVariation;
 use Bio::EnsEMBL::Variation::MotifFeatureVariation;
 use Bio::EnsEMBL::Variation::ExternalFeatureVariation;
@@ -254,7 +254,6 @@ sub allele_string{
   return $self->{'allele_string'};
 }
 
-
 =head2 display_id
 
   Arg [1]    : none
@@ -380,7 +379,7 @@ sub get_all_TranscriptVariations {
             # fetch all transcripts on this slice, we also need to transfer the transcripts to the same slice 
             # as the VariationFeature for the consequence stuff to work
 
-            $transcripts = [ map { $_->transfer($self->slice) } @{ $slice->get_all_Transcripts } ];
+            $transcripts = [ map { $_->transfer($self->slice) } @{ $slice->get_all_Transcripts(1) } ];
         }
 
         my @unfetched_transcripts = grep { 
@@ -772,21 +771,10 @@ sub var_class {
         my $so_term = $self->class_SO_term(undef, $no_db);
 
         # convert the SO term to the ensembl display term
-        
-		if ($self->{adaptor}->AttributeAdaptor) {
-			if (my $display_term = $self->{adaptor}->AttributeAdaptor->display_term_for_SO_term(
-				$so_term, 
-				$self->is_somatic
-			) ) {
-			  $self->{class_display_term} = $display_term;
-			}
-			else {
-				throw("Didn't find display term for SO term '$so_term'");
-			}
-		}
-		else {
-			$self->{class_display_term}= $so_term;
-		}
+       
+        $self->{class_display_term} = $self->is_somatic ? 
+            $VARIATION_CLASSES{$so_term}->{somatic_display_term} : 
+            $VARIATION_CLASSES{$so_term}->{display_term};
     }
     
     return $self->{class_display_term};
