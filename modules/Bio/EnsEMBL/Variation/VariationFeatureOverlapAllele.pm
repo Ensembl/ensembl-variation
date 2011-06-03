@@ -57,7 +57,7 @@ use Bio::EnsEMBL::Utils::Argument qw(rearrange);
 use Bio::EnsEMBL::Utils::Scalar qw(assert_ref);
 use Bio::EnsEMBL::Utils::Exception qw(throw);
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
-use Bio::EnsEMBL::Variation::Utils::Constants qw(@OVERLAP_CONSEQUENCES);
+use Bio::EnsEMBL::Variation::Utils::Constants qw(%OVERLAP_CONSEQUENCES);
 use Scalar::Util qw(weaken);
 
 our $UNAMBIGUOUS_NUCLEOTIDES = qr/^[ACGT-]+$/i;
@@ -372,7 +372,7 @@ sub get_all_OverlapConsequences {
         
         my $cons = [];
         
-        for my $oc (@OVERLAP_CONSEQUENCES) {
+        for my $oc (values %OVERLAP_CONSEQUENCES) {
             if ($oc->feature_class eq ref $self->feature) {
                 if ($oc->predicate->($self)) {
                     push @$cons, $oc;
