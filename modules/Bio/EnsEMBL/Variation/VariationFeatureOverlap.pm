@@ -97,13 +97,15 @@ sub new {
         $feature, 
         $adaptor, 
         $ref_feature, 
-        $disambiguate_sn_alleles
+        $disambiguate_sn_alleles,
+        $no_ref_check
     ) = rearrange([qw(
             VARIATION_FEATURE 
             FEATURE 
             ADAPTOR 
             REF_FEATURE 
             DISAMBIGUATE_SINGLE_NUCLEOTIDE_ALLELES
+            NO_REF_CHECK
         )], @_);
 
     assert_ref($variation_feature, 'Bio::EnsEMBL::Variation::VariationFeature');
@@ -119,15 +121,17 @@ sub new {
         ref_feature         => $ref_feature,
     }, $class;
     
-    # we take the reference allele sequence from the reference sequence, not from the allele string 
     
-    my $ref_allele = $ref_feature->subseq(
-        $variation_feature->start, 
-        $variation_feature->end, 
-        $variation_feature->strand
-    );
+    my $ref_allele;
     
-    $ref_allele = '-' unless $ref_allele;
+    # we take the reference allele sequence from the reference sequence, not from the allele string
+    unless($no_ref_check) {
+        $ref_allele = $ref_feature->subseq(
+            $variation_feature->start, 
+            $variation_feature->end, 
+            $variation_feature->strand
+        );
+    }
 
     # get the variation feature allele string, expand it, and split it into separate alleles
     
@@ -136,7 +140,10 @@ sub new {
     expand(\$allele_string);
 
     my @alleles = split /\//, $allele_string;
- 
+    
+    $ref_allele = $alleles[0] if $no_ref_check;
+    $ref_allele = '-' unless $ref_allele;
+  
     if ($disambiguate_sn_alleles) {
         
         # if this flag is set, disambiguate any ambiguous single nucleotide alleles, so  
