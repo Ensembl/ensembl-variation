@@ -9,9 +9,9 @@ use warnings;
 
 use base qw(Exporter);
 
-our @EXPORT_OK = qw(@OVERLAP_CONSEQUENCES $DEFAULT_OVERLAP_CONSEQUENCE ATTRIB_TYPE_RANK ATTRIB_TYPE_NCBI_TERM ATTRIB_TYPE_SO_TERM ATTRIB_TYPE_FEATURE_SO_TERM ATTRIB_TYPE_DISPLAY_TERM ATTRIB_TYPE_SO_ACCESSION SO_TERM_NC_TRANSCRIPT_VARIANT SO_TERM_3_PRIME_UTR_VARIANT SO_TERM_CODING_SEQUENCE_VARIANT SO_TERM_INFRAME_CODON_LOSS SO_TERM_STOP_RETAINED_VARIANT SO_TERM_INFRAME_CODON_GAIN SO_TERM_NMD_TRANSCRIPT_VARIANT SO_TERM_REGULATORY_REGION_VARIANT SO_TERM_5KB_UPSTREAM_VARIANT SO_TERM_SPLICE_ACCEPTOR_VARIANT SO_TERM_INTERGENIC_VARIANT SO_TERM_2KB_UPSTREAM_VARIANT SO_TERM_INCOMPLETE_TERMINAL_CODON_VARIANT SO_TERM_COMPLEX_CHANGE_IN_TRANSCRIPT SO_TERM_SYNONYMOUS_CODON SO_TERM_FRAMESHIFT_VARIANT SO_TERM_MIRNA_TARGET_SITE_VARIANT SO_TERM_INTRON_VARIANT SO_TERM_5_PRIME_UTR_VARIANT SO_TERM_NON_SYNONYMOUS_CODON SO_TERM_STOP_GAINED SO_TERM_BINDING_SITE_VARIANT SO_TERM_SPLICE_DONOR_VARIANT SO_TERM_5KB_DOWNSTREAM_VARIANT SO_TERM_500B_DOWNSTREAM_VARIANT SO_TERM_MATURE_MIRNA_VARIANT SO_TERM_INITIATOR_CODON_CHANGE SO_TERM_STOP_LOST SO_TERM_SPLICE_REGION_VARIANT SO_TERM_SEQUENCE_ALTERATION SO_TERM_INDEL SO_TERM_DELETION SO_TERM_COPY_NUMBER_VARIATION SO_TERM_TANDEM_REPEAT SO_TERM_SUBSTITUTION SO_TERM_SNV SO_TERM_INSERTION);
+our @EXPORT_OK = qw(%OVERLAP_CONSEQUENCES %VARIATION_CLASSES $DEFAULT_OVERLAP_CONSEQUENCE ATTRIB_TYPE_RANK ATTRIB_TYPE_NCBI_TERM ATTRIB_TYPE_SHORT_NAME ATTRIB_TYPE_FEATURE_SO_TERM ATTRIB_TYPE_DISPLAY_TERM ATTRIB_TYPE_SO_ACCESSION ATTRIB_TYPE_SO_TERM ATTRIB_TYPE_SIFT_PREDICTION ATTRIB_TYPE_POLYPHEN_PREDICTION SO_TERM_NC_TRANSCRIPT_VARIANT SO_TERM_3_PRIME_UTR_VARIANT SO_TERM_CODING_SEQUENCE_VARIANT SO_TERM_INFRAME_CODON_LOSS SO_TERM_STOP_RETAINED_VARIANT SO_TERM_INFRAME_CODON_GAIN SO_TERM_NMD_TRANSCRIPT_VARIANT SO_TERM_REGULATORY_REGION_VARIANT SO_TERM_5KB_UPSTREAM_VARIANT SO_TERM_SPLICE_ACCEPTOR_VARIANT SO_TERM_INTERGENIC_VARIANT SO_TERM_2KB_UPSTREAM_VARIANT SO_TERM_INCOMPLETE_TERMINAL_CODON_VARIANT SO_TERM_COMPLEX_CHANGE_IN_TRANSCRIPT SO_TERM_SYNONYMOUS_CODON SO_TERM_TF_BINDING_SITE_VARIANT SO_TERM_FRAMESHIFT_VARIANT SO_TERM_INTRON_VARIANT SO_TERM_5_PRIME_UTR_VARIANT SO_TERM_NON_SYNONYMOUS_CODON SO_TERM_STOP_GAINED SO_TERM_SPLICE_DONOR_VARIANT SO_TERM_5KB_DOWNSTREAM_VARIANT SO_TERM_500B_DOWNSTREAM_VARIANT SO_TERM_MATURE_MIRNA_VARIANT SO_TERM_INITIATOR_CODON_CHANGE SO_TERM_STOP_LOST SO_TERM_SPLICE_REGION_VARIANT SO_TERM_SEQUENCE_ALTERATION SO_TERM_INDEL SO_TERM_DELETION SO_TERM_COPY_NUMBER_VARIATION SO_TERM_TANDEM_REPEAT SO_TERM_SUBSTITUTION SO_TERM_SNV SO_TERM_STRUCTURAL_VARIANT SO_TERM_INSERTION SO_TERM_PROBE);
 
-our %EXPORT_TAGS = ( attrib_types => [qw(ATTRIB_TYPE_RANK ATTRIB_TYPE_NCBI_TERM ATTRIB_TYPE_SO_TERM ATTRIB_TYPE_FEATURE_SO_TERM ATTRIB_TYPE_DISPLAY_TERM ATTRIB_TYPE_SO_ACCESSION)], SO_consequence_terms => [qw(SO_TERM_NC_TRANSCRIPT_VARIANT SO_TERM_3_PRIME_UTR_VARIANT SO_TERM_CODING_SEQUENCE_VARIANT SO_TERM_INFRAME_CODON_LOSS SO_TERM_STOP_RETAINED_VARIANT SO_TERM_INFRAME_CODON_GAIN SO_TERM_NMD_TRANSCRIPT_VARIANT SO_TERM_REGULATORY_REGION_VARIANT SO_TERM_5KB_UPSTREAM_VARIANT SO_TERM_SPLICE_ACCEPTOR_VARIANT SO_TERM_INTERGENIC_VARIANT SO_TERM_2KB_UPSTREAM_VARIANT SO_TERM_INCOMPLETE_TERMINAL_CODON_VARIANT SO_TERM_COMPLEX_CHANGE_IN_TRANSCRIPT SO_TERM_SYNONYMOUS_CODON SO_TERM_FRAMESHIFT_VARIANT SO_TERM_MIRNA_TARGET_SITE_VARIANT SO_TERM_INTRON_VARIANT SO_TERM_5_PRIME_UTR_VARIANT SO_TERM_NON_SYNONYMOUS_CODON SO_TERM_STOP_GAINED SO_TERM_BINDING_SITE_VARIANT SO_TERM_SPLICE_DONOR_VARIANT SO_TERM_5KB_DOWNSTREAM_VARIANT SO_TERM_500B_DOWNSTREAM_VARIANT SO_TERM_MATURE_MIRNA_VARIANT SO_TERM_INITIATOR_CODON_CHANGE SO_TERM_STOP_LOST SO_TERM_SPLICE_REGION_VARIANT)], SO_class_terms => [qw(SO_TERM_SEQUENCE_ALTERATION SO_TERM_INDEL SO_TERM_DELETION SO_TERM_COPY_NUMBER_VARIATION SO_TERM_TANDEM_REPEAT SO_TERM_SUBSTITUTION SO_TERM_SNV SO_TERM_INSERTION)],  );
+our %EXPORT_TAGS = ( attrib_types => [qw(ATTRIB_TYPE_RANK ATTRIB_TYPE_NCBI_TERM ATTRIB_TYPE_SHORT_NAME ATTRIB_TYPE_FEATURE_SO_TERM ATTRIB_TYPE_DISPLAY_TERM ATTRIB_TYPE_SO_ACCESSION ATTRIB_TYPE_SO_TERM ATTRIB_TYPE_SIFT_PREDICTION ATTRIB_TYPE_POLYPHEN_PREDICTION)], SO_consequence_terms => [qw(SO_TERM_NC_TRANSCRIPT_VARIANT SO_TERM_3_PRIME_UTR_VARIANT SO_TERM_CODING_SEQUENCE_VARIANT SO_TERM_INFRAME_CODON_LOSS SO_TERM_STOP_RETAINED_VARIANT SO_TERM_INFRAME_CODON_GAIN SO_TERM_NMD_TRANSCRIPT_VARIANT SO_TERM_REGULATORY_REGION_VARIANT SO_TERM_5KB_UPSTREAM_VARIANT SO_TERM_SPLICE_ACCEPTOR_VARIANT SO_TERM_INTERGENIC_VARIANT SO_TERM_2KB_UPSTREAM_VARIANT SO_TERM_INCOMPLETE_TERMINAL_CODON_VARIANT SO_TERM_COMPLEX_CHANGE_IN_TRANSCRIPT SO_TERM_SYNONYMOUS_CODON SO_TERM_TF_BINDING_SITE_VARIANT SO_TERM_FRAMESHIFT_VARIANT SO_TERM_INTRON_VARIANT SO_TERM_5_PRIME_UTR_VARIANT SO_TERM_NON_SYNONYMOUS_CODON SO_TERM_STOP_GAINED SO_TERM_SPLICE_DONOR_VARIANT SO_TERM_5KB_DOWNSTREAM_VARIANT SO_TERM_500B_DOWNSTREAM_VARIANT SO_TERM_MATURE_MIRNA_VARIANT SO_TERM_INITIATOR_CODON_CHANGE SO_TERM_STOP_LOST SO_TERM_SPLICE_REGION_VARIANT)], SO_class_terms => [qw(SO_TERM_SEQUENCE_ALTERATION SO_TERM_INDEL SO_TERM_DELETION SO_TERM_COPY_NUMBER_VARIATION SO_TERM_TANDEM_REPEAT SO_TERM_SUBSTITUTION SO_TERM_SNV SO_TERM_STRUCTURAL_VARIANT SO_TERM_INSERTION SO_TERM_PROBE)],  );
 
 use Bio::EnsEMBL::Variation::OverlapConsequence;
 
@@ -21,6 +21,9 @@ use constant ATTRIB_TYPE_DISPLAY_TERM => 'display_term';
 use constant ATTRIB_TYPE_NCBI_TERM => 'NCBI_term';
 use constant ATTRIB_TYPE_FEATURE_SO_TERM => 'feature_SO_term';
 use constant ATTRIB_TYPE_RANK => 'rank';
+use constant ATTRIB_TYPE_POLYPHEN_PREDICTION => 'polyphen_prediction';
+use constant ATTRIB_TYPE_SIFT_PREDICTION => 'sift_prediction';
+use constant ATTRIB_TYPE_SHORT_NAME => 'short_name';
 
 use constant SO_TERM_SNV => 'SNV';
 use constant SO_TERM_SUBSTITUTION => 'substitution';
@@ -30,7 +33,8 @@ use constant SO_TERM_DELETION => 'deletion';
 use constant SO_TERM_INDEL => 'indel';
 use constant SO_TERM_TANDEM_REPEAT => 'tandem_repeat';
 use constant SO_TERM_SEQUENCE_ALTERATION => 'sequence_alteration';
-
+use constant SO_TERM_STRUCTURAL_VARIANT => 'structural_variant';
+use constant SO_TERM_PROBE => 'probe';
 use constant SO_TERM_INTERGENIC_VARIANT => 'intergenic_variant';
 use constant SO_TERM_5KB_UPSTREAM_VARIANT => '5KB_upstream_variant';
 use constant SO_TERM_5KB_DOWNSTREAM_VARIANT => '5KB_downstream_variant';
@@ -58,380 +62,431 @@ use constant SO_TERM_NC_TRANSCRIPT_VARIANT => 'nc_transcript_variant';
 use constant SO_TERM_MATURE_MIRNA_VARIANT => 'mature_miRNA_variant';
 use constant SO_TERM_CODING_SEQUENCE_VARIANT => 'coding_sequence_variant';
 use constant SO_TERM_REGULATORY_REGION_VARIANT => 'regulatory_region_variant';
-use constant SO_TERM_MIRNA_TARGET_SITE_VARIANT => 'miRNA_target_site_variant';
-use constant SO_TERM_BINDING_SITE_VARIANT => 'binding_site_variant';
+use constant SO_TERM_TF_BINDING_SITE_VARIANT => 'TF_binding_site_variant';
 
-our $DEFAULT_OVERLAP_CONSEQUENCE = Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
-          'SO_term' => 'intergenic_variant',
-          'is_default' => 1,
-          'label' => 'Intergenic',
-          'description' => 'More than 5 kb either upstream or downstream of a transcript',
-          'rank' => '100',
-          'SO_accession' => 'SO:0001628',
-          'display_term' => 'INTERGENIC'
-        }
+our %VARIATION_CLASSES = (
+'SNV' => {
+  'somatic_display_term' => 'somatic_SNV',
+  'SO_accession' => 'SO:0001483',
+  'display_term' => 'SNP'
+}
+,
+'substitution' => {
+  'somatic_display_term' => 'somatic_substitution',
+  'SO_accession' => 'SO:1000002',
+  'display_term' => 'substitution'
+}
+,
+'copy_number_variation' => {
+  'somatic_display_term' => 'somatic_CNV',
+  'SO_accession' => 'SO:0001019',
+  'display_term' => 'CNV'
+}
+,
+'insertion' => {
+  'somatic_display_term' => 'somatic_insertion',
+  'SO_accession' => 'SO:0000667',
+  'display_term' => 'insertion'
+}
+,
+'deletion' => {
+  'somatic_display_term' => 'somatic_deletion',
+  'SO_accession' => 'SO:0000159',
+  'display_term' => 'deletion'
+}
+,
+'indel' => {
+  'somatic_display_term' => 'somatic_indel',
+  'SO_accession' => 'SO:1000032',
+  'display_term' => 'indel'
+}
+,
+'tandem_repeat' => {
+  'somatic_display_term' => 'somatic_tandem_repeat',
+  'SO_accession' => 'SO:0000705',
+  'display_term' => 'tandem_repeat'
+}
+,
+'sequence_alteration' => {
+  'somatic_display_term' => 'somatic_sequence_alteration',
+  'SO_accession' => 'SO:0001059',
+  'display_term' => 'sequence_alteration'
+}
+,
+'structural_variant' => {
+  'somatic_display_term' => 'somatic_SV',
+  'SO_accession' => 'SO:0001537',
+  'display_term' => 'SV'
+}
+,
+'probe' => {
+  'somatic_display_term' => 'somatic_CNV_PROBE',
+  'SO_accession' => 'SO:0000051',
+  'display_term' => 'CNV_PROBE'
+}
+,
 );
 
-our @OVERLAP_CONSEQUENCES = (
-$DEFAULT_OVERLAP_CONSEQUENCE,
-Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
-          'feature_SO_term' => 'transcript',
-          'description' => 'Within 5 kb upstream of the 5 prime end of a transcript',
-          'SO_accession' => 'SO:0001635',
-          'SO_term' => '5KB_upstream_variant',
-          'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::upstream_5KB',
-          'label' => 'Upstream',
-          'rank' => '20',
-          'display_term' => 'UPSTREAM',
-          'feature_class' => 'Bio::EnsEMBL::Transcript'
-        }
+our $DEFAULT_OVERLAP_CONSEQUENCE = Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
+  'SO_term' => 'intergenic_variant',
+  'is_default' => 1,
+  'label' => 'Intergenic',
+  'description' => 'More than 5 kb either upstream or downstream of a transcript',
+  'rank' => '100',
+  'SO_accession' => 'SO:0001628',
+  'display_term' => 'INTERGENIC'
+}
+);
+
+
+our %OVERLAP_CONSEQUENCES = (
+'intergenic_variant' => $DEFAULT_OVERLAP_CONSEQUENCE,
+'5KB_upstream_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
+  'feature_SO_term' => 'transcript',
+  'description' => 'Within 5 kb upstream of the 5 prime end of a transcript',
+  'SO_accession' => 'SO:0001635',
+  'SO_term' => '5KB_upstream_variant',
+  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::upstream_5KB',
+  'label' => 'Upstream',
+  'rank' => '20',
+  'display_term' => 'UPSTREAM',
+  'feature_class' => 'Bio::EnsEMBL::Transcript'
+}
 ),
-Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
-          'feature_SO_term' => 'transcript',
-          'description' => 'Within 5 kb downstream of the 3 prime end of a transcript',
-          'SO_accession' => 'SO:0001633',
-          'SO_term' => '5KB_downstream_variant',
-          'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::downstream_5KB',
-          'label' => 'Downstream',
-          'rank' => '21',
-          'display_term' => 'DOWNSTREAM',
-          'feature_class' => 'Bio::EnsEMBL::Transcript'
-        }
+'5KB_downstream_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
+  'feature_SO_term' => 'transcript',
+  'description' => 'Within 5 kb downstream of the 3 prime end of a transcript',
+  'SO_accession' => 'SO:0001633',
+  'SO_term' => '5KB_downstream_variant',
+  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::downstream_5KB',
+  'label' => 'Downstream',
+  'rank' => '21',
+  'display_term' => 'DOWNSTREAM',
+  'feature_class' => 'Bio::EnsEMBL::Transcript'
+}
 ),
-Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
-          'NCBI_term' => 'near-gene-5',
-          'feature_SO_term' => 'transcript',
-          'description' => 'Within 5 kb upstream of the 5 prime end of a transcript',
-          'SO_accession' => 'SO:0001636',
-          'SO_term' => '2KB_upstream_variant',
-          'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::upstream_2KB',
-          'label' => 'Upstream',
-          'rank' => '18',
-          'display_term' => 'UPSTREAM',
-          'feature_class' => 'Bio::EnsEMBL::Transcript'
-        }
+'2KB_upstream_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
+  'NCBI_term' => 'near-gene-5',
+  'feature_SO_term' => 'transcript',
+  'description' => 'Within 5 kb upstream of the 5 prime end of a transcript',
+  'SO_accession' => 'SO:0001636',
+  'SO_term' => '2KB_upstream_variant',
+  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::upstream_2KB',
+  'label' => 'Upstream',
+  'rank' => '18',
+  'display_term' => 'UPSTREAM',
+  'feature_class' => 'Bio::EnsEMBL::Transcript'
+}
 ),
-Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
-          'NCBI_term' => 'near-gene-3',
-          'feature_SO_term' => 'transcript',
-          'description' => 'Within 5 kb downstream of the 3 prime end of a transcript',
-          'SO_accession' => 'SO:0001634',
-          'SO_term' => '500B_downstream_variant',
-          'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::downstream_500B',
-          'label' => 'Downstream',
-          'rank' => '19',
-          'display_term' => 'DOWNSTREAM',
-          'feature_class' => 'Bio::EnsEMBL::Transcript'
-        }
+'500B_downstream_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
+  'NCBI_term' => 'near-gene-3',
+  'feature_SO_term' => 'transcript',
+  'description' => 'Within 5 kb downstream of the 3 prime end of a transcript',
+  'SO_accession' => 'SO:0001634',
+  'SO_term' => '500B_downstream_variant',
+  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::downstream_500B',
+  'label' => 'Downstream',
+  'rank' => '19',
+  'display_term' => 'DOWNSTREAM',
+  'feature_class' => 'Bio::EnsEMBL::Transcript'
+}
 ),
-Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
-          'NCBI_term' => 'splice-5',
-          'feature_SO_term' => 'primary_transcript',
-          'description' => 'In the first 2 or the last 2 basepairs of an intron',
-          'SO_accession' => 'SO:0001575',
-          'SO_term' => 'splice_donor_variant',
-          'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::donor_splice_site',
-          'label' => 'Essential splice site',
-          'rank' => '1',
-          'display_term' => 'ESSENTIAL_SPLICE_SITE',
-          'feature_class' => 'Bio::EnsEMBL::Transcript'
-        }
+'splice_donor_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
+  'NCBI_term' => 'splice-5',
+  'feature_SO_term' => 'primary_transcript',
+  'description' => 'In the first 2 or the last 2 basepairs of an intron',
+  'SO_accession' => 'SO:0001575',
+  'SO_term' => 'splice_donor_variant',
+  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::donor_splice_site',
+  'label' => 'Essential splice site',
+  'rank' => '1',
+  'display_term' => 'ESSENTIAL_SPLICE_SITE',
+  'feature_class' => 'Bio::EnsEMBL::Transcript'
+}
 ),
-Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
-          'NCBI_term' => 'splice-3',
-          'feature_SO_term' => 'primary_transcript',
-          'description' => 'In the first 2 or the last 2 basepairs of an intron',
-          'SO_accession' => 'SO:0001574',
-          'SO_term' => 'splice_acceptor_variant',
-          'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::acceptor_splice_site',
-          'label' => 'Essential splice site',
-          'rank' => '1',
-          'display_term' => 'ESSENTIAL_SPLICE_SITE',
-          'feature_class' => 'Bio::EnsEMBL::Transcript'
-        }
+'splice_acceptor_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
+  'NCBI_term' => 'splice-3',
+  'feature_SO_term' => 'primary_transcript',
+  'description' => 'In the first 2 or the last 2 basepairs of an intron',
+  'SO_accession' => 'SO:0001574',
+  'SO_term' => 'splice_acceptor_variant',
+  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::acceptor_splice_site',
+  'label' => 'Essential splice site',
+  'rank' => '1',
+  'display_term' => 'ESSENTIAL_SPLICE_SITE',
+  'feature_class' => 'Bio::EnsEMBL::Transcript'
+}
 ),
-Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
-          'feature_SO_term' => 'primary_transcript',
-          'description' => '1-3 bps into an exon or 3-8 bps into an intron',
-          'SO_accession' => 'SO:0001630',
-          'SO_term' => 'splice_region_variant',
-          'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::splice_region',
-          'label' => 'Splice site',
-          'rank' => '8',
-          'display_term' => 'SPLICE_SITE',
-          'feature_class' => 'Bio::EnsEMBL::Transcript'
-        }
+'splice_region_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
+  'feature_SO_term' => 'primary_transcript',
+  'description' => '1-3 bps into an exon or 3-8 bps into an intron',
+  'SO_accession' => 'SO:0001630',
+  'SO_term' => 'splice_region_variant',
+  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::splice_region',
+  'label' => 'Splice site',
+  'rank' => '8',
+  'display_term' => 'SPLICE_SITE',
+  'feature_class' => 'Bio::EnsEMBL::Transcript'
+}
 ),
-Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
-          'NCBI_term' => 'intron',
-          'feature_SO_term' => 'primary_transcript',
-          'description' => 'In intron',
-          'SO_accession' => 'SO:0001627',
-          'SO_term' => 'intron_variant',
-          'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::within_intron',
-          'label' => 'Intronic',
-          'rank' => '15',
-          'display_term' => 'INTRONIC',
-          'feature_class' => 'Bio::EnsEMBL::Transcript'
-        }
+'intron_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
+  'NCBI_term' => 'intron',
+  'feature_SO_term' => 'primary_transcript',
+  'description' => 'In intron',
+  'SO_accession' => 'SO:0001627',
+  'SO_term' => 'intron_variant',
+  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::within_intron',
+  'label' => 'Intronic',
+  'rank' => '15',
+  'display_term' => 'INTRONIC',
+  'feature_class' => 'Bio::EnsEMBL::Transcript'
+}
 ),
-Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
-          'NCBI_term' => 'untranslated_5',
-          'feature_SO_term' => 'mRNA',
-          'description' => 'In 5 prime untranslated region',
-          'SO_accession' => 'SO:0001623',
-          'SO_term' => '5_prime_UTR_variant',
-          'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::within_5_prime_utr',
-          'label' => '5 prime UTR',
-          'rank' => '13',
-          'display_term' => '5PRIME_UTR',
-          'feature_class' => 'Bio::EnsEMBL::Transcript'
-        }
+'5_prime_UTR_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
+  'NCBI_term' => 'untranslated_5',
+  'feature_SO_term' => 'mRNA',
+  'description' => 'In 5 prime untranslated region',
+  'SO_accession' => 'SO:0001623',
+  'SO_term' => '5_prime_UTR_variant',
+  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::within_5_prime_utr',
+  'label' => '5 prime UTR',
+  'rank' => '13',
+  'display_term' => '5PRIME_UTR',
+  'feature_class' => 'Bio::EnsEMBL::Transcript'
+}
 ),
-Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
-          'NCBI_term' => 'untranslated_3',
-          'feature_SO_term' => 'mRNA',
-          'description' => 'In 3 prime untranslated region',
-          'SO_accession' => 'SO:0001624',
-          'SO_term' => '3_prime_UTR_variant',
-          'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::within_3_prime_utr',
-          'label' => '3 prime UTR',
-          'rank' => '14',
-          'display_term' => '3PRIME_UTR',
-          'feature_class' => 'Bio::EnsEMBL::Transcript'
-        }
+'3_prime_UTR_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
+  'NCBI_term' => 'untranslated_3',
+  'feature_SO_term' => 'mRNA',
+  'description' => 'In 3 prime untranslated region',
+  'SO_accession' => 'SO:0001624',
+  'SO_term' => '3_prime_UTR_variant',
+  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::within_3_prime_utr',
+  'label' => '3 prime UTR',
+  'rank' => '14',
+  'display_term' => '3PRIME_UTR',
+  'feature_class' => 'Bio::EnsEMBL::Transcript'
+}
 ),
-Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
-          'feature_SO_term' => 'primary_transcript',
-          'description' => 'Insertion or deletion that spans an exon/intron or coding sequence/UTR border',
-          'SO_accession' => 'SO:0001577',
-          'SO_term' => 'complex_change_in_transcript',
-          'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::complex_indel',
-          'label' => 'Complex in/del',
-          'rank' => '5',
-          'display_term' => 'COMPLEX_INDEL',
-          'feature_class' => 'Bio::EnsEMBL::Transcript'
-        }
+'complex_change_in_transcript' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
+  'feature_SO_term' => 'primary_transcript',
+  'description' => 'Insertion or deletion that spans an exon/intron or coding sequence/UTR border',
+  'SO_accession' => 'SO:0001577',
+  'SO_term' => 'complex_change_in_transcript',
+  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::complex_indel',
+  'label' => 'Complex in/del',
+  'rank' => '5',
+  'display_term' => 'COMPLEX_INDEL',
+  'feature_class' => 'Bio::EnsEMBL::Transcript'
+}
 ),
-Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
-          'NCBI_term' => 'cds-synon',
-          'feature_SO_term' => 'mRNA',
-          'description' => 'In coding sequence, not resulting in an amino acid change (silent mutation)',
-          'SO_accession' => 'SO:0001588',
-          'SO_term' => 'synonymous_codon',
-          'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::synonymous_codon',
-          'label' => 'Synonymous coding',
-          'rank' => '10',
-          'display_term' => 'SYNONYMOUS_CODING',
-          'feature_class' => 'Bio::EnsEMBL::Transcript'
-        }
+'synonymous_codon' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
+  'NCBI_term' => 'cds-synon',
+  'feature_SO_term' => 'mRNA',
+  'description' => 'In coding sequence, not resulting in an amino acid change (silent mutation)',
+  'SO_accession' => 'SO:0001588',
+  'SO_term' => 'synonymous_codon',
+  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::synonymous_codon',
+  'label' => 'Synonymous coding',
+  'rank' => '10',
+  'display_term' => 'SYNONYMOUS_CODING',
+  'feature_class' => 'Bio::EnsEMBL::Transcript'
+}
 ),
-Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
-          'NCBI_term' => 'missense',
-          'feature_SO_term' => 'mRNA',
-          'description' => 'In coding sequence and results in an amino acid change in the encoded peptide sequence',
-          'SO_accession' => 'SO:0001583',
-          'SO_term' => 'non_synonymous_codon',
-          'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::non_synonymous_codon',
-          'label' => 'Non-synonymous coding',
-          'rank' => '7',
-          'display_term' => 'NON_SYNONYMOUS_CODING',
-          'feature_class' => 'Bio::EnsEMBL::Transcript'
-        }
+'non_synonymous_codon' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
+  'NCBI_term' => 'missense',
+  'feature_SO_term' => 'mRNA',
+  'description' => 'In coding sequence and results in an amino acid change in the encoded peptide sequence',
+  'SO_accession' => 'SO:0001583',
+  'SO_term' => 'non_synonymous_codon',
+  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::non_synonymous_codon',
+  'label' => 'Non-synonymous coding',
+  'rank' => '7',
+  'display_term' => 'NON_SYNONYMOUS_CODING',
+  'feature_class' => 'Bio::EnsEMBL::Transcript'
+}
 ),
-Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
-          'feature_SO_term' => 'mRNA',
-          'description' => 'In coding sequence and results in an amino acid change in the encoded peptide sequence',
-          'SO_accession' => 'SO:0001651',
-          'SO_term' => 'inframe_codon_gain',
-          'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::inframe_codon_gain',
-          'label' => 'Non-synonymous coding',
-          'rank' => '6',
-          'display_term' => 'NON_SYNONYMOUS_CODING',
-          'feature_class' => 'Bio::EnsEMBL::Transcript'
-        }
+'inframe_codon_gain' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
+  'feature_SO_term' => 'mRNA',
+  'description' => 'In coding sequence and results in an amino acid change in the encoded peptide sequence',
+  'SO_accession' => 'SO:0001651',
+  'SO_term' => 'inframe_codon_gain',
+  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::inframe_codon_gain',
+  'label' => 'Non-synonymous coding',
+  'rank' => '6',
+  'display_term' => 'NON_SYNONYMOUS_CODING',
+  'feature_class' => 'Bio::EnsEMBL::Transcript'
+}
 ),
-Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
-          'feature_SO_term' => 'mRNA',
-          'description' => 'In coding sequence and results in an amino acid change in the encoded peptide sequence',
-          'SO_accession' => 'SO:0001652',
-          'SO_term' => 'inframe_codon_loss',
-          'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::inframe_codon_loss',
-          'label' => 'Non-synonymous coding',
-          'rank' => '6',
-          'display_term' => 'NON_SYNONYMOUS_CODING',
-          'feature_class' => 'Bio::EnsEMBL::Transcript'
-        }
+'inframe_codon_loss' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
+  'feature_SO_term' => 'mRNA',
+  'description' => 'In coding sequence and results in an amino acid change in the encoded peptide sequence',
+  'SO_accession' => 'SO:0001652',
+  'SO_term' => 'inframe_codon_loss',
+  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::inframe_codon_loss',
+  'label' => 'Non-synonymous coding',
+  'rank' => '6',
+  'display_term' => 'NON_SYNONYMOUS_CODING',
+  'feature_class' => 'Bio::EnsEMBL::Transcript'
+}
 ),
-Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
-          'NCBI_term' => 'nonsense',
-          'feature_SO_term' => 'mRNA',
-          'description' => 'In coding sequence, resulting in the gain of a stop codon',
-          'SO_accession' => 'SO:0001587',
-          'SO_term' => 'stop_gained',
-          'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::stop_gained',
-          'label' => 'Stop gained',
-          'rank' => '3',
-          'display_term' => 'STOP_GAINED',
-          'feature_class' => 'Bio::EnsEMBL::Transcript'
-        }
+'stop_gained' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
+  'NCBI_term' => 'nonsense',
+  'feature_SO_term' => 'mRNA',
+  'description' => 'In coding sequence, resulting in the gain of a stop codon',
+  'SO_accession' => 'SO:0001587',
+  'SO_term' => 'stop_gained',
+  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::stop_gained',
+  'label' => 'Stop gained',
+  'rank' => '3',
+  'display_term' => 'STOP_GAINED',
+  'feature_class' => 'Bio::EnsEMBL::Transcript'
+}
 ),
-Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
-          'feature_SO_term' => 'mRNA',
-          'description' => 'In coding sequence, resulting in the loss of a stop codon',
-          'SO_accession' => 'SO:0001578',
-          'SO_term' => 'stop_lost',
-          'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::stop_lost',
-          'label' => 'Stop lost',
-          'rank' => '4',
-          'display_term' => 'STOP_LOST',
-          'feature_class' => 'Bio::EnsEMBL::Transcript'
-        }
+'stop_lost' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
+  'feature_SO_term' => 'mRNA',
+  'description' => 'In coding sequence, resulting in the loss of a stop codon',
+  'SO_accession' => 'SO:0001578',
+  'SO_term' => 'stop_lost',
+  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::stop_lost',
+  'label' => 'Stop lost',
+  'rank' => '4',
+  'display_term' => 'STOP_LOST',
+  'feature_class' => 'Bio::EnsEMBL::Transcript'
+}
 ),
-Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
-          'feature_SO_term' => 'mRNA',
-          'description' => 'In coding sequence, not resulting in an amino acid change (silent mutation)',
-          'SO_accession' => 'SO:0001567',
-          'SO_term' => 'stop_retained_variant',
-          'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::stop_retained',
-          'label' => 'Synonymous coding',
-          'rank' => '10',
-          'display_term' => 'SYNONYMOUS_CODING',
-          'feature_class' => 'Bio::EnsEMBL::Transcript'
-        }
+'stop_retained_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
+  'feature_SO_term' => 'mRNA',
+  'description' => 'In coding sequence, not resulting in an amino acid change (silent mutation)',
+  'SO_accession' => 'SO:0001567',
+  'SO_term' => 'stop_retained_variant',
+  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::stop_retained',
+  'label' => 'Synonymous coding',
+  'rank' => '10',
+  'display_term' => 'SYNONYMOUS_CODING',
+  'feature_class' => 'Bio::EnsEMBL::Transcript'
+}
 ),
-Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
-          'feature_SO_term' => 'mRNA',
-          'description' => 'In coding sequence and results in an amino acid change in the encoded peptide sequence',
-          'SO_accession' => 'SO:0001582',
-          'SO_term' => 'initiator_codon_change',
-          'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::affects_start_codon',
-          'label' => 'Non-synonymous coding',
-          'rank' => '7',
-          'display_term' => 'NON_SYNONYMOUS_CODING',
-          'feature_class' => 'Bio::EnsEMBL::Transcript'
-        }
+'initiator_codon_change' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
+  'feature_SO_term' => 'mRNA',
+  'description' => 'In coding sequence and results in an amino acid change in the encoded peptide sequence',
+  'SO_accession' => 'SO:0001582',
+  'SO_term' => 'initiator_codon_change',
+  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::affects_start_codon',
+  'label' => 'Non-synonymous coding',
+  'rank' => '7',
+  'display_term' => 'NON_SYNONYMOUS_CODING',
+  'feature_class' => 'Bio::EnsEMBL::Transcript'
+}
 ),
-Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
-          'NCBI_term' => 'frameshift',
-          'feature_SO_term' => 'mRNA',
-          'description' => 'In coding sequence, resulting in a frameshift',
-          'SO_accession' => 'SO:0001589',
-          'SO_term' => 'frameshift_variant',
-          'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::frameshift',
-          'label' => 'Frameshift coding',
-          'rank' => '6',
-          'display_term' => 'FRAMESHIFT_CODING',
-          'feature_class' => 'Bio::EnsEMBL::Transcript'
-        }
+'frameshift_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
+  'NCBI_term' => 'frameshift',
+  'feature_SO_term' => 'mRNA',
+  'description' => 'In coding sequence, resulting in a frameshift',
+  'SO_accession' => 'SO:0001589',
+  'SO_term' => 'frameshift_variant',
+  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::frameshift',
+  'label' => 'Frameshift coding',
+  'rank' => '6',
+  'display_term' => 'FRAMESHIFT_CODING',
+  'feature_class' => 'Bio::EnsEMBL::Transcript'
+}
 ),
-Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
-          'feature_SO_term' => 'mRNA',
-          'description' => 'Located within the final, incomplete codon of a transcript whose end coordinate is unknown',
-          'SO_accession' => 'SO:0001626',
-          'SO_term' => 'incomplete_terminal_codon_variant',
-          'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::partial_codon',
-          'label' => 'Partial codon',
-          'rank' => '9',
-          'display_term' => 'PARTIAL_CODON',
-          'feature_class' => 'Bio::EnsEMBL::Transcript'
-        }
+'incomplete_terminal_codon_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
+  'feature_SO_term' => 'mRNA',
+  'description' => 'Located within the final, incomplete codon of a transcript whose end coordinate is unknown',
+  'SO_accession' => 'SO:0001626',
+  'SO_term' => 'incomplete_terminal_codon_variant',
+  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::partial_codon',
+  'label' => 'Partial codon',
+  'rank' => '9',
+  'display_term' => 'PARTIAL_CODON',
+  'feature_class' => 'Bio::EnsEMBL::Transcript'
+}
 ),
-Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
-          'feature_SO_term' => 'mRNA',
-          'description' => 'Located within a transcript predicted to undergo nonsense-mediated decay',
-          'SO_accession' => 'SO:0001621',
-          'SO_term' => 'NMD_transcript_variant',
-          'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::within_nmd_transcript',
-          'label' => 'NMD transcript',
-          'rank' => '16',
-          'display_term' => 'NMD_TRANSCRIPT',
-          'feature_class' => 'Bio::EnsEMBL::Transcript'
-        }
+'NMD_transcript_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
+  'feature_SO_term' => 'mRNA',
+  'description' => 'Located within a transcript predicted to undergo nonsense-mediated decay',
+  'SO_accession' => 'SO:0001621',
+  'SO_term' => 'NMD_transcript_variant',
+  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::within_nmd_transcript',
+  'label' => 'NMD transcript',
+  'rank' => '16',
+  'display_term' => 'NMD_TRANSCRIPT',
+  'feature_class' => 'Bio::EnsEMBL::Transcript'
+}
 ),
-Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
-          'feature_SO_term' => 'ncRNA',
-          'description' => 'Located within a gene that does not code for a protein',
-          'SO_accession' => 'SO:0001619',
-          'SO_term' => 'nc_transcript_variant',
-          'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::within_non_coding_gene',
-          'label' => 'Within non-coding gene',
-          'rank' => '17',
-          'display_term' => 'WITHIN_NON_CODING_GENE',
-          'feature_class' => 'Bio::EnsEMBL::Transcript'
-        }
+'nc_transcript_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
+  'feature_SO_term' => 'ncRNA',
+  'description' => 'Located within a gene that does not code for a protein',
+  'SO_accession' => 'SO:0001619',
+  'SO_term' => 'nc_transcript_variant',
+  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::within_non_coding_gene',
+  'label' => 'Within non-coding gene',
+  'rank' => '17',
+  'display_term' => 'WITHIN_NON_CODING_GENE',
+  'feature_class' => 'Bio::EnsEMBL::Transcript'
+}
 ),
-Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
-          'feature_SO_term' => 'miRNA',
-          'description' => 'Located within a microRNA',
-          'SO_accession' => 'SO:0001620',
-          'SO_term' => 'mature_miRNA_variant',
-          'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::within_mature_miRNA',
-          'label' => 'Within mature miRNA',
-          'rank' => '12',
-          'display_term' => 'WITHIN_MATURE_miRNA',
-          'feature_class' => 'Bio::EnsEMBL::Transcript'
-        }
+'mature_miRNA_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
+  'feature_SO_term' => 'miRNA',
+  'description' => 'Located within a microRNA',
+  'SO_accession' => 'SO:0001620',
+  'SO_term' => 'mature_miRNA_variant',
+  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::within_mature_miRNA',
+  'label' => 'Within mature miRNA',
+  'rank' => '12',
+  'display_term' => 'WITHIN_MATURE_miRNA',
+  'feature_class' => 'Bio::EnsEMBL::Transcript'
+}
 ),
-Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
-          'feature_SO_term' => 'mRNA',
-          'description' => 'In coding sequence with indeterminate effect',
-          'SO_accession' => 'SO:0001580',
-          'SO_term' => 'coding_sequence_variant',
-          'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::coding_unknown',
-          'label' => 'Coding unknown',
-          'rank' => '11',
-          'display_term' => 'CODING_UNKNOWN',
-          'feature_class' => 'Bio::EnsEMBL::Transcript'
-        }
+'coding_sequence_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
+  'feature_SO_term' => 'mRNA',
+  'description' => 'In coding sequence with indeterminate effect',
+  'SO_accession' => 'SO:0001580',
+  'SO_term' => 'coding_sequence_variant',
+  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::coding_unknown',
+  'label' => 'Coding unknown',
+  'rank' => '11',
+  'display_term' => 'CODING_UNKNOWN',
+  'feature_class' => 'Bio::EnsEMBL::Transcript'
+}
 ),
-Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
-          'feature_SO_term' => 'regulatory_region',
-          'description' => 'In regulatory region annotated by Ensembl',
-          'SO_accession' => 'SO:0001566',
-          'SO_term' => 'regulatory_region_variant',
-          'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::within_regulatory_feature',
-          'label' => 'Regulatory region',
-          'rank' => '50',
-          'display_term' => 'REGULATORY_REGION',
-          'feature_class' => 'Bio::EnsEMBL::Funcgen::RegulatoryFeature'
-        }
+'regulatory_region_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
+  'feature_SO_term' => 'regulatory_region',
+  'description' => 'In regulatory region annotated by Ensembl',
+  'SO_accession' => 'SO:0001566',
+  'SO_term' => 'regulatory_region_variant',
+  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::within_regulatory_feature',
+  'label' => 'Regulatory region',
+  'rank' => '50',
+  'display_term' => 'REGULATORY_REGION',
+  'feature_class' => 'Bio::EnsEMBL::Funcgen::RegulatoryFeature'
+}
 ),
-Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
-          'feature_SO_term' => 'binding_site',
-          'description' => 'In regulatory region annotated by Ensembl',
-          'SO_accession' => 'SO:X000004',
-          'SO_term' => 'miRNA_target_site_variant',
-          'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::within_miRNA_target_site',
-          'label' => 'Regulatory region',
-          'rank' => '13',
-          'display_term' => 'REGULATORY_REGION',
-          'feature_class' => 'Bio::EnsEMBL::Funcgen::ExternalFeature'
-        }
+'TF_binding_site_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
+  'feature_SO_term' => 'TF_binding_site',
+  'description' => 'In regulatory region annotated by Ensembl',
+  'SO_accession' => 'SO:0001782',
+  'SO_term' => 'TF_binding_site_variant',
+  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::within_motif_feature',
+  'label' => 'Regulatory region',
+  'rank' => '49',
+  'display_term' => 'REGULATORY_REGION',
+  'feature_class' => 'Bio::EnsEMBL::Funcgen::MotifFeature'
+}
 ),
-Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
-          'feature_SO_term' => 'binding_site',
-          'description' => 'In regulatory region annotated by Ensembl',
-          'SO_accession' => 'SO:X000003',
-          'SO_term' => 'binding_site_variant',
-          'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::within_motif_feature',
-          'label' => 'Regulatory region',
-          'rank' => '49',
-          'display_term' => 'REGULATORY_REGION',
-          'feature_class' => 'Bio::EnsEMBL::Funcgen::MotifFeature'
-        }
-),
-Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
-          'feature_SO_term' => 'regulatory_region',
-          'description' => 'In regulatory region annotated by Ensembl',
-          'SO_accession' => 'SO:0001566',
-          'SO_term' => 'regulatory_region_variant',
-          'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::within_external_feature',
-          'label' => 'Regulatory region',
-          'rank' => '50',
-          'display_term' => 'REGULATORY_REGION',
-          'feature_class' => 'Bio::EnsEMBL::Funcgen::ExternalFeature'
-        }
+'regulatory_region_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
+  'feature_SO_term' => 'regulatory_region',
+  'description' => 'In regulatory region annotated by Ensembl',
+  'SO_accession' => 'SO:0001566',
+  'SO_term' => 'regulatory_region_variant',
+  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::within_external_feature',
+  'label' => 'Regulatory region',
+  'rank' => '50',
+  'display_term' => 'REGULATORY_REGION',
+  'feature_class' => 'Bio::EnsEMBL::Funcgen::ExternalFeature'
+}
 ),
 );
 
