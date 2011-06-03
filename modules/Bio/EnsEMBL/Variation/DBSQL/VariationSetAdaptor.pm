@@ -64,7 +64,7 @@ package Bio::EnsEMBL::Variation::DBSQL::VariationSetAdaptor;
 
 use Bio::EnsEMBL::DBSQL::BaseAdaptor;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
-use Bio::EnsEMBL::Utils::Scalar qw(assert_ref);
+use Bio::EnsEMBL::Utils::Scalar qw(assert_ref wrap_array);
 
 use Bio::EnsEMBL::Variation::VariationSet;
 
@@ -238,7 +238,11 @@ sub fetch_by_name {
     $self->bind_param_generic_fetch($name,SQL_VARCHAR);
     
     #ÊCall the generic fetch method
-    return $self->generic_fetch($constraint);
+    my $result = wrap_array($self->generic_fetch($constraint));
+    
+    # Return the result
+    return undef unless (scalar(@{$result}));
+    return $result->[0];
 }
 
 =head2 fetch_by_short_name
@@ -268,7 +272,11 @@ sub fetch_by_short_name {
     $self->bind_param_generic_fetch($attrib_id,SQL_INTEGER);
     
     #ÊCall the generic fetch method
-    return $self->generic_fetch($constraint);
+    my $result = wrap_array($self->generic_fetch($constraint));
+    
+    # Return the result
+    return undef unless (scalar(@{$result}));
+    return $result->[0];
 }
 
 
@@ -354,7 +362,7 @@ sub _get_bitvalue {
 
 # API-internal method for getting the attrib_type code used for short names
 sub _short_name_attrib_type_code {
-    return q{ short_name };
+    return q{short_name};
 }
 
 sub _columns {
