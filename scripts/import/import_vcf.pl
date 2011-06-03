@@ -46,7 +46,7 @@ my %Printable = ( "\\"=>'\\', "\r"=>'r', "\n"=>'n', "\t"=>'t', "\""=>'"' );
 ######################
 
 # get command-line options
-my ($in_file, $species, $registry_file, $help, $host, $user, $password, $source, $source_desc, $population, $flank_size, $TMP_DIR, $TMP_FILE, $skip_multi, $use_gp, $sample_prefix, $variation_prefix, $disable_keys, $include_tables, $merge_vfs, $skip_tables, $compressed_only, $only_existing, $merge_alleles, $new_var_name, $chrom_regexp, $check_synonyms);
+my ($in_file, $species, $registry_file, $help, $host, $database, $port, $user, $password, $source, $source_desc, $population, $flank_size, $TMP_DIR, $TMP_FILE, $skip_multi, $use_gp, $sample_prefix, $variation_prefix, $disable_keys, $include_tables, $merge_vfs, $skip_tables, $compressed_only, $only_existing, $merge_alleles, $new_var_name, $chrom_regexp, $check_synonyms);
 
 my $args = scalar @ARGV;
 
@@ -54,9 +54,11 @@ GetOptions(
 	'input_file=s'   => \$in_file,
 	'species=s'      => \$species,
 	'registry=s'     => \$registry_file,
-	'db_host=s'      => \$host,
+	'host=s'         => \$host,
+	'database|db=s'  => \$database,
 	'user=s'         => \$user,
 	'password=s'     => \$password,
+	'port=i'         => \$port,
 	'help'           => \$help,
 	'source=s'       => \$source,
 	'source_desc=s'  => \$source_desc,
@@ -89,7 +91,7 @@ if(defined($help) || !$args) {
 # set defaults
 $species ||= "human";
 $flank_size ||= 200;
-$registry_file ||= $Bin . "/ensembl.registry";
+$port ||= 3306;
 
 # set default list of tables to write to
 my $tables = {
@@ -154,30 +156,36 @@ $ImportUtils::TMP_FILE = $TMP_FILE;
 ## DB CONNECTION
 ################
 
-# get registry
-my $reg = 'Bio::EnsEMBL::Registry';
+my $dbVar;
 
-# manually connect to DB server if specs given
-if(defined($host) && defined($user)) {
-	$reg->load_registry_from_db(-host => $host, -user => $user, -pass => $password);
+if(defined($database)) {
+	$dbVar = DBI->connect( "DBI:mysql(RaiseError=>1):host=$host;port=$port;db=$database", $user, $password );
 }
-
-# otherwise load DB options from registry file
 else {
-	if(-e $registry_file) {
-		$reg->load_all($registry_file);
+	
+	# get registry
+	my $reg = 'Bio::EnsEMBL::Registry';
+	
+	if(defined($host) && defined($user)) {
+		$reg->load_registry_from_db(-host => $host, -user => $user, -pass => $password);
 	}
+	
 	else {
-		die "ERROR: could not read from registry file $registry_file\n";
+		if(-e $registry_file) {
+			$reg->load_all($registry_file);
+		}
+		else {
+			die "ERROR: could not read from registry file $registry_file\n";
+		}
 	}
+
+	# connect to DB
+	my $vdba = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'variation')
+		|| usage( "Cannot find variation db for $species in $registry_file" );
+	$dbVar = $vdba->dbc->db_handle;
+
+	debug("Connected to database ", $vdba->dbc->dbname, " on ", $vdba->dbc->host, " as user ", $vdba->dbc->username);
 }
-
-# connect to DB
-my $vdba = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'variation')
-    || usage( "Cannot find variation db for $species in $registry_file" );
-my $dbVar = $vdba->dbc->db_handle;
-
-debug("Connected to database ", $vdba->dbc->dbname, " on ", $vdba->dbc->host, " as user ", $vdba->dbc->username);
 
 
 
@@ -397,7 +405,7 @@ while(<$in_file_handle>) {
 		## FLANKING_SEQUENCE
 		####################
 		
-		if($tables->{flanking_sequence} && !defined($data->{variation_already_exists}) && !$data->{merged}) {
+		if($tables->{flanking_sequence} && !defined($data->{variation_already_exists}) && !$data->{merged} && $data->{seq_region} && $data->{start}) {
 			
 			&flanking_sequence($dbVar, $data, $flank_size);
 		}
@@ -835,6 +843,8 @@ sub get_coordinates {
 	my $data = shift;
 	my $use_gp = shift;
 	
+	my $skip;
+	
 	if($use_gp) {
 		foreach my $pair(split /\;/, $data->{INFO}) {
 			my ($key, $value) = split /\=/, $pair;
@@ -847,6 +857,7 @@ sub get_coordinates {
 		
 		unless(defined($data->{seq_region}) and defined($data->{start})) {
 			warn "Could not determine coordinates from GP INFO field for ", $data->{ID};
+			$skip = 1;
 		}
 	}
 	
@@ -854,6 +865,8 @@ sub get_coordinates {
 		($data->{start}, $data->{end}) = ($data->{POS}, $data->{POS});
 		$data->{seq_region} = $seq_region_ids->{$data->{'#CHROM'}};
 	}
+	
+	return $skip;
 }
 
 
