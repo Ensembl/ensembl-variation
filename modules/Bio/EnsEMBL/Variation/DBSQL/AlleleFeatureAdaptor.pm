@@ -70,6 +70,7 @@ use Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor;
 use Bio::EnsEMBL::Utils::Exception qw(throw);
 use Bio::EnsEMBL::Utils::Sequence qw(expand);
 use Bio::EnsEMBL::Variation::Utils::Sequence qw(strain_ambiguity_code);
+use Bio::EnsEMBL::Variation::Utils::Constants qw(%OVERLAP_CONSEQUENCES);
 
 our @ISA = ('Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor', 'Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor');
 
@@ -405,8 +406,7 @@ sub _objs_from_sth{
       $slice = $dest_slice;   
   }
 
-  my $overlap_consequences = [ map { $self->_overlap_consequence_for_SO_term($_) } 
-    split /,/, $cons ];
+  my $overlap_consequences = [ map { $OVERLAP_CONSEQUENCES{$_} } split /,/, $cons ];
 
     #allele and sample table comes from the Compressed genotype adaptor
 #    $allele = ambiguity_code($allele) if ($self->from_IndividualSlice);
