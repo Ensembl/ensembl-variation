@@ -51,7 +51,7 @@ package Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor;
 
 use Bio::EnsEMBL::DBSQL::BaseAdaptor;
 
-use Bio::EnsEMBL::Variation::Utils::Constants qw(@OVERLAP_CONSEQUENCES);
+use Bio::EnsEMBL::Variation::Utils::Constants qw(%OVERLAP_CONSEQUENCES);
 
 our @ISA = ('Bio::EnsEMBL::DBSQL::BaseAdaptor');
 
@@ -79,16 +79,6 @@ sub class_display_term_for_SO_term {
     }
 
     return $display_term;
-}
-
-sub _overlap_consequence_for_SO_term {
-    my ($self, $SO_term) = @_;
-
-    unless ($self->{_oc_hash}) {
-        $self->{_oc_hash} = { map {$_->SO_term => $_} @OVERLAP_CONSEQUENCES };
-    }
-
-    return $self->{_oc_hash}->{$SO_term};
 }
 
 sub _consequence_type_map {
@@ -137,7 +127,7 @@ sub _consequences_for_set_number {
 
     for my $term (keys %$map) {
         if ($set_number & $map->{$term}) {
-            push @consequences, $self->_overlap_consequence_for_SO_term($term);
+            push @consequences, $OVERLAP_CONSEQUENCES{$term};
         }
     }
 
