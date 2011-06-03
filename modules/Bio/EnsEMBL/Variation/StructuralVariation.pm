@@ -76,6 +76,7 @@ use Bio::EnsEMBL::Utils::Exception qw(throw warning deprecate);
 use Bio::EnsEMBL::Utils::Argument  qw(rearrange);
 use Bio::EnsEMBL::Variation::Variation;
 use Bio::EnsEMBL::Slice;
+use Bio::EnsEMBL::Variation::Utils::Constants qw(%VARIATION_CLASSES); 
 
 our @ISA = ('Bio::EnsEMBL::Feature');
 
@@ -375,18 +376,10 @@ sub class{
 	my $self = shift;
     
 	unless ($self->{class_display_term}) {
-		
-		# convert the SO term to the ensembl display term
-		if (my $display_term = $self->{adaptor}->AttributeAdaptor->display_term_for_SO_term(
-				$self->{class_SO_term}) ) {
-            
-			$self->{class_display_term} = $display_term;
-		}
-		else {
-       die "Unrecognised SO term: ".$self->{class_SO_term};
-		}
-	}
-    
+	    $self->{class_display_term} = 
+            $VARIATION_CLASSES{$self->{class_SO_term}}->{display_term};
+    }
+
 	return $self->{class_display_term};
 }
 
