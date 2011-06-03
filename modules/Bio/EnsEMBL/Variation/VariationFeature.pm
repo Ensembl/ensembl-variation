@@ -1545,9 +1545,8 @@ sub get_all_hgvs_notations {
           }
           # Else, this is not a frame shift
           else {
-            
             # If the change affects just one single AA, this is a single non-synonymous change.
-            if (substr($ref_peptide,$first_offset+1) eq substr($alt_peptide,$first_offset+1)) {
+            if (length($ref_peptide) > $first_offset && length($alt_peptide) > $first_offset && substr($ref_peptide,$first_offset+1) eq substr($alt_peptide,$first_offset+1)) {
 	      $hgvs_notation->{'type'} = '>';
 	      $hgvs_notation->{'ref'} = substr($ref_peptide,$first_offset,1);
 	      $hgvs_notation->{'alt'} = substr($alt_peptide,$first_offset,1);
