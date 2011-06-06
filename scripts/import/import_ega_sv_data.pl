@@ -171,9 +171,7 @@ sub study_table{
 	'" PMID:',
 	pmid,
 	' ',
-	'[remapped from build ',
-	assembly,
-	']'
+	comment
       ),
       CONCAT(
 	'ftp://ftp.ebi.ac.uk/pub/databases/dgva/',
