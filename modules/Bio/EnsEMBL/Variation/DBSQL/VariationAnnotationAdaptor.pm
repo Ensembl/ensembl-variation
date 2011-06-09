@@ -157,6 +157,34 @@ sub fetch_all_by_VariationFeature_list {
   return $self->generic_fetch("va.variation_id in (".$in_str.")");
 }
 
+
+=head2 fetch_all_by_Study
+
+  Arg [1]    : Bio::EnsEMBL:Variation::Study $study
+  Example    : my @studies = @{$studya->fetch_all_by_Study($study)};
+  Description: Retrieves all variation annotations for a given study.
+  Returntype : reference to list Bio::EnsEMBL::Variation::VariationAnnotation
+  Exceptions : throw on bad argument
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub fetch_all_by_Study {
+  my $self   = shift;
+  my $study  = shift;
+
+  if(!ref($study) || !$study->isa('Bio::EnsEMBL::Variation::Study')) {
+    throw('Bio::EnsEMBL::Variation::Study arg expected');
+  }
+
+  if(!defined($study->dbID())) {
+    throw("Study arg must have defined dbID");
+  }
+  return $self->generic_fetch("va.study_id = ".$study->dbID());
+}
+
+
 =head2 fetch_all_by_phenotype_source_name
 
   Arg [1]    : string $phenotype_name
