@@ -11,7 +11,7 @@ use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
 use LRG::LRG;
 use LRG::LRGImport;
 use List::Util qw (min max);
-
+use LRG::Mapper;
 
 # global variables
 
@@ -49,12 +49,14 @@ our %SSAHA_PARAMETERS = (
   '-memory'	=> '4000'
 );
 
-our $use_smalt = 1;
+our $use_mapper = 1;
+our $use_smalt;
 our %SMALT_PARAMETERS = (
   '-a' 	=> ''
 );
 our $SSAHA_HASH = 'kmer14_skip14';
 our $SMALT_HASH = 'GRCh37_k20_s13';
+our $MAPPER_REFERENCE_GENOME = 'Homo_sapiens_GRCh37.fa.rz';
 
 our $EXONERATE_BIN = 'exonerate';
 our %EXONERATE_PARAMETERS = (
@@ -71,13 +73,22 @@ sub mapping {
   my $lrg_seq = shift;
   
   my $mainmap;
-  unless ($use_smalt) {
-  	my $maps = map_to_genome($lrg_seq);
-  	$mainmap = join_mappings($maps);
+  if ($use_mapper) {
+    my $mapper = Mapper->new('query' => $lrg_seq, 'hash' => "$target_dir/hash/$SMALT_HASH", 'target' => "$target_dir/$MAPPER_REFERENCE_GENOME", 'tmpdir' => $input_dir);
+    $mapper->do_mapping();
+    my $maps = $mapper->alignments(); 
+    my @keys = keys(%{$maps});
+    warn ("Mapper module produced multiple alignments, just using the first one") if (scalar(@keys) > 1);
+    die ("No mapping could be found") unless (scalar(@keys));
+    $mainmap = $maps->{$keys[0]};
   }
-  else {
+  elsif ($use_smalt) {
   	$mainmap = smalt_map($lrg_seq);
   	$mainmap = $mainmap->[0];
+  }
+  else {
+  	my $maps = map_to_genome($lrg_seq);
+  	$mainmap = join_mappings($maps);
   }
   
   return $mainmap;
