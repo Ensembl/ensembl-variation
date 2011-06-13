@@ -34,7 +34,7 @@ sub run {
 
     $dbc->do(qq{
         INSERT INTO $temp_table (variation_feature_id, consequence_type)
-        SELECT  variation_feature_id, GROUP_CONCAT(consequence_types) 
+        SELECT  variation_feature_id, GROUP_CONCAT(DISTINCT(consequence_types)) 
         FROM    transcript_variation 
         GROUP BY variation_feature_id
     }) or die "Populating temp table failed";
