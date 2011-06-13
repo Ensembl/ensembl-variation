@@ -54,6 +54,8 @@ our @EXPORT_OK = qw(get_condel_prediction);
 
 use Bio::EnsEMBL::Variation::Utils::CondelConstants qw($CONDEL_CONFIG $CONDEL_SIFT_DATA $CONDEL_POLYPHEN_DATA);
 
+our $USE_V2 = 0;
+
 =head2 get_condel_prediction
 
   Arg[1]      : float SIFT score
@@ -85,23 +87,23 @@ sub get_condel_prediction {
     
     if ($sift_score <= $config{'cutoff.HumVar.sift'}){
       $int_score += sprintf("%.3f", (1 - $sift_score/$config{'max.HumVar.sift'})*(1-$sift{'tn'}{"$sift_score"}));
-      $base += 1-$sift{'tn'}{"$sift_score"};
+      $base += $USE_V2 ? 1 : 1-$sift{'tn'}{"$sift_score"};
       $class{'sift'} = 'deleterious';
     }
     else {
       $int_score += sprintf("%.3f", (1 - $sift_score/$config{'max.HumVar.sift'})*(1-$sift{'tp'}{"$sift_score"}));
-      $base += 1-$sift{'tp'}{"$sift_score"};
+      $base += $USE_V2 ? 1 : 1-$sift{'tp'}{"$sift_score"};
       $class{'sift'} = 'neutral';
     }
     
     if ($polyphen_score >= $config{'cutoff.HumVar.polyphen'}){
       $int_score += sprintf("%.3f", $polyphen_score/$config{'max.HumVar.polyphen'}*(1-$polyphen{'tn'}{"$polyphen_score"}));
-      $base += 1-$polyphen{'tn'}{"$polyphen_score"};
+      $base += $USE_V2 ? 1 : 1-$polyphen{'tn'}{"$polyphen_score"};
       $class{'polyphen'} = 'deleterious';
     }
     else {
       $int_score += sprintf("%.3f", $polyphen_score/$config{'max.HumVar.polyphen'}*(1-$polyphen{'tp'}{"$polyphen_score"}));
-      $base += 1-$polyphen{'tp'}{"$polyphen_score"};
+      $base += $USE_V2 ? 1 : 1-$polyphen{'tp'}{"$polyphen_score"};
       $class{'polyphen'} = 'neutral';
     }
 
