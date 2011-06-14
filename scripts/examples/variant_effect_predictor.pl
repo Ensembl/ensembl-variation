@@ -36,7 +36,24 @@ use Bio::EnsEMBL::Registry;
 use Bio::EnsEMBL::Variation::DBSQL::VariationFeatureAdaptor;
 use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(MAX_DISTANCE_FROM_TRANSCRIPT);
 use Bio::EnsEMBL::Variation::Utils::Sequence qw(unambiguity_code);
-	
+
+my @OUTPUT_COLS = qw(
+	Uploaded_variation
+	Location
+	Allele
+	Gene
+	Feature
+    Feature_type
+	Consequence
+	cDNA_position
+	CDS_position
+	Protein_position
+	Amino_acids
+	Codons
+	Existing_variation
+    Extra
+);
+
 # configure from command line opts
 my $config = &configure(scalar @ARGV);
 
@@ -225,52 +242,125 @@ sub main {
 }
 
 sub print_consequences {
+
 	my $config = shift;
 	my $vfs = shift;
-	
-	my $out_file_handle = $config->{out_file_handle};
 	
 	foreach my $new_vf(@$vfs) {
 		
 		# find any co-located existing VFs
 		my $existing_vf;
 		$existing_vf = &find_existing($new_vf) if defined $config->{check_existing} && $config->{check_existing} == 1;
-		$existing_vf ||= '-';
-	
-		foreach my $tv(@{$new_vf->get_all_TranscriptVariations}) {
+
+        my $line = {
+            Uploaded_variation  => $new_vf->variation_name,
+            Location            => $new_vf->seq_region_name.':'.&format_coords($new_vf->start, $new_vf->end),
+            Existing_variation  => $existing_vf,
+            Extra               => {},
+        };
+
+        my $term_method = $config->{terms}.'_term';
+            
+        unless (defined $config->{coding_only}) {
+            
+            for my $rfv (@{ $new_vf->get_all_RegulatoryFeatureVariations }) {
+
+                my $rf = $rfv->regulatory_feature;
+                
+                $line->{Feature_type}   = 'RegulatoryFeature';
+                $line->{Feature}        = $rf->stable_id;
+
+                $line->{Extra}->{REG_FEAT_TYPE} = $rf->feature_type->name;
+                
+                for my $rfva (@{ $rfv->get_all_alternate_RegulatoryFeatureVariationAlleles }) {
+
+                    $line->{Allele}         = $rfva->variation_feature_seq;
+                    $line->{Consequence}    = join ',', 
+                        map { $_->$term_method || $_->display_term } 
+                            @{ $rfva->get_all_OverlapConsequences };
+
+                    print_line($line);
+                }
+            }
+
+            $line->{Extra} = {};
+            
+            for my $mfv (@{ $new_vf->get_all_MotifFeatureVariations }) {
+
+                my $mf = $mfv->motif_feature;
+                
+                $line->{Feature_type}   = 'MotifFeature';
+                $line->{Feature}        = $mf->binding_matrix->name;
+
+                $line->{Extra}->{MATRIX}        = $mf->binding_matrix->description.' '.$mf->display_label,
+                $line->{Extra}->{HIGH_INF_POS}  = ($mfv->in_informative_position ? 'Y' : 'N'); 
+
+                for my $mfva (@{ $mfv->get_all_alternate_MotifFeatureVariationAlleles }) {
+                    
+                    $line->{Allele}         = $mfva->variation_feature_seq;
+                    $line->{Consequence}    = join ',', 
+                        map { $_->$term_method || $_->display_term } 
+                            @{ $mfva->get_all_OverlapConsequences };
+
+                    print_line($line);
+                }
+            }
+        }
+
+        $line->{Extra} = {};
+
+		for my $tv (@{ $new_vf->get_all_TranscriptVariations }) {
 			
 			next if(defined $config->{coding_only} && !($tv->affects_transcript));
 			
+            my $t = $tv->transcript;
+
+            my $gene;
+            
+            unless (defined $config->{whole_genome}) {
+                $gene = $config->{ga}->fetch_by_transcript_stable_id;
+            }
+ 
+            $line->{Feature_type}       = 'Transcript';
+            $line->{Feature}            = $t->stable_id;
+            $line->{cDNA_position}      = &format_coords($tv->cdna_start, $tv->cdna_end);
+			$line->{CDS_position}       = &format_coords($tv->cds_start, $tv->cds_end);
+			$line->{Protein_position}   = &format_coords($tv->translation_start, $tv->translation_end);
+            $line->{Gene}               = $gene->stable_id if $gene;
+            
 			foreach my $tva(@{$tv->get_all_alternate_TranscriptVariationAlleles}) {
-				
-				my $method_name = $config->{terms}.'_term';
-				my $type = join ",", map {$_->$method_name || $_->display_term} @{$tva->get_all_OverlapConsequences};
-				
-				my $gene = ($tv->transcript ? $config->{ga}->fetch_by_transcript_stable_id($tv->transcript->stable_id) : undef) unless defined $config->{whole_genome};
-				
-				# extra
-				my $extra;
-				
+                
+                $line->{Allele}         = $tva->variation_feature_seq;
+                $line->{Amino_acids}    = $tva->pep_allele_string;
+                $line->{Codons}         = $tva->display_codon_allele_string;
+			    $line->{Consequence}    = join ",", 
+                    map { $_->$term_method || $_->display_term } 
+                        @{ $tva->get_all_OverlapConsequences };
+			    
+                # Extra column stuff
+
 				# HGNC
 				if(defined $config->{hgnc} && $gene) {
 				  my @entries = grep {$_->database eq 'HGNC'} @{$gene->get_all_DBEntries()};
 				  if(scalar @entries) {
-					$extra .= 'HGNC='.$entries[0]->display_id.';';
+                    $line->{Extra}->{HGNC} = $entries[0]->display_id;
 				  }
 				}
 				
 				# protein ID
-				if(defined $config->{protein} && $tv->transcript->translation) {
-					$extra .= 'ENSP='.$tv->transcript->translation->stable_id.';';
+				if(defined $config->{protein} && $t->translation) {
+                    $line->{Extra}->{ENSP} = $tv->transcript->translation->stable_id;
 				}
 				
 				# HGVS
 				if(defined $config->{hgvs}) {
-					$extra .= 'HGVSc='.$tva->hgvs_coding.';' if defined($tva->hgvs_coding);
-					$extra .= 'HGVSp='.$tva->hgvs_protein.';' if defined($tva->hgvs_protein);
+					$line->{Extra}->{HGVSc} = $tva->hgvs_coding if defined($tva->hgvs_coding);
+					$line->{Extra}->{HGVSp} = $tva->hgvs_protein if defined($tva->hgvs_protein);
 				}
-				
+			    
+                # protein function predictions
 				foreach my $tool (qw(SIFT PolyPhen Condel)) {
+
 					my $lc_tool = lc($tool);
 					
 					if (my $opt = $config->{$lc_tool}) {
@@ -291,11 +381,10 @@ sub print_consequences {
 						my $pred = $tva->$pred_meth;
 						
 						if($pred) {
-							$extra .= "$tool=";
 							
 							if ($want_pred) {
 								$pred =~ s/\s+/\_/;
-								$extra .= $pred;
+                                $line->{Extra}->{$tool} = $pred; 
 							}
 								
 							if ($want_score) {
@@ -303,39 +392,37 @@ sub print_consequences {
 								
 								if(defined $score) {
 									if($want_pred) {
-										$extra .= "($score)";
+                                        $line->{Extra}->{$tool} .= "($score)";
 									}
 									else {
-										$extra .= $score;
+                                        $line->{Extra}->{$tool} = $score;
 									}
 								}
 							}
-							
-							$extra .= ';';
 						}
 					}
 				}
-				
-				$extra =~ s/\;$//g;
-				
-				print $out_file_handle
-				  $new_vf->variation_name, "\t",
-				  $new_vf->seq_region_name, ":",
-				  &format_coords($new_vf->start, $new_vf->end), "\t",
-				  $tva->variation_feature_seq, "\t",
-				  ($gene ? $gene->stable_id : '-'), "\t",
-				  ($tv->transcript ? $tv->transcript->stable_id : "-"), "\t",
-				  $type, "\t",
-				  &format_coords($tv->cdna_start, $tv->cdna_end), "\t",
-				  &format_coords($tv->cds_start, $tv->cds_end), "\t",
-				  &format_coords($tv->translation_start, $tv->translation_end), "\t",
-				  ($tva->pep_allele_string || "-"), "\t",
-				  ($tva->display_codon_allele_string || "-"), "\t",
-				  $existing_vf, "\t",
-				  ($extra || '-'), "\n";
+               
+                print_line($line);
 			}
 		}
 	}
+}
+
+sub print_line {
+    my $line = shift;
+
+    $line->{Extra} = join ';', map { $_.'='.$line->{Extra}->{$_} } keys %{ $line->{Extra} || {} };
+
+    my $output = join "\t", map { $line->{$_} || '-' } @OUTPUT_COLS;
+
+    my $fh = $config->{out_file_handle};
+
+    print $fh "$output\n";
+
+    # clear out the Extra column for the next line
+
+    $line->{Extra} = {};
 }
 
 sub configure {
@@ -706,22 +793,8 @@ HEAD
 	print $out_file_handle $header;
 	
 	# add column headers
-	print $out_file_handle join "\t", qw(
-		#Uploaded_variation
-		Location
-		Allele
-		Gene
-		Transcript
-		Consequence
-		cDNA_position
-		CDS_position
-		Protein_position
-		Amino_acids
-		Codons
-		Existing_variation
-		Extra
-	);
-	
+	print $out_file_handle '#', (join "\t", @OUTPUT_COLS);
+
 	print $out_file_handle "\n";
 	
 	return $out_file_handle;
