@@ -332,29 +332,29 @@ use warnings;
         # XXX: for now, just resort to the highest level SO class term as we don't have 
         # accurate class information in the database
 
-        $gff->{type} = 'sequence_alteration';
+        $gff->{type} = $self->class_SO_term;
         
         #$gff->{attributes}->{Reference_seq} = $self->end > $self->start+50 ? '~' : $self->get_reference_sequence;
       
-        if ( (defined $self->bound_start) && ($self->bound_start != $self->seq_region_start) ) {
+        if ( (defined $self->inner_start) && ($self->inner_start != $self->seq_region_start) ) {
             
-            if ($self->bound_start > $self->seq_region_start) {
-                warn "Invalid bound_start for ".$self->variation_name.": ".$self->bound_start." > ".$self->seq_region_start."\n";
+            if ($self->inner_start < $self->seq_region_start) {
+                warn "Invalid inner_start for ".$self->variation_name.": ".$self->inner_start." < ".$self->seq_region_start."\n";
                 return undef;
             }
 
-            $gff->{attributes}->{Start_range} = join ',', $self->bound_start, $self->seq_region_start;
+            $gff->{attributes}->{Start_range} = join ',', $self->seq_region_start, $self->inner_start;
         }
 
-        if ( (defined $self->bound_end) && ($self->bound_end != $self->seq_region_end) ) {
+        if ( (defined $self->inner_end) && ($self->inner_end != $self->seq_region_end) ) {
            
-            if ($self->bound_end < $self->seq_region_end) {
-                warn "Invalid bound_end for ".$self->variation_name.": ".$self->bound_end." < ".$self->seq_region_end."\n";
+            if ($self->inner_end > $self->seq_region_end) {
+                warn "Invalid inner_end for ".$self->variation_name.": ".$self->inner_end." > ".$self->seq_region_end."\n";
                 return undef;
             }
 
 
-            $gff->{attributes}->{End_range}   = join ',', $self->seq_region_end, $self->bound_end;
+            $gff->{attributes}->{End_range}   = join ',', $self->inner_end, $self->seq_region_end;
         }
 
         return $gff;
@@ -364,7 +364,6 @@ use warnings;
         my $self = shift;
         return $self->to_gff(@_);
     }
-    
 }
 
 {
