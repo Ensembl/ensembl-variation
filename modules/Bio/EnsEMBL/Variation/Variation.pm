@@ -1141,4 +1141,28 @@ sub _weaken {
     weaken($self->{'alleles'}{$allele->_hash_key()});
 }
 
+
+=head2 get_all_VariationAnnotations
+
+  Args       : none
+  Example    : my $annotations = $var->get_all_VariationAnnotations()
+  Description: Getter for VariationAnnotations for this Variation, returns empty list if 
+               there are none. 
+  Returntype : listref of VariationAnnotations
+  Exceptions : none
+  Caller     : general
+
+=cut
+
+sub get_all_VariationAnnotations {
+    my $self = shift;
+
+    #ÊAssert the adaptor reference
+    assert_ref($self->adaptor(),'Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor');
+    
+    # Get the annotations from the database
+    return $self->adaptor->db->get_VariationAnnotationAdaptor()->fetch_all_by_Variation($self);
+
+}
+
 1;
