@@ -299,8 +299,6 @@ sub _before_coding {
     my $t_s   = $tran->seq_region_start;
     my $cds_s = $tran->coding_region_start;
     
-    #print "vfs: $vf_s vfe: $vf_e ts: $t_s cdss: $cds_s\n";
-    
     # we need to special case insertions just before the CDS start
     if ($vf_s == $vf_e+1 && $vf_s == $cds_s) {
         return 1;
@@ -467,7 +465,7 @@ sub inframe_codon_loss {
     my $tva = shift;
     
     my ($ref_codon, $alt_codon) = _get_codon_alleles($tva);
-    
+
     return 0 unless defined $ref_codon;
   
     return ( 
@@ -508,13 +506,13 @@ sub frameshift {
     
     my $var_len = $tv->cds_end - $tv->cds_start + 1;
 
-    my $len = $tva->seq_length;
+    my $allele_len = $tva->seq_length;
 
-    # if the length is undefined then we can't call a frameshift
+    # if the allele length is undefined then we can't call a frameshift
 
-    return 0 unless defined $len;
+    return 0 unless defined $allele_len;
 
-    return abs( $len - $var_len ) % 3;
+    return abs( $allele_len - $var_len ) % 3;
 }
 
 sub partial_codon {
@@ -566,13 +564,13 @@ sub within_external_feature {
     return (within_feature($efva) and (not within_miRNA_target_site($efva)));
 }
 
-sub within_miRNA_target_site {
-    my $efva = shift;
-
-    my $fset = $efva->variation_feature_overlap->feature->feature_set;
-
-    return ($fset && $fset->name eq 'miRanda miRNA targets');
-}
+#sub within_miRNA_target_site {
+#    my $efva = shift;
+#
+#    my $fset = $efva->variation_feature_overlap->feature->feature_set;
+#
+#    return ($fset && $fset->name eq 'miRanda miRNA targets');
+#}
 
 #package Bio::EnsEMBL::Variation::MotifFeatureVariationAllele;
 
@@ -590,17 +588,17 @@ sub within_motif_feature {
     return within_feature($mfva);
 }
 
-sub increased_binding_affinity {
-    my $mfva = shift;
-    my $change = $mfva->binding_affinity_change;
-    return (within_feature($mfva) and (defined $change) and ($change > 0));
-}
-
-sub decreased_binding_affinity {
-    my $mfva = shift;
-    my $change = $mfva->binding_affinity_change;
-    return (within_feature($mfva) and (defined $change) and ($change < 0));
-}
+#sub increased_binding_affinity {
+#    my $mfva = shift;
+#    my $change = $mfva->binding_affinity_change;
+#    return (within_feature($mfva) and (defined $change) and ($change > 0));
+#}
+#
+#sub decreased_binding_affinity {
+#    my $mfva = shift;
+#    my $change = $mfva->binding_affinity_change;
+#    return (within_feature($mfva) and (defined $change) and ($change < 0));
+#}
 
 1;
 
