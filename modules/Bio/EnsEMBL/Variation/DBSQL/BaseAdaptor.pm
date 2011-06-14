@@ -65,22 +65,6 @@ sub AttributeAdaptor {
     return $self->{_attribute_adaptor};
 }
 
-sub class_display_term_for_SO_term {
-    my ($self, $SO_term, $somatic) = @_;
-
-    my $display_term = $self->AttributeAdaptor->display_term_for_SO_term($SO_term);
-
-    if ($somatic) {
-        if ($display_term eq 'SNP') {
-            $display_term = 'SNV';
-        }
-
-        $display_term = 'somatic_'.$display_term;
-    }
-
-    return $display_term;
-}
-
 sub _consequence_type_map {
     
     # return a hash mapping between the string terms of a mysql set and
