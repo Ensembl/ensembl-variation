@@ -81,4 +81,21 @@ sub get_all_MotifFeatureVariationAlleles {
     return $self->SUPER::get_all_VariationFeatureOverlapAlleles(@_);
 }
 
+sub in_informative_position {
+    my $self = shift;
+
+    my $mf = $self->motif_feature;
+    my $vf = $self->variation_feature;
+    
+    return undef if $vf->seq_region_start != $vf->seq_region_start;
+    
+    # get the (1-based) relative start of the vf with respect to this mf
+    
+    my $mf_start = $vf->seq_region_start - $mf->seq_region_start + 1;
+        
+    return undef if $mf_start < 0;
+        
+    return $mf->is_position_informative($mf_start);
+}
+
 1;
