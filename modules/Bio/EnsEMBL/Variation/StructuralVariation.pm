@@ -372,15 +372,25 @@ sub get_nearest_Gene{
 =cut
 
 
-sub class{
+sub class {
 	my $self = shift;
     
 	unless ($self->{class_display_term}) {
-	    $self->{class_display_term} = 
+        my $display_term =
             $VARIATION_CLASSES{$self->{class_SO_term}}->{display_term};
+
+        warn "No display term for SO term: ".$self->{class_SO_term} unless $display_term;
+
+        $self->{class_display_term} = $display_term || $self->{class_SO_term};
     }
 
 	return $self->{class_display_term};
+}
+
+sub class_SO_term {
+	my $self = shift;
+
+	return $self->{class_SO_term};
 }
 
 
