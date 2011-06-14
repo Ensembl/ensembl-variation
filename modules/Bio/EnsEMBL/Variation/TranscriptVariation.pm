@@ -576,6 +576,8 @@ sub _intron_effects {
         my $vf_start = $vf->seq_region_start;
         my $vf_end   = $vf->seq_region_end;
 
+        my $insertion = $vf_start == $vf_end+1;
+
         for my $intron (@{ $self->_introns }) {
             
             my $intron_start = $intron->seq_region_start;
@@ -592,56 +594,45 @@ sub _intron_effects {
             if ($frameshift_intron) {
                 if (overlap($vf_start, $vf_end, $intron_start, $intron_end)) {
                     $intron_effects->{within_frameshift_intron} = 1;
-                    last;
+                    next;
                 }
             }
-            
-            # the order of these checks is deliberately designed to minimise the number
-            # of calls we make to overlap because we can sometimes establish several
-            # intron effects within one call and then break out of the loop with last
-            
+
             if (overlap($vf_start, $vf_end, $intron_start, $intron_start+1)) {
                 $intron_effects->{start_splice_site} = 1;
-                #$intron_effects->{splice_region} = 1;
-                #$intron_effects->{intronic} = 1;
-                
-                last;
             }
             
             if (overlap($vf_start, $vf_end, $intron_end-1, $intron_end)) {
                 $intron_effects->{end_splice_site} = 1;
-                #$intron_effects->{splice_region} = 1;
-                #$intron_effects->{intronic} = 1;
-                
-                last;
             }
             
-            # we don't last out of this check, because a variation can be both
-            # intronic and splice_region, so we just set a flag
-            
-            if (overlap($vf_start, $vf_end, $intron_start, $intron_end)) {
+            # we need to special case insertions between the donor and acceptor sites
+
+            if (overlap($vf_start, $vf_end, $intron_start+2, $intron_end-2) or 
+                ($insertion && ($vf_start == $intron_start+2 || $vf_end == $intron_end-2)) ) {
                 $intron_effects->{intronic} = 1;
-                
-                $found_effect = 1;
             }
             
             # the definition of splice_region (SO:0001630) is "within 1-3 bases 
             # of the exon or 3-8 bases of the intron", the intron start is the 
             # first base of the intron so we only need to add or subtract 7 from 
-            # it to get the correct coordinate (we don't check if it falls in the
-            # donor or acceptor splice sites because that would have been 
-            # established above)
+            # it to get the correct coordinate. We also need to special case 
+            # insertions between the edge of an exon and a donor or acceptor site
+            # and between a donor or acceptor site and the intron
             
-            if ( ( overlap($vf_start, $vf_end, $intron_start-3, $intron_start+7) or
-                   overlap($vf_start, $vf_end, $intron_end-7,   $intron_end+3) ) and 
-                   not $frameshift_intron ) {
+            if ( overlap($vf_start, $vf_end, $intron_start-3, $intron_start-1) or
+                 overlap($vf_start, $vf_end, $intron_start+2, $intron_start+7) or
+                 overlap($vf_start, $vf_end, $intron_end-7,   $intron_end-2  ) or
+                 overlap($vf_start, $vf_end, $intron_end+1,   $intron_end+3  ) or
+                 ($insertion && ( 
+                     $vf_start == $intron_start || 
+                     $vf_end == $intron_end ||
+                     $vf_start == $intron_start+2 ||
+                     $vf_end == $intron_end-2
+                    ) )) { 
                    
                 $intron_effects->{splice_region} = 1;
-                
-                $found_effect = 1;
             }
-                
-            last if $found_effect;
         }
         
         $self->{_intron_effects} = $intron_effects;       
