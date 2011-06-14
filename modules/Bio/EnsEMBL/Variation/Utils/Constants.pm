@@ -476,18 +476,6 @@ our %OVERLAP_CONSEQUENCES = (
   'feature_class' => 'Bio::EnsEMBL::Funcgen::MotifFeature'
 }
 ),
-'regulatory_region_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
-  'feature_SO_term' => 'regulatory_region',
-  'description' => 'In regulatory region annotated by Ensembl',
-  'SO_accession' => 'SO:0001566',
-  'SO_term' => 'regulatory_region_variant',
-  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::within_external_feature',
-  'label' => 'Regulatory region',
-  'rank' => '50',
-  'display_term' => 'REGULATORY_REGION',
-  'feature_class' => 'Bio::EnsEMBL::Funcgen::ExternalFeature'
-}
-),
 );
 
 1;
