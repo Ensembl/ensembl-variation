@@ -43,8 +43,8 @@ VariationFeatureOverlap. It is the super-class of various feature-specific allel
 classes such as TranscriptVariationAllele and RegulatoryFeatureVariationAllele and 
 contains methods not specific to any particular feature type. Ordinarily you will 
 not create these objects yourself, but instead you would create e.g. a 
-TranscriptVariation object which will then VariationFeatureOverlapAlleles based on the 
-allele string of the associated VariationFeature. 
+TranscriptVariation object which will then create VariationFeatureOverlapAlleles 
+based on the allele string of the associated VariationFeature. 
 
 =cut
 
@@ -174,7 +174,7 @@ sub variation_feature {
     return $self->variation_feature_overlap->variation_feature;
 }
 
-=head2 transcript
+=head2 feature
 
   Description: Get the associated Feature
   Returntype : Bio::EnsEMBL::Feature
@@ -240,7 +240,7 @@ sub variation_feature_seq {
 =head2 seq_is_unambiguous_dna
 
   Description: identify if the sequence of this allele is unambiguous DNA 
-               i.e. if it is translateable
+               i.e. if we can meaningfully translate it
   Returntype : bool
   Exceptions : none
   Status     : At Risk
@@ -260,7 +260,8 @@ sub seq_is_unambiguous_dna {
 
 =head2 seq_is_dna
 
-  Description: identify if the sequence of this allele is DNA, and may 
+  Description: identify if the sequence of this allele is DNA including ambiguity 
+               codes, use seq_is_unambiguous_dna to check for alleles that do not
                include ambiguity codes
   Returntype : bool
   Exceptions : none
@@ -401,11 +402,6 @@ sub add_OverlapConsequence {
     assert_ref($oc, 'Bio::EnsEMBL::Variation::OverlapConsequence');
     $self->{overlap_consequences} ||= [];
     push @{ $self->{overlap_consequences} }, $oc;
-}
-
-sub _is_redundant {
-    
-    
 }
 
 sub SO_isa {
