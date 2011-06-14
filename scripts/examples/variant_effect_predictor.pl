@@ -282,8 +282,6 @@ sub print_consequences {
                     print_line($line);
                 }
             }
-
-            $line->{Extra} = {};
             
             for my $mfv (@{ $new_vf->get_all_MotifFeatureVariations }) {
 
@@ -306,8 +304,6 @@ sub print_consequences {
                 }
             }
         }
-
-        $line->{Extra} = {};
 
 		for my $tv (@{ $new_vf->get_all_TranscriptVariations }) {
 			
