@@ -55,6 +55,12 @@ my $html_header = qq{
 <body>
 <h1>Ensembl Variation Sources Documentation</h1>
 
+<a href="/info/docs/variation/index.html">About Variation Data</a> | 
+<a href="/info/docs/variation/database.html">Database Description</a> |
+<a href="/info/docs/variation/sources_documentation.html">Variation Sources</a> |
+<a href="/info/docs/variation/variation_schema.html">Variation Tables Description</a> |
+<a href="/info/docs/api/variation/index.html">Perl API</a>
+
 <h2>List of Variation sources for each species - Ensembl $e_version</h2>
 
 };
