@@ -35,6 +35,8 @@ my $include_svs;
 my $just_svs;
 my $help;
 
+$| = 1;
+
 GetOptions(
     "species|s=s"                   => \$species,
     "output|o=s"                    => \$output_file,
@@ -550,7 +552,7 @@ while (my $slice = shift @$slices) {
                     
                 print GVF "$gvf_line\n" if $gvf_line;
 
-                $prev_svs->{$sv->variation_name} = $coords;
+                $prev_svs->{$sv->variation_name} = $coords if $gvf_line;
             }
         }
     }
