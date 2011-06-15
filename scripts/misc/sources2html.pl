@@ -49,7 +49,7 @@ my $html_header = qq{
 <html>
 <head>
 	<meta http-equiv="CONTENT-TYPE" content="text/html; charset=utf-8" />
-	<title>Variation Sources Documentation</title>
+	<title>Variation Sources</title>
 </head>
 
 <body>
