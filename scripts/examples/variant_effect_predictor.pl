@@ -270,7 +270,8 @@ sub print_consequences {
                 $line->{Feature_type}   = 'RegulatoryFeature';
                 $line->{Feature}        = $rf->stable_id;
 
-                $line->{Extra}->{REG_FEAT_TYPE} = $rf->feature_type->name;
+                # this currently always returns 'RegulatoryFeature', so we ignore it for now
+                #$line->{Extra}->{REG_FEAT_TYPE} = $rf->feature_type->name;
                 
                 for my $rfva (@{ $rfv->get_all_alternate_RegulatoryFeatureVariationAlleles }) {
 
