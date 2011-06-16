@@ -72,6 +72,7 @@ package Bio::EnsEMBL::Variation::DBSQL::PopulationAdaptor;
 
 use Bio::EnsEMBL::Variation::DBSQL::SampleAdaptor;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
+use Bio::EnsEMBL::Utils::Scalar qw(wrap_array);
 
 use Bio::EnsEMBL::Variation::Population;
 
@@ -484,6 +485,54 @@ sub fetch_tagged_Population{
     $sth->finish();
 
     return $results;
+}
+
+
+=head2 get_sample_id_for_population_names
+
+  Arg [1]     : $population_names reference to list of population names
+  Example     : my $ids = $pop_adaptor->get_sample_id_for_population_names(['CSHL-HAPMAP:HAPMAP-MEX','1000GENOMES:pilot_1_CHB+JPT_low_coverage_panel']);
+                map {printf("Population: \%s has sample_id \%d\n",$ids->{$_},$_)} keys(%{$ids});
+  Description : Retrieve the sample_ids for a list of population names
+  ReturnType  : reference to hash with sample_ids as keys and population names as values
+  Caller      : web
+  Status      : At Risk
+
+=cut
+
+sub get_sample_id_for_population_names {
+    my $self = shift;
+    my $population_names = shift;
+
+    # Wrap the argument into an arrayref
+    $population_names = wrap_array($population_names);
+    
+    # Define a statement handle for the lookup query
+    my $stmt = qq{
+        SELECT
+            s.sample_id
+            s.name
+        FROM
+            sample s
+        WHERE
+            s.name = ?
+        LIMIT 1
+    };
+    my $sth = $self->prepare($stmt);
+    
+    # Loop over the population names and query the db
+    my %sample_ids;
+    foreach my $name (@{$population_names}) {
+        $sth->execute($name);
+        
+        my ($sid,$sname);
+        $sth->bind_columns(\$sid,\$sname);
+        $sth->execute();
+        
+        $sample_ids{$sid} = $sname if (defined($sid));
+    }
+    
+    return \%sample_ids;
 }
 
 #
