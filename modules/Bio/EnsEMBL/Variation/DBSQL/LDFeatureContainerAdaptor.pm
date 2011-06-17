@@ -229,6 +229,13 @@ sub fetch_by_VariationFeature {
 
 sub get_populations_by_Slice{
   my $self = shift;
+  
+  my $population_hash = $self->get_populations_hash_by_Slice(@_);
+  return [values(%{$population_hash})];
+}
+
+sub get_populations_hash_by_Slice{
+  my $self = shift;
   my $slice = shift;
   
   if(!ref($slice) || !$slice->isa('Bio::EnsEMBL::Slice')) {
@@ -239,25 +246,25 @@ sub get_populations_by_Slice{
   
   my ($sr, $slice_start, $slice_end) = ($slice->get_seq_region_id, $slice->start, $slice->end);
   
-  my @results;
+  my %results;
   my $pop_threshold = 20;	# number of individuals required
   my $gen_threshold = 3;	# number of genotypes per individual required
 
   # just get the population list if it's really too long
   if($slice->length > 10000000) {
 	
-	my $sth = $self->prepare(qq{SELECT name FROM sample WHERE sample_id $pop_list;});
+	my $sth = $self->prepare(qq{SELECT sample_id, name FROM sample WHERE sample_id $pop_list;});
 	$sth->execute;
 	
 	
-	@results = map {$_->[0]} @{$sth->fetchall_arrayref()};
+	%results = map {$_->[0] => $_->[1]} @{$sth->fetchall_arrayref()};
   }
 
   # do a guesstimate for long slices, otherwise it takes too long
   elsif($slice->length > 5000000) {
 	
 	my $sth = $self->prepare(qq{
-	  SELECT distinct(c.sample_id), s.name
+	  SELECT distinct(c.sample_id), s.sample_id, s.name
 	  FROM compressed_genotype_single_bp c, individual_population ip, sample s, individual i
 	  WHERE c.sample_id = ip.individual_sample_id
 	  AND ip.population_sample_id = s.sample_id
@@ -271,15 +278,16 @@ sub get_populations_by_Slice{
 	
 	$sth->execute($slice->get_seq_region_id, $slice->start, $slice->end, $slice->start);
 	
-	my %pops = ();
+	my %counts = ();
 	
 	while(my $row = $sth->fetchrow_arrayref()) {
-	  my ($ind_id, $pop_id) = @$row;
-	  
-	  $pops{$pop_id}++;
+	  my ($ind_id, $pop_id, $pop_name) = @$row;
+	  $results{$pop_id} = $pop_name;
+	  $counts{$pop_id}++;
 	}
 	
-	@results = grep {$pops{$_} > $pop_threshold} keys %pops;
+	#ÊDelete the populations that doesn't have enough individuals
+	delete @results{ grep {$counts{$_} <= $pop_threshold} keys(%counts)};
   }
   
   else {
@@ -310,6 +318,8 @@ sub get_populations_by_Slice{
 	  
 	  next if $enough{$sample_id};
 	  
+	  
+	  $results{$population_id} = $population_name;
 	  $sample_pop{$sample_id} = $population_name;
 	  
 	  # if the row is only partially within the slice
@@ -350,13 +360,13 @@ sub get_populations_by_Slice{
 	  }
 	  
 	  $enough{$sample_id} = 1 if $counts{$sample_id} >= $gen_threshold;
-	  $counts_pop{$population_name}++ if $counts{$sample_id} >= $gen_threshold;
+	  $counts_pop{$population_id}++ if $counts{$sample_id} >= $gen_threshold;
 	}
 	
-	@results = grep {$counts_pop{$_} > $pop_threshold} keys %counts_pop;
+	delete @results{grep {$counts_pop{$_} <= $pop_threshold} keys %counts_pop};
   }
   
-  return \@results;
+  return \%results;
 }
 
 
