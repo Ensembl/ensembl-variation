@@ -687,10 +687,12 @@ INTRO
         debug("INFO: Whole-genome mode is now the default run-mode for the script. To disable it, use --no_whole_genome") unless defined($config->{quiet});
     }
     
-    $config->{whole_genome}   = 1 unless defined $config->{no_whole_genome};
-    $config->{include_failed} = 1 unless defined $config->{include_failed};
-    $config->{chunk_size}     =~ s/mb?/000000/i;
-    $config->{chunk_size}     =~ s/kb?/000/i;
+    $config->{whole_genome}      = 1 unless defined $config->{no_whole_genome};
+    $config->{include_failed}    = 1 unless defined $config->{include_failed};
+    $config->{chunk_size}        =~ s/mb?/000000/i;
+    $config->{chunk_size}        =~ s/kb?/000/i;
+    $config->{cache_region_size} =~ s/mb?/000000/i;
+    $config->{cache_region_size} =~ s/kb?/000/i;
     
     # cluck and display executed SQL?
     $Bio::EnsEMBL::DBSQL::StatementHandle::cluck = 1 if defined($config->{cluck});
