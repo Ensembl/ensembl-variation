@@ -752,7 +752,7 @@ sub bitval_to_array {
 }
 
 
-=head2 add_to_bitval
+=head2 add_validation_state
 
   Arg [1]    : string $state
   Example    : add_validation_state('cluster');

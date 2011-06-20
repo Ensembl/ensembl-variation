@@ -89,21 +89,6 @@ our $MAX_SNP_DISTANCE = 100000;
 our $BINARY_FILE      = '';
 our $TMP_PATH         = '';
 
-=head2 fetch_by_Slice
-
-  Arg [1]    : Bio::EnsEMBL::Slice $slice
-               The slice to fetch genes on. Assuming it is always correct (in the top level)
-  Arg [2]    : (optional) Bio::EnsEMBL::Variation::Population $population. Population where 
-                we want to select the LD information
-  Example    : $ldFeatureContainer = $ldfeaturecontainer_adaptor->fetch_by_Slice($slice);
-  Description: Overwrites superclass method to add the name of the slice to the LDFeatureContainer.
-  Returntype : Bio::EnsEMBL::Variation::LDFeatureContainer
-  Exceptions : thrown on bad argument
-  Caller     : general
-  Status     : At Risk
-
-=cut
-
 sub executable {
   my $self = shift;
   $BINARY_FILE = shift if @_;
@@ -121,7 +106,21 @@ sub temp_path {
   return $TMP_PATH;
 }
 
-sub fetch_by_Slice{
+=head2 fetch_by_Slice
+
+  Arg [1]    : Bio::EnsEMBL::Slice $slice
+               The slice to fetch genes on. Assuming it is always correct (in the top level)
+  Arg [2]    : (optional) Bio::EnsEMBL::Variation::Population $population. Population where 
+                we want to select the LD information
+  Example    : $ldFeatureContainer = $ldfeaturecontainer_adaptor->fetch_by_Slice($slice);
+  Description: Overwrites superclass method to add the name of the slice to the LDFeatureContainer.
+  Returntype : Bio::EnsEMBL::Variation::LDFeatureContainer
+  Exceptions : thrown on bad argument
+  Caller     : general
+  Status     : At Risk
+
+=cut
+sub fetch_by_Slice {
     my $self = shift;
     my $slice = shift;
     my $population = shift;

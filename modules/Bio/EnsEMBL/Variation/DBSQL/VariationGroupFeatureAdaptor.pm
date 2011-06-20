@@ -82,10 +82,10 @@ our @ISA = ('Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor');
 
 
 
-=head2 fetch_all_by_Variation
+=head2 fetch_all_by_VariationGroup
 
-  Arg [1]    : Bio::EnsEMBL:Variation::Variation $var
-  Example    : my @vfs = @{$vfa->fetch_all_by_Variation($var)};
+  Arg [1]    : Bio::EnsEMBL::Variation::Variation $var
+  Example    : my @vfs = @{$vfa->fetch_all_by_VariationGroup($var)};
   Description: Retrieves all variation features for a given variation.  Most
                variations should only hit the genome once and only a return
                a single variation feature.
