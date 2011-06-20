@@ -74,7 +74,7 @@ my %Printable = ( "\\"=>'\\', "\r"=>'r', "\n"=>'n', "\t"=>'t', "\""=>'"' );
 
 #my $_pack_type = "n";
 
-=head2 fetch_all_by_Slice_Sample
+=head2 fetch_all_by_Slice_SampleId
 
     Arg[0]      : Bio::EnsEMBL::Slice $slice
     Arg[1]      : (optional) $sample_id

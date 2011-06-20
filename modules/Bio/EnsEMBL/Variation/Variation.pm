@@ -364,10 +364,10 @@ sub _add_Allele {
     $allele->_weaken();
 }
 
-=head2 allele
+=head2 add_allele
 
   Arg [1]    : Bio::EnsEMBL::Variation::Allele $allele (Optional)
-  Example    : $v->allele(Bio::EnsEMBL::Variation::Alelele->new(...));
+  Example    : $v->add_allele(Bio::EnsEMBL::Variation::Allele->new(...));
   Description: Add an Allele to this variation.
   Returntype : none
   Exceptions : throw on incorrect argument

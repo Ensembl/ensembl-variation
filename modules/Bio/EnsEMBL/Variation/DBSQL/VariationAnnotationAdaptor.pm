@@ -72,7 +72,7 @@ our @ISA = ('Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor');
 
 =head2 fetch_all_by_Variation
 
-  Arg [1]    : Bio::EnsEMBL:Variation::Variation $var
+  Arg [1]    : Bio::EnsEMBL::Variation::Variation $var
   Example    : my @vas = @{$vaa->fetch_all_by_Variation($var)};
   Description: Retrieves all variation annotations for a given variation.
   Returntype : reference to list Bio::EnsEMBL::Variation::VariationAnnotation
@@ -100,7 +100,7 @@ sub fetch_all_by_Variation {
 
 =head2 fetch_all_by_Variation_list
 
-  Arg [1]    : reference to a list of Bio::EnsEMBL:Variation::Variation objects
+  Arg [1]    : reference to a list of Bio::EnsEMBL::Variation::Variation objects
   Example    : my @vas = @{$vaa->fetch_all_by_Variation_list($vars)};
   Description: Retrieves all variation annotations for a given list of variations
   Returntype : reference to a list of Bio::EnsEMBL::Variation::VariationAnnotation objects
@@ -185,7 +185,7 @@ sub fetch_all_by_Study {
 }
 
 
-=head2 fetch_all_by_phenotype_source_name
+=head2 fetch_all_by_phenotype_name_source_name
 
   Arg [1]    : string $phenotype_name
   Arg [2]    : string $source_name (optional)
