@@ -107,8 +107,8 @@ sub new {
   my $caller = shift;
   my $class = ref($caller) || $caller;
 
-  my ($dbID, $adaptor, $allele, $freq, $count, $pop, $ss_id, $variation, $variation_id, $population_id) =
-    rearrange(['dbID', 'ADAPTOR', 'ALLELE', 'FREQUENCY', 'COUNT', 'POPULATION', 'SUBSNP', 'VARIATION', 'VARIATION_ID', 'POPULATION_ID'], @_);
+  my ($dbID, $adaptor, $allele, $freq, $count, $pop, $ss_id, $variation_id, $population_id) =
+    rearrange(['dbID', 'ADAPTOR', 'ALLELE', 'FREQUENCY', 'COUNT', 'POPULATION', 'SUBSNP', 'VARIATION_ID', 'POPULATION_ID'], @_);
   
   # set subsnp_id to undefined if it's 0 in the DB
   #$ss_id = undef if (defined $ss_id && $ss_id == 0);
@@ -116,32 +116,31 @@ sub new {
   # add ss to the subsnp_id
   $ss_id = 'ss'.$ss_id if defined $ss_id && $ss_id !~ /^ss/;
 
-  #ÊCheck that we at least get a BaseAdaptor
+  # Check that we at least get a BaseAdaptor
   assert_ref($adaptor,'Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor');
-  #ÊIf the adaptor is not an AlleleAdaptor, try to get it via the passed adaptor
+  # If the adaptor is not an AlleleAdaptor, try to get it via the passed adaptor
   unless (check_ref($adaptor,'Bio::EnsEMBL::Variation::DBSQL::AlleleAdaptor')) {
       $adaptor = $adaptor->db->get_AlleleAdaptor();
       # Verify that we could get the AlleleAdaptor
         assert_ref($adaptor,'Bio::EnsEMBL::Variation::DBSQL::AlleleAdaptor');
   }
   
-  my $self = {'dbID'    => $dbID,
-                'adaptor' => $adaptor,
-                'allele'  => $allele,
-                'frequency' => $freq,
-                'count'   => $count,
-                'population' => $pop,
-                'subsnp'  => $ss_id,
-                'variation' => $variation,
-                '_variation_id' => $variation_id,
-                '_population_id' => $population_id
-  };
-  bless $self, $class;
+  my $self = bless {}, $class;
+  
+  $self->dbID($dbID);
+  $self->adaptor($adaptor);
+  $self->allele($allele);
+  $self->frequency($freq);
+  $self->count($count);
+  $self->subsnp($ss_id);
+  $self->{'_variation_id'} = $variation_id;
+  $self->{'_population_id'} = $population_id;
+  $self->population($pop) if (defined($pop));
   
   return $self;
 }
 
-#ÊAn internal method for getting a unique hash key identifier, used by the Variation module 
+# An internal method for getting a unique hash key identifier, used by the Variation module 
 sub _hash_key {
     my $self = shift;
     
@@ -149,8 +148,8 @@ sub _hash_key {
     my $dbID = $self->dbID();
     return $dbID if (defined($dbID));
      
-    #ÊIf no dbID is specified, e.g. if we are creating a 'custom' object, return a fake dbID. This is necessary since e.g. Variation stores
-    #Êits alleles in a hash with dbID as key. To create fake dbIDs, use the string representing the memory address.
+    # If no dbID is specified, e.g. if we are creating a 'custom' object, return a fake dbID. This is necessary since e.g. Variation stores
+    # its alleles in a hash with dbID as key. To create fake dbIDs, use the string representing the memory address.
     ($dbID) = sprintf('%s',$self) =~ m/\(([0-9a-fx]+)\)/i;
     return $dbID;
 }
@@ -250,10 +249,10 @@ sub population{
     # Population can be lazy-loaded, so get it from the database if we have a sample_id but no cached object
     if (!defined($self->{'population'}) && defined($self->{'_population_id'})) {
         
-        #ÊCheck that an adaptor is attached
+        # Check that an adaptor is attached
         assert_ref($self->adaptor(),'Bio::EnsEMBL::Variation::DBSQL::AlleleAdaptor');
         
-        #ÊGet a population object
+        # Get a population object
         my $population = $self->adaptor->db->get_PopulationAdaptor()->fetch_by_dbID($self->{'_population_id'});
         
         # Set the population
@@ -293,7 +292,6 @@ sub subsnp{
   Returntype : Bio::EnsEMBL::Variation::Variation
   Exceptions : throw on incorrect argument
   Caller     : general
-  Status     : At Risk
 
 =cut
 
@@ -301,27 +299,26 @@ sub variation {
     my $self = shift;
     my $variation = shift;
   
+    # Set the dbID of the variation object on this allele
     if(defined($variation)) {
         assert_ref($variation,'Bio::EnsEMBL::Variation::Variation');
-        $self->{'variation'} = $variation;
         $self->{'_variation_id'} = $variation->dbID();
+        return $variation;
     }
 
-    # Variations can be lazy-loaded, so get it from the database if we have a variation_id but no cached object
-    if (!defined($self->{'variation'}) && defined($self->{'_variation_id'})) {
+    # Load the variation from the database if we have a variation_id
+    if (defined($self->{'_variation_id'})) {
         
-        #ÊCheck that an adaptor is attached
-        assert_ref($self->adaptor(),'Bio::EnsEMBL::Variation::DBSQL::AlleleAdaptor');
+        # Check that an adaptor is attached
+        assert_ref($self->adaptor(),'Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor');
         
-        #ÊGet a variation object.
-        my $variation = $self->adaptor->db->get_VariationAdaptor()->fetch_by_dbID($self->{'_variation_id'});
-        
-        # Add ourself to the variation object
-        $self->_add_Variation($variation); 
+        # Get a variation object
+        $variation = $self->adaptor->db->get_VariationAdaptor()->fetch_by_dbID($self->{'_variation_id'});
         
     }
     
-    return $self->{'variation'};
+    # Return the variation object
+    return $variation;
 }
 
 =head2 is_failed
@@ -339,33 +336,6 @@ sub is_failed {
     my $self = shift;
   
     return (length($self->failed_description()) > 0);
-}
-
-
-=head2 _add_Variation
-
-  Arg [1]    : Bio::EnsEMBL::Variation::Variation
-  Example    : $a->add_Variation($var);
-  Description: Associates this Allele with the specified Variation object. This is a private method that should only be called from within the allele module. 
-  Exceptions : thrown on incorrect argument
-  Caller     : general
-  Status     : At Risk
-
-=cut
-
-sub _add_Variation {
-    my $self = shift;
-    my $variation = shift;
-  
-    # Set the variation
-    $self->variation($variation);
-    
-    #ÊAdd the allele to the variation
-    $variation->add_Allele($self);
-    
-    #ÊWeaken the variation's reference back to this allele
-    $variation->_weaken($self);
-    
 }
 
 
@@ -404,7 +374,7 @@ sub failed_description {
         # Update the cached failed_description
         $self->{'failed_description'} = $description;
     }
-    #ÊElse, fetch it from the db if it's not cached
+    # Else, fetch it from the db if it's not cached
     elsif (!defined($self->{'failed_description'})) {
         $self->{'failed_description'} = $self->get_all_failed_descriptions();
     }
@@ -433,10 +403,10 @@ sub failed_description {
 sub get_all_failed_descriptions {
     my $self = shift;
     
-    #ÊIf the failed descriptions haven't been cached yet, load them from db
+    # If the failed descriptions haven't been cached yet, load them from db
     unless (defined($self->{'failed_description'})) {
         
-        #ÊCheck that this allele has an adaptor attached
+        # Check that this allele has an adaptor attached
         assert_ref($self->adaptor(),'Bio::EnsEMBL::Variation::DBSQL::AlleleAdaptor');
     
         $self->{'failed_description'} = $self->adaptor->get_all_failed_descriptions($self);
@@ -468,7 +438,7 @@ sub subsnp_handle{
     }
     elsif (!defined($self->{'subsnp_handle'})) {
 
-        #ÊCheck that this allele has an adaptor attached
+        # Check that this allele has an adaptor attached
         assert_ref($self->adaptor(),'Bio::EnsEMBL::Variation::DBSQL::AlleleAdaptor');
         
         $self->{'subsnp_handle'} = $self->adaptor->get_subsnp_handle($self);
@@ -480,10 +450,10 @@ sub subsnp_handle{
 sub _weaken {
     my $self = shift;
     
-    #ÊIf the variation is not defined, do nothing
+    # If the variation is not defined, do nothing
     return unless (defined($self->variation()));
     
-    #ÊWeaken the link to the variation
+    # Weaken the link to the variation
     weaken($self->{'variation'});
 }
 
