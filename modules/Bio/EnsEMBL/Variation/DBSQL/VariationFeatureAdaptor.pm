@@ -86,6 +86,7 @@ use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Utils::Iterator;
 use Bio::EnsEMBL::Variation::Utils::Constants qw(%OVERLAP_CONSEQUENCES);
+use Bio::EnsEMBL::Variation::Utils::Sequence qw(get_validation_code);
 
 our @ISA = ('Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor', 'Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor');
 our $MAX_VARIATION_SET_ID = 64;
@@ -852,9 +853,9 @@ sub _objs_from_sth {
                 }
                 $slice = $dest_slice;
             }
-            my @states;
+            my $validation_code;
             if (defined($validation_status)) {
-                @states = split(',',$validation_status);
+                $validation_code = get_validation_code([split(',',$validation_status)]);
             }
             
             #my $overlap_consequences = $self->_variation_feature_consequences_for_set_number($consequence_type);
@@ -878,7 +879,7 @@ sub _objs_from_sth {
                 'source'   => $source_name,
                 'source_version' => $source_version,
                 'is_somatic' => $is_somatic,
-                'validation_code' => \@states,
+                'validation_code' => $validation_code,
                 'overlap_consequences' => $overlap_consequences,
                 '_variation_id' => $variation_id,
                 'class_SO_term' => $aa->attrib_value_for_id($class_attrib_id),

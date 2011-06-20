@@ -93,13 +93,13 @@ use Bio::EnsEMBL::Utils::Scalar qw(assert_ref);
 use Bio::EnsEMBL::Utils::Argument  qw(rearrange);
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp); 
 use Bio::EnsEMBL::Variation::Utils::Sequence qw(ambiguity_code hgvs_variant_notation SO_variation_class);
+use Bio::EnsEMBL::Variation::Utils::Sequence;
 use Bio::EnsEMBL::Variation::Variation;
 use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(MAX_DISTANCE_FROM_TRANSCRIPT);
 use Bio::EnsEMBL::Variation::Utils::Constants qw($DEFAULT_OVERLAP_CONSEQUENCE %VARIATION_CLASSES); 
 use Bio::EnsEMBL::Variation::RegulatoryFeatureVariation;
 use Bio::EnsEMBL::Variation::MotifFeatureVariation;
 use Bio::EnsEMBL::Variation::ExternalFeatureVariation;
-use Bio::EnsEMBL::Variation::Utils::Sequence;
 use Bio::EnsEMBL::Slice;
 use Bio::EnsEMBL::Variation::DBSQL::TranscriptVariationAdaptor;
 use Bio::PrimarySeq;
@@ -217,7 +217,7 @@ sub new {
   $self->{'source'}                 = $source;
   $self->{'source_version'}         = $source_version;
   $self->{'is_somatic'}             = $is_somatic;
-  $self->{'validation_code'}        = Bio::EnsEMBL::Variation::Utils::Sequence::get_validation_code($validation_code);
+  $self->{'validation_code'}        = $validation_code;
   $self->{'overlap_consequences'}   = $overlap_consequences;
   $self->{'class_SO_term'}          = $class_so_term;
   
