@@ -103,7 +103,7 @@ sub fetch_all_by_subsnp_id {
 
     throw('name argument expected') if(!defined($name));
 
-    #ÊAdd the constraint on the subsnp_id column and pass to generic_fetch
+    # Add the constraint on the subsnp_id column and pass to generic_fetch
     my $constraint = qq{ a.subsnp_id = $name };
 
     return $self->generic_fetch($constraint);
@@ -136,29 +136,23 @@ sub fetch_all_by_Variation {
     # If we got a population argument, make sure that it is a Population object
     assert_ref($population,'Bio::EnsEMBL::Variation::Population') if (defined($population));
     
-    #ÊAdd a constraint on the variation_id column and pass to generic fetch
+    # Add a constraint on the variation_id column and pass to generic fetch
     my $variation_id = $variation->dbID();
     my $constraint = qq{ a.variation_id = $variation_id };
     
-    #ÊIf required, add a constraint on the sample id
+    # If required, add a constraint on the sample id
     if (defined($population)) {
         my $sample_id = $population->dbID();
         $constraint .= qq{ AND a.sample_id = $sample_id };
     }
     
-    #ÊAdd the constraint for failed alleles
+    # Add the constraint for failed alleles
     $constraint .= " AND " . $self->db->_exclude_failed_alleles_constraint();
   
     my $alleles = $self->generic_fetch($constraint);
     
-    #ÊIterate over the alleles and add the Variation object to each one of them. This will also add the Allele to the variation object and weaken the variations link back to the allele 
-    #ÊIf a population object was specified, add this object to the allele as well
-    map {
-        $_->_add_Variation($variation);
-        if (defined($population)) {
-            $_->population($population);
-        }
-    } @{$alleles};
+    # If a population was specified, attach the population to the allele object
+    map {$_->population($population)} @{$alleles} if (defined($population));
     
     # Return the alleles
     return $alleles;
@@ -186,7 +180,7 @@ sub get_all_failed_descriptions {
     my $self = shift;
     my $allele = shift;
     
-    #ÊCall the internal get method without any constraints
+    # Call the internal get method without any constraints
     my $description = $self->_internal_get_failed_descriptions($allele) || [];
     
     return $description;
@@ -238,7 +232,7 @@ sub get_subsnp_handle {
 }
 
 
-#ÊAPI-internal method for getting failed descriptions for an Allele
+# API-internal method for getting failed descriptions for an Allele
 sub _internal_get_failed_descriptions {
     my $self = shift;
     my $allele = shift;
@@ -282,7 +276,7 @@ sub _objs_from_sth {
     
     while($sth->fetch()) {
     
-        #ÊThe left join to failed allele can create duplicate rows, so check that we've got a new Allele before creating the object
+        # The left join to failed allele can create duplicate rows, so check that we've got a new Allele before creating the object
         unless (defined($last_allele_id) && $last_allele_id == $allele_id) {
         
             my $obj = Bio::EnsEMBL::Variation::Allele->new(
@@ -313,13 +307,13 @@ sub _tables {
         ['allele', 'a']
     );
     
-	#ÊIf we are excluding failed_alleles, add that table
+	# If we are excluding failed_alleles, add that table
 	push(@tables,['failed_allele', 'fa']) unless ($self->db->include_failed_variations());
 	
 	return @tables;
 }
 
-#ÊAdd a left join to the failed_variation table
+# Add a left join to the failed_variation table
 sub _left_join { 
     my $self = shift;
     
