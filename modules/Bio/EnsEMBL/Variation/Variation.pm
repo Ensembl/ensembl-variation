@@ -101,7 +101,7 @@ package Bio::EnsEMBL::Variation::Variation;
 
 use Bio::EnsEMBL::Storable;
 use Bio::EnsEMBL::Utils::Argument qw(rearrange);
-use Bio::EnsEMBL::Utils::Scalar qw(assert_ref);
+use Bio::EnsEMBL::Utils::Scalar qw(assert_ref wrap_array);
 use Bio::EnsEMBL::Variation::Utils::Sequence qw(ambiguity_code SO_variation_class);
 use Bio::EnsEMBL::Utils::Exception qw(throw deprecate warning);
 use Bio::EnsEMBL::Variation::Utils::Sequence;
@@ -125,13 +125,13 @@ use Scalar::Util qw(weaken);
     string - the name of this SNP
 
   Arg [-SOURCE] :
-    string - the source of this SNP	
+    string - the source of this SNP 
 
   Arg [-SOURCE_DESCRIPTION] :
     string - description of the SNP source
-		
-	Arg [-SOURCE_TYPE] :
-		string - the source type of this variant
+    
+  Arg [-SOURCE_TYPE] :
+    string - the source type of this variant
 
   Arg [-SYNONYMS] :
     reference to hash with list reference values -  keys are source
@@ -192,7 +192,7 @@ sub new {
     'source' => $src,
     'source_description' => $src_desc,
     'source_url' => $src_url,
-	'source_type'=> $src_type,
+  'source_type'=> $src_type,
     'is_somatic' => $is_somatic,
     'synonyms' => $syns || {},
     'ancestral_allele' => $ancestral_allele,
@@ -203,8 +203,7 @@ sub new {
     'flank_flag' => $flank_flag
   }, $class;
   
-    # Add the alleles to this Variation object
-    map {$self->_add_Allele($_)} @{$alleles} if (defined($alleles));
+  $self->add_Allele($alleles) if defined($alleles);
   
   return $self;
 }
@@ -214,7 +213,7 @@ sub new {
 
   Example    : print "Variation '" . $var->name() . "' has " . ($var->is_failed() ? "" : "not ") . "been flagged as failed\n";
   Description: Gets the failed attribute for this variation. The failed attribute
-	           is lazy-loaded from the database.
+             is lazy-loaded from the database.
   Returntype : int
   Exceptions : none
   Caller     : general
@@ -263,13 +262,13 @@ sub has_failed_alleles {
 =head2 failed_description
 
   Arg [1]    : $failed_description (optional)
-	           The new value to set the failed_description attribute to. Should 
-	           be a reference to a list of strings, alternatively a string can
-	           be passed. If multiple failed descriptions are specified, they should
-	           be separated with semi-colons.  
+             The new value to set the failed_description attribute to. Should 
+             be a reference to a list of strings, alternatively a string can
+             be passed. If multiple failed descriptions are specified, they should
+             be separated with semi-colons.  
   Example    : $failed_str = $var->failed_description();
   Description: Get/Sets the failed description for this variation. The failed
-	           descriptions are lazy-loaded from the database.
+             descriptions are lazy-loaded from the database.
   Returntype : Semi-colon separated string 
   Exceptions : Thrown on illegal argument.
   Caller     : general
@@ -338,35 +337,9 @@ sub get_all_failed_descriptions {
     return $self->{'failed_description'};
 }
 
-=head2 _add_Allele
+=head2 add_Allele
 
-  Arg [1]    : Bio::EnsEMBL::Variation::Allele $allele
-  Example    : $v->add_Allele(Bio::EnsEMBL::Variation::Alelele->new(...));
-  Description: Associates an Allele with this variation. Should only be called from within the variation module
-  Returntype : none
-  Exceptions : throw on incorrect argument
-  Caller     : general
-  Status     : At Risk
-
-=cut
-
-sub _add_Allele {
-    my $self = shift;
-    my $allele = shift;
-
-    #ÊAdd (or replace) the allele to the hash
-    $self->add_Allele($allele);
-    
-    #ÊAdd a reference to ourself to the allele object
-    $allele->variation($self);
-  
-    #ÊWeaken the allele's reference back to this variation object
-    $allele->_weaken();
-}
-
-=head2 add_allele
-
-  Arg [1]    : Bio::EnsEMBL::Variation::Allele $allele (Optional)
+  Arg [1]    : Bio::EnsEMBL::Variation::Allele $allele 
   Example    : $v->add_allele(Bio::EnsEMBL::Variation::Allele->new(...));
   Description: Add an Allele to this variation.
   Returntype : none
@@ -379,11 +352,14 @@ sub _add_Allele {
 sub add_Allele {
     my $self = shift;
     my $allele = shift;
-  
-    assert_ref($allele,'Bio::EnsEMBL::Variation::Allele');
+
+    # This method also accepts a list of alleles so wrap the argument in an array and treat as such
+    $allele = wrap_array($allele);  
+    map {assert_ref($_,'Bio::EnsEMBL::Variation::Allele')} @{$allele};
     
-    #ÊStore the allele in our private hash using the allele_id as key. This is primarily in order to quickly update allele objects that are created later and needs to be properly linked to the variation
-    $self->{'alleles'}{$allele->_hash_key()} = $allele;
+    # Store the allele in the private hash
+    $self->{alleles} = [] unless (exists($self->{alleles}));
+    push(@{$self->{alleles}},@{$allele});
     
 }
 
@@ -424,31 +400,31 @@ sub get_all_Genes{
     my $self = shift;
     my $genes;
     if (defined $self->{'adaptor'}){
-	my $UPSTREAM = 5000;
-	my $DOWNSTREAM = 5000;
-	my $vf_adaptor = $self->adaptor()->db()->get_VariationFeatureAdaptor();
-	my $vf_list = $vf_adaptor->fetch_all_by_Variation($self);
-	#foreach vf, get the slice is on, us ethe USTREAM and DOWNSTREAM limits to get all the genes, and see if SNP is within the gene
-	my $new_slice;
-	my $gene_list;
-	my $gene_hash;
+  my $UPSTREAM = 5000;
+  my $DOWNSTREAM = 5000;
+  my $vf_adaptor = $self->adaptor()->db()->get_VariationFeatureAdaptor();
+  my $vf_list = $vf_adaptor->fetch_all_by_Variation($self);
+  #foreach vf, get the slice is on, us ethe USTREAM and DOWNSTREAM limits to get all the genes, and see if SNP is within the gene
+  my $new_slice;
+  my $gene_list;
+  my $gene_hash;
 
-	foreach my $vf (@{$vf_list}){
-	    #expand the slice UPSTREAM and DOWNSTREAM
-	    $new_slice = $vf->feature_Slice()->expand($UPSTREAM,$DOWNSTREAM);
-	    #get the genes in the new slice
-	    $gene_list = $new_slice->get_all_Genes();
-	    foreach my $gene (@{$gene_list}){
-		if (($vf->start >= $gene->seq_region_start - $UPSTREAM) && ($vf->start <= $gene->seq_region_end + $DOWNSTREAM) && ($vf->end <= $gene->seq_region_end + $DOWNSTREAM)){
-		    #the vf is affecting the gene, add to the hash if not present already
-		    if (!exists $gene_hash->{$gene->dbID}){
-			$gene_hash->{$gene->dbID} = $gene;
-		    }
-		}
-	    }
-	}
-	#and return all the genes
-	push @{$genes}, values %{$gene_hash};
+  foreach my $vf (@{$vf_list}){
+      #expand the slice UPSTREAM and DOWNSTREAM
+      $new_slice = $vf->feature_Slice()->expand($UPSTREAM,$DOWNSTREAM);
+      #get the genes in the new slice
+      $gene_list = $new_slice->get_all_Genes();
+      foreach my $gene (@{$gene_list}){
+    if (($vf->start >= $gene->seq_region_start - $UPSTREAM) && ($vf->start <= $gene->seq_region_end + $DOWNSTREAM) && ($vf->end <= $gene->seq_region_end + $DOWNSTREAM)){
+        #the vf is affecting the gene, add to the hash if not present already
+        if (!exists $gene_hash->{$gene->dbID}){
+      $gene_hash->{$gene->dbID} = $gene;
+        }
+    }
+      }
+  }
+  #and return all the genes
+  push @{$genes}, values %{$gene_hash};
     }
     return $genes;
 }
@@ -472,16 +448,16 @@ sub get_all_VariationFeatures{
   my $self = shift;
   
   if(defined $self->adaptor) {
-	
-	# get variation feature adaptor
-	my $vf_adaptor = $self->adaptor()->db()->get_VariationFeatureAdaptor();
-	
-	return $vf_adaptor->fetch_all_by_Variation($self);
+  
+  # get variation feature adaptor
+  my $vf_adaptor = $self->adaptor()->db()->get_VariationFeatureAdaptor();
+  
+  return $vf_adaptor->fetch_all_by_Variation($self);
   }
   
   else {
-	warn("No variation database attached");
-	return [];
+  warn("No variation database attached");
+  return [];
   }
 }
 
@@ -490,7 +466,7 @@ sub get_all_VariationFeatures{
   Args        : None
   Example     : $vf = $v->get_VariationFeature_by_dbID();
   Description : Retrieves a VariationFeature for this Variation by it's internal
-				database identifier
+        database identifier
   ReturnType  : Bio::EnsEMBL::Variation::VariationFeature
   Exceptions  : None
   Caller      : general
@@ -505,34 +481,34 @@ sub get_VariationFeature_by_dbID{
   throw("No dbID defined") unless defined $dbID;
   
   if(defined $self->adaptor) {
-	
-	# get variation feature adaptor
-	my $vf_adaptor = $self->adaptor()->db()->get_VariationFeatureAdaptor();
-	
-	my $vf = $vf_adaptor->fetch_by_dbID($dbID);
-	
-	# check defined
-	if(defined($vf)) {
-	  
-	  # check it is the same variation ID
-	  if($vf->{_variation_id} == $self->dbID) {
-		return $vf;
-	  }
-	  
-	  else {
-		warn("Variation dbID for Variation Feature does not match this Variation's dbID");
-		return undef;
-	  }
-	}
-	
-	else {
-	  return undef;
-	}
+  
+  # get variation feature adaptor
+  my $vf_adaptor = $self->adaptor()->db()->get_VariationFeatureAdaptor();
+  
+  my $vf = $vf_adaptor->fetch_by_dbID($dbID);
+  
+  # check defined
+  if(defined($vf)) {
+    
+    # check it is the same variation ID
+    if($vf->{_variation_id} == $self->dbID) {
+    return $vf;
+    }
+    
+    else {
+    warn("Variation dbID for Variation Feature does not match this Variation's dbID");
+    return undef;
+    }
   }
   
   else {
-	warn("No variation database attached");
-	return undef;
+    return undef;
+  }
+  }
+  
+  else {
+  warn("No variation database attached");
+  return undef;
   }  
 }
 
@@ -555,16 +531,20 @@ sub get_VariationFeature_by_dbID{
 =cut
 
 sub get_all_synonyms {
-  my $self = shift;
-  my $source = shift;
+    my $self = shift;
+    my $source = shift;
 
-  if($source) {
-    return $self->{'synonyms'}->{$source} || []
-  }
+    if ($source) {
+        $source = [$source];
+    }
+    else {
+        $source = $self->get_all_synonym_sources();
+    }
+    
+    my @synonyms;
+    map {push(@synonyms,keys(%{$self->{synonyms}{$_}}))} @{$source};
 
-  my @synonyms = map {@$_} values %{$self->{'synonyms'}};
-
-  return \@synonyms;
+    return \@synonyms;
 }
 
 
@@ -612,9 +592,7 @@ sub add_synonym {
   throw("source argument is required") if(!$source);
   throw("syn argument is required") if(!$syn);
 
-  $self->{'synonyms'}->{$source} ||= [];
-
-  push @{$self->{'synonyms'}->{$source}}, $syn;
+  $self->{'synonyms'}{$source}{$syn}++;
 
   return;
 }
@@ -776,8 +754,17 @@ sub is_somatic {
 sub get_all_Alleles {
   my $self = shift;
   
-  my @alleles = values(%{$self->{'alleles'}});
-  return \@alleles;
+  # If the private hash key 'alleles' does not exist, no attempt has been made to load them, so do that
+  unless (exists($self->{alleles})) {
+      
+      # Get an AlleleAdaptor
+      assert_ref($self->adaptor(),'Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor');
+      my $allele_adaptor = $self->adaptor->db->get_AlleleAdaptor();
+      
+      $self->add_Allele($allele_adaptor->fetch_all_by_Variation($self));
+  } 
+
+  return $self->{alleles};
 }
 
 
@@ -891,11 +878,11 @@ sub three_prime_flanking_seq{
 
 sub get_all_IndividualGenotypes {
     my $self = shift;
-	my $individual = shift;
+  my $individual = shift;
     if (defined ($self->{'adaptor'})){
-	my $igtya = $self->{'adaptor'}->db()->get_IndividualGenotypeAdaptor();
-	
-	return $igtya->fetch_all_by_Variation($self, $individual);
+  my $igtya = $self->{'adaptor'}->db()->get_IndividualGenotypeAdaptor();
+  
+  return $igtya->fetch_all_by_Variation($self, $individual);
     }
     return [];
 }
@@ -918,9 +905,9 @@ sub get_all_PopulationGenotypes {
 
     #simulate a lazy-load on demand situation, used by the Glovar team
     if (!defined($self->{'populationGenotypes'}) && defined ($self->{'adaptor'})){
-	my $pgtya = $self->{'adaptor'}->db()->get_PopulationGenotypeAdaptor();
-	
-	return $pgtya->fetch_all_by_Variation($self);
+  my $pgtya = $self->{'adaptor'}->db()->get_PopulationGenotypeAdaptor();
+  
+  return $pgtya->fetch_all_by_Variation($self);
     }
     return $self->{'populationGenotypes'};
 
@@ -942,11 +929,11 @@ sub add_PopulationGenotype{
     my $self = shift;
 
     if (@_){
-	if(!ref($_[0]) || !$_[0]->isa('Bio::EnsEMBL::Variation::PopulationGenotype')) {
-	    throw("Bio::EnsEMBL::Variation::PopulationGenotype argument expected");
-	}
-	#a variation can have multiple PopulationGenotypes
-	push @{$self->{'populationGenotypes'}},shift;
+  if(!ref($_[0]) || !$_[0]->isa('Bio::EnsEMBL::Variation::PopulationGenotype')) {
+      throw("Bio::EnsEMBL::Variation::PopulationGenotype argument expected");
+  }
+  #a variation can have multiple PopulationGenotypes
+  push @{$self->{'populationGenotypes'}},shift;
     }
 
 }
@@ -966,26 +953,26 @@ sub add_PopulationGenotype{
 
 sub ambig_code{
     my $self = shift;
-	
-	my $code;
-	
-	# first try via VF
-	if(my @vfs = @{$self->get_all_VariationFeatures}) {
-	  if(scalar @vfs) {
-		$code = $vfs[0]->ambig_code;
-	  }
-	}
-	
-	# otherwise get it via alleles attatched to this object already
-	if(!defined($code)) {
-	  my $alleles = $self->get_all_Alleles(); #get all Allele objects
-	  my %alleles; #to get all the different alleles in the Variation
-	  map {$alleles{$_->allele}++} @{$alleles};
-	  my $allele_string = join "|",keys %alleles;
-	  $code = &ambiguity_code($allele_string);
-	}
-	
-	return $code;
+  
+  my $code;
+  
+  # first try via VF
+  if(my @vfs = @{$self->get_all_VariationFeatures}) {
+    if(scalar @vfs) {
+    $code = $vfs[0]->ambig_code;
+    }
+  }
+  
+  # otherwise get it via alleles attatched to this object already
+  if(!defined($code)) {
+    my $alleles = $self->get_all_Alleles(); #get all Allele objects
+    my %alleles; #to get all the different alleles in the Variation
+    map {$alleles{$_->allele}++} @{$alleles};
+    my $allele_string = join "|",keys %alleles;
+    $code = &ambiguity_code($allele_string);
+  }
+  
+  return $code;
 }
 
 =head2 var_class
@@ -1052,29 +1039,29 @@ sub derived_allele_frequency{
   }
   my $ancestral_allele = $self->ancestral_allele();
   if (defined $ancestral_allele){
-	#get reference allele
-	my $vf_adaptor = $self->adaptor->db->get_VariationFeatureAdaptor();
-	my $vf = shift @{$vf_adaptor->fetch_all_by_Variation($self)};
-	my $ref_freq;
-	#get allele in population
-	my $alleles = $self->get_all_Alleles();
-	
-	foreach my $allele (@{$alleles}){
-	  next unless defined $allele->population;
-	  
-	  if (($allele->allele eq $vf->ref_allele_string) and ($allele->population->name eq $population->name)){
-		$ref_freq = $allele->frequency;
-	  }
-	}
-	
-	if(defined $ref_freq) {
-	  if ($ancestral_allele eq $vf->ref_allele_string){
-		$daf = 1 - $ref_freq
-	  }
-	  elsif ($ancestral_allele ne $vf->ref_allele_string){
-		$daf = $ref_freq;
-	  }
-	}
+  #get reference allele
+  my $vf_adaptor = $self->adaptor->db->get_VariationFeatureAdaptor();
+  my $vf = shift @{$vf_adaptor->fetch_all_by_Variation($self)};
+  my $ref_freq;
+  #get allele in population
+  my $alleles = $self->get_all_Alleles();
+  
+  foreach my $allele (@{$alleles}){
+    next unless defined $allele->population;
+    
+    if (($allele->allele eq $vf->ref_allele_string) and ($allele->population->name eq $population->name)){
+    $ref_freq = $allele->frequency;
+    }
+  }
+  
+  if(defined $ref_freq) {
+    if ($ancestral_allele eq $vf->ref_allele_string){
+    $daf = 1 - $ref_freq
+    }
+    elsif ($ancestral_allele ne $vf->ref_allele_string){
+    $daf = $ref_freq;
+    }
+  }
   }
   
   return $daf;
@@ -1126,21 +1113,6 @@ sub derived_allele {
      }
      return $derived_allele_str;
 }
-
-sub _weaken {
-    my $self = shift;
-    my $allele = shift;
-    
-    #ÊAssert the allele reference
-    assert_ref($allele,'Bio::EnsEMBL::Variation::Allele');
-    
-    #ÊIf the allele does not exist in our allele hash, do nothing
-    return unless (defined($self->{'alleles'}) && exists($self->{'alleles'}{$allele->_hash_key()}));
-    
-    #ÊWeaken the link from this variation to the allele
-    weaken($self->{'alleles'}{$allele->_hash_key()});
-}
-
 
 =head2 get_all_VariationAnnotations
 
