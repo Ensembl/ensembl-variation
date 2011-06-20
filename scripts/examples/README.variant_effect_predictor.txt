@@ -41,9 +41,6 @@ Version 2.1
 - ability to use local file cache in place of or alongside connecting to an
   Ensembl database
 
-- new "standalone" mode does not depend on API installation or network
-  connection
-
 - significant improvements to speed of script
 
 - whole-genome mode now default (no disadvantage for smaller datasets)
