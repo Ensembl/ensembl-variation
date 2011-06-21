@@ -55,7 +55,7 @@ use Bio::EnsEMBL::DBSQL::CoordSystemAdaptor;
 
 
 # debug
-use Time::HiRes qw(tv_interval gettimeofday);
+#use Time::HiRes qw(tv_interval gettimeofday);
 
 # output columns
 my @OUTPUT_COLS = qw(
@@ -2493,7 +2493,7 @@ NB: Regulatory consequences are currently available for human and mouse only
                        VIOLATES OUR FAIR USAGE POLICY [default: off]
                        
 --compress             Specify utility to decompress cache files - may be "gzcat" or
-                       "gzip -c". Only use if default does not work [default: zcat]
+                       "gzip -dc Only use if default does not work [default: zcat]
                        
 --skip_db_check        ADVANCED! Force the script to use a cache built from a different
                        database than specified with --host. Only use this if you are
