@@ -521,6 +521,7 @@ sub configure {
         'password=s',              # database password
         'db_version=i',            # Ensembl database version to use e.g. 62
         'genomes',                 # automatically sets DB params for e!Genomes
+        'no_disconnect',           # disables disconnect_when_inactive
         
         # runtime options
         'most_severe',             # only return most severe consequence
@@ -910,7 +911,7 @@ sub connect_to_dbs {
             );
         }
         
-        $reg->set_disconnect_when_inactive();
+        $reg->set_disconnect_when_inactive() unless defined($config->{no_disconnect});
         
         if(defined($config->{verbose})) {
             # get a meta container adaptors to check version
@@ -2478,6 +2479,9 @@ NB: Regulatory consequences are currently available for human and mouse only
                        Defining a registry file overrides above connection settings.
 --db_version=[number]  Force script to load DBs from a specific Ensembl version. Not
                        advised due to likely incompatibilities between API and DB
+--no_disconnect        By default the API will disconnect from the database when there
+                       are large gaps between queries to prevent connections being
+                       dropped. Use this flag to disable the disconnects [default: off]
 
 --no_whole_genome      Run in old-style, non-whole genome mode [default: off]
 --buffer_size          Sets the number of variants sent in each batch [default: 5000]
