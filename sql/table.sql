@@ -138,6 +138,7 @@ create table variation_synonym (
 /**
 @table sample_synonym
 
+@colour #FF8500
 @desc Used to store alternative names for populations when data comes from multiple sources.
 
 @column sample_synonym_id	Primary key, internal identifier.
@@ -221,6 +222,7 @@ create table allele(
 /**
 @table sample
 
+@colour #FF8500
 @desc Sample is used as a generic catch-all term to cover individuals, populations and strains; it contains a name and description, as well as a size if applicable to the population.
 
 @column sample_id		Primary key, internal identifier.
@@ -253,6 +255,7 @@ create table sample(
 /**
 @table population
 
+@colour #FF8500
 @desc A table consisting simply of sample_ids representing populations; all data relating to the populations are stored in separate tables (see below).<br />A population may be an ethnic group (e.g. caucasian, hispanic), assay group (e.g. 24 europeans), strain, phenotypic group (e.g. blue eyed, diabetes) etc. Populations may be composed of other populations by defining relationships in the population_structure table.
 
 @column sample_id	int	Foreign key references to the @link sample table. Corresponds to the population ID.
@@ -277,6 +280,7 @@ create table population(
 /**
 @table population_structure
 
+@colour #FF8500
 @desc This table stores hierarchical relationships between populations by relating them as populations and sub-populations.
 
 @column super_population_sample_id	Foreign key references to the population table.
@@ -297,6 +301,7 @@ create table population_structure (
 /**
 @table individual
 
+@colour #FF8500
 @desc Stores information about an identifiable individual, including gender and the identifiers of the individual's parents (if known).
 
 @column sample_id							Primary key, internal identifier. See the @link sample table. Corresponds to the individual ID.
@@ -327,6 +332,7 @@ create table individual(
 /**
 @table individual_type
 
+@colour #FF8500
 @desc This table resolves the many-to-many relationship between the individual and population tables; i.e. samples may belong to more than one population. Hence it is composed of rows of individual and population identifiers.
 
 @column individual_type_id	Primary key, internal identifier.
@@ -530,6 +536,7 @@ create table supporting_structural_variation (
 /**
 @table variation_set_variation
 
+@colour #FFD700
 @desc A table for mapping variations to variation_sets.
 
 @column variation_id			Primary key. Foreign key references to the @link variation table.
@@ -549,6 +556,7 @@ CREATE TABLE IF NOT EXISTS variation_set_variation (
 /**
 @table variation_set
 
+@colour #FFD700
 @desc This table containts the name of sets and subsets of variations stored in the database. It usually represents the name of the project or subproject where a group of variations has been identified.
 
 @column variation_set_id			Primary key, internal identifier.
@@ -573,6 +581,7 @@ CREATE TABLE IF NOT EXISTS variation_set (
 /**
 @table variation_set_structure
 
+@colour #FFD700
 @desc This table stores hierarchical relationships between variation sets by relating them as variation sets and variation subsets.
 
 @column variation_set_super	Primary key. Foreign key references to the @link variation_set table.
@@ -896,6 +905,7 @@ create table httag(
 /**
 @table source
 
+@colour #7CFC00
 @desc This table contains details of the source from which a variation is derived. Most commonly this is NCBI's dbSNP; other sources include SNPs called by Ensembl.
 
 @column source_id		Primary key, internal identifier.
@@ -934,6 +944,7 @@ create table source(
 /**
 @table study
 
+@colour #7CFC00
 @desc This table contains details of the studies.
 			The studies information can come from internal studies (DGVa, EGA) or from external studies (Uniprot, NHGRI, ...).
 
@@ -967,6 +978,7 @@ create table study (
 /**
 @table associate_study
 
+@colour #7CFC00
 @desc This table contains identifiers of associated studies (e.g. NHGRI and EGA studies with the same pubmed identifier).
 
 @column study1_id		Primary key. Foreign key references to the @link study table.
@@ -985,6 +997,7 @@ create table associate_study (
 /**
 @table population_genotype
 
+@colour #FF8500
 @desc This table stores alleles and frequencies for variations in given populations.
 
 @column population_genotype_id	Primary key, internal identifier.
@@ -1021,6 +1034,7 @@ create table population_genotype (
 /**
 @table individual_population
 
+@colour #FF8500
 @desc This table resolves the many-to-many relationship between the individual and population tables; i.e. samples may belong to more than one population. Hence it is composed of rows of individual and population identifiers.
 
 @column individual_sample_id	Foreign key references to the @link individual table.
@@ -1043,6 +1057,7 @@ create table individual_population (
 /**
 @table tmp_individual_genotype_single_bp
 
+@colour #FF8500
 @desc his table is only needed for create master schema when run healthcheck system. Needed for other species, but human, so keep it.
 
 @column variation_id	Primary key. Foreign key references to the @link variation table.
@@ -1072,6 +1087,7 @@ CREATE TABLE tmp_individual_genotype_single_bp (
 /**
 @table individual_genotype_multiple_bp
 
+@colour #FF8500
 @desc This table holds uncompressed genotypes for given variations.
 
 @column variation_id	Primary key. Foreign key references to the @link variation table.
@@ -1101,6 +1117,7 @@ create table individual_genotype_multiple_bp (
 /**
 @table meta_coord
 
+@colour #DA70D6
 @desc This table gives the coordinate system used by various tables in the database.
 
 @column table_name			Name of the feature table, e.g. "variation_feature".
@@ -1122,6 +1139,7 @@ CREATE TABLE meta_coord (
 /**
 @table meta
 
+@colour #DA70D6
 @desc This table stores various metadata relating to the database, generally used by the Ensembl web code.
 
 @column meta_id		Primary key, internal identifier.
@@ -1172,6 +1190,7 @@ CREATE TABLE tagged_variation_feature (
 /**
 @table read_coverage
 
+@colour #FF8500
 @desc This table stores the read coverage in the resequencing of individuals. Each row contains an individual ID, chromosomal coordinates and a read coverage level.
 
 @column seq_region_id		Foreign key references @link seq_region in core db. ers to the seq_region which this variant is on, which may be a chromosome, a clone, etc...
@@ -1197,6 +1216,7 @@ CREATE TABLE read_coverage (
 /**
 @table compressed_genotype_single_bp
 
+@colour #FF8500
 @desc This table holds genotypes compressed using the pack() method in Perl. These genotypes are mapped to particular genomic locations rather than variation objects. The data have been compressed to reduce table size and increase the speed of the web code.
 
 @column sample_id				Primary key. Foreign key references to the sample table.
@@ -1225,6 +1245,7 @@ CREATE TABLE compressed_genotype_single_bp(
 /**
 @table failed_description
 
+@colour #3CB371
 @desc This table contains descriptions of reasons for a variation being flagged as failed.
 
 @column failed_description_id	Primary key, internal identifier.
@@ -1245,6 +1266,7 @@ CREATE TABLE failed_description(
 /**
 @table failed_variation
 
+@colour #3CB371
 @desc For various reasons it may be necessary to store information about a variation that has failed quality checks in the Variation pipeline. This table acts as a flag for such failures.
 
 @column failed_variation_id		Primary key, internal identifier.
@@ -1267,6 +1289,7 @@ CREATE TABLE failed_variation (
 /**
 @table failed_allele
 
+@colour #3CB371
 @desc Contains alleles that did not pass the Ensembl filters
 
 @column failed_allele_id			Primary key, internal identifier.
@@ -1302,6 +1325,7 @@ CREATE TABLE strain_gtype_poly (
 /**
 @table  attrib_type
 
+@colour #FF0000
 @desc   Defines the set of possible attribute types used in the attrib table
 
 @column attrib_type_id  Primary key
@@ -1326,6 +1350,7 @@ CREATE TABLE attrib_type (
 /**
 @table  attrib
 
+@colour #FF0000
 @desc   Defines various attributes used elsewhere in the database
 
 @column attrib_id       Primary key
@@ -1348,6 +1373,7 @@ CREATE TABLE attrib (
 /**
 @table  attrib_set
 
+@colour #FF0000
 @desc   Groups related attributes together
 
 @column attrib_set_id   Primary key
@@ -1368,6 +1394,7 @@ CREATE TABLE attrib_set (
 /**
 @table  protein_info
 
+@colour #1E90FF
 @desc   Contains information about each translation in the ensembl proteome, used by the nsSNP prediction tables
 
 @column protein_info_id     Primary key
@@ -1392,6 +1419,7 @@ CREATE TABLE protein_info (
 /**
 @table  protein_position
 
+@colour #1E90FF
 @desc   Table with a row for each position in every ensembl translation, used by the nsSNP prediction tables
 
 @column protein_position_id             Primary key
@@ -1420,6 +1448,7 @@ CREATE TABLE protein_position (
 /**
 @table  polyphen_prediction
 
+@colour #1E90FF
 @desc   Stores the PolyPhen 2 prediction for every possible amino acid substitution in the ensembl proteome
 
 @column polyphen_prediction_id  Primary key
@@ -1449,6 +1478,7 @@ CREATE TABLE polyphen_prediction (
 /**
 @table  sift_prediction
 
+@colour #1E90FF
 @desc   Stores the SIFT prediction for every possible amino acid substitution in the ensembl proteome
 
 @column sift_prediction_id  Primary key
