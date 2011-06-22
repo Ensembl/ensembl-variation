@@ -25,14 +25,29 @@ use warnings;
 
 use Bio::EnsEMBL::Variation::Pipeline::TranscriptFileAdaptor;
 
+use Bio::EnsEMBL::Hive::AnalysisJob;
+
 use base qw(Bio::EnsEMBL::Hive::Process);
 
 sub param {
+    my $self = shift;
+    
+    unless ($self->input_job) {
+        # if we don't have an input job, add a dummy one (used when we're not 
+        # running as part of a pipeline proper)
+        $self->input_job(Bio::EnsEMBL::Hive::AnalysisJob->new);
+    }
+
+    return $self->SUPER::param(@_);
+}
+
+sub required_param {
     my $self        = shift;
     my $param_name  = shift;
-    
-    my $param_value = $self->SUPER::param($param_name, @_) 
-        or die "$param_name is a required parameter";
+   
+    my $param_value = $self->param($param_name, @_);
+
+    die "$param_name is a required parameter" unless defined $param_value;
     
     return $param_value;
 }
@@ -52,8 +67,7 @@ sub get_transcript_file_adaptor {
 sub get_species_adaptor {
     my ($self, $group) = @_;
 
-    my $species = $self->param('species') 
-        or die "species is a required parameter";
+    my $species = $self->required_param('species');
     
     return $self->get_adaptor($species, $group);
 }
@@ -78,8 +92,7 @@ sub get_adaptor {
 sub _load_registry {
     my ($self) = @_;
     
-    my $reg_file = $self->param('ensembl_registry')
-        or die "ensembl_registry is a required parameter";  
+    my $reg_file = $self->required_param('ensembl_registry');
     
     Bio::EnsEMBL::Registry->load_all($reg_file, 0, 1);
     
