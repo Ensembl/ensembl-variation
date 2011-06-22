@@ -12,9 +12,9 @@ sub run {
 
     my $self = shift;
     
-    my $var_id_start = $self->param('variation_id_start');
+    my $var_id_start = $self->required_param('variation_id_start');
 
-    my $var_id_stop  = $self->param('variation_id_stop');
+    my $var_id_stop  = $self->required_param('variation_id_stop');
 
     my $temp_var_table = $self->param('temp_var_table');
     
@@ -50,16 +50,33 @@ sub run {
         WHERE   v.variation_id >= ?
         AND     v.variation_id <= ?
     });
-   
-    my $vf_insert_sth = $dbc->prepare(qq{
-        INSERT IGNORE INTO $temp_var_feat_table (variation_feature_id, class_attrib_id)
-        VALUES (?,?)
-    });
-    
-    my $v_insert_sth = $dbc->prepare(qq{
-        INSERT IGNORE INTO $temp_var_table (variation_id, class_attrib_id)
-        VALUES (?,?)
-    });
+
+    my $vf_insert_sth;
+    my $v_insert_sth;
+
+    if (defined $temp_var_feat_table) {
+        $vf_insert_sth = $dbc->prepare(qq{
+            INSERT IGNORE INTO $temp_var_feat_table (class_attrib_id, variation_feature_id)
+            VALUES (?,?)
+        });
+    }
+    else {
+        $vf_insert_sth = $dbc->prepare(qq{
+            UPDATE variation_feature SET class_attrib_id = ? WHERE variation_feature_id = ?
+        });
+    }
+
+    if (defined $temp_var_table) {
+        $v_insert_sth = $dbc->prepare(qq{
+            INSERT IGNORE INTO $temp_var_table (class_attrib_id, variation_id)
+            VALUES (?,?)
+        });
+    }
+    else {
+        $v_insert_sth = $dbc->prepare(qq{
+            UPDATE variation SET class_attrib_id = ? WHERE variation_id = ?
+        });
+    }
     
     $all_sth->execute($var_id_start, $var_id_stop);
 
@@ -92,9 +109,9 @@ sub run {
 
         die "No attrib_id for $so_term" unless defined $attrib_id;
 
-        $vf_insert_sth->execute($vf_id, $attrib_id);
+        $vf_insert_sth->execute($attrib_id, $vf_id);
         
-        $v_insert_sth->execute($v_id, $attrib_id);
+        $v_insert_sth->execute($attrib_id, $v_id);
     }
     
     $all_sth->finish();
@@ -137,7 +154,7 @@ sub run {
 
             die "No attrib_id for $so_term" unless defined $attrib_id;
 
-            $v_insert_sth->execute($v_id, $attrib_id);
+            $v_insert_sth->execute($attrib_id, $v_id);
         }
     }
     

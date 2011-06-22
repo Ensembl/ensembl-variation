@@ -10,9 +10,9 @@ my $DEBUG = 0;
 sub run {
     my $self = shift;
     
-    my $temp_var_table = $self->param('temp_var_table');
+    my $temp_var_table = $self->required_param('temp_var_table');
     
-    my $temp_var_feat_table = $self->param('temp_var_feat_table');
+    my $temp_var_feat_table = $self->required_param('temp_var_feat_table');
   
     my $var_dba = $self->get_species_adaptor('variation');
     
