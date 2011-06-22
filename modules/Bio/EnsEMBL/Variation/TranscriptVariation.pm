@@ -796,4 +796,14 @@ sub _hgvs_generic {
     return $hgvs;
 }
 
+sub _prefetch_for_vep {
+    my $self = shift;
+    
+    $self->cdna_coords;
+    $self->cds_coords;
+    $self->translation_coords;
+    $self->pep_allele_string;
+}
+
+
 1;
