@@ -47,8 +47,7 @@ sub fetch_input {
 
     $dbc->do("ALTER TABLE transcript_variation DISABLE KEYS");
     
-    my $ga = $core_dba->get_GeneAdaptor
-        or die "Failed to get slice adaptor";
+    my $ga = $core_dba->get_GeneAdaptor or die "Failed to get gene adaptor";
 
     my @transcript_output_ids;
     
@@ -56,7 +55,15 @@ sub fetch_input {
 
     # fetch all the regular genes
 
-    for my $gene (@{ $ga->fetch_all }) {
+    my @genes = @{ $ga->fetch_all };
+
+    if ($include_lrg) {
+        # fetch the LRG genes as well
+        
+        push @genes, @{ $ga->fetch_all_by_biotype('LRG_gene') }
+    }
+
+    for my $gene (@genes) {
         $gene_count++;
         
         for my $transcript (@{ $gene->get_all_Transcripts }) {
@@ -70,25 +77,11 @@ sub fetch_input {
         }
     }
 
-    if ($include_lrg) {
-        
-        # fetch the LRG genes as well 
-
-        for my $lrg_gene (@{ $ga->generic_fetch('ig.biotype = "LRG_gene" and g.is_current = 1') }) {
-            for my $transcript (@{ $lrg_gene->get_all_Transcripts }) {
-
-                push @transcript_output_ids, {
-                    transcript_stable_id  => $transcript->stable_id,
-                };
-            } 
-        }
-    }
-
     $self->param('transcript_output_ids', \@transcript_output_ids);
 
     $self->param(
         'rebuild_indexes', [{
-            tables              => ['transcript_variation'],
+            tables => ['transcript_variation'],
         }]
     );
    
@@ -102,7 +95,6 @@ sub fetch_input {
     $self->param(
         'set_var_class', [{}]
     );
-
 }
 
 sub write_output {

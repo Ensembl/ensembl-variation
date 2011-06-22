@@ -33,11 +33,17 @@ my $DEBUG   = 0;
 sub run {
     my $self = shift;
 
-    my $transcript_id = $self->param('transcript_stable_id') 
-        or die "transcript_stable_id is a required parameter";
+    my $transcript_id = $self->required_param('transcript_stable_id'); 
 
     my $disambiguate_sn_alleles = 
         $self->param('disambiguate_single_nucleotide_alleles'); 
+    
+    my $variations_to_include;
+    
+    if (my $vars = $self->param('variations_to_include')) {
+        # turn the list of variation names into a hash to speed up checking
+        $variations_to_include = { map { $_ => 1 } @$vars };
+    }
 
     my $core_dba = $self->get_species_adaptor('core');
     my $var_dba = $self->get_species_adaptor('variation');
@@ -61,6 +67,10 @@ sub run {
 
     for my $vf ( @{ $slice->get_all_VariationFeatures }, 
                  @{ $slice->get_all_somatic_VariationFeatures } ) {
+
+        if (defined $variations_to_include) {
+            next unless $variations_to_include->{$vf->variation_name};
+        }
 
         my $tv = Bio::EnsEMBL::Variation::TranscriptVariation->new(
             -transcript         => $transcript,

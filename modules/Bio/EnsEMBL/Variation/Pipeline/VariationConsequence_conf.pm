@@ -73,10 +73,6 @@ sub default_options {
         
         disambiguate_single_nucleotide_alleles => 0,
 
-        # set this flag to 1 to include LRG transcripts in the transcript effect analysis
-
-        include_lrg => 0,
-
         # configuration for the various resource options used in the pipeline
         # EBI users should either change these here, or override them on the
         # command line to suit the EBI farm. The names of each option hopefully
@@ -93,8 +89,12 @@ sub default_options {
         # transcript_effect_capacity to 300 which improves runtime (though can use a lot 
         # of database connections)
 
-        transcript_effect_capacity      => 100,
+        transcript_effect_capacity      => 50,
         set_variation_class_capacity    => 10,
+        
+        # set this flag to 1 to include LRG transcripts in the transcript effect analysis
+
+        include_lrg => 1,
 
         # connection parameters for the hive database, you should supply the hive_db_pass
         # option on the command line to init_pipeline.pl (parameters for the target database
@@ -144,12 +144,13 @@ sub pipeline_analyses {
         ensembl_registry    => $self->o('reg_file'),
         species             => $self->o('species'),
     );
-
+    
     return [
+
         {   -logic_name => 'init_transcript_effect',
             -module     => 'Bio::EnsEMBL::Variation::Pipeline::InitTranscriptEffect',
             -parameters => {
-                include_lrg => $self->o('include_lrg'),
+                include_lrg                 => $self->o('include_lrg'),
                 @common_params,
             },
             -input_ids  => [{}],
@@ -201,7 +202,7 @@ sub pipeline_analyses {
         {   -logic_name     => 'init_variation_class',
             -module         => 'Bio::EnsEMBL::Variation::Pipeline::InitVariationClass',
             -parameters     => {
-                num_chunks => 50,
+                num_chunks          => 50,
                 @common_params,
             },
             -input_ids      => [],
