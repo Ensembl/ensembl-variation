@@ -465,7 +465,7 @@ sub _get_all_RegulationVariations {
                 -species  => $adap->db->species, 
                 -type     => $type,
             );
-            
+			
             unless ($fg_adaptor) {
                 warning("Failed to get adaptor for $type");
                 return undef;
@@ -480,14 +480,18 @@ sub _get_all_RegulationVariations {
                 
         my $constructor = 'Bio::EnsEMBL::Variation::'.$type.'Variation';
 
-        $self->{regulation_variations}->{$type} = [ 
-            map {  
-                $constructor->new(
-                    -variation_feature  => $self,
-                    -feature            => $_,
-                );
-            } map { $_->transfer($self->slice) } @{ $fg_adaptor->fetch_all_by_Slice($slice) } 
-        ];
+		eval {
+		  $self->{regulation_variations}->{$type} = [ 
+			  map {  
+				  $constructor->new(
+					  -variation_feature  => $self,
+					  -feature            => $_,
+				  );
+			  } map { $_->transfer($self->slice) } @{ $fg_adaptor->fetch_all_by_Slice($slice) } 
+		  ];
+		};
+		
+		$self->{regulation_variations}->{$type} ||= [];
     }
 
     return $self->{regulation_variations}->{$type};
