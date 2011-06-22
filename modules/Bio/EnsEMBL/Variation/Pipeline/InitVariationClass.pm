@@ -13,7 +13,7 @@ sub fetch_input {
     
     my $self = shift;
 
-    my $num_chunks = $self->param('num_chunks');
+    my $num_chunks = $self->required_param('num_chunks');
     
     my $var_dba = $self->get_species_adaptor('variation');
         
