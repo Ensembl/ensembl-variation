@@ -102,8 +102,7 @@ sub write_output {
 
     $self->dataflow_output_id($self->param('rebuild_indexes'), 1);
     $self->dataflow_output_id($self->param('update_vf'), 2);
-    $self->dataflow_output_id($self->param('set_var_class'), 3);
-    $self->dataflow_output_id($self->param('transcript_output_ids'), 4);
+    $self->dataflow_output_id($self->param('transcript_output_ids'), 3);
 }
 
 1;
