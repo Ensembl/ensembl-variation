@@ -96,6 +96,11 @@ sub default_options {
 
         include_lrg => 1,
 
+        # these flags control which parts of the pipeline are run
+
+        run_transcript_effect   => 1,
+        run_variation_class     => 1,
+
         # connection parameters for the hive database, you should supply the hive_db_pass
         # option on the command line to init_pipeline.pl (parameters for the target database
         # should be set in the registry file defined above)
@@ -144,100 +149,114 @@ sub pipeline_analyses {
         ensembl_registry    => $self->o('reg_file'),
         species             => $self->o('species'),
     );
-    
-    return [
+   
+    my @analyses;
 
-        {   -logic_name => 'init_transcript_effect',
-            -module     => 'Bio::EnsEMBL::Variation::Pipeline::InitTranscriptEffect',
-            -parameters => {
-                include_lrg                 => $self->o('include_lrg'),
-                @common_params,
-            },
-            -input_ids  => [{}],
-            -rc_id      => 1,
-            -flow_into  => {
-                1 => [ 'rebuild_tv_indexes' ],
-                2 => [ 'update_variation_feature' ],
-                3 => [ 'init_variation_class' ],
-                4 => [ 'transcript_effect' ],
-            },
-        },
+    if ($self->o('run_transcript_effect')) {
 
-        {   -logic_name     => 'transcript_effect',
-            -module         => 'Bio::EnsEMBL::Variation::Pipeline::TranscriptEffect',
-            -parameters     => { 
-                disambiguate_single_nucleotide_alleles => $self->o('disambiguate_single_nucleotide_alleles'), 
-                @common_params,
+        push @analyses, (
+            
+            {   -logic_name => 'init_transcript_effect',
+                -module     => 'Bio::EnsEMBL::Variation::Pipeline::InitTranscriptEffect',
+                -parameters => {
+                    include_lrg                 => $self->o('include_lrg'),
+                    @common_params,
+                },
+                -input_ids  => [{}],
+                -rc_id      => 1,
+                -flow_into  => {
+                    1 => [ 'rebuild_tv_indexes' ],
+                    2 => [ 'update_variation_feature' ],
+                    3 => [ 'transcript_effect' ],
+                },
             },
-            -input_ids      => [],
-            -hive_capacity  => $self->o('transcript_effect_capacity'),
-            -rc_id          => 0,
-            -flow_into      => {},
-        },
 
-        {   -logic_name     => 'rebuild_tv_indexes',
-            -module         => 'Bio::EnsEMBL::Variation::Pipeline::RebuildIndexes',
-            -parameters     => {
-                @common_params,
+            {   -logic_name     => 'transcript_effect',
+                -module         => 'Bio::EnsEMBL::Variation::Pipeline::TranscriptEffect',
+                -parameters     => { 
+                    disambiguate_single_nucleotide_alleles => $self->o('disambiguate_single_nucleotide_alleles'), 
+                    @common_params,
+                },
+                -input_ids      => [],
+                -hive_capacity  => $self->o('transcript_effect_capacity'),
+                -rc_id          => 0,
+                -flow_into      => {},
             },
-            -input_ids      => [],
-            -hive_capacity  => 1,
-            -rc_id          => 1,
-            -wait_for       => [ 'transcript_effect' ],
-            -flow_into      => {},
-        },
+
+            {   -logic_name     => 'rebuild_tv_indexes',
+                -module         => 'Bio::EnsEMBL::Variation::Pipeline::RebuildIndexes',
+                -parameters     => {
+                    @common_params,
+                },
+                -input_ids      => [],
+                -hive_capacity  => 1,
+                -rc_id          => 1,
+                -wait_for       => [ 'transcript_effect' ],
+                -flow_into      => {},
+            },
         
-        {   -logic_name     => 'update_variation_feature',
-            -module         => 'Bio::EnsEMBL::Variation::Pipeline::UpdateVariationFeature',
-            -parameters     => {
-                @common_params,
-            },
-            -input_ids      => [],
-            -hive_capacity  => 1,
-            -rc_id          => 1,
-            -wait_for       => [ 'rebuild_tv_indexes' ],
-            -flow_into      => {},
-        },
-        
-        {   -logic_name     => 'init_variation_class',
-            -module         => 'Bio::EnsEMBL::Variation::Pipeline::InitVariationClass',
-            -parameters     => {
-                num_chunks          => 50,
-                @common_params,
-            },
-            -input_ids      => [],
-            -hive_capacity  => 1,
-            -rc_id          => 2,
-            -wait_for       => [ 'update_variation_feature' ],
-            -flow_into      => {
-                1 => [ 'finish_variation_class' ],
-                2 => [ 'set_variation_class' ],
-            },
-        },
-        
-        {   -logic_name     => 'set_variation_class',
-            -module         => 'Bio::EnsEMBL::Variation::Pipeline::SetVariationClass',
-            -parameters     => {
-                @common_params,
-            },
-            -input_ids      => [],
-            -hive_capacity  => $self->o('set_variation_class_capacity'),
-            -rc_id          => 0,
-            -flow_into      => {},
-        },
+            {   -logic_name     => 'update_variation_feature',
+                -module         => 'Bio::EnsEMBL::Variation::Pipeline::UpdateVariationFeature',
+                -parameters     => {
+                    @common_params,
+                },
+                -input_ids      => [],
+                -hive_capacity  => 1,
+                -rc_id          => 1,
+                -wait_for       => [ 'rebuild_tv_indexes' ],
+                -flow_into      => {},
+            }, 
 
-        {   -logic_name     => 'finish_variation_class',
-            -module         => 'Bio::EnsEMBL::Variation::Pipeline::FinishVariationClass',
-            -parameters     => {
-                @common_params,
+        );
+    }
+
+    if ($self->o('run_variation_class')) {
+
+        push @analyses, (
+
+            {   -logic_name     => 'init_variation_class',
+                -module         => 'Bio::EnsEMBL::Variation::Pipeline::InitVariationClass',
+                -parameters     => {
+                    num_chunks  => 50,
+                    @common_params,
+                },
+                -input_ids      => [{}],
+                -hive_capacity  => 1,
+                -rc_id          => 2,
+                -wait_for       => ( $self->o('run_transcript_effect') ? [ 'update_variation_feature' ] : [] ),
+                -flow_into      => {
+                    1 => [ 'finish_variation_class' ],
+                    2 => [ 'set_variation_class' ],
+                },
             },
-            -input_ids      => [],
-            -hive_capacity  => 1,
-            -rc_id          => 1,
-            -wait_for       => [ 'set_variation_class' ],
-            -flow_into      => {},
-        },
-    ];
+            
+            {   -logic_name     => 'set_variation_class',
+                -module         => 'Bio::EnsEMBL::Variation::Pipeline::SetVariationClass',
+                -parameters     => {
+                    @common_params,
+                },
+                -input_ids      => [],
+                -hive_capacity  => $self->o('set_variation_class_capacity'),
+                -rc_id          => 0,
+                -flow_into      => {},
+            },
+
+            {   -logic_name     => 'finish_variation_class',
+                -module         => 'Bio::EnsEMBL::Variation::Pipeline::FinishVariationClass',
+                -parameters     => {
+                    @common_params,
+                },
+                -input_ids      => [],
+                -hive_capacity  => 1,
+                -rc_id          => 1,
+                -wait_for       => [ 'set_variation_class' ],
+                -flow_into      => {},
+            },
+
+        );
+    }
+
+    return \@analyses;
 }
 
 1;
