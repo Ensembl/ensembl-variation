@@ -38,15 +38,6 @@ sub fetch_input {
     
     my $dbc = $var_dba->dbc();
 
-    # truncate the table because we don't want duplicates
-
-    $dbc->do("TRUNCATE TABLE transcript_variation");
-   
-    # disable the indexes on the table we're going to insert into as
-    # this significantly speeds up the TranscriptEffect process
-
-    $dbc->do("ALTER TABLE transcript_variation DISABLE KEYS");
-    
     my $ga = $core_dba->get_GeneAdaptor or die "Failed to get gene adaptor";
 
     my @transcript_output_ids;
@@ -76,33 +67,49 @@ sub fetch_input {
             last if $gene_count >= 100;
         }
     }
-
-    $self->param('transcript_output_ids', \@transcript_output_ids);
-
-    $self->param(
-        'rebuild_indexes', [{
-            tables => ['transcript_variation'],
-        }]
-    );
-   
-    # we need to kick off the update_vf and set_var_class analyses as well, 
-    # but they don't have any parameters we need to set here
-        
-    $self->param(
-        'update_vf', [{}]
-    );
     
-    $self->param(
-        'set_var_class', [{}]
-    );
+    if (@transcript_output_ids) {
+        
+        # check we actually found some transcripts
+
+        # truncate the table because we don't want duplicates
+
+        $dbc->do("TRUNCATE TABLE transcript_variation");
+
+        # disable the indexes on the table we're going to insert into as
+        # this significantly speeds up the TranscriptEffect process
+
+        $dbc->do("ALTER TABLE transcript_variation DISABLE KEYS");
+
+        $self->param('transcript_output_ids', \@transcript_output_ids);
+
+        $self->param(
+            'rebuild_indexes', [{
+                tables => ['transcript_variation'],
+            }]
+        );
+
+        # we need to kick off the update_vf and set_var_class analyses as well, 
+        # but they don't have any parameters we need to set here
+
+        $self->param(
+            'update_vf', [{}]
+        );
+
+        $self->param(
+            'set_var_class', [{}]
+        );
+    }
 }
 
 sub write_output {
     my $self = shift;
-
-    $self->dataflow_output_id($self->param('rebuild_indexes'), 1);
-    $self->dataflow_output_id($self->param('update_vf'), 2);
-    $self->dataflow_output_id($self->param('transcript_output_ids'), 3);
+    
+    if (my $transcript_output_ids = $self->param('transcript_output_ids')) {
+        $self->dataflow_output_id($self->param('rebuild_indexes'), 1);
+        $self->dataflow_output_id($self->param('update_vf'), 2);
+        $self->dataflow_output_id($transcript_output_ids, 3);
+    }
 }
 
 1;
