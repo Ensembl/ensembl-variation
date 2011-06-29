@@ -911,8 +911,13 @@ sub connect_to_dbs {
             );
         }
         
-        eval {$reg->set_reconnect_when_lost();};
-        #$reg->set_disconnect_when_inactive() unless defined($config->{no_disconnect});
+        # we need to use this when cache writing
+        if(defined($config->{write_cache})) {
+            $reg->set_disconnect_when_inactive();
+        }
+        else {
+            eval { $reg->set_reconnect_when_lost() };
+        }
         
         if(defined($config->{verbose})) {
             # get a meta container adaptors to check version
