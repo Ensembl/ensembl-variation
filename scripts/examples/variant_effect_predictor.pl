@@ -911,13 +911,7 @@ sub connect_to_dbs {
             );
         }
         
-        # we need to use this when cache writing
-        if(defined($config->{write_cache})) {
-            $reg->set_disconnect_when_inactive();
-        }
-        else {
-            eval { $reg->set_reconnect_when_lost() };
-        }
+        eval { $reg->set_reconnect_when_lost() };
         
         if(defined($config->{verbose})) {
             # get a meta container adaptors to check version
@@ -1948,6 +1942,8 @@ sub dump_transcript_cache {
     
     &strip_transcript_cache($config, $transcript_cache);
     
+    $config->{reg}->disconnect_all;
+    
     my $dir = $config->{dir}.'/'.$chr;
     my $dump_file = $dir.'/'.($region || "dump").'.gz';
     
@@ -2018,6 +2014,8 @@ sub clean_slice_adaptor{
 # dump adaptors to cache
 sub dump_adaptor_cache {
     my $config = shift;
+    
+    $config->{reg}->disconnect_all;
     
     my $dir = $config->{dir};
     my $dump_file = $dir.'/adaptors.gz';
