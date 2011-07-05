@@ -62,7 +62,8 @@ my @option_defs = (
   'skip_routine=s@',
   'scriptdir=s', 
   'logfile=s',
-  'group_term=s'
+  'group_term=s',
+	'group_label=s'
 );
 
 GetOptions(\%options,@option_defs);
@@ -77,7 +78,8 @@ my $TMP_DIR = $options{'tmpdir'};
 my $TMP_FILE = $options{'tmpfile'};
 my $MAPPING_FILE_DIR = $options{'mapping_file_dir'};
 my $SCHEMA_FILE = $options{'schema_file'};
-my $GROUP_TERM = $options{'group_term'};
+my $GROUP_TERM  = $options{'group_term'};
+my $GROUP_LABEL = $options{'group_label'};
 my $species = $options{'species'};
 my $dshost = $options{'dshost'};
 my $dsuser = $options{'dsuser'};
@@ -183,7 +185,8 @@ my @parameters = (
   -mapping_file_dir => $MAPPING_FILE_DIR,
   -dbSNP_version => $dbSNP_BUILD_VERSION,
   -assembly_version => $ASSEMBLY_VERSION,
-  -group_term => $GROUP_TERM,
+  -group_term  => $GROUP_TERM,
+	-group_label => $GROUP_LABEL,
   -skip_routines => \@skip_routines,
   -scriptdir => $scriptdir,
   -log => $logh
@@ -192,7 +195,7 @@ my $import_object;
 if ($species =~ m/zebrafish/i || $species =~ m/^pig$/i || $species eq 'cat' || $species =~ m/zebrafinch/i || $species =~ m/tetraodon/i) {
   $import_object = dbSNP::MappingChromosome->new(@parameters);
 }
-elsif ($species =~ m/chimp/i || $species =~ m/chicken/i || $species =~ m/rat/i || $species =~ m/horse/i || $species =~ m/platypus/i || $species =~ m/opossum/i || $species =~ m/mouse/i) {
+elsif ($species =~ m/chimp/i || $species =~ m/chicken/i || $species =~ m/rat/i || $species =~ m/horse/i || $species =~ m/platypus/i || $species =~ m/opossum/i || $species =~ m/mouse/i || $species =~ m/cow/i) {
   $import_object = dbSNP::GenericChromosome->new(@parameters);
 }
 elsif ($species =~ m/dog/i) {
@@ -309,25 +312,28 @@ sub usage {
   usage: perl dbSNP.pl <options>
       
     options:
-      -dshost <hostname>   hostname of dbSNP MSSQL database (default = dbsnp)
-      -dsuser <user>       username of dbSNP MSSQL database (default = dbsnpro)
-      -dspass <pass>       password of dbSNP MSSQL database
-      -dsport <port>       TCP port of dbSNP MSSQL database (default = 1026)
-      -dsdbname <dbname>   dbname of dbSNP MySQL database   (default = dbSNP_121)
-      -chost <hostname>    hostname of core Ensembl MySQL database (default = ecs2)
-      -cuser <user>        username of core Ensembl MySQL database (default = ensro)
-      -cpass <pass>        password of core Ensembl MySQL database
-      -cport <port>        TCP port of core Ensembl MySQL database (default = 3364)
-      -cdbname <dbname>    dbname of core Ensembl MySQL database
-      -vhost <hostname>    hostname of variation MySQL database to write to
-      -vuser <user>        username of variation MySQL database to write to (default = ensadmin)
-      -vpass <pass>        password of variation MySQL database to write to
-      -vport <port>        TCP port of variation MySQL database to write to (default = 3306)
-      -vdbname <dbname>    dbname of variation MySQL database to write to
-      -limit <number>      limit the number of rows transfered for testing
-      -tmpdir <dir>        temporary directory to use (with lots of space!)
-      -tmpfile <filename>  temporary filename to use
-      -mapping_file <filename>  file containing the mapping data
+      -dshost <hostname>          hostname of dbSNP MSSQL database (default = dbsnp)
+      -dsuser <user>              username of dbSNP MSSQL database (default = dbsnpro)
+      -dspass <pass>              password of dbSNP MSSQL database
+      -dsport <port>              TCP port of dbSNP MSSQL database (default = 1026)
+      -dsdbname <dbname>          dbname of dbSNP MySQL database   (default = dbSNP_121)
+      -chost <hostname>           hostname of core Ensembl MySQL database (default = ecs2)
+      -cuser <user>               username of core Ensembl MySQL database (default = ensro)
+      -cpass <pass>               password of core Ensembl MySQL database
+      -cport <port>               TCP port of core Ensembl MySQL database (default = 3364)
+      -cdbname <dbname>           dbname of core Ensembl MySQL database
+      -vhost <hostname>           hostname of variation MySQL database to write to
+      -vuser <user>               username of variation MySQL database to write to (default = ensadmin)
+      -vpass <pass>               password of variation MySQL database to write to
+      -vport <port>               TCP port of variation MySQL database to write to (default = 3306)
+      -vdbname <dbname>           dbname of variation MySQL database to write to
+      -limit <number>             limit the number of rows transfered for testing
+      -tmpdir <dir>               temporary directory to use (with lots of space!)
+      -tmpfile <filename>         temporary filename to use
+      -mapping_file <filename>    file containing the mapping data
+			-group_term <group_term>    select the group_term to import
+			-group_label <group_label>  select the group_label to import
+			
 EOF
 
       die("\n$msg\n\n");
