@@ -173,14 +173,7 @@ sub variation_feature{
 		   ctg.contig_gi,
                    loc.lc_ngbr+2,
 		   loc.rc_ngbr,
-		   CASE WHEN
-		     ctg.group_term LIKE '$group_term' AND
-		     ctg.group_label LIKE '$group_label'
-		   THEN
-		     ctg.contig_chr
-		   ELSE
-		     ctg.contig_label
-		   END, 
+		   ctg.contig_chr, 
 		   CASE WHEN
 		     loc.loc_type = 3
 		   THEN
@@ -207,6 +200,9 @@ sub variation_feature{
 		   $tablename2 ctg ON (
 		     ctg.ctg_id = loc.ctg_id
 		   )
+      WHERE
+        ctg.group_term LIKE '$group_term' AND
+        ctg.group_label LIKE '$group_label'
 	        };
      if ($self->{'limit'}) {
        $stmt .= qq{    
