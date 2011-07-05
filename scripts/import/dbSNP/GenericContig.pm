@@ -81,8 +81,8 @@ sub new {
   my $caller = shift;
   my $class = ref($caller) || $caller;
 
-  my ($dbm, $tmp_dir, $tmp_file, $limit, $mapping_file_dir, $dbSNP_BUILD_VERSION, $ASSEMBLY_VERSION, $GROUP_TERM, $skip_routines, $scriptdir, $logh) =
-        rearrange([qw(DBMANAGER TMPDIR TMPFILE LIMIT MAPPING_FILE_DIR DBSNP_VERSION ASSEMBLY_VERSION GROUP_TERM SKIP_ROUTINES SCRIPTDIR LOG)],@_);
+  my ($dbm, $tmp_dir, $tmp_file, $limit, $mapping_file_dir, $dbSNP_BUILD_VERSION, $ASSEMBLY_VERSION, $GROUP_TERM,$GROUP_LABEL, $skip_routines, $scriptdir, $logh) =
+        rearrange([qw(DBMANAGER TMPDIR TMPFILE LIMIT MAPPING_FILE_DIR DBSNP_VERSION ASSEMBLY_VERSION GROUP_TERM GROUP_LABEL SKIP_ROUTINES SCRIPTDIR LOG)],@_);
 
 #  my $dbSNP_share_db = "dbSNP_$dbSNP_BUILD_VERSION\_shared";
 #  $dbSNP_share_db =~ s/dbSNP_b/dbSNP_/;
@@ -105,7 +105,7 @@ sub new {
 		'tmpdir' => $tmp_dir,
 		'tmpfile' => $tmp_file,
 		'limit' => $limit,
-                'mapping_file_dir' => $mapping_file_dir,
+    'mapping_file_dir' => $mapping_file_dir,
 		'dbSNP_version' => $dbSNP_BUILD_VERSION,
 		'dbSNP_share_db' => $shared_db,
 		'assembly_version' => $ASSEMBLY_VERSION,
@@ -114,7 +114,8 @@ sub new {
 		'registry_file' => $registry_file,
 		'scriptdir' => $scriptdir,
 		'dbm' => $dbm,
-		'group_term' => $GROUP_TERM
+		'group_term'  => $GROUP_TERM,
+		'group_label' => $GROUP_LABEL
 		}, $class;
 }
 
