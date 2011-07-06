@@ -369,8 +369,9 @@ sub source_table {
 #    my ($dbname,$version) = split /\_/,$self->{'snp_dbname'};
     my ($species,$tax_id,$version) = $self->{'snp_dbname'} =~ m/^(.+)?\_([0-9]+)\_([0-9]+)$/;
     my $dbname = 'dbSNP';
-    
-    $self->{'dbVar'}->do(qq{INSERT INTO source (source_id,name,version,description) VALUES (1,"$dbname",$version,"Variants (including SNPs and indels) imported from dbSNP [http://www.ncbi.nlm.nih.gov/projects/SNP/]")});
+    my $url = 'http://www.ncbi.nlm.nih.gov/projects/SNP/';
+		
+    $self->{'dbVar'}->do(qq{INSERT INTO source (source_id,name,version,description,url) VALUES (1,"$dbname",$version,"Variants (including SNPs and indels) imported from dbSNP [$url]",$url)});
     print $logh Progress::location();
 
 }
