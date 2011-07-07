@@ -415,7 +415,7 @@ sub print_consequences {
                         
                         $hgnc = undef if $hgnc eq '-';
                         
-                        $line->{Extra}->{HGNC} if defined($hgnc);
+                        $line->{Extra}->{HGNC} = $hgnc if defined($hgnc);
                     }
                     
                     # protein ID
