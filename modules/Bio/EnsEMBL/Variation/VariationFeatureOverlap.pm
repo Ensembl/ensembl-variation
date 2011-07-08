@@ -50,6 +50,7 @@ use strict;
 use warnings;
 
 use Bio::EnsEMBL::Utils::Scalar qw(assert_ref);
+use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Utils::Argument qw(rearrange);
 use Bio::EnsEMBL::Utils::Sequence qw(expand);
 use Bio::EnsEMBL::Variation::Utils::Sequence qw(unambiguity_code);
@@ -113,6 +114,12 @@ sub new {
     assert_ref($adaptor, 'Bio::EnsEMBL::Variation::DBSQL::VariationFeatureOverlapAdaptor') if $adaptor;
 
     $ref_feature ||= $variation_feature->slice;
+
+    # we need to ensure the Feature and the VariationFeature live on the same slice
+    # so we explicitly transfer the Feature here
+
+    $feature = $feature->transfer($variation_feature->slice) 
+        or throw("Unable to transfer the supplied feature to the same slice as the variation feature");
 
     my $self = bless {
         variation_feature   => $variation_feature,

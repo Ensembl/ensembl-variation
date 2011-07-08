@@ -63,24 +63,24 @@ sub within_feature {
     my $feat    = $vfoa->feature;
     
     return overlap(
-        $vf->seq_region_start, 
-        $vf->seq_region_end,
-        $feat->seq_region_start, 
-        $feat->seq_region_end
+        $vf->start, 
+        $vf->end,
+        $feat->start, 
+        $feat->end
     );
 }
 
 sub _before_start {
     my ($vf, $feat, $dist) = @_;
     
-    return ( ($vf->seq_region_end >= ($feat->seq_region_start - $dist)) and 
-        ($vf->seq_region_end < $feat->seq_region_start) );
+    return ( ($vf->end >= ($feat->start - $dist)) and 
+        ($vf->end < $feat->start) );
 }
 
 sub _after_end {
     my ($vf, $feat, $dist) = @_;
-    return ( ($vf->seq_region_start <= ($feat->seq_region_end + $dist)) 
-            and ($vf->seq_region_start > $feat->seq_region_end) );
+    return ( ($vf->start <= ($feat->end + $dist)) 
+            and ($vf->start > $feat->end) );
 }
 
 sub _upstream {
@@ -146,10 +146,10 @@ sub affects_transcript {
     return 0 unless $tran->isa('Bio::EnsEMBL::Transcript');
     
     return overlap(
-        $vf->seq_region_start, 
-        $vf->seq_region_end,
-        $tran->seq_region_start - 5000, 
-        $tran->seq_region_end + 5000
+        $vf->start, 
+        $vf->end,
+        $tran->start - 5000, 
+        $tran->end + 5000
     );
 }
 
@@ -198,8 +198,8 @@ sub within_mature_miRNA {
         for my $coord ($tv->_mapper->cdna2genomic($1, $2, $tran->strand)) {
             if ($coord->isa('Bio::EnsEMBL::Mapper::Coordinate')) {
                 if (overlap(
-                        $vf->seq_region_start, 
-                        $vf->seq_region_end, 
+                        $vf->start, 
+                        $vf->end, 
                         $coord->start, 
                         $coord->end) ) {
                     return 1;
@@ -294,9 +294,9 @@ sub _before_coding {
     my ($vf, $tran) = @_;
     return 0 unless defined $tran->translation;
     
-    my $vf_s  = $vf->seq_region_start;
-    my $vf_e  = $vf->seq_region_end;
-    my $t_s   = $tran->seq_region_start;
+    my $vf_s  = $vf->start;
+    my $vf_e  = $vf->end;
+    my $t_s   = $tran->start;
     my $cds_s = $tran->coding_region_start;
     
     # we need to special case insertions just before the CDS start
@@ -311,9 +311,9 @@ sub _after_coding {
     my ($vf, $tran) = @_;
     return 0 unless defined $tran->translation;
     
-    my $vf_s  = $vf->seq_region_start;
-    my $vf_e  = $vf->seq_region_end;
-    my $t_e   = $tran->seq_region_end;
+    my $vf_s  = $vf->start;
+    my $vf_e  = $vf->end;
+    my $t_e   = $tran->end;
     my $cds_e = $tran->coding_region_end;
     
     # we need to special case insertions just after the CDS end
