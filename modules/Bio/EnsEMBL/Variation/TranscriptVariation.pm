@@ -405,7 +405,7 @@ sub cdna_coords {
     unless ($self->{_cdna_coords}) {
         my $vf   = $self->variation_feature;
         my $tran = $self->transcript; 
-        $self->{_cdna_coords} = [ $self->_mapper->genomic2cdna($vf->seq_region_start, $vf->seq_region_end, $tran->strand) ];
+        $self->{_cdna_coords} = [ $self->_mapper->genomic2cdna($vf->start, $vf->end, $tran->strand) ];
     }
     
     return $self->{_cdna_coords};
@@ -428,7 +428,7 @@ sub cds_coords {
     unless ($self->{_cds_coords}) {
         my $vf   = $self->variation_feature;
         my $tran = $self->transcript; 
-        $self->{_cds_coords} = [ $self->_mapper->genomic2cds($vf->seq_region_start, $vf->seq_region_end, $tran->strand) ];
+        $self->{_cds_coords} = [ $self->_mapper->genomic2cds($vf->start, $vf->end, $tran->strand) ];
     }
     
     return $self->{_cds_coords};
@@ -451,7 +451,7 @@ sub translation_coords {
     unless ($self->{_translation_coords}) {
         my $vf   = $self->variation_feature;
         my $tran = $self->transcript; 
-        $self->{_translation_coords} = [ $self->_mapper->genomic2pep($vf->seq_region_start, $vf->seq_region_end, $tran->strand) ];
+        $self->{_translation_coords} = [ $self->_mapper->genomic2pep($vf->start, $vf->end, $tran->strand) ];
     }
     
     return $self->{_translation_coords};
@@ -573,15 +573,15 @@ sub _intron_effects {
         
         my $found_effect = 0;
         
-        my $vf_start = $vf->seq_region_start;
-        my $vf_end   = $vf->seq_region_end;
+        my $vf_start = $vf->start;
+        my $vf_end   = $vf->end;
 
         my $insertion = $vf_start == $vf_end+1;
 
         for my $intron (@{ $self->_introns }) {
             
-            my $intron_start = $intron->seq_region_start;
-            my $intron_end   = $intron->seq_region_end;
+            my $intron_start = $intron->start;
+            my $intron_end   = $intron->end;
             
             # under various circumstances the genebuild process can introduce
             # artificial short (<= 12 nucleotide) introns into transcripts

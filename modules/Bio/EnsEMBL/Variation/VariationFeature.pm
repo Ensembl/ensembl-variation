@@ -368,18 +368,17 @@ sub get_all_TranscriptVariations {
         unless ($transcripts) {
             # if the caller didn't supply some transcripts fetch those around this VariationFeature
 
-            # get a slice around this transcript twice as large as the defined maximum distance from 
-            # a transcript
+            # get a slice around this transcript including the maximum distance up and down-stream
+            # that we still call consequences for
 
             my $slice = $self->feature_Slice->expand(
                 MAX_DISTANCE_FROM_TRANSCRIPT, 
                 MAX_DISTANCE_FROM_TRANSCRIPT
             );
 
-            # fetch all transcripts on this slice, we also need to transfer the transcripts to the same slice 
-            # as the VariationFeature for the consequence stuff to work
+            # fetch all transcripts on this slice 
 
-            $transcripts = [ map { $_->transfer($self->slice) } @{ $slice->get_all_Transcripts(1) } ];
+            $transcripts = $slice->get_all_Transcripts(1);
         }
 
         my @unfetched_transcripts = grep { 
