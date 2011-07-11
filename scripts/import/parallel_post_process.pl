@@ -1277,7 +1277,7 @@ sub merge_rs_feature{
 	    CREATE TABLE
 	       tmp_merge
 	    SELECT
-	       tbl.$table\_id
+	       tbl.$table\_id,
 	       m.variation_id2 AS variation_id
 	    FROM
 	       tmp_ids_rs_final m JOIN
