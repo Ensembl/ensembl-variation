@@ -13,7 +13,7 @@ use Bio::EnsEMBL::Registry;
 my $CURRENT_ASSEMBLY = 'GRCh37';
 my $CURRENT_SCHEMA_VERSION = '1.6';
 
-my ($template_file, $output_file, $registry_file, $config_file, $target_dir, $exon_file, $genomic_file, $cdna_file, $peptide_file, $lrg_id, $help, $skip_fixed, $skip_updatable, $skip_unbranded, $skip_transcript_matching, $use_existing_mapping, $replace_annotations, $skip_host_check);
+my ($template_file, $output_file, $registry_file, $config_file, $target_dir, $exon_file, $genomic_file, $cdna_file, $peptide_file, $lrg_id, $help, $skip_fixed, $skip_updatable, $skip_unbranded, $do_transcript_matching, $use_existing_mapping, $replace_annotations, $skip_host_check);
 my $tmpdir;
 my $ssaha2_bin;
 my $exonerate_bin;
@@ -38,7 +38,7 @@ GetOptions(
 	   'skip_fixed!' => \$skip_fixed,
 	   'skip_updatable!' => \$skip_updatable,
 	   'skip_unbranded!' => \$skip_unbranded,
-	   'skip_transcript_matching!' => \$skip_transcript_matching,
+	   'do_transcript_matching!' => \$do_transcript_matching,
 	   'use_existing_mapping!' => \$use_existing_mapping,
 	   'replace_annotations!' => \$replace_annotations,
 	   'skip_host_check!' => \$skip_host_check,
@@ -100,10 +100,10 @@ if (!$skip_updatable) {
 
 # get registry and a gene adaptor
 	$LRGMapping::registry_file = $registry_file;
-	Bio::EnsEMBL::Registry->load_all( $registry_file );
-	$LRGMapping::dbCore_ro = Bio::EnsEMBL::Registry->get_DBAdaptor('human','core_ro');
-	$LRGMapping::dbCore_rw = Bio::EnsEMBL::Registry->get_DBAdaptor('human','core_rw');
-	$LRGMapping::dbFuncGen = Bio::EnsEMBL::Registry->get_DBAdaptor('human','funcgen');
+	Bio::EnsEMBL::Registry->load_all( $registry_file, 1 );
+	$LRGMapping::dbCore_ro = Bio::EnsEMBL::Registry->get_DBAdaptor('homo_sapiens','core_ro');
+	$LRGMapping::dbCore_rw = Bio::EnsEMBL::Registry->get_DBAdaptor('homo_sapiens','core_rw');
+	$LRGMapping::dbFuncGen = Bio::EnsEMBL::Registry->get_DBAdaptor('homo_sapiens','funcgen');
 	my $host = $LRGMapping::dbCore_rw->dbc->host();
 	if ($host !~ m/variation/ && !$skip_host_check) {
 		die('Host is ' . $host . '! Changes will be written to the database, make sure you want to use the database on this host. If so, skip this check by using -skip_host_check on command line');
@@ -140,7 +140,7 @@ if (!$skip_updatable) {
 	# align_updatable_to_fixed_transcripts($root,$LRGMapping::dbCore_ro->get_TranscriptAdaptor()) unless $skip_transcript_matching;
 	
 	# Find transcripts in the updatable section that correspond to transcripts in the fixed section (only for Ensembl annotations for now)
-	match_fixed_annotation_transcripts($root,$LRGMapping::dbCore_ro->get_TranscriptAdaptor()) unless $skip_transcript_matching;
+	match_fixed_annotation_transcripts($root,$LRGMapping::dbCore_ro->get_TranscriptAdaptor()) if $do_transcript_matching;
 
 }
 
