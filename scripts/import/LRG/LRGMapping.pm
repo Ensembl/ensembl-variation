@@ -25,7 +25,7 @@ our $output_dir;
 our $target_dir;
 our %rec_seq;
 
-#ÊKeep different db connections for a core db with write access to and one with read-only access
+# Keep different db connections for a core db with write access to and one with read-only access
 our $dbCore_rw;
 our $dbCore_ro;
 our $dbFuncGen;
@@ -76,7 +76,7 @@ sub mapping {
   if ($use_mapper) {
     my $mapper = Mapper->new('query' => $lrg_seq, 'hash' => "$target_dir/hash/$SMALT_HASH", 'target' => "$target_dir/$MAPPER_REFERENCE_GENOME", 'tmpdir' => $input_dir);
     $mapper->do_mapping();
-    my $maps = $mapper->alignments(); 
+    my $maps = $mapper->mappings(); 
     my @keys = keys(%{$maps});
     warn ("Mapper module produced multiple alignments, just using the first one") if (scalar(@keys) > 1);
     die ("No mapping could be found") unless (scalar(@keys));
@@ -97,7 +97,7 @@ sub mapping {
 sub smalt_map {
 	my $lrg_seq = shift;
 	
-	#ÊDump the sequence to a fasta file
+	# Dump the sequence to a fasta file
 	my $PID = $$;
 	my $name = 'temp' . $PID . '.fa';
 	my $input_file = $input_dir . '/' . $name;
@@ -105,7 +105,7 @@ sub smalt_map {
 	print FA ">$name\n$lrg_seq\n";
 	close(FA);
 	
-	#ÊConstruct the SMALT command
+	# Construct the SMALT command
 	my $smalt_cmd = "smalt map ";
 	while (my ($p,$v) = each(%SMALT_PARAMETERS)) {
 		$smalt_cmd .= "$p $v ";
@@ -118,7 +118,7 @@ sub smalt_map {
 	my $resource = "-R'select[mem>$FARM_MEMORY] rusage[mem=$FARM_MEMORY]' -M" . $FARM_MEMORY . "000";
 	my $bsub_cmd = "bsub -K -J smalt_$name -o $output_file -e $error_file $resource $smalt_cmd";
 	
-	#ÊSubmit the job to the farm and wait for it to finish
+	# Submit the job to the farm and wait for it to finish
 	# print $bsub_cmd . "\n";
 	system($bsub_cmd);
 
@@ -136,7 +136,7 @@ sub smalt_map {
     	print STDERR "*************\n";
   	}
   	
-  	#ÊParse the output.
+  	# Parse the output.
   	my $mapping = parse_ssaha2_out($output_file);
     
     # Clean up temporary files
@@ -164,12 +164,12 @@ sub map_to_genome {
   if ($q_len + $SPLIT_OVERLAP > $SPLIT_SIZE + $MIN_QUERY_LENGTH) {
     # Chop off a split at the 5' end 
     my $q_split = substr($q_seq,0,$SPLIT_SIZE);
-    #ÊAppend a small overlap to the remainder
+    # Append a small overlap to the remainder
     my $q_rest = substr($q_split,-$SPLIT_OVERLAP) . substr($q_seq,$SPLIT_SIZE);
     
     # Map the split to the genome and add it to the array
     @maps = (@maps,@{map_to_genome($q_split,$lrg_offset)});
-    #ÊSend the rest of the sequence back to this method to do a recursion
+    # Send the rest of the sequence back to this method to do a recursion
     @maps = (@maps,@{map_to_genome($q_rest,$lrg_offset+($SPLIT_SIZE-$SPLIT_OVERLAP))});
     
     return \@maps;
@@ -200,24 +200,24 @@ sub join_mappings {
   
   my %mainmap;
   while (my $submap = shift(@mappings)) {
-    #ÊInitialize the mainmap by setting it to the first mapped piece
+    # Initialize the mainmap by setting it to the first mapped piece
     if (!defined($mainmap{'lrg_id'})) {
       %mainmap = %{$submap};
       next;
     }
-    #ÊCheck that this piece is overlapping the previous one (or possibly lying back-to-back in case of no overlap)
+    # Check that this piece is overlapping the previous one (or possibly lying back-to-back in case of no overlap)
     die("Mapped pieces are not overlapping!") unless ($submap->{'lrg_end'} > $mainmap{'lrg_end'} && $submap->{'lrg_start'} - $mainmap{'lrg_end'} <= 1);
     # Do a check to make sure that the mappings are not on opposite strands
     die("Mapped pieces are on opposite strands!") unless ($submap->{'strand'} == $mainmap{'strand'});
     
-    #ÊSort the mainmap's pairs in descending LRG coord order
+    # Sort the mainmap's pairs in descending LRG coord order
     my @mainpairs = sort {$b->[2] <=> $a->[2]} @{$mainmap{'pairs'}};
     
-    #ÊAdd pairs that fall on or beyond the mainmap's border to the mainmap's pair array
+    # Add pairs that fall on or beyond the mainmap's border to the mainmap's pair array
     while (my $subpair = shift(@{$submap->{'pairs'}})) {
       # Go to the next if the pair ends within the overlap with the main map
       next if ($subpair->[2] <= $mainmap{'lrg_end'});
-      #ÊIf the pair starts within the overlap and extends beyond, it should be merged with an already existing pair
+      # If the pair starts within the overlap and extends beyond, it should be merged with an already existing pair
       # In the special case of no overlap between mappings, 'DNA' pairs that lie back-to-back and have no gap in between should be joined
       if (
 	  ($subpair->[1] <= $mainmap{'lrg_end'} && $subpair->[2] > $mainmap{'lrg_end'}) ||
@@ -400,10 +400,10 @@ sub parse_ssaha2_out {
   }
   close SSAHA;
 
-  #ÊParse the stored vulgar string and sequences
+  # Parse the stored vulgar string and sequences
   if (defined($vulgar)) {  
   	
-  	#ÊConvert cigar to vulgar if necessary
+  	# Convert cigar to vulgar if necessary
   	if ($vulgar =~ m/cigar/i) {
   		$vulgar = cigar_to_vulgar($vulgar);
   	}
@@ -455,7 +455,7 @@ sub exonerate_align {
   return $o_file;
 }
 
-#ÊParse the exonerate output
+# Parse the exonerate output
 sub parse_exonerate {
   my $output_file = shift;
   
@@ -511,7 +511,7 @@ sub parse_exonerate {
   # Use the method for parsing the vulgar string to get a pairs hash
   my $data = parse_vulgar_string($vulgar,$q_seq,$t_seq);
   
-  #ÊAdd the alignment length to the data hash
+  # Add the alignment length to the data hash
   $data->{'length'} = $align_length;
   
   return $data;
@@ -524,24 +524,24 @@ sub cigar_to_vulgar {
 	# The prefix is the same so separate out the necessary information
 	my ($format,$static,$match) = $cigar =~ m/^\s*(cigar\S*)\s+(\S+\s+\d+\s+\d+\s+[\+\-]\s+\S+\s+\d+\s+\d+\s+[\+\-]\s+\d+)\s+(.+)$/;
 	
-	#ÊDie if we couldn't parse the cigar string properly
+	# Die if we couldn't parse the cigar string properly
 	die ("Could not parse the cigar string: $cigar") unless (defined($format) && defined($static) && defined($match));
 	
-	#ÊConstruct the vulgar string
+	# Construct the vulgar string
 	my $vulgar = "vulgar $static";
 	
 	# Basically, insertions and deletions are just annotated as gaps with the lengths indicating I or D. All annotations are given as pairs of lengths for query and subject.
 	while ($match =~ m/([MDI])\s+(\d+)/g) {
 		
-		#ÊIf it is a 'M', just report a pair of lengths
+		# If it is a 'M', just report a pair of lengths
 		if ($1 eq 'M') {
 			$vulgar .= " M $2 $2";
 		}
-		#ÊElse, if it is a insertion (gap in subject)
+		# Else, if it is a insertion (gap in subject)
 		elsif ($1 eq 'I') {
 			$vulgar .= " G $2 0";
 		}
-		#ÊElse, if it is a deletion (gap in query)
+		# Else, if it is a deletion (gap in query)
 		elsif ($1 eq 'D') {
 			$vulgar .= " G 0 $2";
 		}
@@ -560,8 +560,8 @@ sub cigar_to_vulgar {
 #  chr_name
 #  lrg_start
 #  lrg_end
-#Ê chr_start
-#Ê chr_end
+#  chr_start
+#  chr_end
 #  strand
 #  score
 #  pairs
@@ -615,7 +615,7 @@ sub parse_vulgar_string {
   
   my @pairs;
   
-  #ÊA vulgar label 'M' means that the match is of equal length* while 'G' means an indel
+  # A vulgar label 'M' means that the match is of equal length* while 'G' means an indel
   # *At least this is what I think. I do an extra step to check this and if it's not true, the script will die.
   my $q_offset = 0;
   my $t_offset = 0;
@@ -731,7 +731,7 @@ sub get_annotations {
   my $mapping = shift;
   my $pairs = $mapping->{'pairs'};
   
-  #ÊTry to fetch a slice for the LRG (from the read-write db), this should be possible if an entry exists in the core db
+  # Try to fetch a slice for the LRG (from the read-write db), this should be possible if an entry exists in the core db
   my $sa_rw = $dbCore_rw->get_SliceAdaptor();
   # Since this method dies if not successful, wrap it in an eval block
   my $lrg_slice;
@@ -796,14 +796,14 @@ sub get_feature_limits {
   my $feat_slice = $feature->slice();
   my $feat_strand = $feature->strand();
   
-  #ÊGet the start position of the feature on the slice
+  # Get the start position of the feature on the slice
   my $lrg_position = lift_coordinate($feat_start,$feat_slice,$slice);
   if (defined($lrg_position->{'position'})) {
     $limits{'start'} = $lrg_position->{'position'};
     $limits{'strand'} = $lrg_position->{'strand'};
   }
   else {
-    #ÊIf start position lies upstream of LRG slice, indicate that the feature is partial in its 3'-end or 5'-end
+    # If start position lies upstream of LRG slice, indicate that the feature is partial in its 3'-end or 5'-end
     if ($lrg_position->{'reason'} eq 'upstream') {
       $limits{'start'} = 1;
       if ($feat_strand > 0) {
@@ -820,14 +820,14 @@ sub get_feature_limits {
     }
   }
   
-  #ÊGet the end position of the feature on the slice
+  # Get the end position of the feature on the slice
   $lrg_position = lift_coordinate($feat_end,$feat_slice,$slice);
   if (defined($lrg_position->{'position'})) {
     $limits{'end'} = $lrg_position->{'position'};
     $limits{'strand'} = $lrg_position->{'strand'};
   }
   else {
-    #ÊIf end position lies downstream of LRG slice, indicate that the feature is partial in its 5'-end or 3'-end
+    # If end position lies downstream of LRG slice, indicate that the feature is partial in its 5'-end or 3'-end
     if ($lrg_position->{'reason'} eq 'downstream') {
       if ($feat_strand > 0) {
 	$limits{'partial_3'} = 1;
@@ -848,7 +848,7 @@ sub get_feature_limits {
   return \%limits;
 }
 
-#ÊLift a specific coordinate from a source slice to another slice. Returns a hash with the new coordinate and a field for storing the reason why mapping failed
+# Lift a specific coordinate from a source slice to another slice. Returns a hash with the new coordinate and a field for storing the reason why mapping failed
 sub lift_coordinate {
   my $position = shift;
   my $input_slice = shift;
@@ -859,7 +859,7 @@ sub lift_coordinate {
   my %mapping;
   
   my $source_slice;
-  #ÊIf the source slice is fetched from the read-only database, get the corresponding slice from the read-write db instead
+  # If the source slice is fetched from the read-only database, get the corresponding slice from the read-write db instead
   if ($input_slice->adaptor->dbc->host() eq $dbCore_rw->dbc->host() && $input_slice->adaptor->dbc->dbname() eq $dbCore_rw->dbc->dbname()) {
     $source_slice = $input_slice;
   }
@@ -874,10 +874,10 @@ sub lift_coordinate {
     );
   }
   
-  #ÊProject the feature onto the target slice
+  # Project the feature onto the target slice
   my $projections = $source_slice->project_to_slice($target_slice);
   
-  #ÊIf feature fails to project (lies entirely outside of the supplied slice), return with reason 'failed'
+  # If feature fails to project (lies entirely outside of the supplied slice), return with reason 'failed'
   if (!defined($projections) || scalar(@{$projections}) == 0) {
     warn("Failed to do a project_to_slice from " . $source_slice->coord_system_name() . ":" . $source_slice->seq_region_name() . ":" . $source_slice->start() . "-" . $source_slice->end() . ":" . $source_slice->strand() . " to " . $target_slice->coord_system_name() . ":" . $target_slice->seq_region_name() . ":" . $target_slice->start() . "-" . $target_slice->end() . ":" . $target_slice->strand() . ", will try again...");
     $projections = $source_slice->project_to_slice($target_slice);
@@ -890,7 +890,7 @@ sub lift_coordinate {
   
   # If position is 5' of what's been mapped
   $mapping{'reason'} = 'upstream' if ($position < $projections->[0][0]);
-  #ÊIf position is 3' of what's been mapped
+  # If position is 3' of what's been mapped
   $mapping{'reason'} = 'downstream' if ($position > $projections->[-1][1]);
   
   # Return if position was outside of lrg_slice
@@ -947,27 +947,27 @@ sub attach_protein {
   my $outside = 0;
   
   # Get the coding region start coordinates in LRG coordinates.
-  #ÊNote that this is always the lowest coordinate, so the coding_region_start on a transcript is the stop codon position if the transcript is on the negative strand
+  # Note that this is always the lowest coordinate, so the coding_region_start on a transcript is the stop codon position if the transcript is on the negative strand
   my $lift = lift_coordinate($transcript->coding_region_start(),$transcript->slice(),$lrg_slice);
   
   # In case the position couldn't be found on the LRG slice, investigate why
   if (!defined($lift->{'position'})) {
     
-    #ÊIf coding start lies downstream of LRG slice, just set the start to the first position outside of the slice (no coding part is within the LRG)
+    # If coding start lies downstream of LRG slice, just set the start to the first position outside of the slice (no coding part is within the LRG)
     if ($lift->{'reason'} eq 'downstream') {
       $cds_start = $slice_end + 1;
       $outside = 1;
     }
     
-    #ÊIf coding start lies upstream of LRG slice, set start of protein to the closest exon start
+    # If coding start lies upstream of LRG slice, set start of protein to the closest exon start
     elsif ($lift->{'reason'} eq 'upstream') {
       $partial_5 = 1;
     }
     
-    #ÊIf it is because of a deletion, don't know what to do... (set to closest, non-deleted position?)
+    # If it is because of a deletion, don't know what to do... (set to closest, non-deleted position?)
     elsif ($lift->{'reason'} eq 'deleted') {}
     
-    #ÊElse if it failed to project, this is likely to be because the transcript is entirely outside of LRG. Shouldn't have gotten this far in that case but still, sset start outside of LRG slice
+    # Else if it failed to project, this is likely to be because the transcript is entirely outside of LRG. Shouldn't have gotten this far in that case but still, sset start outside of LRG slice
     elsif ($lift->{'reason'} eq 'failed') {
       $cds_start = $slice_end + 1;
     }
@@ -981,21 +981,21 @@ sub attach_protein {
   
   # In case the position couldn't be found on the LRG slice, investigate why
   if (!defined($lift->{'position'})) {
-    #ÊIf coding end lies upstream of LRG slice, set the end to be negative
+    # If coding end lies upstream of LRG slice, set the end to be negative
     if ($lift->{'reason'} eq 'upstream') {
       $cds_end = -1;
       $outside = 1;
     }
     
-    #ÊIf coding end lies downstream of LRG slice, set end of protein to the closest exon end
+    # If coding end lies downstream of LRG slice, set end of protein to the closest exon end
     elsif ($lift->{'reason'} eq 'downstream') {
       $partial_3 = 1;
     }
     
-    #ÊIf it is because of a deletion, don't know what to do... (set to closest, non-deleted position?)
+    # If it is because of a deletion, don't know what to do... (set to closest, non-deleted position?)
     elsif ($lift->{'reason'} eq 'deleted') {}
    
-    #ÊElse if it failed to project, this is likely to be because the transcript is entirely outside of LRG. Shouldn't have gotten this far in that case but still, skip protein in that case
+    # Else if it failed to project, this is likely to be because the transcript is entirely outside of LRG. Shouldn't have gotten this far in that case but still, skip protein in that case
     elsif ($lift->{'reason'} eq 'failed') {
       $cds_end = -1;
     }
@@ -1023,7 +1023,7 @@ sub attach_protein {
     # Create an xref node
     my $xref = xref($entry);
     
-    #ÊAttach the xref node to the protein if applicable 
+    # Attach the xref node to the protein if applicable 
     if ($entry->dbname() !~ /MIM_GENE|Entrez/) {
         
       $protein_node->addExisting($xref) unless ($protein_node->nodeExists($xref));
@@ -1046,7 +1046,7 @@ sub attach_protein {
     return;
   }
     
-  #ÊIf part of the protein falls outside the LRG slice, adjust the cds_start and cds_end to the closest coding exons
+  # If part of the protein falls outside the LRG slice, adjust the cds_start and cds_end to the closest coding exons
   if ($partial_5 || $partial_3) {
     my $feat_start = $transcript_node->data()->{'start'};
     my $feat_end = $transcript_node->data()->{'end'};
@@ -1059,7 +1059,7 @@ sub attach_protein {
         my $limits = get_feature_limits($exon,$lrg_slice);
         next if (!defined($limits) || $limits->{'upstream'} || $limits->{'downstream'});
 	
-	#ÊGet the position of the coding sequence start and end within the exon.
+	# Get the position of the coding sequence start and end within the exon.
 	# On the exon (as opposed to the transcript), coding_region_start ALWAYS referes to the start codon, so we need to pass coding_region_end if the exon is on the negative strand
 	$lift = lift_coordinate(($exon->strand > 0 ? $exon->coding_region_start($transcript) : $exon->coding_region_end($transcript)),$exon->slice(),$lrg_slice);
 	if ($lift->{'position'}) {
@@ -1078,7 +1078,7 @@ sub attach_protein {
     $cds_end = $feat_end if ($partial_3);
   }
   
-  #ÊIn case the transcript is on the opposite strand relative to the LRG, flip the partial flags
+  # In case the transcript is on the opposite strand relative to the LRG, flip the partial flags
   ($partial_5,$partial_3) = ($partial_3,$partial_5) if ($transcript->strand() < 0);
     
   # Add partial nodes if necessary
@@ -1103,7 +1103,7 @@ sub attach_transcripts {
   my $lrg_slice = shift;
   my $gene_node = shift;
   
-  #ÊGet the transcripts from the gene object
+  # Get the transcripts from the gene object
   my $transcripts = $gene->get_all_Transcripts();
   
   # Loop over the transcripts
@@ -1133,7 +1133,7 @@ sub attach_transcripts {
     my $entries = $transcript->get_all_DBEntries();
     while (my $entry = shift(@{$entries})) {
   
-      #ÊSkip the xref if the source is not one of the allowed ones	  	
+      # Skip the xref if the source is not one of the allowed ones	  	
       next unless $entry->dbname =~ /GI|RefSeq|MIM_GENE|Entrez|CCDS|RFAM$|miRBase|pseudogene.org/;
       next if $entry->dbname =~ /RefSeq_peptide/;
 	
@@ -1205,7 +1205,7 @@ sub gene_2_feature {
   
   # Get xrefs for the gene
   my $entries = $gene->get_all_DBEntries();
-  #ÊMake an exception to use 'HGNC (curated)' in case no 'HGNC' exists
+  # Make an exception to use 'HGNC (curated)' in case no 'HGNC' exists
   my @hgnc;
   my @hgnc_curated;
   while(my $entry = shift(@{$entries})) {
@@ -1289,7 +1289,7 @@ sub xref {
 	return $node;
 }
 
-#ÊCreate an array of FeaturePair objects from a mapping tag, one for each mapping span
+# Create an array of FeaturePair objects from a mapping tag, one for each mapping span
 sub mapping_2_feature_pair {
 	my $mapping = shift;
 	my $slice_adaptor = shift;
@@ -1402,7 +1402,7 @@ sub mapping_2_pairs {
       $last_strand = $strand;
     }
     
-    #ÊAt each indel in the alignment, a new DNA pair is added to the array and a G(ap) pair as well
+    # At each indel in the alignment, a new DNA pair is added to the array and a G(ap) pair as well
     my $diffs = $span->findNodeArray('diff');
     foreach my $diff (@{$diffs}) {
       my $pair;
@@ -1468,11 +1468,11 @@ sub mapping_2_pairs {
   return \%mapping;
 }
 
-#ÊConvert a pair array structure to an XML alignment structure
+# Convert a pair array structure to an XML alignment structure
 sub pairs_2_alignment {
   my $data = shift;
   
-  #ÊA counter for the number of identical nucleotides in the alignment
+  # A counter for the number of identical nucleotides in the alignment
   my $matches = 0;
   
   my $alignment_node = LRG::Node->new('alignment');
@@ -1528,7 +1528,7 @@ sub pairs_2_mapping {
   $mapping_node->addData({'chr_id' => $chr_id}) if (defined($chr_id));
   $mapping_node->addData({'most_recent' => $most_recent}) if (defined($most_recent));
   
-  #ÊCreate a local deep copy of the array so we won't mess up the elements
+  # Create a local deep copy of the array so we won't mess up the elements
   my @pairs_array;
   foreach my $pair (@{$pairs}) {
     my @copy;
@@ -1538,7 +1538,7 @@ sub pairs_2_mapping {
     push(@pairs_array,\@copy);
   }
   
-  #ÊOrder the pairs array according to ascending LRG coordinates
+  # Order the pairs array according to ascending LRG coordinates
   my @sorted_pairs = sort {$a->[1] <=> $b->[1]} @pairs_array;
   
   # Separate the DNA chunks from mismatches in the pairs array. We will create a mapping span for each DNA chunk and include all mismatch information in this span
@@ -1676,7 +1676,7 @@ sub pairs_2_feature_pairs {
     my $strand = $chunk->[5];
     my @type;
     
-    #ÊGet all the mismatch information that is spanned by this chunk
+    # Get all the mismatch information that is spanned by this chunk
     foreach my $mismatch (@mismatches) {
       next unless($mismatch->[1] >= $lrg_start && $mismatch->[2] <= $lrg_end);
       push(@type,$mismatch);
@@ -1740,7 +1740,7 @@ sub get_overlapping_features {
   
     # Get a FeatureSet adaptor to get the feature sets
     my $feature_set_adaptor = $dbFuncGen->get_FeatureSetAdaptor();
-    #ÊGet all Feature Sets (might want to limit these?)
+    # Get all Feature Sets (might want to limit these?)
     my $fsets = $feature_set_adaptor->fetch_all();
     my @reg_features;
     # Loop over all Feature Sets
@@ -1767,19 +1767,19 @@ sub regulatory_feature_2_feature {
   
   # FIXME: Check if there is partial overlap
   
-  #ÊAdd an element with the Regulatory Feature class
+  # Add an element with the Regulatory Feature class
   if (length($reg_feature->feature_type()->class()) > 0) {
     my $class_node = LRG::Node->new('class');
     $class_node->content($reg_feature->feature_type()->class());
     $reg_feature_node->addExisting($class_node);
   }
-  #ÊAdd an element with the Regulatory Feature display label
+  # Add an element with the Regulatory Feature display label
   if (length($reg_feature->display_label()) > 0) {
     my $label_node = LRG::Node->new('label');
     $label_node->content($reg_feature->display_label());
     $reg_feature_node->addExisting($label_node);
   }
-  #ÊAdd an element with the Regulatory Feature description
+  # Add an element with the Regulatory Feature description
   if (length($reg_feature->feature_type()->description()) > 0) {
     my $desc_node = LRG::Node->new('description');
     $desc_node->content($reg_feature->feature_type()->description());
