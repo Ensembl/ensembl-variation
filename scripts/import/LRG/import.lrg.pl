@@ -186,6 +186,7 @@ my $dbCore = new Bio::EnsEMBL::DBSQL::DBAdaptor(
   -user => $user,
   -pass => $pass,
   -port => $port,
+  -species => ${SPECIES},
   -dbname => $coredb
 ) or die("Could not get a database adaptor to $coredb on $host:$port");
 print STDOUT localtime() . "\tConnected to $coredb on $host:$port\n" if ($verbose);
