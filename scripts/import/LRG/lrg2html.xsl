@@ -1102,49 +1102,53 @@
 					  <xsl:attribute name="title">Exon <xsl:value-of select="peptide_coords/@start"/>-<xsl:value-of select="peptide_coords/@end"/></xsl:attribute>
 					  
 					  <xsl:choose>
-						<xsl:when test="position()=1">
+						<xsl:when test="peptide_coords/@start=1">
 						  <xsl:choose>
-							<xsl:when test="following-sibling::intron[1]/@phase=0">
-							  <xsl:value-of select="substring($trans_seq,peptide_coords/@start,(peptide_coords/@end - peptide_coords/@start) + 1)"/>
+							<xsl:when test="following-sibling::intron[1]/@phase &gt; 0">
+                <xsl:value-of select="substring($trans_seq,peptide_coords/@start,(peptide_coords/@end - peptide_coords/@start))"/>
 							</xsl:when>
 							<xsl:otherwise>
-							  <xsl:value-of select="substring($trans_seq,peptide_coords/@start,(peptide_coords/@end - peptide_coords/@start))"/>
+                <xsl:value-of select="substring($trans_seq,peptide_coords/@start,(peptide_coords/@end - peptide_coords/@start) + 1)"/>
 							</xsl:otherwise>
 						  </xsl:choose>
 						</xsl:when>
 						
-						<xsl:when test="position()=last()">
+						<xsl:when test="peptide_coords/@end=string-length($trans_seq)">
 						  <xsl:choose>
-							<xsl:when test="preceding-sibling::intron[1]/@phase=0">
-							  <xsl:value-of select="substring($trans_seq,peptide_coords/@start,(peptide_coords/@end - peptide_coords/@start) + 1)"/>
+							<xsl:when test="preceding-sibling::intron[1]/@phase &gt; 0">
+                <xsl:value-of select="substring($trans_seq,peptide_coords/@start + 1,(peptide_coords/@end - peptide_coords/@start))"/>
 							</xsl:when>
 							<xsl:otherwise>
-							  <xsl:value-of select="substring($trans_seq,peptide_coords/@start + 1,(peptide_coords/@end - peptide_coords/@start))"/>
+                <xsl:value-of select="substring($trans_seq,peptide_coords/@start,(peptide_coords/@end - peptide_coords/@start) + 1)"/>
 							</xsl:otherwise>
 						  </xsl:choose>
 						</xsl:when>
 						
 						<xsl:otherwise>
 						  <xsl:choose>
-							<xsl:when test="preceding-sibling::intron[1]/@phase=0">
-							  <xsl:choose>
-								<xsl:when test="following-sibling::intron[1]/@phase=0">
-								  <xsl:value-of select="substring($trans_seq,peptide_coords/@start,(peptide_coords/@end - peptide_coords/@start) + 1)"/>
-								</xsl:when>
-								<xsl:otherwise>
-								  <xsl:value-of select="substring($trans_seq,peptide_coords/@start,(peptide_coords/@end - peptide_coords/@start))"/>
-								</xsl:otherwise>
-							  </xsl:choose>
+							<xsl:when test="preceding-sibling::intron[1]/@phase &gt; 0">
+							
+                <xsl:choose>
+                <xsl:when test="following-sibling::intron[1]/@phase &gt; 0">
+                  <xsl:value-of select="substring($trans_seq,peptide_coords/@start + 1,(peptide_coords/@end - peptide_coords/@start) - 1)"/>
+                </xsl:when>
+                <xsl:otherwise>
+                  <xsl:value-of select="substring($trans_seq,peptide_coords/@start + 1,(peptide_coords/@end - peptide_coords/@start))"/>
+                </xsl:otherwise>
+                </xsl:choose>
+							
 							</xsl:when>
 							<xsl:otherwise>
-							  <xsl:choose>
-								<xsl:when test="following-sibling::intron[1]/@phase=0">
-								  <xsl:value-of select="substring($trans_seq,peptide_coords/@start + 1,(peptide_coords/@end - peptide_coords/@start))"/>
-								</xsl:when>
-								<xsl:otherwise>
-								  <xsl:value-of select="substring($trans_seq,peptide_coords/@start + 1,(peptide_coords/@end - peptide_coords/@start) - 1)"/>
-								</xsl:otherwise>
-							  </xsl:choose>
+							  
+                <xsl:choose>
+                <xsl:when test="following-sibling::intron[1]/@phase &gt; 0">
+                  <xsl:value-of select="substring($trans_seq,peptide_coords/@start,(peptide_coords/@end - peptide_coords/@start))"/>
+                </xsl:when>
+                <xsl:otherwise>
+                  <xsl:value-of select="substring($trans_seq,peptide_coords/@start,(peptide_coords/@end - peptide_coords/@start) + 1)"/>
+                </xsl:otherwise>
+                </xsl:choose>
+                
 							</xsl:otherwise>
 						  </xsl:choose>
 						</xsl:otherwise>
