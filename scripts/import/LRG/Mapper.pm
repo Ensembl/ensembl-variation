@@ -11,14 +11,13 @@ package Mapper;
 
 use LRG::SMALT;
 use LRG::Samtools;
-use LRG::Revcomp;
 use LRG::Exonerate;
 use LRG::bsub;
 use Bio::EnsEMBL::Utils::Scalar qw(wrap_array);
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
 use List::Util qw (min max);
 
-#ÊUse autoload for get/set methods
+# Use autoload for get/set methods
 our $AUTOLOAD;
 
 sub DESTROY { }
@@ -50,7 +49,7 @@ sub AUTOLOAD {
     my $self = shift;
     my $type = ref($self) or die("$self is not an object");
 
-    #ÊThe name of the called subroutine
+    # The name of the called subroutine
     my $name = $AUTOLOAD;
     # Strip away the pre-pended package info
     $name =~ s/.*://;
@@ -64,7 +63,7 @@ sub AUTOLOAD {
     return $self->_get_set('_' . $name,@_);
 }
 
-#ÊConstructor
+# Constructor
 sub new {
     
     my $class = shift;
@@ -81,17 +80,17 @@ sub initialize {
     my $self = shift;
     my %vals = @_;
     
-    #ÊThe get/set methods that exist in this module
+    # The get/set methods that exist in this module
     $self->_get_set('_permitted',$self->permitted());
 
     # Set the pid of this process
     $self->pid($$);
 
-    #ÊSet the default values
+    # Set the default values
     my $DEFAULTS = $self->defaults();
     map { $self->$_($DEFAULTS->{$_}) } keys(%{$DEFAULTS});
     
-    #ÊSet any field passed in via the parameter hash
+    # Set any field passed in via the parameter hash
     map { $self->$_($vals{$_}) } keys(%vals);
      
 }
@@ -113,7 +112,7 @@ sub _get_set {
 #   1. Do a paired read mapping to the genome using SMALT with the 5' and 3' ends of the query
 #   2. Extract the genomic sequence where the pair has been "anchored" using faidx of samtools
 #   3. Do a detailed alignment using exonerate
-#ÊThe Mapper module wraps this all up in a pipeline. The input needed to the module is the query and the target database.
+# The Mapper module wraps this all up in a pipeline. The input needed to the module is the query and the target database.
 # Additional parameters can be set
 sub do_mapping {
     my $self = shift;
@@ -146,18 +145,18 @@ sub do_mapping {
         my ($short_id) = $id =~ m/^(\S+)/;
         printf("Processing \%s...\n",$id);
         
-        #ÊExtract a few samples from the sequence and "anchor" them to the genome
+        # Extract a few samples from the sequence and "anchor" them to the genome
         
-        #ÊCalculate the spacing between the anchors 
+        # Calculate the spacing between the anchors 
         my $anchor_spacing = int((length($seq) - $anchor_length*$anchors)/($anchors - 1));
         
-        #ÊIf the anchor spacing is too small, say 2kb, just use the entire sequence
+        # If the anchor spacing is too small, say 2kb, just use the entire sequence
         if ($anchor_spacing < $min_anchor_spacing) {
             $anchors = 1;
             $anchor_length = length($seq);
         }
           
-        #ÊExtract the anchor sequences          
+        # Extract the anchor sequences          
         my @anchorseq;
         my $offset = 0;
         for (my $i=0; $i<$anchors; $i++) {
@@ -165,13 +164,13 @@ sub do_mapping {
             $offset += $anchor_length + $anchor_spacing;            
         }
         
-        #ÊWrite the anchors to a fasta file
+        # Write the anchors to a fasta file
         my $anchorfile = $self->to_fasta(\@anchorseq);
         
         # Use the anchorfile as input for SMALT
         $smalt->inputfile($anchorfile);
         
-        #ÊSet an output file for SMALT
+        # Set an output file for SMALT
         my $outfile = $self->tmpfile() . ".smalt";
         $smalt->outputfile($outfile);
         
@@ -181,11 +180,11 @@ sub do_mapping {
         my $bsub = bsub->new('logout' => qq{$logprefix\.out}, 'logerr' => qq{$logprefix\.err}, 'jobname' => 'smalt_' . $self->pid() . "_$short_id", 'job' => $smalt);
         $bsub->execute();
         
-        #ÊParse the SMALT output and determine the most promising genomic region where the anchors map in a sensible way
+        # Parse the SMALT output and determine the most promising genomic region where the anchors map in a sensible way
         printf("\tFinding most promising genomic region where anchors map...\n");
         my $best_span = parse_anchors($outfile,$anchors,$anchor_length,$anchor_spacing) or die ("Could not identify the genomic region where the query sequence, $id, should be anchored");
         
-        #ÊExtract the genomic region, including some wiggle room on the flanks
+        # Extract the genomic region, including some wiggle room on the flanks
         printf("\tDetermined the best location to be \%s:\%d-\%d:\%d, extracting sequence, including \%d bp flanking...\n",$best_span->[0],$best_span->[1],$best_span->[2],$best_span->[3],$anchor_spacing);
         my $genomic_start = $best_span->[1] - $anchor_spacing;
         my $genomic_end = $best_span->[2] + $anchor_spacing;
@@ -194,26 +193,29 @@ sub do_mapping {
         # Dump the sequence to a file
         my $genomicfile = $self->to_fasta($genomic_seq);
          
-        #ÊDo the full alignment using Exonerate
+        # Do the full alignment using Exonerate
         # Write the query seq to a tempfile
         my $queryfile = $self->to_fasta($seq);
         $exonerate->query($queryfile);
         $exonerate->target($genomicfile);
         
         printf("\tAligning query sequence to genomic region...\n");
-        #ÊBsub the exonerate job
+        # Bsub the exonerate job
         $bsub->jobname('exonerate_' . $self->pid() . "_$short_id");
         $bsub->job($exonerate);
         $bsub->execute();
+        
+        
+        printf("\tParsing alignment...\n");
+        my $alignment = $self->parse_alignment($bsub->logout(),1,$genomic_start);
+        $alignments{$id} = $alignment;
         
         unlink($anchorfile);
         unlink($outfile);
         unlink($genomicfile);
         unlink($queryfile);
-        
-        printf("\tParsing alignment...\n");
-        my $alignment = $self->parse_alignment($bsub->logout(),1,$genomic_start);
-        $alignments{$id} = $alignment;
+        unlink($bsub->logout());
+        unlink($bsub->logerr());
     }
     
     $self->mappings(\%alignments);
@@ -246,7 +248,7 @@ sub parse_anchors {
     # Sort the locations according to chromosome and position
     @locations = sort {$a->[4] cmp $b->[4] || $a->[5] <=> $b->[5]} @locations;
 
-    #ÊParse the anchor locations and try to find a genomic span where they occur together at the expected intervals. 
+    # Parse the anchor locations and try to find a genomic span where they occur together at the expected intervals. 
     # Allow the distance between to mapped anchors to be at most $max_anchor_spacing and require them to be on the same chromosome
     my @span;
     foreach my $location (@locations) {
@@ -257,7 +259,7 @@ sub parse_anchors {
             $span[-1]->[3] += ($location->[3] * $location->[7]);
             $span[-1]->[4]++;
         }
-        #ÊElse, start a new span
+        # Else, start a new span
         else {
             push(@span,[$location->[4],$location->[5],$location->[6],($location->[3] * $location->[7]),1]);
         }
@@ -269,7 +271,7 @@ sub parse_anchors {
         
     my $best_span;
     foreach my $s (@span) {   
-        #ÊPick the first one that fulfills the criteria
+        # Pick the first one that fulfills the criteria
         if (abs($s->[2] - $s->[1] + 1 - $query_length) < $max_length_tolerance && $s->[4] >= ($anchors - 1)) {
             $best_span = $s;
             $best_span->[3] /= abs($best_span->[3]);
@@ -293,7 +295,7 @@ sub parse_alignment {
     my ($qseq,$tseq,$target);
     my ($vulgar,$score);
     
-    #ÊOpen the output file
+    # Open the output file
     open(FH,"<",$alignfile) or die ("Could not open alignment file $alignfile for parsing");
     while (<FH>) {
         chomp;
@@ -306,23 +308,23 @@ sub parse_alignment {
             $tseq .= $seq if ($target);
             $target = !$target;
         }
-        #ÊParse the query or target coordinates
+        # Parse the query or target coordinates
         elsif (m/^\=([Q|T])MATCH\=(\S+),(\d+),(\d+),([\+\-])$/) {
             ($qid,$qstart,$qend,$qstrand) = ($2,$3,$4,($5 eq '+' ? 1 : -1)) if ($1 eq 'Q');
             ($tid,$tstart,$tend,$tstrand) = ($2,$3,$4,($5 eq '+' ? 1 : -1)) if ($1 eq 'T');
         }
-        #ÊParse the vulgar output
+        # Parse the vulgar output
         elsif (m/^\=VULGAROUT\=(.+)/) {
             $vulgar = $1;
         }        
-        #ÊGet the score
+        # Get the score
         elsif (m/^\=SCORE\=(\d+)/) {
             $score = $1;
         }        
     }
     close(FH);
     
-    #ÊParse the vulgar string and store the details of the alignment
+    # Parse the vulgar string and store the details of the alignment
     my @pairs;
     my $qaoffset = 0;
     my $taoffset = 0;
@@ -368,7 +370,7 @@ sub parse_alignment {
             ]);
             for (my $i=0; $i<min($qlen,$tlen); $i++) {
                 if (substr($qsegment,$i,1) ne substr($tsegment,$i,1)) {                    
-                    #ÊCreate a segment for the mismatch
+                    # Create a segment for the mismatch
                     push(@pairs,[
                         $type,
                         $qaoffset + $i,
@@ -407,7 +409,7 @@ sub parse_alignment {
                 
             }
         }
-        #ÊIf the query is opn the negative strand but we're supposed to use the forward, reverse complement
+        # If the query is opn the negative strand but we're supposed to use the forward, reverse complement
         unless ($allow_query_reversed || $qstrand > 0) {
             reverse_comp(\$pair->[6]);
             reverse_comp(\$pair->[7]);
@@ -439,18 +441,18 @@ sub tmpfile {
     return $tmpfile;
 }
 
-#ÊWill dump a sequence to a (possibly temporary) fasta file. 
-#ÊCan also be passed a filename in which case it will do nothing
+# Will dump a sequence to a (possibly temporary) fasta file. 
+# Can also be passed a filename in which case it will do nothing
 sub to_fasta {
     my $self = shift;
     my $seq = shift;
     my $outfile = shift;
     
-    #ÊFirst of all, if the $seq is in fact an existing file, just return the name of that file
+    # First of all, if the $seq is in fact an existing file, just return the name of that file
     my $seqs = wrap_array($seq);
     return $seq unless ((grep {is_dna($_)} @{$seqs}) || !(-e $seq && -f $seq ));
     
-    #ÊIf $outfile is undefined, generate a temporary filename
+    # If $outfile is undefined, generate a temporary filename
     $outfile = $self->tmpfile() . ".fa" unless (defined($outfile));
     
     # Open a filehandle to the outfile
@@ -471,7 +473,7 @@ sub to_fasta {
     # Close the file
     close(FA);
     
-    #ÊReturn the name of the outfile
+    # Return the name of the outfile
     return $outfile;
 }
 
@@ -483,7 +485,7 @@ sub from_fasta {
     # If the supplied file is in fact a nucleotide sequence, wrap it in the hash and return it
     return {'seq_' . length($file) => $file} if (is_dna($file));
     
-    #ÊElse, parse it as a fasta file
+    # Else, parse it as a fasta file
     return parsefasta($file);
 } 
 
