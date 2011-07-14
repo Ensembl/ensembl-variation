@@ -16,6 +16,7 @@ our $verbose;
 my $skip_synonyms;
 my $skip_phenotypes;
 my $source;
+my $source_version;
 my $help;
 
 my $UNIPROT_SOURCE_NAME = "Uniprot";
@@ -24,7 +25,7 @@ my $UNIPROT_SOURCE_URL = "http://www.uniprot.org/";
 
 my $OMIM_SOURCE_NAME = "OMIM";
 my $OMIM_SOURCE_DESCRIPTION = "Variations linked to entries in the Online Mendelian Inheritance in Man (OMIM) database";
-my $OMIM_SOURCE_URL = "http://www.ncbi.nlm.nih.gov/omim/";
+my $OMIM_SOURCE_URL = "http://www.omim.org/";
 
 my $NHGRI_SOURCE_NAME = "NHGRI_GWAS_catalog";
 my $NHGRI_SOURCE_DESCRIPTION = "Variants associated with phenotype data from the NHGRI GWAS catalog";
@@ -44,6 +45,7 @@ GetOptions(
     'pass=s' => \$pass,
     'port=s' => \$port,
     'source=s' => \$source,
+		'version=i' => \$source_version,
     'verbose!' => \$verbose,
     'skip_synonyms!' => \$skip_synonyms,
     'skip_phenotypes!' => \$skip_phenotypes,
@@ -54,6 +56,7 @@ usage() if ($help);
 
 die ("An input file is required") unless (defined($infile));
 die ("Database credentials are required") unless (defined($host) && defined($dbname) && defined($user) && defined($pass));
+die ("A source version is required") unless (defined($source_version));
 
 $port ||= 3306;
 
@@ -81,6 +84,10 @@ my $source_url;
 
 # Make sure that the input file is XML compliant
 ImportUtils::make_xml_compliant($infile);
+
+# Remove carriage return in the input file
+remove_carriage_return($infile);
+
 
 # Connect to the variation database
 print STDOUT localtime() . "\tConnecting to database $dbname\n" if ($verbose);
@@ -315,14 +322,6 @@ sub parse_dbsnp_omim {
     my $infile = shift;
     
     my @phenotypes;
-    my @attribute_keys = (
-        'ID',
-        'Phenotype_study',
-        'Phenotype_associated_variant_risk_seq',
-        'Omim_title',
-        'Allele_title',
-        'Gene_names'
-    );
     
     # Open the input file for reading
     open(IN,'<',$infile) or die ("Could not open $infile for reading");
@@ -332,32 +331,29 @@ sub parse_dbsnp_omim {
         chomp;
         
         my @attributes = split(/\t/);
-        
-        # Skip the risk allele if the variant is "0000"
-        my $data = {
-            'rsid' => 'rs' . $attributes[0],
-            'study' => 'MIM:' . $attributes[1],
-            'associated_variant_risk_allele' => ($attributes[2] !~ m/^\s*0+\s*$/ ? $attributes[2] : undef),
-            'associated_gene' => $attributes[5],
-            'variation_names' => 'rs' . $attributes[0]
-        };
-        
-        # If available, use the variant title, else use the omim record title
-        if (defined($data->{'associated_variant_risk_allele'}) and $attributes[4] ne '') {
-            $data->{'description'} = $attributes[4];
-        }
-        else {
-            $data->{'description'} = $attributes[3];
-        }
-        
-        # If possible, try to extract the last comma-separated word as this should be the short name for the phenotype
-        @attributes = split(/;/,$data->{'description'});
-        if (scalar(@attributes) > 1) {
-            ($data->{'name'}) = pop(@attributes) =~ m/(\S+)/;
-            $data->{'description'} = join(';',@attributes);
-        }
 				
-        push(@phenotypes,$data);
+				next if (!$attributes[4] or $attributes[0] =~ /^\D/);
+				
+				my ($study,$allele) = split(/\./,$attributes[0]);
+				my $rsids = $attributes[4];
+				
+				my @rs_list = split(',',$rsids);
+				
+				#  Get one line for each variation_names
+				foreach my $rs (@rs_list) {
+				
+       		# Skip the risk allele if the variant is "0000"
+       	 	my $data = {
+            	'rsid'            => $rs,
+            	'study'           => 'MIM:'.$study,
+            	'associated_gene' => $attributes[2],
+            	'variation_names' => $rsids,
+							'description'     => $attributes[1],
+							'associated_variant_risk_allele' => ($allele !~ m/^\s*0+\s*$/ ? $allele : undef),
+        	};
+				
+        	push(@phenotypes,$data);
+				}
     }
     
     close(IN);
@@ -522,20 +518,19 @@ sub get_dbIDs {
     my %mapping;
     
     foreach my $rs_id (@{$rs_ids}) {
-        $id_sth->bind_param(1,$rs_id,SQL_VARCHAR);
-        $id_sth->execute();
-        my ($var_id,$var_name);
-        $id_sth->bind_columns(\$var_id,\$var_name);
-        $id_sth->fetch();
+   			$id_sth->bind_param(1,$rs_id,SQL_VARCHAR);
+      	$id_sth->execute();
+				my ($var_id,$var_name);
+      	$id_sth->bind_columns(\$var_id,\$var_name);
+      	$id_sth->fetch();
         
-        # If we couldn't find the rs_id, look in the synonym table
-        if (!defined($var_id)) {
-            $syn_sth->bind_param(1,$rs_id,SQL_VARCHAR);
-            $syn_sth->execute();
-            $syn_sth->bind_columns(\$var_id,\$var_name);
+      	# If we couldn't find the rs_id, look in the synonym table
+      	if (!defined($var_id)) {
+      			$syn_sth->bind_param(1,$rs_id,SQL_VARCHAR);
+						$syn_sth->execute();
+						$syn_sth->bind_columns(\$var_id,\$var_name);
             $syn_sth->fetch();
         }
-        
         $mapping{$rs_id} = [$var_id,$var_name];
     }
     
@@ -582,6 +577,20 @@ sub get_or_add_source {
         
         print STDOUT "Added source for $source_name (source_id = $source_id)\n" if ($verbose);
     }
+		else {
+			$stmt = qq{
+            UPDATE
+                source 
+						SET name=?,
+								description=?,
+								url=?,
+								version=?
+            WHERE
+								source_id=?
+        };
+			my $update_source_sth =$db_adaptor->dbc->prepare($stmt);
+			$update_source_sth->execute($source_name,$source_description,$source_url,$source_version,$source_id);
+		}
 
     return $source_id;
 }
@@ -789,7 +798,7 @@ sub add_phenotypes {
     }
 		print STDOUT "$study_count new studies added\n" if ($verbose);
     print STDOUT "$phenotype_count new phenotypes added\n" if ($verbose);
-    print STDOUT "$annotation_count variations were annoteted with phenotypes\n" if ($verbose);
+    print STDOUT "$annotation_count variations were annotated with phenotypes\n" if ($verbose);
 }
 
 sub add_synonyms {
@@ -885,6 +894,25 @@ sub convert_p_value {
 }
 
 
+# Method to remove the carriage return character in each line of the input file
+sub remove_carriage_return {
+  my $infile = shift;
+  my $replacement = shift;
+  
+  $replacement ||= "";
+  
+  my @ARGV_bak = @ARGV;
+  @ARGV = ($infile);
+  $^I = ".bak2";
+  while (<>) {
+		s/\r/$replacement/g;
+    print;
+  }
+  # Restore the @ARGV variable
+  @ARGV = @ARGV_bak;
+}
+
+
 sub usage {
 	
   print qq{
@@ -918,6 +946,7 @@ sub usage {
     supported sources are 'uniprot' and 'nhgri'.
     
       -source		         String indicating the source of the data (Required)
+      -version           Numerical version of the source (Required)
   } . "\n";
   exit(0);
 }
