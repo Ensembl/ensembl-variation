@@ -33,8 +33,8 @@ create table variation (
 								 'failed','precious'),
 	ancestral_allele varchar(255) DEFAULT NULL,
 	flipped tinyint(1) unsigned NULL DEFAULT NULL,
-    class_attrib_id int(10) unsigned not null default 0,
-    somatic tinyint(1) DEFAULT 0 NOT NULL,
+	class_attrib_id int(10) unsigned not null default 0,
+	somatic tinyint(1) DEFAULT 0 NOT NULL,
 
 	primary key( variation_id ),
 	unique ( name ),
@@ -457,8 +457,8 @@ create table variation_feature(
     somatic tinyint(1) DEFAULT 0 NOT NULL,
 
    	primary key( variation_feature_id ),
-	key pos_idx( seq_region_id, seq_region_start, seq_region_end ),
-	key variation_idx( variation_id ),
+	  key pos_idx( seq_region_id, seq_region_start, seq_region_end ),
+	  key variation_idx( variation_id ),
     key variation_set_idx ( variation_set_id )
 );
 
@@ -466,45 +466,32 @@ create table variation_feature(
 /**
 @table structural_variation
 
-@desc This table stores information about structural variation features.
+@colour #01D4F7
+@desc This table stores information about structural variation.
 
 @column structural_variation_id	Primary key, internal identifier.
-@column seq_region_id						Foreign key references @link seq_region in core db. Refers to the seq_region which this variant is on, which may be a chromosome, a clone, etc...
-@column seq_region_start				The start position of the variation on the @link seq_region.
-@column seq_region_end					The end position of the variation on the @link seq_region.
-@column seq_region_strand				The orientation of the variation on the @link seq_region.
 @column variation_name					The external identifier or name of the variation. e.g. "esv9549".
 @column source_id								Foreign key references to the @link source table.
 @column study_id								Foreign key references to the @link study table.	
 @column class_attrib_id					Foreign key references to the @link attrib table. Defines the type of structural variant. 
-@column inner_start							The 5' inner bound defined for the feature on the @link seq_region.
-@column inner_end								The 3' inner bound defined for the feature on the @link seq_region.
-@column allele_string						The variant allele, where known.
 @column validation_status				Validation status of the variant.
+@column somatic                 Flags whether this structural_variation is somatic or germline.
 
 @see source
 @see study
-@see seq_region
 @see attrib
 */
 
 CREATE TABLE structural_variation (
   structural_variation_id int(10) unsigned NOT NULL AUTO_INCREMENT,
-  seq_region_id int(10) unsigned NOT NULL,
-  seq_region_start int(11) NOT NULL,
-  seq_region_end int(11) NOT NULL,
-  seq_region_strand tinyint(4) NOT NULL,
   variation_name varchar(255) DEFAULT NULL,
   source_id int(10) unsigned NOT NULL,
-  study_id int(10) DEFAULT NULL,
-	class_attrib_id int(10) unsigned not null default 0,
-  inner_start int(11) DEFAULT NULL,
-  inner_end int(11) DEFAULT NULL,
-  allele_string longtext,
+  study_id int(10) unsigned DEFAULT NULL,
+	class_attrib_id int(10) unsigned NOT NULL DEFAULT 0,
   validation_status ENUM('validated','not validated','high quality'),
+	somatic tinyint(1) DEFAULT 0 NOT NULL,
 	
   PRIMARY KEY (structural_variation_id),
-  KEY pos_idx (seq_region_id,seq_region_start,seq_region_end),
   KEY name_idx (variation_name),
 	KEY study_idx (study_id),
 	KEY attrib_idx (class_attrib_id)
@@ -514,22 +501,79 @@ CREATE TABLE structural_variation (
 /**
 @table supporting_structural_variation
 
+@colour #01D4F7
 @desc This table stores the name of the supporting evidence for the structural variants (e.g. DGVa structural variants).
 
 @column supporting_structural_variation_id	Primary key, internal identifier.
 @column name																The identifier or name of the supporting evidence.
 @column structural_variation_id							Foreign key references to the @link structural_variation table.
+@column class_attrib_id					            Foreign key references to the @link attrib table. Defines the type of supporting evidence. 
 
 @see structural_variation
+@see attrib
 */
 
 create table supporting_structural_variation (
-	supporting_structural_variation_id int(10) unsigned not null auto_increment,
-	name varchar(255) not null,
-	structural_variation_id int(10) unsigned not null,
+	supporting_structural_variation_id int(10) unsigned NOT NULL AUTO_INCREMENT,
+
+	name varchar(255) NOT NULL,
+	structural_variation_id int(10) unsigned NOT NULL,
+	class_attrib_id int(10) unsigned NOT NULL DEFAULT 0,
 	
-	primary key( supporting_structural_variation_id ),
-	key structural_variation_idx (structural_variation_id)
+	PRIMARY KEY (supporting_structural_variation_id),
+	KEY structural_variation_idx (structural_variation_id),
+	KEY attrib_idx (class_attrib_id)
+);
+
+
+/**
+@table structural_variation_feature
+
+@colour #01D4F7
+@desc This table stores information about structural variation features (i.e. mappings of structural variations to genomic locations).
+
+@column structural_variation_feature_id	 Primary key, internal identifier.
+@column seq_region_id						         Foreign key references @link seq_region in core db. Refers to the seq_region which this variant is on, which may be a chromosome, a clone, etc...
+@column outer_start				               The 5' outer bound position of the variation on the @link seq_region.
+@column seq_region_start			 	         The start position of the variation on the @link seq_region.
+@column inner_start				               The 5' inner bound position of the variation on the @link seq_region.
+@column inner_end   			               The 3' inner bound position of the variation on the @link seq_region.
+@column seq_region_end					         The end position of the variation on the @link seq_region.
+@column outer_end				                 The 3' outer bound position of the variation on the @link seq_region.
+@column seq_region_strand				         The orientation of the variation on the @link seq_region.
+@column structural_variation_id	         Foreign key references to the @link structural_variation table.
+@column variation_name					         A denormalisation taken from the structural_variation table. This is the name or identifier that is used for displaying the feature (e.g. "esv9549").
+@column source_id								         Foreign key references to the @link source table.
+@column study_id								         Foreign key references to the @link study table.	
+@column class_attrib_id					         Foreign key references to the @link attrib table. Defines the type of structural variant.
+@column allele_string						         The variant allele, where known.
+
+@see structural_variation
+@see source
+@see seq_region
+@see attrib
+*/
+
+create table structural_variation_feature (
+	structural_variation_feature_id int(10) unsigned NOT NULL AUTO_INCREMENT,
+	seq_region_id int(10) unsigned NOT NULL,
+	outer_start int,	
+	seq_region_start int,
+	inner_start int,
+	inner_end int,
+	seq_region_end int,
+	outer_end int,
+	seq_region_strand tinyint NOT NULL,
+	structural_variation_id int(10) unsigned NOT NULL,
+  variation_name varchar(255),
+	source_id int(10) unsigned NOT NULL, 
+  class_attrib_id int(10) unsigned NOT NULL DEFAULT 0,
+	allele_string longtext DEFAULT NULL,
+	
+  PRIMARY KEY (structural_variation_feature_id),
+	KEY pos_idx (seq_region_id),
+	KEY structural_variation_idx (structural_variation_id),
+	KEY attrib_idx (class_attrib_id)
 );
 
 
