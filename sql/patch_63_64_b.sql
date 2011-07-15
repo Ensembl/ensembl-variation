@@ -4,10 +4,10 @@ create table structural_variation_feature (
 	structural_variation_feature_id int(10) unsigned NOT NULL AUTO_INCREMENT,
 	seq_region_id int(10) unsigned NOT NULL,
 	outer_start int,	
-	seq_region_start int,
+	seq_region_start int NOT NULL,
 	inner_start int,
 	inner_end int,
-	seq_region_end int,
+	seq_region_end int NOT NULL,
 	outer_end int,
 	seq_region_strand tinyint NOT NULL,
 	structural_variation_id int(10) unsigned NOT NULL,
@@ -17,7 +17,7 @@ create table structural_variation_feature (
 	allele_string longtext DEFAULT NULL,
 	
   PRIMARY KEY (structural_variation_feature_id),
-	KEY pos_idx (seq_region_id),
+	KEY pos_idx( seq_region_id, seq_region_start, seq_region_end ),
 	KEY structural_variation_idx (structural_variation_id),
 	KEY attrib_idx (class_attrib_id)
 );
