@@ -236,4 +236,51 @@ sub fetch_all_by_dbID_list {
   return \@out;
 }
 
+
+sub _get_individual_population_hash {
+	my $self = shift;
+	my $id_list_ref = shift;
+
+	if(!defined($id_list_ref) || ref($id_list_ref) ne 'ARRAY') {
+		throw("id_list list reference argument is required");
+	}
+	
+	return [] if (!@$id_list_ref);
+	
+	my %ip_hash;
+	my $max_size = 200;
+	my @id_list = @$id_list_ref;
+	
+	while(@id_list) {
+		my @ids;
+		if(@id_list > $max_size) {
+			@ids = splice(@id_list, 0, $max_size);
+		} else {
+			@ids = splice(@id_list, 0);
+		}
+		
+		my $id_str;
+		if(@ids > 1)  {
+			$id_str = " IN (" . join(',', @ids). ")";
+		} else {
+			$id_str = " = ".$ids[0];
+		}
+		
+		my $sth = $self->prepare(qq/
+			SELECT individual_sample_id, population_sample_id
+			FROM individual_population
+			WHERE individual_sample_id $id_str
+		/);
+		
+		$sth->execute();
+		
+		my ($ind, $pop);
+		$sth->bind_columns(\$ind, \$pop);
+		$ip_hash{$pop}{$ind} = 1 while $sth->fetch;
+		$sth->finish();
+	}
+	
+	return \%ip_hash;
+}
+
 1;
