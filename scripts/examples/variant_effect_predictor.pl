@@ -331,12 +331,17 @@ sub print_consequences {
                 
                 $line->{Feature_type}   = 'MotifFeature';
                 $line->{Feature}        = $mf->binding_matrix->name;
-                
-                $line->{Extra}->{MATRIX}        = $mf->binding_matrix->description.' '.$mf->display_label,
-                $line->{Extra}->{MATRIX}        =~ s/\s+/\_/g;
-                $line->{Extra}->{HIGH_INF_POS}  = ($mfv->in_informative_position ? 'Y' : 'N');
-                
+               
                 for my $mfva (@{ $mfv->get_all_alternate_MotifFeatureVariationAlleles }) {
+                   
+                    $line->{Extra}->{MATRIX} = $mf->binding_matrix->description.'_'.$mf->display_label,
+                    $line->{Extra}->{MATRIX} =~ s/\s+/\_/g;
+
+                    my $high_inf_pos = $mfva->in_informative_position;
+
+                    if (defined $high_inf_pos) {
+                        $line->{Extra}->{HIGH_INF_POS}  = ($high_inf_pos ? 'Y' : 'N');
+                    }
                     
                     $line->{Allele}         = $mfva->variation_feature_seq;
                     $line->{Consequence}    = join ',', 
