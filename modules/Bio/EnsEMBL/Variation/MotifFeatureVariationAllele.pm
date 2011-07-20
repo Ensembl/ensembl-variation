@@ -51,6 +51,29 @@ sub motif_feature {
     return $self->motif_feature_variation->motif_feature;
 }
 
+sub in_informative_position {
+    my $self = shift;
+
+    my $mf = $self->motif_feature;
+    my $vf = $self->variation_feature;
+
+    # we can only call this for true SNPs
+
+    unless (($vf->start == $vf->end) && ($self->variation_feature_seq ne '-')) {
+        return undef;
+    }
+    
+    # get the (1-based) relative start of the vf with respect to this mf
+    
+    my $mf_start = $vf->seq_region_start - $mf->seq_region_start + 1;
+
+    # check that we're in bounds
+
+    return undef if ( ($mf_start < 1) || ($mf_start > $mf->length) );
+        
+    return $mf->is_position_informative($mf_start);
+}
+
 sub binding_affinity_change {
     my $self    = shift;
     my $linear  = shift;
