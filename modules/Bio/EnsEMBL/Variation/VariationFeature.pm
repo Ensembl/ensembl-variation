@@ -1325,6 +1325,9 @@ sub get_all_hgvs_notations {
       $tr_vf = $self;
     }
     
+    # Return undef if this VariationFeature could not be transferred
+    return {} if (!defined($tr_vf));
+    
     # Split the allele_string into distinct alleles
     my @alleles = split(/\//,$tr_vf->allele_string());
     
@@ -1332,9 +1335,6 @@ sub get_all_hgvs_notations {
     if (defined($use_allele)) {
       @alleles = grep(/^$use_allele$/,@alleles);
     }
-    
-    # Return undef if this VariationFeature could not be transferred
-    return {} if (!defined($tr_vf));
     
     #ÊReturn undef if this VariationFeature does not fall within the supplied feature.
     return {} if ($tr_vf->start < 1 || $tr_vf->end < 1 || $tr_vf->start > ($ref_feature->end - $ref_feature->start + 1) || $tr_vf->end > ($ref_feature->end - $ref_feature->start + 1));
