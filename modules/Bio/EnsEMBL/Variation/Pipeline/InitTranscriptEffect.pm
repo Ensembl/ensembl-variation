@@ -89,15 +89,11 @@ sub fetch_input {
             }]
         );
 
-        # we need to kick off the update_vf and set_var_class analyses as well, 
-        # but they don't have any parameters we need to set here
+        # we need to kick off the update_vf analysis as well, 
+        # but it doesn't have any parameters we need to set here
 
         $self->param(
             'update_vf', [{}]
-        );
-
-        $self->param(
-            'set_var_class', [{}]
         );
     }
 }
@@ -106,10 +102,12 @@ sub write_output {
     my $self = shift;
     
     if (my $transcript_output_ids = $self->param('transcript_output_ids')) {
-        $self->dataflow_output_id($self->param('rebuild_indexes'), 1);
-        $self->dataflow_output_id($self->param('update_vf'), 2);
-        $self->dataflow_output_id($transcript_output_ids, 3);
+        $self->dataflow_output_id($self->param('rebuild_indexes'), 2);
+        $self->dataflow_output_id($self->param('update_vf'), 3);
+        $self->dataflow_output_id($transcript_output_ids, 4);
     }
+
+    return;
 }
 
 1;

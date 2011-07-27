@@ -70,6 +70,7 @@ use Bio::EnsEMBL::Variation::TranscriptVariationAllele;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(MAX_DISTANCE_FROM_TRANSCRIPT);
 use Bio::EnsEMBL::Variation::Utils::Constants qw(%OVERLAP_CONSEQUENCES);
+use Bio::EnsEMBL::Variation::Utils::ProteinFunctionUtils qw(expand_prediction_string);
 
 use base qw(Bio::EnsEMBL::Variation::DBSQL::VariationFeatureOverlapAdaptor);
 
@@ -105,8 +106,10 @@ sub store {
             hgvs_coding,
             hgvs_protein,
             polyphen_prediction,
-            sift_prediction
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            polyphen_score,
+            sift_prediction,
+            sift_score
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     });
 
     for my $allele (@{ $tv->get_all_alternate_TranscriptVariationAlleles }) {
@@ -129,9 +132,23 @@ sub store {
             $allele->hgvs_coding,
             $allele->hgvs_protein,
             $allele->polyphen_prediction,
-            $allele->sift_prediction
+            $allele->polyphen_score,
+            $allele->sift_prediction,
+            $allele->sift_score
         );
     }
+}
+
+sub fetch_all_by_Transcripts_SO_term {
+    my ($self, $transcripts, $term) = @_;
+    my $constraint = $self->_get_consequences_constraint($term);
+    return $self->fetch_all_by_Transcripts_with_constraint($transcripts, $constraint.' AND somatic = 0');
+}
+
+sub fetch_all_somatic_by_Transcripts_SO_term {
+    my ($self, $transcripts, $term) = @_;
+    my $constraint = $self->_get_consequences_constraint($term);
+    return $self->fetch_all_by_Transcripts_with_constraint($transcripts, $constraint.' AND somatic = 1');
 }
 
 =head2 fetch_all_by_Transcripts
@@ -178,31 +195,7 @@ sub fetch_all_somatic_by_Transcripts {
 sub fetch_all_by_Transcripts_with_constraint {
     my ($self, $transcripts, $constraint) = @_;
     
-    my $tvs = $self->SUPER::fetch_all_by_Features_with_constraint($transcripts, $constraint);
-    
-#    # we need to create some TVs for any LRG transcripts we're passed as 
-#    # these aren't stored in the database
-#
-#    for my $tran (@$transcripts) {
-#
-#        if ($tran->stable_id =~ /LRG\_\d+/) {
-#            
-#            my $slice = $tran->feature_Slice->expand(
-#                MAX_DISTANCE_FROM_TRANSCRIPT,
-#                MAX_DISTANCE_FROM_TRANSCRIPT
-#            );
-#           
-#            for my $vf (@{ $slice->get_all_VariationFeatures }) {
-#                push @$tvs, Bio::EnsEMBL::Variation::TranscriptVariation->new(
-#                   -variation_feature   => $vf,
-#                   -transcript          => $tran,
-#                   -adaptor             => $self,
-#                );
-#            }
-#        }
-#    }
-
-    return $tvs;
+    return $self->SUPER::fetch_all_by_Features_with_constraint($transcripts, $constraint);
 }
 
 sub _objs_from_sth {
@@ -228,7 +221,9 @@ sub _objs_from_sth {
         $hgvs_coding,
         $hgvs_protein,
         $polyphen_prediction,
+        $polyphen_score,
         $sift_prediction,
+        $sift_score,
     );
     
     $sth->bind_columns(
@@ -249,7 +244,9 @@ sub _objs_from_sth {
         \$hgvs_coding,
         \$hgvs_protein,
         \$polyphen_prediction,
+        \$polyphen_score,
         \$sift_prediction,
+        \$sift_score,
     );
     
     my %tvs;
@@ -320,7 +317,9 @@ sub _objs_from_sth {
             hgvs_protein                => $hgvs_protein,
             overlap_consequences        => $overlap_consequences, 
             polyphen_prediction         => $polyphen_prediction,
+            polyphen_score              => $polyphen_score,
             sift_prediction             => $sift_prediction, 
+            sift_score                  => $sift_score, 
             dbID                        => $transcript_variation_id,
         });
         
@@ -355,47 +354,39 @@ sub _columns {
         hgvs_coding 
         hgvs_protein 
         polyphen_prediction 
+        polyphen_score 
         sift_prediction
+        sift_score
     );
 }
 
-sub _get_nsSNP_prediction {
-    my ($self, $program, $tva) = @_;
+sub _get_prediction_string {
+    my ($self, $analysis, $transcript_stable_id) = @_;
     
-    # look in the sift or polyphen prediction table to see if there is 
-    # a prediction for the given non-synonymous TranscriptVariationAllele
+    # look in the protein function prediction table to see if there is 
+    # a prediction string for this transcript
     
-    return undef unless ($program eq 'polyphen' || $program eq 'sift');
+    return undef unless ($analysis eq 'polyphen' || $analysis eq 'sift');
     
     # we can only deal with single amino acid substitutions
     
-    return undef unless ($tva->peptide && length($tva->peptide) == 1);
-    
     my $dbh = $self->dbc->db_handle;
     
-    my $score_col = $program eq 'polyphen' ? 'probability' : 'score';
+    my $col = $analysis.'_predictions';
 
     my $sth = $dbh->prepare_cached(qq{
-        SELECT  pred.prediction, pred.${score_col}
-        FROM    ${program}_prediction pred, protein_position pp, protein_info pi
-        WHERE   pred.protein_position_id = pp.protein_position_id
-        AND     pp.protein_info_id = pi.protein_info_id
-        AND     pi.transcript_stable_id = ?
-        AND     pp.position = ?
-        AND     pred.amino_acid = ?
+        SELECT  $col
+        FROM    protein_function_predictions
+        WHERE   transcript_stable_id = ?
    });
     
-    $sth->execute(
-        $tva->transcript->stable_id,
-        $tva->transcript_variation->translation_start,
-        $tva->peptide,
-    );
+    $sth->execute($transcript_stable_id);
     
-    my ($prediction, $score) = $sth->fetchrow_array;
+    my ($pred_str) = $sth->fetchrow_array;
    
     $sth->finish;
 
-    return wantarray ? ($prediction, $score) : $prediction;
+    return $pred_str ? expand_prediction_string($pred_str) : undef;
 }
 
 1;

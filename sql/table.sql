@@ -740,13 +740,15 @@ create table variation_group_feature(
 @column cdna_end					The end position of variation in cdna coordinates.
 @column translation_start			The start position of variation on peptide.
 @column translation_end				The end position of variation on peptide.
-@column codon_allele_string                The reference and variant codons
-@column pep_allele_string                  The reference and variant peptides
-@column hgvs_genomic                       HGVS representation of this allele with respect to the genomic sequence
-@column hgvs_coding                        HGVS representation of this allele with respect to the CDS
-@column hgvs_protein                       HGVS representation of this allele with respect to the protein
-@column polyphen_prediction                The PolyPhen prediction for the effect of this allele on the protein
-@column sift_prediction                    The SIFT prediction for the effect of this allele on the protein 
+@column codon_allele_string         The reference and variant codons
+@column pep_allele_string           The reference and variant peptides
+@column hgvs_genomic                HGVS representation of this allele with respect to the genomic sequence
+@column hgvs_coding                 HGVS representation of this allele with respect to the CDS
+@column hgvs_protein                HGVS representation of this allele with respect to the protein
+@column polyphen_prediction         The PolyPhen prediction for the effect of this allele on the protein
+@column polyphen_score              The PolyPhen score corresponding to the prediction 
+@column sift_prediction             The SIFT prediction for the effect of this allele on the protein 
+@column sift_score                  The SIFT score corresponsing to this prediction
 
 @see variation_feature
 */
@@ -797,7 +799,9 @@ CREATE TABLE transcript_variation (
     hgvs_coding                         text,
     hgvs_protein                        text,
     polyphen_prediction                 enum('unknown', 'benign', 'possibly damaging', 'probably damaging') DEFAULT NULL,
+    polyphen_score                      float DEFAULT NULL,
     sift_prediction                     enum('tolerated', 'deleterious') DEFAULT NULL,
+    sift_score                          float DEFAULT NULL,
 
     PRIMARY KEY                         (transcript_variation_id),
     KEY variation_feature_idx           (variation_feature_id),
@@ -1436,114 +1440,29 @@ CREATE TABLE attrib_set (
 );
 
 /**
-@table  protein_info
+@table  protein_function_predictions
 
 @colour #1E90FF
-@desc   Contains information about each translation in the ensembl proteome, used by the nsSNP prediction tables
+@desc   Contains encoded sift and polyphen predictions for every protein-coding transcript in this species
 
-@column protein_info_id     Primary key
+@column translation_stable_id   The stable ID of the translation
 @column transcript_stable_id    The stable ID of the transcript from which this protein is translated
-@column transcript_version      The version of the transcript
 @column translation_md5         A hexidecimal string representing the MD5 hash of the protein sequence
-
-@see    protein_position
-@see    sift_prediction
-@see    polyphen_prediction
-*/
-CREATE TABLE protein_info (
-    protein_info_id         int(10) unsigned NOT NULL AUTO_INCREMENT,
-    transcript_stable_id    varchar(128) NOT NULL,
-    transcript_version      smallint unsigned NOT NULL,
-    translation_md5         char(32) NOT NULL,
-
-    PRIMARY KEY         (protein_info_id),
-    KEY transcript_idx  (transcript_stable_id, transcript_version)
-);
-
-/**
-@table  protein_position
-
-@colour #1E90FF
-@desc   Table with a row for each position in every ensembl translation, used by the nsSNP prediction tables
-
-@column protein_position_id             Primary key
-@column protein_info_id                 Foreign key into the @link protein_info table, identifying the relevant protein
-@column position                        The coordinate in the protein sequence
-@column amino_acid                      The amino acid at this position
-@column sift_median_conservation        The median conservation at this position, as calculated by SIFT
-@column sift_num_sequences_represented  The number of sequences that SIFT found at this position in its multiple alignment
-
-@see    protein_info
-@see    sift_prediction
-@see    polyphen_prediction
-*/
-CREATE TABLE protein_position (
-    protein_position_id             int(10) unsigned NOT NULL AUTO_INCREMENT,
-    protein_info_id                 int(10) unsigned NOT NULL,
-    position                        mediumint unsigned NOT NULL,
-    amino_acid                      char(1) NOT NULL,
-    sift_median_conservation        float,
-    sift_num_sequences_represented  smallint,
-
-    PRIMARY KEY (protein_position_id),
-    KEY pos_idx (protein_info_id, position)
-);
-
-/**
-@table  polyphen_prediction
-
-@colour #1E90FF
-@desc   Stores the PolyPhen 2 prediction for every possible amino acid substitution in the ensembl proteome
-
-@column polyphen_prediction_id  Primary key
-@column protein_position_id     Foreign key into the @link protein_position table identifying the protein and position that this prediction applies to
-@column amino_acid              The substituted amino acid
-@column prediction              The qualitative PolyPhen prediction for this substitution
-@column probability             The PolyPhen probability that this substitution is damaging
-@column compressed_result_hash  A compressed string representation of a Perl hash with further results from PolyPhen (not released)
-
-@see    protein_info
-@see    protein_position
-@see    sift_prediction
+@column polyphen_predictions    A compressed binary string containing the PolyPhen-2 predictions for all
+                                possible amino acid substitutions in this translation
+@column sift_predictions        A similarly encoded string for SIFT predictions
 */
 
-CREATE TABLE polyphen_prediction (
-    polyphen_prediction_id  int(10) unsigned NOT NULL AUTO_INCREMENT,
-    protein_position_id     int(10) unsigned NOT NULL,
-    amino_acid              char(1) NOT NULL,
-    prediction              enum('unknown', 'benign', 'possibly damaging', 'probably damaging') NOT NULL,
-    probability             float NOT NULL,
-    compressed_result_hash  blob,
+CREATE TABLE protein_function_predictions (
+
+    translation_stable_id   VARCHAR(128) NOT NULL,
+    transcript_stable_id    VARCHAR(128) NOT NULL,
+    translation_md5         CHAR(32) NOT NULL,
+    polyphen_predictions    MEDIUMBLOB,
+    sift_predictions        MEDIUMBLOB,
     
-    PRIMARY KEY     (polyphen_prediction_id),
-    KEY pos_aa_idx  (protein_position_id, amino_acid)
-);
-
-/**
-@table  sift_prediction
-
-@colour #1E90FF
-@desc   Stores the SIFT prediction for every possible amino acid substitution in the ensembl proteome
-
-@column sift_prediction_id  Primary key
-@column protein_position_id Foreign key into the @link protein_position table identifying the protein and position that this prediction applies to
-@column amino_acid          The substituted amino acid
-@column prediction          The qualitative SIFT prediction for this substitution
-@column score               The SIFT score for this substitution
-
-@see    protein_info
-@see    protein_position
-@see    polyphen_prediction
-*/
-CREATE table sift_prediction (
-    sift_prediction_id      int(10) unsigned NOT NULL AUTO_INCREMENT,
-    protein_position_id     int(10) NOT NULL,
-    amino_acid              char(1) NOT NULL,
-    prediction              enum('tolerated', 'deleterious') NOT NULL,
-    score                   float NOT NULL,
-
-    PRIMARY KEY     (sift_prediction_id),
-    KEY pos_aa_idx  (protein_position_id, amino_acid)
+    PRIMARY KEY (translation_stable_id),
+    KEY transcript_idx (transcript_stable_id)
 );
 
 #possible values in the failed_description table

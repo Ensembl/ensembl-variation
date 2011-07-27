@@ -713,6 +713,25 @@ sub _codon_table {
     return $codon_table;
 }
 
+sub _protein_function_predictions {
+    
+    my ($self, $analysis) = @_;
+
+    my $tran = $self->transcript;
+
+    my $prediction_string = $tran->{_variation_effect_feature_cache}->{protein_function_predictions}->{$analysis};
+
+    unless ($prediction_string) {
+        
+        $prediction_string = $self->{adaptor}->_get_prediction_string($analysis, $tran->stable_id);
+        
+        $tran->{_variation_effect_feature_cache}->{protein_function_predictions}->{$analysis} 
+            = $prediction_string;
+    }
+
+    return $prediction_string; 
+}
+
 =head2 hgvs_genomic
 
   Description: Return the strings representing the genomic-level effect of each of the alleles 
