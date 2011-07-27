@@ -62,6 +62,7 @@ use strict;
 use warnings;
 
 use Bio::EnsEMBL::Variation::Utils::Condel qw(get_condel_prediction);
+use Bio::EnsEMBL::Variation::Utils::ProteinFunctionUtils qw(prediction_from_string $AA_LOOKUP);
 
 use base qw(Bio::EnsEMBL::Variation::VariationFeatureOverlapAllele);
 
@@ -370,8 +371,11 @@ sub polyphen_prediction {
     
     $self->{polyphen_prediction} = $polyphen_prediction if $polyphen_prediction;
     
-    $self->{polyphen_prediction} = $self->_nsSNP_prediction('polyphen')
-        unless $self->{polyphen_prediction};
+    unless ($self->{polyphen_prediction}) {
+        my ($prediction, $score) = $self->_protein_function_prediction('polyphen');
+        $self->{polyphen_score} = $score;
+        $self->{polyphen_prediction} = $prediction;
+    }
     
     return $self->{polyphen_prediction};
 }
@@ -394,9 +398,9 @@ sub polyphen_score {
     $self->{polyphen_score} = $polyphen_score if defined $polyphen_score;
 
     unless ($self->{polyphen_score}) {
-        my ($prediction, $score) = $self->_nsSNP_prediction('polyphen');
+        my ($prediction, $score) = $self->_protein_function_prediction('polyphen');
         $self->{polyphen_score} = $score;
-        $self->{polyphen_prediction} = $prediction unless $self->{polyphen_prediction};
+        $self->{polyphen_prediction} = $prediction;
     }
 
     return $self->{polyphen_score};
@@ -419,8 +423,11 @@ sub sift_prediction {
     
     $self->{sift_prediction} = $sift_prediction if $sift_prediction;
     
-    $self->{sift_prediction} = $self->_nsSNP_prediction('sift')
-        unless $self->{sift_prediction};
+    unless ($self->{sift_prediction}) {
+        my ($prediction, $score) = $self->_protein_function_prediction('sift');
+        $self->{sift_score} = $score;
+        $self->{sift_prediction} = $prediction unless $self->{sift_prediction};
+    }
     
     return $self->{sift_prediction};
 }
@@ -442,9 +449,9 @@ sub sift_score {
     $self->{sift_score} = $sift_score if defined $sift_score;
 
     unless ($self->{sift_score}) {
-        my ($prediction, $score) = $self->_nsSNP_prediction('sift');
+        my ($prediction, $score) = $self->_protein_function_prediction('sift');
         $self->{sift_score} = $score;
-        $self->{sift_prediction} = $prediction unless $self->{sift_prediction};
+        $self->{sift_prediction} = $prediction;
     }
 
     return $self->{sift_score};
@@ -509,15 +516,23 @@ sub condel_score {
     return $self->{condel_score};
 }
 
-sub _nsSNP_prediction {
-    my ($self, $program) = @_;
+sub _protein_function_prediction {
+    my ($self, $analysis) = @_;
 
     # we can only get results for variants that cause a single amino acid substitution, 
     # so check the peptide allele string first
 
-    if ($self->pep_allele_string && $self->pep_allele_string =~ /^[A-Z]\/[A-Z]$/) {
-        if (my $adap = $self->transcript_variation->{adaptor}) {
-            my ($prediction, $score) = $adap->_get_nsSNP_prediction($program, $self);
+    if ($self->pep_allele_string && $self->pep_allele_string =~ /^[A-Z]\/[A-Z]$/ && defined $AA_LOOKUP->{$self->peptide}) {
+        
+        if (my $pred_str = $self->transcript_variation->_protein_function_predictions($analysis)) {
+            
+            my ($prediction, $score) = prediction_from_string(
+                $analysis,
+                $pred_str,
+                $self->transcript_variation->translation_start,
+                $self->peptide,
+            );
+
             return wantarray ? ($prediction, $score) : $prediction;
         }
     }

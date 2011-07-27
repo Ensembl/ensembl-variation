@@ -99,7 +99,7 @@ sub default_options {
         # these flags control which parts of the pipeline are run
 
         run_transcript_effect   => 1,
-        run_variation_class     => 1,
+        run_variation_class     => 0,
 
         # connection parameters for the hive database, you should supply the hive_db_pass
         # option on the command line to init_pipeline.pl (parameters for the target database
@@ -159,15 +159,15 @@ sub pipeline_analyses {
             {   -logic_name => 'init_transcript_effect',
                 -module     => 'Bio::EnsEMBL::Variation::Pipeline::InitTranscriptEffect',
                 -parameters => {
-                    include_lrg                 => $self->o('include_lrg'),
+                    include_lrg => $self->o('include_lrg'),
                     @common_params,
                 },
                 -input_ids  => [{}],
                 -rc_id      => 1,
                 -flow_into  => {
-                    1 => [ 'rebuild_tv_indexes' ],
-                    2 => [ 'update_variation_feature' ],
-                    3 => [ 'transcript_effect' ],
+                    2 => [ 'rebuild_tv_indexes' ],
+                    3 => [ 'update_variation_feature' ],
+                    4 => [ 'transcript_effect' ],
                 },
             },
 
