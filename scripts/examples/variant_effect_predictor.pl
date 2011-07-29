@@ -280,8 +280,9 @@ sub print_consequences {
     
     my ($vf_count, $vf_counter);
     $vf_count = scalar @$vfs;
+    my $new_vf;
     
-    foreach my $new_vf(@$vfs) {
+    while($new_vf = shift @$vfs) {
         
         &progress($config, $vf_counter++, $vf_count) unless $vf_count == 1;
         
@@ -955,6 +956,7 @@ sub get_adaptors {
     $config->{sa}  = $config->{reg}->get_adaptor($config->{species}, 'core', 'slice');
     $config->{ga}  = $config->{reg}->get_adaptor($config->{species}, 'core', 'gene');
     $config->{ta}  = $config->{reg}->get_adaptor($config->{species}, 'core', 'transcript');
+    $config->{tra}  = $config->{reg}->get_adaptor($config->{species}, 'core', 'translation');
     $config->{mca} = $config->{reg}->get_adaptor($config->{species}, 'core', 'metacontainer');
     $config->{csa} = $config->{reg}->get_adaptor($config->{species}, 'core', 'coordsystem');
     
@@ -1310,7 +1312,7 @@ sub whole_genome_fetch {
                     # try and load cache from disk if using cache
                     my $tmp_cache;
                     if(defined($config->{cache})) {
-                        $tmp_cache = &load_dumped_transcript_cache($config, $chr, $region);
+                        $tmp_cache = &load_dumped_transcript_cache($config, $chr, $region);                       
                         $count_from_cache += scalar @{$tmp_cache->{$chr}} if defined($tmp_cache->{$chr});
                     }
                     
@@ -1868,6 +1870,9 @@ sub clean_transcript {
     }
     
     $tr->{analysis} = {};
+    
+    # sometimes the translation's transcript points to another ref
+    $tr->{translation}->{transcript} = $tr if defined $tr->{translation};
 }
 
 # build slice cache from transcript cache
@@ -1981,6 +1986,16 @@ sub load_dumped_transcript_cache {
     open my $fh, $config->{compress}." ".$dump_file." |" or return undef;
     my $transcript_cache = fd_retrieve($fh);
     close $fh;
+    
+    # reattach adaptors
+    foreach my $t(@{$transcript_cache->{$chr}}) {
+        if(defined($t->{translation})) {
+            $t->{translation}->{adaptor} = $config->{tra} if defined $t->{translation}->{adaptor};
+            $t->{translation}->{transcript} = $t;
+        }
+        
+        $t->{slice}->{adaptor} = $config->{sa};
+    }
     
     return $transcript_cache;
 }
