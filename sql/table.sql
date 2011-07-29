@@ -982,7 +982,7 @@ create table source(
 	version int,
 	description varchar(255),
 	url varchar(255),
-	type ENUM('chip') DEFAULT NULL,
+	type ENUM('chip','lsdb') DEFAULT NULL,
     somatic_status ENUM ('germline','somatic','mixed') DEFAULT 'germline',
 	
 	primary key( source_id )
