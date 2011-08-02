@@ -313,7 +313,7 @@ sub get_all_SupportingStructuralVariants {
 
   Example     : $svf->get_nearest_Gene($flanking_size);
   Description : Getter a Gene which is associated to or nearest to the StructuralVariation
-  Returntype  : a reference to a list of objects of Bio::EnsEMBL::Gene
+  Returntype  : Listref of objects of Bio::EnsEMBL::Gene
   Exceptions  : None
   Caller      : general
   Status      : At Risk
@@ -707,7 +707,7 @@ sub external_reference{
   Example    : $sv = $obj->is_supporting_structural_variation()
   Description: Getter of the structural variation object for which this structural variant 
 	             is a supporting evidence. 
-  Returntype : A different Bio::EnsEMBL::Variation::StructuralVariation
+  Returntype : Bio::EnsEMBL::Variation::StructuralVariation
   Exceptions : none
   Caller     : general
   Status     : At Risk
@@ -724,4 +724,28 @@ sub is_supporting_structural_variation{
 	}
 	else { return undef; }
 }
+
+=head2 summary_as_hash
+
+  Example       : $gene_summary = $gene->summary_as_hash();
+  Description   : Retrieves a textual summary of this Gene object.
+  Returns       : hashref of descriptive strings
+
+=cut
+
+sub summary_as_hash {
+    my $self = shift;
+    my %summary;
+    $summary{'display_id'} = $self->display_id;
+    $summary{'study_description'} = $self->study_description;
+    $summary{'strand'} = $self->strand;
+	$summary{'start'} = $self->start;
+	$summary{'end'} = $self->end;
+	$summary{'class'} = $self->class;
+	$summary{'variation_name'} = $self->variation_name;
+    return \%summary;
+
+}
+
+
 1;
