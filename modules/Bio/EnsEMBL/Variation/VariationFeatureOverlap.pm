@@ -521,11 +521,13 @@ sub consequence_type {
 
         for my $allele (@{ $self->get_all_alternate_VariationFeatureOverlapAlleles }) {
             for my $cons (@{ $allele->get_all_OverlapConsequences }) {
-                $cons_types{$cons->$method_name}++
+                $cons_types{$cons->$method_name} = $cons->rank;
             }
         }
-        
-        $self->{_consequence_type} = [ keys %cons_types ];
+
+        # sort the consequence types by rank such that the more severe terms are earlier in the list
+
+        $self->{_consequence_type} = [ sort { $cons_types{$a} <=> $cons_types{$b} } keys %cons_types ];
     }
     
     return $self->{_consequence_type};
