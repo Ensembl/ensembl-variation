@@ -1796,4 +1796,23 @@ sub length {
   my $self = shift;
   return $self->{'end'} - $self->{'start'} + 1;
 }
+
+=head2 summary_as_hash
+
+  Example       : $variation_feature_summary = $feature->summary_as_hash();
+  Description   : Retrieves a textual summary of this VariationFeature object.
+	                      
+  Returns       : hashref of descriptive strings
+=cut
+
+sub summary_as_hash {
+  my $self = shift;
+  my %summary;
+  $summary{'display_id'} = $self->display_id;
+  $summary{'start'} = $self->start;
+  $summary{'end'} = $self->end;
+  return \%summary;
+}   
+
+
 1;
