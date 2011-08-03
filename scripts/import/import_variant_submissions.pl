@@ -36,16 +36,16 @@ die ("The source name of the submission is required") unless (defined($source));
 die ("A submission report file is required") unless (defined($submission_report));
 die ("A registry configuration file is required") unless (defined($registry_file));
 
-#ÊLoad the registry and get a variation feature adaptor
+# Load the registry and get a variation feature adaptor
 Bio::EnsEMBL::Registry->load_all($registry_file);
 my $vf_adaptor = Bio::EnsEMBL::Registry->get_adaptor($species,'Variation','VariationFeature');
-#ÊGet a db_handle to the variation database
+# Get a db_handle to the variation database
 my $dbh = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'Variation')->dbc->db_handle();
 
-#ÊCheck that the source exists in the source table, otherwise add it
+# Check that the source exists in the source table, otherwise add it
 import_source($source,$dbh);
 
-#ÊOpen the submission report for parsing
+# Open the submission report for parsing
 open(FH,'<',$submission_report) or die ("Could not open $submission_report for reading");
 while (<FH>) {
     chomp;
@@ -56,7 +56,7 @@ while (<FH>) {
     # Set the ssID to be undefined if it's just an empty string
     $ssid = undef unless (defined($ssid) && length($ssid));
     
-    #ÊIf the rsId is not all digits (after stripping an initial rs), warn and skip to the next record
+    # If the rsId is not all digits (after stripping an initial rs), warn and skip to the next record
     $rsid =~ s/^rs//;
     warn ("Can not import variant with rsId '$rsid', skipping row beginning with '" . substr($_,0,35) . "...'") unless ($rsid =~ m/^\d+$/);
     
@@ -69,7 +69,7 @@ while (<FH>) {
         next;
     }
     
-    #ÊSet the name, source and synonym of the variation
+    # Set the name, source and synonym of the variation
     $vf->variation->source($source);
     
     # In case an rsId was supplied, use that
@@ -98,52 +98,38 @@ while (<FH>) {
     $vf->add_validation_state('precious');
     $vf->variation->add_validation_state('precious');
     
-    #ÊTransform the variation feature to the chromosome coordinate system
+    # Transform the variation feature to the chromosome coordinate system
     my $chr_vf = $vf->transform('chromosome');
     
     # Warn if the transform was unsuccessful but store the variation feature using LRG coordinates
     warn ("Could not transform $hgvs to the chromosome coordinate system") unless (defined($chr_vf));
     $chr_vf ||= $vf;
     
-    #ÊIf the variation feature is on the opposite strand on the chromsome, flip everything around to be on the positive strand
-    if ($chr_vf->strand() < 0) {
-        
-        # Flip the allele string
-        my @alleles = split(/\//,$chr_vf->allele_string());
-        map {reverse_comp(\$_)} @alleles;
-        $chr_vf->allele_string(join("/",@alleles));
-        
-        # Flip the alleles
-        foreach my $allele (@{$chr_vf->variation()->get_all_Alleles()}) {
-            my $seq = $allele->allele();
-            reverse_comp(\$seq);
-            $allele->allele($seq);
-        }
-        
-        # Change the strand
-        $chr_vf->strand(1);
-    }
-    
-    #ÊCheck if there already exists a variation feature in the same location, in which case we should only add synonyms to this one
+    # Check if there already exists a variation feature in the same location, in which case we should only add synonyms to this one
     my $slice = $chr_vf->feature_Slice();
     my $existing_vfs = $vf_adaptor->fetch_all_by_Slice($slice);
     
-    #ÊIf we already have a variation here and it has the same rsID as the one we are importing, add synonyms to the submitter and add the alleles if necessary 
+    # If we already have a variation here and it has the same rsID as the one we are importing, add synonyms to the submitter and add the alleles if necessary 
     if (scalar(@{$existing_vfs}) && grep {$_->variation_name() eq $chr_vf->variation->name()} @{$existing_vfs}) {
         
         my ($ext_vf) = grep {$_->variation_name() eq $chr_vf->variation->name()} @{$existing_vfs};
         
-        #ÊSet the variation_id of our vf to match the one in the database
+        # Set the variation_id of our vf to match the one in the database
         $chr_vf->dbID($ext_vf->dbID());
         $chr_vf->variation->dbID($ext_vf->variation->dbID());
         
-        #ÊAdd the alleles of our variation
+        # Flip our vf if it's on a different strand than the existing vf
+        if ($chr_vf->strand() != $ext_vf->strand()) {
+          flip_variation_feature(\$chr_vf);
+        }
+        
+        # Add the alleles of our variation
         import_alleles($chr_vf->variation,$dbh);
         
-        #ÊAdd the synonyms
+        # Add the synonyms
         import_variation_synonyms($chr_vf->variation,$dbh);
         
-        #ÊAdd 'precious' to the validation_state of the existing variation if it's not set
+        # Add 'precious' to the validation_state of the existing variation if it's not set
         unless (grep {$_ =~ m/precious/} @{$ext_vf->get_all_validation_states()}) {
             
             my $vid = $ext_vf->variation->dbID();
@@ -174,12 +160,17 @@ while (<FH>) {
         }
         
     }
-    #ÊElse, add everything to the database
+    # Else, add everything to the database
     else {
         
+        # If the variation feature is on the negative strand on the chromsome, flip everything around to be on the positive strand
+        if ($chr_vf->strand() < 0) {
+            flip_variation_feature(\$chr_vf);
+        }
+    
         # 1) import the variation object
         import_variation($chr_vf->variation,$dbh);
-        #Ê2) import the alleles
+        # 2) import the alleles
         import_alleles($chr_vf->variation,$dbh);
         # 3) import the flanking sequence
         import_flanking_sequence($chr_vf,$dbh);
@@ -189,8 +180,8 @@ while (<FH>) {
         import_variation_feature($chr_vf,$dbh);
     }
     
-    #ÊVerify that the vf does not fail
-    #Êcheck_failed($chr_vf,$dbh);
+    # Verify that the vf does not fail
+    # check_failed($chr_vf,$dbh);
 =head    
     # If the input data contains phenotypes, attach a variation annotation object to the variation
     if (defined($condition) && $condition ne 'NULL' && defined($omim) && $omim ne 'NULL') {
@@ -211,6 +202,25 @@ while (<FH>) {
 =cut    
 }
 close(FH);
+
+sub flip_variation_feature {
+  my $vf = shift;
+  
+  # Flip the allele string
+  my @alleles = split(/\//,${$vf}->allele_string());
+  map {reverse_comp(\$_)} @alleles;
+  ${$vf}->allele_string(join("/",@alleles));
+  
+  # Flip the alleles
+  foreach my $allele (@{${$vf}->variation()->get_all_Alleles()}) {
+      my $seq = $allele->allele();
+      reverse_comp(\$seq);
+      $allele->allele($seq);
+  }
+  
+  # Change the strand
+  ${$vf}->strand(-1 * ${$vf}->strand());
+}
 
 sub import_variation_annotation {
     my $va = shift;
@@ -338,7 +348,7 @@ sub import_variation_synonyms {
     # Loop over all synonym sources
     foreach my $source (@{$variation->get_all_synonym_sources()}) {
         
-        #ÊLoop over all synonyms from this source
+        # Loop over all synonyms from this source
         foreach my $synonym (@{$variation->get_all_synonyms($source)}) {
             
             # Check if the synonym exists
@@ -463,7 +473,7 @@ sub import_alleles {
     my $variation = shift;
     my $dbh = shift;
     
-    #ÊFor each allele, check whether we already have that allele for the variation, subsnp and sample, in which case we do nothing
+    # For each allele, check whether we already have that allele for the variation, subsnp and sample, in which case we do nothing
     my $check_stmt = qq{
         SELECT
             allele_id
@@ -494,15 +504,15 @@ sub import_alleles {
     };
     my $sth = $dbh->prepare($stmt);
     
-    #ÊLoop over all alleles for this variation object
+    # Loop over all alleles for this variation object
     foreach my $allele (@{$variation->get_all_Alleles()}) {
         
-        #ÊCheck if the allele already exists
+        # Check if the allele already exists
         $stmt = sprintf($check_stmt,$variation->dbID(),$allele->allele(),(defined($allele->subsnp()) ? "= " . $allele->subsnp() : "IS NULL "));
         my $dbid = $dbh->selectall_arrayref($stmt)->[0][0];
         $allele->dbID($dbid);
         
-        #ÊInsert the allele if it wasn't already in the db
+        # Insert the allele if it wasn't already in the db
         unless (defined($allele->dbID())) {
             $sth->execute(
                 $variation->dbID(),
@@ -525,7 +535,7 @@ sub import_variation {
     my $variation = shift;
     my $dbh = shift;
     
-    #ÊFirst, check if the variation name already exists. In that case, just set the dbID of our object and return
+    # First, check if the variation name already exists. In that case, just set the dbID of our object and return
     my $stmt = qq{
         SELECT
             variation_id
@@ -704,7 +714,7 @@ sub check_failed {
     unless (grep {$_->allele() eq $vf->feature_Slice->seq()} @{$vf->variation->get_all_Alleles()}) {
         warn ("None of the variant alleles for variation_feature_id " . $vf->dbID() . " (" . $vf->variation->name() . ", " . $vf->allele_string . ") match the reference sequence (" . $vf->seq_region_name . ":" . $vf->seq_region_start . "-" . $vf->seq_region_end . ":" . $vf->seq_region_strand . ")");
         $sth->execute($vf->variation->dbID(),$subsnp_id,2);
-        #Ê$fail_sth->execute($vf->variation->dbID());
+        # $fail_sth->execute($vf->variation->dbID());
     }
 }
 
