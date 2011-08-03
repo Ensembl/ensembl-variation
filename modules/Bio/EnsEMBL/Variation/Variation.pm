@@ -173,10 +173,10 @@ sub new {
   my $caller = shift;
   my $class = ref($caller) || $caller;
 
-  my ($dbID, $adaptor, $name, $class_so_term, $src, $src_desc, $src_url, $src_type, $is_somatic, $syns, $ancestral_allele,
+  my ($dbID, $adaptor, $name, $class_so_term, $src, $src_desc, $src_url, $src_type, $is_somatic, $flipped, $syns, $ancestral_allele,
       $alleles, $valid_states, $moltype, $five_seq, $three_seq, $flank_flag) =
         rearrange([qw(dbID ADAPTOR NAME CLASS_SO_TERM SOURCE SOURCE_DESCRIPTION SOURCE_URL SOURCE_TYPE IS_SOMATIC 
-                      SYNONYMS ANCESTRAL_ALLELE ALLELES VALIDATION_STATES MOLTYPE FIVE_PRIME_FLANKING_SEQ
+                      FLIPPED SYNONYMS ANCESTRAL_ALLELE ALLELES VALIDATION_STATES MOLTYPE FIVE_PRIME_FLANKING_SEQ
                       THREE_PRIME_FLANKING_SEQ FLANK_FLAG)],@_);
 
   # convert the validation state strings into a bit field
@@ -194,6 +194,7 @@ sub new {
     'source_url' => $src_url,
   'source_type'=> $src_type,
     'is_somatic' => $is_somatic,
+    'flipped' => $flipped,
     'synonyms' => $syns || {},
     'ancestral_allele' => $ancestral_allele,
     'validation_code' => $vcode,
@@ -737,6 +738,26 @@ sub is_somatic {
   my ($self, $is_somatic) = @_;
   $self->{is_somatic} = $is_somatic if defined $is_somatic;
   return $self->{is_somatic};
+}
+
+=head2 flipped
+
+  Arg [1]    : boolean $flipped (optional)
+               The new value to set the flipped flag to
+  Example    : $flipped = $v->flipped
+  Description: Getter/Setter for the flipped flag, which identifies if this
+               variation's strand has been flipped during the import process
+  Returntype : boolean
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub flipped {
+  my ($self, $flipped) = @_;
+  $self->{flipped} = $flipped if defined $flipped;
+  return $self->{flipped};
 }
 
 =head2 get_all_Alleles
