@@ -258,29 +258,16 @@ sub parse_nhgri {
     while (<IN>) {
         chomp;
         
-        my (
-            $catalog_date,
-            $pubmed_id,
-            $author,
-            $pub_date,
-            $journal,
-            $url,
-            $study,
-            $phenotype,
-            $initial_sample_size,
-            $replication_sample_size,
-            $region,
-            $gene,
-            $rs_risk_allele,
-            $rs_id,
-            $risk_frequency,
-            $pvalue,
-            $pval_text,
-            $beta,
-            $ci,
-            $platform,
-            $cnv
-        ) = split(/\t/,$_);
+				my @content = split(/\t/,$_);
+				
+        my $pubmed_id      = $content[1];
+        my $study          = $content[6];
+        my $phenotype      = $content[7];
+        my $gene           = $content[13];
+        my $rs_risk_allele = $content[20];
+        my $rs_id          = $content[21];
+        my $risk_frequency = $content[26];
+        my $pvalue         = $content[27];
         
         my %data = (
             'study_type' => 'GWAS',
@@ -433,7 +420,7 @@ sub parse_ega {
     # Read through the file and parse out the desired fields
     while (<IN>) {
         chomp $_;
-				my @attributes = split("\t",$_);
+				my @attributes = split(",",$_);
 				next if ($attributes[1] eq '');
 				my $name = $attributes[0];
 				my $pubmed = 'pubmed/'.$attributes[1];
