@@ -475,7 +475,6 @@ create table variation_feature(
 @column study_id								Foreign key references to the @link study table.	
 @column class_attrib_id					Foreign key references to the @link attrib table. Defines the type of structural variant. 
 @column validation_status				Validation status of the variant.
-@column somatic                 Flags whether this structural_variation is somatic or germline.
 
 @see source
 @see study
@@ -489,7 +488,6 @@ CREATE TABLE structural_variation (
   study_id int(10) unsigned DEFAULT NULL,
 	class_attrib_id int(10) unsigned NOT NULL DEFAULT 0,
   validation_status ENUM('validated','not validated','high quality'),
-	somatic tinyint(1) DEFAULT 0 NOT NULL,
 	
   PRIMARY KEY (structural_variation_id),
   KEY name_idx (variation_name),
