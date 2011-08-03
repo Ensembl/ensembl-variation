@@ -32,9 +32,9 @@ Bio::EnsEMBL::Variation::TranscriptVariation
     );
 
     print "consequence type: ", (join ",", @{$tv->consequence_type}), "\n";
-    print "cdna coords: ", $tv->cdna_start(), '-', $tv->cdna_end, "\n";
+    print "cdna coords: ", $tv->cdna_start, '-', $tv->cdna_end, "\n";
     print "cds coords: ", $tv->cds_start, '-', $tv->cds_end, "\n";
-    print "pep coords: ", $tv->translation_start, '-',$tv->translation_end(), "\n";
+    print "pep coords: ", $tv->translation_start, '-',$tv->translation_end, "\n";
     print "amino acid change: ", $tv->pep_allele_string, "\n";
     print "codon change: ", $tv->codons, "\n";
     print "allele sequences: ", (join ",", map { $_->variation_feature_seq } 
