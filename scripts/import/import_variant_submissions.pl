@@ -737,10 +737,12 @@ sub import_source {
         $stmt = qq{
             INSERT INTO
                 source (
-                    name
+                    name,
+                    type
                 )
             VALUES (
-                '$source'
+                '$source',
+                'lsdb'
             )
         };
         $dbh->do($stmt);
