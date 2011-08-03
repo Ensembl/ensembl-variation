@@ -76,6 +76,30 @@ our @VARIATION_CLASSES = (
         SO_term => 'probe',
         display_term => 'CNV_PROBE',
     },
+    {
+        SO_accession => 'SO:0001742',
+        SO_term => 'copy_number_gain',
+        display_term => 'Gain',
+    },
+    {
+        SO_accession => 'SO:0001743',
+        SO_term => 'copy_number_loss',
+        display_term => 'Loss',
+    },
+    {
+        SO_accession => 'SO:1000036',
+        SO_term => 'inversion',
+    },
+    {
+        SO_accession => 'SO:0001784',
+        SO_term => 'complex_structural_alteration',
+        display_term => 'Complex',
+    },
+    {
+        SO_accession => 'SO:1000173',
+        SO_term => 'tandem_duplication',
+        display_term => 'Tandem duplication',
+    },
     
 );
 
