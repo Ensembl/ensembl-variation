@@ -50,8 +50,14 @@ open(FH,'<',$submission_report) or die ("Could not open $submission_report for r
 while (<FH>) {
     chomp;
     
+    # Skip comments
+    next if (m/^#/);
+    
     # Split the line
     my ($local_id,$hgvs,$ssid,$rsid,$condition,$omim) = split(/\t/);
+    
+    # Skip if local id or hgvs notation could not be found
+    next unless (defined($local_id) && defined($hgvs));
     
     # Set the ssID to be undefined if it's just an empty string
     $ssid = undef unless (defined($ssid) && length($ssid));
