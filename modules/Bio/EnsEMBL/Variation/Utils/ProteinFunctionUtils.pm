@@ -1,3 +1,38 @@
+=head1 LICENSE
+
+ Copyright (c) 1999-2011 The European Bioinformatics Institute and
+ Genome Research Limited.  All rights reserved.
+
+ This software is distributed under a modified Apache license.
+ For license details, please see
+
+   http://www.ensembl.org/info/about/code_licence.html
+
+=head1 CONTACT
+
+ Please email comments or questions to the public Ensembl
+ developers list at <dev@ensembl.org>.
+
+ Questions may also be sent to the Ensembl help desk at
+ <helpdesk@ensembl.org>.
+
+=cut
+
+=head1 NAME
+
+Bio::EnsEMBL::Variation::Utils::ProteinFunctionUtils
+
+=head1 DESCRIPTION
+
+This module defines several subroutines used to encode and decode
+the compressed format used to store the SIFT and PolyPhen predictions
+in the variation databases. Normally users will not use this module
+directly, but should instead use the various methods provided to access
+these predictions on a Bio::EnsEMBL::Variation::TranscriptVariationAllele
+object.
+
+=cut
+
 package Bio::EnsEMBL::Variation::Utils::ProteinFunctionUtils;
 
 use strict;
@@ -128,9 +163,9 @@ sub prediction_from_short {
 
     my $pred = $VAL_TO_PREDICTION->{$tool}->{$val >> (16 - $NUM_PRED_BITS)};
 
-    # mask off the top bits used for the prediction and convert back to a 3 d.p. float
+    # mask off the top 6 bits reserved for the prediction and convert back to a 3 d.p. float
 
-    my $prob = ($val & (2**(16 - $NUM_PRED_BITS) - 1)) / 1000;
+    my $prob = ($val & (2**10 - 1)) / 1000;
 
     printf("pfs: 0x%04x => $pred ($prob)\n", $val) if $DEBUG;
 
