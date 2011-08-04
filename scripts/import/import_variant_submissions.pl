@@ -51,7 +51,7 @@ while (<FH>) {
     chomp;
     
     # Split the line
-    my ($hgvs,$local_id,$ssid,$rsid,$condition,$omim) = split(/\t/);
+    my ($local_id,$hgvs,$ssid,$rsid,$condition,$omim) = split(/\t/);
     
     # Set the ssID to be undefined if it's just an empty string
     $ssid = undef unless (defined($ssid) && length($ssid));
