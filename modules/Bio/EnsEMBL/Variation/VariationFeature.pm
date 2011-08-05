@@ -1504,8 +1504,9 @@ sub get_all_hgvs_notations {
         my $alt_cds = Bio::PrimarySeq->new(-seq => $codon_up . $t_allele . $cds_down, -id => 'alt_cds', -alphabet => 'dna');
         my $alt_peptide = $alt_cds->translate()->seq();
         
-        # If the translation is the same as the reference, this should be noted as a DNA notation with (p.=)
-        if ($ref_peptide eq $alt_peptide) {
+        # If the translation is the same as the reference, this should be noted as a DNA notation with (p.=). The same is true for the special case where the mutation occurs at the end of the peptide 
+        # but the resulting peptide is intact up to (and including) the stop codon
+        if ($ref_peptide eq $alt_peptide || (substr($ref_peptide,-1) eq '*' && index($alt_peptide,$ref_peptide) == 0)) {
 	  my $c_hgvs = $self->get_all_hgvs_notations($ref_feature,'c',undef,$allele);
 	  $hgvs{$allele} = $c_hgvs->{$allele} . "(p.=)";
 	  next;
