@@ -367,9 +367,7 @@ sub _get_prediction_string {
     # a prediction string for this transcript
     
     return undef unless ($analysis eq 'polyphen' || $analysis eq 'sift');
-    
-    # we can only deal with single amino acid substitutions
-    
+     
     my $dbh = $self->dbc->db_handle;
     
     my $col = $analysis.'_predictions';
@@ -378,7 +376,7 @@ sub _get_prediction_string {
         SELECT  $col
         FROM    protein_function_predictions
         WHERE   transcript_stable_id = ?
-   });
+    });
     
     $sth->execute($transcript_stable_id);
     
