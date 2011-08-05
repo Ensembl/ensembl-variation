@@ -358,7 +358,7 @@ sub complex_indel {
     # as it may not have been set at this stage in the pipeline
     my $class = $vf->var_class(1);
 
-    return 0 unless $class =~ /^(in|del)/;
+    return 0 unless $class =~ /insertion|deletion|indel/;
 
     return @{ $tva->transcript_variation->cds_coords } > 1;
 }
