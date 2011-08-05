@@ -505,7 +505,7 @@ CREATE TABLE structural_variation (
 @column supporting_structural_variation_id	Primary key, internal identifier.
 @column name																The identifier or name of the supporting evidence.
 @column structural_variation_id							Foreign key references to the @link structural_variation table.
-@column class_attrib_id					            Foreign key references to the @link attrib table. Defines the type of supporting evidence. 
+@column class_attrib_id					            Foreign key references to the @link attrib table. Defines the allele type of the supporting evidence. 
 
 @see structural_variation
 @see attrib
@@ -542,7 +542,6 @@ create table supporting_structural_variation (
 @column structural_variation_id	         Foreign key references to the @link structural_variation table.
 @column variation_name					         A denormalisation taken from the structural_variation table. This is the name or identifier that is used for displaying the feature (e.g. "esv9549").
 @column source_id								         Foreign key references to the @link source table.
-@column study_id								         Foreign key references to the @link study table.	
 @column class_attrib_id					         Foreign key references to the @link attrib table. Defines the type of structural variant.
 @column allele_string						         The variant allele, where known.
 
