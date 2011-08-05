@@ -32,6 +32,7 @@ usage() if ($help);
 
 
 my @hostnames = ('ens-staging1','ens-staging2');
+my $previous_host = 'ens-livemirror';
 
 # Settings
 my $database = "";
@@ -77,33 +78,41 @@ my $html_footer = qq{
 my $html_content = '';
 
 foreach my $hostname (@hostnames) {
-	# DBI connection to get all phenotype annotation in th variation database
-	my $dsn = "DBI:mysql:$database:$hostname:$port";
-	my $dbh = DBI->connect($dsn, $login, $pswd) or die "Connection failed";
 
 	my $sql = qq{SHOW DATABASES LIKE '%variation_$e_version%'};
-	my $sth = $dbh->prepare($sql);
-	$sth->execute;
+  my $sth = get_connection_and_query($database, $hostname, $sql);
 
 	# loop over databases
 	while (my ($dbname) = $sth->fetchrow_array) {
 		next if ($dbname =~ /^master_schema/);
 		print $dbname."\n";
 		
-		# SQL connection and query
-		my $dsn2 = "DBI:mysql:$dbname:$hostname:$port";
-		my $dbh2 = DBI->connect($dsn2, $login, $pswd) or die "Connection failed";
-		
+		# Get list of sources from the new databases
 		my $sql2 = qq{SELECT name, version, description, url FROM source};
-		my $sth2 = $dbh2->prepare($sql2);
-		$sth2->execute;
+    my $sth2 = get_connection_and_query($dbname, $hostname, $sql2);
 		$sth2->bind_columns(\$source,\$s_version,\$s_description,\$s_url);
 		
 		$dbname =~ /^(.+)_variation/;
 		my $s_name = $1;
 		
+		# Previous database (and sources)
+		my $p_version = $e_version-1;
+		my $sql3 = qq{SHOW DATABASES LIKE '%$s_name\_variation_$p_version%'};
+		my $sth3 = get_connection_and_query($database, $previous_host, $sql3);
+		my $p_dbname = $sth3->fetchrow_array;
+		
+		#print "\tPREVIOUS: $p_dbname\n";
+		my %p_list;
+		if ($p_dbname) {
+			my $sql4 = qq{SELECT name, version FROM source};
+			my $sth4 = get_connection_and_query($p_dbname, $previous_host, $sql4);
+			while (my @p = $sth4->fetchrow_array) {
+				$p_list{$p[0]} = $p[1];
+			}
+		}
+		
 		$html_content .= '<br />' if ($start == 1);
-		$html_content .= source_table($s_name,$sth2);
+		$html_content .= source_table($s_name,$sth2,\%p_list);
 		
 		$start = 1 if ($start == 0);
 	}
@@ -118,33 +127,64 @@ close(HTML);
 
 
 sub source_table {
-	my $name = shift;
-	my $sth = shift;
+	my $name   = shift;
+	my $sth    = shift;
+	my $p_list = shift;
 	
 	my $species = $name;
   $species =~ s/_/ /;
  	$species =~ /^(\w)(.+)$/;
 	$species = uc($1).$2;
 	
-	my $html  = qq{\n<h3 id="$name"># $species</h3>};
-	   $html .= qq{
+	my $s_name = $species;
+	$s_name =~ s/\s/_/g;
+	my $html = qq{
+	<table id="$name"><tr style="vertical-align:middle">
+		<td style="padding-left:0px"><img src="http://static.ensembl.org/img/species/thumb_$s_name.png" alt="$species" /></td>
+		<td style="padding-left:10px"><h3>$species</h3></td>
+	</tr></table>
+	};
+	
+	$html .= qq{
 			<table class="ss" style="width:60%">
-				<tr><th>Source</th><th>Version</th><th>Description</th></tr>
+				<tr><th>Source</th><th>Version</th><th>Description</th><th></th></tr>
 		 };
 	
 	my $bg = 1;
+	my @p_sources = keys(%{$p_list});
 	
+	my %colors = ( 'version' => '#00CC00',
+								 'source'  => '#0000CC',
+	             );
 	while (my @a = $sth->fetchrow_array) {
+	
+		# Check if the source or the its version are new
+		my $s_new      = '';
+		my $s_new_type = '';
+		
+		if ($p_list->{$source} ne $s_version){
+			$s_new_type = 'version';
+		}
+		elsif (!grep {$_ eq $source} @p_sources) {
+			$s_new_type = 'source';
+		}
+	  $s_new = '<span style="color:'.$colors{$s_new_type}.'">New '.$s_new_type.'</span>' if ($s_new_type);
+	
+		# Display
 		if ($s_url) {
 			$source = qq{<a href="$s_url">$source</a>};
-		}	
+		}
+		
 		$s_version = format_version($s_version);
+		
+		
 		
 		$html .= qq{
 			<tr class="bg$bg">
 				<td>$source</td>
 				<td>$s_version</td>
 				<td>$s_description</td>
+				<td style="text-align:center;width:80px">$s_new</td>
 			</tr>
 		};
 		if ($bg == 1) { $bg = 2; }
@@ -177,6 +217,21 @@ sub format_version {
 	}
 	
 	return $version;
+}
+
+# Connects and execute a query
+sub get_connection_and_query {
+	my $dbname = shift;
+	my $host   = shift;
+	my $sql    = shift;
+	
+	# DBI connection 
+	my $dsn = "DBI:mysql:$dbname:$host:$port";
+	my $dbh = DBI->connect($dsn, $login, $pswd) or die "Connection failed";
+
+	my $sth = $dbh->prepare($sql);
+	$sth->execute;
+	return $sth;
 }
 
 
