@@ -52,6 +52,7 @@ our @EXPORT_OK = qw(
     @ALL_AAS
     $AA_LOOKUP
     $NO_PREDICTION
+    $HEADER
     prediction_from_string 
     prediction_to_short
     prediction_from_short
@@ -62,7 +63,7 @@ our @EXPORT_OK = qw(
 
 # user-defined constants
 
-my $HEADER      = 'VEP';
+our $HEADER      = 'VEP';
 my $PACK_FORMAT = 'v';
 
 my $PREDICTION_TO_VAL = {
