@@ -106,15 +106,17 @@ use warnings;
 
         return undef unless defined $gff;
 
+        # default optional columns, and check that all required columns are present
+
         $gff->{score}  = '.' unless defined $gff->{score};
         $gff->{strand} = '.' unless defined $gff->{strand};
         $gff->{phase}  = '.' unless defined $gff->{phase};
 
-        # order as per GFF3 spec: http://www.sequenceontology.org/gff3.shtml 
-
         for my $req (qw(source type start end)) {
             die "'$req' attribute required for GFF" unless $gff->{$req};
         }
+
+        # order as per GFF3 spec: http://www.sequenceontology.org/gff3.shtml 
  
         my $gff_str = join( "\t",
             $gff->{seqid}, $gff->{source}, $gff->{type}, $gff->{start},
@@ -123,8 +125,11 @@ use warnings;
 
         if ($extra_attrs) {
 
-            # combine the extra attributes with any existing ones (duplicate keys will get squashed!)
+            # combine the extra attributes with any existing ones (duplicate keys will get squashed,
+            # so attributes specified in the extra_attrs hash will override existing ones)
+
             $gff->{attributes} = {} unless defined $gff->{attributes};
+            
             @{ $gff->{attributes} }{ keys %$extra_attrs } = values %$extra_attrs;
         }
 
@@ -155,7 +160,8 @@ use warnings;
         
         my %args = @_;
         
-        my $rebase      = $args{rebase};
+        my $rebase      = $args{rebase}; # use absolute or slice-relative coordinates
+        
         my $gff_seqid   = $args{gff_seqid} || $self->slice->seq_region_name;
         my $gff_source  = $args{gff_source} || $self->_gff_source;
 
@@ -210,7 +216,7 @@ use warnings;
 {
     package Bio::EnsEMBL::Variation::VariationFeature;
     
-    use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp expand);
+    use Bio::EnsEMBL::Utils::Sequence qw(expand);
     
     sub to_gvf {
         my $self = shift;
@@ -236,8 +242,6 @@ use warnings;
         $source .= '_'.$self->source_version if defined $self->source_version;
 
         $gff->{attributes}->{Dbxref} = "$source:".$self->variation_name;
-
-        # Use the variation name (rsID etc.) concatenated with the seq_region_name and positions as the ID
 
         $gff->{attributes}->{ID} = $self->dbID;
 
