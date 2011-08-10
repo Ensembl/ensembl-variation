@@ -10,7 +10,7 @@ use Data::Dumper;
 use FindBin qw( $Bin );
 use Getopt::Long;
 use ImportUtils qw(dumpSQL debug create_and_load load);
-our ($species, $input_file, $source_name, $TMP_DIR, $TMP_FILE, $mapping, $num_gaps, $target_assembly, $size_diff);
+our ($species, $input_file, $source_name, $TMP_DIR, $TMP_FILE, $mapping, $num_gaps, $target_assembly, $size_diff, $version);
 
 GetOptions('species=s'         => \$species,
 		  		 'source_name=s'     => \$source_name,
@@ -21,21 +21,25 @@ GetOptions('species=s'         => \$species,
 		   		 'gaps=i'			   		 => \$num_gaps,
 		   		 'target_assembly=s' => \$target_assembly,
 		   		 'size_diff=i'       => \$size_diff,
+					 'version=i'         => \$version,
           );
 my $registry_file ||= $Bin . "/ensembl.registry";
 
 $num_gaps = 1 unless defined $num_gaps;
 $species ||= 'human';
 
-usage('-species argument is required') if(!$species);
+usage('-species argument is required')    if(!$species);
 usage('-input_file argument is required') if (!$input_file);
+usage('-version argument is required')    if (!$version);
 
 $TMP_DIR  = $ImportUtils::TMP_DIR;
 $TMP_FILE = $ImportUtils::TMP_FILE;
 
-my $study_table = 'study';
-my $sv_table = 'structural_variation';
-my $ssv_table = 'supporting_structural_variation';
+my $add         = '';
+my $study_table = "study$add";
+my $sv_table    = "structural_variation$add";
+my $ssv_table   = "supporting_structural_variation$add";
+my $svf_table   = "structural_variation_feature$add";
 
 # connect to databases
 Bio::EnsEMBL::Registry->load_all( $registry_file );
@@ -57,6 +61,7 @@ our $connected_tax_id = $meta_container->get_taxonomy_id;
 
 # run the mapping sub-routine if the data needs mapping
 my $failed = [];
+my %studies = {};
 if($mapping) {
   $failed = mapping();
 	print join(',',@{$failed})."\n";
@@ -85,6 +90,7 @@ structural_variation($failed);
 supporting_evidence();
 meta_coord();
 
+
 sub read_file{
   debug("Loading file into temporary table");
   
@@ -94,28 +100,28 @@ sub read_file{
   create_and_load(
 	$dbVar, "temp_cnv", "study", "pmid i", "author", "year", "title l", "organism", "id *", "tax_id i", "type", "chr", "outer_start i", "start i", "inner_start i",
 	"inner_end i", "end i", "outer_end i", "assembly", "ssv l", "comment");
-  
+	 
+	# remove those that are of different species
+	$dbVar->do(qq{DELETE FROM temp_cnv WHERE tax_id != $connected_tax_id;});
+	if ($species eq 'human') {
+		$dbVar->do(qq{DELETE FROM temp_cnv WHERE chr like '%_random';});
+	}
+	
   # fix nulls
-  foreach my $coord('outer_start', 'inner_start', 'inner_end', 'outer_end') {
-	$dbVar->do(qq{UPDATE temp_cnv SET $coord = NULL WHERE $coord = 0;});
-  }
-  
-	# Replace the coordinates (4 coordinates)
-	$dbVar->do(qq{UPDATE temp_cnv SET inner_start=start, start=outer_start 
-								WHERE outer_start is not NULL and inner_start is NULL;});
-	$dbVar->do(qq{UPDATE temp_cnv SET inner_end=end, end=outer_end 
-								WHERE outer_end is not NULL and inner_end is null;});							
+	foreach my $coord('outer_start', 'inner_start', 'inner_end', 'outer_end', 'start', 'end') {
+		$dbVar->do(qq{UPDATE temp_cnv SET $coord = NULL WHERE $coord = 0;});
+	}
+							
 	$dbVar->do(qq{UPDATE temp_cnv SET start=outer_start WHERE start is NULL;});
 	$dbVar->do(qq{UPDATE temp_cnv SET end=outer_end WHERE end is NULL;});	
 	
 	$dbVar->do(qq{UPDATE temp_cnv SET start=inner_start WHERE start is NULL;});
 	$dbVar->do(qq{UPDATE temp_cnv SET end=inner_end WHERE end is NULL;});
 											
-	
-	
-  # remove those that are of different species
-  $dbVar->do(qq{DELETE FROM temp_cnv WHERE tax_id != $connected_tax_id;});
-  $dbVar->do(qq{DELETE FROM temp_cnv WHERE chr like '%_random';});
+	# Case with insertions						
+	$dbVar->do(qq{UPDATE temp_cnv SET start=outer_start, end=inner_start, 
+	              outer_end=inner_start, inner_start=NULL, inner_end=NULL
+								WHERE outer_start=outer_end AND inner_start=inner_end;});																				
 }
 
 
@@ -124,10 +130,10 @@ sub source{
 	
 	# Check if the DGVa source already exists, else it create the entry
 	if ($dbVar->selectrow_arrayref(qq{SELECT source_id FROM source WHERE name='DGVa';})) {
-		$dbVar->do(qq{UPDATE IGNORE source SET description='Database of Genomic Variants Archive',url='http://www.ebi.ac.uk/dgva/',version=201105 where name='DGVa';});
+		$dbVar->do(qq{UPDATE IGNORE source SET description='Database of Genomic Variants Archive',url='http://www.ebi.ac.uk/dgva/',version=$version where name='DGVa';});
 	}
 	else {
-		$dbVar->do(qq{INSERT INTO source (name,description,url,version) VALUES ('DGVa','Database of Genomic Variants Archive','http://www.ebi.ac.uk/dgva/',201105);});
+		$dbVar->do(qq{INSERT INTO source (name,description,url,version) VALUES ('DGVa','Database of Genomic Variants Archive','http://www.ebi.ac.uk/dgva/',$version);});
 	}
 	my @source_id = @{$dbVar->selectrow_arrayref(qq{SELECT source_id FROM source WHERE name='DGVa';})};
 	return $source_id[0];
@@ -136,17 +142,36 @@ sub source{
 sub study_table{
   debug("Inserting into $study_table table");
   
+	my $stmt;
+	
+	# Checks the studies with different assemblies when the option "mapping" is selected.
+	if ($mapping) {
+		foreach my $st (keys(%studies)) {
+			next if (!$studies{$st});
+			my $count_assemblies = scalar(@{$studies{$st}});
+			next if ($count_assemblies < 2);
+			my $assemblies = '';
+			my $c_loop = 0;
+			foreach my $a_version (@{$studies{$st}}) {
+				if ($c_loop == $count_assemblies-1) {
+					$assemblies .= ' and ';
+				}
+				elsif ($assemblies ne '') {
+					$assemblies .= ', ';
+				}
+				$assemblies .= $a_version;
+				$c_loop ++;
+			}
+			$stmt = qq{
+				UPDATE temp_cnv SET comment='[remapped from builds $assemblies]' WHERE title='$st'
+			};
+			$dbVar->do($stmt);
+		}
+	}
+	
+	
   # An ugly construct, but let's create a unique key on the study name in order to avoid duplicates but still update the URLs
   # BTW, perhaps we actually should have a unique constraint on the name column??
-	my $stmt;
-# my $stmt = qq{
-#    ALTER TABLE
-#      $study_table
-#    ADD CONSTRAINT
-#      UNIQUE KEY
-#	name_key (name)
-#  };
-#  $dbVar->do($stmt);
   
   # Then insert "new" studys. Update the URL field in case of duplicates
   $stmt = qq{
@@ -206,15 +231,6 @@ sub study_table{
   };
   $dbVar->do($stmt);
   
-  # And then drop the name key again
-#  $stmt = qq{
-#    ALTER TABLE
-#      $study_table
-#    DROP KEY
-#      name_key
-#  };
-#  $dbVar->do($stmt);
-  
 	# Special case for the De Smith url study
 	if ($species eq 'human') {
 		my @s_data = @{$dbVar->selectrow_arrayref(qq{SELECT study_id,url FROM $study_table WHERE name='estd24';})};
@@ -229,28 +245,6 @@ sub structural_variation{
   
   debug("Inserting into $sv_table table");
   
-  # create table if it doesn't exist yet
-	$dbVar->do(qq{CREATE TABLE IF NOT EXISTS $sv_table (
-	structural_variation_id int(10) unsigned NOT NULL AUTO_INCREMENT,
-	seq_region_id int(10) unsigned NOT NULL,
-	seq_region_start int(11) NOT NULL,
-	seq_region_end int(11) NOT NULL,
-	seq_region_strand tinyint(4) NOT NULL,
-	variation_name varchar(255) DEFAULT NULL,
-	source_id int(10) unsigned NOT NULL,
-	study_id int(10) unsigned NOT NULL,
-	class_attrib_id int(11) NOT NULL,
-	inner_start int(11) DEFAULT NULL,
-	inner_end int(11) DEFAULT NULL,
-	allele_string longtext,
-	validation_status ENUM('validated','not validated'),
-	tmp_class_name varchar(255),
-	PRIMARY KEY (structural_variation_id),
-	KEY pos_idx (seq_region_id,seq_region_start),
-	KEY name_idx (variation_name),
-	KEY study_idx (study_id) 
-  )});
-
 	if ($dbVar->do(qq{show columns from $sv_table like 'tmp_class_name';}) != 1){
 		$dbVar->do(qq{ALTER TABLE $sv_table ADD COLUMN tmp_class_name varchar(255);});
 	}
@@ -267,44 +261,73 @@ sub structural_variation{
   $dbVar->do($stmt);
   
   # now copy the data. If the variation is duplicated, replace the old data
-  $stmt = qq{
+  
+	# Structural variations
+	$stmt = qq{
     REPLACE INTO
-      $sv_table (
-	seq_region_id,
-	seq_region_start,
-	seq_region_end,
-	seq_region_strand,
-	variation_name,
-	source_id,
-	study_id,
-	tmp_class_name,
-	inner_start,
-	inner_end
-      )
+    $sv_table (
+	    variation_name,
+	    source_id,
+	    study_id,
+	    tmp_class_name
+    )
     SELECT
-      q.seq_region_id,
-      t.start,
-      t.end,
-      1,
       t.id,
       s.source_id,
 			st.study_id,
-      t.type,
-      t.inner_start,
-      t.inner_end
+      t.type
     FROM
-      seq_region q,
       temp_cnv t,
       source s,
 			$study_table st 
     WHERE
-      q.name = t.chr AND
-      st.source_id=$source_id AND
+			st.source_id=$source_id AND
 			st.source_id=s.source_id AND
 			st.name=t.study
   };
   $dbVar->do($stmt);
-  
+	
+	
+	# Structural variation features
+	debug("Inserting into $svf_table table");
+	
+	$stmt = qq{
+    INSERT INTO $svf_table (
+	    seq_region_id,
+	    outer_start,
+	    seq_region_start,
+	    inner_start,
+	    inner_end,
+	    seq_region_end,
+	    outer_end,
+	    seq_region_strand,
+	    structural_variation_id,
+	    variation_name,
+	    source_id
+    )
+    SELECT
+      q.seq_region_id,
+			t.outer_start,
+      t.start,
+			t.inner_start,
+			t.inner_end,
+      t.end,
+			t.outer_end,
+      1,
+			sv.structural_variation_id,
+      t.id,
+      $source_id
+    FROM
+      seq_region q,
+      temp_cnv t,
+			$sv_table sv
+    WHERE
+      q.name = t.chr AND
+			t.id=sv.variation_name AND
+			sv.source_id=$source_id
+  };
+  $dbVar->do($stmt);
+	
   # cleanup
   $stmt = qq{
     ALTER TABLE
@@ -357,6 +380,10 @@ sub supporting_evidence {
 	
 	debug("Inserting into $ssv_table table");
 	
+	if ($dbVar->do(qq{show columns from $ssv_table like 'tmp_class_name';}) != 1){
+		$dbVar->do(qq{ALTER TABLE $ssv_table ADD COLUMN tmp_class_name varchar(255);});
+	}
+	
 	my $stmt = qq{
     SELECT
       sv.structural_variation_id, 
@@ -373,9 +400,15 @@ sub supporting_evidence {
 		my $sv_id = $row->[0];
 		my $ssv_ids = $row->[1];
 		my @ssv = split(':',$ssv_ids);
-		foreach my $ssv_name (@ssv) {
-		# now copy the data. If the variation is duplicated, replace the old data
-			$dbVar->do(qq{INSERT INTO $ssv_table (name,structural_variation_id) VALUES ('$ssv_name',$sv_id);});
+		foreach my $ssv_data (@ssv) {
+			next if ($ssv_data eq 'None');
+			my ($ssv_name, $ssv_class) = split(/\|/,$ssv_data);
+			my $exists_ssv = $dbVar->selectall_arrayref(qq{
+				SELECT supporting_structural_variation_id FROM $ssv_table WHERE structural_variation_id=$sv_id AND name='$ssv_name' LIMIT 1
+  		});
+			next if (defined($exists_ssv->[0][0]));
+			# now copy the data. If the variation is duplicated, replace the old data
+			$dbVar->do(qq{INSERT INTO $ssv_table (name,structural_variation_id,tmp_class_name) VALUES ('$ssv_name',$sv_id,'$ssv_class');});
 		}
 	}
   
@@ -391,16 +424,16 @@ sub meta_coord{
   my $max_length_ref = $dbVar->selectall_arrayref(qq{
 	SELECT
 	  MAX(seq_region_end - seq_region_start + 1)
-	FROM $sv_table
+	FROM $svf_table
   });
   my $max_length = $max_length_ref->[0][0];
 	if (!defined($max_length)) { $max_length = 0; }
 	
   my $cs = $default_cs->dbID;
   
-  $dbVar->do(qq{DELETE FROM meta_coord where table_name = 'structural_variation';});
-  print "INSERT INTO meta_coord(table_name, coord_system_id, max_length) VALUES ('structural_variation', $cs, $max_length);\n";
-	$dbVar->do(qq{INSERT INTO meta_coord(table_name, coord_system_id, max_length) VALUES ('structural_variation', $cs, $max_length);});
+  $dbVar->do(qq{DELETE FROM meta_coord where table_name = 'structural_variation_feature';});
+  print "INSERT INTO meta_coord(table_name, coord_system_id, max_length) VALUES ('structural_variation_feature', $cs, $max_length);\n";
+	$dbVar->do(qq{INSERT INTO meta_coord(table_name, coord_system_id, max_length) VALUES ('structural_variation_feature', $cs, $max_length);});
 }
 
 
@@ -426,6 +459,9 @@ sub mapping{
   # Store and return the variant ids that we could not map. In case these already exist in the database with a different (and thus assumingly outdated) position, we will delete them
   my @failed = ();
   
+	my $sth = $dbVar->prepare(qq{ SELECT seq_region_id FROM seq_region WHERE name=?});
+	
+	
   while(<IN>) {
 	chomp;
 	
@@ -442,13 +478,13 @@ sub mapping{
 	if($species =~ /human|homo/) {
 	  # try to guess the source assembly
 	  if($assembly =~ /34/) {
-		$assembly = 'NCBI34';
+			$assembly = 'NCBI34';
 	  }
 	  elsif($assembly =~ /35/) {
-		$assembly = 'NCBI35';
+			$assembly = 'NCBI35';
 	  }
 	  elsif($assembly =~ /36/) {
-		$assembly = 'NCBI36';
+			$assembly = 'NCBI36';
 	  }
 	  elsif($assembly =~ /$cs_version_number/) {
 		# no need to map if it's already on the latest assembly
@@ -472,38 +508,48 @@ sub mapping{
 		$assembly = 'NCBIM36';
 	  }
 	  elsif($assembly =~ /$cs_version_number/) {
-		# no need to map if it's already on the latest assembly
-		print OUT "$_\t\n";
-		$no_mapping_needed++;
+		# Check if the chromosome is stored into the variation database (seq_region table)
+		$sth->execute($chr);
+		if(!defined(($sth->fetchrow_array)[0])) {
+			warn("Unable to find the chromosome '$chr' in the variation database, for the structural variant '$id' from study '$study' ($author ($year))");
+	  	$skipped++;
+		}
+		else {
+			# no need to map if it's already on the latest assembly
+			print OUT "$_\t\n";
+			$no_mapping_needed++;
+		}
 		next;
 	  }
 	}
 	
 	# get a slice on the old assembly
 	my $slice;
+	my $start_c = $start;
+	my $end_c   = $end;
 	
 	if (!$start) {
 		if ($outer_start) {
-			$start = $outer_start;
+			$start_c = $outer_start;
 		}
 		else {
-			$start = $inner_start;
+			$start_c = $inner_start;
 		}
 	}
 	if (!$end) {
 		if ($outer_end) {
-			$end = $outer_end;
+			$end_c = $outer_end;
 		}
 		else {
-			$end = $inner_end;
+			$end_c = $inner_end;
 		}
 	}
 	
-	eval { $slice = $sa->fetch_by_region('chromosome', $chr, $start, $end, 1, $assembly); };
+	eval { $slice = $sa->fetch_by_region('chromosome', $chr, $start_c, $end_c, 1, $assembly); };
 	
 	# check got the slice OK
 	if(!defined($slice)) {
-	  warn("Unable to map from assembly $assembly, or unable to retrieve slice $chr\:$start\-$end");
+	  warn("Unable to map from assembly $assembly, or unable to retrieve slice $chr\:$start_c\-$end_c");
 	  $skipped++;
 	  next;
 	}
@@ -521,9 +567,9 @@ sub mapping{
 	  
 	  # check this segment is on the same chrom
 	  if((defined $to_chr) && ($to_chr ne $to_slice->seq_region_name)) {
-		$count = 0;
-		warn("Segments of $id map to different chromosomes ($to_chr and ", $to_slice->seq_region_name, ")");
-		last;
+			$count = 0;
+			warn("Segments of $id map to different chromosomes ($to_chr and ", $to_slice->seq_region_name, ")");
+			last;
 	  }
 	  
 	  # get the chromosome name
@@ -557,17 +603,25 @@ sub mapping{
 	  $num_mapped{$assembly}++;
 	  
 	  # calculate inner/outer coords
-	  $outer_start = $min_start - ($start - $outer_start) if $outer_start >= 1;
-	  $inner_start = $min_start + ($inner_start - $start) if $inner_start >= 1;
-	  $inner_end = $max_end - ($end - $inner_end) if $inner_end >= 1;
-	  $outer_end = $max_end + ($outer_end - $end) if $outer_end >= 1;
-	  
+	  $outer_start = $min_start - ($start_c - $outer_start) if $outer_start >= 1;
+	  $inner_start = $min_start + ($inner_start - $start_c) if $inner_start >= 1;
+	  $inner_end = $max_end - ($end_c - $inner_end) if $inner_end >= 1;
+	  $outer_end = $max_end + ($outer_end - $end_c) if $outer_end >= 1;
+		
+		if ($studies{$title}) {
+			push (@{$studies{$title}}, $assembly) if (!grep{$_ eq $assembly} @{$studies{$title}});
+		}
+		else {
+			$studies{$title} = [$assembly];
+		}
+		
+		
 	  print OUT (join "\t", ($study, $pmid, $author, $year, $title, $organism, $id, $tax_id, $type, $to_chr, $outer_start, $min_start, $inner_start, $inner_end, $max_end, $outer_end, $target_assembly, $ssv, "[remapped from build $assembly]"));
 	  print OUT "\n";
 	}
 	
 	else {
-	  warn ("Structural variant '$id' from study '$study' ($author ($year)) has location '$assembly:$chr:$start\-$end' , which could not be re-mapped to $target_assembly. This variant will not be imported, if it is already present with a different (and outdated) location, it will be removed from the database");
+	  warn ("Structural variant '$id' from study '$study' ($author ($year)) has location '$assembly:$chr:$start_c\-$end_c' , which could not be re-mapped to $target_assembly. This variant will not be imported, if it is already present with a different (and outdated) location, it will be removed from the database");
 	  push(@failed,qq{'$id'});
 	  $num_not_mapped{$assembly}++;
 	}
@@ -586,7 +640,7 @@ sub usage {
   die shift, qq{
 
 Options -
-  -species
+  -species         : species name (required)
   -target_assembly : assembly version to map to
   -tmpdir
   -tmpfile
@@ -594,6 +648,7 @@ Options -
   -mapping         : if set, the data will be mapped to $target_assembly using the Ensembl API
   -gaps            : number of gaps allowed in mapping (defaults to 1)
   -size_diff       : % difference allowed in size after mapping
+	-version         : version number of the data (required)
   
   };
 }
