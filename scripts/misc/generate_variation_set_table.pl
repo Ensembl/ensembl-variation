@@ -11,15 +11,17 @@ my $registry = 'Bio::EnsEMBL::Registry';
 #ÊPrint the usage instructions if run without parameters
 usage() unless (scalar(@ARGV));
 
-my $species = shift;
-my $host = shift;
+my $species    = shift;
+my $host       = shift;
+my $db_version = shift;
 
-die ("Species and db_host must be specified") unless ($species && $host);
+die ("Species, db_host and db_version must be specified") unless ($species && $host && $db_version);
 
 # Load the registry from db
 $registry->load_registry_from_db(
     -host => $host,
-    -user => 'ensro'
+    -user => 'ensro',
+		-db_version => $db_version
 );
 
 # Get a VariationSetAdaptor on the human variation database
