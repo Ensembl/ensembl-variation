@@ -153,8 +153,8 @@ sub source_table {
 	my $bg = 1;
 	my @p_sources = keys(%{$p_list});
 	
-	my %colors = ( 'version' => '#00CC00',
-								 'source'  => '#0000CC',
+	my %colors = ( 'version' => '#009900',
+								 'source'  => '#000066',
 	             );
 	while (my @a = $sth->fetchrow_array) {
 	
