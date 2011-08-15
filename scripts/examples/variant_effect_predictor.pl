@@ -1356,6 +1356,8 @@ sub whole_genome_fetch {
                         }
                     }
                     
+                    $transcript_cache->{$chr} ||= [];
+                    
                     undef $tmp_cache;
                     
                     # restore quiet status
@@ -1883,7 +1885,8 @@ sub build_slice_cache {
     my %slice_cache;
     
     foreach my $chr(keys %$transcript_cache) {
-        $slice_cache{$chr} = $transcript_cache->{$chr}[0]->slice;
+        
+        $slice_cache{$chr} = scalar @{$transcript_cache->{$chr}} ? $transcript_cache->{$chr}[0]->slice : &get_slice($config, $chr);
         
         # reattach adaptor to the coord system
         $slice_cache{$chr}->{coord_system}->{adaptor} ||= $config->{csa};
