@@ -64,8 +64,6 @@ ALTER TABLE population_genotype ADD FOREIGN KEY (sample_id) REFERENCES populatio
 ALTER TABLE population_structure ADD FOREIGN KEY (super_population_sample_id) REFERENCES population(sample_id);
 ALTER TABLE population_structure ADD FOREIGN KEY (sub_population_sample_id) REFERENCES population(sample_id);
 
-ALTER TABLE protein_position ADD FOREIGN KEY (protein_info_id) REFERENCES protein_info(protein_info_id);
-
 ALTER TABLE read_coverage ADD FOREIGN KEY (sample_id) REFERENCES individual(sample_id);
 ALTER TABLE read_coverage ADD FOREIGN KEY (seq_region_id) REFERENCES seq_region(seq_region_id);
 
@@ -75,13 +73,18 @@ ALTER TABLE sample_synonym ADD FOREIGN KEY (sample_id) REFERENCES sample(sample_
 ALTER TABLE sift_prediction ADD FOREIGN KEY (protein_position_id) REFERENCES protein_position(protein_position_id);
 
 ALTER TABLE structural_variation ADD FOREIGN KEY (source_id) REFERENCES source(source_id);
-ALTER TABLE structural_variation ADD FOREIGN KEY (seq_region_id) REFERENCES seq_region(seq_region_id);
 ALTER TABLE structural_variation ADD FOREIGN KEY (study_id) REFERENCES study(study_id);
 ALTER TABLE structural_variation ADD FOREIGN KEY (class_attrib_id) REFERENCES attrib(attrib_id);
+
+ALTER TABLE structural_variation_feature ADD FOREIGN KEY (seq_region_id) REFERENCES seq_region(seq_region_id);
+ALTER TABLE structural_variation_feature ADD FOREIGN KEY (structural_variation_id) REFERENCES structural_variation(structural_variation_id);
+ALTER TABLE structural_variation_feature ADD FOREIGN KEY (source_id) REFERENCES source(source_id);
+ALTER TABLE structural_variation_feature ADD FOREIGN KEY (class_attrib_id) REFERENCES attrib(attrib_id);
 
 ALTER TABLE study ADD FOREIGN KEY (source_id) REFERENCES source(source_id);
 
 ALTER TABLE supporting_structural_variation ADD FOREIGN KEY (structural_variation_id) REFERENCES structural_variation(structural_variation_id);
+ALTER TABLE supporting_structural_variation ADD FOREIGN KEY (class_attrib_id) REFERENCES attrib(attrib_id);
 
 ALTER TABLE tagged_variation_feature ADD FOREIGN KEY (variation_feature_id) REFERENCES variation_feature(variation_feature_id);
 ALTER TABLE tagged_variation_feature ADD FOREIGN KEY (sample_id) REFERENCES sample(sample_id);
