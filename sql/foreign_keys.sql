@@ -53,8 +53,6 @@ ALTER TABLE individual_genotype_multiple_bp ADD FOREIGN KEY (sample_id) REFERENC
 ALTER TABLE individual_population ADD FOREIGN KEY (individual_sample_id) REFERENCES individual(sample_id);
 ALTER TABLE individual_population ADD FOREIGN KEY (population_sample_id) REFERENCES population(sample_id);
 
-ALTER TABLE polyphen_prediction ADD FOREIGN KEY (protein_position_id) REFERENCES protein_position(protein_position_id);
-
 ALTER TABLE population ADD FOREIGN KEY (sample_id) REFERENCES sample(sample_id);
 
 ALTER TABLE population_genotype ADD FOREIGN KEY (subsnp_id) REFERENCES subsnp_handle(subsnp_id);
