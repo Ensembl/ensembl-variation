@@ -67,6 +67,7 @@ sub get_available_adaptors{
 		 'Variation' => 'Bio::EnsEMBL::Variation::DBSQL::VariationAdaptor',
 		 'VariationFeature' => 'Bio::EnsEMBL::Variation::DBSQL::VariationFeatureAdaptor',
 		 'StructuralVariation' => 'Bio::EnsEMBL::Variation::DBSQL::StructuralVariationAdaptor',
+		 'StructuralVariationFeature' => 'Bio::EnsEMBL::Variation::DBSQL::StructuralVariationFeatureAdaptor',
 		 'SupportingStructuralVariation' => 'Bio::EnsEMBL::Variation::DBSQL::SupportingStructuralVariationAdaptor',
 		 'Study' => 'Bio::EnsEMBL::Variation::DBSQL::StudyAdaptor',
 		 'VariationAnnotation' => 'Bio::EnsEMBL::Variation::DBSQL::VariationAnnotationAdaptor',
