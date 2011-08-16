@@ -44,6 +44,11 @@ my $first_intron = $tf->get_all_Introns->[0];
 my $intron_start = $first_intron->seq_region_start;
 my $intron_end   = $first_intron->seq_region_end;
 
+my $second_exon = $tf->get_all_Exons->[1];
+
+my $exon_start = $second_exon->seq_region_start;
+my $exon_end   = $second_exon->seq_region_end;
+
 $transcript_tests->{$tf->stable_id}->{transcript} = $tf;
 
 $transcript_tests->{$tf->stable_id}->{tests} = [
@@ -264,7 +269,13 @@ $transcript_tests->{$tf->stable_id}->{tests} = [
         start   => $intron_end-7,
         end     => $intron_end-8,
         effects => [qw(intron_variant)],
-    }, 
+    }, {
+        comment => 'whole exon deletion',
+        alleles => '-',
+        start   => $exon_start-10,
+        end     => $exon_end+10,
+        effects => [qw(intron_variant splice_region_variant splice_acceptor_variant coding_sequence_variant splice_donor_variant complex_change_in_transcript)],
+    },
 
     # check the CDS 
 
@@ -422,20 +433,27 @@ $transcript_tests->{$tf->stable_id}->{tests} = [
         start   => $cds_end-9,
         end     => $cds_end-10,
         effects => [qw(coding_sequence_variant)],
+    }, {
+        comment => 'delete the last codon of an exon',
+        alleles => '-',
+        start   => $intron_start-3,
+        end     => $intron_start-1,
+        effects => [qw(inframe_codon_loss splice_region_variant)],
     }, 
+    
 
     # check the complex calls
-    
+   
     {
         alleles => '-',
         start   => $intron_start-3,
         end     => $intron_start+2,
-        effects => [qw(complex_change_in_transcript splice_donor_variant coding_sequence_variant)],
+        effects => [qw(complex_change_in_transcript splice_donor_variant coding_sequence_variant splice_region_variant intron_variant)],
     }, {
         alleles => '-',
         start   => $intron_end-2,
         end     => $intron_end+3,
-        effects => [qw(complex_change_in_transcript splice_acceptor_variant coding_sequence_variant)],
+        effects => [qw(complex_change_in_transcript splice_acceptor_variant coding_sequence_variant splice_region_variant intron_variant)],
     }, {
         alleles => '-',
         start   => $cds_start-3,
@@ -862,7 +880,14 @@ $transcript_tests->{$tr->stable_id}->{tests} = [
         start   => $cds_start + 10,
         end     => $cds_start + 9,
         effects => [qw(coding_sequence_variant)],
+    }, {
+        comment => 'delete the last codon of an exon',
+        alleles => '-',
+        start   => $intron_end + 1,
+        end     => $intron_end + 3,
+        effects => [qw(inframe_codon_loss splice_region_variant)],
     }, 
+
 
     # check the complex calls
     
@@ -870,12 +895,12 @@ $transcript_tests->{$tr->stable_id}->{tests} = [
         alleles => '-',
         start   => $intron_end - 2,
         end     => $intron_end + 3,
-        effects => [qw(complex_change_in_transcript splice_donor_variant coding_sequence_variant)],
+        effects => [qw(complex_change_in_transcript splice_donor_variant coding_sequence_variant splice_region_variant intron_variant)],
     }, {
         alleles => '-',
         start   => $intron_start - 3,
         end     => $intron_start + 2,
-        effects => [qw(complex_change_in_transcript splice_acceptor_variant coding_sequence_variant)],
+        effects => [qw(complex_change_in_transcript splice_acceptor_variant coding_sequence_variant splice_region_variant intron_variant)],
     }, {
         alleles => '-',
         start   => $cds_end - 2,
@@ -892,7 +917,6 @@ $transcript_tests->{$tr->stable_id}->{tests} = [
 ];
 
 # a forward strand transcript with an intron in the UTR
-
 
 my $t3 = $ta->fetch_by_stable_id('ENST00000530893');
 
