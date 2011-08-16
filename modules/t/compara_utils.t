@@ -45,8 +45,8 @@ for my $k (sort keys %input) {
 
 # and ungapify it (polyphen excludes the query seq, while sift includes it)
 
-my $sift_align = Bio::EnsEMBL::Variation::Utils::ComparaUtils::ungapify_alignment($sa, 'QUERY', 1);
-my ($query_seq, $pph_align) = Bio::EnsEMBL::Variation::Utils::ComparaUtils::ungapify_alignment($sa, 'QUERY', 0);
+my $sift_align = Bio::EnsEMBL::Variation::Utils::ComparaUtils::_ungapify_alignment($sa, 'QUERY', 1);
+my ($query_seq, $pph_align) = Bio::EnsEMBL::Variation::Utils::ComparaUtils::_ungapify_alignment($sa, 'QUERY', 0);
 
 # we just check that the sift alignment looks good
 
@@ -57,13 +57,13 @@ for my $n ($sift_align->each_seq) {
 # check the percent_id;
 
 is(
-    Bio::EnsEMBL::Variation::Utils::ComparaUtils::percent_id($query_seq, $pph_align->get_seq_by_pos(1)), 
+    Bio::EnsEMBL::Variation::Utils::ComparaUtils::_percent_id($query_seq, $pph_align->get_seq_by_pos(1)), 
     0, 
     "S1 percent_id is correct"
 );
 
 is(
-    Bio::EnsEMBL::Variation::Utils::ComparaUtils::percent_id($query_seq, $pph_align->get_seq_by_pos(2)), 
+    Bio::EnsEMBL::Variation::Utils::ComparaUtils::_percent_id($query_seq, $pph_align->get_seq_by_pos(2)), 
     0.125,
     "S2 percent_id is correct"
 );
@@ -86,9 +86,9 @@ S2                                                                    T----UVH
 S1                                                                    --ILMN-O
 PPH
 
-# redefine the get_alignment subroutine to return our test alignment 
+# redefine the _get_ungapped_alignment subroutine to return our test alignment 
 
-sub Bio::EnsEMBL::Variation::Utils::ComparaUtils::get_ungapped_alignment {
+sub Bio::EnsEMBL::Variation::Utils::ComparaUtils::_get_ungapped_alignment {
     return wantarray ? ($query_seq, $pph_align) : $sift_align;
 }
 
