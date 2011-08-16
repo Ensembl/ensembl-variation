@@ -63,8 +63,16 @@ our @EXPORT_OK = qw(
 
 # user-defined constants
 
-our $HEADER      = 'VEP';
+# a header which lets us identify prediction strings and
+# to check if they may have been corrupted
+
+our $HEADER     = 'VEP';
+
+# the format we use when 'pack'ing our predictions
+
 my $PACK_FORMAT = 'v';
+
+# a hash mapping qualitative predictions to numerical values
 
 my $PREDICTION_TO_VAL = {
     polyphen => {
@@ -80,6 +88,10 @@ my $PREDICTION_TO_VAL = {
     },
 };
 
+# all valid amino acids
+
+our @ALL_AAS = qw(A C D E F G H I K L M N P Q R S T V W Y);
+
 # we use a short with all bits set to represent the lack of a prediction in 
 # an (uncompressed) prediction string, we will never observe this value
 # as a real prediction even if we set all the (6) prediction bits because we 
@@ -89,11 +101,17 @@ our $NO_PREDICTION = pack($PACK_FORMAT, 0xFFFF);
 
 # constants derived from the the user-defined constants
 
+# the maximum number of distinct qualitative predictions used by any tool
+
 my $MAX_NUM_PREDS = max( map { scalar keys %$_ } values %$PREDICTION_TO_VAL ); 
+
+# the number of bits used to encode the qualitative prediction
 
 my $NUM_PRED_BITS = ceil( log($MAX_NUM_PREDS) / log(2) );
 
-die "Cannot represent more than ".(2**6-1)." predictions" if $NUM_PRED_BITS > 6;
+throw("Cannot represent more than ".(2**6-1)." predictions") if $NUM_PRED_BITS > 6;
+
+# a hash mapping back from a numerical value to a qualitative prediction
 
 my $VAL_TO_PREDICTION = {
     map {
@@ -106,11 +124,26 @@ my $VAL_TO_PREDICTION = {
     } keys %$PREDICTION_TO_VAL
 };
 
-our @ALL_AAS = qw(A C D E F G H I K L M N P Q R S T V W Y);
+# a hash from amino acid single letter code to a numerical value
 
 our $AA_LOOKUP = { map {$ALL_AAS[$_] => $_} 0 .. $#ALL_AAS };
 
+# the number of valid amino acids
+
 our $NUM_AAS = scalar(@ALL_AAS);
+
+
+=head2 prediction_to_short
+
+  Arg[1]      : string $tool - one of 'sift' or 'polyphen' 
+  Arg[2]      : string $pred - one of the possible qualitative predictions of the tool 
+  Arg[3]      : string $prob - the prediction score (with 3 d.p.s of precision)
+  Description : converts a prediction and corresponding score into a 2-byte short value
+  Returntype  : the packed short value
+  Exceptions  : throws if either the tool or prediction arguments aren't recognised 
+  Status      : At Risk
+  
+=cut
 
 sub prediction_to_short {
     my ($tool, $pred, $prob) = @_;
@@ -146,6 +179,17 @@ sub prediction_to_short {
     return $val;
 }
 
+=head2 prediction_from_short
+
+  Arg[1]      : string $tool - one of 'sift' or 'polyphen' 
+  Arg[2]      : string $pred - the packed short value 
+  Description : converts a 2-byte short value back into a prediction and a score
+  Returntype  : a list containing 2 values, the prediction and the score
+  Exceptions  : throws if the tool argument isn't recognised 
+  Status      : At Risk
+  
+=cut
+
 sub prediction_from_short {
     my ($tool, $val) = @_;
 
@@ -173,6 +217,16 @@ sub prediction_from_short {
     return ($pred, $prob);
 }
 
+=head2 compress_prediction_string
+
+  Arg[1]      : string $string - the prediction string to compress 
+  Description : compresses a prediction string with gzip
+  Returntype  : the compressed string
+  Exceptions  : throws if the string is an unexpected length, or if the compression fails
+  Status      : At Risk
+  
+=cut
+
 sub compress_prediction_string {
     my ($string) = @_;
 
@@ -190,11 +244,31 @@ sub compress_prediction_string {
     return $gzipped;
 }
 
+=head2 header_ok
+
+  Arg[1]      : string $string - the prediction string to check 
+  Description : checks if a prediction string has the expected header
+  Returntype  : boolean
+  Exceptions  : none
+  Status      : At Risk
+  
+=cut
+
 sub header_ok {
     my ($string) = @_;
     return undef unless $string;
     return substr($string,0,length($HEADER)) eq $HEADER;
 }
+
+=head2 expand_prediction_string
+
+  Arg[1]      : string $gzipped - the compressed prediction string 
+  Description : uncompresses a compressed prediction string
+  Returntype  : the uncompressed string
+  Exceptions  : throws if the header is incorrect, or if the decompression fails
+  Status      : At Risk
+  
+=cut
 
 sub expand_prediction_string {
     my ($gzipped) = @_;
@@ -209,6 +283,18 @@ sub expand_prediction_string {
     return $raw;
 }
 
+=head2 compute_offset
+
+  Arg[1]      : int $pos - the desired position in the peptide 
+  Arg[2]      : string $aa - the desired mutant amino acid
+  Description : computes the correct offset into a prediction string for a given
+                peptide position and mutant amino acid
+  Returntype  : the integer offset
+  Exceptions  : none
+  Status      : At Risk
+  
+=cut
+
 sub compute_offset {
     my ($pos, $aa) = @_;
 
@@ -216,6 +302,23 @@ sub compute_offset {
 
     return $offset;
 }
+
+=head2 prediction_from_string
+
+  Arg[1]      : string $tool - one of 'sift' or 'polyphen' 
+  Arg[2]      : string $string - the (possibly compressed) prediction string
+  Arg[3]      : int $pos - the desired position in the peptide 
+  Arg[4]      : string $aa - the desired mutant amino acid
+  Description : returns the prediction and score from the specified tool for 
+                the requested position and mutant amino acid in the given
+                prediction string
+  Returntype  : a list containing 2 values, the prediction and the score
+  Exceptions  : throws if the tool argument isn't recognised, if either the 
+                position or amino acid are invalid, or if the prediction string
+                looks to be malformed
+  Status      : At Risk
+  
+=cut
 
 sub prediction_from_string {
     my ($tool, $string, $pos, $aa) = @_;

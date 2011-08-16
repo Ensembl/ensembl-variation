@@ -1,10 +1,45 @@
+=head1 LICENSE
+
+ Copyright (c) 1999-2011 The European Bioinformatics Institute and
+ Genome Research Limited.  All rights reserved.
+
+ This software is distributed under a modified Apache license.
+ For license details, please see
+
+   http://www.ensembl.org/info/about/code_licence.html
+
+=head1 CONTACT
+
+ Please email comments or questions to the public Ensembl
+ developers list at <dev@ensembl.org>.
+
+ Questions may also be sent to the Ensembl help desk at
+ <helpdesk@ensembl.org>.
+
+=cut
+
+=head1 NAME
+
+Bio::EnsEMBL::Variation::Utils::ComparaUtils
+
+=head1 DESCRIPTION
+
+This module exports two subroutines, dump_alignment_for_polyphen and
+dump_alignment_for_sift that write Compara alignments to files in the 
+formats expected by PolyPhen and SIFT. This allows you to use
+Compara alignments in place of both these tools' alignment pipelines
+
+=cut
+
 package Bio::EnsEMBL::Variation::Utils::ComparaUtils;
 
 use strict;
 use warnings;
 
+use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Registry;
 use Bio::SimpleAlign;
+use Bio::AlignIO;
 use Bio::LocatableSeq;
 
 use base qw(Exporter);
@@ -14,32 +49,64 @@ our @EXPORT_OK = qw(dump_alignment_for_polyphen dump_alignment_for_sift);
 my $MAX_PSIC_SEQS   = 8190;
 my $MAX_PSIC_SEQLEN = 409650;
 
-sub get_ungapped_alignment {
+sub _ungapify_alignment {
     
     # turn a gapped alignment into an ungapped alignment
-    # with respect to the given query_id
+    # with respect to the given query_id,
+    #
+    # e.g. if our query sequence is no. 1 below, we want to 
+    # turn this:
+    #
+    # 1: -ABC--DEFG-H---
+    # 2: ---IJKLMN--OPQR
+    # 3: ST------UVWXYZ-
+    #
+    # into:
+    #
+    # 1: ABCDEFGH
+    # 2: --ILMN-O
+    # 3: T----UVX
 
     my ($gapped_alignment, $query_id, $include_query) = @_;
 
-    my @seqs = $gapped_alignment->each_seq; 
+    my @seqs = $gapped_alignment->each_seq;
+
+    # find the Seq object corresponding to the query id 
 
     my $query_seq;
 
-    for my $seq (@seqs){
+    for my $seq (@seqs) {
         $query_seq = $seq;
         last if $seq->display_id eq $query_id;
     }
 
+    throw("Could not find query sequence '$query_id' in the alignment")
+        unless $query_seq->display_id eq $query_id;
+
     my $qseq = $query_seq->seq;
 
     #print $qseq, " (".length($qseq).")\n";
+
+    # first we split the query sequence into its component parts and gaps,
+    # so -ABC--DEFG-H--- will become ('ABC','DEFG','H') and ('-','--','-','---')
+    
+    # we grep because we don't want any empty strings that otherwise seem to 
+    # make it through
 
     my @parts = grep {$_} split /-+/, $qseq;
     my @gaps = grep {$_} split /[^-]+/, $qseq;
 
     my @chunks;
 
+    # then we compute the coordinates of each sequence chunk,
+    # taking into account that we might start with a gap
+
     my $offset = substr($qseq,0,1) eq '-' ? length(shift @gaps) : 0;
+
+    # we build up a list of [start, length] pairs for each chunk
+    # of sequence, incrementing our offset by the length of each 
+    # chunk and the gap that follows it, for our example above this 
+    # will result in ([1,3],[6,4],[11,1])
 
     for my $part (@parts) {
 
@@ -52,6 +119,9 @@ sub get_ungapped_alignment {
         $offset += $l + length(shift @gaps || '');
     }
 
+    # we then use this list of chunks to obtain the aligned portions
+    # of all other members of the alignment and create a new alignment,
+   
     my @seq_objs;
 
     for my $seq (@seqs) {
@@ -96,44 +166,46 @@ sub get_ungapped_alignment {
 
     $new_align->add_seq($_) for @seq_objs;
 
+    # sometimes we want the query sequence back as well as the new alignment
+
     return wantarray ? ($query_seq, $new_align) : $new_align;
 }
 
-sub get_alignment {
+sub _get_ungapped_alignment {
 
     # get an ungapped Bio::SimpleAlign for the given query translation
 
     my ($translation_stable_id, $include_query) = @_;
 
     my $compara_dba = Bio::EnsEMBL::Registry->get_DBAdaptor('multi', 'compara')
-        or die "Failed to get compara DBAdaptor";
+        or throw("Failed to get compara DBAdaptor");
 
     my $ma = $compara_dba->get_MemberAdaptor
-        or die "Failed to get member adaptor";
+        or throw("Failed to get member adaptor");
 
     my $fa = $compara_dba->get_FamilyAdaptor
-        or die "Failed to get family adaptor";
+        or throw("Failed to get family adaptor");
 
     my $member = $ma->fetch_by_source_stable_id("ENSEMBLPEP", $translation_stable_id) 
-        or die "Didn't find family member for $translation_stable_id";
+        or throw("Didn't find family member for $translation_stable_id");
 
     my $fams = $fa->fetch_all_by_Member($member) 
-        or die "Didn't find a family for $translation_stable_id";
+        or throw("Didn't find a family for $translation_stable_id");
 
-    die "$translation_stable_id is in more than one family" if @$fams > 1;
+    throw("$translation_stable_id is in more than one family") if @$fams > 1;
 
     my $orig_align = $fams->[0]->get_SimpleAlign;
 
     $compara_dba->dbc->disconnect_if_idle;
 
-    return get_ungapped_alignment(
+    return _ungapify_alignment(
         $orig_align, 
         $translation_stable_id, 
         $include_query
     );
 }
 
-sub percent_id {
+sub _percent_id {
     my ($q, $a) = @_;
 
     my @q = split //, $q->seq;
@@ -150,22 +222,36 @@ sub percent_id {
     return ($tot / $num);
 }
 
+=head2 dump_alignment_for_polyphen
+
+  Arg[1]      : string $translation_stable_id - the stable of the Ensembl translation
+                you want to run PolyPhe on
+  Arg[2]      : string $file - the name of the file you want to write the alignment to
+  Description : Fetches the Compara protein family containing the specified translation
+                (if available), ungaps the alignment with respect to the translation, and 
+                writes the alignment to the specified file in the format expected by PolyPhen
+  Returntype  : none
+  Exceptions  : throws if an alignment cannot be found, or if the file cannot be written 
+  Status      : At Risk
+  
+=cut
+
 sub dump_alignment_for_polyphen {
 
     my ($translation_stable_id, $file) = @_;
 
     # polyphen does not want the query included in the alignment
 
-    my ($query_seq, $alignment) = get_alignment($translation_stable_id, 0);
+    my ($query_seq, $alignment) = _get_ungapped_alignment($translation_stable_id, 0);
 
     my @seqs = $alignment->each_seq;
     
     unless (scalar(@seqs)) {
-        die "No sequences in the alignment for $translation_stable_id";
+        throw("No sequences in the alignment for $translation_stable_id");
     }
 
     if (length($seqs[0]->seq) > $MAX_PSIC_SEQLEN) {
-        die "$translation_stable_id sequence too long for PSIC";
+        throw("$translation_stable_id sequence too long for PSIC");
     }
 
     # polyphen expects the alignment to be sorted descending by % id
@@ -173,7 +259,7 @@ sub dump_alignment_for_polyphen {
     my $percent_id;
 
     for my $seq (@seqs) {
-        $percent_id->{$seq->id} = percent_id($query_seq, $seq);
+        $percent_id->{$seq->id} = _percent_id($query_seq, $seq);
     }
 
     my @sorted = sort { $percent_id->{$b->id} <=> $percent_id->{$a->id} } @seqs;
@@ -187,7 +273,7 @@ sub dump_alignment_for_polyphen {
 
     my $num_seqs = scalar(@seqs);
 
-    open my $ALN, ">$file" or die "Failed to open $file for writing";
+    open my $ALN, ">$file" or throw("Failed to open $file for writing");
 
     print $ALN "CLUSTAL $translation_stable_id (".($num_seqs > $MAX_PSIC_SEQS ? $MAX_PSIC_SEQS : $num_seqs).")\n\n";
 
@@ -210,6 +296,20 @@ sub dump_alignment_for_polyphen {
     close $ALN;
 }
 
+=head2 dump_alignment_for_sift
+
+  Arg[1]      : string $translation_stable_id - the stable id of the Ensembl translation
+                you want to run SIFT on
+  Arg[2]      : string $file - the name of the file you want to write the alignment to
+  Description : Fetches the Compara protein family containing the specified translation
+                (if available), ungaps the alignment with respect to the translation, and 
+                writes the alignment to the specified file in the format expected by SIFT
+  Returntype  : none
+  Exceptions  : throws if an alignment cannot be found, or if the file cannot be written 
+  Status      : At Risk
+  
+=cut
+
 sub dump_alignment_for_sift {
 
     my ($translation_stable_id, $file) = @_;
@@ -217,9 +317,9 @@ sub dump_alignment_for_sift {
     # SIFT is easy, we just fetch an ungapped alignment including the query 
     # and dump it in FASTA format
 
-    my $aln = get_alignment($translation_stable_id, 1);
+    my $aln = _get_ungapped_alignment($translation_stable_id, 1);
 
-    open my $ALN, ">$file" or die "Failed to open $file for writing";
+    open my $ALN, ">$file" or throw("Failed to open $file for writing");
 
     my $alignIO = Bio::AlignIO->newFh(
         -interleaved => 0,
