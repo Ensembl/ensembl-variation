@@ -90,8 +90,8 @@ sub fetch_by_name {
 =head2 fetch_all_by_name
 
   Arg [1]    : string $name
-  Example    : $ssv = $ssv_adaptor->fetch_by_name('nssv133');
-  Description: Retrieves a supporting evidence object via its name
+  Example    : $ssv = $ssv_adaptor->fetch_all_by_name('nssv133');
+  Description: Retrieves a list of supporting evidence objects via its name
   Returntype : listref of Bio::EnsEMBL::Variation::SupportingStructuralVariation
   Exceptions : throw if name argument is not defined
   Caller     : general
@@ -105,7 +105,9 @@ sub fetch_all_by_name {
 
   throw('name argument expected') if(!defined($name));
 
-  my $sth = $self->prepare(qq{SELECT supporting_structural_variation_id, name, structural_variation_id 
+	my $cols = join ",", $self->_columns();
+
+  my $sth = $self->prepare(qq{SELECT $cols
                               FROM   supporting_structural_variation 
                               WHERE  name = ?});
 
@@ -144,8 +146,10 @@ sub fetch_all_by_dbID_list {
   }
   
   my $id_str = (@$list > 1)  ? " IN (".join(',',@$list).")"   :   ' = \''.$list->[0].'\'';
+	
+	my $cols = join ",", $self->_columns();
 
-  my $sth = $self->prepare(qq{SELECT supporting_structural_variation_id, name, structural_variation_id 
+  my $sth = $self->prepare(qq{SELECT $cols
                               FROM   supporting_structural_variation 
                               WHERE  supporting_structural_variation_id $id_str});
   $sth->execute();
@@ -167,7 +171,7 @@ sub fetch_all_by_dbID_list {
                 foreach my $ssv (@{$ssv_adaptor->fetch_all_by_StructuralVariation($sv)}){
 		    		 print $ssv->name,"\n";
                 }
-  Description : Retrieves all populations from a specified structural variant
+  Description : Retrieves all supporting evidences from a specified structural variant
   ReturnType  : reference to list of Bio::EnsEMBL::Variation::SupportingStructuralVariation objects
   Exceptions  : throw if incorrect argument is passed
                 warning if provided structural variant does not have a dbID
@@ -177,33 +181,36 @@ sub fetch_all_by_dbID_list {
 =cut
 
 sub fetch_all_by_StructuralVariation{
-    my $self = shift;
-    my $sv = shift;
+	my $self = shift;
+	my $sv = shift;
 
-    if(!ref($sv) || !$sv->isa('Bio::EnsEMBL::Variation::StructuralVariation')) {
-	throw("Bio::EnsEMBL::Variation::StructuralVariation arg expected");
-    }
+	if(!ref($sv) || !$sv->isa('Bio::EnsEMBL::Variation::StructuralVariation')) {
+		throw("Bio::EnsEMBL::Variation::StructuralVariation arg expected");
+	}
     
-    if(!$sv->dbID()) {
-	warning("StructuralVariation does not have dbID, cannot retrieve structural variants");
-	return [];
+	if(!$sv->dbID()) {
+		warning("StructuralVariation does not have dbID, cannot retrieve structural variants");
+		return [];
   } 
+	
+	my $cols = join ",", $self->_columns();
 
-    my $sth = $self->prepare(qq{SELECT ssv.supporting_structural_variation_id, ssv.name, ssv.structural_variation_id 
-				FROM supporting_structural_variation ssv, structural_variation sv 
-				WHERE sv.structural_variation_id = ssv.structural_variation_id 
-				AND sv.structural_variation_id = ?
-			    });
-    $sth->bind_param(1,$sv->dbID,SQL_INTEGER);
-    $sth->execute();
+	my $sth = $self->prepare(qq{SELECT $cols
+				                        FROM supporting_structural_variation
+				                        WHERE structural_variation_id = ?});
+	$sth->bind_param(1,$sv->dbID,SQL_INTEGER);
+	$sth->execute();
 
-    my $results = $self->_objs_from_sth($sth);
+	my $results = $self->_objs_from_sth($sth);
 
-    $sth->finish();
+	$sth->finish();
 
-    return $results;
+	return $results;
 }
 
+sub _columns {
+  return qw( supporting_structural_variation_id name structural_variation_id class_attrib_id );
+}
 
 #
 # private method, creates supporting evidence objects from an executed statement handle
@@ -215,17 +222,21 @@ sub _objs_from_sth {
 
   my @ssvs;
 
-  my ($ssv_id, $name, $structural_variation_id);
+  my ($ssv_id, $name, $structural_variation_id, $class_attrib_id);
 
-  $sth->bind_columns(\$ssv_id, \$name, \$structural_variation_id);
-
+	$sth->bind_columns(\$ssv_id, \$name, \$structural_variation_id, \$class_attrib_id);
+	
+	my $aa = $self->db->get_AttributeAdaptor;
+	
   while($sth->fetch()) {
 	
     push @ssvs, Bio::EnsEMBL::Variation::SupportingStructuralVariation->new
-      (-dbID => $ssv_id,
+      (-dbID    => $ssv_id,
        -ADAPTOR => $self,
-       -NAME => $name,
-       -STRUCTURAL_VARIATION_ID => $structural_variation_id);
+       -NAME    => $name,
+       -STRUCTURAL_VARIATION_ID => $structural_variation_id,
+       -CLASS_SO_TERM           => $aa->attrib_value_for_id($class_attrib_id),
+			);
   }
 
   return \@ssvs;
