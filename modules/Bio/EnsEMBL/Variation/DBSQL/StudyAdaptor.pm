@@ -36,10 +36,10 @@ Bio::EnsEMBL::Variation::DBSQL::StudyAdaptor
   
   $reg->load_registry_from_db(-host => 'ensembldb.ensembl.org',-user => 'anonymous');
   
-  $ssva = $reg->get_adaptor("human","variation","study");
+  $sta = $reg->get_adaptor("human","variation","study");
 
   # fetch a study by its name
-  $ssv = $ssva->fetch_by_name('nssv133'); 
+  $study = $sta->fetch_by_name('estd1'); 
 
   # fetch all study for a source
   $sta = $reg->get_adaptor("human","variation","study");
@@ -72,7 +72,7 @@ use base qw{Bio::EnsEMBL::DBSQL::BaseAdaptor};
 =head2 fetch_by_name
 
   Arg [1]    : string $name
-  Example    : $ssv = $ssv_adaptor->fetch_by_name('nssv133');
+  Example    : $study = $study_adaptor->fetch_by_name('estd1');
   Description: Retrieves a study object via its name
   Returntype : Bio::EnsEMBL::Variation::Study
   Exceptions : throw if name argument is not defined
@@ -87,10 +87,12 @@ sub fetch_by_name {
 
   throw('name argument expected') if(!defined($name));
 
-  my $sth = $self->prepare(qq{SELECT st.study_id, st.name, st.description, st.url, st.external_reference,
-		 																 st.study_type, s.name 
+	my $cols   = join ",", $self->_columns();
+	my $clause = $self->_default_where_clause();
+
+  my $sth = $self->prepare(qq{SELECT $cols 
 															FROM study st, source s 
-														  WHERE st.source_id = s.source_id AND name = ?});
+														  WHERE $clause AND st.name = ?});
 
   $sth->bind_param(1,$name,SQL_VARCHAR);
   $sth->execute();
@@ -108,7 +110,7 @@ sub fetch_by_name {
 =head2 fetch_by_dbID
 
   Arg [1]    : int $dbID
-  Example    : $st = $st_adaptor->fetch_by_dbID(254);
+  Example    : $study = $study_adaptor->fetch_by_dbID(254);
   Description: Retrieves a Study object via its internal identifier.
                If no such study exists undef is returned.
   Returntype : Bio::EnsEMBL::Variation::Study
@@ -124,10 +126,13 @@ sub fetch_by_dbID {
 
   throw('dbID argument expected') if(!defined($dbID));
 
+	my $cols   = join ",", $self->_columns();
+	my $clause = $self->_default_where_clause();
+	
   my $sth = $self->prepare
-    (qq{SELECT st.study_id, st.name, st.description, st.url, st.external_reference, st.study_type, s.name 
+    (qq{SELECT $cols 
 				FROM study st, source s 
-       	WHERE st.source_id = s.source_id AND st.study_id = ?});
+       	WHERE $clause AND st.study_id = ?});
   $sth->bind_param(1,$dbID,SQL_INTEGER);
   $sth->execute();
 
@@ -142,7 +147,7 @@ sub fetch_by_dbID {
 =head2 fetch_all_by_dbID_list
 
   Arg [1]    : listref $list
-  Example    : $ssv = $ssv_adaptor->fetch_all_by_dbID_list([907,1132]);
+  Example    : $study = $study_adaptor->fetch_all_by_dbID_list([907,1132]);
   Description: Retrieves a listref of study objects via a list of internal
                dbID identifiers
   Returntype : listref of Bio::EnsEMBL::Variation::Study objects
@@ -162,10 +167,12 @@ sub fetch_all_by_dbID_list {
   
   my $id_str = (@$list > 1)  ? " IN (".join(',',@$list).")"   :   ' = \''.$list->[0].'\'';
 
-  my $sth = $self->prepare(qq{SELECT st.study_id, st.name, st.description, st.url, st.external_reference,
-		 																 st.study_type, s.name 
+	my $cols   = join ",", $self->_columns();
+	my $clause = $self->_default_where_clause();
+	
+  my $sth = $self->prepare(qq{SELECT $cols 
 														  FROM study st, source s 
-															WHERE st.source_id = s.source_id AND study_id $id_str});
+															WHERE $clause AND study_id $id_str});
   $sth->execute();
 
   my $result = $self->_objs_from_sth($sth);
@@ -181,7 +188,7 @@ sub fetch_all_by_dbID_list {
 =head2 fetch_all_by_source
 
   Arg [1]     : string $source_name
-  Example     : my $st = $st_adaptor->fetch_by_name('EGAS00000000001');
+  Example     : my $study = $study_adaptor->fetch_by_name('EGAS00000000001');
   Description : Retrieves all Study objects associated with a source.
 	Returntype : listref of Bio::EnsEMBL::Variation::Study
   Exceptions : thrown if source_name not provided
@@ -196,12 +203,13 @@ sub fetch_all_by_source{
 
 		throw('name argument expected') if(!defined($source_name));
 
-    my $sth = $self->prepare(qq{SELECT st.study_id, st.name, st.description, st.url, st.external_reference,
-		 																	 st.study_type, s.name 
+		my $cols   = join ",", $self->_columns();
+		my $clause = $self->_default_where_clause();
+
+    my $sth = $self->prepare(qq{SELECT $cols
 																FROM study st, source s 
-																WHERE st.source_id = s.source_id 
-																AND s.name = ?
-			    });
+																WHERE $clause AND s.name = ?
+			    		});
     $sth->bind_param(1,$source_name,SQL_VARCHAR);
     $sth->execute();
 
@@ -235,9 +243,17 @@ sub _fetch_all_associate_study_id {
 }
 
 
+sub _columns {
+  return qw(st.study_id st.name st.description st.url st.external_reference st.study_type s.name);
+}
+
+sub _default_where_clause {
+  my $self = shift;
+  return 'st.source_id = s.source_id';
+}
 
 #
-# private method, creates supporting evidence objects from an executed statement handle
+# private method, creates study objects from an executed statement handle
 # ordering of columns must be consistant
 #
 sub _objs_from_sth {
