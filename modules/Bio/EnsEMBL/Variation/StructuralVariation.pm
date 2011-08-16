@@ -26,17 +26,13 @@
 
 =head1 NAME
 
-Bio::EnsEMBL::Variation::StructuralVariation - A genomic position for a structural variation.
+Bio::EnsEMBL::Variation::StructuralVariation - Ensembl representation of a structural variation.
 
 =head1 SYNOPSIS
 
-    # Structural variation feature representing a CNV
-    $svf = Bio::EnsEMBL::Variation::StructuralVariation->new
-       (-start   => 100,
-        -end     => 200,
-        -strand  => 1,
-        -slice   => $slice,
-        -variation_name => 'esv25480',
+    # Structural variation representing a CNV
+    $sv = Bio::EnsEMBL::Variation::StructuralVariation->new
+       (-variation_name => 'esv25480',
 				-class_so_term => 'structural_variant',
 				-source => 'DGVa',
 				-source_description => 'Database of Genomic Variants Archive',
@@ -47,20 +43,16 @@ Bio::EnsEMBL::Variation::StructuralVariation - A genomic position for a structur
 
     ...
 
-    # a variation feature is like any other ensembl feature, can be
-    # transformed etc.
-    $svf = $svf->transform('supercontig');
-
-    print $svf->start(), "-", $svf->end(), '(', $svf->strand(), ')', "\n";
-
-    print $svf->name(), ":", $svf->class();
+    print $sv->name(), ":", $sv->var_class();
 
 =head1 DESCRIPTION
 
-This is a class representing the genomic position of a structural variation
-from the ensembl-variation database.  A StructuralVariation behaves as any other
-Ensembl feature. See B<Bio::EnsEMBL::Feature> and
-B<Bio::EnsEMBL::Variation::Variation>.
+This is a class representing a structural variation from the
+ensembl-variation database. A structural variant may have a copy number variation, a tandem duplication, 
+an inversion of the sequence or others structural variations. 
+
+The position of a StrucutralVariation object on the Genome is represented
+by the B<Bio::EnsEMBL::Variation::StructuralVariationFeature> class.
 
 =head1 METHODS
 
@@ -71,14 +63,12 @@ use warnings;
 
 package Bio::EnsEMBL::Variation::StructuralVariation;
 
-use Bio::EnsEMBL::Feature;
+use Bio::EnsEMBL::Storable;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning deprecate);
 use Bio::EnsEMBL::Utils::Argument  qw(rearrange);
-use Bio::EnsEMBL::Variation::Variation;
-use Bio::EnsEMBL::Slice;
 use Bio::EnsEMBL::Variation::Utils::Constants qw(%VARIATION_CLASSES); 
 
-our @ISA = ('Bio::EnsEMBL::Feature');
+our @ISA = ('Bio::EnsEMBL::Storable');
 
 =head2 new
 
@@ -87,23 +77,6 @@ our @ISA = ('Bio::EnsEMBL::Feature');
 
   Arg [-ADAPTOR] :
     see superclass constructor
-
-  Arg [-START] :
-    see superclass constructor
-  Arg [-END] :
-    see superclass constructor
-
-  Arg [-STRAND] :
-    see superclass constructor
-
-  Arg [-SLICE] :
-    see superclass constructor
-	
-  Arg [-INNER_START] :
-	int - the 5'-less coordinate of the underlying structural variation
-	
-  Arg [-INNER_END] :
-	int - the 3'-less coordinate of the underlying structural variation
 
   Arg [-VARIATION_NAME] :
     string - the name of the variation this feature is for (denormalisation
@@ -116,42 +89,25 @@ our @ISA = ('Bio::EnsEMBL::Feature');
     string - the name of the source where the variation comes from
 	
   Arg [-SOURCE_DESCRIPTION] :
-	string - description of the source
+	  string - description of the source
 
   Arg [-TYPE] :
-     string - the class of structural variation e.g. 'SV'
-
-  Arg [-STUDY_NAME] :
-    string - the name of the study where the variation comes from
+     string - the class of structural variation e.g. 'copy_number_variation'
 	
-  Arg [-STUDY_DESCRIPTION] :
-	string - description of the study
-	
-  Arg [-STUDY_URL] :
-	string - url of the database/file where the data are stored
-
-  Arg [-EXTERNAL_REFERENCE] :
-	string - the pubmed/ids or project/study names
+	Arg [-STUDY] :
+    object ref - the study object describing where the annotated variation comes from.
 	
 	Arg [-VALIDATION_STATUS] :
-	string - the status of the structural variation (e.g. validated, not validated, ...)
+	  string - the status of the structural variation (e.g. validated, not validated, ...)
 	
 	
   Example    :
-    $svf = Bio::EnsEMBL::Variation::StructuralVariation->new
-       (-start   => 100,
-        -end     => 200,
-        -strand  => 1,
-        -slice   => $slice,
-        -variation_name => 'esv25480',
-		-class_so_term => 'structural_variant',
-		-source => 'DGVa',
-		-source_description => 'Database of Genomic Variants Archive',
-		-study_name => 'estd20',
-		-study_description => 'Conrad 2009 "Origins and functional impact of copy number variation in the human genome." PMID:19812545 [remapped from build NCBI36]',
-		-study_url => 'ftp://ftp.ebi.ac.uk/pub/databases/dgva/estd20_Conrad_et_al_2009',
-		-external_reference => 'pubmed/19812545');
-
+    $sv = Bio::EnsEMBL::Variation::StructuralVariation->new
+       (-variation_name => 'esv25480',
+		    -class_so_term => 'copy_number_variation',
+		    -source => 'DGVa',
+		    -source_description => 'Database of Genomic Variants Archive',
+		
   Description: Constructor. Instantiates a new StructuralVariation object.
   Returntype : Bio::EnsEMBL::Variation::StructuralVariation
   Exceptions : none
@@ -163,53 +119,40 @@ our @ISA = ('Bio::EnsEMBL::Feature');
 sub new {
   my $caller = shift;
   my $class = ref($caller) || $caller;
-
-  my $self = $class->SUPER::new(@_);
   
   my (
-    $var_name, 
+		$dbID,
+		$adaptor,
+    $var_name,
     $source, 
     $source_version, 
     $source_description, 
-    $class_so_term, 
-    $inner_start, 
-    $inner_end, 
-    $allele_string, 
-    $study_name, 
-    $study_description, 
-    $study_url, 
-    $external_reference,
+    $class_so_term,
+    $study,
 		$validation_status
   ) = rearrange([qw(
-          VARIATION_NAME 
+					dbID
+					ADAPTOR
+          VARIATION_NAME
           SOURCE 
           SOURCE_VERSION
           SOURCE_DESCRIPTION 
           CLASS_SO_TERM
-          INNER_START 
-          INNER_END 
-          ALLELE_STRING 
-          STUDY_NAME 
-          STUDY_DESCRIPTION 
-          STUDY_URL 
-          EXTERNAL_REFERENCE
+          STUDY
+					VALIDATION_STATES
     )], @_);
-
-
-  $self->{'variation_name'}     = $var_name;
-  $self->{'source'}             = $source;
-  $self->{'source_version'}     = $source_version;
-  $self->{'source_description'} = $source_description;
-  $self->{'class_SO_term'}      = $class_so_term;
-  $self->{'inner_start'}        = $inner_start;
-  $self->{'inner_end'}          = $inner_end;
-  $self->{'allele_string'}      = $allele_string;
-  $self->{'study_name'}         = $study_name;
-  $self->{'study_description'}  = $study_description;
-  $self->{'study_url'}          = $study_url;
-  $self->{'external_reference'} = $external_reference;
-	$self->{'validation_status'}  = $validation_status;
-
+		
+	my $self = bless {
+		'dbID'               => $dbID,
+		'adaptor'            => $adaptor,
+  	'variation_name'     => $var_name,
+  	'source'             => $source,
+  	'source_version'     => $source_version,
+  	'source_description' => $source_description,
+  	'class_SO_term'      => $class_so_term,
+  	'study'              => $study,
+		'validation_status'  => $validation_status,
+	};
   return $self;
 }
 
@@ -225,8 +168,8 @@ sub new_fast {
 =head2 display_id
 
   Arg [1]    : none
-  Example    : print $svf->display_id(), "\n";
-  Description: Returns the 'display' identifier for this feature. For
+  Example    : print $sv->display_id(), "\n";
+  Description: Returns the 'display' identifier for this structural variation. For
                StructuralVariations this is simply the name of the variation
                it is associated with.
   Returntype : string
@@ -263,30 +206,10 @@ sub variation_name{
   return $self->{'variation_name'};
 }
 
-=head2 allele_string
-
-  Arg [1]    : string $newval (optional)
-               The new value to set the allele_string attribute to
-  Example    : $allele_string = $obj->allele_string()
-  Description: Getter/Setter for the allele_string attribute. This is the
-               genomic sequence represented by this feature.
-  Returntype : string
-  Exceptions : none
-  Caller     : general
-  Status     : Stable
-
-=cut
-
-sub allele_string{
-  my $self = shift;
-  return $self->{'allele_string'} = shift if(@_);
-  return $self->{'allele_string'};
-}
-
 
 =head2 get_all_SupportingStructuralVariants
 
-  Example     : $svf->get_all_SupportingStructuralVariants();
+  Example     : $sv->get_all_SupportingStructuralVariants();
   Description : Retrieves all SupportingStructuralVariation associated with this structural variation.
                 Return empty list if there are none.
   Returntype  : reference to list of Bio::EnsEMBL::Variation::SupportingStructuralVariation objects
@@ -307,77 +230,23 @@ sub get_all_SupportingStructuralVariants {
 }
 
 
-
-
-=head2 get_nearest_Gene
-
-  Example     : $svf->get_nearest_Gene($flanking_size);
-  Description : Getter a Gene which is associated to or nearest to the StructuralVariation
-  Returntype  : Listref of objects of Bio::EnsEMBL::Gene
-  Exceptions  : None
-  Caller      : general
-  Status      : At Risk
-
-=cut
-
-sub get_nearest_Gene{
-
-    my $self = shift;
-    my $flanking_size = shift; #flanking size is optional
-    $flanking_size ||= 0;
-    my $sa = $self->{'adaptor'}->db()->dnadb->get_SliceAdaptor();
-    my $slice = $sa->fetch_by_Feature($self,$flanking_size);
-    my @genes = @{$slice->get_all_Genes};
-    return \@genes if @genes; #$svf is on the gene
-
-    if (! @genes) { #if $svf is not on the gene, increase flanking size
-      warning("flanking_size $flanking_size is not big enough to overlap a gene, increase it by 1,000,000");
-      $flanking_size += 1000000;
-      $slice = $sa->fetch_by_Feature($self,$flanking_size);
-      @genes = @{$slice->get_all_Genes};
-    }
-    if (@genes) {
-      my %distances = ();
-      foreach my $g (@genes) {
-        if ($g->seq_region_start > $self->start) {
-          $distances{$g->seq_region_start-$self->start}=$g;
-        }
-        else {
-          $distances{$self->start-$g->seq_region_end}=$g;
-        }
-      }
-      my @distances = sort {$a<=>$b} keys %distances;
-      my $shortest_distance = $distances[0];
-      if ($shortest_distance) {
-        my $nearest_gene = $distances{$shortest_distance};
-        return [$nearest_gene];
-      }
-    }
-    else {
-      throw("variation_feature with flanking_size $flanking_size is not overlap with a gene, try a bigger flanking_size");
-    }
-}
-
-
-=head2 class
+=head2 var_class
 
     Args         : None
-    Example      : my $sv_class = $svf->class()
+    Example      : my $sv_class = $sv->var_class()
     Description  : Getter/setter for the class of structural variation
-    ReturnType   : String $sv_class
+    ReturnType   : String
     Exceptions   : none
     Caller       : General
     Status       : At Risk
 
 =cut
 
-
-sub class {
+sub var_class {
 	my $self = shift;
     
 	unless ($self->{class_display_term}) {
-        my $display_term =
-            $VARIATION_CLASSES{$self->{class_SO_term}}->{display_term};
+        my $display_term = $VARIATION_CLASSES{$self->{class_SO_term}}->{display_term};
 
         warn "No display term for SO term: ".$self->{class_SO_term} unless $display_term;
 
@@ -386,6 +255,19 @@ sub class {
 
 	return $self->{class_display_term};
 }
+
+
+=head2 class_SO_term
+
+    Args         : None
+    Example      : my $sv_so_term = $svf->class_SO_term()
+    Description  : Getter for the class of structural variation, returning the SO term
+    ReturnType   : String
+    Exceptions   : none
+    Caller       : General
+    Status       : At Risk
+
+=cut
 
 sub class_SO_term {
 	my $self = shift;
@@ -414,6 +296,7 @@ sub source{
   return $self->{'source'};
 }
 
+
 =head2 source_version
 
   Arg [1]    : string $source_version (optional)
@@ -433,6 +316,7 @@ sub source_version {
   return $self->{'source_version'};
 }
 
+
 =head2 source_description
 
   Arg [1]    : string $source_description (optional)
@@ -450,87 +334,6 @@ sub source_description{
   my $self = shift;
   return $self->{'source_description'} = shift if(@_);
   return $self->{'source_description'};
-}
-
-
-=head2 bound_start
-
-
-
-	Arg [1]    : int $bound_start (optional)
-				The new value to set the bound_start attribute to
-    Example     : my $bound_start = $svf->bound_start();
-    Description : Getter/setter for the 5'-most coordinate defined for this StructuralVariation
-    ReturnType  : int
-    Exceptions  : none
-    Caller      : general
-    Status      : DEPRECATED - Use the method seq_region_start
-=cut
-
-sub bound_start{
-  my $self = shift;
-	deprecate('Use the seq_region_start method instead.');
-  return $self->{'start'} = shift if(@_);
-  return $self->{'start'};
-}
-
-
-=head2 bound_end
-
-	Arg [1]    : int $bound_end (optional)
-				The new value to set the bound_end attribute to
-    Example     : my $bound_end = $svf->bound_end();
-    Description : Getter/setter for the 3'-most coordinate defined for this StructuralVariation
-    ReturnType  : int
-    Exceptions  : none
-    Caller      : general
-    Status      : DEPRECATED - Use the method seq_region_end
-=cut
-
-sub bound_end{
-  my $self = shift;
-	deprecate('Use the seq_region_end method instead.');
-  return $self->{'end'} = shift if(@_);
-  return $self->{'end'};
-}
-
-
-
-=head2 inner_start
-
-	Arg [1]    : int $inner_start (optional)
-				The new value to set the inner_start attribute to
-    Example     : my $inner_start = $svf->inner_start();
-    Description : Getter/setter for the 5'-less coordinate defined for this StructuralVariation
-    ReturnType  : int
-    Exceptions  : none
-    Caller      : general
-    Status      : At Risk
-=cut
-
-sub inner_start{
-  my $self = shift;
-  return $self->{'inner_start'} = shift if(@_);
-  return $self->{'inner_start'};
-}
-
-
-=head2 inner_end
-
-	Arg [1]    : int $inner_end (optional)
-				The new value to set the bound_end attribute to
-    Example     : my $inner_end = $svf->inner_end();
-    Description : Getter/setter for the 3'-less coordinate defined for this StructuralVariation
-    ReturnType  : int
-    Exceptions  : none
-    Caller      : general
-    Status      : At Risk
-=cut
-
-sub inner_end{
-  my $self = shift;
-  return $self->{'inner_end'} = shift if(@_);
-  return $self->{'inner_end'};
 }
 
 
@@ -555,69 +358,22 @@ sub get_all_validation_states {
 }
 
 
-=head2 get_reference_sequence
+=head2 study
 
-    Args        : none
-    Example     : my $seq = $svf->get_reference_sequence
-    Description : returns a string containing the reference sequence for the region
-				  covered by this StructuralVariation
-    ReturnType  : string
-    Exceptions  : none
-    Caller      : general
-    Status      : At Risk
+  Arg [1]    : Bio::EnsEMBL::Variation::Study (optional)
+  Example    : $study = $sv->study()
+  Description: Getter/Setter for the study object
+  Returntype : Bio::EnsEMBL::Variation::Study
+  Exceptions : none
+  Caller     : general
+  Status     : At Risk
+
 =cut
 
-sub get_reference_sequence{
+sub study {
   my $self = shift;
-  
-  return $self->feature_Slice->seq();
-}
-
-
-sub transform {
-  my $self = shift;
-  
-  # run the transform method from the parent class
-  my $transformed = $self->SUPER::transform(@_);
-  
-  if(defined $transformed) {
-	
-	# fit the start and end coords to the new coords
-	$transformed->_fix_bounds($self);
-  }
-  
-  return $transformed;
-}
-
-
-sub transfer {
-  my $self = shift;
-  
-  # run the transfer method from the parent class
-  my $transferred = $self->SUPER::transfer(@_);
-  
-  if(defined $transferred) {
-	
-	# fit the start and end coords to the new coords
-	$transferred->_fix_bounds($self);
-  }
-  
-  return $transferred;
-}
-
-
-
-sub _fix_bounds {
-  my $self = shift;
-  my $old = shift;
-  
-  if(defined $old->{'start'}) {
-	$self->{'start'} = $self->start - ($old->start - $old->{'start'});
-  }
-  
-  if(defined $old->{'end'}) {
-	$self->{'end'} = $self->end + ($old->{'end'} - $old->end);
-  }
+  return $self->{'study'} = shift if(@_);
+  return $self->{'study'};
 }
 
 
@@ -625,19 +381,21 @@ sub _fix_bounds {
 
   Arg [1]    : string $study (optional)
                The new value to set the study attribute to
-  Example    : $study = $svf->study()
+  Example    : $study = $sv->study()
   Description: Getter/Setter for the study attribute
   Returntype : string
   Exceptions : none
   Caller     : general
-  Status     : At Risk
+  Status     : Deprecated
 
 =cut
 
 sub study_name{
   my $self = shift;
-  return $self->{'study_name'} = shift if(@_);
-  return $self->{'study_name'};
+	deprecate('Use the method "study" instead (returns a Bio::EnsEMBL::Variation::Study object).');
+	return undef if (!$self->study);
+  return $self->study->name = shift if(@_);
+  return $self->study->name;
 }
 
 
@@ -646,19 +404,21 @@ sub study_name{
 
   Arg [1]    : string $study_description (optional)
                The new value to set the study_description attribute to
-  Example    : $study_description = $svf->study_description()
+  Example    : $study_description = $sv->study_description()
   Description: Getter/Setter for the study_description attribute
   Returntype : string
   Exceptions : none
   Caller     : general
-  Status     : At Risk
+  Status     : Deprecated
 
 =cut
 
 sub study_description{
   my $self = shift;
-  return $self->{'study_description'} = shift if(@_);
-  return $self->{'study_description'};
+	deprecate('Use the method "study" instead (returns a Bio::EnsEMBL::Variation::Study object).');
+	return undef if (!$self->study);
+  return $self->study->description = shift if(@_);
+  return $self->study->description;
 }
 
 =head2 study_url
@@ -670,14 +430,16 @@ sub study_description{
   Returntype : string
   Exceptions : none
   Caller     : general
-  Status     : At Risk
+  Status     : Deprecated
 
 =cut
 
 sub study_url{
   my $self = shift;
-  return $self->{'study_url'} = shift if(@_);
-  return $self->{'study_url'};
+	deprecate('Use the method "study" instead (returns a Bio::EnsEMBL::Variation::Study object).');
+	return undef if (!$self->study);
+  return $self->study->url = shift if(@_);
+  return $self->study->url;
 }
 
 
@@ -691,16 +453,17 @@ sub study_url{
   Returntype : string
   Exceptions : none
   Caller     : general
-  Status     : At Risk
+  Status     : Deprecated
 
 =cut
 
 sub external_reference{
   my $self = shift;
-  return $self->{'external_reference'} = shift if(@_);
-  return $self->{'external_reference'};
+	deprecate('Use the method "study" instead (returns a Bio::EnsEMBL::Variation::Study object).');
+	return undef if (!$self->study);
+  return $self->study->external_reference = shift if(@_);
+  return $self->study->external_reference;
 }
-
 
 
 =head2 is_supporting_structural_variation
@@ -717,7 +480,7 @@ sub external_reference{
 sub is_supporting_structural_variation{
   my $self = shift;
 
-	my $ssva = $self->{'adaptor'}->db()->get_SupportingStructuralVariationAdaptor();
+	my $ssva = $self->adaptor->db()->get_SupportingStructuralVariationAdaptor();
 	my $ssv  = $ssva->fetch_by_name($self->{'variation_name'});
 	if (defined($ssv)) {
 		return $ssv->get_StructuralVariation;
@@ -725,27 +488,52 @@ sub is_supporting_structural_variation{
 	else { return undef; }
 }
 
+
+=head2 get_all_StructuralVariationFeatures
+
+  Args        : None
+  Example     : $svfs = $sv->get_all_StructuralVariationFeatures();
+  Description : Retrieves all StructuralVariationFeatures for this StructuralVariation
+  ReturnType  : reference to list of Bio::EnsEMBL::Variation::StructuralVariationFeature
+  Exceptions  : None
+  Caller      : general
+  Status      : At Risk
+
+=cut
+
+sub get_all_StructuralVariationFeatures{
+  my $self = shift;
+  
+  if(defined $self->{'adaptor'}) {
+  
+  	# get variation feature adaptor
+  	my $svf_adaptor = $self->{'adaptor'}->db()->get_StructuralVariationFeatureAdaptor();
+  
+  	return $svf_adaptor->fetch_all_by_StructuralVariation($self);
+  }
+  else {
+  	warn("No variation database attached");
+  	return [];
+  }
+}
+
 =head2 summary_as_hash
 
-  Example       : $gene_summary = $gene->summary_as_hash();
-  Description   : Retrieves a textual summary of this Gene object.
+  Example       : $sv_summary = $sv->summary_as_hash();
+  Description   : Retrieves a textual summary of this StructuralVariation object.
   Returns       : hashref of descriptive strings
 
 =cut
 
 sub summary_as_hash {
-    my $self = shift;
-    my %summary;
-    $summary{'display_id'} = $self->display_id;
-    $summary{'study_description'} = $self->study_description;
-    $summary{'strand'} = $self->strand;
-	$summary{'start'} = $self->start;
-	$summary{'end'} = $self->end;
-	$summary{'class'} = $self->class;
-	$summary{'variation_name'} = $self->variation_name;
-    return \%summary;
+	my $self = shift;
+	my %summary;
+	$summary{'display_id'} = $self->display_id;
+	$summary{'study_name'} = $self->study_name;
+	$summary{'study_description'} = $self->study_description;
+	$summary{'class'} = $self->var_class;
+	return \%summary;
 
 }
-
 
 1;
