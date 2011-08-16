@@ -1,0 +1,237 @@
+package Bio::EnsEMBL::Variation::Utils::ComparaUtils;
+
+use strict;
+use warnings;
+
+use Bio::EnsEMBL::Registry;
+use Bio::SimpleAlign;
+use Bio::LocatableSeq;
+
+use base qw(Exporter);
+
+our @EXPORT_OK = qw(dump_alignment_for_polyphen dump_alignment_for_sift);
+
+my $MAX_PSIC_SEQS   = 8190;
+my $MAX_PSIC_SEQLEN = 409650;
+
+sub get_ungapped_alignment {
+    
+    # turn a gapped alignment into an ungapped alignment
+    # with respect to the given query_id
+
+    my ($gapped_alignment, $query_id, $include_query) = @_;
+
+    my @seqs = $gapped_alignment->each_seq; 
+
+    my $query_seq;
+
+    for my $seq (@seqs){
+        $query_seq = $seq;
+        last if $seq->display_id eq $query_id;
+    }
+
+    my $qseq = $query_seq->seq;
+
+    #print $qseq, " (".length($qseq).")\n";
+
+    my @parts = grep {$_} split /-+/, $qseq;
+    my @gaps = grep {$_} split /[^-]+/, $qseq;
+
+    my @chunks;
+
+    my $offset = substr($qseq,0,1) eq '-' ? length(shift @gaps) : 0;
+
+    for my $part (@parts) {
+
+        my $l = length($part);
+
+        push @chunks, [$offset, $l];
+
+        #print "$part: $offset - $l\n";
+
+        $offset += $l + length(shift @gaps || '');
+    }
+
+    my @seq_objs;
+
+    for my $seq (@seqs) {
+        
+        my $old_seq = $seq->seq;
+        my $new_seq;
+
+        for my $chunk (@chunks) {
+            $new_seq .= substr($old_seq, $chunk->[0], $chunk->[1]);
+        }
+
+        next if $new_seq =~ /^-*$/;
+
+        #my $gap_count = ($new_seq =~ tr/-//);
+
+        #next if $gap_count / length($new_seq) > 0.1;
+
+        if ($seq->display_id eq $query_id) {
+
+            $query_seq =  Bio::LocatableSeq->new(
+                -SEQ    => $new_seq,
+                -START  => 1,
+                -END    => length($new_seq),
+                -ID     => 'QUERY',
+                -STRAND => 0
+            );
+            
+            unshift @seq_objs, $query_seq if $include_query;
+        }
+        else {
+            push @seq_objs,  Bio::LocatableSeq->new(
+                -SEQ    => $new_seq,
+                -START  => 1,
+                -END    => length($new_seq),
+                -ID     => $seq->display_id,
+                -STRAND => 0
+            )
+        }
+    }
+
+    my $new_align = Bio::SimpleAlign->new;
+
+    $new_align->add_seq($_) for @seq_objs;
+
+    return wantarray ? ($query_seq, $new_align) : $new_align;
+}
+
+sub get_alignment {
+
+    # get an ungapped Bio::SimpleAlign for the given query translation
+
+    my ($translation_stable_id, $include_query) = @_;
+
+    my $compara_dba = Bio::EnsEMBL::Registry->get_DBAdaptor('multi', 'compara')
+        or die "Failed to get compara DBAdaptor";
+
+    my $ma = $compara_dba->get_MemberAdaptor
+        or die "Failed to get member adaptor";
+
+    my $fa = $compara_dba->get_FamilyAdaptor
+        or die "Failed to get family adaptor";
+
+    my $member = $ma->fetch_by_source_stable_id("ENSEMBLPEP", $translation_stable_id) 
+        or die "Didn't find family member for $translation_stable_id";
+
+    my $fams = $fa->fetch_all_by_Member($member) 
+        or die "Didn't find a family for $translation_stable_id";
+
+    die "$translation_stable_id is in more than one family" if @$fams > 1;
+
+    my $orig_align = $fams->[0]->get_SimpleAlign;
+
+    $compara_dba->dbc->disconnect_if_idle;
+
+    return get_ungapped_alignment(
+        $orig_align, 
+        $translation_stable_id, 
+        $include_query
+    );
+}
+
+sub percent_id {
+    my ($q, $a) = @_;
+
+    my @q = split //, $q->seq;
+    my @a = split //, $a->seq;
+
+    my $num = scalar(@q);
+        
+    my $tot = 0.0;
+
+    for (my $i = 0; $i < $num; $i++ ) {
+        $tot++ if $q[$i] eq $a[$i];
+    }
+
+    return ($tot / $num);
+}
+
+sub dump_alignment_for_polyphen {
+
+    my ($translation_stable_id, $file) = @_;
+
+    # polyphen does not want the query included in the alignment
+
+    my ($query_seq, $alignment) = get_alignment($translation_stable_id, 0);
+
+    my @seqs = $alignment->each_seq;
+    
+    unless (scalar(@seqs)) {
+        die "No sequences in the alignment for $translation_stable_id";
+    }
+
+    if (length($seqs[0]->seq) > $MAX_PSIC_SEQLEN) {
+        die "$translation_stable_id sequence too long for PSIC";
+    }
+
+    # polyphen expects the alignment to be sorted descending by % id
+
+    my $percent_id;
+
+    for my $seq (@seqs) {
+        $percent_id->{$seq->id} = percent_id($query_seq, $seq);
+    }
+
+    my @sorted = sort { $percent_id->{$b->id} <=> $percent_id->{$a->id} } @seqs;
+
+    # the format is similar to a clustalw .aln file, but it *must* have a
+    # 70 character description beginning each line, and then the alignment string
+    # on the rest of the line with no line breaks between sequences, PSIC
+    # can also only deal with a fixed maximum sequence length and number
+    # of sequences on the alignment, these are set in the constants at the
+    # top of this file
+
+    my $num_seqs = scalar(@seqs);
+
+    open my $ALN, ">$file" or die "Failed to open $file for writing";
+
+    print $ALN "CLUSTAL $translation_stable_id (".($num_seqs > $MAX_PSIC_SEQS ? $MAX_PSIC_SEQS : $num_seqs).")\n\n";
+
+    my $count = 0;
+
+    for my $seq (@sorted) {
+        if ($percent_id->{$seq->id} == 1) {
+            #warn "Ignoring identical seq ".$seq->id."\n";
+            #next;
+        }
+
+        my $id = $seq->id;
+        my $extra = 70 - length($id);
+        
+        print $ALN $seq->id, ' ' x $extra, $seq->seq, "\n";                
+
+        last if ++$count >= $MAX_PSIC_SEQS;
+    }
+
+    close $ALN;
+}
+
+sub dump_alignment_for_sift {
+
+    my ($translation_stable_id, $file) = @_;
+
+    # SIFT is easy, we just fetch an ungapped alignment including the query 
+    # and dump it in FASTA format
+
+    my $aln = get_alignment($translation_stable_id, 1);
+
+    open my $ALN, ">$file" or die "Failed to open $file for writing";
+
+    my $alignIO = Bio::AlignIO->newFh(
+        -interleaved => 0,
+        -fh          => $ALN,
+        -format      => 'fasta',
+        -idlength    => 20,
+    );
+
+    print $alignIO $aln;
+
+    close $ALN;
+}
+
+1;
+
