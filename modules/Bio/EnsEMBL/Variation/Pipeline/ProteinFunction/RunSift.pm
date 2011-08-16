@@ -7,8 +7,10 @@ use File::Path qw(make_path remove_tree);
 use Data::Dumper;
 
 use Bio::EnsEMBL::Registry;
+use Bio::EnsEMBL::Variation::Utils::ProteinFunctionUtils qw(@ALL_AAS);
+use Bio::EnsEMBL::Variation::Utils::ComparaUtils qw(dump_alignment_for_sift);
 
-use base ('Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess');
+use base ('Bio::EnsEMBL::Variation::Pipeline::ProteinFunction::BaseProteinFunction');
 
 my $DEBUG   = 0;
 
@@ -17,15 +19,14 @@ my $MEDIAN_CUTOFF = 2.75; # as per README
 sub run {
     my $self = shift;
 
-    my $transcript_stable_id    = $self->param('transcript_stable_id');
-    my $fasta                   = $self->param('proteins_fasta');
-    my $sift_dir                = $self->param('sift_dir');
-    my $ncbi_dir                = $self->param('ncbi_dir');
-    my $blastdb                 = $self->param('blastdb');
+    my $translation_stable_id   = $self->required_param('translation_stable_id');
+    my $sift_dir                = $self->required_param('sift_dir');
+    my $ncbi_dir                = $self->required_param('ncbi_dir');
+    my $blastdb                 = $self->required_param('blastdb');
 
-    my $md5 = md5_hex($transcript_stable_id);
+    my $md5 = md5_hex($translation_stable_id);
     my $dir = substr($md5, 0, 2);
-    my $output_dir = "$sift_dir/working/$dir/$transcript_stable_id";
+    my $output_dir = "$sift_dir/working/$dir/$translation_stable_id";
     my $tarball = 'scratch.tgz';
 
     unless (-d $output_dir) {
@@ -36,8 +37,7 @@ sub run {
 
     chdir $output_dir or die "Failed to chdir to $output_dir";
 
-    #my $root_file  = "$output_dir/$transcript_stable_id";
-    my $root_file  = "$transcript_stable_id";
+    my $root_file  = "$translation_stable_id";
     my $fasta_file = "$root_file.fa";
     my $aln_file   = "$root_file.alignedfasta";
     my $res_file   = "$root_file.SIFTprediction";
@@ -55,44 +55,61 @@ sub run {
     $ENV{SIFT_DIR}   = $sift_dir;   
     $ENV{tmpdir}     = $output_dir;   
     
-    # fetch our proteins 
+    # fetch our protein 
 
-    my $peptide = $self->get_transcript_file_adaptor->get_protein_seq($transcript_stable_id);
+    my $tfa = $self->get_transcript_file_adaptor;
+
+    my $peptide = $tfa->get_translation_seq($translation_stable_id);
+
+    die "No protein sequence for $translation_stable_id" unless $peptide && (length($peptide) > 0);
 
     my $alignment_ok = 1;
 
-    $self->dbc->disconnect_when_inactive(1);
-
     unless (-e $aln_file) {
         
-        # we need to do a multiple alignment
-
-        # first create a fasta file for the protein of this transcript (there should always 
-        # be one because we only create a job for transcripts with a translation)
-    
-        open (FASTA_FILE, ">$fasta_file");
-
-        my $pep_str = $peptide;
-
-        $pep_str =~ s/(.{80})/$1\n/g;
-
-        print FASTA_FILE '>'.$transcript_stable_id,"\n$pep_str\n";
-
-        close FASTA_FILE;
-
-        # and run the alignment program
-
-        my $cmd = "$sift_dir/bin/ensembl_seqs_chosen_via_median_info.csh $fasta_file $blastdb $MEDIAN_CUTOFF";
-
-        my $exit_code = system($cmd);
+        # we need to get the multiple alignment
         
-        if ($exit_code == 0) {
-            $alignment_ok = 1;
+        if ($self->param('use_compara')) {
+            
+            eval {
+                dump_alignment_for_sift($translation_stable_id, $aln_file);
+            };
+
+            if ($@) {
+                warn "Failed to get a compara alignment for $translation_stable_id: $@";
+                $alignment_ok = 0;
+            }
         }
         else {
-            # the alignment failed for some reason, what to do?
-            warn "Alignment for $transcript_stable_id failed - cmd: $cmd";
-            $alignment_ok = 0;
+
+            # do the alignment ourselves
+            
+            # first create a fasta file for the protein sequence
+
+            open (FASTA_FILE, ">$fasta_file");
+
+            print FASTA_FILE $tfa->get_translation_fasta($translation_stable_id);
+
+            close FASTA_FILE;
+
+            # and run the alignment program
+
+            $self->dbc->disconnect_when_inactive(1);
+
+            my $cmd = "$sift_dir/bin/ensembl_seqs_chosen_via_median_info.csh $fasta_file $blastdb $MEDIAN_CUTOFF";
+
+            $self->dbc->disconnect_when_inactive(0);
+
+            my $exit_code = system($cmd);
+            
+            if ($exit_code == 0) {
+                $alignment_ok = 1;
+            }
+            else {
+                # the alignment failed for some reason, what to do?
+                warn "Alignment for $translation_stable_id failed - cmd: $cmd";
+                $alignment_ok = 0;
+            }
         }
     }
 
@@ -104,17 +121,15 @@ sub run {
 
             # create our substitution file
 
-            my @aas = split //, $peptide;
-
-            my @all_aas = qw(A C D E F G H I K L M N P Q R S T V W Y);
-
             my $pos = 0;
 
             open SUBS, ">$subs_file" or die "Failed to open $subs_file: $!";
+            
+            my @aas = split //, $peptide;
 
             for my $ref (@aas) {
                 $pos++;
-                for my $alt (@all_aas) {
+                for my $alt (@ALL_AAS) {
                     unless ($ref eq $alt) {
                         print SUBS $ref.$pos.$alt."\n";
                     }
@@ -126,6 +141,8 @@ sub run {
 
         # and run sift on it
 
+        $self->dbc->disconnect_when_inactive(1);
+
         my $cmd = "$sift_dir/bin/info_on_seqs $aln_file $subs_file $res_file";
 
         system($cmd) == 0 or die "Failed to run $cmd: $?";
@@ -134,49 +151,11 @@ sub run {
 
         # parse and store the results 
         
-        my $var_dba = $self->get_species_adaptor('variation');
-  
-        my $dbh = $var_dba->dbc->db_handle;
-
-        # define the necessary SQL statements
-
-        my $get_pos_sth = $dbh->prepare_cached(qq{
-            SELECT  pp.protein_position_id, pp.position
-            FROM    protein_position pp, protein_info pi
-            WHERE   pp.protein_info_id = pi.protein_info_id
-            AND     pi.transcript_stable_id = ?
-        }) or die "DB error: ".$dbh->errstr;
-
-        my $add_sift_pos_info_sth = $dbh->prepare_cached(qq{
-            UPDATE  protein_position
-            SET     sift_median_conservation = ?, sift_num_sequences_represented = ?
-            WHERE   protein_position_id = ?
-        }) or die "DB error: ".$dbh->errstr;
-
-        my $save_sth = $dbh->prepare_cached(qq{
-            INSERT INTO sift_prediction (
-                protein_position_id,
-                amino_acid,
-                score
-            ) 
-            VALUES (?,?,?)
-        }) or die "DB error: ".$dbh->errstr;
-
         open (RESULTS, "<$res_file") or die "Failed to open $res_file: $!";
-
-        # fetch the protein_position_ids for this protein
-
-        $get_pos_sth->execute($transcript_stable_id);
-
-        my %pos_ids;
-
-        while (my ($pos_id, $pos) = $get_pos_sth->fetchrow_array) {
-            $pos_ids{$pos} = $pos_id;
-        }
 
         # parse the results file
 
-        my %pos_has_sift_info;
+        my $preds;
 
         while (<RESULTS>) {
 
@@ -191,31 +170,14 @@ sub run {
 
             next unless $ref_aa && $alt_aa && defined $pos;
 
-            my $pos_id = $pos_ids{$pos} || die "No protein_position entry for $transcript_stable_id pos $pos";
-
-            unless ($pos_has_sift_info{$pos_id}) {
-                # add the sift position specific information
-
-                $add_sift_pos_info_sth->execute(
-                    $median_cons,
-                    $num_seqs,
-                    $pos_id
-                );
-
-                $pos_has_sift_info{$pos_id}++;
-            }
-
-            # save the prediction for this specific possible substitution
-
-            $save_sth->execute(
-                $pos_id,
-                $alt_aa,
-                $score            
-            );
+            $preds->{$pos}->{$alt_aa} = {
+                prediction  => $prediction, 
+                score       => $score
+            };
         }
+        
+        $self->save_predictions('sift', $preds);
     }
-
-    $self->dbc->disconnect_when_inactive(0);
 
     # tar up the files
 

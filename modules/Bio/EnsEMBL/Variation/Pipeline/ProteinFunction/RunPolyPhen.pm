@@ -6,50 +6,26 @@ use Digest::MD5 qw(md5_hex);
 use File::Path qw(make_path remove_tree);
 use Data::Dumper;
 
-use base ('Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess');
+use Bio::EnsEMBL::Variation::Utils::ProteinFunctionUtils qw(@ALL_AAS $AA_LOOKUP);
+use Bio::EnsEMBL::Variation::Utils::ComparaUtils qw(dump_alignment_for_polyphen);
 
-my $DEBUG   = 0;
+use base ('Bio::EnsEMBL::Variation::Pipeline::ProteinFunction::BaseProteinFunction');
 
-my $PERSIST = 0;
+my $DEBUG           = 0;
+my $PERSIST         = 1;
+my $MAX_PSIC_SEQS   = 8190;
+my $MAX_PSIC_SEQLEN = 409650;
 
 sub run {
     my $self = shift;
 
-    my $transcript_stable_id = $self->param('transcript_stable_id'); 
+    my $translation_stable_id = $self->required_param('translation_stable_id'); 
 
-    my $pph_dir = $self->param('pph_dir');
- 
-    my @all_aas = qw(A C D E F G H I K L M N P Q R S T V W Y);
+    my $pph_dir = $self->required_param('pph_dir');
     
-    my $aa_muts = {
-        A => [qw(D E G P S T V)],
-        C => [qw(F G R S W Y)],
-        D => [qw(A E G H N V Y)],
-        E => [qw(A D G K Q V)],
-        F => [qw(C I L S V Y)],
-        G => [qw(A C D E R S V W)],
-        H => [qw(D L N P Q R Y)],
-        I => [qw(F K L M N R S T V)],
-        K => [qw(E I M N Q R T)],
-        L => [qw(F H I M P Q R S V W)],
-        M => [qw(I K L R T V)],
-        N => [qw(D H I K S T Y)],
-        P => [qw(A H L Q R S T)],
-        Q => [qw(E H K L P R)],
-        R => [qw(C G H I K L M P Q S T W)],
-        S => [qw(A C F G I L N P R T W Y)],
-        T => [qw(A I K M N P R S)],
-        V => [qw(A D E F G I L M)],
-        W => [qw(C G L R S)],
-        Y => [qw(C D F H N S)],
-    };
-
-    # create a directory tree to control number of files in a directory
-
-    my $md5 = md5_hex($transcript_stable_id);
+    my $md5 = md5_hex($translation_stable_id);
     my $dir = substr($md5, 0, 2);
-    #$dir .= '/'.substr($md5, 2, 2);
-    my $output_dir = "$pph_dir/working/$dir/$transcript_stable_id";
+    my $output_dir = "$pph_dir/working/$dir/$translation_stable_id";
 
     my @to_delete;
 
@@ -84,39 +60,46 @@ sub run {
         die "make_path failed: ".Dumper($err) if $err && @$err;
     }
 
-    my $snp_file        = "${output_dir}/source_files/${transcript_stable_id}_snps.txt";
-    my $protein_file    = "${output_dir}/source_files/${transcript_stable_id}_protein.fa";
-    my $output_file     = "${output_dir}/features/${transcript_stable_id}.features";
-    my $error_file      = "${output_dir}/errors/${transcript_stable_id}.polyphen_stderr";
+    my $subs_file       = "${output_dir}/source_files/${translation_stable_id}_subs.txt";
+    my $protein_file    = "${output_dir}/source_files/${translation_stable_id}_protein.fa";
+    my $aln_file        = "${output_dir}/alignments/${translation_stable_id}.aln";
+    my $output_file     = "${output_dir}/features/${translation_stable_id}.features";
+    my $error_file      = "${output_dir}/errors/${translation_stable_id}.polyphen_stderr";
 
-    open (SNPS, ">$snp_file") or die "Failed to open file for SNPs $snp_file: $!";
+    my $tfa = $self->get_transcript_file_adaptor;
+
+    # dump the protein sequence,
+
     open (PROTEIN, ">$protein_file") or die "Failed to open file for protein $protein_file: $!";
-  
-    #push @to_delete, $snp_file, $protein_file;
+    
+    print PROTEIN $tfa->get_translation_fasta($translation_stable_id);
 
-    my $peptide = $self->get_transcript_file_adaptor->get_protein_seq($transcript_stable_id);
+    # and the substitutions.
+
+    open (SUBS, ">$subs_file") or die "Failed to open file for SUBS $subs_file: $!";
+
+    #push @to_delete, $subs_file, $protein_file;
+
+    my $peptide = $tfa->get_translation_seq($translation_stable_id);
         
-    die "$transcript_stable_id has no peptide?" unless length($peptide) > 0;
+    die "$translation_stable_id is length 0?" unless length($peptide) > 0;
 
     my @aas = split //, $peptide;
-
-    my $tran_ver = $transcript_stable_id;
-
-    $peptide =~ s/(.{80})/$1\n/g;
-    print PROTEIN ">$tran_ver\n$peptide\n";
 
     my $idx = 0;
 
     for my $ref (@aas) {
         $idx++;
-        #my $alt_aas = $aa_muts->{$aa};
-        #next unless $alt_aas;
-        next unless $aa_muts->{$ref}; # ignore any non standard amino acids, e.g. X
-        for my $alt (@all_aas) {
+         
+        # ignore any non standard amino acids, e.g. X
+
+        next unless defined $AA_LOOKUP->{$ref};        
+        
+        for my $alt (@ALL_AAS) {
             unless ($ref eq $alt) {
-                print SNPS join ("\t",
-                    $tran_ver.'_'.$idx.'_'.$alt,
-                    $tran_ver,
+                print SUBS join ("\t",
+                    $translation_stable_id.'_'.$idx.'_'.$alt,
+                    $translation_stable_id,
                     $idx,
                     $ref,
                     $alt
@@ -125,12 +108,28 @@ sub run {
         }
     }
 
-    close SNPS;
+    close SUBS;
     close PROTEIN;
+    
+    if ($self->param('use_compara')) {
+        
+        # if we're using compara alignments then dump the alignment
+        # to the alignment file, PolyPhen will check if it exists
+        # and use it in place of its own alignment if so
+        eval {
+            dump_alignment_for_polyphen($translation_stable_id, $aln_file);
+        };
+
+        if ($@) {
+            die "Failed to fetch a compara alignment for $translation_stable_id: $@";
+        }
+    }
+
+    # now run polyphen itself, disconnecting for the duration
 
     $self->dbc->disconnect_when_inactive(1);
 
-    my $cmd = "$pph_dir/bin/run_pph.pl -d $output_dir -s $protein_file $snp_file 1> $output_file 2> $error_file";
+    my $cmd = "$pph_dir/bin/run_pph.pl -d $output_dir -s $protein_file $subs_file 1> $output_file 2> $error_file";
 
     system($cmd) == 0 or die "Failed to run $cmd: $?";
     
@@ -173,7 +172,7 @@ sub write_output {
     
     if (my $feature_file = $self->param('feature_file')) {
         $self->dataflow_output_id( [{
-            transcript_stable_id    => $self->param('transcript_stable_id'),
+            translation_stable_id   => $self->param('translation_stable_id'),
             feature_file            => $feature_file,
         }], 2);
     }

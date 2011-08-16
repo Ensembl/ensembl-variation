@@ -5,6 +5,8 @@ use warnings;
 
 use base ('Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf');
 
+use Bio::EnsEMBL::Variation::Pipeline::ProteinFunction::Constants qw(FULL UPDATE NONE);
+
 sub default_options {
     my ($self) = @_;
 
@@ -20,7 +22,7 @@ sub default_options {
 
         ensembl_registry        => $self->o('pipeline_dir').'/ensembl.registry',
 
-        proteins_fasta          => $self->o('pipeline_dir').'/ensembl_63_proteins.fa',
+        proteins_fasta          => $self->o('pipeline_dir').'/ensembl_64_proteins.fa',
 
         species                 => 'human',
 
@@ -31,6 +33,18 @@ sub default_options {
         ncbi_dir                => '/software/ncbiblast/bin',
         
         blastdb                 => $self->o('pipeline_dir').'/blastdb/swissprot_trembl.uni',
+
+        sift_run_type           => UPDATE,
+
+        polyphen_run_type       => UPDATE,
+
+        sift_use_compara        => 0,
+        
+        pph_use_compara         => 0,
+
+        include_lrg             => 1,
+        
+        use_existing_table      => 0,
 
         pipeline_db => {
             -host   => 'ens-variation',
@@ -56,7 +70,7 @@ sub resource_classes {
     return {
         0 => { -desc => 'default',  'LSF' => '' },
         1 => { -desc => 'urgent',   'LSF' => '-q yesterday' },
-        2 => { -desc => 'highmem',  'LSF' => '-R"select[mem>5000] rusage[mem=5000]" -M5000000 -q long'},
+        2 => { -desc => 'highmem',  'LSF' => '-R"select[mem>8000] rusage[mem=8000]" -M8000000 -q long'},
         3 => { -desc => 'long',     'LSF' => '-q long' },
     };
 }
@@ -74,26 +88,30 @@ sub pipeline_analyses {
         {   -logic_name => 'init_jobs',
             -module     => 'Bio::EnsEMBL::Variation::Pipeline::ProteinFunction::InitJobs',
             -parameters => {
+                sift_run_type       => $self->o('sift_run_type'),
+                polyphen_run_type   => $self->o('polyphen_run_type'),
+                include_lrg         => $self->o('include_lrg'),
+                use_existing_table  => $self->o('use_existing_table'),
                 @common_params,
             },
             -input_ids  => [{}],
             -rc_id      => 2,
             -flow_into  => {
-                1 => [ 'rebuild_polyphen_indexes' ],
                 2 => [ 'run_polyphen' ],
-                3 => [ 'rebuild_sift_indexes' ],
-                4 => [ 'run_sift' ],
+                3 => [ 'run_sift' ],
             },
         },
 
         {   -logic_name     => 'run_polyphen',
             -module         => 'Bio::EnsEMBL::Variation::Pipeline::ProteinFunction::RunPolyPhen',
             -parameters     => {
-                pph_dir => $self->o('pph_dir'),
+                pph_dir     => $self->o('pph_dir'),
+                use_compara => $self->o('pph_use_compara'),
                 @common_params,
             },
+            -max_retry_count => 0,
             -input_ids      => [],
-            -hive_capacity  => 1000,
+            -hive_capacity  => 500,
             -rc_id          => 2,
             -flow_into      => {
                 2   => [ 'run_weka' ],
@@ -106,6 +124,7 @@ sub pipeline_analyses {
                 pph_dir => $self->o('pph_dir'),
                 @common_params,
             },
+            -max_retry_count => 0,
             -input_ids      => [],
             -hive_capacity  => 100,
             -rc_id          => 0,
@@ -118,40 +137,15 @@ sub pipeline_analyses {
                 sift_dir    => $self->o('sift_dir'),
                 ncbi_dir    => $self->o('ncbi_dir'),
                 blastdb     => $self->o('blastdb'),
+                use_compara => $self->o('sift_use_compara'),
                 @common_params,
             },
+            -max_retry_count => 0,
             -input_ids      => [],
             -hive_capacity  => 500,
             -rc_id          => 0,
             -flow_into      => {},
         },
-
-        {   -logic_name     => 'rebuild_polyphen_indexes',
-            -module         => 'Bio::EnsEMBL::Variation::Pipeline::RebuildIndexes',
-            -parameters     => {
-                tables  => [ qw(polyphen_prediction polyphen_supplementary_data) ],
-                @common_params,
-            },
-           -input_ids      => [],
-            -hive_capacity  => 1,
-            -rc_id          => 3,
-            -wait_for       => [ 'run_polyphen', 'run_weka' ],
-            -flow_into      => {},
-        },
-
-        {   -logic_name     => 'rebuild_sift_indexes',
-            -module         => 'Bio::EnsEMBL::Variation::Pipeline::RebuildIndexes',
-            -parameters     => {
-                tables  => [ qw(polyphen_prediction polyphen_supplementary_data) ],
-                @common_params,
-            },
-            -input_ids      => [],
-            -hive_capacity  => 1,
-            -rc_id          => 3,
-            -wait_for       => [ 'run_sift' ],
-            -flow_into      => {},
-        },
-
     ];
 }
 
