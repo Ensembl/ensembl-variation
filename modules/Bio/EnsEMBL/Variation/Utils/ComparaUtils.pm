@@ -49,7 +49,7 @@ our @EXPORT_OK = qw(dump_alignment_for_polyphen dump_alignment_for_sift);
 my $MAX_PSIC_SEQS   = 8190;
 my $MAX_PSIC_SEQLEN = 409650;
 
-sub _ungapify_alignment {
+sub _ungap_alignment {
     
     # turn a gapped alignment into an ungapped alignment
     # with respect to the given query_id,
@@ -198,7 +198,7 @@ sub _get_ungapped_alignment {
 
     $compara_dba->dbc->disconnect_if_idle;
 
-    return _ungapify_alignment(
+    return _ungap_alignment(
         $orig_align, 
         $translation_stable_id, 
         $include_query
@@ -225,7 +225,7 @@ sub _percent_id {
 =head2 dump_alignment_for_polyphen
 
   Arg[1]      : string $translation_stable_id - the stable of the Ensembl translation
-                you want to run PolyPhe on
+                you want to run PolyPhen on
   Arg[2]      : string $file - the name of the file you want to write the alignment to
   Description : Fetches the Compara protein family containing the specified translation
                 (if available), ungaps the alignment with respect to the translation, and 
