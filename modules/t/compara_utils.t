@@ -43,10 +43,10 @@ for my $k (sort keys %input) {
     );
 }
 
-# and ungapify it (polyphen excludes the query seq, while sift includes it)
+# and ungap it (polyphen excludes the query seq, while sift includes it)
 
-my $sift_align = Bio::EnsEMBL::Variation::Utils::ComparaUtils::_ungapify_alignment($sa, 'QUERY', 1);
-my ($query_seq, $pph_align) = Bio::EnsEMBL::Variation::Utils::ComparaUtils::_ungapify_alignment($sa, 'QUERY', 0);
+my $sift_align = Bio::EnsEMBL::Variation::Utils::ComparaUtils::_ungap_alignment($sa, 'QUERY', 1);
+my ($query_seq, $pph_align) = Bio::EnsEMBL::Variation::Utils::ComparaUtils::_ungap_alignment($sa, 'QUERY', 0);
 
 # we just check that the sift alignment looks good
 
