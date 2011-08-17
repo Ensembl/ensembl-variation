@@ -68,8 +68,6 @@ ALTER TABLE read_coverage ADD FOREIGN KEY (seq_region_id) REFERENCES seq_region(
 ALTER TABLE sample_synonym ADD FOREIGN KEY (source_id) REFERENCES source(source_id);
 ALTER TABLE sample_synonym ADD FOREIGN KEY (sample_id) REFERENCES sample(sample_id);
 
-ALTER TABLE sift_prediction ADD FOREIGN KEY (protein_position_id) REFERENCES protein_position(protein_position_id);
-
 ALTER TABLE structural_variation ADD FOREIGN KEY (source_id) REFERENCES source(source_id);
 ALTER TABLE structural_variation ADD FOREIGN KEY (study_id) REFERENCES study(study_id);
 ALTER TABLE structural_variation ADD FOREIGN KEY (class_attrib_id) REFERENCES attrib(attrib_id);
