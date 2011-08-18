@@ -70,7 +70,7 @@ use Bio::EnsEMBL::Variation::TranscriptVariationAllele;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(MAX_DISTANCE_FROM_TRANSCRIPT);
 use Bio::EnsEMBL::Variation::Utils::Constants qw(%OVERLAP_CONSEQUENCES);
-use Bio::EnsEMBL::Variation::Utils::ProteinFunctionUtils qw(expand_prediction_string);
+use Bio::EnsEMBL::Variation::ProteinFunctionPredictionMatrix;
 
 use base qw(Bio::EnsEMBL::Variation::DBSQL::VariationFeatureOverlapAdaptor);
 
@@ -360,7 +360,7 @@ sub _columns {
     );
 }
 
-sub _get_prediction_string {
+sub _get_prediction_matrix {
     my ($self, $analysis, $transcript_stable_id) = @_;
     
     # look in the protein function prediction table to see if there is 
@@ -380,11 +380,18 @@ sub _get_prediction_string {
     
     $sth->execute($transcript_stable_id);
     
-    my ($pred_str) = $sth->fetchrow_array;
+    my ($raw_matrix) = $sth->fetchrow_array;
    
     $sth->finish;
 
-    return $pred_str ? expand_prediction_string($pred_str) : undef;
+    return undef unless $raw_matrix;
+
+    my $matrix = Bio::EnsEMBL::Variation::ProteinFunctionPredictionMatrix->new(
+        -analysis   => $analysis,
+        -matrix     => $raw_matrix,
+    );
+    
+    return $matrix;
 }
 
 1;

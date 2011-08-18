@@ -719,17 +719,14 @@ sub _protein_function_predictions {
 
     my $tran = $self->transcript;
 
-    my $prediction_string = $tran->{_variation_effect_feature_cache}->{protein_function_predictions}->{$analysis};
+    my $matrix = $tran->{_variation_effect_feature_cache}->{protein_function_predictions}->{$analysis};
 
-    unless ($prediction_string) {
-        
-        $prediction_string = $self->{adaptor}->_get_prediction_string($analysis, $tran->stable_id);
-        
-        $tran->{_variation_effect_feature_cache}->{protein_function_predictions}->{$analysis} 
-            = $prediction_string;
+    unless ($matrix) {
+        $matrix = $self->{adaptor}->_get_prediction_matrix($analysis, $tran->stable_id);
+        $tran->{_variation_effect_feature_cache}->{protein_function_predictions}->{$analysis} = $matrix;
     }
 
-    return $prediction_string; 
+    return $matrix; 
 }
 
 =head2 hgvs_genomic
