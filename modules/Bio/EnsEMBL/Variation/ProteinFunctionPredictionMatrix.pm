@@ -22,13 +22,44 @@
 
 Bio::EnsEMBL::Variation::ProteinFunctionPredictionMatrix
 
+=head1 SYNOPSIS
+
+  # create a new matrix for polyphen predictions
+
+  my $orig_pfpm = Bio::EnsEMBL::Variation::ProteinFunctionPredictionMatrix->new(
+      -analysis       => 'polyphen',
+      -peptide_length => 134,
+  );
+
+  # add some predictions
+
+  $orig_pfpm->add_prediction(1, 'A', 'probably damaging', 0.967);
+  $orig_pfpm->add_prediction(2, 'C', 'benign', 0.09);
+
+  # serialize the matrix to a compressed binary string
+
+  my $binary_string = $pfpm->serialize;
+
+  # store the string somewhere, fetch it later, and then create a new matrix using it
+
+  my $new_pfpm = Bio::EnsEMBL::Variation::ProteinFunctionPredictionMatrix->new(
+      -analysis   => 'polyphen',
+      -matrix     => $binary_string
+  );
+
+  # retrieve predictions
+
+  my ($prediction, $score) = $new_pfpm->get_prediction(2, 'C');
+
+  print "A mutation to 'C' at position 2 is predicted to be $prediction\n";
+
 =head1 DESCRIPTION
 
 This module defines a class representing a matrix of protein
 function predictions, and provides method to access and set
 predictions for a given position and amino acid, and also to
 serialize the matrix for storage in a database, and deserialize
-from the compressed format.
+a matrix from the compressed format into a perl hash.
 
 =cut
 
@@ -122,6 +153,28 @@ our $AA_LOOKUP = { map {$ALL_AAS[$_] => $_} 0 .. $#ALL_AAS };
 
 our $NUM_AAS = scalar(@ALL_AAS);
 
+=head2 new
+
+  Arg [-ANALYSIS] : 
+    The name of the analysis tool that made these predictions,
+    currently must be one of 'sift' or 'polyphen'
+
+  Arg [-MATRIX] :
+    A gzip compressed binary string encoding the predictions,
+    typically created using this class and fetched from the 
+    variation database (optional)
+
+  Arg [-PEPTIDE_LENGTH] :
+    The length of the associated peptide, only required if
+    you want to serialize this matrix (optional)
+
+  Description: Constructs a new ProteinFunctionPredictionMatrix object
+  Returntype : A new Bio::EnsEMBL::Variation::ProteinFunctionPredictionMatrix instance 
+  Exceptions : throws unless ANALYSIS is supplied and recognised
+  Status     : At Risk
+
+=cut 
+
 sub new {
     my $class = shift;
     
@@ -151,10 +204,61 @@ sub new {
     return $self;
 }
 
+=head2 analysis
+
+  Arg[1]      : string $analysis - the name of the analysis tool (optional)
+  Description : Get/set the analysis name
+  Returntype  : string
+  Exceptions  : throws if the name is not recognised 
+  Status      : At Risk
+  
+=cut
+
+sub analysis {
+    my ($self, $analysis) = @_;
+    
+    if ($analysis) {
+        throw("Unrecognised analysis '$analysis'") 
+            unless defined $PREDICTION_TO_VAL->{$analysis};
+
+        $self->{analysis} = $analysis;
+    }
+
+    return $self->{analysis};
+}
+
+=head2 peptide_length
+
+  Arg[1]      : int $peptide_length - the length of the peptide (optional)
+  Description : Get/set the length of the peptide - required when you want to
+                serialize a matrix, as we need to know how many rows the matrix has
+  Returntype  : int
+  Exceptions  : none 
+  Status      : At Risk
+  
+=cut
+
+sub peptide_length {
+    my ($self, $peptide_length) = @_;
+    $self->{peptide_length} = $peptide_length if defined $peptide_length;
+    return $self->{peptide_length};
+}
+
+=head2 get_prediction
+
+  Arg[1]      : int $pos - the desired position
+  Arg[2]      : string $aa - the mutant amino acid
+  Description : get the prediction and score for the given position and amino acid
+  Returntype  : a list containing 2 values, the prediction and the score
+  Exceptions  : throws if either the position or amino acid are invalid 
+  Status      : At Risk
+  
+=cut
+
 sub get_prediction {
     my ($self, $pos, $aa) = @_;
 
-    # if we have it in our preds hash then just return it
+    # if we have it in our uncompressed hash then just return it
 
     if (defined $self->{preds}->{$pos}->{$aa}) {
         return @{ $self->{preds}->{$pos}->{$aa} };
@@ -165,11 +269,37 @@ sub get_prediction {
     return $self->prediction_from_matrix($pos, $aa);
 }
 
+=head2 add_prediction
+
+  Arg[1]      : int $pos - the peptide position
+  Arg[2]      : string $aa - the mutant amino acid
+  Arg[3]      : string $prediction - the prediction to store
+  Arg[4]      : float $score - the score to store
+  Description : add a prediction to the matrix for the specified position and amino acid,
+                note that this just adds the prediction to a perl hash. If you want to
+                encode the matrix in the binary format you should call serialize on the 
+                matrix object after you have added all the predictions.
+  Exceptions  : none
+  Status      : At Risk
+  
+=cut
+
 sub add_prediction {
     my ($self, $pos, $aa, $prediction, $score) = @_;
 
     $self->{preds}->{$pos}->{$aa} = [$prediction, $score];
 }
+
+=head2 serialize
+
+  Arg[1]      : int $peptide_length - the length of the associated peptide (optional)
+  Description : serialize the matrix into a compressed binary format suitable for
+                storage in a database, file etc. The same string can later be used
+                to create a new matrix object and the predictions can be retrieved
+  Exceptions  : throws if the peptide length has not been specified
+  Status      : At Risk
+  
+=cut
 
 sub serialize {
     my ($self, $peptide_length) = @_;
@@ -214,6 +344,28 @@ sub serialize {
 
     return $self->compress_matrix;
 }
+
+=head2 deserialize
+
+  Description : deserialize a binary formatted matrix into a perl hash reference
+                containing all the uncompressed predictions. For example, to retrieve
+                the prediction for a substitution of 'C' at position 23 from this
+                data structure, you could use like:
+
+                my $prediction_hash = $pfpm->deserialize;
+                my ($prediction, $score) = @{ $prediction_hash->{23}->{'C'} };
+
+                Note that if you don't explicitly deserialize a matrix, this
+                class will keep it in the memory-efficient encoded format, and
+                you can access individual predictions with the get_prediction
+                method. You should only use this class if you want to decode
+                all predictions (for example to perfomr some large-scale analysis)
+
+  Returntype  : hashref containing decoded predictions
+  Exceptions  : none
+  Status      : At Risk
+  
+=cut
 
 sub deserialize {
     my ($self) = @_;
@@ -287,8 +439,8 @@ sub prediction_to_short {
 
   Arg[1]      : string $pred - the packed short value 
   Description : converts a 2-byte short value back into a prediction and a score
-  Returntype  : a list containing 2 values, the prediction and the score
   Exceptions  : none
+  Returntype  : a list containing 2 values, the prediction and the score
   Status      : At Risk
   
 =cut
