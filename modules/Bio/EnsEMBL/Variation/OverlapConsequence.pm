@@ -64,6 +64,7 @@ package Bio::EnsEMBL::Variation::OverlapConsequence;
 use strict;
 use warnings;
 
+use Bio::EnsEMBL::Utils::Argument qw(rearrange);
 use Bio::EnsEMBL::Utils::Exception qw(throw);
 use Bio::EnsEMBL::Variation::Utils::VariationEffect;
 
