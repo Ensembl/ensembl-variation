@@ -62,7 +62,7 @@ use strict;
 use warnings;
 
 use Bio::EnsEMBL::Variation::Utils::Condel qw(get_condel_prediction);
-use Bio::EnsEMBL::Variation::Utils::ProteinFunctionUtils qw(prediction_from_string $AA_LOOKUP);
+use Bio::EnsEMBL::Variation::ProteinFunctionPredictionMatrix qw($AA_LOOKUP);
 
 use base qw(Bio::EnsEMBL::Variation::VariationFeatureOverlapAllele);
 
@@ -524,11 +524,9 @@ sub _protein_function_prediction {
 
     if ($self->pep_allele_string && $self->pep_allele_string =~ /^[A-Z]\/[A-Z]$/ && defined $AA_LOOKUP->{$self->peptide}) {
         
-        if (my $pred_str = $self->transcript_variation->_protein_function_predictions($analysis)) {
+        if (my $matrix = $self->transcript_variation->_protein_function_predictions($analysis)) {
             
-            my ($prediction, $score) = prediction_from_string(
-                $analysis,
-                $pred_str,
+            my ($prediction, $score) = $matrix->get_prediction(
                 $self->transcript_variation->translation_start,
                 $self->peptide,
             );
