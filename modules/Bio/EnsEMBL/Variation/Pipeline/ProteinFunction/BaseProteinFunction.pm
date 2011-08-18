@@ -9,7 +9,7 @@ use Bio::LocatableSeq;
 use base ('Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess');
 
 sub save_predictions {
-    my ($self, $matrix) = @_;
+    my ($self, $pred_matrix) = @_;
 
     # serialize the matrix and save it to the database
     

@@ -95,7 +95,7 @@ sub run {
 
     # save the predictions to the database
 
-    $self->save_predictions('polyphen', $pred_matrix);
+    $self->save_predictions($pred_matrix);
 
     system("gzip -f $feature_file") == 0 or warn "Failed to gzip $feature_file: $?"; 
     
