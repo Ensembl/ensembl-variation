@@ -48,7 +48,7 @@ use base qw(Exporter);
 
 our @EXPORT_OK = qw($AA_LOOKUP);
 
-my $DEBUG = 1;
+my $DEBUG = 0;
 
 # user-defined constants
 
@@ -185,7 +185,7 @@ sub serialize {
 
     if ($self->{preds}) {
 
-        $self->{matrix} = '';
+        $self->{matrix} = $HEADER;
 
         for my $pos (1 .. $self->{peptide_length}) {
         
@@ -202,6 +202,10 @@ sub serialize {
                 $self->{matrix} .= defined $short ? $short : $NO_PREDICTION;
             }
         }
+
+        # delete the hash copy, so things don't get out of sync
+
+        $self->{preds} = undef;
 
         $self->{matrix_compressed} = 0;
     }
