@@ -3,6 +3,7 @@ package Bio::EnsEMBL::Variation::Pipeline::ProteinFunction::RunWeka;
 use strict;
 
 use Bio::EnsEMBL::Hive::Utils qw(stringify);
+use Bio::EnsEMBL::Variation::ProteinFunctionPredictionMatrix;
 
 use base ('Bio::EnsEMBL::Variation::Pipeline::ProteinFunction::BaseProteinFunction');
 
@@ -51,7 +52,12 @@ sub run {
 
     my @fields;
 
-    my $preds;
+    my $peptide = $self->get_transcript_file_adaptor->get_translation_seq($translation_stable_id);
+
+    my $pred_matrix = Bio::EnsEMBL::Variation::ProteinFunctionPredictionMatrix->new(
+        -analysis       => 'polyphen',
+        -peptide_length => length($peptide),
+    );
 
     while (<RESULT>) {
         if (/^#/) {
@@ -79,15 +85,17 @@ sub run {
 
         next unless $position && $alt_aa;
 
-        $preds->{$position}->{$alt_aa} = {
-            prediction  => $prediction, 
-            score       => $prob,
-        };
+        $pred_matrix->add_prediction(
+            $position,
+            $alt_aa,
+            $prediction, 
+            $prob,
+        );
     }
 
     # save the predictions to the database
 
-    $self->save_predictions('polyphen', $preds);
+    $self->save_predictions('polyphen', $pred_matrix);
 
     system("gzip -f $feature_file") == 0 or warn "Failed to gzip $feature_file: $?"; 
     
