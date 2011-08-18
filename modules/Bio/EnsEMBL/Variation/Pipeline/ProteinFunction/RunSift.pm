@@ -7,7 +7,7 @@ use File::Path qw(make_path remove_tree);
 use Data::Dumper;
 
 use Bio::EnsEMBL::Registry;
-use Bio::EnsEMBL::Variation::Utils::ProteinFunctionUtils qw(@ALL_AAS);
+use Bio::EnsEMBL::Variation::ProteinFunctionPredictionMatrix qw(@ALL_AAS);
 use Bio::EnsEMBL::Variation::Utils::ComparaUtils qw(dump_alignment_for_sift);
 
 use base ('Bio::EnsEMBL::Variation::Pipeline::ProteinFunction::BaseProteinFunction');
@@ -155,7 +155,10 @@ sub run {
 
         # parse the results file
 
-        my $preds;
+        my $pred_matrix = Bio::EnsEMBL::Variation::ProteinFunctionPredictionMatrix->new(
+            -analysis       => 'sift',
+            -peptide_length => length($peptide),
+        );
 
         while (<RESULTS>) {
 
@@ -170,13 +173,15 @@ sub run {
 
             next unless $ref_aa && $alt_aa && defined $pos;
 
-            $preds->{$pos}->{$alt_aa} = {
-                prediction  => $prediction, 
-                score       => $score
-            };
+            $pred_matrix->add_prediction(
+                $pos,
+                $alt_aa,
+                $prediction, 
+                $score,
+            );
         }
         
-        $self->save_predictions('sift', $preds);
+        $self->save_predictions($pred_matrix);
     }
 
     # tar up the files
