@@ -77,7 +77,7 @@ use Bio::EnsEMBL::Utils::Argument qw(rearrange);
 
 use base qw(Exporter);
 
-our @EXPORT_OK = qw($AA_LOOKUP);
+our @EXPORT_OK = qw($AA_LOOKUP @ALL_AAS);
 
 my $DEBUG = 0;
 
