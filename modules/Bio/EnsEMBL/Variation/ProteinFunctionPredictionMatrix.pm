@@ -310,10 +310,12 @@ sub serialize {
         unless defined $self->{peptide_length};
 
     # convert predictions to the binary format, and concatenate them all 
-    # together in the correct order, inserting out dummy NO_PREDICTION
+    # together in the correct order, inserting our dummy $NO_PREDICTION
     # value to fill in any gaps
 
     if ($self->{preds}) {
+
+        $self->{matrix_compressed} = 0;
 
         $self->{matrix} = $HEADER;
 
@@ -336,8 +338,9 @@ sub serialize {
         # delete the hash copy, so things don't get out of sync
 
         $self->{preds} = undef;
-
-        $self->{matrix_compressed} = 0;
+    }
+    else {
+        warning("There don't seem to be any predictions in the matrix to serialize!");
     }
 
     # and return the compressed string for storage
@@ -350,19 +353,20 @@ sub serialize {
   Description : deserialize a binary formatted matrix into a perl hash reference
                 containing all the uncompressed predictions. For example, to retrieve
                 the prediction for a substitution of 'C' at position 23 from this
-                data structure, you could use like:
+                data structure, you could use code like:
 
                 my $prediction_hash = $pfpm->deserialize;
                 my ($prediction, $score) = @{ $prediction_hash->{23}->{'C'} };
 
-                Note that if you don't explicitly deserialize a matrix, this
+                Note that if you don't explicitly deserialize a matrix this
                 class will keep it in the memory-efficient encoded format, and
                 you can access individual predictions with the get_prediction
-                method. You should only use this class if you want to decode
-                all predictions (for example to perfomr some large-scale analysis)
+                method. You should only use this method if you want to decode
+                all predictions (for example to perform some large-scale 
+                analysis, or to reformat the predictions)
 
   Returntype  : hashref containing decoded predictions
-  Exceptions  : none
+  Exceptions  : throws if the binary matrix isn't in the expected format
   Status      : At Risk
   
 =cut
@@ -370,21 +374,22 @@ sub serialize {
 sub deserialize {
     my ($self) = @_;
 
-    my $string = $self->{matrix};
-
     if ($self->{matrix_compressed}) {
         $self->expand_matrix;
     }
 
-    my $length = (length($string) - length($HEADER)) / $NUM_AAS;
+    throw("Matrix looks corrupted") unless $self->header_ok;
+
+    my $length = (length($self->{matrix}) - length($HEADER)) / $NUM_AAS;
 
     for my $pos (1 .. $length) {
+        
         for my $aa (@ALL_AAS) {
 
             # we call prediction_from_short directly to avoid doing all the
             # checks performed in prediction_from_string
 
-            $self->{preds}->{$pos}->{$aa} = [ 
+            $self->{preds}->{$pos}->{$aa} = [
                 $self->prediction_from_short(substr($self->{matrix}, $self->compute_offset($pos, $aa), 2))
             ];
         }
@@ -509,8 +514,7 @@ sub compress_matrix {
 
 =head2 header_ok
 
-  Arg[1]      : string $matrix - the prediction matrix to check 
-  Description : checks if a prediction matrix has the expected header
+  Description : checks if the binary matrix has the expected header
   Returntype  : boolean
   Exceptions  : none
   Status      : At Risk
@@ -526,7 +530,7 @@ sub header_ok {
 =head2 expand_matrix
 
   Description : uncompresses a compressed prediction matrix
-  Returntype  : the uncompressed matrix
+  Returntype  : the uncompressed binary matrix string
   Exceptions  : throws if the header is incorrect, or if the decompression fails
   Status      : At Risk
   
