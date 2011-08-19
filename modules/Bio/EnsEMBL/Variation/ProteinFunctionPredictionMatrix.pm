@@ -350,6 +350,11 @@ sub serialize {
 
 =head2 deserialize
 
+  Arg [1]     : coderef $coderef - an anonymous subroutine that will be called 
+                as each prediction is decoded in order. The subroutine will be 
+                called with 4 arguments: the peptide position, the amino acid, 
+                the prediction and the score. This can be used, for example to 
+                dump out the prediction matrix to a file. (optional)
   Description : deserialize a binary formatted matrix into a perl hash reference
                 containing all the uncompressed predictions. For example, to retrieve
                 the prediction for a substitution of 'C' at position 23 from this
@@ -372,7 +377,7 @@ sub serialize {
 =cut
 
 sub deserialize {
-    my ($self) = @_;
+    my ($self, $coderef) = @_;
 
     if ($self->{matrix_compressed}) {
         $self->expand_matrix;
@@ -380,7 +385,7 @@ sub deserialize {
 
     throw("Matrix looks corrupted") unless $self->header_ok;
 
-    my $length = (length($self->{matrix}) - length($HEADER)) / $NUM_AAS;
+    my $length = ((length($self->{matrix}) - length($HEADER)) / 2) / $NUM_AAS;
 
     for my $pos (1 .. $length) {
         
@@ -389,9 +394,13 @@ sub deserialize {
             # we call prediction_from_short directly to avoid doing all the
             # checks performed in prediction_from_string
 
-            $self->{preds}->{$pos}->{$aa} = [
-                $self->prediction_from_short(substr($self->{matrix}, $self->compute_offset($pos, $aa), 2))
-            ];
+            my ($prediction, $score) = $self->prediction_from_short(substr($self->{matrix}, $self->compute_offset($pos, $aa), 2));
+
+            $self->{preds}->{$pos}->{$aa} = [$prediction, $score];
+
+            if ($coderef) {
+                $coderef->($pos, $aa, $prediction, $score);
+            }
         }
     }
     

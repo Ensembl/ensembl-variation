@@ -360,38 +360,38 @@ sub _columns {
     );
 }
 
-sub _get_prediction_matrix {
-    my ($self, $analysis, $transcript_stable_id) = @_;
-    
-    # look in the protein function prediction table to see if there is 
-    # a prediction string for this transcript
-    
-    return undef unless ($analysis eq 'polyphen' || $analysis eq 'sift');
-     
-    my $dbh = $self->dbc->db_handle;
-    
-    my $col = $analysis.'_predictions';
-
-    my $sth = $dbh->prepare_cached(qq{
-        SELECT  $col
-        FROM    protein_function_predictions
-        WHERE   transcript_stable_id = ?
-    });
-    
-    $sth->execute($transcript_stable_id);
-    
-    my ($raw_matrix) = $sth->fetchrow_array;
-   
-    $sth->finish;
-
-    return undef unless $raw_matrix;
-
-    my $matrix = Bio::EnsEMBL::Variation::ProteinFunctionPredictionMatrix->new(
-        -analysis   => $analysis,
-        -matrix     => $raw_matrix,
-    );
-    
-    return $matrix;
-}
+#sub _get_prediction_matrix {
+#    my ($self, $analysis, $transcript_stable_id) = @_;
+#    
+#    # look in the protein function prediction table to see if there is 
+#    # a prediction string for this transcript
+#    
+#    return undef unless ($analysis eq 'polyphen' || $analysis eq 'sift');
+#     
+#    my $dbh = $self->dbc->db_handle;
+#    
+#    my $col = $analysis.'_predictions';
+#
+#    my $sth = $dbh->prepare_cached(qq{
+#        SELECT  $col
+#        FROM    protein_function_predictions
+#        WHERE   transcript_stable_id = ?
+#    });
+#    
+#    $sth->execute($transcript_stable_id);
+#    
+#    my ($raw_matrix) = $sth->fetchrow_array;
+#   
+#    $sth->finish;
+#
+#    return undef unless $raw_matrix;
+#
+#    my $matrix = Bio::EnsEMBL::Variation::ProteinFunctionPredictionMatrix->new(
+#        -analysis   => $analysis,
+#        -matrix     => $raw_matrix,
+#    );
+#    
+#    return $matrix;
+#}
 
 1;
