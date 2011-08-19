@@ -91,6 +91,8 @@ sub get_available_adaptors{
          'OverlapConsequence' => 'Bio::EnsEMBL::Variation::DBSQL::OverlapConsequenceAdaptor',
          'Attribute' => 'Bio::EnsEMBL::Variation::DBSQL::AttributeAdaptor',
          'Allele' => 'Bio::EnsEMBL::Variation::DBSQL::AlleleAdaptor',
+         'ProteinFunctionPredictionMatrix' => 'Bio::EnsEMBL::Variation::DBSQL::ProteinFunctionPredictionMatrixAdaptor',
+
                  );
     return (\%pairs);
 }
