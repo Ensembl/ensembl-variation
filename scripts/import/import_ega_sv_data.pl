@@ -10,6 +10,8 @@ use Data::Dumper;
 use FindBin qw( $Bin );
 use Getopt::Long;
 use ImportUtils qw(dumpSQL debug create_and_load load);
+use LWP::Simple;
+
 our ($species, $input_file, $source_name, $TMP_DIR, $TMP_FILE, $mapping, $num_gaps, $target_assembly, $size_diff, $version);
 
 GetOptions('species=s'         => \$species,
@@ -89,7 +91,7 @@ study_table();
 structural_variation($failed);
 supporting_evidence();
 meta_coord();
-
+verifications();
 
 sub read_file{
   debug("Loading file into temporary table");
@@ -347,9 +349,7 @@ sub structural_variation{
       t.year
     FROM
       temp_cnv t LEFT JOIN
-      seq_region sr ON (
-				sr.name = t.chr
-      )
+      seq_region sr ON ( sr.name = t.chr )
     WHERE
       sr.seq_region_id IS NULL
   };
@@ -633,6 +633,21 @@ sub mapping{
   debug("Finished mapping\n\tSuccess: ".(join " ", %num_mapped)." not required $no_mapping_needed\n\tFailed: ".(join " ", %num_not_mapped)." skipped $skipped");
   
   return \@failed;
+}
+
+
+sub verifications {
+	debug("Verification of ftp links");
+	my $sth = $dbVar->prepare(qq{ SELECT url FROM $study_table WHERE source_id=$source_id});
+	$sth->execute();
+	my $failed_flag = 0;
+	while (my $url = ($sth->fetchrow_array)[0]) {
+		if (!head($url)) {
+			print STDERR "$url IS NOT VALID\n";
+			$failed_flag = 1;
+		}
+	}
+	print "URL verification: OK\n" if ($failed_flag == 0);
 }
 
 
