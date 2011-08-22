@@ -126,6 +126,8 @@ our $NO_PREDICTION = pack($PACK_FORMAT, 0xFFFF);
 
 my $MAX_NUM_PREDS = max( map { scalar keys %$_ } values %$PREDICTION_TO_VAL ); 
 
+my $BYTES_PER_PREDICTION = 2;
+
 # the number of bits used to encode the qualitative prediction
 
 my $NUM_PRED_BITS = ceil( log($MAX_NUM_PREDS) / log(2) );
@@ -385,7 +387,7 @@ sub deserialize {
 
     throw("Matrix looks corrupted") unless $self->header_ok;
 
-    my $length = ((length($self->{matrix}) - length($HEADER)) / 2) / $NUM_AAS;
+    my $length = ((length($self->{matrix}) - length($HEADER)) / $BYTES_PER_PREDICTION) / $NUM_AAS;
 
     for my $pos (1 .. $length) {
         
@@ -394,7 +396,7 @@ sub deserialize {
             # we call prediction_from_short directly to avoid doing all the
             # checks performed in prediction_from_string
 
-            my ($prediction, $score) = $self->prediction_from_short(substr($self->{matrix}, $self->compute_offset($pos, $aa), 2));
+            my ($prediction, $score) = $self->prediction_from_short(substr($self->{matrix}, $self->compute_offset($pos, $aa), $BYTES_PER_PREDICTION));
 
             $self->{preds}->{$pos}->{$aa} = [$prediction, $score];
 
@@ -577,7 +579,7 @@ sub expand_matrix {
 sub compute_offset {
     my ($self, $pos, $aa) = @_;
 
-    my $offset = length($HEADER) + ( ( (($pos-1) * $NUM_AAS) + $AA_LOOKUP->{$aa} ) * 2 );
+    my $offset = length($HEADER) + ( ( (($pos-1) * $NUM_AAS) + $AA_LOOKUP->{$aa} ) * $BYTES_PER_PREDICTION );
 
     return $offset;
 }
@@ -620,7 +622,7 @@ sub prediction_from_matrix {
         return undef;
     }
     
-    my $pred = substr($self->{matrix}, $offset, 2);
+    my $pred = substr($self->{matrix}, $offset, $BYTES_PER_PREDICTION);
 
     return $self->prediction_from_short($pred);
 }
