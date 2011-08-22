@@ -358,7 +358,10 @@ sub serialize {
                 the prediction and the score. This can be used, for example to 
                 dump out the prediction matrix to a file. (optional)
   Description : deserialize a binary formatted matrix into a perl hash reference
-                containing all the uncompressed predictions. For example, to retrieve
+                containing all the uncompressed predictions. This hash has an 
+                entry for each position in the peptide, which is itself a hashref
+                with an entry for each possible alternate amino acid which is a 
+                listref containing the prediction and score. For example, to retrieve
                 the prediction for a substitution of 'C' at position 23 from this
                 data structure, you could use code like:
 
@@ -367,10 +370,10 @@ sub serialize {
 
                 Note that if you don't explicitly deserialize a matrix this
                 class will keep it in the memory-efficient encoded format, and
-                you can access individual predictions with the get_prediction
+                you can access individual predictions with the get_prediction()
                 method. You should only use this method if you want to decode
                 all predictions (for example to perform some large-scale 
-                analysis, or to reformat the predictions)
+                analysis, or to reformat the predictions somehow)
 
   Returntype  : hashref containing decoded predictions
   Exceptions  : throws if the binary matrix isn't in the expected format
@@ -386,6 +389,8 @@ sub deserialize {
     }
 
     throw("Matrix looks corrupted") unless $self->header_ok;
+
+    # we can work out the length of the peptide by counting the rows in the matrix
 
     my $length = ((length($self->{matrix}) - length($HEADER)) / $BYTES_PER_PREDICTION) / $NUM_AAS;
 
