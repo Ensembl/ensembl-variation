@@ -596,22 +596,4 @@ sub _fix_bounds {
 }
 
 
-=head2 summary_as_hash
-
-  Example       : $sv_feature_summary = $sv_feature->summary_as_hash();
-  Description   : Retrieves a textual summary of this StructuralVariationFeature object.
-	                      
-  Returns       : hashref of descriptive strings
-=cut
-
-sub summary_as_hash {
-  my $self = shift;
-  my %summary;
-  $summary{'display_id'} = $self->display_id;
-  $summary{'start'} = $self->start;
-  $summary{'end'} = $self->end;
-  return \%summary;
-}
-
-
 1;
