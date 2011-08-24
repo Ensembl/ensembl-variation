@@ -214,6 +214,22 @@ sub variation_feature {
         
 		my $allele_str;
 		
+		# check coord length
+		my $coord_length = $top_level ? $top_sr_end - $top_sr_start + 1 : $top_coord->end - $top_coord->start + 1;
+		my $tmp_allele_str = join("/", keys %alleles);
+		my $ok = 0;
+		foreach my $allele(values %alleles_expanded) {
+		  $allele =~ s/\-//g;
+		  $ok = 1 if length($allele) == $coord_length;
+		}
+		
+		if(!$ok) {
+		  warn("None of the alleles $tmp_allele_str for $cur_v_name match the given coordinate length of $coord_length");
+      
+		  #needs to be written to the failed_variation table
+		  $dbVar_write->do(qq{INSERT IGNORE INTO failed_variation (variation_id,failed_description_id) VALUES ($cur_v_id,15)}) if ($cur_map_weight==1);
+		}
+		
         # construct an allele string. Remember to check the expanded version
         if($alleles_expanded{$ref_allele}) {
           # make sure the reference allele is first. Remember to convert ref_allele (in expanded version) to a compressed allele
@@ -228,7 +244,7 @@ sub variation_feature {
 		  $allele_str = join("/", keys %alleles);
 			  warn("Reference allele $ref_allele for $cur_v_name not found in alleles: " .
 			  $allele_str, " flagging feature cur_allele was $cur_allele");
-		  $dbVar_write->do(qq{INSERT IGNORE INTO failed_variation (variation_id,failed_description_id) VALUES ($cur_v_id,2)}) if ($cur_map_weight ==1); #only put into failed_variation when map_weight==1
+		  $dbVar_write->do(qq{INSERT IGNORE INTO failed_variation (variation_id,failed_description_id) VALUES ($cur_v_id,2)}) if ($cur_map_weight ==1) if $ok; #only put into failed_variation when map_weight==1
 		}
 		
 		#if($allele_str) {
@@ -364,6 +380,22 @@ sub variation_feature {
   if($top_coord ) {
     my $allele_str;
 	
+	# check coord length
+	my $coord_length = $top_level ? $top_sr_end - $top_sr_start + 1 : $top_coord->end - $top_coord->start + 1;
+	my $tmp_allele_str = join("/", keys %alleles);
+	my $ok = 0;
+	foreach my $allele(values %alleles_expanded) {
+	  $allele =~ s/\-//g;
+	  $ok = 1 if length($allele) == $coord_length;
+	}
+	
+	if(!$ok) {
+	  warn("None of the alleles $tmp_allele_str for $cur_v_name match the given coordinate length of $coord_length");
+      
+	  #needs to be written to the failed_variation table
+      $dbVar_write->do(qq{INSERT IGNORE INTO failed_variation (variation_id,failed_description_id) VALUES ($cur_v_id,15)}) if ($cur_map_weight==1);
+	}
+
     if($alleles{$ref_allele}) {
       # make sure the reference allele is first
       delete $alleles{$ref_allele};
@@ -378,7 +410,7 @@ sub variation_feature {
       warn("Reference allele $ref_allele for $cur_v_name not found in alleles: $allele_str flagging feature\n");
       
 	  #needs to be written to the failed_variation table
-      $dbVar_write->do(qq{INSERT IGNORE INTO failed_variation (variation_id,failed_description_id) VALUES ($cur_v_id,2)}) if ($cur_map_weight==1);
+      $dbVar_write->do(qq{INSERT IGNORE INTO failed_variation (variation_id,failed_description_id) VALUES ($cur_v_id,2)}) if ($cur_map_weight==1) if $ok;
     }
     
     #if($allele_str) {
