@@ -951,11 +951,14 @@ sub get_alleles {
 			
 			# insertion or deletion (VCF 4+)
 			else {
-				# chop off first base
-				$data->{REF} = substr($data->{REF}, 1);
-				$data->{ALT} = substr($data->{ALT}, 1);
 				
-				$data->{start}++;
+				# chop off first base if they match
+				if(substr($data->{REF}, 0, 1) eq substr($data->{ALT}, 0, 1)) {
+					$data->{REF} = substr($data->{REF}, 1);
+					$data->{ALT} = substr($data->{ALT}, 1);
+					
+					$data->{start}++;
+				}
 				
 				if($data->{REF} eq '') {
 					# make ref '-' if no ref allele left
