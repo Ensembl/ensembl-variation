@@ -99,7 +99,8 @@ sub new {
         $adaptor, 
         $ref_feature, 
         $disambiguate_sn_alleles,
-        $no_ref_check
+        $no_ref_check,
+        $no_transfer
     ) = rearrange([qw(
             VARIATION_FEATURE 
             FEATURE 
@@ -107,6 +108,7 @@ sub new {
             REF_FEATURE 
             DISAMBIGUATE_SINGLE_NUCLEOTIDE_ALLELES
             NO_REF_CHECK
+            NO_TRANSFER
         )], @_);
 
     assert_ref($variation_feature, 'Bio::EnsEMBL::Variation::VariationFeature');
@@ -117,9 +119,10 @@ sub new {
 
     # we need to ensure the Feature and the VariationFeature live on the same slice
     # so we explicitly transfer the Feature here
-
-    $feature = $feature->transfer($variation_feature->slice) 
-        or throw("Unable to transfer the supplied feature to the same slice as the variation feature");
+    unless(defined $no_transfer && $no_transfer == 1) {
+        $feature = $feature->transfer($variation_feature->slice) 
+            or throw("Unable to transfer the supplied feature to the same slice as the variation feature");
+    }
 
     my $self = bless {
         variation_feature   => $variation_feature,
