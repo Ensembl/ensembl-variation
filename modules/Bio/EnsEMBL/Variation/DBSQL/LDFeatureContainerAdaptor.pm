@@ -172,7 +172,7 @@ sub fetch_by_Slice {
     $sth->bind_param(2,$slice->start - MAX_SNP_DISTANCE,SQL_INTEGER) if ($slice->start - MAX_SNP_DISTANCE >= 1);
     $sth->bind_param(2,1,SQL_INTEGER) if ($slice->start - MAX_SNP_DISTANCE < 1);
     $sth->bind_param(3,$slice->end,SQL_INTEGER);
-    $sth->bind_param(4,$slice->start,SQL_INTEGER);
+    $sth->bind_param(4,($slice->start < 1 ? 1 : $slice->start),SQL_INTEGER);
 
     $sth->execute();
     
