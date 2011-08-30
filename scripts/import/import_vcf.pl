@@ -46,7 +46,7 @@ my %Printable = ( "\\"=>'\\', "\r"=>'r', "\n"=>'n', "\t"=>'t', "\""=>'"' );
 ######################
 
 # get command-line options
-my ($in_file, $species, $registry_file, $help, $host, $database, $port, $user, $password, $source, $source_desc, $population, $flank_size, $TMP_DIR, $TMP_FILE, $skip_multi, $use_gp, $sample_prefix, $variation_prefix, $disable_keys, $include_tables, $merge_vfs, $skip_tables, $compressed_only, $only_existing, $merge_alleles, $new_var_name, $chrom_regexp, $check_synonyms);
+my ($in_file, $species, $registry_file, $help, $host, $database, $port, $user, $password, $source, $source_desc, $population, $flank_size, $TMP_DIR, $TMP_FILE, $skip_multi, $use_gp, $sample_prefix, $variation_prefix, $disable_keys, $include_tables, $merge_vfs, $skip_tables, $compressed_only, $only_existing, $merge_alleles, $new_var_name, $chrom_regexp, $check_synonyms, $force_multi);
 
 my $args = scalar @ARGV;
 
