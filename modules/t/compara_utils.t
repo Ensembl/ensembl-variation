@@ -86,10 +86,14 @@ S2                                                                    T----UVH
 S1                                                                    --ILMN-O
 PPH
 
-# redefine the _get_ungapped_alignment subroutine to return our test alignment 
+{
+    no warnings qw(redefine);
+    
+    # redefine the _get_ungapped_alignment subroutine to return our test alignment 
 
-sub Bio::EnsEMBL::Variation::Utils::ComparaUtils::_get_ungapped_alignment {
-    return wantarray ? ($query_seq, $pph_align) : $sift_align;
+    sub Bio::EnsEMBL::Variation::Utils::ComparaUtils::_get_ungapped_alignment {
+        return wantarray ? ($query_seq, $pph_align) : $sift_align;
+    }
 }
 
 undef $/;
