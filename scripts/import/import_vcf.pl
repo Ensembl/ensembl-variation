@@ -79,6 +79,7 @@ GetOptions(
 	'create_name'    => \$new_var_name,
 	'chrom_regexp=s' => \$chrom_regexp,
 	'check_synonyms' => \$check_synonyms,
+	'force_multi'    => \$force_multi,
 );
 
 
@@ -280,7 +281,7 @@ while(<$in_file_handle>) {
 	# header lines
 	next if /^##/;
 	
-	my @split = split /\t/;
+	my @split = split /\s+/;
 	my $data;
 		
 	# set some variables we'll need later
@@ -302,6 +303,9 @@ while(<$in_file_handle>) {
 			if(defined($headers{FORMAT})) {
 				$first_sample_col = $headers{FORMAT} + 1;
 				$data->{first_sample_col} = $first_sample_col;
+				
+				# delete sample IDs
+				undef $data->{sample_ids};
 				
 				# populate sample tables and get sample_ids
 				&sample_tables($dbVar, $data, \@split);
@@ -458,7 +462,7 @@ while(<$in_file_handle>) {
 		############
 		
 		# multi bp
-		if(($data->{is_multi} || $data->{is_indel}) && $tables->{individual_genotype_multiple_bp}) {
+		if(($data->{is_multi} || $data->{is_indel} || $force_multi) && $tables->{individual_genotype_multiple_bp}) {
 			&multi_bp_genotype($dbVar, $data);
 		}
 		
@@ -951,11 +955,14 @@ sub get_alleles {
 			
 			# insertion or deletion (VCF 4+)
 			else {
-				# chop off first base
-				$data->{REF} = substr($data->{REF}, 1);
-				$data->{ALT} = substr($data->{ALT}, 1);
 				
-				$data->{start}++;
+				# chop off first base if they match
+				if(substr($data->{REF}, 0, 1) eq substr($data->{ALT}, 0, 1)) {
+					$data->{REF} = substr($data->{REF}, 1);
+					$data->{ALT} = substr($data->{ALT}, 1);
+					
+					$data->{start}++;
+				}
 				
 				if($data->{REF} eq '') {
 					# make ref '-' if no ref allele left
@@ -1111,6 +1118,11 @@ sub merge_variation_features {
 	if($row_count == 1) {
 		
 		$data->{merged} = 1;
+		
+		# delete original entry from variation
+		$sth = $dbVar->prepare(qq{DELETE FROM variation WHERE variation_id = ?});
+		$sth->execute($data->{var_id});
+		$sth->finish;
 		
 		# update the variation_id
 		$data->{var_id} = $variation_id;
