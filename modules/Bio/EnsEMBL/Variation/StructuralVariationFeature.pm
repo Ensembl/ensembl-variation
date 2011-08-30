@@ -271,8 +271,8 @@ sub structural_variation {
   my $self = shift;
 
   if(@_) {
-    if(!ref($_[0]) || !$_[0]->isa('Bio::EnsEMBL::Variation::StrucutralVariation')) {
-      throw("Bio::EnsEMBL::Variation::StrucutralVariation argument expected");
+    if(!ref($_[0]) || !$_[0]->isa('Bio::EnsEMBL::Variation::StructuralVariation')) {
+      throw("Bio::EnsEMBL::Variation::StructuralVariation argument expected");
     }
     $self->{'structural_variation'} = shift;
   }

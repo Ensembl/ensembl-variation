@@ -315,7 +315,7 @@ use warnings;
 }
 
 {
-    package Bio::EnsEMBL::Variation::StructuralVariation;
+    package Bio::EnsEMBL::Variation::StructuralVariationFeature;
     
     sub _gff_hash {
         
@@ -327,38 +327,22 @@ use warnings;
         
         $gff->{source} = $self->source;
         
-        my $source = $self->source;
-
-        $source .= ':'.$self->study_name if $self->study_name;
-
-        $gff->{attributes}->{Dbxref} = $source;
-
-        # XXX: for now, just resort to the highest level SO class term as we don't have 
-        # accurate class information in the database
+        my $sv = $self->structural_variation;
+        
+        $gff->{attributes}->{Dbxref} = $self->source . ':' . $self->variation_name;
+        
+        $gff->{attributes}->{study_accession} = $sv->study->name if $sv->study->name;
 
         $gff->{type} = $self->class_SO_term;
         
         #$gff->{attributes}->{Reference_seq} = $self->end > $self->start+50 ? '~' : $self->get_reference_sequence;
-      
-        if ( (defined $self->inner_start) && ($self->inner_start != $self->seq_region_start) ) {
-            
-            if ($self->inner_start < $self->seq_region_start) {
-                warn "Invalid inner_start for ".$self->variation_name.": ".$self->inner_start." < ".$self->seq_region_start."\n";
-                return undef;
-            }
-
-            $gff->{attributes}->{Start_range} = join ',', $self->seq_region_start, $self->inner_start;
+     
+        if ( (defined $self->inner_start) && (defined $self->outer_start) && ($self->inner_start != $self->outer_start) ) {
+            $gff->{attributes}->{Start_range} = join ',', $self->outer_start, $self->inner_start;
         }
 
-        if ( (defined $self->inner_end) && ($self->inner_end != $self->seq_region_end) ) {
-           
-            if ($self->inner_end > $self->seq_region_end) {
-                warn "Invalid inner_end for ".$self->variation_name.": ".$self->inner_end." > ".$self->seq_region_end."\n";
-                return undef;
-            }
-
-
-            $gff->{attributes}->{End_range}   = join ',', $self->inner_end, $self->seq_region_end;
+        if ( (defined $self->inner_end) && (defined $self->outer_end) && ($self->inner_end != $self->outer_end) ) {
+            $gff->{attributes}->{End_range} = join ',', $self->inner_end, $self->outer_end;
         }
 
         return $gff;
