@@ -1439,6 +1439,8 @@ sub whole_genome_fetch {
         
         debug("Calculating and writing output") unless defined($config->{quiet});
         &print_consequences($config, \@finished_vfs);
+
+	@finished_vfs = ();
         
         # clean hash
         delete $vf_hash->{$chr};
