@@ -460,19 +460,21 @@ sub _get_all_RegulationVariations {
         my $fg_adaptor;
 
         if (my $adap = $self->adaptor) {
-            $fg_adaptor = Bio::EnsEMBL::DBSQL::MergedAdaptor->new(
-                -species  => $adap->db->species, 
-                -type     => $type,
-            );
-			
+            if(my $db = $adap->db) {
+                $fg_adaptor = Bio::EnsEMBL::DBSQL::MergedAdaptor->new(
+                    -species  => $adap->db->species, 
+                    -type     => $type,
+                );			
+            }
+            
             unless ($fg_adaptor) {
                 warning("Failed to get adaptor for $type");
-                return undef;
+                return [];
             }
         }
         else {
             warning('Cannot get variation features without attached adaptor');
-            return undef;
+            return [];
         }
 
         my $slice = $self->feature_Slice;
@@ -1408,7 +1410,7 @@ sub get_all_hgvs_notations {
     $reference_name = $ref_feature->seq_region_name if ($ref_feature->isa('Bio::EnsEMBL::Slice'));
       
     # Use the feature's display id as reference name unless specified otherwise. If the feature is a transcript or translation, append the version number as well
-    $reference_name ||= $ref_feature->display_id() . ($ref_feature->isa('Bio::EnsEMBL::Transcript') ? '.' . $ref_feature->version() : '');
+    $reference_name ||= $ref_feature->display_id() . ($ref_feature->isa('Bio::EnsEMBL::Transcript') && $ref_feature->display_id !~ /\.\d+$/ ? '.' . $ref_feature->version() : '');
     
     # Get all alleles for this VariationFeature and create a HGVS notation for each.
     # Store them in a hash with the allele as keys to avoid duplicates
