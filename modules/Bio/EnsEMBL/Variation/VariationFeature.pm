@@ -460,19 +460,21 @@ sub _get_all_RegulationVariations {
         my $fg_adaptor;
 
         if (my $adap = $self->adaptor) {
-            $fg_adaptor = Bio::EnsEMBL::DBSQL::MergedAdaptor->new(
-                -species  => $adap->db->species, 
-                -type     => $type,
-            );
-			
+            if(my $db = $adap->db) {
+                $fg_adaptor = Bio::EnsEMBL::DBSQL::MergedAdaptor->new(
+                    -species  => $adap->db->species, 
+                    -type     => $type,
+                );			
+            }
+            
             unless ($fg_adaptor) {
                 warning("Failed to get adaptor for $type");
-                return undef;
+                return [];
             }
         }
         else {
             warning('Cannot get variation features without attached adaptor');
-            return undef;
+            return [];
         }
 
         my $slice = $self->feature_Slice;
