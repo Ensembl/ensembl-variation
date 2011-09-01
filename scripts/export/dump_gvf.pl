@@ -270,6 +270,8 @@ for my $slice (@$slices) {
 # just use a file-wide count for the ID attribute
 my $id_count = 0;
 
+my $prev_svs;
+
 while (my $slice = shift @$slices) {
 
     # only operate on chunk_size sub slices to avoid running out of memory
@@ -539,6 +541,13 @@ while (my $slice = shift @$slices) {
 
                 next if $svf->var_class eq 'CNV_PROBE';
 
+                my $coords = join '-', $svf->seq_region_start, $svf->seq_region_end; 
+                
+                if (my $prev_coords = $prev_svs->{$svf->variation_name}) {
+                    warn "repeated SV: ".$svf->variation_name." coords 1: $prev_coords, coords 2: $coords\n" if $prev_coords ne $coords;
+                    next;
+                }
+
                 # we can now have SVs that map to multiple locations so we can't use the
                 # feature's own identifier and we have to use a file-wide count as for
                 # normal variations
@@ -546,6 +555,8 @@ while (my $slice = shift @$slices) {
                 my $gvf_line = $svf->to_gvf(extra_attrs => {ID => ++$id_count});
                     
                 print GVF "$gvf_line\n" if $gvf_line;
+                
+                $prev_svs->{$svf->variation_name} = $coords if $gvf_line;
             }
         }
     }
