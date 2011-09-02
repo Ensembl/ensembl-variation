@@ -1066,12 +1066,24 @@ sub _parse_hgvs_position {
 sub fetch_by_hgvs_notation {
     my $self = shift;
     my $hgvs = shift;
+    my $user_slice_adaptor = shift;
+    my $user_transcript_adaptor = shift;
     
     #ÊSplit the HGVS notation into the reference, notation type and variation description
     my ($reference,$type,$description) = $hgvs =~ m/^([^\:]+)\:.*?([cgmrp]?)\.?([\*\-0-9]+.*)$/i;
     
+    my $extra;
+    
+    if($description =~ m/\(.+\)/) {        
+        ($description, $extra) = $description =~ /(.+?)(\(.+\))/;        
+        throw ("Could not parse the HGVS notation $hgvs - can't interpret \'$extra\'") unless $extra eq '(p.=)';
+    }
+    
     #ÊIf any of the fields are unknown, return undef
     throw ("Could not parse the HGVS notation $hgvs") unless (defined($reference) && defined($type) && defined($description));
+    
+    # strip version number from reference
+    $reference =~ s/\.\d+//g if $reference =~ /^ENS/;
     
     my ($start,$end,$start_offset,$end_offset,$ref_allele,$alt_allele,$class);
     
@@ -1124,7 +1136,7 @@ sub fetch_by_hgvs_notation {
     }
     
     #ÊGet a slice representing this variation
-    my $slice_adaptor = $self->db()->dnadb()->get_SliceAdaptor();
+    my $slice_adaptor = $user_slice_adaptor || $self->db()->dnadb()->get_SliceAdaptor();
     my $slice;
     my $strand;
     if ($type =~ m/c/i) {
@@ -1133,7 +1145,7 @@ sub fetch_by_hgvs_notation {
     	$reference =~ s/^(LRG_[0-9]+)_?(t[0-9]+)$/$1\_$2/i;
     	
     	#ÊGet the Transcript object for this variation
-    	my $transcript_adaptor = $self->db()->dnadb()->get_TranscriptAdaptor();
+    	my $transcript_adaptor = $user_transcript_adaptor || $self->db()->dnadb()->get_TranscriptAdaptor();
     	my $transcript = $transcript_adaptor->fetch_by_stable_id($reference) or throw ("Could not get a Transcript object for '$reference'");
     	
     	# Get the TranscriptMapper
