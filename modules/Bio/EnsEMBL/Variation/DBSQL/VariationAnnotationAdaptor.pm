@@ -189,7 +189,7 @@ sub fetch_all_by_Study {
 
   Arg [1]    : string $phenotype_name
   Arg [2]    : string $source_name (optional)
-  Example    : $vaa = $va_adaptor->fetch_by_phenotype_source_name('BD','EGA');
+  Example    : $va = $va_adaptor->fetch_all_by_phenotype_source_name('BD','EGA');
   Description: Retrieves a variation annotation object via its phenotype/source name
   Returntype : list of ref of Bio::EnsEMBL::Variation::VariationAnnotation
   Exceptions : throw if phenotype name argument is not defined
@@ -222,7 +222,7 @@ sub fetch_all_by_phenotype_name_source_name {
 
   Arg [1]    : string $phenotype_description
   Arg [2]    : string $source_name (optional)
-  Example    : $vaa = $va_adaptor->fetch_by_phenotype_description_source_name('diabetes','EGA');
+  Example    : $va = $va_adaptor->fetch_all_by_phenotype_description_source_name('diabetes','EGA');
   Description: Retrieves a variation annotation object via its phenotype description/source name
   Returntype : list of ref of Bio::EnsEMBL::Variation::VariationAnnotation
   Exceptions : throw if phenotype name argument is not defined
@@ -255,7 +255,7 @@ sub fetch_all_by_phenotype_description_source_name {
 
   Arg [1]    : integer $phenotype_id
   Arg [2]    : string $source_name (optional)
-  Example    : $vaa = $va_adaptor->fetch_by_phenotype_id_source_name(999,'EGA');
+  Example    : $va = $va_adaptor->fetch_all_by_phenotype_id_source_name(999,'EGA');
   Description: Retrieves a variation annotation object via its phenotype id/source name
   Returntype : list of ref of Bio::EnsEMBL::Variation::VariationAnnotation
   Exceptions : throw if phenotype id argument is not defined
@@ -284,6 +284,36 @@ sub fetch_all_by_phenotype_id_source_name {
   return $self->generic_fetch("$extra_sql");
   
 }
+
+
+=head2 fetch_all_by_associated_gene
+
+  Arg [1]    : string $gene_name
+  Example    : $va = $va_adaptor->fetch_all_by_associated_gene('CAV3');
+  Description: Retrieves the variation annotation objects via which are associated with the gene.
+  Returntype : list of ref of Bio::EnsEMBL::Variation::VariationAnnotation
+  Exceptions : throw if the gene_name argument is not defined
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub fetch_all_by_associated_gene {
+
+  my $self = shift;
+  my $gene_name  = shift;
+
+  throw('gene_name argument expected') if(!defined($gene_name));
+
+  my $extra_sql = " va.associated_gene LIKE '%$gene_name%'";
+  
+  # Add the constraint for failed variations
+  $extra_sql .= " AND " . $self->db->_exclude_failed_variations_constraint();
+  
+  return $self->generic_fetch("$extra_sql");
+  
+}
+
 
 =head2 fetch_all
 
@@ -371,7 +401,6 @@ sub _objs_from_sth {
   }
 
   return \@features;
-
 
 }
 
