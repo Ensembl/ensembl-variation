@@ -54,7 +54,7 @@ our @EXPORT_OK = qw(get_condel_prediction);
 
 use Bio::EnsEMBL::Variation::Utils::CondelConstants qw($CONDEL_CONFIG $CONDEL_SIFT_DATA $CONDEL_POLYPHEN_DATA);
 
-our $USE_V2 = 0;
+our $USE_V2 = 1;
 
 =head2 get_condel_prediction
 
