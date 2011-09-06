@@ -1439,8 +1439,8 @@ sub whole_genome_fetch {
         
         debug("Calculating and writing output") unless defined($config->{quiet});
         &print_consequences($config, \@finished_vfs);
-
-	@finished_vfs = ();
+        
+        @finished_vfs = ();
         
         # clean hash
         delete $vf_hash->{$chr};
@@ -2298,7 +2298,7 @@ sub is_var_novel {
         
         my $seen_new = 0;
         foreach my $a(split /\//, $new_var->allele_string) {
-            reverse_comp(\$a) if $new_var->seq_region_strand ne $existing_var->[5];
+            reverse_comp(\$a) if $new_var->strand ne $existing_var->[5];
             $seen_new = 1 unless defined $existing_alleles{$a};
         }
         
