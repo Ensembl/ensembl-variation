@@ -74,13 +74,11 @@ use vars qw(@ISA @EXPORT_OK);
     &parse_line
     &vf_to_consequences
     &validate_vf
-    &print_line
     &read_cache_info
     &dump_adaptor_cache
     &load_dumped_adaptor_cache
     &get_all_consequences
     &get_slice
-    &scan_file
     &build_slice_cache
     &build_full_cache
     &regions_from_hash
@@ -491,7 +489,25 @@ sub get_all_consequences {
         
         while(my $vf = shift @$finished_vfs) {
             progress($config, $vf_counter++, $vf_count) unless $vf_count == 1;
-            push @return, @{vf_to_consequences($config, $vf)};
+            
+            if(defined($config->{gvf})) {
+                use Bio::EnsEMBL::Variation::Utils::EnsEMBL2GFF3;
+                
+                $vf->source("User");
+                
+                $config->{gvf_id} ||= 1;
+                
+                push @return, $vf->to_gvf(
+                    include_consequences => 1,
+                    extra_attrs          => {
+                        ID     => $config->{gvf_id}++
+                    }
+                );
+            }
+            
+            else {
+                push @return, @{vf_to_consequences($config, $vf)};
+            }
         }
         
         end_progress($config) unless $vf_count == 1;
@@ -516,7 +532,8 @@ sub get_all_consequences {
             "LINES ", $config->{line_number},
             "\tMEMORY $tot ", (join " ", @$mem),
             "\tDIFF ", (join " ", @$mem_diff),
-            "\tCACHE ", total_size($tr_cache)
+            "\tCACHE ", total_size($tr_cache).
+            "\tRF ", total_size($rf_cache),
         );
         #exit(0) if grep {$_ < 0} @$mem_diff;
     }
@@ -528,9 +545,6 @@ sub get_all_consequences {
 sub vf_to_consequences {
     my $config = shift;
     my $vf = shift;
-    
-    #use Devel::Size qw(total_size);
-    #print $vf->variation_name, " ", total_size($vf), "\n";
     
     my @return = ();
     
@@ -932,7 +946,7 @@ sub whole_genome_fetch {
     ## TRANSCRIPTS
     ##############
     
-    $count_from_mem = scalar @{$tr_cache->{$chr}} if defined($tr_cache->{$chr});
+    $count_from_mem = scalar @{$tr_cache->{$chr}} if defined($tr_cache->{$chr}) && ref($tr_cache->{$chr}) eq 'ARRAY';
     
     # check we have defined regions
     if(defined($regions->{$chr})) {
@@ -1054,7 +1068,7 @@ sub whole_genome_fetch {
                     foreach my $vf(@{$vf_hash->{$chr}{$chunk}{$pos}}) {
                         
                         # pinch slice from slice cache if we don't already have it
-                        $_->{slice} ||= $slice_cache->{$chr} for @{$vf_hash->{$chr}{$chunk}{$pos}};
+                        $vf->{slice} ||= $slice_cache->{$chr};
                         
                         my $tv = Bio::EnsEMBL::Variation::TranscriptVariation->new(
                             -transcript        => $tr,
@@ -1072,8 +1086,6 @@ sub whole_genome_fetch {
                     }
                 }
             }
-            
-            #debug("TR ", $tr->stable_id, " MEMORY ", (join " ", @{mem_diff($config)}));
         }
         
         end_progress($config);
@@ -1083,10 +1095,12 @@ sub whole_genome_fetch {
     ## REGULATORY FEATURES
     ######################
     
-    $count_from_mem = scalar @{$rf_cache->{$chr}} if defined($rf_cache->{$chr});
-    
     if(defined($config->{regulatory})) {
-        ($count_from_db, $count_from_cache, $count_duplicates) = (0, 0, 0);
+        ($count_from_mem, $count_from_db, $count_from_cache, $count_duplicates) = (0, 0, 0, 0);
+        
+        if(defined($rf_cache->{$chr}) && ref($rf_cache->{$chr}) eq 'HASH') {
+            $count_from_mem += scalar @{$rf_cache->{$chr}->{$_}} for keys %{$rf_cache->{$chr}};
+        }
         
         # check we have defined regions
         if(defined($regions->{$chr})) {
@@ -1162,7 +1176,7 @@ sub whole_genome_fetch {
                                 $count_duplicates++;
                                 next;
                             }
-                            $seen_trs{$dbID} = 1;
+                            $seen_rfs{$dbID} = 1;
                             
                             push @{$rf_cache->{$chr}->{$type}}, $rf;
                         }
@@ -1214,14 +1228,12 @@ sub whole_genome_fetch {
                     foreach my $chunk(keys %chunks) {
                         foreach my $pos(grep {$_ >= $s && $_ <= $e} keys %{$vf_hash->{$chr}{$chunk}}) {
                             foreach my $vf(@{$vf_hash->{$chr}{$chunk}{$pos}}) {
-                                #eval {
-                                    push @{$vf->{regulation_variations}->{$type}}, $constructor->new(
-                                        -variation_feature  => $vf,
-                                        -feature            => $rf,
-                                        -no_ref_check       => 1,
-                                        -no_transfer        => 1
-                                    );
-                                #};
+                                push @{$vf->{regulation_variations}->{$type}}, $constructor->new(
+                                    -variation_feature  => $vf,
+                                    -feature            => $rf,
+                                    -no_ref_check       => 1,
+                                    -no_transfer        => 1
+                                );
                             }
                         }
                     }
@@ -1377,48 +1389,6 @@ sub get_slice {
 
 # METHODS THAT DEAL WITH "REGIONS"
 ##################################
-
-# scans file to get all slice bits we need
-sub scan_file() {
-    my $config = shift;
-    
-    my $in_file_handle = $config->{in_file_handle};
-    
-    my %include_regions;
-    
-    debug("Scanning input file") unless defined($config->{quiet});
-    
-    while(<$in_file_handle>) {
-        chomp;
-        
-        # header line?
-        next if /^\#/;
-        
-        # some lines (pileup) may actually parse out into more than one variant)
-        foreach my $sub_line(@{parse_line($config, $_)}) {
-        
-            # get the sub-line into named variables
-            my ($chr, $start, $end, $allele_string, $strand, $var_name) = @{$sub_line};
-            $chr =~ s/chr//ig unless $chr =~ /^chromosome$/i;
-            $chr = 'MT' if $chr eq 'M';
-            
-            next if defined($config->{chr}) && !$config->{chr}->{$chr};
-            
-            $include_regions{$chr} ||= [];
-            
-            add_region($start, $end, $include_regions{$chr});
-        }
-    }
-    
-    # close filehandle and recycle
-    close $in_file_handle;
-    $config->{in_file_handle} = get_in_file_handle($config);
-    
-    # merge regions
-    merge_regions(\%include_regions, $config);
-    
-    return \%include_regions;
-}
 
 # gets regions from VF hash
 sub regions_from_hash {
@@ -1593,7 +1563,7 @@ sub prune_cache {
     
     # delete no longer in use chroms
     foreach my $chr(keys %$cache) {
-        delete $cache->{$chr} unless defined $regions->{$chr};
+        delete $cache->{$chr} unless defined $regions->{$chr} && scalar @{$regions->{$chr}};
     }
     
     foreach my $chr(keys %$cache) {
@@ -1606,29 +1576,14 @@ sub prune_cache {
             $max = $e if !defined($max) or $e > $max;
         }
         
-        # splice out features not in area spanned by min/max
-        my $i = 0;
-        my $f_count = scalar @{$cache->{$chr}};
-        my @new_cache;
-        
-        while($i < $f_count) {
-            my $f = $cache->{$chr}->[$i];
-            
-            $i++;
-            
-            if($max - $f->start() > 0 && $f->end - $min > 0) {
-                push @new_cache, $f;
-            }
-            
-            # do some cleaning for transcripts
-            elsif(defined $f->{translation}) {
-                delete $f->{translation}->{transcript};
-                delete $f->{translation};
-            }
+        # transcript cache
+        if(ref($cache->{$chr}) eq 'ARRAY') {
+            $cache->{$chr} = prune_min_max($cache->{$chr}, $min, $max);
         }
-        
-        undef $cache->{$chr};
-        $cache->{$chr} = \@new_cache;
+        # regfeat cache
+        elsif(ref($cache->{$chr}) eq 'HASH') {
+            $cache->{$chr}->{$_} = prune_min_max($cache->{$chr}->{$_}, $min, $max) for keys %{$cache->{$chr}};
+        }
         
         # update loaded regions
         my %have_regions = map {$_ => 1} @{$regions->{$chr}};
@@ -1637,6 +1592,37 @@ sub prune_cache {
             delete $loaded->{$chr}->{$region} unless defined $have_regions{$region};
         }
     }
+}
+
+# does the actual pruning
+sub prune_min_max {
+    my $array = shift;
+    my $min   = shift;
+    my $max   = shift;
+    
+    # splice out features not in area spanned by min/max
+    my $i = 0;
+    my $f_count = scalar @{$array};
+    my @new_cache;
+    
+    while($i < $f_count) {
+        my $f = $array->[$i];
+        
+        $i++;
+        
+        if($max - $f->start() > 0 && $f->end - $min > 0) {
+            push @new_cache, $f;
+        }
+        
+        # do some cleaning for transcripts
+        elsif(defined $f->{translation}) {
+            delete $f->{translation}->{transcript};
+            delete $f->{translation};
+        }
+    }
+    
+    undef $array;
+    return \@new_cache;
 }
 
 # get transcripts for slices
