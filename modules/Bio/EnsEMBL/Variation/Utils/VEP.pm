@@ -1593,7 +1593,7 @@ sub prune_cache {
     
     # delete no longer in use chroms
     foreach my $chr(keys %$cache) {
-        delete $cache->{$_} unless defined $regions->{$_};
+        delete $cache->{$chr} unless defined $regions->{$chr};
     }
     
     foreach my $chr(keys %$cache) {
