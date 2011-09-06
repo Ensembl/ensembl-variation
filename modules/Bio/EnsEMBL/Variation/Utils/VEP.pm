@@ -532,7 +532,8 @@ sub get_all_consequences {
             "LINES ", $config->{line_number},
             "\tMEMORY $tot ", (join " ", @$mem),
             "\tDIFF ", (join " ", @$mem_diff),
-            "\tCACHE ", total_size($tr_cache)
+            "\tCACHE ", total_size($tr_cache).
+            "\tRF ", total_size($rf_cache),
         );
         #exit(0) if grep {$_ < 0} @$mem_diff;
     }
@@ -945,7 +946,7 @@ sub whole_genome_fetch {
     ## TRANSCRIPTS
     ##############
     
-    $count_from_mem = scalar @{$tr_cache->{$chr}} if defined($tr_cache->{$chr});
+    $count_from_mem = scalar @{$tr_cache->{$chr}} if defined($tr_cache->{$chr}) && ref($tr_cache->{$chr}) eq 'ARRAY';
     
     # check we have defined regions
     if(defined($regions->{$chr})) {
@@ -1097,7 +1098,9 @@ sub whole_genome_fetch {
     if(defined($config->{regulatory})) {
         ($count_from_mem, $count_from_db, $count_from_cache, $count_duplicates) = (0, 0, 0, 0);
         
-        $count_from_mem = scalar @{$rf_cache->{$chr}} if defined($rf_cache->{$chr});    
+        if(defined($rf_cache->{$chr}) && ref($rf_cache->{$chr}) eq 'HASH') {
+            $count_from_mem += scalar @{$rf_cache->{$chr}->{$_}} for keys %{$rf_cache->{$chr}};
+        }
         
         # check we have defined regions
         if(defined($regions->{$chr})) {
@@ -1560,7 +1563,7 @@ sub prune_cache {
     
     # delete no longer in use chroms
     foreach my $chr(keys %$cache) {
-        delete $cache->{$chr} unless defined $regions->{$chr};
+        delete $cache->{$chr} unless defined $regions->{$chr} && scalar @{$regions->{$chr}};
     }
     
     foreach my $chr(keys %$cache) {
@@ -1573,29 +1576,14 @@ sub prune_cache {
             $max = $e if !defined($max) or $e > $max;
         }
         
-        # splice out features not in area spanned by min/max
-        my $i = 0;
-        my $f_count = scalar @{$cache->{$chr}};
-        my @new_cache;
-        
-        while($i < $f_count) {
-            my $f = $cache->{$chr}->[$i];
-            
-            $i++;
-            
-            if($max - $f->start() > 0 && $f->end - $min > 0) {
-                push @new_cache, $f;
-            }
-            
-            # do some cleaning for transcripts
-            elsif(defined $f->{translation}) {
-                delete $f->{translation}->{transcript};
-                delete $f->{translation};
-            }
+        # transcript cache
+        if(ref($cache->{$chr}) eq 'ARRAY') {
+            $cache->{$chr} = prune_min_max($cache->{$chr}, $min, $max);
         }
-        
-        undef $cache->{$chr};
-        $cache->{$chr} = \@new_cache;
+        # regfeat cache
+        elsif(ref($cache->{$chr}) eq 'HASH') {
+            $cache->{$chr}->{$_} = prune_min_max($cache->{$chr}->{$_}, $min, $max) for keys %{$cache->{$chr}};
+        }
         
         # update loaded regions
         my %have_regions = map {$_ => 1} @{$regions->{$chr}};
@@ -1604,6 +1592,37 @@ sub prune_cache {
             delete $loaded->{$chr}->{$region} unless defined $have_regions{$region};
         }
     }
+}
+
+# does the actual pruning
+sub prune_min_max {
+    my $array = shift;
+    my $min   = shift;
+    my $max   = shift;
+    
+    # splice out features not in area spanned by min/max
+    my $i = 0;
+    my $f_count = scalar @{$array};
+    my @new_cache;
+    
+    while($i < $f_count) {
+        my $f = $array->[$i];
+        
+        $i++;
+        
+        if($max - $f->start() > 0 && $f->end - $min > 0) {
+            push @new_cache, $f;
+        }
+        
+        # do some cleaning for transcripts
+        elsif(defined $f->{translation}) {
+            delete $f->{translation}->{transcript};
+            delete $f->{translation};
+        }
+    }
+    
+    undef $array;
+    return \@new_cache;
 }
 
 # get transcripts for slices
