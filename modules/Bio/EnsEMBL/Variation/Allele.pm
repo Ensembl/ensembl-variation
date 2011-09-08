@@ -256,7 +256,7 @@ sub population{
         my $population = $self->adaptor->db->get_PopulationAdaptor()->fetch_by_dbID($self->{'_population_id'});
         
         # Set the population
-        return $self->population($population);
+				$self->{'population'} = $population;
     }
     
     return $self->{'population'};
