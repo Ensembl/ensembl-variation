@@ -533,6 +533,7 @@ sub fetch_by_subsnp_id {
 
     # This method will need to left join to the flanking sequence table so set that flag
     $self->{'_check_flanking'} = 1;
+    $self->{'_constrain_sample'} = 1;
     
     # Add a constraint on the subsnp_id
     my $constraint = qq{a.subsnp_id = ?};
@@ -545,6 +546,7 @@ sub fetch_by_subsnp_id {
     
     # Unset the check flanking flag again
     delete($self->{'_check_flanking'});
+    delete($self->{'_constrain_sample'});
     
     # Return the result
     return undef unless (scalar(@{$result}));
