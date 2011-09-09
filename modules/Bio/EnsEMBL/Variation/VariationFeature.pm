@@ -85,7 +85,7 @@ use warnings;
 
 package Bio::EnsEMBL::Variation::VariationFeature;
 
-use Scalar::Util qw(weaken);
+use Scalar::Util qw(weaken isweak);
 
 use Bio::EnsEMBL::Feature;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
@@ -227,9 +227,13 @@ sub new {
 
 
 sub new_fast {
+
   my $class = shift;
   my $hashref = shift;
-  return bless $hashref, $class;
+  my $self = bless $hashref, $class;
+  weaken($self->{'adaptor'})  if ( ! isweak($self->{'adaptor'}) );
+  return $self;
+
 }
 
 
@@ -350,7 +354,7 @@ sub get_all_TranscriptVariations {
 
         #die;
 
-        if (my $db = $self->{adaptor}->db) {
+        if (my $db = $self->adaptor->db) {
             my $tva = $db->get_TranscriptVariationAdaptor;
 
             # just fetch TVs for all Transcripts because that's more efficient,
@@ -542,10 +546,10 @@ sub variation {
     }
     $self->{'variation'} = shift;
   }
-  elsif(!defined($self->{'variation'}) && $self->{'adaptor'} &&
+  elsif(!defined($self->{'variation'}) && $self->adaptor() &&
         defined($self->{'_variation_id'})) {
     # lazy-load from database on demand
-    my $va = $self->{'adaptor'}->db()->get_VariationAdaptor();
+    my $va = $self->adaptor->db()->get_VariationAdaptor();
     $self->{'variation'} = $va->fetch_by_dbID($self->{'_variation_id'});
   }
 
@@ -918,8 +922,8 @@ sub is_somatic {
 sub is_tagged{
     my $self = shift;
     
-    if ($self->{'adaptor'}){
-	my $population_adaptor = $self->{'adaptor'}->db()->get_PopulationAdaptor();
+    if ($self->adaptor()){
+	my $population_adaptor = $self->adaptor()->db()->get_PopulationAdaptor();
 	return $population_adaptor->fetch_tagged_Population($self);
     }
 }
@@ -997,8 +1001,8 @@ sub convert_to_SNP{
 sub get_all_LD_values{
     my $self = shift;
     
-    if ($self->{'adaptor'}){
-	my $ld_adaptor = $self->{'adaptor'}->db()->get_LDFeatureContainerAdaptor();
+    if ($self->adaptor()){
+	my $ld_adaptor = $self->adaptor()->db()->get_LDFeatureContainerAdaptor();
 	return $ld_adaptor->fetch_by_VariationFeature($self);
     }
     return {};
@@ -1091,8 +1095,8 @@ sub get_all_sources{
    
     my @sources;
     my %sources;
-    if ($self->{'adaptor'}){
-	map {$sources{$_}++} @{$self->{'adaptor'}->get_all_synonym_sources($self)};
+    if ($self->adaptor()){
+	map {$sources{$_}++} @{$self->adaptor()->get_all_synonym_sources($self)};
 	$sources{$self->source}++;
 	@sources = keys %sources;
 	return \@sources;
@@ -1135,10 +1139,10 @@ sub ref_allele_string{
 sub get_all_VariationSets {
     my $self = shift;
     
-    if (!$self->{'adaptor'}) {
+    if (!$self->adaptor()) {
       throw('An adaptor must be attached in order to get all variation sets');
     }
-    my $vs_adaptor = $self->{'adaptor'}->db()->get_VariationSetAdaptor();
+    my $vs_adaptor = $self->adaptor()->db()->get_VariationSetAdaptor();
     my $variation_sets = $vs_adaptor->fetch_all_by_Variation($self->variation());
     
     return $variation_sets;
@@ -1799,6 +1803,5 @@ sub length {
   my $self = shift;
   return $self->{'end'} - $self->{'start'} + 1;
 }
-
 
 1;
