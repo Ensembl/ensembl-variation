@@ -202,7 +202,7 @@ sub compress_genotypes{
 			if($has_proxy) {
 				$sth = $dbVar->prepare(qq{
 					SELECT vf.seq_region_id, vf.seq_region_start, vf.seq_region_end, vf.seq_region_strand, gt.allele_1, gt.allele_2, gt.sample_id, vf.variation_id
-					FROM variation_feature vf, $genotype_table as gt, subsnp_proxy_sp FORCE INDEX(variation_idx)
+					FROM $tmp_table vf, $genotype_table as gt, subsnp_proxy_sp
 					WHERE sp.variation_id = vf.variation_id
 					AND sp.subsnp_proxy_id = gt.subsnp_proxy_id
 					AND gt.sample_id $sample_string
