@@ -192,7 +192,7 @@ sub compress_genotypes{
 				AND seq_region_start >= ?
 				AND seq_region_start < ?
 			});
-			$sth->execute($seq_region, $min_pos, ($min_pos + $jump) - 1);
+			$sth->execute($seq_region, $min_pos, $min_pos + $jump);
 			$sth->finish();
 			
 			$dbVar->do(qq{ALTER TABLE $tmp_table ORDER BY seq_region_start ASC});
