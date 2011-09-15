@@ -1804,4 +1804,27 @@ sub length {
   return $self->{'end'} - $self->{'start'} + 1;
 }
 
+<<<<<<< VariationFeature.pm
+=head2 summary_as_hash
+
+  Example       : $feature_summary = $feature->summary_as_hash();
+  Description   : Extends Feature::summary_as_hash
+                  Retrieves a summary of this VariationFeature object.
+					                        
+  Returns       : hashref of descriptive strings
+
+=cut
+
+sub summary_as_hash {
+  my $self = shift;
+  my $summary_ref = $self->SUPER::summary_as_hash;
+  $summary_ref->{'consequence_type'} = $self->display_consequence;
+  my @allele_list = split(/\//,$self->allele_string);
+  $summary_ref->{'alt_alleles'} = \@allele_list;
+  return $summary_ref;
+}
+
+
+=======
+>>>>>>> 1.126
 1;
