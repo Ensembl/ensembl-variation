@@ -410,7 +410,7 @@ sub variation_feature {
       warn("Reference allele $ref_allele for $cur_v_name not found in alleles: $allele_str flagging feature\n");
       
 	  #needs to be written to the failed_variation table
-      $dbVar_write->do(qq{INSERT IGNORE INTO failed_variation (variation_id,failed_description_id) VALUES ($cur_v_id,2)}) if ($cur_map_weight==1) if $ok;
+      $dbVar_write->do(qq{INSERT IGNORE INTO failed_variation (variation_id,failed_description_id) VALUES ($cur_v_id,2)}) if ($cur_map_weight==1) && $ok;
     }
     
     #if($allele_str) {
