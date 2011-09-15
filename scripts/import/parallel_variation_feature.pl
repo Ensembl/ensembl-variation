@@ -244,7 +244,7 @@ sub variation_feature {
 		  $allele_str = join("/", keys %alleles);
 			  warn("Reference allele $ref_allele for $cur_v_name not found in alleles: " .
 			  $allele_str, " flagging feature cur_allele was $cur_allele");
-		  $dbVar_write->do(qq{INSERT IGNORE INTO failed_variation (variation_id,failed_description_id) VALUES ($cur_v_id,2)}) if ($cur_map_weight ==1) if $ok; #only put into failed_variation when map_weight==1
+		  $dbVar_write->do(qq{INSERT IGNORE INTO failed_variation (variation_id,failed_description_id) VALUES ($cur_v_id,2)}) if ($cur_map_weight ==1) && $ok; #only put into failed_variation when map_weight==1
 		}
 		
 		#if($allele_str) {
