@@ -234,7 +234,7 @@ sub dump_AFFYIDs{
     my $source_id = $source_id_ref->[0][0];
 
     if (!$source_id) {
-      $self->{'dbVar'}->do(qq{insert into source (name,description,url) values("$source_name","$source_description","$source_url")});
+      $self->{'dbVar'}->do(qq{insert into source (name,description,url,type) values("$source_name","$source_description","$source_url","chip")});
 	print Progress::location();
       $source_id = $self->{'dbVar'}->db_handle->{'mysql_insertid'};
     }
