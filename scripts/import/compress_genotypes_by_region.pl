@@ -79,6 +79,8 @@ my $max_code = (sort {$a <=> $b} values %codes)[-1] || 0;
 
 my $flipped_status = defined($no_flip) ? undef : flipped_status($dbVar);
 
+$has_proxy = 0;
+
 if(!defined($has_proxy)) {
 	# find out if this table has subsnp_proxy_id or variation_id+subsnp_id
 	my $sth = $dbVar->prepare(qq{DESCRIBE $genotype_table});
