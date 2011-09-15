@@ -1804,7 +1804,6 @@ sub length {
   return $self->{'end'} - $self->{'start'} + 1;
 }
 
-<<<<<<< VariationFeature.pm
 =head2 summary_as_hash
 
   Example       : $feature_summary = $feature->summary_as_hash();
@@ -1824,7 +1823,4 @@ sub summary_as_hash {
   return $summary_ref;
 }
 
-
-=======
->>>>>>> 1.126
 1;
