@@ -5,6 +5,7 @@ use DBI;
 use Getopt::Long;
 
 use Bio::EnsEMBL::Variation::Utils::Config qw(
+    $MAX_ATTRIB_CODE_LENGTH
     @ATTRIB_TYPES
     @ATTRIB_SETS
     %ATTRIBS
@@ -99,6 +100,9 @@ while (my ($set_id, $attrib_id) = $get_sets_sth->fetchrow_array) {
 
 sub get_attrib_type_id {
     my ($code) = @_;
+
+    warn "$code is > $MAX_ATTRIB_CODE_LENGTH characters, have you changed the schema to match?"
+        if length($code) > $MAX_ATTRIB_CODE_LENGTH;
 
     my $id = $existing_attrib_type->{$code};
 
