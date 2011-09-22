@@ -32,7 +32,7 @@ our @short_names = qw(1kg_hct 1kg_hct_ceu 1kg_hct_yri 1kg_hce 1kg_hce_ceu 1kg_hc
                       ph_cosmic ph_ega precious
                      );
 
-our @clinical_significance_types = qw(
+our @dbsnp_clinical_significance_types = qw(
     unknown
     untested
     non-pathogenic
@@ -42,6 +42,15 @@ our @clinical_significance_types = qw(
     drug-response
     histocompatibility
     other
+);
+
+our @dgva_clinical_significance_types = qw(
+    Not_tested
+    Benign
+    Pathogenic
+    Uncertain_Significance
+    Uncertain_Significance:_likely_benign
+    Uncertain_Significance:_likely_pathogenic
 );
 
 our @VARIATION_CLASSES = (
@@ -596,23 +605,29 @@ our @ATTRIB_TYPES = (
         description => 'A shorter name for an instance, e.g. a VariationSet',
     },
     {
-        code => 'clin_sig',
-        name => 'Clinical significance',
+        code => 'dbsnp_clin_sig',
+        name => 'dbSNP clinical significance',
         description => 'The clinical significance of a variant as reported by dbSNP',
+    },
+     {
+        code => 'dgva_clin_sig',
+        name => 'DGVa clinical significance',
+        description => 'The clinical significance of a structural variant as reported by DGVa',
     },
 );
 
 # attribs are specified in the %ATTRIBS hash, having the attrib_type code as hash key and a listref containing the attribs that will be loaded as value
 our %ATTRIBS = (
    
-   'short_name'             => \@short_names,
-   'polyphen_prediction'    => $PROTEIN_FUNCTION_PREDICTION->{'polyphen_prediction'},
-   'sift_prediction'        => $PROTEIN_FUNCTION_PREDICTION->{'sift_prediction'},
-   'clin_sig'  => \@clinical_significance_types,
+   'short_name'          => \@short_names,
+   'polyphen_prediction' => $PROTEIN_FUNCTION_PREDICTION->{'polyphen_prediction'},
+   'sift_prediction'     => $PROTEIN_FUNCTION_PREDICTION->{'sift_prediction'},
+   'dbsnp_clin_sig'      => \@dbsnp_clinical_significance_types,
+   'dgva_clin_sig'       => \@dgva_clinical_significance_types,
    
 );
 
-#Êattrib sets are specified by putting a hashref in the @ATTRIB_SETS array having the attrib_type code as key and the attrib as value. new attrib entries will be inserted as necessary
+# attrib sets are specified by putting a hashref in the @ATTRIB_SETS array having the attrib_type code as key and the attrib as value. new attrib entries will be inserted as necessary
 our @ATTRIB_SETS = (
     @VARIATION_CLASSES,
     @OVERLAP_CONSEQUENCES,
