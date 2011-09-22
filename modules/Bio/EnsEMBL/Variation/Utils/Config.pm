@@ -44,13 +44,13 @@ our @dbsnp_clinical_significance_types = qw(
     other
 );
 
-our @dgva_clinical_significance_types = qw(
-    Not_tested
-    Benign
-    Pathogenic
-    Uncertain_Significance
-    Uncertain_Significance:_likely_benign
-    Uncertain_Significance:_likely_pathogenic
+our @dgva_clinical_significance_types = (
+    'Not tested',
+    'Benign',
+    'Pathogenic',
+    'Uncertain Significance',
+    'Uncertain Significance: likely benign',
+    'Uncertain Significance: likely pathogenic'
 );
 
 our @VARIATION_CLASSES = (
