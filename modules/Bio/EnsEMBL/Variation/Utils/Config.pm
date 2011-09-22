@@ -11,9 +11,12 @@ our @EXPORT_OK = qw(
     @OVERLAP_CONSEQUENCES 
     @FEATURE_TYPES 
     $OVERLAP_CONSEQUENCE_CLASS
+    $MAX_ATTRIB_CODE_LENGTH
 );
 
 our $OVERLAP_CONSEQUENCE_CLASS = 'Bio::EnsEMBL::Variation::OverlapConsequence';
+
+our $MAX_ATTRIB_CODE_LENGTH = 20;
 
 our %PROTEIN_FUNCTION_PREDICTIONS = (
     polyphen_prediction => ['probably damaging', 'possibly damaging', 'benign', 'unknown'],
@@ -24,10 +27,22 @@ our @short_names = qw(1kg_hct 1kg_hct_ceu 1kg_hct_yri 1kg_hce 1kg_hce_ceu 1kg_hc
                       1kg_hce_chd 1kg_hce_jpt 1kg_hce_lwk 1kg_hce_tsi 1kg_hce_yri 1kg_lc
                       1kg_lc_ceu 1kg_lc_chb_jpt 1kg_lc_yri hapmap ind_venter ind_watson
                       fail_all fail_nonref fail_ambig fail_gt_fq fail_incons_map fail_mult_map
-                      fail_no_alleles fail_no_gt fail_no_map fail_no_seq fail_non_nt fail_mult_alleles
+                      fail_no_alleles fail_no_gt fail_no_map fail_no_seq fail_non_nt fail_mult_alleles fail_dbsnp_suspect
                       ph_hgmd_pub ph_johnson_et_al ph_nhgri ph_omim ph_variants ph_uniprot
                       ph_cosmic ph_ega precious
                      );
+
+our @clinical_significance_types = qw(
+    unknown
+    untested
+    non-pathogenic
+    probable-non-pathogenic
+    probable-pathogenic
+    pathogenic
+    drug-response
+    histocompatibility
+    other
+);
 
 our @VARIATION_CLASSES = (
     {
@@ -580,14 +595,20 @@ our @ATTRIB_TYPES = (
         name => 'Short name',
         description => 'A shorter name for an instance, e.g. a VariationSet',
     },
+    {
+        code => 'clin_sig',
+        name => 'Clinical significance',
+        description => 'The clinical significance of a variant as reported by dbSNP',
+    },
 );
 
 # attribs are specified in the %ATTRIBS hash, having the attrib_type code as hash key and a listref containing the attribs that will be loaded as value
 our %ATTRIBS = (
    
-   'short_name' => \@short_names,
-   'polyphen_prediction' => $PROTEIN_FUNCTION_PREDICTION->{'polyphen_prediction'},
-   'sift_prediction' => $PROTEIN_FUNCTION_PREDICTION->{'sift_prediction'},
+   'short_name'             => \@short_names,
+   'polyphen_prediction'    => $PROTEIN_FUNCTION_PREDICTION->{'polyphen_prediction'},
+   'sift_prediction'        => $PROTEIN_FUNCTION_PREDICTION->{'sift_prediction'},
+   'clin_sig'  => \@clinical_significance_types,
    
 );
 
