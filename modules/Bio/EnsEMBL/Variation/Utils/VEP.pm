@@ -514,7 +514,7 @@ sub get_all_consequences {
     }
     
     if(defined($config->{debug})) {
-        use Devel::Size qw(total_size);
+        eval q{use Devel::Size qw(total_size)};
         my $mem = memory();
         my $tot;
         $tot += $_ for @$mem;
