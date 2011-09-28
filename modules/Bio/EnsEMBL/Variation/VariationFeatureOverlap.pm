@@ -596,7 +596,9 @@ sub display_consequence {
 	
 	$method_name ||= 'display_term';
     
-    return $self->most_severe_OverlapConsequence->$method_name;
+    my $worst_conseq = $self->most_severe_OverlapConsequence;
+
+    return $worst_conseq ? $worst_conseq->$method_name : '';
 }
 
 sub _convert_to_sara {
