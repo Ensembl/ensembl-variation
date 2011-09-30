@@ -527,8 +527,8 @@ sub fetch_all_by_Slice_Population {
 	AND a.sample_id = ?
 	$extra_sql
 	AND vf.seq_region_id = ?
-	AND vf.seq_region_end > ?
-	AND vf.seq_region_start < ?
+	AND vf.seq_region_start >= ?
+	AND vf.seq_region_end <= ?
     GROUP BY a.variation_id
   });
   
@@ -547,8 +547,8 @@ sub fetch_all_by_Slice_Population {
 #	  a_outer.frequency > ? AND
 #	  a_outer.frequency < 0.5 AND
 #	  vf.seq_region_id = ? AND
-#	  vf.seq_region_end > ? AND
-#	  vf.seq_region_start < ? AND
+#	  vf.seq_region_start >= ? AND
+#	  vf.seq_region_end <= ? AND
 #	  NOT EXISTS (
 #		SELECT
 #		  *
