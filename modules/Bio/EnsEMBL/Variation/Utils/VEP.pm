@@ -45,13 +45,15 @@ package Bio::EnsEMBL::Variation::Utils::VEP;
 # module list
 use Getopt::Long;
 use FileHandle;
+use Storable qw(nstore_fd fd_retrieve);
+use Scalar::Util qw(weaken);
+
 use Bio::EnsEMBL::Registry;
 use Bio::EnsEMBL::Variation::DBSQL::VariationFeatureAdaptor;
 use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(MAX_DISTANCE_FROM_TRANSCRIPT);
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
 use Bio::EnsEMBL::Variation::Utils::Sequence qw(unambiguity_code);
-use Storable qw(nstore_fd fd_retrieve);
-use Scalar::Util qw(weaken);
+use Bio::EnsEMBL::Variation::Utils::EnsEMBL2GFF3;
 
 # we need to manually include all these modules for caching to work
 use Bio::EnsEMBL::CoordSystem;
@@ -491,8 +493,6 @@ sub get_all_consequences {
             progress($config, $vf_counter++, $vf_count) unless $vf_count == 1;
             
             if(defined($config->{gvf})) {
-                use Bio::EnsEMBL::Variation::Utils::EnsEMBL2GFF3;
-                
                 $vf->source("User");
                 
                 $config->{gvf_id} ||= 1;
@@ -1463,6 +1463,8 @@ sub add_region {
             my $new_region_start = ($start < $end ? $start : $end) - MAX_DISTANCE_FROM_TRANSCRIPT;
             my $new_region_end = ($start > $end ? $start : $end) + MAX_DISTANCE_FROM_TRANSCRIPT;
             
+            $new_region_start = 1 if $new_region_start < 1;
+            
             $region_start = $new_region_start if $new_region_start < $region_start;
             $region_end = $new_region_end if $new_region_end > $region_end;
             
@@ -1474,7 +1476,10 @@ sub add_region {
     }
     
     unless($added) {
-        push @{$region_list}, ($start - MAX_DISTANCE_FROM_TRANSCRIPT).'-'.($end + MAX_DISTANCE_FROM_TRANSCRIPT);
+        my $s = $start - MAX_DISTANCE_FROM_TRANSCRIPT;
+        $s = 1 if $s < 1;
+        
+        push @{$region_list}, $s.'-'.($end + MAX_DISTANCE_FROM_TRANSCRIPT);
     }
 }
 
@@ -2115,10 +2120,13 @@ sub cache_reg_feats {
             $sub_slice->{coord_system}->{adaptor} = $config->{csa};
             
             foreach my $type(@REG_FEAT_TYPES) {
+                my $features = $config->{$type.'_adaptor'}->fetch_all_by_Slice($sub_slice);
+                next unless defined($features);
+                
                 push @{$rf_cache->{$chr}->{$type}},
                     map { clean_reg_feat($_) }
                     map { $_->transfer($slice) }
-                    @{ $config->{$type.'_adaptor'}->fetch_all_by_Slice($sub_slice)};
+                    @{$features};
             }
         }
     }
