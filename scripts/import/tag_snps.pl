@@ -35,8 +35,12 @@ my $siblings;
 create_LD_table($dbVariation); #create the LD table if it is not there yet
 my $in_str = get_LD_populations($dbVariation,$siblings);
 
+# genotype codes
+my $gca = $reg->get_adaptor($species, 'variation', 'genotypecode');
+my %codes = map {$_->dbID => (join "|", @{$_->genotype})} @{$gca->fetch_all()};
+
 my $sth = $dbVariation->dbc->prepare(qq{SELECT c.sample_id,c.seq_region_id,c.seq_region_start,c.seq_region_end,c.genotypes,ip.population_sample_id
-				 FROM compressed_genotype_single_bp c FORCE INDEX(pos_idx), individual_population ip
+				 FROM compressed_genotype_region c FORCE INDEX(pos_idx), individual_population ip
 				 WHERE  ip.individual_sample_id = c.sample_id
 				 AND   ip.population_sample_id $in_str
 			     },{mysql_use_result => 1});
@@ -124,35 +128,18 @@ sub store_file{
     my $genotype = shift;
     my $population_id = shift;
     my $seq_region_id = shift;
-
-    #get the first byte of the string, and unpack it (the genotype, without the gaps)
-    my $blob = substr($genotype,2);
-    #the array contains the uncompressed value of genotype, always in the format number_gaps . genotype		  
-    my @genotypes = unpack("naa" x (length($blob)/4),$blob);
-    unshift @genotypes, substr($genotype,1,1); #add the second allele of the first genotype
-    unshift @genotypes, substr($genotype,0,1); #add the first allele of the first genotype
-    unshift @genotypes, 0; #the first SNP is in the position indicated by the seq_region1
-    my $snp_start;
-    my $allele_1;
-    my $allele_2;
-    for (my $i=0; $i < @genotypes -1;$i+=3){
-	#number of gaps
-	if ($i == 0){
-	    $snp_start = $seq_region_start; #first SNP is in the beginning of the region
+	
+	my @genotypes = unpack '(www)*', $genotypes;
+	my $snp_start = $seq_region_start;
+	
+	while( my( $variation_id, $gt_code, $gap ) = splice @genotypes, 0, 3 ) {
+		
+		my ($allele_1, $allele_2) = split /\|/, $codes{$gt_code};
+		
+		print_buffered($buffer,"$TMP_DIR/dump_data_$population_id\_$seq_region_id.txt",join("\t",$snp_start,$individual_id,$allele_1,$allele_2)."\n");
+		
+		$snp_start += $gap + 1 if defined $gap;
 	}
-	else{
-            #ignore when there is more than 1 genotype in the same position
-	    if ($genotypes[$i] == 0){
-		$snp_start += 1;
-		next; 
-	    }
-	    $snp_start += $genotypes[$i] +1;
-	}
-	#genotype
-	$allele_1 = $genotypes[$i+1];
-	$allele_2 = $genotypes[$i+2];
-	print_buffered($buffer,"$TMP_DIR/dump_data_$population_id\_$seq_region_id.txt",join("\t",$snp_start,$individual_id,$allele_1,$allele_2)."\n");
-    }
 }
 
 
