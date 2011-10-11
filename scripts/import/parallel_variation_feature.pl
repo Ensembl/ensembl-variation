@@ -218,9 +218,16 @@ sub variation_feature {
 		my $coord_length = $top_level ? $top_sr_end - $top_sr_start + 1 : $top_coord->end - $top_coord->start + 1;
 		my $tmp_allele_str = join("/", keys %alleles);
 		my $ok = 0;
+		
 		foreach my $allele(values %alleles_expanded) {
-		  $allele =~ s/\-//g;
-		  $ok = 1 if length($allele) == $coord_length;
+		  my $tmp_allele = $allele;
+		  $tmp_allele =~ s/\-//g;
+		  $ok = 1 if length($tmp_allele) == $coord_length;
+		  
+		  # special case alleles
+		  $ok = 1 if $allele !~ /^[ACGT-]+$/;
+		  
+		  last if $ok;
 		}
 		
 		if(!$ok) {
@@ -385,8 +392,14 @@ sub variation_feature {
 	my $tmp_allele_str = join("/", keys %alleles);
 	my $ok = 0;
 	foreach my $allele(values %alleles_expanded) {
-	  $allele =~ s/\-//g;
-	  $ok = 1 if length($allele) == $coord_length;
+	  my $tmp_allele = $allele;
+	  $tmp_allele =~ s/\-//g;
+	  $ok = 1 if length($tmp_allele) == $coord_length;
+	  
+	  # special case alleles don't need to match length
+	  $ok = 1 if $allele !~ /^[ACGT-]+$/;
+	  
+	  last if $ok;
 	}
 	
 	if(!$ok) {
