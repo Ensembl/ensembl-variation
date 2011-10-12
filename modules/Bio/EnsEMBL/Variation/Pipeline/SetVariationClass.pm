@@ -49,7 +49,7 @@ sub run {
                 LEFT JOIN failed_variation fv ON v.variation_id = fv.variation_id, source s
         WHERE   v.variation_id >= ?
         AND     v.variation_id <= ?
-        AND     v.source_id = source_id
+        AND     v.source_id = s.source_id
         AND     s.name != 'HGMD-PUBLIC'
     });
 
