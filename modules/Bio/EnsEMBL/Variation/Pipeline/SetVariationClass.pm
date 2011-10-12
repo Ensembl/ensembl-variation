@@ -46,9 +46,11 @@ sub run {
     my $all_sth = $dbc->prepare(qq{
         SELECT  v.variation_id, vf.variation_feature_id, vf.allele_string, fv.failed_description_id
         FROM    (variation v LEFT JOIN variation_feature vf ON v.variation_id = vf.variation_id) 
-                LEFT JOIN failed_variation fv ON v.variation_id = fv.variation_id
+                LEFT JOIN failed_variation fv ON v.variation_id = fv.variation_id, source s
         WHERE   v.variation_id >= ?
         AND     v.variation_id <= ?
+        AND     v.source_id = source_id
+        AND     s.name != 'HGMD-PUBLIC'
     });
 
     my $vf_insert_sth;
