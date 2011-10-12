@@ -21,7 +21,7 @@ sub fetch_input {
     
     my $dbc = $var_dba->dbc();
     
-    # first set everything in variation to 'sequence_alteration' by default
+    # first set everything in variation (except HGMDs) to 'sequence_alteration' by default
     # because sometimes we miss them because there is no variation_feature
     # or any alleles (though this should become unnecessary as we move to the
     # new approach to failing for all species)
@@ -30,7 +30,12 @@ sub fetch_input {
 
     die "No attrib_id for 'sequence_alteration'" unless defined $default_attrib_id;
 
-    $dbc->do(qq{UPDATE variation SET class_attrib_id = $default_attrib_id});
+    $dbc->do(qq{
+        UPDATE  variation v, source s
+        SET     v.class_attrib_id = $default_attrib_id
+        WHERE   v.source_id = s.source_id
+        AND     s.name != 'HGMD-PUBLIC'
+    });
     
     # now create some temp tables to store the class attribs
 
