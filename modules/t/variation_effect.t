@@ -1045,6 +1045,40 @@ $transcript_tests->{$t4->stable_id}->{tests} = [
     }, 
 ];
 
+# transcripts with frameshift introns
+
+# a non-coding pseudogene with a frameshift intron
+my $nc_fs_t = $ta->fetch_by_stable_id('ENST00000438775');
+
+$transcript_tests->{$nc_fs_t->stable_id}->{transcript} = $nc_fs_t;
+
+my $fs_intron_start = $nc_fs_t->get_all_Exons->[0]->end+1;
+
+$transcript_tests->{$nc_fs_t->stable_id}->{tests} = [
+    {
+        comment => "a non-coding transcript with a frameshift intron",
+        start   => $fs_intron_start,
+        end     => $fs_intron_start,
+        effects => [qw(nc_transcript_variant)],
+    }, 
+];
+
+# a coding transcript with a frameshift intron in the CDS
+my $c_fs_t = $ta->fetch_by_stable_id('ENST00000392535');
+
+$transcript_tests->{$c_fs_t->stable_id}->{transcript} = $c_fs_t;
+
+$fs_intron_start = $c_fs_t->get_all_Exons->[0]->end+1;
+
+$transcript_tests->{$c_fs_t->stable_id}->{tests} = [
+    {
+        comment => "a transcript with a frameshift intron in the CDS",
+        start   => $fs_intron_start,
+        end     => $fs_intron_start,
+        effects => [qw(coding_sequence_variant)],
+    }, 
+];
+
 my $test_count = 1;
 
 my $def_strand  = 1;
