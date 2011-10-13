@@ -264,7 +264,20 @@ sub within_cds {
             }
         }
     }
-    
+
+    # we also need to check if the vf is in a frameshift intron within the CDS
+
+    if (defined $tran->translation &&
+        $tva->transcript_variation->_intron_effects->{within_frameshift_intron}) {
+ 
+        return overlap(
+            $vf->start, 
+            $vf->end, 
+            $tran->coding_region_start,
+            $tran->coding_region_end,
+        );
+    }
+        
     return 0;
 }
 
@@ -273,7 +286,6 @@ sub within_cdna {
     my $vf      = $tva->variation_feature;
     my $tran    = $tva->transcript;
     my $tv      = $tva->transcript_variation;
-    
     
     my $cdna_coords = $tv->cdna_coords;
     
@@ -285,6 +297,12 @@ sub within_cdna {
                 }
             }
         }
+    }
+    
+    # we also need to check if the vf is in a frameshift intron within the cDNA
+
+    if ($tva->transcript_variation->_intron_effects->{within_frameshift_intron}) {
+        return within_feature($vf, $tran); 
     }
     
     return 0;
@@ -531,23 +549,10 @@ sub partial_codon {
     return ( $last_codon_length < 3 and $last_codon_length > 0 );
 }
 
-sub within_coding_frameshift_intron {
-    my $tva = shift;
-    
-    return (within_cds($tva) and 
-        $tva->transcript_variation->_intron_effects->{within_frameshift_intron});
-}
-
-sub coding_other {
-    my $tva = shift;
-
-    return (within_cds($tva) and (not $tva->peptide) and (not frameshift($tva)));
-}
-
 sub coding_unknown {
     my $tva = shift;
 
-    return (within_coding_frameshift_intron($tva) or coding_other($tva));
+    return (within_cds($tva) and (not $tva->peptide) and (not frameshift($tva)));
 }
 
 #package Bio::EnsEMBL::Variation::RegulatoryFeatureVariationAllele;
