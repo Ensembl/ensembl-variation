@@ -304,7 +304,7 @@ sub _tables {
     my $self = shift;
     
     my @tables = (
-        ['allele', 'a']
+        ['allele', 'a'], ['allele_code', 'ac']
     );
     
 	# If we are excluding failed_alleles, add that table
@@ -323,7 +323,11 @@ sub _left_join {
 }
 
 sub _columns {
-  return qw( a.allele_id a.variation_id a.subsnp_id a.allele a.frequency a.sample_id a.count );
+  return qw( a.allele_id a.variation_id a.subsnp_id ac.allele a.frequency a.sample_id a.count );
+}
+
+sub _default_where_clause  {
+  return 'a.allele_code_id = ac.allele_code_id';
 }
 
 1;
