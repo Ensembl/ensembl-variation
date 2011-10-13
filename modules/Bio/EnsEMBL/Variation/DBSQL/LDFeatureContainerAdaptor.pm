@@ -160,7 +160,7 @@ sub fetch_by_Slice {
     }
 
     $sth = $self->prepare(qq{SELECT c.sample_id,c.seq_region_id,c.seq_region_start,c.seq_region_end,c.genotypes,ip.population_sample_id
-				 FROM compressed_genotype_single_bp c, individual_population ip
+				 FROM compressed_genotype_region c, individual_population ip
 				 WHERE  ip.individual_sample_id = c.sample_id
 				 AND   ip.population_sample_id $in_str
 				 AND   c.seq_region_id = ?
@@ -263,8 +263,8 @@ sub get_populations_hash_by_Slice{
   elsif($slice->length > 5000000) {
 	
 	my $sth = $self->prepare(qq{
-	  SELECT distinct(c.sample_id), s.sample_id, s.name
-	  FROM compressed_genotype_single_bp c, individual_population ip, sample s, individual i
+	  SELECT distinct(c.sample_id), s.name
+	  FROM compressed_genotype_region c, individual_population ip, sample s, individual i
 	  WHERE c.sample_id = ip.individual_sample_id
 	  AND ip.population_sample_id = s.sample_id
 	  AND c.sample_id = i.sample_id
@@ -293,7 +293,7 @@ sub get_populations_hash_by_Slice{
 
 	my $sth = $self->prepare(qq{
 	  SELECT s.sample_id, s.name, c.sample_id, c.seq_region_start, c.seq_region_end, c.genotypes 
-	  FROM compressed_genotype_single_bp c, individual_population ip, sample s, individual i
+	  FROM compressed_genotype_region, individual_population ip, sample s, individual i
 	  WHERE c.sample_id = ip.individual_sample_id
 	  AND ip.population_sample_id = s.sample_id
 	  AND c.sample_id = i.sample_id
@@ -323,33 +323,25 @@ sub get_populations_hash_by_Slice{
 	  
 	  # if the row is only partially within the slice
 	  if($start < $slice_start || $end > $slice_end) {
-		my $blob = substr($genotypes,2);
-		#the array contains the uncompressed value of genotype, always in the format number_gaps . genotype		  
-		my @genotypes = unpack("naa" x (length($blob)/4),$blob);
-		unshift @genotypes, substr($genotypes,1,1); #add the second allele of the first genotype
-		unshift @genotypes, substr($genotypes,0,1); #add the first allele of the first genotype
-		unshift @genotypes, 0; #the first SNP is in the position indicated by the seq_region1
 		
-		my $snp_start;
-		for (my $i=0; $i < @genotypes -1;$i+=3){
-		  #number of gaps
-		  if ($i == 0){
-			$snp_start = $start; #first SNP is in the beginning of the region
-		  }
-		  else{
-			#ignore when there is more than 1 genotype in the same position
-			if ($genotypes[$i] == 0){
-			  $snp_start += 1;
-			  next; 
-			}
-			
-			$snp_start += $genotypes[$i] +1;
+		my @genotypes = unpack("(www)*", $genotype);
+		my $snp_start = $start;
+		
+		while( my( $variation_id, $gt_code, $gap ) = splice @genotypes, 0, 3 ) {
+		  my $gt = $genotype_codes->{$gt_code};
+		  
+		  if(
+			defined $gt &&
+			($snp_start >= $slice_start) &&
+			($snp_start <= $slice_end) &&
+			$gt->[0] =~ /^[ACGT]$/ &&
+			$gt->[1] =~ /[ACGT]$/
+		  ) {		
+			$counts{$sample_id}++;
 		  }
 		  
-		  next if $snp_start < $slice_start;
+		  $snp_start += $gap + 1 if defined $gap;
 		  last if $snp_start > $slice_end;
-		  
-		  $counts{$sample_id}++;
 		}
 	  }
 	  
@@ -394,6 +386,7 @@ sub _get_siblings{
 #reads one line from the compress_genotypes table, uncompress the data, and writes it to the different hashes: one containing the number of bases for the variation and the other with the actual genotype information we need to print in the file
 sub _store_genotype{
     my $self = shift;
+	my $genotype_codes = shift;
     my $individual_information = shift;
     my $alleles_variation = shift;
     my $individual_id = shift;
@@ -401,45 +394,30 @@ sub _store_genotype{
     my $genotype = shift;
     my $population_id = shift;
     my $slice = shift;
-
-    #get the first byte of the string, and unpack it (the genotype, without the gaps)
-    my $blob = substr($genotype,2);
-    #the array contains the uncompressed value of genotype, always in the format number_gaps . genotype		  
-    my @genotypes = unpack("naa" x (length($blob)/4),$blob);
-    unshift @genotypes, substr($genotype,1,1); #add the second allele of the first genotype
-    unshift @genotypes, substr($genotype,0,1); #add the first allele of the first genotype
-    unshift @genotypes, 0; #the first SNP is in the position indicated by the seq_region1
-    my $snp_start;
-    my $allele_1;
-    my $allele_2;
-    for (my $i=0; $i < @genotypes -1;$i+=3){
-	#number of gaps
-	if ($i == 0){
-	    $snp_start = $seq_region_start; #first SNP is in the beginning of the region
+	
+	my $snp_start = $seq_region_start;
+	my ($slice_start, $slice_end) = ($slice->start, $slice->end);
+	
+	my @genotypes = unpack("(www)*", $genotype);
+	while( my( $variation_id, $gt_code, $gap ) = splice @genotypes, 0, 3 ) {
+	  my $gt = $genotype_codes->{$gt_code};
+	  
+	  if(
+		defined $gt &&
+		($snp_start >= $slice_start) &&
+		($snp_start <= $slice_end) &&
+		$gt->[0] =~ /^[ACGT]$/ &&
+		$gt->[1] =~ /[ACGT]$/
+	  ) {		
+		$alleles_variation->{$snp_start}->{$population_id}->{$gt->[0]}++;
+		$alleles_variation->{$snp_start}->{$population_id}->{$gt->[1]}++;
+		  
+		$individual_information->{$population_id}->{$snp_start}->{$individual_id}->{allele_1} = $gt->[0];
+		$individual_information->{$population_id}->{$snp_start}->{$individual_id}->{allele_2} = $gt->[1];
+	  }
+	  
+	  $snp_start += $gap + 1  if defined $gap;
 	}
-	else{
-            #ignore when there is more than 1 genotype in the same position
-	    if ($genotypes[$i] == 0){
-		$snp_start += 1;
-		next; 
-	    }
-	    $snp_start += $genotypes[$i] +1;
-	}
-	#genotype
-	$allele_1 = $genotypes[$i+1];
-	$allele_2 = $genotypes[$i+2];
-	#only get genotypes in the range
-	if (($snp_start >= $slice->start) && ($snp_start <= $slice->end)){
-	    #store in structure
-	    if ($allele_1 ne 'N' and $allele_2 ne 'N'){
-		$alleles_variation->{$snp_start}->{$population_id}->{$allele_1}++;
-		$alleles_variation->{$snp_start}->{$population_id}->{$allele_2}++;
-		
-		$individual_information->{$population_id}->{$snp_start}->{$individual_id}->{allele_1} = $allele_1;
-		$individual_information->{$population_id}->{$snp_start}->{$individual_id}->{allele_2} = $allele_2;
-	    }
-	}
-    }
 }
 
 #
@@ -543,6 +521,11 @@ sub _objs_from_sth {
     warning("Binary file calc_genotypes not found. Please, read the ensembl-variation/C_code/README.txt file if you want to use LD calculation\n");
     goto OUT;
   }
+  
+  # fetch all genotype codes as a hash
+  my $gtca = $self->db->get_GenotypeCodeAdaptor;
+  my %genotype_codes;
+  $genotype_codes{$_->dbID} = $_->genotype for @{$gtca->fetch_all_single_bp()};
 
   #my $file= $self->temp_path."/".sprintf( "ld%08x%08x%08x", $$, time, rand( 0x7fffffff) );
   #open IN, ">$file.in";
@@ -550,7 +533,7 @@ sub _objs_from_sth {
   while($sth->fetch()) {
     #only print genotypes without parents genotyped
     if (!exists $siblings->{$population_id . '-' . $individual_id}){ #necessary to use the population_id
-      $self->_store_genotype(\%individual_information,\%alleles_variation, $individual_id, $seq_region_start, $genotypes, $population_id, $slice);
+      $self->_store_genotype(\%genotype_codes, \%individual_information,\%alleles_variation, $individual_id, $seq_region_start, $genotypes, $population_id, $slice);
       $previous_seq_region_id = $seq_region_id;
     }
   }
