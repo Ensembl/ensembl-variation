@@ -475,6 +475,7 @@ create table variation_feature(
 @column study_id								Foreign key references to the @link study table.	
 @column class_attrib_id					Foreign key references to the @link attrib table. Defines the type of structural variant. 
 @column validation_status				Validation status of the variant.
+@column is_evidence             Flag indicating if the structural variation is a supporting evidence (1) or not (0).
 
 @see source
 @see study
@@ -488,39 +489,33 @@ CREATE TABLE structural_variation (
   study_id int(10) unsigned DEFAULT NULL,
 	class_attrib_id int(10) unsigned NOT NULL DEFAULT 0,
   validation_status ENUM('validated','not validated','high quality'),
+	is_evidence TINYINT(4) DEFAULT 0,
 	
   PRIMARY KEY (structural_variation_id),
   KEY name_idx (variation_name),
+	KEY source_idx (source_id),
 	KEY study_idx (study_id),
 	KEY attrib_idx (class_attrib_id)
 );
 
 
 /**
-@table supporting_structural_variation
+@table structural_variation_association
 
 @colour #01D4F7
-@desc This table stores the name of the supporting evidence for the structural variants (e.g. DGVa structural variants).
+@desc This table stores the associations between structural variations and their supporting evidences.
 
-@column supporting_structural_variation_id	Primary key, internal identifier.
-@column name																The identifier or name of the supporting evidence.
-@column structural_variation_id							Foreign key references to the @link structural_variation table.
-@column class_attrib_id					            Foreign key references to the @link attrib table. Defines the allele type of the supporting evidence. 
+@column structural_variation_id	            Primary key. Foreign key references to the @link structural_variation table.
+@column supporting_structural_variation_id	Primary key. Foreign key references to the @link structural_variation table.
 
 @see structural_variation
-@see attrib
 */
 
-create table supporting_structural_variation (
-	supporting_structural_variation_id int(10) unsigned NOT NULL AUTO_INCREMENT,
-
-	name varchar(255) NOT NULL,
-	structural_variation_id int(10) unsigned NOT NULL,
-	class_attrib_id int(10) unsigned NOT NULL DEFAULT 0,
+CREATE TABLE structural_variation_association (
+  structural_variation_id int(10) unsigned NOT NULL,
+  supporting_structural_variation_id int(10) unsigned NOT NULL,
 	
-	PRIMARY KEY (supporting_structural_variation_id),
-	KEY structural_variation_idx (structural_variation_id),
-	KEY attrib_idx (class_attrib_id)
+  PRIMARY KEY (structural_variation_id, supporting_structural_variation_id)
 );
 
 
@@ -570,7 +565,44 @@ create table structural_variation_feature (
   PRIMARY KEY (structural_variation_feature_id),
 	KEY pos_idx( seq_region_id, seq_region_start, seq_region_end ),
 	KEY structural_variation_idx (structural_variation_id),
+	KEY source_idx (source_id),
 	KEY attrib_idx (class_attrib_id)
+);
+
+
+/**
+@table structural_variation_annotation
+
+@colour #01D4F7
+@desc This table stores phenotype and sample information for structural variants and their supporting evidences.
+
+@column structural_variation_annotation_id  Primary key, internal identifier.
+@column structural_variation_id             Foreign key references to the @link structural_variation table.
+@column clinical_attrib_id                  Foreign key references to the @link attrib table. Clinical effect of the structural variant.
+@column phenotype_id                        Foreign key references to the @link phenotype table. Links to the phenotype description.
+@column sample_id		                        Foreign key references to the @link sample table. Defines the individual or sample name.
+@column strain_id		                        Foreign key references to the @link sample table. Defines the strain name.
+
+@see structural_variation
+@see attrib
+@see phenotype
+@see sample
+*/
+
+CREATE TABLE structural_variation_annotation (
+	structural_variation_annotation_id int(10) unsigned NOT NULL auto_increment,
+	structural_variation_id int(10) unsigned NOT NULL,
+	clinical_attrib_id int(10) unsigned DEFAULT NULL,
+	phenotype_id int(10) unsigned DEFAULT NULL,
+	sample_id int(10) unsigned DEFAULT NULL,
+	strain_id int(10) unsigned DEFAULT NULL,
+	
+	primary key (structural_variation_annotation_id),
+	key structural_variation_idx(structural_variation_id),
+	key clinical_attrib_idx(clinical_attrib_id),
+	key phenotype_idx(phenotype_id),
+	key sample_idx(sample_id),
+	key strain_idx(strain_id)
 );
 
 
@@ -636,6 +668,26 @@ CREATE TABLE IF NOT EXISTS variation_set_structure (
 	variation_set_sub int(10) unsigned NOT NULL,
 	PRIMARY KEY (variation_set_super,variation_set_sub),
 	KEY sub_idx (variation_set_sub,variation_set_super)
+);
+
+
+/**
+@table variation_set_structural_variation
+
+@colour #FFD700
+@desc A table for mapping structural variations to variation_sets.
+
+@column structural_variation_id  Primary key. Foreign key references to the @link structural_variation table.
+@column variation_set_id	       Primary key. Foreign key references to the @link variation_set table.
+
+@see structural_variation
+@see variation_set
+*/
+
+CREATE TABLE IF NOT EXISTS variation_set_structural_variation (
+	structural_variation_id int(10) unsigned NOT NULL,
+	variation_set_id int(10) unsigned NOT NULL,
+	PRIMARY KEY (structural_variation_id,variation_set_id)
 );
 
 
@@ -1006,7 +1058,7 @@ create table source(
 @see structural_variation
 */
 
-create table study (
+CREATE TABLE study (
 	study_id int(10) unsigned not null auto_increment,
 	source_id int(10) unsigned not null,
 	name varchar(255) DEFAULT null,
@@ -1031,7 +1083,7 @@ create table study (
 
 @see study
 */
-create table associate_study (
+CREATE TABLE associate_study (
 	study1_id int(10) unsigned not null,
 	study2_id int(10) unsigned not null,
 	
@@ -1172,9 +1224,9 @@ create table individual_genotype_multiple_bp (
 
 CREATE TABLE meta_coord (
 
-  table_name                  VARCHAR(40) NOT NULL,
-  coord_system_id             INT(10) UNSIGNED NOT NULL,
-  max_length		      INT,
+  table_name      VARCHAR(40) NOT NULL,
+  coord_system_id INT(10) UNSIGNED NOT NULL,
+  max_length		  INT,
 
   UNIQUE(table_name, coord_system_id)
 
@@ -1195,10 +1247,10 @@ CREATE TABLE meta_coord (
 
 CREATE TABLE meta (
 
-  meta_id 		      INT(10) UNSIGNED not null auto_increment,
-  species_id                  INT UNSIGNED DEFAULT 1,
-  meta_key                    varchar( 40 ) not null,
-  meta_value                  varchar( 255 ) not null,
+  meta_id 		INT(10) UNSIGNED not null auto_increment,
+  species_id  INT UNSIGNED DEFAULT 1,
+  meta_key    varchar( 40 ) not null,
+  meta_value  varchar( 255 ) not null,
 
   PRIMARY KEY( meta_id ),
   UNIQUE KEY species_key_value_idx (species_id, meta_key, meta_value ),
@@ -1264,12 +1316,12 @@ CREATE TABLE read_coverage (
 @colour #FF8500
 @desc This table holds genotypes compressed using the pack() method in Perl. These genotypes are mapped to particular genomic locations rather than variation objects. The data have been compressed to reduce table size and increase the speed of the web code.
 
-@column sample_id				Primary key. Foreign key references to the sample table.
-@column seq_region_id		Foreign key references @link seq_region in core db. ers to the seq_region which this variant is on, which may be a chromosome, a clone, etc...
+@column sample_id				  Primary key. Foreign key references to the sample table.
+@column seq_region_id		  Foreign key references @link seq_region in core db. ers to the seq_region which this variant is on, which may be a chromosome, a clone, etc...
 @column seq_region_start	The start position of the variation on the @link seq_region.
 @column seq_region_end		The end position of the variation on the @link seq_region.
 @column seq_region_strand	The orientation of the variation on the @link seq_region.
-@column genotypes				Encoded representation of the genotype data:<br />Each row in the compressed table stores genotypes from one individual in one fixed-size region of the genome (arbitrarily defined as 100 Kb). The compressed string (using Perl's pack method) consisting of a repeating triplet of elements: a distance in base pairs from the previous genotype followed by a pair of alleles.<br />For example, a given row may have a start position of 1000, indicating the chromosomal position of the first genotype in this row. The unpacked genotypes field then may contain the following elements:<br />0, A, G, 20, C, C, 35, G, T, 320, A, A, ...<br />The first genotype has a position of 1000 + 0 = 1000 and alleles A and G.<br />The second genotype has a position of 1000 + 20 = 1020 and alleles C and C.<br />The third genotype similarly has a position of 1055 and alleles G and T, and so on.
+@column genotypes				  Encoded representation of the genotype data:<br />Each row in the compressed table stores genotypes from one individual in one fixed-size region of the genome (arbitrarily defined as 100 Kb). The compressed string (using Perl's pack method) consisting of a repeating triplet of elements: a distance in base pairs from the previous genotype followed by a pair of alleles.<br />For example, a given row may have a start position of 1000, indicating the chromosomal position of the first genotype in this row. The unpacked genotypes field then may contain the following elements:<br />0, A, G, 20, C, C, 35, G, T, 320, A, A, ...<br />The first genotype has a position of 1000 + 0 = 1000 and alleles A and G.<br />The second genotype has a position of 1000 + 20 = 1020 and alleles C and C.<br />The third genotype similarly has a position of 1055 and alleles G and T, and so on.
 
 @see individual
 @see seq_region
@@ -1297,6 +1349,8 @@ CREATE TABLE compressed_genotype_single_bp(
 @column description				Text containing the reason why the Variation has been flagged as failed. e.g. "Variation does not map to the genome".
 
 @see failed_variation
+@see failed_allele
+@see failed_structural_variation
 */
 
 CREATE TABLE failed_description(
@@ -1351,6 +1405,30 @@ CREATE TABLE failed_allele (
   failed_description_id int(10) unsigned NOT NULL,
   PRIMARY KEY (failed_allele_id),
   UNIQUE KEY allele_idx (allele_id,failed_description_id)
+);
+
+
+/**
+@table failed_structural_variation
+
+@colour #3CB371
+@desc For various reasons it may be necessary to store information about a structural variation that has failed quality checks (mappings) in the Structural Variation pipeline. This table acts as a flag for such failures.
+
+@column failed_structural_variation_id		Primary key, internal identifier.
+@column structural_variation_id					  Foreign key references to the @link structural_variation table.
+@column failed_description_id		          Foreign key references to the @link failed_description table.
+
+@see failed_description
+@see structural_variation
+*/
+
+CREATE TABLE failed_structural_variation (
+  failed_structural_variation_id int(11) NOT NULL AUTO_INCREMENT,
+  structural_variation_id int(10) unsigned NOT NULL,
+  failed_description_id int(10) unsigned NOT NULL,
+	
+  PRIMARY KEY (failed_structural_variation_id),
+  UNIQUE KEY structural_variation_idx (structural_variation_id,failed_description_id)
 );
 
 
@@ -1478,4 +1556,7 @@ INSERT INTO failed_description (failed_description_id,description) VALUES (12,'V
 INSERT INTO failed_description (failed_description_id,description) VALUES (13,'Alleles contain non-nucleotide characters');  
 INSERT INTO failed_description (failed_description_id,description) VALUES (14,'Alleles contain ambiguity codes');  
 INSERT INTO failed_description (failed_description_id,description) VALUES (15,'Mapped position is not compatible with reported alleles');
+INSERT INTO failed_description (failed_description_id,description) VALUES (16,'Variation can not be re-mapped to the current assembly');
+INSERT INTO failed_description (failed_description_id,description) VALUES (17,'Supporting evidence can not be re-mapped to the current assembly');
+
 
