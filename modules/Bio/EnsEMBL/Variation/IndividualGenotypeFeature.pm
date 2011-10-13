@@ -50,14 +50,14 @@ use warnings;
 
 package Bio::EnsEMBL::Variation::IndividualGenotypeFeature;
 
-use Bio::EnsEMBL::Variation::Genotype;
+use Bio::EnsEMBL::Variation::IndividualGenotype;
 use Bio::EnsEMBL::Feature;
 use Bio::EnsEMBL::Utils::Argument qw(rearrange);
 use Bio::EnsEMBL::Utils::Exception qw(throw deprecate warning);
 
 use vars qw(@ISA);
 
-@ISA = qw(Bio::EnsEMBL::Variation::Genotype Bio::EnsEMBL::Feature);
+@ISA = qw(Bio::EnsEMBL::Variation::IndividualGenotype Bio::EnsEMBL::Feature);
 
 
 
@@ -82,15 +82,15 @@ use vars qw(@ISA);
     genotype
   Arg [-individual] :
     Bio::EnsEMBL::Individual - The individual this genotype is for.
-  Example    : $ind_genotype = Bio:EnsEMBL::Variation::IndividualGenotype->new
-                   (-start   => 100,
-		    -end     => 100,
-		    -strand  => 1,
-		    -slice   => $slice,
-		    -allele1 => 'A',
-                    -allele2 => 'T',
-                    -variation => $variation,
-                    -individual => $ind);
+  Example    : $ind_genotype = Bio:EnsEMBL::Variation::IndividualGenotype->new(
+					-start      => 100,
+					-end        => 100,
+					-strand     => 1,
+					-slice      => $slice,
+					-genotype   => ['A','T'],
+					-variation  => $variation,
+					-individual => $ind
+				);
   Description: Constructor.  Instantiates an IndividualGenotype object.
   Returntype : Bio::EnsEMBL::Variation::IndividualGenotype
   Exceptions : throw on bad argument
@@ -100,101 +100,30 @@ use vars qw(@ISA);
 =cut
 
 sub new {
-    my $caller = shift;
-    my $class = ref($caller) || $caller;
-
-  my $self = $class->SUPER::new(@_);
-
-  my ($adaptor, $allele1, $allele2, $var, $ind) =
-    rearrange([qw(adaptor allele1 allele2 variation individual)],@_);
-
-  if(defined($var) &&
-     (!ref($var) || !$var->isa('Bio::EnsEMBL::Variation::Variation'))) {
-    throw("Bio::EnsEMBL::Variation::Variation argument expected");
-  }
-
-  if(defined($ind) &&
-     (!ref($ind) || !$ind->isa('Bio::EnsEMBL::Variation::Individual'))) {
-    throw("Bio::EnsEMBL::Variation::Individual argument expected");
-  }
-
-    $self->{'adaptor'} = $adaptor;
-    $self->{'allele1'} = $allele1;
-    $self->{'allele2'} = $allele2;
-    $self->{'individual'} = $ind;
-    $self->{'variation'} = $var;
-    
-    return $self;
-
-}
-
-
-
-sub new_fast {
-  my $class = shift;
-  my $hashref = shift;
-  return bless $hashref, $class;
-}
-
-
-=head2 individual
-
-  Arg [1]    : (optional) Bio::EnsEMBL::Variation::Individual $ind
-  Example    : $ind = $ind_genotype->individual();
-  Description: Getter/Setter for the individual associated with this genotype
-  Returntype : Bio::EnsEMBL::Variation::Individual
-  Exceptions : throw on bad argument
-  Caller     : general
-  Status     : At Risk
-
-=cut
-
-
-sub individual {
-  my $self = shift;
-  if(@_) {
-    my $ind = shift;
-    if(defined($ind) &&
-       (!ref($ind) || !$ind->isa('Bio::EnsEMBL::Variation::Individual'))) {
-      throw('Bio::EnsEMBL::Variation::Individual argument expected');
-    }
-    return $self->{'individual'} = $ind;
-  }
-  return $self->{'individual'};
-}
-
-=head2 variation
-
-  Arg [1]    : (optional) Bio::EnsEMBL::Variation::Variation $var
-  Example    : $var = $genotype->variation();
-  Description: Getter/Setter for the Variation as
-  Returntype : Bio::EnsEMBL::Variation::Variation
-  Exceptions : throw on bad argument
-  Caller     : general
-  Status     : At Risk
-
-=cut
-
-sub variation {
-  my $self = shift;
-
-  if(@_) {
-      #Setter: check wether it is a variation and return it
-      my $v = shift;
-      if(defined($v) &&
-	 (!ref($v) || !$v->isa('Bio::EnsEMBL::Variation::Variation'))) {
-	  throw('Bio::EnsEMBL::Variation::Variation argument expected.');
-      }
-      $self->{'variation'} = $v;
-  }
-  else{
-      if(!defined($self->{'variation'}) && $self->{'adaptor'})    {
-	  #lazy-load from database on demand
-	  my $vfa = $self->{'adaptor'}->db()->get_VariationFeatureAdaptor();
-	  $self->{'variation'} = (shift @{$vfa->fetch_all_by_Slice($self->feature_Slice())})->variation;
-      }
-  }
-  return $self->{'variation'};
+	my $caller = shift;
+	my $class = ref($caller) || $caller;
+	
+	my $self = $class->SUPER::new(@_);
+	
+	my ($adaptor, $allele1, $allele2, $var, $var_id, $ind) =
+	rearrange([qw(adaptor genotype variation _variation_id individual)],@_);
+	
+	if(defined($var) && (!ref($var) || !$var->isa('Bio::EnsEMBL::Variation::Variation'))) {
+		throw("Bio::EnsEMBL::Variation::Variation argument expected");
+	}
+	
+	if(defined($ind) && (!ref($ind) || !$ind->isa('Bio::EnsEMBL::Variation::Individual'))) {
+		throw("Bio::EnsEMBL::Variation::Individual argument expected");
+	}
+	
+	$self->{'adaptor'} = $adaptor;
+	$self->{'allele1'} = $allele1;
+	$self->{'allele2'} = $allele2;
+	$self->{'individual'} = $ind;
+	$self->{'variation'} = $var;
+	$self->{'_variation_id'} = $var_id;
+	
+	return $self;
 }
 
 1;
