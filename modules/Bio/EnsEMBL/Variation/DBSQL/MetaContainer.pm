@@ -77,4 +77,13 @@ sub get_schema_version {
   return 0;
 }
 
+sub ploidy {
+  my $self = shift;
+  
+  my $values = $self->list_value_by_key('ploidy');
+  
+  # default to 2
+  return scalar @$values ? $values->[0] : 2;
+}
+
 1;
