@@ -442,6 +442,53 @@ sub fetch_all_by_Individual{
 }
 
 
+=head2 fetch_all_by_Individual_list
+
+  Arg [1]     : reference to list of of Bio::EnsEMBL::Variation::Individual objects
+  Example     : foreach my $pop (@{$pop_adaptor->fetch_all_by_Individual_list($inds)}){
+		    print $pop->name,"\n";
+                }
+  Description : Retrieves all populations from a specified individual
+  ReturnType  : reference to list of Bio::EnsEMBL::Variation::Population objects
+  Exceptions  : throw if incorrect argument is passed
+                warning if provided individual does not have a dbID
+  Caller      : general
+  Status      : At Risk
+
+=cut
+
+sub fetch_all_by_Individual_list{
+	my $self = shift;
+	my $list = shift;
+	
+	if(!ref($list) || !$list->[0]->isa('Bio::EnsEMBL::Variation::Individual')) {
+		throw("Listref of Bio::EnsEMBL::Variation::Individual arg expected");
+	}
+	
+	if(!$list->[0]->dbID()) {
+		warning("First Individual does not have dbID, cannot retrieve Populations");
+		return [];
+	}
+	
+	my $id_str = " IN (" . join(',', map {$_->dbID} @$list). ")";	
+	
+	my $sth = $self->prepare(qq{
+		SELECT p.sample_id, s.name, s.size, s.description
+		FROM population p, individual_population ip, sample s
+		WHERE s.sample_id = ip.population_sample_id
+		AND s.sample_id = p.sample_id
+		AND ip.individual_sample_id $id_str
+	});
+	$sth->execute();
+	
+	my $results = $self->_objs_from_sth($sth);
+	
+	$sth->finish();
+	
+	return $results;
+}
+
+
 =head2 fetch_tagged_Population
 
   Arg [1]     : Bio::EnsEMBL::Variation::VariationFeature $vf
