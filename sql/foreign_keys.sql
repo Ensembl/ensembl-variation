@@ -35,6 +35,9 @@ ALTER TABLE failed_allele ADD FOREIGN KEY (failed_description_id) REFERENCES fai
 ALTER TABLE failed_variation ADD FOREIGN KEY (variation_id) REFERENCES variation(variation_id);
 ALTER TABLE failed_variation ADD FOREIGN KEY (failed_description_id) REFERENCES failed_description(failed_description_id);
 
+ALTER TABLE failed_structural_variation ADD FOREIGN KEY (structural_variation_id) REFERENCES structural_variation(structural_variation_id);
+ALTER TABLE failed_structural_variation ADD FOREIGN KEY (failed_description_id) REFERENCES failed_description(failed_description_id);
+
 ALTER TABLE flanking_sequence ADD FOREIGN KEY (variation_id) REFERENCES variation(variation_id);
 ALTER TABLE flanking_sequence ADD FOREIGN KEY (seq_region_id) REFERENCES seq_region(seq_region_id);
 
@@ -72,15 +75,21 @@ ALTER TABLE structural_variation ADD FOREIGN KEY (source_id) REFERENCES source(s
 ALTER TABLE structural_variation ADD FOREIGN KEY (study_id) REFERENCES study(study_id);
 ALTER TABLE structural_variation ADD FOREIGN KEY (class_attrib_id) REFERENCES attrib(attrib_id);
 
+ALTER TABLE structural_variation_annotation ADD FOREIGN KEY (structural_variation_id) REFERENCES structural_variation(structural_variation_id);
+ALTER TABLE structural_variation_annotation ADD FOREIGN KEY (clinical_attrib_id) REFERENCES attrib(attrib_id);
+ALTER TABLE structural_variation_annotation ADD FOREIGN KEY (phenotype_id) REFERENCES phenotype(phenotype_id);
+ALTER TABLE structural_variation_annotation ADD FOREIGN KEY (sample_id) REFERENCES sample(sample_id);
+ALTER TABLE structural_variation_annotation ADD FOREIGN KEY (strain_id) REFERENCES sample(sample_id);
+
+ALTER TABLE structural_variation_association ADD FOREIGN KEY (structural_variation_id) REFERENCES structural_variation(structural_variation_id);
+ALTER TABLE structural_variation_association ADD FOREIGN KEY (supporting_structural_variation_id) REFERENCES structural_variation(structural_variation_id);
+
 ALTER TABLE structural_variation_feature ADD FOREIGN KEY (seq_region_id) REFERENCES seq_region(seq_region_id);
 ALTER TABLE structural_variation_feature ADD FOREIGN KEY (structural_variation_id) REFERENCES structural_variation(structural_variation_id);
 ALTER TABLE structural_variation_feature ADD FOREIGN KEY (source_id) REFERENCES source(source_id);
 ALTER TABLE structural_variation_feature ADD FOREIGN KEY (class_attrib_id) REFERENCES attrib(attrib_id);
 
 ALTER TABLE study ADD FOREIGN KEY (source_id) REFERENCES source(source_id);
-
-ALTER TABLE supporting_structural_variation ADD FOREIGN KEY (structural_variation_id) REFERENCES structural_variation(structural_variation_id);
-ALTER TABLE supporting_structural_variation ADD FOREIGN KEY (class_attrib_id) REFERENCES attrib(attrib_id);
 
 ALTER TABLE tagged_variation_feature ADD FOREIGN KEY (variation_feature_id) REFERENCES variation_feature(variation_feature_id);
 ALTER TABLE tagged_variation_feature ADD FOREIGN KEY (sample_id) REFERENCES sample(sample_id);
@@ -108,6 +117,9 @@ ALTER TABLE variation_group_variation ADD FOREIGN KEY (variation_group_id) REFER
 ALTER TABLE variation_group_variation ADD FOREIGN KEY (variation_id) REFERENCES variation(variation_id);
 
 ALTER TABLE variation_set ADD FOREIGN KEY (short_name_attrib_id) REFERENCES attrib(attrib_id);
+
+ALTER TABLE variation_set_structural_variation ADD FOREIGN KEY (structural_variation_id) REFERENCES structural_variation(structural_variation_id);
+ALTER TABLE variation_set_structural_variation ADD FOREIGN KEY (variation_set_id) REFERENCES variation_set(variation_set_id);
 
 ALTER TABLE variation_set_structure ADD FOREIGN KEY (variation_set_super) REFERENCES variation_set(variation_set_id);
 ALTER TABLE variation_set_structure ADD FOREIGN KEY (variation_set_sub) REFERENCES variation_set(variation_set_id);
