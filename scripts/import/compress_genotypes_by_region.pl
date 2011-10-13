@@ -156,9 +156,13 @@ sub compress_genotypes{
 	$dbVar->do(qq{CREATE TABLE IF NOT EXISTS $tmp_table LIKE variation_feature});
 	$dbVar->do(qq{TRUNCATE $tmp_table});
 	
+	my $sr_counter = 0;
+	
 	foreach my $seq_region(@seq_regions) {
 		
-		debug("Dumping genotypes from seq_region $seq_region");
+		$sr_counter++;
+		
+		debug("Dumping genotypes from seq_region $seq_region ($sr_counter\/".(scalar @seq_regions).")");
 		
 		$sth = $dbVar->prepare(qq{
 			SELECT min(seq_region_start), max(seq_region_start)
@@ -313,7 +317,9 @@ sub compress_genotypes{
 		&end_progress();
 	}
 	
+	# clean up
 	$dbVar->do(qq{DROP TABLE $tmp_table});
+	$dbVar->do(qq{DELETE FROM compressed_genotype_region WHERE seq_region_id = 0;});
 }
 
 
@@ -499,8 +505,8 @@ sub progress {
     my ($i, $total) = @_;
     
     my $width = 60;
-    my $percent = int(($i/$total) * 100);
-    my $numblobs = (($i/$total) * $width) - 2;
+    my $percent = $total > 0 ? int(($i/$total) * 100) : 0;
+    my $numblobs = $total > 0 ? (($i/$total) * $width) - 2 : 0;
 	
     printf("\r% -${width}s% 1s% 10s", '['.('=' x $numblobs).($numblobs == $width - 2 ? '=' : '>'), ']', "[ " . $percent . "% ]");
 }
