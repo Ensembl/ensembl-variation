@@ -18,7 +18,7 @@ $| = 1;
 my %Printable = ( "\\"=>'\\', "\r"=>'r', "\n"=>'n', "\t"=>'t', "\""=>'"' );
 
 
-my ($TMP_DIR, $TMP_FILE, $species, $registry_file, $genotype_table, $start_sp_id, $monoploid, $jump, $no_flip);
+my ($TMP_DIR, $TMP_FILE, $species, $registry_file, $genotype_table, $start_sp_id, $monoploid, $jump, $flip, $straight);
 
 GetOptions(
 	'tmpdir=s'        => \$TMP_DIR,
@@ -29,14 +29,15 @@ GetOptions(
 	'variation_id=s'  => \$start_sp_id,
 	'monoploid'       => \$monoploid,
 	'jump=s'          => \$jump,
-	'no_flip'         => \$no_flip,
+	'flip'            => \$flip,
+	'straight'        => \$straight,
 );
 
 
 my $dump_file = 'compressed_genotype_var.txt';
 $genotype_table ||= 'tmp_individual_genotype_single_bp';
 $start_sp_id ||= 1;
-$jump ||= 1000000;
+$jump ||= 100000;
 $monoploid = 0 unless defined($monoploid);
 
 warn("Make sure you have an updated ensembl.registry file!\n");
@@ -49,7 +50,7 @@ $registry_file ||= $Bin . "/ensembl.registry";
 
 my $reg = 'Bio::EnsEMBL::Registry';
 $reg->load_all( $registry_file );
-$reg->set_reconnect_when_lost();
+#$reg->set_reconnect_when_lost();
 
 my $vdba = $reg->get_DBAdaptor($species,'variation');
 my $dbCore = $reg->get_DBAdaptor($species,'core');
@@ -69,118 +70,122 @@ my $max_code = (sort {$a <=> $b} values %codes)[-1] || 0;
 print "Getting flipped status\n";
 
 # flipped status
-my $flipped_status = defined($no_flip) ? undef : flipped_status($dbVar);
+my $flipped_status = defined($flip) ? flipped_status($dbVar) : undef;
 
-
-	
-# find out if the genotype table has subsnp_proxy_id or variation_id+subsnp_id
-#my $sth1 = $dbVar->prepare(qq{DESCRIBE $genotype_table});
-#$sth1->execute();
-#my $has_proxy = 0;
-#
-#while(my $ref = $sth1->fetchrow_arrayref) {
-#	$has_proxy = 1 if $ref->[0] eq 'subsnp_proxy_id';
-#}
-#$sth1->finish();
-#
-#unless($has_proxy) {
-#	$dbVar->do(qq{
-#		CREATE TABLE IF NOT EXISTS tmp_compressed_genotype_var (
-#			variation_id int(11) unsigned NOT NULL,
-#			subsnp_id int(11) unsigned NOT NULL,
-#			genotypes blob,
-#			PRIMARY KEY (variation_id, subsnp_id)
-#		) ENGINE=MyISAM DEFAULT CHARSET=latin1;
-#	});
-#	$dbVar->do(qq{TRUNCATE tmp_compressed_genotype_var;});
-#}
+# set value for progress
+my $prev_percent = 0;
 
 
 compress_genotypes($dbCore,$dbVar);
 
 #reads the genotype and variation_feature data and compress it in one table with blob field
 sub compress_genotypes{
-    my $dbCore = shift;
-    my $dbVar = shift;
-    my $buffer;
-    my $genotypes = ''; #string containing genotypes
-    my $blob = '';
-    my $count = 0;
+	my $dbCore = shift;
+	my $dbVar = shift;
+	my %genotypes = (); #hash containing genotypes
 	
-	my $max_var_id;
-	my $tmp_type = 'variation';#$has_proxy ? 'subsnp_proxy' : 'variation';
-	my $sth1 = $dbVar->prepare(qq{select max($tmp_type\_id) FROM $tmp_type});
+	# find out the maximum variation_id in the genotype table
+	my ($max_var_id, $row_count, $sth);
+	my $sth1 = $dbVar->prepare(qq{SELECT max(variation_id) from $genotype_table});
 	$sth1->execute;
 	$sth1->bind_columns(\$max_var_id);
 	$sth1->fetch;
 	$sth1->finish;
 	
-	#print "$genotype_table ".($has_proxy ? "has" : "does not have")." subsnp_proxy_id\n";
-	
 	my $low = $start_sp_id;
-	my $high = $jump;
+	my $tmp_var_table = 'tmp_var_'.$$;
+	
+	# straight, no ordering (for human)
+	if(defined($straight)) {
+		$sth = $dbVar->prepare(qq{
+			SELECT gt.variation_id, gt.subsnp_id, gt.allele_1, gt.allele_2, gt.sample_id FROM
+			$genotype_table gt
+		}, {mysql_use_result => 1});
+		
+		# count rows
+		my $sth3 = $dbVar->prepare(qq{SELECT count(*) from $genotype_table});
+		$sth3->execute;
+		$sth3->bind_columns(\$row_count);
+		$sth3->fetch;
+		$sth3->finish;
+	}
+	
+	else {
+		# create a tmp_var table
+		$dbVar->do(qq{
+			CREATE TABLE $tmp_var_table (
+				variation_id int(11) unsigned NOT NULL,
+				PRIMARY KEY (variation_id)
+			);
+		});
+		
+		$sth = $dbVar->prepare(qq{
+			SELECT STRAIGHT_JOIN gt.variation_id, gt.subsnp_id, gt.allele_1, gt.allele_2, gt.sample_id FROM
+			$tmp_var_table tv, $genotype_table gt 
+			WHERE gt.variation_id = tv.variation_id
+		}, {mysql_use_result => 1});
+	}
+	
+	my $got_gts = 0;
 	
 	while($low <= $max_var_id) {
-		&progress($low, $max_var_id);
 		
-		open OUT, ">$TMP_DIR/$dump_file";
+		unless(defined($straight)) {
+			# we do a bit of trickery here to help slow old MySQL
+			# first write out a file containing a range of var IDs
+			$dbVar->do(qq{TRUNCATE $tmp_var_table});
+			open TMP_VAR, ">$TMP_DIR/$tmp_var_table\.txt";
+			print TMP_VAR "$_\n" for ($low..($low+$jump)-1);
+			close TMP_VAR;
+			
+			# load that into our tmp_var table
+			my $call = "mv $TMP_DIR/$tmp_var_table\.txt $TMP_DIR/$TMP_FILE";
+			system($call);
+			load($dbVar, ($tmp_var_table, "variation_id"));
+			
+			&progress($low, $max_var_id);
+			open OUT, ">$TMP_DIR/$dump_file";
+		}
 		
-		my $sth;
+		# now execute statement that joins the genotype table to the tmp_var table
+		$sth->execute();#$low, $low+$jump);
+		$low += defined($straight) ? $max_var_id : $jump;
 		
-		#if($has_proxy) {
-		#	$sth = $dbVar->prepare(qq{
-		#		SELECT subsnp_proxy_id, allele_1, allele_2, sample_id FROM
-		#		$genotype_table
-		#		WHERE subsnp_proxy_id >= ?
-		#		AND subsnp_proxy_id < ?
-		#		ORDER BY subsnp_proxy_id, sample_id
-		#	}, {mysql_use_result => 1});
-		#}
-		
-		#else {
-			$sth = $dbVar->prepare(qq{
-				SELECT variation_id, subsnp_id, allele_1, allele_2, sample_id FROM
-				$genotype_table gt
-				WHERE variation_id >= ?
-				AND variation_id < ?
-				ORDER BY variation_id, subsnp_id, sample_id
-			}, {mysql_use_result => 1});
-		#}
-		
-		$sth->execute($low, $high);
-		$low += $jump;
-		$high += $jump;
-		
-		#information dumping from database
 		my ($var_id, $ss_id, $allele_1, $allele_2, $sample_id);
 		my $previous_var_id = 0;
 		
-		#if($has_proxy) {
-		#	$sth->bind_columns(\$var_id, \$allele_1, \$allele_2, \$sample_id);
-		#}
-		#else {
-			$sth->bind_columns(\$var_id, \$ss_id, \$allele_1, \$allele_2, \$sample_id);
-		#}
+		$sth->bind_columns(\$var_id, \$ss_id, \$allele_1, \$allele_2, \$sample_id);
 		
 		my %new_gt_codes;
+		%genotypes = ();
+		
+		my $i = 0;
 		
 		while ($sth->fetch){
 			
+			$i++;
+			
+			&progress($i, $row_count) if defined($straight);
+			
+			$got_gts = 1;
+			
 			# fill blanks
-			$ss_id    ||= 0;
+			$ss_id    ||= '\N';
 			$allele_1 ||= "";
 			$allele_2 ||= "";
 			
+			my $combo_id = $var_id."\t".$ss_id;
+			my $use_id = defined($straight) ? $combo_id : $var_id;
+			
 			# new var, print genotypes
 			if(
-			   $previous_var_id ne 0 && $previous_var_id ne $var_id."\t".$ss_id
-				#(($has_proxy && $previous_var_id != $var_id) || $previous_var_id ne $var_id."\t".$ss_id)
-			){ 
-				print OUT "$previous_var_id\t$genotypes\n";
-				$genotypes = '';
+			   $previous_var_id ne 0 && $previous_var_id ne $use_id && scalar keys %genotypes
+			){
+				print OUT "_\t".$genotypes{$_}."\n" for keys %genotypes;
+				%genotypes = ();
 			}
 			
-			unless(defined($no_flip)) {
+			if(defined($flip)) {
 				my $flipped = $flipped_status->{$var_id};
 				reverse_alleles(\$allele_1, \$allele_2) if defined($flipped) && $flipped;
 			}
@@ -194,35 +199,28 @@ sub compress_genotypes{
 				$codes{$genotype} = $genotype_code;
 			}
 			
-			$genotypes .= escape(pack("ww", $sample_id, $genotype_code));
+			$genotypes{$combo_id} .= escape(pack("ww", $sample_id, $genotype_code));
 			
-			#$previous_var_id = $has_proxy ? $var_id : $var_id."\t".$ss_id;
-			$previous_var_id = $var_id."\t".$ss_id;
+			$previous_var_id = $use_id;
 		}
+		
 		$sth->finish();
-		print OUT "$previous_var_id\t$genotypes\n";
+		
+		if(scalar keys %genotypes && $previous_var_id ne 0) {
+			print OUT "_\t".$genotypes{$_}."\n" for keys %genotypes;
+			%genotypes = ();
+		}
+		close OUT;
+	
+		#and import remaining genotypes
+		&import_genotypes($dbVar) if $got_gts;
 		
 		create_genotype_code($dbVar, $new_gt_codes{$_}, $_) for sort {$a <=> $b} keys %new_gt_codes;
-		
-		close OUT;
-		
-		#and import remaining genotypes
-		&import_genotypes($dbVar);
 	}
 	
-	&end_progress();
+	$dbVar->do(qq{DROP TABLE $tmp_var_table}) unless defined($straight);
 	
-	#unless($has_proxy) {
-	#	print "Converting table\n";
-	#	
-	#	$dbVar->do(qq{
-	#		INSERT IGNORE INTO compressed_genotype_var
-	#		SELECT sp.subsnp_proxy_id, gt.genotypes
-	#		FROM subsnp_proxy sp FORCE INDEX (variation_idx), tmp_compressed_genotype_var gt
-	#		WHERE sp.variation_id = gt.variation_id
-	#		AND sp.subsnp_id = gt.subsnp_id;
-	#	});
-	#}
+	&end_progress();
 }
 
 sub import_genotypes{
@@ -231,7 +229,6 @@ sub import_genotypes{
     system($call);
 	
 	load($dbVar,qw(compressed_genotype_var variation_id subsnp_id genotypes));
-	#my $table = $has_proxy ? load($dbVar,qw(compressed_genotype_var subsnp_proxy_id genotypes)) : load($dbVar,qw(tmp_compressed_genotype_var variation_id subsnp_id genotypes));
 }
 
 # creates a new genotype_code entry
@@ -303,13 +300,6 @@ sub flipped_status {
 	
 	my ($var_id, $flipped);
 	
-	#my $sth = $dbVar->prepare(qq{
-	#	SELECT sp.subsnp_proxy_id, v.flipped
-	#	FROM variation v, subsnp_proxy sp
-	#	WHERE v.variation_id = sp.variation_id
-	#	AND v.flipped = 1
-	#});
-	
 	my $sth = $dbVar->prepare(qq{
 		SELECT variation_id, flipped
 		FROM variation v
@@ -341,7 +331,7 @@ options:
 	-species <species_name>  name of species
 	-table                   name of table to get genotypes from
 	-variation_id            variation_id to restart broken process from
-	-no_flip                 don't flip genotypes
+	-flip                    flip genotypes according to flipped column in variation table
 	-monoploid               indicate this species is monoploid
 EOF
 
@@ -352,9 +342,11 @@ EOF
 sub progress {
     my ($i, $total) = @_;
     
-    my $width = 60;
-    my $percent = int(($i/$total) * 100);
+    my $width = 100;
+    my $percent = sprintf("%.1f", ($i/$total) * 100);
     my $numblobs = (($i/$total) * $width) - 2;
+	
+	return unless $percent > $prev_percent;
 	
     printf("\r% -${width}s% 1s% 10s", '['.('=' x $numblobs).($numblobs == $width - 2 ? '=' : '>'), ']', "[ " . $percent . "% ]");
 }
