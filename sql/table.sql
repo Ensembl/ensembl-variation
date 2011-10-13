@@ -194,7 +194,7 @@ create table subsnp_handle (
 @column allele_id		Primary key, internal identifier.
 @column variation_id	Foreign key references to the @link variation table.
 @column subsnp_id		Foreign key references to the @link subsnp_handle table.
-@column allele			Allele found at the variation location, for the sample. e.g. "A".
+@column allele_code_id	Foriegn key reference to @link allele_code table.
 @column frequency		Frequency of this allele in the sample.
 @column sample_id		Foreign key references to the @link sample table.
 @column count			Number of individuals in the sample where this allele is found.
@@ -202,20 +202,66 @@ create table subsnp_handle (
 @see variation
 @see population
 @see subsnp_handle
+@see allele_code
 */
 
-create table allele(
-	allele_id int(10) unsigned not null auto_increment,
-	variation_id int(10) unsigned not null,
-   subsnp_id int(15) unsigned,
-	allele varchar(25000),
-	frequency float,
-	sample_id int(10) unsigned,
-	count int(10) unsigned DEFAULT NULL,
+CREATE TABLE `allele` (
+  `allele_id` int(11) NOT NULL AUTO_INCREMENT,
+  `variation_id` int(11) unsigned NOT NULL,
+  `subsnp_id` int(11) unsigned DEFAULT NULL,
+  `allele_code_id` int(11) unsigned NOT NULL,
+  `sample_id` int(11) unsigned DEFAULT NULL,
+  `frequency` float unsigned DEFAULT NULL,
+  `count` int(11) unsigned DEFAULT NULL,
+  
+  PRIMARY KEY (`allele_id`),
+  KEY `variation_idx` (`variation_id`),
+  KEY `subsnp_idx` (`subsnp_id`),
+  KEY `sample_idx` (`sample_id`)
+);
 
-	primary key( allele_id ),
-   key subsnp_idx(subsnp_id),
-	key variation_idx( variation_id,allele(10) )
+
+/**
+@table allele_code
+
+@desc This table stores the relationship between the internal allele identifiers and the alleles themselves.
+
+@column allele_code_id	Primary key, internal identifier.
+@column allele      	String representing the allele. Has a unique constraint on the first 1000 characters (max allowed by MySQL).
+
+@see allele
+@see genotype_code
+*/
+
+CREATE TABLE `allele_code` (
+  `allele_code_id` int(11) NOT NULL AUTO_INCREMENT,
+  `allele` varchar(60000) DEFAULT NULL,
+  
+  PRIMARY KEY (`allele_code_id`),
+  UNIQUE KEY `allele_idx` (`allele`(1000))
+);
+
+
+/**
+@table genotype_code
+
+@desc This table stores genotype codes as multiple rows of allele_code identifiers, linked by genotype_code_id and ordered by haplotype_id.
+
+@column genotype_code_id	Internal identifier.
+@column allele_code_id 	    Foreign key reference to @link allele_code table.
+@column haplotype_id        Sorting order of the genotype's alleles.
+
+@see allele_code
+@see population_genotype
+*/
+
+CREATE TABLE `genotype_code` (
+  `genotype_code_id` int(11) unsigned NOT NULL,
+  `allele_code_id` int(11) unsigned NOT NULL,
+  `haplotype_id` tinyint(2) unsigned NOT NULL,
+  
+  KEY `genotype_code_id` (`genotype_code_id`),
+  KEY `allele_code_id` (`allele_code_id`)
 );
 
 
@@ -1095,13 +1141,12 @@ CREATE TABLE associate_study (
 @table population_genotype
 
 @colour #FF8500
-@desc This table stores alleles and frequencies for variations in given populations.
+@desc This table stores genotypes and frequencies for variations in given populations.
 
 @column population_genotype_id	Primary key, internal identifier.
 @column variation_id					Foreign key references to the @link variation table.
 @column subsnp_id						Foreign key references to the subsnp_handle table.
-@column allele_1						First allele in the genotype.
-@column allele_2						Second allele in the genotype.
+@column genotype_code_id                Foreign key reference to the @link genotype_code table.
 @column frequency						Frequency of the genotype in the population.
 @column sample_id						Foreign key references to the @link population table.
 @column count							Number of individuals who have this genotype, in this population.
@@ -1109,22 +1154,23 @@ CREATE TABLE associate_study (
 @see population
 @see variation
 @see subsnp_handle
+@see genotype_code
 */
 
-create table population_genotype (
-	population_genotype_id int(10) unsigned not null auto_increment,
-	variation_id int(10) unsigned not null,
-   subsnp_id int(15) unsigned DEFAULT NULL,
-	allele_1 varchar(25000),
-	allele_2 varchar(25000),
-	frequency float,
- 	sample_id int(10) unsigned,
-	count int(10) unsigned DEFAULT NULL,
 
-	primary key( population_genotype_id ),
- 	key variation_idx(variation_id),
-    key subsnp_idx(subsnp_id),
-	key sample_idx(sample_id)
+CREATE TABLE `population_genotype` (
+  `population_genotype_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `variation_id` int(11) unsigned NOT NULL,
+  `subsnp_id` int(11) unsigned DEFAULT NULL,
+  `genotype_code_id` int(11) DEFAULT NULL,
+  `frequency` float DEFAULT NULL,
+  `sample_id` int(10) unsigned DEFAULT NULL,
+  `count` int(10) unsigned DEFAULT NULL,
+  
+  PRIMARY KEY (`population_genotype_id`),
+  KEY `sample_idx` (`sample_id`),
+  KEY `variation_idx` (`variation_id`),
+  KEY `subsnp_idx` (`subsnp_id`)
 );
 
 
@@ -1311,32 +1357,59 @@ CREATE TABLE read_coverage (
 );
 
 /**
-@table compressed_genotype_single_bp
+@table compressed_genotype_region
 
 @colour #FF8500
-@desc This table holds genotypes compressed using the pack() method in Perl. These genotypes are mapped to particular genomic locations rather than variation objects. The data have been compressed to reduce table size and increase the speed of the web code.
+@desc This table holds genotypes compressed using the pack() method in Perl. These genotypes are mapped to particular genomic locations rather than variation objects. The data have been compressed to reduce table size and increase the speed of the web code when retrieving strain slices and LD data. Only data from resequenced and individuals used for LD calculations are included in this table
 
-@column sample_id				  Primary key. Foreign key references to the sample table.
-@column seq_region_id		  Foreign key references @link seq_region in core db. ers to the seq_region which this variant is on, which may be a chromosome, a clone, etc...
+@column sample_id           Foreign key references to the sample table.
+@column seq_region_id       Foreign key references @link seq_region in core db. ers to the seq_region which this variant is on, which may be a chromosome, a clone, etc...
 @column seq_region_start	The start position of the variation on the @link seq_region.
 @column seq_region_end		The end position of the variation on the @link seq_region.
 @column seq_region_strand	The orientation of the variation on the @link seq_region.
-@column genotypes				  Encoded representation of the genotype data:<br />Each row in the compressed table stores genotypes from one individual in one fixed-size region of the genome (arbitrarily defined as 100 Kb). The compressed string (using Perl's pack method) consisting of a repeating triplet of elements: a distance in base pairs from the previous genotype followed by a pair of alleles.<br />For example, a given row may have a start position of 1000, indicating the chromosomal position of the first genotype in this row. The unpacked genotypes field then may contain the following elements:<br />0, A, G, 20, C, C, 35, G, T, 320, A, A, ...<br />The first genotype has a position of 1000 + 0 = 1000 and alleles A and G.<br />The second genotype has a position of 1000 + 20 = 1020 and alleles C and C.<br />The third genotype similarly has a position of 1055 and alleles G and T, and so on.
+@column genotypes				  Encoded representation of the genotype data:<br />Each row in the compressed table stores genotypes from one individual in one fixed-size region of the genome (arbitrarily defined as 100 Kb). The compressed string (using Perl's pack method) consisting of a repeating triplet of elements: a distance in base pairs from the previous genotype; a variation dbID; a genotype_code_id identifier.<br />For example, a given row may have a start position of 1000, indicating the chromosomal position of the first genotype in this row. The unpacked genotypes field then may contain the following elements:<br />0, 1, 1, 20, 2, 5, 35, 3, 3, ...<br />The first genotype has a position of 1000 + 0 = 1000, and corresponds to the variation with the identifier 1 and genotype_code corresponding to A and G.<br />The second genotype has a position of 1000 + 20 = 1020, variation_id 2 and genotype_code representing C and C.<br />The third genotype similarly has a position of 1055, and so on.
 
 @see individual
 @see seq_region
+@see variation
+@see genotype_code
 */
 
-CREATE TABLE compressed_genotype_single_bp(
-  sample_id int(10) unsigned not null,
-  seq_region_id int(10) unsigned not null,
-  seq_region_start int not null,
-  seq_region_end int not null,
-  seq_region_strand tinyint not null,
-  genotypes blob,
+CREATE TABLE `compressed_genotype_region` (
+  `sample_id` int(10) unsigned NOT NULL,
+  `seq_region_id` int(10) unsigned NOT NULL,
+  `seq_region_start` int(11) NOT NULL,
+  `seq_region_end` int(11) NOT NULL,
+  `seq_region_strand` tinyint(4) NOT NULL,
+  `genotypes` blob,
+  
+  KEY `pos_idx` (`seq_region_id`,`seq_region_start`),
+  KEY `sample_idx` (`sample_id`)
+);
 
-  key pos_idx(seq_region_id,seq_region_start)
-) MAX_ROWS = 100000000;
+/**
+@table compressed_genotype_var
+
+@colour #FF8500
+@desc This table holds genotypes compressed using the pack() method in Perl. These genotypes are mapped directly to variation objects. The data have been compressed to reduce table size. All genotypes in the database are included in this table (included duplicates of those genotypes contained in the compressed_genotype_region table). This table is optimised for retrieval from 
+
+@column variation_id	Foreign key references to the @link variation table.
+@column subsnp_id		Foreign key references to the subsnp_handle table.
+@column genotypes       Encoded representation of the genotype data:<br />Each row in the compressed table stores genotypes from one subsnp of a variation (or one variation if no subsnp is defined). The compressed string (using Perl's pack method) consisting of a repeating pair of elements: an internal sample_id corresponding to an individual; a genotype_code_id identifier.
+
+@see individual
+@see variation
+@see genotype_code
+*/
+
+CREATE TABLE `compressed_genotype_var` (
+  `variation_id` int(11) unsigned NOT NULL,
+  `subsnp_id` int(11) unsigned DEFAULT NULL,
+  `genotypes` blob,
+  
+  KEY `variation_idx` (`variation_id`),
+  KEY `subsnp_idx` (`subsnp_id`)
+);
 
 
 /**
@@ -1539,6 +1612,7 @@ CREATE TABLE protein_function_predictions (
     PRIMARY KEY (translation_stable_id),
     KEY transcript_idx (transcript_stable_id)
 );
+
 
 #possible values in the failed_description table
 
