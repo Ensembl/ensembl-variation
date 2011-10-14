@@ -54,10 +54,12 @@ sub required_param {
 
 sub get_transcript_file_adaptor {
     my $self = shift;
+    my $transcripts = shift;
     
     unless ($self->{tfa}) {
         $self->{tfa} = Bio::EnsEMBL::Variation::Pipeline::TranscriptFileAdaptor->new(
-            fasta_file => $self->param('proteins_fasta'),
+            fasta_file  => $self->param('proteins_fasta'),
+            transcripts => $transcripts,
         );
     }
 
