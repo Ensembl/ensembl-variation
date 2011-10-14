@@ -94,6 +94,10 @@ sub _dump_translations {
     }
 
     close FASTA;
+
+    # index the file
+
+    `samtools faidx $fasta`;
 }
  
 
