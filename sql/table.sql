@@ -205,19 +205,19 @@ create table subsnp_handle (
 @see allele_code
 */
 
-CREATE TABLE `allele` (
-  `allele_id` int(11) NOT NULL AUTO_INCREMENT,
-  `variation_id` int(11) unsigned NOT NULL,
-  `subsnp_id` int(11) unsigned DEFAULT NULL,
-  `allele_code_id` int(11) unsigned NOT NULL,
-  `sample_id` int(11) unsigned DEFAULT NULL,
-  `frequency` float unsigned DEFAULT NULL,
-  `count` int(11) unsigned DEFAULT NULL,
+CREATE TABLE allele (
+  allele_id int(11) NOT NULL AUTO_INCREMENT,
+  variation_id int(11) unsigned NOT NULL,
+  subsnp_id int(11) unsigned DEFAULT NULL,
+  allele_code_id int(11) unsigned NOT NULL,
+  sample_id int(11) unsigned DEFAULT NULL,
+  frequency float unsigned DEFAULT NULL,
+  count int(11) unsigned DEFAULT NULL,
   
-  PRIMARY KEY (`allele_id`),
-  KEY `variation_idx` (`variation_id`),
-  KEY `subsnp_idx` (`subsnp_id`),
-  KEY `sample_idx` (`sample_id`)
+  PRIMARY KEY (allele_id),
+  KEY variation_idx (variation_id),
+  KEY subsnp_idx (subsnp_id),
+  KEY sample_idx (sample_id)
 );
 
 
@@ -233,12 +233,12 @@ CREATE TABLE `allele` (
 @see genotype_code
 */
 
-CREATE TABLE `allele_code` (
-  `allele_code_id` int(11) NOT NULL AUTO_INCREMENT,
-  `allele` varchar(60000) DEFAULT NULL,
+CREATE TABLE allele_code (
+  allele_code_id int(11) NOT NULL AUTO_INCREMENT,
+  allele varchar(60000) DEFAULT NULL,
   
-  PRIMARY KEY (`allele_code_id`),
-  UNIQUE KEY `allele_idx` (`allele`(1000))
+  PRIMARY KEY (allele_code_id),
+  UNIQUE KEY allele_idx (allele(1000))
 );
 
 
@@ -255,13 +255,13 @@ CREATE TABLE `allele_code` (
 @see population_genotype
 */
 
-CREATE TABLE `genotype_code` (
-  `genotype_code_id` int(11) unsigned NOT NULL,
-  `allele_code_id` int(11) unsigned NOT NULL,
-  `haplotype_id` tinyint(2) unsigned NOT NULL,
+CREATE TABLE genotype_code (
+  genotype_code_id int(11) unsigned NOT NULL,
+  allele_code_id int(11) unsigned NOT NULL,
+  haplotype_id tinyint(2) unsigned NOT NULL,
   
-  KEY `genotype_code_id` (`genotype_code_id`),
-  KEY `allele_code_id` (`allele_code_id`)
+  KEY genotype_code_id (genotype_code_id),
+  KEY allele_code_id (allele_code_id)
 );
 
 
@@ -1158,19 +1158,19 @@ CREATE TABLE associate_study (
 */
 
 
-CREATE TABLE `population_genotype` (
-  `population_genotype_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-  `variation_id` int(11) unsigned NOT NULL,
-  `subsnp_id` int(11) unsigned DEFAULT NULL,
-  `genotype_code_id` int(11) DEFAULT NULL,
-  `frequency` float DEFAULT NULL,
-  `sample_id` int(10) unsigned DEFAULT NULL,
-  `count` int(10) unsigned DEFAULT NULL,
+CREATE TABLE population_genotype (
+  population_genotype_id int(10) unsigned NOT NULL AUTO_INCREMENT,
+  variation_id int(11) unsigned NOT NULL,
+  subsnp_id int(11) unsigned DEFAULT NULL,
+  genotype_code_id int(11) DEFAULT NULL,
+  frequency float DEFAULT NULL,
+  sample_id int(10) unsigned DEFAULT NULL,
+  count int(10) unsigned DEFAULT NULL,
   
-  PRIMARY KEY (`population_genotype_id`),
-  KEY `sample_idx` (`sample_id`),
-  KEY `variation_idx` (`variation_id`),
-  KEY `subsnp_idx` (`subsnp_id`)
+  PRIMARY KEY (population_genotype_id),
+  KEY sample_idx (sample_id),
+  KEY variation_idx (variation_id),
+  KEY subsnp_idx (subsnp_id)
 );
 
 
@@ -1375,16 +1375,16 @@ CREATE TABLE read_coverage (
 @see genotype_code
 */
 
-CREATE TABLE `compressed_genotype_region` (
-  `sample_id` int(10) unsigned NOT NULL,
-  `seq_region_id` int(10) unsigned NOT NULL,
-  `seq_region_start` int(11) NOT NULL,
-  `seq_region_end` int(11) NOT NULL,
-  `seq_region_strand` tinyint(4) NOT NULL,
-  `genotypes` blob,
+CREATE TABLE compressed_genotype_region (
+  sample_id int(10) unsigned NOT NULL,
+  seq_region_id int(10) unsigned NOT NULL,
+  seq_region_start int(11) NOT NULL,
+  seq_region_end int(11) NOT NULL,
+  seq_region_strand tinyint(4) NOT NULL,
+  genotypes blob,
   
-  KEY `pos_idx` (`seq_region_id`,`seq_region_start`),
-  KEY `sample_idx` (`sample_id`)
+  KEY pos_idx (seq_region_id,seq_region_start),
+  KEY sample_idx (sample_id)
 );
 
 /**
@@ -1402,13 +1402,13 @@ CREATE TABLE `compressed_genotype_region` (
 @see genotype_code
 */
 
-CREATE TABLE `compressed_genotype_var` (
-  `variation_id` int(11) unsigned NOT NULL,
-  `subsnp_id` int(11) unsigned DEFAULT NULL,
-  `genotypes` blob,
+CREATE TABLE compressed_genotype_var (
+  variation_id int(11) unsigned NOT NULL,
+  subsnp_id int(11) unsigned DEFAULT NULL,
+  genotypes blob,
   
-  KEY `variation_idx` (`variation_id`),
-  KEY `subsnp_idx` (`subsnp_id`)
+  KEY variation_idx (variation_id),
+  KEY subsnp_idx (subsnp_id)
 );
 
 
