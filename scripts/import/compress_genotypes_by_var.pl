@@ -73,7 +73,7 @@ print "Getting flipped status\n";
 my $flipped_status = defined($flip) ? flipped_status($dbVar) : undef;
 
 # set value for progress
-my $prev_percent = 0;
+my $prev_percent;
 
 
 compress_genotypes($dbCore,$dbVar);
@@ -181,7 +181,7 @@ sub compress_genotypes{
 			if(
 			   $previous_var_id ne 0 && $previous_var_id ne $use_id && scalar keys %genotypes
 			){
-				print OUT "_\t".$genotypes{$_}."\n" for keys %genotypes;
+				print OUT "$_\t".$genotypes{$_}."\n" for keys %genotypes;
 				%genotypes = ();
 			}
 			
@@ -346,7 +346,8 @@ sub progress {
     my $percent = sprintf("%.1f", ($i/$total) * 100);
     my $numblobs = (($i/$total) * $width) - 2;
 	
-	return unless $percent > $prev_percent;
+	return if defined($prev_percent) && $percent == $prev_percent;
+	$prev_percent = $percent;
 	
     printf("\r% -${width}s% 1s% 10s", '['.('=' x $numblobs).($numblobs == $width - 2 ? '=' : '>'), ']', "[ " . $percent . "% ]");
 }
