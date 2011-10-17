@@ -24,6 +24,7 @@
 @see allele
 @see allele_group_allele
 @see individual_genotype_multiple_bp
+@see compressed_genotype_var
 @see attrib
 */
 
@@ -98,6 +99,7 @@ create table variation_annotation (
 @column description	varchar		Phenotype long name. e.g. "Coronary Artery Disease".
 
 @see variation_annotation
+@see structural_variation_annotation
 */
 
 create table phenotype (
@@ -199,13 +201,13 @@ create table subsnp_handle (
 
 @desc This table stores information about each of a variation's alleles, along with population frequencies.
 
-@column allele_id		Primary key, internal identifier.
-@column variation_id	Foreign key references to the @link variation table.
-@column subsnp_id		Foreign key references to the @link subsnp_handle table.
-@column allele_code_id	Foriegn key reference to @link allele_code table.
-@column frequency		Frequency of this allele in the sample.
-@column sample_id		Foreign key references to the @link sample table.
-@column count			Number of individuals in the sample where this allele is found.
+@column allele_id		   Primary key, internal identifier.
+@column variation_id	 Foreign key references to the @link variation table.
+@column subsnp_id		   Foreign key references to the @link subsnp_handle table.
+@column allele_code_id Foreign key reference to @link allele_code table.
+@column frequency		   Frequency of this allele in the sample.
+@column sample_id		   Foreign key references to the @link sample table.
+@column count			     Number of individuals in the sample where this allele is found.
 
 @see variation
 @see population
@@ -369,7 +371,6 @@ create table population_structure (
 @see individual_type
 @see individual_population
 @see individual_genotype_multiple_bp
-@see compressed_genotype_single_bp
 */
 
 create table individual(
@@ -925,7 +926,7 @@ CREATE TABLE transcript_variation (
 @see variation_feature
 @see variation_group_feature
 @see flanking_sequence
-@see compressed_genotype_single_bp
+@see compressed_genotype_region
 @see read_coverage
 */
 
@@ -1402,7 +1403,7 @@ CREATE TABLE compressed_genotype_region (
 @desc This table holds genotypes compressed using the pack() method in Perl. These genotypes are mapped directly to variation objects. The data have been compressed to reduce table size. All genotypes in the database are included in this table (included duplicates of those genotypes contained in the compressed_genotype_region table). This table is optimised for retrieval from 
 
 @column variation_id	Foreign key references to the @link variation table.
-@column subsnp_id		Foreign key references to the subsnp_handle table.
+@column subsnp_id		Foreign key references to the @link subsnp_handle table.
 @column genotypes       Encoded representation of the genotype data:<br />Each row in the compressed table stores genotypes from one subsnp of a variation (or one variation if no subsnp is defined). The compressed string (using Perl's pack method) consisting of a repeating pair of elements: an internal sample_id corresponding to an individual; a genotype_code_id identifier.
 
 @see individual
