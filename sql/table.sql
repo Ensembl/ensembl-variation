@@ -11,6 +11,10 @@
 @column flipped				This is set to 1 if the variant is flipped from the negative to the positive strand during import.
 @column class_attrib_id		Class of the variation, key into the @link attrib table
 @column somatic             flags whether this variation is known to be somatic or not
+@column minor_allele        The minor allele of this variant, as reported by dbSNP
+@column minor_allele_freq   The 'global' frequency of the minor allele of this variant, as reported by dbSNP
+@column minor_allele_count  The number of samples the minor allele of this variant is found in, as reported by dbSNP
+@column clinical_significance_attrib_id     An attrib_id identifying the clinical significance of this variant, as reported by dbSNP
 
 @see variation_synonym
 @see flanking_sequence
@@ -35,6 +39,10 @@ create table variation (
 	flipped tinyint(1) unsigned NULL DEFAULT NULL,
 	class_attrib_id int(10) unsigned not null default 0,
 	somatic tinyint(1) DEFAULT 0 NOT NULL,
+    minor_allele char(1) DEFAULT NULL,
+    minor_allele_freq float DEFAULT NULL,
+    minor_allele_count int(10) unsigned DEFAULT NULL,
+    clinical_significance_attrib_id int(10) unsigned DEFAULT NULL,
 
 	primary key( variation_id ),
 	unique ( name ),
@@ -1630,7 +1638,7 @@ INSERT INTO failed_description (failed_description_id,description) VALUES (12,'V
 INSERT INTO failed_description (failed_description_id,description) VALUES (13,'Alleles contain non-nucleotide characters');  
 INSERT INTO failed_description (failed_description_id,description) VALUES (14,'Alleles contain ambiguity codes');  
 INSERT INTO failed_description (failed_description_id,description) VALUES (15,'Mapped position is not compatible with reported alleles');
-INSERT INTO failed_description (failed_description_id,description) VALUES (16,'Variation can not be re-mapped to the current assembly');
-INSERT INTO failed_description (failed_description_id,description) VALUES (17,'Supporting evidence can not be re-mapped to the current assembly');
-
+INSERT INTO failed_description (failed_description_id,description) VALUES (16,'Flagged as suspect by dbSNP');
+INSERT INTO failed_description (failed_description_id,description) VALUES (17,'Variation can not be re-mapped to the current assembly');
+INSERT INTO failed_description (failed_description_id,description) VALUES (18,'Supporting evidence can not be re-mapped to the current assembly');
 
