@@ -87,23 +87,9 @@ sub fetch_by_name {
 
   throw('name argument expected') if(!defined($name));
 
-	my $cols   = join ",", $self->_columns();
-	my $clause = $self->_default_where_clause();
+  my $result = $self->generic_fetch("st.name='$name'");
 
-  my $sth = $self->prepare(qq{SELECT $cols 
-															FROM study st, source s 
-														  WHERE $clause AND st.name = ?});
-
-  $sth->bind_param(1,$name,SQL_VARCHAR);
-  $sth->execute();
-
-  my $result = $self->_objs_from_sth($sth);
-
-  $sth->finish();
-
-  return undef if(!@$result);
-
-  return $result->[0];
+  return ($result ? $result->[0] : undef);
 }
 
 
@@ -125,22 +111,10 @@ sub fetch_by_dbID {
   my $dbID = shift;
 
   throw('dbID argument expected') if(!defined($dbID));
-
-	my $cols   = join ",", $self->_columns();
-	my $clause = $self->_default_where_clause();
 	
-  my $sth = $self->prepare
-    (qq{SELECT $cols 
-				FROM study st, source s 
-       	WHERE $clause AND st.study_id = ?});
-  $sth->bind_param(1,$dbID,SQL_INTEGER);
-  $sth->execute();
+	my $result = $self->generic_fetch("st.study_id=$dbID");
 
-  my $result = $self->_objs_from_sth($sth);
-  $sth->finish();
-  return undef if(!@$result);
-
-  return $result->[0];
+  return ($result ? $result->[0] : undef);
 }
 
 	
@@ -166,22 +140,10 @@ sub fetch_all_by_dbID_list {
   }
   
   my $id_str = (@$list > 1)  ? " IN (".join(',',@$list).")"   :   ' = \''.$list->[0].'\'';
-
-	my $cols   = join ",", $self->_columns();
-	my $clause = $self->_default_where_clause();
 	
-  my $sth = $self->prepare(qq{SELECT $cols 
-														  FROM study st, source s 
-															WHERE $clause AND study_id $id_str});
-  $sth->execute();
+	my $result = $self->generic_fetch("st.study_id $id_str");
 
-  my $result = $self->_objs_from_sth($sth);
-
-  $sth->finish();
-
-  return undef if(!@$result);
-
-  return $result;
+  return ($result ? $result : undef);
 }
 
 
@@ -198,26 +160,14 @@ sub fetch_all_by_dbID_list {
 =cut
 
 sub fetch_all_by_source{
-    my $self = shift;
-    my $source_name = shift;
+	my $self = shift;
+	my $source_name = shift;
 
-		throw('name argument expected') if(!defined($source_name));
+	throw('source_name argument expected') if(!defined($source_name));
+		
+	my $result = $self->generic_fetch("s.name='$source_name'");
 
-		my $cols   = join ",", $self->_columns();
-		my $clause = $self->_default_where_clause();
-
-    my $sth = $self->prepare(qq{SELECT $cols
-																FROM study st, source s 
-																WHERE $clause AND s.name = ?
-			    		});
-    $sth->bind_param(1,$source_name,SQL_VARCHAR);
-    $sth->execute();
-
-    my $results = $self->_objs_from_sth($sth);
-
-    $sth->finish();
-
-    return $results;
+	return ($result ? $result : undef);
 }
 
 
@@ -246,6 +196,8 @@ sub _fetch_all_associate_study_id {
 sub _columns {
   return qw(st.study_id st.name st.description st.url st.external_reference st.study_type s.name);
 }
+
+sub _tables { return (['study', 'st'],['source', 's']); }
 
 sub _default_where_clause {
   my $self = shift;
