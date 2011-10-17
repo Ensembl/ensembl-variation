@@ -12,5 +12,5 @@ ALTER TABLE variation
 INSERT INTO failed_description (failed_description_id,description) VALUES (16,'Flagged as suspect by dbSNP');
 
 # patch identifier
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL,'patch', 'patch_64_65_b.sql|add support for new data types from dbSNP');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL,'patch', 'patch_64_65_i.sql|add support for new data types from dbSNP');
 
