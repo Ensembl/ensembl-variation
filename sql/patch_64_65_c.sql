@@ -9,8 +9,8 @@ CREATE TABLE failed_structural_variation (
   UNIQUE KEY structural_variation_idx (structural_variation_id,failed_description_id)
 );
 
-INSERT INTO failed_description (failed_description_id,description) VALUES (16,'Variation can not be re-mapped to the current assembly');
-INSERT INTO failed_description (failed_description_id,description) VALUES (17,'Supporting evidence can not be re-mapped to the current assembly');
+INSERT INTO failed_description (failed_description_id,description) VALUES (17,'Variation can not be re-mapped to the current assembly');
+INSERT INTO failed_description (failed_description_id,description) VALUES (18,'Supporting evidence can not be re-mapped to the current assembly');
 
 
 # patch identifier
