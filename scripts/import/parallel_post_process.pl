@@ -506,7 +506,7 @@ sub reverse_genotype{
   my $dbsnp = 0; #for non-dbsnp data
   
   my ($source_id,$name,$validation_status,$ancestral_allele,$flipped,$count,$population_genotype_id,$variation_id,$ss_id,
-      $allele_id,$allele,$allele_1,$allele_2,$frequency,$sample_id,$allele_string,$seq_region_id,$class_so_id,$is_somatic);
+      $allele_id,$allele,$allele_1,$allele_2,$frequency,$sample_id,$allele_string,$seq_region_id,$class_so_id,$is_somatic,$minor_allele,$minor_allele_freq,$minor_allele_count,$clin_sig);
   
   my (%rec_seq_region_ids,%rec_table_name,$table_name);
 
@@ -548,13 +548,11 @@ sub reverse_genotype{
 
     my $sth = $dbVar->prepare(qq{
 	  SELECT tg.*,vf.allele_string,vf.seq_region_id 
-	  FROM ($table tg, variation_feature vf)
-	  LEFT JOIN failed_variation fv ON tg.variation_id = fv.variation_id
-	  WHERE vf.variation_id=tg.variation_id
-	  AND vf.seq_region_strand = -1 
-	  AND map_weight=1
-	  AND fv.variation_id IS NULL
-	  $hap_line ##excluding haplotype chromosomes
+	  FROM $table tg, variation_feature vf, variations_to_reverse vtr
+	  WHERE vtr.variation_id=tg.variation_id
+      AND vtr.variation_id=vf.variation_id
+	  AND vf.map_weight=1
+	  $hap_line 
 	}, {mysql_use_result=>1} );  
 
     $sth->execute();
@@ -567,7 +565,7 @@ sub reverse_genotype{
       $sth->bind_columns(\$allele_id,\$variation_id,\$ss_id,\$allele,\$frequency,\$sample_id,\$count,\$allele_string,\$seq_region_id);
     }
     elsif($table =~ /variation/) {
-      $sth->bind_columns(\$allele_id,\$source_id,\$name,\$validation_status,\$allele,\$flipped,\$class_so_id,\$is_somatic,\$allele_string,\$seq_region_id);
+      $sth->bind_columns(\$allele_id,\$source_id,\$name,\$validation_status,\$allele,\$flipped,\$class_so_id,\$is_somatic,\$minor_allele,\$minor_allele_freq,\$minor_allele_count,\$clin_sig,\$allele_string,\$seq_region_id);
     }
     else {
       $sth->bind_columns(\$variation_id,\$ss_id,\$allele_1,\$allele_2,\$sample_id,\$allele_string,\$seq_region_id);
@@ -719,7 +717,7 @@ sub reverse_variation_feature{
 
   debug("processing reverse variation_feature strand");
 
-  my ($variation_feature_id,$allele_string);
+  my ($variation_feature_id,$allele_string,$strand);
 
   my $hap_line;
   if ($hap_id_string =~ /\([\,\d]+\)/) {
@@ -734,18 +732,14 @@ sub reverse_variation_feature{
     $dbVar->do(qq{INSERT INTO variation_feature_before_re SELECT * FROM variation_feature});
     my $sth;
     $sth = $dbVar->prepare(qq{
-	  select vf.variation_feature_id,vf.allele_string
-	  from $table vf left join failed_variation fv
-	  on vf.variation_id = fv.variation_id
-	  where vf.seq_region_strand=-1
-	  and vf.map_weight=1
-	  and fv.variation_id is null
-	  $hap_line
+	  select vf.variation_feature_id,vf.allele_string,vf.seq_region_strand
+	  from $table vf, variations_to_reverse vtr
+      where vf.variation_id = vtr.variation_id
 	});
   
 
     $sth->execute();
-    $sth->bind_columns(\$variation_feature_id,\$allele_string);
+    $sth->bind_columns(\$variation_feature_id,\$allele_string,\$strand);
 
     while ($sth->fetch()){
       my @alleles = split /\//,$allele_string;
@@ -764,8 +758,12 @@ sub reverse_variation_feature{
 		  reverse_comp(\$allele);
 		}
       }
+      
+      # flip strand
+      $strand *= -1;
+      
       my $new_allele_string = join "/",@alleles;
-      $dbVar->do(qq{update $table set allele_string = "$new_allele_string", seq_region_strand =1 where variation_feature_id=$variation_feature_id});
+      $dbVar->do(qq{update $table set allele_string = "$new_allele_string", seq_region_strand =$strand where variation_feature_id=$variation_feature_id});
     }
   }
 }
@@ -789,14 +787,8 @@ sub reverse_flanking_sequence {
 
   foreach my $table ("flanking_sequence") {
     my $sth=$dbVar->prepare(qq{
-	  select fl.* from (flanking_sequence fl, variation_feature_before_re vf)
-	  left join failed_variation fv on vf.variation_id = fv.variation_id 
-	  where vf.map_weight=1
-	  $hap_line 
-	  and fl.variation_id = vf.variation_id
-	  and vf.seq_region_strand=-1
-	  and vf.seq_region_strand = fl.seq_region_strand
-	  and fv.variation_id is null
+	  select fl.* from flanking_sequence fl, variations_to_reverse vtr
+	  where fl.variation_id = vtr.variation_id
 	});
 	
     $sth->execute();
@@ -1277,7 +1269,7 @@ sub merge_rs_feature{
 	    CREATE TABLE
 	       tmp_merge
 	    SELECT
-	       tbl.$table\_id,
+	       tbl.$table\_id
 	       m.variation_id2 AS variation_id
 	    FROM
 	       tmp_ids_rs_final m JOIN
