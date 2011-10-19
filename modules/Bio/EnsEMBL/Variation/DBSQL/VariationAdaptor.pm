@@ -273,7 +273,11 @@ sub _columns {
         "v.ancestral_allele AS v_ancestral_allele",
         "vs.moltype AS vs_moltype",
         "vs.name AS vs_name",
-        "s2.name AS vs_source_name"
+        "s2.name AS vs_source_name",
+        "v.minor_allele",
+        "v.minor_allele_freq",
+        "v.minor_allele_count",
+        "v.clinical_significance_attrib_id",
     );
     if ($self->{'_check_flanking'}) {
         push(@cols,qq{(fs.up_seq is not null OR fs.down_seq is not null) AS fs_flank_flag});
@@ -1315,7 +1319,11 @@ sub _obj_from_row {
             -MOLTYPE => $row->{vs_moltype},
             -VALIDATION_STATES => \@states,
             -FLANK_FLAG => $row->{fs_flank_flag},
-            -CLASS_SO_TERM => $self->AttributeAdaptor()->attrib_value_for_id($row->{v_class_attrib_id})
+            -CLASS_SO_TERM => $self->AttributeAdaptor()->attrib_value_for_id($row->{v_class_attrib_id}),
+            -CLINICAL_SIGNIFICANCE => $self->AttributeAdaptor->attrib_value_for_id($row->{clinical_significance_attrib_id}),
+            -MINOR_ALLELE => $row->{minor_allele},
+            -MINOR_ALLELE_FREQUENCY => $row->{minor_allele_freq},
+            -MINOR_ALLELE_COUNT => $row->{minor_allele_count},
         );
         
         $self->{_temp_objs}{$row->{variation_id}} = $obj;
