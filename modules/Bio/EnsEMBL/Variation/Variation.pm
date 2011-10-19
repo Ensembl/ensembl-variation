@@ -174,10 +174,12 @@ sub new {
   my $class = ref($caller) || $caller;
 
   my ($dbID, $adaptor, $name, $class_so_term, $src, $src_desc, $src_url, $src_type, $is_somatic, $flipped, $syns, $ancestral_allele,
-      $alleles, $valid_states, $moltype, $five_seq, $three_seq, $flank_flag) =
+      $alleles, $valid_states, $moltype, $five_seq, $three_seq, $flank_flag, $minor_allele, $minor_allele_frequency, $minor_allele_count, 
+      $clinical_significance) =
         rearrange([qw(dbID ADAPTOR NAME CLASS_SO_TERM SOURCE SOURCE_DESCRIPTION SOURCE_URL SOURCE_TYPE IS_SOMATIC 
                       FLIPPED SYNONYMS ANCESTRAL_ALLELE ALLELES VALIDATION_STATES MOLTYPE FIVE_PRIME_FLANKING_SEQ
-                      THREE_PRIME_FLANKING_SEQ FLANK_FLAG)],@_);
+                      THREE_PRIME_FLANKING_SEQ FLANK_FLAG MINOR_ALLELE MINOR_ALLELE_FREQUENCY MINOR_ALLELE_COUNT 
+                      CLINICAL_SIGNIFICANCE)],@_);
 
   # convert the validation state strings into a bit field
   # this preserves the same order and representation as in the database
@@ -192,7 +194,7 @@ sub new {
     'source' => $src,
     'source_description' => $src_desc,
     'source_url' => $src_url,
-  'source_type'=> $src_type,
+    'source_type'=> $src_type,
     'is_somatic' => $is_somatic,
     'flipped' => $flipped,
     'synonyms' => $syns || {},
@@ -201,7 +203,11 @@ sub new {
     'moltype' => $moltype,
     'five_prime_flanking_seq' => $five_seq,
     'three_prime_flanking_seq' => $three_seq,
-    'flank_flag' => $flank_flag
+    'flank_flag' => $flank_flag,
+    'minor_allele' => $minor_allele,
+    'minor_allele_frequency' => $minor_allele_frequency,
+    'minor_allele_count' => $minor_allele_count,
+    'clinical_significance' => $clinical_significance,
   }, $class;
   
   $self->add_Allele($alleles) if defined($alleles);
@@ -1133,6 +1139,92 @@ sub derived_allele {
          }
      }
      return $derived_allele_str;
+}
+
+=head2 minor_allele
+
+  Arg [1]    : string $minor_allele (optional)
+               The new minor allele string
+  Example    : $ma = $obj->minor_allele()
+  Description: Get/set the minor allele of this variation, as reported by dbSNP
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub minor_allele {
+    my ($self, $minor_allele) = @_;
+    $self->{minor_allele} = $minor_allele if defined $minor_allele;
+    return $self->{minor_allele}
+}
+
+=head2 minor_allele_frequency
+
+  Arg [1]    : float $minor_allele_frequency (optional)
+               The new minor allele frequency
+  Example    : $maf = $obj->minor_allele_frequency()
+  Description: Get/set the frequency of the minor allele of this variation, as reported by dbSNP
+  Returntype : float
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub minor_allele_frequency {
+    my ($self, $minor_allele_frequency) = @_;
+    $self->{minor_allele_frequency} = $minor_allele_frequency if defined $minor_allele_frequency;
+    return $self->{minor_allele_frequency}
+}
+
+=head2 minor_allele_count
+
+  Arg [1]    : int $minor_allele_count (optional)
+               The new minor allele count
+  Example    : $maf_count = $obj->minor_allele_count()
+  Description: Get/set the count of the minor allele of this variation, as reported by dbSNP
+  Returntype : int
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub minor_allele_count {
+    my ($self, $minor_allele_count) = @_;
+    $self->{minor_allele_count} = $minor_allele_count if defined $minor_allele_count;
+    return $self->{minor_allele_count}
+}
+
+=head2 clinical_significance
+
+  Arg [1]    : string $clinical_significance (optional)
+               The new clinical significance string
+  Example    : $ma = $obj->clinical_significance()
+  Description: Get/set the clinical significance of this variation, as reported by dbSNP.
+               When available, this will be one of the following strings:
+                unknown 
+                untested
+                non-pathogenic
+                probable-non-pathogenic
+                probable-pathogenic
+                pathogenic
+                drug-response
+                histocompatibility
+                other
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub clinical_significance {
+    my ($self, $clinical_significance) = @_;
+    $self->{clinical_significance} = $clinical_significance if defined $clinical_significance;
+    return $self->{clinical_significance}
 }
 
 =head2 get_all_VariationAnnotations
