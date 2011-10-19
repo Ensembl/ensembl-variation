@@ -302,7 +302,7 @@ sub within_cdna {
     # we also need to check if the vf is in a frameshift intron within the cDNA
 
     if ($tva->transcript_variation->_intron_effects->{within_frameshift_intron}) {
-        return within_feature($vf, $tran); 
+        return within_transcript($tva); 
     }
     
     return 0;
