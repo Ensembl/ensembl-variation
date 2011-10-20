@@ -1,3 +1,47 @@
+=head1 LICENSE
+
+ Copyright (c) 1999-2011 The European Bioinformatics Institute and
+ Genome Research Limited.  All rights reserved.
+
+ This software is distributed under a modified Apache license.
+ For license details, please see
+
+   http://www.ensembl.org/info/about/code_licence.html
+
+=head1 CONTACT
+
+ Please email comments or questions to the public Ensembl
+ developers list at <dev@ensembl.org>.
+
+ Questions may also be sent to the Ensembl help desk at
+ <helpdesk@ensembl.org>.
+
+=cut
+
+=head1 NAME
+
+Bio::EnsEMBL::Variation::Utils::dbSNP
+
+=head1 SYNOPSIS
+
+    use Bio::EnsEMBL::Variation::Utils::dbSNP qw(decode_bitfield);
+    
+    my $hashref = decode_bitfield('050160000a01050512110101');
+
+    print "variant is precious\n" if $hashref->{precious};
+
+=head1 DESCRIPTION
+
+This module provides a single subroutine decode_bitfield which decodes
+a dbSNP bitfield from their VCF files into a hash reference with values
+for each value specified in the field. 
+
+The encoding is taken from the following NCBI document:
+
+ftp://ftp.ncbi.nlm.nih.gov/snp/specs/dbSNP_BitField_latest.pdf
+
+=cut
+
 package Bio::EnsEMBL::Variation::Utils::dbSNP;
 
 use strict;
@@ -149,6 +193,18 @@ my %var_class = (
     0b0111  => 'mixed',
     0b1000  => 'multi_base',
 );
+
+=head2 decode_bitfield
+
+  Arg[1]      : string $bitfield
+  Example     : my $hashref = decode_bitfield('050160000a01050512110101');
+  Description : Decodes a dbSNP bitfield string which encodes various attributes of a variation
+  Returntype  : A hash reference with a key for each attribute set in the field, if the field
+                is boolean (e.g. precious, suspect etc.) then the value should be treated as a 
+                true or false value, otherwise (e.g. var_class, weight) the value is the actual 
+                value of the attribute
+
+=cut
 
 sub decode_bitfield {
 
