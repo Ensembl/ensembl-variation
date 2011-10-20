@@ -15,7 +15,7 @@ use constant ENCODING_VERSION => 5;
 #  05 0160 000a 01 05 05 12 11 01 01
 #  0  2 4  6 8  10 12 14 16 18 20 22
 
-# offsets into the string for each byte
+# offsets into the string for each field
 
 my %offsets = (
     F0      => 0,
@@ -137,6 +137,8 @@ my %fields= (
     },
 );
 
+# a lookup table for the variation class
+
 my %var_class = (
     0b0001  => 'snp',
     0b0010  => 'dips',
@@ -149,7 +151,8 @@ my %var_class = (
 );
 
 sub decode_bitfield {
-    my $s = shift;
+
+    my $bitfield = shift;
 
     my %res;
 
@@ -169,9 +172,9 @@ sub decode_bitfield {
                 $mask |= 2**($bit-1);
             }
             
-            # extract the relevant characters from the string, 
+            # extract the relevant characters from the bitfield string, 
             # convert them to an integer, and apply our mask
-            $res{$value} = hex(substr($s, $offsets{$field}, 2)) & $mask;
+            $res{$value} = hex(substr($bitfield, $offsets{$field}, 2)) & $mask;
         
             # check that the version matches ours
             if ($value eq 'version' && $res{$value} != ENCODING_VERSION) {
