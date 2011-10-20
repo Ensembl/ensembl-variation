@@ -7,6 +7,8 @@ use base qw(Exporter);
 
 our @EXPORT_OK = qw(decode_bitfield);
 
+use constant ENCODING_VERSION => 5;
+
 # an example string, with the fields and offsets
 
 #  F0 F1   F2   F3 F4 F5 F6 F7 F8 F9 
@@ -33,6 +35,7 @@ use constant {
 # masks to retrieve the required bits
 
 my %encoding = (
+
     version     => [F0, 0b111],
 
     trace_archive       => [F1_1, 0b1000_0000],
@@ -43,6 +46,7 @@ my %encoding = (
     entrez_sts          => [F1_1, 0b100],
     has_structure       => [F1_1, 0b10],
     submitter_link_out  => [F1_1, 0b1],
+
     clinical            => [F1_2, 0b100_0000],
     precious            => [F1_2, 0b10_0000],
     provisional_tpa     => [F1_2, 0b1_0000],
@@ -51,12 +55,6 @@ my %encoding = (
     organism_db_link    => [F1_2, 0b10],
     mgc_clone           => [F1_2, 0b1],
     
-    stop_loss   => [F2_2, 0b10_0000],
-    frameshift  => [F2_2, 0b1_0000],
-    missense    => [F2_2, 0b1000],
-    stop_gain   => [F2_2, 0b100],
-    has_ref     => [F2_2, 0b10],
-    has_syn     => [F2_2, 0b1],
     utr_3       => [F2_1, 0b1000_0000],
     utr_5       => [F2_1, 0b100_0000],
     acceptor_ss => [F2_1, 0b10_0000],
@@ -65,7 +63,14 @@ my %encoding = (
     region_3    => [F2_1, 0b100],
     region_5    => [F2_1, 0b10],
     in_gene     => [F2_1, 0b1],
-    
+     
+    stop_loss   => [F2_2, 0b10_0000],
+    frameshift  => [F2_2, 0b1_0000],
+    missense    => [F2_2, 0b1000],
+    stop_gain   => [F2_2, 0b100],
+    has_ref     => [F2_2, 0b10],
+    has_syn     => [F2_2, 0b1],
+   
     has_other_snp           => [F3, 0b1_0000],
     has_assembly_conflict   => [F3, 0b1000],
     is_assembly_specific    => [F3, 0b100],
@@ -120,20 +125,32 @@ my %var_class = (
     0b1000  => 'multi_base',
 );
 
-
 sub decode_bitfield {
     my $s = shift;
 
     my %res;
 
     for my $enc (keys %encoding) {
+
         my ($offset, $mask) = @{ $encoding{$enc} };
         $res{$enc} = hex(substr($s, $offset, 2)) & $mask;
+        
+        # check that the version matches ours
+        if ($enc eq 'version' && $res{$enc} != ENCODING_VERSION) {
+            warn "Version field does not match the expected version";
+            return undef;
+        }
+
+        # lookup the class description 
         $res{$enc} = $var_class{$res{$enc}} if $enc eq 'var_class';
+        
+        # get rid of anything set to 0
         delete $res{$enc} unless $res{$enc};
+
     }
 
     return \%res;
 }
 
 1;
+
