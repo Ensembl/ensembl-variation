@@ -15,9 +15,9 @@ use constant ENCODING_VERSION => 5;
 #  05 0160 000a 01 05 05 12 11 01 01
 #  0  2 4  6 8  10 12 14 16 18 20 22
 
-# offsets into the string
+# offsets into the string for each byte
 
-use constant {
+my %offsets = (
     F0      => 0,
     F1_1    => 2,
     F1_2    => 4,
@@ -30,88 +30,111 @@ use constant {
     F7      => 18,
     F8      => 20,
     F9      => 22,
-};
+);
 
-# masks to retrieve the required bits
+# a hash mapping the values encoded in each field to the bits used encode them
 
-my %encoding = (
+my %fields= (
 
-    version     => [F0, [3,2,1]],
+    F0 => {
+        version => [3,2,1],
+    },
 
-    trace_archive       => [F1_1, 8],
-    assembly_archive    => [F1_1, 7],
-    entrez_geo          => [F1_1, 6],
-    probe_db            => [F1_1, 5],
-    entrez_gene         => [F1_1, 4],
-    entrez_sts          => [F1_1, 3],
-    has_structure       => [F1_1, 2],
-    submitter_link_out  => [F1_1, 1],
-
-    clinical            => [F1_2, 7],
-    precious            => [F1_2, 6],
-    provisional_tpa     => [F1_2, 5],
-    pubmed              => [F1_2, 4],
-    sra                 => [F1_2, 3],
-    organism_db_link    => [F1_2, 2],
-    mgc_clone           => [F1_2, 1],
-    
-    utr_3       => [F2_1, 8],
-    utr_5       => [F2_1, 7],
-    acceptor_ss => [F2_1, 6],
-    donor_ss    => [F2_1, 5],
-    intron      => [F2_1, 4],
-    region_3    => [F2_1, 3],
-    region_5    => [F2_1, 2],
-    in_gene     => [F2_1, 1],
-     
-    stop_loss   => [F2_2, 6],
-    frameshift  => [F2_2, 5],
-    missense    => [F2_2, 4],
-    stop_gain   => [F2_2, 3],
-    has_ref     => [F2_2, 2],
-    has_syn     => [F2_2, 1],
+    F1_1 => {
+        trace_archive       => 8,
+        assembly_archive    => 7,
+        entrez_geo          => 6,
+        probe_db            => 5,
+        entrez_gene         => 4,
+        entrez_sts          => 3,
+        has_structure       => 2,
+        submitter_link_out  => 1,
+    },
    
-    has_other_snp           => [F3, 5],
-    has_assembly_conflict   => [F3, 4],
-    is_assembly_specific    => [F3, 3],
-    weight                  => [F3, [1,2]],
+    F1_2 => {
+        clinical            => 7,
+        precious            => 6,
+        provisional_tpa     => 5,
+        pubmed              => 4,
+        sra                 => 3,
+        organism_db_link    => 2,
+        mgc_clone           => 1,
+    },
+
+    F2_1 => { 
+        utr_3       => 8,
+        utr_5       => 7,
+        acceptor_ss => 6,
+        donor_ss    => 5,
+        intron      => 4,
+        region_3    => 3,
+        region_5    => 2,
+        in_gene     => 1,
+    },
+
+    F2_2 => {
+        stop_loss   => 6,
+        frameshift  => 5,
+        missense    => 4,
+        stop_gain   => 3,
+        has_ref     => 2,
+        has_syn     => 1,
+    },
+
+    F3 => {
+        has_other_snp           => 5,
+        has_assembly_conflict   => 4,
+        is_assembly_specific    => 3,
+        weight                  => [1,2],
+    },
     
-    is_mutation     => [F4, 4],
-    is_validated    => [F4, 3],
-    maf_all_pops    => [F4, 2],
-    maf_some_pops   => [F4, 1],
+    F4 => {
+        is_mutation     => 4,
+        is_validated    => 3,
+        maf_all_pops    => 2,
+        maf_some_pops   => 1,
+    },
     
-    marker_high_density         => [F5, 3],
-    in_haplotype_tagging_set    => [F5, 2],
-    genotypes_available         => [F5, 1],
-    
-    tgp_2010_production     => [F6, 7],
-    tgp_validated           => [F6, 6],
-    tgp_2010_pilot          => [F6, 5],
-    tgp_2009_pilot          => [F6, 4],
-    hm_phase_3_genotyped    => [F6, 3],
-    hm_phase_2_genotyped    => [F6, 2],
-    hm_phase_1_genotyped    => [F6, 1],
+    F5 => {
+        marker_high_density         => 3,
+        in_haplotype_tagging_set    => 2,
+        genotypes_available         => 1,
+    },
 
-    has_mesh            => [F7, 8],
-    clinical_assay      => [F7, 7],
-    has_tf              => [F7, 6],
-    lsdb                => [F7, 5],
-    dbgap_significant   => [F7, 4],
-    dbgap_lod_score     => [F7, 3],
-    third_party_annot   => [F7, 2],
-    omim                => [F7, 1],
+    F6 => {
+        tgp_2010_production     => 7,
+        tgp_validated           => 6,
+        tgp_2010_pilot          => 5,
+        tgp_2009_pilot          => 4,
+        hm_phase_3_genotyped    => 3,
+        hm_phase_2_genotyped    => 2,
+        hm_phase_1_genotyped    => 1,
+    },
 
-    var_class   => [F8, [4,3,2,1]],
+    F7 => {
+        has_mesh            => 8,
+        clinical_assay      => 7,
+        has_tf              => 6,
+        lsdb                => 5,
+        dbgap_significant   => 4,
+        dbgap_lod_score     => 3,
+        third_party_annot   => 2,
+        omim                => 1,
+    },
 
-    is_suspect                  => [F9, 7],
-    is_somatic                  => [F9, 6],
-    contig_allele_not_present   => [F9, 5],
-    withdrawn                   => [F9, 4],
-    cluster_no_overlap          => [F9, 3],
-    strain_specific             => [F9, 2],
-    genotype_conflict           => [F9, 1],
+    F8 => {
+        var_class   => [4,3,2,1],
+    },
 
+    F9 => {
+        is_suspect                  => 7,
+        is_somatic                  => 6,
+        contig_allele_not_present   => 5,
+        withdrawn                   => 4,
+        cluster_no_overlap          => 3,
+        strain_specific             => 2,
+        genotype_conflict           => 1,
+    },
 );
 
 my %var_class = (
@@ -130,35 +153,38 @@ sub decode_bitfield {
 
     my %res;
 
-    for my $enc (keys %encoding) {
+    for my $field (keys %fields) {
 
-        my ($offset, $bits) = @{ $encoding{$enc} };
+        for my $value (keys %{ $fields{$field} }) {
 
-        # if bits isn't an array, put the single bit into an array
-        $bits = [$bits] unless ref $bits eq 'ARRAY';
+            my $bits = $fields{$field}->{$value};
 
-        # OR together all the bits to give us our mask
-        my $mask;
+            # if bits isn't an array, put the single bit into an array
+            $bits = [$bits] unless ref $bits eq 'ARRAY';
 
-        for my $bit (@$bits) {
-            $mask |= 2**($bit-1);
-        }
+            # OR together all the bits to give us our mask
+            my $mask;
 
-        $res{$enc} = hex(substr($s, $offset, 2)) & $mask;
+            for my $bit (@$bits) {
+                $mask |= 2**($bit-1);
+            }
+            
+            # extract the relevant characters from the string, 
+            # convert them to an integer, and apply our mask
+            $res{$value} = hex(substr($s, $offsets{$field}, 2)) & $mask;
         
-        # check that the version matches ours
-        if ($enc eq 'version' && $res{$enc} != ENCODING_VERSION) {
-            print $res{$enc}, "\n";
-            warn "Version field does not match the expected version";
-            return undef;
+            # check that the version matches ours
+            if ($value eq 'version' && $res{$value} != ENCODING_VERSION) {
+                warn "Version field does not match the expected version (".$res{$value}." vs ".ENCODING_VERSION.")";
+                return undef;
+            }
+
+            # lookup the class description 
+            $res{$value} = $var_class{$res{$value}} if $value eq 'var_class';
+            
+            # get rid of anything set to 0
+            delete $res{$value} unless $res{$value};
         }
-
-        # lookup the class description 
-        $res{$enc} = $var_class{$res{$enc}} if $enc eq 'var_class';
-        
-        # get rid of anything set to 0
-        delete $res{$enc} unless $res{$enc};
-
     }
 
     return \%res;
