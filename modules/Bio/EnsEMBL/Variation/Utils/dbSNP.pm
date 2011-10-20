@@ -36,81 +36,81 @@ use constant {
 
 my %encoding = (
 
-    version     => [F0, 0b111],
+    version     => [F0, [3,2,1]],
 
-    trace_archive       => [F1_1, 0b1000_0000],
-    assembly_archive    => [F1_1, 0b100_0000],
-    entrez_geo          => [F1_1, 0b10_0000],
-    probe_db            => [F1_1, 0b1_0000],
-    entrez_gene         => [F1_1, 0b1000],
-    entrez_sts          => [F1_1, 0b100],
-    has_structure       => [F1_1, 0b10],
-    submitter_link_out  => [F1_1, 0b1],
+    trace_archive       => [F1_1, 8],
+    assembly_archive    => [F1_1, 7],
+    entrez_geo          => [F1_1, 6],
+    probe_db            => [F1_1, 5],
+    entrez_gene         => [F1_1, 4],
+    entrez_sts          => [F1_1, 3],
+    has_structure       => [F1_1, 2],
+    submitter_link_out  => [F1_1, 1],
 
-    clinical            => [F1_2, 0b100_0000],
-    precious            => [F1_2, 0b10_0000],
-    provisional_tpa     => [F1_2, 0b1_0000],
-    pubmed              => [F1_2, 0b1000],
-    sra                 => [F1_2, 0b100],
-    organism_db_link    => [F1_2, 0b10],
-    mgc_clone           => [F1_2, 0b1],
+    clinical            => [F1_2, 7],
+    precious            => [F1_2, 6],
+    provisional_tpa     => [F1_2, 5],
+    pubmed              => [F1_2, 4],
+    sra                 => [F1_2, 3],
+    organism_db_link    => [F1_2, 2],
+    mgc_clone           => [F1_2, 1],
     
-    utr_3       => [F2_1, 0b1000_0000],
-    utr_5       => [F2_1, 0b100_0000],
-    acceptor_ss => [F2_1, 0b10_0000],
-    donor_ss    => [F2_1, 0b1_0000],
-    intron      => [F2_1, 0b1000],
-    region_3    => [F2_1, 0b100],
-    region_5    => [F2_1, 0b10],
-    in_gene     => [F2_1, 0b1],
+    utr_3       => [F2_1, 8],
+    utr_5       => [F2_1, 7],
+    acceptor_ss => [F2_1, 6],
+    donor_ss    => [F2_1, 5],
+    intron      => [F2_1, 4],
+    region_3    => [F2_1, 3],
+    region_5    => [F2_1, 2],
+    in_gene     => [F2_1, 1],
      
-    stop_loss   => [F2_2, 0b10_0000],
-    frameshift  => [F2_2, 0b1_0000],
-    missense    => [F2_2, 0b1000],
-    stop_gain   => [F2_2, 0b100],
-    has_ref     => [F2_2, 0b10],
-    has_syn     => [F2_2, 0b1],
+    stop_loss   => [F2_2, 6],
+    frameshift  => [F2_2, 5],
+    missense    => [F2_2, 4],
+    stop_gain   => [F2_2, 3],
+    has_ref     => [F2_2, 2],
+    has_syn     => [F2_2, 1],
    
-    has_other_snp           => [F3, 0b1_0000],
-    has_assembly_conflict   => [F3, 0b1000],
-    is_assembly_specific    => [F3, 0b100],
-    weight                  => [F3, 0b11],
+    has_other_snp           => [F3, 5],
+    has_assembly_conflict   => [F3, 4],
+    is_assembly_specific    => [F3, 3],
+    weight                  => [F3, [1,2]],
     
-    is_mutation     => [F4, 0b1000],
-    is_validated    => [F4, 0b100],
-    maf_all_pops    => [F4, 0b10,],
-    maf_some_pops   => [F4, 0b1],
+    is_mutation     => [F4, 4],
+    is_validated    => [F4, 3],
+    maf_all_pops    => [F4, 2],
+    maf_some_pops   => [F4, 1],
     
-    marker_high_density         => [F5, 0b100],
-    in_haplotype_tagging_set    => [F5, 0b10],
-    genotypes_available         => [F5, 0b1],
+    marker_high_density         => [F5, 3],
+    in_haplotype_tagging_set    => [F5, 2],
+    genotypes_available         => [F5, 1],
     
-    tgp_2010_production     => [F6, 0b100_0000],
-    tgp_validated           => [F6, 0b10_0000],
-    tgp_2010_pilot          => [F6, 0b1_0000],
-    tgp_2009_pilot          => [F6, 0b1000],
-    hm_phase_3_genotyped    => [F6, 0b100],
-    hm_phase_2_genotyped    => [F6, 0b10],
-    hm_phase_1_genotyped    => [F6, 0b1],
+    tgp_2010_production     => [F6, 7],
+    tgp_validated           => [F6, 6],
+    tgp_2010_pilot          => [F6, 5],
+    tgp_2009_pilot          => [F6, 4],
+    hm_phase_3_genotyped    => [F6, 3],
+    hm_phase_2_genotyped    => [F6, 2],
+    hm_phase_1_genotyped    => [F6, 1],
 
-    has_mesh            => [F7, 0b1000_0000],
-    clinical_assay      => [F7, 0b100_0000],
-    has_tf              => [F7, 0b10_0000],
-    lsdb                => [F7, 0b1_0000],
-    dbgap_significant   => [F7, 0b1000],
-    dbgap_lod_score     => [F7, 0b100],
-    third_party_annot   => [F7, 0b10],
-    omim                => [F7, 0b1],
+    has_mesh            => [F7, 8],
+    clinical_assay      => [F7, 7],
+    has_tf              => [F7, 6],
+    lsdb                => [F7, 5],
+    dbgap_significant   => [F7, 4],
+    dbgap_lod_score     => [F7, 3],
+    third_party_annot   => [F7, 2],
+    omim                => [F7, 1],
 
-    var_class   => [F8, 0b1111],
+    var_class   => [F8, [4,3,2,1]],
 
-    is_suspect                  => [F9, 0b100_0000],
-    is_somatic                  => [F9, 0b10_0000],
-    contig_allele_not_present   => [F9, 0b1_0000],
-    withdrawn                   => [F9, 0b1000],
-    cluster_no_overlap          => [F9, 0b100],
-    strain_specific             => [F9, 0b10],
-    genotype_conflict           => [F9, 0b1],
+    is_suspect                  => [F9, 7],
+    is_somatic                  => [F9, 6],
+    contig_allele_not_present   => [F9, 5],
+    withdrawn                   => [F9, 4],
+    cluster_no_overlap          => [F9, 3],
+    strain_specific             => [F9, 2],
+    genotype_conflict           => [F9, 1],
 
 );
 
@@ -132,11 +132,23 @@ sub decode_bitfield {
 
     for my $enc (keys %encoding) {
 
-        my ($offset, $mask) = @{ $encoding{$enc} };
+        my ($offset, $bits) = @{ $encoding{$enc} };
+
+        # if bits isn't an array, put the single bit into an array
+        $bits = [$bits] unless ref $bits eq 'ARRAY';
+
+        # OR together all the bits to give us our mask
+        my $mask;
+
+        for my $bit (@$bits) {
+            $mask |= 2**($bit-1);
+        }
+
         $res{$enc} = hex(substr($s, $offset, 2)) & $mask;
         
         # check that the version matches ours
         if ($enc eq 'version' && $res{$enc} != ENCODING_VERSION) {
+            print $res{$enc}, "\n";
             warn "Version field does not match the expected version";
             return undef;
         }
