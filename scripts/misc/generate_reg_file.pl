@@ -128,3 +128,6 @@ for my $species (keys %$dbs) {
     }
 }
 
+# make sure the registry file returns a true value
+
+print "\n1;\n";
