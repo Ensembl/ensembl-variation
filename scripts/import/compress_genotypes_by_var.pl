@@ -108,6 +108,8 @@ sub compress_genotypes{
 		$sth3->bind_columns(\$row_count);
 		$sth3->fetch;
 		$sth3->finish;
+		
+		open OUT, ">$TMP_DIR/$dump_file";
 	}
 	
 	else {
@@ -207,7 +209,7 @@ sub compress_genotypes{
 		$sth->finish();
 		
 		if(scalar keys %genotypes && $previous_var_id ne 0) {
-			print OUT "_\t".$genotypes{$_}."\n" for keys %genotypes;
+			print OUT "$_\t".$genotypes{$_}."\n" for keys %genotypes;
 			%genotypes = ();
 		}
 		close OUT;
