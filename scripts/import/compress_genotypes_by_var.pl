@@ -92,6 +92,10 @@ sub compress_genotypes{
 	$sth1->fetch;
 	$sth1->finish;
 	
+	if(!defined($max_var_id)) {
+		die("ERROR: No genotypes found in table $genotype_table\n");
+	}
+	
 	my $low = $start_sp_id;
 	my $tmp_var_table = 'tmp_var_'.$$;
 	
