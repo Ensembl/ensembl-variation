@@ -25,7 +25,9 @@ our %PROTEIN_FUNCTION_PREDICTIONS = (
 
 our @short_names = qw(1kg_hct 1kg_hct_ceu 1kg_hct_yri 1kg_hce 1kg_hce_ceu 1kg_hce_chb
                       1kg_hce_chd 1kg_hce_jpt 1kg_hce_lwk 1kg_hce_tsi 1kg_hce_yri 1kg_lc
-                      1kg_lc_ceu 1kg_lc_chb_jpt 1kg_lc_yri hapmap ind_venter ind_watson
+                      1kg_lc_ceu 1kg_lc_chb_jpt 1kg_lc_yri hapmap
+                      ind_venter ind_watson ind_gill ind_ak1 ind_irish ind_angrist
+                      ind_gates_jr ind_gates_sr ind_kriek ind_quake ind_saqqaq ind_saqqaq_hc ind_sjk ind_yh
                       fail_all fail_nonref fail_ambig fail_gt_fq fail_incons_map fail_mult_map
                       fail_no_alleles fail_no_gt fail_no_map fail_no_seq fail_non_nt fail_mult_alleles fail_dbsnp_suspect
                       ph_hgmd_pub ph_johnson_et_al ph_nhgri ph_omim ph_variants ph_uniprot
