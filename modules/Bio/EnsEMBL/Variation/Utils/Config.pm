@@ -126,6 +126,11 @@ our @VARIATION_CLASSES = (
         SO_term => 'tandem_duplication',
         display_term => 'Tandem duplication',
     },
+    {
+        SO_accession => 'SO:0001837',
+        SO_term => 'mobile_element_insertion',
+        display_term => 'Mobile element insertion',
+    },
     
 );
 
