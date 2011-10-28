@@ -280,6 +280,44 @@ sub _get_individual_population_hash {
 		$sth->finish();
 	}
 	
+	# now get super-populations
+	my @pops = keys %ip_hash;
+	my %new_pops;
+	
+	# need to iterate in case there's multiple levels
+	while(scalar @pops) {
+		
+		my $id_str;
+		if(scalar @pops)  {
+			$id_str = " IN (" . join(',', @pops). ")";
+		} else {
+			$id_str = " = ".$pops[0];
+		}
+		
+		@pops = ();
+		
+		my $sth = $self->prepare(qq{
+			SELECT sub_population_sample_id, super_population_sample_id
+			FROM population_structure
+			WHERE sub_population_sample_id $id_str
+		});
+		$sth->execute();
+		
+		my ($sub, $super);
+		$sth->bind_columns(\$sub, \$super);
+		while($sth->fetch) {
+			push @{$new_pops{$sub}}, $super;
+			push @pops, $super;
+		}
+		$sth->finish();
+	}
+	
+	foreach my $sub(keys %new_pops) {
+		foreach my $super(@{$new_pops{$sub}}) {
+			$ip_hash{$super}{$_} = 1 for keys %{$ip_hash{$sub}};
+		}
+	}
+	
 	return \%ip_hash;
 }
 
