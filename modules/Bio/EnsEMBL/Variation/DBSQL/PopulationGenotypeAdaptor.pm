@@ -231,8 +231,8 @@ sub _objs_from_sth{
 		$subsnp_id ||= "s".$variation_id;
 		
 		$genotypes{$subsnp_id}{$sample_id}{$haplotype_id} = $allele;
-		$freqs{$subsnp_id}{$sample_id}{$haplotype_id}     = $freq;
-		$counts{$subsnp_id}{$sample_id}{$haplotype_id}    = $count;
+		$freqs{$subsnp_id}{$sample_id}                    = $freq;
+		$counts{$subsnp_id}{$sample_id}                   = $count;
 		$variation_ids{$subsnp_id}                        = $variation_id;
 		$samples{$sample_id}                              = undef;
 	}
@@ -252,7 +252,7 @@ sub _objs_from_sth{
 			push @results, Bio::EnsEMBL::Variation::PopulationGenotype->new_fast({
 				_variation_id => $variation_ids{$subsnp_id},
 				subsnp        => ($subsnp_id =~ /^s/ ? undef : $subsnp_id),
-				individual    => $samples{$sample_id},
+				population    => $samples{$sample_id},
 				genotype      => [map {$gts->{$_}} sort {$a <=> $b} keys %$gts],
 				adaptor       => $self,
 				frequency     => $freqs{$subsnp_id}{$sample_id},
