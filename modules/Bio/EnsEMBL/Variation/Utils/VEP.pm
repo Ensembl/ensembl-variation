@@ -88,6 +88,7 @@ use vars qw(@ISA @EXPORT_OK);
     &debug
     @REG_FEAT_TYPES
     @OUTPUT_COLS
+    @VEP_WEB_CONFIG
 );
 
 our @OUTPUT_COLS = qw(
@@ -112,7 +113,24 @@ our @REG_FEAT_TYPES = qw(
     MotifFeature
 );
 
-
+our @VEP_WEB_CONFIG = qw(
+    format
+    check_existing
+    coding_only
+    hgnc
+    protein
+    hgvs
+    terms
+    check_frequency
+    freq_filter
+    freq_gt_lt
+    freq_freq
+    freq_pop
+    sift
+    polyphen
+    condel
+    regulatory
+);
 
 # parses a line of input, returns VF object(s)
 sub parse_line {
