@@ -324,18 +324,13 @@ sub get_populations_hash_by_Slice{
 	  # if the row is only partially within the slice
 	  if($start < $slice_start || $end > $slice_end) {
 		
-		my @genotypes = unpack("(www)*", $genotype);
+		my @genotypes = unpack("(www)*", $genotypes);
 		my $snp_start = $start;
 		
 		while( my( $variation_id, $gt_code, $gap ) = splice @genotypes, 0, 3 ) {
-		  my $gt = $genotype_codes->{$gt_code};
-		  
 		  if(
-			defined $gt &&
 			($snp_start >= $slice_start) &&
-			($snp_start <= $slice_end) &&
-			$gt->[0] =~ /^[ACGT]$/ &&
-			$gt->[1] =~ /[ACGT]$/
+			($snp_start <= $slice_end)
 		  ) {		
 			$counts{$sample_id}++;
 		  }
