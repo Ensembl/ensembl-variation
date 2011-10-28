@@ -70,7 +70,7 @@ if($mem < 2) {
 	$cmd .= ' -q normal ';
 }
 else {
-	$cmd .= ' -q hugemem -M'.$mem.'0000000 -R"select[mem>'.$mem.'000] rusage[mem='.$mem.'000]" ';
+	$cmd .= ' -q hugemem -M'.$mem.'000000 -R"select[mem>'.$mem.'000] rusage[mem='.$mem.'000]" ';
 }
 
 $cmd = "echo 'sort -u $file > $file\_sorted; mv $file\_sorted $file' | ".$cmd;
