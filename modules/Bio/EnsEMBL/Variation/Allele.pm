@@ -278,8 +278,10 @@ sub population{
 
 sub subsnp{
   my $self = shift;
-  return $self->{'subsnp'} = shift if(@_);
-  return $self->{'subsnp'};
+  if(@_) {
+    $self->{'subsnp'} = shift;
+  }
+  return $self->{'subsnp'} =~ /^ss/ ? $self->{'subsnp'} : 'ss'.$self->{'subsnp'};
 }
 
 
