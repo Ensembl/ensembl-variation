@@ -10,6 +10,7 @@
 
 ALTER TABLE allele ADD FOREIGN KEY (subsnp_id) REFERENCES subsnp_handle(subsnp_id);
 ALTER TABLE allele ADD FOREIGN KEY (variation_id) REFERENCES variation(variation_id);
+ALTER TABLE allele ADD FOREIGN KEY (allele_code_id) REFERENCES allele_code(allele_code_id);
 ALTER TABLE allele ADD FOREIGN KEY (sample_id) REFERENCES population(sample_id);
 
 ALTER TABLE allele_group ADD FOREIGN KEY (source_id) REFERENCES source(source_id);
@@ -26,8 +27,11 @@ ALTER TABLE attrib ADD FOREIGN KEY (attrib_type_id) REFERENCES attrib_type(attri
 
 ALTER TABLE attrib_set ADD FOREIGN KEY (attrib_id) REFERENCES attrib(attrib_id);
 
-ALTER TABLE compressed_genotype_single_bp ADD FOREIGN KEY (sample_id) REFERENCES individual(sample_id);
-ALTER TABLE compressed_genotype_single_bp ADD FOREIGN KEY (seq_region_id) REFERENCES seq_region(seq_region_id);
+ALTER TABLE compressed_genotype_region ADD FOREIGN KEY (sample_id) REFERENCES individual(sample_id);
+ALTER TABLE compressed_genotype_region ADD FOREIGN KEY (seq_region_id) REFERENCES seq_region(seq_region_id);
+
+ALTER TABLE compressed_genotype_var ADD FOREIGN KEY (variation_id) REFERENCES variation(variation_id);
+ALTER TABLE compressed_genotype_var ADD FOREIGN KEY (subsnp_id) REFERENCES subsnp_handle(subsnp_id);
 
 ALTER TABLE failed_allele ADD FOREIGN KEY (allele_id) REFERENCES allele(allele_id);
 ALTER TABLE failed_allele ADD FOREIGN KEY (failed_description_id) REFERENCES failed_description(failed_description_id);
@@ -40,6 +44,8 @@ ALTER TABLE failed_structural_variation ADD FOREIGN KEY (failed_description_id) 
 
 ALTER TABLE flanking_sequence ADD FOREIGN KEY (variation_id) REFERENCES variation(variation_id);
 ALTER TABLE flanking_sequence ADD FOREIGN KEY (seq_region_id) REFERENCES seq_region(seq_region_id);
+
+ALTER TABLE genotype_code ADD FOREIGN KEY (allele_code_id) REFERENCES allele_code(allele_code_id);
 
 ALTER TABLE httag ADD FOREIGN KEY (source_id) REFERENCES source(source_id);
 ALTER TABLE httag ADD FOREIGN KEY (variation_group_id) REFERENCES variation_group(variation_group_id);
@@ -60,6 +66,7 @@ ALTER TABLE population ADD FOREIGN KEY (sample_id) REFERENCES sample(sample_id);
 
 ALTER TABLE population_genotype ADD FOREIGN KEY (subsnp_id) REFERENCES subsnp_handle(subsnp_id);
 ALTER TABLE population_genotype ADD FOREIGN KEY (variation_id) REFERENCES variation(variation_id);
+ALTER TABLE population_genotype ADD FOREIGN KEY (genotype_code_id) REFERENCES genotype_code(genotype_code_id);
 ALTER TABLE population_genotype ADD FOREIGN KEY (sample_id) REFERENCES population(sample_id);
 
 ALTER TABLE population_structure ADD FOREIGN KEY (super_population_sample_id) REFERENCES population(sample_id);
