@@ -73,7 +73,6 @@ use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Utils::Argument  qw(rearrange);
 use Bio::EnsEMBL::Variation::Variation;
 use Bio::EnsEMBL::Storable;
-use Bio::EnsEMBL::Utils::Exception qw(deprecate);
 
 use vars qw(@ISA);
 
@@ -241,22 +240,6 @@ sub study_type{
   return $self->{'study'}->type;
 }
 
-=head2 local_stable_id  
-
-  Description: DEPRECATED - Use the method local_study_name
-  
-=cut
-
-sub local_stable_id{  
-
-  my $self = shift; 
-  deprecate('Use the associated_studies method instead, which returns a reference list of Study objects.');
-	my @list;
-	foreach my $study (@{$self->associated_studies}) {
-		push (@list,$study->name);
-	}
-  return join(',',@list);
-}
 
 =head2 variation
 
@@ -312,17 +295,6 @@ sub variation_names{
   return $self->{'variation_names'};
 }
 
-=head2 study
-
-  Description: DEPRECATED - Use the external_reference method instead.
-
-=cut
-
-sub study{
-  my $self = shift;
-	deprecate('Use external_reference instead.');
-  return $self->{'study'}->external_reference(@_);
-}
 
 =head2 study_name
 
