@@ -14,8 +14,8 @@ my ($e_version,$html_file,$source,$s_version,$s_description,$s_url,$help);
 usage() if (!scalar(@ARGV));
  
 GetOptions(
-    'v=i' => \$e_version,
-    'o=s' => \$html_file,
+    'v=i'   => \$e_version,
+    'o=s'   => \$html_file,
 		'help!' => \$help
 );
 
@@ -101,7 +101,6 @@ foreach my $hostname (@hostnames) {
 		my $sth3 = get_connection_and_query($database, $previous_host, $sql3);
 		my $p_dbname = $sth3->fetchrow_array;
 		
-		#print "\tPREVIOUS: $p_dbname\n";
 		my %p_list;
 		if ($p_dbname) {
 			my $sql4 = qq{SELECT name, version FROM source};
@@ -153,21 +152,21 @@ sub source_table {
 	my $bg = 1;
 	my @p_sources = keys(%{$p_list});
 	
-	my %colors = ( 'version' => '#009900',
-								 'source'  => '#000066',
+	my %colors = ( 'version' => '#090',
+								 'source'  => '#D33',
 	             );
 	while (my @a = $sth->fetchrow_array) {
 	
-		# Check if the source or the its version are new
+		# Check if the source or its version is new
 		my $s_new      = '';
 		my $s_new_type = '';
-		
-		if ($p_list->{$source} ne $s_version){
-			$s_new_type = 'version';
-		}
-		elsif (!grep {$_ eq $source} @p_sources) {
+		if (!grep {$_ eq $source} @p_sources) {
 			$s_new_type = 'source';
 		}
+		elsif ($p_list->{$source} ne $s_version){
+			$s_new_type = 'version';
+		}
+		
 	  $s_new = '<span style="color:'.$colors{$s_new_type}.'">New '.$s_new_type.'</span>' if ($s_new_type);
 	
 		# Display
@@ -246,7 +245,7 @@ sub usage {
 
     -help           Print this message
       
-		-v							Ensembl version, e.g. 63 (Required)
+    -v							Ensembl version, e.g. 65 (Required)
     -o              An HTML output file name (Required)							 
   } . "\n";
   exit(0);
