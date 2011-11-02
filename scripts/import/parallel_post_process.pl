@@ -1344,7 +1344,7 @@ sub remove_wrong_variations {
 	SELECT a.allele_id, fd.failed_description_id
 	FROM allele a, failed_description fd
 	WHERE a.allele = 'N'
-	AND fd.description = 'Variation contains N alleles'
+	AND fd.description = 'Alleles contain ambiguity codes'
   });
     
   # now check for variations with >3 alleles
