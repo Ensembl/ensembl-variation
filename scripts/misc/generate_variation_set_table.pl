@@ -40,8 +40,13 @@ print "\t<tr>\n";
 	
 # Loop over the top level variation sets and recursively print the subsets
 my $rowcount = 0;
+my $sets;
 foreach my $top_vs (@{$top_vss}) {
-	print_set($top_vs,\$rowcount);
+	$sets->{$top_vs->name} = $top_vs;
+}
+
+foreach my $set_name (sort(keys(%$sets))) {
+	print_set($sets->{$set_name},\$rowcount);
 }
 
 print "</table>\n";
@@ -75,8 +80,12 @@ sub print_set {
 	my $subsets = $set->get_all_sub_VariationSets(1);
 	
 	# Call the print subroutine for each of the subsets with an increased indentation
-	foreach my $subset (@{$subsets}) {
-		print_set($subset,$rowcount,$indent+1);
+	my $ssets;
+	foreach my $sub_vs (@{$subsets}) {
+		$ssets->{$sub_vs->name} = $sub_vs;
+	}
+	foreach my $sset_name (sort(keys(%$ssets))) {
+		print_set($ssets->{$sset_name},$rowcount,$indent+1);
 	}
 }
 
