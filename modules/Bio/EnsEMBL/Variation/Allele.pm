@@ -77,8 +77,9 @@ use Bio::EnsEMBL::Utils::Argument qw(rearrange);
 use Bio::EnsEMBL::Utils::Exception qw(throw deprecate warning);
 use Bio::EnsEMBL::Utils::Scalar qw(assert_ref check_ref);
 use Scalar::Util qw(weaken);
+use Bio::EnsEMBL::Variation::Failable;
 
-our @ISA = ('Bio::EnsEMBL::Storable');
+our @ISA = ('Bio::EnsEMBL::Storable', 'Bio::EnsEMBL::Variation::Failable');
 
 
 =head2 new
@@ -323,99 +324,6 @@ sub variation {
     return $variation;
 }
 
-=head2 is_failed
-
-  Example    : print $a->is_failed();
-  Description: Gets the failed attribute.
-  Returntype : int
-  Exceptions : none
-  Caller     : general
-  Status     : At Risk
-
-=cut
-
-sub is_failed {
-    my $self = shift;
-  
-    return (length($self->failed_description()) > 0);
-}
-
-
-=head2 failed_description
-
-  Arg [1]    : $failed_description (optional)
-	           The new value to set the failed_description attribute to. Should 
-	           be a reference to a list of strings, alternatively a string can
-	           be passed. If multiple failed descriptions are specified, they should
-	           be separated with semi-colons.  
-  Example    : $failed_str = $allele->failed_description();
-  Description: Get/Sets the failed attribute for this allele. The failed
-	       descriptions are lazy-loaded from the database.
-  Returntype : Semi-colon separated string 
-  Exceptions : Thrown on illegal argument.
-  Caller     : general
-  Status     : At risk
-
-=cut
-
-sub failed_description {
-    my $self = shift;
-    my $description = shift;
-  
-    # Update the description if necessary
-    if (defined($description)) {
-        
-        # If the description is a string, split it by semi-colon and take the reference
-        if (check_ref($description,'STRING')) {
-            my @pcs = split(/;/,$description);
-            $description = \@pcs;
-        }
-        # Throw an error if the description is not an arrayref
-        assert_ref($description.'ARRAY');
-        
-        # Update the cached failed_description
-        $self->{'failed_description'} = $description;
-    }
-    # Else, fetch it from the db if it's not cached
-    elsif (!defined($self->{'failed_description'})) {
-        $self->{'failed_description'} = $self->get_all_failed_descriptions();
-    }
-    
-    # Return a semi-colon separated string of descriptions
-    return join(";",@{$self->{'failed_description'}});
-}
-
-=head2 get_all_failed_descriptions
-
-  Example    :  
-                if ($allele->is_failed()) {
-                    my $descriptions = $allele->get_all_failed_descriptions();
-                    print "Allele " . $allele->allele() . " has been flagged as failed because '";
-                    print join("' and '",@{$descriptions}) . "'\n";
-                }
-                
-  Description: Gets all failed descriptions associated with this allele.
-  Returntype : Reference to a list of strings 
-  Exceptions : Thrown if an adaptor is not attached to this object.
-  Caller     : general
-  Status     : At risk
-
-=cut
-
-sub get_all_failed_descriptions {
-    my $self = shift;
-    
-    # If the failed descriptions haven't been cached yet, load them from db
-    unless (defined($self->{'failed_description'})) {
-        
-        # Check that this allele has an adaptor attached
-        assert_ref($self->adaptor(),'Bio::EnsEMBL::Variation::DBSQL::AlleleAdaptor');
-    
-        $self->{'failed_description'} = $self->adaptor->get_all_failed_descriptions($self);
-    }
-    
-    return $self->{'failed_description'};
-}
 
 =head2 subsnp_handle
 
