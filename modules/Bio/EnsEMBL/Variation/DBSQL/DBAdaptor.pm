@@ -69,6 +69,7 @@ sub get_available_adaptors{
 		'StructuralVariation'             => 'Bio::EnsEMBL::Variation::DBSQL::StructuralVariationAdaptor',
 		'SupportingStructuralVariation'   => 'Bio::EnsEMBL::Variation::DBSQL::SupportingStructuralVariationAdaptor',
 		'StructuralVariationFeature'      => 'Bio::EnsEMBL::Variation::DBSQL::StructuralVariationFeatureAdaptor',
+		'StructuralVariationAnnotation'   => 'Bio::EnsEMBL::Variation::DBSQL::StructuralVariationAnnotationAdaptor',
 		'Study'                           => 'Bio::EnsEMBL::Variation::DBSQL::StudyAdaptor',
 		'VariationAnnotation'             => 'Bio::EnsEMBL::Variation::DBSQL::VariationAnnotationAdaptor',
 		'AlleleFeature'                   => 'Bio::EnsEMBL::Variation::DBSQL::AlleleFeatureAdaptor',
@@ -177,6 +178,19 @@ sub _exclude_failed_variations_constraint {
     $table_alias ||= 'fv';
     
     return $self->_exclude_failed_constraint('variation_id',$table_alias);
+}
+
+# API-internal method for getting the constraint to filter out failed structural variations. Assumes that the
+# failed_structural_variation table has been (left) joined to the query and that the table alias is either supplied
+# or equals 'fsv'
+sub _exclude_failed_structural_variations_constraint {
+    my $self = shift;
+    my $table_alias = shift;
+    
+    # If not specified, assume that the failed_structural_variation table alias is 'fsv'
+    $table_alias ||= 'fsv';
+    
+    return $self->_exclude_failed_constraint('structural_variation_id',$table_alias);
 }
 
 # API-internal method for getting the constraint to filter out failed alleles. Assumes that the
