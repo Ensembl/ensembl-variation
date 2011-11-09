@@ -52,62 +52,19 @@ use warnings;
 
 package Bio::EnsEMBL::Variation::SupportingStructuralVariation;
 
-use Bio::EnsEMBL::Storable;
-use Bio::EnsEMBL::Utils::Exception qw(throw warning);
-use Bio::EnsEMBL::Utils::Argument  qw(rearrange);
-use Bio::EnsEMBL::Variation::Utils::Constants qw(%VARIATION_CLASSES); 
+use Bio::EnsEMBL::Variation::BaseStructuralVariation;
+use Bio::EnsEMBL::Utils::Exception qw(throw warning deprecate);
 
-our @ISA = ('Bio::EnsEMBL::Storable');
+our @ISA = ('Bio::EnsEMBL::Variation::BaseStructuralVariation');
 
-
-=head2 new
-
-  Arg [-dbID] :
-    see superclass constructor
-
-  Arg [-ADAPTOR] :
-    see superclass constructor
-
-  Arg [-NAME] :
-    string - the identifier of the supporting evidence
-    
-  Arg [-STRUCTURAL_VARIATION_ID] :
-    int - the internal identifier of the structural variation supported by this object
-		
-	Arg [-CLASS_SO_TERM] :
-		string - the sequence ontology term defining the allele type of the supporting evidence.
-
-  Example    :
-		
-    $svv = Bio::EnsEMBL::Variation::SupportingStructuralVariation->new
-       (-name => 'esv25480',
-        -structural_variation_id   => $structural_variation->dbID);
-
-  Description: Constructor. Instantiates a new SupportingStructuralVariation object.
-  Returntype : Bio::EnsEMBL::Variation::SupportingStructuralVariation
-  Exceptions : none
-  Caller     : general
-  Status     : At Risk
-
-=cut
 
 sub new {
-  my $caller = shift;
-  my $class = ref($caller) || $caller;
-
-  my $self = $class->SUPER::new(@_);
-  my ($dbID, $name, $structural_variation_id, $class_so_term) = rearrange(
-	   [qw(dbID NAME STRUCTURAL_VARIATION_ID CLASS_SO_TERM)], @_
-	);
-
-  $self->{'dbID'} = $dbID;
-  $self->{'name'} = $name;
-  $self->{'structural_variation_id'} = $structural_variation_id;
-	$self->{'class_SO_term'}           = $class_so_term;
-  
-  return $self;
+	my $caller = shift;
+	my $class = ref($caller) || $caller;
+	
+	my $self = Bio::EnsEMBL::Variation::BaseStructuralVariation->new(@_);
+	return(bless($self, $class));
 }
-
 
 =head2 name
 
@@ -118,60 +75,15 @@ sub new {
   Returntype : string
   Exceptions : none
   Caller     : general
-  Status     : At Risk
+  Status     : DEPRECATED: use the variation_name method
 
 =cut
 
 sub name{
   my $self = shift;
-  return $self->{'name'} = shift if(@_);
-  return $self->{'name'};
-}
-
-
-=head2 var_class
-
-    Args         : None
-    Example      : my $ssv_class = $ssv->var_class()
-    Description  : Getter/setter for the allele type of the supporting structural variation
-    ReturnType   : String
-    Exceptions   : none
-    Caller       : General
-    Status       : At Risk
-
-=cut
-
-sub var_class {
-	my $self = shift;
-    
-	unless ($self->{class_display_term}) {
-        my $display_term = $VARIATION_CLASSES{$self->{class_SO_term}}->{display_term};
-
-        warn "No display term for SO term: ".$self->{class_SO_term} unless $display_term;
-
-        $self->{class_display_term} = $display_term || $self->{class_SO_term};
-    }
-
-	return $self->{class_display_term};
-}
-
-
-=head2 class_SO_term
-
-    Args         : None
-    Example      : my $sv_so_term = $ssv->class_SO_term()
-    Description  : Getter for the allele type of the supporting evidence, returning the SO term
-    ReturnType   : String
-    Exceptions   : none
-    Caller       : General
-    Status       : At Risk
-
-=cut
-
-sub class_SO_term {
-	my $self = shift;
-
-	return $self->{class_SO_term};
+	deprecate('Use the method "variation_name" instead');
+  return $self->{'variation_name'} = shift if(@_);
+  return $self->{'variation_name'};
 }
 
 
@@ -181,16 +93,32 @@ sub class_SO_term {
   Returntype : Bio::EnsEMBL::Variation::StructuralVariation
   Exceptions : none
   Caller     : general
+  Status     : DEPRECATED: use the get_all_StructuralVariations method
+
+=cut
+
+sub get_StructuralVariation {
+  my $self = shift;
+	deprecate('Use the method "get_all_StructuralVariations" instead');
+}
+
+
+=head2 get_all_StructuralVariations
+  Example    : $ssv = $obj->get_all_StructuralVariations()
+  Description: Getter of the structural variations supported by the supporting evidence. 
+  Returntype : reference to list of Bio::EnsEMBL::Variation::StructuralVariation objects
+  Exceptions : none
+  Caller     : general
   Status     : At Risk
 
 =cut
 
-sub get_StructuralVariation{
+sub get_all_StructuralVariations {
   my $self = shift;
 
 	if(defined $self->{'adaptor'}) {
 		my $sva = $self->{'adaptor'}->db()->get_StructuralVariationAdaptor();
-		return $sva->fetch_by_dbID($self->{'structural_variation_id'});
+		return $sva->fetch_all_by_supporting_evidence($self);
 	}
 	else {
   	warn("No variation database attached");
@@ -204,15 +132,13 @@ sub get_StructuralVariation{
   Returntype : Bio::EnsEMBL::Variation::StructuralVariation
   Exceptions : none
   Caller     : general
-  Status     : At Risk
+  Status     : DEPRECATED: no more used
 
 =cut
 
 sub is_structural_variation{
   my $self = shift;
-
-	my $sva = $self->{'adaptor'}->db()->get_StructuralVariationAdaptor();
-	return $sva->fetch_by_name($self->{'name'});
+	deprecate('Method no more used');
 }
 1;
 
