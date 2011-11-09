@@ -1,0 +1,278 @@
+=head1 LICENSE
+
+ Copyright (c) 1999-2011 The European Bioinformatics Institute and
+ Genome Research Limited.  All rights reserved.
+
+ This software is distributed under a modified Apache license.
+ For license details, please see
+
+   http://www.ensembl.org/info/about/code_licence.html
+
+=head1 CONTACT
+
+ Please email comments or questions to the public Ensembl
+ developers list at <dev@ensembl.org>.
+
+ Questions may also be sent to the Ensembl help desk at
+ <helpdesk@ensembl.org>.
+
+=cut
+
+
+# Ensembl module for Bio::EnsEMBL::Variation::DBSQL::BaseStructuralVariationAdaptor
+#
+# Copyright (c) 2011 Ensembl
+#
+# You may distribute this module under the same terms as perl itself
+#
+#
+
+=head1 NAME
+
+Bio::EnsEMBL::Variation::DBSQL::BaseStructuralVariationAdaptor
+
+=head1 DESCRIPTION
+
+Abstract adaptor class for fetching structural variants. Should not be invoked directly.
+
+By default, the 'fetch_all_by_...'-methods will not return variations
+that have been flagged as failed in the Ensembl QC. This behaviour can be modified
+by setting the include_failed_variations flag in Bio::EnsEMBL::Variation::DBSQL::DBAdaptor.
+
+=head1 METHODS
+
+=cut
+
+use strict;
+use warnings;
+
+package Bio::EnsEMBL::Variation::DBSQL::BaseStructuralVariationAdaptor;
+
+use Bio::EnsEMBL::Variation::BaseStructuralVariation;
+use Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor;
+use Bio::EnsEMBL::Utils::Exception qw(throw warning);
+use Bio::EnsEMBL::Utils::Scalar qw(assert_ref);
+use DBI qw(:sql_types);
+
+our @ISA = ('Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor');
+
+
+# method used by superclass to construct SQL
+sub _tables { 
+  my $self = shift;
+  my @tables = (['structural_variation', 'sv'], ['source', 's']);
+	
+	# If we are excluding failed_structural_variations, add that table
+  push(@tables,['failed_structural_variation', 'fsv']) unless ($self->db->include_failed_variations());
+	
+	return @tables;
+}
+
+sub _columns {
+  return qw( sv.structural_variation_id sv.variation_name sv.validation_status s.name s.version 
+	           s.description sv.class_attrib_id sv.study_id sv.is_evidence);
+}
+
+# Add a left join to the failed_structural_variation table
+sub _left_join {
+	my $self = shift;
+	
+	# If we are including failed structural variations, skip the left join
+	return () if ($self->db->include_failed_variations());
+	return (['failed_structural_variation', 'fsv.structural_variation_id=sv.structural_variation_id']);
+}
+
+
+sub _default_where_clause {
+  my $self = shift;
+  return 'sv.source_id=s.source_id';
+}
+
+
+=head2 list_dbIDs
+
+  Arg [1]    : none
+  Example    : @feature_ids = @{$simple_feature_adaptor->list_dbIDs()};
+  Description: Gets an array of internal ids for all simple features in 
+               the current db
+  Returntype : list of ints
+  Exceptions : none
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub list_dbIDs {
+  my $self = shift;
+  return $self->_list_dbIDs('structural_variation');
+}
+
+
+=head2 fetch_by_name
+
+    Args[1]     : string $name
+    Example     : my $structural_variation = $sv_adaptor->fetch_by_name('esv263');
+    Description : returns the structural variation with the given variation name (or undef if one isn't found).
+                  If the name argument is undef this will be converted to NULL in the SQL statement generated.
+    ReturnType  : Bio::EnsEMBL::Variation::StructuralVariation or 
+		              Bio::EnsEMBL::Variation::SupportingStructuralVariation object
+    Exceptions  : thrown if there are multiple objects found with the same variation name
+    Caller      : general
+    Status      : Stable
+
+=cut
+
+sub fetch_by_name {
+  my ($self, $name) = @_;
+    
+  my $constraint = $self->_internal_exclude_failed_constraint("sv.variation_name='$name'");
+	
+	my $objs = $self->generic_fetch($constraint);
+  throw("Multiple structural variations found with the same name: '$name'") if @$objs > 1;
+  return $objs->[0] if @$objs == 1;
+}
+
+
+=head2 fetch_all_by_Study
+
+  Arg [1]     : Bio::EnsEMBL::Variation::Study $study_id
+  Example     : my $study = $study_adaptor->fetch_by_name('estd1');
+                foreach my $sv (@{$sv_adaptor->fetch_all_by_Study($study)}){
+		    		 			print $sv->variation_name,"\n";
+                }
+  Description : Retrieves all structural variations from a specified study
+  ReturnType  : reference to list of Bio::EnsEMBL::Variation::StructuralVariation or 
+	              Bio::EnsEMBL::Variation::SupportingStructuralVariation objects
+  Exceptions  : throw if incorrect argument is passed
+                warning if provided study does not have a dbID
+  Caller      : general
+  Status      : At Risk
+
+=cut
+
+sub fetch_all_by_Study {
+  my $self = shift;
+  my $study = shift;
+
+  if(!ref($study) || !$study->isa('Bio::EnsEMBL::Variation::Study')) {
+    throw("Bio::EnsEMBL::Variation::Study arg expected");
+  }
+    
+  if(!$study->dbID()) {
+    warning("Study does not have dbID, cannot retrieve structural variants");
+    return [];
+  } 
+	
+	my $constraint = $self->_internal_exclude_failed_constraint('sv.study_id = '.$study->dbID);
+	
+  my $result = $self->generic_fetch($constraint);
+
+  return $result;
+}
+
+
+=head2 fetch_all_by_dbID_list
+
+  Arg [1]    : listref $list
+  Example    : $ssv = $sv_adaptor->fetch_all_by_dbID_list([907,1132]);
+  Description: Retrieves a listref of structural variant objects via a list of internal
+               dbID identifiers
+  Returntype : listref of Bio::EnsEMBL::Variation::StructuralVariation or
+	             Bio::EnsEMBL::Variation::SupportingStructuralVariation objects
+  Exceptions : throw if list argument is not defined
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub fetch_all_by_dbID_list {
+  my $self = shift;
+  my $list = shift;
+
+  if(!defined($list) || ref($list) ne 'ARRAY') {
+    throw("list reference argument is required");
+  }
+  
+  my $id_str = (@$list > 1)  ? " IN (".join(',',@$list).")"   :   ' = \''.$list->[0].'\'';
+	
+	my $constraint = $self->_internal_exclude_failed_constraint("sv.structural_variation_id $id_str");
+	
+  my $result = $self->generic_fetch($constraint);
+
+  return $result;
+}
+
+
+# Exclude the constraint for failed structural variant
+sub _internal_exclude_failed_constraint {
+	my $self = shift;
+	my $constraint = shift;
+	$constraint .= " AND " . $self->db->_exclude_failed_structural_variations_constraint();
+	
+	return $constraint;
+}
+
+
+# API-internal method for getting failed descriptions for an Allele
+sub _internal_get_failed_descriptions {
+    my $self = shift;
+    my $allele = shift;
+    my $constraint = shift;
+    
+    # Assert that the object passed is an Allele
+    assert_ref($allele,'Bio::EnsEMBL::Variation::BaseStructuralVariation');
+    
+    my $stmt = qq{
+        SELECT DISTINCT
+            fd.description
+        FROM
+            failed_structural_variation fsv JOIN
+            failed_description fd ON (
+                fd.failed_description_id = fsv.failed_description_id
+            )
+        WHERE
+            fsv.structural_variation_id = ?
+    };
+    $stmt .= qq{ AND $constraint } if (defined($constraint));
+    
+    my $sth = $self->prepare($stmt);
+    $sth->execute($allele->dbID());
+    my @descriptions;
+    my $description;
+    $sth->bind_columns(\$description);
+    while ($sth->fetch()) {
+        push(@descriptions,$description);
+    }
+    return \@descriptions;
+}
+
+
+=head2 get_all_failed_descriptions
+
+  Arg[1]      : Bio::EnsEMBL::Variation::BaseStructuralVariation $sv
+	               The structural variant object to get the failed descriptions for
+  Example     : 
+                my $failed_descriptions = $adaptor->get_all_failed_descriptions($sv);
+                if (scalar(@{$failed_descriptions})) {
+		              print "The structural variant'" . $sv->variation_name . "' has been flagged as failed because '" . join("' and '",@{$failed_descriptions}) . "'\n";
+                }
+		
+  Description : Gets the unique descriptions for the reasons why the supplied structural variant has failed.
+  ReturnType  : reference to a list of strings
+  Exceptions  : thrown on incorrect argument
+  Caller      : general
+  Status      : At Risk
+
+=cut
+
+sub get_all_failed_descriptions {
+    my $self = shift;
+    my $sv = shift;
+    
+    # Call the internal get method without any constraints
+    my $description = $self->_internal_get_failed_descriptions($sv) || [];
+    
+    return $description;
+}
+
+1;
