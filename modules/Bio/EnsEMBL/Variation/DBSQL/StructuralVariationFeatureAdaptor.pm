@@ -19,7 +19,7 @@
 =cut
 
 
-# Ensembl module for Bio::EnsEMBL::Variation::DBSQL::VariationFeatureAdaptor
+# Ensembl module for Bio::EnsEMBL::Variation::DBSQL::StructuralVariationFeatureAdaptor
 #
 # Copyright (c) 2011 Ensembl
 #
@@ -62,7 +62,7 @@ Bio::EnsEMBL::Variation::DBSQL::StructuralVariationFeatureAdaptor
 This adaptor provides database connectivity for StructuralVariationFeature objects.
 Genomic locations of structural variations can be obtained from the database using this
 adaptor. See the base class BaseFeatureAdaptor for more information.
-By default, the 'fetch_all_by_...'-methods will not return variations
+By default, the 'fetch_all_by_...'-methods will not return structural variants
 that have been flagged as failed in the Ensembl QC. This behaviour can be modified
 by setting the include_failed_variations flag in Bio::EnsEMBL::Variation::DBSQL::DBAdaptor.
 
@@ -89,8 +89,8 @@ our @ISA = ('Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor', 'Bio::EnsEMBL::DBSQL:
   Arg [1]    : Bio::EnsEMBL::Slice $slice
                the slice from which to obtain features
   Example    : my $svfs = $svfa->fetch_all_by_Slice($slice);
-  Description: Retrieves all strucutral variation features on the given Slice.
-  Returntype : listref of Bio::EnsEMBL::StrucutralVariationFeatures
+  Description: Retrieves all structural variation features on the given Slice.
+  Returntype : reference to list Bio::EnsEMBL::StructuralVariationFeature
   Exceptions : none
   Caller     : general
   Status     : Stable
@@ -99,13 +99,17 @@ our @ISA = ('Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor', 'Bio::EnsEMBL::DBSQL:
 
 sub fetch_all_by_Slice {
   my ($self, $slice) = @_;
-  return $self->fetch_all_by_Slice_constraint($slice, '');
+	
+	my $constraint = $self->_internal_exclude_failed_constraint('',1);
+	
+  return $self->fetch_all_by_Slice_constraint($slice, $constraint);
 }
 
 
 =head2 fetch_all_by_StructuralVariation
 
-  Arg [1]    : Bio::EnsEMBL:Variation::StructuralVariation $var
+  Arg [1]    : Bio::EnsEMBL:Variation::StructuralVariation or 
+	             Bio::EnsEMBL::Variation::SupportingStructuralVariation $var
   Example    : my @svfs = @{$svfa->fetch_all_by_StructuralVariation($var)};
   Description: Retrieves all structural variation features for a given structural variation. Most
                structural variations should only hit the genome once and only a return
@@ -122,15 +126,20 @@ sub fetch_all_by_StructuralVariation {
   my $self = shift;
   my $var  = shift;
 
-  if(!ref($var) || !$var->isa('Bio::EnsEMBL::Variation::StructuralVariation')) {
-    throw('Bio::EnsEMBL::Variation::StructuralVariation arg expected');
+  if(!ref($var) || (!$var->isa('Bio::EnsEMBL::Variation::StructuralVariation') &&
+	                  !$var->isa('Bio::EnsEMBL::Variation::SupportingStructuralVariation'))
+	) {
+    throw('Bio::EnsEMBL::Variation::StructuralVariation or 
+		       Bio::EnsEMBL::Variation::SupportingStructuralVariation arg expected');
   }
 
   if(!defined($var->dbID())) {
     throw("StructuralVariation arg must have defined dbID");
   }
-
-  return $self->generic_fetch("svf.structural_variation_id = ".$var->dbID());
+	
+	my $constraint = $self->_internal_exclude_failed_constraint("svf.structural_variation_id = ".$var->dbID());
+	
+  return $self->generic_fetch($constraint);
 }
 
 
@@ -140,10 +149,10 @@ sub fetch_all_by_StructuralVariation {
                the slice from which to obtain features
   Arg [2]    : (optional) string $constraint
                An SQL query constraint (i.e. part of the WHERE clause)
-  Description: Returns a listref of strucutral variation features created 
+  Description: Returns a listref of structural variation features created 
                from the database which are on the Slice defined by $slice 
                and fulfill the SQL constraint defined by $constraint, using the iterator method.
-  Returntype : listref of StructuralVariationFeatures
+  Returntype : reference to list StructuralVariationFeature
   Exceptions : thrown if $slice is not defined
   Caller     : general
   Status     : Stable
@@ -155,6 +164,8 @@ sub fetch_Iterator_by_Slice_constraint {
     
     $self->{_iterator} = 1;
     
+		$constraint = $self->_internal_exclude_failed_constraint($constraint,1);
+		
     my $iterator = $self->fetch_all_by_Slice_constraint($slice, $constraint);
 
     $self->{_iterator} = 0;
@@ -173,7 +184,7 @@ sub fetch_Iterator_by_Slice_constraint {
   Description: Retrieves all structural variation features in a slice with a variant type 
 	             (structural variation class) or an allele type (supporting structural variation class) 
 							 corresponding to the SO term.
-  Returntype : listref of Bio::EnsEMBL::Variation::StructuralVariationFeature
+  Returntype : reference to list Bio::EnsEMBL::Variation::StructuralVariationFeature
   Exceptions : throw on incorrect argument
   Caller     : general
   Status     : At Risk
@@ -198,18 +209,26 @@ sub fetch_all_by_Slice_SO_term {
 	}
 	
 	my $cols = join ",", $self->_columns();
+	
+	my $constraint = $self->_internal_exclude_failed_constraint();
+	
+	my $from = 'structural_variation_feature svf';
+	if (!$self->db->include_failed_variations()) {
+		$from .= qq{ LEFT JOIN failed_structural_variation fsv 
+			           ON (fsv.structural_variation_id=svf.structural_variation_id) };
+	}
 
 	my $sth = $self->prepare(qq{
-  SELECT DISTINCT $cols
-	FROM structural_variation_feature svf, source s, supporting_structural_variation ssv
-	WHERE svf.source_id = s.source_id
-		AND svf.seq_region_id = ?
-		AND svf.seq_region_end > ?
-		AND svf.seq_region_start < ?
-  	AND svf.structural_variation_id = ssv.structural_variation_id
-		AND (svf.class_attrib_id = ? OR ssv.class_attrib_id = ?)
+    SELECT DISTINCT $cols
+	  FROM $from, source s
+	  WHERE svf.source_id = s.source_id
+		  AND svf.seq_region_id = ?
+		  AND svf.seq_region_end > ?
+		  AND svf.seq_region_start < ?
+		  AND svf.class_attrib_id = ?
+		  $constraint
   });
-  $sth->execute($slice->get_seq_region_id, $slice->start, $slice->end, $sv_class_id, $sv_class_id);
+  $sth->execute($slice->get_seq_region_id, $slice->start, $slice->end, $sv_class_id);
 	
 	my $result = $self->_objs_from_sth($sth);
 	$sth->finish;
@@ -223,8 +242,20 @@ sub _tables {
 	my $self = shift;
     
 	my @tables = ( ['structural_variation_feature', 'svf'], [ 'source', 's'] );
+	
+	# If we are excluding failed_structural_variations, add that table
+  push(@tables,['failed_structural_variation', 'fsv']) unless ($self->db->include_failed_variations());
 		
 	return @tables;
+}
+
+# Add a left join to the failed_structural_variation table
+sub _left_join {
+	my $self = shift;
+	
+	# If we are including failed structural variations, skip the left join
+	return () if ($self->db->include_failed_variations());
+	return (['failed_structural_variation', 'fsv.structural_variation_id=svf.structural_variation_id']);
 }
 
 sub _default_where_clause {
@@ -242,8 +273,6 @@ sub _columns {
 
 sub _objs_from_sth {
     my ($self, $sth, $mapper, $dest_slice) = @_;
-
-    #warn $sth->sql;
 
     # 
     # This code is ugly because an attempt has been made to remove as many
@@ -367,8 +396,6 @@ sub _objs_from_sth {
                 $slice = $dest_slice;
             }
             return $self->_create_feature_fast('Bio::EnsEMBL::Variation::StructuralVariationFeature',
-            #push @features, Bio::EnsEMBL::Variation::StructuralVariationFeature->new_fast(
-            #if use new_fast, then do not need "-" infront of key, i.e 'start' => $seq_region_start,
         
                {'outer_start'    => $outer_start,
 							  'start'          => $seq_region_start,
@@ -427,5 +454,16 @@ sub list_dbIDs {
   return $self->_list_dbIDs('structural_variation_feature');
 }
 
+
+# Exclude the constraint for failed structural variant
+sub _internal_exclude_failed_constraint {
+	my $self = shift;
+	my $constraint = shift;
+	my $no_and = shift;
+	$constraint .= " AND " if (!$no_and or $constraint);
+	$constraint .= $self->db->_exclude_failed_structural_variations_constraint();
+	
+	return $constraint;
+}
 
 1;
