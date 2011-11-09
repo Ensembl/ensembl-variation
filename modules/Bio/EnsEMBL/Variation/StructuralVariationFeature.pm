@@ -50,7 +50,7 @@ Bio::EnsEMBL::Variation::StructuralVariationFeature - A genomic position for a s
 
 =head1 DESCRIPTION
 
-This is a class representing the genomic position of a structural variation
+This is a class representing the genomic position of a structural variant
 from the ensembl-variation database.  A StructuralVariationFeature behaves as any other
 Ensembl feature. See B<Bio::EnsEMBL::Feature> and
 B<Bio::EnsEMBL::Variation::Variation>.
@@ -216,7 +216,7 @@ sub display_id {
                The new value to set the variation_name attribute to
   Example    : $variation_name = $obj->variation_name()
   Description: Getter/Setter for the variation_name attribute.  This is the
-               name of the structural variation associated with this feature.
+               name of the structural variant associated with this feature.
   Returntype : string
   Exceptions : none
   Caller     : general
@@ -254,13 +254,15 @@ sub allele_string{
 
 =head2 structural_variation
 
-  Arg [1]    : (optional) Bio::EnsEMBL::Variation::StructuralVariation $structural_variation
+  Arg [1]    : (optional) Bio::EnsEMBL::Variation::StructuralVariation or 
+	             Bio::EnsEMBL::Variation::SupportingStructuralVariation $structural_variation
   Example    : $sv = $svf->structural_variation();
-  Description: Getter/Setter for the structural variation associated with this feature.
+  Description: Getter/Setter for the structural variant associated with this feature.
                If not set, and this StructuralVariationFeature has an associated adaptor
                an attempt will be made to lazy-load the structural variation from the
                database.
-  Returntype : Bio::EnsEMBL::Variation::StructuralVariation
+  Returntype : Bio::EnsEMBL::Variation::StructuralVariation or 
+	             Bio::EnsEMBL::Variation::SupportingStructuralVariation
   Exceptions : throw on incorrect argument
   Caller     : general
   Status     : Stable
@@ -271,16 +273,22 @@ sub structural_variation {
   my $self = shift;
 
   if(@_) {
-    if(!ref($_[0]) || !$_[0]->isa('Bio::EnsEMBL::Variation::StructuralVariation')) {
-      throw("Bio::EnsEMBL::Variation::StructuralVariation argument expected");
+    if(!ref($_[0]) || (!$_[0]->isa('Bio::EnsEMBL::Variation::StructuralVariation') &&
+		                   !$_[0]->isa('Bio::EnsEMBL::Variation::SupportingStructuralVariation')
+		)) {
+      throw("Bio::EnsEMBL::Variation::StructuralVariation or Bio::EnsEMBL::Variation::SupportingStructuralVariation argument expected");
     }
     $self->{'structural_variation'} = shift;
   }
   elsif(!defined($self->{'structural_variation'}) && $self->{'adaptor'} &&
         defined($self->{'structural_variation_id'})) {
     # lazy-load from database on demand
-    my $sva = $self->{'adaptor'}->db()->get_StructuralVariationAdaptor();
-    $self->{'structural_variation'} = $sva->fetch_by_dbID($self->{'structural_variation_id'});
+		my $sva = $self->{'adaptor'}->db()->get_StructuralVariationAdaptor();
+		$self->{'structural_variation'} = $sva->fetch_by_dbID($self->{'structural_variation_id'});
+		if (!defined($self->{'structural_variation'})) {
+			$sva = $self->{'adaptor'}->db()->get_SupportingStructuralVariationAdaptor();
+			$self->{'structural_variation'} = $sva->fetch_by_dbID($self->{'structural_variation_id'});
+		}
   }
 
   return $self->{'structural_variation'};
