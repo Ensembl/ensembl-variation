@@ -1622,6 +1622,16 @@ CREATE TABLE protein_function_predictions (
     KEY transcript_idx (transcript_stable_id)
 );
 
+/**
+@legend #FF8500 Tables containing individual data
+@legend #01D4F7	Tables containing structural variation data
+@legend #FFD700	Tables containing sets of variations
+@legend #7CFC00	Tables containing source and study data
+@legend #DA70D6	Tables containing metadata
+@legend #3CB371	Tables containing "failed" data
+@legend #FF0000	Tables containing attribute data
+@legend #1E90FF	Tables concerning protein data
+*/
 
 #possible values in the failed_description table
 
