@@ -46,6 +46,8 @@ for my $attrib_type (@ATTRIB_TYPES) {
 
 $code .= "\n";
 
+my $class_code = "our %VARIATION_CLASSES = (\n";
+
 for my $class_set (@VARIATION_CLASSES) {
 
     my $term = $class_set->{SO_term};
@@ -57,11 +59,18 @@ for my $class_set (@VARIATION_CLASSES) {
     $to_export->{SO_class_terms}->{$const} = 1;
 
     $code .= "use constant $const => '$term';\n";
+
+    delete $class_set->{SO_term};
+
+    $class_set->{display_term} ||= $term;
+    $class_set->{somatic_display_term} ||= 'somatic_'.$class_set->{display_term};
+    
+    $class_code .= "'$term' => ".Dumper($class_set).",\n";
 }
 
-$code .= "\n";
+$class_code .= ");\n";
 
-my $cons_code = "our \@OVERLAP_CONSEQUENCES = (\n";
+my $cons_code = "our \%OVERLAP_CONSEQUENCES = (\n";
 
 my $default_consequence_code;
 
@@ -78,16 +87,16 @@ for my $cons_set (@OVERLAP_CONSEQUENCES) {
     if ($cons_set->{is_default}) {
         die "Cannot have more than one default OverlapConsequence object!" if $default_consequence_code;
         $default_consequence_code = "our \$DEFAULT_OVERLAP_CONSEQUENCE = $OVERLAP_CONSEQUENCE_CLASS->new_fast(".Dumper($cons_set).");\n";
-        $cons_code .= "\$DEFAULT_OVERLAP_CONSEQUENCE,\n";
+        $cons_code .= "'$term' => \$DEFAULT_OVERLAP_CONSEQUENCE,\n";
     }
     else {
-        $cons_code .= "$OVERLAP_CONSEQUENCE_CLASS->new_fast(".Dumper($cons_set)."),\n";
+        $cons_code .= "'$term' => $OVERLAP_CONSEQUENCE_CLASS->new_fast(".Dumper($cons_set)."),\n";
     }
 }
 
-$cons_code = $default_consequence_code. "\n". $cons_code .");\n";
+$cons_code = $default_consequence_code. "\n". "\n" . $cons_code .");\n";
 
-$hdr .= 'our @EXPORT_OK = qw(@OVERLAP_CONSEQUENCES $DEFAULT_OVERLAP_CONSEQUENCE '.(join ' ', map { keys %{ $to_export->{$_} } } keys %$to_export).');';
+$hdr .= 'our @EXPORT_OK = qw(%OVERLAP_CONSEQUENCES %VARIATION_CLASSES $DEFAULT_OVERLAP_CONSEQUENCE '.(join ' ', map { keys %{ $to_export->{$_} } } keys %$to_export).');';
 
 $hdr .= "\n\n";
 
@@ -101,4 +110,4 @@ $hdr .= " );\n\n";
 
 $hdr .= "use $OVERLAP_CONSEQUENCE_CLASS;\n";
 
-print $hdr, "\n", $code, "\n", $cons_code, "\n1;\n";
+print $hdr, "\n", $code, "\n", $class_code, "\n", $cons_code, "\n1;\n";
