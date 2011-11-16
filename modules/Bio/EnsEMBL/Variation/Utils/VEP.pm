@@ -67,7 +67,6 @@ use Bio::EnsEMBL::DBSQL::TranscriptAdaptor;
 use Bio::EnsEMBL::DBSQL::MetaContainer;
 use Bio::EnsEMBL::DBSQL::CoordSystemAdaptor;
 
-
 use Exporter;
 use vars qw(@ISA @EXPORT_OK);
 @ISA = qw(Exporter);
@@ -482,7 +481,11 @@ sub get_all_consequences {
     # might need to reinit caches if coming from web
     $tr_cache ||= {};
     $rf_cache ||= {};
-    
+   
+    if ($config->{extra}) {
+        eval "use Plugin qw($config);"
+    }
+
     # build hash
     my %vf_hash;
     push @{$vf_hash{$_->{chr}}{int($_->{start} / $config->{chunk_size})}{$_->{start}}}, $_ for @$listref;
@@ -604,6 +607,8 @@ sub vf_to_consequences {
                 $line->{Consequence}    = join ',', 
                     map { $_->$term_method || $_->display_term } 
                         @{ $rfva->get_all_OverlapConsequences };
+
+                $line = run_plugins($rfva, $line, $config);
                         
                 push @return, $line;
             }
@@ -633,7 +638,9 @@ sub vf_to_consequences {
                 $line->{Consequence}    = join ',', 
                     map { $_->$term_method || $_->display_term } 
                         @{ $mfva->get_all_OverlapConsequences };
-                        
+
+                $line = run_plugins($mfva, $line, $config);
+                       
                 push @return, $line;
             }
         }
@@ -709,6 +716,37 @@ sub vf_to_consequences {
     #undef $vf->{$_} for keys %$vf;
     
     return \@return;
+}
+
+# run all of the configured plugins on a VariationFeatureOverlapAllele instance
+# and store any results in the provided line hash
+sub run_plugins {
+
+    my ($vfoa, $line_hash, $config) = @_;
+
+    for my $plugin_name (keys %{ $config->{plugin} }) {
+
+        my $plugin = $config->{plugin}->{$plugin_name};
+
+        # check that this plugin is interested in this type of feature
+            
+        if ($plugin->check_feature_type(ref $vfoa->feature)) {
+            
+            eval {
+                my $plugin_results = $plugin->run($vfoa);
+                
+                for my $key (keys %$plugin_results) {
+                    $line_hash->{Extra}->{$key} = $plugin_results->{$key};
+                }
+            };
+
+            if ($@) {
+                warn "Plugin '$plugin_name' went wrong: $@";
+            }
+        }
+    }
+
+    return $line_hash;
 }
 
 # turn a TranscriptVariationAllele into a line hash
@@ -827,7 +865,9 @@ sub tva_to_line {
             }
         }
     }
-    
+
+    $line = run_plugins($tva, $line, $config);
+
     #undef $tva->{$_} for keys %$tva;
     
     return $line;
