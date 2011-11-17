@@ -1061,7 +1061,7 @@ sub tva_to_line {
             $base_line->{Gene} = $gene ? $gene->stable_id : '-';
         }
     }
-    
+  
     my $line = init_line($config, $tva->variation_feature, $base_line);
     
     # HGNC
@@ -1133,7 +1133,7 @@ sub tva_to_line {
     
     foreach my $tool (qw(SIFT PolyPhen Condel)) {
         my $lc_tool = lc($tool);
-        
+
         if (my $opt = $config->{$lc_tool}) {
             my $want_pred   = $opt =~ /^p/i;
             my $want_score  = $opt =~ /^s/i;
@@ -1150,9 +1150,9 @@ sub tva_to_line {
             my $score_meth  = $lc_tool.'_score';
             
             my $pred = $tva->$pred_meth;
-            
+
             if($pred) {
-                
+
                 if ($want_pred) {
                     $pred =~ s/\s+/\_/;
                     $line->{Extra}->{$tool} = $pred;
@@ -1194,7 +1194,14 @@ sub init_line {
     
     # add custom info
     if(defined($config->{custom})) {
-        $line->{Extra} = get_custom_annotation($config, $vf);
+    
+        # merge the custom hash with the extra hash
+
+        my $custom = get_custom_annotation($config, $vf);
+
+        for my $key (keys %$custom) {
+            $line->{Extra}->{$key} = $custom->{$key};
+        }
     }
     
     # copy entries from base_line
@@ -1211,9 +1218,9 @@ sub get_custom_annotation {
     my $config = shift;
     my $vf = shift;
     my $cache = shift;
-    
+
     return $vf->{custom} if defined($vf->{custom});
-    
+
     my $annotation = {};
     
     my $chr = $vf->{chr};
