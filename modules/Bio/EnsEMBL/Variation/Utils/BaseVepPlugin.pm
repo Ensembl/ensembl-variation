@@ -159,7 +159,7 @@ sub check_feature_type {
         $type = ref $type;
     }
 
-    for my $t (@{ $self->{feature_types} }) {
+    for my $t (@{ $self->feature_types }) {
         if ($type =~ /$t/i) {
             return 1;
         }
