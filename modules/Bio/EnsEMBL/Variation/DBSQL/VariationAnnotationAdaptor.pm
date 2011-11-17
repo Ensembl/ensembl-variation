@@ -405,4 +405,28 @@ sub _objs_from_sth {
 }
 
 
+=head2 fetch_phenotype_description_by_id
+  
+  Arg [1]    : int $phenotype_id
+  Example    : $phenotype = $va_adaptor->fetch_phenotype_description(10);
+  Description: Retrieves the phenotype description from the phenotype ID
+  Returntype : string
+  Exceptions : throw if the phenotype_id argument is not defined
+  Caller     : general
+
+=cut
+
+sub fetch_phenotype_description_by_id {
+	my $self = shift;
+  my $phenotype_id  = shift;
+	
+	throw('phenotype_id argument expected') if(!defined($phenotype_id));
+	
+	my $sth = $self->prepare(qq{SELECT description FROM phenotype WHERE phenotype_id = ?});
+	$sth->bind_param(1,$phenotype_id,SQL_INTEGER);
+	$sth->execute();
+	
+	return ($sth->fetchrow_array)[0];
+}
+
 1;
