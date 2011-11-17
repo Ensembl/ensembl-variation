@@ -632,8 +632,8 @@ sub vf_to_consequences {
             for my $mfva (@{ $mfv->get_all_alternate_MotifFeatureVariationAlleles }) {
                 
                 my $line = init_line($vf, $base_line);
-                
-                $line->{Extra}->{HIGH_INF_POS}  = (defined $mfva->in_informative_position ? 'Y' : 'N');
+
+                $line->{Extra}->{HIGH_INF_POS}  = ($mfva->in_informative_position ? 'Y' : 'N');
                 $line->{Allele}         = $mfva->variation_feature_seq;
                 $line->{Consequence}    = join ',', 
                     map { $_->$term_method || $_->display_term } 
