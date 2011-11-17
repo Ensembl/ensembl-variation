@@ -733,7 +733,7 @@ sub run_plugins {
         if ($plugin->check_feature_type(ref $vfoa->feature)) {
             
             eval {
-                my $plugin_results = $plugin->run($vfoa);
+                my $plugin_results = $plugin->run($vfoa, $line_hash);
                 
                 for my $key (keys %$plugin_results) {
                     $line_hash->{Extra}->{$key} = $plugin_results->{$key};

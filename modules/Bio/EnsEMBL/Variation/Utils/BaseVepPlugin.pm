@@ -36,16 +36,14 @@ Bio::EnsEMBL::Variation::Utils::BaseVepPlugin
 
     sub get_header_info {
         return {
-            FunkyPlugin => "Description of funcky plugin"
+            FunkyPlugin => "Description of funky plugin"
         };
     }
 
     sub run {
         my ($self, $transcript_variation_allele) = @_;
 
-        # do analysis
-        
-        my $results = ...
+        my $results = ... # do analysis
         
         return {
             FunkyPlugin => $results
@@ -82,6 +80,8 @@ sub new {
     my $class = shift;
     
     my $config = shift;
+
+    # default to analysing Transcripts
 
     return bless {
         config          => $config,
@@ -171,6 +171,7 @@ sub check_feature_type {
 =head2 run
 
   Arg[1]     : An instance of a subclass of Bio::EnsEMBL::Variation::VariationFeatureOverlapAllele
+  Arg[2]     : A hashref containing all the data that will be printed on this line
   Description: Run this plugin, this is where most of the plugin logic should reside. 
                When the VEP is about to finish one line of output (for a given variant-feature-allele 
                combination) it will call this method, passing it a relevant subclass of a
@@ -184,7 +185,8 @@ sub check_feature_type {
 
                Once the plugin has done its analysis it should return the results as a hashref
                with a key for each type of data (which should match the keys described in 
-               get_header_info) and a corresponding value for this allele object. Please refer
+               get_header_info) and a corresponding value for this allele object. This extra
+               data will then be included in the Extra column in the VEP output file. Please refer
                to the variation API documentation to see what methods are available on each
                of the possible classes, bearing in mind that common functionality can be found
                in the VariationFeatureOverlapAllele superclass.
@@ -195,7 +197,7 @@ sub check_feature_type {
 =cut
 
 sub run {
-    my ($self, $tva) = @_;
+    my ($self, $vfoa, $line_hash) = @_;
     warn "VEP plugins should implement the 'run' method\n";
     return undef;
 }
