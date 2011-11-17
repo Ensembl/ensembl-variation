@@ -84,9 +84,28 @@ sub new {
     # default to analysing Transcripts
 
     return bless {
+        version         => '2.3',
         config          => $config,
         feature_types   => ['Transcript'],
     }, $class;
+}
+
+=head2 version
+
+  Arg [1]    : (optional) a version number in the form N.N.N
+  Description: Get/set the version of this plugin. The version should
+               match the version of the VEP that this plugin works with
+               (at least in the major version number). This is used to
+               detect compatibility between the VEP and plugins.
+  Returntype : string
+  Status     : Experimental
+
+=cut
+
+sub version {
+    my ($self, $version) = @_;
+    $self->{version} = $version if $version;
+    return $self->{version};
 }
 
 =head2 config
