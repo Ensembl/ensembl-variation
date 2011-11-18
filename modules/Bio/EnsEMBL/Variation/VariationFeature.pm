@@ -579,7 +579,7 @@ sub consequence_type {
 	
     # delete cached term
     if(defined($term_type)) {
-        delete $self->{_consequence_type};
+        delete $self->{consequence_type};
 		$method_name = $term_type.($term_type eq 'label' ? '' : '_term');
 		$method_name = 'display_term' unless @{$self->get_all_OverlapConsequences} && $self->get_all_OverlapConsequences->[0]->can($method_name);
     }
