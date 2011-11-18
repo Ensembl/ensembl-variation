@@ -36,7 +36,7 @@ Bio::EnsEMBL::Variation::Utils::BaseVepPlugin
 
     sub get_header_info {
         return {
-            FunkyPlugin => "Description of funky plugin"
+            FUNKY_PLUGIN => "Description of funky plugin"
         };
     }
 
@@ -46,7 +46,7 @@ Bio::EnsEMBL::Variation::Utils::BaseVepPlugin
         my $results = ... # do analysis
         
         return {
-            FunkyPlugin => $results
+            FUNKY_PLUGIN => $results
         };
     }
 
@@ -58,7 +58,8 @@ To make writing plugin modules for the VEP easier, get
 your plugin to inherit from this class, override (at least)
 the feature_types, get_header_info and run methods to behave
 according to the documentation below, and then run the VEP
-with your plugin with --plugin <module name>
+with your plugin using the --plugin <module name> command
+line option.
 
 =cut
 
@@ -71,7 +72,7 @@ use warnings;
 
   Arg [1]    : a VEP configuration hashref
   Description: Creates and returns a new instance of this plugin
-  Returntype : Bio::EnsEMBL::Variation::Utils::BaseVepPlugin instance (most likely a subclass)
+  Returntype : Bio::EnsEMBL::Variation::Utils::BaseVepPlugin instance (most likely a user-defined subclass)
   Status     : Experimental
 
 =cut
@@ -127,7 +128,7 @@ sub config {
 
   Description: Return a hashref with any Extra column keys as keys and a description
                of the data as a value, this will be included in the VEP output file 
-               header to help explain the data produced by this plugin
+               header to help explain the results of this plugin.
   Returntype : hashref 
   Status     : Experimental
 
@@ -190,27 +191,34 @@ sub check_feature_type {
 =head2 run
 
   Arg[1]     : An instance of a subclass of Bio::EnsEMBL::Variation::VariationFeatureOverlapAllele
-  Arg[2]     : A hashref containing all the data that will be printed on this line
+  Arg[2]     : A hashref containing all the data that will be printed on this line, keyed by column name
   Description: Run this plugin, this is where most of the plugin logic should reside. 
                When the VEP is about to finish one line of output (for a given variant-feature-allele 
                combination) it will call this method, passing it a relevant subclass of a
                Bio::EnsEMBL::Variation::VariationFeatureOverlapAllele object according to 
                feature types it is interested in, as returned by the feature_types method:
                
-               feature type         argument type
-               'Transcript          Bio::EnsEMBL::Variation::TranscriptVariationAllele
-               'RegualtoryFeature'  Bio::EnsEMBL::Variation::RegulatoryFeatureVariationAllele
-               'MotifFeature'       Bio::EnsEMBL::Variation::MotifFeatureVariationAllele
+                feature type         argument type
+
+                'Transcript'         Bio::EnsEMBL::Variation::TranscriptVariationAllele
+                'RegulatoryFeature'  Bio::EnsEMBL::Variation::RegulatoryFeatureVariationAllele
+                'MotifFeature'       Bio::EnsEMBL::Variation::MotifFeatureVariationAllele
 
                Once the plugin has done its analysis it should return the results as a hashref
                with a key for each type of data (which should match the keys described in 
-               get_header_info) and a corresponding value for this allele object. This extra
-               data will then be included in the Extra column in the VEP output file. Please refer
-               to the variation API documentation to see what methods are available on each
-               of the possible classes, bearing in mind that common functionality can be found
-               in the VariationFeatureOverlapAllele superclass.
+               get_header_info) and a corresponding value for this particular object, or an empty hash if 
+               this plugin does not produce any annotation for this object. Any extra data will 
+               then be included in the Extra column in the VEP output file. Please refer to the variation 
+               API documentation to see what methods are available on each of the possible classes, 
+               bearing in mind that common functionality can be found in the 
+               VariationFeatureOverlapAllele superclass. 
+               
+               If the plugin wants to filter this line out of the VEP output it can indicate
+               this by returning undef rather than a hashref. Using this mechanism a plugin
+               can act as a filter on the VEP output to limit lines to particular events
+               of interest.
 
-  Returntype : hashref
+  Returntype : hashref or undef if the plugin wants to filter out this line
   Status     : Experimental
 
 =cut
@@ -218,7 +226,7 @@ sub check_feature_type {
 sub run {
     my ($self, $vfoa, $line_hash) = @_;
     warn "VEP plugins should implement the 'run' method\n";
-    return undef;
+    return {};
 }
 
 1;
