@@ -78,9 +78,7 @@ use warnings;
 =cut
 
 sub new {
-    my $class = shift;
-    
-    my $config = shift;
+    my ($class, $config, @params) = @_;
 
     # default to analysing Transcripts
 
@@ -88,6 +86,7 @@ sub new {
         version         => '2.3',
         config          => $config,
         feature_types   => ['Transcript'],
+        params          => \@params,
     }, $class;
 }
 
@@ -122,6 +121,21 @@ sub config {
     my ($self, $config) = @_;
     $self->{config} = $config if $config;
     return $self->{config};
+}
+
+=head2 params
+
+  Arg [1]    : (optional) a listref of plugin parameters
+  Description: Get/set the parameters of this plugin, typically as passed on the VEP command line.
+  Returntype : listref
+  Status     : Experimental
+
+=cut
+
+sub params {
+    my ($self, $params) = @_;
+    $self->{params} = $params if $params;
+    return $self->{params} || [];
 }
 
 =head2 get_header_info
