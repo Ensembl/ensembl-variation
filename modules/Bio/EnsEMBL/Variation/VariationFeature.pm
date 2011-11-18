@@ -1402,7 +1402,7 @@ sub get_all_hgvs_notations {
       $peptide_start = ($codon_up_start/3 + 1);
       
       # Get the complete reference peptide (needed for checking for duplications)
-      $peptide = $ref_feature->translation()->seq() . '*';
+      $peptide = (defined($ref_feature->{_variation_effect_feature_cache}) ? $ref_feature->{_variation_effect_feature_cache}->{peptide} : $ref_feature->translation()->seq() ). '*';
       
       # If necessary, get the name and version of the translation for the transcript
       if (!defined($reference_name)) {
