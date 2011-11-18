@@ -32,8 +32,12 @@ Bio::EnsEMBL::Variation::Utils::BaseVepFilterPlugin
         
     sub include_line {
         my ($self, $transcript_variation_allele) = @_;
+        
+        if (my $pep_alleles = $transcript_variation_allele->pep_allele_string) {
+            return $pep_alleles =~ /\//;
+        }
 
-        return $transcript_variation_allele =~ /\//;
+        return 0;
     }
 
     1;
