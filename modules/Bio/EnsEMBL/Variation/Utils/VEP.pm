@@ -1002,19 +1002,27 @@ sub run_plugins {
 
     my ($vfoa, $line_hash, $config) = @_;
 
+    my $skip_line = 0;
+
     for my $plugin_name (keys %{ $config->{plugin} }) {
 
         my $plugin = $config->{plugin}->{$plugin_name};
 
         # check that this plugin is interested in this type of feature
-            
+        
         if ($plugin->check_feature_type(ref $vfoa->feature)) {
             
             eval {
                 my $plugin_results = $plugin->run($vfoa, $line_hash);
                 
-                for my $key (keys %$plugin_results) {
-                    $line_hash->{Extra}->{$key} = $plugin_results->{$key};
+                if (defined $plugin_results) {
+                    for my $key (keys %$plugin_results) {
+                        $line_hash->{Extra}->{$key} = $plugin_results->{$key};
+                    }
+                }
+                else {
+                    # if a plugin returns undef, that means it want to filter out this line
+                    $skip_line = 1;
                 }
             };
 
@@ -1024,7 +1032,7 @@ sub run_plugins {
         }
     }
 
-    return $line_hash;
+    return $skip_line ? undef : $line_hash;
 }
 
 # turn a TranscriptVariationAllele into a line hash
