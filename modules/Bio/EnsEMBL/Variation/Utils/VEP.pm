@@ -1023,10 +1023,15 @@ sub run_plugins {
                     $skip_line = 1;
                 }
             };
-
             if ($@) {
                 warn "Plugin '".(ref $plugin)."' went wrong: $@";
             }
+            
+            # there's no point running any other plugins if we're filtering this line, 
+            # because the first filter wins, so we might as well last out of the loop 
+            # now and avoid any unnecessary computation
+
+            last if $skip_line;
         }
     }
 
