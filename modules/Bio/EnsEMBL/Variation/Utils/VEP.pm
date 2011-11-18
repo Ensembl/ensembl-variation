@@ -1004,9 +1004,7 @@ sub run_plugins {
 
     my $skip_line = 0;
 
-    for my $plugin_name (keys %{ $config->{plugin} }) {
-
-        my $plugin = $config->{plugin}->{$plugin_name};
+    for my $plugin (@{ $config->{plugins} }) {
 
         # check that this plugin is interested in this type of feature
         
@@ -1027,7 +1025,7 @@ sub run_plugins {
             };
 
             if ($@) {
-                warn "Plugin '$plugin_name' went wrong: $@";
+                warn "Plugin '".(ref $plugin)."' went wrong: $@";
             }
         }
     }
