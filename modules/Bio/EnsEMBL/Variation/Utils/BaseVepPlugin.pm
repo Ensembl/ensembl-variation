@@ -179,13 +179,21 @@ sub check_feature_type {
         $type = ref $type;
     }
 
-    for my $t (@{ $self->feature_types }) {
-        if ($type =~ /$t/i) {
-            return 1;
+    unless (defined $self->{feature_types_wanted}->{$type}) {
+
+        # cache the result so we don't have to loop each time
+
+        $self->{feature_types_wanted}->{$type} = 0;
+
+        for my $wanted (@{ $self->feature_types }) {
+            if ($type =~ /$wanted/i) {
+                $self->{feature_types_wanted}->{$type} = 1;
+                last;
+            }
         }
     }
 
-    return 0;
+    return $self->{feature_types_wanted}->{$type};
 }
 
 =head2 run
