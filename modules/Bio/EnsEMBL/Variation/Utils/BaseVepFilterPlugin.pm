@@ -31,16 +31,9 @@ Bio::EnsEMBL::Variation::Utils::BaseVepFilterPlugin
     use base qw(Bio::EnsEMBL::Variation::Utils::BaseVepFilterPlugin);
         
     sub include_line {
-
         my ($self, $transcript_variation_allele) = @_;
 
-        for my $conseq (@{ $transcript_variation_allele->get_all_OverlapConsequences }) {
-            if ($conseq->display_term eq 'NON_SYNONYMOUS_CODING') {
-                return 1;
-            }
-        }
-
-        return 0;
+        return $transcript_variation_allele =~ /\//;
     }
 
     1;
