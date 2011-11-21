@@ -177,7 +177,7 @@ sub feature_types {
 
 =head2 check_feature_type
   
-  Arg[1]     : the feature type as a string or as a reference to an object
+  Arg[1]     : the feature type as a string (or a reference to an object of the desired type)
   Description: Check if this plugin is interested in a particular feature type 
   Returntype : boolean
   Status     : Experimental
@@ -188,7 +188,7 @@ sub check_feature_type {
     my ($self, $type) = @_;
 
     # if we're passed an object instead of a type string
-    # get the type of reference
+    # get the type of reference and use that
     if (ref $type) {
         $type = ref $type;
     }

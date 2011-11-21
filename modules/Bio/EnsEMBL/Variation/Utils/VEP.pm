@@ -1004,7 +1004,7 @@ sub run_plugins {
 
     my $skip_line = 0;
 
-    for my $plugin (@{ $config->{plugins} }) {
+    for my $plugin (@{ $config->{plugins} || [] }) {
 
         # check that this plugin is interested in this type of feature
         
