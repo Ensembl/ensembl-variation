@@ -36,9 +36,10 @@ sub dump_dbSNP{
     $duration = Progress::time_format($end-$start);
     print $duration->{'weeks'} . " weeks, " . $duration->{'days'} . " days, " . $duration->{'hours'} . " hours, " . $duration->{'minutes'} . " minutes and " . $duration->{'seconds'} . " seconds spent in dump_ENSIDs()\n";
     
-    #ÊNote that the dump_AFFIDs routine has some database/table names hard-coded within!!
+    # Note that the dump_AFFIDs routine has some database/table names hard-coded within!!
+		# /!\ Now has to be launched in a separate script for post-processing: import_affy.pl
     $start = time();
-    $self->dump_AFFYIDs() if $self->{'dbm'}->dbCore()->species =~ /hum|homo/i;
+#    $self->dump_AFFYIDs() if $self->{'dbm'}->dbCore()->species =~ /hum|homo/i;
     print Progress::location();
     $end = time();
     $duration = Progress::time_format($end-$start);
