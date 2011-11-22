@@ -269,6 +269,7 @@ sub variation_feature {
     return $self->{variation_feature};
 }
 
+# temporary shim until we get this class to inherit from BaseVariationFeatureOverlap
 sub base_variation_feature {
     my $self = shift;
     return $self->variation_feature(@_);
