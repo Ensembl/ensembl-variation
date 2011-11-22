@@ -44,15 +44,15 @@ sub new_fast {
 
     my $self = $class->SUPER::new_fast($hashref);
 
-    for my $ssv (@{ $self->structural_variation_feature->structural_variation->get_all_SupportingStructuralVariants }) {
-        for my $ssvf (@{ $ssv->get_all_StructuralVariationFeatures }) {
-            $self->add_StructuralVariationOverlapAllele(
-                Bio::EnsEMBL::Variation::StructuralVariationOverlapAllele->new_fast({
-                    structural_variation_overlap    => $self,
-                })
-            );
-        }
-    }
+#    for my $ssv (@{ $self->structural_variation_feature->structural_variation->get_all_SupportingStructuralVariants }) {
+#        for my $ssvf (@{ $ssv->get_all_StructuralVariationFeatures }) {
+#            $self->add_StructuralVariationOverlapAllele(
+#                Bio::EnsEMBL::Variation::StructuralVariationOverlapAllele->new_fast({
+#                    structural_variation_overlap    => $self,
+#                })
+#            );
+#        }
+#    }
 
     unless (@{ $self->get_all_alternate_StructuralVariationOverlapAlleles }) {
 
