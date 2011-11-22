@@ -174,6 +174,11 @@ sub variation_feature {
     return $self->variation_feature_overlap->variation_feature;
 }
 
+sub base_variation_feature {
+    my $self = shift;
+    return $self->variation_feature(@_);
+}
+
 =head2 feature
 
   Description: Get the associated Feature
@@ -206,7 +211,7 @@ sub feature_seq {
     unless ($self->{feature_seq}) {
         
         # check if we need to reverse complement the variation_feature_seq
-        
+
         if (($self->variation_feature->strand != $self->feature->strand) && $self->seq_is_dna) {
             my $vf_seq = $self->variation_feature_seq;
             reverse_comp(\$vf_seq);

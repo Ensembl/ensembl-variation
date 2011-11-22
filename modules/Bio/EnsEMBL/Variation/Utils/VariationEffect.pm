@@ -72,56 +72,76 @@ sub within_feature {
 
 sub partial_overlap_feature {
     my $bvfoa   = shift;
-    my $bvf      = $bvfoa->base_variation_feature;
+    my $bvf     = $bvfoa->base_variation_feature;
     my $feat    = $bvfoa->feature;
     
-    return within_feature($bvfoa) and
-        (($bvf->end > $feat->end) or ($bvf->start < $feat->start));
+    return (
+        within_feature($bvfoa) and 
+        (not complete_overlap_feature($bvfoa)) and
+        (($bvf->end > $feat->end) or ($bvf->start < $feat->start))
+    );
 }
 
 sub complete_within_feature {
-    my $vfoa = shift;
-    my $bvf  = $vfoa->base_variation_feature;
-    my $feat = $vfoa->feature;
+    my $bvfoa   = shift;
+    my $bvf     = $bvfoa->base_variation_feature;
+    my $feat    = $bvfoa->feature;
     
-    return ($bvf->start >= $feat->start) and ($bvf->end <= $feat->end);
+    return (
+        ($bvf->start >= $feat->start) and 
+        ($bvf->end <= $feat->end)
+    );
 }
 
 sub complete_overlap_feature {
-    my $bvfoa = shift;
-    my $bvf   = $bvfoa->base_variation_feature;
-    my $feat = $bvfoa->feature;
+    my $bvfoa   = shift;
+    my $bvf     = $bvfoa->base_variation_feature;
+    my $feat    = $bvfoa->feature;
     
-    return ($bvf->start <= $feat->start) and ($bvf->end >= $feat->end);
+    return ( 
+        ($bvf->start <= $feat->start) and 
+        ($bvf->end >= $feat->end) 
+    );
 }
 
 sub deletion {
     my $bvfoa = shift;
-    
-    return $bvfoa->base_variation_feature->class_SO_term eq 'deletion' or
-        $bvfoa->base_variation_feature->class_SO_term =~ /deletion/i;
+   
+    return (
+        ($bvfoa->base_variation_feature->class_SO_term eq 'deletion') or
+        ($bvfoa->base_variation_feature->class_SO_term =~ /deletion/i) or
+        ($bvfoa->base_variation_feature->class_SO_term =~ /loss/i)
+    );
 }
 
 sub insertion {
     my $bvfoa = shift;
     
-    return $bvfoa->base_variation_feature->class_SO_term eq 'insertion' or
-        $bvfoa->base_variation_feature->class_SO_term =~ /insertion/i;
+    return (
+        ($bvfoa->base_variation_feature->class_SO_term eq 'insertion') or
+        ($bvfoa->base_variation_feature->class_SO_term =~ /insertion/i)
+    );
 }
 
 sub duplication {
     my $bvfoa = shift;
     
-    return ($bvfoa->base_variation_feature->class_SO_term eq 'duplication' or
-        $bvfoa->base_variation_feature->class_SO_term =~ /duplication/i) and
-        !tandem_duplication($bvfoa);
+    return (
+        (
+            ($bvfoa->base_variation_feature->class_SO_term eq 'duplication') or
+            ($bvfoa->base_variation_feature->class_SO_term =~ /duplication/i)
+        ) and
+        (not tandem_duplication($bvfoa))
+    );
 }
 
 sub tandem_duplication {
     my $bvfoa = shift;
     
-    return $bvfoa->base_variation_feature->class_SO_term eq 'tandem_duplication' or
-        $bvfoa->base_variation_feature->class_SO_term =~ /tandem_duplication/i;
+    return (
+        ($bvfoa->base_variation_feature->class_SO_term eq 'tandem_duplication') or
+        ($bvfoa->base_variation_feature->class_SO_term =~ /tandem_duplication/i) 
+    );
 }
 
 sub _before_start {
