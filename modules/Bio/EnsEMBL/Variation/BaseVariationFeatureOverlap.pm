@@ -239,7 +239,7 @@ sub _intron_effects {
     
     unless ($self->{_intron_effects}) {
         
-        my $vf = $self->variation_feature;
+        my $vf = $self->base_variation_feature;
         
         my $intron_effects = {};
         
@@ -322,11 +322,18 @@ sub _intron_effects {
 sub _introns {
     my $self = shift;
     
-    my $tran = $self->feature;
+    my $feat = $self->feature;
+
+    if ($feat->isa('Bio::EnsEMBL::Transcript')) {
+
+        my $introns = $feat->{_variation_effect_feature_cache}->{introns} ||= $feat->get_all_Introns;
+
+        return $introns;
     
-    my $introns = $tran->{_variation_effect_feature_cache}->{introns} ||= $tran->get_all_Introns;
-    
-    return $introns;
+    }
+
+    return [];
+
 }
 
 
