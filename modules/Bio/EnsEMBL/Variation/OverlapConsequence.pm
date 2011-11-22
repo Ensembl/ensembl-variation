@@ -64,7 +64,6 @@ package Bio::EnsEMBL::Variation::OverlapConsequence;
 use strict;
 use warnings;
 
-use Bio::EnsEMBL::Utils::Argument qw(rearrange);
 use Bio::EnsEMBL::Utils::Exception qw(throw);
 use Bio::EnsEMBL::Variation::Utils::VariationEffect;
 
@@ -81,6 +80,9 @@ use Bio::EnsEMBL::Variation::Utils::VariationEffect;
   
   Arg [-FEATURE_CLASS] : 
     The Ensembl class that represents the feature affected by this consequence type
+
+  Arg [-VARIANT_FEATURE_CLASS] : 
+    The Ensembl class that represents the variation feature this consequence applies to  
   
   Arg [-PREDICATE] : 
     A reference to a subroutine that checks if this consequence type holds for
@@ -135,6 +137,7 @@ sub new {
         $SO_term,
         $feature_SO_term,
         $feature_class,
+        $variant_feature_class,
         $predicate,
         $rank,
         $display_term,
@@ -147,6 +150,7 @@ sub new {
             SO_TERM
             FEATURE_SO_TERM
             FEATURE_CLASS
+            VARIANT_FEATURE_CLASS
             PREDICATE
             RANK
             DISPLAY_TERM
@@ -358,6 +362,22 @@ sub label {
     my ($self, $label) = @_;
     $self->{label} = $label if $label;
     return $self->{label};
+}
+
+=head2 variant_feature_class
+
+  Arg [1]    : (optional) class as a atring
+  Description: Get/set the class of variant features that this consequence can apply to
+  Returntype : string
+  Exceptions : none
+  Status     : At Risk
+
+=cut
+
+sub variant_feature_class {
+    my ($self, $class) = @_;
+    $self->{variant_feature_class} = $class if $class;
+    return $self->{variant_feature_class};
 }
 
 =head2 is_default
