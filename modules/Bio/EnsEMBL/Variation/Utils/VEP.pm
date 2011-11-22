@@ -1028,8 +1028,8 @@ sub run_plugins {
             }
             
             # there's no point running any other plugins if we're filtering this line, 
-            # because the first filter wins, so we might as well last out of the loop 
-            # now and avoid any unnecessary computation
+            # because the first plugin to skip the line wins, so we might as well last 
+            # out of the loop now and avoid any unnecessary computation
 
             last if $skip_line;
         }
