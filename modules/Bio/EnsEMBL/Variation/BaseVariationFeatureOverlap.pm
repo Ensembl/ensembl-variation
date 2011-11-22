@@ -105,10 +105,11 @@ sub get_all_alternate_BaseVariationFeatureOverlapAlleles {
 
 sub get_all_BaseVariationFeatureOverlapAlleles {
     my $self = shift;
-    return [ 
-        $self->get_reference_BaseVariationFeatureOverlapAllele, 
-        @{ $self->get_all_alternate_BaseVariationFeatureOverlapAlleles } 
-    ];
+	my @alts = @{ $self->get_all_alternate_BaseVariationFeatureOverlapAlleles };
+	my $ref = $self->get_reference_BaseVariationFeatureOverlapAllele;
+	unshift @alts, $ref if defined($ref);
+	
+    return \@alts;
 }
 
 =head2 consequence_type
