@@ -26,7 +26,15 @@ sub new {
     }
 
     # call the superclass constructor
-    my $self = $class->SUPER::new(%args) || return undef;
+    my $self = $class->SUPER::new(%args);
+    
+    # construct a fake 'allele'
+    
+    $self->add_StructuralVariationOverlapAllele(
+        Bio::EnsEMBL::Variation::StructuralVariationOverlapAllele->new_fast({
+            structural_variation_overlap    => $self,
+        })
+    );
 
     return $self;
 }
