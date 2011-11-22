@@ -87,7 +87,7 @@ package Bio::EnsEMBL::Variation::VariationFeature;
 
 use Scalar::Util qw(weaken isweak);
 
-use Bio::EnsEMBL::Feature;
+use Bio::EnsEMBL::Variation::BaseVariationFeature;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Utils::Scalar qw(assert_ref);
 use Bio::EnsEMBL::Utils::Argument  qw(rearrange);
@@ -105,7 +105,7 @@ use Bio::EnsEMBL::Variation::DBSQL::TranscriptVariationAdaptor;
 use Bio::PrimarySeq;
 use Bio::SeqUtils;
 
-our @ISA = ('Bio::EnsEMBL::Feature');
+our @ISA = ('Bio::EnsEMBL::Variation::BaseVariationFeature');
 
 =head2 new
 
@@ -1402,7 +1402,7 @@ sub get_all_hgvs_notations {
       $peptide_start = ($codon_up_start/3 + 1);
       
       # Get the complete reference peptide (needed for checking for duplications)
-      $peptide = (defined($ref_feature->{_variation_effect_feature_cache}) ? $ref_feature->{_variation_effect_feature_cache}->{peptide} : $ref_feature->translation()->seq() ). '*';
+      $peptide = (defined($ref_feature->{_variation_effect_feature_cache}) && defined($ref_feature->{_variation_effect_feature_cache}->{peptide}) ? $ref_feature->{_variation_effect_feature_cache}->{peptide} : $ref_feature->translation()->seq() ). '*';
       
       # If necessary, get the name and version of the translation for the transcript
       if (!defined($reference_name)) {
