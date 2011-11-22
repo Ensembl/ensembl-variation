@@ -269,6 +269,11 @@ sub variation_feature {
     return $self->{variation_feature};
 }
 
+sub base_variation_feature {
+    my $self = shift;
+    return $self->variation_feature(@_);
+}
+
 sub _variation_feature_id {
 
     # get the dbID of the variation feature, using the VariationFeature object 
@@ -599,6 +604,7 @@ sub display_consequence {
     my $worst_conseq = $self->most_severe_OverlapConsequence;
 
     return $worst_conseq ? $worst_conseq->$method_name : '';
+    return $self->most_severe_OverlapConsequence->$method_name;
 }
 
 sub _convert_to_sara {
