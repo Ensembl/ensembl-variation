@@ -20,7 +20,7 @@ sub new {
     # swap a '-structural_variation_feature' argument for a '-base_variation_feature' one for the superclass
 
     for my $arg (keys %args) {
-        if (lc($arg) eq '-structural_variation') {
+        if (lc($arg) eq '-structural_variation_feature') {
             $args{'-base_variation_feature'} = delete $args{$arg};
         }
     }
@@ -36,21 +36,34 @@ sub new_fast {
     
     # swap a 'structural_variation_feature' argument for a 'base_variation_feature' one for the superclass
     
-    if ($hashref->{structural_variation}) {
-        $hashref->{base_variation_feature} = delete $hashref->{structural_variation};
+    if ($hashref->{structural_variation_feature}) {
+        $hashref->{base_variation_feature} = delete $hashref->{structural_variation_feature};
     }
     
     # and call the superclass
 
     my $self = $class->SUPER::new_fast($hashref);
 
-    my $allele = Bio::EnsEMBL::Variation::StructuralVariationOverlapAllele->new_fast({
-        structural_variation_overlap    => $self,
-    });
+    for my $ssv (@{ $self->structural_variation_feature->structural_variation->get_all_SupportingStructuralVariants }) {
+        for my $ssvf (@{ $ssv->get_all_StructuralVariationFeatures }) {
+            $self->add_StructuralVariationOverlapAllele(
+                Bio::EnsEMBL::Variation::StructuralVariationOverlapAllele->new_fast({
+                    structural_variation_overlap    => $self,
+                })
+            );
+        }
+    }
 
-    die unless $allele->base_variation_feature_overlap;
+    unless (@{ $self->get_all_alternate_StructuralVariationOverlapAlleles }) {
 
-    $self->add_StructuralVariationOverlapAllele($allele);
+        # construct a fake 'allele'
+        
+        $self->add_StructuralVariationOverlapAllele(
+            Bio::EnsEMBL::Variation::StructuralVariationOverlapAllele->new_fast({
+                structural_variation_overlap    => $self,
+            })
+        );
+    }
 
     return $self;
 }
