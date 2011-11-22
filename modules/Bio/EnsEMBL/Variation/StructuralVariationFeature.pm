@@ -64,13 +64,14 @@ use warnings;
 
 package Bio::EnsEMBL::Variation::StructuralVariationFeature;
 
-use Bio::EnsEMBL::Feature;
+use Bio::EnsEMBL::Variation::BaseVariationFeature;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning deprecate);
 use Bio::EnsEMBL::Utils::Argument  qw(rearrange);
 use Bio::EnsEMBL::Slice;
-use Bio::EnsEMBL::Variation::Utils::Constants qw(%VARIATION_CLASSES); 
+use Bio::EnsEMBL::Variation::Utils::Constants qw(%VARIATION_CLASSES);
+use Bio::EnsEMBL::Variation::StructuralVariationOverlap;
 
-our @ISA = ('Bio::EnsEMBL::Feature');
+our @ISA = ('Bio::EnsEMBL::Variation::BaseVariationFeature');
 
 =head2 new
 
@@ -345,6 +346,56 @@ sub get_nearest_Gene{
 }
 
 
+sub get_all_StructualVariationOverlaps {
+  my $self = shift;
+  
+  if(!defined($self->{structural_variation_overlaps})) {
+	my @svos = ();
+	
+	foreach my $gene(@{$self->feature_Slice->get_all_Genes}) {
+	  my $svo = Bio::EnsEMBL::Variation::StructuralVariationOverlap->new_fast({
+		feature                      => $gene,
+		structural_variation_feature => $self,
+		no_transfer                  => 1
+	  });
+	  
+	  push @svos, $svo if defined($svo);
+	  
+	  foreach my $tr(@{$gene->get_all_Transcripts}) {
+		$svo = undef;
+		
+		$svo = Bio::EnsEMBL::Variation::StructuralVariationOverlap->new_fast({
+		  feature                      => $tr,
+		  structural_variation_feature => $self,
+		  no_transfer                  => 1
+		});
+		
+		push @svos, $svo if defined $svo;
+		
+		foreach my $exon(@{$tr->get_all_Exons}) {
+		  $svo = undef;
+		  
+		  $svo = Bio::EnsEMBL::Variation::StructuralVariationOverlap->new_fast({
+			feature                      => $exon,
+			structural_variation_feature => $self,
+			no_transfer                  => 1
+		  });
+		  
+		  push @svos, $svo if defined $svo;
+		}
+	  }
+	}
+	
+	$self->{structural_variation_overlaps} = \@svos;
+	
+	# sort them
+	$self->_sort_svos;
+  }
+  
+  return $self->{structural_variation_overlaps};
+}
+
+
 =head2 var_class
 
     Args         : None
@@ -601,6 +652,29 @@ sub _fix_bounds {
   if(defined $old->{'outer_end'}) {
 	$self->{'outer_end'} = $self->end + ($old->{'outer_end'} - $old->end);
   }
+}
+
+sub _sort_svos {
+  my $self = shift;
+  
+  return unless defined $self->{structural_variation_overlaps};
+  
+  my @svos = @{$self->{structural_variation_overlaps}};
+  
+  # define a feature order for sorting
+  my %feature_order = (
+	'Bio::EnsEMBL::Gene'       => 1,
+	'Bio::EnsEMBL::Transcript' => 2,
+	'Bio::EnsEMBL::Exon'       => 3,
+  );
+  
+  # sort them nicely by feature type and position
+  @svos = sort {
+	$feature_order{ref($a->feature)} <=> $feature_order{ref($b->feature)} ||
+	$a->feature->start <=> $b->feature->start
+  } @svos;
+  
+  $self->{structural_variation_overlaps} = \@svos;
 }
 
 
