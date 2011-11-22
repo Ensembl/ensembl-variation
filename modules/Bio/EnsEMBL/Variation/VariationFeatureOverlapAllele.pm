@@ -174,6 +174,7 @@ sub variation_feature {
     return $self->variation_feature_overlap->variation_feature;
 }
 
+# temporary shim until we get this class to inherit from BaseVariationFeatureOverlapAllele
 sub base_variation_feature {
     my $self = shift;
     return $self->variation_feature(@_);
