@@ -70,6 +70,60 @@ sub within_feature {
     );
 }
 
+sub partial_overlap_feature {
+    my $vfoa = shift;
+    my $vf   = $vfoa->variation_feature;
+    my $feat = $vfoa->feature;
+    
+    return within_feature($vfoa) and
+        (($vf->end > $feat->end) or ($vf->start < $feat->start));
+}
+
+sub complete_within_feature {
+    my $vfoa = shift;
+    my $vf   = $vfoa->variation_feature;
+    my $feat = $vfoa->feature;
+    
+    return ($vf->start >= $feat->start) and ($vf->end <= $feat->end);
+}
+
+sub complete_overlap_feature {
+    my $vfoa = shift;
+    my $vf   = $vfoa->variation_feature;
+    my $feat = $vfoa->feature;
+    
+    return ($vf->start <= $feat->start) and ($vf->end >= $feat->end);
+}
+
+sub deletion {
+    my $vfoa = shift;
+    
+    return $vfoa->variation_feature->class_SO_term eq 'deletion' or
+        $vfoa->variation_feature->class_SO_term =~ /deletion/i;
+}
+
+sub insertion {
+    my $vfoa = shift;
+    
+    return $vfoa->variation_feature->class_SO_term eq 'insertion' or
+        $vfoa->variation_feature->class_SO_term =~ /insertion/i;
+}
+
+sub duplication {
+    my $vfoa = shift;
+    
+    return ($vfoa->variation_feature->class_SO_term eq 'duplication' or
+        $vfoa->variation_feature->class_SO_term =~ /duplication/i) and
+        !tandem_duplication($vfoa);
+}
+
+sub tandem_duplication {
+    my $vfoa = shift;
+    
+    return $vfoa->variation_feature->class_SO_term eq 'tandem_duplication' or
+        $vfoa->variation_feature->class_SO_term =~ /tandem_duplication/i;
+}
+
 sub _before_start {
     my ($vf, $feat, $dist) = @_;
     
