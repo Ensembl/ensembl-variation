@@ -6,6 +6,7 @@ use warnings;
 use Bio::EnsEMBL::Utils::Argument qw(rearrange);
 use Bio::EnsEMBL::Utils::Scalar qw(assert_ref);
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
+use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(overlap within_cds);
 
 sub new {
     my $class = shift;
