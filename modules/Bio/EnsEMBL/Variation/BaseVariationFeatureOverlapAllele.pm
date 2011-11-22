@@ -69,10 +69,12 @@ sub get_all_OverlapConsequences {
         my $cons = [];
         
         for my $oc (values %OVERLAP_CONSEQUENCES) {
+            
             #warn "variant feature class: ".$oc->variant_feature_class."\n";
             #warn "base variation feature class: ".(ref $self->base_variation_feature)."\n";
             #warn "feature class: ".$oc->feature_class."\n\n";
-            if ($oc->variant_feature_class && $oc->variant_feature_class eq ref $self->base_variation_feature) {
+            
+            if ($oc->variant_feature_class && $self->base_variation_feature->isa($oc->variant_feature_class)) {
                 if ($self->feature->isa($oc->feature_class)) {
                     if ($oc->predicate->($self)) {
                         push @$cons, $oc;
