@@ -246,14 +246,16 @@ sub _objs_from_sth{
 	# create genotype objects from hash
 	foreach $subsnp_id(keys %genotypes) {
 		foreach $sample_id(keys %{$genotypes{$subsnp_id}}) {
-			my $gts = $genotypes{$subsnp_id}{$sample_id};
-			next unless scalar keys %$gts == $ploidy;
+			my @gt = map {$genotypes{$subsnp_id}{$sample_id}{$_}} sort {$a <=> $b} keys %{$genotypes{$subsnp_id}{$sample_id}};
+			
+			# splice it down to ploidy size
+			@gt = splice @gt, 0, $ploidy;
 			
 			push @results, Bio::EnsEMBL::Variation::PopulationGenotype->new_fast({
 				_variation_id => $variation_ids{$subsnp_id},
 				subsnp        => ($subsnp_id =~ /^s/ ? undef : $subsnp_id),
 				population    => $samples{$sample_id},
-				genotype      => [map {$gts->{$_}} sort {$a <=> $b} keys %$gts],
+				genotype      => \@gt,
 				adaptor       => $self,
 				frequency     => $freqs{$subsnp_id}{$sample_id},
 				count         => $counts{$subsnp_id}{$sample_id},
