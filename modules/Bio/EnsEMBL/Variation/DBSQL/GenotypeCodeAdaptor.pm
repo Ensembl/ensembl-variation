@@ -119,7 +119,9 @@ sub fetch_all_single_bp {
 sub _objs_from_sth {
     my $self = shift;
     my $sth = shift;
-
+	
+	my $ploidy = $self->ploidy;
+	
     my ($gt_code_id, $haplotype_id, $allele);
     my (@result, %gts);
     
@@ -128,9 +130,10 @@ sub _objs_from_sth {
 	$gts{$gt_code_id}{$haplotype_id} = $allele while $sth->fetch;
 	
 	foreach $gt_code_id(keys %gts) {
-		next unless scalar keys %{$gts{$gt_code_id}} == $self->_ploidy;
-		
 		my @gt = map {$gts{$gt_code_id}{$_}} sort {$a <=> $b} keys %{$gts{$gt_code_id}};
+		
+		# splice it down to ploidy size
+		@gt = splice @gt, 0, $ploidy;
 		
 		push @result, Bio::EnsEMBL::Variation::GenotypeCode->new_fast({
 			dbID     => $gt_code_id,
@@ -139,10 +142,6 @@ sub _objs_from_sth {
 	}
     
     return \@result;
-}
-
-sub _ploidy {
-	return 2;
 }
 
 # method used by superclass to construct SQL
