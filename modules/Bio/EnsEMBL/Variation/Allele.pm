@@ -282,7 +282,13 @@ sub subsnp{
   if(@_) {
     $self->{'subsnp'} = shift;
   }
-  return $self->{'subsnp'} =~ /^ss/ ? $self->{'subsnp'} : 'ss'.$self->{'subsnp'};
+  
+  my $ssid = $self->{'subsnp'};
+  if(defined($ssid)) {
+	$ssid = 'ss'.$ssid unless $ssid =~ /^ss/;
+  }
+  
+  return $ssid;
 }
 
 
