@@ -154,5 +154,34 @@ sub _variation_feature_set_number_for_consequences {
     return $self->_set_number_for_consequences($cons, $map);
 }
 
+=head2 ploidy
+
+  Arg[1]      : int $ploidy
+  Example     : my $ploidy = $adaptor->ploidy();
+  Description : Gets/sets the ploidy for this database
+  ReturnType  : int
+  Exceptions  : None
+  Caller      : general
+  Status      : At Risk
+
+=cut
+
+sub ploidy {
+	my $self = shift;
+	my $ploidy = shift;
+	
+	if(defined($ploidy)) {
+		$self->{ploidy} = $ploidy;
+	}
+	elsif(!defined($self->{ploidy})) {
+		my $mc = $self->db->get_MetaContainer;
+		throw("Could not retrieve MetaContainer") unless defined($mc);
+		
+		$self->{ploidy} = $mc->ploidy;
+	}
+	
+	return $self->{ploidy};
+}
+
 1;
 
