@@ -44,12 +44,12 @@ use warnings;
 
 package Bio::EnsEMBL::Variation::DBSQL::BaseGenotypeAdaptor;
 
-use Bio::EnsEMBL::DBSQL::BaseAdaptor;
+use Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Utils::Scalar qw(assert_ref);
 
 
-our @ISA = ('Bio::EnsEMBL::DBSQL::BaseAdaptor');
+our @ISA = ('Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor');
 
 =head2 get_subsnp_handle
 
@@ -93,36 +93,6 @@ sub get_subsnp_handle {
     $sth->fetch();
     
     return $handle;
-}
-
-
-=head2 ploidy
-
-  Arg[1]      : int $ploidy
-  Example     : my $ploidy = $adaptor->ploidy();
-  Description : Gets/sets the ploidy for this database
-  ReturnType  : int
-  Exceptions  : None
-  Caller      : general
-  Status      : At Risk
-
-=cut
-
-sub ploidy {
-	my $self = shift;
-	my $ploidy = shift;
-	
-	if(defined($ploidy)) {
-		$self->{ploidy} = $ploidy;
-	}
-	elsif(!defined($self->{ploidy})) {
-		my $mc = $self->db->get_MetaContainer;
-		throw("Could not retrieve MetaContainer") unless defined($mc);
-		
-		$self->{ploidy} = $mc->ploidy;
-	}
-	
-	return $self->{ploidy};
 }
 
 1;
