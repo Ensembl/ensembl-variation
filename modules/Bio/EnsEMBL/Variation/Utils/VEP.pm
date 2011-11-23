@@ -54,6 +54,7 @@ use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(MAX_DISTANCE_FROM_TRANSCR
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
 use Bio::EnsEMBL::Variation::Utils::Sequence qw(unambiguity_code);
 use Bio::EnsEMBL::Variation::Utils::EnsEMBL2GFF3;
+use Bio::EnsEMBL::Variation::StructuralVariationOverlap;
 
 # we need to manually include all these modules for caching to work
 use Bio::EnsEMBL::CoordSystem;
@@ -850,6 +851,9 @@ sub vf_to_consequences {
     my $config = shift;
     my $vf = shift;
     
+    # use a different method for SVs
+    return svf_to_consequences($config, $vf) if $vf->isa('Bio::EnsEMBL::Variation::StructuralVariationFeature'); 
+    
     my @return = ();
     
     # method name for consequence terms
@@ -996,6 +1000,41 @@ sub vf_to_consequences {
     return \@return;
 }
 
+# get consequences for a structural variation feature
+sub svf_to_consequences {
+    my $config = shift;
+    my $svf    = shift;
+    
+    my @return = ();
+    
+    my $term_method = $config->{terms}.'_term';
+    
+    foreach my $svo(@{$svf->get_all_StructualVariationOverlaps}) {
+        
+        my $feature = $svo->feature;
+        
+        # get feature type
+        my $feature_type = (split '::', ref($feature))[-1];
+        
+        my $base_line = {
+            Feature_type     => $feature_type,
+            Feature          => $feature->stable_id,
+        };
+        
+        foreach my $svoa(@{$svo->get_all_StructuralVariationOverlapAlleles}) {
+            my $line = init_line($config, $svf, $base_line);
+            
+            $line->{Consequence} = join ",", map {$_->$term_method} @{$svoa->get_all_OverlapConsequences};
+            
+            $line = run_plugins($tva, $line, $config);
+            
+            push @return, $line;
+        }
+    }
+    
+    return \@return;
+}
+
 # run all of the configured plugins on a VariationFeatureOverlapAllele instance
 # and store any results in the provided line hash
 sub run_plugins {
@@ -1072,7 +1111,7 @@ sub tva_to_line {
             $base_line->{Gene} = $gene ? $gene->stable_id : '-';
         }
     }
-  
+    
     my $line = init_line($config, $tva->variation_feature, $base_line);
     
     # HGNC
@@ -1144,7 +1183,7 @@ sub tva_to_line {
     
     foreach my $tool (qw(SIFT PolyPhen Condel)) {
         my $lc_tool = lc($tool);
-
+        
         if (my $opt = $config->{$lc_tool}) {
             my $want_pred   = $opt =~ /^p/i;
             my $want_score  = $opt =~ /^s/i;
@@ -1161,9 +1200,9 @@ sub tva_to_line {
             my $score_meth  = $lc_tool.'_score';
             
             my $pred = $tva->$pred_meth;
-
+            
             if($pred) {
-
+                
                 if ($want_pred) {
                     $pred =~ s/\s+/\_/;
                     $line->{Extra}->{$tool} = $pred;
@@ -1204,12 +1243,10 @@ sub init_line {
     };
     
     # add custom info
-    if(defined($config->{custom})) {
-    
+    if(defined($config->{custom}) && scalar @{$config->{custom}}) {
         # merge the custom hash with the extra hash
-
         my $custom = get_custom_annotation($config, $vf);
-
+        
         for my $key (keys %$custom) {
             $line->{Extra}->{$key} = $custom->{$key};
         }
@@ -1229,9 +1266,9 @@ sub get_custom_annotation {
     my $config = shift;
     my $vf = shift;
     my $cache = shift;
-
+    
     return $vf->{custom} if defined($vf->{custom});
-
+    
     my $annotation = {};
     
     my $chr = $vf->{chr};
@@ -1466,6 +1503,55 @@ sub whole_genome_fetch {
     my $slice_cache;
     
     debug("Analyzing chromosome $chr") unless defined($config->{quiet});
+    
+    
+    
+    # CUSTOM ANNOTATIONS
+    ####################
+    
+    if(defined($config->{custom}) && scalar @{$config->{custom}}) {
+        
+        # create regions based on VFs instead of chunks
+        my $tmp_regions;
+        
+        foreach my $chunk(keys %{$vf_hash->{$chr}}) {
+            foreach my $pos(keys %{$vf_hash->{$chr}{$chunk}}) {
+                foreach my $vf(@{$vf_hash->{$chr}{$chunk}{$pos}}) {
+                    push @{$tmp_regions->{$chr}}, ($vf->{start}-1).'-'.($vf->{end}+1);
+                }
+            }
+        }
+        
+        if(defined($tmp_regions->{$chr})) {
+            
+            # cache annotations
+            my $annotation_cache = cache_custom_annotation($config, $tmp_regions, $chr);
+            
+            # count and report
+            my $total_annotations = 0;
+            $total_annotations += scalar keys %{$annotation_cache->{$chr}->{$_}} for keys %{$annotation_cache->{$chr}};
+            debug("Retrieved $total_annotations custom annotations (", (join ", ", map {(scalar keys %{$annotation_cache->{$chr}->{$_}}).' '.$_} keys %{$annotation_cache->{$chr}}), ")");
+            
+            # compare annotations to variations in hash
+            debug("Analyzing custom annotations") unless defined($config->{quiet});
+            my $total = scalar keys %{$vf_hash->{$chr}};
+            my $i = 0;
+            
+            foreach my $chunk(keys %{$vf_hash->{$chr}}) {
+                progress($config, $i++, $total);
+                
+                foreach my $pos(keys %{$vf_hash->{$chr}{$chunk}}) {
+                    foreach my $vf(@{$vf_hash->{$chr}{$chunk}{$pos}}) {
+                        
+                        $vf->{custom} = get_custom_annotation($config, $vf, $annotation_cache);
+                    }
+                }
+            }
+            
+            end_progress($config);
+        }
+    }
+    
     
     my ($count_from_mem, $count_from_db, $count_from_cache, $count_duplicates) = (0, 0, 0, 0);
     
@@ -1797,78 +1883,56 @@ sub whole_genome_fetch {
         }
     }
     
-    # CUSTOM ANNOTATIONS
-    ####################
-    
-    if(defined($config->{custom}) && scalar @{$config->{custom}}) {
-        
-        # create regions based on VFs instead of chunks
-        my $tmp_regions;
-        
-        foreach my $chunk(keys %{$vf_hash->{$chr}}) {
-            foreach my $pos(keys %{$vf_hash->{$chr}{$chunk}}) {
-                foreach my $vf(@{$vf_hash->{$chr}{$chunk}{$pos}}) {
-                    push @{$tmp_regions->{$chr}}, ($vf->{start}-1).'-'.($vf->{end}+1);
-                }
-            }
-        }
-        
-        if(defined($tmp_regions->{$chr})) {
-            
-            # cache annotations
-            my $annotation_cache = cache_custom_annotation($config, $tmp_regions, $chr);
-            
-            # count and report
-            my $total_annotations = 0;
-            $total_annotations += scalar keys %{$annotation_cache->{$chr}->{$_}} for keys %{$annotation_cache->{$chr}};
-            debug("Retrieved $total_annotations custom annotations (", (join ", ", map {(scalar keys %{$annotation_cache->{$chr}->{$_}}).' '.$_} keys %{$annotation_cache->{$chr}}), ")");
-            
-            # compare annotations to variations in hash
-            debug("Analyzing custom annotations") unless defined($config->{quiet});
-            my $total = scalar keys %{$vf_hash->{$chr}};
-            my $i = 0;
-            
-            foreach my $chunk(keys %{$vf_hash->{$chr}}) {
-                progress($config, $i++, $total);
-                
-                foreach my $pos(keys %{$vf_hash->{$chr}{$chunk}}) {
-                    foreach my $vf(@{$vf_hash->{$chr}{$chunk}{$pos}}) {
-                        
-                        $vf->{custom} = get_custom_annotation($config, $vf, $annotation_cache);
-                    }
-                }
-            }
-            
-            end_progress($config);
-        }
-    }
-    
     # STRUCTURAL VARIANTS
     #####################
     
     if(scalar @svfs) {
         foreach my $svf(@svfs) {
-            foreach my $tr(grep {$_->{start} - $up_down_size <= $svf->{end} && $_->{end} + $up_down_size >= $svf->{start}} @{$tr_cache->{$chr}}) {                
-                # spoof allele string
-                $svf->{allele_string} = ('N' x $svf->length).'/'.('N' x ($svf->length * 2));
+            my %done_genes = ();
+            
+            foreach my $tr(grep {$_->{start} <= $svf->{end} && $_->end >= $svf->{end}} @{$tr_cache->{$chr}}) {
                 
-                $DB::single = 1;
+                my $svo;
                 
-                my $tv = Bio::EnsEMBL::Variation::TranscriptVariation->new(
-                    -transcript        => $tr,
-                    -variation_feature => $svf,
-                    -adaptor           => $config->{tva},
-                    -no_ref_check      => 1,
-                    -no_transfer       => 1
+                if(defined($tr->{gene}) && !$done_genes{$tr->{gene}->dbID}) {
+                    $svo = Bio::EnsEMBL::Variation::StructuralVariationOverlap->new(
+                        -feature                      => $tr->{gene},
+                        -structural_variation_feature => $svf,
+                        -no_transfer                  => 1
+                    );
+                    
+                    push @{$svf->{structural_variation_overlaps}}, $svo;
+                    
+                    $done_genes{$tr->{gene}->dbID} = 1;
+                }
+                
+                $svo = undef;
+                
+                $svo = Bio::EnsEMBL::Variation::StructuralVariationOverlap->new(
+                    -feature                      => $tr,
+                    -structural_variation_feature => $svf,
+                    -no_transfer                  => 1
                 );
-             
-                print "SV ", $svf->{variation_name}, " ", $svf->var_class, " ", $svf->{start}."-".$svf->{end}, " TRANSCRIPT ", $tr->stable_id, " ", $tr->{start}."-".$tr->{end}, "\t", (join ",", @{$tv->consequence_type}), "\n";   
                 
-                #use Data::Dumper;
-                #$Data::Dumper::Maxdepth = 2;
-                #warn Dumper $tv;
-                #last;
+                push @{$svf->{structural_variation_overlaps}}, $svo;
+                
+                foreach my $exon(grep {$_->{start} <= $svf->{end} && $_->end >= $svf->{end}} @{$tr->get_all_Exons}) {
+                    $svo = undef;
+                    
+                    $svo = Bio::EnsEMBL::Variation::StructuralVariationOverlap->new(
+                        -feature                      => $exon,
+                        -structural_variation_feature => $svf,
+                        -no_transfer                  => 1
+                    );
+                    
+                    push @{$svf->{structural_variation_overlaps}}, $svo;
+                }
             }
+            
+            # sort them
+            #$svf->_sort_svos;
+            $svf->{structural_variation_overlaps} ||= [];
+            push @finished_vfs, $svf;
         }
     }
     
@@ -2331,6 +2395,7 @@ sub cache_transcripts {
                     
                     foreach my $tr(map {$_->transfer($slice)} @{$gene->get_all_Transcripts}) {
                         $tr->{_gene_stable_id} = $gene_stable_id;
+                        $tr->{gene} = $gene;
                         
                         # indicate if canonical
                         $tr->{is_canonical} = 1 if defined $canonical_tr_id and $tr->dbID eq $canonical_tr_id;
@@ -2924,12 +2989,21 @@ sub cache_custom_annotation {
                     # tabix can fetch multiple regions, so construct a string
                     my $region_string = join " ", map {$tmp_chr.':'.$_} @tmp_regions;
                     
-                    open CUSTOM, "tabix ".$custom->{file}." $region_string |"
+                    open CUSTOM, "tabix ".$custom->{file}." $region_string 2>&1 |"
                         or die "\nERROR: Could not open tabix pipe for ".$custom->{file}."\n";
                 }
                 
+                # set an error flag so we don't have to check every line
+                my $error_flag = 1;
+                
                 while(<CUSTOM>) {
                     chomp;
+                    
+                    # check for errors
+                    if($error_flag) {
+                        die "\nERROR: Problem using annotation file ".$custom->{file}."\n$_\n" if /invalid pointer|tabix|get_intv/;
+                        $error_flag = 0;
+                    }
                     
                     my @data = split /\t/, $_;
                     
