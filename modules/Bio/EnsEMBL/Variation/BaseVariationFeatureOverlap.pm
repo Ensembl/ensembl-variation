@@ -1,3 +1,49 @@
+=head1 LICENSE
+
+ Copyright (c) 1999-2011 The European Bioinformatics Institute and
+ Genome Research Limited.  All rights reserved.
+
+ This software is distributed under a modified Apache license.
+ For license details, please see
+
+   http://www.ensembl.org/info/about/code_licence.html
+
+=head1 CONTACT
+
+ Please email comments or questions to the public Ensembl
+ developers list at <dev@ensembl.org>.
+
+ Questions may also be sent to the Ensembl help desk at
+ <helpdesk@ensembl.org>.
+
+=cut
+
+=head1 NAME
+
+Bio::EnsEMBL::Variation::BaseVariationFeatureOverlap
+
+=head1 SYNOPSIS
+
+    use Bio::EnsEMBL::Variation::BaseVariationFeatureOverlap;
+
+    my $bvfo = Bio::EnsEMBL::Variation::BaseVariationFeatureOverlap->new(
+        -feature                => $feature,
+        -base_variation_feature => $var_feat
+    );
+
+    print "consequence type: ", (join ",", @{ $bvfo->consequence_type }), "\n";
+    print "most severe consequence: ", $bvfo->display_consequence, "\n";
+
+=head1 DESCRIPTION
+
+A BaseVariationFeatureOverlap represents a BaseVariationFeature which is in close
+proximity to another Ensembl Feature. It is the superclass of variation feature
+specific classes such as VariationFEatureOverlap and StructuralVariationOverlap
+and has methods common to all such objects. You will not normally instantiate this
+class directly, instead instantiating one of the more specific subclasses.
+
+=cut
+
 package Bio::EnsEMBL::Variation::BaseVariationFeatureOverlap;
 
 use strict;
@@ -44,15 +90,143 @@ sub new_fast {
     return bless $hashref, $class;
 }
 
+=head2 feature
+
+  Arg [1]    : (optional) A Bio::EnsEMBL::Feature
+  Description: Get/set the associated Feature, lazy-loading it if required
+  Returntype : Bio::EnsEMBL::Feature
+  Exceptions : throws isf the argument is the wrong type
+  Status     : At Risk
+
+=cut
+
 sub feature {
-    my ($self, $feature) = @_;
-    $self->{feature} = $feature if $feature;
+    my ($self, $feature, $type) = @_;
+    
+    if ($feature) {
+        assert_ref($feature, 'Bio::EnsEMBL::Feature');
+        $self->{feature} = $feature;
+    }
+ 
+    if ($type && !$self->{feature}) {
+    
+        # try to lazy load the feature
+        
+        if (my $adap = $self->{adaptor}) {
+            
+            my $get_method = 'get_'.$type.'Adaptor';
+           
+            # XXX: this can doesn't work because the method is AUTOLOADed, need to rethink this...
+            #if ($adap->db->dnadb->can($get_method)) {
+                if (my $fa = $adap->db->dnadb->$get_method) {
+                    
+                    # if we have a stable id for the feature use that
+                    if (my $feature_stable_id = $self->{_feature_stable_id}) {
+                        if (my $f = $fa->fetch_by_stable_id($feature_stable_id)) {
+                            $self->{feature} = $f;
+                            delete $self->{_feature_stable_id};
+                        }
+                    }
+                    elsif (my $feature_label = $self->{_feature_label}) {
+                        # get a slice covering the vf
+                        
+                        #for my $f ($fa->fetch_all_by_Slice_constraint)
+                    }
+                }
+            #}
+            else {
+                warn "Cannot get an adaptor for type: $type";
+            }
+        }
+    }
+    
     return $self->{feature};
 }
 
+sub _fetch_feature_for_stable_id {
+    
+    # we shouldn't actually need this method as there will apparently
+    # soon be core support for fetching any feature by its stable id, 
+    # but I'm waiting for core to add this...
+
+    my ($self, $feature_stable_id) = @_;
+    
+    my $type_lookup = {
+        G   => { type => 'Gene',                 group => 'core' },
+        T   => { type => 'Transcript',           group => 'core'  },
+        R   => { type => 'RegulatoryFeature',    group => 'funcgen' },
+    };
+    
+    if ($feature_stable_id =~ /^ENS[A-Z]*([G|R|T])\d+$/) {
+        
+        my $type  = $type_lookup->{$1}->{type};
+        my $group = $type_lookup->{$1}->{group};
+        
+        if (my $adap = $self->{adaptor}) {
+            
+            my $get_method = 'get_'.$type.'Adaptor';
+            
+            if ($adap->db->dnadb->can($get_method)) {
+                if (my $fa = $adap->db->dnadb->$get_method) {
+                    
+                    # if we have a stable id for the feature use that
+                    if (my $feature_stable_id = $self->{_feature_stable_id}) {
+                        if (my $f = $fa->fetch_by_stable_id($feature_stable_id)) {
+                            $self->{feature} = $f;
+                            delete $self->{_feature_stable_id};
+                        }
+                    }
+                    elsif (my $feature_label = $self->{_feature_label}) {
+                        # get a slice covering the vf
+                        
+                        
+                        #for my $f ($fa->fetch_all_by_Slice_constraint)
+                    }
+                }
+            }
+            else {
+                warn "Cannot get an adaptor for type: $type";
+            }
+    }
+    }
+}
+
+sub _fetch_adaptor_for_group {
+    my ($self, $group) = @_;
+    
+}
+
+sub _feature_stable_id {
+    my $self = shift;
+    if ($self->feature && $self->feature->can('stable_id')) {
+        return $self->feature->stable_id;
+    }
+    elsif (my $id = $self->{_feature_stable_id}) {
+        return $id;
+    }
+    else {
+        return undef;
+    }
+}
+
+=head2 base_variation_feature
+
+  Arg [1]    : (optional) A Bio::EnsEMBL::Variation::BaseVariationFeature
+  Description: Get/set the associated BaseVariationFeature
+  Returntype : Bio::EnsEMBL::Variation::BaseVariationFeature
+  Exceptions : throws if the argument is the wrong type
+  Status     : At Risk
+
+=cut
+
 sub base_variation_feature {
     my ($self, $bvf) = @_;
-    $self->{base_variation_feature} = $bvf if $bvf;
+    
+    if ($bvf) {
+        assert_ref($bvf, 'Bio::EnsEMBL::Variation::BaseVariationFeature');
+        $self->{base_variation_feature} = $bvf;
+    }
+
     return $self->{base_variation_feature};
 }
 
@@ -134,7 +308,7 @@ sub get_all_BaseVariationFeatureOverlapAlleles {
 
   Arg [1]    : (optional) String $term_type
   Description: Get a list of all the unique consequence terms of the alleles of this 
-               VariationFeatureOverlap. By default returns Ensembl display terms
+               BaseVariationFeatureOverlap. By default returns Ensembl display terms
                (e.g. 'NON_SYNONYMOUS_CODING'). $term_type can also be 'label'
                (e.g. 'Non-synonymous coding'), 'SO' (Sequence Ontology, e.g.
                'non_synonymous_codon') or 'NCBI' (e.g. 'missense')
@@ -353,8 +527,6 @@ sub _introns {
     return [];
 
 }
-
-
 
 1;
 

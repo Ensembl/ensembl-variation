@@ -56,6 +56,8 @@ use Bio::EnsEMBL::Utils::Sequence qw(expand);
 use Bio::EnsEMBL::Variation::Utils::Sequence qw(unambiguity_code);
 use Bio::EnsEMBL::Variation::VariationFeatureOverlapAllele;
 
+use base qw(Bio::EnsEMBL::Variation::BaseVariationFeatureOverlap);
+
 =head2 new
 
   Arg [-FEATURE] : 
@@ -92,46 +94,41 @@ use Bio::EnsEMBL::Variation::VariationFeatureOverlapAllele;
 sub new {
 
     my $class = shift;
+   
+    my %args = @_;
+
+    # swap a '-variation_feature' argument for a '-base_variation_feature' one for the superclass
+
+    for my $arg (keys %args) {
+        if (lc($arg) eq '-variation_feature') {
+            $args{'-base_variation_feature'} = delete $args{$arg};
+        }
+    }
+
+    my $self = $class->SUPER::new(%args);
 
     my (
-        $variation_feature, 
-        $feature, 
         $adaptor, 
         $ref_feature, 
         $disambiguate_sn_alleles,
         $no_ref_check,
-        $no_transfer
     ) = rearrange([qw(
-            VARIATION_FEATURE 
-            FEATURE 
             ADAPTOR 
             REF_FEATURE 
             DISAMBIGUATE_SINGLE_NUCLEOTIDE_ALLELES
             NO_REF_CHECK
-            NO_TRANSFER
-        )], @_);
+        )], %args);
+
+    my $variation_feature = $self->base_variation_feature;
 
     assert_ref($variation_feature, 'Bio::EnsEMBL::Variation::VariationFeature');
-    assert_ref($feature, 'Bio::EnsEMBL::Feature');
     assert_ref($adaptor, 'Bio::EnsEMBL::Variation::DBSQL::VariationFeatureOverlapAdaptor') if $adaptor;
 
     $ref_feature ||= $variation_feature->slice;
 
-    # we need to ensure the Feature and the VariationFeature live on the same slice
-    # so we explicitly transfer the Feature here
-    unless(defined $no_transfer && $no_transfer == 1) {
-        $feature = $feature->transfer($variation_feature->slice) 
-            or throw("Unable to transfer the supplied feature to the same slice as the variation feature");
-    }
+    $self->{adaptor}        = $adaptor;
+    $self->{ref_feature}    = $ref_feature;
 
-    my $self = bless {
-        variation_feature   => $variation_feature,
-        feature             => $feature,
-        adaptor             => $adaptor,
-        ref_feature         => $ref_feature,
-    }, $class;
-    
-    
     my $ref_allele;
     
     # we take the reference allele sequence from the reference sequence, not from the allele string
@@ -217,6 +214,18 @@ sub new {
     return $self;
 }
 
+sub new_fast {
+    my ($class, $hashref) = @_;
+
+    # swap a variation_feature argument for a base_variation_feature one
+    
+    if ($hashref->{variation_feature}) {
+        $hashref->{base_variation_feature} = delete $hashref->{variation_feature};
+    }
+
+    return $class->SUPER::new_fast($hashref);
+}
+
 sub dbID {
     my $self = shift;
     
@@ -227,11 +236,6 @@ sub dbID {
     }
 
     return $self->{dbID};
-}
-
-sub new_fast {
-    my ($class, $hashref) = @_;
-    return bless $hashref, $class;
 }
 
 =head2 variation_feature
@@ -249,7 +253,7 @@ sub variation_feature {
 
     if ($variation_feature) {
         assert_ref($variation_feature, 'Bio::EnsEMBL::Variation::VariationFeature');
-        $self->{variation_feature} = $variation_feature;
+        $self->base_variation_feature($variation_feature);
     }
     
     if (my $vf_id = $self->{_variation_feature_id}) {
@@ -259,20 +263,14 @@ sub variation_feature {
         if (my $adap = $self->{adaptor}) {
             if (my $vfa = $adap->db->get_VariationFeatureAdaptor) {
                 if (my $vf = $vfa->fetch_by_dbID($vf_id)) {
-                    $self->{variation_feature} = $vf;
+                    $self->base_variation_feature($vf);
                     delete $self->{_variation_feature_id};
                 }
             }
         }
     }
     
-    return $self->{variation_feature};
-}
-
-# temporary shim until we get this class to inherit from BaseVariationFeatureOverlap
-sub base_variation_feature {
-    my $self = shift;
-    return $self->variation_feature(@_);
+    return $self->base_variation_feature;
 }
 
 sub _variation_feature_id {
@@ -286,125 +284,6 @@ sub _variation_feature_id {
         return $vf->dbID;
     }
     elsif (my $id = $self->{_variation_feature_id}) {
-        return $id;
-    }
-    else {
-        return undef;
-    }
-}
-
-=head2 feature
-
-  Arg [1]    : (optional) A Bio::EnsEMBL::Feature
-  Description: Get/set the associated Feature, lazy-loading it if required
-  Returntype : Bio::EnsEMBL::Feature
-  Exceptions : throws isf the argument is the wrong type
-  Status     : At Risk
-
-=cut
-
-sub feature {
-    my ($self, $feature, $type) = @_;
-    
-    if ($feature) {
-        assert_ref($feature, 'Bio::EnsEMBL::Feature');
-        $self->{feature} = $feature;
-    }
- 
-    if ($type && !$self->{feature}) {
-    
-        # try to lazy load the feature
-        
-        if (my $adap = $self->{adaptor}) {
-            
-            my $get_method = 'get_'.$type.'Adaptor';
-           
-            # XXX: this can doesn't work because the method is AUTOLOADed, need to rethink this...
-            #if ($adap->db->dnadb->can($get_method)) {
-                if (my $fa = $adap->db->dnadb->$get_method) {
-                    
-                    # if we have a stable id for the feature use that
-                    if (my $feature_stable_id = $self->{_feature_stable_id}) {
-                        if (my $f = $fa->fetch_by_stable_id($feature_stable_id)) {
-                            $self->{feature} = $f;
-                            delete $self->{_feature_stable_id};
-                        }
-                    }
-                    elsif (my $feature_label = $self->{_feature_label}) {
-                        # get a slice covering the vf
-                        
-                        #for my $f ($fa->fetch_all_by_Slice_constraint)
-                    }
-                }
-            #}
-            else {
-                warn "Cannot get an adaptor for type: $type";
-            }
-        }
-    }
-    
-    return $self->{feature};
-}
-
-sub _fetch_feature_for_stable_id {
-    
-    # we shouldn't actually need this method as there will apparently
-    # soon be core support for fetching any feature by its stable id, 
-    # but I'm waiting for core to add this...
-
-    my ($self, $feature_stable_id) = @_;
-    
-    my $type_lookup = {
-        G   => { type => 'Gene',                 group => 'core' },
-        T   => { type => 'Transcript',           group => 'core'  },
-        R   => { type => 'RegulatoryFeature',    group => 'funcgen' },
-    };
-    
-    if ($feature_stable_id =~ /^ENS[A-Z]*([G|R|T])\d+$/) {
-        
-        my $type  = $type_lookup->{$1}->{type};
-        my $group = $type_lookup->{$1}->{group};
-        
-        if (my $adap = $self->{adaptor}) {
-            
-            my $get_method = 'get_'.$type.'Adaptor';
-            
-            if ($adap->db->dnadb->can($get_method)) {
-                if (my $fa = $adap->db->dnadb->$get_method) {
-                    
-                    # if we have a stable id for the feature use that
-                    if (my $feature_stable_id = $self->{_feature_stable_id}) {
-                        if (my $f = $fa->fetch_by_stable_id($feature_stable_id)) {
-                            $self->{feature} = $f;
-                            delete $self->{_feature_stable_id};
-                        }
-                    }
-                    elsif (my $feature_label = $self->{_feature_label}) {
-                        # get a slice covering the vf
-                        
-                        
-                        #for my $f ($fa->fetch_all_by_Slice_constraint)
-                    }
-                }
-            }
-            else {
-                warn "Cannot get an adaptor for type: $type";
-            }
-    }
-    }
-}
-
-sub _fetch_adaptor_for_group {
-    my ($self, $group) = @_;
-    
-}
-
-sub _feature_stable_id {
-    my $self = shift;
-    if ($self->feature && $self->feature->can('stable_id')) {
-        return $self->feature->stable_id;
-    }
-    elsif (my $id = $self->{_feature_stable_id}) {
         return $id;
     }
     else {
@@ -454,7 +333,7 @@ sub add_VariationFeatureOverlapAllele {
 
 sub get_reference_VariationFeatureOverlapAllele {
     my $self = shift;
-    return $self->{reference_allele};
+    return $self->get_reference_BaseVariationFeatureOverlapAllele(@_);
 }
 
 =head2 get_all_alternate_VariationFeatureOverlapAlleles
@@ -468,10 +347,7 @@ sub get_reference_VariationFeatureOverlapAllele {
 
 sub get_all_alternate_VariationFeatureOverlapAlleles {
     my $self = shift;
-
-    $self->{alt_alleles} ||= [];
-    
-    return $self->{alt_alleles};
+    return $self->get_all_alternate_BaseVariationFeatureOverlapAlleles(@_);
 }
 
 =head2 get_all_VariationFeatureOverlapAlleles
@@ -486,126 +362,7 @@ sub get_all_alternate_VariationFeatureOverlapAlleles {
 
 sub get_all_VariationFeatureOverlapAlleles {
     my $self = shift;
-    return [ 
-        $self->get_reference_VariationFeatureOverlapAllele, 
-        @{ $self->get_all_alternate_VariationFeatureOverlapAlleles } 
-    ];
-}
-
-=head2 consequence_type
-
-  Arg [1]    : (optional) String $term_type
-  Description: Get a list of all the unique consequence terms of the alleles of this 
-               VariationFeatureOverlap. By default returns Ensembl display terms
-               (e.g. 'NON_SYNONYMOUS_CODING'). $term_type can also be 'label'
-               (e.g. 'Non-synonymous coding'), 'SO' (Sequence Ontology, e.g.
-               'non_synonymous_codon') or 'NCBI' (e.g. 'missense')
-  Returntype : listref of strings
-  Exceptions : none
-  Status     : At Risk
-
-=cut
-
-sub consequence_type {
-    my $self = shift;
-	my $term_type = shift;
-	
-	my $method_name;
-	
-    # delete cached term
-    if(defined($term_type)) {
-        delete $self->{_consequence_type};
-		$method_name = $term_type.($term_type eq 'label' ? '' : '_term');
-		$method_name = 'display_term' unless defined $self->most_severe_OverlapConsequence && $self->most_severe_OverlapConsequence->can($method_name);
-    }
-	
-	$method_name ||= 'display_term';
-    
-    unless ($self->{_consequence_type}) {
-        
-        # use a hash to ensure we don't include redundant terms (because more than one
-        # allele may have the same consequence display_term)
-
-        my %cons_types;
-
-        for my $allele (@{ $self->get_all_alternate_VariationFeatureOverlapAlleles }) {
-            for my $cons (@{ $allele->get_all_OverlapConsequences }) {
-                $cons_types{$cons->$method_name} = $cons->rank;
-            }
-        }
-
-        # sort the consequence types by rank such that the more severe terms are earlier in the list
-
-        $self->{_consequence_type} = [ sort { $cons_types{$a} <=> $cons_types{$b} } keys %cons_types ];
-    }
-    
-    return $self->{_consequence_type};
-}
-
-=head2 most_severe_OverlapConsequence
-
-  Description: Get the OverlapConsequence considered (by Ensembl) to be the most severe 
-               consequence of all the alleles of this VariationFeatureOverlap 
-  Returntype : Bio::EnsEMBL::Variation::OverlapConsequence
-  Exceptions : none
-  Status     : At Risk
-
-=cut
-
-sub most_severe_OverlapConsequence {
-    my $self = shift;
-    
-    unless ($self->{_most_severe_consequence}) {
-        
-        my $highest;
-        
-        for my $allele (@{ $self->get_all_alternate_VariationFeatureOverlapAlleles }) {
-            for my $cons (@{ $allele->get_all_OverlapConsequences }) {
-                $highest ||= $cons;
-                if ($cons->rank < $highest->rank) {
-                    $highest = $cons;
-                }
-            }
-        }
-        
-        $self->{_most_severe_consequence} = $highest;
-    }
-    
-    return $self->{_most_severe_consequence};
-}
-
-=head2 display_consequence
-
-  Arg [1]    : (optional) String $term_type
-  Description: Get the term for the most severe OverlapConsequence of this 
-               VariationFeatureOverlap. By default returns Ensembl display terms
-               (e.g. 'NON_SYNONYMOUS_CODING'). $term_type can also be 'label'
-               (e.g. 'Non-synonymous coding'), 'SO' (Sequence Ontology, e.g.
-               'non_synonymous_codon') or 'NCBI' (e.g. 'missense')
-  Returntype : string
-  Exceptions : none
-  Status     : At Risk
-
-=cut
-
-sub display_consequence {
-    my $self = shift;
-	my $term_type = shift;
-	
-	my $method_name;
-	
-    # delete cached term
-    if(defined($term_type)) {
-		$method_name = $term_type.($term_type eq 'label' ? '' : '_term');
-		$method_name = 'display_term' unless @{$self->get_all_OverlapConsequences} && $self->get_all_OverlapConsequences->[0]->can($method_name);
-    }
-	
-	$method_name ||= 'display_term';
-    
-    my $worst_conseq = $self->most_severe_OverlapConsequence;
-
-    return $worst_conseq ? $worst_conseq->$method_name : '';
-    return $self->most_severe_OverlapConsequence->$method_name;
+    return $self->get_all_BaseVariationFeatureOverlapAlleles(@_);
 }
 
 sub _convert_to_sara {

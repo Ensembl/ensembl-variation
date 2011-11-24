@@ -24,16 +24,22 @@ Bio::EnsEMBL::Variation::Utils::BaseVepFilterPlugin
 
 =head1 SYNOPSIS
 
+    # a simple example filter plugin that excludes all
+    # lines that are not non-synonymous changes
+
     package NonSynonymousFilter;
 
     use Bio::EnsEMBL::Variation::Utils::BaseVepFilterPlugin;
 
     use base qw(Bio::EnsEMBL::Variation::Utils::BaseVepFilterPlugin);
-        
+
     sub include_line {
-        my ($self, $transcript_variation_allele) = @_;
+        my ($self, $vfoa) = @_;
         
-        if (my $pep_alleles = $transcript_variation_allele->pep_allele_string) {
+        # exclude anything that does not affect the peptide 
+        return 0 unless $vfoa->can('pep_allele_string');
+
+        if (my $pep_alleles = $vfoa->pep_allele_string) {
             return $pep_alleles =~ /\//;
         }
 
@@ -48,7 +54,7 @@ This is a subclass of BaseVepPlugin aimed to make plugins that act like
 filters very straightforward to write. Users should subclass this module
 and then need only override the include_line method which should return
 a true value if the current line should be included, or a false value
-to filter this line out. A filter can then be used with the VEP just as
+to filter the line out. A filter can then be used with the VEP just as
 any other plugin by using the --plugin <module name> command line option.
 
 =cut
@@ -95,7 +101,7 @@ sub get_header_info {
 }
 
 sub feature_types {
-    # we want to get run for all feature types
+    # default to running for all feature types
     return ['Transcript', 'RegulatoryFeature', 'MotifFeature'];
 }
 

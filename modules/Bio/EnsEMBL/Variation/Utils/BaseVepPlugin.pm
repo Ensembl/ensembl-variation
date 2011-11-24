@@ -33,6 +33,10 @@ Bio::EnsEMBL::Variation::Utils::BaseVepPlugin
     sub feature_types {
         return ['Transcript'];
     }
+    
+    sub variant_feature_types {
+        return ['Variation'];
+    }
 
     sub get_header_info {
         return {
@@ -80,19 +84,21 @@ use warnings;
 sub new {
     my ($class, $config, @params) = @_;
 
-    # default to analysing Transcripts
+    # default to the current VEP version, and analysing
+    # VariationFeatures and Transcripts
 
     return bless {
-        version         => '2.3',
-        config          => $config,
-        feature_types   => ['Transcript'],
-        params          => \@params,
+        version                 => '2.3',
+        feature_types           => ['Transcript'],
+        variant_feature_types   => ['Variation'],
+        config                  => $config,
+        params                  => \@params,
     }, $class;
 }
 
 =head2 version
 
-  Arg [1]    : (optional) a version number in the form N.N.N
+  Arg [1]    : (optional) a version number string in the form N.N.N
   Description: Get/set the version of this plugin. The version should
                match the version of the VEP that this plugin works with
                (at least in the major version number). This is used to
@@ -142,8 +148,9 @@ sub params {
 
   Description: Return a hashref with any Extra column keys as keys and a description
                of the data as a value, this will be included in the VEP output file 
-               header to help explain the results of this plugin.
-  Returntype : hashref 
+               header to help explain the results of this plugin. Plugins that do
+               not want to include anything in the header should return undef.
+  Returntype : hashref or undef
   Status     : Experimental
 
 =cut
@@ -158,12 +165,29 @@ sub prefetch {
     return undef;
 }
 
+=head2 variant_feature_types
+
+  Description: To indicate which types of variation features a plugin is interested
+               in, plugins should return a listref of the types of variation feature 
+               they can deal with. Currently this list should include one or more of: 
+               'Variation' or 'StructuralVariation' 
+  Returntype : listref
+  Status     : Experimental
+
+=cut
+
+sub variant_feature_types {
+    my ($self, $types) = @_;
+    $self->{variant_feature_types} = $types if $types;
+    return $self->{variant_feature_types};
+}
+
 =head2 feature_types
 
   Description: To indicate which types of genomic features a plugin is interested
                in, plugins should return a listref of the types of feature they can deal 
-               with. Currently this list can only include 'Transcript', 'RegulatoryFeature'
-               and 'MotifFeature'
+               with. Currently this list should include one or more of: 'Transcript', 
+               'RegulatoryFeature' and 'MotifFeature'
   Returntype : listref
   Status     : Experimental
 
@@ -173,6 +197,43 @@ sub feature_types {
     my ($self, $types) = @_;
     $self->{feature_types} = $types if $types;
     return $self->{feature_types};
+}
+
+sub _check_types {
+    my ($self, $type_type, $type) = @_;
+
+    # if we're passed an object instead of a type string
+    # get the type of reference and use that
+    if (ref $type) {
+        $type = ref $type;
+    }
+
+    # $type_type will either be 'variant_feature' or 'feature'
+    # so construct the method to call and the hash key to
+    # store the cached results under
+    
+    my $method   = $type_type.'_types';
+    my $hash_key = $method.'_wanted';
+
+    unless (defined $self->{$hash_key}->{$type}) {
+
+        # cache the result so we don't have to loop each time
+
+        $self->{$hash_key}->{$type} = 0;
+
+        for my $wanted (@{ $self->$method }) {
+           
+            # we are fairly relaxed about how the user describes features, it can
+            # be the fully qualified class name, or just the 
+
+            if ($type =~ /::$wanted[^:]*$/i) {
+                $self->{$hash_key}->{$type} = 1;
+                last;
+            }
+        }
+    }
+
+    return $self->{$hash_key}->{$type};
 }
 
 =head2 check_feature_type
@@ -186,28 +247,21 @@ sub feature_types {
 
 sub check_feature_type {
     my ($self, $type) = @_;
+    return $self->_check_types('feature', $type);
+}
 
-    # if we're passed an object instead of a type string
-    # get the type of reference and use that
-    if (ref $type) {
-        $type = ref $type;
-    }
+=head2 check_variant_feature_type
+  
+  Arg[1]     : the variant feature type as a string (or a reference to an object of the desired type)
+  Description: Check if this plugin is interested in a particular variant feature type 
+  Returntype : boolean
+  Status     : Experimental
 
-    unless (defined $self->{feature_types_wanted}->{$type}) {
+=cut
 
-        # cache the result so we don't have to loop each time
-
-        $self->{feature_types_wanted}->{$type} = 0;
-
-        for my $wanted (@{ $self->feature_types }) {
-            if ($type =~ /$wanted/i) {
-                $self->{feature_types_wanted}->{$type} = 1;
-                last;
-            }
-        }
-    }
-
-    return $self->{feature_types_wanted}->{$type};
+sub check_variant_feature_type {
+    my ($self, $type) = @_;
+    return $self->_check_types('variant_feature', $type);
 }
 
 =head2 run
@@ -218,7 +272,7 @@ sub check_feature_type {
                When the VEP is about to finish one line of output (for a given variant-feature-allele 
                combination) it will call this method, passing it a relevant subclass of a
                Bio::EnsEMBL::Variation::VariationFeatureOverlapAllele object according to 
-               feature types it is interested in, as returned by the feature_types method:
+               feature types it is interested in, as specified by the plugin's feature_types method:
                
                 feature type         argument type
 
@@ -228,17 +282,19 @@ sub check_feature_type {
 
                Once the plugin has done its analysis it should return the results as a hashref
                with a key for each type of data (which should match the keys described in 
-               get_header_info) and a corresponding value for this particular object, or an empty hash if 
-               this plugin does not produce any annotation for this object. Any extra data will 
-               then be included in the Extra column in the VEP output file. Please refer to the variation 
-               API documentation to see what methods are available on each of the possible classes, 
-               bearing in mind that common functionality can be found in the 
-               VariationFeatureOverlapAllele superclass. 
+               get_header_info) and a corresponding value for this particular object, or an empty 
+               hash (_not_ undef) if this plugin does not produce any annotation for this object. 
+               Any extra data will then be included in the Extra column in the VEP output file. 
+               Please refer to the variation API documentation to see what methods are available 
+               on each of the possible classes, bearing in mind that common functionality can be 
+               found in the VariationFeatureOverlapAllele superclass. 
                
                If the plugin wants to filter this line out of the VEP output it can indicate
                this by returning undef rather than a hashref. Using this mechanism a plugin
                can act as a filter on the VEP output to limit lines to particular events
-               of interest.
+               of interest. If you are writing a plugin to act as filter, consider subclassing
+               Bio::EnsEMBL::Variation::Utils::BaseVepFilterPlugin, a subclass of this class
+               which provides some convenient functionality for filter plugins.
 
   Returntype : hashref or undef if the plugin wants to filter out this line
   Status     : Experimental

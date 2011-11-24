@@ -70,7 +70,7 @@ sub in_informative_position {
     # check that we're in bounds
 
     return undef if ( ($mf_start < 1) || ($mf_start > $mf->length) );
-        
+
     return $mf->is_position_informative($mf_start);
 }
 
