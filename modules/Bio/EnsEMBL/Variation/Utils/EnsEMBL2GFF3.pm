@@ -48,10 +48,14 @@ use warnings;
         my $end         = $self->end;
         my $assembly    = $self->coord_system->version;
         
+        my $mca = $self->adaptor->db->get_MetaContainerAdaptor;
+        my $tax_id = $mca->get_taxonomy_id;
+        
         my $hdr =
             "##gff-version 3\n"
           . "##file-date $date\n"
-          . "##genome-build ensembl $assembly\n";
+          . "##genome-build ensembl $assembly\n"
+          . "##species http://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi?id=$tax_id\n";
         
         $hdr .= "##sequence-region $region $start $end\n" unless $args{no_sequence_region};
         
@@ -217,7 +221,9 @@ use warnings;
     package Bio::EnsEMBL::Variation::VariationFeature;
     
     use Bio::EnsEMBL::Utils::Sequence qw(expand);
-    
+
+    my $REFERENCE_ALLELE_IDENTIFIER = '@';
+
     sub to_gvf {
         my $self = shift;
         return $self->to_gff(@_);
@@ -231,7 +237,9 @@ use warnings;
         
         my %args = @_;
         
-        my $include_consequences = $args{include_consequences};
+        my $include_consequences    = $args{include_consequences};
+        my $include_coding_details  = $args{include_coding_details};
+        my $include_global_maf      = $args{include_global_maf};
 
         $gff->{source} = $self->source;
 
@@ -245,12 +253,10 @@ use warnings;
 
         $gff->{attributes}->{ID} = $self->dbID;
 
-        $gff->{attributes}->{Variant_effect} = [];
-
         # the Variant_seq attribute requires a comma separated list of alleles
 
         my @alleles = split '/', $self->allele_string;
-        my $ref_seq = shift @alleles; # shift off the reference allele
+        my $ref_seq = shift @alleles unless @alleles == 1; # shift off the reference allele
        
         $gff->{attributes}->{Variant_seq} = join ',', @alleles;
 
@@ -263,10 +269,36 @@ use warnings;
         # if you expand e.g. (T)0 you get an empty string, which we treat as a deletion, so default to '-'
 
         my %allele_index = map { ($_ || '-') => $index++ } @alleles;
+
+        if ($include_global_maf) {
+
+            my $var = $self->variation;
+            
+            if (defined $var->minor_allele_frequency) {
+                
+                my $allele_idx;
+
+                if ($var->minor_allele eq $ref_seq) {
+                    $allele_idx = $REFERENCE_ALLELE_IDENTIFIER;
+                }
+                else {
+                    $allele_idx = $allele_index{$var->minor_allele};
+                }
+
+                if (defined $allele_idx) {
+                    $gff->{attributes}->{global_minor_allele_frequency} = 
+                        join (' ', 
+                            $allele_idx,
+                            $var->minor_allele_frequency,
+                            $var->minor_allele_count
+                        );
+                }
+            }
+        }
         
         # the reference sequence should be set to '~' if the sequence is longer than 50 nucleotides
 
-        $ref_seq = '~' if CORE::length($ref_seq) > 50;
+        $ref_seq = '~' if (not $ref_seq) || (CORE::length($ref_seq) > 50);
         $gff->{attributes}->{Reference_seq} = $ref_seq;
         
         # Hack for HGMD mutations
@@ -277,7 +309,8 @@ use warnings;
             $allele_index{$self->allele_string} = 0;
         }
         
-        if ($include_consequences) {
+        if ($include_consequences || $include_coding_details) {
+            
             for my $tv (@{ $self->get_all_TranscriptVariations }) {
 
                 unless ($tv->get_all_alternate_TranscriptVariationAlleles) {
@@ -285,21 +318,58 @@ use warnings;
                     next;
                 }
 
+                if ($include_coding_details) {
+                    my $ref_tva = $tv->get_reference_TranscriptVariationAllele;
+
+                    if (my $pep = $ref_tva->peptide) {
+                        $gff->{attributes}->{reference_peptide} = $pep;
+                    }
+                }
+
                 for my $tva (@{ $tv->get_all_alternate_TranscriptVariationAlleles }) {
 
                     my $allele_idx = $allele_index{$tva->variation_feature_seq};
                     
                     if (defined $allele_idx) {
-                        for my $oc (@{ $tva->get_all_OverlapConsequences }) {
 
-                            my $effect_string = join ' ', (
-                                $oc->SO_term, 
-                                $allele_idx,
-                                $oc->feature_SO_term,
-                                $tv->transcript_stable_id,
-                            );
+                        if ($include_consequences) {
+                            for my $oc (@{ $tva->get_all_OverlapConsequences }) {
 
-                            push @{ $gff->{attributes}->{Variant_effect} }, $effect_string;
+                                push @{ $gff->{attributes}->{Variant_effect} ||= [] },
+                                    join(' ',
+                                        $oc->SO_term, 
+                                        $allele_idx,
+                                        $oc->feature_SO_term,
+                                        $tv->transcript_stable_id,
+                                    );
+                            }
+                        }
+                        
+                        if ($include_coding_details) {
+                            if ($tva->pep_allele_string) {
+
+                                push @{ $gff->{attributes}->{variant_peptide} ||= [] },
+                                    join(' ',
+                                        $allele_idx,
+                                        $tva->peptide,
+                                        $tv->transcript_stable_id,
+                                    );
+
+                                for my $tool (qw(sift polyphen)) {
+                                    my $pred_meth = $tool.'_prediction';
+                                    my $score_meth = $tool.'_score';
+                                    if (my $pred = $tva->$pred_meth) {
+                                        $pred =~ s/\s/_/g;
+                                        push @{ $gff->{attributes}->{polyphen_prediction} ||= [] }, 
+                                            join(' ', 
+                                                $allele_idx, 
+                                                $pred, 
+                                                $tva->$score_meth,
+                                                $tv->transcript_stable_id
+                                            );
+                                    }
+                                }
+                            }
                         }
                     }
                     else {
@@ -309,7 +379,7 @@ use warnings;
                 }
             }
         }
-        
+    
         return $gff;
     }
 }
