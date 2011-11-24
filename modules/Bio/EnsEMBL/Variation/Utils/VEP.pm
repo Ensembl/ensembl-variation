@@ -1026,7 +1026,7 @@ sub svf_to_consequences {
             
             $line->{Consequence} = join ",", map {$_->$term_method} @{$svoa->get_all_OverlapConsequences};
             
-            $line = run_plugins($tva, $line, $config);
+            $line = run_plugins($svoa, $line, $config);
             
             push @return, $line;
         }
@@ -1039,38 +1039,43 @@ sub svf_to_consequences {
 # and store any results in the provided line hash
 sub run_plugins {
 
-    my ($vfoa, $line_hash, $config) = @_;
+    my ($bvfoa, $line_hash, $config) = @_;
 
     my $skip_line = 0;
 
     for my $plugin (@{ $config->{plugins} || [] }) {
 
-        # check that this plugin is interested in this type of feature
-        
-        if ($plugin->check_feature_type(ref $vfoa->feature)) {
-            
-            eval {
-                my $plugin_results = $plugin->run($vfoa, $line_hash);
-                
-                if (defined $plugin_results) {
-                    for my $key (keys %$plugin_results) {
-                        $line_hash->{Extra}->{$key} = $plugin_results->{$key};
-                    }
-                }
-                else {
-                    # if a plugin returns undef, that means it want to filter out this line
-                    $skip_line = 1;
-                }
-            };
-            if ($@) {
-                warn "Plugin '".(ref $plugin)."' went wrong: $@";
-            }
-            
-            # there's no point running any other plugins if we're filtering this line, 
-            # because the first plugin to skip the line wins, so we might as well last 
-            # out of the loop now and avoid any unnecessary computation
+        # check that this plugin is interested in this type of variation feature
 
-            last if $skip_line;
+        if ($plugin->check_variant_feature_type(ref $bvfoa->base_variation_feature)) {
+
+            # check that this plugin is interested in this type of feature
+            
+            if ($plugin->check_feature_type(ref $bvfoa->feature)) {
+                
+                eval {
+                    my $plugin_results = $plugin->run($bvfoa, $line_hash);
+                    
+                    if (defined $plugin_results) {
+                        for my $key (keys %$plugin_results) {
+                            $line_hash->{Extra}->{$key} = $plugin_results->{$key};
+                        }
+                    }
+                    else {
+                        # if a plugin returns undef, that means it want to filter out this line
+                        $skip_line = 1;
+                    }
+                };
+                if ($@) {
+                    warn "Plugin '".(ref $plugin)."' went wrong: $@";
+                }
+                
+                # there's no point running any other plugins if we're filtering this line, 
+                # because the first plugin to skip the line wins, so we might as well last 
+                # out of the loop now and avoid any unnecessary computation
+
+                last if $skip_line;
+            }
         }
     }
 

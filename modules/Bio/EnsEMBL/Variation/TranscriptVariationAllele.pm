@@ -67,7 +67,7 @@ use Bio::EnsEMBL::Variation::ProteinFunctionPredictionMatrix qw($AA_LOOKUP);
 use base qw(Bio::EnsEMBL::Variation::VariationFeatureOverlapAllele);
 
 sub new_fast {
-    my ($self, $hashref) = @_;
+    my ($class, $hashref) = @_;
     
     # swap a transcript_variation argument for a variation_feature_overlap one
 
@@ -77,7 +77,7 @@ sub new_fast {
     
     # and call the superclass
 
-    return $self->SUPER::new_fast($hashref);
+    return $class->SUPER::new_fast($hashref);
 }
 
 =head2 transcript_variation

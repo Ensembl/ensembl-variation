@@ -1089,7 +1089,7 @@ sub minor_allele_frequency {
   Arg [1]    : int $minor_allele_count (optional)
                The new minor allele count
   Example    : $maf_count = $obj->minor_allele_count()
-  Description: Get/set the count of the minor allele of this variation, as reported by dbSNP
+  Description: Get/set the sample count of the minor allele of this variation, as reported by dbSNP
   Returntype : int
   Exceptions : none
   Caller     : general

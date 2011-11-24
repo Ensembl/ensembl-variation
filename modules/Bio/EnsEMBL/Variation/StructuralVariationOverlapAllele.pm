@@ -20,5 +20,37 @@ sub new_fast {
     return $class->SUPER::new_fast($hashref);
 }
 
+=head2 structural_variation_overlap
+
+  Description: Get the associated StructuralVariationOverlap
+  Returntype : Bio::EnsEMBL::Variation::StructuralVariationOverlap
+  Exceptions : none
+  Status     : At Risk
+
+=cut
+
+sub structural_variation_overlap {
+    my ($self, $svo) = @_;
+    if ($svo) {
+        assert_ref($svo, 'Bio::EnsEMBL::Variation::StructuralVariationOverlap');
+    }
+    return $self->base_variation_feature_overlap($svo);
+}
+
+
+=head2 structural_variation_feature
+
+  Description: Get the associated StructuralVariationFeature
+  Returntype : Bio::EnsEMBL::Variation::StructuralVariationFeature
+  Exceptions : none
+  Status     : At Risk
+
+=cut
+
+sub structural_variation_feature {
+    my $self = shift;
+    return $self->structural_variation_overlap->structural_variation_feature;
+}
+
 1;
 
