@@ -151,7 +151,7 @@ sub fetch_all_by_VariationFeatures {
 
     for my $vfo (@$vfos) {
         if ($vfo->{_variation_feature_id}) {
-            $vfo->{variation_feature} = $vfs_by_id{delete $vfo->{_variation_feature_id}};
+            $vfo->variation_feature($vfs_by_id{delete $vfo->{_variation_feature_id}});
         }
     }
    
