@@ -919,7 +919,11 @@ sub vf_to_consequences {
             for my $mfva (@{ $mfv->get_all_alternate_MotifFeatureVariationAlleles }) {
                 
                 my $line = init_line($config, $vf, $base_line);
-                $line->{Extra}->{HIGH_INF_POS}  = ($mfva->in_informative_position ? 'Y' : 'N');
+                
+                $line->{Extra}->{MATRIX_POS}        = $mfva->motif_start;
+                $line->{Extra}->{HIGH_INF_POS}      = ($mfva->in_informative_position ? 'Y' : 'N');
+                $line->{Extra}->{MOTIF_SCORE_DELTA} = sprintf "%.3f", $mfva->motif_score_delta;
+
                 $line->{Allele}         = $mfva->variation_feature_seq;
                 $line->{Consequence}    = join ',', 
                     map { $_->$term_method || $_->display_term } 
