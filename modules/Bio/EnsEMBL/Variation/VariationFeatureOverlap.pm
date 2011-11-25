@@ -201,7 +201,7 @@ sub new {
     for my $allele (@alleles) {
         
         next if $allele eq $ref_allele;
-        
+       
         my $vfoa = Bio::EnsEMBL::Variation::VariationFeatureOverlapAllele->new(
             -variation_feature_overlap  => $self,
             -variation_feature_seq      => $allele,
