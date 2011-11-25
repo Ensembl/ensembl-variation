@@ -77,6 +77,9 @@ my %offsets = (
 );
 
 # a hash mapping the values encoded in each field to the bits used encode them
+# if multiple bits are used (e.g. for version) then the values should be a 
+# listref of all the bits, this will be used to construct a bit mask to pick
+# out the necessary information
 
 my %fields= (
 
@@ -232,7 +235,7 @@ sub decode_bitfield {
             # convert them to an integer, and apply our mask
             $res{$value} = hex(substr($bitfield, $offsets{$field}, 2)) & $mask;
         
-            # check that the version matches ours
+            # check that the version matches what we expect
             if ($value eq 'version' && $res{$value} != ENCODING_VERSION) {
                 warn "Version field does not match the expected version (".$res{$value}." vs ".ENCODING_VERSION.")";
                 return undef;
