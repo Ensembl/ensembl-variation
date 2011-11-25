@@ -311,13 +311,7 @@ sub add_VariationFeatureOverlapAllele {
 
     assert_ref($vfoa, 'Bio::EnsEMBL::Variation::VariationFeatureOverlapAllele');
 
-    if ($vfoa->is_reference) {
-        $self->{reference_allele} = $vfoa;
-    }
-    else {
-        my $alt_alleles = $self->{alt_alleles} ||= [];
-        push @$alt_alleles, $vfoa;
-    }
+    $self->add_BaseVariationFeatureOverlapAllele($vfoa);
 
     $self->{_alleles_by_seq}->{ $vfoa->variation_feature_seq } = $vfoa;
 }
