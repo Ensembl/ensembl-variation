@@ -38,7 +38,7 @@ Bio::EnsEMBL::Variation::BaseVariationFeatureOverlap
 
 A BaseVariationFeatureOverlap represents a BaseVariationFeature which is in close
 proximity to another Ensembl Feature. It is the superclass of variation feature
-specific classes such as VariationFEatureOverlap and StructuralVariationOverlap
+specific classes such as VariationFeatureOverlap and StructuralVariationOverlap
 and has methods common to all such objects. You will not normally instantiate this
 class directly, instead instantiating one of the more specific subclasses.
 
@@ -241,16 +241,16 @@ sub base_variation_feature {
 =cut
 
 sub add_BaseVariationFeatureOverlapAllele {
-    my ($self, $vfoa) = @_;
+    my ($self, $bvfoa) = @_;
 
-    assert_ref($vfoa, 'Bio::EnsEMBL::Variation::BaseVariationFeatureOverlapAllele');
+    assert_ref($bvfoa, 'Bio::EnsEMBL::Variation::BaseVariationFeatureOverlapAllele');
 
-    if ($vfoa->is_reference) {
-        $self->{reference_allele} = $vfoa;
+    if ($bvfoa->is_reference) {
+        $self->{reference_allele} = $bvfoa;
     }
     else {
         my $alt_alleles = $self->{alt_alleles} ||= [];
-        push @$alt_alleles, $vfoa;
+        push @$alt_alleles, $bvfoa;
     }
 }
 
@@ -297,11 +297,14 @@ sub get_all_alternate_BaseVariationFeatureOverlapAlleles {
 
 sub get_all_BaseVariationFeatureOverlapAlleles {
     my $self = shift;
-	my @alts = @{ $self->get_all_alternate_BaseVariationFeatureOverlapAlleles };
-	my $ref = $self->get_reference_BaseVariationFeatureOverlapAllele;
-	unshift @alts, $ref if defined($ref);
 	
-    return \@alts;
+    my $alleles = $self->get_all_alternate_BaseVariationFeatureOverlapAlleles;
+	
+    my $ref = $self->get_reference_BaseVariationFeatureOverlapAllele;
+	
+    unshift @$alleles, $ref if defined $ref;
+	
+    return $alleles;
 }
 
 =head2 consequence_type
@@ -517,15 +520,11 @@ sub _introns {
     my $feat = $self->feature;
 
     if ($feat->isa('Bio::EnsEMBL::Transcript')) {
-
         my $introns = $feat->{_variation_effect_feature_cache}->{introns} ||= $feat->get_all_Introns;
-
         return $introns;
-    
     }
 
     return [];
-
 }
 
 1;

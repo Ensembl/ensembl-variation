@@ -352,8 +352,6 @@ sub get_all_TranscriptVariations {
         # this VariationFeature is from the database, so we can just fetch the 
         # TranscriptVariations from the database as well
 
-        #die;
-
         if (my $db = $self->adaptor->db) {
             my $tva = $db->get_TranscriptVariationAdaptor;
 
@@ -517,10 +515,9 @@ sub add_TranscriptVariation {
     my ($self, $tv) = @_;
     assert_ref($tv, 'Bio::EnsEMBL::Variation::TranscriptVariation');
     # we need to weaken the reference back to us to avoid a circular reference
-    weaken($tv->{variation_feature});
+    weaken($tv->{base_variation_feature});
     $self->{transcript_variations}->{$tv->transcript_stable_id} = $tv;
 }
-
 
 =head2 variation
 
