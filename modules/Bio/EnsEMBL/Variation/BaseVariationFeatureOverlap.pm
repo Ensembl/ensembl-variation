@@ -298,13 +298,13 @@ sub get_all_alternate_BaseVariationFeatureOverlapAlleles {
 sub get_all_BaseVariationFeatureOverlapAlleles {
     my $self = shift;
 	
-    my $alleles = $self->get_all_alternate_BaseVariationFeatureOverlapAlleles;
+    my @alleles = @{ $self->get_all_alternate_BaseVariationFeatureOverlapAlleles };
 	
     my $ref = $self->get_reference_BaseVariationFeatureOverlapAllele;
 	
-    unshift @$alleles, $ref if defined $ref;
+    unshift @alleles, $ref if defined $ref;
 	
-    return $alleles;
+    return \@alleles;
 }
 
 =head2 consequence_type
