@@ -96,7 +96,7 @@ sub fetch_all_by_Variation {
 			@$results = grep {$_->individual->dbID == $individual->dbID} @$results;
 		}
 		elsif($individual->isa('Bio::EnsEMBL::Variation::Population')) {
-			my %include = map {$_->dbID => 1} @{$individual->get_all_Individuals};
+			my %include = map {$_->dbID => 1} @{$individual->get_all_Individuals};			
 			@$results = grep {$include{$_->individual->dbID}} @$results;
 		}
 		else {
@@ -125,7 +125,7 @@ sub fetch_all_by_Variation {
 sub fetch_all_by_Slice {
 	my $self = shift;
 	
-	my $cga = $self->db->get_CompressedGenotypeAdaptor();
+	my $cga = $self->db->get_IndividualGenotypeFeatureAdaptor();
 	
 	return $cga->fetch_all_by_Slice(@_);
 }
