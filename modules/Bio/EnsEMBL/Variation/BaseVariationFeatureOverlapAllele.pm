@@ -40,9 +40,7 @@ BaseVariationFeatureOverlap. It is the super-class of variation feature specific
 classes such as VariationFeatureOverlapAllele and StructuralVariationOverlapAllele 
 and contains methods not specific to any particular variation feature type. 
 Ordinarily you will not create these objects yourself, but instead you would 
-create e.g. a TranscriptVariation object which will then create 
-VariationFeatureOverlapAlleles based on the allele string of the associated 
-VariationFeature. 
+create one of the more specific subclasses.
 
 =cut
 
@@ -108,7 +106,7 @@ sub new {
 sub new_fast {
     my ($class, $hashref) = @_;
     my $self = bless $hashref, $class;
-    # avoid a memory leak, because the vfo also has a reference to us
+    # avoid a memory leak, because the bvfo also has a reference to us
     weaken $self->{base_variation_feature_overlap} if $self->{base_variation_feature_overlap};
     return $self;
 }
@@ -152,7 +150,7 @@ sub base_variation_feature {
 =head2 feature
 
   Description: Get the associated Feature
-  Returntype : Bio::EnsEMBL::Feature
+  Returntype : Bio::EnsEMBL::Feature (or relevant subclass)
   Exceptions : none
   Status     : At Risk
 
@@ -179,7 +177,6 @@ sub is_reference {
     return $self->{is_reference};
 }
 
-
 =head2 get_all_OverlapConsequences
 
   Description: Get a list of all the OverlapConsequences of this allele, calculating them 
@@ -199,12 +196,20 @@ sub get_all_OverlapConsequences {
         
         my $cons = [];
         
+        # loop over all the possible consequences
+
         for my $oc (values %OVERLAP_CONSEQUENCES) {
-            
+           
+            # check that this consequence applies to this type of variation feature
+
             if ($oc->variant_feature_class && $self->base_variation_feature->isa($oc->variant_feature_class)) {
                 
+                # check that this consequence applies to this type of feature
+
                 if ($self->feature->isa($oc->feature_class)) {
                     
+                    # if so, check if the predicate of this consequence holds for this bvfoa
+
                     if ($oc->predicate->($self)) {
                         push @$cons, $oc;
                     }

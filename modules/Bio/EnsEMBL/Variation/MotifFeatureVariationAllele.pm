@@ -127,7 +127,7 @@ sub in_informative_position {
 
 =head2 motif_score_delta
 
-  Description: Calculate the difference in motif score between the reference and variant sequence
+  Description: Calculate the difference in motif score between the reference and variant sequences
   Returntype : float
   Status     : At Risk
 
