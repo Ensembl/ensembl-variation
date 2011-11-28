@@ -70,6 +70,8 @@ sub run {
         # we need to get the multiple alignment
         
         if ($self->param('use_compara')) {
+
+            $self->_load_registry;
             
             eval {
                 dump_alignment_for_sift($translation_stable_id, $aln_file);
