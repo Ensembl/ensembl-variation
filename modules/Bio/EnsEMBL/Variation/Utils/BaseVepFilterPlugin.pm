@@ -25,7 +25,9 @@ Bio::EnsEMBL::Variation::Utils::BaseVepFilterPlugin
 =head1 SYNOPSIS
 
     # a simple example filter plugin that excludes all
-    # lines that are not non-synonymous changes
+    # lines that are not non-synonymous changes (defined
+    # as those which have alternate peptides in their
+    # pep_allele_string)
 
     package NonSynonymousFilter;
 
@@ -81,7 +83,7 @@ use base qw(Bio::EnsEMBL::Variation::Utils::BaseVepPlugin);
 
 sub include_line {
     my ($self, $vfoa, $line_hash) = @_;
-    warn "VEP filter plugins should implement the 'include_line' method";
+    warn "VEP filter plugins should implement the 'include_line' method\n";
     return 1;
 }
 
@@ -89,9 +91,13 @@ sub include_line {
 # providing default configuration for filter plugins
 
 sub run {
-    my ($self, $vfoa, $line_hash) = @_; 
+    my ($self, $vfoa, $line_hash) = @_;
+
     # all run does for filters is check if the plugin wants to 
-    # include this line and returns the appropriate type
+    # include this line and then returns the appropriate type: 
+    # an empty hashref to include the line, or undef to filter
+    # out the line
+    
     return $self->include_line($vfoa, $line_hash) ? {} : undef;
 }
 
