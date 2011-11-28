@@ -75,6 +75,7 @@ use warnings;
 =head2 new
 
   Arg [1]    : a VEP configuration hashref
+  Arg [>1]   : any parameters passed on the VEP command line, will be stored as a listref in $self->{params}
   Description: Creates and returns a new instance of this plugin
   Returntype : Bio::EnsEMBL::Variation::Utils::BaseVepPlugin instance (most likely a user-defined subclass)
   Status     : Experimental
@@ -84,8 +85,10 @@ use warnings;
 sub new {
     my ($class, $config, @params) = @_;
 
-    # default to the current VEP version, and analysing
-    # VariationFeatures and Transcripts
+    # default to the current VEP version, and analysing VariationFeatures and
+    # Transcripts (which we expect to be the most common usage, this means that
+    # the run method will be called with a TranscriptVariationAllele as the 
+    # first argument)
 
     return bless {
         version                 => '2.3',
@@ -277,12 +280,12 @@ sub check_variant_feature_type {
 
 =head2 run
 
-  Arg[1]     : An instance of a subclass of Bio::EnsEMBL::Variation::VariationFeatureOverlapAllele
+  Arg[1]     : An instance of a subclass of Bio::EnsEMBL::Variation::BaseVariationFeatureOverlapAllele
   Arg[2]     : A hashref containing all the data that will be printed on this line, keyed by column name
   Description: Run this plugin, this is where most of the plugin logic should reside. 
-               When the VEP is about to finish one line of output (for a given variant-feature-allele 
+               When the VEP is about to finish one line of output (for a given variation-allele-feature 
                combination) it will call this method, passing it a relevant subclass of a
-               Bio::EnsEMBL::Variation::VariationFeatureOverlapAllele object according to 
+               Bio::EnsEMBL::Variation::BaseVariationFeatureOverlapAllele object according to 
                feature types it is interested in, as specified by the plugin's feature_types method:
                
                 feature type         argument type
@@ -294,11 +297,11 @@ sub check_variant_feature_type {
                Once the plugin has done its analysis it should return the results as a hashref
                with a key for each type of data (which should match the keys described in 
                get_header_info) and a corresponding value for this particular object, or an empty 
-               hash (_not_ undef) if this plugin does not produce any annotation for this object. 
-               Any extra data will then be included in the Extra column in the VEP output file. 
+               hash (*not* undef) if this plugin does not produce any annotation for this object. 
+               Any edata will then be included in the Extra column in the VEP output file. 
                Please refer to the variation API documentation to see what methods are available 
                on each of the possible classes, bearing in mind that common functionality can be 
-               found in the VariationFeatureOverlapAllele superclass. 
+               found in the BaseVariationFeatureOverlapAllele superclass. 
                
                If the plugin wants to filter this line out of the VEP output it can indicate
                this by returning undef rather than a hashref. Using this mechanism a plugin
