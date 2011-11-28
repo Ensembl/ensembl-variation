@@ -54,6 +54,8 @@ use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(MAX_DISTANCE_FROM_TRANSCR
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
 use Bio::EnsEMBL::Variation::Utils::Sequence qw(unambiguity_code);
 use Bio::EnsEMBL::Variation::Utils::EnsEMBL2GFF3;
+use Bio::EnsEMBL::Variation::StructuralVariationFeature;
+use Bio::EnsEMBL::Variation::DBSQL::StructuralVariationFeatureAdaptor;
 use Bio::EnsEMBL::Variation::StructuralVariationOverlap;
 
 # we need to manually include all these modules for caching to work
@@ -1028,7 +1030,29 @@ sub svf_to_consequences {
         foreach my $svoa(@{$svo->get_all_StructuralVariationOverlapAlleles}) {
             my $line = init_line($config, $svf, $base_line);
             
-            $line->{Consequence} = join ",", map {$_->$term_method} @{$svoa->get_all_OverlapConsequences};
+            $line->{Consequence} = join ",",
+                map {s/feature/$feature_type/e; $_}
+                map {$_->$term_method}
+                @{$svoa->get_all_OverlapConsequences};
+            
+            # work out overlap amounts            
+            my $overlap_start  = (sort {$a <=> $b} ($svf->start, $feature->start))[-1];
+            my $overlap_end    = (sort {$a <=> $b} ($svf->end, $feature->end))[0];
+            my $overlap_length = ($overlap_end - $overlap_start) + 1;
+            
+            $line->{Extra}->{OverlapBP} = $overlap_length;
+            $line->{Extra}->{OverlapPC} = sprintf("%.2f", 100 * ($overlap_length / (($feature->end - $feature->start) + 1)));
+            
+            if($line->{Consequence} =~ /partial/) {                
+                $line->{Extra}->{Partial} =
+                    $svf->start < $feature->start ? (
+                        $feature->strand == 1 ?
+                        '5P' : '3P'
+                    ) : (
+                        $feature->strand == 1 ?
+                        '3P' : '5P'
+                    );
+            }
             
             $line = run_plugins($svoa, $line, $config);
             
@@ -1684,7 +1708,7 @@ sub whole_genome_fetch {
         debug("Retrieved $tr_count transcripts ($count_from_mem mem, $count_from_cache cached, $count_from_db DB, $count_duplicates duplicates)") unless defined($config->{quiet});        
         
         # skip chr if no cache
-        if(defined($tr_cache->{$chr})) {
+        if(defined($tr_cache->{$chr}) && defined($vf_hash->{$chr})) {
         
             # copy slice from transcript to slice cache
             $slice_cache = build_slice_cache($config, $tr_cache) unless defined($slice_cache->{$chr});
@@ -1838,7 +1862,7 @@ sub whole_genome_fetch {
             end_progress($config);
         }
         
-        if(defined($rf_cache->{$chr})) {
+        if(defined($rf_cache->{$chr}) && defined($vf_hash->{$chr})) {
             
             $slice_cache ||= build_slice_cache($config, $rf_cache);
             
@@ -1896,23 +1920,30 @@ sub whole_genome_fetch {
     #####################
     
     if(scalar @svfs) {
+        
+        debug("Analyzing structural variations");
+        
+        my($i, $total) = (0, scalar @svfs);
+        
         foreach my $svf(@svfs) {
+            progress($config, $i++, $total);
+            
             my %done_genes = ();
             
             foreach my $tr(grep {$_->{start} <= $svf->{end} && $_->end >= $svf->{end}} @{$tr_cache->{$chr}}) {
                 
                 my $svo;
                 
-                if(defined($tr->{gene}) && !$done_genes{$tr->{gene}->dbID}) {
+                if(defined($tr->{_gene}) && !$done_genes{$tr->{_gene}->stable_id}) {
                     $svo = Bio::EnsEMBL::Variation::StructuralVariationOverlap->new(
-                        -feature                      => $tr->{gene},
+                        -feature                      => $tr->{_gene},
                         -structural_variation_feature => $svf,
                         -no_transfer                  => 1
                     );
                     
                     push @{$svf->{structural_variation_overlaps}}, $svo;
                     
-                    $done_genes{$tr->{gene}->dbID} = 1;
+                    $done_genes{$tr->{_gene}->stable_id} = 1;
                 }
                 
                 $svo = undef;
@@ -1938,11 +1969,28 @@ sub whole_genome_fetch {
                 }
             }
             
+            # do regulatory features
+            if(defined($config->{regulatory}) && defined($rf_cache)) {
+                foreach my $rf_type(keys %{$rf_cache->{$chr}}) {
+                    foreach my $rf(grep {$_->{start} <= $svf->{end} && $_->end >= $svf->{end}} @{$rf_cache->{$chr}->{$rf_type}}) {
+                        my $svo = Bio::EnsEMBL::Variation::StructuralVariationOverlap->new(
+                            -feature                      => $rf,
+                            -structural_variation_feature => $svf,
+                            -no_transfer                  => 1
+                        );
+                        
+                        push @{$svf->{structural_variation_overlaps}}, $svo;
+                    }
+                }
+            }
+            
             # sort them
             #$svf->_sort_svos;
             $svf->{structural_variation_overlaps} ||= [];
             push @finished_vfs, $svf;
         }
+        
+        end_progress($config);
     }
     
     
@@ -2396,23 +2444,21 @@ sub cache_transcripts {
             
             # add transcripts to the cache, via a transfer to the chrom's slice
             if(defined($sub_slice)) {
-                foreach my $gene(@{$sub_slice->get_all_Genes(undef, undef, 1)}) {
+                foreach my $gene(map {$_->transfer($slice)} @{$sub_slice->get_all_Genes(undef, undef, 1)}) {
                     my $gene_stable_id = $gene->stable_id;
                     my $canonical_tr_id = $gene->{canonical_transcript_id};
                     
                     my @trs;
                     
-                    foreach my $tr(map {$_->transfer($slice)} @{$gene->get_all_Transcripts}) {
+                    foreach my $tr(@{$gene->get_all_Transcripts}) {
                         $tr->{_gene_stable_id} = $gene_stable_id;
-                        $tr->{gene} = $gene;
+                        $tr->{_gene} = $gene;
                         
                         # indicate if canonical
                         $tr->{is_canonical} = 1 if defined $canonical_tr_id and $tr->dbID eq $canonical_tr_id;
                         
                         if(defined($config->{prefetch})) {
-                            $tr->{_gene} = $gene;
                             prefetch_transcript_data($config, $tr);
-                            delete $tr->{_gene};
                         }
                         
                         # CCDS
@@ -2453,23 +2499,11 @@ sub cache_transcripts {
                         }
                     }
                     
+                    # clean the gene
+                    clean_gene($gene);
+                    
                     push @{$tr_cache->{$chr}}, @trs;
                 }
-                
-                # old method fetched transcripts directly
-                #foreach my $tr(map {$_->transfer($slice)} @{$sub_slice->get_all_Transcripts(1)}) {
-                #    
-                #    if(defined($config->{prefetch})) {
-                #        #$tr->{_gene} = $gene;
-                #        prefetch_transcript_data($config, $tr);
-                #        delete $tr->{_gene};
-                #    }
-                #    
-                #    # strip some unnecessary data from the transcript object
-                #    clean_transcript($tr) if defined($config->{write_cache});
-                #    
-                #    push @{$tr_cache->{$chr}}, $tr;
-                #}
             }
         }
     }
@@ -2483,7 +2517,7 @@ sub cache_transcripts {
 sub clean_transcript {
     my $tr = shift;
     
-    foreach my $key(qw(display_xref external_db external_display_name external_name external_status created_date status description edits_enabled modified_date)) {
+    foreach my $key(qw(display_xref external_db external_display_name external_name external_status created_date status description edits_enabled modified_date dbentries)) {
         delete $tr->{$key} if defined($tr->{$key});
     }
     
@@ -2500,6 +2534,23 @@ sub clean_transcript {
     
     # sometimes the translation's transcript points to another ref
     $tr->{translation}->{transcript} = $tr if defined $tr->{translation};
+}
+
+# gets rid of extra bits of info attached to genes. At the moment this is almost
+# everything as genes are only used for their locations when looking at
+# structural variations
+sub clean_gene {
+    my $gene = shift;
+    
+    # delete almost everything in the gene
+    map {delete $gene->{$_}}
+        grep {
+            $_ ne 'start' &&
+            $_ ne 'end' &&
+            $_ ne 'strand' && 
+            $_ ne 'stable_id'
+        }
+    keys %{$gene};
 }
 
 # build slice cache from transcript cache
@@ -2553,7 +2604,6 @@ sub prefetch_transcript_data {
     
     # gene
     $tr->{_gene} ||= $config->{ga}->fetch_by_transcript_stable_id($tr->stable_id);
-    $tr->{_gene_stable_id} ||= $tr->{_gene}->stable_id;
     
     # gene HGNC
     if(defined $config->{hgnc}) {
