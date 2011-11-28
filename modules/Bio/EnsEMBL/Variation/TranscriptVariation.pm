@@ -721,7 +721,7 @@ sub _protein_function_predictions {
 
     my $matrix = $tran->{_variation_effect_feature_cache}->{protein_function_predictions}->{$analysis};
 
-    unless ($matrix) {
+    unless ($matrix || exists($tran->{_variation_effect_feature_cache}->{protein_function_predictions}->{$analysis})) {
         my $pfpma = $self->{adaptor}->db->get_ProteinFunctionPredictionMatrixAdaptor;
         $matrix = $pfpma->fetch_by_analysis_transcript_stable_id($analysis, $tran->stable_id);
         $tran->{_variation_effect_feature_cache}->{protein_function_predictions}->{$analysis} = $matrix;
