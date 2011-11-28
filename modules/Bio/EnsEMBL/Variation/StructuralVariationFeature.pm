@@ -353,33 +353,30 @@ sub get_all_StructualVariationOverlaps {
 	my @svos = ();
 	
 	foreach my $gene(@{$self->feature_Slice->get_all_Genes}) {
-	  my $svo = Bio::EnsEMBL::Variation::StructuralVariationOverlap->new_fast({
-		feature                      => $gene,
-		structural_variation_feature => $self,
-		no_transfer                  => 1
-	  });
+	  my $svo = Bio::EnsEMBL::Variation::StructuralVariationOverlap->new(
+		-feature                      => $gene,
+		-structural_variation_feature => $self,
+	  );
 	  
 	  push @svos, $svo if defined($svo);
 	  
-	  foreach my $tr(@{$gene->get_all_Transcripts}) {
+	  foreach my $tr(grep {$_->seq_region_start <= $self->seq_region_end && $_->seq_region_end >= $self->seq_region_start} @{$gene->get_all_Transcripts}) {
 		$svo = undef;
 		
-		$svo = Bio::EnsEMBL::Variation::StructuralVariationOverlap->new_fast({
-		  feature                      => $tr,
-		  structural_variation_feature => $self,
-		  no_transfer                  => 1
-		});
+		$svo = Bio::EnsEMBL::Variation::StructuralVariationOverlap->new(
+		  -feature                      => $tr,
+		  -structural_variation_feature => $self,
+		);
 		
 		push @svos, $svo if defined $svo;
 		
-		foreach my $exon(@{$tr->get_all_Exons}) {
+		foreach my $exon(grep {$_->seq_region_start <= $self->seq_region_end && $_->seq_region_end >= $self->seq_region_start} @{$tr->get_all_Exons}) {
 		  $svo = undef;
 		  
-		  $svo = Bio::EnsEMBL::Variation::StructuralVariationOverlap->new_fast({
-			feature                      => $exon,
-			structural_variation_feature => $self,
-			no_transfer                  => 1
-		  });
+		  $svo = Bio::EnsEMBL::Variation::StructuralVariationOverlap->new(
+			-feature                      => $exon,
+			-structural_variation_feature => $self,
+		  );
 		  
 		  push @svos, $svo if defined $svo;
 		}
@@ -389,7 +386,7 @@ sub get_all_StructualVariationOverlaps {
 	$self->{structural_variation_overlaps} = \@svos;
 	
 	# sort them
-	$self->_sort_svos;
+	#$self->_sort_svos;
   }
   
   return $self->{structural_variation_overlaps};
