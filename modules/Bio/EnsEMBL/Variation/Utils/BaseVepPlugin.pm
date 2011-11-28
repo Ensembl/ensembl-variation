@@ -35,7 +35,7 @@ Bio::EnsEMBL::Variation::Utils::BaseVepPlugin
     }
     
     sub variant_feature_types {
-        return ['Variation'];
+        return ['VariationFeature'];
     }
 
     sub get_header_info {
@@ -90,7 +90,7 @@ sub new {
     return bless {
         version                 => '2.3',
         feature_types           => ['Transcript'],
-        variant_feature_types   => ['Variation'],
+        variant_feature_types   => ['VariationFeature'],
         config                  => $config,
         params                  => \@params,
     }, $class;
@@ -170,7 +170,7 @@ sub prefetch {
   Description: To indicate which types of variation features a plugin is interested
                in, plugins should return a listref of the types of variation feature 
                they can deal with. Currently this list should include one or more of: 
-               'Variation' or 'StructuralVariation' 
+               'VariationFeature' or 'StructuralVariationFeature' 
   Returntype : listref
   Status     : Experimental
 
@@ -224,9 +224,20 @@ sub _check_types {
         for my $wanted (@{ $self->$method }) {
            
             # we are fairly relaxed about how the user describes features, it can
-            # be the fully qualified class name, or just the 
+            # be the fully qualified class name, or just the specific module name, 
+            # (i.e. the text after the last '::') in which case we automatically 
+            # fully qualify it
+            
+            if ($wanted !~ /::/) {
+                if ($type_type eq 'feature') {
+                    $wanted = "Bio::EnsEMBL::$wanted";
+                }
+                elsif ($type_type eq 'variant_feature') {
+                    $wanted = "Bio::EnsEMBL::Variation::$wanted";
+                }
+            }
 
-            if ($type =~ /::$wanted[^:]*$/i) {
+            if ($type->isa($wanted)) {
                 $self->{$hash_key}->{$type} = 1;
                 last;
             }
