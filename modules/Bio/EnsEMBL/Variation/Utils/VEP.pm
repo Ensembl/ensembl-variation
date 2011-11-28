@@ -1085,8 +1085,13 @@ sub run_plugins {
                     my $plugin_results = $plugin->run($bvfoa, $line_hash);
                     
                     if (defined $plugin_results) {
-                        for my $key (keys %$plugin_results) {
-                            $line_hash->{Extra}->{$key} = $plugin_results->{$key};
+                        if (ref $plugin_results eq 'HASH') {
+                            for my $key (keys %$plugin_results) {
+                                $line_hash->{Extra}->{$key} = $plugin_results->{$key};
+                            }
+                        }
+                        else {
+                            warn "Plugin '".(ref $plugin)."' did not return a hashref, output ignored!\n";
                         }
                     }
                     else {
