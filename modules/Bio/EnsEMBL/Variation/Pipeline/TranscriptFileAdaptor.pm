@@ -67,7 +67,7 @@ sub _dump_translations {
 
     my $fasta = $self->{fasta_file};
 
-    open FASTA, ">$fasta" or die "Failed to open $fasta for writing";
+    open my $FASTA, ">$fasta" or die "Failed to open $fasta for writing";
 
     # get rid of any existing index file
 
@@ -90,10 +90,10 @@ sub _dump_translations {
 
         my $hdr = $tl->stable_id;
 
-        print FASTA ">$hdr\n$protein\n";
+        print $FASTA ">$hdr\n$protein\n";
     }
 
-    close FASTA;
+    close $FASTA;
 
     # index the file
 

@@ -112,7 +112,9 @@ sub run {
     close PROTEIN;
     
     if ($self->param('use_compara')) {
-        
+       
+        $self->_load_registry;
+
         # if we're using compara alignments then dump the alignment
         # to the alignment file, PolyPhen will check if it exists
         # and use it in place of its own alignment if so

@@ -12,7 +12,7 @@ sub default_options {
 
     return {
     
-        ensembl_cvs_root_dir    => $ENV{'HOME'}.'/workspace',
+        ensembl_cvs_root_dir    => $ENV{'HOME'}.'/ensembl-branches/HEAD/',
 
         pipeline_name           => 'protein_function',
 
@@ -22,7 +22,7 @@ sub default_options {
 
         ensembl_registry        => $self->o('pipeline_dir').'/ensembl.registry',
 
-        proteins_fasta          => $self->o('pipeline_dir').'/ensembl_64_proteins.fa',
+        proteins_fasta          => $self->o('pipeline_dir').'/ensembl_65_proteins.fa',
 
         species                 => 'human',
 
@@ -34,15 +34,15 @@ sub default_options {
         
         blastdb                 => $self->o('pipeline_dir').'/blastdb/swissprot_trembl.uni',
 
-        sift_run_type           => UPDATE,
+        sift_run_type           => FULL,
 
-        polyphen_run_type       => UPDATE,
+        polyphen_run_type       => FULL,
 
-        sift_use_compara        => 0,
+        sift_use_compara        => 1,
         
-        pph_use_compara         => 0,
+        pph_use_compara         => 1,
 
-        include_lrg             => 1,
+        include_lrg             => 0,
         
         use_existing_table      => 0,
 

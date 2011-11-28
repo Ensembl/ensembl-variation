@@ -126,10 +126,11 @@ sub run {
         my $id_str = join ',', @unmapped_v_ids;
 
         my $unmapped_sth = $dbc->prepare(qq{
-            SELECT  variation_id, allele
-            FROM    allele
-            WHERE   variation_id IN ($id_str)
-            GROUP BY allele
+            SELECT  a.variation_id, ac.allele
+            FROM    allele a, allele_code ac
+            WHERE   a.variation_id IN ($id_str)
+            AND     a.allele_code_id = ac.allele_code_id
+            GROUP BY ac.allele
         });
 
         $unmapped_sth->execute or die "Failed to fetch unmapped variation alleles for variation ids: $id_str";

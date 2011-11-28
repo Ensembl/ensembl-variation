@@ -39,9 +39,9 @@ sub default_options {
 
         # general pipeline options that you should change to suit your environment
         
-        # the location of your checkout of the ensembl API
+        # the location of your checkout of the ensembl API (the hive looks for SQL files here)
         
-        ensembl_cvs_root_dir    => $ENV{'HOME'}.'/workspace',
+        ensembl_cvs_root_dir    => $ENV{'HOME'}.'/ensembl-branches/HEAD',
 
         # a name for your pipeline (will also be used in the name of the hive database)
         
@@ -98,8 +98,8 @@ sub default_options {
 
         # these flags control which parts of the pipeline are run
 
-        run_transcript_effect   => 1,
-        run_variation_class     => 0,
+        run_transcript_effect   => 0,
+        run_variation_class     => 1,
 
         # connection parameters for the hive database, you should supply the hive_db_pass
         # option on the command line to init_pipeline.pl (parameters for the target database
@@ -109,7 +109,7 @@ sub default_options {
         # <username>_<pipeline_name>, and will drop any existing database with this
         # name
 
-        hive_db_host    => 'ens-genomics2',
+        hive_db_host    => 'ens-variation',
         hive_db_port    => 3306,
         hive_db_user    => 'ensadmin',
 
