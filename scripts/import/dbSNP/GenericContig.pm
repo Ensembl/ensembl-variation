@@ -371,7 +371,7 @@ sub source_table {
     my $dbname = 'dbSNP';
     my $url = 'http://www.ncbi.nlm.nih.gov/projects/SNP/';
 		
-    $self->{'dbVar'}->do(qq{INSERT INTO source (source_id,name,version,description,url) VALUES (1,"$dbname",$version,"Variants (including SNPs and indels) imported from dbSNP",$url)});
+    $self->{'dbVar'}->do(qq{INSERT INTO source (source_id,name,version,description,url) VALUES (1,"$dbname",$version,"Variants (including SNPs and indels) imported from dbSNP","$url")});
     print $logh Progress::location();
 
 }
