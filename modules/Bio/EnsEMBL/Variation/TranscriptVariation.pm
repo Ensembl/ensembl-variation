@@ -242,13 +242,17 @@ sub cdna_start {
     
     $self->{cdna_start} = $cdna_start if defined $cdna_start;
     
-    unless (defined $self->{cdna_start}) {
+    unless (exists $self->{cdna_start}) {
         my $cdna_coords = $self->cdna_coords;
         
-        return undef if (@$cdna_coords != 1 || $cdna_coords->[0]->isa('Bio::EnsEMBL::Mapper::Gap'));
-        
-        $self->{cdna_start} = $cdna_coords->[0]->start;
-        $self->{cdna_end}   = $cdna_coords->[0]->end;
+        if (@$cdna_coords != 1 || $cdna_coords->[0]->isa('Bio::EnsEMBL::Mapper::Gap')) {
+            $self->{cdna_start} = undef;
+            $self->{cdna_end}   = undef;
+        }
+        else {
+            $self->{cdna_start} = $cdna_coords->[0]->start;
+            $self->{cdna_end}   = $cdna_coords->[0]->end;
+        }
     }
     
     return $self->{cdna_start};
@@ -273,7 +277,7 @@ sub cdna_end {
     $self->{cdna_end} = $cdna_end if defined $cdna_end;
     
     # call cdna_start to calculate the start and end
-    $self->cdna_start unless defined $self->{cdna_end};
+    $self->cdna_start unless exists $self->{cdna_end};
     
     return $self->{cdna_end};
 }
@@ -296,15 +300,19 @@ sub cds_start {
     
     $self->{cds_start} = $cds_start if defined $cds_start;
     
-    unless (defined $self->{cds_start}) {
+    unless (exists $self->{cds_start}) {
         my $cds_coords = $self->cds_coords;
         
-        return undef if (@$cds_coords != 1 || $cds_coords->[0]->isa('Bio::EnsEMBL::Mapper::Gap'));
-        
-        my $exon_phase = $self->transcript->start_Exon->phase;
-        
-        $self->{cds_start} = $cds_coords->[0]->start + ($exon_phase > 0 ? $exon_phase : 0);
-        $self->{cds_end}   = $cds_coords->[0]->end   + ($exon_phase > 0 ? $exon_phase : 0);
+        if (@$cds_coords != 1 || $cds_coords->[0]->isa('Bio::EnsEMBL::Mapper::Gap')) {
+            $self->{cds_start}  = undef;
+            $self->{cds_end}    = undef;
+        }
+        else {
+            my $exon_phase = $self->transcript->start_Exon->phase;
+            
+            $self->{cds_start} = $cds_coords->[0]->start + ($exon_phase > 0 ? $exon_phase : 0);
+            $self->{cds_end}   = $cds_coords->[0]->end   + ($exon_phase > 0 ? $exon_phase : 0);
+        }
     }
     
     return $self->{cds_start};
@@ -329,7 +337,7 @@ sub cds_end {
     $self->{cds_end} = $cds_end if defined $cds_end;
     
     # call cds_start to calculate the start and end
-    $self->cds_start unless defined $self->{cds_end};
+    $self->cds_start unless exists $self->{cds_end};
     
     return $self->{cds_end};
 }
@@ -352,17 +360,22 @@ sub translation_start {
     
     $self->{translation_start} = $translation_start if defined $translation_start;
     
-    unless (defined $self->{translation_start}) {
+    unless (exists $self->{translation_start}) {
         my $translation_coords = $self->translation_coords;
         
-        return undef if (@$translation_coords != 1 || $translation_coords->[0]->isa('Bio::EnsEMBL::Mapper::Gap'));
-        
-        $self->{translation_start} = $translation_coords->[0]->start;
-        $self->{translation_end}   = $translation_coords->[0]->end;
+        if (@$translation_coords != 1 || $translation_coords->[0]->isa('Bio::EnsEMBL::Mapper::Gap')) {
+            $self->{translation_start} = undef;
+            $self->{translation_end}   = undef;
+        }
+        else {
+            $self->{translation_start} = $translation_coords->[0]->start;
+            $self->{translation_end}   = $translation_coords->[0]->end;
+        }
     }
-    
+
     return $self->{translation_start};
 }
+
 
 =head2 translation_end
 
@@ -383,7 +396,7 @@ sub translation_end {
     $self->{translation_end} = $translation_end if defined $translation_end;
     
     # call translation_start to calculate the start and end
-    $self->translation_start unless defined $self->{translation_end};
+    $self->translation_start unless exists $self->{translation_end};
     
     return $self->{translation_end};
 }
