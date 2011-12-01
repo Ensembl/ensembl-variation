@@ -28,6 +28,7 @@ by Will McLaren (wm2@ebi.ac.uk)
 
 use strict;
 use Bio::EnsEMBL::Registry;
+use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
 use Getopt::Long;
 use FileHandle;
 use Data::Dumper;
@@ -46,7 +47,7 @@ my %Printable = ( "\\"=>'\\', "\r"=>'r', "\n"=>'n', "\t"=>'t', "\""=>'"' );
 ######################
 
 # get command-line options
-my ($in_file, $species, $registry_file, $help, $host, $database, $port, $user, $password, $source, $source_desc, $population, $flank_size, $TMP_DIR, $TMP_FILE, $skip_multi, $use_gp, $sample_prefix, $variation_prefix, $disable_keys, $include_tables, $merge_vfs, $skip_tables, $compressed_only, $only_existing, $merge_alleles, $new_var_name, $chrom_regexp, $check_synonyms, $force_multi);
+my ($in_file, $species, $registry_file, $help, $host, $database, $port, $user, $password, $source, $source_desc, $population, $flank_size, $TMP_DIR, $TMP_FILE, $skip_multi, $use_gp, $sample_prefix, $variation_prefix, $disable_keys, $include_tables, $merge_vfs, $skip_tables, $compressed_only, $only_existing, $merge_alleles, $new_var_name, $chrom_regexp, $check_synonyms, $force_multi, $force_no_var);
 
 my $args = scalar @ARGV;
 
@@ -80,6 +81,7 @@ GetOptions(
 	'chrom_regexp=s' => \$chrom_regexp,
 	'check_synonyms' => \$check_synonyms,
 	'force_multi'    => \$force_multi,
+	'force_no_var'   => \$force_no_var,
 );
 
 
@@ -101,8 +103,9 @@ my $tables = {
 	'flanking_sequence'               => 1,
 	'allele'                          => 1,
 	'population_genotype'             => 1,
-	'individual_genotype_multiple_bp' => 1,
-	'compressed_genotype_single_bp'   => 1,
+	'compressed_genotype_var'         => 1,
+	'individual_genotype_multiple_bp' => 0,
+	'compressed_genotype_region'      => 0,
 	'sample'                          => 1,
 	'population'                      => 1,
 	'individual'                      => 1,
@@ -129,7 +132,8 @@ if(defined($skip_tables)) {
 	}
 }
 
-$compressed_only = 1 if scalar (grep {$tables->{$_}} keys %$tables) == 1 && $tables->{compressed_genotype_single_bp};
+$compressed_only = 1 if scalar (grep {$tables->{$_}} keys %$tables) == 1 && $tables->{compressed_genotype_region};
+my $get_var_from_vf = 1;
 
 # special case for sample, we also want to set the other sample tables to on
 if($tables->{sample}) {
@@ -137,7 +141,7 @@ if($tables->{sample}) {
 }
 
 # force population if user wants allele or population_genotype
-if($tables->{allele} || $tables->{population_genotype} || $tables->{compressed_genotype_single_bp} || $tables->{individual_genotype_multiple_bp}) {
+if($tables->{allele} || $tables->{population_genotype} || $tables->{compressed_genotype_region} || $tables->{individual_genotype_multiple_bp} || $tables->{compressed_genotype_var}) {
 	$tables->{population} = 1;
 	$tables->{sample} = 1;
 }
@@ -147,7 +151,7 @@ die "ERROR: no tables left included\n" unless grep {$tables->{$_}} keys %$tables
 
 
 
-die "ERROR: tmpdir not specified\n" if !defined $TMP_DIR && $tables->{compressed_genotype_single_bp};
+die "ERROR: tmpdir not specified\n" if !defined $TMP_DIR && $tables->{compressed_genotype_region};
 $TMP_FILE ||= 'compress.txt';
 $ImportUtils::TMP_DIR = $TMP_DIR;
 $ImportUtils::TMP_FILE = $TMP_FILE;
@@ -181,7 +185,7 @@ else {
 	}
 
 	# connect to DB
-	my $vdba = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'variation')
+	my $vdba = $reg->get_DBAdaptor($species,'variation')
 		|| usage( "Cannot find variation db for $species in $registry_file" );
 	$dbVar = $vdba->dbc->db_handle;
 
@@ -249,6 +253,16 @@ if($disable_keys) {
 	}
 }
 
+# get genotype codes
+my $gca = Bio::EnsEMBL::Registry->get_adaptor($species, 'variation', 'genotypecode');
+my %gt_codes = map {(join "|", @{$_->genotype}) => $_->dbID} @{$gca->fetch_all()};
+
+# get allele codes
+my $sth = $dbVar->prepare(qq{SELECT allele_code_id, allele FROM allele_code});
+$sth->execute;
+my %allele_codes = map {$_->[1] => $_->[0]} @{$sth->fetchall_arrayref};
+$sth->finish();
+
 
 
 # SET UP VARIABLES
@@ -264,7 +278,8 @@ my (
 	$prev_seq_region,
 	$genotypes,
 	$var_counter,
-	$start_time
+	$start_time,
+	$skipped,
 );
 
 $start_time = time();
@@ -281,7 +296,7 @@ while(<$in_file_handle>) {
 	# header lines
 	next if /^##/;
 	
-	my @split = split /\s+/;
+	my @split = split /\t/;
 	my $data;
 		
 	# set some variables we'll need later
@@ -315,7 +330,7 @@ while(<$in_file_handle>) {
 			
 			# if no sample data
 			else {
-				delete $tables->{$_} foreach qw(individual_genotype_multiple_bp compressed_genotype_single_bp population_genotype);
+				delete $tables->{$_} foreach qw(individual_genotype_multiple_bp compressed_genotype_region population_genotype);
 			}
 		}
 	}
@@ -324,6 +339,7 @@ while(<$in_file_handle>) {
 	else {
 		
 		$var_counter++;
+		$skipped++;
 		if($var_counter =~ /000$/) {
 			debug "Processed $var_counter lines";
 		}
@@ -354,13 +370,10 @@ while(<$in_file_handle>) {
 		&variation($dbVar, $data, $tables->{variation}, $check_synonyms) unless $compressed_only;
 		
 		
-		
 		## COORDINATES
 		##############
 		
-		if($tables->{variation_feature} || $tables->{compressed_genotype_single_bp}) {
-			&get_coordinates($data, $use_gp);
-		}
+		&get_coordinates($data, $use_gp);
 		
 		
 		
@@ -372,7 +385,8 @@ while(<$in_file_handle>) {
 		   $tables->{allele} ||
 		   $tables->{population_genotype} ||
 		   $tables->{individual_genotype_multiple_bp} ||
-		   $tables->{compressed_genotype_single_bp}
+		   $tables->{compressed_genotype_var} ||
+		   $tables->{compressed_genotype_region}
 		) {
 			&get_alleles($data);
 		}
@@ -382,7 +396,7 @@ while(<$in_file_handle>) {
 		## VARIATION_FEATURE
 		####################
 		
-		if($tables->{variation_feature} || (!defined($data->{var_id}) && !$compressed_only)) {
+		if($tables->{variation_feature} || $merge_vfs) {
 			
 			# merge variation_features if it's not an indel
 			if($merge_vfs && !$data->{is_indel}) {
@@ -401,9 +415,11 @@ while(<$in_file_handle>) {
 			}
 		}
 		
-		# skip when the user has elected not to add new variations
-		next if !defined($data->{var_id}) && ((!$tables->{variation} && !$compressed_only) || $only_existing);
+		# still no var ID
+		&get_variation_id_from_variation_feature($dbVar, $data) if(!defined($data->{var_id}));
 		
+		# skip if no var ID found
+		next if !defined($data->{var_id}) && !$force_no_var;
 		
 		
 		## FLANKING_SEQUENCE
@@ -422,7 +438,8 @@ while(<$in_file_handle>) {
 		if(
 		   $tables->{allele} ||
 		   $tables->{population_genotype} ||
-		   $tables->{compressed_genotype_single_bp} ||
+		   $tables->{compressed_genotype_region} ||
+		   $tables->{compressed_genotype_var} ||
 		   $tables->{individual_genotype_multiple_bp}
 		) {
 			
@@ -461,24 +478,27 @@ while(<$in_file_handle>) {
 		## GENOTYPES
 		############
 		
+		# compressed by var
+		if($tables->{compressed_genotype_var}) {
+			&genotype_by_var($dbVar, $data);
+		}
+		
 		# multi bp
-		if(($data->{is_multi} || $data->{is_indel} || $force_multi) && $tables->{individual_genotype_multiple_bp}) {
+		if($tables->{individual_genotype_multiple_bp} && $force_multi && @{$data->{genotypes}}) {
 			&multi_bp_genotype($dbVar, $data);
 		}
 		
-		# single bp
-		elsif($tables->{compressed_genotype_single_bp} && @{$data->{genotypes}}) {
+		# compressed by region
+		if($tables->{compressed_genotype_region} && @{$data->{genotypes}}) {
 			next unless defined($data->{seq_region}) && defined($data->{start});
-			
-			my (@multi_rows, $total_count, %counts);
 			
 			for my $i($data->{first_sample_col}..$#split) {
 				my $sample_id = $data->{sample_ids}->[$i-$data->{first_sample_col}];
 				
-				my @bits = split /\|/, $data->{genotypes}->[$i-$data->{first_sample_col}];
+				my $gt = $data->{genotypes}->[$i-$data->{first_sample_col}];
 				
 				# otherwise add to compress hash for writing later
-				if(scalar @bits && $bits[0] ne '.' and $bits[1] ne '.') {
+				if(defined($gt) && $gt !~ /\./) {
 					
 					if (!defined $genotypes->{$sample_id}->{region_start}){
 						$genotypes->{$sample_id}->{region_start} = $data->{start};
@@ -488,9 +508,13 @@ while(<$in_file_handle>) {
 					# write previous data?
 					#compare with the beginning of the region if it is within the DISTANCE of compression
 					if (
-						(abs($genotypes->{$sample_id}->{region_start} - $data->{start}) > DISTANCE()) ||
-						(abs($data->{start} - $genotypes->{$sample_id}->{region_end}) > MAX_SHORT) ||
-						(defined($prev_seq_region) && $data->{seq_region} != $prev_seq_region)
+						defined($genotypes->{$sample_id}->{genotypes}) &&
+						(
+							(abs($genotypes->{$sample_id}->{region_start} - $data->{start}) > DISTANCE()) ||
+							(abs($data->{start} - $genotypes->{$sample_id}->{region_end}) > MAX_SHORT) ||
+							(defined($prev_seq_region) && $data->{seq_region} != $prev_seq_region) ||
+							($data->{start} - $genotypes->{$sample_id}->{region_end} - 1 < 0)
+						)
 					) {
 						#snp outside the region, print the region for the sample we have already visited and start a new one
 						print_file("$TMP_DIR/compressed_genotype_".$$.".txt",$genotypes, $prev_seq_region, $sample_id);
@@ -498,15 +522,14 @@ while(<$in_file_handle>) {
 						$genotypes->{$sample_id}->{region_start} = $data->{start};
 					}
 					
-					# not first genotype
 					if ($data->{start} != $genotypes->{$sample_id}->{region_start}){
 						#compress information
-						my $blob = pack ("n",$data->{start} - $genotypes->{$sample_id}->{region_end} - 1);
-						$genotypes->{$sample_id}->{genotypes} .= &escape($blob).($bits[0] || '-').($bits[1] || '0');
+						my $blob = pack ("w",$data->{start} - $genotypes->{$sample_id}->{region_end} - 1);
+						$genotypes->{$sample_id}->{genotypes} .= escape($blob) .escape(pack("w", $data->{var_id} || 0)). escape(pack("w", gt_code($dbVar, $gt)));
 					}
-					# first genotype
 					else{
-						$genotypes->{$sample_id}->{genotypes} = ($bits[0] || '-').($bits[1] || '0');
+						#first genotype starts in the region_start, not necessary the number
+						$genotypes->{$sample_id}->{genotypes} = escape(pack("w", $data->{var_id} || 0)).escape(pack("w", gt_code($dbVar, $gt)));
 					}
 					
 					$genotypes->{$sample_id}->{region_end} = $data->{start};
@@ -515,11 +538,12 @@ while(<$in_file_handle>) {
 		}
 		
 		$prev_seq_region = $data->{seq_region};
+		$skipped--;
 	}
 }
 
 # clean up remaining genotypes and import
-if($tables->{compressed_genotype_single_bp}) {
+if($tables->{compressed_genotype_region}) {
 
     debug("Importing compressed genotype data");
 	
@@ -536,6 +560,7 @@ if($disable_keys) {
 	}
 }
 
+debug("Skipped $skipped variations in the file\n");
 debug("Took ", time() - $start_time, "s to run\n");
 
 
@@ -559,7 +584,7 @@ Options
 
 -i | --input_file     Input file - if not specified, attempts to read from STDIN
 --tmpdir              Temporary directory to write genotype dump file. Required if
-                      writing to compressed_genotype_single_bp [default: no default]
+                      writing to compressed_genotype_region [default: no default]
 --tmpfile             Name for temporary file [default: compress.txt]
 
 --species             Species to use [default: "human"]
@@ -684,12 +709,12 @@ sub escape ($) {
 
 
 
-# imports genotypes from tmp file to compressed_genotype_single_bp
+# imports genotypes from tmp file to compressed_genotype_region
 sub import_genotypes{
     my $dbVar = shift;
     my $call = "mv $TMP_DIR/compressed_genotype_".$$.".txt $TMP_DIR/$TMP_FILE";
     system($call);
-    load($dbVar,qw(compressed_genotype_single_bp sample_id seq_region_id seq_region_start seq_region_end seq_region_strand genotypes));
+    load($dbVar,qw(compressed_genotype_region sample_id seq_region_id seq_region_start seq_region_end seq_region_strand genotypes));
 }
 
 
@@ -955,7 +980,6 @@ sub get_alleles {
 			
 			# insertion or deletion (VCF 4+)
 			else {
-				
 				# chop off first base if they match
 				if(substr($data->{REF}, 0, 1) eq substr($data->{ALT}, 0, 1)) {
 					$data->{REF} = substr($data->{REF}, 1);
@@ -1156,6 +1180,54 @@ sub merge_variation_features {
 }
 
 
+# gets variation ID from variation_feature overlap
+sub get_variation_id_from_variation_feature {
+	my $dbVar = shift;
+	my $data = shift;
+	
+	unless(
+		defined($data->{start}) &&
+		defined($data->{end}) &&
+		defined($data->{seq_region})
+	) {
+		warn "WARNING: Attempting to retrieve variation ID with missing data";
+		return;
+	}
+		
+	my $sth = $dbVar->prepare(qq{
+		SELECT variation_id, allele_string, seq_region_strand
+		FROM variation_feature
+		WHERE seq_region_id = ?
+		AND seq_region_start = ?
+		AND seq_region_end = ?
+	});
+	
+	$sth->execute($data->{seq_region}, $data->{start}, $data->{end});
+	
+	my ($var_id, $allele_string, $strand);
+	$sth->bind_columns(\$var_id, \$allele_string, \$strand);
+	
+	while($sth->fetch) {
+		my %vf_alleles = map {$_ => 1} split /\//, $allele_string;
+		
+		if($strand == -1) {
+			my %new_alleles;
+			
+			foreach(keys %vf_alleles) {
+				reverse_comp(\$_);
+				$new_alleles{$_} = 1;
+			}
+			
+			%vf_alleles = %new_alleles;
+		}
+		
+		next unless grep {$vf_alleles{$_}} grep {$_ ne 'N'} @{$data->{alleles}};
+		
+		$data->{var_id} = $var_id;
+		
+		last;
+	}
+}
 
 # parses info column and gets frequencies
 sub parse_info {
@@ -1170,6 +1242,9 @@ sub parse_info {
 		my ($key, $val) = split /\=/, $chunk;
 		$info{$key} = $val;
 	}
+	
+	# get GMAF if available
+	$data->{GMAF} = $info{GMAF} if defined $info{GMAF};
 	
 	# deal with frequencies
 	my (@freqs, %gt_freqs, @genotypes);
@@ -1187,42 +1262,44 @@ sub parse_info {
 	my %allele_counts;
 	
 	# get counts
-	for my $i($data->{first_sample_col}..$#split) {
-		my $gt;
-		my @bits;
-		my $gt = (split /\:/, $split[$i])[0];
-		foreach my $bit(split /\||\/|\\/, $gt) {
-			push @bits, ($bit eq '.' ? '.' : $data->{alleles}->[$bit]);
-		}
-		
-		if(scalar @bits) {
-			$allele_counts{$_}++ for @bits;
+	if(defined($data->{first_sample_col})) {
+		for my $i($data->{first_sample_col}..$#split) {
+			my $gt;
+			my @bits;
+			my $gt = (split /\:/, $split[$i])[0];
+			foreach my $bit(split /\||\/|\\/, $gt) {
+				push @bits, ($bit eq '.' ? '.' : $data->{alleles}->[$bit]);
+			}
 			
-			$gt = join '|', sort @bits;
-			
-			# store genotypes for later
-			push @genotypes, $gt;
-			
-			unless($gt =~ /\./) {
-				$counts{$gt}++;
-				$total_count++;
+			if(scalar @bits) {
+				$allele_counts{$_}++ for @bits;
+				
+				$gt = join '|', sort @bits;
+				
+				# store genotypes for later
+				push @genotypes, $gt;
+				
+				unless($gt =~ /\./) {
+					$counts{$gt}++;
+					$total_count++;
+				}
 			}
 		}
-	}
-	
-	# now calculate frequencies
-	for my $i(0..(scalar @{$data->{alleles}} - 1)) {
-		my ($c_aa, $c_ab);
-		my $a = $data->{alleles}->[$i];
 		
-		$c_aa = $counts{$a.'|'.$a};
-		
-		foreach my $gt(keys %counts) {
-			$c_ab += $counts{$gt} if $gt =~ /$a/ and $gt ne $a.'|'.$a;
-			$gt_freqs{$gt} = ($total_count ? $counts{$gt}/$total_count : 0);
+		# now calculate frequencies
+		for my $i(0..(scalar @{$data->{alleles}} - 1)) {
+			my ($c_aa, $c_ab);
+			my $a = $data->{alleles}->[$i];
+			
+			$c_aa = $counts{$a.'|'.$a};
+			
+			foreach my $gt(keys %counts) {
+				$c_ab += $counts{$gt} if $gt =~ /$a/ and $gt ne $a.'|'.$a;
+				$gt_freqs{$gt} = ($total_count ? $counts{$gt}/$total_count : 0);
+			}
+			
+			push @freqs, ($total_count ? (((2*$c_aa) + $c_ab) / (2*$total_count)) : 0) unless defined($info{AF});
 		}
-		
-		push @freqs, ($total_count ? (((2*$c_aa) + $c_ab) / (2*$total_count)) : 0) unless defined($info{AF});
 	}
 	
 	$data->{freqs} = \@freqs;
@@ -1246,13 +1323,13 @@ sub allele {
 		defined($data->{pop_id});
 	
 	my $sth = $dbVar->prepare(qq{
-		INSERT IGNORE INTO allele(variation_id, allele, frequency, sample_id, count)
-		VALUES (?,?,?,?,?)
+		INSERT IGNORE INTO allele(variation_id, subsnp_id, allele_code_id, frequency, sample_id, count)
+		VALUES (?,NULL,?,?,?,?)
 	});
 	
 	$sth->execute(
 		$data->{var_id},
-		$data->{alleles}->[$_],
+		allele_code($dbVar, $data->{alleles}->[$_]),
 		$data->{freqs}->[$_],
 		$data->{pop_id},
 		$data->{allele_counts}->{$data->{alleles}->[$_]} || 0
@@ -1279,7 +1356,7 @@ sub merge_alleles {
 		SET frequency = ?, count = ?
 		WHERE variation_id = ?
 		AND sample_id = ?
-		AND allele = ?
+		AND allele_code_id = ?
 	});
 	
 	my $rows_affected;
@@ -1292,7 +1369,7 @@ sub merge_alleles {
 			$data->{allele_counts}->{$allele} || 0,
 			$data->{var_id},
 			$data->{pop_id},
-			$allele
+			allele_code($allele),
 		);
 	}
 	
@@ -1349,6 +1426,91 @@ sub multi_bp_genotype {
 }
 
 
+# genotype by variation
+sub genotype_by_var {
+	my $dbVar = shift;
+	my $data = shift;
+	
+	die "ERROR: Attempting to populate compressed_genotype_var table with missing data" unless
+		defined($data->{var_id}) &&
+		defined($data->{genotypes}) &&
+		defined($data->{sample_ids});
+
+	if(scalar @{$data->{genotypes}}) {
+		
+		my $genotype_string = '';
+		
+		for my $i(0..(scalar @{$data->{sample_ids}}) - 1) {
+			my $sample_id = $data->{sample_ids}->[$i];
+			my $gt = $data->{genotypes}->[$i];
+			next if $gt =~ /\./;
+			
+			$genotype_string .= pack("ww", $sample_id, &gt_code($dbVar, $gt));
+		}
+		if($genotype_string ne '') {
+			my $sth = $dbVar->prepare(qq{
+				INSERT INTO compressed_genotype_var(
+					variation_id,
+					subsnp_id,
+					genotypes
+				)
+				VALUES(?, NULL, ?)
+			});
+			$sth->execute($data->{var_id}, $genotype_string);
+			$sth->finish;
+		}
+	}
+}
+
+# gets/sets genotype codes
+sub gt_code {
+	my $dbVar = shift;
+	my $gt = shift;
+	
+	if(!defined($gt_codes{$gt})) {
+		my $new_code = (sort {$a <=> $b} values %gt_codes)[-1] + 1;
+		create_genotype_code($dbVar, $gt, $new_code);
+		$gt_codes{$gt} = $new_code;
+	}
+	
+	return $gt_codes{$gt};
+}
+
+# creates a new genotype_code entry
+sub create_genotype_code {
+	my $dbVar = shift;
+	my $genotype = shift;
+	my $gt_code = shift;
+	my $hap_id = 1;
+	
+	my $sth = $dbVar->prepare("INSERT INTO genotype_code VALUES(?, ?, ?)");
+	
+	foreach my $allele(split /\|/, $genotype) {
+		my $allele_code = allele_code($dbVar, $allele);
+		$sth->execute($gt_code, $allele_code, $hap_id++);
+	}
+	
+	$sth->finish;
+	return $gt_code;
+}
+
+# getter/setter for allele code
+sub allele_code {
+	my $dbVar = shift;
+	my $allele = shift;
+	
+	# create if doesn't exist
+	if(!defined($allele_codes{$allele})) {
+		my $sth = $dbVar->prepare("INSERT INTO allele_code(allele) VALUES(?)");
+		$sth->execute($allele);
+		$sth->finish();
+		
+		$allele_codes{$allele} = $dbVar->last_insert_id(undef, undef, qw(allele_code allele_code_id));
+	}
+	
+	return $allele_codes{$allele};
+}
+
 
 # populates population_genotype table
 sub population_genotype {
@@ -1365,21 +1527,18 @@ sub population_genotype {
 		INSERT IGNORE INTO population_genotype(
 			variation_id,
 			subsnp_id,
-			allele_1,
-			allele_2,
+			genotype_code_id,
 			frequency,
 			sample_id,
 			count
 		)
-		VALUES (?,NULL,?,?,?,?,?)
+		VALUES (?,NULL,?,?,?,?)
 	});
 	
 	foreach my $gt(keys %{$data->{gt_freqs}}) {
-		my @bits = split /\||\/|\\/, $gt;
 		$sth->execute(
 			$data->{var_id},
-			$bits[0],
-			$bits[1],
+			gt_code($dbVar, $gt),
 			$data->{gt_freqs}->{$gt},
 			$data->{pop_id},
 			$data->{gt_counts}->{$gt}
