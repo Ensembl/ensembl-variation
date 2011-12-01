@@ -414,6 +414,14 @@ use warnings;
         if ( (defined $self->inner_end) && (defined $self->outer_end) && ($self->inner_end != $self->outer_end) ) {
             $gff->{attributes}->{End_range} = join ',', $self->inner_end, $self->outer_end;
         }
+        
+        if (my $sv = $self->structural_variation) {
+            if (ref $sv eq 'Bio::EnsEMBL::Variation::SupportingStructuralVariation') {
+                if (my $parents = $sv->get_all_StructuralVariations) {
+                    $gff->{attributes}->{Parent} = join ',', map { $_->variation_name } @$parents;
+                }
+            }
+        }
 
         return $gff;
     }
