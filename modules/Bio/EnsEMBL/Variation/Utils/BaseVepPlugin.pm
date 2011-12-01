@@ -26,16 +26,10 @@ Bio::EnsEMBL::Variation::Utils::BaseVepPlugin
 
     package FunkyPlugin;
 
-    use Bio::EnsEMBL::Variation::Utils::BaseVepPlugin;
-
     use base qw(Bio::EnsEMBL::Variation::Utils::BaseVepPlugin);
     
     sub feature_types {
         return ['Transcript'];
-    }
-    
-    sub variant_feature_types {
-        return ['VariationFeature'];
     }
 
     sub get_header_info {
