@@ -163,11 +163,6 @@ sub get_header_info {
     return undef;
 }
 
-sub prefetch {
-    my ($self) = @_;
-    return undef;
-}
-
 =head2 variant_feature_types
 
   Description: To indicate which types of variation features a plugin is interested

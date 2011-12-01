@@ -31,8 +31,6 @@ Bio::EnsEMBL::Variation::Utils::BaseVepFilterPlugin
 
     package NonSynonymousFilter;
 
-    use Bio::EnsEMBL::Variation::Utils::BaseVepFilterPlugin;
-
     use base qw(Bio::EnsEMBL::Variation::Utils::BaseVepFilterPlugin);
 
     sub include_line {
@@ -65,8 +63,6 @@ package Bio::EnsEMBL::Variation::Utils::BaseVepFilterPlugin;
 
 use strict;
 use warnings;
-
-use Bio::EnsEMBL::Variation::Utils::BaseVepPlugin;
 
 use base qw(Bio::EnsEMBL::Variation::Utils::BaseVepPlugin);
 
