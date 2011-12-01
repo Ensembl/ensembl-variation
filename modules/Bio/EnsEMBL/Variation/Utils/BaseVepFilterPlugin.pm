@@ -33,13 +33,14 @@ Bio::EnsEMBL::Variation::Utils::BaseVepFilterPlugin
 
     use base qw(Bio::EnsEMBL::Variation::Utils::BaseVepFilterPlugin);
 
-    sub include_line {
-        my ($self, $vfoa) = @_;
-        
-        # exclude anything that does not affect the peptide 
-        return 0 unless $vfoa->can('pep_allele_string');
+    sub feature_types {
+        return ['Transcript'];
+    }
 
-        if (my $pep_alleles = $vfoa->pep_allele_string) {
+    sub include_line {
+        my ($self, $tva) = @_;
+        
+        if (my $pep_alleles = $tva->pep_allele_string) {
             return $pep_alleles =~ /\//;
         }
 
