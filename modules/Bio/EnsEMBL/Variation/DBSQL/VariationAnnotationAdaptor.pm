@@ -429,4 +429,28 @@ sub fetch_phenotype_description_by_id {
 	return ($sth->fetchrow_array)[0];
 }
 
+
+=head2 fetch_annotation_number_by_phenotype_id
+  
+  Arg [1]    : int $phenotype_id
+  Example    : $phenotype = $va_adaptor->fetch_annotation_number_by_phenotype_id(10);
+  Description: Retrieves the number of variation annotation with the given phenotype ID
+  Returntype : integer
+  Exceptions : throw if the phenotype_id argument is not defined
+  Caller     : general
+
+=cut
+
+sub fetch_annotation_number_by_phenotype_id {
+	my $self = shift;
+  my $phenotype_id  = shift;
+	
+	throw('phenotype_id argument expected') if(!defined($phenotype_id));
+	
+	my $sth = $self->prepare(qq{SELECT count(variation_annotation_id) FROM variation_annotation WHERE phenotype_id = ?});
+	$sth->bind_param(1,$phenotype_id,SQL_INTEGER);
+	$sth->execute();
+	
+	return ($sth->fetchrow_array)[0];
+}
 1;
