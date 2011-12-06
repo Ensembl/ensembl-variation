@@ -557,12 +557,12 @@ sub parse_hgvs {
     eval { $vf = $config->{vfa}->fetch_by_hgvs_notation($line, $config->{sa}, $config->{ta}) };
     
     if(!defined($vf) || (defined $@ && length($@) > 1)) {
-        warn("WARNING: Unable to parse HGVS notation \'$line\'\n") unless defined $config->{quiet};
+        warn("WARNING: Unable to parse HGVS notation \'$line\'\n$@") unless defined $config->{quiet};
         return [];
     }
     
     # get whole chromosome slice
-    my $slice = $vf->slice->adaptor->fetch_by_region('chromosome', $vf->slice->seq_region_name);
+    my $slice = $vf->slice->adaptor->fetch_by_region($vf->slice->coord_system->name, $vf->slice->seq_region_name);
     
     $vf = $vf->transfer($slice);
     
