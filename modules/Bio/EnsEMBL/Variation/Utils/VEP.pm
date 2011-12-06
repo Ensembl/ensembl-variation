@@ -189,7 +189,11 @@ sub parse_line {
     my $parse_method = 'parse_'.$config->{format};
     my $method_ref   = \&$parse_method;
     
-    return &$method_ref($config, $line);
+    my $vfs = &$method_ref($config, $line);
+    
+    $vfs = add_lrg_mappings($config, $vfs) if defined($config->{lrg});
+    
+    return $vfs;
 }
 
 # sub-routine to detect format of input
@@ -681,6 +685,38 @@ sub convert_to_vcf {
             '.', '.', '.'
         ];
     }
+}
+
+
+# tries to map a VF to the LRG coordinate system
+sub add_lrg_mappings {
+    my $config = shift;
+    my $vfs = shift;
+    
+    my @new_vfs;
+    
+    foreach my $vf(@$vfs) {
+        
+        # add the unmapped VF to the array
+        push @new_vfs, $vf;
+        
+        # make sure the VF has an attached slice
+        $vf->{slice} ||= get_slice($config, $vf->{chr});
+        next unless defined($vf->{slice});
+        
+        # transform LRG <-> chromosome
+        my $new_vf = $vf->transform($vf->{slice}->coord_system->name eq 'lrg' ? 'chromosome' : 'lrg');
+        
+        # add it to the array if transformation worked
+        if(defined($new_vf)) {
+            
+            # update new VF's chr entry
+            $new_vf->{chr} = $new_vf->seq_region_name;
+            push @new_vfs, $new_vf;
+        }
+    }
+    
+    return \@new_vfs;
 }
 
 
