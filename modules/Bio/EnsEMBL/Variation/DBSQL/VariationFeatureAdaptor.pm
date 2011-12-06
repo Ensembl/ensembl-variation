@@ -1083,7 +1083,7 @@ sub fetch_by_hgvs_notation {
     throw ("Could not parse the HGVS notation $hgvs") unless (defined($reference) && defined($type) && defined($description));
     
     # strip version number from reference
-    $reference =~ s/\.\d+//g if $reference =~ /^ENS/;
+    $reference =~ s/\.\d+//g if $reference =~ /^ENS|^LRG_\d+/;
     
     my ($start,$end,$start_offset,$end_offset,$ref_allele,$alt_allele,$class);
     
