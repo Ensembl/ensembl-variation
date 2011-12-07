@@ -77,6 +77,9 @@ my $default_consequence_code;
 for my $cons_set (@OVERLAP_CONSEQUENCES) {
 
     my $term = $cons_set->{SO_term};
+
+    # set a default rank
+    $cons_set->{rank} ||= '999';
     
     my $const = "SO_TERM_".uc($term);
 
