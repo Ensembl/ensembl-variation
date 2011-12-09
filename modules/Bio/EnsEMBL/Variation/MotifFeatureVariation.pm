@@ -81,4 +81,14 @@ sub get_all_MotifFeatureVariationAlleles {
     return $self->SUPER::get_all_VariationFeatureOverlapAlleles(@_);
 }
 
+sub _motif_feature_seq {
+    my $self = shift;
+    
+    my $mf = $self->motif_feature;
+    
+    my $mf_seq = $mf->{_variation_effect_feature_cache}->{seq} ||= $mf->seq;
+    
+    return $mf_seq;
+}
+
 1;
