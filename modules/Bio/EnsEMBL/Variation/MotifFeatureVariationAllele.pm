@@ -161,7 +161,7 @@ sub motif_score_delta {
 
         return undef if $var_len > $mf->length;
 
-        my $mf_seq = $mf->seq;
+        my $mf_seq = $self->motif_feature_variation->_motif_feature_seq;
 
         my $matrix = $mf->binding_matrix;
 
