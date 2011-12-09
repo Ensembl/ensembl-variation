@@ -2929,7 +2929,8 @@ sub clean_reg_feat {
     }
     
     if(defined($rf->{binding_matrix})) {
-        
+        $rf->{_variation_effect_feature_cache}->{seq} = $rf->seq;
+ 
         foreach my $key(qw/adaptor feature_type analysis dbID/) {
             delete $rf->{binding_matrix}->{$key};
         }
