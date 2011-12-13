@@ -366,8 +366,11 @@ sub _objs_from_sth{
 			$igty->{genotype} = $gtc->genotype;
 		}
 	}
-
-	return \@results;
+	
+	# unique sort the results on individual and position (we don't care if GTs disagree)
+	my %tmp_hash = map {$_->{individual}."_".$_->{start}."_".$_->{end} => $_} @results;
+	
+	return [values %tmp_hash];
 }
 
 1;
