@@ -4,6 +4,7 @@ DROP TABLE variation_group_variation;
 DROP TABLE variation_group_feature;
 DROP TABLE allele_group;
 DROP TABLE allele_group_allele;
+DROP TABLE httag;
 
 
 # patch identifier
