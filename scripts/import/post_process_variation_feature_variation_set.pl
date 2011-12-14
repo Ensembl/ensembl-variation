@@ -16,13 +16,12 @@ use DBI;
 use Bio::EnsEMBL::Registry;
 
 our $MAX_VARIATION_SETS = 64;
-# This is just for convenience in case we have a custom name for the variation_feature table
-our $VARIATION_FEATURE_TABLE = 'variation_feature';
 
 my @option_defs = (
   'species=s',
   'group=s',
   'registry_file=s',
+	'sv!',
   'clean!',
   'quiet!',
   'help!'
@@ -37,8 +36,14 @@ my $registry_file = $options{'registry_file'};
 my $clean = $options{'clean'};
 my $quiet = $options{'quiet'};
 my $help = $options{'help'};
+my $sv_prefix = 'structural_' if $options{'sv'};
 
 usage() if ($help);
+
+# This is just for convenience in case we have a custom name for the variation_feature table
+our $VARIATION_FEATURE_TABLE = $sv_prefix.'variation_feature';
+our $VAR_COL       = $sv_prefix.'variation_id';
+our $VAR_SET_TABLE = 'variation_set_'.$sv_prefix.'variation';
 
 #ÊCheck that required parameters were passed
 die ("Required argument '-species' was not specified") unless (defined($species));
@@ -79,7 +84,7 @@ sub post_process {
     $stmt = qq{
         CREATE TABLE
             $tmp_table (
-                variation_id INT NOT NULL, 
+                $VAR_COL INT NOT NULL, 
                 variation_set_id SET(
                     '1','2','3','4','5','6','7','8',
                     '9','10','11','12','13','14','15','16',
@@ -90,7 +95,7 @@ sub post_process {
                     '49','50','51','52','53','54','55','56',
                     '57','58','59','60','61','62','63','64'
                 ) NOT NULL DEFAULT '', 
-                PRIMARY KEY (variation_id) 
+                PRIMARY KEY ($VAR_COL) 
             );
     };
     my $tmp_tbl_sth = $dbVar->dbc->prepare($stmt);
@@ -99,16 +104,16 @@ sub post_process {
     $stmt = qq{
         INSERT INTO
             $tmp_table (
-                variation_id,
+                $VAR_COL,
                 variation_set_id
             )
         SELECT
-            vsv.variation_id,
+            vsv.$VAR_COL,
             GROUP_CONCAT(vsv.variation_set_id)
         FROM
-            variation_set_variation vsv
+            $VAR_SET_TABLE vsv
         GROUP BY
-            vsv.variation_id
+            vsv.$VAR_COL
     };
     my $ins_expl_sth = $dbVar->dbc->prepare($stmt);
     
@@ -152,7 +157,7 @@ sub post_process {
         SET
             vf.variation_set_id = t.variation_set_id
         WHERE
-            vf.variation_id = t.variation_id
+            vf.$VAR_COL = t.$VAR_COL
     };
     my $upd_vf_sth = $dbVar->dbc->prepare($stmt);
     
@@ -245,7 +250,10 @@ Command line switches:
   -group g          (Optional)
                     The group identifier for the database to post-process as it is specified
                     in the registry configuration file. Defaults to 'variation'.
-                  
+
+  -sv               (Optional)
+                    If specified, will run the script for the structural_variation_feature table
+	                
   -clean            (Optional)
                     If specified, all pre-existing variation_set_id entries in variation_feature are truncated. 
                     
