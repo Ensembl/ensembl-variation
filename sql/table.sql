@@ -592,11 +592,13 @@ CREATE TABLE structural_variation_association (
 @column class_attrib_id					         Foreign key references to the @link attrib table. Defines the type of structural variant.
 @column allele_string						         The variant allele, where known.
 @column is_evidence                      Flag indicating if the structural variation is a supporting evidence (1) or not (0).
+@column variation_set_id		             The structural variation feature can belong to a @link variation_set.
 
 @see structural_variation
 @see source
 @see seq_region
 @see attrib
+@see variation_set
 */
 
 create table structural_variation_feature (
@@ -615,12 +617,23 @@ create table structural_variation_feature (
   class_attrib_id int(10) unsigned NOT NULL DEFAULT 0,
 	allele_string longtext DEFAULT NULL,
 	is_evidence tinyint(1) NOT NULL DEFAULT 0,
+  variation_set_id SET (
+          '1','2','3','4','5','6','7','8',
+          '9','10','11','12','13','14','15','16',
+          '17','18','19','20','21','22','23','24',
+          '25','26','27','28','29','30','31','32',
+          '33','34','35','36','37','38','39','40',
+          '41','42','43','44','45','46','47','48',
+          '49','50','51','52','53','54','55','56',
+          '57','58','59','60','61','62','63','64'
+  ) NOT NULL DEFAULT '',
 	
   PRIMARY KEY (structural_variation_feature_id),
 	KEY pos_idx( seq_region_id, seq_region_start, seq_region_end ),
 	KEY structural_variation_idx (structural_variation_id),
 	KEY source_idx (source_id),
-	KEY attrib_idx (class_attrib_id)
+	KEY attrib_idx (class_attrib_id),
+	KEY variation_set_idx (variation_set_id)
 );
 
 
