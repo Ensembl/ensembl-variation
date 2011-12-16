@@ -17,8 +17,8 @@ my $registry_file;
 my $help;
 
 GetOptions(
-    "import|i"      => \$import_file,
-    "registry|r"    => \$registry_file,
+    "import|i=s"    => \$import_file,
+    "registry|r=s"  => \$registry_file,
     "verbose|v"     => \$VERBOSE,
     "test|t"        => \$USE_DB,
     "help|h"        => \$help,
@@ -149,7 +149,7 @@ my ($cosmic_set_id) = $get_cosmic_set_id_sth->fetchrow_array;
 die "Didn't find COSMIC set id?" unless defined $cosmic_set_id;
 
 my $get_phenotype_set_id_sth = $dbh->prepare(qq{
-    SELECT variation_set_id FROM variation_set WHERE name = "Phenotype-associated variants"
+    SELECT variation_set_id FROM variation_set WHERE name like '%phenotype-associated variants%'
 });
 
 $get_phenotype_set_id_sth->execute;
