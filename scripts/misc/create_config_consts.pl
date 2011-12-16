@@ -83,7 +83,7 @@ for my $cons_set (@OVERLAP_CONSEQUENCES) {
     
     my $const = "SO_TERM_".uc($term);
 
-    $code .= "use constant $const => '$term';\n" unless $to_export->{SO_consequence_terms}->{$const};
+    $code .= "use constant $const => '$term';\n" unless $to_export->{SO_consequence_terms}->{$const} || $to_export->{SO_class_terms}->{$const};
 
     $to_export->{SO_consequence_terms}->{$const} = 1;
     
@@ -99,7 +99,17 @@ for my $cons_set (@OVERLAP_CONSEQUENCES) {
 
 $cons_code = $default_consequence_code. "\n". "\n" . $cons_code .");\n";
 
-$hdr .= 'our @EXPORT_OK = qw(%OVERLAP_CONSEQUENCES %VARIATION_CLASSES $DEFAULT_OVERLAP_CONSEQUENCE '.(join ' ', map { keys %{ $to_export->{$_} } } keys %$to_export).');';
+# avoid any duplicate exports by putting all constants to export into a single hash
+
+my $all_to_export;
+
+for my $type (keys %$to_export) {
+    for my $export (keys %{ $to_export->{$type} }) {
+        $all_to_export->{$export} = 1;
+    }
+}
+
+$hdr .= 'our @EXPORT_OK = qw(%OVERLAP_CONSEQUENCES %VARIATION_CLASSES $DEFAULT_OVERLAP_CONSEQUENCE '.(join ' ', keys %$all_to_export).');';
 
 $hdr .= "\n\n";
 
