@@ -15,13 +15,15 @@ use FindBin qw( $Bin );
 use Getopt::Long;
 use ImportUtils qw(dumpSQL debug create_and_load load);
 use DBI qw(:sql_types);
-our ($species, $input_file, $source_name, $TMP_DIR, $TMP_FILE);
+our ($species, $input_file, $source_name, $TMP_DIR, $TMP_FILE, $mapping, $registry_file);
 
 GetOptions('species=s'     => \$species,
 	   	   	 'input_file=s'  => \$input_file,
 	   	   	 'source_name=s' => \$source_name,
 	   	   	 'tmpdir=s'      => \$ImportUtils::TMP_DIR,
          	 'tmpfile=s'     => \$ImportUtils::TMP_FILE,
+					 'mapping!'      => \$mapping,
+					 'registry=s'    => \$registry_file
           );
 
 $species ||= 'human';
@@ -30,7 +32,7 @@ $source_name ||= 'HGMD-PUBLIC';
 
 my $header = 'HGMD_PUBLIC';
 my $ncbi_version = 'NCBI36';
-my $registry_file ||= $Bin . "/ensembl.registry";
+   $registry_file ||= $Bin . "/ensembl.registry";
 my $hgmd_url = 'http://www.hgmd.cf.ac.uk/ac/index.php';
 my $insertion_label = 'I';
 
@@ -64,16 +66,22 @@ else {
 	my $year      = $1;
 	my $month_num	= $2;
 	my $month     = $month_hash->{$month_num} if ($month_num);
+	my $remapped;
+	if ($mapping) {
+		$remapped = " [remapped from build $ncbi_version]";
+	}
+	
+	
 	if ($year and $month) {
 		$source_description .= " set $month $year";
 		$month_num = '0'.$month_num if ($month_num<10);
   	$dbVar2->do(qq{INSERT INTO source(name,description,url,version)
-									 values("$source_name","$source_description [remapped from build $ncbi_version]","$hgmd_url",$year$month_num)
+									 values("$source_name","$source_description$remapped","$hgmd_url",$year$month_num)
 									});
 	}
 	else {
 		$dbVar2->do(qq{INSERT INTO source(name,description,url)
-									 values("$source_name","$source_description [remapped from build $ncbi_version]","$hgmd_url")
+									 values("$source_name","$source_description$remapped","$hgmd_url")
 							    });
 	}
   $source_id = $dbVar2->{'mysql_insertid'};
@@ -97,86 +105,95 @@ open IN, "$input_file" or die "can't open file $input_file : $!";
 while (<IN>) {
   chomp;
   my ($var_name,$gene_symbol,$seq_region_name,$pos,$var_type) = split /\s+/, $_;
-  my $variation_id;
-  
-  my $slice_newdb_oldasm = $sa2->fetch_by_region('chromosome', $seq_region_name, undef, undef, undef, "$ncbi_version");
-  if (!$slice_newdb_oldasm) {
-    print_buffered($buffer,"$TMP_DIR/$header\_error",join ("\t",$var_name,$seq_region_name,$pos) . "\n");
-    next;
-  }
+	my %data = ('var_name'    => $var_name,
+	            'gene_symbol' => $gene_symbol,
+							'region_name' => $seq_region_name,
+							'pos'         => $pos,
+							'var_type'    => $var_type,
+							'strand'      => 1,
+							'status'      => '\N',
+							'map_weight'  => 1,
+							'allele'      => 'HGMD_MUTATION',
+							'flags'       => '\N',
+							'consequence' => 'HGMD_MUTATION'
+						);
+	
+	
+	if ($mapping) {
+  	my $slice_newdb_oldasm = $sa2->fetch_by_region('chromosome', $data{region_name}, undef, undef, undef, "$ncbi_version");
+  	if (!$slice_newdb_oldasm) {
+    	print_buffered($buffer,"$TMP_DIR/$header\_error",join ("\t",$data{var_name},$data{region_name},$data{pos}) . "\n");
+    	next;
+	  }
     
-  my $seq_region_strand = 1;
-  my $feat = new Bio::EnsEMBL::SimpleFeature(
-					      -START => $pos,
-					      -END => $pos,
-					      -STRAND => $seq_region_strand,
-					      -SLICE => $slice_newdb_oldasm,
-					    );
+  	my $feat = new Bio::EnsEMBL::SimpleFeature(
+					      	-START  => $data{pos},
+					      	-END    => $data{pos},
+					      	-STRAND => $data{strand},
+					      	-SLICE  => $slice_newdb_oldasm,
+					    	);
 
-  #print $feat->start," ",$feat->strand," ",$feat->slice,"\n";
-  my @segments;
+  	#print $feat->start," ",$feat->strand," ",$feat->slice,"\n";
+  	my @segments;
 
-  eval {
-    @segments = @{$feat->feature_Slice->project('chromosome','GRCh37')};
-  };
-  if ($@) {
-    print "no segments found for $var_name\n" if $@;
-    print_buffered($buffer,"$TMP_DIR/$header\_error",join ("\t",$var_name,$seq_region_name,$pos) . "\n");
-    next;
-  }
+  	eval {
+    	@segments = @{$feat->feature_Slice->project('chromosome','GRCh37')};
+  	};
+  	if ($@) {
+    	print "no segments found for ".$data{var_name}."\n" if $@;
+    	print_buffered($buffer,"$TMP_DIR/$header\_error",join ("\t",$data{var_name},$data{region_name},$data{pos}) . "\n");
+   	 next;
+  	}
+	
+  	my @slices_newdb_newasm = map { $_->to_Slice }  @segments;
+  	@slices_newdb_newasm = sort {$a->start<=>$b->start} @slices_newdb_newasm;
 
-  my @slices_newdb_newasm = map { $_->to_Slice }  @segments;
-  @slices_newdb_newasm = sort {$a->start<=>$b->start} @slices_newdb_newasm;
+  	#make new strand is same as old strand 
+  	my $indel;
+  	if (@slices_newdb_newasm) {
+			$data{start} = $slices_newdb_newasm[0]->start;
+      $data{end}   = $slices_newdb_newasm[-1]->end;
+    	if ($indel) {
+      	$data{start} ++;
+      	$data{end} --;
+    	}
 
-  my $validation_status = '\N';
-  my $map_weight = 1;
-  my $allele_string = 'HGMD_MUTATION';
-  my ($allele1,$allele2) = ($allele_string,$allele_string);
-  my $flags = '\N';
+    	$data{region_id} = $slices_newdb_newasm[0]->get_seq_region_id;
 
-  #make new strand is same as old strand 
-  my $new_strand = $seq_region_strand;
-  my ($new_start,$new_end);
-  my $consequence = 'HGMD_MUTATION';
-  my $indel;
-  if (@slices_newdb_newasm) {
-    if ($indel) {
-      $new_start = $slices_newdb_newasm[0]->start +1;
-      $new_end = $slices_newdb_newasm[-1]->end -1;
-    }
-    else {
-      $new_start = $slices_newdb_newasm[0]->start;
-      $new_end = $slices_newdb_newasm[-1]->end;
-    }
-
-    my $new_seq_region_id = $slices_newdb_newasm[0]->get_seq_region_id;
-
-    # new feature spans start of first projection segment to end of last segment
-    #print "old_seq_region_name is ",$old_slice->get_seq_region_id," old_start is ",$feat->start," old_end is ",$feat->end," new_seq_region_name is ",$new_seq_region_id," new_start is ",$new_start," new_end is ",$new_end,"\n" if (@slices_newdb_newasm);
+   	 # new feature spans start of first projection segment to end of last segment
+   	 #print "old_seq_region_name is ",$old_slice->get_seq_region_id," old_start is ",$feat->start," old_end is ",$feat->end," new_seq_region_name is ",$new_seq_region_id," new_start is ",$new_start," new_end is ",$new_end,"\n" if (@slices_newdb_newasm);
  
-    $dbVar2->do(qq{INSERT INTO $header\_variation(source_id,name,type)values($source_id,"$var_name","$var_type")});
-    $variation_id = $dbVar2->{'mysql_insertid'};
-
-	 	print_buffered($buffer,"$TMP_DIR/$header\_variation_feature",join ("\t",$new_seq_region_id,$new_start,$new_end,$new_strand,"$variation_id\t$allele_string\t$var_name\t$map_weight\t$flags\t$source_id\t$validation_status\t$consequence\n"));
-    print_buffered($buffer,"$TMP_DIR/$header\_flanking_sequence",join ("\t",$variation_id,'\N','\N',$new_start-100,$new_start-1,$new_start+1,$new_start+100,$new_seq_region_id,$new_strand)."\n");
-    print_buffered($buffer,"$TMP_DIR/$header\_allele", join ("\t",$variation_id,$allele1) . "\n");
-	  print_buffered($buffer,"$TMP_DIR/$header\_variation_annotation", join ("\t",$variation_id,$var_name,$gene_symbol) . "\n");
+    	print_all_buffers(\%data);
 		
-	  #print_buffered($buffer,"$TMP_DIR/$header\_allele", join ("\t",$variation_id,$allele2) . "\n");
-    #print OUT join "\t",$slices_newdb_newasm[0]->get_seq_region_id,$new_start,$new_end,$slices_newdb_newasm[0]->strand,"$variation_id\t$allele_string\t$variation_name\t$map_weight\t$flags\t$source_id\t$validation_status\n";
-  }
-  else {
-    print_buffered($buffer,"$TMP_DIR/$header\_error",join ("\t",$var_name,$seq_region_name,$pos) . "\n") if $var_name;
-    #print ERR "$variation_id\t$seq_region_id\t$seq_region_start\t$seq_region_end\n";
-  }
+			#print_buffered($buffer,"$TMP_DIR/$header\_allele", join ("\t",$variation_id,$allele2) . "\n");
+    	#print OUT join "\t",$slices_newdb_newasm[0]->get_seq_region_id,$new_start,$new_end,$slices_newdb_newasm[0]->strand,"$variation_id\t$allele_string\t$variation_name\t$map_weight\t$flags\t$source_id\t$validation_status\n";
+ 	 	}
+  	else {
+    	print_buffered($buffer,"$TMP_DIR/$header\_error",join ("\t",$var_name,$seq_region_name,$pos) . "\n") if $var_name;
+    	#print ERR "$variation_id\t$seq_region_id\t$seq_region_start\t$seq_region_end\n";
+  	}
+	}
+	else {
+		$data{start} = $data{pos};
+    $data{end}   = $data{pos};
+		
+		my $slice = $sa2->fetch_by_region('chromosome', $data{region_name}, $data{start},$data{end});
+  	if (!$slice) {
+    	print_buffered($buffer,"$TMP_DIR/$header\_error",join ("\t",$data{var_name},$data{region_name},$data{pos}) . "\n");
+    	next;
+	  }
+		$data{region_id} = $slice->get_seq_region_id;
+		
+		print_all_buffers(\%data);
+	}
 }
-
 
 print_buffered($buffer);
 
 debug("Loading mapping data...");
 
-foreach my $file ("$TMP_DIR/$header\_variation_feature","$TMP_DIR/$header\_flanking_sequence","$TMP_DIR/$header\_allele","$TMP_DIR/$header\_variation_annotation","$TMP_DIR/$header\_error") {
+foreach my $file ("$TMP_DIR/$header\_variation_feature","$TMP_DIR/$header\_flanking_sequence",
+                  "$TMP_DIR/$header\_allele","$TMP_DIR/$header\_variation_annotation","$TMP_DIR/$header\_error") {
   if (-e "$file") {
     system("mv $file  $TMP_DIR/$TMP_FILE") ;
     $file =~ s/$TMP_DIR\///;
@@ -271,4 +288,19 @@ sub print_buffered {
 	   	$buffer->{ $filename } = '';
 		}
 	}
+}
+
+sub print_all_buffers {
+	my $data = shift;
+	my $var_name = $data->{var_name};
+	my $var_type = $data->{var_type};
+	my $start    = $data->{start};
+	
+	$dbVar2->do(qq{INSERT INTO $header\_variation(source_id,name,type)values($source_id,"$var_name","$var_type")});
+  my $variation_id = $dbVar2->{'mysql_insertid'};
+
+	print_buffered($buffer,"$TMP_DIR/$header\_variation_feature",join ("\t",$data->{region_id},$start,$data->{end},$data->{region_strand},"$variation_id\t".$data->{allele}."\t$var_name\t".$data->{map_weight}."\t".$data->{flags}."\t$source_id\t".$data->{status}."\t".$data->{consequence}."\n"));
+  print_buffered($buffer,"$TMP_DIR/$header\_flanking_sequence",join ("\t",$variation_id,'\N','\N',$start-100,$start-1,$start+1,$start+100,$data->{region_id},$data->{region_strand})."\n");
+  print_buffered($buffer,"$TMP_DIR/$header\_allele", join ("\t",$variation_id,$data->{allele}) . "\n");
+	print_buffered($buffer,"$TMP_DIR/$header\_variation_annotation", join ("\t",$variation_id,$var_name,$data->{gene_symbol}) . "\n");	
 }
