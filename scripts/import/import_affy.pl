@@ -1,6 +1,8 @@
 use strict;
 use warnings;
+use Getopt::Long;
 use dbSNP::GenericChromosome;
+use dbSNP::DBManager;
 
 use vars qw(@ISA);
 use ImportUtils qw(debug load dumpSQL create_and_load);
@@ -26,7 +28,7 @@ my $dbSNP  = $dbm->dbSNP()->dbc();
 my $dbCore = $dbm->dbCore()->dbc();
 my $dbVar  = $dbm->dbVar()->dbc();
   
-my ($cs) = @{$dbCore->get_CoordSystemAdaptor->fetch_all};
+my ($cs) = @{$dbm->dbCore()->get_CoordSystemAdaptor->fetch_all};
 my $ASSEMBLY_VERSION = $cs->version();
 
 # Main #
