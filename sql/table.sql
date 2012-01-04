@@ -864,9 +864,13 @@ CREATE TABLE seq_region (
 
   seq_region_id               INT(10) UNSIGNED NOT NULL,
   name                        VARCHAR(40) NOT NULL,
+  coord_system_id             INT(10) UNSIGNED NOT NULL,
 
   PRIMARY KEY (seq_region_id),
-  UNIQUE KEY name_idx (name)
+  # Which one, check with Will
+  #UNIQUE KEY name_idx (name),
+  UNIQUE KEY name_cs_idx (name, coord_system_id),
+  KEY cs_idx (coord_system_id)
 
 ) ;
 
@@ -1469,6 +1473,40 @@ CREATE TABLE protein_function_predictions (
     
     PRIMARY KEY (translation_stable_id),
     KEY transcript_idx (transcript_stable_id)
+);
+
+/**
+@table coord_system
+@desc Stores information about the available co-ordinate systems for the species identified through the species_id field.
+Note that for each species, there must be one co-ordinate system that has the attribute "top_level" and one that has the attribute "sequence_level".
+
+@column coord_system_id      Primary key, internal identifier.
+@column species_id           Indentifies the species for multi-species databases.
+@column name                 Co-oridinate system name, e.g. 'chromosome', 'contig', 'scaffold' etc.
+@column version              Assembly.
+@column rank                 Co-oridinate system rank.
+@column attrib               Co-oridinate system attrib (e.g. "top_level", "sequence_level").
+
+@see seq_region
+@see meta_coord
+@see meta
+
+*/
+
+CREATE TABLE coord_system (
+
+  coord_system_id             INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
+  species_id                  INT(10) UNSIGNED NOT NULL DEFAULT 1,
+  name                        VARCHAR(40) NOT NULL,
+  version                     VARCHAR(255) DEFAULT NULL,
+  rank                        INT NOT NULL,
+  attrib                      SET('default_version', 'sequence_level'),
+
+  PRIMARY   KEY (coord_system_id),
+  UNIQUE    KEY rank_idx (rank, species_id),
+  UNIQUE    KEY name_idx (name, version, species_id),
+            KEY species_idx (species_id)
+
 );
 
 /**
