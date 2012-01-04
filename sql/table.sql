@@ -851,8 +851,9 @@ CREATE TABLE transcript_variation (
 
 @desc This table stores the relationship between Ensembl's internal coordinate system identifiers and traditional chromosome names.
 
-@column seq_region_id	Primary key. Foreign key references seq_region in core db. Refers to the seq_region which this variant is on, which may be a chromosome, a clone, etc...
-@column name				The name of this sequence region.
+@column seq_region_id	   Primary key. Foreign key references seq_region in core db. Refers to the seq_region which this variant is on, which may be a chromosome, a clone, etc...
+@column name				     The name of this sequence region.
+@column coord_system_id  Foreign key references to the @link coord_system table.
 
 @see variation_feature
 @see flanking_sequence
