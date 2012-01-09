@@ -330,7 +330,7 @@ while(<$in_file_handle>) {
 			
 			# if no sample data
 			else {
-				delete $tables->{$_} foreach qw(individual_genotype_multiple_bp compressed_genotype_region population_genotype);
+				delete $tables->{$_} foreach qw(compressed_genotype_region compressed_genotype_var population_genotype);
 			}
 		}
 	}
