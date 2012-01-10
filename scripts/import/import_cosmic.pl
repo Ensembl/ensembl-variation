@@ -126,6 +126,10 @@ else {
 
 # set up the various queries and inserts we'll need
 
+my %failed_desc_list = ( 1 => 'Variation has no associated sequence',
+                         2 => 'Mapped position is not compatible with reported alleles'
+									     );
+
 my $vf_table = "variation_feature";
 
 my $set_version_sth = $dbh->prepare(qq{
@@ -220,12 +224,8 @@ my $add_annotation_sth = $dbh->prepare(qq{
 my $get_failed_desc_sth = $dbh->prepare(qq{
     SELECT  failed_description_id 
     FROM    failed_description
-    WHERE   description = 'Variation has no associated sequence'
+    WHERE   description = ?
 });
-
-$get_failed_desc_sth->execute;
-
-my ($failed_description_id) = $get_failed_desc_sth->fetchrow_array;
 
 my $get_class_attrib_ids_sth = $dbh->prepare(qq{
     SELECT  a.value, a.attrib_id
@@ -369,6 +369,7 @@ MAIN_LOOP : while(<$INPUT>) {
                 print "Insertion start == stop, patched to: start: $start stop: $stop\n";
             }
             else {
+								$fail_variation = 2;
                 print "Wierd start stop for insertion?\n";
             }
         }
@@ -421,17 +422,38 @@ MAIN_LOOP : while(<$INPUT>) {
 
             if ($accession =~ /ENST/) {
                 for my $tran (@{ $gene->get_all_Transcripts }) {
-                    if ($tran->stable_id eq $accession) {
-                        $ens_gene = $gene;
+              	    if ($tran->stable_id eq $accession) {
+                	      $ens_gene = $gene;
                         last GENE;
                     }
-                }                
-            }
+                }
+								 
+								# Extract the gene name (e.g. CDKN2A_ENST00000361570 => extracts CDKN2A)
+								my @g_names = split('_',$cosmic_gene);
+								if (scalar @g_names > 1 and $g_names[1] =~ /ENST/) {
+									  if ($gene->external_name eq $g_names[0]) {
+                		    $ens_gene = $gene;
+                		    last GENE;
+            			  }
+            			  else {
+                	      # try synonyms of this gene
+                		    for my $db_entry (@{ $gene->get_all_DBEntries } ) {
+                    	      for my $syn (@{ $db_entry->get_all_synonyms }) {
+                                if ($syn eq $g_names[0]) {
+                                    $ens_gene = $gene;
+                                    last GENE;
+                                }
+                    	      }
+                		    }
+            			  }
+							  }  
+						}            
             
             if ($gene->description && $gene->description =~ /$cosmic_gene/) {
                 $ens_gene = $gene;
                 last GENE;
             }
+						
         }
 
         if (!$ens_gene && @genes == 1) {
@@ -479,7 +501,7 @@ MAIN_LOOP : while(<$INPUT>) {
         my ($cs_ref_nt, $cs_mut_nt) = split />/, $mut_nt;
         my ($cs_ref_aa, $cs_mut_aa) = split />/, $mut_aa;
 
-        if ($check_strand && !$fail_variation) {
+        if ($check_strand && $fail_variation != 1) {
             if ($cs_ref_nt eq $ens_ref) {
                 
                 if (defined $strand && $strand == 1) {
@@ -519,7 +541,7 @@ MAIN_LOOP : while(<$INPUT>) {
 
         my $mismatching_reference;
 
-        unless ($fail_variation) {
+        unless ($fail_variation == 1) {
             if ($strand == 1) {
                 if ($cs_ref_nt ne $ens_ref) {
                     $mismatching_reference = "cosmic: $cs_ref_nt vs. ensembl: $ens_ref";
@@ -554,7 +576,7 @@ MAIN_LOOP : while(<$INPUT>) {
 #            next;
         }
         
-        my $allele_string = $fail_variation ? '' : "$forward_strand_ref_allele/$forward_strand_mut_allele";
+        my $allele_string = ($fail_variation == 1) ? '' : "$forward_strand_ref_allele/$forward_strand_mut_allele";
         
         my $class_id = $class_attrib_ids{
             SO_variation_class($allele_string, defined $mismatching_reference ? 0 : 1)
@@ -590,9 +612,10 @@ MAIN_LOOP : while(<$INPUT>) {
             $variation_id = $dbh->last_insert_id(undef, undef, undef, undef);
 
             if ($fail_variation) {
+								my $failed_description_id = get_failed_description_id($fail_variation);
                 $add_failed_var_sth->execute($variation_id, $failed_description_id);
                 print "Failed variation\n";
-                next MAIN_LOOP;
+                next MAIN_LOOP if ($fail_variation == 1);
             }
             
             if ($ADD_SETS) {
@@ -716,3 +739,12 @@ MAIN_LOOP : while(<$INPUT>) {
 }
 
 
+sub get_failed_description_id {
+	my $failed_id = shift;
+	my $description = $failed_desc_list{$failed_id};
+	
+	$get_failed_desc_sth->execute($description);
+	my ($failed_description_id) = $get_failed_desc_sth->fetchrow_array;
+	
+	return $failed_description_id;
+}
