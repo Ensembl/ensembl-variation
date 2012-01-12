@@ -44,6 +44,12 @@ my $get_vars_sth = $dbh->prepare(qq{
     AND     v.minor_allele = SUBSTR(vf.allele_string,1,1)
 });
 
+my $get_syns_sth = $dbh->prepare(qq{
+    SELECT  name
+    FROM    variation_synonym
+    WHERE   variation_id = ?
+});
+
 my $get_maf_sth = $dbh->prepare(qq{
     SELECT  allele
     FROM    maf
@@ -60,10 +66,10 @@ $get_vars_sth->execute;
 
 my $count = 0;
 
-while (my ($v_id, $name, $old_allele) = $get_vars_sth->fetchrow_array) {
-    
-    $name =~ s/^rs//;
-    $get_maf_sth->execute($name);
+sub get_new_allele {
+    my ($snp_id, $old_allele) = @_;
+
+    $get_maf_sth->execute($snp_id);
     
     my $new_allele;
 
@@ -71,6 +77,26 @@ while (my ($v_id, $name, $old_allele) = $get_vars_sth->fetchrow_array) {
         if ($allele ne $old_allele) {
             $new_allele = $allele;
             last;
+        }
+    }
+
+    return $new_allele;
+}
+
+while (my ($v_id, $name, $old_allele) = $get_vars_sth->fetchrow_array) {
+    
+    $name =~ s/^rs//;
+
+    my $new_allele = get_new_allele($name, $old_allele);
+    
+    unless ($new_allele) {
+        $get_syns_sth->execute($v_id);
+
+        while (my ($name) = $get_syns_sth->fetchrow_array) {
+            next unless $name =~ /^rs/;
+            $name =~ s/^rs//;
+            $new_allele = get_new_allele($name, $old_allele);
+            last if $new_allele;
         }
     }
 
