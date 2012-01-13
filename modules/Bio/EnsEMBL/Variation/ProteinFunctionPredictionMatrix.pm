@@ -120,13 +120,16 @@ our @ALL_AAS = qw(A C D E F G H I K L M N P Q R S T V W Y);
 
 our $NO_PREDICTION = pack($PACK_FORMAT, 0xFFFF);
 
+# the number of bytes in a short
+
+my $BYTES_PER_PREDICTION = 2;
+
+
 # constants derived from the the user-defined constants
 
 # the maximum number of distinct qualitative predictions used by any tool
 
 my $MAX_NUM_PREDS = max( map { scalar keys %$_ } values %$PREDICTION_TO_VAL ); 
-
-my $BYTES_PER_PREDICTION = 2;
 
 # the number of bits used to encode the qualitative prediction
 
