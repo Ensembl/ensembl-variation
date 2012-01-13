@@ -1,6 +1,6 @@
 =head1 LICENSE
 
- Copyright (c) 1999-2011 The European Bioinformatics Institute and
+ Copyright (c) 1999-2012 The European Bioinformatics Institute and
  Genome Research Limited.  All rights reserved.
 
  This software is distributed under a modified Apache license.
@@ -222,7 +222,13 @@ sub _check_types {
             
             if ($wanted !~ /::/) {
                 if ($type_type eq 'feature') {
-                    $wanted = "Bio::EnsEMBL::$wanted";
+
+                    if ($wanted eq 'RegulatoryFeature' || $wanted eq 'MotifFeature') {
+                        $wanted = "Bio::EnsEMBL::Funcgen::$wanted";
+                    }
+                    else {
+                        $wanted = "Bio::EnsEMBL::$wanted";
+                    }
                 }
                 elsif ($type_type eq 'variant_feature') {
                     $wanted = "Bio::EnsEMBL::Variation::$wanted";
