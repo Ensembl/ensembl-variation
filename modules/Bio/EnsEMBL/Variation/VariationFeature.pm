@@ -1413,6 +1413,14 @@ sub get_all_hgvs_notations {
     # Use the feature's display id as reference name unless specified otherwise. If the feature is a transcript or translation, append the version number as well
     $reference_name ||= $ref_feature->display_id() . ($ref_feature->isa('Bio::EnsEMBL::Transcript') && $ref_feature->display_id !~ /\.\d+$/ ? '.' . $ref_feature->version() : '');
     
+    # Special parsing for LRG
+	if ($reference_name =~ /^LRG_/) {
+		# Remove version
+		if ($reference_name =~ /(.+)\.\d+$/) {
+			$reference_name = $1;
+		}
+	}
+    
     # Get all alleles for this VariationFeature and create a HGVS notation for each.
     # Store them in a hash with the allele as keys to avoid duplicates
     # First, get the notation in genomic coordinate numbering for all
