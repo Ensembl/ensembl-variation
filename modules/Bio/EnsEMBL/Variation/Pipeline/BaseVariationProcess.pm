@@ -76,9 +76,13 @@ sub get_species_adaptor {
 
 sub get_adaptor {
     my ($self, $species, $group) = @_;
-    
-    my $dba = Bio::EnsEMBL::Registry->get_DBAdaptor($species, $group);
-    
+   
+    my $dba;
+
+    eval {
+        $dba = Bio::EnsEMBL::Registry->get_DBAdaptor($species, $group);
+    };
+
     unless (defined $dba) {
         $self->_load_registry();
         $dba = Bio::EnsEMBL::Registry->get_DBAdaptor($species, $group);
