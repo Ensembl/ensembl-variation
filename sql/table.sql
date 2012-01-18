@@ -1175,23 +1175,24 @@ INSERT INTO meta (meta_key, meta_value) VALUES ('schema_type', 'variation');
 /**
 @table tagged_variation_feature
 
-@desc This table lists variation features that are tagged by another variation feature. Tag pairs are defined as having an r<sup>2</sup> &gt; 0.99.
+@desc This table lists variation feature IDs that are tagged by another variation feature ID. Tag pairs are defined as having an r<sup>2</sup> &gt; 0.99.
 
-@column variation_feature_id	Primary key. Foreign key references to the @link variation_feature table.
-@column sample_id					Primary key. Foreign key references to the @link sample table.
+@column variation_feature_id		Foreign key references to the @link variation_feature table.
+@column tagged_variation_feature_id	Foreign key references to the @link variation_feature table.
+@column sample_id			Foreign key references to the @link sample table.
 
 @see variation_feature
 @see population
 */
 
 CREATE TABLE tagged_variation_feature (
-
-  variation_feature_id       INT(10) UNSIGNED not null,
-  sample_id              INT(10) UNSIGNED not null,
-  
-  PRIMARY KEY(variation_feature_id, sample_id)
+  variation_feature_id int(10) unsigned NOT NULL,
+  tagged_variation_feature_id int(10) unsigned DEFAULT NULL,
+  sample_id int(10) unsigned NOT NULL,
+  KEY tag_idx (variation_feature_id),
+  KEY tagged_idx (tagged_variation_feature_id),
+  KEY sample_idx (sample_id`)
 );
-
 
 /**
 @table read_coverage
