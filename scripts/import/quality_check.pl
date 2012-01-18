@@ -628,7 +628,7 @@ sub _multiple_alleles {
     my $cache = shift;
     
     # If this variation has no mappings, it won't have any allele strings
-    return 0 if (no_mapping($rows,$cache) && $rows->[0][10] eq 'variation');
+    #return 0 if (no_mapping($rows,$cache) && $rows->[0][10] eq 'variation');
     
     # Get the unique allele strings
     my $allele_string = _unique_allele_string($rows);
@@ -663,7 +663,7 @@ sub _ambiguous_alleles {
     if ($rows->[0][10] eq 'variation') {
     
         # If this variation has no mappings, it won't have any illegal characters in the allele_string
-        return 0 if (no_mapping($rows,$cache));
+        #return 0 if (no_mapping($rows,$cache));
     
         # Get the unique allele strings
         my $allele_string = _unique_allele_string($rows);
@@ -713,7 +713,7 @@ sub _illegal_character_alleles {
     if ($rows->[0][10] eq 'variation') {
     
         # If this variation has no mappings, it won't have any illegal characters in the allele_string
-        return 0 if (no_mapping($rows,$cache));
+        #return 0 if (no_mapping($rows,$cache));
     
         # Get the unique allele strings
         my $allele_string = _unique_allele_string($rows);
