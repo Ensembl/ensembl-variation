@@ -13,13 +13,6 @@ ALTER TABLE allele ADD FOREIGN KEY (variation_id) REFERENCES variation(variation
 ALTER TABLE allele ADD FOREIGN KEY (allele_code_id) REFERENCES allele_code(allele_code_id);
 ALTER TABLE allele ADD FOREIGN KEY (sample_id) REFERENCES population(sample_id);
 
-ALTER TABLE allele_group ADD FOREIGN KEY (source_id) REFERENCES source(source_id);
-ALTER TABLE allele_group ADD FOREIGN KEY (variation_group_id) REFERENCES variation_group(variation_group_id);
-ALTER TABLE allele_group ADD FOREIGN KEY (sample_id) REFERENCES population(sample_id);
-
-ALTER TABLE allele_group_allele ADD FOREIGN KEY (variation_id) REFERENCES variation(variation_id);
-ALTER TABLE allele_group_allele ADD FOREIGN KEY (allele_group_id) REFERENCES allele_group(allele_group_id);
-
 ALTER TABLE associate_study ADD FOREIGN KEY (study1_id) REFERENCES study(study_id);
 ALTER TABLE associate_study ADD FOREIGN KEY (study2_id) REFERENCES study(study_id);
 
@@ -46,9 +39,6 @@ ALTER TABLE flanking_sequence ADD FOREIGN KEY (variation_id) REFERENCES variatio
 ALTER TABLE flanking_sequence ADD FOREIGN KEY (seq_region_id) REFERENCES seq_region(seq_region_id);
 
 ALTER TABLE genotype_code ADD FOREIGN KEY (allele_code_id) REFERENCES allele_code(allele_code_id);
-
-ALTER TABLE httag ADD FOREIGN KEY (source_id) REFERENCES source(source_id);
-ALTER TABLE httag ADD FOREIGN KEY (variation_group_id) REFERENCES variation_group(variation_group_id);
 
 ALTER TABLE individual ADD FOREIGN KEY (sample_id) REFERENCES sample(sample_id);
 ALTER TABLE individual ADD FOREIGN KEY (father_individual_sample_id) REFERENCES individual(sample_id);
@@ -114,14 +104,6 @@ ALTER TABLE variation_feature ADD FOREIGN KEY (source_id) REFERENCES source(sour
 ALTER TABLE variation_feature ADD FOREIGN KEY (variation_id) REFERENCES variation(variation_id);
 ALTER TABLE variation_feature ADD FOREIGN KEY (seq_region_id) REFERENCES seq_region(seq_region_id);
 ALTER TABLE variation_feature ADD FOREIGN KEY (class_attrib_id) REFERENCES attrib(attrib_id);
-
-ALTER TABLE variation_group ADD FOREIGN KEY (source_id) REFERENCES source(source_id);
-
-ALTER TABLE variation_group_feature ADD FOREIGN KEY (variation_group_id) REFERENCES variation_group(variation_group_id);
-ALTER TABLE variation_group_feature ADD FOREIGN KEY (seq_region_id) REFERENCES seq_region(seq_region_id);
-
-ALTER TABLE variation_group_variation ADD FOREIGN KEY (variation_group_id) REFERENCES variation_group(variation_group_id);
-ALTER TABLE variation_group_variation ADD FOREIGN KEY (variation_id) REFERENCES variation(variation_id);
 
 ALTER TABLE variation_set ADD FOREIGN KEY (short_name_attrib_id) REFERENCES attrib(attrib_id);
 
