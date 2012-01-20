@@ -1191,7 +1191,7 @@ CREATE TABLE tagged_variation_feature (
   sample_id int(10) unsigned NOT NULL,
   KEY tag_idx (variation_feature_id),
   KEY tagged_idx (tagged_variation_feature_id),
-  KEY sample_idx (sample_id`)
+  KEY sample_idx (sample_id)
 );
 
 /**
