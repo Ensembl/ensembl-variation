@@ -31,7 +31,7 @@ our @short_names = qw(1kg_hct 1kg_hct_ceu 1kg_hct_yri 1kg_hce 1kg_hce_ceu 1kg_hc
                       fail_all fail_nonref fail_ambig fail_gt_fq fail_incons_map fail_mult_map
                       fail_no_alleles fail_no_gt fail_no_map fail_no_seq fail_non_nt fail_mult_alleles fail_dbsnp_suspect
                       ph_hgmd_pub ph_johnson_et_al ph_nhgri ph_omim ph_variants ph_uniprot
-                      ph_cosmic ph_ega precious
+                      ph_cosmic ph_ega precious hapmap_ceu hapmap_hcb hapmap_jpt hapmap_yri
                      );
 
 our @dbsnp_clinical_significance_types = qw(
