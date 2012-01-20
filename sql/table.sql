@@ -36,7 +36,7 @@ create table variation (
 								 'failed','precious'),
   ancestral_allele varchar(255) DEFAULT NULL,
   flipped tinyint(1) unsigned NULL DEFAULT NULL,
-  class_attrib_id int(10) unsigned not null default 0,
+  class_attrib_id int(10) unsigned default 0,
   somatic tinyint(1) DEFAULT 0 NOT NULL,
   minor_allele char(1) DEFAULT NULL,
   minor_allele_freq float DEFAULT NULL,
@@ -505,7 +505,7 @@ create table variation_feature(
             '49','50','51','52','53','54','55','56',
             '57','58','59','60','61','62','63','64'
     ) NOT NULL DEFAULT '',
-    class_attrib_id int(10) unsigned not null default 0,
+    class_attrib_id int(10) unsigned default 0,
     somatic tinyint(1) DEFAULT 0 NOT NULL,
 
    	primary key( variation_feature_id ),
