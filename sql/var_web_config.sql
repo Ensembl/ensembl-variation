@@ -19,12 +19,19 @@ values
 (NULL, 'web_config', "source#dbSNP variants#variation_feature_variation_dbSNP#dbsnp");
 
 
-# add HapMap set
+# add HapMap sets
 insert into meta(species_id, meta_key, meta_value)
-select NULL, "web_config",  concat("set#", vs.name, "#variation_set_", a.value, "#1kg_hapmap")
+values
+(NULL, 'web_config', "menu#HapMap#hapmap#1kg_hapmap");
+
+insert into meta(species_id, meta_key, meta_value)
+select NULL, "web_config",  concat("set#", vs.name, "#variation_set_", a.value, "#hapmap")
 from variation_set vs, attrib a
 where vs.short_name_attrib_id = a.attrib_id
 and a.value like 'hapmap%';
+
+# hack for main hapmap set
+update meta set meta_value = 'set#All HapMap#variation_set_hapmap#hapmap' where meta_value = 'set#HapMap#variation_set_hapmap#hapmap';
 
 # add 1000 genomes sets
 insert into meta(species_id, meta_key, meta_value)
