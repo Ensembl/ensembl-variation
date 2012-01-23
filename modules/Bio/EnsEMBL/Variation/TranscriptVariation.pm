@@ -602,13 +602,15 @@ sub get_overlapping_ProteinFeatures {
 
         $self->{_protein_features } = [];
 
-        if (defined $self->transcript->translation) {
+        my $tl = $self->transcript->translation;
+
+        if (defined $tl) {
             
             my $tl_start = $self->translation_start;
             my $tl_end   = $self->translation_end;
 
             if (defined $tl_start && defined $tl_end) {
-                for my $feat (@{ $self->transcript->translation->get_all_ProteinFeatures }) {
+                for my $feat (@{ $tl->get_all_ProteinFeatures }) {
                     if (overlap($feat->start, $feat->end, $tl_start, $tl_end)) { 
                         push @{ $self->{_protein_features} }, $feat;
                     }
