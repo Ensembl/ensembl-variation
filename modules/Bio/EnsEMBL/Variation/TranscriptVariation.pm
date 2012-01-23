@@ -581,8 +581,45 @@ sub affects_cds {
 
 sub affects_peptide {
     my $self = shift;
-    return scalar grep { $_->SO_term =~ /stop|non_syn|frameshit|inframe|initiator/ } map {@{$_->get_all_OverlapConsequences}} @{ $self->get_all_alternate_TranscriptVariationAlleles }; 
+    return scalar grep { $_->SO_term =~ /stop|non_syn|frameshift|inframe|initiator/ } map {@{$_->get_all_OverlapConsequences}} @{ $self->get_all_alternate_TranscriptVariationAlleles }; 
 }
+
+=head2 get_overlapping_ProteinFeatures
+
+  Description: Find any ProteinFeatures (e.g. pfam or interpro domains etc.) that
+               the associated variation feature lies in
+  Returntype : listref of Bio::EnsEMBL::ProteinFeatures (possibly empty)
+  Exceptions : None
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub get_overlapping_ProteinFeatures {
+    my $self = shift;
+
+    unless (exists $self->{_protein_features}) {
+
+        $self->{_protein_features } = [];
+
+        if (defined $self->transcript->translation) {
+            
+            my $tl_start = $self->translation_start;
+            my $tl_end   = $self->translation_end;
+
+            if (defined $tl_start && defined $tl_end) {
+                for my $feat (@{ $self->transcript->translation->get_all_ProteinFeatures }) {
+                    if (overlap($feat->start, $feat->end, $tl_start, $tl_end)) { 
+                        push @{ $self->{_protein_features} }, $feat;
+                    }
+                }
+            }
+        }
+    }
+
+    return $self->{_protein_features};
+}
+
 
 sub _intron_effects {
     my $self = shift;
