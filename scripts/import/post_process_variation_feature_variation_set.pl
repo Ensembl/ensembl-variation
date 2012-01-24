@@ -36,7 +36,7 @@ my $registry_file = $options{'registry_file'};
 my $clean = $options{'clean'};
 my $quiet = $options{'quiet'};
 my $help = $options{'help'};
-my $sv_prefix = 'structural_' if $options{'sv'};
+my $sv_prefix = $option{'sv'} ? 'structural_' : '';
 
 usage() if ($help);
 
