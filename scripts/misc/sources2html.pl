@@ -146,20 +146,21 @@ sub source_table {
 	
 	$html .= qq{
 			<table class="ss" style="width:60%">
-				<tr><th>Source</th><th>Version</th><th>Description</th><th></th></tr>
+				<tr><th colspan="2">Source</th><th>Version</th><th>Description</th><th></th></tr>
 		 };
 	
 	my $bg = 1;
 	my @p_sources = keys(%{$p_list});
 	
 	my %colors = ( 'version' => '#090',
-								 'source'  => '#D33',
+								 'source'  => '#00F',
 	             );
 	while (my @a = $sth->fetchrow_array) {
 	
 		# Check if the source or its version is new
 		my $s_new      = '';
 		my $s_new_type = '';
+		my $s_header   = '<td style="width:4px;padding:0px;margin:0px';
 		if (!grep {$_ eq $source} @p_sources) {
 			$s_new_type = 'source';
 		}
@@ -167,7 +168,12 @@ sub source_table {
 			$s_new_type = 'version';
 		}
 		
-	  $s_new = '<span style="color:'.$colors{$s_new_type}.'">New '.$s_new_type.'</span>' if ($s_new_type);
+		if ($s_new_type) {
+	  	$s_new = '<span style="color:'.$colors{$s_new_type}.'">New '.$s_new_type.'</span>' if ($s_new_type);
+			$s_header .= ';background-color:'.$colors{$s_new_type};
+		}
+			
+		$s_header .= '"></td>';
 	
 		# Display
 		if ($s_url) {
@@ -176,12 +182,11 @@ sub source_table {
 		
 		$s_version = format_version($s_version);
 		
-		
-		
 		$html .= qq{
 			<tr class="bg$bg">
+				$s_header
 				<td>$source</td>
-				<td>$s_version</td>
+				<td style="text-align:center">$s_version</td>
 				<td>$s_description</td>
 				<td style="text-align:center;width:80px">$s_new</td>
 			</tr>
