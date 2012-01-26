@@ -622,6 +622,85 @@ sub get_overlapping_ProteinFeatures {
     return $self->{_protein_features};
 }
 
+=head2 exon_number
+
+  Description: Identify which exon this variant falls in   
+  Returntype : '/'-separated string containing the exon number and the total 
+               number of exons in this transcript, or undef if this variant 
+               does not fall in an exon
+  Exceptions : None
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub exon_number {
+    my $self = shift;
+    $self->_exon_intron_number unless exists $self->{exon_number};
+    return $self->{exon_number};
+}
+
+=head2 intron_number
+  
+  Description: Identify which intron this variant falls in   
+  Returntype : '/'-separated string containing the intron number and the total 
+               number of introns in this transcript, or undef if this variant 
+               does not fall in an intron
+  Exceptions : None
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub intron_number {
+    my $self = shift;
+    $self->_exon_intron_number unless exists $self->{intron_number};
+    return $self->{intron_number};
+}
+
+sub _exon_intron_number {
+    my $self = shift;
+
+    # work out which exon or intron this variant falls in
+
+    # ensure the keys exist so even if we don't fall in an exon 
+    # or intron we'll only call this method once
+
+    $self->{exon_number} = $self->{intron_number} = undef;
+
+    my $vf = $self->variation_feature;    
+    
+    my $vf_start = $vf->start;
+    my $vf_end   = $vf->end;
+
+    my $strand = $self->transcript->strand;
+
+    my $exon_count = 0;
+
+    my $prev_exon;
+
+    for my $exon (@{ $self->_exons }) {
+
+        $exon_count++;
+        
+        if (overlap($vf_start, $vf_end, $exon->start, $exon->end)) {
+            $self->{exon_number} = sprintf "%d/%d", $exon_count, scalar(@{ $self->_exons });
+            last;
+        }
+
+        if ($prev_exon) {
+            my $intron_start = $strand == 1 ? $prev_exon->end + 1 : $exon->end + 1;
+            my $intron_end   = $strand == 1 ? $exon->start - 1 : $prev_exon->start - 1;
+
+            if ($prev_exon && overlap($vf_start, $vf_end, $intron_start, $intron_end)) {
+                $self->{intron_number} = sprintf "%d/%d", $exon_count - 1, scalar(@{ $self->_exons }) - 1;
+                last;
+            }
+        }
+
+        $prev_exon = $exon;
+    }
+}
 
 sub _intron_effects {
     my $self = shift;
@@ -646,8 +725,13 @@ sub _intron_effects {
 
         my $insertion = $vf_start == $vf_end+1;
 
+        my $intron_count = 0;
+        my $exon_count   = 1;
+
         for my $intron (@{ $self->_introns }) {
             
+            $intron_count++;
+
             my $intron_start = $intron->start;
             my $intron_end   = $intron->end;
             
@@ -668,10 +752,12 @@ sub _intron_effects {
 
             if (overlap($vf_start, $vf_end, $intron_start, $intron_start+1)) {
                 $intron_effects->{start_splice_site} = 1;
+                $intron_effects->{intron_number} = $intron_count;
             }
             
             if (overlap($vf_start, $vf_end, $intron_end-1, $intron_end)) {
                 $intron_effects->{end_splice_site} = 1;
+                $intron_effects->{intron_number} = $intron_count;
             }
             
             # we need to special case insertions between the donor and acceptor sites
@@ -679,6 +765,7 @@ sub _intron_effects {
             if (overlap($vf_start, $vf_end, $intron_start+2, $intron_end-2) or 
                 ($insertion && ($vf_start == $intron_start+2 || $vf_end == $intron_end-2)) ) {
                 $intron_effects->{intronic} = 1;
+                $intron_effects->{intron_number} = $intron_count;
             }
             
             # the definition of splice_region (SO:0001630) is "within 1-3 bases 
@@ -723,6 +810,16 @@ sub _introns {
     my $introns = $tran->{_variation_effect_feature_cache}->{introns} ||= $tran->get_all_Introns;
     
     return $introns;
+}
+
+sub _exons {
+    my $self = shift;
+
+    my $tran = $self->transcript;
+
+    my $exons = $tran->{_variation_effect_feature_cache}->{exons} ||= $tran->get_all_Exons;
+
+    return $exons;
 }
 
 sub _translateable_seq {
