@@ -100,6 +100,7 @@ use Bio::EnsEMBL::Variation::Utils::Constants qw($DEFAULT_OVERLAP_CONSEQUENCE %V
 use Bio::EnsEMBL::Variation::RegulatoryFeatureVariation;
 use Bio::EnsEMBL::Variation::MotifFeatureVariation;
 use Bio::EnsEMBL::Variation::ExternalFeatureVariation;
+use Bio::EnsEMBL::Variation::IntergenicVariation;
 use Bio::EnsEMBL::Slice;
 use Bio::EnsEMBL::Variation::DBSQL::TranscriptVariationAdaptor;
 use Bio::PrimarySeq;
@@ -500,6 +501,50 @@ sub _get_all_RegulationVariations {
     return $self->{regulation_variations}->{$type};
 }
 
+sub get_IntergenicVariation {
+    my $self = shift;
+
+    unless (exists $self->{intergenic_variation}) {
+        if (scalar(@{ $self->get_all_TranscriptVariations }) == 0) {
+            $self->{intergenic_variation} = Bio::EnsEMBL::Variation::IntergenicVariation->new(
+                -variation_feature => $self
+            );
+        }
+        else {
+            $self->{intergenic_variation} = undef;
+        }
+    }
+
+    return $self->{intergenic_variation};
+}
+
+=head2 get_all_VariationFeatureOverlaps
+
+  Description : Get all the VariationFeatureOverlaps associated with this VariationFeature, this
+                includes TranscriptVariations and regulatory feature overlap object.
+  Returntype  : listref of Bio::EnsEMBL::Variation::VariationFeatureOverlap objects
+  Exceptions  : none
+  Status      : At Risk
+
+=cut
+
+sub get_all_VariationFeatureOverlaps {
+    my $self = shift;
+    
+    my $vfos =  [
+        @{ $self->get_all_TranscriptVariations },
+        @{ $self->get_all_RegulatoryFeatureVariations },
+        @{ $self->get_all_MotifFeatureVariations },
+        @{ $self->get_all_ExternalFeatureVariations },
+    ];
+
+    if (my $iv = $self->get_IntergenicVariation) {
+        push @$vfos, $iv;
+    }
+
+    return $vfos;
+}
+
 =head2 add_TranscriptVariation
 
    Arg [1]     : Bio::EnsEMBL::Variation::TranscriptVariation
@@ -609,15 +654,13 @@ sub get_all_OverlapConsequences {
 
     unless ($self->{overlap_consequences}) {
         
-        # work them out from the TranscriptVariations
-
-        # store them in a hash keyed by SO_term as we don't want duplicates from 
-        # different TranscriptVariations
+        # work them out and store them in a hash keyed by SO_term as we don't 
+        # want duplicates from different VFOs
 
         my %overlap_cons;
 
-        for my $tv (@{ $self->get_all_TranscriptVariations }) {
-            for my $allele (@{ $tv->get_all_alternate_TranscriptVariationAlleles }) {
+        for my $vfo (@{ $self->get_all_TranscriptVariations }) {
+            for my $allele (@{ $vfo->get_all_alternate_VariationFeatureOverlapAlleles }) {
                 for my $cons (@{ $allele->get_all_OverlapConsequences }) {
                     $overlap_cons{$cons->SO_term} = $cons;
                 }
@@ -632,7 +675,7 @@ sub get_all_OverlapConsequences {
         ];
     }
 
-    return $self->{overlap_consequences}
+    return $self->{overlap_consequences};
 }
 
 =head2 add_OverlapConsequence
