@@ -979,7 +979,9 @@ sub vf_to_consequences {
         }
     }
     
-    if (my $iv = $vf->get_IntergenicVariation) {# && !defined($config->{no_intergenic})) {
+    # pass a true argument to get_IntergenicVariation to stop it doing a reference allele check
+    # (to stay consistent with the rest of the VEP)
+    if ((my $iv = $vf->get_IntergenicVariation(1)) && !defined($config->{no_intergenic})) {
       
         for my $iva (@{ $iv->get_all_alternate_IntergenicVariationAlleles }) {
             
