@@ -503,11 +503,13 @@ sub _get_all_RegulationVariations {
 
 sub get_IntergenicVariation {
     my $self = shift;
+    my $no_ref_check = shift;
 
     unless (exists $self->{intergenic_variation}) {
         if (scalar(@{ $self->get_all_TranscriptVariations }) == 0) {
             $self->{intergenic_variation} = Bio::EnsEMBL::Variation::IntergenicVariation->new(
-                -variation_feature => $self
+                -variation_feature  => $self,
+                -no_ref_check       => $no_ref_check,
             );
         }
         else {
