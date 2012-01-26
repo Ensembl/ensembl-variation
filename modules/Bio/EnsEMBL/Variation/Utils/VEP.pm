@@ -979,17 +979,30 @@ sub vf_to_consequences {
         }
     }
     
+    if (my $iv = $vf->get_IntergenicVariation) {# && !defined($config->{no_intergenic})) {
+      
+        for my $iva (@{ $iv->get_all_alternate_IntergenicVariationAlleles }) {
+            
+            my $line = init_line($config, $vf);
+           
+            $line->{Allele} = $iva->variation_feature_seq;
+    
+            my $cons = $iva->get_all_OverlapConsequences->[0];
+
+            $line->{Consequence} = $cons->$term_method || $cons->display_term;
+
+            $line = run_plugins($iva, $line, $config);
+                    
+            push @return, $line;
+        }
+    }
     
     # get TVs
     my $tvs = $vf->get_all_TranscriptVariations;
     
-    # no TVs (intergenic) or only most severe
-    if(!@$tvs || defined($config->{most_severe}) || defined($config->{summary})) {
-        
-        if(!@$tvs && defined($config->{no_intergenic})) {
-            return \@return;
-        }
-        
+    # only most severe
+    if(defined($config->{most_severe}) || defined($config->{summary})) {
+       
         my $line = init_line($config, $vf);
         
         if(defined($config->{summary})) {
@@ -1120,7 +1133,7 @@ sub run_plugins {
 
             # check that this plugin is interested in this type of feature
             
-            if ($plugin->check_feature_type(ref $bvfoa->feature)) {
+            if ($plugin->check_feature_type(ref $bvfoa->feature || 'Intergenic')) {
                 
                 eval {
                     my $plugin_results = $plugin->run($bvfoa, $line_hash);

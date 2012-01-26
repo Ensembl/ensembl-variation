@@ -215,29 +215,41 @@ sub _check_types {
 
         for my $wanted (@{ $self->$method }) {
            
-            # we are fairly relaxed about how the user describes features, it can
-            # be the fully qualified class name, or just the specific module name, 
-            # (i.e. the text after the last '::') in which case we automatically 
-            # fully qualify it
+            # special case the intergenic class
             
-            if ($wanted !~ /::/) {
-                if ($type_type eq 'feature') {
-
-                    if ($wanted eq 'RegulatoryFeature' || $wanted eq 'MotifFeature') {
-                        $wanted = "Bio::EnsEMBL::Funcgen::$wanted";
-                    }
-                    else {
-                        $wanted = "Bio::EnsEMBL::$wanted";
-                    }
-                }
-                elsif ($type_type eq 'variant_feature') {
-                    $wanted = "Bio::EnsEMBL::Variation::$wanted";
+            if ($wanted eq 'Intergenic') {
+                if ($wanted eq $type) {        
+                    $self->{$hash_key}->{$type} = 1;
+                    last;
                 }
             }
+            else {
 
-            if ($type->isa($wanted)) {
-                $self->{$hash_key}->{$type} = 1;
-                last;
+                # we are fairly relaxed about how the user describes features, it can
+                # be the fully qualified class name, or just the specific module name, 
+                # (i.e. the text after the last '::') in which case we automatically 
+                # fully qualify it
+
+                if ($wanted !~ /::/) {
+
+                    if ($type_type eq 'feature') {
+
+                        if ($wanted eq 'RegulatoryFeature' || $wanted eq 'MotifFeature') {
+                            $wanted = "Bio::EnsEMBL::Funcgen::$wanted";
+                        }
+                        else {
+                            $wanted = "Bio::EnsEMBL::$wanted" unless $wanted eq 'Intergenic';
+                        }
+                    }
+                    elsif ($type_type eq 'variant_feature') {
+                        $wanted = "Bio::EnsEMBL::Variation::$wanted";
+                    }
+                }
+
+                if ($type->isa($wanted)) {
+                    $self->{$hash_key}->{$type} = 1;
+                    last;
+                }
             }
         }
     }
@@ -311,7 +323,7 @@ sub check_variant_feature_type {
 =cut
 
 sub run {
-    my ($self, $vfoa, $line_hash) = @_;
+    my ($self, $bvfoa, $line_hash) = @_;
     warn "VEP plugins should implement the 'run' method\n";
     return {};
 }
