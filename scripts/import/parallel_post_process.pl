@@ -20,13 +20,13 @@ my ($TMP_DIR, $TMP_FILE, $LIMIT, $PERLBIN, $SCHEDULER);
 my ($vhost, $vport, $vdbname, $vuser, $vpass,
     $chost, $cport, $cdbname, $cuser, $cpass,
     $limit, $num_processes, $top_level, $species,
-    $variation_feature, $flanking_sequence, $variation_group_feature,
+    $variation_feature, $flanking_sequence,
     $transcript_variation, $ld_populations, $reverse_things, $make_allele_string_table,$merge_rs_features,
     $merge_ensembl_snps,$new_source_id,$remove_wrong_variations,$remove_multi_tables,$check_seq_region_id, 
     $read_updated_files,$merge_multi_tables,
     $registry_file, $bsub_queue_name,@into_source_id);
 
-$variation_feature = $flanking_sequence = $variation_group_feature = $transcript_variation = $ld_populations = $reverse_things = $merge_rs_features = $merge_ensembl_snps = $new_source_id = $remove_wrong_variations = $remove_multi_tables = $make_allele_string_table = $check_seq_region_id = $read_updated_files = $merge_multi_tables = '';
+$variation_feature = $flanking_sequence = $transcript_variation = $ld_populations = $reverse_things = $merge_rs_features = $merge_ensembl_snps = $new_source_id = $remove_wrong_variations = $remove_multi_tables = $make_allele_string_table = $check_seq_region_id = $read_updated_files = $merge_multi_tables = '';
 
 GetOptions(
   'tmpdir=s'  => \$ImportUtils::TMP_DIR,
@@ -39,7 +39,6 @@ GetOptions(
   'num_processes=i' => \$num_processes,
   'variation_feature' => \$variation_feature,
   'flanking_sequence' => \$flanking_sequence,
-  'variation_group_feature' => \$variation_group_feature,
   'transcript_variation' => \$transcript_variation,
   'reverse_things'       => \$reverse_things,
   'merge_rs_features'         => \$merge_rs_features,
@@ -121,7 +120,6 @@ $hap_id_string = '(0)' if $hap_id_string eq '()';
 #create_failed_variation_table($dbVar);
 parallel_variation_feature($dbVar, $top_level, $Bin . '/parallel_variation_feature.pl', $bsub_queue_name) if ($variation_feature);
 parallel_flanking_sequence($dbVar, $Bin . '/parallel_flanking_sequence.pl', $bsub_queue_name) if ($flanking_sequence);
-parallel_variation_group_feature($dbVar, $bsub_queue_name) if ($variation_group_feature);
 parallel_transcript_variation($dbVar, $Bin . '/parallel_transcript_variation.pl', $registry_file, $bsub_queue_name) if ($transcript_variation);
 parallel_ld_populations($dbVar, $bsub_queue_name) if ($ld_populations);
 reverse_things($dbVar) if ($reverse_things);
@@ -343,22 +341,6 @@ sub parallel_flanking_sequence{
   
 }
 
-#when the variation_feature table has been filled up, run the variation_group_feature. Not necessary to parallelize as fas as I know....
-sub parallel_variation_group_feature{
-  my $dbVar = shift;
-  my $bsub_queue_name = shift;
-
-  my $total_process = 0;
-
-  $bsub_queue_name ||= 'normal';
-
-  my $call = "bsub -q $bsub_queue_name  -o $TMP_DIR/output_group_feature_$$\.txt $PERLBIN parallel_variation_group_feature.pl -chost $chost -cuser $cuser -cdbname $cdbname -vhost $vhost -vuser $vuser -vport $vport -vdbname $vdbname -tmpdir $TMP_DIR -tmpfile $TMP_FILE ";
-  $call .= "-cpass $cpass " if ($cpass);
-  $call .= "-cport $cport " if ($cport);
-  $call .= "-vpass $vpass " if ($vpass);
-  $call .= "-limit $limit" if ($limit);
-  system($call);
-}
 
 #will fill in the transcriptoutput_transcript_0_6030 variation table. Has to wait until the variation feature table has been filled up. Then, divide the number of entries
 # by the number of processes to make the subprocesses
@@ -1847,7 +1829,6 @@ options:
     -num_processes <number> number of processes that are running (default = disabled)
     -variation_feature  fill in the Variation_feature table (default = disabled)
     -flanking_sequence  fill in the flanking sequence tables (default = disabled)
-    -variation_group_feature fill in the Variation_group_feature table (default = disabled)
     -transcript_variation  fill in the Transcript_variation table (default = disabled)
     -ld_populations  fill in the Pairwise_ld table (default = disabled)
 EOF
