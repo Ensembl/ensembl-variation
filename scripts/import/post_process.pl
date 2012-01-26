@@ -65,7 +65,6 @@ my ($TMP_DIR, $TMP_FILE, $LIMIT);
 #  load_asm_cache($dbCore);
 #  variation_feature($dbCore, $dbVar);
   flanking_sequence($dbCore, $dbVar);
-#  variation_group_feature($dbCore, $dbVar);
 #  transcript_variation($dbCore, $dbVar);
 #  ld_populations($dbCore,$dbVar);
 
@@ -377,39 +376,6 @@ sub flanking_sequence {
 
   $sth->finish();
   $update_sth->finish();
-
-  return;
-}
-
-
-#
-# Loads the variation_group_feature table by using the locations of
-# the variation_features and their groupings in the variation_group_feature
-# table
-#
-
-sub variation_group_feature {
-  my $dbCore = shift;
-  my $dbVar  = shift;
-
-  ### TBD: possibly fix this: does not check to see that all the
-  ### variation_features are actually on the same seq_region or in close
-  ### proximity
-
-  debug("Loading variation_group_feature table");
-
-  $dbVar->do(qq{INSERT INTO variation_group_feature 
-                       (seq_region_id, seq_region_start, seq_region_end,
-                        seq_region_strand, variation_group_id)
-                SELECT vf.seq_region_id, min(vf.seq_region_start),
-                       max(vf.seq_region_end), vf.seq_region_strand,
-                       vgv.variation_group_id
-                FROM   variation_feature vf, variation_group_variation vgv
-                WHERE  vgv.variation_id = vf.variation_id
-                GROUP BY vgv.variation_group_id, vf.seq_region_id});
-
-
-  update_meta_coord($dbCore, $dbVar, 'variation_group_feature');
 
   return;
 }
