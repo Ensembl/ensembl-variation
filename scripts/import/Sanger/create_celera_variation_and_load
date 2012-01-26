@@ -239,74 +239,6 @@ create table variation_feature(
 
 
 #
-# variation_group
-# 
-# This table defines a variation group.  Allele groups can 
-# be classed into a variation_group when they are comprised
-# of the same set of variations.  This is equivalent to 
-# HapSets in dbSNP.
-#
-# variation_group_id   - primary_key, internal identifier
-# name                 - the code or name of this variation_group
-# source_id            - foreign key ref source
-#
-
-create table variation_group (
-	variation_group_id int not null auto_increment,
-	name varchar(255),
-	source_id int not null,
-  type enum('haplotype', 'tag'),
-
-	primary key (variation_group_id),
-  unique(name)
-);
-
-#
-# variation_group_variation
-# Keeps all the variations stored in a group (normalisation of the n..n relationship between variation and variation_group)
-# variation_id - foreign key references variation
-# variation_group_id - foreign key references variation_group
-#
-
-create table variation_group_variation (
-	variation_id int not null,
-	variation_group_id int not null,
-
-	unique( variation_group_id, variation_id ),
-	key variation_idx( variation_id, variation_group_id )
-);
-
-#
-# variation_group_feature
-#
-# Places a variation_group (i.e. group of associated haplotypes) on the genome
-# as a feature.
-#
-# variation_group_feature_id - primary key, internal identifier
-# seq_region_id              - foreign key references seq_region in core db
-# seq_region_start           - start position of the variation_group_feature
-#                              on the referenced seq_region
-# seq_region_end             - end position of the variation_group_feature
-# seq_region_strand          - orientation of feature on seq_region
-# variation_group_id         - foreign key references variation_group
-# variation_group_name       - name of the variation_group
-#
-
-create table variation_group_feature(
-  variation_group_feature_id int not null auto_increment,
-  seq_region_id int not null,
-  seq_region_start int not null,
-  seq_region_end int not null,
-  seq_region_strand tinyint not null,
-  variation_group_id int not null,
-  variation_group_name varchar(255),
-
-  primary key (variation_group_feature_id),
-  key pos_idx(seq_region_id, seq_region_start),
-  key variation_group_idx(variation_group_id)
-);
-
-#
 # transcript_variation
 # 
 # This table contains a classification of variation features based on Ensembl
@@ -349,56 +281,6 @@ create table transcript_variation(
 	
 
 #
-# allele_group
-#
-# This table defines haplotypes - groups of
-# polymorphisms which are found together in a block.
-# This is equivalent to Haps in dbSNP
-#
-# allele_group_id    - primary_key, internal identifier
-# variation_group_id - foreign key, ref variation_group
-# sample_id          - foreign key, ref population
-# name               - the name of this allele group
-# frequency          - the frequency of this allele_group
-#                      within the referenced population
-#
-#
-
-create table allele_group(
-	allele_group_id int not null auto_increment,
-	variation_group_id int not null,
-	sample_id int,
-	name varchar(255),
-	source_id int,
-	frequency float,
-
-	primary key( allele_group_id ),
-  unique(name)
-);
-
-
-#
-# allele_group_allele
-#
-# Defines which alleles make up an allele group.  
-# There is no direct link to the allele table because the allele table has 
-# population and frequency data which may not correspond to this allele group
-#
-# allele_group_id - primary key, internal identifier
-# allele - base present in the group
-# variation_id - foreign key, references variation
-
-create table allele_group_allele (
-	allele_group_id int not null,
-	allele varchar(255) not null,
-        variation_id int not null,
-
-	unique( allele_group_id, variation_id ),
-	key allele_idx( variation_id, allele_group_id )
-);
-
-
-#
 # flanking_sequence
 #
 # table that stores the flanking sequences from th core database. To reduce space used, takes coordinates from the sequences in the core database
@@ -426,27 +308,6 @@ create table flanking_sequence (
 
 ) MAX_ROWS = 100000000;
 
-
-#
-# httag
-#
-# this table contains the tags of a haplotype: bases of the haplotypes that uniquely identify it
-#
-# httag_id - primary key, internal identifier
-# variation_group_id - foreign key, references variation_group
-# name - name of the tag, for web purposes
-# source_id - foreign key, references source
-#
-
-create table httag(
-	httag_id int not null auto_increment,
-	variation_group_id int not null,
-	name varchar(255),
-	source_id int not null,
-
-	primary key( httag_id ),
-	key variation_group_idx( variation_group_id )
-);
 
 #
 # source
