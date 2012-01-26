@@ -68,13 +68,17 @@ sub new {
         )], @_);
  
     assert_ref($base_variation_feature, 'Bio::EnsEMBL::Variation::BaseVariationFeature');
-    assert_ref($feature, 'Bio::EnsEMBL::Feature');
     
-    # we need to ensure the Feature and the BaseVariationFeature live on the same slice
-    # so we explicitly transfer the Feature here
-    unless($no_transfer && $no_transfer == 1) {
-        $feature = $feature->transfer($base_variation_feature->slice) 
-            or throw("Unable to transfer the supplied feature to the same slice as the base variation feature");
+    if (defined $feature) {
+
+        assert_ref($feature, 'Bio::EnsEMBL::Feature');
+
+        # we need to ensure the Feature and the BaseVariationFeature live on the same slice
+        # so we explicitly transfer the Feature here
+        unless($no_transfer && $no_transfer == 1) {
+            $feature = $feature->transfer($base_variation_feature->slice) 
+                or throw("Unable to transfer the supplied feature to the same slice as the base variation feature");
+        }
     }
 
     my $self = bless {
