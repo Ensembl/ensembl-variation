@@ -332,6 +332,60 @@ sub fetch_all_by_Variation {
   return \@res;
 }
 
+
+=head2 fetch_all_by_StructuralVariation
+
+  Arg [1]    : Bio::EnsEMBL::Variation::StructuralVariation
+  Example    : my $vss = $vsa->fetch_all_by_StructuralVariation($sv);
+  Description: Retrieves all variation sets which a particular structural variation
+               is present in.
+  Returntype : reference to list of Bio::EnsEMBL::Variation::VariationSets
+  Exceptions : throw on incorrect argument
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub fetch_all_by_StructuralVariation {
+    my $self = shift;
+    my $var  = shift;
+
+    assert_ref($var,'Bio::EnsEMBL::Variation::StructuralVariation');
+
+  my $cols = join(',',$self->_columns());
+  my $stmt = qq{
+    SELECT
+      $cols
+    FROM
+      variation_set vs,
+      variation_set_structural_variation vssv
+    WHERE
+      vs.variation_set_id = vssv.variation_set_id AND
+      vssv.structural_variation_id = ?
+  };
+
+  my $sth = $self->prepare($stmt);
+  $sth->bind_param(1,$var->dbID,SQL_INTEGER);
+  $sth->execute();
+
+  my $result = $self->_objs_from_sth($sth);
+  $sth->finish();
+
+# Fetch all supersets of the returned sets as well. Since a variation may occur at several places in a hierarchy
+# which will cause duplicated data, store variation sets in a hash with dbID as key.
+  my %sets;
+  foreach my $set (@{$result}) {
+    $sets{$set->dbID()} = $set;
+    foreach my $sup (@{$self->fetch_all_by_sub_VariationSet($set)}) {
+      $sets{$sup->dbID()} = $sup;
+    }
+  }
+  
+  my @res = values %sets;
+  return \@res;
+}
+
+
 # An API-internal subroutine for getting the bitvalue of the specified variation_set and (unless specifically indicated) its subsets
 sub _get_bitvalue {
   my $self = shift;
