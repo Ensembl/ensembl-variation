@@ -1193,7 +1193,7 @@ sub tva_to_line {
         Codons           => $tva->display_codon_allele_string,
         Consequence      => join ",", map {$_->$term_method || $_->display_term} @{$tva->get_all_OverlapConsequences},
     };
-    
+
     # get gene
     my $gene;
     
@@ -1208,6 +1208,29 @@ sub tva_to_line {
     
     my $line = init_line($config, $tva->variation_feature, $base_line);
     
+    # exon/intron numbers
+    if ($config->{numbers}) {
+        $line->{Extra}->{EXON} = $tv->exon_number if defined $tv->exon_number;
+        $line->{Extra}->{INTRON} = $tv->intron_number if defined $tv->intron_number;
+    }
+
+    if ($config->{domains}) {
+        my $feats = $tv->get_overlapping_ProteinFeatures;
+
+        my @strings;
+
+        for my $feat (@$feats) {
+            my $label = $feat->analysis->display_label;
+
+            # replace any special characters
+            $label =~ s/\s+|;\=/_/g;
+
+            push @strings, "$label:".($feat->hseqname || $feat->idesc || $feat->interpro_ac);
+        }
+
+        $line->{Extra}->{DOMAINS} = join ',', @strings if @strings;
+    }
+
     # HGNC
     if(defined $config->{hgnc}) {
         my $hgnc;
