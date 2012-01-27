@@ -86,10 +86,15 @@ our @ISA = ('Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor', 'Bio::EnsEMBL::DBSQL:
 
 =head2 fetch_all_by_Slice
 
-  Arg [1]    : Bio::EnsEMBL::Slice $slice
-               the slice from which to obtain features
+  Arg [1]    : Bio::EnsEMBL::Slice 
+	             $slice the slice from which to obtain features
+	Arg [2]    : int $include_evidence [optional]
   Example    : my $svfs = $svfa->fetch_all_by_Slice($slice);
   Description: Retrieves all structural variation features on the given Slice.
+               If $include_evidence is set (i.e. $include_evidence=1), structural variation features from 
+							 both structural variation (SV) and their supporting structural variations (SSV) will be 
+							 returned. By default, it only returns features from structural variations (SV). 
+							 from structural variations.
   Returntype : reference to list Bio::EnsEMBL::StructuralVariationFeature
   Exceptions : none
   Caller     : general
@@ -98,9 +103,13 @@ our @ISA = ('Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor', 'Bio::EnsEMBL::DBSQL:
 =cut
 
 sub fetch_all_by_Slice {
-  my ($self, $slice) = @_;
+  my ($self, $slice, $include_evidence) = @_;
 	
 	my $constraint = $self->_internal_exclude_failed_constraint('',1);
+	if (!$include_evidence) {
+		$constraint .= ' AND ' if ($constraint);
+		$constraint .= 'is_evidence=0';
+	}
 	
   return $self->fetch_all_by_Slice_constraint($slice, $constraint);
 }
