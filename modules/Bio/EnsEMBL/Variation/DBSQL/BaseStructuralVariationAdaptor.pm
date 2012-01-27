@@ -56,6 +56,7 @@ use DBI qw(:sql_types);
 
 our @ISA = ('Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor');
 
+my $DEFAULT_ITERATOR_CACHE_SIZE = 10000;
 
 # method used by superclass to construct SQL
 sub _tables { 
@@ -200,6 +201,50 @@ sub fetch_all_by_dbID_list {
   my $result = $self->generic_fetch($constraint);
 
   return $result;
+}
+
+
+=head2 fetch_Iterator_by_dbID_list
+
+  Arg [1]    : reference to list of ints $list
+  Example    : $variation_iterator = $va->fetch_Iterator_by_dbID_list([124, 56, 90]);
+  Description: Retrieves an iterator over a set of structural variations via their internal identifiers.
+  Returntype : Bio::EnsEMBL::Utils::Iterator
+  Exceptions : throw on bad argument
+  Caller     : general
+  Status     : Experimental
+
+=cut
+
+sub fetch_Iterator_by_dbID_list {
+    my ($self, $dbid_list, $cache_size) = @_;
+    
+    unless ((defined $dbid_list) && (ref $dbid_list eq 'ARRAY')) {
+        throw("list reference argument is required");
+    }
+
+    $cache_size ||= $DEFAULT_ITERATOR_CACHE_SIZE;
+
+    # create an iterator that fetches structural variations in blocks of
+    # $cache_size and returns them in turn
+
+    my @object_cache;
+
+    return Bio::EnsEMBL::Utils::Iterator->new(sub {
+
+            if (@object_cache == 0 && @$dbid_list > 0 ) {
+                my @dbids = splice @$dbid_list, 0, $cache_size;
+                
+                # Create a constraint on the dbIDs
+                my $id_str = "(" . join(",",@dbids) . ")";
+                my $constraint = qq{sv.structural_variation_id IN $id_str};
+                
+                @object_cache = @{ $self->generic_fetch($constraint) };
+            }
+
+            return shift @object_cache;
+        }
+    );
 }
 
 
