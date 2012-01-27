@@ -28,8 +28,9 @@ $TMP_FILE = $ImportUtils::TMP_FILE;
 
 #added default options
 $species ||= 'human';
-Bio::EnsEMBL::Registry->load_all( $registry_file );
-my $dbVariation = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'variation');
+my $reg = 'Bio::EnsEMBL::Registry';
+$reg->load_all( $registry_file );
+my $dbVariation = $reg->get_DBAdaptor($species,'variation');
 
 my $siblings;
 create_LD_table($dbVariation); #create the LD table if it is not there yet
@@ -53,7 +54,6 @@ $sth->finish();
 my @files = glob("$TMP_DIR/dump*");
 my $call = '';
 my @stats;
-my $bsub_flag = 0;
 debug("Submitting calculate LD jobs");
 
 
@@ -65,12 +65,12 @@ foreach my $file (@files){
 foreach my $file (sort {$files_size->{$b} <=> $files_size->{$a}} keys %{$files_size}){
 	
     $file =~ /.*_(\d+)_(\d+)/;
+	$call = "bsub -J ld_calculation_$1\_$2 -o $TMP_DIR\/$1\_$2\_farm.out ";
 	
     @stats = stat($file);
     if ($stats[7] > MAX_SIZE){
-#once the files are created, we have to calculate the ld
-	$call = "bsub -M15000000 -R'select[mem>15000] rusage[mem=15000]' -q long -J ld_calculation_$1\_$2 -o $TMP_DIR\/$1\_$2\_farm.out ";
-	$bsub_flag = 1;
+		# once the files are created, we have to calculate the ld
+		$call .= " -M15000000 -R'select[mem>15000] rusage[mem=15000]' -q long ";
     }
     $call .= "perl calculate_ld_table.pl -tmpdir $TMP_DIR -tmpfile $TMP_FILE -ldfile $file ";
     print $call,"\n";
@@ -78,27 +78,30 @@ foreach my $file (sort {$files_size->{$b} <=> $files_size->{$a}} keys %{$files_s
     $call = '';
 }
 
-if($bsub_flag) {
-	sleep(60);
-	$call = "bsub -K -W2:00 -w 'done(ld_calculation*)' -J waiting_ld date";
-	system($call);
-}
+sleep(60);
+$call = "bsub -K -W2:00 -w 'done(ld_calculation*)' -J waiting_ld date";
+system($call);
 
 # import the data in the LD table
 debug("Importing LD values to DB");
-$call = "cat $TMP_DIR/$TMP_FILE*.out > $TMP_DIR/$TMP_FILE";
-system($call);
-load($dbVariation->dbc,qw(pairwise_ld sample_id seq_region_id seq_region_start seq_region_end r2));
 
-$bsub_flag = 0;
+
+my @ld_files = glob("$TMP_DIR/$TMP_FILE*.out");
+foreach my $file(@ld_files) {
+	system("mv $file $TMP_DIR/$TMP_FILE");
+	load($dbVariation->dbc,qw(pairwise_ld sample_id seq_region_id seq_region_start seq_region_end r2));
+}
+
 debug("Submitting find tag SNPs jobs");
 $call = '';
 
 foreach my $file (sort {$files_size->{$b} <=> $files_size->{$a}} keys %{$files_size}){
     $file =~ /.*_(\d+)_(\d+)/;
 	
+	$call = "bsub -J tag_snps_$1\_$2 -o $TMP_DIR\/$1\_$2\_farm.out ";
+	
     if ($files_size->{$file} > MAX_SIZE){
-	$call = "bsub -q long -J tag_snps_$1\_$2 -o $TMP_DIR\/$1\_$2\_farm.out -R'select[mem>15000] rusage[mem=15000]' -M15000000 ";
+		$call .= " -q long  -R'select[mem>15000] rusage[mem=15000]' -M15000000 ";
     }
     $call .= "/software/bin/perl select_tag_snps.pl $file ";
     $call .= " -tmpdir $TMP_DIR -species $species";
@@ -110,10 +113,8 @@ foreach my $file (sort {$files_size->{$b} <=> $files_size->{$a}} keys %{$files_s
     
 }
 
-if($bsub_flag) {
-	$call = "bsub -K -w 'done(tag_snps*)' -J waiting_process sleep 1"; #waits until all snp_tagging have finished to continue
-	system($call);
-}
+$call = "bsub -K -w 'done(tag_snps*)' -J waiting_process sleep 1"; #waits until all snp_tagging have finished to continue
+system($call);
 
 debug("Importing tag SNPs");
 &import_tagg_snps($dbVariation);
@@ -129,7 +130,7 @@ sub store_file{
     my $population_id = shift;
     my $seq_region_id = shift;
 	
-	my @genotypes = unpack '(www)*', $genotypes;
+	my @genotypes = unpack '(www)*', $genotype;
 	my $snp_start = $seq_region_start;
 	
 	while( my( $variation_id, $gt_code, $gap ) = splice @genotypes, 0, 3 ) {
@@ -267,15 +268,11 @@ sub create_LD_table{
 sub import_tagg_snps{
     my $dbVariation = shift;
     
-    #group all the fragments in 1 file
-    my $call = "cat $TMP_DIR/snps_tagged_*.txt > $TMP_DIR/$TMP_FILE";
-    system($call);
-
-    unlink(<$TMP_DIR/snps_tagged_*>);
-    #and finally, load the information
-    load($dbVariation->dbc(), qw(tagged_variation_feature variation_feature_id sample_id));
-    unlink(<$TMP_DIR/tag_snps_*>);
-   
+	my @ld_files = glob("$TMP_DIR/snps_tagged_*.txt");
+	foreach my $file(@ld_files) {
+		system("mv $file $TMP_DIR/$TMP_FILE");
+		load($dbVariation->dbc(), qw(tagged_variation_feature variation_feature_id tagged_variation_feature_id sample_id));
+	}
 }
 
 # gets time
