@@ -66,7 +66,7 @@ close IN;
 $MAF_snps->{$previous_seq_region_start} = &calculate_MAF($genotypes_snp)  if ($last_snp == 0);
 
 #get LD values for the chromosome
-$file =~/.*(\d+)_(\d+)\.txt/; #extract the seq_region_id from the name of the file
+$file =~/.*_(\d+)_(\d+)\.txt/; #extract the seq_region_id from the name of the file
 $population_id = $1;
 my $seq_region_id = $2;
 
@@ -76,6 +76,7 @@ chop $host;
 my $LD_values = &get_LD_chromosome($dbVariation,$seq_region_id,$r2,$population_id, $pos_to_vf);
 #do the algorithm
 my $remove_snps = {}; #hash containing the snps that must be removed from the entry, they have been ruled out
+my $tagged_by = {};
 foreach $seq_region_start (sort {$MAF_snps->{$b} <=> $MAF_snps->{$a} || $a <=> $b} keys %{$MAF_snps}){
     if (!defined $remove_snps->{$seq_region_start}){
 		#add the SNPs that should be removed in future iterations
@@ -85,6 +86,7 @@ foreach $seq_region_start (sort {$MAF_snps->{$b} <=> $MAF_snps->{$a} || $a <=> $
 			foreach(@{$LD_values->{$seq_region_start}}) {
 				$remove_snps->{$_}++;
 				delete $MAF_snps->{$_};
+				push @{$tagged_by->{$seq_region_start}}, $_;
 			}
 		}
 		
@@ -100,12 +102,17 @@ my $genotype_without_vf = 0;
 my $genotype_with_vf = 0;
 open OUT, ">$TMP_DIR/snps_tagged_$population_id\_$host\-$$\.txt" or die ("Could not open output file");
 foreach my $position_vf (keys %{$MAF_snps}){
+	# do pos_to_vf on the tagged snps
+	foreach my $tagged(@{$tagged_by->{$position_vf}}) {
+		$pos_to_vf->{$tagged} ||= &get_vf_id_from_position($dbVariation, $seq_region_id, $tagged);
+	}
+	
     if (! defined $pos_to_vf->{$position_vf}){ #some variations might not have LD, get dbID from database
 		#get it from the database
 		$pos_to_vf->{$position_vf} = &get_vf_id_from_position($dbVariation,$seq_region_id,$position_vf);
     }
     if ($pos_to_vf->{$position_vf} ne ''){
-		print OUT join("\t",$pos_to_vf->{$position_vf},$population_id),"\n";
+		print OUT join("\t",$pos_to_vf->{$position_vf},$pos_to_vf->{$_},$population_id),"\n" for grep {defined($pos_to_vf->{$_})} @{$tagged_by->{$position_vf}};
 		$genotype_with_vf++;
     }
     else{
