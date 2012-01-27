@@ -72,9 +72,12 @@ package Bio::EnsEMBL::Variation::DBSQL::StructuralVariationAdaptor;
 use Bio::EnsEMBL::Variation::StructuralVariation;
 use Bio::EnsEMBL::Variation::DBSQL::BaseStructuralVariationAdaptor;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
+use Bio::EnsEMBL::Utils::Scalar qw(assert_ref);
 use DBI qw(:sql_types);
 
 our @ISA = ('Bio::EnsEMBL::Variation::DBSQL::BaseStructuralVariationAdaptor');
+
+my $DEFAULT_ITERATOR_CACHE_SIZE = 10000;
 
 sub _default_where_clause {
   my $self = shift;
@@ -190,6 +193,198 @@ sub fetch_all_by_supporting_evidence {
 	$sth->finish();
 
 	return $results;
+}
+
+
+sub _generic_fetch_by_VariationSet {
+    my $self = shift;
+    my $want_iterator = shift;
+    my $set = shift;
+    
+    assert_ref($set,'Bio::EnsEMBL::Variation::VariationSet');
+
+    if(!defined($set->dbID())) {
+        warning("Cannot retrieve structural variations for variation set without a dbID");
+        return [];
+    }
+  
+    # Get the unique dbIDs for all variations in this set and all of its subsets
+    my $dbid_list = $self->fetch_all_dbIDs_by_VariationSet($set);
+ 
+    my $num_vars = @$dbid_list;
+
+    if ($num_vars > 100_000 && !$want_iterator) {
+        warn "This set contains a large number ($num_vars) of structural variations, these may not fit".
+             "into memory at once, considering using fetch_Iterator_by_VariationSet instead";
+    }
+
+    # Use the dbIDs to get all variations and return them
+    return $want_iterator ? 
+        $self->fetch_Iterator_by_dbID_list($dbid_list) : 
+        $self->fetch_all_by_dbID_list($dbid_list);
+}
+
+
+=head2 fetch_all_dbIDs_by_VariationSet
+
+  Arg [1]    : Bio::EnsEMBL::Variation::VariationSet
+  Example    : @sv_ids = @{$sva_adaptor->fetch_all_dbIDs_by_VariationSet($vs)};
+  Description: Gets an array of internal ids of all structural variations which are present 
+               in a specified variation set and its subsets.
+  Returntype : listref of integers
+  Exceptions : throw on incorrect argument
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub fetch_all_dbIDs_by_VariationSet {
+  my $self = shift;
+  my $set  = shift;
+  
+  # First, get ids for all subsets,
+  
+  my @var_set_ids = ($set->dbID);
+  
+  foreach my $var_set (@{$set->adaptor->fetch_all_by_super_VariationSet($set)}) {
+    push @var_set_ids, $var_set->dbID;
+  }
+  
+  my $set_str = "(" . join(",",@var_set_ids) .")";
+
+  # Add the constraint for failed structural variations
+  my $constraint = $self->_internal_exclude_failed_constraint;
+  
+  # Then get the dbIDs for all these sets
+  my $stmt = qq{
+    SELECT DISTINCT
+      vssv.structural_variation_id
+    FROM
+      variation_set_structural_variation vssv LEFT JOIN
+      failed_structural_variation fsv ON (
+	      fsv.structural_variation_id = vssv.structural_variation_id
+      )
+    WHERE
+      vssv.variation_set_id in $set_str
+      $constraint
+  };
+
+  my $sth = $self->prepare($stmt);
+  
+  $sth->execute();
+  
+  my @result;
+  my $dbID;
+  
+  $sth->bind_columns(\$dbID);
+  
+  while ($sth->fetch()) {
+        push @result, $dbID;
+  }
+
+  return \@result;
+}
+
+
+=head2 fetch_all_by_VariationSet
+
+  Arg [1]    : Bio::EnsEMBL::Variation::VariationSet
+  Example    : @svs = @{$sva_adaptor->fetch_all_by_VariationSet($vs)};
+  Description: Retrieves all structural variations which are present in a specified
+               variation set and its subsets.
+  Returntype : listref of Bio::EnsEMBL::Variation::StructuralVariation
+  Exceptions : throw on incorrect argument
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub fetch_all_by_VariationSet {
+    my $self = shift;
+    return $self->_generic_fetch_by_VariationSet(0, @_);
+}
+
+
+=head2 fetch_Iterator_by_VariationSet
+
+  Arg [1]    : Bio::EnsEMBL::Variation::VariationSet
+  Example    : $sv_iterator = $sva_adaptor->fetch_Iterator_by_VariationSet($vs);
+  Description: Retrieves an iterator for all structural variations which are present 
+	             in a specified variation set and its subsets.
+  Returntype : Bio::EnsEMBL::Utils::Iterator object
+  Exceptions : throw on incorrect argument
+  Caller     : general
+  Status     : Experimental
+
+=cut
+
+sub fetch_Iterator_by_VariationSet {
+    my $self = shift;
+    my $set = shift;
+    my $cache_size = shift || $DEFAULT_ITERATOR_CACHE_SIZE;
+    
+    # First, get ids for all subsets,
+    my @var_set_ids = ($set->dbID);
+    map {push(@var_set_ids,$_->dbID())} @{$set->adaptor->fetch_all_by_super_VariationSet($set)};
+    my $var_set_id = join(",",@var_set_ids);
+    
+    # Prepare a query for getting the span of variation_ids
+    my $stmt = qq{
+        FROM
+            variation_set_structural_variation vssv LEFT JOIN
+            failed_structural_variation fsv ON (
+    	       fsv.structural_variation_id = vssv.structural_variation_id
+            )
+        WHERE
+            vssv.variation_set_id IN ($var_set_id)
+    };
+      
+    # Add the constraint for failed structural variations
+    my $constraint = $self->_internal_exclude_failed_constraint;
+    
+    my $sth = $self->prepare(qq{SELECT MIN(vssv.structural_variation_id), MAX(vssv.structural_variation_id) 
+		                            $stmt $constraint});
+    $sth->execute();
+    my ($min_sv_id,$max_sv_id);
+    $sth->bind_columns(\$min_sv_id,\$max_sv_id);
+    $sth->fetch();
+    $max_sv_id ||= 0;
+    $min_sv_id ||= 1;
+    
+    # Prepare a statement for getting the ids in a range
+    $sth = $self->prepare(qq{SELECT vssv.structural_variation_id $stmt 
+		                         AND vssv.structural_variation_id BETWEEN ? AND ? $constraint});
+    
+    # Internally, we keep an Iterator that works on the dbID span we're at
+    my $iterator;
+        
+    return Bio::EnsEMBL::Utils::Iterator->new(sub {
+
+        # If the iterator is empty, get a new chunk of dbIDs, unless we've fetched all dbIDs 
+        unless (defined($iterator) && $iterator->has_next() && $min_sv_id <= $max_sv_id) {
+            
+            # Get the next chunk of dbIDs
+            $sth->execute($min_sv_id,$min_sv_id+$cache_size);
+            $min_sv_id += ($cache_size + 1);
+            
+            # Use a hash to keep track of the seen dbIDs
+            my %seen;
+            
+            # Loop over the dbIDs and avoid duplicates
+            my $dbID;
+            my @dbIDs;
+            $sth->bind_columns(\$dbID);
+            while ($sth->fetch()) {
+                push (@dbIDs,$dbID) unless ($seen{$dbID}++);
+            }
+    
+            # Get a new Iterator based on the new dbID span
+            $iterator = $self->fetch_Iterator_by_dbID_list(\@dbIDs);
+            
+        }
+        
+        return $iterator->next();
+    });
 }
 
 1;
