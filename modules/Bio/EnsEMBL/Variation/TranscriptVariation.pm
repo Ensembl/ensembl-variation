@@ -675,16 +675,20 @@ sub _exon_intron_number {
 
     my $strand = $self->transcript->strand;
 
+    my $exons = $self->_exons;
+
+    my $tot_exons = scalar(@$exons);
+
     my $exon_count = 0;
 
     my $prev_exon;
 
-    for my $exon (@{ $self->_exons }) {
+    for my $exon (@$exons) {
 
         $exon_count++;
         
         if (overlap($vf_start, $vf_end, $exon->start, $exon->end)) {
-            $self->{exon_number} = sprintf "%d/%d", $exon_count, scalar(@{ $self->_exons });
+            $self->{exon_number} = sprintf "%d/%d", $exon_count, $tot_exons;
             last;
         }
 
@@ -693,7 +697,7 @@ sub _exon_intron_number {
             my $intron_end   = $strand == 1 ? $exon->start - 1 : $prev_exon->start - 1;
 
             if ($prev_exon && overlap($vf_start, $vf_end, $intron_start, $intron_end)) {
-                $self->{intron_number} = sprintf "%d/%d", $exon_count - 1, scalar(@{ $self->_exons }) - 1;
+                $self->{intron_number} = sprintf "%d/%d", $exon_count - 1, $tot_exons - 1;
                 last;
             }
         }
