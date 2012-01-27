@@ -117,7 +117,7 @@ our @ISA = ('Bio::EnsEMBL::Variation::BaseVariationFeature');
   Arg [-SOURCE] :
     string - the name of the source where the variation comes from
 	
-  Arg [-SOURCE_VERSION :
+  Arg [-SOURCE_VERSION]:
 	string - version number of the source
 	
 	
@@ -293,6 +293,31 @@ sub structural_variation {
   }
 
   return $self->{'structural_variation'};
+}
+
+
+=head2 get_all_VariationSets
+
+    Args        : none
+    Example     : my @vs = @{$svf->get_all_VariationSets()};
+    Description : returns a reference to a list of all the VariationSets this
+                  StructuralVariationFeature is a member of
+    ReturnType  : reference to list of Bio::EnsEMBL::Variation::VariationSets
+    Exceptions  : if no adaptor is attached to this object
+    Caller      : general
+    Status      : At Risk
+=cut
+
+sub get_all_VariationSets {
+    my $self = shift;
+    
+    if (!$self->adaptor()) {
+      throw('An adaptor must be attached in order to get all variation sets');
+    }
+    my $vs_adaptor = $self->adaptor()->db()->get_VariationSetAdaptor();
+    my $variation_sets = $vs_adaptor->fetch_all_by_StructuralVariation($self->structural_variation());
+    
+    return $variation_sets;
 }
 
 
@@ -673,6 +698,5 @@ sub _sort_svos {
   
   $self->{structural_variation_overlaps} = \@svos;
 }
-
 
 1;
