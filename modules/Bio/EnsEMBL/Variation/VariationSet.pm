@@ -101,7 +101,7 @@ sub new {
   my ($dbID, $adaptor, $name, $description, $short_name) =
     rearrange([qw(DBID ADAPTOR NAME DESCRIPTION SHORT_NAME)], @_);
   
-  #ÊCheck that the dbID does not exceed the maximum dbID that can be stored in the variation_set_id SET construct in variation_set_variation
+  # Check that the dbID does not exceed the maximum dbID that can be stored in the variation_set_id SET construct in variation_set_variation
   warn("Primary key variation_set_id $dbID for variation set '$name' exceeds " . $Bio::EnsEMBL::Variation::DBSQL::VariationSetAdaptor::MAX_VARIATION_SET_ID . ". Therefore, this variation set cannot be properly referenced in variation_set_variation") if ($dbID > $Bio::EnsEMBL::Variation::DBSQL::VariationSetAdaptor::MAX_VARIATION_SET_ID);
   
   return bless {'dbID' => $dbID,
@@ -149,7 +149,7 @@ sub get_all_sub_VariationSets {
   my $self = shift;
   my $only_immediate = shift;
   
-# A database adaptor must be attached to this object   
+  # A database adaptor must be attached to this object   
   if(!$self->adaptor()) {
     warning('Cannot get sub variation sets without attached adaptor');
     return [];
@@ -175,7 +175,7 @@ sub get_all_super_VariationSets {
   my $self = shift;
   my $only_immediate = shift;
   
-# A database adaptor must be attached to this object   
+  # A database adaptor must be attached to this object   
   if(!$self->adaptor()) {
     warning('Cannot get super variation sets without attached adaptor');
     return [];
@@ -198,27 +198,61 @@ sub get_all_super_VariationSets {
 sub get_all_Variations {
   my $self = shift;
   
-# A database adaptor must be attached to this object   
+  # A database adaptor must be attached to this object   
   if(!$self->adaptor()) {
     warning('Cannot get variations without attached adaptor');
     return [];
   }
   
-# Call the method in VariationAdaptor that will handle this
+  # Call the method in VariationAdaptor that will handle this
   my $variation_adaptor = $self->adaptor->db->get_VariationAdaptor();
   if(!$variation_adaptor) {
     warning('Could not get variation adaptor from database');
     return [];
   }
 
- # Get all variations from this set (and its subsets)
+  # Get all variations from this set (and its subsets)
   return $variation_adaptor->fetch_all_by_VariationSet($self);
 }
+
+
+=head2 get_all_StructuralVariations
+
+  Example    : print $vs->get_all_StructuralVariations();
+  Description: Gets all structural variations belonging to this variation set and all of its subsets.
+  Returntype : reference to list of Bio::EnsEMBL::Variation::StructuralVariation
+  Exceptions : none
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub get_all_StructuralVariations {
+  my $self = shift;
+  
+  # A database adaptor must be attached to this object   
+  if(!$self->adaptor()) {
+    warning('Cannot get structural variations without attached adaptor');
+    return [];
+  }
+  
+  # Call the method in StructuralVariationAdaptor that will handle this
+  my $sv_adaptor = $self->adaptor->db->get_StructuralVariationAdaptor();
+  if(!$sv_adaptor) {
+    warning('Could not get structural variation adaptor from database');
+    return [];
+  }
+
+  # Get all variations from this set (and its subsets)
+  return $sv_adaptor->fetch_all_by_VariationSet($self);
+}
+
 
 =head2 get_Variation_Iterator
 
   Example    : my $var_iterator = $vs->get_Variation_Iterator;
-  Description: Gets an iterator over  all variations belonging to this variation set and all of its subsets.
+  Description: Gets an iterator over  all variations belonging to this 
+	             variation set and all of its subsets.
   Returntype : Bio::EnsEMBL::Utils::Iterator
   Exceptions : none
   Caller     : general
@@ -246,6 +280,41 @@ sub get_Variation_Iterator {
     # Get an iterator over variations from this set (and its subsets)
     return $variation_adaptor->fetch_Iterator_by_VariationSet($self);
 }
+
+
+=head2 get_StructuralVariation_Iterator
+
+  Example    : my $sv_iterator = $vs->get_StructuralVariation_Iterator;
+  Description: Gets an iterator over all structural variations belonging to this 
+	             variation set and all of its subsets.
+  Returntype : Bio::EnsEMBL::Utils::Iterator
+  Exceptions : none
+  Caller     : general
+  Status     : Experimental
+
+=cut
+
+sub get_StructuralVariation_Iterator {
+    my $self = shift;
+  
+    # A database adaptor must be attached to this object   
+    unless ($self->adaptor) {
+        warning('Cannot get structural variations without attached adaptor');
+        return Bio::EnsEMBL::Utils::Iterator->new;
+    }
+  
+    # Call the method in StructuralVariationAdaptor that will handle this
+    my $sv_adaptor = $self->adaptor->db->get_StructuralVariationAdaptor();
+    
+    unless ($sv_adaptor) {
+        warning('Could not get dructural variation adaptor from database');
+        return Bio::EnsEMBL::Utils::Iterator->new;
+    }
+
+    # Get an iterator over Structural variations from this set (and its subsets)
+    return $sv_adaptor->fetch_Iterator_by_VariationSet($self);
+}
+
 
 =head2 get_all_VariationFeatures_by_Slice
 
@@ -319,12 +388,12 @@ sub short_name {
   return $self->{'short_name'};
 }
 
-#ÊAPI-internal subroutine to get the bitvalue of this set's id and all of its subsets (unless specifically indicated not to)
+# API-internal subroutine to get the bitvalue of this set's id and all of its subsets (unless specifically indicated not to)
 sub _get_bitvalue {
   my $self = shift;
   my @args = @_;
   
-  #ÊIf the subsets should be exluded, call the subroutine in the adaptor and return the result. No caching.
+  # If the subsets should be exluded, call the subroutine in the adaptor and return the result. No caching.
   if (@args) {
     return $self->adaptor->_get_bitvalue($self,@args);
   }
