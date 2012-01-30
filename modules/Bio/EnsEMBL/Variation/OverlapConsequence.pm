@@ -65,6 +65,7 @@ use strict;
 use warnings;
 
 use Bio::EnsEMBL::Utils::Exception qw(throw);
+use Bio::EnsEMBL::Utils::Argument qw(rearrange);
 use Bio::EnsEMBL::Variation::Utils::VariationEffect;
 
 =head2 new
@@ -161,17 +162,18 @@ sub new {
         )], @_);
 
     my $self = bless {
-        SO_accession        => $SO_accession,
-        SO_term             => $SO_term,
-        feature_SO_term     => $feature_SO_term,
-        feature_class       => $feature_class,
-        predicate           => $predicate,
-        rank                => $rank,
-        display_term        => $display_term,
-        NCBI_term           => $NCBI_term,
-        description         => $description,
-        label               => $label,
-        is_default          => $is_default,
+        SO_accession            => $SO_accession,
+        SO_term                 => $SO_term,
+        feature_SO_term         => $feature_SO_term,
+        feature_class           => $feature_class,
+        variant_feature_class   => $variant_feature_class,
+        predicate               => $predicate,
+        rank                    => $rank,
+        display_term            => $display_term,
+        NCBI_term               => $NCBI_term,
+        description             => $description,
+        label                   => $label,
+        is_default              => $is_default,
     }, $class;
 
     return $self;
