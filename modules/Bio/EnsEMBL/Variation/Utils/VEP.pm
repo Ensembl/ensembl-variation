@@ -1220,12 +1220,12 @@ sub tva_to_line {
         my @strings;
 
         for my $feat (@$feats) {
-            my $label = $feat->analysis->display_label;
+            my $label = $feat->analysis->display_label.':'.$feat->hseqname;
 
             # replace any special characters
-            $label =~ s/\s+|;\=/_/g;
+            $label =~ s/[\s;=]/_/g;
 
-            push @strings, "$label:".($feat->hseqname || $feat->idesc || $feat->interpro_ac);
+            push @strings, $label;
         }
 
         $line->{Extra}->{DOMAINS} = join ',', @strings if @strings;
