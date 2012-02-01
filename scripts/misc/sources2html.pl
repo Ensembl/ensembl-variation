@@ -9,7 +9,7 @@ use Getopt::Long;
 ###############
 ### Options ###
 ###############
-my ($e_version,$html_file,$source,$s_version,$s_description,$s_url,$help);
+my ($e_version,$html_file,$source,$s_version,$s_description,$s_url,$s_type,$help);
 
 usage() if (!scalar(@ARGV));
  
@@ -88,9 +88,9 @@ foreach my $hostname (@hostnames) {
 		print $dbname."\n";
 		
 		# Get list of sources from the new databases
-		my $sql2 = qq{SELECT name, version, description, url FROM source};
+		my $sql2 = qq{SELECT name, version, description, url, type FROM source};
     my $sth2 = get_connection_and_query($dbname, $hostname, $sql2);
-		$sth2->bind_columns(\$source,\$s_version,\$s_description,\$s_url);
+		$sth2->bind_columns(\$source,\$s_version,\$s_description,\$s_url,\$s_type);
 		
 		$dbname =~ /^(.+)_variation/;
 		my $s_name = $1;
@@ -152,9 +152,18 @@ sub source_table {
 	my $bg = 1;
 	my @p_sources = keys(%{$p_list});
 	
-	my %colors = ( 'version' => '#090',
-								 'source'  => '#00F',
-	             );
+	my %colors = ( 'version' => '#090', 'source'  => '#00F' );
+	
+	
+	# Chip headers
+	my $cbg = 1;
+	my $chip_table;
+	my $chip_header .= qq{<br />
+			<table class="ss" style="width:60%">
+				<tr><th colspan="2">Chip Source</th><th>Version</th><th>Description</th><th></th></tr>
+		 };
+		 
+							 
 	while (my @a = $sth->fetchrow_array) {
 	
 		# Check if the source or its version is new
@@ -174,7 +183,8 @@ sub source_table {
 		}
 			
 		$s_header .= '"></td>';
-	
+
+		
 		# Display
 		if ($s_url) {
 			$source = qq{<a href="$s_url">$source</a>};
@@ -182,20 +192,39 @@ sub source_table {
 		
 		$s_version = format_version($s_version);
 		
-		$html .= qq{
-			<tr class="bg$bg">
-				$s_header
-				<td>$source</td>
-				<td style="text-align:center">$s_version</td>
-				<td>$s_description</td>
-				<td style="text-align:center;width:80px">$s_new</td>
-			</tr>
-		};
-		if ($bg == 1) { $bg = 2; }
-		else { $bg = 1; }
+		
+		# Is chip ?
+		if ($s_type eq 'chip') {
+			$chip_table .= $chip_header if (!$chip_table);
+			$chip_table .= qq{
+				<tr class="bg$cbg">
+					$s_header
+					<td>$source</td>
+					<td style="text-align:center">$s_version</td>
+					<td>$s_description</td>
+					<td style="text-align:center;width:80px">$s_new</td>
+				</tr>
+			};
+			if ($cbg == 1) { $cbg = 2; }
+			else { $cbg = 1; }
+		}
+		else {
+			$html .= qq{
+				<tr class="bg$bg">
+					$s_header
+					<td>$source</td>
+					<td style="text-align:center">$s_version</td>
+					<td>$s_description</td>
+					<td style="text-align:center;width:80px">$s_new</td>
+				</tr>
+			};
+			if ($bg == 1) { $bg = 2; }
+			else { $bg = 1; }
+		}
 	}
 	
 	$html .= qq{</table>};
+	$html .= qq{$chip_table</table>} if ($chip_table);
 	
 	return $html;
 }
