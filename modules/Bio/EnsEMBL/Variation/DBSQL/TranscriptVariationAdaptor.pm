@@ -141,13 +141,13 @@ sub store {
 
 sub fetch_all_by_Transcripts_SO_term {
     my ($self, $transcripts, $term) = @_;
-    my $constraint = $self->_get_consequences_constraint($term);
+    my $constraint = $self->_get_consequence_constraint($term);
     return $self->fetch_all_by_Transcripts_with_constraint($transcripts, $constraint.' AND somatic = 0');
 }
 
 sub fetch_all_somatic_by_Transcripts_SO_term {
     my ($self, $transcripts, $term) = @_;
-    my $constraint = $self->_get_consequences_constraint($term);
+    my $constraint = $self->_get_consequence_constraint($term);
     return $self->fetch_all_by_Transcripts_with_constraint($transcripts, $constraint.' AND somatic = 1');
 }
 
