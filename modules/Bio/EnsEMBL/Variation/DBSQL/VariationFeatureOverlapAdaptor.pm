@@ -158,4 +158,141 @@ sub fetch_all_by_VariationFeatures {
     return $vfos;
 }
 
+sub _get_term_object {
+    my ($self, $term) = @_;
+
+    my $oa = $self->{_ontology_adaptor} ||= 
+        Bio::EnsEMBL::Registry->get_adaptor( 'Multi', 'Ontology', 'OntologyTerm' );
+
+    my $terms = $oa->fetch_all_by_name($term, 'SO');
+
+    if (@$terms > 1) {
+        warn "Ambiguous term '$term', just using first result";
+    }
+
+    return $terms->[0];
+}
+
+sub _get_child_terms {
+    my ($self, $parent_term) = @_;
+
+    my $parent_obj = $self->_get_term_object($parent_term);
+
+    my $all_terms = $parent_obj->descendants;
+
+    unshift @$all_terms, $parent_obj;
+
+    return $all_terms;
+}
+
+sub _get_parent_terms {
+    my ($self, $child_term) = @_;
+
+    my $child_obj = $self->_get_term_object($child_term);
+
+    my $all_terms = $child_obj->ancestors;
+
+    unshift @$all_terms, $child_obj;
+
+    return $all_terms;
+}
+
+sub _get_VariationFeatureOverlapAlleles_under_SO_term {
+    my ($self, $term, $vfoas) = @_;
+
+    my $terms = $self->_get_child_terms($term);
+
+    my @found;
+
+    ALLELES : for my $vfoa (@$vfoas) {
+        for my $cons (@{ $vfoa->get_all_OverlapConsequences }) {
+            for my $term (@$terms) {
+                if ($cons->SO_term eq $term->name) {
+                    push @found, $vfoa;
+                    next ALLELES;
+                }
+            }
+        }
+    }
+
+    return \@found;
+}
+
+sub _get_consequence_constraint {
+    
+    my ($self, $query_term) = @_;
+
+    # we allow either an ontology term object, or just a string
+    $query_term = UNIVERSAL::can($query_term, 'name') ? $query_term->name : $query_term;
+   
+    # get a hash mapping consequence terms to numerical values (specifically powers of 2)
+    my $cons_map = $self->_consequence_type_map('transcript_variation', 'consequence_types');
+
+    # we store only the most specific consequence term, so we need to get all children of 
+    # the query term
+    my $terms = $self->_get_child_terms($query_term);
+
+    # and then build up the numerical value for our query by ORing together all the terms
+    my $query = 0;
+
+    for my $term (@$terms) {
+        next unless $cons_map->{$term->name};
+        $query |= $cons_map->{$term->name};
+    }
+
+    unless ($self->{_possible_consequences}) {
+
+        # we need a list of the numerical values of all possible 
+        # consequence term combinations we have actually observed
+
+        my $sth = $self->dbc->prepare(qq{
+            SELECT DISTINCT(consequence_types)
+            FROM transcript_variation
+        });
+
+        $sth->execute;
+
+        my $cons;
+
+        $sth->bind_columns(\$cons);
+
+        my @poss_cons;
+
+        while ($sth->fetch) {
+            # construct the numerical value by ORing together each combination
+            # (this is much quicker than SELECTing consequence_types+0 above which
+            # is what I used to do, but this seems to mean the db can't use the index)
+        
+            my $bit_val = 0;
+            
+            for my $term (split /,/, $cons) {
+                $bit_val |= $cons_map->{$term};
+            }
+
+            push @poss_cons, $bit_val;
+        }
+
+        $self->{_possible_consequences} = \@poss_cons;
+    }
+
+    # we now find all combinations that include our query by ANDing 
+    # the query with all possible combinations and combine these into 
+    # our query string
+
+    my $id_str = join ',', grep { $_ & $query } @{ $self->{_possible_consequences} }; 
+
+    my $constraint = "consequence_types IN ($id_str)"; 
+
+    return $constraint;
+}
+
+sub fetch_all_by_SO_term {
+    my ($self, $term) = @_;
+
+    my $constraint = $self->_get_consequence_constraint($term);
+
+    return $self->generic_fetch($constraint);
+}
+
+
 1;
