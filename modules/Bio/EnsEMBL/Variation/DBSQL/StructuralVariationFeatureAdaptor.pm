@@ -246,6 +246,47 @@ sub fetch_all_by_Slice_SO_term {
 }
 
 
+=head2 fetch_all_by_Slice_VariationSet
+
+  Arg [1]    : Bio::EnsEMBL:Variation::Slice $slice
+  Arg [2]    : Bio::EnsEMBL:Variation::VariationSet $set
+  Example    : my @vsfs = @{$svfa->fetch_all_by_Slice_VariationSet($slice, $set)};
+  Description: Retrieves all structural variation features in a slice that belong to a 
+	             given variation set.
+  Returntype : reference to list Bio::EnsEMBL::Variation::StructuralVariationFeature
+  Exceptions : throw on bad argument
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub fetch_all_by_Slice_VariationSet {
+
+  my $self  = shift;
+  my $slice = shift;
+  my $set   = shift;
+	
+  if(!ref($slice) || !$slice->isa('Bio::EnsEMBL::Slice')) {
+    throw('Bio::EnsEMBL::Slice arg expected');
+  }
+  if(!ref($set) || !$set->isa('Bio::EnsEMBL::Variation::VariationSet')) {
+    throw('Bio::EnsEMBL::Variation::VariationSet arg expected');
+  }
+  
+  # Get the bitvalue for this set and its subsets
+  my $bitvalue = $set->_get_bitvalue();
+  
+  # Add a constraint to only return StructuralVariationFeatures having the 
+	# primary keys of the supplied VariationSet or its subsets in the variation_set_id column
+  my $constraint = " svf.variation_set_id & $bitvalue ";
+  
+  # Get the VariationFeatures by calling fetch_all_by_Slice_constraint
+  my $svfs = $self->fetch_all_by_Slice_constraint($slice,$constraint);
+
+  return $svfs;
+}
+
+
 # method used by superclass to construct SQL
 sub _tables { 
 	my $self = shift;
