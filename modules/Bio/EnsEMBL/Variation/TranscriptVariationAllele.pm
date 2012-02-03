@@ -218,26 +218,31 @@ sub peptide {
             
             # translate the codon sequence to establish the peptide allele
             
-            # for mithocondrial dna we need to to use a different codon table
-            my $codon_table = $self->transcript_variation->_codon_table;
+            # allow for partial codons - split the sequence into whole and partial
+            # e.g. AAAGG split into AAA and GG            
+            my $whole_codon   = substr($codon, 0, int(length($codon) / 3) * 3);
+            my $partial_codon = substr($codon, int(length($codon) / 3) * 3);
             
-            my $codon_seq = Bio::Seq->new(
-                -seq        => $codon,
-                -moltype    => 'dna',
-                -alphabet   => 'dna',
-            );
-        
-            my $pep = $codon_seq->translate(undef, undef, undef, $codon_table)->seq;
+            my $pep = '';
             
-            if (length($pep) < 1) {
-                if (length($codon) % 3) {
-                    # partial codon
-                    $pep = 'X';
-                }
-                else {
-                    $pep = '-';
-                }
+            if($whole_codon) {
+                # for mithocondrial dna we need to to use a different codon table
+                my $codon_table = $self->transcript_variation->_codon_table;
+                
+                my $codon_seq = Bio::Seq->new(
+                    -seq        => $whole_codon,
+                    -moltype    => 'dna',
+                    -alphabet   => 'dna',
+                );
+                
+                $pep .= $codon_seq->translate(undef, undef, undef, $codon_table)->seq;
             }
+            
+            if($partial_codon) {
+                $pep .= 'X';
+            }
+            
+            $pep ||= '-';
            
             $self->{peptide} = $pep;
         }
