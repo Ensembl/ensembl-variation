@@ -519,7 +519,7 @@ sub synonymous_codon {
     
     return 0 unless $ref_pep;
 
-    return ( ($alt_pep eq $ref_pep) and (not stop_retained($tva)) );
+    return ( ($alt_pep eq $ref_pep) and (not stop_retained($tva) and ($alt_pep !~ /X/) and ($ref_pep !~ /X/)) );
 }
 
 sub non_synonymous_codon {
@@ -626,7 +626,7 @@ sub partial_codon {
 sub coding_unknown {
     my $tva = shift;
 
-    return (within_cds($tva) and (not $tva->peptide) and (not frameshift($tva)));
+    return (within_cds($tva) and ((not $tva->peptide) or ($tva->peptide =~ /X/)) and (not frameshift($tva)));
 }
 
 #package Bio::EnsEMBL::Variation::RegulatoryFeatureVariationAllele;
