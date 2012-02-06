@@ -110,7 +110,7 @@ sub print_set {
 	print "\t\t<td>$bullet_open" . $set->name() . "$bullet_close</td>\n";
 	print "\t\t<td>" . $set->short_name() . "</td>\n";
 	print "\t\t<td>" . $set->description() . "</td>\n";
-	print "\t<tr>\n";
+	print "\t</tr>\n";
 	
 	# Get the subsets that have the current set as immediate parent
 	my $subsets = $set->get_all_sub_VariationSets(1);
