@@ -30,6 +30,8 @@ my $population_name;
 my $set_name;
 my $chunk_size;
 my $include_consequences;
+my $include_coding_details;
+my $include_global_maf;
 my @seq_region_names;
 my $include_svs;
 my $just_svs;
@@ -53,6 +55,8 @@ GetOptions(
     "just_failed"                   => \$just_failed,
     "chunk_size|cs=i"               => \$chunk_size,
     "include_consequences"          => \$include_consequences,
+    "include_coding_details"        => \$include_coding_details,
+    "include_global_maf"            => \$include_global_maf,
     "seq_region|sr=s"               => \@seq_region_names,
     "include_structural_variations" => \$include_svs,
     "just_structural_variations"    => \$just_svs,
@@ -162,9 +166,10 @@ if ($population_name) {
 
     my $dbh = $vdba->dbc->db_handle;
     my $sth = $dbh->prepare(qq{
-        SELECT  variation_id, allele, frequency
-        FROM    allele
-        WHERE   sample_id = ?
+        SELECT  a.variation_id, ac.allele, a.frequency
+        FROM    allele a, allele_code ac
+        WHERE   a.allele_code_id = ac.allele_code_id
+        AND     sample_id = ?
     });
 
     $sth->execute($population->dbID);
@@ -523,7 +528,16 @@ while (my $slice = shift @$slices) {
 
                 $attrs->{ID} = ++$id_count;
 
-                my $gvf_line = $vf->to_gvf(extra_attrs => $attrs, include_consequences => $include_consequences);
+                my $gvf_line = $vf->to_gvf(
+                    extra_attrs             => $attrs, 
+                    include_consequences    => $include_consequences,
+                    include_coding_details  => $include_coding_details,
+                    include_global_maf      => $include_global_maf,
+                );
+
+                if ($id_count % 1000 == 1) {
+                    #check_mem();
+                }
 
                 print GVF $gvf_line, ($comment ? " # $comment" : ''), "\n" if $gvf_line;
             }
@@ -541,7 +555,7 @@ while (my $slice = shift @$slices) {
 
                 next if $svf->var_class eq 'CNV_PROBE';
 
-                my $coords = join '-', $svf->seq_region_start, $svf->seq_region_end; 
+                my $coords = join '-', $svf->seq_region_name, $svf->seq_region_start, $svf->seq_region_end; 
                 
                 if (my $prev_coords = $prev_svs->{$svf->variation_name}) {
                     warn "repeated SV: ".$svf->variation_name." coords 1: $prev_coords, coords 2: $coords\n" if $prev_coords ne $coords;
@@ -566,6 +580,61 @@ close GVF;
 
 if ($compress) {
     system("gzip $output_file") == 0 or die "Failed to gzip $output_file";
+}
+
+my $config = {};
+
+# finds out memory usage
+sub memory {
+    my @mem;
+    
+    open IN, "ps -o rss,vsz $$ |";
+    while(<IN>) {
+        next if $_ =~ /rss/i;
+        chomp;
+        @mem = split;
+    }
+    close IN;
+    
+    return \@mem;
+}
+
+
+sub check_mem {
+    eval q{use Devel::Size qw(total_size)};
+    my $mem = memory();
+    my $tot;
+    $tot += $_ for @$mem;
+
+    if($tot > 1000000) {
+        $tot = sprintf("%.2fGB", $tot / (1024 * 1024));
+    }
+
+    elsif($tot > 1000) {
+        $tot = sprintf("%.2fMB", $tot / 1024);
+    }
+
+    my $mem_diff = mem_diff($config);
+    print "MEMORY $tot ", (join " ", @$mem),"\nDIFF ", (join " ", @$mem_diff), "\n";
+}
+
+sub mem_diff {
+    my $config = shift;
+    my $mem = memory();
+    my @diffs;
+    
+    if(defined($config->{memory})) {
+        for my $i(0..(scalar @{$config->{memory}} - 1)) {
+            push @diffs, $mem->[$i] - $config->{memory}->[$i];
+        }
+    }
+    else {
+        @diffs = @$mem;
+    }
+    
+    $config->{memory} = $mem;
+    
+    return \@diffs;
 }
 
 __END__
@@ -643,6 +712,14 @@ Only include variations flagged as failed
 =item B<--include_consequences>
 
 Include the consequences of variations on transcripts and regulatory regions etc.
+
+=item B<--include_coding_details>
+
+Include extra information for coding variations, including the amino acid alleles and any SIFT or PolyPhen predictions
+
+=item B<--include_global_maf>
+
+Include the global minor allele frequency information from dbSNP 
 
 =item B<--individual NAME>
 
