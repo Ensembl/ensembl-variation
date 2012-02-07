@@ -44,6 +44,14 @@ sub dump_dbSNP{
     $end = time();
     $duration = Progress::time_format($end-$start);
     print $duration->{'weeks'} . " weeks, " . $duration->{'days'} . " days, " . $duration->{'hours'} . " hours, " . $duration->{'minutes'} . " minutes and " . $duration->{'seconds'} . " seconds spent in dump_AFFYIDs()\n";
+	
+	$start = time();
+    $self->dump_LSDBIDs() if $self->{'dbm'}->dbCore()->species =~ /hum|homo/i;
+    print Progress::location();
+    $end = time();
+    $duration = Progress::time_format($end-$start);
+    print $duration->{'weeks'} . " weeks, " . $duration->{'days'} . " days, " . $duration->{'hours'} . " hours, " . $duration->{'minutes'} . " minutes and " . $duration->{'seconds'} . " seconds spent in dump_LSDBIDs()\n";
+	
   
 }
 
@@ -266,6 +274,69 @@ sub dump_AFFYIDs{
     print Progress::location();
 
   }
+}
+
+
+# gets LSDB local IDs
+sub dump_LSDBIDs {
+	my $self = shift;
+	
+    print Progress::location();
+    debug(localtime() . "\tAdding/getting source ID for LSDB\n");
+	
+	my $source_name = 'LSDB';
+	my $source_id_ref = $self->{'dbVar'}->db_handle->selectall_arrayref(qq{
+		SELECT source_id from source where name = "$source_name"
+	});
+    my $source_id = $source_id_ref->[0][0];
+	
+	# add source row if not there
+	if (!$source_id) {
+		$self->{'dbVar'}->do(qq{insert into source (name) values("$source_name")});
+		$source_id = $self->{'dbVar'}->db_handle->{'mysql_insertid'};
+	}
+	
+    print Progress::location();
+    debug(localtime() . "\tDumping LSDB local IDs from dbSNP\n");
+	
+	# dump IDs from dbSNP DB
+	my $stmt = qq{
+		SELECT
+			DISTINCT ss.loc_snp_id,
+			ss.subsnp_id,
+			sl.snp_id
+			
+		FROM SubSNP ss
+			JOIN SNPSubSNPLink sl ON sl.subsnp_id = ss.subsnp_id
+			JOIN Batch b ON b.batch_id = ss.batch_id
+			JOIN $self->{'dbSNP_share_db'}..Method m ON b.method_id = m.method_id AND m.method_class = 109;
+	};
+	dumpSQL($self->{'dbSNP'}, $stmt);
+	
+    print Progress::location();
+    debug(localtime() . "\tCopying IDs to synonym table\n");
+	
+	create_and_load($self->{'dbVar'}, "tmp_lsdb_ids", 'name', 'ssid i*', 'rsid i*');
+	
+	$self->{'dbVar'}->db_handle->do(qq{
+		INSERT IGNORE INTO
+			variation_synonym(variation_id, subsnp_id, source_id, name)
+		SELECT
+			v.variation_id,
+			t.ssid,
+			$source_id,
+			t.name
+		FROM
+			variation v,
+			tmp_lsdb_ids t
+		WHERE
+			v.name = concat('rs', t.rsid);
+	});
+	
+    print Progress::location();
+    debug(localtime() . "\tDropping temporary table\n");
+	
+	$self->{'dbVar'}->db_handle->do(qq{DROP TABLE tmp_lsdb_ids});
 }
 
 1;
