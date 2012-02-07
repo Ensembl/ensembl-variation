@@ -45,6 +45,9 @@ $ftp->login;
 
 $ftp->cwd($path) or die "Failed to cwd to '$path', is the path correct?";
 
+my $ok_count = 0;
+my $file_count = 0;
+
 for my $species ($ftp->ls) {
     
     $ftp->cwd("$path/$species") or die "Failed to cwd to $species directory?";
@@ -52,6 +55,8 @@ for my $species ($ftp->ls) {
     for my $gvf ($ftp->ls) {
     
         next unless $gvf =~ /\.gvf\.gz$/;
+
+        $file_count++;
 
         my $curr_file = "$output_dir/$species/$gvf";
 
@@ -64,6 +69,9 @@ for my $species ($ftp->ls) {
             if ($curr_size < ($ftp_size * (1 - $wiggle)) ) {
                 print "$curr_file is smaller than ftp version: $curr_size vs. $ftp_size\n";
             }
+            else {
+                $ok_count++;
+            }
         }
         else {
             print "$curr_file not found ?\n";
@@ -72,4 +80,7 @@ for my $species ($ftp->ls) {
 }
 
 $ftp->quit;
+
+print "$ok_count/$file_count GVF files look good\n";
+
 
