@@ -25,13 +25,13 @@ unless ($output_dir) {
     $help = 1;
 }
 
-unless (defined $release && !$help) {  
+unless (defined $release) {  
     warn "Must supply --release argument\n" unless $help;
     $help = 1;
 }
 
 if ($help) {
-    print "Usage: $0 --output_dir <name> --server <name> --release <num> --path <path> --wiggle <%> --help\n";
+    print "Usage: $0 --output_dir <name> --server <name> --release <num> --path <path> --wiggle <num> --help\n";
     exit(0);
 }
 
