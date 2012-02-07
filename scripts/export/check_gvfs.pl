@@ -39,6 +39,8 @@ $release--;
 
 $path = "/pub/release-${release}/variation/gvf/" unless $path;
 
+print "Looking for GVFs in: ${server}${path}\n";
+
 my $ftp = Net::FTP->new($server) or die "Failed to connect to '$server:' $@";
 
 $ftp->login;
