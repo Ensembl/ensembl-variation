@@ -519,12 +519,59 @@ sub fetch_tagged_Population{
 	return [];
   } 
 
-    my $sth = $self->prepare(qq{SELECT p.sample_id, s.name, s.size, s.description
-				FROM population p, tagged_variation_feature tvf, sample s
-				WHERE p.sample_id = tvf.sample_id
-				AND   s.sample_id = p.sample_id
-                                AND   tvf.variation_feature_id = ?
-			    });
+    my $sth = $self->prepare(qq{
+		SELECT p.sample_id, s.name, s.size, s.description
+		FROM population p, tagged_variation_feature tvf, sample s
+		WHERE p.sample_id = tvf.sample_id
+		AND   s.sample_id = p.sample_id
+		AND   tvf.tagged_variation_feature_id = ?
+	});
+    $sth->bind_param(1,$variation_feature->dbID,SQL_INTEGER);
+    $sth->execute();
+    my $results = $self->_objs_from_sth($sth);
+
+    $sth->finish();
+
+    return $results;
+}
+
+=head2 fetch_tag_Population
+
+  Arg [1]     : Bio::EnsEMBL::Variation::VariationFeature $vf
+  Example     : my $vf = $vf_adaptor->fetch_by_name('rs205621');
+                my $populations_is_tag = $vf->is_tag();
+                foreach my $pop (@{$vf_adaptor->is_tag}){
+		    print $pop->name," has been tagged using a 0.99 r2 criteria\n";
+                }
+  Description : Retrieves all populations in which the specified variation feature is a tag
+  ReturnType  : reference to list of Bio::EnsEMBL::Variation::Population objects
+  Exceptions  : throw if incorrect argument is passed
+                warning if provided variation feature does not have a dbID
+  Caller      : general
+  Status      : At Risk
+
+=cut
+
+sub fetch_tag_Population{
+    my $self = shift;
+    my $variation_feature = shift;
+
+    if(!ref($variation_feature) || !$variation_feature->isa('Bio::EnsEMBL::Variation::VariationFeature')) {
+	throw("Bio::EnsEMBL::Variation::VariationFeature arg expected");
+    }
+    
+    if(!$variation_feature->dbID()) {
+	warning("Variation feature does not have dbID, cannot retrieve tag populations");
+	return [];
+  } 
+
+    my $sth = $self->prepare(qq{
+		SELECT p.sample_id, s.name, s.size, s.description
+		FROM population p, tagged_variation_feature tvf, sample s
+		WHERE p.sample_id = tvf.sample_id
+		AND   s.sample_id = p.sample_id
+		AND   tvf.variation_feature_id = ?
+	});
     $sth->bind_param(1,$variation_feature->dbID,SQL_INTEGER);
     $sth->execute();
     my $results = $self->_objs_from_sth($sth);
