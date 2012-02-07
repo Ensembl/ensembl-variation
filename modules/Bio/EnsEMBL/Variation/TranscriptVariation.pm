@@ -470,6 +470,27 @@ sub translation_coords {
     return $self->{_translation_coords};
 }
 
+=head2 cdna_allele_string
+
+  Description: Return a '/' delimited string of the alleles of this variation with respect
+               to the associated transcript
+  Returntype : string
+  Exceptions : None
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub cdna_allele_string {
+    my $self = shift;
+    
+    unless ($self->{_cdna_allele_string}) {
+        $self->{_cdna_allele_string} = join '/', map { $_->feature_seq } @{ $self->get_all_TranscriptVariationAlleles };
+    }
+    
+    return $self->{_cdna_allele_string};
+}
+
 =head2 pep_allele_string
 
   Description: Return a '/' delimited string of amino acid codes representing
@@ -729,12 +750,7 @@ sub _intron_effects {
 
         my $insertion = $vf_start == $vf_end+1;
 
-        my $intron_count = 0;
-        my $exon_count   = 1;
-
         for my $intron (@{ $self->_introns }) {
-            
-            $intron_count++;
 
             my $intron_start = $intron->start;
             my $intron_end   = $intron->end;
@@ -756,12 +772,10 @@ sub _intron_effects {
 
             if (overlap($vf_start, $vf_end, $intron_start, $intron_start+1)) {
                 $intron_effects->{start_splice_site} = 1;
-                $intron_effects->{intron_number} = $intron_count;
             }
             
             if (overlap($vf_start, $vf_end, $intron_end-1, $intron_end)) {
                 $intron_effects->{end_splice_site} = 1;
-                $intron_effects->{intron_number} = $intron_count;
             }
             
             # we need to special case insertions between the donor and acceptor sites
@@ -769,7 +783,6 @@ sub _intron_effects {
             if (overlap($vf_start, $vf_end, $intron_start+2, $intron_end-2) or 
                 ($insertion && ($vf_start == $intron_start+2 || $vf_end == $intron_end-2)) ) {
                 $intron_effects->{intronic} = 1;
-                $intron_effects->{intron_number} = $intron_count;
             }
             
             # the definition of splice_region (SO:0001630) is "within 1-3 bases 
