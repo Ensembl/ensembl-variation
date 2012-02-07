@@ -970,6 +970,80 @@ sub is_tagged{
     }
 }
 
+=head2 is_tag
+
+  Args        : None
+  Example     : my $populations = $vf->is_tag();
+  Description : Returns an array of populations in which this variation feature
+                is a tag SNP.
+  ReturnType  : list of Bio::EnsEMBL::Variation::Population
+  Exceptions  : none
+  Caller      : general
+  Status      : At Risk
+  
+=cut
+
+sub is_tag{
+    my $self = shift;
+    
+    if ($self->adaptor()){
+	my $population_adaptor = $self->adaptor()->db()->get_PopulationAdaptor();
+	return $population_adaptor->fetch_tag_Population($self);
+    }
+}
+
+=head2 get_all_tagged_VariationFeatures
+
+  Args        : Bio::EnsEMBL::Variation::Population $pop (optional)
+  Example     : my $vfs = $vf->get_all_tagged_VariationFeatures();
+  Description : Returns an arrayref of variation features that are tagged by
+                this variation feature, in the population $pop if specified.
+  ReturnType  : list of Bio::EnsEMBL::Variation::VariationFeature
+  Exceptions  : none
+  Caller      : general
+  Status      : At Risk
+  
+=cut
+
+sub get_all_tagged_VariationFeatures {
+  return $_[0]->adaptor->fetch_all_tagged_by_VariationFeature(@_);
+}
+
+=head2 get_all_tag_VariationFeatures
+
+  Args        : Bio::EnsEMBL::Variation::Population $pop (optional)
+  Example     : my $vfs = $vf->get_all_tag_VariationFeatures();
+  Description : Returns an arrayref of variation features that tag this
+                variation feature, in the population $pop if specified.
+  ReturnType  : list of Bio::EnsEMBL::Variation::VariationFeature
+  Exceptions  : none
+  Caller      : general
+  Status      : At Risk
+  
+=cut
+
+sub get_all_tag_VariationFeatures {
+  return $_[0]->adaptor->fetch_all_tags_by_VariationFeature(@_);
+}
+
+=head2 get_all_tag_and_tagged_VariationFeatures
+
+  Args        : Bio::EnsEMBL::Variation::Population $pop (optional)
+  Example     : my $vfs = $vf->get_all_tag_and_tagged_VariationFeatures();
+  Description : Returns an arrayref of variation features that either tag or are
+                tagged by this variation feature, in the population $pop if
+				specified.
+  ReturnType  : list of Bio::EnsEMBL::Variation::VariationFeature
+  Exceptions  : none
+  Caller      : general
+  Status      : At Risk
+  
+=cut
+
+sub get_all_tag_and_tagged_VariationFeatures {
+  return $_[0]->adaptor->fetch_all_tags_and_tagged_by_VariationFeature(@_);
+}
+
 
 
 =head2 is_reference
