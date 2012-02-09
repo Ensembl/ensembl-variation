@@ -94,8 +94,7 @@ sub motif_start {
 
     return undef if ( ($mf_start < 1) || ($mf_start > $mf->length) );
 
-    #return $mf_start;
-    return 10;
+    return $mf_start;
 }
 
 =head2 in_informative_position
