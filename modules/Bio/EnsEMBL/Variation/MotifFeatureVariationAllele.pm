@@ -83,7 +83,7 @@ sub motif_start {
 
     my $mf = $self->motif_feature;
     my $vf = $self->variation_feature;
-    
+   
     my $mf_start = $vf->seq_region_start - $mf->seq_region_start + 1;
 
     # adjust if the motif is on the reverse strand
@@ -94,7 +94,8 @@ sub motif_start {
 
     return undef if ( ($mf_start < 1) || ($mf_start > $mf->length) );
 
-    return $mf_start;
+    #return $mf_start;
+    return 10;
 }
 
 =head2 in_informative_position
@@ -122,7 +123,7 @@ sub in_informative_position {
 
     return undef unless defined $start;
 
-    return $self->motif_feature->is_position_informative($start);
+    return $self->motif_feature->binding_matrix->is_position_informative($start);
 }
 
 =head2 motif_score_delta
