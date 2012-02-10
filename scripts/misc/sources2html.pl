@@ -10,13 +10,19 @@ use Getopt::Long;
 ### Options ###
 ###############
 my ($e_version,$html_file,$source,$s_version,$s_description,$s_url,$s_type,$help);
+## EG options
+my ($hlist, $phost, $site, $etype);
 
 usage() if (!scalar(@ARGV));
  
 GetOptions(
-    'v=i'   => \$e_version,
-    'o=s'   => \$html_file,
-		'help!' => \$help
+	   'v=s'   => \$e_version,
+	   'o=s'   => \$html_file,
+	   'help!' => \$help,
+	   'hlist=s' => \$hlist,
+	   'phost=s' => \$phost,
+	   'site=s' => \$site,
+	   'etype=s' =>  \$etype
 );
 
 if (!$e_version) {
@@ -31,12 +37,28 @@ if (!$html_file) {
 usage() if ($help);
 
 
-my @hostnames = ('ens-staging1','ens-staging2');
-my $previous_host = 'ens-livemirror';
+my @hostnames = ('ens-staging1:3306','ens-staging2:3306');
+my $previous_host = 'ens-livemirror:3306';
+my $server_name = 'http://static.ensembl.org';
+my $ecaption = 'Ensembl';
 
+if ($site) {
+    $server_name = $site;
+}
+
+if ($phost) {
+    $previous_host = $phost;
+}
+
+if ($hlist) {
+    @hostnames = split /,/, $hlist;
+}
+
+if ($etype) {
+    $ecaption = "Ensembl ".ucfirst($etype);
+}
 # Settings
 my $database = "";
-my $port = "3306";
 my $login = "ensro";
 my $pswd = "";
 my $sep = "\t";
@@ -62,7 +84,7 @@ my $html_header = qq{
 <a href="/info/docs/variation/variation_schema.html">Variation Tables Description</a> |
 <a href="/info/docs/api/variation/index.html">Perl API</a>
 
-<h2>List of Variation sources for each species - Ensembl $e_version</h2>
+<h2>List of Variation sources for each species - $ecaption $e_version</h2>
 
 };
 
@@ -80,20 +102,29 @@ my $html_content = '';
 foreach my $hostname (@hostnames) {
 
 	my $sql = qq{SHOW DATABASES LIKE '%variation_$e_version%'};
-  my $sth = get_connection_and_query($database, $hostname, $sql);
+	my $sth = get_connection_and_query($database, $hostname, $sql);
 
 	# loop over databases
 	while (my ($dbname) = $sth->fetchrow_array) {
 		next if ($dbname =~ /^master_schema/);
-		print $dbname."\n";
-		
-		# Get list of sources from the new databases
-		my $sql2 = qq{SELECT name, version, description, url, type FROM source};
-    my $sth2 = get_connection_and_query($dbname, $hostname, $sql2);
-		$sth2->bind_columns(\$source,\$s_version,\$s_description,\$s_url,\$s_type);
-		
+		print $dbname;
 		$dbname =~ /^(.+)_variation/;
 		my $s_name = $1;
+
+		if ($etype) { # EG site - need to filter out species
+		    my $img_thumb = sprintf qq{eg-plugins/%s/htdocs/img/species/thumb_%s.png}, $etype, ucfirst($s_name);
+#		    print "- checking for $img_thumb ... ";
+		    if (! -e $img_thumb) {
+			print "\t... skipping \n";
+			next;
+		    } 
+		}
+		print "\n";
+		# Get list of sources from the new databases
+		my $sql2 = qq{SELECT name, version, description, url, type FROM source};
+		my $sth2 = get_connection_and_query($dbname, $hostname, $sql2);
+		$sth2->bind_columns(\$source,\$s_version,\$s_description,\$s_url,\$s_type);
+		
 		
 		# Previous database (and sources)
 		my $p_version = $e_version-1;
@@ -114,7 +145,7 @@ foreach my $hostname (@hostnames) {
 		$html_content .= source_table($s_name,$sth2,\%p_list);
 		
 		$start = 1 if ($start == 0);
-	}
+	    }
 }
 
 ## HTML/output file ##
@@ -129,17 +160,15 @@ sub source_table {
 	my $name   = shift;
 	my $sth    = shift;
 	my $p_list = shift;
-	
 	my $species = $name;
-  $species =~ s/_/ /;
+	$species =~ s/_/ /;
  	$species =~ /^(\w)(.+)$/;
 	$species = uc($1).$2;
-	
 	my $s_name = $species;
 	$s_name =~ s/\s/_/g;
 	my $html = qq{
 	<table id="$name"><tr style="vertical-align:middle">
-		<td style="padding-left:0px"><img src="http://static.ensembl.org/img/species/thumb_$s_name.png" alt="$species" /></td>
+		<td style="padding-left:0px"><img src="${server_name}/img/species/thumb_$s_name.png" alt="$species" /></td>
 		<td style="padding-left:10px"><h3>$species</h3></td>
 	</tr></table>
 	};
@@ -255,9 +284,11 @@ sub format_version {
 # Connects and execute a query
 sub get_connection_and_query {
 	my $dbname = shift;
-	my $host   = shift;
+	my $hname   = shift;
 	my $sql    = shift;
 	
+	my ($host, $port) = split /\:/, $hname;
+
 	# DBI connection 
 	my $dsn = "DBI:mysql:$dbname:$host:$port";
 	my $dbh = DBI->connect($dsn, $login, $pswd) or die "Connection failed";
