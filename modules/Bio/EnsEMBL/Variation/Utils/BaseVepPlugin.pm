@@ -238,7 +238,7 @@ sub _check_types {
                             $wanted = "Bio::EnsEMBL::Funcgen::$wanted";
                         }
                         else {
-                            $wanted = "Bio::EnsEMBL::$wanted" unless $wanted eq 'Intergenic';
+                            $wanted = "Bio::EnsEMBL::$wanted";
                         }
                     }
                     elsif ($type_type eq 'variant_feature') {
