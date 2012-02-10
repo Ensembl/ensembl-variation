@@ -169,6 +169,9 @@ sub _get_term_object {
     if (@$terms > 1) {
         warn "Ambiguous term '$term', just using first result";
     }
+    elsif (@$terms == 0) {
+        warn "Didn't find an ontology term for '$term'";
+    }
 
     return $terms->[0];
 }
@@ -218,26 +221,48 @@ sub _get_VariationFeatureOverlapAlleles_under_SO_term {
     return \@found;
 }
 
+#sub _get_consequence_constraint_simple {
+#    
+#    my ($self, $query_term) = @_;
+#
+#    # we allow either an ontology term object, or just a string
+#    $query_term = UNIVERSAL::can($query_term, 'name') ? $query_term->name : $query_term;
+#   
+#    # get a hash mapping consequence terms to numerical values (specifically powers of 2)
+#    my $cons_map = $self->_consequence_type_map('transcript_variation', 'consequence_types');
+#
+#    # we store only the most specific consequence term, so we need to get all children of 
+#    # the query term
+#    my $terms = $self->_get_child_terms($query_term);
+#
+#    return '(' . ( join ' OR ', map { "FIND_IN_SET('".$_->name."',consequence_types)" } @$terms ) .')';
+#}
+
 sub _get_consequence_constraint {
     
-    my ($self, $query_term) = @_;
+    my ($self, @query_terms) = @_;
 
-    # we allow either an ontology term object, or just a string
-    $query_term = UNIVERSAL::can($query_term, 'name') ? $query_term->name : $query_term;
-   
+    # we build up the numerical value for our query by ORing together all the children of all the terms
+    my $query = 0;
+
     # get a hash mapping consequence terms to numerical values (specifically powers of 2)
     my $cons_map = $self->_consequence_type_map('transcript_variation', 'consequence_types');
 
-    # we store only the most specific consequence term, so we need to get all children of 
-    # the query term
-    my $terms = $self->_get_child_terms($query_term);
+    for my $query_term (@query_terms) {
 
-    # and then build up the numerical value for our query by ORing together all the terms
-    my $query = 0;
+        # we allow either an ontology term object, or just a string
+        $query_term = UNIVERSAL::can($query_term, 'name') ? $query_term->name : $query_term;
+    
+        # we store only the most specific consequence term, so we need to get all children of 
+        # each query term
+        my $terms = $self->_get_child_terms($query_term);
 
-    for my $term (@$terms) {
-        next unless $cons_map->{$term->name};
-        $query |= $cons_map->{$term->name};
+        # and then we OR together all relevant terms
+
+        for my $term (@$terms) {
+            next unless $cons_map->{$term->name};
+            $query |= $cons_map->{$term->name};
+        }
     }
 
     unless ($self->{_possible_consequences}) {
@@ -286,10 +311,10 @@ sub _get_consequence_constraint {
     return $constraint;
 }
 
-sub fetch_all_by_SO_term {
-    my ($self, $term) = @_;
+sub fetch_all_by_SO_terms {
+    my ($self, $terms) = @_;
 
-    my $constraint = $self->_get_consequence_constraint($term);
+    my $constraint = $self->_get_consequence_constraint(@$terms);
 
     return $self->generic_fetch($constraint);
 }
