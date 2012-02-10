@@ -9,9 +9,9 @@ use Getopt::Long;
 ###############
 ### Options ###
 ###############
-my ($e_version,$html_file,$source,$s_version,$s_description,$s_url,$s_type,$help);
+my ($e_version,$html_file,$source,$s_version,$s_description,$s_url,$s_type,$hlist,$phost,$help);
 ## EG options
-my ($hlist, $phost, $site, $etype);
+my ($site, $etype);
 
 usage() if (!scalar(@ARGV));
  
@@ -33,29 +33,27 @@ if (!$html_file) {
 	print "> Error! Please give an output file using the option '-o'\n";
 	usage();
 }
+if (!$phost) {
+	print "> Error! Please give host name where the previous databases are stored using the option '-phost'\n";
+	usage();
+}
+if (!$hlist) {
+	print "> Error! Please give the list of host names where the new databases are stored using the option '-hlist'\n";
+	usage();
+}
 
 usage() if ($help);
 
-
-my @hostnames = ('ens-staging1:3306','ens-staging2:3306');
-my $previous_host = 'ens-livemirror:3306';
 my $server_name = 'http://static.ensembl.org';
 my $ecaption = 'Ensembl';
+my $previous_host = $phost;
+my @hostnames = split /,/, $hlist;
 
 if ($site) {
-    $server_name = $site;
+  $server_name = $site;
 }
-
-if ($phost) {
-    $previous_host = $phost;
-}
-
-if ($hlist) {
-    @hostnames = split /,/, $hlist;
-}
-
 if ($etype) {
-    $ecaption = "Ensembl ".ucfirst($etype);
+  $ecaption .= ' '.ucfirst($etype);
 }
 # Settings
 my $database = "";
@@ -112,12 +110,12 @@ foreach my $hostname (@hostnames) {
 		my $s_name = $1;
 
 		if ($etype) { # EG site - need to filter out species
-		    my $img_thumb = sprintf qq{eg-plugins/%s/htdocs/img/species/thumb_%s.png}, $etype, ucfirst($s_name);
-#		    print "- checking for $img_thumb ... ";
-		    if (! -e $img_thumb) {
-			print "\t... skipping \n";
-			next;
-		    } 
+			my $img_thumb = sprintf qq{eg-plugins/%s/htdocs/img/species/thumb_%s.png}, $etype, ucfirst($s_name);
+			#	print "- checking for $img_thumb ... ";
+		  if (! -e $img_thumb) {
+				print "\t... skipping \n";
+				next;
+		  } 
 		}
 		print "\n";
 		# Get list of sources from the new databases
@@ -311,7 +309,12 @@ sub usage {
     -help           Print this message
       
     -v							Ensembl version, e.g. 65 (Required)
-    -o              An HTML output file name (Required)							 
+    -o              An HTML output file name (Required)			
+    -phost          Host name where the previous databases are stored, e.g. ensembldb.ensembl.org	(Required)
+    -hlist          The list of host names where the new databases are stored, separated by a coma,
+                    e.g. ensembldb.ensembl.org1, ensembldb.ensembl.org2 (Required)
+    -site           The URL of the website (optional)
+    -etype          The type of Ensembl, e.g. Plant (optional)
   } . "\n";
   exit(0);
 }
