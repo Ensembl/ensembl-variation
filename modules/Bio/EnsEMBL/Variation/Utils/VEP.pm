@@ -986,7 +986,7 @@ sub vf_to_consequences {
                 Feature_type => 'MotifFeature',
                 Feature      => $mf->binding_matrix->name,
                 Extra        => {
-                    MATRIX       => $matrix,
+                    MOTIF_NAME  => $matrix,
                 }
             };
             
@@ -994,12 +994,12 @@ sub vf_to_consequences {
                 
                 my $line = init_line($config, $vf, $base_line);
                 
-                $line->{Extra}->{MATRIX_POS}         = $mfva->motif_start;
+                $line->{Extra}->{MOTIF_POS}         = $mfva->motif_start if defined $mfva->motif_start;
                 $line->{Extra}->{HIGH_INF_POS}       = ($mfva->in_informative_position ? 'Y' : 'N');
 
                 my $delta = $mfva->motif_score_delta;
 
-                $line->{Extra}->{MOTIF_SCORE_CHANGE} = $delta == 0 ? '0' : $delta > 0 ? '+' : '-';
+                $line->{Extra}->{MOTIF_SCORE_CHANGE} = $delta if defined $delta;
 
                 $line->{Allele}         = $mfva->variation_feature_seq;
                 $line->{Consequence}    = join ',', 
