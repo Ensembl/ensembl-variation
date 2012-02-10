@@ -49,7 +49,7 @@ use Storable qw(nstore_fd fd_retrieve);
 use Scalar::Util qw(weaken);
 
 use Bio::EnsEMBL::Registry;
-use Bio::EnsEMBL::Variation::DBSQL::VariationFeatureAdaptor;
+use Bio::EnsEMBL::Variation::VariationFeature;
 use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(MAX_DISTANCE_FROM_TRANSCRIPT);
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
 use Bio::EnsEMBL::Variation::Utils::Sequence qw(unambiguity_code);
@@ -63,6 +63,8 @@ use Bio::EnsEMBL::CoordSystem;
 use Bio::EnsEMBL::Transcript;
 use Bio::EnsEMBL::Translation;
 use Bio::EnsEMBL::Exon;
+use Bio::EnsEMBL::ProteinFeature;
+use Bio::EnsEMBL::Analysis;
 use Bio::EnsEMBL::DBSQL::GeneAdaptor;
 use Bio::EnsEMBL::DBSQL::SliceAdaptor;
 use Bio::EnsEMBL::DBSQL::TranslationAdaptor;
@@ -179,6 +181,9 @@ sub parse_line {
         $config->{format} = &detect_format($line);
         debug("Detected format of input file as ", $config->{format}) unless defined($config->{quiet});
         
+        # HGVS and ID formats need DB
+        die("ERROR: Can't use ".uc($config->{format})." format in  mode") if $config->{format} =~ /id|hgvs/ && defined($config->{offline});
+        
         # force certain options if format is VEP output
         if($config->{format} eq 'vep') {
             $config->{no_consequence} = 1;
@@ -187,6 +192,7 @@ sub parse_line {
         }
     }
     my $parse_method = 'parse_'.$config->{format};
+    $parse_method =~ s/vep_//;
     my $method_ref   = \&$parse_method;
     
     my $vfs = &$method_ref($config, $line);
@@ -560,6 +566,10 @@ sub parse_hgvs {
     # not all hgvs notations are supported yet, so we have to wrap it in an eval
     eval { $vf = $config->{vfa}->fetch_by_hgvs_notation($line, $config->{sa}, $config->{ta}) };
     
+    if((!defined($vf) || (defined $@ && length($@) > 1)) && defined($config->{coordinator})) {
+        eval { $vf = $config->{vfa}->fetch_by_hgvs_notation($line, $config->{ofsa}, $config->{ofta}) };
+    }
+    
     if(!defined($vf) || (defined $@ && length($@) > 1)) {
         warn("WARNING: Unable to parse HGVS notation \'$line\'\n$@") unless defined $config->{quiet};
         return [];
@@ -758,7 +768,7 @@ sub get_all_consequences {
         
         debug("Calculating and writing output") unless defined($config->{quiet});
         my $vf_count = scalar @$finished_vfs;
-        my $vf_counter = 0;
+        my $vf_counter = 0;        
         
         while(my $vf = shift @$finished_vfs) {
             progress($config, $vf_counter++, $vf_count) unless $vf_count == 1;
@@ -804,16 +814,37 @@ sub get_all_consequences {
                 if(!defined($line->[7]) || $line->[7] eq '.') {
                     $line->[7] = '';
                 }
-                #else {
-                #    $line->[7] .= ';';
-                #}
+                
+                # get all the lines the normal way                
+                # and process them into VCF-compatible string
+                my $string = 'CSQ=';
+                
+                foreach my $line(@{vf_to_consequences($config, $vf)}) {
+                    
+                    # use the field list (can be user-defined by setting --fields)
+                    for my $col(@{$config->{fields}}) {
+                        
+                        # skip fields already represented in the VCF
+                        next if $col eq 'Uploaded_variation' or $col eq 'Location' or $col eq 'Extra';
+                        
+                        # search for data in main line hash as well as extra field
+                        my $data = $line->{$col} || $line->{Extra}->{$col};
+                        
+                        # "-" means null for everything except the Allele field (confusing...)
+                        $data = undef if defined($data) and $data eq '-' and $col ne 'Allele';
+                        $data =~ s/\,/\&/g if defined $data;
+                        $string .= defined($data) ? $data : '';
+                        $string .= '|';
+                    }
+                    
+                    $string =~ s/\|$//;
+                    $string .= ',';
+                }
+                
+                $string =~ s/\,$//;
                 
                 unless (defined($config->{no_consequences})) {
-                    $line->[7] .= ($line->[7] ? ';' : '').
-                        'CSQ='.(defined($config->{most_severe}) ?
-                        $vf->display_consequence($config->{terms}) || $vf->display_consequence :
-                        join ",", @{$vf->consequence_type($config->{terms}) || $vf->consequence_type}
-                    );
+                    $line->[7] .= ($line->[7] ? ';' : '').$string;
                 }
                 
                 # get custom annotation
@@ -1027,7 +1058,7 @@ sub vf_to_consequences {
         my %by_gene;
         
         foreach my $tv(@$tvs) {
-            next if(defined $config->{coding_only} && !($tv->affects_transcript));
+            next if(defined $config->{coding_only} && !($tv->affects_cds));
             
             my $gene = $tv->transcript->{_gene_stable_id} || $config->{ga}->fetch_by_transcript_stable_id($tv->transcript->stable_id)->stable_id;
             
@@ -1054,7 +1085,7 @@ sub vf_to_consequences {
     
     else {
         foreach my $tv(@$tvs) {
-            next if(defined $config->{coding_only} && !($tv->affects_transcript));
+            next if(defined $config->{coding_only} && !($tv->affects_cds));
             
             push @return, map {tva_to_line($config, $_)} @{$tv->get_all_alternate_TranscriptVariationAlleles};
             
@@ -1084,6 +1115,9 @@ sub svf_to_consequences {
         my $base_line = {
             Feature_type     => $feature_type,
             Feature          => $feature->stable_id,
+            #cDNA_position    => format_coords($svo->cdna_start, $svo->cdna_end),
+            #CDS_position     => format_coords($svo->cds_start, $svo->cds_end),
+            #Protein_position => format_coords($svo->translation_start, $svo->translation_end),
         };
         
         foreach my $svoa(@{$svo->get_all_StructuralVariationOverlapAlleles}) {
@@ -1286,8 +1320,16 @@ sub tva_to_line {
     }
     
     # protein ID
-    if(defined $config->{protein} && $t->translation) {
-        $line->{Extra}->{ENSP} = $t->translation->stable_id;
+    if(defined $config->{protein}) {
+        my $protein = $t->{_protein};
+        
+        if(!defined($protein)) {
+            $protein = $t->translation->stable_id if defined($t->translation);
+        }
+        
+        $protein = undef if defined($protein) && $protein eq '-';
+        
+        $line->{Extra}->{ENSP} = $protein if defined($protein);
     }
     
     # HGVS
@@ -1485,7 +1527,7 @@ sub filter_by_consequence {
     
     # check special case, coding
     if(defined($filters->{coding})) {
-        if(grep {$_->affects_transcript} @{$vf->get_all_TranscriptVariations}) {
+        if(grep {$_->affects_cds} @{$vf->get_all_TranscriptVariations}) {
             if($filters->{coding} == 1) {
                 $yes = 1;
             }
@@ -1518,6 +1560,7 @@ sub validate_vf {
     # fix inputs
     $vf->{chr} =~ s/chr//ig unless $vf->{chr} =~ /^chromosome$/i;
     $vf->{chr} = 'MT' if $vf->{chr} eq 'M';
+    $vf->{strand} ||= 1;
     $vf->{strand} = ($vf->{strand} =~ /\-/ ? "-1" : "1");
     
     # sanity checks
@@ -1598,7 +1641,7 @@ sub whole_genome_fetch {
     
     my (%vf_done, @finished_vfs, %seen_trs, %seen_rfs);
     
-    if(defined($config->{standalone}) && !-e $config->{dir}.'/'.$chr) {
+    if(defined($config->{offline}) && !-e $config->{dir}.'/'.$chr) {
         debug("No cache found for chromsome $chr") unless defined($config->{quiet});
         next;
     }
@@ -1730,7 +1773,7 @@ sub whole_genome_fetch {
                 # no cache found on disk or not using cache
                 if(!defined($tmp_cache->{$chr})) {
                     
-                    if(defined($config->{standalone})) {
+                    if(defined($config->{offline})) {
                         debug("WARNING: Could not find cache for $chr\:$region") unless defined($config->{quiet});
                         next;
                     }
@@ -1893,7 +1936,7 @@ sub whole_genome_fetch {
                 # no cache found on disk or not using cache
                 if(!defined($tmp_cache->{$chr})) {
                     
-                    if(defined($config->{standalone})) {
+                    if(defined($config->{offline})) {
                         debug("WARNING: Could not find cache for $chr\:$region") unless defined($config->{quiet});
                         next;
                     }
@@ -2150,7 +2193,7 @@ sub check_existing_hash {
                         
                         # load from DB if not found in cache
                         if(!defined($tmp_cache->{$chr})) {
-                            if(defined($config->{standalone})) {
+                            if(defined($config->{offline})) {
                                 debug("WARNING: Could not find variation cache for $chr\:$region") unless defined($config->{quiet});
                                 next;
                             }
@@ -2186,7 +2229,7 @@ sub check_existing_hash {
                     
                     if(defined($variation_cache->{$chr})) {
                         if(my $existing_vars = $variation_cache->{$chr}->{$pos}) {
-                            foreach my $existing_var(@$existing_vars) {
+                            foreach my $existing_var(grep {$_->[1] <= $config->{failed}} @$existing_vars) {
                                 push @found, $existing_var->[0] unless is_var_novel($config, $existing_var, $var);
                             }
                         }
@@ -2208,17 +2251,19 @@ sub check_existing_hash {
 sub get_slice {
     my $config = shift;
     my $chr = shift;
+    my $otherfeatures = shift;
+    $otherfeatures ||= '';
     
     return undef unless defined($config->{sa}) && defined($chr);
     
     my $slice;
     
     # first try to get a chromosome
-    eval { $slice = $config->{sa}->fetch_by_region('chromosome', $chr); };
+    eval { $slice = $config->{$otherfeatures.'sa'}->fetch_by_region('chromosome', $chr); };
     
     # if failed, try to get any seq region
     if(!defined($slice)) {
-        $slice = $config->{sa}->fetch_by_region(undef, $chr);
+        $slice = $config->{$otherfeatures.'sa'}->fetch_by_region(undef, $chr);
     }
     
     return $slice;
@@ -2604,7 +2649,7 @@ sub cache_transcripts {
 sub clean_transcript {
     my $tr = shift;
     
-    foreach my $key(qw(display_xref external_db external_display_name external_name external_status created_date status description edits_enabled modified_date dbentries)) {
+    foreach my $key(qw(display_xref external_db external_display_name external_name external_status created_date status description edits_enabled modified_date dbentries is_current analysis transcript_mapper)) {
         delete $tr->{$key} if defined($tr->{$key});
     }
     
@@ -2617,10 +2662,16 @@ sub clean_transcript {
         $tr->{attributes} = \@new_atts;
     }
     
-    $tr->{analysis} = {};
-    
-    # sometimes the translation's transcript points to another ref
-    $tr->{translation}->{transcript} = $tr if defined $tr->{translation};
+    # clean the translation
+    if(defined($tr->translation)) {
+        
+        # sometimes the translation points to a different transcript?
+        $tr->{translation}->{transcript} = $tr;
+        
+        for my $key(qw(attributes protein_features created_date modified_date)) {
+            delete $tr->translation->{$key};
+        }
+    }
 }
 
 # gets rid of extra bits of info attached to genes. At the moment this is almost
@@ -2662,8 +2713,20 @@ sub prefetch_transcript_data {
     my $config = shift;
     my $tr = shift;
     
-    # introns, translateable_seq, mapper
-    $tr->{_variation_effect_feature_cache}->{introns} ||= $tr->get_all_Introns;
+    # introns
+    my $introns = $tr->get_all_Introns;
+    
+    if(defined($introns)) {
+        foreach my $intron(@$introns) {
+            foreach my $key(qw(adaptor analysis dbID next prev seqname)) {
+                delete $intron->{$key};
+            }
+        }
+    }
+    
+    $tr->{_variation_effect_feature_cache}->{introns} ||= $introns;
+    
+    # translateable_seq, mapper
     $tr->{_variation_effect_feature_cache}->{translateable_seq} ||= $tr->translateable_seq;
     $tr->{_variation_effect_feature_cache}->{mapper} ||= $tr->get_TranscriptMapper;
     
@@ -2671,6 +2734,31 @@ sub prefetch_transcript_data {
     unless ($tr->{_variation_effect_feature_cache}->{peptide}) {
         my $translation = $tr->translate;
         $tr->{_variation_effect_feature_cache}->{peptide} = $translation ? $translation->seq : undef;
+    }
+    
+    # protein features
+    if(defined($config->{domains}) || defined($config->{write_cache})) {
+        my $pfs = $tr->translation ? $tr->translation->get_all_ProteinFeatures : [];
+        
+        # clean them to save cache space
+        foreach my $pf(@$pfs) {
+            
+            # remove everything but the coord, analysis and ID fields
+            foreach my $key(keys %$pf) {
+                delete $pf->{$key} unless
+                    $key eq 'start' ||
+                    $key eq 'end' ||
+                    $key eq 'analysis' ||
+                    $key eq 'hseqname';
+            }
+            
+            # remove everything from the analysis but the display label
+            foreach my $key(keys %{$pf->{analysis}}) {
+                delete $pf->{analysis}->{$key} unless $key eq '_display_label';
+            }
+        }
+        
+        $tr->{_variation_effect_feature_cache}->{protein_features} = $pfs;
     }
     
     # codon table
@@ -2726,7 +2814,8 @@ sub prefetch_transcript_data {
         $tr->{_refseq} = '-';
     }
     
-    #delete $tr->{_gene};
+    # protein stable ID
+    $tr->{_protein} = $tr->translation ? $tr->translation->stable_id : '-';
     
     return $tr;
 }
@@ -2763,6 +2852,51 @@ sub dump_transcript_cache {
     close $fh;
 }
 
+#sub dump_transcript_cache_tabix {
+#    my $config = shift;
+#    my $tr_cache = shift;
+#    my $chr = shift;
+#    my $region = shift;
+#    
+#    debug("Dumping cached transcript data") unless defined($config->{quiet});
+#    
+#    # clean the slice adaptor before storing
+#    clean_slice_adaptor($config);
+#    
+#    strip_transcript_cache($config, $tr_cache);
+#    
+#    $DB::single = 1;
+#    
+#    $config->{reg}->disconnect_all;
+#    
+#    my $dir = $config->{dir}.'/'.$chr;
+#    my $dump_file = $dir.'/'.($region || "dump").'.gz';
+#    
+#    # make directory if it doesn't exist
+#    if(!(-e $dir)) {
+#        system("mkdir -p ".$dir);
+#    }
+#    
+#    debug("Writing to $dump_file") unless defined($config->{quiet});
+#    
+#    
+#    use Storable qw(nfreeze);
+#    use Compress::Zlib qw(compress);
+#    use MIME::Base64 qw(encode_base64url);
+#    open NEW, ">> $dir/dump.txt" or die "ERROR\n";
+#    
+#    foreach my $tr(sort {$a->start <=> $b->start} @{$tr_cache->{$chr}}) {
+#        print NEW join "\t", (
+#            $chr,
+#            $tr->start,
+#            $tr->end,
+#            encode_base64url(nfreeze($tr))
+#        );
+#        print NEW "\n";
+#    }
+#    close NEW;
+#}
+
 # loads in dumped transcript cache to memory
 sub load_dumped_transcript_cache {
     my $config = shift;
@@ -2794,7 +2928,47 @@ sub load_dumped_transcript_cache {
     return $tr_cache;
 }
 
-# strips cache
+#sub load_dumped_transcript_cache_tabix {
+#    my $config = shift;
+#    my $chr = shift;
+#    my $region = shift;
+#    
+#    my $dir = $config->{dir}.'/'.$chr;
+#    my $dump_file = $dir.'/dump.txt.gz';
+#    
+#    return undef unless -e $dump_file;
+#    
+#    debug("Reading cached transcript data for chromosome $chr".(defined $region ? "\:$region" : "")." from dumped file") unless defined($config->{quiet});
+#    
+#    my $tr_cache;
+#    
+#    use MIME::Base64 qw(decode_base64url);
+#    use Storable qw(thaw);
+#    
+#    open IN, "tabix $dump_file $chr:$region |";
+#    while(<IN>) {
+#        
+#        $DB::single = 1;
+#        my ($chr, $start, $end, $blob) = split /\t/, $_;
+#        my $tr = thaw(decode_base64url($blob));
+#        push @{$tr_cache->{$chr}}, $tr;
+#    }
+#    close IN;
+#    
+#    # reattach adaptors
+#    foreach my $t(@{$tr_cache->{$chr}}) {
+#        if(defined($t->{translation})) {
+#            $t->{translation}->{adaptor} = $config->{tra} if defined $t->{translation}->{adaptor};
+#            $t->{translation}->{transcript} = $t;
+#        }
+#        
+#        $t->{slice}->{adaptor} = $config->{sa};
+#    }
+#    
+#    return $tr_cache;
+#}
+
+# strips cache before writing to disk
 sub strip_transcript_cache {
     my $config = shift;
     my $cache = shift;
@@ -2802,8 +2976,11 @@ sub strip_transcript_cache {
     foreach my $chr(keys %$cache) {
         foreach my $tr(@{$cache->{$chr}}) {
             foreach my $exon(@{$tr->{_trans_exon_array}}) {
-                delete $exon->{adaptor};
                 delete $exon->{slice}->{adaptor};
+                
+                for(qw(adaptor created_date modified_date is_current version is_constitutive _seq_cache dbID slice)) {
+                    delete $exon->{$_};
+                }
             }
             
             delete $tr->{adaptor};
@@ -2884,11 +3061,11 @@ sub dump_variation_cache {
     
     foreach my $pos(keys %{$v_cache->{$chr}}) {
         foreach my $v(@{$v_cache->{$chr}->{$pos}}) {
-            my ($name, $source, $start, $end, $as, $strand) = @$v;
+            my ($name, $failed, $start, $end, $as, $strand) = @$v;
             
             print DUMP join " ", (
                 $name,
-                $source == 1 ? '' : $source,
+                $failed == 0 ? '' : $failed,
                 $start,
                 $end == $start ? '' : $end,
                 $as,
@@ -2918,12 +3095,12 @@ sub load_dumped_variation_cache {
     
     while(<DUMP>) {
         chomp;
-        my ($name, $source, $start, $end, $as, $strand) = split / /, $_;
-        $source ||= 1;
+        my ($name, $failed, $start, $end, $as, $strand) = split / /, $_;
+        $failed ||= 0;
         $end ||= $start;
         $strand ||= 1;
         
-        my @v = ($name, $source, $start, $end, $as, $strand);
+        my @v = ($name, $failed, $start, $end, $as, $strand);
         push @{$v_cache->{$chr}->{$start}}, \@v;
     }
     
@@ -3011,6 +3188,8 @@ sub clean_reg_feat {
     }
     
     if(defined($rf->{binding_matrix})) {
+        
+        $rf->{_variation_effect_feature_cache}->{seq} = $rf->seq;
         
         foreach my $key(qw/adaptor feature_type analysis dbID/) {
             delete $rf->{binding_matrix}->{$key};
@@ -3207,7 +3386,9 @@ sub cache_custom_annotation {
                     if(defined($feature)) {
                         $got_features = 1;
                         
-                        $feature->{name} ||= $feature->{chr}.":".$feature->{start}."-".$feature->{end};
+                        if(!defined($feature->{name}) || $custom->{coords}) {
+                            $feature->{name} = $feature->{chr}.":".$feature->{start}."-".$feature->{end};
+                        }
                         
                         # add the feature to the cache
                         $annotation->{$chr}->{$custom->{name}}->{$feature->{start}}->{$feature->{name}} = $feature;
@@ -3238,6 +3419,7 @@ sub build_full_cache {
     
     if($config->{build} =~ /all/i) {
         @slices = @{$config->{sa}->fetch_all('toplevel')};
+        push @slices, @{$config->{sa}->fetch_all('lrg', undef, 1, undef, 1)} if defined($config->{lrg});
     }
     else {
         foreach my $val(split /\,/, $config->{build}) {
@@ -3397,15 +3579,16 @@ sub find_existing {
     my $config = shift;
     my $new_vf = shift;
     
-    if(defined($new_vf->adaptor->db)) {
+    if(defined($config->{vfa}->db)) {
         
-        my $sth = $new_vf->adaptor->db->dbc->prepare(qq{
-            SELECT variation_name, source_id, seq_region_start, seq_region_end, allele_string, seq_region_strand
-            FROM variation_feature
-            WHERE seq_region_id = ?
-            AND seq_region_start = ?
-            AND seq_region_end = ?
-            ORDER BY source_id ASC
+        my $sth = $config->{vfa}->db->dbc->prepare(qq{
+            SELECT variation_name, IF(fv.variation_id IS NULL, 0, 1), seq_region_start, seq_region_end, allele_string, seq_region_strand
+            FROM variation_feature vf LEFT JOIN failed_variation fv
+    	    ON vf.variation_id = fv.variation_id
+            WHERE vf.seq_region_id = ?
+            AND vf.seq_region_start = ?
+            AND vf.seq_region_end = ?
+            ORDER BY vf.source_id ASC
         });
         
         $sth->execute($new_vf->slice->get_seq_region_id, $new_vf->start, $new_vf->end);
@@ -3420,7 +3603,7 @@ sub find_existing {
         my @found;
         
         while($sth->fetch) {
-            push @found, $v[0] unless is_var_novel($config, \@v, $new_vf);
+            push @found, $v[0] unless is_var_novel($config, \@v, $new_vf) || $v[1] > $config->{failed};
         }
         
         $sth->finish();
@@ -3508,8 +3691,9 @@ sub get_variations_in_region {
     
     if(defined($config->{vfa}->db)) {
         my $sth = $config->{vfa}->db->dbc->prepare(qq{
-            SELECT vf.variation_name, vf.source_id, vf.seq_region_start, vf.seq_region_end, vf.allele_string, vf.seq_region_strand
-            FROM variation_feature vf, seq_region s
+            SELECT vf.variation_name, IF(fv.variation_id IS NULL, 0, 1), vf.seq_region_start, vf.seq_region_end, vf.allele_string, vf.seq_region_strand
+            FROM (variation_feature vf, seq_region s)
+            LEFT JOIN failed_variation fv ON fv.variation_id = vf.variation_id
             WHERE s.seq_region_id = vf.seq_region_id
             AND s.name = ?
             AND vf.seq_region_start >= ?
