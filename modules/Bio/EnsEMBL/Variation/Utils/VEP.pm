@@ -999,7 +999,7 @@ sub vf_to_consequences {
 
                 my $delta = $mfva->motif_score_delta;
 
-                $line->{Extra}->{MOTIF_SCORE_CHANGE} = $delta if defined $delta;
+                $line->{Extra}->{MOTIF_SCORE_CHANGE} = sprintf("%.3f", $delta) if defined $delta;
 
                 $line->{Allele}         = $mfva->variation_feature_seq;
                 $line->{Consequence}    = join ',', 
