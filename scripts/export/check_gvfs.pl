@@ -39,7 +39,7 @@ $release--;
 
 $path = "/pub/release-${release}/variation/gvf/" unless $path;
 
-print "Looking for GVFs in: ${server}${path}\n";
+print "Looking for GVFs from previous release in: ${server}${path}\n";
 
 my $ftp = Net::FTP->new($server) or die "Failed to connect to '$server:' $@";
 
@@ -83,6 +83,5 @@ for my $species ($ftp->ls) {
 
 $ftp->quit;
 
-print "$ok_count/$file_count GVF files look good\n";
-
+print "$ok_count/$file_count GVF files look OK\n";
 
