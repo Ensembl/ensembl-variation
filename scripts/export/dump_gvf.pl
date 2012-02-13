@@ -547,7 +547,7 @@ while (my $slice = shift @$slices) {
 
             my $svfa = $vdba->get_StructuralVariationFeatureAdaptor;
             
-            my $svfs = $svfa->fetch_all_by_Slice($sub_slice);
+            my $svfs = $svfa->fetch_all_by_Slice($sub_slice, 1);
             
             for my $svf (@$svfs) {
                
