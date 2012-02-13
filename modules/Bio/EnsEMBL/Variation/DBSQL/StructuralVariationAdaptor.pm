@@ -180,11 +180,11 @@ sub fetch_all_by_supporting_evidence {
 	# Add the constraint for failed structural variant
 	$constraint .= " AND " . $self->db->_exclude_failed_structural_variations_constraint();
 	
-	my $sth = $self->prepare(qq{SELECT DISTINCT $cols
-				                      FROM $tables, structural_variation_association sa
-				                      WHERE $constraint 
-															AND sa.structural_variation_id=sv.structural_variation_id
-															AND sa.supporting_structural_variation_id = ?});
+	my $sth = $self->prepare(qq{SELECT $cols 
+		                        FROM $tables, structural_variation_association sa
+				                WHERE $constraint 
+								      AND sa.structural_variation_id=sv.structural_variation_id
+								      AND sa.supporting_structural_variation_id = ?});
 	$sth->bind_param(1,$se->dbID,SQL_INTEGER);
 	$sth->execute();
 
