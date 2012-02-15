@@ -293,7 +293,7 @@ our %OVERLAP_CONSEQUENCES = (
   'SO_term' => 'intron_variant',
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::within_intron',
   'label' => 'Intronic',
-  'rank' => '19',
+  'rank' => '17',
   'display_term' => 'INTRONIC',
   'feature_class' => 'Bio::EnsEMBL::Transcript'
 }
@@ -481,7 +481,7 @@ our %OVERLAP_CONSEQUENCES = (
   'SO_term' => 'NMD_transcript_variant',
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::within_nmd_transcript',
   'label' => 'NMD transcript',
-  'rank' => '17',
+  'rank' => '18',
   'display_term' => 'NMD_TRANSCRIPT',
   'feature_class' => 'Bio::EnsEMBL::Transcript'
 }
@@ -494,7 +494,7 @@ our %OVERLAP_CONSEQUENCES = (
   'SO_term' => 'nc_transcript_variant',
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::within_non_coding_gene',
   'label' => 'Within non-coding gene',
-  'rank' => '18',
+  'rank' => '19',
   'display_term' => 'WITHIN_NON_CODING_GENE',
   'feature_class' => 'Bio::EnsEMBL::Transcript'
 }
