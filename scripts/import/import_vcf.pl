@@ -1144,9 +1144,11 @@ sub merge_variation_features {
 		$data->{merged} = 1;
 		
 		# delete original entry from variation
-		$sth = $dbVar->prepare(qq{DELETE FROM variation WHERE variation_id = ?});
-		$sth->execute($data->{var_id});
-		$sth->finish;
+		unless($data->{variation_already_exists}) {
+			$sth = $dbVar->prepare(qq{DELETE FROM variation WHERE variation_id = ?});
+			$sth->execute($data->{var_id});
+			$sth->finish;
+		}
 		
 		# update the variation_id
 		$data->{var_id} = $variation_id;
