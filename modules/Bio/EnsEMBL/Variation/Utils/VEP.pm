@@ -50,6 +50,7 @@ use Scalar::Util qw(weaken);
 
 use Bio::EnsEMBL::Registry;
 use Bio::EnsEMBL::Variation::VariationFeature;
+use Bio::EnsEMBL::Variation::DBSQL::VariationFeatureAdaptor;
 use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(MAX_DISTANCE_FROM_TRANSCRIPT);
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
 use Bio::EnsEMBL::Variation::Utils::Sequence qw(unambiguity_code);
