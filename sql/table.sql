@@ -1457,24 +1457,23 @@ CREATE TABLE attrib_set (
 @colour #1E90FF
 @desc   Contains encoded sift and polyphen predictions for every protein-coding transcript in this species
 
-@column translation_stable_id   The stable ID of the translation
-@column transcript_stable_id    The stable ID of the transcript from which this protein is translated
-@column translation_md5         A hexidecimal string representing the MD5 hash of the protein sequence
-@column polyphen_predictions    A compressed binary string containing the PolyPhen-2 predictions for all
-                                possible amino acid substitutions in this translation
-@column sift_predictions        A similarly encoded string for SIFT predictions
+@column translation_md5             A hexidecimal string representing the MD5 hash of the protein sequence
+                                    to which these predictions apply
+@column sift_predictions            A compressed binary string containing the SIFT predictions for all
+                                    possible amino acid substitutions in this translation
+@column polyphen_humvar_predictions A similarly formatted string with predictions from PolyPhen-2 using
+                                    the HumVar classifier model
+@column polyphen_humdiv_predictions Predictions using PolyPhen-2's HumDiv classifier model
 */
 
 CREATE TABLE protein_function_predictions (
 
-    translation_stable_id   VARCHAR(128) NOT NULL,
-    transcript_stable_id    VARCHAR(128) NOT NULL,
-    translation_md5         CHAR(32) NOT NULL,
-    polyphen_predictions    MEDIUMBLOB,
-    sift_predictions        MEDIUMBLOB,
+    translation_md5             CHAR(32) NOT NULL,
+    sift_predictions            MEDIUMBLOB,
+    polyphen_humdiv_predictions MEDIUMBLOB,
+    polyphen_humvar_predictions MEDIUMBLOB,
     
-    PRIMARY KEY (translation_stable_id),
-    KEY transcript_idx (transcript_stable_id)
+    PRIMARY KEY (translation_md5)
 );
 
 /**
