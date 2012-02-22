@@ -24,11 +24,11 @@ sub run {
 
     $feature_file =~ s/.gz$//;
 
-    my ($output_dir) = $feature_file =~ /(.+)\/features.txt$/;
+    my ($output_dir, $feature_filename) = $feature_file =~ /(.+)\/([^\/]+)$/;
+
+    chdir $output_dir or die "Failed to chdir to $output_dir";
 
     my @to_delete;
-
-    push @to_delete, $feature_file;
 
     for my $model ($humdiv_model, $humvar_model) {
 
@@ -36,13 +36,13 @@ sub run {
 
         my $model_name = $model eq $humdiv_model ? 'humdiv' : 'humvar';
 
-        my $output_file = "${output_dir}/${model_name}.txt";
+        my $output_file = "${model_name}.txt";
 
         push @to_delete, $output_file;
 
-        my $error_file  = "${output_dir}/${model_name}.weka.err";
+        my $error_file  = "${model_name}.err";
 
-        my $cmd = "$pph_dir/bin/run_weka.pl -l $model $feature_file 1> $output_file 2> $error_file";
+        my $cmd = "$pph_dir/bin/run_weka.pl -l $model $feature_filename 1> $output_file 2> $error_file";
 
         system($cmd) == 0 or die "Failed to run $cmd: $?";
 
