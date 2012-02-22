@@ -253,8 +253,8 @@ sub add_strains{
 		      GROUP BY s.name
 		     });
   #and insert the new strain in the population table
-  $dbVariation->do(qq{INSERT INTO population (sample_id, is_strain)
-		      SELECT sample_id, is_strain
+  $dbVariation->do(qq{INSERT INTO population (sample_id)
+		      SELECT sample_id
 		      FROM sample
 		      WHERE is_strain = 1
 		     });
