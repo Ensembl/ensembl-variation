@@ -161,20 +161,19 @@ sub fetch_all_by_Population {
 
 
 sub fetch_all_by_Variation {
-    my $self = shift;
-    my $variation = shift;
-
-    if(!ref($variation) || !$variation->isa('Bio::EnsEMBL::Variation::Variation')) {
+  my $self = shift;
+  my $variation = shift;
+  
+  if(!ref($variation) || !$variation->isa('Bio::EnsEMBL::Variation::Variation')) {
 	throw('Bio::EnsEMBL::Variation::Variation argument expected');
-    }
-
-    if(!defined($variation->dbID())) {
+  }
+  
+  if(!defined($variation->dbID())) {
 	warning("Cannot retrieve genotypes for variation without set dbID");
 	return [];
-    }
-
-    return $self->generic_fetch("pg.variation_id = " . $variation->dbID());
-
+  }
+  
+  return $self->generic_fetch("pg.variation_id = " . $variation->dbID());
 }
 
 =head2 fetch_all
@@ -189,80 +188,77 @@ sub fetch_all_by_Variation {
 
 
 sub fetch_all {
-    my $self = shift;
-
-    # Add the constraint for failed variations
-    my $constraint = $self->db->_exclude_failed_variations_constraint();
-    
-    return $self->generic_fetch($constraint);
+  my $self = shift;
+  
+  # Add the constraint for failed variations
+  my $constraint = $self->db->_exclude_failed_variations_constraint();
+  
+  return $self->generic_fetch($constraint);
 }
 
 sub _tables{return (
-	['population_genotype','pg'],
-	['genotype_code','gc'],
-	['allele_code','ac'],
-	['failed_variation','fv']
+  ['population_genotype','pg'],
+  ['failed_variation','fv']
 )}
 
 #ÊAdd a left join to the failed_variation table
 sub _left_join { return ([ 'failed_variation', 'fv.variation_id = pg.variation_id']); }
 
 sub _columns{
-    return qw(pg.population_genotype_id pg.variation_id pg.subsnp_id pg.sample_id ac.allele gc.haplotype_id pg.frequency pg.count)
-}
-
-sub _default_where_clause  {
-	return 'pg.genotype_code_id = gc.genotype_code_id AND gc.allele_code_id = ac.allele_code_id';
+  return qw(pg.population_genotype_id pg.variation_id pg.subsnp_id pg.sample_id pg.genotype_code_id pg.frequency pg.count)
 }
 
 sub _objs_from_sth{
   
-	my $self = shift;
-	my $sth = shift;
+  my $self = shift;
+  my $sth = shift;
+  
+  my ($dbID, $variation_id, $subsnp_id, $sample_id, $gt_code, $freq, $count);
+  
+  $sth->bind_columns(\$dbID, \$variation_id, \$subsnp_id, \$sample_id, \$gt_code, \$freq, \$count);
+  
+  my (%pop_hash, %gt_code_hash, @results);
+  
+  while($sth->fetch) {
+  
+	my $pgtype  = Bio::EnsEMBL::Variation::PopulationGenotype->new_fast({
+	  _variation_id => $variation_id,
+	  subsnp        => $subsnp_id,
+	  adaptor       => $self,
+	  frequency     => $freq,
+	  count         => $count
+	});
+  
+	$pop_hash{$sample_id} ||= [];
+	push @{$pop_hash{$sample_id}}, $pgtype;
 	
-	my ($dbID, $variation_id, $subsnp_id, $sample_id, $allele, $haplotype_id, $freq, $count);
+	$gt_code_hash{$gt_code} ||= [];
+	push @{$gt_code_hash{$gt_code}}, $pgtype;
 	
-	$sth->bind_columns(\$dbID, \$variation_id, \$subsnp_id, \$sample_id, \$allele, \$haplotype_id, \$freq, \$count);
-	
-	my (@results, %genotypes, %variation_ids, %samples, %freqs, %counts);
-	
-	while($sth->fetch) {
-		# some rows won't have ssIDs, make one up
-		$subsnp_id ||= "s".$variation_id;
-		
-		$genotypes{$subsnp_id}{$sample_id}{$haplotype_id} = $allele;
-		$freqs{$subsnp_id}{$sample_id}                    = $freq;
-		$counts{$subsnp_id}{$sample_id}                   = $count;
-		$variation_ids{$subsnp_id}                        = $variation_id;
-		$samples{$sample_id}                              = undef;
+	push @results, $pgtype;
+  }
+  
+  # fetch populations
+  my $pa = $self->db()->get_PopulationAdaptor();
+  my $pops = $pa->fetch_all_by_dbID_list([keys %pop_hash]);
+  
+  foreach my $p (@$pops) {
+	foreach my $pgty (@{$pop_hash{$p->dbID()}}) {
+	  $pgty->{population} = $p;
 	}
-	
-	# fetch populations
-	my $pa = $self->db->get_PopulationAdaptor;
-	$samples{$_->dbID} = $_ for @{$pa->fetch_all_by_dbID_list([keys %samples])};
-	
-	my $ploidy = $self->ploidy;
-	
-	# create genotype objects from hash
-	foreach $subsnp_id(keys %genotypes) {
-		foreach $sample_id(keys %{$genotypes{$subsnp_id}}) {
-			my @gt = map {$genotypes{$subsnp_id}{$sample_id}{$_}} sort {$a <=> $b} keys %{$genotypes{$subsnp_id}{$sample_id}};
-			
-			# splice it down to ploidy size
-			@gt = splice @gt, 0, $ploidy;
-			
-			push @results, Bio::EnsEMBL::Variation::PopulationGenotype->new_fast({
-				_variation_id => $variation_ids{$subsnp_id},
-				subsnp        => ($subsnp_id =~ /^s/ ? undef : $subsnp_id),
-				population    => $samples{$sample_id},
-				genotype      => \@gt,
-				adaptor       => $self,
-				frequency     => $freqs{$subsnp_id}{$sample_id},
-				count         => $counts{$subsnp_id}{$sample_id},
-			});
-		}
+  }
+  
+  # get all genotypes from codes
+  my $gtca = $self->db->get_GenotypeCodeAdaptor();
+  my $gtcs = $gtca->fetch_all_by_dbID_list([keys %gt_code_hash]);
+  
+  foreach my $gtc(@$gtcs) {
+	foreach my $pgty(@{$gt_code_hash{$gtc->dbID}}) {
+	  $pgty->{genotype} = $gtc->genotype;
 	}
-	
-	return \@results;
+  }
+  
+  return \@results;
 }
+
 1;
