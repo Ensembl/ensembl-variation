@@ -225,7 +225,7 @@ if ($species =~ m/mouse/i || $species =~ m/chicken/i || $species =~ m/rat/i || $
   # Add strain information
   $clock->checkpoint('add_strains');
   
-  add_strains($dbm->dbVar());
+  add_strains($dbm->dbVar()->dbc->db_handle);
   
   print $logh $clock->duration();
 }
