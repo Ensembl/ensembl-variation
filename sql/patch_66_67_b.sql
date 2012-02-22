@@ -4,8 +4,8 @@ CREATE TABLE protein_function_predictions (
 
     translation_md5             CHAR(32) NOT NULL,
     sift_predictions            MEDIUMBLOB,
-    polyphen_humvar_predictions MEDIUMBLOB,
     polyphen_humdiv_predictions MEDIUMBLOB,
+    polyphen_humvar_predictions MEDIUMBLOB,
     
     PRIMARY KEY (translation_md5)
 );
