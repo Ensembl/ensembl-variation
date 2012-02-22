@@ -10,175 +10,157 @@ use Digest::MD5 qw(md5_hex);
 
 use base qw(Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess);
 
-my $DEBUG = 0;
+my $DEBUG = 1;
 
 sub fetch_input {
    
     my $self = shift;
     
-    my $var_dba  = $self->get_species_adaptor('variation');
+    my $sift_run_type   = $self->required_param('sift_run_type');
+    my $pph_run_type    = $self->required_param('pph_run_type');
+    my $include_lrg     = $self->param('include_lrg');
+    
     my $core_dba = $self->get_species_adaptor('core');
-  
-    my $fasta = $self->required_param('proteins_fasta');
+    my $var_dba  = $self->get_species_adaptor('variation');
 
-    my $sift_run_type       = $self->required_param('sift_run_type');
-    my $polyphen_run_type   = $self->required_param('polyphen_run_type');
-    my $include_lrg         = $self->param('include_lrg');
-    my $use_existing_table  = $self->param('use_existing_table');
+    # fetch all the transcripts from the core DB
 
-    my $var_dbh = $var_dba->dbc->db_handle;
-   
-    my $get_existing_sth = $var_dbh->prepare(qq{
-        SELECT  translation_md5, transcript_stable_id, polyphen_predictions, sift_predictions
-        FROM    protein_function_predictions
-        WHERE   translation_stable_id = ?
-    });
-
-    my $delete_preds_sth = $var_dbh->prepare(qq{
-        DELETE FROM protein_function_predictions
-        WHERE   translation_stable_id = ?
-    });
-
-    my $add_preds_sth = $var_dbh->prepare_cached(qq{
-        INSERT INTO protein_function_predictions (
-            translation_stable_id,
-            transcript_stable_id,
-            translation_md5
-        )
-        VALUES (?,?,?)
-    }) or die "DB error: ".$var_dbh->errstr;
-
-    my $fix_transcript_stable_id = $var_dbh->prepare(qq{
-        UPDATE  protein_function_predictions
-        SET     transcript_stable_id = ?
-        WHERE   translation_stable_id = ?
-    });
-
-    my $ta = $core_dba->get_TranscriptAdaptor or die "Failed to get transcript adaptor";
-    my $ga = $core_dba->get_GeneAdaptor or die "Failed to get gene adaptor";
-    my $sa = $core_dba->get_SliceAdaptor or die "Failed to get slice adaptor";
-
-    # fetch all the regular genes
-
-    my $transcripts;
+    my @transcripts;
 
     if ($DEBUG) {
-        $transcripts = $ga->fetch_all_by_external_name('BRCA2')->[0]->get_all_Transcripts;
+        my $ga = $core_dba->get_GeneAdaptor or die "Failed to get gene adaptor";
+        
+        @transcripts = grep { $_->translation } @{ $ga->fetch_all_by_external_name('BRCA2')->[0]->get_all_Transcripts };
     }
     else {
+        my $sa = $core_dba->get_SliceAdaptor or die "Failed to get slice adaptor";
+        
         for my $slice (@{ $sa->fetch_all('toplevel', undef, 1, undef, ($include_lrg ? 1 : undef)) }) {
             for my $gene (@{ $slice->get_all_Genes(undef, undef, 1) }) {
                 for my $transcript (@{ $gene->get_all_Transcripts }) {
                     if (my $translation = $transcript->translation) {
-                        push @$transcripts, $transcript;
+                        push @transcripts, $transcript;
                     }
                 }
             }
         }
     }
 
-    # get a transcript file adaptor over these transcripts
+    # store a table mapping each translation stable ID to its corresponding MD5
 
-    my $tfa;
+    $var_dba->dbc->do(qq{DROP TABLE IF EXISTS translation_mapping});
 
-    if ($use_existing_table) {
-        $tfa = $self->get_transcript_file_adaptor;
-    }
-    else {
-        # create a new fasta dump of all the transcripts
-        $tfa = $self->get_transcript_file_adaptor($transcripts);
-    }
+    $var_dba->dbc->do(qq{
+        CREATE TABLE translation_mapping (
+            stable_id   VARCHAR(255),
+            md5         CHAR(32),
+            PRIMARY KEY (stable_id),
+            KEY md5_idx (md5)
+        )
+    });
 
-    my @sift_stable_ids;
-    my @polyphen_stable_ids;
+    my $add_mapping_sth = $var_dba->prepare(qq{
+        INSERT DELAYED IGNORE INTO translation_mapping (stable_id, md5) VALUES (?,?)
+    });
 
-    for my $transcript (@$transcripts) {
+    # build a hash mapping MD5s for our set of translations to their peptide sequences
+    # and also write each stable ID - MD5 mapping to the database
+
+    my %unique_translations;
+
+    for my $tran (@transcripts) {
         
-        my $translation_stable_id = $transcript->translation->stable_id;
+        my $tl = $tran->translation;
 
-        my $translation_md5;
+        my $seq = $tl->seq;
         
-        unless ($use_existing_table) {
-            
-            # check the table to see if we need to run anything
+        my $md5 = md5_hex($seq);
+        
+        $unique_translations{$md5} = $seq;
 
-            $get_existing_sth->execute($translation_stable_id);
+        $add_mapping_sth->execute($tl->stable_id, $md5);
+    }
 
-            my (
-                $existing_md5, 
-                $existing_transcript_stable_id, 
-                $pph_preds, 
-                $sift_preds
-            ) = $get_existing_sth->fetchrow_array;
+    # work out which translations we need to run for which analysis
+    
+    my @translation_md5s = keys %unique_translations;
+    
+    my @sift_md5s;
+    my @pph_md5s;
 
-            #$translation_md5 = $tfa->get_translation_md5($translation_stable_id);
-            $translation_md5 = md5_hex($transcript->translation->seq);
+    # if we're doing full runs, then we just use all the translations
 
-            if ($existing_md5) {
+    @sift_md5s = @translation_md5s if $sift_run_type == FULL;
+    @pph_md5s  = @translation_md5s if $pph_run_type == FULL;
 
-                if ($existing_md5 eq $translation_md5) {
+    # if we're updating we need to check which translations already have predictions
+        
+    if ($sift_run_type == UPDATE || $pph_run_type == UPDATE) {
+        
+        my $var_dbh = $var_dba->dbc->db_handle;
+    
+        my $get_existing_sth = $var_dbh->prepare(qq{
+            SELECT  translation_md5, polyphen_humvar_predictions, sift_predictions
+            FROM    protein_function_predictions
+        });
 
-                    # the protein hasn't changed, so we'll only run the analyses for
-                    # the protein if we're doing a full new run, or if we don't have any
-                    # existing predictions
+        # store the set of existing MD5s in a hash
 
-                    if ($sift_run_type == FULL || length($sift_preds) < 1) {
-                        push @sift_stable_ids, $translation_stable_id;
-                    }
+        $get_existing_sth->execute;
 
-                    if ($polyphen_run_type == FULL || length($pph_preds) < 1) {
-                        push @polyphen_stable_ids, $translation_stable_id;      
-                    }
-                    
-                    # check that the transcript_stable_id for this translation is correct
+        my $existing_md5s;
 
-                    unless ($existing_transcript_stable_id eq $transcript->stable_id) {
-                        $fix_transcript_stable_id->execute($transcript->stable_id, $translation_stable_id);
-                    }
-
-                    # next out of the loop here as we'll keep the same entry in
-                    # the protein_function_predictions table
-
-                    next;
-                }
-                else {
-                    # the translation has changed, so delete the existing entry
-                    
-                    $delete_preds_sth->execute($translation_stable_id);
-                }
-            }
+        while ( my ($md5, $pph_preds, $sift_preds) = $get_existing_sth->fetchrow_array ) {
+            # just record true if we already have predictions for each translation
+            $existing_md5s->{$md5}->{sift} = length($sift_preds) > 0;   
+            $existing_md5s->{$md5}->{pph}  = length($pph_preds) > 0;   
         }
 
-        # this is a new or altered protein so we need to run both tools, unless their run type is NONE
-        
-        push @sift_stable_ids, $translation_stable_id unless $sift_run_type == NONE;
-        push @polyphen_stable_ids, $translation_stable_id unless $polyphen_run_type == NONE;      
+        # exclude any translations MD5s we find in the database
 
-        # and we need to add this protein to the protein_function_predictions table
-
-        unless ($use_existing_table) {
-            $add_preds_sth->execute(
-                $translation_stable_id,
-                $transcript->stable_id,
-                $translation_md5
-            );
-        }
+        @sift_md5s = grep { ! $existing_md5s->{$_}->{sift} } @translation_md5s if $sift_run_type == UPDATE;
+        @pph_md5s  = grep { ! $existing_md5s->{$_}->{pph} } @translation_md5s if $pph_run_type == UPDATE;
     }
     
-    # and set up the necessary sift and polyphen jobs
+    # create a FASTA dump of all the necessary translation sequences
 
-    my @polyphen_output_ids = map { {translation_stable_id => $_} } @polyphen_stable_ids;
-    my @sift_output_ids = map { {translation_stable_id => $_} } @sift_stable_ids;
+    # work out the set of all unique MD5s for sift and polyphen
 
-    $self->param('polyphen_output_ids', \@polyphen_output_ids);
-    $self->param('sift_output_ids', \@sift_output_ids);
+    my %required_md5s = map { $_ => 1 } (@sift_md5s, @pph_md5s);
+
+    my $fasta = $self->required_param('fasta_file');
+
+    open my $FASTA, ">$fasta" or die "Failed to open $fasta for writing";
+
+    # get rid of any existing index file
+
+    if (-e "$fasta.fai") {
+        unlink "$fasta.fai" or die "Failed to delete fasta index file";
+    }
+    
+    # dump out each peptide sequence
+
+    for my $md5 (keys %required_md5s) {
+        my $seq = $unique_translations{$md5};
+        $seq =~ s/(.{80})/$1\n/g;
+        # get rid of any trailing newline
+        chomp $seq;
+        print $FASTA ">$md5\n$seq\n";
+    }
+
+    close $FASTA;
+
+    # set up our list of output ids
+
+    $self->param('pph_output_ids',  [ map { {translation_md5 => $_} } @pph_md5s ]);
+    $self->param('sift_output_ids', [ map { {translation_md5 => $_} } @sift_md5s ]);
 }
 
 sub write_output {
     my $self = shift;
     
-    unless ($self->param('polyphen_run_type') == NONE) {
-        $self->dataflow_output_id($self->param('polyphen_output_ids'), 2);
+    unless ($self->param('pph_run_type') == NONE) {
+        $self->dataflow_output_id($self->param('pph_output_ids'), 2);
     }
 
     unless ($self->param('sift_run_type') == NONE) {
