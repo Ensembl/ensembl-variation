@@ -51,7 +51,7 @@ sub default_options {
         
         humvar_model            => $self->o('pph_dir').'/models/HumVar.UniRef100.NBd.f11.model',
 
-        pph_run_type            => NONE,
+        pph_run_type            => FULL,
 
         pph_use_compara         => 0,
         
@@ -83,10 +83,11 @@ sub pipeline_create_commands {
 sub resource_classes {
     my ($self) = @_;
     return {
-        0 => { -desc => 'default',  'LSF' => '-R"select[mem>4000] rusage[mem=4000]" -M4000000' },
+        0 => { -desc => 'default',  'LSF' => '-R"select[mem>2000] rusage[mem=2000]" -M2000000' },
         1 => { -desc => 'urgent',   'LSF' => '-q yesterday -R"select[mem>2000] rusage[mem=2000]" -M2000000' },
         2 => { -desc => 'highmem',  'LSF' => '-R"select[mem>8000] rusage[mem=8000]" -M8000000 -q long'},
         3 => { -desc => 'long',     'LSF' => '-q long -R"select[mem>2000] rusage[mem=2000]" -M2000000 -q long' },
+        4 => { -desc => 'medmem',   'LSF' => '-R"select[mem>4000] rusage[mem=4000]" -M4000000' },
     };
 }
 
@@ -161,7 +162,7 @@ sub pipeline_analyses {
             -max_retry_count => 0,
             -input_ids      => [],
             -hive_capacity  => 500,
-            -rc_id          => 0,
+            -rc_id          => 4,
             -flow_into      => {},
         },
     ];
