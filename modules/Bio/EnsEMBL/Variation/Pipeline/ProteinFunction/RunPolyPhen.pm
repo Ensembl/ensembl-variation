@@ -19,13 +19,13 @@ my $MAX_PSIC_SEQLEN = 409650;
 sub run {
     my $self = shift;
 
-    my $translation_stable_id = $self->required_param('translation_stable_id'); 
+    my $translation_md5     = $self->required_param('translation_md5'); 
 
-    my $pph_dir = $self->required_param('pph_dir');
+    my $pph_dir     = $self->required_param('pph_dir');
+    my $working_dir = $self->required_param('pph_working');
     
-    my $md5 = md5_hex($translation_stable_id);
-    my $dir = substr($md5, 0, 2);
-    my $output_dir = "$pph_dir/working/$dir/$translation_stable_id";
+    my $dir = substr($translation_md5, 0, 2);
+    my $output_dir = "$working_dir/$dir/$translation_md5";
 
     my @to_delete;
 
@@ -60,11 +60,11 @@ sub run {
         die "make_path failed: ".Dumper($err) if $err && @$err;
     }
 
-    my $subs_file       = "${output_dir}/source_files/${translation_stable_id}_subs.txt";
-    my $protein_file    = "${output_dir}/source_files/${translation_stable_id}_protein.fa";
-    my $aln_file        = "${output_dir}/alignments/${translation_stable_id}.aln";
-    my $output_file     = "${output_dir}/features/${translation_stable_id}.features";
-    my $error_file      = "${output_dir}/errors/${translation_stable_id}.polyphen_stderr";
+    my $subs_file       = "${output_dir}/source_files/subs.txt";
+    my $protein_file    = "${output_dir}/source_files/protein.fa";
+    my $aln_file        = "${output_dir}/alignments/${translation_md5}.aln";
+    my $output_file     = "${output_dir}/features/features.txt";
+    my $error_file      = "${output_dir}/errors/polyphen.err";
 
     my $tfa = $self->get_transcript_file_adaptor;
 
@@ -72,7 +72,7 @@ sub run {
 
     open (PROTEIN, ">$protein_file") or die "Failed to open file for protein $protein_file: $!";
     
-    print PROTEIN $tfa->get_translation_fasta($translation_stable_id);
+    print PROTEIN $tfa->get_translation_fasta($translation_md5);
 
     # and the substitutions.
 
@@ -80,9 +80,9 @@ sub run {
 
     #push @to_delete, $subs_file, $protein_file;
 
-    my $peptide = $tfa->get_translation_seq($translation_stable_id);
+    my $peptide = $tfa->get_translation_seq($translation_md5);
         
-    die "$translation_stable_id is length 0?" unless length($peptide) > 0;
+    die "$translation_md5 is length 0?" unless length($peptide) > 0;
 
     my @aas = split //, $peptide;
 
@@ -98,8 +98,8 @@ sub run {
         for my $alt (@ALL_AAS) {
             unless ($ref eq $alt) {
                 print SUBS join ("\t",
-                    $translation_stable_id.'_'.$idx.'_'.$alt,
-                    $translation_stable_id,
+                    #$translation_md5.'_'.$idx.'_'.$alt,
+                    $translation_md5,
                     $idx,
                     $ref,
                     $alt
@@ -112,18 +112,19 @@ sub run {
     close PROTEIN;
     
     if ($self->param('use_compara')) {
-       
-        $self->_load_registry;
-
+        
+        my $stable_id = $self->get_stable_id_for_md5($translation_md5);
+        
         # if we're using compara alignments then dump the alignment
         # to the alignment file, PolyPhen will check if it exists
         # and use it in place of its own alignment if so
+
         eval {
-            dump_alignment_for_polyphen($translation_stable_id, $aln_file);
+            dump_alignment_for_polyphen($stable_id, $aln_file);
         };
 
         if ($@) {
-            die "Failed to fetch a compara alignment for $translation_stable_id: $@";
+            die "Failed to fetch a compara alignment for $stable_id: $@";
         }
     }
 
@@ -174,8 +175,8 @@ sub write_output {
     
     if (my $feature_file = $self->param('feature_file')) {
         $self->dataflow_output_id( [{
-            translation_stable_id   => $self->param('translation_stable_id'),
-            feature_file            => $feature_file,
+            translation_md5 => $self->param('translation_md5'),
+            feature_file    => $feature_file,
         }], 2);
     }
 }

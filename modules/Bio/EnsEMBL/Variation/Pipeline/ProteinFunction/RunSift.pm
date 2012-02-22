@@ -2,7 +2,6 @@ package Bio::EnsEMBL::Variation::Pipeline::ProteinFunction::RunSift;
 
 use strict;
 
-use Digest::MD5 qw(md5_hex);
 use File::Path qw(make_path remove_tree);
 use Data::Dumper;
 
@@ -19,14 +18,15 @@ my $MEDIAN_CUTOFF = 2.75; # as per README
 sub run {
     my $self = shift;
 
-    my $translation_stable_id   = $self->required_param('translation_stable_id');
-    my $sift_dir                = $self->required_param('sift_dir');
-    my $ncbi_dir                = $self->required_param('ncbi_dir');
-    my $blastdb                 = $self->required_param('blastdb');
+    my $translation_md5     = $self->required_param('translation_md5');
+    my $sift_dir            = $self->required_param('sift_dir');
+    my $working_dir         = $self->required_param('sift_working');
+    my $ncbi_dir            = $self->required_param('ncbi_dir');
+    my $blastdb             = $self->required_param('blastdb');
 
-    my $md5 = md5_hex($translation_stable_id);
-    my $dir = substr($md5, 0, 2);
-    my $output_dir = "$sift_dir/working/$dir/$translation_stable_id";
+    my $dir = substr($translation_md5, 0, 2);
+    my $output_dir = "$working_dir/$dir/$translation_md5";
+    
     my $tarball = 'scratch.tgz';
 
     unless (-d $output_dir) {
@@ -37,11 +37,10 @@ sub run {
 
     chdir $output_dir or die "Failed to chdir to $output_dir";
 
-    my $root_file  = "$translation_stable_id";
-    my $fasta_file = "$root_file.fa";
-    my $aln_file   = "$root_file.alignedfasta";
-    my $res_file   = "$root_file.SIFTprediction";
-    my $subs_file  = "$root_file.subst";
+    my $fasta_file = "protein.fa";
+    my $aln_file   = "protein.alignedfasta";
+    my $res_file   = "protein.SIFTprediction";
+    my $subs_file  = "subs.txt";
 
     if (-e "$output_dir/$tarball") {
         system("tar zxvf $tarball > /dev/null") == 0
@@ -59,9 +58,9 @@ sub run {
 
     my $tfa = $self->get_transcript_file_adaptor;
 
-    my $peptide = $tfa->get_translation_seq($translation_stable_id);
+    my $peptide = $tfa->get_translation_seq($translation_md5);
 
-    die "No protein sequence for $translation_stable_id" unless $peptide && (length($peptide) > 0);
+    die "No protein sequence for $translation_md5" unless $peptide && (length($peptide) > 0);
 
     my $alignment_ok = 1;
 
@@ -71,14 +70,14 @@ sub run {
         
         if ($self->param('use_compara')) {
 
-            $self->_load_registry;
+            my $stable_id = $self->get_stable_id_for_md5($translation_md5);
             
             eval {
-                dump_alignment_for_sift($translation_stable_id, $aln_file);
+                dump_alignment_for_sift($stable_id, $aln_file);
             };
 
             if ($@) {
-                warn "Failed to get a compara alignment for $translation_stable_id: $@";
+                warn "Failed to get a compara alignment for $stable_id: $@";
                 $alignment_ok = 0;
             }
         }
@@ -90,7 +89,7 @@ sub run {
 
             open (FASTA_FILE, ">$fasta_file");
 
-            print FASTA_FILE $tfa->get_translation_fasta($translation_stable_id);
+            print FASTA_FILE $tfa->get_translation_fasta($translation_md5);
 
             close FASTA_FILE;
 
@@ -99,6 +98,8 @@ sub run {
             $self->dbc->disconnect_when_inactive(1);
 
             my $cmd = "$sift_dir/bin/ensembl_seqs_chosen_via_median_info.csh $fasta_file $blastdb $MEDIAN_CUTOFF";
+
+            #die `env`."\n".$cmd;
 
             $self->dbc->disconnect_when_inactive(0);
 
@@ -109,7 +110,7 @@ sub run {
             }
             else {
                 # the alignment failed for some reason, what to do?
-                warn "Alignment for $translation_stable_id failed - cmd: $cmd";
+                warn "Alignment for $translation_md5 failed - cmd: $cmd";
                 $alignment_ok = 0;
             }
         }
