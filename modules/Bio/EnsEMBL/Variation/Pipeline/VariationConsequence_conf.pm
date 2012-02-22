@@ -69,25 +69,23 @@ sub default_options {
         # if set to 1 this option tells the transcript_effect analysis to disambiguate
         # ambiguity codes in single nucleotide alleles, so e.g. an allele string like
         # 'T/M' will be treated as if it were 'T/A/C' (this was a request from ensembl
-        # genomes)
+        # genomes and we don't use it by default in the ensembl variation pipeline)
         
         disambiguate_single_nucleotide_alleles => 0,
 
         # configuration for the various resource options used in the pipeline
-        # EBI users should either change these here, or override them on the
+        # EBI farm users should either change these here, or override them on the
         # command line to suit the EBI farm. The names of each option hopefully
         # reflect their usage, but you may want to change the details (memory
         # requirements, queue parameters etc.) to suit your own data
         
-        default_lsf_options => '',
-        urgent_lsf_options  => '-q yesterday',
+        default_lsf_options => '-R"select[mem>2000] rusage[mem=2000]" -M2000000',
+        urgent_lsf_options  => '-q yesterday -R"select[mem>2000] rusage[mem=2000]" -M2000000',
         highmem_lsf_options => '-R"select[mem>15000] rusage[mem=15000]" -M15000000', # this is Sanger LSF speak for "give me 15GB of memory"
-        long_lsf_options    => '-q long',
+        long_lsf_options    => '-q long -R"select[mem>2000] rusage[mem=2000]" -M2000000',
 
         # options controlling the number of workers used for the parallelisable analyses
-        # these default values seem to work for most species, for human I up the
-        # transcript_effect_capacity to 300 which improves runtime (though can use a lot 
-        # of database connections)
+        # these default values seem to work for most species
 
         transcript_effect_capacity      => 50,
         set_variation_class_capacity    => 10,
@@ -101,7 +99,7 @@ sub default_options {
         run_transcript_effect   => 0,
         run_variation_class     => 1,
 
-        # connection parameters for the hive database, you should supply the hive_db_pass
+        # connection parameters for the hive database, you should supply the hive_db_password
         # option on the command line to init_pipeline.pl (parameters for the target database
         # should be set in the registry file defined above)
 
