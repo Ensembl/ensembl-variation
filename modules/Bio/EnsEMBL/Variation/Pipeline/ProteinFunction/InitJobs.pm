@@ -10,7 +10,7 @@ use Digest::MD5 qw(md5_hex);
 
 use base qw(Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess);
 
-my $DEBUG = 1;
+my $DEBUG = 0;
 
 sub fetch_input {
    
