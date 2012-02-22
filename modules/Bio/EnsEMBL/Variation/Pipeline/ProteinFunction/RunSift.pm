@@ -110,7 +110,7 @@ sub run {
             }
             else {
                 # the alignment failed for some reason, what to do?
-                warn "Alignment for $translation_md5 failed - cmd: $cmd";
+                die "Alignment for $translation_md5 failed - cmd: $cmd";
                 $alignment_ok = 0;
             }
         }
