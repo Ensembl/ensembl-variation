@@ -6,7 +6,7 @@ use Digest::MD5 qw(md5_hex);
 use File::Path qw(make_path remove_tree);
 use Data::Dumper;
 
-use Bio::EnsEMBL::Variation::Utils::ProteinFunctionUtils qw(@ALL_AAS $AA_LOOKUP);
+use Bio::EnsEMBL::Variation::ProteinFunctionPredictionMatrix qw(@ALL_AAS $AA_LOOKUP);
 use Bio::EnsEMBL::Variation::Utils::ComparaUtils qw(dump_alignment_for_polyphen);
 
 use base ('Bio::EnsEMBL::Variation::Pipeline::ProteinFunction::BaseProteinFunction');
@@ -66,23 +66,21 @@ sub run {
     my $output_file     = "${output_dir}/features/features.txt";
     my $error_file      = "${output_dir}/errors/polyphen.err";
 
-    my $tfa = $self->get_transcript_file_adaptor;
-
     # dump the protein sequence,
 
+    my $peptide = $self->get_protein_sequence($translation_md5);
+
     open (PROTEIN, ">$protein_file") or die "Failed to open file for protein $protein_file: $!";
-    
-    print PROTEIN $tfa->get_translation_fasta($translation_md5);
+   
+    print PROTEIN ">$translation_md5\n$peptide";
+
+    close PROTEIN;
 
     # and the substitutions.
 
     open (SUBS, ">$subs_file") or die "Failed to open file for SUBS $subs_file: $!";
 
     #push @to_delete, $subs_file, $protein_file;
-
-    my $peptide = $tfa->get_translation_seq($translation_md5);
-        
-    die "$translation_md5 is length 0?" unless length($peptide) > 0;
 
     my @aas = split //, $peptide;
 
@@ -98,7 +96,6 @@ sub run {
         for my $alt (@ALL_AAS) {
             unless ($ref eq $alt) {
                 print SUBS join ("\t",
-                    #$translation_md5.'_'.$idx.'_'.$alt,
                     $translation_md5,
                     $idx,
                     $ref,
