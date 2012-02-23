@@ -12,6 +12,10 @@ sub default_options {
 
     return {
 
+        # NB: You can find some documentation on this pipeline on confluence here:
+        #
+        # http://www.ebi.ac.uk/seqdb/confluence/display/EV/Protein+function+pipeline
+
         # Pipeline wide commands
 
         species                 => 'Homo_sapiens',
