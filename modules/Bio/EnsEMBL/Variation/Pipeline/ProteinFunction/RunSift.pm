@@ -56,11 +56,7 @@ sub run {
     
     # fetch our protein 
 
-    my $tfa = $self->get_transcript_file_adaptor;
-
-    my $peptide = $tfa->get_translation_seq($translation_md5);
-
-    die "No protein sequence for $translation_md5" unless $peptide && (length($peptide) > 0);
+    my $peptide = $self->get_protein_sequence($translation_md5);
 
     my $alignment_ok = 1;
 
@@ -89,7 +85,7 @@ sub run {
 
             open (FASTA_FILE, ">$fasta_file");
 
-            print FASTA_FILE $tfa->get_translation_fasta($translation_md5);
+            print FASTA_FILE ">$translation_md5\n$peptide";
 
             close FASTA_FILE;
 
