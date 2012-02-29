@@ -1198,6 +1198,15 @@ sub fetch_by_hgvs_notation {
     	    $class = 'delins';
     	    ($ref_allele,$alt_allele) = $description =~ m/del(.*?)ins([A-Z]+)$/i;    	    
     	}
+        # insertion
+        elsif ($description =~ m/ins/i) {
+            $class = 'ins';
+            ($alt_allele) = $description =~ m/ins([A-Z]*)$/i;
+            $ref_allele = '';
+            
+            # switch start/end
+            ($start, $end) = ($end, $start);
+        }
     	# A deletion, the reference allele is optional
     	elsif ($description =~ m/del/i) {
     	    $class = 'del';
@@ -1268,6 +1277,14 @@ sub fetch_by_hgvs_notation {
     	$slice = $slice_adaptor->fetch_by_region($transcript->coord_system_name(),$transcript->seq_region_name());
     }
     
+    elsif($type =~ m/g/i) {
+        $slice = $slice_adaptor->fetch_by_region("chromosome", $reference);
+    }
+    
+    if(!defined($slice)) {
+        throw("Failed to parse HGVS notation - could not retrieve reference feature named $reference");
+    }
+    
     #ÊGet the reference allele based on the coordinates
     my $refseq_allele = $slice->subseq($start,$end,$strand);
     
@@ -1290,6 +1307,9 @@ sub fetch_by_hgvs_notation {
     #ÊElse if we have a deletion, the alt allele should be set to '-'
     elsif ($class eq 'del') {
         $alt_allele = '-';
+    }
+    elsif($class eq 'ins') {
+        $ref_allele = '-';
     }
     
     #ÊCreate Allele objects
