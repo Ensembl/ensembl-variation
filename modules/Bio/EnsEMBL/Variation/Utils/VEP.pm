@@ -2995,7 +2995,7 @@ sub clean_slice_adaptor{
     my $config = shift;
     
     # clean some stuff off the slice adaptor
-    $config->{sa}->{asm_exc_cache} = {};
+    delete $config->{sa}->{asm_exc_cache};
     $config->{sa}->{sr_name_cache} = {};
     $config->{sa}->{sr_id_cache} = {};
     delete $config->{sa}->{db}->{seq_region_cache};
