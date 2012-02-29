@@ -1,3 +1,6 @@
+
+# Import COSMIC data into an Ensembl variation schema database
+
 use strict;
 use warnings;
 
