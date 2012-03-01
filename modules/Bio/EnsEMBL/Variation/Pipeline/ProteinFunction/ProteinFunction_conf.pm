@@ -16,7 +16,7 @@ sub default_options {
         #
         # http://www.ebi.ac.uk/seqdb/confluence/display/EV/Protein+function+pipeline
 
-        # Pipeline wide commands
+        # Pipeline wide settings
 
         species                 => 'Homo_sapiens',
     
@@ -26,22 +26,22 @@ sub default_options {
 
         pipeline_name           => 'protein_function',
 
-        pipeline_dir            => '/lustre/scratch101/ensembl/'.$ENV{USER}.'/'.$self->o('pipeline_name'),
+        pipeline_dir            => '/lustre/scratch101/ensembl/'.$ENV{USER}.'/'.$self->o('pipeline_name').'/'.$self->o('species'),
         
         # directory used for the hive's own output files
 
         output_dir              => $self->o('pipeline_dir').'/hive_output',
 
-        # this registry file should contain conection details for the core, variation
+        # this registry file should contain connection details for the core, variation
         # and compara databases (if you are using compara alignments). If you are
         # doing an UPDATE run for either sift or polyphen, the variation database
         # should have existing predictions in the protein_function_predictions table
 
         ensembl_registry        => $self->o('pipeline_dir').'/ensembl.registry',
 
-        # peptide sequences for all unique translations will be dumped to this file
+        # peptide sequences for all unique translations for this species will be dumped to this file
 
-        fasta_file              => $self->o('pipeline_dir').'/required_translations.fa',
+        fasta_file              => $self->o('pipeline_dir').'/'.$self->o('species').'_translations.fa',
         
         # set this flag to include LRG translations in the analysis
 
@@ -56,6 +56,8 @@ sub default_options {
             -pass   => $self->o('password'),            
             -dbname => $ENV{USER}.'_'.$self->o('pipeline_name').'_hive',
         },
+        
+        hive_use_triggers       => 0,
         
         # configuration for the various resource options used in the pipeline
         
@@ -89,7 +91,7 @@ sub default_options {
         # in the registry above is used to identify translations we already have 
         # predictions for.
 
-        pph_run_type            => FULL,
+        pph_run_type            => UPDATE,
 
         # set this flag to use compara protein families as the alignments rather than
         # polyphen's own alignment pipeline
@@ -121,7 +123,7 @@ sub default_options {
 
         # the following parameters mean the same as for polyphen
 
-        sift_run_type           => FULL,
+        sift_run_type           => UPDATE,
 
         sift_use_compara        => 0,
 
@@ -217,6 +219,7 @@ sub pipeline_analyses {
                 use_compara     => $self->o('sift_use_compara'),
                 @common_params,
             },
+            -failed_job_tolerance => 10,
             -max_retry_count => 0,
             -input_ids      => [],
             -hive_capacity  => $self->o('sift_max_workers'),
