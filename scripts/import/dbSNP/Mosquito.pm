@@ -37,8 +37,8 @@ sub add_strains{
     }
     #and copy the data from the sample to the Population table
     debug("Loading population table with data from sample");
-    $self->{'dbVariation'}->do(qq{INSERT INTO population (sample_id,is_strain) 
-				  SELECT sample_id, 1
+    $self->{'dbVariation'}->do(qq{INSERT INTO population (sample_id) 
+				  SELECT sample_id
 				  FROM sample
 				 });
     
