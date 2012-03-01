@@ -84,8 +84,11 @@ sub run {
             # first create a fasta file for the protein sequence
 
             open (FASTA_FILE, ">$fasta_file");
-
-            print FASTA_FILE ">$translation_md5\n$peptide";
+            
+            my $pep_copy = $peptide;
+            $pep_copy =~ s/(.{80})/$1\n/g;
+            chomp $pep_copy;
+            print FASTA_FILE ">$translation_md5\n$pep_copy\n";
 
             close FASTA_FILE;
 

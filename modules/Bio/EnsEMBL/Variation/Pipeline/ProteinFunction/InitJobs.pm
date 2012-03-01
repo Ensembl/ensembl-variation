@@ -35,11 +35,14 @@ sub fetch_input {
     else {
         my $sa = $core_dba->get_SliceAdaptor or die "Failed to get slice adaptor";
         
-        for my $slice (@{ $sa->fetch_all('toplevel', undef, 1, undef, ($include_lrg ? 1 : undef)) }) {
+        my $count = 0;
+        
+        LOOP : for my $slice (@{ $sa->fetch_all('toplevel', undef, 1, undef, ($include_lrg ? 1 : undef)) }) {
             for my $gene (@{ $slice->get_all_Genes(undef, undef, 1) }) {
                 for my $transcript (@{ $gene->get_all_Transcripts }) {
                     if (my $translation = $transcript->translation) {
                         push @transcripts, $transcript;
+                        last LOOP if $count++ > 50000;
                     }
                 }
             }

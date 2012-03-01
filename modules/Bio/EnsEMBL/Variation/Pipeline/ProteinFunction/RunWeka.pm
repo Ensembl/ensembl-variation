@@ -2,6 +2,9 @@ package Bio::EnsEMBL::Variation::Pipeline::ProteinFunction::RunWeka;
 
 use strict;
 
+use File::Copy;
+use File::Path qw(make_path remove_tree);
+
 use Bio::EnsEMBL::Variation::ProteinFunctionPredictionMatrix;
 
 use base ('Bio::EnsEMBL::Variation::Pipeline::ProteinFunction::BaseProteinFunction');
@@ -18,13 +21,25 @@ sub run {
     my $humdiv_model = $self->required_param('humdiv_model');
     my $humvar_model = $self->required_param('humvar_model');
 
-    if ($feature_file =~ /\.gz$/ && -e $feature_file) {    
-        system("gunzip -f $feature_file") == 0 or die "Failed to gunzip feature_file: $feature_file";
-    }
-
-    $feature_file =~ s/.gz$//;
+    # copy stuff to /tmp to avoid lustre slowness
 
     my ($output_dir, $feature_filename) = $feature_file =~ /(.+)\/([^\/]+)$/;
+
+    my $tmp_dir = "/tmp/weka_${translation_md5}";
+
+    make_path($tmp_dir);
+    
+    copy($feature_file, $tmp_dir);
+
+    my $input_file = "${tmp_dir}/${feature_filename}";
+
+    # unzip the file if necessary
+
+    if ($input_file =~ /\.gz$/ && -e $input_file) {    
+        system("gunzip -f $input_file") == 0 or die "Failed to gunzip input file: $input_file";
+    }
+
+    $input_file =~ s/.gz$//;
 
     chdir $output_dir or die "Failed to chdir to $output_dir";
 
@@ -36,13 +51,11 @@ sub run {
 
         my $model_name = $model eq $humdiv_model ? 'humdiv' : 'humvar';
 
-        my $output_file = "${model_name}.txt";
-
-        push @to_delete, $output_file;
+        my $output_file = "${tmp_dir}/${model_name}.txt";
 
         my $error_file  = "${model_name}.err";
 
-        my $cmd = "$pph_dir/bin/run_weka.pl -l $model $feature_filename 1> $output_file 2> $error_file";
+        my $cmd = "$pph_dir/bin/run_weka.pl -l $model $input_file 1> $output_file 2> $error_file";
 
         system($cmd) == 0 or die "Failed to run $cmd: $?";
 
@@ -104,7 +117,7 @@ sub run {
         $self->save_predictions($pred_matrix);
     }
 
-    system("gzip -f $feature_file") == 0 or warn "Failed to gzip $feature_file: $?"; 
+    remove_tree($tmp_dir);
     
     unlink @to_delete;
 }

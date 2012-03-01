@@ -72,8 +72,11 @@ sub run {
 
     open (PROTEIN, ">$protein_file") or die "Failed to open file for protein $protein_file: $!";
    
-    print PROTEIN ">$translation_md5\n$peptide";
-
+    my $pep_copy = $peptide;
+    $pep_copy =~ s/(.{80})/$1\n/g;
+    chomp $pep_copy;
+    print PROTEIN ">$translation_md5\n$pep_copy\n";
+   
     close PROTEIN;
 
     # and the substitutions.
