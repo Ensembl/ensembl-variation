@@ -12,6 +12,4 @@ create index tagged_idx on tagged_variation_feature(tagged_variation_feature_id)
 create index sample_idx on tagged_variation_feature(sample_id);
 
 # patch identifier
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL,'patch', 'patch_65_66_f.sql|change
-tagged_variation_feature to store
-relationship between tag and tagged');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL,'patch', 'patch_65_66_f.sql|change tagged_variation_feature to store relationship between tag and tagged');
