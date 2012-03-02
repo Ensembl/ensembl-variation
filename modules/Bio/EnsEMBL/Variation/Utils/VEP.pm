@@ -296,8 +296,15 @@ sub parse_vcf {
     my @data = split /\s+/, $line;
     
     # non-variant
+    my $non_variant = 0;
+    
     if($data[4] eq '.') {
-        return [];
+        if(defined($config->{allow_non_variant})) {
+            $non_variant = 1;
+        }
+        else {
+            return [];
+        }
     }
     
     # get relevant data
@@ -474,7 +481,7 @@ sub parse_vcf {
         my $vf = Bio::EnsEMBL::Variation::VariationFeature->new_fast({
             start          => $start,
             end            => $end,
-            allele_string  => $ref.'/'.$alt,
+            allele_string  => $non_variant ? $ref : $ref.'/'.$alt,
             strand         => 1,
             map_weight     => 1,
             adaptor        => $config->{vfa},
@@ -843,8 +850,8 @@ sub get_all_consequences {
                 }
                 
                 $string =~ s/\,$//;
-                
-                unless (defined($config->{no_consequences})) {
+               
+                if(!defined($config->{no_consequences}) && $string ne 'CSQ=') {
                     $line->[7] .= ($line->[7] ? ';' : '').$string;
                 }
                 
