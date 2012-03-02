@@ -2702,8 +2702,14 @@ sub build_slice_cache {
     foreach my $chr(keys %$tr_cache) {
         $slice_cache{$chr} = scalar @{$tr_cache->{$chr}} ? $tr_cache->{$chr}[0]->slice : &get_slice($config, $chr);
         
-        # reattach adaptor to the coord system
-        $slice_cache{$chr}->{coord_system}->{adaptor} ||= $config->{csa};
+        if(!defined($slice_cache{$chr})) {
+            delete $slice_cache{$chr}
+        }
+        
+        else {
+            # reattach adaptor to the coord system
+            $slice_cache{$chr}->{coord_system}->{adaptor} ||= $config->{csa};
+        }
     }
     
     return \%slice_cache;
