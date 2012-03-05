@@ -836,7 +836,7 @@ sub get_all_consequences {
                         next if $col eq 'Uploaded_variation' or $col eq 'Location' or $col eq 'Extra';
                         
                         # search for data in main line hash as well as extra field
-                        my $data = $line->{$col} || $line->{Extra}->{$col};
+                        my $data = defined $line->{$col} ? $line->{$col} : $line->{Extra}->{$col};
                         
                         # "-" means null for everything except the Allele field (confusing...)
                         $data = undef if defined($data) and $data eq '-' and $col ne 'Allele';
