@@ -92,6 +92,149 @@ our @ISA = ('Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor');
 
 my $DEFAULT_ITERATOR_CACHE_SIZE = 10000;
 
+sub store {
+    my ($self, $var) = @_;
+    
+	my $dbh = $self->dbc->db_handle;
+    
+    # look up source_id
+    if(!defined($var->{source_id})) {
+        my $sth = $dbh->prepare(q{
+            SELECT source_id FROM source WHERE name = ?
+        });
+        $sth->execute($var->{source});
+        
+        my $source_id;
+		$sth->bind_columns(\$source_id);
+		$sth->fetch();
+		$sth->finish();
+		$var->{source_id} = $source_id;
+    }
+    
+    throw("No source ID found for source name ", $var->{source}) unless defined($var->{source_id});
+    
+    my $sth = $dbh->prepare(q{
+        INSERT INTO variation (
+            source_id,
+			name,
+			validation_status,
+            ancestral_allele,
+            flipped,
+            class_attrib_id,
+            somatic,
+            minor_allele,
+            minor_allele_freq,
+            minor_allele_count,
+            clinical_significance_attrib_id
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?)
+    });
+    
+    $sth->execute(
+        $var->{source_id},
+        $var->name,
+        (join ",", @{$var->get_all_validation_states}) || undef,
+        $var->ancestral_allele,
+        $var->{flipped},
+        $var->{class_attrib_id},
+        $var->is_somatic,
+        $var->minor_allele,
+        $var->minor_allele_frequency,
+        $var->minor_allele_count,
+        $var->{clinical_significance_attrib_id}
+    );
+    
+    $sth->finish;
+    
+    # get dbID
+	my $dbID = $dbh->last_insert_id(undef, undef, 'variation', 'variation_id');
+    $var->{dbID}    = $dbID;
+    $var->{adaptor} = $self;
+    
+    # flanking sequence
+    $sth = $dbh->prepare(q{
+        INSERT INTO flanking_sequence (
+            variation_id,
+            up_seq,
+            down_seq,
+            up_seq_region_start,
+            up_seq_region_end,
+            down_seq_region_start,
+            down_seq_region_end,
+            seq_region_id,
+            seq_region_strand
+        ) VALUES (?,?,?,?,?,?,?,?,?)
+    });
+    
+    $sth->execute(
+        $var->dbID,
+        $var->{five_prime_flanking_seq},
+        $var->{three_prime_flanking_seq},
+        $var->{up_seq_region_start},
+        $var->{up_seq_region_end},
+        $var->{down_seq_region_start},
+        $var->{down_seq_region_end},
+        $var->{seq_region_id},
+        $var->{seq_region_strand}
+    );
+    
+    $sth->finish;
+}
+
+sub update {
+    my ($self, $var) = @_;
+    
+	my $dbh = $self->dbc->db_handle;
+    
+    # look up source_id
+    if(!defined($var->{source_id})) {
+        my $sth = $dbh->prepare(q{
+            SELECT source_id FROM source WHERE name = ?
+        });
+        $sth->execute($var->{source});
+        
+        my $source_id;
+		$sth->bind_columns(\$source_id);
+		$sth->fetch();
+		$sth->finish();
+		$var->{source_id} = $source_id;
+    }
+    
+    throw("No source ID found for source name ", $var->{source}) unless defined($var->{source_id});
+    
+    my $sth = $dbh->prepare(q{
+        UPDATE variation
+           SET source_id = ?,
+               name = ?,
+               validation_status = ?,
+               ancestral_allele = ?,
+               flipped = ?,
+               class_attrib_id = ?,
+               somatic = ?,
+               minor_allele = ?,
+               minor_allele_freq = ?,
+               minor_allele_count = ?,
+               clinical_significance_attrib_id = ?
+         WHERE variation_id = ?
+    });
+    
+    $sth->execute(
+        $var->{source_id},
+        $var->name,
+        (join ",", @{$var->get_all_validation_states}) || undef,
+        $var->ancestral_allele,
+        $var->{flipped},
+        $var->{class_attrib_id},
+        $var->is_somatic,
+        $var->minor_allele,
+        $var->minor_allele_frequency,
+        $var->minor_allele_count,
+        $var->{clinical_significance_attrib_id},
+        $var->dbID
+    );
+    
+    $sth->finish;
+}
+
 =head2 fetch_all
 
   Description: Returns a listref of all germline variations
