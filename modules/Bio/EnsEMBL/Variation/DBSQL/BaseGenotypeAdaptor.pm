@@ -95,4 +95,84 @@ sub get_subsnp_handle {
     return $handle;
 }
 
+# caches genotype codes in a hash on the adaptor object
+sub _cache_genotype_codes {
+	my $self = shift;
+	
+	if(!defined($self->{_genotype_code_adaptor})) {
+		$self->{_genotype_code_adaptor} = $self->db->get_GenotypeCodeAdaptor;
+	}
+	
+	my %gt_codes = map {(join "|", @{$_->genotype}) => $_->dbID} @{$self->{_genotype_code_adaptor}->fetch_all()};
+	
+	$self->db->{_genotype_codes} = \%gt_codes;
+	
+	return $self->db->{_genotype_codes};
+}
+
+# get or (if not yet in DB) add a new GT code
+sub _genotype_code {
+	my ($self, $genotype) = @_;
+	
+	# check if cache is loaded
+	my $just_loaded = 0;
+	
+	if(!exists($self->db->{_genotype_codes})) {
+		$self->_cache_genotype_codes;
+		$just_loaded = 1;
+	}
+	
+	my $gt_string = join "|", @$genotype;
+	
+	if(!exists($self->db->{_genotype_codes}->{$gt_string})) {
+		
+		# check another process hasn't created it by reloading the cache
+		$self->_cache_genotype_codes unless $just_loaded;
+		
+		# if it still doesn't exist
+		if(!exists($self->db->{_genotype_codes}->{$gt_string})) {
+			
+			# get allele codes
+			if(!defined($self->{_allele_adaptor})) {
+				$self->{_allele_adaptor} = $self->db->get_AlleleAdaptor;
+			}
+			
+			my %allele_codes = map {$_ => $self->{_allele_adaptor}->_allele_code($_)} @$genotype;
+			
+			my $dbh = $self->dbc->db_handle;
+			
+			my $sth = $dbh->prepare(q{
+				SELECT max(genotype_code_id) FROM genotype_code
+			});
+			$sth->execute();
+			
+			my $max_id;
+			$sth->bind_columns(\$max_id);
+			$sth->fetch;
+			$sth->finish;
+			$max_id ||= 0;
+			
+			my $gt_code = $max_id + 1;
+			
+			$sth = $dbh->prepare(q{
+				INSERT INTO genotype_code (
+					genotype_code_id, allele_code_id, haplotype_id
+				)
+				VALUES (?,?,?)
+			});
+			
+			for my $hap_id(1..(scalar @$genotype)) {
+				$sth->execute($gt_code, $allele_codes{$genotype->[$hap_id-1]}, $hap_id);
+			}
+			
+			$sth->finish;
+			
+			$self->db->{_genotype_codes}->{$gt_string} = $gt_code;
+		}
+	}
+	
+	return $self->db->{_genotype_codes}->{$gt_string};
+}
+
+
 1;
