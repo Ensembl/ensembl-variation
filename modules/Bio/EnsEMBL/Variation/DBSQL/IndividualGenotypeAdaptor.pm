@@ -58,6 +58,94 @@ use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
 
 @ISA = ('Bio::EnsEMBL::Variation::DBSQL::BaseGenotypeAdaptor');
 
+# stores a listref of individual genotype objects
+sub store {
+	my ($self, $gts, $merge) = @_;
+	
+	throw("First argument to store is not a listref") unless ref($gts) eq 'ARRAY';
+	
+	# sort genotypes into rows by variation
+	my %by_var;
+	push @{$by_var{$_->variation->dbID.'_'.($_->{subsnp} ? $_->{subsnp} : '')}}, $_ for @$gts;
+	
+	# get unique genotypes and codes
+	my %unique_gts = map {$_->genotype_string() => 1} @$gts;
+	$unique_gts{$_} = $self->_genotype_code([split /\|/, $_]) for keys %unique_gts;
+	
+	# get variation objects
+	my %var_objs = map {$_->variation->dbID => $_->variation} @$gts;
+	
+	my $dbh = $self->dbc->db_handle;
+	
+	my $sth = $dbh->prepare_cached(qq{
+		INSERT DELAYED INTO compressed_genotype_var(
+			variation_id,
+			subsnp_id,
+			genotypes
+		) VALUES (?,?,?)
+	});
+	
+	my $update_sth = $dbh->prepare(qq{
+		UPDATE compressed_genotype_var
+		SET genotypes = ?
+		WHERE variation_id = ?
+		AND subsnp_id = ?
+	});
+	
+	my $rows_added = 0;
+	
+	foreach my $combo_id(keys %by_var) {
+		my $genotype_string = '';
+		
+		my ($var_id, $subsnp_id) = split /\_/, $combo_id;
+		$subsnp_id = undef if $subsnp_id eq '';
+		
+		# check for existing genotypes
+		my @existing_gts = ($merge ?
+			grep {
+				(defined($_->{subsnp}) && defined($subsnp_id) && $_->{subsnp} eq $subsnp_id) ||
+				(!defined($_->{subsnp}) && !defined($subsnp_id))
+			} @{$self->fetch_all_by_Variation($var_objs{$var_id})} : ());
+		
+		# update if existing
+		if(@existing_gts) {
+			
+			# refresh unique_gts
+			%unique_gts = map {$_->genotype_string() => 1} (@existing_gts, @$gts);
+			$unique_gts{$_} = $self->_genotype_code([split /\|/, $_]) for keys %unique_gts;
+			
+			# make sure we don't put in duplicates
+			my %by_ind = map {$_->individual->dbID => $_} (@existing_gts, @$gts);
+			
+			$genotype_string .= pack("ww", $_->individual->dbID, $unique_gts{$_->genotype_string}) for values %by_ind;
+			
+			$update_sth->execute(
+				$genotype_string,
+				$var_id,
+				$subsnp_id
+			);
+		}
+		
+		else {
+			$genotype_string .= pack("ww", $_->individual->dbID, $unique_gts{$_->genotype_string}) for @$gts;
+			
+			$sth->execute(
+				$var_id,
+				$subsnp_id,
+				$genotype_string
+			);
+			
+			$rows_added++;
+		}
+		
+	}
+	
+	$sth->finish;
+	$update_sth->finish;
+	
+	return $rows_added;
+}
+
 
 =head2 fetch_all_by_Variation
 

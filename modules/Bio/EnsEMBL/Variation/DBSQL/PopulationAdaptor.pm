@@ -78,6 +78,40 @@ use Bio::EnsEMBL::Variation::Population;
 
 our @ISA = ('Bio::EnsEMBL::Variation::DBSQL::SampleAdaptor');
 
+sub store {
+	my ($self, $pop) = @_;
+	
+	my $dbh = $self->dbc->db_handle;
+    
+    my $sth = $dbh->prepare(q{
+        INSERT INTO sample (
+            name,
+			size,
+			description
+        ) VALUES (?,?,?)
+    });
+	
+	$sth->execute(
+		$pop->name,
+		$pop->size,
+		$pop->description
+	);
+	$sth->finish;
+	
+	# get the sample_id inserted
+	my $dbID = $dbh->last_insert_id(undef, undef, 'sample', 'sample_id');
+	
+	$pop->{dbID}    = $dbID;
+	$pop->{adaptor} = $self;
+	
+	# add entry to population table also
+	$sth = $dbh->prepare(q{
+		INSERT INTO population (sample_id) VALUES (?)
+	});
+	$sth->execute($dbID);
+	$sth->finish;
+}
+
 =head2 fetch_population_by_synonym
 
     Arg [1]              : $population_synonym
