@@ -92,6 +92,8 @@ use vars qw(@ISA @EXPORT_OK);
     &get_time
     &debug
     &convert_to_vcf
+    &progress
+    &end_progress
     @REG_FEAT_TYPES
     @OUTPUT_COLS
     @VEP_WEB_CONFIG
