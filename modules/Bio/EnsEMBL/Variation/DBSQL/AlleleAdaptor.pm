@@ -69,6 +69,37 @@ our @ISA = ('Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor');
 my $DEFAULT_ITERATOR_CACHE_SIZE = 1000;
 
 
+sub store {
+	my ($self, $allele) = @_;
+	
+	my $dbh = $self->dbc->db_handle;
+	
+	# look up or store allele code
+	my $allele_code = $self->_allele_code($allele->allele);
+	
+	my $sth = $dbh->prepare_cached(q{
+		INSERT DELAYED INTO allele (
+			variation_id,
+			subsnp_id,
+			allele_code_id,
+			sample_id,
+			frequency,
+			count			
+		) VALUES (?,?,?,?,?,?)
+	});
+	
+	$sth->execute(
+		$allele->{_variation_id} || $allele->variation->dbID,
+		$allele->{subsnp},
+		$allele_code,
+		$allele->population ? $allele->population->dbID : undef,
+		$allele->frequency,
+		$allele->count
+	);
+	
+	$sth->finish;
+}
+
 =head2 fetch_all
 
   Description: fetch_all should not be used for Alleles.
@@ -330,4 +361,59 @@ sub _default_where_clause  {
   return 'a.allele_code_id = ac.allele_code_id';
 }
 
+sub _cache_allele_codes {
+	my $self = shift;
+	
+	my $dbh = $self->dbc->db_handle;
+	
+	my $sth = $dbh->prepare(qq{SELECT allele_code_id, allele FROM allele_code});
+	$sth->execute;
+	
+	my ($code, $allele);
+	$sth->bind_columns(\$code, \$allele);
+	my %allele_codes;
+	$allele_codes{$allele} = $code while $sth->fetch;
+	$sth->finish();
+	
+	$self->db->{_allele_codes} = \%allele_codes;
+	
+	return $self->db->{_allele_codes};
+}
+
+sub _allele_code {
+	my ($self, $allele) = @_;
+	
+	# check if cache is loaded
+	my $just_loaded = 0;
+	
+	if(!exists($self->db->{_allele_codes})) {
+		$self->_cache_allele_codes;
+		$just_loaded = 1;
+	}
+	
+	if(!exists($self->db->{_allele_codes}->{$allele})) {
+		
+		# check another process hasn't created it by reloading the cache
+		$self->_cache_allele_codes unless $just_loaded;
+		
+		# if it still doesn't exist
+		if(!exists($self->db->{_allele_codes}->{$allele})) {
+			my $dbh = $self->dbc->db_handle;
+			
+			my $sth = $dbh->prepare(q{
+				INSERT INTO allele_code (
+					allele
+				)
+				VALUES (?)
+			});
+			$sth->execute($allele);
+			$sth->finish;
+			
+			my $allele_code = $dbh->last_insert_id(undef, undef, 'allele_code', 'allele_code_id');
+			$self->db->{_allele_codes}->{$allele} = $allele_code;
+		}
+	}
+	
+	return $self->db->{_allele_codes}->{$allele};
+}
 1;
