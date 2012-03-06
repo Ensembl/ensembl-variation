@@ -292,12 +292,12 @@ sub read_config_from_file {
     
     open CONFIG, $file or die "ERROR: Could not open config file \"$file\"\n";
     
-    debug("Reading configuration from $file") unless defined($config->{quiet});
+    debug($config, "Reading configuration from $file") unless defined($config->{quiet});
     
     while(<CONFIG>) {
         next if /^\#/;
         my @split = split /\s+|\=/;
-        my $key = shift @split;            
+        my $key = shift @split;
         $key =~ s/^\-//g;
         
         if(defined($config->{$key}) && ref($config->{$key}) eq 'ARRAY') {
@@ -677,7 +677,7 @@ sub run_forks {
 			die "$remote_test\nERROR: Could not find file or index file for remote annotation file $filepath\n";
 		}
 		elsif($remote_test =~ /get_local_version/) {
-			debug("Downloaded tabix index file for remote annotation file $filepath") unless defined($config->{quiet});
+			debug($config, "Downloaded tabix index file for remote annotation file $filepath") unless defined($config->{quiet});
 		}
 	}
 	
