@@ -80,6 +80,38 @@ our @ISA = ('Bio::EnsEMBL::Variation::DBSQL::BaseGenotypeAdaptor');
 
 
 
+
+sub store {
+  my ($self, $popgt) = @_;
+  
+  my $dbh = $self->dbc->db_handle;
+  
+  # get genotype code
+  my $gt_code = $self->_genotype_code($popgt->genotype);
+  
+  my $sth = $dbh->prepare_cached(q{
+	INSERT DELAYED INTO population_genotype (
+	  variation_id,
+	  subsnp_id,
+	  genotype_code_id,
+	  sample_id,
+	  frequency,
+	  count			
+	) VALUES (?,?,?,?,?,?)
+  });
+  
+  $sth->execute(
+	$popgt->{_variation_id} || $popgt->variation->dbID,
+	$popgt->{subsnp},
+	$gt_code,
+	$popgt->population ? $popgt->population->dbID : undef,
+	$popgt->frequency,
+	$popgt->count
+  );
+  
+  $sth->finish;
+}
+
 =head2 fetch_by_dbID
 
   Arg [1]    : int $dbID

@@ -80,6 +80,86 @@ use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Variation::Individual;
 our @ISA = ('Bio::EnsEMBL::Variation::DBSQL::SampleAdaptor');
 
+sub store {
+	my ($self, $ind) = @_;
+	
+	my $dbh = $self->dbc->db_handle;
+    
+    my $sth = $dbh->prepare(q{
+        INSERT INTO sample (
+            name,
+			description,
+			display
+        ) VALUES (?,?,?)
+    });
+	
+	$sth->execute(
+		$ind->name,
+		$ind->description,
+		$ind->display
+	);
+	$sth->finish;
+	
+	# get the sample_id inserted
+	my $dbID = $dbh->last_insert_id(undef, undef, 'sample', 'sample_id');
+	
+	$ind->{dbID}    = $dbID;
+	$ind->{adaptor} = $self;
+	
+	# retrieve individual type ID - default to 3 (outbred)
+	my $individual_type_id = 3;
+	
+	if(defined($ind->type_individual)) {
+		my $sth = $dbh->prepare(q{
+			SELECT individual_type_id
+			FROM individual_type
+			WHERE name = ?
+		});
+		$sth->execute($ind->type_individual);
+		
+		$sth->bind_columns(\$individual_type_id);
+		$sth->fetch();
+		$sth->finish();
+	}
+	
+	# add entry to individual table also
+	$sth = $dbh->prepare(q{
+		INSERT INTO individual (
+			sample_id,
+			gender,
+			father_individual_sample_id,
+			mother_individual_sample_id,
+			individual_type_id
+		) VALUES (?,?,?,?,?)
+	});
+	$sth->execute(
+		$ind->dbID,
+		$ind->gender || 'Unknown',
+		$ind->father_Individual ? $ind->father_Individual->dbID : undef,
+		$ind->mother_Individual ? $ind->mother_Individual->dbID : undef,
+		$individual_type_id
+	);
+	$sth->finish;
+	
+	# store individual/population relationships
+	$sth = $dbh->prepare(q{
+		INSERT INTO individual_population (
+			individual_sample_id,
+			population_sample_id
+		) VALUES (?,?)
+	});
+	
+	foreach my $pop(@{$ind->{populations}}) {
+		next unless defined($pop->dbID);
+		
+		$sth->execute(
+			$ind->dbID,
+			$pop->dbID
+		);
+	}
+	
+	$sth->finish;
+}
 
 =head2 fetch_individual_by_synonym
 
