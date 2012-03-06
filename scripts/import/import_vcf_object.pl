@@ -1478,14 +1478,10 @@ sub variation_feature {
 		if(defined($config->{gmaf}) && !defined($data->{variation}->minor_allele_frequency)) {
 			add_gmaf($config, $data, $data->{variation});
 			
-			use Data::Dumper;
-			$Data::Dumper::Maxdepth = 1;
-			warn Dumper $data->{variation};
-			
 			if(defined($config->{test})) {
 				debug($config, "(TEST) Updating variation ", $data->{variation}->name, " with GMAF data");
-			#}
-			#else {
+			}
+			else {
 				$config->{variation_adaptor}->update($data->{variation});
 			}
 		}
