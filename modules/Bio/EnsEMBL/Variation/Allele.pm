@@ -141,6 +141,13 @@ sub new {
   return $self;
 }
 
+sub new_fast {
+  my $class = shift;
+  my $hashref = shift;
+  return bless $hashref, $class;
+}
+
+
 # An internal method for getting a unique hash key identifier, used by the Variation module 
 sub _hash_key {
     my $self = shift;
@@ -323,11 +330,12 @@ sub variation {
         
         # Get a variation object
         $variation = $self->adaptor->db->get_VariationAdaptor()->fetch_by_dbID($self->{'_variation_id'});
-        
+		
+		$self->{variation} = $variation;
     }
     
     # Return the variation object
-    return $variation;
+    return $self->{variation};
 }
 
 
