@@ -92,6 +92,71 @@ use Bio::EnsEMBL::Variation::Utils::Sequence qw(get_validation_code);
 our @ISA = ('Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor', 'Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor');
 our $MAX_VARIATION_SET_ID = 64;
 
+sub store {
+    my ($self, $vf) = @_;
+    
+	my $dbh = $self->dbc->db_handle;
+    
+    # look up source_id
+    if(!defined($vf->{source_id})) {
+        my $sth = $dbh->prepare(q{
+            SELECT source_id FROM source WHERE name = ?
+        });
+        $sth->execute($vf->{source});
+        
+        my $source_id;
+		$sth->bind_columns(\$source_id);
+		$sth->fetch();
+		$sth->finish();
+		$vf->{source_id} = $source_id;
+    }
+    
+    my $sth = $dbh->prepare(q{
+        INSERT INTO variation_feature (
+            seq_region_id,
+            seq_region_start,
+            seq_region_end,
+            seq_region_strand,
+            variation_id,
+            allele_string,
+            variation_name,
+            map_weight,
+            flags,
+            source_id,
+            validation_status,
+            consequence_type,
+            variation_set_id,
+            class_attrib_id,
+            somatic
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+    });
+    
+    $sth->execute(
+        $vf->{slice} ? $vf->get_seq_region_id : $vf->{seq_region_id},
+        $vf->{slice} ? $vf->seq_region_start : $vf->{start},
+        $vf->{slice} ? $vf->seq_region_end : $vf->{end},
+        $vf->strand,
+        $vf->variation ? $vf->variation->dbID : $vf->{_variation_id},
+        $vf->allele_string,
+        $vf->variation_name,
+        $vf->map_weight || 1,
+        $vf->{flags},
+        $vf->{source_id},
+        (join ",", @{$vf->get_all_validation_states}) || undef,
+        $vf->{slice} ? (join ",", @{$vf->consequence_type}) : 'intergenic_variant',
+        $vf->{variation_set_id} || '',
+        $vf->{class_attrib_id},
+        $vf->is_somatic
+    );
+    
+    $sth->finish;
+    
+    # get dbID
+	my $dbID = $dbh->last_insert_id(undef, undef, 'variation_feature', 'variation_feature_id');
+    $vf->{dbID}    = $dbID;
+    $vf->{adaptor} = $self;
+}
+
 =head2 fetch_all
 
   Description: Returns a listref of all germline variation features
@@ -770,6 +835,17 @@ sub fetch_Iterator_by_Slice_constraint {
     return $iterator;
 }
 
+# method used by import VCF script
+sub _fetch_all_by_coords {
+    my ($self, $seq_region_id, $start, $end) = @_;
+    
+    return $self->generic_fetch(qq{
+        vf.seq_region_id = $seq_region_id AND
+        vf.seq_region_start = $start AND
+        vf.seq_region_end = $end
+    });
+}
+
 # method used by superclass to construct SQL
 sub _tables { 
     my $self = shift;
@@ -1198,6 +1274,15 @@ sub fetch_by_hgvs_notation {
     	    $class = 'delins';
     	    ($ref_allele,$alt_allele) = $description =~ m/del(.*?)ins([A-Z]+)$/i;    	    
     	}
+        # insertion
+        elsif ($description =~ m/ins/i) {
+            $class = 'ins';
+            ($alt_allele) = $description =~ m/ins([A-Z]*)$/i;
+            $ref_allele = '';
+            
+            # switch start/end
+            ($start, $end) = ($end, $start);
+        }
     	# A deletion, the reference allele is optional
     	elsif ($description =~ m/del/i) {
     	    $class = 'del';
@@ -1268,6 +1353,14 @@ sub fetch_by_hgvs_notation {
     	$slice = $slice_adaptor->fetch_by_region($transcript->coord_system_name(),$transcript->seq_region_name());
     }
     
+    elsif($type =~ m/g/i) {
+        $slice = $slice_adaptor->fetch_by_region("chromosome", $reference);
+    }
+    
+    if(!defined($slice)) {
+        throw("Failed to parse HGVS notation - could not retrieve reference feature named $reference");
+    }
+    
     #ÊGet the reference allele based on the coordinates
     my $refseq_allele = $slice->subseq($start,$end,$strand);
     
@@ -1290,6 +1383,9 @@ sub fetch_by_hgvs_notation {
     #ÊElse if we have a deletion, the alt allele should be set to '-'
     elsif ($class eq 'del') {
         $alt_allele = '-';
+    }
+    elsif($class eq 'ins') {
+        $ref_allele = '-';
     }
     
     #ÊCreate Allele objects
