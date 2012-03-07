@@ -1158,6 +1158,11 @@ sub population{
 		$config->{ind_pops} = $ind_pops;
 		$config->{pop_inds} = $pop_inds;
 		@pops = keys %$pop_inds;
+		
+		if(defined($config->{test})) {
+			debug($config, "(TEST) Population counts:");
+			debug($config, "(TEST) $_\t".(scalar keys %{$pop_inds->{$_}})) for keys %$pop_inds;
+		}
 	}
 	
 	elsif(defined $config->{population}) {
