@@ -1734,7 +1734,7 @@ sub population_genotype {
 		if(defined($data->{genotypes})) {
 			map {$counts{$_}++}
 				grep {$_ !~ /\./}
-				map {$_->genotype_string}
+				map {join '|', sort @{$_->genotype}}
 				grep {$config->{pop_inds}->{$pop->name}->{$_->individual->name}}
 				@{$data->{genotypes}};
 			$total += $_ for values %counts;
