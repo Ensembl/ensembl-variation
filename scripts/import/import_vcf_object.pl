@@ -59,6 +59,7 @@ socketpair(CHILD, PARENT, AF_UNIX, SOCK_STREAM, PF_UNSPEC) or die "ERROR: Failed
 CHILD->autoflush(1);
 PARENT->autoflush(1);
 
+my $start = [gettimeofday];
 
 # check if we are forking
 if(
@@ -73,6 +74,10 @@ if(
 else {
 	main($config);
 }
+
+my $elapsed = tv_interval($start, [gettimeofday]);
+
+debug($config, "Took $elapsed s");
 
 sub configure {
 	
@@ -1506,14 +1511,14 @@ sub variation_feature {
 			debug($config, "(TEST) Writing variation object named ", $data->{variation}->name) unless defined($data->{variation}->dbID);
 		}
 		else {
-			$config->{variation_adaptor}->store($data->{variation}) unless defined($data->{variation}->dbID);
+			$config->{variation_adaptor}->store($data->{variation}) unless defined($data->{variation}->{dbID});
 		}
 		
 		$config->{meta_coord}->{flanking_sequence} = undef;
 		$config->{rows_added}->{variation}++;
 		
 		# get class
-		my $so_term = SO_variation_class($vf->allele_string, 1);
+		my $so_term = SO_variation_class($vf->{allele_string}, 1);
 		
 		# add in some info needed (since we won't have a slice)
 		$vf->{seq_region_id}   = $config->{seq_region_ids}->{$vf->{chr}};
@@ -1614,20 +1619,17 @@ sub get_genotypes {
 	
 	for my $i(9..((scalar @$split) - 1)) {
 		my @bits;
+		
 		my $gt = (split /\:/, $split->[$i])[0];
 		foreach my $bit(split /\||\/|\\/, $gt) {
 			push @bits, ($bit eq '.' ? '.' : $alleles[$bit]);
 		}
 		
-		if(scalar @bits) {
-			my $gt_obj = Bio::EnsEMBL::Variation::IndividualGenotype->new_fast({
-				variation => $data->{variation},
-				individual => $config->{individuals}->[$i-9],
-				genotype => \@bits
-			});
-			
-			push @genotypes, $gt_obj;
-		}
+		push @genotypes, Bio::EnsEMBL::Variation::IndividualGenotype->new_fast({
+			variation => $data->{variation},
+			individual => $config->{individuals}->[$i-9],
+			genotype => \@bits
+		}) if scalar @bits;
 	}
 	
 	return \@genotypes;
@@ -1649,11 +1651,11 @@ sub add_gmaf {
 	
 	if(defined($data->{genotypes})) {
 		map {$counts{$_}++}
-			map {@{$_->genotype}}
+			map {@{$_->{genotype}}}
 			grep {
 				$config->{gmaf} eq 'ALL' ||
-				$config->{pop_inds}->{$config->{gmaf}}->{$_->individual->name} ||
-				$config->{pop_inds}->{$config->{pop_prefix}.$config->{gmaf}}->{$_->individual->name}
+				$config->{pop_inds}->{$config->{gmaf}}->{$_->{individual}->{name}} ||
+				$config->{pop_inds}->{$config->{pop_prefix}.$config->{gmaf}}->{$_->{individual}->{name}}
 			}
 			@{$data->{genotypes}};
 			
@@ -1674,12 +1676,15 @@ sub allele {
 	my $config = shift;
 	my $data   = shift;
 	
-	my @alleles = split /\//, $data->{vf}->allele_string;
+	my @alleles = split /\//, $data->{vf}->{allele_string};
+	
+	my @objs = ();
 	
 	foreach my $pop(@{$config->{populations}}) {
 		
-		# frequencies
 		my @freqs;
+		
+		my $pop_name = $pop->{name};
 		
 		#if(defined($config->{info}->{AF})) {
 		#	@freqs = split /\,/, $config->{info}->{AF};
@@ -1691,8 +1696,8 @@ sub allele {
 		my (%counts, $total);
 		if(defined($data->{genotypes})) {
 			map {$counts{$_}++}
-				map {@{$_->genotype}}
-				grep {$config->{pop_inds}->{$pop->name}->{$_->individual->name}}
+				map {@{$_->{genotype}}}
+				grep {$config->{pop_inds}->{$pop_name}->{$_->{individual}->{name}}}
 				@{$data->{genotypes}};
 				
 			$total += $_ for values %counts;
@@ -1702,22 +1707,25 @@ sub allele {
 		for my $i(0..$#alleles) {
 			my $allele = Bio::EnsEMBL::Variation::Allele->new_fast({
 				allele     => $alleles[$i],
-				count      => scalar keys %counts ? $counts{$alleles[$i]} : undef,
+				count      => scalar keys %counts ? ($counts{$alleles[$i]} || 0) : undef,
 				frequency  => @freqs ? $freqs[$i] : undef,
 				population => $pop,
 				variation  => $data->{variation}
 			});
 			
 			if(defined($config->{test})) {
-				debug($config, "(TEST) Writing allele object for variation ", $data->{variation}->name, ", allele ", $alleles[$i], ", population ", $pop->name, " freq ", (@freqs ? $freqs[$i] : "?"));
+				debug($config, "(TEST) Writing allele object for variation ", $data->{variation}->name, ", allele ", $alleles[$i], ", population ", $pop_name, " freq ", (@freqs ? $freqs[$i] : "?"));
 			}
 			else {
-				$config->{allele_adaptor}->store($allele);
+				#$config->{allele_adaptor}->store($allele);
+				push @objs, $allele;
 			}
 			
 			$config->{rows_added}->{allele}++;
 		}
 	}
+	
+	$config->{allele_adaptor}->store_multiple(\@objs) unless defined($config->{test});
 }
 
 
@@ -1726,16 +1734,19 @@ sub population_genotype {
 	my $config = shift;
 	my $data   = shift;
 	
-	foreach my $pop(@{$config->{populations}}) {
+	my @objs = ();
 	
+	foreach my $pop(@{$config->{populations}}) {
+		
 		my %freqs;
+		my $pop_name = $pop->{name};
 		
 		my (%counts, $total);
 		if(defined($data->{genotypes})) {
 			map {$counts{$_}++}
 				grep {$_ !~ /\./}
-				map {join '|', sort @{$_->genotype}}
-				grep {$config->{pop_inds}->{$pop->name}->{$_->individual->name}}
+				map {join '|', sort @{$_->{genotype}}}
+				grep {$config->{pop_inds}->{$pop_name}->{$_->{individual}->{name}}}
 				@{$data->{genotypes}};
 			$total += $_ for values %counts;
 			%freqs = map {$_ => ($counts{$_} / $total)} keys %counts;
@@ -1758,15 +1769,18 @@ sub population_genotype {
 			
 			
 			if(defined($config->{test})) {
-				debug($config, "(TEST) Writing population_genotype object for variation ", $data->{variation}->name, ", genotype ", $gt_string, ", population ", $pop->name, " freq ", ($freqs{$gt_string} || "?"));
+				debug($config, "(TEST) Writing population_genotype object for variation ", $data->{variation}->name, ", genotype ", $gt_string, ", population ", $pop_name, " freq ", ($freqs{$gt_string} || "?"));
 			}
 			else {
-				$config->{populationgenotype_adaptor}->store($popgt);
+				#$config->{populationgenotype_adaptor}->store($popgt);
+				push @objs, $popgt;
 			}
 			
 			$config->{rows_added}->{population_genotype}++;
 		}
 	}
+	
+	$config->{populationgenotype_adaptor}->store_multiple(\@objs) unless defined($config->{test});
 }
 
 sub individual_genotype {
