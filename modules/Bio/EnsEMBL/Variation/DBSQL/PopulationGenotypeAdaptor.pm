@@ -112,6 +112,40 @@ sub store {
   $sth->finish;
 }
 
+
+
+sub store_multiple {
+  my ($self, $popgts) = @_;
+  
+  my $dbh = $self->dbc->db_handle;
+  
+  my $q_string = join ",", map {'(?,?,?,?,?,?)'} @$popgts;
+  
+  my @args = map {
+	$_->{_variation_id} || $_->variation->dbID,
+	$_->{subsnp},
+	$self->_genotype_code($_->genotype),
+	$_->population ? $_->population->dbID : undef,
+	$_->frequency,
+	$_->count
+  } @$popgts;
+  
+  my $sth = $dbh->prepare_cached(qq{
+	INSERT DELAYED INTO population_genotype (
+	  variation_id,
+	  subsnp_id,
+	  genotype_code_id,
+	  sample_id,
+	  frequency,
+	  count				
+	) VALUES $q_string
+  });
+  
+  $sth->execute(@args);
+  
+  $sth->finish;
+}
+
 =head2 fetch_by_dbID
 
   Arg [1]    : int $dbID
