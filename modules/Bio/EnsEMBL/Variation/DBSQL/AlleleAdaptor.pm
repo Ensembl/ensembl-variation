@@ -100,6 +100,38 @@ sub store {
 	$sth->finish;
 }
 
+sub store_multiple {
+	my ($self, $alleles) = @_;
+	
+	my $dbh = $self->dbc->db_handle;
+	
+	my $q_string = join ",", map {'(?,?,?,?,?,?)'} @$alleles;
+	
+	my @args = map {
+		$_->{_variation_id} || $_->variation->dbID,
+		$_->{subsnp},
+		$self->_allele_code($_->allele),
+		$_->population ? $_->population->dbID : undef,
+		$_->frequency,
+		$_->count
+	} @$alleles;
+	
+	my $sth = $dbh->prepare_cached(qq{
+		INSERT DELAYED INTO allele (
+			variation_id,
+			subsnp_id,
+			allele_code_id,
+			sample_id,
+			frequency,
+			count			
+		) VALUES $q_string
+	});
+	
+	$sth->execute(@args);
+	
+	$sth->finish;
+}
+
 =head2 fetch_all
 
   Description: fetch_all should not be used for Alleles.
