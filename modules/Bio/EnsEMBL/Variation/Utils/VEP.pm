@@ -2111,7 +2111,8 @@ sub whole_genome_fetch {
             
             # do regulatory features
             if(defined($config->{regulatory}) && defined($rf_cache)) {
-                foreach my $rf_type(keys %{$rf_cache->{$chr}}) {
+                foreach my $rf_type(qw/RegulatoryFeature/) {#keys %{$rf_cache->{$chr}}) {
+                    next unless $rf_cache->{$chr}->{$rf_type};
                     foreach my $rf(grep {$_->{start} <= $svf->{end} && $_->end >= $svf->{end}} @{$rf_cache->{$chr}->{$rf_type}}) {
                         my $svo = Bio::EnsEMBL::Variation::StructuralVariationOverlap->new(
                             -feature                      => $rf,
