@@ -1007,7 +1007,7 @@ sub vf_to_consequences {
                 $line->{Extra}->{MOTIF_POS}         = $mfva->motif_start if defined $mfva->motif_start;
                 $line->{Extra}->{HIGH_INF_POS}       = ($mfva->in_informative_position ? 'Y' : 'N');
 
-                my $delta = $mfva->motif_score_delta;
+                my $delta = $mfva->motif_score_delta if $mfva->variation_feature_seq =~ /^[ACGT]+$/;
 
                 $line->{Extra}->{MOTIF_SCORE_CHANGE} = sprintf("%.3f", $delta) if defined $delta;
 
