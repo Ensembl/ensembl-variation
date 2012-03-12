@@ -29,7 +29,7 @@ by Will McLaren (wm2@ebi.ac.uk)
 use strict;
 use Bio::EnsEMBL::Registry;
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
-use Bio::EnsEMBL::Variation::Utils::VEP qw(parse_line get_all_consequences progress end_progress);
+use Bio::EnsEMBL::Variation::Utils::VEP qw(parse_line get_all_consequences);
 use Bio::EnsEMBL::Variation::Utils::Sequence qw(SO_variation_class);
 
 # object types need to imported explicitly to use new_fast
@@ -44,6 +44,7 @@ use Data::Dumper;
 use Time::HiRes qw(gettimeofday tv_interval);
 use ImportUtils qw(load);
 use FindBin qw( $Bin );
+use Digest::MD5 qw(md5_hex);
 
 use constant DISTANCE => 100_000;
 use constant MAX_SHORT => 2**16 -1;
@@ -59,7 +60,7 @@ socketpair(CHILD, PARENT, AF_UNIX, SOCK_STREAM, PF_UNSPEC) or die "ERROR: Failed
 CHILD->autoflush(1);
 PARENT->autoflush(1);
 
-my $start = [gettimeofday];
+$config->{start_time} = [gettimeofday];
 
 # check if we are forking
 if(
@@ -75,7 +76,7 @@ else {
 	main($config);
 }
 
-my $elapsed = tv_interval($start, [gettimeofday]);
+my $elapsed = tv_interval($config->{start_time}, [gettimeofday]);
 
 debug($config, "Took $elapsed s");
 
@@ -96,6 +97,9 @@ sub configure {
 		'tmpdir=s',
 		'tmpfile=s',
 		'config=s',
+		
+		'progress_update=i',
+		'no_progress',
 		
 		'species=s',
 		'registry|r=s',
@@ -137,6 +141,11 @@ sub configure {
 		'backup',
 		'move',
 		
+		'recover',
+		'recover_point=s',
+		'recover_pos=s',
+		'no_recover',
+		
 	# die if we can't parse arguments - better to get user to sort out their command line
 	# than potentially do the wrong thing
 	) or die "ERROR: Failed to parse command line arguments - check the documentation!\n";
@@ -151,17 +160,47 @@ sub configure {
 	# read config from file?
     read_config_from_file($config, $config->{config}) if defined $config->{config};
 	
+	# remove recover from config otherwise changes session id
+	my $recover;
+	if(defined($config->{recover})) {
+		$recover = 1;
+		delete $config->{recover};
+	}
+	
+	# create session ID from config
+	$config->{session_id} = md5_hex(join '|', (map {$_." ".$config->{$_}} sort keys %$config));
+	
+	debug($config, "Session ID is ", $config->{session_id});
+	
+	$config->{recover} = 1 if $recover;
+	
+	# recover?
+	if(defined $config->{recover}) {
+		open IN, (join '/', ($ENV{HOME}, '.import_vcf', $config->{session_id})) or die "ERROR: Could not recover session with ID ".$config->{session_id}."\n";
+		$config->{recover_point} = <IN>;
+		close IN;
+		
+		die "ERROR: Cannot recover - session with ID ".$config->{session_id}." has been flagged as finished" if $config->{recover_point} eq 'FINISHED';
+		
+		debug($config, "Found recover point ", $config->{recover_point}, " for session ID ", $config->{session_id});
+	}
+	
 	# sanity checks
 	die("ERROR: Cannot run in test mode using forks\n") if defined($config->{fork}) and defined($config->{test});
+	die("ERROR: Cannot recover using forks\n") if defined($config->{fork}) and defined($config->{recover});
 	
 	# set defaults
-	$config->{species}      ||= "human";
-	$config->{flank}        ||= 200;
-	$config->{port}         ||= 3306;
-	$config->{format}         = 'vcf';
-	$config->{ind_prefix}   ||= '';
-	$config->{pop_prefix}   ||= '';
-	$config->{coord_system} ||= 'chromosome';
+	$config->{species}         ||= "human";
+	$config->{flank}           ||= 200;
+	$config->{port}            ||= 3306;
+	$config->{format}            = 'vcf';
+	$config->{ind_prefix}      ||= '';
+	$config->{pop_prefix}      ||= '';
+	$config->{coord_system}    ||= 'chromosome';
+	$config->{progress_update} ||= 100;
+	
+	# recovery not possible if forking
+	$config->{no_recover} = 1 if defined($config->{fork});
 	
 	# set default list of tables to write to
 	my $tables = {
@@ -256,12 +295,12 @@ sub configure {
 	$config->{terms}               = 'SO';
 	$config->{tr_cache}            = {};
 	$config->{rf_cache}            = {};
-	$config->{quiet}               = 1;
+	#$config->{quiet}               = 1;
 	$config->{original}            = 1;
 	$config->{dir}                 = $ENV{'HOME'}.'/.vep/homo_sapiens/66';
 	$config->{cache}               = 1;
 	$config->{offline}             = 1;
-	$config->{no_progress}         = 1;
+	#$config->{no_progress}         = 1;
 	$config->{buffer_size}       ||= 1000;
 	
 	# get terminal width for progress bars
@@ -443,8 +482,8 @@ sub main {
 		next if /^##/;
 		
 		my @split = split /\t/;
-		my $data;
-		my $line = $_;
+		my $data = {};
+		$data->{line} = $_;
 		
 		# column definition line
 		if(/^#/) {
@@ -453,6 +492,51 @@ sub main {
 		
 		# data
 		else {
+			
+			$config->{prev_time} ||= [gettimeofday];
+			
+			# recover?
+			if(defined($config->{recover_point}) || defined($config->{recover_pos})) {
+				$config->{skipped}->{already_processed}++;
+				
+				if(defined($config->{recover_point}) && md5_hex($data->{line}) eq $config->{recover_point}) {
+					delete $config->{recover_point};
+					debug(
+						$config,
+						"Found recovery point, skipped ",
+						$config->{skipped}->{already_processed},
+						" already processed variants"
+					);
+				}
+				
+				if(defined($config->{recover_pos})) {
+					my $rpos = $config->{recover_pos};
+					
+					if($rpos =~ /\:/) {
+						my ($chr, $pos) = split /\:/, $rpos;
+						if($data->{line} =~ /^$chr\s+$pos\s+/) {
+							delete $config->{recover_pos};
+							debug(
+								$config,
+								"Found recovery point, skipped ",
+								$config->{skipped}->{already_processed},
+								" already processed variants"
+							);
+						}
+					}
+					elsif($data->{line} =~ /^\w+?\s+$rpos\s+/) {
+						delete $config->{recover_pos};
+						debug(
+							$config,
+							"Found recovery point, skipped ",
+							$config->{skipped}->{already_processed},
+							" already processed variants"
+						);
+					}
+				}
+				
+				next;
+			}
 			
 			# check we're not skipping loads in a row
 			if($last_skipped > 100 && $last_skipped =~ /(5|0)00$/) {
@@ -478,7 +562,7 @@ sub main {
 			#next if defined($config->{chrom_regexp}) && $data->{'#CHROM'} !~ m/$chrom_regexp/;
 			
 			# use VEP's parse_line to get a skeleton VF
-			($data->{tmp_vf}) = @{parse_line($config, $line)};
+			($data->{tmp_vf}) = @{parse_line($config, $data->{line})};
 			
 			if(!defined($data->{tmp_vf})) {
 				$config->{skipped}->{could_not_parse}++;
@@ -616,11 +700,16 @@ sub main {
 			if(defined($config->{forked})) {
 				debug($config, "Processed $var_counter lines (".$config->{forked}.")");
 			}
-			elsif($var_counter =~ /(5|0)00$/) {
-				debug($config, "Processed $var_counter lines");
+			elsif($var_counter % $config->{progress_update} == 0) {
+				progress($config, $var_counter);
+				
+				store_session($config, md5_hex($data->{line})) unless defined($config->{no_recover});
+				#debug($config, "Processed $var_counter lines");
 			}
 		}
 	}
+	
+	end_progress($config);
 	
 	# clean up remaining genotypes and import
 	if($config->{tables}->{compressed_genotype_region}) {
@@ -642,8 +731,9 @@ sub main {
 		}
 	}
 	
-	#debug($config, "Skipped $skipped variations in the file\n");
-	#debug($config, "Took ", time() - $start_time, "s to run\n");
+	if(defined($config->{recover_point}) || defined($config->{recover_pos})) {
+		die("ERROR: Could not find recovery point in input file\n");
+	}
 	
 	debug($config, "Updating meta_coord");
 	meta_coord($config);
@@ -663,6 +753,8 @@ sub main {
 	for my $key(sort keys %{$config->{skipped}}) {
 		debug($config, (defined($config->{forked}) ? "SKIPPED\t" : "").$key.(' ' x (($max_length - length($key)) + 4)).$config->{skipped}->{$key});
 	}
+	
+	store_session($config, "FINISHED");
 	
 	debug($config, "Finished!".(defined($config->{forked}) ? " (".$config->{forked}.")" : ""));
 }
@@ -734,11 +826,11 @@ sub run_forks {
 				#my ($q, $n) = ($config->{quiet}, $config->{no_progress});
 				#delete $config->{quiet};
 				#delete $config->{no_progress};
-				#progress($config, $c, $num_lines);
+				progress($config, $c);
 				#($config->{quiet}, $config->{no_progress}) = ($q, $n);
-				if($c =~ /000$/) {
-					debug({}, "Processed $c lines");
-				}
+				#if($c =~ /000$/) {
+				#	debug({}, "Processed $c lines");
+				#}
 			}
 			elsif(/Finished/) {
 				print $_;
@@ -1071,6 +1163,29 @@ sub parse_header {
 	}
 	
 	return \%headers;
+}
+
+# stores session state for recovery
+sub store_session {
+	my $config = shift;
+	my $point  = shift;
+	
+	my $dir = join '/', ($ENV{'HOME'}, '.import_vcf');
+	
+	if(!-e $dir) {
+		system('mkdir -p '.$dir);
+	}
+	
+	my $file = join '/', ($dir, $config->{session_id});
+	
+	if(open SESSION, "> $file") {
+		print SESSION $point;
+		close SESSION;
+	}
+	else {
+		debug($config, "WARNING: Could not write to session recover file $file - you will not be able to recover this session");
+		$config->{no_recover} = 1;
+	}
 }
 
 # gets seq_region_id to chromosome mapping from DB
@@ -1955,6 +2070,23 @@ Options
 --test [n]            Run in test mode on first n lines of file. No database writes
                       are done, and any that would be done are output as status
 					  messages
+					  
+--no_progress         Disable progress output
+--quiet               Don't print any status messages
+--progress_update [n] Update the progress status after each n variants. This also
+                      determines how often recovery status is written to disk. To set
+					  the recovery state frequency to 1 without overloading your
+					  output with progress messages, add --no_progress
+					  
+--recover             Attempt to recover an incomplete session. Sessions are
+                      uniquely identified by the options passed on the command line,
+					  but NOT the content of any input files
+--recover_pos         Force recover from chromosomal position. Given as either
+                      "chr:pos" or "pos" alone
+--recover_point       Force recover from a position in the file given by the md5 hash
+                      of the line content (without newline character)
+--no_recover          Disable session recovery - this will result in a slight speed
+                      increase
 
 --species             Species to use [default: "human"]
 --source              Name of source [required]
@@ -2047,6 +2179,9 @@ sub getTime() {
 # prints debug output with time
 sub debug {
 	my $config = shift;
+	
+	return if defined($config->{quiet});
+	
 	my $text = (@_ ? (join "", @_) : "No message");
 	my $time = getTime;
 	
@@ -2065,4 +2200,28 @@ sub escape ($) {
 	local $_ = ( defined $_[0] ? $_[0] : '' );
 	s/([\r\n\t\\\"])/\\$Printable{$1}/sg;
 	return $_;
+}
+
+sub progress {
+	my $config = shift;
+	my $count = shift;
+	
+	return if defined($config->{no_progress});
+	
+	$config->{prev_time} ||= $config->{start_time};
+	
+	my $prev_elapsed = tv_interval($config->{prev_time}, [gettimeofday]);
+	my $total_elapsed = tv_interval($config->{start_time}, [gettimeofday]);
+	
+	my $prev_pm = $config->{progress_update} / ($prev_elapsed / 60);
+	my $total_pm = $count / ($total_elapsed / 60);
+	
+	printf("\r%s - Processed %i variants (%.2f per min / %.2f per min overall)", getTime, $count, $prev_pm, $total_pm);
+	
+	$config->{prev_time} = [gettimeofday];
+}
+
+sub end_progress {
+	my $config = shift;
+	print "\n";
 }
