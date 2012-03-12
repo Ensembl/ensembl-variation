@@ -404,7 +404,7 @@ sub _cache_allele_codes {
 	my ($code, $allele);
 	$sth->bind_columns(\$code, \$allele);
 	my %allele_codes;
-	$allele_codes{$allele} = $code while $sth->fetch;
+	$allele_codes{defined($allele) ? $allele : ''} = $code while $sth->fetch;
 	$sth->finish();
 	
 	$self->db->{_allele_codes} = \%allele_codes;
