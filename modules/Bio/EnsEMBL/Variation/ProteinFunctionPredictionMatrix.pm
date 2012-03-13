@@ -173,6 +173,9 @@ our $NUM_AAS = scalar(@ALL_AAS);
     The length of the associated peptide, only required if
     you want to serialize this matrix (optional)
 
+  Arg [-TRANSLATION_MD5] :
+    The hex MD5 hash of the associated peptide sequence
+
   Description: Constructs a new ProteinFunctionPredictionMatrix object
   Returntype : A new Bio::EnsEMBL::Variation::ProteinFunctionPredictionMatrix instance 
   Exceptions : throws unless ANALYSIS is supplied and recognised
@@ -185,12 +188,16 @@ sub new {
     
     my (
         $analysis,
+        $sub_analysis,
         $matrix,
         $peptide_length,
+        $translation_md5,
     ) = rearrange([qw(
             ANALYSIS
+            SUB_ANALYSIS
             MATRIX
             PEPTIDE_LENGTH
+            TRANSLATION_MD5
         )], @_);
     
     throw("analysis argument required") unless defined $analysis;
@@ -200,8 +207,10 @@ sub new {
 
     my $self = bless {
         analysis        => $analysis,
+        sub_analysis    => $sub_analysis,
         matrix          => $matrix,
         peptide_length  => $peptide_length,
+        translation_md5 => $translation_md5,
     }, $class;
 
     $self->{matrix_compressed} = defined $matrix ? 1 : 0;
@@ -232,6 +241,24 @@ sub analysis {
     return $self->{analysis};
 }
 
+=head2 sub_analysis
+
+  Arg[1]      : string $sub_analysis - the name of the sub analysis (optional)
+  Description : Get/set the sub analysis name
+  Returntype  : string
+  Exceptions  : None 
+  Status      : At Risk
+  
+=cut
+
+sub sub_analysis {
+    my ($self, $sub_analysis) = @_;
+    
+    $self->{sub_analysis} = $sub_analysis if $sub_analysis;
+    
+    return $self->{sub_analysis};
+}
+
 =head2 peptide_length
 
   Arg[1]      : int $peptide_length - the length of the peptide (optional)
@@ -247,6 +274,22 @@ sub peptide_length {
     my ($self, $peptide_length) = @_;
     $self->{peptide_length} = $peptide_length if defined $peptide_length;
     return $self->{peptide_length};
+}
+
+=head2 translation_md5
+
+  Arg[1]      : string $translation_md5 - the hex MD5 hash of the peptide sequence (optional)
+  Description : Get/set the MD5 hash of the peptide sequence
+  Returntype  : string
+  Exceptions  : none 
+  Status      : At Risk
+  
+=cut
+
+sub translation_md5 {
+    my ($self, $translation_md5) = @_;
+    $self->{translation_md5} = $translation_md5 if defined $translation_md5;
+    return $self->{translation_md5};
 }
 
 =head2 get_prediction

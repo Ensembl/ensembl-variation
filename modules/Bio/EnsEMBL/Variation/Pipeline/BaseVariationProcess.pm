@@ -58,7 +58,7 @@ sub get_transcript_file_adaptor {
     
     unless ($self->{tfa}) {
         $self->{tfa} = Bio::EnsEMBL::Variation::Pipeline::TranscriptFileAdaptor->new(
-            fasta_file  => $self->param('proteins_fasta'),
+            fasta_file  => $self->param('fasta_file'),
             transcripts => $transcripts,
         );
     }

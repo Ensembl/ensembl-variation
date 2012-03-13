@@ -132,7 +132,8 @@ sub run {
 
     $self->dbc->disconnect_when_inactive(1);
 
-    my $cmd = "$pph_dir/bin/run_pph.pl -d $output_dir -s $protein_file $subs_file 1> $output_file 2> $error_file";
+    # use -A option to disable polyphen's own LSF support (which conflicts with the hive)
+    my $cmd = "$pph_dir/bin/run_pph.pl -A -d $output_dir -s $protein_file $subs_file 1> $output_file 2> $error_file";
 
     system($cmd) == 0 or die "Failed to run $cmd: $?";
     

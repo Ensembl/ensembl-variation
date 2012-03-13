@@ -45,6 +45,11 @@ sub run {
 
     my @to_delete;
 
+    my $var_dba = $self->get_species_adaptor('variation');
+
+    my $pfpma = $var_dba->get_ProteinFunctionPredictionMatrixAdaptor
+        or die "Failed to get matrix adaptor";
+
     for my $model ($humdiv_model, $humvar_model) {
 
         next unless $model;
@@ -73,9 +78,10 @@ sub run {
         my $peptide = $self->get_transcript_file_adaptor->get_translation_seq($translation_md5);
 
         my $pred_matrix = Bio::EnsEMBL::Variation::ProteinFunctionPredictionMatrix->new(
-            -analysis       => 'polyphen',
-            -sub_analysis   => $model_name,
-            -peptide_length => length($peptide),
+            -analysis           => 'polyphen',
+            -sub_analysis       => $model_name,
+            -peptide_length     => length($peptide),
+            -translation_md5    => $translation_md5,
         );
 
         while (<RESULT>) {
@@ -114,7 +120,7 @@ sub run {
 
         # save the predictions to the database
 
-        $self->save_predictions($pred_matrix);
+        $pfpma->store($pred_matrix);
     }
 
     remove_tree($tmp_dir);

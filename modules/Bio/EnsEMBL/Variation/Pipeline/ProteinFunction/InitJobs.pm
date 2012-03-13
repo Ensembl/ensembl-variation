@@ -10,7 +10,7 @@ use Digest::MD5 qw(md5_hex);
 
 use base qw(Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess);
 
-my $DEBUG = 0;
+my $DEBUG = 1;
 
 sub fetch_input {
    
@@ -30,19 +30,16 @@ sub fetch_input {
     if ($DEBUG) {
         my $ga = $core_dba->get_GeneAdaptor or die "Failed to get gene adaptor";
         
-        @transcripts = grep { $_->translation } @{ $ga->fetch_all_by_external_name('BRCA2')->[0]->get_all_Transcripts };
+        @transcripts = grep { $_->translation } @{ $ga->fetch_all_by_external_name('BRCA1')->[0]->get_all_Transcripts };
     }
     else {
         my $sa = $core_dba->get_SliceAdaptor or die "Failed to get slice adaptor";
         
-        my $count = 0;
-        
-        LOOP : for my $slice (@{ $sa->fetch_all('toplevel', undef, 1, undef, ($include_lrg ? 1 : undef)) }) {
+        for my $slice (@{ $sa->fetch_all('toplevel', undef, 1, undef, ($include_lrg ? 1 : undef)) }) {
             for my $gene (@{ $slice->get_all_Genes(undef, undef, 1) }) {
                 for my $transcript (@{ $gene->get_all_Transcripts }) {
                     if (my $translation = $transcript->translation) {
                         push @transcripts, $transcript;
-                        last LOOP if $count++ > 50000;
                     }
                 }
             }
@@ -63,7 +60,11 @@ sub fetch_input {
     });
 
     my $add_mapping_sth = $var_dba->prepare(qq{
-        INSERT DELAYED IGNORE INTO translation_mapping (stable_id, md5) VALUES (?,?)
+        INSERT IGNORE INTO translation_mapping (stable_id, md5) VALUES (?,?)
+    });
+
+    my $add_md5_sth = $var_dba->prepare(qq{
+        INSERT IGNORE INTO translation_md5 (translation_md5) VALUES (?)
     });
 
     # build a hash mapping MD5s for our set of translations to their peptide sequences
@@ -103,8 +104,10 @@ sub fetch_input {
         my $var_dbh = $var_dba->dbc->db_handle;
     
         my $get_existing_sth = $var_dbh->prepare(qq{
-            SELECT  translation_md5, polyphen_humvar_predictions, sift_predictions
-            FROM    protein_function_predictions
+            SELECT  t.translation_md5, a.value, p.prediction_matrix
+            FROM    translation_md5 t, attrib a, protein_function_predictions p
+            WHERE   t.translation_md5_id = p.translation_md5_id 
+            AND     a.attrib_id = p.analysis_attrib_id
         });
 
         # store the set of existing MD5s in a hash
@@ -113,10 +116,11 @@ sub fetch_input {
 
         my $existing_md5s;
 
-        while ( my ($md5, $pph_preds, $sift_preds) = $get_existing_sth->fetchrow_array ) {
+        while ( my ($md5, $analysis, $preds) = $get_existing_sth->fetchrow_array ) {
+            # there are 2 polyphen analyses, but we only want to track one
+            $analysis = 'pph' if $analysis =~ /polyphen/;
             # just record true if we already have predictions for each translation
-            $existing_md5s->{$md5}->{sift} = length($sift_preds) > 0;   
-            $existing_md5s->{$md5}->{pph}  = length($pph_preds) > 0;   
+            $existing_md5s->{$md5}->{$analysis} = length($preds) > 0;   
         }
 
         # exclude any translations MD5s we find in the database

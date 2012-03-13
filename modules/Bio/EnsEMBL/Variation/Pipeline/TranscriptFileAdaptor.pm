@@ -23,9 +23,9 @@ sub new {
 }
 
 sub get_translation_seq {
-    my ($self, $translation_stable_id) = @_;
+    my ($self, $translation_md5) = @_;
 
-    my $fasta = $self->get_translation_fasta($translation_stable_id);
+    my $fasta = $self->get_translation_fasta($translation_md5);
 
     $fasta =~ s/>.*\n//m;
     $fasta =~ s/\s//mg;
@@ -34,22 +34,16 @@ sub get_translation_seq {
 }
 
 sub get_translation_fasta {
-    my ($self, $translation_stable_id) = @_;
+    my ($self, $translation_md5) = @_;
     
     my $file = $self->{fasta_file};
     
-    my $fasta = `samtools faidx $file $translation_stable_id`;
+    my $fasta = `samtools faidx $file $translation_md5`;
 
     return $fasta;
 }
 
-sub get_translation_md5 {
-    my ($self, $translation_stable_id) = @_;
-
-    return md5_hex($self->get_translation_seq($translation_stable_id));
-}
-
-sub get_all_translation_stable_ids {
+sub get_all_translation_md5s {
     my $self = shift;
 
     my $fasta = $self->{fasta_file};
@@ -75,6 +69,8 @@ sub _dump_translations {
         unlink "$fasta.fai" or die "Failed to delete fasta index file";
     }
 
+    my %seen_md5;
+
     for my $transcript (@$transcripts) {
 
         my $tl = $transcript->translation;
@@ -83,14 +79,16 @@ sub _dump_translations {
 
         my $protein = $tl->seq;
 
+        my $md5 = md5_hex($protein);
+
+        next if $seen_md5{$md5}++;
+
         $protein =~ s/(.{80})/$1\n/g;
 
         # get rid of any trailing newline
         chomp $protein;
 
-        my $hdr = $tl->stable_id;
-
-        print $FASTA ">$hdr\n$protein\n";
+        print $FASTA ">$md5\n$protein\n";
     }
 
     close $FASTA;
