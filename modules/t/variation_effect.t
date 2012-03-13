@@ -18,14 +18,10 @@ BEGIN {
 my $reg = 'Bio::EnsEMBL::Registry';
 
 $reg->load_all("$Bin/test.ensembl.registry");
-#$reg->load_all;
 
 my $cdba = $reg->get_DBAdaptor('human', 'core');
-my $vdba = $reg->get_DBAdaptor('human', 'variation');
 
 my $ta = $cdba->get_TranscriptAdaptor;
-my $vfa = $vdba->get_VariationFeatureAdaptor;
-my $tva = $vdba->get_TranscriptVariationAdaptor;
 
 my $transcript_tests;
 
@@ -1041,7 +1037,7 @@ $transcript_tests->{$t4->stable_id}->{tests} = [
     {
         start   => $cds_end,
         end     => $cds_end,
-        effects => [qw(incomplete_terminal_codon_variant)],
+        effects => [qw(incomplete_terminal_codon_variant coding_sequence_variant)],
     }, 
 ];
 
@@ -1112,13 +1108,11 @@ for my $stable_id (keys %$transcript_tests) {
             -slice          => $tran->slice,
             -allele_string  => $ref.'/'.$test->{alleles},
             -variation_name => 'test'.$test_count,
-            -adaptor        => $vfa,
         );
 
         my $tv = Bio::EnsEMBL::Variation::TranscriptVariation->new(
             -variation_feature  => $vf,
             -transcript         => $tran,
-            -adaptor            => $tva,
         );
 
         warn "# alleles: $allele_string\n";
@@ -1137,7 +1131,7 @@ for my $stable_id (keys %$transcript_tests) {
 
         # sort so that the order doesn't matter
         is_deeply( [sort @effects], [sort @{ $test->{effects} }], "VF $test_count (strand $strand): $comment") 
-            || (diag "Actually got: ", explain \@effects)  || die;
+            || (diag "Actually got: ", explain \@effects) || die;
 
         if (my $expected_pep_alleles = $test->{pep_alleles}) {
             is(
