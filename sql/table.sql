@@ -1455,25 +1455,44 @@ CREATE TABLE attrib_set (
 @table  protein_function_predictions
 
 @colour #1E90FF
-@desc   Contains encoded sift and polyphen predictions for every protein-coding transcript in this species
+@desc   Contains encoded protein function predictions for every protein-coding transcript in this species
 
-@column translation_md5             A hexidecimal string representing the MD5 hash of the protein sequence
-                                    to which these predictions apply
-@column sift_predictions            A compressed binary string containing the SIFT predictions for all
-                                    possible amino acid substitutions in this translation
-@column polyphen_humvar_predictions A similarly formatted string with predictions from PolyPhen-2 using
-                                    the HumVar classifier model
-@column polyphen_humdiv_predictions Predictions using PolyPhen-2's HumDiv classifier model
+@column translation_md5_id  Identifies the MD5 hash corresponding to the protein sequence to which 
+                            these predictions apply
+@column analysis_attrib_id  Identifies the analysis (sift, polyphen etc.) that produced these predictions 
+@column prediction_matrix   A compressed binary string containing the predictions for all possible 
+                            amino acid substitutions in this protein
+
+@see    translation_md5
+@see    attrib
 */
 
 CREATE TABLE protein_function_predictions (
-
-    translation_md5             CHAR(32) NOT NULL,
-    sift_predictions            MEDIUMBLOB,
-    polyphen_humdiv_predictions MEDIUMBLOB,
-    polyphen_humvar_predictions MEDIUMBLOB,
+    translation_md5_id int(11) unsigned NOT NULL,
+    analysis_attrib_id int(11) unsigned NOT NULL,
+    prediction_matrix mediumblob,
     
-    PRIMARY KEY (translation_md5)
+    PRIMARY KEY (translation_md5_id, analysis_attrib_id)
+);
+
+/**
+@table  translation_md5
+
+@colour #1E90FF
+@desc   Maps a hex MD5 hash of a translation sequence to an ID used for the protein function predictions
+
+@column translation_md5_id  Primary key
+@column translation_md5     Hex MD5 hash of a translation sequence
+
+@see    protein_function_predictions
+*/
+
+CREATE TABLE translation_md5 (
+    translation_md5_id int(11) NOT NULL AUTO_INCREMENT,
+    translation_md5 char(32) NOT NULL,
+
+    PRIMARY KEY (translation_md5_id),
+    UNIQUE KEY md5_idx (translation_md5)
 );
 
 /**
