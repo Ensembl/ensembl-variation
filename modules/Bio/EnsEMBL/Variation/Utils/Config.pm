@@ -3,7 +3,6 @@ package Bio::EnsEMBL::Variation::Utils::Config;
 use base qw(Exporter); 
 
 our @EXPORT_OK = qw(
-    %PROTEIN_FUNCTION_PREDICTIONS 
     @ATTRIB_TYPES 
     %ATTRIBS
     @ATTRIB_SETS
@@ -17,11 +16,6 @@ our @EXPORT_OK = qw(
 our $OVERLAP_CONSEQUENCE_CLASS = 'Bio::EnsEMBL::Variation::OverlapConsequence';
 
 our $MAX_ATTRIB_CODE_LENGTH = 20;
-
-our %PROTEIN_FUNCTION_PREDICTIONS = (
-    polyphen_prediction => ['probably damaging', 'possibly damaging', 'benign', 'unknown'],
-    sift_prediction     => ['tolerated', 'deleterious'],
-);
 
 our @short_names = qw(1kg_hct 1kg_hct_ceu 1kg_hct_yri 1kg_hce 1kg_hce_ceu 1kg_hce_chb
                       1kg_hce_chd 1kg_hce_jpt 1kg_hce_lwk 1kg_hce_tsi 1kg_hce_yri 1kg_lc
@@ -715,22 +709,27 @@ our @ATTRIB_TYPES = (
         name => 'dbSNP clinical significance',
         description => 'The clinical significance of a variant as reported by dbSNP',
     },
-     {
+    {
         code => 'dgva_clin_sig',
         name => 'DGVa clinical significance',
         description => 'The clinical significance of a structural variant as reported by DGVa',
     },
+    {
+        code => 'prot_func_analysis',
+        name => 'Protein function analysis ',
+        description => 'The program used to make protein function predictions',
+    },
+
 );
 
 # attribs are specified in the %ATTRIBS hash, having the attrib_type code as hash key and a listref containing the attribs that will be loaded as value
 our %ATTRIBS = (
-   
    'short_name'          => \@short_names,
-   'polyphen_prediction' => $PROTEIN_FUNCTION_PREDICTION->{'polyphen_prediction'},
-   'sift_prediction'     => $PROTEIN_FUNCTION_PREDICTION->{'sift_prediction'},
    'dbsnp_clin_sig'      => \@dbsnp_clinical_significance_types,
    'dgva_clin_sig'       => \@dgva_clinical_significance_types,
-   
+   'polyphen_prediction' => ['probably damaging', 'possibly damaging', 'benign', 'unknown'],
+   'sift_prediction'     => [qw(tolerated deleterious)],
+   'prot_func_analysis'  => [qw(sift polyphen_humvar polyphen_humdiv)],
 );
 
 # attrib sets are specified by putting a hashref in the @ATTRIB_SETS array having the attrib_type code as key and the attrib as value. new attrib entries will be inserted as necessary
