@@ -25,7 +25,7 @@ our %FARM_PARAMS = (
   'default' => {
     'script' => 'run_task.pl',
     'max_concurrent_jobs' => 5,
-    'memory' => 3500,
+    'memory' => 8000,
     'queue' => 1,
     'wait_queue' => 0
   },
@@ -33,7 +33,7 @@ our %FARM_PARAMS = (
   'allele_table' => {
     'script' => 'run_task.pl',
     'max_concurrent_jobs' => 10,
-    'memory' => 3500,
+    'memory' => 8000,
     'queue' => 1,
     'wait_queue' => 0
   },
@@ -41,7 +41,7 @@ our %FARM_PARAMS = (
   'allele_table_load' => {
     'script' => 'run_task.pl',
     'max_concurrent_jobs' => 5,
-    'memory' => 3500,
+    'memory' => 8000,
     'queue' => 2,
     'wait_queue' => 0
   },
@@ -49,7 +49,7 @@ our %FARM_PARAMS = (
   'individual_genotypes' => {
     'script' => 'run_task.pl',
     'max_concurrent_jobs' => 5,
-    'memory' => 3500,
+    'memory' => 8000,
     'queue' => 1,
     'wait_queue' => 0
   },
@@ -57,7 +57,7 @@ our %FARM_PARAMS = (
   'individual_genotypes_load' => {
     'script' => 'run_task.pl',
     'max_concurrent_jobs' => 5,
-    'memory' => 3500,
+    'memory' => 8000,
     'queue' => 2,
     'wait_queue' => 0
   },
@@ -370,12 +370,267 @@ sub source_table {
     my ($species,$tax_id,$version) = $self->{'snp_dbname'} =~ m/^(.+)?\_([0-9]+)\_([0-9]+)$/;
     my $dbname = 'dbSNP';
     my $url = 'http://www.ncbi.nlm.nih.gov/projects/SNP/';
-		
-    $self->{'dbVar'}->do(qq{INSERT INTO source (source_id,name,version,description,url) VALUES (1,"$dbname",$version,"Variants (including SNPs and indels) imported from dbSNP","$url")});
+    $self->{'dbVar'}->do(qq{INSERT INTO source (source_id,name,version,description,url,somatic_status) VALUES (1,"$dbname",$version,"Variants (including SNPs and indels) imported from dbSNP", "$url", "mixed")});
     print $logh Progress::location();
 
 }
 
+sub table_exists_and_populated {
+
+    # check if a table is present in dbSNP, and that it has some data in it
+    
+    my $self = shift;
+    my $table = shift;
+
+    my ($obj_id) = $self->{'dbSNP'}->db_handle->selectrow_array(qq{SELECT OBJECT_ID('$table')});
+ 
+    if (defined $obj_id) {
+
+        # the table exists
+
+        my ($count) = $self->{'dbSNP'}->db_handle->selectrow_array(qq{SELECT COUNT(*) FROM $table});
+
+        if (defined $count && $count > 0) {
+            
+            # the table is populated
+
+            debug(localtime() . "\t$table table exists and is populated");
+
+            return 1;
+        }
+    }
+
+    debug(localtime() . "\t$table table either doesn't exist or is empty");
+
+    return 0;
+}
+
+sub clin_sig {
+    my $self = shift;
+
+    return unless $self->table_exists_and_populated('SNPClinSig');
+
+    my $logh = $self->{'log'};
+    
+    # dump the data from dbSNP and store it in a temporary clin_sig table
+    # in the variation database
+
+    print $logh Progress::location();
+    debug(localtime() . "\tDumping clinical significance");
+
+    my $stmt = qq{
+        SELECT  cs.snp_id, csc.descrip 
+        FROM    SNPClinSig cs, ClinSigCode csc
+        WHERE   cs.clin_sig_id = csc.code
+    };
+    
+    dumpSQL($self->{'dbSNP'}, $stmt);
+    
+    print $logh Progress::location();
+    debug(localtime() . "\tLoading clinical significance");
+    
+    create_and_load( $self->{'dbVar'}, "clin_sig", "snp_id i*", "descrip");
+
+    # check that we know about all the possible values
+    
+    $stmt = qq{
+        SELECT  count(descrip) 
+        FROM    clin_sig 
+        WHERE   descrip NOT IN (
+            SELECT  a.value 
+            FROM    attrib a, attrib_type att 
+            WHERE   a.attrib_type_id = att.attrib_type_id 
+            AND     att.code = 'dbsnp_clin_sig'
+        )
+    };
+
+    my ($count) = $self->{'dbVar'}->db_handle->selectrow_array($stmt);
+
+    if ($count > 0) {   
+        die "There are unexpected (probably new) clinical significance types, add them to the attrib table first";
+    }
+
+    # update the variation table with the correct attrib_ids
+
+    print $logh Progress::location();
+    debug(localtime() . "\tUpdating variation table with clinical significance");
+
+    $stmt = qq{
+        UPDATE  variation v, clin_sig c, attrib a, attrib_type att
+        SET     v.clinical_significance_attrib_id = a.attrib_id
+        WHERE   att.code = 'dbsnp_clin_sig'
+        AND     a.attrib_type_id = att.attrib_type_id
+        AND     c.descrip = a.value
+        AND     v.name = CONCAT('rs', c.snp_id)
+    };
+
+    $self->{'dbVar'}->do($stmt);
+
+    # in case dbsnp also assign clin sigs to synonyms we also join to the variation_synonym table
+    # (for build 135 they (redundantly) had both the original and the synonym rsID associated with 
+    # a clinical significance, but this may  change in the future as it has for MAF and suspect 
+    # SNPs and it doesn't do any harm to run this statement)
+
+    $stmt = qq{ 
+        UPDATE  variation v, variation_synonym vs, clin_sig c, attrib a, attrib_type att
+        SET     v.clinical_significance_attrib_id = a.attrib_id
+        WHERE   att.code = 'dbsnp_clin_sig'
+        AND     a.attrib_type_id = att.attrib_type_id
+        AND     c.descrip = a.value
+        AND     vs.name = CONCAT('rs', c.snp_id)
+        AND     vs.variation_id = v.variation_id
+    };
+
+    $self->{'dbVar'}->do($stmt);
+
+    #$self->{'dbVar'}->do(qq{DROP TABLE clin_sig});
+}
+
+sub minor_allele_freq {
+    my $self = shift;
+
+    return unless $self->table_exists_and_populated('SNPAlleleFreq_TGP');
+
+    my $logh = $self->{'log'};
+    
+    # dump the data from dbSNP and store in the temporary maf table in
+    # the variation database
+
+    print $logh Progress::location();
+    debug(localtime() . "\tDumping global minor allele freqs");
+
+    my $shared = $self->{'dbSNP_share_db'};
+
+    my $stmt = qq{
+        SELECT  af.snp_id, a.allele, af.freq, af.count, af.is_minor_allele
+        FROM    SNPAlleleFreq_TGP af, ${shared}..Allele a
+        WHERE   af.allele_id = a.allele_id
+    };
+
+    dumpSQL($self->{'dbSNP'}, $stmt);
+    
+    print $logh Progress::location();
+    debug(localtime() . "\tLoading global minor allele freqs");
+    
+    create_and_load($self->{'dbVar'}, "maf", "snp_id i*", "allele l", "freq f", "count i", "is_minor_allele i");
+    
+    print $logh Progress::location();
+    debug(localtime() . "\tUpdating variations with global minor allele frequencies");
+   
+    my $variation_sql = qq{
+        UPDATE  variation v, maf m
+        SET     v.minor_allele_freq = m.freq, v.minor_allele_count = m.count, v.minor_allele = m.allele
+        WHERE   v.name = CONCAT('rs', m.snp_id)
+    };
+
+    my $synonym_sql = qq{
+        UPDATE  variation v, maf m, variation_synonym vs
+        SET     v.minor_allele_freq = m.freq, v.minor_allele_count = m.count, v.minor_allele = m.allele
+        WHERE   vs.name = CONCAT('rs', m.snp_id)
+        AND     v.variation_id = vs.variation_id
+    };
+
+    # update the variation table with the frequencies for only the minor alleles
+
+    $self->{'dbVar'}->do($variation_sql . " AND m.is_minor_allele");
+
+    # it seems dbSNP also store frequencies on synonyms but don't copy this across to the
+    # merged refsnp for some reason, we want to do this though so we also join to the 
+    # variation_synonym table and copy across the data
+    
+    $self->{'dbVar'}->do($synonym_sql . " AND m.is_minor_allele");
+
+    # we also copy across data where the MAF = 0.5 which do not have the is_minor_allele 
+    # flag set, we will ensure this is set on the non-reference allele later in the post-processing
+    # when we have the allele string from the variation_feature table to check which is the 
+    # reference allele
+
+    $self->{'dbVar'}->do($variation_sql . " AND m.freq = 0.5");
+
+    $self->{'dbVar'}->do($synonym_sql . " AND m.freq = 0.5");
+
+    # we don't delete the maf temporary table because we need it for post-processing MAFs = 0.5
+}
+
+sub suspect_snps {
+    my $self = shift;
+
+    return unless $self->table_exists_and_populated('SNPSuspect');
+
+    my $logh = $self->{'log'};
+    
+    # dump the data into a temporary suspect table
+
+    print $logh Progress::location();
+    debug(localtime() . "\tDumping suspect SNPs");
+   
+    # create a table to store this data in the variation database,
+    # we use a mysql SET column which means the dbSNP values which
+    # are stored essentially as a bitfield will automatically be 
+    # assigned the correct reasons. 
+    #
+    # XXX: If dbSNP change anything though this CREATE statement 
+    # will need to be changed accordingly.
+
+    my $var_table_sql = qq{
+        CREATE TABLE suspect (
+            snp_id      INTEGER(10) NOT NULL DEFAULT 0,
+            reason_code SET('Paralog','byEST','oldAlign','Para_EST','1kg_failed','','','','','','other') DEFAULT NULL,
+            PRIMARY KEY (snp_id)
+        )
+    };
+
+    $self->{'dbVar'}->do($var_table_sql);
+
+    my $stmt = qq{
+        SELECT  ss.snp_id, ss.reason_code
+        FROM    SNPSuspect ss
+    };
+
+    dumpSQL($self->{'dbSNP'}, $stmt);
+    
+    print $logh Progress::location();
+    debug(localtime() . "\tLoading suspect SNPs");
+    
+    load($self->{'dbVar'}, "suspect", "snp_id", "reason_code");
+
+    # fail the variations tagged as suspect by adding them to the failed_variation table
+
+    # for the moment we just fail these all for the same reason (using the same 
+    # failed_description_id), we don't group them by dbSNP's reason_code, but we 
+    # keep this information in the suspect table in case we want to do this at 
+    # some point in the future
+
+    print $logh Progress::location();
+    debug(localtime() . "\tFailing suspect variations");
+
+    $stmt = qq{
+        INSERT INTO failed_variation (variation_id, failed_description_id)
+        SELECT  v.variation_id, fd.failed_description_id
+        FROM    suspect s, variation v, failed_description fd
+        WHERE   fd.description = 'Flagged as suspect by dbSNP'
+        AND     v.name = CONCAT('rs', s.snp_id)
+    };
+
+    $self->{'dbVar'}->do($stmt);
+
+    # also fail any variants with synonyms, use INSERT IGNORE because dbSNP
+    # redundantly fail both the refsnp and the synonym sometimes, and we have
+    # a unique constraint on (variation_id, failed_description_id)
+
+    $stmt = qq{
+        INSERT IGNORE INTO failed_variation (variation_id, failed_description_id)
+        SELECT  v.variation_id, fd.failed_description_id
+        FROM    suspect s, variation v, variation_synonym vs, failed_description fd
+        WHERE   fd.description = 'Flagged as suspect by dbSNP'
+        AND     vs.name = CONCAT('rs', s.snp_id)
+        AND     v.variation_id = vs.variation_id
+    };
+
+    $self->{'dbVar'}->do($stmt);
+
+    #$self->{'dbVar'}->do(qq{DROP TABLE suspect});
+}
 
 # filling of the variation table from SubSNP and SNP
 # creating of a link table variation_id --> subsnp_id
@@ -720,6 +975,15 @@ sub variation_table {
     dumpSQL($self->{'dbSNP'},$stmt);
     load( $self->{'dbVar'}, "subsnp_handle", "subsnp_id", "handle");
   print $logh Progress::location();
+  
+    # import any clinical significance, global minor allele frequencies or suspect SNPs
+    # these subroutines all check if the table is present and populated before doing
+    # anything so should work fine on species without the necessary tables
+
+    $self->clin_sig;
+    $self->minor_allele_freq;
+    $self->suspect_snps;
+
     return;
 }
 
