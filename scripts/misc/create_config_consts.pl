@@ -1,18 +1,58 @@
+
+# Read a variation config module and generate a perl module
+# defining various constants used by the API which should
+# be stored in Bio/EnsEMBL/Variation/Utils/Constants.pm and
+# then checked into the variation CVS repository
+
 use strict;
 use warnings;
+
+use Getopt::Long;
 
 use Data::Dumper;
 
 $Data::Dumper::Terse = 1;
 
-use Bio::EnsEMBL::Variation::Utils::Config qw(
-    @ATTRIB_TYPES
-    @VARIATION_CLASSES 
-    @OVERLAP_CONSEQUENCES 
-    @FEATURE_TYPES
-    $OVERLAP_CONSEQUENCE_CLASS
+my $config;
+my $help;
+
+GetOptions(
+    "config=s"  => \$config,
+    "help|h"    => \$help,
 );
 
+if ($help) {
+    print "Usage: $0 --config <module> --help > Constants.pm\n";
+    exit(0);
+}
+
+# pull in our config module
+
+$config ||= 'Bio::EnsEMBL::Variation::Utils::Config';
+
+eval qq{require $config};
+
+die "Failed to require config module '$config':\n$@" if $@;
+
+# and import the variables we need
+
+our @ATTRIB_TYPES;
+our @VARIATION_CLASSES;
+our @OVERLAP_CONSEQUENCES; 
+our @FEATURE_TYPES;
+our $OVERLAP_CONSEQUENCE_CLASS;
+
+eval {
+    $config->import(qw(
+        @ATTRIB_TYPES
+        @VARIATION_CLASSES
+        @OVERLAP_CONSEQUENCES 
+        @FEATURE_TYPES
+        $OVERLAP_CONSEQUENCE_CLASS
+    ));
+};
+
+die "Failed to import required data structures from config module '$config':\n$@" if $@;
 
 my $hdr = q{package Bio::EnsEMBL::Variation::Utils::Constants;
 
