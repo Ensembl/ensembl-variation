@@ -52,29 +52,27 @@ my $buffer = {};
 my $source_id;
 my $source_description = 'Variants from HGMD-PUBLIC data';
 
-my $month_hash = { 1 => 'January', 2 => 'February', 3 => 'March', 4 => 'April',
-									 5 => 'May', 6 => 'June', 7 => 'July', 8 => 'August',
-									 9 => 'September', 10 => 'October', 11 => 'November', 12 => 'December'
-            		 };
+my $month_hash = { 1 => 'March', 2 => 'June', 3 => 'September', 4 => 'December' };
 
 my $new_source_ref = $dbVar2->selectall_arrayref(qq{SELECT source_id FROM source WHERE name = "$source_name"});
+
+$input_file =~ /\/(\d{4})\.(\d+)-hgmd-public\.tsv$/;
+my $year      = $1;
+my $month_num	= $2;
+my $month     = $month_hash->{$month_num} if ($month_num);
+my $remapped;
+if ($mapping) {
+	$remapped = " [remapped from build $ncbi_version]";
+}
+$source_description .= " set $month $year" if ($year and $month);
+
 if ($new_source_ref->[0][0]) {
   $source_id = $new_source_ref->[0][0];
+	$dbVar2->do(qq{UPDATE source SET description="$source_description$remapped", version=$year$month_num 
+	               WHERE source_id=$source_id });
 }
 else {
-	$input_file =~ /\/(\d{4})\.(\d+)-hgmd-public\.tsv$/;
-	my $year      = $1;
-	my $month_num	= $2;
-	my $month     = $month_hash->{$month_num} if ($month_num);
-	my $remapped;
-	if ($mapping) {
-		$remapped = " [remapped from build $ncbi_version]";
-	}
-	
-	
 	if ($year and $month) {
-		$source_description .= " set $month $year";
-		$month_num = '0'.$month_num if ($month_num<10);
   	$dbVar2->do(qq{INSERT INTO source(name,description,url,version)
 									 values("$source_name","$source_description$remapped","$hgmd_url",$year$month_num)
 									});
