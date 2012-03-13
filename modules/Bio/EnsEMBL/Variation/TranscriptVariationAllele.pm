@@ -372,17 +372,21 @@ sub display_codon {
 =cut
 
 sub polyphen_prediction {
-    my ($self, $polyphen_prediction) = @_;
+    my ($self, $classifier, $polyphen_prediction) = @_;
     
-    $self->{polyphen_prediction} = $polyphen_prediction if $polyphen_prediction;
+    $classifier ||= 'humvar';
     
-    unless ($self->{polyphen_prediction}) {
-        my ($prediction, $score) = $self->_protein_function_prediction('polyphen');
-        $self->{polyphen_score} = $score;
-        $self->{polyphen_prediction} = $prediction;
+    my $analysis = "polyphen_${classifier}";
+    
+    $self->{$analysis}->{prediction} = $polyphen_prediction if $polyphen_prediction;
+    
+    unless ($self->{$analysis.'_prediction'}) {
+        my ($prediction, $score) = $self->_protein_function_prediction($analysis);
+        $self->{$analysis}->{score} = $score;
+        $self->{$analysis}->{prediction} = $prediction;
     }
     
-    return $self->{polyphen_prediction};
+    return $self->{$analysis}->{_prediction};
 }
 
 =head2 polyphen_score
@@ -398,17 +402,21 @@ sub polyphen_prediction {
 =cut
 
 sub polyphen_score {
-    my ($self, $polyphen_score) = @_;
+    my ($self, $classifier, $polyphen_score) = @_;
+    
+    $classifier ||= 'humvar';
 
-    $self->{polyphen_score} = $polyphen_score if defined $polyphen_score;
+    my $analysis = "polyphen_${classifier}";
+    
+    $self->{$analysis}->{score} = $polyphen_score if defined $polyphen_score;
 
-    unless ($self->{polyphen_score}) {
-        my ($prediction, $score) = $self->_protein_function_prediction('polyphen');
-        $self->{polyphen_score} = $score;
-        $self->{polyphen_prediction} = $prediction;
+    unless ($self->{$analysis}->{score}) {
+        my ($prediction, $score) = $self->_protein_function_prediction($analysis);
+        $self->{$analysis}->{score} = $score;
+        $self->{$analysis}->{prediction} = $prediction;
     }
 
-    return $self->{polyphen_score};
+    return $self->{$analysis}->{score};
 }
 
 =head2 sift_prediction

@@ -26,11 +26,13 @@ sub default_options {
 
         pipeline_name           => 'protein_function',
 
-        pipeline_dir            => '/lustre/scratch101/ensembl/'.$ENV{USER}.'/'.$self->o('pipeline_name').'/'.$self->o('species'),
+        pipeline_dir            => '/lustre/scratch101/ensembl/'.$ENV{USER}.'/'.$self->o('pipeline_name'),
+        
+        species_dir             => $self->o('pipeline_dir').'/'.$self->o('species'),
         
         # directory used for the hive's own output files
 
-        output_dir              => $self->o('pipeline_dir').'/hive_output',
+        output_dir              => $self->o('species_dir').'/hive_output',
 
         # this registry file should contain connection details for the core, variation
         # and compara databases (if you are using compara alignments). If you are
@@ -41,7 +43,7 @@ sub default_options {
 
         # peptide sequences for all unique translations for this species will be dumped to this file
 
-        fasta_file              => $self->o('pipeline_dir').'/'.$self->o('species').'_translations.fa',
+        fasta_file              => $self->o('species_dir').'/'.$self->o('species').'_translations.fa',
         
         # set this flag to include LRG translations in the analysis
 
@@ -75,7 +77,7 @@ sub default_options {
 
         # where we will keep polyphen's working files etc. as the pipeline runs
 
-        pph_working             => $self->o('pipeline_dir').'/polyphen_working',
+        pph_working             => $self->o('species_dir').'/polyphen_working',
         
         # specify the Weka classifier models here, if you don't want predictions from 
         # one of the classifier models set the value to the empty string
@@ -111,7 +113,7 @@ sub default_options {
 
         sift_dir                => '/software/ensembl/variation/sift4.0.5',
 
-        sift_working            => $self->o('pipeline_dir').'/sift_working',
+        sift_working            => $self->o('species_dir').'/sift_working',
         
         # the location of blastpgp etc.
 

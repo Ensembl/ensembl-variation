@@ -53,6 +53,8 @@ package Bio::EnsEMBL::Variation::TranscriptVariation;
 use strict;
 use warnings;
 
+use Digest::MD5 qw(md5_hex);
+
 use Bio::EnsEMBL::Utils::Scalar qw(assert_ref check_ref);
 use Bio::EnsEMBL::Variation::TranscriptVariationAllele;
 use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(overlap within_cds);
@@ -875,6 +877,19 @@ sub _peptide {
     return $peptide;
 }
 
+sub _translation_md5 {
+    my $self = shift;
+
+    my $tran = $self->transcript;
+    
+    unless (exists $tran->{_variation_effect_feature_cache}->{translation_md5}) {
+        $tran->{_variation_effect_feature_cache}->{translation_md5} = 
+            $self->_peptide ? md5_hex($self->_peptide) : undef;
+    }
+
+    return $tran->{_variation_effect_feature_cache}->{translation_md5};
+}
+
 sub _codon_table {
     my $self = shift;
     
@@ -905,7 +920,9 @@ sub _protein_function_predictions {
 
     unless ($matrix || exists($tran->{_variation_effect_feature_cache}->{protein_function_predictions}->{$analysis})) {
         my $pfpma = $self->{adaptor}->db->get_ProteinFunctionPredictionMatrixAdaptor;
-        $matrix = $pfpma->fetch_by_analysis_transcript_stable_id($analysis, $tran->stable_id);
+           
+        $matrix = $pfpma->fetch_by_analysis_translation_md5($analysis, $self->_translation_md5);
+
         $tran->{_variation_effect_feature_cache}->{protein_function_predictions}->{$analysis} = $matrix;
     }
 

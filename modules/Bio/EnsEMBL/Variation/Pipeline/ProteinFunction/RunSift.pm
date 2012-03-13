@@ -158,8 +158,9 @@ sub run {
         # parse the results file
 
         my $pred_matrix = Bio::EnsEMBL::Variation::ProteinFunctionPredictionMatrix->new(
-            -analysis       => 'sift',
-            -peptide_length => length($peptide),
+            -analysis           => 'sift',
+            -peptide_length     => length($peptide),
+            -translation_md5    => $translation_md5,
         );
 
         while (<RESULTS>) {
@@ -183,7 +184,12 @@ sub run {
             );
         }
         
-        $self->save_predictions($pred_matrix);
+        my $var_dba = $self->get_species_adaptor('variation');
+
+        my $pfpma = $var_dba->get_ProteinFunctionPredictionMatrixAdaptor
+            or die "Failed to get matrix adaptor";
+        
+        $pfpma->store($pred_matrix);
     }
 
     # tar up the files

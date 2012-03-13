@@ -53,38 +53,4 @@ sub get_stable_id_for_md5 {
     return $stable_id;
 }
 
-sub save_predictions {
-    my ($self, $pred_matrix) = @_;
-
-    # serialize the matrix and save it to the database
-    
-    my $translation_md5 = $self->required_param('translation_md5');
-    
-    my $serialized = $pred_matrix->serialize;
-
-    my $var_dba = $self->get_species_adaptor('variation');    
-
-    my $dbh = $var_dba->dbc->db_handle;
-
-    my $column = $pred_matrix->analysis;
-
-    $column .= '_'.$pred_matrix->sub_analysis if defined $pred_matrix->sub_analysis;
-
-    $column .= '_predictions';
-
-    my $insert_sth = $dbh->prepare(qq{
-        INSERT IGNORE INTO protein_function_predictions (translation_md5) VALUES (?)
-    });
-
-    $insert_sth->execute($translation_md5);
-
-    my $save_sth = $dbh->prepare(qq{
-        UPDATE protein_function_predictions 
-        SET $column = ?
-        WHERE translation_md5 = ?
-    }) or die "DB error: ".$dbh->errstr;
-    
-    $save_sth->execute($serialized, $translation_md5);
-}
-
 1;
