@@ -380,13 +380,13 @@ sub polyphen_prediction {
     
     $self->{$analysis}->{prediction} = $polyphen_prediction if $polyphen_prediction;
     
-    unless ($self->{$analysis.'_prediction'}) {
+    unless ($self->{$analysis}->{prediction}) {
         my ($prediction, $score) = $self->_protein_function_prediction($analysis);
         $self->{$analysis}->{score} = $score;
         $self->{$analysis}->{prediction} = $prediction;
     }
     
-    return $self->{$analysis}->{_prediction};
+    return $self->{$analysis}->{prediction};
 }
 
 =head2 polyphen_score
