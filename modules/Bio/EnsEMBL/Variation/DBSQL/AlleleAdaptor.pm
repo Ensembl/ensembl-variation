@@ -117,7 +117,7 @@ sub store_multiple {
 	} @$alleles;
 	
 	my $sth = $dbh->prepare_cached(qq{
-		INSERT DELAYED INTO allele (
+		INSERT INTO allele (
 			variation_id,
 			subsnp_id,
 			allele_code_id,
@@ -438,10 +438,32 @@ sub _allele_code {
 				)
 				VALUES (?)
 			});
-			$sth->execute($allele);
+			eval {
+				$sth->execute($allele);
+			};
 			$sth->finish;
 			
-			my $allele_code = $dbh->last_insert_id(undef, undef, 'allele_code', 'allele_code_id');
+			my $allele_code;
+			
+			# insert failed, another process did it maybe?
+			if($@) {
+				my $sth2 = $dbh->prepare(qq{
+					SELECT allele_code_id
+					FROM allele_code
+					WHERE allele = ?
+				});
+				$sth2->execute($allele);
+				$sth2->bind_columns(\$allele_code);
+				$sth2->fetch();
+				
+				throw("ERROR: Failed to insert allele '$allele' into allele_code") unless defined($allele_code);
+				
+				$sth2->finish();
+			}
+			else {
+				$allele_code = $dbh->last_insert_id(undef, undef, 'allele_code', 'allele_code_id');
+			}
+			
 			$self->db->{_allele_codes}->{$allele} = $allele_code;
 		}
 	}
