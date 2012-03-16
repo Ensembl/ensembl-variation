@@ -63,6 +63,7 @@ use warnings;
 
 use Bio::EnsEMBL::Variation::Utils::Condel qw(get_condel_prediction);
 use Bio::EnsEMBL::Variation::ProteinFunctionPredictionMatrix qw($AA_LOOKUP);
+use Bio::EnsEMBL::Utils::Exception qw(throw warning deprecate);
 
 use base qw(Bio::EnsEMBL::Variation::VariationFeatureOverlapAllele);
 
@@ -485,6 +486,8 @@ sub sift_score {
 sub condel_prediction {
     my ($self, $condel_prediction) = @_;
 
+	deprecate('Condel support has been moved to a VEP plugin. This method will be removed in the next release.');
+
     $self->{condel_prediction} = $condel_prediction if $condel_prediction;
 
     unless ($self->{condel_prediction}) {
@@ -497,7 +500,6 @@ sub condel_prediction {
 
         if (defined $pph_score && defined $sift_score && ($pph_pred ne 'unknown') ) {
             my ($prediction, $score) = get_condel_prediction($sift_score, $pph_score);
-
             $self->{condel_prediction}  = $prediction;
             $self->{condel_score}       = $score;
         }
