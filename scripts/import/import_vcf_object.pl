@@ -63,13 +63,11 @@ PARENT->autoflush(1);
 $config->{start_time} = [gettimeofday];
 
 # check if we are forking
-if(
-   defined($config->{input_file}) &&
-   -e $config->{input_file} &&
-   $config->{input_file} =~ /\.gz$/ &&
-   -e $config->{input_file}.'.tbi' &&
-   defined($config->{fork})
-) {
+if(defined($config->{fork})) {
+	die "ERROR: Could not find input file\n" unless defined($config->{input_file}) && -e $config->{input_file};
+	die "ERROR: Input file is not bgzipped, cannot fork\n" unless $config->{input_file} =~ /\.gz$/;
+	die "ERROR: Tabix index file ".$config->{input_file}.".tbi not found, cannot fork\n" unless $config->{input_file}.'.tbi';
+	
 	run_forks($config);
 }
 else {
@@ -128,6 +126,7 @@ sub configure {
 		'disable_keys',
 		'tables=s',
 		'skip_tables=s',
+		'add_tables=s',
 		
 		'merge_vfs',
 		'only_existing',
@@ -177,17 +176,18 @@ sub configure {
 	# recover?
 	if(defined $config->{recover}) {
 		open IN, (join '/', ($ENV{HOME}, '.import_vcf', $config->{session_id})) or die "ERROR: Could not recover session with ID ".$config->{session_id}."\n";
-		$config->{recover_point} = <IN>;
+		my $a = <IN>;
+		($config->{recover_point}, $config->{pid}) = split ' ', $a;
 		close IN;
 		
 		die "ERROR: Cannot recover - session with ID ".$config->{session_id}." has been flagged as finished" if $config->{recover_point} eq 'FINISHED';
 		
-		debug($config, "Found recover point ", $config->{recover_point}, " for session ID ", $config->{session_id});
+		debug($config, "Found recover point ", $config->{recover_point}, " for session ID ", $config->{session_id}, " PID ", $config->{pid});
 	}
 	
 	# sanity checks
 	die("ERROR: Cannot run in test mode using forks\n") if defined($config->{fork}) and defined($config->{test});
-	die("ERROR: Cannot recover using forks\n") if defined($config->{fork}) and defined($config->{recover});
+	#die("ERROR: Cannot recover using forks\n") if defined($config->{fork}) and defined($config->{recover});
 	
 	# set defaults
 	$config->{species}         ||= "human";
@@ -198,9 +198,10 @@ sub configure {
 	$config->{pop_prefix}      ||= '';
 	$config->{coord_system}    ||= 'chromosome';
 	$config->{progress_update} ||= 100;
+	$config->{pid}             ||= $$;
 	
 	# recovery not possible if forking
-	$config->{no_recover} = 1 if defined($config->{fork});
+	#$config->{no_recover} = 1 if defined($config->{fork});
 	
 	# set default list of tables to write to
 	my $tables = {
@@ -213,6 +214,7 @@ sub configure {
 		'compressed_genotype_var'         => 1,
 		'individual_genotype_multiple_bp' => 0,
 		'compressed_genotype_region'      => 0,
+		'transcript_variation'            => 0,
 		'sample'                          => 1,
 		'population'                      => 1,
 		'individual'                      => 1,
@@ -231,6 +233,14 @@ sub configure {
 		
 		# set include tables
 		foreach my $table(split /\,/, $config->{tables}) {
+			$tables->{$table} = 1 if defined($tables->{$table});
+		}
+	}
+	
+	if(defined($config->{add_tables})) {
+		
+		# add tables
+		foreach my $table(split /\,/, $config->{add_tables}) {
 			$tables->{$table} = 1 if defined($tables->{$table});
 		}
 	}
@@ -288,20 +298,21 @@ sub configure {
 	$config->{reg} = 'Bio::EnsEMBL::Registry';
 	
 	# VEP stuff
-	$config->{chunk_size}        ||= 50000;
-	$config->{cache_region_size} ||= 1000000;
-	$config->{compress}          ||= 'zcat';
-	$config->{sa}                  = $config->{slice_adaptor};
-	$config->{terms}               = 'SO';
-	$config->{tr_cache}            = {};
-	$config->{rf_cache}            = {};
-	#$config->{quiet}               = 1;
-	$config->{original}            = 1;
-	$config->{dir}                 = $ENV{'HOME'}.'/.vep/homo_sapiens/66';
-	$config->{cache}               = 1;
-	$config->{offline}             = 1;
-	#$config->{no_progress}         = 1;
-	$config->{buffer_size}       ||= 1000;
+	$config->{vep}->{chunk_size}        ||= 50000;
+	$config->{vep}->{cache_region_size} ||= 1000000;
+	$config->{vep}->{compress}          ||= 'zcat';
+	$config->{vep}->{sa}                  = $config->{slice_adaptor};
+	$config->{vep}->{terms}               = 'SO';
+	$config->{vep}->{tr_cache}            = {};
+	$config->{vep}->{rf_cache}            = {};
+	$config->{vep}->{quiet}               = 1;
+	$config->{vep}->{original}            = 1;
+	$config->{vep}->{dir}                 = $ENV{'HOME'}.'/.vep/homo_sapiens/66';
+	$config->{vep}->{cache}               = 1;
+	$config->{vep}->{offline}             = 1;
+	$config->{vep}->{no_progress}         = 1;
+	$config->{buffer_size}              ||= 100;
+	$config->{vep}->{species}             = $config->{species};
 	
 	# get terminal width for progress bars
 	my $width;
@@ -384,12 +395,39 @@ sub main {
 	connect_to_dbs($config);
 	
 	# populate from SQL?
-	if(defined($config->{sql}) && !defined($config->{forked})) {
+	if(defined($config->{sql}) && !defined($config->{recover})) {
 		sql_populate($config, $config->{sql});
+		
+		if(defined($config->{test})) {
+			debug($config, "(TEST) Adding schema version to meta table");
+		}
+		else {
+			# add schema version to meta
+			my $sth = $config->{dbVar}->prepare(qq{
+				INSERT INTO meta (species_id, meta_key, meta_value)
+				VALUES (NULL, ?, ?)
+			});
+			$sth->execute('schema_version', $config->{reg}->software_version);
+			$sth->finish();
+		}
+		
+		# try and do attrib
+		if(system('perl  ../misc/create_attrib_sql.pl --config Bio::EnsEMBL::Variation::Utils::Config --no_model > /tmp/attribs.sql') == 0) {
+			sql_populate($config, '/tmp/attribs.sql');
+		}
+		else {
+			debug("WARNING: Failed to populate attrib table. Variation classses will not be set correctly");
+		}
 	}
 	
 	# get adaptors
 	get_adaptors($config);
+	
+	# insert genotypes if recovering
+	if(defined($config->{recover}) && $config->{tables}->{compressed_genotype_region}) {
+		debug($config, "Importing genotypes from recovered session");
+		import_genotypes($config);
+	}
 	
 	# backup
 	backup($config) if defined($config->{backup}) || defined($config->{move});
@@ -488,6 +526,13 @@ sub main {
 		# column definition line
 		if(/^#/) {
 			%headers = %{parse_header($config, \@split)};
+			
+			# leave a file telling the master process to fork the others
+			if(defined($config->{forked})) {
+				open TMP, '> '.$ENV{HOME}.'/.import_vcf/'.$config->{pid};
+				print TMP '1';
+				close TMP;
+			}
 		}
 		
 		# data
@@ -501,6 +546,7 @@ sub main {
 				
 				if(defined($config->{recover_point}) && md5_hex($data->{line}) eq $config->{recover_point}) {
 					delete $config->{recover_point};
+					$config->{recover_check} = 1;
 					debug(
 						$config,
 						"Found recovery point, skipped ",
@@ -516,6 +562,7 @@ sub main {
 						my ($chr, $pos) = split /\:/, $rpos;
 						if($data->{line} =~ /^$chr\s+$pos\s+/) {
 							delete $config->{recover_pos};
+							$config->{recover_check} = 1;
 							debug(
 								$config,
 								"Found recovery point, skipped ",
@@ -526,6 +573,7 @@ sub main {
 					}
 					elsif($data->{line} =~ /^\w+?\s+$rpos\s+/) {
 						delete $config->{recover_pos};
+						$config->{recover_check} = 1;
 						debug(
 							$config,
 							"Found recovery point, skipped ",
@@ -547,7 +595,10 @@ sub main {
 			$data->{$_} = $split[$headers{$_}] for keys %headers;
 			
 			# skip non-variant lines
-			next if $data->{ALT} eq '.';
+			if($data->{ALT} eq '.') {
+				$config->{skipped}->{non_variant}++;
+				next;
+			}
 			
 			# parse info column
 			my %info;	
@@ -575,6 +626,9 @@ sub main {
 				$last_skipped++;
 				next;
 			}
+			
+			# copy seq region ID
+			$data->{tmp_vf}->{seq_region_id} = $config->{seq_region_ids}->{$data->{tmp_vf}->{chr}};
 			
 			next unless $data->{tmp_vf}->isa('Bio::EnsEMBL::Variation::VariationFeature');
 			
@@ -604,8 +658,14 @@ sub main {
 			# get variation object
 			$data->{variation} = variation($config, $data);
 			
+			# transcript variation
+			get_all_consequences($config->{vep}, [$data->{tmp_vf}], $config->{vep}->{tr_cache}, $config->{vep}->{rf_cache});
+			
 			# get variation_feature object
 			$data->{vf} = variation_feature($config, $data);
+			
+			# attach variation to genotypes
+			$_->{variation} = $data->{variation} for @{$data->{genotypes}};
 			
 			# skip variation if no dbID
 			if(!defined($data->{variation}->{dbID}) && !defined($config->{test})) {
@@ -615,10 +675,14 @@ sub main {
 			}
 			
 			# transcript variation
-			#push @vf_buffer, $data->{vf};
-			#if(scalar @vf_buffer == $config->{buffer_size}) {
-			#	transcript_variation($config, \@vf_buffer);
-			#	@vf_buffer = ();
+			transcript_variation($config, [$data->{tmp_vf}]) if $config->{tables}->{transcript_variation};
+			
+			#if($config->{tables}->{transcript_variation}) {
+			#	push @vf_buffer, $data->{vf};
+			#	if(scalar @vf_buffer == $config->{buffer_size}) {
+			#		transcript_variation($config, \@vf_buffer);
+			#		@vf_buffer = ();
+			#	}
 			#}
 			
 			# alleles
@@ -699,20 +763,21 @@ sub main {
 			
 			if(defined($config->{forked})) {
 				debug($config, "Processed $var_counter lines (".$config->{forked}.")");
+				store_session($config, md5_hex($data->{line})) if $var_counter % $config->{progress_update} == 0;
 			}
 			elsif($var_counter % $config->{progress_update} == 0) {
 				progress($config, $var_counter);
 				
 				store_session($config, md5_hex($data->{line})) unless defined($config->{no_recover});
-				#debug($config, "Processed $var_counter lines");
 			}
 		}
 	}
 	
+	progress($config, $var_counter) unless defined($config->{forked});
 	end_progress($config);
 	
 	# clean up remaining genotypes and import
-	if($config->{tables}->{compressed_genotype_region}) {
+	if($config->{tables}->{compressed_genotype_region} && $var_counter) {
 	
 		debug($config, "Importing compressed genotype data");
 		
@@ -720,7 +785,7 @@ sub main {
 		&import_genotypes($config);
 	}
 	
-	transcript_variation($config, \@vf_buffer) if @vf_buffer;
+	transcript_variation($config, \@vf_buffer) if @vf_buffer and $config->{tables}->{transcript_variation};
 	
 	# re-enable keys if requested
 	if(defined $config->{disable_keys}) {
@@ -732,7 +797,13 @@ sub main {
 	}
 	
 	if(defined($config->{recover_point}) || defined($config->{recover_pos})) {
-		die("ERROR: Could not find recovery point in input file\n");
+		if(defined($config->{forked})) {
+			debug($config, "WARNING: Could not find recovery point ".(defined($config->{recover_point}) ? $config->{recover_point} : $config->{recover_pos})." for session ".$config->{session_id}.(defined($config->{forked}) ? " (".$config->{forked} : "")." in input file");
+			exit(0);
+		}
+		else {
+			die("ERROR: Could not find recovery point in input file\n");
+		}
 	}
 	
 	debug($config, "Updating meta_coord");
@@ -789,7 +860,48 @@ sub run_forks {
 		push @chrs, $_;
 	}
 	close TMP;
+	
 	@chrs = reverse @chrs;
+	
+	my $num_lines;
+	
+	# if we have fewer chroms than forks, we'll need to subdivide
+	if(scalar @chrs < $config->{fork}) {
+		
+		debug($config, "Found only ".(scalar @chrs)." chromosomes, subdividing");
+		
+		my (%min_pos, %max_pos);
+		
+		open TMP, "zcat ".$config->{input_file}." | ";
+		while(<TMP>) {
+			next if /^#/;
+			my ($chr, $pos) = (split)[0..1];
+			$max_pos{$chr} = $pos if !defined($max_pos{$chr}) or $pos > $max_pos{$chr};
+			$min_pos{$chr} = $pos if !defined($min_pos{$chr}) or $pos < $min_pos{$chr};
+			$num_lines++;
+		}
+		close TMP;
+		
+		my $size = (scalar @chrs == 1 ? int(($max_pos{$chrs[0]} - $min_pos{$chrs[0]} + 1) / $config->{fork}) : 10000000);
+		my @new_chrs;
+		
+		while(scalar @new_chrs < $config->{fork}) {
+			@new_chrs = ();
+			
+			foreach my $chr(@chrs) {
+				my $i = $size * int($min_pos{$chr}/$size);
+				
+				while($i < $max_pos{$chr}) {
+					push @new_chrs, $chr.':'.$i.'-'.(($i + $size) - 1);
+					$i += $size;
+				}
+			}
+			
+			$size = int($size / 10);
+		}
+		
+		@chrs = @new_chrs;
+	}
 	
 	## we need to scan upfront through the file to find the chrs we are parsing
 	#my (%chr_hash, $num_lines);
@@ -807,10 +919,38 @@ sub run_forks {
 	#
 	#my @chrs = sort {$chr_hash{$a} <=> $chr_hash{$b}} keys %chr_hash;#(1..22,'X','Y','MT');
 	
-	my $string = '?';#$num_lines;
-    #1 while $string =~ s/^(-?\d+)(\d\d\d)/$1,$2/;
+	my $string;
+	if($num_lines) {
+		$string = $num_lines;
+		1 while $string =~ s/^(-?\d+)(\d\d\d)/$1,$2/;
+	}
+	else {
+		$string = '?';
+	}
 	
-	debug($config, "Done - found $string variants across ".(scalar @chrs)." chromosomes");
+	debug($config, "Done - found $string variants across ".(scalar @chrs)." chromosomal regions");
+	
+	# if we're recovering, skip those already finished
+	if(defined($config->{recover})) {
+		debug($config, "Checking for finished forks");
+		
+		my @new_chrs;
+		
+		foreach my $chr(@chrs) {
+			if(open IN, (join '/', ($ENV{HOME}, '.import_vcf', md5_hex($config->{session_id}.$chr)))) {
+				my $a = <IN>;
+				my ($point, $pid) = split ' ', $a;
+				push @new_chrs, $chr unless $point eq 'FINISHED';
+			}
+			else {
+				push @new_chrs, $chr;
+			}
+		}
+		
+		debug($config, "Found ".(scalar @chrs - scalar @new_chrs)." finished forks");
+		
+		@chrs = @new_chrs;
+	}
 	
 	# fork off a process to handle comms
 	my $comm_pid = fork;
@@ -818,23 +958,30 @@ sub run_forks {
 	if($comm_pid == 0) {
 		my $c;
 		my $finished = 0;
+		my %in_progress;
 		
 		while(<CHILD>) {
+			my $fork = (split /\(|\)/)[-2];
+			
+			#print unless /Processed/;
+			
 			if(/Processed/) {
 				$c++;
+				$in_progress{$fork} = 1;
 				
 				#my ($q, $n) = ($config->{quiet}, $config->{no_progress});
 				#delete $config->{quiet};
 				#delete $config->{no_progress};
-				progress($config, $c);
+				progress($config, $c, scalar keys %in_progress) if $c % $config->{progress_update} == 0;
 				#($config->{quiet}, $config->{no_progress}) = ($q, $n);
 				#if($c =~ /000$/) {
 				#	debug({}, "Processed $c lines");
 				#}
 			}
 			elsif(/Finished/) {
-				print $_;
+				#print "\n$_";
 				$finished++;
+				delete $in_progress{$fork};
 				last if $finished == @chrs;
 			}
 			elsif(/STATS/) {
@@ -848,7 +995,7 @@ sub run_forks {
 				$config->{skipped}->{$split[-2]} += $split[-1];
 			}
 			elsif(/WARNING/) {
-				print;
+				print "\n$_";
 			}
 		}
 		close CHILD;
@@ -879,6 +1026,10 @@ sub run_forks {
 		die("ERROR: Unable to fork communications process\n");
 	}
 	
+	my $first = 1;
+	
+	my @master_pids;
+	
 	# now fork a process for each chromosome
 	for my $chr(@chrs) {
 		
@@ -886,13 +1037,23 @@ sub run_forks {
 		
 		if($pid) {
 			push @pids, $pid;
+			push @master_pids, $pid;
 			
-			# stop the next one doing backup
+			store_session($config, $pid);
+			
+			# stop the next one doing backup and sql import
 			delete $config->{backup} if defined($config->{backup});
 			delete $config->{move} if defined($config->{move});
+			delete $config->{sql} if defined($config->{sql});
 			
 			# sleep to avoid conflicting inserts at beginning of forked processes
-			sleep(10);
+			if($first) {
+				while(!-e $ENV{HOME}.'/.import_vcf/'.$pid) {
+					sleep(1);
+				}
+				$first = 0;
+				unlink($ENV{HOME}.'/.import_vcf/'.$pid);
+			}
 			
 			# stop if max processes reached
 			if(scalar @pids == $config->{fork}) {
@@ -903,17 +1064,46 @@ sub run_forks {
 		}
 		elsif($pid == 0) {
 			
-			debug($config, "Forking chr $chr");
+			#debug($config, "Forking chr $chr\n\n");
 			$config->{forked} = $chr;
+			
+			$config->{session_id} = md5_hex($config->{session_id}.$chr);
+			
+			debug($config, "Session ID is ", $config->{session_id});
+			
+			# recover?
+			if(defined $config->{recover}) {
+				if(open IN, (join '/', ($ENV{HOME}, '.import_vcf', $config->{session_id}))) {
+					my $a = <IN>;
+					($config->{recover_point}, $config->{pid}) = split ' ', $a;
+					close IN;
+					
+					# already finished
+					if($config->{recover_point} eq 'FINISHED') {
+						debug($config, "Finished! ($chr)");
+						exit(0);
+					}
+				}
+				
+				# delete the old recovery point since this will be the one for the main session
+				else {
+					delete $config->{recover_point};
+					delete $config->{recover_pos};
+				}
+			}
 			
 			# point the file handle to a tabix pipe
 			my $in_file_handle = FileHandle->new;
 			
-			$in_file_handle->open("tabix ".$config->{input_file}." $chr | ");
+			$in_file_handle->open("tabix -h ".$config->{input_file}." $chr | ");
 			$config->{in_file_handle} = $in_file_handle;
+			
+			$config->{pid} = $$;
 			
 			# run the main sub
 			main($config);
+			
+			$in_file_handle->close();
 			
 			close PARENT;
 			
@@ -930,6 +1120,15 @@ sub run_forks {
 	
 	# kill off the comm pid in case one of the other children died
 	kill 9, $comm_pid;
+	
+	# store main session as finished
+	store_session($config, 'FINISHED');
+	
+	# unlink forked session files
+	unlink(join '/', ($ENV{HOME}, '.import_vcf', md5_hex($config->{session_id}.$_))) for @chrs;
+	
+	# unlink conflicting insert locks
+	unlink($ENV{HOME}.'/.import_vcf/'.$_) for @master_pids;
 	
 	debug($config, "Finished all forks");
 }
@@ -1179,7 +1378,7 @@ sub store_session {
 	my $file = join '/', ($dir, $config->{session_id});
 	
 	if(open SESSION, "> $file") {
-		print SESSION $point;
+		print SESSION $point." ".$config->{pid};
 		close SESSION;
 	}
 	else {
@@ -1374,7 +1573,8 @@ sub individuals {
 	
 	# need the relationship to go both ways (allele/pop_genotype uses this way round later on)
 	if(!exists($config->{pop_inds})) {
-		my %pop_inds = map { $config->{pop_prefix}.$config->{population} => {$config->{ind_prefix}.$_ => 1} } @$split_ref;
+		my %pop_inds;
+		$pop_inds{$config->{pop_prefix}.$config->{population}}->{$config->{ind_prefix}.$_} = 1 for @$split_ref;
 		$config->{pop_inds} = \%pop_inds;
 	}
 	
@@ -1476,7 +1676,7 @@ sub variation {
 			name             => $var_id,
 			source           => $config->{source},
 			is_somatic       => 0,
-			ancestral_allele => $data->{info}->{AA} eq '.' ? undef : $data->{info}->{AA}
+			ancestral_allele => $data->{info}->{AA} eq '.' ? undef : uc($data->{info}->{AA})
 		});
 		
 		# add in some hacky stuff so flanking sequence gets written
@@ -1516,84 +1716,73 @@ sub variation_feature {
 	
 	my $existing_vfs = $vfa->_fetch_all_by_coords($config->{seq_region_ids}->{$vf->{chr}}, $vf->{start}, $vf->{end});
 	
-	my ($existing_vf, $new_allele_string);
-	
-	# if there's more than one, choose the lowest rs number
-	if(scalar @$existing_vfs > 1) {
-		my @names = map {$_->variation_name} @$existing_vfs;
-		$_ =~ s/^rs//g for @names;
-		my %sorting = map {$_ => $names[$_]} (0..$#names);
-		$existing_vf = $existing_vfs->[(sort {$sorting{$a} <=> $sorting{$b}} keys %sorting)[0]];
-	}
-	
-	# just one existing, merge in novel alleles?
-	elsif(scalar @$existing_vfs) {
-		$existing_vf = $existing_vfs->[0];
-	}
-	
-	if(defined $existing_vf) {
-		unless(defined $config->{only_existing}) {
-			my @existing_alleles = split /\//, $existing_vf->allele_string;
+	# check existing VFs
+	foreach my $existing_vf (sort {
+		(split 'rs', $a->variation_name)[-1] <=> (split 'rs', $b->variation_name)[-1]
+	} @$existing_vfs) {
+		
+		my @existing_alleles = split /\//, $existing_vf->allele_string;
+		
+		my %combined_alleles;
+		$combined_alleles{$_}++ for (@existing_alleles, @new_alleles);
+		
+		# new alleles, need to merge
+		if(scalar keys %combined_alleles > scalar @new_alleles) {
 			
-			# compare ref alleles - we don't want to merge if they differ
-			#next unless $existing_alleles[0] eq $new_alleles[0];
+			# don't want to merge when doing only existing
+			next if defined $config->{only_existing};
 			
-			# copy to hash to see which alleles are novel
-			my %combined_alleles;
-			$combined_alleles{$_}++ for (@existing_alleles, @new_alleles);
+			# don't want to merge any in/del types
+			next if grep {$_ =~ /\-/} keys %combined_alleles;
 			
-			if(scalar keys %combined_alleles != scalar @existing_alleles) {
-				
-				# create new allele string and update variation_feature
-				# not really ideal to be doing direct SQL here but will do for now
-				$new_allele_string =
-					$existing_vf->allele_string.
-					'/'.
-					(join /\//, grep {$combined_alleles{$_} == 1} @new_alleles);
-				
-				if(defined($config->{test})) {
-					debug($config, "(TEST) Changing allele_string for ", $existing_vf->variation_name, " from ", $existing_vf->allele_string, " to $new_allele_string");
-				}
-				else {
-					my $sth = $dbVar->prepare(qq{
-						UPDATE variation_feature
-						SET allele_string = ?
-						WHERE variation_feature_id = ?
-					});
-					$sth->execute($new_allele_string, $existing_vf->dbID);
-					$sth->finish;
-				}
-				
-				$config->{rows_added}->{variation_feature_allele_string_merged}++;
+			# create new allele string and update variation_feature
+			# not really ideal to be doing direct SQL here but will do for now
+			my $new_allele_string =
+				$existing_vf->allele_string.
+				'/'.
+				(join /\//, grep {$combined_alleles{$_} == 1} @new_alleles);
+			
+			if(defined($config->{test})) {
+				debug($config, "(TEST) Changing allele_string for ", $existing_vf->variation_name, " from ", $existing_vf->allele_string, " to $new_allele_string");
+			}
+			else {
+				my $sth = $dbVar->prepare(qq{
+					UPDATE variation_feature
+					SET allele_string = ?
+					WHERE variation_feature_id = ?
+				});
+				$sth->execute($new_allele_string, $existing_vf->dbID);
+				$sth->finish;
 			}
 			
+			$config->{rows_added}->{variation_feature_allele_string_merged}++;
+		}
+		
+		# we also need to add a synonym entry if the variation has a new name
+		if($existing_vf->variation_name ne $data->{ID}) {
 			
-			# we also need to add a synonym entry if the variation has a new name
-			if($existing_vf->variation_name ne $data->{ID}) {
-				
-				if(defined($config->{test})) {
-					debug($config, "(TEST) Adding ", $data->{ID}, " to variation_synonym as synonym for ", $existing_vf->variation_name);
-				}
-				else {
-					my $sth = $dbVar->prepare(qq{
-						INSERT IGNORE INTO variation_synonym(
-							variation_id,
-							source_id,
-							name
-						)
-						VALUES(?, ?, ?)
-					});
-					
-					$sth->execute(
-						$existing_vf->{_variation_id} || $existing_vf->variation->dbID,
-						$config->{source_id},
-						$data->{ID}
-					);
-					$sth->finish;
-				}
-				
-				$config->{rows_added}->{variation_synonym}++;
+			if(defined($config->{test})) {
+				debug($config, "(TEST) Adding ", $data->{ID}, " to variation_synonym as synonym for ", $existing_vf->variation_name);
 			}
+			else {
+				my $sth = $dbVar->prepare(qq{
+					INSERT IGNORE INTO variation_synonym(
+						variation_id,
+						source_id,
+						name
+					)
+					VALUES(?, ?, ?)
+				});
+				
+				$sth->execute(
+					$existing_vf->{_variation_id} || $existing_vf->variation->dbID,
+					$config->{source_id},
+					$data->{ID}
+				);
+				$sth->finish;
+			}
+			
+			$config->{rows_added}->{variation_synonym}++;
 		}
 		
 		# point the variation object to the existing one
@@ -1616,7 +1805,7 @@ sub variation_feature {
 	}
 	
 	# otherwise we need to store the object we've created
-	elsif(!defined($config->{only_existing})) {
+	if(!defined($vf->{dbID}) && !defined($config->{only_existing})) {
 		
 		# add GMAF to variation object?
 		add_gmaf($config, $data, $data->{variation}) if defined($config->{gmaf});
@@ -1636,7 +1825,6 @@ sub variation_feature {
 		my $so_term = SO_variation_class($vf->{allele_string}, 1);
 		
 		# add in some info needed (since we won't have a slice)
-		$vf->{seq_region_id}   = $config->{seq_region_ids}->{$vf->{chr}};
 		$vf->{source_id}       = $config->{source_id};
 		$vf->{is_somatic}      = 0;
 		$vf->{class_attrib_id} = $config->{attribute_adaptor}->attrib_id_for_type_value('SO_term', $so_term);
@@ -1675,31 +1863,33 @@ sub transcript_variation {
 	#my $slice = $config->{slice_adaptor}->fetch_by_region("chromosome", $vf->{chr});
 	#$vf->{slice} = $slice;
 	
-	#my $dbID = $vf->dbID;
-	#delete $vf->{dbID};
 	
-	waitpid($config->{tv_pid}, 0) if defined($config->{tv_pid});
-	
-	my $pid = fork;
-	
-	# parent
-	if($pid) {
-		$config->{tv_pid} = $pid;
-		$config->{transcriptvariation_adaptor}->dbc->reconnect;
-		return;
-	}
-	
-	elsif($pid == 0) {
+	#waitpid($config->{tv_pid}, 0) if defined($config->{tv_pid});
+	#
+	#my $pid = fork;
+	#
+	## parent
+	#if($pid) {
+	#	$config->{tv_pid} = $pid;
+	#	$config->{transcriptvariation_adaptor}->dbc->reconnect;
+	#	return;
+	#}
+	#
+	#elsif($pid == 0) {
 		
 		#debug($config, "Doing TV");
 		
-		get_all_consequences($config, $vfs, $config->{tr_cache}, $config->{rf_cache});
+		#get_all_consequences($config->{vep}, $vfs, $config->{vep}->{tr_cache}, $config->{vep}->{rf_cache});
 		
 		#debug($config, "Finished TV - writing to DB");
 		
 		foreach my $vf(@$vfs) {
+			
+			my $dbID = $vf->dbID;
+			delete $vf->{dbID};
+			
 			foreach my $tv(@{$vf->get_all_TranscriptVariations}) {
-				#$vf->{dbID} ||= $dbID;
+				$vf->{dbID} ||= $dbID;
 				
 				if(defined($config->{test})) {
 					debug($config, "(TEST) Writing transcript_variation object for variation ", $vf->variation_name, ", transcript ", $tv->transcript->stable_id);
@@ -1714,12 +1904,12 @@ sub transcript_variation {
 		
 		#debug($config, "Finished writing to DB");
 		
-		exit(0);
-	}
-	
-	else {
-		die("ERROR: Could not fork\n");
-	}
+	#	exit(0);
+	#}
+	#
+	#else {
+	#	die("ERROR: Could not fork\n");
+	#}
 }
 
 
@@ -1835,12 +2025,55 @@ sub allele {
 				#$config->{allele_adaptor}->store($allele);
 				push @objs, $allele;
 			}
-			
-			$config->{rows_added}->{allele}++;
 		}
 	}
 	
+	# recovery check
+	if(defined($config->{recover_check})) {
+		my $db_alleles = $data->{variation}->get_all_Alleles;
+		
+		my @final_objs = ();
+		my $count = 0;
+		
+		foreach my $a(@objs) {
+			
+			my $matched = 0;
+			
+			foreach my $b(@$db_alleles) {
+				if(
+					$a->allele eq $b->allele and
+					(defined $b->{_population_id} or defined $b->population) and
+					$a->population->dbID eq (defined($b->{_population_id}) ? $b->{_population_id} : $b->population->dbID) and
+					(
+						(
+							(defined($a->count) && defined($b->count) && $a->count == $b->count) or
+							(!defined($a->count) && !defined($b->count))
+						) or
+						(
+							(defined($a->frequency) && defined($b->frequency) && substr($a->frequency, 0, 4) == substr($b->frequency, 0, 4)) or
+							(!defined($a->frequency) && !defined($b->frequency))
+						)
+					)
+				) {
+					$matched = 1;
+					$count++;
+					last;
+				}
+			}
+			
+			push @final_objs, $a unless $matched;
+		}
+		
+		# all objects novel, must be onto all new stuff
+		delete $config->{recover_check} if scalar @objs == scalar @final_objs;
+		
+		return unless scalar @final_objs;
+		
+		@objs = @final_objs;
+	}
+	
 	$config->{allele_adaptor}->store_multiple(\@objs) unless defined($config->{test});
+	$config->{rows_added}->{allele} += scalar @objs;
 }
 
 
@@ -1890,12 +2123,55 @@ sub population_genotype {
 				#$config->{populationgenotype_adaptor}->store($popgt);
 				push @objs, $popgt;
 			}
-			
-			$config->{rows_added}->{population_genotype}++;
 		}
 	}
 	
+	# recovery check
+	if(defined($config->{recover_check})) {
+		my $db_popgts = $data->{variation}->get_all_PopulationGenotypes;
+		
+		my @final_objs = ();
+		my $count = 0;
+		
+		foreach my $a(@objs) {
+			
+			my $matched = 0;
+			
+			foreach my $b(@$db_popgts) {
+				if(
+					$a->genotype_string eq $b->genotype_string and
+					(defined $b->{_population_id} or defined $b->population) and
+					$a->population->dbID eq (defined $b->{_population_id} ? $b->{_population_id} : $b->population->dbID) and
+					(
+						(
+							(defined($a->count) && defined($b->count) && $a->count == $b->count) or
+							(!defined($a->count) && !defined($b->count))
+						) or
+						(
+							(defined($a->frequency) && defined($b->frequency) && substr($a->frequency, 0, 4) == substr($b->frequency, 0, 4)) or
+							(!defined($a->frequency) && !defined($b->frequency))
+						)
+					)
+				) {
+					$matched = 1;
+					$count++;
+					last;
+				}
+			}
+			
+			push @final_objs, $a unless $matched;
+		}
+		
+		# all objects novel, must be onto all new stuff
+		delete $config->{recover_check} if scalar @objs == scalar @final_objs;
+		
+		return unless scalar @final_objs;
+		
+		@objs = @final_objs;
+	}
+	
 	$config->{populationgenotype_adaptor}->store_multiple(\@objs) unless defined($config->{test});
+	$config->{rows_added}->{population_genotype} += scalar @objs;
 }
 
 sub individual_genotype {
@@ -1908,6 +2184,40 @@ sub individual_genotype {
 		debug($config, "(TEST) Writing ", scalar @gts, " genotype objects for variation ", $data->{variation}->name);
 	}
 	else {
+		# recovery check
+		if(defined($config->{recover_check})) {
+			my $db_gts = $data->{variation}->get_all_IndividualGenotypes;
+			
+			my @final_objs = ();
+			my $count = 0;
+			
+			foreach my $a(@gts) {
+				
+				my $matched = 0;
+				
+				foreach my $b(@$db_gts) {
+					if(
+						$a->genotype_string eq $b->genotype_string and
+						defined $b->individual and
+						$a->individual->dbID eq $b->individual->dbID
+					) {
+						$matched = 1;
+						$count++;
+						last;
+					}
+				}
+				
+				push @final_objs, $a unless $matched;
+			}
+			
+			# all objects novel, must be onto all new stuff
+			delete $config->{recover_check} if scalar @gts == scalar @final_objs;
+			
+			return unless scalar @final_objs;
+			
+			@gts = @final_objs;
+		}
+		
 		my $rows_added = $config->{individualgenotype_adaptor}->store(\@gts);
 		$config->{rows_added}->{compressed_genotype_var} += $rows_added;	
 	}
@@ -1919,6 +2229,31 @@ sub individual_genotype {
 sub import_genotypes{
 	my $config = shift;
 	
+	# check for lock file
+	my $sleeps = 0;
+	
+	my $lock_file = $ENV{HOME}.'/.import_vcf/compressed_genotype_region_lock';
+	
+	while(-e $lock_file) {
+		$sleeps++;
+		sleep(1);
+		
+		if($sleeps % 60 == 0) {
+			debug($config,
+				"WARNING: Process ".
+				(defined($config->{forked}) ? $config->{forked}." " : "").
+				"has been waiting to insert into compressed_genotype_region for ".
+				($sleeps / 60)." min".($sleeps > 60 ? 's' : '').
+				", you may need to delete the lock file ".$lock_file
+			);
+		}
+	}
+	
+	# create lock file
+	open TMP, '> '.$lock_file;
+	print TMP '1';
+	close TMP;
+	
 	# update meta_coord stat
 	$config->{meta_coord}->{compressed_genotype_region} = DISTANCE + 1;
 	
@@ -1927,15 +2262,21 @@ sub import_genotypes{
 	}
 	else {
 		$config->{compress_out}->close if defined($config->{compress_out});
-		my $call = "mv ".$config->{tmpdir}."/compressed_genotype_".$$.".txt ".$config->{tmpdir}."/".$config->{tmpfile};
-		system($call);
-		load($config->{dbVar},qw(compressed_genotype_region sample_id seq_region_id seq_region_start seq_region_end seq_region_strand genotypes));
+		
+		if(-e $config->{tmpdir}."/compressed_genotype_".$config->{pid}.".txt") {
+			my $call = "mv ".$config->{tmpdir}."/compressed_genotype_".$config->{pid}.".txt ".$config->{tmpdir}."/".$config->{tmpfile};
+			system($call);
+			load($config->{dbVar},qw(compressed_genotype_region sample_id seq_region_id seq_region_start seq_region_end seq_region_strand genotypes));
+		}
 	}
+	
+	# remove lock file
+	unlink($lock_file);
 }
 
 sub open_compressed_output {
 	my $config = shift;
-	my $file_handle = FileHandle->new("> ".$config->{tmpdir}."/compressed_genotype_".$$.".txt");
+	my $file_handle = FileHandle->new("> ".$config->{tmpdir}."/compressed_genotype_".$config->{pid}.".txt");
 	$config->{compress_out} = $file_handle;
 }
 
@@ -2010,7 +2351,7 @@ sub meta_coord {
 	});
 	
 	my $isth = $config->{dbVar}->prepare(q{
-		INSERT INTO meta_coord (
+		INSERT IGNORE INTO meta_coord (
 			table_name, coord_system_id, max_length
 		) VALUES (?,?,?)
 	});
@@ -2113,8 +2454,10 @@ Options
 -f | --flank          Size of flanking sequence [default: 200]
 --gp                  Use GP tag from INFO column to get coords
 
---tables              Comma-separated list of tables to include when writing to DB
-                      [default: all tables included]
+--tables              Comma-separated list of tables to include when writing to DB.
+                      Overwrites default list [default: all tables included]
+--add_tables          Comma-separated list of tables to add to default list. Use to
+                      add e.g. compressed_genotype_region (not added by default)
 --skip_tables         Comma-separated list of tables to exclude when writing to DB.
                       Takes precedence over --tables (i.e. any tables named in --tables
                       and --skip_tables will be skipped)
@@ -2204,7 +2547,10 @@ sub escape ($) {
 
 sub progress {
 	my $config = shift;
-	my $count = shift;
+	my $count  = shift;
+	my $proc   = shift;
+	
+	$proc ||= 1;
 	
 	return if defined($config->{no_progress});
 	
@@ -2216,12 +2562,17 @@ sub progress {
 	my $prev_pm = $config->{progress_update} / ($prev_elapsed / 60);
 	my $total_pm = $count / ($total_elapsed / 60);
 	
-	printf("\r%s - Processed %i variants (%.2f per min / %.2f per min overall)", getTime, $count, $prev_pm, $total_pm);
+	printf("\r%s - Processed %8i variants (%8.2f per min / %8.2f per min overall ) ( %2i process%2s )", getTime, $count, $prev_pm, $total_pm, $proc, ($proc > 1 ? 'es' : '  '));
 	
 	$config->{prev_time} = [gettimeofday];
 }
 
 sub end_progress {
 	my $config = shift;
-	print "\n";
+	if(defined $config->{forked}) {
+		print PARENT "\n";
+	}
+	else {
+		print "\n";
+	}
 }
