@@ -136,18 +136,21 @@ sub new {
 	  throw('Type of individual must of one of: "fully_inbred", "partly_inbred", "outbred", "mutant"');
       }
   }
-  return bless {'dbID'    => $dbID,
-                'adaptor' => $adaptor,
-                'name'    => $name,
-                'description' => $desc,
-		'display' => $display_flag,
-                'gender'  => $gender,
-                'father_individual' => $father,
-                'mother_individual' => $mother,
-		'type_individual' => $type_name,
-		'type_description' => $type_desc,
-                '_mother_individual_sample_id' => $mother_id,
-                '_father_individual_sample_id' => $father_id}, $class;
+  
+  return bless {
+	'dbID'    => $dbID,
+	'adaptor' => $adaptor,
+	'name'    => $name,
+	'description' => $desc,
+	'display' => $display_flag,
+	'gender'  => $gender,
+	'father_individual' => $father,
+	'mother_individual' => $mother,
+	'type_individual' => $type_name,
+	'type_description' => $type_desc,
+	'_mother_individual_sample_id' => $mother_id,
+	'_father_individual_sample_id' => $father_id,
+  }, $class;
 }
 
 
@@ -268,14 +271,16 @@ sub display{
 =cut
 
 sub get_all_Populations{
-    my $self = shift;
-
-    if (defined ($self->{'adaptor'})){
-	my $pop_adaptor = $self->{'adaptor'}->db()->get_PopulationAdaptor();
-
-	return $pop_adaptor->fetch_all_by_Individual($self);
-    }
-    return [];
+  my $self = shift;
+  
+  if(!defined($self->{populations})) {
+	if (defined ($self->{'adaptor'})){
+	  my $pop_adaptor = $self->{'adaptor'}->db()->get_PopulationAdaptor();
+	  $self->{populations} = $pop_adaptor->fetch_all_by_Individual($self);
+	}
+  }
+  
+  return $self->{populations};
 }
 
 
