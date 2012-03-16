@@ -131,7 +131,7 @@ sub store_multiple {
   } @$popgts;
   
   my $sth = $dbh->prepare_cached(qq{
-	INSERT DELAYED INTO population_genotype (
+	INSERT INTO population_genotype (
 	  variation_id,
 	  subsnp_id,
 	  genotype_code_id,
