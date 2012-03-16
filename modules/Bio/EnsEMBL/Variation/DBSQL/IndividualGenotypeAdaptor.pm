@@ -78,7 +78,7 @@ sub store {
 	my $dbh = $self->dbc->db_handle;
 	
 	my $sth = $dbh->prepare_cached(qq{
-		INSERT DELAYED INTO compressed_genotype_var(
+		INSERT INTO compressed_genotype_var(
 			variation_id,
 			subsnp_id,
 			genotypes
