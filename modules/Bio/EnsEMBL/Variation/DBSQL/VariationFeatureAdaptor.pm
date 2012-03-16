@@ -132,7 +132,7 @@ sub store {
     });
     
     $sth->execute(
-        $vf->{slice} ? $vf->get_seq_region_id : $vf->{seq_region_id},
+        defined($vf->{seq_region_id}) ? $vf->{seq_region_id} : $vf->slice->get_seq_region_id,
         $vf->{slice} ? $vf->seq_region_start : $vf->{start},
         $vf->{slice} ? $vf->seq_region_end : $vf->{end},
         $vf->strand,
@@ -143,7 +143,7 @@ sub store {
         $vf->{flags},
         $vf->{source_id},
         (join ",", @{$vf->get_all_validation_states}) || undef,
-        $vf->{slice} ? (join ",", @{$vf->consequence_type}) : 'intergenic_variant',
+        $vf->{slice} ? (join ",", @{$vf->consequence_type('SO')}) : 'intergenic_variant',
         $vf->{variation_set_id} || '',
         $vf->{class_attrib_id},
         $vf->is_somatic
@@ -1241,7 +1241,9 @@ sub fetch_by_hgvs_notation {
     my $user_transcript_adaptor = shift;
     
     #ÊSplit the HGVS notation into the reference, notation type and variation description
-    my ($reference,$type,$description) = $hgvs =~ m/^([^\:]+)\:.*?([cgmrp]?)\.?([\*\-0-9]+.*)$/i;
+    my ($reference,$type,$description) = $hgvs =~ m/^([^\:]+)\:.*?([cgmrp]?)\.?(.*?[\*\-0-9]+.*)$/i;
+    
+    print "REF $reference TYPE $type DESC $description\n";
     
     my $extra;
     
@@ -1256,7 +1258,11 @@ sub fetch_by_hgvs_notation {
     # strip version number from reference
     $reference =~ s/\.\d+//g if $reference =~ /^ENS|^LRG_\d+/;
     
-    my ($start,$end,$start_offset,$end_offset,$ref_allele,$alt_allele,$class);
+    my ($start,$end,$strand,$start_offset,$end_offset,$ref_allele,$alt_allele,$class);
+    
+    #ÊGet a slice adaptor
+    my $slice_adaptor = $user_slice_adaptor || $self->db()->dnadb()->get_SliceAdaptor();
+    my $slice;
     
     #ÊParse differently depending on the type of the notation and the type of the variation
     if ($type =~ m/[gcrm]/i) {
@@ -1310,15 +1316,93 @@ sub fetch_by_hgvs_notation {
     	warn ("The position specified by HGVS notation '$hgvs' refers to a nucleotide that may not have a specific reference sequence. The current Ensembl genome reference sequence will be used.") if ($start_offset || $end_offset || substr($start,0,1) eq '*' || substr($end,0,1) eq '*' || $start < 0);
     	
     }
+    elsif($type =~ /p/i) {
+        my ($from, $pos, $to) = $description =~ /^(\w+?)(\d+)(\w+?)$/;
+        
+        throw("Could not parse HGVS protein notation $hgvs") unless $from and $pos and $to;
+        
+        $class = 'sub';
+        
+    	my $transcript_adaptor = $user_transcript_adaptor || $self->db()->dnadb()->get_TranscriptAdaptor();
+    	my $transcript = $transcript_adaptor->fetch_by_translation_stable_id($reference) or throw ("Could not get a Transcript object for '$reference'");
+    	$slice = $slice_adaptor->fetch_by_region($transcript->coord_system_name(),$transcript->seq_region_name());
+        
+        # get genomic position
+        my $tr_mapper = $transcript->get_TranscriptMapper();
+        
+        my @coords = $tr_mapper->pep2genomic($pos, $pos);
+        
+        throw ("Unable to map the peptide coordinate $pos to genomic coordinates for protein $reference") if (scalar(@coords) != 1 || !$coords[0]->isa('Bio::EnsEMBL::Mapper::Coordinate'));
+        
+        $strand = $coords[0]->strand();
+    	$start = $coords[0]->start();
+    	$end = $coords[0]->start();
+        
+        # get correct codon table
+        my $attrib = $transcript->slice->get_all_Attributes('codon_table')->[0]; 
+        
+        # default to the vertebrate codon table which is denoted as 1
+        my $codon_table = Bio::Tools::CodonTable->new( -id => ($attrib ? $attrib->value : 1));
+        
+        # rev-translate
+        my @from_codons = $codon_table->revtranslate($from);
+        my @to_codons   = $codon_table->revtranslate($to);
+        
+        # now iterate over all possible mutation paths
+        my %paths;
+        
+        foreach my $f(@from_codons) {
+            foreach my $t(@to_codons) {
+                my $key = $f.'_'.$t;
+                
+                for my $i(0..2) {
+                    my ($a, $b) = (substr($f, $i, 1), substr($t, $i, 1));
+                    next if $a eq $b;
+                    push @{$paths{$key}}, $i.'_'.uc($a).'/'.uc($b);
+                }
+                
+                # non consecutive paths
+                if(scalar @{$paths{$key}} == 2 and $paths{$key}->[0] =~ /^0/ and $paths{$key}->[1] =~ /^2/) {
+                    splice(@{$paths{$key}}, 1, 0, '1_'.substr($f, 1, 1).'/'.substr($f, 1, 1));
+                }
+                
+                $paths{$key} = join ",", @{$paths{$key}};
+            }
+        }
+        
+        # get shortest dist and best paths with that dist
+        my $shortest_dist = length((sort {length($a) <=> length($b)} values %paths)[0]);
+        my %best_paths = map {$_ => 1} grep {length($_) eq $shortest_dist} values %paths;
+        
+        # nice and easy if we only have path
+        if(scalar keys %best_paths == 1) {
+            my @path = map {split /\,/, $_} keys %best_paths;
+            
+            # coords
+            $start += (split /\_/, $path[0])[0];
+            $end += (split /\_/, $path[-1])[0];
+            
+            # alleles
+            $ref_allele .= (split /\_|\//, $path[$_])[1] for 0..$#path;
+            $alt_allele .= (split /\_|\//, $path[$_])[2] for 0..$#path;
+        }
+        
+        else {
+            throw("Could not uniquely determine nucleotide change from peptide change $from \-\> $to");
+        }
+        #
+        #use Data::Dumper;
+        #$Data::Dumper::Maxdepth = 3;
+        #warn Dumper \@from_codons;
+        #warn Dumper \@to_codons;
+        #warn Dumper \%paths;
+        #warn Dumper \%best_paths;
+        #exit(0);
+    }
     # Else, it is protein notation
     else {
-	throw ("Parsing of HGVS protein notation has not yet been implemented");
+        throw ("Could not parse HGVS notation $hgvs");
     }
-    
-    #ÊGet a slice representing this variation
-    my $slice_adaptor = $user_slice_adaptor || $self->db()->dnadb()->get_SliceAdaptor();
-    my $slice;
-    my $strand;
     if ($type =~ m/c/i) {
 	
     	#ÊA small fix in case the reference is a LRG and there is no underscore between name and transcript
@@ -1391,27 +1475,27 @@ sub fetch_by_hgvs_notation {
     #ÊCreate Allele objects
     my @allele_objs;
     foreach my $allele ($ref_allele,$alt_allele) {
-	push(@allele_objs,Bio::EnsEMBL::Variation::Allele->new('-adaptor' => $self, '-allele' => $allele));
+        push(@allele_objs,Bio::EnsEMBL::Variation::Allele->new('-adaptor' => $self, '-allele' => $allele));
     }
     
     #ÊCreate a variation object. Use the HGVS string as its name
     my $variation = Bio::EnsEMBL::Variation::Variation->new(
-	'-adaptor' => $self->db()->get_VariationAdaptor(),
-	'-name' => $hgvs,
-	'-source' => 'Parsed from HGVS notation',
-	'-alleles' => \@allele_objs
+        '-adaptor' => $self->db()->get_VariationAdaptor(),
+        '-name' => $hgvs,
+        '-source' => 'Parsed from HGVS notation',
+        '-alleles' => \@allele_objs
     );
     
     #ÊCreate a variation feature object
     my $variation_feature = Bio::EnsEMBL::Variation::VariationFeature->new(
-	'-adaptor' => $self,
-	'-start' => $start,
-	'-end' => $end,
-	'-strand' => $strand,
-	'-slice' => $slice,
-	'-map_weight' => 1,
-	'-variation' => $variation,
-	'-allele_string' => "$ref_allele/$alt_allele"
+        '-adaptor' => $self,
+        '-start' => $start,
+        '-end' => $end,
+        '-strand' => $strand,
+        '-slice' => $slice,
+        '-map_weight' => 1,
+        '-variation' => $variation,
+        '-allele_string' => "$ref_allele/$alt_allele"
     );
     
     return $variation_feature;
