@@ -587,6 +587,24 @@ MAIN_LOOP : while(<$INPUT>) {
 
         die "No class attrib id for allele string: $allele_string" unless defined $class_id;
 
+		# handle large deletions, insertions ans indels
+		if (length($forward_strand_ref_allele) > 50) {
+			if ($forward_strand_mut_allele eq '-') {
+            	#$forward_strand_ref_allele = 'LARGE_DELETION';
+				$allele_string = ($fail_variation == 1) ? '' : "LARGE_DELETION";
+			} else {
+				$allele_string = ($fail_variation == 1) ? '' : "LARGE_INDEL";
+			}
+        }
+        if (length($forward_strand_mut_allele) > 50) { 
+			if ($forward_strand_ref_allele eq '-') {
+        		#$forward_strand_mut_allele = 'LARGE_INSERTION';
+				$allele_string = ($fail_variation == 1) ? '' : "LARGE_INSERTION";
+			} else {
+				$allele_string = ($fail_variation == 1) ? '' : "LARGE_INDEL";
+			}
+        }
+
         unless ($USE_DB) {
             print " all OK\n";
             next;
