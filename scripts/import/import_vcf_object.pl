@@ -2406,18 +2406,18 @@ Options
                       writing to compressed_genotype_region
 --tmpfile             Name for temporary file [default: compress.txt]
 
---config              Specify a config file
+--config              Specify a config file containing preset arguments
 
 --test [n]            Run in test mode on first n lines of file. No database writes
                       are done, and any that would be done are output as status
-					  messages
+                      messages
 					  
 --no_progress         Disable progress output
 --quiet               Don't print any status messages
 --progress_update [n] Update the progress status after each n variants. This also
                       determines how often recovery status is written to disk. To set
-					  the recovery state frequency to 1 without overloading your
-					  output with progress messages, add --no_progress
+                      the recovery state frequency to 1 without overloading your
+                      output with progress messages, add --no_progress
 					  
 --recover             Attempt to recover an incomplete session. Sessions are
                       uniquely identified by the options passed on the command line,
@@ -2435,14 +2435,14 @@ Options
 --population          Name of population for all individuals in file
 --panel               Panel file containing individual population membership. One or
                       more of --population or --panel is required. Frequencies are
-					  calculated for each population specified. Individuals may belong
-					  to more than one population
+                      calculated for each population specified. Individuals may belong
+                      to more than one population
 --pedigree            Pedigree file containing family relationships and individual
                       genders
 					  
 --gmaf [ALL|pop]      Add global allele frequency data. "--gmaf ALL" uses all
                       individuals in the file; specifying any other population name
-					  will use the selected population as the GMAF.
+                      will use the selected population as the GMAF.
 
 --ind_prefix          Prefix added to individual names [default: not used]
 --pop_prefix          Prefix added to population names [default: not used]
@@ -2464,7 +2464,7 @@ Options
 
 --only_existing       Only write to tables when an existing variant is found. Existing
                       can be a variation with the same name, or a variant with the same
-					  location and alleles
+                      location and alleles
 
 -r | --registry       Registry file to use defines DB connections. Defining a registry
                       file overrides the connection settings below
@@ -2476,16 +2476,19 @@ Options
                       ensembl-variation CVS checkout, as sql/tables.sql
 --coord_system        If the seq_region table is not populated, by default the script
                       will attempt to copy seq_region entries from a Core database
-					  specified in the registry file. The seq_region entries from the
-					  selected coord_system will be copied and used
-					  [default: chromosome]
+                      specified in the registry file. The seq_region entries from the
+                      selected coord_system will be copied and used
+                      [default: chromosome]
 --backup              Backup all affected tables before import
 --move                Move all affected tables to backed up names and replace with
                       empty tables
 					  
 --fork [n]            Fork off n simultaneous processes, each dealing with one
-                      chromosome from the input file. Input file must be bgzipped and
-					  tabix indexed. 10 processes is usually optimal. [default: 1]
+                      chromosome from the input file. If the number of chromosomes
+                      is fewer than the number of forks, the input file will be
+                      scanned up front and the chromosomes sub-divided into regions.
+                      Input file must be bgzipped and tabix indexed. 10 processes
+                      is usually optimal. [default: no forking]
 END
 
 	print $usage;
