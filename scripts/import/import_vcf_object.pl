@@ -658,8 +658,8 @@ sub main {
 			# get variation object
 			$data->{variation} = variation($config, $data);
 			
-			# transcript variation
-			get_all_consequences($config->{vep}, [$data->{tmp_vf}], $config->{vep}->{tr_cache}, $config->{vep}->{rf_cache});
+			# transcript variation (get cons)
+			get_all_consequences($config->{vep}, [$data->{tmp_vf}], $config->{vep}->{tr_cache}, $config->{vep}->{rf_cache}) if $config->{tables}->{transcript_variation};
 			
 			# get variation_feature object
 			$data->{vf} = variation_feature($config, $data);
@@ -674,7 +674,7 @@ sub main {
 				next;
 			}
 			
-			# transcript variation
+			# transcript variation (write to DB)
 			transcript_variation($config, [$data->{tmp_vf}]) if $config->{tables}->{transcript_variation};
 			
 			#if($config->{tables}->{transcript_variation}) {
