@@ -1412,8 +1412,11 @@ sub multi_bp_genotype {
 				")";
 		}
 		
-		my $vals = join ",", @multi_rows;
-		my $sth = $dbVar->prepare(qq{
+		if ( scalar @multi_rows > 0 ){
+	
+		    my $vals = join ",", @multi_rows;
+
+		    my $sth = $dbVar->prepare(qq{
 			INSERT IGNORE INTO individual_genotype_multiple_bp(
 				variation_id,
 				allele_1,
@@ -1424,6 +1427,7 @@ sub multi_bp_genotype {
 		});
 		$sth->execute;
 		$sth->finish;
+}
 	}
 }
 
