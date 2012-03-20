@@ -340,7 +340,7 @@ sub _objs_from_sth {
 
     my ($structural_variation_feature_id, $seq_region_id, $outer_start, $seq_region_start, $inner_start, 
 		    $inner_end, $seq_region_end, $outer_end, $seq_region_strand, $structural_variation_id,
-        $variation_name, $source_name, $source_version, $class_attrib_id,$allele_string, $last_svf_id);
+        $variation_name, $source_name, $source_version, $class_attrib_id, $allele_string, $last_svf_id);
 
     $sth->bind_columns(\$structural_variation_feature_id, \$seq_region_id, \$outer_start, \$seq_region_start, 
 		                   \$inner_start, \$inner_end, \$seq_region_end, \$outer_end, \$seq_region_strand, 
@@ -462,6 +462,7 @@ sub _objs_from_sth {
                 'source_version' => $source_version,
                 'structural_variation_id' => $structural_variation_id,
                 'class_SO_term'  => $aa->attrib_value_for_id($class_attrib_id),
+								'class_attrib_id' => $class_attrib_id,
 								'allele_string'  => $allele_string,
                }
             );
@@ -543,5 +544,85 @@ sub new_fake {
   
   return $self;
 }
+
+
+sub store {
+	my ($self, $svf) = @_;
+    
+	my $dbh = $self->dbc->db_handle;
+    
+	# look up source_id
+	if(!defined($svf->{source_id})) {
+		my $sth = $dbh->prepare(q{
+            SELECT source_id FROM source WHERE name = ?
+		});
+		$sth->execute($svf->{source});
+        
+		my $source_id;
+		$sth->bind_columns(\$source_id);
+		$sth->fetch();
+		$sth->finish();
+		$svf->{source_id} = $source_id;
+	}
+  throw("No source ID found for source name ", $svf->{source}) unless defined($svf->{source_id});	
+		
+	# look up class_attrib_id
+	my $class_attrib_id;
+	if(defined($svf->{class_SO_term})) {
+    my $sth = $dbh->prepare(q{
+           SELECT attrib_id FROM attrib WHERE value = ?
+    });
+    $sth->execute($svf->{class_SO_term});
+        
+		$sth->bind_columns(\$class_attrib_id);
+		$sth->fetch();
+		$sth->finish();
+  }
+	throw("No class ID found for the class name ", $svf->{class_SO_term}) unless defined($class_attrib_id);
+			
+	my $sth = $dbh->prepare(q{
+        INSERT INTO structural_variation_feature (
+            seq_region_id,
+						outer_start,
+            seq_region_start,
+						inner_start,
+						inner_end,
+            seq_region_end,
+						outer_end,
+            seq_region_strand,
+            structural_variation_id,
+            allele_string,
+            variation_name,
+            source_id,
+            class_attrib_id,
+						is_evidence
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+    });
+    
+    $sth->execute(
+        $svf->{slice} ? $svf->{slice}->get_seq_region_id : $svf->{seq_region_id},
+				$svf->{outer_start} || undef,
+        $svf->{slice} ? $svf->seq_region_start : $svf->{start},
+				$svf->{inner_start} || undef,
+				$svf->{inner_end} || undef,
+        $svf->{slice} ? $svf->seq_region_end : $svf->{end},
+				$svf->{outer_end} || undef,
+        $svf->strand,
+        $svf->structural_variation ? $svf->structural_variation->dbID : $svf->{structural_variation_id},
+        $svf->allele_string,
+        $svf->variation_name,
+        $svf->{source_id},
+        $class_attrib_id || 0,
+        $svf->structural_variation ? $svf->structural_variation->is_evidence : 0,
+    );
+    
+    $sth->finish;
+    
+    # get dbID
+		my $dbID = $dbh->last_insert_id(undef, undef, 'structural_variation_feature', 'structural_variation_feature_id');
+    $svf->{dbID}    = $dbID;
+    $svf->{adaptor} = $self;
+}
+
 
 1;
