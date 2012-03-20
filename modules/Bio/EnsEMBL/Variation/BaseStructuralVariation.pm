@@ -156,7 +156,7 @@ sub new {
   	'class_SO_term'      => $class_so_term,
   	'study'              => $study,
 		'validation_status'  => $validation_status,
-		'is_evidence'        => $is_evidence,
+		'is_evidence'        => $is_evidence || 0,
 	};
   return $self;
 }
