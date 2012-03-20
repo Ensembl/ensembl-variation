@@ -320,4 +320,84 @@ sub get_all_failed_descriptions {
     return $description;
 }
 
+
+sub store {
+    my ($self, $sv) = @_;
+    
+	  my $dbh = $self->dbc->db_handle;
+    
+    # look up source_id
+    if(!defined($sv->{source_id})) {
+      my $sth = $dbh->prepare(q{
+           SELECT source_id FROM source WHERE name = ?
+      });
+      $sth->execute($sv->{source});
+        
+      my $source_id;
+			$sth->bind_columns(\$source_id);
+			$sth->fetch();
+			$sth->finish();
+			$sv->{source_id} = $source_id;
+    }
+    throw("No source ID found for source name ", $sv->{source}) unless defined($sv->{source_id});
+    
+		# look up study_id
+    if(!defined($sv->{study_id}) && defined($sv->{study_name})) {
+      my $sth = $dbh->prepare(q{
+           SELECT study_id FROM study WHERE name = ?
+      });
+      $sth->execute($sv->{study_name});
+      
+			my $study_id;  
+			$sth->bind_columns(\$study_id);
+			$sth->fetch();
+			$sth->finish();
+			$sv->{study_id} = $study_id;
+    }
+		
+		# look up class_attrib_id
+		my $class_attrib_id;
+		if(defined($sv->{class_SO_term})) {
+      my $sth = $dbh->prepare(q{
+           SELECT attrib_id FROM attrib WHERE value = ?
+      });
+      $sth->execute($sv->{class_SO_term});
+        
+			$sth->bind_columns(\$class_attrib_id);
+			$sth->fetch();
+			$sth->finish();
+    }
+		throw("No class ID found for the class name ", $sv->{class_SO_term}) unless defined($class_attrib_id);
+		
+		
+    my $sth = $dbh->prepare(q{
+        INSERT INTO structural_variation (
+            source_id,
+						study_id,
+			      variation_name,
+			      validation_status,
+            class_attrib_id,
+            is_evidence
+        ) VALUES (?,?,?,?,?,?)
+    });
+    
+    $sth->execute(
+        $sv->{source_id},
+				$sv->{study_id} || undef,
+        $sv->variation_name,
+        (join ",", @{$sv->get_all_validation_states}) || undef,
+        $class_attrib_id || 0,
+        $sv->is_evidence || 0
+    );
+    
+    $sth->finish;
+    
+    # get dbID
+		my $dbID = $dbh->last_insert_id(undef, undef, 'structural_variation', 'structural_variation_id');
+    $sv->{dbID}    = $dbID;
+    $sv->{adaptor} = $self;
+    
+		$sth->finish;
+}
+		
 1;
