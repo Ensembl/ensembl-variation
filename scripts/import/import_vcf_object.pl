@@ -1581,7 +1581,7 @@ sub individuals {
 	my (@individuals, %ind_objs);
 	
 	# only add the individuals that were defined in the panel file (this will be all if no panel file)
-	my @sorted = grep {defined $config->{ind_pops}->{$_}} @$split_ref;
+	my @sorted = grep {defined $config->{ind_pops}->{$config->{ind_prefix}.$_}} @$split_ref;
 	
 	# if we have pedigree, we need to sort it so the parent individuals get added first
 	if(defined($config->{pedigree}) && ref($config->{pedigree}) eq 'HASH') {
@@ -1956,6 +1956,7 @@ sub add_gmaf {
 	
 	if(defined($data->{genotypes})) {
 		map {$counts{$_}++}
+			grep {$_ ne '.'}
 			map {@{$_->{genotype}}}
 			grep {
 				$config->{gmaf} eq 'ALL' ||
@@ -2001,6 +2002,7 @@ sub allele {
 		my (%counts, $total);
 		if(defined($data->{genotypes})) {
 			map {$counts{$_}++}
+				grep {$_ ne '.'}
 				map {@{$_->{genotype}}}
 				grep {$config->{pop_inds}->{$pop_name}->{$_->{individual}->{name}}}
 				@{$data->{genotypes}};
