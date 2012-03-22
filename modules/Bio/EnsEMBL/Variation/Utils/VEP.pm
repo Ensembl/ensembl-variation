@@ -448,7 +448,7 @@ sub parse_vcf {
             
             else {
                 # for substitutions we just need to replace ',' with '/' in $alt
-                $alt =~ s/\,/\//;
+                $alt =~ s/\,/\//g;
             }
         }
         
