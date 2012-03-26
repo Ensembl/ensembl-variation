@@ -145,6 +145,8 @@ sub configure {
 		'recover_pos=s',
 		'no_recover',
 		
+		'cache=s',
+		
 	# die if we can't parse arguments - better to get user to sort out their command line
 	# than potentially do the wrong thing
 	) or die "ERROR: Failed to parse command line arguments - check the documentation!\n";
@@ -187,7 +189,7 @@ sub configure {
 	
 	# sanity checks
 	die("ERROR: Cannot run in test mode using forks\n") if defined($config->{fork}) and defined($config->{test});
-	#die("ERROR: Cannot recover using forks\n") if defined($config->{fork}) and defined($config->{recover});
+	die("ERROR: Cannot manually recover using forks\n") if defined($config->{fork}) and (defined($config->{recover_point}) || defined($config->{recover_pos}));
 	
 	# set defaults
 	$config->{species}         ||= "human";
@@ -301,18 +303,21 @@ sub configure {
 	$config->{vep}->{chunk_size}        ||= 50000;
 	$config->{vep}->{cache_region_size} ||= 1000000;
 	$config->{vep}->{compress}          ||= 'zcat';
-	$config->{vep}->{sa}                  = $config->{slice_adaptor};
 	$config->{vep}->{terms}               = 'SO';
 	$config->{vep}->{tr_cache}            = {};
 	$config->{vep}->{rf_cache}            = {};
 	$config->{vep}->{quiet}               = 1;
 	$config->{vep}->{original}            = 1;
-	$config->{vep}->{dir}                 = $ENV{'HOME'}.'/.vep/homo_sapiens/66';
-	$config->{vep}->{cache}               = 1;
-	$config->{vep}->{offline}             = 1;
 	$config->{vep}->{no_progress}         = 1;
 	$config->{buffer_size}              ||= 100;
 	$config->{vep}->{species}             = $config->{species};
+	
+	if(defined($config->{cache})) {
+		die("ERROR: Could not find cache directory ".$config->{cache}) unless -e $config->{cache};		
+		$config->{vep}->{dir}             = $config->{cache};
+		$config->{vep}->{cache}           = 1;
+		$config->{vep}->{offline}         = 1;
+	}
 	
 	# get terminal width for progress bars
 	my $width;
@@ -423,10 +428,14 @@ sub main {
 	# get adaptors
 	get_adaptors($config);
 	
-	# insert genotypes if recovering
-	if(defined($config->{recover}) && $config->{tables}->{compressed_genotype_region}) {
-		debug($config, "Importing genotypes from recovered session");
-		import_genotypes($config);
+	# insert from files if recovering
+	if(defined($config->{recover})) {
+		debug($config, "Importing data from recovered session's temporary files");
+		
+		foreach my $table(qw(allele population_genotype compressed_genotype_region)) {
+			debug($config, "Importing data into $table");
+			import_tmp_file($config, $table);
+		}
 	}
 	
 	# backup
@@ -630,6 +639,7 @@ sub main {
 			# copy seq region ID
 			$data->{tmp_vf}->{seq_region_id} = $config->{seq_region_ids}->{$data->{tmp_vf}->{chr}};
 			
+			# could be a structural variation feature
 			next unless $data->{tmp_vf}->isa('Bio::EnsEMBL::Variation::VariationFeature');
 			
 			# sometimes ID has many IDs separated by ";", take the lowest rs number, otherwise the first
@@ -675,7 +685,7 @@ sub main {
 			}
 			
 			# transcript variation (write to DB)
-			transcript_variation($config, [$data->{tmp_vf}]) if $config->{tables}->{transcript_variation};
+			transcript_variation($config, [$data->{tmp_vf}]) if $config->{tables}->{transcript_variation} && defined($data->{tmp_vf}->dbID);
 			
 			#if($config->{tables}->{transcript_variation}) {
 			#	push @vf_buffer, $data->{vf};
@@ -776,13 +786,14 @@ sub main {
 	progress($config, $var_counter) unless defined($config->{forked});
 	end_progress($config);
 	
-	# clean up remaining genotypes and import
-	if($config->{tables}->{compressed_genotype_region} && $var_counter) {
+	# dump remaining genotypes
+	print_file($config,$genotypes, $prev_seq_region) if $config->{tables}->{compressed_genotype_region} && $var_counter;
 	
-		debug($config, "Importing compressed genotype data");
-		
-		print_file($config,$genotypes, $prev_seq_region);
-		&import_genotypes($config);
+	# import data from files
+	debug($config, "Importing data from temporary files");
+	foreach my $table(qw(allele population_genotype compressed_genotype_region)) {
+		debug($config, "Importing data into $table");
+		import_tmp_file($config, $table);
 	}
 	
 	transcript_variation($config, \@vf_buffer) if @vf_buffer and $config->{tables}->{transcript_variation};
@@ -1181,6 +1192,7 @@ sub get_adaptors {
 		genotypecode
 		attribute
 		individualgenotype
+		individualgenotypefeature
 		transcriptvariation
 	)) {
 		$config->{$type.'_adaptor'} = $config->{reg}->get_adaptor($config->{species}, "variation", $type);
@@ -1195,7 +1207,8 @@ sub get_adaptors {
 	#if(defined($config->{tables}->{transcript_variation}) && $config->{tables}->{transcript_variation}) {
 		$config->{slice_adaptor} = $config->{reg}->get_adaptor($config->{species}, "core", "slice");
 		die("ERROR: Could not get slice adaptor\n") unless defined($config->{slice_adaptor});
-		$config->{tva} = $config->{transcriptvariation_adaptor};
+		$config->{vep}->{sa} = $config->{slice_adaptor};
+		$config->{vep}->{tva} = $config->{transcriptvariation_adaptor};
 	#}
 }
 
@@ -1641,6 +1654,8 @@ sub individuals {
 				}
 				
 				$config->{rows_added}->{individual}++;
+				$config->{rows_added}->{sample}++;
+				$config->{rows_added}->{individual_population} += scalar @{$ind->{populations}};
 			}
 		}
 		
@@ -1857,59 +1872,24 @@ sub transcript_variation {
 	# update meta_coord stat
 	$config->{meta_coord}->{transcript_variation} = undef;
 	
-	$DB::single = 1;
-	
-	# get a slice for the VF
-	#my $slice = $config->{slice_adaptor}->fetch_by_region("chromosome", $vf->{chr});
-	#$vf->{slice} = $slice;
-	
-	
-	#waitpid($config->{tv_pid}, 0) if defined($config->{tv_pid});
-	#
-	#my $pid = fork;
-	#
-	## parent
-	#if($pid) {
-	#	$config->{tv_pid} = $pid;
-	#	$config->{transcriptvariation_adaptor}->dbc->reconnect;
-	#	return;
-	#}
-	#
-	#elsif($pid == 0) {
+	foreach my $vf(@$vfs) {
 		
-		#debug($config, "Doing TV");
+		my $dbID = $vf->dbID;
+		delete $vf->{dbID};
 		
-		#get_all_consequences($config->{vep}, $vfs, $config->{vep}->{tr_cache}, $config->{vep}->{rf_cache});
-		
-		#debug($config, "Finished TV - writing to DB");
-		
-		foreach my $vf(@$vfs) {
+		foreach my $tv(@{$vf->get_all_TranscriptVariations}) {
+			$vf->{dbID} ||= $dbID;
 			
-			my $dbID = $vf->dbID;
-			delete $vf->{dbID};
-			
-			foreach my $tv(@{$vf->get_all_TranscriptVariations}) {
-				$vf->{dbID} ||= $dbID;
-				
-				if(defined($config->{test})) {
-					debug($config, "(TEST) Writing transcript_variation object for variation ", $vf->variation_name, ", transcript ", $tv->transcript->stable_id);
-				}
-				else {
-					$config->{transcriptvariation_adaptor}->store($tv);
-				}
-				
-				$config->{rows_added}->{transcript_variation}++;
+			if(defined($config->{test})) {
+				debug($config, "(TEST) Writing transcript_variation object for variation ", $vf->variation_name, ", transcript ", $tv->transcript->stable_id);
 			}
+			else {
+				$config->{transcriptvariation_adaptor}->store($tv);
+			}
+			
+			$config->{rows_added}->{transcript_variation}++;
 		}
-		
-		#debug($config, "Finished writing to DB");
-		
-	#	exit(0);
-	#}
-	#
-	#else {
-	#	die("ERROR: Could not fork\n");
-	#}
+	}
 }
 
 
@@ -2075,6 +2055,9 @@ sub allele {
 	}
 	
 	$config->{allele_adaptor}->store_multiple(\@objs) unless defined($config->{test});
+	#my $fh = get_tmp_file_handle($config, 'allele');
+	#$config->{allele_adaptor}->store_to_file_handle($_, $fh) for @objs;
+	
 	$config->{rows_added}->{allele} += scalar @objs;
 }
 
@@ -2173,6 +2156,9 @@ sub population_genotype {
 	}
 	
 	$config->{populationgenotype_adaptor}->store_multiple(\@objs) unless defined($config->{test});
+	#my $fh = get_tmp_file_handle($config, 'population_genotype');
+	#$config->{populationgenotype_adaptor}->store_to_file_handle($_, $fh) for @objs;
+	
 	$config->{rows_added}->{population_genotype} += scalar @objs;
 }
 
@@ -2225,106 +2211,6 @@ sub individual_genotype {
 	}
 	
 	$config->{rows_added}->{individual_genotype} += scalar @gts;
-}
-
-# imports genotypes from tmp file to compressed_genotype_region
-sub import_genotypes{
-	my $config = shift;
-	
-	# check for lock file
-	my $sleeps = 0;
-	
-	my $lock_file = $ENV{HOME}.'/.import_vcf/compressed_genotype_region_lock';
-	
-	while(-e $lock_file) {
-		$sleeps++;
-		sleep(1);
-		
-		if($sleeps % 60 == 0) {
-			debug($config,
-				"WARNING: Process ".
-				(defined($config->{forked}) ? $config->{forked}." " : "").
-				"has been waiting to insert into compressed_genotype_region for ".
-				($sleeps / 60)." min".($sleeps > 60 ? 's' : '').
-				", you may need to delete the lock file ".$lock_file
-			);
-		}
-	}
-	
-	# create lock file
-	open TMP, '> '.$lock_file;
-	print TMP '1';
-	close TMP;
-	
-	# update meta_coord stat
-	$config->{meta_coord}->{compressed_genotype_region} = DISTANCE + 1;
-	
-	if(defined($config->{test})) {
-		debug($config, "(TEST) Loading compressed genotypes from temporary file into database");
-	}
-	else {
-		$config->{compress_out}->close if defined($config->{compress_out});
-		
-		if(-e $config->{tmpdir}."/compressed_genotype_".$config->{pid}.".txt") {
-			my $call = "mv ".$config->{tmpdir}."/compressed_genotype_".$config->{pid}.".txt ".$config->{tmpdir}."/".$config->{tmpfile};
-			system($call);
-			load($config->{dbVar},qw(compressed_genotype_region sample_id seq_region_id seq_region_start seq_region_end seq_region_strand genotypes));
-		}
-	}
-	
-	# remove lock file
-	unlink($lock_file);
-}
-
-sub open_compressed_output {
-	my $config = shift;
-	my $file_handle = FileHandle->new("> ".$config->{tmpdir}."/compressed_genotype_".$config->{pid}.".txt");
-	$config->{compress_out} = $file_handle;
-}
-
-# dumps compressed data from hash to temporary file
-sub print_file{
-    my $config = shift;
-    my $genotypes = shift;
-    my $seq_region_id = shift;
-    my $sample_id = shift;
-	
-	# load file handle if not defined
-	open_compressed_output($config) unless defined $config->{compress_out};
-	
-	my $file_handle = $config->{compress_out};
-	
-	if(defined($config->{test})) {
-		debug($config, "(TEST) Writing genotypes for ", (scalar keys %$genotypes), " individuals to temp file");
-	}
-	else {
-		if (!defined $sample_id){
-			#new chromosome, print all the genotypes and flush the hash
-			foreach my $sample_id (keys %{$genotypes}){
-				print $file_handle join("\t",
-					$sample_id,
-					$seq_region_id,
-					$genotypes->{$sample_id}->{region_start},
-					$genotypes->{$sample_id}->{region_end},
-					1,
-					$genotypes->{$sample_id}->{genotypes}) . "\n";
-				
-				$config->{rows_added}->{compressed_genotype_region}++;
-			}
-		}
-		else{
-			#only print the region corresponding to sample_id
-			print $file_handle join("\t",
-				$sample_id,
-				$seq_region_id,
-				$genotypes->{$sample_id}->{region_start},
-				$genotypes->{$sample_id}->{region_end},
-				1,
-				$genotypes->{$sample_id}->{genotypes}) . "\n";
-			
-			$config->{rows_added}->{compressed_genotype_region}++;
-		}
-	}
 }
 
 # populates meta_coord table
@@ -2394,6 +2280,139 @@ sub meta_coord {
 	$isth->finish;
 }
 
+sub get_tmp_file_name {
+	my $config = shift;
+	my $table = shift;
+	return $config->{tmpdir}."/$table\_".$config->{pid}.".txt";
+}
+
+sub get_tmp_file_handle {
+	my $config = shift;
+	my $table = shift;
+	
+	if(!defined($config->{handles}->{$table})) {
+		my $file_handle = FileHandle->new("> ".get_tmp_file_name($config, $table));
+		$config->{handles}->{$table} = $file_handle;
+	}
+	return $config->{handles}->{$table};
+}
+
+sub close_tmp_file_handle {
+	my $config = shift;
+	my $table = shift;
+	
+	$config->{handles}->{$table}->close if defined($config->{handles}->{$table});
+}
+
+# imports data from tmp file to table
+sub import_tmp_file{
+	my $config = shift;
+	my $table = shift;
+	
+	my $file = get_tmp_file_name($config, $table);
+	
+	# nothing to import
+	return unless -e $file;
+	
+	# check for lock file
+	my $sleeps = 0;
+	
+	my $lock_file = $ENV{HOME}.'/.import_vcf/lockfile';
+	
+	while(-e $lock_file) {
+		$sleeps++;
+		sleep(1);
+		
+		if($sleeps % 60 == 0) {
+			debug($config,
+				"WARNING: Process ".
+				(defined($config->{forked}) ? $config->{forked}." " : "").
+				"has been waiting to insert into $table for ".
+				($sleeps / 60)." min".($sleeps > 60 ? 's' : '').
+				", you may need to delete the lock file ".$lock_file.
+				" if you are sure no LOAD DATA MySQL process is still running"
+			);
+		}
+	}
+	
+	# create lock file
+	open TMP, '> '.$lock_file;
+	print TMP '1';
+	close TMP;
+	
+	# update meta_coord stat
+	$config->{meta_coord}->{$table} = DISTANCE + 1 if $table eq 'compressed_genotype_region';
+	
+	if(defined($config->{test})) {
+		debug($config, "(TEST) Loading data from temporary file into $table");
+	}
+	else {
+		close_tmp_file_handle($config, $table);
+		
+		if(-e $file) {
+			my $call = "mv $file ".$config->{tmpdir}."/".$config->{tmpfile};
+			system($call);
+			
+			# we need to get the columns from the DB adaptor
+			my %adaptors = (
+				'allele'                     => 'allele',
+				'compressed_genotype_region' => 'individualgenotypefeature',
+				'population_genotype'        => 'populationgenotype',
+			);
+			
+			my @columns = $config->{$adaptors{$table}.'_adaptor'}->_write_columns;
+			
+			load($config->{dbVar},($table, @columns));
+		}
+	}
+	
+	# remove lock file
+	unlink($lock_file);
+}
+
+# dumps compressed data from hash to temporary file
+sub print_file{
+    my $config = shift;
+    my $genotypes = shift;
+    my $seq_region_id = shift;
+    my $sample_id = shift;
+	
+	# get file handle
+	my $file_handle = get_tmp_file_handle($config, 'compressed_genotype_region');
+	
+	if(defined($config->{test})) {
+		debug($config, "(TEST) Writing genotypes for ", (scalar keys %$genotypes), " individuals to temp file");
+	}
+	else {
+		if (!defined $sample_id){
+			#new chromosome, print all the genotypes and flush the hash
+			foreach my $sample_id (keys %{$genotypes}){
+				print $file_handle join("\t",
+					$sample_id,
+					$seq_region_id,
+					$genotypes->{$sample_id}->{region_start},
+					$genotypes->{$sample_id}->{region_end},
+					1,
+					$genotypes->{$sample_id}->{genotypes}) . "\n";
+				
+				$config->{rows_added}->{compressed_genotype_region}++;
+			}
+		}
+		else{
+			#only print the region corresponding to sample_id
+			print $file_handle join("\t",
+				$sample_id,
+				$seq_region_id,
+				$genotypes->{$sample_id}->{region_start},
+				$genotypes->{$sample_id}->{region_end},
+				1,
+				$genotypes->{$sample_id}->{genotypes}) . "\n";
+			
+			$config->{rows_added}->{compressed_genotype_region}++;
+		}
+	}
+}
+
 # prints usage message
 sub usage {
 	my $usage =<<END;
@@ -2444,7 +2463,7 @@ Options
 					  
 --gmaf [ALL|pop]      Add global allele frequency data. "--gmaf ALL" uses all
                       individuals in the file; specifying any other population name
-                      will use the selected population as the GMAF.
+                      will use the selected population for the GMAF.
 
 --ind_prefix          Prefix added to individual names [default: not used]
 --pop_prefix          Prefix added to population names [default: not used]
@@ -2453,7 +2472,7 @@ Options
 --create_name         Always create a new variation name i.e. don't use ID column
 --chrom_regexp        Limit processing to CHROM columns matching regexp
 
--f | --flank          Size of flanking sequence [default: 200]
+--flank               Size of flanking sequence [default: 200]
 --gp                  Use GP tag from INFO column to get coords
 
 --tables              Comma-separated list of tables to include when writing to DB.
