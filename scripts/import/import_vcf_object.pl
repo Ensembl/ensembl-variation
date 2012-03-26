@@ -716,52 +716,55 @@ sub main {
 			if($config->{tables}->{compressed_genotype_region} && @{$data->{genotypes}}) {
 				my $vf = $data->{vf};
 				
-				next unless defined($vf->{seq_region_id}) && defined($vf->{start});
+				$vf->{seq_region_id} = $vf->slice->get_seq_region_id if !defined($vf->{seq_region_id});
 				
-				foreach my $gt(@{$data->{genotypes}}) {
-					my $sample_id = $gt->individual->dbID;
-					
-					next if $gt->genotype_string =~ /\./;
-					
-					# add to compress hash for writing later
-					if (!defined $genotypes->{$sample_id}->{region_start}){
-						$genotypes->{$sample_id}->{region_start} = $vf->{start};
-						$genotypes->{$sample_id}->{region_end} = $vf->{end};
+				if(defined($vf->{seq_region_id}) && defined($vf->{start})) {
+				
+					foreach my $gt(@{$data->{genotypes}}) {
+						my $sample_id = $gt->individual->dbID;
+						
+						next if $gt->genotype_string =~ /\./;
+						
+						# add to compress hash for writing later
+						if (!defined $genotypes->{$sample_id}->{region_start}){
+							$genotypes->{$sample_id}->{region_start} = $vf->{start};
+							$genotypes->{$sample_id}->{region_end} = $vf->{end};
+						}
+						
+						# write previous data?
+						#compare with the beginning of the region if it is within the DISTANCE of compression
+						if (
+							defined($genotypes->{$sample_id}->{genotypes}) &&
+							(
+								(abs($genotypes->{$sample_id}->{region_start} - $vf->{start}) > DISTANCE()) ||
+								(abs($vf->{start} - $genotypes->{$sample_id}->{region_end}) > MAX_SHORT) ||
+								(defined($prev_seq_region) && $vf->{seq_region_id} != $prev_seq_region) ||
+								($vf->{start} - $genotypes->{$sample_id}->{region_end} - 1 < 0)
+							)
+						) {
+							#snp outside the region, print the region for the sample we have already visited and start a new one
+							print_file($config,$genotypes, $prev_seq_region, $sample_id);
+							delete $genotypes->{$sample_id}; #and remove the printed entry
+							$genotypes->{$sample_id}->{region_start} = $vf->{start};
+						}
+						
+						if ($vf->{start} != $genotypes->{$sample_id}->{region_start}){
+							#compress information
+							my $blob = pack ("w",$vf->{start} - $genotypes->{$sample_id}->{region_end} - 1);
+							$genotypes->{$sample_id}->{genotypes} .=
+								escape($blob).
+								escape(pack("w", $data->{variation}->dbID || 0)).
+								escape(pack("w", $config->{individualgenotype_adaptor}->_genotype_code($gt->genotype)));
+						}
+						else{
+							#first genotype starts in the region_start, not necessary the number
+							$genotypes->{$sample_id}->{genotypes} =
+								escape(pack("w", $data->{variation}->dbID || 0)).
+								escape(pack("w", $config->{individualgenotype_adaptor}->_genotype_code($gt->genotype)));
+						}
+						
+						$genotypes->{$sample_id}->{region_end} = $vf->{start};
 					}
-					
-					# write previous data?
-					#compare with the beginning of the region if it is within the DISTANCE of compression
-					if (
-						defined($genotypes->{$sample_id}->{genotypes}) &&
-						(
-							(abs($genotypes->{$sample_id}->{region_start} - $vf->{start}) > DISTANCE()) ||
-							(abs($vf->{start} - $genotypes->{$sample_id}->{region_end}) > MAX_SHORT) ||
-							(defined($prev_seq_region) && $vf->{seq_region_id} != $prev_seq_region) ||
-							($vf->{start} - $genotypes->{$sample_id}->{region_end} - 1 < 0)
-						)
-					) {
-						#snp outside the region, print the region for the sample we have already visited and start a new one
-						print_file($config,$genotypes, $prev_seq_region, $sample_id);
-						delete $genotypes->{$sample_id}; #and remove the printed entry
-						$genotypes->{$sample_id}->{region_start} = $vf->{start};
-					}
-					
-					if ($vf->{start} != $genotypes->{$sample_id}->{region_start}){
-						#compress information
-						my $blob = pack ("w",$vf->{start} - $genotypes->{$sample_id}->{region_end} - 1);
-						$genotypes->{$sample_id}->{genotypes} .=
-							escape($blob).
-							escape(pack("w", $data->{variation}->dbID || 0)).
-							escape(pack("w", $config->{individualgenotype_adaptor}->_genotype_code($gt->genotype)));
-					}
-					else{
-						#first genotype starts in the region_start, not necessary the number
-						$genotypes->{$sample_id}->{genotypes} =
-							escape(pack("w", $data->{variation}->dbID || 0)).
-							escape(pack("w", $config->{individualgenotype_adaptor}->_genotype_code($gt->genotype)));
-					}
-					
-					$genotypes->{$sample_id}->{region_end} = $vf->{start};
 				}
 			}
 			
@@ -1743,7 +1746,7 @@ sub variation_feature {
 		$combined_alleles{$_}++ for (@existing_alleles, @new_alleles);
 		
 		# new alleles, need to merge
-		if(scalar keys %combined_alleles > scalar @new_alleles) {
+		if(scalar keys %combined_alleles > scalar @existing_alleles) {
 			
 			# don't want to merge when doing only existing
 			next if defined $config->{only_existing};
@@ -1775,7 +1778,7 @@ sub variation_feature {
 		}
 		
 		# we also need to add a synonym entry if the variation has a new name
-		if($existing_vf->variation_name ne $data->{ID}) {
+		if($existing_vf->variation_name ne $data->{ID} and !defined($config->{only_existing})) {
 			
 			if(defined($config->{test})) {
 				debug($config, "(TEST) Adding ", $data->{ID}, " to variation_synonym as synonym for ", $existing_vf->variation_name);
