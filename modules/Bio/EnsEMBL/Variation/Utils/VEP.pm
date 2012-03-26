@@ -1873,26 +1873,27 @@ sub whole_genome_fetch {
                 map {delete $chunks{$_} unless defined($vf_hash->{$chr}{$_})} keys %chunks;
                 
                 foreach my $chunk(keys %chunks) {
-                    foreach my $pos(grep {$_ >= $s && $_ <= $e} keys %{$vf_hash->{$chr}{$chunk}}) {
-                        foreach my $vf(@{$vf_hash->{$chr}{$chunk}{$pos}}) {
-                            
-                            # pinch slice from slice cache if we don't already have it
-                            $vf->{slice} ||= $slice_cache->{$chr};
-                            
-                            my $tv = Bio::EnsEMBL::Variation::TranscriptVariation->new(
-                                -transcript        => $tr,
-                                -variation_feature => $vf,
-                                -adaptor           => $config->{tva},
-                                -no_ref_check      => 1,
-                                -no_transfer       => 1
-                            );
-                            
-                            # prefetching stuff here prevents doing loads at the
-                            # end and makes progress reporting more useful
-                            $tv->_prefetch_for_vep;
-                            
-                            $vf->add_TranscriptVariation($tv);
-                        }
+                    foreach my $vf(
+                        grep {$_->{start} <= $e && $_->{end} >= $s}
+                        map {@{$vf_hash->{$chr}{$chunk}{$_}}}
+                        keys %{$vf_hash->{$chr}{$chunk}}
+                    ) {
+                        # pinch slice from slice cache if we don't already have it
+                        $vf->{slice} ||= $slice_cache->{$chr};
+                        
+                        my $tv = Bio::EnsEMBL::Variation::TranscriptVariation->new(
+                            -transcript        => $tr,
+                            -variation_feature => $vf,
+                            -adaptor           => $config->{tva},
+                            -no_ref_check      => 1,
+                            -no_transfer       => 1
+                        );
+                        
+                        # prefetching stuff here prevents doing loads at the
+                        # end and makes progress reporting more useful
+                        $tv->_prefetch_for_vep;
+                        
+                        $vf->add_TranscriptVariation($tv);
                     }
                 }
             }
@@ -2038,15 +2039,17 @@ sub whole_genome_fetch {
                     map {delete $chunks{$_} unless defined($vf_hash->{$chr}{$_})} keys %chunks;
                     
                     foreach my $chunk(keys %chunks) {
-                        foreach my $pos(grep {$_ >= $s && $_ <= $e} keys %{$vf_hash->{$chr}{$chunk}}) {
-                            foreach my $vf(@{$vf_hash->{$chr}{$chunk}{$pos}}) {
-                                push @{$vf->{regulation_variations}->{$type}}, $constructor->new(
-                                    -variation_feature  => $vf,
-                                    -feature            => $rf,
-                                    -no_ref_check       => 1,
-                                    -no_transfer        => 1
-                                );
-                            }
+                        foreach my $vf(
+                            grep {$_->{start} <= $e && $_->{end} >= $s}
+                            map {@{$vf_hash->{$chr}{$chunk}{$_}}}
+                            keys %{$vf_hash->{$chr}{$chunk}}
+                        ) {
+                            push @{$vf->{regulation_variations}->{$type}}, $constructor->new(
+                                -variation_feature  => $vf,
+                                -feature            => $rf,
+                                -no_ref_check       => 1,
+                                -no_transfer        => 1
+                            );
                         }
                     }
                 }
