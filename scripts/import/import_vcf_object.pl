@@ -1733,6 +1733,7 @@ sub variation_feature {
 	
 	# check existing VFs
 	foreach my $existing_vf (sort {
+		($b->source eq 'dbSNP') <=> ($a->source eq 'dbSNP') ||
 		(split 'rs', $a->variation_name)[-1] <=> (split 'rs', $b->variation_name)[-1]
 	} @$existing_vfs) {
 		
