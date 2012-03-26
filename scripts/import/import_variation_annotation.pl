@@ -459,9 +459,7 @@ sub parse_ega {
         FROM
           associate_study
         WHERE
-          (study2_id = ? AND study1_id = ?) 
-					or 
-					(study1_id = ? AND study2_id = ?) 
+          study1_id = ? AND study2_id = ?
         LIMIT 1
     };
 		my $asso_study_ins_stmt = qq{
