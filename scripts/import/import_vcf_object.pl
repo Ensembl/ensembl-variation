@@ -1821,6 +1821,8 @@ sub variation_feature {
 		
 		# set to return the existing vf
 		$vf = $existing_vf;
+		
+		last;
 	}
 	
 	# otherwise we need to store the object we've created
