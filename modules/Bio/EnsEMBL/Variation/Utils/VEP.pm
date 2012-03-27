@@ -491,6 +491,9 @@ sub parse_vcf {
             chr            => $chr,
         });
         
+        # flag as non-variant
+        $vf->{non_variant} = 1 if $non_variant;
+        
         return [$vf];
     }
 }
@@ -758,7 +761,11 @@ sub get_all_consequences {
 
     # build hash
     my %vf_hash;
-    push @{$vf_hash{$_->{chr}}{int($_->{start} / $config->{chunk_size})}{$_->{start}}}, $_ for @$listref;
+    
+    # get non-variants
+    my @non_variants = grep {$_->{non_variant}} @$listref;
+    
+    push @{$vf_hash{$_->{chr}}{int($_->{start} / $config->{chunk_size})}{$_->{start}}}, $_ for grep {!defined($_->{non_variant})} @$listref;
     
     # get regions
     my $regions = &regions_from_hash($config, \%vf_hash);
@@ -772,9 +779,20 @@ sub get_all_consequences {
     
     my @return;
     
-    foreach my $chr(sort {($a !~ /^\d+$/ || $b !~ /^\d+/) ? $a cmp $b : $a <=> $b} keys %vf_hash) {
+    # get chr list
+    my %chrs = map {$_ => 1} (keys %vf_hash, map {$_->{chr}} @non_variants);
+    
+    foreach my $chr(sort {($a !~ /^\d+$/ || $b !~ /^\d+/) ? $a cmp $b : $a <=> $b} keys %chrs) {
         
         my $finished_vfs = whole_genome_fetch($config, $chr, \%vf_hash, $tr_cache, $rf_cache, $regions);
+        
+        # non-variants?
+        if(scalar @non_variants) {
+            push @$finished_vfs, grep {$_->{chr} eq $chr} @non_variants;
+            
+            # need to re-sort
+            @$finished_vfs = sort {$a->{start} <=> $b->{start}} @$finished_vfs;
+        }
         
         debug("Calculating and writing output") unless defined($config->{quiet});
         my $vf_count = scalar @$finished_vfs;
@@ -858,7 +876,7 @@ sub get_all_consequences {
                 }
                 
                 # get custom annotation
-                if(defined($config->{custom})) {
+                if(defined($config->{custom}) && scalar @{$config->{custom}}) {
                     my $custom_annotation = get_custom_annotation($config, $vf);
                     foreach my $key(keys %{$custom_annotation}) {
                         $line->[7] .= ($line->[7] ? ';' : '').$key.'='.$custom_annotation->{$key};
