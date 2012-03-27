@@ -83,6 +83,8 @@ sub motif_start {
 
     my $mf = $self->motif_feature;
     my $vf = $self->variation_feature;
+    
+    return undef unless defined $vf->seq_region_start && defined $mf->seq_region_start;
    
     my $mf_start = $vf->seq_region_start - $mf->seq_region_start + 1;
 
@@ -111,6 +113,8 @@ sub motif_end {
 
     my $mf = $self->motif_feature;
     my $vf = $self->variation_feature;
+    
+    return undef unless defined $vf->seq_region_end && defined $mf->seq_region_start;
    
     my $mf_end = $vf->seq_region_end - $mf->seq_region_start + 1;
 
@@ -148,7 +152,7 @@ sub in_informative_position {
 
     my $start = $self->motif_start;
 
-    return undef unless defined $start;
+    return undef unless defined $start && $start >= 1 && $start <= $self->motif_feature->length;
 
     return $self->motif_feature->binding_matrix->is_position_informative($start);
 }
@@ -210,6 +214,9 @@ sub motif_score_delta {
 
         # splice in the variant sequence (0-based)
         substr($mf_seq, $mf_start - 1, $var_len) = $allele_seq;
+        
+        # check length hasn't changed
+        return undef if length($mf_seq) != $mf_seq_length;
 
         # and get the affinity of the variant sequence
         my $var_affinity = $matrix->relative_affinity($mf_seq, $linear);
