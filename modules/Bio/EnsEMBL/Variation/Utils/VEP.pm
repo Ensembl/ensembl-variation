@@ -2064,7 +2064,7 @@ sub whole_genome_fetch {
     
     if(scalar @svfs) {
         
-        debug("Analyzing structural variations");
+        debug("Analyzing structural variations") unless defined($config->{quiet});
         
         my($i, $total) = (0, scalar @svfs);
         
