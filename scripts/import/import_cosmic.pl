@@ -17,23 +17,24 @@ my $VERBOSE = 1;
 
 my $import_file;
 my $registry_file;
+my $version;
 my $help;
 
 GetOptions(
     "import|i=s"    => \$import_file,
     "registry|r=s"  => \$registry_file,
     "verbose|v"     => \$VERBOSE,
+		"version=s"     => \$version,
     "test|t"        => \$USE_DB,
     "help|h"        => \$help,
 );
 
-unless ($registry_file && $import_file) {
-    print "Must supply an import file and a registry file...\n" unless $help;
+unless ($registry_file && $import_file && $version) {
+    print "Must supply an import file, a registry file and a version ...\n" unless $help;
     $help = 1;
 }
-
 if ($help) {
-    print "Usage: $0 --import <import_file> --registry <reg_file>\n";
+    print "Usage: $0 --import <import_file> --registry <reg_file> --version <cosmic_version>\n";
     exit(0);
 }
 
@@ -69,18 +70,21 @@ if ($existing_src) {
     $source_id = $existing_src->[0];
     
     print "Found existing source_id: $source_id\n";
+		my $sth = $dbh->prepare(qq{  UPDATE source SET version=? WHERE source_id=? });
+		$sth->execute($version,$source_id);
 }
 else {
 
     # if not, add it
 
     my $sth = $dbh->prepare(qq{
-        INSERT INTO source (name, description, url, somatic_status) 
+        INSERT INTO source (name, description, url, somatic_status, version) 
         VALUES (
             'COSMIC', 
             'Somatic mutations found in human cancers from the COSMIC project', 
             'http://www.sanger.ac.uk/genetics/CGP/cosmic/',
-            'somatic'
+            'somatic',
+						$version
         );
     });
 
@@ -208,6 +212,12 @@ my $add_allele_sth = $dbh->prepare(qq{
     VALUES (?,?,?,?)
 });
 
+my $add_allele_with_code_sth = $dbh->prepare(qq{
+    INSERT INTO allele (variation_id, sample_id, allele_code_id, frequency)
+    VALUES (?,?,?,?)
+});
+
+
 my $find_matching_phenotype_sth = $dbh->prepare(qq{
     SELECT * FROM phenotype WHERE description LIKE ? ORDER BY phenotype_id LIMIT 1
 });
@@ -220,6 +230,23 @@ my $add_annotation_sth = $dbh->prepare(qq{
     INSERT INTO variation_annotation (variation_id, phenotype_id, study_id, 
         associated_gene, variation_names)
     VALUES (?,?,?,?,?)
+});
+
+
+# allele code id
+
+my $get_allele_code_sth = $dbh->prepare(qq{
+		SELECT allele_code_id
+		FROM allele_code
+		WHERE allele=?
+});
+my $count_like_allele_code_sth = $dbh->prepare(qq{
+		SELECT count(allele_code_id)
+		FROM allele_code
+		WHERE allele like ?
+});
+my $insert_allele_code_sth = $dbh->prepare(qq{
+    INSERT INTO allele_code (allele) VALUES (?)
 });
 
 # get the failed description ID we will use
@@ -244,6 +271,9 @@ my %class_attrib_ids;
 while (my ($value, $attrib_id) = $get_class_attrib_ids_sth->fetchrow_array) {
     $class_attrib_ids{$value} = $attrib_id;
 }
+
+my $allele_column_type = $dbh->do(qq{show columns from allele like 'allele';});
+
 
 my $patched_version = 0;
 
@@ -705,23 +735,48 @@ MAIN_LOOP : while(<$INPUT>) {
 
         my $mut_freq = $mutated_samples / $total_samples;
         
-        # add the mutant allele
+				# Allele table with a column "allele_code_id"
+				if ($allele_column_type != 1){
+					
+					# add the mutant allele
+					my $mut_allele_code_id = get_allele_code($forward_strand_mut_allele);
+        	$add_allele_with_code_sth->execute(
+            	$variation_id,
+            	$sample_id,
+            	$mut_allele_code_id,
+            	$mut_freq,
+        	);
+				
+					# and the reference allele
+					my $ref_allele_code_id = get_allele_code($forward_strand_ref_allele);
+        	$add_allele_with_code_sth->execute(
+							$variation_id,
+            	$sample_id,
+            	$ref_allele_code_id,
+            	(1 - $mut_freq)
+        	);
+				} 
+				# Allele table with a column "allele"
+				else {
+				
+        	# add the mutant allele
 
-        $add_allele_sth->execute(
-            $variation_id,
-            $sample_id,
-            $forward_strand_mut_allele,
-            $mut_freq,
-        );
+        	$add_allele_sth->execute(
+            	$variation_id,
+            	$sample_id,
+            	$forward_strand_mut_allele,
+            	$mut_freq,
+        	);
 
-        # and the reference allele
+        	# and the reference allele
 
-        $add_allele_sth->execute(
-            $variation_id,
-            $sample_id,
-            $forward_strand_ref_allele,
-            (1 - $mut_freq),
-        );
+        	$add_allele_sth->execute(
+            	$variation_id,
+            	$sample_id,
+            	$forward_strand_ref_allele,
+            	(1 - $mut_freq),
+        	);
+				}
 
         # try to find an existing phenotype, or create a new phenotype entry
 
@@ -768,4 +823,35 @@ sub get_failed_description_id {
 	my ($failed_description_id) = $get_failed_desc_sth->fetchrow_array;
 	
 	return $failed_description_id;
+}
+
+
+sub get_allele_code {
+		my $allele = shift;
+		
+		# Check if an entry exists in the allele_code table
+		$get_allele_code_sth->execute($allele);
+		my $allele_code_id;
+		($allele_code_id) = $get_allele_code_sth->fetchrow_array;
+		
+		# Check with large allele, because of issue with the allele index 
+		# (limited to unique 1000 first bases)
+		if (!defined($allele_code_id) && length($allele) >= 1000) {
+			my $indexed_string = substr($allele,0,1000).'%';
+			$count_like_allele_code_sth->execute($indexed_string);
+			my ($count_allele) = $count_like_allele_code_sth->fetchrow_array;
+			if ($count_allele > 0) {
+				$allele = '(LARGE ALLELE)';
+				$get_allele_code_sth->execute($allele);
+				($allele_code_id) = $get_allele_code_sth->fetchrow_array;
+			}
+		}
+		
+		# Insert a new allele in the allele_code table
+		if (!defined($allele_code_id)) {
+			$insert_allele_code_sth->execute($allele);
+			$allele_code_id = $dbh->last_insert_id(undef, undef, undef, undef);
+		}
+		
+		return $allele_code_id;
 }
