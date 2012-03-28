@@ -145,7 +145,7 @@ sub store {
         (join ",", @{$vf->get_all_validation_states}) || undef,
         $vf->{slice} ? (join ",", @{$vf->consequence_type('SO')}) : 'intergenic_variant',
         $vf->{variation_set_id} || '',
-        $vf->{class_attrib_id},
+        $vf->{class_attrib_id} || $vf->adaptor->db->get_AttributeAdaptor->attrib_id_for_type_value('SO_term', $vf->{class_SO_term}) || 18,
         $vf->is_somatic
     );
     
@@ -1399,7 +1399,6 @@ sub fetch_by_hgvs_notation {
         #warn Dumper \%best_paths;
         #exit(0);
     }
-    # Else, it is protein notation
     else {
         throw ("Could not parse HGVS notation $hgvs");
     }
