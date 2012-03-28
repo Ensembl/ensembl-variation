@@ -11,7 +11,6 @@ use Bio::EnsEMBL::Variation::Utils::ComparaUtils qw(dump_alignment_for_polyphen)
 
 use base ('Bio::EnsEMBL::Variation::Pipeline::ProteinFunction::BaseProteinFunction');
 
-my $DEBUG           = 0;
 my $PERSIST         = 1;
 my $MAX_PSIC_SEQS   = 8190;
 my $MAX_PSIC_SEQLEN = 409650;

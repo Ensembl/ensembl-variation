@@ -18,6 +18,13 @@ sub default_options {
 
         # Pipeline wide settings
 
+        # If the debug_mode flag is set to 1 then we will only run the pipeline on a single gene
+        # (currently set to BRCA1 in InitJobs.pm), this is useful when testing new installations
+        # of sift and polyphen, alterations to the pipeline etc. When set to 0 the full pipeline
+        # will be run
+
+        debug_mode              => 0,
+
         species                 => 'Homo_sapiens',
     
         # the location of your ensembl checkout, the hive looks here for SQL files etc.
@@ -160,6 +167,7 @@ sub pipeline_analyses {
         fasta_file          => $self->o('fasta_file'),
         ensembl_registry    => $self->o('ensembl_registry'),
         species             => $self->o('species'),
+        debug_mode          => $self->o('debug_mode'),
     );
 
     return [
