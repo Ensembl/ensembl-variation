@@ -11,8 +11,6 @@ use Bio::EnsEMBL::Variation::Utils::ComparaUtils qw(dump_alignment_for_sift);
 
 use base ('Bio::EnsEMBL::Variation::Pipeline::ProteinFunction::BaseProteinFunction');
 
-my $DEBUG   = 0;
-
 my $MEDIAN_CUTOFF = 2.75; # as per README
 
 sub run {

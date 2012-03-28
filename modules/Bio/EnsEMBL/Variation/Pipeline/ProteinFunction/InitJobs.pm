@@ -10,8 +10,6 @@ use Digest::MD5 qw(md5_hex);
 
 use base qw(Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess);
 
-my $DEBUG = 1;
-
 sub fetch_input {
    
     my $self = shift;
@@ -27,7 +25,7 @@ sub fetch_input {
 
     my @transcripts;
 
-    if ($DEBUG) {
+    if ($self->param('debug_mode')) {
         my $ga = $core_dba->get_GeneAdaptor or die "Failed to get gene adaptor";
         
         @transcripts = grep { $_->translation } @{ $ga->fetch_all_by_external_name('BRCA1')->[0]->get_all_Transcripts };
