@@ -82,13 +82,7 @@ $dbh->do(qq{
     DELETE FROM study WHERE source_id = $source_id
 });
 
-# phenotype - name LIKE "COSMIC:tumour_site:%" 
-
-$dbh->do(qq{
-    DELETE FROM phenotype WHERE description LIKE "COSMIC:tumour_site:%"
-});
-
-print "Deleted all samples, populations, studies and phenotypes\n" if $verbose;
+print "Deleted all samples, populations and studies\n" if $verbose;
 
 # now all the stuff that is joined to variation
 
@@ -153,12 +147,4 @@ $dbh->do(qq{
 });
 
 print "Deleted all variation associated data\n" if $verbose;
-
-# source - name = 'COSMIC'
-
-$dbh->do(qq{
-    DELETE FROM source WHERE name = "COSMIC"
-});
-
-print "Deleted COSMIC source, removal complete\n" if $verbose;
 
