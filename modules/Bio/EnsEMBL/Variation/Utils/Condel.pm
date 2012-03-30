@@ -118,7 +118,7 @@ sub get_condel_prediction {
     if ($int_score >= 0.469){
       $class{'condel'} = 'deleterious';
     }
-    elsif ($int_score > 0 && $int_score < 0.469) {
+    elsif ($int_score >= 0 && $int_score < 0.469) {
       $class{'condel'} = 'neutral';
     }
 
