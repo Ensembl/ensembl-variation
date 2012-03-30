@@ -528,6 +528,7 @@ create table variation_feature(
 @column class_attrib_id					Foreign key references to the @link attrib table. Defines the type of structural variant. 
 @column validation_status				Validation status of the variant.
 @column is_evidence             Flag indicating if the structural variation is a supporting evidence (1) or not (0).
+@column somatic                 Flags whether this structural variation is known to be somatic or not
 
 @see source
 @see study
@@ -542,6 +543,7 @@ CREATE TABLE structural_variation (
 	class_attrib_id int(10) unsigned NOT NULL DEFAULT 0,
   validation_status ENUM('validated','not validated','high quality'),
 	is_evidence TINYINT(4) DEFAULT 0,
+	somatic TINYINT(1) NOT NULL DEFAULT 0,
 	
   PRIMARY KEY (structural_variation_id),
   KEY name_idx (variation_name),
@@ -567,7 +569,9 @@ CREATE TABLE structural_variation_association (
   structural_variation_id int(10) unsigned NOT NULL,
   supporting_structural_variation_id int(10) unsigned NOT NULL,
 	
-  PRIMARY KEY (structural_variation_id, supporting_structural_variation_id)
+  PRIMARY KEY (structural_variation_id, supporting_structural_variation_id),
+	KEY structural_variation_idx (structural_variation_id),
+	KEY supporting_structural_variation_idx (supporting_structural_variation_id)
 );
 
 
@@ -593,6 +597,8 @@ CREATE TABLE structural_variation_association (
 @column allele_string						         The variant allele, where known.
 @column is_evidence                      Flag indicating if the structural variation is a supporting evidence (1) or not (0).
 @column variation_set_id		             The structural variation feature can belong to a @link variation_set.
+@column somatic                          Flags whether this structural variation is known to be somatic or not
+@column breakpoint_order                 Defines the order of the breakpoints when several events/mutation occured for a structural variation (e.g. somatic mutations)
 
 @see structural_variation
 @see source
@@ -617,6 +623,8 @@ create table structural_variation_feature (
   class_attrib_id int(10) unsigned NOT NULL DEFAULT 0,
 	allele_string longtext DEFAULT NULL,
 	is_evidence tinyint(1) NOT NULL DEFAULT 0,
+	somatic TINYINT(1) NOT NULL DEFAULT 0,
+	breakpoint_order TINYINT(4) DEFAULT NULL,
   variation_set_id SET (
           '1','2','3','4','5','6','7','8',
           '9','10','11','12','13','14','15','16',
