@@ -138,7 +138,6 @@ our @VARIATION_CLASSES = (
     {
         SO_accession => 'SO:0000199',
         SO_term => 'translocation',
-        display_term => 'Translocation',
     },
 );
 
