@@ -125,7 +125,21 @@ our @VARIATION_CLASSES = (
         SO_term => 'mobile_element_insertion',
         display_term => 'Mobile element insertion',
     },
-    
+    {
+        SO_accession => 'SO:0001873',
+        SO_term => 'interchromosomal_breakpoint',
+        display_term => 'Interchromosomal breakpoint',
+    },   
+    {
+        SO_accession => 'SO:0001874',
+        SO_term => 'intrachromosomal_breakpoint',
+        display_term => 'Intrachromosomal breakpoint',
+    },
+    {
+        SO_accession => 'SO:0000199',
+        SO_term => 'translocation',
+        display_term => 'Translocation',
+    },
 );
 
 our @OVERLAP_CONSEQUENCES = (
