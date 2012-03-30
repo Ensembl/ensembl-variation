@@ -407,7 +407,8 @@ sub structural_variation{
 	    structural_variation_id,
 	    variation_name,
 			class_attrib_id,
-	    source_id
+	    source_id,
+			is_evidence
     )
     SELECT
 			DISTINCT
@@ -422,7 +423,8 @@ sub structural_variation{
 			sv.structural_variation_id,
       t.id,
 			sv.class_attrib_id,
-      $source_id
+      $source_id,
+			t.is_ssv
     FROM
       seq_region q,
       temp_cnv t,
@@ -491,6 +493,18 @@ sub structural_variation_set {
 			t.id=sv.variation_name
   };
   $dbVar->do($stmt);
+	
+	# Populate the meta table
+	my $set = $dbVar->selectrow_arrayref(qq{SELECT s.name,a.value FROM variation_set s, attrib a 
+	                                        WHERE s.variation_set_id=$var_set_id 
+																					AND a.attrib_id=s.short_name_attrib_id;}
+																			);
+	my $meta_value = "sv_set#".$set->[0]."#structural_variation_set_".$set->[1]."#structural_variation"; 
+	# Check if the meta entry already exists, else it create the entry
+	if (!$dbVar->selectrow_arrayref(qq{SELECT meta_id FROM meta WHERE meta_key='web_config' 
+																		 AND meta_value='$meta_value';})) {
+		$dbVar->do(qq{INSERT INTO meta (meta_key,meta_value) VALUES ('web_config','$meta_value');});
+	}
 }
 
 
@@ -511,11 +525,10 @@ sub structural_variation_annotation {
 	foreach my $row (@$rows_samples) {
     my $sample = $row->[0];
 		next if ($sample eq	'');
-		
+		print "SAMPLE: $sample\n";
 		my $srow = $dbVar->selectrow_arrayref(qq{ SELECT sample_id FROM sample WHERE name='$sample' });
-		if (!scalar(@$srow)) {
-			$dbVar->do(qq{ INSERT INTO sample (name,description) VALUES ('$sample','Sample from the DGVa study $study_name')});
-		}	
+		next if (defined($srow));
+		$dbVar->do(qq{ INSERT INTO sample (name,description) VALUES ('$sample','Sample from the DGVa study $study_name')});
 	}
 	
 	# Create strain entries
@@ -529,7 +542,7 @@ sub structural_variation_annotation {
 		
 		my $sample_id;
 		my $srow = $dbVar->selectrow_arrayref(qq{SELECT sample_id FROM sample WHERE name='$sample'});
-		if (!scalar(@$srow)) {
+		if (!defined($srow)) {
 			$dbVar->do(qq{ INSERT INTO sample (name,description) VALUES ('$sample','Sample from the DGVa study $study_name')});
 			$sample_id = $dbVar->{'mysql_insertid'};
 		}
@@ -770,6 +783,7 @@ sub parse_gvf {
 			}
 		}
 		
+		print "ID: ".$info->{ID}." | Samples: ".$info->{samples}."\n";
 		
 		print OUT (join "\t", ($info->{ID},
 													 $info->{SO_term},
