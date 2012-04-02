@@ -62,6 +62,9 @@ ALTER TABLE population_genotype ADD FOREIGN KEY (sample_id) REFERENCES populatio
 ALTER TABLE population_structure ADD FOREIGN KEY (super_population_sample_id) REFERENCES population(sample_id);
 ALTER TABLE population_structure ADD FOREIGN KEY (sub_population_sample_id) REFERENCES population(sample_id);
 
+ALTER TABLE protein_function_predictions ADD FOREIGN KEY (translation_md5_id) REFERENCES translation_md5(translation_md5_id);
+ALTER TABLE protein_function_predictions ADD FOREIGN KEY (analysis_attrib_id) REFERENCES atrrib(attrib_id);
+
 ALTER TABLE read_coverage ADD FOREIGN KEY (sample_id) REFERENCES individual(sample_id);
 ALTER TABLE read_coverage ADD FOREIGN KEY (seq_region_id) REFERENCES seq_region(seq_region_id);
 
