@@ -131,6 +131,7 @@ foreach my $hostname (@hostnames) {
 		my $p_dbname = $sth3->fetchrow_array;
 		
 		my %p_list;
+		my $is_new_species = 0;
 		if ($p_dbname) {
 			my $sql4 = qq{SELECT name, version FROM source};
 			my $sth4 = get_connection_and_query($p_dbname, $previous_host, $sql4);
@@ -138,12 +139,15 @@ foreach my $hostname (@hostnames) {
 				$p_list{$p[0]} = $p[1];
 			}
 		}
+		else {
+			$is_new_species = 1;
+		}
 		
 		$html_content .= '<br />' if ($start == 1);
-		$html_content .= source_table($s_name,$sth2,\%p_list);
+		$html_content .= source_table($s_name,$sth2,$is_new_species,\%p_list);
 		
 		$start = 1 if ($start == 0);
-	    }
+  }
 }
 
 ## HTML/output file ##
@@ -157,6 +161,7 @@ close(HTML);
 sub source_table {
 	my $name   = shift;
 	my $sth    = shift;
+	my $is_new = shift;
 	my $p_list = shift;
 	my $species = $name;
 	$species =~ s/_/ /;
@@ -164,10 +169,11 @@ sub source_table {
 	$species = uc($1).$2;
 	my $s_name = $species;
 	$s_name =~ s/\s/_/g;
+	my $new_species = ($is_new == 1) ? qq{<td style="padding-left:20px;color:#00F;font-weight:bold">New species!</td>} : '';
 	my $html = qq{
 	<table id="$name"><tr style="vertical-align:middle">
 		<td style="padding-left:0px"><img src="${server_name}/img/species/thumb_$s_name.png" alt="$species" /></td>
-		<td style="padding-left:10px"><h3>$species</h3></td>
+		<td style="padding-left:10px"><h3>$species</h3></td>$new_species
 	</tr></table>
 	};
 	
@@ -272,6 +278,10 @@ sub format_version {
 	elsif ($version =~ /(\d{2})(\d{2})(\d{2})/) {
 		$version = "$3/$2/20$1";
 	}
+	# e.g. 20121 (HGMD data version)
+	elsif ($version =~ /^(20\d{2})(\d)$/) {
+		$version = "$1.$2";
+	}
 	elsif ($version eq '') {
 		$version = '-';
 	}
@@ -300,7 +310,7 @@ sub get_connection_and_query {
 sub usage {
 	
   print qq{
-  Usage: perl source2html.pl [OPTION]
+  Usage: perl sources2html.pl [OPTION]
   
   Put all variation sources, for each species, into an HTML document.
 	
