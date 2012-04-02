@@ -61,7 +61,7 @@ my $login = "ensro";
 my $pswd = "";
 my $sep = "\t";
 my $start = 0;
-
+my %colors = ( 'version' => '#090', 'source'  => '#00F' );
 
 ##############
 ### Header ###
@@ -91,6 +91,19 @@ my $html_header = qq{
 ### Footer  ##
 ##############
 my $html_footer = qq{
+<div style="border:1px solid #000;padding:5px;width:400px;margin-top:40px">
+	<b>Legend</b><br />
+	<table>
+		<tr>
+			<td style="width:5px;background-color:#090"></td>
+			<td style="color:#090">New version of the data source in this release for the species</td>
+		</tr>
+		<tr>
+			<td style="width:5px;background-color:#00F"></td>
+			<td style="color:#00F">New data source in this release for the species</td>
+		</tr>
+	</table>
+</div>
 </body>
 </html>};
 
@@ -184,8 +197,6 @@ sub source_table {
 	
 	my $bg = 1;
 	my @p_sources = keys(%{$p_list});
-	
-	my %colors = ( 'version' => '#090', 'source'  => '#00F' );
 	
 	
 	# Chip headers
