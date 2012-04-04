@@ -50,7 +50,7 @@ my $dbVar2 = $vdb2->dbc->db_handle;
 my $sa2 = $cdb2->get_SliceAdaptor();
 my $buffer = {};
 my $source_id;
-my $source_description = 'Variants from HGMD-PUBLIC data';
+my $source_description = 'Variants from HGMD-PUBLIC dataset';
 
 my $month_hash = { 1 => 'March', 2 => 'June', 3 => 'September', 4 => 'December' };
 
@@ -64,7 +64,7 @@ my $remapped;
 if ($mapping) {
 	$remapped = " [remapped from build $ncbi_version]";
 }
-$source_description .= " set $month $year" if ($year and $month);
+$source_description .= " $month $year" if ($year and $month);
 
 if ($new_source_ref->[0][0]) {
   $source_id = $new_source_ref->[0][0];
