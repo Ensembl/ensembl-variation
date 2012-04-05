@@ -329,7 +329,7 @@ sub display_term {
 sub NCBI_term {
     my ($self, $NCBI_term) = @_;
     $self->{NCBI_term} = $NCBI_term if $NCBI_term;
-    return $self->{NCBI_term};
+    return $self->{NCBI_term} || $self->SO_term;
 }
 
 =head2 description
