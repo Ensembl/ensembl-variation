@@ -74,15 +74,19 @@ my $html_header = qq{
 </head>
 
 <body>
-<h1>Ensembl Variation Sources Documentation</h1>
+<b>
+<a href="index.html">About Ensembl Variation</a> |
+<a href="data_description.html">Data Description</a> | 
+<a href="predicted_data.html">Predicted Data</a> |
+<a href="database.html">Database Description</a> | 
+<a href="/info/docs/api/variation/index.html">Perl API</a> |
+<a href="vep/index.html">Variant Effect Predictor</a>
+</b>
+<br /><br />
 
-<a href="/info/docs/variation/index.html">About Variation Data</a> | 
-<a href="/info/docs/variation/database.html">Database Description</a> |
-<a href="/info/docs/variation/sources_documentation.html">Variation Sources</a> |
-<a href="/info/docs/variation/variation_schema.html">Variation Tables Description</a> |
-<a href="/info/docs/api/variation/index.html">Perl API</a>
+<h1>Ensembl Variation - Sources Documentation</h1>
 
-<h2>List of Variation sources for each species - $ecaption $e_version</h2>
+<h2>List of Variation sources for each species - $ecaption $e_versio</h2>
 
 };
 
