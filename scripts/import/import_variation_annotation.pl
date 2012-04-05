@@ -15,21 +15,26 @@ my $port;
 our $verbose;
 my $skip_synonyms;
 my $skip_phenotypes;
+my $skip_sets;
 my $source;
 my $source_version;
+my $set;
 my $help;
 
 my $UNIPROT_SOURCE_NAME = "Uniprot";
 my $UNIPROT_SOURCE_DESCRIPTION = "Variants with protein annotation imported from Uniprot";
 my $UNIPROT_SOURCE_URL = "http://www.uniprot.org/";
+my $UNIPROT_SET_NAME = "ph_uniprot";
 
 my $OMIM_SOURCE_NAME = "OMIM";
 my $OMIM_SOURCE_DESCRIPTION = "Variations linked to entries in the Online Mendelian Inheritance in Man (OMIM) database";
 my $OMIM_SOURCE_URL = "http://www.omim.org/";
+my $OMIM_SET_NAME = "ph_omim";
 
 my $NHGRI_SOURCE_NAME = "NHGRI_GWAS_catalog";
 my $NHGRI_SOURCE_DESCRIPTION = "Variants associated with phenotype data from the NHGRI GWAS catalog";
 my $NHGRI_SOURCE_URL = "http://www.genome.gov/gwastudies/";
+my $NHGRI_SET_NAME = "ph_nhgri";
 
 my $EGA_SOURCE_NAME = "EGA";
 my $EGA_SOURCE_DESCRIPTION = "Variants imported from the European Genome-phenome Archive with phenotype association";
@@ -49,6 +54,7 @@ GetOptions(
     'verbose!' => \$verbose,
     'skip_synonyms!' => \$skip_synonyms,
     'skip_phenotypes!' => \$skip_phenotypes,
+		'skip_sets!' => \$skip_sets,
     'help!' => \$help
 );
 
@@ -108,25 +114,28 @@ if ($source =~ m/uniprot/i) {
     $source_name = $UNIPROT_SOURCE_NAME;
     $source_description = $UNIPROT_SOURCE_DESCRIPTION;
     $source_url = $UNIPROT_SOURCE_URL;
-		
+		$set = $UNIPROT_SET_NAME;
 }
 elsif ($source =~ m/nhgri/i) {
     $result = parse_nhgri($infile);
     $source_name = $NHGRI_SOURCE_NAME;
     $source_description = $NHGRI_SOURCE_DESCRIPTION;
     $source_url = $NHGRI_SOURCE_URL;
+		$set = $NHGRI_SET_NAME;
 }
 elsif ($source =~ m/omim/i) {
     $result = parse_omim($infile);
     $source_name = $OMIM_SOURCE_NAME;
     $source_description = $OMIM_SOURCE_DESCRIPTION;
     $source_url = $OMIM_SOURCE_URL;
+		$set = $OMIM_SET_NAME;
 }
 elsif ($source =~ m/dbsnp/i) {
     $result = parse_dbsnp_omim($infile);
     $source_name = $OMIM_SOURCE_NAME;
     $source_description = $OMIM_SOURCE_DESCRIPTION;
     $source_url = $OMIM_SOURCE_URL;
+		$set = $OMIM_SET_NAME;
 }
 elsif ($source =~ m/ega/i) {
 		$source_name = $EGA_SOURCE_NAME;
@@ -168,6 +177,9 @@ add_synonyms(\%synonym,$variation_ids,$source_id,$db_adaptor) unless ($skip_syno
 # Now, insert phenotypes
 add_phenotypes(\@phenotypes,$variation_ids,$source_id,$db_adaptor) unless ($skip_phenotypes);
 
+# Add the variation sets if required
+add_set($set,$source_id,$db_adaptor) unless ($skip_sets);
+
 # Loop over the remaining rsids (the ones that could not be find in the db) and print them out
 while (my ($rs_id,$var_id) = each(%{$variation_ids})) {
     next if (defined($var_id->[0]));
@@ -178,6 +190,11 @@ while (my ($rs_id,$var_id) = each(%{$variation_ids})) {
     print STDOUT "\n";
 }
 
+
+
+###########
+# METHODS #
+###########
 
 sub parse_uniprot {
     my $infile = shift;
@@ -889,6 +906,42 @@ sub add_synonyms {
     print STDOUT "Added $alt_count synonyms for $variation_count rs-ids\n" if ($verbose);
 }
 
+sub add_set {
+  my $set = shift;
+  my $source_id = shift;
+  my $db_adaptor = shift;
+	
+	return if (!defined($set));
+	
+	my $variation_set_id;
+	
+	# Get variation_set_id
+	my $select_set_stmt = qq{
+        SELECT v.variation_set_id
+        FROM variation_set v, attrib a
+        WHERE v.short_name_attrib_id=a.attrib_id 
+				  AND a.value = ?
+	};
+	my $sth1 = $db_adaptor->dbc->prepare($select_set_stmt);
+	$sth1->bind_param(1,$set,SQL_VARCHAR);
+  $sth1->execute();
+  $sth1->bind_columns(\$variation_set_id);
+  $sth1->fetch();
+	return if (!defined($variation_set_id));
+	
+	# Insert into variation_set_variation
+	my $insert_set_stmt = qq{ 
+		INSERT IGNORE INTO variation_set_variation (variation_id,variation_set_id)
+			SELECT distinct variation_id, ? 
+			FROM variation_annotation WHERE study_id IN
+				(SELECT study_id FROM study WHERE source_id=?)
+	};
+	my $sth2 = $db_adaptor->dbc->prepare($insert_set_stmt);
+	$sth2->bind_param(1,$variation_set_id,SQL_INTEGER);
+  $sth2->bind_param(2,$source_id,SQL_INTEGER);
+  $sth2->execute();
+}
+
 
 sub convert_p_value {
 
@@ -962,6 +1015,7 @@ sub usage {
 			
 			-skip_phenotypes   Skip the study, variation_annotation and phenotype tables insertions.
 			-skip_synonyms     Skip the variation_synonym table insertion.
+			-skip_sets         Skip the variation_set_variation table insertion.
       
     Database credentials are specified on the command line
     
