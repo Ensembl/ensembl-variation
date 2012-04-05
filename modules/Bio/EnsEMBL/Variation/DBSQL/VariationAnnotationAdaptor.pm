@@ -305,11 +305,11 @@ sub fetch_all_by_associated_gene {
 
   throw('gene_name argument expected') if(!defined($gene_name));
 
-	my $extra_sql = " va.associated_gene REGEXP '$gene_name(,.+)?\$'";
+	my $extra_sql = " va.associated_gene REGEXP '^(.+,)?[. .]*$gene_name(,.+)?\$'";
   
   # Add the constraint for failed variations
   $extra_sql .= " AND " . $self->db->_exclude_failed_variations_constraint();
-  
+
   return $self->generic_fetch($extra_sql);
   
 }
