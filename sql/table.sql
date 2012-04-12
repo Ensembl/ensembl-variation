@@ -1139,7 +1139,7 @@ CREATE TABLE meta_coord (
 
   UNIQUE(table_name, coord_system_id)
 
-) TYPE=MyISAM;
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
 /**
