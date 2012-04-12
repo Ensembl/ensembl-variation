@@ -11,15 +11,18 @@ use FindBin qw( $Bin );
 ##
 ##  run with bsub -q long -o [tmpdir]/output_tag.txt perl tag_snps.pl -tmpdir [tmpdir] -tmpfile [tmpfile]
 use constant MAX_SIZE => 500_000_000;
-my ($TMP_DIR, $TMP_FILE, $species, $registry_file);
+my ($TMP_DIR, $TMP_FILE, $species, $registry_file, $selected_seq_region);
 
 
 GetOptions('species=s' => \$species,
 	   'tmpdir=s'  => \$ImportUtils::TMP_DIR,
 	   'tmpfile=s' => \$ImportUtils::TMP_FILE,
-	   'registry_file=s' => \$registry_file);
+	   'registry_file=s' => \$registry_file,
+	   'seq_region=i' => \$selected_seq_region);
 
 warn("Make sure you have a updated ensembl.registry file!\n");
+
+$selected_seq_region ||= $ENV{LSB_JOBINDEX} if defined($ENV{LSB_JOBINDEX});
 
 $registry_file ||= $Bin . "/ensembl.registry";
 
@@ -35,6 +38,8 @@ my $dbVariation = $reg->get_DBAdaptor($species,'variation');
 my $siblings;
 create_LD_table($dbVariation); #create the LD table if it is not there yet
 my $in_str = get_LD_populations($dbVariation,$siblings);
+
+$in_str .= ' AND c.seq_region_id = '.$selected_seq_region if defined($selected_seq_region);
 
 # genotype codes
 my $gca = $reg->get_adaptor($species, 'variation', 'genotypecode');
@@ -69,9 +74,11 @@ foreach my $file (sort {$files_size->{$b} <=> $files_size->{$a}} keys %{$files_s
 	
     @stats = stat($file);
     if ($stats[7] > MAX_SIZE){
-		# once the files are created, we have to calculate the ld
-		$call .= " -M15000000 -R'select[mem>15000] rusage[mem=15000]' -q long ";
+		$call .= " -q basement  -R'select[mem>15000] rusage[mem=15000]' -M15000000 ";
     }
+	else {
+		$call .= " -q basement  -R'select[mem>4000] rusage[mem=4000]' -M4000000 ";
+	}
     $call .= "perl calculate_ld_table.pl -tmpdir $TMP_DIR -tmpfile $TMP_FILE -ldfile $file ";
     print $call,"\n";
     system($call);
@@ -79,7 +86,7 @@ foreach my $file (sort {$files_size->{$b} <=> $files_size->{$a}} keys %{$files_s
 }
 
 sleep(60);
-$call = "bsub -K -W2:00 -w 'done(ld_calculation*)' -J waiting_ld date";
+$call = "bsub -K -W2:00 -w -q basement 'done(ld_calculation*)' -J waiting_ld date";
 system($call);
 
 # import the data in the LD table
@@ -101,8 +108,11 @@ foreach my $file (sort {$files_size->{$b} <=> $files_size->{$a}} keys %{$files_s
 	$call = "bsub -J tag_snps_$1\_$2 -o $TMP_DIR\/$1\_$2\_farm.out ";
 	
     if ($files_size->{$file} > MAX_SIZE){
-		$call .= " -q long  -R'select[mem>15000] rusage[mem=15000]' -M15000000 ";
+		$call .= " -q basement  -R'select[mem>15000] rusage[mem=15000]' -M15000000 ";
     }
+	else {
+		$call .= " -q basement  -R'select[mem>4000] rusage[mem=4000]' -M4000000 ";
+	}
     $call .= "/software/bin/perl select_tag_snps.pl $file ";
     $call .= " -tmpdir $TMP_DIR -species $species";
 	$call .= " -registry_file $registry_file" if defined($registry_file);
@@ -113,7 +123,7 @@ foreach my $file (sort {$files_size->{$b} <=> $files_size->{$a}} keys %{$files_s
     
 }
 
-$call = "bsub -K -w 'done(tag_snps*)' -J waiting_process sleep 1"; #waits until all snp_tagging have finished to continue
+$call = "bsub -K -w 'done(tag_snps*)' -q basement -J waiting_process sleep 1"; #waits until all snp_tagging have finished to continue
 system($call);
 
 debug("Importing tag SNPs");
@@ -259,8 +269,10 @@ sub create_LD_table{
 			r2 float not null,
 			
 			key seq_region_idx(seq_region_id,seq_region_start)
-		)
+		);
 	});
+
+    $dbVariation->dbc->do(qq{TRUNCATE pairwise_ld});
 
 }
 
