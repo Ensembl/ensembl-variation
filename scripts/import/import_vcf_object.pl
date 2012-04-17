@@ -1732,7 +1732,20 @@ sub variation_feature {
 	
 	my $vfa = $config->{variationfeature_adaptor};
 	
-	my $existing_vfs = $vfa->_fetch_all_by_coords($config->{seq_region_ids}->{$vf->{chr}}, $vf->{start}, $vf->{end});
+	# does the variation entry exist in the database?
+	my $var_in_db = defined($data->{variation}->{dbID}) ? 1 : 0;
+	
+	# get VF entries either from variation object or VCF locus
+	my $existing_vfs = $var_in_db ?
+		$vfa->fetch_all_by_Variation($data->{variation}) :
+		$vfa->_fetch_all_by_coords(
+			$config->{seq_region_ids}->{$vf->{chr}},
+			$vf->{start},
+			$vf->{end}
+		);
+	
+	# flag to indicate if we've added a synonym
+	my $added_synonym = 0;
 	
 	# check existing VFs
 	foreach my $existing_vf (sort {
@@ -1778,7 +1791,7 @@ sub variation_feature {
 		}
 		
 		# we also need to add a synonym entry if the variation has a new name
-		if($existing_vf->variation_name ne $data->{ID} and !defined($config->{only_existing})) {
+		if($existing_vf->variation_name ne $data->{ID} and !defined($config->{only_existing}) and !$added_synonym) {
 			
 			if(defined($config->{test})) {
 				debug($config, "(TEST) Adding ", $data->{ID}, " to variation_synonym as synonym for ", $existing_vf->variation_name);
@@ -1801,6 +1814,8 @@ sub variation_feature {
 				$sth->finish;
 			}
 			
+			$added_synonym = 1;
+			
 			$config->{rows_added}->{variation_synonym}++;
 		}
 		
@@ -1822,7 +1837,7 @@ sub variation_feature {
 		# set to return the existing vf
 		$vf = $existing_vf;
 		
-		last;
+		last unless $var_in_db;
 	}
 	
 	# otherwise we need to store the object we've created
