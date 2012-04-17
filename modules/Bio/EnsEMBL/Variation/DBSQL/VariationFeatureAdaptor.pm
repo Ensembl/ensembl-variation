@@ -518,6 +518,10 @@ sub fetch_all_by_Slice_VariationSet{
     throw('Bio::EnsEMBL::Variation::VariationSet arg expected');
   }
   
+  # fix for failed sets
+  my $failed = $self->db->include_failed_variations;
+  $self->db->include_failed_variations(1) if $failed == 0 && $set->name =~ /fail/;
+  
   #ÊGet the bitvalue for this set and its subsets
   my $bitvalue = $set->_get_bitvalue();
   
@@ -527,6 +531,8 @@ sub fetch_all_by_Slice_VariationSet{
   #ÊGet the VariationFeatures by calling fetch_all_by_Slice_constraint
   my $vfs = $self->fetch_all_by_Slice_constraint($slice,$constraint);
   
+  # restore failed fetch flag
+  $self->db->include_failed_variations($failed);
 
   $self->{_get_variations} = 0;
 
