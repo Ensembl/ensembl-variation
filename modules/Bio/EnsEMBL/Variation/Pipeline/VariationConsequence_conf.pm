@@ -96,7 +96,7 @@ sub default_options {
 
         # these flags control which parts of the pipeline are run
 
-        run_transcript_effect   => 0,
+        run_transcript_effect   => 1,
         run_variation_class     => 1,
 
         # connection parameters for the hive database, you should supply the hive_db_password
