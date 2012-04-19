@@ -191,13 +191,15 @@ sub fetch_all_by_Slice{
 }
 
 sub _tables{
-    my $self = shift;
     return (['compressed_genotype_region','c']);
 }
 
 sub _columns{
-    my $self = shift;
     return qw(sample_id seq_region_id seq_region_start seq_region_end seq_region_strand genotypes);
+}
+
+sub _write_columns{
+    return $_[0]->_columns;
 }
 
 sub _objs_from_sth{
