@@ -1123,24 +1123,112 @@ sub new_fake {
   return $self;
 }
 
-sub _parse_hgvs_position {
+sub _parse_hgvs_genomic_position {
+
+    my $description  = shift;
+    
+    my ($start, $start_offset, $end, $end_offset) = $description=~ m/^([\-\*]?\d+)((?:[\+\-]\d+)?)(?:_([\-\*]?\d+)((?:[\+\-]\d+)?))?/;
+    ## end information needed even if same as start
+    unless ($end){$end = $start;}  
+    unless ($end_offset){$end_offset = $start_offset;} 
+    if( $start_offset ||   $end_offset){ warn "ERROR: not expecting offsets for genomic location [$description]\n";}
+
+    return ($start, $end);
+}
+
+
+sub _parse_hgvs_transcript_position {
+    ### Work out genomic coordinates from hgvs coding or non coding annotation
+
+    ### Non-exonic notation - 
+    ### P+n  => n bases after listed exonic base
+    ### P-n  => n bases before listed exonic base
+    ### -P+n => n bases after listed 5'UTR base
+    ### *P-n => n bases before listed 3'UTR base
+
     my $description = shift;
+    my $transcript  = shift;
+            
+    my ($start,$start_offset, $end, $end_offset) = $description =~ m/^([\-\*]?\d+)((?:[\+\-]\d+)?)(?:_([\-\*]?\d+)((?:[\+\-]\d+)?))?/;
+    my ($start_direction, $end_direction); ## go back or forward into intron
     
-    my ($start,$start_offset,$end,$end_offset) = $description =~ m/^([\-\*]?\d+)((?:[\+\-]\d+)?)(?:_([\-\*]?\d+)((?:[\+\-]\d+)?))?/;
-    
-    #ÊFill in missing values
-    $start_offset = 0 unless (defined($start_offset) && length($start_offset));
-    unless (defined($end) && length($end)) {
-        $end = $start;
-        $end_offset = $start_offset;
+    $start_offset = 0 unless (defined($start_offset) && length($start_offset));	 ### exonic
+    $end_offset   = $start_offset unless defined $end_offset;
+    ### extract + or - for intronic positions in coding nomenclature
+    if (substr($start_offset,0,1) eq '+' || substr($start_offset,0,1) eq '-'){
+	$start_direction  = substr($start_offset,0,1);  
+	$start_offset     = substr($start_offset,1) ;
+	$start            = $start;
     }
-    $end_offset = 0 unless (defined($end_offset) && length($end_offset));
-    	
-    #ÊGet rid of any '+' signs that may have been parsed into the variables
-    $start_offset = substr($start_offset,1) if (substr($start_offset,0,1) eq '+');
-    $end_offset = substr($end_offset,1) if (substr($end_offset,0,1) eq '+');
+    ###  this is needed for long intronic events eg. ENST00000299272.5:c.98-354_98-351dupGAAA
+    if (substr($end_offset,0,1) eq '+' || substr($end_offset,0,1) eq '-'){
+	$end_direction   = substr($end_offset,0,1); 
+	$end_offset      = substr($end_offset,1) ;
+	$end             = $end
+    }
+    ### add missing values if single-location variant - needed for refseq check later
+    unless (defined($end) && length($end)) {
+	$end          = $start;
+	$end_offset   = $start_offset;
+	$end_direction= $start_direction  ;
+    }
     
-    return [$start,$end,$start_offset,$end_offset];
+    ### Variant in the 3' UTR =>  convert the coordinates by setting them to be the stop codon position + the UTR offset
+    if (substr($start,0,1) eq '*'){
+	$start = ($transcript->cdna_coding_end() - $transcript->cdna_coding_start() + 1) + int(substr($start,1)) ;}
+    if (substr($end,0,1) eq '*'){
+	$end   = ($transcript->cdna_coding_end() - $transcript->cdna_coding_start() + 1) + int(substr($end,1));}
+    
+    ### Variant in the 5' UTR =>  convert the coordinates by setting them to be the start codon position(0) - the UTR offset
+    if (substr($start,0,1) eq '-'){
+	$start =  0 - int(substr($start,1)) ;}
+    if (substr($end,0,1) eq '-'){
+	$end   =  0 - int(substr($end,1));}
+        
+    # Get the TranscriptMapper to convert to genomic coords
+    my $tr_mapper = $transcript->get_TranscriptMapper();    
+    
+   #ÊThe mapper can only convert cDNA coordinates, but we have CDS (relative to the start codon), so we need to convert them
+    my ($cds_start, $cds_end) ;
+    if( defined $transcript->cdna_coding_start()){
+	($cds_start, $cds_end)  = (($start + $transcript->cdna_coding_start() - ($start > 0)),($end + $transcript->cdna_coding_start() - ($end > 0)));
+    }
+    else{
+	#### non coding transcript
+	($cds_start, $cds_end)  = (($start + $transcript->cdna_coding_start() ),($end + $transcript->cdna_coding_start() ));
+    }
+    # Convert the cDNA coordinates to genomic coordinates.
+    my @coords = $tr_mapper->cdna2genomic($cds_start,$cds_end);
+    
+    #ÊThrow an error if we didn't get an unambiguous coordinate back
+    	throw ("Unable to map the cDNA coordinates $start\-$end to genomic coordinates for Transcript " .$transcript->stable_id()) if (scalar(@coords) != 1 || !$coords[0]->isa('Bio::EnsEMBL::Mapper::Coordinate'));
+            
+    my	$strand = $coords[0]->strand();    
+    
+    ### overwrite exonic location with genomic coordinates
+    $start = $coords[0]->start(); 
+    $end   = $coords[0]->end();
+
+    #### intronic variants are described as after or before the nearest exon 
+    #### - add this offset to genomic start & end positions
+    if(defined $start_direction ){
+	if($strand  == 1){
+	    if($start_direction eq "+"){ $start = $start + $start_offset; }
+	    if($end_direction   eq "+"){ $end   = $end   + $end_offset;   }
+	    
+	    if($start_direction eq "-"){ $start = $start - $start_offset; }
+	    if($end_direction   eq "-"){ $end   = $end   - $end_offset;   }
+	}
+	elsif($strand  == -1 ){
+	    if($start_direction eq "+"){ $start = $start - $start_offset;}
+	    if($end_direction   eq "+"){ $end   = $end   - $end_offset;  }
+	    
+	    if($start_direction eq "-"){ $start = $start + $start_offset;}
+	    if($end_direction   eq "-"){ $end   = $end   + $end_offset;  }
+	}
+    }
+        
+    return ($start, $end, $strand);
 }
 
 =head2 fetch_by_hgvs_notation
@@ -1149,169 +1237,110 @@ sub _parse_hgvs_position {
     Example     : my $hgvs = 'LRG_8t1:c.3891A>T';
 		  $vf = $vf_adaptor->fetch_by_hgvs_notation($hgvs);
     Description : Parses an HGVS notation and tries to create a VariationFeature object
-		  based on the notation. The object will have a Variation
-		  and Alleles attached.
+    based on the notation. The object will have a Variation and Alleles attached.
     ReturnType  : Bio::EnsEMBL::Variation::VariationFeature, undef on failure
     Exceptions  : thrown on error
     Caller      : general
     Status      : Stable
 
 =cut
-
+   
 sub fetch_by_hgvs_notation {
+
+    
     my $self = shift;
     my $hgvs = shift;
     my $user_slice_adaptor = shift;
     my $user_transcript_adaptor = shift;
     
+    ########################### Check & split input ###########################
+
     #ÊSplit the HGVS notation into the reference, notation type and variation description
-    my ($reference,$type,$description) = $hgvs =~ m/^([^\:]+)\:.*?([cgmrp]?)\.?([\*\-0-9]+.*)$/i;
-    
+    my ($reference, $type, $description) = $hgvs =~ m/^([^\:]+)\:.*?([cgmnrp]?)\.?([\*\-0-9]+.*)$/i;
+     
+    #ÊIf any of the fields are unknown, return undef
+    throw ("Could not parse the HGVS notation $hgvs") unless (defined($reference) && defined($type) && defined($description));
+
+    ### exit if notation type not handled
+    throw ("Parsing of \"$type\" HGVS  notation has not yet been implemented - abandoning $hgvs") unless ($type =~ m/[gcn]/i) ;
+        
     my $extra;
-    
     if($description =~ m/\(.+\)/) {        
         ($description, $extra) = $description =~ /(.+?)(\(.+\))/;        
         throw ("Could not parse the HGVS notation $hgvs - can't interpret \'$extra\'") unless $extra eq '(p.=)';
     }
     
-    #ÊIf any of the fields are unknown, return undef
-    throw ("Could not parse the HGVS notation $hgvs") unless (defined($reference) && defined($type) && defined($description));
-    
     # strip version number from reference
-    $reference =~ s/\.\d+//g if $reference =~ /^ENS|^LRG_\d+/;
-    
-    my ($start,$end,$start_offset,$end_offset,$ref_allele,$alt_allele,$class);
-    
-    #ÊParse differently depending on the type of the notation and the type of the variation
-    if ($type =~ m/[gcrm]/i) {
-	
-	    # Get the positions
-	    ($start,$end,$start_offset,$end_offset) = @{_parse_hgvs_position($description)};
-	    
-    	# A single nt substitution, reference and alternative alleles are required
-    	if ($description =~ m/>/) {
-    	    $class = 'snv';
-    	    ($ref_allele,$alt_allele) = $description =~ m/([A-Z]+)>([A-Z]+)$/i;
-    	}
-    	#ÊA delins, the reference allele is optional
-    	elsif ($description =~ m/del.*ins/i) {
-    	    $class = 'delins';
-    	    ($ref_allele,$alt_allele) = $description =~ m/del(.*?)ins([A-Z]+)$/i;    	    
-    	}
-        # insertion
-        elsif ($description =~ m/ins/i) {
-            $class = 'ins';
-            ($alt_allele) = $description =~ m/ins([A-Z]*)$/i;
-            $ref_allele = '';
-            
-            # switch start/end
-            ($start, $end) = ($end, $start);
-        }
-    	# A deletion, the reference allele is optional
-    	elsif ($description =~ m/del/i) {
-    	    $class = 'del';
-    	    ($ref_allele) = $description =~ m/del([A-Z]*)$/i; 
-    	}
-    	# A duplication, the reference allele is optional
-    	elsif ($description =~ m/dup/i) {
-    	    $class = 'dup';
-    	    ($ref_allele) = $description =~ m/dup([A-Z]*)$/i;
-    	}
-    	# An inversion, the reference allele is optional
-    	elsif ($description =~ m/inv/i) {
-    	    $class = 'inv';
-    	    ($ref_allele) = $description =~ m/inv([A-Z]*)$/i;
-    	}
-    	else {
-    	    $class = 'unknown';
-    	    die ("The variant class for HGVS notation '$hgvs' is unknown or could not be correctly recognized");
-    	}
-    	
-    	# If the reference allele was omitted, set it to undef
-    	$ref_allele = undef unless (defined($ref_allele) && length($ref_allele));
-    	
-    	#ÊIf the position given was in a intronic or UTR position, it could be undefined what reference sequence the position actually refers to. Issue a warning that we will use the Ensembl reference sequence.
-    	warn ("The position specified by HGVS notation '$hgvs' refers to a nucleotide that may not have a specific reference sequence. The current Ensembl genome reference sequence will be used.") if ($start_offset || $end_offset || substr($start,0,1) eq '*' || substr($end,0,1) eq '*' || $start < 0);
-    	
-    }
-    # Else, it is protein notation
-    else {
-	throw ("Parsing of HGVS protein notation has not yet been implemented");
-    }
-    
-    #ÊGet a slice representing this variation
+    if ($reference =~ /^ENS|^LRG_\d+/){
+        $reference =~ s/\.\d+//g;
+        warn ("The position specified by HGVS notation '$hgvs' refers to a nucleotide that may not have a specific reference sequence. The current Ensembl genome reference sequence will be used.") ;
+     }
+    #ÊA small fix in case the reference is a LRG and there is no underscore between name and transcript
+    $reference =~ s/^(LRG_[0-9]+)_?(t[0-9]+)$/$1\_$2/i;
+
+    $description =~ s/\s+//;
+
+    #######################  extract genomic coordinates and reference seq allele  #######################
+    my ($start, $end, $strand, $refseq_allele);
+
+    #ÊGet a slice adaptor to enable check of supplied reference allele
     my $slice_adaptor = $user_slice_adaptor || $self->db()->dnadb()->get_SliceAdaptor();
-    my $slice;
-    my $strand;
-    if ($type =~ m/c/i) {
-	
-    	#ÊA small fix in case the reference is a LRG and there is no underscore between name and transcript
-    	$reference =~ s/^(LRG_[0-9]+)_?(t[0-9]+)$/$1\_$2/i;
-    	
-    	#ÊGet the Transcript object for this variation
-    	my $transcript_adaptor = $user_transcript_adaptor || $self->db()->dnadb()->get_TranscriptAdaptor();
-    	my $transcript = $transcript_adaptor->fetch_by_stable_id($reference) or throw ("Could not get a Transcript object for '$reference'");
-    	
-    	# Get the TranscriptMapper
-    	my $tr_mapper = $transcript->get_TranscriptMapper();
-    	
-    	#ÊIn case we have a position in the 3' UTR, we need to convert the coordinates by setting them to be the stop codon position + the UTR offset
-    	$start = ($transcript->cdna_coding_end() - $transcript->cdna_coding_start() + 1) + int(substr($start,1)) if (substr($start,0,1) eq '*');
-    	$end = ($transcript->cdna_coding_end() - $transcript->cdna_coding_start() + 1) + int(substr($end,1)) if (substr($end,0,1) eq '*');
-    	
-    	#ÊThe mapper can only convert cDNA coordinates, but we have CDS (relative to the start codon), so we need to convert them
-    	my ($cds_start,$cds_end) = (($start + $transcript->cdna_coding_start() - ($start > 0)),($end + $transcript->cdna_coding_start() - ($end > 0)));
-    	
-    	# Convert the cDNA coordinates to genomic coordinates.
-    	my @coords = $tr_mapper->cdna2genomic($cds_start,$cds_end);
-    	
-    	#ÊThrow an error if we didn't get an unambiguous coordinate back
-    	throw ("Unable to map the cDNA coordinates $start\-$end to genomic coordinates for Transcript $reference") if (scalar(@coords) != 1 || !$coords[0]->isa('Bio::EnsEMBL::Mapper::Coordinate'));
-    	
-    	#ÊAdjust any start and end offsets that resulted from e.g. intronic offsets or UTR positions
-    	$strand = $coords[0]->strand();
-    	$start = $coords[0]->start() + ($strand >= 0 ? $start_offset : $end_offset);
-    	$end = $coords[0]->end() + ($strand < 0 ? $start_offset : $end_offset);
-    	
-    	#ÊGet a slice for this variation
-    	$slice = $slice_adaptor->fetch_by_region($transcript->coord_system_name(),$transcript->seq_region_name());
+    my $slice ;
+
+   if($type =~ m/c|n/i) {   
+
+        #ÊGet the Transcript object to convert coordinates
+        my $transcript_adaptor = $user_transcript_adaptor || $self->db()->dnadb()->get_TranscriptAdaptor();
+        my $transcript = $transcript_adaptor->fetch_by_stable_id($reference) or throw ("Could not get a Transcript object for '$reference'");
+ 
+        ($start, $end, $strand) =  _parse_hgvs_transcript_position($description, $transcript) ;  
+        $slice = $slice_adaptor->fetch_by_region($transcript->coord_system_name(),$transcript->seq_region_name());     
+    
+     }
+
+     elsif($type =~ m/g/i) {
+
+           ($start, $end) =  _parse_hgvs_genomic_position($description) ;  
+           ## grab reference allele
+           $slice = $slice_adaptor->fetch_by_region('chromosome', $reference );    
+           $strand =1; ## strand should be genome strand for HGVS genomic notation
+     }
+             
+    #######################  extract & check alleles  #######################
+    
+    #ÊGet the reference allele based on the coordinates - need to supply lowest coordinate first to slice->subseq()
+
+    if($start > $end){ $refseq_allele = $slice->subseq($end,   $start, $strand);}
+    else{              $refseq_allele = $slice->subseq($start, $end,  $strand);}
+
+    my ($ref_allele, $alt_allele) = _get_hgvs_alleles($description, $hgvs);
+
+   # If the reference allele was omitted, set it to undef
+   $ref_allele = undef unless (defined($ref_allele) && length($ref_allele));    	
+    
+    if ($description =~ m/ins/i && $description !~ m/del/i) {
+       # insertion: the start & end positions are inverted by convention
+        if($end > $start){ ($start, $end  ) = ( $end , $start); }   
+        ##print "Not checking reference allele - insertion\n";
     }
-    
-    elsif($type =~ m/g/i) {
-        $slice = $slice_adaptor->fetch_by_region("chromosome", $reference);
+    else{
+       #if( $start >$end ){ ($start, $end  ) = ( $end , $start);}
+        
+       # If the reference from the sequence does not correspond to the reference given in the HGVS notation, throw an exception 
+       if (defined($ref_allele) && $ref_allele ne $refseq_allele){        
+           throw ("Reference allele extracted from $reference:$start-$end ($refseq_allele) does not match reference allele given by HGVS notation ($ref_allele)");
+       }
     }
-    
-    if(!defined($slice)) {
-        throw("Failed to parse HGVS notation - could not retrieve reference feature named $reference");
+    if (defined($ref_allele) && $ref_allele eq $alt_allele){         
+          throw ("Reference allele extracted from $reference:$start-$end ($refseq_allele) matches alt allele given by HGVS notation ($alt_allele)");
     }
-    
-    #ÊGet the reference allele based on the coordinates
-    my $refseq_allele = $slice->subseq($start,$end,$strand);
-    
-    # If the reference from the sequence does not correspond to the reference given in the HGVS notation, throw an exception 
-    throw ("Reference allele extracted from $reference:$start-$end ($refseq_allele) does not match reference allele given by HGVS notation ($ref_allele)") if (defined($ref_allele) && $ref_allele ne $refseq_allele);
     
     # Use the reference allele from the sequence if none was specified in the notation
     $ref_allele ||= $refseq_allele;
     
-    # If the variation type is an inversion, the alt allele is the reverse complement of the ref_allele
-    if ($class eq 'inv') {
-    	$alt_allele = $ref_allele;
-    	reverse_comp(\$alt_allele);
-    }
-    #ÊElse, if we it is a duplication, set it to be a repeat of the reference allele
-    elsif ($class eq 'dup') {
-        my $repeat = 2;
-        $alt_allele = ${ref_allele}x$repeat; 
-    }
-    #ÊElse if we have a deletion, the alt allele should be set to '-'
-    elsif ($class eq 'del') {
-        $alt_allele = '-';
-    }
-    elsif($class eq 'ins') {
-        $ref_allele = '-';
-    }
     
+    ####################### Create objects #######################
+
     #ÊCreate Allele objects
     my @allele_objs;
     foreach my $allele ($ref_allele,$alt_allele) {
@@ -1321,24 +1350,88 @@ sub fetch_by_hgvs_notation {
     #ÊCreate a variation object. Use the HGVS string as its name
     my $variation = Bio::EnsEMBL::Variation::Variation->new(
 	'-adaptor' => $self->db()->get_VariationAdaptor(),
-	'-name' => $hgvs,
-	'-source' => 'Parsed from HGVS notation',
+	'-name'    => $hgvs,
+	'-source'  => 'Parsed from HGVS notation',
 	'-alleles' => \@allele_objs
     );
     
     #ÊCreate a variation feature object
     my $variation_feature = Bio::EnsEMBL::Variation::VariationFeature->new(
-	'-adaptor' => $self,
-	'-start' => $start,
-	'-end' => $end,
-	'-strand' => $strand,
-	'-slice' => $slice,
-	'-map_weight' => 1,
-	'-variation' => $variation,
+	'-adaptor'       => $self,
+	'-start'         => $start,
+	'-end'           => $end,
+	'-strand'        => $strand,
+	'-slice'         => $slice,
+	'-map_weight'    => 1,
+	'-variation'     => $variation,
 	'-allele_string' => "$ref_allele/$alt_allele"
     );
-    
     return $variation_feature;
+
 }
+
+
+sub _get_hgvs_alleles{
+    
+    #### extract ref and alt alleles where possible from HGVS g/c/n string
+
+    my ($description, $hgvs) = shift;
+    my ($ref_allele, $alt_allele) ;
+    
+    ### A single nt substitution, reference and alternative alleles are required
+    if ($description =~ m/>/) {
+	#$class = 'snv';
+	($ref_allele,$alt_allele) = $description =~ m/([A-Z]+)>([A-Z]+)$/i;
+    }
+    
+    #ÊA delins, the reference allele is optional
+    elsif ($description =~ m/del.*ins/i) {
+	#$class = 'delins';
+	($ref_allele,$alt_allele) = $description =~ m/del(.*?)ins([A-Z]+)$/i;    	    
+    }
+    
+    # A deletion, the reference allele is optional
+    elsif ($description =~ m/del/i) {
+	#$class = 'del';
+	($ref_allele) = $description =~ m/del([A-Z]*)$/i; 
+	$alt_allele = '-';
+    }
+    
+    # A duplication, the reference allele is optional
+    elsif ($description =~ m/dup/i) {
+	# $class = 'dup';
+	($ref_allele) = $description =~ m/dup([A-Z]*)$/i;
+        my $repeat = 2;
+        $alt_allele = ${ref_allele}x$repeat; 
+    }
+    
+    # An inversion, the reference allele is optional
+    elsif ($description =~ m/inv/i) {
+	# $class = 'inv';
+	($ref_allele) = $description =~ m/inv([A-Z]*)$/i;
+	$alt_allele = $ref_allele;
+	reverse_comp(\$alt_allele);
+    }
+    
+    # An insertion, 
+    elsif ($description =~ m/ins/i) {
+	#$class = 'ins';
+	($alt_allele) = $description =~ m/ins([A-Z]*)$/i;
+        $ref_allele = '-';
+    }
+    ## A simple repeat (eg. ENST00000522587.1:c.-310+750[13]A => alt AAAAAAAAAAAAA)
+    elsif ($description =~ m/\[/i) {    
+	
+	my ($number, $string) = $description =~ m/\[(\d+)\]([A-Z]*)$/i; 
+	foreach my $n(1..$number){ $alt_allele .= $string;}
+	#$class = '[$number]';
+	$ref_allele = $string;
+    }
+    else {
+	throw ("The variant class for HGVS notation '$hgvs' is unknown or could not be correctly recognized");
+    }
+    return ($ref_allele, $alt_allele) ;
+}
+
 
 1;
