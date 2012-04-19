@@ -132,6 +132,21 @@ sub store_multiple {
 	$sth->finish;
 }
 
+sub store_to_file_handle {
+	my ($self, $allele, $file_handle) = @_;
+	
+	my $dbh = $self->dbc->db_handle;
+	
+	print $file_handle join("\t",
+		$allele->{_variation_id} || $allele->variation->dbID || '\N',
+		$allele->{subsnp} || '\N',
+		$self->_allele_code($allele->allele),
+		$allele->population ? $allele->population->dbID : '\N',
+		defined($allele->frequency) ? $allele->frequency :  '\N',
+		defined($allele->count) ? $allele->count : '\N',
+	)."\n";
+}
+
 =head2 fetch_all
 
   Description: fetch_all should not be used for Alleles.
@@ -387,6 +402,10 @@ sub _left_join {
 
 sub _columns {
   return qw( a.allele_id a.variation_id a.subsnp_id ac.allele a.frequency a.sample_id a.count );
+}
+
+sub _write_columns {
+	return qw(variation_id subsnp_id allele_code_id sample_id frequency count);
 }
 
 sub _default_where_clause  {

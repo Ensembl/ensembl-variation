@@ -146,6 +146,21 @@ sub store_multiple {
   $sth->finish;
 }
 
+sub store_to_file_handle {
+	my ($self, $popgt, $file_handle) = @_;
+	
+	my $dbh = $self->dbc->db_handle;
+	
+	print $file_handle join("\t",
+		$popgt->{_variation_id} || $popgt->variation->dbID || '\N',
+		$popgt->{subsnp} || '\N',
+		$self->_genotype_code($popgt->genotype),
+		$popgt->population ? $popgt->population->dbID : '\N',
+		defined($popgt->frequency) ? $popgt->frequency :  '\N',
+		defined($popgt->count) ? $popgt->count : '\N',
+	)."\n";
+}
+
 =head2 fetch_by_dbID
 
   Arg [1]    : int $dbID
@@ -272,6 +287,10 @@ sub _left_join { return ([ 'failed_variation', 'fv.variation_id = pg.variation_i
 
 sub _columns{
   return qw(pg.population_genotype_id pg.variation_id pg.subsnp_id pg.sample_id pg.genotype_code_id pg.frequency pg.count)
+}
+
+sub _write_columns {
+  return qw(variation_id subsnp_id genotype_code_id sample_id frequency count);
 }
 
 sub _objs_from_sth{
