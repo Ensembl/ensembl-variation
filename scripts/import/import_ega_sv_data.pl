@@ -211,6 +211,7 @@ sub study_table{
 	$stmt = qq{ SELECT st.study_id, st.description FROM study st, source s 
 		          WHERE s.source_id=st.source_id AND s.name='DGVa' and st.name='$study'};
 	my $rows = $dbVar->selectall_arrayref($stmt);		
+	my $assembly_desc;
 	
 	# UPDATE
 	if (scalar (@$rows)) {
@@ -220,7 +221,7 @@ sub study_table{
 		if ($mapping and $assembly ne $target_assembly) {
 			if ($study_desc =~ /^(.+)\[remapped\sfrom\sbuild(s?)\s(.+)\]$/) {
 				my $gen_desc = $1;
-				my $assembly_desc = $3;
+				$assembly_desc = $3;
 			
 				if ($assembly_desc !~ /$assembly/) {
 					$assembly_desc .= " and $assembly";
@@ -242,7 +243,6 @@ sub study_table{
 	}
 	# INSERT
 	else {
-		my $assembly_desc;
 		my $pmid         = $data->{pubmed};
 		my $first_author = $data->{first_author};
 		my $year         = $data->{year};
@@ -254,7 +254,8 @@ sub study_table{
 		$first_author = $1 if (!$first_author);
 		$year = $2 if (!$year);
 		
-		my $author_desc = "$first_author $year";
+		my $author_desc;
+		$author_desc = "$first_author $year " if ($first_author);
 		
 		if (length($study_desc)>150) {
 			$study_desc = substr($study_desc,0,150);
@@ -280,7 +281,7 @@ sub study_table{
       	'$study',
 				CONCAT(
 					'$author_desc',
-					' "',
+					'"',
 					'$study_desc',
 					'" $pmid_desc',
 					'$assembly_desc'),
@@ -525,7 +526,6 @@ sub structural_variation_annotation {
 	foreach my $row (@$rows_samples) {
     my $sample = $row->[0];
 		next if ($sample eq	'');
-		print "SAMPLE: $sample\n";
 		my $srow = $dbVar->selectrow_arrayref(qq{ SELECT sample_id FROM sample WHERE name='$sample' });
 		next if (defined($srow));
 		$dbVar->do(qq{ INSERT INTO sample (name,description) VALUES ('$sample','Sample from the DGVa study $study_name')});
@@ -656,8 +656,6 @@ sub parse_gvf {
   my $sa = Bio::EnsEMBL::Registry->get_adaptor($species, 'core', 'slice');
   
   open OUT, ">$TMP_DIR/$TMP_FILE" or die "Could not write to output file $TMP_DIR/$TMP_FILE\n";
-  
-	my $sth = $dbVar->prepare(qq{ SELECT seq_region_id FROM seq_region WHERE name=?});
 	
 	my $header;
 	my $assembly;
@@ -782,8 +780,8 @@ sub parse_gvf {
 				}
 			}
 		}
-		
-		print "ID: ".$info->{ID}." | Samples: ".$info->{samples}."\n";
+		$info->{clinical} = $info->{clinical_significance} if ($info->{clinical_significance});
+		$info->{samples}  = $info->{submitter_sample_id} if ($info->{submitter_sample_id});
 		
 		print OUT (join "\t", ($info->{ID},
 													 $info->{SO_term},
@@ -795,7 +793,7 @@ sub parse_gvf {
 													 $info->{end}, 
 													 $info->{outer_end}, 
 													 $info->{Parent},
-													 $info->{clinical_int},
+													 $info->{clinical},
 													 $info->{phenotype},
 													 $info->{samples},
 													 $info->{strain_name},
@@ -840,14 +838,16 @@ sub get_header_info {
 	$label =~ s/^\s//;
 	$info =~ s/^\s+//;
 	
-	$h->{author}       = $info if ($label eq 'Display_name');
-	$h->{first_author} = $info if ($label eq 'First_author');
-	$h->{assembly}     = $info if ($label eq 'assembly-name');
-	$h->{study}        = $info if ($label eq 'Study_accession');
-	$h->{pubmed}       = $info if ($label eq 'PMID');
-	$h->{year}         = $info if ($label eq 'Publication_year');
-	$h->{desc}         = $info if ($label eq 'Paper_title' && $info && $info ne 'None Given');
-	$h->{desc}         = $info if ($label eq 'Study_description' && !$h->{desc} && length($info)<256); # Get the Paper title if possible
+	$h->{author}       = $info if ($label =~ /Display.+name/i);
+	$h->{first_author} = $info if ($label =~ /First.+author/i);
+	$h->{assembly}     = $info if ($label =~ /assembly.+name/i);
+	$h->{study}        = $info if ($label =~ /Study.+accession/i);
+	$h->{pubmed}       = $info if ($label =~ /PMID/i);
+	$h->{year}         = $info if ($label =~ /Publication.+year/i);
+	$h->{desc}         = $info if ($label =~ /Paper.+title/i && $info && $info ne 'None Given');
+	$h->{desc}         = $info if ($label =~ /Study.+description/i && !$h->{desc}); # Get the Paper title if possible
+	
+	$h->{author} =~ s/\s/_/g;
 	
 	return $h;
 }
@@ -870,12 +870,15 @@ sub parse_header {
 			$assembly = 'NCBI36';
 	  }
 	  elsif($assembly !~ /$cs_version_number/) {
-			warn("Could not guess assembly from file - assuming to be NCBI35");
-			$assembly = 'NCBI35';
+			warn("Could not guess assembly from file - assuming to be GRCh37");
+			$assembly = 'GRCh37';
+	  }
+		# For patches
+		elsif($assembly =~ /(\w+\d+)\.p\d+/) {
+			$assembly = $1;
 	  }
 	}
-	
-	if($species =~ /mouse|mus.*mus/) {
+	elsif($species =~ /mouse|mus.*mus/) {
 	  if($assembly =~ /34/) {
 			$assembly = 'NCBIM34';
 	  }
@@ -889,7 +892,14 @@ sub parse_header {
 			$assembly = 'NCBIM37';
 	  }
 	}
-	
+	elsif($species =~ /pig|sus_scrofa/) {
+	  if($assembly =~ /9/) {
+			$assembly = 'Sscrofa9';
+	  }
+	  elsif($assembly =~ /3/) {
+			$assembly = 'Sscrofa3';
+	  }
+	}
 	$h->{assembly} = $assembly;
 	
 	study_table($h);
@@ -922,9 +932,8 @@ sub parse_line {
 	}
 	
 	$data[0] =~ /Chr(.+)$/;
-	$data[0] = $1;
+	$info->{chr} = defined($1) ? $1 : $data[0];
 	$info->{ID}      = $info->{Name} if ($info->{Name});
-	$info->{chr}     = $data[0];
 	$info->{SO_term} = $data[2];
 	$info->{start}   = $data[3];
 	$info->{end}     = $data[4];
