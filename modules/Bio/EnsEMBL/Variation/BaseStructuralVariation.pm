@@ -101,7 +101,10 @@ our @ISA = ('Bio::EnsEMBL::Storable','Bio::EnsEMBL::Variation::Failable');
 	
 	Arg [-IS_EVIDENCE] :
 	  int - flag to inform whether the structural variant is a supporting evidence (1) or not (0).
-			
+		
+	Arg [-IS_SOMATIC] :
+	  int - flag to inform whether the structural variant is a somatic (1) or germline (0).
+		
   Example for a structural variation:
     $sv = Bio::EnsEMBL::Variation::StructuralVariation->new
        (-variation_name => 'esv25480',
@@ -132,7 +135,8 @@ sub new {
     $class_so_term,
     $study,
 		$validation_status,
-		$is_evidence
+		$is_evidence,
+		$is_somatic
   ) = rearrange([qw(
 					dbID
 					ADAPTOR
@@ -144,6 +148,7 @@ sub new {
           STUDY
 					VALIDATION_STATES
 					IS_EVIDENCE
+					IS_SOMATIC
     )], @_);
 		
 	my $self = bless {
@@ -157,6 +162,7 @@ sub new {
   	'study'              => $study,
 		'validation_status'  => $validation_status,
 		'is_evidence'        => $is_evidence || 0,
+		'is_somatic'         => $is_somatic || 0,
 	};
   return $self;
 }
@@ -355,6 +361,24 @@ sub is_evidence{
   return $self->{'is_evidence'};
 }
 
+=head2 is_somatic
+
+  Arg [1]    : int $flag (optional)
+  Example    : $is_somatic = $obj->is_somatic()
+  Description: Getter/Setter of a flag to inform whether the structural variant is somatic (1) or germline (0).
+  Returntype : int
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub is_somatic{
+  my $self = shift;
+  return $self->{'is_somatic'} = shift if(@_);
+  return $self->{'is_somatic'};
+}
+
 
 =head2 study
 
@@ -462,10 +486,6 @@ sub external_reference{
   return $self->study->external_reference = shift if(@_);
   return $self->study->external_reference;
 }
-
-
-
-
 
 
 =head2 get_all_StructuralVariationFeatures

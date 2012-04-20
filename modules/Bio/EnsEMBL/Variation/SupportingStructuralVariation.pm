@@ -53,7 +53,7 @@ use warnings;
 package Bio::EnsEMBL::Variation::SupportingStructuralVariation;
 
 use Bio::EnsEMBL::Variation::BaseStructuralVariation;
-use Bio::EnsEMBL::Utils::Exception qw(throw warning deprecate);
+use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 
 our @ISA = ('Bio::EnsEMBL::Variation::BaseStructuralVariation');
 
@@ -64,42 +64,6 @@ sub new {
 	
 	my $self = Bio::EnsEMBL::Variation::BaseStructuralVariation->new(@_);
 	return(bless($self, $class));
-}
-
-=head2 name
-
-  Arg [1]    : string $newval (optional)
-               The new value to set the name attribute to
-  Example    : $name = $obj->name()
-  Description: Getter/Setter for the name attribute
-  Returntype : string
-  Exceptions : none
-  Caller     : general
-  Status     : DEPRECATED: use the variation_name method
-
-=cut
-
-sub name{
-  my $self = shift;
-	deprecate('Use the method "variation_name" instead');
-  return $self->{'variation_name'} = shift if(@_);
-  return $self->{'variation_name'};
-}
-
-
-=head2 get_StructuralVariation
-  Example    : $ssv = $obj->get_StructuralVariation()
-  Description: Getter of the structural variation supported by the supporting evidence. 
-  Returntype : Bio::EnsEMBL::Variation::StructuralVariation
-  Exceptions : none
-  Caller     : general
-  Status     : DEPRECATED: use the get_all_StructuralVariations method
-
-=cut
-
-sub get_StructuralVariation {
-  my $self = shift;
-	deprecate('Use the method "get_all_StructuralVariations" instead');
 }
 
 
@@ -126,19 +90,5 @@ sub get_all_StructuralVariations {
   }
 }
 
-=head2 is_structural_variation
-  Example    : $sv = $obj->is_structural_variation()
-  Description: Getter to determine if the supporting evidence is also a structural variant 
-  Returntype : Bio::EnsEMBL::Variation::StructuralVariation
-  Exceptions : none
-  Caller     : general
-  Status     : DEPRECATED: no more used
-
-=cut
-
-sub is_structural_variation{
-  my $self = shift;
-	deprecate('Method no more used');
-}
 1;
 
