@@ -95,10 +95,11 @@ sub _objs_from_sth {
 	my @svs;
 	
   my ($struct_variation_id, $variation_name, $validation_status, $source_name, $source_version, 
-		  $source_description, $class_attrib_id, $study_id, $is_evidence);
+		  $source_description, $class_attrib_id, $study_id, $is_evidence, $is_somatic);
 
   $sth->bind_columns(\$struct_variation_id, \$variation_name, \$validation_status, \$source_name, 
-										 \$source_version, \$source_description, \$class_attrib_id, \$study_id, \$is_evidence);
+										 \$source_version, \$source_description, \$class_attrib_id, \$study_id, \$is_evidence, 
+										 \$is_somatic);
 
 	my $aa  = $self->db->get_AttributeAdaptor;
 	my $sta = $self->db->get_StudyAdaptor();
@@ -122,7 +123,8 @@ sub _objs_from_sth {
 	     -SOURCE_DESCRIPTION => $source_description,
 	     -CLASS_SO_TERM      => $aa->attrib_value_for_id($class_attrib_id),
 	     -STUDY              => $study,
-			 -IS_EVIDENCE        => $is_evidence,
+			 -IS_EVIDENCE        => $is_evidence || 0,
+			 -IS_SOMATIC         => $is_somatic || 0
   	);
   }
   return \@svs;
@@ -180,9 +182,10 @@ sub fetch_all_by_supporting_evidence {
 	# Add the constraint for failed structural variant
 	$constraint .= " AND " . $self->db->_exclude_failed_structural_variations_constraint();
 	
-	my $sth = $self->prepare(qq{SELECT $cols 
-		                        FROM $tables, structural_variation_association sa
-				                WHERE $constraint 
+	my $sth = $self->prepare(qq{
+                    SELECT $cols 
+                    FROM $tables, structural_variation_association sa
+                    WHERE $constraint 
 								      AND sa.structural_variation_id=sv.structural_variation_id
 								      AND sa.supporting_structural_variation_id = ?});
 	$sth->bind_param(1,$se->dbID,SQL_INTEGER);

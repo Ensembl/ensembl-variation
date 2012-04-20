@@ -89,11 +89,12 @@ sub _objs_from_sth {
 	my @svs;
 	
   my ($struct_variation_id, $variation_name, $validation_status, $source_name, $source_version, 
-		  $source_description, $class_attrib_id, $study_id, $is_evidence);
+		  $source_description, $class_attrib_id, $study_id, $is_evidence, $is_somatic);
 
   $sth->bind_columns(\$struct_variation_id, \$variation_name, \$validation_status, \$source_name, 
-										 \$source_version, \$source_description, \$class_attrib_id, \$study_id, \$is_evidence);
-
+										 \$source_version, \$source_description, \$class_attrib_id, \$study_id, \$is_evidence, 
+										 \$is_somatic);
+										 
 	my $aa  = $self->db->get_AttributeAdaptor;
 	my $sta = $self->db->get_StudyAdaptor();
 	
@@ -116,28 +117,11 @@ sub _objs_from_sth {
 	     -SOURCE_DESCRIPTION => $source_description,
 	     -CLASS_SO_TERM      => $aa->attrib_value_for_id($class_attrib_id),
 	     -STUDY              => $study,
-			 -IS_EVIDENCE        => $is_evidence,
+			 -IS_EVIDENCE        => $is_evidence || 0,
+			 -IS_SOMATIC         => $is_somatic || 0
   	);
   }
   return \@svs;
-}
-
-
-=head2 fetch_all_by_name
-
-  Arg [1]    : string $name
-  Example    : $ssv = $ssv_adaptor->fetch_all_by_name('nssv133');
-  Description: Retrieves a list of supporting evidence objects via its name
-  Returntype : listref of Bio::EnsEMBL::Variation::SupportingStructuralVariation
-  Exceptions : throw if name argument is not defined
-  Caller     : general
-	Status     : DEPRECATED: use the fetch_by_name method
-
-=cut
-
-sub fetch_all_by_name {
-  my $self = shift;
-  deprecate('Use the method "fetch_by_name" instead');
 }
 
 
@@ -171,7 +155,7 @@ sub fetch_all_by_StructuralVariation {
   } 
 	
 	my $cols = qq{ sa.supporting_structural_variation_id, sv.variation_name, sv.validation_status, s.name, 
-	               s.version, s.description, sv.class_attrib_id, sv.study_id, sv.is_evidence };
+	               s.version, s.description, sv.class_attrib_id, sv.study_id, sv.is_evidence, sv.somatic };
 	
 	my $tables;
 	foreach my $t ($self->_tables()) {

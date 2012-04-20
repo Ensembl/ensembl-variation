@@ -90,11 +90,10 @@ our @ISA = ('Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor', 'Bio::EnsEMBL::DBSQL:
 	             $slice the slice from which to obtain features
 	Arg [2]    : int $include_evidence [optional]
   Example    : my $svfs = $svfa->fetch_all_by_Slice($slice);
-  Description: Retrieves all structural variation features on the given Slice.
+  Description: Retrieves all germline structural variation features on the given Slice.
                If $include_evidence is set (i.e. $include_evidence=1), structural variation features from 
 							 both structural variation (SV) and their supporting structural variations (SSV) will be 
-							 returned. By default, it only returns features from structural variations (SV). 
-							 from structural variations.
+							 returned. By default, it only returns features from structural variations (SV).
   Returntype : reference to list Bio::EnsEMBL::StructuralVariationFeature
   Exceptions : none
   Caller     : general
@@ -106,10 +105,38 @@ sub fetch_all_by_Slice {
   my ($self, $slice, $include_evidence) = @_;
 	
 	my $constraint = $self->_internal_exclude_failed_constraint('',1);
-	if (!$include_evidence) {
-		$constraint .= ' AND ' if ($constraint);
-		$constraint .= 'is_evidence=0';
-	}
+	$constraint .= ' AND ' if ($constraint);
+	$constraint .= ' somatic=0 ';
+	$constraint .= ' AND is_evidence=0 ' if (!$include_evidence);
+	
+  return $self->fetch_all_by_Slice_constraint($slice, $constraint);
+}
+
+
+=head2 fetch_all_somatic_by_Slice
+
+  Arg [1]    : Bio::EnsEMBL::Slice 
+	             $slice the slice from which to obtain features
+	Arg [2]    : int $include_evidence [optional]
+  Example    : my $svfs = $svfa->fetch_all_somatic_by_Slice($slice);
+  Description: Retrieves all somatic structural variation features on the given Slice.
+               If $include_evidence is set (i.e. $include_evidence=1), structural variation features from 
+							 both structural variation (SV) and their supporting structural variations (SSV) will be 
+							 returned. By default, it only returns features from structural variations (SV). 
+  Returntype : reference to list Bio::EnsEMBL::StructuralVariationFeature
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub fetch_all_somatic_by_Slice {
+  my ($self, $slice, $include_evidence) = @_;
+	
+	my $constraint = $self->_internal_exclude_failed_constraint('',1);
+	$constraint .= ' AND ' if ($constraint);
+	$constraint .= ' somatic=1 ';
+	$constraint .= ' AND is_evidence=0 ' if (!$include_evidence);
 	
   return $self->fetch_all_by_Slice_constraint($slice, $constraint);
 }
@@ -318,7 +345,7 @@ sub _columns {
   return qw( svf.structural_variation_feature_id svf.seq_region_id svf.outer_start svf.seq_region_start 
 						 svf.inner_start svf.inner_end svf.seq_region_end svf.outer_end svf.seq_region_strand 
 						 svf.structural_variation_id svf.variation_name s.name s.version svf.class_attrib_id 
-						 svf.allele_string);
+						 svf.allele_string svf.somatic svf.breakpoint_order);
 }
 
 sub _objs_from_sth {
@@ -339,13 +366,13 @@ sub _objs_from_sth {
     my %sr_cs_hash;
 
     my ($structural_variation_feature_id, $seq_region_id, $outer_start, $seq_region_start, $inner_start, 
-		    $inner_end, $seq_region_end, $outer_end, $seq_region_strand, $structural_variation_id,
-        $variation_name, $source_name, $source_version, $class_attrib_id, $allele_string, $last_svf_id);
+		    $inner_end, $seq_region_end, $outer_end, $seq_region_strand, $structural_variation_id, $variation_name,
+				$source_name, $source_version, $class_attrib_id, $allele_string, $is_somatic, $bp_order, $last_svf_id);
 
     $sth->bind_columns(\$structural_variation_feature_id, \$seq_region_id, \$outer_start, \$seq_region_start, 
 		                   \$inner_start, \$inner_end, \$seq_region_end, \$outer_end, \$seq_region_strand, 
 											 \$structural_variation_id, \$variation_name, \$source_name, \$source_version, 
-											 \$class_attrib_id, \$allele_string);
+											 \$class_attrib_id, \$allele_string, \$is_somatic, \$bp_order);
 
     my $asm_cs;
     my $cmp_cs;
@@ -447,23 +474,25 @@ sub _objs_from_sth {
             }
             return $self->_create_feature_fast('Bio::EnsEMBL::Variation::StructuralVariationFeature',
         
-               {'outer_start'    => $outer_start,
-							  'start'          => $seq_region_start,
-								'inner_start'    => $inner_start,
-								'inner_end'      => $inner_end,
-                'end'            => $seq_region_end,
-								'outer_end'      => $outer_end,
-                'strand'         => $seq_region_strand,
-                'slice'          => $slice,
-                'variation_name' => $variation_name,
-                'adaptor'        => $self,
-                'dbID'           => $structural_variation_feature_id,
-                'source'         => $source_name,
-                'source_version' => $source_version,
+               {'outer_start'     => $outer_start,
+							  'start'           => $seq_region_start,
+								'inner_start'     => $inner_start,
+								'inner_end'       => $inner_end,
+                'end'             => $seq_region_end,
+								'outer_end'       => $outer_end,
+                'strand'          => $seq_region_strand,
+                'slice'           => $slice,
+                'variation_name'  => $variation_name,
+                'adaptor'         => $self,
+                'dbID'            => $structural_variation_feature_id,
+                'source'          => $source_name,
+                'source_version'  => $source_version,
                 'structural_variation_id' => $structural_variation_id,
-                'class_SO_term'  => $aa->attrib_value_for_id($class_attrib_id),
+                'class_SO_term'   => $aa->attrib_value_for_id($class_attrib_id),
 								'class_attrib_id' => $class_attrib_id,
-								'allele_string'  => $allele_string,
+								'allele_string'   => $allele_string,
+								'is_somatic'      => $is_somatic,
+								'breakpoint_order' => $bp_order,
                }
             );
         }
@@ -595,8 +624,10 @@ sub store {
             variation_name,
             source_id,
             class_attrib_id,
-						is_evidence
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+						is_evidence,
+						somatic,
+						breakpoint_order
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     });
     
     $sth->execute(
@@ -614,6 +645,8 @@ sub store {
         $svf->{source_id},
         $class_attrib_id || 0,
         $svf->structural_variation ? $svf->structural_variation->is_evidence : 0,
+				$svf->structural_variation ? $svf->structural_variation->is_somatic : 0,
+				$svf->{breakpoint_order} || undef
     );
     
     $sth->finish;
