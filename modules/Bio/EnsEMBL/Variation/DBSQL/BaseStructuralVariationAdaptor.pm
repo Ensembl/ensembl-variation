@@ -71,7 +71,7 @@ sub _tables {
 
 sub _columns {
   return qw( sv.structural_variation_id sv.variation_name sv.validation_status s.name s.version 
-	           s.description sv.class_attrib_id sv.study_id sv.is_evidence);
+	           s.description sv.class_attrib_id sv.study_id sv.is_evidence sv.somatic );
 }
 
 # Add a left join to the failed_structural_variation table
@@ -87,6 +87,36 @@ sub _left_join {
 sub _default_where_clause {
   my $self = shift;
   return 'sv.source_id=s.source_id';
+}
+
+
+=head2 fetch_all
+
+  Description: Returns a listref of all germline structural variants
+  Returntype : listref of Bio::EnsEMBL::Variation::StructuralVariation or Bio::EnsEMBL::Variation::SupportingStructuralVariation objects
+  Status     : At risk
+
+=cut
+
+sub fetch_all {
+    my $self = shift;
+    my $constraint = 'sv.somatic = 0';
+    return $self->generic_fetch($constraint);
+}
+
+
+=head2 fetch_all_somatic
+
+  Description: Returns a listref of all somatic structural variants
+  Returntype : listref of Bio::EnsEMBL::Variation::StructuralVariation or Bio::EnsEMBL::Variation::SupportingStructuralVariation objects
+  Status     : At risk
+
+=cut
+
+sub fetch_all_somatic {
+    my $self = shift;
+    my $constraint = 'sv.somatic = 1';
+    return $self->generic_fetch($constraint);
 }
 
 
@@ -115,8 +145,7 @@ sub list_dbIDs {
     Example     : my $structural_variation = $sv_adaptor->fetch_by_name('esv263');
     Description : returns the structural variation with the given variation name (or undef if one isn't found).
                   If the name argument is undef this will be converted to NULL in the SQL statement generated.
-    ReturnType  : Bio::EnsEMBL::Variation::StructuralVariation or 
-		              Bio::EnsEMBL::Variation::SupportingStructuralVariation object
+    ReturnType  : Bio::EnsEMBL::Variation::StructuralVariation or Bio::EnsEMBL::Variation::SupportingStructuralVariation object
     Exceptions  : thrown if there are multiple objects found with the same variation name
     Caller      : general
     Status      : Stable
@@ -377,8 +406,9 @@ sub store {
 			      variation_name,
 			      validation_status,
             class_attrib_id,
-            is_evidence
-        ) VALUES (?,?,?,?,?,?)
+            is_evidence,
+						somatic
+        ) VALUES (?,?,?,?,?,?,?)
     });
     
     $sth->execute(
@@ -387,7 +417,8 @@ sub store {
         $sv->variation_name,
         (join ",", @{$sv->get_all_validation_states}) || undef,
         $class_attrib_id || 0,
-        $sv->is_evidence || 0
+        $sv->is_evidence || 0,
+				$sv->somatic || 0
     );
     
     $sth->finish;
