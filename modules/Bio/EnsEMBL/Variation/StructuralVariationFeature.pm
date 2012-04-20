@@ -120,6 +120,11 @@ our @ISA = ('Bio::EnsEMBL::Variation::BaseVariationFeature');
   Arg [-SOURCE_VERSION]:
 	string - version number of the source
 	
+	Arg [-IS_SOMATIC] :
+	  int - flag to inform whether the structural variant is a somatic (1) or germline (0).
+
+	Arg [-BREAKPOINT_ORDER] :
+	  int - For a structural variant with multiple breakpoints, this gives the predicted order of the breakpoint event.
 	
   Example    :
     $svf = Bio::EnsEMBL::Variation::StructuralVariationFeature->new
@@ -154,7 +159,9 @@ sub new {
     $inner_end,
 		$outer_start,
 		$outer_end, 
-    $allele_string
+    $allele_string,
+		$is_somatic,
+		$breakpoint_order
   ) = rearrange([qw(
           VARIATION_NAME 
           SOURCE 
@@ -165,6 +172,8 @@ sub new {
 					OUTER_START
 					INNER_START
           ALLELE_STRING
+					IS_SOMATIC
+					BREAKPOINT_ORDER
     )], @_);
 
 
@@ -177,6 +186,8 @@ sub new {
 	$self->{'outer_start'}        = $outer_start;
   $self->{'outer_end'}          = $outer_end;
   $self->{'allele_string'}      = $allele_string;
+	$self->{'is_somatic'}         = $is_somatic || 0;
+	$self->{'breakpoint_order'}   = $breakpoint_order;
 
   return $self;
 }
@@ -296,6 +307,9 @@ sub structural_variation {
 }
 
 
+
+
+
 =head2 get_all_VariationSets
 
     Args        : none
@@ -371,7 +385,47 @@ sub get_nearest_Gene{
 }
 
 
-sub get_all_StructualVariationOverlaps {
+=head2 is_somatic
+
+  Arg [1]    : boolean $is_somatic (optional)
+               The new value to set the is_somatic flag to
+  Example    : $is_somatic = $svf->is_somatic
+  Description: Getter/Setter for the is_somatic flag, which identifies this structural variation feature as either somatic or germline
+  Returntype : boolean
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub is_somatic {
+  my ($self, $is_somatic) = @_;
+  $self->{'is_somatic'} = $is_somatic if defined $is_somatic;
+  return $self->{'is_somatic'};
+}
+
+
+=head2 breakpoint_order
+
+  Arg [1]    : string $bp_order (optional)
+               The new value to set the breakpoint order to
+  Example    : $bp_order = $svf->breakpoint_order()
+  Description: Getter/Setter for the breakpoint_order attribute
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub breakpoint_order {
+  my $self = shift;
+  return $self->{'breakpoint_order'} = shift if(@_);
+  return $self->{'breakpoint_order'};
+}
+
+
+sub get_all_StructuralVariationOverlaps {
   my $self = shift;
   
   if(!defined($self->{structural_variation_overlaps})) {
