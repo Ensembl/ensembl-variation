@@ -29,7 +29,11 @@ use warnings;
 
 {
     package Bio::EnsEMBL::Slice;
-    
+   
+	sub gff_version {
+		return "##gff-version 3\n";
+	}
+	 
     sub gff_header {
         my $self = shift;
         
@@ -52,8 +56,7 @@ use warnings;
         my $tax_id = $mca->get_taxonomy_id;
         
         my $hdr =
-            "##gff-version 3\n"
-          . "##file-date $date\n"
+			"##file-date $date\n"
           . "##genome-build ensembl $assembly\n"
           . "##species http://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi?id=$tax_id\n";
         
@@ -61,13 +64,18 @@ use warnings;
         
         return $hdr;
     }
-    
+   
+	sub gvf_version {
+		return "##gvf-version 1.06\n";
+	}
+ 
     sub gvf_header {
         my $self = shift;
        
         my %args = @_;
-
-        my $hdr = $self->gff_header(@_);
+		my $hdr = $self->gff_version;
+		$hdr .= $self->gvf_version;
+        $hdr .= $self->gff_header(@_);
         
         my $mca = $self->adaptor->db->get_MetaContainerAdaptor;
         my $schema_version = $mca->get_schema_version;
@@ -75,7 +83,6 @@ use warnings;
         $species_name =~ s/ /_/g;
         my $url = 'http://e'.$schema_version.'.ensembl.org/'.$species_name;
         
-        $hdr .= "##gvf-version 1.05\n";
         $hdr .= "##feature-ontology http://song.cvs.sourceforge.net/viewvc/song/ontology/so.obo?revision=1.283\n";
         $hdr .= "##data-source Source=ensembl;version=$schema_version;url=$url\n";
         $hdr .= "##file-version $schema_version\n";
@@ -374,7 +381,7 @@ use warnings;
                     }
                     else {
                         warn "No allele_index entry for allele: ".$tva->variation_feature_seq.
-                            " of ".$self->variation_name."?\n";
+                            " of ".$self->variation_name."? Is reference " . $tva->is_reference . " ref seq " . $ref_seq . "\n";
                     }
                 }
             }
