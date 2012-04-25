@@ -1,0 +1,45 @@
+This directory contains scripts which can be used to import ancestral allele data to a variation database.
+The scripts fetch the ancestral allele for each variation in the variation table and write it to the
+ancestral_allele column in the variation table.
+
+The ancestral allele data comes from Ensembl compara
+(http://www.ensembl.org/info/docs/compara/analyses.html#ancestral) and is based on a 6 way primate alignment.
+Currently, there are ancestral genomes for gorilla, human, macaque, orangutan and chimpanzee.
+They can be downloaded from:
+ftp://ftp.ensembl.org/pub/release-66/fasta/ancestral_alleles/
+
+
+Prerequisites for running the scripts are:
+ - A variation database with data in variation and variation_feature tables
+ - Ancestral genome in fasta file format
+
+The following three scripts have to be run in a row. Use the --help argument to get
+further information on the required arguments:
+ - ancestral_allele_pre_processing.pl [arguments]
+ - parallel_ancestral_allele_calling.pl [arguments]
+ - ancestral_allele_post_processing.pl [arguments] 
+
+More information about what is going on behind the curtains: 
+PRE_PROCESSING
+	All variation features are fetched from the variation database. BioPerl Bio::DB::Fasta is used to build indexes
+	over fasta sequences (ancestral genome) locally which provides fast random access to the data. To speed up computation
+	fasta files are divided into sets of sequence regions and than an index is build over each set of sequence regions.
+	The devision depends on the coverage with variation features: The count of variation features for each region is 
+	computed. Based on these counts a load balancing schema is computed: Divide sequence regions with regard to number
+	of variation features over n processes. Fetch variation features save in a file. Divide fasta files accorindly.
+
+PARALLEL_ANCESTRAL_ALLELE_CALLING
+	The computation of ancestral alleles can be done in parallel: The input is a file with all the variation features
+	for a set of sequence regions and the according fasta files for those sequences.
+	
+	For each variation feature the anancestral is fetched from the ancstral allele genome:
+	Different cases need to be considered:
+ 		- currently insertions cannot be considered
+ 		- deletions of size > 50 bp are not considered
+ 		- reverse sequence if it is from the minus strand
+	Save results to file.
+
+POST_PROCESSING
+	The variation features need to be sorted by variation_id. The sorting is done in a temporary database. Ancestral alleles
+	having the same variation_id are consolidated: An ancestral allele is only assigned to a variation if it is the same over
+	all variation_features of that variation. In a final step the ancestral_allele column is updated.
