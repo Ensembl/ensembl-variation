@@ -355,7 +355,7 @@ while (my $slice = shift @$slices) {
 
                     push @$gts, $igt unless $seen;
                 }
-            }
+            } # end individual
 
             # iterate over our variation_features
 
@@ -460,12 +460,17 @@ while (my $slice = shift @$slices) {
 
                         $attrs->{Variant_seq} = $variant_seq;
 
-                        $attrs->{Genotype} = $hom ? 'homozygous' : 'heterozygous';
+                        $attrs->{Zygosity} = $hom ? 'homozygous' : 'heterozygous';	
 
+						my @variant_seqs = split ',', $variant_seq;
+						my $index = 0;
+						my %allele_index = map {$_ => $index++} @variant_seqs;
+						my $genotype = $allele_index{$gt1} . ":" . $allele_index{$gt2};
+						$attrs->{Genotype} = $genotype;	
                         #$comment .= "real genotype: $gt1/$gt2"
                     }
 
-                    unless ($attrs->{Genotype}) {
+                    unless ($attrs->{Zygosity}) {
                         # this vf isn't in this individual, so don't output it
                         next VF;
                     }
@@ -540,7 +545,7 @@ while (my $slice = shift @$slices) {
                 }
 
                 print GVF $gvf_line, ($comment ? " # $comment" : ''), "\n" if $gvf_line;
-            }
+            } # end variation feature
         }
 
         if ($include_svs) {
