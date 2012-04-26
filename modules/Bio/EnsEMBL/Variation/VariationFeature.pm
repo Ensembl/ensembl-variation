@@ -92,7 +92,7 @@ use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Utils::Scalar qw(assert_ref);
 use Bio::EnsEMBL::Utils::Argument  qw(rearrange);
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp); 
-use Bio::EnsEMBL::Variation::Utils::Sequence qw(ambiguity_code hgvs_variant_notation SO_variation_class);
+use Bio::EnsEMBL::Variation::Utils::Sequence qw(ambiguity_code hgvs_variant_notation SO_variation_class format_hgvs_string);
 use Bio::EnsEMBL::Variation::Utils::Sequence;
 use Bio::EnsEMBL::Variation::Variation;
 use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(MAX_DISTANCE_FROM_TRANSCRIPT);
@@ -108,6 +108,7 @@ use Bio::SeqUtils;
 
 our @ISA = ('Bio::EnsEMBL::Variation::BaseVariationFeature');
 
+our $DEBUG = 0;
 =head2 new
 
   Arg [-dbID] :
@@ -1370,558 +1371,266 @@ sub get_all_PopulationGenotypes{
   Status     : Experimental
 
 =cut
-
 sub get_all_hgvs_notations {
     
-    my $self = shift;
-    my $feature = shift;
-    my $numbering = shift;
-    my $reference_name = shift;
-    my $use_allele = shift;
-    my $transcript_variation = shift;
-        
-    # If no reference feature is supplied, set it to the slice underlying this VariationFeature
-    my $ref_feature = $feature;
-    $ref_feature ||= $self->slice();
+    my $self                 = shift;
+    my $ref_feature          = shift;
+    my $numbering            = shift;    ## HGVS system g=genomic, c=coding, p=protein
+    my $reference_name       = shift;    ## If the ref_feature is a slice, this is over-written
+    my $use_allele           = shift;    ## optional single allele to check
+    my $transcript_variation = shift;    ## optional transcript variation - looked up for c|p if not supplied
     
-    # Feature type & notation
-    my $ft_type;
-    
-    # don't get them for HGMD mutations or CNV probes
+    my %hgvs;
+
+    ##### don't get them for HGMD mutations or CNV probes
     return {} if ($self->allele_string =~ /INS|DEL|HGMD|CNV/ig || $self->var_class() =~ /microsat/i);
-	
-    # First of all, if this will get protein notation, check that the variation falls within the CDS. This will drop the majority of queries.
-    if ($ref_feature->isa('Bio::EnsEMBL::Transcript')) {
-      $ft_type = 'Transcript';
+    ##### By default, use genomic position numbering
+    $numbering ||= 'g';
       
-      if ($numbering eq 'p') {
+    # If no reference feature is supplied, set it to the slice underlying this VariationFeature    
+    $ref_feature  ||= $self->slice();
+  	    
+    # Special parsing for LRG
+    if (defined $reference_name && $reference_name =~ /^LRG_/) {
+		# Remove version
+	if ($reference_name =~ /(.+)\.\d+$/) {
+	    $reference_name = $1;
+	}
+    }    
+
+    ### Check/get transcript variation available for protein & coding 
+    if ($ref_feature->isa('Bio::EnsEMBL::Transcript')) {	
 	
 	# Get a TranscriptVariation object for this VariationFeature and the supplied Transcript if it wasn't passed in the call
-	$transcript_variation = $self->get_all_TranscriptVariations([$ref_feature])->[0] if (!defined($transcript_variation));
+	$transcript_variation = $self->get_all_TranscriptVariations([$ref_feature])->[0] if (!defined($transcript_variation));	
 	
-	# Typically, if the variation is intronic, the fields in transcript_variation for positions are undefined
-	# We cannot get protein notation for an intronic SNP, so return an empty list
-	return {} if (!defined($transcript_variation) || !defined($transcript_variation->translation_start()) || !defined($transcript_variation->translation_end()));
-      }
-    }
-    elsif ($ref_feature->isa('Bio::EnsEMBL::Slice')) {
-      $ft_type = 'Slice';
-    }
-    elsif ($ref_feature->isa('Bio::EnsEMBL::Gene')) {
-      $ft_type = 'Gene';
+	##### call new TranscriptVariationAllele method for each allele
     }
     
-    # Check that HGVS notation is implemented for the supplied feature type
-    if (!defined($ft_type)) {
-      warn("HGVS notation has not been implemented for $ref_feature");
-      return {};
-    }
-    
-    # By default, use genomic position numbering
-    $numbering ||= 'g';
-    
-    # Check that the numbering scheme is compatible with the type of reference supplied
-    if ($numbering !~ m/[gcp]/ || ($ft_type ne 'Transcript' && $numbering ne 'g')) {
-      warn("HGVS $numbering notation is not available for $ref_feature");
-      return {};
-    }
+      
+    if ($numbering eq 'p') {
 	
-    
-    # If the reference feature is a slice, set the ref_slice to the feature, otherwise to the feature_Slice
-    my $ref_slice;
-    if ($ft_type eq 'Slice') {
-      $ref_slice = $ref_feature;
-    }
-    else {
-      # Make a subslice instead of getting the feature_slice since it's faster
-      $ref_slice = $ref_feature->feature_Slice;
-      # $ref_slice = $ref_feature->slice()->sub_Slice($ref_feature->start(),$ref_feature->end(),$ref_feature->strand());
-    }
-    
-    # Transfer this VariationFeature onto the slice of the reference feature (unless the reference feature is the slice the VF is on)
-    my $tr_vf;
-    if (defined($feature)) {
-      $tr_vf = $self->transfer($ref_slice);
-    }
-    else {
-      $tr_vf = $self;
-    }
-    
-    # Return undef if this VariationFeature could not be transferred
-    return {} if (!defined($tr_vf));
-    
-    # Split the allele_string into distinct alleles
-    my @alleles = split(/\//,$tr_vf->allele_string());
-    
-    # If a particular allele was requested, reduce the allele array to this allele
-    if (defined($use_allele)) {
-      @alleles = grep(/^$use_allele$/,@alleles);
-    }
-    
-    # Return undef if this VariationFeature does not fall within the supplied feature.
-    return {} if ($tr_vf->start < 1 || $tr_vf->end < 1 || $tr_vf->start > ($ref_feature->end - $ref_feature->start + 1) || $tr_vf->end > ($ref_feature->end - $ref_feature->start + 1));
-    
-    # The variation should always be reported on the positive strand. So change the orientation of the feature if necessary. Use a flag to indicate this
-    my $revcomp = 0;
-    if ($tr_vf->strand() < 0) {
-      $revcomp = 1;
-      $tr_vf->strand(1);
-    }
-    
-    # Get the underlying slice and sequence
-    $ref_slice = $tr_vf->slice();
-    # Coordinates to use in the notation
-    my $display_start = $tr_vf->start();
-    my $display_end = $tr_vf->end();
-    
-    # In case protein numbering is desired, get the translation and transcript variation for this feature and transcript
-    my $codon_up;
-    my $cds_down;
-    my $peptide;
-    my $ref_cds;
-    my $ref_peptide;
-    my $peptide_start;
-    if ($ft_type eq 'Transcript' && $numbering =~ m/p/) {
-      
-      # FIXME: Check if the variation spans across an exon-intron or intron-exon border, in which case we probably just want to return an unknown effect (p.?)
-      # Actually, in case it does (rs71949117, ENST00000342930 is an example of this), the cds_start, translation_start etc. will be null and this method will
-      # return an empty list. So to be absolutely correct, we should figure out the translation/cds starts independently of the TranscriptVariation object
-      # FIXME: Don't rely on TranscriptVariation for getting cds coordinates
-      
-      # Get the start and end phase of the reference allele
-      my $cds_start = $transcript_variation->cds_start();
-      my $cds_end = $transcript_variation->cds_end();
-      my $start_phase = ($cds_start - 1)%3;
-      my $end_phase = ($cds_end - 1)%3;
-      
-      # Get the complete, affected codons. Break it apart into the upstream piece, the allele and the downstream piece
-      #my $cds = $ref_feature->translateable_seq();
-      my $cds = $transcript_variation->_translateable_seq();
-      my $codon_ref = substr($cds,($cds_start - 1),($cds_end - $cds_start + 1));
-      my $codon_down = substr($cds,$cds_end,(2-$end_phase));
-      
-      # Include one codon upstream of the affected position (if possible) in order to correctly specify insertions
-      my $codon_up_start = ($cds_start - $start_phase - 1);
-      my $codon_up_length = $start_phase;
-      $codon_up_length += 3 * ($codon_up_start >= 3);
-      $codon_up_start -= 3 * ($codon_up_start >= 3);
-      
-      $codon_up = substr($cds,($codon_up_start),$codon_up_length);
-      $cds_down = substr($cds,$cds_end);
-      
-      # FIXME: If sequence starts or ends with partial codons, how should we handle that? Example: rs71969613, ENST00000389639
-      
-      # Create the cds starting from the affected codon and continuing down
-      $ref_cds = Bio::PrimarySeq->new(-seq => $codon_up . $codon_ref . $cds_down, -id => 'ref_cds', -alphabet => 'dna');
-      $ref_peptide = $ref_cds->translate()->seq();
-      # Store the offset in peptide coordinates
-      $peptide_start = ($codon_up_start/3 + 1);
-      
-      # Get the complete reference peptide (needed for checking for duplications)
-      $peptide = (defined($ref_feature->{_variation_effect_feature_cache}) && defined($ref_feature->{_variation_effect_feature_cache}->{peptide}) ? $ref_feature->{_variation_effect_feature_cache}->{peptide} : $ref_feature->translation()->seq() ). '*';
-      
-      # If necessary, get the name and version of the translation for the transcript
-      if (!defined($reference_name)) {
-	$reference_name = $ref_feature->translation()->display_id() . "." . $ref_feature->translation()->version();
-      }
-    }
-    
-    # If the reference is a slice, use the seq_region_name as identifier
-    $reference_name = $ref_feature->seq_region_name if ($ref_feature->isa('Bio::EnsEMBL::Slice'));
-      
-    # Use the feature's display id as reference name unless specified otherwise. If the feature is a transcript or translation, append the version number as well
-    $reference_name ||= $ref_feature->display_id() . ($ref_feature->isa('Bio::EnsEMBL::Transcript') && $ref_feature->display_id !~ /\.\d+$/ ? '.' . $ref_feature->version() : '');
-    
-    # Special parsing for LRG
-	if ($reference_name =~ /^LRG_/) {
-		# Remove version
-		if ($reference_name =~ /(.+)\.\d+$/) {
-			$reference_name = $1;
-		}
-	}
-    
-    # Get all alleles for this VariationFeature and create a HGVS notation for each.
-    # Store them in a hash with the allele as keys to avoid duplicates
-    # First, get the notation in genomic coordinate numbering for all
-    my %hgvs;
-    my $ref_seq;
-    my $last_seq_start;
-    my $last_ref_end;
-    foreach my $allele (@alleles) {
-      
-      # Skip if the allele contains weird characters
-      next if $allele =~ m/[^ACGT\-]/ig;
-      
-      my $t_allele = $allele;
-      
-      # If the VariationFeature is on the opposite strand, relative to what is stored in database, flip the allele
-      if ($revcomp) {
-	reverse_comp(\$t_allele);
-      }
-      
-      # Skip if we've already seen this allele
-      next if (exists($hgvs{$allele}));
-      
-      $t_allele =~ s/\-//g;
-      
-      # Call method in Utils::Sequence but we don't need to pass more reference sequence than the variation and an equal number of nucleotides upstream (for duplication checking)
-      my $ref_start = length($t_allele) + 1;
-      my $ref_end = length($t_allele) + ($tr_vf->end() - $tr_vf->start()) + 1;
-      my $seq_start = ($tr_vf->start() - $ref_start);
-      # Should we be at the beginning of the sequence, adjust the coordinates to not cause an exception
-      if ($seq_start < 0) {
-	$ref_start += $seq_start;
-	$ref_end += $seq_start;
-	$seq_start = 0;
-      }
-      if (!defined($ref_seq) || $seq_start != $last_seq_start || $ref_end != $last_ref_end) {
-	$ref_seq = $ref_slice->subseq($seq_start + 1,$seq_start + $ref_end,1);
-	$last_seq_start = $seq_start;
-	$last_ref_end = $ref_end;
-      }
-      my $hgvs_notation = hgvs_variant_notation((length($t_allele) > 0 ? $t_allele : '-'),$ref_seq,$ref_start,$ref_end,$display_start,$display_end);
-      
-      # Skip if e.g. allele is identical to the reference slice
-      next if (!defined($hgvs_notation));
-      
-      # Add the name of the reference
-      $hgvs_notation->{'name'} = $reference_name;
-      # Add the position_numbering scheme
-      $hgvs_notation->{'numbering'} = $numbering;
-      
-      # If the feature is a transcript and we want to get cDNA coordinates, need to convert the "slice" coordinates to exon+intron coordinates
-      if ($ref_feature->isa('Bio::EnsEMBL::Transcript') && $numbering =~ m/c/) {
+	#### If there is no transcript variation supplied and the variant
+	#### is not in the translated region there is no protein change
+	return {} if (!defined($transcript_variation) || 
+		      !defined($transcript_variation->translation_start()) || 
+		      !defined($transcript_variation->translation_end()));
 	
-	# If this transcript is non-coding, the numbering should not include 'c' and the position should start from the start of the transcript
-	if (!defined($ref_feature->cdna_coding_start())) {
-	  $hgvs_notation->{'numbering'} = '';
-	}
-	
-	# Expects coordinates in the forward orientation, relative to the chromosome but still having positions relative to the transcript slice start and end
-	# Get these by subtracting the variation position from the transcript end in case the transcript is on the reverse strand
-	# In case it is on the forward strand, add the transcript start coordinate, since the TranscriptMapper works on the transcript->slice but the
-	# variation coordinates refer to transcript->feature_Slice
-	my $recalc_start = ($ref_feature->strand > 0 ? ($hgvs_notation->{'start'} + $ref_feature->start - 1) : ($ref_feature->end - $hgvs_notation->{'end'} + 1));
-	my $recalc_end = ($ref_feature->strand > 0 ? ($hgvs_notation->{'end'} + $ref_feature->start - 1) : ($ref_feature->end - $hgvs_notation->{'start'} + 1));
-	
-	my $vf_start = _get_cDNA_position($recalc_start,$ref_feature);
-	my $vf_end;
-	if ($recalc_end == $recalc_start) {
-	  $vf_end = $vf_start;
-	}
-	else {
-	  $vf_end = _get_cDNA_position($recalc_end,$ref_feature);
-	  
-	  # Make sure that start is always less than end
-	  my ($exon_start_coord,$intron_start_offset) = $vf_start =~ m/(\-?[0-9]+)\+?(\-?[0-9]+)?/;
-	  my ($exon_end_coord,$intron_end_offset) = $vf_end =~ m/(\-?[0-9]+)\+?(\-?[0-9]+)?/;
-	  $intron_start_offset ||= 0;
-	  $intron_end_offset ||= 0;
-	  ($vf_start,$vf_end) = ($vf_end,$vf_start) if (($exon_start_coord + $intron_start_offset) > ($exon_end_coord + $intron_end_offset));
-	}
-	
-	# Update the notation
-	$hgvs_notation->{'start'} = $vf_start;
-	$hgvs_notation->{'end'} = $vf_end;
-      }
-      
-      # Get the notation in protein coordinates if required (and there is a protein product)
-      if ($ref_feature->isa('Bio::EnsEMBL::Transcript') && $hgvs_notation->{'numbering'} =~ m/p/) {
-        
-        # There are only a subset of the consequence types that require protein notation. The rest will use the cDNA notation
-        
-        # Replace the reference allele with the alternative allele in the CDS sequence
-        my $alt_cds = Bio::PrimarySeq->new(-seq => $codon_up . $t_allele . $cds_down, -id => 'alt_cds', -alphabet => 'dna');
-        my $alt_peptide = $alt_cds->translate()->seq();
-        
-        # If the translation is the same as the reference, this should be noted as a DNA notation with (p.=). The same is true for the special case where the mutation occurs at the end of the peptide 
-        # but the resulting peptide is intact up to (and including) the stop codon
-        if ($ref_peptide eq $alt_peptide || (substr($ref_peptide,-1) eq '*' && index($alt_peptide,$ref_peptide) == 0)) {
-	       my $c_hgvs = $self->get_all_hgvs_notations($ref_feature,'c',undef,$allele);
-	       $hgvs{$allele} = $c_hgvs->{$allele} . "(p.=)";
-	       next;
-        }
-        # Else, we have to deal with consequences
-        else {
-          
-          # There are two major cases: frame shifts and non-frame shifts
-          # For both these cases, we need to know the offset of the first mismatching AA (this need not be the AA corresponding to the codon affected by the variation)
-          my $first_offset = 0;
-          while ($first_offset < length($ref_peptide) && $first_offset < length($alt_peptide) && substr($ref_peptide,$first_offset,1) eq substr($alt_peptide,$first_offset,1)) {
-            $first_offset++;
-          }
-          
-          $hgvs_notation->{'start'} = $peptide_start + $first_offset;
-          
-          # If the difference in cds lengths between reference and alternative, this is a frame shift
-          if (($ref_cds->length() - $alt_cds->length())%3 != 0) {
-            $hgvs_notation->{'type'} = 'fs';
-      
-            # Indicate a frame shift on the first affected reference AA
-            $hgvs_notation->{'ref'} = substr($ref_peptide,$first_offset,1);
-            $hgvs_notation->{'alt'} = substr($alt_peptide,$first_offset,1);
-	    
-	    # Now, we need to append the UTR to the alternative CDS since translation can extend beyond the stop codon
-	    my $utr = $ref_feature->three_prime_utr();
-	    $alt_cds->seq($alt_cds->seq() . $utr->seq()) if (defined($utr));
-	    
-	    # Count the number of AA's until a stop codon is encountered
-	    substr($alt_cds->translate()->seq(),$first_offset) =~ m/\*/;
-	    # A special case is if the first aa is a stop codon, then we won't display the number of residues until the stop codon
-	    if ($+[0] > 1) {
-	      $hgvs_notation->{'suffix'} = 'X' . $+[0];
+	##### call TranscriptVariationAllele method for each allele
+	foreach my $transcriptVariationAllele (@{$transcript_variation->get_all_alternate_TranscriptVariationAlleles()} ){
+
+	    my $allele_string    = $transcriptVariationAllele->feature_seq();
+	    my $hgvs_full_string = $transcriptVariationAllele->hgvs_protein();
+
+	    if($allele_string ne (split/\//,$self->allele_string())[1] ){
+		reverse_comp(\$allele_string);    ### hash returned relative to input variation feature strand regardless of transcript strand
 	    }
-	    # In case the first frame shifted AA is a stop codon, annotate this as a substitution rather than a frame shift
-	    elsif ($+[0] == 1) {
-	      $hgvs_notation->{'type'} = '>';
-	    }
-	    
-          }
-          # Else, this is not a frame shift
-          else {
-            # If the change affects just one single AA, this is a single non-synonymous change.
-            if (length($ref_peptide) > $first_offset && length($alt_peptide) > $first_offset && substr($ref_peptide,$first_offset+1) eq substr($alt_peptide,$first_offset+1)) {
-	      $hgvs_notation->{'type'} = '>';
-	      $hgvs_notation->{'ref'} = substr($ref_peptide,$first_offset,1);
-	      $hgvs_notation->{'alt'} = substr($alt_peptide,$first_offset,1);
-	      $hgvs_notation->{'end'} = $hgvs_notation->{'start'};
-            }
-            # Else, this is an indel. We need to find the index where the peptide sequences start to match again (this is not a frame shift so they will)
-            else {
-	      # We need to separate the first offset for ref and alt since an insertion requires them to be different
-	      my $ref_first = $first_offset;
-	      my $alt_first = $first_offset;
-	      # Match from the end, stop when the peptides differ or when we reach the aa's already compared from the start
-	      my $ref_last = length($ref_peptide);
-	      my $alt_last = length($alt_peptide);
-	      while ($ref_last > $ref_first && $alt_last > $alt_first && substr($ref_peptide,($ref_last-1),1) eq substr($alt_peptide,($alt_last-1),1)) {
-		$ref_last--;
-		$alt_last--;
-	      }
-	      # If the first and last offsets for the reference are the same, this is an insertion
-	      if ($ref_first == $ref_last) {
-		$hgvs_notation->{'type'} = 'ins';
-		$hgvs_notation->{'end'} = $hgvs_notation->{'start'};
-		$hgvs_notation->{'start'}--;
-		# We need to adjust the first_offset and ref_last so that we get the AA's flanking the insertion
-		$ref_last = $ref_first+1;
-		$ref_first--;
-	      }
-	      # Else, if the first and last offsets for the alternative are the same, this is a deletion
-	      elsif ($first_offset == $alt_last) {
-		$hgvs_notation->{'type'} = 'del';
-		$hgvs_notation->{'end'} = $hgvs_notation->{'start'} + ($ref_last - $ref_first - 1);		
-	      }
-	      # Else, it is an indel
-	      else {
-		$hgvs_notation->{'type'} = 'delins';
-		$hgvs_notation->{'end'} = $hgvs_notation->{'start'} + ($ref_last - $ref_first - 1);
-	      }
-	      $hgvs_notation->{'ref'} = substr($ref_peptide,$ref_first,($ref_last - $ref_first));
-	      $hgvs_notation->{'alt'} = substr($alt_peptide,$alt_first,($alt_last - $alt_first));
-	      
-	      ###
-	      ### A few rules we have to observe: 
-	      ###
-	      
-	      # An insertion where the inserted sequence occur before the point of insertion should be indicated as a duplication instead
-	      if ($hgvs_notation->{'type'} eq 'ins') {
-		# Check if this is a duplication
-		if (($hgvs_notation->{'start'} - length($hgvs_notation->{'alt'})) >= 0 && substr($peptide,($hgvs_notation->{'start'} - length($hgvs_notation->{'alt'})),length($hgvs_notation->{'alt'})) eq $hgvs_notation->{'alt'}) {
-		  $hgvs_notation->{'type'} = 'dup';
-		  $hgvs_notation->{'end'} = $hgvs_notation->{'start'};
-		  $hgvs_notation->{'start'} -= (length($hgvs_notation->{'alt'}) - 1);
-		}
-	      }
-	      # A deletion within a stretch of identical aa's should have the last of those aa's indicated as deleted
-	      # But this will happen automatically because of the offset matching done above
-            }
-          }
-          # Convert the one-letter aa code to three-letter aa code
-          $hgvs_notation->{'ref'} = Bio::SeqUtils->seq3(Bio::PrimarySeq->new(-seq => $hgvs_notation->{'ref'}, -id => 'ref', -alphabet => 'protein')) || "";
-          $hgvs_notation->{'alt'} = Bio::SeqUtils->seq3(Bio::PrimarySeq->new(-seq => $hgvs_notation->{'alt'}, -id => 'ref', -alphabet => 'protein')) || "";
-          
-	  ###
-          ### We have a few 'special' cases that needs to be checked
-	  ###
-          
-          # If the change affects the initiator methionine, the consequence of the change should be indicated as unknown
-          if ($hgvs_notation->{'start'} == 1 && ($hgvs_notation->{'type'} eq '>' || $hgvs_notation->{'type'} eq 'fs' || $hgvs_notation->{'type'} =~ m/del/)) {
-            $hgvs_notation->{'alt'} = "?";
-	    $hgvs_notation->{'type'} = '>';
-	    $hgvs_notation->{'suffix'} = '';
-          }
-          
-          # If the stop codon is lost, investigate if another stop codon can be detected downstream
-          if ($hgvs_notation->{'ref'} =~ m/Ter/) {
-            # Get the remaining transcript sequence
-            my $utr = $ref_feature->three_prime_utr();
-	    if (defined($utr)) {
-	      my $utr_trans = $utr->translate();
-	      # Find the number of residues that are translated until a termination codon is encountered
-	      $utr_trans->seq() =~ m/\*/;
-	      if ($+[0]) {
-		$hgvs_notation->{'suffix'} = $+[0];
-	      }
-	    }
-          }
-          
-        }
-      }
-      
-      # Construct the HGVS notation from the data in the hash
-      if ($hgvs_notation->{'numbering'} =~ m/^[gc]*$/) {
-	$hgvs_notation->{'hgvs'} = $hgvs_notation->{'name'} . ':' . (length($hgvs_notation->{'numbering'}) > 0 ? $hgvs_notation->{'numbering'} . '.' : '') . $hgvs_notation->{'start'} . ($hgvs_notation->{'end'} ne $hgvs_notation->{'start'} ? '_' . $hgvs_notation->{'end'} : '');
-	if ($hgvs_notation->{'type'} eq '>') {
-	  $hgvs_notation->{'hgvs'} .= $hgvs_notation->{'ref'} . $hgvs_notation->{'type'} . $hgvs_notation->{'alt'};
-	}
-	elsif ($hgvs_notation->{'type'} eq 'delins') {
-	  $hgvs_notation->{'hgvs'} .= 'del' . $hgvs_notation->{'ref'} . 'ins' . $hgvs_notation->{'alt'};
-	}
-	elsif ($hgvs_notation->{'type'} eq 'ins') {
-	  $hgvs_notation->{'hgvs'} .= $hgvs_notation->{'type'} . $hgvs_notation->{'alt'};
-	}
-	else {
-	  $hgvs_notation->{'hgvs'} .= $hgvs_notation->{'type'} . $hgvs_notation->{'ref'};
-	}
-      }
-      elsif ($hgvs_notation->{'numbering'} =~ m/p/) {
-	# Replace termination codon code 'Ter' with the HGVS-preferred 'X'
-	$hgvs_notation->{'alt'} =~ s/Ter|\*/X/i;
-	$hgvs_notation->{'ref'} =~ s/Ter|\*/X/i;
-	$hgvs_notation->{'hgvs'} = $hgvs_notation->{'name'} . ':' . $hgvs_notation->{'numbering'} . '.';
-	
-	# A substitution
-	if ($hgvs_notation->{'type'} eq '>') {
-	  $hgvs_notation->{'hgvs'} .= $hgvs_notation->{'ref'} . $hgvs_notation->{'start'} . $hgvs_notation->{'alt'};
-	}
-	
-	# Frame shift
-	if ($hgvs_notation->{'type'} eq 'fs') {
-	  $hgvs_notation->{'hgvs'} .= $hgvs_notation->{'ref'} . $hgvs_notation->{'start'} . $hgvs_notation->{'alt'} . $hgvs_notation->{'type'};
-	}
-	
-	# Insertion
-	if ($hgvs_notation->{'type'} eq 'ins') {
-	  $hgvs_notation->{'hgvs'} .= substr($hgvs_notation->{'ref'},0,3) . $hgvs_notation->{'start'} . '_' . substr($hgvs_notation->{'ref'},3,3) . $hgvs_notation->{'end'} . $hgvs_notation->{'type'} . $hgvs_notation->{'alt'};
-	}
-	
-	# Duplication
-	if ($hgvs_notation->{'type'} eq 'dup') {
-	  $hgvs_notation->{'hgvs'} .= substr($hgvs_notation->{'alt'},0,3) . $hgvs_notation->{'start'};
-	  if ($hgvs_notation->{'start'} < $hgvs_notation->{'end'}) {
-	    $hgvs_notation->{'hgvs'} .= '_' . substr($hgvs_notation->{'alt'},-3,3) . $hgvs_notation->{'end'};
-	  }
-	  $hgvs_notation->{'hgvs'} .= $hgvs_notation->{'type'};
-	}
-	
-	# Deletion
-	if ($hgvs_notation->{'type'} eq 'del') {
-	  $hgvs_notation->{'hgvs'} .= substr($hgvs_notation->{'ref'},0,3) . $hgvs_notation->{'start'};
-	  # If the range is greater than one it should be indicated
-	  if ($hgvs_notation->{'start'} < $hgvs_notation->{'end'}) {
-	    $hgvs_notation->{'hgvs'} .= '_' . substr($hgvs_notation->{'ref'},-3,3) . $hgvs_notation->{'end'};
-	  }
-	  $hgvs_notation->{'hgvs'} .= $hgvs_notation->{'type'};
-	}
-	
-	# Indel
-	if ($hgvs_notation->{'type'} eq 'delins') {
-	  $hgvs_notation->{'hgvs'} .= substr($hgvs_notation->{'ref'},0,3) . $hgvs_notation->{'start'};
-	  if ($hgvs_notation->{'start'} < $hgvs_notation->{'end'}) {
-	    $hgvs_notation->{'hgvs'} .= '_' . substr($hgvs_notation->{'ref'},-3,3) . $hgvs_notation->{'end'};
-	  }
-	  $hgvs_notation->{'hgvs'} .= $hgvs_notation->{'type'} . $hgvs_notation->{'alt'};
-	}
-	
-	# If this is a lost stop codon, indicate the extent of the C-terminal extension
-	if ($hgvs_notation->{'ref'} =~ m/X$/) {
-	  $hgvs_notation->{'hgvs'} .= 'extX';
-	}
-      }
-      
-      if (exists($hgvs_notation->{'suffix'})) {
-        $hgvs_notation->{'hgvs'} .= $hgvs_notation->{'suffix'};
-      }
-      $hgvs{$allele} = $hgvs_notation->{'hgvs'};
+	    $hgvs{$allele_string} = $hgvs_full_string ;
+	} 
+	return \%hgvs;
     }
     
-    return \%hgvs;
+    elsif ( $numbering =~ m/c|n/) { ### coding or non- coding transcript
+	
+	return {} if (!defined $transcript_variation);
+	
+	foreach my $transcriptVariationAllele (@{$transcript_variation->get_all_alternate_TranscriptVariationAlleles()} ){
+
+	    my $allele_string    = $transcriptVariationAllele->feature_seq();
+	    my $hgvs_full_string = $transcriptVariationAllele->hgvs_transcript();
+
+	    if($allele_string ne (split/\//,$self->allele_string())[1] ){
+		 reverse_comp(\$allele_string);    ### hash returned relative to input variation feature strand regardless of transcript strand
+	    }
+	    $hgvs{$allele_string} = $hgvs_full_string ;
+	} 
+	return \%hgvs;
+    }
+    
+    elsif( $numbering =~ m/g/ ) {
+	#### handling both alleles together locally for genomic class
+	my $hgvs = $self->hgvs_genomic($ref_feature, $reference_name, $use_allele );	
+	return $hgvs;
+    }
+    else{
+	warn("HGVS notation is not available for coordinate system: $numbering");
+	return {};
+    }
 }
 
-# Convert a position on a transcript (in the forward orientation and relative to the start position of the slice the transcript is on) to a cDNA coordinate
-# If the position is in an intron, the boundary position of the closest exon and a + or - offset into the intron is returned.
-# If the position is 5' of the start codon, it is reported relative to the start codon (-1 being the last nucleotide before the 'A' of ATG).
-# If the position is 3' pf the stop codon, it is reported with a '*' prefix and the offset from the start codon (*1 being the first nucleotide after the last position of the stop codon)
-sub _get_cDNA_position {
-  my $position = shift;
-  my $transcript = shift;
-  
-  my $cdna_position = $position;
-  
-  # Get all exons and sort them in positional order
-  my @exons = sort {$a->start() <=> $b->start()} @{$transcript->get_all_Exons()};
-  my $n_exons = scalar(@exons);
-  my $strand = $transcript->strand();
-  
-  # Loop over the exons and get the coordinates of the variation in exon+intron notation
-  for (my $i=0; $i<$n_exons; $i++) {
+### HGVS short flanking sequence required to check if HGVS variant class should be dup rather than ins
+sub _get_flank_seq{
+
+    my $self = shift;
+
+    # Get the underlying slice and sequence
+    my $ref_slice = $self->slice();
     
-    # Skip if the start point is beyond this exon
-    next if ($position > $exons[$i]->end());
+    my @allele = split(/\//,$self->allele_string());
+    #### add flank at least as long as longest allele to allow checking 
+    my $add_length;
+    length($allele[0]) > length($allele[1])  ? 
+	$add_length = 1+ (length $allele[0]) :
+	$add_length = 1+ (length $allele[1]) ; 
     
-    # If the start coordinate is within this exon
-    if ($position >= $exons[$i]->start()) {
-      # Get the cDNA start coordinate of the exon and add the number of nucleotides from the exon boundary to the variation
-      # If the transcript is in the opposite direction, count from the end instead
-      $cdna_position = $exons[$i]->cdna_start($transcript) + ($strand > 0 ? ($position - $exons[$i]->start) : ($exons[$i]->end() - $position));
-      last;
+    
+    my $ref_start = $add_length ;
+    my $ref_end   = $add_length + ($self->end() - $self->start());
+    my $seq_start = ($self->start() - $ref_start);
+    
+    # Should we be at the beginning of the sequence, adjust the coordinates to not cause an exception
+    if ($seq_start < 0) {
+	$ref_start += $seq_start;
+	$ref_end   += $seq_start;
+	$seq_start  = 0;
     }
-    # Else the start coordinate is between this exon and the previous one, determine which one is closest and get coordinates relative to that one
-    else {
-      my $updist = ($position - $exons[$i-1]->end());
-      my $downdist = ($exons[$i]->start() - $position);
-      
-      # If the distance to the upstream exon is the shortest, or equal and in the positive orientation, use that
-      if ($updist < $downdist || ($updist == $downdist && $strand >= 0)) {
-        # If the orientation is reversed, we should use the cDNA start and a '-' offset
-        $cdna_position = ($strand >= 0 ? $exons[$i-1]->cdna_end($transcript) . '+' : $exons[$i-1]->cdna_start($transcript) . '-') . $updist;
-      }
-      # Else if downstream is shortest...
-      else {
-        # If the orientation is reversed, we should use the cDNA end and a '+' offset
-        $cdna_position = ($strand >= 0 ? $exons[$i]->cdna_start($transcript) . '-' : $exons[$i]->cdna_end($transcript) . '+') . $downdist;
-      }
-      last;
-    }
-  }
-  
-  # Shift the position to make it relative to the start codon
-  my $start_codon = $transcript->cdna_coding_start();
-  my $stop_codon = $transcript->cdna_coding_end();
-  
-  # Disassemble the cDNA coordinate into the exon and intron parts
-  my ($cdna_coord,$intron_offset) = $cdna_position =~ m/([0-9]+)([\+\-][0-9]+)?/;
-  
-  # Start by correcting for the stop codon
-  if (defined($stop_codon) && $cdna_coord > $stop_codon) {
-    # Get the offset from the stop codon
-    $cdna_coord -= $stop_codon;
-    # Prepend a * to indicate the position is in the 3' UTR
-    $cdna_coord = '*' . $cdna_coord;
-  }
-  elsif (defined($start_codon)) {
-    # If the position is beyond the start codon, add 1 to get the correct offset
-    $cdna_coord += ($cdna_coord >= $start_codon);
-    # Subtract the position of the start codon
-    $cdna_coord -= $start_codon;
-  }
-  
-  # Re-assemble the cDNA position
-  $cdna_position = $cdna_coord . (defined($intron_offset) ? $intron_offset : '');
-  
-  return $cdna_position;
+  	
+    my $flank_seq   = $ref_slice->subseq($seq_start +1 , $seq_start + $ref_end, 1);
+    
+    
+    return ($flank_seq, $ref_start, $ref_end );
 }
+
+#### format HGVS hash for genomic reference sequence
+### Input:  Variation feature
+### Output: $hgvs_notation hash
+
+
+
+=head2  hgvs_genomic
+
+  Arg [1]    : Bio::EnsEMBL::Feature $ref_feature (optional)
+               Get the HGVS notation of this VariationFeature relative to the slice it is on. If an optional reference feature is supplied, returns the coordinates
+	       relative to this feature.
+  Arg [2]    : string (Optional)
+               A name to use for the reference can be supplied. By default the name returned by the display_id() method of the reference feature will be used.
+  Arg [4]    : string (Optional)
+               Return just the HGVS notation corresponding to this allele
+	       
+  
+	       
+  Description: Returns a reference to a hash with the allele as key and a string with the genomic HGVS notation of this VariationFeature as value. By default uses the
+               slice it is placed on as reference but a different reference feature can be supplied.
+  Returntype : Hash reference
+  Exceptions : Throws exception if VariationFeature can not be described relative to the feature_Slice of the supplied reference feature
+  Caller     : general
+  Status     : Experimental
+
+=cut
+sub hgvs_genomic{
+    
+    my $self             = shift;
+    my $ref_feature      = shift;    ## can be a transcript
+    my $reference_name   = shift;    ## If the ref_feature is a slice, this is over-written
+    my $use_allele       = shift;    ## optional single allele to check
+
+    my %hgvs;
+    ########set up sequence reference
+    my $ref_slice;  #### need this for genomic notation
+    
+    if ($ref_feature->isa('Bio::EnsEMBL::Slice')) {
+	$ref_slice = $ref_feature;
+    }
+    else {	
+	# get slice if not supplied
+	$ref_slice = $ref_feature->feature_Slice;	    
+    }         
+    
+    # Create new VariationFeature on the slice of the reference feature (unless the reference feature is the slice the VF is on)
+    my $tr_vf;
+    if ( $self->slice->coord_system->name() eq "chromosome") {
+	$tr_vf = $self;
+    }
+    else {	
+	$tr_vf = $self->transfer($ref_slice);
+    }
+    # Return undef if this VariationFeature could not be transferred
+    return {} if (!defined($tr_vf));
+	
+	
+    # Return undef if this VariationFeature does not fall within the supplied feature.
+    return {} if ($tr_vf->start < 1 || 
+		  $tr_vf->end   < 1 || 
+		  $tr_vf->start > ($ref_feature->end - $ref_feature->start + 1) || 
+		  $tr_vf->end   > ($ref_feature->end - $ref_feature->start + 1));
+    
+    #########   define reference sequence name ###################################
+        
+    # If the reference is a slice, use the seq_region_name as identifier
+    $reference_name ||= $ref_feature->seq_region_name if ($ref_feature->isa('Bio::EnsEMBL::Slice'));
+      
+    # Use the feature's display id as reference name unless specified otherwise. 
+    # If the feature is a transcript or translation, append the version number as well
+    $reference_name ||= $ref_feature->display_id() . ($ref_feature->isa('Bio::EnsEMBL::Transcript') && 
+						      $ref_feature->display_id !~ /\.\d+$/ ? '.' . $ref_feature->version() : '');
+    
+  
+    ##### get short flank sequence for duplication checking & adjusted variation coordinates
+    my ($ref_seq, $ref_start, $ref_end) = _get_flank_seq($tr_vf);;
+    
+    foreach my $allele ( split(/\//,$tr_vf->allele_string()) ) {
+	
+	## If a particular allele was requested, ignore others
+	next if  (defined($use_allele) && $allele ne $use_allele);
+
+	# Skip if the allele contains weird characters
+	next if $allele =~ m/[^ACGT\-]/ig;   #seh  WARNING??
+	
+	##### vf strand is relative to slice - if transcript feature slice, may need complimenting
+	my $check_allele = $allele;
+	if( $self->strand() <0 && $ref_slice->strand >0 ||
+	    $self->strand() >0 && $ref_slice->strand < 0
+	    ){	    
+	    reverse_comp(\$check_allele);
+	    if($DEBUG ==1){print "***************Flipping alt allele $allele => $check_allele to match coding strand\n";}
+	}
+
+	## work out chrom coord for hgvs string if transcript slice supplied
+	my ($chr_start,$chr_end);  
+	if ( $tr_vf->slice->coord_system->name() eq "chromosome") {
+	    $chr_start = $tr_vf->seq_region_start();
+	    $chr_end   = $tr_vf->seq_region_end();
+	}
+	else{
+	    ## add feature start to start of var-in-feature
+	    if( $tr_vf->seq_region_start() <  $tr_vf->seq_region_end()){
+		$chr_start =  $tr_vf->start() + $tr_vf->seq_region_start() ; 
+		$chr_end   =  $tr_vf->end()   + $tr_vf->seq_region_start() ;
+	    }
+	    else{
+		$chr_start =  $tr_vf->seq_region_start() - $tr_vf->start()  ;
+		$chr_end   =  $tr_vf->seq_region_start() - $tr_vf->end()  ;
+	    }
+	}
+	   
+
+	my $hgvs_notation = hgvs_variant_notation( $check_allele,          ## alt allele in refseq strand orientation
+						   $ref_seq,               ## substring of slice for ref allele extraction
+						   $ref_start,             ## start on substring of slice for ref allele extraction
+						   $ref_end,
+						   $chr_start,             ## start wrt seq region slice is on (eg. chrom)
+						   $chr_end,   
+						   "");
+      
+
+	# Skip if e.g. allele is identical to the reference slice
+	next if (!defined($hgvs_notation));
+	
+	# Add the name of the reference
+	$hgvs_notation->{'ref_name'} = $reference_name;
+	# Add the position_numbering scheme
+	$hgvs_notation->{'numbering'} = 'g';     
+	
+	# Construct the HGVS notation from the data in the hash
+	$hgvs_notation->{'hgvs'} = format_hgvs_string( $hgvs_notation);
+	
+	$hgvs{$allele} = $hgvs_notation->{'hgvs'};
+    }
+    return \%hgvs;
+
+}
+
+
 
 sub length {
   my $self = shift;

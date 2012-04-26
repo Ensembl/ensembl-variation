@@ -67,6 +67,7 @@ use vars qw(@ISA @EXPORT_OK);
     &unambiguity_code 
     &sequence_with_ambiguity 
     &hgvs_variant_notation 
+    &format_hgvs_string
     &SO_variation_class 
     &align_seqs 
     &strain_ambiguity_code
@@ -492,7 +493,7 @@ sub hgvs_variant_notation {
     
     # Get the reference allele
     my $ref_allele = substr($ref_sequence,($ref_start-1),$ref_length);
-    
+
     # Check that the alleles are different, otherwise return undef
     return undef unless ($ref_allele ne $alt_allele);
     
@@ -541,6 +542,7 @@ sub hgvs_variant_notation {
         
         # If they match, this is a duplication
         if ($prev_str eq $alt_allele) {
+
 	    $notation{'start'} = ($display_end - $alt_length + 1);
 	    $notation{'type'} = 'dup';
 	    $notation{'ref'} = $prev_str;
@@ -578,6 +580,72 @@ sub hgvs_variant_notation {
     return \%notation;
 }
 
+
+=head2 format_hgvs_string
+
+  Arg[1]      : string reference sequence name
+  Arg[2]      : string strand
+  Arg[3]      : hash of hgvs information
+  Example     : 
+  Description : Creates HGVS formatted string from input hash                
+  ReturnType  : string in HGVS format
+  Exceptions  : 
+  Caller      : 
+
+=cut
+
+sub format_hgvs_string{
+    ##### generic formatting routine for genomic and coding HGVS names
+ 
+    my $hgvs_notation = shift;
+  
+    ### all start with refseq name & numbering type
+    $hgvs_notation->{'hgvs'} = $hgvs_notation->{'ref_name'} . ":" . $hgvs_notation->{'numbering'} . ".";    
+
+    my $coordinates;
+    #### if single base event, list position only once
+    if($hgvs_notation->{'start'} eq $hgvs_notation->{'end'}){
+	$coordinates =  $hgvs_notation->{'start'};
+    }
+    else{
+	$coordinates = $hgvs_notation->{'start'} . "_" . $hgvs_notation->{'end'};
+    }
+
+    ##### format rest of string according to type
+
+    if($hgvs_notation->{'type'} eq 'del' ||  $hgvs_notation->{'type'} eq 'inv' || $hgvs_notation->{'type'} eq 'dup'){
+	### inversion of reference bases => list ref not alt
+	### deletion  of reference bases => list ref lost
+	### duplication  of reference bases (eg ref = GAAA alt = GAAAGAAA) => list duplicated ref (dupGAAA)
+	$hgvs_notation->{'hgvs'} .= $coordinates . $hgvs_notation->{'type'} . $hgvs_notation->{'ref'};      
+    }
+
+    elsif( $hgvs_notation->{'type'} eq '>'){
+	### substitution - list both alleles
+	$hgvs_notation->{'hgvs'} .= $hgvs_notation->{'start'} . $hgvs_notation->{'ref'} . $hgvs_notation->{'type'} . $hgvs_notation->{'alt'};
+    }
+
+    elsif( $hgvs_notation->{'type'} eq 'delins'){
+	$hgvs_notation->{'hgvs'} .= $coordinates . 'del' . $hgvs_notation->{'ref'} . 'ins' . $hgvs_notation->{'alt'};
+    }   
+
+    elsif($hgvs_notation->{'type'} eq 'ins'){
+	## reference not listed
+	$hgvs_notation->{'hgvs'} .= $coordinates . $hgvs_notation->{'type'} . $hgvs_notation->{'alt'};
+    }
+
+    elsif($hgvs_notation->{'type'} =~ /\[\d+\]/){
+	#### insertion described by string and number
+	$hgvs_notation->{'hgvs'} .= $coordinates  . $hgvs_notation->{'type'} . $hgvs_notation->{'ref'};
+    }
+
+    else{
+	warn "PROBLEM with generic HGVS formatter - type = ". $hgvs_notation->{'type'} ."\n";
+    }
+  
+    return $hgvs_notation->{'hgvs'};
+
+}
 
 =head2 align_seqs
 
