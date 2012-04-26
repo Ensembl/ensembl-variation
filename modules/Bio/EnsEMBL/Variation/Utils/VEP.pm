@@ -47,6 +47,7 @@ use Getopt::Long;
 use FileHandle;
 use Storable qw(nstore_fd fd_retrieve);
 use Scalar::Util qw(weaken);
+use Digest::MD5 qw(md5_hex);
 
 use Bio::EnsEMBL::Registry;
 use Bio::EnsEMBL::Variation::VariationFeature;
@@ -126,6 +127,7 @@ our @VEP_WEB_CONFIG = qw(
     format
     check_existing
     coding_only
+    core_type
     hgnc
     protein
     hgvs
@@ -137,7 +139,6 @@ our @VEP_WEB_CONFIG = qw(
     freq_pop
     sift
     polyphen
-    condel
     regulatory
 );
 
@@ -336,7 +337,7 @@ sub parse_vcf {
     $end += (length($ref) - 1);
     
     # structural variation
-    if($data[7] =~ /SVTYPE/ || $alt =~ /\<|\[|\]|\>/) {
+    if((defined($data[7]) && $data[7] =~ /SVTYPE/) || $alt =~ /\<|\[|\]|\>/) {
         
         # parse INFO field
         my %info = ();
@@ -374,15 +375,18 @@ sub parse_vcf {
         
         # get type
         my $type = $info{SVTYPE};
+        my $so_term;
         
-        # convert to SO term
-        my %terms = (
-            INS  => 'insertion',
-            DEL  => 'deletion',
-            TDUP => 'tandem_duplication',
-        );
-        
-        my $so_term = defined $terms{$type} ? $terms{$type} : $type;
+        if(defined($type)) {
+            # convert to SO term
+            my %terms = (
+                INS  => 'insertion',
+                DEL  => 'deletion',
+                TDUP => 'tandem_duplication',
+            );
+            
+            my $so_term = defined $terms{$type} ? $terms{$type} : $type;
+        }
         
         my $svf = Bio::EnsEMBL::Variation::StructuralVariationFeature->new_fast({
             start          => $start,
@@ -480,6 +484,7 @@ sub parse_vcf {
             }
         }
         
+        # create VF object
         my $vf = Bio::EnsEMBL::Variation::VariationFeature->new_fast({
             start          => $start,
             end            => $end,
@@ -494,7 +499,51 @@ sub parse_vcf {
         # flag as non-variant
         $vf->{non_variant} = 1 if $non_variant;
         
-        return [$vf];
+        # individuals?
+        if(defined($config->{individual})) {
+            my @alleles = split /\//, $ref.'/'.$alt;
+            
+            my @return;
+            
+            foreach my $ind(keys %{$config->{ind_cols}}) {
+                
+                # get alleles present in this individual
+                my @bits;
+                my $gt = (split /\:/, $data[$config->{ind_cols}->{$ind}])[0];
+                
+                my $phased = ($gt =~ /\|/ ? 1 : 0);
+                
+                foreach my $bit(split /\||\/|\\/, $gt) {
+                    push @bits, $alleles[$bit] unless $bit eq '.';
+                }
+                
+                # shallow copy VF
+                my $vf_copy = { %$vf };
+                bless $vf_copy, ref($vf);
+                
+                # construct allele_string
+                if(scalar @bits) {
+                    $vf_copy->{allele_string} = $ref."/".(join "/", grep {$_ ne $ref} @bits);
+                }
+                else {
+                    $vf_copy->{allele_string} = $ref;
+                }
+                
+                # store phasing info
+                $vf_copy->{phased} = $phased;
+                $vf_copy->{phased_gt} = \@bits if $phased;
+                
+                # store individual name
+                $vf_copy->{individual} = $ind;
+                
+                push @return, $vf_copy;
+            }
+            
+            return \@return;
+        }
+        else {
+            return [$vf];
+        }
     }
 }
 
@@ -775,7 +824,10 @@ sub get_all_consequences {
     prune_cache($config, $rf_cache, $regions, $config->{loaded_rf});
     
     # check existing VFs
-    &check_existing_hash($config, \%vf_hash) if defined($config->{check_existing});
+    &check_existing_hash($config, \%vf_hash) if defined($config->{check_existing});# && scalar @$listref > 10;
+    
+    # get overlapping SVs
+    &check_svs_hash($config, \%vf_hash) if defined($config->{check_svs});
     
     my @return;
     
@@ -870,7 +922,7 @@ sub get_all_consequences {
                 }
                 
                 $string =~ s/\,$//;
-               
+                
                 if(!defined($config->{no_consequences}) && $string ne 'CSQ=') {
                     $line->[7] .= ($line->[7] ? ';' : '').$string;
                 }
@@ -980,6 +1032,15 @@ sub vf_to_consequences {
                 Feature      => $rf->stable_id,
             };
             
+            if(defined($config->{cell_type})) {
+                $base_line->{Extra}->{CELL_TYPE} = join ",",
+                    map {$_.':'.$rf->{cell_types}->{$_}}
+                    grep {$rf->{cell_types}->{$_}}
+                    @{$config->{cell_type}};
+                    
+                $base_line->{Extra}->{CELL_TYPE} =~ s/\s+/\_/g;
+            }
+            
             # this currently always returns 'RegulatoryFeature', so we ignore it for now
             #$base_line->{Extra}->{REG_FEAT_TYPE} = $rf->feature_type->name;
             
@@ -1017,14 +1078,23 @@ sub vf_to_consequences {
                     MOTIF_NAME  => $matrix,
                 }
             };
+                
+            if(defined($config->{cell_type})) {
+                $base_line->{Extra}->{CELL_TYPE} = join ",",
+                    map {$_.':'.$mf->{cell_types}->{$_}}
+                    grep {$mf->{cell_types}->{$_}}
+                    @{$config->{cell_type}};
+                    
+                $base_line->{Extra}->{CELL_TYPE} =~ s/\s+/\_/g;
+            }
             
             for my $mfva (@{ $mfv->get_all_alternate_MotifFeatureVariationAlleles }) {
                 
                 my $line = init_line($config, $vf, $base_line);
                 
-                $line->{Extra}->{MOTIF_POS}         = $mfva->motif_start if defined $mfva->motif_start;
+                $line->{Extra}->{MOTIF_POS}          = $mfva->motif_start if defined $mfva->motif_start;
                 $line->{Extra}->{HIGH_INF_POS}       = ($mfva->in_informative_position ? 'Y' : 'N');
-
+                
                 my $delta = $mfva->motif_score_delta if $mfva->variation_feature_seq =~ /^[ACGT]+$/;
 
                 $line->{Extra}->{MOTIF_SCORE_CHANGE} = sprintf("%.3f", $delta) if defined $delta;
@@ -1035,7 +1105,7 @@ sub vf_to_consequences {
                         @{ $mfva->get_all_OverlapConsequences };
 
                 $line = run_plugins($mfva, $line, $config);
-                       
+                
                 push @return, $line;
             }
         }
@@ -1362,8 +1432,11 @@ sub tva_to_line {
     
     # HGVS
     if(defined $config->{hgvs}) {
-        $line->{Extra}->{HGVSc} = $tva->hgvs_coding if defined($tva->hgvs_coding);
-        $line->{Extra}->{HGVSp} = $tva->hgvs_protein if defined($tva->hgvs_protein);
+        my $hgvs_t = $tva->hgvs_transcript;
+        my $hgvs_p = $tva->hgvs_protein;
+        
+        $line->{Extra}->{HGVSc} = $hgvs_t if $hgvs_t;
+        $line->{Extra}->{HGVSp} = $hgvs_p if $hgvs_p;
     }
     
     # canonical transcript
@@ -1371,7 +1444,12 @@ sub tva_to_line {
         $line->{Extra}->{CANONICAL} = 'YES' if $t->is_canonical;
     }
     
-    foreach my $tool (qw(SIFT PolyPhen Condel)) {
+    # overlapping SVs
+    if(defined $config->{check_svs} && defined $tva->variation_feature->{overlapping_svs}) {
+        $line->{Extra}->{SV} = $tva->variation_feature->{overlapping_svs};
+    }
+    
+    foreach my $tool (qw(SIFT PolyPhen)) {
         my $lc_tool = lc($tool);
         
         if (my $opt = $config->{$lc_tool}) {
@@ -1441,6 +1519,9 @@ sub init_line {
             $line->{Extra}->{$key} = $custom->{$key};
         }
     }
+    
+    # individual?
+    $line->{Extra}->{IND} = $vf->{individual} if defined($vf->{individual});
     
     # copy entries from base_line
     if(defined($base_line)) {
@@ -1665,9 +1746,7 @@ sub whole_genome_fetch {
     my $rf_cache = shift;
     my $regions = shift;
     
-    my $up_down_size = MAX_DISTANCE_FROM_TRANSCRIPT;
-    
-    my (%vf_done, @finished_vfs, %seen_trs, %seen_rfs);
+    my (%vf_done, @finished_vfs, %seen_rfs);
     
     if(defined($config->{offline}) && !-e $config->{dir}.'/'.$chr) {
         debug("No cache found for chromsome $chr") unless defined($config->{quiet});
@@ -1695,56 +1774,8 @@ sub whole_genome_fetch {
     
     debug("Analyzing chromosome $chr") unless defined($config->{quiet});
     
-    
-    
-    # CUSTOM ANNOTATIONS
-    ####################
-    
-    if(defined($config->{custom}) && scalar @{$config->{custom}}) {
-        
-        # create regions based on VFs instead of chunks
-        my $tmp_regions;
-        
-        foreach my $chunk(keys %{$vf_hash->{$chr}}) {
-            foreach my $pos(keys %{$vf_hash->{$chr}{$chunk}}) {
-                foreach my $vf(@{$vf_hash->{$chr}{$chunk}{$pos}}) {
-                    push @{$tmp_regions->{$chr}}, ($vf->{start}-1).'-'.($vf->{end}+1);
-                }
-            }
-        }
-        
-        if(defined($tmp_regions->{$chr})) {
-            
-            # cache annotations
-            my $annotation_cache = cache_custom_annotation($config, $tmp_regions, $chr);
-            
-            # count and report
-            my $total_annotations = 0;
-            $total_annotations += scalar keys %{$annotation_cache->{$chr}->{$_}} for keys %{$annotation_cache->{$chr}};
-            debug("Retrieved $total_annotations custom annotations (", (join ", ", map {(scalar keys %{$annotation_cache->{$chr}->{$_}}).' '.$_} keys %{$annotation_cache->{$chr}}), ")");
-            
-            # compare annotations to variations in hash
-            debug("Analyzing custom annotations") unless defined($config->{quiet});
-            my $total = scalar keys %{$vf_hash->{$chr}};
-            my $i = 0;
-            
-            foreach my $chunk(keys %{$vf_hash->{$chr}}) {
-                progress($config, $i++, $total);
-                
-                foreach my $pos(keys %{$vf_hash->{$chr}{$chunk}}) {
-                    foreach my $vf(@{$vf_hash->{$chr}{$chunk}{$pos}}) {
-                        
-                        $vf->{custom} = get_custom_annotation($config, $vf, $annotation_cache);
-                    }
-                }
-            }
-            
-            end_progress($config);
-        }
-    }
-    
-    
-    my ($count_from_mem, $count_from_db, $count_from_cache, $count_duplicates) = (0, 0, 0, 0);
+    # custom annotations
+    whole_genome_fetch_custom($config, $vf_hash, $chr) if defined($config->{custom});
     
     # split up normal variations from SVs
     my ($tmp_vf_hash, @svfs);
@@ -1764,333 +1795,448 @@ sub whole_genome_fetch {
     
     $vf_hash = $tmp_vf_hash;
     
-    unless(defined($config->{no_consequences})) {
+    # transcript annotations
+    whole_genome_fetch_transcript($config, $vf_hash, $tr_cache, $slice_cache, $regions, $chr)
+        unless defined($config->{no_consequences});
+    
+    # regulatory annotations
+    whole_genome_fetch_reg($config, $vf_hash, $rf_cache, $slice_cache, $regions, $chr)
+        if defined($config->{regulatory})
+        && !defined($config->{no_consequences});
         
-        ## TRANSCRIPTS
-        ##############
-        
-        $count_from_mem = scalar @{$tr_cache->{$chr}} if defined($tr_cache->{$chr}) && ref($tr_cache->{$chr}) eq 'ARRAY';
-        
-        # check we have defined regions
-        if(defined($regions->{$chr})) {
-            my $region_count = scalar @{$regions->{$chr}};
-            my $counter;
+    # structural variations
+    @finished_vfs = @{whole_genome_fetch_sv($config, \@svfs, $tr_cache, $rf_cache, $slice_cache, $chr)}
+        if scalar @svfs;
+    
+    # sort results into @finished_vfs array
+    foreach my $chunk(sort {$a cmp $b} keys %{$vf_hash->{$chr}}) {
+        foreach my $pos(sort {$a <=> $b} keys %{$vf_hash->{$chr}{$chunk}}) {
             
-            debug("Reading transcript data from cache and/or database") unless defined($config->{quiet});
+            # pinch slice from slice cache if we don't already have it
+            $_->{slice} ||= $slice_cache->{$chr} for @{$vf_hash->{$chr}{$chunk}{$pos}};
             
-            foreach my $region(sort {(split /\-/, $a)[0] <=> (split /\-/, $b)[1]} @{$regions->{$chr}}) {
-                progress($config, $counter++, $region_count);
-                
-                # skip regions beyond the end of the chr
-                next if defined($slice_cache->{$chr}) && (split /\-/, $region)[0] > $slice_cache->{$chr}->length;
-                
-                next if defined($config->{loaded_tr}->{$chr}->{$region});
-                
-                # force quiet so other methods don't mess up the progress bar
-                my $quiet = $config->{quiet};
-                $config->{quiet} = 1;
-                
-                # try and load cache from disk if using cache
-                my $tmp_cache;
-                if(defined($config->{cache})) {
-                    $tmp_cache = load_dumped_transcript_cache($config, $chr, $region);
-                    $count_from_cache += scalar @{$tmp_cache->{$chr}} if defined($tmp_cache->{$chr});
-                    $config->{loaded_tr}->{$chr}->{$region} = 1;
-                }
-                
-                # no cache found on disk or not using cache
-                if(!defined($tmp_cache->{$chr})) {
-                    
-                    if(defined($config->{offline})) {
-                        debug("WARNING: Could not find cache for $chr\:$region") unless defined($config->{quiet});
-                        next;
-                    }
-                    
-                    # spoof temporary region hash
-                    my $tmp_hash;
-                    push @{$tmp_hash->{$chr}}, $region;
-                    
-                    $tmp_cache = cache_transcripts($config, $tmp_hash);
-                    
-                    # make it an empty arrayref that gets cached
-                    # so we don't get confused and reload next time round
-                    $tmp_cache->{$chr} ||= [];
-                    
-                    $count_from_db += scalar @{$tmp_cache->{$chr}};
-                    
-                    # dump to disk if writing to cache
-                    dump_transcript_cache($config, $tmp_cache, $chr, $region) if defined($config->{write_cache});
-                    
-                    $config->{loaded_tr}->{$chr}->{$region} = 1;
-                }
-                
-                # add loaded transcripts to main cache
-                if(defined($tmp_cache->{$chr})) {
-                    while(my $tr = shift @{$tmp_cache->{$chr}}) {
-                        
-                        # CCDS
-                        #if(defined($config->{ccds})) {
-                        #    next unless defined($tr->{_ccds});
-                        #}
-                        
-                        # track already added transcripts by dbID
-                        my $dbID = $tr->dbID;
-                        if($seen_trs{$dbID}) {
-                            $count_duplicates++;
-                            next;
-                        }
-                        $seen_trs{$dbID} = 1;
-                        
-                        push @{$tr_cache->{$chr}}, $tr;
-                    }
-                }
-                
-                $tr_cache->{$chr} ||= [];
-                
-                undef $tmp_cache;
-                
-                # restore quiet status
-                $config->{quiet} = $quiet;
-                
-                # build slice cache
-                $slice_cache = build_slice_cache($config, $tr_cache) unless defined($slice_cache->{$chr});
-            }
-            
-            end_progress($config);
-        }
-        
-        my $tr_count = 0;
-        
-        $tr_count = scalar @{$tr_cache->{$chr}} if defined($tr_cache->{$chr});
-        
-        debug("Retrieved $tr_count transcripts ($count_from_mem mem, $count_from_cache cached, $count_from_db DB, $count_duplicates duplicates)") unless defined($config->{quiet});        
-        
-        # skip chr if no cache
-        if(defined($tr_cache->{$chr}) && defined($vf_hash->{$chr})) {
-        
-            # copy slice from transcript to slice cache
-            $slice_cache = build_slice_cache($config, $tr_cache) unless defined($slice_cache->{$chr});
-            
-            debug("Analyzing variants") unless defined($config->{quiet});
-            
-            my $tr_counter = 0;
-            
-            while($tr_counter < $tr_count) {
-                
-                progress($config, $tr_counter, $tr_count);
-                
-                my $tr = $tr_cache->{$chr}->[$tr_counter++];
-                
-                # do each overlapping VF
-                my $s = $tr->start - $up_down_size;
-                my $e = $tr->end + $up_down_size;
-                
-                # get the chunks this transcript overlaps
-                my %chunks;
-                $chunks{$_} = 1 for (int($s/$config->{chunk_size})..int($e/$config->{chunk_size}));
-                map {delete $chunks{$_} unless defined($vf_hash->{$chr}{$_})} keys %chunks;
-                
-                foreach my $chunk(keys %chunks) {
-                    foreach my $vf(
-                        grep {$_->{start} <= $e && $_->{end} >= $s}
-                        map {@{$vf_hash->{$chr}{$chunk}{$_}}}
-                        keys %{$vf_hash->{$chr}{$chunk}}
-                    ) {
-                        # pinch slice from slice cache if we don't already have it
-                        $vf->{slice} ||= $slice_cache->{$chr};
-                        
-                        my $tv = Bio::EnsEMBL::Variation::TranscriptVariation->new(
-                            -transcript        => $tr,
-                            -variation_feature => $vf,
-                            -adaptor           => $config->{tva},
-                            -no_ref_check      => 1,
-                            -no_transfer       => 1
-                        );
-                        
-                        # prefetching stuff here prevents doing loads at the
-                        # end and makes progress reporting more useful
-                        $tv->_prefetch_for_vep;
-                        
-                        $vf->add_TranscriptVariation($tv);
-                    }
+            if(defined($config->{regulatory})) {
+                foreach my $type(@REG_FEAT_TYPES) {
+                    $_->{regulation_variations}->{$type} ||= [] for @{$vf_hash->{$chr}{$chunk}{$pos}};
                 }
             }
             
-            end_progress($config);
+            if(defined($config->{custom})) {
+                $_->{custom} ||= {} for @{$vf_hash->{$chr}{$chunk}{$pos}};
+            }
+            
+            $_->{transcript_variations} ||= {} for @{$vf_hash->{$chr}{$chunk}{$pos}};
+            
+            # add to final array
+            push @finished_vfs, @{$vf_hash->{$chr}{$chunk}{$pos}};
         }
     }
     
+    # clean hash
+    delete $vf_hash->{$chr};
     
-    ## REGULATORY FEATURES
-    ######################
+    return \@finished_vfs;
+}
+
+sub whole_genome_fetch_custom {
+    my $config = shift;
+    my $vf_hash = shift;
+    my $chr = shift;
     
-    if(defined($config->{regulatory})) {
-        ($count_from_mem, $count_from_db, $count_from_cache, $count_duplicates) = (0, 0, 0, 0);
-        
-        if(defined($rf_cache->{$chr}) && ref($rf_cache->{$chr}) eq 'HASH') {
-            $count_from_mem += scalar @{$rf_cache->{$chr}->{$_}} for keys %{$rf_cache->{$chr}};
-        }
-        
-        # check we have defined regions
-        if(defined($regions->{$chr})) {
-            my $region_count = scalar @{$regions->{$chr}};
-            my $counter;
-            
-            debug("Reading regulatory data from cache and/or database") unless defined($config->{quiet});
-            
-            foreach my $region(sort {(split /\-/, $a)[0] cmp (split /\-/, $b)[1]} @{$regions->{$chr}}) {
-                progress($config, $counter++, $region_count);
-                
-                next if defined($config->{loaded_rf}->{$chr}->{$region});
-                
-                # skip regions beyond the end of the chr
-                next if defined($slice_cache->{$chr}) && (split /\-/, $region)[0] > $slice_cache->{$chr}->length;
-                
-                # force quiet so other methods don't mess up the progress bar
-                my $quiet = $config->{quiet};
-                $config->{quiet} = 1;
-                
-                # try and load cache from disk if using cache
-                my $tmp_cache;
-                if(defined($config->{cache})) {
-                    $tmp_cache = load_dumped_reg_feat_cache($config, $chr, $region);
-                    if(defined($tmp_cache->{$chr})) {
-                        $count_from_cache += scalar @{$tmp_cache->{$chr}->{$_}} for keys %{$tmp_cache->{$chr}};
-                    }
-                    
-                    # flag as loaded
-                    $config->{loaded_rf}->{$chr}->{$region} = 1;
-                }
-                
-                # no cache found on disk or not using cache
-                if(!defined($tmp_cache->{$chr})) {
-                    
-                    if(defined($config->{offline})) {
-                        debug("WARNING: Could not find cache for $chr\:$region") unless defined($config->{quiet});
-                        next;
-                    }
-                    
-                    # spoof temporary region hash
-                    my $tmp_hash;
-                    push @{$tmp_hash->{$chr}}, $region;
-                    
-                    $tmp_cache = cache_reg_feats($config, $tmp_hash);
-                    
-                    # make it an empty arrayref that gets cached
-                    # so we don't get confused and reload next time round
-                    $tmp_cache->{$chr} ||= {};
-                    
-                    $count_from_db += scalar @{$tmp_cache->{$chr}->{$_}} for keys %{$tmp_cache->{$chr}};
-                    
-                    # dump to disk if writing to cache
-                    dump_reg_feat_cache($config, $tmp_cache, $chr, $region) if defined($config->{write_cache});
-                    
-                    # restore deleted coord_system adaptor
-                    foreach my $type(keys %{$tmp_cache->{$chr}}) {
-                        $_->{slice}->{coord_system}->{adaptor} = $config->{csa} for @{$tmp_cache->{$chr}->{$type}};
-                    }
-                    
-                    # flag as loaded
-                    $config->{loaded_rf}->{$chr}->{$region} = 1;                        
-                }
-                
-                # add loaded reg_feats to main cache
-                if(defined($tmp_cache->{$chr})) {
-                    foreach my $type(keys %{$tmp_cache->{$chr}}) {
-                        while(my $rf = shift @{$tmp_cache->{$chr}->{$type}}) {
-                            
-                            # track already added reg_feats by dbID
-                            my $dbID = $rf->{dbID};
-                            if($seen_rfs{$dbID}) {
-                                $count_duplicates++;
-                                next;
-                            }
-                            $seen_rfs{$dbID} = 1;
-                            
-                            push @{$rf_cache->{$chr}->{$type}}, $rf;
-                        }
-                    }
-                }
-                
-                undef $tmp_cache;
-                
-                # restore quiet status
-                $config->{quiet} = $quiet;
-            }
-            
-            end_progress($config);
-        }
-        
-        if(defined($rf_cache->{$chr}) && defined($vf_hash->{$chr})) {
-            
-            $slice_cache ||= build_slice_cache($config, $rf_cache);
-            
-            my $rf_count = 0;
-            
-            foreach my $type(keys %{$rf_cache->{$chr}}) {
-                $rf_count += scalar @{$rf_cache->{$chr}->{$type}};
-            }
-            
-            debug("Retrieved $rf_count regulatory features ($count_from_mem mem, $count_from_cache cached, $count_from_db DB, $count_duplicates duplicates)") unless defined($config->{quiet});
-            
-            foreach my $type(keys %{$rf_cache->{$chr}}) {
-                debug("Analyzing ".$type."s") unless defined($config->{quiet});
-                
-                my $constructor = 'Bio::EnsEMBL::Variation::'.$type.'Variation';
-                
-                my $rf_counter = 0;
-                my $rf_count = scalar @{$rf_cache->{$chr}->{$type}};
-                
-                while($rf_counter < $rf_count) {
-                    
-                    progress($config, $rf_counter, $rf_count);
-                    
-                    my $rf = $rf_cache->{$chr}->{$type}->[$rf_counter++];
-                    
-                    # do each overlapping VF
-                    my $s = $rf->{start};
-                    my $e = $rf->{end};
-                    
-                    # get the chunks this transcript overlaps
-                    my %chunks;
-                    $chunks{$_} = 1 for (int($s/$config->{chunk_size})..int($e/$config->{chunk_size}));
-                    map {delete $chunks{$_} unless defined($vf_hash->{$chr}{$_})} keys %chunks;
-                    
-                    foreach my $chunk(keys %chunks) {
-                        foreach my $vf(
-                            grep {$_->{start} <= $e && $_->{end} >= $s}
-                            map {@{$vf_hash->{$chr}{$chunk}{$_}}}
-                            keys %{$vf_hash->{$chr}{$chunk}}
-                        ) {
-                            push @{$vf->{regulation_variations}->{$type}}, $constructor->new(
-                                -variation_feature  => $vf,
-                                -feature            => $rf,
-                                -no_ref_check       => 1,
-                                -no_transfer        => 1
-                            );
-                        }
-                    }
-                }
-                
-                end_progress($config);
+    return unless scalar @{$config->{custom}};
+    
+    # create regions based on VFs instead of chunks
+    my $tmp_regions;
+    
+    foreach my $chunk(keys %{$vf_hash->{$chr}}) {
+        foreach my $pos(keys %{$vf_hash->{$chr}{$chunk}}) {
+            foreach my $vf(@{$vf_hash->{$chr}{$chunk}{$pos}}) {
+                push @{$tmp_regions->{$chr}}, ($vf->{start}-1).'-'.($vf->{end}+1);
             }
         }
     }
     
-    # STRUCTURAL VARIANTS
-    #####################
+    return unless defined($tmp_regions->{$chr});
     
-    if(scalar @svfs) {
+    # cache annotations
+    my $annotation_cache = cache_custom_annotation($config, $tmp_regions, $chr);
+    
+    # count and report
+    my $total_annotations = 0;
+    $total_annotations += scalar keys %{$annotation_cache->{$chr}->{$_}} for keys %{$annotation_cache->{$chr}};
+    debug("Retrieved $total_annotations custom annotations (", (join ", ", map {(scalar keys %{$annotation_cache->{$chr}->{$_}}).' '.$_} keys %{$annotation_cache->{$chr}}), ")");
+    
+    # compare annotations to variations in hash
+    debug("Analyzing custom annotations") unless defined($config->{quiet});
+    my $total = scalar keys %{$vf_hash->{$chr}};
+    my $i = 0;
+    
+    foreach my $chunk(keys %{$vf_hash->{$chr}}) {
+        progress($config, $i++, $total);
         
-        debug("Analyzing structural variations") unless defined($config->{quiet});
+        foreach my $pos(keys %{$vf_hash->{$chr}{$chunk}}) {
+            foreach my $vf(@{$vf_hash->{$chr}{$chunk}{$pos}}) {
+                
+                $vf->{custom} = get_custom_annotation($config, $vf, $annotation_cache);
+            }
+        }
+    }
+    
+    end_progress($config);
+}
+
+sub whole_genome_fetch_transcript {
+    my $config = shift;
+    my $vf_hash = shift;
+    my $tr_cache = shift;
+    my $slice_cache = shift;
+    my $regions = shift;
+    my $chr = shift;
+    
+    my ($count_from_mem, $count_from_db, $count_from_cache, $count_duplicates) = (0, 0, 0, 0);
+    
+    my %seen_trs;
+    
+    my $up_down_size = MAX_DISTANCE_FROM_TRANSCRIPT;
+    
+    $count_from_mem = scalar @{$tr_cache->{$chr}} if defined($tr_cache->{$chr}) && ref($tr_cache->{$chr}) eq 'ARRAY';
+    
+    # check we have defined regions
+    return unless defined($regions->{$chr}) && defined($vf_hash->{$chr});
+    
+    my $region_count = scalar @{$regions->{$chr}};
+    my $counter;
+    
+    debug("Reading transcript data from cache and/or database") unless defined($config->{quiet});
+    
+    foreach my $region(sort {(split /\-/, $a)[0] <=> (split /\-/, $b)[1]} @{$regions->{$chr}}) {
+        progress($config, $counter++, $region_count);
         
-        my($i, $total) = (0, scalar @svfs);
+        # skip regions beyond the end of the chr
+        next if defined($slice_cache->{$chr}) && (split /\-/, $region)[0] > $slice_cache->{$chr}->length;
         
-        foreach my $svf(@svfs) {
-            progress($config, $i++, $total);
+        next if defined($config->{loaded_tr}->{$chr}->{$region});
+        
+        # force quiet so other methods don't mess up the progress bar
+        my $quiet = $config->{quiet};
+        $config->{quiet} = 1;
+        
+        # try and load cache from disk if using cache
+        my $tmp_cache;
+        if(defined($config->{cache})) {
+            $tmp_cache = load_dumped_transcript_cache($config, $chr, $region);
+            $count_from_cache += scalar @{$tmp_cache->{$chr}} if defined($tmp_cache->{$chr});
+            $config->{loaded_tr}->{$chr}->{$region} = 1;
+        }
+        
+        # no cache found on disk or not using cache
+        if(!defined($tmp_cache->{$chr})) {
             
-            my %done_genes = ();
+            if(defined($config->{offline})) {
+                debug("WARNING: Could not find cache for $chr\:$region") unless defined($config->{quiet});
+                next;
+            }
             
+            # spoof temporary region hash
+            my $tmp_hash;
+            push @{$tmp_hash->{$chr}}, $region;
+            
+            $tmp_cache = cache_transcripts($config, $tmp_hash);
+            
+            # make it an empty arrayref that gets cached
+            # so we don't get confused and reload next time round
+            $tmp_cache->{$chr} ||= [];
+            
+            $count_from_db += scalar @{$tmp_cache->{$chr}};
+            
+            # dump to disk if writing to cache
+            dump_transcript_cache($config, $tmp_cache, $chr, $region) if defined($config->{write_cache});
+            
+            $config->{loaded_tr}->{$chr}->{$region} = 1;
+        }
+        
+        # add loaded transcripts to main cache
+        if(defined($tmp_cache->{$chr})) {
+            while(my $tr = shift @{$tmp_cache->{$chr}}) {
+                
+                # CCDS
+                #if(defined($config->{ccds})) {
+                #    next unless defined($tr->{_ccds});
+                #}
+                
+                # track already added transcripts by dbID
+                my $dbID = $tr->dbID;
+                if($seen_trs{$dbID}) {
+                    $count_duplicates++;
+                    next;
+                }
+                $seen_trs{$dbID} = 1;
+                
+                push @{$tr_cache->{$chr}}, $tr;
+            }
+        }
+        
+        $tr_cache->{$chr} ||= [];
+        
+        undef $tmp_cache;
+        
+        # restore quiet status
+        $config->{quiet} = $quiet;
+        
+        # build slice cache
+        $slice_cache = build_slice_cache($config, $tr_cache) unless defined($slice_cache->{$chr});
+    }
+    
+    end_progress($config);
+    
+    my $tr_count = 0;
+    
+    $tr_count = scalar @{$tr_cache->{$chr}} if defined($tr_cache->{$chr});
+    
+    debug("Retrieved $tr_count transcripts ($count_from_mem mem, $count_from_cache cached, $count_from_db DB, $count_duplicates duplicates)") unless defined($config->{quiet});        
+    
+    # skip chr if no cache
+    return unless defined($tr_cache->{$chr});
+    
+    # copy slice from transcript to slice cache
+    $slice_cache = build_slice_cache($config, $tr_cache) unless defined($slice_cache->{$chr});
+    
+    debug("Analyzing variants") unless defined($config->{quiet});
+    
+    my $tr_counter = 0;
+    
+    while($tr_counter < $tr_count) {
+        
+        progress($config, $tr_counter, $tr_count);
+        
+        my $tr = $tr_cache->{$chr}->[$tr_counter++];
+        
+        # do each overlapping VF
+        my $s = $tr->start - $up_down_size;
+        my $e = $tr->end + $up_down_size;
+        
+        # get the chunks this transcript overlaps
+        my %chunks;
+        $chunks{$_} = 1 for (int($s/$config->{chunk_size})..int($e/$config->{chunk_size}));
+        map {delete $chunks{$_} unless defined($vf_hash->{$chr}{$_})} keys %chunks;
+        
+        foreach my $chunk(keys %chunks) {
+            foreach my $vf(
+                grep {$_->{start} <= $e && $_->{end} >= $s}
+                map {@{$vf_hash->{$chr}{$chunk}{$_}}}
+                keys %{$vf_hash->{$chr}{$chunk}}
+            ) {
+                # pinch slice from slice cache if we don't already have it
+                $vf->{slice} ||= $slice_cache->{$chr};
+                
+                my $tv = Bio::EnsEMBL::Variation::TranscriptVariation->new(
+                    -transcript        => $tr,
+                    -variation_feature => $vf,
+                    -adaptor           => $config->{tva},
+                    -no_ref_check      => 1,
+                    -no_transfer       => 1
+                );
+                
+                # prefetching stuff here prevents doing loads at the
+                # end and makes progress reporting more useful
+                $tv->_prefetch_for_vep;
+                
+                $vf->add_TranscriptVariation($tv);
+            }
+        }
+    }
+    
+    end_progress($config);
+}
+
+sub whole_genome_fetch_reg {
+    my $config = shift;
+    my $vf_hash = shift;
+    my $rf_cache = shift;
+    my $slice_cache = shift;
+    my $regions = shift;
+    my $chr = shift;
+    
+    my ($count_from_mem, $count_from_db, $count_from_cache, $count_duplicates) = (0, 0, 0, 0);
+    
+    my %seen_rfs;
+    
+    my $up_down_size = MAX_DISTANCE_FROM_TRANSCRIPT;
+    
+    if(defined($rf_cache->{$chr}) && ref($rf_cache->{$chr}) eq 'HASH') {
+        $count_from_mem += scalar @{$rf_cache->{$chr}->{$_}} for keys %{$rf_cache->{$chr}};
+    }
+    
+    # check we have defined regions
+    return unless defined($regions->{$chr});
+    
+    my $region_count = scalar @{$regions->{$chr}};
+    my $counter;
+    
+    debug("Reading regulatory data from cache and/or database") unless defined($config->{quiet});
+    
+    foreach my $region(sort {(split /\-/, $a)[0] cmp (split /\-/, $b)[1]} @{$regions->{$chr}}) {
+        progress($config, $counter++, $region_count);
+        
+        next if defined($config->{loaded_rf}->{$chr}->{$region});
+        
+        # skip regions beyond the end of the chr
+        next if defined($slice_cache->{$chr}) && (split /\-/, $region)[0] > $slice_cache->{$chr}->length;
+        
+        # force quiet so other methods don't mess up the progress bar
+        my $quiet = $config->{quiet};
+        $config->{quiet} = 1;
+        
+        # try and load cache from disk if using cache
+        my $tmp_cache;
+        if(defined($config->{cache})) {
+            $tmp_cache = load_dumped_reg_feat_cache($config, $chr, $region);
+            if(defined($tmp_cache->{$chr})) {
+                $count_from_cache += scalar @{$tmp_cache->{$chr}->{$_}} for keys %{$tmp_cache->{$chr}};
+            }
+            
+            # flag as loaded
+            $config->{loaded_rf}->{$chr}->{$region} = 1;
+        }
+        
+        # no cache found on disk or not using cache
+        if(!defined($tmp_cache->{$chr})) {
+            
+            if(defined($config->{offline})) {
+                debug("WARNING: Could not find cache for $chr\:$region") unless defined($config->{quiet});
+                next;
+            }
+            
+            # spoof temporary region hash
+            my $tmp_hash;
+            push @{$tmp_hash->{$chr}}, $region;
+            
+            $tmp_cache = cache_reg_feats($config, $tmp_hash);
+            
+            # make it an empty arrayref that gets cached
+            # so we don't get confused and reload next time round
+            $tmp_cache->{$chr} ||= {};
+            
+            $count_from_db += scalar @{$tmp_cache->{$chr}->{$_}} for keys %{$tmp_cache->{$chr}};
+            
+            # dump to disk if writing to cache
+            dump_reg_feat_cache($config, $tmp_cache, $chr, $region) if defined($config->{write_cache});
+            
+            # restore deleted coord_system adaptor
+            foreach my $type(keys %{$tmp_cache->{$chr}}) {
+                $_->{slice}->{coord_system}->{adaptor} = $config->{csa} for @{$tmp_cache->{$chr}->{$type}};
+            }
+            
+            # flag as loaded
+            $config->{loaded_rf}->{$chr}->{$region} = 1;                        
+        }
+        
+        # add loaded reg_feats to main cache
+        if(defined($tmp_cache->{$chr})) {
+            foreach my $type(keys %{$tmp_cache->{$chr}}) {
+                while(my $rf = shift @{$tmp_cache->{$chr}->{$type}}) {
+                    
+                    # filter on cell type
+                    if(defined($config->{cell_type})) {
+                        next unless grep {$rf->{cell_types}->{$_}} @{$config->{cell_type}};
+                    }
+                    
+                    # track already added reg_feats by dbID
+                    my $dbID = $rf->{dbID};
+                    if($seen_rfs{$dbID}) {
+                        $count_duplicates++;
+                        next;
+                    }
+                    $seen_rfs{$dbID} = 1;
+                    
+                    push @{$rf_cache->{$chr}->{$type}}, $rf;
+                }
+            }
+        }
+        
+        undef $tmp_cache;
+        
+        # restore quiet status
+        $config->{quiet} = $quiet;
+    }
+    
+    end_progress($config);
+    
+    return unless defined($rf_cache->{$chr});
+    
+    $slice_cache ||= build_slice_cache($config, $rf_cache);
+    
+    my $rf_count = 0;
+    
+    foreach my $type(keys %{$rf_cache->{$chr}}) {
+        $rf_count += scalar @{$rf_cache->{$chr}->{$type}};
+    }
+    
+    debug("Retrieved $rf_count regulatory features ($count_from_mem mem, $count_from_cache cached, $count_from_db DB, $count_duplicates duplicates)") unless defined($config->{quiet});
+    
+    foreach my $type(keys %{$rf_cache->{$chr}}) {
+        debug("Analyzing ".$type."s") unless defined($config->{quiet});
+        
+        my $constructor = 'Bio::EnsEMBL::Variation::'.$type.'Variation';
+        
+        my $rf_counter = 0;
+        my $rf_count = scalar @{$rf_cache->{$chr}->{$type}};
+        
+        while($rf_counter < $rf_count) {
+            
+            progress($config, $rf_counter, $rf_count);
+            
+            my $rf = $rf_cache->{$chr}->{$type}->[$rf_counter++];
+            
+            # do each overlapping VF
+            my $s = $rf->{start};
+            my $e = $rf->{end};
+            
+            # get the chunks this transcript overlaps
+            my %chunks;
+            $chunks{$_} = 1 for (int($s/$config->{chunk_size})..int($e/$config->{chunk_size}));
+            map {delete $chunks{$_} unless defined($vf_hash->{$chr}{$_})} keys %chunks;
+            
+            foreach my $chunk(keys %chunks) {
+                foreach my $vf(
+                    grep {$_->{start} <= $e && $_->{end} >= $s}
+                    map {@{$vf_hash->{$chr}{$chunk}{$_}}}
+                    keys %{$vf_hash->{$chr}{$chunk}}
+                ) {
+                    push @{$vf->{regulation_variations}->{$type}}, $constructor->new(
+                        -variation_feature  => $vf,
+                        -feature            => $rf,
+                        -no_ref_check       => 1,
+                        -no_transfer        => 1
+                    );
+                }
+            }
+        }
+        
+        end_progress($config);
+    }
+}
+
+sub whole_genome_fetch_sv {
+    my $config = shift;
+    my $svfs = shift;
+    my $tr_cache = shift;
+    my $rf_cache = shift;
+    my $slice_cache = shift;
+    my $chr = shift;
+    
+    debug("Analyzing structural variations") unless defined($config->{quiet});
+    
+    my($i, $total) = (0, scalar @$svfs);
+    
+    my @finished_vfs;
+    
+    foreach my $svf(@$svfs) {
+        progress($config, $i++, $total);
+        
+        my %done_genes = ();
+        
+        if(defined($tr_cache->{$chr})) {
             foreach my $tr(grep {$_->{start} <= $svf->{end} && $_->end >= $svf->{end}} @{$tr_cache->{$chr}}) {
                 
                 my $svo;
@@ -2129,59 +2275,30 @@ sub whole_genome_fetch {
                     push @{$svf->{structural_variation_overlaps}}, $svo;
                 }
             }
-            
-            # do regulatory features
-            if(defined($config->{regulatory}) && defined($rf_cache)) {
-                foreach my $rf_type(qw/RegulatoryFeature/) {#keys %{$rf_cache->{$chr}}) {
-                    next unless $rf_cache->{$chr}->{$rf_type};
-                    foreach my $rf(grep {$_->{start} <= $svf->{end} && $_->end >= $svf->{end}} @{$rf_cache->{$chr}->{$rf_type}}) {
-                        my $svo = Bio::EnsEMBL::Variation::StructuralVariationOverlap->new(
-                            -feature                      => $rf,
-                            -structural_variation_feature => $svf,
-                            -no_transfer                  => 1
-                        );
-                        
-                        push @{$svf->{structural_variation_overlaps}}, $svo;
-                    }
-                }
-            }
-            
-            # sort them
-            #$svf->_sort_svos;
-            $svf->{structural_variation_overlaps} ||= [];
-            push @finished_vfs, $svf;
         }
         
-        end_progress($config);
-    }
-    
-    
-    # sort results into @finished_vfs array
-    foreach my $chunk(sort {$a cmp $b} keys %{$vf_hash->{$chr}}) {
-        foreach my $pos(sort {$a <=> $b} keys %{$vf_hash->{$chr}{$chunk}}) {
-            
-            # pinch slice from slice cache if we don't already have it
-            $_->{slice} ||= $slice_cache->{$chr} for @{$vf_hash->{$chr}{$chunk}{$pos}};
-            
-            if(defined($config->{regulatory})) {
-                foreach my $type(@REG_FEAT_TYPES) {
-                    $_->{regulation_variations}->{$type} ||= [] for @{$vf_hash->{$chr}{$chunk}{$pos}};
+        # do regulatory features
+        if(defined($config->{regulatory}) && defined($rf_cache->{$chr})) {
+            foreach my $rf_type(qw/RegulatoryFeature/) {#keys %{$rf_cache->{$chr}}) {
+                foreach my $rf(grep {$_->{start} <= $svf->{end} && $_->end >= $svf->{end}} @{$rf_cache->{$chr}->{$rf_type}}) {
+                    my $svo = Bio::EnsEMBL::Variation::StructuralVariationOverlap->new(
+                        -feature                      => $rf,
+                        -structural_variation_feature => $svf,
+                        -no_transfer                  => 1
+                    );
+                    
+                    push @{$svf->{structural_variation_overlaps}}, $svo;
                 }
             }
-            
-            if(defined($config->{custom})) {
-                $_->{custom} ||= {} for @{$vf_hash->{$chr}{$chunk}{$pos}};
-            }
-            
-            $_->{transcript_variations} ||= {} for @{$vf_hash->{$chr}{$chunk}{$pos}};
-            
-            # add to final array
-            push @finished_vfs, @{$vf_hash->{$chr}{$chunk}{$pos}};
         }
+        
+        # sort them
+        #$svf->_sort_svos;
+        $svf->{structural_variation_overlaps} ||= [];
+        push @finished_vfs, $svf;
     }
     
-    # clean hash
-    delete $vf_hash->{$chr};
+    end_progress($config);
     
     return \@finished_vfs;
 }
@@ -2274,6 +2391,51 @@ sub check_existing_hash {
         }
         
         delete $variation_cache->{$chr};
+    }
+    
+    end_progress($config);
+}
+
+# gets overlapping SVs for a vf_hash
+sub check_svs_hash {
+    my $config = shift;
+    my $vf_hash = shift;
+    
+    debug("Checking for overlapping structural variations") unless defined($config->{quiet});
+    
+    my ($chunk_count, $counter);
+    $chunk_count += scalar keys %{$vf_hash->{$_}} for keys %{$vf_hash};
+    
+    foreach my $chr(keys %{$vf_hash}) {
+        foreach my $chunk(keys %{$vf_hash->{$chr}}) {
+            
+            progress($config, $counter++, $chunk_count);
+            
+            # work out start and end using chunk_size
+            my ($start, $end);
+            $start = $config->{chunk_size} * $chunk;
+            $end = $config->{chunk_size} * ($chunk + 1);
+            
+            # check for structural variations
+            if(defined($config->{sa})) {
+                my $slice = $config->{sa}->fetch_by_region('chromosome', $chr, $start, $end);
+                
+                if(defined($slice)) {
+                    my $svs = $config->{svfa}->fetch_all_by_Slice($slice);
+                    
+                    foreach my $pos(keys %{$vf_hash->{$chr}->{$chunk}}) {
+                        foreach my $var(@{$vf_hash->{$chr}->{$chunk}->{$pos}}) {
+                            my $string = join ",",
+                                map {$_->variation_name}
+                                grep {$_->seq_region_start <= $var->end && $_->seq_region_end >= $var->start}
+                                @$svs;
+                            
+                            $var->{overlapping_svs} = $string if $string;
+                        }
+                    }
+                }
+            }
+        }
     }
     
     end_progress($config);
@@ -2808,10 +2970,10 @@ sub prefetch_transcript_data {
     }
     
     # sift/polyphen
-    if(defined($config->{pfpma})) {
+    if(defined($config->{pfpma}) && defined($tr->{_variation_effect_feature_cache}->{peptide})) {
         foreach my $analysis(qw(sift polyphen)) {
             next unless defined($config->{$analysis});
-            $tr->{_variation_effect_feature_cache}->{protein_function_predictions}->{$analysis} ||= $config->{pfpma}->fetch_by_analysis_transcript_stable_id($analysis, $tr->stable_id);
+            $tr->{_variation_effect_feature_cache}->{protein_function_predictions}->{$analysis} ||= $config->{pfpma}->fetch_by_analysis_translation_md5($analysis, md5hex($tr->{_variation_effect_feature_cache}->{peptide}))
         }
     }
     
@@ -2873,6 +3035,7 @@ sub dump_transcript_cache {
     strip_transcript_cache($config, $tr_cache);
     
     $config->{reg}->disconnect_all;
+    delete $config->{sa}->{dbc}->{_sql_helper};
     
     my $dir = $config->{dir}.'/'.$chr;
     my $dump_file = $dir.'/'.($region || "dump").'.gz';
@@ -3045,6 +3208,7 @@ sub dump_adaptor_cache {
     my $config = shift;
     
     $config->{reg}->disconnect_all;
+    delete $config->{sa}->{dbc}->{_sql_helper};
     
     my $dir = $config->{dir};
     my $dump_file = $dir.'/adaptors.gz';
@@ -3203,6 +3367,30 @@ sub cache_reg_feats {
                 my $features = $config->{$type.'_adaptor'}->fetch_all_by_Slice($sub_slice);
                 next unless defined($features);
                 
+                # cell types
+                if(defined($config->{cell_type})) {
+                    foreach my $rf(@$features) {
+                        
+                        my %cl;
+                        
+                        # get cell type by fetching all from stable ID
+                        if($type eq 'RegulatoryFeature') {
+                            %cl = map {
+                                $_->feature_set->cell_type->name => $_->feature_type->name
+                            } @{$rf->adaptor->fetch_all_by_stable_ID($rf->stable_id)};
+                        }
+                        
+                        # get cell type by fetching regfeats that contain this MotifFeature
+                        elsif($type eq 'MotifFeature') {
+                            %cl = map {
+                                $_->feature_set->cell_type->name => $_->feature_type->name
+                            } @{$config->{'RegulatoryFeature_adaptor'}->fetch_all_by_attribute_feature($rf)};
+                        }
+                        
+                        $rf->{cell_types} = \%cl;
+                    }
+                }
+                
                 push @{$rf_cache->{$chr}->{$type}},
                     map { clean_reg_feat($_) }
                     map { $_->transfer($slice) }
@@ -3226,7 +3414,6 @@ sub clean_reg_feat {
     }
     
     if(defined($rf->{binding_matrix})) {
-        
         $rf->{_variation_effect_feature_cache}->{seq} = $rf->seq;
         
         foreach my $key(qw/adaptor feature_type analysis dbID/) {
@@ -3251,6 +3438,7 @@ sub dump_reg_feat_cache {
     clean_slice_adaptor($config);
     
     $config->{reg}->disconnect_all;
+    delete $config->{sa}->{dbc}->{_sql_helper};
     
     foreach my $chr(keys %{$rf_cache}) {
         foreach my $type(keys %{$rf_cache->{$chr}}) {
@@ -3448,7 +3636,6 @@ sub cache_custom_annotation {
     return $annotation;
 }
 
-
 # builds a full cache for this species
 sub build_full_cache {
     my $config = shift;
@@ -3560,7 +3747,12 @@ sub write_cache_info {
         print OUT "$param\t".(defined $config->{$param} ? $config->{$param} : '-')."\n";
     }
     
-    print OUT "condel\tb\n" if defined($config->{sift}) && defined($config->{polyphen});
+    # cell types
+    if(defined($config->{cell_type})) {
+        my $cta = $config->{RegulatoryFeature_adaptor}->db->get_CellTypeAdaptor();
+        print OUT "cell_types\t".(join ",", @{$cta->fetch_all});
+        print OUT "\n";
+    }
     
     close OUT;
 }
