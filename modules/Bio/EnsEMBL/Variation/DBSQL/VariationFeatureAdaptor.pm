@@ -1213,6 +1213,11 @@ sub _parse_hgvs_genomic_position {
     ## end information needed even if same as start
     unless ($end){$end = $start;}  
     unless ($end_offset){$end_offset = $start_offset;} 
+    if($description =~ /dup/){ 
+          ## handle as insertion for ensembl object purposes 
+              $start = $end ;
+              $start++;
+      }
     if( $start_offset ||   $end_offset){ warn "ERROR: not expecting offsets for genomic location [$description]\n";}
 
     return ($start, $end);
@@ -1234,24 +1239,32 @@ sub _parse_hgvs_transcript_position {
     my ($start,$start_offset, $end, $end_offset) = $description =~ m/^([\-\*]?\d+)((?:[\+\-]\d+)?)(?:_([\-\*]?\d+)((?:[\+\-]\d+)?))?/;
     my ($start_direction, $end_direction); ## go back or forward into intron
     
-    $start_offset = 0 unless (defined($start_offset) && length($start_offset));	 ### exonic
-    
-    ### extract + or - for intronic positions in coding nomenclature
-    if (substr($start_offset,0,1) eq '+' || substr($start_offset,0,1) eq '-'){
-	$start_direction  = substr($start_offset,0,1);  
-	$start_offset     = substr($start_offset,1) ;
-	$start            = $start;
+    if($start_offset ){
+	### extract + or - for intronic positions in coding nomenclature
+	if (substr($start_offset,0,1) eq '+' || substr($start_offset,0,1) eq '-'){
+	    $start_direction  = substr($start_offset,0,1);  
+	    $start_offset     = substr($start_offset,1) ;
+	    $start            = $start;
+	}
     }
-    ###  this is needed for long intronic events eg. ENST00000299272.5:c.98-354_98-351dupGAAA
-    if (substr($end_offset,0,1) eq '+' || substr($end_offset,0,1) eq '-'){
-	$end_direction   = substr($end_offset,0,1); 
-	$end_offset      = substr($end_offset,1) ;
-	$end             = $end
+    else{  ### exonic
+	$start_offset = 0 ;
+    }
+    
+    if($end_offset ){
+	###  this is needed for long intronic events eg. ENST00000299272.5:c.98-354_98-351dupGAAA
+	if (substr($end_offset,0,1) eq '+' || substr($end_offset,0,1) eq '-'){
+	    $end_direction   = substr($end_offset,0,1); 
+	    $end_offset      = substr($end_offset,1) ;
+	    $end             = $end
+	}
+    }
+    else{
+	$end_offset   =  $start_offset;    
     }
     ### add missing values if single-location variant - needed for refseq check later
-    unless (defined($end) && length($end)) {
+    unless (defined $end) {
 	$end          = $start;
-	$end_offset   = $start_offset;
 	$end_direction= $start_direction  ;
     }
     
@@ -1278,7 +1291,7 @@ sub _parse_hgvs_transcript_position {
     }
     else{
 	#### non coding transcript
-	($cds_start, $cds_end)  = (($start + $transcript->cdna_coding_start() ),($end + $transcript->cdna_coding_start() ));
+	($cds_start, $cds_end)  = ($start, $end);
     }
     # Convert the cDNA coordinates to genomic coordinates.
     my @coords = $tr_mapper->cdna2genomic($cds_start,$cds_end);
@@ -1311,7 +1324,12 @@ sub _parse_hgvs_transcript_position {
 	    if($end_direction   eq "-"){ $end   = $end   + $end_offset;  }
 	}
     }
-        
+    if($description =~ /dup/){ 
+	## special case: handle as insertion for ensembl object purposes 
+	$start = $end ;
+	if($strand  == 1){ $start++; }
+	else{	           $end--;   }
+    }   
     return ($start, $end, $strand);
 }
 
@@ -1403,14 +1421,11 @@ sub fetch_by_hgvs_notation {
    # If the reference allele was omitted, set it to undef
    $ref_allele = undef unless (defined($ref_allele) && length($ref_allele));    	
     
-    if ($description =~ m/ins/i && $description !~ m/del/i) {
+    if ($description =~ m/ins|dup/i && $description !~ m/del/i) {
        # insertion: the start & end positions are inverted by convention
         if($end > $start){ ($start, $end  ) = ( $end , $start); }   
-        ##print "Not checking reference allele - insertion\n";
     }
     else{
-       #if( $start >$end ){ ($start, $end  ) = ( $end , $start);}
-        
        # If the reference from the sequence does not correspond to the reference given in the HGVS notation, throw an exception 
        if (defined($ref_allele) && $ref_allele ne $refseq_allele){        
            throw ("Reference allele extracted from $reference:$start-$end ($refseq_allele) does not match reference allele given by HGVS notation ($ref_allele)");
@@ -1467,34 +1482,28 @@ sub _get_hgvs_alleles{
     
     ### A single nt substitution, reference and alternative alleles are required
     if ($description =~ m/>/) {
-	#$class = 'snv';
 	($ref_allele,$alt_allele) = $description =~ m/([A-Z]+)>([A-Z]+)$/i;
     }
     
     #ÊA delins, the reference allele is optional
     elsif ($description =~ m/del.*ins/i) {
-	#$class = 'delins';
 	($ref_allele,$alt_allele) = $description =~ m/del(.*?)ins([A-Z]+)$/i;    	    
     }
     
     # A deletion, the reference allele is optional
     elsif ($description =~ m/del/i) {
-	#$class = 'del';
 	($ref_allele) = $description =~ m/del([A-Z]*)$/i; 
 	$alt_allele = '-';
     }
     
     # A duplication, the reference allele is optional
     elsif ($description =~ m/dup/i) {
-	# $class = 'dup';
-	($ref_allele) = $description =~ m/dup([A-Z]*)$/i;
-        my $repeat = 2;
-        $alt_allele = ${ref_allele}x$repeat; 
+	$ref_allele ="-";
+	($alt_allele) = $description =~ m/dup([A-Z]*)$/i;
     }
     
     # An inversion, the reference allele is optional
     elsif ($description =~ m/inv/i) {
-	# $class = 'inv';
 	($ref_allele) = $description =~ m/inv([A-Z]*)$/i;
 	$alt_allele = $ref_allele;
 	reverse_comp(\$alt_allele);
@@ -1502,7 +1511,6 @@ sub _get_hgvs_alleles{
     
     # An insertion, 
     elsif ($description =~ m/ins/i) {
-	#$class = 'ins';
 	($alt_allele) = $description =~ m/ins([A-Z]*)$/i;
         $ref_allele = '-';
     }
@@ -1511,7 +1519,6 @@ sub _get_hgvs_alleles{
 	
 	my ($number, $string) = $description =~ m/\[(\d+)\]([A-Z]*)$/i; 
 	foreach my $n(1..$number){ $alt_allele .= $string;}
-	#$class = '[$number]';
 	$ref_allele = $string;
     }
     else {
