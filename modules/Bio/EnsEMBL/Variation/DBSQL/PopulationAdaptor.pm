@@ -390,7 +390,7 @@ sub fetch_default_LDPopulation{
 sub fetch_all_LD_Populations{
     my $self = shift;
 	
-	return $self->generic_fetch(qq{ s.display = 'LD' });
+	return [grep {$_->name !~ /ALL|AFR|AMR|ASN|EUR/} @{$self->generic_fetch(qq{ s.display = 'LD' })}];
 }
 
 
