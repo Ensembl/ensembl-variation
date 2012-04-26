@@ -919,9 +919,9 @@ sub _protein_function_predictions {
     my $matrix = $tran->{_variation_effect_feature_cache}->{protein_function_predictions}->{$analysis};
 
     unless ($matrix || exists($tran->{_variation_effect_feature_cache}->{protein_function_predictions}->{$analysis})) {
-        my $pfpma = $self->{adaptor}->db->get_ProteinFunctionPredictionMatrixAdaptor;
+        #my $pfpma = $self->{adaptor}->db->get_ProteinFunctionPredictionMatrixAdaptor;
            
-        $matrix = $pfpma->fetch_by_analysis_translation_md5($analysis, $self->_translation_md5);
+        #$matrix = $pfpma->fetch_by_analysis_translation_md5($analysis, $self->_translation_md5);
 
         $tran->{_variation_effect_feature_cache}->{protein_function_predictions}->{$analysis} = $matrix;
     }
@@ -954,7 +954,22 @@ sub hgvs_genomic {
 =cut
 
 sub hgvs_coding {
-    return _hgvs_generic(@_,'coding');
+    deprecate('HGVS coding support has been moved to hgvs_transcript. This method will be removed in the next release.');
+    return _hgvs_generic(@_,'transcript');
+}
+
+=head2 hgvs_transcript
+
+  Description: Return the strings representing the CDS-level effect of each of the alleles 
+               of this variation in HGVS format
+  Returntype : hashref where the key is the allele sequence and then value is the HGVS string 
+  Exceptions : none
+  Status     : At Risk
+
+=cut
+
+sub hgvs_transcript {
+    return _hgvs_generic(@_,'transcript');
 }
 
 =head2 hgvs_protein
@@ -1005,7 +1020,7 @@ sub _hgvs_generic {
         }
         # Else, add the HGVS notation for this allele to the HGVS hash
         else {
-            $hgvs->{$tv_allele->variation_feature_seq()} = $tv_allele->$sub();
+wc             $hgvs->{$tv_allele->variation_feature_seq()} = $tv_allele->$sub();
         }
     }
     
