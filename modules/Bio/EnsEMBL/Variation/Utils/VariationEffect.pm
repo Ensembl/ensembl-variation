@@ -45,7 +45,7 @@ use warnings;
 
 use base qw(Exporter);
 
-our @EXPORT_OK = qw(overlap within_cds MAX_DISTANCE_FROM_TRANSCRIPT);
+our @EXPORT_OK = qw(overlap within_cds MAX_DISTANCE_FROM_TRANSCRIPT within_intron stop_lost affects_start_codon);
 
 use constant MAX_DISTANCE_FROM_TRANSCRIPT => 5000;
 
