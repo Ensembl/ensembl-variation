@@ -85,6 +85,7 @@ use vars qw(@ISA @EXPORT_OK);
     &read_cache_info
     &dump_adaptor_cache
     &load_dumped_adaptor_cache
+    &load_dumped_variation_cache
     &get_all_consequences
     &get_slice
     &build_slice_cache
@@ -2973,7 +2974,7 @@ sub prefetch_transcript_data {
     if(defined($config->{pfpma}) && defined($tr->{_variation_effect_feature_cache}->{peptide})) {
         foreach my $analysis(qw(sift polyphen)) {
             next unless defined($config->{$analysis});
-            $tr->{_variation_effect_feature_cache}->{protein_function_predictions}->{$analysis} ||= $config->{pfpma}->fetch_by_analysis_translation_md5($analysis, md5hex($tr->{_variation_effect_feature_cache}->{peptide}))
+            $tr->{_variation_effect_feature_cache}->{protein_function_predictions}->{$analysis} ||= $config->{pfpma}->fetch_by_analysis_translation_md5($analysis, md5_hex($tr->{_variation_effect_feature_cache}->{peptide}))
         }
     }
     
