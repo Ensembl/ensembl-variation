@@ -2974,7 +2974,9 @@ sub prefetch_transcript_data {
     if(defined($config->{pfpma}) && defined($tr->{_variation_effect_feature_cache}->{peptide})) {
         foreach my $analysis(qw(sift polyphen)) {
             next unless defined($config->{$analysis});
-            $tr->{_variation_effect_feature_cache}->{protein_function_predictions}->{$analysis} ||= $config->{pfpma}->fetch_by_analysis_translation_md5($analysis, md5_hex($tr->{_variation_effect_feature_cache}->{peptide}))
+            my $a = $analysis;
+            $a .= '_humvar' if $a eq 'polyphen';
+            $tr->{_variation_effect_feature_cache}->{protein_function_predictions}->{$a} ||= $config->{pfpma}->fetch_by_analysis_translation_md5($a, md5_hex($tr->{_variation_effect_feature_cache}->{peptide}))
         }
     }
     
@@ -3751,7 +3753,7 @@ sub write_cache_info {
     # cell types
     if(defined($config->{cell_type})) {
         my $cta = $config->{RegulatoryFeature_adaptor}->db->get_CellTypeAdaptor();
-        print OUT "cell_types\t".(join ",", @{$cta->fetch_all});
+        print OUT "cell_types\t".(join ",", map {$_->name} @{$cta->fetch_all});
         print OUT "\n";
     }
     
