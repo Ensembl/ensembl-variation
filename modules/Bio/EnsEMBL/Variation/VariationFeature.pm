@@ -1468,11 +1468,14 @@ sub _get_flank_seq{
     
     my @allele = split(/\//,$self->allele_string());
     #### add flank at least as long as longest allele to allow checking 
-    my $add_length;
-    length($allele[0]) > length($allele[1])  ? 
-	$add_length = 1+ (length $allele[0]) :
-	$add_length = 1+ (length $allele[1]) ; 
-    
+    my $add_length = 0;
+
+    foreach my $al(@allele){ ## may have >2 alleles
+	if(length($al) > $add_length){
+	    $add_length = length $al ;
+	}
+    }
+    $add_length++;
     
     my $ref_start = $add_length ;
     my $ref_end   = $add_length + ($self->end() - $self->start());
@@ -1574,7 +1577,7 @@ sub hgvs_genomic{
 	next if  (defined($use_allele) && $allele ne $use_allele);
 
 	# Skip if the allele contains weird characters
-	next if $allele =~ m/[^ACGT\-]/ig;   #seh  WARNING??
+	next if $allele =~ m/[^ACGT\-]/ig;   
 	
 	##### vf strand is relative to slice - if transcript feature slice, may need complimenting
 	my $check_allele = $allele;

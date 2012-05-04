@@ -1020,7 +1020,7 @@ sub _hgvs_generic {
         }
         # Else, add the HGVS notation for this allele to the HGVS hash
         else {
-wc             $hgvs->{$tv_allele->variation_feature_seq()} = $tv_allele->$sub();
+	    $hgvs->{$tv_allele->variation_feature_seq()} = $tv_allele->$sub();
         }
     }
     
