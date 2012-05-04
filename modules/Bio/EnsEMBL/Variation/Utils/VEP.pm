@@ -2369,7 +2369,20 @@ sub check_existing_hash {
             
             # no cache, get all variations in region from DB
             else {
-                $variation_cache->{$chr} = get_variations_in_region($config, $chr, $start.'-'.$end);
+                
+                my ($min, $max);
+                
+                # we can fetch smaller region when using DB
+                foreach my $pos(keys %{$vf_hash->{$chr}->{$chunk}}) {
+                    foreach my $var(@{$vf_hash->{$chr}->{$chunk}->{$pos}}) {
+                        foreach my $coord(qw(start end)) {
+                            $min = $var->{$coord} if !defined($min) || $var->{$coord} < $min;
+                            $max = $var->{$coord} if !defined($max) || $var->{$coord} > $max;
+                        }
+                    }
+                }
+                
+                $variation_cache->{$chr} = get_variations_in_region($config, $chr, $min.'-'.$max);
             }
             
             # now compare retrieved vars with vf_hash
