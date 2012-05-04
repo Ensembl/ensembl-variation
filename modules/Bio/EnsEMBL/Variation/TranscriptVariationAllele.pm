@@ -70,6 +70,7 @@ use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(within_cds within_intron 
 
 use base qw(Bio::EnsEMBL::Variation::VariationFeatureOverlapAllele);
 
+
 our $DEBUG = 0;
 
 sub new_fast {
@@ -651,10 +652,10 @@ sub hgvs_transcript {
 					     $slice_start,
 					     $slice_end
 	);
-
+                       
     ### This should not happen
     unless($hgvs_notation->{'type'}){
-	warn "Error - not continuing; no HGVS annotation\n";
+	#warn "Error - not continuing; no HGVS annotation\n";
 	return undef;
     }	
   
@@ -737,8 +738,8 @@ sub hgvs_protein {
 
     #### Define type - Types are different for protein numbering
     $hgvs_notation->{type}  = $self->_get_hgvs_protein_type();
-   
-    ### get defualt reference location [changed later in some cases eg. duplication]
+
+    ### get default reference location [changed later in some cases eg. duplication]
     $hgvs_notation->{start}   = $self->transcript_variation->translation_start();
     $hgvs_notation->{end}     = $self->transcript_variation->translation_end();  
 
@@ -797,11 +798,6 @@ sub _get_hgvs_protein_format{
     }
     elsif( $hgvs_notation->{type} eq "delins" || $hgvs_notation->{type} eq "ins" ){
 
-
-	 ### correct ordering if needed
-	if($hgvs_notation->{start} > $hgvs_notation->{end}){	   
-	    ( $hgvs_notation->{start}, $hgvs_notation->{end}) = ($hgvs_notation->{end}, $hgvs_notation->{start} );
-	}
 	
 	#### list first and last aa in reference only
 	my $ref_pep_first = substr($hgvs_notation->{ref}, 0, 3);
@@ -816,9 +812,17 @@ sub _get_hgvs_protein_format{
 	    ### For stops & add extX & distance to next stop to alt pep
 	    $hgvs_notation->{alt} .="extX" . _stop_loss_extra_AA($self,$hgvs_notation->{start}, "loss");
 	}
-	
-	$hgvs_notation->{'hgvs'} .= $ref_pep_first . $hgvs_notation->{start}  . "_"  .  $ref_pep_last . $hgvs_notation->{end} . $hgvs_notation->{type} . $hgvs_notation->{alt} ;
-	
+	if($hgvs_notation->{start} == $hgvs_notation->{end}){	   
+	    $hgvs_notation->{'hgvs'} .= $ref_pep_first . $hgvs_notation->{start} . $hgvs_notation->{end} . $hgvs_notation->{type} . $hgvs_notation->{alt} ;
+	}
+	else{	    
+	    ### correct ordering if needed
+	    if($hgvs_notation->{start} > $hgvs_notation->{end}){	   
+		( $hgvs_notation->{start}, $hgvs_notation->{end}) = ($hgvs_notation->{end}, $hgvs_notation->{start} );
+	    }
+	    
+	    $hgvs_notation->{'hgvs'} .= $ref_pep_first . $hgvs_notation->{start}  . "_"  .  $ref_pep_last . $hgvs_notation->{end} . $hgvs_notation->{type} . $hgvs_notation->{alt} ;
+	}
     }     
     
     elsif($hgvs_notation->{type} eq "fs"){
@@ -827,12 +831,22 @@ sub _get_hgvs_protein_format{
 
 	}
 	else{ ## not immediate stop - count aa until next
-	    $hgvs_notation->{'hgvs'} .= $hgvs_notation->{ref} . $hgvs_notation->{start}  .  $hgvs_notation->{alt} . "fs" . "X" . _stop_loss_extra_AA($self, $hgvs_notation->{start}-1, "fs") ;
+
+
+	    my $aa_til_stop =  _stop_loss_extra_AA($self, $hgvs_notation->{start}-1, "fs");
+	    if($aa_til_stop ){
+		### use long form if new stop found 
+		$hgvs_notation->{'hgvs'} .= $hgvs_notation->{ref} . $hgvs_notation->{start}  .  $hgvs_notation->{alt} . "fsX$aa_til_stop"  ;
+	    }
+	    else{
+		### otherwise use short form 
+		$hgvs_notation->{'hgvs'} .= $hgvs_notation->{ref} . $hgvs_notation->{start}  . "fs";
+	    }
 
 	}
     }
     elsif( $hgvs_notation->{type} eq "del"){
-	$hgvs_notation->{alt} =  "del";
+	$hgvs_notation->{alt} =  "del"; 
 	if( length($hgvs_notation->{ref}) >3 ){
 	    my $ref_pep_first = substr($hgvs_notation->{ref}, 0, 3);
 	    my $ref_pep_last  = substr($hgvs_notation->{ref}, -3, 3);
@@ -852,7 +866,7 @@ sub _get_hgvs_protein_format{
 	#### default to substitution	
 	 $hgvs_notation->{'hgvs'}  .=   $hgvs_notation->{ref}. $hgvs_notation->{start} .  $hgvs_notation->{alt};
     }
-
+    if($DEBUG==1){ print "Returning protein format: $hgvs_notation->{'hgvs'}\n";}
     return $hgvs_notation->{'hgvs'};
 }
 
@@ -870,8 +884,6 @@ sub _get_hgvs_protein_type{
     my ($ref_length, $alt_length ) = $self->_get_allele_length();    
     my $alt_pep = $self->peptide();
 
-    
-    
     if( defined $self->transcript_variation->get_reference_TranscriptVariationAllele->peptide() && defined $alt_pep ){
 	### Run type checks on peptides if available
 
@@ -923,7 +935,7 @@ sub _get_hgvs_protein_type{
 	  }   
     }
     else{
-	#warn "Cannot define protein variant type\n";
+#	warn "Cannot define protein variant type [$ref_length  - $alt_length]\n";
     }
     return $type;
 
@@ -934,7 +946,7 @@ sub _get_hgvs_peptides{
 
     my $self          = shift;
     my $hgvs_notation = shift;
-    
+
     if($hgvs_notation->{type} eq "fs"){
 	### ensembl alt/ref peptides not the same as HGVS alt/ref - look up seperately
 	($hgvs_notation->{ref}, $hgvs_notation->{alt}, $hgvs_notation->{start}) = $self->_get_fs_peptides();	
@@ -1063,19 +1075,15 @@ sub _get_allele_length{
     my $ref_length = 0;
     my $alt_length = 0;
 
-    my $al_string = $self->variation_feature->allele_string();
-    my @alleles   = split/\//, $al_string;
+    my $al_string = $self->allele_string();
+    my $ref_allele   = (split/\//, $al_string)[0];
+    $ref_allele =~ s/\-//;
+    $ref_length    =  length $ref_allele;
 
-    foreach my $allele (@alleles){
-	if ($allele eq $self->variation_feature_seq()){
-	    $allele =~ s/\-//;
-	    $alt_length    =  length $allele;
-	}
-	else{
-	    $allele =~ s/\-//;
-	    $ref_length    =  length $allele;
-	}
-    }
+    my $alt_allele = $self->variation_feature_seq();
+    $alt_allele =~ s/\-//;
+    $alt_length    =  length  $alt_allele;
+
     return ($ref_length, $alt_length );
   
 
@@ -1163,7 +1171,7 @@ sub _get_alternate_cds{
 	$alt_cds->seq($alt_cds->seq() . $utr->seq()); 
     }
     else{
-	warn "No UTR available for alternate CDS\n";
+#	warn "No UTR available for alternate CDS\n";
     }
 
     return $alt_cds;
@@ -1242,7 +1250,7 @@ sub _stop_loss_extra_AA{
 	return $extra_aa ;
     }
     else{ 
-	warn "No stop found in alternate sequence\n";
+	#warn "No stop found in alternate sequence\n";
 	return undef;
     }
  
