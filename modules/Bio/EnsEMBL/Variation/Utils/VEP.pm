@@ -1014,7 +1014,8 @@ sub vf_to_consequences {
     
     # skip based on frequency checks?
     if(defined($config->{check_frequency}) && defined($vf->{existing}) && $vf->{existing} ne '-' && defined($config->{va})) {
-        return [] unless check_frequencies($config, $vf->{existing});
+        return [] unless grep {$_} map {check_frequencies($config, $_)} reverse split(/\,/, $vf->{existing});
+        $vf->{freqs} = $config->{filtered_freqs};
     }
     
     # force empty hash into object's transcript_variations if undefined from whole_genome_fetch
@@ -1523,6 +1524,9 @@ sub init_line {
     
     # individual?
     $line->{Extra}->{IND} = $vf->{individual} if defined($vf->{individual});
+    
+    # frequencies?
+    $line->{Extra}->{FREQS} = join ",", @{$vf->{freqs}} if defined($vf->{freqs});
     
     # copy entries from base_line
     if(defined($base_line)) {
@@ -3893,6 +3897,7 @@ sub check_frequencies {
     my $var_name = shift;
     
     my $v = $config->{va}->fetch_by_name($var_name);
+    
     my $pass = 0;
     
     my $freq_pop      = $config->{freq_pop};
@@ -3902,6 +3907,8 @@ sub check_frequencies {
     my $freq_pop_name = (split /\_/, $freq_pop)[-1];
     $freq_pop_name = undef if $freq_pop_name =~ /1kg|hap/;
     
+    delete $config->{filtered_freqs};
+    
     foreach my $a(@{$v->get_all_Alleles}) {
         next unless defined $a->{population} || defined $a->{'_population_id'};
         next unless defined $a->frequency;
@@ -3909,13 +3916,16 @@ sub check_frequencies {
         
         my $pop_name = $a->population->name;
         
-        if($freq_pop =~ /1kg/) { next unless $pop_name =~ /^1000.+low.+/i; }
+        if($freq_pop =~ /1kg/) { next unless $pop_name =~ /^1000.+(low|phase).+/i; }
         if($freq_pop =~ /hap/) { next unless $pop_name =~ /^CSHL-HAPMAP/i; }
-        if($freq_pop =~ /any/) { next unless $pop_name =~ /^(CSHL-HAPMAP)|(1000.+low.+)/i; }
+        if($freq_pop =~ /any/) { next unless $pop_name =~ /^(CSHL-HAPMAP)|(1000.+(low|phase).+)/i; }
         if(defined $freq_pop_name) { next unless $pop_name =~ /$freq_pop_name/i; }
         
         $pass = 1 if $a->frequency >= $freq_freq and $freq_gt_lt eq 'gt';
         $pass = 1 if $a->frequency <= $freq_freq and $freq_gt_lt eq 'lt';
+        
+        $pop_name =~ s/\:/\_/g;
+        push @{$config->{filtered_freqs}}, $pop_name.':'.$a->frequency;
         
         #warn "Comparing allele ", $a->allele, " ", $a->frequency, " for $var_name in population ", $a->population->name, " PASS $pass";
     }
