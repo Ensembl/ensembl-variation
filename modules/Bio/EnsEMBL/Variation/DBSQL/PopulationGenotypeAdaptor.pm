@@ -94,8 +94,8 @@ sub store {
 	  variation_id,
 	  subsnp_id,
 	  genotype_code_id,
-	  sample_id,
 	  frequency,
+	  sample_id,
 	  count			
 	) VALUES (?,?,?,?,?,?)
   });
@@ -104,8 +104,8 @@ sub store {
 	$popgt->{_variation_id} || $popgt->variation->dbID,
 	$popgt->{subsnp},
 	$gt_code,
-	$popgt->population ? $popgt->population->dbID : undef,
 	$popgt->frequency,
+	$popgt->population ? $popgt->population->dbID : undef,
 	$popgt->count
   );
   
@@ -125,8 +125,8 @@ sub store_multiple {
 	$_->{_variation_id} || $_->variation->dbID,
 	$_->{subsnp},
 	$self->_genotype_code($_->genotype),
-	$_->population ? $_->population->dbID : undef,
 	$_->frequency,
+	$_->population ? $_->population->dbID : undef,
 	$_->count
   } @$popgts;
   
@@ -135,8 +135,8 @@ sub store_multiple {
 	  variation_id,
 	  subsnp_id,
 	  genotype_code_id,
-	  sample_id,
 	  frequency,
+	  sample_id,
 	  count				
 	) VALUES $q_string
   });
@@ -155,8 +155,8 @@ sub store_to_file_handle {
 		$popgt->{_variation_id} || $popgt->variation->dbID || '\N',
 		$popgt->{subsnp} || '\N',
 		$self->_genotype_code($popgt->genotype),
-		$popgt->population ? $popgt->population->dbID : '\N',
 		defined($popgt->frequency) ? $popgt->frequency :  '\N',
+		$popgt->population ? $popgt->population->dbID : '\N',
 		defined($popgt->count) ? $popgt->count : '\N',
 	)."\n";
 }
@@ -290,7 +290,7 @@ sub _columns{
 }
 
 sub _write_columns {
-  return qw(variation_id subsnp_id genotype_code_id sample_id frequency count);
+  return qw(variation_id subsnp_id genotype_code_id frequency sample_id count);
 }
 
 sub _objs_from_sth{
