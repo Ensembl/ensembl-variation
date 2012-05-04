@@ -3936,17 +3936,26 @@ sub get_variations_in_region {
     my %variations;
     
     if(defined($config->{vfa}->db)) {
+        my $sr_cache = $config->{seq_region_cache};
+        
+        if(!defined($sr_cache)) {
+            $sr_cache = cache_seq_region_ids($config);
+            $config->{seq_region_cache} = $sr_cache;
+        }
+        
+        # no seq_region_id?
+        return {} unless defined($sr_cache) && defined($sr_cache->{$chr});
+        
         my $sth = $config->{vfa}->db->dbc->prepare(qq{
             SELECT vf.variation_name, IF(fv.variation_id IS NULL, 0, 1), vf.seq_region_start, vf.seq_region_end, vf.allele_string, vf.seq_region_strand
-            FROM (variation_feature vf, seq_region s)
+            FROM variation_feature vf
             LEFT JOIN failed_variation fv ON fv.variation_id = vf.variation_id
-            WHERE s.seq_region_id = vf.seq_region_id
-            AND s.name = ?
+            WHERE vf.seq_region_id = ?
             AND vf.seq_region_start >= ?
             AND vf.seq_region_start <= ?
         });
         
-        $sth->execute($chr, $start, $end);
+        $sth->execute($sr_cache->{$chr}, $start, $end);
         
         my @v;
         for my $i(0..5) {
@@ -3964,6 +3973,23 @@ sub get_variations_in_region {
     }
     
     return \%variations;
+}
+
+sub cache_seq_region_ids {
+    my $config = shift;
+    
+    my (%cache, $chr, $id);
+    
+    my $sth = $config->{vfa}->db->dbc->prepare(qq{
+        SELECT seq_region_id, name FROM seq_region
+    });
+    
+    $sth->execute();
+    $sth->bind_columns(\$id, \$chr);
+    $cache{$chr} = $id while $sth->fetch();
+    $sth->finish;
+    
+    return \%cache;
 }
 
 
