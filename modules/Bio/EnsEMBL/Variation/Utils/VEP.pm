@@ -1869,7 +1869,7 @@ sub whole_genome_fetch_custom {
     # count and report
     my $total_annotations = 0;
     $total_annotations += scalar keys %{$annotation_cache->{$chr}->{$_}} for keys %{$annotation_cache->{$chr}};
-    debug("Retrieved $total_annotations custom annotations (", (join ", ", map {(scalar keys %{$annotation_cache->{$chr}->{$_}}).' '.$_} keys %{$annotation_cache->{$chr}}), ")");
+    debug("Retrieved $total_annotations custom annotations (", (join ", ", map {(scalar keys %{$annotation_cache->{$chr}->{$_}}).' '.$_} keys %{$annotation_cache->{$chr}}), ")") unless defined($config->{quiet});
     
     # compare annotations to variations in hash
     debug("Analyzing custom annotations") unless defined($config->{quiet});
