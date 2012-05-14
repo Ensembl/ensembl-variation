@@ -106,17 +106,25 @@ sub fetch_by_name {
 
 =cut
 
+my %cache;
 sub fetch_by_dbID {
   my $self = shift;
   my $dbID = shift;
 
   throw('dbID argument expected') if(!defined($dbID));
-	
-	my $result = $self->generic_fetch("st.study_id=$dbID");
+
+  ## Cache results, or they slow down the website horribly!
+  if (exists($cache{$dbID})) {
+    return $cache{$dbID};
+  }
+  my $result = $self->generic_fetch("st.study_id=$dbID");
+
+  if ($result) {
+    $cache{$dbID} = $result->[0];
+  }
 
   return ($result ? $result->[0] : undef);
 }
-
 	
 =head2 fetch_all_by_dbID_list
 
