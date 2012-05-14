@@ -68,6 +68,7 @@ use Bio::EnsEMBL::Variation::Study;
 
 use base qw{Bio::EnsEMBL::DBSQL::BaseAdaptor};
 
+my %cache;
 
 =head2 fetch_by_name
 
@@ -111,8 +112,15 @@ sub fetch_by_dbID {
   my $dbID = shift;
 
   throw('dbID argument expected') if(!defined($dbID));
-	
-	my $result = $self->generic_fetch("st.study_id=$dbID");
+
+  if (exists($cache{$dbID})) {
+    return $cache{$dbID};
+  }
+  my $result = $self->generic_fetch("st.study_id=$dbID");
+
+  if ($result) {
+    $cache{$dbID} = $result->[0];
+  }
 
   return ($result ? $result->[0] : undef);
 }
