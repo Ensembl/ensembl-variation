@@ -522,12 +522,16 @@ sub parse_vcf {
                 my $vf_copy = { %$vf };
                 bless $vf_copy, ref($vf);
                 
+                # get non-refs
+                my %non_ref = map {$_ => 1} grep {$_ ne $ref} @bits;
+                
                 # construct allele_string
-                if(scalar @bits) {
-                    $vf_copy->{allele_string} = $ref."/".(join "/", grep {$_ ne $ref} @bits);
+                if(scalar keys %non_ref) {
+                    $vf_copy->{allele_string} = $ref."/".(join "/", keys %non_ref);
                 }
                 else {
                     $vf_copy->{allele_string} = $ref;
+                    $vf_copy->{non_variant} = 1;
                 }
                 
                 # store phasing info
