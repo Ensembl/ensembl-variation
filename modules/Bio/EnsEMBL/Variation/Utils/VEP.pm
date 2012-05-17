@@ -536,7 +536,9 @@ sub parse_vcf {
                 
                 # store phasing info
                 $vf_copy->{phased} = $phased;
-                $vf_copy->{phased_gt} = \@bits if $phased;
+                
+                # store GT
+                $vf_copy->{genotype} = \@bits;
                 
                 # store individual name
                 $vf_copy->{individual} = $ind;
