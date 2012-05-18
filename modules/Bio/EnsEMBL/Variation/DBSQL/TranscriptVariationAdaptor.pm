@@ -103,7 +103,7 @@ sub store {
             codon_allele_string,
             pep_allele_string,
             hgvs_genomic,
-            hgvs_coding,
+            hgvs_transcript,
             hgvs_protein,
             polyphen_prediction,
             polyphen_score,
@@ -351,7 +351,7 @@ sub _columns {
         codon_allele_string 
         pep_allele_string 
         hgvs_genomic 
-        hgvs_coding 
+        hgvs_transcript 
         hgvs_protein 
         polyphen_prediction 
         polyphen_score 
