@@ -200,12 +200,13 @@ create table subsnp_handle (
 @desc This table stores information about each of a variation's alleles, along with population frequencies.
 
 @column allele_id		   Primary key, internal identifier.
-@column variation_id	 Foreign key references to the @link variation table.
+@column variation_id	 	   Foreign key references to the @link variation table.
 @column subsnp_id		   Foreign key references to the @link subsnp_handle table.
-@column allele_code_id Foreign key reference to @link allele_code table.
+@column allele_code_id 		   Foreign key reference to @link allele_code table.
 @column frequency		   Frequency of this allele in the sample.
 @column sample_id		   Foreign key references to the @link sample table.
-@column count			     Number of individuals in the sample where this allele is found.
+@column count			   Number of individuals in the sample where this allele is found.
+@column frequency_submitter_handle dbSNP handle for submitter of frequency data [may be different to submitter of observed variant]
 
 @see variation
 @see population
@@ -221,7 +222,8 @@ CREATE TABLE allele (
   sample_id int(11) unsigned DEFAULT NULL,
   frequency float unsigned DEFAULT NULL,
   count int(11) unsigned DEFAULT NULL,
-  
+  frequency_submitter_handle varchar(20) DEFAULT NULL,
+
   PRIMARY KEY (allele_id),
   KEY variation_idx (variation_id),
   KEY subsnp_idx (subsnp_id),
@@ -786,7 +788,7 @@ CREATE TABLE IF NOT EXISTS variation_set_structural_variation (
 @column codon_allele_string         The reference and variant codons
 @column pep_allele_string           The reference and variant peptides
 @column hgvs_genomic                HGVS representation of this allele with respect to the genomic sequence
-@column hgvs_coding                 HGVS representation of this allele with respect to the CDS
+@column hgvs_transcript             HGVS representation of this allele with respect to the [coding or non-coding] transcript
 @column hgvs_protein                HGVS representation of this allele with respect to the protein
 @column polyphen_prediction         The PolyPhen prediction for the effect of this allele on the protein
 @column polyphen_score              The PolyPhen score corresponding to the prediction 
@@ -839,7 +841,7 @@ CREATE TABLE transcript_variation (
     codon_allele_string                 text,
     pep_allele_string                   text,
     hgvs_genomic                        text,
-    hgvs_coding                         text,
+    hgvs_transcript                     text,
     hgvs_protein                        text,
     polyphen_prediction                 enum('unknown', 'benign', 'possibly damaging', 'probably damaging') DEFAULT NULL,
     polyphen_score                      float DEFAULT NULL,
