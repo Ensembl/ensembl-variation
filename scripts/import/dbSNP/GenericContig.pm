@@ -182,7 +182,7 @@ sub run_on_farm {
   
   #ÊPut the log filehandle in a local variable
   my $logh = $self->{'log'};
-  
+
   my $param_key = $jobname;
   if (!exists($FARM_PARAMS{$jobname})) {
     warn("No farm resource parameters defined for job $jobname, will use default parameters");
@@ -1371,7 +1371,7 @@ sub parallelized_allele_table {
   my $allelefile = $file_prefix . '_alleles.txt';
   
   # Do the extraction of the alleles unless we're resuming and will only load the alleles
-  my $task_manager_file;
+  my $task_manager_file = $file_prefix . '_task_management.txt';
   my $jobindex;
   my $jobid;
   my $jobname;
@@ -1400,33 +1400,46 @@ sub parallelized_allele_table {
   
     #ÊProcess the alleles in chunks based on the SubSNP id. This number should be kept at a reasonable level, ideally so that we don't need to request more than 4GB memory on the farm. If so, we'll have access to the most machines.
     #ÊThe limitation is that the results from the dbSNP query is read into memory. If necessary, we can dump it to a file (if the results are sorted)
-    my $chunksize = 5e5;
-    
-    $stmt = qq{
+
+
+   
+    if($self->{'dbm'}->dbCore()->species =~ m/homo|human/i){
+
+	my $chunksize = 5e5;	
+
+	$stmt = qq{
       SELECT
 	MIN(ss.subsnp_id),
 	MAX(ss.subsnp_id)
       FROM
 	SubSNP ss
     };
-    my ($min_ss,$max_ss) = @{$self->{'dbSNP'}->db_handle()->selectall_arrayref($stmt)->[0]};
-    my $ss_offset = ($min_ss - 1);
-    
-    $task_manager_file = $file_prefix . '_task_management.txt';
-    $jobindex = 0;
-    
+	my ($min_ss,$max_ss) = @{$self->{'dbSNP'}->db_handle()->selectall_arrayref($stmt)->[0]};
+	my $ss_offset = ($min_ss - 1);
+	
+	$jobindex = 0;
+
     #ÊLoop over all subtask intervals and write the parameters to the manager file
-    open(MGMT,'>',$task_manager_file);
-    while ($ss_offset < $max_ss) {
-      
-      $jobindex++;
-      my $start = ($ss_offset + 1);
-      my $end = $ss_offset + $chunksize;
-      $ss_offset = $end;
-      
-      print MGMT qq{$jobindex $loadfile $start $end $allelefile $samplefile\n};
+	open(MGMT,'>',$task_manager_file);
+	while ($ss_offset < $max_ss) {
+	    
+	    $jobindex++;
+	    my $start = ($ss_offset + 1);
+	    my $end = $ss_offset + $chunksize;
+	    $ss_offset = $end;
+	    
+	    print MGMT qq{$jobindex $loadfile $start $end $allelefile $samplefile\n};
+	}
+	close(MGMT);
     }
-    close(MGMT);
+    else{
+	## improve binning for sparsely submitted species
+
+	$jobindex = write_allele_task_file($self->{'dbSNP'}->db_handle(),$task_manager_file, $loadfile,  $allelefile, $samplefile);
+
+
+    }
+
     
     # Run the job on the farm
     $jobname = 'allele_table';
@@ -1546,6 +1559,54 @@ sub parallelized_allele_table {
   print $logh Progress::location();
 }
 
+sub write_allele_task_file{
+
+    my ($dbh, $task_manager_file, $loadfile,  $allelefile, $samplefile) = @_;
+    warn "Starting allele_task file \n";
+    ### previously binning at 500,000, switched to 400,000
+    my ($first, $previous, $counter, $jobindex);
+
+   open(MGMT,'>',$task_manager_file) || die "Failed to open allele table task management file ($task_manager_file): $!\n";;
+
+    my $ss_extract_sth = $dbh->prepare(qq[SELECT
+                                      ss.subsnp_id
+                                      FROM
+                                      SubSNP ss
+                                      order by ss.subsnp_id
+                                      ]);
+    $ss_extract_sth->execute() ||die "Error extracting ss ids for allele_table binning\n";
+    
+    while( my $l = $ss_extract_sth->fetchrow_arrayref()){
+	
+	$counter++;
+	unless(defined $first){
+	    ### set up first bin
+	    $first = $l->[0];
+	    $jobindex   = 1;
+	    next;
+	}
+	if($counter >=100000){
+	    ## end bin
+	     print MGMT qq{$jobindex $loadfile $first $previous $allelefile $samplefile\n};
+	    ## start new bin
+	    $first       = $l->[0];
+	    $counter     = 1;
+	    $jobindex++;
+	}
+	else{
+	    $previous = $l->[0];
+	}
+	
+    }
+    ### write out last bin
+    print MGMT qq{$jobindex $loadfile $first $previous $allelefile $samplefile\n};
+    close MGMT;
+    print "Finished allele task file \n"; 
+  ## die "Terminating here\n";;
+    return ($jobindex);
+}
+
+=head  NOT USED
 sub allele_table {
   my $self = shift;
   
@@ -1812,10 +1873,11 @@ sub allele_table {
   $self->{'dbVar'}->do($stmt);
   print $logh Progress::location();
 }
-
+=cut
 #
 # loads the allele table
 #
+=head NOT USED
 sub old_allele_table {
     my $self = shift;
 
@@ -2042,7 +2104,7 @@ sub old_allele_table {
      #$self->{'dbVar'}->do("DROP TABLE tmp_rev_allele");
      #$self->{'dbVar'}->do("DROP TABLE tmp_allele");
 }
-
+=cut
 
 #
 # loads the flanking sequence table
