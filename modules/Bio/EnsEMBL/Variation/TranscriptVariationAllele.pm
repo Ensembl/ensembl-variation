@@ -61,7 +61,6 @@ package Bio::EnsEMBL::Variation::TranscriptVariationAllele;
 use strict;
 use warnings;
 
-use Bio::EnsEMBL::Variation::Utils::Condel qw(get_condel_prediction);
 use Bio::EnsEMBL::Variation::ProteinFunctionPredictionMatrix qw($AA_LOOKUP);
 use Bio::EnsEMBL::Utils::Exception qw(throw warning deprecate);
 use Bio::EnsEMBL::Variation::Utils::Sequence qw(hgvs_variant_notation format_hgvs_string);
@@ -477,65 +476,6 @@ sub sift_score {
     return $self->{sift_score};
 }
 
-=head2 condel_prediction
-
-  Description: Return the Condel (Consensus Deleteriousness) prediction for this allele that integrates
-               the SIFT and Polyphen-2 scores
-  Returntype : string (one of 'neutral', 'deleterious', 'non_computable_was') if this is a non-synonymous 
-               mutation and predictions for this substitution are available from both SIFT and PolyPhen, 
-               undef otherwise
-  Exceptions : none
-  Status     : At Risk
-
-=cut
-
-sub condel_prediction {
-    my ($self, $condel_prediction) = @_;
-
-	deprecate('Condel support has been moved to a VEP plugin. This method will be removed in the next release.');
-
-    $self->{condel_prediction} = $condel_prediction if $condel_prediction;
-
-    unless ($self->{condel_prediction}) {
-
-        my $sift_score = $self->sift_score;
-        my $pph_score  = $self->polyphen_score;
-        my $pph_pred   = $self->polyphen_prediction;
-
-        # we can only run Condel when we have predictions from both sift and polyphen
-
-        if (defined $pph_score && defined $sift_score && ($pph_pred ne 'unknown') ) {
-            my ($prediction, $score) = get_condel_prediction($sift_score, $pph_score);
-            $self->{condel_prediction}  = $prediction;
-            $self->{condel_score}       = $score;
-        }
-    }
-
-    return $self->{condel_prediction};
-}
-
-=head2 condel_score
-
-  Description: Return the Condel (Consensus Deleteriousness) score for this allele that integrates
-               the SIFT and Polyphen-2 scores
-  Returntype : float between 0 and 1 if this is a missense mutation and a prediction is 
-               computable, -1 if SIFT and PolyPhen scores are available but Condel is unable 
-               to compute a weighted average score, and undef otherwise
-  Exceptions : none
-  Status     : At Risk
-
-=cut
-
-sub condel_score {
-    my ($self, $condel_score) = @_;
-
-    $self->{condel_score} = $condel_score if defined $condel_score;
-
-    # call condel_prediction to set the score if we need it
-    $self->condel_prediction unless $self->{condel_score};
-
-    return $self->{condel_score};
-}
 
 sub _protein_function_prediction {
     my ($self, $analysis) = @_;
