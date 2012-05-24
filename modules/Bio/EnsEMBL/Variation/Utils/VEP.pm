@@ -386,7 +386,7 @@ sub parse_vcf {
                 TDUP => 'tandem_duplication',
             );
             
-            my $so_term = defined $terms{$type} ? $terms{$type} : $type;
+            $so_term = defined $terms{$type} ? $terms{$type} : $type;
         }
         
         my $svf = Bio::EnsEMBL::Variation::StructuralVariationFeature->new_fast({
@@ -1211,7 +1211,7 @@ sub svf_to_consequences {
     
     my $term_method = $config->{terms}.'_term';
     
-    foreach my $svo(@{$svf->get_all_StructualVariationOverlaps}) {
+    foreach my $svo(@{$svf->get_all_StructuralVariationOverlaps}) {
         
         my $feature = $svo->feature;
         
