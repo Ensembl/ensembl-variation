@@ -104,7 +104,7 @@ my @test_input = (    ["2:g.46746465G>A",
 		       "-",
 		       "ENSP00000348220.2:p.Gln655ArgfsX17",  
 		       "deletion, fs"
-		      ], 		      
+		      ], 		      		      
 		      ["7:g.7680048A>G",
 		       "G",
 		       "ENST00000223129.4:c.2T>C",
@@ -167,7 +167,7 @@ my @test_input = (    ["2:g.46746465G>A",
 		       "",
 		       "",
 		       "substitution, downstream" 
-		      ], 
+		      ], 		     
 		      ["2:g.46747460C>G",    
 		       "G", 
 		       "",
@@ -182,6 +182,13 @@ my @test_input = (    ["2:g.46746465G>A",
 		       "",           
 		       "substitution, noncoding intron"
 		      ], 
+		      ["5:g.96232565_96232566insCC",
+		       "CC",
+		       "ENST00000508077.1:c.488_489insCC",
+		       "CC",
+		       "",
+		       "insertion, partial codon"
+		      ]
 );
 
 foreach my $line(@test_input){
@@ -210,7 +217,7 @@ sub test_output{
     my $hgvs_genomic      = $variation_feature->get_all_hgvs_notations("", "g");
 
     ok( $line->[0] eq $hgvs_genomic->{$allele} , "$input_type -> genomic - $line->[5]  [$line->[0]] ");
-    if($DEBUG==1){print "TEMP: $line->[0]\t$hgvs_genomic->{$line->[1]}\n";}					   
+    if($DEBUG==1){print "TEMP: $line->[0]\t returns: $hgvs_genomic->{$line->[1]}\n";}					   
 
     
     ##### transcript level - transcript to be supplied as ref feature  - alt allele may be complimented wrt genomic reference  
@@ -222,7 +229,7 @@ sub test_output{
          my $hgvs_coding      = $variation_feature->get_all_hgvs_notations($transcript, "c");
 
 	ok( $line->[2] eq $hgvs_coding->{$allele} , "$input_type -> transcr - $line->[5] [$line->[2]]");
-         if($DEBUG==1){	print "TEMP: $line->[2]\t$hgvs_coding->{$line->[1]} [allele:$line->[1]]\n";}
+         if($DEBUG==1){	print "TEMP: $line->[2]\t returns: $hgvs_coding->{$line->[1]} [allele:$line->[1]]\n";}
 
 
         if( $line->[4] =~/\w+/){
@@ -241,7 +248,7 @@ sub test_output{
 										       $transcript_variation
 			);
 		    ok( $line->[4] eq $hgvs_protein->{$allele} , "$input_type -> protein - $line->[5] [$line->[4]]");
-		    if($DEBUG==1){   print "TEMP: $line->[4]\t$hgvs_protein->{$line->[3]}\n";}
+		    if($DEBUG==1){   print "TEMP: $line->[4]\t returns: $hgvs_protein->{$line->[3]}\n";}
 		}
 	    }
 	}
