@@ -34,8 +34,8 @@ $seed = 5 if $input_dir !~ /zfish|array/;
 print "seed is $seed\n";
 
 my $output_file = "ssaha2_output";
-my $queue_long = "-q long -M7000000 -R'select[mem>7000] rusage[mem=7000]'";## for watson reads
-my $queue_normal = "-q normal -M3000000 -R'select[mem>3000] rusage[mem=3000]'"; ##for new farm abi reads
+my $queue_long = "-q long -M10000000 -R'select[mem>10000] rusage[mem=10000]'";## for watson reads
+my $queue_normal = "-q normal -M6000000 -R'select[mem>6000] rusage[mem=6000]'"; ##for new farm abi reads
 
 
 #my $queue = $queue_long;
@@ -55,12 +55,12 @@ sub run_ssaha2 {
 
   if (! -f "$subject\.body") {
     print "Submitting ssaha2Build job...\n";
-    my $ssaha2build = "bsub $queue_long -J 'ssaha2build' -o $target_file\_out $ssahabuild -save $subject $target_file";
+    my $ssaha2build = "bsub $queue_long -J 'ssaha2build' -o $target_file\_out $ssahabuild -kmer 12 -skip 2 -save $subject $target_file";
     system("$ssaha2build");
 
     my $call = "bsub -q normal -K -w 'done('ssaha2build')' -J waiting_process sleep 1"; #waits until all variation features have finished to continue
-
     system($call);
+		
   }
 
   if ($start and $end) {
@@ -70,7 +70,7 @@ sub run_ssaha2 {
     #next if (-z "$input");
     print "input is $input and split $split\n";
     if (! $split) {#mainly for flanking_sequence mapping
-      print "Submitting ssaha2 job...\n";
+      print "Submitting ssaha2 job array...\n";
       bsub_ssaha_job_array($start,$end,$input,$queue,$target_file);
     }
     else {
@@ -140,7 +140,7 @@ sub bsub_ssaha_job_array {
   #my $ssaha_command = "$ssaha2 -seeds 5 -cut 5000 -memory 300 -best 1 -output cigar -name -save $subject $input_file";
 
   #for normal flanking mapping
-  my $ssaha_command = "$ssaha2 -align 0 -kmer 12 -seeds $seed -cut 5000 -output vulgar -depth 5 -best 1 -tags 1 -name -save $subject $input_file";
+  my $ssaha_command = "$ssaha2 -align 0 -kmer 12 -skip 2 -seeds $seed -cut 5000 -output vulgar -depth 5 -best 1 -tags 1 -name -save $subject $input_file";
   my $call = "bsub -J'ssaha_out_[$start-$end]%50' $queue -e $output_dir/ssaha.%I.err -o $output_dir/ssaha.%I.out ";
   $call .= " $ssaha_command";
   print "$call\n";
@@ -151,6 +151,7 @@ sub bsub_ssaha_job_array {
 sub bsub_ssaha_job {
 
   my ($start, $end, $n, $e, $queue, $input_file, $target_file) = @_ ;
+	
 
   my ($subj_dir,$tar_file) = $target_file =~ /^(.*)\/(.*)$/;
   my ($subname) = $tar_file =~ /^(.*)\.*.*$/;
@@ -208,7 +209,7 @@ sub parse_ssaha2_out {
   }
 
   foreach my $name (keys %rec_seq) {
-    my ($fseq,$lseq) = split /[NWACTG\-\_]+/,$rec_seq{$name};
+    my ($fseq,$lseq) = split /[W\-\_]+/,$rec_seq{$name};
     my $snp_posf = length($fseq)+1;
     my $snp_posl = length($lseq)+1;
     #my $tot_length = $snp_posf + $snp_posl-2;
@@ -216,6 +217,7 @@ sub parse_ssaha2_out {
     $snp_pos{$name} = "$snp_posf\_$snp_posl";
     $snp_pos{$name} = "$snp_posf\_$snp_posl";
     $input_length{$name} = $tot_length;
+		#print "$name: ".$snp_pos{$name}.' > '.$rec_seq{$name}."\n";
   }
 
 
@@ -347,11 +349,12 @@ sub find_results {
         $new_t_start = $t_start + $target_match_length +1 if ($type eq 'G');
       }
                                               
-      #print "$snp_q_pos,$q_start,$new_q_start and $t_start\n";
-      if ($snp_q_pos >= $q_start and $snp_q_pos <= $new_q_start or $snp_q_pos >= $new_q_start and $snp_q_pos <= $q_start) {
+      #print "$q_id: [$snp_q_pos:$q_start,$new_q_start],$new_t_start and $t_start ; ".$snp_pos{$q_id}."\n";
+      if (($snp_q_pos >= $q_start and $snp_q_pos <= $new_q_start) or ($snp_q_pos >= $new_q_start and $snp_q_pos <= $q_start)) {
 	if ($type eq 'M') {
 	  $snp_t_start = $t_start + abs($snp_q_pos-$q_start);
 	  $snp_t_end = $snp_t_start;
+		#print "$q_id: $snp_q_pos,$q_start => $snp_t_start\n";
           #print "abs is ",abs($snp_q_pos-$q_start),"\n";
           #print "$snp_t_start and $snp_t_end\n";
 	}
