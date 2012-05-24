@@ -685,7 +685,7 @@ sub hgvs_protein {
 
     ##### Find ref & alt peptides taking into account HGVS rules
     $hgvs_notation = $self->_get_hgvs_peptides($hgvs_notation);
-    
+
     ##### String formatting
     $self->{hgvs_protein}  =  $self->_get_hgvs_protein_format($hgvs_notation);
     return $self->{hgvs_protein} ;
@@ -698,7 +698,10 @@ sub _get_hgvs_protein_format{
     my $self          = shift;
     my $hgvs_notation = shift;
 
-    if(($hgvs_notation->{ref} eq $hgvs_notation->{alt}) || $hgvs_notation->{type} eq "="){
+    if ((defined  $hgvs_notation->{ref} && defined $hgvs_notation->{alt} && 
+	 $hgvs_notation->{ref} eq $hgvs_notation->{alt}) || 
+	$hgvs_notation->{type} eq "="){
+
 	### no protein change - return transcript nomenclature with flag for neutral protein consequence
 	$hgvs_notation->{'hgvs'} = $self->hgvs_transcript() . "(p.=)";
 	return $hgvs_notation->{'hgvs'} ;
@@ -706,7 +709,6 @@ sub _get_hgvs_protein_format{
 
     ### all start with refseq name & numbering type
     $hgvs_notation->{'hgvs'} = $hgvs_notation->{'ref_name'} . ":" . $hgvs_notation->{'numbering'} . ".";    
-
 
     ### handle stop_lost seperately regardless of cause by del/delins => p.XposAA1extnum_AA_to_stop
     if(stop_lost($self)){  ### if deletion of stop add extX and number of new aa to alt
@@ -736,6 +738,11 @@ sub _get_hgvs_protein_format{
 	}
 	
     }
+    elsif($hgvs_notation->{type} eq ">"){
+	#### substitution
+
+	$hgvs_notation->{'hgvs'}  .=   $hgvs_notation->{ref}. $hgvs_notation->{start} .  $hgvs_notation->{alt};
+    }    
     elsif( $hgvs_notation->{type} eq "delins" || $hgvs_notation->{type} eq "ins" ){
 
 	
@@ -766,7 +773,7 @@ sub _get_hgvs_protein_format{
     }     
     
     elsif($hgvs_notation->{type} eq "fs"){
-	if($hgvs_notation->{alt}  eq "X"){ ## stop gained
+	if(defined $hgvs_notation->{alt} && $hgvs_notation->{alt} eq "X"){ ## stop gained
 	    $hgvs_notation->{'hgvs'} .= $hgvs_notation->{ref} . $hgvs_notation->{start}  .  $hgvs_notation->{alt} ;
 
 	}
@@ -831,9 +838,9 @@ sub _get_hgvs_protein_type{
 	    #### synonymous indicated by =
 	    $type = "=";
 	}
-	elsif( length($self->transcript_variation->get_reference_TranscriptVariationAllele->peptide()) ==1 && $alt_pep eq "*"  ) {
+	elsif( length($self->transcript_variation->get_reference_TranscriptVariationAllele->peptide()) ==1 && $alt_pep eq "*"  ||  length($self->transcript_variation->get_reference_TranscriptVariationAllele->peptide()) ==1 && length($alt_pep) ==1 ) {
 	    ### capture stop as subs
-	    $type = "<";
+	    $type = ">";
 	}
 	elsif($self->transcript_variation->get_reference_TranscriptVariationAllele->peptide() eq "-") {
 
@@ -858,7 +865,7 @@ sub _get_hgvs_protein_type{
     }
     
   
-    elsif(($ref_length  - $alt_length)%3 !=0 ){
+    elsif($ref_length ne $alt_length && ($ref_length  - $alt_length)%3 !=0 ){
 	$type = "fs";
     }    
     
@@ -890,6 +897,7 @@ sub _get_hgvs_peptides{
     if($hgvs_notation->{type} eq "fs"){
 	### ensembl alt/ref peptides not the same as HGVS alt/ref - look up seperately
 	($hgvs_notation->{ref}, $hgvs_notation->{alt}, $hgvs_notation->{start}) = $self->_get_fs_peptides();	
+	
     }
     elsif($hgvs_notation->{type} eq "ins"){
 
@@ -906,16 +914,21 @@ sub _get_hgvs_peptides{
 	### look up standard ref & alt
 	$hgvs_notation->{alt} = $self->peptide;
 	$hgvs_notation->{ref} = $self->transcript_variation->get_reference_TranscriptVariationAllele->peptide;	
+
 	$hgvs_notation = _clip_alleles( $hgvs_notation);
+
     }
     
 
     ### Convert peptide to 3 letter code as used in HGVS
     $hgvs_notation->{ref}  = Bio::SeqUtils->seq3(Bio::PrimarySeq->new(-seq => $hgvs_notation->{ref}, -id => 'ref',  -alphabet => 'protein')) || "";
-    if( $hgvs_notation->{alt}){
+    if( $hgvs_notation->{alt} eq "-"){
+	$hgvs_notation->{alt} = "del";
+    }
+    else{
 	$hgvs_notation->{alt}  = Bio::SeqUtils->seq3(Bio::PrimarySeq->new(-seq => $hgvs_notation->{alt}, -id => 'ref',  -alphabet => 'protein')) || "";      
     }
-
+ 
     ### handle special cases
     if(	affects_start_codon($self) ){
 	#### handle initiator loss -> probably no translation => alt allele is '?'
@@ -923,7 +936,7 @@ sub _get_hgvs_peptides{
 	$hgvs_notation->{type} = "";
     }
 
-    elsif( length($self->codon()) < 3 && $hgvs_notation->{type} ne "fs"){
+    elsif(  $hgvs_notation->{type} eq "del"){ 
 	#### partial last codon    
 	$hgvs_notation->{alt} = "del";
     } 
@@ -933,8 +946,8 @@ sub _get_hgvs_peptides{
     }
   
     ### set stop to HGVS prefered "X"
-    $hgvs_notation->{ref} =~ s/Ter|Xaa/X/;
-    $hgvs_notation->{alt} =~ s/Ter|Xaa/X/;
+    if(defined $hgvs_notation->{ref}){ $hgvs_notation->{ref} =~ s/Ter|Xaa/X/; }
+    if(defined $hgvs_notation->{alt}){ $hgvs_notation->{alt} =~ s/Ter|Xaa/X/; }
            
     return ($hgvs_notation);                  
 }
@@ -956,6 +969,7 @@ sub _clip_alleles{
 	if($check_next_ref eq  "*" && $check_next_alt eq "*"){
 	    ### stop re-created by variant - no protein change
 	    $hgvs_notation->{type} = "=";
+
 	    return($hgvs_notation);
 	}
 	
@@ -1048,11 +1062,12 @@ sub _get_fs_peptides{
     $ref_pos = $self->transcript_variation->translation_start() ;
 
 
-    while ($ref_pos < length $alt_trans){
+    while ($ref_pos <= length $alt_trans){
 	### frame shift may result in the same AA#
 
 	$ref = substr($ref_trans, $ref_pos-1, 1);
 	$alt = substr($alt_trans, $ref_pos-1, 1);
+
 	if($ref eq "*" && $alt eq "*"){
 	    ### variation at stop codon, but maintains stop codon
 	    return ($ref, $alt, $ref_pos);
@@ -1060,7 +1075,6 @@ sub _get_fs_peptides{
 	last if $ref ne $alt;
 	$ref_pos++;
     }
-
     return ($ref,$alt, $ref_pos);
 
 }
