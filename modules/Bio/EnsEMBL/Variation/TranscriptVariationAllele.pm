@@ -758,7 +758,9 @@ sub _get_hgvs_protein_format{
     my $self          = shift;
     my $hgvs_notation = shift;
 
-    if(($hgvs_notation->{ref} eq $hgvs_notation->{alt}) || $hgvs_notation->{type} eq "="){
+    if ((defined  $hgvs_notation->{ref} && defined $hgvs_notation->{alt} &&
+	 $hgvs_notation->{ref} eq $hgvs_notation->{alt}) || 
+	$hgvs_notation->{type} eq "="){
 	### no protein change - return transcript nomenclature with flag for neutral protein consequence
 	$hgvs_notation->{'hgvs'} = $self->hgvs_transcript() . "(p.=)";
 	return $hgvs_notation->{'hgvs'} ;
@@ -781,6 +783,11 @@ sub _get_hgvs_protein_format{
 	   # warn "TVA: stop loss for type $hgvs_notation->{type}  not caught \n";
 	}
 	$hgvs_notation->{'hgvs'} .=  $hgvs_notation->{ref} . $hgvs_notation->{start} .  $hgvs_notation->{alt} ;
+    } 
+    elsif($hgvs_notation->{type} eq ">"){
+ 	#### substitution
+ 
+ 	$hgvs_notation->{'hgvs'}  .=   $hgvs_notation->{ref}. $hgvs_notation->{start} .  $hgvs_notation->{alt};
     } 
     elsif( $hgvs_notation->{type} eq "dup"){
 
@@ -826,7 +833,7 @@ sub _get_hgvs_protein_format{
     }     
     
     elsif($hgvs_notation->{type} eq "fs"){
-	if($hgvs_notation->{alt}  eq "X"){ ## stop gained
+	if(defined $hgvs_notation->{alt} && $hgvs_notation->{alt} eq "X"){ ## stop gained
 	    $hgvs_notation->{'hgvs'} .= $hgvs_notation->{ref} . $hgvs_notation->{start}  .  $hgvs_notation->{alt} ;
 
 	}
@@ -891,9 +898,9 @@ sub _get_hgvs_protein_type{
 	    #### synonymous indicated by =
 	    $type = "=";
 	}
-	elsif( length($self->transcript_variation->get_reference_TranscriptVariationAllele->peptide()) ==1 && $alt_pep eq "*"  ) {
-	    ### capture stop as subs
-	    $type = "<";
+	elsif( length($self->transcript_variation->get_reference_TranscriptVariationAllele->peptide()) ==1 && length($alt_pep) ==1  ) {
+
+	    $type = ">";
 	}
 	elsif($self->transcript_variation->get_reference_TranscriptVariationAllele->peptide() eq "-") {
 
@@ -918,7 +925,7 @@ sub _get_hgvs_protein_type{
     }
     
   
-    elsif(($ref_length  - $alt_length)%3 !=0 ){
+    elsif($ref_length ne $alt_length && ($ref_length  - $alt_length)%3 !=0 ){
 	$type = "fs";
     }    
     
@@ -972,7 +979,10 @@ sub _get_hgvs_peptides{
 
     ### Convert peptide to 3 letter code as used in HGVS
     $hgvs_notation->{ref}  = Bio::SeqUtils->seq3(Bio::PrimarySeq->new(-seq => $hgvs_notation->{ref}, -id => 'ref',  -alphabet => 'protein')) || "";
-    if( $hgvs_notation->{alt}){
+    if( $hgvs_notation->{alt}eq "-"){
+ 	$hgvs_notation->{alt} = "del";
+    }
+    else{
 	$hgvs_notation->{alt}  = Bio::SeqUtils->seq3(Bio::PrimarySeq->new(-seq => $hgvs_notation->{alt}, -id => 'ref',  -alphabet => 'protein')) || "";      
     }
 
@@ -982,8 +992,8 @@ sub _get_hgvs_peptides{
 	$hgvs_notation->{alt}  = "?";	
 	$hgvs_notation->{type} = "";
     }
+    elsif( $hgvs_notation->{type} eq "del" ){
 
-    elsif( length($self->codon()) < 3 && $hgvs_notation->{type} ne "fs"){
 	#### partial last codon    
 	$hgvs_notation->{alt} = "del";
     } 
@@ -993,8 +1003,8 @@ sub _get_hgvs_peptides{
     }
   
     ### set stop to HGVS prefered "X"
-    $hgvs_notation->{ref} =~ s/Ter|Xaa/X/;
-    $hgvs_notation->{alt} =~ s/Ter|Xaa/X/;
+    if(defined $hgvs_notation->{ref}){ $hgvs_notation->{ref} =~ s/Ter|Xaa/X/; }
+    if(defined $hgvs_notation->{alt}){ $hgvs_notation->{alt} =~ s/Ter|Xaa/X/;}
            
     return ($hgvs_notation);                  
 }
@@ -1108,7 +1118,7 @@ sub _get_fs_peptides{
     $ref_pos = $self->transcript_variation->translation_start() ;
 
 
-    while ($ref_pos < length $alt_trans){
+    while ($ref_pos <= length $alt_trans){
 	### frame shift may result in the same AA#
 
 	$ref = substr($ref_trans, $ref_pos-1, 1);
