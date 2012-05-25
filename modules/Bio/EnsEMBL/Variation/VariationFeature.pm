@@ -1541,7 +1541,7 @@ sub hgvs_genomic{
     
     # Create new VariationFeature on the slice of the reference feature (unless the reference feature is the slice the VF is on)
     my $tr_vf;
-    if ( $tr_vf->slice->is_toplevel() == 1) {
+    if ( $self->slice->coord_system->name() eq "chromosome") {
 	$tr_vf = $self;
     }
     else {	
@@ -1590,7 +1590,7 @@ sub hgvs_genomic{
 
 	## work out chrom coord for hgvs string if transcript slice supplied
 	my ($chr_start,$chr_end);  
-	if ( $tr_vf->slice->coord_system->name() eq "chromosome") {
+	if ( $tr_vf->slice->is_toplevel() == 1) {
 	    $chr_start = $tr_vf->seq_region_start();
 	    $chr_end   = $tr_vf->seq_region_end();
 	}
