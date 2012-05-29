@@ -12,6 +12,7 @@ use strict;
 use warnings;
 use Getopt::Long;
 use DBI;
+use ImportUtils qw(update_table);
 
 use Bio::EnsEMBL::Registry;
 
@@ -36,7 +37,7 @@ my $registry_file = $options{'registry_file'};
 my $clean = $options{'clean'};
 my $quiet = $options{'quiet'};
 my $help = $options{'help'};
-my $sv_prefix = $option{'sv'} ? 'structural_' : '';
+my $sv_prefix = $options{'sv'} ? 'structural_' : '';
 
 usage() if ($help);
 
@@ -140,28 +141,6 @@ sub post_process {
     };
     my $upd_impl_sth = $dbVar->dbc->prepare($stmt);
     
-    #ÊClean the variation_feature table
-    $stmt = qq{
-        UPDATE
-            $VARIATION_FEATURE_TABLE vf
-        SET
-            vf.variation_set_id = ''
-    };
-    my $clean_vf_sth = $dbVar->dbc->prepare($stmt);
-    
-    #ÊUpdate the variation_feature table
-    $stmt = qq{
-        UPDATE
-            $VARIATION_FEATURE_TABLE vf,
-            $tmp_table t
-        SET
-            vf.variation_set_id = t.variation_set_id
-        WHERE
-            vf.$VAR_COL = t.$VAR_COL
-    };
-    my $upd_vf_sth = $dbVar->dbc->prepare($stmt);
-    
-    
     ####
     ## Post-process
     
@@ -195,18 +174,11 @@ sub post_process {
         
     }
     
-    #ÊIf specified, truncate all pre-existing variation_set_id entries in variation_feature
-    if ($clean) {
-        
-        print STDOUT localtime() . "\tTruncating pre-existing variation_set_id columns in variation_feature..." unless ($quiet);
-        $clean_vf_sth->execute();
-        print STDOUT "done!\n" unless ($quiet);
-        
-    }
-    
     # Finally, update the variation_set_id column in variation_feature
     print STDOUT localtime() . "\tUpdating variation_feature with the variation_set_id column from $tmp_table..." unless ($quiet);
-    $upd_vf_sth->execute();
+    
+    update_table($dbVar->dbc, $tmp_table, qw(variation_feature variation_id variation_id variation_set_id variation_set_id), $clean);
+    
     print STDOUT "done!\n" unless ($quiet);
     
     # ...and lastly, drop the temporary table
