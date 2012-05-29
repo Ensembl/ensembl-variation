@@ -7,7 +7,7 @@ use Exporter;
 
 our @ISA = ('Exporter');
 
-our @EXPORT_OK = qw(dumpSQL debug create_and_load load loadfile get_create_statement make_xml_compliant);
+our @EXPORT_OK = qw(dumpSQL debug create_and_load load loadfile get_create_statement make_xml_compliant update_table);
 
 our $TMP_DIR = "/tmp";
 our $TMP_FILE = 'tabledump.txt';
@@ -251,6 +251,111 @@ sub get_create_statement {
   }
   
   return $stmt;
+}
+
+sub update_table {
+  my $db = shift;
+  my $source_table = shift;
+  my $target_table = shift;
+  my $source_key = shift;
+  my $target_key = shift;
+  my $source_col = shift;
+  my $target_col = shift;
+  my $clean = shift;
+  
+  die("Incorrect arguments supplied to update_table\n") unless
+    defined($db) &&
+    defined($source_table) &&
+    defined($target_table) &&
+    defined($source_key) &&
+    defined($target_key) &&
+    defined($source_col) &&
+    defined($target_col);
+  
+  my ($stmt, $sth);
+  
+  # get columns of source table
+  $stmt = qq{
+    DESCRIBE $source_table
+  };
+  $sth = $db->prepare($stmt);
+  $sth->execute;
+  
+  my @source_cols = map {$_->[0]} @{$sth->fetchall_arrayref};
+  $sth->finish;
+  
+  die("No columns found in table $source_table\n") unless @source_cols;
+  die("Key column $source_key not found in source table $source_table\n") unless grep {$_ eq $source_key} @source_cols;
+  die("Data column $source_col not found in source table $source_table\n") unless grep {$_ eq $source_col} @source_cols;
+  
+  # get columns of target table
+  $stmt = qq{
+    DESCRIBE $target_table
+  };
+  $sth = $db->prepare($stmt);
+  $sth->execute;
+  
+  my @target_cols = map {$_->[0]} @{$sth->fetchall_arrayref};
+  $sth->finish;
+  
+  die("No columns found in table $target_table\n") unless @target_cols;
+  die("Key column $target_key not found in target table $target_table\n") unless grep {$_ eq $target_key} @target_cols;
+  die("Data column $target_col not found in target table $target_table\n") unless grep {$_ eq $target_col} @target_cols;
+  
+  # construct columns to select
+  my (@select_cols, $select_cols);
+  
+  foreach my $col(@target_cols) {
+    if($col eq $target_col) {
+      if($clean) {
+        push @select_cols, $source_table.'.'.$source_col;
+      }
+      else {
+        push @select_cols, qq{if($source_table.$source_col is null, $target_table.$col, $source_table.$source_col)};
+      }
+    }
+    else {
+      push @select_cols, $target_table.'.'.$col;
+    }
+  }
+  
+  $select_cols = join ",", @select_cols;
+  
+  # create tmp table
+  my $tmp_table = $target_table.'_tmp_'.$$;
+  
+  $stmt = qq{
+    CREATE TABLE $tmp_table LIKE $target_table
+  };
+  $db->do($stmt);
+  
+  # construct SQL
+  $stmt = qq{
+    INSERT INTO $tmp_table
+    SELECT $select_cols
+    FROM $target_table
+    LEFT JOIN $source_table
+    ON $target_table.$target_key = $source_table.$source_key
+  };
+  
+  $db->do($stmt);
+  
+  # check things went OK
+  $sth = $db->prepare("SELECT COUNT(*) FROM $target_table");
+  $sth->execute();
+  my $old_count = $sth->fetchall_arrayref()->[0]->[0];
+  $sth->finish();
+  
+  $sth = $db->prepare("SELECT COUNT(*) FROM $tmp_table");
+  $sth->execute();
+  my $new_count = $sth->fetchall_arrayref()->[0]->[0];
+  $sth->finish();
+  
+  die("New tmp table ($new_count) does not have the same number of rows as original target table ($old_count)\n") unless $old_count == $new_count;
+  
+  # rename and drop
+  $db->do(qq{DROP TABLE $target_table});
+  $db->do(qq{RENAME TABLE $tmp_table TO $target_table});
 }
 
 sub debug {
