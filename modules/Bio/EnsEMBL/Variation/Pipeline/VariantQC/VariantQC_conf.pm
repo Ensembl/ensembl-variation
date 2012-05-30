@@ -81,16 +81,16 @@ sub default_options {
 
         # flip varation_features on reverse strand with map weight 1 unless this set to 0
 
-        #flip_variants            => 1,    TO BE IMPLEMENTED
+        #flip_variants            => 1,    TO BE IMPLEMENTED on by default
 
 	## The current dbSNP importer does not create the variation_feature.allele_string
 	## Switch this to 0 if QC'ing external data imported with variation_feature.allele_string's
 
-	do_allele_string          => 1,
+	do_allele_string          => 0,
 
 	# number of *variants* handled per batch
 
-	qc_batch_size            => 10000, ## testing on small sets
+	qc_batch_size            => 1000, 
 	unmapped_batch_size      => 100000, ## quicker check can be binned in bigger chunks
 
 
@@ -126,7 +126,7 @@ sub default_options {
         # options controlling the number of workers used for the parallelisable analyses
         # NEED TO ESTABLISH GOOD default values for most species
 
-        variant_qc_capacity        => 10,
+        variant_qc_capacity        => 30,
         unmapped_var_capacity      => 10,
 
 
@@ -152,7 +152,7 @@ sub default_options {
             -port   => $self->o('hive_db_port'),
             -user   => $self->o('hive_db_user'),
             -pass   => $self->o('hive_db_password'),            
-            -dbname => $ENV{'USER'}.'_'.$self->o('pipeline_name'),
+            -dbname => $ENV{'USER'}.'_'.$self->o('pipeline_name') . '_' . $self->o('species'),
         },
     };
 }
