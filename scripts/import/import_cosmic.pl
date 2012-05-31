@@ -29,7 +29,7 @@ GetOptions(
     "help|h"        => \$help,
 );
 
-unless ($registry_file && $import_file && $version) {
+unless (defined($registry_file) && defined($import_file) && defined($version)) {
     print "Must supply an import file, a registry file and a version ...\n" unless $help;
     $help = 1;
 }
@@ -560,8 +560,11 @@ MAIN_LOOP : while(<$INPUT>) {
                 next;
             }
         }
-
-        die "strand should be defined now" unless defined $strand;
+				
+				unless (defined $strand) {
+        	print "Reference bases mismatch and no evidence for any strand - leaving\n";
+          next;
+        }
 
         # these two variables are used when adding this feature to the DB because we 
         # add everything as if it were on the forward strand, regardless of the cosmic 
