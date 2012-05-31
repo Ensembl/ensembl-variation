@@ -23,6 +23,8 @@ $output_dir ||=".";
 my $seed;
 ###kmer is always set to 12, so ajust seed for different species
 $seed = 2 if $input_dir =~ /zfish/;
+my $skip = 3;
+
 ##if input from array, this is short sequence, run it in turing (big mem) or use exonerate(small memory 1024 MB)
 ##[exonerate_bin_dir]/exonerate-1.4.0 --query [ssaha_input_dir]/1_query_seq --target [blast_db_dir]/softmasked_dusted.fa --showalignment no --showvulgar yes
 ##nathan's affy array parameters to ensure one mismatch : --bestn 100 --dnahspthreshold 116 --fsmmemory 256 --dnawordlen 25 --dnawordthreshold 11
@@ -55,7 +57,7 @@ sub run_ssaha2 {
 
   if (! -f "$subject\.body") {
     print "Submitting ssaha2Build job...\n";
-    my $ssaha2build = "bsub $queue_long -J 'ssaha2build' -o $target_file\_out $ssahabuild -kmer 12 -skip 2 -save $subject $target_file";
+    my $ssaha2build = "bsub $queue_long -J 'ssaha2build' -o $target_file\_out $ssahabuild -kmer 12 -skip $skip -save $subject $target_file";
     system("$ssaha2build");
 
     my $call = "bsub -q normal -K -w 'done('ssaha2build')' -J waiting_process sleep 1"; #waits until all variation features have finished to continue
@@ -140,7 +142,7 @@ sub bsub_ssaha_job_array {
   #my $ssaha_command = "$ssaha2 -seeds 5 -cut 5000 -memory 300 -best 1 -output cigar -name -save $subject $input_file";
 
   #for normal flanking mapping
-  my $ssaha_command = "$ssaha2 -align 0 -kmer 12 -skip 2 -seeds $seed -cut 5000 -output vulgar -depth 5 -best 1 -tags 1 -name -save $subject $input_file";
+  my $ssaha_command = "$ssaha2 -align 0 -kmer 12 -skip $skip -seeds $seed -cut 5000 -output vulgar -depth 5 -best 1 -tags 1 -name -save $subject $input_file";
   my $call = "bsub -J'ssaha_out_[$start-$end]%50' $queue -e $output_dir/ssaha.%I.err -o $output_dir/ssaha.%I.out ";
   $call .= " $ssaha_command";
   print "$call\n";
