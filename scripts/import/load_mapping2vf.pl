@@ -7,6 +7,7 @@ use DBI;
 use DBH;
 use Getopt::Long;
 use Benchmark;
+use Bio::EnsEMBL::Registry;
 use Bio::EnsEMBL::DBSQL::DBConnection;
 use ImportUtils qw(dumpSQL debug create_and_load load );
 use FindBin qw( $Bin );
@@ -56,19 +57,19 @@ sub variation_feature {
 
   debug("Dumping Variation");
   
-  my $sth = $dbVar->prepare (qq{SELECT variation_id, variation_name, source_id, allele_string, validation_status
-                                #FROM variation_feature_venter_map1_no_hap
-                                FROM variation_feature
-                                #WHERE seq_region_id=100965538
-  });
+  my $sth = $dbVar->prepare (qq{SELECT v.variation_id, v.name, v.source_id, f.allele_string, v.validation_status 
+	                              FROM variation v LEFT JOIN variation_feature f ON v.variation_id=f.variation_id;
+                             });									 
   $sth->execute();
 
   while(my ($variation_id, $name, $source_id, $allele_string, $validation_status) = $sth->fetchrow_array()) {
-    my $h={};
+		next if ($rec{$name});
+		
+		my $h={};
     $h->{name} = $name;
     $h->{variation_id} = $variation_id;
     $h->{source_id} = $source_id;
-    $h->{allele_string} = $allele_string;
+    $h->{allele_string} = defined $allele_string ?  $allele_string : '\N';
     $h->{validation} = defined $validation_status ? $validation_status : '\N';
     $rec{$name} = $h;
   }
@@ -122,8 +123,8 @@ sub variation_feature {
       my $new_seq_region_end = $seq_region_start + $end -1 if ($seq_region_start);
     
       if (!$rec_pos{$ref_id}{$seq_region_id}{$new_seq_region_start}{$new_seq_region_end}) {
-	print FH join ("\t", $seq_region_id,$new_seq_region_start,$new_seq_region_end,$strand,$rec{$ref_id}->{variation_id},$ref_id,$rec{$ref_id}->{allele_string},$rec{$ref_id}->{source_id},$rec{$ref_id}->{validation})."\n";
-	$rec_pos{$ref_id}{$seq_region_id}{$new_seq_region_start}{$new_seq_region_end}=1;
+				print FH join ("\t", $seq_region_id,$new_seq_region_start,$new_seq_region_end,$strand,$rec{$ref_id}->{variation_id},$ref_id,$rec{$ref_id}->{allele_string},$rec{$ref_id}->{source_id},$rec{$ref_id}->{validation})."\n";
+				$rec_pos{$ref_id}{$seq_region_id}{$new_seq_region_start}{$new_seq_region_end}=1;
       }
     }
   }
@@ -136,7 +137,7 @@ sub variation_feature {
 
   $dbVar->do(qq{CREATE TABLE IF NOT EXISTS variation_feature_mapping_MT LIKE variation_feature});
   load($dbVar, "variation_feature_mapping_MT","seq_region_id","seq_region_start","seq_region_end",
-       "seq_region_strand","variation_id","variation_name","allele_string","source_id", "validation_status");
+               "seq_region_strand","variation_id","variation_name","allele_string","source_id", "validation_status");
 }
 
 ###
