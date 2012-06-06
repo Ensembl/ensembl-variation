@@ -30,9 +30,6 @@ from variation_set vs, attrib a
 where vs.short_name_attrib_id = a.attrib_id
 and a.value like 'hapmap%';
 
-# hack for main hapmap set
-update meta set meta_value = 'set#All HapMap#variation_set_hapmap#hapmap' where meta_value = 'set#HapMap#variation_set_hapmap#hapmap';
-
 # add 1000 genomes sets
 insert into meta(species_id, meta_key, meta_value)
 values
