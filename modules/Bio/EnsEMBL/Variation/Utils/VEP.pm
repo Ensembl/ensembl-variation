@@ -2175,8 +2175,6 @@ sub whole_genome_fetch_reg {
     
     return unless defined($rf_cache->{$chr});
     
-    $slice_cache ||= build_slice_cache($config, $rf_cache);
-    
     my $rf_count = 0;
     
     foreach my $type(keys %{$rf_cache->{$chr}}) {
