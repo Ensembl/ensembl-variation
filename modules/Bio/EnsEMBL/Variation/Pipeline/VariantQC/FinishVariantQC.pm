@@ -57,8 +57,8 @@ sub run {
 
     ## rename tables
     if( $all_ok ==2 ){
-	print $report "\n\tOK to rename post-QC tables \n\n";
-	# rename_tables($var_dba);
+         print $report "\n\tOK to rename post-QC tables \n\n";
+  # rename_tables($var_dba);
     }
 
 }
@@ -90,20 +90,20 @@ sub run {
 
     my $all_ok = 0; ## can we proceed to rename tables?
 
-   if($old_varfeat->[0]->[0] == $new_varfeat->[0]->[0]){
-	print $report "Variation_Feature: Correct number of entries seen in variation_feature: $new_varfeat->[0]->[0]\n\n";
-	$all_ok++;
+    if($old_varfeat->[0]->[0] == $new_varfeat->[0]->[0]){
+       print $report "Variation_Feature: Correct number of entries seen in variation_feature: $new_varfeat->[0]->[0]\n\n";
+       $all_ok++;
     }
     else{
-	print $report "Variation_Feature: ERROR old table has :$old_varfeat rows, new table has $new_varfeat->[0]->[0]\n\n";
+        print $report "Variation_Feature: ERROR old table has :$old_varfeat rows, new table has $new_varfeat->[0]->[0]\n\n";
     }
 
     if($old_allele->[0]->[0] == $new_allele->[0]->[0]){
-	print $report "Allele: Correct number of entries seen : $new_allele->[0]->[0]\n";
-	$all_ok++;
+       print $report "Allele: Correct number of entries seen : $new_allele->[0]->[0]\n";
+       $all_ok++;
     }
     else{
-	print $report "Allele: ERROR old table has : $old_allele->[0]->[0] rows, new table has: $new_allele->[0]->[0]\n";
+       print $report "Allele: ERROR old table has : $old_allele->[0]->[0] rows, new table has: $new_allele->[0]->[0]\n";
     }
 
     return ( $new_allele->[0]->[0], $all_ok );
@@ -113,7 +113,7 @@ sub run {
 
  sub get_failure_rates{
 
-     my ($var_dba, $report, $allele_number) = @_;
+    my ($var_dba, $report, $allele_number) = @_;
     
     my $variation_ext_sth    = $var_dba->dbc->prepare(qq[ select count(*) from variation]);
     my $varfail_ext_sth      = $var_dba->dbc->prepare(qq[ select count(distinct variation_id) from failed_variation_working]);
@@ -130,14 +130,14 @@ sub run {
     my $allelefail  = $allelefail_ext_sth->fetchall_arrayref();
  
 
-     my $var_fail_rate = substr((100 * $varfail->[0]->[0] / $variation->[0]->[0] ), 0,5 ); 
+    my $var_fail_rate = substr((100 * $varfail->[0]->[0] / $variation->[0]->[0] ), 0,5 ); 
      
-     print $report "\nVariation failure rate:  $var_fail_rate % [$varfail->[0]->[0] / $variation->[0]->[0] ]\n";
+    print $report "\nVariation failure rate:  $var_fail_rate % [$varfail->[0]->[0] / $variation->[0]->[0] ]\n";
      
      
-     my $allele_fail_rate = substr((100 * $allelefail->[0]->[0] / $allele_number ), 0,5 ); 
+    my $allele_fail_rate = substr((100 * $allelefail->[0]->[0] / $allele_number ), 0,5 ); 
 
-     print $report "\nAllele failure rate: $allele_fail_rate % [$allelefail->[0]->[0] /$allele_number ] \n\n";
+    print $report "\nAllele failure rate: $allele_fail_rate % [$allelefail->[0]->[0] /$allele_number ] \n\n";
      
      
 }
@@ -169,12 +169,12 @@ sub check_failure_rates{
 
     print $report "\nVariation Failure reasons:\n";
     foreach my $l (@{$vardesc}){
-	print $report "\t$l->[1]\t$l->[0]\n";
+       print $report "\t$l->[1]\t$l->[0]\n";
     }
 
     print $report "\nAllele Failure reasons:\n";
     foreach my $l (@{$alleledesc}){
-	print $report "\t$l->[1]\t$l->[0]\n";
+       print $report "\t$l->[1]\t$l->[0]\n";
     }
 }
 
@@ -194,8 +194,11 @@ sub rename_tables{
     #$var_dba->dbc->do(qq[ rename table allele_working to allele ]);
     #$var_dba->dbc->do(qq[ rename table variation_feature_working to variation_feature ]);
     #$var_dba->dbc->do(qq[ rename table failed_allele_working to failed_allele ]);        ## Not needed post dev phase
-    #$var_dba->dbc->do(qq[ rename table failed_variation_working to variation ]);         ## Not needed post dev phase
+    #$var_dba->dbc->do(qq[ rename table failed_variation_working to failed_variation ]);  ## Not needed post dev phase
 
+    ## does this need binning?
+    #$var_dba->dbc->do(qq[ update variation set flipped = 0  ]);
+    #$var_dba->dbc->do(qq[ update variation set flipped = 1 where variation_id in (select variation_id from variation_to_reverse_working) ]);
 
 }
 1;
