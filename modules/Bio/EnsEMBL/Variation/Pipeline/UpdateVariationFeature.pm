@@ -17,8 +17,8 @@ sub run {
 
     $dbc->do(qq{
         UPDATE  variation_feature
-        SET     consequence_type = 'intergenic_variant'
-    }) or die "Failed to reset consequence_type on variation_feature";
+        SET     consequence_types = 'intergenic_variant'
+    }) or die "Failed to reset consequence_types on variation_feature";
 
     # create a temp table (dropping it if it exists)
 
@@ -33,7 +33,7 @@ sub run {
     # concatenate the consequence types from transcript_variation 
 
     $dbc->do(qq{
-        INSERT INTO $temp_table (variation_feature_id, consequence_type)
+        INSERT INTO $temp_table (variation_feature_id, consequence_types)
         SELECT  variation_feature_id, GROUP_CONCAT(DISTINCT(consequence_types)) 
         FROM    transcript_variation 
         GROUP BY variation_feature_id
@@ -43,7 +43,7 @@ sub run {
     
     $dbc->do(qq{
         UPDATE  variation_feature vf, $temp_table tvf
-        SET     vf.consequence_type = tvf.consequence_type
+        SET     vf.consequence_types = tvf.consequence_types
         WHERE   vf.variation_feature_id = tvf.variation_feature_id
     }) or die "Failed to update vf table";
 

@@ -41,7 +41,7 @@ sub default_options {
         
         # the location of your checkout of the ensembl API (the hive looks for SQL files here)
         
-        ensembl_cvs_root_dir    => $ENV{'HOME'}.'/ensembl-branches/HEAD',
+        ensembl_cvs_root_dir    => $ENV{'HOME'}.'/Ensembl/CheckedOut',
 
         # a name for your pipeline (will also be used in the name of the hive database)
         
@@ -50,7 +50,7 @@ sub default_options {
         # a directory to keep hive output files and your registry file, you should
         # create this if it doesn't exist
 
-        pipeline_dir            => '/lustre/scratch103/ensembl/gr5/'.$self->o('pipeline_name'),
+        pipeline_dir            => '/lustre/scratch103/ensembl/wm2/'.$self->o('pipeline_name'),
 
         # a directory where hive workers will dump STDOUT and STDERR for their jobs
         # if you use lots of workers this directory can get quite big, so it's
@@ -107,7 +107,7 @@ sub default_options {
         # <username>_<pipeline_name>, and will drop any existing database with this
         # name
 
-        hive_db_host    => 'ens-variation',
+        hive_db_host    => 'ens-variation2',
         hive_db_port    => 3306,
         hive_db_user    => 'ensadmin',
 
@@ -118,6 +118,8 @@ sub default_options {
             -pass   => $self->o('hive_db_password'),            
             -dbname => $ENV{'USER'}.'_'.$self->o('pipeline_name'),
         },
+        
+        hive_use_triggers => 0,
     };
 }
 
