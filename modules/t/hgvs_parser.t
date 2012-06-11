@@ -196,15 +196,15 @@ my @test_input = (
            "A",
            "ENSP00000386201.1:p.Arg82Gln",
            "parseable protein change"
-           ],
-          ["2:g.46739216C>A",
-           "A",
-           "ENST00000306448.4:c.635G>T",
-           "T",
-           "ENSP00000304891.4:p.Arg212Leu",
-           "parseable protein change [-1]"
-           ],
-         
+           ],         
+           ["2:g.98275102C>T",
+            "T",
+            "ENST00000289228.5:c.445G>A",
+            "A",
+            "ENSP00000289228.5:p.Ala149Thr",
+            "A",
+            "parseable protein change [-1]" 
+           ]
 );
 
 foreach my $line(@test_input){
