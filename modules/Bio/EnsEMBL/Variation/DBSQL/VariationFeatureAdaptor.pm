@@ -1571,8 +1571,8 @@ sub _parse_hgvs_protein_position{
   throw ("Unable to map the peptide coordinate $pos to genomic coordinates for protein $reference") if (scalar(@coords) != 1 || !$coords[0]->isa('Bio::EnsEMBL::Mapper::Coordinate')); 
 
   my $strand = $coords[0]->strand(); 
-  my $start  = $coords[0]->start(); 
-  my $end    = $coords[0]->start(); 
+  my $start  = $strand > 0 ? $coords[0]->start() : $coords[0]->end(); 
+  my $end    = $strand > 0 ? $coords[0]->start() : $coords[0]->end(); 
 
 
   # get correct codon table 
@@ -1609,7 +1609,7 @@ sub _parse_hgvs_protein_position{
 
   # get shortest dist and best paths with that dist 
   my $shortest_dist = length((sort {length($a) <=> length($b)} values %paths)[0]); 
-  my %best_paths = map {$_ => 1} grep {length($_) eq $shortest_dist} values %paths; 
+  my %best_paths = map {$_ => 1} grep {length($_) eq $shortest_dist} values %paths;
 
   my ($ref_allele, $alt_allele);
 
@@ -1617,9 +1617,15 @@ sub _parse_hgvs_protein_position{
   if(scalar keys %best_paths == 1) { 
       my @path = map {split /\,/, $_} keys %best_paths; 
 
-      # coords 
-      $start += (split /\_/, $path[0])[0]; 
-      $end += (split /\_/, $path[-1])[0]; 
+      # coords
+	  if($strand > 0) {
+		$start += (split /\_/, $path[0])[0]; 
+		$end   += (split /\_/, $path[-1])[0];
+	  }
+	  else {
+		$start -= (split /\_/, $path[0])[0]; 
+		$end   -= (split /\_/, $path[-1])[0];
+	  }
 
       # alleles 
       $ref_allele .= (split /\_|\//, $path[$_])[1] for 0..$#path; 
