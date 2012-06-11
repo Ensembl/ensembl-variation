@@ -419,21 +419,24 @@ INSERT INTO individual_type (name,description) VALUES ('mutant','a single or mul
 @desc This table represents mappings of variations to genomic locations. It stores an allele string representing the different possible alleles that are found at that locus e.g. "A/T" for a SNP, as well as a "worst case" consequence of the mutation. It also acts as part of the relationship between variations and transcripts.
 
 @column variation_feature_id	Primary key, internal identifier.
-@column seq_region_id			Foreign key references @link seq_region in core db. Refers to the seq_region which this variant is on, which may be a chromosome, a clone, etc...
-@column seq_region_start		The start position of the variation on the @link seq_region.
-@column seq_region_end			The end position of the variation on the @link seq_region.
-@column seq_region_strand		The orientation of the variation on the @link seq_region.
-@column variation_id				Foreign key references to the @link variation table.
-@column allele_string			This is a denormalised string taken from the alleles in the allele table associated with this variation. The reference allele (i.e. one on the reference genome comes first).
-@column variation_name			A denormalisation taken from the variation table. This is the name or identifier that is used for displaying the feature.
-@column map_weight				The number of times that this variation has mapped to the genome. This is a denormalisation as this particular feature is one example of a mapped location. This can be used to limit the the features that come back from a query.
-@column flags						Flag to filter the selection of variations.
-@column source_id					Foreign key references to the source table.
-@column validation_status		SET('cluster', 'freq', 'submitter', 'doublehit', 'hapmap', '1000Genome', 'precious')	Variant discovery method and validation from dbSNP.
-@column consequence_types		The SO term(s) of all unique observed consequence types of this variation feature
-@column variation_set_id		The variation feature can belong to a @link variation_set.
-@column class_attrib_id			Class of the variation, key in the @link attrib table
-@column somatic                 Flags whether this variation_feature is somatic or germline
+@column seq_region_id			    Foreign key references @link seq_region in core db. Refers to the seq_region which this variant is on, which may be a chromosome, a clone, etc...
+@column seq_region_start		  The start position of the variation on the @link seq_region.
+@column seq_region_end			  The end position of the variation on the @link seq_region.
+@column seq_region_strand		  The orientation of the variation on the @link seq_region.
+@column variation_id				  Foreign key references to the @link variation table.
+@column allele_string			    This is a denormalised string taken from the alleles in the allele table associated with this variation. The reference allele (i.e. one on the reference genome comes first).
+@column variation_name			  A denormalisation taken from the variation table. This is the name or identifier that is used for displaying the feature.
+@column map_weight				    The number of times that this variation has mapped to the genome. This is a denormalisation as this particular feature is one example of a mapped location. This can be used to limit the the features that come back from a query.
+@column flags						      Flag to filter the selection of variations.
+@column source_id					    Foreign key references to the source table.
+@column validation_status		  SET('cluster', 'freq', 'submitter', 'doublehit', 'hapmap', '1000Genome', 'precious')	Variant discovery method and validation from dbSNP.
+@column consequence_types		  The SO term(s) of all unique observed consequence types of this variation feature
+@column variation_set_id		  The variation feature can belong to a @link variation_set.
+@column class_attrib_id			  Class of the variation, key in the @link attrib table
+@column somatic               Flags whether this variation_feature is somatic or germline
+@column minor_allele          The minor allele of this variant, as reported by dbSNP
+@column minor_allele_freq     The 'global' frequency of the minor allele of this variant, as reported by dbSNP
+@column minor_allele_count    The number of samples the minor allele of this variant is found in, as reported by dbSNP
 
 @see variation
 @see tagged_variation_feature
@@ -782,27 +785,28 @@ CREATE TABLE IF NOT EXISTS variation_set_structural_variation (
 
 @desc This table relates a single allele of a variation_feature to a transcript (see Core documentation). It contains the consequence of the allele e.g. intron_variant, non_synonymous_codon, stop_lost etc, along with the change in amino acid in the resulting protein if applicable.
 
-@column transcript_variation_id	    Primary key, internal identifier.
-@column feature_stable_id		    Foreign key to core databases. Unique stable id of related transcript.
-@column variation_feature_id		Foreign key references to the @link variation_feature table.
-@column allele_string               Shows the reference sequence and variant sequence of this allele
-@column somatic                     Flags if the associated variation is known to be somatic
-@column consequence_types			The consequence(s) of the variant allele on this transcript.
-@column cds_start					The start position of variation in cds coordinates.
-@column cds_end						The end position of variation in cds coordinates.
-@column cdna_start					The start position of variation in cdna coordinates.
-@column cdna_end					The end position of variation in cdna coordinates.
-@column translation_start			The start position of variation on peptide.
-@column translation_end				The end position of variation on peptide.
-@column codon_allele_string         The reference and variant codons
-@column pep_allele_string           The reference and variant peptides
-@column hgvs_genomic                HGVS representation of this allele with respect to the genomic sequence
-@column hgvs_transcript             HGVS representation of this allele with respect to the [coding or non-coding] transcript
-@column hgvs_protein                HGVS representation of this allele with respect to the protein
-@column polyphen_prediction         The PolyPhen prediction for the effect of this allele on the protein
-@column polyphen_score              The PolyPhen score corresponding to the prediction 
-@column sift_prediction             The SIFT prediction for the effect of this allele on the protein 
-@column sift_score                  The SIFT score corresponsing to this prediction
+@column transcript_variation_id	 Primary key, internal identifier.
+@column feature_stable_id		     Foreign key to core databases. Unique stable id of related transcript.
+@column variation_feature_id		 Foreign key references to the @link variation_feature table.
+@column allele_string            Shows the reference sequence and variant sequence of this allele
+@column somatic                  Flags if the associated variation is known to be somatic
+@column consequence_types			   The consequence(s) of the variant allele on this transcript.
+@column cds_start					       The start position of variation in cds coordinates.
+@column cds_end						       The end position of variation in cds coordinates.
+@column cdna_start					     The start position of variation in cdna coordinates.
+@column cdna_end					       The end position of variation in cdna coordinates.
+@column translation_start			   The start position of variation on peptide.
+@column translation_end				   The end position of variation on peptide.
+@column distance_to_transcript   Only for upstream or downstream variants, it gives the distance from the start or the end of the transcript
+@column codon_allele_string      The reference and variant codons
+@column pep_allele_string        The reference and variant peptides
+@column hgvs_genomic             HGVS representation of this allele with respect to the genomic sequence
+@column hgvs_transcript          HGVS representation of this allele with respect to the [coding or non-coding] transcript
+@column hgvs_protein             HGVS representation of this allele with respect to the protein
+@column polyphen_prediction      The PolyPhen prediction for the effect of this allele on the protein
+@column polyphen_score           The PolyPhen score corresponding to the prediction 
+@column sift_prediction          The SIFT prediction for the effect of this allele on the protein 
+@column sift_score               The SIFT score corresponsing to this prediction
 
 @see variation_feature
 */
@@ -991,7 +995,7 @@ create table source(
 @column description					Description of the study.
 @column url									URL to find the study data (http or ftp).
 @column external_reference	The pubmed/id or project name associated with this study.
-@column study_type					Displays if a study comes from a genome-wide association study or not.
+@column study_type					Displays the type of the study (e.g. genome-wide association study, control-set, case-set, curated, ...).
 
 @see source
 @see variation_annotation
@@ -1005,7 +1009,7 @@ CREATE TABLE study (
 	description varchar(255) DEFAULT NULL,
 	url varchar(255) DEFAULT NULL,
 	external_reference varchar(255) DEFAULT NULL,
-	study_type set('GWAS'),
+	study_type varchar(255) DEFAULT NULL,
 	
 	primary key( study_id ),
 	key source_idx (source_id)
