@@ -120,6 +120,7 @@ use Bio::EnsEMBL::Variation::Utils::VariationEffect;
         -predicate          => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::non_synonymous_codon',
         -label              => 'Non-synonymous coding',
         -rank               => 7,
+        -tier               => 1,
         -feature_class      => 'Bio::EnsEMBL::Transcript',
     );
   
@@ -141,6 +142,7 @@ sub new {
         $variant_feature_class,
         $predicate,
         $rank,
+        $tier,
         $display_term,
         $NCBI_term,
         $description,
@@ -154,6 +156,7 @@ sub new {
             VARIANT_FEATURE_CLASS
             PREDICATE
             RANK
+            TIER
             DISPLAY_TERM
             NCBI_TERM
             DESCRIPTION
@@ -169,6 +172,7 @@ sub new {
         variant_feature_class   => $variant_feature_class,
         predicate               => $predicate,
         rank                    => $rank,
+        tier                    => $tier,
         display_term            => $display_term,
         NCBI_term               => $NCBI_term,
         description             => $description,
@@ -287,7 +291,7 @@ sub predicate {
   Description: Get/set the relative rank of this OverlapConsequence when compared to other
                OverlapConsequence objects. This is used, for example, to determine the most 
                severe consequence of a VariationFeature. 
-  Returntype : string
+  Returntype : integer
   Exceptions : none
   Status     : At Risk
 
@@ -298,6 +302,25 @@ sub rank {
     $self->{rank} = $rank if $rank;
     return $self->{rank};
 }
+
+=head2 tier
+
+  Arg [1]    : (optional) tier to set
+  Description: Get/set the tier this OverlapConsequence belongs to. Variations will be
+               assigned consequences in tier order; if a tier 1 consequence is assigned,
+               no tier 2 consequences will be checked/assigned. 
+  Returntype : integer
+  Exceptions : none
+  Status     : At Risk
+
+=cut
+
+sub tier {
+    my ($self, $tier) = @_;
+    $self->{tier} = $tier if $tier;
+    return $self->{tier};
+}
+
 
 =head2 display_term
 
