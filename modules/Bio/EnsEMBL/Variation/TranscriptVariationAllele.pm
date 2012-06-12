@@ -67,7 +67,7 @@ use Bio::EnsEMBL::Variation::Utils::Sequence qw(hgvs_variant_notation format_hgv
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
 use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(within_cds within_intron stop_lost affects_start_codon);
 
-use base qw(Bio::EnsEMBL::Variation::VariationFeatureOverlapAllele);
+use base qw(Bio::EnsEMBL::Variation::VariationFeatureOverlapAllele Bio::EnsEMBL::Variation::BaseTranscriptVariationAllele);
 
 
 our $DEBUG = 0;
@@ -99,20 +99,6 @@ sub transcript_variation {
     my ($self, $tv) = @_;
     assert_ref($tv, 'Bio::EnsEMBL::Variation::TranscriptVariation') if $tv;
     return $self->variation_feature_overlap($tv);
-}
-
-=head2 transcript
-
-  Description: Get the associated Transcript
-  Returntype : Bio::EnsEMBL::Transcript
-  Exceptions : none
-  Status     : At Risk
-
-=cut
-
-sub transcript {
-    my $self = shift;
-    return $self->transcript_variation->transcript;
 }
 
 =head2 variation_feature
@@ -148,6 +134,8 @@ sub pep_allele_string {
     return undef unless $pep;
     
     my $ref_pep = $self->transcript_variation->get_reference_TranscriptVariationAllele->peptide;
+    
+    return undef unless $ref_pep;
     
     return $ref_pep ne $pep ? $ref_pep.'/'.$pep : $pep;
 }
