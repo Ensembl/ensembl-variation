@@ -100,6 +100,7 @@ sub store {
             cdna_end,
             translation_start,
             translation_end,
+            distance_to_transcript,
             codon_allele_string,
             pep_allele_string,
             hgvs_genomic,
@@ -109,7 +110,7 @@ sub store {
             polyphen_score,
             sift_prediction,
             sift_score
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     });
 
     for my $allele (@{ $tv->get_all_alternate_TranscriptVariationAlleles }) {
@@ -126,6 +127,7 @@ sub store {
             $tv->cdna_end,
             $tv->translation_start,
             $tv->translation_end,
+            $tv->distance_to_transcript,
             $allele->codon_allele_string,
             $allele->pep_allele_string,
             $allele->hgvs_genomic,
@@ -215,6 +217,7 @@ sub _objs_from_sth {
         $cdna_end,
         $translation_start,
         $translation_end,
+        $distance_to_transcript,
         $codon_allele_string,
         $pep_allele_string,
         $hgvs_genomic,
@@ -238,6 +241,7 @@ sub _objs_from_sth {
         \$cdna_end,
         \$translation_start,
         \$translation_end,
+        \$distance_to_transcript,
         \$codon_allele_string,
         \$pep_allele_string,
         \$hgvs_genomic,
@@ -285,6 +289,7 @@ sub _objs_from_sth {
                 cdna_end                => $cdna_end,
                 translation_start       => $translation_start,
                 translation_end         => $translation_end,
+                distance_to_transcript  => $distance_to_transcript,
                 adaptor                 => $self,
             });
             
@@ -348,6 +353,7 @@ sub _columns {
         cdna_end 
         translation_start 
         translation_end 
+        distance_to_transcript 
         codon_allele_string 
         pep_allele_string 
         hgvs_genomic 
