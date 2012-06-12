@@ -196,7 +196,10 @@ sub new {
       $is_somatic, 
       $validation_code, 
       $overlap_consequences,
-      $class_so_term
+      $class_so_term,
+      $minor_allele,
+      $minor_allele_freq,
+      $minor_allele_count
   ) = rearrange([qw(
           ALLELE_STRING 
           VARIATION_NAME 
@@ -209,6 +212,9 @@ sub new {
           VALIDATION_CODE 
 		  OVERLAP_CONSEQUENCES 
           CLASS_SO_TERM
+          MINOR_ALLELE
+          MINOR_ALLELE_FREQ
+          MINOR_ALLELE_COUNT
         )], @_);
 
   $self->{'allele_string'}          = $allele_str;
@@ -222,6 +228,9 @@ sub new {
   $self->{'validation_code'}        = $validation_code;
   $self->{'overlap_consequences'}   = $overlap_consequences;
   $self->{'class_SO_term'}          = $class_so_term;
+  $self->{'minor_allele'}           = $minor_allele;
+  $self->{'minor_allele_freq'}      = $minor_allele_freq;
+  $self->{'minor_allele_count'}     = $minor_allele_count;
   
   return $self;
 }
@@ -323,6 +332,64 @@ sub map_weight{
   return $self->{'map_weight'} = shift if(@_);
   return $self->{'map_weight'};
 }
+
+=head2 minor_allele
+
+  Arg [1]    : string $minor_allele (optional)
+               The new minor allele string
+  Example    : $ma = $obj->minor_allele()
+  Description: Get/set the minor allele of this variation, as reported by dbSNP
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub minor_allele {
+    my ($self, $minor_allele) = @_;
+    $self->{minor_allele} = $minor_allele if defined $minor_allele;
+    return $self->{minor_allele}
+}
+
+=head2 minor_allele_frequency
+
+  Arg [1]    : float $minor_allele_frequency (optional)
+               The new minor allele frequency
+  Example    : $maf = $obj->minor_allele_frequency()
+  Description: Get/set the frequency of the minor allele of this variation, as reported by dbSNP
+  Returntype : float
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub minor_allele_frequency {
+    my ($self, $minor_allele_frequency) = @_;
+    $self->{minor_allele_frequency} = $minor_allele_frequency if defined $minor_allele_frequency;
+    return $self->{minor_allele_frequency}
+}
+
+=head2 minor_allele_count
+
+  Arg [1]    : int $minor_allele_count (optional)
+               The new minor allele count
+  Example    : $maf_count = $obj->minor_allele_count()
+  Description: Get/set the sample count of the minor allele of this variation, as reported by dbSNP
+  Returntype : int
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub minor_allele_count {
+    my ($self, $minor_allele_count) = @_;
+    $self->{minor_allele_count} = $minor_allele_count if defined $minor_allele_count;
+    return $self->{minor_allele_count}
+}
+
 
 
 =head2 get_all_TranscriptVariations
@@ -624,22 +691,22 @@ sub consequence_type {
 	
     # delete cached term
     if(defined($term_type)) {
-        delete $self->{consequence_type};
+        delete $self->{consequence_types};
 		$method_name = $term_type.($term_type eq 'label' ? '' : '_term');
-		$method_name = 'display_term' unless @{$self->get_all_OverlapConsequences} && $self->get_all_OverlapConsequences->[0]->can($method_name);
+		$method_name = 'SO_term' unless @{$self->get_all_OverlapConsequences} && $self->get_all_OverlapConsequences->[0]->can($method_name);
     }
 	
-	$method_name ||= 'display_term';
+	$method_name ||= 'SO_term';
 
-    unless ($self->{consequence_type}) {
+    unless ($self->{consequence_types}) {
 
         # work out the terms from the OverlapConsequence objects
         
-        $self->{consequence_type} = 
+        $self->{consequence_types} = 
             [ map { $_->$method_name } @{ $self->get_all_OverlapConsequences } ];
     }
     
-    return $self->{consequence_type};
+    return $self->{consequence_types};
 }
 
 =head2 get_all_OverlapConsequences
@@ -750,10 +817,10 @@ sub display_consequence {
     # delete cached term
     if(defined($term_type)) {
 		$method_name = $term_type.($term_type eq 'label' ? '' : '_term');
-		$method_name = 'display_term' unless @{$self->get_all_OverlapConsequences} && $self->get_all_OverlapConsequences->[0]->can($method_name);
+		$method_name = 'SO_term' unless @{$self->get_all_OverlapConsequences} && $self->get_all_OverlapConsequences->[0]->can($method_name);
     }
 	
-	$method_name ||= 'display_term';
+	$method_name ||= 'SO_term';
 	
     return $self->most_severe_OverlapConsequence->$method_name;
 }
