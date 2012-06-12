@@ -196,9 +196,12 @@ sub get_all_OverlapConsequences {
         
         my $cons = [];
         
+        my $assigned_tier;
+        
         # loop over all the possible consequences
-
-        for my $oc (values %OVERLAP_CONSEQUENCES) {
+        for my $oc (sort {$a->tier <=> $b->tier} values %OVERLAP_CONSEQUENCES) {
+            
+            last if defined($assigned_tier) and $oc->tier > $assigned_tier;
            
             # check that this consequence applies to this type of variation feature
 
@@ -209,9 +212,13 @@ sub get_all_OverlapConsequences {
                 if ($self->feature->isa($oc->feature_class)) {
                     
                     # if so, check if the predicate of this consequence holds for this bvfoa
+                    my $check = $oc->predicate->($self);
+                    
+                    #print $self->base_variation_feature->variation_name." ".$oc->{SO_term}." ".$self->feature->stable_id. " $check\n";
 
-                    if ($oc->predicate->($self)) {
+                    if ($check) {
                         push @$cons, $oc;
+                        $assigned_tier = $oc->tier;
                     }
                 }
             }
