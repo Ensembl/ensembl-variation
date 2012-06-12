@@ -222,9 +222,9 @@ sub consequence_type {
 	
 	unless ($self->{consequence_type}) {
 	
-	  $term_type ||= 'display';
+	  $term_type ||= 'SO';
 	  my $method_name = $term_type.($term_type eq 'label' ? '' : '_term');
-	  $method_name = 'display_term' unless $self->most_severe_OverlapConsequence->can($method_name);
+	  $method_name = 'SO_term' unless $self->most_severe_OverlapConsequence->can($method_name);
 	  
 	  # work out the terms from the OverlapConsequence objects
 	  $self->{consequence_type} = 
@@ -304,9 +304,9 @@ sub display_consequence {
 	return 'SARA';
   }
   else {
-	$term_type ||= 'display';
+	$term_type ||= 'SO';
 	my $method_name = $term_type.($term_type eq 'label' ? '' : '_term');
-	$method_name = 'display_term' unless $self->most_severe_OverlapConsequence->can($method_name);
+	$method_name = 'SO_term' unless $self->most_severe_OverlapConsequence->can($method_name);
 	
 	return $self->most_severe_OverlapConsequence->$method_name;
   }
