@@ -104,7 +104,7 @@ my @test_input = (
            "ENST00000355951.2:c.1964delA", 
            "-",
            "ENSP00000348220.2:p.Gln655ArgfsX17",  
-           "deletion, fs"
+           "deletion, frameshift"
           ],                     
           ["7:g.7680048A>G",
            "G",
@@ -126,6 +126,13 @@ my @test_input = (
           "AGG",
            "",
            "duplication, intronic - long"
+          ],
+          [ "13:g.51519667dupA",   #rs17857128
+          "A",
+          "ENST00000336617.2:c.615dupA",
+          "A",
+          "ENSP00000337623.2:p.Glu206ArgfsX13",
+          "duplication, frameshift"
           ],
           ["22:g.20920895_20920939dupCCACAGCCTCCGCCCTCCCAGGCTCTGCCCCAGCAGCTGCAGCAG",
            "CCACAGCCTCCGCCCTCCCAGGCTCTGCCCCAGCAGCTGCAGCAG",
@@ -202,9 +209,40 @@ my @test_input = (
             "ENST00000289228.5:c.445G>A",
             "A",
             "ENSP00000289228.5:p.Ala149Thr",
-            "A",
             "parseable protein change [-1]" 
+           ],
+
+           ["11:g.32417913_32417914insCCTACGAGTACTACC",
+           "CCTACGAGTACTACC", 
+           "ENST00000530998.1:c.451_452insGGTAGTACTCGTAGG",
+           "GGTAGTACTCGTAGG", 
+	   "ENSP00000435307.1:p.Arg151_Ser152insXTyrSerXGly",
+            "insertion, stop gained [-1]"
+           ],
+           ["17:g.7123233_7123234insCAGGACGTGGGCGTG",
+           "CAGGACGTGGGCGTG",
+           "ENST00000356839.4:c.68_69insCAGGACGTGGGCGTG",
+           "CAGGACGTGGGCGTG",  
+           "ENSP00000349297.4:p.Pro23_Gly24insArgThrTrpAlaX",
+           "insertion,  stop gained"
+           ],
+           ["17:g.48452979_48452980insAGC",                  ##rs67225428
+           "AGC",
+           "ENST00000393271.1:c.410_411insAGC",
+           "AGC",
+           "ENSP00000376952.1:p.Lys137_Pro138insAla", 
+           "insertion,  codon gained"
+           ],
+           ["13:g.51519667_51519668insG",    ##rs17857128
+           "G",
+           "ENST00000336617.2:c.615_616insG",
+           "G",
+           "ENSP00000337623.2:p.Glu206GlyfsX13",
+           "insertion, frameshift"
            ]
+#insertion stop loss
+
+
 );
 
 foreach my $line(@test_input){
