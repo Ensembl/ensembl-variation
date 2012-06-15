@@ -75,7 +75,7 @@ for my $cons_set (@OVERLAP_CONSEQUENCES) {
 
 my $cons_table = 
     qq{<table id="consequence_type_table" class="ss">\n<tr>\n\t<th style="width:5px">*</th>\n\t<th>}.
-    (join qq{</th>\n\t<th>}, 'Ensembl term', 'SO term', 'SO Description', 'SO accession', 'NCBI term').
+    (join qq{</th>\n\t<th>}, 'Ensembl term', 'SO term', 'SO description', 'SO accession', 'NCBI term').
     qq{</th>\n</tr>\n};
 
 my $bg;
