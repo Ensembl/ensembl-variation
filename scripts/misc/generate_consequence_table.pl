@@ -46,7 +46,6 @@ for my $cons_set (@OVERLAP_CONSEQUENCES) {
     my $so_acc       = $cons_set->{SO_accession};
     my $ens_label    = $cons_set->{label};
     my $so_desc      = $cons_set->{description};
-    my $ncbi_term    = $cons_set->{NCBI_term} || '-';
     my $rank         = $cons_set->{rank};
 
 		$display_term = $ens_label if (!defined($display_term));
@@ -58,7 +57,7 @@ for my $cons_set (@OVERLAP_CONSEQUENCES) {
 		
     $so_acc = qq{<a rel="external" href="$SO_BASE_LINK/$so_acc">$so_acc</a>};
 
-    my $row = "$so_term|$so_desc|$so_acc|$ncbi_term";
+    my $row = "$so_term|$so_desc|$so_acc";
 
     $cons_rows{$row} = $rank;
 		
@@ -75,10 +74,10 @@ for my $cons_set (@OVERLAP_CONSEQUENCES) {
 
 my $cons_table = 
     qq{<table id="consequence_type_table" class="ss">\n<tr>\n\t<th style="width:5px">*</th>\n\t<th>}.
-    (join qq{</th>\n\t<th>}, 'Ensembl term', 'SO term', 'SO description', 'SO accession', 'NCBI term').
+    (join qq{</th>\n\t<th>}, 'Ensembl term', 'SO term', 'SO description', 'SO accession').
     qq{</th>\n</tr>\n};
 
-my $bg;
+my $bg = '';
 
 for my $d_term (sort {$consequences_rank{$a} <=> $consequences_rank{$b}} keys(%consequences)) {
 
