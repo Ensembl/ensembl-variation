@@ -228,13 +228,27 @@ sub feature_amplification {
 sub feature_elongation {
     my $bvfoa = shift;
     
-    return (complete_within_feature($bvfoa) and (copy_number_gain($bvfoa) or insertion($bvfoa)) and not($bvfoa->isa('Bio::EnsEMBL::Variation::BaseTranscriptVariationAllele') and inframe_insertion($bvfoa)));
+    return (
+        complete_within_feature($bvfoa) and
+        (copy_number_gain($bvfoa) or insertion($bvfoa)) and
+        not(
+            $bvfoa->isa('Bio::EnsEMBL::Variation::BaseTranscriptVariationAllele') and
+            (inframe_insertion($bvfoa) or stop_lost($bvfoa))
+        )
+    );
 }
 
 sub feature_truncation {
     my $bvfoa = shift;
     
-    return ((partial_overlap_feature($bvfoa) or complete_within_feature($bvfoa)) and (copy_number_loss($bvfoa) or deletion($bvfoa)) and not($bvfoa->isa('Bio::EnsEMBL::Variation::BaseTranscriptVariationAllele') and inframe_deletion($bvfoa)));
+    return (
+        (partial_overlap_feature($bvfoa) or complete_within_feature($bvfoa)) and
+        (copy_number_loss($bvfoa) or deletion($bvfoa)) and
+        not(
+            $bvfoa->isa('Bio::EnsEMBL::Variation::BaseTranscriptVariationAllele') and
+            (inframe_deletion($bvfoa) or stop_gained($bvfoa))
+        )
+    );
 }
 
 #sub transcript_fusion {
