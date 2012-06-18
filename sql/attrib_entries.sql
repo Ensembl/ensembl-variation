@@ -108,6 +108,12 @@ INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (292, 2, 'tr
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (293, 1, 'SO:0000199');
 INSERT IGNORE INTO attrib_set (attrib_set_id, attrib_id) VALUES (89, 292);
 INSERT IGNORE INTO attrib_set (attrib_set_id, attrib_id) VALUES (89, 293);
+INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (253, 2, 'duplication');
+INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (254, 1, 'SO:1000035');
+INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (331, 3, 'Duplication');
+INSERT IGNORE INTO attrib_set (attrib_set_id, attrib_id) VALUES (123, 253);
+INSERT IGNORE INTO attrib_set (attrib_set_id, attrib_id) VALUES (123, 254);
+INSERT IGNORE INTO attrib_set (attrib_set_id, attrib_id) VALUES (123, 331);
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (20, 2, 'intergenic_variant');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (294, 6, '38');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (19, 1, 'SO:0001628');
