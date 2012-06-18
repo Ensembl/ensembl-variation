@@ -196,6 +196,12 @@ our %VARIATION_CLASSES = (
   'SO_accession' => 'SO:0000199',
   'display_term' => 'translocation'
 }
+
+'duplication' => {
+  'somatic_display_term' => 'somatic_duplication',
+  'SO_accession' => 'SO:1000035',
+  'display_term' => 'duplication'
+}
 ,
 );
 
