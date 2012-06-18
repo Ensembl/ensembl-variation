@@ -140,6 +140,11 @@ our @VARIATION_CLASSES = (
         SO_accession => 'SO:0000199',
         SO_term => 'translocation',
     },
+    {
+        SO_accession => 'SO:1000035',
+        SO_term => 'duplication',
+        display_term => 'Duplication',
+    },
 );
 
 our @OVERLAP_CONSEQUENCES = (
