@@ -82,10 +82,10 @@ my $html = qq{
 	<table id="variation_classes" class="ss">
 		<tr>
 			<th style="width:5px">*</th>
-			<th>Ensembl term</th>
 			<th>SO term</th>
 			<th>SO description</th>
 			<th>SO accession</th>
+			<th>Ensembl term</th>
 			<th>Called for</th>
 		</tr>
 };
@@ -107,8 +107,14 @@ foreach my $b (sort(keys(%both_class))) {
 	print_line($b,$both_class{$b},3);
 }
 
-$html .= qq { </table> };
+$html .= qq{ </table>\n};
 
+$html .= qq{
+<p>
+* Corresponding colours for the Ensembl web displays (only for Structural variations). 
+The colours are based on the <a rel="external" href="http://www.ncbi.nlm.nih.gov/dbvar/content/overview/">dbVar</a> displays.
+<p>
+};
 
 print $html;
 
@@ -145,14 +151,13 @@ sub print_line {
 	$html .= qq{
 		<tr$bg>
 			<td rowspan="2" style="padding:0px;margin:0px$class_col"></td>
-			<td>$e_class</td>
 			<td rowspan="2">$so_term</td>
 			<td rowspan="2">$so_desc</td>
 			<td rowspan="2"><a rel="external" href="http://www.sequenceontology.org/miso/current_release/term/$so_acc">$so_acc</a></td>
+			<td>$e_class</td>
 			<td rowspan="2">$t_name</td>
 		</tr>
 		<tr$bg>
-			
 			<td>$som_term</td>
 		</tr>
 	};

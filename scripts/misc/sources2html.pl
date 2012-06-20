@@ -86,7 +86,7 @@ my $html_header = qq{
 
 <h1>Ensembl Variation - Sources Documentation</h1>
 
-<h2>List of Variation sources for each species - $ecaption $e_versio</h2>
+<h2>List of Variation sources for each species - $ecaption $e_version</h2>
 
 };
 
