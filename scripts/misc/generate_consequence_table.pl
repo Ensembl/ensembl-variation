@@ -74,7 +74,7 @@ for my $cons_set (@OVERLAP_CONSEQUENCES) {
 
 my $cons_table = 
     qq{<table id="consequence_type_table" class="ss">\n<tr>\n\t<th style="width:5px">*</th>\n\t<th>}.
-    (join qq{</th>\n\t<th>}, 'Ensembl term', 'SO term', 'SO description', 'SO accession').
+    (join qq{</th>\n\t<th>}, 'SO term', 'SO description', 'SO accession', 'Ensembl term').
     qq{</th>\n</tr>\n};
 
 my $bg = '';
@@ -86,9 +86,9 @@ for my $d_term (sort {$consequences_rank{$a} <=> $consequences_rank{$b}} keys(%c
 	my $rspan = ($count > 1) ? qq{ rowspan="$count"} : '';
 	
 	my $c = $colour{$d_term};
-	my $first_col = (defined($c)) ? qq{\t<td $rspan style="padding:0px;margin:0px"><div style="padding:0px;margin:0px;height:20px;background-color:$c"></div></td>} : qq{<td$rspan></td>};
+	my $first_col = (defined($c)) ? qq{\t<td $rspan style="padding:0px;margin:0px;background-color:$c"></td>} : qq{<td$rspan></td>};
 	
-	$cons_table .= qq{<tr$bg>\n$first_col\n\t<td$rspan>$d_term</td>\n};
+	$cons_table .= qq{<tr$bg>\n$first_col\n};
 	
 	my $line = 1;
 	
@@ -97,6 +97,7 @@ for my $d_term (sort {$consequences_rank{$a} <=> $consequences_rank{$b}} keys(%c
 		
 		$cons_table .= qq{</tr>\n<tr$bg>\n} if ($line !=1 );
 		$cons_table .= qq{\t<td>$row</td>\n};
+		$cons_table .= qq{\t<td$rspan>$d_term</td>\n} if ($line == 1);
 		$line ++;
 	}
 	$cons_table .= qq{</tr>\n};
@@ -106,7 +107,7 @@ for my $d_term (sort {$consequences_rank{$a} <=> $consequences_rank{$b}} keys(%c
 }
 
 $cons_table .= qq{</table>\n};
-$cons_table .= qq{<p>* Corresponding colours in the Genome browser.<p>\n};
+$cons_table .= qq{<p>* Corresponding colours for the Ensembl web displays.<p>\n};
 
 print $cons_table;
 
