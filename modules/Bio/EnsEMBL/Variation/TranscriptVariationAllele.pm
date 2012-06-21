@@ -1313,16 +1313,18 @@ sub _hgvs_generic {
 }
 
 
-### HGVS: move variant to transcript slic
+### HGVS: move variant to transcript slice
 sub _var2transcript_slice_coords{
 
     my $self = shift;
     
     my $ref_slice = $self->transcript->feature_Slice();  #### returns with strand same as feature
+    
     my $tr_vf     = $self->variation_feature->transfer($ref_slice);
             
     # Return undef if this VariationFeature does not fall within the supplied feature.
-    return undef if ($tr_vf->start  < 1 || 
+    return undef if (!defined $tr_vf ||
+             $tr_vf->start  < 1 || 
              $tr_vf->end    < 1 || 
              $tr_vf->start  > ($self->transcript->end - $self->transcript->start + 1) || 
              $tr_vf->end    > ($self->transcript->end - $self->transcript->start + 1)); 
