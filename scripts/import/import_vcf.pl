@@ -654,7 +654,7 @@ sub main {
 			
 			
 			# make a var name if none exists
-			if($data->{ID} eq '.' || defined($config->{new_var_name})) {
+			if(!defined($data->{ID}) || $data->{ID} eq '.' || defined($config->{new_var_name})) {
 				$data->{ID} =
 					($config->{var_prefix} ? $config->{var_prefix} : 'tmp').
 					'_'.$data->{'#CHROM'}.'_'.$data->{POS};
