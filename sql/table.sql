@@ -525,7 +525,8 @@ create table variation_feature(
    	primary key( variation_feature_id ),
 	  key pos_idx( seq_region_id, seq_region_start, seq_region_end ),
 	  key variation_idx( variation_id ),
-    key variation_set_idx ( variation_set_id )
+    key variation_set_idx ( variation_set_id ),
+    key consequence_type_idx (consequence_types)
 );
 
 
