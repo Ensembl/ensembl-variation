@@ -5,9 +5,30 @@
 use strict;
 use warnings;
 use Data::Dumper;
+use Getopt::Long;
 use Bio::EnsEMBL::Variation::Utils::Config qw(@OVERLAP_CONSEQUENCES);
 
 
+###############
+### Options ###
+###############
+my ($web_colour_file, $web_mapping_colour, $output_file, $help);
+
+usage() if (!scalar(@ARGV));
+ 
+GetOptions(
+	   'colour_file=s'  => \$web_colour_file,
+	   'mapping_file=s' => \$web_mapping_colour,
+		 'output_file=s'  => \$output_file,
+	   'help!'          => \$help
+);
+
+if (!$output_file) {
+	print "> Error! Please give an output file name using the option '-output_file'\n";
+	usage();
+}
+
+usage() if ($help);
 
 my %colour = (
 	'Essential splice site'  => 'coral',
@@ -39,6 +60,16 @@ my %cons_rows;
 my %consequences;
 my %consequences_rank;
 
+
+# If you want to use directly the colours from the web colours configuration file
+# instead of the almost-up-to-date-colour-hash above.
+# Usually, you can find the colour configuration file in:
+# ensembl-webcode/conf/ini-files/COLOUR.ini
+if (defined($web_colour_file)) {
+	%colour = get_colours_from_web();
+}
+
+
 for my $cons_set (@OVERLAP_CONSEQUENCES) {
 
 		my $display_term = $cons_set->{display_term};
@@ -49,11 +80,7 @@ for my $cons_set (@OVERLAP_CONSEQUENCES) {
     my $rank         = $cons_set->{rank};
 
 		$display_term = $ens_label if (!defined($display_term));
-		$display_term = ucfirst(lc($display_term));
-	  $display_term =~ s/_/ /g;
-	  $display_term =~ s/Nmd /NMD /g;
-	  $display_term =~ s/ utr/ UTR/g;
-	  $display_term =~ s/rna/RNA/g;
+		$display_term = display_term_for_web($display_term);
 		
     $so_acc = qq{<a rel="external" href="$SO_BASE_LINK/$so_acc">$so_acc</a>};
 
@@ -109,5 +136,77 @@ for my $d_term (sort {$consequences_rank{$a} <=> $consequences_rank{$b}} keys(%c
 $cons_table .= qq{</table>\n};
 $cons_table .= qq{<p>* Corresponding colours for the Ensembl web displays.<p>\n};
 
-print $cons_table;
+open OUT, "> $output_file" or die $!;
+print OUT $cons_table;
+close(OUT);
+
+
+# Retrieve the variation consequence colours from the COLOUR.ini file
+sub get_colours_from_web {
+	my %webcolours;
+	my $var_flag = 0;
+	open F, "$web_colour_file" or die $!;
+	while(<F>) {
+		chomp $_;
+		if ($_ =~ /\[variation\]/) {
+			$var_flag = 1;
+			next;
+		}
+		next if ($var_flag == 0);
+		
+		if ($_ =~ /^(\S+)\s*=\s*(\S+)\s*/) {
+			my $cons = display_term_for_web($1);
+			my $c    = (split(';',$2))[0]; 
+			
+			# Convert the colour name into hexadecimal code
+			if (-e $web_mapping_colour) {
+				my $line = `grep -w "'$c'" $web_mapping_colour`;
+				$c = '#'.$1 if ($line =~ /=>\s+'(\S+)'/);
+			}
+			
+			$webcolours{$cons} = $c;
+		}
+		
+		last if ($_ eq '');
+	}
+	close(F);
+	return (scalar(keys(%webcolours))) ? %webcolours : %colour;
+}
+
+sub display_term_for_web {
+	my $term = shift;
+	$term = ucfirst(lc($term));
+	$term =~ s/_/ /g;
+	$term =~ s/Nmd /NMD /g;
+	$term =~ s/ utr/ UTR/g;
+	$term =~ s/rna/RNA/g;
+	return $term;
+}
+
+
+sub usage {
+	
+  print qq{
+  Usage: perl generate_consequence_table.pl [OPTION]
+  
+  Put all variation consequence information into an HTML table.
+	
+  Options:
+
+    -help           Print this message
+      
+    -output_file    An HTML output file name (Required)			
+    -colour_file    If you want to use directly the colours from the web colours configuration file
+                    instead of the almost-up-to-date-colour-hash \%colour hash. (optional)
+                    Usually, you can find the colour configuration file in:
+                    ensembl-webcode/conf/ini-files/COLOUR.ini 
+		
+    -mapping_file   Web module to map the colour names to the corresponding hexadecimal code. (optional)
+                    Useful because some colour names are internal to Ensembl and won't be displayed in the 
+                    documentation pages (i.e. not using the perl modules).
+                    The module ColourMap.pm can be find in:
+                    ensembl-draw/modules/Sanger/Graphics/ColourMap.pm
+  } . "\n";
+  exit(0);
+}
 
