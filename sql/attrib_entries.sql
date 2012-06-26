@@ -543,3 +543,10 @@ INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (227, 11, 'U
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (228, 11, 'Uncertain Significance: likely benign');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (229, 11, 'Uncertain Significance: likely pathogenic');
 
+INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (245, 9, 'PorcineSNP60'); 
+INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (332, 9, 'Affy_500K');
+INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (333, 9, 'Affy_SNP6');
+INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (337, 9, 'Cardio-Metabo_Chip');
+INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (338, 9, 'HumanOmni1-Quad');
+INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (335, 9, 'Illumina_1M-duo');
+INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (334, 9, 'Illumina_660Q');
