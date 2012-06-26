@@ -80,6 +80,23 @@ sub new {
     return bless $self, $class;
 }
 
+=head2 id
+
+  Example    : $name = $obj->id()
+  Description: Getter/Setter for the id attribute
+  Returntype : integer
+  Exceptions : none
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub id {
+    my $self = shift;
+    return $self->{'dbID'} = shift if(@_);
+    return $self->{'dbID'};
+}
+
 =head2 description
 
   Example    : $name = $obj->description()
