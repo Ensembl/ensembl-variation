@@ -52,14 +52,14 @@ foreach my $top_vs (@{$top_vss}) {
 	# Common set
 	foreach my $com_filter (@filters) {
 		if ($top_vs->short_name =~ /^$com_filter/) {
-			$com_sets->{$top_vs->name} = $top_vs;
+			$com_sets->{$top_vs->short_name} = $top_vs;
 			$is_com = 1;
 			last;
 		}
 	}
 	# Human specific set
 	if (!$is_com) {
-		$sets->{$top_vs->name} = $top_vs;
+		$sets->{$top_vs->short_name} = $top_vs;
 	}
 }
 
