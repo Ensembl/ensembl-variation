@@ -785,6 +785,8 @@ sub inframe_deletion {
 sub stop_gained {
     my $bvfoa = shift;
     my $bvfo  = $bvfoa->base_variation_feature_overlap;
+    
+    return 0 unless $bvfoa->isa('Bio::EnsEMBL::Variation::TranscriptVariationAllele');
 
     my ($ref_pep, $alt_pep) = _get_peptide_alleles($bvfoa);
     
@@ -838,7 +840,7 @@ sub frameshift {
     
         my $bvfo = $bvfoa->base_variation_feature_overlap;
     
-        return 0 unless defined $bvfo->cds_start;
+        return 0 unless defined $bvfo->cds_start && defined $bvfo->cds_end;
         
         my $var_len = $bvfo->cds_end - $bvfo->cds_start + 1;
     
