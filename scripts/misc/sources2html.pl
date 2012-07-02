@@ -187,10 +187,15 @@ sub source_table {
 	my $s_name = $species;
 	$s_name =~ s/\s/_/g;
 	my $new_species = ($is_new == 1) ? qq{<td style="padding-left:20px;color:#00F;font-weight:bold">New species!</td>} : '';
+	
 	my $html = qq{
-	<table id="$name"><tr style="vertical-align:middle">
-		<td style="padding-left:0px"><img src="${server_name}/img/species/thumb_$s_name.png" alt="$species" /></td>
-		<td style="padding-left:10px"><h3>$species</h3></td>$new_species
+	<table id="$name" style="padding-left:0px"><tr>
+		<td style="padding-left:0px">
+		  <div class="species-box" style="float:left;margin-bottom:0px;padding-left:0px">  
+		    <img src="/i/species/48/$s_name.png" alt="$species" class="sp-thumb" />
+		  </div>
+		  <div style="float:left"><h3>$species</h3></div>
+		</td>$new_species
 	</tr></table>
 	};
 	
