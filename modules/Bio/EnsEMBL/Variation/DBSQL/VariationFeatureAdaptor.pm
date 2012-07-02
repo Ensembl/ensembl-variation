@@ -835,6 +835,70 @@ sub _tag_fetch {
     return $features;
 }
 
+
+
+=head2 fetch_all_by_Slice_SO_terms
+
+  Arg [1]    : Bio::EnsEMBL::Slice
+  Arg [2]    : listref of SO terms
+  Description: Fetch all germline VariationFeatures on the given slice with
+               consequences with given SO terms
+  Returntype : listref of Bio::EnsEMBL::Variation::VariationFeatures
+  Status     : At risk
+
+=cut
+
+sub fetch_all_by_Slice_SO_terms {
+  my ($self, $slice, $terms, $without_children, $included_so) = @_;
+
+  if(!ref($slice) || !$slice->isa('Bio::EnsEMBL::Slice')) {
+    throw('Bio::EnsEMBL::Slice arg expected');
+  }
+
+  my $constraint = $self->_get_consequence_constraint($terms, $without_children, $included_so);
+  if (!$constraint) {
+    return [];
+  }
+  
+  my $vfs = $self->fetch_all_by_Slice_constraint($slice,$constraint);
+
+  return $vfs;
+}
+
+=head2 fetch_all_somatic_by_Slice_SO_terms
+
+  Arg [1]    : Bio::EnsEMBL::Slice
+  Arg [2]    : listref of SO terms
+  Description: Fetch all somatic VariationFeatures on the given slice with
+               consequences with given SO terms
+  Returntype : listref of Bio::EnsEMBL::Variation::VariationFeatures
+  Status     : At risk
+
+=cut
+
+sub fetch_all_somatic_by_Slice_SO_terms {
+  my ($self, $slice, $terms, $without_children, $included_so) = @_;
+
+  if(!ref($slice) || !$slice->isa('Bio::EnsEMBL::Slice')) {
+    throw('Bio::EnsEMBL::Slice arg expected');
+  }
+
+  my $constraint = $self->_get_consequence_constraint($terms, $without_children, $included_so);
+  if (!$constraint) {
+    return [];
+  }
+  
+  my $vfs = $self->fetch_all_somatic_by_Slice_constraint($slice,$constraint);
+
+  return $vfs;
+}
+
+# call to method in BaseAdaptor
+sub _get_consequence_constraint {
+	my $self = shift;
+	return $self->SUPER::_get_consequence_constraint('variation_feature', @_);
+}
+
 sub fetch_Iterator_by_Slice_constraint {
     my ($self, $slice, $constraint) = @_;
     
@@ -1070,7 +1134,7 @@ sub _objs_from_sth {
                 '_variation_id' => $variation_id,
                 'class_SO_term' => $aa->attrib_value_for_id($class_attrib_id),
 				'minor_allele' => $minor_allele,
-				'minor_allele_freq' => $minor_allele_freq,
+				'minor_allele_frequency' => $minor_allele_freq,
 				'minor_allele_count' => $minor_allele_count
                 }
             );
