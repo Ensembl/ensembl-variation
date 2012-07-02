@@ -261,7 +261,7 @@ sub codon {
     
     my $tv = $self->transcript_variation;      
     
-    return undef unless $tv->translation_start;
+    return undef unless $tv->translation_start && $tv->translation_end;
    
     return undef unless $self->seq_is_dna;
     
