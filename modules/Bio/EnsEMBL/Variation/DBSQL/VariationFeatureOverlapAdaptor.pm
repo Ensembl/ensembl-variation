@@ -92,18 +92,15 @@ sub fetch_all_somatic_by_Features {
 =cut
 
 sub fetch_all_by_Features_with_constraint {
+    my $self = shift;
     
-    my ($self, $features, $constraint) = @_;
+    my ($features, $constraint) = @_;
    
+    my $vfos = $self->_func_all_by_Features_with_constraint(@_, 'fetch');
+    
+    # Note duplicated code 
     my %feats_by_id = map { $_->stable_id => $_ } @$features;
-    
-    my $id_str = join ',', map {"'$_'"} keys %feats_by_id;
-    
-    my $full_constraint = "feature_stable_id in ( $id_str )";
-    $full_constraint .= " AND $constraint" if $constraint;
-    
-    my $vfos = $self->generic_fetch($full_constraint);
-    
+
     for my $vfo (@$vfos) {
         if ($vfo->{_feature_stable_id}) {
             my $feat_id = delete $vfo->{_feature_stable_id};
@@ -112,6 +109,33 @@ sub fetch_all_by_Features_with_constraint {
     }
     
     return $vfos;
+}
+
+sub _func_all_by_Features_with_constraint {
+    my ($self, $features, $constraint, $func) = @_;
+   
+    my %feats_by_id = map { $_->stable_id => $_ } @$features;
+    
+    my $id_str = join ',', map {"'$_'"} keys %feats_by_id;
+    
+    my $full_constraint = "feature_stable_id in ( $id_str )";
+    $full_constraint .= " AND $constraint" if $constraint;
+
+    my $method = "generic_" . $func;
+    my $data = $self->$method($full_constraint);
+
+    return $data;
+}
+
+sub count_all_by_Features_with_constraint {
+    my $self = shift;
+    my ($features, $constraint) = @_;
+
+    my $count = $self->_func_all_by_Features_with_constraint(@_, 'count');
+
+    if (!defined($count)) { $count = 0; }
+ 
+    return $count;
 }
 
 =head2 fetch_all_by_VariationFeatures
@@ -124,80 +148,98 @@ sub fetch_all_by_Features_with_constraint {
   Status     : At risk
 
 =cut
-
 sub fetch_all_by_VariationFeatures {
-    
     my ($self, $vfs, $features) = @_;
+    return $self->fetch_all_by_VariationFeatures_with_constraint($vfs,$features,undef);
+}
+    
+sub count_all_by_VariationFeatures {
+    my ($self, $vfs, $features) = @_;
+    return $self->count_all_by_VariationFeatures_with_constraint($vfs,$features,undef);
+}
+
+sub count_all_by_VariationFeatures_with_constraint {
+    my $self = shift;
+    my ($vfs, $features, $constraint) = @_;
+
+    my $allcounts = $self->_func_all_by_VariationFeatures_with_constraint(@_ , 'count');
+
+    my $total = 0;
+    for my $count (@$allcounts) {
+        $total += $count;
+    }
    
+    return $total;
+}
+
+sub _func_all_by_VariationFeatures_with_constraint {
+    my ($self, $vfs, $features, $constraint, $func) = @_;
+
     my %vfs_by_id = map { $_->dbID => $_ } @$vfs;
+
+    my @vfids = keys %vfs_by_id;
+
+    if (!scalar(@vfids)) {
+      return [];
+    }
+
+    my @alldata;
+
+    while (@vfids) {
   
-    my $id_str = join ',', keys %vfs_by_id;
+      my $fullconstraint = $constraint;
 
-    my $constraint = "variation_feature_id in ( $id_str )";
+      my @vfid_subset = splice(@vfids,0,50000);
 
-    my $vfos;
-
-    if ($features) {
-        # if we're passed some features, fetch by features with the VF ids as an 
-        # extra constraint
-        $vfos = $self->fetch_all_by_Features_with_constraint($features, $constraint);
+      my $id_str = join ',', @vfid_subset;
+  
+      if ($id_str eq '') {
+        last;
+      }
+  
+      if ($fullconstraint) {
+        $fullconstraint .= " AND ";
+      }
+      $fullconstraint .= "variation_feature_id in ( $id_str )";
+  
+  
+      my $data;
+  
+      if ($features) {
+          # if we're passed some features, fetch/count by features with the VF ids as an 
+          # extra constraint
+          my $method = $func . "_all_by_Features_with_constraint";
+          $data = $self->$method($features, $fullconstraint);
+      }
+      else {
+          # otherwise just fetch/count the VFs directly
+          my $method = "generic_" . $func;
+          $data = $self->$method($fullconstraint);
+      }
+      push @alldata,ref($data) eq 'ARRAY' ? @$data : $data;
     }
-    else {
-        # otherwise just fetch the VFs directly
-        $vfos = $self->generic_fetch($constraint);
-    }
+
+    return \@alldata;
+} 
+
+sub fetch_all_by_VariationFeatures_with_constraint {
+    my $self = shift;
+    my ($vfs, $features, $constraint) = @_;
+
+    my $allvfos = $self->_func_all_by_VariationFeatures_with_constraint(@_ , 'fetch');
+   
+
+    my %vfs_by_id = map { $_->dbID => $_ } @$vfs;
 
     # attach the VariationFeatures to the VariationFeatureOverlaps because we have them already
 
-    for my $vfo (@$vfos) {
+    for my $vfo (@$allvfos) {
         if ($vfo->{_variation_feature_id}) {
             $vfo->variation_feature($vfs_by_id{delete $vfo->{_variation_feature_id}});
         }
     }
    
-    return $vfos;
-}
-
-sub _get_term_object {
-    my ($self, $term) = @_;
-
-    my $oa = $self->{_ontology_adaptor} ||= 
-        Bio::EnsEMBL::Registry->get_adaptor( 'Multi', 'Ontology', 'OntologyTerm' );
-
-    my $terms = $oa->fetch_all_by_name($term, 'SO');
-
-    if (@$terms > 1) {
-        warn "Ambiguous term '$term', just using first result";
-    }
-    elsif (@$terms == 0) {
-        warn "Didn't find an ontology term for '$term'";
-    }
-
-    return $terms->[0];
-}
-
-sub _get_child_terms {
-    my ($self, $parent_term) = @_;
-
-    my $parent_obj = $self->_get_term_object($parent_term);
-
-    my $all_terms = $parent_obj->descendants;
-
-    unshift @$all_terms, $parent_obj;
-
-    return $all_terms;
-}
-
-sub _get_parent_terms {
-    my ($self, $child_term) = @_;
-
-    my $child_obj = $self->_get_term_object($child_term);
-
-    my $all_terms = $child_obj->ancestors;
-
-    unshift @$all_terms, $child_obj;
-
-    return $all_terms;
+    return $allvfos;
 }
 
 sub _get_VariationFeatureOverlapAlleles_under_SO_term {
@@ -221,100 +263,16 @@ sub _get_VariationFeatureOverlapAlleles_under_SO_term {
     return \@found;
 }
 
-#sub _get_consequence_constraint_simple {
-#    
-#    my ($self, $query_term) = @_;
-#
-#    # we allow either an ontology term object, or just a string
-#    $query_term = UNIVERSAL::can($query_term, 'name') ? $query_term->name : $query_term;
-#   
-#    # get a hash mapping consequence terms to numerical values (specifically powers of 2)
-#    my $cons_map = $self->_consequence_type_map('transcript_variation', 'consequence_types');
-#
-#    # we store only the most specific consequence term, so we need to get all children of 
-#    # the query term
-#    my $terms = $self->_get_child_terms($query_term);
-#
-#    return '(' . ( join ' OR ', map { "FIND_IN_SET('".$_->name."',consequence_types)" } @$terms ) .')';
-#}
-
+# call to method in BaseAdaptor
 sub _get_consequence_constraint {
-    
-    my ($self, @query_terms) = @_;
-
-    # we build up the numerical value for our query by ORing together all the children of all the terms
-    my $query = 0;
-
-    # get a hash mapping consequence terms to numerical values (specifically powers of 2)
-    my $cons_map = $self->_consequence_type_map('transcript_variation', 'consequence_types');
-
-    for my $query_term (@query_terms) {
-
-        # we allow either an ontology term object, or just a string
-        $query_term = UNIVERSAL::can($query_term, 'name') ? $query_term->name : $query_term;
-    
-        # we store only the most specific consequence term, so we need to get all children of 
-        # each query term
-        my $terms = $self->_get_child_terms($query_term);
-
-        # and then we OR together all relevant terms
-
-        for my $term (@$terms) {
-            next unless $cons_map->{$term->name};
-            $query |= $cons_map->{$term->name};
-        }
-    }
-
-    unless ($self->{_possible_consequences}) {
-
-        # we need a list of the numerical values of all possible 
-        # consequence term combinations we have actually observed
-
-        my $sth = $self->dbc->prepare(qq{
-            SELECT DISTINCT(consequence_types)
-            FROM transcript_variation
-        });
-
-        $sth->execute;
-
-        my $cons;
-
-        $sth->bind_columns(\$cons);
-
-        my @poss_cons;
-
-        while ($sth->fetch) {
-            # construct the numerical value by ORing together each combination
-            # (this is much quicker than SELECTing consequence_types+0 above which
-            # is what I used to do, but this seems to mean the db can't use the index)
-        
-            my $bit_val = 0;
-            
-            for my $term (split /,/, $cons) {
-                $bit_val |= $cons_map->{$term};
-            }
-
-            push @poss_cons, $bit_val;
-        }
-
-        $self->{_possible_consequences} = \@poss_cons;
-    }
-
-    # we now find all combinations that include our query by ANDing 
-    # the query with all possible combinations and combine these into 
-    # our query string
-
-    my $id_str = join ',', grep { $_ & $query } @{ $self->{_possible_consequences} }; 
-
-    my $constraint = "consequence_types IN ($id_str)"; 
-
-    return $constraint;
+    my $self = shift;
+	return $self->SUPER::_get_consequence_constraint('transcript_variation', @_);
 }
 
 sub fetch_all_by_SO_terms {
     my ($self, $terms) = @_;
 
-    my $constraint = $self->_get_consequence_constraint(@$terms);
+    my $constraint = $self->_get_consequence_constraint($terms);
 
     return $self->generic_fetch($constraint);
 }
