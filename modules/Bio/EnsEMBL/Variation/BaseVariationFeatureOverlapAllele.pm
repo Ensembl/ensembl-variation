@@ -199,7 +199,7 @@ sub get_all_OverlapConsequences {
         my $assigned_tier;
         
         # loop over all the possible consequences
-        for my $oc (sort {$a->tier <=> $b->tier} values %OVERLAP_CONSEQUENCES) {
+        for my $oc (@{$self->get_sorted_OverlapConsequences}) {
             
             last if defined($assigned_tier) and $oc->tier > $assigned_tier;
            
@@ -214,7 +214,7 @@ sub get_all_OverlapConsequences {
                     # if so, check if the predicate of this consequence holds for this bvfoa
                     my $check = $oc->predicate->($self);
                     
-                    #print $self->base_variation_feature->variation_name." ".$oc->{SO_term}." ".$self->feature->stable_id. " $check\n";
+                    #print STDERR $self->base_variation_feature->variation_name." ".$oc->{SO_term}." ".$self->feature->stable_id. " $check\n";
 
                     if ($check) {
                         push @$cons, $oc;
@@ -262,6 +262,17 @@ sub SO_isa {
             return 1;
         }
     } 
+}
+
+sub get_sorted_OverlapConsequences {
+    my $self = shift;
+    
+    if(!defined($self->base_variation_feature_overlap->adaptor->{sorted_cons})) {
+        my @sorted = sort {$a->tier <=> $b->tier} values %OVERLAP_CONSEQUENCES;
+        $self->base_variation_feature_overlap->adaptor->{sorted_cons} = \@sorted;
+    }
+    
+    return $self->base_variation_feature_overlap->adaptor->{sorted_cons};
 }
 
 1;
