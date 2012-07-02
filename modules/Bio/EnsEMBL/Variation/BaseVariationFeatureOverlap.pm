@@ -58,10 +58,12 @@ sub new {
     my $class = shift;
 
     my (
+        $adaptor,
         $base_variation_feature,
         $feature, 
         $no_transfer
     ) = rearrange([qw(
+            ADAPTOR
             BASE_VARIATION_FEATURE
             FEATURE
             NO_TRANSFER
@@ -84,6 +86,7 @@ sub new {
     my $self = bless {
         base_variation_feature  => $base_variation_feature,
         feature                 => $feature,
+        adaptor                 => $adaptor,
     }, $class;
 
     return $self;
@@ -424,6 +427,17 @@ sub display_consequence {
     my $worst_conseq = $self->most_severe_OverlapConsequence;
 
     return $worst_conseq ? $worst_conseq->$method_name : '';
+}
+
+sub adaptor {
+    my $self = shift;
+    $self->{adaptor} = shift if @_;
+    
+    # make adaptor an anonymous hash in its absence
+    # this allows the VEP to cache OverlapConsequences in offline mode
+    $self->{adaptor} ||= {};
+    
+    return $self->{adaptor};
 }
 
 1;
