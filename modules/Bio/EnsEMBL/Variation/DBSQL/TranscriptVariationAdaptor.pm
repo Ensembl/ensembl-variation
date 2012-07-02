@@ -141,16 +141,79 @@ sub store {
     }
 }
 
+=head2 fetch_all_by_Transcripts_SO_terms
+
+  Arg [1]    : listref of Bio::EnsEMBL::Transcripts
+  Arg [2]    : listref of SO terms
+  Description: Fetch all germline TranscriptVariations associated with the
+               given list of Transcripts with consequences with given SO terms
+  Returntype : listref of Bio::EnsEMBL::Variation::TranscriptVariations
+  Status     : At risk
+
+=cut
+
 sub fetch_all_by_Transcripts_SO_terms {
     my ($self, $transcripts, $terms) = @_;
-    my $constraint = $self->_get_consequence_constraint(@$terms);
+    my $constraint = $self->_get_consequence_constraint($terms);
     return $self->fetch_all_by_Transcripts_with_constraint($transcripts, $constraint.' AND somatic = 0');
 }
 
+=head2 fetch_all_somatic_by_Transcripts_SO_terms
+
+  Arg [1]    : listref of Bio::EnsEMBL::Transcripts
+  Arg [2]    : listref of SO terms
+  Description: Fetch all somatic TranscriptVariations associated with the
+               given list of Transcripts with consequences with given SO terms
+  Returntype : listref of Bio::EnsEMBL::Variation::TranscriptVariations
+  Status     : At risk
+
+=cut
+
 sub fetch_all_somatic_by_Transcripts_SO_terms {
     my ($self, $transcripts, $terms) = @_;
-    my $constraint = $self->_get_consequence_constraint(@$terms);
+    my $constraint = $self->_get_consequence_constraint($terms);
     return $self->fetch_all_by_Transcripts_with_constraint($transcripts, $constraint.' AND somatic = 1');
+}
+
+=head2 fetch_all_by_VariationFeatures_SO_terms
+
+  Arg [1]    : listref of Bio::EnsEMBL::Variation::VariationFeatures
+  Arg [2]    : listref of SO terms
+  Description: Fetch all germline TranscriptVariations associated with the
+               given list of VariationFeatures with consequences with given
+               SO terms
+  Returntype : listref of Bio::EnsEMBL::Variation::TranscriptVariations
+  Status     : At risk
+
+=cut
+
+sub fetch_all_by_VariationFeatures_SO_terms {
+    my ($self, $vfs, $transcripts, $terms, $without_children, $included_so) = @_;
+    my $constraint = $self->_get_consequence_constraint($terms, $without_children, $included_so);
+    if (!$constraint) {
+      return [];
+    }
+    return $self->SUPER::fetch_all_by_VariationFeatures_with_constraint($vfs, $transcripts, $constraint);
+}
+
+=head2 count_all_by_VariationFeatures_SO_terms
+
+  Arg [1]    : listref of Bio::EnsEMBL::Variation::VariationFeatures
+  Arg [2]    : listref of SO terms
+  Description: Count TranscriptVariations associated with given
+               VariationFeatures with consequences with given SO terms
+  Returntype : int
+  Status     : At risk
+
+=cut
+
+sub count_all_by_VariationFeatures_SO_terms {
+    my ($self, $vfs, $transcripts, $terms, $included_so) = @_;
+    my $constraint = $self->_get_consequence_constraint($terms, 1, $included_so);
+    if (!$constraint) {
+      return 0;
+    }
+    return $self->SUPER::count_all_by_VariationFeatures_with_constraint($vfs, $transcripts, $constraint);
 }
 
 =head2 fetch_all_by_Transcripts
