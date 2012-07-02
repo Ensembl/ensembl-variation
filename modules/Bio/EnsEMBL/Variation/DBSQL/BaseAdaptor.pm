@@ -104,6 +104,110 @@ sub _consequence_type_map {
     return $self->{$key};
 }
 
+sub _get_consequence_constraint {
+    
+    my ($self, $table, $query_terms, $without_children, $term_subset) = @_;
+
+    # we build up the numerical value for our query by ORing together all the children of all the terms
+    my $query = 0;
+
+    # get a hash mapping consequence terms to numerical values (specifically powers of 2)
+    my $cons_map = $self->_consequence_type_map($table, 'consequence_types');
+
+    for my $query_term (@$query_terms) {
+
+        # we allow either an ontology term object, or just a string
+        $query_term = UNIVERSAL::can($query_term, 'name') ? $query_term->name : $query_term;
+    
+        # we store only the most specific consequence term, so we need to get all children of 
+        # each query term
+        my $terms = $without_children ? [ ($self->_get_term_object($query_term)) ] : $self->_get_child_terms($query_term);
+
+        # and then we OR together all relevant terms
+
+        for my $term (@$terms) {
+            next unless $cons_map->{$term->name};
+            $query |= $cons_map->{$term->name};
+        }
+    }
+
+    my $subset_mask;
+    if ($term_subset) {
+        for my $query_term (@$term_subset) {
+    
+            # we allow either an ontology term object, or just a string
+            $query_term = UNIVERSAL::can($query_term, 'name') ? $query_term->name : $query_term;
+        
+            my $terms = [ ($self->_get_term_object($query_term)) ];
+    
+            # and then we OR together all relevant terms
+    
+            for my $term (@$terms) {
+                next unless $cons_map->{$term->name};
+                $subset_mask |= $cons_map->{$term->name};
+            }
+        }
+    }
+
+    unless ($self->{_possible_consequences}) {
+
+        # we need a list of the numerical values of all possible 
+        # consequence term combinations we have actually observed
+
+        my $sth = $self->dbc->prepare(qq{
+            SELECT DISTINCT(consequence_types)
+            FROM $table
+        });
+
+        $sth->execute;
+
+        my $cons;
+
+        $sth->bind_columns(\$cons);
+
+        my @poss_cons;
+
+        while ($sth->fetch) {
+            # construct the numerical value by ORing together each combination
+            # (this is much quicker than SELECTing consequence_types+0 above which
+            # is what I used to do, but this seems to mean the db can't use the index)
+        
+            my $bit_val = 0;
+            
+            for my $term (split /,/, $cons) {
+                $bit_val |= $cons_map->{$term};
+            }
+
+            push @poss_cons, $bit_val;
+        }
+
+        $self->{_possible_consequences} = \@poss_cons;
+    }
+
+    # we now find all combinations that include our query by ANDing 
+    # the query with all possible combinations and combine these into 
+    # our query string
+
+    #my $id_str = join ',', grep { $_ & $query } @{ $self->{_possible_consequences} }; 
+    my @cons_vals =  grep { $_ & $query } @{ $self->{_possible_consequences} }; 
+
+    if ($subset_mask) {
+        # When only including a subset of types, filter combinations to ones which
+        # include at least one of the the subset types.
+        @cons_vals =  grep { $_ & $subset_mask } @cons_vals;
+    }
+
+    if (!scalar(@cons_vals)) {
+      return undef;
+    }
+   
+    my $id_str = join ',', @cons_vals;
+
+    my $constraint = "consequence_types IN ($id_str)"; 
+
+    return $constraint;
+}
+
 sub _consequences_for_set_number {
     my ($self, $set_number, $map) = @_;
 
@@ -116,6 +220,48 @@ sub _consequences_for_set_number {
     }
 
     return \@consequences;
+}
+
+sub _get_term_object {
+    my ($self, $term) = @_;
+
+    my $oa = $self->{_ontology_adaptor} ||=
+        Bio::EnsEMBL::Registry->get_adaptor( 'Multi', 'Ontology', 'OntologyTerm' );
+
+    my $terms = $oa->fetch_all_by_name($term, 'SO');
+
+    if (@$terms > 1) {
+        warn "Ambiguous term '$term', just using first result";
+    }
+    elsif (@$terms == 0) {
+        warn "Didn't find an ontology term for '$term'";
+    }
+
+    return $terms->[0];
+}
+
+sub _get_child_terms {
+    my ($self, $parent_term) = @_;
+
+    my $parent_obj = $self->_get_term_object($parent_term);
+
+    my $all_terms = $parent_obj->descendants;
+
+    unshift @$all_terms, $parent_obj;
+
+    return $all_terms;
+}
+
+sub _get_parent_terms {
+    my ($self, $child_term) = @_;
+
+    my $child_obj = $self->_get_term_object($child_term);
+
+    my $all_terms = $child_obj->ancestors;
+
+    unshift @$all_terms, $child_obj;
+
+    return $all_terms;
 }
 
 sub _set_number_for_consequences {
@@ -138,7 +284,7 @@ sub _transcript_variation_consequences_for_set_number {
 
 sub _variation_feature_consequences_for_set_number {
     my ($self, $set_number) = @_;
-    my $map = $self->_consequence_type_map('variation_feature', 'consequence_type');
+    my $map = $self->_consequence_type_map('variation_feature', 'consequence_types');
     return $self->_consequences_for_set_number($set_number, $map);
 }
 
@@ -150,7 +296,7 @@ sub _transcript_variation_set_number_for_consequences {
 
 sub _variation_feature_set_number_for_consequences {
     my ($self, $cons) = @_;
-    my $map = $self->_consequence_type_map('variation_feature', 'consequence_type');
+    my $map = $self->_consequence_type_map('variation_feature', 'consequence_types');
     return $self->_set_number_for_consequences($cons, $map);
 }
 
