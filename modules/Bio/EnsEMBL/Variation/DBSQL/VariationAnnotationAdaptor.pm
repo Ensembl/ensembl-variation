@@ -314,6 +314,31 @@ sub fetch_all_by_associated_gene {
   
 }
 
+=head2 count_all_by_associated_gene
+
+  Description: Retrieves count of variation_annotation objects associated with a
+               given gene
+  Returntype : integer
+  Exceptions : none
+  Caller     : general
+
+=cut
+
+sub count_all_by_associated_gene {
+
+  my $self = shift;
+  my $gene_name  = shift;
+
+  throw('gene_name argument expected') if(!defined($gene_name));
+
+  my $extra_sql = " va.associated_gene REGEXP '^(.+,)?[. .]*$gene_name(,.+)?\$'";
+  
+  # Add the constraint for failed variations
+  $extra_sql .= " AND " . $self->db->_exclude_failed_variations_constraint();
+
+  return $self->generic_count($extra_sql);
+}
+
 
 =head2 fetch_all
 
