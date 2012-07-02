@@ -213,7 +213,7 @@ sub new {
 		  OVERLAP_CONSEQUENCES 
           CLASS_SO_TERM
           MINOR_ALLELE
-          MINOR_ALLELE_FREQ
+          MINOR_ALLELE_FREQUENCY
           MINOR_ALLELE_COUNT
         )], @_);
 
@@ -229,7 +229,7 @@ sub new {
   $self->{'overlap_consequences'}   = $overlap_consequences;
   $self->{'class_SO_term'}          = $class_so_term;
   $self->{'minor_allele'}           = $minor_allele;
-  $self->{'minor_allele_freq'}      = $minor_allele_freq;
+  $self->{'minor_allele_frequency'} = $minor_allele_freq;
   $self->{'minor_allele_count'}     = $minor_allele_count;
   
   return $self;
@@ -698,6 +698,10 @@ sub consequence_type {
 	
 	$method_name ||= 'SO_term';
 
+	if (exists($self->{current_consequence_method}) && $self->{current_consequence_method} ne $method_name) {
+		delete $self->{consequence_type};
+	}
+
     unless ($self->{consequence_types}) {
 
         # work out the terms from the OverlapConsequence objects
@@ -705,6 +709,8 @@ sub consequence_type {
         $self->{consequence_types} = 
             [ map { $_->$method_name } @{ $self->get_all_OverlapConsequences } ];
     }
+
+	$self->{current_consequence_method} = $method_name;
     
     return $self->{consequence_types};
 }
