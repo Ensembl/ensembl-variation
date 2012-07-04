@@ -81,7 +81,7 @@ for my $cons_set (@OVERLAP_CONSEQUENCES) {
 
     $display_term = $ens_label if (!defined($display_term));
     $display_term = display_term_for_web($display_term);
-    print "$so_term: $display_term\n";
+
     $so_acc = qq{<a rel="external" href="$SO_BASE_LINK/$so_acc">$so_acc</a>};
 
     my $row = "$so_term|$so_desc|$so_acc";
