@@ -238,10 +238,15 @@ my @test_input = (
            "ENST00000336617.2:c.615_616insG",
            "G",
            "ENSP00000337623.2:p.Glu206GlyfsX13",
-           "insertion, frameshift"
-           ]
-#insertion stop loss
-
+           "insertion, frameshift",
+           ],
+          ["19:g.7706085T>C",                                ## rs144546645
+           "C",
+           "ENST00000320400.4:c.1186T>C",
+           "C",
+           "ENSP00000318233.4:p.X396Gln",
+           "substitution, stop loss, no alt stop"
+          ]
 
 );
 
