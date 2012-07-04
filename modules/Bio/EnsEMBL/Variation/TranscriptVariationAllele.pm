@@ -770,7 +770,7 @@ sub _get_hgvs_protein_format{
 
     if ((defined  $hgvs_notation->{ref} && defined $hgvs_notation->{alt} && 
      $hgvs_notation->{ref} eq $hgvs_notation->{alt}) || 
-     $hgvs_notation->{type} eq "="){
+     (defined  $hgvs_notation->{type} && $hgvs_notation->{type} eq "=")){
 
       ### no protein change - return transcript nomenclature with flag for neutral protein consequence
       $hgvs_notation->{'hgvs'} = $self->hgvs_transcript() . "(p.=)";
@@ -784,10 +784,16 @@ sub _get_hgvs_protein_format{
     if(stop_lost($self)){  ### if deletion of stop add extX and number of new aa to alt
       $hgvs_notation->{alt} = substr($hgvs_notation->{alt}, 0, 3);
      if($hgvs_notation->{type} eq "del"){
-        $hgvs_notation->{alt} .=  "extX" . _stop_loss_extra_AA($self,$hgvs_notation->{start}-1, "del");
+	 my $aa_til_stop = _stop_loss_extra_AA($self,$hgvs_notation->{start}-1, "del");
+	 if(defined $aa_til_stop){ ## append distance to next alt stop if available
+           $hgvs_notation->{alt} .=  "extX" .  $aa_til_stop;
+	 }
       }
       elsif($hgvs_notation->{type} eq ">"){
-        $hgvs_notation->{alt} .=  "extX" . _stop_loss_extra_AA($self,$hgvs_notation->{start}-1, "subs");
+	 my $aa_til_stop = _stop_loss_extra_AA($self,$hgvs_notation->{start}-1, "subs");
+         if(defined $aa_til_stop){ ## append distance to next alt stop if available
+          $hgvs_notation->{alt} .=  "extX" . $aa_til_stop;
+        }
       }
       else{
        # warn "TVA: stop loss for type $hgvs_notation->{type}  not caught \n";
@@ -827,7 +833,10 @@ sub _get_hgvs_protein_format{
       }
       if($hgvs_notation->{ref} =~ /X$/){
         ### For stops & add extX & distance to next stop to alt pep
-        $hgvs_notation->{alt} .="extX" . _stop_loss_extra_AA($self,$hgvs_notation->{start}, "loss");
+         my $aa_til_stop = _stop_loss_extra_AA($self,$hgvs_notation->{start}-1, "loss");
+	 if(defined $aa_til_stop){
+            $hgvs_notation->{alt} .="extX" . $aa_til_stop;
+         }
       }
       if($hgvs_notation->{start} == $hgvs_notation->{end} && $hgvs_notation->{type} eq "delins"){       
         $hgvs_notation->{'hgvs'} .= $ref_pep_first . $hgvs_notation->{start} . $hgvs_notation->{end} . $hgvs_notation->{type} . $hgvs_notation->{alt} ;
