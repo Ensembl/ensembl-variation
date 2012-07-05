@@ -899,7 +899,7 @@ sub _get_hgvs_peptides{
 
   if($hgvs_notation->{type} eq "fs"){
   ### ensembl alt/ref peptides not the same as HGVS alt/ref - look up seperately
-  ($hgvs_notation->{ref}, $hgvs_notation->{alt}, $hgvs_notation->{start}) = $self->_get_fs_peptides();    
+  $hgvs_notation = $self->_get_fs_peptides($hgvs_notation);    
   
   }
   elsif($hgvs_notation->{type} eq "ins" ){
@@ -1047,6 +1047,7 @@ sub _get_allele_length{
 sub _get_fs_peptides{
 
   my $self    = shift;
+  my $hgvs_notation = shift;
 
   ### get CDS with alt variant
   my $alt_cds = $self->_get_alternate_cds();
@@ -1056,26 +1057,30 @@ sub _get_fs_peptides{
   
   ### get changed end (currently in single letter AA coding)    
   my $ref_trans  = $self->transcript->translate()->seq();
-  $ref_trans    .= "*";   ## appending ref stop for checking purposes
+  $ref_trans    .= "*";   ## appending ref stop for checking purposes 
+  
+  $hgvs_notation->{start} = $self->transcript_variation->translation_start() ;
 
-  my ($ref, $alt, $ref_pos);
-  $ref_pos = $self->transcript_variation->translation_start() ;
-
-
-  while ($ref_pos <= length $alt_trans){
-  ### frame shift may result in the same AA#
-
-    $ref = substr($ref_trans, $ref_pos-1, 1);
-    $alt = substr($alt_trans, $ref_pos-1, 1);
-
-    if($ref eq "*" && $alt eq "*"){
-      ### variation at stop codon, but maintains stop codon
-      return ($ref, $alt, $ref_pos);
-    }
-    last if $ref ne $alt;
-    $ref_pos++;
+  if( $hgvs_notation->{start} > length $alt_trans){ ## deletion of stop, no further AA in alt seq 
+    $hgvs_notation->{alt}  = "del";
+    $hgvs_notation->{type} = "del";
+    return $hgvs_notation;
   }
-  return ($ref,$alt, $ref_pos);
+
+    while ($hgvs_notation->{start} <= length $alt_trans){
+    ### frame shift may result in the same AA#
+
+      $hgvs_notation->{ref} = substr($ref_trans, $hgvs_notation->{start}-1, 1);
+      $hgvs_notation->{alt} = substr($alt_trans, $hgvs_notation->{start}-1, 1);
+
+      if($hgvs_notation->{ref} eq "*" && $hgvs_notation->{alt} eq "*"){
+          ### variation at stop codon, but maintains stop codon
+          return ($hgvs_notation);
+      }
+      last if $hgvs_notation->{ref} ne $hgvs_notation->{alt};
+      $hgvs_notation->{start}++;
+    }
+    return ($hgvs_notation);
 
 }
 
