@@ -167,7 +167,7 @@ sub _columns{
 	
     return qw(vf.variation_id 
 	      vf.seq_region_id vf.seq_region_start vf.seq_region_end 
-	      vf.seq_region_strand vf.variation_name s.name vf.variation_feature_id vf.allele_string vf.consequence_type);
+	      vf.seq_region_strand vf.variation_name s.name vf.variation_feature_id vf.allele_string vf.consequence_types);
 }
 
 sub _default_where_clause{
