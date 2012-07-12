@@ -738,7 +738,8 @@ sub _get_hgvs_protein_format{
         }
         else{
             $hgvs_notation->{'hgvs'} .=  $hgvs_notation->{alt} . $hgvs_notation->{start} .  "dup" ;
-        }    
+        }  
+	print "formating a dup  $hgvs_notation->{hgvs} \n";  
     }
 
     elsif($hgvs_notation->{type} eq ">"){
@@ -1150,14 +1151,19 @@ sub _check_for_peptide_duplication{
    ##### create translation to check against inserted peptides 
    my $upstream_cds =Bio::PrimarySeq->new(-seq => $upstream_seq,  -id => 'alt_cds', -alphabet => 'dna');
    my $upstream_trans = $upstream_cds->translate()->seq();
+   
+   ## Test whether alt peptide matches the reference sequence just before the variant
+   my $test_new_start = $hgvs_notation->{'start'} - length($hgvs_notation->{'alt'}) -1 ;
+   my $test_seq       =  substr($upstream_trans, $test_new_start, length($hgvs_notation->{'alt'}));
 
-   if($upstream_trans =~/$hgvs_notation->{alt}$/){
-     ### For duplications, start and end coords refer to section of reference sequence duplicated
-     $hgvs_notation->{type}  = "dup";
-     $hgvs_notation->{start} = 1 + length($`); 
-     $hgvs_notation->{end}   = length($upstream_trans) ; 
+   if ( $test_new_start >= 0 && $test_seq eq $hgvs_notation->{alt}) {
 
-   }
+	  $hgvs_notation->{type}   = 'dup';
+	  $hgvs_notation->{end}    = $hgvs_notation->{start} -1;
+	  $hgvs_notation->{start} -= length($hgvs_notation->{alt});
+
+	}
+   
    return $hgvs_notation;
 
 }
