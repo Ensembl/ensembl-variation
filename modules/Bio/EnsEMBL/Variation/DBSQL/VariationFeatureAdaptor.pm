@@ -854,6 +854,10 @@ sub fetch_all_by_Slice_SO_terms {
   if(!ref($slice) || !$slice->isa('Bio::EnsEMBL::Slice')) {
     throw('Bio::EnsEMBL::Slice arg expected');
   }
+  
+  if(!defined($terms) || scalar @$terms == 0) {
+	return $self->fetch_all_by_Slice($slice);
+  }
 
   my $constraint = $self->_get_consequence_constraint($terms, $without_children, $included_so);
   if (!$constraint) {
@@ -881,6 +885,10 @@ sub fetch_all_somatic_by_Slice_SO_terms {
 
   if(!ref($slice) || !$slice->isa('Bio::EnsEMBL::Slice')) {
     throw('Bio::EnsEMBL::Slice arg expected');
+  }
+  
+  if(!defined($terms) || scalar @$terms == 0) {
+	return $self->fetch_all_somatic_by_Slice($slice);
   }
 
   my $constraint = $self->_get_consequence_constraint($terms, $without_children, $included_so);
@@ -923,17 +931,17 @@ sub _fetch_all_by_coords {
 }
 
 # method used by superclass to construct SQL
-sub _tables { 
-    my $self = shift;
-    
-    my @tables = (
-        ['variation_feature', 'vf'],
-        [ 'source', 's']
-       );
+sub _tables {
+	my $self = shift;
+	
+	my @tables = (
+		[ 'variation_feature', 'vf', 'IGNORE INDEX(consequence_type_idx)'],
+		[ 'source', 's']
+	);
 
-   #ÊIf we are including failed_variations, add that table
+   # If we are including failed_variations, add that table
    push(@tables,['failed_variation', 'fv']) unless ($self->db->include_failed_variations());
-    
+
    # add bits for tagged variation feature
    push @tables, ['tagged_variation_feature', 'tvf'] if defined $self->{tag};
 
@@ -974,7 +982,7 @@ sub _columns {
 
 sub _objs_from_sth {
     my ($self, $sth, $mapper, $dest_slice) = @_;
-
+	
     #warn $sth->sql;
 
     # 
