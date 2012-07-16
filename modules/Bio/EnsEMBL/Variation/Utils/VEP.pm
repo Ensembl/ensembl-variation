@@ -4155,6 +4155,18 @@ sub build_full_cache {
     foreach my $slice(@slices) {
         my $chr = $slice->seq_region_name;
         
+        # check for features, we don't want a load of effectively empty dirs
+        my $dbc = $config->{sa}->db->dbc;
+        my $sth = $dbc->prepare("SELECT COUNT(*) FROM transcript WHERE seq_region_id = ?");
+        $sth->execute($slice->get_seq_region_id);
+        
+        my $count;
+        $sth->bind_columns(\$count);
+        $sth->fetch;
+        $sth->finish;
+        
+        next unless $count > 0;
+        
         my $regions;
         
         # for progress
