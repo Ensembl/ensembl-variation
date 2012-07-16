@@ -64,12 +64,18 @@ use warnings;
 
 package Bio::EnsEMBL::Variation::StructuralVariationFeature;
 
+use Scalar::Util qw(weaken isweak);
+
 use Bio::EnsEMBL::Variation::BaseVariationFeature;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning deprecate);
 use Bio::EnsEMBL::Utils::Argument  qw(rearrange);
+use Bio::EnsEMBL::Utils::Scalar qw(assert_ref);
 use Bio::EnsEMBL::Slice;
 use Bio::EnsEMBL::Variation::Utils::Constants qw(%VARIATION_CLASSES);
+use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(MAX_DISTANCE_FROM_TRANSCRIPT);
 use Bio::EnsEMBL::Variation::StructuralVariationOverlap;
+use Bio::EnsEMBL::Variation::TranscriptStructuralVariation;
+use Bio::EnsEMBL::Variation::IntergenicStructuralVariation;
 
 our @ISA = ('Bio::EnsEMBL::Variation::BaseVariationFeature');
 
@@ -157,24 +163,24 @@ sub new {
     $class_so_term, 
     $inner_start, 
     $inner_end,
-		$outer_start,
-		$outer_end, 
+	$outer_start,
+	$outer_end, 
     $allele_string,
-		$is_somatic,
-		$breakpoint_order
+	$is_somatic,
+	$breakpoint_order
   ) = rearrange([qw(
-          VARIATION_NAME 
-          SOURCE 
-          SOURCE_VERSION
-          CLASS_SO_TERM
-          INNER_START 
-          INNER_END 
-					OUTER_START
-					INNER_START
-          ALLELE_STRING
-					IS_SOMATIC
-					BREAKPOINT_ORDER
-    )], @_);
+	VARIATION_NAME 
+	SOURCE 
+	SOURCE_VERSION
+	CLASS_SO_TERM
+	INNER_START 
+	INNER_END 
+	OUTER_START
+	INNER_START
+	ALLELE_STRING
+	IS_SOMATIC
+	BREAKPOINT_ORDER
+  )], @_);
 
 
   $self->{'variation_name'}     = $var_name;
@@ -183,11 +189,11 @@ sub new {
   $self->{'class_SO_term'}      = $class_so_term;
   $self->{'inner_start'}        = $inner_start;
   $self->{'inner_end'}          = $inner_end;
-	$self->{'outer_start'}        = $outer_start;
+  $self->{'outer_start'}        = $outer_start;
   $self->{'outer_end'}          = $outer_end;
   $self->{'allele_string'}      = $allele_string;
-	$self->{'is_somatic'}         = $is_somatic || 0;
-	$self->{'breakpoint_order'}   = $breakpoint_order;
+  $self->{'is_somatic'}         = $is_somatic || 0;
+  $self->{'breakpoint_order'}   = $breakpoint_order;
 
   return $self;
 }
@@ -424,51 +430,229 @@ sub breakpoint_order {
   return $self->{'breakpoint_order'};
 }
 
+=head2 get_all_StructuralVariationOverlaps
+
+  Description : Get all the StructuralVariationOverlaps associated with this StructuralVariation, this
+                includes TranscriptStructuralVariations and regulatory feature overlap object.
+  Returntype  : listref of Bio::EnsEMBL::Variation::StructuralVariationOverlap objects
+  Exceptions  : none
+  Status      : At Risk
+
+=cut
 
 sub get_all_StructuralVariationOverlaps {
   my $self = shift;
   
-  if(!defined($self->{structural_variation_overlaps})) {
-	my @svos = ();
-	
-	foreach my $gene(@{$self->feature_Slice->get_all_Genes}) {
-	  my $svo = Bio::EnsEMBL::Variation::StructuralVariationOverlap->new(
-		-feature                      => $gene,
-		-structural_variation_feature => $self,
-	  );
-	  
-	  push @svos, $svo if defined($svo);
-	  
-	  foreach my $tr(grep {$_->seq_region_start <= $self->seq_region_end && $_->seq_region_end >= $self->seq_region_start} @{$gene->get_all_Transcripts}) {
-		$svo = undef;
-		
-		$svo = Bio::EnsEMBL::Variation::StructuralVariationOverlap->new(
-		  -feature                      => $tr,
-		  -structural_variation_feature => $self,
-		);
-		
-		push @svos, $svo if defined $svo;
-		
-		foreach my $exon(grep {$_->seq_region_start <= $self->seq_region_end && $_->seq_region_end >= $self->seq_region_start} @{$tr->get_all_Exons}) {
-		  $svo = undef;
-		  
-		  $svo = Bio::EnsEMBL::Variation::StructuralVariationOverlap->new(
-			-feature                      => $exon,
-			-structural_variation_feature => $self,
-		  );
-		  
-		  push @svos, $svo if defined $svo;
-		}
-	  }
-	}
-	
-	$self->{structural_variation_overlaps} = \@svos;
-	
-	# sort them
-	#$self->_sort_svos;
+  my $vfos =  [
+	@{ $self->get_all_TranscriptStructuralVariations },
+	@{ $self->get_all_RegulatoryFeatureStructuralVariations },
+	@{ $self->get_all_MotifFeatureStructuralVariations },
+  ];
+
+  if (my $iv = $self->get_IntergenicStructuralVariation) {
+	push @$vfos, $iv;
+  }
+
+  return $vfos;
+}
+
+=head2 get_all_TranscriptStructuralVariations
+
+  Arg [1]     : (optional) listref of Bio::EnsEMBL::Transcript objects
+  Example     : $svf->get_all_TranscriptStructuralVariations;
+  Description : Get all the TranscriptStructuralVariations associated with this
+                StructuralVariationFeature. If the optional list of Transcripts
+				is supplied, get only TranscriptStructuralVariations
+		        associated with those Transcripts.
+  Returntype  : listref of Bio::EnsEMBL::Variation::TranscriptVariation objects
+  Exceptions  : Thrown on wrong argument type
+  Caller      : general
+  Status      : At Risk
+
+=cut
+
+sub get_all_TranscriptStructuralVariations {
+  my ($self, $transcripts) = @_;
+  
+  if ($transcripts) {
+	assert_ref($transcripts, 'ARRAY');
+	map { assert_ref($_, 'Bio::EnsEMBL::Transcript') } @$transcripts;
   }
   
-  return $self->{structural_variation_overlaps};
+  elsif (not defined $self->{transcript_structural_variations}) {
+	# this VariationFeature is not in the database so we have to build the 
+	# TranscriptVariations ourselves
+	
+	unless ($transcripts) {
+	  # if the caller didn't supply some transcripts fetch those around this VariationFeature
+	  # get a slice around this transcript including the maximum distance up and down-stream
+	  # that we still call consequences for
+	  my $slice = $self->feature_Slice->expand(
+		MAX_DISTANCE_FROM_TRANSCRIPT, 
+		MAX_DISTANCE_FROM_TRANSCRIPT
+	  );
+	  
+	  # fetch all transcripts on this slice 
+	  $transcripts = $slice->get_all_Transcripts(1);
+	}
+	
+	my @unfetched_transcripts = grep { 
+	  not exists $self->{transcript_structural_variations}->{$_->stable_id} 
+	} @$transcripts;
+	
+	for my $transcript (@unfetched_transcripts) {
+	  $self->add_TranscriptStructuralVariation(
+		Bio::EnsEMBL::Variation::TranscriptStructuralVariation->new(
+		  -structural_variation_feature  => $self,
+		  -transcript                    => $transcript,
+		  -adaptor                       => undef,
+		)
+	  );
+	}
+  }
+  
+  if ($transcripts) {
+	# just return TranscriptVariations for the requested Transcripts
+	return [ map { $self->{transcript_structural_variations}->{$_->stable_id} } @$transcripts ];
+  }
+  else {
+	# return all TranscriptVariations
+	return [ values %{ $self->{transcript_structural_variations} } ];
+  }
+}
+
+=head2 get_all_RegulatoryFeatureStructuralVariations
+
+  Description : Get all the RegulatoryFeatureStructuralVariations associated with this VariationFeature.
+  Returntype  : listref of Bio::EnsEMBL::Variation::StructuralVariationOverlap objects
+  Exceptions  : none
+  Status      : At Risk
+
+=cut
+
+sub get_all_RegulatoryFeatureStructuralVariations {
+  my $self = shift;
+  return $self->_get_all_RegulationStructuralVariations('RegulatoryFeature', @_);
+}
+
+=head2 get_all_MotifFeatureStructuralVariations
+
+  Description : Get all the MotifFeatureStructuralVariations associated with this VariationFeature.
+  Returntype  : listref of Bio::EnsEMBL::Variation::StructuralVariationOverlap objects
+  Exceptions  : none
+  Status      : At Risk
+
+=cut
+
+sub get_all_MotifFeatureStructuralVariations {
+  my $self = shift;
+  return $self->_get_all_RegulationStructuralVariations('MotifFeature', @_);
+}
+
+=head2 get_all_ExternalFeatureStructuralVariations
+
+  Description : Get all the ExternalFeatureStructuralVariations associated with this VariationFeature.
+  Returntype  : listref of Bio::EnsEMBL::Variation::StructuralVariationOverlap objects
+  Exceptions  : none
+  Status      : At Risk
+
+=cut
+
+sub get_all_ExternalFeatureStructuralVariations {
+  my $self = shift;
+  return $self->_get_all_RegulationStructuralVariations('ExternalFeature', @_);
+}
+
+sub _get_all_RegulationStructuralVariations {
+  my ($self, $type) = @_;
+  
+  unless ($type && ($type eq 'RegulatoryFeature' || $type eq 'MotifFeature' || $type eq 'ExternalFeature')) {
+	throw("Invalid Ensembl Regulation type '$type'");
+  }
+  
+  unless ($self->{regulation_structural_variations}->{$type}) {
+	my $fg_adaptor;
+	
+	if (my $adap = $self->adaptor) {
+	  if(my $db = $adap->db) {
+		$fg_adaptor = Bio::EnsEMBL::DBSQL::MergedAdaptor->new(
+		  -species  => $adap->db->species, 
+		  -type     => $type,
+		);			
+	  }
+	  
+	  unless ($fg_adaptor) {
+		warning("Failed to get adaptor for $type");
+		return [];
+	  }
+	}
+	else {
+	  warning('Cannot get variation features without attached adaptor');
+	  return [];
+	}
+	
+	my $slice = $self->feature_Slice;
+	
+	my $constructor = 'Bio::EnsEMBL::Variation::StructuralVariationOverlap';
+	
+	eval {
+	  $self->{regulation_structural_variations}->{$type} = [ 
+		map {  
+		  $constructor->new(
+			-structural_variation_feature  => $self,
+			-feature                       => $_,
+		  );
+		} map { $_->transfer($self->slice) } @{ $fg_adaptor->fetch_all_by_Slice($slice) } 
+	  ];
+	};
+	
+	$self->{regulation_structural_variations}->{$type} ||= [];
+  }
+  
+  return $self->{regulation_structural_variations}->{$type};
+}
+
+
+sub get_IntergenicStructuralVariation {
+  my $self = shift;
+  my $no_ref_check = shift;
+  
+  unless (exists $self->{intergenic_structural_variation}) {
+	if (scalar(@{ $self->get_all_TranscriptStructuralVariations }) == 0) {
+	  $self->{intergenic_structural_variation} = Bio::EnsEMBL::Variation::IntergenicStructuralVariation->new(
+		-structural_variation_feature  => $self,
+		-no_ref_check                  => $no_ref_check,
+	  );
+	}
+	else {
+	  $self->{intergenic_structural_variation} = undef;
+	}
+  }
+  
+  return $self->{intergenic_structural_variation};
+}
+
+
+
+=head2 TranscriptStructuralVariation
+
+  Arg [1]     : Bio::EnsEMBL::Variation::TranscriptStructuralVariation
+  Example     : $vf->add_TranscriptStructuralVariation($tsv);
+  Description : Adds a TranscriptStructuralVariation to the structural variation
+                feature object.
+  Exceptions  : thrown on bad argument
+  Caller      : Bio::EnsEMBL::Variation::StructuralVariationFeature,
+                Bio::EnsEMBL::Varaition::Utils::VEP
+  Status      : Stable
+
+=cut
+
+sub add_TranscriptStructuralVariation {
+  my ($self, $tsv) = @_;
+  assert_ref($tsv, 'Bio::EnsEMBL::Variation::TranscriptStructuralVariation');
+  # we need to weaken the reference back to us to avoid a circular reference
+  weaken($tsv->{base_variation_feature});
+  $self->{transcript_structural_variations}->{$tsv->transcript_stable_id} = $tsv;
 }
 
 
