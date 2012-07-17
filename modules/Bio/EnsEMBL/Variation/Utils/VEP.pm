@@ -45,6 +45,7 @@ package Bio::EnsEMBL::Variation::Utils::VEP;
 # module list
 use Getopt::Long;
 use FileHandle;
+use File::Path qw(make_path);
 use Storable qw(nstore_fd fd_retrieve freeze thaw);
 use Scalar::Util qw(weaken);
 use Digest::MD5 qw(md5_hex);
@@ -3417,7 +3418,7 @@ sub get_dump_file_name {
     
     # make directory if it doesn't exist
     if(!(-e $dir) && defined($config->{write_cache})) {
-        system("mkdir -p ".$dir);
+        make_path($dir);
     }
     
     return $dump_file;
@@ -3470,7 +3471,7 @@ sub dump_transcript_cache {
 #    
 #    # make directory if it doesn't exist
 #    if(!(-e $dir)) {
-#        system("mkdir -p ".$dir);
+#        make_path($dir);
 #    }
 #    
 #    debug("Writing to $dump_file") unless defined($config->{quiet});
@@ -3639,7 +3640,7 @@ sub dump_adaptor_cache {
     
     # make directory if it doesn't exist
     if(!(-e $dir)) {
-        system("mkdir -p ".$dir);
+        make_path($dir);
 	}
     
     open my $fh, "| gzip -9 -c > ".$dump_file or die "ERROR: Could not write to dump file $dump_file";
