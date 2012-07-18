@@ -954,16 +954,16 @@ sub get_all_consequences {
             }
             
             # output
-            elsif(/^\d+ /) {
+            elsif(/^\-?\d+ /) {
                 
                 # plugin
-                if(/^\d+ PLUGIN/) {
+                if(/^\-?\d+ PLUGIN/) {
                     
-                    m/^(\d+) PLUGIN (\w+) /;
+                    m/^(\-?\d+) PLUGIN (\w+) /;
                     my ($pid, $plugin) = ($1, $2);
                     
                     # remove the PID
-                    s/^\d+ PLUGIN \w+ //;
+                    s/^\-?\d+ PLUGIN \w+ //;
                     chomp;
                     
                     my $tmp = thaw(decode_base64($_));
@@ -980,12 +980,12 @@ sub get_all_consequences {
                 
                 else {
                     # grab the PID
-                    m/^(\d+)\s/;
+                    m/^(\-?\d+)\s/;
                     my $pid = $1;
                     die "ERROR: Could not parse forked PID from line $_" unless defined($pid);
                     
                     # remove the PID
-                    s/^\d+\s//;
+                    s/^\-?\d+\s//;
                     chomp;
                     
                     # decode and thaw "output" from forked process
