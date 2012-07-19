@@ -1022,9 +1022,11 @@ sub get_flanking_sequence{
  
   if (!defined $down_seq){
 	if( $seq_region_id){
+	  my ($s, $e) = ($down_seq_region_start, $down_seq_region_end);
+	  ($s, $e) = ($e, $s) if $e < $s;
 	  $down_seq = $self->_get_flank_from_core($seq_region_id, 
-											  $down_seq_region_start, 
-											  $down_seq_region_end, 
+											  $s, 
+											  $e, 
 											  $seq_region_strand);
 	} else {
 	  warn( "*****[ERROR]: No seq_region_id for SNP with dbID: $variationID. ".
@@ -1033,9 +1035,11 @@ sub get_flanking_sequence{
   }
   if (!defined $up_seq){
 	if( $seq_region_id){
+	  my ($s, $e) = ($up_seq_region_start, $up_seq_region_end);
+	  ($s, $e) = ($e, $s) if $e < $s;
 	  $up_seq = $self->_get_flank_from_core($seq_region_id, 
-											$up_seq_region_start, 
-											$up_seq_region_end, 
+											$s, 
+											$e, 
 											$seq_region_strand);
 	} else {
 	  warn( "*****[ERROR]: No seq_region_id for SNP with dbID: $variationID. ".
