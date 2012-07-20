@@ -51,7 +51,9 @@ sub default_options {
     return {
 
         # general pipeline options that you should change to suit your environment
-        
+
+        hive_use_triggers       => 0,         
+
         # the location of your checkout of the ensembl API (the hive looks for SQL files here)
         
         ensembl_cvs_root_dir    => $ENV{'HOME'}.'/EBI/bin/HEAD',
@@ -83,31 +85,31 @@ sub default_options {
 
         #flip_variants            => 1,    TO BE IMPLEMENTED on by default
 
-	## The current dbSNP importer does not create the variation_feature.allele_string
-	## Switch this to 0 if QC'ing external data imported with variation_feature.allele_string's
+        # The current dbSNP importer does not create the variation_feature.allele_string
+        # Switch this to 0 if QC'ing external data imported with variation_feature.allele_string's
 
-	do_allele_string          => 0,
+        do_allele_string          => 1,
 
-	# number of *variants* handled per batch
+        ## number of *variants* handled per batch
 
-	qc_batch_size            => 1000, 
-	unmapped_batch_size      => 100000, ## quicker check can be binned in bigger chunks
+        qc_batch_size            => 1000, 
+        unmapped_batch_size      => 100000, ## quicker check can be binned in bigger chunks
 
 
-	# Options to change for failure recovery 
+        # Options to change for failure recovery 
 
-	# only data with variation_id >= start_at_variation_id will be imported
+        ## only data with variation_id >= start_at_variation_id will be imported
+                            
+        #start_at_variation_id     => 1,
+
+        ## this can be changed for failure recovery 
+        ## working tables will not be created when create_working_table is set to 0
                                     
-	start_at_variation_id     => 1,
+        create_working_tables     => 1,
 
-	# this can be changed for failure recovery 
-	# working tables will not be created when create_working_table is set to 0
-                                    
-	create_working_tables     => 1,
+        # create tmp_map_weight table unless this set to 0
 
-	# create tmp_map_weight table unless this set to 0
-
-	create_map_table          => 1,
+        create_map_table          => 1,
 
 
 
@@ -118,13 +120,11 @@ sub default_options {
         # requirements, queue parameters etc.) to suit your own data
         
         default_lsf_options => '-R"select[mem>2000] rusage[mem=2000]" -M2000000',
-        #urgent_lsf_options  => '-q yesterday -R"select[mem>2000] rusage[mem=2000]" -M2000000',  ## limit on processes
-	urgent_lsf_options  => '-R"select[mem>2000] rusage[mem=2000]" -M2000000',
+        urgent_lsf_options  => '-R"select[mem>2000] rusage[mem=2000]" -M2000000',
         highmem_lsf_options => '-R"select[mem>15000] rusage[mem=15000]" -M15000000', # this is Sanger LSF speak for "give me 15GB of memory"
         long_lsf_options    => '-q long -R"select[mem>2000] rusage[mem=2000]" -M2000000',
 
         # options controlling the number of workers used for the parallelisable analyses
-        # NEED TO ESTABLISH GOOD default values for most species
 
         variant_qc_capacity        => 30,
         unmapped_var_capacity      => 10,
@@ -132,8 +132,13 @@ sub default_options {
 
         # these flags control which parts of the pipeline are run
 
-        run_variant_qc     => 1,
-        run_unmapped_var   => 1,
+        run_variant_qc                   => 1,
+        run_unmapped_var                 => 1,
+        run_update_population_genotype   => 1,
+
+        # put back support for re-runs on new format schema
+
+        schema                       => 'old',
 
         # connection parameters for the hive database, you should supply the hive_db_password
         # option on the command line to init_pipeline.pl (parameters for the target database
@@ -169,10 +174,10 @@ sub pipeline_create_commands {
 sub resource_classes {
     my ($self) = @_;
     return {
-        0 => { -desc => 'default',  'LSF' => $self->o('default_lsf_options') },
-        1 => { -desc => 'urgent',   'LSF' => $self->o('urgent_lsf_options')  },
-        2 => { -desc => 'highmem',  'LSF' => $self->o('highmem_lsf_options') },
-        3 => { -desc => 'long',     'LSF' => $self->o('long_lsf_options')    },
+        'default' => { 'LSF' => $self->o('default_lsf_options') },
+        'urgent'  => { 'LSF' => $self->o('urgent_lsf_options')  },
+        'highmem' => { 'LSF' => $self->o('highmem_lsf_options') },
+        'long'    => { 'LSF' => $self->o('long_lsf_options')    },
     };
 }
 
@@ -189,71 +194,83 @@ sub pipeline_analyses {
     
 
     push @analyses, (
-	
-	{   -logic_name => 'init_run_variant_qc',
-	    -module     => 'Bio::EnsEMBL::Variation::Pipeline::VariantQC::InitVariantQC',
-	    -parameters => {
-		qc_batch_size               => $self->o('qc_batch_size'),
-		unmapped_batch_size         => $self->o('unmapped_batch_size'),
-		
-		run_variant_qc              => $self->o('run_variant_qc'),
-		run_unmapped_var            => $self->o('run_unmapped_var'),
-		
-		start_at_variation_id       => $self->o('start_at_variation_id'),
-		create_working_tables       => $self->o('create_working_tables'),
-		create_map_table            => $self->o('create_map_table'),
-		@common_params,
-	    },
-	    -input_ids  => [{}],
-                -rc_id      => 1,
+    
+    {   -logic_name => 'init_run_variant_qc',
+        -module     => 'Bio::EnsEMBL::Variation::Pipeline::VariantQC::InitVariantQC',
+        -parameters => {
+            qc_batch_size               => $self->o('qc_batch_size'),
+            unmapped_batch_size         => $self->o('unmapped_batch_size'),
+        
+            run_variant_qc                 => $self->o('run_variant_qc'),
+            run_unmapped_var               => $self->o('run_unmapped_var'),
+            run_update_population_genotype => $self->o('run_update_population_genotype'),
+
+            start_at_variation_id       => $self->o('start_at_variation_id'),
+            create_working_tables       => $self->o('create_working_tables'),
+            create_map_table            => $self->o('create_map_table'),
+            @common_params,
+        },
+        -input_ids  => [{}],
+                -rc_id      => 'default',
                 -flow_into  => {
                     2 => [ 'variant_qc'     ],
                     3 => [ 'unmapped_var'   ],
-		    4 => [ 'finish_variation_qc' ],
+                    4 => [ 'update_population_genotype' ],
+                    5 => [ 'finish_variation_qc' ],
 
                 },
             },
 
-	    {   -logic_name     => 'unmapped_var',
-                -module         => 'Bio::EnsEMBL::Variation::Pipeline::VariantQC::UnmappedVariant',		
-                -parameters     => {   
-		    batch_size => $self->o('unmapped_batch_size'),
-                    @common_params,
-                },
-                -input_ids      => [],
-                -hive_capacity  => $self->o('unmapped_var_capacity'),
-                -rc_id          => 0,
-                -flow_into      => {},
-            },
+     {   -logic_name     => 'unmapped_var',
+             -module         => 'Bio::EnsEMBL::Variation::Pipeline::VariantQC::UnmappedVariant',        
+             -parameters     => {   
+                 batch_size => $self->o('unmapped_batch_size'),
+                 @common_params,
+             },
+             -input_ids      => [],
+             -hive_capacity  => $self->o('unmapped_var_capacity'),
+             -rc_id          => 'default',
+             -flow_into      => {},
+         },
 
-            {   -logic_name     => 'variant_qc',
-                -module         => 'Bio::EnsEMBL::Variation::Pipeline::VariantQC::VariantQC',
-                -parameters     => {   
-		    batch_size         => $self->o('qc_batch_size'),
-		    do_allele_string   => $self->o('do_allele_string'),
-		    pipeline_dir       => $self->o('pipeline_dir'),   ### temp - write temp log files
-                    @common_params,
-                },
-                -input_ids      => [],
-                -hive_capacity  => $self->o('variant_qc_capacity'),
-                -rc_id          => 0,
-                -flow_into      => {},
-            },
-
-	    	
-	{   -logic_name     => 'finish_variation_qc',
-	    -module         => 'Bio::EnsEMBL::Variation::Pipeline::VariantQC::FinishVariantQC', 
-	    -parameters     => {
-		pipeline_dir  => $self->o('pipeline_dir'),
-		@common_params,
-               },
-	    -input_ids      => [],
-	    -hive_capacity  => 1,
-	    -rc_id          => 1,
-	    -wait_for       => [ 'variant_qc','unmapped_var' ],
-	    -flow_into      => {},
-	},                   
-	
+         {   -logic_name     => 'variant_qc',
+             -module         => 'Bio::EnsEMBL::Variation::Pipeline::VariantQC::VariantQC',
+             -parameters     => {   
+                 schema             => $self->o('schema'),
+                 batch_size         => $self->o('qc_batch_size'),
+                 do_allele_string   => $self->o('do_allele_string'),
+                 pipeline_dir       => $self->o('pipeline_dir'),   ### temp - write temp log files
+                 @common_params,
+             },
+             -input_ids      => [],
+             -hive_capacity  => $self->o('variant_qc_capacity'),
+             -rc_id          => 'default',
+             -flow_into      => {},
+    },
+    {   -logic_name     => 'update_population_genotype',
+        -module         => 'Bio::EnsEMBL::Variation::Pipeline::VariantQC::UpdatePopulationGenotype', 
+        -parameters     => {
+            @common_params,
+         },
+        -input_ids      => [],
+        -hive_capacity  => 1,
+        -rc_id          => 'default',
+        -wait_for       => [ 'variant_qc' ],
+        -flow_into      => {},
+    },              
+    {   -logic_name     => 'finish_variation_qc',
+        -module         => 'Bio::EnsEMBL::Variation::Pipeline::VariantQC::FinishVariantQC', 
+        -parameters     => {
+            pipeline_dir  => $self->o('pipeline_dir'),
+            @common_params,
+         },
+            -input_ids      => [],
+            -hive_capacity  => 1,
+            -rc_id          => 'default',
+            -wait_for       => [ 'variant_qc','unmapped_var','update_population_genotype' ],
+            -flow_into      => {},
+   },                   
+   
     );
     
 
