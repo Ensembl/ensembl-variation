@@ -47,7 +47,7 @@ use warnings;
 
 use Bio::EnsEMBL::Variation::TranscriptStructuralVariationAllele;
 
-use base qw(Bio::EnsEMBL::Variation::StructuralVariationOverlap Bio::EnsEMBL::Variation::BaseTranscriptVariation);
+use base qw(Bio::EnsEMBL::Variation::BaseTranscriptVariation Bio::EnsEMBL::Variation::StructuralVariationOverlap);
 
 sub new {
 

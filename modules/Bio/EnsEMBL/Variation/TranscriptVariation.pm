@@ -58,7 +58,7 @@ use Bio::EnsEMBL::Variation::TranscriptVariationAllele;
 use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(overlap within_cds);
 use Bio::EnsEMBL::Variation::BaseTranscriptVariation;
 
-use base qw(Bio::EnsEMBL::Variation::VariationFeatureOverlap Bio::EnsEMBL::Variation::BaseTranscriptVariation);
+use base qw(Bio::EnsEMBL::Variation::BaseTranscriptVariation Bio::EnsEMBL::Variation::VariationFeatureOverlap);
 
 =head2 new
 
