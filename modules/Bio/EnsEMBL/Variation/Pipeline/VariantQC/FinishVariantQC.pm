@@ -40,7 +40,8 @@ sub run {
     open my $report, ">", "$dir/QC_report.txt" || die "Failed to open QC_report.txt : $!\n";
     print $report "\n\tChecking post-QC tables \n\n";
 
-    my $var_dba  = $self->get_species_adaptor('variation');
+    my $var_dba   = $self->get_species_adaptor('variation');
+    my $core_dba  = $self->get_species_adaptor('core');
 
 
     ## Have all rows been processed
@@ -54,12 +55,17 @@ sub run {
     ## what are failure reasons for alleles and variants    
     check_failure_rates($var_dba, $report);
 
+    update_failed_variation_set($var_dba, $report);
+
+    #add_indexes( $var_dba);
 
     ## rename tables
-    if( $all_ok ==2 ){
+    if( $all_ok ==3){
          print $report "\n\tOK to rename post-QC tables \n\n";
-  # rename_tables($var_dba);
+         rename_tables($var_dba);
     }
+    
+    update_meta_coord( $core_dba, $var_dba, 'variation_feature');
 
 }
 
@@ -75,18 +81,21 @@ sub run {
     my $new_varfeat_ext_sth  = $var_dba->dbc->prepare(qq[ select count(*) from variation_feature_working]);
     my $old_allele_ext_sth   = $var_dba->dbc->prepare(qq[ select count(*) from allele]);
     my $new_allele_ext_sth   = $var_dba->dbc->prepare(qq[ select count(*) from allele_working]);
+    my $mart_allele_ext_sth  = $var_dba->dbc->prepare(qq[ select count(*) from  MTMP_allele_working]);
   
 
     $old_varfeat_ext_sth->execute() || die "Failed to extract old_varfeat count \n";
     $new_varfeat_ext_sth->execute() || die "Failed to extract new_varfeat count\n";
     $old_allele_ext_sth->execute()  || die "Failed to extract old_allele count\n";   
     $new_allele_ext_sth->execute()  || die "Failed to extract new_allele count\n";
-
+    $mart_allele_ext_sth->execute() || die "Failed to extract mart_allele count\n";
 
     my $old_varfeat = $old_varfeat_ext_sth->fetchall_arrayref();
     my $new_varfeat = $new_varfeat_ext_sth->fetchall_arrayref();
     my $old_allele  = $old_allele_ext_sth->fetchall_arrayref();
     my $new_allele  = $new_allele_ext_sth->fetchall_arrayref();
+    my $mart_allele = $mart_allele_ext_sth->fetchall_arrayref();
+
 
     my $all_ok = 0; ## can we proceed to rename tables?
 
@@ -104,6 +113,13 @@ sub run {
     }
     else{
        print $report "Allele: ERROR old table has : $old_allele->[0]->[0] rows, new table has: $new_allele->[0]->[0]\n";
+    }
+    if($old_allele->[0]->[0] == $mart_allele->[0]->[0]){
+       print $report "Mart Allele: Correct number of entries seen : $mart_allele->[0]->[0]\n";
+       $all_ok++;
+    }
+    else{
+       print $report "Allele: ERROR old table has : $old_allele->[0]->[0] rows, mart table has: $mart_allele->[0]->[0]\n";
     }
 
     return ( $new_allele->[0]->[0], $all_ok );
@@ -177,28 +193,157 @@ sub check_failure_rates{
        print $report "\t$l->[1]\t$l->[0]\n";
     }
 }
+sub add_indexes{
 
+  my $var_dba    = shift;
+
+  $var_dba->dbc->do( qq[ALTER TABLE MTMP_allele_working ADD KEY `subsnp_idx` (`subsnp_id`)]);
+  $var_dba->dbc->do( qq[ALTER TABLE MTMP_allele_working ADD KEY `variation_idx` (`variation_id`,`allele`(10))]);
+  $var_dba->dbc->do( qq[ALTER TABLE MTMP_allele_working ADD KEY `sample_idx` (`sample_id`) ]);
+
+
+  $var_dba->dbc->do( qq[ALTER TABLE variation_feature ADD key pos_idx( seq_region_id, seq_region_start, seq_region_end )]);
+  $var_dba->dbc->do( qq[ALTER TABLE variation_feature ADD key variation_idx( variation_id )]);
+  $var_dba->dbc->do( qq[ALTER TABLE variation_feature ADD key variation_set_idx ( variation_set_id )]);
+  $var_dba->dbc->do( qq[ALTER TABLE variation_feature ADD key consequence_type_idx (consequence_types)]);
+
+
+
+}
 
 sub rename_tables{
 
-    my ($var_dba) = shift;
+  my ($var_dba) = shift;
 
-    ## Keep orignal tables in short term
-    #$var_dba->dbc->do(qq[ rename table allele to allele_before_pp ]);
-    #$var_dba->dbc->do(qq[ rename table variation_feature to variation_feature_before_pp ]);
-    #$var_dba->dbc->do(qq[ rename table failed_allele to failed_allele_before_pp ]);         ## Not needed post dev phase
-    #$var_dba->dbc->do(qq[ rename table failed_variation to failed_variation_before_pp ]);   ## Not needed post dev phase
+  ## Keep orignal tables in short term
+  $var_dba->dbc->do(qq[ rename table allele to allele_before_pp ]) || die;
+  $var_dba->dbc->do(qq[ rename table variation_feature to variation_feature_before_pp ]) || die;
+  $var_dba->dbc->do(qq[ rename table failed_allele to failed_allele_before_pp ]) || die;         ## Not needed post dev phase
+  $var_dba->dbc->do(qq[ rename table failed_variation to failed_variation_before_pp ]) || die;   ## Not needed post dev phase
 
 
-    ## Rename working tables 
-    #$var_dba->dbc->do(qq[ rename table allele_working to allele ]);
-    #$var_dba->dbc->do(qq[ rename table variation_feature_working to variation_feature ]);
-    #$var_dba->dbc->do(qq[ rename table failed_allele_working to failed_allele ]);        ## Not needed post dev phase
-    #$var_dba->dbc->do(qq[ rename table failed_variation_working to failed_variation ]);  ## Not needed post dev phase
+  # Rename working tables 
+  $var_dba->dbc->do(qq[ rename table allele_working to allele ]) || die;
+  $var_dba->dbc->do(qq[ rename table MTMP_allele_working to MTMP_allele ]) || die;
 
-    ## does this need binning?
-    #$var_dba->dbc->do(qq[ update variation set flipped = 0  ]);
-    #$var_dba->dbc->do(qq[ update variation set flipped = 1 where variation_id in (select variation_id from variation_to_reverse_working) ]);
+  $var_dba->dbc->do(qq[ rename table variation_feature_working to variation_feature ]) || die;
+
+  $var_dba->dbc->do(qq[ rename table failed_allele_working to failed_allele ]) || die;        ## Not needed post dev phase
+  $var_dba->dbc->do(qq[ rename table failed_variation_working to failed_variation ]) || die;  ## Not needed post dev phase
+
+  $var_dba->dbc->do(qq[ rename table population_genotype to MTMP_population_genotype]) || die;
+  $var_dba->dbc->do(qq[ rename table population_genotype_working to population_genotype]) || die;
+
+
+  # does this need binning?
+  $var_dba->dbc->do(qq[ update variation set flipped = 0  ]) || die;
+  $var_dba->dbc->do(qq[ update variation set flipped = 1 where variation_id in (select variation_id from variation_to_reverse_working) ]) || die;
+
+  
 
 }
+
+sub update_failed_variation_set{
+
+  my $var_dba = shift;
+  my $report  = shift;
+    
+   
+  my $failed_var_ext_sth  = $var_dba->dbc->prepare(qq[ select distinct variation_id
+                                                       from failed_variation_working
+                                                     ]);
+
+
+  ### sql to get variation set id
+  my $fail_attrib_ext_sth  = $var_dba->dbc->prepare(qq[ select attrib_id
+                                                         from attrib
+                                                         where attrib_type_id = 9
+                                                         and value = 'fail_all'
+
+                                                       ]);
+ 
+   my $variation_set_ext_sth  = $var_dba->dbc->prepare(qq[ select variation_set_id
+                                                            from variation_set
+                                                            where name = ?
+                                                           ]);
+
+   my $variation_set_ins_sth  = $var_dba->dbc->prepare(qq[ insert into variation_set
+                                                            ( name, description, short_name_attrib_id)
+                                                            values (?,?,?)
+                                                          ]);
+
+
+  my $var_set_ins_ext_sth  = $var_dba->dbc->prepare(qq[insert into variation_set_variation
+                                                         (variation_id, variation_set_id)
+                                                         values (?,?)
+                                                        ]);
+
+
+  $variation_set_ext_sth->execute('All failed variations')  || die "Failed to extract allele fail reasons\n"; 
+  my $failed_set_id = $variation_set_ext_sth->fetchall_arrayref();
+
+  unless(defined $failed_set_id->[0]->[0] ){
+      #no set entered - look up attrib for short name and enter set
+
+    $fail_attrib_ext_sth->execute() || die "Failed to extract failed set attrib reasons\n";
+    my $attrib = $fail_attrib_ext_sth->fetchall_arrayref();
+
+    if(defined $attrib->[0]->[0] ){
+      $variation_set_ins_sth->execute('All failed variations',
+                                       'Variations that have failed the Ensembl QC checks' ,
+                                        $attrib->[0]->[0] )|| die "Failed to insert failed set\n";       
+    }
+  }
+
+  $variation_set_ext_sth->execute('All failed variations')  || die "Failed to extract allele fail reasons\n"; 
+  $failed_set_id = $variation_set_ext_sth->fetchall_arrayref();
+
+
+  ## extract list of variation ids to put in set
+  $failed_var_ext_sth->execute() || die "Failed to extract variation fails\n";  
+  my $all_failed_var = $failed_var_ext_sth->fetchall_arrayref();
+
+  unless( defined $all_failed_var->[0]->[0]){
+    print $report "ERROR: no variation fails available to update to variation set \n";
+    return;
+  }
+
+  my $check_num = scalar @{ $all_failed_var};
+  foreach my $var(@{ $all_failed_var}){
+
+    $var_set_ins_ext_sth->execute( $var->[0], $failed_set_id->[0]->[0] )||die;
+  }
+  print $report "\n$check_num variants inserted into variation_set_variation table\n";
+    
+}
+
+
+
+
+#
+# updates the meta coord table 
+# copied from old pipeline - $csname  not supplied => only ever updated as chromosome
+sub update_meta_coord {
+
+  my $core_dba   = shift;
+  my $var_dba    = shift;
+  my $table_name = shift;
+
+  my $csname     = 'chromosome';
+
+  my $csa = $core_dba->get_CoordSystemAdaptor();
+
+  my $cs = $csa->fetch_by_name($csname);
+
+  my $sth = $var_dba->dbc->prepare
+    ('INSERT IGNORE INTO meta_coord set table_name = ?, coord_system_id = ?, max_length =500');
+
+  $sth->execute($table_name, $cs->dbID());
+
+  $sth->finish();
+
+  return;
+}
+
+
 1;
