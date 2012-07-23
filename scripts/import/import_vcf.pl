@@ -116,6 +116,7 @@ sub configure {
 		'pedigree=s',
 		'panel=s',
 		'gmaf=s',
+		'somatic',
 		
 		'flank=s',
 		'gp',
@@ -201,6 +202,7 @@ sub configure {
 	$config->{coord_system}    ||= 'chromosome';
 	$config->{progress_update} ||= 100;
 	$config->{pid}             ||= $$;
+	$config->{somatic}         || = 0;
 	
 	# recovery not possible if forking
 	#$config->{no_recover} = 1 if defined($config->{fork});
@@ -658,6 +660,7 @@ sub main {
 				$data->{ID} =
 					($config->{var_prefix} ? $config->{var_prefix} : 'tmp').
 					'_'.$data->{'#CHROM'}.'_'.$data->{POS};
+				$data->{made_up_name} = 1;
 			}
 			
 			$data->{tmp_vf}->{variation_name} = $data->{ID};
@@ -1743,7 +1746,8 @@ sub variation_feature {
 		$vfa->_fetch_all_by_coords(
 			$config->{seq_region_ids}->{$vf->{chr}},
 			$vf->{start},
-			$vf->{end}
+			$vf->{end},
+			$config->{somatic}
 		);
 	
 	# flag to indicate if we've added a synonym
@@ -1751,6 +1755,8 @@ sub variation_feature {
 	
 	# check existing VFs
 	foreach my $existing_vf (sort {
+		(count_common_alleles($vf->allele_string, $b->allele_string) <=> count_common_alleles($vf->allele_string, $a->allele_string)) ||
+		($a->map_weight <=> $b->map_weight) ||
 		($b->source eq 'dbSNP') <=> ($a->source eq 'dbSNP') ||
 		(split 'rs', $a->variation_name)[-1] <=> (split 'rs', $b->variation_name)[-1]
 	} @$existing_vfs) {
@@ -1793,7 +1799,7 @@ sub variation_feature {
 		}
 		
 		# we also need to add a synonym entry if the variation has a new name
-		if($existing_vf->variation_name ne $data->{ID} and !defined($config->{only_existing}) and !$added_synonym) {
+		if($existing_vf->variation_name ne $data->{ID} and !defined($config->{only_existing}) and !$added_synonym and !defined($data->{made_up_name})) {
 			
 			if(defined($config->{test})) {
 				debug($config, "(TEST) Adding ", $data->{ID}, " to variation_synonym as synonym for ", $existing_vf->variation_name);
@@ -1886,6 +1892,15 @@ sub variation_feature {
 	return $vf;
 }
 
+# counts how many alleles two allele strings share
+sub count_common_alleles {
+	my ($as1, $as2) = @_;
+	
+	my %alleles;
+	$alleles{$_}++ for split('/', $as1.'/'.$as2);
+	
+	return scalar grep {$_ > 1} values %alleles;
+}
 
 # transcript_variation
 sub transcript_variation {
@@ -2489,6 +2504,9 @@ Options
 --gmaf [ALL|pop]      Add global allele frequency data. "--gmaf ALL" uses all
                       individuals in the file; specifying any other population name
                       will use the selected population for the GMAF.
+
+--somatic             Indicate the data in this VCF is somatic (will not be merged
+                      with germline, and vice versa if --somatic not used)
 
 --ind_prefix          Prefix added to individual names [default: not used]
 --pop_prefix          Prefix added to population names [default: not used]
