@@ -116,6 +116,7 @@ sub configure {
 		'pedigree=s',
 		'panel=s',
 		'gmaf=s',
+		'somatic',
 		
 		'flank=s',
 		'gp',
@@ -201,6 +202,7 @@ sub configure {
 	$config->{coord_system}    ||= 'chromosome';
 	$config->{progress_update} ||= 100;
 	$config->{pid}             ||= $$;
+	$config->{somatic}         || = 0;
 	
 	# recovery not possible if forking
 	#$config->{no_recover} = 1 if defined($config->{fork});
@@ -1744,7 +1746,8 @@ sub variation_feature {
 		$vfa->_fetch_all_by_coords(
 			$config->{seq_region_ids}->{$vf->{chr}},
 			$vf->{start},
-			$vf->{end}
+			$vf->{end},
+			$config->{somatic}
 		);
 	
 	# flag to indicate if we've added a synonym
@@ -2501,6 +2504,9 @@ Options
 --gmaf [ALL|pop]      Add global allele frequency data. "--gmaf ALL" uses all
                       individuals in the file; specifying any other population name
                       will use the selected population for the GMAF.
+
+--somatic             Indicate the data in this VCF is somatic (will not be merged
+                      with germline, and vice versa if --somatic not used)
 
 --ind_prefix          Prefix added to individual names [default: not used]
 --pop_prefix          Prefix added to population names [default: not used]
