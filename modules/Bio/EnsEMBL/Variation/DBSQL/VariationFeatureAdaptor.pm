@@ -921,12 +921,15 @@ sub fetch_Iterator_by_Slice_constraint {
 
 # method used by import VCF script
 sub _fetch_all_by_coords {
-    my ($self, $seq_region_id, $start, $end) = @_;
+    my ($self, $seq_region_id, $start, $end, $somatic) = @_;
+	
+	$somatic ||= 0;
     
     return $self->generic_fetch(qq{
         vf.seq_region_id = $seq_region_id AND
         vf.seq_region_start = $start AND
-        vf.seq_region_end = $end
+        vf.seq_region_end = $end AND
+		vf.somatic = $somatic
     });
 }
 
