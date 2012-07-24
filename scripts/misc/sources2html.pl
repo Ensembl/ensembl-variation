@@ -186,23 +186,21 @@ sub source_table {
 	$species = uc($1).$2;
 	my $s_name = $species;
 	$s_name =~ s/\s/_/g;
-	my $new_species = ($is_new == 1) ? qq{<td style="padding-left:20px;color:#00F;font-weight:bold">New species!</td>} : '';
+	my $new_species = ($is_new == 1) ? qq{<span style="padding-left:20px;color:#00F;font-weight:bold">New species!</span>} : '';
 	
 	my $html = qq{
-	<table id="$name" style="padding-left:0px"><tr>
-		<td style="padding-left:0px">
-		  <div class="species-box" style="float:left;margin-bottom:0px;padding-left:0px">  
-		    <img src="/i/species/48/$s_name.png" alt="$species" class="sp-thumb" />
-		  </div>
-		  <div style="float:left"><h3>$species</h3></div>
-		</td>$new_species
-	</tr></table>
+	<div id="bos_taurus" style="padding-left:0px;padding-bottom:3px">
+	  <img src="/i/species/48/$s_name.png" alt="$species" class="sp-thumb" style="float:none;margin-right:4px;vertical-align:middle" />
+		<span style="font-weight:bold;font-size:1.1em;color:#333">$species</span>
+		$new_species
+  </div>
 	};
 	
 	$html .= qq{
-			<table class="ss" style="width:60%">
-				<tr><th colspan="2">Source</th><th>Version</th><th>Description</th><th></th></tr>
-		 };
+	<div>
+	  <table class="ss" style="width:60%">
+	    <tr><th colspan="2">Source</th><th>Version</th><th>Description</th><th></th></tr>
+	};
 	
 	my $bg = 1;
 	my @p_sources = keys(%{$p_list});
@@ -212,9 +210,10 @@ sub source_table {
 	my $cbg = 1;
 	my $chip_table;
 	my $chip_header .= qq{<br />
-			<table class="ss" style="width:60%">
-				<tr><th colspan="2">Chip Source</th><th>Version</th><th>Description</th><th></th></tr>
-		 };
+	<div>
+	  <table class="ss" style="width:60%">
+			<tr><th colspan="2">Chip Source</th><th>Version</th><th>Description</th><th></th></tr>
+	};
 		 
 							 
 	while (my @a = $sth->fetchrow_array) {
@@ -250,34 +249,34 @@ sub source_table {
 		if ($s_type eq 'chip') {
 			$chip_table .= $chip_header if (!$chip_table);
 			$chip_table .= qq{
-				<tr class="bg$cbg">
-					$s_header
-					<td>$source</td>
-					<td style="text-align:center">$s_version</td>
-					<td>$s_description</td>
-					<td style="text-align:center;width:80px">$s_new</td>
-				</tr>
+			<tr class="bg$cbg">
+				$s_header
+				<td>$source</td>
+				<td>$s_version</td>
+				<td>$s_description</td>
+				<td style="text-align:center;width:80px">$s_new</td>
+			</tr>
 			};
 			if ($cbg == 1) { $cbg = 2; }
 			else { $cbg = 1; }
 		}
 		else {
 			$html .= qq{
-				<tr class="bg$bg">
-					$s_header
-					<td>$source</td>
-					<td style="text-align:center">$s_version</td>
-					<td>$s_description</td>
-					<td style="text-align:center;width:80px">$s_new</td>
-				</tr>
+			<tr class="bg$bg">
+				$s_header
+				<td>$source</td>
+				<td>$s_version</td>
+				<td>$s_description</td>
+				<td style="text-align:center;width:80px">$s_new</td>
+			</tr>
 			};
 			if ($bg == 1) { $bg = 2; }
 			else { $bg = 1; }
 		}
 	}
 	
-	$html .= qq{</table>};
-	$html .= qq{$chip_table</table>} if ($chip_table);
+	$html .= qq{</table>\n</div>};
+	$html .= qq{$chip_table</table>\n</div>} if ($chip_table);
 	
 	return $html;
 }
@@ -338,7 +337,7 @@ sub usage {
 
     -help           Print this message
       
-    -v							Ensembl version, e.g. 65 (Required)
+    -v              Ensembl version, e.g. 65 (Required)
     -o              An HTML output file name (Required)			
     -phost          Host name where the previous databases are stored, e.g. ensembldb.ensembl.org	(Required)
     -hlist          The list of host names where the new databases are stored, separated by a coma,
