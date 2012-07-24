@@ -100,8 +100,8 @@ for my $cons_set (@OVERLAP_CONSEQUENCES) {
 
 
 my $cons_table = 
-    qq{<table id="consequence_type_table" class="ss">\n<tr>\n\t<th style="width:5px">*</th>\n\t<th>}.
-    (join qq{</th>\n\t<th>}, 'SO term', 'SO description', 'SO accession', 'Ensembl term').
+    qq{<table id="consequence_type_table" class="ss">\n<tr>\n\t<th style="width:5px;padding-left:0px;padding-right:0px;text-align:center">*</th>\n\t<th>}.
+    (join qq{</th>\n\t<th>}, 'SO term', 'SO description', 'SO accession', 'Old Ensembl term').
     qq{</th>\n</tr>\n};
 
 my $bg = '';
@@ -133,7 +133,7 @@ for my $d_term (sort {$consequences_rank{$a} <=> $consequences_rank{$b}} keys(%c
     $line ++;
   }
   
-  my $first_col = (defined($c)) ? qq{\t<td $rspan style="padding:0px;margin:0px;background-color:$c"></td>} : qq{<td$rspan></td>};
+  my $first_col = (defined($c)) ? qq{\t<td$rspan style="padding:0px;margin:0px;background-color:$c"></td>} : qq{<td$rspan></td>};
   
   $cons_table .= qq{<tr$bg>\n$first_col\n};
   $cons_table .= qq{$cons_line</tr>\n};
