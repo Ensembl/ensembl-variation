@@ -1335,26 +1335,6 @@ sub vf_to_consequences {
         }
     }
     
-    # pass a true argument to get_IntergenicVariation to stop it doing a reference allele check
-    # (to stay consistent with the rest of the VEP)
-    if ((my $iv = $vf->get_IntergenicVariation(1)) && !defined($config->{no_intergenic})) {
-      
-        for my $iva (@{ $iv->get_all_alternate_IntergenicVariationAlleles }) {
-            
-            my $line = init_line($config, $vf);
-           
-            $line->{Allele} = $iva->variation_feature_seq;
-    
-            my $cons = $iva->get_all_OverlapConsequences->[0];
-
-            $line->{Consequence} = $cons->$term_method || $cons->SO_term;
-
-            $line = run_plugins($iva, $line, $config);
-                    
-            push @return, $line;
-        }
-    }
-    
     # get TVs
     my $tvs = $vf->get_all_TranscriptVariations;
     
@@ -1371,6 +1351,26 @@ sub vf_to_consequences {
         }
         
         push @return, $line;
+    }
+    
+    # pass a true argument to get_IntergenicVariation to stop it doing a reference allele check
+    # (to stay consistent with the rest of the VEP)
+    elsif ((my $iv = $vf->get_IntergenicVariation(1)) && !defined($config->{no_intergenic})) {
+      
+        for my $iva (@{ $iv->get_all_alternate_IntergenicVariationAlleles }) {
+            
+            my $line = init_line($config, $vf);
+           
+            $line->{Allele} = $iva->variation_feature_seq;
+    
+            my $cons = $iva->get_all_OverlapConsequences->[0];
+
+            $line->{Consequence} = $cons->$term_method || $cons->SO_term;
+
+            $line = run_plugins($iva, $line, $config);
+                    
+            push @return, $line;
+        }
     }
     
     # user wants only one conseqeunce per gene
