@@ -81,7 +81,7 @@ $sth2->finish;
 my $html = qq{
 	<table id="variation_classes" class="ss">
 		<tr>
-			<th style="width:5px">*</th>
+			<th style="width:8px;padding-left:0px;padding-right:0px;text-align:center">*</th>
 			<th>SO term</th>
 			<th>SO description</th>
 			<th>SO accession</th>
