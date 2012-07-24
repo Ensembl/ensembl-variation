@@ -100,7 +100,7 @@ sub default_options {
 
         ## only data with variation_id >= start_at_variation_id will be imported
                             
-        #start_at_variation_id     => 1,
+        start_at_variation_id     => 1,
 
         ## this can be changed for failure recovery 
         ## working tables will not be created when create_working_table is set to 0
