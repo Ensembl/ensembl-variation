@@ -2,7 +2,7 @@ use strict;
 use warnings;
 
 #generic object for the dbSNP data. Contains the general methods to dump the data into the new Variation database. Any change in the methods
-# will need to overload the correspondent method in the subclass for the specie
+# will need to overload the correspondent method in the subclass for the species
 
 package dbSNP::ImportTask;
 
@@ -31,6 +31,7 @@ sub new {
 }
 
 
+######## export allele data (with frequencies where possible) from  local dbSNP database 
 sub allele_table {
 
     
@@ -38,48 +39,57 @@ sub allele_table {
   my $loadfile = shift;
   my $task_start = shift;
   my $task_end = shift;
-  my $allelefile = shift;
-  my $samplefile = shift;
-
 
   my $logh = $self->{'log'};
-  print $logh "\tStarting for SubSNP ids from $task_start to $task_end\n";
  
   my $stmt;
   my $dbm = $self->{'db_manager'};
   my $shared_db = $dbm->dbSNP_shared();
   
-  print $logh Progress::location() . "\tImporting for SubSNP ids from $task_start to $task_end\n";
+  print  Progress::location() . "\tImporting for SubSNP ids from $task_start to $task_end\n";
   
+ # Prepared statement to get the alleles
+  $stmt = qq{
+    SELECT
+      a.allele,
+      ar.allele
+    FROM
+      $shared_db..Allele a JOIN
+      $shared_db..Allele ar ON (
+      ar.allele_id = a.rev_allele_id
+      )
+    WHERE
+      a.allele_id = ?
+  };
+  my $allele_sth = $dbm->dbSNP()->dbc->prepare($stmt)||die "ERROR preparing allele_sth: $DBI::errstr\n";
+  
+
+
   #ÊPrepared statement for getting the SubSNPs with or without population frequency data
    my $ss_no_freq_stmt = qq{
      SELECT
-      ss.subsnp_id,     
-      CASE WHEN  b.pop_id IS NULL
-      THEN   0
-      ELSE   b.pop_id
-      END AS pop_id,
-      uv.allele_id,
-      sssl.substrand_reversed_flag,
-      '\\N' AS frequency,
-      '\\N' AS count,
-      '\\N' AS handle
-    FROM
-      SNPSubSNPLink sssl JOIN
-      SubSNP ss ON (ss.subsnp_id = sssl.subsnp_id  ) JOIN
-      Batch b ON (b.batch_id = ss.batch_id  ) JOIN
-      $shared_db..ObsVariation ov ON (ov.var_id = ss.variation_id ) JOIN
-      $shared_db..UniVariAllele uv ON (uv.univar_id = ov.univar_id ) 
-    WHERE  ss.subsnp_id BETWEEN  ? AND ?
+        ss.subsnp_id,     
+        b.pop_id,
+        uv.allele_id ,
+        sssl.substrand_reversed_flag,
+        '\\N' AS frequency,
+        '\\N' AS count,
+        0 AS handle
+    FROM   SNPSubSNPLink sssl,
+           SubSNP ss,
+           Batch b,
+           $shared_db..ObsVariation  ov,
+           $shared_db..UniVariAllele uv        
+        WHERE ss.subsnp_id BETWEEN ? AND ?
+        AND   ss.subsnp_id = sssl.subsnp_id
+        AND   b.batch_id = ss.batch_id       
+        AND   ov.var_id = ss.variation_id
+        AND   uv.univar_id = ov.univar_id
     ORDER BY
-      ss.subsnp_id ASC,
-      uv.allele_id ASC,
-      b.pop_id ASC
+      ss.subsnp_id ASC
   };
 
 ## Can't filter s with freq from those without easily due to circular schena
-## LEFT OUTER JOIN      AlleleFreqBySsPop afbsp ON ( afbsp.subsnp_id = ss.subsnp_id  )
-#    AND    afbsp.freq IS NULL 
 
   my $ss_no_freq_sth = $dbm->dbSNP()->dbc->prepare($ss_no_freq_stmt) ||die "ERROR preparing ss_no_freq_sth: $DBI::errstr\n";
   
@@ -88,21 +98,22 @@ sub allele_table {
     SELECT
       ss.subsnp_id,
       afbsp.pop_id,
-      afbsp.allele_id,
+      afbsp.allele_id ,
       sssl.substrand_reversed_flag,
       afbsp.freq,
       afbsp.cnt,
       pop.handle 
     FROM
-      SNPSubSNPLink sssl JOIN
-      SubSNP ss ON (ss.subsnp_id = sssl.subsnp_id   ) JOIN
-      AlleleFreqBySsPop afbsp ON (afbsp.subsnp_id = ss.subsnp_id ) JOIN   
-      Population pop ON ( afbsp.pop_id = pop.pop_id)
-    WHERE
-      ss.subsnp_id BETWEEN ? AND ?
+      SNPSubSNPLink sssl,
+      SubSNP ss,
+      AlleleFreqBySsPop afbsp, 
+      Population pop      
+    WHERE ss.subsnp_id BETWEEN ? AND ?
+    AND   ss.subsnp_id = sssl.subsnp_id  
+    AND   afbsp.subsnp_id = ss.subsnp_id
+    AND   afbsp.pop_id = pop.pop_id
     ORDER BY
-      ss.subsnp_id ASC,
-      afbsp.allele_id ASC,
+      ss.subsnp_id ASC,   
       afbsp.pop_id ASC
   };
   my $ss_freq_sth = $dbm->dbSNP()->dbc->prepare($ss_with_freq_stmt)  ||die "ERROR preparing ss_freq_sth: $DBI::errstr\n";
@@ -119,21 +130,12 @@ sub allele_table {
   };
   my $vs_sth = $dbm->dbVar()->dbc->prepare($vs_stmt) ||die "ERROR preparing vs_sth: $DBI::errstr\n";
 
-  # Prepared statement to get the alleles
-  $stmt = qq{
-    SELECT
-      a.allele,
-      ar.allele
-    FROM
-      $shared_db..Allele a JOIN
-      $shared_db..Allele ar ON (
-	ar.allele_id = a.rev_allele_id
-      )
-    WHERE
-      a.allele_id = ?
-  };
-  my $allele_sth = $dbm->dbSNP()->dbc->prepare($stmt)||die "ERROR preparing allele_sth: $DBI::errstr\n";
-  
+  my %handle;
+  $handle{0} = '\N';
+  my $handle_ext_sth  = $dbm->dbVar()->dbc->prepare(qq[select handle_id from submitter_handle where handle =?])||die "ERROR preparing handle_ins_sth: $DBI::errstr\n";
+  my $handle_ins_sth  = $dbm->dbVar()->dbc->prepare(qq[insert into submitter_handle (handle) values (?)])||die "ERROR preparing handle_ins_sth: $DBI::errstr\n";
+
+
   # Prepared statement to get the sample_id from a pop_id
   my $sample_stmt = qq{
     SELECT
@@ -145,91 +147,93 @@ sub allele_table {
     LIMIT 1
   };
   my $sample_sth = $dbm->dbVar()->dbc->prepare($sample_stmt)||die "ERROR preparing sample_sth: $DBI::errstr\n";
-  
+    #ÊHash to keep sample_ids in memory
+  my %samples;
+  # The pop_id = 0 is a replacement for NULL but since it's used for a key in the hash below, we need it to have an actual numerical value
+  $samples{0} = '\N';
+
 
   #ÊHash to hold the alleles in memory
   my %alleles;
-  #ÊIf the allele file exist, we'll read alleles from it
-  %alleles = %{read_alleles($allelefile)} if (defined($allelefile) && -e $allelefile);
-
-
-  print $logh Progress::location();
-
   # The allele_id = 0 is a replacement for NULL but since it's used for a key in the hash below, we need it to have an actual numerical value
   $alleles{0} = ['\N','\N'];
-  # Keep track if we did any new lookups
-  my $new_alleles = 0;
   
-  #ÊHash to keep sample_ids in memory
-  my %samples;
-  #ÊIf the sample file exist, we'll read alleles from it
-  %samples = %{read_samples($samplefile)} if (defined($samplefile) && -e $samplefile);
-  print $logh Progress::location();
-  # The pop_id = 0 is a replacement for NULL but since it's used for a key in the hash below, we need it to have an actual numerical value
-  $samples{0} = '\N';
-  # Keep track if we did any new lookups
-  my $new_samples = 0;
+
   
   # Hash to hold the output until it's time to write to disk
   my @output;
-  
-  # First, get all SubSNPs
-  
-  #ÊFetch the query result as a hashref
-  $ss_no_freq_sth->execute($task_start,$task_end )||die "ERROR getting the SubSNPs with or without population frequency data: $DBI::errstr\n";
-
-  
-  print $logh Progress::location();
-  my $subsnp_alleles = $ss_no_freq_sth->fetchall_arrayref();
-  
-  # Fetch the population frequency alleles as an arrayref
-  $ss_freq_sth->execute($task_start,$task_end )||die "ERROR getting the SubSNPs with population frequency data: $DBI::errstr\n";;
-  print $logh Progress::location();
-  my $subsnp_freq_alleles = $ss_freq_sth->fetchall_arrayref();
-  
+    
  
-
+ 
   # Fetch the subsnp_id to variation_id mapping and store as hashref
   $vs_sth->execute($task_start,$task_end)||die "ERROR getting the SubSNPs variation id mapping: $DBI::errstr\n";
-  print $logh Progress::location();
   my $variation_ids = $vs_sth->fetchall_hashref(['subsnp_id']);
-
+ 
   
   ## write values to file for later importation:
   ## variation_id,  subsnp_id, samples_id, alleles[strand appropriate], frequency, count, frequency submitter handle
   
   my %done;  ## remove duplicates
 
-  foreach my $line(@{$subsnp_freq_alleles}){
 
+  # Fetch the alleles with frequency data
+  $ss_freq_sth->execute($task_start,$task_end )||die "ERROR getting the SubSNPs with population frequency data: $DBI::errstr\n";;
+
+  while( my $line = $ss_freq_sth->fetchrow_arrayref()){
+
+      ## line content: [ss.subsnp_id,afbsp.pop_id, allele_id,sssl.substrand_reversed_flag,afbsp.freq,afbsp.cnt, pop.handle ]
+      unless ($variation_ids->{$line->[0]}{'variation_id'}){ warn "Variation id not found for $line->[0]\n";}
+
+      ## save as done by subsnp id and allele 
       $done{$line->[0]}{$line->[1]}{$line->[2]} = 1;
+      $done{$line->[0]}{0}{$line->[2]} = 1;  ## don't want to import records without population info if records with held
 
-     if (!exists($samples{$line->[1]})) {  $samples{$line->[1]} = get_sample($line->[1], $sample_sth);}
-     
-     if (!exists($alleles{$line->[2]})) {  $alleles{$line->[2]} = get_allele($line->[2], $allele_sth);}
+     ## look-ups from ensembl db
+     unless( defined $line->[6] ){ $line->[6] = 0 ; }
+     if (!exists($samples{$line->[1]})) {  $samples{$line->[1]} = get_sample($line->[1], $sample_sth);}     
+     if (!exists($handle{$line->[6]}))  {  $handle{$line->[6]}  = get_handle($line->[6], $handle_ext_sth, $handle_ins_sth);}
+     if (!exists($alleles{$line->[2]})) {  $alleles{$line->[2]} = get_allele($line->[2], $allele_sth);}   # returns alleles as  [for, rev]    
 
-     my $row = join("\t",($variation_ids->{$line->[0]}{'variation_id'},$line->[0],$samples{$line->[1]},$alleles{$line->[2]}->[$line->[3]],$line->[4],$line->[5],$line->[6] )) ;
-     
+
+     unless (defined $alleles{$line->[2]}->[$line->[3]]){ die "No allele for ss $line->[0] strand $line->[3]\n";}
+     my $row = join("\t",($variation_ids->{$line->[0]}{'variation_id'},$line->[0],$samples{$line->[1]},$alleles{$line->[2]}->[$line->[3]],$line->[4],$line->[5],$handle{$line->[6]} )) ;
+
      push(@output,$row);
   }
 
 
-  foreach my $line(@{$subsnp_alleles}){
-      
+
+  ########## rest of alleles
+
+
+  # Fetch all alleles and exclude those already written
+  $ss_no_freq_sth->execute($task_start,$task_end )||die "ERROR getting the SubSNPs with or without population frequency data: $DBI::errstr\n";
+
+  # line content: [ss.subsnp_id,  b.pop_id,uv.allele_id ,  sssl.substrand_reversed_flag,'\\N' AS frequency, \\N' AS count,0 AS handle]
+  while( my $line = $ss_no_freq_sth->fetchrow_arrayref()){
+
+      unless ($variation_ids->{$line->[0]}{'variation_id'}){ warn "Variation id not found for $line->[0]\n"; next}
+
+      ## don't add a line without frequency information if record with frequency already entered 
+      unless( defined $line->[1] ){ $line->[1] = 0; }
       next if defined  $done{$line->[0]}{$line->[1]}{$line->[2]} ;
-
+   
       if (!exists($samples{$line->[1]})) {  $samples{$line->[1]} = get_sample($line->[1], $sample_sth);}
-      
-      if (!exists($alleles{$line->[2]})) {  $alleles{$line->[2]} = get_allele($line->[2], $allele_sth);}
+      if (!exists($alleles{$line->[2]})) {  $alleles{$line->[2]} = get_allele($line->[2], $allele_sth);} # returns alleles as  [for, rev]
 
-      my $row = join("\t",($variation_ids->{$line->[0]}{'variation_id'},$line->[0],$samples{$line->[1]},$alleles{$line->[2]}->[$line->[3]],$line->[4],$line->[5],$line->[6] )) ;
-	push(@output,$row);
+      unless( defined $line->[4] ){ $line->[4] = '\N'; }
+      unless( defined $line->[5] ){ $line->[5] = '\N'; }
+    
+      unless (defined $alleles{$line->[2]}->[$line->[3]]) {die "No allele for ss$line->[0]\n"; }
+
+      my $row = join("\t",($variation_ids->{$line->[0]}{'variation_id'},$line->[0],$samples{$line->[1]},$alleles{$line->[2]}->[$line->[3]],$line->[4],$line->[5],$handle{$line->[6]} )) ;
+
+      push(@output,$row);
   }
-  
-  
+   print    Progress::location() . "Saved no-freq data\n";
+ 
 
 
-  print $logh Progress::location();
   open(IMP,'>>',$loadfile) ||die "ERROR opening loadfile : $!\n";
   # Lock the file
   flock(IMP,LOCK_EX);
@@ -237,22 +241,15 @@ sub allele_table {
     print IMP $row . "\n";
   }
   close(IMP);
-  print $logh Progress::location();
 
-
-  write_alleles($allelefile,\%alleles) if (defined($allelefile) && $new_alleles);
-  print $logh Progress::location();
-  delete($samples{0});
-  write_samples($samplefile,\%samples) if (defined($samplefile) && $new_samples);
-  print $logh Progress::location();
 
   # We're done, return success
   return 1;
 }
 
+ 
 
 ## extract ensembl database id for pre-imported sample
-
 sub get_sample{
 
     my $pop_id     = shift;
@@ -262,11 +259,16 @@ sub get_sample{
     
     my $sample_id = $sample_sth->fetchall_arrayref();
 
-    return $sample_id->[0]->[0];
+    if(defined $sample_id->[0]->[0]){
+        return $sample_id->[0]->[0];
+    }
+    else{
+        return '\N';
+    }
 }
 
 ## convert dbSNP allele id to letter representation of base
-
+## not done as join in main query due db holding 2 rows per id
 sub get_allele{
 
     my $allele_id      = shift;
@@ -276,8 +278,31 @@ sub get_allele{
 
     ## forward and reverse returned
     my  $alleles = $allele_sth->fetchall_arrayref();
-
+    ## curently first row is A, C second (A)1 (C)1
     return $alleles->[0];
+
+}
+
+## get handle id from e! database or enter if new 
+sub get_handle{
+
+    my $handle         = shift;
+    my $handle_ext_sth = shift;
+    my $handle_ins_sth = shift;
+
+
+    $handle_ext_sth->execute($handle)|| die "Failed to find handle id for $handle: $DBI::errstr\n";
+    my  $id = $handle_ext_sth->fetchall_arrayref();
+
+    unless(defined $id->[0]->[0]){ ## handle unknown => enter
+       $handle_ins_sth->execute($handle)|| die "Failed to insert handle id for $handle: $DBI::errstr\n";
+
+        $handle_ext_sth->execute($handle)|| die "Failed to find handle id for $handle: $DBI::errstr\n";
+        $id = $handle_ext_sth->fetchall_arrayref();
+    }
+
+   return $id->[0]->[0];
+  
 
 }
 
@@ -557,7 +582,7 @@ sub load_data_infile {
   
   my $dbm = $self->{'db_manager'};
   my $dbVar = $dbm->dbVar();
-  
+
   #ÊDisable the keys on the destination table before loading
   my $stmt = qq {
     ALTER TABLE
@@ -566,12 +591,12 @@ sub load_data_infile {
   };
   $dbVar->dbc()->do($stmt);
   print $logh Progress::location();
-  
+
   # Load the data from the infile
   print $logh Progress::location() . "\tLoads the infile $loadfile to $dst_table\n";
   loadfile($loadfile,$dbVar->dbc(),$dst_table,@args);
   print $logh Progress::location();
-  
+
   # Enable the keys after the inserts
   $stmt = qq {
     ALTER TABLE
@@ -580,7 +605,7 @@ sub load_data_infile {
   };
   $dbVar->dbc()->do($stmt);
   print $logh Progress::location();
-  
+
   return 1;
 }
 
