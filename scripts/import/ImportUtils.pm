@@ -174,20 +174,32 @@ sub create_and_load {
   my @col_names;
 
   foreach my $col (@cols) {
-    my ($name, $type) = split(/\s+/,$col);
+     my ($name, $type, $nullable) = split(/\s+/,$col);
+
     push @col_names, $name;
 
+    my $null ="";
+    if (defined($nullable) && $nullable =~/not_null/){$null =" NOT NULL";}
+
     if(defined($type) && $type =~ /i/) {
-      push @col_defs, "$name INT";
+      push @col_defs, "$name INT $null";
     }
     elsif (defined($type) && $type =~ /f/) {
-      push @col_defs, "$name FLOAT";
+      push @col_defs, "$name FLOAT $null";
     }
     elsif (defined($type) && $type =~ /l/) {
-      push @col_defs, "$name TEXT";
+      push @col_defs, "$name TEXT $null";
     } 
+    elsif (defined($type) && $type =~ /d/) {
+       push @col_defs, "$name DOUBLE $null";
+    }
+    elsif (defined($type) && $type =~ /v/) {
+      $type =~ s/v//;
+      my $len = 255;
+       push @col_defs, "$name VARCHAR($len) $null";
+    }
     else {
-      push @col_defs, "$name VARCHAR(255)";
+      push @col_defs, "$name VARCHAR(255) $null";
     }
 
     if(defined($type) && $type =~ /\*/) {
