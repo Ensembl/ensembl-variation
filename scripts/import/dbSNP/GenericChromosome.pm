@@ -28,11 +28,14 @@ sub variation_feature{
 
      debug(localtime() . "\tLoading seq_region data");
      load($self->{'dbVar'}, "seq_region", "seq_region_id", "name");
-  print Progress::location();
-    
-     debug(localtime() . "\tDumping SNPLoc data");
+     print Progress::location();
+     my $version_number = substr($self->{'dbSNP_version'},1);
+     debug(localtime() . "\tDumping SNPLoc data for dbSNP version $version_number " );
     
      my ($tablename1,$tablename2,$row);
+
+    if(  $version_number  < 137){ ## table rename for dbSNP - keeping this temporarily for backwards comparibility
+
 
      print "assembly_version is ",$self->{'assembly_version'},"\n";
      my ($assembly_version) =  $self->{'assembly_version'} =~ /^[a-zA-Z]+\_?(\d+)\.*.*$/;
@@ -85,32 +88,15 @@ sub variation_feature{
     $tablename2 = $self->{'dbSNP_version'} . "_ContigInfo_" . $genome_build;
     
      print "SNPContigLoc table is $tablename1 and ContigInfo table is $tablename2\n";
-    if (!$tablename1) {
-      debug("core db has assembly version : $assembly_version, which is different from dbsnp");
-      $stmt = qq{
-	SELECT 
-	    name 
-        FROM 
-	    $self->{'snp_dbname'}..sysobjects 
-	WHERE 
-	    name LIKE '$self->{'dbSNP_version'}\_SNPContigLoc\_%\_1'
-      };
-      my $tablename1_ref = $self->{'dbSNP'}->selectall_arrayref($stmt);
-      $tablename1 = $tablename1_ref->[0][0] if $tablename1_ref;
-      $stmt = qq{
-	SELECT 
-	    name 
-        FROM 
-	    $self->{'snp_dbname'}..sysobjects 
-	WHERE 
-	    name LIKE '$self->{'dbSNP_version'}\_ContigInfo\_%\_1'
-      };
-      my $tablename2_ref = $self->{'dbSNP'}->selectall_arrayref($stmt);
-      $tablename2 = $tablename1_ref->[0][0] if $tablename2_ref;
+   
+
     }
 
-     #my $tablename = $self->{'species_prefix'} . 'SNPContigLoc';
-
+     else{
+    $tablename1 = $self->{'dbSNP_version'} . "_SNPContigLoc" ;
+    $tablename2 = $self->{'dbSNP_version'} . "_ContigInfo";
+     }
+my $stmt;
     #ÊThe group term (the name of the reference assembly in the dbSNP b[version]_SNPContigInfo_[assembly]_[assembly version] table) is either specified via the config file or, if not, attempted to automatically determine from the data
     my $group_term = $self->{'group_term'};
     my $group_label = $self->{'group_label'};
@@ -128,7 +114,7 @@ sub variation_feature{
 		            ctg.ctg_id = loc.ctg_id
 		        )
 		    GROUP BY
-		        ctg.group_term,
+ 		        ctg.group_term,
 		        ctg.group_label
             ORDER BY
                 N DESC
@@ -167,6 +153,14 @@ sub variation_feature{
      if ($self->{'limit'}) {
        $stmt .= "TOP $self->{'limit'} ";
      }
+    ### 2012/07 Mitochondria mappings extracted for human only until references stabilise for other species
+    my $extract_mappings_for;
+    if($self->{'dbm'}->dbCore()->species =~ m/homo|human/i){
+	$extract_mappings_for = qq['$group_term', 'non-nuclear'];
+    }
+    else{
+	$extract_mappings_for = qq['$group_term'];
+    }
      $stmt .= qq{
                    loc.snp_id AS sorting_id, 
                    ctg.contig_acc,
@@ -194,14 +188,15 @@ sub variation_feature{
 		     -1
 		   ELSE
 		     1
-		   END
+		   END,
+                   loc.aln_quality
 		 FROM 
 		   $tablename1 loc JOIN 
 		   $tablename2 ctg ON (
 		     ctg.ctg_id = loc.ctg_id
 		   )
       WHERE
-        ctg.group_term LIKE '$group_term' AND
+        ctg.group_term in($extract_mappings_for) AND
         ctg.group_label LIKE '$group_label'
 	        };
      if ($self->{'limit'}) {
@@ -215,8 +210,8 @@ sub variation_feature{
     
     
     debug(localtime() . "\tLoading SNPLoc data");
-    
-     create_and_load($self->{'dbVar'}, "tmp_contig_loc_chrom", "snp_id i*", "ctg *", "ctg_gi i", "ctg_start i", "ctg_end i", "chr *", "start i", "end i", "strand i");
+    ## seh - set indexed columns to not null
+     create_and_load($self->{'dbVar'}, "tmp_contig_loc_chrom", "snp_id i* not_null", "ctg * not_null", "ctg_gi i", "ctg_start i not_null", "ctg_end i", "chr *", "start i", "end i", "strand i", "aln_quality d");
   print Progress::location();
 
     #ÊAs a correction for the human haplotypes that dbSNP actually reported on the chromosome 6 (and 4 & 17), cross-check the ctg_gi against the pontus_dbsnp_import_external_data.refseq_to_ensembl table and replace the chr if necessary
@@ -271,25 +266,25 @@ sub variation_feature{
 	$self->{'dbVar'}->do(qq{INSERT IGNORE INTO tmp_genotyped_var SELECT DISTINCT variation_id FROM individual_genotype_multiple_bp});
 	print Progress::location();
     }
-    debug(localtime() . "\tCreating tmp_variation_feature_chrom data");
+    debug(localtime() . "\tCreating tmp_variation_feature_chrom data  in GenericChromosome");
     #if tcl.end>1, this means we have coordinates for chromosome, we will use it
     dumpSQL($self->{'dbVar'},qq{SELECT v.variation_id, ts.seq_region_id, 
                                       tcl.start,tcl.end,
-                                      tcl.strand, v.name, v.source_id, v.validation_status
+                                      tcl.strand, v.name, v.source_id, v.validation_status, tcl.aln_quality
 				      FROM variation v, tmp_contig_loc_chrom tcl, seq_region ts
 				      WHERE v.snp_id = tcl.snp_id
 				      AND tcl.start>2 #to get rid of lots of start=1
                                       AND tcl.chr = ts.name
     });
 
-    create_and_load($self->{'dbVar'},'tmp_variation_feature_chrom',"variation_id *","seq_region_id", "seq_region_start", "seq_region_end", "seq_region_strand", "variation_name", "source_id", "validation_status");
+    create_and_load($self->{'dbVar'},'tmp_variation_feature_chrom',"variation_id i* not_null","seq_region_id i", "seq_region_start i", "seq_region_end i", "seq_region_strand", "variation_name", "source_id", "validation_status", "aln_quality d");
   print Progress::location();
     
-    debug(localtime() . "\tCreating tmp_variation_feature_ctg data");
+    debug(localtime() . "\tCreating tmp_variation_feature_ctg data  in GenericChromosome");
     #if tcl.start = 1 or tcl.end=1, this means we don't have mappings on chromosome, we take ctg coordinates if it is in toplevel
     dumpSQL($self->{'dbVar'},qq{SELECT v.variation_id, ts.seq_region_id, 
                                       tcl.ctg_start,tcl.ctg_end,
-                                      tcl.strand, v.name, v.source_id, v.validation_status
+                                      tcl.strand, v.name, v.source_id, v.validation_status, tcl.aln_quality
 				      FROM variation v, tmp_contig_loc_chrom tcl, seq_region ts
 				      WHERE v.snp_id = tcl.snp_id
 				      AND (
@@ -301,23 +296,29 @@ sub variation_feature{
                                       AND tcl.ctg = ts.name
    });
 
-    create_and_load($self->{'dbVar'},'tmp_variation_feature_ctg',"variation_id *","seq_region_id", "seq_region_start", "seq_region_end", "seq_region_strand", "variation_name", "source_id", "validation_status");
+    create_and_load($self->{'dbVar'},'tmp_variation_feature_ctg',"variation_id i* not_null","seq_region_id i ", "seq_region_start i", "seq_region_end i", "seq_region_strand", "variation_name", "source_id", "validation_status", "aln_quality d");
   print Progress::location();
 
-    debug(localtime() . "\tDumping data into variation_feature table");
+    debug(localtime() . "\tDumping data into variation_feature table in GenericChromosome");
     if ($gtype_row) {
       foreach my $table ("tmp_variation_feature_chrom","tmp_variation_feature_ctg") {
-	$self->{'dbVar'}->do(qq{INSERT INTO variation_feature (variation_id, seq_region_id,seq_region_start, seq_region_end, seq_region_strand,variation_name, flags, source_id, validation_status)
-				  SELECT tvf.variation_id, tvf.seq_region_id, tvf.seq_region_start, tvf.seq_region_end, tvf.seq_region_strand,tvf.variation_name,IF(tgv.variation_id,'genotyped',NULL), tvf.source_id, tvf.validation_status
+
+	$self->{'dbVar'}->do(qq{INSERT INTO variation_feature (variation_id, seq_region_id,seq_region_start, seq_region_end, seq_region_strand,variation_name, flags, source_id, validation_status, alignment_quality)
+				  SELECT tvf.variation_id, tvf.seq_region_id, tvf.seq_region_start, tvf.seq_region_end, tvf.seq_region_strand,tvf.variation_name,IF(tgv.variation_id,'genotyped',NULL), tvf.source_id, tvf.validation_status, tvf.aln_quality
 				  FROM $table tvf LEFT JOIN tmp_genotyped_var tgv ON tvf.variation_id = tgv.variation_id
 				  });
+
+
+
   print Progress::location();
       }
+
       #last fill in flags with genotyped
       $self->{'dbVar'}->do(qq{UPDATE variation_feature vf, tmp_genotyped_var tgv
                               SET vf.flags = "genotyped"
                               WHERE vf.variation_id = tgv.variation_id
-                             });
+                              });
+
   print Progress::location();
 
     }
@@ -325,8 +326,8 @@ sub variation_feature{
 
       debug(localtime() . "\tDumping data into variation_feature table only used if table tmp_genotyped_var is not ready");
       foreach my $table ("tmp_variation_feature_chrom","tmp_variation_feature_ctg") {
-	$self->{'dbVar'}->do(qq{INSERT INTO variation_feature (variation_id, seq_region_id,seq_region_start, seq_region_end, seq_region_strand,variation_name, flags, source_id, validation_status)
- 				  SELECT tvf.variation_id, tvf.seq_region_id, tvf.seq_region_start, tvf.seq_region_end, tvf.seq_region_strand,tvf.variation_name,NULL, tvf.source_id, tvf.validation_status
+	$self->{'dbVar'}->do(qq{INSERT INTO variation_feature (variation_id, seq_region_id,seq_region_start, seq_region_end, seq_region_strand,variation_name, flags, source_id, validation_status, alignment_quality)
+ 				  SELECT tvf.variation_id, tvf.seq_region_id, tvf.seq_region_start, tvf.seq_region_end, tvf.seq_region_strand,tvf.variation_name,NULL, tvf.source_id, tvf.validation_status, tvf.aln_quality
  				  FROM $table tvf
  				  });
   print Progress::location();
