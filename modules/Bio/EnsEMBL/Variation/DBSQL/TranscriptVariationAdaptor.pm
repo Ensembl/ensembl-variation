@@ -256,7 +256,7 @@ sub fetch_all_somatic_by_Transcripts {
     return $self->fetch_all_by_Transcripts_with_constraint($transcripts, 'somatic = 1');
 }
 
-=head2
+=head2 fetch_all_by_translation_id
 
     Arg[1]     : String $translation_id
                  The stable identifier of the translation
@@ -272,7 +272,7 @@ sub fetch_all_by_translation_id {
     return $self->_transcript_variations_on_protein($all_tvs);
 }
 
-=head2
+=head2 fetch_all_somatic_by_translation_id
 
     Arg[1]     : String $translation_id
                  The stable identifier of the translation.
@@ -288,7 +288,7 @@ sub fetch_all_somatic_by_translation_id {
     return $self->_transcript_variations_on_protein($all_tvs);
 }
 
-=head2
+=head2 fetch_all_by_translation_id_SO_terms
 
     Arg[1]      : String $translation_id
                   The stable identifier of the translation
@@ -306,7 +306,7 @@ sub fetch_all_by_translation_id_SO_terms {
     return $self->_transcript_variations_on_protein($all_tvs);
 }
 
-=head2
+=head2 fetch_all_somatic_by_translation_id_SO_terms
 
     Arg[1]     : String $translation_id
                  The stable identifier of the translation
