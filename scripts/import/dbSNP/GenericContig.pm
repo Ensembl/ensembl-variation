@@ -1413,6 +1413,7 @@ sub parallelized_allele_table {
       open my $subfile, $cat_file ||die  "Failed to open $cat_file to read:$!\n";
       while(<$subfile>){print $new_load_file $_;} 
   }
+  close $new_load_file;
 
   ### start loading process - run as single job
 
@@ -1528,8 +1529,8 @@ sub  update_allele_schema{
   $dbVar_dbh->do( qq [ CREATE TABLE allele (
                            allele_id int(10) unsigned NOT NULL AUTO_INCREMENT,
                           variation_id int(10) unsigned NOT NULL,
-                          subsnp_id int(15) unsigned DEFAULT NULL,
-                          allele varchar(25000) DEFAULT NULL,
+                          subsnp_id int(15) unsigned NOT NULL,
+                          allele varchar(25000) NOT NULL,
                           frequency float DEFAULT NULL,
                           sample_id int(10) unsigned DEFAULT NULL,
                           count int(10) unsigned DEFAULT NULL,
