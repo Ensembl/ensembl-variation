@@ -215,6 +215,11 @@ sub rename_tables{
 
   my ($var_dba) = shift;
 
+
+  ## Capture dbSNP 'suspect' variant fails 
+  $var_dba->dbc->do(qq[ insert into failed_variation_working select * from failed_variation ]);
+
+
   ## Keep orignal tables in short term
   $var_dba->dbc->do(qq[ rename table allele to allele_before_pp ]) || die;
   $var_dba->dbc->do(qq[ rename table variation_feature to variation_feature_before_pp ]) || die;
