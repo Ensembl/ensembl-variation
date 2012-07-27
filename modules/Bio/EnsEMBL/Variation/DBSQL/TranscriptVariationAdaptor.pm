@@ -246,6 +246,94 @@ sub fetch_all_somatic_by_Transcripts {
     return $self->fetch_all_by_Transcripts_with_constraint($transcripts, 'somatic = 1');
 }
 
+=head2 fetch_all_by_translation_id
+
+    Arg[1]     : String $translation_id
+                 The stable identifier of the translation
+    Description: Fetch all germline TranscriptVariations associated with the given Translation
+    Returntype : listref of Bio::EnsEMBL::Variation::TranscriptVariation
+    Status     : At Risk
+=cut
+
+sub fetch_all_by_translation_id {
+    my ($self, $translation_id) = @_;
+    my $transcript = $self->_transcript($translation_id);
+    my $all_tvs = $self->fetch_all_by_Transcripts([$transcript]);
+    return $self->_transcript_variations_on_protein($all_tvs);
+}
+
+=head2 fetch_all_somatic_by_translation_id
+
+    Arg[1]     : String $translation_id
+                 The stable identifier of the translation.
+    Description: Fetch all somatic TranscriptVariations associated with the given Translation
+    Returntype : listref of Bio::EnsEMBL::Variation::TranscriptVariation
+    Status     : At Risk
+=cut
+
+sub fetch_all_somatic_by_translation_id {
+    my ($self, $translation_id) = @_;
+    my $transcript = $self->_transcript($translation_id);
+    my $all_tvs = $self->fetch_all_somatic_by_Transcripts([$transcript]);
+    return $self->_transcript_variations_on_protein($all_tvs);
+}
+
+=head2 fetch_all_by_translation_id_SO_terms
+
+    Arg[1]      : String $translation_id
+                  The stable identifier of the translation
+    Arg[2]      : listref of SO terms
+    Description : Fetch all germline TranscriptVariations associated with the given Translation
+                  and having consequence types as given in the input list of SO terms
+    Returntype  : listref of Bio::EnsEMBL::Variation::TranscriptVariation
+    Status      : At Risk
+=cut
+
+sub fetch_all_by_translation_id_SO_terms {
+    my ($self, $translation_id, $terms) = @_;
+    my $transcript = $self->_transcript($translation_id);
+    my $all_tvs = $self->fetch_all_by_Transcripts_SO_terms([$transcript], $terms);
+    return $self->_transcript_variations_on_protein($all_tvs);
+}
+
+=head2 fetch_all_somatic_by_translation_id_SO_terms
+
+    Arg[1]     : String $translation_id
+                 The stable identifier of the translation
+    Arg[2]     : listref of SO terms
+    Description: Fetch all somatic TranscriptVariations associated with the given Translation
+                 and having consequence types as given in the input list of SO terms
+    Returntype : listref of Bio::EnsEMBL::Variation::TranscriptVariation
+    Status     : At Risk 
+=cut
+
+sub fetch_all_somatic_by_translation_id_SO_terms {
+    my ($self, $translation_id, $terms) = @_;
+    my $transcript = $self->_transcript($translation_id);
+    my $all_tvs = $self->fetch_all_somatic_by_Transcripts_SO_terms([$transcript], $terms);
+    return $self->_transcript_variations_on_protein($all_tvs);
+}
+
+# Returns the associated Transcript for a given translation id 
+sub _transcript {
+    my ($self, $translation_id) = @_;
+    my $transcript_adaptor = $self->db()->dnadb()->get_TranscriptAdaptor(); 
+    my $transcript = $transcript_adaptor->fetch_by_translation_stable_id($translation_id);
+    return $transcript;
+}
+
+# Returns listref of TranscriptVariations whose coordinates can be mapped to the protein sequence 
+sub _transcript_variations_on_protein {
+    my ($self, $all_tvs) = @_;  
+    my @tvs;
+    foreach my $tv (@$all_tvs) {
+        if ($tv->translation_start && $tv->translation_end) {
+            push(@tvs, $tv);
+        }
+    }
+    return \@tvs;
+}
+
 =head2 fetch_all_by_Transcripts_with_constraint
 
   Arg [1]    : listref of Bio::EnsEMBL::Transcripts
