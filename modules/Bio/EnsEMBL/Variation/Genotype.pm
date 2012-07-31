@@ -123,7 +123,7 @@ sub genotype {
 =cut
 
 sub genotype_string {
-  return join '|', @{$_[0]->genotype};
+  return join '|', @{$_[0]->genotype || []};
 }
 
 =head2 variation
