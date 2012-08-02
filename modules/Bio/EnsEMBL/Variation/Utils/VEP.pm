@@ -993,6 +993,10 @@ sub get_all_consequences {
                 }
             }
             
+            elsif(/^DEBUG/) {
+                print STDERR;
+            }
+            
             # something's wrong
             else {
                 # kill the other pids
@@ -4506,8 +4510,6 @@ sub cache_seq_region_ids {
 sub have_maf_cols {
     my $config = shift;
     
-    $DB::single = 1;
-    
     if(!defined($config->{have_maf_cols})) {
         my $sth = $config->{vfa}->db->dbc->prepare(qq{
             DESCRIBE variation_feature
@@ -4531,7 +4533,7 @@ sub merge_hashes {
         if (!defined($x->{$k})) {
             $x->{$k} = $y->{$k};
         } else {
-            if(ref($x->{$k}) eq 'SCALAR') {
+            if(ref($x->{$k}) eq 'SCALAR' || !ref($x->{$k})) {
                 $x->{$k} = $y->{$k};
             }
             elsif(ref($x->{$k}) eq 'ARRAY') {
