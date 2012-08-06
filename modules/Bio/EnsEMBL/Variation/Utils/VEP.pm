@@ -4533,14 +4533,14 @@ sub merge_hashes {
         if (!defined($x->{$k})) {
             $x->{$k} = $y->{$k};
         } else {
-            if(ref($x->{$k}) eq 'SCALAR' || !ref($x->{$k})) {
-                $x->{$k} = $y->{$k};
-            }
-            elsif(ref($x->{$k}) eq 'ARRAY') {
+            if(ref($x->{$k}) eq 'ARRAY') {
                 $x->{$k} = merge_arrays($x->{$k}, $y->{$k});
             }
-            else {
+            elsif(ref($x->{$k}) eq 'HASH') {
                 $x->{$k} = merge_hashes($x->{$k}, $y->{$k});
+            }
+            else {
+                $x->{$k} = $y->{$k};
             }
         }
     }
