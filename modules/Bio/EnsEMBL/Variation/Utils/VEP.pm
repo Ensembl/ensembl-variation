@@ -1260,7 +1260,7 @@ sub vf_to_consequences {
                 Feature      => $rf->stable_id,
             };
             
-            if(defined($config->{cell_type})) {
+            if(defined($config->{cell_type}) && scalar(@{$config->{cell_type}})) {
                 $base_line->{Extra}->{CELL_TYPE} = join ",",
                     map {$_.':'.$rf->{cell_types}->{$_}}
                     grep {$rf->{cell_types}->{$_}}
@@ -1306,8 +1306,8 @@ sub vf_to_consequences {
                     MOTIF_NAME  => $matrix,
                 }
             };
-                
-            if(defined($config->{cell_type})) {
+            
+            if(defined($config->{cell_type}) && scalar(@{$config->{cell_type}})) {
                 $base_line->{Extra}->{CELL_TYPE} = join ",",
                     map {$_.':'.$mf->{cell_types}->{$_}}
                     grep {$mf->{cell_types}->{$_}}
@@ -2603,7 +2603,7 @@ sub fetch_regfeats {
                     while(my $rf = shift @{$tmp_cache->{$chr}->{$type}}) {
                         
                         # filter on cell type
-                        if(defined($config->{cell_type})) {
+                        if(defined($config->{cell_type}) && scalar(@{$config->{cell_type}})) {
                             next unless grep {$rf->{cell_types}->{$_}} @{$config->{cell_type}};
                         }
                      
@@ -3794,7 +3794,7 @@ sub cache_reg_feats {
                 next unless defined($features);
                 
                 # cell types
-                if(defined($config->{cell_type})) {
+                if(defined($config->{cell_type}) && scalar(@{$config->{cell_type}})) {
                     foreach my $rf(@$features) {
                         
                         my %cl;
@@ -4262,7 +4262,7 @@ sub write_cache_info {
     }
     
     # cell types
-    if(defined($config->{cell_type})) {
+    if(defined($config->{cell_type}) && scalar(@{$config->{cell_type}})) {
         my $cta = $config->{RegulatoryFeature_adaptor}->db->get_CellTypeAdaptor();
         print OUT "cell_types\t".(join ",", map {$_->name} @{$cta->fetch_all});
         print OUT "\n";
