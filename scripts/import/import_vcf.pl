@@ -202,7 +202,7 @@ sub configure {
 	$config->{coord_system}    ||= 'chromosome';
 	$config->{progress_update} ||= 100;
 	$config->{pid}             ||= $$;
-	$config->{somatic}         || = 0;
+	$config->{somatic}         ||= 0;
 	
 	# recovery not possible if forking
 	#$config->{no_recover} = 1 if defined($config->{fork});
