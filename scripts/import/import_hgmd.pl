@@ -139,6 +139,15 @@ sub add_allele {
 	my $allele = 'HGMD_MUTATION';
 	
 	if ($dbh->do(qq{show columns from allele like 'allele';}) != 1){
+		my $select_ac_sth = $dbh->prepare(qq{
+		  SELECT allele_code_id FROM allele_code WHERE allele=?;
+	  });
+	  $select_ac_sth->execute($allele);
+	  my $ac_id = ($select_ac_sth->fetchrow_array)[0];
+	  if (!defined($ac_id)) { 
+		  $dbh->do(qq{INSERT INTO allele_code (allele) VALUES ('HGMD_MUTATION');});
+		  $ac_id = $dbh->{'mysql_insertid'};
+	  }
 		$insert_al_sth = $dbh->prepare(qq{
 			INSERT INTO 
 				allele (
@@ -146,10 +155,9 @@ sub add_allele {
 					allele_code_id
 				) 
 				SELECT DISTINCT
-					v.new_var_id,
-					a.allele_code_id
-				FROM $var_table v, allele_code a 
-				WHERE a.allele="$allele";
+					new_var_id,
+					$ac_id
+				FROM $var_table;
 		});
 	} else {
 
