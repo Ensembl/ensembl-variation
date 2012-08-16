@@ -82,7 +82,7 @@ else {
         VALUES (
             'COSMIC', 
             'Somatic mutations found in human cancers from the COSMIC project', 
-            'http://www.sanger.ac.uk/genetics/CGP/cosmic/',
+            'http://cancer.sanger.ac.uk/cancergenome/projects/cosmic/',
             'somatic',
 						$version
         );
