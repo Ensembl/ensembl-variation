@@ -222,13 +222,34 @@ CREATE TABLE allele (
   sample_id int(11) unsigned DEFAULT NULL,
   frequency float unsigned DEFAULT NULL,
   count int(11) unsigned DEFAULT NULL,
-  frequency_submitter_handle varchar(20) DEFAULT NULL,
+  frequency_submitter_handle int(10) DEFAULT NULL,
 
   PRIMARY KEY (allele_id),
   KEY variation_idx (variation_id),
   KEY subsnp_idx (subsnp_id),
   KEY sample_idx (sample_id)
 );
+
+
+/**
+@table submitter_handle
+
+@desc This table holds a short string to distinguish data submitters
+
+@column handle_id	Primary key, internal identifier.
+@column handle      	Short string assigned to the data submitter. 
+
+@see allele 
+*/
+
+create table submitter_handle (
+  handle_id int(10) unsigned not null auto_increment,
+  handle varchar(25),
+ primary key( handle_id ),
+        unique ( handle )
+);
+
+
 
 
 /**
@@ -437,6 +458,7 @@ INSERT INTO individual_type (name,description) VALUES ('mutant','a single or mul
 @column minor_allele          The minor allele of this variant, as reported by dbSNP
 @column minor_allele_freq     The 'global' frequency of the minor allele of this variant, as reported by dbSNP
 @column minor_allele_count    The number of samples the minor allele of this variant is found in, as reported by dbSNP
+@column alignment_quality     Quality of alignment for variants mapped by flanks rather than position justified.
 
 @see variation
 @see tagged_variation_feature
@@ -521,6 +543,7 @@ create table variation_feature(
     minor_allele char(1) DEFAULT NULL,
     minor_allele_freq float DEFAULT NULL,
     minor_allele_count int(10) unsigned DEFAULT NULL,
+    alignment_quality double  DEFAULT NULL,
 
    	primary key( variation_feature_id ),
 	  key pos_idx( seq_region_id, seq_region_start, seq_region_end ),
@@ -972,7 +995,7 @@ create table flanking_sequence (
 
 create table source(
 	source_id int(10) unsigned not null auto_increment,
-	name varchar(255),
+	name varchar(24) not null,
 	version int,
 	description varchar(255),
 	url varchar(255),
@@ -1595,4 +1618,4 @@ INSERT INTO failed_description (failed_description_id,description) VALUES (15,'M
 INSERT INTO failed_description (failed_description_id,description) VALUES (16,'Flagged as suspect by dbSNP');
 INSERT INTO failed_description (failed_description_id,description) VALUES (17,'Variation can not be re-mapped to the current assembly');
 INSERT INTO failed_description (failed_description_id,description) VALUES (18,'Supporting evidence can not be re-mapped to the current assembly');
-
+INSERT INTO failed_description (failed_description_id,description) VALUES (19,'Variation maps to more than one genomic location');
