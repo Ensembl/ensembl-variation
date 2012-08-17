@@ -243,6 +243,13 @@ sub create_map_weight_table{
 sub write_output {
     
     my $self = shift;
+
+    ## Initial quick check for obvious failures in dbSNP import
+
+    unless ($self->param('run_check_dbSNP_import') == 0){
+        
+      $self->dataflow_output_id($self->param('check_dbSNP_import'), 2);        
+    }
    
     ## No map fails - larger bins used as check is very quick
 
@@ -250,7 +257,7 @@ sub write_output {
 
        my $unmapped_start_ids =  $self->param('unmapped_start_ids');
        $self->warning(scalar @{$unmapped_start_ids} .' unmapped_variant_qc jobs to do');  
-       $self->dataflow_output_id($unmapped_start_ids, 3);     
+       $self->dataflow_output_id($unmapped_start_ids, 4);     
     }
 
     ## Variant QC - bin start positions supplied
@@ -259,7 +266,7 @@ sub write_output {
 
         my $qc_start_ids =  $self->param('qc_start_ids');
         $self->warning(scalar @{$qc_start_ids} .' variant_qc jobs to do');    	
-        $self->dataflow_output_id($qc_start_ids, 2);  
+        $self->dataflow_output_id($qc_start_ids, 3);  
     }
       
     ## Migrate raw genotype data to new coded schema  
@@ -267,11 +274,11 @@ sub write_output {
     unless ($self->param('run_update_population_genotype') == 0){
 
        $self->warning('scheduling update_population_genotype'); 
-       $self->dataflow_output_id( $self->param('update_population_genotype'), 4);
+       $self->dataflow_output_id( $self->param('update_population_genotype'), 5);
     }
     ## run basic checks when everything is updated
 
-    $self->dataflow_output_id($self->param('finish_variation_qc'), 5);
+    $self->dataflow_output_id($self->param('finish_variation_qc'), 6);
    
     
     return;
