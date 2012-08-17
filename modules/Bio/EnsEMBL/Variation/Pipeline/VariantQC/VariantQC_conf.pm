@@ -52,7 +52,10 @@ sub default_options {
 
         # general pipeline options that you should change to suit your environment
 
-        hive_use_triggers       => 0,         
+        hive_use_triggers       => 0,  
+
+        ## check why jobs failed before re-submitting for analysis
+        retry_throwing_job      => 0,  
 
         # the location of your checkout of the ensembl API (the hive looks for SQL files here)
         
@@ -126,12 +129,13 @@ sub default_options {
 
         # options controlling the number of workers used for the parallelisable analyses
 
-        variant_qc_capacity        => 30,
+        variant_qc_capacity        => 20,
         unmapped_var_capacity      => 10,
 
 
         # these flags control which parts of the pipeline are run
 
+        run_check_dbSNP_import           => 1,
         run_variant_qc                   => 1,
         run_unmapped_var                 => 1,
         run_update_population_genotype   => 1,
@@ -200,7 +204,8 @@ sub pipeline_analyses {
         -parameters => {
             qc_batch_size               => $self->o('qc_batch_size'),
             unmapped_batch_size         => $self->o('unmapped_batch_size'),
-        
+
+            run_check_dbSNP_import         => $self->o('run_check_dbSNP_import'),
             run_variant_qc                 => $self->o('run_variant_qc'),
             run_unmapped_var               => $self->o('run_unmapped_var'),
             run_update_population_genotype => $self->o('run_update_population_genotype'),
@@ -213,14 +218,25 @@ sub pipeline_analyses {
         -input_ids  => [{}],
                 -rc_id      => 'default',
                 -flow_into  => {
-                    2 => [ 'variant_qc'     ],
-                    3 => [ 'unmapped_var'   ],
-                    4 => [ 'update_population_genotype' ],
-                    5 => [ 'finish_variation_qc' ],
+                    2 => [ 'check_dbSNP_import' ],
+                    3 => [ 'variant_qc'     ],
+                    4 => [ 'unmapped_var'   ],
+                    5 => [ 'update_population_genotype' ],
+                    6 => [ 'finish_variation_qc' ],
 
                 },
-            },
-
+       },
+     {  -logic_name => 'check_dbSNP_import',
+        -module     => 'Bio::EnsEMBL::Variation::Pipeline::VariantQC::CheckdbSNPImport',
+        -parameters => {    
+            pipeline_dir  => $self->o('pipeline_dir'),       
+            @common_params,
+        },
+        -input_ids      => [],
+        -hive_capacity  => 1,
+        -rc_id          => 'default',               
+      },
+          
      {   -logic_name     => 'unmapped_var',
              -module         => 'Bio::EnsEMBL::Variation::Pipeline::VariantQC::UnmappedVariant',        
              -parameters     => {   
@@ -230,6 +246,7 @@ sub pipeline_analyses {
              -input_ids      => [],
              -hive_capacity  => $self->o('unmapped_var_capacity'),
              -rc_id          => 'default',
+             -wait_for       => [ 'check_dbSNP_import' ],
              -flow_into      => {},
          },
 
@@ -245,6 +262,7 @@ sub pipeline_analyses {
              -input_ids      => [],
              -hive_capacity  => $self->o('variant_qc_capacity'),
              -rc_id          => 'default',
+             -wait_for       => [ 'check_dbSNP_import' ],
              -flow_into      => {},
     },
     {   -logic_name     => 'update_population_genotype',
