@@ -1219,7 +1219,7 @@ sub get_all_LD_Populations{
 	my $ld_pops = $pa->fetch_all_LD_Populations;
 	return [] unless $ld_pops;
 	
-	my $sth = $self->adaptor->db->prepare(qq{
+	my $sth = $self->adaptor->dbc->prepare(qq{
 	  SELECT ip.population_sample_id, c.seq_region_start, c.genotypes
 	  FROM compressed_genotype_region c, individual_population ip
 	  WHERE c.sample_id = ip.individual_sample_id
