@@ -155,12 +155,12 @@ my $stmt;
      }
     ### 2012/07 Mitochondria mappings extracted for human only until references stabilise for other species
     my $extract_mappings_for;
-    if($self->{'dbm'}->dbCore()->species =~ m/homo|human/i){
+   # if($self->{'dbm'}->dbCore()->species =~ m/homo|human/i){
 	$extract_mappings_for = qq['$group_term', 'non-nuclear'];
-    }
-    else{
-	$extract_mappings_for = qq['$group_term'];
-    }
+    #}
+    #else{
+	#$extract_mappings_for = qq['$group_term'];
+    #}
      $stmt .= qq{
                    loc.snp_id AS sorting_id, 
                    ctg.contig_acc,
