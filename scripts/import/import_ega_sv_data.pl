@@ -12,7 +12,7 @@ use ImportUtils qw(dumpSQL debug create_and_load load);
 use LWP::Simple;
 
 our ($species, $input_file, $input_dir, $source_name, $TMP_DIR, $TMP_FILE, $var_set_id, $mapping, 
-     $num_gaps, $target_assembly, $cs_version_number, $size_diff, $version, $registry_file);
+     $num_gaps, $target_assembly, $cs_version_number, $size_diff, $version, $registry_file,$debug);
 
 GetOptions('species=s'         => \$species,
 		  		 'source_name=s'     => \$source_name,
@@ -26,7 +26,8 @@ GetOptions('species=s'         => \$species,
 		   		 'target_assembly=s' => \$target_assembly,
 		   		 'size_diff=i'       => \$size_diff,
 					 'version=i'         => \$version,
-					 'registry=s'        => \$registry_file
+					 'registry=s'        => \$registry_file,
+					 'debug!'            => \$debug,
           );
 $registry_file ||= $Bin . "/ensembl.registry";
 
@@ -88,7 +89,7 @@ my %var_set = ('pilot1' => 31, 'pilot2' => 32);
 
 
 # run the mapping sub-routine if the data needs mapping
-my (%num_mapped, %num_not_mapped, %samples);
+my (%num_mapped, %num_not_mapped, %samples, %subject_pop);
 my $no_mapping_needed = 0;
 my $skipped = 0;
 my $failed = [];
@@ -119,6 +120,9 @@ foreach my $in_file (@files) {
 	# Variation set
 	if ($species eq 'human' && $fname =~ /pilot(\d)/) { 
 		$var_set_id = $var_set{"pilot$1"};
+	}
+	elsif ($species eq 'human' && $fname =~ /estd199/) {
+	  $var_set_id = '1kg';
 	}
 	else {
 		$var_set_id = undef;
@@ -171,7 +175,7 @@ sub read_file{
   create_and_load(
 	$dbVar, "temp_cnv", "id *", "type", "chr", "outer_start i", "start i", "inner_start i",
 	"inner_end i", "end i", "outer_end i", "parent", "clinic", "phenotype", "sample", "strain",
-  "is_ssv i", "is_failed i");		
+  "is_ssv i", "is_failed i", "population");		
 	
 	
   # fix nulls
@@ -509,33 +513,112 @@ sub structural_variation{
 sub structural_variation_set {
 	debug(localtime()." Inserting into $set_table table");
 	
-	my $stmt = qq{
-   	REPLACE INTO
-   	$set_table (
-	    structural_variation_id,
-			variation_set_id
-    )
-    SELECT
-     	sv.structural_variation_id,
-     	$var_set_id
-    FROM
-     	temp_cnv t,
-			structural_variation sv
-    WHERE
-			t.is_ssv=0 AND
-			t.id=sv.variation_name
-  };
-  $dbVar->do($stmt);
+	my $stmt;
+	my @var_set_list;
 	
-	# Populate the meta table
+	if ($var_set_id eq '1kg') {
+	
+    my %pop_1kg_p1 = (
+      'ASW' => 'AFR', 'LWK' => 'AFR', 'YRI' => 'AFR',                                 # AFR
+      'CLM'	=> 'AMR', 'PEL'	=> 'AMR', 'PUR'	=> 'AMR', 'MXL'	=> 'AMR',                 # AMR
+      'CEU'	=> 'EUR', 'TSI'	=> 'EUR', 'FIN'	=> 'EUR', 'GBR'	=> 'EUR', 'IBS'	=> 'EUR', # EUR
+      'CHB'	=> 'ASN', 'JPT'	=> 'ASN', 'CHS'	=> 'ASN', 'CDX'	=> 'ASN', 'KHV'	=> 'ASN', # ASN
+		);
+		
+	  while (my($sub_pop, $sup_pop) = each (%pop_1kg_p1)) {
+			$dbVar->do(qq{UPDATE temp_cnv SET population='$sup_pop' WHERE population='$sub_pop'});
+		}
+		
+	  $stmt = qq{
+   	  INSERT IGNORE INTO
+   	  $set_table (
+	      structural_variation_id,
+			  variation_set_id
+      )
+      SELECT DISTINCT
+     	  sva.structural_variation_id,
+     	  vs.variation_set_id
+      FROM
+     	  temp_cnv t,
+			  structural_variation sv,
+				structural_variation_association sva,
+			  variation_set vs
+      WHERE
+			  t.id=sv.variation_name AND
+				sva.supporting_structural_variation_id=sv.structural_variation_id AND
+				t.population is not null AND
+			  vs.name=CONCAT('1000 Genomes - ',t.population)
+    };
+	  $dbVar->do($stmt);
+		
+		# Variation set "All"
+		$stmt = qq{
+   	  INSERT IGNORE INTO
+   	  $set_table (
+	      structural_variation_id,
+			  variation_set_id
+      )
+      SELECT DISTINCT
+     	  sva.structural_variation_id,
+     	  vs.variation_set_id
+				
+		  FROM
+     	  temp_cnv t,
+			  structural_variation sv,
+				structural_variation_association sva,
+			  variation_set vs
+      WHERE
+			  t.id=sv.variation_name AND
+				sva.supporting_structural_variation_id=sv.structural_variation_id AND
+				t.population is not null AND
+			  vs.name='1000 Genomes - All'
+    };
+		$dbVar->do($stmt);
+		
+		my $sets_1kg = $dbVar->selectrow_arrayref(qq{
+				 SELECT DISTINCT vssv.variation_set_id 
+				 FROM variation_set_structural_variation vssv, structural_variation sv, temp_cnv t 
+				 WHERE vssv.structural_variation_id=sv.structural_variation_id AND sv.variation_name=t.id
+			 });
+		foreach my $s_id (@$sets_1kg) {
+		  push (@var_set_list,$s_id);
+		}	 
+		
+	}
+	else {
+	
+	  $stmt = qq{
+   	  INSERT IGNORE INTO
+   	  $set_table (
+	      structural_variation_id,
+			  variation_set_id
+      )
+      SELECT
+     	  sv.structural_variation_id,
+     	  $var_set_id
+      FROM
+     	  temp_cnv t,
+			  structural_variation sv
+      WHERE
+			  t.is_ssv=0 AND
+			  t.id=sv.variation_name
+    };
+		$dbVar->do($stmt);
+		
+		push(@var_set_list,$var_set_id);
+  }  
+	
+	my $set_id_list = join(',',@var_set_list);
+	
+  # Populate the meta table
 	my $set = $dbVar->selectrow_arrayref(qq{SELECT s.name,a.value FROM variation_set s, attrib a 
-	                                        WHERE s.variation_set_id=$var_set_id 
+	                                        WHERE s.variation_set_id IN ($set_id_list) 
 																					AND a.attrib_id=s.short_name_attrib_id;}
 																			);
 	my $meta_value = "sv_set#".$set->[0]."#structural_variation_set_".$set->[1]."#structural_variation"; 
 	# Check if the meta entry already exists, else it create the entry
 	if (!$dbVar->selectrow_arrayref(qq{SELECT meta_id FROM meta WHERE meta_key='web_config' 
-																		 AND meta_value='$meta_value';})) {
+	    															 AND meta_value='$meta_value';})) {
 		$dbVar->do(qq{INSERT INTO meta (meta_key,meta_value) VALUES ('web_config','$meta_value');});
 	}
 }
@@ -649,7 +732,7 @@ sub structural_variation_annotation {
 	};
 	
 	$dbVar->do($stmt);
-  #$dbVar->do(qq{DROP TABLE temp_cnv;});
+  $dbVar->do(qq{DROP TABLE temp_cnv;}) if (!defined($debug));
 }
 
 
@@ -828,7 +911,8 @@ sub parse_gvf {
 													 $info->{sample},
 													 $info->{strain_name},
 													 $is_ssv, 
-													 $is_failed)
+													 $is_failed,
+													 $info->{population})
 							);
   	print OUT "\n";
   }
@@ -860,6 +944,8 @@ sub get_header_info {
 	my $line = shift;
 	my $h    = shift;
 	
+	chomp($line);
+	
 	my ($label, $info);
 	if ($line =~ /^##/) {
 		($label, $info) = split(' ', $line);
@@ -886,7 +972,7 @@ sub get_header_info {
 		}
 	}
 	
-	if ($label eq 'Study') {
+	elsif ($label eq 'Study') {
 		foreach my $st (split(';',$info)) {
 			my ($s_label,$s_info) = split('=',$st);
 			if ($s_label =~ /First.+author/i) {
@@ -897,7 +983,7 @@ sub get_header_info {
 		}
 	}
 	
-	if ($label eq 'sample') {
+	elsif ($label eq 'sample') {
 		my ($sample,$subject);
 		foreach my $s_info (split(';',$info)) {
 			my ($key,$value) = split('=',$s_info);
@@ -908,6 +994,19 @@ sub get_header_info {
 			$samples{$sample} = $subject;
 		}
 	}
+	
+	elsif ($label eq 'subject') {
+		my ($subject,$pop);
+		foreach my $s_info (split(';',$info)) {
+			my ($key,$value) = split('=',$s_info);
+			$pop = $value if ($key eq 'subject_population');
+			$subject = $value if ($key eq 'subject_name'); 
+		}
+		if (defined($pop) and defined($subject)){
+			$subject_pop{$subject} = $pop;
+		}
+	}
+	
 	
 	$h->{author} =~ s/\s/_/g;
 	
@@ -1012,7 +1111,8 @@ sub parse_9th_col {
 		$info->{clinical}  = $value if ($key eq 'clinical_significance');
 		$info->{phenotype} = decode_text($value) if ($key eq 'phenotype_description');
 		if ($key eq 'sample_name'  and $value !~ /Unknown/i) {
-			$info->{sample}    = ($samples{$value}) ? $samples{$value} : $value;
+			$info->{sample}     = ($samples{$value}) ? $samples{$value} : $value;
+			$info->{population} = ($subject_pop{$value}) ? $subject_pop{$value} : undef; # 1000 Genomes study
 		}
 		$info->{sample}    = $value if ($key eq 'subject_name' and $value !~ /Unknown/i);
 		$info->{parent}    = $value if ($key eq 'Parent'); # Check how the 'parent' key is spelled
@@ -1141,5 +1241,6 @@ Options -
   -size_diff       : % difference allowed in size after mapping (optional)
 	-version         : version number of the data (required)
   -registry        : registry file (optional)
+  -debug           : flag to keep the temp_cnv table (optional)
   };
 }
