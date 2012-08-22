@@ -45,22 +45,28 @@ sub run {
 
 
     ## Have all rows been processed
-    my ($allele_number, $all_ok)  = check_all_processed($var_dba, $report);
+    my ($allele_number, $all_ok)  = $self->check_all_processed($var_dba, $report);
 
      
     ## What are the failure rates for alleles and variants
-    get_failure_rates($var_dba, $report, $allele_number );
-
-
+    my $suspiciously_poor = get_failure_rates($var_dba, $report, $allele_number );
+    
     ## what are failure reasons for alleles and variants    
     check_failure_rates($var_dba, $report);
+    
+    ## crude check to ensure same MT sequence used
+    check_MT_fails($var_dba, $report);
+
+
+    if( defined $suspiciously_poor ){
+	print $report "\n\tExiting due to high failure rates -set, meta_coord and table rename not done \n\n";
+	return;
+    }
 
     update_failed_variation_set($var_dba, $report);
 
-    #add_indexes( $var_dba);
-
     ## rename tables
-    if( $all_ok ==3){
+    if( ($self->required_param('species') =~/Homo|Human/i && $all_ok ==2 ) || $all_ok ==3){
          print $report "\n\tOK to rename post-QC tables \n\n";
          rename_tables($var_dba);
     }
@@ -74,7 +80,8 @@ sub run {
  ## Have all rows been processed
  sub check_all_processed{
 
-    my $var_dba    = shift;
+    my $self    = shift;
+    my $var_dba = shift;
     my $report  = shift;
 
     my $old_varfeat_ext_sth  = $var_dba->dbc->prepare(qq[ select count(*) from variation_feature]);
@@ -114,14 +121,16 @@ sub run {
     else{
        print $report "Allele: ERROR old table has : $old_allele->[0]->[0] rows, new table has: $new_allele->[0]->[0]\n";
     }
-    if($old_allele->[0]->[0] == $mart_allele->[0]->[0]){
-       print $report "Mart Allele: Correct number of entries seen : $mart_allele->[0]->[0]\n";
-       $all_ok++;
-    }
-    else{
-       print $report "Allele: ERROR old table has : $old_allele->[0]->[0] rows, mart table has: $mart_allele->[0]->[0]\n";
-    }
 
+    unless($self->required_param('species') =~/Homo|Human/i){ ## Mart tables not required for human
+      if($old_allele->[0]->[0] == $mart_allele->[0]->[0]){
+         print $report "Mart Allele: Correct number of entries seen : $mart_allele->[0]->[0]\n";
+         $all_ok++;
+      }
+      else{
+         print $report "Allele: ERROR old table has : $old_allele->[0]->[0] rows, mart table has: $mart_allele->[0]->[0]\n";
+      }
+    }
     return ( $new_allele->[0]->[0], $all_ok );
 
 }
@@ -155,7 +164,12 @@ sub run {
 
     print $report "\nAllele failure rate: $allele_fail_rate % [$allelefail->[0]->[0] /$allele_number ] \n\n";
      
-     
+
+    my $suspiciously_poor;
+    if( $var_fail_rate >10 || $allele_fail_rate > 1){
+         $suspiciously_poor = 1;
+    }
+    return  $suspiciously_poor;
 }
 
 ## Breakdown of fails by reason
@@ -193,32 +207,52 @@ sub check_failure_rates{
        print $report "\t$l->[1]\t$l->[0]\n";
     }
 }
-sub add_indexes{
 
-  my $var_dba    = shift;
+sub check_MT_fails{
 
-  $var_dba->dbc->do( qq[ALTER TABLE MTMP_allele_working ADD KEY `subsnp_idx` (`subsnp_id`)]);
-  $var_dba->dbc->do( qq[ALTER TABLE MTMP_allele_working ADD KEY `variation_idx` (`variation_id`,`allele`(10))]);
-  $var_dba->dbc->do( qq[ALTER TABLE MTMP_allele_working ADD KEY `sample_idx` (`sample_id`) ]);
+  my $var_dba= shift;
+  my $report= shift;
+ 
+  my $all_MT_ext_sth      = $var_dba->dbc->prepare(qq[ select count(distinct variation_id) 
+                                                        from  variation_feature,seq_region 
+                                                        where seq_region.name = 'MT' 
+                                                        and variation_feature.seq_region_id = seq_region.seq_region_id
+                                                        ]);
 
+  my $fail_MT_ext_sth      = $var_dba->dbc->prepare(qq[select count(distinct variation_feature.variation_id) 
+                                                       from  variation_feature,seq_region,failed_variation_working
+                                                       where seq_region.name = 'MT' 
+                                                       and variation_feature.seq_region_id = seq_region.seq_region_id 
+                                                       and failed_variation_working.variation_id = variation_feature.variation_id
+                                                      ]);
+  $all_MT_ext_sth->execute()||die;
+  my $count_all_MT =  $all_MT_ext_sth->fetchall_arrayref();
 
-  $var_dba->dbc->do( qq[ALTER TABLE variation_feature ADD key pos_idx( seq_region_id, seq_region_start, seq_region_end )]);
-  $var_dba->dbc->do( qq[ALTER TABLE variation_feature ADD key variation_idx( variation_id )]);
-  $var_dba->dbc->do( qq[ALTER TABLE variation_feature ADD key variation_set_idx ( variation_set_id )]);
-  $var_dba->dbc->do( qq[ALTER TABLE variation_feature ADD key consequence_type_idx (consequence_types)]);
+  if( $count_all_MT->[0]->[0] > 0){
 
+      $fail_MT_ext_sth->execute()||die;
+      my $count_fail_MT =  $fail_MT_ext_sth->fetchall_arrayref();
 
+      my $fail_rate = 0;
+      if( $count_fail_MT->[0]->[0] > 0){
+
+	  $fail_rate = substr((100 * $count_fail_MT->[0]->[0]/$count_all_MT->[0]->[0]),0,5);
+      }
+
+      print $report "MT failure rate:\t$fail_rate [$count_fail_MT->[0]->[0]/$count_all_MT->[0]->[0]]\n\n";
+  }
+  else{
+      print $report "No MT variants observed\n\n";
+  }
 
 }
-
+  
 sub rename_tables{
 
   my ($var_dba) = shift;
 
-
   ## Capture dbSNP 'suspect' variant fails 
-  $var_dba->dbc->do(qq[ insert into failed_variation_working select * from failed_variation ]);
-
+  $var_dba->dbc->do(qq[ insert into failed_variation_working (variation_id, failed_description_id) select variation_id, failed_description_id from failed_variation ]); 
 
   ## Keep orignal tables in short term
   $var_dba->dbc->do(qq[ rename table allele to allele_before_pp ]) || die;
@@ -297,6 +331,9 @@ sub update_failed_variation_set{
       $variation_set_ins_sth->execute('All failed variations',
                                        'Variations that have failed the Ensembl QC checks' ,
                                         $attrib->[0]->[0] )|| die "Failed to insert failed set\n";       
+    }
+    else{
+	die "Exiting: Error - attribs not loaded. Load attribs then re-run FinishVariantQC\n";
     }
   }
 
