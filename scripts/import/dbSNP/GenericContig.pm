@@ -146,7 +146,7 @@ sub dump_dbSNP{
    'parallelized_individual_genotypes',
    'population_genotypes',
   'parallelized_allele_table',
-  # 'flanking_sequence_table',
+#  'flanking_sequence_table',
    'variation_feature',
    
     'cleanup'
@@ -1294,6 +1294,7 @@ sub individual_table {
  				      SELECT sample_id, 1, individual_id
  				      FROM sample
  				      WHERE individual_id is NOT NULL
+
  				  });
   print $logh Progress::location();
 
@@ -2033,7 +2034,7 @@ sub flanking_sequence_table {
   my $cur_vid;
   my $cur_revcom;
 
-=head Not flipping & merging flanks as part of import process
+#=head Not flipping & merging flanks as part of import process
 
   debug(localtime() . "\tRearranging flanking sequence data");
 
@@ -2087,7 +2088,7 @@ sub flanking_sequence_table {
   print $logh Progress::location();
 
   unlink($self->{'tmpdir'} . "/" . $self->{'tmpfile'});
-=cut
+#=cut
   return;
 }
 
@@ -2235,7 +2236,7 @@ sub variation_feature {
 sub parallelized_individual_genotypes {
   my $self = shift;
   my $load_only = shift;
-  my $load_only = 1;
+
   my $genotype_table = 'tmp_individual_genotype_single_bp';
   my $multi_bp_gty_table = 'individual_genotype_multiple_bp';
   my $jobindex;
@@ -2304,7 +2305,7 @@ sub parallelized_individual_genotypes {
   } 
    ### write task file
    unless($load_only){   
-#  =head 
+
     unless(defined $failure_recovery  && $failure_recovery == 1){
      
      ## set up task file unless rerunning
@@ -2312,8 +2313,7 @@ sub parallelized_individual_genotypes {
 
      next unless defined  $jobindex;  ## there may be nothing to do
     }
-# =cut
-    
+
     $task_manager_file = "individual_genotypes_task_management.txt";
     # Run the job on the farm
     print $logh Progress::location() . "\tSubmitting the importing of the genotypes to the farm\n";
