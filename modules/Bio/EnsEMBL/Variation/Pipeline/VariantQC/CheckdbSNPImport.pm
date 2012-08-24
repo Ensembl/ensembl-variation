@@ -29,6 +29,7 @@ use base qw(Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess);
 my $DEBUG = 0;
 
 ## This runs some basic checks on the raw dbSNP import before full QC
+## If serious errors are present, the job dies killing the hive process
 
 sub run {
    
@@ -65,11 +66,18 @@ Variations without allele_string: $var_no_allele_string
 
 \n";  
 
-    if($var_no_ss_allele   > 0 || $var_no_allele_string > 0){
+    if($var_no_ss_allele   > 0   || 
+       $var_no_allele_string > 0 || 
+       $variation_count  == 0    ||
+       $varfeat_count    == 0    ||
+       $allele_count     == 0    
+	){
 
 	print $report "Exiting - missing data to import\n"; 
 	die;  ## rest of QC process does not start if this fails
     }
+
+
 }
 
 
