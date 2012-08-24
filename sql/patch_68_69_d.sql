@@ -9,4 +9,4 @@ INSERT INTO failed_description (failed_description_id,description) VALUES (19,'V
 
 UPDATE failed_variation SET failed_description_id = 19 WHERE failed_description_id=1;
 
-INSERT INTO failed_variation (variation_id, failed_description_id)  ( SELECT DISTINCT variation_id, '19' FROM variation_feature WHERE map_weight >1 AND map_weight < 3);
+INSERT INTO failed_variation (variation_id, failed_description_id)  ( SELECT DISTINCT(variation_id), '19' FROM variation_feature WHERE map_weight >1 AND map_weight < 3);
