@@ -1,4 +1,4 @@
-Limit source.name column to be a maximum of 24 characters to be compatible with BioMart
+#Limit source.name column to be a maximum of 24 characters to be compatible with BioMart
 ##################
 
 # patch identifier
