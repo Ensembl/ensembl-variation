@@ -117,7 +117,7 @@ sub create_working_tables{
   $var_dba->dbc->do(qq{ CREATE TABLE MTMP_allele_working like allele });
  
 
-  ## table to hold coded allele info after fliping ** No indexes for quicker load **
+  ## table to hold coded allele info after fliping 
   $var_dba->dbc->do(qq{ DROP TABLE IF EXISTS allele_working});
   $var_dba->dbc->do(qq{ CREATE TABLE allele_working (
                         allele_id int(11) NOT NULL AUTO_INCREMENT,
@@ -127,7 +127,7 @@ sub create_working_tables{
                         sample_id int(11) unsigned DEFAULT NULL,
                         frequency float unsigned DEFAULT NULL,
                         count int(11) unsigned DEFAULT NULL,
-                        frequency_submitter_handle varchar(20) DEFAULT NULL,
+                        frequency_submitter_handle int(10) DEFAULT NULL,
                         PRIMARY KEY (allele_id),
                         KEY variation_idx (variation_id),
                         KEY subsnp_idx (subsnp_id),
