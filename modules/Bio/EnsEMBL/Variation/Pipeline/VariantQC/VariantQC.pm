@@ -1001,7 +1001,7 @@ sub write_allele{
           $allele_old_ins_sth->execute( $var, $allele->[1], $allele->[2], $allele->[3], $allele->[4], $allele->[5]) || die "ERROR inserting allele info\n";
      }
       #unless (defined $allele->[6]){$allele->[6] = '\N';}
-      $allele_new_ins_sth->execute( $var, $allele->[1], $code->{$allele->[2]}, $allele->[3], $allele->[4], $allele->[5], $allele->[6]) || die "ERROR inserting allele info\n";
+      $allele_new_ins_sth->execute( $var, $allele->[1], $code->{$allele->[2]}, $allele->[3], $allele->[4], $allele->[5], $allele->[7]) || die "ERROR inserting allele info\n";
       #### DANGER - not restricting these to have the same PK
     }
   }
