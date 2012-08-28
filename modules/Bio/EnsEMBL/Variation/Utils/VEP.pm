@@ -933,7 +933,8 @@ sub get_all_consequences {
         my $fh = $config->{out_file_handle};
         my $done_processes = 0;
         my $done_vars = 0;
-        my $total_size = $size + (($fetched_tr_count + $fetched_rf_count) * scalar @pids);
+        my $total_size = $size;
+        my $pruned_count;
         
         # create a hash to store the returned data by PID
         # this means we can sort it correctly on output
@@ -950,7 +951,7 @@ sub get_all_consequences {
             
             # variant finished / progress indicator
             elsif(/^BUMP/) {
-                progress($config, ++$done_vars, $total_size);
+                progress($config, ++$done_vars, $total_size);# if $pruned_count == scalar @pids;
             }
             
             # output
@@ -991,6 +992,13 @@ sub get_all_consequences {
                     # decode and thaw "output" from forked process
                     push @{$by_pid{$pid}}, thaw(decode_base64($_));
                 }
+            }
+            
+            elsif(/^PRUNED/) {
+                s/PRUNED //g;
+                chomp;
+                $pruned_count++;
+                $total_size += $_;
             }
             
             elsif(/^DEBUG/) {
@@ -1074,8 +1082,12 @@ sub vf_list_to_cons {
         $config->{cache} = $tmp;
         
         # prune caches
-        prune_cache($config, $config->{tr_cache}, $regions, $config->{loaded_tr});
-        prune_cache($config, $config->{rf_cache}, $regions, $config->{loaded_rf});
+        my $new_count = 0;
+        
+        $new_count += prune_cache($config, $config->{tr_cache}, $regions, $config->{loaded_tr});
+        $new_count += prune_cache($config, $config->{rf_cache}, $regions, $config->{loaded_rf});
+        
+        print PARENT "PRUNED $new_count\n";
     }
     
     my @return;
@@ -1631,7 +1643,7 @@ sub tva_to_line {
         }
     }
     
-    add_extra_fields($config, $line, $tva);
+    $line = add_extra_fields($config, $line, $tva);
     
     return $line;
 }
@@ -1647,10 +1659,12 @@ sub add_extra_fields {
     }
     
     # add transcript-specific fields
-    add_extra_fields_transcript($config, $line, $bvfoa) if $bvfoa->isa('Bio::EnsEMBL::Variation::BaseTranscriptVariationAllele');
+    $line = add_extra_fields_transcript($config, $line, $bvfoa) if $bvfoa->isa('Bio::EnsEMBL::Variation::BaseTranscriptVariationAllele');
     
     # run plugins
     $line = run_plugins($bvfoa, $line, $config);
+    
+    return $line;
 }
 
 sub add_extra_fields_transcript {
@@ -1767,6 +1781,8 @@ sub add_extra_fields_transcript {
     if(defined $config->{canonical}) {
         $line->{Extra}->{CANONICAL} = 'YES' if $tr->is_canonical;
     }
+    
+    return $line;
 }
 
 # initialize a line hash
@@ -3026,6 +3042,8 @@ sub prune_cache {
         delete $cache->{$chr} unless defined $regions->{$chr} && scalar @{$regions->{$chr}};
     }
     
+    my $new_count = 0;
+    
     foreach my $chr(keys %$cache) {
         
         # get total area spanned by regions    
@@ -3039,10 +3057,14 @@ sub prune_cache {
         # transcript cache
         if(ref($cache->{$chr}) eq 'ARRAY') {
             $cache->{$chr} = prune_min_max($cache->{$chr}, $min, $max);
+            $new_count += scalar @{$cache->{$chr}};
         }
         # regfeat cache
         elsif(ref($cache->{$chr}) eq 'HASH') {
-            $cache->{$chr}->{$_} = prune_min_max($cache->{$chr}->{$_}, $min, $max) for keys %{$cache->{$chr}};
+            for(keys %{$cache->{$chr}}) {
+                $cache->{$chr}->{$_} = prune_min_max($cache->{$chr}->{$_}, $min, $max);
+                $new_count += scalar @{$cache->{$chr}->{$_}};
+            }
         }
         
         # update loaded regions
@@ -3052,6 +3074,8 @@ sub prune_cache {
             delete $loaded->{$chr}->{$region} unless defined $have_regions{$region};
         }
     }
+    
+    return $new_count;
 }
 
 # does the actual pruning
