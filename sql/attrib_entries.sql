@@ -546,7 +546,11 @@ INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (229, 11, 'U
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (245, 9, 'PorcineSNP60'); 
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (332, 9, 'Affy_500K');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (333, 9, 'Affy_SNP6');
+INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (334, 9, 'Illumina_660Q');
+INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (335, 9, 'Illumina_1M-duo');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (337, 9, 'Cardio-Metabo_Chip');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (338, 9, 'HumanOmni1-Quad');
-INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (335, 9, 'Illumina_1M-duo');
-INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (334, 9, 'Illumina_660Q');
+INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (340, 9, 'HumanHap650Y');
+INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (341, 9, 'HumanOmni2.5');
+INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (342, 9, 'Human610_Quad');
+INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (343, 9, 'HumanHap550');     
