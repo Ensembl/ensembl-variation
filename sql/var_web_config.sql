@@ -85,3 +85,32 @@ where name like 'Affy%'
 or name like 'Illumina%'
 or name like 'Uniprot%'
 order by name asc;
+
+# add structural variation sets
+insert into meta(species_id, meta_key, meta_value)
+values
+(NULL, 'web_config', "sv_set#1000 Genomes - Low coverage#1kg_lc");
+
+insert into meta(species_id, meta_key, meta_value)
+values
+(NULL, 'web_config', "sv_set#1000 Genomes - High coverage - Trios#1kg_hct");
+
+insert into meta(species_id, meta_key, meta_value)
+values
+(NULL, 'web_config', "sv_set#1000 Genomes - All#1kg");
+
+insert into meta(species_id, meta_key, meta_value)
+values
+(NULL, 'web_config', "sv_set#1000 Genomes - EUR#1kg_eur");
+
+insert into meta(species_id, meta_key, meta_value)
+values
+(NULL, 'web_config', "sv_set#1000 Genomes - ASN#1kg_asn");
+
+insert into meta(species_id, meta_key, meta_value)
+values
+(NULL, 'web_config', "sv_set#1000 Genomes - AMR#1kg_amr");
+
+insert into meta(species_id, meta_key, meta_value)
+values
+(NULL, 'web_config', "sv_set#1000 Genomes - AFR#1kg_afr");
