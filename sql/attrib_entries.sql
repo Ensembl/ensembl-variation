@@ -554,3 +554,4 @@ INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (340, 9, 'Hu
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (341, 9, 'HumanOmni2.5');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (342, 9, 'Human610_Quad');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (343, 9, 'HumanHap550');     
+INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (344, 9, 'esp_6500');
