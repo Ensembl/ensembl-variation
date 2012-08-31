@@ -17,13 +17,27 @@ GetOptions(
 	'port|P=i',
 	'password|p=s',
 	'db|d=s',
-	'table|t=s'
+	'table|t=s',
+	'version|v=i',
+	'pattern=s',
 ) or die "ERROR: Could not parse command line options\n";
 
 
-foreach my $opt(qw(tmpdir host user port password db)) {
-	die "ERROR: --$opt not specified\n";
+# check options
+for(qw(host user port password tmpdir tmpfile)) {
+	die("ERROR: $_ not defined, use --$_\n") unless defined $config->{$_};
 }
+
+my @db_list;
+
+if(!defined($config->{db})) {
+	@db_list = @{get_species_list($config, $config->{host})};
+}
+else {
+	push @db_list, $config->{db};
+}
+
+die "ERROR: no suitable databases found on host ".$config->{host}."\n" unless scalar @db_list;
 
 
 $config->{table} ||= 'transcript_variation';
@@ -36,104 +50,148 @@ my $TMP_FILE = $config->{tmpfile};
 $ImportUtils::TMP_DIR = $TMP_DIR;
 $ImportUtils::TMP_FILE = $TMP_FILE;
 
-# check options
-for(qw(host user port password db tmpdir tmpfile)) {
-	die("ERROR: $_ not defined, use --$_\n") unless defined $config->{$_};
-}
 
-my $dbc = DBI->connect(
-    sprintf(
-        "DBI:mysql(RaiseError=>1):host=%s;port=%s;db=%s",
-        $config->{host},
-        $config->{port},
-        $config->{db},
-    ), $config->{user}, $config->{password}
-);
-
-print "Getting column definition\n";
-
-# get column definition from transcript_variation
-my $sth = $dbc->prepare(qq{
-	SHOW CREATE TABLE $source_table
-});
-$sth->execute();
-
-my $create_sth = $sth->fetchall_arrayref->[0]->[1];
-$sth->finish;
-
-# convert set to enum
-$create_sth =~ s/^set/enum/;
-
-# rename table
-$create_sth =~ s/TABLE \`$source_table\`/TABLE \`$table\`/;
-
-# filter out some columns
-$create_sth =~ s/\`?$_.+?,// for @exclude;
-
-# filter out some indices
-$create_sth =~ s/AUTO_INCREMENT=\d+//;
-$create_sth =~ s/$_.+,// for ('PRIMARY KEY', 'KEY `somatic', 'KEY `cons');
-$create_sth =~ s/\`somatic\`\)//;
-
-# remove final comma
-$create_sth =~ s/,(\s+\))/$1/;
-
-#print "$create_sth\n";
-
-print "Creating table $table\n";
-
-# create a new table
-$dbc->do($create_sth);
-
-# get columns of new table
-$sth = $dbc->prepare(qq{
-	DESCRIBE $table
-});
-$sth->execute();
-my @cols = map {$_->[0]} @{$sth->fetchall_arrayref};
-$sth->finish;
-
-
-print "Populating table $table\n";
-
-
-$sth = $dbc->prepare(qq{
-	SELECT count(*)
-	FROM $source_table
-});
-$sth->execute();
-my $row_count = $sth->fetchall_arrayref->[0]->[0];
-$sth->finish;
-
-# populate it
-$sth = $dbc->prepare(qq{
-	SELECT *
-	FROM $source_table
-	#LIMIT ?, ?
-}, {mysql_use_result => 1});
-
-open OUT, ">$TMP_DIR/$TMP_FILE";
-
-$sth->execute();
+foreach my $db(@db_list) {
+	print "\nProcessing database $db\n";
 	
-while(my $row = $sth->fetchrow_hashref()) {
-	my $cons = $row->{consequence_types};
+	my $dbc = DBI->connect(
+		sprintf(
+			"DBI:mysql(RaiseError=>1):host=%s;port=%s;db=%s",
+			$config->{host},
+			$config->{port},
+			$db,
+		), $config->{user}, $config->{password}
+	);
 	
-	foreach my $con(split /\,/, $cons) {
-		my %vals = %{$row};
-		$vals{consequence_types} = $con;
-		delete $vals{$_} for @exclude;
-		my @values = map {defined $vals{$_} ? $vals{$_} : '\N'} @cols;
+	print "Getting column definition\n";
+	
+	# get column definition from transcript_variation
+	my $sth = $dbc->prepare(qq{
+		SHOW CREATE TABLE $source_table
+	});
+	$sth->execute();
+	
+	my $create_sth = $sth->fetchall_arrayref->[0]->[1];
+	$sth->finish;
+	
+	# convert set to enum
+	$create_sth =~ s/^set/enum/;
+	
+	# rename table
+	$create_sth =~ s/TABLE \`$source_table\`/TABLE \`$table\`/;
+	
+	# filter out some columns
+	$create_sth =~ s/\`?$_.+?,// for @exclude;
+	
+	# filter out some indices
+	$create_sth =~ s/AUTO_INCREMENT=\d+//;
+	$create_sth =~ s/$_.+,// for ('PRIMARY KEY', 'KEY `somatic', 'KEY `cons');
+	$create_sth =~ s/\`somatic\`\)//;
+	
+	# remove final comma
+	$create_sth =~ s/,(\s+\))/$1/;
+	
+	print "Creating table $table\n";
+	
+	# create a new table
+	$dbc->do($create_sth);
+	
+	# get columns of new table
+	$sth = $dbc->prepare(qq{
+		DESCRIBE $table
+	});
+	$sth->execute();
+	my @cols = map {$_->[0]} @{$sth->fetchall_arrayref};
+	$sth->finish;
+	
+	
+	print "Dumping data from $source_table to $TMP_DIR\/$TMP_FILE\n";
+	
+	
+	$sth = $dbc->prepare(qq{
+		SELECT count(*)
+		FROM $source_table
+	});
+	$sth->execute();
+	my $row_count = $sth->fetchall_arrayref->[0]->[0];
+	$sth->finish;
+	
+	# populate it
+	$sth = $dbc->prepare(qq{
+		SELECT *
+		FROM $source_table
+		#LIMIT ?, ?
+	}, {mysql_use_result => 1});
+	
+	open OUT, ">$TMP_DIR/$TMP_FILE";
+	
+	$sth->execute();
 		
-		print OUT join("\t", @values);
-		print OUT "\n";
+	while(my $row = $sth->fetchrow_hashref()) {
+		my $cons = $row->{consequence_types};
 		
-		#$sth2->execute(@values);
+		foreach my $con(split /\,/, $cons) {
+			my %vals = %{$row};
+			$vals{consequence_types} = $con;
+			delete $vals{$_} for @exclude;
+			my @values = map {defined $vals{$_} ? $vals{$_} : '\N'} @cols;
+			
+			print OUT join("\t", @values);
+			print OUT "\n";
+			
+			#$sth2->execute(@values);
+		}
 	}
+	
+	$sth->finish;
+	
+	close OUT;
+	print "Loading table $table from dumped data\n";
+	
+	load($dbc, $table);
+	
+	print "Done\n";
 }
 
-$sth->finish;
+print "All done!\n";
 
-close OUT;
 
-load($dbc, $table);
+sub get_species_list {
+	my $config = shift;
+	my $host   = shift;
+	
+	# connect to DB
+	my $dbc = DBI->connect(
+		sprintf(
+			"DBI:mysql(RaiseError=>1):host=%s;port=%s;db=mysql",
+			$host,
+			$config->{port}
+		), $config->{user}, $config->{password}
+	);
+	
+	my $version = $config->{version};
+	
+	my $sth = $dbc->prepare(qq{
+		SHOW DATABASES LIKE '%\_variation\_$version%'
+	});
+	$sth->execute();
+	
+	my $db;
+	$sth->bind_columns(\$db);
+	
+	my @dbs;
+	push @dbs, $db while $sth->fetch;
+	$sth->finish;
+	
+	# remove master and coreexpression
+	@dbs = grep {$_ !~ /master|express/} @dbs;
+	
+	# filter on pattern if given
+	my $pattern = $config->{pattern};
+	@dbs = grep {$_ =~ /$pattern/} @dbs if defined($pattern);
+	
+	# remove version, build
+	#$_ =~ s/^([a-z]+\_[a-z]+)(.+)/$1/ for @dbs;
+	
+	return \@dbs;
+}
