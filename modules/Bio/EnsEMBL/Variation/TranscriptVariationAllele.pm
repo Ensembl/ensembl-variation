@@ -581,10 +581,10 @@ sub hgvs_transcript {
                          $slice_end
     );
                        
-    ### This should not happen
+    ### This should not happen unless specified alt allele matches sequence extracted from reference at specified position
     unless($hgvs_notation->{'type'}){
-    #warn "Error - not continuing; no HGVS annotation\n";
-    return undef;
+      warn "Error with ". $self->transcript_variation->variation_feature->variation_name() .": no HGVS transcript annotation - are position and alt allele correct? \n";
+      return undef;
     }    
   
     ### create reference name - transcript name & seq version 
@@ -668,7 +668,6 @@ sub hgvs_protein {
     $hgvs_notation->{start}   = $self->transcript_variation->translation_start();
     $hgvs_notation->{end}     = $self->transcript_variation->translation_end();  
 
-
     ## get default reference & alt peptides  [changed later to hgvs format]
     $hgvs_notation->{alt} = $self->peptide;
     $hgvs_notation->{ref} = $self->transcript_variation->get_reference_TranscriptVariationAllele->peptide;    
@@ -698,9 +697,15 @@ sub _get_hgvs_protein_format{
      $hgvs_notation->{ref} eq $hgvs_notation->{alt}) || 
       (defined  $hgvs_notation->{type} && $hgvs_notation->{type} eq "=")){
 
-        ### no protein change - return transcript nomenclature with flag for neutral protein consequence
-        $hgvs_notation->{'hgvs'} = $self->hgvs_transcript() . "(p.=)";
-        return $hgvs_notation->{'hgvs'} ;
+         ### no protein change - return transcript nomenclature with flag for neutral protein consequence
+        if( defined $self->hgvs_transcript()){
+         ### $self->hgvs_transcript() warns & returns undef if alt allele matches reference genome - check here
+         $hgvs_notation->{'hgvs'} = $self->hgvs_transcript() . "(p.=)";
+         return $hgvs_notation->{'hgvs'} ;
+      }
+      else{
+        return undef;
+      }
     }
 
     ### all start with refseq name & numbering type
