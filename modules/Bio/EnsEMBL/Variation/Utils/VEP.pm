@@ -2072,7 +2072,14 @@ sub whole_genome_fetch {
     
     if(defined($config->{offline}) && !-e $config->{dir}.'/'.$chr) {
         debug("No cache found for chromsome $chr") unless defined($config->{quiet});
-        return;
+        
+        foreach my $chunk(keys %{$vf_hash->{$chr}}) {
+            foreach my $pos(keys %{$vf_hash->{$chr}{$chunk}}) {
+                push @finished_vfs, @{$vf_hash->{$chr}{$chunk}{$pos}};
+            }
+        }
+        
+        return \@finished_vfs;
     }
     
     my $slice_cache = $config->{slice_cache};
@@ -2446,6 +2453,9 @@ sub fetch_transcripts {
             if(!defined($tmp_cache->{$chr})) {
                 
                 if(defined($config->{offline})) {
+                    # restore quiet status
+                    $config->{quiet} = $quiet;
+                    
                     debug("WARNING: Could not find cache for $chr\:$region") unless defined($config->{quiet});
                     next;
                 }
@@ -2584,6 +2594,10 @@ sub fetch_regfeats {
             if(!defined($tmp_cache->{$chr})) {
                 
                 if(defined($config->{offline})) {
+                    
+                    # restore quiet status
+                    $config->{quiet} = $quiet;
+                    
                     debug("WARNING: Could not find cache for $chr\:$region") unless defined($config->{quiet});
                     next;
                 }
