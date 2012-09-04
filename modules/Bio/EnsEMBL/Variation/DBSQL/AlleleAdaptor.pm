@@ -267,12 +267,21 @@ sub get_all_failed_descriptions {
 =head2 get_subsnp_handle
 
   Arg[1]      : Bio::EnsEMBL::Variation::Allele
-	               The allele object to get the subsnp handle for
+	               The allele object to get the observation submitter subsnp handle for
+  Arg[2]      : Bio::EnsEMBL::Variation::Population (optional)
+                       The population object to get the frequency submitter subsnp handle for                           
   Example     : 
                 my $handle = $adaptor->get_subsnp_handle($allele);
-		        print "The allele '" . $allele->allele() . "' of subsnp 'ss" . $allele->subsnp_id() . "' was submitted by '$handle'\n";
+		print "The allele '" . $allele->allele() . "' of subsnp 'ss" . $allele->subsnp() . "' was submitted by '$handle'\n";
+
+                my $handle = $adaptor->get_subsnp_handle($allele, $population);
+		print "Frequency data for subsnp 'ss" . $allele->subsnp() . "' in population " . $population->name() . " was submitted by '$handle'\n";
+
+
 		
   Description : Gets the submitter handle for the specified allele
+                The initial observation and later allele frequencies may be submitted for the same ss record by different groups
+                supplying a population returns the submitter handle for data obtained within this population  
   ReturnType  : string
   Exceptions  : thrown on incorrect argument
   Caller      : general
@@ -283,29 +292,55 @@ sub get_all_failed_descriptions {
 sub get_subsnp_handle {
     my $self = shift;
     my $allele = shift;
-    
+    my $population = shift ; ## return submitter for specific allele frequency
+
     # Assert that the object passed is an Allele
     assert_ref($allele,'Bio::EnsEMBL::Variation::Allele');
     
+    # If we got a population argument, make sure that it is a Population object
+    assert_ref($population,'Bio::EnsEMBL::Variation::Population') if (defined($population));
+
+
     # Get the subsnp id and get rid of any 'ss' prefix
     my $ssid = $allele->subsnp() || "";
     $ssid =~ s/^ss//;
     
-    my $stmt = qq{
+    my ($stmt, $sth);
+    if(defined $population ){
+       $stmt = qq{
         SELECT
-            handle
+            submitter_handle.handle
         FROM
-            subsnp_handle
+            submitter_handle, allele
         WHERE
-            subsnp_id = ?
+            allele.subsnp_id = ?
+        AND allele.frequency_submitter_handle = submitter_handle.handle_id
+        AND allele.sample_id = ?
         LIMIT 1
-    };
-    my $sth = $self->prepare($stmt);
+        };
+       $sth = $self->prepare($stmt);
+       $sth->execute($ssid, $population->dbID());       
+       
+    }
+    else{
+        $stmt = qq{
+          SELECT
+              handle
+          FROM
+              subsnp_handle
+          WHERE
+              subsnp_id = ?
+          LIMIT 1
+        };
+
+
+    $sth = $self->prepare($stmt);
     $sth->execute($ssid);
+
+    }
     my $handle;
     $sth->bind_columns(\$handle);
     $sth->fetch();
-    
     return $handle;
 }
 
