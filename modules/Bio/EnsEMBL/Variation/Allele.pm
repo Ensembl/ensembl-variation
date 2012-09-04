@@ -371,6 +371,43 @@ sub subsnp_handle{
     return $self->{'subsnp_handle'};
 }
 
+=head2 frequency_subsnp_handle
+
+  Arg[1]     : Bio::EnsEMBL::Variation::Population
+                       The population object to get/set the frequency submitter subsnp handle for      
+  Arg[2]     : string $newval (optional) 
+               The new value to set the frequency_subsnp_handle attribute to
+  Example    : print $a->frequency_subsnp_handle($population);
+  Description: Getter/Setter for the frequency_subsnp_handle attribute.
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub frequency_subsnp_handle{
+    my $self = shift;
+    my $population = shift;
+    my $handle = shift;
+
+    assert_ref($population,'Bio::EnsEMBL::Variation::Population') if (defined($population));
+      
+    # if changing handle
+    if(defined($handle)) {
+        $self->{'frequency_subsnp_handle'} = $handle;
+    }
+    elsif (!defined($self->{'frequency_subsnp_handle'})) {
+
+        # Check that this allele has an adaptor attached
+        assert_ref($self->adaptor(),'Bio::EnsEMBL::Variation::DBSQL::AlleleAdaptor');
+        
+        $self->{'frequency_subsnp_handle'} = $self->adaptor->get_subsnp_handle($self,$population );
+    }
+    
+    return $self->{'frequency_subsnp_handle'};
+}
+
 sub _weaken {
     my $self = shift;
     
