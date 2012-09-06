@@ -1732,4 +1732,28 @@ sub summary_as_hash {
   return $summary_ref;
 }
 
+=head2 flank_match
+
+  Arg [1]    : int $newval (optional)
+               The new value to set the flank_match attribute to
+  Example    : $flank_match = $obj->flank_match()
+  Description: Getter/Setter for the flank_match attribute.
+               Return values:
+               1 = submitted flank has perfect match to genomic reference (allowing for neighbouring variants)
+               0 = imperfect match
+  Returntype : int
+  Exceptions : none
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub flank_match{
+  my $self = shift;
+  return $self->{'flank_match'} = shift if(@_);
+  return $self->{'flank_match'};
+}
+
+
+
 1;
