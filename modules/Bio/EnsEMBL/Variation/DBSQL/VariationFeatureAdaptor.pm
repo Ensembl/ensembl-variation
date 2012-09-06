@@ -107,7 +107,7 @@ sub store {
         my $source_id;
 		$sth->bind_columns(\$source_id);
 		$sth->fetch();
-		$sth->finish();
+		$sth->finish(); 
 		$vf->{source_id} = $source_id;
     }
     
@@ -130,8 +130,9 @@ sub store {
             somatic,
             minor_allele,
             minor_allele_freq,
-            minor_allele_count
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            minor_allele_count,
+            alignment_quality
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     });
     
     $sth->execute(
@@ -153,6 +154,7 @@ sub store {
         $vf->minor_allele,
         $vf->minor_allele_frequency,
         $vf->minor_allele_count,
+        $vf->flank_match,
     );
     
     $sth->finish;
@@ -980,7 +982,7 @@ sub _columns {
              vf.seq_region_end vf.seq_region_strand vf.variation_id
              vf.allele_string vf.variation_name vf.map_weight s.name s.version vf.somatic 
              vf.validation_status vf.consequence_types vf.class_attrib_id
-             vf.minor_allele vf.minor_allele_freq vf.minor_allele_count);
+             vf.minor_allele vf.minor_allele_freq vf.minor_allele_count vf.alignment_quality);
 }
 
 sub _objs_from_sth {
@@ -1007,14 +1009,14 @@ sub _objs_from_sth {
       $seq_region_end, $seq_region_strand, $variation_id,
       $allele_string, $variation_name, $map_weight, $source_name, $source_version,
       $is_somatic, $validation_status, $consequence_types, $class_attrib_id,
-	  $minor_allele, $minor_allele_freq, $minor_allele_count, $last_vf_id);
+	  $minor_allele, $minor_allele_freq, $minor_allele_count, $last_vf_id,$alignment_quality);
 
     $sth->bind_columns(\$variation_feature_id, \$seq_region_id,
                      \$seq_region_start, \$seq_region_end, \$seq_region_strand,
                      \$variation_id, \$allele_string, \$variation_name,
                      \$map_weight, \$source_name, \$source_version, \$is_somatic, \$validation_status, 
                      \$consequence_types, \$class_attrib_id,
-					 \$minor_allele, \$minor_allele_freq, \$minor_allele_count);
+		     \$minor_allele, \$minor_allele_freq, \$minor_allele_count,\$alignment_quality);
 
     my $asm_cs;
     my $cmp_cs;
@@ -1144,9 +1146,10 @@ sub _objs_from_sth {
                 'overlap_consequences' => $overlap_consequences,
                 '_variation_id' => $variation_id,
                 'class_SO_term' => $aa->attrib_value_for_id($class_attrib_id),
-				'minor_allele' => $minor_allele,
-				'minor_allele_frequency' => $minor_allele_freq,
-				'minor_allele_count' => $minor_allele_count
+                'minor_allele' => $minor_allele,
+                'minor_allele_frequency' => $minor_allele_freq,
+                'minor_allele_count' => $minor_allele_count,
+                'flank_match'  => $alignment_quality
                 }
             );
         }
