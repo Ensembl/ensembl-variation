@@ -79,7 +79,7 @@ sub post_process {
 
     ###Ê
     ## Define the statements we will be using
-    my $tmp_table = q{tmp_vs_vf_upd};    
+    my $tmp_table = ($sv_prefix ne '') ? q{tmp_vs_svf_upd} : q{tmp_vs_vf_upd};    
     
     # Create a temporary table to hold the variation_set_id string until we're ready to update variation_feature
     $stmt = qq{
@@ -175,9 +175,9 @@ sub post_process {
     }
     
     # Finally, update the variation_set_id column in variation_feature
-    print STDOUT localtime() . "\tUpdating variation_feature with the variation_set_id column from $tmp_table..." unless ($quiet);
+    print STDOUT localtime() . "\tUpdating $VARIATION_FEATURE_TABLE with the variation_set_id column from $tmp_table..." unless ($quiet);
     
-    update_table($dbVar->dbc, $tmp_table, qw(variation_feature variation_id variation_id variation_set_id variation_set_id), $clean);
+		update_table($dbVar->dbc, $tmp_table, ($VARIATION_FEATURE_TABLE, $VAR_COL, $VAR_COL, 'variation_set_id', 'variation_set_id'), $clean);
     
     print STDOUT "done!\n" unless ($quiet);
     
