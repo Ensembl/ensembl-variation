@@ -54,6 +54,10 @@ sub run {
   $var_dba->dbc->do(qq[INSERT IGNORE INTO genotype_code_tmp(allele_1, allele_2) 
                       SELECT distinct allele_1, allele_2 FROM population_genotype]);
 
+  ## add any missing allele codes present in genotype tables only
+  $var_dba->dbc->do(qq[INSERT IGNORE INTO allele_code(allele) SELECT allele_1 FROM genotype_code_tmp]);
+  $var_dba->dbc->do(qq[INSERT IGNORE INTO allele_code(allele) SELECT allele_2 FROM genotype_code_tmp]);
+
   ## populate genotype code with both alleles
   $var_dba->dbc->do(qq[INSERT INTO genotype_code
                        SELECT t.genotype_code_id, ac.allele_code_id, 1
