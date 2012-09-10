@@ -215,6 +215,14 @@ sub source_table {
 			<tr><th colspan="2">Chip Source</th><th>Version</th><th>Description</th><th></th></tr>
 	};
 		 
+	# LSDB headers
+	my $lbg = 1;
+	my $lsdb_table;
+	my $lsdb_header .= qq{<br />
+	<div>
+	  <table class="ss" style="width:60%">
+			<tr><th colspan="2">LSDB Source</th><th>Version</th><th>Description</th><th></th></tr>
+	};
 							 
 	while (my @a = $sth->fetchrow_array) {
 	
@@ -260,6 +268,21 @@ sub source_table {
 			if ($cbg == 1) { $cbg = 2; }
 			else { $cbg = 1; }
 		}
+		# Is lsdb ?
+		elsif ($s_type eq 'lsdb') {
+			$lsdb_table .= $lsdb_header if (!$lsdb_table);
+			$lsdb_table .= qq{
+			<tr class="bg$lbg">
+				$s_header
+				<td>$source</td>
+				<td>$s_version</td>
+				<td>$s_description</td>
+				<td style="text-align:center;width:80px">$s_new</td>
+			</tr>
+			};
+			if ($lbg == 1) { $lbg = 2; }
+			else { $lbg = 1; }
+		}
 		else {
 			$html .= qq{
 			<tr class="bg$bg">
@@ -277,6 +300,7 @@ sub source_table {
 	
 	$html .= qq{</table>\n</div>};
 	$html .= qq{$chip_table</table>\n</div>} if ($chip_table);
+	$html .= qq{$lsdb_table</table>\n</div>} if ($lsdb_table);
 	
 	return $html;
 }
