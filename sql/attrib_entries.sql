@@ -487,6 +487,8 @@ INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (277, 9, '1k
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (278, 9, '1kg_amr');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (279, 9, '1kg_asn');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (280, 9, '1kg_eur');
+INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (281, 9, '1kg_com');
+INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (282, 9, '1kg_afr_com');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (283, 9, '1kg_amr_com');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (284, 9, '1kg_asn_com');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (285, 9, '1kg_eur_com');
@@ -542,7 +544,6 @@ INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (226, 11, 'P
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (227, 11, 'Uncertain Significance');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (228, 11, 'Uncertain Significance: likely benign');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (229, 11, 'Uncertain Significance: likely pathogenic');
-
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (245, 9, 'PorcineSNP60'); 
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (332, 9, 'Affy_500K');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (333, 9, 'Affy_SNP6');
