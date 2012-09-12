@@ -598,6 +598,8 @@ sub _get_codon_alleles {
     
     my $ref_codon = $bvfo->get_reference_TranscriptVariationAllele->codon;
     
+    return () unless defined $ref_codon;
+    
     $ref_codon = '' if $ref_codon eq '-';
     $alt_codon = '' if $alt_codon eq '-';
     
