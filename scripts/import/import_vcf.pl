@@ -131,6 +131,7 @@ sub configure {
 		
 		'merge_vfs',
 		'only_existing',
+		'skip_n',
 		
 		'create_name',
 		'chrom_regexp=s',
@@ -716,7 +717,7 @@ sub main {
 			#}
 			
 			# compressed by region
-			if($config->{tables}->{compressed_genotype_region} && @{$data->{genotypes}}) {
+			if($config->{tables}->{compressed_genotype_region} && @{$data->{genotypes}} && !defined($config->{test})) {
 				my $vf = $data->{vf};
 				
 				$vf->{seq_region_id} = $vf->slice->get_seq_region_id if !defined($vf->{seq_region_id});
@@ -1735,6 +1736,9 @@ sub variation_feature {
 	
 	my @new_alleles = split /\//, $vf->allele_string;
 	
+	# remove Ns?
+	@new_alleles = grep {$_ ne 'N'} @new_alleles if defined($config->{skip_n});
+	
 	my $vfa = $config->{variationfeature_adaptor};
 	
 	# does the variation entry exist in the database?
@@ -2207,6 +2211,7 @@ sub individual_genotype {
 	my @gts = grep {$_->genotype_string !~ /\./} @{$data->{genotypes}};
 	
 	if(defined($config->{test})) {
+		return unless scalar keys %{$data->{variation}};
 		debug($config, "(TEST) Writing ", scalar @gts, " genotype objects for variation ", $data->{variation}->name);
 	}
 	else {
@@ -2529,6 +2534,9 @@ Options
 --only_existing       Only write to tables when an existing variant is found. Existing
                       can be a variation with the same name, or a variant with the same
                       location and alleles
+--skip_n              When comparing to existing variations, set this flag to ignore N
+                      alleles in the VCF. This is useful if you have converted data to
+                      a VCF without knowing the reference
 
 -r | --registry       Registry file to use defines DB connections. Defining a registry
                       file overrides the connection settings below
