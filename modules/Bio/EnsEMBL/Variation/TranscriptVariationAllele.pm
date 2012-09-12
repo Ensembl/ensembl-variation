@@ -183,6 +183,8 @@ sub display_codon_allele_string {
     
     my $ref_display_codon = $self->transcript_variation->get_reference_TranscriptVariationAllele->display_codon;
     
+    return undef unless $ref_display_codon;
+    
     return $ref_display_codon.'/'.$display_codon;
 }
 
@@ -891,7 +893,8 @@ sub _get_hgvs_protein_type{
       }   
     }
     else{
-#    warn "Cannot define protein variant type [$ref_length  - $alt_length]\n";
+        #print STDERR "DEBUG ".$self->variation_feature->start."\n";
+        #warn "Cannot define protein variant type [$ref_length  - $alt_length]\n";
     }
     return $hgvs_notation ;
 
