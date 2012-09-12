@@ -385,15 +385,9 @@ sub _generic_fetch_Iterator {
 sub fetch_by_dbID {
     my $self = shift;
     my $dbID = shift;
-
-    # This method uses the flanking_sequence table
-    $self->{'_check_flanking'} = 1;
     
     # Now, it should be fine to just use the superclass method
     my $result = $self->SUPER::fetch_by_dbID($dbID);
-    
-    # Unset the flanking flag
-    delete($self->{'_check_flanking'});
     
     return $result;
     
@@ -422,12 +416,7 @@ sub _columns {
         "v.minor_allele_count",
         "v.clinical_significance_attrib_id",
     );
-    if ($self->{'_check_flanking'}) {
-        push(@cols,qq{(fs.up_seq is not null OR fs.down_seq is not null) AS fs_flank_flag});
-    }
-    else {
-        push(@cols,qq{0 AS fs_flank_flag});  
-    }
+    
     
     return @cols;
 }
@@ -444,8 +433,7 @@ sub _tables {
     
     # If we are constraining on sample_id, add the allele table
     push(@tables,['allele', 'a']) if ($self->{'_constrain_sample'});
-    # Add the flanking_sequence table if we are checking that
-    push(@tables,['flanking_sequence', 'fs']) if ($self->{'_check_flanking'});
+
     # Add the failed_variation table if we are filtering on those
     push(@tables,['failed_variation', 'fv']) unless ($self->db->include_failed_variations());
     
@@ -460,8 +448,6 @@ sub _left_join {
         ['source s2', 'vs.source_id = s2.source_id']
     );
     
-    # If we are checking flanking_sequences, left join to that table
-    push(@left_join,['flanking_sequence', 'v.variation_id = fs.variation_id']) if ($self->{'_check_flanking'});
     # If we are filtering on failed variations, left join
     push(@left_join,['failed_variation', 'v.variation_id = fv.variation_id']) unless ($self->db->include_failed_variations());
  
@@ -500,10 +486,7 @@ sub fetch_by_name {
     my $source = shift;
 
     throw('name argument expected') if(!defined($name));
-  
-    # This method will need to left join to the flanking sequence table so set that flag
-    $self->{'_check_flanking'} = 1;
-    
+      
     # Add a constraint on the name
     my $constraint = qq{v.name = ?};
 
@@ -516,10 +499,7 @@ sub fetch_by_name {
     
     # Get the results from generic fetch method
     my $result = $self->generic_fetch($constraint);
-    
-    # Unset the check flanking flag again
-    delete($self->{'_check_flanking'});
-    
+        
     # We need to check the synonym table in case the name was not found in the variation table
     unless (scalar(@{$result})) {
         
@@ -678,8 +658,6 @@ sub fetch_by_subsnp_id {
     # Strip away any ss prefix
     $name =~ s/^ss//gi;
 
-    # This method will need to left join to the flanking sequence table so set that flag
-    $self->{'_check_flanking'} = 1;
     $self->{'_constrain_sample'} = 1;
     
     # Add a constraint on the subsnp_id
@@ -691,8 +669,6 @@ sub fetch_by_subsnp_id {
     # Get the results from generic fetch method
     my $result = $self->generic_fetch($constraint);
     
-    # Unset the check flanking flag again
-    delete($self->{'_check_flanking'});
     delete($self->{'_constrain_sample'});
     
     # Return the result
@@ -990,8 +966,8 @@ sub get_source_version{
 
     Arg[1]      : int $variationID
     Example     : $flankinq_sequence = $va->get_flanking_sequence('652');
-    Description : Retrieves from the database the appropriate flanking sequence (five,three) for the variation. If the flanking sequence is not in
-                  the Flankinq_sequence table, access the core database with the coordinates
+    Description : Retrieves the appropriate flanking sequence (five,three) for the variation
+                  position from the genomic reference sequence
     ReturnType  : reference to a list containing (three_flank,five_flank)
     Exceptions  : throw when not possible to obtain sequence
     Caller      : general, Variation
@@ -999,58 +975,74 @@ sub get_source_version{
 
 =cut
 
+
 sub get_flanking_sequence{
+
   my $self = shift;
   my $variationID = shift;
+  my $length = shift ||325;
+
 
   my $flanking_sequence; #reference to an array for the three_prime and five_prime seqs
-  my ($seq_region_id, $seq_region_strand, $up_seq, $down_seq, $up_seq_region_start, $up_seq_region_end, $down_seq_region_start, $down_seq_region_end);
-  
+  my ($seq_region_id, $seq_region_strand, $seq_region_start,  $seq_region_end, $up_seq_region_end, $down_seq_region_start,
+$match );
+
+  ## variant may have multiple mappings, some perfect (alignment_quality = 1) others not (alignment_quality =0)
   my $sth = $self->prepare(qq{
-			      SELECT seq_region_id, seq_region_strand, up_seq, 
-			      down_seq, up_seq_region_start, up_seq_region_end, 
-			      down_seq_region_start, down_seq_region_end
-			      FROM flanking_sequence
-			      WHERE variation_id = ?
-			     });
+                              SELECT seq_region_id, seq_region_start, seq_region_end, seq_region_strand, alignment_quality
+                              FROM variation_feature
+                              WHERE variation_id = ?
+                              ORDER BY alignment_quality DESC
+                             });
 
   $sth->bind_param(1,$variationID,SQL_INTEGER);
   $sth->execute(); #retrieve the flank from the variation database
-  $sth->bind_columns(\($seq_region_id, $seq_region_strand, $up_seq, $down_seq, $up_seq_region_start, $up_seq_region_end, $down_seq_region_start, $down_seq_region_end));
+  $sth->bind_columns(\($seq_region_id, $seq_region_start,  $seq_region_end, $seq_region_strand,$match ));
   $sth->fetch();
   $sth->finish();
- 
-  if (!defined $down_seq){
-	if( $seq_region_id){
-	  my ($s, $e) = ($down_seq_region_start, $down_seq_region_end);
-	  ($s, $e) = ($e, $s) if $e < $s;
-	  $down_seq = $self->_get_flank_from_core($seq_region_id, 
-											  $s, 
-											  $e, 
-											  $seq_region_strand);
-	} else {
-	  warn( "*****[ERROR]: No seq_region_id for SNP with dbID: $variationID. ".
-			"Cannot retrieve flanking region******\n" );    
-	}
+
+
+  unless( $seq_region_id){
+      warn( "*****[ERROR]: No seq_region_id for SNP with dbID: $variationID. ".
+            "Cannot retrieve flanking region******\n" );
+      return;
   }
-  if (!defined $up_seq){
-	if( $seq_region_id){
-	  my ($s, $e) = ($up_seq_region_start, $up_seq_region_end);
-	  ($s, $e) = ($e, $s) if $e < $s;
-	  $up_seq = $self->_get_flank_from_core($seq_region_id, 
-											$s, 
-											$e, 
-											$seq_region_strand);
-	} else {
-	  warn( "*****[ERROR]: No seq_region_id for SNP with dbID: $variationID. ".
-			"Cannot retrieve flanking region******\n" );
-	}
+  unless( $seq_region_start &&  $seq_region_end){
+      warn( "*****[ERROR]: No mapping for SNP with dbID: $variationID. ".
+               "Cannot retrieve flanking region******\n" );
+      return;
   }
-  
+
+  if($seq_region_start >  $seq_region_end){
+    ##insertion - re-order start and end coordinates
+    ($up_seq_region_end,$down_seq_region_start)  =  ($seq_region_end, $seq_region_start );
+  }
+  else{
+    ## deletion or substitution - increment start and end coordinates to avoid variant base(s)
+    ($up_seq_region_end,$down_seq_region_start)  =  ($seq_region_start,  $seq_region_end);
+    $up_seq_region_end--;
+    $down_seq_region_start++;
+  }
+  my $up_seq_region_start  = $up_seq_region_end - $length;
+  my $down_seq_region_end  = $down_seq_region_start + $length;
+
+  my $down_seq = $self->_get_flank_from_core( $seq_region_id,
+                                              $down_seq_region_start,
+                                              $down_seq_region_end,
+                                              $seq_region_strand );
+
+  my $up_seq = $self->_get_flank_from_core( $seq_region_id,
+                                            $up_seq_region_start,
+                                            $up_seq_region_end,
+                                            $seq_region_strand );
+
+
   push @{$flanking_sequence},$down_seq,$up_seq; #add to the array the 3 and 5 prime sequences
-  
+
   return $flanking_sequence;
+
 }
+
 
 =head2 fetch_all_by_Population
 
