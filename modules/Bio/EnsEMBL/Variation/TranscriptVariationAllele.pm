@@ -654,7 +654,7 @@ sub hgvs_protein {
     #### else, check viable input and create notation
     return if $self->is_reference();
 
-    unless ($self->transcript_variation->translation_start()){   
+    unless ($self->transcript_variation->translation_start() && $self->transcript_variation->translation_end()){   
         return undef ;
     }
 
@@ -830,7 +830,6 @@ sub _get_hgvs_protein_type{
 
     my $self = shift;
     my $hgvs_notation = shift;
-    
    
     ### get allele length
     my ($ref_length, $alt_length ) = $self->_get_allele_length();    
@@ -902,9 +901,8 @@ sub _get_hgvs_peptides{
   my $hgvs_notation = shift;
 
   if($hgvs_notation->{type} eq "fs"){
-  ### ensembl alt/ref peptides not the same as HGVS alt/ref - look up seperately
-  $hgvs_notation = $self->_get_fs_peptides($hgvs_notation);    
-  
+    ### ensembl alt/ref peptides not the same as HGVS alt/ref - look up seperately
+    $hgvs_notation = $self->_get_fs_peptides($hgvs_notation);    
   }
   elsif($hgvs_notation->{type} eq "ins" ){
 
@@ -1055,6 +1053,7 @@ sub _get_fs_peptides{
 
   ### get CDS with alt variant
   my $alt_cds = $self->_get_alternate_cds();
+  return undef unless defined($alt_cds);
 
   #### get new translation
   my $alt_trans = $alt_cds->translate()->seq();
@@ -1110,6 +1109,8 @@ sub _get_alternate_cds{
 
   ### get reference sequence
   my $reference_cds_seq = $self->transcript->translateable_seq();
+  
+  return undef unless defined($self->transcript_variation->cds_start) && defined($self->transcript_variation->cds_end());
 
   ### get sequences upstream and downstream of variant
   my $upstream_seq   =  substr($reference_cds_seq, 0, ($self->transcript_variation->cds_start() -1) );
@@ -1183,7 +1184,9 @@ sub _stop_loss_extra_AA{
   my $extra_aa;
 
   ### get the sequence with variant added
-  my $alt_cds   = $self->_get_alternate_cds();   
+  my $alt_cds   = $self->_get_alternate_cds();
+  return undef unless defined($alt_cds);
+  
   ### get new translation
   my $alt_trans = $alt_cds->translate();
   
