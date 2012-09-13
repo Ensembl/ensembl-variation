@@ -60,6 +60,13 @@ select NULL, "web_config",  concat("source#", name, " variants", "#variation_fea
 from source
 where name like 'LSDB%';
 
+# add clinical set (phenotype)
+insert into meta(species_id, meta_key, meta_value)
+select NULL, "web_config",  concat("set#", vs.name, "#variation_set_", a.value, "#phenotype")
+from variation_set vs, attrib a
+where vs.short_name_attrib_id = a.attrib_id
+and a.value like 'precious%';
+
 # add individual genotype sets
 insert into meta(species_id, meta_key, meta_value)
 select NULL, "web_config",  concat("set#", vs.name, "#variation_set_", a.value, "#ind_genomes")
