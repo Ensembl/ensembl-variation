@@ -740,8 +740,9 @@ sub _get_hgvs_protein_format{
         }
         else{
             $hgvs_notation->{'hgvs'} .=  $hgvs_notation->{alt} . $hgvs_notation->{start} .  "dup" ;
-        }  
-	print "formating a dup  $hgvs_notation->{hgvs} \n";  
+        }
+        
+        print "formating a dup  $hgvs_notation->{hgvs} \n" if $DEBUG==1;
     }
 
     elsif($hgvs_notation->{type} eq ">"){
