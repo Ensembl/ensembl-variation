@@ -583,10 +583,10 @@ sub hgvs_transcript {
                          $slice_end
     );
                        
-    ### This should not happen unless specified alt allele matches sequence extracted from reference at specified position
+    ### This should not happen
     unless($hgvs_notation->{'type'}){
-      warn "Error with ". $self->transcript_variation->variation_feature->variation_name() .": no HGVS transcript annotation - are position and alt allele correct? \n";
-      return undef;
+    #warn "Error - not continuing; no HGVS annotation\n";
+    return undef;
     }    
   
     ### create reference name - transcript name & seq version 
@@ -654,7 +654,7 @@ sub hgvs_protein {
     #### else, check viable input and create notation
     return if $self->is_reference();
 
-    unless ($self->transcript_variation->translation_start()){   
+    unless ($self->transcript_variation->translation_start() && $self->transcript_variation->translation_end()){   
         return undef ;
     }
 
@@ -669,6 +669,7 @@ sub hgvs_protein {
     ### get default reference location [changed later in some cases eg. duplication]
     $hgvs_notation->{start}   = $self->transcript_variation->translation_start();
     $hgvs_notation->{end}     = $self->transcript_variation->translation_end();  
+
 
     ## get default reference & alt peptides  [changed later to hgvs format]
     $hgvs_notation->{alt} = $self->peptide;
@@ -699,15 +700,9 @@ sub _get_hgvs_protein_format{
      $hgvs_notation->{ref} eq $hgvs_notation->{alt}) || 
       (defined  $hgvs_notation->{type} && $hgvs_notation->{type} eq "=")){
 
-         ### no protein change - return transcript nomenclature with flag for neutral protein consequence
-        if( defined $self->hgvs_transcript()){
-         ### $self->hgvs_transcript() warns & returns undef if alt allele matches reference genome - check here
-         $hgvs_notation->{'hgvs'} = $self->hgvs_transcript() . "(p.=)";
-         return $hgvs_notation->{'hgvs'} ;
-      }
-      else{
-        return undef;
-      }
+        ### no protein change - return transcript nomenclature with flag for neutral protein consequence
+        $hgvs_notation->{'hgvs'} = $self->hgvs_transcript() . "(p.=)";
+        return $hgvs_notation->{'hgvs'} ;
     }
 
     ### all start with refseq name & numbering type
@@ -745,8 +740,9 @@ sub _get_hgvs_protein_format{
         }
         else{
             $hgvs_notation->{'hgvs'} .=  $hgvs_notation->{alt} . $hgvs_notation->{start} .  "dup" ;
-        }  
-
+        }
+        
+        print "formating a dup  $hgvs_notation->{hgvs} \n" if $DEBUG==1;
     }
 
     elsif($hgvs_notation->{type} eq ">"){
@@ -835,7 +831,6 @@ sub _get_hgvs_protein_type{
 
     my $self = shift;
     my $hgvs_notation = shift;
-    
    
     ### get allele length
     my ($ref_length, $alt_length ) = $self->_get_allele_length();    
@@ -907,9 +902,8 @@ sub _get_hgvs_peptides{
   my $hgvs_notation = shift;
 
   if($hgvs_notation->{type} eq "fs"){
-  ### ensembl alt/ref peptides not the same as HGVS alt/ref - look up seperately
-  $hgvs_notation = $self->_get_fs_peptides($hgvs_notation);    
-  
+    ### ensembl alt/ref peptides not the same as HGVS alt/ref - look up seperately
+    $hgvs_notation = $self->_get_fs_peptides($hgvs_notation);    
   }
   elsif($hgvs_notation->{type} eq "ins" ){
 
@@ -1060,6 +1054,7 @@ sub _get_fs_peptides{
 
   ### get CDS with alt variant
   my $alt_cds = $self->_get_alternate_cds();
+  return undef unless defined($alt_cds);
 
   #### get new translation
   my $alt_trans = $alt_cds->translate()->seq();
@@ -1115,6 +1110,8 @@ sub _get_alternate_cds{
 
   ### get reference sequence
   my $reference_cds_seq = $self->transcript->translateable_seq();
+  
+  return undef unless defined($self->transcript_variation->cds_start) && defined($self->transcript_variation->cds_end());
 
   ### get sequences upstream and downstream of variant
   my $upstream_seq   =  substr($reference_cds_seq, 0, ($self->transcript_variation->cds_start() -1) );
@@ -1188,7 +1185,9 @@ sub _stop_loss_extra_AA{
   my $extra_aa;
 
   ### get the sequence with variant added
-  my $alt_cds   = $self->_get_alternate_cds();   
+  my $alt_cds   = $self->_get_alternate_cds();
+  return undef unless defined($alt_cds);
+  
   ### get new translation
   my $alt_trans = $alt_cds->translate();
   
