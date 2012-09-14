@@ -41,7 +41,7 @@ my %colour = (
 my %type = (
 	'1' => 'Variation',
 	'2' => 'Structural variation', 
-	'3' => 'Variation<br / >Structural variation'
+	'3' => 'Variation<br />Structural variation'
 );
 
 my $vdb = $registry->get_DBAdaptor($species,'variation');
@@ -143,9 +143,6 @@ sub print_line {
 	if ($colour{$so_term}) {
 		$class_col = $colour{$so_term};
 		$class_col = qq {;background-color:$class_col};
-		#$class_col = qq{
-		#	<div style="padding:0px;margin:0px;height:20px;background-color:$class_col"></div>
-		#}
 	}
 	
 	$html .= qq{
