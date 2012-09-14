@@ -837,12 +837,12 @@ sub get_all_consequences {
     
     # get trimmed regions - allows us to discard out-of-range transcripts
     # when using cache
-    if(defined($config->{cache})) {
-        my $tmp = $config->{cache};
-        delete $config->{cache};
-        $trim_regions = regions_from_hash($config, \%vf_hash);
-        $config->{cache} = $tmp;
-    }
+    #if(defined($config->{cache})) {
+    #    my $tmp = $config->{cache};
+    #    delete $config->{cache};
+    #    $trim_regions = regions_from_hash($config, \%vf_hash);
+    #    $config->{cache} = $tmp;
+    #}
     
     # prune caches
     prune_cache($config, $config->{tr_cache}, $regions, $config->{loaded_tr});
