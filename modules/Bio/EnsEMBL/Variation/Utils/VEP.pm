@@ -913,6 +913,8 @@ sub get_all_consequences {
                     # reconstitute it into parent's plugin cache
                     foreach my $plugin(@{$config->{plugins}}) {
                         
+                        next unless defined($plugin->{has_cache});
+                        
                         # delete unnecessary stuff and stuff that can't be serialised
                         delete $plugin->{$_} for qw(config feature_types variant_feature_types version feature_types_wanted variant_feature_types_wanted params);
                         print PARENT $$." PLUGIN ".ref($plugin)." ".encode_base64(freeze($plugin), "\t")."\n";
