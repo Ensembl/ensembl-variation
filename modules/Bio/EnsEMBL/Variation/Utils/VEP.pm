@@ -172,14 +172,14 @@ our %FILTER_SHORTCUTS = (
     coding_change => {
         stop_lost            => 1,
         stop_gained          => 1,
-        non_synonymous_codon => 1,
+        missense_variant     => 1,
         frameshift_variant   => 1,
-        inframe_codon_gain   => 1,
-        inframe_codon_lost   => 1,
+        inframe_insertion    => 1,
+        inframe_deletion     => 1,
     },
     regulatory => {
         regulatory_region_variant => 1,
-        TF_binding_site_variant => 1,
+        TF_binding_site_variant   => 1,
     },
 );
 
@@ -1898,7 +1898,7 @@ sub filter_by_consequence {
     my ($yes, $no) = (0, 0);
     
     # get all consequences across all term types
-    my @types = ('SO', 'display', 'NCBI');
+    my @types = ('SO', 'display');
     
     my @cons;
     push @cons, @{$vf->consequence_type($_)} for @types;
@@ -1914,7 +1914,7 @@ sub filter_by_consequence {
                 }
             }   
             for my $mfv (@{ $vf->get_all_MotifFeatureVariations }) {
-                for my $mfva(@{$mfv->get_all_alternate_MotifFeatureVarationAlleles}) {
+                for my $mfva(@{$mfv->get_all_alternate_MotifFeatureVariationAlleles}) {
                     push @cons, map {$_->$term_method} @{ $mfva->get_all_OverlapConsequences };
                 }
             }
