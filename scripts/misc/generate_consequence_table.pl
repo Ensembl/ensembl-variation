@@ -117,7 +117,6 @@ for my $d_term (sort {$consequences_rank{$a} <=> $consequences_rank{$b}} keys(%c
   my $line = 1;
   
   my $cons_line;
-  my $first_col;
   
   for my $row (sort {$cons_rows{$a} <=> $cons_rows{$b}} @$cons_list) {
     $row =~ s/\|/<\/td>\n\t<td>/g;
