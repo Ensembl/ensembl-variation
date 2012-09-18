@@ -231,9 +231,88 @@ sub fetch_all_by_Variation {
     
     # If a population was specified, attach the population to the allele object
     map {$_->population($population)} @{$alleles} if (defined($population));
-    
+	
+	# add freqs from genotypes for human (1KG data)
+	push @$alleles, @{$self->_fetch_all_by_Variation_from_Genotypes($variation, $population)} if $self->db->species =~ /homo_sapiens/i;
+	
     # Return the alleles
     return $alleles;
+}
+
+sub _fetch_all_by_Variation_from_Genotypes {
+	my $self = shift;
+	my $variation = shift;
+    my $population = shift;
+    
+    # Make sure that we are passed a Variation object
+    assert_ref($variation,'Bio::EnsEMBL::Variation::Variation');
+    
+    # If we got a population argument, make sure that it is a Population object
+    assert_ref($population,'Bio::EnsEMBL::Variation::Population') if (defined($population));
+	
+	# fetch all genotypes
+	my $genotypes = $variation->get_all_IndividualGenotypes();
+	
+	return [] unless scalar @$genotypes;
+	
+	# get populations for individuals
+	my (@pop_list, %pop_hash);
+	
+	if(defined($population)) {
+		@pop_list = ($population);
+		map {$pop_hash{$population->dbID}{$_->dbID} = 1} @{$population->get_all_Individuals};
+	}
+	else {
+		my $pa = $self->db->get_PopulationAdaptor();
+		%pop_hash = %{$pa->_get_individual_population_hash([map {$_->individual->dbID} @$genotypes])};
+		return [] unless %pop_hash;
+		
+		@pop_list = @{$pa->fetch_all_by_dbID_list([keys %pop_hash])};
+	}
+	
+	return [] unless @pop_list and %pop_hash;
+	
+	my %ss_list = map {$_->subsnp || '' => 1} @$genotypes;
+	
+	my @objs;
+	
+	foreach my $pop(@pop_list) {
+		
+		# HACK: only include 1KG phase 1 pops for now
+		next unless $pop->name =~ /^1000GENOMES:phase_1_/;
+		
+		foreach my $ss(keys %ss_list) {
+			
+			my (%counts, $total, @freqs);
+			map {$counts{$_}++}
+				map {@{$_->{genotype}}}
+				grep {$pop_hash{$pop->dbID}{$_->individual->dbID}}
+				grep {$_->subsnp || '' eq $ss}
+				@$genotypes;
+			
+			next unless %counts;
+			
+			my @alleles = keys %counts;
+			$total += $_ for values %counts;
+			next unless $total;
+			
+			@freqs = map {defined($counts{$_}) ? ($counts{$_} / $total) : 0} @alleles;
+			
+			for my $i(0..$#alleles) {
+				push @objs, Bio::EnsEMBL::Variation::Allele->new_fast({
+					allele     => $alleles[$i],
+					count      => scalar keys %counts ? ($counts{$alleles[$i]} || 0) : undef,
+					frequency  => @freqs ? $freqs[$i] : undef,
+					population => $pop,
+					variation  => $variation,
+					adaptor    => $self,
+					subsnp     => $ss eq '' ? undef : $ss,
+				});
+			}
+		}
+	}
+	
+	return \@objs;
 }
 
 =head2 get_all_failed_descriptions
