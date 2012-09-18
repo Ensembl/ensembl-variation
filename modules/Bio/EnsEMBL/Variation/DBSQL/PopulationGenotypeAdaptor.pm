@@ -73,6 +73,7 @@ package Bio::EnsEMBL::Variation::DBSQL::PopulationGenotypeAdaptor;
 
 use Bio::EnsEMBL::Variation::DBSQL::BaseGenotypeAdaptor;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
+use Bio::EnsEMBL::Utils::Scalar qw(assert_ref);
 
 use Bio::EnsEMBL::Variation::PopulationGenotype;
 
@@ -147,18 +148,16 @@ sub store_multiple {
 }
 
 sub store_to_file_handle {
-	my ($self, $popgt, $file_handle) = @_;
-	
-	my $dbh = $self->dbc->db_handle;
-	
-	print $file_handle join("\t",
-		$popgt->{_variation_id} || $popgt->variation->dbID || '\N',
-		$popgt->{subsnp} || '\N',
-		$self->_genotype_code($popgt->genotype),
-		defined($popgt->frequency) ? $popgt->frequency :  '\N',
-		$popgt->population ? $popgt->population->dbID : '\N',
-		defined($popgt->count) ? $popgt->count : '\N',
-	)."\n";
+  my ($self, $popgt, $file_handle) = @_;
+  
+  print $file_handle join("\t",
+	$popgt->{_variation_id} || $popgt->variation->dbID || '\N',
+	$popgt->{subsnp} || '\N',
+	$self->_genotype_code($popgt->genotype),
+	defined($popgt->frequency) ? $popgt->frequency :  '\N',
+	$popgt->population ? $popgt->population->dbID : '\N',
+	defined($popgt->count) ? $popgt->count : '\N',
+  )."\n";
 }
 
 =head2 fetch_by_dbID
@@ -180,7 +179,7 @@ sub fetch_by_dbID {
   my $dbID = shift;
   
   if (! $dbID){
-      throw('no dbID argument provided');
+    throw('no dbID argument provided');
   }
   return shift @{$self->generic_fetch("pg.population_genotype_id = " . $dbID)};
 
@@ -220,7 +219,7 @@ sub fetch_all_by_Population {
   
   # Add the constraint for failed variations
   $constraint .= " AND " . $self->db->_exclude_failed_variations_constraint();
-    
+  
   return $self->generic_fetch($constraint);
 }
 
@@ -254,7 +253,88 @@ sub fetch_all_by_Variation {
 	return [];
   }
   
-  return $self->generic_fetch("pg.variation_id = " . $variation->dbID());
+  my $pgs = $self->generic_fetch("pg.variation_id = " . $variation->dbID());
+  
+  # fetch pop GTs from ind GTs for human (1KG data)
+  push @$pgs, @{$self->_fetch_all_by_Variation_from_Genotypes($variation)} if $self->db->species =~ /homo_sapiens/i;
+  
+  return $pgs;
+}
+
+
+
+sub _fetch_all_by_Variation_from_Genotypes {
+  my $self = shift;
+  my $variation = shift;
+  my $population = shift;
+  
+  # Make sure that we are passed a Variation object
+  assert_ref($variation,'Bio::EnsEMBL::Variation::Variation');
+  
+  # If we got a population argument, make sure that it is a Population object
+  assert_ref($population,'Bio::EnsEMBL::Variation::Population') if (defined($population));
+  
+  # fetch all genotypes
+  my $genotypes = $variation->get_all_IndividualGenotypes();
+  
+  return [] unless scalar @$genotypes;
+  
+  # get populations for individuals
+  my (@pop_list, %pop_hash);
+  
+  if(defined($population)) {
+	@pop_list = ($population);
+	map {$pop_hash{$population->dbID}{$_->dbID} = 1} @{$population->get_all_Individuals};
+  }
+  else {
+	my $pa = $self->db->get_PopulationAdaptor();
+	%pop_hash = %{$pa->_get_individual_population_hash([map {$_->individual->dbID} @$genotypes])};
+	return [] unless %pop_hash;
+	
+	@pop_list = @{$pa->fetch_all_by_dbID_list([keys %pop_hash])};
+  }
+  
+  return [] unless @pop_list and %pop_hash;
+  
+  my %ss_list = map {$_->subsnp || '' => 1} @$genotypes;
+  
+  my @objs;
+  
+  foreach my $pop(@pop_list) {
+	
+	# HACK: only include 1KG phase 1 pops for now
+	next unless $pop->name =~ /^1000GENOMES:phase_1_/;
+	
+	foreach my $ss(keys %ss_list) {
+	  my (%counts, $total, @freqs);
+	  map {$counts{$_->genotype_string(1)}++}
+		grep {$pop_hash{$pop->dbID}{$_->individual->dbID}}
+		grep {$_->subsnp || '' eq $ss}
+		@$genotypes;
+	  
+	  next unless %counts;
+	  
+	  my @alleles = keys %counts;
+	  $total += $_ for values %counts;
+	  next unless $total;
+	  
+	  @freqs = map {defined($counts{$_}) ? ($counts{$_} / $total) : 0} @alleles;
+	  
+	  for my $i(0..$#alleles) {
+		push @objs, Bio::EnsEMBL::Variation::PopulationGenotype->new_fast({
+		  genotype   => [split /\|/, $alleles[$i]],
+		  count      => scalar keys %counts ? ($counts{$alleles[$i]} || 0) : undef,
+		  frequency  => @freqs ? $freqs[$i] : undef,
+		  population => $pop,
+		  variation  => $variation,
+		  adaptor    => $self,
+		  subsnp     => $ss eq '' ? undef : $ss,
+		});
+	  }
+	}
+  }
+  
+  return \@objs;
 }
 
 =head2 fetch_all
