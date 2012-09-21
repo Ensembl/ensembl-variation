@@ -29,16 +29,16 @@
 Bio::EnsEMBL::Variation::StructuralVariationAnnotation - Annotations for a structural variant (sample and phenotype annotations).
 
 =head1 SYNOPSIS
-	
-	$study = $study_adaptor->fetch_by_name('nstd37');
+  
+  $study = $study_adaptor->fetch_by_name('nstd37');
 
-	$sva = Bio::EnsEMBL::Variation::StructuralVariationAnnotation->new
+  $sva = Bio::EnsEMBL::Variation::StructuralVariationAnnotation->new
         (-sample_name => 'ISCA_ID_5554',
-				 -clinical_significance => 'Not tested',
-				 -study => $study);
-	...
-	
-	$sva->structural_variation->variation_name(),":", $sva->sample_name();			
+         -clinical_significance => 'Not tested',
+         -study => $study);
+  ...
+  
+  $sva->structural_variation->variation_name(),":", $sva->sample_name();      
 
 =head1 DESCRIPTION
 
@@ -59,7 +59,6 @@ use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Utils::Argument  qw(rearrange);
 use Bio::EnsEMBL::Variation::BaseStructuralVariation;
 use Bio::EnsEMBL::Storable;
-use Bio::EnsEMBL::Utils::Exception qw(deprecate);
 
 use vars qw(@ISA);
 
@@ -69,42 +68,42 @@ use vars qw(@ISA);
 
   Arg [-dbID] :
     int - unique internal identifier for variation_annotation
-	
-	Arg [-ADAPTOR] :
+  
+  Arg [-ADAPTOR] :
     Bio::EnsEMBL::Variation::DBSQL::StructuralVariationAnnotationAdaptor
     Adaptor which provides database connectivity for this StructuralVariationAnnotation object
-	
-	Arg [-_PHENOTYPE_ID] :
-    int _ the internal id of the phenotype	
   
-	Arg [-PHENOTYPE_DESCRIPTION] :
+  Arg [-_PHENOTYPE_ID] :
+    int _ the internal id of the phenotype  
+  
+  Arg [-PHENOTYPE_DESCRIPTION] :
     string - description of the phenotype
   
-	Arg [-SAMPLE_NAME] :
+  Arg [-SAMPLE_NAME] :
     string - name of the associated sample
-	
-	Arg [-STRAIN_NAME] :
+  
+  Arg [-STRAIN_NAME] :
     string - name of the associated strain
   
-	Arg [-CLINICAL_SIGNIFICANCE] :
+  Arg [-CLINICAL_SIGNIFICANCE] :
     string - clinical annotation for this structural variant.
-	
-	Arg [-STUDY] :
-    object ref - the study object describing where the annotated variation comes from.	
   
-	Arg [_STRUCTURAL_VARIATION_ID] :
+  Arg [-STUDY] :
+    object ref - the study object describing where the annotated variation comes from.  
+  
+  Arg [_STRUCTURAL_VARIATION_ID] :
     int _ the internal id of the structural variant object associated with this
     identifier. TUsing this identifier the structural variant may be lazy-loaded from 
-		the database on demand.
-	
+    the database on demand.
+  
   Example    :
-		$study = $study_adaptor->fetch_by_name('nstd37');
+    $study = $study_adaptor->fetch_by_name('nstd37');
 
-	  $sva = Bio::EnsEMBL::Variation::StructuralVariationAnnotation->new
+    $sva = Bio::EnsEMBL::Variation::StructuralVariationAnnotation->new
           (-sample_name => 'ISCA_ID_5554',
-				   -strain_name => 'ISCA',
-				   -clinical_significance => 'Not tested',
-				   -study => $study);
+           -strain_name => 'ISCA',
+           -clinical_significance => 'Not tested',
+           -study => $study);
 
   Description: Constructor. Instantiates a new StructuralVariationAnnotation object.
   Returntype : Bio::EnsEMBL::Variation::StructuralVariationAnnotation
@@ -120,9 +119,9 @@ sub new {
   my $self = $class->SUPER::new(@_);
 
   my ($dbID,$adaptor,$phenotype_id,$phenotype_description,$structural_variation_id,$sample_name,
-			$strain_name,$clinical_significance,$study) =
+      $strain_name,$clinical_significance,$study) =
     rearrange([qw(dbID ADAPTOR _PHENOTYPE_ID PHENOTYPE_DESCRIPTION _STRUCTURAL_VARIATION_ID 
-		              SAMPLE_NAME STRAIN_NAME CLINICAL_SIGNIFICANCE STUDY)],@_); 
+                  SAMPLE_NAME STRAIN_NAME CLINICAL_SIGNIFICANCE STUDY)],@_); 
 
   $self->{'dbID'}                     = $dbID;
   $self->{'adaptor'}                  = $adaptor;
@@ -148,7 +147,7 @@ sub new_fast {
 =head2 structural_variation
 
   Arg [1]    : (optional) Bio::EnsEMBL::Variation::StructuralVariation or 
-	             Bio::EnsEMBL::Variation::SupportingStructuralVariation $structural_variation
+               Bio::EnsEMBL::Variation::SupportingStructuralVariation $structural_variation
   Example    : $sv = $svf->structural_variation();
   Description: Getter/Setter for the structural variant associated with this feature.
                If not set, and this StructuralVariationFeature has an associated adaptor
@@ -166,8 +165,8 @@ sub structural_variation {
 
   if(@_) {
     if(!ref($_[0]) || (!$_[0]->isa('Bio::EnsEMBL::Variation::StructuralVariation') &&
-		                   !$_[0]->isa('Bio::EnsEMBL::Variation::SupportingStructuralVariation')
-		)) {
+                       !$_[0]->isa('Bio::EnsEMBL::Variation::SupportingStructuralVariation')
+    )) {
       throw("Bio::EnsEMBL::Variation::StructuralVariation or Bio::EnsEMBL::Variation::SupportingStructuralVariation argument expected");
     }
     $self->{'_structural_variation_id'} = shift;
@@ -175,12 +174,12 @@ sub structural_variation {
   elsif(!defined($self->{'structural_variation'}) && $self->{'adaptor'} &&
          defined($self->{'_structural_variation_id'})) {
     # lazy-load from database on demand
-		my $sva = $self->{'adaptor'}->db()->get_StructuralVariationAdaptor();
-		$self->{'structural_variation'} = $sva->fetch_by_dbID($self->{'_structural_variation_id'});
-		if (!defined($self->{'structural_variation'})) {
-			$sva = $self->{'adaptor'}->db()->get_SupportingStructuralVariationAdaptor();
-			$self->{'structural_variation'} = $sva->fetch_by_dbID($self->{'_structural_variation_id'});
-		}
+    my $sva = $self->{'adaptor'}->db()->get_StructuralVariationAdaptor();
+    $self->{'structural_variation'} = $sva->fetch_by_dbID($self->{'_structural_variation_id'});
+    if (!defined($self->{'structural_variation'})) {
+      $sva = $self->{'adaptor'}->db()->get_SupportingStructuralVariationAdaptor();
+      $self->{'structural_variation'} = $sva->fetch_by_dbID($self->{'_structural_variation_id'});
+    }
   }
 
   return $self->{'structural_variation'};

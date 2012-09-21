@@ -37,10 +37,10 @@ Bio::EnsEMBL::Variation::StructuralVariationFeature - A genomic position for a s
         -strand  => 1,
         -slice   => $slice,
         -variation_name => 'esv1001',
-				-class_so_term => 'copy_number_variation',
-				-source => 'DGVa',
-				-source_description => 'Database of Genomic Variants Archive',
-			 );
+        -class_so_term => 'copy_number_variation',
+        -source => 'DGVa',
+        -source_description => 'Database of Genomic Variants Archive',
+       );
 
     ...
 
@@ -67,7 +67,7 @@ package Bio::EnsEMBL::Variation::StructuralVariationFeature;
 use Scalar::Util qw(weaken isweak);
 
 use Bio::EnsEMBL::Variation::BaseVariationFeature;
-use Bio::EnsEMBL::Utils::Exception qw(throw warning deprecate);
+use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Utils::Argument  qw(rearrange);
 use Bio::EnsEMBL::Utils::Scalar qw(assert_ref);
 use Bio::EnsEMBL::Slice;
@@ -97,41 +97,41 @@ our @ISA = ('Bio::EnsEMBL::Variation::BaseVariationFeature');
 
   Arg [-SLICE] :
     see superclass constructor
-	
+  
   Arg [-INNER_START] :
-	int - the 5'-greater coordinate of the underlying structural variation
-	
+  int - the 5'-greater coordinate of the underlying structural variation
+  
   Arg [-INNER_END] :
-	int - the 3'-less coordinate of the underlying structural variation
+  int - the 3'-less coordinate of the underlying structural variation
 
-	 Arg [-OUTER_START] :
-	int - the 5'-less coordinate of the underlying structural variation
-	
+   Arg [-OUTER_START] :
+  int - the 5'-less coordinate of the underlying structural variation
+  
   Arg [-OUTER_END] :
-	int - the 3'-greater coordinate of the underlying structural variation
+  int - the 3'-greater coordinate of the underlying structural variation
 
   Arg [-VARIATION_NAME] :
     string - the name of the variation this feature is for (denormalisation
     from Variation object).
 
-	Arg [-CLASS_SO_TERM] :
-		string - the sequence ontology term defining the class of the structural variation.
-		
-	Arg [-ALLELE_STRING] :
-		string - allele sequence of the structural variation.
-		
+  Arg [-CLASS_SO_TERM] :
+    string - the sequence ontology term defining the class of the structural variation.
+    
+  Arg [-ALLELE_STRING] :
+    string - allele sequence of the structural variation.
+    
   Arg [-SOURCE] :
     string - the name of the source where the variation comes from
-	
+  
   Arg [-SOURCE_VERSION]:
-	string - version number of the source
-	
-	Arg [-IS_SOMATIC] :
-	  int - flag to inform whether the structural variant is a somatic (1) or germline (0).
+  string - version number of the source
+  
+  Arg [-IS_SOMATIC] :
+    int - flag to inform whether the structural variant is a somatic (1) or germline (0).
 
-	Arg [-BREAKPOINT_ORDER] :
-	  int - For a structural variant with multiple breakpoints, this gives the predicted order of the breakpoint event.
-	
+  Arg [-BREAKPOINT_ORDER] :
+    int - For a structural variant with multiple breakpoints, this gives the predicted order of the breakpoint event.
+  
   Example    :
     $svf = Bio::EnsEMBL::Variation::StructuralVariationFeature->new
        (-start   => 100,
@@ -139,8 +139,8 @@ our @ISA = ('Bio::EnsEMBL::Variation::BaseVariationFeature');
         -strand  => 1,
         -slice   => $slice,
         -variation_name => 'esv25480',
-		    -class_so_term => 'structural_variant',
-		    -source => 'DGVa');
+        -class_so_term => 'structural_variant',
+        -source => 'DGVa');
 
   Description: Constructor. Instantiates a new StructuralVariationFeature object.
   Returntype : Bio::EnsEMBL::Variation::StructuralVariationFeature
@@ -163,23 +163,23 @@ sub new {
     $class_so_term, 
     $inner_start, 
     $inner_end,
-	$outer_start,
-	$outer_end, 
+  $outer_start,
+  $outer_end, 
     $allele_string,
-	$is_somatic,
-	$breakpoint_order
+  $is_somatic,
+  $breakpoint_order
   ) = rearrange([qw(
-	VARIATION_NAME 
-	SOURCE 
-	SOURCE_VERSION
-	CLASS_SO_TERM
-	INNER_START 
-	INNER_END 
-	OUTER_START
-	INNER_START
-	ALLELE_STRING
-	IS_SOMATIC
-	BREAKPOINT_ORDER
+  VARIATION_NAME 
+  SOURCE 
+  SOURCE_VERSION
+  CLASS_SO_TERM
+  INNER_START 
+  INNER_END 
+  OUTER_START
+  INNER_START
+  ALLELE_STRING
+  IS_SOMATIC
+  BREAKPOINT_ORDER
   )], @_);
 
 
@@ -273,14 +273,14 @@ sub allele_string{
 =head2 structural_variation
 
   Arg [1]    : (optional) Bio::EnsEMBL::Variation::StructuralVariation or 
-	             Bio::EnsEMBL::Variation::SupportingStructuralVariation $structural_variation
+               Bio::EnsEMBL::Variation::SupportingStructuralVariation $structural_variation
   Example    : $sv = $svf->structural_variation();
   Description: Getter/Setter for the structural variant associated with this feature.
                If not set, and this StructuralVariationFeature has an associated adaptor
                an attempt will be made to lazy-load the structural variation from the
                database.
   Returntype : Bio::EnsEMBL::Variation::StructuralVariation or 
-	             Bio::EnsEMBL::Variation::SupportingStructuralVariation
+               Bio::EnsEMBL::Variation::SupportingStructuralVariation
   Exceptions : throw on incorrect argument
   Caller     : general
   Status     : Stable
@@ -292,8 +292,8 @@ sub structural_variation {
 
   if(@_) {
     if(!ref($_[0]) || (!$_[0]->isa('Bio::EnsEMBL::Variation::StructuralVariation') &&
-		                   !$_[0]->isa('Bio::EnsEMBL::Variation::SupportingStructuralVariation')
-		)) {
+                       !$_[0]->isa('Bio::EnsEMBL::Variation::SupportingStructuralVariation')
+    )) {
       throw("Bio::EnsEMBL::Variation::StructuralVariation or Bio::EnsEMBL::Variation::SupportingStructuralVariation argument expected");
     }
     $self->{'structural_variation'} = shift;
@@ -301,12 +301,12 @@ sub structural_variation {
   elsif(!defined($self->{'structural_variation'}) && $self->{'adaptor'} &&
         defined($self->{'structural_variation_id'})) {
     # lazy-load from database on demand
-		my $sva = $self->{'adaptor'}->db()->get_StructuralVariationAdaptor();
-		$self->{'structural_variation'} = $sva->fetch_by_dbID($self->{'structural_variation_id'});
-		if (!defined($self->{'structural_variation'})) {
-			$sva = $self->{'adaptor'}->db()->get_SupportingStructuralVariationAdaptor();
-			$self->{'structural_variation'} = $sva->fetch_by_dbID($self->{'structural_variation_id'});
-		}
+    my $sva = $self->{'adaptor'}->db()->get_StructuralVariationAdaptor();
+    $self->{'structural_variation'} = $sva->fetch_by_dbID($self->{'structural_variation_id'});
+    if (!defined($self->{'structural_variation'})) {
+      $sva = $self->{'adaptor'}->db()->get_SupportingStructuralVariationAdaptor();
+      $self->{'structural_variation'} = $sva->fetch_by_dbID($self->{'structural_variation_id'});
+    }
   }
 
   return $self->{'structural_variation'};
@@ -444,13 +444,13 @@ sub get_all_StructuralVariationOverlaps {
   my $self = shift;
   
   my $vfos =  [
-	@{ $self->get_all_TranscriptStructuralVariations },
-	@{ $self->get_all_RegulatoryFeatureStructuralVariations },
-	@{ $self->get_all_MotifFeatureStructuralVariations },
+  @{ $self->get_all_TranscriptStructuralVariations },
+  @{ $self->get_all_RegulatoryFeatureStructuralVariations },
+  @{ $self->get_all_MotifFeatureStructuralVariations },
   ];
 
   if (my $iv = $self->get_IntergenicStructuralVariation) {
-	push @$vfos, $iv;
+  push @$vfos, $iv;
   }
 
   return $vfos;
@@ -462,8 +462,8 @@ sub get_all_StructuralVariationOverlaps {
   Example     : $svf->get_all_TranscriptStructuralVariations;
   Description : Get all the TranscriptStructuralVariations associated with this
                 StructuralVariationFeature. If the optional list of Transcripts
-				is supplied, get only TranscriptStructuralVariations
-		        associated with those Transcripts.
+        is supplied, get only TranscriptStructuralVariations
+            associated with those Transcripts.
   Returntype  : listref of Bio::EnsEMBL::Variation::TranscriptVariation objects
   Exceptions  : Thrown on wrong argument type
   Caller      : general
@@ -475,49 +475,49 @@ sub get_all_TranscriptStructuralVariations {
   my ($self, $transcripts) = @_;
   
   if ($transcripts) {
-	assert_ref($transcripts, 'ARRAY');
-	map { assert_ref($_, 'Bio::EnsEMBL::Transcript') } @$transcripts;
+  assert_ref($transcripts, 'ARRAY');
+  map { assert_ref($_, 'Bio::EnsEMBL::Transcript') } @$transcripts;
   }
   
   elsif (not defined $self->{transcript_structural_variations}) {
-	# this VariationFeature is not in the database so we have to build the 
-	# TranscriptVariations ourselves
-	
-	unless ($transcripts) {
-	  # if the caller didn't supply some transcripts fetch those around this VariationFeature
-	  # get a slice around this transcript including the maximum distance up and down-stream
-	  # that we still call consequences for
-	  my $slice = $self->feature_Slice->expand(
-		MAX_DISTANCE_FROM_TRANSCRIPT, 
-		MAX_DISTANCE_FROM_TRANSCRIPT
-	  );
-	  
-	  # fetch all transcripts on this slice 
-	  $transcripts = $slice->get_all_Transcripts(1);
-	}
-	
-	my @unfetched_transcripts = grep { 
-	  not exists $self->{transcript_structural_variations}->{$_->stable_id} 
-	} @$transcripts;
-	
-	for my $transcript (@unfetched_transcripts) {
-	  $self->add_TranscriptStructuralVariation(
-		Bio::EnsEMBL::Variation::TranscriptStructuralVariation->new(
-		  -structural_variation_feature  => $self,
-		  -transcript                    => $transcript,
-		  -adaptor                       => undef,
-		)
-	  );
-	}
+  # this VariationFeature is not in the database so we have to build the 
+  # TranscriptVariations ourselves
+  
+  unless ($transcripts) {
+    # if the caller didn't supply some transcripts fetch those around this VariationFeature
+    # get a slice around this transcript including the maximum distance up and down-stream
+    # that we still call consequences for
+    my $slice = $self->feature_Slice->expand(
+    MAX_DISTANCE_FROM_TRANSCRIPT, 
+    MAX_DISTANCE_FROM_TRANSCRIPT
+    );
+    
+    # fetch all transcripts on this slice 
+    $transcripts = $slice->get_all_Transcripts(1);
+  }
+  
+  my @unfetched_transcripts = grep { 
+    not exists $self->{transcript_structural_variations}->{$_->stable_id} 
+  } @$transcripts;
+  
+  for my $transcript (@unfetched_transcripts) {
+    $self->add_TranscriptStructuralVariation(
+    Bio::EnsEMBL::Variation::TranscriptStructuralVariation->new(
+      -structural_variation_feature  => $self,
+      -transcript                    => $transcript,
+      -adaptor                       => undef,
+    )
+    );
+  }
   }
   
   if ($transcripts) {
-	# just return TranscriptVariations for the requested Transcripts
-	return [ map { $self->{transcript_structural_variations}->{$_->stable_id} } @$transcripts ];
+  # just return TranscriptVariations for the requested Transcripts
+  return [ map { $self->{transcript_structural_variations}->{$_->stable_id} } @$transcripts ];
   }
   else {
-	# return all TranscriptVariations
-	return [ values %{ $self->{transcript_structural_variations} } ];
+  # return all TranscriptVariations
+  return [ values %{ $self->{transcript_structural_variations} } ];
   }
 }
 
@@ -567,46 +567,46 @@ sub _get_all_RegulationStructuralVariations {
   my ($self, $type) = @_;
   
   unless ($type && ($type eq 'RegulatoryFeature' || $type eq 'MotifFeature' || $type eq 'ExternalFeature')) {
-	throw("Invalid Ensembl Regulation type '$type'");
+  throw("Invalid Ensembl Regulation type '$type'");
   }
   
   unless ($self->{regulation_structural_variations}->{$type}) {
-	my $fg_adaptor;
-	
-	if (my $adap = $self->adaptor) {
-	  if(my $db = $adap->db) {
-		$fg_adaptor = Bio::EnsEMBL::DBSQL::MergedAdaptor->new(
-		  -species  => $adap->db->species, 
-		  -type     => $type,
-		);			
-	  }
-	  
-	  unless ($fg_adaptor) {
-		warning("Failed to get adaptor for $type");
-		return [];
-	  }
-	}
-	else {
-	  warning('Cannot get variation features without attached adaptor');
-	  return [];
-	}
-	
-	my $slice = $self->feature_Slice;
-	
-	my $constructor = 'Bio::EnsEMBL::Variation::StructuralVariationOverlap';
-	
-	eval {
-	  $self->{regulation_structural_variations}->{$type} = [ 
-		map {  
-		  $constructor->new(
-			-structural_variation_feature  => $self,
-			-feature                       => $_,
-		  );
-		} map { $_->transfer($self->slice) } @{ $fg_adaptor->fetch_all_by_Slice($slice) } 
-	  ];
-	};
-	
-	$self->{regulation_structural_variations}->{$type} ||= [];
+  my $fg_adaptor;
+  
+  if (my $adap = $self->adaptor) {
+    if(my $db = $adap->db) {
+    $fg_adaptor = Bio::EnsEMBL::DBSQL::MergedAdaptor->new(
+      -species  => $adap->db->species, 
+      -type     => $type,
+    );      
+    }
+    
+    unless ($fg_adaptor) {
+    warning("Failed to get adaptor for $type");
+    return [];
+    }
+  }
+  else {
+    warning('Cannot get variation features without attached adaptor');
+    return [];
+  }
+  
+  my $slice = $self->feature_Slice;
+  
+  my $constructor = 'Bio::EnsEMBL::Variation::StructuralVariationOverlap';
+  
+  eval {
+    $self->{regulation_structural_variations}->{$type} = [ 
+    map {  
+      $constructor->new(
+      -structural_variation_feature  => $self,
+      -feature                       => $_,
+      );
+    } map { $_->transfer($self->slice) } @{ $fg_adaptor->fetch_all_by_Slice($slice) } 
+    ];
+  };
+  
+  $self->{regulation_structural_variations}->{$type} ||= [];
   }
   
   return $self->{regulation_structural_variations}->{$type};
@@ -618,15 +618,15 @@ sub get_IntergenicStructuralVariation {
   my $no_ref_check = shift;
   
   unless (exists $self->{intergenic_structural_variation}) {
-	if (scalar(@{ $self->get_all_TranscriptStructuralVariations }) == 0) {
-	  $self->{intergenic_structural_variation} = Bio::EnsEMBL::Variation::IntergenicStructuralVariation->new(
-		-structural_variation_feature  => $self,
-		-no_ref_check                  => $no_ref_check,
-	  );
-	}
-	else {
-	  $self->{intergenic_structural_variation} = undef;
-	}
+  if (scalar(@{ $self->get_all_TranscriptStructuralVariations }) == 0) {
+    $self->{intergenic_structural_variation} = Bio::EnsEMBL::Variation::IntergenicStructuralVariation->new(
+    -structural_variation_feature  => $self,
+    -no_ref_check                  => $no_ref_check,
+    );
+  }
+  else {
+    $self->{intergenic_structural_variation} = undef;
+  }
   }
   
   return $self->{intergenic_structural_variation};
@@ -669,9 +669,9 @@ sub add_TranscriptStructuralVariation {
 =cut
 
 sub var_class {
-	my $self = shift;
+  my $self = shift;
     
-	unless ($self->{class_display_term}) {
+  unless ($self->{class_display_term}) {
         my $display_term = $VARIATION_CLASSES{$self->{class_SO_term}}->{display_term};
 
         warn "No display term for SO term: ".$self->{class_SO_term} unless $display_term;
@@ -679,7 +679,7 @@ sub var_class {
         $self->{class_display_term} = $display_term || $self->{class_SO_term};
     }
 
-	return $self->{class_display_term};
+  return $self->{class_display_term};
 }
 
 
@@ -696,9 +696,9 @@ sub var_class {
 =cut
 
 sub class_SO_term {
-	my $self = shift;
+  my $self = shift;
 
-	return $self->{class_SO_term};
+  return $self->{class_SO_term};
 }
 
 
@@ -742,7 +742,7 @@ sub source_version {
 
 =head2 bound_start
 
-		Args        : None
+    Args        : None
     Example     : my $bound_start = $svf->bound_start();
     Description : Getter/setter for the 5'-most coordinate defined for this StructuralVariationFeature (outer_start or start)
     ReturnType  : int
@@ -753,14 +753,14 @@ sub source_version {
 
 sub bound_start{
   my $self = shift;
-	return $self->{'outer_start'} if (defined($self->{'outer_start'}));
-	return $self->{'start'};
+  return $self->{'outer_start'} if (defined($self->{'outer_start'}));
+  return $self->{'start'};
 }
 
 
 =head2 bound_end
 
-		Args        : None
+    Args        : None
     Example     : my $bound_end = $svf->bound_end();
     Description : Getter/setter for the 3'-most coordinate defined for this StructuralVariationFeature (outer_end or end)
     ReturnType  : int
@@ -771,15 +771,15 @@ sub bound_start{
 
 sub bound_end{
   my $self = shift;
-	return $self->{'outer_end'} if (defined($self->{'outer_end'}));
-	return $self->{'end'};
+  return $self->{'outer_end'} if (defined($self->{'outer_end'}));
+  return $self->{'end'};
 }
 
 
 =head2 outer_start
 
-		Arg [1]     : int $outer_start (optional)
-								  The new value to set the outer_start attribute to
+    Arg [1]     : int $outer_start (optional)
+                  The new value to set the outer_start attribute to
     Example     : my $outer_start = $svf->outer_start();
     Description : Getter/setter for the 5'-most coordinate defined for this StructuralVariationFeature
     ReturnType  : int
@@ -797,8 +797,8 @@ sub outer_start{
 
 =head2 outer_end
 
-	  Arg [1]     : int $outer_end (optional)
-				          The new value to set the outer_end attribute to
+    Arg [1]     : int $outer_end (optional)
+                  The new value to set the outer_end attribute to
     Example     : my $outer_end = $svf->outer_end();
     Description : Getter/setter for the 3'-most coordinate defined for this StructuralVariationFeature
     ReturnType  : int
@@ -816,8 +816,8 @@ sub outer_end{
 
 =head2 inner_start
 
-	Arg [1]       : int $inner_start (optional)
-				          The new value to set the inner_start attribute to
+  Arg [1]       : int $inner_start (optional)
+                  The new value to set the inner_start attribute to
     Example     : my $inner_start = $svf->inner_start();
     Description : Getter/setter for the 5'-less coordinate defined for this StructuralVariationFeature
     ReturnType  : int
@@ -835,8 +835,8 @@ sub inner_start{
 
 =head2 inner_end
 
-	  Arg [1]     : int $inner_end (optional)
-				          The new value to set the inner_end attribute to
+    Arg [1]     : int $inner_end (optional)
+                  The new value to set the inner_end attribute to
     Example     : my $inner_end = $svf->inner_end();
     Description : Getter/setter for the 3'-less coordinate defined for this StructuralVariationFeature
     ReturnType  : int
@@ -857,7 +857,7 @@ sub inner_end{
     Args        : none
     Example     : my $seq = $svf->get_reference_sequence
     Description : returns a string containing the reference sequence for the region
-				  covered by this StructuralVariationFeature
+          covered by this StructuralVariationFeature
     ReturnType  : string
     Exceptions  : none
     Caller      : general
@@ -878,8 +878,8 @@ sub transform {
   my $transformed = $self->SUPER::transform(@_);
   
   if(defined $transformed) {
-		# fit the start and end coords to the new coords
-		$transformed->_fix_bounds($self);
+    # fit the start and end coords to the new coords
+    $transformed->_fix_bounds($self);
   }
   
   return $transformed;
@@ -893,8 +893,8 @@ sub transfer {
   my $transferred = $self->SUPER::transfer(@_);
   
   if(defined $transferred) {
-		# fit the start and end coords to the new coords
-		$transferred->_fix_bounds($self);
+    # fit the start and end coords to the new coords
+    $transferred->_fix_bounds($self);
   }
   
   return $transferred;
@@ -906,11 +906,11 @@ sub _fix_bounds {
   my $old = shift;
   
   if(defined $old->{'outer_start'}) {
-	$self->{'outer_start'} = $self->start - ($old->start - $old->{'outer_start'});
+  $self->{'outer_start'} = $self->start - ($old->start - $old->{'outer_start'});
   }
   
   if(defined $old->{'outer_end'}) {
-	$self->{'outer_end'} = $self->end + ($old->{'outer_end'} - $old->end);
+  $self->{'outer_end'} = $self->end + ($old->{'outer_end'} - $old->end);
   }
 }
 
@@ -923,15 +923,15 @@ sub _sort_svos {
   
   # define a feature order for sorting
   my %feature_order = (
-	'Bio::EnsEMBL::Gene'       => 1,
-	'Bio::EnsEMBL::Transcript' => 2,
-	'Bio::EnsEMBL::Exon'       => 3,
+  'Bio::EnsEMBL::Gene'       => 1,
+  'Bio::EnsEMBL::Transcript' => 2,
+  'Bio::EnsEMBL::Exon'       => 3,
   );
   
   # sort them nicely by feature type and position
   @svos = sort {
-	$feature_order{ref($a->feature)} <=> $feature_order{ref($b->feature)} ||
-	$a->feature->start <=> $b->feature->start
+  $feature_order{ref($a->feature)} <=> $feature_order{ref($b->feature)} ||
+  $a->feature->start <=> $b->feature->start
   } @svos;
   
   $self->{structural_variation_overlaps} = \@svos;
