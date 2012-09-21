@@ -29,21 +29,21 @@
 Bio::EnsEMBL::Variation::StructuralVariation - Ensembl representation of a structural variation.
 
 =head1 SYNOPSIS
-
+    # A Study object
+    $study = $study_adaptor->fetch_by_name('estd59');
+    
     # Structural variation representing a CNV
     $sv = Bio::EnsEMBL::Variation::StructuralVariation->new
-       (-variation_name => 'esv25480',
+       (-variation_name => 'esv234231',
 				-class_so_term => 'structural_variant',
 				-source => 'DGVa',
 				-source_description => 'Database of Genomic Variants Archive',
-				-study_name => 'estd20',
-				-study_description => 'Conrad 2009 "Origins and functional impact of copy number variation in the human genome." PMID:19812545 [remapped from build NCBI36]',
-				-study_url => 'ftp://ftp.ebi.ac.uk/pub/databases/dgva/estd20_Conrad_et_al_2009',
-				-external_reference => 'pubmed/19812545');
+				-is_evidence => 0,
+				-is_somatic => 0);
 
     ...
 
-    print $sv->name(), ":", $sv->var_class();
+    print $sv->variation_name(), ":", $sv->var_class();
 
 =head1 DESCRIPTION
 

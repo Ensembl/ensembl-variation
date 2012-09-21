@@ -30,6 +30,7 @@ Bio::EnsEMBL::Variation::StructuralVariationAnnotation - Annotations for a struc
 
 =head1 SYNOPSIS
   
+  # A study object
   $study = $study_adaptor->fetch_by_name('nstd37');
 
   $sva = Bio::EnsEMBL::Variation::StructuralVariationAnnotation->new

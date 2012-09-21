@@ -33,7 +33,7 @@ Bio::EnsEMBL::Variation::SupportingStructuralVariation - A supporting evidence f
     # Supporting evidence of a structural variation
     $ssv = Bio::EnsEMBL::Variation::SupportingStructuralVariation->new
        (-supporting_structural_evidence => 'ssv001'
-        -structural_variation   => $structural_variation);
+        -structural_variation   => $structural_variation); # a StructuralVariation object
 
     ...
 
