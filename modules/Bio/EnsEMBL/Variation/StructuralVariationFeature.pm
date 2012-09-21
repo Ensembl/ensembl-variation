@@ -35,7 +35,7 @@ Bio::EnsEMBL::Variation::StructuralVariationFeature - A genomic position for a s
        (-start   => 100,
         -end     => 200,
         -strand  => 1,
-        -slice   => $slice,
+        -slice   => $slice, # a Slice object (Core API) 
         -variation_name => 'esv1001',
         -class_so_term => 'copy_number_variation',
         -source => 'DGVa',
