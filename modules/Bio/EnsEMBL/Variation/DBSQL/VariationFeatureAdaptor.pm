@@ -390,50 +390,52 @@ sub _internal_fetch_all_with_annotation_by_Slice{
 		throw('Bio::EnsEMBL::Slice arg expected');
 	}
 	
-	my $extra_sql = '';
+  my $extra_sql = '';
+  my $extra_table = '';
     
-    if(defined $v_source) {
+  if(defined $v_source) {
 		$extra_sql .= qq{ AND s.name = '$v_source' };
-    }
+  }
     
-    if(defined $p_source) {
+  if(defined $p_source) {
 		$extra_sql .= qq{ AND ps.name = '$p_source' };
-    }
+  }
     
-    if(defined $annotation) {
-		if($annotation =~ /^[0-9]+$/) {
-		  $extra_sql .= qq{ AND p.phenotype_id = $annotation };
-		}
-		else {
-		  $extra_sql .= qq{ AND (p.name = '$annotation' OR p.description LIKE '%$annotation%') };
-		}
+  if(defined $annotation) {
+    if($annotation =~ /^[0-9]+$/) {
+      $extra_sql .= qq{ AND va.phenotype_id = $annotation };
     }
+    else {
+      $extra_sql .= qq{ AND va.phenotype_id = p.phenotype_id 
+                        AND (p.name = '$annotation' OR p.description LIKE '%$annotation%') };
+      $extra_table .= qq{, phenotype p};
+    }
+  }
     
     if ($constraint) {
         $extra_sql .= qq{ AND $constraint };
     }
     
-    # Add the constraint for failed variations
-    $extra_sql .= " AND " . $self->db->_exclude_failed_variations_constraint();
+  # Add the constraint for failed variations
+  $extra_sql .= " AND " . $self->db->_exclude_failed_variations_constraint();
     
-    my $cols = join ",", $self->_columns();
+  my $cols = join ",", $self->_columns();
     
-    my $sth = $self->prepare(qq{
+  my $sth = $self->prepare(qq{
 		SELECT $cols
 		FROM (variation_feature vf, variation_annotation va,
-		phenotype p, source s, source ps, study st) # need to link twice to source
+		source s, source ps, study st $extra_table) # need to link twice to source
 		LEFT JOIN failed_variation fv ON (fv.variation_id = vf.variation_id)
 		WHERE va.study_id = st.study_id
 		AND st.source_id = ps.source_id
 		AND vf.source_id = s.source_id
 		AND vf.variation_id = va.variation_id
-		AND va.phenotype_id = p.phenotype_id
 		$extra_sql
 		AND vf.seq_region_id = ?
 		AND vf.seq_region_end > ?
 		AND vf.seq_region_start < ?
 		GROUP BY vf.variation_feature_id
-    });
+  });
     
     $sth->execute($slice->get_seq_region_id, $slice->start, $slice->end);
     
@@ -651,6 +653,7 @@ sub _internal_fetch_all_with_annotation {
     my ($self, $v_source, $p_source, $annotation, $constraint) = @_;
     
     my $extra_sql = '';
+    my $extra_table = '';
     
     if(defined $v_source) {
         $extra_sql .= qq{ AND s.name = '$v_source' };
@@ -662,10 +665,12 @@ sub _internal_fetch_all_with_annotation {
     
     if(defined $annotation) {
         if($annotation =~ /^[0-9]+$/) {
-          $extra_sql .= qq{ AND p.phenotype_id = $annotation };
+          $extra_sql .= qq{ AND va.phenotype_id = $annotation };
         }
         else {
-          $extra_sql .= qq{ AND (p.name = '$annotation' OR p.description LIKE '%$annotation%') };
+          $extra_sql .= qq{ AND va.phenotype_id = p.phenotype_id 
+					                  AND (p.name = '$annotation' OR p.description LIKE '%$annotation%') };
+					$extra_table .= qq{, phenotype p};
         }
     }
     
@@ -681,13 +686,12 @@ sub _internal_fetch_all_with_annotation {
     my $sth = $self->prepare(qq{
         SELECT $cols
         FROM (variation_feature vf, variation_annotation va,
-        phenotype p, source s, source ps, study st) # need to link twice to source
+        source s, source ps, study st $extra_table) # need to link twice to source
         LEFT JOIN failed_variation fv ON (fv.variation_id = vf.variation_id)
         WHERE va.study_id = st.study_id
         AND st.source_id = ps.source_id 
         AND vf.source_id = s.source_id
         AND vf.variation_id = va.variation_id
-        AND va.phenotype_id = p.phenotype_id
         $extra_sql
         GROUP BY vf.variation_feature_id
     });
