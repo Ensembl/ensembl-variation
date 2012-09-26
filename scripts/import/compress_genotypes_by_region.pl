@@ -44,7 +44,7 @@ $genotype_table ||= 'tmp_individual_genotype_single_bp';
 $monoploid = 0 unless defined($monoploid);
 $jump ||= 10000000;
 
-$selected_seq_region ||= $ENV{LSB_JOBINDEX} if defined($ENV{LSB_JOBINDEX});
+#$selected_seq_region ||= $ENV{LSB_JOBINDEX} if defined($ENV{LSB_JOBINDEX});
 undef $selected_seq_region unless $selected_seq_region;
 
 $TMP_FILE .= "_".$selected_seq_region if defined($selected_seq_region);
@@ -77,7 +77,7 @@ my $gca = $reg->get_adaptor($species, 'variation', 'genotypecode');
 my %codes = map {(join "|", @{$_->genotype}) => $_->dbID} @{$gca->fetch_all()};
 my $max_code = (sort {$a <=> $b} values %codes)[-1] || 0;
 
-my $flipped_status = defined($no_flip) ? undef : flipped_status($dbVar);
+my $flipped_status = defined($no_flip) ? {} : flipped_status($dbVar);
 
 $has_proxy = 0;
 
@@ -237,11 +237,12 @@ sub compress_genotypes{
 			my $genotypes = {}; #hash containing all the genotypes
 			
 			while ($sth->fetch) {
+				next unless defined($sample_id);
 				
-				unless(defined($no_flip)) {
-					my $flipped = (defined($flipped_status->{$variation_id}) ? $flipped_status->{$variation_id} : undef);
-					reverse_alleles($seq_region_strand, $flipped, \$allele_1, \$allele_2);
-				}
+				#unless(defined($no_flip)) {
+				my $flipped = (defined($flipped_status->{$variation_id}) ? $flipped_status->{$variation_id} : undef);
+				reverse_alleles($seq_region_strand, $flipped, \$allele_1, \$allele_2);
+				#}
 				
 				my $genotype = ($monoploid ? $allele_1 : $allele_1.'|'.$allele_2);
 				my $genotype_code = $codes{$genotype};
@@ -347,9 +348,14 @@ sub import_genotypes{
     my $dbVar = shift;
 
     #debug("Importing compressed genotype data");
-    my $call = "mv $TMP_DIR/$dump_file $TMP_DIR/$TMP_FILE";
-    system($call);
-    load($dbVar,qw(compressed_genotype_region sample_id seq_region_id seq_region_start seq_region_end seq_region_strand genotypes));
+	#debug("mv $TMP_DIR/$dump_file $TMP_DIR/$TMP_FILE");
+	
+	$dbVar->do(qq{LOAD DATA LOCAL INFILE "$TMP_DIR/$dump_file" INTO TABLE compressed_genotype_region});
+	unlink("$TMP_DIR/$dump_file");
+	
+    #my $call = "mv $TMP_DIR/$dump_file $TMP_DIR/$TMP_FILE";
+    #system($call);
+    #load($dbVar,qw(compressed_genotype_region sample_id seq_region_id seq_region_start seq_region_end seq_region_strand genotypes));
 }
 
 #
@@ -423,7 +429,7 @@ sub flipped_status {
 	
 	my ($var_id, $flipped);
 	
-	my $sth = $dbVar->prepare("SELECT variation_id, flipped FROM variation WHERE flipped IS NOT NULL");
+	my $sth = $dbVar->prepare("SELECT variation_id, flipped FROM variation WHERE flipped IS NOT NULL", {mysql_use_result => 1});
 	$sth->execute;
 	$sth->bind_columns(\$var_id, \$flipped);
 		
