@@ -74,10 +74,10 @@ foreach my $file (sort {$files_size->{$b} <=> $files_size->{$a}} keys %{$files_s
 	
     @stats = stat($file);
     if ($stats[7] > MAX_SIZE){
-		$call .= " -q basement  -R'select[mem>15000] rusage[mem=15000]' -M15000000 ";
+		$call .= " -q hugemem  -R'select[mem>28000] rusage[mem=28000]' -M28000000 ";
     }
 	else {
-		$call .= " -q basement  -R'select[mem>4000] rusage[mem=4000]' -M4000000 ";
+		$call .= " -q basement  -R'select[mem>8000] rusage[mem=8000]' -M8000000 ";
 	}
     $call .= "perl calculate_ld_table.pl -tmpdir $TMP_DIR -tmpfile $TMP_FILE -ldfile $file ";
     print $call,"\n";
@@ -108,10 +108,10 @@ foreach my $file (sort {$files_size->{$b} <=> $files_size->{$a}} keys %{$files_s
 	$call = "bsub -J tag_snps_$1\_$2 -o $TMP_DIR\/$1\_$2\_farm.out ";
 	
     if ($files_size->{$file} > MAX_SIZE){
-		$call .= " -q basement  -R'select[mem>15000] rusage[mem=15000]' -M15000000 ";
+		$call .= " -q hugemem  -R'select[mem>28000] rusage[mem=28000]' -M28000000 ";
     }
 	else {
-		$call .= " -q basement  -R'select[mem>4000] rusage[mem=4000]' -M4000000 ";
+		$call .= " -q basement  -R'select[mem>8000] rusage[mem=8000]' -M8000000 ";
 	}
     $call .= "/software/bin/perl select_tag_snps.pl $file ";
     $call .= " -tmpdir $TMP_DIR -species $species";
@@ -146,6 +146,9 @@ sub store_file{
 	while( my( $variation_id, $gt_code, $gap ) = splice @genotypes, 0, 3 ) {
 		
 		my ($allele_1, $allele_2) = split /\|/, $codes{$gt_code};
+		
+		$allele_1 ||= '-';
+		$allele_2 ||= '-';
 		
 		print_buffered($buffer,"$TMP_DIR/dump_data_$population_id\_$seq_region_id.txt",join("\t",$snp_start,$individual_id,$allele_1,$allele_2)."\n");
 		
