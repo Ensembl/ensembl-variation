@@ -18,7 +18,7 @@ $| = 1;
 my %Printable = ( "\\"=>'\\', "\r"=>'r', "\n"=>'n', "\t"=>'t', "\""=>'"' );
 
 
-my ($TMP_DIR, $TMP_FILE, $species, $registry_file, $genotype_table, $start_sp_id, $monoploid, $jump, $flip, $straight);
+my ($TMP_DIR, $TMP_FILE, $species, $registry_file, $genotype_table, $start_sp_id, $monoploid, $jump, $flip, $straight, $no_sort);
 
 GetOptions(
 	'tmpdir=s'        => \$TMP_DIR,
@@ -31,6 +31,7 @@ GetOptions(
 	'jump=s'          => \$jump,
 	'flip'            => \$flip,
 	'straight'        => \$straight,
+	'no_sort'         => \$no_sort,
 );
 
 
@@ -39,6 +40,7 @@ $genotype_table ||= 'tmp_individual_genotype_single_bp';
 $start_sp_id ||= 1;
 $jump ||= 100000;
 $monoploid = 0 unless defined($monoploid);
+$no_sort ||= 0;
 
 warn("Make sure you have an updated ensembl.registry file!\n");
 
@@ -60,21 +62,51 @@ my $dbVar = $vdba->dbc->db_handle;
 $ImportUtils::TMP_DIR = $TMP_DIR;
 $ImportUtils::TMP_FILE = $TMP_FILE;
 
-print "Loading genotype codes\n";
+debug("Examining table types");
+
+# find out if this is a MRG_MyISAM table
+my $desc_sth = $dbVar->prepare("SHOW CREATE TABLE $genotype_table");
+$desc_sth->execute();
+
+my ($tmp_table, $create_sql);
+$desc_sth->bind_columns(\$tmp_table, \$create_sql);
+$desc_sth->fetch();
+
+if($create_sql =~ /mrg_myisam/i) {
+	debug("Specified genotype table looks like a MRG_MyISAM table - forcing --straight");
+	$straight = 1;
+	
+	unless($no_sort) {
+		debug("Sorting tables - this may take a while!");
+		
+		if($create_sql =~ m/UNION\=\(([\w\`\,]+?)\)/i) {
+			my @sub_tables = split /\,/, $1;
+			$_ =~ s/\`//g for @sub_tables;
+			
+			foreach my $sub_table(@sub_tables) {
+				debug("Sorting $sub_table");
+				$dbVar->do("ALTER TABLE $sub_table ORDER BY variation_id, subsnp_id");
+			}
+		}
+	}
+}
+
+exit(0);
+
+debug("Loading genotype codes");
 
 # genotype codes
 my $gca = $reg->get_adaptor($species, 'variation', 'genotypecode');
 my %codes = map {(join "|", @{$_->genotype}) => $_->dbID} @{$gca->fetch_all()};
 my $max_code = (sort {$a <=> $b} values %codes)[-1] || 0;
 
-print "Getting flipped status\n";
+debug("Getting flipped status");
 
 # flipped status
 my $flipped_status = defined($flip) ? flipped_status($dbVar) : undef;
 
 # set value for progress
 my $prev_percent;
-
 
 compress_genotypes($dbCore,$dbVar);
 
@@ -140,7 +172,7 @@ sub compress_genotypes{
 			# we do a bit of trickery here to help slow old MySQL
 			# first write out a file containing a range of var IDs
 			$dbVar->do(qq{TRUNCATE $tmp_var_table});
-			open TMP_VAR, ">$TMP_DIR/$tmp_var_table\.txt";
+			open TMP_VAR, ">$TMP_DIR/$tmp_var_table\.txt" or die "Could not write to temporary file $TMP_DIR/$tmp_var_table\.txt\n";
 			print TMP_VAR "$_\n" for ($low..($low+$jump)-1);
 			close TMP_VAR;
 			
@@ -180,6 +212,8 @@ sub compress_genotypes{
 			$allele_1 ||= "";
 			$allele_2 ||= "";
 			
+			next unless defined($sample_id);
+			
 			my $combo_id = $var_id."\t".$ss_id;
 			my $use_id = defined($straight) ? $combo_id : $var_id;
 			
@@ -206,6 +240,9 @@ sub compress_genotypes{
 			}
 			
 			$genotypes{$combo_id} .= escape(pack("ww", $sample_id, $genotype_code));
+			
+			#print "Encoding $genotype as $sample_id $genotype_code\n";
+			#exit(0);
 			
 			$previous_var_id = $use_id;
 		}
@@ -310,7 +347,7 @@ sub flipped_status {
 		SELECT variation_id, flipped
 		FROM variation v
 		WHERE flipped = 1
-	});
+	}, {mysql_use_result => 1});
 	$sth->execute;
 	$sth->bind_columns(\$var_id, \$flipped);
 		
@@ -362,4 +399,35 @@ sub progress {
 sub end_progress {
     progress(1,1);
     print "\n";
+}
+# gets time
+sub get_time() {
+    my @time = localtime(time());
+
+    # increment the month (Jan = 0)
+    $time[4]++;
+
+    # add leading zeroes as required
+    for my $i(0..4) {
+        $time[$i] = "0".$time[$i] if $time[$i] < 10;
+    }
+
+    # put the components together in a string
+    my $time =
+        ($time[5] + 1900)."-".
+        $time[4]."-".
+        $time[3]." ".
+        $time[2].":".
+        $time[1].":".
+        $time[0];
+
+    return $time;
+}
+
+# prints debug output with time
+sub debug {
+    my $text = (@_ ? (join "", @_) : "No message");
+    my $time = get_time;
+    
+    print $time." - ".$text.($text =~ /\n$/ ? "" : "\n");
 }
