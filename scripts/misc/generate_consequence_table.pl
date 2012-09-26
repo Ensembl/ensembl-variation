@@ -122,20 +122,17 @@ for my $d_term (sort {$consequences_rank{$a} <=> $consequences_rank{$b}} keys(%c
     $row =~ s/\|/<\/td>\n\t<td>/g;
     
     # Fetch the group colour
-    if (!defined($c)) {
-      $row =~ /^(\S+)</;
-      $c = $colour{lc($1)} if ($colour{lc($1)});
-    }
+    $row =~ /^(\S+)</;
+    $c = $colour{lc($1)} if ($colour{lc($1)});
+    
     $cons_line .= qq{</tr>\n<tr$bg>\n} if ($line !=1 );
+    $cons_line .= (defined($c)) ? qq{\t<td style="padding:0px;margin:0px;background-color:$c"></td>} : qq{<td></td>};
     $cons_line .= qq{\t<td>$row</td>\n};
     $cons_line .= qq{\t<td$rspan>$d_term</td>\n} if ($line == 1);
     $line ++;
   }
   
-  my $first_col = (defined($c)) ? qq{\t<td$rspan style="padding:0px;margin:0px;background-color:$c"></td>} : qq{<td$rspan></td>};
-  
-  $cons_table .= qq{<tr$bg>\n$first_col\n};
-  $cons_table .= qq{$cons_line</tr>\n};
+  $cons_table .= qq{<tr$bg>\n$cons_line</tr>\n};
   
   $bg = ($bg eq '') ? qq{ class="bg2"} : '';
   
