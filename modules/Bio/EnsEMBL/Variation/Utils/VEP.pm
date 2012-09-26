@@ -2695,6 +2695,21 @@ sub check_existing_hash {
     my $vf_hash = shift;
     my $variation_cache;
     
+    # we only care about non-SVs here
+    my %new_hash;
+    
+    foreach my $chr(keys %{$vf_hash}) {
+        foreach my $chunk(keys %{$vf_hash->{$chr}}) {
+            foreach my $pos(keys %{$vf_hash->{$chr}->{$chunk}}) {
+                foreach my $var(grep {$_->isa('Bio::EnsEMBL::Variation::VariationFeature')} @{$vf_hash->{$chr}->{$chunk}->{$pos}}) {
+                    push @{$new_hash{$chr}->{$chunk}->{$pos}}, $var;
+                }
+            }
+        }
+    }
+    
+    $vf_hash = \%new_hash;
+    
     debug("Checking for existing variations") unless defined($config->{quiet});
     
     my ($chunk_count, $counter);
@@ -4425,7 +4440,7 @@ sub is_var_novel {
         $existing_alleles{$_} = 1 for split /\//, $existing_var->[4];
         
         my $seen_new = 0;
-        foreach my $a(split /\//, $new_var->allele_string) {
+        foreach my $a(split /\//, ($new_var->allele_string || "")) {
             reverse_comp(\$a) if $new_var->strand ne $existing_var->[5];
             $seen_new = 1 unless defined $existing_alleles{$a};
         }
