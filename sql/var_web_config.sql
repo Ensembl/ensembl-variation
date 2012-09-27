@@ -96,28 +96,28 @@ order by name asc;
 # add structural variation sets
 insert into meta(species_id, meta_key, meta_value)
 values
-(NULL, 'web_config', "sv_set#1000 Genomes - Low coverage#1kg_lc");
+(NULL, 'web_config', "sv_set#1000 Genomes - Low coverage#sv_set_1kg_lc");
 
 insert into meta(species_id, meta_key, meta_value)
 values
-(NULL, 'web_config', "sv_set#1000 Genomes - High coverage - Trios#1kg_hct");
+(NULL, 'web_config', "sv_set#1000 Genomes - High coverage - Trios#sv_set_1kg_hct");
 
 insert into meta(species_id, meta_key, meta_value)
 values
-(NULL, 'web_config', "sv_set#1000 Genomes - All#1kg");
+(NULL, 'web_config', "sv_set#1000 Genomes - All#sv_set_1kg");
 
 insert into meta(species_id, meta_key, meta_value)
 values
-(NULL, 'web_config', "sv_set#1000 Genomes - EUR#1kg_eur");
+(NULL, 'web_config', "sv_set#1000 Genomes - EUR#sv_set_1kg_eur");
 
 insert into meta(species_id, meta_key, meta_value)
 values
-(NULL, 'web_config', "sv_set#1000 Genomes - ASN#1kg_asn");
+(NULL, 'web_config', "sv_set#1000 Genomes - ASN#sv_set_1kg_asn");
 
 insert into meta(species_id, meta_key, meta_value)
 values
-(NULL, 'web_config', "sv_set#1000 Genomes - AMR#1kg_amr");
+(NULL, 'web_config', "sv_set#1000 Genomes - AMR#sv_set_1kg_amr");
 
 insert into meta(species_id, meta_key, meta_value)
 values
-(NULL, 'web_config', "sv_set#1000 Genomes - AFR#1kg_afr");
+(NULL, 'web_config', "sv_set#1000 Genomes - AFR#sv_set_1kg_afr");
