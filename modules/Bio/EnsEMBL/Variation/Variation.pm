@@ -814,14 +814,16 @@ sub three_prime_flanking_seq{
 =cut
 
 sub get_all_IndividualGenotypes {
-    my $self = shift;
+  my $self = shift;
   my $individual = shift;
-    if (defined ($self->{'adaptor'})){
-  my $igtya = $self->{'adaptor'}->db()->get_IndividualGenotypeAdaptor();
   
-  return $igtya->fetch_all_by_Variation($self, $individual);
-    }
-    return [];
+  if (defined ($self->{'adaptor'})){
+    my $igtya = $self->{'adaptor'}->db()->get_IndividualGenotypeAdaptor();
+    
+    return $igtya->fetch_all_by_Variation($self, $individual);
+  }
+  
+  return [];
 }
 
 =head2 get_all_PopulationGenotypes
@@ -1158,6 +1160,23 @@ sub get_all_VariationAnnotations {
     # Get the annotations from the database
     return $self->adaptor->db->get_VariationAnnotationAdaptor()->fetch_all_by_Variation($self);
 
+}
+
+sub display_consequence {
+    my $self = shift;
+    
+    my @ocs = map {@{$_->get_all_OverlapConsequences}} @{$self->get_all_VariationFeatures};
+    
+    my $highest;
+    
+    for my $cons (@ocs) {
+        $highest ||= $cons;
+        if ($cons->rank < $highest->rank) {
+            $highest = $cons;
+        }
+    }
+	
+    return $highest->label;
 }
 
 1;
