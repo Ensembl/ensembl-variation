@@ -113,8 +113,10 @@ sub genotype {
 
 =head2 genotype_string
 
+  Arg [1]    : (optional) bool $sort
   Examples   : $genotype_string = $genotype->genotype_string;
-  Description: Gets the genotype as a '|'-separated string.
+  Description: Gets the genotype as a '|'-separated string. Pass "1" as first
+               argument to alphabetically sort genotype.
   Returntype : string
   Exceptions : none
   Caller     : general
@@ -122,8 +124,8 @@ sub genotype {
 
 =cut
 
-sub genotype_string {
-  return join '|', @{$_[0]->genotype || []};
+sub genotype_string {  
+  return join '|', ($_[1] ? sort @{$_[0]->genotype || []} : @{$_[0]->genotype} || []);
 }
 
 =head2 variation
