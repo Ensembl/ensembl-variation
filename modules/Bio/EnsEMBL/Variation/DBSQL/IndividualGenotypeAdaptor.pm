@@ -176,23 +176,29 @@ sub fetch_all_by_Variation {
 		return [];
     }
 	
-	my $results = $self->generic_fetch("g.variation_id = " . $variation->dbID());
+	my $results;
 	
-	# individual can be an individual or a population
+	# check cache
+	if(!defined($self->{_cache}->{$variation->dbID})) {
+		$self->{_cache}->{$variation->dbID} = $self->generic_fetch("g.variation_id = " . $variation->dbID());
+		$_->variation($variation) for @{$self->{_cache}->{$variation->dbID}};
+	}
+	
 	if (defined $individual && defined $individual->dbID){
 		if($individual->isa('Bio::EnsEMBL::Variation::Individual')) {
-			@$results = grep {$_->individual->dbID == $individual->dbID} @$results;
+			@$results = grep {$_->individual->dbID == $individual->dbID} @{$self->{_cache}->{$variation->dbID}};
 		}
 		elsif($individual->isa('Bio::EnsEMBL::Variation::Population')) {
 			my %include = map {$_->dbID => 1} @{$individual->get_all_Individuals};			
-			@$results = grep {$include{$_->individual->dbID}} @$results;
+			@$results = grep {$include{$_->individual->dbID}} @{$self->{_cache}->{$variation->dbID}};
 		}
 		else {
 			throw("Argument supplied is not of type Bio::EnsEMBL::Variation::Sample");
 		}
 	}
-	
-	$_->variation($variation) for @$results;
+	else {
+		$results = $self->{_cache}->{$variation->dbID};
+	}
 	
 	# flip genotypes for flipped variations
 	#if(defined $variation->flipped && $variation->flipped == 1) {
