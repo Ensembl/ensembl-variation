@@ -35,15 +35,14 @@ $config->{mem}      ||= 12000000;
 $config->{queue}    ||= 'normal';
 
 # check dir exists
-die "ERROR: Directory ".$config->{dir}." does not exist\n" unless -e $config->{dir};
+die "ERROR: Dump directory ".$config->{dir}." does not exist\n" unless -e $config->{dir};
 
 # check version defined
 die "ERROR: No Ensembl DB version defined - use --version [version]\n" unless defined($config->{version});
 
 # check command supplied looks sensible
-die "ERROR: Supplied command doesn't look right, it should look something like:\nperl -I /include/perl/libs/ /path/to/variant_effect_predictor.pl --build all" unless
-	$config->{command} =~ /\-build (all|\w+)/ &&
-	$config->{command} =~ /variant_effect_predictor/;
+die "ERROR: Supplied command doesn't look right, it should look something like:\n\nperl -I /include/perl/libs/ /path/to/variant_effect_predictor.pl --build all\n\n"
+	unless $config->{command} =~ /variant_effect_predictor.+\-build (all|\w+)/;
 
 # parse hosts
 $config->{hosts} = [split /\,/, $config->{hosts}];
@@ -99,7 +98,8 @@ sub get_species_list {
 	@dbs = grep {$_ =~ /$pattern/} @dbs if defined($pattern);
 	
 	# remove version, build
-	$_ =~ s/^([a-z]+\_[a-z]+)(.+)/$1/ for @dbs;
+	$_ =~ s/^([a-z]+\_[a-z]+)(\_[a-z]+)?(.+)/$1$2/ for @dbs;
+	$_ =~ s/\_core$// for @dbs;
 	
 	return \@dbs;
 }
@@ -111,7 +111,7 @@ sub dump_vep {
 	
 	# check if dir exists
 	if(!defined($config->{overwrite}) && -e $config->{dir}.'/'.$species.'/'.$config->{version}) {
-		debug("Dump directory found for $species, skipping (use --overwrite to overwrite)\n");
+		debug("Existing dump directory found for $species, skipping (use --overwrite to overwrite)\n");
 		return;
 	}
 	
@@ -149,7 +149,7 @@ sub tar {
 	
 	# check if tar exists
 	if(!defined($config->{overwrite}) && -e $tar_file) {
-		debug("Dump file found for $species, skipping (use --overwrite to overwrite)\n");
+		debug("Existing dump file found for $species, skipping (use --overwrite to overwrite)\n");
 		return;
 	}
 	
