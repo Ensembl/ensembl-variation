@@ -244,6 +244,9 @@ sub compress_genotypes{
 				reverse_alleles($seq_region_strand, $flipped, \$allele_1, \$allele_2);
 				#}
 				
+				$allele_1 ||= '';
+				$allele_2 ||= '';
+				
 				my $genotype = ($monoploid ? $allele_1 : $allele_1.'|'.$allele_2);
 				my $genotype_code = $codes{$genotype};
 				
