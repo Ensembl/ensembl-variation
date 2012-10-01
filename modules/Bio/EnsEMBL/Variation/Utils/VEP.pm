@@ -2839,7 +2839,7 @@ sub check_svs_hash {
             
             # check for structural variations
             if(defined($config->{sa})) {
-                my $slice = $config->{sa}->fetch_by_region('chromosome', $chr, $start, $end);
+                my $slice = $config->{sa}->fetch_by_region(undef, $chr, $start, $end);
                 
                 if(defined($slice)) {
                     my $svs = $config->{svfa}->fetch_all_by_Slice($slice);
