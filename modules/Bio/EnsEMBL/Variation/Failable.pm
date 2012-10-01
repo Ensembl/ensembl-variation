@@ -1,3 +1,4 @@
+
 =head1 LICENSE
 
   Copyright (c) 1999-2012 The European Bioinformatics Institute and
@@ -36,6 +37,8 @@ This object returns failed information.
 
 use strict;
 use warnings;
+
+use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 
 package Bio::EnsEMBL::Variation::Failable;
 
