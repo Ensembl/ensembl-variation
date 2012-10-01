@@ -172,14 +172,14 @@ our %FILTER_SHORTCUTS = (
     coding_change => {
         stop_lost            => 1,
         stop_gained          => 1,
-        non_synonymous_codon => 1,
+        missense_variant     => 1,
         frameshift_variant   => 1,
-        inframe_codon_gain   => 1,
-        inframe_codon_lost   => 1,
+        inframe_insertion    => 1,
+        inframe_deletion     => 1,
     },
     regulatory => {
         regulatory_region_variant => 1,
-        TF_binding_site_variant => 1,
+        TF_binding_site_variant   => 1,
     },
 );
 
@@ -837,12 +837,12 @@ sub get_all_consequences {
     
     # get trimmed regions - allows us to discard out-of-range transcripts
     # when using cache
-    if(defined($config->{cache})) {
-        my $tmp = $config->{cache};
-        delete $config->{cache};
-        $trim_regions = regions_from_hash($config, \%vf_hash);
-        $config->{cache} = $tmp;
-    }
+    #if(defined($config->{cache})) {
+    #    my $tmp = $config->{cache};
+    #    delete $config->{cache};
+    #    $trim_regions = regions_from_hash($config, \%vf_hash);
+    #    $config->{cache} = $tmp;
+    #}
     
     # prune caches
     prune_cache($config, $config->{tr_cache}, $regions, $config->{loaded_tr});
@@ -912,6 +912,8 @@ sub get_all_consequences {
                     # some plugins may cache stuff, check for this and try and
                     # reconstitute it into parent's plugin cache
                     foreach my $plugin(@{$config->{plugins}}) {
+                        
+                        next unless defined($plugin->{has_cache});
                         
                         # delete unnecessary stuff and stuff that can't be serialised
                         delete $plugin->{$_} for qw(config feature_types variant_feature_types version feature_types_wanted variant_feature_types_wanted params);
@@ -1592,8 +1594,7 @@ sub tva_to_line {
     my $line = init_line($config, $tva->variation_feature, $base_line);
     
     # HGVS
-    if(defined $config->{hgvs}) {
-        my $hgvs_t = $tva->hgvs_transcript;
+    if(defined $config->{hgvs}) {my $hgvs_t = $tva->hgvs_transcript;
         my $hgvs_p = $tva->hgvs_protein;
         
         $line->{Extra}->{HGVSc} = $hgvs_t if $hgvs_t;
@@ -1896,7 +1897,7 @@ sub filter_by_consequence {
     my ($yes, $no) = (0, 0);
     
     # get all consequences across all term types
-    my @types = ('SO', 'display', 'NCBI');
+    my @types = ('SO', 'display');
     
     my @cons;
     push @cons, @{$vf->consequence_type($_)} for @types;
@@ -1912,7 +1913,7 @@ sub filter_by_consequence {
                 }
             }   
             for my $mfv (@{ $vf->get_all_MotifFeatureVariations }) {
-                for my $mfva(@{$mfv->get_all_alternate_MotifFeatureVarationAlleles}) {
+                for my $mfva(@{$mfv->get_all_alternate_MotifFeatureVariationAlleles}) {
                     push @cons, map {$_->$term_method} @{ $mfva->get_all_OverlapConsequences };
                 }
             }
@@ -2250,6 +2251,7 @@ sub whole_genome_fetch_transcript {
             ) {
                 # pinch slice from slice cache if we don't already have it
                 $vf->{slice} ||= $slice_cache->{$chr};
+                $vf->{slice} = $slice_cache->{$chr} if defined($vf->{slice}->{is_fake});
                 
                 my $tv = Bio::EnsEMBL::Variation::TranscriptVariation->new(
                     -transcript        => $tr,
@@ -2693,6 +2695,21 @@ sub check_existing_hash {
     my $vf_hash = shift;
     my $variation_cache;
     
+    # we only care about non-SVs here
+    my %new_hash;
+    
+    foreach my $chr(keys %{$vf_hash}) {
+        foreach my $chunk(keys %{$vf_hash->{$chr}}) {
+            foreach my $pos(keys %{$vf_hash->{$chr}->{$chunk}}) {
+                foreach my $var(grep {$_->isa('Bio::EnsEMBL::Variation::VariationFeature')} @{$vf_hash->{$chr}->{$chunk}->{$pos}}) {
+                    push @{$new_hash{$chr}->{$chunk}->{$pos}}, $var;
+                }
+            }
+        }
+    }
+    
+    $vf_hash = \%new_hash;
+    
     debug("Checking for existing variations") unless defined($config->{quiet});
     
     my ($chunk_count, $counter);
@@ -2852,9 +2869,24 @@ sub get_slice {
     my $otherfeatures = shift;
     $otherfeatures ||= '';
     
-    return undef unless defined($config->{sa}) && defined($chr);
-    
     my $slice;
+    
+    # with a FASTA DB we can just spoof slices
+    if(defined($config->{fasta_db})) {
+        $slice = Bio::EnsEMBL::Slice->new(
+			-COORD_SYSTEM      => $config->{coord_system},
+			-START             => 1,
+			-END               => $config->{fasta_db}->length($chr),
+			-SEQ_REGION_NAME   => $chr,
+			-SEQ_REGION_LENGTH => $config->{fasta_db}->length($chr)
+		);
+        
+        $slice->{is_fake} = 1;
+        
+        return $slice;
+    }
+    
+    return undef unless defined($config->{sa}) && defined($chr);
     
     # first try to get a chromosome
     eval { $slice = $config->{$otherfeatures.'sa'}->fetch_by_region('chromosome', $chr); };
@@ -3827,6 +3859,8 @@ sub cache_reg_feats {
             my $sub_slice = $slice->sub_Slice($s, $e);
             $sub_slice->{coord_system}->{adaptor} = $config->{csa};
             
+            next unless defined($sub_slice);
+            
             foreach my $type(@REG_FEAT_TYPES) {
                 my $features = $config->{$type.'_adaptor'}->fetch_all_by_Slice($sub_slice);
                 next unless defined($features);
@@ -4306,6 +4340,18 @@ sub write_cache_info {
         print OUT "\n";
     }
     
+    # sift/polyphen versions
+    foreach my $tool(qw(sift polyphen)) {
+        if(defined($config->{$tool})) {
+            my $var_mca = $config->{reg}->get_adaptor($config->{species}, 'variation', 'metacontainer');
+            
+            if(defined($var_mca)) {
+                my $version = $var_mca->list_value_by_key($tool.'_version');
+                print OUT "$tool\_version\t".$version->[0]."\n" if defined($version) and scalar @$version;
+            }
+        }
+    }
+    
     close OUT;
 }
 
@@ -4421,7 +4467,7 @@ sub is_var_novel {
         $existing_alleles{$_} = 1 for split /\//, $existing_var->[4];
         
         my $seen_new = 0;
-        foreach my $a(split /\//, $new_var->allele_string) {
+        foreach my $a(split /\//, ($new_var->allele_string || "")) {
             reverse_comp(\$a) if $new_var->strand ne $existing_var->[5];
             $seen_new = 1 unless defined $existing_alleles{$a};
         }
