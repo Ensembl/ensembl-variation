@@ -2889,12 +2889,7 @@ sub get_slice {
     return undef unless defined($config->{sa}) && defined($chr);
     
     # first try to get a chromosome
-    eval { $slice = $config->{$otherfeatures.'sa'}->fetch_by_region('chromosome', $chr); };
-    
-    # if failed, try to get any seq region
-    if(!defined($slice)) {
-        $slice = $config->{$otherfeatures.'sa'}->fetch_by_region(undef, $chr);
-    }
+    eval { $slice = $config->{$otherfeatures.'sa'}->fetch_by_region(undef, $chr); };
     
     return $slice;
 }
