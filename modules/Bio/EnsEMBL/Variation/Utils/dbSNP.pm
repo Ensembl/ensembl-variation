@@ -32,13 +32,16 @@ Bio::EnsEMBL::Variation::Utils::dbSNP
 
 =head1 DESCRIPTION
 
-This module provides a single subroutine decode_bitfield which decodes
+This module provides a subroutine decode_bitfield which decodes
 a dbSNP bitfield from their VCF files into a hash reference with values
 for each value specified in the field. 
 
 The encoding is taken from the following NCBI document:
 
 ftp://ftp.ncbi.nlm.nih.gov/snp/specs/dbSNP_BitField_latest.pdf
+
+An additional subroutine converts allele strings from dbSNP format
+to ensembl format, as used multiple times in the import pipeline.
 
 =cut
 
@@ -49,7 +52,7 @@ use warnings;
 
 use base qw(Exporter);
 
-our @EXPORT_OK = qw(decode_bitfield);
+our @EXPORT_OK = qw(decode_bitfield get_alleles_from_pattern);
 
 use constant ENCODING_VERSION => 5;
 
@@ -251,6 +254,42 @@ sub decode_bitfield {
 
     return \%res;
 }
+
+
+
+=head2 get_alleles_from_pattern
+
+  Arg[1]      : string 
+  Example     : my $arrayref = get_alleles_from_pattern('(AGAC)25/26/27');
+  Description : splits allele string in dbSNP ObservedVariation pattern to return seperate alleles
+  Returntype  : An array reference containing all alleles ['(AGAC)25', '(AGAC)26', '(AGAC)27']
+
+=cut
+
+sub get_alleles_from_pattern{
+     
+    my $pattern = shift;
+
+    my @sep_alleles;
+    if($pattern  =~ /^(\(.*\))\d+\/\d+/){
+	## tandem stored (AGAC)25/26/27/28/29/30/31/32/33/34/3
+	my $string = $1;
+	my @al = split/\//, $pattern;
+	
+	foreach my $al(@al){
+	    unless( $al =~ /$string/){
+		$al = $string . $al;
+	    }
+	    push @sep_alleles,  $al;
+	}
+    }
+    else{
+	## assume A/T format
+	@sep_alleles = split/\//, $pattern;
+    }
+    return \@sep_alleles;
+}
+
 
 1;
 
