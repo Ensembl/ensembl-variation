@@ -1,4 +1,5 @@
 
+
 use strict;
 use warnings;
 
@@ -13,6 +14,7 @@ use Bio::EnsEMBL::Utils::Exception qw(throw);
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
 use ImportUtils qw(dumpSQL debug create_and_load load loadfile get_create_statement);
 use dbSNP::ImportTask;
+use Bio::EnsEMBL::Variation::Utils::dbSNP qw(get_alleles_from_pattern);
 
 use Progress;
 use DBI qw(:sql_types);
@@ -61,7 +63,7 @@ our %FARM_PARAMS = (
   'individual_genotypes_load' => {
     'script' => 'run_task.pl',
     'max_concurrent_jobs' => 5,
-    'memory' =>4000, #was 9000 for human
+     'memory' =>4000, #was 9000 for human
     'queue' => 2,
     'wait_queue' => 0
   },
@@ -145,8 +147,8 @@ sub dump_dbSNP{
 
    'parallelized_individual_genotypes',
    'population_genotypes',
-  'parallelized_allele_table',
-#  'flanking_sequence_table',
+   'parallelized_allele_table',
+ # 'flanking_sequence_table',
    'variation_feature',
    
     'cleanup'
@@ -499,7 +501,7 @@ sub clin_sig {
 
     $self->{'dbVar'}->do($stmt);
 
-    #$self->{'dbVar'}->do(qq{DROP TABLE clin_sig});
+    $self->{'dbVar'}->do(qq{DROP TABLE clin_sig});
 }
 
 sub minor_allele_freq {
@@ -679,7 +681,7 @@ sub suspect_snps {
 	$fail_old_rs_ins_sth->execute($start, $end)||die;
 	$start = $end + 1;
     }
-    #$self->{'dbVar'}->do(qq{DROP TABLE suspect});
+    $self->{'dbVar'}->do(qq{DROP TABLE suspect});
 }
 
 # filling of the variation table from SubSNP and SNP
@@ -901,6 +903,10 @@ sub subsnp_synonyms{
     FROM
       tmp_var_allele tv
   };
+
+  
+
+
   my ($min_id,$max_id) = @{$self->{'dbVar'}->db_handle()->selectall_arrayref($stmt)->[0]};
   print $logh Progress::location();
 
@@ -924,12 +930,25 @@ sub subsnp_synonyms{
                ORDER BY   tv.subsnp_id ASC)
                });
 
+
  # Increase the offset
     $offset += ($interval + 1);
   }
   debug(localtime() . "\tIndexing variation_synonym table ");
   $self->{'dbVar'}->do("ALTER TABLE variation_synonym enable keys");
-  print $logh Progress::location();
+
+  debug(localtime() . "\tCreating subsnp_map table ");
+  ## create subsnp_map table
+
+    $self->{'dbVar'}->do(qq[ CREATE TABLE subsnp_map
+                            ( variation_id  int(11) unsigned NOT NULL,
+                              subsnp_id     int(11) unsigned DEFAULT NULL)
+                            ]);
+
+    $self->{'dbVar'}->do( qq[ insert into subsnp_map (variation_id, subsnp_id)  select variation_id, subsnp_id from variation_synonym]);
+
+    $self->{'dbVar'}->do(qq[ CREATE INDEX variation_idx on subsnp_map (variation_id) ]);
+    print $logh Progress::location();
   
     return;
 }
@@ -1471,18 +1490,15 @@ sub parallelized_allele_table {
   # If we still have subtasks that fail, this needs to be resolved before proceeding
 
 
-  #ÊFinally, create the allele_string table needed for variation_feature    
+  #ÊFinally, create the allele_string table needed for variation_feature    ## change to store A/T rather than seperate rows per allele
   $stmt = qq{
     SELECT 
       snp.snp_id, 
-      a.allele
+      uv.var_str
     FROM   
       SNP snp JOIN 
-      $self->{'dbSNP_share_db'}..UniVariAllele uva ON (
-	uva.univar_id = snp.univar_id
-      ) JOIN
-      $self->{'dbSNP_share_db'}..Allele a ON (
-	a.allele_id = uva.allele_id
+      $self->{'dbSNP_share_db'}..UniVariation uv ON (
+	uv.univar_id = snp.univar_id
       )
   };
   dumpSQL($self->{'dbSNP'},$stmt);
@@ -1495,7 +1511,7 @@ sub parallelized_allele_table {
       allele_string
     SELECT
       v.variation_id AS variation_id,
-      tas.allele AS allele
+      tas.allele AS allele_string
     FROM
       variation v,
       tmp_allele_string tas
@@ -1516,7 +1532,7 @@ sub parallelized_allele_table {
   };
   $self->{'dbVar'}->do($stmt);
   print $logh Progress::location();
-  debug(localtime() . "\nEnding allele table");
+  debug(localtime() . "\tEnding allele table");
 }
 
 
@@ -1550,7 +1566,7 @@ sub  update_allele_schema{
 sub write_allele_task_file{
 
     my ($dbh, $task_manager_file, $loadfile,  $allelefile, $samplefile) = @_;
-    warn "Starting allele_task file \n";
+    #warn "Starting allele_task file \n";
     ### previously binning at 500,000, switched to 400,000
     my ($first, $previous, $counter, $jobindex);
 
@@ -2350,7 +2366,28 @@ sub parallelized_individual_genotypes {
     
     # If we still have subtasks that fail, this needs to be resolved before proceeding
     die("Some subtasks are failing (see log output). This needs to be resolved before proceeding with the loading of genotypes!") unless ($result->{'success'});
+   }
+
+  ## merge seperate export files into table specific load files
+  ## db storage of dump file => load file link ( expect loading of larger files to be more efficient) 
+  my $file_data_ext_sth = $self->{'dbVar'}->prepare(qq[SELECT sub_file, destination_file from tmp_indgeno_file]);
+  $file_data_ext_sth->execute()||die "Problem extracting list of files to merge\n";
+  my $file_list =  $file_data_ext_sth->fetchall_arrayref();
+#  print "Cat'ing files\n"; 
+  foreach my $pair (@{$file_list}){
+      unless (-e $pair->[0]){
+        warn "No file of name $pair->[0] created\n"; ## many bins have multi files missing
+        next;
+      }
+      open my $load_file, ">>", $pair->[1] || die "Failed to open $pair->[1] to write: $!\n";
+#      print "Cat'ing $pair->[0] to $pair->[1]\n";
+      open my $subfile, "<", $pair->[0] ||die  "Failed to open $pair->[0] to read: $!\n";
+      while(<$subfile>){print $load_file $_ ;} 
+      close $load_file;  
+      close $subfile;
   }
+  print "Load files written\n";
+
   # Loop over the subtables and load each of them
   my @subtables;
   my $jobindex = 0;
@@ -2528,7 +2565,12 @@ sub create_parallelized_individual_genotypes_task_file{
 
   # Store the data for the farm submission in a hash with the data as key. This way, the jobs will be "randomized" w.r.t. chromosomes and chunks when submitted so all processes shouldn't work on the same tables/files at the same time.
   my %job_data;
-  
+
+  ## temp table to hold files to create & load
+  $self->{'dbVar'}->do(qq[ DROP TABLE IF EXISTS tmp_indgeno_file ]);
+  $self->{'dbVar'}->do(qq[ CREATE TABLE tmp_indgeno_file (sub_file varchar(255), destination_file varchar(255) ) ] );
+  my $file_ins_sth = $self->{'dbVar'}->prepare(qq[insert into tmp_indgeno_file (sub_file ,destination_file) values (?,?)]);
+
   foreach my $subind_table (keys(%$gty_tables)) {
     
   
@@ -2578,8 +2620,11 @@ sub create_parallelized_individual_genotypes_task_file{
   foreach my $params (keys(%job_data)) {
     $jobindex++;
     my @arr = split(/\s+/,$params);
+
     print $logh "writing genotype task management file : $params\n";  
-    print MGMT qq{$jobindex $arr[0] $$gty_tables{$arr[0]}->[1] $multi_bp_gty_file $arr[1] $arr[2] $$gty_tables{$arr[0]}->[2]\n};
+    $file_ins_sth->execute("$$gty_tables{$arr[0]}->[1]\_$jobindex", $$gty_tables{$arr[0]}->[1])|| die "Problem entering geno file info\n";
+    $file_ins_sth->execute("$multi_bp_gty_file\_$jobindex", $multi_bp_gty_file)|| die "Problem entering geno file info\n";
+    print MGMT qq{$jobindex $arr[0] $$gty_tables{$arr[0]}->[1]\_$jobindex $multi_bp_gty_file\_$jobindex $arr[1] $arr[2] $$gty_tables{$arr[0]}->[2]\n};
   }
   close(MGMT);
 
@@ -3646,7 +3691,7 @@ sub cleanup {
     $self->{'dbVar'}->do('DROP TABLE tmp_pop'); #and finally remove the temporary table
   print $logh Progress::location();
 
-    $self->{'dbVar'}->do('ALTER TABLE variation  DROP COLUMN snp_id');
+    $self->{'dbVar'}->do('ALTER TABLE variation  DROP COLUMN snp_id');  
   print $logh Progress::location();  
     $self->{'dbVar'}->do('ALTER TABLE variation_synonym DROP COLUMN substrand_reversed_flag');
   print $logh Progress::location();
