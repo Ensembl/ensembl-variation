@@ -292,7 +292,15 @@ sub dump_LSDBIDs {
 	
 	# add source row if not there
 	if (!$source_id) {
-		$self->{'dbVar'}->do(qq{insert into source (name) values("$source_name")});
+
+	    my ($species,$tax_id,$version) = $self->{'snp_dbname'} =~ m/^(.+)?\_([0-9]+)\_([0-9]+)$/;
+
+		$self->{'dbVar'}->do(qq{insert into source (name, version, description,url) 
+                                        values("$source_name",
+                                                $version,
+                                               "Variants dbSNP annotates as being from LSDBs",
+                                               "http://www.ncbi.nlm.nih.gov/projects/SNP/")});
+
 		$source_id = $self->{'dbVar'}->db_handle->{'mysql_insertid'};
 	}
 	
