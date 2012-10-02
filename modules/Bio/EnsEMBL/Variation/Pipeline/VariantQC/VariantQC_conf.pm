@@ -138,6 +138,7 @@ sub default_options {
         run_check_dbSNP_import           => 1,
         run_variant_qc                   => 1,
         run_unmapped_var                 => 1,
+        run_flip_population_genotype     => 1,
         run_update_population_genotype   => 1,
 
         # put back support for re-runs on new format schema
@@ -199,33 +200,35 @@ sub pipeline_analyses {
 
     push @analyses, (
     
-    {   -logic_name => 'init_run_variant_qc',
+      { -logic_name => 'init_run_variant_qc',
         -module     => 'Bio::EnsEMBL::Variation::Pipeline::VariantQC::InitVariantQC',
         -parameters => {
-            qc_batch_size               => $self->o('qc_batch_size'),
-            unmapped_batch_size         => $self->o('unmapped_batch_size'),
+            qc_batch_size                  => $self->o('qc_batch_size'),
+            unmapped_batch_size            => $self->o('unmapped_batch_size'),
 
             run_check_dbSNP_import         => $self->o('run_check_dbSNP_import'),
             run_variant_qc                 => $self->o('run_variant_qc'),
             run_unmapped_var               => $self->o('run_unmapped_var'),
+            run_flip_population_genotype   => $self->o('run_flip_population_genotype'),
             run_update_population_genotype => $self->o('run_update_population_genotype'),
 
-            start_at_variation_id       => $self->o('start_at_variation_id'),
-            create_working_tables       => $self->o('create_working_tables'),
-            create_map_table            => $self->o('create_map_table'),
+            start_at_variation_id          => $self->o('start_at_variation_id'),
+            create_working_tables          => $self->o('create_working_tables'),
+            create_map_table               => $self->o('create_map_table'),
             @common_params,
         },
         -input_ids  => [{}],
-                -rc_id      => 'default',
-                -flow_into  => {
-                    2 => [ 'check_dbSNP_import' ],
-                    3 => [ 'variant_qc'     ],
-                    4 => [ 'unmapped_var'   ],
-                    5 => [ 'update_population_genotype' ],
-                    6 => [ 'finish_variation_qc' ],
-
+        -rc_id      => 'default',
+        -flow_into  => {
+             2 => [ 'check_dbSNP_import' ],
+             3 => [ 'variant_qc'     ],
+             4 => [ 'unmapped_var'   ],
+             5 => [ 'flip_population_genotype' ],
+             6 => [ 'update_population_genotype' ],
+             7 => [ 'finish_variation_qc' ],
                 },
-       },
+     },
+
      {  -logic_name => 'check_dbSNP_import',
         -module     => 'Bio::EnsEMBL::Variation::Pipeline::VariantQC::CheckdbSNPImport',
         -parameters => {    
@@ -236,58 +239,81 @@ sub pipeline_analyses {
         -hive_capacity  => 1,
         -rc_id          => 'default',               
       },
+
           
-     {   -logic_name     => 'unmapped_var',
-             -module         => 'Bio::EnsEMBL::Variation::Pipeline::VariantQC::UnmappedVariant',        
-             -parameters     => {   
-                 batch_size => $self->o('unmapped_batch_size'),
-                 @common_params,
-             },
-             -input_ids      => [],
-             -hive_capacity  => $self->o('unmapped_var_capacity'),
-             -rc_id          => 'default',
-             -wait_for       => [ 'check_dbSNP_import' ],
-             -flow_into      => {},
+      {  -logic_name     => 'unmapped_var',
+         -module         => 'Bio::EnsEMBL::Variation::Pipeline::VariantQC::UnmappedVariant',        
+         -parameters     => {   
+               batch_size => $self->o('unmapped_batch_size'),
+               @common_params,
+           },
+         -input_ids      => [],
+         -hive_capacity  => $self->o('unmapped_var_capacity'),
+         -rc_id          => 'default',
+         -wait_for       => [ 'check_dbSNP_import' ],
+         -flow_into      => {},
          },
 
-         {   -logic_name     => 'variant_qc',
-             -module         => 'Bio::EnsEMBL::Variation::Pipeline::VariantQC::VariantQC',
-             -parameters     => {   
-                 schema             => $self->o('schema'),
-                 batch_size         => $self->o('qc_batch_size'),
-                 do_allele_string   => $self->o('do_allele_string'),
-                 pipeline_dir       => $self->o('pipeline_dir'),   ### temp - write temp log files
-                 @common_params,
-             },
-             -input_ids      => [],
-             -hive_capacity  => $self->o('variant_qc_capacity'),
-             -rc_id          => 'default',
-             -wait_for       => [ 'check_dbSNP_import' ],
-             -flow_into      => {},
+
+
+     {   -logic_name     => 'variant_qc',
+         -module         => 'Bio::EnsEMBL::Variation::Pipeline::VariantQC::VariantQC',
+         -parameters     => {   
+             schema             => $self->o('schema'),
+             batch_size         => $self->o('qc_batch_size'),
+             do_allele_string   => $self->o('do_allele_string'),
+             pipeline_dir       => $self->o('pipeline_dir'),   ### temp - write temp log files
+             @common_params,
+         },
+         -input_ids      => [],
+         -hive_capacity  => $self->o('variant_qc_capacity'),
+         -rc_id          => 'default',
+         -wait_for       => [ 'check_dbSNP_import' ],
+         -flow_into      => {},
+     },
+
+
+
+    {   -logic_name     => 'flip_population_genotype',
+        -module         => 'Bio::EnsEMBL::Variation::Pipeline::VariantQC::FlipPopulationGenotype',
+        -parameters     => {                   
+            @common_params,
+        },
+        -input_ids      => [],
+        -hive_capacity  => 1,
+        -rc_id          => 'default',
+        -wait_for       => [ 'check_dbSNP_import' ],
+        -flow_into      => {},
     },
+
+
+
     {   -logic_name     => 'update_population_genotype',
         -module         => 'Bio::EnsEMBL::Variation::Pipeline::VariantQC::UpdatePopulationGenotype', 
         -parameters     => {
             @common_params,
-         },
+        },
         -input_ids      => [],
         -hive_capacity  => 1,
         -rc_id          => 'default',
-        -wait_for       => [ 'variant_qc' ],
+        -wait_for       => [ 'variant_qc', 'flip_population_genotype' ],
         -flow_into      => {},
     },              
+
+
+
     {   -logic_name     => 'finish_variation_qc',
         -module         => 'Bio::EnsEMBL::Variation::Pipeline::VariantQC::FinishVariantQC', 
         -parameters     => {
             pipeline_dir  => $self->o('pipeline_dir'),
             @common_params,
          },
-            -input_ids      => [],
-            -hive_capacity  => 1,
-            -rc_id          => 'default',
-            -wait_for       => [ 'variant_qc','unmapped_var','update_population_genotype' ],
-            -flow_into      => {},
-   },                   
+         -input_ids      => [],
+         -hive_capacity  => 1,
+         -rc_id          => 'default',
+         -wait_for       => [ 'variant_qc','unmapped_var','update_population_genotype' ],
+         -flow_into      => {},
+    },                   
    
     );
     
