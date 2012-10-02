@@ -52,7 +52,15 @@ sub run {
 
     my $var_no_ss_allele     = $self->count_no_ss_allele();
     my $var_no_allele_string = $self->count_no_allele_string();
-     
+
+    my $geno_no_sample       = $self->count_sampleless_geno();
+    my $geno_no_subsnp       = $self->count_geno_ss_problem();
+    my $geno_no_allele       = $self->count_alleleless_geno();
+
+    my $varfeat_no_pos       = $self->count_bad_varfeat();
+    my $varfeat_no_seqreg    = $self->count_seq_region_problem();
+    
+
     print $report "Post-import preQC check
 
 Total Variation:        $variation_count
@@ -61,20 +69,31 @@ Total Allele:           $allele_count ( $mean_al per variation )
 
 Failed Variation:       $fail_count (failure rate: $fail_rate )
 
-Variations without ss alleles:    $var_no_ss_allele  
-Variations without allele_string: $var_no_allele_string 
+Variations without ss alleles:      $var_no_ss_allele  
+Variations without allele_string:   $var_no_allele_string 
+
+Genotypes without samples:          $geno_no_sample
+Genotypes without real ss:          $geno_no_subsnp
+Genotypes without alleles:          $geno_no_allele
+
+VariationFeature without start/end: $varfeat_no_pos 
+VariationFeature without seqregion: $varfeat_no_seqreg
 
 \n";  
 
-    if($var_no_ss_allele   > 0   || 
+    if($var_no_ss_allele    > 0  || 
        $var_no_allele_string > 0 || 
        $variation_count  == 0    ||
        $varfeat_count    == 0    ||
-       $allele_count     == 0    
-	){
+       $allele_count     == 0    ||
+       $geno_no_sample     >0    ||
+       $varfeat_no_pos     >0    ||
+       $varfeat_no_seqreg  >0    ||
+       $geno_no_subsnp     >0
+       ){
 
-	print $report "Exiting - missing data to import\n"; 
-	die;  ## rest of QC process does not start if this fails
+        print $report "Exiting - missing data to import\n"; 
+        die;  ## rest of QC process does not start if this fails
     }
 
 
@@ -131,12 +150,15 @@ sub count_failed_variation{
 
     defined $fail_count->[0]->[0]  ?  return $fail_count->[0]->[0] : return 0;
 }
+
+## Checks for missing data
  
  sub count_no_ss_allele{
 
     my $self = shift;
     my $var_dba   = $self->get_species_adaptor('variation');
 
+  
     my $no_allele_ext_sth      = $var_dba->dbc->prepare(qq[ select count(*) from variation 
                                                             where variation_id not in (select variation_id  from allele)]);
 
@@ -162,6 +184,113 @@ sub count_no_allele_string{
  
 }
 
+## checks on variation_feature
+
+sub count_bad_varfeat{
+
+    my $self = shift;
+    my $var_dba   = $self->get_species_adaptor('variation');
+
+    my $varfeat_ext_sth = $var_dba->dbc->prepare(qq[ select count(*) from variation_feature where seq_region_start =0 or seq_region_end =0  ]);
+    $varfeat_ext_sth->execute()|| die "Failed to extract failed seq_region_start/end count\n";   
+    my $varfeat_count   = $varfeat_ext_sth->fetchall_arrayref();
+
+    defined $varfeat_count->[0]->[0]  ?  return $varfeat_count->[0]->[0] : return 0;
+}
+
+sub count_seq_region_problem{
+
+    my $self = shift;
+    my $var_dba   = $self->get_species_adaptor('variation');
+
+    my $varfeat_ext_sth = $var_dba->dbc->prepare(qq[ select count(*) from variation_feature 
+                                                     where seq_region_id  not in (select seq_region_id from seq_region)  ]);
+
+    $varfeat_ext_sth->execute()|| die "Failed to extract failed seq_region_id count\n";   
+    my $varfeat_count   = $varfeat_ext_sth->fetchall_arrayref();
+
+    defined $varfeat_count->[0]->[0]  ?  return $varfeat_count->[0]->[0] : return 0;
+}
+
+
+### Checks on genotype tables
+
+
+sub count_sampleless_geno{
+
+    my $self = shift;
+    my $var_dba   = $self->get_species_adaptor('variation');
+
+    my $tot = 0;
+
+   foreach my $table ("tmp_individual_genotype_single_bp", "population_genotype", "tmp_individual_genotype_single_bp" ){ 
+
+      my $no_sample_ext_sth  = $var_dba->dbc->prepare(qq[select count(*) from $table where sample_id not in (select sample_id from sample) ]);
+
+      $no_sample_ext_sth->execute() || die "Failed to extract no sample count for $table\n";
+      my $no_sample_count    = $no_sample_ext_sth->fetchall_arrayref();
+
+      if (defined $no_sample_count->[0]->[0]){
+         $tot += $no_sample_count->[0]->[0];
+      }
+
+   }
+
+   return $tot;
+
+}
+
+
+sub count_alleleless_geno{
+
+    my $self = shift;
+    my $var_dba   = $self->get_species_adaptor('variation');
+
+    my $total_problem_genotypes = 0;
+
+   foreach my $table ("tmp_individual_genotype_single_bp", "population_genotype", "tmp_individual_genotype_single_bp" ){ 
+
+     my $no_allele_ext_sth  = $var_dba->dbc->prepare(qq[select count(*) from $table where allele_1 is null or allele_2 is null ]);
+
+     $no_allele_ext_sth->execute() || die "Failed to extract no allele count for $table\n";
+     my $no_allele_count    = $no_allele_ext_sth->fetchall_arrayref();
+
+     if (defined $no_allele_count->[0]->[0]){
+        $total_problem_genotypes += $no_allele_count->[0]->[0];
+      }
+  }
+
+  return $total_problem_genotypes;
+
+}
+
+
+sub count_geno_ss_problem{
+
+    my $self = shift;
+    my $var_dba   = $self->get_species_adaptor('variation');
+
+   ## useful (slow) SQL:
+   ## select count(*) from tmp_individual_genotype_single_bp  where subsnp_id  not in (select subsnp_id from allele)
+
+    my $total_problem = 0;
+
+    my $max_subsnp_ext_sth      = $var_dba->dbc->prepare(qq[ select max(subsnp_id) from allele]);
+    $max_subsnp_ext_sth->execute()||die "Failed to find max subsnp_id\n";
+    my $max_subsnp = $max_subsnp_ext_sth->fetchall_arrayref();
+    unless(defined  $max_subsnp->[0]->[0]){ die "Failed to find max subsnp_id\n";}
+
+   foreach my $table ("tmp_individual_genotype_single_bp", "population_genotype", "tmp_individual_genotype_single_bp" ){ 
+    
+    my $geno_ext_sth = $var_dba->dbc->prepare(qq[ select count(*) from $table where subsnp_id >  $max_subsnp->[0]->[0] ]);
+
+      $geno_ext_sth->execute()|| die "Failed to extract failed genotype subsnp count for $table\n";   
+      my $geno_count  = $geno_ext_sth->fetchall_arrayref();
+      $total_problem += $geno_count->[0]->[0];
+    }
+
+    return $total_problem;
+}
 
 
 
