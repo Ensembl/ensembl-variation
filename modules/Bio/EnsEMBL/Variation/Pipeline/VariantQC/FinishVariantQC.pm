@@ -44,7 +44,7 @@ sub run {
     my $core_dba  = $self->get_species_adaptor('core');
 
 
-    ## Have all rows been processed
+    ## Have all rows been processed in flipped/ re-ordered table
     my ($allele_number, $all_ok)  = $self->check_all_processed($var_dba, $report);
 
      
@@ -59,110 +59,134 @@ sub run {
 
 
     if( defined $suspiciously_poor ){
-	print $report "\n\tExiting due to high failure rates -set, meta_coord and table rename not done \n\n";
-	return;
+        print $report "\nExiting due to high failure rates - not renaming tables or running updates\n"; 
+        die;
     }
+    
+    unless( $all_ok == 1){        
+        print $report "\nExiting - not all rows processed - not renaming tables or running updates\n";
+        die; 
+    }
+
+    ### if the results of the checks look ok, update & rename tables 
+    rename_tables($var_dba);
 
     update_failed_variation_set($var_dba, $report);
 
-    ## rename tables
-    if( ($self->required_param('species') =~/Homo|Human/i && $all_ok ==2 ) || $all_ok ==3){
-         print $report "\n\tOK to rename post-QC tables \n\n";
-         rename_tables($var_dba);
-    }
-    
     update_meta_coord( $core_dba, $var_dba, 'variation_feature');
 
 }
 
 
 
- ## Have all rows been processed
+ ## Have all rows been processed 
  sub check_all_processed{
 
     my $self    = shift;
     my $var_dba = shift;
     my $report  = shift;
 
-    my $old_varfeat_ext_sth  = $var_dba->dbc->prepare(qq[ select count(*) from variation_feature]);
-    my $new_varfeat_ext_sth  = $var_dba->dbc->prepare(qq[ select count(*) from variation_feature_working]);
-    my $old_allele_ext_sth   = $var_dba->dbc->prepare(qq[ select count(*) from allele]);
-    my $new_allele_ext_sth   = $var_dba->dbc->prepare(qq[ select count(*) from allele_working]);
-    my $mart_allele_ext_sth  = $var_dba->dbc->prepare(qq[ select count(*) from  MTMP_allele_working]);
-  
+   
+    my $old_varfeat   = count_rows($var_dba, 'variation_feature');
+    my $new_varfeat   = count_rows($var_dba, 'variation_feature_working');
 
-    $old_varfeat_ext_sth->execute() || die "Failed to extract old_varfeat count \n";
-    $new_varfeat_ext_sth->execute() || die "Failed to extract new_varfeat count\n";
-    $old_allele_ext_sth->execute()  || die "Failed to extract old_allele count\n";   
-    $new_allele_ext_sth->execute()  || die "Failed to extract new_allele count\n";
-    $mart_allele_ext_sth->execute() || die "Failed to extract mart_allele count\n";
+    my $old_allele    = count_rows($var_dba, 'allele');
+    my $new_allele    = count_rows($var_dba, 'allele_working');
+    my $mart_allele   = count_rows($var_dba, 'MTMP_allele_working');
 
-    my $old_varfeat = $old_varfeat_ext_sth->fetchall_arrayref();
-    my $new_varfeat = $new_varfeat_ext_sth->fetchall_arrayref();
-    my $old_allele  = $old_allele_ext_sth->fetchall_arrayref();
-    my $new_allele  = $new_allele_ext_sth->fetchall_arrayref();
-    my $mart_allele = $mart_allele_ext_sth->fetchall_arrayref();
+    my $new_pop_geno  = count_rows($var_dba, 'population_genotype_working');
+    my $old_pop_geno  = count_rows($var_dba, 'population_genotype');
+    my $mart_pop_geno = count_rows($var_dba, 'MTMP_population_genotype_working');
 
+    my $all_ok = 1; ## can we proceed to rename tables?
 
-    my $all_ok = 0; ## can we proceed to rename tables?
+    print $report "Checking row counts between raw and post processed tables\n\n"; 
 
-    if($old_varfeat->[0]->[0] == $new_varfeat->[0]->[0]){
-       print $report "Variation_Feature: Correct number of entries seen in variation_feature: $new_varfeat->[0]->[0]\n\n";
-       $all_ok++;
+    if($old_varfeat == $new_varfeat){
+       print $report "Variation_feature: OK ($new_varfeat  rows)\n";
     }
     else{
-        print $report "Variation_Feature: ERROR old table has :$old_varfeat rows, new table has $new_varfeat->[0]->[0]\n\n";
+       $all_ok = 0;
+       print $report "Variation_Feature: ERROR old table has :$old_varfeat rows, new table has $new_varfeat\n";
     }
 
-    if($old_allele->[0]->[0] == $new_allele->[0]->[0]){
-       print $report "Allele: Correct number of entries seen : $new_allele->[0]->[0]\n";
-       $all_ok++;
+    if($old_allele == $new_allele){
+       print $report "Allele: OK ($new_allele)\n";
     }
     else{
-       print $report "Allele: ERROR old table has : $old_allele->[0]->[0] rows, new table has: $new_allele->[0]->[0]\n";
+       $all_ok = 0;
+       print $report "Allele: ERROR old table has : $old_allele rows, new table has: $new_allele\n";
+    }
+
+    if($old_pop_geno == $new_pop_geno){
+         print $report "Population_genotype: OK ($new_pop_geno  rows)\n";
+      }
+      else{
+         $all_ok = 0;
+         print $report "Population_genotype: ERROR old table has : $old_pop_geno rows, new table has: $new_pop_geno\n";
     }
 
     unless($self->required_param('species') =~/Homo|Human/i){ ## Mart tables not required for human
-      if($old_allele->[0]->[0] == $mart_allele->[0]->[0]){
-         print $report "Mart Allele: Correct number of entries seen : $mart_allele->[0]->[0]\n";
-         $all_ok++;
+      if($old_allele == $mart_allele){
+         print $report "Mart Allele: OK ($mart_allele rows)\n";
       }
       else{
-         print $report "Allele: ERROR old table has : $old_allele->[0]->[0] rows, mart table has: $mart_allele->[0]->[0]\n";
+         $all_ok = 0;
+         print $report "Allele: ERROR old table has : $old_allele rows, mart table has: $mart_allele\n";
       }
+
+      if($old_pop_geno == $mart_pop_geno){
+         print $report "Mart population_genotype: OK ($mart_pop_geno rows)\n";
+      }
+      else{
+         $all_ok = 0;
+         print $report "Population_genotype: ERROR old table has : $old_pop_geno rows, mart table has: $mart_pop_geno\n";
+      }
+
     }
-    return ( $new_allele->[0]->[0], $all_ok );
+    return ( $new_allele, $all_ok );
 
 }
 
+sub count_rows{
+
+   my $var_dba     = shift;
+   my $table_name  = shift;
+   my $column_name = shift;
+
+   my $row_count_ext_sth;
+
+   if(defined $column_name){
+     $row_count_ext_sth  = $var_dba->dbc->prepare(qq[ select count(distinct $column_name) from $table_name]);
+   }
+   else{
+     $row_count_ext_sth  = $var_dba->dbc->prepare(qq[ select count(*) from $table_name]);
+   }
+
+   $row_count_ext_sth->execute();
+   my $total_rows = $row_count_ext_sth->fetchall_arrayref();
+
+   return $total_rows->[0]->[0]; 
+
+}
 
  sub get_failure_rates{
 
     my ($var_dba, $report, $allele_number) = @_;
     
-    my $variation_ext_sth    = $var_dba->dbc->prepare(qq[ select count(*) from variation]);
-    my $varfail_ext_sth      = $var_dba->dbc->prepare(qq[ select count(distinct variation_id) from failed_variation_working]);
-    my $allelefail_ext_sth   = $var_dba->dbc->prepare(qq[ select count(*) from failed_allele_working]);
+    my $variation_count        = count_rows($var_dba, 'variation');
+    my $failed_variation_count = count_rows($var_dba, 'failed_variation_working','variation_id');
+    my $failed_allele_count    = count_rows($var_dba, 'failed_allele_working');
 
 
-    $variation_ext_sth->execute()   || die "Failed to extract variation count\n";  
-    $varfail_ext_sth->execute()     || die "Failed to extract varfail count\n";    
-    $allelefail_ext_sth->execute()  || die "Failed to extract allelefail count\n"; 
-
-
-    my $variation   = $variation_ext_sth->fetchall_arrayref();
-    my $varfail     = $varfail_ext_sth->fetchall_arrayref();
-    my $allelefail  = $allelefail_ext_sth->fetchall_arrayref();
- 
-
-    my $var_fail_rate = substr((100 * $varfail->[0]->[0] / $variation->[0]->[0] ), 0,5 ); 
+    my $var_fail_rate = substr((100 * $failed_variation_count / $variation_count ), 0,5 ); 
      
-    print $report "\nVariation failure rate:  $var_fail_rate % [$varfail->[0]->[0] / $variation->[0]->[0] ]\n";
+    print $report "\nVariation failure rate:\t$var_fail_rate\% [$failed_variation_count / $variation_count ]\n";
      
      
-    my $allele_fail_rate = substr((100 * $allelefail->[0]->[0] / $allele_number ), 0,5 ); 
+    my $allele_fail_rate = substr((100 * $failed_allele_count / $allele_number ), 0,5 ); 
 
-    print $report "\nAllele failure rate: $allele_fail_rate % [$allelefail->[0]->[0] /$allele_number ] \n\n";
+    print $report "\nAllele failure rate:\t$allele_fail_rate\% [$failed_allele_count /$allele_number ] \n\n";
      
 
     my $suspiciously_poor;
@@ -212,6 +236,8 @@ sub check_MT_fails{
 
   my $var_dba= shift;
   my $report= shift;
+
+  my $fail_rate = 0;
  
   my $all_MT_ext_sth      = $var_dba->dbc->prepare(qq[ select count(distinct variation_id) 
                                                         from  variation_feature,seq_region 
@@ -233,16 +259,16 @@ sub check_MT_fails{
       $fail_MT_ext_sth->execute()||die;
       my $count_fail_MT =  $fail_MT_ext_sth->fetchall_arrayref();
 
-      my $fail_rate = 0;
+
       if( $count_fail_MT->[0]->[0] > 0){
 
-	  $fail_rate = substr((100 * $count_fail_MT->[0]->[0]/$count_all_MT->[0]->[0]),0,5);
+          $fail_rate = substr((100 * $count_fail_MT->[0]->[0]/$count_all_MT->[0]->[0]),0,5);
       }
 
-      print $report "MT failure rate:\t$fail_rate [$count_fail_MT->[0]->[0]/$count_all_MT->[0]->[0]]\n\n";
+      print $report "\nMT failure rate:\t$fail_rate\% [$count_fail_MT->[0]->[0]/$count_all_MT->[0]->[0]]\n\n";
   }
   else{
-      print $report "No MT variants observed\n\n";
+      print $report "\nNo MT variants observed\n\n";
   }
 
 }
@@ -267,10 +293,13 @@ sub rename_tables{
 
   $var_dba->dbc->do(qq[ rename table variation_feature_working to variation_feature ]) || die;
 
+  $var_dba->dbc->do(qq[ alter table variation_feature order by seq_region_id,seq_region_start,seq_region_end ]) || die;
+
   $var_dba->dbc->do(qq[ rename table failed_allele_working to failed_allele ]) || die;        ## Not needed post dev phase
   $var_dba->dbc->do(qq[ rename table failed_variation_working to failed_variation ]) || die;  ## Not needed post dev phase
 
-  $var_dba->dbc->do(qq[ rename table population_genotype to MTMP_population_genotype]) || die;
+  $var_dba->dbc->do(qq[ rename table population_genotype to population_genotype_before_pp]) || die;
+  $var_dba->dbc->do(qq[ rename table MTMP_population_genotype_working to MTMP_population_genotype]) || die;
   $var_dba->dbc->do(qq[ rename table population_genotype_working to population_genotype]) || die;
 
 
@@ -289,7 +318,7 @@ sub update_failed_variation_set{
     
    
   my $failed_var_ext_sth  = $var_dba->dbc->prepare(qq[ select distinct variation_id
-                                                       from failed_variation_working
+                                                       from failed_variation
                                                      ]);
 
 
@@ -333,7 +362,7 @@ sub update_failed_variation_set{
                                         $attrib->[0]->[0] )|| die "Failed to insert failed set\n";       
     }
     else{
-	die "Exiting: Error - attribs not loaded. Load attribs then re-run FinishVariantQC\n";
+        die "Exiting: Error - attribs not loaded. Load attribs then re-run FinishVariantQC\n";
     }
   }
 
