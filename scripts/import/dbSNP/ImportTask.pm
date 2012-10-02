@@ -11,6 +11,15 @@ use Progress;
 use DBI qw(:sql_types);
 use Fcntl qw( LOCK_SH LOCK_EX );
 use Digest::MD5 qw ( md5_hex );
+use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
+use Bio::EnsEMBL::Variation::Utils::dbSNP qw(get_alleles_from_pattern);
+
+
+our %QUICK_COMP = ( "A" => "T",
+                    "T" => "A",
+                    "C" => "G",
+                    "G" => "C"
+    ); 
 
 sub new {
   my $class = shift;
@@ -66,25 +75,21 @@ sub allele_table {
 
 
   #ÊPrepared statement for getting the SubSNPs with or without population frequency data
+  # 2012/09/24 switch from UniVariAllele at dbSNP request
    my $ss_no_freq_stmt = qq{
      SELECT
         ss.subsnp_id,     
         b.pop_id,
-        uv.allele_id ,
-        sssl.substrand_reversed_flag,
-        '\\N' AS frequency,
-        '\\N' AS count,
-        0 AS handle
+        ov.pattern,
+        sssl.substrand_reversed_flag
     FROM   SNPSubSNPLink sssl,
            SubSNP ss,
            Batch b,
-           $shared_db..ObsVariation  ov,
-           $shared_db..UniVariAllele uv        
+           $shared_db..ObsVariation  ov
         WHERE ss.subsnp_id BETWEEN ? AND ?
         AND   ss.subsnp_id = sssl.subsnp_id
         AND   b.batch_id = ss.batch_id       
         AND   ov.var_id = ss.variation_id
-        AND   uv.univar_id = ov.univar_id
     ORDER BY
       ss.subsnp_id ASC
   };
@@ -184,10 +189,6 @@ sub allele_table {
       ## line content: [ss.subsnp_id,afbsp.pop_id, allele_id,sssl.substrand_reversed_flag,afbsp.freq,afbsp.cnt, pop.handle ]
       unless ($variation_ids->{$line->[0]}{'variation_id'}){ warn "Variation id not found for $line->[0]\n";}
 
-      ## save as done by subsnp id and allele 
-      $done{$line->[0]}{$line->[1]}{$line->[2]} = 1;
-      $done{$line->[0]}{0}{$line->[2]} = 1;  ## don't want to import records without population info if records with held
-
      ## look-ups from ensembl db
      unless( defined $line->[6] ){ $line->[6] = 0 ; }
      if (!exists($samples{$line->[1]})) {  $samples{$line->[1]} = get_sample($line->[1], $sample_sth);}     
@@ -196,6 +197,13 @@ sub allele_table {
 
 
      unless (defined $alleles{$line->[2]}->[$line->[3]]){ die "No allele for ss $line->[0] strand $line->[3]\n";}
+
+
+      ## save as done by subsnp id pop and allele (don't loose 2nd allele for non-poly)
+      $done{$line->[0]}{$line->[1]}{$alleles{$line->[2]}->[$line->[3]]} = 1;
+      ##$done{$line->[0]}{0} = 1;  ## don't want to import records without population info if records with held
+
+
      my $row = join("\t",($variation_ids->{$line->[0]}{'variation_id'},$line->[0],$samples{$line->[1]},$alleles{$line->[2]}->[$line->[3]],$line->[4],$line->[5],$handle{$line->[6]} )) ;
 
      push(@output,$row);
@@ -214,21 +222,23 @@ sub allele_table {
 
       unless ($variation_ids->{$line->[0]}{'variation_id'}){ warn "Variation id not found for $line->[0]\n"; next}
 
-      ## don't add a line without frequency information if record with frequency already entered 
-      unless( defined $line->[1] ){ $line->[1] = 0; }
-      next if defined  $done{$line->[0]}{$line->[1]}{$line->[2]} ;
-   
+      ## default pop_id to enter as null
+      unless( defined $line->[1] ){ $line->[1] = 0; }        
       if (!exists($samples{$line->[1]})) {  $samples{$line->[1]} = get_sample($line->[1], $sample_sth);}
-      if (!exists($alleles{$line->[2]})) {  $alleles{$line->[2]} = get_allele($line->[2], $allele_sth);} # returns alleles as  [for, rev]
 
-      unless( defined $line->[4] ){ $line->[4] = '\N'; }
-      unless( defined $line->[5] ){ $line->[5] = '\N'; }
-    
-      unless (defined $alleles{$line->[2]}->[$line->[3]]) {die "No allele for ss$line->[0]\n"; }
+      my $sep_alleles = get_alleles_from_pattern($line->[2]);    ## Reported allele pattern [ eg A/T ]
+      foreach my $sep_allele (@$sep_alleles){
+	  if ( $line->[3] ==1 &&  $line->[2] !~/^\(\w+\)$/ ){ ## don't try to compliment named variants 
+	      defined $QUICK_COMP{$sep_allele} ? $sep_allele = $QUICK_COMP{$sep_allele} : reverse_comp(\$sep_allele);
+	  }
+          ## don't add a line without frequency information if record with frequency already entered for this ss & pop & allele
+          next if defined  $done{$line->[0]}{$line->[1]}{$sep_allele} ;
 
-      my $row = join("\t",($variation_ids->{$line->[0]}{'variation_id'},$line->[0],$samples{$line->[1]},$alleles{$line->[2]}->[$line->[3]],$line->[4],$line->[5],$handle{$line->[6]} )) ;
-
-      push(@output,$row);
+	  ## ens variation_id, subsnp_id, ens sample_id, allele, frequency, count, handle
+	  my $row = join("\t",($variation_ids->{$line->[0]}{'variation_id'},$line->[0],$samples{$line->[1]},$sep_allele,'\N','\N','\N' )) ;
+	  
+	  push(@output,$row);
+      }
   }
    print    Progress::location() . "Saved no-freq data\n";
  
@@ -246,8 +256,6 @@ sub allele_table {
   # We're done, return success
   return 1;
 }
-
- 
 
 ## extract ensembl database id for pre-imported sample
 sub get_sample{
