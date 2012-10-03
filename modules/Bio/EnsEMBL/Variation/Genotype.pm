@@ -125,7 +125,13 @@ sub genotype {
 =cut
 
 sub genotype_string {  
-  return join '|', ($_[1] ? sort @{$_[0]->genotype || []} : @{$_[0]->genotype} || []);
+  my $self = shift;
+  my $sort = shift;
+
+  my @gt = @{$self->genotype || []};
+  @gt = sort @gt if defined($sort);
+
+  return join '|', @gt;
 }
 
 =head2 variation
