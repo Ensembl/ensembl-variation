@@ -1428,8 +1428,6 @@ sub vf_to_consequences {
             next if(defined $config->{coding_only} && !($tv->affects_cds));
             
             push @return, map {tva_to_line($config, $_)} @{$tv->get_all_alternate_TranscriptVariationAlleles};
-            
-            undef $tv->{$_} for keys %$tv;
         }
     }
     
