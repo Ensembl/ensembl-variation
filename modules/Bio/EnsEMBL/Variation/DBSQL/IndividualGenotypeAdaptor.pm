@@ -290,6 +290,9 @@ sub _objs_from_sth{
 		}
 	}
 	
+	# check for defined genotype and individual
+	@results = grep {defined $_->{genotype} && defined $_->{individual}} @results;
+	
 	return \@results;
 }
 
