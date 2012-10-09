@@ -358,7 +358,8 @@ sub export_data_adding_allele_string{
                                                       vf.class_attrib_id,
                                                       sr.name,
                                                       vf.alignment_quality,
-                                                      als.allele_string
+                                                      als.allele_string,
+                                                      vf.validation_status
                                                  FROM variation_feature vf,
                                                       seq_region sr,
                                                       tmp_map_weight_working tmw,
@@ -395,6 +396,7 @@ sub export_data_adding_allele_string{
 
     $save{seqreg_name}      = $l->[13];
     $save{align_qual}       = $l->[14];
+    $save{validation_status}= $l->[16];
 
     if($l->[15] =~ /^(\(.*\))\d+\/\d+/){## handle tandem
       my $expanded_alleles = get_alleles_from_pattern($l->[15]); 
@@ -735,8 +737,8 @@ sub insert_variation_features{
   my $varfeat_ins_sth = $var_dba->dbc->prepare(qq[insert  into variation_feature_working
                                                 (variation_id, variation_name, seq_region_id,  seq_region_start, seq_region_end, seq_region_strand,  
                                                  allele_string, map_weight,  source_id, consequence_types, 
-                                                 variation_set_id, somatic, class_attrib_id, alignment_quality)
-                                                 values (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                                                 variation_set_id, somatic, class_attrib_id, alignment_quality,validation_status)
+                                                 values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                                                 ]);       
   
   
@@ -756,7 +758,9 @@ sub insert_variation_features{
                             $data->{variation_set_id},
                             $data->{somatic},
                             $data->{class_attrib_id},
-                            $data->{align_qual}  )|| die "ERROR importing variation feature info\n";
+                            $data->{align_qual},
+			    $data->{validation_status}
+                             )|| die "ERROR importing variation feature info\n";
 
 
   }
