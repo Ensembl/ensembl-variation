@@ -100,8 +100,10 @@ my $stmt;
     #ÊThe group term (the name of the reference assembly in the dbSNP b[version]_SNPContigInfo_[assembly]_[assembly version] table) is either specified via the config file or, if not, attempted to automatically determine from the data
     my $group_term = $self->{'group_term'};
     my $group_label = $self->{'group_label'};
-    unless (defined($group_term) && defined($group_label)) {
-        
+    if (defined($group_term) && defined($group_label)) {
+	warn "Using group_term:$group_term and group_label:$group_label to extract mappings \n";
+    }
+    else{        
         #ÊIf no group term was specified, use the one with the most entries in the dbSNP table. This may be wrong though so warn about it.
         $stmt = qq{
             SELECT
@@ -303,9 +305,10 @@ my $stmt;
     if ($gtype_row) {
       foreach my $table ("tmp_variation_feature_chrom","tmp_variation_feature_ctg") {
 
-	$self->{'dbVar'}->do(qq{INSERT INTO variation_feature (variation_id, seq_region_id,seq_region_start, seq_region_end, seq_region_strand,variation_name, flags, source_id, validation_status, alignment_quality)
-				  SELECT tvf.variation_id, tvf.seq_region_id, tvf.seq_region_start, tvf.seq_region_end, tvf.seq_region_strand,tvf.variation_name,IF(tgv.variation_id,'genotyped',NULL), tvf.source_id, tvf.validation_status, tvf.aln_quality
+	$self->{'dbVar'}->do(qq{INSERT INTO variation_feature (variation_id, seq_region_id,seq_region_start, seq_region_end, seq_region_strand,variation_name, flags, source_id, validation_status, alignment_quality, somatic)
+				  SELECT tvf.variation_id, tvf.seq_region_id, tvf.seq_region_start, tvf.seq_region_end, tvf.seq_region_strand,tvf.variation_name,IF(tgv.variation_id,'genotyped',NULL), tvf.source_id, tvf.validation_status, tvf.aln_quality,  v.somatic
 				  FROM $table tvf LEFT JOIN tmp_genotyped_var tgv ON tvf.variation_id = tgv.variation_id
+                                  LEFT JOIN variation v on tvf.variation_id = v.variation_id
 				  });
 
 
@@ -326,9 +329,10 @@ my $stmt;
 
       debug(localtime() . "\tDumping data into variation_feature table only used if table tmp_genotyped_var is not ready");
       foreach my $table ("tmp_variation_feature_chrom","tmp_variation_feature_ctg") {
-	$self->{'dbVar'}->do(qq{INSERT INTO variation_feature (variation_id, seq_region_id,seq_region_start, seq_region_end, seq_region_strand,variation_name, flags, source_id, validation_status, alignment_quality)
- 				  SELECT tvf.variation_id, tvf.seq_region_id, tvf.seq_region_start, tvf.seq_region_end, tvf.seq_region_strand,tvf.variation_name,NULL, tvf.source_id, tvf.validation_status, tvf.aln_quality
- 				  FROM $table tvf
+	$self->{'dbVar'}->do(qq{INSERT INTO variation_feature (variation_id, seq_region_id,seq_region_start, seq_region_end, seq_region_strand,variation_name, flags, source_id, validation_status, alignment_quality, somatic)
+ 				  SELECT tvf.variation_id, tvf.seq_region_id, tvf.seq_region_start, tvf.seq_region_end, tvf.seq_region_strand,tvf.variation_name,NULL, tvf.source_id, tvf.validation_status, tvf.aln_quality, v.somatic
+ 				  FROM $table tvf, variation v
+                                  WHERE v.variation_id = tvf.variation_id
  				  });
   print Progress::location();
       }
