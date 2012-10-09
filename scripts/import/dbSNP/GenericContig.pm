@@ -1315,11 +1315,41 @@ sub individual_table {
  				      WHERE individual_id is NOT NULL
 
  				  });
+
+    ## update sample.size for samples which are populations
+    $self->update_sample_size();
   print $logh Progress::location();
 
     return;
 }
 
+## count and store the number of individuals in a population
+sub update_sample_size{
+
+    my $self = shift;
+
+    my $sample_size_ext_sth = $self->{'dbVar'}->prepare(qq[ select sample.sample_id, count(*) 
+                                                            from sample, individual_population
+                                                            where sample.sample_id = individual_population.population_sample_id
+                                                            group by sample.sample_id
+                                                           ]);
+
+    my $sample_size_upd_sth = $self->{'dbVar'}->prepare(qq[ update sample
+                                                            set size =?
+                                                            where sample_id = ?
+                                                           ]);
+
+
+    $sample_size_ext_sth->execute()||die "Failed to extact sample counts for populations\n";
+    my $sample_sizes =  $sample_size_ext_sth->fetchall_arrayref();
+    foreach my $l (@{$sample_sizes}){
+
+	$sample_size_upd_sth->execute( $l->[1], $l->[0])||die "Failed to update sample counts for populations\n";
+    }
+
+    return;
+
+}
 sub parallelized_allele_table {
   my $self = shift;
   my $load_only = shift;
