@@ -527,8 +527,8 @@ our @OVERLAP_CONSEQUENCES = (
         rank => '30',
         tier => '2',
         predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::within_motif_feature',
-        description => 'In regulatory region annotated by Ensembl',
-        label => 'A sequence variant located within a transcription factor binding site',
+        description => 'A sequence variant located within a transcription factor binding site',
+        label => 'TF binding site',
     },
 
 #    {
