@@ -471,6 +471,7 @@ sub hgvs_variant_notation {
     my $ref_end = shift;
     my $display_start = shift;
     my $display_end = shift;
+    my $var_name  = shift;
     
     # If display_start and display_end were not specified, use ref_start and ref_end
     $display_start ||= $ref_start;
@@ -495,7 +496,10 @@ sub hgvs_variant_notation {
     my $ref_allele = substr($ref_sequence,($ref_start-1),$ref_length);
 
     # Check that the alleles are different, otherwise return undef
-    return undef unless ($ref_allele ne $alt_allele);
+    if($ref_allele eq $alt_allele){
+	warn "\nError in HGVS calculation for $var_name: alt allele ($alt_allele) is the same as the reference allele ($ref_allele) - potential strand or allele ordering problem - skipping\n";
+	return undef ;
+    }
     
     # Store the notation in a hash that will be returned
     my %notation;
@@ -576,7 +580,6 @@ sub hgvs_variant_notation {
     
     # Else, it's gotta be a delins
     $notation{'type'} = 'delins';
-    
     return \%notation;
 }
 
