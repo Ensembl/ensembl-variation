@@ -538,7 +538,6 @@ sub hgvs_transcript {
     $self->{hgvs_transcript} = $notation   if defined $notation;
     ##### return if held 
     return $self->{hgvs_transcript}        if defined $self->{hgvs_transcript} ;
-    return $self->{hgvs_coding}            if defined $self->{hgvs_coding} ;
 
     my $variation_feature_sequence  = $self->variation_feature_seq() ;
 
@@ -553,8 +552,9 @@ sub hgvs_transcript {
     ### get reference sequence strand
     my $refseq_strand = $self->transcript_variation->transcript->strand();
 
-    if($DEBUG ==1){
     my $var_name = $self->transcript_variation->variation_feature->variation_name();
+
+    if($DEBUG ==1){    
     print "\nHGVS transcript: Checking $var_name refseq strand => $refseq_strand seq name : " . $self->transcript_variation->transcript_stable_id() . " var strand " . $self->transcript_variation->variation_feature->strand() . " vf st " . $self->variation_feature->strand()  ." seqname: " . $self->variation_feature->seqname()  ." seq: " . $self->variation_feature_seq ."\n";
     }
 
@@ -580,15 +580,30 @@ sub hgvs_transcript {
     $hgvs_notation = hgvs_variant_notation(  $variation_feature_sequence,    ### alt_allele,
                          $slice->seq(),                  ### using this to extract ref allele
                          $slice_start,
-                         $slice_end
+                         $slice_end,
+                         "",
+                         "",
+                         $var_name 
     );
                        
     ### This should not happen
     unless($hgvs_notation->{'type'}){
     #warn "Error - not continuing; no HGVS annotation\n";
     return undef;
-    }    
-  
+    } 
+ 
+    ## compare calculated reference base to input reference base to flag incorrect input
+    my $ref_al_for_checking  = $self->transcript_variation->get_reference_TranscriptVariationAllele->variation_feature_seq();
+    if( $self->transcript_variation->variation_feature->strand() <0 && $refseq_strand >0 ||
+        $self->transcript_variation->variation_feature->strand() >0 && $refseq_strand < 0
+       ){    
+	reverse_comp(\$ref_al_for_checking);
+    }
+    $ref_al_for_checking =~ s/-//;
+    unless( $hgvs_notation->{ref} eq $ref_al_for_checking  ){
+	warn "\nError - calculated reference ($hgvs_notation->{ref}) and input reference ($ref_al_for_checking) disagree - skipping HGVS transcript for $var_name\n";
+    }
+
     ### create reference name - transcript name & seq version
     my $stable_id = $self->transcript_variation->transcript_stable_id();    
     $stable_id .= "." . $self->transcript_variation->transcript->version() unless $stable_id =~ /\.\d+$/;
@@ -653,15 +668,13 @@ sub hgvs_protein {
     ### don't try to handle odd characters
     return undef if $self->variation_feature_seq() =~ m/[^ACGT\-]/ig;
 
-    #### else, check viable input and create notation
-    return if $self->is_reference();
+    ### no HGVS annotation for reference allele
+    return undef if $self->is_reference();
 
-    unless ($self->transcript_variation->translation_start() && $self->transcript_variation->translation_end()){   
-        return undef ;
-    }
-
-    #### for debug
-    #my $var_name = $self->transcript_variation->variation_feature->variation_name();   
+    ### no HGVS protein annotation for variants outside translated region 
+    return undef unless ($self->transcript_variation->translation_start() && $self->transcript_variation->translation_end()); 
+         
+    
     
     ### get reference sequence [add seq version to transcript name]
     my $stable_id = $self->transcript_variation->transcript->translation->display_id();
@@ -865,13 +878,13 @@ sub _get_hgvs_protein_type{
           $hgvs_notation->{type} = "del";
       }
       elsif( (length($hgvs_notation->{alt}) >  length($hgvs_notation->{ref}) ) &&       
-           $hgvs_notation->{alt} =~ / $hgvs_notation->{ref}/ ) {
+           $hgvs_notation->{alt} =~ /$hgvs_notation->{ref}/ ) {
           ### capture duplication event described as TTT/TTTTT 
           $hgvs_notation->{type} = "dup";        
       }
 
-      elsif( (length($hgvs_notation->{alt}) >1 &&  length($hgvs_notation->{ref}) ==1) ||
-             (length($hgvs_notation->{alt}) ==1 &&  length($hgvs_notation->{ref}) >1) ) {
+      elsif( (length($hgvs_notation->{alt}) >0 && length($hgvs_notation->{ref}) >0) &&
+             (length($hgvs_notation->{alt}) ne length($hgvs_notation->{ref}) ) ) {
           $hgvs_notation->{type} = "delins";
       }
       else{
@@ -879,12 +892,12 @@ sub _get_hgvs_protein_type{
       }
     }
     
-  
+    ## not a simple event - check DNA strings
     elsif($ref_length ne $alt_length && ($ref_length  - $alt_length)%3 !=0 ){
         $hgvs_notation->{type} = "fs";
     }    
     
-    elsif(length($self->variation_feature_seq()) >1  ){
+    elsif($alt_length >1  ){
       if($hgvs_notation->{start} == ($hgvs_notation->{end} + 1) ){
           ### convention for insertions - end one less than start
           $hgvs_notation->{type} = "ins";
