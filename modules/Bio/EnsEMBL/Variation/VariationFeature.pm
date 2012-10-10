@@ -1642,9 +1642,11 @@ sub hgvs_genomic{
     
   
     ##### get short flank sequence for duplication checking & adjusted variation coordinates
-    my ($ref_seq, $ref_start, $ref_end) = _get_flank_seq($tr_vf);;
-    
-    foreach my $allele ( split(/\//,$tr_vf->allele_string()) ) {
+    my ($ref_seq, $ref_start, $ref_end) = _get_flank_seq($tr_vf);
+
+    my @all_alleles = split(/\//,$tr_vf->allele_string());    
+    shift @all_alleles;  ## remove reference allele - not useful for HGVS
+    foreach my $allele ( @all_alleles ) {
 	
 	## If a particular allele was requested, ignore others
 	next if  (defined($use_allele) && $allele ne $use_allele);
@@ -1686,7 +1688,7 @@ sub hgvs_genomic{
 						   $ref_end,
 						   $chr_start,             ## start wrt seq region slice is on (eg. chrom)
 						   $chr_end,   
-						   "");
+						   $self->variation_name()); ## for error message 
       
 
 	# Skip if e.g. allele is identical to the reference slice
