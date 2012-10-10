@@ -590,8 +590,8 @@ sub hgvs_transcript {
     }    
   
     ### create reference name - transcript name & seq version
-    my $stable_id = $self->transcript_variation->transcript_stable_id();
-    $stable_id .= $self->transcript_variation->transcript->version() unless $stable_id =~ /\.\d+$/;
+    my $stable_id = $self->transcript_variation->transcript_stable_id();    
+    $stable_id .= "." . $self->transcript_variation->transcript->version() unless $stable_id =~ /\.\d+$/;
     $hgvs_notation->{'ref_name'} =  $stable_id;
   
 
@@ -665,7 +665,7 @@ sub hgvs_protein {
     
     ### get reference sequence [add seq version to transcript name]
     my $stable_id = $self->transcript_variation->transcript->translation->display_id();
-    $stable_id .= $self->transcript_variation->transcript->translation->version() unless $stable_id =~ /\.\d+$/;
+    $stable_id .= "." . $self->transcript_variation->transcript->translation->version() unless $stable_id =~ /\.\d+$/;
     $hgvs_notation->{ref_name} =  $stable_id;
 
     $hgvs_notation->{'numbering'} = 'p';
