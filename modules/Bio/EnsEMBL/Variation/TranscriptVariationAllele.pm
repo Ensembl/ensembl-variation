@@ -589,8 +589,10 @@ sub hgvs_transcript {
     return undef;
     }    
   
-    ### create reference name - transcript name & seq version 
-    $hgvs_notation->{'ref_name'} =  $self->transcript_variation->transcript_stable_id() . "." . $self->transcript_variation->transcript->version();
+    ### create reference name - transcript name & seq version
+    my $stable_id = $self->transcript_variation->transcript_stable_id();
+    $stable_id .= $self->transcript_variation->transcript->version() unless $stable_id =~ /\.\d+$/;
+    $hgvs_notation->{'ref_name'} =  $stable_id;
   
 
     ### get position relative to transcript features [use HGVS coords not variation feature coords due to dups]
@@ -662,7 +664,9 @@ sub hgvs_protein {
     #my $var_name = $self->transcript_variation->variation_feature->variation_name();   
     
     ### get reference sequence [add seq version to transcript name]
-    $hgvs_notation->{ref_name} = $self->transcript_variation->transcript->translation()->display_id() . "." . $self->transcript_variation->transcript->translation()->version();
+    my $stable_id = $self->transcript_variation->transcript->translation->display_id();
+    $stable_id .= $self->transcript_variation->transcript->translation->version() unless $stable_id =~ /\.\d+$/;
+    $hgvs_notation->{ref_name} =  $stable_id;
 
     $hgvs_notation->{'numbering'} = 'p';
 
