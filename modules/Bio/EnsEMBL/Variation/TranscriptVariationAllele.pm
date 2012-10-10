@@ -705,8 +705,13 @@ sub _get_hgvs_protein_format{
       (defined  $hgvs_notation->{type} && $hgvs_notation->{type} eq "=")){
 
         ### no protein change - return transcript nomenclature with flag for neutral protein consequence
-        $hgvs_notation->{'hgvs'} = $self->hgvs_transcript() . "(p.=)";
-        return $hgvs_notation->{'hgvs'} ;
+	if(defined $self->hgvs_transcript()){
+	    $hgvs_notation->{'hgvs'} = $self->hgvs_transcript() . "(p.=)";
+	    return $hgvs_notation->{'hgvs'} ;
+	}
+	else{
+	    return undef;
+	}
     }
 
     ### all start with refseq name & numbering type
