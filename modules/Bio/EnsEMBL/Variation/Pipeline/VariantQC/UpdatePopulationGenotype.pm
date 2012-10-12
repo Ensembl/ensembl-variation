@@ -50,9 +50,9 @@ sub run {
   $var_dba->dbc->do(qq[INSERT IGNORE INTO genotype_code_tmp(allele_1, allele_2) 
                       SELECT distinct allele_1, allele_2 FROM individual_genotype_multiple_bp]);
 
-  ## populate temp table with genotypes from population_genotype
+  ## populate temp table with genotypes from flipped population_genotype table 
   $var_dba->dbc->do(qq[INSERT IGNORE INTO genotype_code_tmp(allele_1, allele_2) 
-                      SELECT distinct allele_1, allele_2 FROM population_genotype]);
+                      SELECT distinct allele_1, allele_2 FROM MTMP_population_genotype_working]);
 
   ## add any missing allele codes present in genotype tables only
   $var_dba->dbc->do(qq[INSERT IGNORE INTO allele_code(allele) SELECT allele_1 FROM genotype_code_tmp]);
