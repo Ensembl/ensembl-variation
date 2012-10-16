@@ -218,7 +218,7 @@ sub pipeline_analyses {
             @common_params,
         },
         -input_ids  => [{}],
-        -rc_id      => 'default',
+        -rc_name    => 'default',
         -flow_into  => {
              2 => [ 'check_dbSNP_import' ],
              3 => [ 'variant_qc'     ],
@@ -237,7 +237,7 @@ sub pipeline_analyses {
         },
         -input_ids      => [],
         -hive_capacity  => 1,
-        -rc_id          => 'default',               
+        -rc_name        => 'default',               
       },
 
           
@@ -249,7 +249,7 @@ sub pipeline_analyses {
            },
          -input_ids      => [],
          -hive_capacity  => $self->o('unmapped_var_capacity'),
-         -rc_id          => 'default',
+         -rc_name        => 'default',
          -wait_for       => [ 'check_dbSNP_import' ],
          -flow_into      => {},
          },
@@ -267,12 +267,11 @@ sub pipeline_analyses {
          },
          -input_ids      => [],
          -hive_capacity  => $self->o('variant_qc_capacity'),
-         -rc_id          => 'default',
+         -rc_name        => 'default',
          -wait_for       => [ 'check_dbSNP_import' ],
          -flow_into      => {},
-     },
-
-
+         },
+   
 
     {   -logic_name     => 'flip_population_genotype',
         -module         => 'Bio::EnsEMBL::Variation::Pipeline::VariantQC::FlipPopulationGenotype',
@@ -281,8 +280,8 @@ sub pipeline_analyses {
         },
         -input_ids      => [],
         -hive_capacity  => 1,
-        -rc_id          => 'default',
-        -wait_for       => [ 'check_dbSNP_import' ],
+        -rc_name        => 'default',
+        -wait_for       => [ 'check_dbSNP_import', 'variant_qc' ],
         -flow_into      => {},
     },
 
@@ -295,7 +294,7 @@ sub pipeline_analyses {
         },
         -input_ids      => [],
         -hive_capacity  => 1,
-        -rc_id          => 'default',
+        -rc_name        => 'default',
         -wait_for       => [ 'variant_qc', 'flip_population_genotype' ],
         -flow_into      => {},
     },              
@@ -310,7 +309,7 @@ sub pipeline_analyses {
          },
          -input_ids      => [],
          -hive_capacity  => 1,
-         -rc_id          => 'default',
+         -rc_name        => 'default',
          -wait_for       => [ 'variant_qc','unmapped_var','update_population_genotype' ],
          -flow_into      => {},
     },                   
