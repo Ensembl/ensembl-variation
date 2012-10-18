@@ -13,10 +13,10 @@ GetOptions(
 
 # check host and user
 die "ERROR: You are not logged in as user mysqlens\n" unless $ENV{USER} eq 'mysqlens';
-die "ERROR: You must run this script on the database server machine on which the MTMP table database resides\n" unless $ENV{HOST} eq 'ens-variation2';
+#die "ERROR: You must run this script on the database server machine on which the MTMP table database resides\n" unless $ENV{HOST} eq 'ens-variation2';
 
 # parse tables
-$config->{tables} ||= 'MTMP_allele,MTMP_population_genotype';
+$config->{tables} ||= 'MTMP_allele,MTMP_population_genotype,subsnp_map';
 my %t = map {$_ => 1} split /\,/, $config->{tables};
 $config->{tables} = \%t;
 
@@ -68,6 +68,16 @@ foreach my $host(qw(ens-staging ens-staging2)) {
 		push @tables, $table while $sth->fetch;
 		$sth->finish;
 		
+		$sth = $dbc->prepare(qq{
+			SHOW TABLES LIKE '%subsnp_map%'
+		});
+		$sth->execute();
+		
+		$sth->bind_columns(\$table);
+		
+		push @tables, $table while $sth->fetch;
+		$sth->finish;
+		
 		my %table_hash = map {$_ => 1} grep {$config->{tables}->{$_}} @tables;
 		
 		# find tables to copy
@@ -106,7 +116,8 @@ foreach my $host(qw(ens-staging ens-staging2)) {
 			print "$species: Copying $t\n";
 			
 			for my $ext(qw(frm MYD MYI)) {
-				system "scp ".$config->{dir}."/$map{$t}\.$ext $host:/mysql/data_3306/databases/$db/$t\.$ext\n";
+				system "scp ".$config->{dir}."/$map{$t}\.$ext $host:/mysql/data_3306/databases/$db/$t\.$ext";
+				#print "scp ".$config->{dir}."/$map{$t}\.$ext $host:/mysql/data_3306/databases/$db/$t\.$ext\n";
 			}
 		}
 	}
