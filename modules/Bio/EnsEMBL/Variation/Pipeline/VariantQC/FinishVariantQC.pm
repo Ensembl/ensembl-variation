@@ -132,7 +132,7 @@ sub run {
     print $report "Checking row counts between raw and post processed tables:\n"; 
 
     if($old_varfeat == $new_varfeat){
-	print $report "\tVariation_feature:\tOK ($new_varfeat rows)\n";
+	print $report "\tVariation_feature:\t\tOK ($new_varfeat rows)\n";
     }
     else{
 	$process_error = 1;
@@ -140,7 +140,7 @@ sub run {
     }
 
     if($old_allele == $new_allele){
-	print $report "\tAllele:\t\t\tOK ($new_allele  rows)\n";
+	print $report "\tAllele:\t\t\t\tOK ($new_allele  rows)\n";
     }
     else{
 	$process_error = 1;
@@ -148,7 +148,7 @@ sub run {
     }
 
     if($old_pop_geno == $new_pop_geno){
-	print $report "\tPopulation_genotype:\tOK ($new_pop_geno rows)\n";
+	print $report "\tPopulation_genotype:\t\tOK ($new_pop_geno rows)\n";
     }
     else{
 	$process_error = 1;
@@ -157,7 +157,7 @@ sub run {
 
     unless($self->required_param('species') =~/Homo|Human/i){ ## Mart tables not required for human
       if($old_allele == $mart_allele){
-         print $report "\tMart Allele:\t\tOK ($mart_allele rows)\n";
+         print $report "\tMart Allele:\t\t\tOK ($mart_allele rows)\n";
       }
       else{
          $process_error = 1;
@@ -245,7 +245,7 @@ sub get_failure_rates{
      
 
     my $suspiciously_poor;
-    if( $var_fail_rate >10 || $allele_fail_rate > 1){
+    if( $var_fail_rate >10 || $allele_fail_rate > 3){
          $suspiciously_poor = 1;
     }
     return  $suspiciously_poor;
@@ -477,7 +477,8 @@ sub check_flipping_allele{
 
   Extract a subset of data from allele_string and processed variation_feature
   tables to check allele_strings have been flipped where expected.
-
+      - don't check strings which are the same reverse complimented (eg. -/AT => -/AT)
+      - don't check failed variants which may not have been flipped 
 =cut
 sub check_flipping_variation_feature{
 
@@ -490,8 +491,11 @@ sub check_flipping_variation_feature{
                              where v.variation_id = vtr.variation_id 
                              and v.variation_id = old.variation_id 
                              and new.variation_id = v.variation_id
+                             and new.variation_id not in (select variation_id from failed_variation_working)
+                             and new.allele_string not like '%-%'
                              limit 3000
                            ];
+
 
 
   my $flip_check_sth = $var_dba->dbc->prepare($flip_check_stmt);
