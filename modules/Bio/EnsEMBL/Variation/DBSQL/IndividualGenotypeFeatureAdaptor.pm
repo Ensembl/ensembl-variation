@@ -79,7 +79,7 @@ use Bio::EnsEMBL::Variation::IndividualGenotypeFeature;
   Returntype : listref Bio::EnsEMBL::Variation::IndividualGenotype 
   Exceptions : none
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -134,7 +134,7 @@ sub fetch_all_by_Variation {
   Returntype : reference to list Bio::EnsEMBL::Variation::IndividualGenotype
   Exceptions : throw on bad argument
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 

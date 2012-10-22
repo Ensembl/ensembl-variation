@@ -169,7 +169,7 @@ sub store {
 
   Description: Returns a listref of all germline variation features
   Returntype : listref of VariationFeatures
-  Status     : At risk
+  Status     : Stable
 
 =cut
 
@@ -183,7 +183,7 @@ sub fetch_all {
 
   Description: Returns a listref of all somatic variation features
   Returntype : listref of VariationFeatures
-  Status     : At risk
+  Status     : Stable
 
 =cut
 

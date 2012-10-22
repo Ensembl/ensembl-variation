@@ -94,7 +94,7 @@ sub _default_where_clause {
 
   Description: Returns a listref of all germline structural variants
   Returntype : listref of Bio::EnsEMBL::Variation::StructuralVariation or Bio::EnsEMBL::Variation::SupportingStructuralVariation objects
-  Status     : At risk
+  Status     : Stable
 
 =cut
 
@@ -109,7 +109,7 @@ sub fetch_all {
 
   Description: Returns a listref of all somatic structural variants
   Returntype : listref of Bio::EnsEMBL::Variation::StructuralVariation or Bio::EnsEMBL::Variation::SupportingStructuralVariation objects
-  Status     : At risk
+  Status     : Stable
 
 =cut
 
@@ -211,7 +211,7 @@ sub fetch_all_by_Study {
 	             Bio::EnsEMBL::Variation::SupportingStructuralVariation objects
   Exceptions : throw if list argument is not defined
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -335,7 +335,7 @@ sub _internal_get_failed_descriptions {
   ReturnType  : reference to a list of strings
   Exceptions  : thrown on incorrect argument
   Caller      : general
-  Status      : At Risk
+  Status      : Stable
 
 =cut
 

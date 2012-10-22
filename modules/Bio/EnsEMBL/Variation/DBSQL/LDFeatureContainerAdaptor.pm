@@ -117,7 +117,7 @@ sub temp_path {
   Returntype : Bio::EnsEMBL::Variation::LDFeatureContainer
   Exceptions : thrown on bad argument
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 sub fetch_by_Slice {
@@ -192,7 +192,7 @@ sub fetch_by_Slice {
   Returntype : reference to Bio::EnsEMBL::Variation::LDFeatureContainer
   Exceptions : throw on bad argument
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 

@@ -55,7 +55,7 @@ sub new_fake {
 
   Arg [1]    : ProteinFunctionPredictionMatrix $matrix - the matrix you want to store
   Description: Store the given matrix in the database
-  Status     : At risk
+  Status     : Stable
 
 =cut
 
@@ -102,7 +102,7 @@ sub store {
   Arg [2]    : string $translation_md5 - the hex MD5 hash of the translation sequence
   Description: Fetch the prediction matrix for the given tool and peptide sequence MD5
   Returntype : Bio::EnsEMBL::Variation::ProteinFunctionPredictionMatrix instance or undef
-  Status     : At risk
+  Status     : Stable
 
 =cut
 
@@ -127,7 +127,7 @@ sub fetch_by_analysis_translation_md5 {
   Description: Fetch the polyphen prediction matrix for the given translation sequence MD5
                and classifier model
   Returntype : Bio::EnsEMBL::Variation::ProteinFunctionPredictionMatrix instance or undef
-  Status     : At risk
+  Status     : Stable
 
 =cut
 
@@ -149,7 +149,7 @@ sub fetch_polyphen_predictions_by_translation_md5 {
   Arg [1]    : string $translation_md5 - the hex MD5 hash of the translation sequence
   Description: Fetch the sift prediction matrix for the given translation sequence MD5
   Returntype : Bio::EnsEMBL::Variation::ProteinFunctionPredictionMatrix instance or undef
-  Status     : At risk
+  Status     : Stable
 
 =cut
 

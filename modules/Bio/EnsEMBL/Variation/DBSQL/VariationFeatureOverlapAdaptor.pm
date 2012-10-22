@@ -56,7 +56,7 @@ sub new_fake {
   Description: Fetch all germline VariationFeatureOverlap objects associated 
                with the given list of Features
   Returntype : listref of Bio::EnsEMBL::Variation::VariationFeatureOverlap objects
-  Status     : At risk
+  Status     : Stable
 
 =cut
 
@@ -71,7 +71,7 @@ sub fetch_all_by_Features {
   Description: Fetch all somatic VariationFeatureOverlap objects associated 
                with the given list of Features
   Returntype : listref of Bio::EnsEMBL::Variation::VariationFeatureOverlap objects
-  Status     : At risk
+  Status     : Stable
 
 =cut
 
@@ -87,7 +87,7 @@ sub fetch_all_somatic_by_Features {
   Description: Fetch all VariationFeatureOverlap objects associated 
                with the given list of Features
   Returntype : listref of Bio::EnsEMBL::Variation::VariationFeatureOverlap objects
-  Status     : At risk
+  Status     : Stable
 
 =cut
 
@@ -145,7 +145,7 @@ sub count_all_by_Features_with_constraint {
   Description: Fetch all VariationFeatureOverlap objects associated 
                with the given list of VariationFeatures
   Returntype : listref of Bio::EnsEMBL::Variation::VariationFeatureOverlap objects
-  Status     : At risk
+  Status     : Stable
 
 =cut
 sub fetch_all_by_VariationFeatures {

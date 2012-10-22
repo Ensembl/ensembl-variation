@@ -62,7 +62,7 @@ our @ISA = ('Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor');
   ReturnType  : string
   Exceptions  : thrown on incorrect argument
   Caller      : general
-  Status      : At Risk
+  Status      : Stable
 
 =cut
 

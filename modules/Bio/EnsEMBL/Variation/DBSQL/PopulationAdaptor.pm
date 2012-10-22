@@ -120,7 +120,7 @@ sub store {
     Returntype           : list of Bio::EnsEMBL::Variation::Population
     Exceptions           : none
     Caller               : general
-    Status               : At Risk
+    Status               : Stable
 
 =cut
 
@@ -149,7 +149,7 @@ sub fetch_population_by_synonym{
   Returntype : Bio::EnsEMBL::Variation::Population
   Exceptions : throw if name argument is not defined
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -185,7 +185,7 @@ sub fetch_by_name {
   Returntype : listref of Bio::EnsEMBL::Variation::Population objects
   Exceptions : throw if list argument is not defined
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -442,7 +442,7 @@ sub fetch_all_1KG_Populations{
   Exceptions  : throw if incorrect argument is passed
                 warning if provided individual does not have a dbID
   Caller      : general
-  Status      : At Risk
+  Status      : Stable
 
 =cut
 
@@ -487,7 +487,7 @@ sub fetch_all_by_Individual{
   Exceptions  : throw if incorrect argument is passed
                 warning if provided individual does not have a dbID
   Caller      : general
-  Status      : At Risk
+  Status      : Stable
 
 =cut
 

@@ -66,7 +66,7 @@ our @ISA = ('Bio::EnsEMBL::DBSQL::BaseAdaptor');
     Returntype      : listref of Bio::EnsEMBL::Variation::Phenotype. 
     Exceptions      : none
     Caller          : general
-    Status          : At Risk
+    Status          : Stable
 
 =cut
 

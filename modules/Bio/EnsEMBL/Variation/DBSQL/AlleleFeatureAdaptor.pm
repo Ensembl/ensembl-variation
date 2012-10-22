@@ -84,7 +84,7 @@ our @ISA = ('Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor', 'Bio::EnsEMBL::DBSQL:
    ReturnType  : listref of Bio::EnsEMBL::Variation::AlleleFeature
    Exceptions  : thrown on bad arguments
    Caller      : general
-   Status      : At Risk
+   Status      : Stable
    
 =cut
 

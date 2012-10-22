@@ -232,7 +232,7 @@ sub count_all_by_VariationFeatures_SO_terms {
   Description: Fetch all germline TranscriptVariations associated with the
                given list of Transcripts
   Returntype : listref of Bio::EnsEMBL::Variation::TranscriptVariations
-  Status     : At risk
+  Status     : Stable
 
 =cut
 
@@ -247,7 +247,7 @@ sub fetch_all_by_Transcripts {
   Description: Fetch all somatic TranscriptVariations associated with the
                given list of Transcripts
   Returntype : listref of Bio::EnsEMBL::Variation::TranscriptVariations
-  Status     : At risk
+  Status     : Stable
 
 =cut
 
