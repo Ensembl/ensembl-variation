@@ -98,7 +98,7 @@ our @ISA = ('Bio::EnsEMBL::Feature');
   Returntype : Bio::EnsEMBL::Variation::ReadCoverage
   Exceptions : none
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -127,7 +127,7 @@ sub new {
     ReturnType  : int 
     Exceptions  : none
     Caller      : general
-    Status      : At Risk
+    Status      : Stable
 
 =cut
 
@@ -147,7 +147,7 @@ sub level{
   Returntype : Bio::EnsEMBL::Variation::Individual
   Exceptions : throw on incorrect argument
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 

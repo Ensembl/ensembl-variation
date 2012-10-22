@@ -46,7 +46,7 @@ sub new_fast {
 
   Description: Get/set the associated MotifFeatureVariation
   Returntype : Bio::EnsEMBL::Variation::MotifFeatureVariation
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -60,7 +60,7 @@ sub motif_feature_variation {
 
   Description: Get/set the associated MotifFeature
   Returntype : Bio::EnsEMBL::Funcgen::MotifFeature
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 

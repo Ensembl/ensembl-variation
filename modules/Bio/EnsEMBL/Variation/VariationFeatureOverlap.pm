@@ -87,7 +87,7 @@ use base qw(Bio::EnsEMBL::Variation::BaseVariationFeatureOverlap);
   Returntype : A new Bio::EnsEMBL::Variation::VariationFeatureOverlap instance 
   Exceptions : throws unless both VARIATION_FEATURE and FEATURE are supplied, or if the
                supplied ADAPTOR is the wrong class
-  Status     : At Risk
+  Status     : Stable
 
 =cut 
 
@@ -244,7 +244,7 @@ sub dbID {
   Description: Get/set the associated VariationFeature, lazy-loading it if required
   Returntype : Bio::EnsEMBL::Variation::VariationFeature
   Exceptions : throws if the argument is the wrong type
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -302,7 +302,7 @@ sub get_VariationFeatureOverlapAllele_for_allele_seq {
   Description: Add an allele to this VariationFeatureOverlap
   Returntype : none
   Exceptions : throws if the argument is not the expected type
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -321,7 +321,7 @@ sub add_VariationFeatureOverlapAllele {
   Description: Get the object representing the reference allele of this VariationFeatureOverlapAllele
   Returntype : Bio::EnsEMBL::Variation::VariationFeatureOverlapAllele instance
   Exceptions : none
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -335,7 +335,7 @@ sub get_reference_VariationFeatureOverlapAllele {
   Description: Get a list of the alternate alleles of this VariationFeatureOverlapAllele
   Returntype : listref of Bio::EnsEMBL::Variation::VariationFeatureOverlapAllele objects
   Exceptions : none
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -350,7 +350,7 @@ sub get_all_alternate_VariationFeatureOverlapAlleles {
                VariationFeatureOverlap
   Returntype : listref of Bio::EnsEMBL::Variation::VariationFeatureOverlapAllele objects
   Exceptions : none
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 

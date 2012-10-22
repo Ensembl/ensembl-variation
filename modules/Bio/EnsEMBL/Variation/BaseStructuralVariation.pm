@@ -119,7 +119,7 @@ our @ISA = ('Bio::EnsEMBL::Storable','Bio::EnsEMBL::Variation::Failable');
                Bio::EnsEMBL::Variation::SupportingStructuralVariation
   Exceptions : none
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -186,7 +186,7 @@ sub new_fast {
   Returntype : string
   Exceptions : none
   Caller     : webcode
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -225,7 +225,7 @@ sub variation_name{
     ReturnType   : String
     Exceptions   : none
     Caller       : General
-    Status       : At Risk
+    Status       : Stable
 
 =cut
 
@@ -252,7 +252,7 @@ sub var_class {
     ReturnType   : String
     Exceptions   : none
     Caller       : General
-    Status       : At Risk
+    Status       : Stable
 
 =cut
 
@@ -272,7 +272,7 @@ sub class_SO_term {
   Returntype : string
   Exceptions : none
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -409,7 +409,7 @@ sub study {
   ReturnType  : reference to list of Bio::EnsEMBL::Variation::StructuralVariationFeature
   Exceptions  : None
   Caller      : general
-  Status      : At Risk
+  Status      : Stable
 
 =cut
 
@@ -438,7 +438,7 @@ sub get_all_StructuralVariationFeatures{
   ReturnType  : reference to list of Bio::EnsEMBL::Variation::StructuralVariationAnnotation
   Exceptions  : None
   Caller      : general
-  Status      : At Risk
+  Status      : Stable
 
 =cut
 

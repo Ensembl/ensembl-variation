@@ -25,7 +25,7 @@ sub new_fast {
   Description: Get the associated StructuralVariationOverlap
   Returntype : Bio::EnsEMBL::Variation::StructuralVariationOverlap
   Exceptions : none
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -43,7 +43,7 @@ sub structural_variation_overlap {
   Description: Get the associated StructuralVariationFeature
   Returntype : Bio::EnsEMBL::Variation::StructuralVariationFeature
   Exceptions : none
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 

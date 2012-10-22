@@ -108,7 +108,7 @@ our @ISA = ('Bio::EnsEMBL::Variation::Sample');
   Returntype : Bio::EnsEMBL::Variation::Individual
   Exceptions : throw if gender arg is provided but not valid
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -207,7 +207,7 @@ sub type_description{
   Returntype : string
   Exceptions : none
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -236,7 +236,7 @@ sub gender{
   Returntype : string
   Exceptions : none
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -266,7 +266,7 @@ sub display{
    ReturnType  : listref of Bio::EnsEMBL::Population
    Exceptions  : none
    Caller      : general
-   Status      : At Risk
+   Status      : Stable
 
 =cut
 
@@ -297,7 +297,7 @@ sub get_all_Populations{
   Returntype : string
   Exceptions : none
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -340,7 +340,7 @@ sub father_Individual{
   Returntype : string
   Exceptions : none
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -384,7 +384,7 @@ sub mother_Individual{
   Returntype : reference to list of Bio::EnsEMBL::Variation::Individual objects
   Exceptions : warning if this object does not have an attached adaptor
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 

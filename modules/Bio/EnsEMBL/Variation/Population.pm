@@ -106,7 +106,7 @@ our @ISA = ('Bio::EnsEMBL::Variation::Sample');
   Returntype : Bio::EnsEMBL::Variation::Population
   Exceptions : none
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -140,7 +140,7 @@ sub new {
   Returntype : reference to list of Bio::EnsEMBL::Variation::Population objects
   Exceptions : none
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -171,7 +171,7 @@ sub get_all_sub_Populations {
   Returntype : reference to list of Bio::EnsEMBL::Variation::Population objects
   Exceptions : none
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -251,7 +251,7 @@ sub get_all_synonyms {
   Returntype : reference to list of Bio::EnsEMBL::Variation::Individual objects
   Exceptions : none
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 

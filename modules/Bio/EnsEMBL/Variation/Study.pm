@@ -92,7 +92,7 @@ our @ISA = ('Bio::EnsEMBL::Storable');
   Returntype : Bio::EnsEMBL::Variation::Study
   Exceptions : none
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -130,7 +130,7 @@ sub new {
   Returntype : string
   Exceptions : none
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -150,7 +150,7 @@ sub name{
   Returntype : string
   Exceptions : none
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -170,7 +170,7 @@ sub description{
   Returntype : string
   Exceptions : none
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -210,7 +210,7 @@ sub external_reference{
   Returntype : string
   Exceptions : none
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -230,7 +230,7 @@ sub type{
   Returntype : string
   Exceptions : none
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 

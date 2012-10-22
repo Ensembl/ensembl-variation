@@ -127,7 +127,7 @@ use Bio::EnsEMBL::Variation::Utils::VariationEffect;
   Description: Constructs a new OverlapConsequence instance
   Returntype : A new Bio::EnsEMBL::Variation::OverlapConsequence instance 
   Exceptions : none
-  Status     : At Risk
+  Status     : Stable
 
 =cut 
 
@@ -194,7 +194,7 @@ sub new_fast {
   Description: Get/set the Sequence Ontology accession for this consequence type
   Returntype : string
   Exceptions : none
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -210,7 +210,7 @@ sub SO_accession {
   Description: Get/set the Sequence Ontology term for this consequence type
   Returntype : string
   Exceptions : none
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -226,7 +226,7 @@ sub SO_term {
   Description: Get/set the Sequence Ontology term for the feature affected by this consequence type
   Returntype : string
   Exceptions : none
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -242,7 +242,7 @@ sub feature_SO_term {
   Description: Get/set the Ensembl class representing the feature affected by this consequence type
   Returntype : string
   Exceptions : none
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -262,7 +262,7 @@ sub feature_class {
   Returntype : coderef
   Exceptions : throws if a name is supplied and the subroutine cannot be found in 
                the expected module
-  Status     : At Risk
+  Status     : Stable
 
 =cut
  
@@ -293,7 +293,7 @@ sub predicate {
                severe consequence of a VariationFeature. 
   Returntype : integer
   Exceptions : none
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -362,7 +362,7 @@ sub NCBI_term {
                website and is intended to be a freetext description of this consequence.
   Returntype : string
   Exceptions : none
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -379,7 +379,7 @@ sub description {
                website and is intended to be a short description of this consequence.
   Returntype : string
   Exceptions : none
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -395,7 +395,7 @@ sub label {
   Description: Get/set the class of variant features that this consequence can apply to
   Returntype : string
   Exceptions : none
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -413,7 +413,7 @@ sub variant_feature_class {
                flag is only set on the INTERGENIC OverlapConsequence object.
   Returntype : bool
   Exceptions : none
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 

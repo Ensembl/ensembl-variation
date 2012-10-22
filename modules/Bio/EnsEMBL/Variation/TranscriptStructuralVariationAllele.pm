@@ -59,7 +59,7 @@ sub new_fast {
   Description: Get the associated TranscriptStructuralVariation
   Returntype : Bio::EnsEMBL::Variation::TranscriptStructuralVariation
   Exceptions : none
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 

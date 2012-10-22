@@ -73,7 +73,7 @@ sub new {
   Returntype : reference to list of Bio::EnsEMBL::Variation::StructuralVariation objects
   Exceptions : none
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 

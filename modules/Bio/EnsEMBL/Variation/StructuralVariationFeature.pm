@@ -146,7 +146,7 @@ our @ISA = ('Bio::EnsEMBL::Variation::BaseVariationFeature');
   Returntype : Bio::EnsEMBL::Variation::StructuralVariationFeature
   Exceptions : none
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -217,7 +217,7 @@ sub new_fast {
   Returntype : string
   Exceptions : none
   Caller     : webcode
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -325,7 +325,7 @@ sub structural_variation {
     ReturnType  : reference to list of Bio::EnsEMBL::Variation::VariationSets
     Exceptions  : if no adaptor is attached to this object
     Caller      : general
-    Status      : At Risk
+    Status      : Stable
 =cut
 
 sub get_all_VariationSets {
@@ -664,7 +664,7 @@ sub add_TranscriptStructuralVariation {
     ReturnType   : String
     Exceptions   : none
     Caller       : General
-    Status       : At Risk
+    Status       : Stable
 
 =cut
 
@@ -691,7 +691,7 @@ sub var_class {
     ReturnType   : String
     Exceptions   : none
     Caller       : General
-    Status       : At Risk
+    Status       : Stable
 
 =cut
 
@@ -711,7 +711,7 @@ sub class_SO_term {
   Returntype : string
   Exceptions : none
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 

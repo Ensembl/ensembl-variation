@@ -110,7 +110,7 @@ use vars qw(@ISA);
   Returntype : Bio::EnsEMBL::Variation::StructuralVariationAnnotation
   Exceptions : none
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -195,7 +195,7 @@ sub structural_variation {
   Returntype : Bio::EnsEMBL::Variation::Study
   Exceptions : none
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 

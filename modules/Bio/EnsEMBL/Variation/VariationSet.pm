@@ -91,7 +91,7 @@ use vars qw(@ISA);
   Returntype : Bio::EnsEMBL::Variation::VariationSet
   Exceptions : none
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -119,7 +119,7 @@ sub new {
   Returntype : string
   Exceptions : none
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -141,7 +141,7 @@ sub description {
   Returntype : reference to list of Bio::EnsEMBL::Variation::VariationSet
   Exceptions : none
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -167,7 +167,7 @@ sub get_all_sub_VariationSets {
   Returntype : reference to list of Bio::EnsEMBL::Variation::VariationSet
   Exceptions : none
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -191,7 +191,7 @@ sub get_all_super_VariationSets {
   Returntype : reference to list of Bio::EnsEMBL::Variation::Variation
   Exceptions : none
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -223,7 +223,7 @@ sub get_all_Variations {
   Returntype : reference to list of Bio::EnsEMBL::Variation::StructuralVariation
   Exceptions : none
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -355,7 +355,7 @@ sub get_all_VariationFeatures_by_Slice {
   Returntype : string
   Exceptions : none
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 

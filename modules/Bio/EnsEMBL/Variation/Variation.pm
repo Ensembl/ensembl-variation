@@ -164,7 +164,7 @@ use Scalar::Util qw(weaken);
   Returntype : Bio::EnsEMBL::Variation::Variation
   Exceptions : none
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -357,7 +357,7 @@ sub get_all_Genes{
   ReturnType  : reference to list of Bio::EnsEMBL::Variation::VariationFeature
   Exceptions  : None
   Caller      : general
-  Status      : At Risk
+  Status      : Stable
 
 =cut
 
@@ -443,7 +443,7 @@ sub get_VariationFeature_by_dbID{
   Returntype : reference to list of strings
   Exceptions : none
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -714,7 +714,7 @@ sub get_all_Alleles {
   Returntype : string
   Exceptions : none
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -809,7 +809,7 @@ sub three_prime_flanking_seq{
   Returntype : listref of IndividualGenotypes
   Exceptions : none
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -835,7 +835,7 @@ sub get_all_IndividualGenotypes {
   Returntype : listref of PopulationGenotypes
   Exceptions : none
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -886,7 +886,7 @@ sub add_PopulationGenotype{
     ReturnType   : String $ambiguity_code
     Exceptions   : none    
     Caller       : General
-    Status       : At Risk
+    Status       : Stable
 
 =cut 
 
@@ -922,7 +922,7 @@ sub ambig_code{
     ReturnType   : String $variation_class
     Exceptions   : none
     Caller       : General
-    Status       : At Risk
+    Status       : Stable
 
 =cut
 

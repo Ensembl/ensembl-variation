@@ -142,7 +142,7 @@ sub genotype_string {
   Returntype : Bio::EnsEMBL::Variation::Variation
   Exceptions : throw on bad argument
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -182,7 +182,7 @@ sub variation {
   Returntype : string
   Exceptions : none
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -209,7 +209,7 @@ sub subsnp{
   Returntype : string
   Exceptions : none
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -240,7 +240,7 @@ sub subsnp_handle{
   Returntype : string
   Exceptions : none
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 

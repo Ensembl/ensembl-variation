@@ -87,7 +87,7 @@ use vars qw(@ISA);
   Returntype : Bio::EnsEMBL::Variation::PopulationGenotype
   Exceptions : throw on bad argument
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -137,7 +137,7 @@ sub new {
   Returntype : Bio::EnsEMBL::Variation::Population
   Exceptions : throw on bad argument
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -168,7 +168,7 @@ sub population {
   Returntype : string
   Exceptions : none
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -188,7 +188,7 @@ sub frequency{
   Returntype : string
   Exceptions : none
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 

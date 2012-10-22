@@ -103,7 +103,7 @@ sub new_fast {
   Description: Get/set the associated Feature, lazy-loading it if required
   Returntype : Bio::EnsEMBL::Feature
   Exceptions : throws isf the argument is the wrong type
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -222,7 +222,7 @@ sub _feature_stable_id {
   Description: Get/set the associated BaseVariationFeature
   Returntype : Bio::EnsEMBL::Variation::BaseVariationFeature
   Exceptions : throws if the argument is the wrong type
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -324,7 +324,7 @@ sub get_all_BaseVariationFeatureOverlapAlleles {
                'non_synonymous_codon') or 'NCBI' (e.g. 'missense')
   Returntype : listref of strings
   Exceptions : none
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -406,7 +406,7 @@ sub most_severe_OverlapConsequence {
                'non_synonymous_codon') or 'NCBI' (e.g. 'missense')
   Returntype : string
   Exceptions : none
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
