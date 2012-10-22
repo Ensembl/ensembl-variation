@@ -99,7 +99,7 @@ our @ISA = ('Bio::EnsEMBL::Storable', 'Bio::EnsEMBL::Variation::Failable');
   Returntype : Bio::EnsEMBL::Variation::Allele
   Exceptions : none
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -175,7 +175,7 @@ sub _hash_key {
   Returntype : string
   Exceptions : none
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -200,7 +200,7 @@ sub allele{
   Returntype : float
   Exceptions : none
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -220,7 +220,7 @@ sub frequency{
   Returntype : string
   Exceptions : none
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -241,7 +241,7 @@ sub count{
   Returntype : Bio::EnsEMBL::Variation::Population
   Exceptions : throw on incorrect argument
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -280,7 +280,7 @@ sub population{
   Returntype : string
   Exceptions : none
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -348,7 +348,7 @@ sub variation {
   Returntype : string
   Exceptions : none
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 

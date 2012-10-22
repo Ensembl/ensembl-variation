@@ -79,7 +79,7 @@ sub new {
   Description: Add an allele to this TranscriptStructuralVariation
   Returntype : none
   Exceptions : throws if the argument is not the expected type
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -94,7 +94,7 @@ sub add_TranscriptStructuralVariationAllele {
   Description: Get the object representing the reference allele of this TranscriptStructuralVariation
   Returntype : Bio::EnsEMBL::Variation::TranscriptStructuralVariationAllele instance
   Exceptions : none
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -108,7 +108,7 @@ sub get_reference_TranscriptStructuralVariationAllele {
   Description: Get a list of the alternate alleles of this TranscriptStructuralVariation
   Returntype : listref of Bio::EnsEMBL::Variation::TranscriptStructuralVariationAllele objects
   Exceptions : none
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -123,7 +123,7 @@ sub get_all_alternate_TranscriptStructuralVariationAlleles {
                this TranscriptStructuralVariation
   Returntype : listref of Bio::EnsEMBL::Variation::TranscriptStructuralVariationAllele objects
   Exceptions : none
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 

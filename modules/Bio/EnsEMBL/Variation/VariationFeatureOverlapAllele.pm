@@ -90,7 +90,7 @@ our $SPECIFIED_LENGTH = qr /(\d+) BP (INSERTION|DELETION)/i;
   Returntype : A new Bio::EnsEMBL::Variation::VariationFeatureOverlapAllele instance 
   Exceptions : throws unless both VARIATION_FEATURE_OVERLAP and VARIATION_FEATURE_SEQ 
                are supplied
-  Status     : At Risk
+  Status     : Stable
 
 =cut 
 
@@ -146,7 +146,7 @@ sub new_fast {
   Description: Get/set the dbID of this VariationFeatureOverlapAllele
   Returntype : integer
   Exceptions : none 
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -161,7 +161,7 @@ sub dbID {
   Description: Get/set the associated VariationFeatureOverlap
   Returntype : Bio::EnsEMBL::Variation::VariationFeatureOverlap
   Exceptions : throws if the argument is the wrong type
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -180,7 +180,7 @@ sub variation_feature_overlap {
   Description: Get the associated VariationFeature
   Returntype : Bio::EnsEMBL::Variation::VariationFeature
   Exceptions : none
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 

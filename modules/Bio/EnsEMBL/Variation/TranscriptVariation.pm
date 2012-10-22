@@ -89,7 +89,7 @@ use base qw(Bio::EnsEMBL::Variation::BaseTranscriptVariation Bio::EnsEMBL::Varia
                superclass - see there for more documentation.
   Returntype : A new Bio::EnsEMBL::Variation::TranscriptVariation instance 
   Exceptions : throws unless both VARIATION_FEATURE and TRANSCRIPT are supplied
-  Status     : At Risk
+  Status     : Stable
 
 =cut 
 
@@ -127,7 +127,7 @@ sub get_TranscriptVariationAllele_for_allele_seq {
   Description: Add an allele to this TranscriptVariation
   Returntype : none
   Exceptions : throws if the argument is not the expected type
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -142,7 +142,7 @@ sub add_TranscriptVariationAllele {
   Description: Get the object representing the reference allele of this TranscriptVariation
   Returntype : Bio::EnsEMBL::Variation::TranscriptVariationAllele instance
   Exceptions : none
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -156,7 +156,7 @@ sub get_reference_TranscriptVariationAllele {
   Description: Get a list of the alternate alleles of this TranscriptVariation
   Returntype : listref of Bio::EnsEMBL::Variation::TranscriptVariationAllele objects
   Exceptions : none
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -171,7 +171,7 @@ sub get_all_alternate_TranscriptVariationAlleles {
                this TranscriptVariation
   Returntype : listref of Bio::EnsEMBL::Variation::TranscriptVariationAllele objects
   Exceptions : none
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -258,7 +258,7 @@ sub codons {
   Returntype : int - 1, 2 or 3
   Exceptions : None
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 

@@ -91,7 +91,7 @@ sub new_fast {
   Description: Get/set the associated TranscriptVariation
   Returntype : Bio::EnsEMBL::Variation::TranscriptVariation
   Exceptions : throws if the argument is the wrong type
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -106,7 +106,7 @@ sub transcript_variation {
   Description: Get the associated VariationFeature
   Returntype : Bio::EnsEMBL::Variation::VariationFeature
   Exceptions : none
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -122,7 +122,7 @@ sub variation_feature {
                allele does not change the peptide (e.g. because it is synonymous)
   Returntype : string or undef if this allele is not in the CDS
   Exceptions : none
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -146,7 +146,7 @@ sub pep_allele_string {
                codon resulting from this allele 
   Returntype : string or undef if this allele is not in the CDS
   Exceptions : none
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -170,7 +170,7 @@ sub codon_allele_string {
                nucleotides in lower case
   Returntype : string or undef if this allele is not in the CDS
   Exceptions : none
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -193,7 +193,7 @@ sub display_codon_allele_string {
   Description: Return the amino acid sequence that this allele is predicted to result in
   Returntype : string or undef if this allele is not in the CDS or is a frameshift
   Exceptions : none
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -252,7 +252,7 @@ sub peptide {
   Description: Return the codon sequence that this allele is predicted to result in
   Returntype : string or undef if this allele is not in the CDS or is a frameshift
   Exceptions : none
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -321,7 +321,7 @@ sub codon {
                nucleotides in lower case
   Returntype : string or undef if this allele is not in the CDS or is a frameshift
   Exceptions : none
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 

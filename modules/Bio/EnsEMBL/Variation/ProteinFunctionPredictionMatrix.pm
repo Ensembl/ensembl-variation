@@ -179,7 +179,7 @@ our $NUM_AAS = scalar(@ALL_AAS);
   Description: Constructs a new ProteinFunctionPredictionMatrix object
   Returntype : A new Bio::EnsEMBL::Variation::ProteinFunctionPredictionMatrix instance 
   Exceptions : throws unless ANALYSIS is supplied and recognised
-  Status     : At Risk
+  Status     : Stable
 
 =cut 
 
@@ -224,7 +224,7 @@ sub new {
   Description : Get/set the analysis name
   Returntype  : string
   Exceptions  : throws if the name is not recognised 
-  Status      : At Risk
+  Status      : Stable
   
 =cut
 

@@ -84,7 +84,7 @@ sub new {
   Returntype  : reference to list of Bio::EnsEMBL::Variation::SupportingStructuralVariation objects
   Exceptions  : None
   Caller      : general
-  Status      : At Risk
+  Status      : Stable
 
 =cut
 

@@ -75,7 +75,7 @@ use Scalar::Util qw(weaken);
                reference allele
   Returntype : A new Bio::EnsEMBL::Variation::BaseVariationFeatureOverlapAllele instance 
   Exceptions : throws unlessBASE_VARIATION_FEATURE_OVERLAP is supplied
-  Status     : At Risk
+  Status     : Stable
 
 =cut 
 
@@ -116,7 +116,7 @@ sub new_fast {
   Description: Get/set the associated BaseVariationFeatureOverlap
   Returntype : Bio::EnsEMBL::Variation::BaseVariationFeatureOverlap
   Exceptions : throws if the argument is the wrong type
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -138,7 +138,7 @@ sub base_variation_feature_overlap {
   Description: Get the associated BaseVariationFeature
   Returntype : Bio::EnsEMBL::Variation::BaseVariationFeature
   Exceptions : none
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -152,7 +152,7 @@ sub base_variation_feature {
   Description: Get the associated Feature
   Returntype : Bio::EnsEMBL::Feature (or relevant subclass)
   Exceptions : none
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -167,7 +167,7 @@ sub feature {
   Description: Get/set a flag indicating if this allele is the reference allele
   Returntype : bool
   Exceptions : none
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -183,7 +183,7 @@ sub is_reference {
                on the fly if necessary
   Returntype : listref of Bio::EnsEMBL::Variation::OverlapConsequence objects
   Exceptions : none
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -236,7 +236,7 @@ sub get_all_OverlapConsequences {
   Description: Add an OverlapConsequence to this allele's list 
   Returntype : none
   Exceptions : throws if the argument is the wrong type
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 

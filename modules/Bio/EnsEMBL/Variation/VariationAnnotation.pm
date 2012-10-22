@@ -123,7 +123,7 @@ use vars qw(@ISA);
   Returntype : Bio::EnsEMBL::Variation::VariationAnnotation
   Exceptions : none
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -192,7 +192,7 @@ sub phenotype_name{
   Returntype : string
   Exceptions : none
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -211,7 +211,7 @@ sub phenotype_description{
   Returntype : string
   Exceptions : none
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -230,7 +230,7 @@ sub source_name{
   Returntype : string  
   Exceptions : none  
   Caller     : general  
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -285,7 +285,7 @@ sub variation {
   Returntype : string
   Exceptions : none
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -305,7 +305,7 @@ sub variation_names{
   Returntype : string
   Exceptions : none
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -325,7 +325,7 @@ sub study_name{
   Returntype : string
   Exceptions : none
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -464,7 +464,7 @@ sub risk_allele_freq_in_controls{
   Returntype : string
   Exceptions : none
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 

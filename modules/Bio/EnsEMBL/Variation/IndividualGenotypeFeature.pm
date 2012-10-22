@@ -95,7 +95,7 @@ use vars qw(@ISA);
   Returntype : Bio::EnsEMBL::Variation::IndividualGenotype
   Exceptions : throw on bad argument
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 

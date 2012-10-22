@@ -139,7 +139,7 @@ our @ISA = ('Bio::EnsEMBL::Feature');
   Returntype : Bio::EnsEMBL::Variation::AlleleFeature
   Exceptions : none
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -181,7 +181,7 @@ sub new_fast {
   Returntype : string
   Exceptions : none
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -205,7 +205,7 @@ sub allele_string{
                'non_synonymous_codon') or 'NCBI' (e.g. 'missense')
   Returntype : listref of strings
   Exceptions : none
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -292,7 +292,7 @@ sub most_severe_OverlapConsequence {
   Returntype : string
   Exceptions : none
   Caller     : webteam
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -323,7 +323,7 @@ sub display_consequence {
   Returntype  : listref of Bio::EnsEMBL::Variation::TranscriptVariation objects
   Exceptions  : Thrown on wrong argument type
   Caller      : general
-  Status      : At Risk
+  Status      : Stable
 
 =cut
 
@@ -360,7 +360,7 @@ sub get_all_TranscriptVariations {
   Returntype : string
   Exceptions : none
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -381,7 +381,7 @@ sub variation_name{
   Returntype : Bio::EnsEMBL::Variation::Variation
   Exceptions : throw on incorrect argument
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -415,7 +415,7 @@ sub variation {
   Returntype : Bio::EnsEMBL::Variation::VariationFeature
   Exceptions : throw on incorrect argument
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -449,7 +449,7 @@ sub variation_feature {
   Returntype : Bio::EnsEMBL::Variation::Individual
   Exceptions : throw on incorrect argument
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -490,7 +490,7 @@ sub individual {
     Returntype : reference to the same sequence that was passed in
     Exceptions : none
     Caller     : Slice
-    Status     : At Risk
+    Status     : Stable
 
 =cut
 
@@ -529,7 +529,7 @@ sub apply_edit  {
   Returntype : int
   Exceptions : none
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -559,7 +559,7 @@ sub length {
   Returntype : string
   Exceptions : none
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 

@@ -46,7 +46,7 @@ use base qw(Bio::EnsEMBL::Variation::VariationFeatureOverlapAllele);
   Description: Get/set the associated BaseTranscriptVariation
   Returntype : Bio::EnsEMBL::Variation::BaseTranscriptVariation
   Exceptions : throws if the argument is the wrong type
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -61,7 +61,7 @@ sub base_transcript_variation {
   Description: Get the associated Transcript
   Returntype : Bio::EnsEMBL::Transcript
   Exceptions : none
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -75,7 +75,7 @@ sub transcript {
   Description: Get the associated BaseVariationFeature
   Returntype : Bio::EnsEMBL::Variation::BaseVariationFeature
   Exceptions : none
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 

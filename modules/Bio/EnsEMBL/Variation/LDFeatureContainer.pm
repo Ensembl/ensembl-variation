@@ -81,22 +81,23 @@ use vars qw(@ISA);
     reference - hash containing all the Bio::EnsEMBL::Variation::VariationFeature objects that are present in the Container
     
   Example    :
-    $ldContainer = Bio::EnsEMBL::Variation::LDFeatureContainer->new
-       (-name => 'chr1'
-        -ldContainer => {'variation_feature_1-variation_feature_2' => { 'sample_id_1' =>
-	                                                                          { 'd_prime' => 0.5,
-										    'r2'      => 0.421,
-										    'sample_count' => 120
-										    },
-									'sample_id_2' => 
- 								                  { 'd_prime' => 0.3,
-										    'r2'     => 0.321,
-										    'sample_count' => 35
-										    }
-								    }
-			 
-		     }
-	-variationFeatures => hash of Bio::EnsEMBL::Variation::VariationFeature
+    $ldContainer = Bio::EnsEMBL::Variation::LDFeatureContainer->new(
+	  -name => 'chr1'
+      -ldContainer => {
+		'variation_feature_1-variation_feature_2' => {
+		  'sample_id_1' => {
+			'd_prime' => 0.5,
+			'r2'      => 0.421,
+			'sample_count' => 120
+		  },
+		  'sample_id_2' => {
+			'd_prime' => 0.3,
+			'r2'     => 0.321,
+			'sample_count' => 35
+		  }
+		}
+	  }
+	  -variationFeatures => hash of Bio::EnsEMBL::Variation::VariationFeature
 	);
 
 
@@ -104,7 +105,7 @@ use vars qw(@ISA);
   Returntype : Bio::EnsEMBL::Variation::LDFeatureContainer
   Exceptions : none
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -132,7 +133,7 @@ sub new {
   Returntype : string
   Exceptions : none
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 

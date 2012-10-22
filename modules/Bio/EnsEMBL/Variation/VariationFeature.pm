@@ -175,7 +175,7 @@ our $DEBUG = 0;
   Returntype : Bio::EnsEMBL::Variation::Variation
   Exceptions : none
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -279,7 +279,7 @@ sub allele_string{
   Returntype : string
   Exceptions : none
   Caller     : webcode
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -323,7 +323,7 @@ sub variation_name{
   Returntype : int
   Exceptions : none
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -402,7 +402,7 @@ sub minor_allele_count {
   Returntype  : listref of Bio::EnsEMBL::Variation::TranscriptVariation objects
   Exceptions  : Thrown on wrong argument type
   Caller      : general
-  Status      : At Risk
+  Status      : Stable
 
 =cut
 
@@ -482,7 +482,7 @@ sub get_all_TranscriptVariations {
   Description : Get all the RegulatoryFeatureVariations associated with this VariationFeature.
   Returntype  : listref of Bio::EnsEMBL::Variation::RegulatoryFeatureVariation objects
   Exceptions  : none
-  Status      : At Risk
+  Status      : Stable
 
 =cut
 
@@ -496,7 +496,7 @@ sub get_all_RegulatoryFeatureVariations {
   Description : Get all the MotifFeatureVariations associated with this VariationFeature.
   Returntype  : listref of Bio::EnsEMBL::Variation::MotifFeatureVariation objects
   Exceptions  : none
-  Status      : At Risk
+  Status      : Stable
 
 =cut
 
@@ -678,7 +678,7 @@ sub variation {
                'non_synonymous_codon') or 'NCBI' (e.g. 'missense')
   Returntype : listref of strings
   Exceptions : none
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -721,7 +721,7 @@ sub consequence_type {
                calculating them on the fly from the TranscriptVariations if necessary
   Returntype : listref of Bio::EnsEMBL::Variation::OverlapConsequence objects
   Exceptions : none
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -810,7 +810,7 @@ sub most_severe_OverlapConsequence {
                'non_synonymous_codon') or 'NCBI' (e.g. 'missense')
   Returntype : string
   Exceptions : none
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -863,7 +863,7 @@ sub get_consequence_type {
     ReturnType   : String $ambiguity_code
     Exceptions   : none    
     Caller       : General
-    Status       : At Risk
+    Status       : Stable
 
 =cut 
 
@@ -882,7 +882,7 @@ sub ambig_code{
     ReturnType   : string
     Exceptions   : throws if we can't find a corresponding display term for an SO term
     Caller       : General
-    Status       : At Risk
+    Status       : Stable
 
 =cut
 
@@ -915,7 +915,7 @@ sub var_class {
     ReturnType   : string
     Exceptions   : none
     Caller       : General
-    Status       : At Risk
+    Status       : Stable
 
 =cut
 
@@ -975,7 +975,7 @@ sub add_validation_state {
   Returntype : the source name as a string, 
   Exceptions : none
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -1323,7 +1323,7 @@ sub ref_allele_string{
     ReturnType  : reference to list of Bio::EnsEMBL::Variation::VariationSets
     Exceptions  : if no adaptor is attached to this object
     Caller      : general
-    Status      : At Risk
+    Status      : Stable
 =cut
 
 sub get_all_VariationSets {

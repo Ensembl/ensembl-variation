@@ -56,7 +56,7 @@ package Bio::EnsEMBL::Variation::Failable;
   Returntype : Semi-colon separated string 
   Exceptions : Thrown on illegal argument.
   Caller     : general
-  Status     : At risk
+  Status     : Stable
 
 =cut
 

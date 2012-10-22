@@ -87,7 +87,7 @@ sub structural_variation_feature {
   Description: Add an allele to this StructuralVariationOverlap
   Returntype : none
   Exceptions : throws if the argument is not the expected type
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -102,7 +102,7 @@ sub add_StructuralVariationOverlapAllele {
   Description: Get the object representing the reference allele of this StructuralVariationOverlap
   Returntype : Bio::EnsEMBL::Variation::StructuralVariationOverlapAllele instance
   Exceptions : none
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -116,7 +116,7 @@ sub get_reference_StructuralVariationOverlapAllele {
   Description: Get a list of the alternate alleles of this StructuralVariationOverlap
   Returntype : listref of Bio::EnsEMBL::Variation::StructuralVariationOverlapAllele objects
   Exceptions : none
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -131,7 +131,7 @@ sub get_all_alternate_StructuralVariationOverlapAlleles {
                this StructuralVariationOverlap
   Returntype : listref of Bio::EnsEMBL::Variation::StructuralVariationOverlapAllele objects
   Exceptions : none
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 

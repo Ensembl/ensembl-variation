@@ -64,7 +64,7 @@ our @ISA = ('Bio::EnsEMBL::Storable');
   Returntype : Bio::EnsEMBL::Variation::Phenotype
   Exceptions : none
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -87,7 +87,7 @@ sub new {
   Returntype : integer
   Exceptions : none
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -104,7 +104,7 @@ sub id {
   Returntype : string
   Exceptions : none
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 

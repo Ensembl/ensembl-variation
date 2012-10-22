@@ -50,7 +50,7 @@ use base qw(Bio::EnsEMBL::Variation::VariationFeatureOverlap);
   Description: Returns the stable_id of the associated Transcript
   Returntype : string
   Exceptions : none
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -65,7 +65,7 @@ sub transcript_stable_id {
   Description: Get/set the associated Transcript
   Returntype : Bio::EnsEMBL::Transcript
   Exceptions : throws if argument is wrong type
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -81,7 +81,7 @@ sub transcript {
   Description: Get/set the associated Transcript (overriding the superclass feature method)
   Returntype : Bio::EnsEMBL::Transcript
   Exceptions : throws if argument is wrong type
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
