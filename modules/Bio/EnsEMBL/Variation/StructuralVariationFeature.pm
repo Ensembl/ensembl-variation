@@ -748,7 +748,7 @@ sub source_version {
     ReturnType  : int
     Exceptions  : none
     Caller      : general
-    Status      : At risk
+    Status      : Stable
 =cut
 
 sub bound_start{
@@ -766,7 +766,7 @@ sub bound_start{
     ReturnType  : int
     Exceptions  : none
     Caller      : general
-    Status      : At risk
+    Status      : Stable
 =cut
 
 sub bound_end{
@@ -785,7 +785,7 @@ sub bound_end{
     ReturnType  : int
     Exceptions  : none
     Caller      : general
-    Status      : At risk
+    Status      : Stable
 =cut
 
 sub outer_start{
@@ -804,7 +804,7 @@ sub outer_start{
     ReturnType  : int
     Exceptions  : none
     Caller      : general
-    Status      : At risk
+    Status      : Stable
 =cut
 
 sub outer_end{
