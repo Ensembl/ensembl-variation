@@ -148,7 +148,7 @@ sub get_available_adaptors{
   Returntype : int
   Exceptions : none
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 

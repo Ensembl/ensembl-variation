@@ -76,7 +76,7 @@ use base qw(Bio::EnsEMBL::DBSQL::BaseAdaptor);
   Returntype : reference to list Bio::EnsEMBL::Variation::StructuralVariationAnnotation
   Exceptions : throw on bad argument
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -109,7 +109,7 @@ sub fetch_all_by_StructuralVariation {
   Returntype : reference to a list of Bio::EnsEMBL::Variation::StructuralVariationAnnotation objects
   Exceptions : throw on bad argument
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -143,7 +143,7 @@ sub fetch_all_by_StructuralVariation_list {
   Returntype : reference to a list Bio::EnsEMBL::Variation::StructuralVariationAnnotation objects
   Exceptions : throw on bad argument
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -175,7 +175,7 @@ sub fetch_all_by_StructuralVariationFeature_list {
   Returntype : reference to list Bio::EnsEMBL::Variation::StructuralVariationAnnotation
   Exceptions : throw on bad argument
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 

@@ -199,7 +199,7 @@ sub fetch_individual_by_synonym{
   Returntype : reference to a list of Individual ids
   Exceptions : throw if no argument passed
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -242,7 +242,7 @@ sub fetch_all_by_name {
   Exceptions : throw if incorrect argument is passed
                warning if provided Population does not have an dbID
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -294,7 +294,7 @@ sub fetch_all_by_Population {
   Exceptions : throw if incorrect argument passed
                warning if provided individual has no dbID 
   Caller     : general, Individual::get_all_child_Individuals
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 

@@ -75,7 +75,7 @@ our @ISA = ('Bio::EnsEMBL::DBSQL::BaseAdaptor');
     Returntype : list of strings
     Exceptions : none
     Caller     : Bio:EnsEMBL:Variation::Sample
-    Status     : At Risk
+    Status     : Stable
 
 =cut
 
@@ -151,7 +151,7 @@ sub fetch_sample_by_synonym{
   Exceptions : thrown if $id arg is not provided
                does not exist
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -189,7 +189,7 @@ sub fetch_by_dbID{
   Exceptions : thrown if $id arg is not provided
                does not exist
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 

@@ -151,7 +151,7 @@ sub store_to_file_handle {
 
   Description: fetch_all should not be used for Alleles.
   Exceptions : thrown on invocation
-  Status     : At risk
+  Status     : Stable
 
 =cut
 
@@ -199,7 +199,7 @@ sub fetch_all_by_subsnp_id {
   Returntype : listref of Bio::EnsEMBL::Variation::Allele
   Exceptions : throw on incorrect argument
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -364,7 +364,7 @@ sub get_all_failed_descriptions {
   ReturnType  : string
   Exceptions  : thrown on incorrect argument
   Caller      : general
-  Status      : At Risk
+  Status      : Stable
 
 =cut
 

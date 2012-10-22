@@ -80,7 +80,7 @@ our $MAX_VARIATION_SET_ID = 64;
   Returntype : istref of Bio::EnsEMBL::Variation::VariationSet
   Exceptions : none
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -115,7 +115,7 @@ sub fetch_all_top_VariationSets {
   Returntype : listref of Bio::EnsEMBL::Variation::VariationSet
   Exceptions : throw if sub arg is not valid
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -170,7 +170,7 @@ sub fetch_all_by_sub_VariationSet {
   Returntype : listref of Bio::EnsEMBL::Variation::VariationSet
   Exceptions : throw if super arg is not valid
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -223,7 +223,7 @@ sub fetch_all_by_super_VariationSet {
   Returntype : Bio::EnsEMBL::Variation::VariationSet
   Exceptions : throw if name argument is not provided
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -289,7 +289,7 @@ sub fetch_by_short_name {
   Returntype : reference to list of Bio::EnsEMBL::Variation::VariationSets
   Exceptions : throw on incorrect argument
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -342,7 +342,7 @@ sub fetch_all_by_Variation {
   Returntype : reference to list of Bio::EnsEMBL::Variation::VariationSets
   Exceptions : throw on incorrect argument
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 

@@ -157,7 +157,7 @@ sub store {
   Returntype : listref Bio::EnsEMBL::Variation::IndividualGenotype 
   Exceptions : none
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 

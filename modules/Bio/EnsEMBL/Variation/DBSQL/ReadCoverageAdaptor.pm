@@ -85,7 +85,7 @@ our @ISA = ('Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor');
     ReturnType  : listref of Bio::EnsEMBL::Variation::ReadCoverage
     Exceptions  : thrown on bad arguments
     Caller      : general
-    Status      : At Risk
+    Status      : Stable
 
 =cut
 

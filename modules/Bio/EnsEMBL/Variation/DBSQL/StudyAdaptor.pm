@@ -78,7 +78,7 @@ my %cache;
   Returntype : Bio::EnsEMBL::Variation::Study
   Exceptions : throw if name argument is not defined
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -135,7 +135,7 @@ sub fetch_by_dbID {
   Returntype : listref of Bio::EnsEMBL::Variation::Study objects
   Exceptions : throw if list argument is not defined
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 

@@ -78,7 +78,7 @@ our @ISA = ('Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor');
   Returntype : reference to list Bio::EnsEMBL::Variation::VariationAnnotation
   Exceptions : throw on bad argument
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -106,7 +106,7 @@ sub fetch_all_by_Variation {
   Returntype : reference to a list of Bio::EnsEMBL::Variation::VariationAnnotation objects
   Exceptions : throw on bad argument
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -136,7 +136,7 @@ sub fetch_all_by_Variation_list {
   Returntype : reference to a list Bio::EnsEMBL::Variation::VariationAnnotation objects
   Exceptions : throw on bad argument
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -166,7 +166,7 @@ sub fetch_all_by_VariationFeature_list {
   Returntype : reference to list Bio::EnsEMBL::Variation::VariationAnnotation
   Exceptions : throw on bad argument
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -294,7 +294,7 @@ sub fetch_all_by_phenotype_id_source_name {
   Returntype : list of ref of Bio::EnsEMBL::Variation::VariationAnnotation
   Exceptions : throw if the gene_name argument is not defined
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 

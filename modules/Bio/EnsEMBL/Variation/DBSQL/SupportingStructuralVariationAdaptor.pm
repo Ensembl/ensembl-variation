@@ -137,7 +137,7 @@ sub _objs_from_sth {
   Exceptions  : throw if incorrect argument is passed
                 warning if provided structural variant does not have a dbID
   Caller      : general
-  Status      : At Risk
+  Status      : Stable
 
 =cut
 
