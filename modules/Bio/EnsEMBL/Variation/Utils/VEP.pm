@@ -1126,7 +1126,7 @@ sub vf_list_to_cons {
             
             # original output
             if(defined($config->{original})) {
-                push @return, $vf->{_line};
+                push @return, \$vf->{_line};
             }
             
             # GVF output
