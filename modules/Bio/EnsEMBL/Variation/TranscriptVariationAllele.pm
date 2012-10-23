@@ -597,11 +597,13 @@ sub hgvs_transcript {
     if( $self->transcript_variation->variation_feature->strand() <0 && $refseq_strand >0 ||
         $self->transcript_variation->variation_feature->strand() >0 && $refseq_strand < 0
        ){    
-	reverse_comp(\$ref_al_for_checking);
+        reverse_comp(\$ref_al_for_checking);
     }
     $ref_al_for_checking =~ s/-//;
-    unless( $hgvs_notation->{ref} eq $ref_al_for_checking  ){
-	warn "\nError - calculated reference ($hgvs_notation->{ref}) and input reference ($ref_al_for_checking) disagree - skipping HGVS transcript for $var_name\n";
+    unless( $hgvs_notation->{ref}  eq $ref_al_for_checking ||
+            $hgvs_notation->{type} eq 'dup' ||
+            $hgvs_notation->{type} eq 'inv'){
+        warn "\nError - calculated reference ($hgvs_notation->{ref}) and input reference ($ref_al_for_checking) disagree - skipping HGVS transcript for $var_name\n";
     }
 
     ### create reference name - transcript name & seq version
