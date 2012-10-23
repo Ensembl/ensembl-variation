@@ -131,6 +131,7 @@ sub configure {
 		
 		'merge_vfs',
 		'only_existing',
+		'skip_n',
 		
 		'create_name',
 		'chrom_regexp=s',
@@ -202,7 +203,7 @@ sub configure {
 	$config->{coord_system}    ||= 'chromosome';
 	$config->{progress_update} ||= 100;
 	$config->{pid}             ||= $$;
-	$config->{somatic}         || = 0;
+	$config->{somatic}         ||= 0;
 	
 	# recovery not possible if forking
 	#$config->{no_recover} = 1 if defined($config->{fork});
@@ -672,7 +673,7 @@ sub main {
 			$data->{variation} = variation($config, $data);
 			
 			# transcript variation (get cons)
-			get_all_consequences($config->{vep}, [$data->{tmp_vf}], $config->{vep}->{tr_cache}, $config->{vep}->{rf_cache}) if $config->{tables}->{transcript_variation};
+			get_all_consequences($config->{vep}, [$data->{tmp_vf}]) if $config->{tables}->{transcript_variation};
 			
 			# get variation_feature object
 			$data->{vf} = variation_feature($config, $data);
@@ -716,7 +717,7 @@ sub main {
 			#}
 			
 			# compressed by region
-			if($config->{tables}->{compressed_genotype_region} && @{$data->{genotypes}}) {
+			if($config->{tables}->{compressed_genotype_region} && @{$data->{genotypes}} && !defined($config->{test})) {
 				my $vf = $data->{vf};
 				
 				$vf->{seq_region_id} = $vf->slice->get_seq_region_id if !defined($vf->{seq_region_id});
@@ -1698,7 +1699,7 @@ sub variation {
 		$var = Bio::EnsEMBL::Variation::Variation->new_fast({
 			name             => $var_id,
 			source           => $config->{source},
-			is_somatic       => 0,
+			is_somatic       => $config->{somatic},
 			ancestral_allele => $data->{info}->{AA} eq '.' ? undef : uc($data->{info}->{AA})
 		});
 		
@@ -1734,6 +1735,9 @@ sub variation_feature {
 	my $vf = $data->{tmp_vf};
 	
 	my @new_alleles = split /\//, $vf->allele_string;
+	
+	# remove Ns?
+	@new_alleles = grep {$_ ne 'N'} @new_alleles if defined($config->{skip_n});
 	
 	my $vfa = $config->{variationfeature_adaptor};
 	
@@ -1870,7 +1874,7 @@ sub variation_feature {
 		
 		# add in some info needed (since we won't have a slice)
 		$vf->{source_id}       = $config->{source_id};
-		$vf->{is_somatic}      = 0;
+		$vf->{is_somatic}      = $config->{somatic};
 		$vf->{class_attrib_id} = $config->{attribute_adaptor}->attrib_id_for_type_value('SO_term', $so_term);
 		
 		# now store the VF
@@ -2207,6 +2211,7 @@ sub individual_genotype {
 	my @gts = grep {$_->genotype_string !~ /\./} @{$data->{genotypes}};
 	
 	if(defined($config->{test})) {
+		return unless scalar keys %{$data->{variation}};
 		debug($config, "(TEST) Writing ", scalar @gts, " genotype objects for variation ", $data->{variation}->name);
 	}
 	else {
@@ -2529,6 +2534,9 @@ Options
 --only_existing       Only write to tables when an existing variant is found. Existing
                       can be a variation with the same name, or a variant with the same
                       location and alleles
+--skip_n              When comparing to existing variations, set this flag to ignore N
+                      alleles in the VCF. This is useful if you have converted data to
+                      a VCF without knowing the reference
 
 -r | --registry       Registry file to use defines DB connections. Defining a registry
                       file overrides the connection settings below
