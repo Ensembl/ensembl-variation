@@ -673,7 +673,7 @@ sub main {
 			$data->{variation} = variation($config, $data);
 			
 			# transcript variation (get cons)
-			get_all_consequences($config->{vep}, [$data->{tmp_vf}], $config->{vep}->{tr_cache}, $config->{vep}->{rf_cache}) if $config->{tables}->{transcript_variation};
+			get_all_consequences($config->{vep}, [$data->{tmp_vf}]) if $config->{tables}->{transcript_variation};
 			
 			# get variation_feature object
 			$data->{vf} = variation_feature($config, $data);
@@ -1699,7 +1699,7 @@ sub variation {
 		$var = Bio::EnsEMBL::Variation::Variation->new_fast({
 			name             => $var_id,
 			source           => $config->{source},
-			is_somatic       => 0,
+			is_somatic       => $config->{somatic},
 			ancestral_allele => $data->{info}->{AA} eq '.' ? undef : uc($data->{info}->{AA})
 		});
 		
@@ -1874,7 +1874,7 @@ sub variation_feature {
 		
 		# add in some info needed (since we won't have a slice)
 		$vf->{source_id}       = $config->{source_id};
-		$vf->{is_somatic}      = 0;
+		$vf->{is_somatic}      = $config->{somatic};
 		$vf->{class_attrib_id} = $config->{attribute_adaptor}->attrib_id_for_type_value('SO_term', $so_term);
 		
 		# now store the VF
