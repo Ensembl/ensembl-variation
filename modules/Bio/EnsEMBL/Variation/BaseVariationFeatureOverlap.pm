@@ -131,7 +131,7 @@ sub feature {
                     if (my $feature_stable_id = $self->{_feature_stable_id}) {
                         if (my $f = $fa->fetch_by_stable_id($feature_stable_id)) {
                             $self->{feature} = $f;
-                            delete $self->{_feature_stable_id};
+                            #delete $self->{_feature_stable_id};
                         }
                     }
                     elsif (my $feature_label = $self->{_feature_label}) {
@@ -180,7 +180,7 @@ sub _fetch_feature_for_stable_id {
                     if (my $feature_stable_id = $self->{_feature_stable_id}) {
                         if (my $f = $fa->fetch_by_stable_id($feature_stable_id)) {
                             $self->{feature} = $f;
-                            delete $self->{_feature_stable_id};
+                            #delete $self->{_feature_stable_id};
                         }
                     }
                     elsif (my $feature_label = $self->{_feature_label}) {
@@ -205,11 +205,14 @@ sub _fetch_adaptor_for_group {
 
 sub _feature_stable_id {
     my $self = shift;
-    if ($self->feature && $self->feature->can('stable_id')) {
-        return $self->feature->stable_id;
-    }
-    elsif (my $id = $self->{_feature_stable_id}) {
+    
+    if (my $id = $self->{_feature_stable_id}) {
         return $id;
+    }
+    elsif ($self->feature && $self->feature->can('stable_id')) {
+        $self->{_feature_stable_id} = $self->feature->stable_id;
+        
+        return $self->{_feature_stable_id};
     }
     else {
         return undef;
