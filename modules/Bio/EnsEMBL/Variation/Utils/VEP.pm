@@ -386,7 +386,23 @@ sub parse_vcf {
         }
         
         # get type
-        my $type = $info{SVTYPE};
+        my $type;
+        
+        if($alt =~ /\<|\[|\]|\>/) {
+            $type = $alt;
+            $type =~ s/\<|\>//g;
+            $type =~ s/\:.+//g;
+            
+            if($start >= $end && $type =~ /del/i) {
+                warn "WARNING: VCF line on line ".$config->{line_number}." looks incomplete, skipping:\n$line\n";
+                return [];
+            }
+            
+        }
+        else {
+            $type = $info{SVTYPE};
+        }
+        
         my $so_term;
         
         if(defined($type)) {
@@ -829,7 +845,7 @@ sub get_all_consequences {
     push @{$vf_hash{$_->{chr}}{int($_->{start} / $config->{chunk_size})}{$_->{start}}}, $_ for grep {!defined($_->{non_variant})} @$listref;
     
     my @non_variant = grep {defined($_->{non_variant})} @$listref;
-    debug("Skipping ".(scalar @non_variant)." non-variant loci\n") unless defined($config->{quiet});
+    debug("Skipping ".(scalar @non_variant)." non-variant loci\n") unless defined($config->{quiet}) or !(scalar @non_variant);
     
     # get regions
     my $regions = &regions_from_hash($config, \%vf_hash);
