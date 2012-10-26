@@ -597,13 +597,13 @@ sub hgvs_transcript {
     if( $self->transcript_variation->variation_feature->strand() <0 && $refseq_strand >0 ||
         $self->transcript_variation->variation_feature->strand() >0 && $refseq_strand < 0
        ){    
-	reverse_comp(\$ref_al_for_checking);
+        reverse_comp(\$ref_al_for_checking);
     }
     $ref_al_for_checking =~ s/-//;
     unless( $hgvs_notation->{ref} eq $ref_al_for_checking ||
             $hgvs_notation->{type} eq 'dup' ||
             $hgvs_notation->{type} eq 'inv' ){
-	warn "\nError - calculated reference ($hgvs_notation->{ref}) and input reference ($ref_al_for_checking) disagree - skipping HGVS transcript for $var_name\n";
+        warn "\nError - calculated reference ($hgvs_notation->{ref}) and input reference ($ref_al_for_checking) disagree - skipping HGVS transcript for $var_name\n";
     }
 
     ### create reference name - transcript name & seq version
@@ -697,13 +697,13 @@ sub hgvs_protein {
     if(defined $hgvs_notation->{alt} && defined $hgvs_notation->{ref}){
         $hgvs_notation = _clip_alleles( $hgvs_notation);
     }
+    unless( defined $hgvs_notation->{type} && $hgvs_notation->{type} eq "="){
+        #### define type - types are different for protein numbering
+        $hgvs_notation  = $self->_get_hgvs_protein_type($hgvs_notation);
 
-    #### define type - types are different for protein numbering
-    $hgvs_notation  = $self->_get_hgvs_protein_type($hgvs_notation);
-
-    ##### Convert ref & alt peptides taking into account HGVS rules
-    $hgvs_notation = $self->_get_hgvs_peptides($hgvs_notation);
-
+        ##### Convert ref & alt peptides taking into account HGVS rules
+        $hgvs_notation = $self->_get_hgvs_peptides($hgvs_notation);
+    }
     ##### String formatting
     $self->{hgvs_protein}  =  $self->_get_hgvs_protein_format($hgvs_notation);
     return $self->{hgvs_protein} ;   
@@ -715,18 +715,15 @@ sub _get_hgvs_protein_format{
     my $self          = shift;
     my $hgvs_notation = shift;
 
-    if ((defined  $hgvs_notation->{ref} && defined $hgvs_notation->{alt} && 
-     $hgvs_notation->{ref} eq $hgvs_notation->{alt}) || 
-      (defined  $hgvs_notation->{type} && $hgvs_notation->{type} eq "=")){
-
+    if (defined  $hgvs_notation->{type} && $hgvs_notation->{type} eq "="){
         ### no protein change - return transcript nomenclature with flag for neutral protein consequence
-	if(defined $self->hgvs_transcript()){
-	    $hgvs_notation->{'hgvs'} = $self->hgvs_transcript() . "(p.=)";
-	    return $hgvs_notation->{'hgvs'} ;
-	}
-	else{
-	    return undef;
-	}
+        if(defined $self->hgvs_transcript()){
+            $hgvs_notation->{'hgvs'} = $self->hgvs_transcript() . "(p.=)";
+            return $hgvs_notation->{'hgvs'} ;
+        }
+        else{
+            return undef;
+        }
     }
 
     ### all start with refseq name & numbering type
@@ -863,11 +860,7 @@ sub _get_hgvs_protein_type{
     if( defined $hgvs_notation->{ref} && defined $hgvs_notation->{alt} ){
     ### Run type checks on peptides if available
 
-      if($hgvs_notation->{alt} eq $hgvs_notation->{ref} ){
-          #### synonymous indicated by =
-          $hgvs_notation->{type} = "=";
-      }
-      elsif( length($hgvs_notation->{ref}) ==1 && length($hgvs_notation->{alt}) ==1 ) {
+      if( length($hgvs_notation->{ref}) ==1 && length($hgvs_notation->{alt}) ==1 ) {
  
           $hgvs_notation->{type} = ">";
       }
@@ -1024,8 +1017,11 @@ sub _clip_alleles{
   $hgvs_notation->{alt}   = $check_alt;
   $hgvs_notation->{ref}   = $check_ref;
 
+  if($hgvs_notation->{alt} eq $hgvs_notation->{ref}){
+      $hgvs_notation->{type} = "=";
+  }
   ### check if clipping force type change & adjust location
-  if(length ($check_ref) == 0  && length ($check_alt) >= 1){
+  elsif(length ($check_ref) == 0  && length ($check_alt) >= 1){
     ### re-set as ins not delins  
     $hgvs_notation->{type} ="ins";
         ### insertion between ref base and next => adjust next         
@@ -1191,11 +1187,11 @@ sub _check_for_peptide_duplication{
 
    if ( $test_new_start >= 0 && $test_seq eq $hgvs_notation->{alt}) {
 
-	  $hgvs_notation->{type}   = 'dup';
-	  $hgvs_notation->{end}    = $hgvs_notation->{start} -1;
-	  $hgvs_notation->{start} -= length($hgvs_notation->{alt});
+          $hgvs_notation->{type}   = 'dup';
+          $hgvs_notation->{end}    = $hgvs_notation->{start} -1;
+          $hgvs_notation->{start} -= length($hgvs_notation->{alt});
 
-	}
+        }
    
    return $hgvs_notation;
 
