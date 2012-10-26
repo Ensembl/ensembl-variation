@@ -697,13 +697,13 @@ sub hgvs_protein {
     if(defined $hgvs_notation->{alt} && defined $hgvs_notation->{ref}){
         $hgvs_notation = _clip_alleles( $hgvs_notation);
     }
-
-    #### define type - types are different for protein numbering
-    $hgvs_notation  = $self->_get_hgvs_protein_type($hgvs_notation);
-
-    ##### Convert ref & alt peptides taking into account HGVS rules
-    $hgvs_notation = $self->_get_hgvs_peptides($hgvs_notation);
-
+    unless( defined $hgvs_notation->{type} && $hgvs_notation->{type} eq "="){
+	#### define type - types are different for protein numbering
+	$hgvs_notation  = $self->_get_hgvs_protein_type($hgvs_notation);
+	
+	##### Convert ref & alt peptides taking into account HGVS rules
+	$hgvs_notation = $self->_get_hgvs_peptides($hgvs_notation);
+    }
     ##### String formatting
     $self->{hgvs_protein}  =  $self->_get_hgvs_protein_format($hgvs_notation);
     return $self->{hgvs_protein} ;   
@@ -715,9 +715,9 @@ sub _get_hgvs_protein_format{
     my $self          = shift;
     my $hgvs_notation = shift;
 
-    if ((defined  $hgvs_notation->{ref} && defined $hgvs_notation->{alt} && 
-     $hgvs_notation->{ref} eq $hgvs_notation->{alt}) || 
-      (defined  $hgvs_notation->{type} && $hgvs_notation->{type} eq "=")){
+   # if ((defined  $hgvs_notation->{ref} && defined $hgvs_notation->{alt} && 
+   #  $hgvs_notation->{ref} eq $hgvs_notation->{alt}) || 
+    if  (defined  $hgvs_notation->{type} && $hgvs_notation->{type} eq "="){
 
         ### no protein change - return transcript nomenclature with flag for neutral protein consequence
 	if(defined $self->hgvs_transcript()){
@@ -861,13 +861,8 @@ sub _get_hgvs_protein_type{
 
 
     if( defined $hgvs_notation->{ref} && defined $hgvs_notation->{alt} ){
-    ### Run type checks on peptides if available
-
-      if($hgvs_notation->{alt} eq $hgvs_notation->{ref} ){
-          #### synonymous indicated by =
-          $hgvs_notation->{type} = "=";
-      }
-      elsif( length($hgvs_notation->{ref}) ==1 && length($hgvs_notation->{alt}) ==1 ) {
+   
+	if( length($hgvs_notation->{ref}) ==1 && length($hgvs_notation->{alt}) ==1 ) {
  
           $hgvs_notation->{type} = ">";
       }
@@ -993,9 +988,8 @@ sub _clip_alleles{
   my $check_next_alt = substr( $check_alt, 0, 1);
     
     if($check_next_ref eq  "*" && $check_next_alt eq "*"){
-        ### stop re-created by variant - no protein change
+        ### stop re-created by variant - no protein change; trailing aa don't matter
         $hgvs_notation->{type} = "=";
-
         return($hgvs_notation);
     }
     
@@ -1024,8 +1018,11 @@ sub _clip_alleles{
   $hgvs_notation->{alt}   = $check_alt;
   $hgvs_notation->{ref}   = $check_ref;
 
+  if($hgvs_notation->{alt} eq $hgvs_notation->{ref}){
+      $hgvs_notation->{type} = "=";
+  }
   ### check if clipping force type change & adjust location
-  if(length ($check_ref) == 0  && length ($check_alt) >= 1){
+  elsif(length ($check_ref) == 0  && length ($check_alt) >= 1){
     ### re-set as ins not delins  
     $hgvs_notation->{type} ="ins";
         ### insertion between ref base and next => adjust next         
