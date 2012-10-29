@@ -147,9 +147,10 @@ sub dump_dbSNP{
 
    'parallelized_individual_genotypes',
    'population_genotypes',
-   'parallelized_allele_table',
- # 'flanking_sequence_table',
+  'parallelized_allele_table',
+# 'flanking_sequence_table',
    'variation_feature',
+
    
     'cleanup'
   );
@@ -684,6 +685,64 @@ sub suspect_snps {
     $self->{'dbVar'}->do(qq{DROP TABLE suspect});
 }
 
+=head
+
+Flag named elements (like rs179364355 (Z6867)) in zebrafish)
+- not enough information provided for later QC or annotation
+
+=cut
+sub named_variants {
+
+    my $self = shift;
+
+    my $logh = $self->{'log'};
+    
+    print $logh Progress::location();
+    debug(localtime() . "\tExtracting named variants");
+  
+    ## check if named variants present for the release
+    my $named_ext_stmt = qq[ select SNP.snp_id
+                             from SNP, $self->{'dbSNP_share_db'}..UniVariation uv, $self->{'dbSNP_share_db'}..SnpClassCode scc
+                             where scc.abbrev ='Named'
+                             and uv.univar_id = SNP.univar_id
+                             and scc.code = uv.subsnp_class
+                           ];
+
+    my $named_ext_sth = $self->{'dbSNP'}->prepare($named_ext_stmt);
+    $named_ext_sth->execute();
+
+    my $named_rs_ids = $named_ext_sth->fetchall_arrayref();
+
+    return unless defined $named_rs_ids->[0]->[0]; 
+
+    ## get attrib id for sequence alteration
+    my $attrib_ext_stmt = qq[ select attrib_id
+                             from attrib
+                             where value ='sequence_alteration'
+                           ];
+
+    my $attrib_ext_sth = $self->{'dbVar'}->prepare($attrib_ext_stmt);
+    $attrib_ext_sth->execute() || die;
+    my $attrib_id = $attrib_ext_sth->fetchall_arrayref();
+
+    die "attribs to be loaded\n\n" unless defined $attrib_id->[0]->[0]; 
+
+
+    ## update 
+    my $var_upd_stmt = qq[ update variation
+                           set class_attrib_id = ?
+                           where snp_id = ?
+                         ];
+
+    my $var_upd_sth = $self->{'dbVar'}->prepare($var_upd_stmt);
+    debug(localtime() . "\tUpdating named variants");
+    foreach my $rs_id(@{$named_rs_ids}){
+
+       $var_upd_sth->execute( $attrib_id->[0]->[0], $rs_id->[0]) || die;
+    } 
+
+}
+
 # filling of the variation table from SubSNP and SNP
 # creating of a link table variation_id --> subsnp_id
 sub variation_table {
@@ -747,34 +806,20 @@ sub variation_table {
 
 
    $self->{'dbVar'}->do( qq[ALTER TABLE variation enable keys] );
-   $self->{'dbVar'}->do( qq[ALTER TABLE variation enable keys] );
+
     
   debug(localtime() . "\tVariation table indexed");
 
 	#ÊGet somatic flag from dbSNP but only if the snp exclusively has somatic subsnps
-	$stmt = qq{
-		SELECT DISTINCT
-			sssl.snp_id
-		FROM
-			SubSNP ss JOIN
+	$stmt = qq{SELECT DISTINCT	sssl.snp_id
+	     	       FROM SubSNP ss JOIN
 			SNPSubSNPLink sssl ON (
 				sssl.subsnp_id = ss.subsnp_id AND
 				ss.SOMATIC_ind = 'Y'
 			)
-		WHERE
-		  NOT EXISTS (
-		      SELECT 
-		          * 
-		      FROM 
-		          SNPSubSNPLink sssl2 JOIN 
-                  SubSNP ss2 ON (
-                    sssl2.snp_id = sssl.snp_id AND 
-                    sssl2.subsnp_id != sssl.subsnp_id AND 
-                    ss2.subsnp_id = sssl.subsnp_id
-                  ) 
-              WHERE 
-                ss2.SOMATIC_ind != ss.SOMATIC_ind
-         )
+		       JOIN SNPSubSNPLink sssl2 ON (sssl.snp_id = sssl2.snp_id)
+                       JOIN SubSNP ss2 ON ( sssl2.snp_id = sssl.snp_id )
+                       WHERE ss2.SOMATIC_ind != ss.SOMATIC_ind
 	};
 	my $sth = $self->{'dbSNP'}->prepare($stmt);
   	print $logh Progress::location();
@@ -837,9 +882,10 @@ sub dbSNP_annotations{
     debug(localtime() . "\tStarting MAF");
     $self->minor_allele_freq;
     debug(localtime() . "\tStarting suspect SNP");
-    $self->suspect_snps;
+    $self->suspect_snps;   
+    debug(localtime() . "\tStarting named variants");
+    $self->named_variants;
     debug(localtime() . "\tFinished variation table with dbSNP annotations");
-
     return;
 }
 
@@ -1124,6 +1170,9 @@ sub population_table {
  				      FROM sample
  				      WHERE pop_id is NOT NULL
  				  });
+
+    
+
   print $logh Progress::location();
     
      $self->{'dbVar'}->do("DROP TABLE tmp_pop");
@@ -1318,6 +1367,13 @@ sub individual_table {
 
     ## update sample.size for samples which are populations
     $self->update_sample_size();
+
+    ## remove unhelpful message 
+    $self->{'dbVar'}->do(qq{ UPDATE sample set description ='' 
+                              WHERE description like '%nknown source%use%'or description =  'byPopDesc'
+                             });     
+     
+
   print $logh Progress::location();
 
     return;
@@ -1384,7 +1440,7 @@ sub parallelized_allele_table {
 
   unless ($load_only) {
 
- ##=head hashed out to re-run failed job
+##=head hashed out to re-run failed job
     #ÊFirst, get the population_id -> sample_id mapping and write it to the file. The subroutine can also get it but it's faster to get all at once since we expect many to be used. 
     $stmt = qq{
       SELECT DISTINCT
@@ -1414,9 +1470,11 @@ sub parallelized_allele_table {
     #hash out task file creation if re-running 1 failed job
     $jobindex = write_allele_task_file($self->{'dbSNP'}->db_handle(),$task_manager_file, $loadfile,  $allelefile, $samplefile);
 
-  
- ##=cut  #hash out to re-run failed job 
-   # my $jobindex = 1879;
+ 
+## =cut #hash out to re-run failed job 
+
+#    my $jobindex = 795;
+#    my $start = 795;
     my $start = 1 ;
     debug(localtime() . "\tAt allele table - written export task file");
     # Run the job on the farm
@@ -1453,7 +1511,7 @@ sub parallelized_allele_table {
 
 
   debug(localtime() . " Creating single allele file to load ");
-  #my $jobindex = ; 
+###  my $jobindex = 1879; 
   ## merge all data files into one for loading
   my $new_load_file_name =  $self->{'tmpdir'} . "/allele_load_file_new.txt";
   open my $new_load_file, ">", $new_load_file_name || die "Failed to open allele load file to write:$!\n";
@@ -1470,7 +1528,7 @@ sub parallelized_allele_table {
   $self->{'dbVar'}->do( qq[ LOAD DATA LOCAL INFILE "$new_load_file_name" INTO TABLE allele( variation_id,subsnp_id,sample_id,allele,frequency,count,frequency_submitter_handle )]) || die "Erro loading allele data: $self->{'dbVar'}::errstr \n";
 
 
-=head
+
   $task_manager_file = $file_prefix . '_task_management_load.txt';
   open(MGMT,'>',$task_manager_file);
   $jobindex = 1;
@@ -1510,7 +1568,7 @@ sub parallelized_allele_table {
   }
   #die("Loading of the allele_table failed (see log output). This needs to be resolved before proceeding!") unless ($result->{'success'});
 
-=cut
+
 
   ## add indexes post load 
   debug(localtime() . "\tAt allele table - data load complete");
@@ -1560,7 +1618,9 @@ sub parallelized_allele_table {
     ADD INDEX
       variation_idx (variation_id)
   };
+
   $self->{'dbVar'}->do($stmt);
+
   print $logh Progress::location();
   debug(localtime() . "\tEnding allele table");
 }
@@ -2253,17 +2313,17 @@ sub variation_feature {
     
   debug(localtime() . "\tCreating tmp_variation_feature data");
     
-  dumpSQL($self->{'dbVar'},qq{SELECT v.variation_id, ts.seq_region_id, tcl.start, tcl.end, tcl.strand, v.name, v.source_id, v.validation_status, tcl.aln_quality
+  dumpSQL($self->{'dbVar'},qq{SELECT v.variation_id, ts.seq_region_id, tcl.start, tcl.end, tcl.strand, v.name, v.source_id, v.validation_status, tcl.aln_quality, v.somatic, v.class_attrib_id
 					  FROM variation v, tmp_contig_loc tcl, seq_region ts
 					  WHERE v.snp_id = tcl.snp_id
 					  AND ts.name = tcl.contig});
 
-  create_and_load($self->{'dbVar'},'tmp_variation_feature',"variation_id i* not_null","seq_region_id i", "seq_region_start i", "seq_region_end i", "seq_region_strand i", "variation_name", "source_id i not_null", "validation_status i", "aln_quality d");
+  create_and_load($self->{'dbVar'},'tmp_variation_feature',"variation_id i* not_null","seq_region_id i", "seq_region_start i", "seq_region_end i", "seq_region_strand i", "variation_name", "source_id i not_null", "validation_status i", "aln_quality d", "somatic i", "class_attrib_id i");
   print $logh Progress::location();
 
   debug(localtime() . "\tDumping data into variation_feature table");
-  $self->{'dbVar'}->do(qq{INSERT INTO variation_feature (variation_id, seq_region_id,seq_region_start, seq_region_end, seq_region_strand,variation_name, flags, source_id, validation_status, alignment_quality)
-				SELECT tvf.variation_id, tvf.seq_region_id, tvf.seq_region_start, tvf.seq_region_end, tvf.seq_region_strand,tvf.variation_name,IF(tgv.variation_id,'genotyped',NULL), tvf.source_id, tvf.validation_status, tvf.aln_quality
+  $self->{'dbVar'}->do(qq{INSERT INTO variation_feature (variation_id, seq_region_id,seq_region_start, seq_region_end, seq_region_strand,variation_name, flags, source_id, validation_status, alignment_quality, somatic, class_attrib_id)
+				SELECT tvf.variation_id, tvf.seq_region_id, tvf.seq_region_start, tvf.seq_region_end, tvf.seq_region_strand,tvf.variation_name,IF(tgv.variation_id,'genotyped',NULL), tvf.source_id, tvf.validation_status, tvf.aln_quality, tvf.somatic, tvf.class_attrib_id
 				FROM tmp_variation_feature tvf LEFT JOIN tmp_genotyped_var tgv ON tvf.variation_id = tgv.variation_id
 				 });
   print $logh Progress::location();
