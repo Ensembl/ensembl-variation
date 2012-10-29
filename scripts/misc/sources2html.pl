@@ -195,13 +195,14 @@ sub source_table {
   $species = uc($1).$2;
   my $s_name = $species;
   $s_name =~ s/\s/_/g;
-  
+  my $s_name_id = lc($s_name);
+	
   push (@species_list,{name => $species, anchor => $s_name});
   
   my $new_species = ($is_new == 1) ? qq{<span style="padding-left:20px;color:#00F;font-weight:bold">New species!</span>} : '';
   
   my $html = qq{
-  <div id="$s_name" style="padding-left:0px;padding-bottom:3px">
+  <div id="$s_name_id" style="padding-left:0px;padding-bottom:3px">
     <img src="/i/species/48/$s_name.png" alt="$species" class="sp-thumb" style="float:none;margin-right:4px;vertical-align:middle" />
     <span style="font-weight:bold;font-size:1.1em;color:#333">$species</span>$new_species
   </div>
