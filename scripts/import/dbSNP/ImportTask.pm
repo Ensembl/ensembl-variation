@@ -11,8 +11,9 @@ use Progress;
 use DBI qw(:sql_types);
 use Fcntl qw( LOCK_SH LOCK_EX );
 use Digest::MD5 qw ( md5_hex );
-use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
+use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp );
 use Bio::EnsEMBL::Variation::Utils::dbSNP qw(get_alleles_from_pattern);
+use Bio::EnsEMBL::Variation::Utils::Sequence qw(revcomp_tandem);
 
 
 our %QUICK_COMP = ( "A" => "T",
@@ -228,8 +229,9 @@ sub allele_table {
 
       my $sep_alleles = get_alleles_from_pattern($line->[2]);    ## Reported allele pattern [ eg A/T ]
       foreach my $sep_allele (@$sep_alleles){
-	  if ( $line->[3] ==1 &&  $line->[2] !~/^\(\w+\)$/ ){ ## don't try to compliment named variants 
-	      defined $QUICK_COMP{$sep_allele} ? $sep_allele = $QUICK_COMP{$sep_allele} : reverse_comp(\$sep_allele);
+	  if ($line->[3] ==1 ){
+	      $line->[2] =~/^\(\w+\)/ ?	 $sep_allele = revcomp_tandem($sep_allele):	      
+		  defined $QUICK_COMP{$sep_allele} ? $sep_allele = $QUICK_COMP{$sep_allele} : reverse_comp(\$sep_allele);
 	  }
           ## don't add a line without frequency information if record with frequency already entered for this ss & pop & allele
           next if defined  $done{$line->[0]}{$line->[1]}{$sep_allele} ;
