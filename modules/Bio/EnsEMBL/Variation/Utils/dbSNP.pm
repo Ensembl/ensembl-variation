@@ -271,15 +271,25 @@ sub get_alleles_from_pattern{
     my $pattern = shift;
 
     my @sep_alleles;
+
     if($pattern  =~ /^(\(.*\))\d+\/\d+/){
-	## tandem stored (AGAC)25/26/27/28/29/30/31/32/33/34/3
+	## tandem stored (AGAC)25/26/27/28/29/30,  (TTA)1/6/7/ or mixed (TG)20/21/A/G 
 	my $string = $1;
 	my @al = split/\//, $pattern;
 	
 	foreach my $al(@al){
-	    unless( $al =~ /$string/){
+
+	    if($al eq "1" || $al eq $string . 1){
+                #(TTA)1 or /1/ => TTA for allele check later
+		$al = $string;
+		$al=~ s/\(|\)//g;
+	    }
+	    elsif( $al !~/\D+/){
+                # /4/ => (TTA)4
 		$al = $string . $al;
 	    }
+	    # else assume (TG)20 or A and leave
+
 	    push @sep_alleles,  $al;
 	}
     }
