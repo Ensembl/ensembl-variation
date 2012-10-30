@@ -147,8 +147,8 @@ sub dump_dbSNP{
 
    'parallelized_individual_genotypes',
    'population_genotypes',
-  'parallelized_allele_table',
-# 'flanking_sequence_table',
+   'parallelized_allele_table',
+#  'flanking_sequence_table',
    'variation_feature',
 
    
@@ -359,11 +359,11 @@ sub create_coredb {
   #ÊPut the log filehandle in a local variable
   my $logh = $self->{'log'};
   
-  my $coredb_name = $self->{'dbCore'}->dbc->dbname();
+  my $coredb_name = $self->{'dbCore'}->dbname();
   $self->{'dbVar'}->do(qq{CREATE DATABASE $coredb_name});
   print $logh Progress::location();
   debug(localtime() . "\tmake sure create $coredb_name.coord_system");
-  my $csid_ref = $self->{'dbCore'}->dbc->selectall_arrayref(qq{SELECT coord_system_id from coord_system WHERE name = 'chromosome' and attrib = 'default_version'});
+  my $csid_ref = $self->{'dbCore'}->selectall_arrayref(qq{SELECT coord_system_id from coord_system WHERE name = 'chromosome' and attrib = 'default_version'});
   my $csid;
   if ($csid_ref->[0][0]) {
     $csid = $csid_ref->[0][0];
@@ -1969,14 +1969,14 @@ sub flanking_sequence_table {
 		    seq.type,
 		    seq.line_num,
 		    seq.line,
-                    subsnplink.substrand_reversed_flag
+        subsnplink.substrand_reversed_flag
 		  FROM
 		    SubSNPSeq$type\_$partition seq,
-		    SNP snp
-                    SNPSubSNPLink subsnplink
+		    SNP snp,
+        SNPSubSNPLink subsnplink
 		  WHERE
-		    snp.exemplar_subsnp_id = seq.subsnp_id
-                    subsnp.subsnp_id = subsnplink.subsnp_id
+		    snp.exemplar_subsnp_id = seq.subsnp_id AND
+        seq.subsnp_id = subsnplink.subsnp_id
 		};
 		if ($self->{'limit'}) {
 		  $stmt .= qq{    
@@ -1993,9 +1993,10 @@ sub flanking_sequence_table {
 									  seq_type int NOT NULL,
 									  line_num int,
 									  line varchar(255),
-									  KEY subsnp_id_idx(subsnp_id))
-                                                                          revcom
-					  MAX_ROWS = 100000000 });
+										revcom tinyint,
+									  KEY subsnp_id_idx(subsnp_id)
+										)
+										MAX_ROWS = 100000000 });
                 print $logh Progress::location();
   
                load($self->{'dbVar'}, "tmp_seq_$type\_$partition", "subsnp_id", "seq_type", "line_num", "line");
@@ -2004,8 +2005,7 @@ sub flanking_sequence_table {
 
 
 		# merge the tables into a single tmp table
-		$self->{'dbVar'}->do(qq{INSERT INTO tmp_seq (variation_id, subsnp_id, seq_type,
-								   line_num, type, line, revcom)
+		$self->{'dbVar'}->do(qq{INSERT INTO tmp_seq (variation_id, subsnp_id, seq_type, line_num, type, line, revcom)
 					  SELECT vs.variation_id, ts.subsnp_id, ts.seq_type, ts.line_num, '$type',
 					  ts.line, ts.revcom
 					  FROM   tmp_seq_$type\_$partition ts, variation_synonym vs
@@ -2033,14 +2033,14 @@ sub flanking_sequence_table {
 		    seq.type,
 		    seq.line_num, 
 		    seq.line,
-                    subsnplink.substrand_reversed_flag
+        subsnplink.substrand_reversed_flag
 		  FROM 
 		    SubSNPSeq$type seq, 
-		    SNP snp
-                    SNPSubSNPLink subsnplink
+		    SNP snp,
+        SNPSubSNPLink subsnplink
 		  WHERE 
-		    snp.exemplar_subsnp_id = seq.subsnp_id
-                    subsnp.subsnp_id = subsnplink.subsnp_id
+		    snp.exemplar_subsnp_id = seq.subsnp_id AND
+        seq.subsnp_id = subsnplink.subsnp_id
 		 };
        if ($self->{'limit'}) {
 	 $stmt .= qq{    
@@ -2056,9 +2056,10 @@ sub flanking_sequence_table {
 								seq_type int NOT NULL,
 								line_num int,
 								line varchar(255),
+								revcom tinyint,
 								KEY subsnp_id_idx(subsnp_id)
-                                                                revcom tinyint)
-				    MAX_ROWS = 100000000 });
+							) 
+							MAX_ROWS = 100000000 });
       print $logh Progress::location();
       
       load($self->{'dbVar'}, "tmp_seq_$type", "subsnp_id", "seq_type", "line_num", "line", "revcom");
@@ -2167,7 +2168,7 @@ sub variation_feature {
   
   debug(localtime() . "\tDumping seq_region data");
 
-  dumpSQL($self->{'dbCore'}->dbc()->db_handle, qq{SELECT sr.seq_region_id, sr.name
+  dumpSQL($self->{'dbCore'}->db_handle, qq{SELECT sr.seq_region_id, sr.name
  				      FROM   seq_region sr, coord_system cs
                                       WHERE  sr.coord_system_id = cs.coord_system_id
                                       AND    cs.attrib like "%default_version%"});
@@ -2210,7 +2211,7 @@ sub variation_feature {
              FROM 
                $self->{'snp_dbname'}..sysobjects 
              WHERE 
-               name LIKE '$self->{'dbSNP_version'}\_ContigInfo\__'
+               name LIKE '$self->{'dbSNP_version'}\_ContigInfo%'
           };
   my $sth1 = $self->{'dbSNP'}->prepare($stmt);
   $sth1->execute();
