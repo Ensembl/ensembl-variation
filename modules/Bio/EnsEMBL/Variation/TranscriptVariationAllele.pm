@@ -1081,7 +1081,7 @@ sub _get_fs_peptides{
   my $alt_trans = $alt_cds->translate()->seq();
   
   ### get changed end (currently in single letter AA coding)    
-  my $ref_trans  = $self->transcript->translate()->seq();
+  my $ref_trans  = $self->transcript_variation->_peptide();
   $ref_trans    .= "*";   ## appending ref stop for checking purposes 
   
   $hgvs_notation->{start} = $self->transcript_variation->translation_start() ;
@@ -1114,7 +1114,7 @@ sub _get_surrounding_peptides{
 
   my $self    = shift;
   my $ref_pos = shift; 
-  my $ref_trans  = $self->transcript->translate()->seq();
+  my $ref_trans  = $self->transcript_variation->_peptide();
 
   my $end = substr($ref_trans, $ref_pos-1);
   my $ref_string = substr($ref_trans, $ref_pos-1, 2);
@@ -1130,7 +1130,7 @@ sub _get_alternate_cds{
   my $self = shift;
 
   ### get reference sequence
-  my $reference_cds_seq = $self->transcript->translateable_seq();
+  my $reference_cds_seq = $self->transcript_variation->_translateable_seq();
   
   return undef unless defined($self->transcript_variation->cds_start) && defined($self->transcript_variation->cds_end());
 
@@ -1173,7 +1173,7 @@ sub _check_for_peptide_duplication{
    my $hgvs_notation= shift;
 
    ##### get reference sequence
-   my $reference_cds_seq = $self->transcript->translateable_seq();
+   my $reference_cds_seq = $self->transcript_variation->_translateable_seq();
 
    ##### get sequence upstream of variant
    my $upstream_seq   =  substr($reference_cds_seq, 0, ($self->transcript_variation->cds_start() -1) );
@@ -1216,7 +1216,7 @@ sub _stop_loss_extra_AA{
   ### get new translation
   my $alt_trans = $alt_cds->translate();
   
-  my $ref_temp  =  $self->transcript->translate()->seq;
+  my $ref_temp  =  $self->transcript_variation->_peptide();
   my $ref_len = length($ref_temp);
   
   if($DEBUG==1){ 
