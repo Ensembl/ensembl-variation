@@ -1608,7 +1608,8 @@ sub tva_to_line {
     my $line = init_line($config, $tva->variation_feature, $base_line);
     
     # HGVS
-    if(defined $config->{hgvs}) {my $hgvs_t = $tva->hgvs_transcript;
+    if(defined $config->{hgvs}) {
+        my $hgvs_t = $tva->hgvs_transcript;
         my $hgvs_p = $tva->hgvs_protein;
         
         $line->{Extra}->{HGVSc} = $hgvs_t if $hgvs_t;
@@ -3617,6 +3618,8 @@ sub load_dumped_transcript_cache {
         }
         
         $t->{slice}->{adaptor} = $config->{sa};
+        
+        $_->{slice} ||= $t->{slice} for @{$t->{_trans_exon_array}};
     }
     
     return $tr_cache;
