@@ -1153,7 +1153,7 @@ sub _get_alternate_cds{
   my $alt_cds =Bio::PrimarySeq->new(-seq => $alternate_seq,  -id => 'alt_cds', -alphabet => 'dna');
 
   ### append UTR if available as stop may be disrupted
-  my $utr = $self->transcript_variation->transcript->three_prime_utr();
+  my $utr = $self->transcript_variation->_three_prime_utr();
 
   if (defined $utr) {
   ### append the UTR to the alternative CDS 
