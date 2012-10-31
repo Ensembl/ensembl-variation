@@ -50,7 +50,7 @@ use base qw(Bio::EnsEMBL::Variation::VariationFeatureOverlap);
   Description: Returns the stable_id of the associated Transcript
   Returntype : string
   Exceptions : none
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -65,7 +65,7 @@ sub transcript_stable_id {
   Description: Get/set the associated Transcript
   Returntype : Bio::EnsEMBL::Transcript
   Exceptions : throws if argument is wrong type
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -81,7 +81,7 @@ sub transcript {
   Description: Get/set the associated Transcript (overriding the superclass feature method)
   Returntype : Bio::EnsEMBL::Transcript
   Exceptions : throws if argument is wrong type
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -626,6 +626,20 @@ sub _translateable_seq {
     my $tran_seq = $tran->{_variation_effect_feature_cache}->{translateable_seq} ||= $tran->translateable_seq;
     
     return $tran_seq;
+}
+sub _three_prime_utr {
+    my $self = shift;
+    
+    my $tran = $self->transcript;
+    
+    if(!defined($tran->{_variation_effect_feature_cache}->{three_prime_utr})) {
+        
+        # transfer to feature slice so we don't subseq whole chromosome
+        my $transferred = $tran->transfer($tran->feature_Slice());
+        $tran->{_variation_effect_feature_cache}->{three_prime_utr} = $transferred->three_prime_utr();
+    }
+    
+    return $tran->{_variation_effect_feature_cache}->{three_prime_utr};
 }
   
 sub _peptide {
