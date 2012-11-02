@@ -340,7 +340,8 @@ sub run_allele_checks {
 
          if(defined $submitted_data->[4]){
            ###fail whole experimental set if sample info supplied
-           next if $skip{$submitted_data->[1]}{$submitted_data->[4]};    ## avoid duplicates
+           next if $skip{$submitted_data->[1]}{$submitted_data->[4]} ==1;    ## avoid duplicates
+	   $skip{$submitted_data->[1]}{$submitted_data->[4]} =1;
            push @fail_all, [$submitted_data->[1], $submitted_data->[4]]; ## subsnp_id, sample_id
          }
          else{
@@ -469,7 +470,7 @@ sub export_allele_data{
                                                AND    v.variation_id  = al.variation_id 
                                                 ]);       
   
-   $data_ext_sth->execute($first, $last)|| die "ERROR extracting variation feature info\n";
+   $data_ext_sth->execute($first, $last)|| die "ERROR extracting allele info\n";
   
    my $data = $data_ext_sth->fetchall_arrayref();
    
@@ -486,6 +487,7 @@ sub export_allele_data{
        }
 
        push @{$save{$l->[0]}{allele_data}}, [$l->[2], $l->[3], $l->[4], $l->[5], $l->[6], $l->[7], $l->[8] ];
+
 
   }
 
