@@ -857,9 +857,12 @@ sub get_consequence_type {
 
 =head2 ambig_code
 
-    Args         : None
+    Args         : int $strand (optional)
     Example      : my $ambiguity_code = $vf->ambig_code()
     Description  : Returns the ambigutiy code for the alleles in the VariationFeature
+	               Specify a strand to give the ambiguity code on that genomic strand;
+				   use $strand = 1 to always give the ambiguity code on the forward
+				   strand.
     ReturnType   : String $ambiguity_code
     Exceptions   : none    
     Caller       : General
@@ -869,8 +872,9 @@ sub get_consequence_type {
 
 sub ambig_code{
     my $self = shift;
+	my $strand = shift;
     
-    return &ambiguity_code($self->allele_string());
+    return &ambiguity_code($self->allele_string(), defined($strand) ? ($strand != $self->strand) : 0);
 }
 
 =head2 var_class
