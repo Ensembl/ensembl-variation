@@ -97,9 +97,13 @@ our @VALIDATION_STATES = qw(cluster freq submitter doublehit hapmap 1000Genome f
 
 sub ambiguity_code {
     my $alleles = shift;
+	my $flip = shift;
+	
     my %duplicates; #hash containing all alleles to remove duplicates
 	
 	foreach my $a(split /[\|\/\\]/, $alleles) {
+		reverse_comp(\$a) if defined($flip) && $flip;
+		
 		# convert Ns
 		my @a = ($a eq 'N' ? qw(A C G T) : ($a));
 		map {$duplicates{$_}++} @a;
