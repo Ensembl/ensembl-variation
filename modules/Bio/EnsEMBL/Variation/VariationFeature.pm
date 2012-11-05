@@ -252,6 +252,8 @@ sub new_fast {
 
   Arg [1]    : string $newval (optional)
                The new value to set the allele_string attribute to
+  Arg [2]    : int $strand (optional)
+               Strand on which to report alleles (default is $obj->strand)
   Example    : $allele_string = $obj->allele_string()
   Description: Getter/Setter for the allele_string attribute.
                The allele_string is a '/' demimited string representing the
@@ -265,8 +267,27 @@ sub new_fast {
 
 sub allele_string{
   my $self = shift;
-  return $self->{'allele_string'} = shift if(@_);
-  return $self->{'allele_string'};
+  my $newval = shift;
+  my $strand = shift;
+  
+  if(defined($newval)) {
+	return $self->{'allele_string'} = $newval;
+  }
+  
+  my $as = $self->{'allele_string'};
+  
+  if(defined($strand) && $strand != $self->strand) {
+	my @flipped;
+	
+	foreach my $a(split /\//, $as) {
+	  reverse_comp(\$a) if $a =~ /^[ACGTn\-]+$/;
+	  push @flipped, $a;
+	}
+	
+	$as = join '/', @flipped;
+  }
+  
+  return $as;
 }
 
 =head2 display_id
@@ -874,7 +895,7 @@ sub ambig_code{
     my $self = shift;
 	my $strand = shift;
     
-    return &ambiguity_code($self->allele_string(), defined($strand) ? ($strand != $self->strand) : 0);
+    return &ambiguity_code($self->allele_string(undef, $strand));
 }
 
 =head2 var_class
