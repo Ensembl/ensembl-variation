@@ -251,7 +251,7 @@ sub run_variation_checks{
     }
 
 
-    my $match_coord_length = 0; ## is either allele of compatible length with given coordinates?
+    my $match_coord_length = 1; ## is either allele of compatible length with given coordinates?
   
     my @alleles = split/\//, $var->{allele} ; 
     foreach my $al(@alleles){
@@ -264,7 +264,7 @@ sub run_variation_checks{
       else{        
       $var->{alt} .= "/" . $al;
       ## if one of these suggests an insertion and the other a substitution, the sizes are not compatible
-      if(length($ref_seq ) == length($ch) && $ch ne "-" && $ref_seq ne "-"){$match_coord_length = 1;}
+      if(length($ref_seq ) != length($ch) && $ch ne "-" && $ref_seq ne "-"){$match_coord_length = 0;}
       }
     }
 
@@ -335,12 +335,12 @@ sub run_allele_checks {
 
       
        ## $submitted_data content: [ al.allele_id, al.subsnp_id, al.allele,  al.frequency, al.sample_id, al.count, al.frequency_submitter_handle ]
-
        unless( exists $expected_alleles{$submitted_data->[2]} && $expected_alleles{$submitted_data->[2]} ==1 ){ ## check expected on allele not allele_code
 
-         if(defined $submitted_data->[4]){
+       ## checking ss id here because of the way strains are handled in import
+         if(defined $submitted_data->[4] && defined $submitted_data->[1] && $submitted_data->[1] >0  ){
            ###fail whole experimental set if sample info supplied
-           next if $skip{$submitted_data->[1]}{$submitted_data->[4]} ==1;    ## avoid duplicates
+           next if defined $skip{$submitted_data->[1]}{$submitted_data->[4]} && $skip{$submitted_data->[1]}{$submitted_data->[4]} ==1;  ## avoid duplicates
 	   $skip{$submitted_data->[1]}{$submitted_data->[4]} =1;
            push @fail_all, [$submitted_data->[1], $submitted_data->[4]]; ## subsnp_id, sample_id
          }
@@ -731,7 +731,7 @@ sub write_allele_fails{
       my $allele_set_ids = $allele_set_id_ext_sth->fetchall_arrayref();
       foreach my $allele_id (@{$allele_set_ids}){
 
-        next if (exists $done_new{$allele_id->[0]}{11} && $done_new{$allele_id->[0]}{11} ==1);
+        next if (defined $done_new{$allele_id->[0]}{11} );
         $done_new{$allele_id->[0]}{11} = 1;
 
         $fail_ins_sth->execute($allele_id->[0], 11 )|| die "ERROR inserting allele fails info\n";
@@ -845,7 +845,7 @@ sub write_allele{
     foreach my $allele (@{$var_data->{$var}->{allele_data}}){  ## array of data from 1 row in table
 
       ## keep allele data in un-coded format for Mart for non-human databases
-       unless($self->required_param('species') =~/Homo|Human/i){
+       unless($self->required_param('species') =~/Homo|Human|musculus|mouse/i){
           $allele_old_ins_sth->execute( $var, $allele->[1], $allele->[2], $allele->[3], $allele->[4], $allele->[5]) || die "ERROR inserting allele info\n";
      }
 
