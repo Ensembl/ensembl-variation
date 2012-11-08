@@ -118,6 +118,10 @@ sub add_feature {
 				?
 				FROM $vf_table vf, $var_table v 
 				WHERE v.variation_id=vf.variation_id
+				AND NOT EXISTS ( SELECT * 
+				                 FROM variation_feature vf2 
+												 WHERE vf2.variation_id=v.new_var_id
+											 );
 	});
 	$insert_vf_sth->execute($source_id);
 }
@@ -173,7 +177,11 @@ sub add_allele {
 				SELECT DISTINCT
 					new_var_id,
 					$ac_id
-				FROM $var_table;
+				FROM $var_table
+				WHERE NOT EXISTS ( SELECT * 
+				                   FROM allele a
+												   WHERE a.variation_id=$var_table.new_var_id
+												 );
 		});
 	} else {
 
@@ -187,6 +195,10 @@ sub add_allele {
 					new_var_id,
 					"$allele"
 				FROM $var_table
+				WHERE NOT EXISTS ( SELECT * 
+				                   FROM allele a
+												   WHERE a.variation_id=$var_table.new_var_id
+												 );
 		});
 	}
 	$insert_al_sth->execute();
@@ -238,6 +250,10 @@ sub add_annotation {
 				?
 			FROM $va_table va, $var_table v 
 			WHERE v.variation_id=va.variation_id
+			AND NOT EXISTS ( SELECT * 
+				               FROM variation_annotation va2
+											 WHERE va2.variation_id=$var_table.new_var_id
+										 );
 	});
 	$insert_va_sth->execute($study_id, $phenotype_id);
 }
