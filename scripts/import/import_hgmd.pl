@@ -30,7 +30,7 @@ die ("HGMD tables not found in the database!\nBe sure you ran the script 'map_hg
 # Main
 add_variation();
 add_feature();
-add_flanking();
+#add_flanking(); # Not used anymore
 add_allele();
 add_annotation();
 add_attrib();
@@ -46,7 +46,7 @@ sub add_variation {
 	});
 
 	my $insert_v_sth = $dbh->prepare(qq{
-		INSERT INTO variation (name,source_id) VALUES (?,?);
+		INSERT IGNORE INTO variation (name,source_id) VALUES (?,?);
 	});
 
 	my $select_v_sth = $dbh->prepare(qq{
@@ -73,12 +73,28 @@ sub add_variation {
 			$update_vh_sth->execute($new_id,$res[0]);
 		}
 	}
+	
+	# Check if some HGMD entries have beeen remove from the previous version
+	my $select_not_existing = $dbh->prepare(qq{
+	  SELECT name FROM variation WHERE source_id=$source_id
+		AND name NOT IN (SELECT name FROM $var_table)
+	});
+	my @not_existing;
+	$select_not_existing->execute();
+	while (my @res = $select_vh_sth->fetchrow_array) {
+	  push(@not_existing,$res[0]);
+	}
+	if (scalar @not_existing) {
+	  print "WARNING: ".scalar(@not_existing)." entries are not anymore in the HGMD database!\n";
+		print "Please, remove the following HGMD mutations from the variation database:\n";
+		print join("\n",@not_existing);
+	}
 }
 
 
 sub add_feature {
 	my $insert_vf_sth = $dbh->prepare(qq{
-		INSERT INTO 
+		INSERT IGNORE INTO 
 			variation_feature (
 				seq_region_id,
 				seq_region_start,
@@ -109,7 +125,7 @@ sub add_feature {
 
 sub add_flanking {
 	my $insert_fs_sth = $dbh->prepare(qq{
-		INSERT INTO 
+		INSERT IGNORE INTO 
 			flanking_sequence (
 				variation_id,
 				up_seq_region_start, 
@@ -149,7 +165,7 @@ sub add_allele {
 		  $ac_id = $dbh->{'mysql_insertid'};
 	  }
 		$insert_al_sth = $dbh->prepare(qq{
-			INSERT INTO 
+			INSERT IGNORE INTO 
 				allele (
 					variation_id,
 					allele_code_id
@@ -162,7 +178,7 @@ sub add_allele {
 	} else {
 
 		$insert_al_sth = $dbh->prepare(qq{
-			INSERT INTO 
+			INSERT IGNORE INTO 
 				allele (
 					variation_id,
 					allele
@@ -206,7 +222,7 @@ sub add_annotation {
 	if (!defined($phenotype_id)) { print "Phenotype not found\n"; exit(0); }
 
 	my $insert_va_sth = $dbh->prepare(qq{
-		INSERT INTO 
+		INSERT IGNORE INTO 
 			variation_annotation (
 				associated_gene,
 				variation_id,
