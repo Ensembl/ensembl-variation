@@ -52,7 +52,7 @@ foreach my $project (sort(keys(%pops))) {
 	my $term = $pops{$project}{term};
 	my $constraint  = ($pops{$project}{constraint}) ? $pops{$project}{constraint}.' AND ' : '';
 	
-  print "<h3>Populations from the $project Project (Human)</h3>\n";
+  print "<h4>Populations from the $project Project (Human)</h4>\n";
 	$project =~ s/ /_/g;
 	$project = lc $project;
   print "<table id=\"$project\" class=\"ss\">\n";
