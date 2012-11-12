@@ -65,7 +65,7 @@ foreach my $top_vs (@{$top_vss}) {
 
 
 ## Print the common table headers
-print "<h3>Variation sets common to all species</h3>\n";
+print "<h4>Variation sets common to all species</h4>\n";
 print "<table id=\"variation_set_table\" class=\"ss\">\n";
 print "$table_header\n";
 
@@ -76,7 +76,7 @@ print "</table>\n";
 
 
 ## Print the human specific table headers
-print "<br />\n<h3>Variation sets specific to Human</h3>\n";
+print "<br />\n<h4>Variation sets specific to Human</h4>\n";
 print "<table id=\"human_variation_set_table\" class=\"ss\">\n";
 print $table_header;
 
