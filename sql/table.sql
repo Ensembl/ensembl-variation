@@ -17,7 +17,6 @@
 @column clinical_significance_attrib_id     An attrib_id identifying the clinical significance of this variant, as reported by dbSNP
 
 @see variation_synonym
-@see flanking_sequence
 @see failed_variation
 @see variation_feature
 @see allele
@@ -915,7 +914,6 @@ CREATE TABLE transcript_variation (
 @column coord_system_id  Foreign key references to the @link coord_system table.
 
 @see variation_feature
-@see flanking_sequence
 @see compressed_genotype_region
 @see read_coverage
 */
@@ -933,42 +931,6 @@ CREATE TABLE seq_region (
   KEY cs_idx (coord_system_id)
 
 ) ;
-
-
-/**
-@table flanking_sequence
-
-@desc This table contains the upstream and downstream sequence surrounding a variation. Since each variation is defined by its flanking sequence, this table has a one-to-one relationship with the variation table.
-
-@column variation_id				Primary key. Foreign key references to the variation table.
-@column up_seq						Upstream sequence, used to initially store the sequence from the core database, and in a later process get from here the position.
-@column down_seq					Downstream sequence, used to initially store the sequence from the core database, and in a later process get from here the position.
-@column up_seq_region_start	Position of the starting of the sequence in the region.
-@column up_seq_region_end		Position of the end of the sequence in the region.
-@column down_seq_region_start	Position of the starting of the sequence in the region.
-@column down_seq_region_end	Position of the end of the sequence in the region.
-@column seq_region_id			Foreign key references @link seq_region in core db. Refers to the seq_region which this variant is on, which may be a chromosome or clone etc..
-@column seq_region_strand		The orientation of the variation on the seq_region.
-
-@see variation
-@see seq_region
-*/
-
-create table flanking_sequence (
-	variation_id int(10) unsigned not null,
-	up_seq text,
-	down_seq text,
-  	up_seq_region_start int,
-  	up_seq_region_end   int,
-  	down_seq_region_start int,
-  	down_seq_region_end int,
-  	seq_region_id int(10) unsigned,
-  	seq_region_strand tinyint,
-
-  primary key( variation_id )
-
-) MAX_ROWS = 100000000;
-
 
 /**
 @table source
