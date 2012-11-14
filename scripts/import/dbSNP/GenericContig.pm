@@ -52,6 +52,7 @@ our %FARM_PARAMS = (
   ## ran most of these max_concurrent_jobs=50  & memory=2000
   ## 58 failed =>rerun with memory=8000
   ## 3  failed =>rerun with memory=10000
+  ## mouse - 20/29 failed 4G limit - 5 needed 9.5G
   'individual_genotypes' => {
     'script' => 'run_task.pl',
     'max_concurrent_jobs' => 50,
@@ -144,6 +145,7 @@ sub dump_dbSNP{
    'subsnp_synonyms',
    'archive_rs_synonyms',
    'dbSNP_annotations',
+   'pubmed_citations',
 
    'parallelized_individual_genotypes',
    'population_genotypes',
@@ -378,19 +380,23 @@ sub create_coredb {
 
 sub source_table {
     my $self = shift;
+    my $source_name = shift;
     
-  #ÊPut the log filehandle in a local variable
-  my $logh = $self->{'log'};
-  
-    #my ($dbname,$version) = split /\_/,$self->{'dbSNP'}->dbname(); #get the version of the dbSNP release
-#    my ($dbname,$version) = split /\_/,$self->{'snp_dbname'};
+   
+    #get the version of the dbSNP release
     my ($species,$tax_id,$version) = $self->{'snp_dbname'} =~ m/^(.+)?\_([0-9]+)\_([0-9]+)$/;
-    my $dbname = 'dbSNP';
+
     my $url = 'http://www.ncbi.nlm.nih.gov/projects/SNP/';
-    $self->{'dbVar'}->do(qq{INSERT INTO source (source_id,name,version,description,url,somatic_status) VALUES (1,"$dbname",$version,"Variants (including SNPs and indels) imported from dbSNP", "$url", "mixed")});
-    my $archive_dbname = "Archive dbSNP";
-    $self->{'dbVar'}->do(qq{INSERT INTO source (source_id,name,version,description,url,somatic_status) VALUES (2,"$archive_dbname",$version,"Former variants names imported from dbSNP", "$url", "mixed")});
-    print $logh Progress::location();
+
+    if(defined $source_name &&  $source_name=~ /Archive/){ 
+        $self->{'dbVar'}->do(qq{INSERT INTO source (source_id,name,version,description,url,somatic_status) VALUES (2, "$source_name",$version,"Former variants names imported from dbSNP", "$url", "mixed")});
+    }
+    else{
+
+        my $dbname = 'dbSNP';
+
+        $self->{'dbVar'}->do(qq{INSERT INTO source (source_id,name,version,description,url,somatic_status) VALUES (1,"$dbname",$version,"Variants (including SNPs and indels) imported from dbSNP", "$url", "mixed")});
+    }
 
 }
 
@@ -742,6 +748,56 @@ sub named_variants {
     } 
 
 }
+
+## extract pubmed ids linked to refsnps
+sub pubmed_citations{
+
+    my $self = shift;
+   
+    return unless $self->table_exists_and_populated('SNPPubmed');
+    my $logh = $self->{'log'};
+       
+    print $logh Progress::location();
+    debug(localtime() . "\tExporting pubmed cited SNPs");
+   
+    ## create tables - not part of formal schema currently; used in post-processing only
+    $self->{'dbVar'}->do(qq[ create table pubmed_variation (
+                     pubmed_variation_id int(10) unsigned not null auto_increment,
+                     variation_id int(10) unsigned not null,
+                     pubmed_id int(10) unsigned not null,
+                     primary key (pubmed_variation_id),
+                     key variation_idx (variation_id)
+                    )]);
+
+    $self->{'dbVar'}->do(qq[ create table tmp_pubmed (
+                     variation_name varchar(255) not null,
+                     pubmed_id int(10) unsigned not null,
+                     key variation_idx (variation_name)
+                   )]);
+
+    my $pubmed_ins_sth = $self->{'dbVar'}->prepare(qq[ insert into tmp_pubmed (variation_name, pubmed_id) values (?,?)]);
+
+    my $sth = $self->{'dbSNP'}->prepare(qq[ SELECT snp_id, pubmed_id from SNPPubmed ]);
+    $sth->execute();
+
+    my $data = $sth->fetchall_arrayref();
+    foreach my $l (@{$data}){
+       $pubmed_ins_sth->execute("rs$l->[0]", $l->[1]) ||die "Failed to enter pubmed_id for rs$l->[0], PMID:$l->[1] \n";
+    }
+
+    ## create more useful table linked to variation_id
+    $self->{'dbVar'}->do(qq [insert into pubmed_variation (variation_id ,pubmed_id)
+                            (select variation.variation_id, tmp_pubmed.pubmed_id
+                            from variation,tmp_pubmed
+                            where variation.name = tmp_pubmed.variation_name)]);
+
+    ## remove tmp table
+    $self->{'dbVar'}->do(qq [ drop table tmp_pubmed ]);
+
+
+
+}
+
 
 # filling of the variation table from SubSNP and SNP
 # creating of a link table variation_id --> subsnp_id
@@ -1183,201 +1239,269 @@ sub population_table {
 
 # loads the individual table
 #
-# This subroutine produces identical results as the MySQL equivalence
-#
+# pre-e!70 samples were merged on dbSNP ind_id and a submitted name chosen at random
+# post-e!70 samples are only merged if they have the same name and ind_id
+# gender and ped info are held on the ind_id
+#  -  logic exists to select the correct parent name and avoid multiple conventions within the same family  
 sub individual_table {
     my $self = shift;
 
   #ÊPut the log filehandle in a local variable
   my $logh = $self->{'log'};
   
-  # load individuals into the population table
-  my $stmt;
-  debug(localtime() . "\tDumping Individual data");
+  debug(localtime() . "\tStarting on Individual data");
 
-  # a few submitted  individuals have the same individual or no individual
-  # we ignore this problem with a group by
-  #there were less individuals in the individual than in the individual_genotypes table, the reason is that some individuals do not have
-  #assigned a specie for some reason in the individual table, but they do have in the SubmittedIndividual table
-  #to solve the problem, get the specie information from the SubmittedIndividual table
-  $stmt = qq{ 
-    SELECT
-      CASE WHEN
-	si.loc_ind_alias IS NULL OR
-	LEN(si.loc_ind_alias) = 0
-      THEN
-	LTRIM(STR(si.pop_id))+'_'+LTRIM(si.loc_ind_id)
-      ELSE
-	si.loc_ind_alias
-      END, 
-      i.descrip, 
-      i.ind_id,
-      si.submitted_ind_id
-    FROM   
-      SubmittedIndividual si, 
-      Individual i
-    WHERE  
-      si.ind_id = i.ind_id
-  };
-  dumpSQL($self->{'dbSNP'}, $stmt);
 
-  create_and_load($self->{'dbVar'}, 'tmp_ind_ungrouped', 'loc_ind_id', 'description', 'ind_id i*', 'submitted_ind_id i*');
-  print $logh Progress::location();
-  $self->{'dbVar'}->do(qq{ALTER TABLE tmp_ind_ungrouped ORDER BY submitted_ind_id ASC, ind_id ASC, loc_ind_id ASC, description ASC});
-  print $logh Progress::location();
-  $self->{'dbVar'}->do(qq{
-                          CREATE TABLE 
-                            tmp_ind
-                          SELECT
-                            loc_ind_id,
-                            description,
-                            ind_id
-                          FROM
-                            tmp_ind_ungrouped
-                          GROUP BY
-                            ind_id 		
-                         });	#table size is small, so no need to change group by
-  $self->{'dbVar'}->do(qq{DROP TABLE tmp_ind_ungrouped});
-  print $logh Progress::location();
-
-  # load pedigree into seperate tmp table because there are no
-  # indexes on it in dbsnp and it makes the left join b/w tables v. slow
-  # one individual has 2 (!) pedigree rows, thus the group by
-
-  $stmt = qq{
-             SELECT 
-               ind_id, 
-               pa_ind_id, 
-               ma_ind_id, 
-               sex
-             FROM 
-               PedigreeIndividual
-            };
-  dumpSQL($self->{'dbSNP'}, $stmt);
-
-  create_and_load($self->{'dbVar'}, 'tmp_ped_ungrouped', 'ind_id i*', 'pa_ind_id i', 'ma_ind_id i', 'sex');
-  print $logh Progress::location();
-  $self->{'dbVar'}->do(qq{
-                          CREATE TABLE 
-                            tmp_ped
-                          SELECT
-                            ind_id,
-                            pa_ind_id,
-                            ma_ind_id,
-                            sex
-                          FROM
-                            tmp_ped_ungrouped
-                          GROUP BY
-                            ind_id;
-                         });
-  $self->{'dbVar'}->do(qq{DROP TABLE tmp_ped_ungrouped});
-  print $logh Progress::location();
-                         
-  debug(localtime() . "\tLoading individuals into individual table");
-
-  # to make things easier keep dbSNPs individual.ind_id as our individual_id
-
-  #add the individual_id column in the sample table
-  $self->{'dbVar'}->do("ALTER TABLE sample ADD column individual_id int, add index ind_idx (individual_id)");   
-  print $logh Progress::location();
-
-  #and the individual data in the sample table
-  $self->{'dbVar'}->do(qq{INSERT INTO sample (individual_id, name, description)
-				  SELECT ti.ind_id, ti.loc_ind_id, ti.description
-			          FROM tmp_ind ti
-			      });
-  print $logh Progress::location();
-
-  #decide which individual_type should this species bem make sure it's correct when adding new speciesz
+ #decide which individual_type should this species be make sure it's correct when adding new species
   my $individual_type_id;
   if ($self->{'dbm'}->dbCore()->species =~ /homo|pan|anoph/i) {
-    $individual_type_id = 3;
+      $individual_type_id = 3;
   }
   elsif ($self->{'dbm'}->dbCore()->species =~ /mus/i) {
-    $individual_type_id = 1;
+      $individual_type_id = 1;
   }
   else {
-    $individual_type_id = 2;
+      $individual_type_id = 2;
   }
 
-  $self->{'dbVar'}->do(qq{INSERT INTO individual (sample_id, father_individual_sample_id, mother_individual_sample_id, gender, individual_type_id)
-				    SELECT s.sample_id,
-				    IF(tp.pa_ind_id > 0, tp.pa_ind_id, null),
-				     IF(tp.ma_ind_id > 0, tp.ma_ind_id, null),
-				     IF(tp.sex = 'M', 'Male',
-				        IF(tp.sex = 'F', 'Female', 'Unknown')), $individual_type_id
-				    FROM sample s
-				      LEFT JOIN tmp_ped tp ON s.individual_id = tp.ind_id
-				      WHERE s.individual_id is not null
-				});
-  print $logh Progress::location();
 
-    $self->{'dbVar'}->do("DROP table tmp_ind");
-  print $logh Progress::location();
+   ## create temp table to hold dbSNP submitted_ind_id to simplify genotype loading
+   $self->{'dbVar'}->do(qq{
+                          CREATE TABLE tmp_ind (
+                            submitted_ind_id int(10) unsigned not null,
+                            sample_id int(10) unsigned not null,
+                            primary key(submitted_ind_id),
+                            key sample_id_idx (sample_id))
+                         });
 
-    #need to convert the father_individual_id and mother_individual_id in father_sample_individual_id and mother_sample_individual_id
-    $self->{'dbVar'}->do("UPDATE individual i, sample s, individual i2 set i.father_individual_sample_id = s.sample_id where i.father_individual_sample_id = s.individual_id and i2.sample_id = s.sample_id");
-  print $logh Progress::location();
-   $self->{'dbVar'}->do("UPDATE individual i, sample s, individual i2 set i.mother_individual_sample_id = s.sample_id where i.mother_individual_sample_id = s.individual_id and i2.sample_id = s.sample_id");
-  print $logh Progress::location();
 
-    $self->{'dbVar'}->do("DROP table tmp_ped");
-  print $logh Progress::location();
+    ## get pedigree info - held at dbSNP cluster level 
+    my $ped = $self->get_ped_data();
+
+    ## get sample names, submitters and dbSNPcluster info
+    ## merged hash is used to pick the right name format for parents when 2 name type for the same SunmittedInd are held [human only]
+    my ($individuals, $merged) = $self->get_ind_data();
+
+    ## gt sample ids for pre-loaded populations
+    my $pop_ids = $self->get_pop_ids();
+ 
+
+   ## prepare insert statements
+
+    my $sample_ins_sth = $self->{'dbVar'}->prepare(qq[ INSERT INTO sample ( name, description)
+                                                      values (?,?)]);
+
+    my $ind_ins_sth = $self->{'dbVar'}->prepare(qq[ INSERT INTO individual 
+                                                   (sample_id, father_individual_sample_id, mother_individual_sample_id, gender, individual_type_id)
+                                                   values (?,?,?,?,?)]);
+
+    my $tmp_ins_sth = $self->{'dbVar'}->prepare(qq[ INSERT INTO  tmp_ind (sample_id, submitted_ind_id) values (?,?)]);
+
+    my $pop_ins_sth = $self->{'dbVar'}->prepare(qq[ INSERT  INTO individual_population (individual_sample_id, population_sample_id)
+				                   values (?,?)
+                                                 ]);
+
+    my $syn_ins_sth = $self->{'dbVar'}->prepare(qq[ INSERT INTO sample_synonym (sample_id,source_id,name)  values (?,?,?)  ]);
+
+
+
+
+    ## insert sample data
+    my %sample_id;
+    my %done;
+    my $n = 1000000;
+    foreach my $ind (keys %$individuals){
+        ## not all SubmittedIndividual are currated to dbSNP Individuals
+	$individuals->{$ind}{ind} = $n unless defined $individuals->{$ind}{ind} ; ## not clustered into Individual entry by dbSNP
+	$n++;
+	unless (defined $done{$individuals->{$ind}{name}}{$individuals->{$ind}{ind}} ){
+
+            ## insert sample
+	    $sample_ins_sth->execute( $individuals->{$ind}{name}, $individuals->{$ind}{des});
+	    my $sample_id =  $self->{'dbVar'}->db_handle->last_insert_id(undef, undef, 'sample', 'sample_id');
+
+	    if(defined $individuals->{$ind}{ind} && $individuals->{$ind}{ind} < 1000000){
+                 ## insert dbSNP synonym [not fakes]
+		$syn_ins_sth->execute( $sample_id, 1, $individuals->{$ind}{ind});
+	    }
+	    ## save sample_id  based on name and dbSNP merged id  (merging only these on import) 
+	    $done{ $individuals->{$ind}{name} }{ $individuals->{$ind}{ind} } = $sample_id;
+
+	}
+
+	$tmp_ins_sth->execute($done{$individuals->{$ind}{name}}{$individuals->{$ind}{ind}}, $ind);
+        ## save sample ids for ped look up
+	$sample_id{$ind} = $done{$individuals->{$ind}{name}}{$individuals->{$ind}{ind}};
+
+	if(defined $individuals->{$ind}{pid}){
+	    #warn "Adding ind_pop link $individuals->{$ind}{name} ($sample_id{$ind}) to $individuals->{$ind}{pid} ($pop_ids->{$individuals->{$ind}{pid}})\n";
+	    if(defined $pop_ids->{$individuals->{$ind}{pid}}){
+		$pop_ins_sth->execute( $sample_id{$ind} , $pop_ids->{$individuals->{$ind}{pid}});
+	    }
+	    else{
+		warn "No sample id for population id $individuals->{$ind}{pid} for sample $individuals->{$ind}{name}\n";
+	    }
+	}
+   }
+
+   
+    ## insert individual data inc ped info
+
+    my %ind_done;## entering once per merged sample
+    foreach my $ind (keys %$individuals){
+
+	next if $ind_done{$sample_id{$ind}};
+
+	$ind_done{$sample_id{$ind}} = 1;
+
+	my $merged_id = $individuals->{$ind}{ind}; ## for readablity
+
+	my $gender;
+        if(defined $ped->{$merged_id}{gender} && $ped->{$merged_id}{gender} =~/ale/ ){
+	    $gender = $ped->{$merged_id}{gender};
+	}
+	else{
+	    $gender = "Unknown";
+	}
+
+
+	my $mother_sam_id = '\\N';
+	my $father_sam_id = '\\N';
+
+        ## get submitted_ind_id and correct name from same population to link to (if available)
+	if(defined $ped->{$merged_id}{father} &&
+	   defined $merged->{ $ped->{$merged_id}{father} }{ $individuals->{$ind}{pid}}){
+	    my $father_submitted_id = $merged->{ $ped->{$merged_id}{father} }{ $individuals->{$ind}{pid}};
+	    if(defined $sample_id{$father_submitted_id}){
+		$father_sam_id = $sample_id{$father_submitted_id};
+	    }else{
+		warn "No ensembl id found for father : $father_submitted_id from child name $individuals->{$ind}{name}\n";
+	    }
+	}
+	if(defined $ped->{$merged_id}{mother} &&
+	   defined $merged->{ $ped->{$merged_id}{mother} }{ $individuals->{$ind}{pid}}){
+	    my $mother_submitted_id = $merged->{ $ped->{$merged_id}{mother} }{ $individuals->{$ind}{pid}};
+	    if(defined $sample_id{$mother_submitted_id}){
+		$mother_sam_id = $sample_id{$mother_submitted_id};
+	    }else{
+		warn "No ensembl id found for mother : $mother_submitted_id from child name $individuals->{$ind}{name}\n";
+	    }
+	}
+
+        $ind_ins_sth->execute( $sample_id{$ind},
+			       $father_sam_id,
+                               $mother_sam_id,
+                               $gender,
+                               $individual_type_id
+	    );
+
+    }
     
-    #necessary to fill in the individual_population table with the relation between individual and populations
-    $self->{'dbVar'}->do(qq{CREATE UNIQUE INDEX uniq_idx ON individual_population (individual_sample_id, population_sample_id)});
-  print $logh Progress::location();
-    
-    $stmt = qq{
-               SELECT 
-                 si.pop_id, 
-                 i.ind_id
-	       FROM   
-	         SubmittedIndividual si, 
-	         Individual i
-	       WHERE  
-	         si.ind_id = i.ind_id
-              };
-    dumpSQL($self->{'dbSNP'},$stmt);
-    
-    create_and_load($self->{'dbVar'}, 'tmp_ind_pop', 'pop_id i*', 'ind_id i*');
-  print $logh Progress::location();
 
-    debug(localtime() . "\tLoading individuals_population table");
-
-    $self->{'dbVar'}->do(qq(INSERT IGNORE INTO individual_population (individual_sample_id, population_sample_id)
-				      SELECT s1.sample_id, s2.sample_id
-				      FROM tmp_ind_pop tip, sample s1, sample s2
-				      WHERE tip.pop_id = s2.pop_id
-				      AND s1.individual_id = tip.ind_id
-				  ));
-  print $logh Progress::location();
-    $self->{'dbVar'}->do("DROP INDEX uniq_idx ON individual_population");
-  print $logh Progress::location();
-    $self->{'dbVar'}->do("DROP table tmp_ind_pop");
-  print $logh Progress::location();
-
-    #necessary to fill in the sample_synonym table with the relation between individual_id and sample_id
-    $self->{'dbVar'}->do(qq{INSERT INTO sample_synonym (sample_id,source_id,name)
- 				      SELECT sample_id, 1, individual_id
- 				      FROM sample
- 				      WHERE individual_id is NOT NULL
-
- 				  });
-
-    ## update sample.size for samples which are populations
+    ## update sample.size for samples which are populations once all sample loaded
     $self->update_sample_size();
 
-    ## remove unhelpful message 
-    $self->{'dbVar'}->do(qq{ UPDATE sample set description ='' 
-                              WHERE description like '%nknown source%use%'or description =  'byPopDesc'
-                             });     
-     
-
+ debug(localtime() . "\tIndividual data loaded");
   print $logh Progress::location();
 
     return;
 }
+
+## export family and gender info for samples
+## held at level of curate Individual rather than SubmittedIndividual
+sub get_ped_data{
+
+    my $self = shift;
+
+    my %ped;
+
+    my $all_ped_sth = $self->{'dbSNP'}->prepare(qq[ SELECT ind_id, 
+                                                           pa_ind_id, 
+                                                           ma_ind_id, 
+                                                           sex
+                                                    FROM  PedigreeIndividual
+                                                  ])||die "ERROR preparing ss_sth: $DBI::errstr\n";  
+
+    $all_ped_sth->execute()||die "ERROR executing: $DBI::errstr\n";
+    my $ped = $all_ped_sth->fetchall_arrayref();
+
+    foreach my $l(@{$ped}){
+
+	if(defined $l->[3]){
+	    $l->[3] =~ s/M/Male/;	   
+	    $l->[3] =~ s/F/Female/;
+	}
+
+	$ped{$l->[0]}{father} = $l->[1];
+	$ped{$l->[0]}{mother} = $l->[2];
+	$ped{$l->[0]}{gender} = $l->[3];
+    }
+    return \%ped;
+
+}
+
+## Extract submitted individual data
+sub get_ind_data{
+
+   my $self = shift;
+
+   my %individuals;
+   my %merged;
+
+   my $all_ind_sth = $self->{'dbSNP'}->prepare(qq[ SELECT si.submitted_ind_id,
+                                                          si.loc_ind_id_upp,
+                                                          i.descrip, 
+                                                          i.ind_id ,
+                                                          si.pop_id   
+                                                   FROM  SubmittedIndividual si LEFT OUTER JOIN  Individual i on (si.ind_id = i.ind_id)   
+                                                   ])||die "ERROR preparing ss_sth: $DBI::errstr\n";
+
+
+   $all_ind_sth->execute()||die "ERROR executing: $DBI::errstr\n";
+   my $inds = $all_ind_sth->fetchall_arrayref();
+
+
+   foreach my $l(@{$inds}){
+
+
+       $individuals{$l->[0]}{name} = $l->[1];
+       if( defined $l->[2] && $l->[2] !~ /unknown source|byPopDesc/i ){ 
+           ## save individual description if useful
+           $individuals{$l->[0]}{des}  = $l->[2];
+       }
+       if( defined $l->[3] ){ 
+           ## save dbSNP clustered individual id
+           $individuals{$l->[0]}{ind}  = $l->[3];
+       }
+       if( defined $l->[4]) { 
+           ## save population id
+           $individuals{$l->[0]}{pid}  = $l->[4];
+           
+           ## look up merged id/pop id => submitted_ind_id for ped linking
+           $merged{$l->[3]}{$l->[4]} = $l->[0]  if defined $l->[3] ;
+       }
+   }
+   
+   return (\%individuals, \%merged);
+}
+
+## look up sample_id for dbSNP pop_id to link samples to pops
+sub get_pop_ids{
+
+    my $self = shift;
+
+    my $pop_ext_sth =   $self->{'dbVar'}->prepare(qq[ select sample_id, pop_id from sample where pop_id is not null ]);
+
+    my %pop_id;
+    $pop_ext_sth->execute();
+    my $pop_link = $pop_ext_sth->fetchall_arrayref();
+    foreach my $l (@{$pop_link}){
+	$pop_id{$l->[1]} = $l->[0];
+    }
+
+    return \%pop_id;
+}
+
 
 ## count and store the number of individuals in a population
 sub update_sample_size{
@@ -1593,7 +1717,7 @@ sub  update_allele_schema{
   $dbVar_dbh->do( qq[ drop table allele ] ); 
 
   $dbVar_dbh->do( qq [ CREATE TABLE allele (
-                           allele_id int(10) unsigned NOT NULL AUTO_INCREMENT,
+                          allele_id int(10) unsigned NOT NULL AUTO_INCREMENT,
                           variation_id int(10) unsigned NOT NULL,
                           subsnp_id int(15) unsigned NOT NULL,
                           allele varchar(25000) NOT NULL,
@@ -1655,7 +1779,7 @@ sub write_allele_task_file{
     print MGMT qq{$jobindex $loadfile\_$jobindex $first $previous $allelefile $samplefile\n};
     close MGMT;
     print "Finished allele task file \n"; 
-  ## die "Terminating here\n";;
+
     return ($jobindex);
 }
 
@@ -2289,7 +2413,6 @@ sub variation_feature {
   print $logh Progress::location();
     
     $self->{'dbVar'}->do("DROP TABLE tmp_contig_loc");
-    $self->{'dbVar'}->do("DROP TABLE seq_region");
     $self->{'dbVar'}->do("DROP TABLE tmp_genotyped_var");
     $self->{'dbVar'}->do("DROP TABLE tmp_variation_feature");
 }
@@ -2318,7 +2441,7 @@ sub parallelized_individual_genotypes {
   my $task_manager_file = 'individual_genotypes_task_management.txt';
 
  # Get the SubInd tables that may be split by chromosomes
- my $stmt = qq{
+ my $tablename_ext_stmt = qq{
    SELECT 
      name 
    FROM 
@@ -2326,12 +2449,12 @@ sub parallelized_individual_genotypes {
    WHERE 
      name LIKE 'SubInd%'
  };
- my @subind_tables = map {$_->[0]} @{$self->{'dbSNP'}->db_handle()->selectall_arrayref($stmt)};
+ my @subind_tables = map {$_->[0]} @{$self->{'dbSNP'}->db_handle()->selectall_arrayref($tablename_ext_stmt)};
  print $logh "Found subind tables for genotypes: " . join ",", @subind_tables . "\n";
 
  # Prepared statement to find out if a table exists
- $stmt = qq{  SHOW TABLES LIKE ?  };
- my $table_sth = $self->{'dbVar'}->prepare($stmt);
+ my $table2_ext_stmt = qq{  SHOW TABLES LIKE ?  };
+ my $table_sth = $self->{'dbVar'}->prepare($table2_ext_stmt);
  
  # Use one common file for alleles and one for samples.
  my $file_prefix = $self->{'tmpdir'} . '/individual_genotypes';
@@ -2425,8 +2548,8 @@ sub parallelized_individual_genotypes {
   my $file_list =  $file_data_ext_sth->fetchall_arrayref();
 #  print "Cat'ing files\n"; 
   foreach my $pair (@{$file_list}){
-      unless (-e $pair->[0]){
-        warn "No file of name $pair->[0] created\n"; ## many bins have multi files missing
+      unless (-e $pair->[0] ){
+        warn "No file of name $pair->[0] created\n" unless $pair->[0] =~/multi/;  ## many bins have multi files missing - report only missing singles 
         next;
       }
       open my $load_file, ">>", $pair->[1] || die "Failed to open $pair->[1] to write: $!\n";
@@ -2440,8 +2563,8 @@ sub parallelized_individual_genotypes {
 
   # Loop over the subtables and load each of them
   my @subtables;
-  my $jobindex = 0;
-  my $task_manager_file = $file_prefix . '_task_management_load.txt';
+  $jobindex = 0;  ## reset for loading jobs
+  $task_manager_file = $file_prefix . '_task_management_load.txt';
   open(MGMT,'>',$task_manager_file);
   foreach my $subind_table (keys(%gty_tables)) {
     
@@ -2537,7 +2660,7 @@ sub parallelized_individual_genotypes {
 	$genotype_table
     };
   }
-  warn "Here's the merge statement: $stmt\n";
+
   $self->{'dbVar'}->do($stmt);
   print $logh Progress::location();
   
@@ -3216,7 +3339,7 @@ sub population_genotypes {
    print $logh Progress::location(); 
 
     $self->{'dbVar'}->do(qq{DROP INDEX pop_genotype_idx ON population_genotype});
-    #$self->{'dbVar'}->do("DROP TABLE tmp_pop_gty");
+    $self->{'dbVar'}->do("DROP TABLE tmp_pop_gty");
   debug(localtime() . "\tFinished population_genotype");
 }
 
@@ -3276,6 +3399,9 @@ sub archive_rs_synonyms {
 
     debug(localtime() . "\tLooking for old rs");  
 
+    ## Add source description only if old refSNP names found
+    $self->source_table("Archive dbSNP");
+
     my $logh = $self->{'log'};
     
     print $logh Progress::location();
@@ -3283,11 +3409,13 @@ sub archive_rs_synonyms {
     # export old rs id from dbSNP
     dumpSQL($self->{'dbSNP'},(qq{SELECT  'rs' + CAST(rsHigh as VARCHAR(20)), 
                                 'rs' + CAST(rsCurrent as VARCHAR(20)) , 
-                                 orien2Current
-                                 FROM RsMergeArch})) ;
+                                 orien2Current,
+                                 'rs' + CAST(rsLow as VARCHAR(20))
+                                 FROM RsMergeArch
+                                 })) ;
 
    #loading it to variation database in temp rshist table
-   create_and_load( $self->{'dbVar'}, "rsHist", "rsHigh * not_null", "rsCurrent * not_null","orien2Current not_null") ;
+   create_and_load( $self->{'dbVar'}, "rsHist", "rsHigh * not_null", "rsCurrent * not_null","orien2Current not_null", "rsLow") ;
    print $logh Progress::location();
 
    debug(localtime() . "\tAdding old rs as synonyms"); 
@@ -3311,11 +3439,24 @@ sub archive_rs_synonyms {
                              (SELECT v.variation_id, 2, r.rsHigh
                               FROM variation v, rsHist r
                               WHERE v.name = r.rsCurrent
-                              AND v.variation_id between $start and $end)
+                              AND v.snp_id between $start and $end)
                              }); 
+
+      ## mouse 137 had null values for rsCurrent but appropriate values for rsLow
+      ## take from here if rsCurrent has no id
+      $self->{'dbVar'}->do(qq{INSERT INTO variation_synonym (variation_id, source_id, name)
+                             (SELECT v.variation_id, 2, r.rsHigh
+                              FROM variation v, rsHist r
+                              WHERE v.name = r.rsLow
+                              AND  r.rsCurrent = 'rs'
+                              AND v.snp_id between $start and $end)
+                             }); 
+
+
       $start =  $end +1;
    }
-
+    ## clean up temp table
+    #$self->{'dbVar'}->do(qq[drop table rsHist]);
 
     debug(localtime() . "\tArchive rs synonyms done");
 
@@ -3356,24 +3497,32 @@ sub cleanup {
     my $row_ref = $sth->fetch();
     $sth->finish();
     #check if the value in the version contains the 4.1
+
+    ### delete population entries without alleles, population_genotypes or individuals
     $sql = qq{DELETE FROM p USING population p
 		  LEFT JOIN tmp_pop tp ON p.sample_id = tp.sample_id
 		  LEFT JOIN sample s on p.sample_id = s.sample_id
-		  WHERE tp.sample_id is null AND s.individual_id is null};
+                  LEFT JOIN individual i ON s.sample_id = i.sample_id
+		  WHERE tp.sample_id is null AND i.sample_id is null};
 
+    ### delete sample_synonym entries without alleles, population_genotypes or individuals
     $sql_2 = qq{DELETE FROM ss USING sample_synonym ss
 		    LEFT JOIN tmp_pop tp ON ss.sample_id = tp.sample_id
 		    LEFT JOIN sample s on s.sample_id = ss.sample_id
-		    WHERE tp.sample_id is null AND s.individual_id is null};
+                    LEFT JOIN individual i ON s.sample_id = i.sample_id
+		    WHERE tp.sample_id is null AND i.sample_id is null};
 
+    ### delete population_structure entries without alleles, population_genotypes or sub populations with alleles and population_genotypes
     $sql_3 = qq{DELETE FROM ps USING population_structure ps 
 		    LEFT JOIN tmp_pop tp ON ps.sub_population_sample_id = tp.sample_id 
 		    WHERE tp.sample_id is null};
 
+    ### delete samples which are not poplations or individuals
     $sql_4 = qq{DELETE FROM s USING sample s
 		    LEFT JOIN population p ON s.sample_id = p.sample_id
+                    LEFT JOIN individual i ON s.sample_id = i.sample_id
 		    WHERE p.sample_id is null
-		    AND s.individual_id is null
+		    AND i.sample_id is null
 		    };
 
     $self->{'dbVar'}->do($sql); #delete from population
@@ -3393,11 +3542,19 @@ sub cleanup {
   print $logh Progress::location();  
     $self->{'dbVar'}->do('ALTER TABLE variation_synonym DROP COLUMN substrand_reversed_flag');
   print $logh Progress::location();
-    $self->{'dbVar'}->do('ALTER TABLE sample DROP COLUMN pop_class_id, DROP COLUMN pop_id, DROP COLUMN individual_id');
-  print $logh Progress::location();
-    
+    $self->{'dbVar'}->do('ALTER TABLE sample DROP COLUMN pop_class_id, DROP COLUMN pop_id');
+    print $logh Progress::location();
 
+    ## link between ensembl sample_id and dbSNP submitted_ind_id
+    $self->{'dbVar'}->do('DROP TABLE tmp_ind');
+    
+    ## list of genotype files to create, check and load
+    $self->{'dbVar'}->do('DROP TABLE tmp_indgeno_file');
+
+    ## subsnp strand rs info from synonym creation
+    $self->{'dbVar'}->do('DROP TABLE tmp_var_allele');
 }
+
 
 
 sub sort_num{
