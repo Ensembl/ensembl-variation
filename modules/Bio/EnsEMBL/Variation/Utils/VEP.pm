@@ -1009,6 +1009,8 @@ sub get_all_consequences {
                     
                     # decode and thaw "output" from forked process
                     push @{$by_pid{$pid}}, thaw(decode_base64($_));
+                    
+                    progress($config, ++$done_vars, $total_size);
                 }
             }
             
@@ -1243,7 +1245,7 @@ sub vf_list_to_cons {
                 push @return, @{vf_to_consequences($config, $vf)};
             }
             
-            print PARENT "BUMP\n" if defined($config->{forked});
+            #print PARENT "BUMP\n" if defined($config->{forked});
         }
         
         end_progress($config) unless scalar @$listref == 1;
@@ -2196,7 +2198,7 @@ sub whole_genome_fetch_custom {
     # count and report
     my $total_annotations = 0;
     $total_annotations += scalar keys %{$annotation_cache->{$chr}->{$_}} for keys %{$annotation_cache->{$chr}};
-    debug("Retrieved $total_annotations custom annotations (", (join ", ", map {(scalar keys %{$annotation_cache->{$chr}->{$_}}).' '.$_} keys %{$annotation_cache->{$chr}}), ")");
+    debug("Retrieved $total_annotations custom annotations (", (join ", ", map {(scalar keys %{$annotation_cache->{$chr}->{$_}}).' '.$_} keys %{$annotation_cache->{$chr}}), ")") unless defined($config->{quiet});
     
     # compare annotations to variations in hash
     debug("Analyzing custom annotations") unless defined($config->{quiet});
