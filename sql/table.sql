@@ -322,7 +322,7 @@ create table sample(
 					 'UNDISPLAYABLE',
 					 'LD',
 					 'MARTDISPLAYABLE') default 'UNDISPLAYABLE',
-
+	freqs_from_gts tinyint(1) NOT NULL DEFAULT '0',
 	primary key( sample_id ),
 	key name_idx( name )
 );
