@@ -87,14 +87,16 @@ sub store {
         INSERT INTO sample (
             name,
 			size,
-			description
+			description,
+			freqs_from_gts
         ) VALUES (?,?,?)
     });
 	
 	$sth->execute(
 		$pop->name,
 		$pop->size,
-		$pop->description
+		$pop->description,
+		$pop->_freqs_from_gts
 	);
 	$sth->finish;
 	
@@ -673,9 +675,9 @@ sub _objs_from_sth {
 
   my @pops;
 
-  my ($pop_id, $name, $size, $desc);
+  my ($pop_id, $name, $size, $desc, $freqs);
 
-  $sth->bind_columns(\$pop_id, \$name, \$size, \$desc);
+  $sth->bind_columns(\$pop_id, \$name, \$size, \$desc, \$freqs);
 
   while($sth->fetch()) {
 	
@@ -684,7 +686,8 @@ sub _objs_from_sth {
        -ADAPTOR => $self,
        -NAME => $name,
        -DESCRIPTION => $desc,
-       -SIZE => $size);
+       -SIZE => $size,
+       -FREQS => $freqs);
   }
 
   return \@pops;
@@ -694,7 +697,7 @@ sub _tables{return (['population','p'],
 		    ['sample','s']);}
 
 sub _columns{
-    return qw(s.sample_id s.name s.size s.description);
+    return qw(s.sample_id s.name s.size s.description s.freqs_from_gts);
 }
 
 sub _default_where_clause{
