@@ -302,8 +302,7 @@ sub _fetch_all_by_Variation_from_Genotypes {
   
   foreach my $pop(@pop_list) {
 	
-	# HACK: only include 1KG phase 1 pops for now
-	next unless $pop->name =~ /^1000GENOMES:phase_1_/;
+	next unless $pop->_freqs_from_gts;
 	
 	foreach my $ss(keys %ss_list) {
 	  my (%counts, $total, @freqs);
