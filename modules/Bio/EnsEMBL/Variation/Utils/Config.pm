@@ -308,7 +308,7 @@ our @OVERLAP_CONSEQUENCES = (
         rank => '12',
         tier => '3',
         predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::missense_variant',
-        description => 'A sequence variant, where the change may be longer than 3 bases, and at least one base of a codon is changed resulting in a codon that encodes for a different amino acid',
+        description => 'A sequence variant, that changes one or more bases, resulting in a different amino acid sequence but where the length is preserved',
         label => 'Missense variant',
     },
     {
