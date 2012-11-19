@@ -33,6 +33,10 @@ unless (defined($registry_file) && defined($import_file) && defined($version)) {
     print "Must supply an import file, a registry file and a version ...\n" unless $help;
     $help = 1;
 }
+if ($import_file =~ /\.gz$/) {
+  print "Please unzip the input file before running the script!\n";
+	exit(0);
+}
 if ($help) {
     print "Usage: $0 --import <import_file> --registry <reg_file> --version <cosmic_version>\n";
     exit(0);
@@ -103,7 +107,7 @@ my $study_sth = $dbh->prepare(qq{
     WHERE   source_id = ?
 });
 
-$study_sth->execute;
+$study_sth->execute($source_id);
 
 my $existing_study = $study_sth->fetchrow_arrayref;
 
