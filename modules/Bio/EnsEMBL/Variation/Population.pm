@@ -115,8 +115,8 @@ sub new {
 
   my $class = ref($caller) || $caller;
 
-  my ($dbID, $adaptor, $name, $desc, $size, $is_strain, $sub_pops) =
-    rearrange(['DBID','ADAPTOR','NAME', 'DESCRIPTION', 'SIZE',
+  my ($dbID, $adaptor, $name, $desc, $size, $freqs, $sub_pops) =
+    rearrange(['DBID','ADAPTOR','NAME', 'DESCRIPTION', 'SIZE', 'FREQS',
                'SUB_POPULATIONS'], @_);
 
   return bless {'dbID'        => $dbID,
@@ -124,6 +124,7 @@ sub new {
                 'name'        => $name,
                 'description' => $desc,
                 'size'        => $size,
+                'freqs'       => $freqs,
                 'sub_populations' => $sub_pops}, $class;
 }
 
@@ -261,6 +262,12 @@ sub get_all_Individuals {
   my $ia = $self->adaptor->db->get_IndividualAdaptor;
   
   return (defined $ia ? $ia->fetch_all_by_Population($self) : []);
+}
+
+sub _freqs_from_gts {
+  my $self = shift;
+  $self->{freqs} = shift @_ if @_;
+  return $self->{freqs};
 }
 
 1;
