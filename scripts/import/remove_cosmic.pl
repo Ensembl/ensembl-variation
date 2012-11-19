@@ -76,12 +76,6 @@ $dbh->do(qq{
     DELETE FROM sample WHERE name LIKE "COSMIC:gene:%"
 });
 
-# study - source_id
-
-$dbh->do(qq{
-    DELETE FROM study WHERE source_id = $source_id
-});
-
 print "Deleted all samples, populations and studies\n" if $verbose;
 
 # now all the stuff that is joined to variation
