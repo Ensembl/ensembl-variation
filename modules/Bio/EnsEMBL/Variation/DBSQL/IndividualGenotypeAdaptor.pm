@@ -146,6 +146,44 @@ sub store {
 	return $rows_added;
 }
 
+# similar to store above but writes to old-style non-compressed table
+# defaults to individual_genotype_multiple_bp since
+# tmp_individual_genotype_single_bp will only accept single nucleotide genotypes
+sub store_uncompressed {
+	my ($self, $gts, $table) = @_;
+	
+	$table ||= 'individual_genotype_multiple_bp';
+	
+	throw("First argument to store is not a listref") unless ref($gts) eq 'ARRAY';
+	
+	my $dbh = $self->dbc->db_handle;
+	
+	my $q_string = join ",", map {'(?,?,?,?,?)'} @$gts;
+	
+	my @args = map {
+		$_->{_variation_id} || $_->variation->dbID,
+		$_->{subsnp},
+		$_->allele1,
+		$_->allele2,
+		$_->individual ? $_->individual->dbID : undef,
+	} @$gts;
+	
+	my $sth = $dbh->prepare_cached(qq{
+		INSERT INTO $table(
+			variation_id,
+			subsnp_id,
+			allele_1,
+			allele_2,
+			sample_id
+		) VALUES $q_string
+	});
+	
+	$sth->execute(@args);
+	
+	$sth->finish;
+	
+	return scalar @$gts;
+}
 
 =head2 fetch_all_by_Variation
 
