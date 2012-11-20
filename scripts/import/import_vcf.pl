@@ -132,6 +132,7 @@ sub configure {
 		'merge_vfs',
 		'only_existing',
 		'skip_n',
+		'mart_genotypes',
 		
 		'create_name',
 		'chrom_regexp=s',
@@ -148,6 +149,7 @@ sub configure {
 		'no_recover',
 		
 		'cache=s',
+		'fasta=s',
 		
 	# die if we can't parse arguments - better to get user to sort out their command line
 	# than potentially do the wrong thing
@@ -261,6 +263,8 @@ sub configure {
 	# force some back in
 	$tables->{$_} = 1 for qw/source meta_coord/;
 	
+	$tables->{individual_genotype_multiple_bp} = 1 if defined($config->{mart_genotypes});
+	
 	# special case for sample, we also want to set the other sample tables to on
 	if($tables->{sample}) {
 		$tables->{$_} = 1 for qw/population individual individual_population/;
@@ -321,6 +325,77 @@ sub configure {
 		$config->{vep}->{cache}           = 1;
 		$config->{vep}->{offline}         = 1;
 	}
+	
+	
+    if(defined($config->{fasta})) {
+        die "ERROR: Specified FASTA file/directory not found" unless -e $config->{fasta};
+        
+        eval q{ use Bio::DB::Fasta; };
+        
+        if($@) {
+            die("ERROR: Could not load required BioPerl module\n");
+        }
+        
+        # try to overwrite sequence method in Slice
+        eval q{
+            package Bio::EnsEMBL::Slice;
+            
+            # define a global variable so that we can pull in config hash
+            our $config;
+            
+            {
+                # don't want a redefine warning spat out, thanks
+                no warnings 'redefine';
+                
+                # overwrite seq method to read from FASTA DB
+                sub seq {
+                    my $self = shift;
+                    
+                    # special case for in-between (insert) coordinates
+                    return '' if($self->start() == $self->end() + 1);
+                    
+                    my $seq;
+                    
+                    if(defined($config->{fasta_db})) {
+                        $seq = $config->{fasta_db}->seq($self->seq_region_name, $self->start => $self->end);
+                        reverse_comp(\$seq) if $self->strand < 0;
+                    }
+                    
+                    else {
+                        return $self->{'seq'} if($self->{'seq'});
+                      
+                        if($self->adaptor()) {
+                          my $seqAdaptor = $self->adaptor()->db()->get_SequenceAdaptor();
+                          return ${$seqAdaptor->fetch_by_Slice_start_end_strand($self,1,undef,1)};
+                        }
+                    }
+                    
+                    # default to a string of Ns if we couldn't get sequence
+                    $seq ||= 'N' x $self->length();
+                    
+                    return $seq;
+                }
+            }
+            
+            1;
+        };
+        
+        if($@) {
+            die("ERROR: Could not redefine sequence method\n");
+        }
+        
+        # copy to Slice for offline sequence fetching
+        $Bio::EnsEMBL::Slice::config = $config->{vep};
+        
+        # spoof a coordinate system
+        $config->{vep}->{coord_system} = Bio::EnsEMBL::CoordSystem->new(
+            -NAME => 'chromosome',
+            -RANK => 1,
+        );
+        
+        debug($config, "Checking/creating FASTA index");
+        $config->{vep}->{fasta_db} = Bio::DB::Fasta->new($config->{fasta});
+    }
 	
 	# get terminal width for progress bars
 	my $width;
@@ -706,7 +781,7 @@ sub main {
 			population_genotype($config, $data) if $config->{tables}->{population_genotype};
 			
 			# individual genotypes
-			individual_genotype($config, $data) if $config->{tables}->{compressed_genotype_var};
+			individual_genotype($config, $data) if $config->{tables}->{compressed_genotype_var} || defined($config->{mart_genotypes});
 			
 			# GENOTYPES BY REGION
 			#####################
@@ -970,8 +1045,11 @@ sub run_forks {
 		@chrs = @new_chrs;
 	}
 	
+	my $parent_pid = $$;
+	
 	# fork off a process to handle comms
 	my $comm_pid = fork;
+	my @forked_pids;
 	
 	if($comm_pid == 0) {
 		my $c;
@@ -983,6 +1061,11 @@ sub run_forks {
 			
 			#print unless /Processed/;
 			
+			if(/FORK/) {
+				chomp;
+				my @split = split /\s+/;
+				push @forked_pids, $split[-1];
+			}
 			if(/Processed/) {
 				$c++;
 				$in_progress{$fork} = 1;
@@ -1012,9 +1095,15 @@ sub run_forks {
 				my @split = split /\s+/;
 				$config->{skipped}->{$split[-2]} += $split[-1];
 			}
-			elsif(/WARNING/) {
-				print "\n$_";
+			elsif(/WARN/i) {
+				print;
 			}
+            # something's wrong
+            elsif(!/^\d{4}\-\d{2}\-\d{2}/ && /\S+/) {
+                # kill the other pids
+                kill(15, $_) for (@forked_pids, $parent_pid);
+                die("\nERROR: Forked process failed:\n$_\n");
+            }
 		}
 		close CHILD;
 		
@@ -1081,6 +1170,9 @@ sub run_forks {
 			}
 		}
 		elsif($pid == 0) {
+			
+			# redirect STDERR to PARENT so we can catch errors
+			*STDERR = *PARENT;
 			
 			#debug($config, "Forking chr $chr\n\n");
 			$config->{forked} = $chr;
@@ -2249,8 +2341,16 @@ sub individual_genotype {
 			@gts = @final_objs;
 		}
 		
-		my $rows_added = $config->{individualgenotype_adaptor}->store(\@gts);
-		$config->{rows_added}->{compressed_genotype_var} += $rows_added;	
+		if($config->{tables}->{compressed_genotype_var}) {
+			my $rows_added = $config->{individualgenotype_adaptor}->store(\@gts);
+			$config->{rows_added}->{compressed_genotype_var} += $rows_added;
+		}
+		if($config->{mart_genotypes}) {
+			my $table = $data->{vf}->{allele_string} =~ /^[ACGTN](\/[ACGTN])+$/ ? 'tmp_individual_genotype_single_bp' : 'individual_genotype_multiple_bp';
+			
+			my $rows_added = $config->{individualgenotype_adaptor}->store_uncompressed(\@gts, $table);
+			$config->{rows_added}->{$table} += $rows_added;
+		}
 	}
 	
 	$config->{rows_added}->{individual_genotype} += scalar @gts;
@@ -2530,6 +2630,8 @@ Options
 --skip_tables         Comma-separated list of tables to exclude when writing to DB.
                       Takes precedence over --tables (i.e. any tables named in --tables
                       and --skip_tables will be skipped)
+--mart_genotypes      Use this flag to populate the uncompressed genotype tables. These
+                      are used only to build BioMart databases
 
 --only_existing       Only write to tables when an existing variant is found. Existing
                       can be a variation with the same name, or a variant with the same
