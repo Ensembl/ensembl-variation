@@ -155,7 +155,7 @@ sub run {
 	print $report "Population_genotype: ERROR old table has : $old_pop_geno rows, new table has: $new_pop_geno\n";
     }
 
-    unless($self->required_param('species') =~/Homo|Human/i){ ## Mart tables not required for human
+    unless($self->required_param('species') =~/Homo|Human|Mus|mouse/i){ ## Mart tables not required for human or mouse
       if($old_allele == $mart_allele){
          print $report "\tMart Allele:\t\t\tOK ($mart_allele rows)\n";
       }
@@ -539,6 +539,10 @@ sub check_flipping{
   my $total_checked = scalar @{$data};
 
   foreach my $l (@{$data}){
+      if( $l->[1] eq '-/-' && $l->[2] eq '-/-'){  ## can't check genotypes where individuals are homozygous for deletion
+	  $total_checked--;
+	  next;
+      }
     if($l->[1] eq $l->[2]){
       $is_fail = 1;
       print $report "Flipping error ($type) $l->[0] is $l->[1] pre and $l->[2] post\n";
