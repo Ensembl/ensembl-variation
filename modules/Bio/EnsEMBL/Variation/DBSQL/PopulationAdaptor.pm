@@ -89,14 +89,14 @@ sub store {
 			size,
 			description,
 			freqs_from_gts
-        ) VALUES (?,?,?)
+        ) VALUES (?,?,?,?)
     });
 	
 	$sth->execute(
 		$pop->name,
 		$pop->size,
 		$pop->description,
-		$pop->_freqs_from_gts
+		$pop->_freqs_from_gts || 0,
 	);
 	$sth->finish;
 	
@@ -161,7 +161,7 @@ sub fetch_by_name {
 
   throw('name argument expected') if(!defined($name));
 
-  my $sth = $self->prepare(q{SELECT p.sample_id, s.name, s.size, s.description
+  my $sth = $self->prepare(q{SELECT p.sample_id, s.name, s.size, s.description, s.freqs_from_gts
                              FROM   population p, sample s
                              WHERE  s.name = ?
 			     AND    s.sample_id = p.sample_id});
@@ -203,7 +203,7 @@ sub fetch_all_by_dbID_list {
   
   my $id_str = (@$list > 1)  ? " IN (".join(',',@$list).")"   :   ' = \''.$list->[0].'\'';
 
-  my $sth = $self->prepare(qq{SELECT p.sample_id, s.name, s.size, s.description
+  my $sth = $self->prepare(qq{SELECT p.sample_id, s.name, s.size, s.description, , s.freqs_from_gts
                              FROM   population p, sample s
                              WHERE  s.sample_id $id_str
 			     AND    s.sample_id = p.sample_id});
@@ -238,7 +238,7 @@ sub fetch_all_by_name_search {
 
   throw('name argument expected') if(!defined($name));
 
-  my $sth = $self->prepare(q{SELECT p.sample_id, s.name, s.size, s.description
+  my $sth = $self->prepare(q{SELECT p.sample_id, s.name, s.size, s.description, , s.freqs_from_gts
                              FROM   population p, sample s
                              WHERE  s.name like concat('%', ?, '%')
 			     AND    s.sample_id = p.sample_id});
@@ -282,7 +282,7 @@ sub fetch_all_by_super_Population {
   }
 
   my $sth = $self->prepare(q{SELECT p.sample_id, s.name, s.size,
-                                    s.description
+                                    s.description, , s.freqs_from_gts
                              FROM   population p, population_structure ps, sample s
                              WHERE  p.sample_id = ps.sub_population_sample_id
                              AND    ps.super_population_sample_id = ?
@@ -328,7 +328,7 @@ sub fetch_all_by_sub_Population {
   }
 
   my $sth = $self->prepare(q{SELECT p.sample_id, s.name, s.size,
-                                    s.description
+                                    s.description, , s.freqs_from_gts
                              FROM   population p, population_structure ps, sample s
                              WHERE  p.sample_id = ps.super_population_sample_id
                              AND    ps.sub_population_sample_id = ?
@@ -461,7 +461,7 @@ sub fetch_all_by_Individual{
 	return [];
   } 
 
-    my $sth = $self->prepare(qq{SELECT p.sample_id, s.name, s.size, s.description
+    my $sth = $self->prepare(qq{SELECT p.sample_id, s.name, s.size, s.description, , s.freqs_from_gts
 				FROM population p, individual_population ip, sample s
 				WHERE s.sample_id = ip.population_sample_id
 				AND s.sample_id = p.sample_id
@@ -509,7 +509,7 @@ sub fetch_all_by_Individual_list{
 	my $id_str = " IN (" . join(',', map {$_->dbID} @$list). ")";	
 	
 	my $sth = $self->prepare(qq{
-		SELECT p.sample_id, s.name, s.size, s.description
+		SELECT p.sample_id, s.name, s.size, s.description, , s.freqs_from_gts
 		FROM population p, individual_population ip, sample s
 		WHERE s.sample_id = ip.population_sample_id
 		AND s.sample_id = p.sample_id
@@ -556,7 +556,7 @@ sub fetch_tagged_Population{
   } 
 
     my $sth = $self->prepare(qq{
-		SELECT p.sample_id, s.name, s.size, s.description
+		SELECT p.sample_id, s.name, s.size, s.description, , s.freqs_from_gts
 		FROM population p, tagged_variation_feature tvf, sample s
 		WHERE p.sample_id = tvf.sample_id
 		AND   s.sample_id = p.sample_id
@@ -602,7 +602,7 @@ sub fetch_tag_Population{
   } 
 
     my $sth = $self->prepare(qq{
-		SELECT p.sample_id, s.name, s.size, s.description
+		SELECT p.sample_id, s.name, s.size, s.description, , s.freqs_from_gts
 		FROM population p, tagged_variation_feature tvf, sample s
 		WHERE p.sample_id = tvf.sample_id
 		AND   s.sample_id = p.sample_id
@@ -676,6 +676,8 @@ sub _objs_from_sth {
   my @pops;
 
   my ($pop_id, $name, $size, $desc, $freqs);
+  
+  $DB::single = 1;
 
   $sth->bind_columns(\$pop_id, \$name, \$size, \$desc, \$freqs);
 
