@@ -341,55 +341,7 @@ sub study_table{
 	}
 	# INSERT
 	else {
-#		my $pmid         = $data->{pubmed};
-#		my $first_author = $data->{first_author};
-#		my $year         = $data->{year};
-#		my $author       = $data->{author};
-#		my $author_info  = $data->{author};
-#		my $study_type   = ($data->{study_type}) ? $data->{study_type} : 'NULL';
-#		
-#		$author_info =~ s/_/ /g;
-#		$author_info =~ /(.+)\set\sal\s(.+)/;
-#		
-#		$first_author = $1 if (!$first_author);
-#		my $year_desc = ($2) ? $2 : $year->[0];
-#			
-#		my $author_desc;
-#		$author_desc = "$first_author $year_desc " if ($first_author and defined($year_desc));
-#		
-#		$author = (split('_',$author))[0] if ($author !~ /.+_et_al_.+/);
-#		
-#		if (length($study_desc)>180) {
-#			$study_desc = substr($study_desc,0,180);
-#			$study_desc .= '...';
-#		}
 	
-#		$assembly_desc = " [remapped from build $assembly]" if ($mapping and $assembly ne $target_assembly);
-		
-#		my $pmid_desc = '';
-#		my $pubmed    = 'NULL';
-#		if (defined($pmid)) {
-#			my $pmid_len = scalar(@$pmid);
-#			if ($pmid_len) {
-#				$pmid_desc = 'PMID:';
-#      	if ($pmid_len > 1 and scalar(@$year) == $pmid_len){
-#					for (my $i=0; $i<$pmid_len; $i++) {
-#						$pmid_desc .= ',' if($i>0);
-#						$pmid_desc .= "$pmid->[$i]($year->[$i])";
-#					}
-#				}
-#				else {		
-#					$pmid_desc .= join(',',@$pmid);
-#				}
-#				$pubmed = "pubmed/".join(",pubmed/", @$pmid);
-#			}
-#		}
-#		$study =~ /(\w+\d+)\.?\d*/;
-#		my $study_ftp = $1;
-#		
-#		my $external_link = ($display_name{$author}) ? $display_name{$author} : $pubmed;
-		
-		
 		$stmt = qq{
     	INSERT INTO `$study_table` (
 				`name`,
@@ -995,11 +947,9 @@ sub parse_gvf {
 		
 		$info->{is_failed} = $is_failed;
 							 
-		my $data = generate_data_line($info);					 
+		my $data = generate_data_row($info);					 
 							 
-		foreach my $breakpoint (sort (keys(%$data))) {
-			print OUT (join "\t", @{$data->{$breakpoint}})."\n";
-		}
+		print OUT (join "\t", @{$data})."\n";
   }
   close IN;
   close OUT;
@@ -1435,56 +1385,24 @@ sub remove_data {
 }
 
 
-sub generate_data_line {
-	my $info = shift;
-	my $somatic = shift;
-	
-	my $outer_start = $info->{outer_start};
-	my $start       = $info->{start};
-	my $inner_start = $info->{inner_start};
-	my $inner_end   = $info->{inner_end};
-	my $end         = $info->{end};
-	my $outer_end   = $info->{outer_end};
-	my $bp_order    = $info->{bp_order};
-	
-	my %data;
-	
-	# Split the intrachromosomal coordinates into 2 break points - step 1
-	if ($info->{is_somatic} == 1 && $info->{start}!=$info->{end}) {
-	  $end         = $start;
-		$outer_end   = $inner_start;
-		$inner_start = undef;
-		$inner_end   = undef;
-		$bp_order    = (defined($bp_order)) ? $bp_order : 1;
-	}
-	
-	$data{0} = generate_data_row($info,$outer_start,$start,$inner_start,$inner_end,$end,$outer_end,$bp_order);
-	
-	# Split the intrachromosomal coordinates into 2 break points - step 2
-	if ($info->{is_somatic} == 1 && $info->{start}!=$info->{end}) {
-	  $start = $info->{end};
-		$end = $start;
-	  $outer_start = $info->{inner_end};
-		$outer_end = $info->{outer_end};
-	  $data{1} = generate_data_row($info,$outer_start,$start,$inner_start,$inner_end,$end,$outer_end,$bp_order);
-  }
-	
-	return \%data;
-}
-
 sub generate_data_row {
   my $info = shift;
-	my ($outer_start,$start,$inner_start,$inner_end,$end,$outer_end,$bp_order) = @_;
+	my $somatic = shift;
+ 
+  my $bp_order = $info->{bp_order};
+  if ($info->{is_somatic} == 1 || $somatic) {
+    $bp_order = 1 if(!defined($bp_order));
+	}
  
   my @row = ($info->{ID},
 						 $info->{SO_term},
 		         $info->{chr}, 
-						 $outer_start, 
-						 $start, 
-						 $inner_start, 
-						 $inner_end, 
-						 $end, 
-						 $outer_end, 
+						 $info->{outer_start}, 
+						 $info->{start}, 
+						 $info->{inner_start}, 
+						 $info->{inner_end}, 
+						 $info->{end}, 
+						 $info->{outer_end}, 
 						 $info->{parent},
 						 $info->{clinical},
 						 $info->{phenotype},
