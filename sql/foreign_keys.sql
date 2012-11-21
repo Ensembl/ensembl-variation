@@ -35,9 +35,6 @@ ALTER TABLE failed_variation ADD FOREIGN KEY (failed_description_id) REFERENCES 
 ALTER TABLE failed_structural_variation ADD FOREIGN KEY (structural_variation_id) REFERENCES structural_variation(structural_variation_id);
 ALTER TABLE failed_structural_variation ADD FOREIGN KEY (failed_description_id) REFERENCES failed_description(failed_description_id);
 
-ALTER TABLE flanking_sequence ADD FOREIGN KEY (variation_id) REFERENCES variation(variation_id);
-ALTER TABLE flanking_sequence ADD FOREIGN KEY (seq_region_id) REFERENCES seq_region(seq_region_id);
-
 ALTER TABLE genotype_code ADD FOREIGN KEY (allele_code_id) REFERENCES allele_code(allele_code_id);
 
 ALTER TABLE individual ADD FOREIGN KEY (sample_id) REFERENCES sample(sample_id);
