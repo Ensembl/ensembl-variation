@@ -93,6 +93,10 @@ ALTER TABLE tagged_variation_feature ADD FOREIGN KEY (sample_id) REFERENCES samp
 
 ALTER TABLE transcript_variation ADD FOREIGN KEY (variation_feature_id) REFERENCES variation_feature(variation_feature_id);
 
+ALTER TABLE motif_feature_variation ADD FOREIGN KEY (variation_feature_id) REFERENCES variation_feature(variation_feature_id);
+
+ALTER TABLE regulatory_feature_variation ADD FOREIGN KEY (variation_feature_id) REFERENCES variation_feature(variation_feature_id);
+
 ALTER TABLE variation ADD FOREIGN KEY (source_id) REFERENCES source(source_id);
 ALTER TABLE variation ADD FOREIGN KEY (class_attrib_id) REFERENCES attrib(attrib_id);
 
