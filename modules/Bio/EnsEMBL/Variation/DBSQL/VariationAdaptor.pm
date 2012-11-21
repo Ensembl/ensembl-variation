@@ -149,35 +149,6 @@ sub store {
 	my $dbID = $dbh->last_insert_id(undef, undef, 'variation', 'variation_id');
     $var->{dbID}    = $dbID;
     $var->{adaptor} = $self;
-    
-    # flanking sequence
-    $sth = $dbh->prepare(q{
-        INSERT INTO flanking_sequence (
-            variation_id,
-            up_seq,
-            down_seq,
-            up_seq_region_start,
-            up_seq_region_end,
-            down_seq_region_start,
-            down_seq_region_end,
-            seq_region_id,
-            seq_region_strand
-        ) VALUES (?,?,?,?,?,?,?,?,?)
-    });
-    
-    $sth->execute(
-        $var->dbID,
-        $var->{five_prime_flanking_seq},
-        $var->{three_prime_flanking_seq},
-        $var->{up_seq_region_start},
-        $var->{up_seq_region_end},
-        $var->{down_seq_region_start},
-        $var->{down_seq_region_end},
-        $var->{seq_region_id},
-        $var->{seq_region_strand}
-    );
-    
-    $sth->finish;
 }
 
 sub update {
