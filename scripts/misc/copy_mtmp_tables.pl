@@ -9,6 +9,7 @@ GetOptions(
     $config,
 	'dir|d=s',
 	'tables|t=s',
+	'pattern|p=s'
 ) or die "ERROR: Could not parse command line options\n";
 
 # check host and user
@@ -16,7 +17,7 @@ die "ERROR: You are not logged in as user mysqlens\n" unless $ENV{USER} eq 'mysq
 #die "ERROR: You must run this script on the database server machine on which the MTMP table database resides\n" unless $ENV{HOST} eq 'ens-variation2';
 
 # parse tables
-$config->{tables} ||= 'MTMP_allele,MTMP_population_genotype,subsnp_map';
+$config->{tables} ||= 'MTMP_allele,MTMP_population_genotype,subsnp_map,tmp_individual_genotype_single_bp';
 my %t = map {$_ => 1} split /\,/, $config->{tables};
 $config->{tables} = \%t;
 
@@ -26,7 +27,7 @@ $config->{password} = '';
 $config->{port} = 3306;
 
 # set up dir
-$config->{dir} ||= '/mysql/data_3306/databases/mart_mtmp_tables/';
+$config->{dir} ||= '/mysql/data_3306/databases/production_archive/';
 
 # check dir exists
 die "ERROR: Directory ".$config->{dir}." not found, perhaps you need to specify with --dir?\n" unless -e $config->{dir};
@@ -78,6 +79,16 @@ foreach my $host(qw(ens-staging ens-staging2)) {
 		push @tables, $table while $sth->fetch;
 		$sth->finish;
 		
+		$sth = $dbc->prepare(qq{
+			SHOW TABLES LIKE '%tmp_individual_genotype_single_bp%'
+		});
+		$sth->execute();
+		
+		$sth->bind_columns(\$table);
+		
+		push @tables, $table while $sth->fetch;
+		$sth->finish;
+		
 		my %table_hash = map {$_ => 1} grep {$config->{tables}->{$_}} @tables;
 		
 		# find tables to copy
@@ -89,9 +100,13 @@ foreach my $host(qw(ens-staging ens-staging2)) {
 			# strip off filetype
 			$f =~ s/\..+$//g;
 			
+			# special case for tmp_ind_gt, filename is too long for MySQL 64-char table name limit
+			my $match = $f;
+			$match =~ s/tmp_gt/tmp_individual_genotype_single_bp/;
+			
 			my $ok = 0;
 			foreach my $t(keys %{$config->{tables}}) {
-				if($f =~ /$t/) {
+				if($match =~ /$t/) {
 					$ok = 1;
 					$map{$t} = $f;
 				}
