@@ -301,11 +301,12 @@ CREATE TABLE genotype_code (
 @colour #FF8500
 @desc Sample is used as a generic catch-all term to cover individuals, populations and strains; it contains a name and description, as well as a size if applicable to the population.
 
-@column sample_id		Primary key, internal identifier.
-@column name			Name of the sample (can be an individual or a population name).
-@column size			Number of individual in the sample.
-@column description	Description of the sample.
-@column display		Information used by the website: samples with little information are filtered from some web displays.
+@column sample_id		    Primary key, internal identifier.
+@column name			      Name of the sample (can be an individual or a population name).
+@column size			      Number of individual in the sample.
+@column description	    Description of the sample.
+@column display		      Information used by the website: samples with little information are filtered from some web displays.
+@column freqs_from_gts  Flag indicating if the population frequencies can be retrieved from the allele table (0) or from the individual genotypes (1).
 
 @see individual
 @see population
