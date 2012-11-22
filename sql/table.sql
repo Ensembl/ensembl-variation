@@ -806,6 +806,7 @@ CREATE TABLE IF NOT EXISTS variation_set_structural_variation (
 /**
 @table transcript_variation
 
+@colour #FF4DC8
 @desc This table relates a single allele of a variation_feature to a transcript (see Core documentation). It contains the consequence of the allele e.g. intron_variant, non_synonymous_codon, stop_lost etc, along with the change in amino acid in the resulting protein if applicable.
 
 @column transcript_variation_id	 Primary key, internal identifier.
@@ -907,6 +908,7 @@ CREATE TABLE transcript_variation (
 /**
 @table motif_feature_variation
 
+@colour #FF4DC8
 @desc This table relates a single allele of a variation_feature to a motif feature (see Regulation documentation). It contains the consequence of the allele.
 
 @column motif_feature_variation_id  Primary key, internal identifier.
@@ -989,7 +991,9 @@ CREATE TABLE IF NOT EXISTS motif_feature_variation (
 /**
 @table regulatory_feature_variation
 
+@colour #FF4DC8
 @desc This table relates a single allele of a variation_feature to a regulatory feature (see Regulation documentation). It contains the consequence of the allele.
+
 @column regulatory_feature_variation_id  Primary key, internal identifier.
 @column variation_feature_id             Foreign key references to the @link variation_feature table.
 @column feature_stable_id		         Foreign key to regulation databases. Unique stable id of related regulatory_feature.
@@ -1297,7 +1301,7 @@ create table individual_genotype_multiple_bp (
 /**
 @table meta_coord
 
-@colour #DA70D6
+@colour #BC5CEC
 @desc This table gives the coordinate system used by various tables in the database.
 
 @column table_name			Name of the feature table, e.g. "variation_feature".
@@ -1319,7 +1323,7 @@ CREATE TABLE meta_coord (
 /**
 @table meta
 
-@colour #DA70D6
+@colour #BC5CEC
 @desc This table stores various metadata relating to the database, generally used by the Ensembl web code.
 
 @column meta_id		Primary key, internal identifier.
@@ -1708,10 +1712,11 @@ CREATE TABLE coord_system (
 @legend #01D4F7	Tables containing structural variation data
 @legend #FFD700	Tables containing sets of variations
 @legend #7CFC00	Tables containing source and study data
-@legend #DA70D6	Tables containing metadata
+@legend #BC5CEC	Tables containing metadata
 @legend #3CB371	Tables containing "failed" data
 @legend #FF0000	Tables containing attribute data
 @legend #1E90FF	Tables concerning protein data
+@legend #FF4DC8 Tables concerning the prediction of variation effect(s) in different Ensembl features
 */
 
 #possible values in the failed_description table
