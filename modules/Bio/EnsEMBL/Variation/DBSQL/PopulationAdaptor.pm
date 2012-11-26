@@ -203,10 +203,9 @@ sub fetch_all_by_dbID_list {
   
   my $id_str = (@$list > 1)  ? " IN (".join(',',@$list).")"   :   ' = \''.$list->[0].'\'';
 
-  my $sth = $self->prepare(qq{SELECT p.sample_id, s.name, s.size, s.description, , s.freqs_from_gts
-                             FROM   population p, sample s
-                             WHERE  s.sample_id $id_str
-			     AND    s.sample_id = p.sample_id});
+  my $sth = $self->prepare(qq{SELECT p.sample_id, s.name, s.size, s.description, s.freqs_from_gts
+                              FROM   population p, sample s
+                              WHERE  s.sample_id $id_str AND s.sample_id = p.sample_id});
   $sth->execute();
 
   my $result = $self->_objs_from_sth($sth);
