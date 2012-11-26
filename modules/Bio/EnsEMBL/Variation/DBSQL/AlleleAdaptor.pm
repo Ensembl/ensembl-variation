@@ -62,6 +62,8 @@ use Bio::EnsEMBL::Utils::Scalar qw(assert_ref);
 use Bio::EnsEMBL::Variation::Allele;
 use Bio::EnsEMBL::Utils::Iterator;
 
+use Scalar::Util qw(weaken);
+
 use DBI qw(:sql_types);
 
 our @ISA = ('Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor');
@@ -308,6 +310,8 @@ sub _fetch_all_by_Variation_from_Genotypes {
 					adaptor    => $self,
 					subsnp     => $ss eq '' ? undef : $ss,
 				});
+				
+				weaken($objs[-1]->{'variation'});
 			}
 		}
 	}
