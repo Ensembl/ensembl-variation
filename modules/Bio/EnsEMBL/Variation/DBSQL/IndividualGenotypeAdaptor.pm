@@ -56,6 +56,8 @@ use Bio::EnsEMBL::Variation::IndividualGenotype;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
 
+use Scalar::Util qw(weaken);
+
 @ISA = ('Bio::EnsEMBL::Variation::DBSQL::BaseGenotypeAdaptor');
 
 # stores a listref of individual genotype objects
@@ -181,7 +183,10 @@ sub fetch_all_by_Variation {
 	# check cache
 	if(!defined($self->{_cache}->{$variation->dbID})) {
 		$self->{_cache}->{$variation->dbID} = $self->generic_fetch("g.variation_id = " . $variation->dbID());
-		$_->variation($variation) for @{$self->{_cache}->{$variation->dbID}};
+		for(@{$self->{_cache}->{$variation->dbID}}) {
+			$_->variation($variation);
+			weaken($_->{'variation'});
+		}
 	}
 	
 	if (defined $individual && defined $individual->dbID){
