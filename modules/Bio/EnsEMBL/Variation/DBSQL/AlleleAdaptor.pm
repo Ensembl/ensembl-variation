@@ -62,6 +62,8 @@ use Bio::EnsEMBL::Utils::Scalar qw(assert_ref);
 use Bio::EnsEMBL::Variation::Allele;
 use Bio::EnsEMBL::Utils::Iterator;
 
+use Scalar::Util qw(weaken);
+
 use DBI qw(:sql_types);
 
 our @ISA = ('Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor');
@@ -231,17 +233,17 @@ sub fetch_all_by_Variation {
     
     # If a population was specified, attach the population to the allele object
     map {$_->population($population)} @{$alleles} if (defined($population));
-	
-	# add freqs from genotypes for human (1KG data)
-	push @$alleles, @{$self->_fetch_all_by_Variation_from_Genotypes($variation, $population)} if $self->db->species =~ /homo_sapiens/i;
+
+    # add freqs from genotypes for human (1KG data)
+    push @$alleles, @{$self->_fetch_all_by_Variation_from_Genotypes($variation, $population)};
 	
     # Return the alleles
     return $alleles;
 }
 
 sub _fetch_all_by_Variation_from_Genotypes {
-	my $self = shift;
-	my $variation = shift;
+    my $self = shift;
+    my $variation = shift;
     my $population = shift;
     
     # Make sure that we are passed a Variation object
@@ -307,6 +309,8 @@ sub _fetch_all_by_Variation_from_Genotypes {
 					adaptor    => $self,
 					subsnp     => $ss eq '' ? undef : $ss,
 				});
+				
+				weaken($objs[-1]->{'variation'});
 			}
 		}
 	}
