@@ -58,6 +58,8 @@ use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
 
 use Scalar::Util qw(weaken);
 
+our $CACHE_SIZE = 5;
+
 @ISA = ('Bio::EnsEMBL::Variation::DBSQL::BaseGenotypeAdaptor');
 
 # stores a listref of individual genotype objects
@@ -148,6 +150,44 @@ sub store {
 	return $rows_added;
 }
 
+# similar to store above but writes to old-style non-compressed table
+# defaults to individual_genotype_multiple_bp since
+# tmp_individual_genotype_single_bp will only accept single nucleotide genotypes
+sub store_uncompressed {
+	my ($self, $gts, $table) = @_;
+	
+	$table ||= 'individual_genotype_multiple_bp';
+	
+	throw("First argument to store is not a listref") unless ref($gts) eq 'ARRAY';
+	
+	my $dbh = $self->dbc->db_handle;
+	
+	my $q_string = join ",", map {'(?,?,?,?,?)'} @$gts;
+	
+	my @args = map {
+		$_->{_variation_id} || $_->variation->dbID,
+		$_->{subsnp},
+		$_->allele1,
+		$_->allele2,
+		$_->individual ? $_->individual->dbID : undef,
+	} @$gts;
+	
+	my $sth = $dbh->prepare_cached(qq{
+		INSERT INTO $table(
+			variation_id,
+			subsnp_id,
+			allele_1,
+			allele_2,
+			sample_id
+		) VALUES $q_string
+	});
+	
+	$sth->execute(@args);
+	
+	$sth->finish;
+	
+	return scalar @$gts;
+}
 
 =head2 fetch_all_by_Variation
 
@@ -159,7 +199,7 @@ sub store {
   Returntype : listref Bio::EnsEMBL::Variation::IndividualGenotype 
   Exceptions : none
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -167,7 +207,7 @@ sub store {
 sub fetch_all_by_Variation {
     my $self = shift;
     my $variation = shift;
-	my $individual = shift;
+	my $sample = shift;
 
     if(!ref($variation) || !$variation->isa('Bio::EnsEMBL::Variation::Variation')) {
 		throw('Bio::EnsEMBL::Variation::Variation argument expected');
@@ -181,44 +221,48 @@ sub fetch_all_by_Variation {
 	my $results;
 	
 	# check cache
-	if(!defined($self->{_cache}->{$variation->dbID})) {
-		$self->{_cache}->{$variation->dbID} = $self->generic_fetch("g.variation_id = " . $variation->dbID());
-		for(@{$self->{_cache}->{$variation->dbID}}) {
+	# All ind gt objects for a variation are stored on the adaptor.
+	# They are stored in an array of limited size so that the memory usage
+	# doesn't go out of control for when the API requests genotypes for many
+	# variations sequentially.
+	my $cached;
+	
+	if(defined($self->{_cache})) {
+		foreach my $stored(@{$self->{_cache}}) {
+			my @keys = keys %{$stored};
+			$cached = $stored->{$keys[0]} if $keys[0] eq $variation->dbID;
+			last if defined($cached);
+		}
+	}
+
+	if(!defined($cached)) {
+		$cached = $self->generic_fetch("g.variation_id = " . $variation->dbID());
+		for(@$cached) {
 			$_->variation($variation);
 			weaken($_->{'variation'});
 		}
+		
+		# add genotypes for this variant to the cache
+		push @{$self->{_cache}}, {$variation->dbID => $cached};
+		
+		# shift off first element to keep cache within size limit
+		shift @{$self->{_cache}} if scalar @{$self->{_cache}} > $CACHE_SIZE;
 	}
 	
-	if (defined $individual && defined $individual->dbID){
-		if($individual->isa('Bio::EnsEMBL::Variation::Individual')) {
-			@$results = grep {$_->individual->dbID == $individual->dbID} @{$self->{_cache}->{$variation->dbID}};
+	if (defined $sample && defined $sample->dbID){
+		if($sample->isa('Bio::EnsEMBL::Variation::Individual')) {
+			@$results = grep {$_->individual->dbID == $sample->dbID} @{$cached};
 		}
-		elsif($individual->isa('Bio::EnsEMBL::Variation::Population')) {
-			my %include = map {$_->dbID => 1} @{$individual->get_all_Individuals};			
-			@$results = grep {$include{$_->individual->dbID}} @{$self->{_cache}->{$variation->dbID}};
+		elsif($sample->isa('Bio::EnsEMBL::Variation::Population')) {
+			my %include = map {$_->dbID => 1} @{$sample->get_all_Individuals};			
+			@$results = grep {$include{$_->individual->dbID}} @{$cached};
 		}
 		else {
 			throw("Argument supplied is not of type Bio::EnsEMBL::Variation::Sample");
 		}
 	}
-	else {
-		$results = $self->{_cache}->{$variation->dbID};
-	}
 	
-	# flip genotypes for flipped variations
-	#if(defined $variation->flipped && $variation->flipped == 1) {
-	#	foreach my $gt(@$results) {
-	#		my @new_gt;
-	#		
-	#		foreach my $allele(@{$gt->{genotype}}) {
-	#			reverse_comp(\$allele);
-	#			push @new_gt, $allele;
-	#		}
-	#		$gt->{genotype} = \@new_gt;
-	#	}
-	#}
-	
-	return $results;
+	return $cached;
 }
 
 sub fetch_all_by_Slice {
