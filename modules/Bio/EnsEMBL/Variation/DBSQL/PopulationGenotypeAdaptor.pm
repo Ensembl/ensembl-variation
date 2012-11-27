@@ -77,6 +77,8 @@ use Bio::EnsEMBL::Utils::Scalar qw(assert_ref);
 
 use Bio::EnsEMBL::Variation::PopulationGenotype;
 
+use Scalar::Util qw(weaken);
+
 our @ISA = ('Bio::EnsEMBL::Variation::DBSQL::BaseGenotypeAdaptor');
 
 
@@ -256,7 +258,7 @@ sub fetch_all_by_Variation {
   my $pgs = $self->generic_fetch("pg.variation_id = " . $variation->dbID());
   
   # fetch pop GTs from ind GTs for human (1KG data)
-  push @$pgs, @{$self->_fetch_all_by_Variation_from_Genotypes($variation)} if $self->db->species =~ /homo_sapiens/i;
+  push @$pgs, @{$self->_fetch_all_by_Variation_from_Genotypes($variation)};
   
   return $pgs;
 }
@@ -329,6 +331,8 @@ sub _fetch_all_by_Variation_from_Genotypes {
 		  adaptor    => $self,
 		  subsnp     => $ss eq '' ? undef : $ss,
 		});
+
+                weaken($objs[-1]->{'variation'});
 	  }
 	}
   }
