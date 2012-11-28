@@ -526,7 +526,9 @@ create table variation_feature(
         'regulatory_region_amplification',
         'regulatory_region_translocation',
         'feature_elongation',
-        'feature_truncation'
+        'feature_truncation',
+        'regulatory_region_variant',
+        'TF_binding_site_variant'
     ) DEFAULT 'intergenic_variant' NOT NULL,
     variation_set_id SET (
             '1','2','3','4','5','6','7','8',
