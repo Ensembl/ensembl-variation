@@ -197,7 +197,7 @@ sub source_table {
   $s_name =~ s/\s/_/g;
   my $s_name_id = lc($s_name);
 	
-  push (@species_list,{name => $species, anchor => $s_name});
+  push (@species_list,{name => $species, anchor => $s_name_id});
   
   my $new_species = ($is_new == 1) ? qq{<span style="padding-left:20px;color:#00F;font-weight:bold">New species!</span>} : '';
   
