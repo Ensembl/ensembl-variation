@@ -42,7 +42,7 @@ die "ERROR: no suitable databases found on host ".$config->{host}."\n" unless sc
 
 $config->{table} ||= 'transcript_variation';
 my $source_table = $config->{table};
-my $table = 'MTMP_'.$source_table.'_consequence_types';
+my $table = 'MTMP_'.$source_table;
 
 my $TMP_DIR = $config->{tmpdir};
 my $TMP_FILE = $config->{tmpfile};
