@@ -1,6 +1,6 @@
 =head1 LICENSE
 
- Copyright (c) 1999-2011 The European Bioinformatics Institute and
+ Copyright (c) 1999-2012 The European Bioinformatics Institute and
  Genome Research Limited.  All rights reserved.
 
  This software is distributed under a modified Apache license.
@@ -71,7 +71,7 @@ sub motif_feature {
 
 =head2 motif_start
 
-  Description: Get the (1-based) relative position of the variation feature in the motif
+  Description: Get the (1-based) relative position of the variation feature start in the motif
   Returntype : integer
   Status     : At Risk
 
@@ -84,6 +84,8 @@ sub motif_start {
     my $mf = $self->motif_feature;
     my $vf = $self->variation_feature;
     
+    return undef unless defined $vf->seq_region_start && defined $mf->seq_region_start;
+   
     my $mf_start = $vf->seq_region_start - $mf->seq_region_start + 1;
 
     # adjust if the motif is on the reverse strand
@@ -92,9 +94,39 @@ sub motif_start {
     
     # check that we're in bounds
 
-    return undef if ( ($mf_start < 1) || ($mf_start > $mf->length) );
+    return undef if $mf_start > $mf->length;
 
     return $mf_start;
+}
+
+=head2 motif_end
+
+  Description: Get the (1-based) relative position of the variation feature end in the motif
+  Returntype : integer
+  Status     : At Risk
+
+=cut
+
+sub motif_end {
+
+    my $self = shift;
+
+    my $mf = $self->motif_feature;
+    my $vf = $self->variation_feature;
+    
+    return undef unless defined $vf->seq_region_end && defined $mf->seq_region_start;
+   
+    my $mf_end = $vf->seq_region_end - $mf->seq_region_start + 1;
+
+    # adjust if the motif is on the reverse strand
+
+    $mf_end = $mf->binding_matrix->length - $mf_end + 1 if $mf->strand < 0;
+    
+    # check that we're in bounds
+
+    return undef if $mf_end < 1;
+
+    return $mf_end;
 }
 
 =head2 in_informative_position
@@ -120,9 +152,9 @@ sub in_informative_position {
 
     my $start = $self->motif_start;
 
-    return undef unless defined $start;
+    return undef unless defined $start && $start >= 1 && $start <= $self->motif_feature->length;
 
-    return $self->motif_feature->is_position_informative($start);
+    return $self->motif_feature->binding_matrix->is_position_informative($start);
 }
 
 =head2 motif_score_delta
@@ -153,15 +185,27 @@ sub motif_score_delta {
             return undef;
         }
 
-        my $mf_start = $self->motif_start;
+        my ($mf_start, $mf_end) = ($self->motif_start, $self->motif_end);
 
-        return undef unless defined $mf_start;
+        return undef unless defined $mf_start && defined $mf_end;
+
+        my $mf_seq = $self->motif_feature_variation->_motif_feature_seq;
+        my $mf_seq_length = length($mf_seq);
+        
+        # trim allele_seq
+        if($mf_start < 1) {
+            $allele_seq = substr($allele_seq, 1 - $mf_start);
+            $mf_start = 1;
+        }
+        
+        if($mf_end > $mf_seq_length) {
+            $allele_seq = substr($allele_seq, 0, $mf_seq_length - $mf_start + 1);
+            $mf_end = $mf_seq_length;
+        }
 
         my $var_len = length($allele_seq);
 
         return undef if $var_len > $mf->length;
-
-        my $mf_seq = $self->motif_feature_variation->_motif_feature_seq;
 
         my $matrix = $mf->binding_matrix;
 
@@ -170,6 +214,9 @@ sub motif_score_delta {
 
         # splice in the variant sequence (0-based)
         substr($mf_seq, $mf_start - 1, $var_len) = $allele_seq;
+        
+        # check length hasn't changed
+        return undef if length($mf_seq) != $mf_seq_length;
 
         # and get the affinity of the variant sequence
         my $var_affinity = $matrix->relative_affinity($mf_seq, $linear);
