@@ -34,14 +34,14 @@ package Bio::EnsEMBL::Variation::Pipeline::VariantQC::VariantQC;
 
 use strict;
 use warnings;
-
+use Data::Dumper ;
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp expand);
 use base qw(Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess);
 use Bio::EnsEMBL::Variation::Utils::dbSNP qw(get_alleles_from_pattern);
 use Bio::EnsEMBL::Variation::Utils::Sequence qw(revcomp_tandem);
 
 use vars qw( @EXPORT_OK);
-@EXPORT_OK = qw( check_four_bases check_illegal_characters remove_ambiguous_alleles find_ambiguous_alleles);
+@EXPORT_OK = qw( check_four_bases check_illegal_characters remove_ambiguous_alleles find_ambiguous_alleles get_reference_base);
 
 our $DEBUG   = 1;
  
@@ -84,7 +84,6 @@ sub run {
 
   my $self = shift;
    
-  
 
   ## variation_feature specific checks
   my ($var_data, $flip, $allele_string, $failed_variant, $failed_allele) = $self->run_variation_checks();
@@ -92,12 +91,16 @@ sub run {
   ## allele specific checks 
   my ($allele_data, $failed_allele, $failed_ss) = $self->run_allele_checks( $flip, $failed_allele, $allele_string);  
  
+  
+  ## find supporting evidence & merge to single string
+  my $evidence_summary = $self->summarise_evidence();
+
 
   ## Database updates 
-   my $var_dba = $self->get_species_adaptor('variation');
+  my $var_dba = $self->get_species_adaptor('variation');
 
   ## write to new variation featues 
-  insert_variation_features($var_dba, $var_data); 
+  write_variation_features($var_dba, $var_data, $evidence_summary ); 
  
   ## write to new failed_variation table
   write_variant_fails($var_dba, $failed_variant);
@@ -109,11 +112,8 @@ sub run {
   write_allele_fails($var_dba , $failed_allele, $failed_ss );
 
 
-  ## update variation table with flipped flag
-  write_variant_flips($var_dba, $flip);
-
-   
- 
+  ## write to new variation with evidence string & flip status
+  $self->write_variation(  $evidence_summary , $flip );
   
 }
 
@@ -130,9 +130,11 @@ sub run_variation_checks{
 
 
   my %fail_variant;   # hash of arrays of failed variation_ids
-  my %fail_allele;   # hash of arrays of arrays failed variation_ids & alleles
+  my %fail_allele;    # hash of arrays of arrays failed variation_ids & alleles
   my %flip;           # hash of variation ids which have their strand changed in this process
   my %allele_string;  # hash of expected allele for each variation_id strings saved for allele checking
+
+  
 
 
   my $var_dba = $self->get_species_adaptor('variation');
@@ -144,6 +146,9 @@ sub run_variation_checks{
 
   ## export current variation_feature data
   my $to_check = export_data_adding_allele_string($var_dba, $first, $last);
+
+
+  my $failed_set_id = find_failed_variation_set_id($var_dba);
   
 
 
@@ -153,10 +158,12 @@ sub run_variation_checks{
     ## save initial value of allele string for allele checking incase multi-mapping
     $allele_string{$var->{v_id}} = $var->{allele};
 
+   
     ## Type 19 - fail variant if  >1 mapping seen
   
    if($var->{map} >1){       
       push @{$fail_variant{19}}, $var->{v_id};
+      $var->{variation_set_id} = $failed_set_id ;
     }
 
 
@@ -165,6 +172,7 @@ sub run_variation_checks{
     if($var->{allele} =~ /NOVARIATION/){
       push @{$fail_variant{4}}, $var->{v_id};
       push @{$fail_allele{4}}, [$var->{v_id}, "NOVARIATION"];   ## unflipped allele failed throughout
+      $var->{variation_set_id} = $failed_set_id ;
       next;
     }
   
@@ -172,12 +180,8 @@ sub run_variation_checks{
       ## only locations are available, so no further checking is possible.
       next;
     }
-    if( $var->{class_attrib_id} >0){
-        ## named variants are given the SO term 'sequence alteration' on entry
-        ## no further checking possible
-	next;
-    }
 
+    
     # expand alleles if they contain brackets and numbers before other checks
     my $expanded = $var->{allele};
     expand(\$expanded);
@@ -188,10 +192,15 @@ sub run_variation_checks{
 
   my $illegal_alleles = check_illegal_characters($expanded);
   if(defined $illegal_alleles->[0] ) {
-    push @{$fail_variant{13}}, $var->{v_id};
 
-    foreach my $ill_al( @{$illegal_alleles} ){
-      push @{$fail_allele{13}},  [$var->{v_id}, $ill_al];   ## unflipped allele failed throughout
+      ## named variants are given the SO term 'sequence alteration' on entry - do not fail these 
+      next if $var->{class_attrib_id} eq 18;
+
+      push @{$fail_variant{13}}, $var->{v_id};
+      $var->{variation_set_id} = $failed_set_id ;
+
+      foreach my $ill_al( @{$illegal_alleles} ){
+         push @{$fail_allele{13}},  [$var->{v_id}, $ill_al];   ## unflipped allele failed throughout
     }
     next;  ## don't attempt to order variation_feature.allele_string or compliment
   }
@@ -201,7 +210,8 @@ sub run_variation_checks{
 
   my $all_possible_check = check_four_bases($expanded);
   if ($all_possible_check ==1){        
-    push @{$fail_variant{3}}, $var->{v_id}
+      push @{$fail_variant{3}}, $var->{v_id};
+      $var->{variation_set_id} = $failed_set_id ;
   }
 
   ## Type 14 resolve ambiguities before reference check - flag variants & alleles as fails
@@ -209,6 +219,7 @@ sub run_variation_checks{
   if($expanded =~ m/[$AMBIGUITIES]/){
     $expanded = remove_ambiguous_alleles(\$expanded);
     push @{$fail_variant{14}}, $var->{v_id};
+    $var->{variation_set_id} = $failed_set_id ;
 
     ## identify specific alleles to fail
     my $ambiguous_alleles = find_ambiguous_alleles($var->{allele});
@@ -247,6 +258,7 @@ sub run_variation_checks{
     unless(defined $ref_seq){ 
       ## don't check further if obvious coordinate error
       push @{$fail_variant{15}}, $var->{v_id};
+      $var->{variation_set_id} = $failed_set_id ;
       next;
     }
 
@@ -269,7 +281,8 @@ sub run_variation_checks{
     }
 
     unless  ($match_coord_length == 1){
-      push @{$fail_variant{15}}, $var->{v_id};
+	push @{$fail_variant{15}}, $var->{v_id};
+	$var->{variation_set_id} = $failed_set_id ;
     }
 
     ## lengths ok - is actual base in agreement?
@@ -280,6 +293,7 @@ sub run_variation_checks{
     else{
       ##  Type 2 - flag variants as fails if neither allele matches the reference
       push @{$fail_variant{2}}, $var->{v_id} ;
+      $var->{variation_set_id} = $failed_set_id ;
     } 
    ## save for allele checker if fully processed and possibly flipped
    $allele_string{$var->{v_id}} = $var->{allele};
@@ -307,19 +321,14 @@ sub run_allele_checks {
    my $fail           = shift;
    my $allele_string  = shift;
 
-   ### start and end variation_id supplied
-   my $first = $self->required_param('start_id'); 
-   my $last  = $first + $self->required_param('batch_size') - 1;
-   if($first ==1){$last--;} 
 
    my @fail_all;
 
-   my $var_dba = $self->get_species_adaptor('variation');
+   my %skip;      ## store sets to fail only once;
 
-   my %skip;  ## store sets to fail only once;
 
    ## export current allele & variation_feature data - alleles flipped where needed
-   my $var_data = export_allele_data($var_dba, $first, $last, $flip );
+   my $var_data = $self->export_allele_data( $flip );
    
    foreach my $var( keys %$var_data){
     
@@ -333,6 +342,8 @@ sub run_allele_checks {
      ## check through allele submissions
      foreach my $submitted_data (@{$var_data->{$var}->{allele_data}}){
 
+
+       ## Apply QC checks
       
        ## $submitted_data content: [ al.allele_id, al.subsnp_id, al.allele,  al.frequency, al.sample_id, al.count, al.frequency_submitter_handle ]
        unless( exists $expected_alleles{$submitted_data->[2]} && $expected_alleles{$submitted_data->[2]} ==1 ){ ## check expected on allele not allele_code
@@ -351,7 +362,7 @@ sub run_allele_checks {
      }
    }
 
-   return ($var_data, $fail, \@fail_all);
+   return ($var_data, $fail, \@fail_all );
 
 
 
@@ -450,25 +461,36 @@ sub export_data_adding_allele_string{
 =cut
 sub export_allele_data{
 
-   my ($var_dba, $first, $last, $flip) = @_;
+   my $self           = shift;
+   my $flip           = shift; 
 
-   my %save;       
-          
+
+   ### start and end variation_id supplied
+   my $first = $self->required_param('start_id'); 
+   my $last  = $first + $self->required_param('batch_size') - 1;
+   if($first ==1){$last--;} 
+
+   my $var_dba = $self->get_species_adaptor('variation');
+
+
+   my %save;                 
    my %done;
 
-   my $data_ext_sth = $var_dba->dbc->prepare(qq[SELECT v.variation_id,
-                                                       v.name,
-                                                       al.allele_id,
-                                                       al.subsnp_id,
-                                                       al.allele,
-                                                       al.frequency,
-                                                       al.sample_id,
-                                                       al.count,
-                                                       al.frequency_submitter_handle
-                                               FROM   variation v, allele al
-                                               WHERE  v.variation_id between ? and ?
-                                               AND    v.variation_id  = al.variation_id 
-                                                ]);       
+   my $extraction_stmt = qq[SELECT v.variation_id,
+                                    v.name,
+                                    al.allele_id,
+                                    al.subsnp_id,
+                                    al.allele,
+                                    al.frequency,
+                                    al.sample_id,
+                                    al.count,
+                                    al.frequency_submitter_handle
+                            FROM   variation v, allele al
+                            WHERE  v.variation_id between ? and ?
+                            AND    v.variation_id  = al.variation_id ];
+  
+
+   my $data_ext_sth = $var_dba->dbc->prepare($extraction_stmt);       
   
    $data_ext_sth->execute($first, $last)|| die "ERROR extracting allele info\n";
   
@@ -486,7 +508,7 @@ sub export_allele_data{
 	   
        }
 
-       push @{$save{$l->[0]}{allele_data}}, [$l->[2], $l->[3], $l->[4], $l->[5], $l->[6], $l->[7], $l->[8] ];
+       push @{$save{$l->[0]}{allele_data}}, [$l->[2], $l->[3], $l->[4], $l->[5], $l->[6], $l->[7], $l->[8], $l->[9] ];
 
 
   }
@@ -739,42 +761,44 @@ sub write_allele_fails{
   }
 
 }
-=head2 insert_variation_features
+=head2 write_variation_features
 
   Create new version of variation feature tables with alleles ordered ref/alt where possible and complimented where necessary
 
 =cut
-sub insert_variation_features{
+sub write_variation_features{
     
   my $var_dba  = shift;
-  my $to_check = shift;
+  my $to_load  = shift;
+  my $evidence = shift;
 
-  my $varfeat_ins_sth = $var_dba->dbc->prepare(qq[insert  into variation_feature_working
-                                                (variation_id, variation_name, seq_region_id,  seq_region_start, seq_region_end, seq_region_strand,  
-                                                 allele_string, map_weight,  source_id, consequence_types, 
-                                                 variation_set_id, somatic, class_attrib_id, alignment_quality,validation_status)
-                                                 values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+  my $varfeat_ins_sth = $var_dba->dbc->prepare(qq[ insert  into variation_feature_working
+                                                  (variation_id, variation_name, seq_region_id,  seq_region_start, 
+                                                   seq_region_end, seq_region_strand,  allele_string, map_weight,  
+                                                   source_id, consequence_types, variation_set_id, somatic,
+                                                   class_attrib_id, alignment_quality, evidence)
+                                                  values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                                                 ]);       
   
   
-  foreach my $data (@{$to_check}){ 
+  foreach my $data (@{$to_load}){ 
 
     die "No allele string for $data->{name}\n" unless defined  $data->{allele};
-    $varfeat_ins_sth->execute($data->{v_id},
-                            $data->{name},
-                            $data->{seqreg_id},
-                            $data->{start},
-                            $data->{end},
-                            $data->{strand},
-                            $data->{allele},
-                            $data->{map},
-                            $data->{source_id},
-                            $data->{consequence_types},
-                            $data->{variation_set_id},
-                            $data->{somatic},
-                            $data->{class_attrib_id},
-                            $data->{align_qual},
-			    $data->{validation_status}
+    $varfeat_ins_sth->execute( $data->{v_id},
+                               $data->{name},
+                               $data->{seqreg_id},
+                               $data->{start},
+                               $data->{end},
+                               $data->{strand},
+                               $data->{allele},
+                               $data->{map},
+                               $data->{source_id},
+                               $data->{consequence_types},
+                               $data->{variation_set_id},
+                               $data->{somatic},
+                               $data->{class_attrib_id},
+                               $data->{align_qual},
+			       $evidence->{$data->{v_id}}
                              )|| die "ERROR importing variation feature info\n";
 
 
@@ -782,25 +806,74 @@ sub insert_variation_features{
 }
 
 
-=head2 write_variant_flips
+=head2 write_variation
 
-  Populate a tmp table with a list of variants whose data will be flipped
+  Populate a variation_working table with new flipped & evidence statuses
 
 =cut
-sub write_variant_flips{
+sub write_variation{
     
-  my $var_dba = shift;
-  my $flip    = shift;
+  my $self     = shift;
+  my $evidence = shift;
+  my $flip     = shift;
         
+  my $var_dba = $self->get_species_adaptor('variation');
 
-  my $flip_ins_sth = $var_dba->dbc->prepare(qq[ insert  into variation_to_reverse_working
-                                               (variation_id) values ( ?)
+  my $first = $self->required_param('start_id');
+  my $last  = $first + $self->required_param('batch_size') -1;
+  if($first ==1){$last--;}
+
+  my $var_ext_sth = $var_dba->dbc->prepare(qq[ select variation_id,
+                                                      source_id,
+                                                      name, 
+                                                      flipped,
+                                                      class_attrib_id,
+                                                      somatic,
+                                                      minor_allele,
+                                                      minor_allele_freq,
+                                                      minor_allele_count,
+                                                      clinical_significance_attrib_id
+                                               from variation
+                                               where variation_id between ? and ?
                                               ]);       
-  
-  foreach my $var (keys %{$flip} ){ 
 
-    #### updating VARIATION table at end - no change to imported data unless all OK
-    $flip_ins_sth->execute($var)||    die "ERROR adding variation flip status\n";    
+
+  my $var_ins_sth = $var_dba->dbc->prepare(qq[ insert into variation_working
+                                               (variation_id,
+                                               source_id,
+                                               name, 
+                                               flipped,
+                                               class_attrib_id,
+                                               somatic,
+                                               minor_allele,
+                                               minor_allele_freq,
+                                               minor_allele_count,
+                                               clinical_significance_attrib_id,
+                                               evidence)
+                                               values (?,?,?,?,?,?,?,?,?,?,?)
+                                              ]); 
+
+      
+  
+
+  $var_ext_sth->execute($first,$last)||die;
+  my $data = $var_ext_sth->fetchall_arrayref();
+  foreach my $v (@{$data} ){ 
+
+    $flip->{$v->[0]} = 0 unless defined $flip->{$v->[0]}; ## update non-flipped with 0
+
+    ## substitute in new values as appropriate
+    $var_ins_sth->execute( $v->[0],
+                           $v->[1],
+                           $v->[2],
+                           $flip->{$v->[0]},
+                           $v->[4],
+                           $v->[5],
+                           $v->[6],
+                           $v->[7],
+                           $v->[8],
+                           $v->[9],
+                           $evidence->{$v->[0]})||    die "ERROR writing variation table\n";    
 
   }
 }
@@ -914,6 +987,235 @@ sub get_allele_code{
     return $id->[0]->[0] ;
 }
 
+
+=head2 summarise_evidence
+
+  Description: Compile evidence of variant quality into a single comma seperated string
+  Status     : At Risk
+=cut
+sub summarise_evidence{
+
+    my $self = shift;
+
+    my %evidence;
+
+
+    ## summarise ss information
+    my $ss_variations =  $self->get_ss_variations();
+
+
+    ## extract list of variants with pubmed citations
+    ## not using this to not fail variants assuming it is quicker to fail then revert in bulk
+    my $pubmed_variations =  $self->get_pubmed_variations();
+
+
+    ## get 1KG discovered variants (human only)
+    my $kg_variations =  $self->get_KG_variations() if $self->required_param('species') =~/Homo|Human/i ;
+
+
+    foreach my $var(keys %$ss_variations ){
+
+      ## dbSNP ss submissions
+      $evidence{$var} = "Multiple_observations,"  if $ss_variations->{$var}->{count} > 1;
+
+      $evidence{$var} .= "Frequency,"             if $ss_variations->{$var}->{'freq'} ==1;
+
+
+      ## additional human evidence 
+      $evidence{$var} .= "HapMap,"                if $ss_variations->{$var}->{'HM'} ==1 ;
+      
+      $evidence{$var} .= "1000Genomes,"           if defined $kg_variations->{$var} ;
+
+      ## pubmed citations
+      $evidence{$var} .= "Cited,"                 if defined $pubmed_variations->{$var}; 
+
+      $evidence{$var} =~ s/\,$//;
+
+    }
+    return \%evidence;
+
+}
+=head2  get_ss_variations
+
+  Summarise information from dbSNP ss submissions:
+
+      - check the number of independant observations
+             - ie. different submitter handle or different sample
+      - check for any allele frequency information
+      - check for allele frequency information from Hapap if human
+
+=cut
+
+sub get_ss_variations{
+
+    my $self = shift;
+
+    my $first = $self->required_param('start_id');
+    my $last  = $first + $self->required_param('batch_size') -1;
+    if($first ==1){$last--;}
+   
+    my %evidence;
+
+
+    my $var_dba = $self->get_species_adaptor('variation');
+
+    my $obs_var_ext_sth  = $var_dba->dbc->prepare(qq[ select al.variation_id,
+                                                             h.handle,
+                                                             al.sample_id,
+                                                             al.frequency,
+                                                             s.name
+                                                      from   subsnp_handle h, allele al
+                                                      left outer join sample s on ( s.sample_id = al.sample_id)
+                                                      where  al.variation_id between ? and ?
+                                                      and    h.subsnp_id = al.subsnp_id ]);
+    $obs_var_ext_sth->execute($first, $last );
+    my $dat = $obs_var_ext_sth->fetchall_arrayref();
+
+    my %save_by_var; #  gather ss entries by variant
+
+    foreach my $l (@{$dat}){
+
+	$evidence{$l->[0]}{'obs'}  = 1;  ## save default value for each variant - full set to loop through later.
+
+	$l->[2] = "N" unless defined $l->[2];
+
+        #save  submitter handle and sample to try to discern independent submissions
+	push  @{$save_by_var{$l->[0]}}, [  $l->[1], $l->[2] ];
+
+
+       ## Save frequency evidence for variant by variant id
+
+       if(defined $l->[3] && $l->[3] < 1 && $l->[3] > 0){
+            ## flag if frequency data available
+            $evidence{$l->[0]}{'freq'}  = 1;
+
+	    ## special case for human only
+	    $evidence{$l->[0]}{'HM'}  = 1 if defined $l->[4] && $l->[4]   =~/HapMap/i;
+
+	}
+    }
+
+
+    foreach my $var (keys %save_by_var){
+
+	$evidence{$var}{count} = count_ss(\@{$save_by_var{$var}} );
+    }
+    return \%evidence;
+}
+
+sub count_ss{
+
+
+    my $submissions = shift;
+
+    my %submitter;
+    my $total_count;
+
+
+    foreach my $submission (@{$submissions}){
+        ## group populations seen by submitter
+
+        push @{$submitter{$submission->[0]}{pop}} , $submission->[1];
+	$submitter{$submission->[0]}{no_pop} = 1  if $submission->[1] eq "N";        
+    }
+
+    foreach my $submitter (keys %submitter){
+        ## count by submitter ignoring submissions without populations if submissions with populations are present
+        my %unique_sub;
+        map { $unique_sub{$_} = 1; } @{$submitter{$submitter}{pop}};
+        my $submitter_count = scalar(keys %unique_sub);
+        $submitter_count-- if $submitter_count >1 && defined $submitter{$submitter}{no_pop} && $submitter{$submitter}{no_pop} ==1;
+        $total_count += $submitter_count;
+
+    }
+    return $total_count;
+}
+
+
+
+sub get_pubmed_variations{
+
+  my $self = shift;
+
+  ### start and end variation_id supplied
+  my $first = $self->required_param('start_id');;
+  my $last  = $first + $self->required_param('batch_size') -1;
+  if($first ==1){$last--;}
+ 
+  my %pubmed_variations;
+
+  my $var_dba = $self->get_species_adaptor('variation');
+
+  ## some species don't have pubmed citations for variations
+  my $PM_exists_ext_sth  = $var_dba->dbc->prepare(qq[ show tables like 'pubmed_variation']);
+  $PM_exists_ext_sth->execute();
+  my $exists = $PM_exists_ext_sth->fetchall_arrayref();
+  return unless defined $exists->[0]->[0]; 
+
+  my $pubmed_var_ext_sth  = $var_dba->dbc->prepare(qq[ select variation_id from pubmed_variation]);
+  $pubmed_var_ext_sth->execute();
+  my $data = $pubmed_var_ext_sth->fetchall_arrayref();
+ 
+  foreach my $l (@{$data}){
+      $pubmed_variations{$l->[0]} = 1;
+  }
+
+  return \%pubmed_variations;
+
+}
+
+
+## human only - extact ids for variants found in 1000 genomes project
+
+sub get_KG_variations{
+
+  my $self = shift;
+
+ 
+  ### start and end variation_id supplied
+  my $first = $self->required_param('start_id');
+  my $last  = $first + $self->required_param('batch_size') -1;
+  if($first ==1){$last--;}
+ 
+  my %kg_variations;
+
+  my $var_dba = $self->get_species_adaptor('variation');
+
+  my $var_ext_sth  = $var_dba->dbc->prepare(qq[ select variation.variation_id 
+                                                from variation, tmp_1kg_var 
+                                                where variation.snp_id =  tmp_1kg_var.rs_id 
+                                                and variation.variation_id  between ? and ?
+                                              ]);
+  $var_ext_sth->execute($first, $last);
+  my $data = $var_ext_sth->fetchall_arrayref();
+ 
+  foreach my $l (@{$data}){
+      $kg_variations{$l->[0]} = 1;
+  }
+
+  return \%kg_variations;
+
+}
+
+
+sub find_failed_variation_set_id{
+
+    my $var_dba = shift;
+
+    my $variation_set_ext_sth  = $var_dba->dbc->prepare(qq[ select variation_set_id
+                                                            from variation_set
+                                                            where name = ?
+                                                           ]);
+
+    ## check if present
+    $variation_set_ext_sth->execute('All failed variations')  || die "Failed to extract failed variant set id\n";
+    my $failed_set_id = $variation_set_ext_sth->fetchall_arrayref();
+
+    die "Failed set not available\n" unless defined $failed_set_id->[0]->[0];
+
+    return $failed_set_id->[0]->[0];
+}
+  
 
 ### put somewhere sensible
 sub unique {
