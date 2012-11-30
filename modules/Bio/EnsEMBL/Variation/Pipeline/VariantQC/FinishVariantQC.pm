@@ -51,7 +51,7 @@ sub run {
 
 
     ## Have all rows been processed in flipped/ re-ordered tables
-    my ($allele_number, $process_error )  = $self->check_all_processed($var_dba, $report);
+    my ($var_number, $allele_number, $process_error )  = $self->check_all_processed($var_dba, $report);
 
     ## check for consistency between new and old variation_feature tables
     print  $report "\nRunning checks variation_feature data\n";
@@ -60,8 +60,17 @@ sub run {
      
     print $report "\nChecking failure rates\n";
     ## What are the failure rates for alleles and variants
-    my $suspiciously_poor = get_failure_rates($var_dba, $report, $allele_number );
-    
+    my ($var_fail_rate, $allele_fail_rate) = get_failure_rates($var_dba, $report, $allele_number );
+    my $suspiciously_poor = 0;
+    if( $var_fail_rate >10){
+	$suspiciously_poor = 1;
+	print  $report "\nVariation failure rate far higher than normal\n";
+    }
+    if($allele_fail_rate > 10){
+	$suspiciously_poor = 1;
+	print  $report "\nAllele failure rate far higher than normal\n";    
+    }    
+
     ## crude check to ensure same MT sequence used
     check_MT_fails($var_dba, $report);
 
@@ -100,6 +109,11 @@ sub run {
 
     update_meta_coord( $core_dba, $var_dba, 'variation_feature');
 
+    $self->update_internal_db( $var_number, 
+                               $allele_number,
+                               $var_fail_rate, 
+                               $allele_fail_rate);
+
 }
 
 
@@ -116,6 +130,9 @@ sub run {
     my $report  = shift;
 
    
+    my $old_var       = count_rows($var_dba, 'variation');
+    my $new_var       = count_rows($var_dba, 'variation_working');
+   
     my $old_varfeat   = count_rows($var_dba, 'variation_feature');
     my $new_varfeat   = count_rows($var_dba, 'variation_feature_working');
 
@@ -130,6 +147,15 @@ sub run {
     my $process_error = 0; ## can we proceed to rename tables?
 
     print $report "Checking row counts between raw and post processed tables:\n"; 
+
+    if($old_var == $new_var){
+	print $report "\tVariation:\t\t\tOK ($new_var rows)\n";
+    }
+    else{
+	$process_error = 1;
+	print $report "Variation: ERROR old table has :$old_var rows, new table has $new_var\n";
+    }
+
 
     if($old_varfeat == $new_varfeat){
 	print $report "\tVariation_feature:\t\tOK ($new_varfeat rows)\n";
@@ -173,7 +199,7 @@ sub run {
       }
 
     }
-    return ( $new_allele, $process_error );
+    return ( $new_var, $new_allele, $process_error );
 
 }
 
@@ -243,12 +269,8 @@ sub get_failure_rates{
 
     print $report "\tAllele failure rate:\t$allele_fail_rate\% [$failed_allele_count /$allele_number ]\n";
      
-
-    my $suspiciously_poor;
-    if( $var_fail_rate >10 || $allele_fail_rate > 3){
-         $suspiciously_poor = 1;
-    }
-    return  $suspiciously_poor;
+    
+    return  ($var_fail_rate, $allele_fail_rate);
 }
 
 =head2 fails_by_type
@@ -354,7 +376,7 @@ sub check_variation_feature_consistency{
 
   my $consistency_fail = 0;
 
-  my @columns = ('validation_status', 'somatic', 'seq_region_id');
+  my @columns = ( 'somatic', 'seq_region_id');
 
   foreach my $column (@columns){
 
@@ -363,7 +385,7 @@ sub check_variation_feature_consistency{
 
     foreach my $status (keys %{$old_status}){
       unless ($old_status->{$status} == $new_status->{$status}){
-        print $report "Consistency error: variation_feature.$column $status ($old_status->{$status} => $new_status->{$status})\n";
+       print $report "Consistency error: variation_feature.$column $status ($old_status->{$status} => $new_status->{$status})\n";
         $consistency_fail = 1;
       }
     }
@@ -387,8 +409,8 @@ sub check_flipping_population_genotype{
 
   my $flip_check_stmt  = qq[select v.name, CONCAT(old.allele_1,'/',old.allele_2), CONCAT(alc1.allele, '/',alc2.allele) 
                              from population_genotype old, population_genotype_working new, genotype_code gc1,
-                             allele_code alc1,genotype_code gc2, allele_code alc2, variation v, variation_to_reverse_working vtr 
-                             where v.variation_id = vtr.variation_id 
+                             allele_code alc1,genotype_code gc2, allele_code alc2, variation_working v
+                             where v.flipped = 1
                              and v.variation_id = old.variation_id 
                              and old.population_genotype_id = new.population_genotype_id 
                              and new.genotype_code_id  = gc1.genotype_code_id 
@@ -426,8 +448,8 @@ sub check_flipping_allele{
   my $report  = shift;
 
   my $flip_check_stmt = qq[select distinct old.subsnp_id, old.allele, v.name 
-                             from allele old, variation v, variation_to_reverse_working vtr  
-                             where v.variation_id = vtr.variation_id
+                             from allele old, variation_working v
+                             where v.flipped = 1
                              and v.variation_id = old.variation_id                              
                              limit 3000
                            ];
@@ -487,8 +509,8 @@ sub check_flipping_variation_feature{
   my $report  = shift;
 
   my $flip_check_stmt = qq[select distinct new.variation_name, old.allele_string, new.allele_string 
-                             from allele_string old, variation_feature_working new, variation v,variation_to_reverse_working vtr  
-                             where v.variation_id = vtr.variation_id 
+                             from allele_string old, variation_feature_working new, variation_working v
+                             where v.flipped = 1
                              and v.variation_id = old.variation_id 
                              and new.variation_id = v.variation_id
                              and new.variation_id not in (select variation_id from failed_variation_working)
@@ -511,7 +533,7 @@ sub check_flipping_variation_feature{
   ## filter out G/C and A/T and sort alleles as switched to match reference
   my @cleaned_data;
   foreach my $l (@{$var_feat_flip_dat}){
-      next if $l->[1] =~/G\/C|A\/T|T\/A|C\/G/;
+      next if $l->[1] =~/G\/C|A\/T|T\/A|C\/G|\(AT\)|\(GC\)|\(CG\)|\(TA\)/;
       push @cleaned_data, [$l->[0], sort($l->[1]), sort ($l->[2])];  
   }
 
@@ -574,9 +596,10 @@ sub rename_tables{
 
   ## Keep orignal tables in short term
   $var_dba->dbc->do(qq[ rename table allele to allele_before_pp ]) || die;
+  $var_dba->dbc->do(qq[ rename table variation to variation_before_pp ]) || die;
   $var_dba->dbc->do(qq[ rename table variation_feature to variation_feature_before_pp ]) || die;
-  $var_dba->dbc->do(qq[ rename table failed_allele to failed_allele_before_pp ]) || die;         ## Not needed post dev phase
-  $var_dba->dbc->do(qq[ rename table failed_variation to failed_variation_before_pp ]) || die;   ## Not needed post dev phase
+  $var_dba->dbc->do(qq[ rename table failed_allele to failed_allele_before_pp ]) || die;         
+  $var_dba->dbc->do(qq[ rename table failed_variation to failed_variation_before_pp ]) || die;   
 
 
   # Rename working tables 
@@ -585,20 +608,19 @@ sub rename_tables{
 
   $var_dba->dbc->do(qq[ rename table variation_feature_working to variation_feature ]) || die;
 
+  $var_dba->dbc->do(qq[ rename table variation_working to variation ]) || die;
+
   $var_dba->dbc->do(qq[ alter table variation_feature order by seq_region_id,seq_region_start,seq_region_end ]) || die;
 
-  $var_dba->dbc->do(qq[ rename table failed_allele_working to failed_allele ]) || die;        ## Not needed post dev phase
-  $var_dba->dbc->do(qq[ rename table failed_variation_working to failed_variation ]) || die;  ## Not needed post dev phase
+  $var_dba->dbc->do(qq[ rename table failed_allele_working to failed_allele ]) || die;        
+  $var_dba->dbc->do(qq[ rename table failed_variation_working to failed_variation ]) || die;  
 
   $var_dba->dbc->do(qq[ rename table population_genotype to population_genotype_before_pp]) || die;
   $var_dba->dbc->do(qq[ rename table MTMP_population_genotype_working to MTMP_population_genotype]) || die;
   $var_dba->dbc->do(qq[ rename table population_genotype_working to population_genotype]) || die;
 
 
-  # does this need binning?
-  $var_dba->dbc->do(qq[ update variation set flipped = 0  ]) || die;
-  $var_dba->dbc->do(qq[ update variation set flipped = 1 where variation_id in (select variation_id from variation_to_reverse_working) ]) || die;
-
+ 
   
 
 }
@@ -611,78 +633,47 @@ sub rename_tables{
 =cut
 sub update_failed_variation_set{
 
-  my $var_dba = shift;
-  my $report  = shift;
-    
-   
-  my $failed_var_ext_sth  = $var_dba->dbc->prepare(qq[ select distinct variation_id
-                                                       from failed_variation
-                                                     ]);
+    my $var_dba = shift;
+    my $report  = shift; 
 
-
-
-  my $fail_attrib_ext_sth  = $var_dba->dbc->prepare(qq[ select attrib_id
-                                                         from attrib
-                                                         where attrib_type_id = 9
-                                                         and value = 'fail_all'
-
-                                                       ]);
+    my $failed_var_ext_sth  = $var_dba->dbc->prepare(qq[ select distinct variation_id
+                                                         from failed_variation
+                                                       ]); 
  
-   my $variation_set_ext_sth  = $var_dba->dbc->prepare(qq[ select variation_set_id
+    my $variation_set_ext_sth  = $var_dba->dbc->prepare(qq[ select variation_set_id
                                                             from variation_set
                                                             where name = ?
-                                                           ]);
-
-   my $variation_set_ins_sth  = $var_dba->dbc->prepare(qq[ insert into variation_set
-                                                            ( name, description, short_name_attrib_id)
-                                                            values (?,?,?)
                                                           ]);
-
-
-  my $var_set_ins_ext_sth  = $var_dba->dbc->prepare(qq[insert into variation_set_variation
+  
+    my $var_set_ins_ext_sth  = $var_dba->dbc->prepare(qq[insert into variation_set_variation
                                                          (variation_id, variation_set_id)
                                                          values (?,?)
                                                         ]);
 
+    ## extract variation_set_id for failed variations
+    $variation_set_ext_sth->execute('All failed variations')  || die "Failed to extract allele fail reasons\n";
+    my $failed_set_id = $variation_set_ext_sth->fetchall_arrayref();
+    
+    die "Exiting: Error - variation_set_id for failed variants not found\n" unless defined $failed_set_id->[0]->[0];
+    
+  
+    ## extract list of variation ids to put in set
+    $failed_var_ext_sth->execute() || die "Failed to extract variation fails\n";
+    my $all_failed_var = $failed_var_ext_sth->fetchall_arrayref();
 
-  $variation_set_ext_sth->execute('All failed variations')  || die "Failed to extract allele fail reasons\n"; 
-  my $failed_set_id = $variation_set_ext_sth->fetchall_arrayref();
-
-  unless(defined $failed_set_id->[0]->[0] ){
-      #no set entered - look up attrib for short name and enter set
-
-    $fail_attrib_ext_sth->execute() || die "Failed to extract failed set attrib reasons\n";
-    my $attrib = $fail_attrib_ext_sth->fetchall_arrayref();
-
-    if(defined $attrib->[0]->[0] ){
-      $variation_set_ins_sth->execute('All failed variations',
-                                       'Variations that have failed the Ensembl QC checks' ,
-                                        $attrib->[0]->[0] )|| die "Failed to insert failed set\n";       
+    unless( defined $all_failed_var->[0]->[0]){
+	print $report "ERROR: no variation fails available to update to variation set \n";
+	return;
     }
-    else{
-        die "Exiting: Error - attribs not loaded. Load attribs then re-run FinishVariantQC\n";
+
+    ## link failed variants to failed set
+    foreach my $var(@{ $all_failed_var}){
+
+	$var_set_ins_ext_sth->execute( $var->[0], $failed_set_id->[0]->[0] )||die;
     }
-  }
 
-  $variation_set_ext_sth->execute('All failed variations')  || die "Failed to extract allele fail reasons\n"; 
-  $failed_set_id = $variation_set_ext_sth->fetchall_arrayref();
-
-
-  ## extract list of variation ids to put in set
-  $failed_var_ext_sth->execute() || die "Failed to extract variation fails\n";  
-  my $all_failed_var = $failed_var_ext_sth->fetchall_arrayref();
-
-  unless( defined $all_failed_var->[0]->[0]){
-    print $report "ERROR: no variation fails available to update to variation set \n";
-    return;
-  }
-
-  my $check_num = scalar @{ $all_failed_var};
-  foreach my $var(@{ $all_failed_var}){
-
-    $var_set_ins_ext_sth->execute( $var->[0], $failed_set_id->[0]->[0] )||die;
-  }
-  print $report "\n$check_num failedvariants inserted into variation_set_variation table\n";
+    my $check_num = scalar @{ $all_failed_var};
+    print $report "\n$check_num failed variants inserted into variation_set_variation table\n";
     
 }
 
@@ -714,5 +705,39 @@ sub update_meta_coord {
   return;
 }
 
+
+## final step - update internal production db
+
+sub update_internal_db{
+
+    my $self             = shift;
+    my $var_number       = shift;
+    my $allele_number    = shift;
+    my $var_fail_rate    = shift;
+    my $allele_fail_rate = shift;
+
+
+    my $int_dba ;
+    eval{ $int_dba = $self->get_adaptor('multi', 'intvar');};
+
+    unless (defined $int_dba){
+	$self->warning('No internal database connection found to write status '); 
+	return;
+    }
+
+    my $var_dba = $self->get_species_adaptor('variation');
+    my $ensdb_name = $var_dba->dbc->dbname;
+
+    my $ensvardb_dba  =  $int_dba->get_EnsVardbAdaptor();
+    my $ensdb = $ensvardb_dba->fetch_by_name($ensdb_name);
+    if(defined $ensdb ){
+	$ensvardb_dba->update_status($ensdb,'dbSNP_post_processed');
+
+	$ensvardb_dba->add_result( $ensdb, 'dbSNP_variants',       $var_number );
+	$ensvardb_dba->add_result( $ensdb, 'allele_number',        $allele_number );
+	$ensvardb_dba->add_result( $ensdb, 'variant_fails_percent',$var_fail_rate );
+	$ensvardb_dba->add_result( $ensdb, 'allele_fails_percent', $allele_fail_rate );
+    }
+}
 
 1;
