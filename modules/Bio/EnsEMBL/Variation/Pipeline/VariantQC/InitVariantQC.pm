@@ -36,6 +36,8 @@ use warnings;
 
 use base qw(Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess);
 
+use ImportUtils qw(dumpSQL create_and_load );
+
 my $DEBUG = 0;
 
 sub fetch_input {
@@ -57,7 +59,21 @@ sub fetch_input {
         create_map_weight_table($core_dba,$var_dba);
     }
 
-    
+    if($self->required_param('species') =~ /human|homo/i){
+        ### create temp table of rs ids from 1KG project
+	$self->warning( 'Running 1KG');
+        $self->create_1KG_table();
+    }
+    else{
+	$self->warning( 'Not running 1KG for ' . $self->required_param('species') );
+    }
+
+    ## look up variation_set_id for failed variants once
+    my $failed_set_id = add_failed_variation_set( $var_dba );
+
+    $self->required_param( 'failed_set_id', $failed_set_id );
+    $self->warning( 'Got failed set id ',  $failed_set_id);
+
     ### get max variation_id to set up batches for processing
     my $data_ext_sth = $var_dba->dbc->prepare(qq[ SELECT MAX(variation_id)
                                                   FROM variation    ]);       
@@ -73,7 +89,7 @@ sub fetch_input {
     my $start_from  = int( $start_at_variation_id / $self->param('qc_batch_size'));
     my $qc_var_jobs = int( $max_id->[0]->[0] / $self->param('qc_batch_size') ); 
 
-    $self->warning( 'Defining jobs, $start_from - $qc_var_jobs batch size: ' . $self->param('qc_batch_size') );
+    $self->warning( 'Defining jobs, '. $start_from .'-' . $qc_var_jobs .' batch size: ' . $self->param('qc_batch_size') );
 
     for my $n ( $start_from .. $qc_var_jobs){
         my $start = $n *  $self->param('qc_batch_size');
@@ -85,7 +101,6 @@ sub fetch_input {
 
     ## bin unmapped var check in larger chunks
     
-    $self->warning( 'Running $jobs jobs, batch size: ' . $self->param('unmapped_batch_size') );
     my   @unmapped_start_id;
     
     my $start_unmapped_from = int( $start_at_variation_id / $self->param('unmapped_batch_size') );
@@ -101,15 +116,24 @@ sub fetch_input {
 
 
 }
+=head2 create_working_tables
+
+copies of key tables created to hold post processed data 
+
+=cut
 
 sub create_working_tables{
 
   my $var_dba = shift;
 
+  ## table to hold variation info after fliping & evidence assignment
+  $var_dba->dbc->do(qq{ DROP TABLE IF EXISTS variation_working});
+  $var_dba->dbc->do(qq{ CREATE TABLE variation_working like variation });
+  $var_dba->dbc->do(qq{ ALTER TABLE variation_working DROP COLUMN snp_id }); ## tmp column not in released schema
+
   ## table to hold variation feature info after fliping & ref allele assignment
   $var_dba->dbc->do(qq{ DROP TABLE IF EXISTS variation_feature_working});
   $var_dba->dbc->do(qq{ CREATE TABLE variation_feature_working like variation_feature });
-
 
 
   ## table to hold non-coded allele info after flipping 
@@ -154,12 +178,6 @@ sub create_working_tables{
   $var_dba->dbc->do(qq{DROP TABLE IF EXISTS failed_allele_working});
   $var_dba->dbc->do(qq{CREATE TABLE failed_allele_working like failed_allele});
 
-  ## table to hold list of flipped variation_ids 
-  $var_dba->dbc->do( qq{ DROP TABLE IF EXISTS variation_to_reverse_working });
-  $var_dba->dbc->do( qq{ CREATE TABLE variation_to_reverse_working (variation_id int(10) unsigned not null) });
-  $var_dba->dbc->do( qq{ ALTER TABLE variation_to_reverse_working ADD index variation_idx( variation_id ) });
-
-
   ## table to hold non-coded population_genotype info after flipping 
   $var_dba->dbc->do(qq{ DROP TABLE IF EXISTS MTMP_population_genotype_working });
   $var_dba->dbc->do(qq{ CREATE TABLE MTMP_population_genotype_working like population_genotype });
@@ -201,7 +219,63 @@ sub create_working_tables{
 
 }
 
-## create a look-up table for the number of times a variant maps to the reference
+=head2 add_failed_variation_set
+
+ enter variation_set_variation entry for failed variant set
+ needed in VariantQC for variation_feature updating
+
+=cut
+sub add_failed_variation_set{
+
+    my $var_dba = shift;
+
+    my $fail_attrib_ext_sth  = $var_dba->dbc->prepare(qq[ select attrib_id
+                                                          from attrib
+                                                          where attrib_type_id = 9
+                                                          and value = 'fail_all'
+                                                        ]);
+ 
+    my $variation_set_ext_sth  = $var_dba->dbc->prepare(qq[ select variation_set_id
+                                                            from variation_set
+                                                            where name = ?
+                                                           ]);
+
+    my $variation_set_ins_sth  = $var_dba->dbc->prepare(qq[ insert into variation_set
+                                                            ( name, description, short_name_attrib_id)
+                                                            values (?,?,?)
+                                                          ]);
+
+    ## check if already present
+    $variation_set_ext_sth->execute('All failed variations')  || die "Failed to extract failed variant set id\n";
+    my $failed_set_id = $variation_set_ext_sth->fetchall_arrayref();
+
+    unless(defined $failed_set_id->[0]->[0]){
+        ## no set entered - look up attrib for short name and enter set
+
+	$fail_attrib_ext_sth->execute() || die "Failed to extract failed set attrib reasons\n";
+	my $attrib = $fail_attrib_ext_sth->fetchall_arrayref();
+
+	die "Exiting: Error - attribs not found. Load attribs then re-run\n" unless defined $attrib->[0]->[0] ;
+
+        ## if attribs loaded, enter set
+        $variation_set_ins_sth->execute( 'All failed variations',
+                                         'Variations that have failed the Ensembl QC checks' ,
+                                          $attrib->[0]->[0] )|| die "Failed to insert failed set\n"; 
+
+        ## and pull out id to return
+	$variation_set_ext_sth->execute('All failed variations')  || die "Failed to extract failed variant set id\n";
+        $failed_set_id = $variation_set_ext_sth->fetchall_arrayref();      
+    }
+
+    return $failed_set_id->[0]->[0];
+   
+}
+
+=head2 create_map_weight_table
+
+create a look-up table for the number of times a variant maps to the reference
+
+=cut
 sub create_map_weight_table{
     
     my $core_dba  = shift;
@@ -251,6 +325,39 @@ sub create_map_weight_table{
 
 }
 
+=head2 create_1KG_table
+
+ copy rs ids found by 1000 genomes project to local tmp table to allow joining
+
+=cut
+sub create_1KG_table{
+
+    my $self = shift;
+
+    my $int_dba ;
+    eval{ $int_dba = $self->get_adaptor('multi', 'intvar'); };
+
+    unless (defined $int_dba){
+	$self->warning('No internal database connection found extract 1KG variants '); 
+	return;
+    }
+
+    my $var_dba  = $self->get_species_adaptor('variation');
+    ## drop any pre-existing table and run clean new import
+    $var_dba->dbc->do(qq[ DROP TABLE tmp_1kg_var ]);
+
+    my $export_stmt = qq[ select rs_id from 1kg_rs_id ];
+    dumpSQL($int_dba->dbc(), $export_stmt);
+
+
+    create_and_load( $var_dba->dbc(), "tmp_1kg_var", "rs_id int not_null");
+    
+    $var_dba->dbc->do(qq[ ALTER TABLE tmp_1kg_var ADD INDEX rsidx( rs_id )]);
+
+
+    
+}
+
 sub write_output {
     
     my $self = shift;
@@ -296,9 +403,14 @@ sub write_output {
        $self->warning('scheduling update_population_genotype'); 
        $self->dataflow_output_id( $self->param('update_population_genotype'), 6);
     }
+    ## bulk updates to statuses for special cases
+
+    $self->dataflow_output_id($self->param('special_cases'), 7);
+
     ## run basic checks when everything is updated
 
-    $self->dataflow_output_id($self->param('finish_variation_qc'), 7);
+    $self->dataflow_output_id($self->param('finish_variation_qc'), 8);
+   
    
     
     return;
