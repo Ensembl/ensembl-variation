@@ -3,7 +3,8 @@
 # schema with data from dbSNP
 # we use the local mssql copy of dbSNP at the sanger center
 # the script will call the dbSNP factory to create the object that will deal with
-# the creation of the data according to the specie
+# the creation of the data according to the species
+
 
 use strict;
 use warnings;
@@ -16,7 +17,6 @@ use Progress;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Variation::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Utils::Exception qw(throw);
-
 
 use ImportUtils qw(dumpSQL debug create_and_load load);
 use dbSNP::GenericContig;
@@ -35,7 +35,8 @@ if (scalar(@ARGV) == 1) {
   open(CFG,'<',$configfile) or die("Could not open configuration file $configfile for reading");
   while (<CFG>) {
     chomp;
-    my ($name,$val) = $_ =~ m/^\s*(\S+)\s+([^\s]+)/;
+    next unless/\w+/;
+    my ($name,$val) = (split/\s+/,$_,2);             #altered for cow which had space in primary assembly tag
     push(@opts,('-' . $name,$val));
   }
   close(CFG);
@@ -63,7 +64,8 @@ my @option_defs = (
   'scriptdir=s', 
   'logfile=s',
   'group_term=s',
-	'group_label=s'
+  'group_label=s',
+  'ensembl_version:s'
 );
 
 GetOptions(\%options,@option_defs);
@@ -90,6 +92,8 @@ my $registry_file = $options{'registry_file'};
 my $mssql_driver = $options{'mssql_driver'};
 my $scriptdir = $options{'scriptdir'};
 my $logfile = $options{'logfile'};
+my $ens_version = $options{'ensembl_version'};
+
 my @skip_routines;
 @skip_routines = @{$options{'skip_routine'}} if (defined($options{'skip_routine'}));
 
@@ -113,6 +117,8 @@ $ENV{'SYBASE'} = $mssql_driver if (defined($mssql_driver));
 
 # Set default option
 $registry_file ||= $Bin . "/ensembl.registry";
+
+
 
 # Open a file handle to the logfile. If it's not defined, use STDOUT
 my $logh = *STDOUT;
@@ -191,11 +197,15 @@ my @parameters = (
   -scriptdir => $scriptdir,
   -log => $logh
 );
+
 my $import_object;
-if ($species =~ m/zebrafish/i || $species =~ m/^pig$/i || $species eq 'cat' || $species =~ m/zebrafinch/i || $species =~ m/tetraodon/i) {
+if ($species eq 'cat' || $species =~ m/zebrafinch/i || $species =~ m/tetraodon/i) {
   $import_object = dbSNP::MappingChromosome->new(@parameters);
 }
-elsif ($species =~ m/chimp/i || $species =~ m/chicken/i || $species =~ m/rat/i || $species =~ m/horse/i || $species =~ m/platypus/i || $species =~ m/opossum/i || $species =~ m/mouse/i || $species =~ m/cow/i) {
+elsif ($species =~ m/zebrafish/i || $species =~ m/chimp/i || $species =~ m/chicken/i || $species =~ m/rat/i || $species =~ m/horse/i || 
+    $species =~ m/platypus/i || $species =~ m/opossum/i || $species =~ m/mouse/i || $species =~ m/cow/i  || $species =~ m/^pig$|sus_scrofa/i ||
+    $species eq 'cat' || $species =~ m/zebrafinch/i || $species =~ m/tetraodon/i || $species =~ m/taeniopygia_guttata/   || $species =~ m/orangutan/  || 
+    $species =~ m/monodelphis_domestica/  || $species =~ m/macaque/) {
   $import_object = dbSNP::GenericChromosome->new(@parameters);
 }
 elsif ($species =~ m/dog/i) {
@@ -230,6 +240,41 @@ if ($species =~ m/mouse/i || $species =~ m/chicken/i || $species =~ m/rat/i || $
   print $logh $clock->duration();
 }
 
+
+### update production db as final step
+
+## get dbSNP id 
+my $dbSNP_db_dba =  $dbm->registry()->get_adaptor('multi', 'intvar', 'dbSNPdb');
+my $dbSNP_db     =  $dbSNP_db_dba->fetch_current_by_name($dbm->dbSNP()->dbc->dbname() );
+
+my $ensvardb_dba =  $dbm->registry()->get_adaptor('multi', 'intvar', 'EnsVardb');
+my $preexisting  =  $ensvardb_dba->fetch_by_name($dbm->dbVar()->dbc->dbname() ); 
+
+if (defined $preexisting){
+    warn "Not updating - ensembl database of this name " . $dbm->dbVar()->dbc->dbname() ." already recorded\n";
+}
+else{
+    ## enter new db 
+    my $ensvar_db = Bio::EnsEMBL::IntVar::EnsVardb->new_fast({ name             => $dbm->dbVar()->dbc->dbname(),
+							       dbsnpdb_id       => $dbSNP_db->dbID(),
+							       species          => $dbm->dbVar()->species(),
+							       version          => $ens_version,
+							       genome_reference => $ASSEMBLY_VERSION,
+							       adaptor          => $ensvardb_dba 
+							     });
+
+
+    $ensvardb_dba->store($ensvar_db);
+    $ensvardb_dba->update_status($ensvar_db,'dbSNP_imported');
+
+
+    if( defined $ens_version ){
+	## update meta if version supplied
+	$dbm->dbVar()->dbc->db_handle->do(qq{INSERT INTO meta ( meta_key, meta_value) values ( 'schema_version',  $ens_version) });
+    }
+}
+
+
 debug(localtime() . "\tAll done!");
 
 #ÊClose the filehandle to the logfile if one was specified
@@ -246,8 +291,9 @@ sub add_strains{
   # (some individuals have the same name, but different individual_id)
   $dbVariation->do(qq{ALTER TABLE sample ADD COLUMN is_strain int});
 
-  $dbVariation->do(qq{INSERT INTO sample (name, description,is_strain)
-		      SELECT s.name, s.description,1
+  ## added population size of 1  
+  $dbVariation->do(qq{INSERT INTO sample (name, description,is_strain,size)
+		      SELECT s.name, s.description,1,1
 		      FROM individual i, sample s
 		      WHERE i.sample_id = s.sample_id
 		      GROUP BY s.name
