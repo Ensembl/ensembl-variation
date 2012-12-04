@@ -54,6 +54,8 @@ sub default_options {
 
         hive_use_triggers       => 0,  
 
+        compile_module_once     => 1, 
+
         ## check why jobs failed before re-submitting for analysis
         retry_throwing_job      => 0,  
 
@@ -84,14 +86,6 @@ sub default_options {
         
         reg_file                => $self->o('pipeline_dir').'/ensembl.registry',
 
-        # flip varation_features on reverse strand with map weight 1 unless this set to 0
-
-        #flip_variants            => 1,    TO BE IMPLEMENTED on by default
-
-        # The current dbSNP importer does not create the variation_feature.allele_string
-        # Switch this to 0 if QC'ing external data imported with variation_feature.allele_string's
-
-        do_allele_string          => 1,
 
         ## number of *variants* handled per batch
 
@@ -112,8 +106,7 @@ sub default_options {
 
         # create tmp_map_weight table unless this set to 0
 
-        create_map_table          => 1,
-
+        create_map_table          => 1,  
 
 
         # configuration for the various resource options used in the pipeline
@@ -122,9 +115,9 @@ sub default_options {
         # reflect their usage, but you may want to change the details (memory
         # requirements, queue parameters etc.) to suit your own data
         
-        default_lsf_options => '-R"select[mem>2000] rusage[mem=2000]" -M2000000',
+        default_lsf_options => '-R"select[mem>2000] rusage[mem=2000]" -M2000000',       ## upped to 4G from 2G for mouse
         urgent_lsf_options  => '-R"select[mem>2000] rusage[mem=2000]" -M2000000',
-        highmem_lsf_options => '-R"select[mem>15000] rusage[mem=15000]" -M15000000', # this is Sanger LSF speak for "give me 15GB of memory"
+        highmem_lsf_options => '-R"select[mem>15000] rusage[mem=15000]" -M15000000', 
         long_lsf_options    => '-q long -R"select[mem>2000] rusage[mem=2000]" -M2000000',
 
         # options controlling the number of workers used for the parallelisable analyses
@@ -135,11 +128,15 @@ sub default_options {
 
         # these flags control which parts of the pipeline are run
 
-        run_check_dbSNP_import           => 1,
+        run_check_dbSNP_import           => 1, 
         run_variant_qc                   => 1,
         run_unmapped_var                 => 1,
         run_flip_population_genotype     => 1,
         run_update_population_genotype   => 1,
+
+        run_PAR_check                    => 1,
+        run_Pubmed_check                 => 1,
+
 
         # put back support for re-runs on new format schema
 
@@ -192,12 +189,12 @@ sub pipeline_analyses {
     my @common_params = (
         ensembl_registry    => $self->o('reg_file'),
         species             => $self->o('species'),
+        pipeline_dir        => $self->o('pipeline_dir'),
     );
    
     my @analyses;
 
-    
-
+ 
     push @analyses, (
     
       { -logic_name => 'init_run_variant_qc',
@@ -218,6 +215,7 @@ sub pipeline_analyses {
             @common_params,
         },
         -input_ids  => [{}],
+        -hive_capacity  => -1,
         -rc_name    => 'default',
         -flow_into  => {
              2 => [ 'check_dbSNP_import' ],
@@ -225,18 +223,18 @@ sub pipeline_analyses {
              4 => [ 'unmapped_var'   ],
              5 => [ 'flip_population_genotype' ],
              6 => [ 'update_population_genotype' ],
-             7 => [ 'finish_variation_qc' ],
+             7 => [ 'special_cases' ],
+             8 => [ 'finish_variation_qc' ],
                 },
      },
 
      {  -logic_name => 'check_dbSNP_import',
         -module     => 'Bio::EnsEMBL::Variation::Pipeline::VariantQC::CheckdbSNPImport',
         -parameters => {    
-            pipeline_dir  => $self->o('pipeline_dir'),       
             @common_params,
         },
         -input_ids      => [],
-        -hive_capacity  => 1,
+        -hive_capacity  => -1,
         -rc_name        => 'default',               
       },
 
@@ -247,11 +245,13 @@ sub pipeline_analyses {
                batch_size => $self->o('unmapped_batch_size'),
                @common_params,
            },
-         -input_ids      => [],
-         -hive_capacity  => $self->o('unmapped_var_capacity'),
-         -rc_name        => 'default',
-         -wait_for       => [ 'check_dbSNP_import' ],
-         -flow_into      => {},
+         -input_ids        => [],
+         -hive_capacity    => $self->o('unmapped_var_capacity'),
+#         -analysis_capacity=>$self->o('unmapped_var_capacity'),
+         -max_retry_count  => 0,
+         -rc_name          => 'default',
+         -wait_for         => [ 'check_dbSNP_import' ],
+         -flow_into        => {},
          },
 
 
@@ -261,17 +261,17 @@ sub pipeline_analyses {
          -parameters     => {   
              schema             => $self->o('schema'),
              batch_size         => $self->o('qc_batch_size'),
-             do_allele_string   => $self->o('do_allele_string'),
-             pipeline_dir       => $self->o('pipeline_dir'),   ### temp - write temp log files
              @common_params,
          },
-         -input_ids      => [],
-         -hive_capacity  => $self->o('variant_qc_capacity'),
-         -rc_name        => 'default',
-         -wait_for       => [ 'check_dbSNP_import' ],
-         -flow_into      => {},
+         -input_ids        => [],
+         -hive_capacity    => $self->o('variant_qc_capacity') ,  ## switch this off on hive upgrade
+#         -analysis_capacity=> $self->o('variant_qc_capacity') ,
+         -max_retry_count  => 0,
+         -rc_name          => 'default',
+         -wait_for         => [ 'check_dbSNP_import'],
+         -flow_into        => {},
          },
-   
+        
 
     {   -logic_name     => 'flip_population_genotype',
         -module         => 'Bio::EnsEMBL::Variation::Pipeline::VariantQC::FlipPopulationGenotype',
@@ -279,9 +279,9 @@ sub pipeline_analyses {
             @common_params,
         },
         -input_ids      => [],
-        -hive_capacity  => 1,
+        -hive_capacity  => -1,
         -rc_name        => 'default',
-        -wait_for       => [ 'check_dbSNP_import', 'variant_qc' ],
+        -wait_for       => [  'variant_qc' ],
         -flow_into      => {},
     },
 
@@ -293,24 +293,37 @@ sub pipeline_analyses {
             @common_params,
         },
         -input_ids      => [],
-        -hive_capacity  => 1,
+        -hive_capacity  => -1,
         -rc_name        => 'default',
         -wait_for       => [ 'variant_qc', 'flip_population_genotype' ],
         -flow_into      => {},
     },              
 
 
+   {     -logic_name     => 'special_cases',
+         -module         => 'Bio::EnsEMBL::Variation::Pipeline::VariantQC::SpecialCase',
+         -parameters     => {   
+             run_PAR_check      => $self->o('run_PAR_check'),
+             run_Pubmed_check   => $self->o('run_Pubmed_check'),
+             @common_params,
+         },
+         -input_ids      => [],
+         -hive_capacity  => -1,
+         -rc_name        => 'default',
+         -wait_for       => [ 'variant_qc'],
+         -flow_into      => {},
+         },
+
 
     {   -logic_name     => 'finish_variation_qc',
         -module         => 'Bio::EnsEMBL::Variation::Pipeline::VariantQC::FinishVariantQC', 
         -parameters     => {
-            pipeline_dir  => $self->o('pipeline_dir'),
             @common_params,
          },
          -input_ids      => [],
-         -hive_capacity  => 1,
+         -hive_capacity  => -1,
          -rc_name        => 'default',
-         -wait_for       => [ 'variant_qc','unmapped_var','update_population_genotype' ],
+         -wait_for       => [ 'variant_qc','unmapped_var','update_population_genotype','special_cases' ],
          -flow_into      => {},
     },                   
    
