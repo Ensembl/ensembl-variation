@@ -51,7 +51,7 @@ sub run {
 
 
     ## Have all rows been processed in flipped/ re-ordered tables
-    my ($var_number, $allele_number, $process_error )  = $self->check_all_processed($var_dba, $report);
+    my ($row_counts, $process_error )  = $self->check_all_processed($var_dba, $report);
 
     ## check for consistency between new and old variation_feature tables
     print  $report "\nRunning checks variation_feature data\n";
@@ -60,15 +60,15 @@ sub run {
      
     print $report "\nChecking failure rates\n";
     ## What are the failure rates for alleles and variants
-    my ($var_fail_rate, $allele_fail_rate) = get_failure_rates($var_dba, $report, $allele_number );
+    my ($var_fail_rate, $allele_fail_rate) = get_failure_rates($var_dba, $report, $row_counts->{old_allele} );
     my $suspiciously_poor = 0;
     if( $var_fail_rate >10){
-	$suspiciously_poor = 1;
-	print  $report "\nVariation failure rate far higher than normal\n";
+        $suspiciously_poor = 1;
+        print  $report "\nVariation failure rate far higher than normal\n";
     }
     if($allele_fail_rate > 10){
-	$suspiciously_poor = 1;
-	print  $report "\nAllele failure rate far higher than normal\n";    
+        $suspiciously_poor = 1;
+        print  $report "\nAllele failure rate far higher than normal\n";    
     }    
 
     ## crude check to ensure same MT sequence used
@@ -109,10 +109,7 @@ sub run {
 
     update_meta_coord( $core_dba, $var_dba, 'variation_feature');
 
-    $self->update_internal_db( $var_number, 
-                               $allele_number,
-                               $var_fail_rate, 
-                               $allele_fail_rate);
+    $self->update_internal_db( $row_counts, $var_fail_rate, $allele_fail_rate);
 
 }
 
@@ -129,77 +126,78 @@ sub run {
     my $var_dba = shift;
     my $report  = shift;
 
+    my %counts;
    
-    my $old_var       = count_rows($var_dba, 'variation');
-    my $new_var       = count_rows($var_dba, 'variation_working');
+    $counts{old_var}       = count_rows($var_dba, 'variation');
+    $counts{new_var}       = count_rows($var_dba, 'variation_working');
    
-    my $old_varfeat   = count_rows($var_dba, 'variation_feature');
-    my $new_varfeat   = count_rows($var_dba, 'variation_feature_working');
+    $counts{old_varfeat}   = count_rows($var_dba, 'variation_feature');
+    $counts{new_varfeat}   = count_rows($var_dba, 'variation_feature_working');
 
-    my $old_allele    = count_rows($var_dba, 'allele');
-    my $new_allele    = count_rows($var_dba, 'allele_working');
-    my $mart_allele   = count_rows($var_dba, 'MTMP_allele_working');
+    $counts{old_allele}    = count_rows($var_dba, 'allele');
+    $counts{new_allele}    = count_rows($var_dba, 'allele_working');
+    $counts{mart_allele}   = count_rows($var_dba, 'MTMP_allele_working');
 
-    my $new_pop_geno  = count_rows($var_dba, 'population_genotype_working');
-    my $old_pop_geno  = count_rows($var_dba, 'population_genotype');
-    my $mart_pop_geno = count_rows($var_dba, 'MTMP_population_genotype_working');
+    $counts{new_pop_geno}  = count_rows($var_dba, 'population_genotype_working');
+    $counts{old_pop_geno}  = count_rows($var_dba, 'population_genotype');
+    $counts{mart_pop_geno} = count_rows($var_dba, 'MTMP_population_genotype_working');
 
     my $process_error = 0; ## can we proceed to rename tables?
 
     print $report "Checking row counts between raw and post processed tables:\n"; 
 
-    if($old_var == $new_var){
-	print $report "\tVariation:\t\t\tOK ($new_var rows)\n";
+    if($counts{old_var} == $counts{new_var}){
+        print $report "\tVariation:\t\t\tOK ($counts{new_var} rows)\n";
     }
     else{
-	$process_error = 1;
-	print $report "Variation: ERROR old table has :$old_var rows, new table has $new_var\n";
+        $process_error = 1;
+        print $report "Variation: ERROR old table has :$counts{old_var} rows, new table has $counts{new_var}\n";
     }
 
 
-    if($old_varfeat == $new_varfeat){
-	print $report "\tVariation_feature:\t\tOK ($new_varfeat rows)\n";
+    if($counts{old_varfeat} == $counts{new_varfeat}){
+        print $report "\tVariation_feature:\t\tOK ($counts{new_varfeat} rows)\n";
     }
     else{
-	$process_error = 1;
-	print $report "Variation_Feature: ERROR old table has :$old_varfeat rows, new table has $new_varfeat\n";
+        $process_error = 1;
+        print $report "Variation_Feature: ERROR old table has :$counts{old_varfeat} rows, new table has $counts{new_varfeat}\n";
     }
 
-    if($old_allele == $new_allele){
-	print $report "\tAllele:\t\t\t\tOK ($new_allele  rows)\n";
+    if($counts{old_allele} == $counts{new_allele}){
+        print $report "\tAllele:\t\t\t\tOK ($counts{new_allele}  rows)\n";
     }
     else{
-	$process_error = 1;
-	print $report "Allele: ERROR old table has : $old_allele rows, new table has: $new_allele\n";
+        $process_error = 1;
+        print $report "Allele: ERROR old table has : $counts{old_allele} rows, new table has: $counts{new_allele}\n";
     }
 
-    if($old_pop_geno == $new_pop_geno){
-	print $report "\tPopulation_genotype:\t\tOK ($new_pop_geno rows)\n";
+    if($counts{old_pop_geno} == $counts{new_pop_geno}){
+        print $report "\tPopulation_genotype:\t\tOK ($counts{new_pop_geno} rows)\n";
     }
     else{
-	$process_error = 1;
-	print $report "Population_genotype: ERROR old table has : $old_pop_geno rows, new table has: $new_pop_geno\n";
+        $process_error = 1;
+        print $report "Population_genotype: ERROR old table has : $counts{old_pop_geno} rows, new table has: $counts{new_pop_geno}\n";
     }
 
     unless($self->required_param('species') =~/Homo|Human|Mus|mouse/i){ ## Mart tables not required for human or mouse
-      if($old_allele == $mart_allele){
-         print $report "\tMart Allele:\t\t\tOK ($mart_allele rows)\n";
+      if($counts{old_allele} == $counts{mart_allele}){
+         print $report "\tMart Allele:\t\t\tOK ($counts{mart_allele} rows)\n";
       }
       else{
          $process_error = 1;
-         print $report "Allele: ERROR old table has : $old_allele rows, mart table has: $mart_allele\n";
+         print $report "Allele: ERROR old table has : $counts{old_allele} rows, mart table has: $counts{mart_allele}\n";
       }
 
-      if($old_pop_geno == $mart_pop_geno){
-         print $report "\tMart population_genotype:\tOK ($mart_pop_geno rows)\n";
+      if($counts{old_pop_geno} == $counts{mart_pop_geno}){
+         print $report "\tMart population_genotype:\tOK ($counts{mart_pop_geno} rows)\n";
       }
       else{
          $process_error = 1;
-         print $report "Population_genotype: ERROR old table has : $old_pop_geno rows, mart table has: $mart_pop_geno\n";
+         print $report "Population_genotype: ERROR old table has : $counts{old_pop_geno} rows, mart table has: $counts{mart_pop_geno}\n";
       }
 
     }
-    return ( $new_var, $new_allele, $process_error );
+    return ( \%counts, $process_error );
 
 }
 
@@ -482,7 +480,7 @@ sub check_flipping_allele{
       $allele_new_sth->execute($l->[0])||die "Failed to run new allele_flip check \n";
       my $als = $allele_new_sth->fetchall_arrayref();
       foreach my $al(@{$als}){
-	  $data{$l->[0]}{new} .= $als->[0] . "/";
+         $data{$l->[0]}{new} .= $als->[0] . "/";
       }
   }
   my @cleaned_data;
@@ -561,14 +559,14 @@ sub check_flipping{
   my $total_checked = scalar @{$data};
 
   foreach my $l (@{$data}){
-      if( $l->[1] eq '-/-' && $l->[2] eq '-/-'){  ## can't check genotypes where individuals are homozygous for deletion
-	  $total_checked--;
-	  next;
-      }
-    if($l->[1] eq $l->[2]){
-      $is_fail = 1;
-      print $report "Flipping error ($type) $l->[0] is $l->[1] pre and $l->[2] post\n";
-    }
+     if( $l->[1] eq '-/-' && $l->[2] eq '-/-'){  ## can't check genotypes where individuals are homozygous for deletion
+         $total_checked--;
+         next;
+     }
+     if($l->[1] eq $l->[2]){
+        $is_fail = 1;
+        print $report "Flipping error ($type) $l->[0] is $l->[1] pre and $l->[2] post\n";
+     }
   }
 
   if($is_fail ==0){print  $report "\tOK: $type\t[$total_checked entries checked]\n";}
@@ -662,14 +660,14 @@ sub update_failed_variation_set{
     my $all_failed_var = $failed_var_ext_sth->fetchall_arrayref();
 
     unless( defined $all_failed_var->[0]->[0]){
-	print $report "ERROR: no variation fails available to update to variation set \n";
-	return;
+        print $report "ERROR: no variation fails available to update to variation set \n";
+        return;
     }
 
     ## link failed variants to failed set
     foreach my $var(@{ $all_failed_var}){
 
-	$var_set_ins_ext_sth->execute( $var->[0], $failed_set_id->[0]->[0] )||die;
+        $var_set_ins_ext_sth->execute( $var->[0], $failed_set_id->[0]->[0] )||die;
     }
 
     my $check_num = scalar @{ $all_failed_var};
@@ -706,38 +704,56 @@ sub update_meta_coord {
 }
 
 
-## final step - update internal production db
+=head2 update_internal_db
 
+If all checking and updates have been successful, update internal production database
+with stat to allow comparisions between releases
+  
+
+=cut
 sub update_internal_db{
 
     my $self             = shift;
-    my $var_number       = shift;
-    my $allele_number    = shift;
+    my $row_counts       = shift;
     my $var_fail_rate    = shift;
     my $allele_fail_rate = shift;
-
 
     my $int_dba ;
     eval{ $int_dba = $self->get_adaptor('multi', 'intvar');};
 
     unless (defined $int_dba){
-	$self->warning('No internal database connection found to write status '); 
-	return;
+        $self->warning('No internal database connection found to write status '); 
+        return;
     }
 
     my $var_dba = $self->get_species_adaptor('variation');
     my $ensdb_name = $var_dba->dbc->dbname;
 
     my $ensvardb_dba  =  $int_dba->get_EnsVardbAdaptor();
+    my $result_dba    =  $int_dba->get_ResultAdaptor();
+
     my $ensdb = $ensvardb_dba->fetch_by_name($ensdb_name);
     if(defined $ensdb ){
-	$ensvardb_dba->update_status($ensdb,'dbSNP_post_processed');
+        $ensvardb_dba->update_status($ensdb,'dbSNP_post_processed');
 
-	$ensvardb_dba->add_result( $ensdb, 'dbSNP_variants',       $var_number );
-	$ensvardb_dba->add_result( $ensdb, 'allele_number',        $allele_number );
-	$ensvardb_dba->add_result( $ensdb, 'variant_fails_percent',$var_fail_rate );
-	$ensvardb_dba->add_result( $ensdb, 'allele_fails_percent', $allele_fail_rate );
+        my %results  = ( 'dbSNP_variants',            $row_counts->{old_var},
+                         'dbSNP_alleles',             $row_counts->{old_allele},
+                         'dbSNP_variation_features',  $row_counts->{old_varfeat},
+                         'dbSNP_population_genotype', $row_counts->{old_pop_geno},
+                         'variant_fails_percent',     $var_fail_rate,
+                         'allele_fails_percent',      $allele_fail_rate );
+
+        foreach my $type ( keys %results){
+             my $result =  Bio::EnsEMBL::IntVar::Result->new_fast({ ensvardb     => $ensdb,
+                                                                    result_value => $results{$type},
+                                                                    result_type  => $type,
+                                                                    adaptor      => $result_dba
+                                                                  });
+    
+             $result_dba->store($result);
+        }
     }
 }
 
 1;
+
