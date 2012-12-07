@@ -1637,16 +1637,7 @@ sub hgvs_genomic{
 	$ref_slice = $ref_feature->feature_Slice;	    
     }         
     
-    # Create new VariationFeature on the slice of the reference feature (unless the reference feature is the slice the VF is on)
-    my $tr_vf;
-    if ( $self->slice->coord_system->name() eq "chromosome") {
-	$tr_vf = $self;
-    }
-    else {	
-	$tr_vf = $self->transfer($ref_slice);
-    }
-    # Return undef if this VariationFeature could not be transferred
-    return {} if (!defined($tr_vf));
+    my $tr_vf = $self;
 	
 	
     # Return undef if this VariationFeature does not fall within the supplied feature.
@@ -1688,25 +1679,9 @@ sub hgvs_genomic{
 	    if($DEBUG ==1){print "***************Flipping alt allele $allele => $check_allele to match coding strand\n";}
 	}
 
-	## work out chrom coord for hgvs string if transcript slice supplied
-	my ($chr_start,$chr_end);  
-	if ( $tr_vf->slice->is_toplevel() == 1) {
-	    $chr_start = $tr_vf->seq_region_start();
-	    $chr_end   = $tr_vf->seq_region_end();
-	}
-	else{
-	    ## add feature start to start of var-in-feature
-	    if( $tr_vf->seq_region_start() <  $tr_vf->seq_region_end()){
-		$chr_start =  $tr_vf->start() + $tr_vf->seq_region_start() ; 
-		$chr_end   =  $tr_vf->end()   + $tr_vf->seq_region_start() ;
-	    }
-	    else{
-		$chr_start =  $tr_vf->seq_region_start() - $tr_vf->start()  ;
-		$chr_end   =  $tr_vf->seq_region_start() - $tr_vf->end()  ;
-	    }
-	}
-	   
-
+	my $chr_start = $tr_vf->seq_region_start();
+	my $chr_end   = $tr_vf->seq_region_end();
+	
 	my $hgvs_notation = hgvs_variant_notation( $check_allele,          ## alt allele in refseq strand orientation
 						   $ref_seq,               ## substring of slice for ref allele extraction
 						   $ref_start,             ## start on substring of slice for ref allele extraction
