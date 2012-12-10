@@ -53,7 +53,7 @@ sub new {
 
 sub regulatory_feature_stable_id {
     my $self = shift;
-    return $self->SUPER::feature_stable_id(@_);
+    return $self->SUPER::_feature_stable_id(@_);
 }
 
 sub regulatory_feature {
