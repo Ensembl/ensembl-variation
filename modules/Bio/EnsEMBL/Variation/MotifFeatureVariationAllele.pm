@@ -80,23 +80,24 @@ sub motif_feature {
 sub motif_start {
 
     my $self = shift;
+    unless ($self->{motif_start}) {
+        my $mf = $self->motif_feature;
+        my $vf = $self->variation_feature;
+        
+        return undef unless defined $vf->seq_region_start && defined $mf->seq_region_start;
+       
+        my $mf_start = $vf->seq_region_start - $mf->seq_region_start + 1;
 
-    my $mf = $self->motif_feature;
-    my $vf = $self->variation_feature;
-    
-    return undef unless defined $vf->seq_region_start && defined $mf->seq_region_start;
-   
-    my $mf_start = $vf->seq_region_start - $mf->seq_region_start + 1;
+        # adjust if the motif is on the reverse strand
 
-    # adjust if the motif is on the reverse strand
+        $mf_start = $mf->binding_matrix->length - $mf_start + 1 if $mf->strand < 0;
+        
+        # check that we're in bounds
 
-    $mf_start = $mf->binding_matrix->length - $mf_start + 1 if $mf->strand < 0;
-    
-    # check that we're in bounds
-
-    return undef if $mf_start > $mf->length;
-
-    return $mf_start;
+        return undef if $mf_start > $mf->length;
+        $self->{motif_start} = $mf_start;
+    }
+    return $self->{motif_start};
 }
 
 =head2 motif_end
@@ -110,23 +111,24 @@ sub motif_start {
 sub motif_end {
 
     my $self = shift;
+    unless ($self->{motif_end}) {
+        my $mf = $self->motif_feature;
+        my $vf = $self->variation_feature;
+        
+        return undef unless defined $vf->seq_region_end && defined $mf->seq_region_start;
+       
+        my $mf_end = $vf->seq_region_end - $mf->seq_region_start + 1;
 
-    my $mf = $self->motif_feature;
-    my $vf = $self->variation_feature;
-    
-    return undef unless defined $vf->seq_region_end && defined $mf->seq_region_start;
-   
-    my $mf_end = $vf->seq_region_end - $mf->seq_region_start + 1;
+        # adjust if the motif is on the reverse strand
 
-    # adjust if the motif is on the reverse strand
+        $mf_end = $mf->binding_matrix->length - $mf_end + 1 if $mf->strand < 0;
+        
+        # check that we're in bounds
 
-    $mf_end = $mf->binding_matrix->length - $mf_end + 1 if $mf->strand < 0;
-    
-    # check that we're in bounds
-
-    return undef if $mf_end < 1;
-
-    return $mf_end;
+        return undef if $mf_end < 1;
+        $self->{motif_end} = $mf_end;
+    }
+    return $self->{motif_end};
 }
 
 =head2 in_informative_position
@@ -141,20 +143,22 @@ sub in_informative_position {
     my $self = shift;
 
     # we can only call this for true SNPs
+    unless ($self->{in_informative_position}) {
+        my $vf = $self->variation_feature;
 
-    my $vf = $self->variation_feature;
+        unless (($vf->start == $vf->end) && ($self->variation_feature_seq ne '-')) {
+            return undef;
+        }
 
-    unless (($vf->start == $vf->end) && ($self->variation_feature_seq ne '-')) {
-        return undef;
+        # get the 1-based position
+
+        my $start = $self->motif_start;
+
+        return undef unless defined $start && $start >= 1 && $start <= $self->motif_feature->length;
+
+        $self->{in_informative_position} = $self->motif_feature->binding_matrix->is_position_informative($start);
     }
-
-    # get the 1-based position
-
-    my $start = $self->motif_start;
-
-    return undef unless defined $start && $start >= 1 && $start <= $self->motif_feature->length;
-
-    return $self->motif_feature->binding_matrix->is_position_informative($start);
+    return $self->{in_informative_position};
 }
 
 =head2 motif_score_delta
