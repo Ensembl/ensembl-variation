@@ -508,8 +508,32 @@ sub get_all_TranscriptVariations {
 =cut
 
 sub get_all_RegulatoryFeatureVariations {
-    my $self = shift;
-    return $self->_get_all_RegulationVariations('RegulatoryFeature', @_);
+    my ($self, $regulatory_features) = @_;
+
+    if ($regulatory_features) {
+        assert_ref($regulatory_features, 'ARRAY');
+        map { assert_ref($_, 'Bio::EnsEMBL::Funcgen::RegulatoryFeature') } @$regulatory_features;
+    }
+
+    if ($self->dbID && not defined $self->{regulatory_feature_variations}) {
+        # This VariationFeature is from the database, so we can just fetch the
+        # RegulatoryFeatureVariations from the database as well
+        if (my $db = $self->adaptor->db) {
+            my $rfva = $db->get_RegulatoryFeatureVariationAdaptor;
+            my $rfvs = $rfva->fetch_all_by_VariationFeatures([$self]);
+            map {$self->add_RegulatoryFeatureVariation($_)} @$rfvs;
+        }
+    } else {
+        # This VariationFeature is not in the database, so we have to build the
+        # RegulatoryFeatureVariations ourselves
+        my $rfvs = $self->_get_all_RegulationVariations('RegulatoryFeature', @_);
+        map {$self->add_RegulatoryFeatureVariation($_)} @$rfvs;
+    }
+    if ($regulatory_features) {
+        return [ map {$self->{regulatory_feature_variations}->{$_->stable_id}} @$regulatory_features];
+    } else {
+        return [ values %{ $self->{regulatory_feature_variations}}];
+    }
 }
 
 =head2 get_all_MotifFeatureVariations
@@ -522,8 +546,27 @@ sub get_all_RegulatoryFeatureVariations {
 =cut
 
 sub get_all_MotifFeatureVariations {
-    my $self = shift;
-    return $self->_get_all_RegulationVariations('MotifFeature', @_);
+    my ($self, $motif_features) = @_;
+
+    if ($motif_features) {
+        assert_ref($motif_features, 'ARRAY');
+        map { assert_ref($_, 'Bio::EnsEMBL::Funcgen::MotifFeature')} @$motif_features;
+    }
+    if ($self->dbID && not defined $self->{motif_feature_variations}) {
+        if (my $db = $self->adaptor->db) {
+            my $mfva = $db->get_MotifFeatureVariationAdaptor;
+            my $mfvs = $mfva->fetch_all_by_VariationFeatures([$self]);   
+            map {$self->add_MotifFeatureVariation($_)} @$mfvs;
+        }
+    } else {
+        my $mfvs = $self->_get_all_RegulationVariations('MotifFeature', @_);
+        map {$self->add_MotifFeatureVariation($_)} @$mfvs;
+    } 
+    if ($motif_features) {
+        return [ map {$self->{motif_feature_variations}->{$_->dbID}} @$motif_features]; 
+    } else {
+        return [ values %{ $self->{motif_feature_variations}}];
+    }
 }
 
 =head2 get_all_ExternalFeatureVariations
@@ -572,6 +615,7 @@ sub _get_all_RegulationVariations {
         my $slice = $self->feature_Slice;
                 
         my $constructor = 'Bio::EnsEMBL::Variation::'.$type.'Variation';
+        my $get_adaptor = 'get_'.$type.'VariationAdaptor';
 
 		eval {
 		  $self->{regulation_variations}->{$type} = [ 
@@ -579,6 +623,7 @@ sub _get_all_RegulationVariations {
 				  $constructor->new(
 					  -variation_feature  => $self,
 					  -feature            => $_,
+                      -adaptor            => ($self->adaptor->db ? $self->adaptor->db->$get_adaptor : undef),
 				  );
 			  } map { $_->transfer($self->slice) } @{ $fg_adaptor->fetch_all_by_Slice($slice) } 
 		  ];
@@ -653,6 +698,44 @@ sub add_TranscriptVariation {
     # we need to weaken the reference back to us to avoid a circular reference
     weaken($tv->{base_variation_feature});
     $self->{transcript_variations}->{$tv->transcript_stable_id} = $tv;
+}
+
+=head2 add_RegulatoryFeatureVariation
+
+   Arg [1]     : Bio::EnsEMBL::Variation::RegulatoryFeatureVariation
+   Example     : $vf->add_RegulatoryFeatureVariation($rfv);
+   Description : Adds a RegulatoryFeatureVariation to the variation feature object.
+   Exceptions  : thrown on bad argument
+   Caller      : Bio::EnsEMBL::Variation::RegulatoryFeatureVariationAdaptor
+   Status      : At Risk
+
+=cut
+
+sub add_RegulatoryFeatureVariation {
+    my ($self, $rfv) = @_;
+    assert_ref($rfv, 'Bio::EnsEMBL::Variation::RegulatoryFeatureVariation');
+    # we need to weaken the reference back to us to avoid a circular reference
+    weaken($rfv->{base_variation_feature});
+    $self->{regulatory_feature_variations}->{$rfv->regulatory_feature_stable_id} = $rfv;
+}
+
+=head2 add_MotifFeatureVariation
+
+   Arg [1]     : Bio::EnsEMBL::Variation::MotifFeatureVariation
+   Example     : $vf->add_MotifFeatureVariation($mfv);
+   Description : Adds a MotifFeatureVariation to the variation feature object.
+   Exceptions  : thrown on bad argument
+   Caller      : Bio::EnsEMBL::Variation::MotifFeatureVariationAdaptor
+   Status      : At Risk
+
+=cut
+
+sub add_MotifFeatureVariation {
+    my ($self, $mfv) = @_;
+    assert_ref($mfv, 'Bio::EnsEMBL::Variation::MotifFeatureVariation');
+    # we need to weaken the reference back to us to avoid a circular reference
+    weaken($mfv->{base_variation_feature});
+    $self->{motif_feature_variations}->{$mfv->motif_feature_id} = $mfv;
 }
 
 =head2 variation
