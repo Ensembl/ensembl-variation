@@ -116,33 +116,53 @@ sub feature {
     }
  
     if ($type && !$self->{feature}) {
-    
-        # try to lazy load the feature
-        
         if (my $adap = $self->{adaptor}) {
-            
-            my $get_method = 'get_'.$type.'Adaptor';
-           
-            # XXX: this can doesn't work because the method is AUTOLOADed, need to rethink this...
-            #if ($adap->db->dnadb->can($get_method)) {
-                if (my $fa = $adap->db->dnadb->$get_method) {
-                    
-                    # if we have a stable id for the feature use that
-                    if (my $feature_stable_id = $self->{_feature_stable_id}) {
-                        if (my $f = $fa->fetch_by_stable_id($feature_stable_id)) {
-                            $self->{feature} = $f;
-                            #delete $self->{_feature_stable_id};
+            # try to lazy load the feature
+            my $feature_stable_id = $self->{_feature_stable_id};
+            if ($type eq 'RegulatoryFeature') {
+                my $funcgen_db = $adap->db->get_db_adaptor('funcgen');
+                unless ($funcgen_db) {
+                    warn("Ensembl Funcgen DB is missing.");
+                }
+                my $rfa = $funcgen_db->get_RegulatoryFeatureAdaptor;
+                if ($feature_stable_id) {
+                    my $feature = $rfa->fetch_by_stable_id($feature_stable_id);
+                    $self->{feature} = $feature;
+                }
+            } elsif ($type eq 'MotifFeature') {
+                my $funcgen_db = $adap->db->get_db_adaptor('funcgen');
+                unless ($funcgen_db) {
+                    warn("Ensembl Funcgen DB is missing.")
+                }
+                my $mfa = $funcgen_db->get_MotifFeatureAdaptor;
+                if (my $motif_feature_id = $self->{motif_feature_id}) {
+                    my $feature = $mfa->fetch_by_dbID($motif_feature_id);
+                    $self->{feature} = $feature;
+                }    
+            } else {
+                my $get_method = 'get_'.$type.'Adaptor';
+               
+                # XXX: this can doesn't work because the method is AUTOLOADed, need to rethink this...
+                #if ($adap->db->dnadb->can($get_method)) {
+                    if (my $fa = $adap->db->dnadb->$get_method) {
+                        
+                        # if we have a stable id for the feature use that
+                        if (my $feature_stable_id = $self->{_feature_stable_id}) {
+                            if (my $f = $fa->fetch_by_stable_id($feature_stable_id)) {
+                                $self->{feature} = $f;
+                                #delete $self->{_feature_stable_id};
+                            }
+                        }
+                        elsif (my $feature_label = $self->{_feature_label}) {
+                            # get a slice covering the vf
+                            
+                            #for my $f ($fa->fetch_all_by_Slice_constraint)
                         }
                     }
-                    elsif (my $feature_label = $self->{_feature_label}) {
-                        # get a slice covering the vf
-                        
-                        #for my $f ($fa->fetch_all_by_Slice_constraint)
-                    }
+                #}
+                else {
+                    warn "Cannot get an adaptor for type: $type";
                 }
-            #}
-            else {
-                warn "Cannot get an adaptor for type: $type";
             }
         }
     }
