@@ -16,12 +16,12 @@ my ($site, $etype);
 usage() if (!scalar(@ARGV));
  
 GetOptions(
-     'v=s'   => \$e_version,
-     'o=s'   => \$html_file,
-     'help!' => \$help,
+     'v=s'     => \$e_version,
+     'o=s'     => \$html_file,
+     'help!'   => \$help,
      'hlist=s' => \$hlist,
      'phost=s' => \$phost,
-     'site=s' => \$site,
+     'site=s'  => \$site,
      'etype=s' =>  \$etype
 );
 
@@ -362,7 +362,7 @@ sub create_menu {
   
   my $html = qq{
   <div style="float:right;margin-left:8px;margin-top:2px;background-color:#F2F2F2;color:#333;border-radius:5px">
-    <div style="padding:5px;font-weight:bold;color:#FFF;background-color:navy;border-top-left-radius:5px;border-top-right-radius:5px">
+    <div style="padding:5px;font-weight:bold;color:#FFF;background-color:#336;border-top-left-radius:5px;border-top-right-radius:5px">
       <img src="/i/16/rev/info.png" style="vertical-align:top" />
       Species list:
     </div> 
