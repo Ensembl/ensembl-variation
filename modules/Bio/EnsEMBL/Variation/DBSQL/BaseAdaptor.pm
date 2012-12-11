@@ -300,6 +300,32 @@ sub _variation_feature_set_number_for_consequences {
     return $self->_set_number_for_consequences($cons, $map);
 }
 
+sub _get_all_subsnp_handles_from_variation_ids {
+	my $self = shift;
+	my $list = shift;
+    
+    my $in_list = join ",", @$list;
+    
+	my $sth = $self->dbc->prepare(qq{
+		SELECT v.variation_id, sh.handle
+		FROM allele a, variation v, subsnp_handle sh
+		WHERE a.variation_id = v.variation_id
+		AND a.subsnp_id = sh.subsnp_id
+		AND v.variation_id IN ($in_list)
+		GROUP BY v.variation_id, sh.handle
+	});
+	
+	$sth->execute();
+	
+	my ($var_id, $handle, %handles);
+	$sth->bind_columns(\$var_id, \$handle);
+	
+	push @{$handles{$var_id}}, $handle while $sth->fetch();
+	$sth->finish;
+	
+	return \%handles;
+}
+
 =head2 ploidy
 
   Arg[1]      : int $ploidy
