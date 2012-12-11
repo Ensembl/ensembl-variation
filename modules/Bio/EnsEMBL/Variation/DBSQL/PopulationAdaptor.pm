@@ -675,8 +675,6 @@ sub _objs_from_sth {
   my @pops;
 
   my ($pop_id, $name, $size, $desc, $freqs);
-  
-  $DB::single = 1;
 
   $sth->bind_columns(\$pop_id, \$name, \$size, \$desc, \$freqs);
 
