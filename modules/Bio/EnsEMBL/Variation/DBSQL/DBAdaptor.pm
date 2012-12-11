@@ -89,7 +89,9 @@ sub get_available_adaptors{
 		'Attribute'                       => 'Bio::EnsEMBL::Variation::DBSQL::AttributeAdaptor',
 		'Allele'                          => 'Bio::EnsEMBL::Variation::DBSQL::AlleleAdaptor',
 		'ProteinFunctionPredictionMatrix' => 'Bio::EnsEMBL::Variation::DBSQL::ProteinFunctionPredictionMatrixAdaptor',
-        'Phenotype'                       => 'Bio::EnsEMBL::Variation::DBSQL::PhenotypeAdaptor',
+    'Phenotype'                       => 'Bio::EnsEMBL::Variation::DBSQL::PhenotypeAdaptor',
+    'RegulatoryFeatureVariation'      => 'Bio::EnsEMBL::Variation::DBSQL::RegulatoryFeatureVariationAdaptor',
+    'MotifFeatureVariation'           => 'Bio::EnsEMBL::Variation::DBSQL::MotifFeatureVariationAdaptor',
     );
 	
     return (\%pairs);
