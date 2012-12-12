@@ -91,7 +91,7 @@ use Bio::EnsEMBL::Variation::BaseVariationFeature;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Utils::Scalar qw(assert_ref);
 use Bio::EnsEMBL::Utils::Argument  qw(rearrange);
-use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp); 
+use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp expand); 
 use Bio::EnsEMBL::Variation::Utils::Sequence qw(ambiguity_code hgvs_variant_notation SO_variation_class format_hgvs_string);
 use Bio::EnsEMBL::Variation::Utils::Sequence;
 use Bio::EnsEMBL::Variation::Variation;
@@ -1750,6 +1750,8 @@ sub hgvs_genomic{
 	## If a particular allele was requested, ignore others
 	next if  (defined($use_allele) && $allele ne $use_allele);
 
+        ## expand tandems before check for non nucleotide character
+        expand(\$allele);
 	# Skip if the allele contains weird characters
 	next if $allele =~ m/[^ACGT\-]/ig;   
 	
