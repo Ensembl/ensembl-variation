@@ -2,8 +2,8 @@ use strict;
 use warnings;
 
 BEGIN { $| = 1;
-	use Test;
-	plan tests => 11;
+	use Test::More;
+	plan tests => 12;
 }
 
 
@@ -25,36 +25,34 @@ my $var = Bio::EnsEMBL::Variation::Variation->new
    -source => 'dbSNP');
 
 
-my $a1 = 'A';
-my $a2 = 'C';
-
+my $geno  = ['A','C'];
+my $ambig = 'M';
+my $ss = 1234;
 my $dbID = 1;
 
 my $freq = 0.76;
 
 my $pop_gtype = Bio::EnsEMBL::Variation::PopulationGenotype->new
   (-dbID => $dbID,
-   -allele1 => $a1,
-   -allele2 => $a2,
+   -genotype => $geno,
    -variation => $var,
    -population => $pop,
-   -frequency => $freq);
+   -frequency => $freq,
+   -subsnp => $ss);
 
 
-ok($pop_gtype->population()->name() eq $pop->name());
-ok($pop_gtype->variation()->name()  eq $var->name());
+ok($pop_gtype->population()->name() eq $pop->name(), "population name" );
+ok($pop_gtype->variation()->name()  eq $var->name(), "variation name");
+ok($pop_gtype->genotype() eq $geno, "genotype" );
+ok($pop_gtype->subsnp() eq "ss$ss", "ssubsnp_id");
 
-ok($pop_gtype->allele1() eq $a1);
-ok($pop_gtype->allele2() eq $a2);
+ok($pop_gtype->dbID() == $dbID, "dbSNP ID") ;
 
-ok($pop_gtype->dbID() == $dbID);
+ok($pop_gtype->frequency() == $freq, "frequency");
 
-ok($pop_gtype->frequency() == $freq);
-
-# test getter/setters
-
-ok(test_getter_setter($pop_gtype, 'allele1', 'TT'));
-ok(test_getter_setter($pop_gtype, 'allele2', '-'));
+ok($pop_gtype->allele(1) eq 'A', "allele 1");
+ok($pop_gtype->allele(2) eq 'C', "allele 2");
+ok($pop_gtype->ambiguity_code() eq $ambig, "ambiguity code");
 
 my $pop2 = Bio::EnsEMBL::Variation::Population->new
   (-name => 'test population 2',
@@ -70,3 +68,6 @@ ok(test_getter_setter($pop_gtype, 'population', $pop2));
 ok(test_getter_setter($pop_gtype, 'variation', $var2));
 
 ok(test_getter_setter($pop_gtype, 'frequency', $freq));
+
+
+done_testing();
