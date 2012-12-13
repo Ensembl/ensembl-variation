@@ -45,7 +45,7 @@ package Bio::EnsEMBL::Variation::Utils::VEP;
 # module list
 use Getopt::Long;
 use FileHandle;
-use File::Path qw(make_path);
+use File::Path qw(mkpath);
 use Storable qw(nstore_fd fd_retrieve freeze thaw);
 use Scalar::Util qw(weaken);
 use Digest::MD5 qw(md5_hex);
@@ -145,6 +145,7 @@ our @VEP_WEB_CONFIG = qw(
     freq_gt_lt
     freq_freq
     freq_pop
+    filter_common
     sift
     polyphen
     regulatory
@@ -912,6 +913,7 @@ sub get_all_consequences {
                     
                     $config->{forked} = $$;
                     $config->{quiet} = 1;
+                    $config->{filter_count} = 0 if defined($config->{filter_count});
                     
                     # redirect STDERR to PARENT so we can catch errors
                     *STDERR = *PARENT;
@@ -936,6 +938,9 @@ sub get_all_consequences {
                         print PARENT $$." PLUGIN ".ref($plugin)." ".encode_base64(freeze($plugin), "\t")."\n";
                     }
                     
+                    # tell parent how many we filtered out
+                    print PARENT $$." FILTERED ".$config->{filter_count}."\n" if defined($config->{filter_count});
+                    
                     # we need to tell the parent this child is finished
                     # otherwise it keeps listening
                     print PARENT "DONE $$\n";
@@ -951,7 +956,7 @@ sub get_all_consequences {
         my $fh = $config->{out_file_handle};
         my $done_processes = 0;
         my $done_vars = 0;
-        my $total_size = $size;
+        my $total_size = $size + ($config->{fork} * ($fetched_tr_count + $fetched_rf_count));
         my $pruned_count;
         
         # create a hash to store the returned data by PID
@@ -969,7 +974,9 @@ sub get_all_consequences {
             
             # variant finished / progress indicator
             elsif(/^BUMP/) {
-                progress($config, ++$done_vars, $total_size);# if $pruned_count == scalar @pids;
+                m/BUMP ?(\d*)/;
+                $done_vars += $1 || 1;
+                progress($config, $done_vars, $total_size);
             }
             
             # output
@@ -997,6 +1004,14 @@ sub get_all_consequences {
                     merge_hashes($parent_plugin, $tmp);
                 }
                 
+                # filtered count
+                elsif(/^\-?\d+ FILTERED/) {
+                    m/^(\-?\d+) FILTERED (\d+)/;
+                    $config->{filter_count} += $2;
+                    $done_vars += (int($size / $config->{fork}) - $2);
+                    progress($config, $done_vars, $total_size);
+                }
+                
                 else {
                     # grab the PID
                     m/^(\-?\d+)\s/;
@@ -1010,15 +1025,8 @@ sub get_all_consequences {
                     # decode and thaw "output" from forked process
                     push @{$by_pid{$pid}}, thaw(decode_base64($_));
                     
-                    progress($config, ++$done_vars, $total_size);
+                    #progress($config, ++$done_vars, $total_size);
                 }
-            }
-            
-            elsif(/^PRUNED/) {
-                s/PRUNED //g;
-                chomp;
-                $pruned_count++;
-                $total_size += $_;
             }
             
             elsif(/^DEBUG/) {
@@ -1080,7 +1088,7 @@ sub get_all_consequences {
 sub vf_list_to_cons {
     my $config = shift;
     my $listref = shift;
-    my $regions = shift;    
+    my $regions = shift;
     
     # get non-variants
     my @non_variants = grep {$_->{non_variant}} @$listref;
@@ -1090,6 +1098,28 @@ sub vf_list_to_cons {
     
     # check existing VFs
     &check_existing_hash($config, \%vf_hash) if defined($config->{check_existing});# && scalar @$listref > 10;
+    
+    my $new_listref = [];
+    
+    # skip any based on frequency checks?
+    if(defined($config->{check_frequency})) {
+        foreach my $vf(@$listref) {
+            if(defined($vf->{existing}) && scalar @{$vf->{existing}}) {
+                push @$new_listref, $vf if grep {$_} map {check_frequencies($config, $_)} reverse @{$vf->{existing}};
+                $vf->{freqs} = $config->{filtered_freqs};
+            }
+        }
+    }
+    else {
+        $new_listref = $listref;
+    }
+    
+    # if using consequence filter, we're not interested in how many remain yet
+    $config->{filter_count} += scalar @$new_listref unless defined($config->{filter});
+    
+    # remake hash
+    %vf_hash = ();
+    push @{$vf_hash{$_->{chr}}{int($_->{start} / $config->{chunk_size})}{$_->{start}}}, $_ for grep {!defined($_->{non_variant})} @$new_listref;
     
     # get overlapping SVs
     &check_svs_hash($config, \%vf_hash) if defined($config->{check_svs});
@@ -1107,7 +1137,7 @@ sub vf_list_to_cons {
         $new_count += prune_cache($config, $config->{tr_cache}, $regions, $config->{loaded_tr});
         $new_count += prune_cache($config, $config->{rf_cache}, $regions, $config->{loaded_rf});
         
-        print PARENT "PRUNED $new_count\n";
+        print PARENT "BUMP $new_count\n" unless defined($config->{no_progress});
     }
     
     my @return;
@@ -1245,7 +1275,7 @@ sub vf_list_to_cons {
                 push @return, @{vf_to_consequences($config, $vf)};
             }
             
-            #print PARENT "BUMP\n" if defined($config->{forked});
+            print PARENT "BUMP\n" if defined($config->{forked}) && !defined($config->{no_progress});
         }
         
         end_progress($config) unless scalar @$listref == 1;
@@ -1266,15 +1296,9 @@ sub vf_to_consequences {
     
     # method name for consequence terms
     my $term_method = $config->{terms}.'_term';
-        
+    
     # find any co-located existing VFs
     $vf->{existing} ||= find_existing($config, $vf) if defined $config->{check_existing};
-    
-    # skip based on frequency checks?
-    if(defined($config->{check_frequency}) && defined($vf->{existing}) && $vf->{existing} ne '-' && defined($config->{va})) {
-        return [] unless grep {$_} map {check_frequencies($config, $_)} reverse split(/\,/, $vf->{existing});
-        $vf->{freqs} = $config->{filtered_freqs};
-    }
     
     # force empty hash into object's transcript_variations if undefined from whole_genome_fetch
     # this will stop the API trying to go off and fill it again
@@ -1812,7 +1836,7 @@ sub init_line {
     my $line = {
         Uploaded_variation  => $vf->variation_name,
         Location            => ($vf->{chr} || $vf->seq_region_name).':'.format_coords($vf->start, $vf->end),
-        Existing_variation  => $vf->{existing},
+        Existing_variation  => defined $vf->{existing} && scalar @{$vf->{existing}} ? join ",", map {$_->[0]} @{$vf->{existing}} : '-',
         Extra               => {},
     };
     
@@ -1833,7 +1857,10 @@ sub init_line {
     $line->{Extra}->{FREQS} = join ",", @{$vf->{freqs}} if defined($vf->{freqs});
     
     # gmaf?
-    $line->{Extra}->{GMAF} = $vf->{gmaf} if defined($config->{gmaf}) && defined($vf->{gmaf});
+    if(defined($config->{gmaf}) && defined($vf->{existing}) && scalar @{$vf->{existing}}) {
+        my @gmafs = map {$_->[6].':'.$_->[7]} grep {defined($_->[6])} @{$vf->{existing}};
+        $line->{Extra}->{GMAF} = scalar @gmafs ? join ",", @gmafs : '-';
+    }
     
     # copy entries from base_line
     if(defined($base_line)) {
@@ -2243,7 +2270,7 @@ sub whole_genome_fetch_transcript {
     while($tr_counter < $tr_count) {
         
         progress($config, $tr_counter, $tr_count);
-        print PARENT "BUMP\n" if defined($config->{forked});
+        print PARENT "BUMP\n" if defined($config->{forked}) && !defined($config->{no_progress});
         
         my $tr = $tr_cache->{$chr}->[$tr_counter++];
         
@@ -2290,8 +2317,8 @@ sub whole_genome_fetch_transcript {
                 if(defined($config->{individual})) {
                     
                     # store VF on transcript, weaken reference to avoid circularity
-                    push @{$tr->{vfs}}, $vf;
-                    weaken($tr->{vfs}->[-1]);
+                    push @{$tr->{vfs}->{$vf->{individual}}}, $vf;
+                    weaken($tr->{vfs}->{$vf->{individual}}->[-1]);
                     
                     delete $previous_vf->{last_in_transcript}->{$tr->stable_id};
                     $vf->{last_in_transcript}->{$tr->stable_id} = 1;
@@ -2324,7 +2351,7 @@ sub whole_genome_fetch_reg {
         while($rf_counter < $rf_count) {
             
             progress($config, $rf_counter, $rf_count);
-            print PARENT "BUMP\n" if defined($config->{forked});
+            print PARENT "BUMP\n" if defined($config->{forked}) && !defined($config->{no_progress});
             
             my $rf = $rf_cache->{$chr}->{$type}->[$rf_counter++];
             
@@ -2806,24 +2833,19 @@ sub check_existing_hash {
             foreach my $pos(keys %{$vf_hash->{$chr}->{$chunk}}) {
                 foreach my $var(@{$vf_hash->{$chr}->{$chunk}->{$pos}}) {
                     my @found;
-                    my @gmafs;
                     
                     if(defined($variation_cache->{$chr})) {
                         if(my $existing_vars = $variation_cache->{$chr}->{$pos}) {
                             foreach my $existing_var(grep {$_->[1] <= $config->{failed}} @$existing_vars) {
                                 unless(is_var_novel($config, $existing_var, $var)) {
-                                    push @found, $existing_var->[0];
-                                    push @gmafs, $existing_var->[6].":".$existing_var->[7] if defined($existing_var->[6]) && defined($existing_var->[7]);
+                                    push @found, $existing_var;
                                 }
                             }
                         }
                     }
                     
-                    $var->{existing} = join ",", @found;
-                    $var->{existing} ||= '-';
-                    
-                    $var->{gmaf} = join ",", @gmafs;
-                    $var->{gmaf} ||= undef;
+                    $var->{existing}   = \@found;
+                    $var->{existing} ||= [];
                 }
             }
         }
@@ -3504,7 +3526,7 @@ sub get_dump_file_name {
     
     # make directory if it doesn't exist
     if(!(-e $dir) && defined($config->{write_cache})) {
-        make_path($dir);
+        mkpath($dir);
     }
     
     return $dump_file;
@@ -3557,7 +3579,7 @@ sub dump_transcript_cache {
 #    
 #    # make directory if it doesn't exist
 #    if(!(-e $dir)) {
-#        make_path($dir);
+#        mkpath($dir);
 #    }
 #    
 #    debug("Writing to $dump_file") unless defined($config->{quiet});
@@ -3728,7 +3750,7 @@ sub dump_adaptor_cache {
     
     # make directory if it doesn't exist
     if(!(-e $dir)) {
-        make_path($dir);
+        mkpath($dir);
 	}
     
     open my $fh, "| gzip -9 -c > ".$dump_file or die "ERROR: Could not write to dump file $dump_file";
@@ -3780,7 +3802,8 @@ sub dump_variation_cache {
                 $as,
                 $strand == 1 ? '' : $strand,
                 $ma || '',
-                defined($maf) ? sprintf("%.2f", $maf) : '',
+                defined($maf) ? sprintf("%.4f", $maf) : '',
+                defined($config->{'freqs'}) && defined($config->{'freqs'}->{$name}) ? $config->{'freqs'}->{$name} : '',
             );
             print DUMP "\n";
         }
@@ -3805,14 +3828,19 @@ sub load_dumped_variation_cache {
     
     while(<DUMP>) {
         chomp;
-        my ($name, $failed, $start, $end, $as, $strand, $ma, $maf) = split / /, $_;
+        my ($name, $failed, $start, $end, $as, $strand, $ma, $maf, $afr, $amr, $asn, $eur) = split / /, $_;
         $failed ||= 0;
         $end ||= $start;
         $strand ||= 1;
         $ma ||= undef;
-        $maf ||= undef;
         
         my @v = ($name, $failed, $start, $end, $as, $strand, $ma, $maf);
+        push @v, ($afr, $amr, $asn, $eur) if
+            defined($afr) ||
+            defined($amr) ||
+            defined($asn) ||
+            defined($eur);
+        
         push @{$v_cache->{$chr}->{$start}}, \@v;
     }
     
@@ -4454,12 +4482,12 @@ sub find_existing {
         my @found;
         
         while($sth->fetch) {
-            push @found, $v[0] unless is_var_novel($config, \@v, $new_vf) || $v[1] > $config->{failed};
+            push @found, \@v unless is_var_novel($config, \@v, $new_vf) || $v[1] > $config->{failed};
         }
         
         $sth->finish();
         
-        return (scalar @found ? join ",", @found : undef);
+        return (scalar @found ? \@found : []);
     }
     
     return undef;
@@ -4495,40 +4523,69 @@ sub is_var_novel {
 # check frequencies of existing var against requested params
 sub check_frequencies {
     my $config = shift;
-    my $var_name = shift;
+    my $var_array = shift;
     
-    my $v = $config->{va}->fetch_by_name($var_name);
-    
-    my $pass = 0;
+    my $var_name = $var_array->[0];
     
     my $freq_pop      = $config->{freq_pop};
     my $freq_freq     = $config->{freq_freq};
     my $freq_gt_lt    = $config->{freq_gt_lt};
     
-    my $freq_pop_name = (split /\_/, $freq_pop)[-1];
-    $freq_pop_name = undef if $freq_pop_name =~ /1kg|hap/;
+    my $pass = 0;
+    my $checked_cache = 0;
     
     delete $config->{filtered_freqs};
     
-    foreach my $a(@{$v->get_all_Alleles}) {
-        next unless defined $a->{population} || defined $a->{'_population_id'};
-        next unless defined $a->frequency;
-        next if $a->frequency > 0.5;
+    # if we can, check using cached frequencies as this is way quicker than
+    # going to the DB
+    if($freq_pop =~ /1kg/i && $freq_pop =~ /all|afr|amr|asn|eur/i) {
+        my $freq;
         
-        my $pop_name = $a->population->name;
+        $freq = $var_array->[7] if $freq_pop =~ /all/i;
         
-        if($freq_pop =~ /1kg/) { next unless $pop_name =~ /^1000.+(low|phase).+/i; }
-        if($freq_pop =~ /hap/) { next unless $pop_name =~ /^CSHL-HAPMAP/i; }
-        if($freq_pop =~ /any/) { next unless $pop_name =~ /^(CSHL-HAPMAP)|(1000.+(low|phase).+)/i; }
-        if(defined $freq_pop_name) { next unless $pop_name =~ /$freq_pop_name/i; }
+        # newer cache files have global pops too
+        if(scalar @{$var_array} > 8 && !defined($freq)) {
+            $freq = $var_array->[8]  if $freq_pop =~ /afr/i;
+            $freq = $var_array->[9]  if $freq_pop =~ /amr/i;
+            $freq = $var_array->[10] if $freq_pop =~ /asn/i;
+            $freq = $var_array->[11] if $freq_pop =~ /eur/i;
+        }
         
-        $pass = 1 if $a->frequency >= $freq_freq and $freq_gt_lt eq 'gt';
-        $pass = 1 if $a->frequency <= $freq_freq and $freq_gt_lt eq 'lt';
+        if(defined($freq) && $freq =~ /\d/) {
+            $pass = 1 if $freq >= $freq_freq and $freq_gt_lt eq 'gt';
+            $pass = 1 if $freq <= $freq_freq and $freq_gt_lt eq 'lt';
+            push @{$config->{filtered_freqs}}, $freq_pop.':'.$freq;
+        }
         
-        $pop_name =~ s/\:/\_/g;
-        push @{$config->{filtered_freqs}}, $pop_name.':'.$a->frequency;
+        $checked_cache = 1;
+    }
+    
+    if(defined($config->{va}) && $checked_cache == 0) {
+        my $v = $config->{va}->fetch_by_name($var_name);
         
-        #warn "Comparing allele ", $a->allele, " ", $a->frequency, " for $var_name in population ", $a->population->name, " PASS $pass";
+        my $freq_pop_name = (split /\_/, $freq_pop)[-1];
+        $freq_pop_name = undef if $freq_pop_name =~ /1kg|hap/;
+        
+        foreach my $a(@{$v->get_all_Alleles}) {
+            next unless defined $a->{population} || defined $a->{'_population_id'};
+            next unless defined $a->frequency;
+            next if $a->frequency > 0.5;
+            
+            my $pop_name = $a->population->name;
+            
+            if($freq_pop =~ /1kg/) { next unless $pop_name =~ /^1000.+(low|phase).+/i; }
+            if($freq_pop =~ /hap/) { next unless $pop_name =~ /^CSHL-HAPMAP/i; }
+            if($freq_pop =~ /any/) { next unless $pop_name =~ /^(CSHL-HAPMAP)|(1000.+(low|phase).+)/i; }
+            if(defined $freq_pop_name) { next unless $pop_name =~ /$freq_pop_name/i; }
+            
+            $pass = 1 if $a->frequency >= $freq_freq and $freq_gt_lt eq 'gt';
+            $pass = 1 if $a->frequency <= $freq_freq and $freq_gt_lt eq 'lt';
+            
+            $pop_name =~ s/\:/\_/g;
+            push @{$config->{filtered_freqs}}, $pop_name.':'.$a->frequency;
+            
+            #warn "Comparing allele ", $a->allele, " ", $a->frequency, " for $var_name in population ", $a->population->name, " PASS $pass";
+        }
     }
     
     return 0 if $config->{freq_filter} eq 'exclude' and $pass == 1;
