@@ -66,10 +66,8 @@ use vars qw(@ISA);
     int - unique internal identifier
   Arg [-adaptor] :
     Bio::EnsEMBL::Variation::DBSQL::PopulationAdaptor
-  Arg [-allele1] :
-    string - One of the two alleles defining this genotype
-  Arg [-allele2] :
-    string - One of the two alleles defining this genotype
+  Arg [-genotype] :
+    arrayref of strings - The alleles defining this genotype
   Arg [-variation] :
     Bio::EnsEMBL::Variation::Variation - The variation associated with this
     genotype
@@ -78,8 +76,7 @@ use vars qw(@ISA);
   Arg [-frequency] :
     int - the frequency this genotype occurs in this population
   Example    : $pop_genotype = Bio:EnsEMBL::Variation::PopulationGenotype->new
-                   (-allele1 => 'A',
-                    -allele2 => 'T',
+                   (-genotype => ['A','T'],
                     -variation => $variation,
                     -population => $pop
                     -frequency  => 0.87);
