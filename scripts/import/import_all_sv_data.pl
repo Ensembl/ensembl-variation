@@ -530,16 +530,14 @@ sub structural_variation {
 	    FROM $sv_table sv, $svf_table svf 
 	    WHERE sv.structural_variation_id=svf.structural_variation_id 
 	      AND sv.study_id=$study_id
+				AND sv.somatic=1
 		    AND svf.breakpoint_order is null
 	      GROUP BY structural_variation_id having svfc>1
 	  };
 	  my $sv_ids = $dbVar->selectall_arrayref($stmt);
-	  $stmt = qq{
-		  UPDATE $svf_table SET breakpoint_order=1 WHERE structural_variation_id=?
-	  };
 	  foreach my $sv_id (@$sv_ids) {
 		  my $id = $sv_id->[0];
-		  $dbVar->do(qq{UPDATE $svf_table SET breakpoint_order=1 WHERE structural_variation_id=$id});
+		  $dbVar->do(qq{UPDATE $svf_table SET breakpoint_order=1 WHERE structural_variation_id=$id AND somatic=1});
 	  }
 	}
 	
@@ -1392,6 +1390,8 @@ sub generate_data_row {
   my $bp_order = $info->{bp_order};
   if ($info->{is_somatic} == 1 || $somatic) {
     $bp_order = 1 if(!defined($bp_order));
+	} else {
+	  $bp_order = undef;
 	}
  
   my @row = ($info->{ID},
