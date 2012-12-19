@@ -363,7 +363,11 @@ sub strain_name {
 sub phenotype_description{
   my $self = shift;
   return $self->{'phenotype_description'} = shift if(@_);
-  return $self->{'phenotype_description'};
+	
+  ## Hack to hide wrong phenotypes for COSMIC data ##
+	return undef if ($self->{'study'}->description =~ /COSMIC/ && $self->{'phenotype_description'} !~ /^COSMIC/);
+	
+	return $self->{'phenotype_description'};
 }
 
 
