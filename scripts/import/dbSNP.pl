@@ -202,7 +202,7 @@ my $import_object;
 if ($species eq 'cat' || $species =~ m/zebrafinch/i || $species =~ m/tetraodon/i) {
   $import_object = dbSNP::MappingChromosome->new(@parameters);
 }
-elsif ($species =~ m/zebrafish/i || $species =~ m/chimp/i || $species =~ m/chicken/i || $species =~ m/rat/i || $species =~ m/horse/i || 
+elsif ($species =~ m/zebrafish/i || $species =~ m/chimp/i || $species =~ m/chicken|gallus_gallus/i || $species =~ m/rat/i || $species =~ m/horse/i || 
     $species =~ m/platypus/i || $species =~ m/opossum/i || $species =~ m/mouse/i || $species =~ m/cow/i  || $species =~ m/^pig$|sus_scrofa/i ||
     $species eq 'cat' || $species =~ m/zebrafinch/i || $species =~ m/tetraodon/i || $species =~ m/taeniopygia_guttata/   || $species =~ m/orangutan/  || 
     $species =~ m/monodelphis_domestica/  || $species =~ m/macaque/) {
@@ -244,9 +244,15 @@ if ($species =~ m/mouse/i || $species =~ m/chicken/i || $species =~ m/rat/i || $
 ### update production db as final step
 
 ## get dbSNP id 
-my $dbSNP_db_dba =  $dbm->registry()->get_adaptor('multi', 'intvar', 'dbSNPdb');
-my $dbSNP_db     =  $dbSNP_db_dba->fetch_current_by_name($dbm->dbSNP()->dbc->dbname() );
+my $dbSNP_name = $dbm->dbSNP()->dbc->dbname();
+$dbSNP_name =~ s/\_\d+$//;
 
+my $dbSNP_db_dba =  $dbm->registry()->get_adaptor('multi', 'intvar', 'dbSNPdb');
+my $dbSNP_db     =  $dbSNP_db_dba->fetch_current_by_name($dbSNP_name );
+unless (defined $dbSNP_db){
+    warn "Not updating - dbSNP database of this name $dbSNP_name not recorded\n";
+    exit;
+}
 my $ensvardb_dba =  $dbm->registry()->get_adaptor('multi', 'intvar', 'EnsVardb');
 my $preexisting  =  $ensvardb_dba->fetch_by_name($dbm->dbVar()->dbc->dbname() ); 
 
@@ -256,17 +262,16 @@ if (defined $preexisting){
 else{
     ## enter new db 
     my $ensvar_db = Bio::EnsEMBL::IntVar::EnsVardb->new_fast({ name             => $dbm->dbVar()->dbc->dbname(),
-							       dbsnpdb_id       => $dbSNP_db->dbID(),
+							       dbsnpdb          => $dbSNP_db,
 							       species          => $dbm->dbVar()->species(),
 							       version          => $ens_version,
 							       genome_reference => $ASSEMBLY_VERSION,
-							       adaptor          => $ensvardb_dba 
+							       adaptor          => $ensvardb_dba,
+							       status_desc      => 'dbSNP_imported'
 							     });
 
 
     $ensvardb_dba->store($ensvar_db);
-    $ensvardb_dba->update_status($ensvar_db,'dbSNP_imported');
-
 
     if( defined $ens_version ){
 	## update meta if version supplied
