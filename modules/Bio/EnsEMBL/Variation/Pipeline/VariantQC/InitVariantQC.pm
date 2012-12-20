@@ -130,15 +130,18 @@ sub create_working_tables{
   $var_dba->dbc->do(qq{ DROP TABLE IF EXISTS variation_working});
   $var_dba->dbc->do(qq{ CREATE TABLE variation_working like variation });
   $var_dba->dbc->do(qq{ ALTER TABLE variation_working DROP COLUMN snp_id }); ## tmp column not in released schema
+  $var_dba->dbc->do(qq{ ALTER TABLE variation_working DISABLE KEYS});
 
   ## table to hold variation feature info after fliping & ref allele assignment
   $var_dba->dbc->do(qq{ DROP TABLE IF EXISTS variation_feature_working});
   $var_dba->dbc->do(qq{ CREATE TABLE variation_feature_working like variation_feature });
-
+  $var_dba->dbc->do(qq{ ALTER TABLE variation_feature_working DISABLE KEYS});
+ 
 
   ## table to hold non-coded allele info after flipping 
   $var_dba->dbc->do(qq{ DROP TABLE IF EXISTS MTMP_allele_working });
   $var_dba->dbc->do(qq{ CREATE TABLE MTMP_allele_working like allele });
+  $var_dba->dbc->do(qq{ ALTER TABLE MTMP_allele_working DISABLE KEYS});
  
 
   ## table to hold coded allele info after fliping 
@@ -157,6 +160,7 @@ sub create_working_tables{
                         KEY subsnp_idx (subsnp_id),
                         KEY sample_idx (sample_id))
                       });
+  $var_dba->dbc->do(qq{ ALTER TABLE allele_working DISABLE KEYS});
   
   ## add intial values to allele code table
   $var_dba->dbc->do(qq{TRUNCATE allele_code});# empty if re-running to allow genotype_code population for basics

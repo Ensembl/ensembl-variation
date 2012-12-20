@@ -49,6 +49,7 @@ sub run {
     my $var_dba   = $self->get_species_adaptor('variation');
     my $core_dba  = $self->get_species_adaptor('core');
 
+    rebuild_indexes($var_dba);
 
     ## Have all rows been processed in flipped/ re-ordered tables
     my ($row_counts, $process_error )  = $self->check_all_processed($var_dba, $report);
@@ -575,8 +576,16 @@ sub check_flipping{
 }
 
 
+# enable indexes which were disabled for quicker loading
+sub rebuild_indexes{
 
+    my $var_dba = shift;
 
+    $var_dba->dbc->do(qq{ ALTER TABLE MTMP_allele_working ENABLE KEYS});
+    $var_dba->dbc->do(qq{ ALTER TABLE allele_working ENABLE KEYS});
+    $var_dba->dbc->do(qq{ ALTER TABLE variation_working ENABLE KEYS});
+    $var_dba->dbc->do(qq{ ALTER TABLE variation_feature_working ENABLE KEYS});
+}
 
 =head2 rename_tables
 
