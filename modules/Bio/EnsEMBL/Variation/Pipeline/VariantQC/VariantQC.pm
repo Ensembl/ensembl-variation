@@ -106,10 +106,10 @@ sub run {
   write_variant_fails($var_dba, $failed_variant);
 
   ## write to new allele table
-  $self->write_allele($var_dba, $allele_data);
+  my $allele_ids = $self->write_allele($var_dba, $allele_data);
 
   ### fail full experimental result for sample & subsnp_id
-  write_allele_fails($var_dba , $failed_allele, $failed_ss );
+  write_allele_fails($var_dba , $allele_ids, $failed_allele, $failed_ss );
 
 
   ## write to new variation with evidence string & flip status
@@ -561,10 +561,8 @@ sub get_reference_base{
 =cut
 sub check_illegal_characters{
 
-  my $allele      = shift;
+    my $allele   = shift;
 
-  ## HGMD_MUTATION is permitted as an allele string
-  $allele =~ s/\/|HGMD_MUTATION//g;
   if ($allele =~ m /[^ACGTU\-$AMBIGUITIES]/i){
     ## identify specfic alleles to flag
     my @fail;
@@ -687,78 +685,52 @@ sub write_variant_fails{
 sub write_allele_fails{
 
 
-  my $var_dba   = shift; 
-  my $fail_list = shift;  ## has of arrays of alleles by fail class
-  my $fail_all  = shift;  ## array of [subsnp_id, sample_id] 
-
-
-  ## find allele id to fail by variant & allele  
-  my $allele_id_ext_sth  = $var_dba->dbc->prepare(qq[ select al.allele_id 
-                                                      from allele_working al, allele_code ac
-                                                      where ac.allele =?
-                                                      and  ac.allele_code_id = al.allele_code_id
-                                                      and  al.variation_id =?
-                                                   ]);
-  
- 
-                                                   
-
-  ## find allele id to fail as a submitted set with frequencies
-  my $allele_set_id_ext_sth = $var_dba->dbc->prepare(qq[ select al.allele_id 
-                                                         from   allele_working al
-                                                         where  al.subsnp_id = ?
-                                                         and    al.sample_id = ?
-                                                       ]);
-
-
+  my $var_dba    = shift;
+  my $allele_ids = shift;  ## allele_id look up
+  my $fail_list  = shift;  ## hash of arrays of [variation_id, allele]'s by fail class
+  my $fail_all   = shift;  ## array of [subsnp_id, sample_id] 
 
   my $fail_ins_sth   = $var_dba->dbc->prepare(qq[ insert into failed_allele_working
                                                   (allele_id, failed_description_id)
                                                   values (?,?)
                                                 ]);       
-          
+
   my %done;     ## save on old pk to drop out eariler
   my %done_new; ## save on new pk too
 
-  ## deal with single allele fails
+  ## deal with single allele fails (by variation and allele)
   foreach my $reason (keys %{$fail_list}){ 
 
-    foreach my $var( @{$fail_list->{$reason}}  ){
+      foreach my $var( @{$fail_list->{$reason}}  ){
       ## if the failure is a property of the reported allele, fail all entries with this allele
 
-      if ($done{$reason}{$var->[0]}{$var->[1]}){ next; }  ## duplicates arise due to running on multiple variation_feature.allele_string's
+          if ($done{$reason}{$var->[0]}{$var->[1]}){ next; }  ## duplicates arise due to running on multiple variation_feature.allele_string's
 
-      $done{$reason}{$var->[0]}{$var->[1]} = 1;
-      
-      $allele_id_ext_sth->execute($var->[1], $var->[0])|| die "ERROR extracting allele id info\n";
-      my $allele_id = $allele_id_ext_sth->fetchall_arrayref();
+	  $done{$reason}{$var->[0]}{$var->[1]} = 1;
 
-       unless ($allele_id->[0]->[0]){
-	   warn "Error finding allele id for var :  $var->[0] & allele  $var->[1] - not failing \n";
-	   next;
-       }
-      foreach my $al(@{$allele_id}){
-        $done_new{$al->[0]}{$reason} = 1; ## flag by reason and new id for screening later
-	$fail_ins_sth->execute($al->[0], $reason)|| die "ERROR inserting allele fails info\n";
+	  unless ( defined $allele_ids->{va}{$var->[0]}{$var->[1]}->[0] ){
+	      warn "Error finding allele ids to fail for var: $var->[0] & allele: $var->[1] - not failing on reason $reason\n";
+	      next;
+	  }
+	  foreach my $al(@{$allele_ids->{va}{$var->[0]}{$var->[1]}}){
+             $done_new{$al}{$reason} = 1; ## flag by reason and new id for screening later
+	     $fail_ins_sth->execute($al, $reason)|| die "ERROR inserting allele fails info\n";
       }
     }
   }
 
-  ### deal with sets of allele fails
+  ### deal with submission sets of allele fails (by ss id and sample)
   foreach my $set(@{$fail_all}){
-
-      ## look up new pk for submission set on subsnp_id, sample_id 
-      $allele_set_id_ext_sth->execute( $set->[0], $set->[1] )|| die "ERROR extracting allele id info\n";
-      
-      my $allele_set_ids = $allele_set_id_ext_sth->fetchall_arrayref();
-      foreach my $allele_id (@{$allele_set_ids}){
-
-        next if (defined $done_new{$allele_id->[0]}{11} );
-        $done_new{$allele_id->[0]}{11} = 1;
-
-        $fail_ins_sth->execute($allele_id->[0], 11 )|| die "ERROR inserting allele fails info\n";
+      unless (defined $allele_ids->{ss}{$set->[0]}{$set->[1]} ){
+	  warn "Error finding allele ids to fail for var: $set->[0] & sample: $set->[1] - not failing \n";
+	  next;
+       }
+      foreach my $allele_id (@{$allele_ids->{ss}{$set->[0]}{$set->[1]} }){
+	  next if $done_new{$allele_id}{11} == 1;
+	  $done_new{$allele_id}{11} = 1;
+         $fail_ins_sth->execute($allele_id, 11 )|| die "ERROR inserting allele fails info\n";
       }
-  }
+  }  
 
 }
 =head2 write_variation_features
@@ -891,11 +863,13 @@ sub write_allele{
   my $var_dba   = shift;
   my $var_data  = shift;
 
+  my %save_id;
+
   my $code = read_allele_code($var_dba);
 
   my $allele_old_ins_sth = $var_dba->dbc->prepare(qq[ insert  into MTMP_allele_working
-                                                    (variation_id, subsnp_id, allele, frequency, sample_id, count)
-                                                    values (?, ?, ?, ?, ?,? )
+                                                    (allele_id, variation_id, subsnp_id, allele, frequency, sample_id, count)
+                                                    values (?,?,?,?,?,?,?)
                                                      ]);
  
   my $allele_new_ins_sth = $var_dba->dbc->prepare(qq[ insert  into allele_working
@@ -916,16 +890,23 @@ sub write_allele{
   foreach my $var (keys %$var_data){
 
     foreach my $allele (@{$var_data->{$var}->{allele_data}}){  ## array of data from 1 row in table
+    
+      $allele_new_ins_sth->execute( $var, $allele->[1], $code->{$allele->[2]}, $allele->[3], $allele->[4], $allele->[5], $allele->[6]) || die "ERROR inserting allele info\n";
+      my $allele_id = $var_dba->db_handle->last_insert_id(undef, undef, qw(allele_working allele_id))|| die "no insert id for allele\n";
 
-      ## keep allele data in un-coded format for Mart for non-human databases
+
+      ## save allele id for later fail update
+      push @{$save_id{va}{$var}{$allele->[2]}},         $allele_id;
+      push @{$save_id{ss}{$allele->[1]}{$allele->[4]}}, $allele_id;
+
+        ## keep allele data in un-coded format for Mart for non-human databases
        unless($self->required_param('species') =~/Homo|Human|musculus|mouse/i){
-          $allele_old_ins_sth->execute( $var, $allele->[1], $allele->[2], $allele->[3], $allele->[4], $allele->[5]) || die "ERROR inserting allele info\n";
+          $allele_old_ins_sth->execute($allele_id, $var, $allele->[1], $allele->[2], $allele->[3], $allele->[4], $allele->[5]) || die "ERROR inserting allele info\n";
      }
 
-      $allele_new_ins_sth->execute( $var, $allele->[1], $code->{$allele->[2]}, $allele->[3], $allele->[4], $allele->[5], $allele->[6]) || die "ERROR inserting allele info\n";
-      #### DANGER - not restricting these to have the same PK
     }
   }
+  return \%save_id;
 }
 
 

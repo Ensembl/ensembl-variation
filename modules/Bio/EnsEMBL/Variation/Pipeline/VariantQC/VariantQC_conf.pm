@@ -122,7 +122,7 @@ sub default_options {
 
         # options controlling the number of workers used for the parallelisable analyses
 
-        variant_qc_capacity        => 20,
+        variant_qc_capacity        => 60,
         unmapped_var_capacity      => 10,
 
 
@@ -134,7 +134,7 @@ sub default_options {
         run_flip_population_genotype     => 1,
         run_update_population_genotype   => 1,
 
-        run_PAR_check                    => 1,
+        run_PAR_check                    => 1, 
         run_Pubmed_check                 => 1,
 
 
@@ -280,7 +280,7 @@ sub pipeline_analyses {
         },
         -input_ids      => [],
         -hive_capacity  => -1,
-        -rc_name        => 'default',
+        -rc_name        => 'long',
         -wait_for       => [  'variant_qc' ],
         -flow_into      => {},
     },
