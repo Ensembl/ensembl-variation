@@ -4564,7 +4564,7 @@ sub check_frequencies {
         my $v = $config->{va}->fetch_by_name($var_name);
         
         my $freq_pop_name = (split /\_/, $freq_pop)[-1];
-        $freq_pop_name = undef if $freq_pop_name =~ /1kg|hap/;
+        $freq_pop_name = undef if $freq_pop_name =~ /1kg|hap|any/;
         
         foreach my $a(@{$v->get_all_Alleles}) {
             next unless defined $a->{population} || defined $a->{'_population_id'};
