@@ -4506,7 +4506,7 @@ sub check_frequencies {
     my $freq_gt_lt    = $config->{freq_gt_lt};
     
     my $freq_pop_name = (split /\_/, $freq_pop)[-1];
-    $freq_pop_name = undef if $freq_pop_name =~ /1kg|hap/;
+    $freq_pop_name = undef if $freq_pop_name =~ /1kg|hap|any/;
     
     delete $config->{filtered_freqs};
     
