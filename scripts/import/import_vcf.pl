@@ -45,6 +45,7 @@ use Time::HiRes qw(gettimeofday tv_interval);
 use ImportUtils qw(load);
 use FindBin qw( $Bin );
 use Digest::MD5 qw(md5_hex);
+use Cwd 'abs_path';
 
 use constant DISTANCE => 100_000;
 use constant MAX_SHORT => 2**16 -1;
@@ -467,7 +468,6 @@ sub main {
 		$prev_seq_region,
 		$genotypes,
 		$var_counter,
-		$start_time,
 		@vf_buffer,
 	);
 	
@@ -495,12 +495,7 @@ sub main {
 		}
 		
 		# try and do attrib
-		if(system('perl  ../misc/create_attrib_sql.pl --config Bio::EnsEMBL::Variation::Utils::Config --no_model > /tmp/attribs.sql') == 0) {
-			sql_populate($config, '/tmp/attribs.sql');
-		}
-		else {
-			debug("WARNING: Failed to populate attrib table. Variation classses will not be set correctly");
-		}
+		attrib($config);
 	}
 	
 	# get adaptors
@@ -1381,7 +1376,9 @@ sub sql_populate {
 	else {
 		debug($config, "Executing SQL in $sql_file");
 		foreach my $command(split ';', $sql) {
-			$config->{dbVar}->do($command) or die $config->{dbVar}->errstr;
+			eval {
+				$config->{dbVar}->do($command) or warn $config->{dbVar}->errstr;
+			};
 		}
 	}
 }
@@ -1414,6 +1411,77 @@ sub backup {
 	}
 }
 
+# populate attrib tables using script
+sub attrib {
+	my $config = shift;
+	
+	# check for entries
+	my $sth = $config->{dbVar}->prepare(q{
+		SELECT COUNT(*) FROM attrib
+	});
+	$sth->execute();
+	my $count;
+	$sth->bind_columns(\$count);
+	$sth->fetch;
+	$sth->finish;
+	
+	if($count) {
+		debug($config, "Looks like attrib is populated, skipping");
+		return;
+	}
+	
+	# check script exists
+	my $script = '../misc/create_attrib_sql.pl';
+	my $this_script = abs_path($0);
+	$this_script =~ s/\/[^\/]+$//;
+	$script = $this_script.'/'.$script;
+	
+	if(!-e $script) {
+		debug($config, "WARNING: Could not find create_attrib_sql.pl in ../misc/");
+		return;
+	}
+	
+	# try and do attrib
+	my $installed_version = Bio::EnsEMBL::Registry->software_version;
+	
+	# look for DBs of this version on ensembldb
+	my $dbh = DBI->connect('DBI:mysql:;host=ensembldb.ensembl.org;port=5306', 'anonymous');
+	$sth = $dbh->prepare(qq{
+		SHOW DATABASES LIKE ?
+	});
+	
+	$sth->execute('homo_sapiens_variation_'.$installed_version.'_%');
+	
+	my $db_name;
+	$sth->bind_columns(\$db_name);
+	$sth->fetch;
+	$sth->finish;
+	
+	# try prev version
+	if(!defined($db_name)) {
+		$sth->execute('homo_sapiens_variation_'.($installed_version - 1).'_%');
+		$sth->bind_columns(\$db_name);
+		$sth->fetch;
+		$sth->finish;
+		
+		if(!defined($db_name)) {
+			debug($config, "WARNING: Could not find database of version $installed_version or ".($installed_version - 1)." on ensembldb.ensembl.org; can't populate attrib tables");
+			return;
+		}
+	}
+	
+	debug($config, "Using $db_name as model for attrib tables");
+	
+	if(system(sprintf('perl %s --config Bio::EnsEMBL::Variation::Utils::Config --host ensembldb.ensembl.org --user anonymous --port 5306 --db %s > /tmp/attribs.sql', $script, $db_name))  == 0) {
+		sql_populate($config, '/tmp/attribs.sql');
+	}
+	else {
+		debug($config, "WARNING: Failed to populate attrib table. Variation classses will not be set correctly");
+	}
+	
+	return;
+}
+
 # copies seq_region entries from core DB
 sub copy_seq_region_from_core {
 	my $config = shift;
@@ -1441,6 +1509,9 @@ sub copy_seq_region_from_core {
 	});
 	
 	$vsth->execute($sr, $cs, $name) while $sth->fetch();
+	
+	$vsth->finish();
+	$sth->finish();
 }
 
 
@@ -1667,7 +1738,7 @@ sub pedigree {
 		$ped->{$ind}->{father} = $dad if defined($dad) && $dad;
 		$ped->{$ind}->{mother} = $mum if defined($mum) && $mum;
 	}
-	close FILE;
+	close IN;
 	
 	return $ped;
 }
@@ -1876,7 +1947,7 @@ sub variation_feature {
 			my $new_allele_string =
 				$existing_vf->allele_string.
 				'/'.
-				(join /\//, grep {$combined_alleles{$_} == 1} @new_alleles);
+				(join '/', grep {$combined_alleles{$_} == 1} @new_alleles);
 			
 			if(defined($config->{test})) {
 				debug($config, "(TEST) Changing allele_string for ", $existing_vf->variation_name, " from ", $existing_vf->allele_string, " to $new_allele_string");
