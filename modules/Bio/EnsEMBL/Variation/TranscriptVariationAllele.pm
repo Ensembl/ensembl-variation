@@ -1275,11 +1275,12 @@ sub _get_del_peptides{
   return undef unless defined($alt_cds);
 
   #### get new translation
-  my $alt = substr($alt_cds->translate()->seq(), $self->transcript_variation->translation_start());
+  my $start = $self->transcript_variation->translation_start() - 1;
+  my $alt = substr($alt_cds->translate()->seq(), $start );
   $hgvs_notation->{alt} = (split/\*/, $alt)[0];
-
+  print "ref\n" . $self->transcript->translate()->seq() . " => alt \n".$alt_cds->translate()->seq() ."\n"; 
   ### get changed end (currently in single letter AA coding)    
-  $hgvs_notation->{ref}  = substr($self->transcript->translate()->seq(),$self->transcript_variation->translation_start());
+  $hgvs_notation->{ref}  = substr($self->transcript->translate()->seq(), $start );
 
   $hgvs_notation->{start} = $self->transcript_variation->translation_start() ;
 
