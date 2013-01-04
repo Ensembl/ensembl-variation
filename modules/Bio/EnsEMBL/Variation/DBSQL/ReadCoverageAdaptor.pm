@@ -137,7 +137,14 @@ sub fetch_all_by_Slice_Sample_depth{
 		if (!$args[0]->isa('Bio::EnsEMBL::Variation::Sample')){
 		    throw('Bio::EnsEMBL::Variation::Sample arg expected');
 		}
-		$constraint = "rc.sample_id = " . $args[0]->dbID; 
+		
+		# VERY NASTY HACK FOR DUPLICATED MOUSE DATA, REMOVE ASAP!!!
+		if($self->db->species =~ /mus|mouse/ && ($args[0]->dbID == 110 || $args[0]->dbID == 118)) {
+			$constraint = "rc.sample_id in (110,118)";
+		}
+		else {
+			$constraint = "rc.sample_id = " . $args[0]->dbID;
+		}
 		#$constraint = "rc.sample_id = ?";
 		#$self->bind_param_generic_fetch($args[0]->dbID,SQL_INTEGER);
 	    }
