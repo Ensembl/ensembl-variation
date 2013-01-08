@@ -91,7 +91,7 @@ if($create_sql =~ /mrg_myisam/i) {
 	}
 }
 
-exit(0);
+#exit(0);
 
 debug("Loading genotype codes");
 
