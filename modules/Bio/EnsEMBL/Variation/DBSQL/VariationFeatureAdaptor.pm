@@ -560,7 +560,7 @@ sub fetch_all_by_Slice_VariationSet{
   Arg [3]	 : $minimum_frequency (optional)
   Example    : $pop = $pop_adaptor->fetch_by_dbID(659);
 			  $slice = $slice_adaptor->fetch_by_region("chromosome", 1, 1, 1e6);
-              @vfs = @{$vf_adaptor->fetch_all_by_Slice_Population($pop,$slice)};
+              @vfs = @{$vf_adaptor->fetch_all_by_Slice_Population($slice,$pop)};
   Description: Retrieves all variation features in a slice which are stored for
 			   a specified population. If $minimum_frequency is supplied, only
 			   variations with a minor allele frequency (MAF) greater than
