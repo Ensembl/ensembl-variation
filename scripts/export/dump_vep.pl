@@ -98,7 +98,7 @@ sub get_species_list {
 	@dbs = grep {$_ =~ /$pattern/} @dbs if defined($pattern);
 	
 	# remove version, build
-	$_ =~ s/^([a-z]+\_[a-z]+)(\_[a-z]+)?(.+)/$1$2/ for @dbs;
+	$_ =~ s/^([a-z]+\_[a-z,1-9]+)(\_[a-z]+)?(.+)/$1$2/ for @dbs;
 	$_ =~ s/\_core$// for @dbs;
 	
 	return \@dbs;
