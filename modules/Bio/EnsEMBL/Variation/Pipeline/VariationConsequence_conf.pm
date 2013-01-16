@@ -28,12 +28,14 @@ use base ('Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf');
 sub default_options {
     my ($self) = @_;
 
-    # the hash returned from this function is used to configure the pipeline, you can supply
-    # any of these options on the command line to override these default values
+    # The hash returned from this function is used to configure the
+    # pipeline, you can supply any of these options on the command
+    # line to override these default values.
     
-    # you shouldn't need to edit anything in this file other than these values, if you
-    # find you do need to then we should probably make it an option here, contact
-    # the variation team to discuss this - patches are welcome!
+    # You shouldn't need to edit anything in this file other than
+    # these values, if you find you do need to then we should probably
+    # make it an option here, contact the variation team to discuss
+    # this - patches are welcome!
 
     return {
 
@@ -102,6 +104,9 @@ sub default_options {
         # connection parameters for the hive database, you should supply the hive_db_password
         # option on the command line to init_pipeline.pl (parameters for the target database
         # should be set in the registry file defined above)
+
+        # Should hive use triggeres?
+        hive_use_triggers       => 0,
 
         # init_pipeline.pl will create the hive database on this machine, naming it
         # <username>_<pipeline_name>, and will drop any existing database with this
