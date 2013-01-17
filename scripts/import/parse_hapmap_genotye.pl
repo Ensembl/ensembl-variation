@@ -1,4 +1,4 @@
-#!/usr/local/ensembl/bin/perl -w
+#!/usr/bin/env perl 
 # this script read hapmap genotyping data into individual, 
 #individual_genotype, population, population_genotype tables
 

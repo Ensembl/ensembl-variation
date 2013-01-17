@@ -1,4 +1,4 @@
-#!/usr/local/ensembl/bin/perl -w
+#!/usr/bin/env perl
 # this script read mapping data ALL_DIFF into variation_feature table
 
 use strict;

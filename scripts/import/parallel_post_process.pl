@@ -61,7 +61,7 @@ $num_processes ||= 1;
 $bsub_queue_name ||= 'long';
 
 $LIMIT = ($limit) ? " $limit " : ''; #will refer to position in a slice
-$PERLBIN   ||= '/software/bin/perl'; # Could use $^X?
+$PERLBIN   ||= '/software/bin/env perl'; # Could use $^X?
 -x $PERLBIN or usage("Perl interpretor at $PERLBIN is not suitable. " .
                      "See the -perlbin argument" );
 $SCHEDULER ||= 'LSF';
@@ -1822,7 +1822,7 @@ usage: perl parallel_post_process.pl <options>
 options:
     -species <string>       species in ensembl.registry
     -limit <number>         limit the number of rows for testing
-    -perlbin <path>         path to perl interpreter (def /usr/local/ensembl/bin/perl)
+    -perlbin <path>         path to perl interpreter (def/usr/bin/env perl)
     -scheduler <string>     job submission system to use (def LSF)
     -tmpdir <dir>           temp directory to use (with lots of space!)
     -tmpfile <filename>     name of temp file to use

@@ -9,7 +9,7 @@ Set the working directory
   $ setenv BASEDIR $PWD
 
 Set the path to the perl binary that is available on the cluster
-  $ setenv PERLDIR /usr/bin/perl
+  $ setenv PERLDIR/usr/bin/env perl
 
 Get bioperl code
 

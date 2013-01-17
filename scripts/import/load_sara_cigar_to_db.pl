@@ -1,4 +1,4 @@
-#! /usr/local/ensembl/bin/perl
+#!/usr/bin/env perl
 #
 #./bsub_ssaha2.pl -species human -input_dir /ecs4/scratch2/yuan/hum/mapping_36 -output_dir /ecs4/scratch2/yuan/hum/mapping_36 -target_dir /ecs4/scratch2/yuan/hum/mapping_36/target_dna -start 1 -end 9
 

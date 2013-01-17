@@ -1,4 +1,4 @@
-#! perl
+#!/usr/bin/env perl
 
 #####
 # Script for dumping out the genomic reference sequence for each variation 

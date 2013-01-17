@@ -1,4 +1,4 @@
-#! /usr/local/bin/perl
+#!/usr/bin/env perl
 # Modified by Laurent the 01/12/2010
 
 use strict;

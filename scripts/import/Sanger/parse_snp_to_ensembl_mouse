@@ -1,6 +1,7 @@
-#!/usr/local/bin/perl5.8.0 -w
+#!/usr/bin/env perl
 
 use strict;
+use warnings;
 use DBI;
 use lib qw(../../ensembl-code/ensembl/modules
            ../../ensembl-code/ensembl-variation/modules

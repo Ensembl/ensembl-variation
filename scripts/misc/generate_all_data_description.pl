@@ -1,4 +1,4 @@
-#! perl -w
+#!/usr/bin/env perl
 
 #Script to generate the classes, population and sets tables in the documentation page "Data description".
 

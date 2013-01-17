@@ -1,4 +1,4 @@
-#!/software/bin/perl
+#!/usr/bin/env perl
 use strict;
 use warnings;
 
@@ -113,7 +113,7 @@ foreach my $file (sort {$files_size->{$b} <=> $files_size->{$a}} keys %{$files_s
 	else {
 		$call .= " -q basement  -R'select[mem>8000] rusage[mem=8000]' -M8000000 ";
 	}
-    $call .= "/software/bin/perl select_tag_snps.pl $file ";
+    $call .= "/software/bin/env perl select_tag_snps.pl $file ";
     $call .= " -tmpdir $TMP_DIR -species $species";
 	$call .= " -registry_file $registry_file" if defined($registry_file);
     

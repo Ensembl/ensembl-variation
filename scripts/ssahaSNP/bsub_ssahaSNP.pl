@@ -1,4 +1,4 @@
-#! /software/bin/perl
+#!/usr/bin/env perl
 #perl ./bsub_ssahaSNP.pl -reads_dir [reads_dir] -output_dir [out_dir] -target_file [target_dir]/chimp_repeat_masked.fa
 
 use strict;

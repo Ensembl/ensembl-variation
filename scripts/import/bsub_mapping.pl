@@ -1,4 +1,4 @@
-#! /usr/local/ensembl/bin/perl
+#!/usr/bin/env perl
 #
 #./bsub_mapping.pl -species mouse -job flank -tmpdir [tmp_dir] -tmpfile patric_mapping
 
@@ -66,7 +66,7 @@ sub run {
   my $sthc = $dbCore->prepare(qq{select sr.seq_region_id from seq_region_attrib sra, attrib_type at, seq_region sr where sra.attrib_type_id=at.attrib_type_id and at.code="toplevel" and sr.seq_region_id = sra.seq_region_id});
   $sthc->execute();
   while (my ($seq_region_id) = $sthc->fetchrow_array()) {
-    my $call = "bsub -q normal -o $TMP_DIR/mapping_out\_$seq_region_id\_$job  /usr/local/bin/perl $script_name -species $species -seq_region_id $seq_region_id -source_name $source_name -tmpdir $TMP_DIR -tmpfile $TMP_FILE";
+    my $call = "bsub -q normal -o $TMP_DIR/mapping_out\_$seq_region_id\_$job /usr/bin/env perl $script_name -species $species -seq_region_id $seq_region_id -source_name $source_name -tmpdir $TMP_DIR -tmpfile $TMP_FILE";
     system($call);
     $count++;
     print "submitting job for $seq_region_id count $count\n";

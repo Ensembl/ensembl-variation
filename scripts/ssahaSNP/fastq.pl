@@ -1,4 +1,4 @@
-#!/usr/local/ensembl/bin/perl
+#!/usr/bin/env perl
 #perl fastq.pl [fasta_dir] [qual_dir]
 
 

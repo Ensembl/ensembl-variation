@@ -1,4 +1,4 @@
-#! /usr/local/ensembl/bin/perl
+#!/usr/bin/env perl
 
 my %rec_file;
 my %rec_name;
