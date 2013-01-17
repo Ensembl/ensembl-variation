@@ -1,4 +1,4 @@
-#!/usr/local/bin/perl -w
+#!/usr/bin/env perl
 # this is the script to fill the new variation 
 # schema with data from dbSNP
 # we use the local mssql copy of dbSNP at the sanger center

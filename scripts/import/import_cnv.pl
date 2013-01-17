@@ -1,4 +1,4 @@
-#!/usr/local/ensembl/bin/perl -w
+#!/usr/bin/env perl
 
 #to run it type perl import_cnv.pl data_file.txt
 use strict;

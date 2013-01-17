@@ -1,4 +1,4 @@
-#! perl -w
+#!/usr/bin/env perl
 
 # Script to generate tables to display the clinical significance tables
 

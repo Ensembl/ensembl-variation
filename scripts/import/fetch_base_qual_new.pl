@@ -1,4 +1,4 @@
-#! /usr/local/bin/perl
+#!/usr/bin/env perl
 #example: ./fetch_base_qual.pl -i [index_file] -r [reads_file] 19866807248411 -1 11
 
 use strict;

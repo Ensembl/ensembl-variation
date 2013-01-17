@@ -1,4 +1,4 @@
-#! perl -w
+#!/usr/bin/env perl
 
 #ÊScript to dump out a table of variation sets that can be used in the documentation
 

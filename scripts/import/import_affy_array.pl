@@ -1,4 +1,4 @@
-#! /usr/local/ensembl/bin/perl
+#!/usr/bin/env perl
 #array files are download from affy websit, files are in directory:
 #/ecs4/scratch2/yuan/array/Homo_sapiens,should be moved to work dir
 #now moved to:/ecs4/work2/yuan/microarray/mapping_array

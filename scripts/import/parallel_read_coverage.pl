@@ -1,4 +1,4 @@
-#!/usr/local/ensembl/bin/perl
+#!/usr/bin/env perl
 
 use strict;
 use warnings;
@@ -69,7 +69,7 @@ $bsub_wait_status ||= 'done';
 my $call;
 my $i = 0;
 foreach my $read_file (glob("$read_dir/*.mapped")){
-    $call = "bsub -J read_coverage_job_$i -o $TMP_DIR/output_reads_$i.txt -q research /sw/arch/bin/perl read_coverage.pl -chost $chost -cuser $cuser -cport $cport -cdbname $cdbname -vhost $vhost -vuser $vuser -vpass $vpass -vport $vport -vdbname $vdbname -tmpdir $TMP_DIR -tmpfile read_coverage_$i.txt -maxlevel $max_level -readfile $read_file";
+    $call = "bsub -J read_coverage_job_$i -o $TMP_DIR/output_reads_$i.txt -q research /sw/arch/bin/env perl read_coverage.pl -chost $chost -cuser $cuser -cport $cport -cdbname $cdbname -vhost $vhost -vuser $vuser -vpass $vpass -vport $vport -vdbname $vdbname -tmpdir $TMP_DIR -tmpfile read_coverage_$i.txt -maxlevel $max_level -readfile $read_file";
 
     if ($ind_file)
     {

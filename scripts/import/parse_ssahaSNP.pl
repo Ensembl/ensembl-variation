@@ -1,4 +1,4 @@
-#! /usr/local/bin/perl
+#!/usr/bin/env perl
 
 #perl parse_ssahaSNP_new.pl -species human -input_file [ssaha_ooutput_dir]/output_parse.txt -output_file [ssaha_ooutput_dir]/watson_output.txt -align_file [ssaha_ooutput_dir]/ALIGNMENT_file -tmpdir [tmpdir] -tmpfile temp_Watson.txt -individual 'Venter'
 
