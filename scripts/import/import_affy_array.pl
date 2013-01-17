@@ -1,4 +1,25 @@
 #!/usr/bin/env perl
+
+=head1 LICENSE
+
+  Copyright (c) 1999-2013 The European Bioinformatics Institute and
+  Genome Research Limited.  All rights reserved.
+
+  This software is distributed under a modified Apache license.
+  For license details, please see
+
+    http://www.ensembl.org/info/about/legal/code_licence.html
+
+=head1 CONTACT
+
+  Please email comments or questions to the public Ensembl
+  developers list at <dev@ensembl.org>.
+
+  Questions may also be sent to the Ensembl help desk at
+  <helpdesk.org>.
+
+=cut
+
 #array files are download from affy websit, files are in directory:
 #/ecs4/scratch2/yuan/array/Homo_sapiens,should be moved to work dir
 #now moved to:/ecs4/work2/yuan/microarray/mapping_array
