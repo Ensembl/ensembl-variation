@@ -37,6 +37,9 @@ sub fetch_input {
     my $pph_run_type    = $self->required_param('pph_run_type');
     my $include_lrg     = $self->param('include_lrg');
     
+    $self->update_meta ;
+
+
     my $core_dba = $self->get_species_adaptor('core');
     my $var_dba  = $self->get_species_adaptor('variation');
 
@@ -179,6 +182,45 @@ sub fetch_input {
     $self->param('pph_output_ids',  [ map { {translation_md5 => $_} } @pph_md5s ]);
     $self->param('sift_output_ids', [ map { {translation_md5 => $_} } @sift_md5s ]);
 }
+
+## hold code & protein database version in meta table if new complete run
+sub update_meta{
+    my $self = shift;
+
+    my $var_dba  = $self->get_species_adaptor('variation');
+
+    my $var_dbh = $var_dba->dbc->db_handle;
+    
+    my $update_meta_sth = $var_dbh->prepare(qq{
+            insert into meta ( meta_key, meta_value) values (?,?)
+        });
+
+    if ($self->required_param('sift_run_type')  == FULL){
+
+	my @code =split/\//, $self->required_param('sift_dir');
+	my $sift_version = pop @code;
+
+	$update_meta_sth->execute('sift_version', $sift_version);
+
+	unless($self->param('use_compara')){
+
+	    my @db =split/\//, $self->required_param('blastdb');
+	    my $db_version = pop @db;
+
+	    $update_meta_sth->execute('sift_protein_db_version', $db_version);
+	}
+
+    }
+    if ($self->required_param('pph_run_type')  == FULL){
+
+	my @code =split/\//,$self->required_param('polyphen_dir');
+	my $polyphen_version = pop @code;   
+
+	$update_meta_sth->execute('polyphen_version', $polyphen_version);
+    }
+
+}
+
 
 sub write_output {
     my $self = shift;
