@@ -42,6 +42,8 @@ sub default_options {
         # of sift and polyphen, alterations to the pipeline etc. When set to 0 the full pipeline
         # will be run
 
+        hive_use_triggers       => 0,
+
         debug_mode              => 0,
 
         species                 => 'Homo_sapiens',
@@ -52,7 +54,7 @@ sub default_options {
 
         pipeline_name           => 'protein_function',
 
-        pipeline_dir            => '/lustre/scratch101/ensembl/'.$ENV{USER}.'/'.$self->o('pipeline_name'),
+        pipeline_dir            => '/lustre/scratch110/ensembl/'.$ENV{USER}.'/'.$self->o('pipeline_name'),
         
         species_dir             => $self->o('pipeline_dir').'/'.$self->o('species'),
         
@@ -65,7 +67,7 @@ sub default_options {
         # doing an UPDATE run for either sift or polyphen, the variation database
         # should have existing predictions in the protein_function_predictions table
 
-        ensembl_registry        => $self->o('pipeline_dir').'/ensembl.registry',
+        ensembl_registry        => $self->o('species_dir').'/ensembl.registry',
 
         # peptide sequences for all unique translations for this species will be dumped to this file
 
@@ -82,7 +84,7 @@ sub default_options {
             -port   => 3306,
             -user   => 'ensadmin',
             -pass   => $self->o('password'),            
-            -dbname => $ENV{USER}.'_'.$self->o('pipeline_name').'_hive',
+            -dbname => $ENV{USER}.'_'.$self->o('pipeline_name').'_'. $self->o('species') .'_hive',
         },
         
         hive_use_triggers       => 0,
@@ -119,7 +121,7 @@ sub default_options {
         # in the registry above is used to identify translations we already have 
         # predictions for.
 
-        pph_run_type            => UPDATE,
+        pph_run_type            => NONE,
 
         # set this flag to use compara protein families as the alignments rather than
         # polyphen's own alignment pipeline
@@ -137,7 +139,7 @@ sub default_options {
     
         # location of the software
 
-        sift_dir                => '/software/ensembl/variation/sift4.0.5',
+        sift_dir                => '/software/ensembl/variation/sift5.0.2',
 
         sift_working            => $self->o('species_dir').'/sift_working',
         
@@ -147,11 +149,11 @@ sub default_options {
         
         # the protein database used to build alignments if you're not using compara
 
-        blastdb                 => '/data/blastdb/Ensembl/variation/sift4.0.5/uniprot/swiss_trembl.uni',
+        blastdb                 => '/data/blastdb/Ensembl/variation/sift5.0.1/uniref90/uniref90.uni',
 
         # the following parameters mean the same as for polyphen
 
-        sift_run_type           => UPDATE,
+        sift_run_type           => FULL,
 
         sift_use_compara        => 0,
 
@@ -196,6 +198,9 @@ sub pipeline_analyses {
                 sift_run_type   => $self->o('sift_run_type'),
                 pph_run_type    => $self->o('pph_run_type'),
                 include_lrg     => $self->o('include_lrg'),
+                polyphen_dir    => $self->o('pph_dir'),
+                sift_dir        => $self->o('sift_dir'),                
+                blastdb         => $self->o('blastdb'),
                 @common_params,
             },
             -input_ids  => [{}],
