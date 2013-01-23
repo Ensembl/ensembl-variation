@@ -258,7 +258,7 @@ sub fetch_all_by_Variation {
   my $pgs = $self->generic_fetch("pg.variation_id = " . $variation->dbID());
   
   # fetch pop GTs from ind GTs for human (1KG data)
-  push @$pgs, @{$self->_fetch_all_by_Variation_from_Genotypes($variation)};
+  push @$pgs, @{$self->_fetch_all_by_Variation_from_Genotypes($variation)} if $self->db->species =~ /homo_sapiens/i;
   
   return $pgs;
 }
