@@ -1962,6 +1962,9 @@ sub variation_feature {
 				$sth->finish;
 			}
 			
+			# remember to update the object!
+			$existing_vf->{allele_string} = $new_allele_string;
+			
 			$config->{rows_added}->{variation_feature_allele_string_merged}++;
 		}
 		
