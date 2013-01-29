@@ -386,7 +386,7 @@ sub get_subsnp_handle {
     # Get the subsnp id and get rid of any 'ss' prefix
     my $ssid = $allele->subsnp() || "";
     $ssid =~ s/^ss//;
-    
+    return if $ssid eq "0";
     my ($stmt, $sth);
     if(defined $population ){
        $stmt = qq{
