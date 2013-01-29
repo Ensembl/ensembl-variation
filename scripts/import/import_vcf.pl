@@ -131,7 +131,6 @@ sub configure {
 		'skip_tables=s',
 		'add_tables=s',
 		
-		'merge_vfs',
 		'only_existing',
 		'skip_n',
 		'mart_genotypes',
@@ -728,7 +727,7 @@ sub main {
 			
 			
 			# make a var name if none exists
-			if(!defined($data->{ID}) || $data->{ID} eq '.' || defined($config->{new_var_name})) {
+			if(!defined($data->{ID}) || $data->{ID} eq '.' || defined($config->{create_name})) {
 				$data->{ID} =
 					($config->{var_prefix} ? $config->{var_prefix} : 'tmp').
 					'_'.$data->{'#CHROM'}.'_'.$data->{POS};
