@@ -1,24 +1,25 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
 
 =head1 LICENSE
 
-  Copyright (c) 1999-2010 The European Bioinformatics Institute and
+  Copyright (c) 1999-2013 The European Bioinformatics Institute and
   Genome Research Limited.  All rights reserved.
 
   This software is distributed under a modified Apache license.
   For license details, please see
 
-    http://www.ensembl.org/info/about/code_licence.html
+    http://www.ensembl.org/info/about/legal/code_licence.html
 
 =head1 CONTACT
 
   Please email comments or questions to the public Ensembl
-  developers list at <ensembl-dev@ebi.ac.uk>.
+  developers list at <dev@ensembl.org>.
 
   Questions may also be sent to the Ensembl help desk at
-  <helpdesk@ensembl.org>.
+  <helpdesk.org>.
 
 =cut
+
 
 =head1 NAME
 import_vcf.pl - imports variations from a VCF file into an Ensembl variation DB
@@ -130,7 +131,6 @@ sub configure {
 		'skip_tables=s',
 		'add_tables=s',
 		
-		'merge_vfs',
 		'only_existing',
 		'skip_n',
 		'mart_genotypes',
@@ -727,7 +727,7 @@ sub main {
 			
 			
 			# make a var name if none exists
-			if(!defined($data->{ID}) || $data->{ID} eq '.' || defined($config->{new_var_name})) {
+			if(!defined($data->{ID}) || $data->{ID} eq '.' || defined($config->{create_name})) {
 				$data->{ID} =
 					($config->{var_prefix} ? $config->{var_prefix} : 'tmp').
 					'_'.$data->{'#CHROM'}.'_'.$data->{POS};
