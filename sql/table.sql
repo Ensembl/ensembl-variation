@@ -49,10 +49,11 @@ create table variation (
   flipped tinyint(1) unsigned NULL DEFAULT NULL,
   class_attrib_id int(10) unsigned default 0,
   somatic tinyint(1) DEFAULT 0 NOT NULL,
-  minor_allele char(1) DEFAULT NULL,
+  minor_allele char(10) DEFAULT NULL,
   minor_allele_freq float DEFAULT NULL,
   minor_allele_count int(10) unsigned DEFAULT NULL,
   clinical_significance_attrib_id int(10) unsigned DEFAULT NULL,
+  evidence SET('Multiple_observations', 'Frequency','HapMap','1000Genomes', 'Cited'),
 
 	primary key( variation_id ),
 	unique ( name ),
@@ -168,10 +169,11 @@ create table variation_feature(
     ) NOT NULL DEFAULT '',
     class_attrib_id int(10) unsigned default 0,
     somatic tinyint(1) DEFAULT 0 NOT NULL,
-    minor_allele char(1) DEFAULT NULL,
+    minor_allele char(10) DEFAULT NULL,
     minor_allele_freq float DEFAULT NULL,
     minor_allele_count int(10) unsigned DEFAULT NULL,
     alignment_quality double  DEFAULT NULL,
+    evidence SET('Multiple_observations', 'Frequency','HapMap','1000Genomes', 'Cited'),
 
    	primary key( variation_feature_id ),
 	  key pos_idx( seq_region_id, seq_region_start, seq_region_end ),
@@ -1824,6 +1826,24 @@ CREATE TABLE translation_md5 (
 
     PRIMARY KEY (translation_md5_id),
     UNIQUE KEY md5_idx (translation_md5)
+);
+
+/**
+@table  study_variation
+
+@colour #7CFC00
+@desc   Links a variation to a study
+
+@column variation_id  Primary key, foreign key references variation
+@column study_id      Primary key, foreign key references study
+
+@see  variation 
+@see  study  
+*/
+CREATE TABLE study_variation (
+   variation_id int(10) unsigned not null,
+   study_id int(10) unsigned not null,
+   PRIMARY KEY study_variation_idx (variation_id, study_id)
 );
 
 
