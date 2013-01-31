@@ -70,9 +70,7 @@ $config->{hosts} = [split /\,/, $config->{hosts}];
 
 foreach my $host(@{$config->{hosts}}) {
 	debug("Getting species list for host $host");
-	
 	my $species_list = get_species_list($config, $host);
-	
 	debug("Found ".(scalar @$species_list)." valid databases\n");
 	
 	foreach my $species(@$species_list) {
@@ -87,18 +85,20 @@ foreach my $host(@{$config->{hosts}}) {
 sub get_species_list {
 	my $config = shift;
 	my $host   = shift;
-	
-	# connect to DB
-	my $dbc = DBI->connect(
-		sprintf(
+
+	my $connection_string = sprintf(
 			"DBI:mysql(RaiseError=>1):host=%s;port=%s;db=mysql",
 			$host,
 			$config->{port}
-		), $config->{user}, $config->{password}
+		);
+	
+	# connect to DB
+	my $dbc = DBI->connect(
+	    $connection_string, $config->{user}, $config->{password}
 	);
 	
 	my $version = $config->{version};
-	
+
 	my $sth = $dbc->prepare(qq{
 		SHOW DATABASES LIKE '%\_core\_$version%'
 	});
@@ -110,19 +110,28 @@ sub get_species_list {
 	my @dbs;
 	push @dbs, $db while $sth->fetch;
 	$sth->finish;
-	
+
 	# remove master and coreexpression
 	@dbs = grep {$_ !~ /master|express/} @dbs;
-	
+
 	# filter on pattern if given
 	my $pattern = $config->{pattern};
 	@dbs = grep {$_ =~ /$pattern/} @dbs if defined($pattern);
-	
-	# remove version, build
-	$_ =~ s/^([a-z]+\_[a-z,1-9]+)(\_[a-z]+)?(.+)/$1$2/ for @dbs;
-	$_ =~ s/\_core$// for @dbs;
-	
-	return \@dbs;
+
+	my @species;
+
+	foreach my $current_db_name (@dbs) {
+
+	    $sth = $dbc->prepare("select meta_value from ".$current_db_name.".meta where meta_key='species.db_name';");
+	    $sth->execute();
+	    my $current_species = $sth->fetchall_arrayref();
+
+	    my @flattened_species_list = sort map { $_->[0] } @$current_species;
+
+	    push @species, @flattened_species_list;
+	}
+
+	return \@species;
 }
 
 sub dump_vep {
