@@ -605,7 +605,7 @@ while (my $slice = shift @$slices) {
 close GVF;
 
 if ($compress) {
-    system("gzip $output_file") == 0 or die "Failed to gzip $output_file";
+    system("gzip -f $output_file") == 0 or die "Failed to gzip $output_file";
 }
 
 my $config = {};
