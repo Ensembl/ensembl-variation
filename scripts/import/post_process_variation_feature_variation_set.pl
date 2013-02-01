@@ -33,7 +33,7 @@ use strict;
 use warnings;
 use Getopt::Long;
 use DBI;
-use ImportUtils qw(update_table);
+use ImportUtils qw(update_table load);
 
 use Bio::EnsEMBL::Registry;
 
@@ -46,7 +46,9 @@ my @option_defs = (
 	'sv!',
   'clean!',
   'quiet!',
-  'help!'
+  'help!',
+	'tmpdir=s',
+	'tmpfile=s',
 );
 
 my %options;
@@ -59,6 +61,12 @@ my $clean = $options{'clean'};
 my $quiet = $options{'quiet'};
 my $help = $options{'help'};
 my $sv_prefix = $options{'sv'} ? 'structural_' : '';
+
+my $TMP_DIR = $options{tmpdir} || '/tmp/';
+my $TMP_FILE = $options{tmpfile} || $$.'_vfvs.txt';
+
+$ImportUtils::TMP_DIR = $TMP_DIR;
+$ImportUtils::TMP_FILE = $TMP_FILE;
 
 usage() if ($help);
 
@@ -201,6 +209,50 @@ sub post_process {
 		update_table($dbVar->dbc, $tmp_table, ($VARIATION_FEATURE_TABLE, $VAR_COL, $VAR_COL, 'variation_set_id', 'variation_set_id'), $clean);
     
     print STDOUT "done!\n" unless ($quiet);
+	
+	# create MTMP table
+	my $mtmp_table_name = 'MTMP_variation_set_'.$sv_prefix.'variation';
+	
+	$stmt = qq{
+		CREATE TABLE IF NOT EXISTS $mtmp_table_name (
+			$VAR_COL int(11) unsigned NOT NULL,
+			variation_set_id int(11) unsigned NOT NULL,
+			KEY $VAR_COL ($VAR_COL),
+			KEY variation_set_id (variation_set_id)
+		);
+	};
+    $dbVar->dbc->do($stmt);
+	
+	# truncate it
+    $dbVar->dbc->do(qq{TRUNCATE $mtmp_table_name});
+	
+	# now populate it
+	$stmt = qq{
+		SELECT $VAR_COL, variation_set_id
+		FROM $tmp_table
+	};
+
+	print STDOUT localtime() . "\tDumping data for $mtmp_table_name\n";
+	
+	my $retrieve_sth = $dbVar->dbc->prepare($stmt, {mysql_use_result => 1});
+	$retrieve_sth->execute;
+	
+	my ($var_id, $set_ids);
+	$retrieve_sth->bind_columns(\$var_id, \$set_ids);
+	
+	open TMP, ">$TMP_DIR/$TMP_FILE" or die "Could not write to tmp file $TMP_DIR/$TMP_FILE";
+	
+	while($retrieve_sth->fetch) {
+		print TMP "$var_id\t$_\n" for split(',', $set_ids);
+	}
+	
+	close TMP;
+	
+	print STDOUT localtime() . "\tLoading table $mtmp_table_name from dumped data\n";
+	
+	load($dbVar->dbc, $mtmp_table_name);
+	
+	
     
     # ...and lastly, drop the temporary table
     print STDOUT localtime() . "\tDropping the temp table $tmp_table..." unless ($quiet);
