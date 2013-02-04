@@ -430,6 +430,7 @@ sub structural_variation {
 			validation_status
     )
     SELECT
+			DISTINCT
       t.id,
       $source_id,
 			$study_id,
@@ -441,8 +442,6 @@ sub structural_variation {
     FROM
       temp_cnv t 
 			LEFT JOIN attrib a ON (t.type=a.value)
-		WHERE
-			t.chr IN (SELECT name FROM seq_region)
   };
   $dbVar->do($stmt);
 	
@@ -464,8 +463,8 @@ sub structural_variation {
       temp_cnv t
     WHERE
 			sv.variation_name=t.id AND
-			t.is_ssv=0 AND
-      t.is_failed!=0
+			t.is_ssv=0 AND 
+      (t.is_failed!=0 OR t.chr NOT IN (SELECT name FROM seq_region))
   };
   $dbVar->do($stmt);
 	
@@ -487,10 +486,11 @@ sub structural_variation {
       temp_cnv t
     WHERE
 			sv.variation_name=t.id AND
-			t.is_ssv=1 AND
-      t.is_failed!=0
+			t.is_ssv=1 AND 
+			(t.is_failed!=0 OR t.chr NOT IN (SELECT name FROM seq_region))
   };
   $dbVar->do($stmt);
+	
 	
 	
 	# Structural variation features & supporting structural variation features
@@ -853,7 +853,9 @@ sub parse_gvf {
 				$header = get_header_info($current_line,$header);
 				$current_line = <IN>;
 			}
+			
 			$assembly = parse_header($header);
+			study_table($header);
 		}
 	
 		chomp ($current_line);
@@ -890,8 +892,9 @@ sub parse_gvf {
 	
 			# check got the slice OK
 			if(!defined($slice)) {
-	 			warn("Unable to map from assembly $assembly, or unable to retrieve slice ".$info->{chr}."\:$start_c\-$end_c");
+	 			warn("Structural variant '".$info->{ID}."' (study ".$header->{study}."): Unable to map from assembly $assembly or unable to retrieve slice ".$info->{chr}."\:$start_c\-$end_c");
 	  		$skipped++;
+				$num_not_mapped{$assembly}++;
 				$is_failed = 2;
 			}
 			else {
@@ -956,7 +959,7 @@ sub parse_gvf {
 				}
 				else {
 					if (!$info->{is_ssv}) {
-	  				warn ("Structural variant '".$info->{ID}."' from study '".$header->{study}."' has location '$assembly:".$info->{chr}.":$start_c\-$end_c' , which could not be re-mapped to $target_assembly. This variant will be labelled as failed");
+	  				warn ("Structural variant '".$info->{ID}."' (study ".$header->{study}.") has location '$assembly:".$info->{chr}.":$start_c\-$end_c' , which could not be re-mapped to $target_assembly. This variant will be labelled as failed");
 	  				$num_not_mapped{$assembly}++;
 					}	
 					$is_failed = 1;
@@ -967,14 +970,14 @@ sub parse_gvf {
 		$info->{is_failed} = $is_failed;
 							 
 		my $data = generate_data_row($info);					 
-							 
+		
 		print OUT (join "\t", @{$data})."\n";
   }
   close IN;
   close OUT;
 	
 	if ($mapping && $assembly !~ /$cs_version_number/) {
-		debug(localtime()." Finished SV mapping:\n\t\tSuccess: ".(join " ", %num_mapped)." not required $no_mapping_needed\n\t\tFailed: ".(join " ", %num_not_mapped)." In no existing chromosome: $skipped");
+		debug(localtime()." Finished SV mapping:\n\t\tSuccess: ".(join " ", %num_mapped)." not required $no_mapping_needed\n\t\tFailed: ".(join " ", %num_not_mapped)." (In no existing chromosome: $skipped)");
 	}
 }
 
@@ -1115,9 +1118,10 @@ sub parse_header {
 			$assembly = 'GRCm38';
 		}
 	}
+	elsif($species =~ /dog|can.*fam/) {
+		$assembly = 'BROADD2' if ($assembly =~ /2\.0/);
+	}
 	$h->{assembly} = $assembly;
-	
-	study_table($h);
 	
 	return $assembly;
 }
@@ -1171,10 +1175,14 @@ sub parse_9th_col {
 		
 		if ($value !~ /Unknown/i) {
 		  if ($key eq 'sample_name' || ($key eq 'subject_name' && !$info->{sample})) {
-			  $info->{sample}     = ($samples{$value}{name}) ? $samples{$value}{name} : $value;
+				if ($species =~ /dog|can.*fam/) {
+					$info->{sample}     = ($samples{$value}{population}) ? $samples{$value}{population} : $value;
+				} else {
+			  	$info->{sample}     = ($samples{$value}{name}) ? $samples{$value}{name} : $value;
+				}	
 				$info->{population} = ($samples{$value}{population}) ? $samples{$value}{population} : undef; # 1000 Genomes study
-		    $info->{phenotype}  = ($samples{$value}{phenotype}) ? decode_text($samples{$value}{phenotype}) : $samples{$value}{tissue};
-			} 
+				$info->{phenotype}  = ($samples{$value}{phenotype}) ? decode_text($samples{$value}{phenotype}) : $samples{$value}{tissue};
+			}
 		}
 		
 		$info->{strain_name} = $info->{population} if ($species =~ /mouse|mus_musculus/i);
@@ -1369,7 +1377,7 @@ sub cleanup {
 	} 
 	else {
 	  $dbVar->do(qq{ALTER TABLE $svanno_table DROP COLUMN $tmp_sva_col});
-		debug(localtime()." Table $sva_table: cleaned");
+		debug(localtime()." Table $svanno_table: cleaned");
 	}
 }
 
