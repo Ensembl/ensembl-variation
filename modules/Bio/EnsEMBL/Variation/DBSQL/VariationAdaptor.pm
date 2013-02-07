@@ -125,8 +125,9 @@ sub store {
             minor_allele,
             minor_allele_freq,
             minor_allele_count,
-            clinical_significance_attrib_id
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?)
+            clinical_significance_attrib_id,
+            evidence
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
     });
     
     $sth->execute(
@@ -140,7 +141,8 @@ sub store {
         $var->minor_allele,
         $var->minor_allele_frequency,
         $var->minor_allele_count,
-        $var->{clinical_significance_attrib_id}
+        $var->{clinical_significance_attrib_id},
+        (join ",", @{$var->{evidence}})  || undef
     );
     
     $sth->finish;
@@ -184,7 +186,8 @@ sub update {
                minor_allele = ?,
                minor_allele_freq = ?,
                minor_allele_count = ?,
-               clinical_significance_attrib_id = ?
+               clinical_significance_attrib_id = ?,
+               evidence = ?
          WHERE variation_id = ?
     });
     
@@ -200,6 +203,7 @@ sub update {
         $var->minor_allele_frequency,
         $var->minor_allele_count,
         $var->{clinical_significance_attrib_id},
+        join(",",@{$var->{evidence}}) || undef,
         $var->dbID
     );
     
@@ -386,6 +390,7 @@ sub _columns {
         "v.minor_allele_freq",
         "v.minor_allele_count",
         "v.clinical_significance_attrib_id",
+        "v.evidence"
     );
     
     
@@ -1413,7 +1418,10 @@ sub _obj_from_row {
         if (defined($row->{v_validation_status})) {
             @states = split(/,/,$row->{v_validation_status}); 
         } 
-    
+        my @evidence;
+        if (defined($row->{evidence})) {
+            @evidence = split(/,/,$row->{evidence}); 
+        } 
         # Create the variation object
         $obj = Bio::EnsEMBL::Variation::Variation->new(
             -dbID   => $row->{variation_id},
@@ -1434,6 +1442,7 @@ sub _obj_from_row {
             -MINOR_ALLELE => $row->{minor_allele},
             -MINOR_ALLELE_FREQUENCY => $row->{minor_allele_freq},
             -MINOR_ALLELE_COUNT => $row->{minor_allele_count},
+            -EVIDENCE => \@evidence,
         );
         
         $self->{_temp_objs}{$row->{variation_id}} = $obj;
