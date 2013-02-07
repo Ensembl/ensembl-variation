@@ -75,10 +75,13 @@ use vars qw(@ISA @EXPORT_OK);
     &get_validation_code
     &add_validation_state
     &revcomp_tandem
+    %EVIDENCE_VALUES
 );
 
 # List of validation states. Order must match that of set in database
 our @VALIDATION_STATES = qw(cluster freq submitter doublehit hapmap 1000Genome failed precious);
+
+our %EVIDENCE_VALUES  = qw(Multiple_observations 1 Frequency 2 HapMap 2 1000Genomes 2 Cited 3);
 
 =head2 ambiguity_code
 

@@ -18,10 +18,7 @@
 
 =cut
 
-# Ensembl module for Bio::EnsEMBL::Variation::VariationFeature
-#
-# Copyright (c) 2004 Ensembl
-#
+
 
 
 =head1 NAME
@@ -105,6 +102,7 @@ use Bio::EnsEMBL::Slice;
 use Bio::EnsEMBL::Variation::DBSQL::TranscriptVariationAdaptor;
 use Bio::PrimarySeq;
 use Bio::SeqUtils;
+use Bio::EnsEMBL::Variation::Utils::Sequence  qw(%EVIDENCE_VALUES); 
 
 our @ISA = ('Bio::EnsEMBL::Variation::BaseVariationFeature');
 
@@ -199,7 +197,8 @@ sub new {
       $class_so_term,
       $minor_allele,
       $minor_allele_freq,
-      $minor_allele_count
+      $minor_allele_count,
+      $evidence
   ) = rearrange([qw(
           ALLELE_STRING 
           VARIATION_NAME 
@@ -215,6 +214,7 @@ sub new {
           MINOR_ALLELE
           MINOR_ALLELE_FREQUENCY
           MINOR_ALLELE_COUNT
+          EVIDENCE
         )], @_);
 
   $self->{'allele_string'}          = $allele_str;
@@ -231,7 +231,7 @@ sub new {
   $self->{'minor_allele'}           = $minor_allele;
   $self->{'minor_allele_frequency'} = $minor_allele_freq;
   $self->{'minor_allele_count'}     = $minor_allele_count;
-  
+  $self->{'evidence'}               = $evidence;
   return $self;
 }
 
@@ -1038,6 +1038,25 @@ sub class_SO_term {
 
     return $self->{class_SO_term};
 }
+=head2 get_all_evidence_values
+
+  Arg [1]    : none
+  Example    : my @vstates = @{$vf->get_all_validation_states()};
+  Description: Retrieves all evidence values for this variationFeature.  Current
+               possible evidence values are 'Multiple_observations','Frequency',
+              'HapMap', '1000Genomes','Cited'
+  Returntype : reference to list of strings
+  Exceptions : none
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub get_all_evidence_values {
+    my $self = shift;
+    return $self->{'evidence'};
+}
+
 
 =head2 get_all_validation_states
 
@@ -1073,6 +1092,34 @@ sub get_all_validation_states {
 
 sub add_validation_state {
     Bio::EnsEMBL::Variation::Utils::Sequence::add_validation_state(@_);
+}
+
+
+=head2 add_evidence_value
+
+  Arg [1]    : string $state
+  Example    : $v->add_evidence_value('Frequency');
+  Description: Adds an evidence value  to this variation.
+  Returntype : none
+  Exceptions : 
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub add_evidence_value {
+    
+    my $self = shift;
+    my $add_ev = shift if(@_);
+
+    ## do not add evidence value unless it is in the list of permitted values
+    return $self->{'evidence'} unless $EVIDENCE_VALUES{$add_ev};
+
+    push @{$self->{'evidence'}}, $add_ev;
+    my %unique = map { $_ => 1 } @{$self->{'evidence'}};
+    @{$self->{'evidence'}} = keys %unique;
+
+    return $self->{'evidence'};    
 }
 
 =head2 source

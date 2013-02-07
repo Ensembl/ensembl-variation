@@ -53,7 +53,7 @@ Bio::EnsEMBL::Variation::DBSQL::VariationFeatureAdaptor
   }
 
   # fetch all genome hits for a particular variation
-  $v = $va->fetch_by_name('rs56');
+  $v = $va->fetch_by_nam('rs56');
 
   foreach $vf (@{$vfa->fetch_all_by_Variation($v)}) {
     print $vf->seq_region_name(), $vf->seq_region_start(), '-',
@@ -131,8 +131,9 @@ sub store {
             minor_allele,
             minor_allele_freq,
             minor_allele_count,
-            alignment_quality
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            alignment_quality,
+            evidence
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     });
     
     $sth->execute(
@@ -560,7 +561,7 @@ sub fetch_all_by_Slice_VariationSet{
   Arg [3]	 : $minimum_frequency (optional)
   Example    : $pop = $pop_adaptor->fetch_by_dbID(659);
 			  $slice = $slice_adaptor->fetch_by_region("chromosome", 1, 1, 1e6);
-              @vfs = @{$vf_adaptor->fetch_all_by_Slice_Population($slice,$pop)};
+              @vfs = @{$vf_adaptor->fetch_all_by_Slice_Population($pop,$slice)};
   Description: Retrieves all variation features in a slice which are stored for
 			   a specified population. If $minimum_frequency is supplied, only
 			   variations with a minor allele frequency (MAF) greater than
@@ -990,7 +991,7 @@ sub _columns {
              vf.seq_region_end vf.seq_region_strand vf.variation_id
              vf.allele_string vf.variation_name vf.map_weight s.name s.version vf.somatic 
              vf.validation_status vf.consequence_types vf.class_attrib_id
-             vf.minor_allele vf.minor_allele_freq vf.minor_allele_count vf.alignment_quality);
+             vf.minor_allele vf.minor_allele_freq vf.minor_allele_count vf.alignment_quality vf.evidence);
 }
 
 sub _objs_from_sth {
@@ -1017,14 +1018,14 @@ sub _objs_from_sth {
       $seq_region_end, $seq_region_strand, $variation_id,
       $allele_string, $variation_name, $map_weight, $source_name, $source_version,
       $is_somatic, $validation_status, $consequence_types, $class_attrib_id,
-	  $minor_allele, $minor_allele_freq, $minor_allele_count, $last_vf_id,$alignment_quality);
+	  $minor_allele, $minor_allele_freq, $minor_allele_count, $last_vf_id,$alignment_quality,$evidence);
 
     $sth->bind_columns(\$variation_feature_id, \$seq_region_id,
                      \$seq_region_start, \$seq_region_end, \$seq_region_strand,
                      \$variation_id, \$allele_string, \$variation_name,
                      \$map_weight, \$source_name, \$source_version, \$is_somatic, \$validation_status, 
                      \$consequence_types, \$class_attrib_id,
-		     \$minor_allele, \$minor_allele_freq, \$minor_allele_count,\$alignment_quality);
+		     \$minor_allele, \$minor_allele_freq, \$minor_allele_count,\$alignment_quality, \$evidence);
 
     my $asm_cs;
     my $cmp_cs;
@@ -1128,6 +1129,11 @@ sub _objs_from_sth {
             if (defined($validation_status)) {
                 $validation_code = get_validation_code([split(',',$validation_status)]);
             }
+
+	    my @evidence;
+	    if (defined($evidence)) {
+		@evidence = split(/,/,$evidence );
+	    }
             
             #my $overlap_consequences = $self->_variation_feature_consequences_for_set_number($consequence_types);
             
@@ -1157,7 +1163,8 @@ sub _objs_from_sth {
                 'minor_allele' => $minor_allele,
                 'minor_allele_frequency' => $minor_allele_freq,
                 'minor_allele_count' => $minor_allele_count,
-                'flank_match'  => $alignment_quality
+                'flank_match'  => $alignment_quality,
+                'evidence'     => \@evidence
                 }
             );
         }
