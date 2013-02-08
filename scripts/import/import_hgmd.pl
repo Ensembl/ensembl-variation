@@ -39,7 +39,7 @@ my $vdb2 = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'variation');
 my $dbh = $vdb2->dbc->db_handle;
 
 my $select_source_sth = $dbh->prepare(qq{
-	SELECT source_id FROM source WHERE name='HGMD-PUBLIC';
+  SELECT source_id FROM source WHERE name='HGMD-PUBLIC';
 });
 $select_source_sth->execute();
 my $source_id = ($select_source_sth->fetchrow_array)[0];
@@ -51,9 +51,8 @@ die ("HGMD tables not found in the database!\nBe sure you ran the script 'map_hg
 # Main
 add_variation();
 add_feature();
-#add_flanking(); # Not used anymore
 add_allele();
-add_annotation();
+add_annotation(); # phenotype_feature & phenotype_feature_attrib
 add_attrib();
 add_set();
 
@@ -62,300 +61,295 @@ add_set();
 # Methods
 sub add_variation {
 
-	my $select_vh_sth = $dbh->prepare(qq{
-		SELECT distinct name FROM $var_table;
-	});
+  my $select_vh_sth = $dbh->prepare(qq{
+    SELECT distinct name FROM $var_table;
+  });
 
-	my $insert_v_sth = $dbh->prepare(qq{
-		INSERT IGNORE INTO variation (name,source_id) VALUES (?,?);
-	});
+  my $insert_v_sth = $dbh->prepare(qq{
+    INSERT IGNORE INTO variation (name,source_id) VALUES (?,?);
+  });
 
-	my $select_v_sth = $dbh->prepare(qq{
-		SELECT variation_id FROM variation WHERE name=? and source_id=?;
-	});
+  my $select_v_sth = $dbh->prepare(qq{
+    SELECT variation_id FROM variation WHERE name=? and source_id=?;
+  });
 
-	my $update_vh_sth = $dbh->prepare(qq{
-		UPDATE $var_table SET new_var_id=? WHERE name=?;
-	});
+  my $update_vh_sth = $dbh->prepare(qq{
+    UPDATE $var_table SET new_var_id=? WHERE name=?;
+  });
+  
+  my $select_not_existing_sth = $dbh->prepare(qq{
+    SELECT name FROM variation WHERE source_id=? AND name NOT IN (SELECT name FROM $var_table)
+  });
 
-	if ($dbh->do(qq{show columns from $var_table like 'new_var_id';}) != 1){
-		$dbh->do(qq{ALTER TABLE $var_table ADD COLUMN new_var_id int(10);});
-		$dbh->do(qq{ALTER TABLE $var_table ADD INDEX new_var_idx (new_var_id);});
-	}
+
+  if ($dbh->do(qq{show columns from $var_table like 'new_var_id';}) != 1){
+    $dbh->do(qq{ALTER TABLE $var_table ADD COLUMN new_var_id int(10);});
+    $dbh->do(qq{ALTER TABLE $var_table ADD INDEX new_var_idx (new_var_id);});
+  }
 
 
-	$select_vh_sth->execute();
-	while (my @res = $select_vh_sth->fetchrow_array) {
-		$insert_v_sth->execute($res[0],$source_id);
-	
-		$select_v_sth->execute($res[0],$source_id);
-		my $new_id = ($select_v_sth->fetchrow_array)[0];
-		if (defined($new_id)) {
-			$update_vh_sth->execute($new_id,$res[0]);
-		}
-	}
-	
-	# Check if some HGMD entries have beeen remove from the previous version
-	my $select_not_existing = $dbh->prepare(qq{
-	  SELECT name FROM variation WHERE source_id=$source_id
-		AND name NOT IN (SELECT name FROM $var_table)
-	});
-	my @not_existing;
-	$select_not_existing->execute();
-	while (my @res = $select_vh_sth->fetchrow_array) {
-	  push(@not_existing,$res[0]);
-	}
-	if (scalar @not_existing) {
-	  print "WARNING: ".scalar(@not_existing)." entries are not anymore in the HGMD database!\n";
-		print "Please, remove the following HGMD mutations from the variation database:\n";
-		print join("\n",@not_existing);
-	}
+  $select_vh_sth->execute();
+  while (my @res = $select_vh_sth->fetchrow_array) {
+    $insert_v_sth->execute($res[0],$source_id);
+  
+    $select_v_sth->execute($res[0],$source_id);
+    my $new_id = ($select_v_sth->fetchrow_array)[0];
+    if (defined($new_id)) {
+      $update_vh_sth->execute($new_id,$res[0]);
+    }
+  }
+  
+  # Check if some HGMD entries have beeen remove from the previous version
+  my @not_existing;
+  $select_not_existing_sth->execute($source_id);
+  while (my @res = $select_not_existing_sth->fetchrow_array) {
+    push(@not_existing,$res[0]);
+  }
+  if (scalar @not_existing) {
+    print "WARNING: ".scalar(@not_existing)." entries are not anymore in the HGMD database!\n";
+    print "Please, remove the following HGMD mutations from the variation database:\n";
+    print join("\n",@not_existing);
+  }
 }
 
 
 sub add_feature {
-	my $insert_vf_sth = $dbh->prepare(qq{
-		INSERT IGNORE INTO 
-			variation_feature (
-				seq_region_id,
-				seq_region_start,
-				seq_region_end,
-				seq_region_strand,
-				allele_string,
-				map_weight,
-				variation_id,
-				variation_name,
-				source_id
-			) 
-			SELECT 
-				vf.seq_region_id,
-				vf.seq_region_start,
-				vf.seq_region_end,
-				1,
-				vf.allele_string,
-				vf.map_weight,
-				v.new_var_id,
-				v.name,
-				?
-				FROM $vf_table vf, $var_table v 
-				WHERE v.variation_id=vf.variation_id
-				AND NOT EXISTS ( SELECT * 
-				                 FROM variation_feature vf2 
-												 WHERE vf2.variation_id=v.new_var_id
-											 );
-	});
-	$insert_vf_sth->execute($source_id);
-}
-
-
-sub add_flanking {
-	my $insert_fs_sth = $dbh->prepare(qq{
-		INSERT IGNORE INTO 
-			flanking_sequence (
-				variation_id,
-				up_seq_region_start, 
-				up_seq_region_end,
-				down_seq_region_start,
-				down_seq_region_end,
-				seq_region_id,
-				seq_region_strand
-			) 
-			SELECT 
-				v.new_var_id,
-				fs.up_seq_region_start, 
-				fs.up_seq_region_end,
-				fs.down_seq_region_start,
-				fs.down_seq_region_end,
-				fs.seq_region_id,
-				1
-			FROM $fs_table fs, $var_table v 
-			WHERE v.variation_id=fs.variation_id
-	});
-	$insert_fs_sth->execute();
+  my $insert_vf_sth = $dbh->prepare(qq{
+    INSERT IGNORE INTO 
+      variation_feature (
+        seq_region_id,
+        seq_region_start,
+        seq_region_end,
+        seq_region_strand,
+        allele_string,
+        map_weight,
+        variation_id,
+        variation_name,
+        source_id
+      ) 
+      SELECT 
+        vf.seq_region_id,
+        vf.seq_region_start,
+        vf.seq_region_end,
+        1,
+        vf.allele_string,
+        vf.map_weight,
+        v.new_var_id,
+        v.name,
+        ?
+        FROM $vf_table vf, $var_table v 
+        WHERE v.variation_id=vf.variation_id
+        AND NOT EXISTS ( SELECT * 
+                         FROM variation_feature vf2 
+                         WHERE vf2.variation_id=v.new_var_id
+                       );
+  });
+  $insert_vf_sth->execute($source_id);
 }
 
 
 sub add_allele {
-	my $insert_al_sth;
-	my $allele = 'HGMD_MUTATION';
-	
-	if ($dbh->do(qq{show columns from allele like 'allele';}) != 1){
-		my $select_ac_sth = $dbh->prepare(qq{
-		  SELECT allele_code_id FROM allele_code WHERE allele=?;
-	  });
-	  $select_ac_sth->execute($allele);
-	  my $ac_id = ($select_ac_sth->fetchrow_array)[0];
-	  if (!defined($ac_id)) { 
-		  $dbh->do(qq{INSERT INTO allele_code (allele) VALUES ('HGMD_MUTATION');});
-		  $ac_id = $dbh->{'mysql_insertid'};
-	  }
-		$insert_al_sth = $dbh->prepare(qq{
-			INSERT IGNORE INTO 
-				allele (
-					variation_id,
-					allele_code_id
-				) 
-				SELECT DISTINCT
-					new_var_id,
-					$ac_id
-				FROM $var_table
-				WHERE NOT EXISTS ( SELECT * 
-				                   FROM allele a
-												   WHERE a.variation_id=$var_table.new_var_id
-												 );
-		});
-	} else {
+  my $insert_al_sth;
+  my $allele = 'HGMD_MUTATION';
+  
+  if ($dbh->do(qq{show columns from allele like 'allele';}) != 1){
+    my $select_ac_sth = $dbh->prepare(qq{
+      SELECT allele_code_id FROM allele_code WHERE allele=?;
+    });
+    $select_ac_sth->execute($allele);
+    my $ac_id = ($select_ac_sth->fetchrow_array)[0];
+    if (!defined($ac_id)) { 
+      $dbh->do(qq{INSERT INTO allele_code (allele) VALUES ('HGMD_MUTATION');});
+      $ac_id = $dbh->{'mysql_insertid'};
+    }
+    $insert_al_sth = $dbh->prepare(qq{
+      INSERT IGNORE INTO 
+        allele (
+          variation_id,
+          allele_code_id
+        ) 
+        SELECT DISTINCT
+          new_var_id,
+          $ac_id
+        FROM $var_table
+        WHERE NOT EXISTS ( SELECT * 
+                           FROM allele a
+                           WHERE a.variation_id=$var_table.new_var_id
+                         );
+    });
+  } else {
 
-		$insert_al_sth = $dbh->prepare(qq{
-			INSERT IGNORE INTO 
-				allele (
-					variation_id,
-					allele
-				) 
-				SELECT DISTINCT
-					new_var_id,
-					"$allele"
-				FROM $var_table
-				WHERE NOT EXISTS ( SELECT * 
-				                   FROM allele a
-												   WHERE a.variation_id=$var_table.new_var_id
-												 );
-		});
-	}
-	$insert_al_sth->execute();
+    $insert_al_sth = $dbh->prepare(qq{
+      INSERT IGNORE INTO 
+        allele (
+          variation_id,
+          allele
+        ) 
+        SELECT DISTINCT
+          new_var_id,
+          "$allele"
+        FROM $var_table
+        WHERE NOT EXISTS ( SELECT * 
+                           FROM allele a
+                           WHERE a.variation_id=$var_table.new_var_id
+                         );
+    });
+  }
+  $insert_al_sth->execute();
 }
 
 
 sub add_annotation {
-	
-	# Study
-	my $select_study_sth = $dbh->prepare(qq{
-		SELECT study_id FROM study WHERE source_id=?;
-	});
-	$select_study_sth->execute($source_id);
-	my $study_id = ($select_study_sth->fetchrow_array)[0];
-	if (!defined($study_id)) { 
-		$dbh->do(qq{INSERT INTO study (name,source_id) VALUES ('HGMD-PUBLIC',$source_id)});
-		$study_id = $dbh->{'mysql_insertid'};
-	}
-	if (!defined($study_id)) { print "Study not found\n"; exit(0); }
-	
-	# Phenotype
-	my $select_phe_sth = $dbh->prepare(qq{
-		SELECT distinct phenotype_id FROM phenotype where name='HGMD_MUTATION' limit 1;
-	});
-	$select_phe_sth->execute();
-	my $phenotype_id = ($select_phe_sth->fetchrow_array)[0];
-	if (!defined($phenotype_id)) {
-		$dbh->do(qq{INSERT INTO phenotype (name,description) 
-		            VALUES ('HGMD_MUTATION','Annotated by HGMD but no phenotype description is publicly available')
-							 });
-		$phenotype_id = $dbh->{'mysql_insertid'};
-	}
-	if (!defined($phenotype_id)) { print "Phenotype not found\n"; exit(0); }
+  
+  # Phenotype
+  my $select_phe_sth = $dbh->prepare(qq{
+    SELECT distinct phenotype_id FROM phenotype where name='HGMD_MUTATION' limit 1;
+  });
+  $select_phe_sth->execute();
+  my $phenotype_id = ($select_phe_sth->fetchrow_array)[0];
+  if (!defined($phenotype_id)) {
+    $dbh->do(qq{INSERT INTO phenotype (name,description) 
+                VALUES ('HGMD_MUTATION','Annotated by HGMD but no phenotype description is publicly available')
+               });
+    $phenotype_id = $dbh->{'mysql_insertid'};
+  }
+  if (!defined($phenotype_id)) { print "Phenotype not found\n"; exit(0); }
 
-	my $insert_va_sth = $dbh->prepare(qq{
-		INSERT IGNORE INTO 
-			variation_annotation (
-				associated_gene,
-				variation_id,
-				variation_names,
-				study_id,
-				phenotype_id
-			) 
-			SELECT 
-				va.associated_gene,
-				v.new_var_id,
-				v.name,
-				?,
-				?
-			FROM $va_table va, $var_table v 
-			WHERE v.variation_id=va.variation_id
-			AND NOT EXISTS ( SELECT * 
-				               FROM variation_annotation va2
-											 WHERE va2.variation_id=$var_table.new_var_id
-										 );
-	});
-	$insert_va_sth->execute($study_id, $phenotype_id);
+  # Phenotype feature
+  my $insert_pf_sth = $dbh->prepare(qq{
+    INSERT IGNORE INTO 
+      phenotype_feature (
+        phenotype_id,
+        object_id,
+        source_id,
+        type,
+        seq_region_id,
+        seq_region_start,
+        seq_region_end,
+        seq_region_strand
+      ) 
+      SELECT 
+        ?,
+        v.name,
+        ?,
+        'VARIATION',
+        vf.seq_region_id,
+        vf.seq_region_start,
+        vf.seq_region_end,
+        vf.seq_region_strand 
+      FROM $va_table va, $var_table v , $vf_table vf
+      WHERE v.variation_id=va.variation_id AND v.variation_id=vf.variation_id
+      AND NOT EXISTS ( SELECT * FROM phenotype_feature pf2
+                       WHERE pf2.object_id=v.name AND pf2.type='VARIATION' 
+                     );
+  });
+  $insert_pf_sth->execute($phenotype_id,$source_id);
+  
+  # Attribute type "associated_gene"
+  my $select_attr_sth = $dbh->prepare(qq{
+    SELECT distinct attrib_type_id FROM attrib_type where code='associated_gene' limit 1;
+  });
+  $select_attr_sth->execute();
+  my $attrib_type_id = ($select_attr_sth->fetchrow_array)[0];
+  die("Variation annotation - Can't find an attribute type ID for 'associated_gene in the table attrib_type'") if (!defined($attrib_type_id));
+  
+  # Phenotype feature attrib
+  my $insert_pfa_sth = $dbh->prepare(qq{
+    INSERT IGNORE INTO 
+      phenotype_feature_attrib (
+        phenotype_feature_id,
+        attrib_type_id,
+        value
+      ) 
+      SELECT 
+        pf.phenotype_feature_id,
+        ?,
+        va.associated_gene
+      FROM $var_table v, $va_table va, phenotype_feature pf
+      WHERE v.variation_id=va.variation_id 
+        AND v.name=pf.object_id
+        AND pf.type='VARIATION'
+  });
+  $insert_pfa_sth->execute($attrib_type_id);
 }
 
 
 sub add_attrib {
-	my %attrib = ('M' => 'SNV',
-   	            'D' => 'deletion',
-   	            'I' => 'insertion',
-								'X' => 'indel',
-								'P' => 'indel',
-								'R' => 'sequence_alteration',
-								'S' => 'sequence_alteration'
-							 );
+  my %attrib = ('M' => 'SNV',
+                 'D' => 'deletion',
+                 'I' => 'insertion',
+                'X' => 'indel',
+                'P' => 'indel',
+                'R' => 'sequence_alteration',
+                'S' => 'sequence_alteration'
+               );
 
-	my %class = ();
+  my %class = ();
 
-	my $select_a_sth = $dbh->prepare(qq{
-		SELECT a.attrib_id FROM attrib a, attrib_type att 
-		WHERE a.attrib_type_id = att.attrib_type_id AND att.code = 'SO_term' AND a.value = ?;
-	});
+  my $select_a_sth = $dbh->prepare(qq{
+    SELECT a.attrib_id FROM attrib a, attrib_type att 
+    WHERE a.attrib_type_id = att.attrib_type_id AND att.code = 'SO_term' AND a.value = ?;
+  });
 
 
-	my $select_v_sth = $dbh->prepare(qq{
-		SELECT DISTINCT new_var_id,type FROM $var_table;
-	});
+  my $select_v_sth = $dbh->prepare(qq{
+    SELECT DISTINCT new_var_id,type FROM $var_table;
+  });
 
-	my $update_v_sth = $dbh->prepare(qq{
-		UPDATE variation SET class_attrib_id = ? WHERE variation_id = ?;
-	});
+  my $update_v_sth = $dbh->prepare(qq{
+    UPDATE variation SET class_attrib_id = ? WHERE variation_id = ?;
+  });
 
-	my $update_vf_sth = $dbh->prepare(qq{
-		UPDATE variation_feature vf, variation v SET vf.class_attrib_id = v.class_attrib_id 
-		WHERE v.variation_id = vf.variation_id AND v.source_id=?;
-	});
+  my $update_vf_sth = $dbh->prepare(qq{
+    UPDATE variation_feature vf, variation v SET vf.class_attrib_id = v.class_attrib_id 
+    WHERE v.variation_id = vf.variation_id AND v.source_id=?;
+  });
 
-	while (my ($k,$v) = each (%attrib)) {
-		$select_a_sth->execute($v);
-		$class{$k} = ($select_a_sth->fetchrow_array)[0];
-		print "$k: ".$class{$k}."\n";
-	}
+  while (my ($k,$v) = each (%attrib)) {
+    $select_a_sth->execute($v);
+    $class{$k} = ($select_a_sth->fetchrow_array)[0];
+    print "$k: ".$class{$k}."\n";
+  }
 
-	$select_v_sth->execute();
-	while (my @res = $select_v_sth->fetchrow_array) {
-		my $att = $class{$res[1]};
-		if (defined $att) {
-			$update_v_sth->execute($att,$res[0]) or die $!;
-		}
-	}
+  $select_v_sth->execute();
+  while (my @res = $select_v_sth->fetchrow_array) {
+    my $att = $class{$res[1]};
+    if (defined $att) {
+      $update_v_sth->execute($att,$res[0]) or die $!;
+    }
+  }
 
-	$update_vf_sth->execute($source_id) or die $!;
+  $update_vf_sth->execute($source_id) or die $!;
 }
 
 
 sub add_set {
-	
-	my $variation_set_id;
-	
-	# Get variation_set_id
-	my $select_set_stmt = qq{
+  
+  my $variation_set_id;
+  
+  # Get variation_set_id
+  my $select_set_stmt = qq{
         SELECT v.variation_set_id
         FROM variation_set v, attrib a
         WHERE v.short_name_attrib_id=a.attrib_id 
-				  AND a.value = ?
-	};
-	my $sth1 = $dbh->prepare($select_set_stmt);
-	$sth1->bind_param(1,$short_set,SQL_VARCHAR);
+          AND a.value = ?
+  };
+  my $sth1 = $dbh->prepare($select_set_stmt);
+  $sth1->bind_param(1,$short_set,SQL_VARCHAR);
   $sth1->execute();
   $sth1->bind_columns(\$variation_set_id);
   $sth1->fetch();
-	return if (!defined($variation_set_id));
-	
-	# Insert into variation_set_variation
-	my $insert_set_stmt = qq{ 
-		INSERT IGNORE INTO variation_set_variation (variation_id,variation_set_id)
-			SELECT distinct variation_id, ? 
-			FROM variation_annotation WHERE study_id IN
-				(SELECT study_id FROM study WHERE source_id=?)
-	};
-	my $sth2 = $dbh->prepare($insert_set_stmt);
-	$sth2->bind_param(1,$variation_set_id,SQL_INTEGER);
+  return if (!defined($variation_set_id));
+  
+  # Insert into variation_set_variation
+  my $insert_set_stmt = qq{ 
+    INSERT IGNORE INTO variation_set_variation (variation_id,variation_set_id)
+      SELECT distinct variation_id, ? 
+      FROM variation_annotation WHERE study_id IN
+        (SELECT study_id FROM study WHERE source_id=?)
+  };
+  my $sth2 = $dbh->prepare($insert_set_stmt);
+  $sth2->bind_param(1,$variation_set_id,SQL_INTEGER);
   $sth2->bind_param(2,$source_id,SQL_INTEGER);
   $sth2->execute();
 }
