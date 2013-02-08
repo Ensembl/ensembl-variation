@@ -20,7 +20,6 @@
 
 =cut
 
-#
 
 use strict;
 use Bio::EnsEMBL::Registry;
@@ -130,6 +129,8 @@ my $source_id = source();
 #  Main  #
 ##########
 
+pre_processing();
+
 foreach my $in_file (@files) {
 	next if ($in_file !~ /\.gvf$/);
 	
@@ -206,7 +207,7 @@ sub load_file_data{
   
   create_and_load(
 	$dbVar, "temp_cnv", "id *", "type", "chr", "outer_start i", "start i", "inner_start i",
-	"inner_end i", "end i", "outer_end i", "parent", "clinic", "phenotype", "sample", "strain",
+	"inner_end i", "end i", "outer_end i", "strand i", "parent", "clinic", "phenotype", "sample", "strain",
   "is_ssv i", "is_failed i", "population", "bp_order i", "is_somatic i", "status");		
 	
 	
@@ -330,20 +331,10 @@ sub study_table{
 			
 				if ($assembly_desc !~ /$assembly/) {
 					$assembly_desc .= " and $assembly";
-					#$stmt = qq{
-					#	UPDATE study SET description='$gen_desc [remapped from builds $assembly_desc]' 
-					#	WHERE study_id=$study_id
-					#};
-					#$dbVar->do($stmt);
 					$study_desc = "$gen_desc [remapped from builds $assembly_desc]";
 				}
 			}
 			else {
-				#$stmt = qq{
-				#		UPDATE study SET description='$study_desc [remapped from build $assembly]' 
-				#		WHERE study_id=$study_id
-				#};
-				#$dbVar->do($stmt);
 				$study_desc = "$study_desc [remapped from build $assembly]";
 			}
 		}
@@ -402,20 +393,10 @@ sub structural_variation {
 	if ($dbVar->do(qq{show columns from $sv_table like '$tmp_sv_col';}) != 1){
 		$dbVar->do(qq{ALTER TABLE $sv_table ADD COLUMN $tmp_sv_col varchar(255);});
 	}
-  
-  # The variation name should be unique so for the insert, create a unique key for this column.
-  # Should there perhaps in fact be a unique constraint on this column?
-	my $stmt = qq{
-    ALTER TABLE
-      $sv_table
-    ADD CONSTRAINT
-      UNIQUE KEY
-	name_key (variation_name)
-  };
-  $dbVar->do($stmt);
-  
+    
   # now copy the data. If the variation is duplicated, replace the old data
-  
+  my $stmt;
+	
 	# Structural variations & supporting structural variations
 	$stmt = qq{
     INSERT IGNORE INTO
@@ -459,7 +440,7 @@ sub structural_variation {
       sv.structural_variation_id,
       17
     FROM
-			structural_variation sv,
+			$sv_table sv,
       temp_cnv t
     WHERE
 			sv.variation_name=t.id AND
@@ -482,7 +463,7 @@ sub structural_variation {
       sv.structural_variation_id,
       18
     FROM
-			structural_variation sv,
+			$sv_table sv,
       temp_cnv t
     WHERE
 			sv.variation_name=t.id AND
@@ -523,7 +504,7 @@ sub structural_variation {
 			t.inner_end,
       t.end,
 			t.outer_end,
-      1,
+      t.strand,
 			sv.structural_variation_id,
       t.id,
 			sv.class_attrib_id,
@@ -582,16 +563,6 @@ sub structural_variation {
 			t1.id=sv1.variation_name AND
 			t1.parent=t2.id AND
 			t2.id=sv2.variation_name
-  };
-  $dbVar->do($stmt);
-	
-	
-  # cleanup
-  $stmt = qq{
-    ALTER TABLE
-      $sv_table
-    DROP KEY
-      name_key
   };
   $dbVar->do($stmt);
 }
@@ -726,7 +697,7 @@ sub structural_variation_annotation {
 
 	# Create sample entries
 	$stmt = qq{ SELECT DISTINCT sample FROM temp_cnv WHERE is_ssv=1 
-	            AND sample NOT IN (SELECT DISTINCT name from sample)
+	            AND sample NOT IN (SELECT DISTINCT name from sample WHERE size is NULL)
 						};
   my $rows_samples = $dbVar->selectall_arrayref($stmt);
 	foreach my $row (@$rows_samples) {
@@ -735,25 +706,16 @@ sub structural_variation_annotation {
 		$dbVar->do(qq{ INSERT INTO sample (name,description) VALUES ('$sample','Subject from the DGVa study $study_name')});
 	}
 	
+	
 	# Create strain entries
-	$stmt = qq{ SELECT DISTINCT strain FROM temp_cnv};
+	$stmt = qq{ SELECT DISTINCT strain FROM temp_cnv 
+	            WHERE strain NOT IN (SELECT DISTINCT name from sample WHERE size is NULL AND display!='UNDISPLAYABLE')
+						};
   my $rows_strains = $dbVar->selectall_arrayref($stmt);
-	my $strain_type = 1;
-	$strain_type = 3 if ($species =~ /human|homo_sapiens/i);
 	foreach my $row (@$rows_strains) {
     my $sample = $row->[0];
 		next if ($sample eq	'');
-		
-		my $sample_id;
-		my $srow = $dbVar->selectrow_arrayref(qq{SELECT s.sample_id FROM sample s WHERE s.name='$sample' LIMIT 1});
-		if (!defined($srow)) {
-			# Strain entry
-			$dbVar->do(qq{ INSERT INTO sample (name,description) VALUES ('$sample','Strain from the DGVa study $study_name')});
-			$sample_id = $dbVar->{'mysql_insertid'};
-		}
-		else {
-			$sample_id = $srow->[0];
-		}
+		$dbVar->do(qq{ INSERT INTO sample (name,description,display) VALUES ('$sample','Strain from the DGVa study $study_name','MARTDISPLAYABLE')});
 	}
 
 	
@@ -772,11 +734,13 @@ sub structural_variation_annotation {
 	
 	$stmt = qq{ SELECT attrib_type_id FROM attrib_type WHERE code='$clinical_attrib_type'};
 	my $clinical_attrib_type_id = ($dbVar->selectall_arrayref($stmt))->[0][0];
-	my $ext;
+	my $ext1;
+	my $ext2;
 	
 	# For mouse
 	if ($species =~ /mouse|mus/i) {
-		$ext = " AND s1.display='UNDISPLAYABLE'";
+		$ext1 = " AND s1.display='UNDISPLAYABLE' AND s1.size is NULL";
+		$ext2 = " AND s2.display!='UNDISPLAYABLE' AND s2.size is NULL";
 	}
 	
 	$stmt = qq{
@@ -801,8 +765,8 @@ sub structural_variation_annotation {
       temp_cnv t 
 			LEFT JOIN attrib c ON (c.value=t.clinic AND c.attrib_type_id=$clinical_attrib_type_id)
 			LEFT JOIN phenotype p ON (p.description=t.phenotype)
-			LEFT JOIN sample s1 ON (s1.name=t.sample$ext)
-			LEFT JOIN sample s2 ON (s2.name=t.strain)
+			LEFT JOIN sample s1 ON (s1.name=t.sample$ext1)
+			LEFT JOIN sample s2 ON (s2.name=t.strain$ext2)
     WHERE
 			sv.variation_name=t.id
   };
@@ -1137,6 +1101,7 @@ sub parse_line {
 	$info->{SO_term} = $data[2];
 	$info->{start}   = $data[3];
 	$info->{end}     = $data[4];
+	$info->{strand}  = ($data[6] eq '.') ? 1 : ($data[6] eq '-') ? -1 : 1;
 
   $info = parse_9th_col($info,\@last_col);
 
@@ -1221,6 +1186,28 @@ sub decode_text {
 }
 
 
+#### Pre processing ####
+sub pre_processing {
+	debug(localtime()." Add temporary unique keys in $sv_table, $svf_table and $svanno_table tables");
+	
+	# Prepare the structural_variation table
+	if ($dbVar->do(qq{SHOW KEYS FROM $sv_table WHERE Key_name='name_key';}) < 1){
+		$dbVar->do(qq{ALTER TABLE $sv_table ADD CONSTRAINT UNIQUE KEY `name_key` (`variation_name`)});
+	}
+	
+	# Prepare the structural_variation_feature table
+	if ($dbVar->do(qq{SHOW KEYS FROM $svf_table WHERE Key_name='name_coord_key';}) < 1){
+		$dbVar->do(qq{ALTER TABLE $svf_table ADD CONSTRAINT  UNIQUE KEY
+		              `name_coord_key` (`variation_name`,`seq_region_id`,`seq_region_start`,`seq_region_end`)
+						   	});
+  }
+	
+	# Prepare the structural_variation_annotation table
+	if ($dbVar->do(qq{SHOW KEYS FROM $svanno_table WHERE Key_name='sv_id_key';}) < 1){
+		$dbVar->do(qq{ALTER TABLE $svanno_table ADD CONSTRAINT  UNIQUE KEY `sv_id_key` (`structural_variation_id`)});
+	}
+	
+}
 
 
 #### Post processing ####
@@ -1240,36 +1227,6 @@ sub post_processing_annotation {
 	if (scalar(@sv_list)>0) {
 		my $svs  = join(',',@sv_list); 
 		my $stmt = qq{ DELETE FROM $svanno_table WHERE sample_id=strain_id AND structural_variation_id IN ($svs) };
-		$dbVar->do($stmt);
-	}
-	
-	# Second round - duplicated samples
-	@sv_list;
-	$sth->execute();
-	while (my @res = ($sth->fetchrow_array)) {
-		push (@sv_list,$res[0]);
-	}
-	if (scalar(@sv_list)>0) {
-		my $svs  = join(',',@sv_list);
-		my $stmt = qq{ DELETE FROM $svanno_table 
-	                 WHERE sample_id IN (SELECT sample_id FROM individual WHERE individual_type_id=1) 
-							       AND structural_variation_id IN ($svs) 
-						     };
-		$dbVar->do($stmt);
-	}
-	
-	# Third round - duplicated strains
-	@sv_list;
-	$sth->execute();
-	while (my @res = ($sth->fetchrow_array)) {
-		push (@sv_list,$res[0]);
-	}
-	if (scalar(@sv_list)>0) {
-		my $svs  = join(',',@sv_list);
-		my $stmt = qq{ DELETE FROM $svanno_table 
-	                 WHERE strain_id NOT IN (SELECT sample_id FROM individual WHERE individual_type_id=1) 
-							       AND structural_variation_id IN ($svs) 
-						     };
 		$dbVar->do($stmt);
 	}
 }
@@ -1293,22 +1250,34 @@ sub post_processing_feature {
 # Change the sample description if a subject is associated to several studies
 sub post_processing_sample {
 	debug(localtime()." Post processing of the table sample");
+	my $stmt;
 	
+	# Sample
 	my $sth = $dbVar->prepare(qq{ SELECT s.sample_id, s.description, count(DISTINCT sv.study_id) c 
 	                              FROM $sv_table sv, sample s, $svanno_table sva
-	                              WHERE sv.structural_variation_id=sva.structural_variation_id
-																  AND s.sample_id=sva.sample_id
+	                              WHERE sv.structural_variation_id=sva.structural_variation_id AND s.sample_id=sva.sample_id
 																GROUP BY sva.sample_id HAVING c>1
-								           });
-	
+								              });
 	$sth->execute();
-	
 	while (my @res = ($sth->fetchrow_array)) {
 		if ($res[1] =~ /^(Sample|Subject) from the DGVa study/) {
-			my $stmt_s = qq{ UPDATE sample SET description='Subject from several DGVa studies'
-	                     WHERE sample_id=$res[0]
-								 		 };
-			$dbVar->do($stmt_s);
+			$stmt = qq{UPDATE sample SET description='Subject from several DGVa studies' WHERE sample_id=$res[0]};
+			$dbVar->do($stmt);
+		}
+	}
+	
+	# Strain
+	my $sth2 = $dbVar->prepare(qq{ SELECT s.sample_id, s.description, count(DISTINCT sv.study_id) c 
+	                               FROM $sv_table sv, sample s, $svanno_table sva
+	                               WHERE sv.structural_variation_id=sva.structural_variation_id
+																   AND s.sample_id=sva.strain_id AND sva.strain_id is not NULL  
+																 GROUP BY sva.strain_id HAVING c>1
+								               });
+	$sth2->execute();
+	while (my @res = ($sth2->fetchrow_array)) {
+		if ($res[1] =~ /^Strain from the DGVa study/) {
+			$stmt = qq{UPDATE sample SET description='Strain from several DGVa studies' WHERE sample_id=$res[0]};
+			$dbVar->do($stmt);
 		}
 	}
 }
@@ -1352,7 +1321,16 @@ sub verifications {
 
 
 sub cleanup {
-  debug(localtime()." Cleanup temporary columns");
+  debug(localtime()." Cleanup temporary columns and keys");
+
+	# Drop a unique constraint in structural_variation
+  $dbVar->do(qq{ALTER TABLE $sv_table DROP KEY name_key});
+	
+	# Drop a unique constraint in structural_variation_feature;
+  $dbVar->do(qq{ALTER TABLE $svf_table DROP KEY name_coord_key});
+
+	# Drop a unique constraint in structural_variation_annotation;
+  $dbVar->do(qq{ALTER TABLE $svanno_table DROP KEY sv_id_key});
 
   # Column tmp_class_name" in structural_variation
 	my $sth1 = $dbVar->prepare(qq{ SELECT count(*) FROM $sv_table WHERE source_id=$source_id AND class_attrib_id=0});
@@ -1431,7 +1409,8 @@ sub generate_data_row {
 						 $info->{inner_start}, 
 						 $info->{inner_end}, 
 						 $info->{end}, 
-						 $info->{outer_end}, 
+						 $info->{outer_end},
+						 $info->{strand}, 
 						 $info->{parent},
 						 $info->{clinical},
 						 $info->{phenotype},
