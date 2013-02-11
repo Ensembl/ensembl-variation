@@ -60,130 +60,135 @@ else {
 
 die "ERROR: no suitable databases found on host ".$config->{host}."\n" unless scalar @db_list;
 
-
-$config->{table} ||= 'transcript_variation';
-
+if (lc($config->{table}) eq 'all') {
+    $config->{table} = 'transcript_variation motif_feature_variation regulatory_feature_variation';
+} else {
+    $config->{table} ||= 'transcript_variation';
+}
 my @exclude;
-if ($config->{table} eq 'transcript_variation') {
-    @exclude = qw(transcript_variation_id hgvs_genomic hgvs_protein hgvs_transcript somatic codon_allele_string);
-}
-if ($config->{table} eq 'regulatory_feature_variation') {
-    @exclude = qw(regulatory_feature_variation_id feature_type somatic);
-}
-if ($config->{table} eq 'motif_feature_variation') {
-    @exclude = qw(motif_feature_variation_id motif_feature_id somatic motif_end);
-}
 
-my $source_table = $config->{table};
-my $table = 'MTMP_'.$source_table;
+my $table_input = $config->{table};
+for my $source_table (split(/\s+/, $table_input)) {
+    if ($source_table eq 'transcript_variation') {
+        @exclude = qw(transcript_variation_id hgvs_genomic hgvs_protein hgvs_transcript somatic codon_allele_string);
+    }
+    if ($source_table eq 'regulatory_feature_variation') {
+        @exclude = qw(regulatory_feature_variation_id feature_type somatic);
+    }
+    if ($source_table eq 'motif_feature_variation') {
+        @exclude = qw(motif_feature_variation_id motif_feature_id somatic motif_end);
+    }
 
-my $TMP_DIR = $config->{tmpdir};
-my $TMP_FILE = $config->{tmpfile};
+    $table = 'MTMP_'. $source_table;
 
-$ImportUtils::TMP_DIR = $TMP_DIR;
-$ImportUtils::TMP_FILE = $TMP_FILE;
+    my $TMP_DIR = $config->{tmpdir};
+    my $TMP_FILE = $config->{tmpfile};
+
+    $ImportUtils::TMP_DIR = $TMP_DIR;
+    $ImportUtils::TMP_FILE = $TMP_FILE;
 
 
-foreach my $db(@db_list) {
-	print "\nProcessing database $db\n";
-	
-	my $dbc = DBI->connect(
-		sprintf(
-			"DBI:mysql(RaiseError=>1):host=%s;port=%s;db=%s",
-			$config->{host},
-			$config->{port},
-			$db,
-		), $config->{user}, $config->{password}
-	);
-	
-	print "Getting column definition\n";
-	
-	# get column definition from transcript_variation
-	my $sth = $dbc->prepare(qq{
-		SHOW CREATE TABLE $source_table
-	});
-	$sth->execute();
-	
-	my $create_sth = $sth->fetchall_arrayref->[0]->[1];
-	$sth->finish;
-	
-	# convert set to enum
-	$create_sth =~ s/^set/enum/;
-	
-	# rename table
-	$create_sth =~ s/TABLE \`$source_table\`/TABLE \`$table\`/;
-	
-	# filter out some columns
-	$create_sth =~ s/\`?$_.+?,// for @exclude;
-	
-	# filter out some indices
-	$create_sth =~ s/AUTO_INCREMENT=\d+//;
-	$create_sth =~ s/$_.+,// for ('PRIMARY KEY', 'KEY `somatic', 'KEY `cons');
-	$create_sth =~ s/\`somatic\`\)//;
-	
-	# remove final comma
-	$create_sth =~ s/,(\s+\))/$1/;
-	
-	print "Creating table $table\n";
-	
-	# create a new table
-	$dbc->do($create_sth);
-	
-	# get columns of new table
-	$sth = $dbc->prepare(qq{
-		DESCRIBE $table
-	});
-	$sth->execute();
-	my @cols = map {$_->[0]} @{$sth->fetchall_arrayref};
-	$sth->finish;
-	
-	
-	print "Dumping data from $source_table to $TMP_DIR\/$TMP_FILE\n";
-	
-	
-	$sth = $dbc->prepare(qq{
-		SELECT count(*)
-		FROM $source_table
-	});
-	$sth->execute();
-	my $row_count = $sth->fetchall_arrayref->[0]->[0];
-	$sth->finish;
-	
-	# populate it
-	$sth = $dbc->prepare(qq{
-		SELECT *
-		FROM $source_table
-		#LIMIT ?, ?
-	}, {mysql_use_result => 1});
-	
-	open OUT, ">$TMP_DIR/$TMP_FILE";
-	
-	$sth->execute();
-		
-	while(my $row = $sth->fetchrow_hashref()) {
-		my $cons = $row->{consequence_types};
-		
-		foreach my $con(split /\,/, $cons) {
-			my %vals = %{$row};
-			$vals{consequence_types} = $con;
-			delete $vals{$_} for @exclude;
-			my @values = map {defined $vals{$_} ? $vals{$_} : '\N'} @cols;
-			
-			print OUT join("\t", @values);
-			print OUT "\n";
-			
-			#$sth2->execute(@values);
-		}
-	}
-	
-	$sth->finish;
-	
-	close OUT;
-	print "Loading table $table from dumped data\n";
-	
-	load($dbc, $table);
-	
-	print "Done\n";
+    foreach my $db(@db_list) {
+        print "\nProcessing database $db\n";
+        
+        my $dbc = DBI->connect(
+            sprintf(
+                "DBI:mysql(RaiseError=>1):host=%s;port=%s;db=%s",
+                $config->{host},
+                $config->{port},
+                $db,
+            ), $config->{user}, $config->{password}
+        );
+        
+        print "Getting column definition\n";
+        
+        # get column definition from transcript_variation
+        my $sth = $dbc->prepare(qq{
+            SHOW CREATE TABLE $source_table
+        });
+        $sth->execute();
+        
+        my $create_sth = $sth->fetchall_arrayref->[0]->[1];
+        $sth->finish;
+        
+        # convert set to enum
+        $create_sth =~ s/^set/enum/;
+        
+        # rename table
+        $create_sth =~ s/TABLE \`$source_table\`/TABLE \`$table\`/;
+        
+        # filter out some columns
+        $create_sth =~ s/\`?$_.+?,// for @exclude;
+        
+        # filter out some indices
+        $create_sth =~ s/AUTO_INCREMENT=\d+//;
+        $create_sth =~ s/$_.+,// for ('PRIMARY KEY', 'KEY `somatic', 'KEY `cons');
+        $create_sth =~ s/\`somatic\`\)//;
+        
+        # remove final comma
+        $create_sth =~ s/,(\s+\))/$1/;
+        
+        print "Creating table $table\n";
+        
+        # create a new table
+        $dbc->do($create_sth);
+        
+        # get columns of new table
+        $sth = $dbc->prepare(qq{
+            DESCRIBE $table
+        });
+        $sth->execute();
+        my @cols = map {$_->[0]} @{$sth->fetchall_arrayref};
+        $sth->finish;
+        
+        
+        print "Dumping data from $source_table to $TMP_DIR\/$TMP_FILE\n";
+        
+        
+        $sth = $dbc->prepare(qq{
+            SELECT count(*)
+            FROM $source_table
+        });
+        $sth->execute();
+        my $row_count = $sth->fetchall_arrayref->[0]->[0];
+        $sth->finish;
+        
+        # populate it
+        $sth = $dbc->prepare(qq{
+            SELECT *
+            FROM $source_table
+            #LIMIT ?, ?
+        }, {mysql_use_result => 1});
+        
+        open OUT, ">$TMP_DIR/$TMP_FILE";
+        
+        $sth->execute();
+            
+        while(my $row = $sth->fetchrow_hashref()) {
+            my $cons = $row->{consequence_types};
+            
+            foreach my $con(split /\,/, $cons) {
+                my %vals = %{$row};
+                $vals{consequence_types} = $con;
+                delete $vals{$_} for @exclude;
+                my @values = map {defined $vals{$_} ? $vals{$_} : '\N'} @cols;
+                
+                print OUT join("\t", @values);
+                print OUT "\n";
+                
+                #$sth2->execute(@values);
+            }
+        }
+        
+        $sth->finish;
+        
+        close OUT;
+        print "Loading table $table from dumped data\n";
+        
+        load($dbc, $table);
+        
+        print "Done\n";
+    }
 }
 
 print "All done!\n";
