@@ -72,12 +72,6 @@ ALTER TABLE structural_variation ADD FOREIGN KEY (source_id) REFERENCES source(s
 ALTER TABLE structural_variation ADD FOREIGN KEY (study_id) REFERENCES study(study_id);
 ALTER TABLE structural_variation ADD FOREIGN KEY (class_attrib_id) REFERENCES attrib(attrib_id);
 
-ALTER TABLE structural_variation_annotation ADD FOREIGN KEY (structural_variation_id) REFERENCES structural_variation(structural_variation_id);
-ALTER TABLE structural_variation_annotation ADD FOREIGN KEY (clinical_attrib_id) REFERENCES attrib(attrib_id);
-ALTER TABLE structural_variation_annotation ADD FOREIGN KEY (phenotype_id) REFERENCES phenotype(phenotype_id);
-ALTER TABLE structural_variation_annotation ADD FOREIGN KEY (sample_id) REFERENCES sample(sample_id);
-ALTER TABLE structural_variation_annotation ADD FOREIGN KEY (strain_id) REFERENCES sample(sample_id);
-
 ALTER TABLE structural_variation_association ADD FOREIGN KEY (structural_variation_id) REFERENCES structural_variation(structural_variation_id);
 ALTER TABLE structural_variation_association ADD FOREIGN KEY (supporting_structural_variation_id) REFERENCES structural_variation(structural_variation_id);
 
@@ -100,9 +94,15 @@ ALTER TABLE regulatory_feature_variation ADD FOREIGN KEY (variation_feature_id) 
 ALTER TABLE variation ADD FOREIGN KEY (source_id) REFERENCES source(source_id);
 ALTER TABLE variation ADD FOREIGN KEY (class_attrib_id) REFERENCES attrib(attrib_id);
 
-ALTER TABLE variation_annotation ADD FOREIGN KEY (study_id) REFERENCES study(study_id);
-ALTER TABLE variation_annotation ADD FOREIGN KEY (variation_id) REFERENCES variation(variation_id);
-ALTER TABLE variation_annotation ADD FOREIGN KEY (phenotype_id) REFERENCES phenotype(phenotype_id);
+ALTER TABLE phenotype_feature ADD FOREIGN KEY (source_id) REFERENCES study(study_id);
+ALTER TABLE phenotype_feature ADD FOREIGN KEY (study_id) REFERENCES study(study_id);
+ALTER TABLE phenotype_feature ADD FOREIGN KEY (object_id) REFERENCES variation(name);
+ALTER TABLE phenotype_feature ADD FOREIGN KEY (object_id) REFERENCES structural_variation(name);
+ALTER TABLE phenotype_feature ADD FOREIGN KEY (phenotype_id) REFERENCES phenotype(phenotype_id);
+ALTER TABLE phenotype_feature ADD FOREIGN KEY (seq_region_id) REFERENCES seq_region(seq_region_id);
+
+ALTER TABLE phenotype_feature_attrib ADD FOREIGN KEY (phenotype_feature_id) REFERENCES phenotype_feature(phenotype_feature_id);
+ALTER TABLE phenotype_feature_attrib ADD FOREIGN KEY (attrib_type_id) REFERENCES attrib_type(attrib_type_id);
 
 ALTER TABLE variation_feature ADD FOREIGN KEY (source_id) REFERENCES source(source_id);
 ALTER TABLE variation_feature ADD FOREIGN KEY (variation_id) REFERENCES variation(variation_id);
