@@ -184,40 +184,66 @@ create table variation_feature(
 
 
 /**
-@table variation_annotation
+@table phenotype_feature
 
-@desc This table stores information linking genotypes and phenotypes. It stores various fields pertaining to the study conducted, along with the associated gene, risk allele frequency and a p-value.
+@desc This table stores information linking entities (variants, genes, QTLs) and phenotypes.
 
-@column variation_annotation_id					Primary key, internal identifier.
-@column variation_id										Foreign key references to the @link variation table.
-@column phenotype_id										Foreign key references to the @link phenotype table.
-@column study_id												Foreign key references to the @link study table.
-@column associated_gene									Common gene(s) name(s) associated to the variation.
-@column associated_variant_risk_allele	Allele associated to the phenotype.
-@column variation_names									Name of the variation. e.g. "rs1333049".
-@column risk_allele_freq_in_controls		Risk allele frequency.
-@column p_value													P value of the association phenotype/variation.
+@column phenotype_feature_id	  Primary key, internal identifier.
+@column phenotype_id			  Foreign key references to the @link phenotype table.
+@column source_id				  Foreign key references to the @link source table.
+@column study_id				  Foreign key references to the @link study table.
+@column type					  Type of object associated.
+@column object_id	              Stable identifier for associated object.
+@column is_significant			  Flag indicating if the association is statistically significant in the given study.
+@column seq_region_id			  Foreign key references @link seq_region in core db. Refers to the seq_region which this feature is on, which may be a chromosome, a clone, etc...
+@column seq_region_start		  The start position of the feature on the @link seq_region.
+@column seq_region_end			  The end position of the feature on the @link seq_region.
+@column seq_region_strand		  The orientation of the feature on the @link seq_region.
 
 @see variation
 @see phenotype
 @see source
+@see study
 */
 
-create table variation_annotation (
-	variation_annotation_id int(10) unsigned not null auto_increment,
-	variation_id int(10) unsigned not null,
-	phenotype_id int(10) unsigned not null,
-	study_id int(10) unsigned not null,
-	associated_gene varchar(255) default NULL,
-	associated_variant_risk_allele varchar(255) default NULL,
-	variation_names varchar(255) default NULL,
-	risk_allele_freq_in_controls double default NULL,
-	p_value double default NULL,
-	
-	primary key (variation_annotation_id),
-	key variation_idx(variation_id),
-	key phenotype_idx(phenotype_id),
-	key study_idx(study_id)
+CREATE TABLE IF NOT EXISTS `phenotype_feature` (
+  `phenotype_feature_id` int(11) unsigned NOT NULL AUTO_INCREMENT,
+  `phenotype_id` int(11) unsigned DEFAULT NULL,
+  `source_id` int(11) unsigned DEFAULT NULL,
+  `study_id` int(11) unsigned DEFAULT NULL,
+  `type` enum('Gene','Variation','StructuralVariation','SupportingStructuralVariation','QTL','RegulatoryFeature') DEFAULT NULL,
+  `object_id` varchar(255) DEFAULT NULL,
+  `is_significant` tinyint(1) unsigned DEFAULT '1',
+  `seq_region_id` int(11) unsigned DEFAULT NULL,
+  `seq_region_start` int(11) unsigned DEFAULT NULL,
+  `seq_region_end` int(11) unsigned DEFAULT NULL,
+  `seq_region_strand` tinyint(4) DEFAULT NULL,
+  PRIMARY KEY (`phenotype_feature_id`),
+  KEY `phenotype_idx` (`phenotype_id`),
+  KEY `object_idx` (`object_id`,`type`),
+  KEY `type_idx` (`type`)
+);
+
+
+
+/**
+@table phenotype_feature_attrib
+
+@desc This table stores additional information on a given phenotype/object association. It is styled as an attrib table to allow for a variety of fields to be populated across different object types.
+
+@column phenotype_feature_id	  Foreign key, references to the @link phenotype_feature table.
+@column attrib_type_id			  Foreign key references to the @link attrib_type table.
+@column value	    			  The value of the attribute.
+
+@see phenotype_feature
+@see attrib_type
+*/
+
+CREATE TABLE IF NOT EXISTS `phenotype_feature_attrib` (
+  `phenotype_feature_id` int(11) unsigned NOT NULL,
+  `attrib_type_id` int(11) DEFAULT NULL,
+  `value` varchar(255) DEFAULT NULL,
+  KEY `phenotype_feature_idx` (`phenotype_feature_id`)
 );
 
 
@@ -303,23 +329,24 @@ CREATE TABLE allele (
 /**
 @table phenotype
 
-@desc This table stores details of the phenotypes associated with variation annotations.
+@desc This table stores details of the phenotypes associated with phenotype_features.
 
-@column phenotype_id	Primary key, internal identifier.
+@column phenotype_id	        Primary key, internal identifier.
+@column stable_id               Ensembl stable identifier for the phenotype
 @column name					Phenotype short name. e.g. "CAD".
 @column description	varchar		Phenotype long name. e.g. "Coronary Artery Disease".
 
-@see variation_annotation
-@see structural_variation_annotation
+@see phenotype_feature
 */
 
-create table phenotype (
-	phenotype_id int(10) unsigned not null auto_increment,
-	name varchar(50),
-	description varchar(255),
-
-	primary key (phenotype_id),
-	unique key name_idx(name)
+CREATE TABLE `phenotype` (
+  `phenotype_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `stable_id` varchar(255) DEFAULT NULL,
+  `name` varchar(50) DEFAULT NULL,
+  `description` varchar(255) DEFAULT NULL,
+  PRIMARY KEY (`phenotype_id`),
+  UNIQUE KEY `name_idx` (`name`),
+  KEY `stable_idx` (`stable_id`)
 );
 
 
