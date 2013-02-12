@@ -101,7 +101,7 @@ sub fetch_input {
 
     ## bin unmapped var check in larger chunks
     
-    my   @unmapped_start_id;
+    my @unmapped_start_id;
     
     my $start_unmapped_from = int( $start_at_variation_id / $self->param('unmapped_batch_size') );
     my $unmapped_var_jobs   = int( $max_id->[0]->[0]      / $self->param('unmapped_batch_size') ); 
@@ -131,6 +131,13 @@ sub create_working_tables{
   $var_dba->dbc->do(qq{ CREATE TABLE variation_working like variation });
   $var_dba->dbc->do(qq{ ALTER TABLE variation_working DROP COLUMN snp_id }); ## tmp column not in released schema
   $var_dba->dbc->do(qq{ ALTER TABLE variation_working DISABLE KEYS});
+
+  ## temp table to hold variants with minor alleles not in the variation_feature allele string
+  $var_dba->dbc->do(qq{ DROP TABLE IF EXISTS failed_minor_allele_tmp});
+  $var_dba->dbc->do(qq{ CREATE TABLE failed_minor_allele_tmp  (
+                        variation_id int(11) unsigned NOT NULL,                        
+                        KEY variation_idx (variation_id),
+                      )});
 
   ## table to hold variation feature info after fliping & ref allele assignment
   $var_dba->dbc->do(qq{ DROP TABLE IF EXISTS variation_feature_working});
