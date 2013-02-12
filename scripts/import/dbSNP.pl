@@ -21,7 +21,7 @@
 
 =cut
 
-# this is the script to fill the new variation 
+# this is the script to fill the new variation
 # schema with data from dbSNP
 # we use the local mssql copy of dbSNP at the sanger center
 # the script will call the dbSNP factory to create the object that will deal with
@@ -48,6 +48,7 @@ use dbSNP::Mosquito;
 use dbSNP::Human;
 use dbSNP::EnsemblIds;
 use dbSNP::DBManager;
+use Bio::EnsEMBL::Variation::Pipeline::VariantQC::RegisterDBSNPImport qw(register);
 
 # If a config file was specified, parse it and override any specified options
 my @opts;
@@ -221,16 +222,29 @@ my @parameters = (
 );
 
 my $import_object;
-if ($species eq 'cat' || $species =~ m/zebrafinch/i || $species =~ m/tetraodon/i) {
+if ($species =~ m/felix_cattus/i || $species =~ m/zebrafinch|taeniopygia_guttata/i || $species =~ m/tetraodon/i) {
   $import_object = dbSNP::MappingChromosome->new(@parameters);
 }
-elsif ($species =~ m/zebrafish/i || $species =~ m/chimp/i || $species =~ m/chicken|gallus_gallus/i || $species =~ m/rat/i || $species =~ m/horse/i || 
-    $species =~ m/platypus/i || $species =~ m/opossum/i || $species =~ m/mouse/i || $species =~ m/cow/i  || $species =~ m/^pig$|sus_scrofa/i ||
-    $species eq 'cat' || $species =~ m/zebrafinch/i || $species =~ m/tetraodon/i || $species =~ m/taeniopygia_guttata/   || $species =~ m/orangutan/  || 
-    $species =~ m/monodelphis_domestica/  || $species =~ m/macaque/) {
-  $import_object = dbSNP::GenericChromosome->new(@parameters);
+elsif ($species =~ m/zebrafish|danio/i || 
+       $species =~ m/chimp|troglodytes/i || 
+       $species =~ m/gallus_gallus/i || 
+       $species =~ m/rat/i ||
+       $species =~ m/horse|equus/i ||  
+       $species =~ m/platypus|anatinus/i || 
+       $species =~ m/opossum/i ||
+       $species =~ m/mus_musculus/i || 
+       $species =~ m/bos_taurus/i   || 
+       $species =~ m/sus_scrofa/i   ||  
+       $species =~ m/felix_cattus/i || 
+       $species =~ m/zebrafinch|taeniopygia_guttata/i || 
+       $species =~ m/tetraodon/i || 
+       $species =~ m/orangutan|Pongo_abelii/i || 
+       $species =~ m/monodelphis_domestica/i  || 
+       $species =~ m/macaca_mulatta/i
+    ) {
+    $import_object = dbSNP::GenericChromosome->new(@parameters);
 }
-elsif ($species =~ m/dog/i) {
+elsif ($species =~ m/dog|canis/i) {
   $import_object = dbSNP::GenericContig->new(@parameters);
 }
 elsif ($species =~ m/mosquitos/i) {
@@ -253,53 +267,33 @@ $import_object->dump_dbSNP();
 $clock->checkpoint('end_dump');
 print $logh $clock->duration('start_dump','end_dump');
 
-if ($species =~ m/mouse/i || $species =~ m/chicken/i || $species =~ m/rat/i || $species =~ m/dog/i) {
-  # Add strain information
-  $clock->checkpoint('add_strains');
-  
-  add_strains($dbm->dbVar()->dbc->db_handle);
-  
-  print $logh $clock->duration();
-}
+### Previously this script copied tmp_individual_genotypes to alleles for mouse, rat, chicken and dog.
+### This behaviour ceased as of 30/1/2013
+
 
 
 ### update production db as final step
 
-## get dbSNP id 
 my $dbSNP_name = $dbm->dbSNP()->dbc->dbname();
 $dbSNP_name =~ s/\_\d+$//;
 
-my $dbSNP_db_dba =  $dbm->registry()->get_adaptor('multi', 'intvar', 'dbSNPdb');
-my $dbSNP_db     =  $dbSNP_db_dba->fetch_current_by_name($dbSNP_name );
-unless (defined $dbSNP_db){
-    warn "Not updating - dbSNP database of this name $dbSNP_name not recorded\n";
-    exit;
+my %data;
+
+$data{dbSNP_name}       = $dbSNP_name;
+$data{species}          = $dbm->dbVar()->species();
+$data{ensdb_name}       = $dbm->dbVar()->dbc->dbname();
+$data{registry}         = $dbm->registry();
+$data{ensdb_version}    = $ens_version;
+$data{assembly_version} = $ASSEMBLY_VERSION;
+$data{pwd}              = $TMP_DIR;
+register(\%data);
+
+
+if( defined $ens_version ){
+    ## update meta if version supplied
+    $dbm->dbVar()->dbc->db_handle->do(qq{INSERT INTO meta ( meta_key, meta_value) values ( 'schema_version',  $ens_version) });
 }
-my $ensvardb_dba =  $dbm->registry()->get_adaptor('multi', 'intvar', 'EnsVardb');
-my $preexisting  =  $ensvardb_dba->fetch_by_name($dbm->dbVar()->dbc->dbname() ); 
 
-if (defined $preexisting){
-    warn "Not updating - ensembl database of this name " . $dbm->dbVar()->dbc->dbname() ." already recorded\n";
-}
-else{
-    ## enter new db 
-    my $ensvar_db = Bio::EnsEMBL::IntVar::EnsVardb->new_fast({ name             => $dbm->dbVar()->dbc->dbname(),
-							       dbsnpdb          => $dbSNP_db,
-							       species          => $dbm->dbVar()->species(),
-							       version          => $ens_version,
-							       genome_reference => $ASSEMBLY_VERSION,
-							       adaptor          => $ensvardb_dba,
-							       status_desc      => 'dbSNP_imported'
-							     });
-
-
-    $ensvardb_dba->store($ensvar_db);
-
-    if( defined $ens_version ){
-	## update meta if version supplied
-	$dbm->dbVar()->dbc->db_handle->do(qq{INSERT INTO meta ( meta_key, meta_value) values ( 'schema_version',  $ens_version) });
-    }
-}
 
 
 debug(localtime() . "\tAll done!");
@@ -307,75 +301,6 @@ debug(localtime() . "\tAll done!");
 #ÊClose the filehandle to the logfile if one was specified
 close($logh) if (defined($logfile));
   
-
-#gets all the individuals and copies the data in the Population table as strain, and the individual_genotype as allele
-sub add_strains{
-  my $dbVariation = shift;
-
-  debug(localtime() . "\tIn add_strains...");
-
-  #first, copy the data from Individual to Population, necessary to group by name to remove duplicates
-  # (some individuals have the same name, but different individual_id)
-  $dbVariation->do(qq{ALTER TABLE sample ADD COLUMN is_strain int});
-
-  ## added population size of 1  
-  $dbVariation->do(qq{INSERT INTO sample (name, description,is_strain,size)
-		      SELECT s.name, s.description,1,1
-		      FROM individual i, sample s
-		      WHERE i.sample_id = s.sample_id
-		      GROUP BY s.name
-		     });
-  #and insert the new strain in the population table
-  $dbVariation->do(qq{INSERT INTO population (sample_id)
-		      SELECT sample_id
-		      FROM sample
-		      WHERE is_strain = 1
-		     });
-  #then, populate the individual_population table with the relation between individual and strains
-  $dbVariation->do(qq{INSERT INTO individual_population (individual_sample_id, population_sample_id)
-		      SELECT s1.sample_id, s2.sample_id
-		      FROM sample s1, sample s2, individual i
-		      WHERE s1.name = s2.name
-		      AND s2.is_strain = 1
-		      AND s1.sample_id = i.sample_id
-		     });
-
-  #check to see allele_1 and allele_2 is same or not to determine frequency
-
-  for my $gtype_table ('tmp_individual_genotype_single_bp','individual_genotype_multiple_bp') {
-    debug(localtime() . "\tcreate tmp_freq table...from $gtype_table");
-
-    $dbVariation->do(qq{CREATE TABLE tmp_freq (variation_id int, allele_1 text, sample_id int, gtype char (4), key (sample_id))});
-    #add allele_1 into tmp_freq
-    $dbVariation->do(qq{INSERT INTO tmp_freq
-			SELECT distinct variation_id, allele_1, sample_id,
-			IF (allele_1 != allele_2, 'DIFF', 'SAME')
-			FROM $gtype_table
-		       });
-    #add allele_2 into tmp_freq only if it's different from allele_1
-    $dbVariation->do(qq{INSERT INTO tmp_freq
-			SELECT distinct variation_id, allele_2, sample_id, 'DIFF'
-			FROM $gtype_table
-			WHERE allele_1 != allele_2
-		       });
-
-    #and finally, add the alleles to the Allele table for the strains
-    debug(localtime() . "\tInsert into allele in add_strain...");
-    $dbVariation->do(qq{INSERT INTO allele (variation_id, sample_id, allele, frequency)
-			SELECT tf.variation_id, ip.population_sample_id, tf.allele_1,
-			IF (tf.gtype = 'SAME',1,0.5)
-			FROM tmp_freq tf, individual_population ip, sample s
-			WHERE tf.sample_id = ip.individual_sample_id
-			AND   ip.population_sample_id = s.sample_id
-			AND   s.is_strain = 1
-		       });
-
-    $dbVariation->do(qq{DROP TABLE tmp_freq});
-  }
-
-  $dbVariation->do(qq{ALTER TABLE sample DROP COLUMN is_strain});
-}
-
 
 sub usage {
     my $msg = shift;
