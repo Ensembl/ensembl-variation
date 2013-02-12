@@ -32,7 +32,7 @@ use strict;
 use warnings;
 
 use base qw(Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess);
-
+use Bio::EnsEMBL::Variation::Utils::QCUtils qw(count_rows count_group_by);
 
 my $DEBUG = 0;
 
@@ -98,8 +98,11 @@ sub run {
         print $report "\n\nExiting due errors - not renaming tables or running updates\n"; 
         die;
     }
-    
-   
+
+    ## report any variation.minor_allele / variation_feature.allele_string incompatiblities 
+    my $suspect_minor_allele = count_rows(failed_minor_allele_tmp);
+    print  $report "$suspect_minor_allele variants have minor alleles incompatible with their allele strings (see database)\n" 
+	if $suspect_minor_allele > 0;
 
     ### if the results of the checks look ok, update & rename tables 
     print  $report "\nRunning updates and renaming working tables:\n";
@@ -202,48 +205,7 @@ sub run {
 
 }
 
-sub count_rows{
 
-   my $var_dba     = shift;
-   my $table_name  = shift;
-   my $column_name = shift;
-
-   my $row_count_ext_sth;
-
-   if(defined $column_name){
-     $row_count_ext_sth  = $var_dba->dbc->prepare(qq[ select count(distinct $column_name) from $table_name]);
-   }
-   else{
-     $row_count_ext_sth  = $var_dba->dbc->prepare(qq[ select count(*) from $table_name]);
-   }
-
-   $row_count_ext_sth->execute();
-   my $total_rows = $row_count_ext_sth->fetchall_arrayref();
-
-   return $total_rows->[0]->[0]; 
-
-}
-
-sub count_group_by{
-
-   my $var_dba     = shift;
-   my $table_name  = shift;
-   my $column_name = shift;
-
-   return unless defined  $table_name  && defined $column_name;
-
-   my %count;
-   my  $row_count_ext_sth  = $var_dba->dbc->prepare(qq[ select $column_name, count(*) from $table_name group by $column_name]);   
-
-   $row_count_ext_sth->execute();
-   my $data = $row_count_ext_sth->fetchall_arrayref();
-   foreach my $l(@{$data}){
-       $count{$l->[0]} = $l->[1];
-   }
-
-   return \%count; 
-
-}
 
 =head2 get_failure_rates
 
@@ -745,10 +707,10 @@ sub update_internal_db{
     if(defined $ensdb ){
         $ensvardb_dba->update_status($ensdb,'dbSNP_post_processed');
 
-        my %results  = ( 'dbSNP_variants',            $row_counts->{old_var},
-                         'dbSNP_alleles',             $row_counts->{old_allele},
-                         'dbSNP_variation_features',  $row_counts->{old_varfeat},
-                         'dbSNP_population_genotype', $row_counts->{old_pop_geno},
+        my %results  = ( #'dbSNP_variants',            $row_counts->{old_var},
+                         #'dbSNP_alleles',             $row_counts->{old_allele},
+                         #'dbSNP_variation_features',  $row_counts->{old_varfeat},
+                         #'dbSNP_population_genotype', $row_counts->{old_pop_geno},
                          'variant_fails_percent',     $var_fail_rate,
                          'allele_fails_percent',      $allele_fail_rate );
 
