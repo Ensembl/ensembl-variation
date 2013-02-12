@@ -53,11 +53,14 @@ our $DEBUG   = 1;
 sub run {
 
   my $self = shift;
-   
-  
+
   if ( $self->param('run_PAR_check') ==1 ){ $self->check_PAR_variants();}
 
   if ( $self->param('run_Pubmed_check') ==1 ){ $self->check_Pubmed_variants();}
+
+  if ( $self->required_param('species') =~/mus_musculus|gallus_gallus|rattus_norvegicus|canis_familiaris/ ){ $self->set_strain_display();}
+
+  if ( $self->required_param('species') =~/gallus_gallus|rattus_norvegicus|canis_familiaris/ ){ $self->fake_read_coverage();}
 
 }
 
@@ -74,22 +77,21 @@ sub check_PAR_variants{
 
     ## check if internal production db is available
     my $int_dba ;
-    eval{ $int_dba = $self->get_species_adaptor('intvar');};
+    eval{ $int_dba = $self->get_adaptor('multi', 'intvar');};
 
     unless (defined $int_dba){
-	$self->warning('No internal database connection found to look up PAR variants '); 
-	return;
+        $self->warning('No internal database connection found to look up PAR variants '); 
+        return;
     }
 
     my $fail_delete_sth = $var_dba->dbc->prepare(qq[delete from failed_variation where failed_description_id = 19 and variation_id in
-                                                   select vf_x.variation_id
-                                                   from  variation_feature vf_x, variation_feature vf_y, seq_region sr_x, seq_region sr_y
+                                                   (select vf_x.variation_id from  variation_feature vf_x, variation_feature vf_y, seq_region sr_x, seq_region sr_y
                                                    where vf_x.map_weight = 2
                                                    and vf_x.seq_region_id = sr_x.seq_region_id  
-                                                   and sr_x.name ='X' and vf_x.seq_region_start between ? AND ?
+                                                   and sr_x.name ='X' and vf_x.seq_region_start between ? and ?
                                                    and vf_y.variation_id = vf_x.variation_id
                                                    and vf_y.seq_region_id = sr_y.seq_region_id  
-                                                   and sr_y.name ='Y' and vf_y.seq_region_start ? and ? )]);
+                                                   and sr_y.name ='Y' and vf_y.seq_region_start between ? and ? )]);
 
 
    my $par_ext_sth = $int_dba->dbc->prepare(qq[ select X_region_start, X_region_end, Y_region_start, Y_region_end 
@@ -98,9 +100,9 @@ sub check_PAR_variants{
                                               ]);
 
     $par_ext_sth->execute($self->required_param('species'), 1);
-    my $regions = $par_ext_sth->fetchall_arayref();
+    my $regions = $par_ext_sth->fetchall_arrayref();
 
-    foreach my $l (@{$self->param('PAR')}){
+    foreach my $l (@{$regions}){
 
 	$fail_delete_sth->execute($l->[0], $l->[1], $l->[2], $l->[3] )||die "Failed to update PAR variants\n"; ;	
     }
@@ -109,6 +111,7 @@ sub check_PAR_variants{
 =head2  check_Pubmed_variants
 
  Remove all fail statuses from cited variants for which dbSNP holds Pubmed ids
+ Citations ar held on studies 
 
 =cut
 sub check_Pubmed_variants{
@@ -118,21 +121,128 @@ sub check_Pubmed_variants{
     my $var_dba = $self->get_species_adaptor('variation');
 
     ## check if there are any cited variants
-    my $table_check_sth = $var_dba->dbc->prepare(qq[ show tables like '%pubmed_variation%']);
-    $table_check_sth->execute()||die;
-    my $present =  $table_check_sth->fetchall_arrayref();
-
-    if( defined $present->[0]->[0]){
-        $self->warning('Setting cited variants to non-failed '); 
+    $self->warning('Setting cited variants to non-failed ');
  
-	$var_dba->dbc->do(qq[ delete from failed_variation_working 
-                              where variation_id in (select variation_id from pubmed_variation)
-                              ]);
+    $var_dba->dbc->do(qq[ delete from failed_variation_working 
+                          where variation_id in (select study_variation.variation_id from study_variation, study
+                                                 where study_variation.study_id = study.study_id
+                                                 and study.study_type ='PubMed')
+                        ]);
+
+}
+
+=head2 set_strain_display
+
+  set display status on expected strains to enable mart filtering & read coverage viewing
+  report missing or duplicated samples
+
+=cut
+sub set_strain_display{
+
+    my $self = shift;
+
+    my $var_dba = $self->get_species_adaptor('variation');
+    my $dir = $self->required_param('pipeline_dir');
+    open my $report, ">", "$dir/Strain_report.txt" || die "Failed to open Strain_report.txt : $!\n";
+
+
+    ## check if internal production db is available
+    my $int_dba ;
+    eval{ $int_dba = $self->get_adaptor('multi', 'intvar');};
+
+    unless (defined $int_dba){
+	$self->warning('No internal database connection found to look up expected strains '); 
+	return;
     }
-    else{
-      $self->warning('No cited variants found to unfailed '); 
+
+    my $display_update_sth = $var_dba->dbc->prepare(qq[update sample set display = ? where name = ? ]);
+
+    #### ADAPT TO NEW SCHEMA
+    ## check strains are neither missing or duplicated
+    my $strain_check_sth =  $var_dba->dbc->prepare(qq[ select count(*) from sample, individual
+                                                       where sample.name =?
+                                                       and sample.sample_id = individual.sample_id
+                                                      ]);
+
+
+    my $strain_ext_sth = $int_dba->dbc->prepare(qq[ select name, display
+                                                    from strain_info
+                                                    where species = ? 
+                                                  ]);
+
+   
+
+
+    $strain_ext_sth->execute($self->required_param('species'));
+    my $strain = $strain_ext_sth->fetchall_arrayref();
+
+    foreach my $l (@{$strain}){
+	print $report "Checking expected strain $l->[0]\n";
+	$strain_check_sth->execute( $l->[0] )||die "Failed to check displayable samples \n";
+	my $count = $strain_check_sth->fetchall_arrayref();
+	if($count->[0]->[0] == 1){
+            ## set display status on individual
+	    print $report "Single individual seen - setting display for strain $l->[0]\n";
+        }
+        elsif ($count->[0]->[0] ==0){
+	    print $report "Error : strain $l->[0] missing from new import\n";
+	    next;
+	}
+	else{
+	    print $report "Error : strain $l->[0] duplicated (x $count->[0]->[0]) in new import - setting display for all entries\n";
+	}
+	$display_update_sth->execute($l->[1], $l->[0] )||die "Failed to update display status \n";
+	
+    }
+    close $report;
+}
+
+### Three species have near genome-coverage data, but precise coverage not known
+### Fake to cover entire length of each seq_region, pending view change
+
+sub fake_read_coverage{
+
+
+    my $self = shift;
+
+    my $var_dba  = $self->get_species_adaptor('variation');
+    my $core_dba = $self->get_species_adaptor('core');
+
+    my $len_extr_sth = $core_dba->dbc->prepare(qq[ select seq_region_id,length from seq_region ]);
+
+
+    my $sam_extr_sth = $var_dba->dbc->prepare(qq[ select individual.sample_id from individual,sample
+                                                  where individual.sample_id = sample.sample_id
+                                                  and sample.display !='UNDISPLAYABLE']);
+    
+    
+    my $cov_ins_sth = $var_dba->dbc->prepare(qq[ insert into  read_coverage
+                                                 (seq_region_id,seq_region_start,seq_region_end, level, sample_id )
+                                                 values(?,1,?,1,?)]);
+    
+    my %seq;
+    ## extract sequence lengths from core database
+    $len_extr_sth->execute()||die "Failed to extrace seq ids and lengths\n";
+    my $seq = $len_extr_sth->fetchall_arrayref();
+    foreach my $l (@{$seq}){
+        $seq{$l->[0]} = $l->[1];
+    }
+    
+    ## extract samples with display options from variation database
+    $sam_extr_sth->execute()||die "Failed to extrace seq ids and lengths\n";
+    my $sam = $sam_extr_sth->fetchall_arrayref();
+
+    ## add fake read coverage info
+    foreach my $l (@{$sam}){     
+        foreach my $seq_id(keys %seq){            
+            
+            $cov_ins_sth->execute($seq_id ,$seq{$seq_id}, $l->[0])||die "Failed to load read_coverage \n";
+        }
     }
 }
+
+ 
+
 
 
 1;
