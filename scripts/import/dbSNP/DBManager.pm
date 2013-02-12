@@ -1,5 +1,3 @@
-use strict;
-
 =head1 LICENSE
 
   Copyright (c) 1999-2013 The European Bioinformatics Institute and
@@ -20,6 +18,7 @@ use strict;
 
 =cut
 
+use strict;
 use warnings;
 
 package dbSNP::DBManager;
@@ -69,7 +68,11 @@ sub dbCore {
   
   return $self->get_dbAdaptor('core');
 }
-
+sub dbInt {
+  my $self = shift;
+  
+  return $self->get_dbAdaptor('intvar');
+}
 sub get_dbAdaptor {
   my $self = shift;
   my $type = shift;
@@ -98,6 +101,11 @@ sub registryfile {
   my $self = shift;
   
   return $self->{'registryfile'};
+}
+sub registry {
+  my $self = shift;
+  
+  return $self->{'registry'};
 }
 
 sub species {
