@@ -412,6 +412,9 @@ sub source_table {
     if(defined $source_name &&  $source_name=~ /Archive/){ 
         $self->{'dbVar'}->do(qq{INSERT INTO source (source_id,name,version,description,url,somatic_status) VALUES (2, "$source_name",$version,"Former variants names imported from dbSNP", "$url", "mixed")});
     }
+    elsif(defined $source_name &&  $source_name=~ /PubMed/){
+        $self->{'dbVar'}->do(qq[insert into source (source_id, name, description, url, somatic_status ) values (4, 'PubMed', 'Variants with pubmed citations', 'http://www.ncbi.nlm.nih.gov/pubmed/','mixed')]);
+    }
     else{
 
         my $dbname = 'dbSNP';
@@ -780,37 +783,66 @@ sub pubmed_citations{
        
     print $logh Progress::location();
     debug(localtime() . "\tExporting pubmed cited SNPs");
-   
-    ## create tables - not part of formal schema currently; used in post-processing only
-    $self->{'dbVar'}->do(qq[ create table pubmed_variation (
-                     pubmed_variation_id int(10) unsigned not null auto_increment,
-                     variation_id int(10) unsigned not null,
-                     pubmed_id int(10) unsigned not null,
-                     primary key (pubmed_variation_id),
-                     key variation_idx (variation_id)
-                    )]);
 
+    ## Add source description only if citations are available
+    $self->source_table("PubMed");
+
+   
+    ## create tmp table & populate with rs ids & pmids
     $self->{'dbVar'}->do(qq[ create table tmp_pubmed (
-                     variation_name varchar(255) not null,
-                     pubmed_id int(10) unsigned not null,
-                     key variation_idx (variation_name)
+                             snp_id varchar(255) not null,
+                             pubmed_id int(10) unsigned not null,
+                             key snp_idx (snp_id )
                    )]);
 
-    my $pubmed_ins_sth = $self->{'dbVar'}->prepare(qq[ insert into tmp_pubmed (variation_name, pubmed_id) values (?,?)]);
+    my $pubmed_ins_sth = $self->{'dbVar'}->prepare(qq[ insert into tmp_pubmed (snp_id, pubmed_id) values (?,?)]);
 
     my $sth = $self->{'dbSNP'}->prepare(qq[ SELECT snp_id, pubmed_id from SNPPubmed ]);
     $sth->execute();
 
     my $data = $sth->fetchall_arrayref();
     foreach my $l (@{$data}){
-       $pubmed_ins_sth->execute("rs$l->[0]", $l->[1]) ||die "Failed to enter pubmed_id for rs$l->[0], PMID:$l->[1] \n";
+       $pubmed_ins_sth->execute($l->[0], $l->[1]) ||die "Failed to enter pubmed_id for rs: $l->[0], PMID:$l->[1] \n";
     }
 
-    ## create more useful table linked to variation_id
-    $self->{'dbVar'}->do(qq [insert into pubmed_variation (variation_id ,pubmed_id)
-                            (select variation.variation_id, tmp_pubmed.pubmed_id
-                            from variation,tmp_pubmed
-                            where variation.name = tmp_pubmed.variation_name)]);
+    ## move data to correct structure
+    my $pubmed_ext_sth = $self->{'dbVar'}->prepare(qq [ select variation.variation_id, tmp_pubmed.pubmed_id
+                                                        from variation,tmp_pubmed
+                                                        where variation.snp_id = tmp_pubmed.snp_id]);
+
+    ## linked to PMID via study
+    my $study_ext_sth    = $self->{'dbVar'}->prepare(qq[select study_id from study where name = ?]);
+
+    my $study_ins_sth    = $self->{'dbVar'}->prepare(qq[insert into study ( source_id, name, url, study_type) values (?, ?, ?, ?)]);
+
+    my $studyvar_ins_sth = $self->{'dbVar'}->prepare(qq[insert into study_variation ( variation_id, study_id ) values (?,?)]);
+
+
+    $pubmed_ext_sth->execute()||die "Failed to etract pubed data from tmp table\n";;
+    my $data = $pubmed_ext_sth->fetchall_arrayref();
+
+    my %done;
+    foreach my $l (@{$data}){
+
+	next if $done{$l->[0]}{$l->[1]};
+	$done{$l->[0]}{$l->[1]} = 1;
+
+	my $study_name = "PMID:" . $l->[1];
+	my $url        = "http://www.ncbi.nlm.nih.gov/pubmed/" . $l->[1];
+
+	$study_ext_sth->execute( $study_name )||die;
+	my $study_id = $study_ext_sth->fetchall_arrayref();
+
+	unless ( defined $study_id->[0]->[0]){
+            ## create one study per PMID
+	    $study_ins_sth->execute( 4, $study_name, $url, 'PubMed');
+	    $study_ext_sth->execute( $study_name )||die;
+	    $study_id = $study_ext_sth->fetchall_arrayref();
+	}
+
+	unless ( defined $study_id->[0]->[0]){die "problem adding new study $study_name\n";}
+	$studyvar_ins_sth->execute($l->[0], $study_id->[0]->[0])||die;
+    }
 
     ## remove tmp table
     $self->{'dbVar'}->do(qq [ drop table tmp_pubmed ]);
@@ -1344,8 +1376,8 @@ sub individual_table {
 	    if(defined $individuals->{$ind}{ind} && $individuals->{$ind}{ind} < 1000000){
                  ## insert dbSNP synonym [not fakes]
 		$syn_ins_sth->execute( $sample_id, 1, $individuals->{$ind}{ind});
-	    }
-	    ## save sample_id  based on name and dbSNP merged id  (merging only these on import) 
+	    }	    
+            ## save sample_id  based on name and dbSNP merged id  (merging only these on import) 
 	    $done{ $individuals->{$ind}{name} }{ $individuals->{$ind}{ind} } = $sample_id;
 
 	}
