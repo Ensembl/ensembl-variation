@@ -53,8 +53,8 @@ AND va.variation_names IS NOT NULL;
 
 
 ## structural_variation_annotation
-INSERT INTO phenotype_feature(phenotype_id, object_id, type, seq_region_id, seq_region_start, seq_region_end, seq_region_strand, variation_annotation_id)
-SELECT phenotype_id, vf.variation_name, if(vf.is_evidence = 0, 'StructuralVariation', 'SupportingStructuralVariation'), vf.seq_region_id, vf.seq_region_start, vf.seq_region_end, vf.seq_region_strand, va.structural_variation_annotation_id
+INSERT INTO phenotype_feature(phenotype_id, object_id, type, is_significant, seq_region_id, seq_region_start, seq_region_end, seq_region_strand, variation_annotation_id)
+SELECT phenotype_id, vf.variation_name, if(vf.is_evidence = 0, 'StructuralVariation', 'SupportingStructuralVariation'), if(phenotype_id IS NULL, 0, 1), vf.seq_region_id, vf.seq_region_start, vf.seq_region_end, vf.seq_region_strand, va.structural_variation_annotation_id
 FROM structural_variation_annotation va, structural_variation_feature vf
 WHERE va.structural_variation_id = vf.structural_variation_id;
 
