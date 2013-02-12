@@ -67,7 +67,7 @@ AND va.clinical_attrib_id = a.attrib_id
 AND t.code = "dgva_clin_sig";
 
 INSERT INTO phenotype_feature_attrib
-SELECT p.phenotype_feature_id, t.attrib_type_id, va.individual_id
+SELECT p.phenotype_feature_id, t.attrib_type_id, va.sample_id
 FROM structural_variation_annotation va, phenotype_feature p, attrib_type t
 WHERE va.structural_variation_annotation_id = p.variation_annotation_id
 AND va.sample_id IS NOT NULL
