@@ -39,39 +39,17 @@ use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp expand);
 use base qw(Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess);
 use Bio::EnsEMBL::Variation::Utils::dbSNP qw(get_alleles_from_pattern);
 use Bio::EnsEMBL::Variation::Utils::Sequence qw(revcomp_tandem);
+use Bio::EnsEMBL::Variation::Utils::QCUtils qw( check_four_bases get_reference_base check_illegal_characters check_for_ambiguous_alleles remove_ambiguous_alleles find_ambiguous_alleles summarise_evidence count_rows count_group_by);
 
-use vars qw( @EXPORT_OK);
-@EXPORT_OK = qw( check_four_bases check_illegal_characters remove_ambiguous_alleles find_ambiguous_alleles get_reference_base);
 
 our $DEBUG   = 1;
- 
-our %AMBIG_REGEXP_HASH = (
-    'M' =>  '[AC]',
-    'R' =>  '[AG]',
-    'W' =>  '[AT]',
-    'S' =>  '[CG]',
-    'Y' =>  '[CT]',
-    'K' =>  '[GT]',
-    'V' =>  '[ACG]',
-    'H' =>  '[ACT]',
-    'D' =>  '[AGT]',
-    'B' =>  '[CGT]',
-    'X' =>  '[ACGT]',
-    'N' =>  '[ACGT]'
-    );
+
 
 our %QUICK_COMP = ( "A" => "T",
                     "T" => "A",
                     "C" => "G",
                     "G" => "C"
     ); 
-
-     
-#ÊGet a string containing the possible ambiguity nucleotides
-our $AMBIGUITIES = join("",keys(%AMBIG_REGEXP_HASH));
-
-# Add the code for uracil in case some allele should have that
-%AMBIG_REGEXP_HASH = (%AMBIG_REGEXP_HASH,('U' =>  'T'));
 
 
 
@@ -91,13 +69,21 @@ sub run {
   ## allele specific checks 
   my ($allele_data, $failed_allele, $failed_ss) = $self->run_allele_checks( $flip, $failed_allele, $allele_string);  
  
-  
+  my $var_dba = $self->get_species_adaptor('variation');
+
+  my $first = $self->required_param('start_id');
+  my $last  = $first + $self->required_param('batch_size') -1;
+  if($first ==1){$last--;}
+
   ## find supporting evidence & merge to single string
-  my $evidence_summary = $self->summarise_evidence();
+  my $evidence_summary = summarise_evidence($var_dba->dbc(),
+                                             $self->required_param('species'),
+                                             $first,
+                                             $last);
+
 
 
   ## Database updates 
-  my $var_dba = $self->get_species_adaptor('variation');
 
   ## write to new variation featues 
   write_variation_features($var_dba, $var_data, $evidence_summary ); 
@@ -113,8 +99,15 @@ sub run {
 
 
   ## write to new variation with evidence string & flip status
-  $self->write_variation(  $evidence_summary , $flip );
+  my $minor_allele = $self->write_variation(  $evidence_summary , $flip );
   
+
+  ## check dbSNP MAF against variation_feature allele string
+  ## warn, but don't fix automatically (1KG genotypes loaded later)
+  if($self->required_param('species') =~/homo/i){
+     $self->check_minor_allele($minor_allele,  $allele_string); 
+  }
+
 }
 
 sub run_variation_checks{
@@ -216,17 +209,17 @@ sub run_variation_checks{
 
   ## Type 14 resolve ambiguities before reference check - flag variants & alleles as fails
 
-  if($expanded =~ m/[$AMBIGUITIES]/){
-    $expanded = remove_ambiguous_alleles(\$expanded);
-    push @{$fail_variant{14}}, $var->{v_id};
-    $var->{variation_set_id} = $failed_set_id ;
+    my $is_ambiguous = check_for_ambiguous_alleles($expanded );
+    if(defined $is_ambiguous){
+	$expanded = remove_ambiguous_alleles(\$expanded);
+	push @{$fail_variant{14}}, $var->{v_id};
+	$var->{variation_set_id} = $failed_set_id ;
 
-    ## identify specific alleles to fail
-    my $ambiguous_alleles = find_ambiguous_alleles($var->{allele});
-    foreach my $amb_al( @{$ambiguous_alleles} ){
-      push @{$fail_allele{14}},  [$var->{v_id}, $amb_al]; ## unflipped allele failed throughout
-    }
-
+        ## identify specific alleles to fail
+	my $ambiguous_alleles = find_ambiguous_alleles($var->{allele});
+	foreach my $amb_al( @{$ambiguous_alleles} ){
+          push @{$fail_allele{14}},  [$var->{v_id}, $amb_al]; ## unflipped allele failed throughout
+	}
   }
   ## Further checks only run for variants with 1 genomic location
   
@@ -274,9 +267,7 @@ sub run_variation_checks{
           $match_coord_length = 1;
       }
       else{        
-      $var->{alt} .= "/" . $al;
-      ## if one of these suggests an insertion and the other a substitution, the sizes are not compatible
-      if(length($ref_seq ) != length($ch) && $ch ne "-" && $ref_seq ne "-"){$match_coord_length = 0;}
+	  $var->{alt} .= "/" . $al;
       }
     }
 
@@ -517,135 +508,6 @@ sub export_allele_data{
 
 }
 
-=head2 get_reference_base
-
-  Extract sequence from genomic reference at variant coordinates
-  to check against supplied coordinates
-
-=cut
-
-sub get_reference_base{
-
-   my ($var, $slice_ad) = @_;
-   
-   my $ref_seq;
-   
-   if( ($var->{end} +1) == $var->{start}){ ## convention for insertions to reference
-     $ref_seq = "-";
-   }
-
-   elsif( $var->{end} < $var->{start}){ ## coordinate error
-     warn "Incorrect coords $var->{start} - $var->{end}  for $var->{name} \n";    
-   }    
-
-   else{
-   
-     # retrieve the reference sequence at that mapping for deletion or substitution    
-
-     my $slice = $slice_ad->fetch_by_region('toplevel', $var->{seqreg_name}, $var->{start}, $var->{end});
-   
-     unless (defined $slice){ die "ERROR Getting slice for $var->{seqreg_name}, $var->{start}, $var->{end}";}
-     $ref_seq = $slice->seq();
-
-     # correct for multi-mapping variants which may be on negative strand
-     if($var->{strand} eq "-1"){ reverse_comp(\$ref_seq);}
-   }
-
-   return $ref_seq;
-
-}
-=head2 check_illegal_characters
-
-  Checks for non ambiguity code/ATGC character to fail
-
-=cut
-sub check_illegal_characters{
-
-    my $allele   = shift;
-
-  if ($allele =~ m /[^ACGTU\-$AMBIGUITIES]/i){
-    ## identify specfic alleles to flag
-    my @fail;
-    my @al = split/\//, $allele;
-    foreach my $al(@al){ 
-      if ($al =~ m /[^ACGTU\-$AMBIGUITIES]|\)\)$/i){
-        push @fail, $al;
-      }
-    }
-    return \@fail;
-  }
-  else{
-    return undef;
-  }
-}
-=head2 remove_ambiguous_alleles
-
-  Expand ambiguous alleles to A/T/C/G
-  Returntype : expanded allele string
-
-=cut
-sub remove_ambiguous_alleles{
-
-  my $allele_string = shift;
-
-  $allele_string =~ s/([U$AMBIGUITIES])/$AMBIG_REGEXP_HASH{$1}/ig;
-
-  return $allele_string;
-}
-
-=head2 find_ambiguous_alleles
-
-  Checks if any of the bases in an allele string are ambiguity codes
-  Returntype : reference to array of ambiguous alleles
-
-=cut
-sub find_ambiguous_alleles{
-
-  my $allele_string = shift;
-
-  my @fail;
-  my @al = split/\//, $allele_string;
-  foreach my $al(@al){ 
-
-    if ($al =~ m/[$AMBIGUITIES]/i){
-      push @fail, $al;
-    }
-  }
-  return \@fail;
-
-}
-=head2 check_four_bases
-
-  Checks if all 4 bases are present in allele string
-  Returntype : 1 if present, 0 if not
-
-=cut
-sub check_four_bases{
-
-  my $allele_string =shift;
-
-  my @alleles = split /\//, $allele_string ;
-
-  return 0 if scalar(@alleles) < 4;
-
-
-  my %allele;
-  foreach my $al(@alleles){
-      $allele{$al} = 1;
-  } 
-  
-  if( exists $allele{A} && 
-    exists $allele{T} && 
-    exists $allele{C} && 
-    exists $allele{G} ){
-    return 1;
-  }
-  else{
-    return 0;
-  }
-}
-
-
 =head2 write_variant_fails
 
     Update failed_variation_working with all variation_id/reason combinations
@@ -795,6 +657,8 @@ sub write_variation{
   my $last  = $first + $self->required_param('batch_size') -1;
   if($first ==1){$last--;}
 
+  my %minor_allele;
+
   my $var_ext_sth = $var_dba->dbc->prepare(qq[ select variation_id,
                                                       source_id,
                                                       name, 
@@ -834,6 +698,9 @@ sub write_variation{
 
     $flip->{$v->[0]} = 0 unless defined $flip->{$v->[0]}; ## update non-flipped with 0
 
+    ## save minor allele for later checking
+    $minor_allele{$v->[0]} = $v->[6] if defined $v->[6];
+
     ## substitute in new values as appropriate
     $var_ins_sth->execute( $v->[0],
                            $v->[1],
@@ -848,6 +715,8 @@ sub write_variation{
                            $evidence->{$v->[0]})||    die "ERROR writing variation table\n";    
 
   }
+  return \%minor_allele;
+
 }
 
 
@@ -969,216 +838,6 @@ sub get_allele_code{
 }
 
 
-=head2 summarise_evidence
-
-  Description: Compile evidence of variant quality into a single comma seperated string
-  Status     : At Risk
-=cut
-sub summarise_evidence{
-
-    my $self = shift;
-
-    my %evidence;
-
-
-    ## summarise ss information
-    my $ss_variations =  $self->get_ss_variations();
-
-
-    ## extract list of variants with pubmed citations
-    ## not using this to not fail variants assuming it is quicker to fail then revert in bulk
-    my $pubmed_variations =  $self->get_pubmed_variations();
-
-
-    ## get 1KG discovered variants (human only)
-    my $kg_variations =  $self->get_KG_variations() if $self->required_param('species') =~/Homo|Human/i ;
-
-
-    foreach my $var(keys %$ss_variations ){
-
-      ## dbSNP ss submissions
-      $evidence{$var} = "Multiple_observations,"  if $ss_variations->{$var}->{count} > 1;
-
-      $evidence{$var} .= "Frequency,"             if $ss_variations->{$var}->{'freq'} ==1;
-
-
-      ## additional human evidence 
-      $evidence{$var} .= "HapMap,"                if $ss_variations->{$var}->{'HM'} ==1 ;
-      
-      $evidence{$var} .= "1000Genomes,"           if defined $kg_variations->{$var} ;
-
-      ## pubmed citations
-      $evidence{$var} .= "Cited,"                 if defined $pubmed_variations->{$var}; 
-
-      $evidence{$var} =~ s/\,$//;
-
-    }
-    return \%evidence;
-
-}
-=head2  get_ss_variations
-
-  Summarise information from dbSNP ss submissions:
-
-      - check the number of independant observations
-             - ie. different submitter handle or different sample
-      - check for any allele frequency information
-      - check for allele frequency information from Hapap if human
-
-=cut
-
-sub get_ss_variations{
-
-    my $self = shift;
-
-    my $first = $self->required_param('start_id');
-    my $last  = $first + $self->required_param('batch_size') -1;
-    if($first ==1){$last--;}
-   
-    my %evidence;
-
-
-    my $var_dba = $self->get_species_adaptor('variation');
-
-    my $obs_var_ext_sth  = $var_dba->dbc->prepare(qq[ select al.variation_id,
-                                                             h.handle,
-                                                             al.sample_id,
-                                                             al.frequency,
-                                                             s.name
-                                                      from   subsnp_handle h, allele al
-                                                      left outer join sample s on ( s.sample_id = al.sample_id)
-                                                      where  al.variation_id between ? and ?
-                                                      and    h.subsnp_id = al.subsnp_id ]);
-    $obs_var_ext_sth->execute($first, $last );
-    my $dat = $obs_var_ext_sth->fetchall_arrayref();
-
-    my %save_by_var; #  gather ss entries by variant
-
-    foreach my $l (@{$dat}){
-
-	$evidence{$l->[0]}{'obs'}  = 1;  ## save default value for each variant - full set to loop through later.
-
-	$l->[2] = "N" unless defined $l->[2];
-
-        #save  submitter handle and sample to try to discern independent submissions
-	push  @{$save_by_var{$l->[0]}}, [  $l->[1], $l->[2] ];
-
-
-       ## Save frequency evidence for variant by variant id
-
-       if(defined $l->[3] && $l->[3] < 1 && $l->[3] > 0){
-            ## flag if frequency data available
-            $evidence{$l->[0]}{'freq'}  = 1;
-
-	    ## special case for human only
-	    $evidence{$l->[0]}{'HM'}  = 1 if defined $l->[4] && $l->[4]   =~/HapMap/i;
-
-	}
-    }
-
-
-    foreach my $var (keys %save_by_var){
-
-	$evidence{$var}{count} = count_ss(\@{$save_by_var{$var}} );
-    }
-    return \%evidence;
-}
-
-sub count_ss{
-
-
-    my $submissions = shift;
-
-    my %submitter;
-    my $total_count;
-
-
-    foreach my $submission (@{$submissions}){
-        ## group populations seen by submitter
-
-        push @{$submitter{$submission->[0]}{pop}} , $submission->[1];
-	$submitter{$submission->[0]}{no_pop} = 1  if $submission->[1] eq "N";        
-    }
-
-    foreach my $submitter (keys %submitter){
-        ## count by submitter ignoring submissions without populations if submissions with populations are present
-        my %unique_sub;
-        map { $unique_sub{$_} = 1; } @{$submitter{$submitter}{pop}};
-        my $submitter_count = scalar(keys %unique_sub);
-        $submitter_count-- if $submitter_count >1 && defined $submitter{$submitter}{no_pop} && $submitter{$submitter}{no_pop} ==1;
-        $total_count += $submitter_count;
-
-    }
-    return $total_count;
-}
-
-
-
-sub get_pubmed_variations{
-
-  my $self = shift;
-
-  ### start and end variation_id supplied
-  my $first = $self->required_param('start_id');;
-  my $last  = $first + $self->required_param('batch_size') -1;
-  if($first ==1){$last--;}
- 
-  my %pubmed_variations;
-
-  my $var_dba = $self->get_species_adaptor('variation');
-
-  ## some species don't have pubmed citations for variations
-  my $PM_exists_ext_sth  = $var_dba->dbc->prepare(qq[ show tables like 'pubmed_variation']);
-  $PM_exists_ext_sth->execute();
-  my $exists = $PM_exists_ext_sth->fetchall_arrayref();
-  return unless defined $exists->[0]->[0]; 
-
-  my $pubmed_var_ext_sth  = $var_dba->dbc->prepare(qq[ select variation_id from pubmed_variation]);
-  $pubmed_var_ext_sth->execute();
-  my $data = $pubmed_var_ext_sth->fetchall_arrayref();
- 
-  foreach my $l (@{$data}){
-      $pubmed_variations{$l->[0]} = 1;
-  }
-
-  return \%pubmed_variations;
-
-}
-
-
-## human only - extact ids for variants found in 1000 genomes project
-
-sub get_KG_variations{
-
-  my $self = shift;
-
- 
-  ### start and end variation_id supplied
-  my $first = $self->required_param('start_id');
-  my $last  = $first + $self->required_param('batch_size') -1;
-  if($first ==1){$last--;}
- 
-  my %kg_variations;
-
-  my $var_dba = $self->get_species_adaptor('variation');
-
-  my $var_ext_sth  = $var_dba->dbc->prepare(qq[ select variation.variation_id 
-                                                from variation, tmp_1kg_var 
-                                                where variation.snp_id =  tmp_1kg_var.rs_id 
-                                                and variation.variation_id  between ? and ?
-                                              ]);
-  $var_ext_sth->execute($first, $last);
-  my $data = $var_ext_sth->fetchall_arrayref();
- 
-  foreach my $l (@{$data}){
-      $kg_variations{$l->[0]} = 1;
-  }
-
-  return \%kg_variations;
-
-}
-
-
 sub find_failed_variation_set_id{
 
     my $var_dba = shift;
@@ -1195,6 +854,34 @@ sub find_failed_variation_set_id{
     die "Failed set not available\n" unless defined $failed_set_id->[0]->[0];
 
     return $failed_set_id->[0]->[0];
+}
+=head check_minor_allele
+
+Description: Compare minor allele string to allele string for any variants with both and save suspect variants
+Status     : At Risk
+
+=cut
+sub check_minor_allele{
+
+    my $self          = shift;
+    my $minor_allele  = shift; 
+    my $allele_string = shift;
+    
+    my $mafail_ins_sth  = $var_dba->dbc->prepare(qq[ insert into failed_minor_allele_tmp (variation_id) values (?) ]);
+
+    foreach my $var_id (keys %{$minor_allele}){
+
+      next unless $allele_string->{$var_id};
+      my @expected = split/\/, $allele_string->{$var_id};
+
+      my $is_found = 0;
+      foreach my $expected (@expected){
+	  $is_found =1 if $minor_allele->{$var_id} eq $expected;
+      } 
+      unless ($is_found ===1){
+	  $minor_allele_fail_ins_sth->execute($var_id});
+    }
+
 }
   
 
