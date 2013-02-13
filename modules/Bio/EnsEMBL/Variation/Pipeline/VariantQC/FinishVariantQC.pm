@@ -100,7 +100,7 @@ sub run {
     }
 
     ## report any variation.minor_allele / variation_feature.allele_string incompatiblities 
-    my $suspect_minor_allele = count_rows(failed_minor_allele_tmp);
+    my $suspect_minor_allele = count_rows($var_dba,'failed_minor_allele_tmp');
     print  $report "$suspect_minor_allele variants have minor alleles incompatible with their allele strings (see database)\n" 
 	if $suspect_minor_allele > 0;
 
