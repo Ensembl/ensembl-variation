@@ -163,13 +163,15 @@ sub check_table_counts{
         my $new_count = count_rows($var_dba , $table );
         my @prev_results = @{$details->{result_ad}->fetch_by_db_result_type($details->{prev_db},$tables_to_check{$table} )};
 
-        my $previous_row_count = $prev_results[0]->result_value();
-        if($new_count  >= $previous_row_count){
-            print $report "OK: $table\t previously $previous_row_count now $new_count \n";
-        }
-        else{
-            print $report "ERROR: $table\t previously $previous_row_count now $new_count \n";
-            $ok =0;
+        if( defined $prev_results[0]){
+            my $previous_row_count = $prev_results[0]->result_value();
+            if($new_count  >= $previous_row_count){
+                print $report "OK: $table\t previously $previous_row_count now $new_count \n";
+            }
+            else{
+                print $report "ERROR: $table\t previously $previous_row_count now $new_count \n";
+                $ok =0;
+            }
         }
         ## store new result
         my $result =  Bio::EnsEMBL::IntVar::Result->new_fast({ ensvardb     => $details->{new_db},
