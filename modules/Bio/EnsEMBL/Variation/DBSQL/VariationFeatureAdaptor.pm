@@ -156,6 +156,7 @@ sub store {
         $vf->minor_allele_frequency,
         $vf->minor_allele_count,
         $vf->flank_match,
+        $vf->{evidence} ? (join ",", @{$vf->{evidence}}) : undef
     );
     
     $sth->finish;

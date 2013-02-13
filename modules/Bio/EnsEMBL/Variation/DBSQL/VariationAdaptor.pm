@@ -142,7 +142,7 @@ sub store {
         $var->minor_allele_frequency,
         $var->minor_allele_count,
         $var->{clinical_significance_attrib_id},
-        (join ",", @{$var->{evidence}})  || undef
+        $var->{evidence} ? (join ",", @{$var->{evidence}}) : undef
     );
     
     $sth->finish;
