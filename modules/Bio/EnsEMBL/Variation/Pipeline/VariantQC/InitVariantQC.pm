@@ -136,8 +136,7 @@ sub create_working_tables{
   $var_dba->dbc->do(qq{ DROP TABLE IF EXISTS failed_minor_allele_tmp});
   $var_dba->dbc->do(qq{ CREATE TABLE failed_minor_allele_tmp  (
                         variation_id int(11) unsigned NOT NULL,                        
-                        KEY variation_idx (variation_id),
-                      )});
+                        KEY variation_idx (variation_id)   )});
 
   ## table to hold variation feature info after fliping & ref allele assignment
   $var_dba->dbc->do(qq{ DROP TABLE IF EXISTS variation_feature_working});
