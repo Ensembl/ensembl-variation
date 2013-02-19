@@ -772,53 +772,6 @@ sub variation {
   return $self->{'variation'};
 }
 
-=head2 consequence_type
-
-  Arg [1]    : (optional) String $term_type
-  Description: Get a list of all the unique consequence terms of this 
-               VariationFeature. By default returns Ensembl display terms
-               (e.g. 'NON_SYNONYMOUS_CODING'). $term_type can also be 'label'
-               (e.g. 'Non-synonymous coding'), 'SO' (Sequence Ontology, e.g.
-               'non_synonymous_codon') or 'NCBI' (e.g. 'missense')
-  Returntype : listref of strings
-  Exceptions : none
-  Status     : Stable
-
-=cut
-
-sub consequence_type {
-    
-    my $self = shift;
-	my $term_type = shift;
-	
-	my $method_name;
-	
-    # delete cached term
-    if(defined($term_type)) {
-        delete $self->{consequence_types};
-		$method_name = $term_type.($term_type eq 'label' ? '' : '_term');
-		$method_name = 'SO_term' unless @{$self->get_all_OverlapConsequences} && $self->get_all_OverlapConsequences->[0]->can($method_name);
-    }
-	
-	$method_name ||= 'SO_term';
-
-	if (exists($self->{current_consequence_method}) && $self->{current_consequence_method} ne $method_name) {
-		delete $self->{consequence_type};
-	}
-
-    unless ($self->{consequence_types}) {
-
-        # work out the terms from the OverlapConsequence objects
-        
-        $self->{consequence_types} = 
-            [ map { $_->$method_name } @{ $self->get_all_OverlapConsequences } ];
-    }
-
-	$self->{current_consequence_method} = $method_name;
-    
-    return $self->{consequence_types};
-}
-
 =head2 get_all_OverlapConsequences
 
   Description: Get a list of all the unique OverlapConsequences of this VariationFeature, 
@@ -902,37 +855,6 @@ sub most_severe_OverlapConsequence {
     }
     
     return $self->{_most_severe_consequence};
-}
-
-=head2 display_consequence
-
-  Arg [1]    : (optional) String $term_type
-  Description: Get the term for the most severe consequence of this 
-               VariationFeature. By default returns Ensembl display terms
-               (e.g. 'NON_SYNONYMOUS_CODING'). $term_type can also be 'label'
-               (e.g. 'Non-synonymous coding'), 'SO' (Sequence Ontology, e.g.
-               'non_synonymous_codon') or 'NCBI' (e.g. 'missense')
-  Returntype : string
-  Exceptions : none
-  Status     : Stable
-
-=cut
-
-sub display_consequence {
-    my $self = shift;
-	my $term_type = shift;
-	
-	my $method_name;
-	
-    # delete cached term
-    if(defined($term_type)) {
-		$method_name = $term_type.($term_type eq 'label' ? '' : '_term');
-		$method_name = 'SO_term' unless @{$self->get_all_OverlapConsequences} && $self->get_all_OverlapConsequences->[0]->can($method_name);
-    }
-	
-	$method_name ||= 'SO_term';
-	
-    return $self->most_severe_OverlapConsequence->$method_name;
 }
 
 =head2 add_consequence_type
