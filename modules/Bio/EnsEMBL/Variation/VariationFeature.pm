@@ -1,12 +1,12 @@
 =head1 LICENSE
 
- Copyright (c) 1999-2012 The European Bioinformatics Institute and
+ Copyright (c) 1999-2013 The European Bioinformatics Institute and
  Genome Research Limited.  All rights reserved.
 
  This software is distributed under a modified Apache license.
  For license details, please see
 
-   http://www.ensembl.org/info/about/code_licence.html
+   http://www.ensembl.org/info/about/legal/code_licence.html
 
 =head1 CONTACT
 
@@ -18,10 +18,7 @@
 
 =cut
 
-# Ensembl module for Bio::EnsEMBL::Variation::VariationFeature
-#
-# Copyright (c) 2004 Ensembl
-#
+
 
 
 =head1 NAME
@@ -105,6 +102,7 @@ use Bio::EnsEMBL::Slice;
 use Bio::EnsEMBL::Variation::DBSQL::TranscriptVariationAdaptor;
 use Bio::PrimarySeq;
 use Bio::SeqUtils;
+use Bio::EnsEMBL::Variation::Utils::Sequence  qw(%EVIDENCE_VALUES); 
 
 our @ISA = ('Bio::EnsEMBL::Variation::BaseVariationFeature');
 
@@ -199,7 +197,8 @@ sub new {
       $class_so_term,
       $minor_allele,
       $minor_allele_freq,
-      $minor_allele_count
+      $minor_allele_count,
+      $evidence
   ) = rearrange([qw(
           ALLELE_STRING 
           VARIATION_NAME 
@@ -215,6 +214,7 @@ sub new {
           MINOR_ALLELE
           MINOR_ALLELE_FREQUENCY
           MINOR_ALLELE_COUNT
+          EVIDENCE
         )], @_);
 
   $self->{'allele_string'}          = $allele_str;
@@ -231,7 +231,7 @@ sub new {
   $self->{'minor_allele'}           = $minor_allele;
   $self->{'minor_allele_frequency'} = $minor_allele_freq;
   $self->{'minor_allele_count'}     = $minor_allele_count;
-  
+  $self->{'evidence'}               = $evidence;
   return $self;
 }
 
@@ -772,53 +772,6 @@ sub variation {
   return $self->{'variation'};
 }
 
-=head2 consequence_type
-
-  Arg [1]    : (optional) String $term_type
-  Description: Get a list of all the unique consequence terms of this 
-               VariationFeature. By default returns Ensembl display terms
-               (e.g. 'NON_SYNONYMOUS_CODING'). $term_type can also be 'label'
-               (e.g. 'Non-synonymous coding'), 'SO' (Sequence Ontology, e.g.
-               'non_synonymous_codon') or 'NCBI' (e.g. 'missense')
-  Returntype : listref of strings
-  Exceptions : none
-  Status     : Stable
-
-=cut
-
-sub consequence_type {
-    
-    my $self = shift;
-	my $term_type = shift;
-	
-	my $method_name;
-	
-    # delete cached term
-    if(defined($term_type)) {
-        delete $self->{consequence_types};
-		$method_name = $term_type.($term_type eq 'label' ? '' : '_term');
-		$method_name = 'SO_term' unless @{$self->get_all_OverlapConsequences} && $self->get_all_OverlapConsequences->[0]->can($method_name);
-    }
-	
-	$method_name ||= 'SO_term';
-
-	if (exists($self->{current_consequence_method}) && $self->{current_consequence_method} ne $method_name) {
-		delete $self->{consequence_type};
-	}
-
-    unless ($self->{consequence_types}) {
-
-        # work out the terms from the OverlapConsequence objects
-        
-        $self->{consequence_types} = 
-            [ map { $_->$method_name } @{ $self->get_all_OverlapConsequences } ];
-    }
-
-	$self->{current_consequence_method} = $method_name;
-    
-    return $self->{consequence_types};
-}
-
 =head2 get_all_OverlapConsequences
 
   Description: Get a list of all the unique OverlapConsequences of this VariationFeature, 
@@ -902,37 +855,6 @@ sub most_severe_OverlapConsequence {
     }
     
     return $self->{_most_severe_consequence};
-}
-
-=head2 display_consequence
-
-  Arg [1]    : (optional) String $term_type
-  Description: Get the term for the most severe consequence of this 
-               VariationFeature. By default returns Ensembl display terms
-               (e.g. 'NON_SYNONYMOUS_CODING'). $term_type can also be 'label'
-               (e.g. 'Non-synonymous coding'), 'SO' (Sequence Ontology, e.g.
-               'non_synonymous_codon') or 'NCBI' (e.g. 'missense')
-  Returntype : string
-  Exceptions : none
-  Status     : Stable
-
-=cut
-
-sub display_consequence {
-    my $self = shift;
-	my $term_type = shift;
-	
-	my $method_name;
-	
-    # delete cached term
-    if(defined($term_type)) {
-		$method_name = $term_type.($term_type eq 'label' ? '' : '_term');
-		$method_name = 'SO_term' unless @{$self->get_all_OverlapConsequences} && $self->get_all_OverlapConsequences->[0]->can($method_name);
-    }
-	
-	$method_name ||= 'SO_term';
-	
-    return $self->most_severe_OverlapConsequence->$method_name;
 }
 
 =head2 add_consequence_type
@@ -1038,6 +960,25 @@ sub class_SO_term {
 
     return $self->{class_SO_term};
 }
+=head2 get_all_evidence_values
+
+  Arg [1]    : none
+  Example    : my @vstates = @{$vf->get_all_validation_states()};
+  Description: Retrieves all evidence values for this variationFeature.  Current
+               possible evidence values are 'Multiple_observations','Frequency',
+              'HapMap', '1000Genomes','Cited'
+  Returntype : reference to list of strings
+  Exceptions : none
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub get_all_evidence_values {
+    my $self = shift;
+    return $self->{'evidence'};
+}
+
 
 =head2 get_all_validation_states
 
@@ -1073,6 +1014,34 @@ sub get_all_validation_states {
 
 sub add_validation_state {
     Bio::EnsEMBL::Variation::Utils::Sequence::add_validation_state(@_);
+}
+
+
+=head2 add_evidence_value
+
+  Arg [1]    : string $state
+  Example    : $v->add_evidence_value('Frequency');
+  Description: Adds an evidence value  to this variation.
+  Returntype : none
+  Exceptions : 
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub add_evidence_value {
+    
+    my $self = shift;
+    my $add_ev = shift if(@_);
+
+    ## do not add evidence value unless it is in the list of permitted values
+    return $self->{'evidence'} unless $EVIDENCE_VALUES{$add_ev};
+
+    push @{$self->{'evidence'}}, $add_ev;
+    my %unique = map { $_ => 1 } @{$self->{'evidence'}};
+    @{$self->{'evidence'}} = keys %unique;
+
+    return $self->{'evidence'};    
 }
 
 =head2 source
