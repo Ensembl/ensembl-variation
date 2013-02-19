@@ -284,22 +284,6 @@ sub codon_position {
     return $self->{_codon_position};
 }
 
-=head2 affects_cds
-
-  Description: Check if any of this TranscriptVariation's alleles lie within
-               the CDS of the Transcript
-  Returntype : boolean
-  Exceptions : None
-  Caller     : general
-  Status     : At Risk
-
-=cut
-
-sub affects_cds {
-    my $self = shift;
-    return scalar grep { within_cds($_) } @{ $self->get_all_alternate_TranscriptVariationAlleles }; 
-}
-
 =head2 affects_peptide
 
   Description: Check if any of this TranscriptVariation's alleles change the
