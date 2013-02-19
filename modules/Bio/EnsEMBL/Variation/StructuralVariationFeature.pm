@@ -71,7 +71,7 @@ use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Utils::Argument  qw(rearrange);
 use Bio::EnsEMBL::Utils::Scalar qw(assert_ref);
 use Bio::EnsEMBL::Slice;
-use Bio::EnsEMBL::Variation::Utils::Constants qw(%VARIATION_CLASSES);
+use Bio::EnsEMBL::Variation::Utils::Constants qw($DEFAULT_OVERLAP_CONSEQUENCE %VARIATION_CLASSES); 
 use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(MAX_DISTANCE_FROM_TRANSCRIPT);
 use Bio::EnsEMBL::Variation::StructuralVariationOverlap;
 use Bio::EnsEMBL::Variation::TranscriptStructuralVariation;
@@ -653,6 +653,46 @@ sub add_TranscriptStructuralVariation {
   # we need to weaken the reference back to us to avoid a circular reference
   weaken($tsv->{base_variation_feature});
   $self->{transcript_structural_variations}->{$tsv->transcript_stable_id} = $tsv;
+}
+
+
+=head2 get_all_OverlapConsequences
+
+  Description: Get a list of all the unique OverlapConsequences of this StructuralVariationFeature, 
+               calculating them on the fly from the StructuralTranscriptVariations if necessary
+  Returntype : listref of Bio::EnsEMBL::Variation::OverlapConsequence objects
+  Exceptions : none
+  Status     : Stable
+
+=cut
+
+sub get_all_OverlapConsequences {
+    my $self = shift;
+
+    unless ($self->{overlap_consequences}) {
+        
+        # work them out and store them in a hash keyed by SO_term as we don't 
+        # want duplicates from different VFOs
+
+        my %overlap_cons;
+
+        for my $vfo (@{ $self->get_all_TranscriptStructuralVariations }) {
+            for my $allele (@{ $vfo->get_all_alternate_TranscriptStructuralVariationAlleles }) {
+                for my $cons (@{ $allele->get_all_OverlapConsequences }) {
+                    $overlap_cons{$cons->SO_term} = $cons;
+                }
+            }
+        }
+
+        # if we don't have any consequences we use a default from Constants.pm 
+        # (currently set to the intergenic consequence)
+
+        $self->{overlap_consequences} = [ 
+            %overlap_cons ? values %overlap_cons : $DEFAULT_OVERLAP_CONSEQUENCE
+        ];
+    }
+
+    return $self->{overlap_consequences};
 }
 
 
