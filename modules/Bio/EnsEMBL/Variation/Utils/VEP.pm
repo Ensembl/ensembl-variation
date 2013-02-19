@@ -1,12 +1,12 @@
 =head1 LICENSE
 
- Copyright (c) 1999-2012 The European Bioinformatics Institute and
+ Copyright (c) 1999-2013 The European Bioinformatics Institute and
  Genome Research Limited.  All rights reserved.
 
  This software is distributed under a modified Apache license.
  For license details, please see
 
-   http://www.ensembl.org/info/about/code_licence.html
+   http://www.ensembl.org/info/about/legal/code_licence.html
 
 =head1 CONTACT
 
@@ -1862,6 +1862,24 @@ sub init_line {
         $line->{Extra}->{GMAF} = scalar @gmafs ? join ",", @gmafs : '-';
     }
     
+    # 1KG MAFs?
+    if(defined($config->{maf_1kg}) && defined($vf->{existing}) && scalar @{$vf->{existing}}) {
+        my @pops = qw(AFR AMR ASN EUR);
+        
+        foreach my $var_array(@{$vf->{existing}}) {
+            if(scalar @{$var_array} > 8) {
+                for my $i(0..$#pops) {
+                    my $freq = $var_array->[$i + 8];
+                    $freq = '-' unless defined($freq);
+                    $line->{Extra}->{$pops[$i].'_MAF'} =
+                        exists($line->{Extra}->{$pops[$i].'_MAF'}) ?
+                        $line->{Extra}->{$pops[$i].'_MAF'}.','.$freq :
+                        $freq;
+                }
+            }
+        }
+    }
+    
     # copy entries from base_line
     if(defined($base_line)) {
         $line->{$_} = $base_line->{$_} for keys %$base_line;
@@ -1946,18 +1964,27 @@ sub filter_by_consequence {
     my @cons;
     push @cons, @{$vf->consequence_type($_)} for @types;
     
+    my $method_mod = $vf->isa('Bio::EnsEMBL::Variation::StructuralVariationFeature') ? 'Structural' : '';
+    
     # add regulatory consequences
     if(defined($config->{regulatory})) {
         foreach my $term_type(@types) {
             my $term_method = $term_type.'_term';
             
-            for my $rfv (@{ $vf->get_all_RegulatoryFeatureVariations }) {
-                for my $rfva(@{$rfv->get_all_alternate_RegulatoryFeatureVariationAlleles}) {
+            my $m1 = 'get_all_RegulatoryFeature'.$method_mod.'Variations';
+            my $m2 = 'get_all_RegulatoryFeature'.$method_mod.'VariationAlleles';
+            
+            for my $rfv (@{ $vf->$m1 }) {
+                for my $rfva(@{$rfv->$m2}) {
                     push @cons, map {$_->$term_method} @{ $rfva->get_all_OverlapConsequences };
                 }
-            }   
-            for my $mfv (@{ $vf->get_all_MotifFeatureVariations }) {
-                for my $mfva(@{$mfv->get_all_alternate_MotifFeatureVariationAlleles}) {
+            }
+            
+            $m1 = 'get_all_MotifFeature'.$method_mod.'Variations';
+            $m2 = 'get_all_MotifFeature'.$method_mod.'VariationAlleles';
+            
+            for my $mfv (@{ $vf->$m1 }) {
+                for my $mfva(@{$mfv->$m2}) {
                     push @cons, map {$_->$term_method} @{ $mfva->get_all_OverlapConsequences };
                 }
             }
@@ -1975,7 +2002,9 @@ sub filter_by_consequence {
     
     # check special case, coding
     if(defined($filters->{coding})) {
-        if(grep {$_->affects_cds} @{$vf->get_all_TranscriptVariations}) {
+        my $method = 'get_all_Transcript'.$method_mod.'Variations';
+        
+        if(grep {$_->affects_cds} @{$vf->$method}) {
             if($filters->{coding} == 1) {
                 $yes = 1;
             }
@@ -4259,6 +4288,7 @@ sub build_full_cache {
     if($config->{build} =~ /all/i) {
         @slices = @{$config->{sa}->fetch_all('toplevel')};
         push @slices, @{$config->{sa}->fetch_all('lrg', undef, 1, undef, 1)} if defined($config->{lrg});
+        push @slices, grep { $_->assembly_exception_type() =~ /^PATCH/ } @{$config->{sa}->fetch_all('toplevel', undef, 1)};
     }
     else {
         foreach my $val(split /\,/, $config->{build}) {
