@@ -404,6 +404,22 @@ sub get_overlapping_ProteinFeatures {
     return $self->{_protein_features};
 }
 
+=head2 affects_cds
+
+  Description: Check if any of this TranscriptVariation's alleles lie within
+               the CDS of the Transcript
+  Returntype : boolean
+  Exceptions : None
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub affects_cds {
+    my $self = shift;
+    return scalar grep { within_cds($_) } @{ $self->get_all_alternate_BaseVariationFeatureOverlapAlleles }; 
+}
+
 =head2 exon_number
 
   Description: Identify which exon(s) this variant falls in   
