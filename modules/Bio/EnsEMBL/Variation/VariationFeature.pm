@@ -696,7 +696,7 @@ sub add_TranscriptVariation {
     my ($self, $tv) = @_;
     assert_ref($tv, 'Bio::EnsEMBL::Variation::TranscriptVariation');
     # we need to weaken the reference back to us to avoid a circular reference
-    weaken($tv->{base_variation_feature});
+    weaken($tv->{base_variation_feature}) unless isweak($tv->{base_variation_feature});
     $self->{transcript_variations}->{$tv->transcript_stable_id} = $tv;
 }
 
@@ -715,7 +715,7 @@ sub add_RegulatoryFeatureVariation {
     my ($self, $rfv) = @_;
     assert_ref($rfv, 'Bio::EnsEMBL::Variation::RegulatoryFeatureVariation');
     # we need to weaken the reference back to us to avoid a circular reference
-    weaken($rfv->{base_variation_feature});
+    weaken($rfv->{base_variation_feature}) unless isweak($rfv->{base_variation_feature});
     $self->{regulatory_feature_variations}->{$rfv->regulatory_feature_stable_id} = $rfv;
 }
 
@@ -734,7 +734,7 @@ sub add_MotifFeatureVariation {
     my ($self, $mfv) = @_;
     assert_ref($mfv, 'Bio::EnsEMBL::Variation::MotifFeatureVariation');
     # we need to weaken the reference back to us to avoid a circular reference
-    weaken($mfv->{base_variation_feature});
+    weaken($mfv->{base_variation_feature}) unless isweak($mfv->{base_variation_feature});
     $self->{motif_feature_variations}->{$mfv->motif_feature_id} = $mfv;
 }
 
