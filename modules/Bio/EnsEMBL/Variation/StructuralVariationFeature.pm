@@ -651,7 +651,7 @@ sub add_TranscriptStructuralVariation {
   my ($self, $tsv) = @_;
   assert_ref($tsv, 'Bio::EnsEMBL::Variation::TranscriptStructuralVariation');
   # we need to weaken the reference back to us to avoid a circular reference
-  weaken($tsv->{base_variation_feature});
+  weaken($tsv->{base_variation_feature}) unless isweak($tsv->{base_variation_feature});
   $self->{transcript_structural_variations}->{$tsv->transcript_stable_id} = $tsv;
 }
 
