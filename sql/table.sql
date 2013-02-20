@@ -646,10 +646,9 @@ create table individual(
 @table individual_type
 
 @colour #FF8500
-@desc This table resolves the many-to-many relationship between the individual and population tables; i.e. samples may belong to more than one population. Hence it is composed of rows of individual and population identifiers.
-
+@desc This table gives a deatailed description for each of the possible individual types: fully_inbred, partly_inbred, outbred, mutant  
 @column individual_type_id	Primary key, internal identifier.
-@column name					Short name of the individual type. e.g. "fully_inbred","mutant".
+@column name				Short name of the individual type. e.g. "fully_inbred","mutant".
 @column description			Long name of the individual type.
 
 
