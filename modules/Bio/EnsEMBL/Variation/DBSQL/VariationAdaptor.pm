@@ -135,7 +135,7 @@ sub store {
         (join ",", @{$var->get_all_validation_states}) || undef,
         $var->ancestral_allele,
         $var->{flipped},
-        $var->{class_attrib_id} || $var->adaptor->db->get_AttributeAdaptor->attrib_id_for_type_value('SO_term', $var->{class_SO_term}) || 18,
+        $var->{class_attrib_id} || $self->db->get_AttributeAdaptor->attrib_id_for_type_value('SO_term', $var->{class_SO_term}) || 18,
         $var->is_somatic,
         $var->minor_allele,
         $var->minor_allele_frequency,
