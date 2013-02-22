@@ -1,4 +1,9 @@
 /**
+Use MyISAM storage engine
+*/
+SET storage_engine=MYISAM;
+
+/**
 @header  Variation tables
 @desc    These tables define the central variation data.
 @colour  #000
@@ -221,7 +226,8 @@ CREATE TABLE IF NOT EXISTS `phenotype_feature` (
   PRIMARY KEY (`phenotype_feature_id`),
   KEY `phenotype_idx` (`phenotype_id`),
   KEY `object_idx` (`object_id`,`type`),
-  KEY `type_idx` (`type`)
+  KEY `type_idx` (`type`),
+  KEY `pos_idx` (`seq_region_id`,`seq_region_start`,`seq_region_end`)
 );
 
 
