@@ -249,7 +249,8 @@ CREATE TABLE IF NOT EXISTS `phenotype_feature_attrib` (
   `phenotype_feature_id` int(11) unsigned NOT NULL,
   `attrib_type_id` int(11) DEFAULT NULL,
   `value` varchar(255) DEFAULT NULL,
-  KEY `phenotype_feature_idx` (`phenotype_feature_id`)
+  KEY `phenotype_feature_idx` (`phenotype_feature_id`),
+  KEY `type_value_idx` (`attrib_type_id`,`value`)
 );
 
 
