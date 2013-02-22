@@ -7,7 +7,7 @@ VALUES
 	(14, 'risk_allele', 'Risk allele', 'Risk allele in phenotype association'),
 	(15, 'p_value', 'P-value', 'P-value denoting significance of an observed phenotype annotation'),
 	(16, 'variation_names', 'Variation names', 'ID of variant(s) linked with a phenotype association'),
-	(17, 'individual_id', 'Individual ID', 'Individual ID for source of phenotype association'),
+	(17, 'sample_id', 'Sample ID', 'Sample ID for source of phenotype association'),
     (18, 'strain_id', 'Strain ID', 'Strain ID for source of phenotype association');
     
 
@@ -71,7 +71,7 @@ SELECT p.phenotype_feature_id, t.attrib_type_id, va.sample_id
 FROM structural_variation_annotation va, phenotype_feature p, attrib_type t
 WHERE va.structural_variation_annotation_id = p.variation_annotation_id
 AND va.sample_id IS NOT NULL
-AND t.code = "individual_id";
+AND t.code = "sample_id";
 
 INSERT INTO phenotype_feature_attrib
 SELECT p.phenotype_feature_id, t.attrib_type_id, va.strain_id
