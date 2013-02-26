@@ -872,7 +872,7 @@ sub check_minor_allele{
     foreach my $var_id (keys %{$minor_allele}){
 
       next unless $allele_string->{$var_id};
-      my @expected = split/\/, $allele_string->{$var_id};
+      my @expected = split/\//, $allele_string->{$var_id};
 
       my $is_found = 0;
       foreach my $expected (@expected){
