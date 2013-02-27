@@ -73,7 +73,7 @@ if ($host || $registry_file) {
         if ($port) {
             $registry->load_registry_from_db(-host => $host, -user => $user, -port => $port);
         } else {
-             $registry->load_registry_from_db(-host => $host, -user => $user, -port => $port);
+            $registry->load_registry_from_db(-host => $host, -user => $user);
         }
     } else {
         $registry->load_all($registry);
