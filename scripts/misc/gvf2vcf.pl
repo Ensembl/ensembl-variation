@@ -418,8 +418,10 @@ sub parse_row {
     if ($genotypes) {
         $format = 'GT';
         $sample = $genotypes;
+        print $vcf_body_fh join("\t", $chrom, $pos, $id, $ref, $alt, $qual, $filter, $info, $format, $sample), "\n";
+    } else {
+        print $vcf_body_fh join("\t", $chrom, $pos, $id, $ref, $alt, $qual, $filter, $info), "\n";
     }
-    print $vcf_body_fh join("\t", $chrom, $pos, $id, $ref, $alt, $qual, $filter, $info, $format, $sample), "\n";
 }
 
 sub get_attributes {
