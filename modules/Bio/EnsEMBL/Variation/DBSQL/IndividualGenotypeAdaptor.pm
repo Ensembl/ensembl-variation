@@ -295,13 +295,19 @@ sub _objs_from_sth{
 	$sth->bind_columns(\$variation_id, \$subsnp_id, \$genotypes);
 	
 	my (%individual_hash, %gt_code_hash, @results);
-	
+	my %done;
 	while($sth->fetch) {
 		my @genotypes = unpack("(ww)*", $genotypes);
 		
 		while(@genotypes) {
 			my $sample_id = shift @genotypes;
 			my $gt_code = shift @genotypes;
+
+                        ## temp fix for duplicated 1KG data   
+                        my $ss = $subsnp_id;
+                        $ss = 0 unless defined $ss  ;
+                        next if $done{$sample_id}{$gt_code}{$ss};
+                        $done{$sample_id}{$gt_code}{$ss} = 1;
 			
 			my $igtype  = Bio::EnsEMBL::Variation::IndividualGenotype->new_fast({
 				_variation_id => $variation_id,
