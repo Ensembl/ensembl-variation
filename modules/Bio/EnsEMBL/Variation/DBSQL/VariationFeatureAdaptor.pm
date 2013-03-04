@@ -379,13 +379,13 @@ sub fetch_all_genotyped_by_Slice{
     return $self->fetch_all_by_Slice_constraint($slice,$constraint);
 }
 
-sub _internal_fetch_all_with_annotation_by_Slice{
+sub _internal_fetch_all_with_phenotype_by_Slice{
 
 	my $self = shift;
 	my $slice = shift;
 	my $v_source = shift;
 	my $p_source = shift;
-	my $annotation = shift;
+	my $phenotype = shift;
 	my $constraint = shift;
 	
 	if(!ref($slice) || !$slice->isa('Bio::EnsEMBL::Slice')) {
@@ -405,13 +405,13 @@ sub _internal_fetch_all_with_annotation_by_Slice{
     $extra_table .= qq{, source ps};
   }
     
-  if(defined $annotation) {
-    if($annotation =~ /^[0-9]+$/) {
-      $extra_sql_in .= qq{ AND va.phenotype_id = $annotation };
+  if(defined $phenotype) {
+    if($phenotype =~ /^[0-9]+$/) {
+      $extra_sql_in .= qq{ AND pf.phenotype_id = $phenotype };
     }
     else {
-      $extra_sql_in .= qq{ AND va.phenotype_id = p.phenotype_id 
-                           AND (p.name = '$annotation' OR p.description LIKE '%$annotation%') 
+      $extra_sql_in .= qq{ AND pf.phenotype_id = p.phenotype_id 
+                           AND (p.name = '$phenotype' OR p.description LIKE '%$phenotype%') 
                          };
       $extra_table .= qq{, phenotype p};
     }
@@ -430,10 +430,11 @@ sub _internal_fetch_all_with_annotation_by_Slice{
     SELECT $cols
     FROM (variation_feature vf, source s)
     LEFT JOIN failed_variation fv ON (fv.variation_id = vf.variation_id)
-    WHERE 
-    vf.variation_id IN
-      (SELECT va.variation_id FROM variation_annotation va, study st $extra_table 
-      WHERE va.study_id=st.study_id $extra_sql_in)
+    WHERE vf.seq_region_id = pf.seq_region_id
+    AND vf.seq_region_start = pf.seq_region_start
+    AND vf.seq_region_end = pf.seq_region_end
+    AND vf.variation_name = pf.object_id
+    $extra_sql_in
     AND vf.source_id = s.source_id 
 		$extra_sql
     AND vf.seq_region_id = ?
@@ -447,23 +448,23 @@ sub _internal_fetch_all_with_annotation_by_Slice{
   return $self->_objs_from_sth($sth, undef, $slice);
 }
 
-=head2 fetch_all_with_annotation_by_Slice
+=head2 fetch_all_with_phenotype_by_Slice
 
   Arg [1]    : Bio::EnsEMBL:Variation::Slice $slice
   Arg [2]    : $variation_feature_source [optional]
-  Arg [3]    : $annotation_source [optional]
-  Arg [4]    : $annotation_name [optional]
-  Example    : my @vfs = @{$vfa->fetch_all_with_annotation_by_Slice($slice)};
-  Description: Retrieves all germline variation features associated with annotations for
+  Arg [3]    : $phenotype_source [optional]
+  Arg [4]    : $phenotype_name [optional]
+  Example    : my @vfs = @{$vfa->fetch_all_with_phenotype_by_Slice($slice)};
+  Description: Retrieves all germline variation features associated with phenotypes for
                a given slice.
                The optional $variation_feature_source argument can be used to
                retrieve only variation features from a paricular source.
-               The optional $annotation source argument can be used to
-               retrieve only variation features with annotations provided by
+               The optional $phenotype source argument can be used to
+               retrieve only variation features with phenotypes provided by
                a particular source.
-               The optional $annotation_name argument can
+               The optional $phenotype_name argument can
                be used to retrieve only variation features associated with
-               that annotation - this can also be a phenotype's dbID.
+               that phenotype - this can also be a phenotype's dbID.
   Returntype : reference to list Bio::EnsEMBL::Variation::VariationFeature
   Exceptions : throw on bad argument
   Caller     : general
@@ -471,23 +472,23 @@ sub _internal_fetch_all_with_annotation_by_Slice{
 
 =cut
 
-sub fetch_all_with_annotation_by_Slice {
+sub fetch_all_with_phenotype_by_Slice {
     my $self = shift;
-    my ($slice, $v_source, $p_source, $annotation) = @_;
+    my ($slice, $v_source, $p_source, $phenotype) = @_;
     my $constraint = 'vf.somatic = 0';
-    return $self->_internal_fetch_all_with_annotation_by_Slice($slice, $v_source, $p_source, $annotation, $constraint);
+    return $self->_internal_fetch_all_with_phenotype_by_Slice($slice, $v_source, $p_source, $phenotype, $constraint);
 }
 
-=head2 fetch_all_somatic_with_annotation_by_Slice
+=head2 fetch_all_somatic_with_phenotype_by_Slice
 
   Arg [1]    : Bio::EnsEMBL:Variation::Slice $slice
   Arg [2]    : $variation_feature_source [optional]
-  Arg [3]    : $annotation_source [optional]
-  Arg [4]    : $annotation_name [optional]
-  Example    : my @vfs = @{$vfa->fetch_all_somatic_with_annotation_by_Slice($slice)};
-  Description: Retrieves all somatic variation features associated with annotations for
+  Arg [3]    : $phenotype_source [optional]
+  Arg [4]    : $phenotype_name [optional]
+  Example    : my @vfs = @{$vfa->fetch_all_somatic_with_phenotype_by_Slice($slice)};
+  Description: Retrieves all somatic variation features associated with phenotypes for
                a given slice.
-               (see fetch_all_with_annotation_by_Slice documentation for description of
+               (see fetch_all_with_phenotype_by_Slice documentation for description of
                the other parameters)
   Returntype : reference to list Bio::EnsEMBL::Variation::VariationFeature
   Exceptions : throw on bad argument
@@ -496,11 +497,11 @@ sub fetch_all_with_annotation_by_Slice {
 
 =cut
 
-sub fetch_all_somatic_with_annotation_by_Slice {
+sub fetch_all_somatic_with_phenotype_by_Slice {
     my $self = shift;
-    my ($slice, $v_source, $p_source, $annotation) = @_;
+    my ($slice, $v_source, $p_source, $phenotype) = @_;
     my $constraint = 'vf.somatic = 1';
-    return $self->_internal_fetch_all_with_annotation_by_Slice($slice, $v_source, $p_source, $annotation, $constraint);
+    return $self->_internal_fetch_all_with_phenotype_by_Slice($slice, $v_source, $p_source, $phenotype, $constraint);
 }
 
 =head2 fetch_all_by_Slice_VariationSet
@@ -653,9 +654,9 @@ sub fetch_all_by_Slice_Population {
   return $self->_objs_from_sth($sth, undef, $slice);
 }
 
-sub _internal_fetch_all_with_annotation {
+sub _internal_fetch_all_with_phenotype {
     
-  my ($self, $v_source, $p_source, $annotation, $constraint) = @_;
+  my ($self, $v_source, $p_source, $phenotype, $constraint) = @_;
     
   my $extra_sql = '';
   my $extra_table = '';
@@ -669,13 +670,13 @@ sub _internal_fetch_all_with_annotation {
     $extra_table .= qq{, source ps};
   }
     
-  if(defined $annotation) {
-    if($annotation =~ /^[0-9]+$/) {
-      $extra_sql .= qq{ AND va.phenotype_id = $annotation };
+  if(defined $phenotype) {
+    if($phenotype =~ /^[0-9]+$/) {
+      $extra_sql .= qq{ AND pf.phenotype_id = $phenotype };
     }
     else {
-      $extra_sql .= qq{ AND va.phenotype_id = p.phenotype_id 
-					              AND (p.name = '$annotation' OR p.description LIKE '%$annotation%')
+      $extra_sql .= qq{ AND pf.phenotype_id = p.phenotype_id 
+					              AND (p.name = '$phenotype' OR p.description LIKE '%$phenotype%')
                       };
 			$extra_table .= qq{, phenotype p};
     }
@@ -692,12 +693,15 @@ sub _internal_fetch_all_with_annotation {
     
   my $sth = $self->prepare(qq{
         SELECT $cols
-        FROM (variation_feature vf, variation_annotation va,
+        FROM (variation_feature vf, phenotype_feature pf,
         source s, study st $extra_table) # need to link twice to source
         LEFT JOIN failed_variation fv ON (fv.variation_id = vf.variation_id)
-        WHERE va.study_id = st.study_id
+        WHERE pf.study_id = st.study_id
         AND vf.source_id = s.source_id
-        AND vf.variation_id = va.variation_id
+        AND vf.seq_region_id = pf.seq_region_id
+				AND vf.seq_region_start = pf.seq_region_start
+				AND vf.seq_region_end = pf.seq_region_end
+				AND vf.variation_name = pf.object_id
         $extra_sql
         GROUP BY vf.variation_feature_id
   });
@@ -707,22 +711,22 @@ sub _internal_fetch_all_with_annotation {
   return $self->_objs_from_sth($sth);
 }
 
-=head2 fetch_all_with_annotation
+=head2 fetch_all_with_phenotype
 
   Arg [1]    : $variation_feature_source [optional]
-  Arg [2]    : $annotation_source [optional]
-  Arg [3]    : $annotation_name [optional]
-  Example    : my @vfs = @{$vfa->fetch_all_with_annotation('EGA', undef, 123)};
-  Description: Retrieves all germline variation features associated with the given annotation
+  Arg [2]    : $phenotype_source [optional]
+  Arg [3]    : $phenotype_name [optional]
+  Example    : my @vfs = @{$vfa->fetch_all_with_phenotype('EGA', undef, 123)};
+  Description: Retrieves all germline variation features associated with the given phenotype
   Returntype : reference to list Bio::EnsEMBL::Variation::VariationFeature
   Caller     : webcode
   Status     : Experimental
 
 =cut
 
-sub fetch_all_with_annotation {
+sub fetch_all_with_phenotype {
     
-    my ($self, $v_source, $p_source, $annotation, $constraint) = @_;
+    my ($self, $v_source, $p_source, $phenotype, $constraint) = @_;
     
     my $somatic_constraint = 'vf.somatic = 0';
     
@@ -733,25 +737,25 @@ sub fetch_all_with_annotation {
         $constraint = $somatic_constraint;
     }
     
-    return $self->_internal_fetch_all_with_annotation($v_source, $p_source, $annotation, $constraint);
+    return $self->_internal_fetch_all_with_phenotype($v_source, $p_source, $phenotype, $constraint);
 }
 
-=head2 fetch_all_somatic_with_annotation
+=head2 fetch_all_somatic_with_phenotype
 
   Arg [1]    : $variation_feature_source [optional]
-  Arg [2]    : $annotation_source [optional]
-  Arg [3]    : $annotation_name [optional]
-  Example    : my @vfs = @{$vfa->fetch_all_somatic_with_annotation('COSMIC', undef, 807)};
-  Description: Retrieves all somatic variation features associated with the given annotation
+  Arg [2]    : $phenotype_source [optional]
+  Arg [3]    : $phenotype_name [optional]
+  Example    : my @vfs = @{$vfa->fetch_all_somatic_with_phenotype('COSMIC', undef, 807)};
+  Description: Retrieves all somatic variation features associated with the given phenotype
   Returntype : reference to list Bio::EnsEMBL::Variation::VariationFeature
   Caller     : webcode
   Status     : Experimental
 
 =cut
 
-sub fetch_all_somatic_with_annotation {
+sub fetch_all_somatic_with_phenotype {
     
-    my ($self, $v_source, $p_source, $annotation, $constraint) = @_;
+    my ($self, $v_source, $p_source, $phenotype, $constraint) = @_;
     
     my $somatic_constraint = 'vf.somatic = 1';
     
@@ -762,7 +766,7 @@ sub fetch_all_somatic_with_annotation {
         $constraint = $somatic_constraint;
     }
     
-    return $self->_internal_fetch_all_with_annotation($v_source, $p_source, $annotation, $constraint);
+    return $self->_internal_fetch_all_with_phenotype($v_source, $p_source, $phenotype, $constraint);
 }
 
 
