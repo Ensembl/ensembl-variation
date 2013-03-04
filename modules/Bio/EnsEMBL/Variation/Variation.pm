@@ -297,6 +297,11 @@ sub name{
   return $self->{'name'};
 }
 
+sub stable_id {
+  my $self = shift;
+  return $self->name(@_);
+}
+
 
 =head2 get_all_Genes
 
@@ -1184,26 +1189,26 @@ sub clinical_significance {
     return $self->{clinical_significance}
 }
 
-=head2 get_all_VariationAnnotations
+=head2 get_all_PhenotypeFeatures
 
   Args       : none
-  Example    : my $annotations = $var->get_all_VariationAnnotations()
-  Description: Getter for VariationAnnotations for this Variation, returns empty list if 
+  Example    : my $pfs = $var->get_all_PhenotypeFeatures()
+  Description: Getter for PhenotypeFeatures for this Variation, returns empty list if 
                there are none. 
-  Returntype : listref of VariationAnnotations
+  Returntype : listref of PhenotypeFeatures
   Exceptions : none
   Caller     : general
 
 =cut
 
-sub get_all_VariationAnnotations {
+sub get_all_PhenotypeFeatures {
     my $self = shift;
 
     #ÊAssert the adaptor reference
     assert_ref($self->adaptor(),'Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor');
     
     # Get the annotations from the database
-    return $self->adaptor->db->get_VariationAnnotationAdaptor()->fetch_all_by_Variation($self);
+    return $self->adaptor->db->get_PhenotypeFeatureAdaptor()->fetch_all_by_Variation($self);
 
 }
 
