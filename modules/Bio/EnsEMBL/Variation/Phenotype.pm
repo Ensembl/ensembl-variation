@@ -30,7 +30,7 @@ Bio::EnsEMBL::Variation::Phenotype - Ensembl representation of a phenotype.
 
 =head1 SYNOPSIS
 
-    $study = Bio::EnsEMBL::Variation::Study->new(-DESCRIPTION => 'Hemostatic factors and hematological phenotypes');
+    my $phenotype = Bio::EnsEMBL::Variation::Phenotype->new(-NAME => 'Type I diabetes');
 
 =head1 DESCRIPTION
 
@@ -72,18 +72,25 @@ sub new {
     my $caller = shift;
     my $class  = ref($caller) || $caller;
     my $self = $class->SUPER::new(@_);
-    my ($dbID, $description) = rearrange([qw(dbID DESCRIPTION)], @_);
+    my ($dbID, $description, $name) = rearrange([qw(dbID DESCRIPTION NAME)], @_);
     $self = {
         'dbID'        => $dbID,
         'description' => $description,
+        'name'        => $name,
     };
     return bless $self, $class;
 }
 
-=head2 id
+sub new_fast {
+  my $class = shift;
+  my $hashref = shift;
+  return bless $hashref, $class;
+}
 
-  Example    : $name = $obj->id()
-  Description: Getter/Setter for the id attribute
+=head2 dbID
+
+  Example    : $name = $obj->dbID()
+  Description: Getter/Setter for the dbIDattribute
   Returntype : integer
   Exceptions : none
   Caller     : general
@@ -91,11 +98,29 @@ sub new {
 
 =cut
 
-sub id {
+sub dbID {
     my $self = shift;
     return $self->{'dbID'} = shift if(@_);
     return $self->{'dbID'};
 }
+
+=head2 name
+
+  Example    : $name = $obj->name()
+  Description: Getter/Setter for the name attribute
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub name {
+    my $self = shift;
+    return $self->{'name'} = shift if(@_);
+    return $self->{'name'};
+}
+
 
 =head2 description
 
