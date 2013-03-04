@@ -59,30 +59,37 @@ use Bio::EnsEMBL::Variation::Phenotype;
 
 our @ISA = ('Bio::EnsEMBL::DBSQL::BaseAdaptor');
 
-=head2 fetch_all
-    
-    Example         : my $phenotypes = $phenotype_adaptor->fetch_all();
-    Description     : Retrieves an array of all phenotyes.
-    Returntype      : listref of Bio::EnsEMBL::Variation::Phenotype. 
-    Exceptions      : none
-    Caller          : general
-    Status          : Stable
-
-=cut
-
-sub fetch_all {
+sub fetch_by_description {
     my $self = shift;
-    my @phenotypes;
-    
-    my $sth = $self->prepare(qq{SELECT phenotype_id, description from phenotype});
-    $sth->execute();
-    my ($dbID, $phenotype_description);
-    $sth->bind_columns(\$dbID, \$phenotype_description);
-    while ($sth->fetch) {
-        push @phenotypes, Bio::EnsEMBL::Variation::Phenotype->new(
-        -dbID        => $dbID,
-        -DESCRIPTION => $phenotype_description,);
-    }    
-    
-    return \@phenotypes;
+    my $desc = shift;
+    return $self->generic_fetch("p.description = '$desc'");
 }
+
+sub _tables {
+    return (['phenotype', 'p']);
+}
+
+sub _columns {
+    return qw(p.phenotype_id p.name p.description);
+}
+
+sub _objs_from_sth {
+    my ($self, $sth) = @_;
+    
+    my ($phenotype_id, $name, $description, @result);
+    
+    $sth->bind_columns(\$phenotype_id, \$name, \$description);
+    
+    push @result, Bio::EnsEMBL::Variation::Phenotype->new_fast({
+        dbID        => $phenotype_id,
+        name        => $name,
+        description => $description,
+        adaptor     => $self,
+    }) while $sth->fetch;
+    
+    $sth->finish;
+    
+    return \@result;
+}
+
+1;
