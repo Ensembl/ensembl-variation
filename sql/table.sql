@@ -1059,42 +1059,6 @@ create table structural_variation_feature (
 );
 
 
-/**
-@table structural_variation_annotation
-
-@colour #01D4F7
-@desc This table stores phenotype and sample information for structural variants and their supporting evidences.
-
-@column structural_variation_annotation_id  Primary key, internal identifier.
-@column structural_variation_id             Foreign key references to the @link structural_variation table.
-@column clinical_attrib_id                  Foreign key references to the @link attrib table. Clinical effect of the structural variant.
-@column phenotype_id                        Foreign key references to the @link phenotype table. Links to the phenotype description.
-@column sample_id		                        Foreign key references to the @link sample table. Defines the individual or sample name.
-@column strain_id		                        Foreign key references to the @link sample table. Defines the strain name.
-
-@see structural_variation
-@see attrib
-@see phenotype
-@see sample
-*/
-
-CREATE TABLE structural_variation_annotation (
-	structural_variation_annotation_id int(10) unsigned NOT NULL auto_increment,
-	structural_variation_id int(10) unsigned NOT NULL,
-	clinical_attrib_id int(10) unsigned DEFAULT NULL,
-	phenotype_id int(10) unsigned DEFAULT NULL,
-	sample_id int(10) unsigned DEFAULT NULL,
-	strain_id int(10) unsigned DEFAULT NULL,
-	
-	primary key (structural_variation_annotation_id),
-	key structural_variation_idx(structural_variation_id),
-	key clinical_attrib_idx(clinical_attrib_id),
-	key phenotype_idx(phenotype_id),
-	key sample_idx(sample_id),
-	key strain_idx(strain_id)
-);
-
-
 
 /**
 @header  Set tables
@@ -1479,7 +1443,6 @@ You can see the complete list, by species, <a href="sources_documentation.html">
 @see variation
 @see variation_synonym
 @see variation_feature
-@see variation_annotation
 @see sample_synonym
 @see structural_variation
 @see study
@@ -1514,7 +1477,6 @@ create table source(
 @column study_type					Displays the type of the study (e.g. genome-wide association study, control-set, case-set, curated, ...).
 
 @see source
-@see variation_annotation
 @see structural_variation
 */
 
