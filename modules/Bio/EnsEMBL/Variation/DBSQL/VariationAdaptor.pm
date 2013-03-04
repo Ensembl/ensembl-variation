@@ -496,6 +496,12 @@ sub fetch_by_name {
     return $result->[0];
 }
 
+# alias for fetch_by_name
+sub fetch_by_stable_id {
+		my $self = shift;
+		return $self->fetch_by_name(@_);
+}
+
 # Internal method for getting the internal dbIDs for a list of names. Will also query the variation_synonym and allele (for subsnp_ids) tables
 sub _name_to_dbID {
     my $self = shift;

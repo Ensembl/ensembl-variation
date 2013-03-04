@@ -162,6 +162,12 @@ sub fetch_by_name {
   return $objs->[0] if @$objs == 1;
 }
 
+# alias for fetch_by_name
+sub fetch_by_stable_id {
+	my $self = shift;
+	return $self->fetch_by_name(@_);
+}
+
 
 =head2 fetch_all_by_Study
 
