@@ -322,4 +322,24 @@ sub _get_individual_population_hash {
 	return \%ip_hash;
 }
 
+sub _get_sample_name_by_dbID {
+  my $self = shift;
+  my $dbID = shift;
+  
+  my $sth = $self->dbc->prepare(qq{
+    SELECT name
+    FROM sample
+    WHERE sample_id = ?
+  });
+  $sth->bind_param(1,$dbID,SQL_INTEGER);
+  $sth->execute();
+  
+  my $sample_name;
+  $sth->bind_columns(\$sample_name);
+  $sth->fetch;
+  $sth->finish;
+  
+  return $sample_name;
+}
+
 1;
