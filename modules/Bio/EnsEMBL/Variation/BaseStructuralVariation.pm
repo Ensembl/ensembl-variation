@@ -400,6 +400,11 @@ sub study {
   return $self->{'study'};
 }
 
+sub stable_id {
+  my $self = shift;
+  return $self->variation_name(@_);
+}
+
 
 =head2 get_all_StructuralVariationFeatures
 
@@ -430,27 +435,28 @@ sub get_all_StructuralVariationFeatures{
 }
 
 
-=head2 get_all_StructuralVariationAnnotations
+=head2 get_all_PhenotypeFeatures
 
   Args        : None
-  Example     : $svas = $sv->get_all_StructuralVariationAnnotations();
-  Description : Retrieves all get_all_StructuralVariationAnnotation for this structural variant
-  ReturnType  : reference to list of Bio::EnsEMBL::Variation::StructuralVariationAnnotation
+  Example     : $pfs = $sv->get_all_PhenotypeFeatures();
+  Description : Retrieves all PhenotypeFeatures for this structural variant
+  ReturnType  : reference to list of Bio::EnsEMBL::Variation::PhenotypeFeature
   Exceptions  : None
   Caller      : general
   Status      : Stable
 
 =cut
 
-sub get_all_StructuralVariationAnnotations{
+sub get_all_PhenotypeFeatures {
   my $self = shift;
+  
   
   if(defined $self->{'adaptor'}) {
   
-    # get structural variation annotation adaptor
-    my $sva_adaptor = $self->{'adaptor'}->db()->get_StructuralVariationAnnotationAdaptor();
+    # get phenotype feature adaptor
+    my $pfa_adaptor = $self->{'adaptor'}->db()->get_PhenotypeFeatureAdaptor();
   
-    return $sva_adaptor->fetch_all_by_StructuralVariation($self);
+    return $pfa_adaptor->_fetch_all_by_object($self);
   }
   else {
     warn("No variation database attached");
