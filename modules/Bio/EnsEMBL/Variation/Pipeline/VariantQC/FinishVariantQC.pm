@@ -62,19 +62,22 @@ sub run {
     print $report "\nChecking failure rates\n";
     ## What are the failure rates for alleles and variants
     my ($var_fail_rate, $allele_fail_rate) = get_failure_rates($var_dba, $report, $row_counts->{old_allele} );
-    my $suspiciously_poor = 0;
-    if( $var_fail_rate >10){
-        $suspiciously_poor = 1;
-        print  $report "\nVariation failure rate far higher than normal\n";
-    }
-    if($allele_fail_rate > 10){
-        $suspiciously_poor = 1;
-        print  $report "\nAllele failure rate far higher than normal\n";    
-    }    
 
     ## crude check to ensure same MT sequence used
     check_MT_fails($var_dba, $report);
 
+
+    my $suspiciously_poor = 0;
+    if( $var_fail_rate >10){
+        $suspiciously_poor = 1;
+        print  $report "\n** ERROR: Variation failure rate far higher than normal **\n\n";
+    }
+    if($allele_fail_rate > 10){
+        $suspiciously_poor = 1;
+        print  $report "\n** ERROR: Allele failure rate far higher than normal **\n\n";    
+    }    
+
+   
 
     ## what are failure reasons for alleles and variants    
     fails_by_type($var_dba, $report);
