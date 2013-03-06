@@ -105,7 +105,7 @@ sub run {
   ## check dbSNP MAF against variation_feature allele string
   ## warn, but don't fix automatically (1KG genotypes loaded later)
   if($self->required_param('species') =~/homo/i){
-     $self->check_minor_allele($minor_allele,  $allele_string); 
+     $self->check_minor_allele($var_dba, $minor_allele,  $allele_string); 
   }
 
 }
@@ -138,7 +138,7 @@ sub run_variation_checks{
 
 
   ## export current variation_feature data
-  my $to_check = export_data_adding_allele_string($var_dba, $first, $last);
+  my ($to_check, $strand_summary) = export_data_adding_allele_string($var_dba, $first, $last);
 
 
   my $failed_set_id = find_failed_variation_set_id($var_dba);
@@ -221,12 +221,21 @@ sub run_variation_checks{
           push @{$fail_allele{14}},  [$var->{v_id}, $amb_al]; ## unflipped allele failed throughout
 	}
   }
-  ## Further checks only run for variants with 1 genomic location
-  
-  next if  $var->{map} > 1;
 
-  
-  ## flip allele string if on reverse strand and single mapping
+    ## Further checks only run for variants with 1 genomic location  
+     if ($var->{map} > 1){
+
+         if($strand_summary->{$var->{v_id}} eq "-1"){
+             ## safe to flip if all mappings are to reverse strand
+             $var->{allele}=~ /\(/ ?  $var->{allele} = revcomp_tandem($var->{allele}) :  reverse_comp(\$var->{allele} );  
+             
+             $var->{strand} = 1;
+             ### store variation_id to use when flipping alleles
+	     $flip{$var->{v_id}} = 1;
+         }
+         next;
+     }
+    ## flip allele string if on reverse strand and single mapping
   
     if( $var->{strand} eq "-1" ){
       reverse_comp(\$expanded );          ## for ref check
@@ -371,6 +380,7 @@ sub export_data_adding_allele_string{
   my ($var_dba, $first, $last) = @_;
   
   my @to_check;
+  my %strand_summary;  ## hold strands seen for multi-mapping variants here rather than check later
 
   my $variant_ext_sth = $var_dba->dbc->prepare(qq[SELECT vf.variation_id,
                                                       vf.variation_name,
@@ -388,15 +398,23 @@ sub export_data_adding_allele_string{
                                                       sr.name,
                                                       vf.alignment_quality,
                                                       als.allele_string,
-                                                      vf.validation_status
+                                                      vf.validation_status,
+                                                      maf.allele,
+                                                      maf.freq,
+                                                      maf.count,
+                                                      maf.is_minor_allele
                                                  FROM variation_feature vf,
                                                       seq_region sr,
                                                       tmp_map_weight_working tmw,
-                                                      allele_string als 
+                                                      allele_string als,
+                                                      variation v
+                                                      left outer join maf on ( maf.snp_id = v.snp_id)
                                                  WHERE  vf.variation_id between ? and ? 
                                                  AND vf.variation_id = tmw.variation_id  
                                                  AND vf.seq_region_id = sr.seq_region_id
                                                  AND vf.variation_id = als.variation_id  
+                                                 AND vf.variation_id = v.variation_id  
+
                                                  ]);       
  
 
@@ -406,26 +424,33 @@ sub export_data_adding_allele_string{
   
   my $variant_data = $variant_ext_sth->fetchall_arrayref();
   foreach my $l(@{$variant_data}){
-    my %save;
+ 
+      next if defined $l->[20] &&  $l->[20] eq "0";
+      my %save;
   
-    $save{v_id}           = $l->[0];
-    $save{name}           = $l->[1];
-    $save{vf_id}          = $l->[2];
-    $save{seqreg_id}      = $l->[3];
-    $save{start}          = $l->[4];
-    $save{end}            = $l->[5];
-    $save{strand}         = $l->[6];
+      $save{v_id}           = $l->[0];
+      $save{name}           = $l->[1];
+      $save{vf_id}          = $l->[2];
+      $save{seqreg_id}      = $l->[3];
+      $save{start}          = $l->[4];
+      $save{end}            = $l->[5];
+      $save{strand}         = $l->[6];
+      
 
+      $save{map}              = $l->[7];
+      $save{source_id}        = $l->[8];
+      $save{consequence_types}= $l->[9];
+      $save{variation_set_id} = $l->[10];
+      $save{somatic}          = $l->[11];
+      $save{class_attrib_id}  = $l->[12];
+      $save{seqreg_name}      = $l->[13];
+      $save{align_qual}       = $l->[14];
+      $save{validation_status}= $l->[16];
 
-    $save{map}              = $l->[7];
-    $save{source_id}        = $l->[8];
-    $save{consequence_types}= $l->[9];
-    $save{variation_set_id} = $l->[10];
-    $save{somatic}          = $l->[11];
-    $save{class_attrib_id}  = $l->[12];
-    $save{seqreg_name}      = $l->[13];
-    $save{align_qual}       = $l->[14];
-    $save{validation_status}= $l->[16];
+      $save{min_allele}    = $l->[17];
+      $save{min_af}        = $l->[18];
+      $save{min_al_count}  = $l->[19];
+  
 
     if($l->[15] =~ /^(\(.*\))\d+\/\d+/){## handle tandem
       my $expanded_alleles = get_alleles_from_pattern($l->[15]); 
@@ -435,10 +460,18 @@ sub export_data_adding_allele_string{
       $save{allele}         = $l->[15];
     }
 
-    push @to_check,\%save;;
+    push @to_check,\%save;
+
+    ## summarise strands seen - if multi-mapping but always reverse, safe to flip
+    if(defined $strand_summary{$l->[0]} && $strand_summary{$l->[0]}  ne $save{strand} ){
+	$strand_summary{$l->[0]} = 0;
+    }
+    else{
+	$strand_summary{$l->[0]} = $save{strand};
+    }
   }
 
-  return (\@to_check);  
+  return (\@to_check, \%strand_summary);  
 
 }
 
@@ -610,8 +643,9 @@ sub write_variation_features{
                                                   (variation_id, variation_name, seq_region_id,  seq_region_start, 
                                                    seq_region_end, seq_region_strand,  allele_string, map_weight,  
                                                    source_id, consequence_types, variation_set_id, somatic,
-                                                   class_attrib_id, alignment_quality, evidence)
-                                                  values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                                                   class_attrib_id, alignment_quality, evidence,
+                                                   minor_allele, minor_allele_freq, minor_allele_count )
+                                                  values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                                                 ]);       
   
   
@@ -632,7 +666,10 @@ sub write_variation_features{
                                $data->{somatic},
                                $data->{class_attrib_id},
                                $data->{align_qual},
-			       $evidence->{$data->{v_id}}
+			       $evidence->{$data->{v_id}},
+                               $data->{min_allele},
+                               $data->{min_af},
+                               $data->{min_al_count}
                              )|| die "ERROR importing variation feature info\n";
 
 
@@ -659,18 +696,20 @@ sub write_variation{
 
   my %minor_allele;
 
-  my $var_ext_sth = $var_dba->dbc->prepare(qq[ select variation_id,
-                                                      source_id,
-                                                      name, 
-                                                      flipped,
-                                                      class_attrib_id,
-                                                      somatic,
-                                                      minor_allele,
-                                                      minor_allele_freq,
-                                                      minor_allele_count,
+  my $var_ext_sth = $var_dba->dbc->prepare(qq[ select v.variation_id,
+                                                      v.source_id,
+                                                      v.name, 
+                                                      v.flipped,
+                                                      v.class_attrib_id,
+                                                      v.somatic,
+                                                      maf.allele,
+                                                      maf.freq,
+                                                      maf.count,
+                                                      maf.is_minor_allele,
                                                       clinical_significance_attrib_id
-                                               from variation
-                                               where variation_id between ? and ?
+                                               from variation v left outer join maf on ( maf.snp_id = v.snp_id)
+                                               where v.variation_id between ? and ?
+
                                               ]);       
 
 
@@ -696,7 +735,11 @@ sub write_variation{
   my $data = $var_ext_sth->fetchall_arrayref();
   foreach my $v (@{$data} ){ 
 
-    $flip->{$v->[0]} = 0 unless defined $flip->{$v->[0]}; ## update non-flipped with 0
+      next if $v->[9] eq "0"; ## not minor allele
+      next if  $minor_allele{$v->[0]}; ## some variants have 2 minor allele from merged indel & subs; randomly select first
+     
+      $flip->{$v->[0]} = 0 unless defined $flip->{$v->[0]} ; ## update non-flipped with 0
+
 
     ## save minor allele for later checking
     $minor_allele{$v->[0]} = $v->[6] if defined $v->[6];
@@ -711,7 +754,7 @@ sub write_variation{
                            $v->[6],
                            $v->[7],
                            $v->[8],
-                           $v->[9],
+                           $v->[10],
                            $evidence->{$v->[0]})||    die "ERROR writing variation table\n";    
 
   }
@@ -863,25 +906,26 @@ Status     : At Risk
 =cut
 sub check_minor_allele{
 
-    my $self          = shift;
+    my $var_dba       = shift;
     my $minor_allele  = shift; 
     my $allele_string = shift;
     
-    my $mafail_ins_sth  = $var_dba->dbc->prepare(qq[ insert into failed_minor_allele_tmp (variation_id) values (?) ]);
+    my $minor_allele_fail_ins_sth  = $var_dba->dbc->prepare(qq[ insert into tmp_failed_minor_allele (variation_id) values (?) ]);
 
     foreach my $var_id (keys %{$minor_allele}){
 
-      next unless $allele_string->{$var_id};
-      my @expected = split/\//, $allele_string->{$var_id};
+	next unless $allele_string->{$var_id};
+	my @expected = split/\//, $allele_string->{$var_id};
+	
+	my $is_found = 0;
 
-      my $is_found = 0;
-      foreach my $expected (@expected){
-	  $is_found =1 if $minor_allele->{$var_id} eq $expected;
-      } 
-      unless ($is_found ===1){
-	  $minor_allele_fail_ins_sth->execute($var_id});
+	foreach my $expected (@expected){
+	    $is_found = 1 if $minor_allele->{$var_id} eq $expected;
+	} 
+	
+	$minor_allele_fail_ins_sth->execute($var_id) unless $is_found == 1;
+
     }
-
 }
   
 
