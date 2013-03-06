@@ -133,8 +133,8 @@ sub create_working_tables{
   $var_dba->dbc->do(qq{ ALTER TABLE variation_working DISABLE KEYS});
 
   ## temp table to hold variants with minor alleles not in the variation_feature allele string
-  $var_dba->dbc->do(qq{ DROP TABLE IF EXISTS failed_minor_allele_tmp});
-  $var_dba->dbc->do(qq{ CREATE TABLE failed_minor_allele_tmp  (
+  $var_dba->dbc->do(qq{ DROP TABLE IF EXISTS tmp_failed_minor_allele});
+  $var_dba->dbc->do(qq{ CREATE TABLE tmp_failed_minor_allele  (
                         variation_id int(11) unsigned NOT NULL,                        
                         KEY variation_idx (variation_id)   )});
 
@@ -226,6 +226,13 @@ sub create_working_tables{
                         ORDER BY ac1.allele_code_id, ac1.allele_code_id + ac2.allele_code_id
                        });
 
+ $var_dba->dbc->do(qq{ CREATE TABLE IF NOT EXISTS maf(
+                        snp_id           int(11),
+                        allele           text,
+                        freq             float,
+                        count            int(11),
+                        is_minor_allele  int(11) )
+                      });
 
 }
 
@@ -354,7 +361,7 @@ sub create_1KG_table{
 
     my $var_dba  = $self->get_species_adaptor('variation');
     ## drop any pre-existing table and run clean new import
-    $var_dba->dbc->do(qq[ DROP TABLE tmp_1kg_var ]);
+    $var_dba->dbc->do(qq[ DROP TABLE IF EXISTS tmp_1kg_var ]);
 
     my $export_stmt = qq[ select rs_id from 1kg_rs_id ];
     dumpSQL($int_dba->dbc(), $export_stmt);
