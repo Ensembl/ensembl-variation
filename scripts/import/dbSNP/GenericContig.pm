@@ -562,7 +562,7 @@ sub minor_allele_freq {
     debug(localtime() . "\tLoading global minor allele freqs");
     
     create_and_load($self->{'dbVar'}, "maf", "snp_id i* not_null", "allele l", "freq f", "count i", "is_minor_allele i");
-
+=head do the updates in post processing when writing new copies of the tables
     print $logh Progress::location(); # 
     debug(localtime() . "\tUpdating variations with global minor allele frequencies");
    
@@ -613,7 +613,7 @@ sub minor_allele_freq {
 
         $start =  $end +1
     }
-
+=cut
     debug(localtime() . "\tComplete MAF update");
     # we don't delete the maf temporary table because we need it for post-processing MAFs = 0.5
 }
@@ -1645,7 +1645,7 @@ sub parallelized_allele_table {
 
     ## improve binning for sparsely submitted species
     #hash out task file creation if re-running 1 failed job
-    $jobindex = write_allele_task_file($self->{'dbSNP'}->db_handle(),$task_manager_file, $loadfile,  $allelefile, $samplefile);
+    $jobindex = write_allele_task_file($self->{'dbSNP'}->db_handle(),$task_manager_file, $loadfile,  $allelefile, $samplefile,$self->{limit});
 
  
 ## =cut #hash out to re-run failed job 
@@ -1791,19 +1791,21 @@ sub  update_allele_schema{
 
 sub write_allele_task_file{
 
-    my ($dbh, $task_manager_file, $loadfile,  $allelefile, $samplefile) = @_;
+    my ($dbh, $task_manager_file, $loadfile,  $allelefile, $samplefile, $limit) = @_;
     #warn "Starting allele_task file \n";
     ### previously binning at 500,000, switched to 400,000
     my ($first, $previous, $counter, $jobindex);
 
    open(MGMT,'>',$task_manager_file) || die "Failed to open allele table task management file ($task_manager_file): $!\n";;
+    my $stmt = "SELECT ";
+    if ($limit) {
+	$stmt .= "TOP $limit ";
+    }
+    $stmt .= qq[ ss.subsnp_id
+                 FROM  SubSNP ss
+                 order by ss.subsnp_id];
 
-    my $ss_extract_sth = $dbh->prepare(qq[SELECT
-                                      ss.subsnp_id
-                                      FROM
-                                      SubSNP ss
-                                      order by ss.subsnp_id
-                                      ]);
+    my $ss_extract_sth = $dbh->prepare($stmt);
     $ss_extract_sth->execute() ||die "Error extracting ss ids for allele_table binning\n";
     
     while( my $l = $ss_extract_sth->fetchrow_arrayref()){
