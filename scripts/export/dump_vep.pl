@@ -27,8 +27,15 @@ use DBI;
 my $config = {};
 
 my %special_options = (
-	'homo_sapiens' => ' --sift b --polyphen b --regulatory',
-	'mus_musculus' => ' --regulatory',
+	'homo_sapiens'      => ' --sift b --polyphen b --regulatory'.
+	                       ' --freq_file /warehouse/ens_variation_wh01/1KG/all_rs_global_freqs.txt',
+	'mus_musculus'      => ' --regulatory --sift b',
+	'bos_taurus'        => ' --sift b',
+	'canis_familiaris'  => ' --sift b',
+	'danio_rerio'       => ' --sift b',
+	'gallus_gallus'     => ' --sift b',
+	'rattus_norvegicus' => ' --sift b',
+	'sus_scrofa'        => ' --sift b',
 );
 
 GetOptions(
@@ -190,7 +197,7 @@ sub tar {
 	die("ERROR: VEP dump directory $root_dir/$sub_dir not found") unless -e $root_dir.'/'.$sub_dir;
 	
 	my $command = "tar -cz -C $root_dir -f $tar_file $sub_dir";
-	system($command);
+	system($command);# or die "ERROR: Failed to create tar file $tar_file\n";
 }
 
 # gets time
