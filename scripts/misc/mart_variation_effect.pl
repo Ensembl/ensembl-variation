@@ -122,8 +122,9 @@ for my $source_table (split(/\s+/, $table_input)) {
         
         # filter out some indices
         $create_sth =~ s/AUTO_INCREMENT=\d+//;
+        $create_sth =~ s/somatic_feature_idx/feature_idx/;
         $create_sth =~ s/$_.+,// for ('PRIMARY KEY', 'KEY `somatic', 'KEY `cons');
-        $create_sth =~ s/\`somatic\`\)//;
+        $create_sth =~ s/,\`somatic\`//;
         
         # remove final comma
         $create_sth =~ s/,(\s+\))/$1/;
