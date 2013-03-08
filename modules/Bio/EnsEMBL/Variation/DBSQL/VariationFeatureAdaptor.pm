@@ -1347,6 +1347,10 @@ sub _parse_hgvs_transcript_position {
   my $transcript  = shift;
             
   my ($start,$start_offset, $end, $end_offset) = $description =~ m/^([\-\*]?\d+)((?:[\+\-]\d+)?)(?:_([\-\*]?\d+)((?:[\+\-]\d+)?))?/;
+
+ my $is_exonic = 1;
+ $is_exonic = 0 if ($start_offset || $end_offset || substr($start,0,1) eq '*' || (defined $end && substr($end,0,1) eq '*') || $start < 0);
+
   my ($start_direction, $end_direction); ## go back or forward into intron
 
   if($start_offset ){
@@ -1446,7 +1450,7 @@ sub _parse_hgvs_transcript_position {
      else{             $end--;   }
   }
    
-  return ($start, $end, $strand);
+  return ($start, $end, $strand, $is_exonic);
 }
 
 =head2 fetch_by_hgvs_notation
@@ -1492,7 +1496,6 @@ sub fetch_by_hgvs_notation {
   # strip version number from reference
   if ($reference=~ /^ENS|^LRG_\d+/){
     $reference =~ s/\.\d+//g;
-    warn ("The position specified by HGVS notation '$hgvs' refers to a nucleotide that may not have a specific reference sequence. The current Ensembl genome reference sequence will be used.") ;
    }
   #ÊA small fix in case the reference is a LRG and there is no underscore between name and transcript
   $reference =~ s/^(LRG_[0-9]+)_?(t[0-9]+)$/$1\_$2/i;
@@ -1512,7 +1515,13 @@ sub fetch_by_hgvs_notation {
       my $transcript_adaptor = $user_transcript_adaptor || $self->db()->dnadb()->get_TranscriptAdaptor();
       my $transcript = $transcript_adaptor->fetch_by_stable_id($reference) or throw ("Could not get a Transcript object for '$reference'");
 
-      ($start, $end, $strand) =  _parse_hgvs_transcript_position($description, $transcript) ;  
+      my $is_exonic;
+      ($start, $end, $strand, $is_exonic) =  _parse_hgvs_transcript_position($description, $transcript) ; 
+
+      #If the position given was in a intronic or UTR position, it could be undefined what reference sequence the position actually refers to. Issue a warning that we will use the Ensembl reference sequence.
+      warn ("The position specified by HGVS notation '$hgvs' refers to a nucleotide that may not have a specific reference sequence. The current Ensembl genome reference sequence will be used.\n")  if $is_exonic eq "0";
+
+ 
       $slice = $slice_adaptor->fetch_by_region($transcript->coord_system_name(),$transcript->seq_region_name());   
       ($ref_allele, $alt_allele) = _get_hgvs_alleles($description, $hgvs);  
   
