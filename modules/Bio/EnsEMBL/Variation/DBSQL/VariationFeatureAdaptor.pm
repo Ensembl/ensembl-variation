@@ -1424,11 +1424,12 @@ sub _parse_hgvs_transcript_position {
     ### overwrite exonic location with genomic coordinates
     $start = $coords[0]->start(); 
     $end   = $coords[0]->end();
-    
+
     #### intronic variants are described as after or before the nearest exon 
     #### - add this offset to genomic start & end positions
     if(defined $start_direction ){
       if($strand  == 1){
+
         if($start_direction eq "+"){ $start = $start + $start_offset; }
         if($end_direction   eq "+"){ $end   = $end   + $end_offset;   }
       
@@ -1441,6 +1442,8 @@ sub _parse_hgvs_transcript_position {
       
         if($start_direction eq "-"){ $start = $start + $start_offset;}
         if($end_direction   eq "-"){ $end   = $end   + $end_offset;  }
+
+        ($start, $end) = ($end,$start) ;
      }
    }
    if($description =~ /dup/){ 
@@ -1449,7 +1452,6 @@ sub _parse_hgvs_transcript_position {
      if($strand  == 1){ $start++; }
      else{             $end--;   }
   }
-   
   return ($start, $end, $strand, $is_exonic);
 }
 
@@ -1565,6 +1567,7 @@ sub fetch_by_hgvs_notation {
      # insertion: the start & end positions are inverted by convention
       if($end > $start){ ($start, $end  ) = ( $end , $start); }   
   }
+ 
   else{
     # If the reference from the sequence does not correspond to the reference given in the HGVS notation, throw an exception 
     if (defined($ref_allele) && $ref_allele ne $refseq_allele){        
@@ -1595,7 +1598,7 @@ sub fetch_by_hgvs_notation {
          '-source'  => 'Parsed from HGVS notation',
          '-alleles' => \@allele_objs
     );
-    
+  warn "Creating allele objects:  st:$start, end:$end\n";
     #ÊCreate a variation feature object
     my $variation_feature = Bio::EnsEMBL::Variation::VariationFeature->new(
        '-adaptor'       => $self,
