@@ -4500,6 +4500,7 @@ sub find_existing {
             ORDER BY vf.source_id ASC
         });
         
+        $new_vf->{slice} ||= get_slice($config, $new_vf->{chr});
         $sth->execute($new_vf->slice->get_seq_region_id, $new_vf->start, $new_vf->end);
         
         my @v;
