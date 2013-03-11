@@ -263,6 +263,25 @@ sub class_SO_term {
 }
 
 
+=head2 class_SO_accession
+
+    Args         : None
+    Example      : my $sv_so_accession = $svf->class_SO_accession()
+    Description  : Returns the SO accession corresponding to the structural variant class
+    ReturnType   : String
+    Exceptions   : none
+    Caller       : General
+    Status       : Stable
+
+=cut
+
+sub class_SO_accession {
+  my $self = shift;
+
+  return $VARIATION_CLASSES{$self->class_SO_term}->{SO_accession};
+}
+
+
 =head2 source
 
   Arg [1]    : string $source (optional)
