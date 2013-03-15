@@ -256,6 +256,27 @@ sub object {
 }
 
 
+=head2 object_id
+
+  Arg [1]    : (optional) string $object_id
+  Example    : $object_id = $pf->object_id();
+  Description: Getter/Setter for the ID of the object associated with this
+	             annotation.
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub object_id {
+	my ($self, $object_id) = @_;
+	
+	$self->{_object_id} = $object_id if defined($object_id);
+	return $self->{_object_id};
+}
+
+
 =head2 variation
 
   Arg [1]    : (optional) Bio::EnsEMBL::Variation::Variation $variation
