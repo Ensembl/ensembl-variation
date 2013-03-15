@@ -806,7 +806,7 @@
           <y:Geometry height="38.0" width="180.4000000000001" x="876.0824218750006" y="303.7629993556704"/>
           <y:Fill hasColor="false" transparent="false"/>
           <y:BorderStyle hasColor="false" type="line" width="1.0"/>
-          <y:NodeLabel alignment="center" autoSizePolicy="content" fontFamily="Arial" fontSize="30" fontStyle="bold" hasBackgroundColor="false" hasLineColor="false" height="37.515625" modelName="custom" textColor="#000000" visible="true" width="162.291015625" x="9.054492187500045" y="0.2421875">Annotation<y:LabelModel>
+          <y:NodeLabel alignment="center" autoSizePolicy="content" fontFamily="Arial" fontSize="30" fontStyle="bold" hasBackgroundColor="false" hasLineColor="false" height="37.515625" modelName="custom" textColor="#000000" visible="true" width="157.3544921875" x="11.522753906250045" y="0.2421875">Phenotype<y:LabelModel>
               <y:SmartNodeLabelModel distance="4.0"/>
             </y:LabelModel>
             <y:ModelParameter>
@@ -1836,7 +1836,6 @@
       </data>
     </edge>
     <edge id="e18" source="n54" target="n66">
-      <data key="d9"/>
       <data key="d10">
         <y:PolyLineEdge>
           <y:Path sx="0.0" sy="0.0" tx="-115.60334969080623" ty="-10.696930227621209">

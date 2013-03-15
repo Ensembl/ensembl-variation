@@ -311,7 +311,7 @@
           <y:Geometry height="38.0" width="180.4000000000001" x="-228.8199965160868" y="-229.04060712714858"/>
           <y:Fill hasColor="false" transparent="false"/>
           <y:BorderStyle hasColor="false" type="line" width="1.0"/>
-          <y:NodeLabel alignment="center" autoSizePolicy="content" fontFamily="Arial" fontSize="30" fontStyle="bold" hasBackgroundColor="false" hasLineColor="false" height="37.515625" modelName="custom" textColor="#000000" visible="true" width="162.291015625" x="9.054492187500045" y="0.2421875">Annotation<y:LabelModel>
+          <y:NodeLabel alignment="center" autoSizePolicy="content" fontFamily="Arial" fontSize="30" fontStyle="bold" hasBackgroundColor="false" hasLineColor="false" height="37.515625" modelName="custom" textColor="#000000" visible="true" width="157.3544921875" x="11.522753906250045" y="0.2421875">Phenotype<y:LabelModel>
               <y:SmartNodeLabelModel distance="4.0"/>
             </y:LabelModel>
             <y:ModelParameter>
@@ -963,7 +963,7 @@
           <y:Geometry height="30.0" width="43.88771350968591" x="375.3768610658834" y="-85.27108372670807"/>
           <y:Fill hasColor="false" transparent="false"/>
           <y:BorderStyle hasColor="false" type="line" width="1.0"/>
-          <y:NodeLabel alignment="center" autoSizePolicy="content" fontFamily="Arial" fontSize="20" fontStyle="plain" hasBackgroundColor="false" hasLineColor="false" height="26.34375" modelName="custom" textColor="#0D737F" visible="true" width="44.009765625" x="-2.6703746829801958" y="1.828125">slice<y:LabelModel>
+          <y:NodeLabel alignment="center" autoSizePolicy="content" fontFamily="Arial" fontSize="20" fontStyle="plain" hasBackgroundColor="false" hasLineColor="false" height="26.34375" modelName="custom" textColor="#0D737F" visible="true" width="44.009765625" x="-2.6703746829802526" y="1.828125">slice<y:LabelModel>
               <y:SmartNodeLabelModel distance="4.0"/>
             </y:LabelModel>
             <y:ModelParameter>
@@ -1135,7 +1135,6 @@
       </data>
     </edge>
     <edge id="e11" source="n20" target="n26">
-      <data key="d9"/>
       <data key="d10">
         <y:PolyLineEdge>
           <y:Path sx="182.20843941463735" sy="-18.727752148796895" tx="0.0" ty="0.0">
