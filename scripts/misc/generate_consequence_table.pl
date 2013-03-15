@@ -133,6 +133,8 @@ for my $d_term (sort {$consequences_rank{$a} <=> $consequences_rank{$b}} keys(%c
   my $count = scalar @$cons_list;
   my $rspan = ($count > 1) ? qq{ rowspan="$count"} : '';
   
+	my $first_SO_term = (split(/\|/, $cons_list->[0]))[0];
+	
   my $c = $colour{$d_term};
   
   my $line = 1;
@@ -140,20 +142,21 @@ for my $d_term (sort {$consequences_rank{$a} <=> $consequences_rank{$b}} keys(%c
   my $cons_line;
   
   for my $row (sort {$cons_rows{$a} <=> $cons_rows{$b}} @$cons_list) {
-    $row =~ s/\|/<\/td>\n\t<td>/g;
+		my $SO_term = (split(/\|/, $row))[0];
+		$row =~ s/\|/<\/td>\n\t<td>/g;
     
     # Fetch the group colour
     $row =~ /^(\S+)</;
     $c = $colour{lc($1)} if ($colour{lc($1)});
     
-    $cons_line .= qq{</tr>\n<tr$bg>\n} if ($line !=1 );
+    $cons_line .= qq{</tr>\n<tr$bg id="$SO_term">\n} if ($line !=1 );
     $cons_line .= (defined($c)) ? qq{\t<td style="padding:0px;margin:0px;background-color:$c"></td>} : qq{<td></td>};
     $cons_line .= qq{\t<td>$row</td>\n};
     $cons_line .= qq{\t<td$rspan>$d_term</td>\n} if ($line == 1);
     $line ++;
   }
   
-  $cons_table .= qq{<tr$bg>\n$cons_line</tr>\n};
+  $cons_table .= qq{<tr$bg id="$first_SO_term">\n$cons_line</tr>\n};
   
   $bg = ($bg eq '') ? qq{ class="bg2"} : '';
   
