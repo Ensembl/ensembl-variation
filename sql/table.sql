@@ -32,6 +32,7 @@ SET storage_engine=MYISAM;
 @column minor_allele_count  The number of samples the minor allele of this variant is found in, as reported by dbSNP
 @column clinical_significance_attrib_id  An attrib_id identifying the clinical significance of this variant, as reported by dbSNP.<br /> 
                                          The list of clinical significances is available <a href="data_description.html#clin_significance">here</a>.
+@column evidence            A summary of the evidence supporting a variant as a guide to its potential reliability.
 
 @see variation_synonym
 @see failed_variation
@@ -91,6 +92,7 @@ create table variation (
 @column minor_allele_freq     The 'global' frequency of the minor allele of this variant, as reported by dbSNP
 @column minor_allele_count    The number of samples the minor allele of this variant is found in, as reported by dbSNP
 @column alignment_quality     Quality of alignment for variants mapped by flanks rather than position justified.
+@column evidence              A summary of the evidence supporting a variant as a guide to its potential reliability.
 
 @see variation
 @see tagged_variation_feature
@@ -189,72 +191,6 @@ create table variation_feature(
 
 
 /**
-@table phenotype_feature
-
-@desc This table stores information linking entities (variants, genes, QTLs) and phenotypes.
-
-@column phenotype_feature_id	  Primary key, internal identifier.
-@column phenotype_id			  Foreign key references to the @link phenotype table.
-@column source_id				  Foreign key references to the @link source table.
-@column study_id				  Foreign key references to the @link study table.
-@column type					  Type of object associated.
-@column object_id	              Stable identifier for associated object.
-@column is_significant			  Flag indicating if the association is statistically significant in the given study.
-@column seq_region_id			  Foreign key references @link seq_region in core db. Refers to the seq_region which this feature is on, which may be a chromosome, a clone, etc...
-@column seq_region_start		  The start position of the feature on the @link seq_region.
-@column seq_region_end			  The end position of the feature on the @link seq_region.
-@column seq_region_strand		  The orientation of the feature on the @link seq_region.
-
-@see variation
-@see phenotype
-@see source
-@see study
-*/
-
-CREATE TABLE IF NOT EXISTS `phenotype_feature` (
-  `phenotype_feature_id` int(11) unsigned NOT NULL AUTO_INCREMENT,
-  `phenotype_id` int(11) unsigned DEFAULT NULL,
-  `source_id` int(11) unsigned DEFAULT NULL,
-  `study_id` int(11) unsigned DEFAULT NULL,
-  `type` enum('Gene','Variation','StructuralVariation','SupportingStructuralVariation','QTL','RegulatoryFeature') DEFAULT NULL,
-  `object_id` varchar(255) DEFAULT NULL,
-  `is_significant` tinyint(1) unsigned DEFAULT '1',
-  `seq_region_id` int(11) unsigned DEFAULT NULL,
-  `seq_region_start` int(11) unsigned DEFAULT NULL,
-  `seq_region_end` int(11) unsigned DEFAULT NULL,
-  `seq_region_strand` tinyint(4) DEFAULT NULL,
-  PRIMARY KEY (`phenotype_feature_id`),
-  KEY `phenotype_idx` (`phenotype_id`),
-  KEY `object_idx` (`object_id`,`type`),
-  KEY `type_idx` (`type`),
-  KEY `pos_idx` (`seq_region_id`,`seq_region_start`,`seq_region_end`)
-);
-
-
-
-/**
-@table phenotype_feature_attrib
-
-@desc This table stores additional information on a given phenotype/object association. It is styled as an attrib table to allow for a variety of fields to be populated across different object types.
-
-@column phenotype_feature_id	  Foreign key, references to the @link phenotype_feature table.
-@column attrib_type_id			  Foreign key references to the @link attrib_type table.
-@column value	    			  The value of the attribute.
-
-@see phenotype_feature
-@see attrib_type
-*/
-
-CREATE TABLE IF NOT EXISTS `phenotype_feature_attrib` (
-  `phenotype_feature_id` int(11) unsigned NOT NULL,
-  `attrib_type_id` int(11) DEFAULT NULL,
-  `value` varchar(255) DEFAULT NULL,
-  KEY `phenotype_feature_idx` (`phenotype_feature_id`),
-  KEY `type_value_idx` (`attrib_type_id`,`value`)
-);
-
-
-/**
 @table variation_synonym
 
 @desc This table allows for a variation to have multiple IDs, generally given by multiple sources.
@@ -321,6 +257,80 @@ CREATE TABLE allele (
   KEY variation_idx (variation_id),
   KEY subsnp_idx (subsnp_id),
   KEY sample_idx (sample_id)
+);
+
+
+
+
+/**
+@header  Phenotype tables
+@desc    These tables store information linking entities (variants, genes, QTLs) with phenotypes and other annotations.
+@colour  #22949b
+*/
+
+
+/**
+@table phenotype_feature
+
+@desc This table stores information linking entities (variants, genes, QTLs) and phenotypes.
+
+@column phenotype_feature_id	  Primary key, internal identifier.
+@column phenotype_id			  Foreign key references to the @link phenotype table.
+@column source_id				  Foreign key references to the @link source table.
+@column study_id				  Foreign key references to the @link study table.
+@column type					  Type of object associated.
+@column object_id	              Stable identifier for associated object.
+@column is_significant			  Flag indicating if the association is statistically significant in the given study.
+@column seq_region_id			  Foreign key references @link seq_region in core db. Refers to the seq_region which this feature is on, which may be a chromosome, a clone, etc...
+@column seq_region_start		  The start position of the feature on the @link seq_region.
+@column seq_region_end			  The end position of the feature on the @link seq_region.
+@column seq_region_strand		  The orientation of the feature on the @link seq_region.
+
+@see variation
+@see phenotype
+@see source
+@see study
+*/
+
+CREATE TABLE IF NOT EXISTS `phenotype_feature` (
+  `phenotype_feature_id` int(11) unsigned NOT NULL AUTO_INCREMENT,
+  `phenotype_id` int(11) unsigned DEFAULT NULL,
+  `source_id` int(11) unsigned DEFAULT NULL,
+  `study_id` int(11) unsigned DEFAULT NULL,
+  `type` enum('Gene','Variation','StructuralVariation','SupportingStructuralVariation','QTL','RegulatoryFeature') DEFAULT NULL,
+  `object_id` varchar(255) DEFAULT NULL,
+  `is_significant` tinyint(1) unsigned DEFAULT '1',
+  `seq_region_id` int(11) unsigned DEFAULT NULL,
+  `seq_region_start` int(11) unsigned DEFAULT NULL,
+  `seq_region_end` int(11) unsigned DEFAULT NULL,
+  `seq_region_strand` tinyint(4) DEFAULT NULL,
+  PRIMARY KEY (`phenotype_feature_id`),
+  KEY `phenotype_idx` (`phenotype_id`),
+  KEY `object_idx` (`object_id`,`type`),
+  KEY `type_idx` (`type`),
+  KEY `pos_idx` (`seq_region_id`,`seq_region_start`,`seq_region_end`)
+);
+
+
+/**
+@table phenotype_feature_attrib
+
+@desc This table stores additional information on a given phenotype/object association. It is styled as an attrib table to allow for a variety of fields to be populated across different object types.
+
+@column phenotype_feature_id	  Foreign key, references to the @link phenotype_feature table.
+@column attrib_type_id			  Foreign key references to the @link attrib_type table.
+@column value	    			  The value of the attribute.
+
+@see phenotype_feature
+@see attrib_type
+*/
+
+CREATE TABLE IF NOT EXISTS `phenotype_feature_attrib` (
+  `phenotype_feature_id` int(11) unsigned NOT NULL,
+  `attrib_type_id` int(11) DEFAULT NULL,
+  `value` varchar(255) DEFAULT NULL,
+  KEY `phenotype_feature_idx` (`phenotype_feature_id`),
+  KEY `type_value_idx` (`attrib_type_id`,`value`)
 );
 
 
@@ -1061,7 +1071,7 @@ create table structural_variation_feature (
 
 
 /**
-@header  Set tables
+@header  Variation set tables
 @desc    These tables define the variation and structural variation set data. The complete list of variation sets with their descriptions is available <a href="data_description.html#variation_sets">here</a>.
 @colour  #FFD700
 */
@@ -1512,7 +1522,23 @@ CREATE TABLE associate_study (
 	primary key( study1_id,study2_id )
 );
 
+/**
+@table  study_variation
 
+@colour #7CFC00
+@desc   Links a variation to a study
+
+@column variation_id  Primary key, foreign key references variation
+@column study_id      Primary key, foreign key references study
+
+@see  variation 
+@see  study  
+*/
+CREATE TABLE study_variation (
+   variation_id int(10) unsigned not null,
+   study_id int(10) unsigned not null,
+   PRIMARY KEY study_variation_idx (variation_id, study_id)
+);
 
 
 /**
@@ -1823,23 +1849,6 @@ CREATE TABLE translation_md5 (
     UNIQUE KEY md5_idx (translation_md5)
 );
 
-/**
-@table  study_variation
-
-@colour #7CFC00
-@desc   Links a variation to a study
-
-@column variation_id  Primary key, foreign key references variation
-@column study_id      Primary key, foreign key references study
-
-@see  variation 
-@see  study  
-*/
-CREATE TABLE study_variation (
-   variation_id int(10) unsigned not null,
-   study_id int(10) unsigned not null,
-   PRIMARY KEY study_variation_idx (variation_id, study_id)
-);
 
 
 /**
