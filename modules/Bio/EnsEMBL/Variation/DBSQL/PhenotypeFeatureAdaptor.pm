@@ -136,7 +136,7 @@ sub fetch_all_by_Slice_type {
   
   throw("No valid object type given, valid types are: ".(join ", ", sort %TYPES)) unless defined $type and defined($TYPES{$type});
   
-  return $self->fetch_all_by_Slice_constraint($slice, "pf.type = $type");
+  return $self->fetch_all_by_Slice_constraint($slice, "pf.type = '$type'");
 }
 
 
@@ -470,6 +470,13 @@ sub count_all_by_Phenotype {
   return $self->count_all_by_phenotype_id($_[0]->dbID);
 }
 
+sub count_all_by_Gene {
+  my $self = shift;
+  my $gene = shift;
+  
+  return $self->generic_count("pf.object_id = '".$gene->stable_id."' AND pf.type = 'Gene'");
+}
+
 sub count_all_by_phenotype_id {
   my $self = shift;
   my $id = shift;
@@ -495,6 +502,30 @@ sub fetch_all {
   
   return $self->generic_fetch();#"$extra_sql");
   
+}
+
+# stub method used by web
+sub _check_gene_by_HGNC {
+  my $self = shift;
+  my $hgnc = shift;
+  
+  my $sth = $self->dbc->prepare(qq{
+    SELECT count(*)
+    FROM phenotype_feature_attrib pfa, attrib_type at
+    WHERE pfa.attrib_type_id = at.attrib_type_id
+    AND at.code = 'associated_gene'
+    AND pfa.value = ?
+  });
+  
+  $sth->bind_param(1, $hgnc, SQL_VARCHAR);
+  $sth->execute();
+  
+  my $count;
+  $sth->bind_columns(\$count);
+  $sth->fetch();
+  $sth->finish();
+  
+  return $count;
 }
 
 # fetches attributes
