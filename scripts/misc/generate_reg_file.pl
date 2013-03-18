@@ -51,6 +51,7 @@ my $aliases = {
     "Gallus_gallus"             => "chicken",
     "Drosophila_melanogaster"   => "fly",
     "Saccharomyces_cerevisiae"  => "yeast",
+    "Macaca_mulatta"            => "macaque",
 };
 
 my $groups = {
