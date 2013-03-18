@@ -670,6 +670,7 @@ our %OVERLAP_CONSEQUENCES = (
 ),
 'feature_elongation' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
   'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature',
+  'feature_SO_term' => 'sequence_feature',
   'description' => 'A sequence variant that causes the extension of a genomic feature, with regard to the reference sequence',
   'SO_accession' => 'SO:0001907',
   'SO_term' => 'feature_elongation',
@@ -682,6 +683,7 @@ our %OVERLAP_CONSEQUENCES = (
 ),
 'feature_truncation' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
   'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature',
+  'feature_SO_term' => 'sequence_feature',
   'description' => 'A sequence variant that causes the reduction of a genomic feature, with regard to the reference sequence',
   'SO_accession' => 'SO:0001906',
   'SO_term' => 'feature_truncation',
