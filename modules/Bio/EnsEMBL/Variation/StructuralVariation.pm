@@ -101,6 +101,17 @@ sub get_all_SupportingStructuralVariants {
 
 
 
+=head2 get_all_supporting_evidence_classes
+
+  Example     : $sv->get_all_supporting_evidence_classes
+  Description : Retrieves the classes (SO term) of the supporting evidence associated with this structural variation.
+                Return empty list if there are none.
+  Returntype  : reference to list of string
+  Exceptions  : None
+  Caller      : general
+  Status      : Stable
+
+=cut
 
 sub get_all_supporting_evidence_classes {
   my $self = shift;
