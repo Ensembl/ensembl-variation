@@ -35,11 +35,11 @@ Bio::EnsEMBL::Variation::StructuralVariation - Ensembl representation of a struc
     # Structural variation representing a CNV
     $sv = Bio::EnsEMBL::Variation::StructuralVariation->new
        (-variation_name => 'esv234231',
-				-class_so_term => 'structural_variant',
-				-source => 'DGVa',
-				-source_description => 'Database of Genomic Variants Archive',
-				-is_evidence => 0,
-				-is_somatic => 0);
+        -class_so_term => 'structural_variant',
+        -source => 'DGVa',
+        -source_description => 'Database of Genomic Variants Archive',
+        -is_evidence => 0,
+        -is_somatic => 0);
 
     ...
 
@@ -69,11 +69,11 @@ our @ISA = ('Bio::EnsEMBL::Variation::BaseStructuralVariation');
 
 
 sub new {
-	my $caller = shift;
-	my $class = ref($caller) || $caller;
-	
-	my $self = Bio::EnsEMBL::Variation::BaseStructuralVariation->new(@_);
-	return(bless($self, $class));
+  my $caller = shift;
+  my $class = ref($caller) || $caller;
+  
+  my $self = Bio::EnsEMBL::Variation::BaseStructuralVariation->new(@_);
+  return(bless($self, $class));
 }
 
 =head2 get_all_SupportingStructuralVariants
@@ -89,14 +89,27 @@ sub new {
 =cut
 
 sub get_all_SupportingStructuralVariants {
-	my $self = shift;
-	
-	if (defined ($self->{'adaptor'})){
-		my $ssv_adaptor = $self->{'adaptor'}->db()->get_SupportingStructuralVariationAdaptor();
-		return $ssv_adaptor->fetch_all_by_StructuralVariation($self);
+  my $self = shift;
+  
+  if (defined ($self->{'adaptor'})){
+    my $ssv_adaptor = $self->{'adaptor'}->db()->get_SupportingStructuralVariationAdaptor();
+    return $ssv_adaptor->fetch_all_by_StructuralVariation($self);
   }
-	warn("No variation database attached");
+  warn("No variation database attached");
   return [];
+}
+
+
+
+
+sub get_all_supporting_evidence_classes {
+  my $self = shift;
+  my $ssvs = $self->get_all_SupportingStructuralVariants;
+  return [] if (scalar @$ssvs == 0);
+  
+  my %ssv_SO_class = map { $_->class_SO_term() => 1 } @$ssvs;
+  my @ssv_SO_list = keys(%ssv_SO_class);
+  return \@ssv_SO_list;
 }
 
 
@@ -109,13 +122,13 @@ sub get_all_SupportingStructuralVariants {
 =cut
 
 sub summary_as_hash {
-	my $self = shift;
-	my %summary;
-	$summary{'display_id'} = $self->display_id;
-	$summary{'study_name'} = $self->study_name;
-	$summary{'study_description'} = $self->study_description;
-	$summary{'class'} = $self->var_class;
-	return \%summary;
+  my $self = shift;
+  my %summary;
+  $summary{'display_id'} = $self->display_id;
+  $summary{'study_name'} = $self->study_name;
+  $summary{'study_description'} = $self->study_description;
+  $summary{'class'} = $self->var_class;
+  return \%summary;
 
 }
 
