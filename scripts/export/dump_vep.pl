@@ -28,7 +28,7 @@ my $config = {};
 
 my %special_options = (
 	'homo_sapiens'      => ' --sift b --polyphen b --regulatory'.
-	                       ' --freq_file /warehouse/ens_variation_wh01/1KG/all_rs_global_freqs.txt',
+	                       ' --freq_file /warehouse/ens_variation_wh01/1KG/all_rs_global_freqs.txt,AFR,AMR,ASN,EUR',
 	'mus_musculus'      => ' --regulatory --sift b',
 	'bos_taurus'        => ' --sift b',
 	'canis_familiaris'  => ' --sift b',
@@ -135,7 +135,7 @@ sub get_species_list {
 
 	    my @flattened_species_list = sort map { $_->[0] } @$current_species;
 
-	    push @species, @flattened_species_list;
+	    push @species, (@flattened_species_list || $current_db_name);
 	}
 
 	return \@species;
