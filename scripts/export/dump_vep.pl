@@ -137,6 +137,9 @@ sub get_species_list {
 
 	    push @species, (@flattened_species_list || $current_db_name);
 	}
+	
+  $_ =~ s/^([a-z]+\_[a-z,1-9]+)(\_[a-z]+)?(.+)/$1$2/ for @species;
+  $_ =~ s/\_core$// for @species;
 
 	return \@species;
 }
