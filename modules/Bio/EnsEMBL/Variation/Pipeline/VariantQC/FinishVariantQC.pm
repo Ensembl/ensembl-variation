@@ -102,10 +102,12 @@ sub run {
         die;
     }
 
-    ## report any variation.minor_allele / variation_feature.allele_string incompatiblities 
-    my $suspect_minor_allele = count_rows($var_dba,'failed_minor_allele_tmp');
-    print  $report "$suspect_minor_allele variants have minor alleles incompatible with their allele strings (see database)\n" 
-	if $suspect_minor_allele > 0;
+    ## report any variation.minor_allele / variation_feature.allele_string incompatiblities for human
+    if($self->required_param('species') =~/Homo|Human/){
+	my $suspect_minor_allele = count_rows($var_dba,'failed_minor_allele_tmp');
+        print  $report "$suspect_minor_allele variants have minor alleles incompatible with their allele strings (see database)\n" 
+	    if $suspect_minor_allele > 0;
+    }
 
     ### if the results of the checks look ok, update & rename tables 
     print  $report "\nRunning updates and renaming working tables:\n";
