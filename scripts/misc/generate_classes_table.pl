@@ -50,19 +50,22 @@ $registry->load_registry_from_db(
 my %colour = (
 	'copy_number_variation'         => '#000000',
 	'insertion'                     => '#FFCC00',
-	'copy_number_gain'              => '#0000FF', 
-	'copy_number_loss'              => '#FF0000',
+	'copy_number_gain'              => '#0000CC', 
+	'copy_number_loss'              => '#CC0000',
 	'inversion'                     => '#9933FF', 
 	'complex_structural_alteration' => '#99CCFF',
 	'tandem_duplication'            => '#732E00',
 	'mobile_element_insertion'      => '#FFCC00',
 	'translocation'                 => '#C3A4FF',
+	'deletion'                      => '#CC0000',
+	'probe'                         => '#4682B4',
 );
 
 my %type = (
 	'1' => 'Variation',
 	'2' => 'Structural variation', 
-	'3' => 'Variation<br />Structural variation'
+	'3' => 'Variation<br />Structural variation',
+	'4' => 'CNV probe',
 );
 
 my $vdb = $registry->get_DBAdaptor($species,'variation');
@@ -71,6 +74,7 @@ my $dbVar = $vdb->dbc->db_handle;
 my %var_class;
 my %sv_class;
 my %both_class;
+my %cnv_probe_class;
 
 # Variation classes
 my $stmt1 = qq{ SELECT distinct a.value FROM variation v, attrib a WHERE a.attrib_id=v.class_attrib_id};
@@ -82,12 +86,14 @@ while(my $v_class = ($sth1->fetchrow_array)[0]) {
 $sth1->finish;
 
 
-# Structural variation classes
+# Structural variation classes + CNV probes
 my $stmt2 = qq{ SELECT distinct a.value FROM structural_variation v, attrib a WHERE a.attrib_id=v.class_attrib_id};
 my $sth2  = $dbVar->prepare($stmt2);
 $sth2->execute;
 while(my $sv_class = ($sth2->fetchrow_array)[0]) {
-	next if ($sv_class =~ /probe/);
+	if ($sv_class =~ /probe/) {
+		$cnv_probe_class{$sv_class} = $VARIATION_CLASSES{$sv_class};
+	}
 	if ($var_class{$sv_class}) {
 		$both_class{$sv_class} = $VARIATION_CLASSES{$sv_class};
 		delete($var_class{$sv_class});
@@ -99,16 +105,17 @@ $sth2->finish;
 
 
 
+
 my $html = qq{
-	<table id="variation_classes" class="ss">
-		<tr>
-			<th style="width:8px;padding-left:0px;padding-right:0px;text-align:center">*</th>
-			<th>SO term</th>
-			<th>SO description</th>
-			<th>SO accession</th>
-			<th>Ensembl term</th>
-			<th>Called for</th>
-		</tr>
+<table id="variation_classes" class="ss">
+  <tr>
+    <th style="width:8px;padding-left:0px;padding-right:0px;text-align:center">*</th>
+    <th>SO term</th>
+    <th>SO description</th>
+    <th>SO accession</th>
+    <th>Ensembl term</th>
+    <th>Called for</th>
+  </tr>
 };
 
 my $bg = '';
@@ -128,7 +135,12 @@ foreach my $b (sort(keys(%both_class))) {
 	print_line($b,$both_class{$b},3);
 }
 
-$html .= qq{ </table>\n};
+# CNV probe
+foreach my $cnv (sort(keys(%cnv_probe_class))) {
+	print_line($cnv,$cnv_probe_class{$cnv},4);
+}
+
+$html .= qq{</table>\n};
 
 $html .= qq{
 <p>
@@ -166,20 +178,25 @@ sub print_line {
 		$class_col = qq {;background-color:$class_col};
 	}
 	
+	my $rowspan = ($so_term eq 'probe') ? '' : ' rowspan="2"';
+	
 	$html .= qq{
-		<tr$bg>
-			<td rowspan="2" style="padding:0px;margin:0px$class_col"></td>
-			<td rowspan="2">$so_term</td>
-			<td rowspan="2">$so_desc</td>
-			<td rowspan="2"><a rel="external" href="http://www.sequenceontology.org/miso/current_release/term/$so_acc">$so_acc</a></td>
-			<td>$e_class</td>
-			<td rowspan="2">$t_name</td>
-		</tr>
-		<tr$bg>
-			<td>$som_term</td>
-		</tr>
-	};
-
+	<tr$bg>
+		<td$rowspan style="padding:0px;margin:0px$class_col"></td>
+		<td$rowspan>$so_term</td>
+		<td$rowspan>$so_desc</td>
+		<td$rowspan><a rel="external" href="http://www.sequenceontology.org/miso/current_release/term/$so_acc">$so_acc</a></td>
+		<td>$e_class</td>
+		<td$rowspan>$t_name</td>
+	</tr>};
+	
+	if ($so_term ne 'probe') {
+	  $html .= qq{
+	<tr$bg>
+		<td>$som_term</td>
+	</tr>\n};
+  }
+	
 	if ($bg eq '') { $bg = ' class="bg2"'; }	
 	else { $bg = ''; }
 }
