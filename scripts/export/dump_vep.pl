@@ -28,7 +28,7 @@ my $config = {};
 
 my %special_options = (
 	'homo_sapiens'      => ' --sift b --polyphen b --regulatory'.
-	                       ' --freq_file /warehouse/ens_variation_wh01/1KG/all_rs_global_freqs.txt,AFR,AMR,ASN,EUR',
+	                       ' --freq_file /nfs/ensembl/wm2/VEP/cache/all_rs_global_freqs.txt,AFR,AMR,ASN,EUR',
 	'mus_musculus'      => ' --regulatory --sift b',
 	'bos_taurus'        => ' --sift b',
 	'canis_familiaris'  => ' --sift b',
@@ -129,17 +129,21 @@ sub get_species_list {
 
 	foreach my $current_db_name (@dbs) {
 
-	    $sth = $dbc->prepare("select meta_value from ".$current_db_name.".meta where meta_key='species.db_name';");
+	    $sth = $dbc->prepare("select meta_value from ".$current_db_name.".meta where meta_key='species.production_name';");
 	    $sth->execute();
 	    my $current_species = $sth->fetchall_arrayref();
 
 	    my @flattened_species_list = sort map { $_->[0] } @$current_species;
-
-	    push @species, (@flattened_species_list || $current_db_name);
+			
+			if(@flattened_species_list) {
+				push @species, @flattened_species_list;
+			}
+			else {
+				$current_db_name =~ s/^([a-z]+\_[a-z,1-9]+)(\_[a-z]+)?(.+)/$1$2/;
+				$current_db_name =~ s/\_core$//;
+				push @species, $current_db_name;
+			}
 	}
-	
-  $_ =~ s/^([a-z]+\_[a-z,1-9]+)(\_[a-z]+)?(.+)/$1$2/ for @species;
-  $_ =~ s/\_core$// for @species;
 
 	return \@species;
 }
