@@ -564,6 +564,30 @@ sub _set_attribute {
 }
 
 
+=head2 variation_names
+
+  Arg [1]    : string $newval (optional)
+               The new value to set the variation_names attribute to
+  Example    : $variation_names = $obj->variation_names()
+  Description: Getter/Setter for the variation_names attribute.  This is the
+               variation name(s) linked with this phenotype association.
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub variation_names {
+  my $self = shift;
+	my $new  = shift;
+	
+	$self->_set_attribute('variation_names', $new) if defined($new);
+	
+  return defined($self->get_all_attributes->{'variation_names'}) ? $self->get_all_attributes->{'variation_names'} : undef;
+}
+
+
 =head2 associated_gene
 
   Arg [1]    : string $newval (optional)
