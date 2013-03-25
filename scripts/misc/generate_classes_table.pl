@@ -46,20 +46,22 @@ $registry->load_registry_from_db(
 		-db_version => $db_version,
 );
 
-
 my %colour = (
-	'copy_number_variation'         => '#000000',
-	'insertion'                     => '#FFCC00',
-	'copy_number_gain'              => '#0000CC', 
-	'copy_number_loss'              => '#CC0000',
-	'inversion'                     => '#9933FF', 
-	'complex_structural_alteration' => '#99CCFF',
-	'tandem_duplication'            => '#732E00',
-	'mobile_element_insertion'      => '#FFCC00',
-	'translocation'                 => '#C3A4FF',
-	'deletion'                      => '#CC0000',
-	'probe'                         => '#4682B4',
+    'copy_number_variation'         => '#000000',
+    'insertion'                     => '#FFCC00',
+    'copy_number_gain'              => '#0000CC', 
+    'copy_number_loss'              => '#CC0000',
+    'inversion'                     => '#9933FF', 
+    'complex_structural_alteration' => '#99CCFF',
+    'tandem_duplication'            => '#732E00',
+    'mobile_element_insertion'      => '#FFCC00',
+    'translocation'                 => '#C3A4FF',
+    'deletion'                      => '#CC0000',
+    'duplication'                   => '#000000',
+    'probe'                         => '#4682B4',
 );
+my $default_colour = '#B2B2B2';
+
 
 my %type = (
 	'1' => 'Variation',
@@ -144,10 +146,12 @@ $html .= qq{</table>\n};
 
 $html .= qq{
 <p>
-* Corresponding colours for the Ensembl web displays (only for Structural variations). 
+<b>*</b> Corresponding colours for the Ensembl web displays (only for Structural variations). 
 The colours are based on the <a rel="external" href="http://www.ncbi.nlm.nih.gov/dbvar/content/overview/">dbVar</a> displays.
 <p>
 };
+
+$html.= get_var_class_piechart();
 
 print $html;
 
@@ -163,7 +167,7 @@ sub print_line {
 	my $t_name   = $type{$type_id};
 	
 	my $so_desc;
-	`wget http://www.sequenceontology.org/browser/current_cvs/export/term_only/csv_text/$so_acc`;
+	`wget http://www.sequenceontology.org/browser/current_release/export/term_only/csv_text/$so_acc`;
 	
 	
 	if (-e $so_acc) {
@@ -175,7 +179,9 @@ sub print_line {
 	my $class_col = '';
 	if ($colour{$so_term}) {
 		$class_col = $colour{$so_term};
-		$class_col = qq {;background-color:$class_col};
+		$class_col = qq{;background-color:$class_col};
+	} elsif ($type_id == 3 || $type_id == 2) {
+	  $class_col = qq{;background-color:$default_colour};
 	}
 	
 	my $rowspan = ($so_term eq 'probe') ? '' : ' rowspan="2"';
@@ -200,3 +206,43 @@ sub print_line {
 	if ($bg eq '') { $bg = ' class="bg2"'; }	
 	else { $bg = ''; }
 }
+
+sub get_var_class_piechart {
+
+  print STDERR "Generate the pie chart of the variation class distribution ...\n";
+	
+	my $species_name = ($species =~ /homo|human/i) ? 'Human' : $species;
+	my $stmt = qq{ SELECT distinct a.value, count(v.variation_id) av FROM variation v,attrib a 
+	               WHERE a.attrib_id=v.class_attrib_id GROUP by a.attrib_id ORDER BY av DESC
+	             };
+	my $sth = $dbVar->prepare($stmt);
+	$sth->execute;
+	my @data;
+	while(my ($class,$count) = $sth->fetchrow_array) {
+	  push @data, "[$count,'$class']";
+	}
+	$sth->finish;
+	
+	my $html .= sprintf( 
+	qq{
+<div class="js_panel" id="pie_chart_panel" style="margin-top:15px;margin-bottom:20px">
+	<input class="panel_type" type="hidden" value="Piechart">
+	<input class="graph_config" type="hidden" name="legendpos" value="'east'" />
+	<input class="graph_dimensions" type="hidden" value="[90,80,80]" />
+	
+	<input type="hidden" class="graph_data" value="[%s]" />
+
+	<div class="pie_chart_classes" title="classes" style="width:400px;height:220px;border:1px solid #888;">
+   	<h3 style="padding:5px 10px">%s Variation class distribution - Ensembl %s</h4>
+   	<div id="graphHolder0"></div>
+	</div>
+</div>
+	},
+	join(',',@data),
+	$species_name,
+	$db_version
+	);
+  
+	return $html;
+} 
+
