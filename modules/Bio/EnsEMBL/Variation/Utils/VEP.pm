@@ -55,7 +55,7 @@ use Bio::EnsEMBL::Variation::VariationFeature;
 use Bio::EnsEMBL::Variation::DBSQL::VariationFeatureAdaptor;
 use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(MAX_DISTANCE_FROM_TRANSCRIPT overlap);
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
-use Bio::EnsEMBL::Variation::Utils::Sequence qw(unambiguity_code);
+use Bio::EnsEMBL::Variation::Utils::Sequence qw(unambiguity_code SO_variation_class);
 use Bio::EnsEMBL::Variation::Utils::EnsEMBL2GFF3;
 use Bio::EnsEMBL::Variation::StructuralVariationFeature;
 use Bio::EnsEMBL::Variation::DBSQL::StructuralVariationFeatureAdaptor;
@@ -149,6 +149,17 @@ our @VEP_WEB_CONFIG = qw(
     sift
     polyphen
     regulatory
+);
+
+our @VAR_CACHE_COLS = qw(
+    variation_name
+    failed
+    start
+    end
+    allele_string
+    strand
+    minor_allele
+    minor_allele_freq
 );
 
 our %FILTER_SHORTCUTS = (
@@ -914,6 +925,7 @@ sub get_all_consequences {
                     $config->{forked} = $$;
                     $config->{quiet} = 1;
                     $config->{filter_count} = 0 if defined($config->{filter_count});
+                    $config->{stats} = {};
                     
                     # redirect STDERR to PARENT so we can catch errors
                     *STDERR = *PARENT;
@@ -938,8 +950,8 @@ sub get_all_consequences {
                         print PARENT $$." PLUGIN ".ref($plugin)." ".encode_base64(freeze($plugin), "\t")."\n";
                     }
                     
-                    # tell parent how many we filtered out
-                    print PARENT $$." FILTERED ".$config->{filter_count}."\n" if defined($config->{filter_count});
+                    # tell parent about stats
+                    print PARENT $$." STATS ".encode_base64(freeze($config->{stats}), "\t")."\n" if defined($config->{stats});
                     
                     # we need to tell the parent this child is finished
                     # otherwise it keeps listening
@@ -1005,10 +1017,13 @@ sub get_all_consequences {
                 }
                 
                 # filtered count
-                elsif(/^\-?\d+ FILTERED/) {
-                    m/^(\-?\d+) FILTERED (\d+)/;
-                    $config->{filter_count} += $2;
-                    $done_vars += (int($size / $config->{fork}) - $2);
+                elsif(/^\-?\d+ STATS/) {
+                    s/^\-?\d+\sSTATS\s//;
+                    my $tmp = thaw(decode_base64($_));
+                    $config->{stats} ||= {};
+                    merge_hashes($config->{stats}, $tmp, 1);
+                    #$config->{stats}->{filter_count} += $2;
+                    #$done_vars += (int($size / $config->{fork}) - $2);
                     progress($config, $done_vars, $total_size);
                 }
                 
@@ -1115,7 +1130,7 @@ sub vf_list_to_cons {
     }
     
     # if using consequence filter, we're not interested in how many remain yet
-    $config->{filter_count} += scalar @$new_listref unless defined($config->{filter});
+    $config->{stats}->{filter_count} += scalar @$new_listref unless defined($config->{filter});
     
     # remake hash
     %vf_hash = ();
@@ -1166,7 +1181,7 @@ sub vf_list_to_cons {
             # filtered output
             if(defined($config->{filter})) {
                 $filter_ok = filter_by_consequence($config, $vf);
-                $config->{filter_count} += $filter_ok;
+                $config->{stats}->{filter_count} += $filter_ok;
             }
             
             # skip filtered lines
@@ -1289,10 +1304,19 @@ sub vf_to_consequences {
     my $config = shift;
     my $vf = shift;
     
+    # pos stats
+    $config->{stats}->{chr}->{$vf->{chr}}->{1e6 * int($vf->start / 1e6)}++;
+    $config->{stats}->{chr_lengths}->{$vf->{chr}} ||= $vf->{slice}->length;
+    
     # use a different method for SVs
     return svf_to_consequences($config, $vf) if $vf->isa('Bio::EnsEMBL::Variation::StructuralVariationFeature'); 
     
     my @return = ();
+    
+    # get stats
+    my $so_term = SO_variation_class($vf->allele_string, 1);
+    $config->{stats}->{classes}->{$so_term}++ if defined($so_term);
+    $config->{stats}->{allele_changes}->{$vf->allele_string}++ if $so_term eq 'SNV';
     
     # method name for consequence terms
     my $term_method = $config->{terms}.'_term';
@@ -1316,6 +1340,8 @@ sub vf_to_consequences {
                 Feature      => $rf->stable_id,
             };
             
+            $config->{stats}->{regfeats}->{$rf->stable_id} = 1;
+            
             if(defined($config->{cell_type}) && scalar(@{$config->{cell_type}})) {
                 $base_line->{Extra}->{CELL_TYPE} = join ",",
                     map {$_.':'.$rf->{cell_types}->{$_}}
@@ -1336,6 +1362,8 @@ sub vf_to_consequences {
                 $line->{Consequence}    = join ',', 
                     map { $_->$term_method || $_->SO_term } 
                         @{ $rfva->get_all_OverlapConsequences };
+                
+                map {$config->{stats}->{consequences}->{$_->$term_method}++} @{$rfva->get_all_OverlapConsequences};
 
                 $line = run_plugins($rfva, $line, $config);
                         
@@ -1387,7 +1415,9 @@ sub vf_to_consequences {
                 $line->{Consequence}    = join ',', 
                     map { $_->$term_method || $_->SO_term } 
                         @{ $mfva->get_all_OverlapConsequences };
-
+                
+                map {$config->{stats}->{consequences}->{$_->$term_method}++} @{$mfva->get_all_OverlapConsequences};
+                
                 $line = run_plugins($mfva, $line, $config);
                 
                 push @return, $line;
@@ -1420,15 +1450,17 @@ sub vf_to_consequences {
         for my $iva (@{ $iv->get_all_alternate_IntergenicVariationAlleles }) {
             
             my $line = init_line($config, $vf);
-           
+            
             $line->{Allele} = $iva->variation_feature_seq;
-    
+            
             my $cons = $iva->get_all_OverlapConsequences->[0];
-
+            
             $line->{Consequence} = $cons->$term_method || $cons->SO_term;
-
+            
+            $config->{stats}->{consequences}->{$cons->$term_method || $cons->SO_term}++;
+            
             $line = run_plugins($iva, $line, $config);
-                    
+            
             push @return, $line;
         }
     }
@@ -1483,6 +1515,9 @@ sub svf_to_consequences {
     
     my @return = ();
     
+    # stats
+    $config->{stats}->{classes}->{$svf->{class_SO_term}}++;
+    
     my $term_method = $config->{terms}.'_term';
     
     if(defined $config->{whole_genome}) {
@@ -1501,6 +1536,8 @@ sub svf_to_consequences {
             my $cons = $iva->get_all_OverlapConsequences->[0];
             
             $line->{Consequence} = $cons->$term_method || $cons->SO_term;
+            
+            $config->{stats}->{consequences}->{$cons->$term_method || $cons->SO_term}++;
             
             $line = run_plugins($iva, $line, $config);
             
@@ -1537,6 +1574,8 @@ sub svf_to_consequences {
                 map {$_->$term_method}
                 sort {$a->rank <=> $b->rank}
                 @{$svoa->get_all_OverlapConsequences};
+            
+            map {$config->{stats}->{consequences}->{$_->$term_method}++} @{$svoa->get_all_OverlapConsequences};
             
             # work out overlap amounts            
             my $overlap_start  = (sort {$a <=> $b} ($svf->start, $feature->start))[-1];
@@ -1631,6 +1670,14 @@ sub tva_to_line {
         Consequence      => join ",", map {$_->$term_method || $_->SO_term} sort {$a->rank <=> $b->rank} @{$tva->get_all_OverlapConsequences},
     };
     
+    # update stats
+    $config->{stats}->{transcripts}->{$t->stable_id} = 1 if defined($t);
+    map {$config->{stats}->{consequences}->{$_}++} map {$_->$term_method || $_->SO_term} @{$tva->get_all_OverlapConsequences};
+    
+    if(defined($tv->translation_start)) {
+        $config->{stats}->{protein_pos}->{int(10 * ($tv->translation_start / length($t->{_variation_effect_feature_cache}->{peptide})))}++;
+    }
+    
     my $line = init_line($config, $tva->variation_feature, $base_line);
     
     # HGVS
@@ -1682,6 +1729,9 @@ sub tva_to_line {
                     }
                 }
             }
+            
+            # update stats
+            $config->{stats}->{$tool}->{$tva->$pred_meth}++ if $tva->$pred_meth;
         }
     }
     
@@ -1726,6 +1776,8 @@ sub add_extra_fields_transcript {
         $gene = $config->{ga}->fetch_by_transcript_stable_id($tr->stable_id);
         $line->{Gene} = $gene ? $gene->stable_id : '-';
     }
+    
+    $config->{stats}->{genes}->{$line->{Gene}}++ if defined($line->{Gene});
     
     # exon/intron numbers
     if ($config->{numbers}) {
@@ -1836,7 +1888,7 @@ sub init_line {
     my $line = {
         Uploaded_variation  => $vf->variation_name,
         Location            => ($vf->{chr} || $vf->seq_region_name).':'.format_coords($vf->start, $vf->end),
-        Existing_variation  => defined $vf->{existing} && scalar @{$vf->{existing}} ? join ",", map {$_->[0]} @{$vf->{existing}} : '-',
+        Existing_variation  => defined $vf->{existing} && scalar @{$vf->{existing}} ? join ",", map {$_->{variation_name}} @{$vf->{existing}} : '-',
         Extra               => {},
     };
     
@@ -1858,7 +1910,7 @@ sub init_line {
     
     # gmaf?
     if(defined($config->{gmaf}) && defined($vf->{existing}) && scalar @{$vf->{existing}}) {
-        my @gmafs = map {$_->[6].':'.$_->[7]} grep {defined($_->[6])} @{$vf->{existing}};
+        my @gmafs = map {$_->{minor_allele}.':'.$_->{minor_allele_freq}} grep {defined($_->{minor_allele})} @{$vf->{existing}};
         $line->{Extra}->{GMAF} = scalar @gmafs ? join ",", @gmafs : '-';
     }
     
@@ -2865,7 +2917,7 @@ sub check_existing_hash {
                     
                     if(defined($variation_cache->{$chr})) {
                         if(my $existing_vars = $variation_cache->{$chr}->{$pos}) {
-                            foreach my $existing_var(grep {$_->[1] <= $config->{failed}} @$existing_vars) {
+                            foreach my $existing_var(grep {$_->{failed} <= $config->{failed}} @$existing_vars) {
                                 unless(is_var_novel($config, $existing_var, $var)) {
                                     push @found, $existing_var;
                                 }
@@ -3821,18 +3873,18 @@ sub dump_variation_cache {
     
     foreach my $pos(keys %{$v_cache->{$chr}}) {
         foreach my $v(@{$v_cache->{$chr}->{$pos}}) {
-            my ($name, $failed, $start, $end, $as, $strand, $ma, $maf) = @$v;
-            
             print DUMP join " ", (
-                $name,
-                $failed == 0 ? '' : $failed,
-                $start,
-                $end == $start ? '' : $end,
-                $as,
-                $strand == 1 ? '' : $strand,
-                $ma || '',
-                defined($maf) ? sprintf("%.4f", $maf) : '',
-                defined($config->{'freqs'}) && defined($config->{'freqs'}->{$name}) ? $config->{'freqs'}->{$name} : '',
+                $v->{variation_name},
+                $v->{failed} == 0 ? '' : $v->{failed},
+                $v->{start},
+                $v->{end} == $v->{start} ? '' : $v->{end},
+                $v->{allele_string},
+                $v->{strand} == 1 ? '' : $v->{strand},
+                $v->{minor_allele} || '',
+                defined($v->{minor_allele_freq}) ? sprintf("%.4f", $v->{minor_allele_freq}) : '',
+                $v->{ancestral_allele} || '',
+                #$v->{clinical} || '',
+                defined($config->{'freqs'}) && defined($config->{'freqs'}->{$v->{variation_name}}) ? $config->{'freqs'}->{$v->{variation_name}} : '',
             );
             print DUMP "\n";
         }
@@ -3855,27 +3907,37 @@ sub load_dumped_variation_cache {
     
     my $v_cache;
     
+    # get columns
+    my @cols = @{get_variation_columns($config)};
+    
     while(<DUMP>) {
         chomp;
-        my ($name, $failed, $start, $end, $as, $strand, $ma, $maf, $afr, $amr, $asn, $eur) = split / /, $_;
-        $failed ||= 0;
-        $end ||= $start;
-        $strand ||= 1;
-        $ma ||= undef;
         
-        my @v = ($name, $failed, $start, $end, $as, $strand, $ma, $maf);
-        push @v, ($afr, $amr, $asn, $eur) if
-            defined($afr) ||
-            defined($amr) ||
-            defined($asn) ||
-            defined($eur);
+        my @data = split / /, $_;
+        my %v = map {$cols[$_] => $data[$_]} (0..$#data);
         
-        push @{$v_cache->{$chr}->{$start}}, \@v;
+        $v{failed} ||= 0;
+        $v{end}    ||= $v{start};
+        $v{strand} ||= 1;
+        
+        push @{$v_cache->{$chr}->{$v{start}}}, \%v;
     }
     
     close DUMP;
     
     return $v_cache;
+}
+
+# gets variation cache columns
+sub get_variation_columns {
+    my $config = shift;
+    
+    if(!defined($config->{cache_variation_cols})) {
+        $config->{cache_variation_cols} = \@VAR_CACHE_COLS;
+        push @{$config->{cache_variation_cols}}, @{$config->{freq_file_pops}} if defined($config->{freq_file_pops});
+    }
+    
+    return $config->{cache_variation_cols};
 }
 
 # caches regulatory features
@@ -4424,6 +4486,10 @@ sub write_cache_info {
         }
     }
     
+    # variation columns
+    print OUT "variation_cols\t".(join ",", @{get_variation_columns($config)});
+    print OUT "\n";
+    
     close OUT;
 }
 
@@ -4439,7 +4505,15 @@ sub read_cache_info {
         next if /^#/;
         chomp;
         my ($param, $value) = split /\t/;
-        $config->{'cache_'.$param} = $value unless defined $value && $value eq '-';
+        
+        
+        if($param =~ /variation_col/) {
+            $config->{'cache_'.$param} = [split /\,/, $value];
+        }
+        else {
+            $config->{'cache_'.$param} = $value unless defined $value && $value eq '-';
+        }
+        
     }
     
     close IN;
@@ -4532,16 +4606,16 @@ sub is_var_novel {
     
     my $is_novel = 1;
     
-    $is_novel = 0 if $existing_var->[2] == $new_var->start && $existing_var->[3] == $new_var->end;
+    $is_novel = 0 if $existing_var->{start} == $new_var->start && $existing_var->{end} == $new_var->end;
     
     if(defined($config->{check_alleles})) {
         my %existing_alleles;
         
-        $existing_alleles{$_} = 1 for split /\//, $existing_var->[4];
+        $existing_alleles{$_} = 1 for split /\//, $existing_var->{allele_string};
         
         my $seen_new = 0;
         foreach my $a(split /\//, ($new_var->allele_string || "")) {
-            reverse_comp(\$a) if $new_var->strand ne $existing_var->[5];
+            reverse_comp(\$a) if $new_var->strand ne $existing_var->{strand};
             $seen_new = 1 unless defined $existing_alleles{$a};
         }
         
@@ -4554,9 +4628,9 @@ sub is_var_novel {
 # check frequencies of existing var against requested params
 sub check_frequencies {
     my $config = shift;
-    my $var_array = shift;
+    my $var = shift;
     
-    my $var_name = $var_array->[0];
+    my $var_name = $var->{variation_name};
     
     my $freq_pop      = $config->{freq_pop};
     my $freq_freq     = $config->{freq_freq};
@@ -4569,17 +4643,14 @@ sub check_frequencies {
     
     # if we can, check using cached frequencies as this is way quicker than
     # going to the DB
-    if($freq_pop =~ /1kg/i && $freq_pop =~ /all|afr|amr|asn|eur/i) {
+    if($freq_pop =~ /1kg/i) {
         my $freq;
+        my $sub_pop = uc((split /\_/, $freq_pop)[-1]);
         
-        $freq = $var_array->[7] if $freq_pop =~ /all/i;
+        $freq = $var->{minor_allele_freq} if $sub_pop =~ /all/i;
         
-        # newer cache files have global pops too
-        if(scalar @{$var_array} > 8 && !defined($freq)) {
-            $freq = $var_array->[8]  if $freq_pop =~ /afr/i;
-            $freq = $var_array->[9]  if $freq_pop =~ /amr/i;
-            $freq = $var_array->[10] if $freq_pop =~ /asn/i;
-            $freq = $var_array->[11] if $freq_pop =~ /eur/i;
+        if(!defined($freq)) {
+            $freq = $var->{$sub_pop} if defined($var->{$sub_pop});
         }
         
         if(defined($freq) && $freq =~ /\d/) {
@@ -4648,7 +4719,7 @@ sub get_variations_in_region {
         my $maf_cols = have_maf_cols($config) ? 'vf.minor_allele, vf.minor_allele_freq' : 'NULL, NULL';
         
         my $sth = $config->{vfa}->db->dbc->prepare(qq{
-            SELECT vf.variation_name, IF(fv.variation_id IS NULL, 0, 1), vf.seq_region_start, vf.seq_region_end, vf.allele_string, vf.seq_region_strand, $maf_cols
+            SELECT vf.variation_id, vf.variation_name, IF(fv.variation_id IS NULL, 0, 1), vf.seq_region_start, vf.seq_region_end, vf.allele_string, vf.seq_region_strand, $maf_cols
             FROM variation_feature vf
             LEFT JOIN failed_variation fv ON fv.variation_id = vf.variation_id
             WHERE vf.seq_region_id = ?
@@ -4658,19 +4729,69 @@ sub get_variations_in_region {
         
         $sth->execute($sr_cache->{$chr}, $start, $end);
         
-        my @v;
-        for my $i(0..7) {
-            $v[$i] = undef;
+        my %v;
+        $v{$_} = undef for @VAR_CACHE_COLS;
+        
+        my ($var_id, %vars_by_id);
+        $sth->bind_col(1, \$var_id);
+        
+        if(have_maf_cols($config)) {
+            $sth->bind_col($_+2, \$v{$VAR_CACHE_COLS[$_]}) for (0..$#VAR_CACHE_COLS);
+        }
+        else {
+            $sth->bind_col($_+2, \$v{$VAR_CACHE_COLS[$_]}) for (0..4);
         }
         
-        $sth->bind_columns(\$v[0], \$v[1], \$v[2], \$v[3], \$v[4], \$v[5], \$v[6], \$v[7]);
-        
         while($sth->fetch) {
-            my @v_copy = @v;
-            push @{$variations{$v[2]}}, \@v_copy;
+            my %v_copy = %v;
+            $v_copy{allele_string} =~ s/\s+/\_/g;
+            push @{$variations{$v{start}}}, \%v_copy;
+            
+            # store by var_id too to get stuff from variation table
+            $vars_by_id{$var_id} = \%v_copy;
         }
         
         $sth->finish();
+        
+        # now get stuff from variation table
+        #if(scalar keys %vars_by_id) {
+        #    my $max_size = 200;
+        #    my @id_list = keys %vars_by_id;
+        #    
+        #    while(@id_list) {
+        #        my @ids;
+        #        if(@id_list > $max_size) {
+        #            @ids = splice(@id_list, 0, $max_size);
+        #        }
+        #        else {
+        #            @ids = splice(@id_list, 0);
+        #        }
+        #        
+        #        my $id_str;
+        #        if(@ids > 1)  {
+        #            $id_str = " IN (" . join(',', @ids). ")";
+        #        }
+        #        else {
+        #            $id_str = " = ".$ids[0];
+        #        }
+        #        
+        #        $sth = $config->{vfa}->db->dbc->prepare(qq{
+        #            SELECT variation_id, ancestral_allele
+        #            FROM variation
+        #            WHERE variation_id $id_str
+        #        });
+        #        
+        #        my $ancestral_allele;
+        #        $sth->execute();
+        #        $sth->bind_columns(\$var_id, \$ancestral_allele);
+        #        
+        #        while($sth->fetch) {
+        #            $vars_by_id{$var_id}->{ancestral_allele} = $ancestral_allele;
+        #        }
+        #        
+        #        $sth->finish();
+        #    }
+        #}
     }
     
     return \%variations;
@@ -4713,7 +4834,7 @@ sub have_maf_cols {
 }
 
 sub merge_hashes {
-    my ($x, $y) = @_;
+    my ($x, $y, $add) = @_;
 
     foreach my $k (keys %$y) {
         if (!defined($x->{$k})) {
@@ -4723,10 +4844,10 @@ sub merge_hashes {
                 $x->{$k} = merge_arrays($x->{$k}, $y->{$k});
             }
             elsif(ref($x->{$k}) eq 'HASH') {
-                $x->{$k} = merge_hashes($x->{$k}, $y->{$k});
+                $x->{$k} = merge_hashes($x->{$k}, $y->{$k}, $add);
             }
             else {
-                $x->{$k} = $y->{$k};
+                $x->{$k} = ($add ? $x->{$k} + $y->{$k} : $y->{$k});
             }
         }
     }
