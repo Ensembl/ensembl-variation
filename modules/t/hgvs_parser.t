@@ -5,6 +5,7 @@ use warnings;
 
 #### Check genomic, coding & non-coding HGVS strings give variation features which return the same HGVS strings
 #### This is gene-annotation dependant
+#### Exceptions should be reported when HGVS protein nomenclature cannot be reliably converted to genomic 
 
 
 use Test::More;
@@ -25,7 +26,7 @@ BEGIN {
 my $DEBUG = 0;
 
 my $reg = 'Bio::EnsEMBL::Registry';
-
+$reg->no_version_check(1); ## switch off version check for test 
 $reg->load_all("$Bin/test.ensembl.registry");
 
 my $variationfeature_adaptor    = $reg->get_adaptor('human', 'variation', 'variationfeature');
@@ -103,7 +104,7 @@ my @test_input = (
            "-", 
            "ENST00000355951.2:c.1964delA", 
            "-",
-           "ENSP00000348220.2:p.Gln655ArgfsX17",  
+           "ENSP00000348220.2:p.Gln655ArgfsTer17",  
            "deletion, frameshift"
           ],                     
           ["7:g.7680048A>G",
@@ -131,7 +132,7 @@ my @test_input = (
           "A",
           "ENST00000336617.2:c.615dupA",
           "A",
-          "ENSP00000337623.2:p.Glu206ArgfsX13",
+          "ENSP00000337623.2:p.Glu206ArgfsTer13",
           "duplication, frameshift"
           ],
           ["22:g.20920895_20920939dupCCACAGCCTCCGCCCTCCCAGGCTCTGCCCCAGCAGCTGCAGCAG",
@@ -145,21 +146,21 @@ my @test_input = (
            "-",
            "ENST00000435363.2:c.3695delC",           
            "-",
-           "ENSP00000415941.2:p.Ser1232X",
+           "ENSP00000415941.2:p.Ser1232Ter",
            "deletion, stop gained"
           ],          
           ["4:g.130032945A>G",
            "G",
            "ENST00000281146.4:c.599A>G",
            "G",
-           "ENSP00000281146.4:p.X200TrpextX2",
+           "ENSP00000281146.4:p.Ter200TrpextTer2",
            "substitution, stop lost"
           ],        
           ["1:g.154140413_154140415delTTA",
            "-", 
            "ENST00000368530.2:c.856_858delTAA",
            "-",
-           "ENSP00000357516.2:p.X286delextX56",
+           "ENSP00000357516.2:p.Ter286delextTer56",
             "deletion, stop loss"
           ],
           [ "19:g.48836478_48836480delAGG", 
@@ -216,14 +217,14 @@ my @test_input = (
            "CCTACGAGTACTACC", 
            "ENST00000530998.1:c.451_452insGGTAGTACTCGTAGG",
            "GGTAGTACTCGTAGG", 
-	   "ENSP00000435307.1:p.Arg151_Ser152insXTyrSerXGly",
+           "ENSP00000435307.1:p.Arg151_Ser152insTerTyrSerTerGly",
             "insertion, stop gained [-1]"
            ],
            ["17:g.7123233_7123234insCAGGACGTGGGCGTG",
            "CAGGACGTGGGCGTG",
            "ENST00000356839.4:c.68_69insCAGGACGTGGGCGTG",
            "CAGGACGTGGGCGTG",  
-           "ENSP00000349297.4:p.Pro23_Gly24insArgThrTrpAlaX",
+           "ENSP00000349297.4:p.Pro23_Gly24insArgThrTrpAlaTer",
            "insertion,  stop gained"
            ],
            ["17:g.48452979_48452980insAGC",                  ##rs67225428
@@ -237,16 +238,16 @@ my @test_input = (
            "G",
            "ENST00000336617.2:c.615_616insG",
            "G",
-           "ENSP00000337623.2:p.Glu206GlyfsX13",
+           "ENSP00000337623.2:p.Glu206GlyfsTer13",
            "insertion, frameshift",
            ],
           ["19:g.7706085T>C",                                ## rs144546645
            "C",
            "ENST00000320400.4:c.1186T>C",
            "C",
-           "ENSP00000318233.4:p.X396Gln",
+           "ENSP00000318233.4:p.Ter396GlnextTer?",
            "substitution, stop loss, no alt stop"
-          ]
+          ],
 
 );
 
