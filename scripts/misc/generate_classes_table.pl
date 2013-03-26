@@ -95,6 +95,7 @@ $sth2->execute;
 while(my $sv_class = ($sth2->fetchrow_array)[0]) {
 	if ($sv_class =~ /probe/) {
 		$cnv_probe_class{$sv_class} = $VARIATION_CLASSES{$sv_class};
+		next;
 	}
 	if ($var_class{$sv_class}) {
 		$both_class{$sv_class} = $VARIATION_CLASSES{$sv_class};
@@ -183,12 +184,13 @@ sub print_line {
 	} elsif ($type_id == 3 || $type_id == 2) {
 	  $class_col = qq{;background-color:$default_colour};
 	}
+	my $border = ($class_col eq '') ? '' : ';border-top:1px solid #FFF';
 	
 	my $rowspan = ($so_term eq 'probe') ? '' : ' rowspan="2"';
 	
 	$html .= qq{
 	<tr$bg>
-		<td$rowspan style="padding:0px;margin:0px$class_col"></td>
+		<td$rowspan style="padding:0px;margin:0px$class_col$border"></td>
 		<td$rowspan>$so_term</td>
 		<td$rowspan>$so_desc</td>
 		<td$rowspan><a rel="external" href="http://www.sequenceontology.org/miso/current_release/term/$so_acc">$so_acc</a></td>
@@ -231,9 +233,9 @@ sub get_var_class_piechart {
 	<input class="graph_dimensions" type="hidden" value="[90,80,80]" />
 	
 	<input type="hidden" class="graph_data" value="[%s]" />
-
-	<div class="pie_chart_classes" title="classes" style="width:400px;height:220px;border:1px solid #888;">
-   	<h3 style="padding:5px 10px">%s Variation class distribution - Ensembl %s</h4>
+  
+	<div class="pie_chart_classes" title="classes" style="width:400px;height:220px;border:1px solid #AAA;border-radius:10px;-moz-border-radius:10px;-webkit-border-radius:10px;-webkit-box-shadow:0 1px 3px #666;">
+   	<h3 style="padding:10px 10px 5px">%s Variation class distribution - Ensembl %s</h4>
    	<div id="graphHolder0"></div>
 	</div>
 </div>
