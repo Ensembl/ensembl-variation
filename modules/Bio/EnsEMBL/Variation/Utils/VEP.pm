@@ -1675,7 +1675,7 @@ sub tva_to_line {
     map {$config->{stats}->{consequences}->{$_}++} map {$_->$term_method || $_->SO_term} @{$tva->get_all_OverlapConsequences};
     
     if(defined($tv->translation_start)) {
-        $config->{stats}->{protein_pos}->{int(10 * ($tv->translation_start / length($t->{_variation_effect_feature_cache}->{peptide})))}++;
+        $config->{stats}->{protein_pos}->{int(10 * ($tv->translation_start / ($t->{_variation_effect_feature_cache}->{peptide} ? length($t->{_variation_effect_feature_cache}->{peptide}) : $t->translation->length)))}++;
     }
     
     my $line = init_line($config, $tva->variation_feature, $base_line);
@@ -3914,6 +3914,12 @@ sub load_dumped_variation_cache {
         chomp;
         
         my @data = split / /, $_;
+        
+        # assumption fix for old cache files
+        if(scalar @data > scalar @cols) {
+            push @cols, ('AFR', 'AMR', 'ASN', 'EUR');
+        }
+        
         my %v = map {$cols[$_] => $data[$_]} (0..$#data);
         
         $v{failed} ||= 0;
