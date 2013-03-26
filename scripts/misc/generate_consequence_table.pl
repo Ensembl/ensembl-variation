@@ -38,9 +38,9 @@ my ($web_colour_file, $web_mapping_colour, $output_file, $help);
 usage() if (!scalar(@ARGV));
  
 GetOptions(
-     'colour_file=s'  => \$web_colour_file,
-     'mapping_file=s' => \$web_mapping_colour,
-     'output_file=s'  => \$output_file,
+     'colour_file|c=s'  => \$web_colour_file,
+     'mapping_file|m=s' => \$web_mapping_colour,
+     'output_file|o=s'  => \$output_file,
      'help!'          => \$help
 );
 
@@ -126,7 +126,8 @@ my $cons_table =
     qq{</th>\n</tr>\n};
 
 my $bg = '';
-
+my $border_top = ';border-top:1px solid #FFF';
+my $not_first = 0;
 for my $d_term (sort {$consequences_rank{$a} <=> $consequences_rank{$b}} keys(%consequences)) {
 
   my $cons_list = $consequences{$d_term};
@@ -140,30 +141,34 @@ for my $d_term (sort {$consequences_rank{$a} <=> $consequences_rank{$b}} keys(%c
   my $line = 1;
   
   my $cons_line;
-  
+  my $SO_term_id;
+	
   for my $row (sort {$cons_rows{$a} <=> $cons_rows{$b}} @$cons_list) {
 		my $SO_term = (split(/\|/, $row))[0];
+		   $SO_term_id = $SO_term if (!defined($SO_term_id));
 		$row =~ s/\|/<\/td>\n\t<td>/g;
     
     # Fetch the group colour
     $row =~ /^(\S+)</;
     $c = $colour{lc($1)} if ($colour{lc($1)});
-    
+    my $border = ($not_first == 1) ? $border_top : '';
+		
     $cons_line .= qq{</tr>\n<tr$bg id="$SO_term">\n} if ($line !=1 );
-    $cons_line .= (defined($c)) ? qq{\t<td style="padding:0px;margin:0px;background-color:$c"></td>} : qq{<td></td>};
+		
+    $cons_line .= (defined($c)) ? qq{\t<td style="padding:0px;margin:0px;background-color:$c$border"></td>} : qq{<td></td>};
     $cons_line .= qq{\t<td>$row</td>\n};
     $cons_line .= qq{\t<td$rspan>$d_term</td>\n} if ($line == 1);
     $line ++;
+		$not_first = 1;
   }
-  
-  $cons_table .= qq{<tr$bg id="$first_SO_term">\n$cons_line</tr>\n};
-  
+  $SO_term_id = $first_SO_term if (!defined($SO_term_id));
+  $cons_table .= qq{<tr$bg id="$SO_term_id">\n$cons_line</tr>\n};
+print qq{<tr$bg id="$SO_term_id">\n$cons_line</tr>\n\n};  
   $bg = ($bg eq '') ? qq{ class="bg2"} : '';
-  
 }
 
 $cons_table .= qq{</table>\n};
-$cons_table .= qq{<p>* Corresponding colours for the Ensembl web displays.<p>\n};
+$cons_table .= qq{<p><b>*</b> Corresponding colours for the Ensembl web displays.<p>\n};
 
 open OUT, "> $output_file" or die $!;
 print OUT $cons_table;
