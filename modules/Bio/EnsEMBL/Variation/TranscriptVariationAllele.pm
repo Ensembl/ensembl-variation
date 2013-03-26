@@ -697,6 +697,7 @@ sub hgvs_protein {
     if(defined $hgvs_notation->{alt} && defined $hgvs_notation->{ref}){
         $hgvs_notation = _clip_alleles( $hgvs_notation);
     }
+
     unless( defined $hgvs_notation->{type} && $hgvs_notation->{type} eq "="){
         #### define type - types are different for protein numbering
         $hgvs_notation  = $self->_get_hgvs_protein_type($hgvs_notation);
@@ -704,6 +705,7 @@ sub hgvs_protein {
         ##### Convert ref & alt peptides taking into account HGVS rules
         $hgvs_notation = $self->_get_hgvs_peptides($hgvs_notation);
     }
+
     ##### String formatting
     $self->{hgvs_protein}  =  $self->_get_hgvs_protein_format($hgvs_notation);
     return $self->{hgvs_protein} ;   
@@ -729,20 +731,24 @@ sub _get_hgvs_protein_format{
     ### all start with refseq name & numbering type
     $hgvs_notation->{'hgvs'} = $hgvs_notation->{'ref_name'} . ":" . $hgvs_notation->{'numbering'} . ".";    
 
-    ### handle stop_lost seperately regardless of cause by del/delins => p.XposAA1extnum_AA_to_stop
-    if(stop_lost($self)){  ### if deletion of stop add extX and number of new aa to alt
+    ### handle stop_lost seperately regardless of cause by del/delins => p.TerposAA1extnum_AA_to_stop
+    if(stop_lost($self)){  ### if deletion of stop add extRer and number of new aa to alt
         $hgvs_notation->{alt} = substr($hgvs_notation->{alt}, 0, 3);
         if($hgvs_notation->{type} eq "del"){
             my $aa_til_stop =  _stop_loss_extra_AA($self,$hgvs_notation->{start}-1, "del");
             if(defined  $aa_til_stop){
-                $hgvs_notation->{alt} .=  "extX" . $aa_til_stop;
-            }
+                $hgvs_notation->{alt} .=  "extTer" . $aa_til_stop;
+            }            
         }
         elsif($hgvs_notation->{type} eq ">"){
             my $aa_til_stop =  _stop_loss_extra_AA($self,$hgvs_notation->{start}-1, "subs");
             if(defined  $aa_til_stop){  
-              $hgvs_notation->{alt} .=  "extX" . $aa_til_stop;
+              $hgvs_notation->{alt} .=  "extTer" . $aa_til_stop;
             }
+            else{
+                $hgvs_notation->{alt} .=  "extTer?" ;
+            }
+
         }
         else{
            # warn "TVA: stop loss for type $hgvs_notation->{type}  not caught \n";
@@ -778,7 +784,7 @@ sub _get_hgvs_protein_format{
         my $ref_pep_first = substr($hgvs_notation->{ref}, 0, 3);
         my $ref_pep_last;
         if(substr($hgvs_notation->{ref}, -1, 1) eq "X"){
-            $ref_pep_last ="X";
+            $ref_pep_last ="Ter";
         }
         else{
             $ref_pep_last  = substr($hgvs_notation->{ref}, -3, 3);
@@ -787,7 +793,7 @@ sub _get_hgvs_protein_format{
             ### For stops & add extX & distance to next stop to alt pep
             my $aa_til_stop =  _stop_loss_extra_AA($self,$hgvs_notation->{start}-1, "loss");
             if(defined  $aa_til_stop){  
-               $hgvs_notation->{alt} .="extX" . $aa_til_stop;
+               $hgvs_notation->{alt} .="extTer" . $aa_til_stop;
             }
          }
          if($hgvs_notation->{start} == $hgvs_notation->{end} && $hgvs_notation->{type} eq "delins"){       
@@ -804,7 +810,7 @@ sub _get_hgvs_protein_format{
     }     
     
     elsif($hgvs_notation->{type} eq "fs"){
-       if(defined $hgvs_notation->{alt} && $hgvs_notation->{alt} eq "X"){ ## stop gained
+       if(defined $hgvs_notation->{alt} && $hgvs_notation->{alt} eq "Ter"){ ## stop gained
            $hgvs_notation->{'hgvs'} .= $hgvs_notation->{ref} . $hgvs_notation->{start}  .  $hgvs_notation->{alt} ;
 
        }
@@ -813,12 +819,12 @@ sub _get_hgvs_protein_format{
           my $aa_til_stop =  _stop_loss_extra_AA($self, $hgvs_notation->{start}-1, "fs");
           if($aa_til_stop ){
               ### use long form if new stop found 
-             $hgvs_notation->{'hgvs'} .= $hgvs_notation->{ref} . $hgvs_notation->{start}  .  $hgvs_notation->{alt} . "fsX$aa_til_stop"  ;
-          }
-          else{
-            ### otherwise use short form 
-            $hgvs_notation->{'hgvs'} .= $hgvs_notation->{ref} . $hgvs_notation->{start}  . "fs";
-          }
+             $hgvs_notation->{'hgvs'} .= $hgvs_notation->{ref} . $hgvs_notation->{start}  .  $hgvs_notation->{alt} . "fsTer$aa_til_stop"  ;
+          }    
+	  else{
+             ### new - ? to show new stop not predicted
+	      $hgvs_notation->{'hgvs'} .= $hgvs_notation->{ref} . $hgvs_notation->{start}  . $hgvs_notation->{alt} . "fsTer?";
+           }      
        }
     }
 
@@ -852,7 +858,7 @@ sub _get_hgvs_protein_type{
 
     my $self = shift;
     my $hgvs_notation = shift;
-   
+
     if( defined $hgvs_notation->{ref} && defined $hgvs_notation->{alt} ){
     ### Run type checks on peptides if available
         $hgvs_notation->{ref} =~ s/\*/X/;
@@ -888,7 +894,8 @@ sub _get_hgvs_protein_type{
       ### Cannot define type from peptides - check at DNA level
       ### get allele length from dna seq & cds length
 
-      my ($ref_length, $alt_length ) = $self->_get_allele_length();    
+      my ($ref_length, $alt_length ) = $self->_get_allele_length(); 
+
       my $vf_nt_len       = $self->transcript_variation->cds_end - $self->transcript_variation->cds_start + 1;
       my $allele_len      = $self->seq_length;
 
@@ -913,6 +920,7 @@ sub _get_hgvs_protein_type{
       }
    
       else{
+
         #print STDERR "DEBUG ".$self->variation_feature->start."\n";
         #warn "Cannot define protein variant type [$ref_length  - $alt_length]\n";
       }
@@ -976,9 +984,9 @@ sub _get_hgvs_peptides{
     $hgvs_notation->{ref} = substr($hgvs_notation->{ref},0,3);
   }
 
-  ### set stop to HGVS prefered "X"
-  if(defined $hgvs_notation->{ref}){ $hgvs_notation->{ref} =~ s/Ter|Xaa/X/g; }
-  if(defined $hgvs_notation->{alt}){ $hgvs_notation->{alt} =~ s/Ter|Xaa/X/g; }
+  ### 2012-08-31  - Ter now recommended in HGVS
+  if(defined $hgvs_notation->{ref}){ $hgvs_notation->{ref} =~ s/Xaa/Ter/g; }
+  if(defined $hgvs_notation->{alt}){ $hgvs_notation->{alt} =~ s/Xaa/Ter/g; }
          
   return ($hgvs_notation);                  
                 
