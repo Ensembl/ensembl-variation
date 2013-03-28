@@ -101,7 +101,7 @@ my $DEFAULT_ITERATOR_CACHE_SIZE = 10_000;
 sub store {
     my ($self, $vf) = @_;
     
-	my $dbh = $self->dbc->db_handle;
+    my $dbh = $self->dbc->db_handle;
     
     # look up source_id
     if(!defined($vf->{source_id})) {
@@ -111,10 +111,10 @@ sub store {
         $sth->execute($vf->{source});
         
         my $source_id;
-		$sth->bind_columns(\$source_id);
-		$sth->fetch();
-		$sth->finish(); 
-		$vf->{source_id} = $source_id;
+        $sth->bind_columns(\$source_id);
+        $sth->fetch();
+        $sth->finish(); 
+        $vf->{source_id} = $source_id;
     }
     
     my $sth = $dbh->prepare(q{
