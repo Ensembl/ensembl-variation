@@ -117,6 +117,9 @@ sub store {
         $vf->{source_id} = $source_id;
     }
     
+    throw("No source ID found for source name ", $vf->{source})
+        unless defined($vf->{source_id});
+    
     my $sth = $dbh->prepare(q{
         INSERT INTO variation_feature (
             seq_region_id,
