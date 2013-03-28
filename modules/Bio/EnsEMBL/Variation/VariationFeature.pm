@@ -331,6 +331,11 @@ sub variation_name{
   return $self->{'variation_name'};
 }
 
+sub name{
+  my $self = shift;
+  return $self->variation_name;
+}
+
 
 
 =head2 map_weight
