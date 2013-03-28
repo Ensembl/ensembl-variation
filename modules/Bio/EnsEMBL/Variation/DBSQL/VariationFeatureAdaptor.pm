@@ -92,10 +92,15 @@ use Bio::EnsEMBL::Variation::Utils::Sequence qw(get_validation_code);
 our @ISA = ('Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor', 'Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor');
 our $MAX_VARIATION_SET_ID = 64;
 our $DEBUG =0;
+
+
+my $DEFAULT_ITERATOR_CACHE_SIZE = 10000;
+
+
 sub store {
     my ($self, $vf) = @_;
     
-	my $dbh = $self->dbc->db_handle;
+    my $dbh = $self->dbc->db_handle;
     
     # look up source_id
     if(!defined($vf->{source_id})) {
@@ -105,11 +110,14 @@ sub store {
         $sth->execute($vf->{source});
         
         my $source_id;
-		$sth->bind_columns(\$source_id);
-		$sth->fetch();
-		$sth->finish(); 
-		$vf->{source_id} = $source_id;
+        $sth->bind_columns(\$source_id);
+        $sth->fetch();
+        $sth->finish(); 
+        $vf->{source_id} = $source_id;
     }
+    
+    throw("No source ID found for source name ", $vf->{source})
+        unless defined($vf->{source_id});
     
     my $sth = $dbh->prepare(q{
         INSERT INTO variation_feature (
@@ -166,6 +174,104 @@ sub store {
     $vf->{dbID}    = $dbID;
     $vf->{adaptor} = $self;
 }
+
+
+sub update {
+    my ($self, $vf) = @_;
+    
+    my $dbh = $self->dbc->db_handle;
+    
+    # look up source_id
+    if(!defined($vf->{source_id})) {
+        my $sth = $dbh->prepare(q{
+            SELECT source_id FROM source WHERE name = ?
+        });
+        $sth->execute($vf->{source});
+        
+        my $source_id;
+        $sth->bind_columns(\$source_id);
+        $sth->fetch();
+        $sth->finish();
+        $vf->{source_id} = $source_id;
+    }
+    
+    throw("No source ID found for source name ", $vf->{source})
+        unless defined($vf->{source_id});
+    
+    my $sth = $dbh->prepare(q{
+        UPDATE variation_feature SET
+            seq_region_id = ?,
+            seq_region_start = ?,
+            seq_region_end = ?,
+            seq_region_strand = ?,
+            variation_id = ?,
+            allele_string = ?,
+            variation_name = ?,
+            map_weight = ?,
+            flags = ?,
+            source_id = ?,
+            validation_status = ?,
+            consequence_types = ?,
+            variation_set_id = ?,
+            class_attrib_id = ?,
+            somatic = ?,
+            minor_allele = ?,
+            minor_allele_freq = ?,
+            minor_allele_count = ?,
+            alignment_quality = ?
+         WHERE variation_feature_id = ?
+    });
+    
+    $sth->execute(
+        defined($vf->{seq_region_id}) ? $vf->{seq_region_id} : $vf->slice->get_seq_region_id,
+        $vf->{slice} ? $vf->seq_region_start : $vf->{start},
+        $vf->{slice} ? $vf->seq_region_end   : $vf->{end},
+        $vf->strand,
+        $vf->variation ? $vf->variation->dbID : $vf->{_variation_id},
+        $vf->allele_string,
+        $vf->variation_name,
+        $vf->map_weight || 1,
+        $vf->{flags},
+        $vf->{source_id},
+        (join ",", @{$vf->get_all_validation_states}) || undef,
+        $vf->{slice} ? (join ",", @{$vf->consequence_type('SO')}) : 'intergenic_variant',
+        $vf->{variation_set_id} || '',
+        $vf->{class_attrib_id} || $vf->adaptor->db->get_AttributeAdaptor->attrib_id_for_type_value('SO_term', $vf->{class_SO_term}) || 18,
+        $vf->is_somatic,
+        $vf->minor_allele,
+        $vf->minor_allele_frequency,
+        $vf->minor_allele_count,
+        $vf->flank_match,
+        $vf->dbID
+    );
+    
+    # warn join("\t", 
+    #     defined($vf->{seq_region_id}) ? $vf->{seq_region_id} : $vf->slice->get_seq_region_id,
+    #     $vf->{slice} ? $vf->seq_region_start : $vf->{start},
+    #     $vf->{slice} ? $vf->seq_region_end   : $vf->{end},
+    #     $vf->strand,
+    #     $vf->variation ? $vf->variation->dbID : $vf->{_variation_id},
+    #     $vf->allele_string,
+    #     $vf->variation_name,
+    #     $vf->map_weight || 1,
+    #     $vf->{flags} || 'NULL',
+    #     $vf->{source_id},
+    #     (join ",", @{$vf->get_all_validation_states}) || 'NULL',
+    #     $vf->{slice} ? (join ",", @{$vf->consequence_type('SO')}) : 'intergenic_variant',
+    #     $vf->{variation_set_id} || '',
+    #     $vf->{class_attrib_id} || $vf->adaptor->db->get_AttributeAdaptor->attrib_id_for_type_value('SO_term', $vf->{class_SO_term}) || 18,
+    #     $vf->is_somatic,
+    #     $vf->minor_allele || 'NULL',
+    #     $vf->minor_allele_frequency || 'NULL',
+    #     $vf->minor_allele_count || 'NULL',
+    #     $vf->flank_match || 'NULL',
+    #     $vf->dbID
+    #     ), "\n";
+    
+    $sth->finish;
+}
+
+
 
 =head2 fetch_all
 
@@ -923,6 +1029,23 @@ sub _get_consequence_constraint {
 	return $self->SUPER::_get_consequence_constraint('variation_feature', @_);
 }
 
+=head2 fetch_Iterator
+
+  Arg [1]    : int $cache_size (optional)
+  Example    : $var_iterator = $varf_adaptor->fetch_Iterator;
+  Description: returns an iterator over all variation features in the database
+  Returntype : Bio::EnsEMBL::Utils::Iterator
+  Exceptions : none
+  Caller     : general
+  Status     : Experimental
+
+=cut
+
+sub fetch_Iterator {
+    my ($self, $cache_size) = @_;
+    return $self->_generic_fetch_Iterator($cache_size);
+}
+
 sub fetch_Iterator_by_Slice_constraint {
     my ($self, $slice, $constraint) = @_;
     
@@ -934,6 +1057,73 @@ sub fetch_Iterator_by_Slice_constraint {
     
     return $iterator;
 }
+
+sub _generic_fetch_Iterator {
+
+    my ($self, $cache_size, $constraint) = @_;
+
+    # prepare and execute a query to fetch all dbIDs
+
+    my $sth = $self->prepare(qq{
+        SELECT      variation_feature_id
+        FROM        variation_feature
+    });
+
+    $sth->execute;
+
+    my $varf_id;
+
+    $sth->bind_columns(\$varf_id);
+
+    # we probably can't fit all of these into memory at once though,
+    # so create an iterator that fetches $cache_size dbIDs from the
+    # statement handle at a time and then fetches these objects,
+    # storing them in a cache. We then return variation feature
+    # objects from this cache one by one, before filling it again if
+    # necessary
+
+    $cache_size ||= $DEFAULT_ITERATOR_CACHE_SIZE;
+    
+    my @cache;
+
+    my $items_to_fetch = 1;
+
+    return Bio::EnsEMBL::Utils::Iterator->new(sub{
+
+        if (@cache == 0 && $items_to_fetch) {
+            
+            # our cache is empty, and there are still items to fetch, so
+            # fetch the next chunk of dbIDs and create objects from them
+
+            my @dbIDs;
+
+            my $item_count = 0;
+
+            while( $sth->fetch ) {
+
+                push @dbIDs, $varf_id;
+                
+                if (++$item_count == $cache_size) {
+                    # we have fetched a cache's worth of dbIDs, so flag that
+                    # there are still items to fetch and last out of the loop
+                    $items_to_fetch = 1;
+                    last;
+                }
+                
+                # if this is the last row, this flag will be 0 outside the loop
+                $items_to_fetch = 0;
+            }
+
+            $sth->finish unless $items_to_fetch;
+            
+            @cache = @{ $self->fetch_all_by_dbID_list(\@dbIDs) } if @dbIDs;
+        }
+
+        return shift @cache;
+    });
+}
+
+
 
 # method used by import VCF script
 sub _fetch_all_by_coords {
