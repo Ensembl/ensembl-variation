@@ -176,6 +176,98 @@ sub store {
     $vf->{adaptor} = $self;
 }
 
+
+=head2 update
+
+  Arg [1]    : Bio::EnsEMBL:VariationFeature
+  Example    : $variation_feature_adaptor->update( $variation_feature )};
+  Description: Updates the given $variation_feature in the database,
+               storing ancy changes that may have been made.
+  Returntype : Bool
+  Exceptions : 
+  Caller     : 
+  Status     : Experimental
+
+=cut
+
+sub update {
+    my ($self, $vf) = @_;
+
+    my $dbh = $self->dbc->db_handle;
+
+    # look up source_id
+    if(!defined($vf->{source_id})) {
+        my $sth = $dbh->prepare(q{
+            SELECT source_id FROM source WHERE name = ?
+        });
+        $sth->execute($vf->{source});
+
+        my $source_id;
+        $sth->bind_columns(\$source_id);
+        $sth->fetch();
+        $sth->finish();
+        $vf->{source_id} = $source_id;
+    }
+
+    throw("No source ID found for source name ", $vf->{source})
+        unless defined($vf->{source_id});
+
+    my $sth = $dbh->prepare(q{
+        UPDATE variation_feature SET
+            seq_region_id = ?,
+            seq_region_start = ?,
+            seq_region_end = ?,
+            seq_region_strand = ?,
+            variation_id = ?,
+            allele_string = ?,
+            variation_name = ?,
+            map_weight = ?,
+            flags = ?,
+            source_id = ?,
+            validation_status = ?,
+            consequence_types = ?,
+            variation_set_id = ?,
+            class_attrib_id = ?,
+            somatic = ?,
+            minor_allele = ?,
+            minor_allele_freq = ?,
+            minor_allele_count = ?,
+            alignment_quality = ?
+         WHERE variation_feature_id = ?
+    });
+    
+    $sth->execute(
+        defined($vf->{seq_region_id}) ?
+          $vf->{seq_region_id} : $vf->slice->get_seq_region_id,
+        $vf->{slice} ? $vf->seq_region_start : $vf->{start},
+        $vf->{slice} ? $vf->seq_region_end   : $vf->{end},
+        $vf->strand,
+        $vf->variation ? $vf->variation->dbID : $vf->{_variation_id},
+        $vf->allele_string,
+        $vf->variation_name,
+        $vf->map_weight || 1,
+        $vf->{flags},
+        $vf->{source_id},
+        (join ",", @{$vf->get_all_validation_states}) || undef,
+        $vf->{slice} ?
+          (join ",", @{$vf->consequence_type('SO')}) : 'intergenic_variant',
+        $vf->{variation_set_id} || '',
+        $vf->{class_attrib_id} ||
+          $vf->adaptor->db->get_AttributeAdaptor->
+            attrib_id_for_type_value('SO_term', $vf->{class_SO_term}) || 18,
+        $vf->is_somatic,
+        $vf->minor_allele,
+        $vf->minor_allele_frequency,
+        $vf->minor_allele_count,
+        $vf->flank_match,
+        $vf->dbID
+    );
+
+    $sth->finish;
+}
+
+
+
 =head2 fetch_all
 
   Description: Returns a listref of all germline variation features
