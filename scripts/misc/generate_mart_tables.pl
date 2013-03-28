@@ -59,13 +59,14 @@ $sth->finish;
 my $mtmp_tables = get_mtmp_tables();
 foreach my $mtmp_table (keys %$mtmp_tables) {
     if ($tables->{$mtmp_table}) {
-        $dbc->do(qq{TRUNCATE $mtmp_table;});
-    } else {
-        print $mtmp_tables->{$mtmp_table}->{'create'}, "\n";
-        $dbc->do($mtmp_tables->{$mtmp_table}->{'create'});
+        $dbc->do(qq{DROP TABLE $mtmp_table;});
     }
+    print $mtmp_tables->{$mtmp_table}->{'create'}, "\n";
+    $dbc->do($mtmp_tables->{$mtmp_table}->{'create'});
+    $dbc->do(qq{ALTER TABLE $mtmp_table DISABLE KEYS;});
     print $mtmp_tables->{$mtmp_table}->{'insert'}, "\n";
     $dbc->do($mtmp_tables->{$mtmp_table}->{'insert'});
+    $dbc->do(qq{ALTER TABLE $mtmp_table ENABLE KEYS;});
     if ($mtmp_tables->{$mtmp_table}->{'index'}) {
         $dbc->do($mtmp_tables->{$mtmp_table}->{'index'});
     }
@@ -113,7 +114,7 @@ sub get_mtmp_tables {
             ) ENGINE=MyISAM DEFAULT CHARSET=latin1; },
         'insert' => qq{
             INSERT INTO MTMP_population_genotype
-            SELECT p.population_genotype_id, p.variation_id, p.subsnp_id, ac1.allele, ac2.allele, p.frequency, p.sample_id, p.count
+            SELECT DISTINCT p.population_genotype_id, p.variation_id, p.subsnp_id, ac1.allele, ac2.allele, p.frequency, p.sample_id, p.count
             FROM population_genotype p, genotype_code gc1, genotype_code gc2, allele_code ac1, allele_code ac2
             WHERE p.genotype_code_id = gc1.genotype_code_id AND gc1.haplotype_id = 1 AND gc1.allele_code_id = ac1.allele_code_id
 AND p.genotype_code_id = gc2.genotype_code_id AND gc2.haplotype_id = 2 AND gc2.allele_code_id = ac2.allele_code_id; },
