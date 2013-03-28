@@ -92,6 +92,12 @@ use Bio::EnsEMBL::Variation::Utils::Sequence qw(get_validation_code);
 our @ISA = ('Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor', 'Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor');
 our $MAX_VARIATION_SET_ID = 64;
 our $DEBUG =0;
+
+
+## Used for the itterator function
+my $DEFAULT_ITERATOR_CACHE_SIZE = 10_000;
+
+
 sub store {
     my ($self, $vf) = @_;
     
@@ -923,6 +929,23 @@ sub _get_consequence_constraint {
 	return $self->SUPER::_get_consequence_constraint('variation_feature', @_);
 }
 
+=head2 fetch_Iterator
+
+  Arg [1]    : int $cache_size (optional)
+  Example    : $var_iterator = $varf_adaptor->fetch_Iterator;
+  Description: returns an iterator over all variation features in the database
+  Returntype : Bio::EnsEMBL::Utils::Iterator
+  Exceptions : none
+  Caller     : general
+  Status     : Experimental
+
+=cut
+
+sub fetch_Iterator {
+    my ($self, $cache_size) = @_;
+    return $self->_generic_fetch_Iterator($cache_size);
+}
+
 sub fetch_Iterator_by_Slice_constraint {
     my ($self, $slice, $constraint) = @_;
     
@@ -934,6 +957,69 @@ sub fetch_Iterator_by_Slice_constraint {
     
     return $iterator;
 }
+
+sub _generic_fetch_Iterator {
+
+    my ($self, $cache_size, $constraint) = @_;
+
+    # prepare and execute a query to fetch all dbIDs
+    my $sth = $self->prepare(qq{
+        SELECT      variation_feature_id
+        FROM        variation_feature
+    });
+    $sth->execute;
+
+    my $varf_id;
+    $sth->bind_columns(\$varf_id);
+
+    # we probably can't fit all of these into memory at once though,
+    # so create an iterator that fetches $cache_size dbIDs from the
+    # statement handle at a time and then fetches these objects,
+    # storing them in a cache. We then return variation feature
+    # objects from this cache one by one, before filling it again if
+    # necessary
+
+    $cache_size ||= $DEFAULT_ITERATOR_CACHE_SIZE;
+
+    my @cache;
+    my $items_to_fetch = 1;
+
+    return Bio::EnsEMBL::Utils::Iterator->new(sub{
+
+        if (@cache == 0 && $items_to_fetch) {
+            # Our cache is empty, and there are still items to fetch, so
+            # fetch the next chunk of dbIDs and create objects from them
+
+            my @dbIDs;
+            my $item_count = 0;
+
+            while( $sth->fetch ) {
+                push @dbIDs, $varf_id;
+
+                if (++$item_count == $cache_size) {
+                    # we have fetched a cache's worth of dbIDs, so
+                    # flag that there are still items to fetch and
+                    # last out of the loop
+                    $items_to_fetch = 1;
+                    last;
+                }
+
+                # If this is the last row, this flag will be 0 outside
+                # the loop
+                $items_to_fetch = 0;
+            }
+
+            $sth->finish unless $items_to_fetch;
+
+            # This looks tricky...
+            @cache = @{ $self->fetch_all_by_dbID_list(\@dbIDs) } if @dbIDs;
+        }
+
+        return shift @cache;
+    });
+}
+
+
 
 # method used by import VCF script
 sub _fetch_all_by_coords {
