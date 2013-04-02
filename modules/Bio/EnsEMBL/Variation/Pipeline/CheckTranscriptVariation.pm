@@ -149,12 +149,20 @@ sub report_results{
     my $prev_percent_synonymous = format_percent( $previous->{synonymous_variant_count}, $previous->{transcript_variation_count} ) ;
 
 
-    print $report "Summary of results from TranscriptVariation\n\n";
-    print $report "$new->{transcript_variation_count} transcript_variation entries (previously $previous->{transcript_variation_count} )\n\n";
-    print $report "$new->{missense_variant_count} ($percent_missense%) missense variants (previously $prev_percent_missense%)\n";
-    print $report "$new->{synonymous_variant_count} ($percent_synonymous%) synonymous variants (previously $prev_percent_synonymous%)\n\n";
-    print $report "$new->{missing_hgvs_protein} missense variants don't have HGVS annotation\n";
-    print $report "$new->{missing_peptide_alleles} missense variants don't have peptide allele strings\n";
+    my $text_out = "\nSummary of results from TranscriptVariation\n\n";
+    $text_out.= "$new->{transcript_variation_count} transcript_variation entries";
+    $text_out.= " (previously $previous->{transcript_variation_count} )" if defined  $previous->{transcript_variation_count} ;
+    
+    $text_out.=  "\n\n$new->{missense_variant_count} ($percent_missense%) missense variants";
+    $text_out.= " (previously $prev_percent_missense%)" if defined  $prev_percent_missense ;
+
+    $text_out.=  "\n$new->{synonymous_variant_count} ($percent_synonymous%) synonymous variants";
+    $text_out.= " (previously $prev_percent_synonymous%)" if defined $prev_percent_synonymous;
+
+    $text_out.=  "\n\n$new->{missing_hgvs_protein} missense variants don't have HGVS annotation\n";
+    $text_out.=  "$new->{missing_peptide_alleles} missense variants don't have peptide allele strings\n";
+
+    print $report $text_out;
 
 
     ### basic report ends here - only a few species have Sift predictions
