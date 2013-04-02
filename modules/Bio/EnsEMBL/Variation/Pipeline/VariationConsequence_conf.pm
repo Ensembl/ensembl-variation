@@ -121,7 +121,7 @@ sub default_options {
             -port   => $self->o('hive_db_port'),
             -user   => $self->o('hive_db_user'),
             -pass   => $self->o('hive_db_password'),            
-            -dbname => $ENV{'USER'}.'_'.$self->o('pipeline_name'),
+            -dbname => $ENV{'USER'}.'_'.$self->o('pipeline_name').'_'.$self->o('species'),
         },
     };
 }
@@ -138,10 +138,10 @@ sub pipeline_create_commands {
 sub resource_classes {
     my ($self) = @_;
     return {
-        0 => { -desc => 'default',  'LSF' => $self->o('default_lsf_options') },
-        1 => { -desc => 'urgent',   'LSF' => $self->o('urgent_lsf_options')  },
-        2 => { -desc => 'highmem',  'LSF' => $self->o('highmem_lsf_options') },
-        3 => { -desc => 'long',     'LSF' => $self->o('long_lsf_options')    },
+          'default' => { 'LSF' => $self->o('default_lsf_options') },
+          'urgent'  => { 'LSF' => $self->o('urgent_lsf_options')  },
+          'highmem' => { 'LSF' => $self->o('highmem_lsf_options') },
+          'long'    => { 'LSF' => $self->o('long_lsf_options')    },
     };
 }
 
@@ -166,11 +166,13 @@ sub pipeline_analyses {
                     @common_params,
                 },
                 -input_ids  => [{}],
-                -rc_id      => 1,
+                -rc_name    => 'default',
                 -flow_into  => {
                     2 => [ 'rebuild_tv_indexes' ],
                     3 => [ 'update_variation_feature' ],
                     4 => [ 'transcript_effect' ],
+                    5 => [ 'check_transcript_variation' ],
+
                 },
             },
 
@@ -182,7 +184,7 @@ sub pipeline_analyses {
                 },
                 -input_ids      => [],
                 -hive_capacity  => $self->o('transcript_effect_capacity'),
-                -rc_id          => 0,
+                -rc_name        => 'default',
                 -flow_into      => {},
             },
 
@@ -193,11 +195,24 @@ sub pipeline_analyses {
                 },
                 -input_ids      => [],
                 -hive_capacity  => 1,
-                -rc_id          => 1,
+                -rc_name        => 'urgent',
                 -wait_for       => [ 'transcript_effect' ],
                 -flow_into      => {},
             },
         
+            {   -logic_name     => 'check_transcript_variation',
+                -module         => 'Bio::EnsEMBL::Variation::Pipeline::CheckTranscriptVariation',
+                -parameters     => {
+                    pipeline_dir  => $self->o('pipeline_dir'),
+                    @common_params,
+                },
+                -input_ids      => [],
+                -hive_capacity  => 1,
+                -rc_name        => 'default',
+                -wait_for       => [ 'rebuild_tv_indexes' ],
+                -flow_into      => {},
+            },
+
             {   -logic_name     => 'update_variation_feature',
                 -module         => 'Bio::EnsEMBL::Variation::Pipeline::UpdateVariationFeature',
                 -parameters     => {
@@ -205,7 +220,7 @@ sub pipeline_analyses {
                 },
                 -input_ids      => [],
                 -hive_capacity  => 1,
-                -rc_id          => 1,
+                -rc_name        => 'urgent',
                 -wait_for       => [ 'rebuild_tv_indexes' ],
                 -flow_into      => {},
             }, 
@@ -225,7 +240,7 @@ sub pipeline_analyses {
                 },
                 -input_ids      => [{}],
                 -hive_capacity  => 1,
-                -rc_id          => 2,
+                -rc_name        => 'highmem',
                 -wait_for       => ( $self->o('run_transcript_effect') ? [ 'update_variation_feature' ] : [] ),
                 -flow_into      => {
                     1 => [ 'finish_variation_class' ],
@@ -240,7 +255,7 @@ sub pipeline_analyses {
                 },
                 -input_ids      => [],
                 -hive_capacity  => $self->o('set_variation_class_capacity'),
-                -rc_id          => 0,
+                -rc_name        => 'default',
                 -flow_into      => {},
             },
 
@@ -251,7 +266,7 @@ sub pipeline_analyses {
                 },
                 -input_ids      => [],
                 -hive_capacity  => 1,
-                -rc_id          => 1,
+                -rc_name        => 'urgent',
                 -wait_for       => [ 'set_variation_class' ],
                 -flow_into      => {},
             },
