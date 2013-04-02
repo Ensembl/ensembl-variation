@@ -275,7 +275,7 @@ sub detect_format {
         $data[0] =~ /\w+/ &&
         $data[1] =~ /^\d+$/ &&
         $data[2] =~ /^\d+$/ &&
-        $data[3] =~ /[ACGTN-]+\/[ACGTN-]+/i
+        $data[3] =~ /(ins|dup|del)|([ACGTN-]+\/[ACGTN-]+)/i
     ) {
         return 'ensembl';
     }
@@ -301,16 +301,46 @@ sub parse_ensembl {
     
     my ($chr, $start, $end, $allele_string, $strand, $var_name) = split /\s+/, $line;
     
-    my $vf = Bio::EnsEMBL::Variation::VariationFeature->new_fast({
-        start          => $start,
-        end            => $end,
-        allele_string  => $allele_string,
-        strand         => $strand,
-        map_weight     => 1,
-        adaptor        => $config->{vfa},
-        variation_name => $var_name,
-        chr            => $chr,
-    });
+    my $vf;
+    
+    # sv?
+    if($allele_string !~ /\//) {
+        my $so_term;
+        
+        # convert to SO term
+        my %terms = (
+            INS  => 'insertion',
+            DEL  => 'deletion',
+            TDUP => 'tandem_duplication',
+            DUP  => 'duplication'
+        );
+        
+        $so_term = defined $terms{$allele_string} ? $terms{$allele_string} : $allele_string;
+        
+        $vf = Bio::EnsEMBL::Variation::StructuralVariationFeature->new_fast({
+            start          => $start,
+            end            => $end,
+            strand         => $strand,
+            adaptor        => $config->{svfa},
+            variation_name => $var_name,
+            chr            => $chr,
+            class_SO_term  => $so_term,
+        });
+    }
+    
+    # normal vf
+    else {
+        $vf = Bio::EnsEMBL::Variation::VariationFeature->new_fast({
+            start          => $start,
+            end            => $end,
+            allele_string  => $allele_string,
+            strand         => $strand,
+            map_weight     => 1,
+            adaptor        => $config->{vfa},
+            variation_name => $var_name,
+            chr            => $chr,
+        });
+    }
     
     return [$vf];
 }
@@ -1306,17 +1336,11 @@ sub vf_to_consequences {
     
     # pos stats
     $config->{stats}->{chr}->{$vf->{chr}}->{1e6 * int($vf->start / 1e6)}++;
-    $config->{stats}->{chr_lengths}->{$vf->{chr}} ||= $vf->{slice}->length;
     
     # use a different method for SVs
     return svf_to_consequences($config, $vf) if $vf->isa('Bio::EnsEMBL::Variation::StructuralVariationFeature'); 
     
     my @return = ();
-    
-    # get stats
-    my $so_term = SO_variation_class($vf->allele_string, 1);
-    $config->{stats}->{classes}->{$so_term}++ if defined($so_term);
-    $config->{stats}->{allele_changes}->{$vf->allele_string}++ if $so_term eq 'SNV';
     
     # method name for consequence terms
     my $term_method = $config->{terms}.'_term';
@@ -1327,6 +1351,16 @@ sub vf_to_consequences {
     # force empty hash into object's transcript_variations if undefined from whole_genome_fetch
     # this will stop the API trying to go off and fill it again
     $vf->{transcript_variations} ||= {} if defined $config->{whole_genome};
+    
+    # get stats
+    my $so_term = SO_variation_class($vf->allele_string, 1);
+    if(defined($so_term)) {
+        $config->{stats}->{classes}->{$so_term}++;
+        $config->{stats}->{allele_changes}->{$vf->allele_string}++ if $so_term eq 'SNV';
+    }
+    
+    # stats
+    $config->{stats}->{existing}++ if defined($vf->{existing}) && scalar @{$vf->{existing}};
     
     # regulatory stuff
     if(!defined $config->{coding_only} && defined $config->{regulatory}) {
@@ -1914,20 +1948,32 @@ sub init_line {
         $line->{Extra}->{GMAF} = scalar @gmafs ? join ",", @gmafs : '-';
     }
     
-    # 1KG MAFs?
-    if(defined($config->{maf_1kg}) && defined($vf->{existing}) && scalar @{$vf->{existing}}) {
-        my @pops = qw(AFR AMR ASN EUR);
+    # existing var stuff
+    if(defined($vf->{existing}) && scalar @{$vf->{existing}}) {
         
-        foreach my $var_array(@{$vf->{existing}}) {
-            if(scalar @{$var_array} > 8) {
-                for my $i(0..$#pops) {
-                    my $freq = $var_array->[$i + 8];
+        # 1KG MAFs?
+        if(defined($config->{maf_1kg})) {
+            my @pops = qw(AFR AMR ASN EUR);
+            
+            foreach my $var(@{$vf->{existing}}) {
+                foreach my $pop(grep {defined($var->{$_})} @pops) {
+                    my $freq = $var->{$pop};
                     $freq = '-' unless defined($freq);
-                    $line->{Extra}->{$pops[$i].'_MAF'} =
-                        exists($line->{Extra}->{$pops[$i].'_MAF'}) ?
-                        $line->{Extra}->{$pops[$i].'_MAF'}.','.$freq :
+                    $line->{Extra}->{$pop.'_MAF'} =
+                        exists($line->{Extra}->{$pop.'_MAF'}) ?
+                        $line->{Extra}->{$pop.'_MAF'}.','.$freq :
                         $freq;
                 }
+            }
+        }
+    
+        # clin sig?
+        foreach my $var(@{$vf->{existing}}) {
+            if(defined($var->{clin_sig})) {
+                $line->{Extra}->{CLIN_SIG} =
+                    exists($line->{Extra}->{CLIN_SIG}) ?
+                    $line->{Extra}->{CLIN_SIG}.','.$var->{clin_sig} :
+                    $var->{clin_sig};
             }
         }
     }
@@ -3324,11 +3370,12 @@ sub cache_transcripts {
             # get sub-slice
             my $sub_slice = $slice->sub_Slice($s, $e);
             
-            # for some reason unless seq is called here the sequence becomes Ns later
-            $sub_slice->seq;
-            
             # add transcripts to the cache, via a transfer to the chrom's slice
             if(defined($sub_slice)) {
+                
+                # for some reason unless seq is called here the sequence becomes Ns later
+                $sub_slice->seq;
+                
                 foreach my $gene(map {$_->transfer($slice)} @{$sub_slice->get_all_Genes(undef, undef, 1)}) {
                     my $gene_stable_id = $gene->stable_id;
                     my $canonical_tr_id = $gene->{canonical_transcript_id};
@@ -3462,6 +3509,9 @@ sub build_slice_cache {
         else {
             # reattach adaptor to the coord system
             $slice_cache{$chr}->{coord_system}->{adaptor} ||= $config->{csa};
+            
+            # log length for stats
+            $config->{chr_lengths}->{$chr} ||= $slice_cache{$chr}->end;
         }
     }
     
@@ -3873,7 +3923,7 @@ sub dump_variation_cache {
     
     foreach my $pos(keys %{$v_cache->{$chr}}) {
         foreach my $v(@{$v_cache->{$chr}->{$pos}}) {
-            print DUMP join " ", (
+            my @tmp = (
                 $v->{variation_name},
                 $v->{failed} == 0 ? '' : $v->{failed},
                 $v->{start},
@@ -3882,10 +3932,17 @@ sub dump_variation_cache {
                 $v->{strand} == 1 ? '' : $v->{strand},
                 $v->{minor_allele} || '',
                 defined($v->{minor_allele_freq}) ? sprintf("%.4f", $v->{minor_allele_freq}) : '',
-                $v->{ancestral_allele} || '',
-                #$v->{clinical} || '',
-                defined($config->{'freqs'}) && defined($config->{'freqs'}->{$v->{variation_name}}) ? $config->{'freqs'}->{$v->{variation_name}} : '',
             );
+            
+            if(have_clin_sig($config) && defined($config->{clin_sig})) {
+                push @tmp, $config->{clin_sig}->{$v->{variation_name}} || '';
+            }
+            
+            if(defined($config->{freqs})) {
+                push @tmp, $config->{'freqs'}->{$v->{variation_name}} || '';
+            }
+            
+            print DUMP join(" ", @tmp);
             print DUMP "\n";
         }
     }
@@ -3940,6 +3997,7 @@ sub get_variation_columns {
     
     if(!defined($config->{cache_variation_cols})) {
         $config->{cache_variation_cols} = \@VAR_CACHE_COLS;
+        push @{$config->{cache_variation_cols}}, 'clin_sig' if have_clin_sig($config) && defined($config->{clin_sig});
         push @{$config->{cache_variation_cols}}, @{$config->{freq_file_pops}} if defined($config->{freq_file_pops});
     }
     
@@ -4355,8 +4413,8 @@ sub build_full_cache {
     
     if($config->{build} =~ /all/i) {
         @slices = @{$config->{sa}->fetch_all('toplevel')};
+        push @slices, map {$_->alternate_slice} map {@{$_->get_all_AssemblyExceptionFeatures}} @slices;
         push @slices, @{$config->{sa}->fetch_all('lrg', undef, 1, undef, 1)} if defined($config->{lrg});
-        push @slices, grep { $_->assembly_exception_type() =~ /^PATCH/ } @{$config->{sa}->fetch_all('toplevel', undef, 1)};
     }
     else {
         foreach my $val(split /\,/, $config->{build}) {
@@ -4368,6 +4426,9 @@ sub build_full_cache {
             }
         }
     }
+    
+    # check and load clin_sig
+    $config->{clin_sig} = get_clin_sig($config) if have_clin_sig($config);
     
     foreach my $slice(@slices) {
         my $chr = $slice->seq_region_name;
@@ -4391,7 +4452,8 @@ sub build_full_cache {
         my $counter = 0;
         
         # initial region
-        my ($start, $end) = (1, $config->{cache_region_size});
+        my $start = 1 + ($config->{cache_region_size} * int($slice->start / $config->{cache_region_size}));
+        my $end   = ($start - 1) + $config->{cache_region_size};
         
         debug((defined($config->{rebuild}) ? "Rebuild" : "Creat")."ing cache for chromosome $chr") unless defined($config->{quiet});
         
@@ -4824,19 +4886,70 @@ sub have_maf_cols {
     my $config = shift;
     
     if(!defined($config->{have_maf_cols})) {
-        my $sth = $config->{vfa}->db->dbc->prepare(qq{
-            DESCRIBE variation_feature
-        });
         
-        $sth->execute();
-        my @cols = map {$_->[0]} @{$sth->fetchall_arrayref};
-        $sth->finish();
-        
-        $config->{have_maf_cols} = 0;
-        $config->{have_maf_cols} = 1 if grep {$_ eq 'minor_allele'} @cols;
+        if(defined($config->{vfa}) && defined($config->{vfa}->db)) {
+            my $sth = $config->{vfa}->db->dbc->prepare(qq{
+                DESCRIBE variation_feature
+            });
+            
+            $sth->execute();
+            my @cols = map {$_->[0]} @{$sth->fetchall_arrayref};
+            $sth->finish();
+            
+            $config->{have_maf_cols} = 0;
+            $config->{have_maf_cols} = 1 if grep {$_ eq 'minor_allele'} @cols;
+        }
+        else {
+            $config->{have_maf_cols} = 0;
+        }
     }
     
     return $config->{have_maf_cols};
+}
+
+sub have_clin_sig {
+    my $config = shift;
+    
+    if(!defined($config->{have_clin_sig})) {
+        
+        if(defined($config->{vfa}) && defined($config->{vfa}->db)) {
+            my $sth = $config->{vfa}->db->dbc->prepare(qq{
+                SELECT COUNT(*) FROM variation
+                WHERE clinical_significance_attrib_id IS NOT NULL
+            });
+            $sth->execute;
+            
+            my $count;
+            $sth->bind_columns(\$count);
+            $sth->fetch();
+            $sth->finish();
+            
+            $config->{have_clin_sig} = $count;
+        }
+        else {
+            $config->{have_clin_sig} = 0;
+        }
+    }
+    
+    return $config->{have_clin_sig};
+}
+
+sub get_clin_sig {
+    my $config = shift;
+    
+    my $sth = $config->{vfa}->db->dbc->prepare(qq{
+        SELECT v.name, a.value
+        FROM variation v, attrib a
+        WHERE v.clinical_significance_attrib_id = a.attrib_id
+    });
+    $sth->execute;
+    
+    my ($v, $c, %cs);
+    $sth->bind_columns(\$v, \$c);
+    $cs{$v} = $c while $sth->fetch();
+    $sth->finish();
+    
+    return \%cs;
 }
 
 sub merge_hashes {
