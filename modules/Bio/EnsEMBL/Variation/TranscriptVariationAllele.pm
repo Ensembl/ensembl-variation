@@ -858,13 +858,13 @@ sub _get_hgvs_protein_type{
         $hgvs_notation->{ref} =~ s/\*/X/;
         $hgvs_notation->{alt} =~ s/\*/X/;
 
-      if( length($hgvs_notation->{ref}) ==1 && length($hgvs_notation->{alt}) ==1 ) {
- 
-          $hgvs_notation->{type} = ">";
-      }
-      elsif($hgvs_notation->{ref} eq "-" || $hgvs_notation->{ref} eq "") {
+      if($hgvs_notation->{ref} eq "-" || $hgvs_notation->{ref} eq "") {
 
           $hgvs_notation->{type} = "ins";
+      }
+      elsif( length($hgvs_notation->{ref}) ==1 && length($hgvs_notation->{alt}) ==1 ) {
+ 
+          $hgvs_notation->{type} = ">";
       }
       elsif($hgvs_notation->{alt} eq "" ) {
 
@@ -934,7 +934,13 @@ sub _get_hgvs_peptides{
   elsif($hgvs_notation->{type} eq "ins" ){
 
     ### HGVS ref are peptides flanking insertion
-    $hgvs_notation->{ref} = $self->_get_surrounding_peptides($hgvs_notation->{start});
+    my $min;
+    if($hgvs_notation->{start} < $hgvs_notation->{end}){
+        $min = $hgvs_notation->{start};
+    }
+    else{ $min = $hgvs_notation->{end};}
+
+    $hgvs_notation->{ref} = $self->_get_surrounding_peptides($min);
 
     if( $hgvs_notation->{alt} =~/\*/){
         ## inserted bases after stop irrelevant; consider as substitution gaining stop MAINTAIN PREVIOUS BEHAVIOUR FOR NOW
@@ -1278,7 +1284,7 @@ sub _get_del_peptides{
   my $start = $self->transcript_variation->translation_start() - 1;
   my $alt = substr($alt_cds->translate()->seq(), $start );
   $hgvs_notation->{alt} = (split/\*/, $alt)[0];
-  print "ref\n" . $self->transcript->translate()->seq() . " => alt \n".$alt_cds->translate()->seq() ."\n"; 
+
   ### get changed end (currently in single letter AA coding)    
   $hgvs_notation->{ref}  = substr($self->transcript->translate()->seq(), $start );
 
