@@ -1969,7 +1969,7 @@ sub init_line {
     
         # clin sig?
         foreach my $var(@{$vf->{existing}}) {
-            if(defined($var->{clin_sig})) {
+            if(defined($var->{clin_sig}) && $var->{clin_sig}) {
                 $line->{Extra}->{CLIN_SIG} =
                     exists($line->{Extra}->{CLIN_SIG}) ?
                     $line->{Extra}->{CLIN_SIG}.','.$var->{clin_sig} :
