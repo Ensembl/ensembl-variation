@@ -1598,7 +1598,7 @@ sub fetch_by_hgvs_notation {
          '-source'  => 'Parsed from HGVS notation',
          '-alleles' => \@allele_objs
     );
-  warn "Creating allele objects:  st:$start, end:$end\n";
+
     #ÊCreate a variation feature object
     my $variation_feature = Bio::EnsEMBL::Variation::VariationFeature->new(
        '-adaptor'       => $self,
