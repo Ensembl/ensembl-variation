@@ -704,6 +704,7 @@ sub hgvs_protein {
 
         ##### Convert ref & alt peptides taking into account HGVS rules
         $hgvs_notation = $self->_get_hgvs_peptides($hgvs_notation);
+
     }
 
     ##### String formatting
@@ -858,20 +859,21 @@ sub _get_hgvs_protein_type{
 
     my $self = shift;
     my $hgvs_notation = shift;
-
+    if($DEBUG==1){ print "get_hgvs_protein_type with $hgvs_notation->{ref}   $hgvs_notation->{alt}\n";}
     if( defined $hgvs_notation->{ref} && defined $hgvs_notation->{alt} ){
     ### Run type checks on peptides if available
         $hgvs_notation->{ref} =~ s/\*/X/;
         $hgvs_notation->{alt} =~ s/\*/X/;
 
-      if( length($hgvs_notation->{ref}) ==1 && length($hgvs_notation->{alt}) ==1 ) {
- 
-          $hgvs_notation->{type} = ">";
-      }
-      elsif($hgvs_notation->{ref} eq "-" || $hgvs_notation->{ref} eq "") {
+      if($hgvs_notation->{ref} eq "-" || $hgvs_notation->{ref} eq "") {
 
           $hgvs_notation->{type} = "ins";
       }
+	elsif( length($hgvs_notation->{ref}) ==1 && length($hgvs_notation->{alt}) ==1 ) {
+ 
+          $hgvs_notation->{type} = ">";
+      }
+
       elsif($hgvs_notation->{alt} eq "" ) {
 
           $hgvs_notation->{type} = "del";
@@ -942,7 +944,13 @@ sub _get_hgvs_peptides{
   elsif($hgvs_notation->{type} eq "ins" ){
 
     ### HGVS ref are peptides flanking insertion
-    $hgvs_notation->{ref} = $self->_get_surrounding_peptides($hgvs_notation->{start});
+      my $min;
+      if($hgvs_notation->{start} < $hgvs_notation->{end}){
+          $min = $hgvs_notation->{start};
+      }
+      else{ $min = $hgvs_notation->{end};}
+
+      $hgvs_notation->{ref} = $self->_get_surrounding_peptides($min);
 
     if( $hgvs_notation->{alt} =~/\*/){
         ## inserted bases after stop irrelevant; consider as substitution gaining stop MAINTAIN PREVIOUS BEHAVIOUR FOR NOW
@@ -956,7 +964,9 @@ sub _get_hgvs_peptides{
   
 
   ### Convert peptide to 3 letter code as used in HGVS
-  $hgvs_notation->{ref}  = Bio::SeqUtils->seq3(Bio::PrimarySeq->new(-seq => $hgvs_notation->{ref}, -id => 'ref',  -alphabet => 'protein')) || "";
+  unless( $hgvs_notation->{ref} eq "-"){
+      $hgvs_notation->{ref}  = Bio::SeqUtils->seq3(Bio::PrimarySeq->new(-seq => $hgvs_notation->{ref}, -id => 'ref',  -alphabet => 'protein')) || "";
+  }
   if( $hgvs_notation->{alt} eq "-"){
     $hgvs_notation->{alt} = "del";
   }
