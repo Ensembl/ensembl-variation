@@ -70,6 +70,15 @@ if (defined($config->{help})) {
     &usage;
     exit(0);
 }
+
+die "species argument required, try --help for usage instructions\n" unless $config->{species};
+
+die "Can't fetch for a population and an individual at once" 
+    if $config->{population} && $config->{individuals};
+
+# default to a sensible file name
+$config->{output_file} ||= "$species.vcf";
+
 my $reg = 'Bio::EnsEMBL::Registry';
 
 if ( defined($config->{host}) && defined($config->{user})) {
