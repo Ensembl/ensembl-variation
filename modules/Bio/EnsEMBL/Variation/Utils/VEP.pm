@@ -3983,6 +3983,11 @@ sub load_dumped_variation_cache {
         $v{end}    ||= $v{start};
         $v{strand} ||= 1;
         
+        # hack for odd frequency data
+        foreach my $pop(qw(AFR AMR ASN EUR)) {
+            $v{$pop} = 1 - $v{$pop} if defined($v{$pop}) && $v{$pop} =~ /\d+/ && $v{$pop} > 0.5;
+        }
+        
         push @{$v_cache->{$chr}->{$v{start}}}, \%v;
     }
     
