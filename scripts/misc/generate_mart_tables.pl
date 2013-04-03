@@ -113,8 +113,8 @@ sub get_mtmp_tables {
             KEY `sample_idx` (`sample_id`)
             ) ENGINE=MyISAM DEFAULT CHARSET=latin1; },
         'insert' => qq{
-            INSERT INTO MTMP_population_genotype
-            SELECT DISTINCT p.population_genotype_id, p.variation_id, p.subsnp_id, ac1.allele, ac2.allele, p.frequency, p.sample_id, p.count
+            INSERT IGNORE INTO MTMP_population_genotype
+            SELECT p.population_genotype_id, p.variation_id, p.subsnp_id, ac1.allele, ac2.allele, p.frequency, p.sample_id, p.count
             FROM population_genotype p, genotype_code gc1, genotype_code gc2, allele_code ac1, allele_code ac2
             WHERE p.genotype_code_id = gc1.genotype_code_id AND gc1.haplotype_id = 1 AND gc1.allele_code_id = ac1.allele_code_id
 AND p.genotype_code_id = gc2.genotype_code_id AND gc2.haplotype_id = 2 AND gc2.allele_code_id = ac2.allele_code_id; },
