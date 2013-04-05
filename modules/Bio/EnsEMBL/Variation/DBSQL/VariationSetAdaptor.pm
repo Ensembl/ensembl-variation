@@ -390,7 +390,7 @@ sub fetch_all_by_StructuralVariation {
 sub _get_bitvalue {
   my $self = shift;
   my $set = shift;
-  return sprintf("power(2, %i)", $set->dbID());
+  return sprintf("power(2, %i)", $set->dbID() - 1);
 }
 
 # API-internal method for getting the attrib_type code used for short names
