@@ -380,39 +380,55 @@ sub _get_siblings{
 
 #reads one line from the compress_genotypes table, uncompress the data, and writes it to the different hashes: one containing the number of bases for the variation and the other with the actual genotype information we need to print in the file
 sub _store_genotype{
-    my $self = shift;
-	my $genotype_codes = shift;
-    my $individual_information = shift;
-    my $alleles_variation = shift;
-    my $individual_id = shift;
-    my $seq_region_start = shift;
-    my $genotype = shift;
-    my $population_id = shift;
-    my $slice = shift;
+	my $self = shift;
+	my $individual_information = shift;
+	my $alleles_variation = shift;
+	my $individual_id = shift;
+	my $seq_region_start = shift;
+	my $genotype = shift;
+	my $population_id = shift;
+	my $slice = shift;
 	
 	my $snp_start = $seq_region_start;
 	my ($slice_start, $slice_end) = ($slice->start, $slice->end);
 	
 	my @genotypes = unpack("(www)*", $genotype);
 	while( my( $variation_id, $gt_code, $gap ) = splice @genotypes, 0, 3 ) {
-	  my $gt = $genotype_codes->{$gt_code};
-	  
-	  if(
-		defined $gt &&
-		($snp_start >= $slice_start) &&
-		($snp_start <= $slice_end) &&
-		$gt->[0] =~ /^[ACGT]$/ &&
-		$gt->[1] =~ /[ACGT]$/
-	  ) {		
-		$alleles_variation->{$snp_start}->{$population_id}->{$gt->[0]}++;
-		$alleles_variation->{$snp_start}->{$population_id}->{$gt->[1]}++;
-		  
-		$individual_information->{$population_id}->{$snp_start}->{$individual_id}->{allele_1} = $gt->[0];
-		$individual_information->{$population_id}->{$snp_start}->{$individual_id}->{allele_2} = $gt->[1];
-	  }
-	  
-	  $snp_start += $gap + 1  if defined $gap;
+		my $gt = $self->_genotype_from_code($gt_code);
+		
+		if(
+			defined $gt &&
+			($snp_start >= $slice_start) &&
+			($snp_start <= $slice_end) &&
+			$gt->[0] =~ /^[ACGT]$/ &&
+			$gt->[1] =~ /[ACGT]$/
+		) {		
+			$alleles_variation->{$snp_start}->{$population_id}->{$gt->[0]}++;
+			$alleles_variation->{$snp_start}->{$population_id}->{$gt->[1]}++;
+			
+			$individual_information->{$population_id}->{$snp_start}->{$individual_id}->{allele_1} = $gt->[0];
+			$individual_information->{$population_id}->{$snp_start}->{$individual_id}->{allele_2} = $gt->[1];
+		}
+		
+		$snp_start += $gap + 1  if defined $gap;
 	}
+}
+
+sub _genotype_from_code {
+	my $self = shift;
+	my $code = shift;
+	
+	return $self->{'_genotype_codes'}->{$code} if defined($self->{'_genotype_codes'}) && defined($self->{'_genotype_codes'}->{$code});
+	
+	if(!defined($self->{'_gtca'})) {
+		$self->{'_gtca'} = $self->db->get_GenotypeCodeAdaptor;
+	}
+	my $gtca = $self->{'_gtca'};
+	
+	my $gtc = $gtca->fetch_by_dbID($code);
+	$self->{'_genotype_codes'}->{$code} = $gtc ? $gtc->genotype : undef;
+	
+	return $self->{'_genotype_codes'}->{$code};
 }
 
 #
@@ -516,19 +532,14 @@ sub _objs_from_sth {
     warning("Binary file calc_genotypes not found. Please, read the ensembl-variation/C_code/README.txt file if you want to use LD calculation\n");
     goto OUT;
   }
-  
-  # fetch all genotype codes as a hash
-  my $gtca = $self->db->get_GenotypeCodeAdaptor;
-  my %genotype_codes;
-  $genotype_codes{$_->dbID} = $_->genotype for @{$gtca->fetch_all_single_bp()};
-
+	
   #my $file= $self->temp_path."/".sprintf( "ld%08x%08x%08x", $$, time, rand( 0x7fffffff) );
   #open IN, ">$file.in";
   $sth->bind_columns(\$individual_id, \$seq_region_id, \$seq_region_start, \$seq_region_end, \$genotypes, \$population_id);
   while($sth->fetch()) {
     #only print genotypes without parents genotyped
     if (!exists $siblings->{$population_id . '-' . $individual_id}){ #necessary to use the population_id
-      $self->_store_genotype(\%genotype_codes, \%individual_information,\%alleles_variation, $individual_id, $seq_region_start, $genotypes, $population_id, $slice);
+      $self->_store_genotype(\%individual_information,\%alleles_variation, $individual_id, $seq_region_start, $genotypes, $population_id, $slice);
       $previous_seq_region_id = $seq_region_id;
     }
   }
