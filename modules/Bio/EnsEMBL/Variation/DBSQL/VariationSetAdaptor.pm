@@ -390,28 +390,7 @@ sub fetch_all_by_StructuralVariation {
 sub _get_bitvalue {
   my $self = shift;
   my $set = shift;
-  my $no_subsets = shift;
-  
-  #ÊCheck the input set
-  assert_ref($set,'Bio::EnsEMBL::Variation::VariationSet');
-  
-  #ÊStore the dbIDs of the set and its subsets in an array
-  my @dbIDs = ($set->dbID());
-  unless ($no_subsets) {
-    map {push(@dbIDs,$_->dbID())} @{$set->adaptor->fetch_all_by_super_VariationSet($set)};
-  }
-  
-  #ÊDo a quick check that none of the dbIDs are too large for being stored in the set construct. In that case, warn about this.
-  my @non_compatible = grep {$_ > $MAX_VARIATION_SET_ID} @dbIDs;
-  if (scalar(@non_compatible)) {
-    warn ("Variation set(s) with dbID " . join(", ",@non_compatible) . " cannot be stored in the variation_set_id SET construct. Entries for these sets won't be returned");
-  }
-  
-  #ÊAdd the bitvalues of the dbIDs in the set together to get the bitvalue, use only the ones that fit within the $MAX_VARIATION_SET_ID limit
-  my $bitvalue = 0;
-  map {$bitvalue += (2 ** ($_ - 1))} grep {$_ <= $MAX_VARIATION_SET_ID} @dbIDs;
-  
-  return $bitvalue;
+  return sprintf("power(2, %i)", $set->dbID());
 }
 
 # API-internal method for getting the attrib_type code used for short names
