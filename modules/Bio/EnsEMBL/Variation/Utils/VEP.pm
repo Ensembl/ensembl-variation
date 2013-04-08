@@ -4161,9 +4161,14 @@ sub cache_custom_annotation {
                 
                 # bigwig needs to use bigWigToWig utility
                 if($custom->{format} eq 'bigwig') {
+                    my @tmp_files;
+                    
+                    die "\nERROR: Could not find temporary directory ".$config->{tmpdir}." - use --tmpdir [dir] to define an existing directory\n" unless -d $config->{tmpdir};
+                    
                     foreach my $region(@tmp_regions) {
                         my ($s, $e) = split /\-/, $region;
                         my $tmp_file = $config->{tmpdir}.'/vep_tmp_'.$$.'_'.$tmp_chr.'_'.$s.'_'.$e;
+                        push @tmp_files, $tmp_file;
                         my $bigwig_file = $custom->{file};
                         my $bigwig_output = `bigWigToWig -chrom=$tmp_chr -start=$s -end=$e $bigwig_file $tmp_file 2>&1`;
                         
@@ -4171,11 +4176,14 @@ sub cache_custom_annotation {
                     }
                     
                     # concatenate all the files together
-                    my $string = $config->{tmpdir}.'/vep_tmp_'.$$.'_*';
+                    my $string = join(" ", @tmp_files);
                     my $tmp_file = $config->{tmpdir}.'/vep_tmp_'.$$;
-                    `cat $string > $tmp_file; rm $string`;
+                    `cat $string > $tmp_file`;
                     open CUSTOM, $tmp_file
                         or die "\nERROR: Could not read from temporary WIG file $tmp_file\n";
+                    
+                    # unlink smaller files
+                    unlink($_) for @tmp_files;
                 }
                 
                 # otherwise use tabix
@@ -4189,6 +4197,9 @@ sub cache_custom_annotation {
                 
                 # set an error flag so we don't have to check every line
                 my $error_flag = 1;
+                
+                # create a hash for storing temporary params (used by bigWig)
+                my %tmp_params = ();
                 
                 while(<CUSTOM>) {
                     chomp;
@@ -4244,12 +4255,41 @@ sub cache_custom_annotation {
                     }
                     
                     elsif($custom->{format} eq 'bigwig') {
-                        $feature = {
-                            chr   => $chr,
-                            start => $data[0],
-                            end   => $data[0],
-                            name  => $data[1],
-                        };
+                        
+                        # header line from wiggle file
+                        if(/^(fixed|variable)Step/) {
+                            my @split = split /\s+/;
+                            $tmp_params{type} = shift @split;
+                            
+                            foreach my $pair(@split) {
+                                my ($key, $value) = split /\=/, $pair;
+                                $tmp_params{$key} = $value;
+                            }
+                            
+                            # default to span of 1
+                            $tmp_params{span} ||= 1;
+                        }
+                        
+                        else {
+                            if($tmp_params{type} eq 'fixedStep') {
+                                $feature = {
+                                    chr   => $chr,
+                                    start => $tmp_params{start},
+                                    end   => ($tmp_params{start} + $tmp_params{span}) - 1,
+                                    name  => $data[0],
+                                };
+                                
+                                $tmp_params{start} += $tmp_params{step};
+                            }
+                            elsif($tmp_params{type} eq 'variableStep') {
+                                $feature = {
+                                    chr   => $chr,
+                                    start => $data[0],
+                                    end   => ($data[0] + $tmp_params{span}) - 1,
+                                    name  => $data[1]
+                                };
+                            }
+                        }
                     }
                     
                     if(defined($feature)) {
