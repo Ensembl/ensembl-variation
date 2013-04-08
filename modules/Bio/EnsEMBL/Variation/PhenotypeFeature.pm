@@ -403,12 +403,16 @@ sub study {
   $self->{study} = $study if defined($study);
   
   # get
-  if(!defined($self->{study})) {
-		throw("No study object or internal identifier found") unless defined($self->{_study_id});
+  if(!exists($self->{study})) {
+		if(!defined($self->{_study_id})) {
+      $self->{study} = undef;
+    }
 		
-		my $pa = $self->adaptor->db->get_StudyAdaptor();
-		
-		$self->{study} = $pa->fetch_by_dbID($self->{_study_id});
+    else {
+      my $pa = $self->adaptor->db->get_StudyAdaptor();
+      
+      $self->{study} = $pa->fetch_by_dbID($self->{_study_id});
+    }
   }
   
   return $self->{study};
