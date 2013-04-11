@@ -1,0 +1,36 @@
+<span style="font-weight:bold">
+  <a href="index.html">About Ensembl Variation</a> |
+  <a href="data_description.html">Data Description</a> | 
+  <a href="predicted_data.html">Predicted Data</a> |
+  <a href="database.html">Database Description</a> | 
+  <a href="/info/docs/api/variation/index.html">Perl API</a> |
+  <a href="vep/index.html">Variant Effect Predictor</a>
+</span>
+<br /><br />
+
+<h1>Ensembl Variation Tables Description</h1>
+
+<p>
+This document gives a high-level description of the tables that
+make up the Ensembl variation schema. Tables are listed by alphabetical order, and the purpose of each table is explained. It is intended to
+allow people to familiarise themselves with the schema when
+encountering it for the first time, or when they need to use some
+tables that they've not used before.
+</p>
+
+<div style="float:left">
+  <p>
+This document refers to version <span style="font-weight:bold;font-size:11pt;color:#000">72</span> of the Ensembl
+variation schema. 
+  </p>
+  <p>
+  The variation database schema diagram (PDF format) is available here:
+  </p>
+</div>
+<div style="float:left;margin-left:5px">
+  <a href="variation-database-schema.pdf">
+    <img src="/img/variation_schema_thumb.png" style="border:1px solid navy" alt="Variation Schema Diagram" title="Variation Schema Diagram (PDF)"/>
+  </a>
+</div>
+<div style="clear:both">
+<br /><br />
