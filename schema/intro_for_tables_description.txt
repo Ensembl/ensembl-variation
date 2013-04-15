@@ -20,7 +20,7 @@ tables that they've not used before.
 
 <div style="float:left">
   <p>
-This document refers to version <span style="font-weight:bold;font-size:11pt;color:#000">72</span> of the Ensembl
+This document refers to version <span style="font-weight:bold;font-size:11pt;color:#000">####DB_VERSION####</span> of the Ensembl
 variation schema. 
   </p>
   <p>
