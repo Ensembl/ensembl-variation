@@ -233,7 +233,7 @@ create table variation_synonym (
 @column subsnp_id		   Foreign key references to the @link subsnp_handle table.
 @column allele_code_id 		   Foreign key reference to @link allele_code table.
 @column frequency		   Frequency of this allele in the sample.
-@column sample_id		   Foreign key references to the @link sample table.
+@column population_id		   Foreign key references to the @link population table.
 @column count			   Number of individuals in the sample where this allele is found.
 @column frequency_submitter_handle dbSNP handle for submitter of frequency data [may be different to submitter of observed variant]
 
@@ -248,7 +248,7 @@ CREATE TABLE allele (
   variation_id int(11) unsigned NOT NULL,
   subsnp_id int(11) unsigned DEFAULT NULL,
   allele_code_id int(11) unsigned NOT NULL,
-  sample_id int(11) unsigned DEFAULT NULL,
+  population_id int(11) unsigned DEFAULT NULL,
   frequency float unsigned DEFAULT NULL,
   count int(11) unsigned DEFAULT NULL,
   frequency_submitter_handle int(10) DEFAULT NULL,
@@ -256,7 +256,7 @@ CREATE TABLE allele (
   PRIMARY KEY (allele_id),
   KEY variation_idx (variation_id),
   KEY subsnp_idx (subsnp_id),
-  KEY sample_idx (sample_id)
+  KEY population_idx (population_id)
 );
 
 
@@ -524,7 +524,7 @@ CREATE TABLE coord_system (
 
 @column variation_feature_id		Foreign key references to the @link variation_feature table.
 @column tagged_variation_feature_id	Foreign key references to the @link variation_feature table.
-@column sample_id			Foreign key references to the @link sample table.
+@column population_id			    Foreign key references to the @link population table.
 
 @see variation_feature
 @see population
@@ -533,10 +533,10 @@ CREATE TABLE coord_system (
 CREATE TABLE tagged_variation_feature (
   variation_feature_id int(10) unsigned NOT NULL,
   tagged_variation_feature_id int(10) unsigned DEFAULT NULL,
-  sample_id int(10) unsigned NOT NULL,
+  population_id int(10) unsigned NOT NULL,
   KEY tag_idx (variation_feature_id),
   KEY tagged_idx (tagged_variation_feature_id),
-  KEY sample_idx (sample_id)
+  KEY population_idx (population_id)
 );
 
 
@@ -550,50 +550,20 @@ CREATE TABLE tagged_variation_feature (
 
 
 /**
-@table sample
-
-@colour #FF8500
-@desc Sample is used as a generic catch-all term to cover individuals, populations and strains; it contains a name and description, as well as a size if applicable to the population.<br />
-Some population examples are available <a href="data_description.html#populations">here</a>.
-
-@column sample_id		    Primary key, internal identifier.
-@column name			      Name of the sample (can be an individual or a population name).
-@column size			      Number of individual in the sample.
-@column description	    Description of the sample.
-@column display		      Information used by the website: samples with little information are filtered from some web displays.
-@column freqs_from_gts  Flag indicating if the population frequencies can be retrieved from the allele table (0) or from the individual genotypes (1).
-
-@see individual
-@see population
-*/
-
-create table sample(
-	sample_id int(10) unsigned not null auto_increment,
-	name varchar(255) not null,
-	size int,
-	description text,
-	display enum('REFERENCE',
-					 'DEFAULT',
-					 'DISPLAYABLE',
-					 'UNDISPLAYABLE',
-					 'LD',
-					 'MARTDISPLAYABLE') default 'UNDISPLAYABLE',
-	freqs_from_gts tinyint(1) NOT NULL DEFAULT '0',
-	primary key( sample_id ),
-	key name_idx( name )
-);
-
-
-/**
 @table population
 
 @colour #FF8500
-@desc A table consisting simply of sample_ids representing populations; all data relating to the populations are stored in separate tables (see below).<br />A population may be an ethnic group (e.g. caucasian, hispanic), assay group (e.g. 24 europeans), strain, phenotypic group (e.g. blue eyed, diabetes) etc. Populations may be composed of other populations by defining relationships in the population_structure table.
+@desc Stores information about a population. A population may be an ethnic group (e.g. caucasian, hispanic), assay group (e.g. 24 europeans), phenotypic group (e.g. blue eyed, diabetes) etc. Populations may be composed of other populations by defining relationships in the population_structure table.
 
-@column sample_id	Foreign key references to the @link sample table. Corresponds to the population ID.
+@column population_id     Primary key, internal identifier.
+@column name              Name of the population.
+@column size              Size of the population.
+@column description       Description of the population.
+@column collection        Flag indicating if the population is defined based on geography (0) or a collection of individuals with respect to some other criteria (1).
+@column freqs_from_gts    Flag indicating if the population frequencies can be retrieved from the allele table (0) or from the individual genotypes (1).
+@column display           Information used by Biomart.
 
-@see sample
-@see sample_synonym
+@see population_synonym
 @see individual_population
 @see population_structure
 @see population_genotype
@@ -601,10 +571,16 @@ create table sample(
 @see tagged_variation_feature
 */
 
-create table population(
-	sample_id int(10) unsigned not null,
+CREATE TABLE population(
+    population_id int(10) unsigned not null,
+    name varchar(255),
+    size int(10),
+    description text,
+    collection tinyint(1) default 0,
+    freqs_from_gts tinyint(1),
+    display enum('LD', 'MARTDISPLAYABLE', 'UNDISPLAYABLE') default 'UNDISPLAYABLE',
 
-	primary key( sample_id )
+    primary key(population_id)
 );
 
 
@@ -614,18 +590,18 @@ create table population(
 @colour #FF8500
 @desc This table stores hierarchical relationships between populations by relating them as populations and sub-populations.
 
-@column super_population_sample_id	Foreign key references to the population table.
-@column sub_population_sample_id		Foreign key references to the population table.
+@column super_population_id    Foreign key references to the population table.
+@column sub_population_id      Foreign key references to the population table.
 
 @see population
 */
 
 create table population_structure (
-  super_population_sample_id int(10) unsigned not null,
-  sub_population_sample_id int(10) unsigned not null,
+  super_population_id int(10) unsigned not null,
+  sub_population_id int(10) unsigned not null,
 
-  unique(super_population_sample_id, sub_population_sample_id),
-  key sub_pop_sample_idx (sub_population_sample_id, super_population_sample_id)
+  unique super_population_idx (super_population_id, sub_population_id),
+  key sub_population_idx (sub_population_id)
 );
 
 
@@ -635,29 +611,33 @@ create table population_structure (
 @colour #FF8500
 @desc Stores information about an identifiable individual, including gender and the identifiers of the individual's parents (if known).
 
-@column sample_id							Primary key, internal identifier. See the @link sample table. Corresponds to the individual ID.
-@column gender								The sex of this individual.
-@column father_individual_sample_id	Self referential ID, the father of this individual if known.
-@column mother_individual_sample_id	Self referential ID, the mother of this individual if known.
-@column individual_type_id				Foreign key references to the @link individual_type table.
+@column individual_id           Primary key, internal identifier.
+@column name                    Name of the individual.
+@column description             Description of the individual.
+@column gender                  The sex of this individual.
+@column father_individual_id    Self referential ID, the father of this individual if known.
+@column mother_individual_id    Self referential ID, the mother of this individual if known.
+@column individual_type_id      Foreign key references to the @link individual_type table.
+@column display                 Information used by the website: individuals with little information are filtered from some web displays.
 
-
-@see sample
+@see individual_synonym
 @see individual_type
 @see individual_population
 @see individual_genotype_multiple_bp
 */
 
 create table individual(
-  sample_id int(10) unsigned not null,
+  individual_id int(10) unsigned not null,
+  name varchar(255),
+  description text,
   gender enum('Male', 'Female', 'Unknown') default 'Unknown' NOT NULL,
-  father_individual_sample_id int(10) unsigned,
-  mother_individual_sample_id int(10) unsigned,
-  individual_type_id int(10) unsigned not null,
+  father_individual_id int(10) unsigned,
+  mother_individual_id int(10) unsigned,
+  individual_type_id int(10) unsigned NOT NULL DEFAULT 0,
+  display enum('REFERENCE', 'DEFAULT', 'DISPLAYABLE', 'UNDISPLAYABLE', 'LD', 'MARTDISPLAYABLE') default 'UNDISPLAYABLE',
 
-  primary key(sample_id)
+  primary key(individual_id)
 );
-
 
 /**
 @table individual_type
@@ -688,57 +668,81 @@ INSERT INTO individual_type (name,description) VALUES ('outbred','a single organ
 INSERT INTO individual_type (name,description) VALUES ('mutant','a single or multiple organisms with the same genome sequence that have a natural or experimentally induced mutation');
 
 
-/**
-@table sample_synonym
-
-@colour #FF8500
-@desc Used to store alternative names for populations when data comes from multiple sources.
-
-@column sample_synonym_id	Primary key, internal identifier.
-@column sample_id					Foreign key references to the @link sample table.
-@column source_id					Foreign key references to the @link source table.
-@column name							Name of the synonym (a different <b>sample_id</b>).
-
-@see sample
-@see population
-@see source
-*/
-
-create table sample_synonym (
-  sample_synonym_id int(10) unsigned not null auto_increment,
-  sample_id int(10) unsigned not null,
-  source_id int(10) unsigned not null,
-  name varchar(255),
-
-  primary key(sample_synonym_id),
-  key sample_idx (sample_id),
-  key (name, source_id)
-);
 
 
 /**
 @table individual_population
 
 @colour #FF8500
-@desc This table resolves the many-to-many relationship between the individual and population tables; i.e. samples may belong to more than one population. Hence it is composed of rows of individual and population identifiers.
+@desc This table resolves the many-to-many relationship between the individual and population tables; i.e. individuals may belong to more than one population. Hence it is composed of rows of individual and population identifiers.
 
-@column individual_sample_id	Foreign key references to the @link individual table.
-@column population_sample_id	Foreign key references to the @link population table.
+@column individual_id	Foreign key references to the @link individual table.
+@column population_id	Foreign key references to the @link population table.
 
 @see individual
 @see population
 */
 
 create table individual_population (
-  individual_sample_id int(10) unsigned not null,
-  population_sample_id int(10) unsigned not null,
+  individual_id int(10) unsigned not null,
+  population_id int(10) unsigned not null,
 
-  key individual_sample_idx(individual_sample_id),
-  key population_sample_idx(population_sample_id)
+  key individual_idx(individual_id),
+  key population_idx(population_id)
 
 );
 
+/**
+@table individual_synonym
 
+@colour #FF8500
+@desc Used to store alternative names for individuals when data comes from multiple sources.
+
+@column synonym_id       Primary key, internal identifier.
+@column individual_id    Foreign key references to the @link individual table.
+@column source_id        Foreign key references to the @link source table.
+@column name             Name of the synonym.
+
+@see individual
+@see source
+*/
+
+CREATE TABLE individual_synonym (
+  synonym_id int(10) unsigned not null auto_increment,
+  individual_id int(10) unsigned not null,
+  source_id int(10) unsigned not null,
+  name int(10),
+
+  primary key(synonym_id),
+  key individual_idx (individual_id),
+  key (name, source_id)
+);
+
+/**
+@table population_synonym
+
+@colour #FF8500
+@desc Used to store alternative names for populations when data comes from multiple sources.
+
+@column synonym_id       Primary key, internal identifier.
+@column population_id    Foreign key references to the @link population table.
+@column source_id        Foreign key references to the @link source table.
+@column name             Name of the synonym.
+
+@see population
+@see source
+*/
+
+CREATE TABLE population_synonym (
+  synonym_id int(10) unsigned not null auto_increment,
+  population_id int(10) unsigned not null,
+  source_id int(10) unsigned not null,
+  name int(10),
+
+  primary key(synonym_id),
+  key population_idx (population_id),
+  key (name, source_id)
+);
 
 
 /**
@@ -754,13 +758,13 @@ create table individual_population (
 @colour #FF8500
 @desc This table stores genotypes and frequencies for variations in given populations.
 
-@column population_genotype_id	Primary key, internal identifier.
-@column variation_id					Foreign key references to the @link variation table.
-@column subsnp_id						Foreign key references to the subsnp_handle table.
-@column genotype_code_id                Foreign key reference to the @link genotype_code table.
-@column frequency						Frequency of the genotype in the population.
-@column sample_id						Foreign key references to the @link population table.
-@column count							Number of individuals who have this genotype, in this population.
+@column population_genotype_id    Primary key, internal identifier.
+@column variation_id              Foreign key references to the @link variation table.
+@column subsnp_id                 Foreign key references to the subsnp_handle table.
+@column genotype_code_id          Foreign key reference to the @link genotype_code table.
+@column frequency                 Frequency of the genotype in the population.
+@column population_id             Foreign key references to the @link population table.
+@column count                     Number of individuals who have this genotype, in this population.
 
 @see population
 @see variation
@@ -775,11 +779,11 @@ CREATE TABLE population_genotype (
   subsnp_id int(11) unsigned DEFAULT NULL,
   genotype_code_id int(11) DEFAULT NULL,
   frequency float DEFAULT NULL,
-  sample_id int(10) unsigned DEFAULT NULL,
+  population_id int(10) unsigned DEFAULT NULL,
   count int(10) unsigned DEFAULT NULL,
   
   PRIMARY KEY (population_genotype_id),
-  KEY sample_idx (sample_id),
+  KEY population_idx (population_id),
   KEY variation_idx (variation_id),
   KEY subsnp_idx (subsnp_id)
 );
@@ -789,13 +793,13 @@ CREATE TABLE population_genotype (
 @table tmp_individual_genotype_single_bp
 
 @colour #FF8500
-@desc his table is only needed for create master schema when run healthcheck system. Needed for other species, but human, so keep it.
+@desc his table is only needed to create master schema when run healthcheck system. Needed for other species, but human, so keep it.
 
-@column variation_id	Primary key. Foreign key references to the @link variation table.
-@column subsnp_id		Foreign key references to the @link subsnp_handle table.
-@column allele_1		One of the alleles of the genotype, e.g. "TAG".
-@column allele_2		The other allele of the genotype.
-@column sample_id		Foreign key references to the @link individual table.
+@column variation_id     Primary key. Foreign key references to the @link variation table.
+@column subsnp_id        Foreign key references to the @link subsnp_handle table.
+@column allele_1         One of the alleles of the genotype, e.g. "TAG".
+@column allele_2         The other allele of the genotype.
+@column individual_id    Foreign key references to the @link individual table.
 
 @see individual
 @see variation
@@ -807,11 +811,11 @@ CREATE TABLE tmp_individual_genotype_single_bp (
 	subsnp_id int(15) unsigned,   
 	allele_1 char(1),
 	allele_2 char(1),
-	sample_id int,
+	individual_id int,
 
 	key variation_idx(variation_id),
-   key subsnp_idx(subsnp_id),
-   key sample_idx(sample_id)
+    key subsnp_idx(subsnp_id),
+    key individual_idx(individual_id)
 ) MAX_ROWS = 100000000;
 
 
@@ -821,11 +825,11 @@ CREATE TABLE tmp_individual_genotype_single_bp (
 @colour #FF8500
 @desc This table holds uncompressed genotypes for given variations.
 
-@column variation_id	Primary key. Foreign key references to the @link variation table.
-@column subsnp_id		Foreign key references to the @link subsnp_handle table.
-@column allele_1		One of the alleles of the genotype, e.g. "TAG".
-@column allele_2		The other allele of the genotype.
-@column sample_id		Foreign key references to the @link individual table.
+@column variation_id     Primary key. Foreign key references to the @link variation table.
+@column subsnp_id        Foreign key references to the @link subsnp_handle table.
+@column allele_1         One of the alleles of the genotype, e.g. "TAG".
+@column allele_2         The other allele of the genotype.
+@column individual_id    Foreign key references to the @link individual table.
 
 @see individual
 @see variation
@@ -837,11 +841,11 @@ create table individual_genotype_multiple_bp (
   subsnp_id int(15) unsigned,	
   allele_1 varchar(25000),
   allele_2 varchar(25000),
-  sample_id int(10) unsigned,
+  individual_id int(10) unsigned,
 
   key variation_idx(variation_id),
   key subsnp_idx(subsnp_id),
-  key sample_idx(sample_id)
+  key individual_idx(individual_id)
 );
 
 
@@ -851,12 +855,12 @@ create table individual_genotype_multiple_bp (
 @colour #FF8500
 @desc This table holds genotypes compressed using the pack() method in Perl. These genotypes are mapped to particular genomic locations rather than variation objects. The data have been compressed to reduce table size and increase the speed of the web code when retrieving strain slices and LD data. Only data from resequenced and individuals used for LD calculations are included in this table
 
-@column sample_id           Foreign key references to the sample table.
-@column seq_region_id       Foreign key references @link seq_region in core db. ers to the seq_region which this variant is on, which may be a chromosome, a clone, etc...
-@column seq_region_start	The start position of the variation on the @link seq_region.
-@column seq_region_end		The end position of the variation on the @link seq_region.
-@column seq_region_strand	The orientation of the variation on the @link seq_region.
-@column genotypes				  Encoded representation of the genotype data:<br />Each row in the compressed table stores genotypes from one individual in one fixed-size region of the genome (arbitrarily defined as 100 Kb). The compressed string (using Perl's pack method) consisting of a repeating triplet of elements: a distance in base pairs from the previous genotype; a variation dbID; a genotype_code_id identifier.<br />For example, a given row may have a start position of 1000, indicating the chromosomal position of the first genotype in this row. The unpacked genotypes field then may contain the following elements:<br />0, 1, 1, 20, 2, 5, 35, 3, 3, ...<br />The first genotype has a position of 1000 + 0 = 1000, and corresponds to the variation with the identifier 1 and genotype_code corresponding to A and G.<br />The second genotype has a position of 1000 + 20 = 1020, variation_id 2 and genotype_code representing C and C.<br />The third genotype similarly has a position of 1055, and so on.
+@column individual_id        Foreign key references to the @link individual table.
+@column seq_region_id        Foreign key references @link seq_region in core db. ers to the seq_region which this variant is on, which may be a chromosome, a clone, etc...
+@column seq_region_start     The start position of the variation on the @link seq_region.
+@column seq_region_end       The end position of the variation on the @link seq_region.
+@column seq_region_strand    The orientation of the variation on the @link seq_region.
+@column genotypes            Encoded representation of the genotype data:<br />Each row in the compressed table stores genotypes from one individual in one fixed-size region of the genome (arbitrarily defined as 100 Kb). The compressed string (using Perl's pack method) consisting of a repeating triplet of elements: a distance in base pairs from the previous genotype; a variation dbID; a genotype_code_id identifier.<br />For example, a given row may have a start position of 1000, indicating the chromosomal position of the first genotype in this row. The unpacked genotypes field then may contain the following elements:<br />0, 1, 1, 20, 2, 5, 35, 3, 3, ...<br />The first genotype has a position of 1000 + 0 = 1000, and corresponds to the variation with the identifier 1 and genotype_code corresponding to A and G.<br />The second genotype has a position of 1000 + 20 = 1020, variation_id 2 and genotype_code representing C and C.<br />The third genotype similarly has a position of 1055, and so on.
 
 @see individual
 @see seq_region
@@ -865,7 +869,7 @@ create table individual_genotype_multiple_bp (
 */
 
 CREATE TABLE compressed_genotype_region (
-  sample_id int(10) unsigned NOT NULL,
+  individual_id int(10) unsigned NOT NULL,
   seq_region_id int(10) unsigned NOT NULL,
   seq_region_start int(11) NOT NULL,
   seq_region_end int(11) NOT NULL,
@@ -873,7 +877,7 @@ CREATE TABLE compressed_genotype_region (
   genotypes blob,
   
   KEY pos_idx (seq_region_id,seq_region_start),
-  KEY sample_idx (sample_id)
+  KEY individual_idx (individual_id)
 );
 
 /**
@@ -884,7 +888,7 @@ CREATE TABLE compressed_genotype_region (
 
 @column variation_id	Foreign key references to the @link variation table.
 @column subsnp_id		Foreign key references to the @link subsnp_handle table.
-@column genotypes       Encoded representation of the genotype data:<br />Each row in the compressed table stores genotypes from one subsnp of a variation (or one variation if no subsnp is defined). The compressed string (using Perl's pack method) consisting of a repeating pair of elements: an internal sample_id corresponding to an individual; a genotype_code_id identifier.
+@column genotypes       Encoded representation of the genotype data:<br />Each row in the compressed table stores genotypes from one subsnp of a variation (or one variation if no subsnp is defined). The compressed string (using Perl's pack method) consisting of a repeating pair of elements: an internal individual_id corresponding to an individual; a genotype_code_id identifier.
 
 @see individual
 @see variation
@@ -907,11 +911,11 @@ CREATE TABLE compressed_genotype_var (
 @colour #FF8500
 @desc This table stores the read coverage in the resequencing of individuals. Each row contains an individual ID, chromosomal coordinates and a read coverage level.
 
-@column seq_region_id		Foreign key references @link seq_region in core db. ers to the seq_region which this variant is on, which may be a chromosome, a clone, etc...
-@column seq_region_start	The start position of the variation on the @link seq_region.
-@column seq_region_end		The end position of the variation on the @link seq_region.
-@column level					Minimum number of reads.
-@column sample_id				Foreign key references to the @link individual table.
+@column seq_region_id       Foreign key references @link seq_region in core db. ers to the seq_region which this variant is on, which may be a chromosome, a clone, etc...
+@column seq_region_start    The start position of the variation on the @link seq_region.
+@column seq_region_end      The end position of the variation on the @link seq_region.
+@column level               Minimum number of reads.
+@column individual_id       Foreign key references to the @link individual table.
 
 @see individual
 @see seq_region
@@ -922,7 +926,7 @@ CREATE TABLE read_coverage (
    seq_region_start int not null,
    seq_region_end int not null,
    level tinyint not null,
-   sample_id int(10) unsigned not null,
+   individual_id int(10) unsigned not null,
 		  
    key seq_region_idx(seq_region_id,seq_region_start)   
 );
@@ -1453,7 +1457,8 @@ You can see the complete list, by species, <a href="sources_documentation.html">
 @see variation
 @see variation_synonym
 @see variation_feature
-@see sample_synonym
+@see individual_synonym
+@see population_synonym
 @see structural_variation
 @see study
 */
