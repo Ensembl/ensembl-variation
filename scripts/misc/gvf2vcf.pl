@@ -487,7 +487,7 @@ sub get_padding_base {
     if ($use_fasta_file) {
         $base = $fasta_db->seq("$seq_region_name:$start,$end"); 
     } else {
-        my $slice = $slice_adaptor->fetch_by_region('chromosome', $seq_region_name, $start, $end);
+        my $slice = $slice_adaptor->fetch_by_toplevel_location("$seq_region_name:$start-$end");
         $base = $slice->seq();
     }
     return $base || 'N';
