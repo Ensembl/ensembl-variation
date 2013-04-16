@@ -748,4 +748,87 @@ sub _objs_from_sth {
 
 }
 
+sub store{
+   my ($self, $pf) = @_;
+
+   my $dbh = $self->dbc->db_handle;
+   
+   # if only object supplied check type matches declared type
+   if(! $pf->{_object_id} && ! $pf->object->isa("Bio::EnsEMBL::Variation::$pf->{type}")) {
+       throw("Bio::EnsEMBL::Variation::$pf->{type} object expected");
+   }
+
+    # look up source_id
+    if(!defined($pf->{source_id})) {
+        my $sth = $dbh->prepare(q{
+            SELECT source_id FROM source WHERE name = ?
+        });
+        $sth->execute($pf->{source});
+
+        my $source_id;
+        $sth->bind_columns(\$source_id);
+        $sth->fetch();
+        $sth->finish();
+        $pf->{source_id} = $source_id;
+    }
+
+    throw("No source ID found for source name ", $pf->{source})
+        unless defined($pf->{source_id});
+
+
+    my $sth = $dbh->prepare(q{
+        INSERT INTO phenotype_feature (
+            phenotype_id,
+            source_id,
+            study_id,
+            type,
+            object_id,
+            is_significant,
+            seq_region_id,
+            seq_region_start,
+            seq_region_end,
+            seq_region_strand            
+        ) VALUES (?,?,?,?,?,?,?,?,?,?)
+    });
+
+    $sth->execute(
+        $pf->phenotype->dbID(),        
+        $pf->{source_id},
+        defined($pf->study)? $pf->study->dbID() : undef,
+        $pf->{type},
+        defined($pf->{_object_id})? $pf->{_object_id} :  $pf->object->stable_id(),
+        defined($pf->{is_significant})? $pf->{is_significant} : 0,
+        defined($pf->{slice}) ? $pf->slice()->get_seq_region_id() : undef,
+        defined($pf->{start}) ? $pf->{start} :undef,
+        defined($pf->{end})   ? $pf->{end} : undef,
+	defined($pf->{strand})? $pf->{strand} : undef         
+    );
+  
+   $sth->finish;
+
+   # get dbID
+   my $dbID = $dbh->last_insert_id(undef, undef, 'phenotype_feature', 'phenotype_feature_id');
+   $pf->{dbID}    = $dbID;
+   $pf->{adaptor} = $self;
+   
+   # add phenotype_feature_attributes
+   my $aa = $self->db->get_AttributeAdaptor;
+   my $pfa_sth = $dbh->prepare(q{
+        INSERT INTO phenotype_feature_attrib (
+            phenotype_feature_id,
+            attrib_type_id,
+            value                  
+        ) VALUES (?,?,?)
+    });
+   
+   foreach my $attrib_type( keys %{$pf->{attribs}} ){
+       my $attrib_type_id = $aa->attrib_id_for_type_code($attrib_type);
+       throw("No attrib type ID found for attrib_type  ", $attrib_type) unless defined  $attrib_type_id;
+       $pfa_sth->execute( $pf->{dbID}, $attrib_type_id, $pf->{attribs}->{$attrib_type} );
+   }
+   $pfa_sth->finish;
+}
+
+
+
 1;

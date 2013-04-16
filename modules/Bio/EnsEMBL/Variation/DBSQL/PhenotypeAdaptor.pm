@@ -92,4 +92,32 @@ sub _objs_from_sth {
     return \@result;
 }
 
+sub store{
+   my ($self, $pheno) = @_;
+
+    my $dbh = $self->dbc->db_handle;
+
+    my $sth = $dbh->prepare(qq{
+        INSERT INTO phenotype (
+             name,
+             description
+        ) VALUES (?,?)
+    });
+
+    $sth->execute(        
+        $pheno->{name},
+        $pheno->{description}        
+    );
+
+    $sth->finish;
+
+    # get dbID
+    my $dbID = $dbh->last_insert_id(undef, undef, 'phenotype', 'phenotype_id');
+    $pheno->{dbID}    = $dbID;
+    $pheno->{adaptor} = $self;
+
+}
+
+
+
 1;
