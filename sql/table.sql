@@ -572,7 +572,7 @@ CREATE TABLE tagged_variation_feature (
 */
 
 CREATE TABLE population(
-    population_id int(10) unsigned not null,
+    population_id int(10) unsigned not null auto_increment,
     name varchar(255),
     size int(10),
     description text,
@@ -627,7 +627,7 @@ create table population_structure (
 */
 
 create table individual(
-  individual_id int(10) unsigned not null,
+  individual_id int(10) unsigned not null auto_increment,
   name varchar(255),
   description text,
   gender enum('Male', 'Female', 'Unknown') default 'Unknown' NOT NULL,
