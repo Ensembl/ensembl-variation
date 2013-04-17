@@ -1547,6 +1547,50 @@ CREATE TABLE study_variation (
 
 
 /**
+@table publication
+@colour #7CFC00
+@desc This table contains details of publications citing variations
+                        This information comes from PubMed and Europe PMC
+
+@column publication_id       Primary key, internal identifier.
+@column title                Title of the publication
+@column authors              Authors of the publication
+@column pmid                 The PubMed id for the publication if available
+@column pmcid                The PubMed Central id for the publication if available
+
+*/
+
+CREATE TABLE publication(
+publication_id int(10) unsigned not null auto_increment, 
+title          varchar(255),
+authors        varchar(255),
+pmid           int(10),
+pmcid          varchar(255),
+primary key( publication_id ),
+key pmid_idx (pmid)
+);
+
+/**
+@table variation_citation
+@colour #7CFC00
+@desc This table links a variation to a publication
+
+@column publication_id       Primary key, internal identifier.
+@column variation_id         Primary key, foreign key references variation
+
+@see publication
+@see variation
+*/
+
+CREATE TABLE variation_citation (
+   variation_id int(10) unsigned not null,
+   publication_id int(10) unsigned not null,
+   PRIMARY KEY variation_citation_idx (variation_id, publication_id)
+);
+
+
+
+/**
 @header  Metadata tables
 @desc    These tables define some metadata information.
 @colour  #BC5CEC
