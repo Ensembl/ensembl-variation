@@ -9,7 +9,7 @@
 RENAME TABLE individual to old_individual;
 
 CREATE TABLE individual(
-    individual_id int(10) unsigned not null,
+    individual_id int(10) unsigned not null auto_increment,
     name varchar(255),
     description text,
     gender enum('Male', 'Female', 'Unknown') default 'Unknown' NOT NULL,
@@ -30,7 +30,7 @@ WHERE oi.sample_id = s.sample_id;
 RENAME TABLE population to old_population;
 
 CREATE TABLE population(
-    population_id int(10) unsigned not null,
+    population_id int(10) unsigned not null auto_increment,
     name varchar(255),
     size int(10),
     description text,
