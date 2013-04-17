@@ -254,7 +254,7 @@ sub population{
         $self->{'_population_id'} = $self->{'population'}->dbID();
     }
 
-    # Population can be lazy-loaded, so get it from the database if we have a sample_id but no cached object
+    # Population can be lazy-loaded, so get it from the database if we have a population_id but no cached object
     if (!defined($self->{'population'}) && defined($self->{'_population_id'})) {
         
         # Check that an adaptor is attached
