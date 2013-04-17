@@ -66,7 +66,7 @@ use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 
 use Bio::EnsEMBL::Variation::IndividualGenotypeFeature;
 
-@ISA = qw(Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor);
+@ISA = qw(Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor Bio::EnsEMBL::Variation::DBSQL::BaseGenotypeAdaptor);
 
 
 =head2 fetch_all_by_Variation
@@ -156,10 +156,10 @@ sub fetch_all_by_Slice{
 		  my @list;
 		  push @list, $_->dbID foreach @$inds;
 		  $instr = (@list > 1)  ? " IN (".join(',',@list).")"   :   ' = \''.$list[0].'\'';
-		  $constraint = " c.sample_id $instr";
+		  $constraint = " c.individual_id $instr";
 		}
 		else {
-		  $constraint = ' c.sample_id = ' . $individual->dbID;
+		  $constraint = ' c.individual_id = ' . $individual->dbID;
 		}
 	}
 	
@@ -195,7 +195,7 @@ sub _tables{
 }
 
 sub _columns{
-    return qw(sample_id seq_region_id seq_region_start seq_region_end seq_region_strand genotypes);
+    return qw(individual_id seq_region_id seq_region_start seq_region_end seq_region_strand genotypes);
 }
 
 sub _write_columns{
@@ -215,10 +215,10 @@ sub _objs_from_sth{
     
     my (@results, %slice_hash, %sr_name_hash, %sr_cs_hash, %individual_hash, %gt_code_hash);
 
-	my ($sample_id, $seq_region_id, $seq_region_start, $seq_region_end, $seq_region_strand, $genotypes);
+	my ($individual_id, $seq_region_id, $seq_region_start, $seq_region_end, $seq_region_strand, $genotypes);
 	
 	$sth->bind_columns(
-		\$sample_id, \$seq_region_id, \$seq_region_start,
+		\$individual_id, \$seq_region_id, \$seq_region_start,
 		\$seq_region_end, \$seq_region_strand, \$genotypes
 	);
 
@@ -337,8 +337,8 @@ sub _objs_from_sth{
 				'_variation_id' => $variation_id
 			});
 			
-			$individual_hash{$sample_id} ||= [];
-			push @{$individual_hash{$sample_id}}, $igtype;
+			$individual_hash{$individual_id} ||= [];
+			push @{$individual_hash{$individual_id}}, $igtype;
 			
 			$gt_code_hash{$gt_code} ||= [];
 			push @{$gt_code_hash{$gt_code}}, $igtype;

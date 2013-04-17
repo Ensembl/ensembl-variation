@@ -407,8 +407,8 @@ sub _tables {
         ['source', 's2']
     );
     
-    # If we are constraining on sample_id, add the allele table
-    push(@tables,['allele', 'a']) if ($self->{'_constrain_sample'});
+    # If we are constraining on population_id, add the allele table
+    push(@tables,['allele', 'a']) if ($self->{'_constrain_population'});
 
     # Add the failed_variation table if we are filtering on those
     push(@tables,['failed_variation', 'fv']) unless ($self->db->include_failed_variations());
@@ -437,8 +437,8 @@ sub _default_where_clause {
         s1.source_id = v.source_id
     };
     
-    # If we are constraining on sample_id, we should have a constraint on the allele tables as well
-    $constraint .= qq{ AND a.variation_id = v.variation_id } if ($self->{'_constrain_sample'});
+    # If we are constraining on population_id, we should have a constraint on the allele tables as well
+    $constraint .= qq{ AND a.variation_id = v.variation_id } if ($self->{'_constrain_population'});
     
     return $constraint;
 }
@@ -640,7 +640,7 @@ sub fetch_by_subsnp_id {
     # Strip away any ss prefix
     $name =~ s/^ss//gi;
 
-    $self->{'_constrain_sample'} = 1;
+    $self->{'_constrain_population'} = 1;
     
     # Add a constraint on the subsnp_id
     my $constraint = qq{a.subsnp_id = ?};
@@ -651,7 +651,7 @@ sub fetch_by_subsnp_id {
     # Get the results from generic fetch method
     my $result = $self->generic_fetch($constraint);
     
-    delete($self->{'_constrain_sample'});
+    delete($self->{'_constrain_population'});
     
     # Return the result
     return undef unless (scalar(@{$result}));
@@ -1055,8 +1055,8 @@ sub fetch_all_by_Population {
         return [];
     }
   
-    # Constraint the query using the sample_id for the population
-    my $constraint = qq{a.sample_id = ?};
+    # Constraint the query using the population_id for the population
+    my $constraint = qq{a.population_id = ?};
     
     # adjust frequency if given a percentage
     if (defined($freq)) {
@@ -1073,13 +1073,13 @@ sub fetch_all_by_Population {
     $self->bind_param_generic_fetch($freq,SQL_DOUBLE) if (defined($freq));
     
     # Set the flag to indicate that we are constraining on population and should not left join to allele
-    $self->{'_constrain_sample'} = 1;
+    $self->{'_constrain_population'} = 1;
     
     # Execute the generic fetch
     my $result = $self->generic_fetch($constraint);
     
     # Unset the flag
-    delete($self->{'_constrain_sample'});
+    delete($self->{'_constrain_population'});
     
     return $result;
 }

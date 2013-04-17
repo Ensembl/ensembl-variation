@@ -178,7 +178,7 @@ sub store_uncompressed {
 			subsnp_id,
 			allele_1,
 			allele_2,
-			sample_id
+			individual_id
 		) VALUES $q_string
 	});
 	
@@ -258,7 +258,7 @@ sub fetch_all_by_Variation {
 			@$results = grep {$include{$_->individual->dbID}} @{$cached};
 		}
 		else {
-			throw("Argument supplied is not of type Bio::EnsEMBL::Variation::Sample");
+			throw("Argument supplied is not of type Bio::EnsEMBL::Variation::Individual or Bio::EnsEMBL::Variation::Population");
 		}
 	}
 	
@@ -300,14 +300,14 @@ sub _objs_from_sth{
 		my @genotypes = unpack("(ww)*", $genotypes);
 		
 		while(@genotypes) {
-			my $sample_id = shift @genotypes;
+			my $individual_id = shift @genotypes;
 			my $gt_code = shift @genotypes;
 
                         ## temp fix for duplicated 1KG data   
                         my $ss = $subsnp_id;
                         $ss = 0 unless defined $ss  ;
-                        next if $done{$sample_id}{$gt_code}{$ss};
-                        $done{$sample_id}{$gt_code}{$ss} = 1;
+                        next if $done{$individual_id}{$gt_code}{$ss};
+                        $done{$individual_id}{$gt_code}{$ss} = 1;
 			
 			my $igtype  = Bio::EnsEMBL::Variation::IndividualGenotype->new_fast({
 				_variation_id => $variation_id,
@@ -315,8 +315,8 @@ sub _objs_from_sth{
 				adaptor       => $self,
 			});
 			
-			$individual_hash{$sample_id} ||= [];
-			push @{$individual_hash{$sample_id}}, $igtype;
+			$individual_hash{$individual_id} ||= [];
+			push @{$individual_hash{$individual_id}}, $igtype;
 			
 			$gt_code_hash{$gt_code} ||= [];
 			push @{$gt_code_hash{$gt_code}}, $igtype;

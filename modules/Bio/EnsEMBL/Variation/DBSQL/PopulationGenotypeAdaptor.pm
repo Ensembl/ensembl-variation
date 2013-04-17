@@ -98,7 +98,7 @@ sub store {
 	  subsnp_id,
 	  genotype_code_id,
 	  frequency,
-	  sample_id,
+	  population_id,
 	  count			
 	) VALUES (?,?,?,?,?,?)
   });
@@ -139,7 +139,7 @@ sub store_multiple {
 	  subsnp_id,
 	  genotype_code_id,
 	  frequency,
-	  sample_id,
+	  population_id,
 	  count				
 	) VALUES $q_string
   });
@@ -217,7 +217,7 @@ sub fetch_all_by_Population {
     return [];
   }
 
-  my $constraint = "pg.sample_id = " . $pop->dbID();
+  my $constraint = "pg.population_id = " . $pop->dbID();
   
   # Add the constraint for failed variations
   $constraint .= " AND " . $self->db->_exclude_failed_variations_constraint();
@@ -369,11 +369,11 @@ sub _tables{return (
 sub _left_join { return ([ 'failed_variation', 'fv.variation_id = pg.variation_id']); }
 
 sub _columns{
-  return qw(pg.population_genotype_id pg.variation_id pg.subsnp_id pg.sample_id pg.genotype_code_id pg.frequency pg.count)
+  return qw(pg.population_genotype_id pg.variation_id pg.subsnp_id pg.population_id pg.genotype_code_id pg.frequency pg.count)
 }
 
 sub _write_columns {
-  return qw(variation_id subsnp_id genotype_code_id frequency sample_id count);
+  return qw(variation_id subsnp_id genotype_code_id frequency population_id count);
 }
 
 sub _objs_from_sth{
@@ -381,9 +381,9 @@ sub _objs_from_sth{
   my $self = shift;
   my $sth = shift;
   
-  my ($dbID, $variation_id, $subsnp_id, $sample_id, $gt_code, $freq, $count);
+  my ($dbID, $variation_id, $subsnp_id, $population_id, $gt_code, $freq, $count);
   
-  $sth->bind_columns(\$dbID, \$variation_id, \$subsnp_id, \$sample_id, \$gt_code, \$freq, \$count);
+  $sth->bind_columns(\$dbID, \$variation_id, \$subsnp_id, \$population_id, \$gt_code, \$freq, \$count);
   
   my (%pop_hash, %gt_code_hash, @results);
   
@@ -394,11 +394,12 @@ sub _objs_from_sth{
 	  subsnp        => $subsnp_id,
 	  adaptor       => $self,
 	  frequency     => $freq,
-	  count         => $count
+	  count         => $count,
+      dbID          => $dbID,
 	});
   
-	$pop_hash{$sample_id} ||= [];
-	push @{$pop_hash{$sample_id}}, $pgtype;
+	$pop_hash{$population_id} ||= [];
+	push @{$pop_hash{$population_id}}, $pgtype;
 	
 	$gt_code_hash{$gt_code} ||= [];
 	push @{$gt_code_hash{$gt_code}}, $pgtype;
