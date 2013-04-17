@@ -26,7 +26,7 @@
 
 =head1 NAME
 
-Bio::EnsEMBL::Variation::AlleleFeature - A genomic position for an allele in a sample.
+Bio::EnsEMBL::Variation::AlleleFeature - A genomic position for an allele in an individual or strain.
 
 =head1 SYNOPSIS
 
@@ -56,7 +56,7 @@ Bio::EnsEMBL::Variation::AlleleFeature - A genomic position for an allele in a s
 
 =head1 DESCRIPTION
 
-This is a class representing the genomic position of a allele in a sample
+This is a class representing the genomic position of a allele in an individual
 from the ensembl-variation database.  The actual variation information is
 represented by an associated Bio::EnsEMBL::Variation::Variation object. Some
 of the information has been denormalized and is available on the feature for
@@ -87,6 +87,7 @@ our @ISA = ('Bio::EnsEMBL::Feature');
 
   Arg [-START] :
     see superclass constructor
+
   Arg [-END] :
     see superclass constructor
 
@@ -111,10 +112,10 @@ our @ISA = ('Bio::EnsEMBL::Feature');
     identifier. This may be provided instead of a variation object so that
     the variation may be lazy-loaded from the database on demand.
     
-  Arg [-SAMPLE_ID] :
-    int - the internal id of the sample object associated with this
+  Arg [-INDIVIDUAL_ID] :
+    int - the internal id of the individual object associated with this
     identifier. This may be provided instead of the object so that
-    the population/individual may be lazy-loaded from the database on demand.
+    the individual may be lazy-loaded from the database on demand.
 
   Arg [-ALLELE_STRING] :
     string - the allele for this AlleleFeature object.
@@ -131,8 +132,8 @@ our @ISA = ('Bio::EnsEMBL::Feature');
         -allele_string => 'A',
 		-consequence_type => 'NON_SYNONYMOUS_CODING',
         -variation_name => 'rs635421',
-	-source => 'Celera',
-	-sample_id  => $sample_id,
+	    -source => 'Celera',
+	    -individual_id  => $individual_id,
         -variation => $v);
 
   Description: Constructor. Instantiates a new AlleleFeature object.
@@ -148,16 +149,16 @@ sub new {
   my $class = ref($caller) || $caller;
 
   my $self = $class->SUPER::new(@_);
-  my ($allele, $overlap_consequences, $var_name, $variation, $variation_id, $population, $sample_id, $source) =
+  my ($allele, $overlap_consequences, $var_name, $variation, $variation_id, $individual_id, $source) =
     rearrange([qw(ALLELE_STRING OVERLAP_CONSEQUENCES VARIATION_NAME 
-                  VARIATION VARIATION_ID SAMPLE_ID SOURCE)], @_);
+                  VARIATION VARIATION_ID INDIVIDUAL_ID SOURCE)], @_);
 
   $self->{'allele_string'}          = $allele;
   $self->{'overlap_consequences'}   = $overlap_consequences;
   $self->{'variation_name'}         = $var_name;
   $self->{'variation'}              = $variation;
   $self->{'_variation_id'}          = $variation_id;
-  $self->{'_sample_id'}             = $sample_id;
+  $self->{'_individual_id'}         = $individual_id;
   $self->{'source'}                 = $source;
 
   return $self;
@@ -463,10 +464,10 @@ sub individual {
     $self->{'individual'} = shift;
   }
   elsif(!defined($self->{'individual'}) && $self->{'adaptor'} &&
-        defined($self->{'_sample_id'})) {
+        defined($self->{'_individual_id'})) {
     # lazy-load from database on demand
     my $ia = $self->{'adaptor'}->db()->get_IndividualAdaptor();
-    $self->{'individual'} = $ia->fetch_by_dbID($self->{'_sample_id'});
+    $self->{'individual'} = $ia->fetch_by_dbID($self->{'_individual_id'});
     if (!defined $self->{'individual'}){
 	warning("AlleleFeature attached to Strain, not Individual");
     }
