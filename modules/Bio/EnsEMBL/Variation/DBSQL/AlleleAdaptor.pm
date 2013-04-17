@@ -84,7 +84,7 @@ sub store {
 			variation_id,
 			subsnp_id,
 			allele_code_id,
-			sample_id,
+			population_id,
 			frequency,
 			count			
 		) VALUES (?,?,?,?,?,?)
@@ -123,7 +123,7 @@ sub store_multiple {
 			variation_id,
 			subsnp_id,
 			allele_code_id,
-			sample_id,
+			population_id,
 			frequency,
 			count			
 		) VALUES $q_string
@@ -220,10 +220,10 @@ sub fetch_all_by_Variation {
     my $variation_id = $variation->dbID();
     my $constraint = qq{ a.variation_id = $variation_id };
     
-    # If required, add a constraint on the sample id
+    # If required, add a constraint on the population id
     if (defined($population)) {
-        my $sample_id = $population->dbID();
-        $constraint .= qq{ AND a.sample_id = $sample_id };
+        my $population_id = $population->dbID();
+        $constraint .= qq{ AND a.population_id = $population_id };
     }
     
     # Add the constraint for failed alleles
@@ -397,7 +397,7 @@ sub get_subsnp_handle {
         WHERE
             allele.subsnp_id = ?
         AND allele.frequency_submitter_handle = submitter_handle.handle_id
-        AND allele.sample_id = ?
+        AND allele.population_id = ?
         LIMIT 1
         };
        $sth = $self->prepare($stmt);
@@ -464,10 +464,10 @@ sub _objs_from_sth {
     my $self = shift;
     my $sth = shift;
 
-    my ($allele_id, $variation_id, $subsnp_id, $allele, $frequency, $sample_id, $count, $last_allele_id);
+    my ($allele_id, $variation_id, $subsnp_id, $allele, $frequency, $population_id, $count, $last_allele_id);
     my @alleles;
     
-    $sth->bind_columns(\$allele_id, \$variation_id, \$subsnp_id, \$allele, \$frequency, \$sample_id, \$count);
+    $sth->bind_columns(\$allele_id, \$variation_id, \$subsnp_id, \$allele, \$frequency, \$population_id, \$count);
     
     while($sth->fetch()) {
     
@@ -480,7 +480,7 @@ sub _objs_from_sth {
                 -SUBSNP         => $subsnp_id,
                 -ALLELE         => $allele,
                 -FREQUENCY      => $frequency,
-                -POPULATION_ID  => $sample_id,
+                -POPULATION_ID  => $population_id,
                 -COUNT          => $count,
                 -ADAPTOR        => $self
             );
@@ -518,11 +518,11 @@ sub _left_join {
 }
 
 sub _columns {
-  return qw( a.allele_id a.variation_id a.subsnp_id ac.allele a.frequency a.sample_id a.count );
+  return qw( a.allele_id a.variation_id a.subsnp_id ac.allele a.frequency a.population_id a.count );
 }
 
 sub _write_columns {
-	return qw(variation_id subsnp_id allele_code_id sample_id frequency count);
+	return qw(variation_id subsnp_id allele_code_id population_id frequency count);
 }
 
 sub _default_where_clause  {
