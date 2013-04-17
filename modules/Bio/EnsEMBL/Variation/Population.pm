@@ -32,13 +32,11 @@ group, ethnic group, set of individuals used in an assay, etc.
 =head1 SYNOPSIS
 
     # Population
-    $pop = Bio::EnsEMBL::Variation::Population->new
-       (-name => 'WEST AFRICA',
+    $pop = Bio::EnsEMBL::Variation::Population->new(
+        -name        => 'WEST AFRICA',
         -description => 'Sub-Saharan Nations bordering Atlantic north' .
                         ' of Congo River, and Central/Southern Atlantic' .
                         ' Island Nations.');
-
-    ...
 
     # print out all sub populations of a population
     # same could work for super populations
@@ -46,21 +44,18 @@ group, ethnic group, set of individuals used in an assay, etc.
     print_sub_pops($pop);
 
     sub print_sub_pops {
-      my $pop = shift;
-      my $level = shift || 0;
+        my $pop = shift;
+        my $level = shift || 0;
+        my $sub_pops = $pop->get_all_sub_Populations();
 
-      my $sub_pops = $pop->get_all_sub_Populations();
-
-      foreach my $sp (@$sub_pops) {
-        print ' ' x $level++,
-              'name: ', $sp->name(),
-              'desc: ', $sp->description(),
-              'size: ', $sp->size(),"\n";
-        print_sub_pops($sp, $level);
-      }
+        foreach my $sp (@$sub_pops) {
+            print ' ' x $level++,
+                  'name: ', $sp->name(),
+                  'desc: ', $sp->description(),
+                  'size: ', $sp->size(),"\n";
+            print_sub_pops($sp, $level);
+        }
     }
-
-
 
 =head1 DESCRIPTION
 
@@ -81,32 +76,34 @@ use warnings;
 
 package Bio::EnsEMBL::Variation::Population;
 
-use Bio::EnsEMBL::Variation::Sample;
+use Bio::EnsEMBL::Storable;
 use Bio::EnsEMBL::Utils::Argument qw(rearrange);
 use Bio::EnsEMBL::Utils::Exception qw(throw);
 
-our @ISA = ('Bio::EnsEMBL::Variation::Sample');
-
+our @ISA = ('Bio::EnsEMBL::Storable');
 
 =head2 new
 
-  Arg [-dbID]: int - unique internal identifier of the sample
-  Arg [-ADAPTOR]: Bio::EnsEMBL::PopulationAdaptor
-  Arg [-NAME]: string - name of the population
-  Arg [-DESCRIPTION]: string - description of the population
-  Arg [-SIZE]: int - the size of the population
+  Arg [-dbID]           : int - unique internal identifier of the population
+  Arg [-ADAPTOR]        : Bio::EnsEMBL::Variation::DBSQL::PopulationAdaptor
+  Arg [-NAME]           : string - name of the population
+  Arg [-DESCRIPTION]    : string - description of the population
+  Arg [-SIZE]           : int - the size of the population
+  Arg [-COLLECTION]     : int - flag indication if population is a collection
+                                of individuals (1) or defined by geography (0)
   Arg [-SUB_POPULATIONS]: listref of Bio::EnsEMBL::Population objects 
-  Example    : $pop = Bio::EnsEMBL::Variation::Population->new
-       (-name => 'WEST AFRICA',
-        -description => 'Sub-Saharan Nations bordering Atlantic north' .
-                        ' of Congo River, and Central/Southern Atlantic' .
-                        ' Island Nations.'
-        -sub_populations => \@sub_pops);
-  Description: Constructor. Instantiates a new Population object
-  Returntype : Bio::EnsEMBL::Variation::Population
-  Exceptions : none
-  Caller     : general
-  Status     : Stable
+  Example               : $pop = Bio::EnsEMBL::Variation::Population->new(
+                                    -name            => 'WEST AFRICA',
+                                    -description     => 'Sub-Saharan Nations bordering Atlantic north' .
+                                                        ' of Congo River, and Central/Southern Atlantic' .
+                                                        ' Island Nations.',
+                                    -collection      => 0,
+                                    -sub_populations => \@sub_pops);
+  Description            : Constructor. Instantiates a new Population object
+  Returntype             : Bio::EnsEMBL::Variation::Population
+  Exceptions             : none
+  Caller                 : general
+  Status                 : Stable
 
 =cut
 
@@ -115,9 +112,8 @@ sub new {
 
   my $class = ref($caller) || $caller;
 
-  my ($dbID, $adaptor, $name, $desc, $size, $freqs, $sub_pops) =
-    rearrange(['DBID','ADAPTOR','NAME', 'DESCRIPTION', 'SIZE', 'FREQS',
-               'SUB_POPULATIONS'], @_);
+  my ($dbID, $adaptor, $name, $desc, $size, $freqs, $sub_pops, $display, $collection) =
+    rearrange(['DBID','ADAPTOR','NAME', 'DESCRIPTION', 'SIZE', 'FREQS', 'SUB_POPULATIONS', 'DISPLAY', 'COLLECTION'], @_);
 
   return bless {'dbID'        => $dbID,
                 'adaptor'     => $adaptor,
@@ -125,10 +121,85 @@ sub new {
                 'description' => $desc,
                 'size'        => $size,
                 'freqs'       => $freqs,
-                'sub_populations' => $sub_pops}, $class;
+                'sub_populations' => $sub_pops,
+                'display' => $display,
+                'collection' => $collection,}, $class;
 }
 
+=head2 name
 
+  Arg [1]    : String $name (optional)
+               The new value to set the name attribute to
+  Example    : $name = $population->name()
+  Description: Getter/Setter for the name attribute
+  Returntype : String
+  Exceptions : None
+  Caller     : General
+  Status     : Stable
+
+=cut
+
+sub name {
+  my $self = shift;
+  return $self->{'name'} = shift if (@_);
+  return $self->{'name'};
+}
+
+=head2 description
+
+  Arg [1]    : String $description (optional) 
+               The new value to set the description attribute to
+  Example    : $description = $population->description()
+  Description: Getter/Setter for the description attribute
+  Returntype : String
+  Exceptions : None
+  Caller     : General
+  Status     : Stable
+
+=cut
+
+sub description {
+  my $self = shift;
+  return $self->{'description'} = shift if (@_);
+  return $self->{'description'};
+}
+
+=head2 size
+
+  Arg [1]    : int $size (optional) 
+               The new value to set the size attribute to
+  Example    : $size = $population->size()
+  Description: Getter/Setter for the size attribute
+  Returntype : Int. Returns undef if information on size is not given.
+  Exceptions : None
+  Caller     : General
+  Status     : Stable
+
+=cut
+
+sub size {
+  my $self = shift;
+  return $self->{'size'} = shift if (@_);
+  return $self->{'size'};
+}
+
+=head2 collection
+
+  Arg [1]    : int $collection (optional) 
+  Example    : $size = $population->size()
+  Description: Getter/Setter for the collection attribute
+  Returntype : Int. Returns 1 if population is a collection of individuals and 0 if it is a population defined by geography
+  Exceptions : None
+  Caller     : General
+  Status     : Stable
+
+=cut
+
+sub collection {
+    my $self = shift;
+    return $self->{'collection'} = shift if (@_);
+    return $self->{'collection'};
+}
 
 =head2 get_all_sub_Populations
 
@@ -138,7 +209,7 @@ sub new {
                }
   Description: Retrieves all populations which are conceptually a sub set
                of this population.
-  Returntype : reference to list of Bio::EnsEMBL::Variation::Population objects
+  Returntype : listref of Bio::EnsEMBL::Variation::Population objects
   Exceptions : none
   Caller     : general
   Status     : Stable
@@ -146,16 +217,14 @@ sub new {
 =cut
 
 sub get_all_sub_Populations {
-  my $self = shift;
+    my $self = shift;
 
-  if(!defined($self->{'sub_populations'}) && $self->{'adaptor'}) {
-    # lazy-load from database
-    $self->{'sub_populations'} =
-      $self->{'adaptor'}->fetch_all_by_super_Population($self);
-  }
-  return $self->{'sub_populations'} || [];
+    if (!defined($self->{'sub_populations'}) && $self->{'adaptor'}) {
+        # lazy-load from database
+        $self->{'sub_populations'} = $self->{'adaptor'}->fetch_all_by_super_Population($self);
+    }
+    return $self->{'sub_populations'} || [];
 }
-
 
 
 =head2 get_all_super_Populations
@@ -169,7 +238,7 @@ sub get_all_sub_Populations {
                Super populations may not be directly added in order to avoid
                circular references and memory leaks.  You must add
                sub_Populations instead and store this in the database.
-  Returntype : reference to list of Bio::EnsEMBL::Variation::Population objects
+  Returntype : listref of Bio::EnsEMBL::Variation::Population objects
   Exceptions : none
   Caller     : general
   Status     : Stable
@@ -177,14 +246,11 @@ sub get_all_sub_Populations {
 =cut
 
 sub get_all_super_Populations {
-  my $self = shift;
-
-  return [] if(!$self->{'adaptor'});
-
-  # load from database - do not cache to avoid circular references (mem leak)!
-  return $self->{'adaptor'}->fetch_all_by_sub_Population($self);
+    my $self = shift;
+    return [] if (!$self->{'adaptor'});
+    # load from database - do not cache to avoid circular references (mem leak)!
+    return $self->{'adaptor'}->fetch_all_by_sub_Population($self);
 }
-
 
 
 =head2 add_sub_Population
@@ -201,21 +267,21 @@ sub get_all_super_Populations {
 =cut
 
 sub add_sub_Population {
-  my $self = shift;
-  my $pop = shift;
+    my $self = shift;
+    my $pop = shift;
 
-  if(!ref($pop) || !$pop->isa('Bio::EnsEMBL::Variation::Population')) {
-    throw('Bio::EnsEMBL::Variation::Population argument expected.');
-  }
+    if (!ref($pop) || !$pop->isa('Bio::EnsEMBL::Variation::Population')) {
+        throw('Bio::EnsEMBL::Variation::Population argument expected.');
+    }
 
-  if($pop == $self) {
-    throw("Cannot add self as sub population.");
-  }
+    if ($pop == $self) {
+        throw("Cannot add self as sub population.");
+    }
 
-  $self->{'sub_populations'} ||= [];
-  push @{$self->{'sub_populations'}}, $pop;
+    $self->{'sub_populations'} ||= [];
+    push @{$self->{'sub_populations'}}, $pop;
 
-  return $pop;
+    return $pop;
 }
 
 =head2 get_all_synonyms

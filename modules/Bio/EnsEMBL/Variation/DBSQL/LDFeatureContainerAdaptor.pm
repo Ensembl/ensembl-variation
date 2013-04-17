@@ -159,10 +159,10 @@ sub fetch_by_Slice {
 	return $t
     }
 
-    $sth = $self->prepare(qq{SELECT c.sample_id,c.seq_region_id,c.seq_region_start,c.seq_region_end,c.genotypes,ip.population_sample_id
+    $sth = $self->prepare(qq{SELECT c.individual_id,c.seq_region_id,c.seq_region_start,c.seq_region_end,c.genotypes,ip.population_id
 				 FROM compressed_genotype_region c, individual_population ip
-				 WHERE  ip.individual_sample_id = c.sample_id
-				 AND   ip.population_sample_id $in_str
+				 WHERE  ip.individual_id = c.individual_id
+				 AND   ip.population_id $in_str
 				 AND   c.seq_region_id = ?
 				 AND   c.seq_region_start >= ? and c.seq_region_start <= ?
 				 AND   c.seq_region_end >= ?
@@ -252,7 +252,7 @@ sub get_populations_hash_by_Slice{
   # just get the population list if it's really too long
   if($slice->length > 10000000) {
 	
-	my $sth = $self->prepare(qq{SELECT sample_id, name FROM sample WHERE sample_id $pop_list;});
+	my $sth = $self->prepare(qq{SELECT population_id, name FROM population WHERE population_id $pop_list;});
 	$sth->execute;
 	
 	
@@ -263,16 +263,16 @@ sub get_populations_hash_by_Slice{
   elsif($slice->length > 5000000) {
 	
 	my $sth = $self->prepare(qq{
-	  SELECT distinct(c.sample_id), s.name
-	  FROM compressed_genotype_region c, individual_population ip, sample s, individual i
-	  WHERE c.sample_id = ip.individual_sample_id
-	  AND ip.population_sample_id = s.sample_id
-	  AND c.sample_id = i.sample_id
+	  SELECT distinct(c.individual_id), p.name
+	  FROM compressed_genotype_region c, individual_population ip, population p, individual i
+	  WHERE c.individual_id = ip.individual_id
+	  AND ip.population_id = p.population_id
+	  AND c.individual_id = i.individual_id
 	  AND c.seq_region_id = ?
-	  AND   c.seq_region_start >= ? and c.seq_region_start <= ?
-	  AND   c.seq_region_end >= ?
-	  AND i.father_individual_sample_id is NULL AND i.mother_individual_sample_id is NULL
-	  AND (s.sample_id $pop_list)
+	  AND c.seq_region_start >= ? and c.seq_region_start <= ?
+	  AND c.seq_region_end >= ?
+	  AND i.father_individual_id is NULL AND i.mother_individual_id is NULL
+	  AND (p.population_id $pop_list)
 	});
 	
 	$sth->execute($slice->get_seq_region_id, $slice->start, $slice->end, $slice->start);
@@ -292,16 +292,16 @@ sub get_populations_hash_by_Slice{
   else {
 
 	my $sth = $self->prepare(qq{
-	  SELECT s.sample_id, s.name, c.sample_id, c.seq_region_start, c.seq_region_end, c.genotypes 
-	  FROM compressed_genotype_region, individual_population ip, sample s, individual i
-	  WHERE c.sample_id = ip.individual_sample_id
-	  AND ip.population_sample_id = s.sample_id
-	  AND c.sample_id = i.sample_id
+	  SELECT p.population_id, p.name, c.individual_id, c.seq_region_start, c.seq_region_end, c.genotypes 
+	  FROM compressed_genotype_region c, individual_population ip, population p, individual i
+	  WHERE c.individual_id = ip.individual_id
+	  AND ip.population_id = p.population_id
+	  AND c.individual_id = i.individual_id
 	  AND c.seq_region_id = ?
-	  AND   c.seq_region_start >= ? and c.seq_region_start <= ?
-	  AND   c.seq_region_end >= ?
-	  AND i.father_individual_sample_id is NULL AND i.mother_individual_sample_id is NULL
-	  AND (s.sample_id $pop_list)
+	  AND c.seq_region_start >= ? and c.seq_region_start <= ?
+	  AND c.seq_region_end >= ?
+	  AND i.father_individual_id is NULL AND i.mother_individual_id is NULL
+	  AND (p.population_id $pop_list)
 	});
 	
 	$sth->execute($sr, $slice_start, $slice_end, $slice_start);
@@ -311,15 +311,15 @@ sub get_populations_hash_by_Slice{
 	my $row_count = 0;
 	
 	while(my $row = $sth->fetchrow_arrayref()) {
-	  my ($population_id, $population_name, $sample_id, $start, $end, $genotypes) = @$row;
+	  my ($population_id, $population_name, $individual_id, $start, $end, $genotypes) = @$row;
 	  
 	  $row_count++;
 	  
-	  next if $enough{$sample_id};
+	  next if $enough{$individual_id};
 	  
 	  
 	  $results{$population_id} = $population_name;
-	  $sample_pop{$sample_id} = $population_name;
+	  $sample_pop{$population_id} = $population_name;
 	  
 	  # if the row is only partially within the slice
 	  if($start < $slice_start || $end > $slice_end) {
@@ -332,7 +332,7 @@ sub get_populations_hash_by_Slice{
 			($snp_start >= $slice_start) &&
 			($snp_start <= $slice_end)
 		  ) {		
-			$counts{$sample_id}++;
+			$counts{$individual_id}++;
 		  }
 		  
 		  $snp_start += $gap + 1 if defined $gap;
@@ -342,11 +342,11 @@ sub get_populations_hash_by_Slice{
 	  
 	  # if the row is fully within the slice
 	  else {
-		$counts{$sample_id} += (((length($genotypes) - 2) / 4) + 1);
+		$counts{$individual_id} += (((length($genotypes) - 2) / 4) + 1);
 	  }
 	  
-	  $enough{$sample_id} = 1 if $counts{$sample_id} >= $gen_threshold;
-	  $counts_pop{$population_id}++ if $counts{$sample_id} >= $gen_threshold;
+	  $enough{$individual_id} = 1 if $counts{$individual_id} >= $gen_threshold;
+	  $counts_pop{$population_id}++ if $counts{$individual_id} >= $gen_threshold;
 	}
 	
 	delete @results{grep {$counts_pop{$_} <= $pop_threshold} keys %counts_pop};
@@ -362,12 +362,12 @@ sub _get_siblings{
     my $population_id = shift;
     my $siblings = shift;
 
-    my $sth_individual = $self->db->dbc->prepare(qq{SELECT i.sample_id
+    my $sth_individual = $self->db->dbc->prepare(qq{SELECT i.individual_id
 							     FROM individual i, individual_population ip
-							     WHERE ip.individual_sample_id = i.sample_id
-							     AND ip.population_sample_id = ? 
-							     AND i.father_individual_sample_id IS NOT NULL
-							     AND i.mother_individual_sample_id IS NOT NULL
+							     WHERE ip.individual_id = i.individual_id
+							     AND ip.population_id = ? 
+							     AND i.father_individual_id IS NOT NULL
+							     AND i.mother_individual_id IS NOT NULL
 							 });
     my ($individual_id);
     $sth_individual->execute($population_id);
@@ -473,7 +473,7 @@ sub _get_LD_populations{
 #				     WHERE (s.name like 'PERLEGEN:AFD%'
 #				     OR s.name like 'CSHL-HAPMAP%')
 #				     AND s.sample_id = p.sample_id});
-	my $sth = $self->db->dbc->prepare(qq{SELECT sample_id, name FROM sample WHERE display = 'LD'});
+	my $sth = $self->db->dbc->prepare(qq{SELECT population_id, name FROM population WHERE display = 'LD'});
 
     $sth->execute();
     $sth->bind_columns(\$pop_id,\$population_name);
@@ -500,7 +500,7 @@ sub _objs_from_sth {
   my $slice = shift;
   my $siblings = shift;
 
-  my ($sample_id,$ld_region_id,$ld_region_start,$ld_region_end,$d_prime,$r2,$sample_count);
+  my ($ld_region_id,$ld_region_start,$ld_region_end,$d_prime,$r2,$sample_count);
   my ($vf_id1,$vf_id2);
 
   my %feature_container = ();
@@ -604,7 +604,7 @@ sub _objs_from_sth {
 	  #get the ouput into the hashes
 	  chomp;
 	  
-	  ($sample_id,$ld_region_id,$ld_region_start,$ld_region_end,$r2,$d_prime,$sample_count) = split /\s/;
+	  ($population_id,$ld_region_id,$ld_region_start,$ld_region_end,$r2,$d_prime,$sample_count) = split /\s/;
 	  
 	  # skip entries unrelated to selected vf if doing fetch_all_by_VariationFeature
 	  if(defined($self->{_vf_pos})) {
@@ -621,11 +621,11 @@ sub _objs_from_sth {
 	  $vf_id1 = $pos_vf{$ld_region_start}->dbID();
 	  $vf_id2 = $pos_vf{$ld_region_end}->dbID();
 	  
-	  $feature_container{$vf_id1 . '-' . $vf_id2}->{$sample_id} = \%ld_values;
+	  $feature_container{$vf_id1 . '-' . $vf_id2}->{$population_id} = \%ld_values;
 	  $vf_objects{$vf_id1} = $pos_vf{$ld_region_start};
 	  $vf_objects{$vf_id2} = $pos_vf{$ld_region_end};
 	  
-	  $_pop_ids{$sample_id} = 1;	  
+	  $_pop_ids{$population_id} = 1;	  
 	}
 	close OUT || die "Could not close filehandle: $!\n";
 	

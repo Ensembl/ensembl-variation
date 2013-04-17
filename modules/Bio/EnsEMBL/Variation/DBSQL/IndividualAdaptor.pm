@@ -74,87 +74,71 @@ use warnings;
 
 package Bio::EnsEMBL::Variation::DBSQL::IndividualAdaptor;
 
-use Bio::EnsEMBL::Variation::DBSQL::SampleAdaptor;
-use Bio::EnsEMBL::Utils::Exception qw(throw warning);
-
+use Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor;
 use Bio::EnsEMBL::Variation::Individual;
-our @ISA = ('Bio::EnsEMBL::Variation::DBSQL::SampleAdaptor');
+use Bio::EnsEMBL::Utils::Exception qw(throw warning);
+use DBI qw(:sql_types);
+our @ISA = ('Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor');
 
 sub store {
-	my ($self, $ind) = @_;
+	my ($self, $individual) = @_;
 	
 	my $dbh = $self->dbc->db_handle;
-    
-    my $sth = $dbh->prepare(q{
-        INSERT INTO sample (
-            name,
-			description,
-			display
-        ) VALUES (?,?,?)
-    });
-	
-	$sth->execute(
-		$ind->name,
-		$ind->description,
-		$ind->display
-	);
-	$sth->finish;
-	
-	# get the sample_id inserted
-	my $dbID = $dbh->last_insert_id(undef, undef, 'sample', 'sample_id');
-	
-	$ind->{dbID}    = $dbID;
-	$ind->{adaptor} = $self;
 	
 	# retrieve individual type ID - default to 3 (outbred)
 	my $individual_type_id = 3;
 	
-	if(defined($ind->type_individual)) {
+	if (defined($individual->type_individual)) {
 		my $sth = $dbh->prepare(q{
 			SELECT individual_type_id
 			FROM individual_type
 			WHERE name = ?
 		});
-		$sth->execute($ind->type_individual);
-		
+		$sth->execute($individual->type_individual);
 		$sth->bind_columns(\$individual_type_id);
 		$sth->fetch();
 		$sth->finish();
 	}
 	
-	# add entry to individual table also
-	$sth = $dbh->prepare(q{
+	# add entry to individual table
+	my $sth = $dbh->prepare(q{
 		INSERT INTO individual (
-			sample_id,
-			gender,
-			father_individual_sample_id,
-			mother_individual_sample_id,
-			individual_type_id
-		) VALUES (?,?,?,?,?)
+			name,
+            description,
+            gender,
+			father_individual_id,
+			mother_individual_id,
+			individual_type_id,
+            display
+		) VALUES (?,?,?,?,?,?,?)
 	});
 	$sth->execute(
-		$ind->dbID,
-		$ind->gender || 'Unknown',
-		$ind->father_Individual ? $ind->father_Individual->dbID : undef,
-		$ind->mother_Individual ? $ind->mother_Individual->dbID : undef,
-		$individual_type_id
+		$individual->name,
+        $individual->description,
+        $individual->gender || 'Unknown',
+		$individual->father_Individual ? $individual->father_Individual->dbID : undef,
+		$individual->mother_Individual ? $individual->mother_Individual->dbID : undef,
+		$individual_type_id,
+        $individual->display,
 	);
 	$sth->finish;
-	
+	my $dbID = $dbh->last_insert_id(undef, undef, 'individual', 'individual_id');
+	$individual->{dbID}    = $dbID;
+	$individual->{adaptor} = $self;
+
 	# store individual/population relationships
 	$sth = $dbh->prepare(q{
 		INSERT INTO individual_population (
-			individual_sample_id,
-			population_sample_id
+			individual_id,
+			population_id
 		) VALUES (?,?)
 	});
 	
-	foreach my $pop(@{$ind->{populations}}) {
-		next unless defined($pop->dbID);
-		
+	foreach my $population (@{$individual->{populations}}) {
+		next unless defined($population->dbID);
 		$sth->execute(
-			$ind->dbID,
-			$pop->dbID
+			$individual->dbID,
+			$population->dbID
 		);
 	}
 	
@@ -163,40 +147,95 @@ sub store {
 
 =head2 fetch_individual_by_synonym
 
-    Arg [1]              : $individual_synonym
-    Example              : my $ind = $ind_adaptor->fetch_individual_by_synonym($individual_synonym,$source);
+    Arg [1]              : String $individual_synonym
+    Arg [2]              : String $source (optional)
+    Example              : my $ind = $ind_adaptor->fetch_individual_by_synonym($individual_synonym, $source);
     Description          : Retrieves individual for the synonym given in the source. If no source is provided, retrieves all the synonyms
-    Returntype           : list of Bio::EnsEMBL::Variation::Individual
+    Returntype           : listref of Bio::EnsEMBL::Variation::Individual objects
     Exceptions           : none
     Caller               : general
     Status               : At Risk
 
 =cut
 
-sub fetch_individual_by_synonym{
+sub fetch_individual_by_synonym {
     my $self = shift;
     my $synonym_name = shift;
     my $source = shift;
-    my $individuals;
-    my $ind;
-    #return all sample_id from the database
-    my $samples = $self->SUPER::fetch_sample_by_synonym($synonym_name, $source);
-    foreach my $sample_id (@{$samples}){
-	#get the ones that are individuals
-	$ind = $self->fetch_by_dbID($sample_id);
-	push @{$individuals}, $ind if (defined $ind);
+    my ($individuals, $individual_ids, $individual_id);
+    my $sql;
+    if (defined $source){
+	    $sql = qq{
+            SELECT is.individual_id 
+            FROM individual_synonym is, source s
+            WHERE is.name = ? and is.source_id = s.source_id AND s.name = "$source"};
+    }
+    else{
+	    $sql = qq{
+            SELECT individual_id 
+            FROM individual_synonym WHERE name = ?};
+    }
+    my $sth = $self->prepare($sql);
+    $sth->bind_param(1, $synonym_name, SQL_VARCHAR);
+    $sth->execute();    
+    $sth->bind_columns(\$individual_id);
+    while ($sth->fetch()){
+	    push @{$individual_ids}, $individual_id;
+    }
+
+    foreach my $individual_id (@{$individual_ids}){
+	    my $individual = $self->fetch_by_dbID($individual_id);
+	    push @{$individuals}, $individual;
     }
     return $individuals;
 }
 
+=head2 fetch_synonyms
+
+    Arg [1]              : $individual_id
+    Arg [2] (optional)   : $source
+    Example              : my $dbSNP_synonyms = $ind_adaptor->fetch_synonyms($individual_id,$dbSNP);
+                           my $all_synonyms = $ind_adaptor->fetch_synonyms($individual_id);
+    Description: Retrieves synonyms for the source provided. Otherwise, return all the synonyms for the individual_id
+    Returntype : listref of strings
+    Exceptions : none
+    Caller     : general
+    Status     : Stable
+
+=cut
+
+sub fetch_synonyms{
+    my $self = shift;
+    my $dbID = shift;
+    my $source = shift;
+    my $synonym;
+    my $synonyms;
+
+    my $sql;
+    if (defined $source){
+	    $sql = qq{SELECT is.name FROM individual_synonym is, source s WHERE is.individual_id = ? AND is.source_id = s.source_id AND s.name = "$source"}
+    } else{
+	    $sql = qq{SELECT name FROM individual_synonym WHERE individual_id = ?};
+    }
+    my $sth = $self->prepare($sql);
+    $sth->bind_param(1,$dbID,SQL_INTEGER);
+    $sth->execute();
+    $sth->bind_columns(\$synonym);
+    while ($sth->fetch){
+	    push @{$synonyms}, $synonym;
+    }
+    return $synonyms;
+}
+
 =head2 fetch_all_by_name
 
-  Arg [1]    : string $name the name of the individuals to retrieve
+  Arg [1]    : string $name 
+               The name of the individuals to retrieve.
   Example    : my @inds = @{$ind_adaptor->fetch_all_by_name('CEPH1332.05')};
   Description: Retrieves all individuals with a specified name.  Individual
                names may be non-unique which is why this method returns a
                reference to a list.
-  Returntype : reference to a list of Individual ids
+  Returntype : listref of Bio::EnsEMBL::Variation::Individual objects
   Exceptions : throw if no argument passed
   Caller     : general
   Status     : Stable
@@ -207,38 +246,30 @@ sub fetch_all_by_name {
   my $self = shift;
   my $name = shift;
 
-  defined($name) || throw("name argument expected");
+  defined($name) || throw("Name argument expected.");
 
-  my $sth = $self->prepare
-    (q{SELECT i.sample_id, s.name, s.description, s.display,
-              i.gender, i.father_individual_sample_id, i.mother_individual_sample_id, it.name, it.description
-       FROM   individual i, sample s, individual_type it
-       WHERE  s.name = ?
-       AND    it.individual_type_id = i.individual_type_id
-       AND    s.sample_id = i.sample_id});
+  my $sth = $self->prepare(q{
+    SELECT i.individual_id, i.name, i.description, i.gender, i.father_individual_id, i.mother_individual_id, it.name, it.description, i.display
+    FROM   individual i, individual_type it
+    WHERE  i.name = ?
+    AND    it.individual_type_id = i.individual_type_id;});
 
-  $sth->bind_param(1,$name,SQL_VARCHAR);
+  $sth->bind_param(1, $name, SQL_VARCHAR);
   $sth->execute();
-
-  my $result =  $self->_objs_from_sth($sth);
-
+  my $individuals =  $self->_objs_from_sth($sth);
   $sth->finish();
-
-  return $result;
+  return $individuals;
 }
-
-
-
 
 =head2 fetch_all_by_Population
 
   Arg [1]    : Bio::EnsEMBL::Variation::Population $pop
   Example    : my $pop = $pop_adaptor->fetch_by_name('PACIFIC');
-               foreach my $ind (@{$ia->fetch_all_by_Population($pop)}) {
+               foreach my $ind (@{$ind_adaptor->fetch_all_by_Population($pop)}) {
                  print $ind->name(), "\n";
                }
   Description: Retrieves all individuals from a specified population 
-  Returntype : reference to list of Bio::EnsEMBL::Variation::Individual objects
+  Returntype : listref of Bio::EnsEMBL::Variation::Individual objects
   Exceptions : throw if incorrect argument is passed
                warning if provided Population does not have an dbID
   Caller     : general
@@ -247,50 +278,43 @@ sub fetch_all_by_name {
 =cut
 
 sub fetch_all_by_Population {
-  my $self = shift;
-  my $pop = shift;
+    my $self = shift;
+    my $pop = shift;
 
-  if(!ref($pop) || !$pop->isa('Bio::EnsEMBL::Variation::Population')) {
-    throw("Bio::EnsEMBL::Variation::Population arg expected");
-  }
+    if (!ref($pop) || !$pop->isa('Bio::EnsEMBL::Variation::Population')) {
+        throw("Bio::EnsEMBL::Variation::Population arg expected");
+    }
 
-  if(!$pop->dbID()) {
-    warning("Population does not have dbID, cannot retrieve Individuals");
-    return [];
-  }
+    if (!$pop->dbID()) {
+        warning("Population does not have dbID, cannot retrieve Individuals");
+        return [];
+    }
 
-  my $sth = $self->prepare
-    (q{SELECT i.sample_id, s.name, s.description, s.display,
-              i.gender, i.father_individual_sample_id, i.mother_individual_sample_id, it.name, it.description
-       FROM   individual i, individual_population ip, sample s, individual_type it
-       WHERE  i.sample_id = ip.individual_sample_id
-       AND    i.sample_id = s.sample_id
-       AND    i.individual_type_id = it.individual_type_id
-       AND    ip.population_sample_id = ?});
+    my $sth = $self->prepare(q{
+        SELECT i.individual_id, i.name, i.description, i.gender, i.father_individual_id, i.mother_individual_id, it.name, it.description, i.display 
+        FROM   individual i, individual_population ip, individual_type it
+        WHERE  i.individual_id = ip.individual_id
+        AND    i.individual_type_id = it.individual_type_id
+        AND    ip.population_id = ?});
 
-  $sth->bind_param(1,$pop->dbID,SQL_INTEGER);
-  $sth->execute();
-
-  my $results = $self->_objs_from_sth($sth);
-
-  $sth->finish();
-
-  return $results;
+    $sth->bind_param(1, $pop->dbID,SQL_INTEGER);
+    $sth->execute();
+    my $individuals = $self->_objs_from_sth($sth);
+    $sth->finish();
+    return $individuals;
 }
-
-
 
 
 =head2 fetch_all_by_parent_Individual
 
   Arg [1]    : Bio::EnsEMBL::Variation::Individual
-  Example    : my @children = @{$ia->fetch_all_by_parent_Individual($ind)};
+  Example    : my @children = @{$ind_adaptor->fetch_all_by_parent_Individual($ind)};
   Description: Retrieves all individuals which are children of a provided
-               parent individual.  This function operates under the assumptions
+               parent individual. This function operates under the assumptions
                that Male individuals can only be fathers, Female individuals
                can only be mothers and Unknown individuals can only be one
                or the other - not both.
-  Returntype : reference to list of Bio::EnsEMBL::Variation::Individuals
+  Returntype : listref of Bio::EnsEMBL::Variation::Individual objects
   Exceptions : throw if incorrect argument passed
                warning if provided individual has no dbID 
   Caller     : general, Individual::get_all_child_Individuals
@@ -299,71 +323,61 @@ sub fetch_all_by_Population {
 =cut
 
 sub fetch_all_by_parent_Individual {
-  my $self = shift;
-  my $parent  = shift;
+    my $self = shift;
+    my $parent  = shift;
 
-  if(!ref($parent) || !$parent->isa('Bio::EnsEMBL::Variation::Individual')) {
-    throw("Bio::EnsEMBL::Variation::Individual argument expected");
-  }
+    if (!ref($parent) || !$parent->isa('Bio::EnsEMBL::Variation::Individual')) {
+        throw("Bio::EnsEMBL::Variation::Individual argument expected");
+    }
 
-  if(!defined($parent->dbID())) {
-    warning("Cannot fetch child Individuals for parent without dbID");
+    if (!defined($parent->dbID())) {
+        warning("Cannot fetch child Individuals for parent without dbID");
+        return [];
+    }
+    my $gender = $parent->gender() || '';
+
+    my $father_sql = q{
+        SELECT i.individual_id, i.name, i.description, i.gender, i.father_individual_id, i.mother_individual_id, it.name, it.description, i.display 
+        FROM   individual i, individual_type it
+        WHERE  i.father_individual_id = ?
+        AND    i.individual_type_id = it.individual_type_id;};
+    my $mother_sql = q{
+        SELECT i.individual_id, i.name, i.description, i.gender, i.father_individual_id, i.mother_individual_id, it.name, it.description, i.display 
+        FROM   individual i, individual_type it
+        WHERE  i.mother_individual_id = ?
+        AND    i.individual_type_id = it.individual_type_id;};
+
+    if ($gender eq 'Male') {
+        my $sth = $self->prepare($father_sql);
+        $sth->bind_param(1,$parent->dbID,SQL_INTEGER);
+        $sth->execute();
+        my $individuals = $self->_objs_from_sth($sth);
+        $sth->finish();
+        return $individuals;
+    } elsif ($gender eq 'Female') {
+        my $sth = $self->prepare($mother_sql);
+        $sth->bind_param(1,$parent->dbID,SQL_INTEGER);
+        $sth->execute();
+        my $individuals = $self->_objs_from_sth($sth);
+        $sth->finish();
+        return $individuals;
+    } else { # unknown gender
+        my $sth = $self->prepare($mother_sql);
+        $sth->bind_param(1,$parent->dbID,SQL_INTEGER);
+        $sth->execute();
+        my $individuals = $self->_objs_from_sth($sth);
+        $sth->finish();
+        # if this parent was a mother, finish now and return results
+        return $individuals if(@$individuals);
+        # otherwise assume was a father (or nothing)
+        $sth = $self->prepare($father_sql);
+        $sth->bind_param(1,$parent->dbID,SQL_INTEGER);
+        $sth->execute();
+        $individuals = $self->_objs_from_sth($sth);
+        $sth->finish();
+        return $individuals;
+    }
     return [];
-  }
-
-  my $gender = $parent->gender() || '';
-
-  my $father_sql =
-    q{SELECT i.sample_id, s.name, s.description, s.display,
-             i.gender, i.father_individual_sample_id, i.mother_individual_sample_id, it.name, it.description
-      FROM   individual i, sample s, individual_type it
-      WHERE  i.father_individual_sample_id = ?
-      AND    i.individual_type_id = it.individual_type_id
-      AND    s.sample_id = i.sample_id};
-  my $mother_sql =
-    q{SELECT i.sample_id, s.name, s.description, s.display,
-              i.gender, i.father_individual_sample_id, i.mother_individual_sample_id, it.name, it.description
-       FROM   individual i, sample s, individual_type it
-       WHERE  i.mother_individual_sample_id = ?
-       AND    i.individual_type_id = it.individual_type_id
-       AND    i.sample_id = s.sample_id};
-
-  if($gender eq 'Male') {
-    my $sth = $self->prepare($father_sql);
-    $sth->bind_param(1,$parent->dbID,SQL_INTEGER);
-    $sth->execute();
-    my $result = $self->_objs_from_sth($sth);
-    $sth->finish();
-    return $result;
-  }
-  elsif($gender eq 'Female') {
-    my $sth = $self->prepare($mother_sql);
-    $sth->bind_param(1,$parent->dbID,SQL_INTEGER);
-    $sth->execute();
-    my $result = $self->_objs_from_sth($sth);
-    $sth->finish();
-    return $result;
-  }
-
-  # unknown gender
-
-  my $sth = $self->prepare($mother_sql);
-  $sth->bind_param(1,$parent->dbID,SQL_INTEGER);
-  $sth->execute();
-  my $result = $self->_objs_from_sth($sth);
-  $sth->finish();
-
-  # if this parent was a mother, finish now and return results
-  return if(@$result);
-
-  # otherwise assume was a father (or nothing)
-  $sth = $self->prepare($father_sql);
-  $sth->bind_param(1,$parent->dbID,SQL_INTEGER);
-  $sth->execute();
-  $result = $self->_objs_from_sth($sth);
-  $sth->finish();
-
-  return $result;
 }
 
 =head2 fetch_all_strains
@@ -371,18 +385,16 @@ sub fetch_all_by_parent_Individual {
     Args       : none
     Example    : my $strains = $ind_adaptor->fetch_all_strains();
     Description: Retrieves Individuals that should be considered as strain (fully inbred) in the specie.
-    Returntype : list of Bio::EnsEMBL::Variation::Individual
+    Returntype : listref of Bio::EnsEMBL::Variation::Individual objetcs
     Exceptions : none
     Caller     : Bio:EnsEMBL:Variation::Individual
     Status     : At Risk
 
 =cut
 
-sub fetch_all_strains{
+sub fetch_all_strains {
     my $self = shift;
-    
     return $self->generic_fetch("it.name = 'fully_inbred'");
-
 }
 
 =head2 get_display_strains
@@ -397,7 +409,7 @@ sub fetch_all_strains{
 
 =cut
 
-sub get_display_strains{
+sub get_display_strains {
     my $self = shift;
     my @strain_names;
     my $name;
@@ -407,26 +419,21 @@ sub get_display_strains{
     #then, get the default ones
     my $default_strains = $self->get_default_strains();
     push @strain_names, @{$default_strains};
-    
     #and finally, get the others
-    my $sth = $self->prepare(qq{SELECT name FROM sample WHERE display = ?});
-    
+    my $sth = $self->prepare(qq{SELECT name FROM individual WHERE display = ?});
     $sth->bind_param(1, 'DISPLAYABLE');
     $sth->execute;
     $sth->bind_columns(\$name);
-#    my $sth = $self->prepare(qq{SELECT meta_value from meta where meta_key = ?
-#				});
+#    my $sth = $self->prepare(qq{SELECT meta_value from meta where meta_key = ?});
 #    $sth->bind_param(1,'individual.display_strain',SQL_VARCHAR);
 #    $sth->execute();
 #    $sth->bind_columns(\$name);
     while ($sth->fetch()){
-	push @strain_names, $name;
+	    push @strain_names, $name;
     }
     $sth->finish;
     return \@strain_names;
-
 }
-
 
 =head2 get_default_strains
 
@@ -440,28 +447,24 @@ sub get_display_strains{
 
 =cut
 
-sub get_default_strains{
+sub get_default_strains {
     my $self = shift;
     my @strain_names;
     my $name;
-    
-    my $sth = $self->prepare(qq{SELECT name FROM sample WHERE display = ?});
-    
+    my $sth = $self->prepare(qq{SELECT name FROM individual WHERE display = ?});
     $sth->bind_param(1, 'DEFAULT');
     $sth->execute;
     $sth->bind_columns(\$name);
     
-#    my $sth = $self->prepare(qq{SELECT meta_value from meta where meta_key = ?
-#				});
+#    my $sth = $self->prepare(qq{SELECT meta_value from meta where meta_key = ?});
 #    $sth->bind_param(1,'individual.default_strain',SQL_VARCHAR);
 #    $sth->execute();
 #    $sth->bind_columns(\$name);
     while ($sth->fetch()){
-	push @strain_names, $name;
+        push @strain_names, $name;
     }
     $sth->finish;
     return \@strain_names;
-
 }
 
 
@@ -477,31 +480,23 @@ sub get_default_strains{
 
 =cut
 
-sub get_reference_strain_name{
+sub get_reference_strain_name {
     my $self = shift;
-
     my $name;
-    
-    my $sth = $self->prepare(qq{SELECT name FROM sample WHERE display = ?});
-    
+    my $sth = $self->prepare(qq{SELECT name FROM individual WHERE display = ?});
     $sth->bind_param(1, 'REFERENCE');
     $sth->execute;
     $sth->bind_columns(\$name);
     $sth->fetch();
     $sth->finish;
-    
     return $name;
-#    
-#    my $sth = $self->prepare(qq{SELECT meta_value from meta where meta_key = ?
-#				});
+#    my $sth = $self->prepare(qq{SELECT meta_value from meta where meta_key = ?});
 #    $sth->bind_param(1,'individual.reference_strain',SQL_VARCHAR);
 #    $sth->execute();
 #    $sth->bind_columns(\$name);
 #    $sth->fetch();
 #    $sth->finish;
-#
 #    return $name;
-
 }
 
 
@@ -510,123 +505,139 @@ sub get_reference_strain_name{
     Args       : none
     Example    : my $strains = $ind_adaptor->fetch_all_strains_with_coverage();
     Description: Retrieves strain that have coverage information
-    Returntype : list of Bio::EnsEMBL::Variation::Individual
+    Returntype : listref of Bio::EnsEMBL::Variation::Individual objetcs
     Exceptions : none
     Caller     : web
     Status     : At Risk
 
 =cut
 
-sub fetch_all_strains_with_coverage{
-
+sub fetch_all_strains_with_coverage {
     my $self = shift;
-
-    my $sample_id;
+    my $individual_id;
     my @strains;
-    my $sth = $self->prepare(qq{SELECT DISTINCT sample_id from read_coverage
-				});
+    my $sth = $self->prepare(qq{SELECT DISTINCT individual_id from read_coverage});
     $sth->execute();
-    $sth->bind_columns(\$sample_id);
+    $sth->bind_columns(\$individual_id);
     while ($sth->fetch()){
-	push @strains, $self->fetch_by_dbID($sample_id)
+	    push @strains, $self->fetch_by_dbID($individual_id)
     }
     $sth->finish;
     return \@strains;
 }
+
+sub _get_name_by_dbID {
+  my $self = shift;
+  my $dbID = shift;
+  
+  my $sth = $self->dbc->prepare(qq{
+    SELECT name
+    FROM individual
+    WHERE individual_id = ?
+  });
+  $sth->bind_param(1,$dbID,SQL_INTEGER);
+  $sth->execute();
+  
+  my $name;
+  $sth->bind_columns(\$name);
+  $sth->fetch;
+  $sth->finish;
+  
+  return $name;
+}
+
+sub _get_sample_name_by_dbID {
+    my $self = shift;
+    warn('The use od this method is deprecated. Use _get_name_by_dbID instead.')
+}
+
+
 #
 # private method, constructs Individuals from an executed statement handle
 # ordering of columns must be consistant
 #
 sub _objs_from_sth {
-  my $self = shift;
-  my $sth = shift;
+    my $self = shift;
+    my $sth = shift;
 
-  my ($dbID, $name, $desc, $gender, $display_flag, $father_id, $mother_id,$it_name,$it_desc);
+    my ($dbID, $name, $desc, $gender, $father_id, $mother_id, $it_name, $it_desc, $display_flag);
+    $sth->bind_columns(\$dbID, \$name, \$desc, \$gender, \$father_id, \$mother_id, \$it_name, \$it_desc, \$display_flag);
 
-  $sth->bind_columns(\$dbID, \$name, \$desc, \$display_flag, \$gender,
-                     \$father_id, \$mother_id, \$it_name, \$it_desc);
+    my %seen;
+    my %wanted_fathers;
+    my %wanted_mothers;
+    my @inds;
 
-  my %seen;
-  my %wanted_fathers;
-  my %wanted_mothers;
+    while ($sth->fetch()) {
+        # get objects for mother and father if they were already constructed
+        # otherwise may have to be lazy-loaded later
+        my $father;
+        if (defined($father_id)) {
+            $father = $seen{$father_id};
+            if (!$father) {
+                $wanted_fathers{$dbID} ||= [];
+                push @{$wanted_fathers{$father_id}}, $dbID;
+            }
+        }
+        my $mother;
+        if (defined($mother_id)) {
+            $mother = $seen{$mother_id};
+            if (!$mother) {
+                $wanted_mothers{$mother_id} ||= [];
+                push @{$wanted_mothers{$mother_id}}, $dbID;
+            }
+        }
 
-  my @inds;
+        my $ind = $seen{$dbID} ||= Bio::EnsEMBL::Variation::Individual->new(
+            -dbID        => $dbID,
+            -adaptor     => $self,
+            -description => $desc,
+            -display     => $display_flag,
+            -gender      => $gender,
+            -name        => $name,
+            -father_individual => $father,
+            -mother_individual => $mother,
+            -father_individual_id => $father_id,
+            -mother_individual_id => $mother_id,
+            -type_individual => $it_name,
+            -type_description => $it_desc);
 
-
-  while($sth->fetch()) {
-    # get objects for mother and father if they were already constructed
-    # otherwise may have to be lazy-loaded later
-    my $father;
-    if(defined($father_id)) {
-      $father = $seen{$father_id};
-      if(!$father) {
-        $wanted_fathers{$dbID} ||= [];
-        push @{$wanted_fathers{$father_id}}, $dbID;
-      }
+        $seen{$dbID} = $ind;
+        push @inds, $ind;
     }
-    my $mother;
-    if(defined($mother_id)) {
-      $mother = $seen{$mother_id};
-      if(!$mother) {
-        $wanted_mothers{$mother_id} ||= [];
-        push @{$wanted_mothers{$mother_id}}, $dbID;
-      }
+
+    # load any of the 'wanted' parent individuals that we did not have at the
+    # of creation, but which we have now
+
+    foreach my $wanted_id (keys %wanted_fathers) {
+        if ($seen{$wanted_id}) {
+            # add father to every child that wanted it
+            foreach my $ind_id (@{$wanted_fathers{$wanted_id}}) {
+                $seen{$ind_id}->father_Individual($seen{$wanted_id});
+            }
+        }
     }
-
-
-    my $ind = $seen{$dbID} ||= Bio::EnsEMBL::Variation::Individual->new
-      (-dbID        => $dbID,
-       -adaptor     => $self,
-       -description => $desc,
-       -display     => $display_flag,
-       -gender      => $gender,
-       -name        => $name,
-       -father_individual => $father,
-       -mother_individual => $mother,
-       -father_individual_sample_id => $father_id,
-       -mother_individual_sample_id => $mother_id,
-       -type_individual => $it_name,
-       -type_description => $it_desc);
-
-    $seen{$dbID} = $ind;
-
-    push @inds, $ind;
-  }
-
-  # load any of the 'wanted' parent individuals that we did not have at the
-  # of creation, but which we have now
-
-  foreach my $wanted_id (keys %wanted_fathers) {
-    if($seen{$wanted_id}) {
-      # add father to every child that wanted it
-      foreach my $ind_id (@{$wanted_fathers{$wanted_id}}) {
-        $seen{$ind_id}->father_Individual($seen{$wanted_id});
-      }
+    foreach my $wanted_id (keys %wanted_mothers) {
+        if ($seen{$wanted_id}) {
+            # add mother to every child that wanted it
+            foreach my $ind_id (@{$wanted_mothers{$wanted_id}}) {
+                $seen{$ind_id}->mother_Individual($seen{$wanted_id});
+            }
+        }
     }
-  }
-  foreach my $wanted_id (keys %wanted_mothers) {
-    if($seen{$wanted_id}) {
-      # add mother to every child that wanted it
-      foreach my $ind_id (@{$wanted_mothers{$wanted_id}}) {
-        $seen{$ind_id}->mother_Individual($seen{$wanted_id});
-      }
-    }
-  }
-
-  return \@inds;
-
+    return \@inds;
 }
 
-sub _tables{return (['individual','i'],
-		    ['sample','s'],
-		    ['individual_type','it'])}
+sub _tables {
+    return (['individual','i'],
+		['individual_type','it'])}
 
-sub _columns{
-    return qw(s.sample_id s.name s.description s.display i.gender i.father_individual_sample_id i.mother_individual_sample_id it.name it.description);
+sub _columns {
+    return qw(i.individual_id i.name i.description i.gender i.father_individual_id i.mother_individual_id it.name it.description i.display);
 }
 
-sub _default_where_clause{
-    return 's.sample_id = i.sample_id AND i.individual_type_id = it.individual_type_id';
+sub _default_where_clause {
+    return 'i.individual_type_id = it.individual_type_id';
 }
 
 1;

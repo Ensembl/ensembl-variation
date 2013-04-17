@@ -713,7 +713,7 @@ sub fetch_all_by_Slice_Population {
 	LEFT JOIN failed_variation fv ON (fv.variation_id = vf.variation_id)
 	WHERE vf.source_id = s.source_id
 	AND vf.variation_id = a.variation_id
-	AND a.sample_id = ?
+	AND a.population_id = ?
 	$extra_sql
 	AND vf.seq_region_id = ?
 	AND vf.seq_region_end >= ?
@@ -732,7 +732,7 @@ sub fetch_all_by_Slice_Population {
 #	WHERE
 #	  vf.source_id = s.source_id AND
 #	  vf.variation_id = a_outer.variation_id AND
-#	  a_outer.sample_id = ? AND
+#	  a_outer.population_id = ? AND
 #	  a_outer.frequency > ? AND
 #	  a_outer.frequency < 0.5 AND
 #	  vf.seq_region_id = ? AND
@@ -745,7 +745,7 @@ sub fetch_all_by_Slice_Population {
 #		  allele a_inner
 #		WHERE
 #		  a_inner.variation_id = a_outer.variation_id AND
-#		  a_inner.sample_id = a_outer.sample_id AND
+#		  a_inner.population_id = a_outer.population_id AND
 #		  a_inner.frequency < a_outer.frequency
 #	  );
 #  });
@@ -942,7 +942,7 @@ sub _tag_fetch {
     # construct a constraint
     my $opp_type = $type eq 'tag' ? 'tagged_' : '';
     my $constraint = "tvf.".$opp_type."variation_feature_id = ".$vf->dbID;
-    $constraint .= ' AND tvf.sample_id = '.$pop->dbID if defined $pop;
+    $constraint .= ' AND tvf.population_id = '.$pop->dbID if defined $pop;
     
     # fetch features here so we can reset the tag flag
     my $features = $self->generic_fetch($constraint);
