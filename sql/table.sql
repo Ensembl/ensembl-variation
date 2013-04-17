@@ -949,10 +949,13 @@ CREATE TABLE read_coverage (
 
 @column structural_variation_id	Primary key, internal identifier.
 @column variation_name					The external identifier or name of the variation. e.g. "esv9549".
+@column alias                   Other structural variation name.
 @column source_id								Foreign key references to the @link source table.
 @column study_id								Foreign key references to the @link study table.	
 @column class_attrib_id					Foreign key references to the @link attrib table. Defines the type of structural variant.<br /> 
                                 The list of structural variation classes is available <a href="data_description.html#classes">here</a>.
+@column clinical_significance_attrib_id  Foreign key references to the @link attrib, identifying the clinical significance of this variant, as reported by DGVa.<br /> 
+                                         The list of clinical significances is available <a href="data_description.html#clin_significance">here</a>.
 @column validation_status				Validation status of the variant.
 @column is_evidence             Flag indicating if the structural variation is a supporting evidence (1) or not (0).
 @column somatic                 Flags whether this structural variation is known to be somatic or not
@@ -965,9 +968,11 @@ CREATE TABLE read_coverage (
 CREATE TABLE structural_variation (
   structural_variation_id int(10) unsigned NOT NULL AUTO_INCREMENT,
   variation_name varchar(255) DEFAULT NULL,
-  source_id int(10) unsigned NOT NULL,
+  alias varchar(255) DEFAULT NULL,
+	source_id int(10) unsigned NOT NULL,
   study_id int(10) unsigned DEFAULT NULL,
 	class_attrib_id int(10) unsigned NOT NULL DEFAULT 0,
+	clinical_significance_attrib_id int(10) unsigned DEFAULT NULL,
   validation_status ENUM('validated','not validated','high quality'),
 	is_evidence TINYINT(4) DEFAULT 0,
 	somatic TINYINT(1) NOT NULL DEFAULT 0,
@@ -976,7 +981,8 @@ CREATE TABLE structural_variation (
   KEY name_idx (variation_name),
 	KEY source_idx (source_id),
 	KEY study_idx (study_id),
-	KEY attrib_idx (class_attrib_id)
+	KEY attrib_idx (class_attrib_id),
+	KEY clinical_attrib_idx (clinical_significance_attrib_id)
 );
 
 
@@ -1020,6 +1026,7 @@ CREATE TABLE structural_variation_association (
 @column structural_variation_id	         Foreign key references to the @link structural_variation table.
 @column variation_name					         A denormalisation taken from the structural_variation table. This is the name or identifier that is used for displaying the feature (e.g. "esv9549").
 @column source_id								         Foreign key references to the @link source table.
+@column study_id								         Foreign key references to the @link study table
 @column class_attrib_id					         Foreign key references to the @link attrib table. Defines the type of structural variant.<br /> 
                                          The list of structural variation classes is available <a href="data_description.html#classes">here</a>.
 @column allele_string						         The variant allele, where known.
@@ -1027,9 +1034,11 @@ CREATE TABLE structural_variation_association (
 @column variation_set_id		             The structural variation feature can belong to a @link variation_set.
 @column somatic                          Flags whether this structural variation is known to be somatic or not
 @column breakpoint_order                 Defines the order of the breakpoints when several events/mutation occured for a structural variation (e.g. somatic mutations)
+@column length                           Length of the structural variant. Used for the variants with a class "insertion", when the size of the insertion is known.
 
 @see structural_variation
 @see source
+@see study
 @see seq_region
 @see attrib
 @see variation_set
@@ -1047,12 +1056,14 @@ create table structural_variation_feature (
 	seq_region_strand tinyint NOT NULL,
 	structural_variation_id int(10) unsigned NOT NULL,
   variation_name varchar(255),
-	source_id int(10) unsigned NOT NULL, 
+	source_id int(10) unsigned NOT NULL,
+  study_id int(10) unsigned DEFAULT NULL,
   class_attrib_id int(10) unsigned NOT NULL DEFAULT 0,
 	allele_string longtext DEFAULT NULL,
 	is_evidence tinyint(1) NOT NULL DEFAULT 0,
 	somatic TINYINT(1) NOT NULL DEFAULT 0,
 	breakpoint_order TINYINT(4) DEFAULT NULL,
+	length int(10) DEFAULT NULL,
   variation_set_id SET (
           '1','2','3','4','5','6','7','8',
           '9','10','11','12','13','14','15','16',
@@ -1068,9 +1079,39 @@ create table structural_variation_feature (
 	KEY pos_idx( seq_region_id, seq_region_start, seq_region_end ),
 	KEY structural_variation_idx (structural_variation_id),
 	KEY source_idx (source_id),
+	KEY study_idx (study_id),
 	KEY attrib_idx (class_attrib_id),
 	KEY variation_set_idx (variation_set_id)
 );
+
+
+/**
+@table structural_variation_sample
+
+@colour #01D4F7
+@desc This table stores individual and strain information for structural variants and their supporting evidences.
+
+@column structural_variation_sample_id  Primary key, internal identifier.
+@column structural_variation_id         Foreign key references to the @link structural_variation table.
+@column individual_id		                Foreign key references to the @link individual table. Defines the individual or sample name.
+@column strain_id		                    Foreign key references to the @link individual table. Defines the strain name.
+
+@see structural_variation
+@see individual
+*/
+
+CREATE TABLE structural_variation_sample (
+	structural_variation_sample_id int(10) unsigned NOT NULL auto_increment,
+	structural_variation_id int(10) unsigned NOT NULL,
+	individual_id int(10) unsigned DEFAULT NULL,
+	strain_id int(10) unsigned DEFAULT NULL,
+	
+	primary key (structural_variation_sample_id),
+	key structural_variation_idx(structural_variation_id),
+	key individual_idx(individual_id),
+	key strain_idx(strain_id)
+);
+
 
 
 
@@ -1499,7 +1540,7 @@ CREATE TABLE study (
 	study_id int(10) unsigned not null auto_increment,
 	source_id int(10) unsigned not null,
 	name varchar(255) DEFAULT null,
-	description varchar(255) DEFAULT NULL,
+	description text DEFAULT NULL,
 	url varchar(255) DEFAULT NULL,
 	external_reference varchar(255) DEFAULT NULL,
 	study_type varchar(255) DEFAULT NULL,
@@ -1910,6 +1951,7 @@ CREATE TABLE translation_md5 (
 @legend #FF0000	Tables containing attribute data
 @legend #1E90FF	Tables concerning protein data
 @legend #FF4DC8 Tables concerning the prediction of variation effect(s) in different Ensembl features
+@legend #22949b Tables concerning data linked to phenotype
 */
 
 #possible values in the failed_description table
