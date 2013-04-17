@@ -37,7 +37,7 @@ Bio::EnsEMBL::Variation::ReadCoverage - A coverage reagion for a read.
         -end     => 200,
         -slice   => $slice,
         -level   => 1.
-        -sample  => $individual);
+        -individual  => $individual);
 
     $rc = $rc->transform('supercontig');
 
@@ -92,7 +92,7 @@ our @ISA = ('Bio::EnsEMBL::Feature');
         -end     => 100,
         -slice   => $slice,
         -level  => 1,
-        -sample => $individual);
+        -individual => $individual);
 
   Description: Constructor. Instantiates a new ReadCoverage object.
   Returntype : Bio::EnsEMBL::Variation::ReadCoverage
@@ -108,10 +108,10 @@ sub new {
 
   my $self = $class->SUPER::new(@_);
   my ($level, $individual) =
-    rearrange([qw(LEVEL SAMPLE)], @_);
+    rearrange([qw(LEVEL INDIVIDUAL)], @_);
 
   $self->{'level'}    = $level;
-  $self->{'sample'}   = $individual;
+  $self->{'individual'}   = $individual;
 
   return $self;
 }
@@ -138,6 +138,32 @@ sub level{
 }
 
 
+=head2 individual
+
+  Arg [1]    : Bio::EnsEMBL::Variation::Individual $newval (optional)
+               The new value to set the individual attribute to
+  Example    : $individual = $rc->individual();
+  Description: Getter/Setter for the individual attribute
+  Returntype : Bio::EnsEMBL::Variation::Individual
+  Exceptions : throw on incorrect argument
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub individual {
+  my $self = shift;
+  my $individual = shift;
+  if($individual) {
+    if(!ref($individual) || !$individual->isa('Bio::EnsEMBL::Variation::Individual')) {
+      throw('Bio::EnsEMBL::Variation::Individual argument expected.');
+    }
+    $self->{'individual'} = $individual;
+  }
+
+  return $self->{'individual'};
+}
+
 =head2 sample
 
   Arg [1]    : Bio::EnsEMBL::Variation::Individual $newval (optional)
@@ -147,21 +173,14 @@ sub level{
   Returntype : Bio::EnsEMBL::Variation::Individual
   Exceptions : throw on incorrect argument
   Caller     : general
-  Status     : Stable
+  Status     : Deprecated
 
 =cut
 
 sub sample{
-  my $self = shift;
-
-  if(@_) {
-    if(!ref($_[0]) || !$_[0]->isa('Bio::EnsEMBL::Variation::Individual')) {
-      throw('Bio::EnsEMBL::Variation::Individual argument expected.');
-    }
-    $self->{'sample'} = shift;
-  }
-
-  return $self->{'sample'};
+    my $self = shift;
+    warn('The use of this method is deprecated. Use individual() instead');
+    return undef;
 }
 
 1;
