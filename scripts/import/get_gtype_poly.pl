@@ -61,7 +61,12 @@ my $dbSara = $sadb->dbc;
 my (%seq_region_ids);
  
 
-my $sthc = $dbCore->prepare(qq{select sra.seq_region_id, sr.name from seq_region_attrib sra, attrib_type at, seq_region sr where sra.attrib_type_id=at.attrib_type_id and at.code="toplevel" and sr.seq_region_id = sra.seq_region_id });
+my $sthc = $dbCore->prepare(qq{
+                select sra.seq_region_id, sr.name 
+                from seq_region_attrib sra, attrib_type at, seq_region sr
+                where sra.attrib_type_id = at.attrib_type_id 
+                and at.code = "toplevel" 
+                and sr.seq_region_id = sra.seq_region_id });
 $sthc->execute();
 
 while (my ($seq_region_id, $seq_region_name) = $sthc->fetchrow_array()) {
@@ -80,10 +85,10 @@ sub get_gtype_poly {
   my $sth;
 
   #get rid of duplicated sample names first
-  my $name_ref = $dbVar->db_handle->selectall_arrayref(qq{select name from (select s.name,count(*) as count from sample s, individual i where s.sample_id = i.sample_id group by s.name having count >1) as name_count});
+  my $name_ref = $dbVar->db_handle->selectall_arrayref(qq{select name from (select name, count(*) as count from individual group by name having count >1) as name_count});
   my @names = map{$_->[0]} @$name_ref;
-  my $name_string = (@names) ? "AND s.name NOT IN (".join(',',map{"'$_'"} @names).");" : '';
-  $sth = $dbVar->prepare(qq{SELECT s.sample_id,s.name from sample s, individual i where s.sample_id=i.sample_id $name_string});
+  my $name_string = (@names) ? "WHERE name NOT IN (".join(',',map{"'$_'"} @names).");" : '';
+  $sth = $dbVar->prepare(qq{SELECT individual_id from individual $name_string});
 
   $sth->execute();
   my ($sample_id,$name,%sample_name);
@@ -105,7 +110,7 @@ sub get_gtype_poly {
   #  print "name is $sample_name{$sample_id}\n";
   #}
 
-  dumpSQL($dbVar,qq{SELECT tg.variation_id,tg.allele_1,tg.sample_id,substring(vf.allele_string,1,1) as ref_allele
+  dumpSQL($dbVar,qq{SELECT tg.variation_id,tg.allele_1,tg.individual_id,substring(vf.allele_string,1,1) as ref_allele
                     FROM tmp_individual_genotype_single_bp tg, variation_feature vf
                     WHERE tg.allele_1 = tg.allele_2
                     AND tg.variation_id = vf.variation_id
