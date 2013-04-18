@@ -82,7 +82,7 @@ sub get_mtmp_tables {
             `subsnp_id` int(15) unsigned DEFAULT NULL,
             `allele` varchar(25000) DEFAULT NULL,
             `frequency` float DEFAULT NULL,
-            `sample_id` int(10) unsigned DEFAULT NULL,
+            `population_id` int(10) unsigned DEFAULT NULL,
             `count` int(10) unsigned DEFAULT NULL,
             PRIMARY KEY (`allele_id`),
             KEY `subsnp_idx` (`subsnp_id`),
@@ -90,7 +90,7 @@ sub get_mtmp_tables {
             ) ENGINE=MyISAM DEFAULT CHARSET=latin1; },
         'insert' => qq{
             INSERT INTO MTMP_allele
-            SELECT a.allele_id, a.variation_id, a.subsnp_id, ac.allele, a.frequency, a.sample_id, a.count
+            SELECT a.allele_id, a.variation_id, a.subsnp_id, ac.allele, a.frequency, a.population_id, a.count
             FROM allele a, allele_code ac
             WHERE a.allele_code_id = ac.allele_code_id; },
         'index' => '',
@@ -104,17 +104,17 @@ sub get_mtmp_tables {
             `allele_1` varchar(25000) DEFAULT NULL,
             `allele_2` varchar(25000) DEFAULT NULL,
             `frequency` float DEFAULT NULL,
-            `sample_id` int(10) unsigned DEFAULT NULL,
+            `population_id` int(10) unsigned DEFAULT NULL,
             `count` int(10) unsigned DEFAULT NULL,
             PRIMARY KEY (`population_genotype_id`),
-            UNIQUE KEY `pop_genotype_idx` (`variation_id`,`subsnp_id`,`frequency`,`sample_id`,`allele_1`(5),`allele_2`(5)),
+            UNIQUE KEY `pop_genotype_idx` (`variation_id`,`subsnp_id`,`frequency`,`population_id`,`allele_1`(5),`allele_2`(5)),
             KEY `variation_idx` (`variation_id`),
             KEY `subsnp_idx` (`subsnp_id`),
-            KEY `sample_idx` (`sample_id`)
+            KEY `population_idx` (`population_id`)
             ) ENGINE=MyISAM DEFAULT CHARSET=latin1; },
         'insert' => qq{
             INSERT IGNORE INTO MTMP_population_genotype
-            SELECT p.population_genotype_id, p.variation_id, p.subsnp_id, ac1.allele, ac2.allele, p.frequency, p.sample_id, p.count
+            SELECT p.population_genotype_id, p.variation_id, p.subsnp_id, ac1.allele, ac2.allele, p.frequency, p.population_id, p.count
             FROM population_genotype p, genotype_code gc1, genotype_code gc2, allele_code ac1, allele_code ac2
             WHERE p.genotype_code_id = gc1.genotype_code_id AND gc1.haplotype_id = 1 AND gc1.allele_code_id = ac1.allele_code_id
 AND p.genotype_code_id = gc2.genotype_code_id AND gc2.haplotype_id = 2 AND gc2.allele_code_id = ac2.allele_code_id; },
