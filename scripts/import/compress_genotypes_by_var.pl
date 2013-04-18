@@ -155,7 +155,7 @@ sub compress_genotypes{
 	# straight, no ordering (for human)
 	if(defined($straight)) {
 		$sth = $dbVar->prepare(qq{
-			SELECT gt.variation_id, gt.subsnp_id, gt.allele_1, gt.allele_2, gt.sample_id FROM
+			SELECT gt.variation_id, gt.subsnp_id, gt.allele_1, gt.allele_2, gt.individual_id FROM
 			$genotype_table gt
 		}, {mysql_use_result => 1});
 		
@@ -179,7 +179,7 @@ sub compress_genotypes{
 		});
 		
 		$sth = $dbVar->prepare(qq{
-			SELECT STRAIGHT_JOIN gt.variation_id, gt.subsnp_id, gt.allele_1, gt.allele_2, gt.sample_id FROM
+			SELECT STRAIGHT_JOIN gt.variation_id, gt.subsnp_id, gt.allele_1, gt.allele_2, gt.individual_id FROM
 			$tmp_var_table tv, $genotype_table gt 
 			WHERE gt.variation_id = tv.variation_id
 		}, {mysql_use_result => 1});
