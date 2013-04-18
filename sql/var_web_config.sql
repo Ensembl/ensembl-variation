@@ -40,6 +40,7 @@ select NULL, "web_config",  concat("set#", vs.name, "#variation_set_", a.value, 
 from variation_set vs, attrib a
 where vs.short_name_attrib_id = a.attrib_id
 and a.value like '1kg%'
+and a.value != '1kg_hq'
 order by vs.name asc;
 
 # add phenotype sets
@@ -121,3 +122,7 @@ values
 insert into meta(species_id, meta_key, meta_value)
 values
 (NULL, 'web_config', "sv_set#1000 Genomes - AFR#sv_set_1kg_afr");
+
+insert into meta(species_id, meta_key, meta_value)
+values
+(NULL, 'web_config', "sv_set#1000 Genomes - High quality#sv_set_1kg_hq");
