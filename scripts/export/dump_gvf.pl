@@ -190,7 +190,7 @@ if ($population_name) {
         SELECT  a.variation_id, ac.allele, a.frequency
         FROM    allele a, allele_code ac
         WHERE   a.allele_code_id = ac.allele_code_id
-        AND     sample_id = ?
+        AND     population_id = ?
     });
 
     $sth->execute($population->dbID);
