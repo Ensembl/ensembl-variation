@@ -92,6 +92,7 @@ our @ISA = ('Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor');
 sub fetch_all_by_Slice_Sample_depth{
     my $self = shift;
     warn('The use of this method is deprecated. Use fetch_all_by_Slice_Individual_depth() instead.');
+    return undef;
 }
 
 =head2 fetch_all_by_Slice_Indivdiual_depth
