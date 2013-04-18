@@ -125,7 +125,7 @@ sub store {
             minor_allele,
             minor_allele_freq,
             minor_allele_count,
-            clinical_significance_attrib_id,
+            clinical_significance,
             evidence
         ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
     });
@@ -141,7 +141,7 @@ sub store {
         $var->minor_allele,
         $var->minor_allele_frequency,
         $var->minor_allele_count,
-        $var->{clinical_significance_attrib_id},
+        $var->{clinical_significance} ? (join ",", @{$var->{clinical_significance}}) : undef,
         $var->{evidence} ? (join ",", @{$var->{evidence}}) : undef
     );
     
@@ -186,7 +186,7 @@ sub update {
                minor_allele = ?,
                minor_allele_freq = ?,
                minor_allele_count = ?,
-               clinical_significance_attrib_id = ?,
+               clinical_significance = ?,
                evidence = ?
          WHERE variation_id = ?
     });
@@ -202,7 +202,7 @@ sub update {
         $var->minor_allele,
         $var->minor_allele_frequency,
         $var->minor_allele_count,
-        $var->{clinical_significance_attrib_id},
+        join(",",@{$var->{clinical_significance}}) || undef,
         join(",",@{$var->{evidence}}) || undef,
         $var->dbID
     );
@@ -389,7 +389,7 @@ sub _columns {
         "v.minor_allele",
         "v.minor_allele_freq",
         "v.minor_allele_count",
-        "v.clinical_significance_attrib_id",
+        "v.clinical_significance",
         "v.evidence"
     );
     
@@ -1428,6 +1428,10 @@ sub _obj_from_row {
         if (defined($row->{evidence})) {
             @evidence = split(/,/,$row->{evidence}); 
         } 
+	my @clin_sig;
+        if (defined($row->{clinical_significance})) {
+            @clin_sig = split(/,/,$row->{clinical_significance}); 
+        } 
         # Create the variation object
         $obj = Bio::EnsEMBL::Variation::Variation->new(
             -dbID   => $row->{variation_id},
@@ -1444,7 +1448,7 @@ sub _obj_from_row {
             -VALIDATION_STATES => \@states,
             -FLANK_FLAG => $row->{fs_flank_flag},
             -CLASS_SO_TERM => $self->AttributeAdaptor()->attrib_value_for_id($row->{v_class_attrib_id}),
-            -CLINICAL_SIGNIFICANCE => $self->AttributeAdaptor->attrib_value_for_id($row->{clinical_significance_attrib_id}),
+            -CLINICAL_SIGNIFICANCE => \@clin_sig,
             -MINOR_ALLELE => $row->{minor_allele},
             -MINOR_ALLELE_FREQUENCY => $row->{minor_allele_freq},
             -MINOR_ALLELE_COUNT => $row->{minor_allele_count},

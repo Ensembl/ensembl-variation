@@ -1162,11 +1162,24 @@ sub minor_allele_count {
 
 =head2 clinical_significance
 
-  Arg [1]    : string $clinical_significance (optional)
-               The new clinical significance string
-  Example    : $ma = $obj->clinical_significance()
-  Description: Get/set the clinical significance of this variation, as reported by dbSNP.
-               When available, this will be one of the following strings:
+  Description: DEPRECATED: use get_all_clinical_significance_statuses instead
+  Status     : DEPRECATED
+
+=cut
+
+sub clinical_significance {
+    my ($self, $clinical_significance) = @_;
+    deprecate("clinical_significance should no longer be used, use get_all_clinical_significance_statuses instead\n");
+    push @{$self->{clinical_significance}}, $clinical_significance if defined $clinical_significance;
+    return defined($self->{clinical_significance}) ?  join ",", @{$self->{clinical_significance}} : undef;
+}
+
+=head2 get_all_clinical_significance_states
+
+  Arg [1]    : none
+  Example    : my @csstates = @{$v->get_all_clinical_significance_states()};
+  Description: Retrieves all clinical_significance states for this variation, as reported by dbSNP.
+               When available, this will contain one or more of the following strings:
                 unknown 
                 untested
                 non-pathogenic
@@ -1175,20 +1188,22 @@ sub minor_allele_count {
                 pathogenic
                 drug-response
                 histocompatibility
-                other
-  Returntype : string
+                other 
+
+  Returntype : reference to list of strings
   Exceptions : none
   Caller     : general
-  Status     : Stable
+  Status     : At Risk
 
 =cut
 
-sub clinical_significance {
-    my ($self, $clinical_significance) = @_;
-    $self->{clinical_significance} = $clinical_significance if defined $clinical_significance;
+sub get_all_clinical_significance_states {
+    my $self = shift;
+
     return $self->{clinical_significance}
 }
 
+    
 =head2 get_all_PhenotypeFeatures
 
   Args       : none
