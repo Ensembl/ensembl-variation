@@ -124,12 +124,12 @@ sub compress_genotypes{
     my $blob = '';
     my $count = 0;
 	
-	# get sample_ids
+	# get individual_ids
 	my $sth = $dbVar->prepare(qq{
-		SELECT distinct(i.sample_id)
-		FROM sample i, sample p, individual_population ip
-		WHERE i.sample_id = ip.individual_sample_id
-		AND ip.population_sample_id = p.sample_id
+		SELECT distinct(i.individual_id)
+		FROM individual i, population p, individual_population ip
+		WHERE i.individual_id = ip.individual_id
+		AND ip.population_id = p.population_id
 		AND (
 		   i.display IN ('DEFAULT','DISPLAYABLE','REFERENCE')
 		   OR p.display = 'LD'
@@ -143,8 +143,8 @@ sub compress_genotypes{
 	push @sample_ids, $sample_id while $sth->fetch();
 	$sth->finish;
 	
-	print "Will compress genotypes from ", scalar @sample_ids, " sample_ids\n";
-	die "No samples found to compress" unless scalar @sample_ids;
+	print "Will compress genotypes from ", scalar @sample_ids, " individual_ids\n";
+	die "No individuals found to compress" unless scalar @sample_ids;
 	
 	my $sample_string = (scalar @sample_ids == 1 ? ' = '.$sample_ids[0] : ' IN ('.(join ",", @sample_ids).') ');
 	
@@ -228,20 +228,20 @@ sub compress_genotypes{
 			
 			if($has_proxy) {
 				$sth = $dbVar->prepare(qq{
-					SELECT vf.seq_region_id, vf.seq_region_start, vf.seq_region_end, vf.seq_region_strand, gt.allele_1, gt.allele_2, gt.sample_id, vf.variation_id
+					SELECT vf.seq_region_id, vf.seq_region_start, vf.seq_region_end, vf.seq_region_strand, gt.allele_1, gt.allele_2, gt.individual_id, vf.variation_id
 					FROM $tmp_table vf, $genotype_table as gt, subsnp_proxy_sp
 					WHERE sp.variation_id = vf.variation_id
 					AND sp.subsnp_proxy_id = gt.subsnp_proxy_id
-					AND gt.sample_id $sample_string
+					AND gt.individual_id $sample_string
 					ORDER BY vf.seq_region_start
 				}, {mysql_use_result => 1});
 			}
 			else {
 				$sth = $dbVar->prepare(qq{
-					SELECT vf.seq_region_id, vf.seq_region_start, vf.seq_region_end, vf.seq_region_strand, gt.allele_1, gt.allele_2, gt.sample_id, vf.variation_id
+					SELECT vf.seq_region_id, vf.seq_region_start, vf.seq_region_end, vf.seq_region_strand, gt.allele_1, gt.allele_2, gt.individual_id, vf.variation_id
 					FROM $tmp_table vf, $genotype_table as gt
 					WHERE gt.variation_id = vf.variation_id
-					AND gt.sample_id $sample_string
+					AND gt.individual_id $sample_string
 					ORDER BY vf.seq_region_start
 				}, {mysql_use_result => 1});
 			}
