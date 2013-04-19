@@ -201,6 +201,12 @@ sub collection {
     return $self->{'collection'};
 }
 
+
+sub display {
+    my $self = shift;
+    return $self->{'display'} = shift if (@_);
+    return $self->{'display'};
+}
 =head2 get_all_sub_Populations
 
   Arg [1]    : none
