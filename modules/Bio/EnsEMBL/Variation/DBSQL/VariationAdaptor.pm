@@ -1257,6 +1257,38 @@ sub _fetch_all_dbIDs_by_VariationSet {
   return \@result;
 }
 
+=head2 fetch_all_by_publication
+
+  Arg [1]    : Bio::EnsEMBL::Variation::Publication
+  Example    : @vars = @{$va_adaptor->fetch_all_by_publication($pub)};
+  Description: Retrieves all variations which are cited in a specific publication
+  Returntype : listref of Bio::EnsEMBL::Variation::Variation
+  Exceptions : throw on incorrect argument
+  Caller     : general
+  Status     : At Risk
+=cut
+
+sub fetch_all_by_publication{
+
+    my $self    = shift;
+    my $pub_obj = shift;
+
+    my @var;
+    my $variation_id;
+
+    my $sth = $self->prepare(qq{ SELECT  variation_id from variation_citation where publication_id = ?  });
+    $sth->execute( $pub_obj->dbID() );
+    $sth->bind_columns(\$variation_id);
+    while ($sth->fetch()){
+      push @var, $self->fetch_by_dbID($variation_id);
+    }
+    $sth->finish;
+
+    return \@var;
+
+}
+
+
 =head2 is_failed
 
   Description : DEPRECATED. The appropriate subroutine on the Variation/Allele object should be used instead.
