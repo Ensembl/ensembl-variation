@@ -91,6 +91,8 @@ sub get_available_adaptors{
     'RegulatoryFeatureVariation'      => 'Bio::EnsEMBL::Variation::DBSQL::RegulatoryFeatureVariationAdaptor',
     'MotifFeatureVariation'           => 'Bio::EnsEMBL::Variation::DBSQL::MotifFeatureVariationAdaptor',
     'PhenotypeFeature'                => 'Bio::EnsEMBL::Variation::DBSQL::PhenotypeFeatureAdaptor',
+    'Publication'                     => 'Bio::EnsEMBL::Variation::DBSQL::PublicationAdaptor',
+
     );
 	
     return (\%pairs);
