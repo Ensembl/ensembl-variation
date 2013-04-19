@@ -290,7 +290,7 @@ sub update_variant_citation {
 
     foreach my $var_obj ( @var_objects  ){
 
-	if( ! $var_obj->object->isa("Bio::EnsEMBL::Variation::Variation")) {
+	if( ! $var_obj->isa("Bio::EnsEMBL::Variation::Variation")) {
 	    throw("Bio::EnsEMBL::Variation::Variation object expected");
 	}
 

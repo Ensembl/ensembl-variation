@@ -91,7 +91,7 @@ sub store {
             collection,
 			freqs_from_gts,
             display
-        ) VALUES (?,?,?,?)
+        ) VALUES (?,?,?,?,?,?)
     });
 	
 	$sth->execute(
