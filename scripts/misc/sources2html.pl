@@ -95,21 +95,24 @@ my $html_header = qq{
 </head>
 
 <body>
-<b>
-<a href="index.html">About Ensembl Variation</a> |
-<a href="data_description.html">Data Description</a> | 
-<a href="predicted_data.html">Predicted Data</a> |
-<a href="database.html">Database Description</a> | 
-<a href="/info/docs/api/variation/index.html">Perl API</a> |
-<a href="vep/index.html">Variant Effect Predictor</a>
-</b>
-<br />
+
 <div>
 };
 
+my $horizontal_menu qq{
+  <!-- Horizontal menu -->
+  <span style="font-weight:bold">
+    <a href="index.html">About Ensembl Variation</a> |
+    <a href="data_description.html">Data Description</a> | 
+    <a href="predicted_data.html">Predicted Data</a> |
+    <a href="database.html">Database Description</a> | 
+    <a href="/info/docs/api/variation/index.html">Perl API</a> |
+    <a href="vep/index.html">Variant Effect Predictor</a>
+  </span>
+};
+
 my $html_title = qq{
-  <br />
-  <h1>Ensembl Variation - Sources Documentation</h1>
+  <h1 style="margin-top:15px">Ensembl Variation - Sources Documentation</h1>
 
   <h2>List of Variation sources for each species - $ecaption $e_version</h2>
 };
@@ -199,6 +202,7 @@ my $html_menu = create_menu();
 open  HTML, "> $html_file" or die "Can't open $html_file : $!";
 print HTML $html_header."\n";
 print HTML $html_menu."\n";
+print HTML $horizontal_menu."\n";
 print HTML $html_title."\n";
 print HTML $html_content."\n";
 print HTML $html_footer."\n";
@@ -382,10 +386,11 @@ sub get_connection_and_query {
 sub create_menu {
   
   my $html = qq{
+	<!-- Right hand side menu -->
   <div style="float:right;margin-left:8px;margin-top:2px;background-color:#F2F2F2;color:#333;border-radius:5px">
     <div style="padding:5px;font-weight:bold;color:#FFF;background-color:#336;border-top-left-radius:5px;border-top-right-radius:5px">
       <img src="/i/16/rev/info.png" style="vertical-align:top" />
-      Species list:
+      Species list
     </div> 
     <ul style="padding-left:25px;padding-right:5px">
   };
