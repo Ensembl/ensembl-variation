@@ -4059,9 +4059,9 @@ sub cache_reg_feats {
             
             # get sub-slice
             my $sub_slice = $slice->sub_Slice($s, $e);
-            $sub_slice->{coord_system}->{adaptor} = $config->{csa};
-            
             next unless defined($sub_slice);
+            
+            $sub_slice->{coord_system}->{adaptor} = $config->{csa};
             
             foreach my $type(@REG_FEAT_TYPES) {
                 my $features = $config->{$type.'_adaptor'}->fetch_all_by_Slice($sub_slice);
