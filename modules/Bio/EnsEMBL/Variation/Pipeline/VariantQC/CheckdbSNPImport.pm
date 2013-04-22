@@ -262,11 +262,19 @@ sub count_sampleless_geno{
     my $var_dba   = $self->get_species_adaptor('variation');
 
     my $tot = 0;
-
+    #my @individual_tables = ('individual_genotype_multiple_bp', 'tmp_individual_genotype_single_bp_SubInd_ch22', 'tmp_individual_genotype_single_bp');
+    #my @population_tables = ('population_genotype');
 
    foreach my $table ( @{$tables} ){ 
 
-       my $no_sample_ext_sth  = $var_dba->dbc->prepare(qq[select count(*) from $table where sample_id not in (select sample_id from sample) ]);
+       # indiviudal population???
+       my $sample = '';
+       if ($table =~ /individual/) {
+           $sample = 'individual';
+       } else {
+          $sample = 'population';
+       }
+       my $no_sample_ext_sth  = $var_dba->dbc->prepare(qq[select count(*) from $table where $sample."_id" not in (select $sample."_id" from $sample) ]);
        $self->warning("At sampleless_geno with table  $table");
        $no_sample_ext_sth->execute() || die "Failed to extract no sample count for $table\n";
        my $no_sample_count    = $no_sample_ext_sth->fetchall_arrayref();
