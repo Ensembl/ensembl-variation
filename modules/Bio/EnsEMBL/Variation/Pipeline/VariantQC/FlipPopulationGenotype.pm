@@ -89,13 +89,13 @@ sub flip_genotypes{
     ); 
 
 
-    my $data_ext_sth = $var_dba->dbc->prepare(qq[ select population_genotype_id, variation_id, subsnp_id, allele_1, allele_2, frequency, sample_id, count 
+    my $data_ext_sth = $var_dba->dbc->prepare(qq[ select population_genotype_id, variation_id, subsnp_id, allele_1, allele_2, frequency, population_id, count 
                                                   from population_genotype
                                                   where variation_id between ? and ?
                                                 ]);
 
     my $data_ins_sth = $var_dba->dbc->prepare(qq[ insert into MTMP_population_genotype_working
-                                                 (population_genotype_id, variation_id, subsnp_id, allele_1, allele_2, frequency, sample_id, count) 
+                                                 (population_genotype_id, variation_id, subsnp_id, allele_1, allele_2, frequency, population_id, count) 
                                                  values(?,?,?,?,?,?,?,?)
                                                 ]);
 
