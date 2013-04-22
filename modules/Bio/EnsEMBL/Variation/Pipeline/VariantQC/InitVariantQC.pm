@@ -157,14 +157,14 @@ sub create_working_tables{
                         variation_id int(11) unsigned NOT NULL,
                         subsnp_id int(11) unsigned DEFAULT NULL,
                         allele_code_id int(11) unsigned NOT NULL,
-                        sample_id int(11) unsigned DEFAULT NULL,
+                        population_id int(11) unsigned DEFAULT NULL,
                         frequency float unsigned DEFAULT NULL,
                         count int(11) unsigned DEFAULT NULL,
                         frequency_submitter_handle int(10) DEFAULT NULL,
                         PRIMARY KEY (allele_id),
                         KEY variation_idx (variation_id),
                         KEY subsnp_idx (subsnp_id),
-                        KEY sample_idx (sample_id))
+                        KEY population_idx (population_id))
                       });
   $var_dba->dbc->do(qq{ ALTER TABLE allele_working DISABLE KEYS});
   
@@ -200,10 +200,10 @@ sub create_working_tables{
                         subsnp_id int(11) unsigned DEFAULT NULL,
                         genotype_code_id int(11) DEFAULT NULL,
                         frequency float DEFAULT NULL,
-                        sample_id int(10) unsigned DEFAULT NULL,
+                        population_id int(10) unsigned DEFAULT NULL,
                         count int(10) unsigned DEFAULT NULL,
                         PRIMARY KEY (population_genotype_id),
-                        KEY sample_idx (sample_id),
+                        KEY population_idx (population_id),
                         KEY variation_idx (variation_id),
                         KEY subsnp_idx (subsnp_id)
                       )});
