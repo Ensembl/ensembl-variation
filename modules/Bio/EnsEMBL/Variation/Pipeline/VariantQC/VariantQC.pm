@@ -345,7 +345,7 @@ sub run_allele_checks {
 
        ## Apply QC checks
       
-       ## $submitted_data content: [ al.allele_id, al.subsnp_id, al.allele,  al.frequency, al.sample_id, al.count, al.frequency_submitter_handle ]
+       ## $submitted_data content: [ al.allele_id, al.subsnp_id, al.allele,  al.frequency, al.population_id, al.count, al.frequency_submitter_handle ]
        unless( exists $expected_alleles{$submitted_data->[2]} && $expected_alleles{$submitted_data->[2]} ==1 ){ ## check expected on allele not allele_code
 
        ## checking ss id here because of the way strains are handled in import
@@ -506,7 +506,7 @@ sub export_allele_data{
                                     al.subsnp_id,
                                     al.allele,
                                     al.frequency,
-                                    al.sample_id,
+                                    al.population_id,
                                     al.count,
                                     al.frequency_submitter_handle
                             FROM   variation v, allele al
@@ -617,7 +617,7 @@ sub write_allele_fails{
   ### deal with submission sets of allele fails (by ss id and sample)
   foreach my $set(@{$fail_all}){
       unless (defined $allele_ids->{ss}{$set->[0]}{$set->[1]} ){
-	  warn "Error finding allele ids to fail for var: $set->[0] & sample: $set->[1] - not failing \n";
+	  warn "Error finding allele ids to fail for var: $set->[0] & population: $set->[1] - not failing \n";
 	  next;
        }
       foreach my $allele_id (@{$allele_ids->{ss}{$set->[0]}{$set->[1]} }){
@@ -780,12 +780,12 @@ sub write_allele{
   my $code = read_allele_code($var_dba);
 
   my $allele_old_ins_sth = $var_dba->dbc->prepare(qq[ insert  into MTMP_allele_working
-                                                    (allele_id, variation_id, subsnp_id, allele, frequency, sample_id, count)
+                                                    (allele_id, variation_id, subsnp_id, allele, frequency, population_id, count)
                                                     values (?,?,?,?,?,?,?)
                                                      ]);
  
   my $allele_new_ins_sth = $var_dba->dbc->prepare(qq[ insert  into allele_working
-                                                     (variation_id, subsnp_id, allele_code_id, frequency, sample_id, count, frequency_submitter_handle)
+                                                     (variation_id, subsnp_id, allele_code_id, frequency, population_id, count, frequency_submitter_handle)
                                                      values (?, ?, ?, ?, ?, ?, ? )
                                                     ]);
     

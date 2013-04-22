@@ -157,13 +157,18 @@ sub set_strain_display{
 	return;
     }
 
-    my $display_update_sth = $var_dba->dbc->prepare(qq[update sample set display = ? where name = ? ]);
+#    my $display_update_sth = $var_dba->dbc->prepare(qq[update sample set display = ? where name = ? ]);
+    my $display_update_sth = $var_dba->dbc->prepare(qq[update individual set display = ? where name = ? ]);
 
     #### ADAPT TO NEW SCHEMA
     ## check strains are neither missing or duplicated
-    my $strain_check_sth =  $var_dba->dbc->prepare(qq[ select count(*) from sample, individual
-                                                       where sample.name =?
-                                                       and sample.sample_id = individual.sample_id
+#    my $strain_check_sth =  $var_dba->dbc->prepare(qq[ select count(*) from sample, individual
+#                                                       where sample.name =?
+#                                                       and sample.sample_id = individual.sample_id
+#                                                      ]);
+
+    my $strain_check_sth =  $var_dba->dbc->prepare(qq[ select count(*) from individual
+                                                       where individual.name = ?
                                                       ]);
 
 
@@ -180,7 +185,7 @@ sub set_strain_display{
 
     foreach my $l (@{$strain}){
 	print $report "Checking expected strain $l->[0]\n";
-	$strain_check_sth->execute( $l->[0] )||die "Failed to check displayable samples \n";
+	$strain_check_sth->execute( $l->[0] )||die "Failed to check displayable individuals \n";
 	my $count = $strain_check_sth->fetchall_arrayref();
 	if($count->[0]->[0] == 1){
             ## set display status on individual
@@ -213,13 +218,15 @@ sub fake_read_coverage{
     my $len_extr_sth = $core_dba->dbc->prepare(qq[ select seq_region_id,length from seq_region ]);
 
 
-    my $sam_extr_sth = $var_dba->dbc->prepare(qq[ select individual.sample_id from individual,sample
-                                                  where individual.sample_id = sample.sample_id
-                                                  and sample.display !='UNDISPLAYABLE']);
-    
+#    my $sam_extr_sth = $var_dba->dbc->prepare(qq[ select individual.sample_id from individual,sample
+#                                                  where individual.sample_id = sample.sample_id
+#                                                  and sample.display !='UNDISPLAYABLE']);
+     my $sam_extr_sth = $var_dba->dbc->prepare(qq[ select individual_id from individual
+                                                  where display !='UNDISPLAYABLE']);
+   
     
     my $cov_ins_sth = $var_dba->dbc->prepare(qq[ insert into  read_coverage
-                                                 (seq_region_id,seq_region_start,seq_region_end, level, sample_id )
+                                                 (seq_region_id,seq_region_start,seq_region_end, level, individual_id )
                                                  values(?,1,?,1,?)]);
     
     my %seq;
