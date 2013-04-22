@@ -384,7 +384,8 @@ sub get_overlapping_ProteinFeatures {
 
         $self->{_protein_features } = [];
 
-        my $tl = $self->transcript->translation;
+        my $tr = $self->transcript;
+        my $tl = $tr->translation;
 
         if (defined $tl) {
             
@@ -392,7 +393,12 @@ sub get_overlapping_ProteinFeatures {
             my $tl_end   = $self->translation_end;
 
             if (defined $tl_start && defined $tl_end) {
-                for my $feat (@{ $tl->get_all_ProteinFeatures }) {
+                unless(exists $tr->{_variation_effect_feature_cache}->{protein_features}) {
+                    my @feats = @{$tl->get_all_ProteinFeatures || []};
+                    $tr->{_variation_effect_feature_cache}->{protein_features} = \@feats;
+                }
+              
+                for my $feat (@{ $tr->{_variation_effect_feature_cache}->{protein_features} }) {
                     if (overlap($feat->start, $feat->end, $tl_start, $tl_end)) { 
                         push @{ $self->{_protein_features} }, $feat;
                     }
