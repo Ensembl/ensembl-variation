@@ -269,12 +269,15 @@ sub count_sampleless_geno{
 
        # indiviudal population???
        my $sample = '';
+       my $sample_id = '';
        if ($table =~ /individual/) {
            $sample = 'individual';
+           $sample_id = 'individual_id';
        } else {
           $sample = 'population';
+          $sample_id = 'population_id';
        }
-       my $no_sample_ext_sth  = $var_dba->dbc->prepare(qq[select count(*) from $table where $sample."_id" not in (select $sample."_id" from $sample) ]);
+       my $no_sample_ext_sth  = $var_dba->dbc->prepare(qq[select count(*) from $table where $sample_id not in (select $sample_id from $sample) ]);
        $self->warning("At sampleless_geno with table  $table");
        $no_sample_ext_sth->execute() || die "Failed to extract no sample count for $table\n";
        my $no_sample_count    = $no_sample_ext_sth->fetchall_arrayref();
