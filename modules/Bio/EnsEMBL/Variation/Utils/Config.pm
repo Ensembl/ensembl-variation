@@ -703,6 +703,7 @@ our @OVERLAP_CONSEQUENCES = (
     {
         SO_accession => 'SO:0001907',
         SO_term => 'feature_elongation',
+        feature_SO_term => 'sequence_feature',
         feature_class => 'Bio::EnsEMBL::Feature',
         variant_feature_class => 'Bio::EnsEMBL::Variation::BaseVariationFeature',
         rank => '36',
@@ -714,6 +715,7 @@ our @OVERLAP_CONSEQUENCES = (
     {
         SO_accession => 'SO:0001906',
         SO_term => 'feature_truncation',
+        feature_SO_term => 'sequence_feature',
         feature_class => 'Bio::EnsEMBL::Feature',
         variant_feature_class => 'Bio::EnsEMBL::Variation::BaseVariationFeature',
         rank => '37',
