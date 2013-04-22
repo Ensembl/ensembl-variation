@@ -3767,7 +3767,7 @@ sub load_dumped_transcript_cache {
     # reattach adaptors
     foreach my $t(@{$tr_cache->{$chr}}) {
         if(defined($t->{translation})) {
-            $t->{translation}->{adaptor} = $config->{tra} if defined $t->{translation}->{adaptor};
+            $t->{translation}->{adaptor} = $config->{tra} if defined $config->{tra};
             $t->{translation}->{transcript} = $t;
             weaken($t->{translation}->{transcript});
         }
