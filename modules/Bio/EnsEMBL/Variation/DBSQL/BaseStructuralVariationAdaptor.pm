@@ -62,25 +62,25 @@ my $DEFAULT_ITERATOR_CACHE_SIZE = 10000;
 sub _tables { 
   my $self = shift;
   my @tables = (['structural_variation', 'sv'], ['source', 's']);
-	
-	# If we are excluding failed_structural_variations, add that table
+  
+  # If we are excluding failed_structural_variations, add that table
   push(@tables,['failed_structural_variation', 'fsv']) unless ($self->db->include_failed_variations());
-	
-	return @tables;
+  
+  return @tables;
 }
 
 sub _columns {
-  return qw( sv.structural_variation_id sv.variation_name sv.validation_status s.name s.version 
-	           s.description sv.class_attrib_id sv.study_id sv.is_evidence sv.somatic );
+  return qw( sv.structural_variation_id sv.variation_name sv.validation_status s.name s.version s.description 
+             sv.class_attrib_id sv.study_id sv.is_evidence sv.somatic sv.alias sv.clinical_significance_attrib_id);
 }
 
 # Add a left join to the failed_structural_variation table
 sub _left_join {
-	my $self = shift;
-	
-	# If we are including failed structural variations, skip the left join
-	return () if ($self->db->include_failed_variations());
-	return (['failed_structural_variation', 'fsv.structural_variation_id=sv.structural_variation_id']);
+  my $self = shift;
+  
+  # If we are including failed structural variations, skip the left join
+  return () if ($self->db->include_failed_variations());
+  return (['failed_structural_variation', 'fsv.structural_variation_id=sv.structural_variation_id']);
 }
 
 
@@ -156,16 +156,16 @@ sub fetch_by_name {
   my ($self, $name) = @_;
     
   my $constraint = $self->_internal_exclude_failed_constraint("sv.variation_name='$name'");
-	
-	my $objs = $self->generic_fetch($constraint);
+  
+  my $objs = $self->generic_fetch($constraint);
   throw("Multiple structural variations found with the same name: '$name'") if @$objs > 1;
   return $objs->[0] if @$objs == 1;
 }
 
 # alias for fetch_by_name
 sub fetch_by_stable_id {
-	my $self = shift;
-	return $self->fetch_by_name(@_);
+  my $self = shift;
+  return $self->fetch_by_name(@_);
 }
 
 
@@ -174,11 +174,11 @@ sub fetch_by_stable_id {
   Arg [1]     : Bio::EnsEMBL::Variation::Study $study_id
   Example     : my $study = $study_adaptor->fetch_by_name('estd1');
                 foreach my $sv (@{$sv_adaptor->fetch_all_by_Study($study)}){
-		    		 			print $sv->variation_name,"\n";
+                   print $sv->variation_name,"\n";
                 }
   Description : Retrieves all structural variations from a specified study
   ReturnType  : reference to list of Bio::EnsEMBL::Variation::StructuralVariation or 
-	              Bio::EnsEMBL::Variation::SupportingStructuralVariation objects
+                Bio::EnsEMBL::Variation::SupportingStructuralVariation objects
   Exceptions  : throw if incorrect argument is passed
                 warning if provided study does not have a dbID
   Caller      : general
@@ -198,9 +198,9 @@ sub fetch_all_by_Study {
     warning("Study does not have dbID, cannot retrieve structural variants");
     return [];
   } 
-	
-	my $constraint = $self->_internal_exclude_failed_constraint('sv.study_id = '.$study->dbID);
-	
+  
+  my $constraint = $self->_internal_exclude_failed_constraint('sv.study_id = '.$study->dbID);
+  
   my $result = $self->generic_fetch($constraint);
 
   return $result;
@@ -214,7 +214,7 @@ sub fetch_all_by_Study {
   Description: Retrieves a listref of structural variant objects via a list of internal
                dbID identifiers
   Returntype : listref of Bio::EnsEMBL::Variation::StructuralVariation or
-	             Bio::EnsEMBL::Variation::SupportingStructuralVariation objects
+               Bio::EnsEMBL::Variation::SupportingStructuralVariation objects
   Exceptions : throw if list argument is not defined
   Caller     : general
   Status     : Stable
@@ -230,9 +230,9 @@ sub fetch_all_by_dbID_list {
   }
   
   my $id_str = (@$list > 1)  ? " IN (".join(',',@$list).")"   :   ' = \''.$list->[0].'\'';
-	
-	my $constraint = $self->_internal_exclude_failed_constraint("sv.structural_variation_id $id_str");
-	
+  
+  my $constraint = $self->_internal_exclude_failed_constraint("sv.structural_variation_id $id_str");
+  
   my $result = $self->generic_fetch($constraint);
 
   return $result;
@@ -285,11 +285,11 @@ sub fetch_Iterator_by_dbID_list {
 
 # Exclude the constraint for failed structural variant
 sub _internal_exclude_failed_constraint {
-	my $self = shift;
-	my $constraint = shift;
-	$constraint .= " AND " . $self->db->_exclude_failed_structural_variations_constraint();
-	
-	return $constraint;
+  my $self = shift;
+  my $constraint = shift;
+  $constraint .= " AND " . $self->db->_exclude_failed_structural_variations_constraint();
+  
+  return $constraint;
 }
 
 
@@ -330,13 +330,13 @@ sub _internal_get_failed_descriptions {
 =head2 get_all_failed_descriptions
 
   Arg[1]      : Bio::EnsEMBL::Variation::BaseStructuralVariation $sv
-	               The structural variant object to get the failed descriptions for
+                 The structural variant object to get the failed descriptions for
   Example     : 
                 my $failed_descriptions = $adaptor->get_all_failed_descriptions($sv);
                 if (scalar(@{$failed_descriptions})) {
-		              print "The structural variant'" . $sv->variation_name . "' has been flagged as failed because '" . join("' and '",@{$failed_descriptions}) . "'\n";
+                  print "The structural variant'" . $sv->variation_name . "' has been flagged as failed because '" . join("' and '",@{$failed_descriptions}) . "'\n";
                 }
-		
+    
   Description : Gets the unique descriptions for the reasons why the supplied structural variant has failed.
   ReturnType  : reference to a list of strings
   Exceptions  : thrown on incorrect argument
@@ -359,7 +359,7 @@ sub get_all_failed_descriptions {
 sub store {
     my ($self, $sv) = @_;
     
-	  my $dbh = $self->dbc->db_handle;
+    my $dbh = $self->dbc->db_handle;
     
     # look up source_id
     if(!defined($sv->{source_id})) {
@@ -369,72 +369,90 @@ sub store {
       $sth->execute($sv->{source});
         
       my $source_id;
-			$sth->bind_columns(\$source_id);
-			$sth->fetch();
-			$sth->finish();
-			$sv->{source_id} = $source_id;
+      $sth->bind_columns(\$source_id);
+      $sth->fetch();
+      $sth->finish();
+      $sv->{source_id} = $source_id;
     }
     throw("No source ID found for source name ", $sv->{source}) unless defined($sv->{source_id});
     
-		# look up study_id
-    if(!defined($sv->{study_id}) && defined($sv->{study_name})) {
+    # look up study_id
+    if(!defined($sv->{study_id}) && defined($sv->{study})) {
       my $sth = $dbh->prepare(q{
            SELECT study_id FROM study WHERE name = ?
       });
-      $sth->execute($sv->{study_name});
+      $sth->execute($sv->{study}->name);
       
-			my $study_id;  
-			$sth->bind_columns(\$study_id);
-			$sth->fetch();
-			$sth->finish();
-			$sv->{study_id} = $study_id;
+      my $study_id;  
+      $sth->bind_columns(\$study_id);
+      $sth->fetch();
+      $sth->finish();
+      $sv->{study_id} = $study_id;
     }
-		
-		# look up class_attrib_id
-		my $class_attrib_id;
-		if(defined($sv->{class_SO_term})) {
+    
+    # look up class_attrib_id
+    my $class_attrib_id;
+    if(defined($sv->{class_SO_term})) {
       my $sth = $dbh->prepare(q{
            SELECT attrib_id FROM attrib WHERE value = ?
       });
       $sth->execute($sv->{class_SO_term});
         
-			$sth->bind_columns(\$class_attrib_id);
-			$sth->fetch();
-			$sth->finish();
+      $sth->bind_columns(\$class_attrib_id);
+      $sth->fetch();
+      $sth->finish();
     }
-		throw("No class ID found for the class name ", $sv->{class_SO_term}) unless defined($class_attrib_id);
-		
-		
+    throw("No class ID found for the class name ", $sv->{class_SO_term}) unless defined($class_attrib_id);
+    
+    # look up clinical_significance_attrib_id
+    my $clin_sign_attrib_id;
+    if(defined($sv->{clinical_significance})) {
+      my $sth = $dbh->prepare(q{
+           SELECT attrib_id FROM attrib WHERE value = ? 
+              AND attrib_type_id IN (SELECT attrib_type_id FROM attrib_type WHERE code='dgva_clin_sig')
+      });
+      $sth->execute($sv->{clinical_significance});
+        
+      $sth->bind_columns(\$clin_sign_attrib_id);
+      $sth->fetch();
+      $sth->finish();
+      throw("No attrib ID found for the clinical significance ", $sv->{clinical_significance}) unless defined($clin_sign_attrib_id);
+    }
+    
     my $sth = $dbh->prepare(q{
         INSERT INTO structural_variation (
             source_id,
-						study_id,
-			      variation_name,
-			      validation_status,
+            study_id,
+            variation_name,
+            validation_status,
             class_attrib_id,
             is_evidence,
-						somatic
-        ) VALUES (?,?,?,?,?,?,?)
+            somatic,
+            alias,
+            clinical_significance_attrib_id
+        ) VALUES (?,?,?,?,?,?,?,?,?)
     });
     
     $sth->execute(
         $sv->{source_id},
-				$sv->{study_id} || undef,
+        $sv->{study_id} || undef,
         $sv->variation_name,
         (join ",", @{$sv->get_all_validation_states}) || undef,
         $class_attrib_id || 0,
         $sv->is_evidence || 0,
-				$sv->somatic || 0
+        $sv->somatic || 0,
+        $sv->alias || undef,
+        $clin_sign_attrib_id || undef
     );
     
     $sth->finish;
     
     # get dbID
-		my $dbID = $dbh->last_insert_id(undef, undef, 'structural_variation', 'structural_variation_id');
+    my $dbID = $dbh->last_insert_id(undef, undef, 'structural_variation', 'structural_variation_id');
     $sv->{dbID}    = $dbID;
     $sv->{adaptor} = $self;
     
-		$sth->finish;
+    $sth->finish;
 }
-		
+
 1;

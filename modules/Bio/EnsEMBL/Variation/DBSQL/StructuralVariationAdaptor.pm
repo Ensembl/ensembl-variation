@@ -38,19 +38,19 @@ Bio::EnsEMBL::Variation::DBSQL::StructuralVariationAdaptor
   
   $sva = $reg->get_adaptor("human","variation","structuralvariation");
   $sta = $reg->get_adaptor("human","variation","study");
-	
+  
   # Get a StructuralVariation by its internal identifier
   $sv = $sva->fetch_by_dbID(145);
 
-	# Get a StructuralVariation by its name
-	$sv = $sva->fetch_by_name('esv1285');
-	
-	# Get all StructuralVariation by a study
-	$study = $sta->fetch_by_name('estd1');
-	foreach my $sv (@{$sva->fetch_all_by_Study($study)}){
-		print $sv->variation_name,"\n";
-	}
-	
+  # Get a StructuralVariation by its name
+  $sv = $sva->fetch_by_name('esv1285');
+  
+  # Get all StructuralVariation by a study
+  $study = $sta->fetch_by_name('estd1');
+  foreach my $sv (@{$sva->fetch_all_by_Study($study)}){
+    print $sv->variation_name,"\n";
+  }
+  
   # Modify the include_failed_variations flag in DBAdaptor to also return structural variations that have been flagged as failed
   $va->db->include_failed_variations(1);
  
@@ -92,40 +92,42 @@ sub _objs_from_sth {
   # function calls as possible for speed purposes.  Thus many caches and
   # a fair bit of gymnastics is used.
   #
-	my @svs;
-	
+  my @svs;
+  
   my ($struct_variation_id, $variation_name, $validation_status, $source_name, $source_version, 
-		  $source_description, $class_attrib_id, $study_id, $is_evidence, $is_somatic);
+      $source_description, $class_attrib_id, $study_id, $is_evidence, $is_somatic, $alias, $clin_sign_attrib_id);
 
   $sth->bind_columns(\$struct_variation_id, \$variation_name, \$validation_status, \$source_name, 
-										 \$source_version, \$source_description, \$class_attrib_id, \$study_id, \$is_evidence, 
-										 \$is_somatic);
+                     \$source_version, \$source_description, \$class_attrib_id, \$study_id, \$is_evidence, 
+                     \$is_somatic, \$alias, \$clin_sign_attrib_id);
 
-	my $aa  = $self->db->get_AttributeAdaptor;
-	my $sta = $self->db->get_StudyAdaptor();
-	
+  my $aa  = $self->db->get_AttributeAdaptor;
+  my $sta = $self->db->get_StudyAdaptor();
+  
   while($sth->fetch()) {
-	
-		my $study;
-		$study = $sta->fetch_by_dbID($study_id) if (defined($study_id));
-	
-		# Get the validation status
+  
+    my $study;
+    $study = $sta->fetch_by_dbID($study_id) if (defined($study_id));
+  
+    # Get the validation status
     $validation_status ||= 0;
     my @states = split(/,/,$validation_status);
-	
+  
     push @svs, Bio::EnsEMBL::Variation::StructuralVariation->new(
-       -dbID               => $struct_variation_id,
-			 -VARIATION_NAME     => $variation_name,
-			 -VALIDATION_STATES  => \@states,
-       -ADAPTOR            => $self,
-       -SOURCE             => $source_name,
-       -SOURCE_VERSION     => $source_version,
-	     -SOURCE_DESCRIPTION => $source_description,
-	     -CLASS_SO_TERM      => $aa->attrib_value_for_id($class_attrib_id),
-	     -STUDY              => $study,
-			 -IS_EVIDENCE        => $is_evidence || 0,
-			 -IS_SOMATIC         => $is_somatic || 0
-  	);
+       -dbID                  => $struct_variation_id,
+       -VARIATION_NAME        => $variation_name,
+       -VALIDATION_STATES     => \@states,
+       -ADAPTOR               => $self,
+       -SOURCE                => $source_name,
+       -SOURCE_VERSION        => $source_version,
+       -SOURCE_DESCRIPTION    => $source_description,
+       -CLASS_SO_TERM         => $aa->attrib_value_for_id($class_attrib_id),
+       -STUDY                 => $study,
+       -IS_EVIDENCE           => $is_evidence || 0,
+       -IS_SOMATIC            => $is_somatic || 0,
+       -ALIAS                 => $alias,
+       -CLINICAL_SIGNIFICANCE => $aa->attrib_value_for_id($clin_sign_attrib_id)
+    );
   }
   return \@svs;
 }
@@ -134,10 +136,10 @@ sub _objs_from_sth {
 =head2 fetch_all_by_supporting_evidence
 
   Arg [1]     : Bio::EnsEMBL::Variation::SupportingStructuralVariation or 
-	              Bio::EnsEMBL::Variation::StructuralVariation $se
+                Bio::EnsEMBL::Variation::StructuralVariation $se
   Example     : my $se = $ssv_adaptor->fetch_by_name('essv2585133');
                 foreach my $sv (@{$sv_adaptor->fetch_all_by_supporting_evidence($se)}){
-		    		      print $sv->variation_name,"\n";
+                  print $sv->variation_name,"\n";
                 }
   Description : Retrieves all structural variations from a specified supporting evidence
   ReturnType  : reference to list of Bio::EnsEMBL::Variation::StructuralVariation objects
@@ -149,53 +151,53 @@ sub _objs_from_sth {
 =cut
 
 sub fetch_all_by_supporting_evidence {
-	my $self = shift;
-	my $se = shift;
+  my $self = shift;
+  my $se = shift;
 
-	if(!ref($se) || (!$se->isa('Bio::EnsEMBL::Variation::SupportingStructuralVariation') &&
-	                  !$se->isa('Bio::EnsEMBL::Variation::StructuralVariation'))
-	) {
-		throw("Bio::EnsEMBL::Variation::SupportingStructuralVariation or Bio::EnsEMBL::Variation::StructuralVariation arg expected");
-	}
+  if(!ref($se) || (!$se->isa('Bio::EnsEMBL::Variation::SupportingStructuralVariation') &&
+                    !$se->isa('Bio::EnsEMBL::Variation::StructuralVariation'))
+  ) {
+    throw("Bio::EnsEMBL::Variation::SupportingStructuralVariation or Bio::EnsEMBL::Variation::StructuralVariation arg expected");
+  }
     
-	if(!$se->dbID()) {
-		warning("The supporting evidence does not have dbID, cannot retrieve supporting evidence");
-		return [];
+  if(!$se->dbID()) {
+    warning("The supporting evidence does not have dbID, cannot retrieve supporting evidence");
+    return [];
   } 
-	
-	my $cols   = join ",", $self->_columns();
+  
+  my $cols   = join ",", $self->_columns();
 
-	my $tables;
-	foreach my $t ($self->_tables()) {
-		next if ($t->[0] eq 'failed_structural_variation' and !$self->db->include_failed_variations());
-		$tables .= ',' if ($tables);
-		$tables .= join(' ',@$t);
-		# Adds a left join to the failed_structural_variation table
-		if ($t->[0] eq 'structural_variation' and !$self->db->include_failed_variations()) {
-			$tables .= qq{ LEFT JOIN failed_structural_variation fsv 
-			               ON (fsv.structural_variation_id=sv.structural_variation_id)};
-		}
-	}
-	
-	my $constraint = $self->_default_where_clause();
-	
-	# Add the constraint for failed structural variant
-	$constraint .= " AND " . $self->db->_exclude_failed_structural_variations_constraint();
-	
-	my $sth = $self->prepare(qq{
+  my $tables;
+  foreach my $t ($self->_tables()) {
+    next if ($t->[0] eq 'failed_structural_variation' and !$self->db->include_failed_variations());
+    $tables .= ',' if ($tables);
+    $tables .= join(' ',@$t);
+    # Adds a left join to the failed_structural_variation table
+    if ($t->[0] eq 'structural_variation' and !$self->db->include_failed_variations()) {
+      $tables .= qq{ LEFT JOIN failed_structural_variation fsv 
+                     ON (fsv.structural_variation_id=sv.structural_variation_id)};
+    }
+  }
+  
+  my $constraint = $self->_default_where_clause();
+  
+  # Add the constraint for failed structural variant
+  $constraint .= " AND " . $self->db->_exclude_failed_structural_variations_constraint();
+  
+  my $sth = $self->prepare(qq{
                     SELECT $cols 
                     FROM $tables, structural_variation_association sa
                     WHERE $constraint 
-								      AND sa.structural_variation_id=sv.structural_variation_id
-								      AND sa.supporting_structural_variation_id = ?});
-	$sth->bind_param(1,$se->dbID,SQL_INTEGER);
-	$sth->execute();
+                      AND sa.structural_variation_id=sv.structural_variation_id
+                      AND sa.supporting_structural_variation_id = ?});
+  $sth->bind_param(1,$se->dbID,SQL_INTEGER);
+  $sth->execute();
 
-	my $results = $self->_objs_from_sth($sth);
+  my $results = $self->_objs_from_sth($sth);
 
-	$sth->finish();
+  $sth->finish();
 
-	return $results;
+  return $results;
 }
 
 
@@ -265,7 +267,7 @@ sub fetch_all_dbIDs_by_VariationSet {
     FROM
       variation_set_structural_variation vssv LEFT JOIN
       failed_structural_variation fsv ON (
-	      fsv.structural_variation_id = vssv.structural_variation_id
+        fsv.structural_variation_id = vssv.structural_variation_id
       )
     WHERE
       vssv.variation_set_id in $set_str
@@ -313,7 +315,7 @@ sub fetch_all_by_VariationSet {
   Arg [1]    : Bio::EnsEMBL::Variation::VariationSet
   Example    : $sv_iterator = $sva_adaptor->fetch_Iterator_by_VariationSet($vs);
   Description: Retrieves an iterator for all structural variations which are present 
-	             in a specified variation set and its subsets.
+               in a specified variation set and its subsets.
   Returntype : Bio::EnsEMBL::Utils::Iterator object
   Exceptions : throw on incorrect argument
   Caller     : general
@@ -336,7 +338,7 @@ sub fetch_Iterator_by_VariationSet {
         FROM
             variation_set_structural_variation vssv LEFT JOIN
             failed_structural_variation fsv ON (
-    	       fsv.structural_variation_id = vssv.structural_variation_id
+              fsv.structural_variation_id = vssv.structural_variation_id
             )
         WHERE
             vssv.variation_set_id IN ($var_set_id)
@@ -346,7 +348,7 @@ sub fetch_Iterator_by_VariationSet {
     my $constraint = $self->_internal_exclude_failed_constraint;
     
     my $sth = $self->prepare(qq{SELECT MIN(vssv.structural_variation_id), MAX(vssv.structural_variation_id) 
-		                            $stmt $constraint});
+                                $stmt $constraint});
     $sth->execute();
     my ($min_sv_id,$max_sv_id);
     $sth->bind_columns(\$min_sv_id,\$max_sv_id);
@@ -356,7 +358,7 @@ sub fetch_Iterator_by_VariationSet {
     
     # Prepare a statement for getting the ids in a range
     $sth = $self->prepare(qq{SELECT vssv.structural_variation_id $stmt 
-		                         AND vssv.structural_variation_id BETWEEN ? AND ? $constraint});
+                             AND vssv.structural_variation_id BETWEEN ? AND ? $constraint});
     
     # Internally, we keep an Iterator that works on the dbID span we're at
     my $iterator;
