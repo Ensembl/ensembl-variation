@@ -78,7 +78,11 @@ ALTER TABLE structural_variation_association ADD FOREIGN KEY (supporting_structu
 ALTER TABLE structural_variation_feature ADD FOREIGN KEY (seq_region_id) REFERENCES seq_region(seq_region_id);
 ALTER TABLE structural_variation_feature ADD FOREIGN KEY (structural_variation_id) REFERENCES structural_variation(structural_variation_id);
 ALTER TABLE structural_variation_feature ADD FOREIGN KEY (source_id) REFERENCES source(source_id);
+ALTER TABLE structural_variation_feature ADD FOREIGN KEY (study_id) REFERENCES study(study_id);
 ALTER TABLE structural_variation_feature ADD FOREIGN KEY (class_attrib_id) REFERENCES attrib(attrib_id);
+
+ALTER TABLE structural_variation_sample ADD FOREIGN KEY (individual_id) REFERENCES individual(individual_id);
+ALTER TABLE structural_variation_sample ADD FOREIGN KEY (strain_id) REFERENCESindividual(individual_id);
 
 ALTER TABLE study ADD FOREIGN KEY (source_id) REFERENCES source(source_id);
 
