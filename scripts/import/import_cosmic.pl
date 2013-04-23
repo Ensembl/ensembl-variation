@@ -177,26 +177,22 @@ my $add_vf_sth = $dbh->prepare(qq{
     VALUES (?,?,?,?,?,?,?,?,?,?,?,1)
 });
 
-my $find_existing_sample_sth = $dbh->prepare(qq{
-    SELECT sample_id FROM sample WHERE name = ? AND size = ? 
+my $find_existing_population_sth = $dbh->prepare(qq{
+    SELECT population_id FROM population WHERE name = ? AND size = ? 
 });
 
-my $add_sample_sth = $dbh->prepare(qq{
-    INSERT INTO sample (name, size, description) 
+my $add_population_sth = $dbh->prepare(qq{
+    INSERT INTO population (name, size, description) 
     VALUES (?,?,?)
 });
 
-my $add_to_population_sth = $dbh->prepare(qq{
-    INSERT INTO population (sample_id) VALUES (?)
-});
-
 my $add_allele_sth = $dbh->prepare(qq{
-    INSERT INTO allele (variation_id, sample_id, allele, frequency)
+    INSERT INTO allele (variation_id, population_id, allele, frequency)
     VALUES (?,?,?,?)
 });
 
 my $add_allele_with_code_sth = $dbh->prepare(qq{
-    INSERT INTO allele (variation_id, sample_id, allele_code_id, frequency)
+    INSERT INTO allele (variation_id, population_id, allele_code_id, frequency)
     VALUES (?,?,?,?)
 });
 
@@ -212,7 +208,7 @@ my $add_phenotype_sth = $dbh->prepare(qq{
 my $add_phe_feature_sth = $dbh->prepare(qq{
     INSERT INTO phenotype_feature (phenotype_id, source_id, type, object_id, seq_region_id,
         seq_region_start, seq_region_end, seq_region_strand)
-    VALUES (?,?,'VARIATION',?,?,?,?,?)
+    VALUES (?,?,'Variation',?,?,?,?,?)
 });
 
 my $add_phe_feature_attrib_sth = $dbh->prepare(qq{
@@ -684,31 +680,29 @@ MAIN_LOOP : while(<$INPUT>) {
         
         # add sample and allele information
 
-        # first check if there is an existing sample
+        # first check if there is an existing population
         
-        my $sample_id;
+        my $population_id;
 
         my $sample_name = "COSMIC:gene:$cosmic_gene:tumour_site:$tumour_site";
         
-        $find_existing_sample_sth->execute($sample_name, $total_samples);
+        $find_existing_population_sth->execute($sample_name, $total_samples);
 
-        my $existing_sample = $find_existing_sample_sth->fetchrow_arrayref;
+        my $existing_population = $find_existing_population_sth->fetchrow_arrayref;
         
-        if ($existing_sample) {
-            $sample_id = $existing_sample->[0];
+        if ($existing_population) {
+            $population_id = $existing_population->[0];
         }
         else {
             # there is not, so add it
 
-            $add_sample_sth->execute(
+            $add_population_sth->execute(
                 $sample_name, 
                 $total_samples,
                 "$total_samples $tumour_site tumours examined through the $cosmic_gene gene"
             );
 
-            $sample_id = $dbh->last_insert_id(undef, undef, undef, undef);
-            
-            $add_to_population_sth->execute($sample_id);
+            $population_id = $dbh->last_insert_id(undef, undef, undef, undef);
         }
 
         my $mut_freq = $mutated_samples / $total_samples;
@@ -720,7 +714,7 @@ MAIN_LOOP : while(<$INPUT>) {
           my $mut_allele_code_id = get_allele_code($forward_strand_mut_allele);
           $add_allele_with_code_sth->execute(
               $variation_id,
-              $sample_id,
+              $population_id,
               $mut_allele_code_id,
               $mut_freq,
           );
@@ -729,7 +723,7 @@ MAIN_LOOP : while(<$INPUT>) {
           my $ref_allele_code_id = get_allele_code($forward_strand_ref_allele);
           $add_allele_with_code_sth->execute(
               $variation_id,
-              $sample_id,
+              $population_id,
               $ref_allele_code_id,
               (1 - $mut_freq)
           );
@@ -741,7 +735,7 @@ MAIN_LOOP : while(<$INPUT>) {
 
           $add_allele_sth->execute(
               $variation_id,
-              $sample_id,
+              $population_id,
               $forward_strand_mut_allele,
               $mut_freq,
           );
@@ -750,7 +744,7 @@ MAIN_LOOP : while(<$INPUT>) {
 
           $add_allele_sth->execute(
               $variation_id,
-              $sample_id,
+              $population_id,
               $forward_strand_ref_allele,
               (1 - $mut_freq),
           );
