@@ -35,11 +35,11 @@ Bio::EnsEMBL::Variation::BaseStructuralVariation - Ensembl representation of a s
     # Structural variation representing a CNV
     $sv = Bio::EnsEMBL::Variation::StructuralVariation->new
        (-variation_name => 'esv234231',
-				-class_so_term => ''copy_number_variation',
-				-source => 'DGVa',
-				-source_description => 'Database of Genomic Variants Archive',
-				-is_evidence => 0,
-				-is_somatic => 0);
+        -class_so_term => ''copy_number_variation',
+        -source => 'DGVa',
+        -source_description => 'Database of Genomic Variants Archive',
+        -is_evidence => 0,
+        -is_somatic => 0);
 
     ...
 
@@ -105,14 +105,20 @@ our @ISA = ('Bio::EnsEMBL::Storable','Bio::EnsEMBL::Variation::Failable');
   Arg [-IS_SOMATIC] :
     int - flag to inform whether the structural variant is a somatic (1) or germline (0).
     
+  Arg [-ALIAS] :
+    string - other name given to the structural variant.
+    
+  Arg [-CLINICAL_SIGNIFICANCE] :
+    string - clinical significance associated with the structural variant, e.g. 'Pathogenic'.
+    
   Example for a structural variation:
     $sv = Bio::EnsEMBL::Variation::StructuralVariation->new
        (-variation_name => 'esv25480',
-				-class_so_term => ''copy_number_variation',
-				-source => 'DGVa',
-				-source_description => 'Database of Genomic Variants Archive',
-				-is_evidence => 0,
-				-is_somatic => 0);
+        -class_so_term => ''copy_number_variation',
+        -source => 'DGVa',
+        -source_description => 'Database of Genomic Variants Archive',
+        -is_evidence => 0,
+        -is_somatic => 0);
     
   Description: Constructor. Instantiates a new structural variant object.
   Returntype : Bio::EnsEMBL::Variation::StructuralVariation or 
@@ -138,7 +144,9 @@ sub new {
     $study,
     $validation_status,
     $is_evidence,
-    $is_somatic
+    $is_somatic,
+    $alias,
+    $clinical_significance
   ) = rearrange([qw(
           dbID
           ADAPTOR
@@ -151,20 +159,24 @@ sub new {
           VALIDATION_STATES
           IS_EVIDENCE
           IS_SOMATIC
+          ALIAS
+          CLINICAL_SIGNIFICANCE
     )], @_);
     
   my $self = bless {
-    'dbID'               => $dbID,
-    'adaptor'            => $adaptor,
-    'variation_name'     => $var_name,
-    'source'             => $source,
-    'source_version'     => $source_version,
-    'source_description' => $source_description,
-    'class_SO_term'      => $class_so_term,
-    'study'              => $study,
-    'validation_status'  => $validation_status,
-    'is_evidence'        => $is_evidence || 0,
-    'is_somatic'         => $is_somatic || 0,
+    'dbID'                  => $dbID,
+    'adaptor'               => $adaptor,
+    'variation_name'        => $var_name,
+    'source'                => $source,
+    'source_version'        => $source_version,
+    'source_description'    => $source_description,
+    'class_SO_term'         => $class_so_term,
+    'study'                 => $study,
+    'validation_status'     => $validation_status,
+    'is_evidence'           => $is_evidence || 0,
+    'is_somatic'            => $is_somatic || 0,
+    'alias'                 => $alias,
+    'clinical_significance' => $clinical_significance
   };
   return $self;
 }
@@ -342,6 +354,45 @@ sub source_description {
 }
 
 
+=head2 alias
+
+  Arg [1]    : string $alias (optional)
+  Example    : $alias = $sv->alias()
+  Description: Getter/Setter for the alias name
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub alias {
+  my $self = shift;
+  return $self->{'alias'} = shift if(@_);
+  return $self->{'alias'};
+}
+
+
+=head2 clinical_significance
+
+  Arg [1]    : string $clinical_significance (optional)
+  Example    : $clinical_significance = $sv->clinical_significance()
+  Description: Getter/Setter for the clinical significance associated with the
+               structural variant
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub clinical_significance {
+  my $self = shift;
+  return $self->{'clinical_significance'} = shift if(@_);
+  return $self->{'clinical_significance'};
+}
+
+
 =head2 get_all_validation_states
 
   Arg [1]    : none
@@ -399,6 +450,8 @@ sub is_somatic{
   return $self->{'is_somatic'} = shift if(@_);
   return $self->{'is_somatic'};
 }
+
+
 
 
 =head2 study
@@ -469,13 +522,41 @@ sub get_all_StructuralVariationFeatures{
 sub get_all_PhenotypeFeatures {
   my $self = shift;
   
-  
   if(defined $self->{'adaptor'}) {
   
     # get phenotype feature adaptor
     my $pfa_adaptor = $self->{'adaptor'}->db()->get_PhenotypeFeatureAdaptor();
   
     return $pfa_adaptor->_fetch_all_by_object($self);
+  }
+  else {
+    warn("No variation database attached");
+    return [];
+  }
+}
+
+
+=head2 get_all_StructuralVariationSamples
+
+  Args        : None
+  Example     : $svss = $sv->get_all_StructuralVariationSamples();
+  Description : Retrieves all StructuralVariationSamples for this structural variant
+  ReturnType  : reference to list of Bio::EnsEMBL::Variation::StructuralVariationSample
+  Exceptions  : None
+  Caller      : general
+  Status      : Stable
+
+=cut
+
+sub get_all_StructuralVariationSamples {
+  my $self = shift;
+  
+  if(defined $self->{'adaptor'}) {
+  
+    # get structural variation sample adaptor
+    my $svsa_adaptor = $self->{'adaptor'}->db()->get_StructuralVariationSampleAdaptor();
+  
+    return $svsa_adaptor->fetch_all_by_StructuralVariation($self);
   }
   else {
     warn("No variation database attached");

@@ -123,8 +123,11 @@ our @ISA = ('Bio::EnsEMBL::Variation::BaseVariationFeature');
   Arg [-SOURCE] :
     string - the name of the source where the variation comes from
   
-  Arg [-SOURCE_VERSION]:
+  Arg [-SOURCE_VERSION] :
   string - version number of the source
+	
+	Arg [-STUDY] :
+    object ref - the study object describing where the structural variant comes from.
   
   Arg [-IS_SOMATIC] :
     int - flag to inform whether the structural variant is a somatic (1) or germline (0).
@@ -132,6 +135,9 @@ our @ISA = ('Bio::EnsEMBL::Variation::BaseVariationFeature');
   Arg [-BREAKPOINT_ORDER] :
     int - For a structural variant with multiple breakpoints, this gives the predicted order of the breakpoint event.
   
+	Arg [-LENGTH] :
+	  int - Length of the structural variant. Useful when the structural variant is an insertion with given length. 
+	
   Example    :
     $svf = Bio::EnsEMBL::Variation::StructuralVariationFeature->new
        (-start   => 100,
@@ -159,19 +165,22 @@ sub new {
   my (
     $var_name, 
     $source, 
-    $source_version, 
+    $source_version,
+		$study, 
     $class_so_term, 
     $inner_start, 
     $inner_end,
-  $outer_start,
-  $outer_end, 
+    $outer_start,
+    $outer_end, 
     $allele_string,
-  $is_somatic,
-  $breakpoint_order
+    $is_somatic,
+    $breakpoint_order,
+		$length
   ) = rearrange([qw(
   VARIATION_NAME 
   SOURCE 
   SOURCE_VERSION
+	STUDY
   CLASS_SO_TERM
   INNER_START 
   INNER_END 
@@ -180,12 +189,14 @@ sub new {
   ALLELE_STRING
   IS_SOMATIC
   BREAKPOINT_ORDER
+	LENGTH
   )], @_);
 
 
   $self->{'variation_name'}     = $var_name;
   $self->{'source'}             = $source;
   $self->{'source_version'}     = $source_version;
+	$self->{'study'}              = $study;
   $self->{'class_SO_term'}      = $class_so_term;
   $self->{'inner_start'}        = $inner_start;
   $self->{'inner_end'}          = $inner_end;
@@ -194,6 +205,7 @@ sub new {
   $self->{'allele_string'}      = $allele_string;
   $self->{'is_somatic'}         = $is_somatic || 0;
   $self->{'breakpoint_order'}   = $breakpoint_order;
+	$self->{'length'}             = $length;
 
   return $self;
 }
@@ -313,7 +325,25 @@ sub structural_variation {
 }
 
 
+=head2 length
 
+  Example    : $length = $obj->length()
+  Description: Getter for the length of the structural variant, if possible.
+  Returntype : int
+  Exceptions : none
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub length{
+  my $self = shift;
+  return $self->{'length'} if (defined($self->{'length'}));
+  my $SO_term = $self->class_SO_term;
+  if ($SO_term =~ /copy|deletion|duplication|inversion/i && !$self->breakpoint_order) {
+    return ($self->seq_region_end-$self->seq_region_start)+1;
+  }
+}
 
 
 =head2 get_all_VariationSets
@@ -892,12 +922,31 @@ sub inner_end{
 }
 
 
+=head2 study
+
+  Arg [1]    : Bio::EnsEMBL::Variation::Study (optional)
+  Example    : $study = $svf->study()
+  Description: Getter/Setter for the study object
+  Returntype : Bio::EnsEMBL::Variation::Study
+  Exceptions : none
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub study {
+  my $self = shift;
+  return $self->{'study'} = shift if(@_);
+  return $self->{'study'};
+}
+
+
 =head2 get_reference_sequence
 
     Args        : none
     Example     : my $seq = $svf->get_reference_sequence
     Description : returns a string containing the reference sequence for the region
-          covered by this StructuralVariationFeature
+                  covered by this StructuralVariationFeature
     ReturnType  : string
     Exceptions  : none
     Caller      : general
