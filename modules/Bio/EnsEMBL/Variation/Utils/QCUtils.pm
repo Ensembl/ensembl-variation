@@ -270,7 +270,7 @@ sub summarise_evidence{
   Summarise information from dbSNP ss submissions:
 
       - check the number of independant observations
-             - ie. different submitter handle or different sample
+             - ie. different submitter handle or different population
       - check for any allele frequency information
       - check for allele frequency information from Hapap if human
 
@@ -286,13 +286,13 @@ sub get_ss_variations{
 
     my $obs_var_ext_sth  = $var_dbh->prepare(qq[ select al.variation_id,
                                                         h.handle,
-                                                        al.sample_id,
+                                                        al.population_id,
                                                         al.frequency,
-                                                        s.name,
+                                                        p.name,
                                                         al.subsnp_id,
                                                         al.count
                                                  from   subsnp_handle h, allele al
-                                                 left outer join sample s on ( s.sample_id = al.sample_id)
+                                                 left outer join population p on ( p.population_id = al.population_id)
                                                  where  al.variation_id between ? and ?
                                                  and    h.subsnp_id = al.subsnp_id ]);
     $obs_var_ext_sth->execute($first, $last );
@@ -306,7 +306,7 @@ sub get_ss_variations{
 
 	$l->[2] = "N" unless defined $l->[2];
 
-        #save  submitter handle, sample and ss id to try to discern independent submissions
+        #save  submitter handle, population and ss id to try to discern independent submissions
 	push  @{$save_by_var{$l->[0]}}, [  $l->[1], $l->[2], $l->[5] ];
 
 
@@ -377,11 +377,8 @@ sub get_pubmed_variations{
  
     my %pubmed_variations;
 
+    my $pubmed_var_ext_sth  = $var_dbh->prepare(qq[ select variation_id from variation_citation ]);
 
-    my $pubmed_var_ext_sth  = $var_dbh->prepare(qq[ select variation_id from study_variation, study
-                                                    where study.study_id = study_variation.study_id
-                                                    and study.study_type = 'PubMed'
-                                                   ]);
     $pubmed_var_ext_sth->execute();
     my $data = $pubmed_var_ext_sth->fetchall_arrayref();
  
