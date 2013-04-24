@@ -163,21 +163,21 @@ sub allele_table {
   my $handle_ins_sth  = $dbm->dbVar()->dbc->prepare(qq[insert into submitter_handle (handle) values (?)])||die "ERROR preparing handle_ins_sth: $DBI::errstr\n";
 
 
-  # Prepared statement to get the sample_id from a pop_id
-  my $sample_stmt = qq{
+  # Prepared statement to get the population_id from a pop_id
+  my $population_stmt = qq{
     SELECT
-      s.sample_id
+      p.population_id
     FROM
-      sample s
+      population p
     WHERE
-      s.pop_id = ?
+      p.pop_id = ?
     LIMIT 1
   };
-  my $sample_sth = $dbm->dbVar()->dbc->prepare($sample_stmt)||die "ERROR preparing sample_sth: $DBI::errstr\n";
-    #ÊHash to keep sample_ids in memory
-  my %samples;
+  my $population_sth = $dbm->dbVar()->dbc->prepare($population_stmt)||die "ERROR preparing population_sth: $DBI::errstr\n";
+    #ÊHash to keep population_ids in memory
+  my %population;
   # The pop_id = 0 is a replacement for NULL but since it's used for a key in the hash below, we need it to have an actual numerical value
-  $samples{0} = '\N';
+  $population{0} = '\N';
 
 
   #ÊHash to hold the alleles in memory
@@ -198,7 +198,7 @@ sub allele_table {
  
   
   ## write values to file for later importation:
-  ## variation_id,  subsnp_id, samples_id, alleles[strand appropriate], frequency, count, frequency submitter handle
+  ## variation_id,  subsnp_id, population_id, alleles[strand appropriate], frequency, count, frequency submitter handle
   
   my %done;  ## remove duplicates
 
@@ -213,7 +213,7 @@ sub allele_table {
 
      ## look-ups from ensembl db
      unless( defined $line->[6] ){ $line->[6] = 0 ; }
-     if (!exists($samples{$line->[1]})) {  $samples{$line->[1]} = get_sample($line->[1], $sample_sth);}     
+     if (!exists($population{$line->[1]})) {  $population{$line->[1]} = get_population($line->[1], $population_sth);}     
      if (!exists($handle{$line->[6]}))  {  $handle{$line->[6]}  = get_handle($line->[6], $handle_ext_sth, $handle_ins_sth);}
      if (!exists($alleles{$line->[2]})) {  $alleles{$line->[2]} = get_allele($line->[2], $allele_sth);}   # returns alleles as  [for, rev]    
 
@@ -226,7 +226,7 @@ sub allele_table {
       ##$done{$line->[0]}{0} = 1;  ## don't want to import records without population info if records with held
 
 
-     my $row = join("\t",($variation_ids->{$line->[0]}{'variation_id'},$line->[0],$samples{$line->[1]},$alleles{$line->[2]}->[$line->[3]],$line->[4],$line->[5],$handle{$line->[6]} )) ;
+     my $row = join("\t",($variation_ids->{$line->[0]}{'variation_id'},$line->[0],$population{$line->[1]},$alleles{$line->[2]}->[$line->[3]],$line->[4],$line->[5],$handle{$line->[6]} )) ;
 
      push(@output,$row);
   }
@@ -246,7 +246,7 @@ sub allele_table {
 
       ## default pop_id to enter as null
       unless( defined $line->[1] ){ $line->[1] = 0; }        
-      if (!exists($samples{$line->[1]})) {  $samples{$line->[1]} = get_sample($line->[1], $sample_sth);}
+      if (!exists($population{$line->[1]})) {  $population{$line->[1]} = get_population($line->[1], $population_sth);}
 
       my $sep_alleles = get_alleles_from_pattern($line->[2]);    ## Reported allele pattern [ eg A/T ]
       foreach my $sep_allele (@$sep_alleles){
@@ -257,8 +257,8 @@ sub allele_table {
           ## don't add a line without frequency information if record with frequency already entered for this ss & pop & allele
           next if defined  $done{$line->[0]}{$line->[1]}{$sep_allele} ;
 
-	  ## ens variation_id, subsnp_id, ens sample_id, allele, frequency, count, handle
-	  my $row = join("\t",($variation_ids->{$line->[0]}{'variation_id'},$line->[0],$samples{$line->[1]},$sep_allele,'\N','\N','\N' )) ;
+	  ## ens variation_id, subsnp_id, ens population_id, allele, frequency, count, handle
+	  my $row = join("\t",($variation_ids->{$line->[0]}{'variation_id'},$line->[0],$population{$line->[1]},$sep_allele,'\N','\N','\N' )) ;
 	  
 	  push(@output,$row);
       }
@@ -280,18 +280,18 @@ sub allele_table {
   return 1;
 }
 
-## extract ensembl database id for pre-imported sample
-sub get_sample{
+## extract ensembl database id for pre-imported population
+sub get_population{
 
-    my $pop_id     = shift;
-    my $sample_sth = shift;
+    my $pop_id         = shift;
+    my $population_sth = shift;
 
-    $sample_sth->execute($pop_id)|| die "Failed to find sample id for $pop_id: $DBI::errstr\n";
+    $population_sth->execute($pop_id)|| die "Failed to find population id for $pop_id: $DBI::errstr\n";
     
-    my $sample_id = $sample_sth->fetchall_arrayref();
+    my $population_id = $population_sth->fetchall_arrayref();
 
-    if(defined $sample_id->[0]->[0]){
-        return $sample_id->[0]->[0];
+    if(defined $population_id->[0]->[0]){
+        return $population_id->[0]->[0];
     }
     else{
         return '\N';
@@ -346,7 +346,7 @@ sub calculate_gtype {
   my $end = shift;
   my $mapping_file = shift;
   my $allele_file = shift;
-  my $sample_file = shift;
+  #my $sample_file = shift;
   
   #ÊPut the log filehandle in a local variable
   my $logh = $self->{'log'};
@@ -406,16 +406,16 @@ sub calculate_gtype {
   };
   my $vs_sth = $dbVar->dbc()->prepare($stmt);
   
-  # Prepared statement to get the sample_id from a ind_id
+  # Prepared statement to get the ensembl individual_id from a dbSNP ind_id
   $stmt = qq{
     SELECT
-      t.sample_id
+      t.individual_id
     FROM
       tmp_ind t
     WHERE
       t.submitted_ind_id = ?
   };
-  my $sample_sth = $dbVar->dbc()->prepare($stmt);
+  my $individual_sth = $dbVar->dbc()->prepare($stmt);
   
   # Prepared statement to get the alleles. We get each one of these when needed.
   $stmt = qq{
@@ -501,15 +501,15 @@ sub calculate_gtype {
   # Keep track if we did any new lookups
   my $new_alleles = 0;
   
-  #ÊHash to keep sample_ids in memory
-  my %samples;
+  #ÊHash to keep individual_ids in memory
+  my %individuals;
   #ÊIf the sample file exist, we'll read alleles from it
-  %samples = %{read_samples($sample_file)} if (defined($sample_file) && -e $sample_file);
+  #%individuals = %{read_samples($sample_file)} if (defined($sample_file) && -e $sample_file);
   print $logh Progress::location();
   # The individual_id = 0 is a replacement for NULL but since it's used for a key in the hash below, we need it to have an actual numerical value
-  $samples{0} = '\N';
+  $individuals{0} = '\N';
   # Keep track if we did any new lookups
-  my $new_samples = 0;
+  #my $new_samples = 0;
   
   #ÊHash to keep subsnp_id to variation_id mappings in memory
   my %variation_ids;
@@ -641,19 +641,18 @@ sub calculate_gtype {
 
 	else{
 =cut
-    if(!exists $samples{$ind_sub_id} ){
+    if(!exists $individuals{$ind_sub_id} ){
 
-	$sample_sth->execute($ind_sub_id);
-	my $sample_id;
-	$sample_sth->bind_columns(\$sample_id);
-	$sample_sth->fetch();
-	if (!defined($sample_id)){  ### check for further drop out??
-	    warn "Skipping genotypes due to lack of sample (submitted_ind_id:$ind_sub_id) & ss$subsnp_id\n";
+	$individual_sth->execute($ind_sub_id);
+	my $individual_id;
+	$individual_sth->bind_columns(\$individual_id);
+	$individual_sth->fetch();
+	if (!defined($individual_id)){  ### check for further drop out??
+	    warn "Skipping genotypes due to lack ofindividual record (submitted_ind_id:$ind_sub_id) & ss$subsnp_id\n";
 	    next;
 	} 
-	$samples{$ind_sub_id} = $sample_id;
+	$individuals{$ind_sub_id} = $individual_id;
 #	    $all_individuals{$ind_id}{$ind_sub_id} = $sample_id;
-	$new_samples = 1;
 	
     }
     $allele_1 = $alleles{$allele_1}->[$reverse];
@@ -668,7 +667,7 @@ sub calculate_gtype {
     next if ($allele_1 eq 'N' && $allele_2 eq 'N');
     
     #my $row = join("\t",($variation_ids{$subsnp_id}->[0],$subsnp_id,$samples{$ind_id},$allele_1,$allele_2));
-    my $row = join("\t",($variation_ids{$subsnp_id}->[0],$subsnp_id,$samples{$ind_sub_id},$allele_1,$allele_2));
+    my $row = join("\t",($variation_ids{$subsnp_id}->[0],$subsnp_id,$individuals{$ind_sub_id},$allele_1,$allele_2));
     my $md5 = md5_hex($row);
     next if (exists($row_md5s{$md5}));
     $row_md5s{$md5}++;
@@ -716,7 +715,7 @@ sub calculate_gtype {
   write_alleles($allele_file,\%alleles) if (defined($allele_file) && $new_alleles);
   print $logh Progress::location();
   # If we had a sample file and we need to update it, do that
-  delete($samples{0});
+  #delete($samples{0});
   #write_samples($sample_file,\%samples) if (defined($sample_file) && $new_samples);
   # If we had a subsnp mapping file and we need to update it, do that
   delete($variation_ids{0});
