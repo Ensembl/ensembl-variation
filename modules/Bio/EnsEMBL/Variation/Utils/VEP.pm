@@ -1937,7 +1937,15 @@ sub init_line {
     }
     
     # individual?
-    $line->{Extra}->{IND} = $vf->{individual} if defined($vf->{individual});
+    if(defined($vf->{individual})) {
+      $line->{Extra}->{IND} = $vf->{individual};
+      
+      # zygosity
+      if(defined($vf->{genotype})) {
+        my %unique = map {$_ => 1} @{$vf->{genotype}};
+        $line->{Extra}->{ZYG} = scalar keys %unique > 1 ? 'HET' : 'HOM';
+      }
+    }
     
     # frequencies?
     $line->{Extra}->{FREQS} = join ",", @{$vf->{freqs}} if defined($vf->{freqs});
