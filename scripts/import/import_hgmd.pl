@@ -108,7 +108,7 @@ sub add_variation {
   if (scalar @not_existing) {
     print "WARNING: ".scalar(@not_existing)." entries are not anymore in the HGMD database!\n";
     print "Please, remove the following HGMD mutations from the variation database:\n";
-    print join("\n",@not_existing);
+    print join("\n",@not_existing)."\n";
   }
 }
 
@@ -232,7 +232,7 @@ sub add_annotation {
         ?,
         v.name,
         ?,
-        'VARIATION',
+        'Variation',
         vf.seq_region_id,
         vf.seq_region_start,
         vf.seq_region_end,
@@ -240,7 +240,7 @@ sub add_annotation {
       FROM $va_table va, $var_table v , $vf_table vf
       WHERE v.variation_id=va.variation_id AND v.variation_id=vf.variation_id
       AND NOT EXISTS ( SELECT * FROM phenotype_feature pf2
-                       WHERE pf2.object_id=v.name AND pf2.type='VARIATION' 
+                       WHERE pf2.object_id=v.name AND pf2.type='Variation' 
                      );
   });
   $insert_pf_sth->execute($phenotype_id,$source_id);
@@ -268,7 +268,7 @@ sub add_annotation {
       FROM $var_table v, $va_table va, phenotype_feature pf
       WHERE v.variation_id=va.variation_id 
         AND v.name=pf.object_id
-        AND pf.type='VARIATION'
+        AND pf.type='Variation'
   });
   $insert_pfa_sth->execute($attrib_type_id);
 }
@@ -276,8 +276,8 @@ sub add_annotation {
 
 sub add_attrib {
   my %attrib = ('M' => 'SNV',
-                 'D' => 'deletion',
-                 'I' => 'insertion',
+                'D' => 'deletion',
+                'I' => 'insertion',
                 'X' => 'indel',
                 'P' => 'indel',
                 'R' => 'sequence_alteration',
@@ -345,8 +345,7 @@ sub add_set {
   my $insert_set_stmt = qq{ 
     INSERT IGNORE INTO variation_set_variation (variation_id,variation_set_id)
       SELECT distinct variation_id, ? 
-      FROM variation_annotation WHERE study_id IN
-        (SELECT study_id FROM study WHERE source_id=?)
+      FROM variation WHERE source_id=?
   };
   my $sth2 = $dbh->prepare($insert_set_stmt);
   $sth2->bind_param(1,$variation_set_id,SQL_INTEGER);
