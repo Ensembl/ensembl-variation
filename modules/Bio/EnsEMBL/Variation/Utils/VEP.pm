@@ -1910,6 +1910,11 @@ sub add_extra_fields_transcript {
         $line->{Extra}->{CANONICAL} = 'YES' if $tr->is_canonical;
     }
     
+    # biotype
+    if(defined $config->{biotype}) {
+        $line->{Extra}->{BIOTYPE} = $tr->biotype;
+    }
+    
     return $line;
 }
 
