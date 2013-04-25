@@ -445,14 +445,14 @@ sub parse_nhgri {
     
     my @content = split(/\t/,$_);
     
-    my $pubmed_id    = $content[1];
-    my $study      = $content[6];
-    my $phenotype    = $content[7];
-    my $gene       = $content[13];
+    my $pubmed_id      = $content[1];
+    my $study          = $content[6];
+    my $phenotype      = $content[7];
+    my $gene           = $content[13];
     my $rs_risk_allele = $content[20];
-    my $rs_id      = $content[21];
+    my $rs_id          = $content[21];
     my $risk_frequency = $content[26];
-    my $pvalue     = $content[27];
+    my $pvalue         = $content[27];
     
     my %data = (
       'study_type' => 'GWAS',
@@ -1468,10 +1468,10 @@ sub add_phenotypes {
         study_type $sql_type
         LIMIT 1
       };
+			
       my $st_check_sth = $db_adaptor->dbc->prepare($st_check_stmt);
       my $second_param_num = 1;
       
-      my $study_id;
       if (defined $phenotype->{"study"}) {
         $st_check_sth->bind_param(1,$phenotype->{"study"},SQL_VARCHAR);
         $second_param_num = 2;
