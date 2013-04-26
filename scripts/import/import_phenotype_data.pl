@@ -132,7 +132,7 @@ my $object_type;
     Currently what is returned should be a reference to a hash. The hash should
     contain the key 'phenotypes' with the value being a reference to an array of
     phenotype data objects. The phenotype data object is a reference to a hash
-    where the keys correspond to the column names in the variation_annotation table.
+    where the keys correspond to the column names in the phenotype_feature table.
     In addition, there are the keys 'rsid' which holds the rs-id that the phenotype
     annotates and 'description' and 'name' which correspond to the columns in the
     phenotype table.
@@ -1711,9 +1711,11 @@ sub add_set {
   # Insert into variation_set_variation
   my $insert_set_stmt = qq{ 
   INSERT IGNORE INTO variation_set_variation (variation_id,variation_set_id)
-  SELECT distinct variation_id, ? 
-  FROM variation_annotation WHERE study_id IN
-  (SELECT study_id FROM study WHERE source_id=?)
+  SELECT distinct v.variation_id, ? 
+  FROM phenotype_feature pf, variation v WHERE 
+	  v.name=pf.object_id AND
+		pf.type='Variation' AND
+	  pf.source_id=?
   };
   my $sth2 = $db_adaptor->dbc->prepare($insert_set_stmt);
   $sth2->bind_param(1,$variation_set_id,SQL_INTEGER);
@@ -1792,7 +1794,7 @@ sub usage {
       -verbose           Progress information is printed
       -help               Print this message
       
-      -skip_phenotypes   Skip the study, variation_annotation and phenotype tables insertions.
+      -skip_phenotypes   Skip the study, phenotype_feature, phenotype_feature_attrib and phenotype tables insertions.
       -skip_synonyms     Skip the variation_synonym table insertion.
       -skip_sets         Skip the variation_set_variation table insertion.
       
