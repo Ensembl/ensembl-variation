@@ -4686,7 +4686,7 @@ sub find_existing {
     my $config = shift;
     my $new_vf = shift;
     
-    if(defined($config->{vfa}->db)) {
+    if(defined($config->{vfa}) && defined($config->{vfa}->db)) {
         
         my $maf_cols = have_maf_cols($config) ? 'vf.minor_allele, vf.minor_allele_freq' : 'NULL, NULL';
         
@@ -4703,17 +4703,18 @@ sub find_existing {
         $new_vf->{slice} ||= get_slice($config, $new_vf->{chr});
         $sth->execute($new_vf->slice->get_seq_region_id, $new_vf->start, $new_vf->end);
         
-        my @v;
-        for my $i(0..7) {
-            $v[$i] = undef;
-        }
+        my %v;
+        $v{$_} = undef for @VAR_CACHE_COLS;
         
-        $sth->bind_columns(\$v[0], \$v[1], \$v[2], \$v[3], \$v[4], \$v[5], \$v[6], \$v[7]);
+        my %vars_by_id;
+        $sth->bind_col($_+1, \$v{$VAR_CACHE_COLS[$_]}) for (0..4);
         
         my @found;
         
         while($sth->fetch) {
-            push @found, \@v unless is_var_novel($config, \@v, $new_vf) || $v[1] > $config->{failed};
+            my %v_copy = %v;
+            $v_copy{allele_string} =~ s/\s+/\_/g;
+            push @found, \%v_copy unless is_var_novel($config, \%v_copy, $new_vf) || $v_copy{failed} > $config->{failed};
         }
         
         $sth->finish();
