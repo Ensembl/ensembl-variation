@@ -1130,6 +1130,8 @@ sub get_header_info {
 			$subject_data{$key} = $value;
 		}
 		
+		$subject_data{subject_sex} = $subject_data{sex} if ($subject_data{sex});
+		
 		if ($subject_data{subject_sex}) {
 			$subject_data{subject_sex} = ($subject_data{subject_sex} =~ /^m/i) ? 'Male' : 'Female';
 		}
@@ -1382,9 +1384,19 @@ sub post_processing_annotation {
 	}
 	if (scalar(@sv_list)>0) {
 		my $svs  = join(',',@sv_list); 
-		my $stmt = qq{ DELETE FROM $svs_table WHERE individual_id=strain_id AND structural_variation_id IN ($svs) };
+		$stmt = qq{ DELETE FROM $svs_table WHERE individual_id=strain_id AND structural_variation_id IN ($svs) };
 		$dbVar->do($stmt);
 	}
+	
+	# Duplicate strains at the SV level (only for mouse)
+	if ($species =~ /mouse|mus/i) {
+	  $stmt = qq{
+	    INSERT IGNORE INTO $svs_table (structural_variation_id,strain_id) 
+		  SELECT distinct sva.structural_variation_id,svs.strain_id FROM $svs_table svs, $sva_table sva 
+		  WHERE sva.supporting_structural_variation_id=svs.structural_variation_id AND svs.strain_id is not null
+		};
+		$dbVar->do($stmt);
+	} 
 }
 
 
@@ -1534,7 +1546,7 @@ sub cleanup {
 	debug(localtime()."\t - Table $svs_table: cleaned");
   
 	# Drop a unique constraint in individual;
-  $dbVar->do(qq{ALTER TABLE individual DROP KEY sv_id_key});
+  $dbVar->do(qq{ALTER TABLE individual DROP KEY name_key});
 	debug(localtime()."\t - Table individual: cleaned");
 	
 	# structural_variation table
