@@ -173,8 +173,8 @@ my $add_failed_var_sth = $dbh->prepare(qq{
 my $add_vf_sth = $dbh->prepare(qq{
     INSERT INTO $vf_table (variation_id, seq_region_id, seq_region_start,
         seq_region_end, seq_region_strand, variation_name, allele_string, map_weight, 
-        source_id, variation_set_id, class_attrib_id, somatic)
-    VALUES (?,?,?,?,?,?,?,?,?,?,?,1)
+        source_id, class_attrib_id, somatic)
+    VALUES (?,?,?,?,?,?,?,?,?,?,1)
 });
 
 my $find_existing_population_sth = $dbh->prepare(qq{
@@ -186,19 +186,13 @@ my $add_population_sth = $dbh->prepare(qq{
     VALUES (?,?,?)
 });
 
-my $add_allele_sth = $dbh->prepare(qq{
-    INSERT INTO allele (variation_id, population_id, allele, frequency)
-    VALUES (?,?,?,?)
-});
-
 my $add_allele_with_code_sth = $dbh->prepare(qq{
     INSERT INTO allele (variation_id, population_id, allele_code_id, frequency)
     VALUES (?,?,?,?)
 });
 
-
 my $find_matching_phenotype_sth = $dbh->prepare(qq{
-    SELECT * FROM phenotype WHERE description LIKE ? ORDER BY phenotype_id LIMIT 1
+    SELECT phenotype_id FROM phenotype WHERE description LIKE ? ORDER BY phenotype_id LIMIT 1
 });
 
 my $add_phenotype_sth = $dbh->prepare(qq{
@@ -235,16 +229,16 @@ my $insert_allele_code_sth = $dbh->prepare(qq{
 # get the failed description ID we will use
 
 my $get_failed_desc_sth = $dbh->prepare(qq{
-    SELECT  failed_description_id 
-    FROM    failed_description
-    WHERE   description = ?
+    SELECT failed_description_id 
+    FROM   failed_description
+    WHERE  description = ?
 });
 
 my $get_class_attrib_ids_sth = $dbh->prepare(qq{
-    SELECT  a.value, a.attrib_id
-    FROM    attrib a, attrib_type at
-    WHERE   a.attrib_type_id = at.attrib_type_id
-    AND     at.code = 'SO_term'
+    SELECT a.value, a.attrib_id
+    FROM   attrib a, attrib_type at
+    WHERE  a.attrib_type_id = at.attrib_type_id
+    AND    at.code = 'SO_term'
 });
 
 $get_class_attrib_ids_sth->execute;
@@ -254,8 +248,6 @@ my %class_attrib_ids;
 while (my ($value, $attrib_id) = $get_class_attrib_ids_sth->fetchrow_array) {
     $class_attrib_ids{$value} = $attrib_id;
 }
-
-my $allele_column_type = $dbh->do(qq{show columns from allele like 'allele';});
 
 
 my $patched_version = 0;
@@ -563,6 +555,16 @@ MAIN_LOOP : while(<$INPUT>) {
         my $mismatching_reference;
 
         unless ($fail_variation == 1) {
+				    if ($cs_ref_nt ne $ens_ref_comp) {
+				      if ($cs_ref_nt =~ /^[^ATGC]$/ && $class =~ /^Substitution/) {
+							  if ($cds =~ /c\.\d+(\w)>\w$/) {
+								  $cs_ref_nt = uc($1) if ($1 !~ /$cs_ref_nt/i);
+								}	
+							} elsif ($cs_ref_nt =~ /^\d+$/ && $class =~ /^Deletion/) {
+							   $cs_ref_nt = $ens_ref;
+							}
+				    }
+				
             if ($strand == 1) {
                 if ($cs_ref_nt ne $ens_ref) {
                     $mismatching_reference = "cosmic: $cs_ref_nt vs. ensembl: $ens_ref";
@@ -577,14 +579,17 @@ MAIN_LOOP : while(<$INPUT>) {
                 }
 
                 if ($cs_ref_nt ne $ens_ref_comp) {
+								    if ($cs_ref_nt =~ /^[^ATGC]$/ && ) {
+										  
+										}
+								
                     $mismatching_reference = "cosmic: $cs_ref_nt vs. ensembl: $ens_ref_comp";
                 }
             }
         }
        
         if ($mismatching_reference) {
-#            print "Reference bases don't match for $cosmic_gene (".
-#                $ens_gene->stable_id."): $mismatching_reference";
+            print "Reference bases don't match for $cosmic_gene (".$ens_gene->stable_id."): $mismatching_reference\n";
 #
 #            print "Other variations here:\n";
 #
@@ -605,22 +610,12 @@ MAIN_LOOP : while(<$INPUT>) {
 
         die "No class attrib id for allele string: $allele_string" unless defined $class_id;
 
-        # handle large deletions, insertions ans indels
+        # handle large deletions, insertions and indels
         if (length($forward_strand_ref_allele) > 50) {
-          if ($forward_strand_mut_allele eq '-') {
-              #$forward_strand_ref_allele = 'LARGE_DELETION';
-            $allele_string = ($fail_variation == 1) ? '' : "LARGE_DELETION";
-          } else {
-            $allele_string = ($fail_variation == 1) ? '' : "LARGE_INDEL";
-          }
+          $allele_string = ($forward_strand_mut_allele eq '-') ? "LARGE_DELETION" : "LARGE_INDEL";
         }
         if (length($forward_strand_mut_allele) > 50) { 
-          if ($forward_strand_ref_allele eq '-') {
-            #$forward_strand_mut_allele = 'LARGE_INSERTION';
-            $allele_string = ($fail_variation == 1) ? '' : "LARGE_INSERTION";
-          } else {
-            $allele_string = ($fail_variation == 1) ? '' : "LARGE_INDEL";
-          }
+          $allele_string = ($forward_strand_ref_allele eq '-') ? "LARGE_INSERTION" : "LARGE_INDEL";
         }
 
         unless ($USE_DB) {
@@ -673,7 +668,6 @@ MAIN_LOOP : while(<$INPUT>) {
                 $allele_string,
                 1,
                 $source_id,
-                (join ",", $cosmic_set_id, $phenotype_set_id),
                 $class_id,
             ); 
         }
@@ -706,49 +700,24 @@ MAIN_LOOP : while(<$INPUT>) {
         }
 
         my $mut_freq = $mutated_samples / $total_samples;
-        
-        # Allele table with a column "allele_code_id"
-        if ($allele_column_type != 1){
           
-          # add the mutant allele
-          my $mut_allele_code_id = get_allele_code($forward_strand_mut_allele);
-          $add_allele_with_code_sth->execute(
-              $variation_id,
-              $population_id,
-              $mut_allele_code_id,
-              $mut_freq,
-          );
+        # add the mutant allele
+        my $mut_allele_code_id = get_allele_code($forward_strand_mut_allele);
+        $add_allele_with_code_sth->execute(
+            $variation_id,
+            $population_id,
+            $mut_allele_code_id,
+            $mut_freq,
+        );
         
-          # and the reference allele
-          my $ref_allele_code_id = get_allele_code($forward_strand_ref_allele);
-          $add_allele_with_code_sth->execute(
-              $variation_id,
-              $population_id,
-              $ref_allele_code_id,
-              (1 - $mut_freq)
-          );
-        } 
-        # Allele table with a column "allele"
-        else {
-        
-          # add the mutant allele
-
-          $add_allele_sth->execute(
-              $variation_id,
-              $population_id,
-              $forward_strand_mut_allele,
-              $mut_freq,
-          );
-
-          # and the reference allele
-
-          $add_allele_sth->execute(
-              $variation_id,
-              $population_id,
-              $forward_strand_ref_allele,
-              (1 - $mut_freq),
-          );
-        }
+        # and the reference allele
+        my $ref_allele_code_id = get_allele_code($forward_strand_ref_allele);
+        $add_allele_with_code_sth->execute(
+            $variation_id,
+            $population_id,
+            $ref_allele_code_id,
+            (1 - $mut_freq)
+        );
 
         # try to find an existing phenotype, or create a new phenotype entry
 
