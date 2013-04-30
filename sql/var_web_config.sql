@@ -120,7 +120,7 @@ insert into meta(species_id, meta_key, meta_value)
 values (NULL, 'web_config', "sv_set#1000 Genomes - High quality#sv_set_1kg_hq");
 
 # add structural variation studies (selection of)
-insert into meta(species_id, meta_key, meta_value) values (NULL, 'web_config', "sv_study#estd199#estd199");
-insert into meta(species_id, meta_key, meta_value) values (NULL, 'web_config', "sv_study#nstd37#nstd37");
-insert into meta(species_id, meta_key, meta_value) values (NULL, 'web_config', "sv_study#estd203#estd203");
-insert into meta(species_id, meta_key, meta_value) values (NULL, 'web_config', "sv_study#nstd71#nstd71");
+insert into meta(species_id, meta_key, meta_value) values (NULL, 'web_config', "sv_study#Study estd199#estd199");
+insert into meta(species_id, meta_key, meta_value) values (NULL, 'web_config', "sv_study#Study nstd37#nstd37");
+insert into meta(species_id, meta_key, meta_value) values (NULL, 'web_config', "sv_study#Study estd203#estd203");
+insert into meta(species_id, meta_key, meta_value) values (NULL, 'web_config', "sv_study#Study nstd71#nstd71");
