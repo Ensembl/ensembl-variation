@@ -96,33 +96,31 @@ order by name asc;
 
 # add structural variation sets
 insert into meta(species_id, meta_key, meta_value)
-values
-(NULL, 'web_config', "sv_set#1000 Genomes - Low coverage#sv_set_1kg_lc");
+values (NULL, 'web_config', "sv_set#1000 Genomes - Low coverage#sv_set_1kg_lc");
 
 insert into meta(species_id, meta_key, meta_value)
-values
-(NULL, 'web_config', "sv_set#1000 Genomes - High coverage - Trios#sv_set_1kg_hct");
+values (NULL, 'web_config', "sv_set#1000 Genomes - High coverage - Trios#sv_set_1kg_hct");
 
 insert into meta(species_id, meta_key, meta_value)
-values
-(NULL, 'web_config', "sv_set#1000 Genomes - All#sv_set_1kg");
+values (NULL, 'web_config', "sv_set#1000 Genomes - All#sv_set_1kg");
 
 insert into meta(species_id, meta_key, meta_value)
-values
-(NULL, 'web_config', "sv_set#1000 Genomes - EUR#sv_set_1kg_eur");
+values (NULL, 'web_config', "sv_set#1000 Genomes - EUR#sv_set_1kg_eur");
 
 insert into meta(species_id, meta_key, meta_value)
-values
-(NULL, 'web_config', "sv_set#1000 Genomes - ASN#sv_set_1kg_asn");
+values (NULL, 'web_config', "sv_set#1000 Genomes - ASN#sv_set_1kg_asn");
 
 insert into meta(species_id, meta_key, meta_value)
-values
-(NULL, 'web_config', "sv_set#1000 Genomes - AMR#sv_set_1kg_amr");
+values (NULL, 'web_config', "sv_set#1000 Genomes - AMR#sv_set_1kg_amr");
 
 insert into meta(species_id, meta_key, meta_value)
-values
-(NULL, 'web_config', "sv_set#1000 Genomes - AFR#sv_set_1kg_afr");
+values (NULL, 'web_config', "sv_set#1000 Genomes - AFR#sv_set_1kg_afr");
 
-insert into meta(species_id, meta_key, meta_value)
-values
-(NULL, 'web_config', "sv_set#1000 Genomes - High quality#sv_set_1kg_hq");
+insert into meta(species_id, meta_key, meta_value) 
+values (NULL, 'web_config', "sv_set#1000 Genomes - High quality#sv_set_1kg_hq");
+
+# add structural variation studies (selection of)
+insert into meta(species_id, meta_key, meta_value) values (NULL, 'web_config', "sv_study#estd199#estd199");
+insert into meta(species_id, meta_key, meta_value) values (NULL, 'web_config', "sv_study#nstd37#nstd37");
+insert into meta(species_id, meta_key, meta_value) values (NULL, 'web_config', "sv_study#estd203#estd203");
+insert into meta(species_id, meta_key, meta_value) values (NULL, 'web_config', "sv_study#nstd71#nstd71");
