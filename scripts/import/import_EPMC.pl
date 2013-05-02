@@ -79,7 +79,7 @@ sub import_citations{
     my $data           = shift;
     my $species_string = shift;
 
-    open my $error_log, ">>$data_file\.log"|| die "Failed to open log file\n";
+    open my $error_log, ">>$data_file\_$species\.log"|| die "Failed to open log file: $!\n";
 
 
     my $var_ad = $reg->get_adaptor($species, 'variation', 'variation');
@@ -287,7 +287,7 @@ sub check_dbSNP{
     my $dba       = shift;
 
 
-    open my $error_log, ">>$data_file\_LIVE.log"|| die "Failed to open log file\n";
+    open my $error_log, ">>$data_file\_$species\_file.log"|| die "Failed to open log file:$!\n";
 
     my $pub_ext_sth = $dba->dbc()->prepare(qq[ select publication.publication_id, publication.pmid
                                                from publication
