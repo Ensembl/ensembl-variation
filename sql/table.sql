@@ -417,6 +417,9 @@ create table submitter_handle (
 @column allele_code_id	Primary key, internal identifier.
 @column allele      	String representing the allele. Has a unique constraint on the first 1000 characters (max allowed by MySQL).
 
+@example See below the first entries in the allele_code table:
+         @sql SELECT * FROM allele_code LIMIT 6;
+
 @see allele
 @see genotype_code
 */
@@ -648,6 +651,8 @@ create table individual(
 @column name				Short name of the individual type. e.g. "fully_inbred","mutant".
 @column description			Long name of the individual type.
 
+@example See below the list of individual types:
+         @sql SELECT * FROM individual_type;
 
 @see individual
 */
@@ -1495,6 +1500,9 @@ You can see the complete list, by species, <a href="sources_documentation.html">
 @column type			Define the type of the source, e.g. 'chip'
 @column somatic_status  Indicates if this source includes somatic or germline mutations, or a mixture
 
+@example See below the command listing all the data sources in the human variation database:
+         @sql SELECT * FROM source ORDER BY source_id;
+
 @see variation
 @see variation_synonym
 @see variation_feature
@@ -1574,8 +1582,8 @@ CREATE TABLE associate_study (
 @colour #7CFC00
 @desc   Links a variation to a study
 
-@column variation_id  Primary key, foreign key references variation
-@column study_id      Primary key, foreign key references study
+@column variation_id  Primary key, foreign key references @link variation
+@column study_id      Primary key, foreign key references @link study
 
 @see  variation 
 @see  study  
@@ -1599,6 +1607,7 @@ CREATE TABLE study_variation (
 @column pmid                 The PubMed id for the publication if available
 @column pmcid                The PubMed Central id for the publication if available
 
+@see variation_citation
 */
 
 CREATE TABLE publication(
@@ -1617,7 +1626,7 @@ key pmid_idx (pmid)
 @desc This table links a variation to a publication
 
 @column publication_id       Primary key, internal identifier.
-@column variation_id         Primary key, foreign key references variation
+@column variation_id         Primary key, foreign key references @link variation
 
 @see publication
 @see variation
@@ -1708,6 +1717,9 @@ INSERT INTO meta (meta_key, meta_value) VALUES ('schema_type', 'variation');
 
 @column failed_description_id	Primary key, internal identifier.
 @column description				Text containing the reason why the Variation has been flagged as failed. e.g. "Variation does not map to the genome".
+
+@example See below the list of the descriptions available in the ensembl variation databases:
+         @sql SELECT * FROM failed_description;
 
 @see failed_variation
 @see failed_allele
@@ -1827,6 +1839,9 @@ CREATE TABLE strain_gtype_poly (
 @column name            The name of this type
 @column description     Longer description of this type
 
+@example See below the command to display a subset of the attrib_type entries:
+         @sql SELECT * FROM attrib_type LIMIT 10;
+
 @see    attrib
 @see    attrib_set
 */
@@ -1850,6 +1865,9 @@ CREATE TABLE attrib_type (
 @column attrib_id       Primary key
 @column attrib_type_id  Key into the @link attrib_type table, identifies the type of this attribute
 @column value           The value of this attribute
+
+@example See below the query to display a subset of the attrib entries:
+         @sql SELECT * FROM attrib WHERE attrib_type_id IN (1,2,3) ORDER BY attrib_id LIMIT 21;
 
 @see    attrib_type
 @see    attrib_set
