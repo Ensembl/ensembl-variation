@@ -30,7 +30,7 @@ SET storage_engine=MYISAM;
 @column minor_allele        The minor allele of this variant, as reported by dbSNP
 @column minor_allele_freq   The 'global' frequency of the minor allele of this variant, as reported by dbSNP
 @column minor_allele_count  The number of samples the minor allele of this variant is found in, as reported by dbSNP
-@column clinical_significance_attrib_id  An attrib_id identifying the clinical significance of this variant, as reported by dbSNP.<br /> 
+@column clinical_significance  A set of clinical significance classes assigned to the variant.<br /> 
                                          The list of clinical significances is available <a href="data_description.html#clin_significance">here</a>.
 @column evidence            A summary of the evidence supporting a variant as a guide to its potential reliability.
 
@@ -58,7 +58,7 @@ create table variation (
   minor_allele char(50) DEFAULT NULL,
   minor_allele_freq float DEFAULT NULL,
   minor_allele_count int(10) unsigned DEFAULT NULL,
-  clinical_significance_attrib_id int(10) unsigned DEFAULT NULL,
+  clinical_significance SET('drug-response','histocompatibility','non-pathogenic','other','pathogenic','probable-non-pathogenic','probable-pathogenic''unknown','untested'),
   evidence SET('Multiple_observations', 'Frequency','HapMap','1000Genomes', 'Cited'),
 
 	primary key( variation_id ),
