@@ -64,6 +64,7 @@ use warnings;
 package Bio::EnsEMBL::Variation::StructuralVariation;
 
 use Bio::EnsEMBL::Variation::BaseStructuralVariation;
+use Bio::EnsEMBL::Utils::Exception qw(deprecate);
 
 our @ISA = ('Bio::EnsEMBL::Variation::BaseStructuralVariation');
 
@@ -115,12 +116,7 @@ sub get_all_SupportingStructuralVariants {
 
 sub get_all_supporting_evidence_classes {
   my $self = shift;
-  my $ssvs = $self->get_all_SupportingStructuralVariants;
-  return [] if (scalar @$ssvs == 0);
-  
-  my %ssv_SO_class = map { $_->class_SO_term() => 1 } @$ssvs;
-  my @ssv_SO_list = keys(%ssv_SO_class);
-  return \@ssv_SO_list;
+	deprecate('Use the method "_get_all_supporting_evidence_classes" in the StructuralVariationFeature object.');
 }
 
 
