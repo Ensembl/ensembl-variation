@@ -55,21 +55,16 @@ my $list_stmt = qq{ SELECT value FROM attrib WHERE attrib_type_id IN
 my $desc_stmt = qq{ SELECT name,description FROM attrib_type WHERE code=? };
 
 my %types = (
-  'dbsnp_clin_sig' => { query => qq{ SELECT v.name FROM variation v, attrib a 
-                                     WHERE v.clinical_significance_attrib_id=a.attrib_id
-                                     AND a.value=? 
-                                     AND v.variation_id NOT IN (SELECT variation_id FROM failed_variation) 
+  'dbsnp_clin_sig' => { query => qq{ SELECT name FROM variation
+                                     WHERE FIND_IN_SET(?,clinical_significance)
+                                     AND variation_id NOT IN (SELECT variation_id FROM failed_variation) 
                                      LIMIT 1},
                         link => qq{/Homo_sapiens/Variation/Explore?v=}
                       },
-  'dgva_clin_sig' => { query => qq{ SELECT v1.variation_name FROM structural_variation v1, structural_variation v2, structural_variation_association vas, phenotype_feature pf, phenotype_feature_attrib pfa, attrib_type at 
-                                    WHERE pf.object_id=v2.variation_name
-                                    AND pf.type='SupportingStructuralVariation' 
-                                    AND v2.structural_variation_id=vas.supporting_structural_variation_id
-                                    AND pf.phenotype_feature_id=pfa.phenotype_feature_id
-                                    AND pfa.attrib_type_id=at.attrib_type_id
-                                    AND at.code='dgva_clin_sig'
-                                    AND pfa.value=?
+  'dgva_clin_sig' => { query => qq{ SELECT v1.variation_name FROM structural_variation v1, structural_variation v2, structural_variation_association vas, attrib a
+                                    WHERE v2.structural_variation_id=vas.supporting_structural_variation_id
+                                    AND v2.clinical_significance_attrib_id=a.attrib_id
+																		AND a.value=?
                                     AND v1.structural_variation_id=vas.structural_variation_id
                                     AND v1.structural_variation_id NOT IN 
                                     (SELECT structural_variation_id FROM failed_structural_variation)
