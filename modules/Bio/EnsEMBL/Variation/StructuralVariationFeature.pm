@@ -123,8 +123,8 @@ our @ISA = ('Bio::EnsEMBL::Variation::BaseVariationFeature');
   Arg [-SOURCE] :
     string - the name of the source where the variation comes from
   
-  Arg [-SOURCE_VERSION] :
-  string - version number of the source
+  Arg [-SOURCE_DESCRIPTION] :
+  string - description of the source
 	
 	Arg [-STUDY] :
     object ref - the study object describing where the structural variant comes from.
@@ -164,8 +164,9 @@ sub new {
   
   my (
     $var_name, 
+		$structural_variation_id,
     $source, 
-    $source_version,
+    $source_description,
 		$study, 
     $class_so_term, 
     $inner_start, 
@@ -178,8 +179,9 @@ sub new {
 		$length
   ) = rearrange([qw(
   VARIATION_NAME 
+	_STRUCTURAL_VARIATION_ID
   SOURCE 
-  SOURCE_VERSION
+  SOURCE_DESCRIPTION
 	STUDY
   CLASS_SO_TERM
   INNER_START 
@@ -193,19 +195,20 @@ sub new {
   )], @_);
 
 
-  $self->{'variation_name'}     = $var_name;
-  $self->{'source'}             = $source;
-  $self->{'source_version'}     = $source_version;
-	$self->{'study'}              = $study;
-  $self->{'class_SO_term'}      = $class_so_term;
-  $self->{'inner_start'}        = $inner_start;
-  $self->{'inner_end'}          = $inner_end;
-  $self->{'outer_start'}        = $outer_start;
-  $self->{'outer_end'}          = $outer_end;
-  $self->{'allele_string'}      = $allele_string;
-  $self->{'is_somatic'}         = $is_somatic || 0;
-  $self->{'breakpoint_order'}   = $breakpoint_order;
-	$self->{'length'}             = $length;
+  $self->{'variation_name'}           = $var_name;
+	$self->{'_structural_variation_id'} = $structural_variation_id;
+  $self->{'source'}                   = $source;
+  $self->{'source_description'}       = $source_description;
+	$self->{'study'}                    = $study;
+  $self->{'class_SO_term'}            = $class_so_term;
+  $self->{'inner_start'}              = $inner_start;
+  $self->{'inner_end'}                = $inner_end;
+  $self->{'outer_start'}              = $outer_start;
+  $self->{'outer_end'}                = $outer_end;
+  $self->{'allele_string'}            = $allele_string;
+  $self->{'is_somatic'}               = $is_somatic || 0;
+  $self->{'breakpoint_order'}         = $breakpoint_order;
+	$self->{'length'}                   = $length;
 
   return $self;
 }
@@ -311,13 +314,13 @@ sub structural_variation {
     $self->{'structural_variation'} = shift;
   }
   elsif(!defined($self->{'structural_variation'}) && $self->{'adaptor'} &&
-        defined($self->{'structural_variation_id'})) {
+        defined($self->{'_structural_variation_id'})) {
     # lazy-load from database on demand
     my $sva = $self->{'adaptor'}->db()->get_StructuralVariationAdaptor();
-    $self->{'structural_variation'} = $sva->fetch_by_dbID($self->{'structural_variation_id'});
+    $self->{'structural_variation'} = $sva->fetch_by_dbID($self->{'_structural_variation_id'});
     if (!defined($self->{'structural_variation'})) {
       $sva = $self->{'adaptor'}->db()->get_SupportingStructuralVariationAdaptor();
-      $self->{'structural_variation'} = $sva->fetch_by_dbID($self->{'structural_variation_id'});
+      $self->{'structural_variation'} = $sva->fetch_by_dbID($self->{'_structural_variation_id'});
     }
   }
 
@@ -726,6 +729,29 @@ sub get_all_OverlapConsequences {
 }
 
 
+=head2 _get_all_supporting_evidence_classes
+
+  Example     : $svf->_get_all_supporting_evidence_classes
+  Description : Retrieves the classes (SO term) of the supporting evidence associated 
+	              with this structural variation feature (mainly, for web purposes).
+                Return empty list if there are none.
+  Returntype  : reference to list of string
+  Exceptions  : None
+  Caller      : web
+  Status      : Stable
+
+=cut
+
+sub _get_all_supporting_evidence_classes {
+  my $self = shift;
+  my $ssva = $self->adaptor->db->get_SupportingStructuralVariationAdaptor();
+	
+	my $ssv_SO_list = $ssva->_fetch_all_SO_term_by_structural_variation_dbID($self->{_structural_variation_id});
+  
+	return $ssv_SO_list;
+}
+
+
 =head2 var_class
 
     Args         : None
@@ -791,12 +817,12 @@ sub source{
   return $self->{'source'};
 }
 
-=head2 source_version
+=head2 source_description
 
-  Arg [1]    : string $source_version (optional)
-               The new value to set the source_version attribute to
-  Example    : $source_version = $svf->source_version()
-  Description: Getter/Setter for the source_version attribute
+  Arg [1]    : string $source_description (optional)
+               The new value to set the source_description attribute to
+  Example    : $source_description = $svf->source_description()
+  Description: Getter/Setter for the source_description attribute
   Returntype : string
   Exceptions : none
   Caller     : general
@@ -804,10 +830,10 @@ sub source{
 
 =cut
 
-sub source_version {
+sub source_description {
   my $self = shift;
-  return $self->{'source_version'} = shift if(@_);
-  return $self->{'source_version'};
+  return $self->{'source_description'} = shift if(@_);
+  return $self->{'source_description'};
 }
 
 =head2 bound_start
