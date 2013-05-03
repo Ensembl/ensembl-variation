@@ -672,9 +672,9 @@ sub clinical_significance {
 	my $self = shift;
 	my $new  = shift;
 	
-	$self->_set_attribute('dgva_clin_sig', $new) if defined($new);
+	$self->_set_attribute('dbsnp_clin_sig', $new) if defined($new);
 	
-	return defined($self->get_all_attributes->{'dgva_clin_sig'}) ? $self->get_all_attributes->{'dgva_clin_sig'} : undef;
+	return defined($self->get_all_attributes->{'dbsnp_clin_sig'}) ? $self->get_all_attributes->{'dbsnp_clin_sig'} : undef;
 }
 
 
@@ -696,71 +696,6 @@ sub external_id {
 	$self->_set_attribute('external_id', $new) if defined($new);
 	
 	return defined($self->get_all_attributes->{'external_id'}) ? $self->get_all_attributes->{'external_id'} : undef;
-}
-
-
-=head2 sample_name
-
-  Example    : $sample_name = $obj->sample_name()
-  Description: Getter for the sample_name attribute.
-  Returntype : string
-  Exceptions : none
-  Caller     : general
-  Status     : Stable
-
-=cut
-
-sub sample_name {
-	my $self = shift;
-	
-	if(!exists($self->{sample_name})) {
-		if(my $sample_id = $self->get_all_attributes->{'sample_id'}) {
-			$self->{sample_name} = $self->_generic_sample_name_fetch($sample_id);
-		}
-		else {
-			$self->{sample_name} = undef;
-		}
-	}
-	
-	return $self->{sample_name};
-}
-
-
-=head2 strain_name
-
-  Example    : $strain_name = $obj->strain_name()
-  Description: Getter for the strain_name attribute.
-  Returntype : string
-  Exceptions : none
-  Caller     : general
-  Status     : Stable
-
-=cut
-
-sub strain_name {
-	my $self = shift;
-	
-	if(!exists($self->{strain_name})) {
-		if(my $strain_id = $self->get_all_attributes->{'strain_id'}) {
-			$self->{strain_name} = $self->_generic_sample_name_fetch($strain_id);
-		}
-		else {
-			$self->{strain_name} = undef;
-		}
-	}
-	
-	return $self->{strain_name};
-}
-
-# internal method used by strain_name and sample_name
-sub _generic_sample_name_fetch {
-	my $self = shift;
-	my $id = shift;
-	
-	# method we want is on SampleAdaptor, but that is a base adaptor so we can't
-	# use it directly
-	my $ia = $self->adaptor->db->get_IndividualAdaptor;
-	return $ia->_get_sample_name_by_dbID($id);
 }
 
 
