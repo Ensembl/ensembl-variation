@@ -8,7 +8,7 @@
   <a href="vep/index.html">Variant Effect Predictor</a>
 </span>
 
-<h1 style="margin-top:15px">Ensembl Variation - Schema description</h1>
+<h1 style="margin-top:15px">Ensembl Variation - Schema documentation</h1>
 
 <p>
 This document gives a high-level description of the tables that
