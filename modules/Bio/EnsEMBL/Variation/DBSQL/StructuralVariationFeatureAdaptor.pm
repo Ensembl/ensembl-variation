@@ -273,6 +273,42 @@ sub fetch_all_by_Slice_SO_term {
 }
 
 
+=head2 fetch_all_by_Slice_Study
+
+  Arg [1]    : Bio::EnsEMBL:Variation::Slice $slice
+  Arg [2]    : Bio::EnsEMBL:Variation::Study $study
+  Example    : my @vsfs = @{$svfa->fetch_all_by_Slice_Study($slice, $study)};
+  Description: Retrieves all structural variation features in a slice that belong to a 
+               given study.
+  Returntype : reference to list Bio::EnsEMBL::Variation::StructuralVariationFeature
+  Exceptions : throw on bad argument
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub fetch_all_by_Slice_Study {
+
+  my $self  = shift;
+  my $slice = shift;
+  my $study   = shift;
+  
+  if(!ref($slice) || !$slice->isa('Bio::EnsEMBL::Slice')) {
+    throw('Bio::EnsEMBL::Slice arg expected');
+  }
+  if(!ref($study) || !$study->isa('Bio::EnsEMBL::Variation::Study')) {
+    throw('Bio::EnsEMBL::Variation::Study arg expected');
+  }
+  
+ # Add a constraint to only return StructuralVariationFeatures belonging to the given study
+  my $constraint = $self->_internal_exclude_failed_constraint("svf.study_id = ".$study->dbID);
+  # Get the VariationFeatures by calling fetch_all_by_Slice_constraint
+  my $svfs = $self->fetch_all_by_Slice_constraint($slice,$constraint);
+
+  return $svfs;
+}
+
+
 =head2 fetch_all_by_Slice_VariationSet
 
   Arg [1]    : Bio::EnsEMBL:Variation::Slice $slice
@@ -344,7 +380,7 @@ sub _default_where_clause {
 sub _columns {
   return qw( svf.structural_variation_feature_id svf.seq_region_id svf.outer_start svf.seq_region_start 
              svf.inner_start svf.inner_end svf.seq_region_end svf.outer_end svf.seq_region_strand 
-             svf.structural_variation_id svf.variation_name s.name s.version svf.study_id svf.class_attrib_id 
+             svf.structural_variation_id svf.variation_name s.name s.description svf.study_id svf.class_attrib_id 
              svf.allele_string svf.somatic svf.breakpoint_order svf.length);
 }
 
@@ -368,11 +404,11 @@ sub _objs_from_sth {
 
     my ($structural_variation_feature_id, $seq_region_id, $outer_start, $seq_region_start, $inner_start, $inner_end, 
         $seq_region_end, $outer_end, $seq_region_strand, $structural_variation_id, $variation_name, $source_name, 
-        $source_version, $study_id, $class_attrib_id, $allele_string, $is_somatic, $bp_order, $length, $last_svf_id);
+        $source_description, $study_id, $class_attrib_id, $allele_string, $is_somatic, $bp_order, $length, $last_svf_id);
 
     $sth->bind_columns(\$structural_variation_feature_id, \$seq_region_id, \$outer_start, \$seq_region_start, 
                        \$inner_start, \$inner_end, \$seq_region_end, \$outer_end, \$seq_region_strand, 
-                       \$structural_variation_id, \$variation_name, \$source_name, \$source_version, 
+                       \$structural_variation_id, \$variation_name, \$source_name, \$source_description, 
                        \$study_id, \$class_attrib_id, \$allele_string, \$is_somatic, \$bp_order, \$length);
 
     my $asm_cs;
@@ -479,27 +515,27 @@ sub _objs_from_sth {
             
             return $self->_create_feature_fast('Bio::EnsEMBL::Variation::StructuralVariationFeature',
         
-               {'outer_start'      => $outer_start,
-                'start'            => $seq_region_start,
-                'inner_start'      => $inner_start,
-                'inner_end'        => $inner_end,
-                'end'              => $seq_region_end,
-                'outer_end'        => $outer_end,
-                'strand'           => $seq_region_strand,
-                'slice'            => $slice,
-                'variation_name'   => $variation_name,
-                'adaptor'          => $self,
-                'dbID'             => $structural_variation_feature_id,
-                'source'           => $source_name,
-                'source_version'   => $source_version,
-                'study'            => $study,
-                'structural_variation_id' => $structural_variation_id,
-                'class_SO_term'    => $aa->attrib_value_for_id($class_attrib_id),
-                'class_attrib_id'  => $class_attrib_id,
-                'allele_string'    => $allele_string,
-                'is_somatic'       => $is_somatic,
-                'breakpoint_order' => $bp_order,
-                'length'           => $length
+               {'outer_start'        => $outer_start,
+                'start'              => $seq_region_start,
+                'inner_start'        => $inner_start,
+                'inner_end'          => $inner_end,
+                'end'                => $seq_region_end,
+                'outer_end'          => $outer_end,
+                'strand'             => $seq_region_strand,
+                'slice'              => $slice,
+                'variation_name'     => $variation_name,
+                'adaptor'            => $self,
+                'dbID'               => $structural_variation_feature_id,
+                'source'             => $source_name,
+                'source_description' => $source_description,
+                'study'              => $study,
+                '_structural_variation_id' => $structural_variation_id,
+                'class_SO_term'      => $aa->attrib_value_for_id($class_attrib_id),
+                'class_attrib_id'    => $class_attrib_id,
+                'allele_string'      => $allele_string,
+                'is_somatic'         => $is_somatic,
+                'breakpoint_order'   => $bp_order,
+                'length'             => $length
                }
             );
         }
