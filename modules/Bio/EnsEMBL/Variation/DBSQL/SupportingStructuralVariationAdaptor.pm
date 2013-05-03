@@ -195,4 +195,31 @@ sub fetch_all_by_StructuralVariation {
 }
 
 
+# Used by StructuralVariationFeature for web purpose
+sub _fetch_all_SO_term_by_structural_variation_dbID {
+  my $self  = shift;
+	my $sv_id = shift;
+	
+	if(!defined($sv_id)) {
+    throw("Structural variation ID arg expected");
+  }
+	
+	my $constraint = " AND " . $self->db->_exclude_failed_structural_variations_constraint(); 
+	my @ssv_SO_list = ();
+	
+	my $sth = $self->prepare(qq{SELECT distinct a.value
+                                FROM structural_variation sv, structural_variation_association sa, attrib a
+                                WHERE sa.supporting_structural_variation_id=sv.structural_variation_id
+                                      AND sa.structural_variation_id = ? 
+																			AND sv.class_attrib_id=a.attrib_id
+																			$constraint });
+	$sth->bind_param(1,$sv_id,SQL_INTEGER);
+  $sth->execute();								
+  
+	while (my ($SO_term) = $sth->fetchrow_array) {
+	  push (@ssv_SO_list, $SO_term);
+	}
+  return \@ssv_SO_list;
+}
+
 1;
