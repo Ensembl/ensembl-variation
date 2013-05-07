@@ -392,7 +392,6 @@ sub _objs_from_sth{
 	my $pgtype  = Bio::EnsEMBL::Variation::PopulationGenotype->new_fast({
 	  _variation_id => $variation_id,
 	  subsnp        => $subsnp_id,
-		dbID          => $dbID,
 	  adaptor       => $self,
 	  frequency     => $freq,
 	  count         => $count,
