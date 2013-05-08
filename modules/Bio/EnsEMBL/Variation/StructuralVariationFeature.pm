@@ -729,7 +729,7 @@ sub get_all_OverlapConsequences {
 }
 
 
-=head2 _get_all_supporting_evidence_classes
+=head2 get_all_supporting_evidence_classes
 
   Example     : $svf->_get_all_supporting_evidence_classes
   Description : Retrieves the classes (SO term) of the supporting evidence associated 
@@ -742,11 +742,11 @@ sub get_all_OverlapConsequences {
 
 =cut
 
-sub _get_all_supporting_evidence_classes {
+sub get_all_supporting_evidence_classes {
   my $self = shift;
   my $ssva = $self->adaptor->db->get_SupportingStructuralVariationAdaptor();
 	
-	my $ssv_SO_list = $ssva->_fetch_all_SO_term_by_structural_variation_dbID($self->{_structural_variation_id});
+	my $ssv_SO_list = $ssva->fetch_all_SO_term_by_structural_variation_dbID($self->{_structural_variation_id});
   
 	return $ssv_SO_list;
 }
