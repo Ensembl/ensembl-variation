@@ -195,8 +195,21 @@ sub fetch_all_by_StructuralVariation {
 }
 
 
-# Used by StructuralVariationFeature for web purpose
-sub _fetch_all_SO_term_by_structural_variation_dbID {
+=head2 fetch_all_SO_term_by_structural_variation_dbID
+
+  Arg [1]     : int $sv_id
+  Example     : my $sv = $sv_adaptor->fetch_by_name('esv9549');
+                foreach my $SO_term (@{$ssv_adaptor->fetch_all_SO_term_by_structural_variation_dbID($sv->dbID)}){
+                  print $SO_term,"\n";
+                }
+  Description : Retrieves all supporting evidences classes from a specified structural variant ID
+  ReturnType  : reference to list of strings
+  Exceptions  : throw if structural variation ID arg is not defined
+  Caller      : general
+  Status      : Stable
+
+=cut
+sub fetch_all_SO_term_by_structural_variation_dbID {
   my $self  = shift;
 	my $sv_id = shift;
 	
