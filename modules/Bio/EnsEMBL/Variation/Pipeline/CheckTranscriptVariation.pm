@@ -318,7 +318,7 @@ sub format_percent{
     my $part  = shift;
     my $whole = shift;
 
-    return unless defined $whole ;
+    return unless (defined $whole && $whole > 0);
 
     return  substr((100 * $part / $whole ),0,5) ;
 }
