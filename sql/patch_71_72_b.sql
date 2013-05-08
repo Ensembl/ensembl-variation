@@ -18,7 +18,7 @@ CREATE PROCEDURE change_column_name(in TableName varchar(128), in OldColumnName 
 BEGIN
     IF ((SELECT COUNT(*) FROM information_schema.tables WHERE TABLE_SCHEMA = DATABASE() and table_name = TableName) = 1) THEN
         IF((SELECT COUNT(*) FROM information_schema.columns WHERE TABLE_SCHEMA = DATABASE() and table_name = TableName AND column_name = NewColumnName) = 0) THEN
-            SET @s = CONCAT('ALTER TABLE ', TableName, ' CHANGE ', OldColumnName, ' ', NewColumnName, ' INT');
+            SET @s = CONCAT('ALTER TABLE ', TableName, ' CHANGE ', OldColumnName, ' ', NewColumnName, ' INT UNSIGNED');
             PREPARE stmt FROM @s;
             EXECUTE stmt;
         END IF;
