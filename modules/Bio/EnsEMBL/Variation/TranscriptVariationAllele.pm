@@ -701,6 +701,7 @@ sub hgvs_protein {
     unless( defined $hgvs_notation->{type} && $hgvs_notation->{type} eq "="){
         #### define type - types are different for protein numbering
         $hgvs_notation  = $self->_get_hgvs_protein_type($hgvs_notation);
+        return undef unless defined $hgvs_notation->{type}; 
 
         ##### Convert ref & alt peptides taking into account HGVS rules
         $hgvs_notation = $self->_get_hgvs_peptides($hgvs_notation);
@@ -939,7 +940,8 @@ sub _get_hgvs_peptides{
 
   if($hgvs_notation->{type} eq "fs"){
     ### ensembl alt/ref peptides not the same as HGVS alt/ref - look up seperately
-    $hgvs_notation = $self->_get_fs_peptides($hgvs_notation);    
+    $hgvs_notation = $self->_get_fs_peptides($hgvs_notation); 
+    return undef unless defined $hgvs_notation->{type};   
   }
   elsif($hgvs_notation->{type} eq "ins" ){
 
