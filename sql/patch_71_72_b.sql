@@ -14,11 +14,11 @@ BEGIN
 END $$
 
 DROP PROCEDURE IF EXISTS change_column_name $$
-CREATE PROCEDURE change_column_name(in TableName varchar(128), in OldColumnName varchar(128), in NewColumnName varchar(128))
+CREATE PROCEDURE change_column_name(in TableName varchar(128), in OldColumnName varchar(128), in NewColumnName varchar(128), in DataType varchar(128))
 BEGIN
     IF ((SELECT COUNT(*) FROM information_schema.tables WHERE TABLE_SCHEMA = DATABASE() and table_name = TableName) = 1) THEN
         IF((SELECT COUNT(*) FROM information_schema.columns WHERE TABLE_SCHEMA = DATABASE() and table_name = TableName AND column_name = NewColumnName) = 0) THEN
-            SET @s = CONCAT('ALTER TABLE ', TableName, ' CHANGE ', OldColumnName, ' ', NewColumnName, ' INT UNSIGNED');
+            SET @s = CONCAT('ALTER TABLE ', TableName, ' CHANGE ', OldColumnName, ' ', NewColumnName, ' ', DataType);
             PREPARE stmt FROM @s;
             EXECUTE stmt;
         END IF;
@@ -47,16 +47,16 @@ CALL drop_index('population_structure', 'sub_pop_sample_idx');
 CALL drop_index('tagged_variation_feature', 'sample_idx');
 CALL drop_index('tmp_individuale_genotypes_single_bp', 'sample_idx');
 
-CALL change_column_name('allele', 'sample_id', 'population_id');
-CALL change_column_name('individual_genotype_multiple_bp', 'sample_id', 'individual_id');
-CALL change_column_name('individual_population', 'individual_sample_id', 'individual_id');
-CALL change_column_name('individual_population', 'population_sample_id', 'population_id');
-CALL change_column_name('population_genotype', 'sample_id', 'population_id');
-CALL change_column_name('population_structure', 'super_population_sample_id', 'super_population_id');
-CALL change_column_name('population_structure', 'sub_population_sample_id', 'sub_population_id');
-CALL change_column_name('read_coverage', 'sample_id', 'individual_id');
-CALL change_column_name('tagged_variation_feature', 'sample_id', 'population_id');
-CALL change_column_name('tmp_individual_genotype_single_bp', 'sample_id', 'individual_id');
+CALL change_column_name('allele', 'sample_id', 'population_id', 'INT');
+CALL change_column_name('individual_genotype_multiple_bp', 'sample_id', 'individual_id', 'INT UNSIGNED');
+CALL change_column_name('individual_population', 'individual_sample_id', 'individual_id', 'INT UNSIGNED NOT NULL');
+CALL change_column_name('individual_population', 'population_sample_id', 'population_id', 'INT UNSIGNED NOT NULL');
+CALL change_column_name('population_genotype', 'sample_id', 'population_id', 'INT UNSIGNED');
+CALL change_column_name('population_structure', 'super_population_sample_id', 'super_population_id', 'INT UNSIGNED NOT NULL');
+CALL change_column_name('population_structure', 'sub_population_sample_id', 'sub_population_id', 'INT UNSIGNED NOT NULL');
+CALL change_column_name('read_coverage', 'sample_id', 'individual_id', 'INT UNSIGNED NOT NULL');
+CALL change_column_name('tagged_variation_feature', 'sample_id', 'population_id', 'INT UNSIGNED NOT NULL');
+CALL change_column_name('tmp_individual_genotype_single_bp', 'sample_id', 'individual_id', 'INT UNSIGNED');
 
 CALL create_index('allele', 'population_idx', 'population_id', '');
 CALL create_index('individual_genotype_multiple_bp', 'individual_idx', 'individual_id', '');
@@ -75,7 +75,7 @@ DROP PROCEDURE IF EXISTS create_index;
 ##compressed_genotype_region: copy and rename is much faster than alter table..
 CREATE TABLE compressed_genotype_region_tmp LIKE compressed_genotype_region;
 DROP INDEX sample_idx ON compressed_genotype_region_tmp;
-ALTER TABLE compressed_genotype_region_tmp CHANGE sample_id individual_id INT;
+ALTER TABLE compressed_genotype_region_tmp CHANGE sample_id individual_id INT UNSIGNED NOT NULL;
 CREATE INDEX individual_idx ON compressed_genotype_region_tmp(individual_id);
 ALTER TABLE compressed_genotype_region_tmp DISABLE KEYS;
 INSERT INTO compressed_genotype_region_tmp(individual_id,seq_region_id,seq_region_start,seq_region_end,seq_region_strand,genotypes)
