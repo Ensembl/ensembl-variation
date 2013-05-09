@@ -86,6 +86,9 @@ ALTER TABLE structural_variation_sample ADD FOREIGN KEY (strain_id) REFERENCESin
 
 ALTER TABLE study ADD FOREIGN KEY (source_id) REFERENCES source(source_id);
 
+ALTER TABLE study_variation ADD FOREIGN KEY (study_id) REFERENCES study(study_id);
+ALTER TABLE study_variation ADD FOREIGN KEY (variation_id) REFERENCES variation(variation_id);
+
 ALTER TABLE tagged_variation_feature ADD FOREIGN KEY (variation_feature_id) REFERENCES variation_feature(variation_feature_id);
 ALTER TABLE tagged_variation_feature ADD FOREIGN KEY (population_id) REFERENCES population(population_id);
 
@@ -107,6 +110,9 @@ ALTER TABLE phenotype_feature ADD FOREIGN KEY (seq_region_id) REFERENCES seq_reg
 
 ALTER TABLE phenotype_feature_attrib ADD FOREIGN KEY (phenotype_feature_id) REFERENCES phenotype_feature(phenotype_feature_id);
 ALTER TABLE phenotype_feature_attrib ADD FOREIGN KEY (attrib_type_id) REFERENCES attrib_type(attrib_type_id);
+
+ALTER TABLE variation_citation ADD FOREIGN KEY (variation_id) REFERENCES variation(variation_id);
+ALTER TABLE variation_citation ADD FOREIGN KEY (publication_id) REFERENCES publication(publication_id);
 
 ALTER TABLE variation_feature ADD FOREIGN KEY (source_id) REFERENCES source(source_id);
 ALTER TABLE variation_feature ADD FOREIGN KEY (variation_id) REFERENCES variation(variation_id);
