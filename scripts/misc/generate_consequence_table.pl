@@ -163,7 +163,6 @@ for my $d_term (sort {$consequences_rank{$a} <=> $consequences_rank{$b}} keys(%c
   }
   $SO_term_id = $first_SO_term if (!defined($SO_term_id));
   $cons_table .= qq{<tr$bg id="$SO_term_id">\n$cons_line</tr>\n};
-print qq{<tr$bg id="$SO_term_id">\n$cons_line</tr>\n\n};  
   $bg = ($bg eq '') ? qq{ class="bg2"} : '';
 }
 
