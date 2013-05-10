@@ -43,7 +43,7 @@ GetOptions(
      'hlist=s' => \$hlist,
      'phost=s' => \$phost,
      'site=s'  => \$site,
-     'etype=s' =>  \$etype
+     'etype=s' => \$etype
 );
 
 if (!$e_version) {
@@ -99,7 +99,7 @@ my $html_header = qq{
 <div>
 };
 
-my $horizontal_menu qq{
+my $horizontal_menu = qq{
   <!-- Horizontal menu -->
   <span style="font-weight:bold">
     <a href="index.html">About Ensembl Variation</a> |
@@ -368,7 +368,7 @@ sub format_version {
 # Connects and execute a query
 sub get_connection_and_query {
   my $dbname = shift;
-  my $hname   = shift;
+  my $hname  = shift;
   my $sql    = shift;
   
   my ($host, $port) = split /\:/, $hname;
