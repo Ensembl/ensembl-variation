@@ -30,9 +30,6 @@ use Bio::EnsEMBL::Variation::Utils::Constants qw(%VARIATION_CLASSES);
 
 my $registry = 'Bio::EnsEMBL::Registry';
 
-# Print the usage instructions if run without parameters
-usage() unless (scalar(@ARGV));
-
 my $species    = shift;
 my $host       = shift;
 my $db_version = shift;
