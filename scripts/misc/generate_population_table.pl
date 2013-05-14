@@ -80,7 +80,7 @@ foreach my $project (sort(keys(%pops))) {
   print "$table_header\n";
 
 
-  my $stmt = qq{ SELECT population_id, name, size, description FROM population WHERE $constraint name like ? };
+  my $stmt = qq{ SELECT population_id, name, size, description FROM population WHERE $constraint name like ? ORDER BY name};
   my $sth = $dbVar->prepare($stmt);
   $sth->execute($term);
 	
