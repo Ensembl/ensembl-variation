@@ -1139,7 +1139,7 @@ sub vf_list_to_cons {
     my @non_variants = grep {$_->{non_variant}} @$listref;
     
     my %vf_hash = ();
-    push @{$vf_hash{$_->{chr}}{int($_->{start} / $config->{chunk_size})}{$_->{start}}}, $_ for grep {!defined($_->{non_variant})} @$listref;
+    push @{$vf_hash{$_->{chr}}{int($_->{start} / $config->{chunk_size})}{$_->{start}}}, $_ for @$listref;
     
     # check existing VFs
     &check_existing_hash($config, \%vf_hash) if defined($config->{check_existing});# && scalar @$listref > 10;
