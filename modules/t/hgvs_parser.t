@@ -217,7 +217,7 @@ my @test_input = (
            "CCTACGAGTACTACC", 
            "ENST00000530998.1:c.451_452insGGTAGTACTCGTAGG",
            "GGTAGTACTCGTAGG", 
-           "ENSP00000435307.1:p.Arg151_Ser152insTerTyrSerTerGly",
+           "ENSP00000435307.1:p.Arg151_Ser152insTer",
             "insertion, stop gained [-1]"
            ],
            ["17:g.7123233_7123234insCAGGACGTGGGCGTG",
@@ -247,6 +247,13 @@ my @test_input = (
            "C",
            "ENSP00000318233.4:p.Ter396GlnextTer?",
            "substitution, stop loss, no alt stop"
+          ],
+          ["3:g.10191482_10191483insTTT",
+           "TTT",
+           "ENST00000345392.2:c.352_353insTTT",
+           "TTT",
+           "ENSP00000344757.2:p.Lys118delinsIleTer",
+           "del ins, stop_gained",
           ],
 
 );
