@@ -1017,6 +1017,7 @@ sub get_all_consequences {
         while(my @ready = $sel->can_read  and $done_processes < scalar @pids ) {
             foreach $fh (@ready) {
                 $_ = $fh->getline();
+                next unless defined($_) && $_;
                 
                 # child finished
                 if(/^DONE/) {
