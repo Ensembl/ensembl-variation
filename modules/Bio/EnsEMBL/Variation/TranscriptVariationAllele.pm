@@ -775,6 +775,8 @@ sub _get_hgvs_protein_format{
 
     elsif( $hgvs_notation->{type} eq "delins" || $hgvs_notation->{type} eq "ins" ){
     
+	$hgvs_notation->{alt} = "X" if $hgvs_notation->{alt} =~ /^X/;
+
         #### list first and last aa in reference only
         my $ref_pep_first = substr($hgvs_notation->{ref}, 0, 3);
         my $ref_pep_last;
@@ -791,8 +793,8 @@ sub _get_hgvs_protein_format{
                $hgvs_notation->{alt} .="extX" . $aa_til_stop;
             }
          }
-         if($hgvs_notation->{start} == $hgvs_notation->{end} && $hgvs_notation->{type} eq "delins"){       
-             $hgvs_notation->{'hgvs'} .= $ref_pep_first . $hgvs_notation->{start} . $hgvs_notation->{end} . $hgvs_notation->{type} . $hgvs_notation->{alt} ;
+         if($hgvs_notation->{start} == $hgvs_notation->{end} && $hgvs_notation->{type} eq "delins"){   
+             $hgvs_notation->{'hgvs'} .= $ref_pep_first . $hgvs_notation->{start} . $hgvs_notation->{type} . $hgvs_notation->{alt} ;
          }
          else{        
              ### correct ordering if needed
