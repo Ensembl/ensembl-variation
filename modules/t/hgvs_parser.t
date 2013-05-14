@@ -27,7 +27,7 @@ my $DEBUG = 0;
 my $reg = 'Bio::EnsEMBL::Registry';
 
 $reg->load_all("$Bin/test.ensembl.registry");
-
+warn "using $Bin/test.ensembl.registry\n";
 my $variationfeature_adaptor    = $reg->get_adaptor('human', 'variation', 'variationfeature');
 my $transcript_adaptor          = $reg->get_adaptor('human', 'core',      'transcript');
 my $transcript_variation_adaptor= $reg->get_adaptor('human', 'variation', 'transcriptvariation');
@@ -216,7 +216,7 @@ my @test_input = (
            "CCTACGAGTACTACC", 
            "ENST00000530998.1:c.451_452insGGTAGTACTCGTAGG",
            "GGTAGTACTCGTAGG", 
-	   "ENSP00000435307.1:p.Arg151_Ser152insXTyrSerXGly",
+	   "ENSP00000435307.1:p.Arg151_Ser152insX",
             "insertion, stop gained [-1]"
            ],
            ["17:g.7123233_7123234insCAGGACGTGGGCGTG",
@@ -246,13 +246,20 @@ my @test_input = (
            "C",
            "ENSP00000318233.4:p.X396Gln",
            "substitution, stop loss, no alt stop"
-          ]
+          ],
+          ["3:g.10191482_10191483insTTT",
+           "TTT",
+           "ENST00000345392.2:c.352_353insTTT",
+           "TTT",
+           "ENSP00000344757.2:p.Lys118delinsIleX",
+           "del ins, stop_gained",
+          ],
 
 );
 
 foreach my $line(@test_input){
 
-    if($DEBUG==1){     print "\n\n\nStarting $line->[0]/ $line->[2]\n";}
+    if($DEBUG==1){     print "\n\n\nStarting var g: $line->[0], c:  $line->[2]\n";}
 
     ## create variation feature from hgvs string
 
