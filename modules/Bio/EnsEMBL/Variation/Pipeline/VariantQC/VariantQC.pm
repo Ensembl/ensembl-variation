@@ -39,7 +39,7 @@ use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp expand);
 use base qw(Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess);
 use Bio::EnsEMBL::Variation::Utils::dbSNP qw(get_alleles_from_pattern);
 use Bio::EnsEMBL::Variation::Utils::Sequence qw(revcomp_tandem);
-use Bio::EnsEMBL::Variation::Utils::QCUtils qw( check_four_bases get_reference_base check_illegal_characters check_for_ambiguous_alleles remove_ambiguous_alleles find_ambiguous_alleles summarise_evidence count_rows count_group_by);
+use Bio::EnsEMBL::Variation::Utils::QCUtils qw( check_four_bases get_reference_base check_illegal_characters check_for_ambiguous_alleles remove_ambiguous_alleles find_ambiguous_alleles summarise_evidence count_rows count_group_by check_variant_size);
 
 
 our $DEBUG   = 1;
@@ -220,21 +220,12 @@ sub run_variation_checks{
 	foreach my $amb_al( @{$ambiguous_alleles} ){
           push @{$fail_allele{14}},  [$var->{v_id}, $amb_al]; ## unflipped allele failed throughout
 	}
-  }
+    }
 
     ## Further checks only run for variants with 1 genomic location  
-     if ($var->{map} > 1){
+    next if $var->{map} > 1;
 
-         if($strand_summary->{$var->{v_id}} eq "-1"){
-             ## safe to flip if all mappings are to reverse strand
-             $var->{allele}=~ /\(/ ?  $var->{allele} = revcomp_tandem($var->{allele}) :  reverse_comp(\$var->{allele} );  
-             
-             $var->{strand} = 1;
-             ### store variation_id to use when flipping alleles
-	     $flip{$var->{v_id}} = 1;
-         }
-         next;
-     }
+
     ## flip allele string if on reverse strand and single mapping
   
     if( $var->{strand} eq "-1" ){
@@ -265,7 +256,7 @@ sub run_variation_checks{
     }
 
 
-    my $match_coord_length = 1; ## is either allele of compatible length with given coordinates?
+    my $match_coord_length = 0; ## is either allele of compatible length with given coordinates?
   
     my @alleles = split/\//, $var->{allele} ; 
     foreach my $al(@alleles){
@@ -275,8 +266,13 @@ sub run_variation_checks{
           $var->{ref} = $al;
           $match_coord_length = 1;
       }
-      else{        
-	  $var->{alt} .= "/" . $al;
+      else{ 
+       ## is the length ok even if the base doesn't match?
+       my $size_ok = check_variant_size( $var->{start} , $var->{end} , $al);
+       $match_coord_length = 1 if $size_ok ==1;
+       ## save as alt allele if it doesn't match the reference
+       $var->{alt} .= "/" . $al;
+
       }
     }
 
@@ -394,7 +390,7 @@ sub export_data_adding_allele_string{
                                                       vf.consequence_types,
                                                       vf.variation_set_id,
                                                       vf.somatic,
-                                                      vf.class_attrib_id,
+                                                      v.class_attrib_id,
                                                       sr.name,
                                                       vf.alignment_quality,
                                                       als.allele_string,
@@ -402,7 +398,8 @@ sub export_data_adding_allele_string{
                                                       maf.allele,
                                                       maf.freq,
                                                       maf.count,
-                                                      maf.is_minor_allele
+                                                      maf.is_minor_allele,
+                                                      vf.flags
                                                  FROM variation_feature vf,
                                                       seq_region sr,
                                                       tmp_map_weight_working tmw,
@@ -450,7 +447,7 @@ sub export_data_adding_allele_string{
       $save{min_allele}    = $l->[17];
       $save{min_af}        = $l->[18];
       $save{min_al_count}  = $l->[19];
-  
+      $save{flags}         = $l->[21];
 
     if($l->[15] =~ /^(\(.*\))\d+\/\d+/){## handle tandem
       my $expanded_alleles = get_alleles_from_pattern($l->[15]); 
@@ -643,9 +640,9 @@ sub write_variation_features{
                                                   (variation_id, variation_name, seq_region_id,  seq_region_start, 
                                                    seq_region_end, seq_region_strand,  allele_string, map_weight,  
                                                    source_id, consequence_types, variation_set_id, somatic,
-                                                   class_attrib_id, alignment_quality, evidence,
+                                                   class_attrib_id, alignment_quality, flags, evidence,
                                                    minor_allele, minor_allele_freq, minor_allele_count )
-                                                  values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                                                  values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                                                 ]);       
   
   
@@ -666,6 +663,7 @@ sub write_variation_features{
                                $data->{somatic},
                                $data->{class_attrib_id},
                                $data->{align_qual},
+                               $data->{flags},
 			       $evidence->{$data->{v_id}},
                                $data->{min_allele},
                                $data->{min_af},
@@ -706,7 +704,7 @@ sub write_variation{
                                                       maf.freq,
                                                       maf.count,
                                                       maf.is_minor_allele,
-                                                      clinical_significance_attrib_id
+                                                      clinical_significance
                                                from variation v left outer join maf on ( maf.snp_id = v.snp_id)
                                                where v.variation_id between ? and ?
 
@@ -723,7 +721,7 @@ sub write_variation{
                                                minor_allele,
                                                minor_allele_freq,
                                                minor_allele_count,
-                                               clinical_significance_attrib_id,
+                                               clinical_significance,
                                                evidence)
                                                values (?,?,?,?,?,?,?,?,?,?,?)
                                               ]); 
@@ -778,11 +776,6 @@ sub write_allele{
   my %save_id;
 
   my $code = read_allele_code($var_dba);
-
-  my $allele_old_ins_sth = $var_dba->dbc->prepare(qq[ insert  into MTMP_allele_working
-                                                    (allele_id, variation_id, subsnp_id, allele, frequency, population_id, count)
-                                                    values (?,?,?,?,?,?,?)
-                                                     ]);
  
   my $allele_new_ins_sth = $var_dba->dbc->prepare(qq[ insert  into allele_working
                                                      (variation_id, subsnp_id, allele_code_id, frequency, population_id, count, frequency_submitter_handle)
@@ -809,12 +802,7 @@ sub write_allele{
 
       ## save allele id for later fail update
       push @{$save_id{va}{$var}{$allele->[2]}},         $allele_id;
-      push @{$save_id{ss}{$allele->[1]}{$allele->[4]}}, $allele_id;
-
-        ## keep allele data in un-coded format for Mart for non-human databases
-       unless($self->required_param('species') =~/Homo|Human|musculus|mouse/i){
-          $allele_old_ins_sth->execute($allele_id, $var, $allele->[1], $allele->[2], $allele->[3], $allele->[4], $allele->[5]) || die "ERROR inserting allele info\n";
-     }
+      push @{$save_id{ss}{$allele->[1]}{$allele->[4]}}, $allele_id;     
 
     }
   }

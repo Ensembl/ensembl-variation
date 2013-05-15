@@ -145,7 +145,6 @@ sub run {
 
     $counts{old_allele}    = count_rows($var_dba, 'allele');
     $counts{new_allele}    = count_rows($var_dba, 'allele_working');
-    $counts{mart_allele}   = count_rows($var_dba, 'MTMP_allele_working');
 
     $counts{new_pop_geno}  = count_rows($var_dba, 'population_genotype_working');
     $counts{old_pop_geno}  = count_rows($var_dba, 'population_genotype');
@@ -189,20 +188,12 @@ sub run {
     }
 
     unless($self->required_param('species') =~/Homo|Human|Mus|mouse/i){ ## Mart tables not required for human or mouse
-      if($counts{old_allele} == $counts{mart_allele}){
-         print $report "\tMart Allele:\t\t\tOK ($counts{mart_allele} rows)\n";
-      }
-      else{
-         $process_error = 1;
-         print $report "Allele: ERROR old table has : $counts{old_allele} rows, mart table has: $counts{mart_allele}\n";
-      }
-
+     
       if($counts{old_pop_geno} == $counts{mart_pop_geno}){
          print $report "\tMart population_genotype:\tOK ($counts{mart_pop_geno} rows)\n";
       }
       else{
-         $process_error = 1;
-         print $report "Population_genotype: ERROR old table has : $counts{old_pop_geno} rows, mart table has: $counts{mart_pop_geno}\n";
+         $process_error = 1;         print $report "Population_genotype: ERROR old table has : $counts{old_pop_geno} rows, mart table has: $counts{mart_pop_geno}\n";
       }
 
     }
@@ -548,7 +539,6 @@ sub rebuild_indexes{
 
     my $var_dba = shift;
 
-    $var_dba->dbc->do(qq{ ALTER TABLE MTMP_allele_working ENABLE KEYS});
     $var_dba->dbc->do(qq{ ALTER TABLE allele_working ENABLE KEYS});
     $var_dba->dbc->do(qq{ ALTER TABLE variation_working ENABLE KEYS});
     $var_dba->dbc->do(qq{ ALTER TABLE variation_feature_working ENABLE KEYS});
@@ -578,7 +568,6 @@ sub rename_tables{
 
   # Rename working tables 
   $var_dba->dbc->do(qq[ rename table allele_working to allele ]) || die;
-  $var_dba->dbc->do(qq[ rename table MTMP_allele_working to MTMP_allele ]) || die;
 
   $var_dba->dbc->do(qq[ rename table variation_feature_working to variation_feature ]) || die;
 
