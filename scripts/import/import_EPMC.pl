@@ -19,6 +19,7 @@ use Bio::EnsEMBL::Registry;
 use Bio::EnsEMBL::Variation::Publication;
 use Bio::EnsEMBL::Variation::DBSQL::PublicationAdaptor;
 use Bio::EnsEMBL::Variation::DBSQL::VariationAdaptor;
+use Bio::EnsEMBL::Variation::Utils::QCUtils qw(count_rows);
 
 our $DEBUG = 0;
 
@@ -72,6 +73,8 @@ import_citations($reg, $file_data, $species_string);
 ## update variations & variation_features to have Cited status
 update_evidence($dba);
 
+## create report on curent status
+report_summary($dba, $species);
 
 sub import_citations{
 
@@ -97,16 +100,16 @@ sub import_citations{
             my $v = $var_ad->fetch_by_name($rsid);
             if (defined $v){
                 push @var_obs, $v;
-        }
+            }
             else{
-                print $error_log "$rsid,$data->{$pub}->{pmid},$data->{$pub}->{pmcid}  No variant record\n";
+                ### write file of variants not found in this species to use as input file for next
+                print $error_log "$rsid,$data->{$pub}->{pmcid},$data->{$pub}->{pmid},  No variant record\n";
             }
         }
 
 
         ## don't enter publication if there are no variants found for this species
         unless (defined $var_obs[0] ){
-            print $error_log "ALL\t$data->{$pub}->{pmid}\t$data->{$pub}->{pmcid} - no variants\n";
             next;
         }
         
@@ -358,6 +361,53 @@ sub update_evidence{
         $varfeat_upd_sth->execute($evidence, $l->[0]);
     }
 }
+
+sub report_summary{
+
+    my $dba     = shift;
+    my $species = shift;
+
+    open my $report, ">import_EPMC_$species\.txt" ||die "Failed to open report file to write: $!\n";
+
+    my $publication_count = count_rows($dba, 'publication');
+    my $citation_count    = count_rows($dba, 'variation_citation');
+
+    print $report "Total publications:\t$publication_count\n";
+    print $report "Total citations:\t$citation_count\n";
+
+    my $dup1_ext_sth = $dba->prepare(qq[ select p1.publication_id, p2.publication_id, p2.pmid
+                                         from publication p1, publication p2
+                                         where p1.pmid = p2.pmid
+                                         and p1.publication_id < p2.publication_id
+                                         and p1.pmid is not null
+                                       ]);
+
+    my $dup2_ext_sth = $dba->prepare(qq[ select p1.publication_id, p2.publication_id, p2.pmcid
+                                         from publication p1, publication p2
+                                         where p1.pmcid = p2.pmcid
+                                         and p1.publication_id < p2.publication_id
+                                         and p1.pmid is null
+                                       ]);
+
+    $dup1_ext_sth->execute()||die;
+    my $dup1 =  $dup1_ext_sth->fetchall_arrayref();
+
+    $dup2_ext_sth->execute()||die;
+    my $dup2 =  $dup1_ext_sth->fetchall_arrayref();
+
+
+    if (defined $dup1->[0]->[0] || defined $dup1->[0]->[0]){
+        print $report "Duplicated publications:\n";
+
+        foreach my $l (@{$dup1}){
+            print $report "$l->[0]\t$l->[1]\t$l->[2]\n";
+        }
+        foreach my $k (@{$dup2}){
+            print $report "$k->[0]\t$k->[1]\t$k->[2]\n";
+        }   
+    }
+}
+
 
 sub usage {
 
