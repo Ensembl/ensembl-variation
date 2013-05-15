@@ -30,9 +30,9 @@ use strict;
 use warnings;
 
 use base qw(Exporter);
+use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp );
 
-
-our @EXPORT_OK = qw(check_four_bases get_reference_base check_illegal_characters check_for_ambiguous_alleles remove_ambiguous_alleles find_ambiguous_alleles summarise_evidence count_rows count_group_by );
+our @EXPORT_OK = qw(check_four_bases get_reference_base check_illegal_characters check_for_ambiguous_alleles remove_ambiguous_alleles find_ambiguous_alleles check_variant_size summarise_evidence count_rows count_group_by );
 
 
  
@@ -102,7 +102,6 @@ sub check_four_bases{
 sub get_reference_base{
 
    my ($var, $slice_ad) = @_;
-   
    my $ref_seq;
    
    if( ($var->{end} +1) == $var->{start}){ ## convention for insertions to reference
@@ -210,6 +209,32 @@ sub find_ambiguous_alleles{
 
 }
 
+
+=head2 check_variant_size
+
+  Compares reference allele string to coordinates for variation and checks length appropriate
+  Returntype : 1 is OK, 0 is failed
+
+=cut
+
+sub check_variant_size{
+
+    my $start  = shift;
+    my $end    = shift;
+    my $allele = shift;
+    
+    my $ref_length = $end - $start +1;
+
+    ### insertion to reference & zero length given is ok
+    return 1  if( $allele eq "-" && $ref_length  == 0);
+
+    ### deletion of reference or substitution- coordinates should reflect length of deleted string
+    return 1 if( $allele ne "-" && $ref_length  == length($allele) ) ;
+
+    ## anything else fails
+    return 0;
+    
+}
 
 
 
