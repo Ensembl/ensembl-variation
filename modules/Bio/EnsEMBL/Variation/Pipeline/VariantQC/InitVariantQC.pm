@@ -142,13 +142,7 @@ sub create_working_tables{
   $var_dba->dbc->do(qq{ DROP TABLE IF EXISTS variation_feature_working});
   $var_dba->dbc->do(qq{ CREATE TABLE variation_feature_working like variation_feature });
   $var_dba->dbc->do(qq{ ALTER TABLE variation_feature_working DISABLE KEYS});
- 
-
-  ## table to hold non-coded allele info after flipping 
-  $var_dba->dbc->do(qq{ DROP TABLE IF EXISTS MTMP_allele_working });
-  $var_dba->dbc->do(qq{ CREATE TABLE MTMP_allele_working like allele });
-  $var_dba->dbc->do(qq{ ALTER TABLE MTMP_allele_working DISABLE KEYS});
- 
+  
 
   ## table to hold coded allele info after fliping 
   $var_dba->dbc->do(qq{ DROP TABLE IF EXISTS allele_working});
