@@ -1290,6 +1290,8 @@ sub vf_list_to_cons {
                     }
                 }
                 
+                $_ ||= '.' for @$line;
+                
                 my $tmp = join "\t", @$line;
                 push @return, \$tmp;
             }
@@ -5117,6 +5119,8 @@ sub progress {
     my ($config, $i, $total) = @_;
     
     return if defined($config->{quiet}) || defined($config->{no_progress});
+    
+    $i = $total if $i > $total;
     
     my $width = $config->{terminal_width} || 60;
     my $percent = int(($i/$total) * 100);
