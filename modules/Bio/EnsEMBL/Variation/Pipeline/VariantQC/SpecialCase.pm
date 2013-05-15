@@ -126,9 +126,7 @@ sub check_Pubmed_variants{
     $self->warning('Setting cited variants to non-failed ');
  
     $var_dba->dbc->do(qq[ delete from failed_variation_working 
-                          where variation_id in (select study_variation.variation_id from study_variation, study
-                                                 where study_variation.study_id = study.study_id
-                                                 and study.study_type ='PubMed')
+                          where variation_id in (select variation_id from variation_citation)
                         ]);
 
 }
