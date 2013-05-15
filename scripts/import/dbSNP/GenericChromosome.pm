@@ -35,7 +35,7 @@ use Progress;
 sub variation_feature{
     my $self = shift;
 
-     debug(localtime() . "\tDumping seq_region data");
+     debug(localtime() . "\tDumping seq_region data using GenericChromosome");
 
      #only take toplevel coordinates
      dumpSQL($self->{'dbCore'}->db_handle, qq{SELECT sr.seq_region_id, 
@@ -176,14 +176,12 @@ my $stmt;
      if ($self->{'limit'}) {
        $stmt .= "TOP $self->{'limit'} ";
      }
-    ### 2012/07 Mitochondria mappings extracted for human only until references stabilise for other species
-    my $extract_mappings_for;
-   # if($self->{'dbm'}->dbCore()->species =~ m/homo|human/i){
-	$extract_mappings_for = qq['$group_term', 'non-nuclear'];
-    #}
-    #else{
-	#$extract_mappings_for = qq['$group_term'];
-    #}
+    ###Extract mappings for Mitochondria as well as named reference 
+    my $extract_mappings_for = qq['$group_term', 'non-nuclear'];
+
+## Type 3: DelOnCtg  Deletion on the contig: part of the snp flanking sequence including 
+##                   the snp was absent on the contig sequence in the alignment
+
      $stmt .= qq{
                    loc.snp_id AS sorting_id, 
                    ctg.contig_acc,
@@ -203,7 +201,7 @@ my $stmt;
 		   THEN
 		     loc.phys_pos_from+1
 		   ELSE
-		     loc.phys_pos_from+LEN(loc.allele)
+		     (loc.asn_to + ctg.contig_start+1 )
 		   END,
 		   CASE WHEN
 		     loc.orientation = 1
@@ -233,7 +231,7 @@ my $stmt;
     
     
     debug(localtime() . "\tLoading SNPLoc data");
-    ## seh - set indexed columns to not null
+
      create_and_load($self->{'dbVar'}, "tmp_contig_loc_chrom", "snp_id i* not_null", "ctg * not_null", "ctg_gi i", "ctg_start i not_null", "ctg_end i", "chr *", "start i", "end i", "strand i", "aln_quality d");
   print Progress::location();
 
@@ -289,7 +287,7 @@ my $stmt;
 	$self->{'dbVar'}->do(qq{INSERT IGNORE INTO tmp_genotyped_var SELECT DISTINCT variation_id FROM individual_genotype_multiple_bp});
 	print Progress::location();
     }
-    debug(localtime() . "\tCreating tmp_variation_feature_chrom data  in GenericChromosome");
+    debug(localtime() . "\tCreating tmp_variation_feature_chrom data in GenericChromosome");
     #if tcl.end>1, this means we have coordinates for chromosome, we will use it
     dumpSQL($self->{'dbVar'},qq{SELECT v.variation_id, ts.seq_region_id, 
                                       tcl.start,tcl.end,
@@ -303,7 +301,7 @@ my $stmt;
     create_and_load($self->{'dbVar'},'tmp_variation_feature_chrom',"variation_id i* not_null","seq_region_id i", "seq_region_start i", "seq_region_end i", "seq_region_strand", "variation_name", "source_id", "validation_status", "aln_quality d");
   print Progress::location();
     
-    debug(localtime() . "\tCreating tmp_variation_feature_ctg data  in GenericChromosome");
+    debug(localtime() . "\tCreating tmp_variation_feature_ctg data in GenericChromosome");
     #if tcl.start = 1 or tcl.end=1, this means we don't have mappings on chromosome, we take ctg coordinates if it is in toplevel
     dumpSQL($self->{'dbVar'},qq{SELECT v.variation_id, ts.seq_region_id, 
                                       tcl.ctg_start,tcl.ctg_end,
