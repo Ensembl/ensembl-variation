@@ -12,7 +12,7 @@ use FindBin qw($Bin);
 
 use Bio::EnsEMBL::Registry;
 use Bio::EnsEMBL::Variation::Utils::Sequence qw(revcomp_tandem);
-use Bio::EnsEMBL::Variation::Utils::QCUtils qw( check_four_bases check_illegal_characters remove_ambiguous_alleles find_ambiguous_alleles);
+use Bio::EnsEMBL::Variation::Utils::QCUtils qw( check_four_bases check_illegal_characters remove_ambiguous_alleles find_ambiguous_alleles check_variant_size);
 
 use_ok('Bio::EnsEMBL::Variation::Pipeline::VariantQC::VariantQC_conf');
 use_ok('Bio::EnsEMBL::Variation::Pipeline::VariantQC::InitVariantQC');
@@ -53,8 +53,15 @@ ok( ! defined $illegal_characters_neg2->[0] ,          "Utils::QCUtils illegal_c
 
 
 ok( remove_ambiguous_alleles("M/T") eq "[AC]/T",         "Utils::QCUtils remove_ambiguous_alleles positive ");
-
 ok( remove_ambiguous_alleles("A/T") eq "A/T",            "Utils::QCUtils remove_ambiguous_alleles negative ");
+
+ok( check_variant_size(10,12,"A")   eq 0,                "Utils::QCUtils variant size error1");
+ok( check_variant_size(10,10,"AA")  eq 0,                "Utils::QCUtils variant size error2");
+ok( check_variant_size(10,12,"-")   eq 0,                "Utils::QCUtils variant size error3");
+ok( check_variant_size(10,10,"-")   eq 1,                "Utils::QCUtils variant size insertion");
+ok( check_variant_size(10,12,"AAA") eq 1,                "Utils::QCUtils variant size del");
+ok( check_variant_size(10,10,"A")   eq 1,                "Utils::QCUtils variant size error");
+
 
 done_testing();
 
