@@ -1,6 +1,6 @@
 =head1 LICENSE
 
- Copyright (c) 1999-2012 The European Bioinformatics Institute and
+ Copyright (c) 1999-2013 The European Bioinformatics Institute and
  Genome Research Limited.  All rights reserved.
 
  This software is distributed under a modified Apache license.
@@ -21,7 +21,7 @@
 
 # Ensembl module for Bio::EnsEMBL::Variation::DBSQL::PhenotypeFeatureAdaptor
 #
-# Copyright (c) 2004 Ensembl
+# Copyright (c) 2013 Ensembl
 #
 # You may distribute this module under the same terms as perl itself
 #
@@ -53,6 +53,12 @@ Bio::EnsEMBL::Variation::DBSQL::PhenotypeFeatureAdaptor
 
 This adaptor provides database connectivity between Variation and PhenotypeFeature objects.
 
+By default, only the phenotype features with associations labelled as "significant" will be fetched.
+To fetch all the phenotype features, set the DBAdaptor variable "include_non_significant_phenotypes", 
+e.g. $pfa->db->include_non_significant_phenotype_associations(1);
+See Bio::EnsEMBL::Variation::DBSQL::DBAdaptor
+
+
 =head1 METHODS
 
 =cut
@@ -70,16 +76,55 @@ use Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor;
 
 our @ISA = ('Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor');
 
+
+# internal method
+=head2 _is_significant_constraint
+
+  Arg [1]    : string $constraint
+  Example    : $self->_is_significant_constraint($constraint)
+  Description: Internal method to add a constraint on the column "is_significant".
+               By default, the constraint is on the significant value (is_significant=1).
+               To remove this constraint, set the DBAdaptor variable "include_non_significant_phenotypes", using the
+               method "include_non_significant_phenotype_associations":  
+               e.g. $pfa->db->include_non_significant_phenotype_associations(1);
+               See the module Bio::EnsEMBL::Variation::DBSQL::DBAdaptor::include_non_significant_phenotype_associations
+  Returntype : string
+  Exceptions : none
+  Caller     : internal
+  Status     : Stable
+
+=cut
+
+sub _is_significant_constraint {
+  my $self = shift;
+  my $constraint = shift;
+    
+  # If we should include non significant objects, no extra condition is needed
+  return $constraint if ($self->db->include_non_significant_phenotype_associations());
+
+  # Otherwise, add a constraint on the phenotype_feature table
+  my $ns_constraint = qq{ pf.is_significant=1 };
+  $constraint  .= (defined($constraint)) ? " AND$ns_constraint" : $ns_constraint;
+    
+  return $constraint;
+}
+
+
 # internal method
 sub _fetch_all_by_object {
-  my $self = shift;
+  my $self   = shift;
   my $object = shift;
-  my $type = shift;
+  my $type   = shift;
   
   $type ||= (split '::', ref($object))[-1];
   throw("$type is not a valid object type, valid types are: ".(join ", ", sort %TYPES)) unless defined $type and defined($TYPES{$type});
   
-  return $self->generic_fetch("pf.type = '".$type."' AND pf.object_id = '".$object->stable_id."'");
+  my $constraint = "pf.type = '".$type."' AND pf.object_id = '".$object->stable_id."'";
+  
+  # Add the constraint for significant data
+  $constraint = $self->_is_significant_constraint($constraint);
+     
+  return $self->generic_fetch($constraint);
 }
 
 
@@ -112,6 +157,9 @@ sub fetch_all_by_object_id {
     $constraint .= qq{ AND pf.type = '$type' } if defined($type);
   }
   
+  # Add the constraint for significant data
+  $constraint = $self->_is_significant_constraint($constraint);
+  
   return $self->generic_fetch($constraint);
 }
 
@@ -130,13 +178,18 @@ sub fetch_all_by_object_id {
 =cut
 
 sub fetch_all_by_Slice_type {
-  my $self = shift;
+  my $self  = shift;
   my $slice = shift;
-  my $type = shift;
+  my $type  = shift;
   
   throw("No valid object type given, valid types are: ".(join ", ", sort %TYPES)) unless defined $type and defined($TYPES{$type});
   
-  return $self->fetch_all_by_Slice_constraint($slice, "pf.type = '$type'");
+  my $constraint = qq{pf.type = '$type'};
+  
+  # Add the constraint for significant data
+  $constraint = $self->_is_significant_constraint($constraint);
+  
+  return $self->fetch_all_by_Slice_constraint($slice, $constraint);
 }
 
 
@@ -178,7 +231,7 @@ sub fetch_all_by_Variation {
 
 sub fetch_all_by_Variation_list {
   my $self = shift;
-  my $vars  = shift;
+  my $vars = shift;
 
   if(!ref($vars) || !$vars->[0]->isa('Bio::EnsEMBL::Variation::Variation')) {
     throw('Bio::EnsEMBL::Variation::Variation arg expected');
@@ -190,7 +243,12 @@ sub fetch_all_by_Variation_list {
   
   my $in_str = join ',', map {"'".$_->name()."'"} @$vars;
 
-  return $self->generic_fetch("pf.type = 'Variation' AND pf.object_id in (".$in_str.")");
+  my $constraint = qq{pf.type = 'Variation' AND pf.object_id in ($in_str)};
+  
+  # Add the constraint for significant data
+  $constraint = $self->_is_significant_constraint($constraint);
+
+  return $self->generic_fetch($constraint);
 }
 
 
@@ -209,7 +267,7 @@ sub fetch_all_by_Variation_list {
 sub fetch_all_by_StructuralVariation {
   my $self = shift;
   my $sv   = shift;
-
+  
   if(!ref($sv) || !$sv->isa('Bio::EnsEMBL::Variation::BaseStructuralVariation')) {
     throw('Bio::EnsEMBL::Variation::BaseStructuralVariation arg expected');
   }
@@ -234,7 +292,7 @@ sub fetch_all_by_StructuralVariation {
 sub fetch_all_by_Gene {
   my $self = shift;
   my $gene = shift;
-
+  
   if(!ref($gene) || !$gene->isa('Bio::EnsEMBL::Gene')) {
     throw('Bio::EnsEMBL::Gene arg expected');
   }
@@ -258,7 +316,7 @@ sub fetch_all_by_Gene {
 sub fetch_all_by_VariationFeature_list {
   my $self = shift;
   my $vfs  = shift;
-
+  
   if(!ref($vfs) || !$vfs->[0]->isa('Bio::EnsEMBL::Variation::VariationFeature')) {
     throw('Listref of Bio::EnsEMBL::Variation::VariationFeature arg expected');
   }
@@ -269,7 +327,12 @@ sub fetch_all_by_VariationFeature_list {
   
   my $in_str = join ',', map {"'".$_->variation_name."'"} @$vfs;
 
-  return $self->generic_fetch("pf.type = 'Variation' AND pf.object_id in (".$in_str.")");
+  my $constraint = qq{pf.type = 'Variation' AND pf.object_id in ($in_str)};
+  
+  # Add the constraint for significant data
+  $constraint = $self->_is_significant_constraint($constraint);
+     
+  return $self->generic_fetch($constraint);
 }
 
 
@@ -296,6 +359,12 @@ sub fetch_all_by_Study {
   if(!defined($study->dbID())) {
     throw("Study arg must have defined dbID");
   }
+  
+  my $constraint = "pf.study_id = ".$study->dbID();
+  
+  # Add the constraint for significant data
+  $constraint = $self->_is_significant_constraint($constraint);
+  
   return $self->generic_fetch("pf.study_id = ".$study->dbID());
 }
 
@@ -325,6 +394,9 @@ sub fetch_all_by_phenotype_name_source_name {
   if (defined $source_name ) {
     $extra_sql .= qq( AND s.name = '$source_name' );
   }
+  
+  # Add the constraint for significant data
+  $extra_sql = $self->_is_significant_constraint($extra_sql);
   
   # Add the constraint for failed variations
   #$extra_sql .= " AND " . $self->db->_exclude_failed_variations_constraint();
@@ -358,6 +430,9 @@ sub fetch_all_by_phenotype_description_source_name {
   if (defined $source_name ) {
     $extra_sql .= qq( AND s.name = '$source_name' );
   }
+  
+  # Add the constraint for significant data
+  $extra_sql = $self->_is_significant_constraint($extra_sql);
   
   # Add the constraint for failed variations
   #$extra_sql .= " AND " . $self->db->_exclude_failed_variations_constraint();
@@ -393,6 +468,9 @@ sub fetch_all_by_phenotype_id_source_name {
     $extra_sql .= sprintf(" AND s.name = '%s'", $self->dbc->db_handle->quote( $source_name, SQL_VARCHAR ) );
   }
   
+  # Add the constraint for significant data
+  $extra_sql = $self->_is_significant_constraint($extra_sql);
+  
   # Add the constraint for failed variations
   #$extra_sql .= " AND " . $self->db->_exclude_failed_variations_constraint();
   
@@ -422,7 +500,10 @@ sub fetch_all_by_associated_gene {
   
   $self->_include_attrib(1);
 
-	my $extra_sql = " at.code = 'associated_gene' and pfa.value REGEXP '^(.+,)?[. .]*$gene_name(,.+)?\$'";
+  my $extra_sql = " at.code = 'associated_gene' and pfa.value REGEXP '^(.+,)?[. .]*$gene_name(,.+)?\$'";
+  
+  # Add the constraint for significant data
+  $extra_sql = $self->_is_significant_constraint($extra_sql);
   
   # Add the constraint for failed variations
   #$extra_sql .= " AND " . $self->db->_exclude_failed_variations_constraint();
@@ -455,6 +536,9 @@ sub count_all_by_associated_gene {
 
   my $extra_sql = " at.code = 'associated_gene' and pfa.value REGEXP '^(.+,)?[. .]*$gene_name(,.+)?\$'";
   
+  # Add the constraint for significant data
+  $extra_sql = $self->_is_significant_constraint($extra_sql);
+  
   # Add the constraint for failed variations
   #$extra_sql .= " AND " . $self->db->_exclude_failed_variations_constraint();
 
@@ -474,13 +558,24 @@ sub count_all_by_Gene {
   my $self = shift;
   my $gene = shift;
   
-  return $self->generic_count("pf.object_id = '".$gene->stable_id."' AND pf.type = 'Gene'");
+  my $constraint = "pf.object_id = '".$gene->stable_id."' AND pf.type = 'Gene'";
+  
+  # Add the constraint for significant data
+  $constraint = $self->_is_significant_constraint($constraint);
+  
+  return $self->generic_count($constraint);
 }
 
 sub count_all_by_phenotype_id {
   my $self = shift;
   my $id = shift;
-  return $self->generic_count("pf.phenotype_id = $id");
+  
+  my $constraint = qq{pf.phenotype_id = $id};
+  
+  # Add the constraint for significant data
+  $constraint = $self->_is_significant_constraint($constraint);
+  
+  return $self->generic_count($constraint);
 }
 
 
@@ -497,10 +592,13 @@ sub fetch_all {
 
   my $self = shift;
   
+  # Add the constraint for significant data
+  my $extra_sql = $self->_is_significant_constraint();
+  
   # Add the constraint for failed variations
   #my $extra_sql = $self->db->_exclude_failed_variations_constraint();
   
-  return $self->generic_fetch();#"$extra_sql");
+  return $self->generic_fetch("$extra_sql");
   
 }
 
@@ -509,12 +607,17 @@ sub _check_gene_by_HGNC {
   my $self = shift;
   my $hgnc = shift;
   
+  # Add the constraint for significant data
+  my $extra_sql = $self->_is_significant_constraint();
+     $extra_sql = qq{ AND$extra_sql} if ($extra_sql);
+  
   my $sth = $self->dbc->prepare(qq{
     SELECT count(*)
     FROM phenotype_feature_attrib pfa, attrib_type at
     WHERE pfa.attrib_type_id = at.attrib_type_id
     AND at.code = 'associated_gene'
     AND pfa.value = ?
+    $extra_sql
   });
   
   $sth->bind_param(1, $hgnc, SQL_VARCHAR);
@@ -801,7 +904,7 @@ sub store{
         defined($pf->{slice}) ? $pf->slice()->get_seq_region_id() : undef,
         defined($pf->{start}) ? $pf->{start} :undef,
         defined($pf->{end})   ? $pf->{end} : undef,
-	defined($pf->{strand})? $pf->{strand} : undef         
+  defined($pf->{strand})? $pf->{strand} : undef         
     );
   
    $sth->finish;
