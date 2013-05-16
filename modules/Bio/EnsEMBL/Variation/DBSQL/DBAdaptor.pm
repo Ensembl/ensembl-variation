@@ -59,6 +59,7 @@ use Bio::EnsEMBL::Utils::Argument qw(rearrange);
 our @ISA = ('Bio::EnsEMBL::DBSQL::DBAdaptor');
 
 our $DEFAULT_INCLUDE_FAILED_VARIATIONS = 0;
+our $DEFAULT_INCLUDE_NON_SIGNIFICANT_PHENOTYPES = 0;
 
 sub get_available_adaptors{
     my %pairs = (
@@ -168,6 +169,7 @@ sub include_failed_variations {
     return $self->{'include_failed_variations'};
 }
 
+
 # API-internal method for getting the constraint to filter out failed variations. Assumes that the
 # failed_variation table has been (left) joined to the query and that the table alias is either supplied
 # or equals 'fv'
@@ -223,6 +225,43 @@ sub _exclude_failed_constraint {
     };
     
     return $constraint;
+}
+
+
+=head2 include_non_significant_phenotype_associations
+
+  Arg [1]    : int $newval (optional)
+  Example    :
+    # Get a DBAdaptor for the human variation database
+    my $dba = $registry->get_DBAdaptor('human','phenotypefeature');
+    
+    # Configure the DBAdaptor to return non significant phenotype associations when using
+    # fetch methods in the various object adaptors
+    $dba->include_non_significant_phenotype_associations(1);
+    
+  Description: Getter/Setter for the behaviour of the adaptors connected through this
+         DBAdaptor when it comes to phenotype feature.
+         The default behaviour is to return the phenotype features with significance results only e.g. the
+         'fetch_all_by...'-type methods. If this flag is set, those methods will
+         instead also return phenotype features with non significant results. 
+  Returntype : int
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub include_non_significant_phenotype_associations {
+    my $self = shift;
+    my $include = shift;
+    
+    # If the flag should be modified, do that
+    if (defined($include)) {$self->{'include_non_significant_phenotypes'} = $include;}
+    
+    # In case the flag has not been set at all, set it to the default value
+    unless (exists($self->{'include_non_significant_phenotypes'})) {$self->{'include_non_significant_phenotypes'} = $DEFAULT_INCLUDE_NON_SIGNIFICANT_PHENOTYPES;}
+    
+    return $self->{'include_non_significant_phenotypes'};
 }
 
 1;
