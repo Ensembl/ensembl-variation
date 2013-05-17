@@ -1045,7 +1045,7 @@ sub get_all_consequences {
                         
                         # remove the PID
                         $line =~ s/^\-?\d+ PLUGIN \w+ //;
-                        chomp;
+                        chomp $line;
                         
                         my $tmp = thaw(decode_base64($line));
                         
@@ -1078,7 +1078,7 @@ sub get_all_consequences {
                         
                         # remove the PID
                         $line =~ s/^\-?\d+\s//;
-                        chomp;
+                        chomp $line;
                         
                         # decode and thaw "output" from forked process
                         push @{$by_pid{$pid}}, thaw(decode_base64($line));
