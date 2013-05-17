@@ -1094,7 +1094,9 @@ sub get_all_consequences {
                 # something's wrong
                 else {
                     # kill the other pids
-                    kill(15, $line) for @pids;
+                    foreach my $pid(@pids) {
+                      kill(15, $pid);
+                    }
                     die("\nERROR: Forked process failed\n$line\n");
                 }
             }
