@@ -1016,11 +1016,11 @@ sub get_all_consequences {
         # read child input
         while(my @ready = $sel->can_read  and $done_processes < scalar @pids ) {
             foreach $fh (@ready) {
-                $_ = $fh->getline();
-                next unless defined($_) && $_;
+                my $line = $fh->getline();
+                next unless defined($line) && $line;
                 
                 # child finished
-                if(/^DONE/) {
+                if($line =~ /^DONE/) {
                     $sel->remove($fh);
                     $fh->close;
                     $done_processes++;
@@ -1028,31 +1028,31 @@ sub get_all_consequences {
                 }
                 
                 # variant finished / progress indicator
-                elsif(/^BUMP/) {
-                    m/BUMP ?(\d*)/;
+                elsif($line =~ /^BUMP/) {
+                    $line =~ m/BUMP ?(\d*)/;
                     $done_vars += $1 || 1;
                     progress($config, $done_vars, $total_size);
                 }
                 
                 # output
-                elsif(/^\-?\d+ /) {
+                elsif($line =~ /^\-?\d+ /) {
                     
                     # plugin
-                    if(/^\-?\d+ PLUGIN/) {
+                    if($line =~ /^\-?\d+ PLUGIN/) {
                         
-                        m/^(\-?\d+) PLUGIN (\w+) /;
+                        $line =~ m/^(\-?\d+) PLUGIN (\w+) /;
                         my ($pid, $plugin) = ($1, $2);
                         
                         # remove the PID
-                        s/^\-?\d+ PLUGIN \w+ //;
+                        $line =~ s/^\-?\d+ PLUGIN \w+ //;
                         chomp;
                         
-                        my $tmp = thaw(decode_base64($_));
+                        my $tmp = thaw(decode_base64($line));
                         
                         next unless defined($plugin);
                         
                         # copy data to parent plugin
-                        my ($parent_plugin) = grep {ref($_) eq $plugin} @{$config->{plugins}};
+                        my ($parent_plugin) = grep {ref($line) eq $plugin} @{$config->{plugins}};
                         
                         next unless defined($parent_plugin);
                         
@@ -1060,9 +1060,9 @@ sub get_all_consequences {
                     }
                     
                     # filtered count
-                    elsif(/^\-?\d+ STATS/) {
-                        s/^\-?\d+\sSTATS\s//;
-                        my $tmp = thaw(decode_base64($_));
+                    elsif($line =~ /^\-?\d+ STATS/) {
+                        $line =~ s/^\-?\d+\sSTATS\s//;
+                        my $tmp = thaw(decode_base64($line));
                         $config->{stats} ||= {};
                         merge_hashes($config->{stats}, $tmp, 1);
                         #$config->{stats}->{filter_count} += $2;
@@ -1072,30 +1072,30 @@ sub get_all_consequences {
                     
                     else {
                         # grab the PID
-                        m/^(\-?\d+)\s/;
+                        $line =~ m/^(\-?\d+)\s/;
                         my $pid = $1;
-                        die "ERROR: Could not parse forked PID from line $_" unless defined($pid);
+                        die "ERROR: Could not parse forked PID from line $line" unless defined($pid);
                         
                         # remove the PID
-                        s/^\-?\d+\s//;
+                        $line =~ s/^\-?\d+\s//;
                         chomp;
                         
                         # decode and thaw "output" from forked process
-                        push @{$by_pid{$pid}}, thaw(decode_base64($_));
+                        push @{$by_pid{$pid}}, thaw(decode_base64($line));
                         
                         #progress($config, ++$done_vars, $total_size);
                     }
                 }
                 
-                elsif(/^DEBUG/) {
+                elsif($line =~ /^DEBUG/) {
                     print STDERR;
                 }
                 
                 # something's wrong
                 else {
                     # kill the other pids
-                    kill(15, $_) for @pids;
-                    die("\nERROR: Forked process failed\n$_\n");
+                    kill(15, $line) for @pids;
+                    die("\nERROR: Forked process failed\n$line\n");
                 }
             }
         }
