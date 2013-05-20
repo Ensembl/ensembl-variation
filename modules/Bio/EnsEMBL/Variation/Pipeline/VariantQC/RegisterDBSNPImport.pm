@@ -216,6 +216,7 @@ sub check_variant_by_sequence{
        else{
            print $report "ERROR\tsequence $seq : no variation count previously $old_seq_count->{$seq} \n";
            $ok = 0;
+	   next; ## don't store count in db if no variants found
        }
 
        my $result =  Bio::EnsEMBL::IntVar::Result->new_fast({ ensvardb     => $details->{new_db},
