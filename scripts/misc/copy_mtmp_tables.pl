@@ -38,7 +38,7 @@ die "ERROR: You are not logged in as user mysqlens\n" unless $ENV{USER} eq 'mysq
 #die "ERROR: You must run this script on the database server machine on which the MTMP table database resides\n" unless $ENV{HOST} eq 'ens-variation2';
 
 # parse tables
-$config->{tables} ||= 'MTMP_allele,MTMP_population_genotype,subsnp_map,tmp_individual_genotype_single_bp';
+$config->{tables} ||= 'MTMP_population_genotype,subsnp_map,tmp_individual_genotype_single_bp';
 my %t = map {$_ => 1} split /\,/, $config->{tables};
 $config->{tables} = \%t;
 
