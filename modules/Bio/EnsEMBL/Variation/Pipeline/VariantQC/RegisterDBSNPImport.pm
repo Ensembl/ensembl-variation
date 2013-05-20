@@ -53,12 +53,12 @@ sub register{
 
     my $details = shift;  
 
-    ## add details of new variation db to production db
-    $details->{new_db}    = register_new_ensvardb($details);
-
     ## find current variation db record for this species & set to non-current
     $details->{prev_db}   = get_previous_ensvardb($details);
 
+    ## add details of new variation db to production db
+    $details->{new_db}    = register_new_ensvardb($details);
+   
     $details->{result_ad} = $details->{registry}->get_adaptor('multi', 'intvar', 'result');
 
     open my $report, ">$details->{pwd}/QC_report.txt" ||die "Failed to open report file : $!\n";
@@ -92,13 +92,29 @@ sub get_previous_ensvardb{
     my $ensvardb_adaptor  = $details->{registry}->get_adaptor('multi', 'intvar', 'ensvardb');
     my $prev_db = $ensvardb_adaptor->fetch_current_by_species( $details->{species} );
     die "No previous database found to compare to for species $details->{species}\n"  unless defined $prev_db;
-
-    print "using ".$prev_db->name() . " as previous ensembl db\n";
-
+    
     ## set last ensembl database to non-current    
     $ensvardb_adaptor->non_current($prev_db);
 
-    return $prev_db;
+    ## hack - last database entered may have only had a transcript_variation update
+    my $db_ext_sth = $ensvardb_adaptor->dbc->prepare(qq[ select max(ensvar_db.ensvardb_id) 
+                                                         from ensvar_db, check_result 
+                                                         where ensvar_db.species =?
+                                                         and ensvar_db.ensvardb_id = check_result.ensvardb_id
+                                                         and check_result.check_id = 1
+                                                       ]);
+    $db_ext_sth->execute( $details->{species});
+    my $last_checked_id = $db_ext_sth->fetchall_arrayref();
+    if (defined $last_checked_id->[0]->[0] && $last_checked_id->[0]->[0] ne $prev_db->dbID()){
+        ## pick up last checked ensembl db object instead of current if current does not have variation counts
+        my $checked_db = $ensvardb_adaptor->fetch_by_dbID( $last_checked_id->[0]->[0] );
+        print "using ".$checked_db->name() . " as previous ensembl db to check counts against (latest load, not most current release)\n";
+        return  $checked_db;
+    }
+    else{
+        print "using ".$prev_db->name() . " as previous ensembl db to check counts against\n";
+        return $prev_db;
+    }
 }
 
 ## store required information for new ensembl variation database
@@ -216,7 +232,7 @@ sub check_variant_by_sequence{
        else{
            print $report "ERROR\tsequence $seq : no variation count previously $old_seq_count->{$seq} \n";
            $ok = 0;
-	   next; ## don't store count in db if no variants found
+           next; ## don't store count in db if no variants found
        }
 
        my $result =  Bio::EnsEMBL::IntVar::Result->new_fast({ ensvardb     => $details->{new_db},
