@@ -32,7 +32,7 @@ INSERT INTO individual(individual_id, name, description, display)
 SELECT sample_id, name, description, display
 FROM sample
 WHERE sample_id NOT IN (select sample_id FROM old_individual)
-AND sample_id NOT IN (select sample_id FROM old_population);
+AND sample_id NOT IN (select sample_id FROM population);
 
 ## Now for population
 RENAME TABLE population to old_population;
