@@ -36,15 +36,15 @@ our ($species, $input_file, $input_dir, $source_name, $TMP_DIR, $TMP_FILE, $var_
 
 GetOptions('species=s'         => \$species,
            'source_name=s'     => \$source_name,
-            'input_file=s'        => \$input_file,
-           'input_dir=s'        => \$input_dir,
+           'input_file=s'      => \$input_file,
+           'input_dir=s'       => \$input_dir,
            'tmpdir=s'          => \$ImportUtils::TMP_DIR,
            'tmpfile=s'         => \$ImportUtils::TMP_FILE,
            'var_set=i'         => \$var_set_id,
-            'mapping'            => \$mapping,
-            'gaps=i'              => \$num_gaps,
-            'target_assembly=s' => \$target_assembly,
-            'size_diff=i'       => \$size_diff,
+           'mapping'           => \$mapping,
+           'gaps=i'            => \$num_gaps,
+           'target_assembly=s' => \$target_assembly,
+           'size_diff=i'       => \$size_diff,
            'version=i'         => \$version,
            'registry=s'        => \$registry_file,
            'replace!'          => \$replace_study,
@@ -763,7 +763,7 @@ sub structural_variation_sample {
     my $gender = ($row->[1] ne '') ? $row->[1] : 'Unknown';
     next if ($sample eq  '');
 
-    my $itype_val = ($species =~ /human|homo/i) ? 3 : 2;
+    my $itype_val = ($species =~ /human|homo/i) ? 3 : ($species =~ /mouse|mus/i ? 1 : 2);
     
     $dbVar->do(qq{ INSERT IGNORE INTO individual (name,description,gender,individual_type_id) VALUES ('$sample','Subject from the DGVa study $study_name','$gender',$itype_val)});
   }
@@ -1073,7 +1073,7 @@ sub get_header_info {
   $h->{study}        = $info if ($label =~ /Study.+accession/i);
   $h->{study_type}   = $info if ($label =~ /Study.+type/i);
   
-  $somatic_study = 1 if ($h->{study_type} =~ /somatic/i);
+  $somatic_study = 1 if ($h->{study_type} =~ /somatic|tumor/i);
   
   # Publication information
   if ($label =~ /Publication/i && $info !~ /Not.+applicable/i) {
