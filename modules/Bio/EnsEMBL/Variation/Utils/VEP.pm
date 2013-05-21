@@ -2010,9 +2010,7 @@ sub init_line {
     }
     
     # copy entries from base_line
-    if(defined($base_line)) {
-        $line->{$_} = $base_line->{$_} for keys %$base_line;
-    }
+    merge_hashes($line, $base_line) if defined($base_line);
     
     return $line;
 }
