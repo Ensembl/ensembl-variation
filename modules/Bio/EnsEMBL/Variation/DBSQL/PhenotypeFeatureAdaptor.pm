@@ -607,17 +607,12 @@ sub _check_gene_by_HGNC {
   my $self = shift;
   my $hgnc = shift;
   
-  # Add the constraint for significant data
-  my $extra_sql = $self->_is_significant_constraint();
-     $extra_sql = qq{ AND$extra_sql} if ($extra_sql);
-  
   my $sth = $self->dbc->prepare(qq{
     SELECT count(*)
     FROM phenotype_feature_attrib pfa, attrib_type at
     WHERE pfa.attrib_type_id = at.attrib_type_id
     AND at.code = 'associated_gene'
     AND pfa.value = ?
-    $extra_sql
   });
   
   $sth->bind_param(1, $hgnc, SQL_VARCHAR);
