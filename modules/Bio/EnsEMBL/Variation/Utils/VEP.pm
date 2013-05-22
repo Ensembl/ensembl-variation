@@ -1975,8 +1975,12 @@ sub init_line {
     
     # gmaf?
     if(defined($config->{gmaf}) && defined($vf->{existing}) && scalar @{$vf->{existing}}) {
-        my @gmafs = map {$_->{minor_allele}.':'.$_->{minor_allele_freq}} grep {defined($_->{minor_allele})} @{$vf->{existing}};
-        $line->{Extra}->{GMAF} = scalar @gmafs ? join ",", @gmafs : '-';
+        my @gmafs =
+          map {$_->{minor_allele}.':'.$_->{minor_allele_freq}}
+          grep {defined($_->{minor_allele}) && $_->{minor_allele_freq} =~ /\d/}
+          @{$vf->{existing}};
+        
+        $line->{Extra}->{GMAF} = join ",", @gmafs if scalar @gmafs;
     }
     
     # existing var stuff
