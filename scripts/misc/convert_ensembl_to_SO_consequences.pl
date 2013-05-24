@@ -45,7 +45,7 @@ while(<>) {
             $so = 'splice_region_variant';
         }
         
-        s/(\s|,|\&|^)$ens/$1$so/g;
+        s/(\s|,|\&|^|\"|\')$ens/$1$so/g;
     }
     print;
 }
