@@ -177,8 +177,10 @@ sub fetch_all_by_StructuralVariation {
   my $constraint = $self->SUPER::_default_where_clause();
   
   # Add the constraint for failed structural variant
-  $constraint .= " AND " . $self->db->_exclude_failed_structural_variations_constraint();
-            
+  if (!$self->db->include_failed_variations()) {
+    $constraint .= " AND " . $self->db->_exclude_failed_structural_variations_constraint();
+  }
+           
   my $sth = $self->prepare(qq{SELECT $cols
                                 FROM $tables, structural_variation_association sa
                                 WHERE $constraint 
@@ -211,27 +213,28 @@ sub fetch_all_by_StructuralVariation {
 =cut
 sub fetch_all_SO_term_by_structural_variation_dbID {
   my $self  = shift;
-	my $sv_id = shift;
-	
-	if(!defined($sv_id)) {
+  my $sv_id = shift;
+  
+  if(!defined($sv_id)) {
     throw("Structural variation ID arg expected");
   }
-	
-	my $constraint = " AND " . $self->db->_exclude_failed_structural_variations_constraint(); 
-	my @ssv_SO_list = ();
-	
-	my $sth = $self->prepare(qq{SELECT distinct a.value
-                                FROM structural_variation sv, structural_variation_association sa, attrib a
-                                WHERE sa.supporting_structural_variation_id=sv.structural_variation_id
-                                      AND sa.structural_variation_id = ? 
-																			AND sv.class_attrib_id=a.attrib_id
-																			$constraint });
-	$sth->bind_param(1,$sv_id,SQL_INTEGER);
-  $sth->execute();								
   
-	while (my ($SO_term) = $sth->fetchrow_array) {
-	  push (@ssv_SO_list, $SO_term);
-	}
+  my @ssv_SO_list = ();
+  
+  # No failed SV/SSV in the structural_variation_feature table
+  my $sth = $self->prepare(qq{SELECT distinct a.value
+                                FROM structural_variation_feature svf, structural_variation_association sa, attrib a
+                                WHERE sa.supporting_structural_variation_id=svf.structural_variation_id
+                                      AND sa.structural_variation_id = ? 
+                                      AND svf.class_attrib_id=a.attrib_id
+                              });
+ 
+  $sth->bind_param(1,$sv_id,SQL_INTEGER);
+  $sth->execute();                
+  
+  while (my ($SO_term) = $sth->fetchrow_array) {
+    push (@ssv_SO_list, $SO_term);
+  }
   return \@ssv_SO_list;
 }
 
