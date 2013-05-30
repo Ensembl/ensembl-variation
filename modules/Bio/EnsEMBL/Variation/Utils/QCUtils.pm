@@ -30,6 +30,7 @@ use strict;
 use warnings;
 
 use base qw(Exporter);
+use Bio::DB::Fasta;
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp );
 
 our @EXPORT_OK = qw(check_four_bases get_reference_base check_illegal_characters check_for_ambiguous_alleles remove_ambiguous_alleles find_ambiguous_alleles check_variant_size summarise_evidence count_rows count_group_by );
@@ -101,29 +102,37 @@ sub check_four_bases{
 
 sub get_reference_base{
 
-   my ($var, $slice_ad) = @_;
+   my ($var, $source, $method) = @_;
    my $ref_seq;
    
    if( ($var->{end} +1) == $var->{start}){ ## convention for insertions to reference
-     $ref_seq = "-";
+       $ref_seq = "-";
    }
 
    elsif( $var->{end} < $var->{start}){ ## coordinate error
-     warn "Incorrect coords $var->{start} - $var->{end}  for $var->{name} \n";    
+     warn "Incorrect coords $var->{start} - $var->{end}  for $var->{name} \n"; 
+     return;  
    }    
 
-   else{
-   
-     # retrieve the reference sequence at that mapping for deletion or substitution    
+   elsif($method eq "fasta_seq"){
+      ## use indexed fasta file for large dbs
+      $ref_seq = $source->seq($var->{seqreg_name}, $var->{start} => $var->{end});
 
-     my $slice = $slice_ad->fetch_by_region('toplevel', $var->{seqreg_name}, $var->{start}, $var->{end});
+   }
+   elsif($method eq "coredb"){
+     # retrieve the reference sequence from core db using slice adaptor   
+     my $slice = $source->fetch_by_region('toplevel', $var->{seqreg_name}, $var->{start}, $var->{end});
    
      unless (defined $slice){ die "ERROR Getting slice for $var->{seqreg_name}, $var->{start}, $var->{end}";}
      $ref_seq = $slice->seq();
 
-     # correct for multi-mapping variants which may be on negative strand
-     if($var->{strand} eq "-1"){ reverse_comp(\$ref_seq);}
    }
+   else{
+       return;    
+   }
+
+   # correct for multi-mapping variants which may be on negative strand
+   if($var->{strand} eq "-1"){ reverse_comp(\$ref_seq);}
 
    return $ref_seq;
 
@@ -264,7 +273,7 @@ sub summarise_evidence{
 
     ## get 1KG discovered variants (human only)
     my $kg_variations =  get_KG_variations($var_dbh, $first, $last) 
-	if $species =~/Homo|Human/i ;
+        if $species =~/Homo|Human/i ;
 
 
     foreach my $var(keys %$ss_variations ){
@@ -327,12 +336,12 @@ sub get_ss_variations{
 
     foreach my $l (@{$dat}){
 
-	$evidence{$l->[0]}{'obs'}  = 1;  ## save default value for each variant - full set to loop through later.
+        $evidence{$l->[0]}{'obs'}  = 1;  ## save default value for each variant - full set to loop through later.
 
-	$l->[2] = "N" unless defined $l->[2];
+        $l->[2] = "N" unless defined $l->[2];
 
         #save  submitter handle, population and ss id to try to discern independent submissions
-	push  @{$save_by_var{$l->[0]}}, [  $l->[1], $l->[2], $l->[5] ];
+        push  @{$save_by_var{$l->[0]}}, [  $l->[1], $l->[2], $l->[5] ];
 
 
        ## Save frequency evidence for variant by variant id - ensure at least 2 chromosomes assayed and variant poly
@@ -341,16 +350,16 @@ sub get_ss_variations{
             ## flag if frequency data available
             $evidence{$l->[0]}{'freq'}  = 1;
 
-	    ## special case for human only
-	    $evidence{$l->[0]}{'HM'}  = 1 if defined $l->[4] && $l->[4]   =~/HapMap/i;
+            ## special case for human only
+            $evidence{$l->[0]}{'HM'}  = 1 if defined $l->[4] && $l->[4]   =~/HapMap/i;
 
-	}
+        }
     }
 
 
     foreach my $var (keys %save_by_var){
 
-	$evidence{$var}{count} = count_ss(\@{$save_by_var{$var}} );
+        $evidence{$var}{count} = count_ss(\@{$save_by_var{$var}} );
     }
     return \%evidence;
 }
@@ -408,7 +417,7 @@ sub get_pubmed_variations{
     my $data = $pubmed_var_ext_sth->fetchall_arrayref();
  
     foreach my $l (@{$data}){
-	$pubmed_variations{$l->[0]} = 1;
+        $pubmed_variations{$l->[0]} = 1;
     }
 
     return \%pubmed_variations;

@@ -129,8 +129,11 @@ sub default_options {
         # these flags control which parts of the pipeline are run
 
         run_check_dbSNP_import           => 1, 
+        run_create_seqdb                 => 1, 
+
         run_variant_qc                   => 1,
         run_unmapped_var                 => 1,
+
         run_flip_population_genotype     => 1,
         run_update_population_genotype   => 1,
 
@@ -192,6 +195,7 @@ sub pipeline_analyses {
         pipeline_dir        => $self->o('pipeline_dir'),
     );
    
+   
     my @analyses;
 
  
@@ -203,6 +207,7 @@ sub pipeline_analyses {
             qc_batch_size                  => $self->o('qc_batch_size'),
             unmapped_batch_size            => $self->o('unmapped_batch_size'),
 
+            run_create_seqdb               => $self->o('run_create_seqdb'),
             run_check_dbSNP_import         => $self->o('run_check_dbSNP_import'),
             run_variant_qc                 => $self->o('run_variant_qc'),
             run_unmapped_var               => $self->o('run_unmapped_var'),
@@ -219,17 +224,28 @@ sub pipeline_analyses {
         -rc_name    => 'default',
         -flow_into  => {
              2 => [ 'check_dbSNP_import' ],
-             3 => [ 'variant_qc'     ],
-             4 => [ 'unmapped_var'   ],
-             5 => [ 'flip_population_genotype' ],
-             6 => [ 'update_population_genotype' ],
-             7 => [ 'special_cases' ],
-             8 => [ 'finish_variation_qc' ],
+             3 => [ 'create_seqdb' ],
+             4 => [ 'variant_qc'     ],
+             5 => [ 'unmapped_var'   ],
+             6 => [ 'flip_population_genotype' ],
+             7 => [ 'update_population_genotype' ],
+             8 => [ 'special_cases' ],
+             9 => [ 'finish_variation_qc' ],
                 },
      },
 
      {  -logic_name => 'check_dbSNP_import',
         -module     => 'Bio::EnsEMBL::Variation::Pipeline::VariantQC::CheckdbSNPImport',
+        -parameters => {    
+            @common_params,
+        },
+        -input_ids      => [],
+        -hive_capacity  => -1,
+        -rc_name        => 'default',               
+      },
+
+     {  -logic_name => 'create_seqdb',
+        -module     => 'Bio::EnsEMBL::Variation::Pipeline::VariantQC::CreateSeqDB',
         -parameters => {    
             @common_params,
         },
@@ -261,6 +277,7 @@ sub pipeline_analyses {
          -parameters     => {   
              schema             => $self->o('schema'),
              batch_size         => $self->o('qc_batch_size'),
+             use_seqdb          => $self->o('run_create_seqdb'),   
              @common_params,
          },
          -input_ids        => [],
@@ -268,7 +285,7 @@ sub pipeline_analyses {
 #         -analysis_capacity=> $self->o('variant_qc_capacity') ,
          -max_retry_count  => 0,
          -rc_name          => 'default',
-         -wait_for         => [ 'check_dbSNP_import'],
+         -wait_for         => [ 'check_dbSNP_import', 'create_seqdb'],
          -flow_into        => {},
          },
         
