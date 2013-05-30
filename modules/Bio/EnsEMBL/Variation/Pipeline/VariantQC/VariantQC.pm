@@ -35,6 +35,7 @@ package Bio::EnsEMBL::Variation::Pipeline::VariantQC::VariantQC;
 use strict;
 use warnings;
 use Data::Dumper ;
+use Bio::DB::Fasta;
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp expand);
 use base qw(Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess);
 use Bio::EnsEMBL::Variation::Utils::dbSNP qw(get_alleles_from_pattern);
@@ -42,7 +43,7 @@ use Bio::EnsEMBL::Variation::Utils::Sequence qw(revcomp_tandem);
 use Bio::EnsEMBL::Variation::Utils::QCUtils qw( check_four_bases get_reference_base check_illegal_characters check_for_ambiguous_alleles remove_ambiguous_alleles find_ambiguous_alleles summarise_evidence count_rows count_group_by check_variant_size);
 
 
-our $DEBUG   = 1;
+our $DEBUG   = 0;
 
 
 our %QUICK_COMP = ( "A" => "T",
@@ -246,8 +247,15 @@ sub run_variation_checks{
   
     # Extract reference sequence to run ref checks [ compliments for reverse strand multi-mappers]
   
-    my $ref_seq = get_reference_base($var, $slice_ad) ;
-
+    my $ref_seq ;
+    if( $self->param('use_seqdb')  == 1){
+        my $fasta_file = $self->required_param('pipeline_dir') . "/genomic.fa";
+        my $db = Bio::DB::Fasta->new($fasta_file );
+        $ref_seq = get_reference_base($var, $db, "fasta_seq") ;
+    }
+    else{
+        $ref_seq = get_reference_base($var, $slice_ad, "coredb") ;
+    }
     unless(defined $ref_seq){ 
       ## don't check further if obvious coordinate error
       push @{$fail_variant{15}}, $var->{v_id};

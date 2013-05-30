@@ -61,11 +61,11 @@ sub fetch_input {
 
     if($self->required_param('species') =~ /human|homo/i){
         ### create temp table of rs ids from 1KG project
-	$self->warning( 'Running 1KG');
+        $self->warning( 'Running 1KG');
         $self->create_1KG_table();
     }
     else{
-	$self->warning( 'Not running 1KG for ' . $self->required_param('species') );
+        $self->warning( 'Not running 1KG for ' . $self->required_param('species') );
     }
 
     ## look up variation_set_id for failed variants once
@@ -263,10 +263,10 @@ sub add_failed_variation_set{
     unless(defined $failed_set_id->[0]->[0]){
         ## no set entered - look up attrib for short name and enter set
 
-	$fail_attrib_ext_sth->execute() || die "Failed to extract failed set attrib reasons\n";
-	my $attrib = $fail_attrib_ext_sth->fetchall_arrayref();
+        $fail_attrib_ext_sth->execute() || die "Failed to extract failed set attrib reasons\n";
+        my $attrib = $fail_attrib_ext_sth->fetchall_arrayref();
 
-	die "Exiting: Error - attribs not found. Load attribs then re-run\n" unless defined $attrib->[0]->[0] ;
+        die "Exiting: Error - attribs not found. Load attribs then re-run\n" unless defined $attrib->[0]->[0] ;
 
         ## if attribs loaded, enter set
         $variation_set_ins_sth->execute( 'All failed variations',
@@ -274,7 +274,7 @@ sub add_failed_variation_set{
                                           $attrib->[0]->[0] )|| die "Failed to insert failed set\n"; 
 
         ## and pull out id to return
-	$variation_set_ext_sth->execute('All failed variations')  || die "Failed to extract failed variant set id\n";
+        $variation_set_ext_sth->execute('All failed variations')  || die "Failed to extract failed variant set id\n";
         $failed_set_id = $variation_set_ext_sth->fetchall_arrayref();      
     }
 
@@ -349,8 +349,8 @@ sub create_1KG_table{
     eval{ $int_dba = $self->get_adaptor('multi', 'intvar'); };
 
     unless (defined $int_dba){
-	$self->warning('No internal database connection found extract 1KG variants '); 
-	return;
+        $self->warning('No internal database connection found extract 1KG variants '); 
+        return;
     }
 
     my $var_dba  = $self->get_species_adaptor('variation');
@@ -380,13 +380,18 @@ sub write_output {
       $self->dataflow_output_id($self->param('check_dbSNP_import'), 2);        
     }
    
+    unless ($self->param('run_create_seqdb') == 0){
+        
+      $self->dataflow_output_id($self->param('create_seqdb'), 3);        
+    }
+   
     ## No map fails - larger bins used as check is very quick
 
     unless ($self->param('run_unmapped_var') == 0){
 
        my $unmapped_start_ids =  $self->param('unmapped_start_ids');
        $self->warning(scalar @{$unmapped_start_ids} .' unmapped_variant_qc jobs to do');  
-       $self->dataflow_output_id($unmapped_start_ids, 4);     
+       $self->dataflow_output_id($unmapped_start_ids, 5);     
     }
 
     ## Variant QC - bin start positions supplied
@@ -395,15 +400,14 @@ sub write_output {
 
         my $qc_start_ids =  $self->param('qc_start_ids');
         $self->warning(scalar @{$qc_start_ids} .' variant_qc jobs to do');
-        $self->dataflow_output_id($qc_start_ids, 3);  
+        $self->dataflow_output_id($qc_start_ids, 4);  
     }
 
     ## Complement alleles in population_genotype for variants which are being flipped
  
     unless ($self->param('run_flip_population_genotype') == 0){
 
-       $self->warning('scheduling flip_population_genotype'); 
-       $self->dataflow_output_id( $self->param('flip_population_genotype'), 5);
+       $self->dataflow_output_id( $self->param('flip_population_genotype'), 6);
     }
 
       
@@ -411,16 +415,15 @@ sub write_output {
     
     unless ($self->param('run_update_population_genotype') == 0){
 
-       $self->warning('scheduling update_population_genotype'); 
-       $self->dataflow_output_id( $self->param('update_population_genotype'), 6);
+       $self->dataflow_output_id( $self->param('update_population_genotype'), 7);
     }
     ## bulk updates to statuses for special cases
 
-    $self->dataflow_output_id($self->param('special_cases'), 7);
+    $self->dataflow_output_id($self->param('special_cases'), 8);
 
     ## run basic checks when everything is updated
 
-    $self->dataflow_output_id($self->param('finish_variation_qc'), 8);
+    $self->dataflow_output_id($self->param('finish_variation_qc'), 9);
    
    
     
