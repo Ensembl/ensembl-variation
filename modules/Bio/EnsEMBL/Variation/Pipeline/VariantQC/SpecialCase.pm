@@ -39,11 +39,9 @@ package Bio::EnsEMBL::Variation::Pipeline::VariantQC::SpecialCase;
 use strict;
 use warnings;
 
-
 use base qw(Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess);
 
 
-our $DEBUG   = 1;
  
 =head2 run
 
@@ -155,16 +153,11 @@ sub set_strain_display{
 	return;
     }
 
-#    my $display_update_sth = $var_dba->dbc->prepare(qq[update sample set display = ? where name = ? ]);
+
     my $display_update_sth = $var_dba->dbc->prepare(qq[update individual set display = ? where name = ? ]);
 
     #### ADAPT TO NEW SCHEMA
     ## check strains are neither missing or duplicated
-#    my $strain_check_sth =  $var_dba->dbc->prepare(qq[ select count(*) from sample, individual
-#                                                       where sample.name =?
-#                                                       and sample.sample_id = individual.sample_id
-#                                                      ]);
-
     my $strain_check_sth =  $var_dba->dbc->prepare(qq[ select count(*) from individual
                                                        where individual.name = ?
                                                       ]);
@@ -249,6 +242,7 @@ sub fake_read_coverage{
 }
 
 ## Pig consortium variation names are supported - copy to new releases
+## mapping on ss ids incase of rs-demerging
  
 sub add_synonym{
 
@@ -305,13 +299,16 @@ sub get_source{
     return  $id ->[0]->[0];
 }
 
+
+
+
 sub get_synonym{
     
     my $self = shift;
 
     my $int_dba  = $self->get_adaptor('multi', 'intvar');
 
-    my $synonym_ext_sth = $int_dba->prepare(qq[ select rs_name, synonym_name from pig_synonym ]);
+    my $synonym_ext_sth = $int_dba->prepare(qq[ select ss_name, synonym_name from pig_synonym ]);
 
     $synonym_ext_sth->execute();
     my $all_syn = $synonym_ext_sth->fetchall_arrayref();
