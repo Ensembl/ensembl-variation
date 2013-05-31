@@ -81,9 +81,6 @@ use Exporter;
 use vars qw(@ISA @EXPORT_OK);
 @ISA = qw(Exporter);
 
-# this variable stores child process references
-my $sel = IO::Select->new;
-
 @EXPORT_OK = qw(
     &parse_line
     &vf_to_consequences
@@ -877,46 +874,7 @@ sub get_all_consequences {
     if ($config->{extra}) {
         eval "use Plugin qw($config);"
     }
-    
-    # initialize caches
-    $config->{$_.'_cache'} ||= {} for qw(tr rf slice);
-
-    # build hash
-    my %vf_hash;
-    push @{$vf_hash{$_->{chr}}{int($_->{start} / $config->{chunk_size})}{$_->{start}}}, $_ for grep {!defined($_->{non_variant})} @$listref;
-    
-    my @non_variants = grep {defined($_->{non_variant})} @$listref;
-    debug("Skipping ".(scalar @non_variants)." non-variant loci\n") unless defined($config->{quiet}) or !(scalar @non_variants);
-    
-    # get regions
-    my $regions = &regions_from_hash($config, \%vf_hash);
-    my $trim_regions = $regions;
-    
-    # get trimmed regions - allows us to discard out-of-range transcripts
-    # when using cache
-    #if(defined($config->{cache})) {
-    #    my $tmp = $config->{cache};
-    #    delete $config->{cache};
-    #    $trim_regions = regions_from_hash($config, \%vf_hash);
-    #    $config->{cache} = $tmp;
-    #}
-    
-    # prune caches
-    prune_cache($config, $config->{tr_cache}, $regions, $config->{loaded_tr});
-    prune_cache($config, $config->{rf_cache}, $regions, $config->{loaded_rf});
-    
-    # get chr list
-    my %chrs = map {$_->{chr} => 1} @$listref;
-    
-    my $fetched_tr_count = 0;
-    $fetched_tr_count = fetch_transcripts($config, $regions, $trim_regions)
-        unless defined($config->{no_consequences});
-    
-    my $fetched_rf_count = 0;
-    $fetched_rf_count = fetch_regfeats($config, $regions, $trim_regions)
-        if defined($config->{regulatory})
-        && !defined($config->{no_consequences});
-    
+   
     # check we can use MIME::Base64
     if(defined($config->{fork})) {
         eval q{ use MIME::Base64; };
@@ -927,17 +885,39 @@ sub get_all_consequences {
         }
     }
     
-    my (@temp_array, @return, @pids);
+    my (@temp_array, @return, %by_pid, @pids);
+    my $active_forks = 0;
+    
     if(defined($config->{fork})) {
-        my $size = scalar @$listref;
+      my $total_size = scalar @$listref;
+      my $done_vars = 0;
+      
+      # this variable stores child process references
+      my $sel = IO::Select->new;
+      
+      debug("Calculating consequences") unless defined($config->{quiet});
+      progress($config, 0, 1);
+      
+      # loop while variants in $listref or forks running
+      while (scalar @$listref or $active_forks ) {
         
-        while(my $tmp_vf = shift @$listref) {
-            push @temp_array, $tmp_vf;
-            
-            # fork
-            if(scalar @temp_array >= ($size / $config->{fork}) || scalar @$listref == 0) {
-                
-                # create socket pairs for cross-process comms
+        # only spawn new forks if we have space
+        if ($active_forks <= $config->{fork} ) {
+          my $delta = 0.5;
+          my $minForkSize = 5;
+          my $maxForkSize = 200;
+          my $numLines = scalar @$listref;
+          my $forkSize = int($numLines / ($config->{fork} + $delta*$config->{fork}) + $minForkSize ) + 1;
+          
+          $forkSize =  $maxForkSize if $forkSize > $maxForkSize;
+          
+          while($active_forks <= $config->{fork} && scalar @$listref) {
+              my $tmp_vf = shift @$listref;
+              
+              push @temp_array, $tmp_vf;
+              
+              # fork
+              if(scalar @temp_array >= $forkSize || scalar @$listref == 0) {
                 my ($child,$parent);
                 
                 socketpair($child, $parent, AF_UNIX, SOCK_STREAM, PF_UNSPEC) or die "ERROR: Failed to open socketpair: $!";
@@ -948,70 +928,57 @@ sub get_all_consequences {
                 my $pid = fork;
                 
                 if(!defined($pid)) {
-                    debug("WARNING: Failed to fork - will attempt to continue without forking") unless defined($config->{quiet});
-                    push @temp_array, @$listref;
-                    push @return, @{vf_list_to_cons($config, \@temp_array, $regions)};
-                    last;
+                  die("WARNING: Failed to fork -") unless defined($config->{quiet});
+                  last;
                 }
                 elsif($pid) {
-                    push @pids, $pid;
-                    @temp_array = ();
+                  push @pids, $pid;
+                  $active_forks++;
+                  @temp_array = ();
                 }
                 elsif($pid == 0) {
+                  $config->{forked} = $$;
+                  $config->{quiet} = 1;
+                  $config->{stats} = {};
+                  
+                  *PARENT = $parent;
+                  *STDERR = *PARENT;
+                  
+                  my $cons = vf_list_to_cons($config, \@temp_array);
+                  
+                  # what we're doing here is sending a serialised hash of the
+                  # results through to the parent process through the socket.
+                  # This is then thawed by the parent process.
+                  # $$, or the PID, is added so that the input can be sorted
+                  # back into the correct order for output
+                
+                  print  PARENT $$." ".encode_base64(freeze($_), "\t")."\n" for @$cons;
+                  
+                  # some plugins may cache stuff, check for this and try and
+                  # reconstitute it into parent's plugin cache
+                  foreach my $plugin(@{$config->{plugins}}) {
+                    next unless defined($plugin->{has_cache});
                     
-                    $config->{forked} = $$;
-                    $config->{quiet} = 1;
-                    $config->{filter_count} = 0 if defined($config->{filter_count});
-                    $config->{stats} = {};
-                    
-                    # redirect STDERR to PARENT so we can catch errors
-                    *PARENT = $parent;
-                    *STDERR = *PARENT;
-                    
-                    my $cons = vf_list_to_cons($config, \@temp_array, $regions);
-                    
-                    # what we're doing here is sending a serialised hash of the
-                    # results through to the parent process through the socket.
-                    # This is then thawed by the parent process.
-                    # $$, or the PID, is added so that the input can be sorted
-                    # back into the correct order for output
-                    print PARENT $$." ".encode_base64(freeze($_), "\t")."\n" for @$cons;
-                    
-                    # some plugins may cache stuff, check for this and try and
-                    # reconstitute it into parent's plugin cache
-                    foreach my $plugin(@{$config->{plugins}}) {
-                        
-                        next unless defined($plugin->{has_cache});
-                        
-                        # delete unnecessary stuff and stuff that can't be serialised
-                        delete $plugin->{$_} for qw(config feature_types variant_feature_types version feature_types_wanted variant_feature_types_wanted params);
-                        print PARENT $$." PLUGIN ".ref($plugin)." ".encode_base64(freeze($plugin), "\t")."\n";
-                    }
-                    
-                    # tell parent about stats
-                    print PARENT $$." STATS ".encode_base64(freeze($config->{stats}), "\t")."\n" if defined($config->{stats});
-                    
-                    # we need to tell the parent this child is finished
-                    # otherwise it keeps listening
-                    print PARENT "DONE $$\n";
-                    close PARENT;
-                    
-                    exit(0);
+                    # delete unnecessary stuff and stuff that can't be serialised
+                    delete $plugin->{$_} for qw(config feature_types variant_feature_types version feature_types_wanted variant_feature_types_wanted params);
+                    print PARENT $$." PLUGIN ".ref($plugin)." ".encode_base64(freeze($plugin), "\t")."\n";
+                  }
+                  
+                  # tell parent about stats
+                  print PARENT $$." STATS ".encode_base64(freeze($config->{stats}), "\t")."\n" if defined($config->{stats});
+                  
+                  # we need to tell the parent this child is finished
+                  # otherwise it keeps listening
+                  print PARENT "DONE $$\n";
+                  
+                  exit(0);
                 }
-            }
+              }
+          }
         }
-        
-        debug("Calculating consequences") unless defined($config->{quiet});
         
         my $fh = $config->{out_file_handle};
         my $done_processes = 0;
-        my $done_vars = 0;
-        my $total_size = $size + ($config->{fork} * ($fetched_tr_count + $fetched_rf_count));
-        my $pruned_count;
-        
-        # create a hash to store the returned data by PID
-        # this means we can sort it correctly on output
-        my %by_pid;
         
         # read child input
         while(my @ready = $sel->can_read  and $done_processes < scalar @pids ) {
@@ -1024,7 +991,8 @@ sub get_all_consequences {
                     $sel->remove($fh);
                     $fh->close;
                     $done_processes++;
-                    last if $done_processes == scalar @pids;
+                    $active_forks--;
+                    last;
                 }
                 
                 # variant finished / progress indicator
@@ -1064,10 +1032,18 @@ sub get_all_consequences {
                         $line =~ s/^\-?\d+\sSTATS\s//;
                         my $tmp = thaw(decode_base64($line));
                         $config->{stats} ||= {};
+                        
+                        # special case chr lengths
+                        my %chr_lengths;
+                        
+                        if(defined($config->{stats}->{chr_lengths})) {
+                          merge_hashes($config->{stats}->{chr_lengths}, $tmp->{chr_lengths});
+                          %chr_lengths = %{$config->{stats}->{chr_lengths}};
+                        }
+                        
                         merge_hashes($config->{stats}, $tmp, 1);
-                        #$config->{stats}->{filter_count} += $2;
-                        #$done_vars += (int($size / $config->{fork}) - $2);
-                        progress($config, $done_vars, $total_size);
+                        
+                        $config->{stats}->{chr_lengths} = \%chr_lengths;
                     }
                     
                     else {
@@ -1082,8 +1058,6 @@ sub get_all_consequences {
                         
                         # decode and thaw "output" from forked process
                         push @{$by_pid{$pid}}, thaw(decode_base64($line));
-                        
-                        #progress($config, ++$done_vars, $total_size);
                     }
                 }
                 
@@ -1100,21 +1074,23 @@ sub get_all_consequences {
                     die("\nERROR: Forked process failed\n$line\n");
                 }
             }
+            last if $active_forks < $config->{fork};
         }
-        
-        end_progress($config);
-        
-        debug("Writing output") unless defined($config->{quiet});
-        
-        waitpid($_, 0) for @pids;
-        
-        # add the sorted data to the return array
-        push @return, @{$by_pid{$_} || []} for @pids;
+      }
+      
+      end_progress($config);
+      
+      debug("Writing output") unless defined($config->{quiet});
+      
+      waitpid($_, 0) for @pids;
+      
+      # add the sorted data to the return array
+      push @return, @{$by_pid{$_} || []} for @pids;
     }
     
     # no forking
     else {
-        push @return, @{vf_list_to_cons($config, $listref, $regions)};
+        push @return, @{vf_list_to_cons($config, $listref)};
     }
     
     if(defined($config->{debug})) {
@@ -1136,9 +1112,7 @@ sub get_all_consequences {
             "LINES ", $config->{line_number},
             "\tMEMORY $tot ", (join " ", @$mem),
             "\tDIFF ", (join " ", @$mem_diff),
-            "\tCACHE ", total_size($config->{tr_cache}).
-            "\tRF ", total_size($config->{rf_cache}),
-            "\tVF ", total_size(\%vf_hash),
+
         );
         #exit(0) if grep {$_ < 0} @$mem_diff;
     }
@@ -1149,13 +1123,38 @@ sub get_all_consequences {
 sub vf_list_to_cons {
     my $config = shift;
     my $listref = shift;
-    my $regions = shift;
+    
+    # initialize caches
+    $config->{$_.'_cache'} ||= {} for qw(tr rf slice);
+
+    # build hash
+    my %vf_hash;
+    push @{$vf_hash{$_->{chr}}{int($_->{start} / $config->{chunk_size})}{$_->{start}}}, $_ for @$listref;
+    
+    # get regions
+    my $regions = &regions_from_hash($config, \%vf_hash);
+    my $trim_regions = $regions;
+    
+    # prune caches
+    if(!defined($config->{forked})) {
+      prune_cache($config, $config->{tr_cache}, $regions, $config->{loaded_tr});
+      prune_cache($config, $config->{rf_cache}, $regions, $config->{loaded_rf});
+    }
+    
+    # get chr list
+    my %chrs = map {$_->{chr} => 1} @$listref;
+    
+    my $fetched_tr_count = 0;
+    $fetched_tr_count = fetch_transcripts($config, $regions, $trim_regions)
+        unless defined($config->{no_consequences});
+    
+    my $fetched_rf_count = 0;
+    $fetched_rf_count = fetch_regfeats($config, $regions, $trim_regions)
+        if defined($config->{regulatory})
+        && !defined($config->{no_consequences});
     
     # get non-variants
     my @non_variants = grep {$_->{non_variant}} @$listref;
-    
-    my %vf_hash = ();
-    push @{$vf_hash{$_->{chr}}{int($_->{start} / $config->{chunk_size})}{$_->{start}}}, $_ for @$listref;
     
     # check existing VFs
     &check_existing_hash($config, \%vf_hash) if defined($config->{check_existing});# && scalar @$listref > 10;
@@ -1178,28 +1177,12 @@ sub vf_list_to_cons {
     # if using consequence filter, we're not interested in how many remain yet
     $config->{stats}->{filter_count} += scalar @$new_listref unless defined($config->{filter});
     
-    # remake hash
+    # remake hash without non-variants
     %vf_hash = ();
     push @{$vf_hash{$_->{chr}}{int($_->{start} / $config->{chunk_size})}{$_->{start}}}, $_ for grep {!defined($_->{non_variant})} @$new_listref;
     
     # get overlapping SVs
     &check_svs_hash($config, \%vf_hash) if defined($config->{check_svs});
-    
-    # if we are forked, we can trim off some stuff
-    if(defined($config->{forked})) {
-        my $tmp = $config->{cache};
-        delete $config->{cache};
-        $regions = regions_from_hash($config, \%vf_hash);
-        $config->{cache} = $tmp;
-        
-        # prune caches
-        my $new_count = 0;
-        
-        $new_count += prune_cache($config, $config->{tr_cache}, $regions, $config->{loaded_tr});
-        $new_count += prune_cache($config, $config->{rf_cache}, $regions, $config->{loaded_rf});
-        
-        print PARENT "BUMP $new_count\n" unless defined($config->{no_progress});
-    }
     
     my @return;
     
@@ -1354,6 +1337,8 @@ sub vf_to_consequences {
     
     # pos stats
     $config->{stats}->{chr}->{$vf->{chr}}->{1e6 * int($vf->start / 1e6)}++;
+    
+    $config->{stats}->{var_cons}->{$vf->display_consequence}++;
     
     # use a different method for SVs
     return svf_to_consequences($config, $vf) if $vf->isa('Bio::EnsEMBL::Variation::StructuralVariationFeature'); 
@@ -2430,7 +2415,6 @@ sub whole_genome_fetch_transcript {
     while($tr_counter < $tr_count) {
         
         progress($config, $tr_counter, $tr_count);
-        print PARENT "BUMP\n" if defined($config->{forked}) && !defined($config->{no_progress});
         
         my $tr = $tr_cache->{$chr}->[$tr_counter++];
         
@@ -2511,7 +2495,6 @@ sub whole_genome_fetch_reg {
         while($rf_counter < $rf_count) {
             
             progress($config, $rf_counter, $rf_count);
-            print PARENT "BUMP\n" if defined($config->{forked}) && !defined($config->{no_progress});
             
             my $rf = $rf_cache->{$chr}->{$type}->[$rf_counter++];
             
@@ -3544,7 +3527,7 @@ sub build_slice_cache {
             $slice_cache{$chr}->{coord_system}->{adaptor} ||= $config->{csa};
             
             # log length for stats
-            $config->{chr_lengths}->{$chr} ||= $slice_cache{$chr}->end;
+            $config->{stats}->{chr_lengths}->{$chr} ||= $slice_cache{$chr}->end;
         }
     }
     
@@ -3686,7 +3669,7 @@ sub get_dump_file_name {
     #my $dir = $config->{dir}.'/'.$chr.'/'.$subdir;
     
     my $dir = $config->{dir}.'/'.$chr;
-    my $dump_file = $dir.'/'.$region.$type.(defined($config->{tabix}) ? '_tabix' : '').'.gz';
+    my $dump_file = $dir.'/'.$region.$type.'.gz';
     
     # make directory if it doesn't exist
     if(!(-e $dir) && defined($config->{write_cache})) {
@@ -4994,7 +4977,7 @@ sub have_clin_sig {
         if(defined($config->{vfa}) && defined($config->{vfa}->db)) {
             my $sth = $config->{vfa}->db->dbc->prepare(qq{
                 SELECT COUNT(*) FROM variation
-                WHERE clinical_significance_attrib_id IS NOT NULL
+                WHERE clinical_significance IS NOT NULL
             });
             $sth->execute;
             
@@ -5017,9 +5000,9 @@ sub get_clin_sig {
     my $config = shift;
     
     my $sth = $config->{vfa}->db->dbc->prepare(qq{
-        SELECT v.name, a.value
-        FROM variation v, attrib a
-        WHERE v.clinical_significance_attrib_id = a.attrib_id
+        SELECT name, clinical_significance
+        FROM variation
+        WHERE clinical_significance IS NOT NULL
     });
     $sth->execute;
     
@@ -5045,7 +5028,7 @@ sub merge_hashes {
                 $x->{$k} = merge_hashes($x->{$k}, $y->{$k}, $add);
             }
             else {
-                $x->{$k} = ($add ? $x->{$k} + $y->{$k} : $y->{$k});
+                $x->{$k} = ($add && $x->{$k} =~ /^[0-9\.]+$/ && $y->{$k} =~ /^[0-9\.]+$/ ? $x->{$k} + $y->{$k} : $y->{$k});
             }
         }
     }
@@ -5148,6 +5131,7 @@ sub progress {
     return if(defined($config->{prev_prog})) && $numblobs.'-'.$percent eq $config->{prev_prog};
     $config->{prev_prog} = $numblobs.'-'.$percent;
     
+    #printf("\r%s of %s", $i, $total);
     printf("\r% -${width}s% 1s% 10s", '['.('=' x $numblobs).($numblobs == $width - 2 ? '=' : '>'), ']', "[ " . $percent . "% ]");
 }
 
