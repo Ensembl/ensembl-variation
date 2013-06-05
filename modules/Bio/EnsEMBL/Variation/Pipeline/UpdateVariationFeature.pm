@@ -49,6 +49,13 @@ sub run {
     $dbc->do(qq{CREATE TABLE $temp_table LIKE variation_feature})
         or die "Failed to create temp table";
 
+    ## remove unneccessary non-null columns (for EGenomes)
+
+    $dbc->do(qq{ALTER TABLE $temp_table  drop seq_region_id,       drop variation_id ,
+                                         drop seq_region_start,    drop seq_region_end,
+                                         drop seq_region_strand,   drop source_id})
+        or die "Failed to alter temp table";
+
     # concatenate the consequence types from transcript_variation 
 
     $dbc->do(qq{
