@@ -482,7 +482,7 @@ sub hgvs_variant_notation {
     $display_start ||= $ref_start;
     $display_end ||= $ref_end;
     
-    #ÊThrow an exception if the lengths of the display interval and reference interval are different
+    #Throw an exception if the lengths of the display interval and reference interval are different
     throw("The coordinate interval for display is of different length than for the reference allele") if (($display_end - $display_start) != ($ref_end - $ref_start));
     
     # Length of the reference allele. Negative lengths make no sense
@@ -772,15 +772,15 @@ sub array_to_bitval {
     my $arr = shift;
     my $ref = shift;
     
-    #ÊEnsure that we have array references
+    #Ensure that we have array references
     $arr = wrap_array($arr);
     $ref = wrap_array($ref);
     
-    #ÊTurn the reference array into a hash, the values will correspond to 2 raised to the power of the position in the array
+    #Turn the reference array into a hash, the values will correspond to 2 raised to the power of the position in the array
     my $i=0;
     my %ref_hash = map {lc($_) => $i++;} @{$ref}; 
     
-    #ÊSet the bitval
+    #Set the bitval
     my $bitval = 0;
     foreach my $a (@{$arr}) {
         
@@ -802,7 +802,7 @@ sub array_to_bitval {
   Arg [1]    : int $bitval
   Arg [2]    : arrayref $ref
   Example    : my $arr = bitval_to_array(6,['cluster','freq','submitter','doublehit','hapmap','1000Genome','failed','precious']);
-             : print join(",",@{$arr}); #ÊWill print 'freq,submitter'
+             : print join(",",@{$arr}); #Will print 'freq,submitter'
   Description: Returns an array with the combination of elements from the reference array specified by the supplied bitvalue. 
                c.f. the SET datatype in MySQL
   Returntype : reference to list of strings
@@ -815,7 +815,7 @@ sub bitval_to_array {
     my $bitval = shift || 0;
     my $ref = shift;
 
-    #ÊEnsure that we have array references
+    #Ensure that we have array references
     $ref = wrap_array($ref);
     
     # convert the bit value into an ordered array
@@ -844,10 +844,10 @@ sub add_validation_state {
   my $obj = shift;
   my $state = shift;
   
-  #ÊGet the bitvalue for the new state 
+  #Get the bitvalue for the new state 
   my $newbit = get_validation_code($state) || 0;
   
-  #ÊBit-add it to the current validation_code
+  #Bit-add it to the current validation_code
   my $oldbit = $obj->{'validation_code'} || 0;
   $newbit |= $oldbit;
   

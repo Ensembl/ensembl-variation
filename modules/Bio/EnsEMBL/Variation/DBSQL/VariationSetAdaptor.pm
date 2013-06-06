@@ -87,7 +87,7 @@ our $MAX_VARIATION_SET_ID = 64;
 sub fetch_all_top_VariationSets {
     my $self = shift;
 
-    #ÊAdd a constraint to only get the sets that don't have any parent sets
+    #Add a constraint to only get the sets that don't have any parent sets
     my $constraint = qq{
         NOT EXISTS (
             SELECT
@@ -99,7 +99,7 @@ sub fetch_all_top_VariationSets {
         )
     };
     
-    #ÊGet the results from generic fetch method
+    #Get the results from generic fetch method
     return $self->generic_fetch($constraint);
     
 }
@@ -124,7 +124,7 @@ sub fetch_all_by_sub_VariationSet {
   my $set = shift;
   my $only_immediate = shift;
 
-  #ÊCheck the input set
+  #Check the input set
   assert_ref($set,'Bio::EnsEMBL::Variation::VariationSet');
   
 # First, get all VariationSets that are direct supersets of this one
@@ -179,7 +179,7 @@ sub fetch_all_by_super_VariationSet {
   my $set = shift;
   my $only_immediate = shift;
   
-  #ÊCheck the input set
+  #Check the input set
   assert_ref($set,'Bio::EnsEMBL::Variation::VariationSet');
   
 # First, get all VariationSets that are direct subsets of this one
@@ -237,7 +237,7 @@ sub fetch_by_name {
     my $constraint = qq{ vs.name LIKE ? };
     $self->bind_param_generic_fetch($name,SQL_VARCHAR);
     
-    #ÊCall the generic fetch method
+    #Call the generic fetch method
     my $result = wrap_array($self->generic_fetch($constraint));
     
     # Return the result
@@ -262,7 +262,7 @@ sub fetch_by_short_name {
 
     throw('short name argument expected') unless (defined($name));
 
-    #ÊGet the attrib_id corresponding to the 'short_name' type and specified name
+    #Get the attrib_id corresponding to the 'short_name' type and specified name
     my $aa = $self->db->get_AttributeAdaptor();
     my $attrib_id = $aa->attrib_id_for_type_value($self->_short_name_attrib_type_code(),$name);
     return undef unless (defined($attrib_id));
@@ -271,7 +271,7 @@ sub fetch_by_short_name {
     my $constraint = qq{ vs.short_name_attrib_id = ? };
     $self->bind_param_generic_fetch($attrib_id,SQL_INTEGER);
     
-    #ÊCall the generic fetch method
+    #Call the generic fetch method
     my $result = wrap_array($self->generic_fetch($constraint));
     
     # Return the result

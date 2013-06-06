@@ -285,7 +285,7 @@ sub get_populations_hash_by_Slice{
 	  $counts{$pop_id}++;
 	}
 	
-	#ÊDelete the populations that doesn't have enough individuals
+	#Delete the populations that doesn't have enough individuals
 	delete @results{ grep {$counts{$_} <= $pop_threshold} keys(%counts)};
   }
   
