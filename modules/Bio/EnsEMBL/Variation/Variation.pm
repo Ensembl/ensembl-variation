@@ -1219,7 +1219,7 @@ sub get_all_clinical_significance_states {
 sub get_all_PhenotypeFeatures {
     my $self = shift;
 
-    #ÊAssert the adaptor reference
+    #Assert the adaptor reference
     assert_ref($self->adaptor(),'Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor');
     
     # Get the annotations from the database

@@ -279,7 +279,7 @@ sub _tables{
 	return (['compressed_genotype_var','g'],['failed_variation','fv']);
 }
 
-#ÊAdd a left join to the failed_variation table
+#Add a left join to the failed_variation table
 sub _left_join { return ([ 'failed_variation', 'fv.variation_id = g.variation_id']); }
 
 sub _columns{

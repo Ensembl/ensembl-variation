@@ -1334,7 +1334,7 @@ sub _hgvs_generic {
     my $reference = pop;
     my $notation = shift;
     
-    #ÊThe rna and mitochondrial modes have not yet been implemented, so return undef in case we get a call to these
+    #The rna and mitochondrial modes have not yet been implemented, so return undef in case we get a call to these
     return undef if ($reference =~ m/rna|mitochondrial/);
     
     my $sub = qq{hgvs_$reference};
