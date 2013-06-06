@@ -153,7 +153,7 @@ sub _tables{
 	return @tables;
 }
 
-#ÊAdd a left join to the failed_variation table
+#Add a left join to the failed_variation table
 sub _left_join {
 	my $self = shift;
 	

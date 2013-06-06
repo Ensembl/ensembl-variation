@@ -104,22 +104,22 @@ sub get_available_adaptors{
 
   Arg [1]    : int $newval (optional)
   Example    :
-		#ÊGet a DBAdaptor for the human variation database
+		#Get a DBAdaptor for the human variation database
 		my $dba = $registry->get_DBAdaptor('human','variation');
 		
-		#ÊConfigure the DBAdaptor to return failed variations when using
-		#Êfetch methods in the various object adaptors
+		#Configure the DBAdaptor to return failed variations when using
+		#fetch methods in the various object adaptors
 		$dba->include_failed_variations(1);
 		
-		#ÊGet a variation set adaptor
+		#Get a variation set adaptor
 		my $vs_adaptor = $dba->get_VariationSetAdaptor();
 		
-		#ÊGet a variation set for the 1000 genomes high coverage Yoruba trio data
+		#Get a variation set for the 1000 genomes high coverage Yoruba trio data
 		my $vs = $vs_adaptor->fetch_by_name('1000 genomes - High coverage - Trios - YRI');
 		
 		# Get the iterator for the variations belonging to this variation set.
-		#ÊThis will now include variations that has been flagged as being failed.
-		#ÊThe default behaviour is not to return these.
+		#This will now include variations that has been flagged as being failed.
+		#The default behaviour is not to return these.
 		my $it = $vs->get_Variation_Iterator();
 		
 		# Iterate over the variations
@@ -134,10 +134,10 @@ sub get_available_adaptors{
 		    }
 		    # If not, check if any of its subsnps have been flagged as failed
 		    elsif ($v->has_failed_subsnps()) {
-			#ÊDo something else...
+			#Do something else...
 		    }
 		    else {
-			#ÊDo something else...
+			#Do something else...
 		    }
 		}
 		
@@ -160,10 +160,10 @@ sub include_failed_variations {
     my $self = shift;
     my $include = shift;
     
-    #ÊIf the flag should be modified, do that
+    #If the flag should be modified, do that
     if (defined($include)) {$self->{'include_failed_variations'} = $include;}
     
-    #ÊIn case the flag has not been set at all, set it to the default value
+    #In case the flag has not been set at all, set it to the default value
     unless (exists($self->{'include_failed_variations'})) {$self->{'include_failed_variations'} = $DEFAULT_INCLUDE_FAILED_VARIATIONS;}
     
     return $self->{'include_failed_variations'};
@@ -214,7 +214,7 @@ sub _exclude_failed_constraint {
     my $key_column = shift;
     my $table_alias = shift;
     
-    #ÊIf we should include failed objects, no extra condition is needed
+    #If we should include failed objects, no extra condition is needed
     return qq{ 1 } if ($self->include_failed_variations());
     
     # Otherwise, add a constraint on the alias table to have the key_column NULL

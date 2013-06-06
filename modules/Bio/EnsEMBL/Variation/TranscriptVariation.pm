@@ -395,7 +395,7 @@ sub _hgvs_generic {
     my $reference = pop;
     my $hgvs = shift;
     
-    #ÊThe rna and mitochondrial modes have not yet been implemented, so return undef in case we get a call to these
+    #The rna and mitochondrial modes have not yet been implemented, so return undef in case we get a call to these
     return undef if ($reference =~ m/rna|mitochondrial/);
     
     # The HGVS subroutine
@@ -404,7 +404,7 @@ sub _hgvs_generic {
     # Loop over the TranscriptVariationAllele objects associated with this TranscriptVariation
     foreach my $tv_allele (@{ $self->get_all_alternate_TranscriptVariationAlleles }) {
         
-        #ÊIf an HGVS hash was supplied and the allele exists as key, set the HGVS notation for this allele
+        #If an HGVS hash was supplied and the allele exists as key, set the HGVS notation for this allele
         if (defined($hgvs)) {
             my $notation = $hgvs->{$tv_allele->variation_feature_seq()};
             $tv_allele->$sub($notation) if defined $notation;
