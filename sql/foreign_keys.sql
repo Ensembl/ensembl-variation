@@ -12,6 +12,7 @@ ALTER TABLE allele ADD FOREIGN KEY (subsnp_id) REFERENCES subsnp_handle(subsnp_i
 ALTER TABLE allele ADD FOREIGN KEY (variation_id) REFERENCES variation(variation_id);
 ALTER TABLE allele ADD FOREIGN KEY (allele_code_id) REFERENCES allele_code(allele_code_id);
 ALTER TABLE allele ADD FOREIGN KEY (population_id) REFERENCES population(population_id);
+ALTER TABLE allele ADD FOREIGN KEY (frequency_submitter_handle) REFERENCES submitter_handle(handle_id);
 
 ALTER TABLE associate_study ADD FOREIGN KEY (study1_id) REFERENCES study(study_id);
 ALTER TABLE associate_study ADD FOREIGN KEY (study2_id) REFERENCES study(study_id);
@@ -57,7 +58,7 @@ ALTER TABLE population_structure ADD FOREIGN KEY (super_population_id) REFERENCE
 ALTER TABLE population_structure ADD FOREIGN KEY (sub_population_id) REFERENCES population(population_id);
 
 ALTER TABLE protein_function_predictions ADD FOREIGN KEY (translation_md5_id) REFERENCES translation_md5(translation_md5_id);
-ALTER TABLE protein_function_predictions ADD FOREIGN KEY (analysis_attrib_id) REFERENCES atrrib(attrib_id);
+ALTER TABLE protein_function_predictions ADD FOREIGN KEY (analysis_attrib_id) REFERENCES attrib(attrib_id);
 
 ALTER TABLE read_coverage ADD FOREIGN KEY (individual_id) REFERENCES individual(individual_id);
 ALTER TABLE read_coverage ADD FOREIGN KEY (seq_region_id) REFERENCES seq_region(seq_region_id);
@@ -67,6 +68,8 @@ ALTER TABLE individual_synonym ADD FOREIGN KEY (individual_id) REFERENCES indivi
 
 ALTER TABLE population_synonym ADD FOREIGN KEY (source_id) REFERENCES source(source_id);
 ALTER TABLE population_synonym ADD FOREIGN KEY (population_id) REFERENCES population(population_id);
+
+ALTER TABLE seq_region ADD FOREIGN KEY (coord_system_id) REFERENCES coord_system(coord_system_id);
 
 ALTER TABLE structural_variation ADD FOREIGN KEY (source_id) REFERENCES source(source_id);
 ALTER TABLE structural_variation ADD FOREIGN KEY (study_id) REFERENCES study(study_id);
@@ -82,7 +85,9 @@ ALTER TABLE structural_variation_feature ADD FOREIGN KEY (study_id) REFERENCES s
 ALTER TABLE structural_variation_feature ADD FOREIGN KEY (class_attrib_id) REFERENCES attrib(attrib_id);
 
 ALTER TABLE structural_variation_sample ADD FOREIGN KEY (individual_id) REFERENCES individual(individual_id);
-ALTER TABLE structural_variation_sample ADD FOREIGN KEY (strain_id) REFERENCESindividual(individual_id);
+ALTER TABLE structural_variation_sample ADD FOREIGN KEY (strain_id) REFERENCES individual(individual_id);
+ALTER TABLE structural_variation_sample ADD FOREIGN KEY (structural_variation_id) REFERENCES structural_variation(structural_variation_id);
+
 
 ALTER TABLE study ADD FOREIGN KEY (source_id) REFERENCES source(source_id);
 
@@ -104,7 +109,7 @@ ALTER TABLE variation ADD FOREIGN KEY (class_attrib_id) REFERENCES attrib(attrib
 ALTER TABLE phenotype_feature ADD FOREIGN KEY (source_id) REFERENCES study(study_id);
 ALTER TABLE phenotype_feature ADD FOREIGN KEY (study_id) REFERENCES study(study_id);
 ALTER TABLE phenotype_feature ADD FOREIGN KEY (object_id) REFERENCES variation(name);
-ALTER TABLE phenotype_feature ADD FOREIGN KEY (object_id) REFERENCES structural_variation(name);
+ALTER TABLE phenotype_feature ADD FOREIGN KEY (object_id) REFERENCES structural_variation(variation_name);
 ALTER TABLE phenotype_feature ADD FOREIGN KEY (phenotype_id) REFERENCES phenotype(phenotype_id);
 ALTER TABLE phenotype_feature ADD FOREIGN KEY (seq_region_id) REFERENCES seq_region(seq_region_id);
 
