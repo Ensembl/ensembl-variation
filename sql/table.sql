@@ -1695,8 +1695,8 @@ CREATE TABLE meta (
 );
 
 
-# insert schema type row
-INSERT INTO meta (meta_key, meta_value) VALUES ('schema_type', 'variation');
+# Add schema type and schema version to the meta table.
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_type', 'variation'), (NULL, 'schema_version', '73');
 
 
 
