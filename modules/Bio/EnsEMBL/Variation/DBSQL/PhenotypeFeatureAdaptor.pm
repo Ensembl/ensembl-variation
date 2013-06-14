@@ -150,7 +150,7 @@ sub fetch_all_by_object_id {
   my $id   = shift;
   my $type = shift;
   
-  my $constraint = qq{ pf.object_id = $id };
+  my $constraint = qq{ pf.object_id = '$id' };
   
   if(defined($type)) {
     throw("$type is not a valid object type, valid types are: ".(join ", ", sort %TYPES)) unless defined($TYPES{$type});
