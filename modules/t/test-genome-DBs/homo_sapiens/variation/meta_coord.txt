@@ -1,6 +1,0 @@
-variation_feature	1	\N
-variation_group_feature	1	\N
-transcript_variation	1	\N
-flanking_sequence	1	\N
-pairwise_ld	1	\N
-compressed_genotype_single_bp	1	100001
