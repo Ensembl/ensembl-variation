@@ -1168,6 +1168,9 @@ sub vf_list_to_cons {
                 push @$new_listref, $vf if grep {$_} map {check_frequencies($config, $_)} reverse @{$vf->{existing}};
                 $vf->{freqs} = $config->{filtered_freqs};
             }
+            else {
+                push @$new_listref, $vf;
+            }
         }
     }
     else {
