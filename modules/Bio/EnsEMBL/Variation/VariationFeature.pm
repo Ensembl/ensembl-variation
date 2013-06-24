@@ -832,36 +832,6 @@ sub add_OverlapConsequence {
     push @{ $self->{overlap_consequences} ||= [] }, $oc;
 }
 
-=head2 most_severe_OverlapConsequence
-
-  Description: Get the OverlapConsequence considered (by Ensembl) to be the most severe 
-               consequence of all the alleles of this VariationFeature 
-  Returntype : Bio::EnsEMBL::Variation::OverlapConsequence
-  Exceptions : none
-  Status     : At Risk
-
-=cut
-
-sub most_severe_OverlapConsequence {
-    my $self = shift;
-    
-    unless ($self->{_most_severe_consequence}) {
-        
-        my $highest;
-        
-        for my $cons (@{ $self->get_all_OverlapConsequences }) {
-            $highest ||= $cons;
-            if ($cons->rank < $highest->rank) {
-                $highest = $cons;
-            }
-        }
-        
-        $self->{_most_severe_consequence} = $highest;
-    }
-    
-    return $self->{_most_severe_consequence};
-}
-
 =head2 add_consequence_type
 
     Status : Deprecated, use add_OverlapConsequence instead
