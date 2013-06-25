@@ -1627,12 +1627,7 @@ sub _parse_hgvs_transcript_position {
         ($start, $end) = ($end,$start) ;
      }
    }
-   if($description =~ /dup/){ 
-     ## special case: handle as insertion for ensembl object purposes 
-     $start = $end ;
-     if($strand  == 1){ $start++; }
-     else{             $end--;   }
-  }
+
   return ($start, $end, $strand, $is_exonic);
 }
 
@@ -1740,11 +1735,23 @@ sub fetch_by_hgvs_notation {
   if($start > $end){ $refseq_allele = $slice->subseq($end,   $start, $strand);}
   else{              $refseq_allele = $slice->subseq($start, $end,  $strand);}
 
+  # take reference allele from genomic reference & coordinates if not supplied in HGVS string for a deletion
+  $ref_allele = $refseq_allele  if( $type =~ m/g|c|n/ && $description =~ m/del$/ );
 
   # If the reference allele was omitted, set it to undef
   $ref_allele = undef unless (defined($ref_allele) && length($ref_allele));      
   
-  if ($description =~ m/ins|dup/i && $description !~ m/del/i) {
+  # take alternate allele from genomic reference & coordinates if not supplied in HGVS string for a duplication
+  $alt_allele = $refseq_allele if( $type =~ m/g|c|n/ && $description =~/dup$/);
+
+  if($description =~ /dup/){ 
+     ## special case: handle as insertion for ensembl object purposes 
+     $start = $end ;
+     if($strand  == 1){ $start++; }
+     else{             $end--;   }
+  }
+  
+  elsif ($description =~ m/ins/i && $description !~ m/del/i) {
      # insertion: the start & end positions are inverted by convention
       if($end > $start){ ($start, $end  ) = ( $end , $start); }   
   }
@@ -1779,7 +1786,7 @@ sub fetch_by_hgvs_notation {
          '-source'  => 'Parsed from HGVS notation',
          '-alleles' => \@allele_objs
     );
-  warn "Creating allele objects:  st:$start, end:$end\n";
+
     #Create a variation feature object
     my $variation_feature = Bio::EnsEMBL::Variation::VariationFeature->new(
        '-adaptor'       => $self,
@@ -1802,7 +1809,7 @@ sub _get_hgvs_alleles{
     
     #### extract ref and alt alleles where possible from HGVS g/c/n string
 
-  my ($description, $hgvs) = shift;
+  my ($description, $hgvs) = @_;
   my ($ref_allele, $alt_allele) ;
     
   ### A single nt substitution, reference and alternative alleles are required
