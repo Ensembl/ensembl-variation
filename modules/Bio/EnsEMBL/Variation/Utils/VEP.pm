@@ -786,6 +786,8 @@ sub convert_to_vcf {
     my %allele_lengths;
     my @alleles = split /\//, $vf->allele_string;
     
+    map {reverse_comp(\$_)} @alleles if $vf->strand < 0;
+    
     foreach my $allele(@alleles) {
         $allele =~ s/\-//g;
         $allele_lengths{length($allele)} = 1;
@@ -1266,6 +1268,7 @@ sub vf_list_to_cons {
                         
                         # search for data in main line hash as well as extra field
                         my $data = defined $line->{$col} ? $line->{$col} : $line->{Extra}->{$col};
+                        reverse_comp(\$data) if $vf->strand < 0 and $col eq 'Allele';
                         
                         # "-" means null for everything except the Allele field (confusing...)
                         $data = undef if defined($data) and $data eq '-' and $col ne 'Allele';
