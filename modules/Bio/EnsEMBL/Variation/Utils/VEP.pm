@@ -1063,17 +1063,14 @@ sub get_all_consequences {
                     }
                 }
                 
-                elsif($line =~ /^DEBUG/) {
-                    print STDERR;
-                }
-                
                 # something's wrong
                 else {
+                    print STDERR "\n$line\n";
                     # kill the other pids
-                    foreach my $pid(@pids) {
-                      kill(15, $pid);
-                    }
-                    die("\nERROR: Forked process failed\n$line\n");
+                    #foreach my $pid(@pids) {
+                    #  kill(15, $pid);
+                    #}
+                    #die("\nERROR: Forked process failed\n$line\n");
                 }
             }
             last if $active_forks < $config->{fork};
