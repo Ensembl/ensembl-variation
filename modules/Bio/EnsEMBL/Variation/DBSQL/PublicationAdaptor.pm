@@ -129,7 +129,7 @@ sub fetch_by_dbID {
   return ($result ? $result->[0] : undef);
 }
 
-	
+        
 =head2 fetch_all_by_dbID_list
 
   Arg [1]    : listref $list
@@ -148,7 +148,7 @@ sub fetch_all_by_dbID_list {
     my $list = shift;
     
     if(!defined($list) || ref($list) ne 'ARRAY') {
-	throw("list reference argument is required");
+        throw("list reference argument is required");
     }
     
     my $id_str = (@$list > 1)  ? " IN (".join(',',@$list).")"   :   ' = \''.$list->[0].'\'';
@@ -176,7 +176,7 @@ sub fetch_all_by_Variation {
     my $var_obj = shift;
     
     if(!defined($var_obj) || ref($var_obj ne 'Variation')) {
-	throw("variation argument is required");
+        throw("variation argument is required");
     }
     
     my @pub;
@@ -186,7 +186,7 @@ sub fetch_all_by_Variation {
     $sth->execute($var_obj->dbID);
     $sth->bind_columns(\$publication_id);
     while ($sth->fetch()){
-	push @pub, $self->fetch_by_dbID($publication_id)
+        push @pub, $self->fetch_by_dbID($publication_id)
     }
     $sth->finish;
     
@@ -197,7 +197,7 @@ sub fetch_all_by_Variation {
 
 
 sub _columns {
-  return qw(p.publication_id p.title p.authors p.pmid p.pmcid );
+  return qw(p.publication_id p.title p.authors p.pmid p.pmcid p.year );
 }
 
 sub _tables { return (['publication', 'p']); }
@@ -217,21 +217,22 @@ sub _objs_from_sth {
 
   my @publication;
 
-  my ($publication_id,$title,$authors,$pmid,$pmcid);
+  my ($publication_id,$title,$authors,$pmid,$pmcid,$year);
   
-  $sth->bind_columns(\$publication_id, \$title, \$authors, \$pmid, \$pmcid);
+  $sth->bind_columns(\$publication_id, \$title, \$authors, \$pmid, \$pmcid, \$year);
   
   while($sth->fetch()) {
-		
-		
+                
+                
       push @publication, Bio::EnsEMBL::Variation::Publication->new
-	  (-dbID       => $publication_id,
-	   -ADAPTOR    => $self,
-	   -TITLE      => $title,
-	   -AUTHORS    => $authors,
-	   -PMID       => $pmid,
-	   -PMCID      => $pmcid,
-	  );
+          (-dbID       => $publication_id,
+           -ADAPTOR    => $self,
+           -TITLE      => $title,
+           -AUTHORS    => $authors,
+           -PMID       => $pmid,
+           -PMCID      => $pmcid,
+           -YEAR       => $year
+          );
   }
 
   return \@publication;
@@ -245,20 +246,22 @@ sub store{
     
     my $dbh = $self->dbc->db_handle;
     
-    my $pub_ins_sth = $dbh->prepare(qq[ insert into publication( title, authors, pmid, pmcid) values ( ?,?,?,?) ]);   
+    my $pub_ins_sth = $dbh->prepare(qq[ insert into publication( title, authors, pmid, pmcid, year ) values ( ?,?,?,?,? ) ]);   
     
     $pub_ins_sth->execute( $pub->{title},
-			   $pub->{authors},
-			   $pub->{pmid}  || undef,
-			   $pub->{pmcid} || undef );
+                           $pub->{authors},
+                           $pub->{pmid}  || undef,
+                           $pub->{pmcid} || undef,
+                           $pub->{year} 
+                         );
 
 
     $pub->{dbID} = $dbh->last_insert_id(undef, undef, 'publication', 'publication_id');
 
     ## check for cited variants to link 
     if( $pub->{variants}->[0] ){
-	
-	$self->update_variant_citation($pub);
+        
+        $self->update_variant_citation($pub);
     }
 }
 
@@ -277,30 +280,30 @@ sub update_variant_citation {
     my @var_objects ;
 
     if(  defined $var->[0]){ 
-	@var_objects = @{$var} ;
+        @var_objects = @{$var} ;
     }
     elsif( defined $pub->{variants}->[0]){ 
-	@var_objects = @{$pub->{variants}} ;
+        @var_objects = @{$pub->{variants}} ;
     }
     else{ 
-	throw("No variants to link to PMID". $pub->{pmid} ); 
-	return;
+        throw("No variants to link to PMID". $pub->{pmid} ); 
+        return;
     }
 
 
     foreach my $var_obj ( @var_objects  ){
 
-	if( ! $var_obj->isa("Bio::EnsEMBL::Variation::Variation")) {
-	    throw("Bio::EnsEMBL::Variation::Variation object expected");
-	}
+        if( ! $var_obj->isa("Bio::EnsEMBL::Variation::Variation")) {
+            throw("Bio::EnsEMBL::Variation::Variation object expected");
+        }
 
         ## avoid duplicates
-	$citation_ext_sth->execute( $var_obj->dbID(),  $pub->{dbID} );
-	my $count = $citation_ext_sth->fetchall_arrayref();
-	next unless $count->[0]->[0] ==0;
+        $citation_ext_sth->execute( $var_obj->dbID(),  $pub->{dbID} );
+        my $count = $citation_ext_sth->fetchall_arrayref();
+        next unless $count->[0]->[0] ==0;
 
-	$citation_ins_sth->execute( $var_obj->dbID(), $pub->{dbID});
-	
+        $citation_ins_sth->execute( $var_obj->dbID(), $pub->{dbID});
+        
     }    
 }
 
