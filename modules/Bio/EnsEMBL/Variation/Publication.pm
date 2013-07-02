@@ -50,6 +50,7 @@ package Bio::EnsEMBL::Variation::Publication;
 use Bio::EnsEMBL::Storable;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Utils::Argument  qw(rearrange);
+use Bio::EnsEMBL::Variation::DBSQL::VariationAdaptor;
 
 our @ISA = ('Bio::EnsEMBL::Storable');
 
@@ -89,8 +90,8 @@ sub new {
   my $class = ref($caller) || $caller;
 
   my $self = $class->SUPER::new(@_);
-	my ($dbID, $adaptor, $title, $authors, $pmid, $pmcid, $variants ) = 
-			rearrange([qw(dbID ADAPTOR TITLE AUTHORS PMID PMCID VARIANTS)], @_);
+	my ($dbID, $adaptor, $title, $authors, $pmid, $pmcid, $year, $variants ) = 
+			rearrange([qw(dbID ADAPTOR TITLE AUTHORS PMID PMCID YEAR VARIANTS)], @_);
 
   $self = {
       'dbID'     => $dbID,
@@ -99,6 +100,7 @@ sub new {
       'authors'  => $authors,
       'pmid'     => $pmid,
       'pmcid'    => $pmcid, 
+      'year'     => $year,
       'variants' => $variants     
   };
 	
@@ -130,7 +132,7 @@ sub title{
 
   Arg [1]    : string $newval (optional)
                The new value to set the authors attribute to
-  Example    : $name = $obj->authors()
+  Example    : $author_list = $obj->authors()
   Description: Getter/Setter for the authors attribute
   Returntype : string
   Exceptions : none
@@ -150,7 +152,7 @@ sub authors{
 
   Arg [1]    : string $newval (optional)
                The new value to set the pmid attribute to
-  Example    : $name = $obj->pmid()
+  Example    : $pmid = $obj->pmid()
   Description: Getter/Setter for the PubMed ID attribute
   Returntype : string
   Exceptions : none
@@ -170,7 +172,7 @@ sub pmid{
 
   Arg [1]    : string $newval (optional)
                The new value to set the pmcid attribute to
-  Example    : $name = $obj->pmcid()
+  Example    : $pmcid = $obj->pmcid()
   Description: Getter/Setter for the PubMed Central ID  attribute
   Returntype : string
   Exceptions : none
@@ -185,5 +187,46 @@ sub pmcid{
   return $self->{'pmcid'};
 }
 
+=head2 year
+
+  Arg [1]    : string $newval (optional)
+               The new value to set the pmcid attribute to
+  Example    : $publication_year = $obj->year()
+  Description: Getter/Setter for the the publication year attribute
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub year{
+  my $self = shift;
+  return $self->{'year'} = shift if(@_);
+  return $self->{'year'};
+}
+
+=head2 variations
+
+  Arg [1]    : array ref [optional]
+               an array of variations cited in the publication
+  Example    : $variant_objects = $obj->variations()
+  Description: Getter/Setter for variatio_citations
+  Returntype : arrayref
+  Exceptions : none
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub variations{
+   my $self = shift;
+  return $self->{'variants'} = shift if(@_);
+ 
+   my $variation_adaptor = $self->adaptor->db->get_VariationAdaptor();      
+   $self->{'variants'} = $variation_adaptor->fetch_all_by_Publication($self);
+
+   return $self->{'variants'};
+}
 
 1;
