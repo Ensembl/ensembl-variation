@@ -102,8 +102,10 @@ sub import_citations{
                 push @var_obs, $v;
             }
             else{
+                no warnings ;
                 ### write file of variants not found in this species to use as input file for next
                 print $error_log "$rsid,$data->{$pub}->{pmcid},$data->{$pub}->{pmid},  No variant record\n";
+                use warnings ;
             }
         }
 
@@ -138,6 +140,8 @@ sub import_citations{
         if ($looks_ok == 0 && $ref->{resultList}->{result}->{title} !~ /$species_string/){
             print $error_log "ALL\t$data->{$pub}->{pmid}\t$ref->{resultList}->{result}->{title} - species not mentioned\n";
             ## can't really check human
+
+
             next unless $species_string =~/human/;
         }
 
@@ -165,6 +169,7 @@ sub import_citations{
                                                                          -authors  => $ref->{resultList}->{result}->{authorString},
                                                                          -pmid     => $ref->{resultList}->{result}->{pmid},
                                                                          -pmcid    => $ref->{resultList}->{result}->{pmcid},
+                                                                         -year     => $ref->{resultList}->{result}->{pubYear},
                                                                          -variants => \@var_obs,
                                                                          -adaptor  => $pub_ad
                 );
@@ -188,8 +193,10 @@ sub get_epmc_data{
     my $response = $http->get($request, {
         headers => { 'Content-type' => 'application/xml' }
                               });
-    warn "Failed! :$!\n" unless $response->{success};
-   
+    unless ($response->{success}){
+        warn "Failed request: $request :$!\n" ;
+        return;
+    }
     return $xs->XMLin($response->{content} );
 
 }
@@ -202,7 +209,9 @@ sub check_species{
     my ($mined ,$data)=@_ ;
     my $looks_ok = 0;
 
-    if($mined->{semanticTypeList}->{semanticType}->{total} ==1){
+    if(defined $mined->{semanticTypeList}->{semanticType}->{total}  &&
+       $mined->{semanticTypeList}->{semanticType}->{total} ==1){
+
         print "found spec ". $mined->{semanticTypeList}->{semanticType}->{tmSummary}->{term} . "\n"  if $DEBUG == 1;
         if ($mined->{semanticTypeList}->{semanticType}->{tmSummary}->{term} =~ /$species_string/i){
             $looks_ok = 1;
@@ -294,13 +303,15 @@ sub check_dbSNP{
 
     my $pub_ext_sth = $dba->dbc()->prepare(qq[ select publication.publication_id, publication.pmid
                                                from publication
-                                               where publication.pmcid not like 'PMC%'                      
+                                               where publication.pmcid not like 'PMC%' 
+                                               and publication.pmid is not null                     
                                               ]);
 
     my $pub_upd_sth = $dba->dbc()->prepare(qq[ update publication
                                                set publication.title = ?,
                                                publication.pmcid=?,
-                                               publication.authors = ?
+                                               publication.authors = ?,
+                                               publication.year = ?
                                                where publication.publication_id = ?
                                              ]);
 
@@ -313,7 +324,10 @@ sub check_dbSNP{
 
         my $mined = get_epmc_data( "MED/$l->[1]/textMinedTerms/ORGANISM" );
         my $ref   = get_epmc_data("search/query=ext_id:$l->[1]%20src:med");
-
+        unless(defined $mined && defined $ref){
+            print $error_log "NO EPMC data for PMID:$l->[1] - skipping\n";
+            next;
+        }
         ## dbSNP may list publications which have not been mined
         my $looks_ok  = check_species($mined ,$ref) ;
         if ($looks_ok == 0 && $ref->{resultList}->{result}->{title} !~/$species_string/i){
@@ -323,6 +337,7 @@ sub check_dbSNP{
         $pub_upd_sth->execute( $ref->{resultList}->{result}->{title},
                                $ref->{resultList}->{result}->{pmcid},
                                $ref->{resultList}->{result}->{authorString},
+                               $ref->{resultList}->{result}->{pubYear},
                                $l->[0]
             ) if defined $ref->{resultList}->{result}->{title};
     }  
@@ -375,14 +390,14 @@ sub report_summary{
     print $report "Total publications:\t$publication_count\n";
     print $report "Total citations:\t$citation_count\n";
 
-    my $dup1_ext_sth = $dba->prepare(qq[ select p1.publication_id, p2.publication_id, p2.pmid
+    my $dup1_ext_sth = $dba->dbc->prepare(qq[ select p1.publication_id, p2.publication_id, p2.pmid
                                          from publication p1, publication p2
                                          where p1.pmid = p2.pmid
                                          and p1.publication_id < p2.publication_id
                                          and p1.pmid is not null
                                        ]);
 
-    my $dup2_ext_sth = $dba->prepare(qq[ select p1.publication_id, p2.publication_id, p2.pmcid
+    my $dup2_ext_sth = $dba->dbc->prepare(qq[ select p1.publication_id, p2.publication_id, p2.pmcid
                                          from publication p1, publication p2
                                          where p1.pmcid = p2.pmcid
                                          and p1.publication_id < p2.publication_id
@@ -393,7 +408,7 @@ sub report_summary{
     my $dup1 =  $dup1_ext_sth->fetchall_arrayref();
 
     $dup2_ext_sth->execute()||die;
-    my $dup2 =  $dup1_ext_sth->fetchall_arrayref();
+    my $dup2 =  $dup2_ext_sth->fetchall_arrayref();
 
 
     if (defined $dup1->[0]->[0] || defined $dup1->[0]->[0]){
@@ -410,7 +425,7 @@ sub report_summary{
 
 
 sub usage {
-
+    
     die "\n\tUsage: import_EPMC.pl -data [EPMC file] -species [name] -registry [registry file]
 
 Options:  -check_dbSNP [0/1]   - add detail to citations from dbSNP import (default:1)\n\n";
