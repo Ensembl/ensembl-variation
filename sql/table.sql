@@ -441,6 +441,7 @@ CREATE TABLE allele_code (
 @column genotype_code_id	Internal identifier.
 @column allele_code_id 	    Foreign key reference to @link allele_code table.
 @column haplotype_id        Sorting order of the genotype's alleles.
+@column phased              Indicates if this genotype is phased
 
 @see allele_code
 @see population_genotype
@@ -450,6 +451,7 @@ CREATE TABLE genotype_code (
   genotype_code_id int(11) unsigned NOT NULL,
   allele_code_id int(11) unsigned NOT NULL,
   haplotype_id tinyint(2) unsigned NOT NULL,
+  phased tinyint(2) unsigned DEFAULT NULL,
   
   KEY genotype_code_id (genotype_code_id),
   KEY allele_code_id (allele_code_id)
