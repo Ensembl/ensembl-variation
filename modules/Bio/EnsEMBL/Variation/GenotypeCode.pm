@@ -74,4 +74,19 @@ sub genotype {
   return $_[0]->{genotype};
 }
 
+=head2 phased
+
+  Example    : $p = $genotypecode->phased()
+  Description: Getter for the phased status of this GenotypeCode object.
+  Returntype : int
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub phased {
+  return $_[0]->{phased};
+}
+
 1;
