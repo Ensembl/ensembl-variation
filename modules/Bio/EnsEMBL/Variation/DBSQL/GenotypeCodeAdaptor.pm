@@ -117,31 +117,34 @@ sub fetch_all_single_bp {
 }
 
 sub _objs_from_sth {
-    my $self = shift;
-    my $sth = shift;
+  my $self = shift;
+  my $sth = shift;
 	
 	my $ploidy = $self->ploidy;
 	
-    my ($gt_code_id, $haplotype_id, $allele);
-    my (@result, %gts);
-    
-    $sth->bind_columns(\$gt_code_id, \$haplotype_id, \$allele);
-    
-	$gts{$gt_code_id}{$haplotype_id} = $allele while $sth->fetch;
+  my ($gt_code_id, $haplotype_id, $allele, $phased);
+  my (@result, %gts);
+  
+  $sth->bind_columns(\$gt_code_id, \$haplotype_id, \$allele, \$phased);
+  
+	$gts{defined($phased) ? $phased : 'NULL'}{$gt_code_id}{$haplotype_id} = $allele while $sth->fetch;
 	
-	foreach $gt_code_id(keys %gts) {
-		my @gt = map {$gts{$gt_code_id}{$_}} sort {$a <=> $b} keys %{$gts{$gt_code_id}};
-		
-		# splice it down to ploidy size
-		@gt = splice @gt, 0, $ploidy;
-		
-		push @result, Bio::EnsEMBL::Variation::GenotypeCode->new_fast({
-			dbID     => $gt_code_id,
-			genotype => \@gt,
-		});
-	}
-    
-    return \@result;
+  foreach $phased(keys %gts) {
+    foreach $gt_code_id(keys %{$gts{$phased}}) {
+      my @gt = map {$gts{$phased}{$gt_code_id}{$_}} sort {$a <=> $b} keys %{$gts{$phased}{$gt_code_id}};
+      
+      # splice it down to ploidy size
+      @gt = splice @gt, 0, $ploidy;
+      
+      push @result, Bio::EnsEMBL::Variation::GenotypeCode->new_fast({
+        dbID     => $gt_code_id,
+        genotype => \@gt,
+        phased   => $phased eq 'NULL' ? undef : $phased,
+      });
+    }
+  }
+  
+  return \@result;
 }
 
 # method used by superclass to construct SQL
@@ -150,7 +153,7 @@ sub _tables {
 }
 
 sub _columns {
-  return qw( gc.genotype_code_id gc.haplotype_id ac.allele );
+  return qw( gc.genotype_code_id gc.haplotype_id ac.allele gc.phased );
 }
 
 sub _default_where_clause {

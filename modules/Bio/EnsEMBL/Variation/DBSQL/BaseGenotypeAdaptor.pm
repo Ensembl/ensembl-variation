@@ -103,7 +103,7 @@ sub _cache_genotype_codes {
 		$self->{_genotype_code_adaptor} = $self->db->get_GenotypeCodeAdaptor;
 	}
 	
-	my %gt_codes = map {(join "|", @{$_->genotype}) => $_->dbID} @{$self->{_genotype_code_adaptor}->fetch_all()};
+	my %gt_codes = map {(join "|", (@{$_->genotype}, $_->phased || "NULL")) => $_->dbID} @{$self->{_genotype_code_adaptor}->fetch_all()};
 	
 	$self->db->{_genotype_codes} = \%gt_codes;
 	
@@ -112,7 +112,7 @@ sub _cache_genotype_codes {
 
 # get or (if not yet in DB) add a new GT code
 sub _genotype_code {
-	my ($self, $genotype) = @_;
+	my ($self, $genotype, $phased) = @_;
 	
 	# check if cache is loaded
 	my $just_loaded = 0;
@@ -122,7 +122,8 @@ sub _genotype_code {
 		$just_loaded = 1;
 	}
 	
-	my $gt_string = join "|", @$genotype;
+	# include phased status in $gt_string to make unique
+	my $gt_string = join "|", (@$genotype, defined($phased) ? $phased : 'NULL');
 	
 	if(!exists($self->db->{_genotype_codes}->{$gt_string})) {
 		
@@ -156,13 +157,15 @@ sub _genotype_code {
 			
 			$sth = $dbh->prepare(q{
 				INSERT INTO genotype_code (
-					genotype_code_id, allele_code_id, haplotype_id
+					genotype_code_id, allele_code_id, haplotype_id, phased
 				)
-				VALUES (?,?,?)
+				VALUES (?,?,?,?)
 			});
 			
+			$phased = undef if defined($phased) && $phased eq 'NULL';
+			
 			for my $hap_id(1..(scalar @$genotype)) {
-				$sth->execute($gt_code, $allele_codes{$genotype->[$hap_id-1]}, $hap_id);
+				$sth->execute($gt_code, $allele_codes{$genotype->[$hap_id-1]}, $hap_id, $phased);
 			}
 			
 			$sth->finish;
