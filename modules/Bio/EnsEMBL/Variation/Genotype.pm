@@ -248,6 +248,21 @@ sub ambiguity_code {
   return strain_ambiguity_code($_[0]->genotype_string);
 }
 
+=head2 phased
+
+  Example    : $p = $genotype->phased()
+  Description: Getter for the phased status of this genotype.
+  Returntype : int
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub phased {
+  return $_[0]->{phased};
+}
+
 sub AUTOLOAD {
   my $self = shift;
   
