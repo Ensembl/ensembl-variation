@@ -44,7 +44,6 @@ use IO::Handle;
 use Data::Dumper;
 use Time::HiRes qw(gettimeofday tv_interval);
 use ImportUtils qw(load);
-use FindBin qw( $Bin );
 use Digest::MD5 qw(md5_hex);
 use Cwd 'abs_path';
 
@@ -1300,12 +1299,12 @@ sub get_adaptors {
 	$config->{variation_adaptor}->db->include_failed_variations(1);
 	
 	# core adaptors
-	#if(defined($config->{tables}->{transcript_variation}) && $config->{tables}->{transcript_variation}) {
+	if(defined($config->{tables}->{transcript_variation}) && $config->{tables}->{transcript_variation}) {
 		$config->{slice_adaptor} = $config->{reg}->get_adaptor($config->{species}, "core", "slice");
 		die("ERROR: Could not get slice adaptor\n") unless defined($config->{slice_adaptor});
 		$config->{vep}->{sa} = $config->{slice_adaptor};
 		$config->{vep}->{tva} = $config->{transcriptvariation_adaptor};
-	#}
+	}
 }
 
 
@@ -2114,6 +2113,7 @@ sub get_genotypes {
 		my @bits;
 		
 		my $gt = (split /\:/, $split->[$i])[0];
+    my $phased = $gt =~ /\|/ ? 1 : 0;
 		foreach my $bit(split /\||\/|\\/, $gt) {
 			push @bits, ($bit eq '.' ? '.' : $alleles[$bit]);
 		}
@@ -2121,7 +2121,8 @@ sub get_genotypes {
 		push @genotypes, Bio::EnsEMBL::Variation::IndividualGenotype->new_fast({
 			variation => $data->{variation},
 			individual => $config->{individuals}->[$i-9],
-			genotype => \@bits
+			genotype => \@bits,
+			phased => $phased
 		}) if scalar @bits;
 	}
 	
