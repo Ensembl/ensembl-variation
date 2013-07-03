@@ -96,8 +96,8 @@ sub new {
 
 	my $self = $class->SUPER::new(@_);
 	
-	my ($adaptor, $genotype, $var, $varid, $ssid, $ind) =
-	  rearrange([qw(adaptor genotype variation _variation_id subsnp individual)],@_);
+	my ($adaptor, $genotype, $var, $varid, $ssid, $ind, $phased) =
+	  rearrange([qw(adaptor genotype variation _variation_id subsnp individual phased)],@_);
 	
 	if(defined($var) &&
 	   (!ref($var) || !$var->isa('Bio::EnsEMBL::Variation::Variation'))) {
@@ -114,6 +114,7 @@ sub new {
 	$self->{'individual'}    = $ind;
 	$self->{'variation'}     = $var;
 	$self->{'subsnp'}        = $ssid;
+  $self->{'phased'}        = $phased;
 	$self->{'_variation_id'} = $varid unless defined $var;
 	
 	return $self;
