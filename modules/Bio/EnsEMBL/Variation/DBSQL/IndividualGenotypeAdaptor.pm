@@ -73,8 +73,13 @@ sub store {
 	push @{$by_var{$_->variation->dbID.'_'.($_->{subsnp} ? $_->{subsnp} : '')}}, $_ for @$gts;
 	
 	# get unique genotypes and codes
-	my %unique_gts = map {$_->genotype_string() => 1} @$gts;
-	$unique_gts{$_} = $self->_genotype_code([split /\|/, $_]) for keys %unique_gts;
+	my %unique_gts = map {$_->genotype_string().'|'.(defined($_->phased) ? $_->phased : 'NULL') => 1} @$gts;
+  
+  foreach my $gt_key(keys %unique_gts) {
+    my @split = split /\|/, $gt_key;
+    my $phased = pop @split;
+    $unique_gts{$gt_key} = $self->_genotype_code(\@split, $phased);
+  }
 	
 	# get variation objects
 	my %var_objs = map {$_->variation->dbID => $_->variation} @$gts;
@@ -115,13 +120,18 @@ sub store {
 		if(@existing_gts) {
 			
 			# refresh unique_gts
-			%unique_gts = map {$_->genotype_string() => 1} (@existing_gts, @$gts);
-			$unique_gts{$_} = $self->_genotype_code([split /\|/, $_]) for keys %unique_gts;
+			%unique_gts = map {$_->genotype_string().'|'.(defined($_->phased) ? $_->phased : 'NULL') => 1} (@existing_gts, @$gts);
+      
+      foreach my $gt_key(keys %unique_gts) {
+        my @split = split /\|/, $gt_key;
+        my $phased = pop @split;
+        $unique_gts{$gt_key} = $self->_genotype_code(\@split, $phased);
+      }
 			
 			# make sure we don't put in duplicates
 			my %by_ind = map {$_->individual->dbID => $_} (@existing_gts, @$gts);
 			
-			$genotype_string .= pack("ww", $_->individual->dbID, $unique_gts{$_->genotype_string}) for values %by_ind;
+			$genotype_string .= pack("ww", $_->individual->dbID, $unique_gts{$_->genotype_string.'|'.(defined($_->phased) ? $_->phased : 'NULL')}) for values %by_ind;
 			
 			$update_sth->execute(
 				$genotype_string,
@@ -131,7 +141,7 @@ sub store {
 		}
 		
 		else {
-			$genotype_string .= pack("ww", $_->individual->dbID, $unique_gts{$_->genotype_string}) for @$gts;
+			$genotype_string .= pack("ww", $_->individual->dbID, $unique_gts{$_->genotype_string.'|'.(defined($_->phased) ? $_->phased : 'NULL')}) for @$gts;
 			
 			$sth->execute(
 				$var_id,
@@ -342,6 +352,7 @@ sub _objs_from_sth{
 	foreach my $gtc(@$gtcs) {
 		foreach my $igty(@{$gt_code_hash{$gtc->dbID}}) {
 			$igty->{genotype} = $gtc->genotype;
+      $igty->{phased}   = $gtc->phased;
 		}
 	}
 	
