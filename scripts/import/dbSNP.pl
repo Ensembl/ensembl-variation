@@ -147,7 +147,7 @@ $registry_file ||= $Bin . "/ensembl.registry";
 my $logh = *STDOUT;
 if (defined($logfile)) {
   open(LOG,'>>',$logfile) or die ("Could not open logfile $logfile for writing");
-  #ÊTurn on autoflush for the logfile
+  #Turn on autoflush for the logfile
   {
     my $ofh = select LOG;
     $| = 1;
@@ -215,13 +215,14 @@ my @parameters = (
   -dbSNP_version => $dbSNP_BUILD_VERSION,
   -assembly_version => $ASSEMBLY_VERSION,
   -group_term  => $GROUP_TERM,
-	-group_label => $GROUP_LABEL,
+  -group_label => $GROUP_LABEL,
   -skip_routines => \@skip_routines,
   -scriptdir => $scriptdir,
   -log => $logh
 );
 
 my $import_object;
+
 if ($species =~ m/felix_cattus/i || $species =~ m/zebrafinch|taeniopygia_guttata/i || $species =~ m/tetraodon/i) {
   $import_object = dbSNP::MappingChromosome->new(@parameters);
 }
@@ -271,6 +272,15 @@ print $logh $clock->duration('start_dump','end_dump');
 ### This behaviour ceased as of 30/1/2013
 
 
+## update meta 
+my $meta_ins_sth = $dbm->dbVar()->dbc->db_handle->prepare(qq[ INSERT INTO meta (species_id, meta_key, meta_value) values (?,?,?)]);
+
+$meta_ins_sth->execute('1', 'species.production_name', $dbm->dbVar()->species() ) ||die;
+
+if (defined $ens_version){
+    $meta_ins_sth->execute('1','schema_version',  $ens_version ) ||die;
+}
+
 
 ### update production db as final step
 
@@ -289,16 +299,13 @@ $data{pwd}              = $TMP_DIR;
 register(\%data);
 
 
-if( defined $ens_version ){
-    ## update meta if version supplied
-    $dbm->dbVar()->dbc->db_handle->do(qq{INSERT INTO meta ( meta_key, meta_value) values ( 'schema_version',  $ens_version) });
-}
+
 
 
 
 debug(localtime() . "\tAll done!");
 
-#ÊClose the filehandle to the logfile if one was specified
+#Close the filehandle to the logfile if one was specified
 close($logh) if (defined($logfile));
   
 
@@ -329,9 +336,9 @@ sub usage {
       -tmpdir <dir>               temporary directory to use (with lots of space!)
       -tmpfile <filename>         temporary filename to use
       -mapping_file <filename>    file containing the mapping data
-			-group_term <group_term>    select the group_term to import
-			-group_label <group_label>  select the group_label to import
-			
+      -group_term <group_term>    select the group_term to import
+      -group_label <group_label>  select the group_label to import
+                        
 EOF
 
       die("\n$msg\n\n");
