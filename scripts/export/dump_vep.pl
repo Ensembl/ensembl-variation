@@ -28,7 +28,7 @@ my $config = {};
 
 my %special_options = (
 	'homo_sapiens'      => ' --sift b --polyphen b --regulatory'.
-	                       ' --freq_file /nfs/ensembl/wm2/VEP/cache/all_rs_global_freqs.txt,AFR,AMR,ASN,EUR',
+	                       ' --freq_file /nfs/ensembl/wm2/VEP/cache/1kg_esp_freqs.txt,AFR,AMR,ASN,EUR,AA,EA',
 	'mus_musculus'      => ' --regulatory --sift b',
 	'bos_taurus'        => ' --sift b',
 	'canis_familiaris'  => ' --sift b',
