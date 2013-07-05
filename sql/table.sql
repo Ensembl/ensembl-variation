@@ -1608,6 +1608,7 @@ CREATE TABLE study_variation (
 @column authors              Authors of the publication
 @column pmid                 The PubMed id for the publication if available
 @column pmcid                The PubMed Central id for the publication if available
+@column year                 The year the publication was published
 
 @see variation_citation
 */
@@ -1618,6 +1619,7 @@ title          varchar(255),
 authors        varchar(255),
 pmid           int(10),
 pmcid          varchar(255),
+year           int(10) unsigned,
 primary key( publication_id ),
 key pmid_idx (pmid)
 );
