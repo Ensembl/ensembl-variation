@@ -59,12 +59,12 @@ sub run {
   $var_dba->dbc->do(qq[INSERT IGNORE INTO allele_code(allele) SELECT allele_2 FROM genotype_code_tmp]);
 
   ## populate genotype code with both alleles
-  $var_dba->dbc->do(qq[INSERT INTO genotype_code
+  $var_dba->dbc->do(qq[INSERT INTO genotype_code (genotype_code_id, allele_code_id, haplotype_id )
                        SELECT t.genotype_code_id, ac.allele_code_id, 1
                        FROM genotype_code_tmp t, allele_code ac
                        WHERE t.allele_1 = ac.allele ]);
 
-  $var_dba->dbc->do(qq[INSERT INTO genotype_code
+  $var_dba->dbc->do(qq[INSERT INTO genotype_code (genotype_code_id, allele_code_id, haplotype_id )
                       SELECT t.genotype_code_id, ac.allele_code_id, 2
                       FROM genotype_code_tmp t, allele_code ac
                       WHERE t.allele_2 = ac.allele ]);
