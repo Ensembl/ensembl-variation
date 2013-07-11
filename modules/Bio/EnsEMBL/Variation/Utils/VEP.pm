@@ -783,52 +783,77 @@ sub convert_to_vcf {
     my $vf = shift;
     
     # look for imbalance in the allele string
-    my %allele_lengths;
-    my @alleles = split /\//, $vf->allele_string;
-    
-    map {reverse_comp(\$_)} @alleles if $vf->strand < 0;
-    
-    foreach my $allele(@alleles) {
-        $allele =~ s/\-//g;
-        $allele_lengths{length($allele)} = 1;
-    }
-    
-    # in/del/unbalanced
-    if(scalar keys %allele_lengths > 1) {
+    if($vf->isa('Bio::EnsEMBL::Variation::VariationFeature')) {
+        my %allele_lengths;
+        my @alleles = split /\//, $vf->allele_string;
         
-        # we need the ref base before the variation
-        # default to N in case we can't get it
-        my $prev_base = 'N';
+        map {reverse_comp(\$_)} @alleles if $vf->strand < 0;
         
-        unless(defined($config->{cache})) {
-            my $slice = $vf->slice->sub_Slice($vf->start - 1, $vf->start - 1);
-            $prev_base = $slice->seq if defined($slice);
+        foreach my $allele(@alleles) {
+            $allele =~ s/\-//g;
+            $allele_lengths{length($allele)} = 1;
         }
         
-        for my $i(0..$#alleles) {
-            $alleles[$i] =~ s/\-//g;
-            $alleles[$i] = $prev_base.$alleles[$i];
+        # in/del/unbalanced
+        if(scalar keys %allele_lengths > 1) {
+            
+            # we need the ref base before the variation
+            # default to N in case we can't get it
+            my $prev_base = 'N';
+            
+            unless(defined($config->{cache})) {
+                my $slice = $vf->slice->sub_Slice($vf->start - 1, $vf->start - 1);
+                $prev_base = $slice->seq if defined($slice);
+            }
+            
+            for my $i(0..$#alleles) {
+                $alleles[$i] =~ s/\-//g;
+                $alleles[$i] = $prev_base.$alleles[$i];
+            }
+            
+            return [
+                $vf->{chr} || $vf->seq_region_name,
+                $vf->start - 1,
+                $vf->variation_name,
+                shift @alleles,
+                (join ",", @alleles),
+                '.', '.', '.'
+            ];
+            
         }
         
-        return [
-            $vf->{chr} || $vf->seq_region_name,
-            $vf->start - 1,
-            $vf->variation_name,
-            shift @alleles,
-            (join ",", @alleles),
-            '.', '.', '.'
-        ];
-        
+        # balanced sub
+        else {
+            return [
+                $vf->{chr} || $vf->seq_region_name,
+                $vf->start,
+                $vf->variation_name,
+                shift @alleles,
+                (join ",", @alleles),
+                '.', '.', '.'
+            ];
+        }
     }
     
-    # balanced sub
+    # SV
     else {
+        
+        # convert to SO term
+        my %terms = (
+            'insertion' => 'INS',
+            'deletion' => 'DEL',
+            'tandem_duplication' => 'TDUP',
+            'duplication' => 'DUP'
+        );
+        
+        my $alt = '<'.($terms{$vf->class_SO_term} || $vf->class_SO_term).'>';
+        
         return [
             $vf->{chr} || $vf->seq_region_name,
             $vf->start,
             $vf->variation_name,
-            shift @alleles,
-            (join ",", @alleles),
+            '.',
+            $alt,
             '.', '.', '.'
         ];
     }
