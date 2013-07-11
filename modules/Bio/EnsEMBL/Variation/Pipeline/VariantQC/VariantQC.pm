@@ -649,8 +649,8 @@ sub write_variation_features{
                                                    seq_region_end, seq_region_strand,  allele_string, map_weight,  
                                                    source_id, consequence_types, variation_set_id, somatic,
                                                    class_attrib_id, alignment_quality, flags, evidence,
-                                                   minor_allele, minor_allele_freq, minor_allele_count )
-                                                  values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                                                   minor_allele, minor_allele_freq, minor_allele_count,validation_status )
+                                                  values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                                                 ]);       
   
   
@@ -675,7 +675,8 @@ sub write_variation_features{
 			       $evidence->{$data->{v_id}},
                                $data->{min_allele},
                                $data->{min_af},
-                               $data->{min_al_count}
+                               $data->{min_al_count},
+			       $data->{validation_status}
                              )|| die "ERROR importing variation feature info\n";
 
 
@@ -712,7 +713,8 @@ sub write_variation{
                                                       maf.freq,
                                                       maf.count,
                                                       maf.is_minor_allele,
-                                                      clinical_significance
+                                                      clinical_significance,
+                                                      validation_status
                                                from variation v left outer join maf on ( maf.snp_id = v.snp_id)
                                                where v.variation_id between ? and ?
 
@@ -730,8 +732,9 @@ sub write_variation{
                                                minor_allele_freq,
                                                minor_allele_count,
                                                clinical_significance,
-                                               evidence)
-                                               values (?,?,?,?,?,?,?,?,?,?,?)
+                                               evidence,
+                                               validation_status)
+                                               values (?,?,?,?,?,?,?,?,?,?,?,?)
                                               ]); 
 
       
@@ -761,7 +764,8 @@ sub write_variation{
                            $v->[7],
                            $v->[8],
                            $v->[10],
-                           $evidence->{$v->[0]})||    die "ERROR writing variation table\n";    
+                           $evidence->{$v->[0]},
+                           $v->[11])||    die "ERROR writing variation table\n";    
 
   }
   return \%minor_allele;
