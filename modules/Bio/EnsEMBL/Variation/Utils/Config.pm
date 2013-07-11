@@ -895,6 +895,16 @@ our @ATTRIB_TYPES = (
         name => 'External ID',
         description => 'External identifier for an entity',
     },
+    {
+        code => 'odd_ratio',
+        name => 'Odd ratio',
+        description => 'Odd ratio used to denote significance of an observed phenotype annotation',
+    },
+    {
+        code => 'beta_coef',
+        name => 'Beta coefficient',
+        description => 'Beta coefficient (or standardized coefficient) used to denote significance of an observed phenotype annotation',
+    },
 );
 
 # attribs are specified in the %ATTRIBS hash, having the attrib_type code as hash key and a listref containing the attribs that will be loaded as value
