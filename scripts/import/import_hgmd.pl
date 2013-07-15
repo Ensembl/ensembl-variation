@@ -50,9 +50,10 @@ die ("HGMD tables not found in the database!\nBe sure you ran the script 'map_hg
 
 # Main
 add_variation();
-add_feature();
+add_variation_feature();
 add_allele();
 add_annotation(); # phenotype_feature & phenotype_feature_attrib
+update_features();
 add_attrib();
 add_set();
 
@@ -113,7 +114,7 @@ sub add_variation {
 }
 
 
-sub add_feature {
+sub add_variation_feature {
   my $insert_vf_sth = $dbh->prepare(qq{
     INSERT IGNORE INTO 
       variation_feature (
@@ -261,7 +262,7 @@ sub add_annotation {
         attrib_type_id,
         value
       ) 
-      SELECT 
+      SELECT DISTINCT
         pf.phenotype_feature_id,
         ?,
         va.associated_gene
@@ -271,6 +272,40 @@ sub add_annotation {
         AND pf.type='Variation'
   });
   $insert_pfa_sth->execute($attrib_type_id);
+}
+
+
+sub update_features {
+	# Variation feature
+	my $update_vf_sth = $dbh->prepare(qq{
+	  UPDATE $vf_table hvf, $var_table hv, variation_feature vf SET
+		  vf.seq_region_id=hvf.seq_region_id,
+			vf.seq_region_start=hvf.seq_region_start,
+			vf.seq_region_end=hvf.seq_region_end
+		WHERE
+		  vf.variation_id=hv.new_var_id AND
+			hv.variation_id=hvf.variation_id AND 
+			vf.source_id = ? AND
+			(vf.seq_region_id!=hvf.seq_region_id OR
+			 vf.seq_region_start!=hvf.seq_region_start OR
+			 vf.seq_region_end!=hvf.seq_region_end) 
+	});
+	$update_vf_sth->execute($source_id);
+	
+	# Phenotype feature
+	my $update_pf_sth = $dbh->prepare(qq{
+	  UPDATE phenotype_feature pf, $vf_table vf SET
+		  pf.seq_region_id=vf.seq_region_id,
+			pf.seq_region_start=vf.seq_region_start,
+			pf.seq_region_end=vf.seq_region_end
+		WHERE
+		  pf.object_id=vf.variation_name AND
+			pf.source_id = ? AND
+			(vf.seq_region_id!=pf.seq_region_id OR
+			 vf.seq_region_start!=pf.seq_region_start OR
+			 vf.seq_region_end!=pf.seq_region_end) 
+	});
+	$update_pf_sth->execute($source_id);
 }
 
 
