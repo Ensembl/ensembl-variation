@@ -772,22 +772,22 @@ sub structural_variation_sample {
   # Create strain entries
   if ($species =~ /mouse|mus/i) {
     $stmt = qq{ SELECT DISTINCT strain FROM $temp_table 
-                WHERE strain NOT IN (SELECT DISTINCT name from individual WHERE display!='UNDISPLAYABLE' AND type=1)
+                WHERE strain NOT IN (SELECT DISTINCT name from individual WHERE display!='UNDISPLAYABLE' AND individual_type_id=1)
               };
     my $rows_strains = $dbVar->selectall_arrayref($stmt);
     foreach my $row (@$rows_strains) {
       my $sample = $row->[0];
       next if ($sample eq  '');
     
-      if (!$dbVar->selectrow_arrayref(qq{SELECT individual_id FROM individual WHERE name=$sample LIMIT 1})) {
-        $dbVar->do(qq{ INSERT IGNORE INTO individual (name,description,type,display,individual_type_id) VALUES ('$sample','Strain from the DGVa study $study_name','MARTDISPLAYABLE',1)});
+      if (!$dbVar->selectrow_arrayref(qq{SELECT individual_id FROM individual WHERE name='$sample' LIMIT 1})) {
+        $dbVar->do(qq{ INSERT IGNORE INTO individual (name,description,gender,display,individual_type_id) VALUES ('$sample','Strain from the DGVa study $study_name','Unknown','MARTDISPLAYABLE',1)});
       }
       else{
-        if ($dbVar->selectrow_arrayref(qq{SELECT individual_id FROM individual WHERE name=$sample AND display='UNDISPLAYABLE'})) {
-          $dbVar->do(qq{UPDATE individual SET display='MARTDISPLAYABLE' WHERE name=$sample AND display='UNDISPLAYABLE'});
+        if ($dbVar->selectrow_arrayref(qq{SELECT individual_id FROM individual WHERE name='$sample' AND display='UNDISPLAYABLE'})) {
+          $dbVar->do(qq{UPDATE individual SET display='MARTDISPLAYABLE' WHERE name='$sample' AND display='UNDISPLAYABLE'});
         }
-        if ($dbVar->selectrow_arrayref(qq{SELECT individual_id FROM individual WHERE name=$sample AND display!='UNDISPLAYABLE' AND type!=1})) {
-          $dbVar->do(qq{UPDATE individual SET type=1 WHERE name=$sample AND display!='UNDISPLAYABLE' AND type!=1});
+        if ($dbVar->selectrow_arrayref(qq{SELECT individual_id FROM individual WHERE name=$sample AND display!='UNDISPLAYABLE' AND individual_type_id!=1})) {
+          $dbVar->do(qq{UPDATE individual SET individual_type_id=1 WHERE name='$sample' AND display!='UNDISPLAYABLE' AND type!=1});
         }
       }
     }
@@ -1073,7 +1073,7 @@ sub get_header_info {
   $h->{study}        = $info if ($label =~ /Study.+accession/i);
   $h->{study_type}   = $info if ($label =~ /Study.+type/i);
   
-  $somatic_study = 1 if ($h->{study_type} =~ /somatic|tumor/i);
+  $somatic_study = 1 if ($h->{study_type} =~ /(somatic)|(tumor)/i);
   
   # Publication information
   if ($label =~ /Publication/i && $info !~ /Not.+applicable/i) {
