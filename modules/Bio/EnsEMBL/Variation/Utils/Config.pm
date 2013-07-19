@@ -896,9 +896,9 @@ our @ATTRIB_TYPES = (
         description => 'External identifier for an entity',
     },
     {
-        code => 'odd_ratio',
-        name => 'Odd ratio',
-        description => 'Odd ratio used to denote significance of an observed phenotype annotation',
+        code => 'odds_ratio',
+        name => 'Odds ratio',
+        description => 'Odds ratio used to denote significance of an observed phenotype annotation',
     },
     {
         code => 'beta_coef',
