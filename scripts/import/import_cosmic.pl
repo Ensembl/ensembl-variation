@@ -252,6 +252,8 @@ while (my ($value, $attrib_id) = $get_class_attrib_ids_sth->fetchrow_array) {
 
 my $patched_version = 0;
 
+my %cosmic_genes_list;
+
 # loop over the input file
 
 MAIN_LOOP : while(<$INPUT>) {
@@ -409,6 +411,15 @@ MAIN_LOOP : while(<$INPUT>) {
         my $strand;
 
         GENE : for my $gene (@genes) {
+        
+            # Use existing gene found
+            if ($cosmic_genes_list{$cosmic_gene}{$accession}) {
+              if ($cosmic_genes_list{$cosmic_gene}{$accession} eq $gene) {
+                $ens_gene = $gene;
+                last;
+              }
+            }
+        
             if ($gene->external_name eq $cosmic_gene) {
                 $ens_gene = $gene;
                 last;
@@ -474,6 +485,7 @@ MAIN_LOOP : while(<$INPUT>) {
 
         if ($ens_gene) {
             $strand = $ens_gene->strand;
+            $cosmic_genes_list{$cosmic_gene}{$accession} = $ens_gene if (!$cosmic_genes_list{$cosmic_gene}{$accession});
         }
         else {
             my $num = @genes;
@@ -548,43 +560,62 @@ MAIN_LOOP : while(<$INPUT>) {
         # strand
 
         my $flipped = 0;
-
+        my $var_strand = $strand;
+        
         my $forward_strand_ref_allele = $cs_ref_nt;
         my $forward_strand_mut_allele = $cs_mut_nt;
 
         my $mismatching_reference;
 
         unless ($fail_variation == 1) {
-				    if ($cs_ref_nt ne $ens_ref_comp) {
-				      if ($cs_ref_nt =~ /^[^ATGC]$/ && $class =~ /^Substitution/) {
-							  if ($cds =~ /c\.\d+(\w)>\w$/) {
-								  $cs_ref_nt = uc($1) if ($1 !~ /$cs_ref_nt/i);
-								}	
-							} elsif ($cs_ref_nt =~ /^\d+$/ && $class =~ /^Deletion/) {
-							   $cs_ref_nt = $ens_ref;
-							}
-				    }
-				
-            if ($strand == 1) {
-                if ($cs_ref_nt ne $ens_ref) {
-                    $mismatching_reference = "cosmic: $cs_ref_nt vs. ensembl: $ens_ref";
-                }
+            if ($cs_ref_nt ne $ens_ref) {
+              if ($cs_ref_nt =~ /^[^ATGC]$/ && $class =~ /^Substitution/) {
+                if ($cds =~ /c\.\d+(\w)>\w$/) {
+                  $cs_ref_nt = uc($1) if ($1 !~ /$cs_ref_nt/i);
+                }  
+              } elsif ($cs_ref_nt =~ /^\d+$/ && $class =~ /^Deletion/) {
+                 $cs_ref_nt = $ens_ref;
+              }
             }
-            else {
-                $flipped = 1;
-                
+        
+            my $flag_update_allele = 0;
+            
+            # Reverse complement if alleles match the reverse strand sequence
+            if ($strand == 1) {
+              if ($cs_ref_nt ne $ens_ref) {
                 unless ($dont_rev_comp) {
-                    reverse_comp(\$forward_strand_ref_allele);
-                    reverse_comp(\$forward_strand_mut_allele);
+                  reverse_comp(\$cs_ref_nt);
+                  reverse_comp(\$cs_mut_nt);
+                }    
+                if ($cs_ref_nt ne $ens_ref) {
+                  $mismatching_reference = "cosmic: $cs_ref_nt vs. ensembl: $ens_ref";
+                }  
+                else {
+                  $flipped = 1;
+                  $flag_update_allele = 1;
                 }
-
-                if ($cs_ref_nt ne $ens_ref_comp) {
-								    if ($cs_ref_nt =~ /^[^ATGC]$/ && ) {
-										  
-										}
-								
-                    $mismatching_reference = "cosmic: $cs_ref_nt vs. ensembl: $ens_ref_comp";
-                }
+              }
+            }
+            # Reverse complement and change strand if alleles match the reverse strand sequence
+            else {
+              if ($cs_ref_nt eq $ens_ref_comp) {
+                unless ($dont_rev_comp) {
+                  reverse_comp(\$cs_ref_nt);
+                  reverse_comp(\$cs_mut_nt);
+                  $flipped = 1;
+                  $flag_update_allele = 1;
+                  $var_strand = 1;
+                }    
+              } elsif ($cs_ref_nt eq $ens_ref) {
+                $var_strand = 1;
+              }  else {  
+                $mismatching_reference = "cosmic: $cs_ref_nt vs. ensembl: $ens_ref";
+              }  
+            }
+            
+            if ($flag_update_allele == 1 && !$mismatching_reference) {
+              $forward_strand_ref_allele = $cs_ref_nt;
+              $forward_strand_mut_allele = $cs_mut_nt;
             }
         }
        
@@ -663,7 +694,7 @@ MAIN_LOOP : while(<$INPUT>) {
                 $seq_region_id,
                 $start,
                 $stop,
-                1,
+                $var_strand,
                 $cosmic_id,
                 $allele_string,
                 1,
