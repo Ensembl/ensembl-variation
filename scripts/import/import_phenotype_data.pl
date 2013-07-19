@@ -78,6 +78,13 @@ my %SOURCES = (
     url => "http://www.orpha.net/",
     type => "Gene",
   },
+
+  "dbGaP" => {
+    description => "The database of Genotypes and Phenotypes.",
+    url => "http://www.ncbi.nlm.nih.gov/gap",
+    type => "Variation",
+  },
+  
 );
 
 usage() if (!scalar(@ARGV));
@@ -104,7 +111,7 @@ GetOptions(
     'skip_phenotypes!' => \$skip_phenotypes,
     'skip_sets!' => \$skip_sets,
     'help!' => \$help,
-		'mim2gene=s' => \$mim2gene,
+    'mim2gene=s' => \$mim2gene,
 ) or die "ERROR: Failed to parse command line arguments\n";
 
 usage() if ($help);
@@ -201,7 +208,7 @@ elsif ($source =~ m/nhgri/i) {
 }
 elsif($source =~ /omim.*gene/i) {
   die("ERROR: No core DB parameters supplied (--chost, --cdbname, --cuser) or could not connect to core database") unless defined($core_db_adaptor);
-	die("ERROR: mim2gene file required (--mim2gene [file])\n") unless defined($mim2gene) && -e $mim2gene;
+  die("ERROR: mim2gene file required (--mim2gene [file])\n") unless defined($mim2gene) && -e $mim2gene;
   
   $result = parse_omim_gene($infile, $mim2gene, $core_db_adaptor);
   $source_name = 'OMIM';
@@ -252,6 +259,10 @@ elsif($source =~ /orphanet/i) {
   $result = parse_orphanet($infile, $core_db_adaptor);
   $source_name = 'Orphanet';
 }
+elsif ($source =~ m/dbgap/i) {
+  $result = parse_dbgap($infile);
+  $source_name = 'dbGaP';
+}
 else {
   die("Source $source is not recognized");
 }
@@ -273,8 +284,6 @@ if (exists($result->{'phenotypes'})) {
 }
 
 print STDOUT "Got ".(scalar @phenotypes)." objects\n" if ($verbose);
-
-$DB::single = 1;
 
 # Get internal variation ids for the rsIds
 print STDOUT "Retrieving internal variation IDs\n" if ($verbose);
@@ -453,7 +462,9 @@ sub parse_nhgri {
     my $rs_id          = $content[21];
     my $risk_frequency = $content[26];
     my $pvalue         = $content[27];
-    
+    my $ratio          = $content[30];
+    my $ratio_info     = $content[31];
+      
     my %data = (
       'study_type' => 'GWAS',
       'description' => $phenotype,
@@ -461,8 +472,28 @@ sub parse_nhgri {
       'risk_allele' => $rs_risk_allele,
       'risk_allele_freq_in_controls' => $risk_frequency,
       'p_value' => $pvalue,
-      'study_description' => $study,
+      'study_description' => $study
     );
+    
+    # Post process the odds_ratio data
+    if (defined($ratio)) {
+      if ($ratio =~ /(\d+)?(\.\d+)$/) {
+        my $pre  = $1;
+        my $post = $2;
+        $ratio = (defined($pre)) ? "$pre$post" : "0$post";
+        $ratio = 0 if ($ratio eq '0.00');
+      } else {
+        $ratio = undef;
+      }
+    }
+    # Add ratio/coef
+    if (defined($ratio)) {
+      if ($ratio_info =~ /unit/) {
+        $data{'odds_ratio'} = $ratio;
+      } else {
+        $data{'beta_coef'} = $ratio
+      }
+    }
     
     # Parse the ids
     my @ids;
@@ -996,11 +1027,11 @@ sub parse_orphanet {
 
 sub parse_omim_gene {
   my $infile = shift;
-	my $mim2gene_file = shift;
+  my $mim2gene_file = shift;
   my $core_db_adaptor = shift;
-	
-	# parse mim2gene
-	my $mim2gene = parse_mim2gene($mim2gene_file);
+  
+  # parse mim2gene
+  my $mim2gene = parse_mim2gene($mim2gene_file);
   
   my $ga = $core_db_adaptor->get_GeneAdaptor;
   die("ERROR: Could not get gene adaptor") unless defined($ga);
@@ -1029,18 +1060,18 @@ sub parse_omim_gene {
         my $type = $1;
         $label =~ s/\;\s[A-Z0-9]+$//; # strip gene name at end
         $label = $label." [".$type.$number."]";
-				
-				my $symbol = $mim2gene->{$number}->{symbols};
-				my $genes = $ga->fetch_all_by_external_name($symbol, 'HGNC');
+        
+        my $symbol = $mim2gene->{$number}->{symbols};
+        my $genes = $ga->fetch_all_by_external_name($symbol, 'HGNC');
         
         # we don't want any LRG genes
         @$genes = grep {$_->stable_id !~ /^LRG_/} @$genes;
-				
-				# try to get only the one with the correct display label
-				if(scalar @{$genes} > 0) {
-					my @tmp = grep {$_->external_name eq $symbol} @$genes;
-					@$genes = @tmp if scalar @tmp;
-				}
+        
+        # try to get only the one with the correct display label
+        if(scalar @{$genes} > 0) {
+          my @tmp = grep {$_->external_name eq $symbol} @$genes;
+          @$genes = @tmp if scalar @tmp;
+        }
         
         if ( scalar(@$genes) > 0) {
           if(scalar @$genes != 1) {
@@ -1058,43 +1089,107 @@ sub parse_omim_gene {
               'seq_region_start' => $gene->seq_region_start,
               'seq_region_end' => $gene->seq_region_end,
               'seq_region_strand' => $gene->seq_region_strand,
-							'type' => 'Gene',
+              'type' => 'Gene',
             };
           }
         }
       }
     }
-		
-		last if scalar @phenotypes >= 20;
+    
+    last if scalar @phenotypes >= 20;
   }
   
   return {'phenotypes' => \@phenotypes};
 }
 
 sub parse_mim2gene {
-	my $file = shift;
-	
-	open IN, $file or die "ERROR: Could not read from file $file\n";
-	
-	my %return;
-	
-	while(<IN>) {
-		next if /^\#/;
-		chomp;
-		
-		my ($mim, $type, $genes, $symbols) = split /\s+/;
-		
-		$return{$mim} = {
-			type => $type,
-			genes => $genes,
-			symbols => $symbols
-		};
-	}
-	
-	close IN;
-	
-	return \%return;
+  my $file = shift;
+  
+  open IN, $file or die "ERROR: Could not read from file $file\n";
+  
+  my %return;
+  
+  while(<IN>) {
+    next if /^\#/;
+    chomp;
+    
+    my ($mim, $type, $genes, $symbols) = split /\s+/;
+    
+    $return{$mim} = {
+      type => $type,
+      genes => $genes,
+      symbols => $symbols
+    };
+  }
+  
+  close IN;
+  
+  return \%return;
 }
+
+
+# dbGaP data
+sub parse_dbgap {
+  my $infile = shift;
+  
+  my @phenotypes;
+  my $study_prefix = 'pha';
+  my @study_0 = ('000000','00000','0000','000','00','0',''); # Fill the study ID up to 6 numbers after the prefix "pha"
+  
+  # Open the input file for reading
+  open(IN,'<',$infile) or die ("Could not open $infile for reading");
+  
+  # Read through the file and parse out the desired fields
+  while (<IN>) {
+    chomp;
+    
+    my @content = split(/\t/,$_);
+    
+    next if ($content[0] !~ /^dbgap$/i);
+    
+    my $phenotype = $content[1];
+    my $rs_id     = $content[2];
+    my $pvalue    = $content[3];
+    my $gene      = $content[6];
+    my $pubmed_id = ($content[8] ne '') ? $content[8] : undef;
+    my $study     = ($content[21] ne '') ? $content[21] : undef;
+       $study = $study_prefix.$study_0[length($study)].$study if (defined($study));
+
+    $gene =~ s/ /,/g;
+    
+    my %data = (
+      'description'       => $phenotype,
+      'associated_gene'   => $gene,
+      'p_value'           => $pvalue,
+      'study_description' => $study
+    );
+    
+    # Parse the ids
+    my @ids;
+    $rs_id ||= "";
+    while ($rs_id =~ m/(rs[0-9]+)/g) {
+      push(@ids,$1);
+    }
+    $data{'variation_names'} = join(',',@ids);
+    $data{'study'} = 'pubmed/' . $pubmed_id if (defined($pubmed_id));
+    
+    # If we didn't get any rsIds, skip this row (this will also get rid of the header)
+    warn("Could not parse any rsIds from string '$rs_id'") if (!scalar(@ids));
+    next if (!scalar(@ids));
+    
+    map {
+      my %t_data = %{\%data};
+      $t_data{'id'} = $_;
+      push(@phenotypes,\%t_data)
+    } @ids;
+  }
+  close(IN);
+  
+  my %result = ('phenotypes' => \@phenotypes);
+  
+  return \%result;
+}
+
 
 sub get_attrib_types {
   my $db_adaptor = shift;
@@ -1306,13 +1401,15 @@ sub add_phenotypes {
   my $object_type = shift;
   my $db_adaptor = shift;
   
+  my $st_col = ($source =~ m/dbgap/i) ? 'name' : 'description';
+  
   # Prepared statements
   my $st_ins_stmt = qq{
     INSERT INTO study (
       source_id,
       external_reference,
       study_type,
-      description
+      $st_col
     )
     VALUES (
       $source_id,
@@ -1443,8 +1540,8 @@ sub add_phenotypes {
   my $phenotype_feature_count = 0;
   
   while (my $phenotype = shift(@sorted)) {
-		$object_type = $phenotype->{type} if defined($phenotype->{type});
-		
+    $object_type = $phenotype->{type} if defined($phenotype->{type});
+    
     # If the rs could not be mapped to a variation id, skip it
     next if $object_type =~ /Variation/ && (!defined($variation_ids->{$phenotype->{"id"}}[0]));
     
@@ -1459,6 +1556,8 @@ sub add_phenotypes {
       if (!defined $phenotype->{"study"}) {$sql_study = 'IS NULL'; }
       if (!defined $phenotype->{"study_type"}) {$sql_type = 'IS NULL'; }  
       
+      my $study_name = ($source =~ m/dbgap/i) ? ' AND name=? ' : '';
+      
       my $st_check_stmt = qq{
         SELECT study_id
         FROM study
@@ -1466,18 +1565,22 @@ sub add_phenotypes {
         source_id = $source_id AND
         external_reference $sql_study AND
         study_type $sql_type
+        $study_name
         LIMIT 1
       };
-			
+         
       my $st_check_sth = $db_adaptor->dbc->prepare($st_check_stmt);
-      my $second_param_num = 1;
+      my $param_num = 1;
       
       if (defined $phenotype->{"study"}) {
-        $st_check_sth->bind_param(1,$phenotype->{"study"},SQL_VARCHAR);
-        $second_param_num = 2;
+        $st_check_sth->bind_param($param_num,$phenotype->{"study"},SQL_VARCHAR);
+        $param_num++;
+      } 
+      if (defined $phenotype->{"study_type"}) {
+        $st_check_sth->bind_param($param_num,$phenotype->{"study_type"},SQL_VARCHAR);
+        $param_num++;
       }
-      
-      $st_check_sth->bind_param($second_param_num,$phenotype->{"study_type"},SQL_VARCHAR) if (defined $phenotype->{"study_type"});
+      $st_check_sth->bind_param($param_num,$phenotype->{"study_description"},SQL_VARCHAR) if ($source =~ m/dbgap/i);
       $st_check_sth->execute();
       $st_check_sth->bind_columns(\$study_id);
       $st_check_sth->fetch();
@@ -1537,7 +1640,7 @@ sub add_phenotypes {
       $phenotype_feature_count++;
       
       # get inserted ID
-      my $pf_id = $db_adaptor->dbc->db_handle->{'mysql_insertid'};
+      $pf_id = $db_adaptor->dbc->db_handle->{'mysql_insertid'};
       
       # add attribs
       foreach my $attrib_type(grep {defined($phenotype->{$_}) && $phenotype->{$_} ne ''} @attrib_types) {
@@ -1713,9 +1816,9 @@ sub add_set {
   INSERT IGNORE INTO variation_set_variation (variation_id,variation_set_id)
   SELECT distinct v.variation_id, ? 
   FROM phenotype_feature pf, variation v WHERE 
-	  v.name=pf.object_id AND
-		pf.type='Variation' AND
-	  pf.source_id=?
+    v.name=pf.object_id AND
+    pf.type='Variation' AND
+    pf.source_id=?
   };
   my $sth2 = $db_adaptor->dbc->prepare($insert_set_stmt);
   $sth2->bind_param(1,$variation_set_id,SQL_INTEGER);
