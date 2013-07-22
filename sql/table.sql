@@ -1702,8 +1702,11 @@ CREATE TABLE meta (
 # Add schema type and schema version to the meta table.
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_type', 'variation'), (NULL, 'schema_version', '73');
 
-
-
+# Patch IDs for new release
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL,'patch', 'patch_72_73_a.sql|schema version');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_72_73_b.sql|Add year to publication table');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_72_73_c.sql|Add phased column to genotype_code table');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_72_73_d.sql| revert population_synonym.name and individual_synonym.name to varchars');
 
 /**
 @header  Failed tables
