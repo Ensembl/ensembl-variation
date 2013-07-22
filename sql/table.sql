@@ -1707,7 +1707,7 @@ INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL,'patch', 'patch
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_72_73_b.sql|Add year to publication table');
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_72_73_c.sql|Add phased column to genotype_code table');
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_72_73_d.sql| revert population_synonym.name and individual_synonym.name to varchars');
-
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_72_73_e.sql|Add ESP to varition set in variation and variation_feature tables');
 /**
 @header  Failed tables
 @desc    These tables define the list of variants/alleles flagged as "failed" in the Variation pipeline.<br />
