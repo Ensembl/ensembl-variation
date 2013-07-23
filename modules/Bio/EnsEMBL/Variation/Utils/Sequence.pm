@@ -68,6 +68,7 @@ use vars qw(@ISA @EXPORT_OK);
     &sequence_with_ambiguity 
     &hgvs_variant_notation 
     &format_hgvs_string
+    &get_hgvs_alleles
     &SO_variation_class 
     &align_seqs 
     &strain_ambiguity_code
@@ -654,6 +655,78 @@ sub format_hgvs_string{
     return $hgvs_notation->{'hgvs'};
 
 }
+
+=head2 get_hgvs_alleles
+
+  Arg[1]      : string - HGVS name for a variant
+  Example     : ACTA1:c.1031delG
+  Description : extracts reference and alternate alleles for an hgvs string
+  ReturnType  : array of alleles (ref_allele_string , alt_allele_string)
+  Exceptions  : if the type of variant is not recognisable from the HGVS name
+  Caller      : 
+
+=cut
+
+sub get_hgvs_alleles{
+    
+    #### extract ref and alt alleles where possible from HGVS g/c/n string
+
+  my ( $hgvs) = shift;
+
+  my ($reference,$type,$description) = $hgvs =~ m/^([^\:]+)\:.*?([cgmnrp]?)\.?(.*?[\*\-0-9]+.*)$/i;
+  
+  ## remove protein no-change part of string if present
+  $description =~ s/\(p\.=\)$//;  
+
+  my ($ref_allele, $alt_allele) ;
+    
+  ### A single nt substitution, reference and alternative alleles are required
+  if ($description =~ m/>/) {
+    ($ref_allele,$alt_allele) = $description =~ m/([A-Z]+)>([A-Z]+)$/i;
+  }
+    
+  # delins, the reference allele is optional
+  elsif ($description =~ m/del.*ins/i) {
+    ($ref_allele,$alt_allele) = $description =~ m/del(.*?)ins([A-Z]+)$/i;          
+  }
+    
+  # A deletion, the reference allele is optional
+  elsif ($description =~ m/del/i) {
+    ($ref_allele) = $description =~ m/del([A-Z]*)$/i; 
+    $alt_allele = '-';
+  }
+    
+  # A duplication, the reference allele is optional
+  elsif ($description =~ m/dup/i) {
+     $ref_allele ="-";
+     ($alt_allele) = $description =~ m/dup([A-Z]*)$/i;
+  }
+    
+  # An inversion, the reference allele is optional
+  elsif ($description =~ m/inv/i) {
+    ($ref_allele) = $description =~ m/inv([A-Z]*)$/i;
+    $alt_allele = $ref_allele;
+    reverse_comp(\$alt_allele);
+  }
+    
+  # An insertion, 
+  elsif ($description =~ m/ins/i) {
+    ($alt_allele) = $description =~ m/ins([A-Z]*)$/i;
+    $ref_allele = '-';
+  }
+  ## A simple repeat (eg. ENST00000522587.1:c.-310+750[13]A => alt AAAAAAAAAAAAA)
+  elsif ($description =~ m/\[/i) {    
+  
+    my ($number, $string) = $description =~ m/\[(\d+)\]([A-Z]*)$/i; 
+    foreach my $n(1..$number){ $alt_allele .= $string;}
+    $ref_allele = $string;
+  }
+  else {
+    throw ("The variant class for HGVS notation '$hgvs' is unknown or could not be correctly recognized");
+  }
+  return ($ref_allele, $alt_allele) ;
+}
+
 
 =head2 align_seqs
 
