@@ -875,6 +875,16 @@ our @ATTRIB_TYPES = (
         name => 'Variation names',
         description => 'Variant ID(s) linked with a phenotype association',
     },
+	{
+        code => 'sample_id',
+        name => 'Sample ID',
+        description => 'Sample ID for source of phenotype association',
+    },
+	{
+        code => 'strain_id',
+        name => 'Strain ID',
+        description => 'Strain ID for source of phenotype association',
+    },
     {
         code => 'lod_score',
         name => 'LOD score',
