@@ -116,9 +116,9 @@ sub set_div {
   
   $desc = (defined($desc)) ? qq{  <p>$desc.</p>\n} : ''; 
   $name =~ /^(.+)(\s+clinical\s+significance)/;
-  
-  $name = qq{<span style="color:#333">$1</span>$2};
-  
+  my $label = ($1 =~ /dbsnp/i) ? 'ClinVar' : $1;
+  $name = qq{<span style="color:#333">$label</span>$2};
+  $desc =~ s/dbSNP/ClinVar and dbSNP/;
   my $div = qq{
 <div id="$id" style="float:left;margin-right:100px;">
   <b>$name</b><br />
