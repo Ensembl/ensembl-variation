@@ -842,8 +842,8 @@ our @ATTRIB_TYPES = (
     },
     {
         code => 'dbsnp_clin_sig',
-        name => 'dbSNP clinical significance',
-        description => 'The clinical significance of a variant as reported by dbSNP',
+        name => 'dbSNP/ClinVar clinical significance',
+        description => 'The clinical significance of a variant as reported by ClinVar and dbSNP',
     },
     {
         code => 'dgva_clin_sig',
