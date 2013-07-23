@@ -87,7 +87,7 @@ use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Utils::Iterator;
 use Bio::EnsEMBL::Variation::Utils::Constants qw(%OVERLAP_CONSEQUENCES);
-use Bio::EnsEMBL::Variation::Utils::Sequence qw(get_validation_code);
+use Bio::EnsEMBL::Variation::Utils::Sequence qw(get_validation_code get_hgvs_alleles);
 
 our @ISA = ('Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor', 'Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor');
 our $MAX_VARIATION_SET_ID = 64;
@@ -1696,12 +1696,8 @@ sub fetch_by_hgvs_notation {
       my $is_exonic;
       ($start, $end, $strand, $is_exonic) =  _parse_hgvs_transcript_position($description, $transcript) ; 
 
-      #If the position given was in a intronic or UTR position, it could be undefined what reference sequence the position actually refers to. Issue a warning that we will use the Ensembl reference sequence.
-      warn ("The position specified by HGVS notation '$hgvs' refers to a nucleotide that may not have a specific reference sequence. The current Ensembl genome reference sequence will be used.\n")  if $is_exonic eq "0";
-
- 
       $slice = $slice_adaptor->fetch_by_region($transcript->coord_system_name(),$transcript->seq_region_name());   
-      ($ref_allele, $alt_allele) = _get_hgvs_alleles($description, $hgvs);  
+      ($ref_allele, $alt_allele) = get_hgvs_alleles( $hgvs);  
   
   }
 
@@ -1711,7 +1707,7 @@ sub fetch_by_hgvs_notation {
       ## grab reference allele
       $slice = $slice_adaptor->fetch_by_region('chromosome', $reference );    
       $strand =1; ## strand should be genome strand for HGVS genomic notation
-     ($ref_allele, $alt_allele) = _get_hgvs_alleles($description, $hgvs);
+     ($ref_allele, $alt_allele) = get_hgvs_alleles( $hgvs);
    }
          
   elsif($type =~ m/p/i) {
@@ -1802,61 +1798,6 @@ sub fetch_by_hgvs_notation {
 
   return $variation_feature;
 
-}
-
-
-sub _get_hgvs_alleles{
-    
-    #### extract ref and alt alleles where possible from HGVS g/c/n string
-
-  my ($description, $hgvs) = @_;
-  my ($ref_allele, $alt_allele) ;
-    
-  ### A single nt substitution, reference and alternative alleles are required
-  if ($description =~ m/>/) {
-    ($ref_allele,$alt_allele) = $description =~ m/([A-Z]+)>([A-Z]+)$/i;
-  }
-    
-  #A delins, the reference allele is optional
-  elsif ($description =~ m/del.*ins/i) {
-    ($ref_allele,$alt_allele) = $description =~ m/del(.*?)ins([A-Z]+)$/i;          
-  }
-    
-  # A deletion, the reference allele is optional
-  elsif ($description =~ m/del/i) {
-    ($ref_allele) = $description =~ m/del([A-Z]*)$/i; 
-    $alt_allele = '-';
-  }
-    
-  # A duplication, the reference allele is optional
-  elsif ($description =~ m/dup/i) {
-     $ref_allele ="-";
-     ($alt_allele) = $description =~ m/dup([A-Z]*)$/i;
-  }
-    
-  # An inversion, the reference allele is optional
-  elsif ($description =~ m/inv/i) {
-    ($ref_allele) = $description =~ m/inv([A-Z]*)$/i;
-    $alt_allele = $ref_allele;
-    reverse_comp(\$alt_allele);
-  }
-    
-  # An insertion, 
-  elsif ($description =~ m/ins/i) {
-    ($alt_allele) = $description =~ m/ins([A-Z]*)$/i;
-    $ref_allele = '-';
-  }
-  ## A simple repeat (eg. ENST00000522587.1:c.-310+750[13]A => alt AAAAAAAAAAAAA)
-  elsif ($description =~ m/\[/i) {    
-  
-    my ($number, $string) = $description =~ m/\[(\d+)\]([A-Z]*)$/i; 
-    foreach my $n(1..$number){ $alt_allele .= $string;}
-    $ref_allele = $string;
-  }
-  else {
-    throw ("The variant class for HGVS notation '$hgvs' is unknown or could not be correctly recognized");
-  }
-  return ($ref_allele, $alt_allele) ;
 }
 
 ## Extract enough information to make a variation_feature from HGVS protein nomenclature
