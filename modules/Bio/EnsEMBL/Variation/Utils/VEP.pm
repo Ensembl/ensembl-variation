@@ -1363,6 +1363,10 @@ sub vf_to_consequences {
     my $config = shift;
     my $vf = shift;
     
+    # force empty hash into object's transcript_variations if undefined from whole_genome_fetch
+    # this will stop the API trying to go off and fill it again
+    $vf->{transcript_variations} ||= {} if defined $config->{whole_genome};
+    
     # pos stats
     $config->{stats}->{chr}->{$vf->{chr}}->{1e6 * int($vf->start / 1e6)}++;
     
@@ -1378,10 +1382,6 @@ sub vf_to_consequences {
     
     # find any co-located existing VFs
     $vf->{existing} ||= find_existing($config, $vf) if defined $config->{check_existing};
-    
-    # force empty hash into object's transcript_variations if undefined from whole_genome_fetch
-    # this will stop the API trying to go off and fill it again
-    $vf->{transcript_variations} ||= {} if defined $config->{whole_genome};
     
     # get stats
     my $so_term = SO_variation_class($vf->allele_string, 1);
