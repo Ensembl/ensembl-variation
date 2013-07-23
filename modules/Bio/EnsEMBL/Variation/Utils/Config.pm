@@ -905,6 +905,47 @@ our @ATTRIB_TYPES = (
         name => 'Beta coefficient',
         description => 'Beta coefficient (or standardized coefficient) used to denote significance of an observed phenotype annotation',
     },
+	{
+		code => 'allele_symbol',
+		name => 'Allele symbol',
+		description => 'Allele symbol linked with phenotype association',
+	},
+	{
+		code => 'allele_accession_id',
+		name => 'Allele accession ID',
+		description => 'Allele accession ID linked with phenotype association',
+	},
+	{
+		code => 'zygosity',
+		name => 'Zygosity',
+		description => 'Zygosity linked with phenotype association',
+	},
+	{
+		code => 'pipeline_name',
+		name => 'Pipeline name',
+		description => 'Pipeline name in mouse phenotype project',
+	},
+	{
+		code => 'procedure_name',
+		name => 'Procedure name',
+		description => 'Procedure name in mouse phenotype project',
+	},
+	{
+		code => 'project_fullname',
+		name => 'Project fullname',
+		description => 'Project fullname in mouse phenotype project',
+	},
+	{
+		code => 'project_name',
+		name => 'Project name',
+		description => 'Project name in mouse phenotype project',
+	},
+	{
+		code => 'parameter_name',
+		name => 'Parameter name',
+		description => 'Parameter name in mouse phenotype project',
+	},
+
 );
 
 # attribs are specified in the %ATTRIBS hash, having the attrib_type code as hash key and a listref containing the attribs that will be loaded as value
