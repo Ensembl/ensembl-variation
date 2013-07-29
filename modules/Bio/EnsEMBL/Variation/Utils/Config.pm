@@ -955,6 +955,11 @@ our @ATTRIB_TYPES = (
 		name => 'Parameter name',
 		description => 'Parameter name in mouse phenotype project',
 	},
+	{
+		code => 'marker_accession_id',
+		name => 'Marker accession ID',
+		description => 'Marker ID linked with phenotype association',
+	},
 
 );
 
