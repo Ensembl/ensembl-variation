@@ -354,7 +354,7 @@ sub fetch_all_by_parent_Individual {
   $sth->finish();
 
   # if this parent was a mother, finish now and return results
-  return if(@$result);
+  return $result if(@$result);
 
   # otherwise assume was a father (or nothing)
   $sth = $self->prepare($father_sql);
