@@ -30,6 +30,7 @@ INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES 
 INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES (30, 'project_fullname', 'Project fullname', 'Project fullname in mouse phenotype project');
 INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES (31, 'project_name', 'Project name', 'Project name in mouse phenotype project');
 INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES (32, 'parameter_name', 'Parameter name', 'Parameter name in mouse phenotype project');
+INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES (33, 'marker_accession_id', 'Marker accession ID', 'Marker ID linked with phenotype association');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (2, 2, 'SNV');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (1, 1, 'SO:0001483');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (3, 3, 'SNP');
