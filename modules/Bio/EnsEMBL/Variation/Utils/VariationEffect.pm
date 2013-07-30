@@ -694,7 +694,7 @@ sub missense_variant {
     return 0 if inframe_deletion($bvfoa);
     return 0 if inframe_insertion($bvfoa);
     
-    return ( $ref_pep ne $alt_pep );
+    return ( $ref_pep ne $alt_pep ) && ( length($ref_pep) == length($alt_pep) );
 }
 
 sub inframe_insertion {
@@ -706,10 +706,7 @@ sub inframe_insertion {
         
         return 0 unless defined $ref_codon;
         
-        return ( 
-            (length($alt_codon) > length ($ref_codon)) &&
-            ( ($alt_codon =~ /^\Q$ref_codon\E/) || ($alt_codon =~ /\Q$ref_codon\E$/) )
-        );
+        return ( length($alt_codon) > length ($ref_codon) );
     }
     
     # structural variant
