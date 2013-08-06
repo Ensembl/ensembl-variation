@@ -1014,7 +1014,8 @@ sub _clip_alleles{
   my $check_alt   = $hgvs_notation->{alt} ;
   my $check_ref   = $hgvs_notation->{ref} ;
   my $check_start = $hgvs_notation->{start};
-    
+  my $check_end   = $hgvs_notation->{end};
+
   ### strip same bases from start of string
   for (my $p =0; $p <length ($hgvs_notation->{ref}); $p++){
   my $check_next_ref = substr( $check_ref, 0, 1);
@@ -1044,38 +1045,33 @@ sub _clip_alleles{
     if($check_next_ref eq  $check_next_alt){
         chop $check_ref;
         chop $check_alt;
+        $check_end--;
     }
     else{
         last;
     }
   }
-
+  
+  ## ammend positions & ref/alt
   $hgvs_notation->{alt}   = $check_alt;
   $hgvs_notation->{ref}   = $check_ref;
+  $hgvs_notation->{start} = $check_start;
+  $hgvs_notation->{end}   = $check_end;
 
-  if($hgvs_notation->{alt} eq $hgvs_notation->{ref}){
-      $hgvs_notation->{type} = "=";
-  }
-  ### check if clipping force type change & adjust location
-  elsif(length ($check_ref) == 0  && length ($check_alt) >= 1){
-    ### re-set as ins not delins  
-    $hgvs_notation->{type} ="ins";
-        ### insertion between ref base and next => adjust next         
-    if($hgvs_notation->{end} == $hgvs_notation->{start} ){$hgvs_notation->{end} = $check_start;    }
-#    $hgvs_notation->{start} = $check_start;    
-  }
-  elsif(length ($check_ref) >=1  && length ($check_alt) == 0){
-    ### re-set as del not delins  
-    $hgvs_notation->{type}  ="del";        
-    $hgvs_notation->{start} = $check_start;
-  }
-  else{
-    #### save trimmed peptide string & increased start position
-    $hgvs_notation->{start} = $check_start;
+  ### check if clipping suggests a type change 
 
-  }        
+  ## no protein change - use transcript level annotation 
+  $hgvs_notation->{type} = "="   if($hgvs_notation->{alt} eq $hgvs_notation->{ref});      
 
-    return $hgvs_notation;
+  ### re-set as ins not delins    
+  $hgvs_notation->{type} ="ins"  if(length ($check_ref) == 0 && length ($check_alt) >= 1);
+
+  ### re-set as del not delins  
+  $hgvs_notation->{type}  ="del" if(length ($check_ref) >=1 && length ($check_alt) == 0);      
+
+  
+
+  return $hgvs_notation;
 }
     
 
