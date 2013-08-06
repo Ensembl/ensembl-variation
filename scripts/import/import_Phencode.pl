@@ -75,8 +75,15 @@ while(<$infile>){
     ## ~40 with same name, different locations (in repeat) - skip these
     next if  $var_counts->{$a[0]} > 1;
 
-    if ($a[5] eq "-1" && $a[1] !~/Phencode|deletion|insertion/i){
-        reverse_comp(\$a[1]) ;
+    if ($a[5] eq "-1" && $a[1] !~/Phencode|del|ins/i){
+        ## compliment individual alleles keeping ref/alt order
+	my @al = split(/\//,$a[1]);
+        $a[1] = '';
+	foreach my $al(@al){
+	    reverse_comp(\$al) ;
+	    $a[1] .= $al . "/";
+	}
+	$a[1] =~ s/\/$//;
         $a[5] = 1;
     }
 
