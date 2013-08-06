@@ -511,7 +511,7 @@ sub fetch_all_by_associated_gene {
   my $result = $self->generic_fetch($extra_sql);
   
   $self->_include_attrib(0);
-  
+  $result = [grep {$_->type ne 'Gene'} @$result];  
   return $result;
 }
 
@@ -542,11 +542,11 @@ sub count_all_by_associated_gene {
   # Add the constraint for failed variations
   #$extra_sql .= " AND " . $self->db->_exclude_failed_variations_constraint();
 
-  my $result = $self->generic_count($extra_sql);
+  my $result = $self->generic_fetch($extra_sql);
   
   $self->_include_attrib(0);
-  
-  return $result;
+  $result = [grep {$_->type ne 'Gene'} @$result];
+  return scalar @$result;
 }
 
 sub count_all_by_Phenotype {
