@@ -117,6 +117,7 @@ sub variation_feature{
     $tablename1 = $self->{'dbSNP_version'} . "_SNPContigLoc" ;
     $tablename2 = $self->{'dbSNP_version'} . "_ContigInfo";
      }
+
 my $stmt;
     #ÊThe group term (the name of the reference assembly in the dbSNP b[version]_SNPContigInfo_[assembly]_[assembly version] table) is either specified via the config file or, if not, attempted to automatically determine from the data
     my $group_term = $self->{'group_term'};
@@ -165,7 +166,8 @@ my $stmt;
             }
         );
     }
-    
+
+
     # In the query below, the pre-131 syntax was ref-assembly. In 131 it is GRCh37 for human. What is it for other species??
     #my $group_term = 'ref_';
     #my ($release) = $self->{'dbSNP_version'} =~ m/^b?(\d+)$/;
@@ -325,7 +327,7 @@ my $stmt;
       foreach my $table ("tmp_variation_feature_chrom","tmp_variation_feature_ctg") {
 
 	$self->{'dbVar'}->do(qq{INSERT INTO variation_feature (variation_id, seq_region_id,seq_region_start, seq_region_end, seq_region_strand,variation_name, flags, source_id, validation_status, alignment_quality, somatic)
-				  SELECT tvf.variation_id, tvf.seq_region_id, tvf.seq_region_start, tvf.seq_region_end, tvf.seq_region_strand,tvf.variation_name,IF(tgv.variation_id,'genotyped',NULL), tvf.source_id, tvf.validation_status, tvf.aln_quality,  v.somatic
+				  SELECT tvf.variation_id, srs.seq_region_id, tvf.seq_region_start, tvf.seq_region_end, tvf.seq_region_strand,tvf.variation_name,IF(tgv.variation_id,'genotyped',NULL), tvf.source_id, tvf.validation_status, tvf.aln_quality,  v.somatic
 				  FROM $table tvf LEFT JOIN tmp_genotyped_var tgv ON tvf.variation_id = tgv.variation_id
                                   LEFT JOIN variation v on tvf.variation_id = v.variation_id
 				  });
@@ -357,16 +359,83 @@ my $stmt;
       }
     }
 
-
+    if ($self->{'dbm'}->dbCore()->species =~ /homo/i){
+	debug(localtime() . "\tDumping non-primary assembly data for human");
+	$self->extract_haplotype_mappings($tablename1, $tablename2, $group_label);
+    }
+   
     #$self->{'dbVar'}->do("DROP TABLE tmp_contig_loc_chrom");
     #$self->{'dbVar'}->do("DROP TABLE tmp_genotyped_var");
     #$self->{'dbVar'}->do("DROP TABLE tmp_variation_feature_chrom");
     #$self->{'dbVar'}->do("DROP TABLE tmp_variation_feature_ctg");
     #for the chicken, delete 13,000 SNPs that cannot be mapped to EnsEMBL coordinate
     if ($self->{'dbm'}->dbCore()->species =~ /gga/i){
-	$self->{'dbVar'}->do("DELETE FROM variation_feature WHERE seq_region_end = -1");
-  print Progress::location();
+        $self->{'dbVar'}->do("DELETE FROM variation_feature WHERE seq_region_end = -1");
+        print Progress::location();
     }
+}
+
+## haplotype & patch mappings are held against the contigs rather than chromosomes
+
+sub extract_haplotype_mappings{
+    
+    my $self         = shift;
+    my $SNPContigLoc = shift;
+    my $ContigInfo   = shift;
+    my $group_label  = shift;
+        
+
+    ## copy synonyms from core db to temp table
+    my $syn_ext_stmt = qq[ select sr.seq_region_id, sr.name, srs.synonym
+                           from  seq_region sr, seq_region_synonym srs
+                           where sr.seq_region_id = srs.seq_region_id ];
+
+    dumpSQL($self->{'dbCore'},$syn_ext_stmt);       
+    
+    create_and_load($self->{'dbVar'}, "tmp_hap_synonym", "seq_region_id i* not_null", "name * not_null", "synonym * not_null" );
+
+
+    ## extract variant mappings on patches/haplotypes
+    my $dat_ext_stmt =  qq[ SELECT loc.snp_id,                            
+                            ctg.genbank_acc + '.' + cast(ctg.genbank_ver as nvarchar(10)),
+                            loc.lc_ngbr+2, 
+                            loc.rc_ngbr,                            
+                            CASE WHEN     loc.orientation = 1
+                            THEN          -1
+                            ELSE           1
+                            END,
+                            loc.aln_quality
+                            FROM 
+                             $SNPContigLoc loc JOIN 
+                             $ContigInfo ctg ON (
+                             ctg.ctg_id = loc.ctg_id
+                            )
+                            WHERE  ctg.group_term !=   'Primary_Assembly' and ctg.group_term !=   'non-nuclear'
+                            and ctg.group_label LIKE '$group_label'                
+                           ];
+    
+    
+    dumpSQL($self->{'dbSNP'},$dat_ext_stmt);
+        
+    debug(localtime() . "\tLoading SNPLoc data for haplotypes");
+
+    create_and_load($self->{'dbVar'}, "tmp_contig_loc_hap", "snp_id i* not_null", "seq_av * not_null",  "seq_start i not_null", "seq_end i", "strand i", "aln_quality d");
+    print Progress::location();
+
+
+    debug(localtime() . "\tAdding VariationFeature data for haplotypes");
+    ### copy to variation_feature table
+    $self->{'dbVar'}->do(qq[ INSERT INTO variation_feature (variation_id, seq_region_id,seq_region_start, seq_region_end, seq_region_strand,
+                                                            variation_name, source_id, validation_status, alignment_quality, somatic)
+                                  SELECT v.variation_id, ths.seq_region_id, tvf.seq_start, tvf.seq_end, tvf.strand, 
+                                         v.name, v.source_id, v.validation_status, tvf.aln_quality,  v.somatic
+                                  FROM tmp_contig_loc_hap tvf  
+                                  LEFT JOIN variation v on tvf.snp_id = v.snp_id
+                                  LEFT JOIN tmp_hap_synonym ths on ths.synonym = tvf.seq_av                                    
+                                  ]);
+
+    debug(localtime() . "\tDone VariationFeature data for haplotypes");
+
 }
 
 1;
