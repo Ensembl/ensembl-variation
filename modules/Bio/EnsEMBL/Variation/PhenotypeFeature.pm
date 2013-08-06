@@ -246,8 +246,12 @@ sub object {
 		# get object type and correct adaptor
 		my $type = $self->type;
 		my $method = 'get_'.$type.'Adaptor';
-		my $adaptor = $self->adaptor->db->$method || $self->adaptor->db->dnadb->$method;
-		
+		my $adaptor;
+		if ($type eq 'Gene') {
+			$adaptor = $self->adaptor->db->dnadb->$method;
+		} else {
+			$adaptor = $self->adaptor->db->dnadb->$method;
+		}
 		# fetch the object
 		$self->{object} = $adaptor->fetch_by_stable_id($self->{_object_id});
   }
@@ -698,5 +702,164 @@ sub external_id {
 	return defined($self->get_all_attributes->{'external_id'}) ? $self->get_all_attributes->{'external_id'} : undef;
 }
 
+=head2 allele_symbol
+
+  Example    : $allele_symbol = $obj->allele_symbol()
+  Description: Getter/setter for allele_symbol attribute. This is only stored for mouse phenotype data.
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub allele_symbol {
+	my $self = shift;
+	my $new  = shift;
+	
+	$self->_set_attribute('allele_symbol', $new) if defined($new);
+	
+	return defined($self->get_all_attributes->{'allele_symbol'}) ? $self->get_all_attributes->{'allele_symbol'} : undef;
+}
+
+=head2 allele_accession_id
+
+  Example    : $allele_accession_id = $obj->allele_accession_id()
+  Description: Getter/setter for allele_accession_id attribute. This is only stored for mouse phenotype data.
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub allele_accession_id {
+	my $self = shift;
+	my $new  = shift;
+	
+	$self->_set_attribute('allele_accession_id', $new) if defined($new);
+	
+	return defined($self->get_all_attributes->{'allele_accession_id'}) ? $self->get_all_attributes->{'allele_accession_id'} : undef;
+}
+
+=head2 marker_accession_id
+
+  Example    : $marker_accession_id = $obj->marker_accession_id()
+  Description: Getter/setter for marker_accession_id attribute. This is only stored for mouse phenotype data.
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub marker_accession_id {
+	my $self = shift;
+	my $new  = shift;
+	
+	$self->_set_attribute('marker_accession_id', $new) if defined($new);
+	
+	return defined($self->get_all_attributes->{'marker_accession_id'}) ? $self->get_all_attributes->{'marker_accession_id'} : undef;
+}
+
+=head2 pipeline_name
+
+  Example    : $pipeline_name = $obj->pipeline_name()
+  Description: Getter/setter for pipeline_name attribute. This is only stored for mouse phenotype data.
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub pipeline_name {
+	my $self = shift;
+	my $new  = shift;
+	
+	$self->_set_attribute('pipeline_name', $new) if defined($new);
+	
+	return defined($self->get_all_attributes->{'pipeline_name'}) ? $self->get_all_attributes->{'pipeline_name'} : undef;
+}
+
+=head2 procedure_name
+
+  Example    : $procedure_name = $obj->procedure_name()
+  Description: Getter/setter for procedure_name attribute. This is only stored for mouse phenotype data.
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub procedure_name {
+	my $self = shift;
+	my $new  = shift;
+	
+	$self->_set_attribute('procedure_name', $new) if defined($new);
+	
+	return defined($self->get_all_attributes->{'procedure_name'}) ? $self->get_all_attributes->{'procedure_name'} : undef;
+}
+
+=head2 parameter_name
+
+  Example    : $parameter_name = $obj->parameter_name()
+  Description: Getter/setter for parameter_name attribute. This is only stored for mouse phenotype data.
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub parameter_name {
+	my $self = shift;
+	my $new  = shift;
+	
+	$self->_set_attribute('parameter_name', $new) if defined($new);
+	
+	return defined($self->get_all_attributes->{'parameter_name'}) ? $self->get_all_attributes->{'parameter_name'} : undef;
+}
+
+=head2 project_name
+
+  Example    : $project_name = $obj->project_name()
+  Description: Getter/setter for project_name attribute. This is only stored for mouse phenotype data.
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub project_name {
+	my $self = shift;
+	my $new  = shift;
+	
+	$self->_set_attribute('project_name', $new) if defined($new);
+	
+	return defined($self->get_all_attributes->{'project_name'}) ? $self->get_all_attributes->{'project_name'} : undef;
+}
+
+=head2 project_fullname
+
+  Example    : $project_fullname = $obj->project_fullname()
+  Description: Getter/setter for project_fullname attribute. This is only stored for mouse phenotype data.
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub project_fullname {
+	my $self = shift;
+	my $new  = shift;
+	
+	$self->_set_attribute('project_fullname', $new) if defined($new);
+	
+	return defined($self->get_all_attributes->{'project_fullname'}) ? $self->get_all_attributes->{'project_fullname'} : undef;
+}
 
 1;
