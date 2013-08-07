@@ -21,6 +21,7 @@ use strict;
 =cut
 
 use warnings;
+
 #object that contains the specific methods to dump data when the specie is a HUMAN (adds HGVbase and TSC information). 
 package dbSNP::EnsemblIds;
 
@@ -40,7 +41,7 @@ sub dump_dbSNP{
     my $start;
     my $end;
     my $duration;
-    
+
     #first, dump all dbSNP data as usual
     $start = time();
     $self->SUPER::dump_dbSNP();
@@ -298,74 +299,202 @@ sub dump_AFFYIDs{
 }
 
 
-# gets LSDB local IDs
+# gets LSDB local IDs & source information
 sub dump_LSDBIDs {
-	my $self = shift;
-	
+    my $self = shift;
+        
     print Progress::location();
     debug(localtime() . "\tAdding/getting source ID for LSDB\n");
-	
-	my $source_name = 'LSDB';
-	my $source_id_ref = $self->{'dbVar'}->db_handle->selectall_arrayref(qq{
-		SELECT source_id from source where name = "$source_name"
-	});
-    my $source_id = $source_id_ref->[0][0];
-	
-	# add source row if not there
-	if (!$source_id) {
 
-	    my ($species,$tax_id,$version) = $self->{'snp_dbname'} =~ m/^(.+)?\_([0-9]+)\_([0-9]+)$/;
+    my $dbh = $self->{'dbVar'}->db_handle();
 
-		$self->{'dbVar'}->do(qq{insert into source (name, version, description,url) 
-                                        values("$source_name",
-                                                $version,
-                                               "Variants dbSNP annotates as being from LSDBs",
-                                               "http://www.ncbi.nlm.nih.gov/projects/SNP/")});
+    my %source_ids;
+    
+    my ($species,$tax_id,$version) = $self->{'snp_dbname'} =~ m/^(.+)?\_([0-9]+)\_([0-9]+)$/;
 
-		$source_id = $self->{'dbVar'}->db_handle->{'mysql_insertid'};
-	}
-	
+    $source_ids{default}  = get_default_source($dbh, $version); ## include version for dbSNP
+    $source_ids{phencode} = get_phencode_source($dbh);
+
+    ## source data for LSDB submissions stored in production db
+    my $batch_data = $self->get_lsdb_batches();
+          
+    foreach my $batch(keys %{$batch_data }){
+        unless (defined $source_ids{ $$batch_data{$batch}{db} } ){
+            my %source_info = ( 'name'    =>  $$batch_data{$batch}{db},
+                                'desc'    =>  $$batch_data{$batch}{desc},
+                                'url'     =>  $$batch_data{$batch}{url}
+                );
+	    warn "getting source for LSDB ". $$batch_data{$batch}{db} . ", ". $$batch_data{$batch}{desc} . "\n";
+            $source_ids{ $$batch_data{$batch}{db} } = get_source($dbh , \%source_info );
+        }
+    }
+
+
+   
     print Progress::location();
     debug(localtime() . "\tDumping LSDB local IDs from dbSNP\n");
-	
-	# dump IDs from dbSNP DB
-	my $stmt = qq{
+      	
+
+    # dump IDs from dbSNP DB & load to temp table
+    my $stmt = qq{
 		SELECT
 			DISTINCT ss.loc_snp_id,
 			ss.subsnp_id,
-			sl.snp_id
-			
+			sl.snp_id,
+                        b.loc_batch_id			
 		FROM SubSNP ss
 			JOIN SNPSubSNPLink sl ON sl.subsnp_id = ss.subsnp_id
 			JOIN Batch b ON b.batch_id = ss.batch_id
-			JOIN $self->{'dbSNP_share_db'}..Method m ON b.method_id = m.method_id AND m.method_class = 109;
+			JOIN $self->{'dbSNP_share_db'}..Method m ON b.method_id = m.method_id AND m.method_class = 109
+                WHERE b.handle !='SWISSPROT'
 	};
-	dumpSQL($self->{'dbSNP'}, $stmt);
-	
+
+    dumpSQL($self->{'dbSNP'}, $stmt);
+    
     print Progress::location();
     debug(localtime() . "\tCopying IDs to synonym table\n");
+    
+    create_and_load($self->{'dbVar'}, "tmp_lsdb_ids", 'name', 'ssid i*', 'rsid i*','batch_id');
+    
+
+    my $syn_ins_sth = $dbh->prepare(qq[ INSERT INTO variation_synonym
+		               	         (variation_id, subsnp_id, source_id, name)
+		                         values (?,?,?,?)
+	                               ]);
 	
-	create_and_load($self->{'dbVar'}, "tmp_lsdb_ids", 'name', 'ssid i*', 'rsid i*');
-	
-	$self->{'dbVar'}->db_handle->do(qq{
-		INSERT IGNORE INTO
-			variation_synonym(variation_id, subsnp_id, source_id, name)
-		SELECT
-			v.variation_id,
-			t.ssid,
-			$source_id,
-			t.name
-		FROM
-			variation v,
-			tmp_lsdb_ids t
-		WHERE
-			v.name = concat('rs', t.rsid);
-	});
-	
+    my $dat_ext_sth = $dbh->prepare(qq[SELECT distinct v.variation_id,
+					t.ssid,
+					t.batch_id,
+					t.name
+				FROM
+					variation v,
+					tmp_lsdb_ids t
+				WHERE v.snp_id =  t.rsid; 
+        ]);
+
+    my %done;
+    $dat_ext_sth->execute()||die;
+
+    while( my $line = $dat_ext_sth->fetchrow_arrayref()){
+
+        print " Doing $line->[0], $line->[1], $line->[2], $line->[3]\n";
+        ## link to phencode if present in db
+        if( defined $batch_data->{ $line->[2]}->{phencode} ){
+            
+            $syn_ins_sth->execute($line->[0], $line->[1], $source_ids{phencode}, $line->[3])||die;
+        }
+        ## link to source db if not in phencode   - could link to both if name switch implemented
+        elsif( defined $batch_data->{$line->[2]}->{db} ){
+            
+            $syn_ins_sth->execute($line->[0], $line->[1], $source_ids{ $batch_data->{$line->[2]}->{db} }, $line->[3])||die;
+
+        }
+        ## link to dbSNP source
+        else{
+            next if(defined $done{$line->[3]}{default} );
+	    $done{$line->[3]}{default} = 1;
+            $syn_ins_sth->execute($line->[0], $line->[1], $source_ids{default}, $line->[3])||die;
+        }
+    }
+    
+        
     print Progress::location();
     debug(localtime() . "\tDropping temporary table\n");
-	
-	$self->{'dbVar'}->db_handle->do(qq{DROP TABLE tmp_lsdb_ids});
+        
+    $self->{'dbVar'}->db_handle->do(qq{DROP TABLE tmp_lsdb_ids});
+
+}
+
+sub get_source {
+
+    my $dbh         = shift;
+    my $source_data = shift;
+
+    die "Cannot handle nameless source\n" unless defined $source_data->{name};
+    my $source_ext_sth = $dbh->prepare(qq[ select source_id from source where name = ?]);
+    my $source_ins_sth = $dbh->prepare(qq[ insert into source (name, version, description, url, somatic_status) values (?,?,?,?,?) ]);
+    
+    ### source already loaded
+    $source_ext_sth->execute($source_data->{name})||die;
+    my $id = $source_ext_sth->fetchall_arrayref();
+
+    return $id->[0]->[0] if defined $id->[0]->[0];
+    
+    ## add new source
+    $source_ins_sth->execute($source_data->{name}, $source_data->{version}, $source_data->{desc}, $source_data->{url}, $source_data->{somatic} )||die;
+    $source_ext_sth->execute($source_data->{name})||die;
+    my $idn = $source_ext_sth->fetchall_arrayref();
+    
+    return $idn->[0]->[0] if defined $idn->[0]->[0];
+    
+    die "Failed to get source for $source_data->{name} \n";
+    
+}
+
+
+sub get_default_source{
+
+    my $dbh     = shift;
+    my $version = shift;
+    
+    ## if original source cannot be identified, link to dbSNP
+    my %default_source = ( 'name'    => 'LSDB',
+			   'version' => "dbSNP $version",
+			   'desc'    => "Variants dbSNP annotates as being from LSDBs",
+			   'url'     => "http://www.ncbi.nlm.nih.gov/projects/SNP/"
+	);
+    
+    return get_source($dbh, \%default_source);
+    
+}
+
+sub get_phencode_source{
+
+    my $dbh     = shift;
+
+    ## many submissions linked to phencode
+    my %phencode_source = ( 'name'    => 'Phencode',
+			   'desc'    => "PhenCode is a collaborative project to better understand the relationship between genotype and phenotype in humans",
+			   'url'     => "http://phencode.bx.psu.edu/"
+	);
+    
+    return get_source($dbh, \%phencode_source );
+}
+
+## find pre-checked batches and source info
+sub get_lsdb_batches{
+
+    my $self = shift;
+
+    my %data;
+
+    my $dbh = $self->{'dbInt'}->db_handle();
+
+    my $req_ext_sth = $dbh->prepare(qq[ select dbSNP_lsdb_batch.dbSNP_batch, 
+                                        lsdb_info.database_name,
+                                        lsdb_info.is_displayed,
+                                        lsdb_info.display_phencode, 
+                                        lsdb_info.description,
+                                        lsdb_info.url
+                                        from lsdb_info, dbSNP_lsdb_batch 
+                                        where dbSNP_lsdb_batch.dbSNP_handle = lsdb_info.dbSNP_handle
+                                        ]);
+    $req_ext_sth->execute();
+    my $dat = $req_ext_sth->fetchall_arrayref();
+    foreach my $l(@{$dat}){
+	if($l->[2] ==1){
+	    ## link to source database
+	    $data{$l->[0]}{db}   = $l->[1];
+	    $data{$l->[0]}{desc} = $l->[4];
+	    $data{$l->[0]}{url}  = $l->[5];
+	}
+	if($l->[3] ==1){
+	    ## link to phencode
+	    $data{$l->[0]}{db} = 'phencode';
+	    $data{$l->[0]}{phencode} = 1;
+	}
+    }
+    return \%data;
 }
 
 1;
