@@ -862,4 +862,47 @@ sub project_fullname {
 	return defined($self->get_all_attributes->{'project_fullname'}) ? $self->get_all_attributes->{'project_fullname'} : undef;
 }
 
+=head2 strain
+
+  Example    : $strain = $pf->strain();
+  Description: Getter/Setter for the strain associated with this annotation.
+               If not set, and this PhenotypeFeature has an associated adaptor
+               an attempt will be made to lazy-load the variation from the
+               database. 
+  Returntype : Bio::EnsEMBL::Variation::Individual
+  Exceptions : throw on incorrect argument
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub strain {
+  my $self = shift;
+  if (@_) {
+    if(!ref($_[0]) || !$_[0]->isa('Bio::EnsEMBL::Variation::Individual')) {
+      throw("Bio::EnsEMBL::Variation::Variation argument expected");
+    } 
+    $self->{'strain'} = shift;
+  } elsif ( !defined($self->{'strain'}) && $self->{'adaptor'} ) {
+    $self->{'strain_id'} = $self->get_all_attributes->{'strain_id'};	
+	# lazy-load from database on demand
+    my $ia = $self->{'adaptor'}->db()->get_IndividualAdaptor();
+    $self->{'strain'} = $ia->fetch_by_dbID($self->{'strain_id'});
+  } else {
+    throw("Adaptor is not defined.");
+  }
+
+  return $self->{'strain'};
+}
+
+
+
+
+
+
+
+
+
+
+
 1;
