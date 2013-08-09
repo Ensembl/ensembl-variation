@@ -50,20 +50,32 @@ sub run {
     my $fasta_seq = $dir ."/genomic.fa";
 
     open my $fh, ">$fasta_seq" or die "can't open fasta file $! \n";
-  
+
+    ## get list of required seq ids
+    ## not using fetch_all("toplevel"..) anymore as MHC haplotypes with variants are not top level
+    my $var_dba = $self->get_species_adaptor('variation');
+    my $id_ext_sth = $var_dba->dbc->prepare(qq [ select distinct seq_region_id from variation_feature ]);
+    $id_ext_sth->execute()||die;
+    my $seq_ids = $id_ext_sth->fetchall_arrayref();
+
     my $core_dba = $self->get_species_adaptor('core');
     my $slice_adaptor = $core_dba->get_SliceAdaptor();
-  
-    my @slices = @{$slice_adaptor->fetch_all("toplevel",undef,1,1)};
 
-    if (@slices) {
-        foreach my $slice (@slices) {     
      
-            print $fh ">".$slice->seq_region_name()."\n";
-            my $seq = $slice->seq;
-            ## format & print seq
-            fasta($seq, $fh);
-        }
+    foreach my $id(@{$seq_ids}){
+	next if $id->[0] ==0;
+
+	my $slice = $slice_adaptor->fetch_by_seq_region_id($id->[0]);
+
+	unless (defined $slice){
+	    $self->warning('No slice found for seq_region_id '.$id->[0] );  
+	    next;
+	}
+	print $fh ">".$slice->seq_region_name()."\n";
+	my $seq = $slice->seq;
+	## format & print seq
+	fasta($seq, $fh);  
+
     }
     close $fh or die "failed to close sequence file: $!\n"; 
 

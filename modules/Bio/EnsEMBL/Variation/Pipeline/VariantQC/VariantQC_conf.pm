@@ -119,6 +119,7 @@ sub default_options {
         urgent_lsf_options  => '-R"select[mem>2000] rusage[mem=2000]" -M2000000',
         highmem_lsf_options => '-R"select[mem>15000] rusage[mem=15000]" -M15000000', 
         long_lsf_options    => '-q long -R"select[mem>2000] rusage[mem=2000]" -M2000000',
+        medium_lsf_options  => '-R"select[mem>4000] rusage[mem=4000]" -M4000000',
 
         # options controlling the number of workers used for the parallelisable analyses
 
@@ -139,6 +140,8 @@ sub default_options {
 
         run_PAR_check                    => 1, 
         run_Pubmed_check                 => 1,
+
+        run_evidence_check               => 0,
 
 
         # put back support for re-runs on new format schema
@@ -183,6 +186,7 @@ sub resource_classes {
         'urgent'  => { 'LSF' => $self->o('urgent_lsf_options')  },
         'highmem' => { 'LSF' => $self->o('highmem_lsf_options') },
         'long'    => { 'LSF' => $self->o('long_lsf_options')    },
+        'medium'  => { 'LSF' => $self->o('medium_lsf_options')  },
     };
 }
 
@@ -250,8 +254,8 @@ sub pipeline_analyses {
             @common_params,
         },
         -input_ids      => [],
-        -hive_capacity  => -1,
-        -rc_name        => 'default',               
+        -hive_capacity  => 1,
+        -rc_name        => 'medium',               
       },
 
           
@@ -277,7 +281,8 @@ sub pipeline_analyses {
          -parameters     => {   
              schema             => $self->o('schema'),
              batch_size         => $self->o('qc_batch_size'),
-             use_seqdb          => $self->o('run_create_seqdb'),   
+             use_seqdb          => $self->o('run_create_seqdb'),  
+             evidence_check     => $self->o('run_evidence_check'),  
              @common_params,
          },
          -input_ids        => [],
