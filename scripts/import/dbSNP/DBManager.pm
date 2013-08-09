@@ -70,15 +70,16 @@ sub dbCore {
 }
 sub dbInt {
   my $self = shift;
-  
-  return $self->get_dbAdaptor('intvar');
+
+  return $self->get_dbAdaptor('intvar', 'multi');
 }
 sub get_dbAdaptor {
   my $self = shift;
   my $type = shift;
+  my $species = shift || $self->{'species'};
 
   if (!defined($self->{$type})) {
-    my $dba = $self->{'registry'}->get_DBAdaptor($self->{'species'},$type) or die ("Could not get DBadaptor to $type database");
+    my $dba = $self->{'registry'}->get_DBAdaptor($species,$type) or die ("Could not get DBadaptor to $type database");
     #$dba->dbc->disconnect_when_inactive(1);
     $dba->dbc->{mysql_auto_reconnect} = 1;
     
