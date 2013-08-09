@@ -92,7 +92,7 @@ our %FARM_PARAMS = (
   
 );
 
-#ÊThe queues in ascending run time limit order
+#The queues in ascending run time limit order
 our @FARM_QUEUES = (
   'small',
   'normal',
@@ -100,7 +100,7 @@ our @FARM_QUEUES = (
   'basement'
 );
 
-#ÊThe maximum amount of farm memory that we will request
+#The maximum amount of farm memory that we will request
 our $MAX_FARM_MEMORY = 15900;
 our $FARM_MEMORY_INCREMENT = 4000;
 
@@ -118,6 +118,7 @@ sub new {
   my $dbSNP = $dbm->dbSNP()->dbc();
   my $dbCore = $dbm->dbCore()->dbc();
   my $dbVar = $dbm->dbVar()->dbc();
+  my $dbInt = $dbm->dbInt()->dbc();
   my $snp_dbname = $dbSNP->dbname();
   my $species = $dbm->species();
   my $shared_db = $dbm->dbSNP_shared();
@@ -125,9 +126,10 @@ sub new {
   
   debug(localtime() . "\tThe shared database is $shared_db");
 
-  return bless {'dbSNP' => $dbSNP,
+  return bless {'dbSNP'  => $dbSNP,
 		'dbCore' => $dbCore,
-		'dbVar' => $dbVar, ##this is a dbconnection
+		'dbInt'  => $dbInt,
+		'dbVar'  => $dbVar, ##this is a dbconnection
 		'snp_dbname' => $snp_dbname,
 		'species' => $species,
 		'tmpdir' => $tmp_dir,
@@ -152,7 +154,7 @@ sub dump_dbSNP{
 
   my $self = shift;
 
-  #ÊPut the log filehandle in a local variable
+  #Put the log filehandle in a local variable
   my $logh = $self->{'log'};
   
   #the following steps need to be run when initial starting the job. If job failed for some reason and some steps below are already finished, then can comment them out
@@ -176,7 +178,7 @@ sub dump_dbSNP{
     'cleanup'
   );
   
-  #ÊThe GenericContig object has an array where routines that should be skipped can be specified. For now, add create_coredb and cleanup by default
+  #The GenericContig object has an array where routines that should be skipped can be specified. For now, add create_coredb and cleanup by default
   push(@{$self->{'skip_routines'}},('create_coredb',
 				    'cleanup'
        ));
@@ -191,7 +193,7 @@ sub dump_dbSNP{
   # Loop over the subroutines and run each one
   foreach my $subroutine (@subroutines) {
     
-    #ÊCheck if this subroutine should be skipped
+    #Check if this subroutine should be skipped
     if (grep($_ eq $subroutine,@{$self->{'skip_routines'}})) {
       debug(localtime() . "\tSkipping $subroutine");
       print $logh localtime() . "\tSkipping $subroutine\n";
@@ -216,7 +218,7 @@ sub run_on_farm {
   my $end = shift;
   my @args = @_;
   
-  #ÊPut the log filehandle in a local variable
+  #Put the log filehandle in a local variable
   my $logh = $self->{'log'};
 
   my $param_key = $jobname;
@@ -233,7 +235,7 @@ sub run_on_farm {
   my $memory_long = $memory . '000';
   my $logfile_prefix = $file_prefix . "_" . $jobname . "-";
   my $array_options = "";
-  #ÊIf just the start was defined, it should be a list of subtasks that should be re-run
+  #If just the start was defined, it should be a list of subtasks that should be re-run
   if (defined($start) && defined($end)) {
     if ($start < $end) {
       $array_options = qq{[$start-$end]%$max_jobs};
@@ -246,7 +248,7 @@ sub run_on_farm {
     $array_options = "[" . join(",",@{$start}) . qq{]%$max_jobs}; 
   }
   
-  #ÊWrap the command to be executed into a shell script
+  #Wrap the command to be executed into a shell script
   my $tempfile = $task . "_" . $self->{'tmpfile'};
   my $task_command = qq{perl $self->{'scriptdir'}/$script -species $self->{'species'} -dbSNP_shared $self->{'dbSNP_share_db'} -registry_file $self->{'registry_file'} -task $task -file_prefix $file_prefix -task_management_file $task_manager_file -tempdir $self->{'tmpdir'} -tempfile $tempfile  } . join(" ",@args);
   my $script_wrapper = $file_prefix . '_command.sh';
@@ -260,16 +262,16 @@ sub run_on_farm {
   
   my $bsub_cmd = qq{$FARM_BINARY -R'select[mem>$memory\] rusage[mem=$memory\]' -M$memory_long -q $queue -J'$jobname$array_options' -o $logfile_prefix\%J.%I.out -e $logfile_prefix\%J.%I.err bash $script_wrapper};
   
-  #ÊSubmit the job array to the farm
+  #Submit the job array to the farm
   my $submission = `$bsub_cmd`;
   my ($jobid) = $submission =~ m/^Job \<([0-9]+)\>/i;
   print $logh Progress::location();
   
-  #ÊSubmit a job that depends on the job array so that the script will halt
+  #Submit a job that depends on the job array so that the script will halt
   system(qq{$FARM_BINARY -J $jobid\_waiting -q $wait_queue -w'ended($jobid)' -K -o $file_prefix\_waiting.out sleep 1});
   print $logh Progress::location();
   
-  #ÊCheck the error and output logs for each subtask. If the error file is empty, delete it. If not, warn that the task generated errors. If the output file doesn't say that it completed successfully, report the job as unseccessful and report which tasks that failed
+  #Check the error and output logs for each subtask. If the error file is empty, delete it. If not, warn that the task generated errors. If the output file doesn't say that it completed successfully, report the job as unseccessful and report which tasks that failed
   my $all_successful = 1;
   my %job_details;
   for (my $index = $start; $index <= $end; $index++) {
@@ -284,7 +286,7 @@ sub run_on_farm {
       $job_details{$index}->{'generated_error'} = 1;
     }
     
-    #ÊDoes the outfile say that the process exited successfully? Faster than querying bhist... (?)
+    #Does the outfile say that the process exited successfully? Faster than querying bhist... (?)
     $job_details{$index}->{'success'} = 0;
     open(FH,'<',$outfile);
     flock(FH,LOCK_SH);
@@ -338,7 +340,7 @@ sub rerun_farm_job {
   my $file_prefix = shift;
   my @args = @_;
   
-  #ÊPut the log filehandle in a local variable
+  #Put the log filehandle in a local variable
   my $logh = $self->{'log'};
   
   my $param_key = $jobname;
@@ -350,7 +352,7 @@ sub rerun_farm_job {
   my $max_time = 0;
   my $max_memory = 0;
   
-  #ÊThis is a preparation step for re-running a farm job. What we do is to re-submit to a longer queue (if one is available) and request more memory
+  #This is a preparation step for re-running a farm job. What we do is to re-submit to a longer queue (if one is available) and request more memory
   my $current_queue = $FARM_QUEUES[$FARM_PARAMS{$param_key}->{'queue'}];
   if (scalar(@FARM_QUEUES) > ($current_queue + 1)) {
     $FARM_PARAMS{$param_key}->{'queue'}++;
@@ -367,7 +369,7 @@ sub rerun_farm_job {
     $max_memory = 1;
   }
   
-  #ÊIf we have already maxed out the resources, it won't help running the job again
+  #If we have already maxed out the resources, it won't help running the job again
   return undef if ($max_time && $max_memory);
   
   return $self->run_on_farm($jobname,$file_prefix . "_submission",$iteration,@args);
@@ -377,7 +379,7 @@ sub create_coredb {
 
   my $self = shift;
   
-  #ÊPut the log filehandle in a local variable
+  #Put the log filehandle in a local variable
   my $logh = $self->{'log'};
   
   my $coredb_name = $self->{'dbCore'}->dbname();
@@ -854,10 +856,10 @@ sub pubmed_citations{
 sub variation_table {
     my $self = shift;
   
-  #ÊIf this variable is set, variations with a subsnp_id below this integer will not be imported. This is useful for resuming when resuming an import that crashed at a particular subsnp_id. Also, any SQL statements preparing for the import will be skipped.
+  #If this variable is set, variations with a subsnp_id below this integer will not be imported. This is useful for resuming when resuming an import that crashed at a particular subsnp_id. Also, any SQL statements preparing for the import will be skipped.
   my $resume_at_subsnp_id = -1;
   
-  #ÊPut the log filehandle in a local variable
+  #Put the log filehandle in a local variable
   my $logh = $self->{'log'};
   
     my $stmt;
@@ -916,7 +918,7 @@ sub variation_table {
     
   debug(localtime() . "\tVariation table indexed");
 
-	#ÊGet somatic flag from dbSNP but only if the snp exclusively has somatic subsnps
+	#Get somatic flag from dbSNP but only if the snp exclusively has somatic subsnps
 	$stmt = qq{SELECT DISTINCT	sssl.snp_id
 	     	       FROM SubSNP ss JOIN
 			SNPSubSNPLink sssl ON (
@@ -1048,7 +1050,7 @@ sub subsnp_synonyms{
   # Subsnp_id interval to export at each go
   my $interval = 5e5;
     my $offset = 0;
-  #ÊGet the minimum and maximum subsnp_id. We will export rows based on subsnp_id rather than using limit and offset in order to avoid having the same subsnp_id split across two exports
+  #Get the minimum and maximum subsnp_id. We will export rows based on subsnp_id rather than using limit and offset in order to avoid having the same subsnp_id split across two exports
   $stmt = qq{
     SELECT
       MIN(tv.subsnp_id) AS mn,
@@ -1112,7 +1114,7 @@ sub subsnp_synonyms{
 sub dump_subSNPs {
     my $self = shift;
 
-  #ÊPut the log filehandle in a local variable
+  #Put the log filehandle in a local variable
   my $logh = $self->{'log'};
   
     my $stmt = "SELECT ";
@@ -1182,7 +1184,7 @@ sub dump_subSNPs {
 sub population_table {
     my $self = shift;
   
-  #ÊPut the log filehandle in a local variable
+  #Put the log filehandle in a local variable
   my $logh = $self->{'log'};
   
   $self->{'dbVar'}->do("ALTER TABLE population ADD column pop_id int");   
@@ -1289,7 +1291,7 @@ sub population_table {
 sub individual_table {
     my $self = shift;
 
-  #ÊPut the log filehandle in a local variable
+  #Put the log filehandle in a local variable
   my $logh = $self->{'log'};
   
   debug(localtime() . "\tStarting on Individual data");
@@ -1583,7 +1585,7 @@ sub parallelized_allele_table {
   update_allele_schema($self->{'dbVar'});
   
   
-  #ÊPut the log filehandle in a local variable
+  #Put the log filehandle in a local variable
   my $logh = $self->{'log'};
   my $stmt;
   
@@ -1608,7 +1610,7 @@ sub parallelized_allele_table {
   unless ($load_only) {
 
 ##=head hashed out to re-run failed job
-    #ÊFirst, get the population_id -> sample_id mapping and write it to the file. The subroutine can also get it but it's faster to get all at once since we expect many to be used. 
+    #First, get the population_id -> sample_id mapping and write it to the file. The subroutine can also get it but it's faster to get all at once since we expect many to be used. 
     $stmt = qq{
       SELECT DISTINCT
 	p.pop_id,
@@ -1629,8 +1631,8 @@ sub parallelized_allele_table {
     dbSNP::ImportTask::write_samples($samplefile,\%s);
     print $logh Progress::location();
   
-    #ÊProcess the alleles in chunks based on the SubSNP id. This number should be kept at a reasonable level, ideally so that we don't need to request more than 4GB memory on the farm. If so, we'll have access to the most machines.
-    #ÊThe limitation is that the results from the dbSNP query is read into memory. If necessary, we can dump it to a file (if the results are sorted)
+    #Process the alleles in chunks based on the SubSNP id. This number should be kept at a reasonable level, ideally so that we don't need to request more than 4GB memory on the farm. If so, we'll have access to the most machines.
+    #The limitation is that the results from the dbSNP query is read into memory. If necessary, we can dump it to a file (if the results are sorted)
 
 
     ## improve binning for sparsely submitted species
@@ -1704,7 +1706,7 @@ sub parallelized_allele_table {
 
 
 
-  #ÊFinally, create the allele_string table needed for variation_feature    ## change to store A/T rather than seperate rows per allele
+  #Finally, create the allele_string table needed for variation_feature    ## change to store A/T rather than seperate rows per allele
   $stmt = qq{
     SELECT 
       snp.snp_id, 
@@ -1835,7 +1837,7 @@ sub write_allele_task_file{
 sub flanking_sequence_table {
   my $self = shift;
 
-  #ÊPut the log filehandle in a local variable
+  #Put the log filehandle in a local variable
   my $logh = $self->{'log'};
   
   my $stmt;
@@ -2061,12 +2063,12 @@ sub flanking_sequence_table {
 sub variation_feature {
   my $self = shift;
 
-  #ÊPut the log filehandle in a local variable
+  #Put the log filehandle in a local variable
   my $logh = $self->{'log'};
   
   debug(localtime() . "\tDumping seq_region data");
 
-  dumpSQL($self->{'dbCore'}->db_handle, qq{SELECT sr.seq_region_id, sr.name
+  dumpSQL($self->{'dbCore'}->db_handle, qq{SELECT sr.seq_region_id, sr.name, sr.coord_system_id
  				      FROM   seq_region sr, coord_system cs
                                       WHERE  sr.coord_system_id = cs.coord_system_id
                                       AND    cs.attrib like "%default_version%"});
@@ -2192,10 +2194,10 @@ sub variation_feature {
 }
 
 
-#ÊThe task of getting the genotype will be chunked up and distributed to the farm in small pieces. Each result will be written to a loadfile that in the end
+#The task of getting the genotype will be chunked up and distributed to the farm in small pieces. Each result will be written to a loadfile that in the end
 # will be used to populate the tmp_individual.. tables after everything has finished. We will chunk up the results by a) chromosome and b) individual. Because
-#Êthe number of genotypes per individual varies _drastically_ with 1000 genomes data having lots of genotypes and most other data only having a few, we need
-#Êto determine the best way to chunk up the individuals in order to get an even distribution of the workload
+#the number of genotypes per individual varies _drastically_ with 1000 genomes data having lots of genotypes and most other data only having a few, we need
+#to determine the best way to chunk up the individuals in order to get an even distribution of the workload
 sub parallelized_individual_genotypes {
   my $self = shift;
   my $load_only = shift;
@@ -2204,12 +2206,12 @@ sub parallelized_individual_genotypes {
   my $multi_bp_gty_table = 'individual_genotype_multiple_bp';
   my $jobindex;
 
- #ÊGet the create statement for tmp_individual_genotype_single_bp from master schema. We will need this to create the individual chromosome tables
+ #Get the create statement for tmp_individual_genotype_single_bp from master schema. We will need this to create the individual chromosome tables
   my $ind_gty_stmt = get_create_statement($genotype_table,$self->{'schema_file'});
  
   my $failure_recovery ;   ## set to allow re-running of individual export jobs after memory failure
 
-  #ÊPut the log filehandle in a local variable
+  #Put the log filehandle in a local variable
   my $logh = $self->{'log'}; 
 
   my $task_manager_file = 'individual_genotypes_task_management.txt';
@@ -2232,7 +2234,7 @@ sub parallelized_individual_genotypes {
  
  # Use one common file for alleles and one for samples.
  my $file_prefix = $self->{'tmpdir'} . '/individual_genotypes';
- #ÊMulti-bp genotypes will be written to a separate loadfile
+ #Multi-bp genotypes will be written to a separate loadfile
  my $multi_bp_gty_file = $file_prefix . '_multi_bp_gty';
  # Allele file is used for caching the alleles
  my $allele_file = $file_prefix . '_alleles.txt';
@@ -2250,7 +2252,7 @@ sub parallelized_individual_genotypes {
   foreach my $subind_table (@subind_tables) {
     
     print $logh Progress::location() . "\t\tProcessing $subind_table\n";
-    #ÊThe subtable to store the data for this subind table and the loadfile to use. The mapping file is used to temporarily store the subsnp_id -> variation_id mapping
+    #The subtable to store the data for this subind table and the loadfile to use. The mapping file is used to temporarily store the subsnp_id -> variation_id mapping
     my $dst_table = "tmp_individual_genotype_single_bp\_$subind_table";
     my $loadfile = $file_prefix . '_' . $dst_table . '.txt';
     my $mapping_file = $file_prefix . '_subsnp_mapping_' . $subind_table . '.txt';
@@ -2400,7 +2402,7 @@ sub parallelized_individual_genotypes {
   # If we still have subtasks that fail, this needs to be resolved before proceeding
   die("Some subtasks are failing (see log output). This needs to be resolved before proceeding with the loading of genotypes!") unless ($result->{'success'});
   
-  #ÊDrop the tmp_individual.. table if it exists
+  #Drop the tmp_individual.. table if it exists
  my $drop_tmp_stmt = qq{
     DROP TABLE IF EXISTS
       $genotype_table
@@ -2414,7 +2416,7 @@ sub parallelized_individual_genotypes {
   my  $stmt;
  if (scalar(keys(%gty_tables)) > 1) {
     
-    #ÊAdd an empty table where any subsequent inserts will end up
+    #Add an empty table where any subsequent inserts will end up
     my $extra_table = $genotype_table . '_extra';
     $stmt = $ind_gty_stmt;
     $stmt =~ s/$genotype_table/$extra_table/;
@@ -2438,7 +2440,7 @@ sub parallelized_individual_genotypes {
   $self->{'dbVar'}->do($stmt);
   print $logh Progress::location();
   
-  #ÊMove multiple bp genotypes into the multiple bp table
+  #Move multiple bp genotypes into the multiple bp table
   $stmt = qq{
       SELECT DISTINCT
           variation_id
@@ -2507,7 +2509,7 @@ sub create_parallelized_individual_genotypes_task_file{
   print $logh Progress::location();
   my $task_manager_file  = 'individual_genotypes_task_management.txt';
 
-  #ÊMulti-bp genotypes will be written to a separate loadfile
+  #Multi-bp genotypes will be written to a separate loadfile
   my $multi_bp_gty_file =  $self->{'tmpdir'} . '/individual_genotypes_multi_bp_gty';
 
   # Store the data for the farm submission in a hash with the data as key. This way, the jobs will be "randomized" w.r.t. chromosomes and chunks when submitted so all processes shouldn't work on the same tables/files at the same time.
@@ -2538,21 +2540,21 @@ sub create_parallelized_individual_genotypes_task_file{
   my ($submitted_ind_id,$genotype_count);
   $count_lines_sth->bind_columns(\$submitted_ind_id,\$genotype_count);
   
-  #ÊLoop over the counts and when a large enough number of genotypes have been counted, split that off as a chunk to be submitted to the farm
+  #Loop over the counts and when a large enough number of genotypes have been counted, split that off as a chunk to be submitted to the farm
   my $total_count = 0;
   my $start_id = -1;
   while ($count_lines_sth->fetch()) {
     $total_count += $genotype_count;
     # Set the start id if it's not specified
     $start_id = $submitted_ind_id if ($start_id < 0);
-    #ÊBreak off the chunk if it's large enough
+    #Break off the chunk if it's large enough
     if ($total_count >= $target_rows) {
  	$job_data{qq{$subind_table $start_id $submitted_ind_id}}++;
  	$total_count = 0;
  	$start_id = -1;
     }
   }
-  #ÊAdd the rest of the individual_ids if a new chunk has been started
+  #Add the rest of the individual_ids if a new chunk has been started
   $job_data{qq{$subind_table $start_id $submitted_ind_id}}++ if ($start_id >= 0);
   print $logh Progress::location();
   }
@@ -2590,11 +2592,11 @@ sub calculate_gtype {
   my $allele_file = shift;
   my $sample_file = shift;
   
-  #ÊPut the log filehandle in a local variable
+  #Put the log filehandle in a local variable
   my $logh = $self->{'log'};
   print $logh Progress::location() . "\tImporting from $subind_table to $dst_table\n";
   
-  #ÊProcess the alleles in chunks based on the SubSNP id
+  #Process the alleles in chunks based on the SubSNP id
   my $chunksize = 1e6;
   
   my $stmt = qq{
@@ -2616,7 +2618,7 @@ sub calculate_gtype {
   # The tempfile to be used for loading
   my $tempfile = $self->{'tmpdir'} . '/' . $dst_table . '_' . $self->{'tmpfile'};
   
-  #ÊA prepared statement for getting the genotype data from the dbSNP mirror
+  #A prepared statement for getting the genotype data from the dbSNP mirror
   $stmt = qq{
     SELECT 
       si.subsnp_id,
@@ -2648,7 +2650,7 @@ sub calculate_gtype {
   };
   my $subind_sth = $dbSNP->prepare($stmt);
   
-  #ÊPrepared statement to get the corresponding variation_ids for a range of subsnps from variation_synonym
+  #Prepared statement to get the corresponding variation_ids for a range of subsnps from variation_synonym
   $stmt = qq{
     SELECT
       vs.subsnp_id,
@@ -2688,9 +2690,9 @@ sub calculate_gtype {
   };
   my $allele_sth = $dbSNP->prepare($stmt);
   
-  #ÊHash to hold the alleles in memory
+  #Hash to hold the alleles in memory
   my %alleles;
-  #ÊIf the allele file exist, we'll read alleles from it
+  #If the allele file exist, we'll read alleles from it
   if (defined($allele_file) && -e $allele_file) {
     open(ALL,'<',$allele_file);
     # Lock the filehandle
@@ -2705,9 +2707,9 @@ sub calculate_gtype {
   # Keep track if we did any new lookups
   my $new_alleles = 0;
   
-  #ÊHash to keep sample_ids in memory
+  #Hash to keep sample_ids in memory
   my %samples;
-  #ÊIf the sample file exist, we'll read alleles from it
+  #If the sample file exist, we'll read alleles from it
   if (defined($sample_file) && -e $sample_file) {
     open(SPL,'<',$sample_file);
     # Lock the filehandle
@@ -2726,12 +2728,12 @@ sub calculate_gtype {
   
   # Open a file handle to the temp file that will be used for loading
   open(SGL,'>',$tempfile) or die ("Could not open import file $tempfile for writing");
-  #ÊGet a lock on the file
+  #Get a lock on the file
   flock(SGL,LOCK_EX);
   
   # Open a file handle to the file that will be used for loading the multi-bp genotypes
   open(MLT,'>>',$mlt_file) or die ("Could not open import file $mlt_file for writing");
-  #ÊGet a lock on the file
+  #Get a lock on the file
   flock(MLT,LOCK_EX);
   
   my $ss_offset = ($min_ss - 1);
@@ -2759,7 +2761,7 @@ sub calculate_gtype {
     my $variation_ids = $vs_sth->fetchall_hashref(['subsnp_id']);
     print $logh Progress::location();
     
-    #ÊNow, loop over the import data and print it to the tempfile so we can import the data. Replace the allele_id with the corresponding allele on-the-fly
+    #Now, loop over the import data and print it to the tempfile so we can import the data. Replace the allele_id with the corresponding allele on-the-fly
     while (my $data = shift(@{$import_data})) {
       my $subsnp_id = $data->[0];
       my $ind_id = $data->[1];
@@ -2771,7 +2773,7 @@ sub calculate_gtype {
       # If pattern length is less than 3, skip this genotype
       next if ($pattern_length < 3);
       
-      #ÊShould the alleles be flipped?
+      #Should the alleles be flipped?
       my $reverse = (($sub_strand + $variation_ids->{$subsnp_id}{'substrand_reversed_flag'})%2 != 0);
       
       # Look up the alleles if necessary
@@ -2785,7 +2787,7 @@ sub calculate_gtype {
 	  $new_alleles = 1;
 	}
       }
-      #ÊLook up the sample id in the database if necessary
+      #Look up the sample id in the database if necessary
       if (!exists($samples{$ind_id})) {
         $sample_sth->execute($ind_id);
         my $sample_id;
@@ -2799,7 +2801,7 @@ sub calculate_gtype {
       $allele_1 = $alleles{$allele_1}->[$reverse];
       $allele_2 = $alleles{$allele_2}->[$reverse];
       
-      #ÊSkip this genotype if the alleles are N
+      #Skip this genotype if the alleles are N
       next if ($allele_1 eq 'N' && $allele_2 eq 'N');
       
       my $row = join("\t",($variation_ids->{$subsnp_id}{'variation_id'},$subsnp_id,$samples{$ind_id},$allele_1,$allele_2)) . "\n";
@@ -2807,7 +2809,7 @@ sub calculate_gtype {
 	print SGL $row;
       }
       else {
-	#ÊSkip this genotype if the first allele contains the string 'indeterminate'
+	#Skip this genotype if the first allele contains the string 'indeterminate'
 	next if ($allele_1 =~ m/indeterminate/i);
 	print MLT $row;
       }
@@ -2821,7 +2823,7 @@ sub calculate_gtype {
   close(SGL);
   close(MLT);
   
-  #ÊDisable the keys on the destination table before loading in order to speed up the insert
+  #Disable the keys on the destination table before loading in order to speed up the insert
   $stmt = qq {
     ALTER TABLE
       $dst_table
@@ -2877,11 +2879,11 @@ sub old_calculate_gtype {
   
   my ($self,$dbVariation,$table1,$table2,$insert) = @_;
 
-  #ÊPut the log filehandle in a local variable
+  #Put the log filehandle in a local variable
   my $logh = $self->{'log'};
 
-  #ÊThe different cases for reversed alleles were split into 4 different queries. As a first step towards optimizing,
-  #ÊI combine these into one query with a conditional based on the value of substrand_reversed_flag + submitted_strand
+  #The different cases for reversed alleles were split into 4 different queries. As a first step towards optimizing,
+  #I combine these into one query with a conditional based on the value of substrand_reversed_flag + submitted_strand
   # An even value means that we'll get the forward allele. An odd value means the reverse allele
   
   # I haven't tested this code so for now, I'll leave it commented out and use the old one
@@ -2997,7 +2999,7 @@ sub old_calculate_gtype {
 sub population_genotypes {
     my $self = shift;
 
-  #ÊPut the log filehandle in a local variable
+  #Put the log filehandle in a local variable
   my $logh = $self->{'log'};
 
   ## revert schema to letter rather than number coded genotype
@@ -3230,7 +3232,7 @@ sub archive_rs_synonyms {
       $start =  $end +1;
    }
     ## clean up temp table
-    #$self->{'dbVar'}->do(qq[drop table rsHist]);
+    $self->{'dbVar'}->do(qq[drop table rsHist]);
 
     debug(localtime() . "\tArchive rs synonyms done");
 
@@ -3243,7 +3245,7 @@ sub archive_rs_synonyms {
 sub cleanup {
     my $self = shift;
 
-  #ÊPut the log filehandle in a local variable
+  #Put the log filehandle in a local variable
   my $logh = $self->{'log'};
   
     debug(localtime() . "\tIn cleanup...");
