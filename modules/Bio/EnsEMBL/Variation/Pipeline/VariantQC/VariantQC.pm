@@ -76,12 +76,15 @@ sub run {
   my $last  = $first + $self->required_param('batch_size') -1;
   if($first ==1){$last--;}
 
-  ## find supporting evidence & merge to single string
-  my $evidence_summary = summarise_evidence($var_dba->dbc(),
+  ## find supporting evidence & merge to single string  
+  my $evidence_summary ;
+  if($self->required_param('evidence_check') ==1){
+      
+      $evidence_summary = summarise_evidence($var_dba->dbc(),
                                              $self->required_param('species'),
                                              $first,
                                              $last);
-
+  }
 
 
   ## Database updates 
@@ -122,7 +125,6 @@ sub run_variation_checks{
   
   if( $DEBUG == 1){$self->warning("Starting to run variantQC with $first & $last " );}
 
-
   my %fail_variant;   # hash of arrays of failed variation_ids
   my %fail_allele;    # hash of arrays of arrays failed variation_ids & alleles
   my %flip;           # hash of variation ids which have their strand changed in this process
@@ -139,7 +141,7 @@ sub run_variation_checks{
 
 
   ## export current variation_feature data
-  my ($to_check, $strand_summary) = export_data_adding_allele_string($var_dba, $first, $last);
+  my ($to_check, $map_count, $strand_summary) = export_data_adding_allele_string($var_dba, $first, $last);
 
 
   my $failed_set_id = find_failed_variation_set_id($var_dba);
@@ -223,8 +225,8 @@ sub run_variation_checks{
 	}
     }
 
-    ## Further checks only run for variants with 1 genomic location  
-    next if $var->{map} > 1;
+    ## Compliment allele string only for variants with 1 genomic location or same strand for all locations 
+    next if $map_count->{$var->{v_id}} > 1  && $strand_summary->{$var->{v_id}} eq '0';
 
 
     ## flip allele string if on reverse strand and single mapping
@@ -243,7 +245,8 @@ sub run_variation_checks{
       $flip{$var->{v_id}} = 1;
     }
   
-  
+    ## Reference match checks and re-ordering only run for variants with 1 genomic location
+    next if $var->{map} > 1;
   
     # Extract reference sequence to run ref checks [ compliments for reverse strand multi-mappers]
   
@@ -298,6 +301,7 @@ sub run_variation_checks{
       ##  Type 2 - flag variants as fails if neither allele matches the reference
       push @{$fail_variant{2}}, $var->{v_id} ;
       $var->{variation_set_id} = $failed_set_id ;
+
     } 
    ## save for allele checker if fully processed and possibly flipped
    $allele_string{$var->{v_id}} = $var->{allele};
@@ -385,6 +389,7 @@ sub export_data_adding_allele_string{
   
   my @to_check;
   my %strand_summary;  ## hold strands seen for multi-mapping variants here rather than check later
+  my %map_count;       ## count all locations including non-ref locations not used in map_weight calculation
 
   my $variant_ext_sth = $var_dba->dbc->prepare(qq[SELECT vf.variation_id,
                                                       vf.variation_name,
@@ -408,17 +413,16 @@ sub export_data_adding_allele_string{
                                                       maf.count,
                                                       maf.is_minor_allele,
                                                       vf.flags
-                                                 FROM variation_feature vf,
+                                                 FROM variation_feature vf
+                                                      left outer join tmp_map_weight_working  tmw on (vf.variation_id = tmw.variation_id ),
                                                       seq_region sr,
-                                                      tmp_map_weight_working tmw,
                                                       allele_string als,
                                                       variation v
                                                       left outer join maf on ( maf.snp_id = v.snp_id)
                                                  WHERE  vf.variation_id between ? and ? 
-                                                 AND vf.variation_id = tmw.variation_id  
                                                  AND vf.seq_region_id = sr.seq_region_id
                                                  AND vf.variation_id = als.variation_id  
-                                                 AND vf.variation_id = v.variation_id  
+                                                 AND vf.variation_id = v.variation_id
 
                                                  ]);       
  
@@ -431,6 +435,8 @@ sub export_data_adding_allele_string{
   foreach my $l(@{$variant_data}){
  
       next if defined $l->[20] &&  $l->[20] eq "0";
+
+      $map_count{$l->[0]}++;
       my %save;
   
       $save{v_id}           = $l->[0];
@@ -442,7 +448,7 @@ sub export_data_adding_allele_string{
       $save{strand}         = $l->[6];
       
 
-      $save{map}              = $l->[7];
+      $save{map}              = $l->[7]  || 0 ;   ## variants mapping only to haplotypes/patches have map_weight 0
       $save{source_id}        = $l->[8];
       $save{consequence_types}= $l->[9];
       $save{variation_set_id} = $l->[10];
@@ -476,7 +482,7 @@ sub export_data_adding_allele_string{
     }
   }
 
-  return (\@to_check, \%strand_summary);  
+  return (\@to_check, \%map_count, \%strand_summary);  
 
 }
 
