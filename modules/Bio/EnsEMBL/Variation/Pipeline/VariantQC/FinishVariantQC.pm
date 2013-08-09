@@ -558,6 +558,9 @@ sub rename_tables{
   ## Capture dbSNP 'suspect' variant fails 
   $var_dba->dbc->do(qq[ insert into failed_variation_working (variation_id, failed_description_id) select variation_id, failed_description_id from failed_variation ]); 
 
+  ## set dbSNP genotypes to null phasing
+  $var_dba->dbc->do(qq[update genotype_code set phased =\\N where phased=0]);
+
   ## Keep orignal tables in short term
   $var_dba->dbc->do(qq[ rename table allele to allele_before_pp ]) || die;
   $var_dba->dbc->do(qq[ rename table variation to variation_before_pp ]) || die;
