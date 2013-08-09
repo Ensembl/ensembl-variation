@@ -241,8 +241,9 @@ sub run_variation_checks{
       }
       $var->{strand} = 1;
 
-      ### store variation_id to use when flipping alleles
+      ### store variation_id to use when flipping alleles & allele stringfor multi-map flips
       $flip{$var->{v_id}} = 1;
+      $allele_string{$var->{v_id}} = $var->{allele};
     }
   
     ## Reference match checks and re-ordering only run for variants with 1 genomic location
