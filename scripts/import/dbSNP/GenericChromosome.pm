@@ -119,14 +119,14 @@ sub variation_feature{
      }
 
 my $stmt;
-    #ÊThe group term (the name of the reference assembly in the dbSNP b[version]_SNPContigInfo_[assembly]_[assembly version] table) is either specified via the config file or, if not, attempted to automatically determine from the data
+    #The group term (the name of the reference assembly in the dbSNP b[version]_SNPContigInfo_[assembly]_[assembly version] table) is either specified via the config file or, if not, attempted to automatically determine from the data
     my $group_term = $self->{'group_term'};
     my $group_label = $self->{'group_label'};
     if (defined($group_term) && defined($group_label)) {
 	warn "Using group_term:$group_term and group_label:$group_label to extract mappings \n";
     }
     else{        
-        #ÊIf no group term was specified, use the one with the most entries in the dbSNP table. This may be wrong though so warn about it.
+        #If no group term was specified, use the one with the most entries in the dbSNP table. This may be wrong though so warn about it.
         $stmt = qq{
             SELECT
                 ctg.group_term,
@@ -148,7 +148,7 @@ my $stmt;
         $group_label = $result->[0][1];
         print Progress::location();
         
-        #ÊWarn about the group_term we settled for
+        #Warn about the group_term we settled for
         debug(
             qq{
                 There was no 'group_term' specified in the config file. 
@@ -228,7 +228,7 @@ my $stmt;
 		     sorting_id ASC  
 	          };
      }
- 				 #AND t2.group_term like "ref_%"
+
      dumpSQL($self->{'dbSNP'},$stmt);
     
     
@@ -237,10 +237,10 @@ my $stmt;
      create_and_load($self->{'dbVar'}, "tmp_contig_loc_chrom", "snp_id i* not_null", "ctg * not_null", "ctg_gi i", "ctg_start i not_null", "ctg_end i", "chr *", "start i", "end i", "strand i", "aln_quality d");
   print Progress::location();
 
-    #ÊAs a correction for the human haplotypes that dbSNP actually reported on the chromosome 6 (and 4 & 17), cross-check the ctg_gi against the pontus_dbsnp_import_external_data.refseq_to_ensembl table and replace the chr if necessary
+    #As a correction for the human haplotypes that dbSNP actually reported on the chromosome 6 (and 4 & 17), cross-check the ctg_gi against the pontus_dbsnp_import_external_data.refseq_to_ensembl table and replace the chr if necessary
     if ($self->{'dbm'}->dbCore()->species() =~ m/homo_sapiens|human/i) {
 	
-	#ÊAdd an index on contig_gi to the tmp_contig_loc_chrom table
+	#Add an index on contig_gi to the tmp_contig_loc_chrom table
 	$stmt = qq{
 	    CREATE INDEX
 		ctg_gi_idx
@@ -327,7 +327,7 @@ my $stmt;
       foreach my $table ("tmp_variation_feature_chrom","tmp_variation_feature_ctg") {
 
 	$self->{'dbVar'}->do(qq{INSERT INTO variation_feature (variation_id, seq_region_id,seq_region_start, seq_region_end, seq_region_strand,variation_name, flags, source_id, validation_status, alignment_quality, somatic)
-				  SELECT tvf.variation_id, srs.seq_region_id, tvf.seq_region_start, tvf.seq_region_end, tvf.seq_region_strand,tvf.variation_name,IF(tgv.variation_id,'genotyped',NULL), tvf.source_id, tvf.validation_status, tvf.aln_quality,  v.somatic
+				  SELECT tvf.variation_id, tvf.seq_region_id, tvf.seq_region_start, tvf.seq_region_end, tvf.seq_region_strand,tvf.variation_name,IF(tgv.variation_id,'genotyped',NULL), tvf.source_id, tvf.validation_status, tvf.aln_quality,  v.somatic
 				  FROM $table tvf LEFT JOIN tmp_genotyped_var tgv ON tvf.variation_id = tgv.variation_id
                                   LEFT JOIN variation v on tvf.variation_id = v.variation_id
 				  });
@@ -364,10 +364,10 @@ my $stmt;
 	$self->extract_haplotype_mappings($tablename1, $tablename2, $group_label);
     }
    
-    #$self->{'dbVar'}->do("DROP TABLE tmp_contig_loc_chrom");
-    #$self->{'dbVar'}->do("DROP TABLE tmp_genotyped_var");
-    #$self->{'dbVar'}->do("DROP TABLE tmp_variation_feature_chrom");
-    #$self->{'dbVar'}->do("DROP TABLE tmp_variation_feature_ctg");
+    $self->{'dbVar'}->do("DROP TABLE tmp_contig_loc_chrom");
+    $self->{'dbVar'}->do("DROP TABLE tmp_genotyped_var");
+    $self->{'dbVar'}->do("DROP TABLE tmp_variation_feature_chrom");
+    $self->{'dbVar'}->do("DROP TABLE tmp_variation_feature_ctg");
     #for the chicken, delete 13,000 SNPs that cannot be mapped to EnsEMBL coordinate
     if ($self->{'dbm'}->dbCore()->species =~ /gga/i){
         $self->{'dbVar'}->do("DELETE FROM variation_feature WHERE seq_region_end = -1");
