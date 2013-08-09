@@ -54,6 +54,7 @@ sub fetch_input {
     unless($self->required_param('create_working_tables') == 0){
         create_working_tables( $var_dba);
     }
+
     if($self->required_param('create_map_table') ==1){
         ### create temp table to hold number of mapping to reference genome
         create_map_weight_table($core_dba,$var_dba);
@@ -209,13 +210,22 @@ sub create_working_tables{
                         genotype_code_id int(11) unsigned NOT NULL AUTO_INCREMENT,
                         allele_1 varchar(30000) NOT NULL,
                         allele_2 varchar(30000) NOT NULL,
+                        phased tinyint(2) unsigned DEFAULT NULL,
                         PRIMARY KEY ( genotype_code_id ),
-                        UNIQUE KEY genotype_idx (allele_1 (500),allele_2(500))
+                        UNIQUE KEY genotype_idx (allele_1 (490),allele_2(490),phased)
                        )});
 
-  # add basic genotypes to genotype_code_tmp first - smaller numbers compress better
-  $var_dba->dbc->do(qq{ INSERT IGNORE INTO genotype_code_tmp (allele_1, allele_2) 
-                        SELECT ac1.allele, ac2.allele 
+  # add basic genotypes to genotype_code_tmp first - smaller numbers compress better - phased for 1KG
+  $var_dba->dbc->do(qq{ INSERT IGNORE INTO genotype_code_tmp (allele_1, allele_2, phased) 
+                        SELECT ac1.allele, ac2.allele, 1 
+                        FROM allele_code ac1, allele_code ac2 
+                        WHERE ac1.allele_code_id < 5 AND ac2.allele_code_id < 5
+                        ORDER BY ac1.allele_code_id, ac1.allele_code_id + ac2.allele_code_id
+                       });
+
+  # add basic genotypes to genotype_code_tmp first - smaller numbers compress better - phasing unknown
+  $var_dba->dbc->do(qq{ INSERT IGNORE INTO genotype_code_tmp (allele_1, allele_2, phased ) 
+                        SELECT ac1.allele, ac2.allele, 0
                         FROM allele_code ac1, allele_code ac2 
                         ORDER BY ac1.allele_code_id, ac1.allele_code_id + ac2.allele_code_id
                        });
@@ -293,18 +303,20 @@ sub create_map_weight_table{
     my $var_dba   = shift;
 
     #### is it better to use not in () or temp columns??
-    my $ref_ext_sth = $core_dba->dbc->prepare(qq [select sra.seq_region_id 
-                                                  from seq_region_attrib sra, attrib_type at 
-                                                  where sra.attrib_type_id=at.attrib_type_id 
-                                                  and at.name="Non Reference"]);
+    my $ref_ext_sth = $core_dba->dbc->prepare(qq [ select sr.seq_region_id 
+                                                   from seq_region sr, coord_system cs
+                                                   where sr.coord_system_id = cs.coord_system_id  
+                                                   and cs.rank = 1
+                                                   and seq_region_id not in (select seq_region_id from seq_region_attrib where attrib_type_id = 16 )
+                                                  ]);
     
      $ref_ext_sth->execute()|| die "Failed to extract ref/non ref status for seq_regions\n";
-     my $non_ref = $ref_ext_sth->fetchall_arrayref();
+     my $is_ref = $ref_ext_sth->fetchall_arrayref();
     
-    $var_dba->dbc->do(qq{alter table seq_region add column is_reference Tinyint(1) default 1});
-    my $sr_status_sth = $var_dba->dbc->prepare(qq[update seq_region set is_reference = 0 where seq_region_id  =?]);
+    $var_dba->dbc->do(qq{alter table seq_region add column is_reference Tinyint(1) default 0});
+    my $sr_status_sth = $var_dba->dbc->prepare(qq[update seq_region set is_reference = 1 where seq_region_id  =?]);
 
-    foreach my $srid (@{$non_ref}){
+    foreach my $srid (@{$is_ref}){
        $sr_status_sth->execute($srid->[0]) || die "ERROR updating seq regions\n";
     }
 
@@ -314,7 +326,7 @@ sub create_map_weight_table{
     $var_dba->dbc->do(qq[ CREATE TABLE tmp_map_weight_working
                            SELECT variation_id, count(*) as count
                            FROM   variation_feature,seq_region
-                           WHERE  variation_feature.seq_region_id = seq_region.seq_region_id
+                            WHERE  variation_feature.seq_region_id = seq_region.seq_region_id
                            AND    seq_region.is_reference =1
                            GROUP BY variation_id]
               );
@@ -322,14 +334,7 @@ sub create_map_weight_table{
     $var_dba->dbc->do(qq{ALTER TABLE tmp_map_weight_working 
                          ADD UNIQUE INDEX variation_idx(variation_id)});
 
-    #add additional variation_ids only appear in haplotype chromosomes
-    $var_dba->dbc->do(qq{INSERT INTO tmp_map_weight_working
-                         SELECT variation_id, count(*) as count
-                         FROM   variation_feature,seq_region
-                         WHERE  variation_feature.seq_region_id = seq_region.seq_region_id
-                         AND    seq_region.is_reference =0
-                         GROUP BY variation_id});
-    
+ 
     ## clean up seq_region table
     $var_dba->dbc->do(qq{alter table seq_region drop column is_reference});
 
