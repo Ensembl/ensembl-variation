@@ -4,7 +4,7 @@ CREATE TABLE individual_synonym (
   synonym_id int(10) unsigned not null auto_increment,
   individual_id int(10) unsigned not null,
   source_id int(10) unsigned not null,
-  name int(10),
+  name varchar(255),
 
   primary key(synonym_id),
   key individual_idx (individual_id),
@@ -20,7 +20,7 @@ CREATE TABLE population_synonym (
   synonym_id int(10) unsigned not null auto_increment,
   population_id int(10) unsigned not null,
   source_id int(10) unsigned not null,
-  name int(10),
+  name varchar(255),
 
   primary key(synonym_id),
   key population_idx (population_id),
