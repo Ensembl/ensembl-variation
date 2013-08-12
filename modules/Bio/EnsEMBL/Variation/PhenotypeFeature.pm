@@ -95,21 +95,21 @@ our %TYPES = (
   Arg [-STUDY_DESCRIPTION] :
     string - description of study reporting the association
   Arg [-ATTRIBS] :
-	hashref - contains key-value pairs of additional data e.g. p-value, risk
-	allele, associated gene
-	
+  hashref - contains key-value pairs of additional data e.g. p-value, risk
+  allele, associated gene
+  
   Example    :
   my $pf = Bio::EnsEMBL::Variation::PhenotypeFeature->new(
-		-slice     => $slice,
-		-start     => 100,
-		-end       => 100,
-		-phenotype => $phenotype,
-		-type      => 'Variation',
-		-object    => $variation,
-		-source    => 'OMIM',
-		-attribs   => {
-			p_value => 0.0000023,
-		},
+    -slice     => $slice,
+    -start     => 100,
+    -end       => 100,
+    -phenotype => $phenotype,
+    -type      => 'Variation',
+    -object    => $variation,
+    -source    => 'OMIM',
+    -attribs   => {
+      p_value => 0.0000023,
+    },
   );
 
   Description: Constructor. Instantiates a new PhenotypeFeature object.
@@ -127,38 +127,38 @@ sub new {
 
   my ($dbID,$adaptor,$phenotype_id,$phenotype,$type,$object,$object_id,$source,$study,$study_id,$is_significant,$attribs) =
     rearrange([qw(
-			dbID ADAPTOR _PHENOTYPE_ID PHENOTYPE
-			TYPE OBJECT _OBJECT_ID
-			SOURCE STUDY _STUDY_ID
-			IS_SIGNIFICANT
-			ATTRIBS
-		)], @_);
+      dbID ADAPTOR _PHENOTYPE_ID PHENOTYPE
+      TYPE OBJECT _OBJECT_ID
+      SOURCE STUDY _STUDY_ID
+      IS_SIGNIFICANT
+      ATTRIBS
+    )], @_);
 
   $self->{'dbID'} = $dbID;
   $self->{'adaptor'} = $adaptor;
   
   # can get phenotype or phenotype ID
   if(defined($phenotype)) {
-		$self->{phenotype} = $phenotype;
+    $self->{phenotype} = $phenotype;
   }
   elsif(defined($phenotype_id)) {
-		$self->{_phenotype_id} = $phenotype_id;
+    $self->{_phenotype_id} = $phenotype_id;
   }
   
   # can get object or object ID
   if(defined($object)) {
-		$self->{object} = $object;
+    $self->{object} = $object;
   }
   elsif(defined($object_id)) {
-		$self->{_object_id} = $object_id;
+    $self->{_object_id} = $object_id;
   }
   
   # can get study or study ID
   if(defined($study)) {
-		$self->{study} = $study;
+    $self->{study} = $study;
   }
   elsif(defined($study_id)) {
-		$self->{_study_id} = $study_id;
+    $self->{_study_id} = $study_id;
   }
   
   $self->{type}           = $type;
@@ -199,9 +199,9 @@ sub phenotype {
   
   # get
   if(!defined($self->{phenotype}) && defined($self->{_phenotype_id})) {
-		my $pa = $self->adaptor->db->get_PhenotypeAdaptor();
-		
-		$self->{phenotype} = $pa->fetch_by_dbID($self->{_phenotype_id});
+    my $pa = $self->adaptor->db->get_PhenotypeAdaptor();
+    
+    $self->{phenotype} = $pa->fetch_by_dbID($self->{_phenotype_id});
   }
   
   return $self->{phenotype};
@@ -213,8 +213,8 @@ sub phenotype {
   Arg [1]    : (optional) Bio::EnsEMBL::* object $ph
   Example    : $object = $pf->object();
   Description: Getter/Setter for the object associated with this annotation.
-	             PhenotypeFeatures may be associated with several Ensembl object
-							 types e.g. Variation, StruturalVariation, Gene.
+               PhenotypeFeatures may be associated with several Ensembl object
+               types e.g. Variation, StruturalVariation, Gene.
                If not set, and this PhenotypeFeature has an associated adaptor
                an attempt will be made to lazy-load the object from the
                database.
@@ -229,31 +229,31 @@ sub object {
   my ($self, $object) = @_;
   
   # set
-	if(defined($object)) {
-		my $type = (split '::', ref($object))[-1];
-		throw("$type is not a valid object type, valid types are: ".(join ", ", sort %TYPES)) unless defined $type and defined($TYPES{$type});
-		
-		$self->{object} = $object;
-		
-		# update type
-		$self->type($type);
-	}
+  if(defined($object)) {
+    my $type = (split '::', ref($object))[-1];
+    throw("$type is not a valid object type, valid types are: ".(join ", ", sort %TYPES)) unless defined $type and defined($TYPES{$type});
+    
+    $self->{object} = $object;
+    
+    # update type
+    $self->type($type);
+  }
   
   # get
   if(!defined($self->{object})) {
-		throw("No object or internal identifier found for PhenotypeFeature") unless defined($self->{_object_id});
-		
-		# get object type and correct adaptor
-		my $type = $self->type;
-		my $method = 'get_'.$type.'Adaptor';
-		my $adaptor;
-		if ($type eq 'Gene') {
-			$adaptor = $self->adaptor->db->dnadb->$method;
-		} else {
-			$adaptor = $self->adaptor->db->dnadb->$method;
-		}
-		# fetch the object
-		$self->{object} = $adaptor->fetch_by_stable_id($self->{_object_id});
+    throw("No object or internal identifier found for PhenotypeFeature") unless defined($self->{_object_id});
+    
+    # get object type and correct adaptor
+    my $type = $self->type;
+    my $method = 'get_'.$type.'Adaptor';
+    my $adaptor;
+    if ($type eq 'Gene') {
+      $adaptor = $self->adaptor->db->dnadb->$method;
+    } else {
+      $adaptor = $self->adaptor->db->$method;
+    }
+    # fetch the object
+    $self->{object} = $adaptor->fetch_by_stable_id($self->{_object_id});
   }
   
   return $self->{object};
@@ -265,7 +265,7 @@ sub object {
   Arg [1]    : (optional) string $object_id
   Example    : $object_id = $pf->object_id();
   Description: Getter/Setter for the ID of the object associated with this
-	             annotation.
+               annotation.
   Returntype : string
   Exceptions : none
   Caller     : general
@@ -274,10 +274,10 @@ sub object {
 =cut
 
 sub object_id {
-	my ($self, $object_id) = @_;
-	
-	$self->{_object_id} = $object_id if defined($object_id);
-	return $self->{_object_id};
+  my ($self, $object_id) = @_;
+  
+  $self->{_object_id} = $object_id if defined($object_id);
+  return $self->{_object_id};
 }
 
 
@@ -289,7 +289,7 @@ sub object_id {
                If not set, and this PhenotypeFeature has an associated adaptor
                an attempt will be made to lazy-load the variation from the
                database. Can only be called when $pf->type() is 'Variation'; for
-							 PhenotypeFeatures with other object types, use $pf->object();
+               PhenotypeFeatures with other object types, use $pf->object();
   Returntype : Bio::EnsEMBL::Variation::Variation
   Exceptions : throw on incorrect argument
   Caller     : general
@@ -332,12 +332,12 @@ sub variation {
 
 sub type {
   my $self = shift;
-	my $type = shift;
-	
-	if(defined($type)) {
-		throw("$type is not a valid object type, valid types are: ".(join ", ", sort %TYPES)) unless defined($TYPES{$type});
-		$self->{'type'} = $type;
-	}
+  my $type = shift;
+  
+  if(defined($type)) {
+    throw("$type is not a valid object type, valid types are: ".(join ", ", sort %TYPES)) unless defined($TYPES{$type});
+    $self->{'type'} = $type;
+  }
   
   return $self->{'type'};
 }
@@ -349,8 +349,8 @@ sub type {
                The new value to set the is_significant attribute to
   Example    : $is_significant = $obj->is_significant()
   Description: Getter/Setter for the is_significant attribute - identifies
-	             whether this phenotype association should be considered as
-							 significant.
+               whether this phenotype association should be considered as
+               significant.
   Returntype : boolean
   Exceptions : none
   Caller     : general
@@ -408,10 +408,10 @@ sub study {
   
   # get
   if(!exists($self->{study})) {
-		if(!defined($self->{_study_id})) {
+    if(!defined($self->{_study_id})) {
       $self->{study} = undef;
     }
-		
+    
     else {
       my $pa = $self->adaptor->db->get_StudyAdaptor();
       
@@ -438,10 +438,10 @@ sub study {
 
 sub study_name {
   my $self = shift;
-	
-	my $study = $self->study;
-	return unless defined $study;
-	
+  
+  my $study = $self->study;
+  return unless defined $study;
+  
   $study->name(@_) if(@_);
   return $study->name;
 }
@@ -462,10 +462,10 @@ sub study_name {
 
 sub study_description {
   my $self = shift;
-	
-	my $study = $self->study;
-	return unless defined $study;
-	
+  
+  my $study = $self->study;
+  return unless defined $study;
+  
   $study->description(@_) if(@_);
   return $study->description;
 }
@@ -487,10 +487,10 @@ sub study_description {
 
 sub external_reference {
   my $self = shift;
-	
-	my $study = $self->study;
-	return unless defined $study;
-	
+  
+  my $study = $self->study;
+  return unless defined $study;
+  
   $study->external_reference(@_) if(@_);
   return $study->external_reference;
 }
@@ -502,7 +502,7 @@ sub external_reference {
                The new value to set the study_url attribute to
   Example    : $url = $obj->study_url()
   Description: Getter/Setter for the study_url attribute. This is the link to
-	             the website where the data are stored.
+               the website where the data are stored.
   Returntype : string
   Exceptions : none
   Caller     : general
@@ -512,10 +512,10 @@ sub external_reference {
 
 sub study_url {
   my $self = shift;
-	
-	my $study = $self->study;
-	return unless defined $study;
-	
+  
+  my $study = $self->study;
+  return unless defined $study;
+  
   $study->url(@_) if(@_);
   return $study->url;
 }
@@ -524,7 +524,7 @@ sub study_url {
 =head2 associated_studies
   Example    : $name = $obj->associate_studies()
   Description: Getter/Setter for the associated_studies attribute 
-	            (e.g. EGA studies can be associated to NHGRI studies). 
+              (e.g. EGA studies can be associated to NHGRI studies). 
   Returntype : reference to list of Bio::EnsEMBL::Variation::Study
   Exceptions : none
   Caller     : general
@@ -534,7 +534,7 @@ sub study_url {
 
 sub associated_studies {
   my $self = shift;
-	return $self->study ? $self->study->associated_studies : undef;
+  return $self->study ? $self->study->associated_studies : undef;
 }
 
 
@@ -555,7 +555,7 @@ sub get_all_attributes {
   my $self = shift;
   
   if(!defined($self->{attribs})) {
-	$self->{attribs} = $self->adaptor->_fetch_attribs_by_dbID($self->dbID);
+  $self->{attribs} = $self->adaptor->_fetch_attribs_by_dbID($self->dbID);
   }
   
   return $self->{attribs};
@@ -563,12 +563,12 @@ sub get_all_attributes {
 
 
 sub _set_attribute {
-	my $self  = shift;
-	my $key   = shift;
-	my $value = shift;
-	
-	$self->get_all_attributes;
-	$self->{attribs}->{$key} = $value;
+  my $self  = shift;
+  my $key   = shift;
+  my $value = shift;
+  
+  $self->get_all_attributes;
+  $self->{attribs}->{$key} = $value;
 }
 
 
@@ -588,10 +588,10 @@ sub _set_attribute {
 
 sub variation_names {
   my $self = shift;
-	my $new  = shift;
-	
-	$self->_set_attribute('variation_names', $new) if defined($new);
-	
+  my $new  = shift;
+  
+  $self->_set_attribute('variation_names', $new) if defined($new);
+  
   return defined($self->get_all_attributes->{'variation_names'}) ? $self->get_all_attributes->{'variation_names'} : undef;
 }
 
@@ -612,10 +612,10 @@ sub variation_names {
 
 sub associated_gene {
   my $self = shift;
-	my $new  = shift;
-	
-	$self->_set_attribute('associated_gene', $new) if defined($new);
-	
+  my $new  = shift;
+  
+  $self->_set_attribute('associated_gene', $new) if defined($new);
+  
   return defined($self->get_all_attributes->{'associated_gene'}) ? $self->get_all_attributes->{'associated_gene'} : undef;
 }
 
@@ -633,10 +633,10 @@ sub associated_gene {
 
 sub risk_allele {
   my $self = shift;
-	my $new  = shift;
-	
-	$self->_set_attribute('risk_allele', $new) if defined($new);
-	
+  my $new  = shift;
+  
+  $self->_set_attribute('risk_allele', $new) if defined($new);
+  
   return defined($self->get_all_attributes->{'risk_allele'}) ? $self->get_all_attributes->{'risk_allele'} : undef;
 }
 
@@ -654,10 +654,10 @@ sub risk_allele {
 
 sub p_value {
   my $self = shift;
-	my $new  = shift;
-	
-	$self->_set_attribute('p_value', $new) if defined($new);
-	
+  my $new  = shift;
+  
+  $self->_set_attribute('p_value', $new) if defined($new);
+  
   return defined($self->get_all_attributes->{'p_value'}) ? $self->get_all_attributes->{'p_value'} : undef;
 }
 
@@ -673,12 +673,12 @@ sub p_value {
 =cut
 
 sub clinical_significance {
-	my $self = shift;
-	my $new  = shift;
-	
-	$self->_set_attribute('dbsnp_clin_sig', $new) if defined($new);
-	
-	return defined($self->get_all_attributes->{'dbsnp_clin_sig'}) ? $self->get_all_attributes->{'dbsnp_clin_sig'} : undef;
+  my $self = shift;
+  my $new  = shift;
+  
+  $self->_set_attribute('dbsnp_clin_sig', $new) if defined($new);
+  
+  return defined($self->get_all_attributes->{'dbsnp_clin_sig'}) ? $self->get_all_attributes->{'dbsnp_clin_sig'} : undef;
 }
 
 
@@ -694,12 +694,12 @@ sub clinical_significance {
 =cut
 
 sub external_id {
-	my $self = shift;
-	my $new  = shift;
-	
-	$self->_set_attribute('external_id', $new) if defined($new);
-	
-	return defined($self->get_all_attributes->{'external_id'}) ? $self->get_all_attributes->{'external_id'} : undef;
+  my $self = shift;
+  my $new  = shift;
+  
+  $self->_set_attribute('external_id', $new) if defined($new);
+  
+  return defined($self->get_all_attributes->{'external_id'}) ? $self->get_all_attributes->{'external_id'} : undef;
 }
 
 =head2 allele_symbol
@@ -714,12 +714,12 @@ sub external_id {
 =cut
 
 sub allele_symbol {
-	my $self = shift;
-	my $new  = shift;
-	
-	$self->_set_attribute('allele_symbol', $new) if defined($new);
-	
-	return defined($self->get_all_attributes->{'allele_symbol'}) ? $self->get_all_attributes->{'allele_symbol'} : undef;
+  my $self = shift;
+  my $new  = shift;
+  
+  $self->_set_attribute('allele_symbol', $new) if defined($new);
+  
+  return defined($self->get_all_attributes->{'allele_symbol'}) ? $self->get_all_attributes->{'allele_symbol'} : undef;
 }
 
 =head2 allele_accession_id
@@ -734,12 +734,12 @@ sub allele_symbol {
 =cut
 
 sub allele_accession_id {
-	my $self = shift;
-	my $new  = shift;
-	
-	$self->_set_attribute('allele_accession_id', $new) if defined($new);
-	
-	return defined($self->get_all_attributes->{'allele_accession_id'}) ? $self->get_all_attributes->{'allele_accession_id'} : undef;
+  my $self = shift;
+  my $new  = shift;
+  
+  $self->_set_attribute('allele_accession_id', $new) if defined($new);
+  
+  return defined($self->get_all_attributes->{'allele_accession_id'}) ? $self->get_all_attributes->{'allele_accession_id'} : undef;
 }
 
 =head2 marker_accession_id
@@ -754,12 +754,12 @@ sub allele_accession_id {
 =cut
 
 sub marker_accession_id {
-	my $self = shift;
-	my $new  = shift;
-	
-	$self->_set_attribute('marker_accession_id', $new) if defined($new);
-	
-	return defined($self->get_all_attributes->{'marker_accession_id'}) ? $self->get_all_attributes->{'marker_accession_id'} : undef;
+  my $self = shift;
+  my $new  = shift;
+  
+  $self->_set_attribute('marker_accession_id', $new) if defined($new);
+  
+  return defined($self->get_all_attributes->{'marker_accession_id'}) ? $self->get_all_attributes->{'marker_accession_id'} : undef;
 }
 
 =head2 pipeline_name
@@ -774,12 +774,12 @@ sub marker_accession_id {
 =cut
 
 sub pipeline_name {
-	my $self = shift;
-	my $new  = shift;
-	
-	$self->_set_attribute('pipeline_name', $new) if defined($new);
-	
-	return defined($self->get_all_attributes->{'pipeline_name'}) ? $self->get_all_attributes->{'pipeline_name'} : undef;
+  my $self = shift;
+  my $new  = shift;
+  
+  $self->_set_attribute('pipeline_name', $new) if defined($new);
+  
+  return defined($self->get_all_attributes->{'pipeline_name'}) ? $self->get_all_attributes->{'pipeline_name'} : undef;
 }
 
 =head2 procedure_name
@@ -794,12 +794,12 @@ sub pipeline_name {
 =cut
 
 sub procedure_name {
-	my $self = shift;
-	my $new  = shift;
-	
-	$self->_set_attribute('procedure_name', $new) if defined($new);
-	
-	return defined($self->get_all_attributes->{'procedure_name'}) ? $self->get_all_attributes->{'procedure_name'} : undef;
+  my $self = shift;
+  my $new  = shift;
+  
+  $self->_set_attribute('procedure_name', $new) if defined($new);
+  
+  return defined($self->get_all_attributes->{'procedure_name'}) ? $self->get_all_attributes->{'procedure_name'} : undef;
 }
 
 =head2 parameter_name
@@ -814,12 +814,12 @@ sub procedure_name {
 =cut
 
 sub parameter_name {
-	my $self = shift;
-	my $new  = shift;
-	
-	$self->_set_attribute('parameter_name', $new) if defined($new);
-	
-	return defined($self->get_all_attributes->{'parameter_name'}) ? $self->get_all_attributes->{'parameter_name'} : undef;
+  my $self = shift;
+  my $new  = shift;
+  
+  $self->_set_attribute('parameter_name', $new) if defined($new);
+  
+  return defined($self->get_all_attributes->{'parameter_name'}) ? $self->get_all_attributes->{'parameter_name'} : undef;
 }
 
 =head2 project_name
@@ -834,12 +834,12 @@ sub parameter_name {
 =cut
 
 sub project_name {
-	my $self = shift;
-	my $new  = shift;
-	
-	$self->_set_attribute('project_name', $new) if defined($new);
-	
-	return defined($self->get_all_attributes->{'project_name'}) ? $self->get_all_attributes->{'project_name'} : undef;
+  my $self = shift;
+  my $new  = shift;
+  
+  $self->_set_attribute('project_name', $new) if defined($new);
+  
+  return defined($self->get_all_attributes->{'project_name'}) ? $self->get_all_attributes->{'project_name'} : undef;
 }
 
 =head2 project_fullname
@@ -854,12 +854,12 @@ sub project_name {
 =cut
 
 sub project_fullname {
-	my $self = shift;
-	my $new  = shift;
-	
-	$self->_set_attribute('project_fullname', $new) if defined($new);
-	
-	return defined($self->get_all_attributes->{'project_fullname'}) ? $self->get_all_attributes->{'project_fullname'} : undef;
+  my $self = shift;
+  my $new  = shift;
+  
+  $self->_set_attribute('project_fullname', $new) if defined($new);
+  
+  return defined($self->get_all_attributes->{'project_fullname'}) ? $self->get_all_attributes->{'project_fullname'} : undef;
 }
 
 =head2 strain
@@ -884,8 +884,8 @@ sub strain {
     } 
     $self->{'strain'} = shift;
   } elsif ( !defined($self->{'strain'}) && $self->{'adaptor'} ) {
-    $self->{'strain_id'} = $self->get_all_attributes->{'strain_id'};	
-	# lazy-load from database on demand
+    $self->{'strain_id'} = $self->get_all_attributes->{'strain_id'};  
+  # lazy-load from database on demand
     my $ia = $self->{'adaptor'}->db()->get_IndividualAdaptor();
     $self->{'strain'} = $ia->fetch_by_dbID($self->{'strain_id'});
   } else {
@@ -895,14 +895,45 @@ sub strain {
   return $self->{'strain'};
 }
 
+=head2 odds_ratio
 
+  Example    : $odds_ratio = $obj->odds_ratio()
+  Description: Getter/setter for odds_ratio attribute. This is only stored for human phenotype data.
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
 
+=cut
 
+sub odds_ratio {
+  my $self = shift;
+  my $new  = shift;
+  
+  $self->_set_attribute('odds_ratio', $new) if defined($new);
+  
+  return defined($self->get_all_attributes->{'odds_ratio'}) ? $self->get_all_attributes->{'odds_ratio'} : undef;
+}
 
+=head2 beta_coefficient
 
+  Example    : $beta_coef = $obj->beta_coefficient()
+  Description: Getter/setter for beta_coef attribute. This is only stored for human phenotype data.
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
 
+=cut
 
-
+sub beta_coefficient {
+  my $self = shift;
+  my $new  = shift;
+  
+  $self->_set_attribute('beta_coef', $new) if defined($new);
+  
+  return defined($self->get_all_attributes->{'beta_coef'}) ? $self->get_all_attributes->{'beta_coef'} : undef;
+}
 
 
 1;
