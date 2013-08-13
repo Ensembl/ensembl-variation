@@ -12,6 +12,8 @@ use warnings;
 use Getopt::Long;
 use Bio::EnsEMBL::Registry;
 
+our $SOURCENAME = 'dbSNP_ClinVar';
+
 my $registry_file;
 
 GetOptions ("registry_file=s"       => \$registry_file);
@@ -46,7 +48,7 @@ sub update_variation{
     warn "starting     update_variation\n";
     my $clinvar_ext_sth = $dbh->prepare(qq[ select variation.variation_id, phenotype_feature_attrib.value
                                             from   variation, phenotype_feature, phenotype_feature_attrib, source
-                                            where source.name ='dbSNP_ClinVar' 
+                                            where source.name = ?
                                             and   phenotype_feature.source_id = source.source_id
                                             and   phenotype_feature.phenotype_feature_id = phenotype_feature_attrib.phenotype_feature_id
                                             and   phenotype_feature_attrib.attrib_type_id = 10
@@ -62,7 +64,7 @@ sub update_variation{
 
 
 
-    $clinvar_ext_sth->execute();
+    $clinvar_ext_sth->execute( $SOURCENAME );
     my $var_list = $clinvar_ext_sth->fetchall_arrayref();
 
     my %assoc;  ## variants to put in set
@@ -151,12 +153,15 @@ sub fix_allele{
     my $allele_upd_sth = $dbh->prepare(qq[ update allele 
                                            set frequency = \\N, population_id = \\N 
                                            where population_id = (select population_id from population where name ='clinvar')
-                                           and variation_id in (select variation_id from variation where source_id = 32)
+                                           and variation_id in ( select variation.variation_id 
+                                                                 from variation,source 
+                                                                 where source.name = ?
+                                                                 and variation.source_id =source.source_id)
                                            and frequency = 0
                                         ]);
 
 
-    $allele_upd_sth->execute();
+    $allele_upd_sth->execute($SOURCENAME );
 }
 
 ## check for unsupported characters in phenotype names 
@@ -172,7 +177,7 @@ sub check_phenotype_names{
 
         next unless defined $l->[0];
 	my $full = $l->[0];
-	$l->[0] =~ s/\w+|\-|\,|\(|\)|\s+|\/|\>|\<|\.|\;|\+|\'|\:|\@|\*|\%//g;
+	$l->[0] =~ s/\w+|\-|\,|\(|\)|\s+|\/|\.|\;|\+|\'|\:|\@|\*|\%//g;
 
 	warn "Phenotype : $full looks suspect\n" if(length($l->[0]) >0);
     }
@@ -188,10 +193,12 @@ sub check_counts{
                                                where variation_set.variation_set_id = variation_set_variation.variation_set_id
                                                and   variation_set.name ='clinically associated' ]);
 
-   my $pheno_count_ext_sth = $dbh->prepare(qq[ select count(*) from phenotype_feature where source_id = 32 ]);
+   my $pheno_count_ext_sth = $dbh->prepare(qq[ select count(*) from phenotype_feature, source 
+                                               where source.name = ?
+                                               and source.source_id = phenotype_feature.source_id ]);
 
 
-   $pheno_count_ext_sth->execute()||die;
+   $pheno_count_ext_sth->execute( $SOURCENAME )||die;
    my $ph =  $pheno_count_ext_sth->fetchall_arrayref();
    warn "$ph->[0]->[0] phenotype_feature entries from ClinVar\n";
 
@@ -212,11 +219,15 @@ sub delete_pheno_less{
     my $pheno_ext_sth   = $dbh->prepare(qq[ select phenotype_id from phenotype where description = "." ]);
     
     my $pheno_attrib_del_sth   = $dbh->prepare(qq[ delete from phenotype_feature_attrib 
-                                                  where  phenotype_feature_id in
-                                                  (select phenotype_feature_id from phenotype_feature where source_id = ? and phenotype_id = ?)
+                                                   where  phenotype_feature_id in
+                                                    (select phenotype_feature_id from phenotype_feature 
+                                                      where source_id in (select source_id  from source where name = ? )
+                                                    and phenotype_id = ?)
                                                ]);
    
-    my $pheno_feature_del_sth   = $dbh->prepare(qq[ delete from phenotype_feature  where source_id = ? and phenotype_id = ? ]);
+    my $pheno_feature_del_sth   = $dbh->prepare(qq[ delete from phenotype_feature  
+                                                    where source_id in (select source_id  from source where name = ? )
+                                                    and phenotype_id = ? ]);
  
     #my $pheno_del_sth   = $dbh->prepare(qq[  delete from phenotype where phenotype_id = ?  ]);
 
@@ -228,8 +239,8 @@ sub delete_pheno_less{
  
     die "Error - no phenotypes called . - not cleaning up\n"  unless defined $id->[0]->[0] ;
 
-    $pheno_attrib_del_sth->execute(32, $id->[0]->[0])||die ;
-    $pheno_feature_del_sth->execute(32,$id->[0]->[0])||die ;
+    $pheno_attrib_del_sth->execute( $SOURCENAME,  $id->[0]->[0] )||die ;
+    $pheno_feature_del_sth->execute( $SOURCENAME,  $id->[0]->[0] )||die ;
 
 }
 
