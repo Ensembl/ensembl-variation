@@ -2936,7 +2936,8 @@ sub regions_from_hash {
             
             foreach my $chunk(keys %{$vf_hash->{$chr}}) {
                 foreach my $pos(keys %{$vf_hash->{$chr}{$chunk}}) {
-                    my ($s, $e) = ($pos - MAX_DISTANCE_FROM_TRANSCRIPT, $pos + MAX_DISTANCE_FROM_TRANSCRIPT);
+                    my @tmp = sort {$a <=> $b} map {($_->{start}, $_->{end})} @{$vf_hash->{$chr}{$chunk}{$pos}};
+                    my ($s, $e) = ($tmp[0] - MAX_DISTANCE_FROM_TRANSCRIPT, $tmp[-1] + MAX_DISTANCE_FROM_TRANSCRIPT);
                     
                     my $low = int ($s / $region_size);
                     my $high = int ($e / $region_size) + 1;
