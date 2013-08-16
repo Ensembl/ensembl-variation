@@ -198,7 +198,7 @@ sub _get_consequence_constraint {
     }
 
     if (!scalar(@cons_vals)) {
-      return undef;
+      return "consequence_types IN ('')";
     }
    
     my $id_str = join ',', @cons_vals;
@@ -244,6 +244,8 @@ sub _get_child_terms {
     my ($self, $parent_term) = @_;
 
     my $parent_obj = $self->_get_term_object($parent_term);
+    
+    return [] unless $parent_obj;
 
     my $all_terms = $parent_obj->descendants;
 
@@ -256,6 +258,8 @@ sub _get_parent_terms {
     my ($self, $child_term) = @_;
 
     my $child_obj = $self->_get_term_object($child_term);
+    
+    return [] unless $child_obj;
 
     my $all_terms = $child_obj->ancestors;
 
