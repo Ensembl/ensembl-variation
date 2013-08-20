@@ -59,7 +59,7 @@ $config->{user}     ||= 'ensro';
 $config->{port}     ||= 3306;
 $config->{dir}      ||= $ENV{'HOME'}.'/.vep/';
 $config->{command}  ||= 'perl variant_effect_predictor.pl --build all';
-$config->{mem}      ||= 12000000;
+$config->{mem}      ||= 12000;
 $config->{queue}    ||= 'normal';
 
 # check dir exists
@@ -164,8 +164,8 @@ sub dump_vep {
 			'bsub -K -J %s -M %i -R"select[mem>%i] rusage[mem=%i]" -q %s -o %s -e %s',
 			$species,
 			$config->{mem},
-			$config->{mem} / 1000,
-			$config->{mem} / 1000,
+			$config->{mem},
+			$config->{mem},
 			$config->{queue},
 			$config->{dir}.'/'.$species.'_vep_dump.farmout',
 			$config->{dir}.'/'.$species.'_vep_dump.farmerr',
