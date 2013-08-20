@@ -90,25 +90,12 @@ my %colors = ( 'version' => '#090', 'source'  => '#00F' );
 my $html_header = qq{
 <html>
 <head>
-  <meta http-equiv="CONTENT-TYPE" content="text/html; charset=utf-8" />
   <title>Variation Sources</title>
 </head>
 
 <body>
 
 <div>
-};
-
-my $horizontal_menu = qq{
-  <!-- Horizontal menu -->
-  <span style="font-weight:bold">
-    <a href="index.html">About Ensembl Variation</a> |
-    <a href="data_description.html">Data Description</a> | 
-    <a href="predicted_data.html">Predicted Data</a> |
-    <a href="database.html">Database Description</a> | 
-    <a href="/info/docs/api/variation/index.html">Perl API</a> |
-    <a href="vep/index.html">Variant Effect Predictor</a>
-  </span>
 };
 
 my $html_title = qq{
@@ -202,7 +189,6 @@ my $html_menu = create_menu();
 open  HTML, "> $html_file" or die "Can't open $html_file : $!";
 print HTML $html_header."\n";
 print HTML $html_menu."\n";
-print HTML $horizontal_menu."\n";
 print HTML $html_title."\n";
 print HTML $html_content."\n";
 print HTML $html_footer."\n";
