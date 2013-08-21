@@ -82,6 +82,7 @@ use vars qw(@ISA @EXPORT_OK);
 @ISA = qw(Exporter);
 
 @EXPORT_OK = qw(
+    &detect_format
     &parse_line
     &vf_to_consequences
     &validate_vf
@@ -132,7 +133,7 @@ our @VEP_WEB_CONFIG = qw(
     check_existing
     coding_only
     core_type
-    hgnc
+    symbol
     protein
     hgvs
     terms
@@ -1181,7 +1182,12 @@ sub vf_list_to_cons {
     my @non_variants = grep {$_->{non_variant}} @$listref;
     
     # check existing VFs
-    &check_existing_hash($config, \%vf_hash) if defined($config->{check_existing});# && scalar @$listref > 10;
+    if(defined($config->{'cache_var_type'}) && $config->{'cache_var_type'} eq 'tabix') {
+      check_existing_tabix($config, $listref) if defined($config->{check_existing});
+    }
+    else {
+      check_existing_hash($config, \%vf_hash) if defined($config->{check_existing});
+    }
     
     my $new_listref = [];
     
@@ -1276,6 +1282,11 @@ sub vf_list_to_cons {
                     $line->[7] = '';
                 }
                 
+                # nuke existing CSQ field
+                if($line->[7] =~ /CSQ\=/ && !defined($config->{keep_csq})) {
+                  $line->[7] =~ s/CSQ\=\S+?\;?(\s|$)/$1/;
+                }
+                
                 # get all the lines the normal way                
                 # and process them into VCF-compatible string
                 my $string = 'CSQ=';
@@ -1344,6 +1355,60 @@ sub vf_list_to_cons {
                 push @return, \$tmp;
             }
             
+            # XML output for Solr
+            elsif(defined($config->{solr})) {
+                eval q{
+                  use CGI qw(escape);
+                };
+                
+                foreach my $con(@{vf_to_consequences($config, $vf)}) {
+                    my $line = "<doc>\n";
+                    
+                    # create unique ID
+                    $line .= sprintf(qq{  <field name="id">%s_%i_%i_%s_%s</field>\n}, $vf->{chr}, $vf->{start}, $vf->{end}, $con->{Allele} || '-', $con->{Feature} || '-');
+                    
+                    # add proper location fields that can be indexed
+                    $line .= sprintf(qq{  <field name="chr">%s</field>\n}, $vf->{chr});
+                    $line .= sprintf(qq{  <field name="start">%s</field>\n}, $vf->{start});
+                    $line .= sprintf(qq{  <field name="end">%s</field>\n}, $vf->{end});
+                    
+                    foreach my $col(@{$config->{fields}}) {
+                        
+                        # search for data in main line hash as well as extra field
+                        my $val = defined $con->{$col} ? $con->{$col} : $con->{Extra}->{$col};
+                        next unless defined($val) && $val ne '-';
+                        
+                        # some have multiple values
+                        foreach my $data(split(',', $val)) {
+                          
+                          # split SIFT and PolyPhen
+                          if($col eq 'SIFT' || $col eq 'PolyPhen') {
+                            if($data =~ m/([a-z\_]+)?\(?([\d\.]+)?\)?/i) {
+                              my ($pred, $score) = ($1, $2);
+                              $line .= sprintf(qq{  <field name="%s">%s</field>\n}, $col.'_pred', $pred) if $pred;
+                              $line .= sprintf(qq{  <field name="%s">%s</field>\n}, $col.'_score', $score) if defined($score);
+                            }
+                          }
+                          
+                          # GMAF
+                          elsif($col eq 'GMAF') {
+                            if($data =~ m/([\d\.]+)/) {
+                              $line .= sprintf(qq{  <field name="%s">%s</field>\n}, $col, $1) if defined($1);
+                            }
+                          }
+                          
+                          else {
+                            $line .= sprintf(qq{  <field name="%s">%s</field>\n}, $col, escape($data)) if defined($data);
+                          }
+                        }
+                    }
+                    
+                    $line .= "</doc>\n";
+                    
+                    push @return, \$line;
+                }
+            }
+            
             # normal output
             else {
                 push @return, @{vf_to_consequences($config, $vf)};
@@ -1376,6 +1441,12 @@ sub vf_to_consequences {
     return svf_to_consequences($config, $vf) if $vf->isa('Bio::EnsEMBL::Variation::StructuralVariationFeature'); 
     
     my @return = ();
+    
+    # get allele nums
+    if(defined($config->{allele_number})) {
+      my @alleles = split /\//, $vf->allele_string || '';
+      %{$vf->{_allele_nums}} = map {$alleles[$_] => $_} (0..$#alleles);
+    }
     
     # method name for consequence terms
     my $term_method = $config->{terms}.'_term';
@@ -1626,9 +1697,16 @@ sub svf_to_consequences {
         };
         
         if($svo->isa('Bio::EnsEMBL::Variation::BaseTranscriptVariation')) {
-            $base_line->{cDNA_position}    = format_coords($svo->cdna_start, $svo->cdna_end);
-            $base_line->{CDS_position}     = format_coords($svo->cds_start, $svo->cds_end);
-            $base_line->{Protein_position} = format_coords($svo->translation_start, $svo->translation_end);
+            $base_line->{cDNA_position}    = format_coords($svo->cdna_start, $svo->cdna_end).
+              (defined($config->{total_length}) ? '/'.$feature->length : '');
+            $base_line->{CDS_position}     = format_coords($svo->cds_start, $svo->cds_end).
+              (defined($config->{total_length}) && $feature->{_variation_effect_feature_cache}->{translateable_seq} ?
+                '/'.length($feature->{_variation_effect_feature_cache}->{translateable_seq}) : ''
+              );
+            $base_line->{Protein_position} = format_coords($svo->translation_start, $svo->translation_end).
+              (defined($config->{total_length}) && $feature->{_variation_effect_feature_cache}->{peptide} ?
+                '/'.length($feature->{_variation_effect_feature_cache}->{peptide}) : ''
+              );
         }
         
         foreach my $svoa(@{$svo->get_all_StructuralVariationOverlapAlleles}) {
@@ -1726,9 +1804,16 @@ sub tva_to_line {
     my $base_line = {
         Feature_type     => 'Transcript',
         Feature          => (defined $t ? $t->stable_id : undef),
-        cDNA_position    => format_coords($tv->cdna_start, $tv->cdna_end),
-        CDS_position     => format_coords($tv->cds_start, $tv->cds_end),
-        Protein_position => format_coords($tv->translation_start, $tv->translation_end),
+        cDNA_position    => format_coords($tv->cdna_start, $tv->cdna_end).
+          (defined($config->{total_length}) ? '/'.$t->length : ''),
+        CDS_position     => format_coords($tv->cds_start, $tv->cds_end).
+          (defined($config->{total_length}) && $t->{_variation_effect_feature_cache}->{translateable_seq} ?
+            '/'.length($t->{_variation_effect_feature_cache}->{translateable_seq}) : ''
+          ),
+        Protein_position => format_coords($tv->translation_start, $tv->translation_end).
+          (defined($config->{total_length}) && $t->{_variation_effect_feature_cache}->{peptide} ?
+            '/'.length($t->{_variation_effect_feature_cache}->{peptide}) : ''
+          ),
         Allele           => $tva->variation_feature_seq,
         Amino_acids      => $tva->pep_allele_string,
         Codons           => $tva->display_codon_allele_string,
@@ -1749,6 +1834,9 @@ sub tva_to_line {
     if(defined $config->{hgvs}) {
         my $hgvs_t = $tva->hgvs_transcript;
         my $hgvs_p = $tva->hgvs_protein;
+        
+        # URI encode "="
+        $hgvs_p =~ s/\=/\%3D/g if $hgvs_p && !defined($config->{no_escape});
         
         $line->{Extra}->{HGVSc} = $hgvs_t if $hgvs_t;
         $line->{Extra}->{HGVSp} = $hgvs_p if $hgvs_p;
@@ -1801,6 +1889,11 @@ sub tva_to_line {
     }
     
     $line = add_extra_fields($config, $line, $tva);
+    
+    # allele number
+    if(defined($config->{allele_number})) {
+      $line->{Extra}->{ALLELE_NUM} = $tv->variation_feature->{_allele_nums}->{$tva->variation_feature_seq} || '?' if $tv->variation_feature->{_allele_nums};
+    }
     
     return $line;
 }
@@ -1871,26 +1964,23 @@ sub add_extra_fields_transcript {
     if($line->{Consequence} =~ /(up|down)stream/i) {
         $line->{Extra}->{DISTANCE} = $tv->distance_to_transcript;
     }
-
-    # HGNC
-    if(defined $config->{hgnc}) {
-        my $hgnc;
-        $hgnc = $tr->{_gene_hgnc};
+    
+    # gene symbol
+    if(defined $config->{symbol}) {
+        my $symbol;
+        $symbol = $tr->{_gene_symbol} || $tr->{_gene_hgnc};
         
-        if(!defined($hgnc)) {
+        if(!defined($symbol)) {
             if(!defined($gene)) {
                 $gene = $config->{ga}->fetch_by_transcript_stable_id($tr->stable_id);
             }
             
-            my @entries = grep {$_->database eq 'HGNC'} @{$gene->get_all_DBEntries()};
-            if(scalar @entries) {
-                $hgnc = $entries[0]->display_id;
-            }
+            $symbol = $gene->display_xref ? $gene->display_xref->display_id : undef;
         }
         
-        $hgnc = undef if defined($hgnc) && $hgnc eq '-';
+        $symbol = undef if defined($symbol) && $symbol eq '-';
         
-        $line->{Extra}->{HGNC} = $hgnc if defined($hgnc);
+        $line->{Extra}->{SYMBOL} = $symbol if defined($symbol);
     }
     
     # CCDS
@@ -2014,14 +2104,37 @@ sub init_line {
                 }
             }
         }
+        
+        # ESP MAFs?
+        if(defined($config->{maf_esp})) {
+            my @pops = qw(AA EA);
+            
+            foreach my $var(@{$vf->{existing}}) {
+                foreach my $pop(grep {defined($var->{$_})} @pops) {
+                    my $freq = $var->{$pop};
+                    $freq = '-' unless defined($freq);
+                    $line->{Extra}->{$pop.'_MAF'} =
+                        exists($line->{Extra}->{$pop.'_MAF'}) ?
+                        $line->{Extra}->{$pop.'_MAF'}.','.$freq :
+                        $freq;
+                }
+            }
+        }
     
-        # clin sig?
+        # clin sig and pubmed?
         foreach my $var(@{$vf->{existing}}) {
             if(defined($var->{clin_sig}) && $var->{clin_sig}) {
                 $line->{Extra}->{CLIN_SIG} =
                     exists($line->{Extra}->{CLIN_SIG}) ?
                     $line->{Extra}->{CLIN_SIG}.','.$var->{clin_sig} :
                     $var->{clin_sig};
+            }
+            
+            if(defined($config->{pubmed}) && defined($var->{pubmed}) && $var->{pubmed}) {
+                $line->{Extra}->{PUBMED} =
+                    exists($line->{Extra}->{PUBMED}) ?
+                    $line->{Extra}->{PUBMED}.','.$var->{pubmed} :
+                    $var->{pubmed};
             }
         }
     }
@@ -2065,6 +2178,10 @@ sub get_custom_annotation {
                     $feature->{end}   eq $vf->{end};
                     
                 $annotation->{$custom->{name}} .= $feature->{name}.',';
+                
+                foreach my $field(@{$custom->{fields}}) {
+                  $annotation->{$custom->{name}."_".$field} .= $feature->{$field}.',' if defined($feature->{$field});
+                }
             }
         }
         
@@ -2079,12 +2196,18 @@ sub get_custom_annotation {
                         $feature->{start} <= $vf->{end};
                         
                     $annotation->{$custom->{name}} .= $feature->{name}.',';
+                    foreach my $field(@{$custom->{fields}}) {
+                      $annotation->{$custom->{name}."_".$field} = $feature->{$field} if defined($feature->{$field});
+                    }
                 }
             }
         }
         
         # trim off trailing commas
         $annotation->{$custom->{name}} =~ s/\,$//g if defined($annotation->{$custom->{name}});
+        foreach my $field(@{$custom->{fields}}) {
+          $annotation->{$custom->{name}."_".$field} =~ s/\,$//g if defined($annotation->{$custom->{name}."_".$field});
+        }
     }
     
     return $annotation;
@@ -2364,7 +2487,11 @@ sub whole_genome_fetch {
     }
     
     # sort
-    @finished_vfs = sort {$a->{start} <=> $b->{start} || $a->{end} <=> $b->{end}} @finished_vfs;
+    @finished_vfs = sort {
+      ($a->{_line_number} || 1) <=> ($b->{_line_number} || 1) ||
+      $a->{start} <=> $b->{start} ||
+      $a->{end} <=> $b->{end}
+    } @finished_vfs;
     
     # clean hash
     delete $vf_hash->{$chr};
@@ -2657,8 +2784,8 @@ sub fetch_transcripts {
             my $tmp_cache;
             if(defined($config->{cache})) {
                 #$tmp_cache = (
-                #    defined($config->{tabix}) ?
-                #    load_dumped_transcript_cache_tabix($config, $chr, $region, $trim_regions) :
+                #    defined($config->{cache_tr_type}) && $config->{cache_tr_type} eq 'tabix' ?
+                #    load_dumped_transcript_cache_tabix($config, $chr, $region) :
                 #    load_dumped_transcript_cache($config, $chr, $region)
                 #);
                 $tmp_cache = load_dumped_transcript_cache($config, $chr, $region);
@@ -3027,6 +3154,73 @@ sub check_existing_hash {
     end_progress($config);
 }
 
+# gets existing VFs for a list of VFs
+sub check_existing_tabix {
+  my $config = shift;
+  my $listref = shift;
+  
+  debug("Checking for existing variations") unless defined($config->{quiet});
+  
+  # we only care about non-SVs here
+  my %by_chr;
+  push @{$by_chr{$_->{chr}}}, $_ for grep {$_->isa('Bio::EnsEMBL::Variation::VariationFeature')} @$listref;
+  
+  my $max = 200;
+  my $total = scalar @$listref;
+  my $i = 0;
+  
+  foreach my $chr(keys %by_chr) {
+    my $list = $by_chr{$chr};
+    
+    while(scalar @$list) {
+      my @tmp_list = sort {$a->{start} <=> $b->{start}} splice @$list, 0, $max;
+      progress($config, $i, $total);
+      $i += scalar @tmp_list;
+      
+      my $region_string = join " ", map {$_->{chr}.':'.($_->{start} > $_->{end} ? $_->{end}.'-'.$_->{start} : $_->{start}.'-'.$_->{end})} @tmp_list;
+      
+      my $file = get_dump_file_name($config, $chr, "all", "vars");
+      die("ERROR: Could not read from file $file\n") unless -e $file;
+      
+      open VARS, "tabix $file $region_string 2>&1 |"
+        or die "\nERROR: Could not open tabix pipe for $file\n";
+      
+      my $i = 0;
+      
+      VAR: while(<VARS>) {
+        chomp;
+        my $existing = parse_variation($config, $_);
+        #print STDERR "EX ".$existing->{variation_name}." ".$existing->{start}."\n";
+        
+        # compare to current indexed var
+        my $input = $tmp_list[$i];
+        last if !$input;
+        
+        while($existing->{start} >= $input->{start}) {
+          #print STDERR "IN ".$input->{variation_name}." ".$input->{start}."\n";
+          
+          if($existing->{start} == $input->{start}) {
+            push @{$input->{existing}}, $existing unless is_var_novel($config, $existing, $input);
+            next VAR;
+          }
+          else {
+            $i++;
+            $input = $tmp_list[$i];
+            last if !$input;
+          }
+        }
+      }
+      
+      close VARS;
+      
+      $_->{existing} ||= [] for @tmp_list;
+    }
+  }
+  
+  end_progress($config);
+}
+
+
 # gets overlapping SVs for a vf_hash
 sub check_svs_hash {
     my $config = shift;
@@ -3129,7 +3323,8 @@ sub regions_from_hash {
             
             foreach my $chunk(keys %{$vf_hash->{$chr}}) {
                 foreach my $pos(keys %{$vf_hash->{$chr}{$chunk}}) {
-                    my ($s, $e) = ($pos - MAX_DISTANCE_FROM_TRANSCRIPT, $pos + MAX_DISTANCE_FROM_TRANSCRIPT);
+                    my @tmp = sort {$a <=> $b} map {($_->{start}, $_->{end})} @{$vf_hash->{$chr}{$chunk}{$pos}};
+                    my ($s, $e) = ($tmp[0] - MAX_DISTANCE_FROM_TRANSCRIPT, $tmp[-1] + MAX_DISTANCE_FROM_TRANSCRIPT);
                     
                     my $low = int ($s / $region_size);
                     my $high = int ($e / $region_size) + 1;
@@ -3636,23 +3831,18 @@ sub prefetch_transcript_data {
     # gene
     $tr->{_gene} ||= $config->{ga}->fetch_by_transcript_stable_id($tr->stable_id);
     
-    # gene HGNC
-    if(defined $config->{hgnc}) {
+    # gene symbol
+    if(defined $config->{symbol}) {
         
         # get from gene cache if found already
-        if(defined($tr->{_gene}->{_hgnc})) {
-            $tr->{_gene_hgnc} = $tr->{_gene}->{_hgnc};
+        if(defined($tr->{_gene}->{_symbol})) {
+            $tr->{_gene_symbol} = $tr->{_gene}->{_symbol};
         }
         else {
-            my @entries = grep {$_->database eq 'HGNC'} @{$tr->{_gene}->get_all_DBEntries()};
-            if(scalar @entries) {
-                $tr->{_gene_hgnc} = $entries[0]->display_id;
-            }
-            
-            $tr->{_gene_hgnc} ||= '-';
+            $tr->{_gene_symbol} ||= $tr->{_gene}->display_xref ? $tr->{_gene}->display_xref->display_id : undef;
             
             # cache it on the gene object too
-            $tr->{_gene}->{_hgnc} = $tr->{_gene_hgnc};
+            $tr->{_gene}->{_symbol} = $tr->{_gene_symbol};
         }
     }
     
@@ -3828,10 +4018,9 @@ sub load_dumped_transcript_cache {
 #    my $config = shift;
 #    my $chr = shift;
 #    my $region = shift;
-#    my $trim_regions = shift;
 #    
 #    my $dir = $config->{dir}.'/'.$chr;
-#    my $dump_file = $dir.'/'.($region || "dump").'_tabix.gz';
+#    my $dump_file = $dir.'/all_trs.gz';
 #    
 #    #print STDERR "Reading from $dump_file\n";
 #    
@@ -3844,19 +4033,20 @@ sub load_dumped_transcript_cache {
 #    use MIME::Base64 qw(decode_base64);
 #    use Storable qw(thaw);
 #    
+#    $DB::single = 1;
+#    
 #    my ($s, $e) = split /\-/, $region;
-#    my @regions = grep {overlap($s, $e, (split /\-/, $_))} @{$trim_regions->{$chr}};
+#    #my @regions = grep {overlap($s, $e, (split /\-/, $_))} @{$trim_regions->{$chr}};
 #    my $regions = "";
-#    $regions .= " $chr\:$_" for @regions;
+#    $regions .= " $chr\:$region";
 #    
 #    #print STDERR "tabix $dump_file $regions |\n";
-#    #open IN, "tabix $dump_file $regions |";
-#    open IN, "gzip -dc $dump_file |";
+#    open IN, "tabix $dump_file $regions |";
+#    #open IN, "gzip -dc $dump_file |";
 #    while(<IN>) {
-#    
-#    #$DB::single = 1;
+#        chomp;
 #        my ($chr, $start, $end, $blob) = split /\t/, $_;
-#        next unless grep {overlap($start, $end, (split /\-/, $_))} @regions;
+#        #next unless grep {overlap($start, $end, (split /\-/, $_))} @regions;
 #        my $tr = thaw(decode_base64($blob));
 #        push @{$tr_cache->{$chr}}, $tr;
 #    }
@@ -3982,6 +4172,10 @@ sub dump_variation_cache {
                 push @tmp, $config->{clin_sig}->{$v->{variation_name}} || '';
             }
             
+            if(have_pubmed($config) && defined($config->{pubmed})) {
+                push @tmp, $config->{pubmed}->{$v->{variation_name}} || '';
+            }
+            
             if(defined($config->{freqs})) {
                 push @tmp, $config->{'freqs'}->{$v->{variation_name}} || '';
             }
@@ -4008,36 +4202,41 @@ sub load_dumped_variation_cache {
     
     my $v_cache;
     
-    # get columns
-    my @cols = @{get_variation_columns($config)};
-    
     while(<DUMP>) {
-        chomp;
-        
-        my @data = split / /, $_;
-        
-        # assumption fix for old cache files
-        if(scalar @data > scalar @cols) {
-            push @cols, ('AFR', 'AMR', 'ASN', 'EUR');
-        }
-        
-        my %v = map {$cols[$_] => $data[$_]} (0..$#data);
-        
-        $v{failed} ||= 0;
-        $v{end}    ||= $v{start};
-        $v{strand} ||= 1;
-        
-        # hack for odd frequency data
-        foreach my $pop(qw(AFR AMR ASN EUR)) {
-            $v{$pop} = 1 - $v{$pop} if defined($v{$pop}) && $v{$pop} =~ /\d+/ && $v{$pop} > 0.5;
-        }
-        
-        push @{$v_cache->{$chr}->{$v{start}}}, \%v;
+      chomp;
+      my $v = parse_variation($config, $_);
+      push @{$v_cache->{$chr}->{$v->{start}}}, $v;
     }
     
     close DUMP;
     
     return $v_cache;
+}
+
+sub parse_variation {
+  my $config = shift;
+  my $line = shift;
+  
+  my @cols = @{get_variation_columns($config)};
+  my @data = split / |\t/, $line;
+  
+  # assumption fix for old cache files
+  if(scalar @data > scalar @cols) {
+    push @cols, ('AFR', 'AMR', 'ASN', 'EUR');
+  }
+  
+  my %v = map {$cols[$_] => $data[$_] eq '.' ? undef : $data[$_]} (0..$#data);
+  
+  $v{failed} ||= 0;
+  $v{end}    ||= $v{start};
+  $v{strand} ||= 1;
+  
+  # hack for odd frequency data
+  foreach my $pop(qw(AFR AMR ASN EUR)) {
+    $v{$pop} = 1 - $v{$pop} if defined($v{$pop}) && $v{$pop} =~ /\d+/ && $v{$pop} > 0.5;
+  }
+  
+  return \%v;
 }
 
 # gets variation cache columns
@@ -4047,6 +4246,7 @@ sub get_variation_columns {
     if(!defined($config->{cache_variation_cols})) {
         $config->{cache_variation_cols} = \@VAR_CACHE_COLS;
         push @{$config->{cache_variation_cols}}, 'clin_sig' if have_clin_sig($config) && defined($config->{clin_sig});
+        push @{$config->{cache_variation_cols}}, 'pubmed' if have_pubmed($config) && defined($config->{pubmed});
         push @{$config->{cache_variation_cols}}, @{$config->{freq_file_pops}} if defined($config->{freq_file_pops});
     }
     
@@ -4407,6 +4607,12 @@ sub cache_custom_annotation {
                             end    => $tmp_vf->{end},
                             name   => $tmp_vf->{variation_name},
                         };
+                        
+                        foreach my $field(@{$custom->{fields}}) {
+                          if(m/$field\=(.+?)(\;|\s|$)/) {
+                            $feature->{$field} = $1;
+                          }
+                        }
                     }
                     
                     elsif($custom->{format} eq 'gff' || $custom->{format} eq 'gtf') {
@@ -4518,6 +4724,9 @@ sub build_full_cache {
     
     # check and load clin_sig
     $config->{clin_sig} = get_clin_sig($config) if have_clin_sig($config);
+    
+    # check and load pubmed
+    $config->{pubmed} = get_pubmed($config) if have_pubmed($config);
     
     foreach my $slice(@slices) {
         my $chr = $slice->seq_region_name;
@@ -4801,7 +5010,7 @@ sub check_frequencies {
     
     # if we can, check using cached frequencies as this is way quicker than
     # going to the DB
-    if($freq_pop =~ /1kg/i) {
+    if($freq_pop =~ /1kg|esp/i) {
         my $freq;
         my $sub_pop = uc((split /\_/, $freq_pop)[-1]);
         
@@ -5040,6 +5249,54 @@ sub get_clin_sig {
     $sth->finish();
     
     return \%cs;
+}
+
+sub have_pubmed {
+    my $config = shift;
+    
+    if(!defined($config->{have_pubmed})) {
+        
+        if(defined($config->{vfa}) && defined($config->{vfa}->db)) {
+            
+            my $sth = $config->{vfa}->db->dbc->prepare(qq{
+                SELECT COUNT(*) FROM variation_citation
+            });
+            $sth->execute;
+            
+            my $count;
+            $sth->bind_columns(\$count);
+            $sth->fetch();
+            $sth->finish();
+            
+            $config->{have_pubmed} = $count;
+        }
+        else {
+            $config->{have_pubmed} = 0;
+        }
+    }
+    
+    return $config->{have_pubmed};
+}
+
+sub get_pubmed {
+    my $config = shift;
+    
+    my $sth = $config->{vfa}->db->dbc->prepare(qq{
+        SELECT v.name, GROUP_CONCAT(p.pmid)
+        FROM variation v, variation_citation c, publication p
+        WHERE v.variation_id = c.variation_id
+        AND c.publication_id = p.publication_id
+        AND p.pmid IS NOT NULL
+        GROUP BY v.variation_id
+    });
+    $sth->execute;
+    
+    my ($v, $p, %pm);
+    $sth->bind_columns(\$v, \$p);
+    $pm{$v} = $p while $sth->fetch();
+    $sth->finish();
+    
+    return \%pm;
 }
 
 sub merge_hashes {
