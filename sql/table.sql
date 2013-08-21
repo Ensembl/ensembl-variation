@@ -16,23 +16,23 @@ SET storage_engine=MYISAM;
 @desc This is the schema's generic representation of a variation, defined as a genetic feature that varies between individuals of the same species. 
       The most common type is the single nucleotide variation (SNP) though the schema also accommodates copy number variations (CNVs) and structural variations (SVs).<br />
 			In Ensembl, a variation is defined by its flanking sequence rather than its mapped location on a chromosome; a variation may in fact have multiple mappings across a genome, 
-			although this fails our <a href="data_description.html#quality_control">Quality Control</a>.<br /> 
+			although this fails our <a href="/info/genome/variation/data_description.html#quality_control">Quality Control</a>.<br /> 
       This table stores a variation's name (commonly an ID of the form e.g. rs123456, assigned by dbSNP), along with a validation status and ancestral (or reference) allele.
 
 @column variation_id		    Primary key, internal identifier.
 @column source_id			      Foreign key references to the @link source table.
 @column name				        Name of the variation. e.g. "rs1333049".
-@column validation_status	  Variant discovery method and validation from dbSNP. See the status descriptions <a href="data_description.html#validation_status">here</a>.
+@column validation_status	  Variant discovery method and validation from dbSNP.
 @column ancestral_allele	  Taken from dbSNP to show ancestral allele for the variation.
 @column flipped				      This is set to 1 if the variant is flipped from the negative to the positive strand during import.
-@column class_attrib_id		  Class of the variation, key into the @link attrib table.<br /> The list of variation classes is available <a href="data_description.html#classes">here</a>.
+@column class_attrib_id		  Class of the variation, key into the @link attrib table.<br /> The list of variation classes is available <a href="/info/genome/variation/data_description.html#classes">here</a>.
 @column somatic             flags whether this variation is known to be somatic or not
 @column minor_allele        The minor allele of this variant, as reported by dbSNP
 @column minor_allele_freq   The 'global' frequency of the minor allele of this variant, as reported by dbSNP
 @column minor_allele_count  The number of samples the minor allele of this variant is found in, as reported by dbSNP
 @column clinical_significance  A set of clinical significance classes assigned to the variant.<br /> 
-                                         The list of clinical significances is available <a href="data_description.html#clin_significance">here</a>.
-@column evidence            A summary of the evidence supporting a variant as a guide to its potential reliability.
+                                         The list of clinical significances is available <a href="/info/genome/variation/data_description.html#clin_significance">here</a>.
+@column evidence            A summary of the evidence supporting a variant as a guide to its potential reliability. See the evidence descriptions <a href="/info/genome/variation/data_description.html#evidence_status">here</a>.
 
 @see variation_synonym
 @see failed_variation
@@ -83,10 +83,10 @@ create table variation (
 @column map_weight				    The number of times that this variation has mapped to the genome. This is a denormalisation as this particular feature is one example of a mapped location. This can be used to limit the the features that come back from a query.
 @column flags						      Flag to filter the selection of variations.
 @column source_id					    Foreign key references to the source table.
-@column validation_status		  Variant discovery method and validation from dbSNP. See the status descriptions <a href="data_description.html#validation_status">here</a>.
-@column consequence_types		  The SO term(s) of all unique observed consequence types of this variation feature.<br /> The list of consequence descriptions is available <a href="predicted_data.html#consequences">here</a>.
+@column validation_status		  Variant discovery method and validation from dbSNP. See the status descriptions <a href="/info/genome/variation/data_description.html#validation_status">here</a>.
+@column consequence_types		  The SO term(s) of all unique observed consequence types of this variation feature.<br /> The list of consequence descriptions is available <a href="/info/genome/variation/predicted_data.html#consequences">here</a>.
 @column variation_set_id		  The variation feature can belong to a @link variation_set.
-@column class_attrib_id			  Class of the variation, key in the @link attrib table.<br /> The list of variation classes is available <a href="data_description.html#classes">here</a>.
+@column class_attrib_id			  Class of the variation, key in the @link attrib table.<br /> The list of variation classes is available <a href="/info/genome/variation/data_description.html#classes">here</a>.
 @column somatic               Flags whether this variation_feature is somatic or germline
 @column minor_allele          The minor allele of this variant, as reported by dbSNP
 @column minor_allele_freq     The 'global' frequency of the minor allele of this variant, as reported by dbSNP
@@ -960,9 +960,9 @@ CREATE TABLE read_coverage (
 @column source_id								Foreign key references to the @link source table.
 @column study_id								Foreign key references to the @link study table.	
 @column class_attrib_id					Foreign key references to the @link attrib table. Defines the type of structural variant.<br /> 
-                                The list of structural variation classes is available <a href="data_description.html#classes">here</a>.
+                                The list of structural variation classes is available <a href="/info/genome/variation/data_description.html#classes">here</a>.
 @column clinical_significance_attrib_id  Foreign key references to the @link attrib, identifying the clinical significance of this variant, as reported by DGVa.<br /> 
-                                         The list of clinical significances is available <a href="data_description.html#clin_significance">here</a>.
+                                         The list of clinical significances is available <a href="/info/genome/variation/data_description.html#clin_significance">here</a>.
 @column validation_status				Validation status of the variant.
 @column is_evidence             Flag indicating if the structural variation is a supporting evidence (1) or not (0).
 @column somatic                 Flags whether this structural variation is known to be somatic or not
@@ -1035,7 +1035,7 @@ CREATE TABLE structural_variation_association (
 @column source_id								         Foreign key references to the @link source table.
 @column study_id								         Foreign key references to the @link study table
 @column class_attrib_id					         Foreign key references to the @link attrib table. Defines the type of structural variant.<br /> 
-                                         The list of structural variation classes is available <a href="data_description.html#classes">here</a>.
+                                         The list of structural variation classes is available <a href="/info/genome/variation/data_description.html#classes">here</a>.
 @column allele_string						         The variant allele, where known.
 @column is_evidence                      Flag indicating if the structural variation is a supporting evidence (1) or not (0).
 @column variation_set_id		             The structural variation feature can belong to a @link variation_set.
@@ -1124,7 +1124,7 @@ CREATE TABLE structural_variation_sample (
 
 /**
 @header  Variation set tables
-@desc    These tables define the variation and structural variation set data. The complete list of variation sets with their descriptions is available <a href="data_description.html#variation_sets">here</a>.
+@desc    These tables define the variation and structural variation set data. The complete list of variation sets with their descriptions is available <a href="/info/genome/variation/data_description.html#variation_sets">here</a>.
 @colour  #FFD700
 */
 
@@ -1234,7 +1234,7 @@ CREATE TABLE IF NOT EXISTS variation_set_structural_variation (
 @column variation_feature_id		 Foreign key references to the @link variation_feature table.
 @column allele_string            Shows the reference sequence and variant sequence of this allele
 @column somatic                  Flags if the associated variation is known to be somatic
-@column consequence_types			   The consequence(s) of the variant allele on this transcript.<br /> The list of consequence descriptions is available <a href="predicted_data.html#consequences">here</a>. 
+@column consequence_types			   The consequence(s) of the variant allele on this transcript.<br /> The list of consequence descriptions is available <a href="/info/genome/variation/predicted_data.html#consequences">here</a>. 
 @column cds_start					       The start position of variation in cds coordinates.
 @column cds_end						       The end position of variation in cds coordinates.
 @column cdna_start					     The start position of variation in cdna coordinates.
@@ -1336,7 +1336,7 @@ CREATE TABLE transcript_variation (
 @column motif_feature_id            Foreign key to regulation databases. Internal id of related motif_feature.
 @column allele_string               Shows the reference sequence and variant sequence of this allele.
 @column somatic                     Flags if the associated variation is known to be somatic.
-@column consequence_types		        The consequence(s) of the variant allele on this motif_feature.<br /> The list of consequence descriptions is available <a href="predicted_data.html#consequences">here</a>.
+@column consequence_types		        The consequence(s) of the variant allele on this motif_feature.<br /> The list of consequence descriptions is available <a href="/info/genome/variation/predicted_data.html#consequences">here</a>.
 @column motif_name                  The display label of the motif.
 @column motif_start                 The start position of the variation in the motif.
 @column motif_end                   The end position of the variation in the motif.
@@ -1418,7 +1418,7 @@ CREATE TABLE IF NOT EXISTS motif_feature_variation (
 @column feature_type                     The name of the feature type.
 @column allele_string                    Shows the reference sequence and variant sequence of this allele.
 @column somatic                          Flags if the associated variation is known to be somatic.
-@column consequence_types		            The consequence(s) of the variant allele on this regulatory feature.<br /> The list of consequence descriptions is available <a href="predicted_data.html#consequences">here</a>.
+@column consequence_types		            The consequence(s) of the variant allele on this regulatory feature.<br /> The list of consequence descriptions is available <a href="/info/genome/variation/predicted_data.html#consequences">here</a>.
 
 @see variation_feature
 */
@@ -1492,7 +1492,7 @@ CREATE TABLE IF NOT EXISTS regulatory_feature_variation (
 
 @colour #7CFC00
 @desc This table contains details of the source from which a variation is derived. Most commonly this is NCBI's dbSNP; other sources include SNPs called by Ensembl.<br />
-You can see the complete list, by species, <a href="sources_documentation.html">here</a>.
+You can see the complete list, by species, <a href="/info/genome/variation/sources_documentation.html">here</a>.
 
 @column source_id		Primary key, internal identifier.
 @column name			Name of the source. e.g. "dbSNP"
@@ -1711,7 +1711,7 @@ INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patc
 /**
 @header  Failed tables
 @desc    These tables define the list of variants/alleles flagged as "failed" in the Variation pipeline.<br />
-         The list of reasons for a variation being flagged as failed is available in the <a href="data_description.html#quality_control">Quality Control documentation</a>.
+         The list of reasons for a variation being flagged as failed is available in the <a href="/info/genome/variation/data_description.html#quality_control">Quality Control documentation</a>.
 @colour  #3CB371
 */
 
@@ -1930,7 +1930,7 @@ CREATE TABLE attrib_set (
                             these predictions apply
 @column analysis_attrib_id  Identifies the analysis (sift, polyphen etc.) that produced these predictions 
 @column prediction_matrix   A compressed binary string containing the predictions for all possible 
-                            amino acid substitutions in this protein. See the explanation <a href="predicted_data.html#nsSNP">here</a>
+                            amino acid substitutions in this protein. See the explanation <a href="/info/genome/variation/predicted_data.html#nsSNP">here</a>
 
 @see    translation_md5
 @see    attrib
