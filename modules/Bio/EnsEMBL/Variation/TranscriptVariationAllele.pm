@@ -35,7 +35,7 @@ Bio::EnsEMBL::Variation::TranscriptVariationAllele
     print "sequence with respect to the transcript: ", $tva->feature_seq, "\n";
     print "sequence with respect to the variation feature: ", $tva->variation_feature_seq, "\n";
     print "consequence SO terms: ", (join ",", map { $_->SO_term } @{ $tva->get_all_OverlapConsequences }), "\n";
-    print "amino acid change: ", $tva->peptide_allele_string, "\n";
+    print "amino acid change: ", $tva->pep_allele_string, "\n";
     print "resulting codon: ", $tva->codon, "\n";
     print "reference codon: ", $tva->transcript_variation->get_reference_TranscriptVariationAllele->codon, "\n";
     print "PolyPhen prediction: ", $tva->polyphen_prediction, "\n";
