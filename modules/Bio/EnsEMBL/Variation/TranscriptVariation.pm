@@ -38,7 +38,7 @@ Bio::EnsEMBL::Variation::TranscriptVariation
     print "amino acid change: ", $tv->pep_allele_string, "\n";
     print "codon change: ", $tv->codons, "\n";
     print "allele sequences: ", (join ",", map { $_->variation_feature_seq } 
-        @{ $tv->get_all_TranscriptVariationAlleles }, "\n";
+        @{ $tv->get_all_TranscriptVariationAlleles }), "\n";
 
 =head1 DESCRIPTION
 
