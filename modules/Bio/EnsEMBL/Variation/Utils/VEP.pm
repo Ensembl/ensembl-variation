@@ -1195,7 +1195,8 @@ sub vf_list_to_cons {
     if(defined($config->{check_frequency})) {
         foreach my $vf(@$listref) {
             if(defined($vf->{existing}) && scalar @{$vf->{existing}}) {
-                push @$new_listref, $vf if grep {$_} map {check_frequencies($config, $_)} reverse @{$vf->{existing}};
+                my @passed = grep {$_} map {check_frequencies($config, $_)} reverse @{$vf->{existing}};
+                push @$new_listref, $vf if scalar @passed == scalar @{$vf->{existing}};
                 $vf->{freqs} = $config->{filtered_freqs};
             }
             else {
