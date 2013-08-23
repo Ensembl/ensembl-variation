@@ -69,6 +69,8 @@ our @ISA = ('Bio::EnsEMBL::Storable');
     string - the PubMed id for this publication
   Arg [-PMCID :
     string - the PubMed Central id for this publication
+  Arg [-DOI :
+    string - the doi for this publication
 			
   Example    : 	$publication = Bio::EnsEMBL::Variation::Publication->new
                                        (-title   => 'A brief history of Alzheimer's disease gene discovery',
@@ -90,8 +92,8 @@ sub new {
   my $class = ref($caller) || $caller;
 
   my $self = $class->SUPER::new(@_);
-	my ($dbID, $adaptor, $title, $authors, $pmid, $pmcid, $year, $variants ) = 
-			rearrange([qw(dbID ADAPTOR TITLE AUTHORS PMID PMCID YEAR VARIANTS)], @_);
+	my ($dbID, $adaptor, $title, $authors, $pmid, $pmcid, $year, $doi, $variants ) = 
+			rearrange([qw(dbID ADAPTOR TITLE AUTHORS PMID PMCID YEAR DOI VARIANTS)], @_);
 
   $self = {
       'dbID'     => $dbID,
@@ -101,6 +103,7 @@ sub new {
       'pmid'     => $pmid,
       'pmcid'    => $pmcid, 
       'year'     => $year,
+      'doi'      => $doi,
       'variants' => $variants     
   };
 	
@@ -206,6 +209,24 @@ sub year{
   return $self->{'year'};
 }
 
+=head2 doi
+
+  Arg [1]    : string $newval (optional)
+               The new value to set the doi attribute to
+  Example    : $doi = $obj->doi()
+  Description: Getter/Setter for the the publication doi attribute
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub doi{
+  my $self = shift;
+  return $self->{'doi'} = shift if(@_);
+  return $self->{'doi'};
+}
 =head2 variations
 
   Arg [1]    : array ref [optional]
