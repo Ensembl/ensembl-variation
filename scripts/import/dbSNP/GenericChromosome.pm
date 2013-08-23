@@ -291,6 +291,8 @@ my $stmt;
     }
     debug(localtime() . "\tCreating tmp_variation_feature_chrom data in GenericChromosome");
     #if tcl.end>1, this means we have coordinates for chromosome, we will use it
+
+
     dumpSQL($self->{'dbVar'},qq{SELECT v.variation_id, ts.seq_region_id, 
                                       tcl.start,tcl.end,
                                       tcl.strand, v.name, v.source_id, v.validation_status, tcl.aln_quality
@@ -323,19 +325,34 @@ my $stmt;
   print Progress::location();
 
     debug(localtime() . "\tDumping data into variation_feature table in GenericChromosome");
+
+    ## the copy process is slow for large dbs, so run 1M at a time
+    my $get_max_sth = $self->{'dbVar'}->prepare(qq[select max(variation_id) from variation]);
+    $get_max_sth->execute()||die;
+    my $max = $get_max_sth->fetchall_arrayref();
+
     if ($gtype_row) {
       foreach my $table ("tmp_variation_feature_chrom","tmp_variation_feature_ctg") {
 
-	$self->{'dbVar'}->do(qq{INSERT INTO variation_feature (variation_id, seq_region_id,seq_region_start, seq_region_end, seq_region_strand,variation_name, flags, source_id, validation_status, alignment_quality, somatic)
+	my $vf_ins_sth = $self->{'dbVar'}->prepare(qq{INSERT INTO variation_feature (variation_id, seq_region_id,seq_region_start, seq_region_end, seq_region_strand,variation_name, flags, source_id, validation_status, alignment_quality, somatic)
 				  SELECT tvf.variation_id, tvf.seq_region_id, tvf.seq_region_start, tvf.seq_region_end, tvf.seq_region_strand,tvf.variation_name,IF(tgv.variation_id,'genotyped',NULL), tvf.source_id, tvf.validation_status, tvf.aln_quality,  v.somatic
 				  FROM $table tvf LEFT JOIN tmp_genotyped_var tgv ON tvf.variation_id = tgv.variation_id
                                   LEFT JOIN variation v on tvf.variation_id = v.variation_id
+				  WHERE tvf.variation_id between ? and ?
 				  });
-
+	my $batch = 1000000;
+	my $start = 1;
+	debug(localtime() . "\tStarting binned variation_feature copy");
+	while( $start  < $max->[0]->[0] ){	
+     
+	    my $end = $start + $batch ;   
+	    $vf_ins_sth->execute($start, $end)||die;
+	    $start = $end + 1;
+	}
 
 
   print Progress::location();
-      }
+    }
 
       #last fill in flags with genotyped
       $self->{'dbVar'}->do(qq{UPDATE variation_feature vf, tmp_genotyped_var tgv
@@ -350,12 +367,24 @@ my $stmt;
 
       debug(localtime() . "\tDumping data into variation_feature table only used if table tmp_genotyped_var is not ready");
       foreach my $table ("tmp_variation_feature_chrom","tmp_variation_feature_ctg") {
-	$self->{'dbVar'}->do(qq{INSERT INTO variation_feature (variation_id, seq_region_id,seq_region_start, seq_region_end, seq_region_strand,variation_name, flags, source_id, validation_status, alignment_quality, somatic)
+
+	my $vf_ins_sth =$self->{'dbVar'}->prepare(qq{INSERT INTO variation_feature (variation_id, seq_region_id,seq_region_start, seq_region_end, seq_region_strand,variation_name, flags, source_id, validation_status, alignment_quality, somatic)
  				  SELECT tvf.variation_id, tvf.seq_region_id, tvf.seq_region_start, tvf.seq_region_end, tvf.seq_region_strand,tvf.variation_name,NULL, tvf.source_id, tvf.validation_status, tvf.aln_quality, v.somatic
  				  FROM $table tvf, variation v
                                   WHERE v.variation_id = tvf.variation_id
+				  AND tvf.variation_id between ? and ?
  				  });
-  print Progress::location();
+
+	my $batch = 1000000;
+	my $start = 1;
+	debug(localtime() . "\tStarting binned variation_feature copy");
+	while( $start  < $max->[0]->[0] ){	
+	    
+	    my $end = $start + $batch ;   
+	    $vf_ins_sth->execute($start, $end)||die;
+	    $start = $end + 1;
+	}
+	print Progress::location();
       }
     }
 
