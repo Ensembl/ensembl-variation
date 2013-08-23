@@ -105,6 +105,30 @@ sub fetch_by_pmcid {
   return ($result ? $result->[0] : undef);
 }
 
+=head2 fetch_by_doi
+
+  Arg [1]    : string $doi
+  Example    : $publication = $publication_adaptor->fetch_by_doi("10.2337/db08-0569");
+  Description: Retrieves a Publication object via its doi identifier.
+               If no such publication exists undef is returned.
+  Returntype : Bio::EnsEMBL::Variation::Publication
+  Exceptions : throw if dbID arg is not defined
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub fetch_by_doi {
+  my $self = shift;
+  my $doi = shift;
+
+  throw('doi argument expected') if(!defined($doi));
+
+  my $result = $self->generic_fetch("p.doi=\"$doi\"");
+ 
+  return ($result ? $result->[0] : undef);
+}
+
 =head2 fetch_by_dbID
 
   Arg [1]    : int $dbID
@@ -194,10 +218,45 @@ sub fetch_all_by_Variation {
 
 }
 
+=head2 fetch_all_by_Phenotype
+
+  Arg [1]    : listref $list
+  Example    : $publication = $publication_adaptor->fetch_all_by_Phenotype( $phenotype_object]);
+  Description: Retrieves a listref of publication objects in which a phenotype is discussed
+  Returntype : listref of Bio::EnsEMBL::Variation::Publication objects
+  Exceptions : throw if variation argument is not defined
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub fetch_all_by_Phenotype {
+    my $self    = shift;
+    my $pheno_obj = shift;
+    
+    if(!defined($pheno_obj) || ref($pheno_obj ne 'Phenotype')) {
+        throw("phenotype argument is required");
+    }
+    
+    my @pub;
+    my $publication_id;
+
+    my $sth = $self->prepare(qq{SELECT publication_id from phenotype_citation where phenotype_id = ?  });
+    $sth->execute($pheno_obj->dbID);
+    $sth->bind_columns(\$publication_id);
+    while ($sth->fetch()){
+        push @pub, $self->fetch_by_dbID($publication_id)
+    }
+    $sth->finish;
+    
+    return \@pub;
+
+}
+
 
 
 sub _columns {
-  return qw(p.publication_id p.title p.authors p.pmid p.pmcid p.year );
+  return qw(p.publication_id p.title p.authors p.pmid p.pmcid p.year p.doi );
 }
 
 sub _tables { return (['publication', 'p']); }
@@ -217,9 +276,9 @@ sub _objs_from_sth {
 
   my @publication;
 
-  my ($publication_id,$title,$authors,$pmid,$pmcid,$year);
+  my ($publication_id,$title,$authors,$pmid,$pmcid,$year,$doi);
   
-  $sth->bind_columns(\$publication_id, \$title, \$authors, \$pmid, \$pmcid, \$year);
+  $sth->bind_columns(\$publication_id, \$title, \$authors, \$pmid, \$pmcid, \$year, \$doi);
   
   while($sth->fetch()) {
                 
@@ -231,7 +290,8 @@ sub _objs_from_sth {
            -AUTHORS    => $authors,
            -PMID       => $pmid,
            -PMCID      => $pmcid,
-           -YEAR       => $year
+           -YEAR       => $year,
+           -DOI        => $doi
           );
   }
 
@@ -246,23 +306,22 @@ sub store{
     
     my $dbh = $self->dbc->db_handle;
     
-    my $pub_ins_sth = $dbh->prepare(qq[ insert into publication( title, authors, pmid, pmcid, year ) values ( ?,?,?,?,? ) ]);   
+    my $pub_ins_sth = $dbh->prepare(qq[ insert into publication( title, authors, pmid, pmcid, year, doi ) values ( ?,?,?,?,?,? ) ]);   
     
     $pub_ins_sth->execute( $pub->{title},
                            $pub->{authors},
                            $pub->{pmid}  || undef,
                            $pub->{pmcid} || undef,
-                           $pub->{year} 
+                           $pub->{year},
+                           $pub->{doi}   || undef, 
                          );
 
 
     $pub->{dbID} = $dbh->last_insert_id(undef, undef, 'publication', 'publication_id');
 
-    ## check for cited variants to link 
-    if( $pub->{variants}->[0] ){
-        
-        $self->update_variant_citation($pub);
-    }
+    ## link cited variants to publication
+    $self->update_variant_citation($pub) if defined $pub->{variants}->[0] ;
+
 }
 
 sub update_variant_citation {
