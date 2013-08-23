@@ -197,6 +197,10 @@ sub check_counts{
                                                where source.name = ?
                                                and source.source_id = phenotype_feature.source_id ]);
 
+   my $featless_count_ext_sth = $dbh->prepare(qq[ select count(*) from phenotype 
+                                                  where phenotype_id not in (select phenotype_id from phenotype_feature) ]);
+
+
 
    $pheno_count_ext_sth->execute( $SOURCENAME )||die;
    my $ph =  $pheno_count_ext_sth->fetchall_arrayref();
@@ -209,6 +213,11 @@ sub check_counts{
    $set_count_ext_sth->execute()||die;
    my $set =  $set_count_ext_sth->fetchall_arrayref();
    warn "$set->[0]->[0] variation entries in ClinVar associated set\n";
+
+
+   $featless_count_ext_sth->execute()||die;
+   my $featless =  $featless_count_ext_sth->fetchall_arrayref();
+   warn "$featless->[0]->[0] phenotype entries have no phenotype features\n";
 
 }
 
