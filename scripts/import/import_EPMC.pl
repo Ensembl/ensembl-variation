@@ -18,20 +18,23 @@ use Data::Dumper;
 use Bio::EnsEMBL::Registry;
 use Bio::EnsEMBL::Variation::Publication;
 use Bio::EnsEMBL::Variation::DBSQL::PublicationAdaptor;
+use Bio::EnsEMBL::Variation::DBSQL::PhenotypeAdaptor;
 use Bio::EnsEMBL::Variation::DBSQL::VariationAdaptor;
 use Bio::EnsEMBL::Variation::Utils::QCUtils qw(count_rows);
 
 our $DEBUG = 0;
 
-my ($registry_file, $data_file, $species, $check_dbSNP);
+my ($registry_file, $data_file, $species, $check_dbSNP, $type, $do_disease);
 
 GetOptions ("data=s"        => \$data_file,
+            "type=s"        => \$type,
             "species=s"     => \$species,
             "check_dbSNP:s" => \$check_dbSNP,
             "registry=s"    => \$registry_file,
     );
 
-usage() unless defined $registry_file && defined $data_file && defined  $species;
+## an export file is needed for EPMC data
+usage() unless defined $registry_file && defined $type && defined  $species && (defined $data_file || $type eq "UCSC" || $type eq "disease") ;
 
 
 my $xs   = XML::Simple->new();
@@ -54,7 +57,7 @@ my $reg = 'Bio::EnsEMBL::Registry';
 $reg->no_version_check(1); 
 $reg->load_all($registry_file);
 my $dba = $reg->get_DBAdaptor($species, 'variation') || die "Error getting db adaptor\n";
-
+our $pheno_adaptor = $reg->get_adaptor($species, 'variation', 'phenotype');
 
 
 ## if new dbSNP release has been imported, pull out full info for citations
@@ -63,15 +66,46 @@ my $dbSNP_data = check_dbSNP($dba) unless defined $check_dbSNP && $check_dbSNP =
 ## check production db for suspected errors
 my $avoid_list = get_avoid_list($reg);
 
-## read ePMC file, ommitting suspected errors
-my $file_data = parse_file($data_file, $avoid_list);
 
-##import ePMC info
-import_citations($reg, $file_data, $species_string);
+## parse input data
+my $file_data;
 
+if( $type eq "EPMC"){
 
-## update variations & variation_features to have Cited status
-update_evidence($dba);
+    ## read ePMC file, ommitting suspected errors
+    $file_data = parse_EPMC_file($data_file, $avoid_list);
+
+    ##import ny new publications & citations 
+    import_citations($reg, $file_data);
+    
+    ## update variations & variation_features to have Cited status
+    update_evidence($dba);
+}
+elsif($type eq "UCSC"){
+
+    ## download current data from UCSC public server unless already extracted
+    $data_file = get_current_UCSC_data() unless defined $data_file;
+    
+    ## read UCSC file, ommitting suspected errors
+    $file_data = parse_UCSC_file($data_file, $avoid_list);
+
+    ##import any new publications & citations 
+    import_citations($reg, $file_data);
+
+    ## update variations & variation_features to have Cited status
+    update_evidence($dba);
+
+}
+
+elsif($type eq "disease"){
+    ## look for phenotype citations in EPMC for all current publications 
+    do_disease($reg);
+}
+
+else{
+    die "Type $type is not recognised - must be EPMC or UCSC\n";
+}
+
 
 ## create report on curent status
 report_summary($dba, $species);
@@ -80,9 +114,8 @@ sub import_citations{
 
     my $reg            = shift;
     my $data           = shift;
-    my $species_string = shift;
 
-    open my $error_log, ">>$data_file\_$species\.log"|| die "Failed to open log file: $!\n";
+    open my $error_log, ">>$species\.log"|| die "Failed to open log file: $!\n";
 
 
     my $var_ad = $reg->get_adaptor($species, 'variation', 'variation');
@@ -111,67 +144,44 @@ sub import_citations{
 
 
         ## don't enter publication if there are no variants found for this species
-        unless (defined $var_obs[0] ){
-            next;
-        }
+        next unless defined $var_obs[0] ;
         
-        ### get data on publication from ePMC
-        my ($ref, $mined);
-        if( defined $data->{$pub}->{pmid} ){
-            $ref   = get_epmc_data( "search/query=ext_id:$data->{$pub}->{pmid}%20src:med" );
-            $mined = get_epmc_data( "MED/$data->{$pub}->{pmid}/textMinedTerms/ORGANISM" );
-        }
-        else{
-            $ref   = get_epmc_data( "search/query=$data->{$pub}->{pmcid}" );
-            $mined = get_epmc_data( "PMC/$data->{$pub}->{pmcid}/textMinedTerms/ORGANISM" );
-        }
         
-
-        ### check title available       
-        unless (defined $ref->{resultList}->{result}->{title}){
-            print $error_log "ALL\t$data->{$pub}->{pmid}\t$data->{$pub}->{pmcid} - as no title\n";
-            next ;
-        }
-
-
-        ### check is species mentioned?
-        my $looks_ok = check_species($mined ,$data) ;
-        
-        if ($looks_ok == 0 && $ref->{resultList}->{result}->{title} !~ /$species_string/){
-            print $error_log "ALL\t$data->{$pub}->{pmid}\t$ref->{resultList}->{result}->{title} - species not mentioned\n";
-            ## can't really check human
-
-
-            next unless $species_string =~/human/;
-        }
-
       
-        ### Everything passes - import publication (if new) & links to variants
-
+        ### Check if publication already known
+	
         my $publication;
-        if(defined $data->{$pub}->{pmid} ){
-            $publication = $pub_ad->fetch_by_pmid( $data->{$pub}->{pmid} );
-        }
-        else{
-            $publication = $pub_ad->fetch_by_pmcid( $data->{$pub}->{pmcid} );
-        }
-        
 
+	## try looking up on doi first
+	$publication = $pub_ad->fetch_by_doi( $data->{$pub}->{doi} )    if defined $data->{$pub}->{doi} ;
+	## then PMID
+	$publication = $pub_ad->fetch_by_pmid( $data->{$pub}->{pmid} )  if (defined $data->{$pub}->{pmid} && ! defined $publication);
+	## then PMCID	
+	$publication = $pub_ad->fetch_by_pmcid( $data->{$pub}->{pmcid}) if (defined $data->{$pub}->{pmcid} && ! defined $publication);
 
 
         if(defined $publication){
-#       warn "Linkings vars to existing pub\n";
+	    #    warn "Linkings vars to existing pub\n";
             $pub_ad->update_variant_citation( $publication,\@var_obs, );
         }
         else{
+	    ## add new publication, looking up missing data from EPMC
+	    my $ref;
+	    unless(defined  $data->{$pub}->{pmid} && defined  $data->{$pub}->{year}){
+		$ref = get_publication_info_from_epmc($data, $pub, $error_log);
+	    }
+
+
             ### create new object
-            my $publication = Bio::EnsEMBL::Variation::Publication->new( -title    => $ref->{resultList}->{result}->{title},
-                                                                         -authors  => $ref->{resultList}->{result}->{authorString},
-                                                                         -pmid     => $ref->{resultList}->{result}->{pmid},
-                                                                         -pmcid    => $ref->{resultList}->{result}->{pmcid},
-                                                                         -year     => $ref->{resultList}->{result}->{pubYear},
-                                                                         -variants => \@var_obs,
-                                                                         -adaptor  => $pub_ad
+            my $publication = Bio::EnsEMBL::Variation::Publication->new( 
+		-title    => $ref->{resultList}->{result}->{title}          || $data->{$pub}->{title},
+		-authors  => $ref->{resultList}->{result}->{authorString}   || $data->{$pub}->{authors},
+		-pmid     => $ref->{resultList}->{result}->{pmid}           || $data->{$pub}->{pmid},
+		-pmcid    => $ref->{resultList}->{result}->{pmcid}          || undef,
+		-year     => $ref->{resultList}->{result}->{pubYear}        || $data->{$pub}->{year},
+		-doi      => $ref->{resultList}->{result}->{DOI}            || $data->{$pub}->{doi},
+		-variants => \@var_obs,
+		-adaptor  => $pub_ad
                 );
         
             $pub_ad->store( $publication);
@@ -179,7 +189,58 @@ sub import_citations{
     }
 }
 
+sub get_publication_info_from_epmc{
 
+    my $data      = shift;
+    my $pub       = shift;
+    my $error_log = shift;
+
+    my ($ref, $mined);
+
+
+    ### check is species mentioned if not human?
+    unless ($species_string =~/human/){ 	
+	
+	$mined = get_epmc_data( "PMC/$data->{$pub}->{pmcid}/textMinedTerms/ORGANISM" );
+	
+	my $looks_ok = check_species($mined ,$data) ;
+	
+	if ($looks_ok == 0 && $ref->{resultList}->{result}->{title} !~ /$species_string/){
+	    print $error_log "ALL\t$data->{$pub}->{pmid}\t$ref->{resultList}->{result}->{title} - species not mentioned\n";
+	    return undef;
+	}
+    }
+
+
+    ### get data on publication from ePMC
+
+    if( defined $data->{$pub}->{pmid} ){
+	$ref   = get_epmc_data( "search/query=ext_id:$data->{$pub}->{pmid}%20src:med" );
+    }
+    elsif( defined $data->{$pub}->{doi} ){
+	$ref   = get_epmc_data( "search/query=$data->{$pub}->{doi}" );
+	## check results of full text query
+	 return undef unless $ref->{resultList}->{result}->{doi} eq $data->{$pub}->{doi}; 
+    }
+    elsif(defined $data->{$pub}->{pmcid}){
+	$ref   = get_epmc_data( "search/query=$data->{$pub}->{pmcid}" );
+	## check results of full text query
+	 return undef unless $ref->{resultList}->{result}->{pmcid} eq $data->{$pub}->{pmcid};  
+	
+    }
+    else{
+	print $error_log "ALL\t$pub - nothing to search on\n";
+	 return undef;
+    }
+    
+    ### check title available       
+    unless (defined $ref->{resultList}->{result}->{title}){
+	print $error_log "ALL\t$data->{$pub}->{pmid}\t$data->{$pub}->{pmcid} - as no title\n";
+	 return undef;
+    }        
+   
+    return $ref;
+}
 sub get_epmc_data{
 
     my $id = shift; ## specific part of URL including pmid or pmcid 
@@ -234,7 +295,7 @@ sub check_species{
 ##                   rs10016388,PMC1513515,16770606
 ##                   RS10028945,PMC1513515,16770606
 
-sub parse_file{
+sub parse_EPMC_file{
 
     my $pubmed_file = shift;
     my $avoid_list  = shift;
@@ -299,7 +360,7 @@ sub check_dbSNP{
     my $dba       = shift;
 
 
-    open my $error_log, ">>$data_file\_$species\_file.log"|| die "Failed to open log file:$!\n";
+    open my $error_log, ">>$species\_file.log"|| die "Failed to open log file:$!\n";
 
     my $pub_ext_sth = $dba->dbc()->prepare(qq[ select publication.publication_id, publication.pmid
                                                from publication
@@ -312,6 +373,7 @@ sub check_dbSNP{
                                                publication.pmcid=?,
                                                publication.authors = ?,
                                                publication.year = ?
+                                               publication.doi = ?
                                                where publication.publication_id = ?
                                              ]);
 
@@ -338,6 +400,7 @@ sub check_dbSNP{
                                $ref->{resultList}->{result}->{pmcid},
                                $ref->{resultList}->{result}->{authorString},
                                $ref->{resultList}->{result}->{pubYear},
+                               $ref->{resultList}->{result}->{doi},
                                $l->[0]
             ) if defined $ref->{resultList}->{result}->{title};
     }  
@@ -424,11 +487,185 @@ sub report_summary{
 }
 
 
+sub get_current_UCSC_data{
+
+    my $filename = "UCSC_export";
+    open my $out, ">$filename" || die "Failed to open file to write data : $!\n";
+
+    my $dbh = DBI->connect('dbi:mysql:hgFixed:genome-mysql.cse.ucsc.edu:3306:max_allowed_packet=1MB', 'genome', '', undef);
+
+    my $cit_ext_sth = $dbh->prepare(qq[ SELECT pma.markerId, pa.pmid, pma.section, pa.doi, pa.title, pa.authors, pa.year
+                                        FROM pubsMarkerAnnot pma JOIN pubsArticle pa USING
+                                        (articleId) WHERE pma.markerType="snp" 
+phen                                      ]);
+
+
+    $cit_ext_sth->execute()||die;
+
+    while( my $line = $cit_ext_sth->fetchrow_arrayref()){
+
+	print $out join("\t", @{$line}) . "\n";
+    }
+    close $out;
+    return $filename;
+}
+
+sub parse_UCSC_file{
+
+   my $ucsc_file  = shift;
+   my $avoid_list = shift;
+
+    my %data;
+    open my $file, $ucsc_file || die "Failed to open file of UCSC citations $ucsc_file : $!\n";
+    while (<$file>){
+
+        next unless /rs\d+/i;
+        chomp;
+        s/RS/rs/;
+	s/^\|\s+//;
+
+        #my ($rs, $pmid, $section, $doi, $title, $authors, $year ) = split/\s+\|\s+|\t/;
+	my ($rs, $pmid, $section, $doi, $title, $authors, $year ) = split/\t/;
+	next if $section =~/refs|ack/; ## not in this publication
+
+        ## remove known errors
+         if ( $avoid_list->{$rs}->{$pmid}){
+            warn "Removing suspected error : $rs in $pmid\n";  
+            next;
+        }
+
+        ## Group by publication; may have pmid, doi or both
+        my $tag = $pmid . "_" .$doi;
+
+
+        $data{$tag}{pmid} = $pmid;
+        $data{$tag}{pmid} = undef unless $pmid =~ /\d+/;
+
+        $data{$tag}{doi}     = $doi;
+	$data{$tag}{title}   = $title;
+	$data{$tag}{authors} = $authors;
+	$data{$tag}{year}    = $year;
+
+
+        push @{$data{$tag}{rsid}}, $rs;
+    }
+
+    return \%data;
+}
+ 
+
+sub do_disease{
+
+    my $reg = shift;
+
+    my $dba = $reg->get_DBAdaptor($species, 'variation') || die "Error getting db adaptor\n";
+   # my $pheno_adaptor = $reg->get_adaptor($species, 'variation', 'phenotype');
+
+
+    my $phencit_ins_sth = $dba->dbc()->prepare(qq[ insert into phenotype_citation ( publication_id, phenotype_id ) values ( ?, ?) ]);
+    my $phencit_ext_sth = $dba->dbc()->prepare(qq[ select publication_id from phenotype_citation where publication_id = ? and  phenotype_id = ? ]);
+
+
+    my $pheno_ext_sth = $dba->dbc()->prepare(qq[ select phenotype_id, description from phenotype]);
+
+
+    my $pub_ext_sth = $dba->dbc()->prepare(qq[ select pmid, publication_id
+                                               from publication 
+                                               where publication_id not in 
+                                              (select publication_id from phenotype_citation)
+                                               and pmid is not null
+                                             ]);
+
+    my %pheno_ids;
+    $pheno_ext_sth->execute()||die;
+    my $curr_pheno = $pheno_ext_sth->fetchall_arrayref();
+    foreach my $l (@{$curr_pheno}){
+	$pheno_ids{"\U$l->[1]"} = $l->[0];
+    }
+
+
+    $pub_ext_sth->execute()||die;
+    my $dat =  $pub_ext_sth->fetchall_arrayref();
+
+    foreach my $l (@{$dat}){
+	warn "looking for disease for $l->[0]\n";
+	## extract disease info
+	my $top_disease = find_disease($l->[0]);
+	## skip paper if none found
+	next unless defined $top_disease;
+
+	$top_disease =~ s/\'//g;
+	$top_disease = "\U$top_disease";
+	warn "looking for/adding $top_disease\n";
+	
+	if(defined  $pheno_ids{$top_disease}){
+
+	    $phencit_ext_sth->execute( $l->[1], $pheno_ids{$top_disease} )||die;
+	    my $already_done = $phencit_ext_sth->fetchall_arrayref();
+	    
+	    unless(defined $already_done ->[0]->[0]){
+		## create phenotype citation
+		$phencit_ins_sth->execute($l->[1], $pheno_ids{$top_disease} )||die;
+	    }
+	}
+	else{
+	    ## enter if new phenotype - warn for quick rubbish scanning
+	    warn "Entering new phenotype  $top_disease\n";
+	    my $pheno = Bio::EnsEMBL::Variation::Phenotype->new(-DESCRIPTION => $top_disease);
+	    $pheno_adaptor->store($pheno );
+	    $pheno_ids{$top_disease} =  $pheno->dbID() ;
+	    ## create phenotype citation
+	    $phencit_ins_sth->execute($l->[1], $pheno_ids{$top_disease})||die;
+	}		
+    }
+}
+
+sub find_disease{
+
+    my $pmid = shift;
+
+    my %count;
+    my @diesase;
+
+    my $mined = get_epmc_data( "MED/$pmid/textMinedTerms/DISEASE" );
+    if( ref($mined->{semanticTypeList}->{semanticType}->{tmSummary}) eq 'ARRAY' ){
+	foreach my $found (@{$mined->{semanticTypeList}->{semanticType}->{tmSummary}}  ){
+	    next if $found->{count} < 2;
+	    $count{ $found->{term}} = $found->{count} ;
+	}
+	
+	my $max = 0;
+	## find highest number of disease mentions in publication
+	foreach my $disease (keys %count){
+	    $max = $count{$disease} if $max < $count{$disease};	    
+	}
+
+	## store diseases reaching this threshhold
+	foreach my $disease (keys %count){
+	    push @diesase, $disease if $max == $count{$disease};
+	    
+	}
+	return undef if scalar(@diesase) >1 ; ## give up - not specific enough
+	return $diesase[0];
+	
+    }
+    else{
+	## if there is only one disease found, return it unless it is only mentioned once
+	return undef if $mined->{semanticTypeList}->{semanticType}->{tmSummary}->{count} < 2;
+	return $mined->{semanticTypeList}->{semanticType}->{tmSummary}->{term};
+
+    }
+
+    
+}
+
 sub usage {
     
-    die "\n\tUsage: import_EPMC.pl -data [EPMC file] -species [name] -registry [registry file]
+    die "\n\tUsage: import_EPMC.pl -type [ EPMC or UCSC or disease] -species [name] -registry [registry file]
 
-Options:  -check_dbSNP [0/1]   - add detail to citations from dbSNP import (default:1)\n\n";
+Options:  
+          -data [file of citations]   - *required* for EPMC import
+          -check_dbSNP [0/1]          - add detail to citations from dbSNP import (default:1)\n\n";
 
 }
 
