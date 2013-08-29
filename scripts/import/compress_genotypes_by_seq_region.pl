@@ -44,11 +44,13 @@ my %Printable = ( "\\"=>'\\', "\r"=>'r', "\n"=>'n', "\t"=>'t', "\""=>'"' );
 
 my ($TMP_DIR, $TMP_FILE, $species, $allow_nulls);
 
+my $registry_file ||= $Bin . "/ensembl.registry";
 
 GetOptions(   'tmpdir=s'  => \$TMP_DIR,
 	      'tmpfile=s' => \$TMP_FILE,
 	      'species=s' => \$species,
 	      'allownulls' => \$allow_nulls,
+              'reg'        => \$registry_file,
 		   );
 
 warn("Make sure you have an updated ensembl.registry file!\n");
@@ -57,7 +59,6 @@ usage('-TMP_DIR argument is required') if(!$TMP_DIR);
 usage('-TMP_FILE argument is required') if(!$TMP_FILE);
 usage('-species argument is required') if(!$species);
 
-my $registry_file ||= $Bin . "/ensembl.registry";
 
 Bio::EnsEMBL::Registry->load_all( $registry_file );
 
