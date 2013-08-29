@@ -2337,6 +2337,16 @@ sub validate_vf {
         return 0;
     }
     
+    # check start <= end + 1
+    if($vf->{start} > $vf->{end} + 1) {
+        warn(
+            "WARNING: start > end+1 : (START=".$vf->{start}.
+            ", END=".$vf->{end}.
+            ") on line ".$config->{line_number}."\n"
+        ) unless defined($config->{quiet});
+        return 0;
+    }
+    
     # check length of reference matches seq length spanned
     my @alleles = split /\//, $vf->{allele_string};
     my $ref_allele = shift @alleles;
