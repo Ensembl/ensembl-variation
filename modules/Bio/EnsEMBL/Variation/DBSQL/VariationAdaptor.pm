@@ -1124,7 +1124,7 @@ sub fetch_Iterator_by_VariationSet {
     my @var_set_ids = ($set->dbID);
     map {push(@var_set_ids,$_->dbID())} @{$set->adaptor->fetch_all_by_super_VariationSet($set)};
     my $var_set_id = join(",",@var_set_ids);
-    
+
     # Prepare a query for getting the span of variation_ids
     my $stmt = qq{
         FROM
@@ -1146,18 +1146,33 @@ sub fetch_Iterator_by_VariationSet {
     $sth->fetch();
     $max_variation_id ||= 0;
     $min_variation_id ||= 1;
-    
+
     # Prepare a statement for getting the ids in a range
     $sth = $self->prepare(qq{SELECT vsv.variation_id $stmt AND vsv.variation_id BETWEEN ? AND ? $constraint});
     
     # Internally, we keep an Iterator that works on the dbID span we're at
     my $iterator;
-        
+
     return Bio::EnsEMBL::Utils::Iterator->new(sub {
 
         # If the iterator is empty, get a new chunk of dbIDs, unless we've fetched all dbIDs 
         unless (defined($iterator) && $iterator->has_next() && $min_variation_id <= $max_variation_id) {
-            
+
+	    ## check there are ids in the range to return
+	    my $count_sth = $self->prepare(qq{SELECT count(vsv.variation_id) $stmt AND vsv.variation_id BETWEEN ? AND ? $constraint});
+
+	    my $done = 0;
+	    while( $min_variation_id < $max_variation_id && $done == 0  ){
+		$count_sth->execute($min_variation_id, $min_variation_id+$cache_size);
+		my $count = $count_sth->fetchall_arrayref();
+		if ($count->[0]->[0] > 0){
+		    $done =1;
+		}
+		else{
+		    $min_variation_id += ($cache_size + 1);
+		}
+	    }
+
             # Get the next chunk of dbIDs
             $sth->execute($min_variation_id,$min_variation_id+$cache_size);
             $min_variation_id += ($cache_size + 1);
@@ -1172,15 +1187,15 @@ sub fetch_Iterator_by_VariationSet {
             while ($sth->fetch()) {
                 push (@dbIDs,$dbID) unless ($seen{$dbID}++);
             }
-    
+
             # Get a new Iterator based on the new dbID span
-            $iterator = $self->fetch_Iterator_by_dbID_list(\@dbIDs);
-            
+            $iterator = $self->fetch_Iterator_by_dbID_list(\@dbIDs)   ;
+             
         }
-        
         return $iterator->next();
     });
 }
+
 
 sub _generic_fetch_by_VariationSet {
     my $self = shift;
