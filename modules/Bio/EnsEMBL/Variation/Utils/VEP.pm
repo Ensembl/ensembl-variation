@@ -598,7 +598,14 @@ sub parse_vcf {
                 }
                 else {
                     $vf_copy->{allele_string} = $ref;
-                    $vf_copy->{non_variant} = 1;
+                    $vf_copy->{hom_ref} = 1;
+                    
+                    if(defined($config->{process_ref_homs})) {
+                        $vf_copy->{allele_string} .= "/".$ref;
+                    }
+                    else {
+                        $vf_copy->{non_variant} = 1;
+                    }
                 }
                 
                 # store phasing info
@@ -1167,7 +1174,7 @@ sub vf_list_to_cons {
     }
     
     # get chr list
-    my %chrs = map {$_->{chr} => 1} @$listref;
+    my @chrs = sort {($a !~ /^\d+$/ || $b !~ /^\d+/) ? $a cmp $b : $a <=> $b} keys %{{map {$_->{chr} => 1} @$listref}};
     
     my $fetched_tr_count = 0;
     $fetched_tr_count = fetch_transcripts($config, $regions, $trim_regions)
@@ -1220,7 +1227,7 @@ sub vf_list_to_cons {
     
     my @return;
     
-    foreach my $chr(sort {($a !~ /^\d+$/ || $b !~ /^\d+/) ? $a cmp $b : $a <=> $b} keys %vf_hash) {
+    foreach my $chr(@chrs) {
         my $finished_vfs = whole_genome_fetch($config, $chr, \%vf_hash);
         
         # non-variants?
@@ -1452,6 +1459,9 @@ sub vf_to_consequences {
     # method name for consequence terms
     my $term_method = $config->{terms}.'_term';
     
+    # method name stub for getting *VariationAlleles
+    my $allele_method = defined($config->{process_ref_homs}) ? 'get_all_' : 'get_all_alternate_';
+    
     # find any co-located existing VFs
     $vf->{existing} ||= find_existing($config, $vf) if defined $config->{check_existing};
     
@@ -1491,7 +1501,8 @@ sub vf_to_consequences {
             # this currently always returns 'RegulatoryFeature', so we ignore it for now
             #$base_line->{Extra}->{REG_FEAT_TYPE} = $rf->feature_type->name;
             
-            for my $rfva (@{ $rfv->get_all_alternate_RegulatoryFeatureVariationAlleles }) {
+            my $method = $allele_method.'RegulatoryFeatureVariationAlleles';
+            for my $rfva (@{ $rfv->$method }) {
                 
                 my $line = init_line($config, $vf, $base_line);
                 
@@ -1537,7 +1548,8 @@ sub vf_to_consequences {
                 $base_line->{Extra}->{CELL_TYPE} =~ s/\s+/\_/g;
             }
             
-            for my $mfva (@{ $mfv->get_all_alternate_MotifFeatureVariationAlleles }) {
+            my $method = $allele_method.'MotifFeatureVariationAlleles';
+            for my $mfva (@{ $mfv->$method }) {
                 
                 my $line = init_line($config, $vf, $base_line);
                 
@@ -1583,8 +1595,9 @@ sub vf_to_consequences {
     # pass a true argument to get_IntergenicVariation to stop it doing a reference allele check
     # (to stay consistent with the rest of the VEP)
     elsif ((my $iv = $vf->get_IntergenicVariation(1)) && !defined($config->{no_intergenic})) {
-      
-        for my $iva (@{ $iv->get_all_alternate_IntergenicVariationAlleles }) {
+        
+        my $method = $allele_method.'IntergenicVariationAlleles';
+        for my $iva (@{ $iv->$method }) {
             
             my $line = init_line($config, $vf);
             
@@ -1613,7 +1626,8 @@ sub vf_to_consequences {
             
             my $gene = $tv->transcript->{_gene_stable_id} || $config->{ga}->fetch_by_transcript_stable_id($tv->transcript->stable_id)->stable_id;
             
-            push @{$by_gene{$gene}}, @{$tv->get_all_alternate_TranscriptVariationAlleles};
+            my $method = $allele_method.'TranscriptVariationAlleles';
+            push @{$by_gene{$gene}}, @{$tv->$method};
         }
         
         foreach my $gene(keys %by_gene) {
@@ -1638,7 +1652,8 @@ sub vf_to_consequences {
         foreach my $tv(@$tvs) {
             next if(defined $config->{coding_only} && !($tv->affects_cds));
             
-            push @return, map {tva_to_line($config, $_)} @{$tv->get_all_alternate_TranscriptVariationAlleles};
+            my $method = $allele_method.'TranscriptVariationAlleles';
+            push @return, map {tva_to_line($config, $_)} @{$tv->$method};
         }
     }
     
@@ -2070,7 +2085,7 @@ sub init_line {
       # zygosity
       if(defined($vf->{genotype})) {
         my %unique = map {$_ => 1} @{$vf->{genotype}};
-        $line->{Extra}->{ZYG} = scalar keys %unique > 1 ? 'HET' : 'HOM';
+        $line->{Extra}->{ZYG} = (scalar keys %unique > 1 ? 'HET' : 'HOM').(defined($vf->{hom_ref}) ? 'REF' : '');
       }
     }
     
