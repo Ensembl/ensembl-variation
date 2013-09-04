@@ -3,7 +3,7 @@ The scripts fetch the ancestral allele for each variation in the variation table
 ancestral_allele column in the variation table.
 
 The ancestral allele data comes from Ensembl compara
-(http://www.ensembl.org/info/docs/compara/analyses.html#ancestral) and is based on a 6 way primate alignment.
+(http://www.ensembl.org/info/genome/compara/analyses.html#ancestral) and is based on a 6 way primate alignment.
 Currently, there are ancestral genomes for gorilla, human, macaque, orangutan and chimpanzee.
 They can be downloaded from:
 ftp://ftp.ensembl.org/pub/release-66/fasta/ancestral_alleles/
