@@ -462,7 +462,10 @@ sub fetch_by_name {
     my $source = shift;
 
     throw('name argument expected') if(!defined($name));
-      
+    
+    # hack fix for phencode names with '+' in getting encoded/decoded by the webcode
+    $name =~ s/\s/\+/ if $self->db->species =~ /homo_sapiens/i;
+    
     # Add a constraint on the name
     my $constraint = qq{v.name = ?};
 
