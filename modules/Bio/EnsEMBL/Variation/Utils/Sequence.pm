@@ -503,7 +503,7 @@ sub hgvs_variant_notation {
 
     # Check that the alleles are different, otherwise return undef
     if($ref_allele eq $alt_allele){
-	warn "\nError in HGVS calculation for $var_name: alt allele ($alt_allele) is the same as the reference allele ($ref_allele) - potential strand or allele ordering problem - skipping\n";
+	#warn "\nError in HGVS calculation for $var_name: alt allele ($alt_allele) is the same as the reference allele ($ref_allele) - potential strand or allele ordering problem - skipping\n";
 	return undef ;
     }
     
