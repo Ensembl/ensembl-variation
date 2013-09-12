@@ -302,7 +302,7 @@ sub create_genotype_code {
 	my $gt_code = shift;
 	my $hap_id = 1;
 	
-	my $sth = $dbVar->prepare("INSERT INTO genotype_code VALUES(?, ?, ?)");
+	my $sth = $dbVar->prepare("INSERT INTO genotype_code (genotype_code_id, allele_code_id,  haplotype_id) VALUES(?, ?, ?)");
 	
 	foreach my $allele(split /\|/, $genotype) {
 		my $allele_code = allele_code($dbVar, $allele);
