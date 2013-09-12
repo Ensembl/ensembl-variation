@@ -797,14 +797,14 @@ sub pubmed_citations{
                    )]);
 
     my $pubmed_ins_sth = $self->{'dbVar'}->prepare(qq[ insert into tmp_pubmed (snp_id, pubmed_id) values (?,?)]);
-
     my $sth = $self->{'dbSNP'}->prepare(qq[ SELECT snp_id, pubmed_id from SNPPubmed ]);
     $sth->execute();
 
-    my $data = $sth->fetchall_arrayref();
-    foreach my $l (@{$data}){
+    print $logh Progress::location();
+    while (my $l = $sth->fetchrow_arrayref()){
        $pubmed_ins_sth->execute($l->[0], $l->[1]) ||die "Failed to enter pubmed_id for rs: $l->[0], PMID:$l->[1] \n";
     }
+    print $logh Progress::location();
     ## move data to correct structure
     my $pubmed_ext_sth = $self->{'dbVar'}->prepare(qq [ select variation.variation_id, tmp_pubmed.pubmed_id
                                                         from variation,tmp_pubmed
@@ -845,7 +845,7 @@ sub pubmed_citations{
     }
     ## remove tmp table
     $self->{'dbVar'}->do(qq [ drop table tmp_pubmed ]);
-
+    debug(localtime() . "\tCompleted pubmed cited SNPs");
 
 
 }
@@ -918,16 +918,15 @@ sub variation_table {
     
   debug(localtime() . "\tVariation table indexed");
 
+
+    debug(localtime() . "\tLooking for Somatic variants");
 	#Get somatic flag from dbSNP but only if the snp exclusively has somatic subsnps
-	$stmt = qq{SELECT DISTINCT	sssl.snp_id
-	     	       FROM SubSNP ss JOIN
-			SNPSubSNPLink sssl ON (
-				sssl.subsnp_id = ss.subsnp_id AND
-				ss.SOMATIC_ind = 'Y'
-			)
-		       JOIN SNPSubSNPLink sssl2 ON (sssl.snp_id = sssl2.snp_id)
-                       JOIN SubSNP ss2 ON ( sssl2.snp_id = sssl.snp_id )
-                       WHERE ss2.SOMATIC_ind != ss.SOMATIC_ind
+	$stmt = qq{ SELECT sssl.snp_id	
+                    FROM SubSNP ss JOIN
+                    SNPSubSNPLink sssl ON ( sssl.subsnp_id = ss.subsnp_id AND ss.SOMATIC_ind = 'Y')
+                    where not exists (select * from SubSNP ss2 JOIN SNPSubSNPLink sssl2 ON ( sssl2.subsnp_id = ss2.subsnp_id AND ss2.SOMATIC_ind = 'N')
+                    where  sssl2.snp_id = sssl.snp_id )
+                    and sssl.snp_id between ? and ? 
 	};
 	my $sth = $self->{'dbSNP'}->prepare($stmt);
   	print $logh Progress::location();
@@ -956,7 +955,7 @@ sub variation_table {
     print $logh Progress::location();
 
 
-
+ debug(localtime() . "\tFinished Somatic variants");
 
     debug(localtime() . "\tStarting subSNPhandle");
     #create a subsnp_handle table
@@ -1579,15 +1578,15 @@ sub parallelized_allele_table {
   my $self = shift;
   my $load_only = shift;
 
-  debug(localtime() . "\tStarting allele table");
-
- ## revert schema to use letter rather than number coded alleles
-  update_allele_schema($self->{'dbVar'});
-  
-  
   #Put the log filehandle in a local variable
   my $logh = $self->{'log'};
   my $stmt;
+
+  debug(localtime() . "\tStarting allele table");
+
+  ## revert schema to use letter rather than number coded alleles
+  update_allele_schema($self->{'dbVar'});
+    
   
   # The tempfile to be used for loading
   my $file_prefix = $self->{'tmpdir'} . '/allele_table';
@@ -1637,10 +1636,7 @@ sub parallelized_allele_table {
 
     ## improve binning for sparsely submitted species
     #hash out task file creation if re-running 1 failed job
-    $jobindex = write_allele_task_file($self->{'dbSNP'}->db_handle(),$task_manager_file, $loadfile,  $allelefile, $samplefile,$self->{limit});
-
- 
-## =cut #hash out to re-run failed job 
+    $jobindex = write_allele_task_file($self->{'dbSNP'}->db_handle(),$task_manager_file, $loadfile,  $allelefile, $samplefile,$self->{limit}); 
 
 #    my $jobindex = 795;
 #    my $start = 795;
@@ -1850,6 +1846,22 @@ sub flanking_sequence_table {
 						      line varchar(255),
 						      revcom tinyint)
 				MAX_ROWS = 100000000});
+
+  ## Create flanking sequence table as no longer part of production schema
+  $self->{'dbVar'}->do(qq{ create table if not exists flanking_sequence (
+         	            variation_id int(10) unsigned not null,
+	                    up_seq text,
+   	                    down_seq text,
+                            up_seq_region_start int,
+                            up_seq_region_end   int,
+                            down_seq_region_start int,
+                            down_seq_region_end int,
+                            seq_region_id int(10) unsigned,
+                            seq_region_strand tinyint,    
+                            primary key( variation_id )   
+                         ) MAX_ROWS = 100000000});
+
+
   print $logh Progress::location();
 
 # import both the 5prime and 3prime flanking sequence tables
@@ -2202,6 +2214,7 @@ sub parallelized_individual_genotypes {
   my $self = shift;
   my $load_only = shift;
 
+  debug(localtime() . "\tStarting parallelized_individual_genotypes");
   my $genotype_table = 'tmp_individual_genotype_single_bp';
   my $multi_bp_gty_table = 'individual_genotype_multiple_bp';
   my $jobindex;
@@ -2514,7 +2527,7 @@ sub create_parallelized_individual_genotypes_task_file{
 
   # Store the data for the farm submission in a hash with the data as key. This way, the jobs will be "randomized" w.r.t. chromosomes and chunks when submitted so all processes shouldn't work on the same tables/files at the same time.
   my %job_data;
-
+ debug(localtime() . "\tCreating parallelized_individual_genotypes task file");
   ## temp table to hold files to create & load
   $self->{'dbVar'}->do(qq[ DROP TABLE IF EXISTS tmp_indgeno_file ]);
   $self->{'dbVar'}->do(qq[ CREATE TABLE tmp_indgeno_file (sub_file varchar(255), destination_file varchar(255) ) ] );
