@@ -50,6 +50,7 @@ sub variation_feature{
      debug(localtime() . "\tLoading seq_region data");
      load($self->{'dbVar'}, "seq_region", "seq_region_id", "name");
      print Progress::location();
+
      my $version_number = substr($self->{'dbSNP_version'},1);
      debug(localtime() . "\tDumping SNPLoc data for dbSNP version $version_number " );
     
@@ -118,10 +119,17 @@ sub variation_feature{
     $tablename2 = $self->{'dbSNP_version'} . "_ContigInfo";
      }
 
+=head hard-coded table names of non-current format
+    if($self->{'dbm'}->dbCore()->species() =~ m/ovis_aries/){
+	$tablename2 ='b128_ContigInfo_0_0';
+	$tablename1 ='b128_SNPContigLoc_0_0'
+    }
+=cut
 my $stmt;
     #The group term (the name of the reference assembly in the dbSNP b[version]_SNPContigInfo_[assembly]_[assembly version] table) is either specified via the config file or, if not, attempted to automatically determine from the data
     my $group_term = $self->{'group_term'};
     my $group_label = $self->{'group_label'};
+
     if (defined($group_term) && defined($group_label)) {
 	warn "Using group_term:$group_term and group_label:$group_label to extract mappings \n";
     }
@@ -393,10 +401,10 @@ my $stmt;
 	$self->extract_haplotype_mappings($tablename1, $tablename2, $group_label);
     }
    
-    $self->{'dbVar'}->do("DROP TABLE tmp_contig_loc_chrom");
-    $self->{'dbVar'}->do("DROP TABLE tmp_genotyped_var");
-    $self->{'dbVar'}->do("DROP TABLE tmp_variation_feature_chrom");
-    $self->{'dbVar'}->do("DROP TABLE tmp_variation_feature_ctg");
+    $self->{'dbVar'}->do("DROP TABLE IF EXISTS tmp_contig_loc_chrom");
+    $self->{'dbVar'}->do("DROP TABLE IF EXISTS tmp_genotyped_var");
+    $self->{'dbVar'}->do("DROP TABLE IF EXISTS tmp_variation_feature_chrom");
+    $self->{'dbVar'}->do("DROP TABLE IF EXISTS tmp_variation_feature_ctg");
     #for the chicken, delete 13,000 SNPs that cannot be mapped to EnsEMBL coordinate
     if ($self->{'dbm'}->dbCore()->species =~ /gga/i){
         $self->{'dbVar'}->do("DELETE FROM variation_feature WHERE seq_region_end = -1");
@@ -460,7 +468,8 @@ sub extract_haplotype_mappings{
                                          v.name, v.source_id, v.validation_status, tvf.aln_quality,  v.somatic
                                   FROM tmp_contig_loc_hap tvf  
                                   LEFT JOIN variation v on tvf.snp_id = v.snp_id
-                                  LEFT JOIN tmp_hap_synonym ths on ths.synonym = tvf.seq_av                                    
+                                  LEFT JOIN tmp_hap_synonym ths on ths.synonym = tvf.seq_av 
+                                  WHERE ths.seq_region_id is not null                                   
                                   ]);
 
     debug(localtime() . "\tDone VariationFeature data for haplotypes");
