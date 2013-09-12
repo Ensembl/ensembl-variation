@@ -157,43 +157,6 @@ if (defined($logfile)) {
   print $logh "\n######### " . localtime() . " #########\n\tImport script launched\n";
 }
 
-=head
-Bio::EnsEMBL::Registry->load_all( $registry_file );
-
-my $cdba = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'core') or die ("Could not get core DBadaptor");
-my $vdba = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'variation') or die ("Could not get DBadaptor to destination variation database");
-my $snpdba = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'dbsnp') or die ("Could not get DBadaptor to dbSNP source database");
-# Set the disconnect_when_inactive property
-#$cdba->dbc->disconnect_when_inactive(1);
-#$vdba->dbc->disconnect_when_inactive(1);
-#$snpdba->dbc->disconnect_when_inactive(1);
-
-$vdba->dbc->{mysql_auto_reconnect} = 1;
-$cdba->dbc->{mysql_auto_reconnect} = 1;
-
-$vdba->dbc->do("SET SESSION wait_timeout = 2678200");
-$cdba->dbc->do("SET SESSION wait_timeout = 2678200");
-
- Set some variables on the MySQL server that can speed up table read/write/loads
-my $stmt = qq{
-  SET SESSION
-    bulk_insert_buffer_size=512*1024*1024
-};
-$vdba->dbc->do($stmt);
-
-if (!$dsdbname) {
-  my $TAX_ID = $cdba->get_MetaContainer()->get_taxonomy_id() or throw("Unable to determine taxonomy id from core database for species $species.");
-  my $version = $dbSNP_BUILD_VERSION;
-  $version =~ s/^b//;
- $dsdbname = "$species\_$TAX_ID\_$version";
-}
-
-my $dbSNP = $snpdba->dbc;
-my $dbVar = $vdba->dbc;
-my $dbCore = $cdba;
-
-#my $my_species = $mc->get_Species();
-=cut
 
 my $dbm = dbSNP::DBManager->new($registry_file,$species);
 $dbm->dbSNP_shared($shared_db);
@@ -241,7 +204,8 @@ elsif ($species =~ m/zebrafish|danio/i ||
        $species =~ m/tetraodon/i || 
        $species =~ m/orangutan|Pongo_abelii/i || 
        $species =~ m/monodelphis_domestica/i  || 
-       $species =~ m/macaca_mulatta/i
+       $species =~ m/macaca_mulatta/i ||
+       $species =~ m/ovis_aries/i
     ) {
     $import_object = dbSNP::GenericChromosome->new(@parameters);
 }
