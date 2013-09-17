@@ -31,7 +31,7 @@ our @short_names = qw(1kg_hct 1kg_hct_ceu 1kg_hct_yri 1kg_hce 1kg_hce_ceu 1kg_hc
                       Human610_Quad HumanHap550 HumanHap650Y HumanOmni2.5 PorcineSNP60
                       esp_6500 clin_assoc 
                       Chicken600K EquineSNP50 BovineHD BovineLD BovineSNP50  
-                      phencode 
+                      phencode HumanOmni5 OvineSNP50
                      );
 
 our @dbsnp_clinical_significance_types = qw(
