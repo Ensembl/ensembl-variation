@@ -1089,7 +1089,7 @@ sub run_forks {
 				my @split = split /\s+/;
 				$config->{skipped}->{$split[-2]} += $split[-1];
 			}
-			elsif(/WARN/i) {
+			elsif(/WARN/i || /difference in the software release/i) {
 				print;
 			}
             # something's wrong
