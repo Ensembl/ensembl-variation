@@ -729,7 +729,7 @@ sub main {
 			if(!defined($data->{ID}) || $data->{ID} eq '.' || defined($config->{create_name})) {
 				$data->{ID} =
 					($config->{var_prefix} ? $config->{var_prefix} : 'tmp').
-					'_'.$data->{'#CHROM'}.'_'.$data->{POS};
+					'_'.$data->{'#CHROM'}.'_'.$data->{POS}.'_'.$data->{REF}.'_'.$data->{ALT};
 				$data->{made_up_name} = 1;
 			}
 			
@@ -1089,7 +1089,7 @@ sub run_forks {
 				my @split = split /\s+/;
 				$config->{skipped}->{$split[-2]} += $split[-1];
 			}
-			elsif(/WARN/i) {
+			elsif(/WARN/i || /difference in the software release/i) {
 				print;
 			}
             # something's wrong
