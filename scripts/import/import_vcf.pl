@@ -729,7 +729,7 @@ sub main {
 			if(!defined($data->{ID}) || $data->{ID} eq '.' || defined($config->{create_name})) {
 				$data->{ID} =
 					($config->{var_prefix} ? $config->{var_prefix} : 'tmp').
-					'_'.$data->{'#CHROM'}.'_'.$data->{POS};
+					'_'.$data->{'#CHROM'}.'_'.$data->{POS}.'_'.$data->{REF}.'_'.$data->{ALT};
 				$data->{made_up_name} = 1;
 			}
 			
