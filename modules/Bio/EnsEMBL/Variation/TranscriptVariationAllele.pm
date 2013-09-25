@@ -877,7 +877,7 @@ sub _get_hgvs_protein_type{
           $hgvs_notation->{type} = ">";
       }
 
-      elsif($hgvs_notation->{alt} eq "" ) {
+      elsif($hgvs_notation->{alt} eq "" || $hgvs_notation->{alt} eq "-") {
 
           $hgvs_notation->{type} = "del";
       }
@@ -965,7 +965,10 @@ sub _get_hgvs_peptides{
         $hgvs_notation = $self->_check_for_peptide_duplication($hgvs_notation);
     }
   }
-  
+  elsif($hgvs_notation->{type} eq "del" ){
+      ##check if bases directly after deletion match start of deletion
+      $hgvs_notation = $self->_check_peptides_post_del($hgvs_notation);
+  }
 
   ### Convert peptide to 3 letter code as used in HGVS
   unless( $hgvs_notation->{ref} eq "-"){
@@ -1145,10 +1148,13 @@ sub _get_surrounding_peptides{
 
   my $self    = shift;
   my $ref_pos = shift; 
+  my $length  = shift;
+
+  $length = 2 unless defined $length;
+
   my $ref_trans  = $self->transcript_variation->_peptide();
 
-  my $end = substr($ref_trans, $ref_pos-1);
-  my $ref_string = substr($ref_trans, $ref_pos-1, 2);
+  my $ref_string = substr($ref_trans, $ref_pos-1, $length);
 
   return ($ref_string);
 
@@ -1215,16 +1221,18 @@ sub _check_for_peptide_duplication{
    
    ## Test whether alt peptide matches the reference sequence just before the variant
    my $test_new_start = $hgvs_notation->{'start'} - length($hgvs_notation->{'alt'}) -1 ;
-   my $test_seq       =  substr($upstream_trans, $test_new_start, length($hgvs_notation->{'alt'}));
 
-   if ( $test_new_start >= 0 && $test_seq eq $hgvs_notation->{alt}) {
-
-          $hgvs_notation->{type}   = 'dup';
-          $hgvs_notation->{end}    = $hgvs_notation->{start} -1;
-          $hgvs_notation->{start} -= length($hgvs_notation->{alt});
-
-        }
-   
+   if(length($upstream_trans) >  $test_new_start + length($hgvs_notation->{'alt'}) ){
+       my $test_seq       =  substr($upstream_trans, $test_new_start, length($hgvs_notation->{'alt'}));
+       
+       if ( $test_new_start >= 0 && $test_seq eq $hgvs_notation->{alt}) {
+           
+           $hgvs_notation->{type}   = 'dup';
+           $hgvs_notation->{end}    = $hgvs_notation->{start} -1;
+           $hgvs_notation->{start} -= length($hgvs_notation->{alt});
+           
+       }
+   }
    return $hgvs_notation;
 
 }
@@ -1308,6 +1316,43 @@ sub _get_del_peptides{
   $hgvs_notation->{alt}  = Bio::SeqUtils->seq3(Bio::PrimarySeq->new(-seq => $hgvs_notation->{alt}, -id => 'ref',  -alphabet => 'protein')) || "";
   $hgvs_notation->{ref}  = Bio::SeqUtils->seq3(Bio::PrimarySeq->new(-seq => $hgvs_notation->{ref}, -id => 'ref',  -alphabet => 'protein')) || "";
   return $hgvs_notation;
+}
+
+## HGVS counts deletion from first different peptide, 
+## so check the sequence post deletion and increment accordingly
+sub _check_peptides_post_del{
+
+    my $self          = shift;
+    my $hgvs_notation = shift;
+
+    my $deleted_length = (length $hgvs_notation->{ref});
+
+    ## check peptides after deletion - get same length as deletion
+    my $post_pos = $hgvs_notation->{end}+1;
+    my $post_seq = $self->_get_surrounding_peptides($post_pos, $deleted_length);
+
+    for (my $n = 0; $n< $deleted_length; $n++){
+
+        my $check_next_del  = substr( $hgvs_notation->{ref}, $n, 1);
+        my $check_next_post = substr( $post_seq, $n, 1);
+
+        if($check_next_del eq  $check_next_post){
+
+            ## move position of deletion along
+            $hgvs_notation->{start}++;
+            $hgvs_notation->{end}++;
+
+            ## modify deleted sequence
+            $hgvs_notation->{ref} = substr($hgvs_notation->{ref},1);
+            $hgvs_notation->{ref} .= $check_next_del;
+
+        }
+        else{
+            last;
+        }
+    }
+
+    return $hgvs_notation;
 }
 
 
