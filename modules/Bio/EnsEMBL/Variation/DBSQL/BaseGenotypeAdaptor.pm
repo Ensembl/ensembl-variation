@@ -103,7 +103,7 @@ sub _cache_genotype_codes {
 		$self->{_genotype_code_adaptor} = $self->db->get_GenotypeCodeAdaptor;
 	}
 	
-	my %gt_codes = map {(join "|", (@{$_->genotype}, $_->phased || "NULL")) => $_->dbID} @{$self->{_genotype_code_adaptor}->fetch_all()};
+	my %gt_codes = map {(join "|", (@{$_->genotype}, defined($_->phased) ? $_->phased : "NULL")) => $_->dbID} @{$self->{_genotype_code_adaptor}->fetch_all()};
 	
 	$self->db->{_genotype_codes} = \%gt_codes;
 	
