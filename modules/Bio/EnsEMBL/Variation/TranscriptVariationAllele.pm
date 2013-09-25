@@ -603,7 +603,7 @@ sub hgvs_transcript {
     if($DEBUG ==1 && $hgvs_notation->{ref} ne $ref_al_for_checking &&
             $hgvs_notation->{type} ne 'dup' &&
             $hgvs_notation->{type} ne 'inv' ){
-        warn "\nError - calculated reference ($hgvs_notation->{ref}) and input reference ($ref_al_for_checking) disagree - skipping HGVS transcript for $var_name\n";
+        #warn "\nError - calculated reference ($hgvs_notation->{ref}) and input reference ($ref_al_for_checking) disagree - skipping HGVS transcript for $var_name\n";
     
     }
     ### create reference name - transcript name & seq version
@@ -699,6 +699,7 @@ sub hgvs_protein {
     }
 
     unless( defined $hgvs_notation->{type} && $hgvs_notation->{type} eq "="){
+
         #### define type - types are different for protein numbering
         $hgvs_notation  = $self->_get_hgvs_protein_type($hgvs_notation);
         return undef unless defined $hgvs_notation->{type}; 
@@ -781,7 +782,7 @@ sub _get_hgvs_protein_format{
     }    
 
     elsif( $hgvs_notation->{type} eq "delins" || $hgvs_notation->{type} eq "ins" ){
-    
+
 	$hgvs_notation->{alt} = "Ter" if $hgvs_notation->{alt} =~ /^Ter/;
 
         #### list first and last aa in reference only
@@ -800,7 +801,7 @@ sub _get_hgvs_protein_format{
                $hgvs_notation->{alt} .="extTer" . $aa_til_stop;
             }
          }
-         if($hgvs_notation->{start} == $hgvs_notation->{end} && $hgvs_notation->{type} eq "delins"){       
+         if($hgvs_notation->{start} == $hgvs_notation->{end} && $hgvs_notation->{type} eq "delins"){  
              $hgvs_notation->{'hgvs'} .= $ref_pep_first . $hgvs_notation->{start}  . $hgvs_notation->{type} . $hgvs_notation->{alt} ;
          }
          else{        
@@ -833,10 +834,12 @@ sub _get_hgvs_protein_format{
     }
 
     elsif( $hgvs_notation->{type} eq "del"){
+
         $hgvs_notation->{alt} =  "del"; 
         if( length($hgvs_notation->{ref}) >3 ){
             my $ref_pep_first = substr($hgvs_notation->{ref}, 0, 3);
             my $ref_pep_last  = substr($hgvs_notation->{ref}, -3, 3);
+
             $hgvs_notation->{'hgvs'} .=  $ref_pep_first . $hgvs_notation->{start} .  "_" .  $ref_pep_last . $hgvs_notation->{end} .$hgvs_notation->{alt} ;
         }
         else{
@@ -877,7 +880,7 @@ sub _get_hgvs_protein_type{
           $hgvs_notation->{type} = ">";
       }
 
-      elsif($hgvs_notation->{alt} eq "" ) {
+      elsif($hgvs_notation->{alt} eq "" || $hgvs_notation->{alt} eq "-") {
 
           $hgvs_notation->{type} = "del";
       }
@@ -965,8 +968,10 @@ sub _get_hgvs_peptides{
         $hgvs_notation = $self->_check_for_peptide_duplication($hgvs_notation);
     }
   }
-  
-
+  elsif($hgvs_notation->{type} eq "del" ){
+      ##check if bases directly after deletion match start of deletion
+      $hgvs_notation = $self->_check_peptides_post_del($hgvs_notation);
+  }
   ### Convert peptide to 3 letter code as used in HGVS
   unless( $hgvs_notation->{ref} eq "-"){
       $hgvs_notation->{ref}  = Bio::SeqUtils->seq3(Bio::PrimarySeq->new(-seq => $hgvs_notation->{ref}, -id => 'ref',  -alphabet => 'protein')) || "";
@@ -979,13 +984,15 @@ sub _get_hgvs_peptides{
   }
 
   ### handle special cases
-  if(    affects_start_codon($self) ){
+
+  if( affects_start_codon($self) ){
     #### handle initiator loss -> probably no translation => alt allele is '?'
     $hgvs_notation->{alt}  = "?";    
     $hgvs_notation->{type} = "";
   }
 
   elsif(  $hgvs_notation->{type} eq "del"){ 
+
     if( $hgvs_notation->{ref} =~/\w+/){
          $hgvs_notation->{alt} = "del";
      }
@@ -1145,10 +1152,13 @@ sub _get_surrounding_peptides{
 
   my $self    = shift;
   my $ref_pos = shift; 
+  my $length  = shift;
+
+  $length = 2 unless defined $length;
+
   my $ref_trans  = $self->transcript_variation->_peptide();
 
-  my $end = substr($ref_trans, $ref_pos-1);
-  my $ref_string = substr($ref_trans, $ref_pos-1, 2);
+  my $ref_string = substr($ref_trans, $ref_pos-1,  $length);
 
   return ($ref_string);
 
@@ -1310,6 +1320,42 @@ sub _get_del_peptides{
   return $hgvs_notation;
 }
 
+## HGVS counts deletion from first different peptide, 
+## so check the sequence post deletion and increment accordingly
+sub _check_peptides_post_del{
+
+    my $self          = shift;
+    my $hgvs_notation = shift;
+
+    my $deleted_length = (length $hgvs_notation->{ref});
+
+    ## check peptides after deletion - get same length as deletion
+    my $post_pos = $hgvs_notation->{end}+1;
+    my $post_seq = $self->_get_surrounding_peptides($post_pos, $deleted_length);
+
+    for (my $n = 0; $n< $deleted_length; $n++){
+
+        my $check_next_del  = substr( $hgvs_notation->{ref}, $n, 1);
+        my $check_next_post = substr( $post_seq, $n, 1);
+
+        if($check_next_del eq  $check_next_post){
+
+            ## move position of deletion along
+            $hgvs_notation->{start}++;
+            $hgvs_notation->{end}++;
+
+            ## modify deleted sequence
+            $hgvs_notation->{ref} = substr($hgvs_notation->{ref},1);
+            $hgvs_notation->{ref} .= $check_next_del;
+
+        }
+        else{
+            last;
+        }
+    }
+
+    return $hgvs_notation;
+}
 
 =head
 # We haven't implemented support for these methods yet
