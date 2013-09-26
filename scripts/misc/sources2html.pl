@@ -82,7 +82,8 @@ my $login = "ensro";
 my $pswd = "";
 my $sep = "\t";
 my $start = 0;
-my %colors = ( 'version' => '#090', 'source'  => '#00F' );
+my %colours = ( 'version' => '#090', 'source'  => '#00F' );
+
 
 ##############
 ### Header ###
@@ -116,6 +117,7 @@ my $html_footer = qq{
 
 my $html_content = '';
 my @species_list;
+my %species_news;
 
 foreach my $hostname (@hostnames) {
 
@@ -245,6 +247,7 @@ sub source_table {
     }
    
     if ($s_new_type) {
+      $species_news{$species}{$s_new_type} = 1;
       my $borders = ";border-top:1px solid #FFF;border-bottom:1px solid #FFF";
       if ($s_type eq 'chip') {
         $s_header .= $borders if ($cbg == 1);
@@ -255,8 +258,8 @@ sub source_table {
       else {
         $s_header .= $borders if ($bg == 1);
       }
-      $s_new = '<span style="color:'.$colors{$s_new_type}.'">New '.$s_new_type.'</span>' if ($s_new_type);
-      $s_header .= ';background-color:'.$colors{$s_new_type};
+      $s_new = '<span style="color:'.$colours{$s_new_type}.'">New '.$s_new_type.'</span>' if ($s_new_type);
+      $s_header .= ';background-color:'.$colours{$s_new_type};
     }
       
     $s_header .= '"></td>';
@@ -281,16 +284,18 @@ sub source_table {
     
     $s_type = 'main' if (!defined($s_type));
     $other_flag{$s_type} = 1 if ($s_phenotype ne '' || $s_new_stuff ne '' || $s_somatic_status ne '-');
-          
+      
+    my $new = ($s_new_stuff eq '') ? qq{<td style="border-left:1px solid #BBB;padding:0px"></td>} : qq{<td style="text-align:center;width:22px;padding:2px 3px;border-left:1px solid #BBB">$s_new_stuff</td>};    
     my $row = qq{
       $s_header
       <td>$source</td>
       <td>$s_version</td>
       <td>$s_description</td>
-      <td style="text-align:center;width:22px">$s_somatic_status</td>
-      <td style="text-align:center;width:22px">$s_phenotype</td>
+      $new
+      <td style="text-align:center;width:22px;padding:2px 3px">$s_phenotype</td>
+      <td style="text-align:center;width:22px;padding:2px 3px">$s_somatic_status</td>
     };
-    $row .= ($s_new_stuff eq '') ? qq{<td></td>} : qq{<td style="text-align:center;width:22px">$s_new_stuff</td>};
+    #$row .= ($s_new_stuff eq '') ? qq{<td></td>} : qq{<td style="text-align:center;width:22px">$s_new_stuff</td>};
     
     # Is chip ?
     if ($s_type eq 'chip') {
@@ -383,23 +388,47 @@ sub get_connection_and_query {
 
 sub create_menu {
   
+  my $label_style = "display:inline-block;height:8px;width:8px;border-radius:4px";
+  my %desc = ( 
+              'version' => qq{New data version(s) for this species},
+              'source'  => qq{New data source(s) for this species}
+             );
+  
   my $html = qq{
   <!-- Right hand side menu -->
   <div style="float:right">
-  <div style="margin-left:8px;margin-top:2px;background-color:#F2F2F2;color:#333;border-radius:5px">
+  <div style="margin-left:8px;margin-top:2px;padding-bottom:2px;background-color:#F2F2F2;color:#333;border-radius:5px">
     <div style="padding:5px;font-weight:bold;color:#FFF;background-color:#336;border-top-left-radius:5px;border-top-right-radius:5px">
       <img src="/i/16/rev/info.png" style="vertical-align:top" />
       Species list
     </div> 
-    <ul style="padding:5px 5px 5px 25px">
+    <ul style="padding:5px 5px 5px 25px;margin-bottom:0px">
   };
   foreach my $species (@species_list) {
     my $name = $species->{name};
     my $anchor = $species->{anchor};
-    $html .= qq{\n      <li><a href="#$anchor">$name</a></li>};
+    my $new_data = '';
+    if ($species_news{$species->{name}}) {
+      my @types = sort {$b cmp $a} keys(%{$species_news{$species->{name}}});
+      foreach my $type (@types) {
+        my $label_colour = $colours{$type};
+        my $label_desc = $desc{$type};
+        $new_data .= qq{<span style="$label_style;margin-right:5px;background-color:$label_colour" title="$label_desc"></span>};
+      }
+    }
+    #my $new_data = ($species_news{$species->{name}}) ? qq{<span style="margin-left:10px;display:inline-block;height:10px;width:10px;border-radius:5px;background-color:#0A0"></span>} : '';
+    $html .= qq{\n      <li><a href="#$anchor" style="margin-right:5px">$name</a>$new_data</li>};
   }
+  my $v_colour = $colours{'version'};
+  my $s_colour = $colours{'source'};
+  my $v_label  = $desc{'version'};
+  my $s_label  = $desc{'source'};
+  
   $html .= sprintf ( qq{
     </ul>
+    <span style="$label_style;margin-left:5px;background-color:$v_colour"></span><small> : $v_label</small>
+    <br />
+    <span style="$label_style;margin-left:5px;background-color:$s_colour"></span><small> : $s_label</small>
   </div>
   <br />
   <div id="legend" style="margin-left:8px;margin-top:2px;background-color:#F2F2F2;color:#333;border-radius:5px">
@@ -408,6 +437,18 @@ sub create_menu {
       Icons legend
     </div> 
     <table>
+      <tr>
+        <td style="padding-top:8px">%s</td>
+        <td style="padding-top:6px"><b>New version</b> of the data source<br />in this release for the species</td>
+      </tr>
+      <tr>
+        <td style="padding-top:8px">%s</td>
+        <td style="padding-top:6px"><b>New data source</b> in this<br />release for the species</td>
+      </tr>
+      <tr>
+        <td style="padding-top:6px"><img src="phenotype.png" style="border-radius:5px;border:1px solid #000;margin-right:1px" alt="Provides phenotype data" title="Provides phenotype data"/></td>
+        <td style="padding-top:6px">Source which provides<br />phenotype association data</td>
+      </tr>
       <tr>
         <td style="padding-top:6px">%s</td>
         <td style="padding-top:6px">The source contains only<br />germline data</td>
@@ -420,34 +461,22 @@ sub create_menu {
         <td style="padding-top:6px">%s</td>
         <td style="padding-top:6px">The source contains both<br />germline and somatic data</td>
       </tr>
-      <tr>
-        <td style="padding-top:6px"><img src="phenotype.png" style="border-radius:5px;border:1px solid #000;margin-right:1px" alt="Provides phenotype data" title="Provides phenotype data"/></td>
-        <td style="padding-top:6px">Source which provides<br />phenotype association data</td>
-      </tr>
-      <tr>
-        <td style="padding-top:8px">%s</td>
-        <td style="padding-top:6px"><b>New version</b> of the data source<br />in this release for the species</td>
-      </tr>
-      <tr>
-        <td style="padding-top:8px">%s</td>
-        <td style="padding-top:6px"><b>New data source</b> in this<br />release for the species</td>
-      </tr>
     </table>
   </div>
 </div>
   },
+  new_source_or_version('version'),
+  new_source_or_version('source'),
   somatic_status('germline'),
   somatic_status('somatic'),
-  somatic_status('mixed'),
-  new_source_or_version('version'),
-  new_source_or_version('source'));
+  somatic_status('mixed'));
   return $html;
 }
 
 sub new_source_or_version {
   my $type = shift;
   my $label = ($type eq 'version') ? 'V' : 'S';
-  my $color = $colors{$type};
+  my $color = $colours{$type};
   
   return qq{
        <div style="color:$color;font-size:0.8em;text-align:center;margin:0px;padding:0px"><span style="margin:0px;padding:0px">New</span> <span style="margin:0px;padding:0px">$type</span></div>
@@ -489,7 +518,7 @@ sub table_header {
   if ($flag->{$type}) {
     my $alt_text = qq{Click here to go to the icons table description};
     $header_col = qq{
-    <th colspan=3 style="width:66px">
+    <th colspan=3 style="width:56px;text-align:center;border-left:1px solid #BBB;background-color:#BBB">
       Other<a href="#legend" class="ht _ht" title="$alt_text"><img src="/i/16/info.png" style="position:relative;top:2px;width:12px;height:12px;margin-left:3px" alt="$alt_text"/></a>
     </th>}; 
   }
@@ -501,7 +530,7 @@ sub table_header {
     <br />
     <div>
       <table class="ss" style="width:75%">
-        <tr><th colspan="2">$name</th><th>Version</th><th>Description</th>$header_col</tr>
+        <tr><th colspan="2">$name</th><th>Version</th><th>Description</th></th>$header_col</tr>
     };
 }
 
