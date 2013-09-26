@@ -295,7 +295,6 @@ sub source_table {
       <td style="text-align:center;width:22px;padding:2px 3px">$s_phenotype</td>
       <td style="text-align:center;width:22px;padding:2px 3px">$s_somatic_status</td>
     };
-    #$row .= ($s_new_stuff eq '') ? qq{<td></td>} : qq{<td style="text-align:center;width:22px">$s_new_stuff</td>};
     
     # Is chip ?
     if ($s_type eq 'chip') {
@@ -416,7 +415,6 @@ sub create_menu {
         $new_data .= qq{<span style="$label_style;margin-right:5px;background-color:$label_colour" title="$label_desc"></span>};
       }
     }
-    #my $new_data = ($species_news{$species->{name}}) ? qq{<span style="margin-left:10px;display:inline-block;height:10px;width:10px;border-radius:5px;background-color:#0A0"></span>} : '';
     $html .= qq{\n      <li><a href="#$anchor" style="margin-right:5px">$name</a>$new_data</li>};
   }
   my $v_colour = $colours{'version'};
@@ -438,27 +436,29 @@ sub create_menu {
     </div> 
     <table>
       <tr>
-        <td style="padding-top:8px">%s</td>
+        <td style="padding-top:8px;text-align:center">%s</td>
         <td style="padding-top:6px"><b>New version</b> of the data source<br />in this release for the species</td>
       </tr>
       <tr>
-        <td style="padding-top:8px">%s</td>
+        <td style="padding-top:8px;text-align:center">%s</td>
         <td style="padding-top:6px"><b>New data source</b> in this<br />release for the species</td>
       </tr>
       <tr>
-        <td style="padding-top:6px"><img src="phenotype.png" style="border-radius:5px;border:1px solid #000;margin-right:1px" alt="Provides phenotype data" title="Provides phenotype data"/></td>
+        <td style="padding-top:6px;text-align:center;">
+          <img src="phenotype.png" style="margin-left:auto;margin-right:auto;border-radius:5px;border:1px solid #000;margin-right:1px" alt="Provides phenotype data" title="Provides phenotype data"/>
+        </td>
         <td style="padding-top:6px">Source which provides<br />phenotype association data</td>
       </tr>
       <tr>
-        <td style="padding-top:6px">%s</td>
+        <td style="padding-top:6px;text-align:center">%s</td>
         <td style="padding-top:6px">The source contains only<br />germline data</td>
       </tr>
       <tr>
-        <td style="padding-top:6px">%s</td>
+        <td style="padding-top:6px;text-align:center">%s</td>
         <td style="padding-top:6px">The source contains only<br />somatic data</td>
       </tr>
       <tr>
-        <td style="padding-top:6px">%s</td>
+        <td style="padding-top:6px;text-align:center">%s</td>
         <td style="padding-top:6px">The source contains both<br />germline and somatic data</td>
       </tr>
     </table>
@@ -475,11 +475,11 @@ sub create_menu {
 
 sub new_source_or_version {
   my $type = shift;
-  my $label = ($type eq 'version') ? 'V' : 'S';
   my $color = $colours{$type};
-  
   return qq{
-       <div style="color:$color;font-size:0.8em;text-align:center;margin:0px;padding:0px"><span style="margin:0px;padding:0px">New</span> <span style="margin:0px;padding:0px">$type</span></div>
+       <div style="color:$color;font-size:0.8em;text-align:center;margin:0px auto 0px auto;padding:0px">
+         <span style="text-align:center;margin:0px;padding:0px">New</span><br /><span style="text-align:center;margin:0px;padding:0px">$type</span>
+       </div>
      };
 }
 
@@ -488,17 +488,17 @@ sub somatic_status {
   my $html;
   if ($type eq 'germline') {
      $html .= qq{
-       <div style="border-radius:5px;border:1px solid #000;width:20px;height:20px;background-color:#00C;" title="$type data"></div>
+       <div style="margin-left:auto;margin-right:auto;border-radius:5px;border:1px solid #000;width:20px;height:20px;background-color:#00C;" title="$type data"></div>
      };
   }
   elsif ($type eq 'somatic') {
     $html .= qq{
-      <div style="border-radius:5px;border:1px solid #000;width:20px;height:20px;background-color:#C00;" title="$type data"></div>
+      <div style="margin-left:auto;margin-right:auto;border-radius:5px;border:1px solid #000;width:20px;height:20px;background-color:#C00;" title="$type data"></div>
     };
   }
   elsif ($type eq 'mixed') {
     $html .= qq{
-      <div style="border-radius:5px;border:1px solid #000;width:20px;height:20px;background-color:#00C;" title="$type data">
+      <div style="margin-left:auto;margin-right:auto;border-radius:5px;border:1px solid #000;width:20px;height:20px;background-color:#00C;" title="$type data">
         <div style="width:0px;height:0px;border-style:solid;border-width:0 0 20px 20px;border-color:transparent transparent #C00 transparent"></div>
       </div>
     };
