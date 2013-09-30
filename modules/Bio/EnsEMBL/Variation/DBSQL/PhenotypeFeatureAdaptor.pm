@@ -768,6 +768,7 @@ sub _objs_from_sth {
     my $slice = $slice_hash{"ID:".$seq_region_id};
     if(!$slice) {
       $slice = $sa->fetch_by_seq_region_id($seq_region_id);
+      next unless $slice;
       $slice_hash{"ID:".$seq_region_id} = $slice;
       $sr_name_hash{$seq_region_id} = $slice->seq_region_name();
       $sr_cs_hash{$seq_region_id} = $slice->coord_system();
