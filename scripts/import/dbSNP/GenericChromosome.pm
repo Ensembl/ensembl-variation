@@ -422,14 +422,25 @@ sub extract_haplotype_mappings{
     my $group_label  = shift;
         
 
-    ## copy synonyms from core db to temp table
-    my $syn_ext_stmt = qq[ select sr.seq_region_id, sr.name, srs.synonym
-                           from  seq_region sr, seq_region_synonym srs
-                           where sr.seq_region_id = srs.seq_region_id ];
+    ## copy synonyms & fake chrom seq_region_ids from core db to temp table
+    my $syn_ext_stmt = qq[ select sr2.seq_region_id, sr2.name, srs.synonym, assembly.asm_start, assembly.asm_end
+                           from  seq_region sr1, seq_region_synonym srs, seq_region sr2, assembly
+                           where sr1.seq_region_id = srs.seq_region_id 
+                           and sr2.name = sr1.name
+                           and sr2.seq_region_id = assembly.asm_seq_region_id
+                           and sr1.seq_region_id = assembly.cmp_seq_region_id
+
+];
 
     dumpSQL($self->{'dbCore'},$syn_ext_stmt);       
     
-    create_and_load($self->{'dbVar'}, "tmp_hap_synonym", "seq_region_id i* not_null", "name * not_null", "synonym * not_null" );
+    create_and_load($self->{'dbVar'}, "tmp_hap_synonym", "seq_region_id i* not_null", "name * not_null", "synonym * not_null", "asm_start i", "asm_end i"   );
+
+    ### check for reverse strand patches - not expecting any, so merely warn
+    my $strand_ch_sth = $self->{'dbVar'}->prepare(qq[ select seq_region_id, name from tmp_hap_synonym where asm_start > asm_end]);
+    $strand_ch_sth->execute();
+    my $problem = $strand_ch_sth->fetchall_arrayref();
+    warn "DANGER: Patch id $problem->[0]->[0] name $problem->[0]->[1] on reverse strand\n" if defined $problem->[0]->[0];
 
 
     ## extract variant mappings on patches/haplotypes
@@ -464,7 +475,7 @@ sub extract_haplotype_mappings{
     ### copy to variation_feature table
     $self->{'dbVar'}->do(qq[ INSERT INTO variation_feature (variation_id, seq_region_id,seq_region_start, seq_region_end, seq_region_strand,
                                                             variation_name, source_id, validation_status, alignment_quality, somatic)
-                                  SELECT v.variation_id, ths.seq_region_id, tvf.seq_start, tvf.seq_end, tvf.strand, 
+                                  SELECT v.variation_id, ths.seq_region_id, tvf.seq_start+asm_start-1, tvf.seq_end+asm_start-1, tvf.strand, 
                                          v.name, v.source_id, v.validation_status, tvf.aln_quality,  v.somatic
                                   FROM tmp_contig_loc_hap tvf  
                                   LEFT JOIN variation v on tvf.snp_id = v.snp_id
