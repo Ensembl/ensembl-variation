@@ -147,6 +147,8 @@ sub fetch_all_by_dbID_list {
     throw("list reference argument is required");
   }
   
+  return undef if (scalar(@$list)==0);
+  
   my $id_str = (@$list > 1)  ? " IN (".join(',',@$list).")"   :   ' = \''.$list->[0].'\'';
 	
 	my $result = $self->generic_fetch("st.study_id $id_str");
