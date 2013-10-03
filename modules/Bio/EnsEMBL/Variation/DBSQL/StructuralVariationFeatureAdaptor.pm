@@ -77,6 +77,7 @@ package Bio::EnsEMBL::Variation::DBSQL::StructuralVariationFeatureAdaptor;
 
 use Bio::EnsEMBL::Variation::StructuralVariationFeature;
 use Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor;
+use Bio::EnsEMBL::Variation::Utils::Constants qw(%VARIATION_CLASSES);
 use Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Utils::Iterator;
@@ -103,13 +104,39 @@ our @ISA = ('Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor', 'Bio::EnsEMBL::DBSQL:
 
 sub fetch_all_by_Slice {
   my ($self, $slice, $include_evidence) = @_;
+  return $self->fetch_all_by_Slice_constraint($slice, undef, $include_evidence);
+}
+
+=head2 fetch_all_by_Slice_constraint
+
+  Arg [1]    : Bio::EnsEMBL::Slice 
+               $slice the slice from which to obtain features
+  Arg [2]    : string $constraint [optional]
+               An SQL query constraint (i.e. part of the WHERE clause)
+  Arg [3]    : int $include_evidence [optional]
+  Example    : my $svfs = $svfa->fetch_all_by_Slice($slice);
+  Description: Retrieves all germline structural variation features on the given Slice, with the additional constraint(s).
+               If $include_evidence is set (i.e. $include_evidence=1), structural variation features from 
+               both structural variation (SV) and their supporting structural variations (SSV) will be 
+               returned. By default, it only returns features from structural variations (SV).
+  Returntype : reference to list Bio::EnsEMBL::StructuralVariationFeature
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub fetch_all_by_Slice_constraint {
+  my ($self, $slice, $constraint, $include_evidence) = @_;
   
-  my $constraint = $self->_internal_exclude_failed_constraint('',1);
+  my $and_flag = (defined($constraint)) ? undef : 1;
+  $constraint .= $self->_internal_exclude_failed_constraint('',$and_flag);
   $constraint .= ' AND ' if ($constraint);
   $constraint .= ' svf.somatic=0 ';
+  $constraint .= ' AND '.$self->_internal_exclude_cnv_probe();
   $constraint .= ' AND svf.is_evidence=0 ' if (!$include_evidence);
   
-  return $self->fetch_all_by_Slice_constraint($slice, $constraint);
+  return $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint);
 }
 
 
@@ -132,13 +159,39 @@ sub fetch_all_by_Slice {
 
 sub fetch_all_somatic_by_Slice {
   my ($self, $slice, $include_evidence) = @_;
+  return $self->fetch_all_somatic_by_Slice_constraint($slice, undef, $include_evidence);
+}
+
+
+=head2 fetch_all_somatic_by_Slice_constraint
+
+  Arg [1]    : Bio::EnsEMBL::Slice 
+               $slice the slice from which to obtain features
+  Arg [2]    : string $constraint [optional]
+               An SQL query constraint (i.e. part of the WHERE clause)
+  Arg [3]    : int $include_evidence [optional]
+  Example    : my $svfs = $svfa->fetch_all_somatic_by_Slice_constraint($slice,$constraint);
+  Description: Retrieves all somatic structural variation features on the given Slice, with the additional constraint(s).
+               If $include_evidence is set (i.e. $include_evidence=1), structural variation features from 
+               both structural variation (SV) and their supporting structural variations (SSV) will be 
+               returned. By default, it only returns features from structural variations (SV). 
+  Returntype : reference to list Bio::EnsEMBL::StructuralVariationFeature
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub fetch_all_somatic_by_Slice_constraint {
+  my ($self, $slice, $constraint, $include_evidence) = @_;
   
-  my $constraint = $self->_internal_exclude_failed_constraint('',1);
-  $constraint .= ' AND ' if ($constraint);
+  my $and_flag = (defined($constraint)) ? undef : 1;
+  $constraint .= $self->_internal_exclude_failed_constraint('',$and_flag);
+  $constraint .= ' AND ' if ($constraint && $constraint !~/\s*AND\s*$/g);
   $constraint .= ' svf.somatic=1 ';
   $constraint .= ' AND svf.is_evidence=0 ' if (!$include_evidence);
   
-  return $self->fetch_all_by_Slice_constraint($slice, $constraint);
+  return $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint);
 }
 
 
@@ -273,6 +326,28 @@ sub fetch_all_by_Slice_SO_term {
 }
 
 
+
+=head2 fetch_all_cnv_probe_by_Slice
+
+  Arg [1]    : Bio::EnsEMBL::Slice 
+               $slice the slice from which to obtain features
+  Example    : my $svfs = $svfa->fetch_all_cnv_probe_by_Slice($slice);
+  Description: Retrieves all CNV PROBE structural variation features on the given Slice.
+  Returntype : reference to list Bio::EnsEMBL::StructuralVariationFeature
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub fetch_all_cnv_probe_by_Slice {
+  my ($self, $slice) = @_;
+  my $SO_term = 'probe';
+  
+  return $self->fetch_all_by_Slice_SO_term($slice, $SO_term);
+}
+
+
 =head2 fetch_all_by_Slice_Study
 
   Arg [1]    : Bio::EnsEMBL:Variation::Slice $slice
@@ -291,7 +366,7 @@ sub fetch_all_by_Slice_Study {
 
   my $self  = shift;
   my $slice = shift;
-  my $study   = shift;
+  my $study = shift;
   
   if(!ref($slice) || !$slice->isa('Bio::EnsEMBL::Slice')) {
     throw('Bio::EnsEMBL::Slice arg expected');
@@ -303,7 +378,7 @@ sub fetch_all_by_Slice_Study {
  # Add a constraint to only return StructuralVariationFeatures belonging to the given study
   my $constraint = $self->_internal_exclude_failed_constraint("svf.study_id = ".$study->dbID);
   # Get the VariationFeatures by calling fetch_all_by_Slice_constraint
-  my $svfs = $self->fetch_all_by_Slice_constraint($slice,$constraint);
+  my $svfs = $self->SUPER::fetch_all_by_Slice_constraint($slice,$constraint);
 
   return $svfs;
 }
@@ -344,7 +419,7 @@ sub fetch_all_by_Slice_VariationSet {
   my $constraint = " svf.variation_set_id & $bitvalue ";
   
   # Get the VariationFeatures by calling fetch_all_by_Slice_constraint
-  my $svfs = $self->fetch_all_by_Slice_constraint($slice,$constraint);
+  my $svfs =  $self->SUPER::fetch_all_by_Slice_constraint($slice,$constraint);
 
   return $svfs;
 }
@@ -626,6 +701,19 @@ sub _internal_exclude_failed_constraint {
   return $constraint;
 }
 
+# Retrieve the attribute ID in the database for the structural variation class "CNV PROBE"
+sub _internal_exclude_cnv_probe {
+  my $self = shift;
+  my $cnv_probe_SO_term = 'probe'; # CNV_PROBE
+  
+  # Get the attrib_id
+  my $at_adaptor = $self->db->get_AttributeAdaptor;
+  my $attrib_id = $at_adaptor->attrib_id_for_type_value('SO_term','probe');
+  
+  return " class_attrib_id!=$attrib_id ";
+}
+
+
 =head2 new_fake
 
   Arg [1]    : string $species
@@ -757,3 +845,4 @@ sub store {
 
 
 1;
+
