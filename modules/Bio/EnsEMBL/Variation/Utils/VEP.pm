@@ -4664,9 +4664,10 @@ sub cache_custom_annotation {
                     elsif($custom->{format} eq 'bigwig') {
                         
                         # header line from wiggle file
-                        if(/^(fixed|variable)Step/) {
+                        if(/^(fixed|variable)Step|^\#bedGraph/i) {
                             my @split = split /\s+/;
                             $tmp_params{type} = shift @split;
+                            $tmp_params{type} =~ s/^\#//g;
                             
                             foreach my $pair(@split) {
                                 my ($key, $value) = split /\=/, $pair;
@@ -4677,7 +4678,7 @@ sub cache_custom_annotation {
                             $tmp_params{span} ||= 1;
                         }
                         
-                        else {
+                        elsif(defined($tmp_params{type})) {
                             if($tmp_params{type} eq 'fixedStep') {
                                 $feature = {
                                     chr   => $chr,
@@ -4696,6 +4697,18 @@ sub cache_custom_annotation {
                                     name  => $data[1]
                                 };
                             }
+                            elsif($tmp_params{type} eq 'bedGraph') {
+                                $feature = {
+                                    chr   => $chr,
+                                    start => $data[1] + 1,
+                                    end   => $data[2],
+                                    name  => $data[3]
+                                };
+                            }
+                        }
+                        
+                        else {
+                          die("ERROR: Cannot parse line from bigWigtoWig output: \n$_\n");
                         }
                     }
                     
