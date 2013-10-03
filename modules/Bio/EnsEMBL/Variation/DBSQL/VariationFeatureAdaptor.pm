@@ -502,7 +502,7 @@ sub _internal_fetch_all_with_phenotype_by_Slice{
   }
     
   if(defined $p_source) {
-    $extra_sql_in .= qq{ AND st.source_id = ps.source_id AND ps.name = '$p_source' };
+    $extra_sql_in .= qq{ AND pf.source_id = ps.source_id AND ps.name = '$p_source' };
     $extra_table .= qq{, source ps};
   }
     
@@ -529,7 +529,8 @@ sub _internal_fetch_all_with_phenotype_by_Slice{
     
   my $sth = $self->prepare(qq{
     SELECT $cols
-    FROM (variation_feature vf, source s)
+    FROM (variation_feature vf, phenotype_feature pf,
+        source s $extra_table) # need to link twice to source
     LEFT JOIN failed_variation fv ON (fv.variation_id = vf.variation_id)
     WHERE vf.seq_region_id = pf.seq_region_id
     AND vf.seq_region_start = pf.seq_region_start
@@ -767,7 +768,7 @@ sub _internal_fetch_all_with_phenotype {
   }
     
   if(defined $p_source) {
-    $extra_sql .= qq{ AND st.source_id = ps.source_id AND ps.name = '$p_source' };
+    $extra_sql .= qq{ AND pf.source_id = ps.source_id AND ps.name = '$p_source' };
     $extra_table .= qq{, source ps};
   }
     
@@ -795,10 +796,9 @@ sub _internal_fetch_all_with_phenotype {
   my $sth = $self->prepare(qq{
         SELECT $cols
         FROM (variation_feature vf, phenotype_feature pf,
-        source s, study st $extra_table) # need to link twice to source
+        source s $extra_table) # need to link twice to source
         LEFT JOIN failed_variation fv ON (fv.variation_id = vf.variation_id)
-        WHERE pf.study_id = st.study_id
-        AND vf.source_id = s.source_id
+        WHERE vf.source_id = s.source_id
         AND vf.seq_region_id = pf.seq_region_id
 				AND vf.seq_region_start = pf.seq_region_start
 				AND vf.seq_region_end = pf.seq_region_end
