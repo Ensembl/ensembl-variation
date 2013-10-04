@@ -256,7 +256,7 @@ sub fetch_all_by_Phenotype {
 
 
 sub _columns {
-  return qw(p.publication_id p.title p.authors p.pmid p.pmcid p.year p.doi );
+  return qw(p.publication_id p.title p.authors p.pmid p.pmcid p.year p.doi p.ucsc_id );
 }
 
 sub _tables { return (['publication', 'p']); }
@@ -276,9 +276,9 @@ sub _objs_from_sth {
 
   my @publication;
 
-  my ($publication_id,$title,$authors,$pmid,$pmcid,$year,$doi);
+  my ($publication_id,$title,$authors,$pmid,$pmcid,$year,$doi,$ucsc_id);
   
-  $sth->bind_columns(\$publication_id, \$title, \$authors, \$pmid, \$pmcid, \$year, \$doi);
+  $sth->bind_columns(\$publication_id, \$title, \$authors, \$pmid, \$pmcid, \$year, \$doi, \$ucsc_id);
   
   while($sth->fetch()) {
                 
@@ -291,7 +291,8 @@ sub _objs_from_sth {
            -PMID       => $pmid,
            -PMCID      => $pmcid,
            -YEAR       => $year,
-           -DOI        => $doi
+           -DOI        => $doi,
+           -UCSC_ID    => $ucsc_id
           );
   }
 
@@ -306,14 +307,15 @@ sub store{
     
     my $dbh = $self->dbc->db_handle;
     
-    my $pub_ins_sth = $dbh->prepare(qq[ insert into publication( title, authors, pmid, pmcid, year, doi ) values ( ?,?,?,?,?,? ) ]);   
+    my $pub_ins_sth = $dbh->prepare(qq[ insert into publication( title, authors, pmid, pmcid, year, doi, ucsc_id ) values ( ?,?,?,?,?,?,? ) ]);   
     
     $pub_ins_sth->execute( $pub->{title},
                            $pub->{authors},
-                           $pub->{pmid}  || undef,
-                           $pub->{pmcid} || undef,
+                           $pub->{pmid}    || undef,
+                           $pub->{pmcid}   || undef,
                            $pub->{year},
-                           $pub->{doi}   || undef, 
+                           $pub->{doi}     || undef, 
+                           $pub->{ucsc_id} || undef, 
                          );
 
 
@@ -364,6 +366,23 @@ sub update_variant_citation {
         $citation_ins_sth->execute( $var_obj->dbID(), $pub->{dbID});
         
     }    
+}
+
+sub update_ucsc_id {
+
+    my $self    = shift;       
+    my $pub     = shift;
+    my $ucsc_id = shift;   
+
+    throw("No UCSC external id defined") unless defined $ucsc_id;
+    throw("No publication defined")      unless defined $pub->{dbID};
+
+    my $dbh = $self->dbc->db_handle;
+    
+    my $publication_updt_sth = $dbh->prepare(qq[ update publication set ucsc_id = ? where publication_id =?  ]);   
+
+    $publication_updt_sth->execute( $ucsc_id, $pub->{dbID});
+
 }
 
 
