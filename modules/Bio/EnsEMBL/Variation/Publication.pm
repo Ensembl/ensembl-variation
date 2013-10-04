@@ -92,8 +92,8 @@ sub new {
   my $class = ref($caller) || $caller;
 
   my $self = $class->SUPER::new(@_);
-	my ($dbID, $adaptor, $title, $authors, $pmid, $pmcid, $year, $doi, $variants ) = 
-			rearrange([qw(dbID ADAPTOR TITLE AUTHORS PMID PMCID YEAR DOI VARIANTS)], @_);
+	my ($dbID, $adaptor, $title, $authors, $pmid, $pmcid, $year, $doi, $ucsc_id,$variants ) = 
+			rearrange([qw(dbID ADAPTOR TITLE AUTHORS PMID PMCID YEAR DOI UCSC_ID VARIANTS)], @_);
 
   $self = {
       'dbID'     => $dbID,
@@ -104,6 +104,7 @@ sub new {
       'pmcid'    => $pmcid, 
       'year'     => $year,
       'doi'      => $doi,
+      'ucsc_id'  => $ucsc_id,
       'variants' => $variants     
   };
 	
@@ -226,6 +227,27 @@ sub doi{
   my $self = shift;
   return $self->{'doi'} = shift if(@_);
   return $self->{'doi'};
+}
+
+
+=head2 ucsc_id
+
+  Arg [1]    : string $newval (optional)
+               The new value to set the ucsc_id attribute to
+  Example    : $ucsc_id = $obj->ucsc_id()
+  Description: Getter/Setter for the the publication USCS external id attribute
+               (enables link to UCSC website)
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub ucsc_id{
+  my $self = shift;
+  return $self->{'ucsc_id'} = shift if(@_);
+  return $self->{'ucsc_id'};
 }
 =head2 variations
 
