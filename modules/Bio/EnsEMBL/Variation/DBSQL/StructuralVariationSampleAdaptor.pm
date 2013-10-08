@@ -312,9 +312,9 @@ sub _objs_from_sth {
       -dbID                     => $structural_variation_sample_id,
       -_STRUCTURAL_VARIATION_ID => $svar_id,
       -INDIVIDUAL               => $individual,
-      -STRAIN_                  => $strain,
+      -STRAIN                   => $strain,
       -ADAPTOR                  => $self,
-	    -STUDY                    => $study,
+      -STUDY                    => $study,
     );
   }
 
