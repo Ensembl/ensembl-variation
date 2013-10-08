@@ -650,6 +650,7 @@ sub get_IntergenicVariation {
                 -variation_feature  => $self,
                 -no_ref_check       => $no_ref_check,
             );
+            weaken($self->{intergenic_variation}->{base_variation_feature});
         }
         else {
             $self->{intergenic_variation} = undef;
