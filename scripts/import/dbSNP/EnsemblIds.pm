@@ -50,30 +50,13 @@ sub dump_dbSNP{
     $duration = Progress::time_format($end-$start);
     print $duration->{'weeks'} . " weeks, " . $duration->{'days'} . " days, " . $duration->{'hours'} . " hours, " . $duration->{'minutes'} . " minutes and " . $duration->{'seconds'} . " seconds spent in SUPER::dump_dbSNP()\n";
     
-    #then, get ENS IDs from dbSNP
-    $start = time();
-    #$self->dump_ENSIDs() if $self->{'dbCore'}->species =~ /hum|homo|rat|mouse|platypus|tetraodon/i;
-    print Progress::location();
-    $end = time();
-    $duration = Progress::time_format($end-$start);
-    print $duration->{'weeks'} . " weeks, " . $duration->{'days'} . " days, " . $duration->{'hours'} . " hours, " . $duration->{'minutes'} . " minutes and " . $duration->{'seconds'} . " seconds spent in dump_ENSIDs()\n";
     
-    # Note that the dump_AFFIDs routine has some database/table names hard-coded within!!
-		# /!\ Now has to be launched in a separate script for post-processing: import_affy.pl
     $start = time();
-#    $self->dump_AFFYIDs() if $self->{'dbm'}->dbCore()->species =~ /hum|homo/i;
-    print Progress::location();
-    $end = time();
-    $duration = Progress::time_format($end-$start);
-    print $duration->{'weeks'} . " weeks, " . $duration->{'days'} . " days, " . $duration->{'hours'} . " hours, " . $duration->{'minutes'} . " minutes and " . $duration->{'seconds'} . " seconds spent in dump_AFFYIDs()\n";
-	
-	$start = time();
     $self->dump_LSDBIDs() if $self->{'dbm'}->dbCore()->species =~ /hum|homo/i;
     print Progress::location();
     $end = time();
     $duration = Progress::time_format($end-$start);
     print $duration->{'weeks'} . " weeks, " . $duration->{'days'} . " days, " . $duration->{'hours'} . " hours, " . $duration->{'minutes'} . " minutes and " . $duration->{'seconds'} . " seconds spent in dump_LSDBIDs()\n";
-	
   
 }
 
@@ -330,7 +313,6 @@ sub dump_LSDBIDs {
     }
 
 
-   
     print Progress::location();
     debug(localtime() . "\tDumping LSDB local IDs from dbSNP\n");
       	
@@ -369,15 +351,13 @@ sub dump_LSDBIDs {
 				FROM
 					variation v,
 					tmp_lsdb_ids t
-				WHERE v.snp_id =  t.rsid; 
-        ]);
+                                WHERE v.snp_id =  t.rsid ]);
 
     my %done;
     $dat_ext_sth->execute()||die;
 
     while( my $line = $dat_ext_sth->fetchrow_arrayref()){
 
-        print " Doing $line->[0], $line->[1], $line->[2], $line->[3]\n";
         ## link to phencode if present in db
         if( defined $batch_data->{ $line->[2]}->{phencode} ){
             
@@ -453,7 +433,7 @@ sub get_phencode_source{
     my $dbh     = shift;
 
     ## many submissions linked to phencode
-    my %phencode_source = ( 'name'    => 'Phencode',
+    my %phencode_source = ( 'name'    => 'PhenCode',
 			   'desc'    => "PhenCode is a collaborative project to better understand the relationship between genotype and phenotype in humans",
 			   'url'     => "http://phencode.bx.psu.edu/"
 	);
