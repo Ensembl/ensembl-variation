@@ -742,9 +742,12 @@ sub parse_id {
     return [] unless defined $v_obj;
     
     my @vfs = @{$v_obj->get_all_VariationFeatures};
-    delete $_->{dbID} for @vfs;
-    delete $_->{overlap_consequences} for @vfs;
-    $_->{chr} = $_->seq_region_name for @vfs;
+    for(@vfs) {
+      delete $_->{dbID};
+      delete $_->{overlap_consequences};
+      $_->{chr} = $_->seq_region_name;
+      $config->{slice_cache}->{$_->{chr}} = $_->slice;
+    }
     
     return \@vfs;
 }
@@ -2318,7 +2321,7 @@ sub validate_vf {
     return 0 if defined($config->{chr}) && !$config->{chr}->{$vf->{chr}};
     
     # fix inputs
-    $vf->{chr} =~ s/chr//ig unless $vf->{chr} =~ /^chromosome$/i;
+    $vf->{chr} =~ s/^chr//ig unless $vf->{chr} =~ /^chromosome$/i;
     $vf->{chr} = 'MT' if $vf->{chr} eq 'M';
     $vf->{strand} ||= 1;
     $vf->{strand} = ($vf->{strand} =~ /\-/ ? "-1" : "1");
@@ -3298,6 +3301,8 @@ sub get_slice {
     my $chr = shift;
     my $otherfeatures = shift;
     $otherfeatures ||= '';
+    
+    return $config->{slice_cache}->{$chr} if defined($config->{slice_cache}) && defined($config->{slice_cache}->{$chr});
     
     my $slice;
     
