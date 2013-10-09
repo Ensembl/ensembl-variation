@@ -1601,7 +1601,7 @@ CREATE TABLE study_variation (
 @table publication
 @colour #7CFC00
 @desc This table contains details of publications citing variations
-                        This information comes from PubMed and Europe PMC
+                        This information comes from dbSNP, UCSC and Europe PMC
 
 @column publication_id       Primary key, internal identifier.
 @column title                Title of the publication
@@ -1609,6 +1609,8 @@ CREATE TABLE study_variation (
 @column pmid                 The PubMed id for the publication if available
 @column pmcid                The PubMed Central id for the publication if available
 @column year                 The year the publication was published
+@doi                         The DOI for the publication
+@ucsc_id                     The external id used in the UCSC database & URL
 
 @see variation_citation
 */
@@ -1620,8 +1622,12 @@ authors        varchar(255),
 pmid           int(10),
 pmcid          varchar(255),
 year           int(10) unsigned,
+doi            varchar(50),
+ucsc_id        varchar(50),
 primary key( publication_id ),
-key pmid_idx (pmid)
+key pmid_idx (pmid),
+key doi_idx (doi)
+
 );
 
 /**
