@@ -106,9 +106,6 @@ ALTER TABLE regulatory_feature_variation ADD FOREIGN KEY (variation_feature_id) 
 ALTER TABLE variation ADD FOREIGN KEY (source_id) REFERENCES source(source_id);
 ALTER TABLE variation ADD FOREIGN KEY (class_attrib_id) REFERENCES attrib(attrib_id);
 
-ALTER TABLE phenotype_citation ADD FOREIGN KEY (phenotype_id) REFERENCES phenotype(phenotype_id);
-ALTER TABLE phenotype_citation ADD FOREIGN KEY (publication_id) REFERENCES publication(publication_id);
-
 ALTER TABLE phenotype_feature ADD FOREIGN KEY (source_id) REFERENCES study(study_id);
 ALTER TABLE phenotype_feature ADD FOREIGN KEY (study_id) REFERENCES study(study_id);
 ALTER TABLE phenotype_feature ADD FOREIGN KEY (object_id) REFERENCES variation(name);
