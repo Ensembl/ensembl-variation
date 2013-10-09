@@ -505,6 +505,9 @@ sub get_current_UCSC_data{
 
     while( my $line = $cit_ext_sth->fetchrow_arrayref()){
 
+	next if $line->[6] < 1999;             ## pre-dbSNP - must be random match
+	next if $line->[7] eq "PMC$line->[1]"; ## incorrect/ missing PMID 
+
         print $out join("\t", @{$line}) . "\n";
     }
     close $out;
