@@ -154,6 +154,9 @@ sub list_dbIDs {
 
 sub fetch_by_name {
   my ($self, $name) = @_;
+
+  # hack fix for phencode names with '+' in getting encoded/decoded by the webcode 
+  $name =~ s/\s/\+/ if $self->db->species =~ /homo_sapiens/i; 
     
   my $constraint = $self->_internal_exclude_failed_constraint("sv.variation_name='$name'");
   
