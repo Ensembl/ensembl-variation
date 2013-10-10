@@ -47,7 +47,7 @@ my $allele_adaptor    = $reg->get_adaptor('homo_sapiens', 'variation', 'allele')
 my $db = Bio::DB::Fasta->new( $fasta_file );
   
 ## writes all data to a file to allow checking & returns the number of times each name is seen
-my $var_counts = extract_data();
+my $var_counts = extract_data();  
 
 ## find or enter source info
 my %source_data  = ( "name"    => "PhenCode",
@@ -63,8 +63,16 @@ my $source_id = get_source($varfeat_adaptor->dbc,  \%source_data );
 my $seq_ids   = get_seq_ids($varfeat_adaptor->dbc );
 
 
-## read the file just written  & enter data 
+## get names of PhenCode variants already imported from dbSNP
+my $already_loaded = get_dbSNP_data($varfeat_adaptor->dbc );
+
+
+## save variant ids to add to set
 my %new_var;
+my %new_svar;
+
+
+## read the file just written  & enter data 
 open my $infile, $DATA_FILE ||die "Failed to open data file to read : $!\n";
 while(<$infile>){
 
@@ -75,42 +83,69 @@ while(<$infile>){
     ## ~40 with same name, different locations (in repeat) - skip these
     next if  $var_counts->{$a[0]} > 1;
 
-    if ($a[5] eq "-1" && $a[1] !~/Phencode|del|ins/i){
+    ## skip if already imported via dbSNP
+    next if $already_loaded->{$a[0]};
+
+    my $ref_len = $a[4] - $a[3];
+    my $al_len  = length($a[1]);
+
+    if( $ref_len> 50 || $al_len  > 52){
+        ## long deletions to go in structural variation table for display purposes
+        my $dbID = insert_svar($varfeat_adaptor->dbc, \@a, $source_id ,$seq_ids );
+        ## save structural var ids to add to variation_set later
+        $new_svar{$dbID} = 1;
+    }
+    else{
+        my $dbID = insert_var(\@a);
+        ## save var ids to add to variation_set later
+        $new_var{$dbID} = 1;
+
+    }
+}
+
+
+## add all variants & structural variants to phencode set
+add_to_set( $varfeat_adaptor->dbc, \%new_var, \%new_svar);
+
+
+sub insert_var{
+
+    my $line = shift;
+    if ($line->[5] eq "-1" && $line->[1] !~/Phencode|del|ins/i){
         ## compliment individual alleles keeping ref/alt order
-	my @al = split(/\//,$a[1]);
-        $a[1] = '';
-	foreach my $al(@al){
-	    reverse_comp(\$al) ;
-	    $a[1] .= $al . "/";
-	}
-	$a[1] =~ s/\/$//;
-        $a[5] = 1;
+        my @al = split(/\//,$line->[1]);
+        $line->[1] = '';
+        foreach my $al(@al){
+            reverse_comp(\$al) ;
+            $line->[1] .= $al . "/";
+        }
+        $line->[1] =~ s/\/$//;
+        $line->[5] = 1;
     }
 
 
-    my $var = enter_var(\@a, 
+    my $var = enter_var($line, 
                         $variation_adaptor,
                         $source_id 
         );
-    ## save var ids to add to variation_set later
-    $new_var{$var->dbID()} = 1;
-
-    enter_varfeat(\@a, 
+   
+    enter_varfeat($line, 
                   $varfeat_adaptor,
                   $source_id,
                   $var,
                   $seq_ids
         );
     
-    enter_alleles(\@a,
+    enter_alleles($line,
                   $allele_adaptor,
                   $var
         );
+
+    return $var->dbID();
   
 }
 
-## add all var to phencode set
-add_to_set( $varfeat_adaptor->dbc, \%new_var);
+
 
 ## export data from local Phencode database and run QC checks
 ## write tmp file for checking
@@ -204,12 +239,12 @@ sub extract_data{
                     "allele"      =>  $allele_string,
                     "label"       =>  $l->[2], 
                     "name"        =>  $l->[0],
-		    "source"      =>  $l->[7],
+                    "source"      =>  $l->[7],
 
         );
         ## check for duplicates
         $count{$l->[0]}++;
-	$var{fail_reasons} = " ";
+        $var{fail_reasons} = " ";
         unless  ($ref_allele =~/_base_deletion/){  ## can't do much with these
             $var{fail_reasons} = run_checks(\%var);
         }
@@ -248,14 +283,14 @@ sub run_checks{
     unless(defined $ref_seq){ 
         ## don't check further if obvious coordinate error
         push @fail, 15;
-	
-	return ( join",", @fail );    
+        
+        return ( join",", @fail );    
     }
 
     
     ## is ref base in agreement?
     my $exp_ref = (split/\//, $var->{allele} )[0] ; 
-    push @fail, 2 unless "\U$exp_ref" eq "\U$ref_seq"; ## using soft masked seq
+    push @fail, 2 unless (defined $exp_ref && "\U$exp_ref" eq "\U$ref_seq"); ## using soft masked seq
        
     
     ## is either allele of compatible length with given coordinates?
@@ -395,22 +430,78 @@ sub enter_alleles{
     }
 }
 
+## attrib ids
+#| deletion       |        12 |
+#| duplication    |       253 |
+#| insertion      |        10 |
+
+sub insert_svar{
+
+
+    my $dbh     = shift;
+    my $line    = shift;
+    my $source  = shift;
+    my $seq_ids = shift;
+
+    my $svar_ins_sth = $dbh->prepare(qq[ insert into structural_variation 
+                                         (variation_name, source_id, class_attrib_id)
+                                         values ( ?,?,? )
+                                       ]);  
+
+    my $svar_ext_sth = $dbh->prepare(qq[ select structural_variation_id from structural_variation 
+                                         where variation_name =? and source_id =?
+                                       ]);
+
+   my $svarf_ins_sth = $dbh->prepare(qq[ insert into structural_variation_feature 
+                                         (seq_region_id, seq_region_start, seq_region_end, seq_region_strand,
+                                         structural_variation_id, variation_name, source_id,  
+                                         class_attrib_id, allele_string)
+                                         values ( ?,?,?,?,?,?,?,?,?)
+                                       ]);  
+
+
+    $svar_ins_sth->execute($line->[0], $source, 12)||die;
+    $svar_ext_sth->execute($line->[0], $source)||die;
+
+    my $svar_id = $svar_ext_sth->fetchall_arrayref();
+    die "Problem importing $line->[0] as sv\n" unless defined $svar_id->[0]->[0];
+
+    $line->[1] = '\\N' if $line->[1] =~/deletion/;  ## no point entering descriptions like 9353_base_deletion as allele strings
+
+    $svarf_ins_sth->execute($seq_ids->{$line->[2]}, $line->[3], $line->[4], $line->[5],$svar_id->[0]->[0], $line->[0], $source, 12, $line->[1])||die;
+
+    return $svar_id->[0]->[0];
+
+}
+
 ## add variation ids to set
 sub add_to_set{
 
-    my ($dbh, $variation_ids ) = @_;
+    my ($dbh, $variation_ids, $struct_variation_ids ) = @_;
 
+    ## get PhenCode set
     my $set_id  = get_set($dbh);
 
+    ## add variants
     my $vsv_ins_sth = $dbh->prepare(qq[ insert ignore into  variation_set_variation
                                        (variation_id, variation_set_id)
                                         values (?,?)] );
 
-
-    foreach my $var ( keys %{$variation_ids} ){
-   
-	$vsv_ins_sth->execute( $var, $set_id );
+    foreach my $var ( keys %{$variation_ids} ){  
+        $vsv_ins_sth->execute( $var, $set_id );
     }
+
+    
+    ## add structural variants
+    my $vssv_ins_sth = $dbh->prepare(qq[ insert ignore into  variation_set_structural_variation
+                                         (structural_variation_id, variation_set_id)
+                                         values (?,?)] );
+
+    foreach my $svar ( keys %{$struct_variation_ids} ){  
+        $vssv_ins_sth->execute( $svar, $set_id );
+    }
+
+
 }
 
 ## look up or enter variation set
@@ -443,6 +534,30 @@ sub get_set{
     ### give up
     die "ERROR: variation set could not be entered\n"; 
 
+}
+
+## extract list of variants already imported from dbSNP 
+##    - no need to re-import
+sub get_dbSNP_data{
+
+    my $dbh = shift;
+
+    my %already_loaded;
+
+    my $phencode_ext_sth = $dbh->prepare(qq[ select vs.name
+                                             from  variation_synonym vs, source
+                                             where source.name = 'PhenCode'                                         
+                                             and vs.source_id = source.source_id
+                                           ]);
+
+    $phencode_ext_sth->execute()||die;
+    my $dat = $phencode_ext_sth->fetchall_arrayref();
+
+    foreach my $l (@{$dat}){
+        $already_loaded{$l->[0]} = 1;
+    }
+
+    return \%already_loaded;
 }
 
 sub usage{
