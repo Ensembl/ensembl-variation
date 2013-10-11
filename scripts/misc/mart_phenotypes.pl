@@ -76,6 +76,7 @@ foreach my $db (@db_list) {
 		`p_value` double default NULL, 
 		`strain_name`  varchar(255) default NULL,
 		`strain_gender` varchar(255) default NULL,
+		`external_id` varchar(255) default NULL,
 		PRIMARY KEY (`mtmp_phenotype_id`),
 		KEY `gene_stable_idx` (`gene_stable_id`)
 		) ENGINE=MyISAM DEFAULT CHARSET=latin1;
@@ -130,6 +131,9 @@ foreach my $db (@db_list) {
 		if ($code eq 'p_value')	 {
 			$row->{p_value} = $value;
 		}
+		if ($code eq 'external_id') {
+			$row->{external_id} = $value;
+		}
 		$current_pf_id = $pf_id;
     }
         
@@ -145,7 +149,8 @@ sub get_values {
 	my $row = shift;
 	$row->{strain_name} ||= '\N';		
 	$row->{strain_gender} ||= '\N';		
-	$row->{p_value} ||= '\N';		
+	$row->{p_value} ||= '\N';
+	$row->{external_id} ||= '\N';
 	my @values = (
 		$row->{pf_id}, 
 		$row->{gene_stable_id}, 
@@ -154,7 +159,8 @@ sub get_values {
 		$row->{is_significant}, 
 		$row->{p_value}, 
 		$row->{strain_name}, 
-		$row->{strain_gender});
+		$row->{strain_gender},
+		$row->{external_id},);
 	return \@values; 	
 }
 
