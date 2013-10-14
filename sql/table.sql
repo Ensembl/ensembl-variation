@@ -181,6 +181,7 @@ create table variation_feature(
     minor_allele_count int(10) unsigned DEFAULT NULL,
     alignment_quality double  DEFAULT NULL,
     evidence SET('Multiple_observations','Frequency','HapMap','1000Genomes','Cited','ESP'),
+    clinical_significance SET('drug-response','histocompatibility','non-pathogenic','other','pathogenic','probable-non-pathogenic','probable-pathogenic''unknown','untested') DEFAULT NULL,
 
    	primary key( variation_feature_id ),
 	  key pos_idx( seq_region_id, seq_region_start, seq_region_end ),
@@ -1522,6 +1523,7 @@ create table source(
 	url varchar(255),
 	type ENUM('chip','lsdb') DEFAULT NULL,
     somatic_status ENUM ('germline','somatic','mixed') DEFAULT 'germline',
+    data_types SET('variation','variation_synonym','structural_variation','phenotype_feature','study') DEFAULT NULL,
 	
 	primary key( source_id )
 );
