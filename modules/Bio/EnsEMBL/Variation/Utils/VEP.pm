@@ -2453,7 +2453,8 @@ sub whole_genome_fetch {
     }
     
     my $slice_cache = $config->{slice_cache};
-    build_slice_cache($config, $config->{tr_cache}) unless defined($slice_cache->{$chr});
+    $slice_cache = build_slice_cache($config, $config->{tr_cache}) unless defined($slice_cache->{$chr});
+    $slice_cache = build_slice_cache($config, $config->{rf_cache}) unless defined($slice_cache->{$chr});
     
     debug("Analyzing chromosome $chr") unless defined($config->{quiet});
     
@@ -3770,7 +3771,17 @@ sub build_slice_cache {
     my %slice_cache;
     
     foreach my $chr(keys %$tr_cache) {
-        $slice_cache{$chr} = scalar @{$tr_cache->{$chr}} ? $tr_cache->{$chr}[0]->slice : &get_slice($config, $chr);
+        
+        my $tmp = $tr_cache->{$chr};
+        
+        if(ref($tmp) eq 'HASH') {
+          foreach my $type(keys %$tmp) {
+            $slice_cache{$chr} ||= scalar @{$tmp->{$type}} ? $tmp->{$type}->[0]->slice : &get_slice($config, $chr);
+          }
+        }
+        else {
+          $slice_cache{$chr} ||= scalar @$tmp ? $tmp->[0]->slice : &get_slice($config, $chr);
+        }
         
         if(!defined($slice_cache{$chr})) {
             delete $slice_cache{$chr}
