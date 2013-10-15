@@ -139,19 +139,23 @@ foreach my $sp (sort keys(%species_list)) {
 	  $html_content .= qq{
     <div style="margin-bottom:5px;padding-right:4px;overflow:hidden;background-color:#336;padding:1px;color:#FFF">
 	    <div style="float:left">
-	      <img src="$img_src" alt="$label" class="sp-thumb" style="float:none;margin-right:4px;vertical-align:middle" />
+	      <img src="$img_src" alt="$label" class="sp-thumb" style="float:left;margin-right:4px;vertical-align:middle" />
 	    </div>
-	    <div style="float:left;margin-top:10px">
-	      <i>$label</i> <a href="sources_documentation.html#$sp">[sources]</a><br />
-	      <span style="font-weight:bold;color:#F00">New species</span>
-	    </div>
+	    <div style="float:left;padding-top:2px;padding-left:2px">
+        <span style="font-style:italic">$label</span><br />
+        <span><a href="sources_documentation.html#$sp" style="color:#AAF">[sources]</a></span><br />
+        <span style="font-weight:bold;color:#F00">New species</span>
+      </div>
     </div>\n};
 	}
 	else {
     $html_content .= qq{
     <div style="margin-bottom:5px;padding-right:4px;overflow:hidden">
-	    <img src="$img_src" alt="$label" class="sp-thumb" style="float:none;margin-right:4px;vertical-align:middle" />
-	    <span><i>$label</i> <a href="sources_documentation.html#$sp">[sources]</a></span>
+	    <img src="$img_src" alt="$label" class="sp-thumb" style="float:left;margin-right:4px;vertical-align:middle" />
+	    <div style="float:left;padding-top:6px">
+        <div style="font-style:italic;margin-bottom:3px">$label</div>
+        <span><a href="sources_documentation.html#$sp">[sources]</a></span>
+      </div>
     </div>\n};
 	}
 	$count_rows ++;
