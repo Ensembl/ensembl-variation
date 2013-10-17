@@ -363,7 +363,8 @@ CREATE TABLE `phenotype` (
   `name` varchar(50) DEFAULT NULL,
   `description` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`phenotype_id`),
-  UNIQUE KEY `name_idx` (`name`),
+  KEY `name_idx` (`name`),
+  UNIQUE KEY `desc_idx` (`description`),
   KEY `stable_idx` (`stable_id`)
 );
 
