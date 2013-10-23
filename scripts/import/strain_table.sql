@@ -1,3 +1,17 @@
+-- Copyright 2013 Ensembl
+-- 
+-- Licensed under the Apache License, Version 2.0 (the "License");
+-- you may not use this file except in compliance with the License.
+-- You may obtain a copy of the License at
+-- 
+--      http://www.apache.org/licenses/LICENSE-2.0
+-- 
+-- Unless required by applicable law or agreed to in writing, software
+-- distributed under the License is distributed on an "AS IS" BASIS,
+-- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+-- See the License for the specific language governing permissions and
+-- limitations under the License.
+
 To limit dbsnp sample_ids not in thses wild derived strains, use this sql:
 mysql> create table tmp_strain_gtype_final like tmp_strain_39_dbsnp;
 mysql> insert into tmp_strain_gtype_final select s.* from tmp_strain_39_dbsnp s where s.sample_id1 not in (174,215,198,230,178) and s.sample_id2 not in (174,215,198,230,178);
