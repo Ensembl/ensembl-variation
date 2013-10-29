@@ -758,11 +758,27 @@ sub inframe_deletion {
         my ($ref_codon, $alt_codon) = _get_codon_alleles($bvfoa);
         
         return 0 unless defined $ref_codon;
-      
-        return ( 
-            (length($alt_codon) < length ($ref_codon)) &&
-            ( ($ref_codon =~ /^\Q$alt_codon\E/) || ($ref_codon =~ /\Q$alt_codon\E$/) )
-        );
+        return 0 unless length($alt_codon) < length ($ref_codon);
+        
+        # simple string match
+        return 1 if ($ref_codon =~ /^\Q$alt_codon\E/) || ($ref_codon =~ /\Q$alt_codon\E$/);
+        
+        # try a more complex string match; matching part may be in the middle
+        # first trim matching bases from start of string
+        while($ref_codon && $alt_codon && substr($ref_codon, 0, 1) eq substr($alt_codon, 0, 1)) {
+          $ref_codon = substr($ref_codon, 1);
+          $alt_codon = substr($alt_codon, 1);
+        }
+        
+        # now trim ends
+        while($ref_codon && $alt_codon && substr($ref_codon, -1, 1) eq substr($alt_codon, -1, 1)) {
+          $ref_codon = substr($ref_codon, 0, length($ref_codon) - 1);
+          $alt_codon = substr($alt_codon, 0, length($alt_codon) - 1);
+        }
+        
+        # if nothing remains of $alt_codon,
+        # then it fully matched a part in the middle of $ref_codon
+        return length($alt_codon) == 0;
     }
     
     # structural variant
