@@ -103,7 +103,7 @@ my $gca = $reg->get_adaptor($species, 'variation', 'genotypecode');
 my %codes = map {(join "|", @{$_->genotype}) => $_->dbID} @{$gca->fetch_all()};
 my $max_code = (sort {$a <=> $b} values %codes)[-1] || 0;
 
-my $flipped_status = defined($no_flip) ? {} : flipped_status($dbVar);
+my $flipped_status = defined($no_flip) ? {} : flipped_status($dbVar, $genotype_table);
 
 $has_proxy = 0;
 
@@ -138,7 +138,7 @@ sub compress_genotypes{
 		AND (
 		   i.display IN ('DEFAULT','DISPLAYABLE','REFERENCE')
 		   OR p.display = 'LD'
-		);
+		) 
 	});
 	$sth->execute;
 	my $sample_id;
@@ -147,7 +147,7 @@ sub compress_genotypes{
 	my @sample_ids;
 	push @sample_ids, $sample_id while $sth->fetch();
 	$sth->finish;
-	
+
 	print "Will compress genotypes from ", scalar @sample_ids, " individual_ids\n";
 	die "No individuals found to compress" unless scalar @sample_ids;
 	
@@ -414,7 +414,7 @@ sub update_meta_coord {
 #checks if the genotype is in the opposite strand. If so, reverse the alleles
 sub reverse_alleles{
     my $seq_region_strand = shift;
-	my $flipped = shift;
+    my $flipped = shift;
     my $ref_allele_1 = shift;
     my $ref_allele_2 = shift;
     
@@ -453,12 +453,15 @@ sub escape ($) {
 
 sub flipped_status {
 	my $dbVar = shift;
+	my $table = shift;
 	
 	my %flipped_status;
 	
 	my ($var_id, $flipped);
 	
-	my $sth = $dbVar->prepare("SELECT variation_id, flipped FROM variation WHERE flipped IS NOT NULL", {mysql_use_result => 1});
+	my $sth = $dbVar->prepare("SELECT variation.variation_id, variation.flipped FROM variation, $table 
+                                  WHERE variation.flipped =1 and variation.variation_id = $table.variation_id",
+                                  {mysql_use_result => 1});
 	$sth->execute;
 	$sth->bind_columns(\$var_id, \$flipped);
 		
