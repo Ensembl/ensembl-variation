@@ -484,7 +484,7 @@ sub extract_haplotype_mappings{
     ### copy to variation_feature table
     $self->{'dbVar'}->do(qq[ INSERT INTO variation_feature (variation_id, seq_region_id,seq_region_start, seq_region_end, seq_region_strand,
                                                             variation_name, source_id, validation_status, alignment_quality, somatic)
-                                  SELECT v.variation_id, ths.seq_region_id, tvf.seq_start+asm_start-1, tvf.seq_end+asm_start-1, tvf.strand, 
+                                  SELECT v.variation_id, ths.seq_region_id, tvf.seq_start+ths.asm_start-1, tvf.seq_end+ths.asm_start-1, tvf.strand, 
                                          v.name, v.source_id, v.validation_status, tvf.aln_quality,  v.somatic
                                   FROM tmp_contig_loc_hap tvf  
                                   LEFT JOIN variation v on tvf.snp_id = v.snp_id
