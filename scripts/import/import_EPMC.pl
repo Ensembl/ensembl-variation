@@ -521,6 +521,11 @@ sub get_current_UCSC_data{
 
 	next if $line->[6] < 1999;             ## pre-dbSNP - must be random match
 	next if $line->[7] eq "PMC$line->[1]"; ## incorrect/ missing PMID 
+	next if $line->[4] eq "NotFound" || $line->[4] eq "TOC" || $line->[4] eq "Highlights"
+	    || $line->[4]  eq "Contents" || $line->[4] eq "Table of Contents" || $line->[4]  eq "Volume Contents"
+	    || $line->[4]  eq "Cannabis" || $line->[4] eq "Index"  || $line->[4] eq "Author Index"
+	    || $line->[4]  =~/This Issue/i  	|| $line->[4]  =~/This Month in/
+	    || $line->[4] eq "Ensembl 2011"; 
 
         print $out join("\t", @{$line}) . "\n";
     }
