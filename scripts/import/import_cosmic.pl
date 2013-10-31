@@ -264,7 +264,9 @@ my %cosmic_genes_list;
 MAIN_LOOP : while(<$INPUT>) {
 
     next unless /COSM/;
-
+  
+    my $line = $_;
+    
     my (
         $cosmic_version,
         $cosmic_id, 
@@ -282,9 +284,35 @@ MAIN_LOOP : while(<$INPUT>) {
         $mutated_samples,
         $total_samples,
         $freq
-    ) = split /,/;
+    ) = split /,/, $_;
+
 
     next unless $cosmic_id =~ /COSM\d+/;
+    
+    while (!defined($freq)) {
+      my $new_line = <$INPUT>;
+      chomp $line;
+      $line = "$line$new_line";
+      
+      (
+        $cosmic_version,
+        $cosmic_id, 
+        $cosmic_gene,
+        $accession,
+        $class,
+        $cds, 
+        $aa, 
+        $chr, 
+        $start, 
+        $stop, 
+        $mut_nt, 
+        $mut_aa,
+        $tumour_site,
+        $mutated_samples,
+        $total_samples,
+        $freq
+      ) = split /,/, $line;
+    }
 
     unless ($patched_version) {
 
@@ -647,11 +675,15 @@ MAIN_LOOP : while(<$INPUT>) {
         die "No class attrib id for allele string: $allele_string" unless defined $class_id;
 
         # handle large deletions, insertions and indels
-        if (length($forward_strand_ref_allele) > 50) {
-          $allele_string = ($forward_strand_mut_allele eq '-') ? "LARGE_DELETION" : "LARGE_INDEL";
+        if (defined($forward_strand_ref_allele)) {
+          if (length($forward_strand_ref_allele) > 50) {
+            $allele_string = ($forward_strand_mut_allele eq '-') ? "LARGE_DELETION" : "LARGE_INDEL";
+          }
         }
-        if (length($forward_strand_mut_allele) > 50) { 
-          $allele_string = ($forward_strand_ref_allele eq '-') ? "LARGE_INSERTION" : "LARGE_INDEL";
+        if (defined($forward_strand_mut_allele)) {
+          if (length($forward_strand_mut_allele) > 50) { 
+            $allele_string = ($forward_strand_ref_allele eq '-') ? "LARGE_INSERTION" : "LARGE_INDEL";
+          }
         }
 
         unless ($USE_DB) {
