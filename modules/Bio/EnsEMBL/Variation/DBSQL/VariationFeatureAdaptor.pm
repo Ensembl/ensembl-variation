@@ -1330,6 +1330,7 @@ sub _objs_from_sth {
             
             my $overlap_consequences = [ map { $OVERLAP_CONSEQUENCES{$_} } split /,/, $consequence_types ];
 
+            $seq_region_start = $seq_region_end if $seq_region_start == $seq_region_end + 2;  ## patch problem fix
             # consequence_types
             return $self->_create_feature_fast('Bio::EnsEMBL::Variation::VariationFeature',
             #push @features, Bio::EnsEMBL::Variation::VariationFeature->new_fast(
