@@ -86,7 +86,8 @@ sub run {
     my $varfeat_no_seqreg    = $self->count_seq_region_problem();
 
     my $complimented_desc    = $self->check_complimented_desc();
-    
+    my $bad_position         = $self->check_bad_position();
+
 
     print $report "Post-import preQC check
 
@@ -105,7 +106,7 @@ Genotypes without alleles:          $geno_no_allele
 
 VariationFeature without start/end: $varfeat_no_pos 
 VariationFeature without seqregion: $varfeat_no_seqreg
-
+VariationFeature where end+1<start: $bad_position
 \n";  
 
     print $report "ERROR: $complimented_desc complimented descriptions found - to be fixed manually\n\n" if $complimented_desc >0;
@@ -189,7 +190,10 @@ sub count_failed_variation{
 
   
     my $no_allele_ext_sth      = $var_dba->dbc->prepare(qq[ select count(*) from variation 
-                                                            where variation_id not in (select variation_id  from allele)]);
+                                                            left outer join  allele on allele.variation_id = variation.variation_id
+                                                            where allele.allele is null
+                                                           ]);
+
 
     $no_allele_ext_sth->execute() || die "Failed to extract no_allele count\n";   
     my $no_allele_count    = $no_allele_ext_sth->fetchall_arrayref();
@@ -383,6 +387,29 @@ sub check_complimented_desc{
                                                   or allele_string like '%NOIAYESNI%']);
 
     $data_ext_sth->execute()||die "Failed to check for complimented allele strings\n";
+
+    my $count = $data_ext_sth->fetchall_arrayref();
+
+    defined $count->[0]->[0]  ?  return $count->[0]->[0] : return 0;
+}
+
+=head2 check_bad_position
+
+  Look for variation feature positions where end coord + 1 is less than start coord
+  either start = end or start = end + 1 for insertions
+
+=cut
+sub check_bad_position{
+
+    my $self = shift;
+
+    my $var_dba   = $self->get_species_adaptor('variation');
+
+    my $data_ext_sth = $var_dba->dbc->prepare(qq[ select count(*) from variation_feature 
+                                                  where seq_region_start > seq_region_end + 1
+                                                ]);
+
+    $data_ext_sth->execute()||die "Failed to check for incorrect varaition_feature positions\n";
 
     my $count = $data_ext_sth->fetchall_arrayref();
 
