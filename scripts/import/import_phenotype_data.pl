@@ -1,4 +1,5 @@
-#! perl -w
+#!/usr/bin/env perl
+
 # Copyright 2013 Ensembl
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,7 +13,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 
 use strict;
 use Getopt::Long;
@@ -1681,6 +1681,18 @@ sub get_phenotype_id {
   
   if(!defined($description)) {
   die "ERROR: No description found for phenotype\n";
+  }
+
+  # Check phenotype description in the format "description; name"
+  if (!defined($name) || $name eq '') {
+    my ($p_desc,$p_name) = split(";",$description);
+    if ($p_name) {
+      $p_name =~ s/ //g;
+      if ($p_name =~ /^\w+$/) {
+        $description = $p_desc;
+        $name = $p_name;
+      }
+    }
   }
   
   if(scalar keys %phenotype_cache) {
