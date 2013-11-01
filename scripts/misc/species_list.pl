@@ -87,7 +87,7 @@ my $sep = "\t";
 my %colors = ( 'version' => '#090', 'source'  => '#00F' );
 my $nb_col = 4;
 
-my $html = 
+my $html;
 
 
 my $html_content = '<table><tr><td>';
@@ -129,12 +129,13 @@ foreach my $hostname (@hostnames) {
   }
 }
 
-my $nb_sp_by_col = ceil(scalar(keys(%species_list))/$nb_col);
+my $count_species = scalar(keys(%species_list));
+my $nb_sp_by_col = ceil($count_species/$nb_col);
 my $count_rows = 0;
 
 foreach my $sp (sort keys(%species_list)) {
   if ($count_rows == $nb_sp_by_col) {
-	  $html_content .= qq{\n  </td>\n  <td style="width:8px"></td>\n  <td>\n};
+	  $html_content .= qq{\n  </td>\n  <td style="width:10px"></td>\n  <td>\n};
 		$count_rows = 0;
 	}
 	my $label = $species_list{$sp}{label};
@@ -142,14 +143,14 @@ foreach my $sp (sort keys(%species_list)) {
 	
 	if ($species_list{$sp}{new}) {
 	  $html_content .= qq{
-    <div style="margin-bottom:5px;padding-right:4px;overflow:hidden;background-color:#336;padding:1px;color:#FFF">
+    <div style="margin-bottom:5px;padding-right:4px;overflow:hidden;background-color:#336;padding:1px;color:#FFF;border-radius:8px">
 	    <div style="float:left">
 	      <img src="$img_src" alt="$label" class="sp-thumb" style="float:left;margin-right:4px;vertical-align:middle" />
 	    </div>
 	    <div style="float:left;padding-top:2px;padding-left:2px">
         <span style="font-style:italic">$label</span><br />
         <span><a href="sources_documentation.html#$sp" style="color:#AAF">[sources]</a></span><br />
-        <span style="font-weight:bold;color:#F00">New species</span>
+        <span style="font-weight:bold;color:#F00">New species in Variation</span>
       </div>
     </div>\n};
 	}
@@ -170,6 +171,7 @@ $html_content .= qq{</td></tr></table>\n};
 
 ## HTML/output file ##
 open  HTML, "> $html_file" or die "Can't open $html_file : $!";
+print HTML qq{<p style="padding-top:0px;margin-top:0px">There are currently <b>$count_species</b> variation databases in Ensembl:</p>\n};
 print HTML $html_content;
 close(HTML);
 
