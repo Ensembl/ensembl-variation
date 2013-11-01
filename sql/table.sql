@@ -31,7 +31,7 @@ SET storage_engine=MYISAM;
 @column minor_allele_freq   The 'global' frequency of the minor allele of this variant, as reported by dbSNP
 @column minor_allele_count  The number of samples the minor allele of this variant is found in, as reported by dbSNP
 @column clinical_significance  A set of clinical significance classes assigned to the variant.<br /> 
-                                         The list of clinical significances is available <a href="/info/genome/variation/data_description.html#clin_significance">here</a>.
+                               The list of clinical significances is available <a href="/info/genome/variation/data_description.html#clin_significance">here</a>.
 @column evidence            A summary of the evidence supporting a variant as a guide to its potential reliability. See the evidence descriptions <a href="/info/genome/variation/data_description.html#evidence_status">here</a>.
 
 @see variation_synonym
@@ -72,27 +72,29 @@ create table variation (
 
 @desc This table represents mappings of variations to genomic locations. It stores an allele string representing the different possible alleles that are found at that locus e.g. "A/T" for a SNP, as well as a "worst case" consequence of the mutation. It also acts as part of the relationship between variations and transcripts.
 
-@column variation_feature_id	Primary key, internal identifier.
-@column seq_region_id			    Foreign key references @link seq_region in core db. Refers to the seq_region which this variant is on, which may be a chromosome, a clone, etc...
-@column seq_region_start		  The start position of the variation on the @link seq_region.
-@column seq_region_end			  The end position of the variation on the @link seq_region.
-@column seq_region_strand		  The orientation of the variation on the @link seq_region.
-@column variation_id				  Foreign key references to the @link variation table.
-@column allele_string			    This is a denormalised string taken from the alleles in the allele table associated with this variation. The reference allele (i.e. one on the reference genome comes first).
-@column variation_name			  A denormalisation taken from the variation table. This is the name or identifier that is used for displaying the feature.
-@column map_weight				    The number of times that this variation has mapped to the genome. This is a denormalisation as this particular feature is one example of a mapped location. This can be used to limit the the features that come back from a query.
-@column flags						      Flag to filter the selection of variations.
-@column source_id					    Foreign key references to the source table.
-@column validation_status		  Variant discovery method and validation from dbSNP. See the status descriptions <a href="/info/genome/variation/data_description.html#validation_status">here</a>.
-@column consequence_types		  The SO term(s) of all unique observed consequence types of this variation feature.<br /> The list of consequence descriptions is available <a href="/info/genome/variation/predicted_data.html#consequences">here</a>.
-@column variation_set_id		  The variation feature can belong to a @link variation_set.
-@column class_attrib_id			  Class of the variation, key in the @link attrib table.<br /> The list of variation classes is available <a href="/info/genome/variation/data_description.html#classes">here</a>.
-@column somatic               Flags whether this variation_feature is somatic or germline
-@column minor_allele          The minor allele of this variant, as reported by dbSNP
-@column minor_allele_freq     The 'global' frequency of the minor allele of this variant, as reported by dbSNP
-@column minor_allele_count    The number of samples the minor allele of this variant is found in, as reported by dbSNP
-@column alignment_quality     Quality of alignment for variants mapped by flanks rather than position justified.
-@column evidence              A summary of the evidence supporting a variant as a guide to its potential reliability.
+@column variation_feature_id	 Primary key, internal identifier.
+@column seq_region_id			     Foreign key references @link seq_region in core db. Refers to the seq_region which this variant is on, which may be a chromosome, a clone, etc...
+@column seq_region_start		   The start position of the variation on the @link seq_region.
+@column seq_region_end			   The end position of the variation on the @link seq_region.
+@column seq_region_strand		   The orientation of the variation on the @link seq_region.
+@column variation_id				   Foreign key references to the @link variation table.
+@column allele_string			     This is a denormalised string taken from the alleles in the allele table associated with this variation. The reference allele (i.e. one on the reference genome comes first).
+@column variation_name			   A denormalisation taken from the variation table. This is the name or identifier that is used for displaying the feature.
+@column map_weight				     The number of times that this variation has mapped to the genome. This is a denormalisation as this particular feature is one example of a mapped location. This can be used to limit the the features that come back from a query.
+@column flags						       Flag to filter the selection of variations.
+@column source_id					     Foreign key references to the source table.
+@column validation_status		   Variant discovery method and validation from dbSNP. See the status descriptions <a href="/info/genome/variation/data_description.html#validation_status">here</a>.
+@column consequence_types		   The SO term(s) of all unique observed consequence types of this variation feature.<br /> The list of consequence descriptions is available <a href="/info/genome/variation/predicted_data.html#consequences">here</a>.
+@column variation_set_id		   The variation feature can belong to a @link variation_set.
+@column class_attrib_id			   Class of the variation, key in the @link attrib table.<br /> The list of variation classes is available <a href="/info/genome/variation/data_description.html#classes">here</a>.
+@column somatic                Flags whether this variation_feature is somatic or germline
+@column minor_allele           The minor allele of this variant, as reported by dbSNP
+@column minor_allele_freq      The 'global' frequency of the minor allele of this variant, as reported by dbSNP
+@column minor_allele_count     The number of samples the minor allele of this variant is found in, as reported by dbSNP
+@column alignment_quality      Quality of alignment for variants mapped by flanks rather than position justified.
+@column evidence               A summary of the evidence supporting a variant as a guide to its potential reliability.
+@column clinical_significance  A set of clinical significance classes assigned to the variant.<br /> 
+                               The list of clinical significances is available <a href="/info/genome/variation/data_description.html#clin_significance">here</a>.
 
 @see variation
 @see tagged_variation_feature
@@ -1496,14 +1498,15 @@ CREATE TABLE IF NOT EXISTS regulatory_feature_variation (
 @desc This table contains details of the source from which a variation is derived. Most commonly this is NCBI's dbSNP; other sources include SNPs called by Ensembl.<br />
 You can see the complete list, by species, <a href="/info/genome/variation/sources_documentation.html">here</a>.
 
-@column source_id		Primary key, internal identifier.
-@column name			Name of the source. e.g. "dbSNP"
-@column version		Version number of the source (if available). e.g. "132"
-@column description	Description of the source.
-@column url				URL of the source.
-@column type			Define the type of the source, e.g. 'chip'
+@column source_id		    Primary key, internal identifier.
+@column name			      Name of the source. e.g. "dbSNP"
+@column version		      Version number of the source (if available). e.g. "132"
+@column description	    Description of the source.
+@column url				      URL of the source.
+@column type			      Define the type of the source, e.g. 'chip'
 @column somatic_status  Indicates if this source includes somatic or germline mutations, or a mixture
-
+@column data_types      Indicates the type(s) of data provided by the source
+ 
 @example See below the command listing all the data sources in the human variation database:
          @sql SELECT * FROM source ORDER BY source_id;
 
@@ -1523,8 +1526,8 @@ create table source(
 	description varchar(255),
 	url varchar(255),
 	type ENUM('chip','lsdb') DEFAULT NULL,
-    somatic_status ENUM ('germline','somatic','mixed') DEFAULT 'germline',
-    data_types SET('variation','variation_synonym','structural_variation','phenotype_feature','study') DEFAULT NULL,
+  somatic_status ENUM ('germline','somatic','mixed') DEFAULT 'germline',
+  data_types SET('variation','variation_synonym','structural_variation','phenotype_feature','study') DEFAULT NULL,
 	
 	primary key( source_id )
 );
@@ -1603,34 +1606,33 @@ CREATE TABLE study_variation (
 /**
 @table publication
 @colour #7CFC00
-@desc This table contains details of publications citing variations
-                        This information comes from dbSNP, UCSC and Europe PMC
+@desc This table contains details of publications citing variations.
+      This information comes from dbSNP, UCSC and Europe PMC.
 
-@column publication_id       Primary key, internal identifier.
-@column title                Title of the publication
-@column authors              Authors of the publication
-@column pmid                 The PubMed id for the publication if available
-@column pmcid                The PubMed Central id for the publication if available
-@column year                 The year the publication was published
-@doi                         The DOI for the publication
-@ucsc_id                     The external id used in the UCSC database & URL
+@column publication_id  Primary key, internal identifier.
+@column title           Title of the publication
+@column authors         Authors of the publication
+@column pmid            The PubMed id for the publication if available
+@column pmcid           The PubMed Central id for the publication if available
+@column year            The year the publication was published
+@column doi             The DOI (Digital Object Identifier) for the publication
+@column ucsc_id         The external id used in the UCSC database and URL
 
 @see variation_citation
 */
 
 CREATE TABLE publication(
-publication_id int(10) unsigned not null auto_increment, 
-title          varchar(255),
-authors        varchar(255),
-pmid           int(10),
-pmcid          varchar(255),
-year           int(10) unsigned,
-doi            varchar(50),
-ucsc_id        varchar(50),
-primary key( publication_id ),
-key pmid_idx (pmid),
-key doi_idx (doi)
-
+  publication_id int(10) unsigned not null auto_increment, 
+  title          varchar(255),
+  authors        varchar(255),
+  pmid           int(10),
+  pmcid          varchar(255),
+  year           int(10) unsigned,
+  doi            varchar(50),
+  ucsc_id        varchar(50),
+  PRIMARY KEY ( publication_id ),
+  KEY pmid_idx (pmid),
+  KEY doi_idx (doi)
 );
 
 /**
@@ -2011,3 +2013,4 @@ INSERT INTO failed_description (failed_description_id,description) VALUES (16,'F
 INSERT INTO failed_description (failed_description_id,description) VALUES (17,'Variation can not be re-mapped to the current assembly');
 INSERT INTO failed_description (failed_description_id,description) VALUES (18,'Supporting evidence can not be re-mapped to the current assembly');
 INSERT INTO failed_description (failed_description_id,description) VALUES (19,'Variation maps to more than one genomic location');
+
