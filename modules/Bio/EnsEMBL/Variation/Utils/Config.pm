@@ -944,36 +944,6 @@ our @ATTRIB_TYPES = (
 		description => 'Allele accession ID linked with phenotype association',
 	},
 	{
-		code => 'zygosity',
-		name => 'Zygosity',
-		description => 'Zygosity linked with phenotype association',
-	},
-	{
-		code => 'pipeline_name',
-		name => 'Pipeline name',
-		description => 'Pipeline name in mouse phenotype project',
-	},
-	{
-		code => 'procedure_name',
-		name => 'Procedure name',
-		description => 'Procedure name in mouse phenotype project',
-	},
-	{
-		code => 'project_fullname',
-		name => 'Project fullname',
-		description => 'Project fullname in mouse phenotype project',
-	},
-	{
-		code => 'project_name',
-		name => 'Project name',
-		description => 'Project name in mouse phenotype project',
-	},
-	{
-		code => 'parameter_name',
-		name => 'Parameter name',
-		description => 'Parameter name in mouse phenotype project',
-	},
-	{
 		code => 'marker_accession_id',
 		name => 'Marker accession ID',
 		description => 'Marker ID linked with phenotype association',
