@@ -24,12 +24,6 @@ INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES 
 INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES (24, 'beta_coef', 'Beta coefficient', 'Beta coefficient (or standardized coefficient) used to denote significance of an observed phenotype annotation');
 INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES (25, 'allele_symbol', 'Allele symbol', 'Allele symbol linked with phenotype association');
 INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES (26, 'allele_accession_id', 'Allele accession ID', 'Allele accession ID linked with phenotype association');
-INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES (27, 'zygosity', 'Zygosity', 'Zygosity linked with phenotype association');
-INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES (28, 'pipeline_name', 'Pipeline name', 'Pipeline name in mouse phenotype project');
-INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES (29, 'procedure_name', 'Procedure name', 'Procedure name in mouse phenotype project');
-INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES (30, 'project_fullname', 'Project fullname', 'Project fullname in mouse phenotype project');
-INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES (31, 'project_name', 'Project name', 'Project name in mouse phenotype project');
-INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES (32, 'parameter_name', 'Parameter name', 'Parameter name in mouse phenotype project');
 INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES (33, 'marker_accession_id', 'Marker accession ID', 'Marker ID linked with phenotype association');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (2, 2, 'SNV');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (1, 1, 'SO:0001483');
