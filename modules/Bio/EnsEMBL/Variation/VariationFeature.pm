@@ -207,7 +207,8 @@ sub new {
       $minor_allele,
       $minor_allele_freq,
       $minor_allele_count,
-      $evidence
+      $evidence,
+      $clin_sig
   ) = rearrange([qw(
           ALLELE_STRING 
           VARIATION_NAME 
@@ -224,6 +225,7 @@ sub new {
           MINOR_ALLELE_FREQUENCY
           MINOR_ALLELE_COUNT
           EVIDENCE
+          CLINICAL_SIGNIFICANCE
         )], @_);
 
   $self->{'allele_string'}          = $allele_str;
@@ -241,6 +243,7 @@ sub new {
   $self->{'minor_allele_frequency'} = $minor_allele_freq;
   $self->{'minor_allele_count'}     = $minor_allele_count;
   $self->{'evidence'}               = $evidence;
+  $self->{'clinical_significance'}  = $clin_sig;
   return $self;
 }
 
@@ -962,6 +965,36 @@ sub class_SO_term {
 sub get_all_evidence_values {
     my $self = shift;
     return $self->{'evidence'};
+}
+
+
+=head2 get_all_clinical_significance_states
+
+  Arg [1]    : none
+  Example    : my @csstates = @{$vf->get_all_clinical_significance_states()};
+  Description: Retrieves all clinical_significance states for this variation, as reported by dbSNP.
+               When available, this will contain one or more of the following strings:
+                unknown 
+                untested
+                non-pathogenic
+                probable-non-pathogenic
+                probable-pathogenic
+                pathogenic
+                drug-response
+                histocompatibility
+                other 
+
+  Returntype : reference to list of strings
+  Exceptions : none
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub get_all_clinical_significance_states {
+    my $self = shift;
+
+    return $self->{clinical_significance}
 }
 
 
