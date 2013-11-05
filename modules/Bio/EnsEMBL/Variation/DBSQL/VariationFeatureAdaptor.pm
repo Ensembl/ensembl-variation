@@ -1182,7 +1182,7 @@ sub _columns {
              vf.seq_region_end vf.seq_region_strand vf.variation_id
              vf.allele_string vf.variation_name vf.map_weight s.name s.version vf.somatic 
              vf.validation_status vf.consequence_types vf.class_attrib_id
-             vf.minor_allele vf.minor_allele_freq vf.minor_allele_count vf.alignment_quality vf.evidence);
+             vf.minor_allele vf.minor_allele_freq vf.minor_allele_count vf.alignment_quality vf.evidence vf.clinical_significance);
 }
 
 sub _objs_from_sth {
@@ -1209,14 +1209,14 @@ sub _objs_from_sth {
       $seq_region_end, $seq_region_strand, $variation_id,
       $allele_string, $variation_name, $map_weight, $source_name, $source_version,
       $is_somatic, $validation_status, $consequence_types, $class_attrib_id,
-	  $minor_allele, $minor_allele_freq, $minor_allele_count, $last_vf_id,$alignment_quality,$evidence);
+	  $minor_allele, $minor_allele_freq, $minor_allele_count, $last_vf_id,$alignment_quality,$evidence,$clin_sig);
 
     $sth->bind_columns(\$variation_feature_id, \$seq_region_id,
                      \$seq_region_start, \$seq_region_end, \$seq_region_strand,
                      \$variation_id, \$allele_string, \$variation_name,
                      \$map_weight, \$source_name, \$source_version, \$is_somatic, \$validation_status, 
                      \$consequence_types, \$class_attrib_id,
-		     \$minor_allele, \$minor_allele_freq, \$minor_allele_count,\$alignment_quality, \$evidence);
+		     \$minor_allele, \$minor_allele_freq, \$minor_allele_count,\$alignment_quality, \$evidence, \$clin_sig);
 
     my $asm_cs;
     my $cmp_cs;
@@ -1325,6 +1325,11 @@ sub _objs_from_sth {
 	    if (defined($evidence)) {
 		@evidence = split(/,/,$evidence );
 	    }
+      
+            my @clin_sig;
+            if (defined($clin_sig)) {
+              @clin_sig = split(/,/,$clin_sig );
+            }
             
             #my $overlap_consequences = $self->_variation_feature_consequences_for_set_number($consequence_types);
             
@@ -1356,7 +1361,8 @@ sub _objs_from_sth {
                 'minor_allele_frequency' => $minor_allele_freq,
                 'minor_allele_count' => $minor_allele_count,
                 'flank_match'  => $alignment_quality,
-                'evidence'     => \@evidence
+                'evidence'     => \@evidence,
+                'clinical_significance' => \@clin_sig
                 }
             );
         }
@@ -1697,7 +1703,25 @@ sub fetch_by_hgvs_notation {
 
       #Get the Transcript object to convert coordinates
       my $transcript_adaptor = $user_transcript_adaptor || $self->db()->dnadb()->get_TranscriptAdaptor();
-      my $transcript = $transcript_adaptor->fetch_by_stable_id($reference) or throw ("Could not get a Transcript object for '$reference'");
+      my $transcript = $transcript_adaptor->fetch_by_stable_id($reference);
+      
+      #try and fetch via gene
+      if(!defined($transcript)) {
+        my $gene_adaptor = $transcript_adaptor->db->get_GeneAdaptor();
+        my ($gene) = @{$gene_adaptor->fetch_all_by_external_name($reference)};
+        
+        if($gene) {  
+          $transcript = $gene->canonical_transcript();
+          
+          if(!defined($transcript)) { 
+            foreach my $tr(@{$gene->get_all_Transcripts}) {
+              $transcript = $tr if grep {$_->database eq 'CCDS'} @{$tr->get_all_DBEntries};
+            }
+          }
+        }
+      }
+      
+      throw ("Could not get a Transcript object for '$reference'") if !defined($transcript);
 
       my $is_exonic;
       ($start, $end, $strand, $is_exonic) =  _parse_hgvs_transcript_position($description, $transcript) ; 
@@ -1720,7 +1744,26 @@ sub fetch_by_hgvs_notation {
   
     #Get the Transcript object to convert coordinates
     my $transcript_adaptor = $user_transcript_adaptor || $self->db()->dnadb()->get_TranscriptAdaptor();
-    my $transcript = $transcript_adaptor->fetch_by_translation_stable_id($reference) or throw ("Could not get a Transcript object for '$reference'");
+    my $transcript = $transcript_adaptor->fetch_by_translation_stable_id($reference);
+    
+    #try and fetch via gene
+    if(!defined($transcript)) {
+      my $gene_adaptor = $transcript_adaptor->db->get_GeneAdaptor();
+      my ($gene) = @{$gene_adaptor->fetch_all_by_external_name($reference)};
+      
+      if($gene) {  
+        $transcript = $gene->canonical_transcript();
+        
+        if(!defined($transcript)) { 
+          foreach my $tr(@{$gene->get_all_Transcripts}) {
+            $transcript = $tr if grep {$_->database eq 'CCDS'} @{$tr->get_all_DBEntries};
+          }
+        }
+      }
+    }
+    
+    throw ("Could not get a Transcript object for '$reference'") if !defined($transcript);
+    
     ($ref_allele, $alt_allele, $start, $end, $strand) =  _parse_hgvs_protein_position($description, $reference, $transcript) ;  
     $slice = $slice_adaptor->fetch_by_region($transcript->coord_system_name(),$transcript->seq_region_name());     
 
