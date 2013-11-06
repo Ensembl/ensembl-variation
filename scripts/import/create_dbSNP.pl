@@ -40,28 +40,40 @@ use strict;
 use warnings;
 use Getopt::Long;
 use Net::FTP;
+use DBI;
+
 
 my ($db, $build, $pass, $host, $db_name );
 
 GetOptions ("db=s"          => \$db,
             "build=s"       => \$build,        
-	    "pass=s"        => \$pass, 
-	    "host=s"        => \$host,
-	    "db_name=s"       => \$db_name,  
+            "pass=s"        => \$pass, 
+            "host=s"        => \$host,
+            "db_name=s"       => \$db_name,  
     );
 
 usage() unless defined  $db && defined $build;
 
+my @required_files ;
+my $ddl ;
 
 
-my @required_files = (qw[ AlleleFreqBySsPop  Batch GtyFreqBySsPop Individual PedigreeIndividual PopLine Population RsMergeArch SNP SNPSubSNPLink SubInd  SubmittedIndividual SubSNP SubSNPPubmed ]);
+if($db_name =~ /shared/){
+    @required_files = (qw[ Allele GtyAllele ObsVariation PopClass PopClassCode UniGty UniVariation]);
+    ## get files from dbSNP ftp site
+    $ddl = download_shared_files(\@required_files) 
+}
+else{
+   @required_files = (qw[ AlleleFreqBySsPop  Batch GtyFreqBySsPop Individual PedigreeIndividual PopLine Population RsMergeArch SNP SNPSubSNPLink SubInd  SubmittedIndividual SubSNP SubSNPPubmed ]);
+    
+    push @required_files, "b$build\_ContigInfo";
+    push @required_files, "b$build\_SNPContigLoc";
 
-push @required_files, "b$build\_ContigInfo";
-push @required_files, "b$build\_SNPContigLoc";
+    ## get files from dbSNP ftp site
+    $ddl = download_organism_files(\@required_files) 
+}
 
-
-## get file from dbSNP ftp site
-my $ddl = download_files(\@required_files);
+die "Error: no ddl\n" unless defined $ddl;
 
 ## check md5sum
 check_files(\@required_files);
@@ -75,13 +87,15 @@ reformat_data_files(\@required_files);
 
 ## load into mysql
 load_data( $db_name, 
-	   $pass, 
-	   $host,
-	   \@required_files, 
-	   $new_ddl ) if defined $db_name;
+           $pass, 
+           $host,
+           \@required_files, 
+           $new_ddl ) if defined $db_name;
 
 
-sub download_files{
+
+
+sub download_organism_files{
     
     my $required_files = shift;
     print localtime(). " downloading files\n";
@@ -93,23 +107,58 @@ sub download_files{
     
     ## pick up the required data files
     foreach my $file ( @$required_files ){
-	warn "looking for $file\n";
-	$ftp->get( "$file\.bcp.gz" ) || die " Failed to download file :$file\.bcp.gz\n" ;
-	#print $ftp->message() . "\n";
-	$ftp->get( "$file\.bcp.gz.md5" );
-	#print $ftp->message() . "\n";
+        warn "looking for $file\n";
+        $ftp->get( "$file\.bcp.gz" ) || die " Failed to download file :$file\.bcp.gz\n" ;
+        #print $ftp->message() . "\n";
+        $ftp->get( "$file\.bcp.gz.md5" );
+        #print $ftp->message() . "\n";
     }
 
     ## pick up ddl also
     $ftp->cwd("../organism_schema")  || die "Cannot change working directory ", $ftp->message;
     my $sql_file_list = $ftp->ls();
+    die "No ddl\n" unless defined $sql_file_list->[0];
     
     foreach my $file (@{$sql_file_list}){    
-	$ftp->get( $file );    
+        $ftp->get( $file ); 
+        warn "picking up $file\n";   
     }
     return $sql_file_list;
 }
  
+
+sub download_shared_files{
+
+   my $required_files = shift;
+    print localtime(). " downloading files\n";
+
+    my $ftp = Net::FTP->new("ftp.ncbi.nih.gov", Debug => 0 )|| die "Cannot connect to ftp.ncbi.nih.gov: $@";    
+    $ftp->login("anonymous",'-anonymous@') || die "Cannot login ", $ftp->message; 
+    $ftp->cwd("snp/database/shared_data")  || die "Cannot change working directory ", $ftp->message;
+    $ftp->binary(); 
+    
+    ## pick up the required data files
+    foreach my $file ( @$required_files ){
+        warn "looking for $file\n";
+        $ftp->get( "$file\.bcp.gz" ) || die " Failed to download file :$file\.bcp.gz\n" ;
+        #print $ftp->message() . "\n";
+        $ftp->get( "$file\.bcp.gz.md5" );
+        #print $ftp->message() . "\n";
+    }
+
+    ## pick up ddl also
+    $ftp->cwd("../shared_schema")  || die "Cannot change working directory ", $ftp->message;
+    my $sql_file_list = $ftp->ls();
+    die "No ddl\n" unless defined $sql_file_list->[0];
+    
+    foreach my $file (@{$sql_file_list}){    
+        $ftp->get( $file ); 
+        warn "picking up $file\n";   
+    }
+    return $sql_file_list;
+}
+ 
+
 sub check_files{  
 
     my $required_files = shift;
@@ -117,26 +166,26 @@ sub check_files{
 
     my $problem = 0;
     foreach my $file ( @$required_files ){
-	
-	## extract supplied md5 - weird format
-	my $md5_dbSNP; 
-	open my $md5_exp, "$file\.bcp.gz.md5" || die "Failed to open $file\.bcp.gz.md5\n";
-	while(<$md5_exp>){
-	    if(/$file/){
-		chomp;
-		$md5_dbSNP = (split)[1];
-	    }
-	}
-	my $md5_output = `md5sum $file\.bcp.gz`;
-	my $md5_found = (split/\s+/,$md5_output)[0];
-	
-	if ($md5_dbSNP eq $md5_found){
-	    print "md5sum OK for $file\n";
-	}
-	else{
-	    $problem = 1;
-	    warn "Error - $file\tsupplied : $md5_dbSNP, found: $md5_output\n";
-	}
+        
+        ## extract supplied md5 - weird format
+        my $md5_dbSNP; 
+        open my $md5_exp, "$file\.bcp.gz.md5" || die "Failed to open $file\.bcp.gz.md5\n";
+        while(<$md5_exp>){
+            if(/$file/){
+                chomp;
+                $md5_dbSNP = (split)[1];
+            }
+        }
+        my $md5_output = `md5sum $file\.bcp.gz`;
+        my $md5_found = (split/\s+/,$md5_output)[0];
+        
+        if ($md5_dbSNP eq $md5_found){
+            print "md5sum OK for $file\n";
+        }
+        else{
+            $problem = 1;
+            warn "Error - $file\tsupplied : $md5_dbSNP, found: $md5_output\n";
+        }
     }
     die "Exiting due to errors\n" unless $problem ==0;
 }
@@ -148,23 +197,23 @@ sub reformat_data_files{
     print localtime(). " Reformatting data files\n";
     
     foreach my $table (@$tables){
-	
-	print  "Reformating $table\n";
-	open my $in, "gunzip -c $table\.bcp.gz | "||die;
-	open my $out, ">$table\_new.bcp"||die;
+        
+        print  "Reformating $table\n";
+        open my $in, "gunzip -c $table\.bcp.gz | "||die;
+        open my $out, ">$table\_new.bcp"||die;
 
-	while(<$in>){
-	    
-	    my @a = split/\t/;
-	    
-	    foreach my $a(@a){
-		if($a =~/\w+|\-|\+|\?|\./ && $a =~/\n/){ print $out $a;}
-		elsif( $a =~/\w+|\-|\+|\?|\./)         { print $out "$a\t";}
-		elsif( $a =~/\n/)   { print $out "\\N\n";}	   
-		else{                 print $out "\\N\t";}
-	    }
-	}
-	close $out;
+        while(<$in>){
+            
+            my @a = split/\t/;
+            
+            foreach my $a(@a){
+                if($a =~/\w+|\-|\+|\?|\./ && $a =~/\n/){ print $out $a;}
+                elsif( $a =~/\w+|\-|\+|\?|\./)         { print $out "$a\t";}
+                elsif( $a =~/\n/)   { print $out "\\N\n";}         
+                else{                 print $out "\\N\t";}
+            }
+        }
+        close $out;
     }
 }
 
@@ -175,61 +224,62 @@ sub reformat_ddl_files{
 
     my @new_ddl;
     foreach my $file(@$ddl){
-	
-	my $outname = "mysql" . $file;
-	$outname =~ s/\.gz//;
-	push @new_ddl, $outname;
 
-	open my $out, ">$outname" || die "Failed to open $outname to write: $!\n";
-	
-	open my $in, "gunzip -c $file |" || die "Failed to open $file to read: $!\n";
-	
-	while(<$in>){
-	    
-	    ## remove weird indexes
-	    next if /getdate|DF__SNP_tax_i__statu__31583BA0/i;  
-	    next if /i_rsCtgMrna ON b138_SNPContigLocusId/; ## index too long but table not used
-	    next if /DF__SubSNPLin__link___56EDABB5/;
-	    next if /DF__Submitted__ploid__0DBDF25B/;
-	    next if /DF__SubSNPLin__link___359F647E/;
-	    next if /DF__Submitted__ploid__7C06F46F/;
-	    next if /i_last_updated/;
-	    
-	    next if /FOREIGN/;
-	
-	    if(/CREATE\s+TABLE/){
-		s/CREATE TABLE/CREATE TABLE IF NOT EXISTS/i;
-		s/\[|\]//g;
-	    }
-	    else{
-		
-		s/\[|\]//g;
-		
-		## end statement with ';' not 'GO'
-		s/GO/;/;
-		
-		## don't think this is needed
-		s/IDENTITY\(1\,1\)//;
-		
-		## fix types for table definitions
-		s/ bit / TINYINT /;        
-		s/uniqueidentifier/CHAR\(36\)/;
-		s/image/BLOB/;
-		s/smalldatetime/DATETIME/;
-		
-		s/float/DOUBLE/;
-		s/real/FLOAT/;
-		s/money|smallmoney/DECIMAL/;
-		
-		## set default for empty columns
-		s/NULL/DEFAULT NULL/ unless/NOT NULL/;
-	    
-		## for indexes
-		s/NONCLUSTERED|CLUSTERED|ASC//g;
-	
-	    }
-	    print $out $_;
-	}
+        my $outname = "mysql_" . $file;
+        $outname =~ s/\.gz//;
+        push @new_ddl, $outname;
+        print  "doing $file => $outname\n";
+        open my $out, ">$outname" || die "Failed to open $outname to write: $!\n";
+        
+        open my $in, "gunzip -c $file |" || die "Failed to open $file to read: $!\n";
+
+        print $out "SET storage_engine=InnoDB;\n\n" if $file=~/table/i;
+
+        
+        while(<$in>){
+            
+            ## remove weird indexes
+            next if /getdate|DF__SNP_tax_i__statu__31583BA0/i;  
+            next if /i_rsCtgMrna ON b138_SNPContigLocusId/; ## index too long but table not used
+            next if /DF__/;
+            next if /i_last_updated/;
+            
+            next if /FOREIGN/;
+        
+            if(/CREATE\s+TABLE/){
+                s/CREATE TABLE/CREATE TABLE IF NOT EXISTS/i;
+                s/\[|\]//g;
+            }
+            else{
+                
+                s/\[|\]//g;
+                
+                ## end statement with ';' not 'GO'
+                s/GO/;/;
+                
+                ## don't think this is needed
+                s/IDENTITY\(1\,1\)//;
+                
+                ## fix types for table definitions
+                s/ bit / TINYINT /;        
+                s/uniqueidentifier/CHAR\(36\)/;
+                s/image/BLOB/;
+                s/smalldatetime/DATETIME/;
+                
+                s/float/DOUBLE/;
+                s/real/FLOAT/;
+                s/money|smallmoney/DECIMAL/;
+                
+                ## set default for empty columns
+                s/NULL/DEFAULT NULL/ unless/NOT NULL/;
+            
+                ## for indexes
+                s/NONCLUSTERED|CLUSTERED|ASC//g;
+        
+            }
+            print $out $_;
+        }
+        print $out "\nSET storage_engine=MYISAM;\n" if $file=~/table/i;
     }
     return \@new_ddl;
 }
@@ -237,20 +287,20 @@ sub reformat_ddl_files{
 sub load_data{
     
     my ( $db_name, 
-	 $pass, 
-	 $host,
-	 $data_files, 
-	 $ddl )   = @_;
+         $pass, 
+         $host,
+         $data_files, 
+         $ddl )   = @_;
 
     my @keys;
     foreach my $ddl_file ( @{$ddl}){
-	if( $ddl_file =~ /table/){
-	    print localtime() .  " loading table definitions\n";
-	    `mysql -h$host -uensadmin -p$pass -D $db_name < $ddl_file`;
-	}
-	else{
-	    push @keys,  $ddl_file;
-	}
+        if( $ddl_file =~ /table/){
+            print localtime() .  " loading table definitions\n";
+            `mysql -h$host -uensadmin -p$pass -D $db_name < $ddl_file`
+        }
+        else{
+            push @keys,  $ddl_file;
+        }
     }
 
     my $dir = `pwd`;
@@ -259,20 +309,47 @@ sub load_data{
     
     ## load data 
     foreach my $table (@{$data_files}){
-	print localtime() . " loading table $table\n";
-	`mysql -h$host -uensadmin -p$pass -D $db_name -e "load data local infile '$dir/$table\_new.bcp' into table $table"` ;
+        warn localtime() . " loading table $table\n";
+        `mysql -h$host -uensadmin -p$pass -D $db_name -e "load data local infile '$dir/$table\_new.bcp' into table $table"` ;
     }
     
     ## add indexes
     foreach my $ddl_file ( @{$ddl}){
-	unless($ddl_file =~ /table|view/){
-	    print localtime() . " loading ddl: $ddl_file \n";
-	    `mysql -h$host -uensadmin -p$pass -D $db_name < $ddl_file`;
-	}
+        unless($ddl_file =~ /table|view/){
+            print localtime() . " loading ddl: $ddl_file \n";
+            `mysql -h$host -uensadmin -p$pass -D $db_name < $ddl_file`;
+        }
     }
+
+
+    ## print counts for tables as report
+    print localtime() . " Getting row counts for new tables \n";
+
+    open my $report, ">$db_name\_report.txt"||die;
+    print $report "Row counts for all tables\n\n";
+
+    my $dbh = DBI->connect("dbi:mysql:$db_name:$host\:3306", 'ensadmin', $pass, undef);
+       
+    foreach my $table (@{$data_files}){
+        my $row_number = count_rows($dbh, $table);
+        print $report "$row_number\t$table\n";       
+    }
+ 
 }
 
+sub count_rows{
 
+   my $dbh    = shift;
+   my $table_name  = shift;
+
+   my $row_count_ext_sth  = $dbh->prepare(qq[ select count(*) from $table_name]);
+
+   $row_count_ext_sth->execute();
+   my $total_rows = $row_count_ext_sth->fetchall_arrayref();
+
+   return $total_rows->[0]->[0]; 
+
+}
 
 sub usage{
 
