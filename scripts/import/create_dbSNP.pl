@@ -243,6 +243,7 @@ sub reformat_ddl_files{
             next if /i_rsCtgMrna ON b138_SNPContigLocusId/; ## index too long but table not used
             next if /DF__/;
             next if /i_last_updated/;
+	    next if /u_Allele_allele/; ## allele strings unique in mssql not unique in mysql
             
             next if /FOREIGN/;
         
