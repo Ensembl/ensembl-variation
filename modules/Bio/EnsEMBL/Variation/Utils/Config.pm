@@ -45,7 +45,7 @@ our @short_names = qw(1kg_hct 1kg_hct_ceu 1kg_hct_yri 1kg_hce 1kg_hce_ceu 1kg_hc
                       fail_no_alleles fail_no_gt fail_no_map fail_no_seq fail_non_nt fail_mult_alleles fail_dbsnp_suspect
                       ph_hgmd_pub ph_nhgri ph_omim ph_variants ph_uniprot
                       ph_cosmic ph_ega  hapmap_ceu hapmap_hcb hapmap_jpt hapmap_yri
-                      Affy_500K Affy_SNP6 Cardio-Metabo_Chip HumanOmni1-Quad Illumina_1M-duo Illumina_660Q
+                      Affy_500K Affy_SNP6 Cardio-Metabo_Chip HumanOmni1-Quad Illumina_1M-duo Illumina_660Q Illumina_CytoSNP12v1
                       Human610_Quad HumanHap550 HumanHap650Y HumanOmni2.5 PorcineSNP60
                       esp_6500 clin_assoc 
                       Chicken600K EquineSNP50 BovineHD BovineLD BovineSNP50  
