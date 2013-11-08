@@ -199,8 +199,8 @@ sub reformat_data_files{
     foreach my $table (@$tables){
         
         print  "Reformating $table\n";
-        open my $in, "gunzip -c $table\.bcp.gz | "||die;
-        open my $out, ">$table\_new.bcp"||die;
+        open my $in, "gunzip -c $table\.bcp.gz | "||die "Failed to open $table\.bcp.gz for reformatting : $!\n";
+        open my $out, ">$table\_new.bcp"||die "Failed to open $table\_new.bcp to write : $!\n";;
 
         while(<$in>){
             
@@ -326,14 +326,17 @@ sub load_data{
     ## print counts for tables as report
     print localtime() . " Getting row counts for new tables \n";
 
-    open my $report, ">$db_name\_report.txt"||die;
-    print $report "Row counts for all tables\n\n";
+    open my $report, ">$db_name\_report.txt"||die "Failed to open file to create report :$!\n";
+    print $report "Entries\tHas PK\tTable name\n\n";
 
     my $dbh = DBI->connect("dbi:mysql:$db_name:$host\:3306", 'ensadmin', $pass, undef);
        
     foreach my $table (@{$data_files}){
-        my $row_number = count_rows($dbh, $table);
-        print $report "$row_number\t$table\n";       
+        my $row_number   = count_rows($dbh, $table);
+	## some tables never have a PK (but have lots of indexes), some occaisionally have no PK in export
+	my $pk_available = "-";
+	$pk_available = check_primary_key($dbh, $table) unless $table =~/SubInd|GtyFreqBySsPop|AlleleFreqBySsPop/;
+        print $report "$row_number\t$pk_available\t$table\n";       
     }
  
 }
@@ -350,6 +353,23 @@ sub count_rows{
 
    return $total_rows->[0]->[0]; 
 
+}
+
+
+sub check_primary_key{
+
+   my $dbh         = shift;
+   my $table_name  = shift;
+
+   my $key_ext_sth  = $dbh->prepare(qq[ show indexes from $table_name where Key_name ='PRIMARY']);
+
+   $key_ext_sth->execute();
+   my $key = $key_ext_sth->fetchall_arrayref();
+
+   my $found = 0;
+   $found = 1 if defined $key->[0]->[0];
+
+   return $found;
 }
 
 sub usage{
