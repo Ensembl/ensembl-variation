@@ -121,6 +121,10 @@ my $html_footer = qq{
 </html>};
 
 
+############
+### Main ###
+############
+
 my $html_content = '';
 my @species_list;
 my %species_news;
@@ -209,14 +213,24 @@ sub source_table {
   
   push (@species_list,{name => $species, s_name => $s_name, anchor => $s_name_id});
   
-  my $new_species = ($is_new == 1) ? qq{<span style="padding-left:20px;color:#00F;font-weight:bold">New species!</span>} : '';
+  my $html = qq{<!-- $species -->};
+  if ($is_new) {
+    $html = qq{
+    <div id="$s_name_id" style="padding-left:0px;padding-bottom:1px">
+      <img src="/i/species/48/$s_name.png" alt="$species" class="sp-thumb" style="float:none;margin-right:4px;padding:2px;vertical-align:middle;background-color:#00F" />
+      <span style="font-weight:bold;font-size:1.1em;color:#333">$species</span><span style="padding-left:20px;color:#00F;font-weight:bold">New species!</span>
+    </div>
+    };
+  }
+  else {
+    $html = qq{
+    <div id="$s_name_id" style="padding-left:0px;padding-bottom:3px">
+      <img src="/i/species/48/$s_name.png" alt="$species" class="sp-thumb" style="float:none;margin-right:4px;vertical-align:middle" />
+      <span style="font-weight:bold;font-size:1.1em;color:#333">$species</span>
+    </div>
+    };
+  }
   
-  my $html = qq{
-  <div id="$s_name_id" style="padding-left:0px;padding-bottom:3px">
-    <img src="/i/species/48/$s_name.png" alt="$species" class="sp-thumb" style="float:none;margin-right:4px;vertical-align:middle" />
-    <span style="font-weight:bold;font-size:1.1em;color:#333">$species</span>$new_species
-  </div>
-  };
   my $source_table;
   
   my $bg = 1;
@@ -268,6 +282,7 @@ sub source_table {
       $source = qq{<a href="$s_url">$source</a>};
     }
     
+    # Version
     $s_version = format_version($s_version);  
     
     # Somatic status
@@ -283,7 +298,7 @@ sub source_table {
     foreach my $dt (@data_types) {
       $data_type_string .= ',<br />' if ($data_type_string ne '');
       if ($dt eq 'phenotype_feature') {
-        $data_type_string .= 'Phenotype association';
+        $data_type_string .= '<span class="_ht" title="Provides phenotype associations">Phenotype</span>';
         $s_phenotype = qq{<img src="phenotype.png" style="border-radius:5px;border:1px solid #000" alt="$phe_title" title="$phe_title" />};
       }
       elsif ($dt eq 'study') {
@@ -305,16 +320,17 @@ sub source_table {
     $s_type = 'main' if (!defined($s_type));
     $other_flag{$s_type} = 1 if ($s_phenotype ne '' || $s_new_stuff ne '' || $s_somatic_status ne '-');
       
-    my $new = ($s_new_stuff eq '') ? qq{<td style="border-left:1px solid #BBB;padding:0px"></td>} : qq{<td style="text-align:center;width:22px;padding:2px 3px;border-left:1px solid #BBB">$s_new_stuff</td>};    
+    my $new = ($s_new_stuff eq '') ? qq{<td style="border-left:1px solid #BBB;padding:0px"></td>} : qq{<td style="text-align:center;width:22px;padding:2px 3px;border-left:1px solid #BBB">$s_new_stuff   </td>};    
+    
     my $row = qq{
-      $s_header
-      <td>$source</td>
-      <td>$s_version</td>
-      <td>$s_description</td>
-      <td>$data_type_string</td>
-      $new
-      <td style="text-align:center;width:22px;padding:2px 3px">$s_phenotype</td>
-      <td style="text-align:center;width:22px;padding:2px 3px">$s_somatic_status</td>
+        $s_header
+        <td>$source</td>
+        <td>$s_version</td>
+        <td>$s_description</td>
+        <td style="max-width:120px">$data_type_string</td>
+        $new
+        <td style="text-align:center;width:22px;padding:2px 3px">$s_phenotype</td>
+        <td style="text-align:center;width:22px;padding:2px 3px">$s_somatic_status   </td>
     };
     
     # Is chip ?
@@ -524,9 +540,9 @@ sub new_source_or_version {
   my $type = shift;
   my $color = $colours{$type};
   return qq{
-       <div style="color:$color;font-size:0.8em;text-align:center;margin:0px auto 0px auto;padding:0px">
-         <span style="text-align:center;margin:0px;padding:0px">New</span><br /><span style="text-align:center;margin:0px;padding:0px">$type</span>
-       </div>
+          <div style="color:$color;font-size:0.8em;text-align:center;margin:0px auto 0px auto;padding:0px">
+            <span style="text-align:center;margin:0px;padding:0px">New</span><br /><span style="text-align:center;margin:0px;padding:0px">$type</span>
+          </div>
      };
 }
 
@@ -535,19 +551,19 @@ sub somatic_status {
   my $html;
   if ($type eq 'germline') {
      $html .= qq{
-       <div class="_ht" style="margin-left:auto;margin-right:auto;border-radius:5px;border:1px solid #000;width:20px;height:20px;background-color:#00C;" title="$type data"></div>
+         <div class="_ht" style="margin-left:auto;margin-right:auto;border-radius:5px;border:1px solid #000;width:20px;height:20px;background-color:#00C;" title="$type data"></div>
      };
   }
   elsif ($type eq 'somatic') {
     $html .= qq{
-      <div class="_ht" style="margin-left:auto;margin-right:auto;border-radius:5px;border:1px solid #000;width:20px;height:20px;background-color:#C00;" title="$type data"></div>
+         <div class="_ht" style="margin-left:auto;margin-right:auto;border-radius:5px;border:1px solid #000;width:20px;height:20px;background-color:#C00;" title="$type data"></div>
     };
   }
   elsif ($type eq 'mixed') {
     $html .= qq{
-      <div class="_ht" style="margin-left:auto;margin-right:auto;border-radius:5px;border:1px solid #000;width:20px;height:20px;background-color:#00C;" title="$type data">
-        <div style="width:0px;height:0px;border-style:solid;border-width:0 0 20px 20px;border-color:transparent transparent #C00 transparent"></div>
-      </div>
+         <div class="_ht" style="margin-left:auto;margin-right:auto;border-radius:5px;border:1px solid #000;width:20px;height:20px;background-color:#00C;" title="$type data">
+           <div style="width:0px;height:0px;border-style:solid;border-width:0 0 20px 20px;border-color:transparent transparent #C00 transparent"></div>
+         </div>
     };
   }
   else {
