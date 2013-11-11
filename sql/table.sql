@@ -58,7 +58,7 @@ create table variation (
   minor_allele varchar(50) DEFAULT NULL,
   minor_allele_freq float DEFAULT NULL,
   minor_allele_count int(10) unsigned DEFAULT NULL,
-  clinical_significance SET('drug-response','histocompatibility','non-pathogenic','other','pathogenic','probable-non-pathogenic','probable-pathogenic''unknown','untested'),
+  clinical_significance SET('drug-response','histocompatibility','non-pathogenic','other','pathogenic','probable-non-pathogenic','probable-pathogenic','unknown','untested'),
   evidence SET('Multiple_observations','Frequency','HapMap','1000Genomes','Cited','ESP'),
 
 	primary key( variation_id ),
@@ -183,7 +183,7 @@ create table variation_feature(
     minor_allele_count int(10) unsigned DEFAULT NULL,
     alignment_quality double  DEFAULT NULL,
     evidence SET('Multiple_observations','Frequency','HapMap','1000Genomes','Cited','ESP'),
-    clinical_significance SET('drug-response','histocompatibility','non-pathogenic','other','pathogenic','probable-non-pathogenic','probable-pathogenic''unknown','untested') DEFAULT NULL,
+    clinical_significance SET('drug-response','histocompatibility','non-pathogenic','other','pathogenic','probable-non-pathogenic','probable-pathogenic','unknown','untested') DEFAULT NULL,
 
    	primary key( variation_feature_id ),
 	  key pos_idx( seq_region_id, seq_region_start, seq_region_end ),
