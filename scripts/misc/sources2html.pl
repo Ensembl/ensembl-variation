@@ -320,7 +320,10 @@ sub source_table {
     $s_type = 'main' if (!defined($s_type));
     $other_flag{$s_type} = 1 if ($s_phenotype ne '' || $s_new_stuff ne '' || $s_somatic_status ne '-');
       
-    my $new = ($s_new_stuff eq '') ? qq{<td style="border-left:1px solid #BBB;padding:0px"></td>} : qq{<td style="text-align:center;width:22px;padding:2px 3px;border-left:1px solid #BBB">$s_new_stuff   </td>};    
+    #my $new = ($s_new_stuff eq '') ? qq{<td style="border-left:1px solid #BBB;padding:0px"></td>} : qq{<td style="text-align:center;width:22px;padding:2px 3px;border-left:1px solid #BBB">$s_new_stuff</td>};
+    my $new = qq{<td style="text-align:center;width:22px;padding:2px 3px;border-left:1px solid #BBB">$s_new_stuff</td>};
+    my $left_border = ';border-left:1px solid #DDD';
+    my $first_border = ($s_new_stuff eq '') ? '' : $left_border ;   
     
     my $row = qq{
         $s_header
@@ -329,8 +332,8 @@ sub source_table {
         <td>$s_description</td>
         <td style="max-width:120px">$data_type_string</td>
         $new
-        <td style="text-align:center;width:22px;padding:2px 3px">$s_phenotype</td>
-        <td style="text-align:center;width:22px;padding:2px 3px">$s_somatic_status   </td>
+        <td style="text-align:center;width:22px;padding:2px 3px$left_border">$s_phenotype</td>
+        <td style="text-align:center;width:22px;padding:2px 3px$left_border">$s_somatic_status</td>
     };
     
     # Is chip ?
