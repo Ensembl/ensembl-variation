@@ -47,9 +47,16 @@ sub fetch_input {
     
     my $dbc = $var_dba->dbc();
 
+
+    # check for out of date seq_regions in variation database
+    my $sequences_ok = $self->check_seq_region();
+    die "Seq region ids are not compatible\n" unless $sequences_ok == 1;
+
+
     my $ga = $core_dba->get_GeneAdaptor or die "Failed to get gene adaptor";
 
     my @transcript_output_ids;
+
     
     my $gene_count = 0;
 
@@ -76,7 +83,9 @@ sub fetch_input {
             last if $gene_count >= 100;
         }
     }
-    
+
+
+
     if (@transcript_output_ids) {
         
         # check we actually found some transcripts
@@ -118,6 +127,41 @@ sub write_output {
     }
 
     return;
+}
+
+## check for out of date seq_regions in variation database
+##    human patches can change between releases
+##    such differences break TranscriptEffect
+sub check_seq_region{
+
+   my $self = shift;
+   
+   my $stmt = qq[ select seq_region_id, name from seq_region];
+   
+   my $core_dba = $self->get_species_adaptor('core');
+   my $var_dba  = $self->get_species_adaptor('variation');
+ 
+   my $core_seq_sth = $core_dba->dbc->prepare($stmt);
+   $core_seq_sth->execute();
+   my $core_ids = $core_seq_sth->fetchall_arrayref();
+
+   my %expected_ids;
+   foreach my $l(@{$core_ids}){
+       $expected_ids{$l->[0]} = $l->[1];
+   }
+
+   my $var_seq_sth = $var_dba->dbc->prepare($stmt);
+   $var_seq_sth->execute();
+   my $var_ids = $var_seq_sth->fetchall_arrayref();
+
+   my $OK = 1;
+   foreach my $l(@{$var_ids}){
+       unless (defined $expected_ids{$l->[0]} ){
+           $self->warning( 'Seq_region_id in variation db is not in core: '.  $l->[0]. ' ' . $l->[1]);
+           $OK = 0;
+       }
+   }    
+   return $OK;
 }
 
 1;
