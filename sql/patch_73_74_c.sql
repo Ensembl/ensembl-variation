@@ -1,7 +1,11 @@
 ## Add clinical_significance to variation_feature (copied from variation)
+ALTER TABLE variation 
+MODIFY COLUMN clinical_significance 
+SET('drug-response','histocompatibility','non-pathogenic','other','pathogenic','probable-non-pathogenic','probable-pathogenic','unknown','untested');
+
 ALTER TABLE variation_feature
 ADD COLUMN clinical_significance
-SET('drug-response','histocompatibility','non-pathogenic','other','pathogenic','probable-non-pathogenic','probable-pathogenic''unknown','untested') DEFAULT NULL;
+SET('drug-response','histocompatibility','non-pathogenic','other','pathogenic','probable-non-pathogenic','probable-pathogenic','unknown','untested') DEFAULT NULL;
 
 UPDATE variation_feature vf, variation v
 SET vf.clinical_significance = v.clinical_significance
