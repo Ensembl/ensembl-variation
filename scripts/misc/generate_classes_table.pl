@@ -236,7 +236,7 @@ sub get_var_class_piechart {
   
   <input type="hidden" class="graph_data" value="[%s]" />
   
-  <div class="pie_chart_classes" title="classes" style="width:400px;height:220px;border:1px solid #AAA;border-radius:10px;-moz-border-radius:10px;-webkit-border-radius:10px;-webkit-box-shadow:0 1px 3px #666;">
+  <div class="pie_chart_classes" title="classes" style="width:400px;height:220px;border:1px solid #CCC;border-radius:8px;box-shadow:0 1px 3px #666">
      <h3 style="padding:10px 10px 5px">%s Variation class distribution - Ensembl %s</h4>
      <div id="graphHolder0"></div>
   </div>
