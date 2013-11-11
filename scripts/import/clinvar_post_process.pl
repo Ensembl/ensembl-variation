@@ -167,10 +167,6 @@ sub fix_allele{
     my $allele_upd_sth = $dbh->prepare(qq[ update allele 
                                            set frequency = \\N, population_id = \\N 
                                            where population_id = (select population_id from population where name ='clinvar')
-                                           and variation_id in ( select variation.variation_id 
-                                                                 from variation,source 
-                                                                 where source.name = ?
-                                                                 and variation.source_id =source.source_id)
                                            and frequency = 0
                                         ]);
 
@@ -214,6 +210,11 @@ sub check_counts{
    my $featless_count_ext_sth = $dbh->prepare(qq[ select count(*) from phenotype 
                                                   where phenotype_id not in (select phenotype_id from phenotype_feature) ]);
 
+   my $class_ext_sth       = $dbh->prepare(qq[ select value from attrib where attrib_type_id = 10 ]);
+
+   my $class_count_ext_sth = $dbh->prepare(qq[ select clinical_significance, count(*) 
+                                               from variation where clinical_significance is not null 
+                                               group by clinical_significance]);
 
 
    $pheno_count_ext_sth->execute( $SOURCENAME )||die;
@@ -233,6 +234,21 @@ sub check_counts{
    my $featless =  $featless_count_ext_sth->fetchall_arrayref();
    warn "$featless->[0]->[0] phenotype entries have no phenotype features\n";
 
+   my %class_count;
+   warn "\nGetting counts by class\n";
+   $class_count_ext_sth->execute()||die;
+   my $class_num = $class_count_ext_sth->fetchall_arrayref();
+   foreach my $l(@{$class_num}){
+       warn "$l->[1]\t$l->[0]\n";
+       $class_count{$l->[0]} = $l->[1];
+   }
+
+
+   $class_ext_sth->execute()||die;
+   my $classes = $class_ext_sth->fetchall_arrayref();
+   foreach my $l(@{$classes}){
+       warn "\nNo variants with class: $l->[0]\n"  unless defined  $class_count{$l->[0]} ;
+   }
 }
 
 sub delete_pheno_less{
