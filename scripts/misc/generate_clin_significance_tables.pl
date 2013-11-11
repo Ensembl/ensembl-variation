@@ -60,13 +60,14 @@ my $list_stmt = qq{ SELECT value FROM attrib WHERE attrib_type_id IN
 my $desc_stmt = qq{ SELECT name,description FROM attrib_type WHERE code=? };
 
 my %types = (
-  'dbsnp_clin_sig' => { query => qq{ SELECT name FROM variation
+  'dbsnp_clin_sig' => { 'query' => qq{ SELECT name FROM variation
                                      WHERE FIND_IN_SET(?,clinical_significance)
                                      AND variation_id NOT IN (SELECT variation_id FROM failed_variation) 
                                      LIMIT 1},
-                        link => qq{/Homo_sapiens/Variation/Explore?v=}
+                        'link' => qq{/Homo_sapiens/Variation/Explore?v=},
+                        'icon' => 1
                       },
-  'dgva_clin_sig' => { query => qq{ SELECT v1.variation_name FROM structural_variation v1, structural_variation v2, structural_variation_association vas, attrib a
+  'dgva_clin_sig' => { 'query' => qq{ SELECT v1.variation_name FROM structural_variation v1, structural_variation v2, structural_variation_association vas, attrib a
                                     WHERE v2.structural_variation_id=vas.supporting_structural_variation_id
                                     AND v2.clinical_significance_attrib_id=a.attrib_id
 																		AND a.value=?
@@ -74,13 +75,13 @@ my %types = (
                                     AND v1.structural_variation_id NOT IN 
                                     (SELECT structural_variation_id FROM failed_structural_variation)
                                     LIMIT 1},
-                       link => qq{/Homo_sapiens/StructuralVariation/Evidence?sv=}
+                       'link' => qq{/Homo_sapiens/StructuralVariation/Evidence?sv=}
                      },
 );
 
 my $html;
 my $bg = '';
-
+my $icon_path = '/i/val/clinsig_';
 
 
 # Types
@@ -99,7 +100,8 @@ foreach my $type (keys %types) {
   my $content = add_table_header($type);
   foreach my $value (sort(@list_val)) {
     my $example = get_variant_example($type,$value);
-    $content .= qq{    <tr$bg><td>$value$example</td></tr>\n};
+    my $icon_col = ($types{$type}{'icon'}) ? qq{<td style="text-align:center"><img src="$icon_path$value.png" alt="$value"/></td>} : '';
+    $content .= qq{    <tr$bg>$icon_col<td>$value$example</td></tr>\n};
     $bg = set_bg();
   }
   
@@ -169,6 +171,26 @@ sub get_variant_example {
 
 sub add_table_header {
   my $type = shift;
+  my $icon_column = ($types{$type}{'icon'}) ? qq{<th><span class="_ht ht" title="Icons designed by Ensembl">Icon</span></th>} : '';
   my $ex_column = ($types{$type}) ? qq{<th>Example</th>} : '';
-  return qq{    <tr><th>Value</th>$ex_column</tr>\n};
+  return qq{    <tr>$icon_column<th>Value</th>$ex_column</tr>\n};
+}
+
+
+sub usage {
+    
+    print STDOUT qq{
+Usage:
+
+  $0 SPECIES DB_HOST DB_VERSION
+  
+Description:
+
+  Prints html code for a table containing the different clinical significances for a species. The species 
+  has to be specified on the command line as the first argument and the host database has to be 
+  specified as the second argument
+         
+};
+    
+    exit(0);
 }
