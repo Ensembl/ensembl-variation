@@ -100,7 +100,8 @@ foreach my $type (keys %types) {
   my $content = add_table_header($type);
   foreach my $value (sort(@list_val)) {
     my $example = get_variant_example($type,$value);
-    my $icon_col = ($types{$type}{'icon'}) ? qq{<td style="text-align:center"><img src="$icon_path$value.png" alt="$value"/></td>} : '';
+    my $label = ucfirst($value);
+    my $icon_col = ($types{$type}{'icon'}) ? qq{<td style="text-align:center"><img src="$icon_path$value.png" title="$label"/></td>} : '';
     $content .= qq{    <tr$bg>$icon_col<td>$value$example</td></tr>\n};
     $bg = set_bg();
   }
@@ -121,14 +122,15 @@ sub set_div {
   my $name = shift;
   my $desc = shift;
   
-  $desc = (defined($desc)) ? qq{  <p>$desc.</p>\n} : ''; 
+  $desc = (defined($desc)) ? qq{<p>$desc.</p>\n} : ''; 
   $name =~ /^(.+)(\s+clinical\s+significance)/;
   my $label = ($1 =~ /dbsnp/i) ? 'ClinVar' : $1;
-  $name = qq{<span style="color:#333">$label</span>$2};
+  my $second_label = ($2) ? $2 : '';
+  $name = qq{<span style="color:#333">$label</span>$second_label};
   $desc =~ s/dbSNP/ClinVar and dbSNP/;
   my $div = qq{
 <div id="$id" style="float:left;margin-right:100px;">
-  <b>$name</b><br />
+  <span style="font-weight:bold">$name</span><br />
   $desc
   <table class="ss" style="width:auto">
    $content
@@ -173,7 +175,7 @@ sub add_table_header {
   my $type = shift;
   my $icon_column = ($types{$type}{'icon'}) ? qq{<th><span class="_ht ht" title="Icons designed by Ensembl">Icon</span></th>} : '';
   my $ex_column = ($types{$type}) ? qq{<th>Example</th>} : '';
-  return qq{    <tr>$icon_column<th>Value</th>$ex_column</tr>\n};
+  return qq{ <tr>$icon_column<th>Value</th>$ex_column</tr>\n};
 }
 
 
