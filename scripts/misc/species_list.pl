@@ -90,7 +90,7 @@ my $nb_col = 4;
 my $html;
 
 
-my $html_content = '<table><tr><td>';
+my $html_content = '<table style="border:1px solid #CCC;border-radius:8px;padding:6px 6px 0px;margin-bottom:5px"><tr><td>';
 my %species_list;
 
 foreach my $hostname (@hostnames) {
