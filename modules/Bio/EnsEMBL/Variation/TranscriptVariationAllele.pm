@@ -612,7 +612,7 @@ sub hgvs_transcript {
     if($DEBUG ==1 && $hgvs_notation->{ref} ne $ref_al_for_checking &&
             $hgvs_notation->{type} ne 'dup' &&
             $hgvs_notation->{type} ne 'inv' ){
-        warn "\nError - calculated reference ($hgvs_notation->{ref}) and input reference ($ref_al_for_checking) disagree - skipping HGVS transcript for $var_name\n";
+
     
     }
     ### create reference name - transcript name & seq version
@@ -790,8 +790,8 @@ sub _get_hgvs_protein_format{
     }    
 
     elsif( $hgvs_notation->{type} eq "delins" || $hgvs_notation->{type} eq "ins" ){
-    
-	$hgvs_notation->{alt} = "Ter" if $hgvs_notation->{alt} =~ /^Ter/;
+
+        $hgvs_notation->{alt} = "Ter" if $hgvs_notation->{alt} =~ /^Ter/;
 
         #### list first and last aa in reference only
         my $ref_pep_first = substr($hgvs_notation->{ref}, 0, 3);
@@ -834,9 +834,9 @@ sub _get_hgvs_protein_format{
               ### use long form if new stop found 
              $hgvs_notation->{'hgvs'} .= $hgvs_notation->{ref} . $hgvs_notation->{start}  .  $hgvs_notation->{alt} . "fsTer$aa_til_stop"  ;
           }    
-	  else{
+          else{
              ### new - ? to show new stop not predicted
-	      $hgvs_notation->{'hgvs'} .= $hgvs_notation->{ref} . $hgvs_notation->{start}  . $hgvs_notation->{alt} . "fsTer?";
+              $hgvs_notation->{'hgvs'} .= $hgvs_notation->{ref} . $hgvs_notation->{start}  . $hgvs_notation->{alt} . "fsTer?";
            }      
        }
     }
@@ -881,7 +881,7 @@ sub _get_hgvs_protein_type{
 
           $hgvs_notation->{type} = "ins";
       }
-	elsif( length($hgvs_notation->{ref}) ==1 && length($hgvs_notation->{alt}) ==1 ) {
+      elsif( length($hgvs_notation->{ref}) ==1 && length($hgvs_notation->{alt}) ==1 ) {
  
           $hgvs_notation->{type} = ">";
       }
@@ -956,7 +956,11 @@ sub _get_hgvs_peptides{
   }
   elsif($hgvs_notation->{type} eq "ins" ){
 
-    ### HGVS ref are peptides flanking insertion
+      ### Check that inserted bases do not duplicate 3' reference sequence [set to type = dup and return if so]
+      $hgvs_notation = $self->_check_for_peptide_duplication($hgvs_notation) unless $hgvs_notation->{alt} =~/\*/;
+      return ($hgvs_notation) if $hgvs_notation->{type} eq "dup";              
+
+      ### HGVS ref are peptides flanking insertion
       my $min;
       if($hgvs_notation->{start} < $hgvs_notation->{end}){
           $min = $hgvs_notation->{start};
@@ -965,14 +969,7 @@ sub _get_hgvs_peptides{
 
       $hgvs_notation->{ref} = $self->_get_surrounding_peptides($min);
 
-    if( $hgvs_notation->{alt} =~/\*/){
-        ## inserted bases after stop irrelevant; consider as substitution gaining stop MAINTAIN PREVIOUS BEHAVIOUR FOR NOW
-        #$hgvs_notation->{alt} =~ s/\*\w+$/\*/;
-    }
-    else{
-        ### Additional check that inserted bases do not duplicate 3' reference sequence [set to type = dup if so]
-        $hgvs_notation = $self->_check_for_peptide_duplication($hgvs_notation);
-    }
+   
   }
   elsif($hgvs_notation->{type} eq "del" ){
       ##check if bases directly after deletion match start of deletion
@@ -991,7 +988,7 @@ sub _get_hgvs_peptides{
   }
 
   ### handle special cases
-  if(    affects_start_codon($self) ){
+  if( affects_start_codon($self) ){
     #### handle initiator loss -> probably no translation => alt allele is '?'
     $hgvs_notation->{alt}  = "?";    
     $hgvs_notation->{type} = "";
@@ -1028,6 +1025,9 @@ sub _clip_alleles{
   my $check_start = $hgvs_notation->{start};
   my $check_end   = $hgvs_notation->{end};
 
+  ## store identical trimmed seq 
+  my $preseq;
+
   ### strip same bases from start of string
   for (my $p =0; $p <length ($hgvs_notation->{ref}); $p++){
   my $check_next_ref = substr( $check_ref, 0, 1);
@@ -1044,6 +1044,7 @@ sub _clip_alleles{
         $check_start++;
         $check_ref  = substr( $check_ref, 1);
         $check_alt  = substr( $check_alt, 1);
+        $preseq    .= $check_next_ref;
     }
     else{
         last;
@@ -1069,6 +1070,7 @@ sub _clip_alleles{
   $hgvs_notation->{ref}   = $check_ref;
   $hgvs_notation->{start} = $check_start;
   $hgvs_notation->{end}   = $check_end;
+  $hgvs_notation->{preseq} =   $preseq ;
 
   ### check if clipping suggests a type change 
 
@@ -1227,11 +1229,12 @@ sub _check_for_peptide_duplication{
    ##### create translation to check against inserted peptides 
    my $upstream_cds =Bio::PrimarySeq->new(-seq => $upstream_seq,  -id => 'alt_cds', -alphabet => 'dna');
    my $upstream_trans = $upstream_cds->translate()->seq();
+   $upstream_trans  .= $hgvs_notation->{preseq} if defined $hgvs_notation->{preseq}; ## add back on anything previously chopped off ref allele
    
    ## Test whether alt peptide matches the reference sequence just before the variant
    my $test_new_start = $hgvs_notation->{'start'} - length($hgvs_notation->{'alt'}) -1 ;
 
-   if((length($upstream_trans) >  $test_new_start + length($hgvs_notation->{'alt'})) && $test_new_start  >=0){
+   if( (length($upstream_trans) >=  $test_new_start + length($hgvs_notation->{'alt'}) ) && $test_new_start  >=0){
        my $test_seq       =  substr($upstream_trans, $test_new_start, length($hgvs_notation->{'alt'}));
        
        if ( $test_new_start >= 0 && $test_seq eq $hgvs_notation->{alt}) {
@@ -1240,6 +1243,8 @@ sub _check_for_peptide_duplication{
            $hgvs_notation->{end}    = $hgvs_notation->{start} -1;
            $hgvs_notation->{start} -= length($hgvs_notation->{alt});
            
+           ## convert to 3 letter code
+           $hgvs_notation->{alt}  = Bio::SeqUtils->seq3(Bio::PrimarySeq->new(-seq => $hgvs_notation->{alt}, -id => 'ref',  -alphabet => 'protein')) || "";
        }
    }
    return $hgvs_notation;
