@@ -83,7 +83,7 @@ create table variation (
 @column map_weight				     The number of times that this variation has mapped to the genome. This is a denormalisation as this particular feature is one example of a mapped location. This can be used to limit the the features that come back from a query.
 @column flags						       Flag to filter the selection of variations.
 @column source_id					     Foreign key references to the source table.
-@column validation_status		   Variant discovery method and validation from dbSNP. See the status descriptions <a href="/info/genome/variation/data_description.html#validation_status">here</a>.
+@column validation_status		   Variant discovery method and validation from dbSNP.
 @column consequence_types		   The SO term(s) of all unique observed consequence types of this variation feature.<br /> The list of consequence descriptions is available <a href="/info/genome/variation/predicted_data.html#consequences">here</a>.
 @column variation_set_id		   The variation feature can belong to a @link variation_set.
 @column class_attrib_id			   Class of the variation, key in the @link attrib table.<br /> The list of variation classes is available <a href="/info/genome/variation/data_description.html#classes">here</a>.
@@ -92,7 +92,7 @@ create table variation (
 @column minor_allele_freq      The 'global' frequency of the minor allele of this variant, as reported by dbSNP
 @column minor_allele_count     The number of samples the minor allele of this variant is found in, as reported by dbSNP
 @column alignment_quality      Quality of alignment for variants mapped by flanks rather than position justified.
-@column evidence               A summary of the evidence supporting a variant as a guide to its potential reliability.
+@column evidence               A summary of the evidence supporting a variant as a guide to its potential reliability. See the evidence descriptions <a href="/info/genome/variation/data_description.html#evidence_status">here</a>.
 @column clinical_significance  A set of clinical significance classes assigned to the variant.<br /> 
                                The list of clinical significances is available <a href="/info/genome/variation/data_description.html#clin_significance">here</a>.
 
