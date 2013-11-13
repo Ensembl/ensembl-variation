@@ -1231,7 +1231,7 @@ sub _check_for_peptide_duplication{
    ## Test whether alt peptide matches the reference sequence just before the variant
    my $test_new_start = $hgvs_notation->{'start'} - length($hgvs_notation->{'alt'}) -1 ;
 
-   if(length($upstream_trans) >  $test_new_start + length($hgvs_notation->{'alt'}) ){
+   if((length($upstream_trans) >  $test_new_start + length($hgvs_notation->{'alt'})) && $test_new_start  >=0){
        my $test_seq       =  substr($upstream_trans, $test_new_start, length($hgvs_notation->{'alt'}));
        
        if ( $test_new_start >= 0 && $test_seq eq $hgvs_notation->{alt}) {
