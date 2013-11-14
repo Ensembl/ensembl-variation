@@ -111,6 +111,7 @@ use vars qw(@ISA @EXPORT_OK);
     &end_progress
     @REG_FEAT_TYPES
     @OUTPUT_COLS
+    %COL_DESCS
     @VEP_WEB_CONFIG
     %FILTER_SHORTCUTS
 );
@@ -130,6 +131,55 @@ our @OUTPUT_COLS = qw(
     Codons
     Existing_variation
     Extra
+);
+
+our %COL_DESCS = (
+    'Uploaded_variation' => 'Identifier of uploaded variant',
+    'ID'                 => 'Identifier of uploaded variant',
+    'Location'           => 'Location of variant in standard coordinate format (chr:start or chr:start-end)',
+    'Allele'             => 'The variant allele used to calculate the consequence',
+    'Gene'               => 'Ensembl stable ID of affected gene',
+    'Feature'            => 'Ensembl stable ID of feature',
+    'Feature_type'       => 'Type of feature - Transcript, RegulatoryFeature or MotifFeature',
+    'Consequence'        => 'Consequence type',
+    'cDNA_position'      => 'Relative position of base pair in cDNA sequence',
+    'CDS_position'       => 'Relative position of base pair in coding sequence',
+    'Protein_position'   => 'Relative position of amino acid in protein',
+    'Amino_acids'        => 'Reference and variant amino acids',
+    'Codons'             => 'Reference and variant codon sequence',
+    'Existing_variation' => 'Identifier(s) of co-located known variants',
+    'CANONICAL'          => 'Indicates if transcript is canonical for this gene',
+    'CCDS'               => 'Indicates if transcript is a CCDS transcript',
+    'SYMBOL'             => 'Gene symbol (e.g. HGNC)',
+    'ENSP'               => 'Ensembl protein identifer',
+    'HGVSc'              => 'HGVS coding sequence name',
+    'HGVSp'              => 'HGVS protein sequence name',
+    'SIFT'               => 'SIFT prediction and/or score',
+    'PolyPhen'           => 'PolyPhen prediction and/or score',
+    'EXON'               => 'Exon number(s) / total',
+    'INTRON'             => 'Intron number(s) / total',
+    'DOMAINS'            => 'The source and identifer of any overlapping protein domains',
+    'MOTIF_NAME'         => 'The source and identifier of a transcription factor binding profile (TFBP) aligned at this position',
+    'MOTIF_POS'          => 'The relative position of the variation in the aligned TFBP',
+    'HIGH_INF_POS'       => 'A flag indicating if the variant falls in a high information position of the TFBP',
+    'MOTIF_SCORE_CHANGE' => 'The difference in motif score of the reference and variant sequences for the TFBP',
+    'CELL_TYPE'          => 'List of cell types and classifications for regulatory feature',
+    'IND'                => 'Individual name',
+    'ZYG'                => 'Zygosity of individual genotype at this locus',
+    'SV'                 => 'IDs of overlapping structural variants',
+    'FREQS'              => 'Frequencies of overlapping variants used in filtering',
+    'GMAF'               => 'Minor allele and frequency of existing variant in 1000 Genomes Phase 1 combined population',
+    'AFR_MAF'            => 'Minor allele and frequency of existing variant in 1000 Genomes Phase 1 combined African population',
+    'AMR_MAF'            => 'Minor allele and frequency of existing variant in 1000 Genomes Phase 1 combined American population',
+    'ASN_MAF'            => 'Minor allele and frequency of existing variant in 1000 Genomes Phase 1 combined Asian population',
+    'EUR_MAF'            => 'Minor allele and frequency of existing variant in 1000 Genomes Phase 1 combined European population',
+    'AA_MAF'             => 'Minor allele and frequency of existing variant in NHLBI-ESP African American population',
+    'EA_MAF'             => 'Minor allele and frequency of existing variant in NHLBI-ESP European American population',
+    'DISTANCE'           => 'Shortest distance from variant to transcript',
+    'CLIN_SIG'           => 'Clinical significance of variant from dbSNP',
+    'BIOTYPE'            => 'Biotype of transcript',
+    'PUBMED'             => 'Pubmed ID(s) of publications that cite existing variant',
+    'ALLELE_NUM'         => 'Allele number from input; 0 is reference, 1 is first alternate etc'
 );
 
 our @REG_FEAT_TYPES = qw(
