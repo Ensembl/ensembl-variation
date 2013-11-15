@@ -33,7 +33,7 @@ use DBI;
 
 my $release = $ARGV[0] || die "Usage: $0 <release_num>\n";
 
-my @servers = qw(ens-livemirror);
+my @servers = qw(ens-staging ens-staging2);
 
 my $default_port = 3306;
 
