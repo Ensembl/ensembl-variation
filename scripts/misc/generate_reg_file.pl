@@ -33,7 +33,7 @@ use DBI;
 
 my $release = $ARGV[0] || die "Usage: $0 <release_num>\n";
 
-my @servers = qw(ens-staging ens-staging2);
+my @servers = qw(ens-livemirror);
 
 my $default_port = 3306;
 
@@ -57,6 +57,8 @@ my $aliases = {
     "Drosophila_melanogaster"   => "fly",
     "Saccharomyces_cerevisiae"  => "yeast",
     "Macaca_mulatta"            => "macaque",
+    "Nomascus_leucogenys"       => "gibbon",
+    "Ovis_aries"                => "sheep",
 };
 
 my $groups = {
