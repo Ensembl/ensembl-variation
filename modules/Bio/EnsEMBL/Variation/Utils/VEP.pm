@@ -531,7 +531,12 @@ sub parse_vcf {
                 $num_deleted =~ s/\D+//g;
                 $end += $num_deleted - 1;
                 $alt = "-";
-                $ref .= ("N" x ($num_deleted - 1)) unless length($ref) > 1;
+                
+                # get ref seq from slice
+                my $tmp_chr = $chr;
+                $tmp_chr =~ s/chr//ig;
+                my $slice = get_slice($config, $tmp_chr);
+                $ref .= $slice ? $slice->sub_Slice($start + 1, $start + $num_deleted - 1)->seq : ("N" x ($num_deleted - 1)) unless length($ref) > 1;
             }
             
             # insertion (VCF <4)
