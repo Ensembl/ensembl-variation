@@ -535,7 +535,7 @@ sub parse_vcf {
                 my $tmp_chr = $chr;
                 $tmp_chr =~ s/chr//ig;
                 my $slice = get_slice($config, $tmp_chr);
-                $ref .= $slice ? $slice->sub_Slice($start + 1, $start + $num_deleted - 1)->seq : ("N" x ($num_deleted - 1)) unless length($ref) > 1;
+                $ref .= $slice ? $slice->sub_Slice($start + 1, $start + $num_deleted - 1)->seq : ("N" x ($num_deleted - 1)) unless length($ref) > 1 || $start == $end;
             }
             
             # insertion (VCF <4)
