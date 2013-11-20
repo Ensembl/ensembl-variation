@@ -206,6 +206,7 @@ sub run {
       }
 
     }
+
     return ( \%counts, $process_error );
 
 }
@@ -350,10 +351,19 @@ sub check_variation_feature_consistency{
     my $old_status = count_group_by($var_dba, 'variation_feature', $column);
 
     foreach my $status (keys %{$old_status}){
-      unless ($old_status->{$status} == $new_status->{$status}){
-       print $report "Consistency error: variation_feature.$column $status ($old_status->{$status} => $new_status->{$status})\n";
-        $consistency_fail = 1;
-      }
+
+	if(defined $old_status->{$status} && defined  $new_status->{$status}){
+	    unless ($old_status->{$status} == $new_status->{$status}){
+		print $report "Consistency error: variation_feature.$column $status ($old_status->{$status} => $new_status->{$status})\n";
+		$consistency_fail = 1;
+	    }
+	}
+	elsif(defined $old_status->{$status}){
+	    print $report "Consistency error: variation_feature.$column $status ($old_status->{$status} => no new)\n";
+	}
+	elsif(defined $new_status->{$status}){
+	    print $report "Consistency error: variation_feature.$column $status (non => $new_status->{$status} )\n";
+	}
     }
   }
   return $consistency_fail;
