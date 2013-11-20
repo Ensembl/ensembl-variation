@@ -67,7 +67,7 @@ sub run {
 
   if ( $self->required_param('species') =~/sus_scrofa/ ){ $self->add_synonym();}
 
-  if ( $self->required_param('species') =~/mus_musculus|gallus_gallus|rattus_norvegicus|canis_familiaris/ ){ $self->set_strain_display();}
+  if ( $self->required_param('species') =~/mus_musculus|gallus_gallus|rattus_norvegicus|canis_familiaris|homo_sapiens/ ){ $self->set_display();}
 
   if ( $self->required_param('species') =~/gallus_gallus|canis_familiaris/ ){ $self->fake_read_coverage();}
 
@@ -138,19 +138,19 @@ sub check_Pubmed_variants{
 
 }
 
-=head2 set_strain_display
+=head2 set_display
 
-  set display status on expected strains to enable mart filtering & read coverage viewing
+  set display status on expected strains/individuals to enable mart filtering & read coverage viewing
   report missing or duplicated samples
 
 =cut
-sub set_strain_display{
+sub set_display{
 
     my $self = shift;
 
     my $var_dba = $self->get_species_adaptor('variation');
     my $dir = $self->required_param('pipeline_dir');
-    open my $report, ">", "$dir/Strain_report.txt" || die "Failed to open Strain_report.txt : $!\n";
+    open my $report, ">", "$dir/Display_report.txt" || die "Failed to open Display_report.txt : $!\n";
 
 
     ## check if internal production db is available
@@ -166,37 +166,37 @@ sub set_strain_display{
     my $display_update_sth = $var_dba->dbc->prepare(qq[update individual set display = ? where name = ? ]);
 
     #### ADAPT TO NEW SCHEMA
-    ## check strains are neither missing or duplicated
-    my $strain_check_sth =  $var_dba->dbc->prepare(qq[ select count(*) from individual
-                                                       where individual.name = ?
+    ## check individuals are neither missing or duplicated
+    my $individual_check_sth =  $var_dba->dbc->prepare(qq[ select count(*) from individual
+                                                           where individual.name = ?
+                                                          ]);
+
+
+    my $individual_ext_sth = $int_dba->dbc->prepare(qq[ select name, display
+                                                        from individual_display_info
+                                                        where species = ? 
                                                       ]);
-
-
-    my $strain_ext_sth = $int_dba->dbc->prepare(qq[ select name, display
-                                                    from strain_info
-                                                    where species = ? 
-                                                  ]);
 
    
 
 
-    $strain_ext_sth->execute($self->required_param('species'));
-    my $strain = $strain_ext_sth->fetchall_arrayref();
+    $individual_ext_sth->execute($self->required_param('species'));
+    my $individual = $individual_ext_sth->fetchall_arrayref();
 
-    foreach my $l (@{$strain}){
-	print $report "Checking expected strain $l->[0]\n";
-	$strain_check_sth->execute( $l->[0] )||die "Failed to check displayable individuals \n";
-	my $count = $strain_check_sth->fetchall_arrayref();
+    foreach my $l (@{$individual}){
+
+	$individual_check_sth->execute( $l->[0] )||die "Failed to check displayable individuals \n";
+	my $count = $individual_check_sth->fetchall_arrayref();
 	if($count->[0]->[0] == 1){
             ## set display status on individual
-	    print $report "Single individual seen - setting display for strain $l->[0]\n";
+	    print $report "Single individual seen - setting display for: $l->[0]\n";
         }
         elsif ($count->[0]->[0] ==0){
-	    print $report "Error : strain $l->[0] missing from new import\n";
+	    print $report "Error : individual $l->[0] missing from new import\n";
 	    next;
 	}
 	else{
-	    print $report "Error : strain $l->[0] duplicated (x $count->[0]->[0]) in new import - setting display for all entries\n";
+	    print $report "Error : individual $l->[0] duplicated (x $count->[0]->[0]) in new import - setting display for all entries\n";
 	}
 	$display_update_sth->execute($l->[1], $l->[0] )||die "Failed to update display status \n";
 	
@@ -218,10 +218,7 @@ sub fake_read_coverage{
     my $len_extr_sth = $core_dba->dbc->prepare(qq[ select seq_region_id,length from seq_region ]);
 
 
-#    my $sam_extr_sth = $var_dba->dbc->prepare(qq[ select individual.sample_id from individual,sample
-#                                                  where individual.sample_id = sample.sample_id
-#                                                  and sample.display !='UNDISPLAYABLE']);
-     my $sam_extr_sth = $var_dba->dbc->prepare(qq[ select individual_id from individual
+    my $sam_extr_sth = $var_dba->dbc->prepare(qq[ select individual_id from individual
                                                   where display !='UNDISPLAYABLE']);
    
     
