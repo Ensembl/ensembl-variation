@@ -124,11 +124,11 @@ sub default_options {
         # reflect their usage, but you may want to change the details (memory
         # requirements, queue parameters etc.) to suit your own data
         
-        default_lsf_options => '-R"select[mem>2000] rusage[mem=2000]" -M2000000',       ## upped to 4G from 2G for mouse
-        urgent_lsf_options  => '-R"select[mem>2000] rusage[mem=2000]" -M2000000',
-        highmem_lsf_options => '-R"select[mem>15000] rusage[mem=15000]" -M15000000', 
-        long_lsf_options    => '-q long -R"select[mem>2000] rusage[mem=2000]" -M2000000',
-        medium_lsf_options  => '-R"select[mem>4000] rusage[mem=4000]" -M4000000',
+        default_lsf_options => '-R"select[mem>2000] rusage[mem=2000]" -M2000',       ## upped to 4G from 2G for mouse
+        urgent_lsf_options  => '-R"select[mem>2000] rusage[mem=2000]" -M2000',
+        highmem_lsf_options => '-R"select[mem>15000] rusage[mem=15000]" -M15000', 
+        long_lsf_options    => '-q long -R"select[mem>2000] rusage[mem=2000]" -M2000',
+        medium_lsf_options  => '-R"select[mem>5000] rusage[mem=5000]" -M5000', ## switched from 4->5 on moving to farm3
 
         # options controlling the number of workers used for the parallelisable analyses
 
@@ -150,7 +150,7 @@ sub default_options {
         run_PAR_check                    => 1, 
         run_Pubmed_check                 => 1,
 
-        run_evidence_check               => 0,
+        run_evidence_check               => 1,
 
 
         # put back support for re-runs on new format schema
