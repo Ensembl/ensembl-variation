@@ -61,7 +61,7 @@ sub default_options {
         # a directory to keep hive output files and your registry file, you should
         # create this if it doesn't exist
 
-        pipeline_dir            => '/lustre/scratch103/ensembl/gr5/'.$self->o('pipeline_name'),
+        pipeline_dir            => '/lustre/scratch110/ensembl/user/'.$self->o('pipeline_name'),
 
         # a directory where hive workers will dump STDOUT and STDERR for their jobs
         # if you use lots of workers this directory can get quite big, so it's
@@ -90,10 +90,10 @@ sub default_options {
         # reflect their usage, but you may want to change the details (memory
         # requirements, queue parameters etc.) to suit your own data
         
-        default_lsf_options => '-R"select[mem>2000] rusage[mem=2000]" -M2000000',
-        urgent_lsf_options  => '-q yesterday -R"select[mem>2000] rusage[mem=2000]" -M2000000',
-        highmem_lsf_options => '-R"select[mem>15000] rusage[mem=15000]" -M15000000', # this is Sanger LSF speak for "give me 15GB of memory"
-        long_lsf_options    => '-q long -R"select[mem>2000] rusage[mem=2000]" -M2000000',
+        default_lsf_options => '-R"select[mem>2000] rusage[mem=2000]" -M2000',
+        urgent_lsf_options  => '-q yesterday -R"select[mem>2000] rusage[mem=2000]" -M2000',
+        highmem_lsf_options => '-R"select[mem>15000] rusage[mem=15000]" -M15000', # this is Sanger LSF speak for "give me 15GB of memory"
+        long_lsf_options    => '-q long -R"select[mem>2000] rusage[mem=2000]" -M2000',
 
         # options controlling the number of workers used for the parallelisable analyses
         # these default values seem to work for most species
