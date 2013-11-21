@@ -99,6 +99,22 @@ sub fetch_input {
 
         $dbc->do("ALTER TABLE transcript_variation DISABLE KEYS");
 
+        # create table to use for web index generation
+        # truncate tables incase TranscriptVariation is being updated for a pre-existing database
+
+        $dbc->do("create table if not exists variation_hgvs(
+                  variation_id int(10) unsigned not null,
+                  hgvs_name varchar(255),
+                  primary key(variation_id, hgvs_name)) ");
+
+        $dbc->do("create table if not exists variation_genename (
+                  variation_id int(10), 
+                  gene_name varchar(255) )" );
+
+        $dbc->do("TRUNCATE TABLE variation_hgvs");
+        $dbc->do("TRUNCATE TABLE variation_genename ");
+
+
         $self->param('transcript_output_ids', \@transcript_output_ids);
 
         $self->param(

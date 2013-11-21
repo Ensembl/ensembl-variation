@@ -69,6 +69,15 @@ sub run {
 
     $tva->db->include_failed_variations(1);
 
+    # create summary tables for web index building
+    my $genelu_ins_sth = $var_dba->prepare (qq[ insert ignore into variation_genename
+                                               (variation_id, gene_name) values (?,?)
+                                             ]);
+
+    my $hgvslu_ins_sth = $var_dba->prepare(qq[ insert ignore into variation_hgvs
+                                               (variation_id, hgvs_name) values (?,?)
+                                             ]);
+
     my $slice = $sa->fetch_by_transcript_stable_id(
         $transcript->stable_id, 
         MAX_DISTANCE_FROM_TRANSCRIPT
@@ -92,7 +101,26 @@ sub run {
 
         if ($tv && ( scalar(@{ $tv->consequence_type }) > 0) ) {
             $tva->store($tv);
-        }
+        
+            ## populate tables for website index building
+
+            $genelu_ins_sth->execute( $vf->variation->dbID(), $transcript->get_Gene->display_xref->display_id ) 
+                if defined $transcript->get_Gene->display_xref();
+
+            for my $allele (@{ $tv->get_all_alternate_TranscriptVariationAlleles }) {
+
+                next unless defined $allele->hgvs_transcript();
+
+                my $hgvs_transcript = (split/\:/, $allele->hgvs_transcript())[1];
+                my $hgvs_protein    = (split/\:/, $allele->hgvs_protein())[1];
+
+                $hgvslu_ins_sth->execute( $vf->variation->dbID(), $hgvs_transcript) if defined $hgvs_transcript;
+
+                $hgvslu_ins_sth->execute( $vf->variation->dbID(), $hgvs_protein) 
+                    if defined $hgvs_protein && $hgvs_protein =~/^p/; ## don't store synonymous
+            }
+        }                                           
+
     }
 
     return;
