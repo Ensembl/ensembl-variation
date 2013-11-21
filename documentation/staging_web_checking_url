@@ -1,9 +1,0 @@
-#Human SNPView with minus strand, ancestral allele, synonym and consequence in tv, also should have LDView linked
-http://staging.ensembl.org/Homo_sapiens/Variation/Summary?v=rs745764
-#Another Human SNPView with synonym with Venter and Watson
-http://staging.ensembl.org/Homo_sapiens/Variation/Summary?v=rs539157
-#Resequencing alignment Ref:36/Venter/Watson
-http://staging.ensembl.org/Homo_sapiens/Location/SequenceAlignment?r=20:38084753-38104752
-#Good to see transcriptSNPView/GeneSNPView
-http://staging.ensembl.org/Homo_sapiens/Variation/Mappings?r=1:228911917-228912917;v=rs699;vdb=variation;vf=724
-
