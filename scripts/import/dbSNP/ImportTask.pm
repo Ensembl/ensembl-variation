@@ -1,23 +1,15 @@
-=head1 LICENSE
-
-Copyright 2013 Ensembl
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-     http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-
-=cut
-
-use strict;
-
+# Copyright 2013 Ensembl
+# 
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+# 
+#      http://www.apache.org/licenses/LICENSE-2.0
+# 
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
 
 =head1 CONTACT
 
@@ -29,6 +21,7 @@ use strict;
 
 =cut
 
+use strict;
 use warnings;
 
 #generic object for the dbSNP data. Contains the general methods to dump the data into the new Variation database. Any change in the methods
@@ -94,8 +87,8 @@ sub allele_table {
       a.allele,
       ar.allele
     FROM
-      $shared_db..Allele a JOIN
-      $shared_db..Allele ar ON (
+      $shared_db.Allele a JOIN
+      $shared_db.Allele ar ON (
       ar.allele_id = a.rev_allele_id
       )
     WHERE
@@ -105,7 +98,7 @@ sub allele_table {
   
 
 
-  #ÊPrepared statement for getting the SubSNPs with or without population frequency data
+  #Prepared statement for getting the SubSNPs with or without population frequency data
   # 2012/09/24 switch from UniVariAllele at dbSNP request
    my $ss_no_freq_stmt = qq{
      SELECT
@@ -116,7 +109,7 @@ sub allele_table {
     FROM   SNPSubSNPLink sssl,
            SubSNP ss,
            Batch b,
-           $shared_db..ObsVariation  ov
+           $shared_db.ObsVariation  ov
         WHERE ss.subsnp_id BETWEEN ? AND ?
         AND   ss.subsnp_id = sssl.subsnp_id
         AND   b.batch_id = ss.batch_id       
@@ -154,7 +147,7 @@ sub allele_table {
   };
   my $ss_freq_sth = $dbm->dbSNP()->dbc->prepare($ss_with_freq_stmt)  ||die "ERROR preparing ss_freq_sth: $DBI::errstr\n";
   
-  #ÊPrepared statement to get the corresponding variation_ids for a range of subsnps from variation_synonym
+  #Prepared statement to get the corresponding variation_ids for a range of subsnps from variation_synonym
   my $vs_stmt = qq{
     SELECT
       vs.subsnp_id,
@@ -183,13 +176,13 @@ sub allele_table {
     LIMIT 1
   };
   my $population_sth = $dbm->dbVar()->dbc->prepare($population_stmt)||die "ERROR preparing population_sth: $DBI::errstr\n";
-    #ÊHash to keep population_ids in memory
+    #Hash to keep population_ids in memory
   my %population;
   # The pop_id = 0 is a replacement for NULL but since it's used for a key in the hash below, we need it to have an actual numerical value
   $population{0} = '\N';
 
 
-  #ÊHash to hold the alleles in memory
+  #Hash to hold the alleles in memory
   my %alleles;
   # The allele_id = 0 is a replacement for NULL but since it's used for a key in the hash below, we need it to have an actual numerical value
   $alleles{0} = ['\N','\N'];
@@ -354,10 +347,11 @@ sub calculate_gtype {
   my $start = shift;
   my $end = shift;
   my $mapping_file = shift;
-  my $allele_file = shift;
+#  my $allele_file = shift;
   #my $sample_file = shift;
+  my $source_engine = shift;  ## mysql or mssql syntax
   
-  #ÊPut the log filehandle in a local variable
+  #Put the log filehandle in a local variable
   my $logh = $self->{'log'};
   print $logh Progress::location() . "\tDumping from $subind_table to $loadfile, processing genotype data for submitted_ind_ids $start - $end\n";  
   
@@ -366,8 +360,16 @@ sub calculate_gtype {
   my $dbVar = $dbm->dbVar();
   my $dbSNP = $dbm->dbSNP();
   
-  #ÊA prepared statement for getting the genotype data from the dbSNP mirror. Note the chr_num, dbSNP is storing the gty allele for each chromosome copy? Anyway, we'll get duplicated rows if not specifying this (or using distinct)
-  #ÊOrder the results by subsnp_id so that we can do the subsnp_id -> variation_id lookup more efficiently
+  #A prepared statement for getting the genotype data from the dbSNP mirror. Note the chr_num, dbSNP is storing the gty allele for each chromosome copy? Anyway, we'll get duplicated rows if not specifying this (or using distinct)
+  #Order the results by subsnp_id so that we can do the subsnp_id -> variation_id lookup more efficiently
+
+ my $len_sql;
+    if($source_engine =~/mssql|sqlserver/ ){
+	$len_sql = "LEN";
+    }
+    else{
+	$len_sql = "LENGTH";
+    }
   my $stmt = qq{
     SELECT 
       si.subsnp_id,
@@ -382,13 +384,13 @@ sub calculate_gtype {
 	0
       END,
       ga.rev_flag,
-      LEN(ug.gty_str) AS pattern_length     
+      $len_sql(ug.gty_str) AS pattern_length     
     FROM   
       $subind_table si JOIN 
-      $shared_db..GtyAllele ga ON (
+      $shared_db.GtyAllele ga ON (
 	ga.gty_id = si.gty_id
-      ) JOIN
-      $shared_db..UniGty ug ON (
+      ) JOIN 
+      $shared_db.UniGty ug ON (
 	ug.unigty_id = ga.unigty_id
       ) JOIN
       SubmittedIndividual sind ON (
@@ -432,8 +434,8 @@ sub calculate_gtype {
       a.allele,
       ar.allele
     FROM
-      $shared_db..Allele a JOIN
-      $shared_db..Allele ar ON (
+      $shared_db.Allele a JOIN
+      $shared_db.Allele ar ON (
 	ar.allele_id = a.rev_allele_id
       )
     WHERE
@@ -503,7 +505,7 @@ sub calculate_gtype {
   #ÊHash to hold the alleles in memory
   my %alleles;
   #ÊIf the allele file exist, we'll read alleles from it
-  %alleles = %{read_alleles($allele_file)} if (defined($allele_file) && -e $allele_file);
+#  %alleles = %{read_alleles($allele_file)} if (defined($allele_file) && -e $allele_file);
   print $logh Progress::location();
   # The allele_id = 0 is a replacement for NULL but since it's used for a key in the hash below, we need it to have an actual numerical value.
   $alleles{0} = ['\N','\N'];
@@ -534,6 +536,9 @@ sub calculate_gtype {
   my @single_bp_gty;
   my @multiple_bp_gty;
   my %row_md5s;
+
+  # Open a file handle to the temp file that will be used for loading
+  open(SGL,'>',$loadfile) or die ("Could not open import file $loadfile for writing");
   
   # First, get all SubSNPs
   $subind_sth->bind_param(1,$start,SQL_INTEGER);
@@ -682,8 +687,9 @@ sub calculate_gtype {
     $row_md5s{$md5}++;
     
     # Determine if this should go into the single or multiple genotype table
-    if (length($allele_2) == 1 && length($allele_2) == 1 && $allele_1 ne '-' && $allele_2 ne '-') {
-      push(@single_bp_gty,$row);
+    if ((length($allele_2) == 1 && length($allele_2) == 1) && $allele_1 ne '-' && $allele_2 ne '-') {
+#      push(@single_bp_gty,$row);
+      print SGL "$row\n"; #### write straight out for meme reassons~~***************
     }
     else {
       #ÊSkip this genotype if the first allele contains the string 'indeterminate'
@@ -692,10 +698,10 @@ sub calculate_gtype {
     }
   }
   print $logh Progress::location();
-  
+=head  
   if (scalar(@single_bp_gty)) {
     # Open a file handle to the temp file that will be used for loading
-    open(SGL,'>>',$loadfile) or die ("Could not open import file $loadfile for writing");
+    open(SGL,'>',$loadfile) or die ("Could not open import file $loadfile for writing");
     #ÊGet a lock on the file
     flock(SGL,LOCK_EX);
     # Write the genotypes
@@ -705,23 +711,25 @@ sub calculate_gtype {
     close(SGL);
     print $logh Progress::location();
   }
-  
+=cut
+ 
   if (scalar(@multiple_bp_gty)) {
     # Open a file handle to the file that will be used for loading the multi-bp genotypes
-    open(MLT,'>>',$mlt_file) or die ("Could not open import file $mlt_file for writing");
+    open(MLT,'>',$mlt_file) or die ("Could not open import file $mlt_file for writing");
     #ÊGet a lock on the file
-    flock(MLT,LOCK_EX);
+    #flock(MLT,LOCK_EX);
     # Write the genotypes
     foreach my $gty (@multiple_bp_gty) {
       print MLT qq{$gty\n};
     }
     close(MLT);
+    close(SGL);
     print $logh Progress::location();
   }
   
   # If we had an allele file and we need to update it, do that
   delete($alleles{0});
-  write_alleles($allele_file,\%alleles) if (defined($allele_file) && $new_alleles);
+#  write_alleles($allele_file,\%alleles) if (defined($allele_file) && $new_alleles);
   print $logh Progress::location();
   # If we had a sample file and we need to update it, do that
   #delete($samples{0});
@@ -805,6 +813,7 @@ sub write_alleles {
   
   #ÊWrite each allele_id and the forward and reverse alleles
   while (my ($id,$a) = each(%{$alleles})) {
+      next unless defined $id;
     print FH join("\t",($id,@{$a})) . "\n";
   }
   
