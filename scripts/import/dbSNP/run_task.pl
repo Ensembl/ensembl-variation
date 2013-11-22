@@ -13,8 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
-
 =head1 CONTACT
 
   Please email comments or questions to the public Ensembl
@@ -34,7 +32,7 @@ use Fcntl qw( LOCK_SH LOCK_EX );
 use dbSNP::ImportTask;
 use dbSNP::DBManager;
 
-#ÊThis script is used to launch a small subtask during the import process. Typically, a bigger task is broken into pieces and submitted to the farm using this script
+#This script is used to launch a small subtask during the import process. Typically, a bigger task is broken into pieces and submitted to the farm using this script
 
 my @option_defs = (
   'species=s',
@@ -47,7 +45,8 @@ my @option_defs = (
   'file_prefix=s',
   'logfile=s',
   'tempdir=s',
-  'tempfile=s'
+  'tempfile=s',
+  'source_engine:s'
 );
 
 my %options;
@@ -64,6 +63,7 @@ my $file_prefix = $options{'file_prefix'};
 my $logfile = $options{'logfile'};
 my $tempdir = $options{'tempdir'};
 my $tempfile = $options{'tempfile'};
+my $source_engine = $options{'source_engine'};
 
 $ImportUtils::TMP_DIR = $tempdir;
 $ImportUtils::TMP_FILE = $tempfile;
@@ -77,7 +77,7 @@ $dbm->dbSNP_shared($dbSNP_shared);
 my $logh = *STDOUT;
 if (defined($logfile)) {
   open(LOG,'>>',$logfile);
-  #ÊTurn on autoflush for the logfile
+  #Turn on autoflush for the logfile
   {
     my $ofh = select LOG;
     $| = 1;
@@ -86,7 +86,7 @@ if (defined($logfile)) {
   $logh = *LOG;
 }
 
-#ÊIf we are a job array element submitted to the farm and the task_start and task_end parameters haven't been set, we refer to the task management file to get our task parameters
+#If we are a job array element submitted to the farm and the task_start and task_end parameters haven't been set, we refer to the task management file to get our task parameters
 if (defined($ENV{'LSB_JOBINDEX'}) && -e $task_management_file) {
     my $jobid = $ENV{'LSB_JOBINDEX'};
     open(FH,'<',$task_management_file);
@@ -110,6 +110,7 @@ my $task_obj = dbSNP::ImportTask->new(
     $logh
 );
 my @args = split(/\s/,$task_parameters);
+push @args, $source_engine if  $task =~ /calculate_gtype/;  ## mysql or mssql syntax
 $task_obj->$task(@args);
 
 close(LOG) if (defined($logfile));

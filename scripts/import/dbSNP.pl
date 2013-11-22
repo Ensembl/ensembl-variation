@@ -66,6 +66,7 @@ if (scalar(@ARGV) == 1) {
     next unless/\w+/;
     my ($name,$val) = (split/\s+/,$_,2);             #altered for cow which had space in primary assembly tag
     push(@opts,('-' . $name,$val));
+
   }
   close(CFG);
   @ARGV = @opts;
@@ -93,7 +94,8 @@ my @option_defs = (
   'logfile=s',
   'group_term=s',
   'group_label=s',
-  'ensembl_version:s'
+  'ensembl_version:s',
+  'source_engine:s'
 );
 
 GetOptions(\%options,@option_defs);
@@ -121,6 +123,8 @@ my $mssql_driver = $options{'mssql_driver'};
 my $scriptdir = $options{'scriptdir'};
 my $logfile = $options{'logfile'};
 my $ens_version = $options{'ensembl_version'};
+my $source_engine ;
+defined $options{'source_engine'} ?  $source_engine = $options{'source_engine'} :  $source_engine = 'mysql';
 
 my @skip_routines;
 @skip_routines = @{$options{'skip_routine'}} if (defined($options{'skip_routine'}));
@@ -135,7 +139,7 @@ die("You must specify a temp dir and temp file (-tmpdir and -tmpfile options)") 
 die("You must specify the species. Use -species option") unless (defined($species));
 die("You must specify the dbSNP build. Use -dbSNP_version option") unless (defined($dbSNP_BUILD_VERSION));
 die("You must specify the dbSNP shared database. Use -shared_db option") unless (defined($shared_db));
-die("You must specify the sql driver, either through an environment variable (SYBASE) or the -sql_driver option") unless (defined($mssql_driver) || defined($ENV{'SYBASE'}));
+die("You must specify the sql driver, either through an environment variable (SYBASE) or the -sql_driver option") unless ((defined($mssql_driver) || defined($ENV{'SYBASE'})) ||  $source_engine !~/mssql/i);
 
 warn("Note that the port for the dbSNP mirror is overridden by the freetds configuration file!\n") if (defined($dsport));
 warn("Make sure you have a updated ensembl.registry file!\n");
@@ -162,7 +166,6 @@ if (defined($logfile)) {
   print $logh "\n######### " . localtime() . " #########\n\tImport script launched\n";
 }
 
-
 my $dbm = dbSNP::DBManager->new($registry_file,$species);
 $dbm->dbSNP_shared($shared_db);
 my $dbCore = $dbm->dbCore();
@@ -186,20 +189,21 @@ my @parameters = (
   -group_label => $GROUP_LABEL,
   -skip_routines => \@skip_routines,
   -scriptdir => $scriptdir,
-  -log => $logh
+  -log => $logh,
+  -source_engine => $source_engine,
 );
 
 my $import_object;
 
-if ($species =~ m/felix_cattus/i || $species =~ m/zebrafinch|taeniopygia_guttata/i || $species =~ m/tetraodon/i) {
+if ($species =~ m/felix_cattus/i ||  $species =~ m/tetraodon/i) {
   $import_object = dbSNP::MappingChromosome->new(@parameters);
 }
 elsif ($species =~ m/zebrafish|danio/i || 
        $species =~ m/chimp|troglodytes/i || 
+       $species =~ m/dog|canis/i     ||
        $species =~ m/gallus_gallus/i || 
        $species =~ m/rat/i ||
        $species =~ m/horse|equus/i ||  
-       $species =~ m/platypus|anatinus/i || 
        $species =~ m/opossum/i ||
        $species =~ m/mus_musculus/i || 
        $species =~ m/bos_taurus/i   || 
@@ -209,12 +213,13 @@ elsif ($species =~ m/zebrafish|danio/i ||
        $species =~ m/tetraodon/i || 
        $species =~ m/orangutan|Pongo_abelii/i || 
        $species =~ m/monodelphis_domestica/i  || 
-       $species =~ m/macaca_mulatta/i ||
-       $species =~ m/ovis_aries/i
+       $species =~ m/macaca_mulatta/i   ||
+       $species =~ m/ovis_aries/i       ||
+       $species =~ m/zebrafinch|taeniopygia_guttata/i 
     ) {
     $import_object = dbSNP::GenericChromosome->new(@parameters);
 }
-elsif ($species =~ m/dog|canis/i) {
+elsif ($species =~ m/platypus|anatinus/i) {
   $import_object = dbSNP::GenericContig->new(@parameters);
 }
 elsif ($species =~ m/mosquitos/i) {
@@ -243,11 +248,12 @@ print $logh $clock->duration('start_dump','end_dump');
 
 ## update meta 
 my $meta_ins_sth = $dbm->dbVar()->dbc->db_handle->prepare(qq[ INSERT INTO meta (species_id, meta_key, meta_value) values (?,?,?)]);
+my $meta_upd_sth = $dbm->dbVar()->dbc->db_handle->prepare(qq[ UPDATE meta set meta_value = ? where  meta_key = ?]);
 
 $meta_ins_sth->execute('1', 'species.production_name', $dbm->dbVar()->species() ) ||die;
 
 if (defined $ens_version){
-    $meta_ins_sth->execute('1','schema_version',  $ens_version ) ||die;
+    $meta_upd_sth->execute($ens_version, 'schema_version' ) ||die;
 }
 
 
@@ -259,6 +265,7 @@ $dbSNP_name =~ s/\_\d+$//;
 my %data;
 
 $data{dbSNP_name}       = $dbSNP_name;
+$data{dbSNP_name} =~ s/^dbSNP\_//; # prefix used for mysql mirror
 $data{species}          = $dbm->dbVar()->species();
 $data{ensdb_name}       = $dbm->dbVar()->dbc->dbname();
 $data{registry}         = $dbm->registry();

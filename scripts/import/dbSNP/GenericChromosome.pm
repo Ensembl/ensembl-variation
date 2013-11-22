@@ -72,16 +72,11 @@ sub variation_feature{
      my ($assembly_version) =  $self->{'assembly_version'} =~ /^[a-zA-Z]+\_?(\d+)\.*.*$/;
      $assembly_version=$1 if $self->{'assembly_version'} =~ /RGSC\d\.(\d+)/;
 
-     my $stmt = qq{
-                   SELECT 
-                     name 
-                   FROM 
-                     $self->{'snp_dbname'}..sysobjects 
-                   WHERE 
-                     name LIKE '$self->{'dbSNP_version'}\_SNPContigLoc\_%'
-		    ORDER BY
-			name DESC
-                  };
+     my $stmt = qq{ SELECT  name 
+                    FROM    $self->{'snp_dbname'}..sysobjects 
+                    WHERE   name LIKE '$self->{'dbSNP_version'}\_SNPContigLoc\__%'
+                    ORDER BY name DESC };
+                  
      my $sth = $self->{'dbSNP'}->prepare($stmt);
      $sth->execute();
 
@@ -101,14 +96,10 @@ sub variation_feature{
     $genome_build = shift(@genome_builds);
     $tablename1 = $self->{'dbSNP_version'} . "_SNPContigLoc_" . $genome_build;
     
-     $stmt = qq{
-                SELECT 
-                  name 
-                FROM 
-                  $self->{'snp_dbname'}..sysobjects 
-                WHERE 
-                  name LIKE '$self->{'dbSNP_version'}\_ContigInfo\_$assembly_version\_%'
-               };
+     $stmt = qq{ SELECT  name 
+                 FROM    $self->{'snp_dbname'}..sysobjects 
+                 WHERE name LIKE '$self->{'dbSNP_version'}\_ContigInfo\_$assembly_version\_%'};
+               
      my $sth1 = $self->{'dbSNP'}->prepare($stmt);
      $sth1->execute();
 
@@ -124,21 +115,14 @@ sub variation_feature{
     }
 
      else{
-    $tablename1 = $self->{'dbSNP_version'} . "_SNPContigLoc" ;
-    $tablename2 = $self->{'dbSNP_version'} . "_ContigInfo";
+         $tablename1 = $self->{'dbSNP_version'} . "_SNPContigLoc" ;
+         $tablename2 = $self->{'dbSNP_version'} . "_ContigInfo";
      }
 
-=head hard-coded table names of non-current format
-    if($self->{'dbm'}->dbCore()->species() =~ m/ovis_aries/){
-	$tablename2 ='b128_ContigInfo_0_0';
-	$tablename1 ='b128_SNPContigLoc_0_0'
-    }
-=cut
-my $stmt;
+    my $stmt;
     #The group term (the name of the reference assembly in the dbSNP b[version]_SNPContigInfo_[assembly]_[assembly version] table) is either specified via the config file or, if not, attempted to automatically determine from the data
     my $group_term = $self->{'group_term'};
     my $group_label = $self->{'group_label'};
-
     if (defined($group_term) && defined($group_label)) {
 	warn "Using group_term:$group_term and group_label:$group_label to extract mappings \n";
     }
@@ -342,7 +326,6 @@ my $stmt;
   print Progress::location();
 
     debug(localtime() . "\tDumping data into variation_feature table in GenericChromosome");
-
     ## the copy process is slow for large dbs, so run 1M at a time
     my $get_max_sth = $self->{'dbVar'}->prepare(qq[select max(variation_id) from variation]);
     $get_max_sth->execute()||die;
@@ -351,25 +334,26 @@ my $stmt;
     if ($gtype_row) {
       foreach my $table ("tmp_variation_feature_chrom","tmp_variation_feature_ctg") {
 
-	my $vf_ins_sth = $self->{'dbVar'}->prepare(qq{INSERT INTO variation_feature (variation_id, seq_region_id,seq_region_start, seq_region_end, seq_region_strand,variation_name, flags, source_id, validation_status, alignment_quality, somatic)
+     	my $vf_ins_sth = $self->{'dbVar'}->prepare(qq{INSERT INTO variation_feature (variation_id, seq_region_id,seq_region_start, seq_region_end, seq_region_strand,variation_name, flags, source_id, validation_status, alignment_quality, somatic)
 				  SELECT tvf.variation_id, tvf.seq_region_id, tvf.seq_region_start, tvf.seq_region_end, tvf.seq_region_strand,tvf.variation_name,IF(tgv.variation_id,'genotyped',NULL), tvf.source_id, tvf.validation_status, tvf.aln_quality,  v.somatic
 				  FROM $table tvf LEFT JOIN tmp_genotyped_var tgv ON tvf.variation_id = tgv.variation_id
                                   LEFT JOIN variation v on tvf.variation_id = v.variation_id
 				  WHERE tvf.variation_id between ? and ?
 				  });
-	my $batch = 1000000;
-	my $start = 1;
-	debug(localtime() . "\tStarting binned variation_feature copy");
-	while( $start  < $max->[0]->[0] ){	
-     
-	    my $end = $start + $batch ;   
-	    $vf_ins_sth->execute($start, $end)||die;
-	    $start = $end + 1;
-	}
 
+       my $batch = 1000000;
+       my $start = 1;
+       debug(localtime() . "\tStarting binned variation_feature copy");
+       while( $start  < $max->[0]->[0] ){
+
+           my $end = $start + $batch ;
+           $vf_ins_sth->execute($start, $end)||die;
+           $start = $end + 1;
+       }
+       
 
   print Progress::location();
-    }
+      }
 
       #last fill in flags with genotyped
       $self->{'dbVar'}->do(qq{UPDATE variation_feature vf, tmp_genotyped_var tgv
@@ -384,14 +368,13 @@ my $stmt;
 
       debug(localtime() . "\tDumping data into variation_feature table only used if table tmp_genotyped_var is not ready");
       foreach my $table ("tmp_variation_feature_chrom","tmp_variation_feature_ctg") {
-
-	my $vf_ins_sth =$self->{'dbVar'}->prepare(qq{INSERT INTO variation_feature (variation_id, seq_region_id,seq_region_start, seq_region_end, seq_region_strand,variation_name, flags, source_id, validation_status, alignment_quality, somatic)
+	 my $vf_ins_sth =$self->{'dbVar'}->prepare(qq{INSERT INTO variation_feature (variation_id, seq_region_id,seq_region_start, seq_region_end, seq_region_strand,variation_name, flags, source_id, validation_status, alignment_quality, somatic)
  				  SELECT tvf.variation_id, tvf.seq_region_id, tvf.seq_region_start, tvf.seq_region_end, tvf.seq_region_strand,tvf.variation_name,NULL, tvf.source_id, tvf.validation_status, tvf.aln_quality, v.somatic
  				  FROM $table tvf, variation v
                                   WHERE v.variation_id = tvf.variation_id
 				  AND tvf.variation_id between ? and ?
  				  });
-
+  
 	my $batch = 1000000;
 	my $start = 1;
 	debug(localtime() . "\tStarting binned variation_feature copy");
@@ -440,9 +423,9 @@ sub extract_haplotype_mappings{
                            and sr1.seq_region_id = assembly.cmp_seq_region_id
 
 ];
-
     dumpSQL($self->{'dbCore'},$syn_ext_stmt);       
     
+
     create_and_load($self->{'dbVar'}, "tmp_hap_synonym", "seq_region_id i* not_null", "name * not_null", "synonym * not_null", "asm_start i", "asm_end i"   );
 
     ### check for reverse strand patches - not expecting any, so merely warn
@@ -484,12 +467,12 @@ sub extract_haplotype_mappings{
     ### copy to variation_feature table
     $self->{'dbVar'}->do(qq[ INSERT INTO variation_feature (variation_id, seq_region_id,seq_region_start, seq_region_end, seq_region_strand,
                                                             variation_name, source_id, validation_status, alignment_quality, somatic)
-                                  SELECT v.variation_id, ths.seq_region_id, tvf.seq_start+ths.asm_start-1, tvf.seq_end+ths.asm_start-1, tvf.strand, 
+                                                                   SELECT v.variation_id, ths.seq_region_id, tvf.seq_start+ths.asm_start-1, tvf.seq_end+ths.asm_start-1, tvf.strand, 
                                          v.name, v.source_id, v.validation_status, tvf.aln_quality,  v.somatic
                                   FROM tmp_contig_loc_hap tvf  
                                   LEFT JOIN variation v on tvf.snp_id = v.snp_id
-                                  LEFT JOIN tmp_hap_synonym ths on ths.synonym = tvf.seq_av 
-                                  WHERE ths.seq_region_id is not null                                   
+                                   LEFT JOIN tmp_hap_synonym ths on ths.synonym = tvf.seq_av 
+                                  WHERE ths.seq_region_id is not null            
                                   ]);
 
     debug(localtime() . "\tDone VariationFeature data for haplotypes");
