@@ -1211,7 +1211,7 @@ sub get_all_consequences {
             "LINES ", $config->{line_number},
             "\tMEMORY $tot ", (join " ", @$mem),
             "\tDIFF ", (join " ", @$mem_diff),
-
+            "\tCONFIG ", total_size($config)
         );
         #exit(0) if grep {$_ < 0} @$mem_diff;
     }
@@ -1230,27 +1230,8 @@ sub vf_list_to_cons {
     my %vf_hash;
     push @{$vf_hash{$_->{chr}}{int($_->{start} / $config->{chunk_size})}{$_->{start}}}, $_ for @$listref;
     
-    # get regions
-    my $regions = &regions_from_hash($config, \%vf_hash);
-    my $trim_regions = $regions;
-    
-    # prune caches
-    if(!defined($config->{forked})) {
-      prune_cache($config, $config->{tr_cache}, $regions, $config->{loaded_tr});
-      prune_cache($config, $config->{rf_cache}, $regions, $config->{loaded_rf});
-    }
-    
     # get chr list
     my @chrs = sort {($a !~ /^\d+$/ || $b !~ /^\d+/) ? $a cmp $b : $a <=> $b} keys %{{map {$_->{chr} => 1} @$listref}};
-    
-    my $fetched_tr_count = 0;
-    $fetched_tr_count = fetch_transcripts($config, $regions, $trim_regions)
-        unless defined($config->{no_consequences});
-    
-    my $fetched_rf_count = 0;
-    $fetched_rf_count = fetch_regfeats($config, $regions, $trim_regions)
-        if defined($config->{regulatory})
-        && !defined($config->{no_consequences});
     
     # get non-variants
     my @non_variants = grep {$_->{non_variant}} @$listref;
@@ -1285,12 +1266,31 @@ sub vf_list_to_cons {
     # if using consequence filter, we're not interested in how many remain yet
     $config->{stats}->{filter_count} += scalar @$new_listref unless defined($config->{filter});
     
+    # get overlapping SVs
+    &check_svs_hash($config, \%vf_hash) if defined($config->{check_svs});
+    
     # remake hash without non-variants
     %vf_hash = ();
     push @{$vf_hash{$_->{chr}}{int($_->{start} / $config->{chunk_size})}{$_->{start}}}, $_ for grep {!defined($_->{non_variant})} @$new_listref;
     
-    # get overlapping SVs
-    &check_svs_hash($config, \%vf_hash) if defined($config->{check_svs});
+    # get regions
+    my $regions = &regions_from_hash($config, \%vf_hash);
+    my $trim_regions = $regions;
+    
+    # prune caches
+    if(!defined($config->{forked})) {
+      prune_cache($config, $config->{tr_cache}, $regions, $config->{loaded_tr});
+      prune_cache($config, $config->{rf_cache}, $regions, $config->{loaded_rf});
+    }
+    
+    my $fetched_tr_count = 0;
+    $fetched_tr_count = fetch_transcripts($config, $regions, $trim_regions)
+        unless defined($config->{no_consequences});
+    
+    my $fetched_rf_count = 0;
+    $fetched_rf_count = fetch_regfeats($config, $regions, $trim_regions)
+        if defined($config->{regulatory})
+        && !defined($config->{no_consequences});
     
     my @return;
     
@@ -1662,7 +1662,6 @@ sub vf_to_consequences {
     # pass a true argument to get_IntergenicVariation to stop it doing a reference allele check
     # (to stay consistent with the rest of the VEP)
     elsif ((my $iv = $vf->get_IntergenicVariation(1)) && !defined($config->{no_intergenic})) {
-        
         my $method = $allele_method.'IntergenicVariationAlleles';
         for my $iva (@{ $iv->$method }) {
             
@@ -1942,8 +1941,9 @@ sub tva_to_line {
             
             my $pred_meth   = $lc_tool.'_prediction';
             my $score_meth  = $lc_tool.'_score';
+            my $analysis    = $config->{polyphen_analysis} if $lc_tool eq 'polyphen';
             
-            my $pred = $tva->$pred_meth;
+            my $pred = $tva->$pred_meth($analysis);
             
             if($pred) {
                 
@@ -1953,7 +1953,7 @@ sub tva_to_line {
                 }
                     
                 if ($want_score) {
-                    my $score = $tva->$score_meth;
+                    my $score = $tva->$score_meth($analysis);
                     
                     if(defined $score) {
                         if($want_pred) {
@@ -2050,20 +2050,26 @@ sub add_extra_fields_transcript {
     
     # gene symbol
     if(defined $config->{symbol}) {
-        my $symbol;
+        my ($symbol, $source);
         $symbol = $tr->{_gene_symbol} || $tr->{_gene_hgnc};
+        $source = $tr->{_gene_symbol_source};
         
         if(!defined($symbol)) {
             if(!defined($gene)) {
                 $gene = $config->{ga}->fetch_by_transcript_stable_id($tr->stable_id);
             }
             
-            $symbol = $gene->display_xref ? $gene->display_xref->display_id : undef;
+            if(my $xref = $gene->display_xref) {
+                $symbol = $xref->display_id;
+                $source = $xref->dbname;
+            }
         }
         
         $symbol = undef if defined($symbol) && $symbol eq '-';
+        $source = undef if defined($source) && $source eq '-';
         
         $line->{Extra}->{SYMBOL} = $symbol if defined($symbol);
+        $line->{Extra}->{SYMBOL_SOURCE} = $source if defined($source);
     }
     
     # CCDS
@@ -3926,10 +3932,19 @@ sub prefetch_transcript_data {
     
     # sift/polyphen
     if(defined($config->{pfpma}) && defined($tr->{_variation_effect_feature_cache}->{peptide})) {
-        foreach my $analysis(qw(sift polyphen)) {
-            next unless defined($config->{$analysis});
-            my $a = $analysis;
-            $a .= '_humvar' if $a eq 'polyphen';
+        my @a = qw(sift);
+        
+        # full build wants both polyphen scores
+        if(defined($config->{build})) {
+          push @a, ('polyphen_humvar', 'polyphen_humdiv');
+        }
+        # otherwise just fetch requested
+        else {
+          push @a, 'polyphen_'.$config->{polyphen_analysis};
+        }
+        
+        foreach my $a(@a) {
+            next unless defined($config->{(split "_", $a)[0]});
             $tr->{_variation_effect_feature_cache}->{protein_function_predictions}->{$a} ||= $config->{pfpma}->fetch_by_analysis_translation_md5($a, md5_hex($tr->{_variation_effect_feature_cache}->{peptide}))
         }
     }
@@ -3943,12 +3958,20 @@ sub prefetch_transcript_data {
         # get from gene cache if found already
         if(defined($tr->{_gene}->{_symbol})) {
             $tr->{_gene_symbol} = $tr->{_gene}->{_symbol};
+            $tr->{_gene_symbol_source} = $tr->{_gene}->{_symbol_source}
         }
         else {
-            $tr->{_gene_symbol} ||= $tr->{_gene}->display_xref ? $tr->{_gene}->display_xref->display_id : undef;
+            $tr->{_gene_symbol} ||= undef;
+            $tr->{_gene_symbol_source} ||= undef;
+            
+            if(my $xref = $tr->{_gene}->display_xref) {
+                $tr->{_gene_symbol} = $xref->display_id;
+                $tr->{_gene_symbol_source} = $xref->dbname;
+            }
             
             # cache it on the gene object too
             $tr->{_gene}->{_symbol} = $tr->{_gene_symbol};
+            $tr->{_gene}->{_symbol_source} = $tr->{_gene_symbol_source};
         }
     }
     
@@ -4969,6 +4992,11 @@ sub write_cache_info {
                 print OUT "$tool\_version\t".$version->[0]."\n" if defined($version) and scalar @$version;
             }
         }
+    }
+    
+    # disabled options for refseq
+    if(defined($config->{refseq})) {
+        print OUT "disabled\t".(join ",", qw(symbol))."\n";
     }
     
     # variation columns
