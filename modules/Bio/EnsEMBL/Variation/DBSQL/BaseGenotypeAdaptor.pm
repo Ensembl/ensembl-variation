@@ -107,10 +107,17 @@ sub _cache_genotype_codes {
 	if(!defined($self->{_genotype_code_adaptor})) {
 		$self->{_genotype_code_adaptor} = $self->db->get_GenotypeCodeAdaptor;
 	}
+  
+  # only fetch codes with dbID higher than what we have already
+  $self->db->{_max_genotype_code} ||= 0;
 	
-	my %gt_codes = map {(join "|", (@{$_->genotype}, defined($_->phased) ? $_->phased : "NULL")) => $_->dbID} @{$self->{_genotype_code_adaptor}->fetch_all()};
+	my %gt_codes = map {(join "|", (@{$_->genotype}, defined($_->phased) ? $_->phased : "NULL")) => $_->dbID} @{$self->{_genotype_code_adaptor}->generic_fetch('gc.genotype_code_id > '.$self->db->{_max_genotype_code})};
+  
+  # store highest code
+  $self->db->{_max_genotype_code} = (sort {$a <=> $b} values %gt_codes)[-1];
 	
-	$self->db->{_genotype_codes} = \%gt_codes;
+  # add new codes to hash
+	$self->db->{_genotype_codes}->{$_} = $gt_codes{$_} for keys %gt_codes;
 	
 	return $self->db->{_genotype_codes};
 }
