@@ -1,12 +1,21 @@
 =head1 LICENSE
 
- Copyright (c) 1999-2013 The European Bioinformatics Institute and
- Genome Research Limited.  All rights reserved.
+Copyright 2013 Ensembl
 
- This software is distributed under a modified Apache license.
- For license details, please see
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
-   http://www.ensembl.org/info/about/legal/code_licence.html
+     http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+=cut
+
 
 =head1 CONTACT
 
@@ -116,7 +125,7 @@ sub deletion {
     if($bvf->isa('Bio::EnsEMBL::Variation::VariationFeature')) {
         my ($ref_allele, $alt_allele) = _get_alleles($bvfoa);
         return (
-            (defined($ref_allele) && ($alt_allele eq '') and $ref_allele) or
+            (defined($ref_allele) && ($alt_allele eq '' || length($alt_allele) < length($ref_allele)) and $ref_allele) or
             $bvf->allele_string =~ /deletion/i
         );
     }
@@ -142,7 +151,7 @@ sub insertion {
     if($bvf->isa('Bio::EnsEMBL::Variation::VariationFeature')) {
         my ($ref_allele, $alt_allele) = _get_alleles($bvfoa);
         return (
-            (defined($ref_allele) && ($ref_allele eq '') and $alt_allele) or
+            (defined($ref_allele) && ($ref_allele eq '' || length($alt_allele) > length($ref_allele)) and $alt_allele) or
             $bvf->allele_string =~ /insertion/i
         );
     }
@@ -233,7 +242,7 @@ sub feature_elongation {
         (copy_number_gain($bvfoa) or insertion($bvfoa)) and
         not(
             $bvfoa->isa('Bio::EnsEMBL::Variation::BaseTranscriptVariationAllele') and
-            (inframe_insertion($bvfoa) or stop_lost($bvfoa))
+            (inframe_insertion($bvfoa) or stop_lost($bvfoa))# or frameshift($bvfoa))
         )
     );
 }
@@ -246,7 +255,7 @@ sub feature_truncation {
         (copy_number_loss($bvfoa) or deletion($bvfoa)) and
         not(
             $bvfoa->isa('Bio::EnsEMBL::Variation::BaseTranscriptVariationAllele') and
-            (inframe_deletion($bvfoa) or stop_gained($bvfoa))
+            (inframe_deletion($bvfoa) or stop_gained($bvfoa))# or frameshift($bvfoa))
         )
     );
 }
@@ -568,7 +577,6 @@ sub complex_indel {
 
 sub _get_peptide_alleles {
     my $bvfoa = shift;
-    my $bvfo  = $bvfoa->base_variation_feature_overlap;
     
     return () if frameshift($bvfoa);
 
@@ -576,7 +584,7 @@ sub _get_peptide_alleles {
     
     return () unless defined $alt_pep;
     
-    my $ref_pep = $bvfo->get_reference_TranscriptVariationAllele->peptide;
+    my $ref_pep = _get_ref_pep($bvfoa);
     
     return () unless defined $ref_pep;
     
@@ -584,6 +592,11 @@ sub _get_peptide_alleles {
     $alt_pep = '' if $alt_pep eq '-';
     
     return ($ref_pep, $alt_pep);
+}
+
+sub _get_ref_pep {
+    my $bvfoa = shift;
+    return $bvfoa->base_variation_feature_overlap->get_reference_TranscriptVariationAllele->peptide;
 }
 
 sub _get_codon_alleles {
@@ -815,6 +828,13 @@ sub stop_lost {
     
     # sequence variant
     if($bvfoa->isa('Bio::EnsEMBL::Variation::TranscriptVariationAllele')) {
+        
+        # special case frameshift
+        if(frameshift($bvfoa)) {
+          my $ref_pep = _get_ref_pep($bvfoa);
+          return $ref_pep && $ref_pep =~ /\*/;
+        }
+        
         my ($ref_pep, $alt_pep) = _get_peptide_alleles($bvfoa);
         
         return 0 unless defined $ref_pep;
