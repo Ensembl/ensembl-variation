@@ -306,7 +306,7 @@ sub codon_position {
 
 sub affects_peptide {
     my $self = shift;
-    return scalar grep { $_->SO_term =~ /stop|non_syn|frameshift|inframe|initiator/ } map {@{$_->get_all_OverlapConsequences}} @{ $self->get_all_alternate_TranscriptVariationAlleles }; 
+    return scalar grep { $_->SO_term =~ /stop|missense|frameshift|inframe|initiator/ } map {@{$_->get_all_OverlapConsequences}} @{ $self->get_all_alternate_TranscriptVariationAlleles }; 
 }
 
 
