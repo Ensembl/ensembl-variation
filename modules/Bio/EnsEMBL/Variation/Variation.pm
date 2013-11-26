@@ -139,6 +139,9 @@ use Scalar::Util qw(weaken);
   Arg [-SOURCE_TYPE] :
     string - the source type of this variant
 
+  Arg [-SOURCE_SOMATIC_STATUS] :
+    string - the source somatic status of this variant (somatic, germline or mixed)
+
   Arg [-SYNONYMS] :
     reference to hash with list reference values -  keys are source
     names and values are lists of identifiers from that db.
@@ -179,13 +182,13 @@ sub new {
   my $caller = shift;
   my $class = ref($caller) || $caller;
 
-  my ($dbID, $adaptor, $name, $class_so_term, $src, $src_desc, $src_url, $src_type, $is_somatic, $flipped, $syns, $ancestral_allele,
-      $alleles, $valid_states, $moltype, $five_seq, $three_seq, $flank_flag, $minor_allele, $minor_allele_frequency, $minor_allele_count, 
-      $clinical_significance, $evidence ) =
-        rearrange([qw(dbID ADAPTOR NAME CLASS_SO_TERM SOURCE SOURCE_DESCRIPTION SOURCE_URL SOURCE_TYPE IS_SOMATIC 
-                      FLIPPED SYNONYMS ANCESTRAL_ALLELE ALLELES VALIDATION_STATES MOLTYPE FIVE_PRIME_FLANKING_SEQ
-                      THREE_PRIME_FLANKING_SEQ FLANK_FLAG MINOR_ALLELE MINOR_ALLELE_FREQUENCY MINOR_ALLELE_COUNT 
-                      CLINICAL_SIGNIFICANCE EVIDENCE)],@_);
+  my ($dbID, $adaptor, $name, $class_so_term, $src, $src_desc, $src_url, $src_type, $src_somatic_status, $is_somatic, $flipped, $syns,
+      $ancestral_allele, $alleles, $valid_states, $moltype, $five_seq, $three_seq, $flank_flag, $minor_allele, $minor_allele_frequency,
+      $minor_allele_count, $clinical_significance, $evidence ) =
+        rearrange([qw(dbID ADAPTOR NAME CLASS_SO_TERM SOURCE SOURCE_DESCRIPTION SOURCE_URL SOURCE_TYPE SOURCE_SOMATIC_STATUS
+                      IS_SOMATIC FLIPPED SYNONYMS ANCESTRAL_ALLELE ALLELES VALIDATION_STATES MOLTYPE 
+                      FIVE_PRIME_FLANKING_SEQ THREE_PRIME_FLANKING_SEQ FLANK_FLAG MINOR_ALLELE MINOR_ALLELE_FREQUENCY 
+                      MINOR_ALLELE_COUNT CLINICAL_SIGNIFICANCE EVIDENCE)],@_);
 
   # convert the validation state strings into a bit field
   # this preserves the same order and representation as in the database
@@ -201,6 +204,7 @@ sub new {
     'source_description' => $src_desc,
     'source_url' => $src_url,
     'source_type'=> $src_type,
+    'source_somatic_status' => $src_somatic_status,
     'is_somatic' => $is_somatic,
     'flipped' => $flipped,
     'synonyms' => $syns || {},
@@ -695,6 +699,47 @@ sub source_url{
   return $self->{'source_url'} = shift if(@_);
   return $self->{'source_url'};
 }
+
+=head2 source_somatic_status
+
+  Arg [1]    : string $source_somatic_status (optional)
+               The new value to set the source status attribute to
+  Example    : $source_somatic_status = $v->source_somatic_status()
+  Description: Getter/Setter for the source somatic status attribute, which identifies 
+               the source of this variation as somatic, germline or mixed
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : At risk
+
+=cut
+
+sub source_somatic_status{
+  my $self = shift;
+  return $self->{'source_somatic_status'} = shift if(@_);
+  return $self->{'source_somatic_status'};
+}
+
+=head2 has_somatic_source
+
+  Arg [1]    : boolean $has_somatic_source (optional)
+               The new value to set the has_somatic_source flag to
+  Example    : $has_somatic_source = $v->has_somatic_source
+  Description: Getter/Setter for the has_somatic_source flag, which identifies if this variation 
+               comes from a somatic or a germline/mixed source
+  Returntype : boolean
+  Exceptions : none
+  Caller     : general
+  Status     : At risk
+
+=cut
+
+sub has_somatic_source {
+  my ($self, $has_somatic_source) = @_;
+  $self->{has_somatic_source} = (defined $has_somatic_source) ? $has_somatic_source : ($self->{'source_somatic_status'} eq 'somatic' ? 1 : 0);
+  return $self->{has_somatic_source};
+}
+
 
 =head2 is_somatic
 
