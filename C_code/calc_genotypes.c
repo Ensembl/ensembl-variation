@@ -1,5 +1,27 @@
 /* A program for calculating linkage disequilibrium stats */
-/* Copyright 2005 Daniel Rios & Tim Cutts                 */
+
+/*
+ Copyright [1999-2013] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+ 
+      http://www.apache.org/licenses/LICENSE-2.0
+ 
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+
+ How to use
+   - Give the command the directories/files you want to search
+   - Ignores binary files if possible
+   - Code will report its best guess at what type of licence was applied
+   - Setting the environment variable APPLY_LICENSE will cause the code to write an Apache2 licence to the file
+   - Does not support JavaScript or CSS files
+*/
+
 
 #include <stdio.h>
 #include <strings.h>
