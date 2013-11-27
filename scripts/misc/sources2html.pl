@@ -516,7 +516,7 @@ sub create_menu {
       var legend_element = document.getElementById("$legend_div_id");
       var legend_element_pos = legend_element.offsetTop;
       window.onscroll = function() {
-        if (document.body.scrollTop > legend_element_pos)  {
+        if (window.pageYOffset-80 > legend_element_pos)  {
           legend_element.style.position = "fixed";
           legend_element.style.top = "10px";
         }
