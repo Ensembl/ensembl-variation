@@ -17,7 +17,6 @@ limitations under the License.
 =cut
 
 
-
 =head1 CONTACT
 
  Please email comments or questions to the public Ensembl
@@ -68,6 +67,7 @@ sub register{
     ## add details of new variation db to production db
     $details->{new_db}    = register_new_ensvardb($details);
    
+   
     $details->{result_ad} = $details->{registry}->get_adaptor('multi', 'intvar', 'result');
 
     open my $report, ">$details->{pwd}/QC_report.txt" ||die "Failed to open report file : $!\n";
@@ -78,6 +78,10 @@ sub register{
     ## check variant counts by seq_contig
     my $seqs_ok   = check_variant_by_sequence($details, $report);
   
+
+    ## exit if there is nothing to compare to
+    return unless defined $details->{prev_db} ;
+
     ### summary result from comparison
     my $is_passed = 1;
     $is_passed = 0 if $totals_ok ==0 || $seqs_ok ==0;
@@ -100,8 +104,10 @@ sub get_previous_ensvardb{
 
     my $ensvardb_adaptor  = $details->{registry}->get_adaptor('multi', 'intvar', 'ensvardb');
     my $prev_db = $ensvardb_adaptor->fetch_current_by_species( $details->{species} );
-    die "No previous database found to compare to for species $details->{species}\n"  unless defined $prev_db;
-    
+    unless (defined $prev_db){
+	warn "No previous database found to compare to for species $details->{species}\n"  ;
+	return;
+    }
     ## set last ensembl database to non-current    
     $ensvardb_adaptor->non_current($prev_db);
 
@@ -186,17 +192,22 @@ sub check_table_counts{
     foreach my $table (keys  %tables_to_check){
 
         my $new_count = count_rows($var_dba , $table );
-        my @prev_results = @{$details->{result_ad}->fetch_by_db_result_type($details->{prev_db},$tables_to_check{$table} )};
 
-        if( defined $prev_results[0]){
-            my $previous_row_count = $prev_results[0]->result_value();
-            if($new_count  >= $previous_row_count){
-                print $report "OK: $table\t previously $previous_row_count now $new_count \n";
+        ## can only check against previously if data held
+	if (defined $details->{prev_db}){
+	    my @prev_results = @{$details->{result_ad}->fetch_by_db_result_type($details->{prev_db},$tables_to_check{$table} )} ;
+	    
+	    if( defined $prev_results[0]){
+		my $previous_row_count = $prev_results[0]->result_value();
+		if($new_count  >= $previous_row_count){
+		    print $report "OK: $table\t previously $previous_row_count now $new_count \n";
+		}
+		else{
+		    print $report "ERROR: $table\t previously $previous_row_count now $new_count \n";
+		    $ok =0;
+		}
             }
-            else{
-                print $report "ERROR: $table\t previously $previous_row_count now $new_count \n";
-                $ok =0;
-            }
+
         }
         ## store new result
         my $result =  Bio::EnsEMBL::IntVar::Result->new_fast({ ensvardb     => $details->{new_db},
@@ -222,7 +233,7 @@ sub check_variant_by_sequence{
     my $new_seq_count = new_seq_count($details);
 
     ## find counts by sequence for previous database
-    my $old_seq_count = old_seq_count($details);
+    my $old_seq_count = old_seq_count($details) if defined $details->{prev_db};
 
 
     my $ok = 1;
@@ -241,8 +252,11 @@ sub check_variant_by_sequence{
        else{
            print $report "ERROR\tsequence $seq : no variation count previously $old_seq_count->{$seq} \n";
            $ok = 0;
-           next; ## don't store count in db if no variants found
        }
+    }
+
+    ## store new variant counts 
+    foreach my $seq (keys %{$new_seq_count}){
 
        my $result =  Bio::EnsEMBL::IntVar::Result->new_fast({ ensvardb     => $details->{new_db},
                                                               result_value => $new_seq_count->{$seq},
