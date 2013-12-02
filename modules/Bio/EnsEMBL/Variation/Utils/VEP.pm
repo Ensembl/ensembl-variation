@@ -151,6 +151,7 @@ our %COL_DESCS = (
     'CANONICAL'          => 'Indicates if transcript is canonical for this gene',
     'CCDS'               => 'Indicates if transcript is a CCDS transcript',
     'SYMBOL'             => 'Gene symbol (e.g. HGNC)',
+    'SYMBOL_SOURCE'      => 'Source of gene symbol',
     'ENSP'               => 'Ensembl protein identifer',
     'HGVSc'              => 'HGVS coding sequence name',
     'HGVSp'              => 'HGVS protein sequence name',
@@ -3379,13 +3380,15 @@ sub get_slice {
     
     # with a FASTA DB we can just spoof slices
     if(defined($config->{fasta_db})) {
+        my $length = $config->{fasta_db}->length($chr) || 1;
+        
         $slice = Bio::EnsEMBL::Slice->new(
-			-COORD_SYSTEM      => $config->{coord_system},
-			-START             => 1,
-			-END               => $config->{fasta_db}->length($chr),
-			-SEQ_REGION_NAME   => $chr,
-			-SEQ_REGION_LENGTH => $config->{fasta_db}->length($chr)
-		);
+          -COORD_SYSTEM      => $config->{coord_system},
+          -START             => 1,
+          -END               => $length,
+          -SEQ_REGION_NAME   => $chr,
+          -SEQ_REGION_LENGTH => $length
+        );
         
         $slice->{is_fake} = 1;
         
