@@ -1298,4 +1298,27 @@ sub display_consequence {
     return $highest->label;
 }
 
+    
+=head2 get_all_Publications
+
+  Args       : none
+  Example    : my $pubs = $var->get_all_Publications()
+  Description: Getter for Publications citing this Variation, returns empty list if 
+               there are none. 
+  Returntype : listref of Publications
+  Exceptions : none
+  Caller     : general
+
+=cut
+sub get_all_Publications{
+    my $self = shift;
+
+    #Assert the adaptor reference
+    assert_ref($self->adaptor(),'Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor');
+    
+    # Get the citations from the database
+    return $self->adaptor->db->get_PublicationAdaptor()->fetch_all_by_Variation($self);
+
+}
+
 1;
