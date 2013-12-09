@@ -423,7 +423,7 @@ sub source_table {
     my $url = 'http://www.ncbi.nlm.nih.gov/projects/SNP/';
 
     if(defined $source_name &&  $source_name=~ /Archive/){ 
-        $self->{'dbVar'}->do(qq{INSERT IGNORE INTO source (source_id,name,version,description,url,somatic_status) VALUES (2, "$source_name",$version,"Former variants names imported from dbSNP", "$url", "mixed")});
+        $self->{'dbVar'}->do(qq{INSERT IGNORE INTO source (source_id,name,version,description,url,somatic_status, data_types) VALUES (2, "$source_name",$version,"Former variants names imported from dbSNP", "$url", "mixed","variation_synonym")});
     }
     elsif(defined $source_name &&  $source_name=~ /PubMed/){
         $self->{'dbVar'}->do(qq[INSERT IGNORE INTO source (source_id, name, description, url, somatic_status ) values (4, 'PubMed', 'Variants with pubmed citations', 'http://www.ncbi.nlm.nih.gov/pubmed/','mixed')]);
@@ -432,7 +432,7 @@ sub source_table {
 
         my $dbname = 'dbSNP';
 
-        $self->{'dbVar'}->do(qq{INSERT INTO source (source_id,name,version,description,url,somatic_status) VALUES (1,"$dbname",$version,"Variants (including SNPs and indels) imported from dbSNP", "$url", "mixed")});
+        $self->{'dbVar'}->do(qq{INSERT INTO source (source_id,name,version,description,url,somatic_status, data_types) VALUES (1,"$dbname",$version,"Variants (including SNPs and indels) imported from dbSNP", "$url", "mixed","variation")});
     }
 
 }
@@ -2345,7 +2345,7 @@ sub parallelized_individual_genotypes {
      ## set up task file unless rerunning
      ($jobindex,$task_manager_file) = $self->create_parallelized_individual_genotypes_task_file(\%gty_tables, $target_rows);   
 
-     next unless defined  $jobindex;  ## there may be nothing to do
+     return unless defined  $jobindex;  ## there may be nothing to do
     }
 
     $task_manager_file = "individual_genotypes_task_management.txt";
