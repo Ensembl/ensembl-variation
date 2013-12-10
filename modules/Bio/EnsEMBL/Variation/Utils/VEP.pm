@@ -1662,7 +1662,9 @@ sub vf_to_consequences {
     
     # pass a true argument to get_IntergenicVariation to stop it doing a reference allele check
     # (to stay consistent with the rest of the VEP)
-    elsif ((my $iv = $vf->get_IntergenicVariation(1)) && !defined($config->{no_intergenic})) {
+    elsif(my $iv = $vf->get_IntergenicVariation(1)) {
+        return [] if defined($config->{coding_only}) || defined($config->{no_intergenic});
+        
         my $method = $allele_method.'IntergenicVariationAlleles';
         for my $iva (@{ $iv->$method }) {
             
