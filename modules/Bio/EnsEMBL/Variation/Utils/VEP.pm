@@ -1717,6 +1717,42 @@ sub vf_to_consequences {
         }
     }
     
+    # pick one per variant, using the following priority:
+    # 1: canonical status of transcript
+    # 2: protein_coding transcripts
+    # 3: rank of consequence type
+    # 4: length of transcript
+    elsif(defined($config->{pick})) {
+      
+      my @tv_info;
+      my %ranks = map {$_->SO_term => $_->rank} values %Bio::EnsEMBL::Variation::Utils::Constants::OVERLAP_CONSEQUENCES;
+      
+      foreach my $tv(@$tvs) {
+        next if(defined $config->{coding_only} && !($tv->affects_cds));
+        my $tr = $tv->transcript;
+        
+        push @tv_info, {
+          tv => $tv,
+          rank => $ranks{$tv->display_consequence},
+          canonical => $tr->is_canonical ? 1 : 0,
+          length => $tr->length(),
+          biotype => $tr->biotype eq 'protein_coding' ? 1 : 0,
+        };
+      }
+      
+      if(scalar @tv_info) {
+        my $picked = (sort {
+          $b->{canonical} <=> $a->{canonical} ||
+          $a->{biotype} <=> $b->{biotype} ||
+          $a->{rank} <=> $b->{rank} ||
+          $b->{length} <=> $a->{length}
+        } @tv_info)[0]->{tv};
+        
+        my $method = $allele_method.'TranscriptVariationAlleles';
+        push @return, map {tva_to_line($config, $_)} @{$picked->$method};
+      }
+    }
+    
     else {
         foreach my $tv(@$tvs) {
             next if(defined $config->{coding_only} && !($tv->affects_cds));
