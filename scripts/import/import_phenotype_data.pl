@@ -538,6 +538,10 @@ sub parse_nhgri {
     my $pvalue         = $content[27];
     my $ratio          = $content[30];
     my $ratio_info     = $content[31];
+
+    if ($rs_risk_allele =~ /$rs_id-\s*(\?|\w+)/i) {
+      $rs_risk_allele = $1;
+    }
       
     my %data = (
       'study_type' => 'GWAS',
