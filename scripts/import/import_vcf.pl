@@ -42,6 +42,9 @@ use Bio::EnsEMBL::Variation::Utils::Sequence qw(SO_variation_class);
 use Bio::EnsEMBL::Variation::Variation;
 use Bio::EnsEMBL::Variation::IndividualGenotype;
 
+# use this for remapping
+use Bio::EnsEMBL::SimpleFeature;
+
 use Getopt::Long;
 use FileHandle;
 use Socket;
@@ -126,6 +129,7 @@ sub configure {
 		
 		'flank=s',
 		'gp',
+    'remap=s',
 		'ind_prefix=s',
 		'pop_prefix=s',
 		'var_prefix=s',
@@ -168,7 +172,7 @@ sub configure {
 	}
 	
 	# read config from file?
-    read_config_from_file($config, $config->{config}) if defined $config->{config};
+  read_config_from_file($config, $config->{config}) if defined $config->{config};
 	
 	# remove recover from config otherwise changes session id
 	my $recover;
@@ -184,6 +188,10 @@ sub configure {
 	
 	$config->{recover} = 1 if $recover;
 	
+	# sanity checks
+	die("ERROR: Cannot run in test mode using forks\n") if defined($config->{fork}) and defined($config->{test});
+	die("ERROR: Cannot manually recover using forks\n") if defined($config->{fork}) and (defined($config->{recover_point}) || defined($config->{recover_pos}));
+	
 	# recover?
 	if(defined $config->{recover}) {
 		open IN, (join '/', ($ENV{HOME}, '.import_vcf', $config->{session_id})) or die "ERROR: Could not recover session with ID ".$config->{session_id}."\n";
@@ -196,10 +204,6 @@ sub configure {
 		debug($config, "Found recover point ", $config->{recover_point}, " for session ID ", $config->{session_id}, " PID ", $config->{pid});
 	}
 	
-	# sanity checks
-	die("ERROR: Cannot run in test mode using forks\n") if defined($config->{fork}) and defined($config->{test});
-	die("ERROR: Cannot manually recover using forks\n") if defined($config->{fork}) and (defined($config->{recover_point}) || defined($config->{recover_pos}));
-	
 	# set defaults
 	$config->{species}         ||= "human";
 	$config->{flank}           ||= 200;
@@ -211,6 +215,13 @@ sub configure {
 	$config->{progress_update} ||= 100;
 	$config->{pid}             ||= $$;
 	$config->{somatic}         ||= 0;
+  
+  # check remap arg
+  if(defined($config->{remap})) {
+    die "ERROR: remap argument incorrect - must be of format --remap [from_assembly],[to_assembly]" unless $config->{remap} =~ /^\S+?\,\S+?$/;
+    
+    $config->{remap} = [split(',', $config->{remap})];
+  }
 	
 	# recovery not possible if forking
 	#$config->{no_recover} = 1 if defined($config->{fork});
@@ -706,6 +717,16 @@ sub main {
 				$last_skipped++;
 				next;
 			}
+      
+      # remap?
+      if(defined($config->{remap})) {
+        my $success = remap($config, $data->{tmp_vf});
+        if(!$success) {
+          $config->{skipped}->{unable_to_remap}++;
+          $last_skipped++;
+          next;
+        }
+      }
 			
 			if(!defined($config->{seq_region_ids}->{$data->{tmp_vf}->{chr}})) {
 				$config->{skipped}->{missing_seq_region}++;
@@ -1304,7 +1325,7 @@ sub get_adaptors {
 	$config->{variation_adaptor}->db->include_failed_variations(1);
 	
 	# core adaptors
-	if(defined($config->{tables}->{transcript_variation}) && $config->{tables}->{transcript_variation}) {
+	if((defined($config->{tables}->{transcript_variation}) && $config->{tables}->{transcript_variation}) || defined($config->{remap})) {
 		$config->{slice_adaptor} = $config->{reg}->get_adaptor($config->{species}, "core", "slice");
 		die("ERROR: Could not get slice adaptor\n") unless defined($config->{slice_adaptor});
 		$config->{vep}->{sa} = $config->{slice_adaptor};
@@ -2064,6 +2085,66 @@ sub variation_feature {
 	}
 	
 	return $vf;
+}
+
+# remap coords between assemblies
+sub remap {
+  my $config = shift;
+  my $vf = shift;
+  
+  # get a slice on the old coord system
+  my $slice = $config->{slice_adaptor}->fetch_by_region('chromosome', $vf->{chr}, undef, undef, undef, $config->{remap}->[0]);
+  return 0 unless $slice;
+  
+  my $indel;
+  
+  my ($s, $e) = ($vf->{start}, $vf->{end});
+  if($s > $e) {
+    ($s, $e) = ($e, $s);
+    $indel = 1;
+  }
+  
+  # create a simple feature with the VF's coordinates
+  my $feat = new Bio::EnsEMBL::SimpleFeature (
+    -START => $s,
+    -END => $e,
+    -STRAND => 1,
+    -SLICE => $slice,
+  );
+  
+  # project to new assembly
+  my @segments;
+  eval {
+    @segments = @{$feat->feature_Slice->project('chromosome',$config->{remap}->[1])};
+  };
+  if ($@) {
+    return 0;
+  }
+  
+  # convert projection segments to slices
+  my @slices_newdb_newasm = map { $_->to_Slice }  @segments;
+  @slices_newdb_newasm = sort { $a->start <=> $b->start } @slices_newdb_newasm;
+  return 0 unless scalar @slices_newdb_newasm;
+  
+  # get new coordinates
+  my ($new_start,$new_end);
+
+  if ($indel) {
+    $new_start = $slices_newdb_newasm[0]->start + 1;
+    $new_end = $slices_newdb_newasm[-1]->end - 1;
+  }
+  else {
+    $new_start = $slices_newdb_newasm[0]->start;
+    $new_end = $slices_newdb_newasm[-1]->end;
+  }
+  
+  # alter coords in VF object
+  $vf->{start} = $new_start;
+  $vf->{end} = $new_end;
+  $vf->{seq_region_strand} = $slices_newdb_newasm[0]->strand;
+  
+  # success
+  return 1;
 }
 
 # counts how many alleles two allele strings share
