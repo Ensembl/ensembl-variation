@@ -488,7 +488,6 @@ CREATE TABLE genotype_code (
 
 @see variation_feature
 @see compressed_genotype_region
-@see read_coverage
 */
 
 CREATE TABLE seq_region (
@@ -929,35 +928,6 @@ CREATE TABLE compressed_genotype_var (
   KEY variation_idx (variation_id),
   KEY subsnp_idx (subsnp_id)
 );
-
-
-/**
-@table read_coverage
-
-@colour #FF8500
-@desc This table stores the read coverage in the resequencing of individuals. Each row contains an individual ID, chromosomal coordinates and a read coverage level.
-
-@column seq_region_id       Foreign key references @link seq_region in core db. ers to the seq_region which this variant is on, which may be a chromosome, a clone, etc...
-@column seq_region_start    The start position of the variation on the @link seq_region.
-@column seq_region_end      The end position of the variation on the @link seq_region.
-@column level               Minimum number of reads.
-@column individual_id       Foreign key references to the @link individual table.
-
-@see individual
-@see seq_region
-*/
-
-CREATE TABLE read_coverage (
-   seq_region_id int(10) unsigned not null,
-   seq_region_start int not null,
-   seq_region_end int not null,
-   level tinyint not null,
-   individual_id int(10) unsigned not null,
-		  
-   key seq_region_idx(seq_region_id,seq_region_start)   
-);
-
-
 
 
 /**
