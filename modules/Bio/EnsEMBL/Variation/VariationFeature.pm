@@ -1829,5 +1829,25 @@ sub flank_match{
 }
 
 
+=head2 get_Variation_dbID
+
+  Example    : $var_id = $vf->get_Variation_dbID()
+  Description: Getter for the Variation (NOT VariationFeature) dbID attribute.
+  Returntype : int
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub get_Variation_dbID {
+  my $self = shift;
+  
+  if(!defined($self->{_variation_id})) {
+    $self->{_variation_id} = $self->variation->dbID;
+  }
+  
+  return $self->{_variation_id};
+}
 
 1;
