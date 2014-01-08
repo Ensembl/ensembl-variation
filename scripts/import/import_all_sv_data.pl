@@ -388,7 +388,7 @@ sub study_table{
         CONCAT(
           '$author_desc',
           '"',
-          '$study_desc',
+          "$study_desc",
           '" $pmid_desc',
           '$assembly_desc'),
         '$study_ftp',
