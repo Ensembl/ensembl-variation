@@ -13,15 +13,30 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+=head1 import_Phencode.pl
 
-## extract data from local phencode database
-##   - run QC
-##   - import to ensembl schema
-##   - create variation set
+   - extracts data from local phencode database
+        - variants with multiple or inconsistent positions are skipped 
+   - runs QC
+        - bad alleles flagged
+        - 4-allele substitutions flagged
+        - reference miss-matches flagged
+        - inconsistent coordinates flagged
+   - imports data to ensembl schema
+        - variants =< 50 bases are variations
+        - variants > 50 bases are structural variations
+        - variants already imported from dbSNP with Phencode ids are not re-entered
+   - creates variation set
 
-## requires seq_region table and attribs
 
-## crudely glued together from 2 initial scripts
+requirements in ensembl db:
+
+    - loaded attribs for fail statuses
+    - seq_region table
+    - dbSNP load with Phencode synonyms for redundancy checking
+
+=cut
+
 
 use strict;
 use warnings;
@@ -30,21 +45,20 @@ use Getopt::Long;
 
 use Bio::DB::Fasta;
 use Bio::EnsEMBL::Registry;
-use Bio::EnsEMBL::Variation::VariationFeature;
-use Bio::EnsEMBL::Variation::DBSQL::DBAdaptor;
-use Bio::EnsEMBL::Variation::DBSQL::VariationFeatureAdaptor;
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp );
 use Bio::EnsEMBL::Variation::Utils::Sequence qw( get_hgvs_alleles);
-use Bio::EnsEMBL::Variation::Utils::QCUtils qw( check_four_bases get_reference_base check_illegal_characters check_for_ambiguous_alleles remove_ambiguous_alleles find_ambiguous_alleles check_variant_size summarise_evidence count_rows count_group_by);
+use Bio::EnsEMBL::Variation::Utils::QCUtils qw( check_four_bases get_reference_base check_illegal_characters check_for_ambiguous_alleles remove_ambiguous_alleles find_ambiguous_alleles check_variant_size);
 
-my ($registry_file,  $fasta_file);
+my ($registry_file,  $fasta_file,  $phenu, $phenp);
 
-GetOptions ( 
-             "fasta=s"       => \$fasta_file,
-             "registry=s"    => \$registry_file,
+GetOptions ( "fasta=s"      => \$fasta_file,
+             "registry=s"   => \$registry_file,
+             "phenu=s"      => \$phenu,
+             "phenp=s"      => \$phenp,
+
     );
 
-usage() unless defined $registry_file && defined $fasta_file ;
+usage() unless defined $registry_file && defined $fasta_file && defined $phenu && defined $phenp;
 
 ### write to and read from tmp file
 our $DATA_FILE = "phencode_data_QC.txt";
@@ -58,10 +72,11 @@ my $allele_adaptor    = $reg->get_adaptor('homo_sapiens', 'variation', 'allele')
 
 
 ## create index on fasta for reference check or reference allele determination
+## unless one is supplied
 my $db = Bio::DB::Fasta->new( $fasta_file );
   
 ## writes all data to a file to allow checking & returns the number of times each name is seen
-my $var_counts = extract_data();  
+my $var_counts = extract_data($phenu, $phenp);  
 
 ## find or enter source info
 my %source_data  = ( "name"    => "PhenCode",
@@ -125,7 +140,9 @@ add_to_set( $varfeat_adaptor->dbc, \%new_var, \%new_svar);
 sub insert_var{
 
     my $line = shift;
+
     if ($line->[5] eq "-1" && $line->[1] !~/Phencode|del|ins/i){
+
         ## compliment individual alleles keeping ref/alt order
         my @al = split(/\//,$line->[1]);
         $line->[1] = '';
@@ -136,7 +153,6 @@ sub insert_var{
         $line->[1] =~ s/\/$//;
         $line->[5] = 1;
     }
-
 
     my $var = enter_var($line, 
                         $variation_adaptor,
@@ -165,8 +181,16 @@ sub insert_var{
 ## write tmp file for checking
 sub extract_data{
 
+    my $phenu = shift;
+    my $phenp = shift;
 
-    my $dbh = DBI->connect('dbi:mysql:phencode:ens-variation2:3306', 'ensadmin', 'ensembl', undef);
+    ## save the number of times a variant name is see & don't import those seen twice ( position uncertain)
+    my %count;
+
+    ## count pass & fail for basic reporting
+    my %status; 
+
+    my $dbh = DBI->connect('dbi:mysql:phencode:ens-variation2:3306', $phenu, $phenp, undef);
     
     my $variant_ext_sth = $dbh->prepare(qq[ SELECT gv.id,
                                               gv.name,
@@ -182,7 +206,6 @@ sub extract_data{
     
 
     open my $out, ">$DATA_FILE"|| die "Failed to open data file to write: $!\n";
-    my %count;
    
     $variant_ext_sth->execute() ||die;
     my $data = $variant_ext_sth->fetchall_arrayref();
@@ -199,8 +222,7 @@ sub extract_data{
         ## hgvs but on non-reference seq => switch seq name & coords
         my ($reported_seq,$change) = split(/\:g|\:c\./,$l->[2], 2);
         
-        ### sort out alleles 
-        ##$change =~ s/g\.|\[|\]|\.//g;  ## clean up  D87675.1(APP):g.[..g.278645G>T..]  half fail anyway
+        ## sort out alleles 
         my ($ref_allele, $alt_allele);
         
         eval{
@@ -227,14 +249,19 @@ sub extract_data{
         my $allele_string = "$ref_allele/$alt_allele";
         
         
-        
+        ## resolve start/end coordinates
         my $start = $l->[4];
         my $end   = $l->[5];
         if($change =~/ins/ && $change !~/del/ ){
             ($start, $end) = ($end, $start);
         }
         $start = $end + 1 if $change =~/dup/ ;
+
+        ## an insertion should be between only 2 bases
+        next if $end +1 < $start;
         
+
+        ## resolve strand
         my $strand ;
         if ($l->[6] eq "+"){
             $strand = 1;
@@ -262,12 +289,21 @@ sub extract_data{
         unless  ($ref_allele =~/_base_deletion/){  ## can't do much with these
             $var{fail_reasons} = run_checks(\%var);
         }
-
+        
+        ## keep a count for fail rate
+        $status{fail}++ if defined $var{fail_reasons} &&  $var{fail_reasons}=~/\d+/;        
+        $status{all}++;
+        
         ## print to tmp file 
         print $out "$var{name}\t$var{allele}\t$var{seqreg_name}\t$var{start}\t$var{end}\t$var{strand}\t$var{label}\t$var{source}\t$var{fail_reasons}\n";
     }
 
     close $out;
+
+    ## print out fail rate
+    my $per_fail = 100 * $status{fail} / $status{all};
+    print "\nWARNING: $status{fail} variants($per_fail %) fail from $status{all})\n";
+
     return \%count;
 
 }

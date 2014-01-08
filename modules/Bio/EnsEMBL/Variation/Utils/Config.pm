@@ -70,8 +70,11 @@ our @dgva_clinical_significance_types = (
     'Benign',
     'Pathogenic',
     'Uncertain Significance',
-    'Uncertain Significance: likely benign',
-    'Uncertain Significance: likely pathogenic'
+    'likely benign',
+    'likely pathogenic',
+    'not provided',
+    'association',
+    'risk factor'
 );
 
 our @VARIATION_CLASSES = (
@@ -168,6 +171,11 @@ our @VARIATION_CLASSES = (
         SO_accession => 'SO:1000035',
         SO_term => 'duplication',
         display_term => 'Duplication',
+    },
+    {
+        SO_accession => 'SO:0001838',
+        SO_term => 'novel_sequence_insertion',
+        display_term => 'Novel sequence insertion',
     },
 );
 

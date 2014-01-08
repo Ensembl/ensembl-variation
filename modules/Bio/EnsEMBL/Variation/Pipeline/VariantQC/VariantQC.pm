@@ -350,22 +350,21 @@ sub run_allele_checks {
    
    foreach my $var( keys %$var_data){
     
+     $allele_string->{$var} = $var_data->{$var}->{allele_data}->[0]->[7] unless defined $allele_string->{$var};
+
      my %expected_alleles;
      my @expected_alleles = split/\//, $allele_string->{$var};
      foreach my $exp(@expected_alleles){ 
        $expected_alleles{$exp} = 1;
      }
-   
 
      ## check through allele submissions
      foreach my $submitted_data (@{$var_data->{$var}->{allele_data}}){
-
 
        ## Apply QC checks
       
        ## $submitted_data content: [ al.allele_id, al.subsnp_id, al.allele,  al.frequency, al.population_id, al.count, al.frequency_submitter_handle ]
        unless( exists $expected_alleles{$submitted_data->[2]} && $expected_alleles{$submitted_data->[2]} ==1 ){ ## check expected on allele not allele_code
-
        ## checking ss id here because of the way strains are handled in import
          if(defined $submitted_data->[4] && defined $submitted_data->[1] && $submitted_data->[1] >0  ){
            ###fail whole experimental set if sample info supplied
@@ -529,12 +528,14 @@ sub export_allele_data{
                                     al.frequency,
                                     al.population_id,
                                     al.count,
-                                    al.frequency_submitter_handle
-                            FROM   variation v, allele al
+                                    al.frequency_submitter_handle,
+                                    als.allele_string
+                            FROM   variation v, allele al, allele_string als
                             WHERE  v.variation_id between ? and ?
-                            AND    v.variation_id  = al.variation_id ];
-  
+                            AND    v.variation_id  = al.variation_id 
+                            AND    als.variation_id = v.variation_id ];
 
+  
    my $data_ext_sth = $var_dba->dbc->prepare($extraction_stmt);       
   
    $data_ext_sth->execute($first, $last)|| die "ERROR extracting allele info\n";

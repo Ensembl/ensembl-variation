@@ -164,16 +164,23 @@ sub import_citations{
         
         
       
-        ### Check if publication already known
-        
+        ### Check if publication already known & enter if not  
         my $publication;
 
+        ## looking up missing data from EPMC before redundancy check
+        my $ref = get_publication_info_from_epmc($data, $pub, $error_log);
+        
+        ## save ids 
+        my $pmid   = $ref->{resultList}->{result}->{pmid}   || $data->{$pub}->{pmid};
+        my $pmcid  = $ref->{resultList}->{result}->{pmcid}  || undef;
+        my $doi    = $ref->{resultList}->{result}->{DOI}    || $data->{$pub}->{doi};
+
         ## try looking up on doi first
-        $publication = $pub_ad->fetch_by_doi( $data->{$pub}->{doi} )    if defined $data->{$pub}->{doi} ;
+        $publication = $pub_ad->fetch_by_doi( $doi )     if defined $doi;
         ## then PMID
-        $publication = $pub_ad->fetch_by_pmid( $data->{$pub}->{pmid} )  if (defined $data->{$pub}->{pmid} && ! defined $publication);
+        $publication = $pub_ad->fetch_by_pmid( $pmid )   if defined $pmid && ! defined $publication;
         ## then PMCID   
-        $publication = $pub_ad->fetch_by_pmcid( $data->{$pub}->{pmcid}) if (defined $data->{$pub}->{pmcid} && ! defined $publication);
+        $publication = $pub_ad->fetch_by_pmcid( $pmcid ) if defined $pmcid && ! defined $publication;
 
 
         if(defined $publication){
@@ -182,11 +189,7 @@ sub import_citations{
             $pub_ad->update_ucsc_id( $publication,  $data->{$pub}->{ucsc} ) if defined $data->{$pub}->{ucsc};
         }
         else{
-            ## add new publication, looking up missing data from EPMC
-            my $ref;
-            unless(defined  $data->{$pub}->{pmid} && defined  $data->{$pub}->{year} && defined $data->{$pub}->{pmcid}){
-                $ref = get_publication_info_from_epmc($data, $pub, $error_log);
-            }
+            ## add new publication
 
             ### create new object
             my $publication = Bio::EnsEMBL::Variation::Publication->new( 
@@ -216,7 +219,7 @@ sub get_publication_info_from_epmc{
 
 
     ### check is species mentioned if not human?
-    unless ($species_string =~/human/){         
+    unless ($species_string =~/human|homo/){         
         
         $mined = get_epmc_data( "PMC/$data->{$pub}->{pmcid}/textMinedTerms/ORGANISM" );
         
@@ -379,7 +382,7 @@ sub check_dbSNP{
 
     my $pub_ext_sth = $dba->dbc()->prepare(qq[ select publication.publication_id, publication.pmid
                                                from publication
-                                               where publication.pmcid is null
+                                               where publication.title is null
                                                and publication.pmid is not null                     
                                               ]);
 
@@ -519,13 +522,13 @@ sub get_current_UCSC_data{
 
     while( my $line = $cit_ext_sth->fetchrow_arrayref()){
 
-	next if $line->[6] < 1999;             ## pre-dbSNP - must be random match
-	next if $line->[7] eq "PMC$line->[1]"; ## incorrect/ missing PMID 
-	next if $line->[4] eq "NotFound" || $line->[4] eq "TOC" || $line->[4] eq "Highlights"
-	    || $line->[4]  eq "Contents" || $line->[4] eq "Table of Contents" || $line->[4]  eq "Volume Contents"
-	    || $line->[4]  eq "Cannabis" || $line->[4] eq "Index"  || $line->[4] eq "Author Index"
-	    || $line->[4]  =~/This Issue/i  	|| $line->[4]  =~/This Month in/
-	    || $line->[4] eq "Ensembl 2011"; 
+        next if $line->[6] < 1999;             ## pre-dbSNP - must be random match
+        next if $line->[7] eq "PMC$line->[1]"; ## incorrect/ missing PMID 
+        next if $line->[4] eq "NotFound" || $line->[4] eq "TOC" || $line->[4] eq "Highlights"
+            || $line->[4]  eq "Contents" || $line->[4] eq "Table of Contents" || $line->[4]  eq "Volume Contents"
+            || $line->[4]  eq "Cannabis" || $line->[4] eq "Index"  || $line->[4] eq "Author Index"
+            || $line->[4]  =~/This Issue/i      || $line->[4]  =~/This Month in/
+            || $line->[4] eq "Ensembl 2011"; 
 
         print $out join("\t", @{$line}) . "\n";
     }

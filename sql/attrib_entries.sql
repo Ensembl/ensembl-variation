@@ -1,18 +1,3 @@
--- Copyright [1999-2013] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
--- 
--- Licensed under the Apache License, Version 2.0 (the "License");
--- you may not use this file except in compliance with the License.
--- You may obtain a copy of the License at
--- 
---      http://www.apache.org/licenses/LICENSE-2.0
--- 
--- Unless required by applicable law or agreed to in writing, software
--- distributed under the License is distributed on an "AS IS" BASIS,
--- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
--- See the License for the specific language governing permissions and
--- limitations under the License.
-
-
 INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES (1, 'SO_accession', '', 'Sequence Ontology accession');
 INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES (2, 'SO_term', '', 'Sequence Ontology term');
 INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES (3, 'display_term', '', 'Ensembl display term');
@@ -144,6 +129,12 @@ INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (331, 3, 'Du
 INSERT IGNORE INTO attrib_set (attrib_set_id, attrib_id) VALUES (123, 253);
 INSERT IGNORE INTO attrib_set (attrib_set_id, attrib_id) VALUES (123, 254);
 INSERT IGNORE INTO attrib_set (attrib_set_id, attrib_id) VALUES (123, 331);
+INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (361, 2, 'novel_sequence_insertion');
+INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (362, 1, 'SO:0001838');
+INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (363, 3, 'Novel sequence insertion');
+INSERT IGNORE INTO attrib_set (attrib_set_id, attrib_id) VALUES (127, 361);
+INSERT IGNORE INTO attrib_set (attrib_set_id, attrib_id) VALUES (127, 362);
+INSERT IGNORE INTO attrib_set (attrib_set_id, attrib_id) VALUES (127, 363);
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (20, 2, 'intergenic_variant');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (294, 6, '38');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (19, 1, 'SO:0001628');
@@ -568,9 +559,9 @@ INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (332, 9, 'Af
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (333, 9, 'Affy_SNP6');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (337, 9, 'Cardio-Metabo_Chip');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (338, 9, 'HumanOmni1-Quad');
-INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (339, 9, 'Illumina_CytoSNP12v1');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (335, 9, 'Illumina_1M-duo');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (334, 9, 'Illumina_660Q');
+INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (339, 9, 'Illumina_CytoSNP12v1');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (342, 9, 'Human610_Quad');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (343, 9, 'HumanHap550');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (340, 9, 'HumanHap650Y');
@@ -578,6 +569,7 @@ INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (341, 9, 'Hu
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (245, 9, 'PorcineSNP60');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (344, 9, 'esp_6500');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (345, 9, 'clin_assoc');
+INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (360, 9, 'all_chips');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (348, 9, 'Chicken600K');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (349, 9, 'EquineSNP50');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (350, 9, 'BovineHD');
@@ -587,6 +579,8 @@ INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (355, 9, 'ph
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (354, 9, 'HumanOmni5');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (356, 9, 'OvineSNP50');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (357, 9, 'OvineHDSNP');
+INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (358, 9, 'ExomeChip');
+INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (359, 9, 'ImmunoChip');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (270, 8, 'tolerated');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (271, 8, 'deleterious');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (272, 7, 'probably damaging');
@@ -597,6 +591,9 @@ INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (224, 11, 'N
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (225, 11, 'Benign');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (226, 11, 'Pathogenic');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (227, 11, 'Uncertain Significance');
-INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (228, 11, 'Uncertain Significance: likely benign');
-INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (229, 11, 'Uncertain Significance: likely pathogenic');
+INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (228, 11, 'likely benign');
+INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (229, 11, 'likely pathogenic');
+INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (364, 11, 'not provided');
+INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (365, 11, 'association');
+INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (366, 11, 'risk factor');
 

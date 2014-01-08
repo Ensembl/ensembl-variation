@@ -75,7 +75,7 @@ sub store {
 	
 	# sort genotypes into rows by variation
 	my %by_var;
-	push @{$by_var{$_->variation->dbID.'_'.($_->{subsnp} ? $_->{subsnp} : '')}}, $_ for @$gts;
+	push @{$by_var{($_->{_variation_id} || $_->variation->dbID).'_'.($_->{subsnp} ? $_->{subsnp} : '')}}, $_ for @$gts;
 	
 	# get unique genotypes and codes
 	my %unique_gts = map {$_->genotype_string().'|'.(defined($_->phased) ? $_->phased : 'NULL') => 1} @$gts;
@@ -87,7 +87,7 @@ sub store {
   }
 	
 	# get variation objects
-	my %var_objs = map {$_->variation->dbID => $_->variation} @$gts;
+	my %var_objs = $merge ? map {($_->{_variation_id} || $_->variation->dbID) => $_->variation} @$gts : ();
 	
 	my $dbh = $self->dbc->db_handle;
 	
@@ -278,6 +278,12 @@ sub fetch_all_by_Variation {
 	}
 	
 	return $cached;
+}
+
+sub fetch_all_by_Variation_dbID {
+  my $self = shift;
+  my $dbID = shift;
+  return $self->generic_fetch('g.variation_id = '.$dbID);
 }
 
 sub fetch_all_by_Slice {
