@@ -504,33 +504,6 @@ sub get_reference_strain_name {
 #    return $name;
 }
 
-
-=head2 fetch_all_strains_with_coverage
-
-    Args       : none
-    Example    : my $strains = $ind_adaptor->fetch_all_strains_with_coverage();
-    Description: Retrieves strain that have coverage information
-    Returntype : listref of Bio::EnsEMBL::Variation::Individual objetcs
-    Exceptions : none
-    Caller     : web
-    Status     : At Risk
-
-=cut
-
-sub fetch_all_strains_with_coverage {
-    my $self = shift;
-    my $individual_id;
-    my @strains;
-    my $sth = $self->prepare(qq{SELECT DISTINCT individual_id from read_coverage});
-    $sth->execute();
-    $sth->bind_columns(\$individual_id);
-    while ($sth->fetch()){
-	    push @strains, $self->fetch_by_dbID($individual_id)
-    }
-    $sth->finish;
-    return \@strains;
-}
-
 sub _get_name_by_dbID {
   my $self = shift;
   my $dbID = shift;
