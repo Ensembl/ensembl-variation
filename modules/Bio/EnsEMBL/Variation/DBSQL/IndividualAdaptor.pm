@@ -399,7 +399,7 @@ sub fetch_all_by_parent_Individual {
 
 sub fetch_all_strains {
     my $self = shift;
-    return $self->generic_fetch("it.name = 'fully_inbred'");
+    return $self->generic_fetch("i.display in ('REFERENCE','DEFAULT','DISPLAYABLE')");
 }
 
 =head2 get_display_strains
