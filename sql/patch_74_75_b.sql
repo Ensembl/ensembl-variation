@@ -13,9 +13,11 @@
 -- limitations under the License.
 
 
-# update the schema_version entry in the meta table
-##################
-UPDATE meta SET meta_value = 75 WHERE meta_key = 'schema_version';
+##  drop read_coverage table
+DROP TABLE read_coverage;
 
-# patch identifier
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL,'patch', 'patch_74_75_a.sql|schema version');
+## remove meta entries
+DELETE FROM meta WHERE meta_key like 'read_coverage%';
+
+#patch identifier
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_74_75_b.sql|Drop read_coverage table');
