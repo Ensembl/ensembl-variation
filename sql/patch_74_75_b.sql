@@ -19,5 +19,8 @@ DROP TABLE read_coverage;
 ## remove meta entries
 DELETE FROM meta WHERE meta_key like 'read_coverage%';
 
+## remove meta_coord entry
+DELETE FROM meta_coord WHERE table_name = 'read_coverage';
+
 #patch identifier
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_74_75_b.sql|Drop read_coverage table');
