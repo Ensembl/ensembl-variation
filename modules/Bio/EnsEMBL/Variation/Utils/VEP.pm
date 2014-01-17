@@ -1543,110 +1543,17 @@ sub vf_to_consequences {
     # stats
     $config->{stats}->{existing}++ if defined($vf->{existing}) && scalar @{$vf->{existing}};
     
-    # regulatory stuff
-    if(!defined $config->{coding_only} && defined $config->{regulatory}) {
+    # pass a true argument to get_IntergenicVariation to stop it doing a reference allele check
+    # (to stay consistent with the rest of the VEP)
+    if(my $iv = $vf->get_IntergenicVariation(1)) {
+        return [] if defined($config->{coding_only}) || defined($config->{no_intergenic});
         
-        for my $rfv (@{ $vf->get_all_RegulatoryFeatureVariations }) {
-            
-            my $rf = $rfv->regulatory_feature;
-            
-            my $base_line = {
-                Feature_type => 'RegulatoryFeature',
-                Feature      => $rf->stable_id,
-            };
-            
-            $config->{stats}->{regfeats}->{$rf->stable_id} = 1;
-            
-            if(defined($config->{cell_type}) && scalar(@{$config->{cell_type}})) {
-                $base_line->{Extra}->{CELL_TYPE} = join ",",
-                    map {$_.':'.$rf->{cell_types}->{$_}}
-                    grep {$rf->{cell_types}->{$_}}
-                    @{$config->{cell_type}};
-                    
-                $base_line->{Extra}->{CELL_TYPE} =~ s/\s+/\_/g;
-            }
-            
-            # this currently always returns 'RegulatoryFeature', so we ignore it for now
-            #$base_line->{Extra}->{REG_FEAT_TYPE} = $rf->feature_type->name;
-            
-            my $method = $allele_method.'RegulatoryFeatureVariationAlleles';
-            for my $rfva (@{ $rfv->$method }) {
-                
-                my $line = init_line($config, $vf, $base_line);
-                
-                $line->{Allele}         = $rfva->variation_feature_seq;
-                $line->{Consequence}    = join ',', 
-                    map { $_->$term_method || $_->SO_term } 
-                        @{ $rfva->get_all_OverlapConsequences };
-                
-                map {$config->{stats}->{consequences}->{$_->$term_method}++} @{$rfva->get_all_OverlapConsequences};
-
-                $line = run_plugins($rfva, $line, $config);
-                        
-                push @return, $line;
-            }
-        }
-        
-        for my $mfv (@{ $vf->get_all_MotifFeatureVariations }) {
-            
-            my $mf = $mfv->motif_feature;
-           
-            # check that the motif has a binding matrix, if not there's not 
-            # much we can do so don't return anything
-
-            next unless defined $mf->binding_matrix;
-
-            my $matrix = $mf->binding_matrix->description.' '.$mf->display_label;
-            $matrix =~ s/\s+/\_/g;
-            
-            my $base_line = {
-                Feature_type => 'MotifFeature',
-                Feature      => $mf->binding_matrix->name,
-                Extra        => {
-                    MOTIF_NAME  => $matrix,
-                }
-            };
-            
-            if(defined($config->{cell_type}) && scalar(@{$config->{cell_type}})) {
-                $base_line->{Extra}->{CELL_TYPE} = join ",",
-                    map {$_.':'.$mf->{cell_types}->{$_}}
-                    grep {$mf->{cell_types}->{$_}}
-                    @{$config->{cell_type}};
-                    
-                $base_line->{Extra}->{CELL_TYPE} =~ s/\s+/\_/g;
-            }
-            
-            my $method = $allele_method.'MotifFeatureVariationAlleles';
-            for my $mfva (@{ $mfv->$method }) {
-                
-                my $line = init_line($config, $vf, $base_line);
-                
-                $line->{Extra}->{MOTIF_POS}          = $mfva->motif_start if defined $mfva->motif_start;
-                $line->{Extra}->{HIGH_INF_POS}       = ($mfva->in_informative_position ? 'Y' : 'N');
-                
-                my $delta = $mfva->motif_score_delta if $mfva->variation_feature_seq =~ /^[ACGT]+$/;
-
-                $line->{Extra}->{MOTIF_SCORE_CHANGE} = sprintf("%.3f", $delta) if defined $delta;
-
-                $line->{Allele}         = $mfva->variation_feature_seq;
-                $line->{Consequence}    = join ',', 
-                    map { $_->$term_method || $_->SO_term } 
-                        @{ $mfva->get_all_OverlapConsequences };
-                
-                map {$config->{stats}->{consequences}->{$_->$term_method}++} @{$mfva->get_all_OverlapConsequences};
-                
-                $line = run_plugins($mfva, $line, $config);
-                
-                push @return, $line;
-            }
-        }
+        my $method = $allele_method.'IntergenicVariationAlleles';
+        push @return, map {vfoa_to_line($config, $_)} @{$iv->$method};
     }
     
-    # get TVs
-    my $tvs = $vf->get_all_TranscriptVariations;
-    
     # only most severe
-    if(defined($config->{most_severe}) || defined($config->{summary})) {
+    elsif(defined($config->{most_severe}) || defined($config->{summary})) {
        
         my $line = init_line($config, $vf);
         
@@ -1660,109 +1567,127 @@ sub vf_to_consequences {
         push @return, $line;
     }
     
-    # pass a true argument to get_IntergenicVariation to stop it doing a reference allele check
-    # (to stay consistent with the rest of the VEP)
-    elsif(my $iv = $vf->get_IntergenicVariation(1)) {
-        return [] if defined($config->{coding_only}) || defined($config->{no_intergenic});
-        
-        my $method = $allele_method.'IntergenicVariationAlleles';
-        for my $iva (@{ $iv->$method }) {
-            
-            my $line = init_line($config, $vf);
-            
-            $line->{Allele} = $iva->variation_feature_seq;
-            
-            my $cons = $iva->get_all_OverlapConsequences->[0];
-            
-            $line->{Consequence} = $cons->$term_method || $cons->SO_term;
-            
-            $config->{stats}->{consequences}->{$cons->$term_method || $cons->SO_term}++;
-            
-            $line = run_plugins($iva, $line, $config);
-            
-            push @return, $line;
-        }
-    }
-    
-    # user wants only one conseqeunce per gene
-    elsif(defined($config->{per_gene})) {
-        
-        # sort the TVA objects into a hash by gene
-        my %by_gene;
-        
-        foreach my $tv(@$tvs) {
-            next if(defined $config->{coding_only} && !($tv->affects_cds));
-            
-            my $gene = $tv->transcript->{_gene_stable_id} || $config->{ga}->fetch_by_transcript_stable_id($tv->transcript->stable_id)->stable_id;
-            
-            my $method = $allele_method.'TranscriptVariationAlleles';
-            push @{$by_gene{$gene}}, @{$tv->$method};
-        }
-        
-        foreach my $gene(keys %by_gene) {
-            my ($lowest, $lowest_tva);
-            
-            # at the moment this means the one that comes out last will be picked
-            # if there is more than one TVA with the same rank of consequence
-            foreach my $tva(@{$by_gene{$gene}}) {
-                foreach my $oc(@{$tva->get_all_OverlapConsequences}) {
-                    if(!defined($lowest) || $oc->rank < $lowest) {
-                        $lowest = $oc->rank;
-                        $lowest_tva = $tva;
-                    }
-                }
-            }
-            
-            push @return, tva_to_line($config, $lowest_tva);
-        }
-    }
-    
-    # pick one per variant, using the following priority:
-    # 1: canonical status of transcript
-    # 2: protein_coding transcripts
-    # 3: rank of consequence type
-    # 4: length of transcript
-    elsif(defined($config->{pick})) {
-      
-      my @tv_info;
-      my %ranks = map {$_->SO_term => $_->rank} values %Bio::EnsEMBL::Variation::Utils::Constants::OVERLAP_CONSEQUENCES;
-      
-      foreach my $tv(@$tvs) {
-        next if(defined $config->{coding_only} && !($tv->affects_cds));
-        my $tr = $tv->transcript;
-        
-        push @tv_info, {
-          tv => $tv,
-          rank => $ranks{$tv->display_consequence},
-          canonical => $tr->is_canonical ? 1 : 0,
-          length => $tr->length(),
-          biotype => $tr->biotype eq 'protein_coding' ? 1 : 0,
-        };
-      }
-      
-      if(scalar @tv_info) {
-        my $picked = (sort {
-          $b->{canonical} <=> $a->{canonical} ||
-          $a->{biotype} <=> $b->{biotype} ||
-          $a->{rank} <=> $b->{rank} ||
-          $b->{length} <=> $a->{length}
-        } @tv_info)[0]->{tv};
-        
-        my $method = $allele_method.'TranscriptVariationAlleles';
-        push @return, map {tva_to_line($config, $_)} @{$picked->$method};
-      }
-    }
-    
+    # normal consequence processing
     else {
-        foreach my $tv(@$tvs) {
-            next if(defined $config->{coding_only} && !($tv->affects_cds));
-            
-            my $method = $allele_method.'TranscriptVariationAlleles';
-            push @return, map {tva_to_line($config, $_)} @{$tv->$method};
+        my $vfos;
+        my $method = $allele_method.'VariationFeatureOverlapAlleles';
+        
+        # include regulatory stuff?
+        if(!defined $config->{coding_only} && defined $config->{regulatory}) {
+          $vfos = $vf->get_all_VariationFeatureOverlaps;
         }
+        # otherwise just get transcript ones
+        else {
+          $vfos = $vf->get_all_TranscriptVariations;
+        }
+        
+        # grep out non-coding?
+        @$vfos = map {$_->affects_cds} @$vfos if defined($config->{coding_only});
+        
+        # get alleles
+        my @vfoas = map {@{$_->$method}} @{$vfos};
+        
+        # pick worst?
+        @vfoas = (pick_worst_vfoa($config, \@vfoas)) if defined($config->{pick});
+        
+        # pick per gene?
+        @vfoas = @{pick_vfoa_per_gene($config, \@vfoas)} if defined($config->{per_gene});
+        
+        # otherwise process all
+        push @return, map {vfoa_to_line($config, $_)} grep {defined($_)} @vfoas;
     }
     
     return \@return;
+}
+
+
+# picks the worst of all VariationFeatureOverlapAlleles so VEP only prints
+# one line of output. VFOAs are ordered by a heirarchy:
+# 1: canonical
+# 2: biotype (protein coding favoured)
+# 3: consequence rank
+# 4: transcript length
+sub pick_worst_vfoa {
+  my $config = shift;
+  my $vfoas = shift;
+  
+  my @vfoa_info;
+  my %ranks = map {$_->SO_term => $_->rank} values %Bio::EnsEMBL::Variation::Utils::Constants::OVERLAP_CONSEQUENCES;
+  
+  return $vfoas->[0] if scalar @$vfoas == 1;
+  
+  foreach my $vfoa(@$vfoas) {
+    my @ocs = sort {$a->rank <=> $b->rank} @{$vfoa->get_all_OverlapConsequences};
+    next unless scalar @ocs;
+    
+    # create a hash of info for this VFOA that will be used to rank it
+    my $info = {
+      vfoa => $vfoa,
+      rank => $ranks{$ocs[0]->SO_term},
+      
+      # these will only be used by transcript types, default to 0 for others
+      # to avoid writing an else clause below
+      canonical => 0,
+      length => 0,
+      biotype => 0
+    };
+    
+    if($vfoa->isa('Bio::EnsEMBL::Variation::TranscriptVariationAllele')) {
+      my $tr = $vfoa->feature;
+      $info->{canonical} = $tr->is_canonical ? 1 : 0;
+      $info->{length} = $tr->length();
+      $info->{biotype} = $tr->biotype eq 'protein_coding' ? 1 : 0;
+    }
+    
+    push @vfoa_info, $info;
+  }
+  
+  if(scalar @vfoa_info) {
+    my $picked = (sort {
+      $b->{canonical} <=> $a->{canonical} ||
+      $a->{biotype} <=> $b->{biotype} ||
+      $a->{rank} <=> $b->{rank} ||
+      $b->{length} <=> $a->{length}
+    } @vfoa_info)[0]->{vfoa};
+    
+    return $picked;
+  }
+  
+  return undef;
+}
+
+# pick one vfoa per gene
+# allow non-transcript types to pass through
+sub pick_vfoa_per_gene {
+  my $config = shift;
+  my $vfoas = shift;
+  
+  my @return;
+  my @tvas;
+  
+  # pick out TVAs
+  foreach my $vfoa(@$vfoas) {
+    if($vfoa->isa('Bio::EnsEMBL::Variation::TranscriptVariationAllele')) {
+      push @tvas, $vfoa;
+    }
+    else {
+      push @return, $vfoa;
+    }
+  }
+  
+  # sort the TVA objects into a hash by gene
+  my %by_gene;
+  
+  foreach my $tva(@tvas) {
+    my $gene = $tva->transcript->{_gene_stable_id} || $config->{ga}->fetch_by_transcript_stable_id($tva->transcript->stable_id)->stable_id;
+    push @{$by_gene{$gene}}, $tva;
+  }
+  
+  foreach my $gene(keys %by_gene) {
+    push @return, grep {defined($_)} pick_worst_vfoa($config, $by_gene{$gene});
+  }
+  
+  return \@return;
 }
 
 # get consequences for a structural variation feature
@@ -1911,7 +1836,61 @@ sub run_plugins {
     return $skip_line ? undef : $line_hash;
 }
 
-# turn a TranscriptVariationAllele into a line hash
+# turn a generic VariationFeatureOverlapAllele into a line hash
+sub vfoa_to_line {
+  my $config = shift;
+  my $vfoa = shift;
+  
+  # stats
+  my $term_method = $config->{terms}.'_term';
+  map {$config->{stats}->{consequences}->{$_->$term_method || $_->SO_term}++} @{$vfoa->get_all_OverlapConsequences};
+  
+  my $line;
+  
+  if($vfoa->isa('Bio::EnsEMBL::Variation::TranscriptVariationAllele')) {
+    $line = tva_to_line($config, $vfoa);
+  }
+  elsif($vfoa->isa('Bio::EnsEMBL::Variation::RegulatoryFeatureVariationAllele')) {
+    $line = rfva_to_line($config, $vfoa);
+  }
+  elsif($vfoa->isa('Bio::EnsEMBL::Variation::MotifFeatureVariationAllele')) {
+    $line = mfva_to_line($config, $vfoa);
+  }
+  elsif($vfoa->isa('Bio::EnsEMBL::Variation::IntergenicVariationAllele')) {
+    $line = iva_to_line($config, $vfoa);
+  }
+  else {
+    return undef;
+  }
+  
+  # add extra fields
+  $line = add_extra_fields($config, $line, $vfoa);
+  
+  # run plugins
+  $line = run_plugins($vfoa, $line, $config);
+  
+  return $line;
+}
+
+# process IntergenicVariationAllele
+sub iva_to_line {
+  my $config = shift;
+  my $iva = shift;
+  
+  my $line = init_line($config, $iva->variation_feature);
+  
+  $line->{Allele} = $iva->variation_feature_seq;
+  
+  my $cons = $iva->get_all_OverlapConsequences->[0];
+  
+  # method name for consequence terms
+  my $term_method = $config->{terms}.'_term';
+  $line->{Consequence} = $cons->$term_method || $cons->SO_term;
+  
+  return $line;
+}
+
+# process TranscriptVariationAllele
 sub tva_to_line {
     my $config = shift;
     my $tva = shift;
@@ -1943,7 +1922,6 @@ sub tva_to_line {
     
     # update stats
     $config->{stats}->{transcripts}->{$t->stable_id} = 1 if defined($t);
-    map {$config->{stats}->{consequences}->{$_}++} map {$_->$term_method || $_->SO_term} @{$tva->get_all_OverlapConsequences};
     
     if(defined($tv->translation_start)) {
         $config->{stats}->{protein_pos}->{int(10 * ($tv->translation_start / ($t->{_variation_effect_feature_cache}->{peptide} ? length($t->{_variation_effect_feature_cache}->{peptide}) : $t->translation->length)))}++;
@@ -2010,14 +1988,109 @@ sub tva_to_line {
         }
     }
     
-    $line = add_extra_fields($config, $line, $tva);
-    
-    # allele number
-    if(defined($config->{allele_number})) {
-      $line->{Extra}->{ALLELE_NUM} = $tv->variation_feature->{_allele_nums}->{$tva->variation_feature_seq} || '?' if $tv->variation_feature->{_allele_nums};
-    }
-    
     return $line;
+}
+
+# process RegulatoryFeatureVariationAllele
+sub rfva_to_line {
+  my $config = shift;
+  my $rfva = shift;
+  
+  # method name for consequence terms
+  my $term_method = $config->{terms}.'_term';
+  
+  # method name stub for getting *VariationAlleles
+  my $allele_method = defined($config->{process_ref_homs}) ? 'get_all_' : 'get_all_alternate_';
+  
+  my $rf = $rfva->regulatory_feature;
+  
+  my $base_line = {
+    Feature_type => 'RegulatoryFeature',
+    Feature      => $rf->stable_id,
+  };
+  
+  $config->{stats}->{regfeats}->{$rf->stable_id} = 1;
+  
+  if(defined($config->{cell_type}) && scalar(@{$config->{cell_type}})) {
+    $base_line->{Extra}->{CELL_TYPE} = join ",",
+      map {$_.':'.$rf->{cell_types}->{$_}}
+      grep {$rf->{cell_types}->{$_}}
+      @{$config->{cell_type}};
+    
+    $base_line->{Extra}->{CELL_TYPE} =~ s/\s+/\_/g;
+  }
+  
+  # this currently always returns 'RegulatoryFeature', so we ignore it for now
+  #$base_line->{Extra}->{REG_FEAT_TYPE} = $rf->feature_type->name;
+  
+  my $method = $allele_method.'RegulatoryFeatureVariationAlleles';
+  
+  my $line = init_line($config, $rfva->variation_feature, $base_line);
+  
+  $line->{Allele}         = $rfva->variation_feature_seq;
+  $line->{Consequence}    = join ',', 
+    map { $_->$term_method || $_->SO_term } 
+    @{ $rfva->get_all_OverlapConsequences };
+  
+  $line = run_plugins($rfva, $line, $config);
+  
+  return $line;
+}
+
+# process MotifFeatureVariationAllele
+sub mfva_to_line {
+  my $config = shift;
+  my $mfva = shift;
+  
+  # method name for consequence terms
+  my $term_method = $config->{terms}.'_term';
+  
+  # method name stub for getting *VariationAlleles
+  my $allele_method = defined($config->{process_ref_homs}) ? 'get_all_' : 'get_all_alternate_';
+  
+  my $mf = $mfva->motif_feature;
+  
+  # check that the motif has a binding matrix, if not there's not 
+  # much we can do so don't return anything
+  return undef unless defined $mf->binding_matrix;
+  
+  my $matrix = $mf->binding_matrix->description.' '.$mf->display_label;
+  $matrix =~ s/\s+/\_/g;
+  
+  my $base_line = {
+    Feature_type => 'MotifFeature',
+    Feature      => $mf->binding_matrix->name,
+    Extra        => {
+      MOTIF_NAME  => $matrix,
+    }
+  };
+  
+  if(defined($config->{cell_type}) && scalar(@{$config->{cell_type}})) {
+    $base_line->{Extra}->{CELL_TYPE} = join ",",
+      map {$_.':'.$mf->{cell_types}->{$_}}
+      grep {$mf->{cell_types}->{$_}}
+      @{$config->{cell_type}};
+    
+    $base_line->{Extra}->{CELL_TYPE} =~ s/\s+/\_/g;
+  }
+  
+  my $method = $allele_method.'MotifFeatureVariationAlleles';
+  
+  my $line = init_line($config, $mfva->variation_feature, $base_line);
+  
+  $line->{Extra}->{MOTIF_POS}          = $mfva->motif_start if defined $mfva->motif_start;
+  $line->{Extra}->{HIGH_INF_POS}       = ($mfva->in_informative_position ? 'Y' : 'N');
+  
+  my $delta = $mfva->motif_score_delta if $mfva->variation_feature_seq =~ /^[ACGT]+$/;
+  
+  $line->{Extra}->{MOTIF_SCORE_CHANGE} = sprintf("%.3f", $delta) if defined $delta;
+  
+  $line->{Allele}         = $mfva->variation_feature_seq;
+  $line->{Consequence}    = join ',', 
+    map { $_->$term_method || $_->SO_term } 
+    @{ $mfva->get_all_OverlapConsequences };
+  
+  return $line;
 }
 
 sub add_extra_fields {
@@ -2030,11 +2103,13 @@ sub add_extra_fields {
         $line->{Extra}->{SV} = $bvfoa->base_variation_feature->{overlapping_svs};
     }
     
+    # allele number
+    if(defined($config->{allele_number})) {
+      $line->{Extra}->{ALLELE_NUM} = $bvfoa->variation_feature->{_allele_nums}->{$bvfoa->variation_feature_seq} || '?' if $bvfoa->variation_feature->{_allele_nums};
+    }
+    
     # add transcript-specific fields
     $line = add_extra_fields_transcript($config, $line, $bvfoa) if $bvfoa->isa('Bio::EnsEMBL::Variation::BaseTranscriptVariationAllele');
-    
-    # run plugins
-    $line = run_plugins($bvfoa, $line, $config);
     
     return $line;
 }
