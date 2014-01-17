@@ -2165,6 +2165,7 @@ sub add_extra_fields_transcript {
         $source = $tr->{_gene_symbol_source};
         
         if(!defined($symbol)) {
+          
             if(!defined($gene)) {
                 $gene = $config->{ga}->fetch_by_transcript_stable_id($tr->stable_id);
             }
@@ -2172,6 +2173,11 @@ sub add_extra_fields_transcript {
             if(my $xref = $gene->display_xref) {
                 $symbol = $xref->display_id;
                 $source = $xref->dbname;
+            }
+            
+            else {
+              my ($entry) = @{$gene->get_all_DBEntries('RefSeq_gene_name')};
+              $symbol = $entry->display_id if $entry;
             }
         }
         
@@ -4079,6 +4085,11 @@ sub prefetch_transcript_data {
             if(my $xref = $tr->{_gene}->display_xref) {
                 $tr->{_gene_symbol} = $xref->display_id;
                 $tr->{_gene_symbol_source} = $xref->dbname;
+            }
+            
+            else {
+                my ($entry) = @{$tr->{_gene}->get_all_DBEntries('RefSeq_gene_name')};
+                $tr->{_gene_symbol} = $entry->display_id if $entry;
             }
             
             # cache it on the gene object too
