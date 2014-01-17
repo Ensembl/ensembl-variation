@@ -5117,11 +5117,6 @@ sub write_cache_info {
         }
     }
     
-    # disabled options for refseq
-    if(defined($config->{refseq})) {
-        print OUT "disabled\t".(join ",", qw(symbol))."\n";
-    }
-    
     # variation columns
     print OUT "variation_cols\t".(join ",", @{get_variation_columns($config)});
     print OUT "\n";
