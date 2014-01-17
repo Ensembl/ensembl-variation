@@ -1501,108 +1501,104 @@ sub vf_list_to_cons {
 
 # takes a variation feature and returns ready to print consequence information
 sub vf_to_consequences {
-    my $config = shift;
-    my $vf = shift;
+  my $config = shift;
+  my $vf = shift;
+  
+  # force empty hash into object's transcript_variations if undefined from whole_genome_fetch
+  # this will stop the API trying to go off and fill it again
+  $vf->{transcript_variations} ||= {} if defined $config->{whole_genome};
+  
+  # pos stats
+  $config->{stats}->{chr}->{$vf->{chr}}->{1e6 * int($vf->start / 1e6)}++;
+  
+  $config->{stats}->{var_cons}->{$vf->display_consequence}++;
+  
+  # use a different method for SVs
+  return svf_to_consequences($config, $vf) if $vf->isa('Bio::EnsEMBL::Variation::StructuralVariationFeature'); 
+  
+  my @return = ();
+  
+  # get allele nums
+  if(defined($config->{allele_number})) {
+    my @alleles = split /\//, $vf->allele_string || '';
+    %{$vf->{_allele_nums}} = map {$alleles[$_] => $_} (0..$#alleles);
+  }
+  
+  # method name stub for getting *VariationAlleles
+  my $allele_method = defined($config->{process_ref_homs}) ? 'get_all_' : 'get_all_alternate_';
+  
+  # find any co-located existing VFs
+  $vf->{existing} ||= find_existing($config, $vf) if defined $config->{check_existing};
+  
+  # get stats
+  my $so_term = SO_variation_class($vf->allele_string, 1);
+  if(defined($so_term)) {
+    $config->{stats}->{classes}->{$so_term}++;
+    $config->{stats}->{allele_changes}->{$vf->allele_string}++ if $so_term eq 'SNV';
+  }
+  
+  # stats
+  $config->{stats}->{existing}++ if defined($vf->{existing}) && scalar @{$vf->{existing}};
+  
+  # prefetch intergenic variation
+  # pass a true argument to get_IntergenicVariation to stop it doing a reference allele check
+  # (to stay consistent with the rest of the VEP)
+  $vf->get_IntergenicVariation(1);
+  
+  # only most severe or summary?
+  if(defined($config->{most_severe}) || defined($config->{summary})) {
     
-    # force empty hash into object's transcript_variations if undefined from whole_genome_fetch
-    # this will stop the API trying to go off and fill it again
-    $vf->{transcript_variations} ||= {} if defined $config->{whole_genome};
+    my $line = init_line($config, $vf);
     
-    # pos stats
-    $config->{stats}->{chr}->{$vf->{chr}}->{1e6 * int($vf->start / 1e6)}++;
-    
-    $config->{stats}->{var_cons}->{$vf->display_consequence}++;
-    
-    # use a different method for SVs
-    return svf_to_consequences($config, $vf) if $vf->isa('Bio::EnsEMBL::Variation::StructuralVariationFeature'); 
-    
-    my @return = ();
-    
-    # get allele nums
-    if(defined($config->{allele_number})) {
-      my @alleles = split /\//, $vf->allele_string || '';
-      %{$vf->{_allele_nums}} = map {$alleles[$_] => $_} (0..$#alleles);
+    if(defined($config->{summary})) {
+      $line->{Consequence} = join ",", @{$vf->consequence_type($config->{terms}) || $vf->consequence_type};
     }
-    
-    # method name for consequence terms
-    my $term_method = $config->{terms}.'_term';
-    
-    # method name stub for getting *VariationAlleles
-    my $allele_method = defined($config->{process_ref_homs}) ? 'get_all_' : 'get_all_alternate_';
-    
-    # find any co-located existing VFs
-    $vf->{existing} ||= find_existing($config, $vf) if defined $config->{check_existing};
-    
-    # get stats
-    my $so_term = SO_variation_class($vf->allele_string, 1);
-    if(defined($so_term)) {
-        $config->{stats}->{classes}->{$so_term}++;
-        $config->{stats}->{allele_changes}->{$vf->allele_string}++ if $so_term eq 'SNV';
-    }
-    
-    # stats
-    $config->{stats}->{existing}++ if defined($vf->{existing}) && scalar @{$vf->{existing}};
-    
-    # pass a true argument to get_IntergenicVariation to stop it doing a reference allele check
-    # (to stay consistent with the rest of the VEP)
-    if(my $iv = $vf->get_IntergenicVariation(1)) {
-        return [] if defined($config->{coding_only}) || defined($config->{no_intergenic});
-        
-        my $method = $allele_method.'IntergenicVariationAlleles';
-        push @return, map {vfoa_to_line($config, $_)} @{$iv->$method};
-    }
-    
-    # only most severe
-    elsif(defined($config->{most_severe}) || defined($config->{summary})) {
-       
-        my $line = init_line($config, $vf);
-        
-        if(defined($config->{summary})) {
-            $line->{Consequence} = join ",", @{$vf->consequence_type($config->{terms}) || $vf->consequence_type};
-        }
-        else {
-            $line->{Consequence} = $vf->display_consequence($config->{terms}) || $vf->display_consequence;
-        }
-        
-        push @return, $line;
-    }
-    
-    # normal consequence processing
     else {
-        my $vfos;
-        my $method = $allele_method.'VariationFeatureOverlapAlleles';
-        
-        # include regulatory stuff?
-        if(!defined $config->{coding_only} && defined $config->{regulatory}) {
-          $vfos = $vf->get_all_VariationFeatureOverlaps;
-        }
-        # otherwise just get transcript ones
-        else {
-          $vfos = $vf->get_all_TranscriptVariations;
-        }
-        
-        # grep out non-coding?
-        @$vfos = map {$_->affects_cds} @$vfos if defined($config->{coding_only});
-        
-        # get alleles
-        my @vfoas = map {@{$_->$method}} @{$vfos};
-        
-        # pick worst?
-        @vfoas = (pick_worst_vfoa($config, \@vfoas)) if defined($config->{pick});
-        
-        # pick per gene?
-        @vfoas = @{pick_vfoa_per_gene($config, \@vfoas)} if defined($config->{per_gene});
-        
-        # otherwise process all
-        push @return, map {vfoa_to_line($config, $_)} grep {defined($_)} @vfoas;
+      $line->{Consequence} = $vf->display_consequence($config->{terms}) || $vf->display_consequence;
     }
     
-    return \@return;
+    push @return, $line;
+  }
+  
+  # otherwise do normal consequence processing
+  else {
+    my $vfos;
+    my $method = $allele_method.'VariationFeatureOverlapAlleles';
+    
+    # include regulatory stuff?
+    if(!defined $config->{coding_only} && defined $config->{regulatory}) {
+      $vfos = $vf->get_all_VariationFeatureOverlaps;
+    }
+    # otherwise just get transcript & intergenic ones
+    else {
+      @$vfos = grep {defined($_)} (
+        @{$vf->get_all_TranscriptVariations},
+        $vf->get_IntergenicVariation
+      );
+    }
+    
+    # grep out non-coding?
+    @$vfos = grep {$_->can('affects_cds') && $_->affects_cds} @$vfos if defined($config->{coding_only});
+    
+    # get alleles
+    my @vfoas = map {@{$_->$method}} @{$vfos};
+    
+    # pick worst?
+    @vfoas = (pick_worst_vfoa($config, \@vfoas)) if defined($config->{pick});
+    
+    # pick per gene?
+    @vfoas = @{pick_vfoa_per_gene($config, \@vfoas)} if defined($config->{per_gene});
+    
+    # process remaining
+    push @return, map {vfoa_to_line($config, $_)} grep {defined($_)} @vfoas;
+  }
+  
+  return \@return;
 }
 
 
-# picks the worst of all VariationFeatureOverlapAlleles so VEP only prints
-# one line of output. VFOAs are ordered by a heirarchy:
+# picks the worst of a list of VariationFeatureOverlapAlleles
+# VFOAs are ordered by a heirarchy:
 # 1: canonical
 # 2: biotype (protein coding favoured)
 # 3: consequence rank
@@ -1892,103 +1888,103 @@ sub iva_to_line {
 
 # process TranscriptVariationAllele
 sub tva_to_line {
-    my $config = shift;
-    my $tva = shift;
+  my $config = shift;
+  my $tva = shift;
+  
+  my $tv = $tva->transcript_variation;
+  my $t  = $tv->transcript;
+  
+  # method name for consequence terms
+  my $term_method = $config->{terms}.'_term';
+  
+  my $base_line = {
+    Feature_type     => 'Transcript',
+    Feature          => (defined $t ? $t->stable_id : undef),
+    cDNA_position    => format_coords($tv->cdna_start, $tv->cdna_end).
+      (defined($config->{total_length}) ? '/'.$t->length : ''),
+    CDS_position     => format_coords($tv->cds_start, $tv->cds_end).
+      (defined($config->{total_length}) && $t->{_variation_effect_feature_cache}->{translateable_seq} ?
+      '/'.length($t->{_variation_effect_feature_cache}->{translateable_seq}) : ''
+      ),
+    Protein_position => format_coords($tv->translation_start, $tv->translation_end).
+      (defined($config->{total_length}) && $t->{_variation_effect_feature_cache}->{peptide} ?
+      '/'.length($t->{_variation_effect_feature_cache}->{peptide}) : ''
+      ),
+    Allele           => $tva->variation_feature_seq,
+    Amino_acids      => $tva->pep_allele_string,
+    Codons           => $tva->display_codon_allele_string,
+    Consequence      => join ",", map {$_->$term_method || $_->SO_term} sort {$a->rank <=> $b->rank} @{$tva->get_all_OverlapConsequences},
+  };
+  
+  # update stats
+  $config->{stats}->{transcripts}->{$t->stable_id} = 1 if defined($t);
+  
+  if(defined($tv->translation_start)) {
+    $config->{stats}->{protein_pos}->{int(10 * ($tv->translation_start / ($t->{_variation_effect_feature_cache}->{peptide} ? length($t->{_variation_effect_feature_cache}->{peptide}) : $t->translation->length)))}++;
+  }
+  
+  my $line = init_line($config, $tva->variation_feature, $base_line);
+  
+  # HGVS
+  if(defined $config->{hgvs}) {
+    my $hgvs_t = $tva->hgvs_transcript;
+    my $hgvs_p = $tva->hgvs_protein;
     
-    my $tv = $tva->transcript_variation;
-    my $t  = $tv->transcript;
+    # URI encode "="
+    $hgvs_p =~ s/\=/\%3D/g if $hgvs_p && !defined($config->{no_escape});
     
-    # method name for consequence terms
-    my $term_method = $config->{terms}.'_term';
+    $line->{Extra}->{HGVSc} = $hgvs_t if $hgvs_t;
+    $line->{Extra}->{HGVSp} = $hgvs_p if $hgvs_p;
+  }
+  
+  foreach my $tool (qw(SIFT PolyPhen)) {
+    my $lc_tool = lc($tool);
     
-    my $base_line = {
-        Feature_type     => 'Transcript',
-        Feature          => (defined $t ? $t->stable_id : undef),
-        cDNA_position    => format_coords($tv->cdna_start, $tv->cdna_end).
-          (defined($config->{total_length}) ? '/'.$t->length : ''),
-        CDS_position     => format_coords($tv->cds_start, $tv->cds_end).
-          (defined($config->{total_length}) && $t->{_variation_effect_feature_cache}->{translateable_seq} ?
-            '/'.length($t->{_variation_effect_feature_cache}->{translateable_seq}) : ''
-          ),
-        Protein_position => format_coords($tv->translation_start, $tv->translation_end).
-          (defined($config->{total_length}) && $t->{_variation_effect_feature_cache}->{peptide} ?
-            '/'.length($t->{_variation_effect_feature_cache}->{peptide}) : ''
-          ),
-        Allele           => $tva->variation_feature_seq,
-        Amino_acids      => $tva->pep_allele_string,
-        Codons           => $tva->display_codon_allele_string,
-        Consequence      => join ",", map {$_->$term_method || $_->SO_term} sort {$a->rank <=> $b->rank} @{$tva->get_all_OverlapConsequences},
-    };
-    
-    # update stats
-    $config->{stats}->{transcripts}->{$t->stable_id} = 1 if defined($t);
-    
-    if(defined($tv->translation_start)) {
-        $config->{stats}->{protein_pos}->{int(10 * ($tv->translation_start / ($t->{_variation_effect_feature_cache}->{peptide} ? length($t->{_variation_effect_feature_cache}->{peptide}) : $t->translation->length)))}++;
-    }
-    
-    my $line = init_line($config, $tva->variation_feature, $base_line);
-    
-    # HGVS
-    if(defined $config->{hgvs}) {
-        my $hgvs_t = $tva->hgvs_transcript;
-        my $hgvs_p = $tva->hgvs_protein;
+    if (my $opt = $config->{$lc_tool}) {
+      my $want_pred  = $opt =~ /^p/i;
+      my $want_score = $opt =~ /^s/i;
+      my $want_both  = $opt =~ /^b/i;
+      
+      if ($want_both) {
+        $want_pred  = 1;
+        $want_score = 1;
+      }
+      
+      next unless $want_pred || $want_score;
+      
+      my $pred_meth  = $lc_tool.'_prediction';
+      my $score_meth = $lc_tool.'_score';
+      my $analysis   = $config->{polyphen_analysis} if $lc_tool eq 'polyphen';
+      
+      my $pred = $tva->$pred_meth($analysis);
+      
+      if($pred) {
         
-        # URI encode "="
-        $hgvs_p =~ s/\=/\%3D/g if $hgvs_p && !defined($config->{no_escape});
-        
-        $line->{Extra}->{HGVSc} = $hgvs_t if $hgvs_t;
-        $line->{Extra}->{HGVSp} = $hgvs_p if $hgvs_p;
-    }
-    
-    foreach my $tool (qw(SIFT PolyPhen)) {
-        my $lc_tool = lc($tool);
-        
-        if (my $opt = $config->{$lc_tool}) {
-            my $want_pred   = $opt =~ /^p/i;
-            my $want_score  = $opt =~ /^s/i;
-            my $want_both   = $opt =~ /^b/i;
-            
-            if ($want_both) {
-                $want_pred  = 1;
-                $want_score = 1;
-            }
-            
-            next unless $want_pred || $want_score;
-            
-            my $pred_meth   = $lc_tool.'_prediction';
-            my $score_meth  = $lc_tool.'_score';
-            my $analysis    = $config->{polyphen_analysis} if $lc_tool eq 'polyphen';
-            
-            my $pred = $tva->$pred_meth($analysis);
-            
-            if($pred) {
-                
-                if ($want_pred) {
-                    $pred =~ s/\s+/\_/;
-                    $line->{Extra}->{$tool} = $pred;
-                }
-                    
-                if ($want_score) {
-                    my $score = $tva->$score_meth($analysis);
-                    
-                    if(defined $score) {
-                        if($want_pred) {
-                            $line->{Extra}->{$tool} .= "($score)";
-                        }
-                        else {
-                            $line->{Extra}->{$tool} = $score;
-                        }
-                    }
-                }
-            }
-            
-            # update stats
-            $config->{stats}->{$tool}->{$tva->$pred_meth}++ if $tva->$pred_meth;
+        if ($want_pred) {
+          $pred =~ s/\s+/\_/;
+          $line->{Extra}->{$tool} = $pred;
         }
+          
+        if ($want_score) {
+          my $score = $tva->$score_meth($analysis);
+          
+          if(defined $score) {
+            if($want_pred) {
+              $line->{Extra}->{$tool} .= "($score)";
+            }
+            else {
+              $line->{Extra}->{$tool} = $score;
+            }
+          }
+        }
+      }
+      
+      # update stats
+      $config->{stats}->{$tool}->{$tva->$pred_meth}++ if $tva->$pred_meth;
     }
-    
-    return $line;
+  }
+  
+  return $line;
 }
 
 # process RegulatoryFeatureVariationAllele
