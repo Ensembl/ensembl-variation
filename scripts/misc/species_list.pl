@@ -48,7 +48,7 @@ GetOptions(
      'hlist=s' => \$hlist,
      'phost=s' => \$phost,
      'site=s'  => \$site,
-		 'etype=s' => \$etype
+     'etype=s' => \$etype
 );
 
 if (!$e_version) {
@@ -114,10 +114,10 @@ foreach my $hostname (@hostnames) {
       } 
     }
     print "\n";
-		
-		my $label_name = ucfirst($s_name);
-		   $label_name =~ s/_/ /g;
-		$species_list{$s_name}{label} = $label_name;   
+    
+    my $label_name = ucfirst($s_name);
+       $label_name =~ s/_/ /g;
+    $species_list{$s_name}{label} = $label_name;   
     
     # Previous database (and sources)
     my $p_version = $e_version-1;
@@ -135,43 +135,48 @@ my $count_rows = 0;
 
 foreach my $sp (sort keys(%species_list)) {
   if ($count_rows == $nb_sp_by_col) {
-	  $html_content .= qq{\n  </td>\n  <td style="width:10px"></td>\n  <td>\n};
-		$count_rows = 0;
-	}
-	my $label = $species_list{$sp}{label};
-	my $img_src = "/i/species/48/".ucfirst($sp).".png";
-	
-	if ($species_list{$sp}{new}) {
-	  $html_content .= qq{
+    $html_content .= qq{\n  </td>\n  <td style="width:10px"></td>\n  <td>\n};
+    $count_rows = 0;
+  }
+  my $label = $species_list{$sp}{label};
+  my $uc_sp = ucfirst($sp);      
+  my $img_src = "/i/species/48/$uc_sp.png";
+  
+  if ($species_list{$sp}{new}) {
+    $html_content .= qq{
     <div style="margin-bottom:5px;padding-right:4px;overflow:hidden;background-color:#336;padding:1px;color:#FFF;border-radius:8px">
-	    <div style="float:left">
-	      <img src="$img_src" alt="$label" class="sp-thumb" style="float:left;margin-right:4px;vertical-align:middle" />
-	    </div>
-	    <div style="float:left;padding-top:2px;padding-left:2px">
+      <div style="float:left">
+        <a href="/$uc_sp/Info/Index" title="$label Ensembl Home page"/>
+          <img src="$img_src" alt="$label" class="sp-thumb" style="float:left;margin-right:4px;vertical-align:middle" />
+        </a>
+      </div>
+      <div style="float:left;padding-top:2px;padding-left:2px">
         <span style="font-style:italic">$label</span><br />
         <span><a href="sources_documentation.html#$sp" style="color:#AAF">[sources]</a></span><br />
         <span style="font-weight:bold;color:#F00">New species in Variation</span>
       </div>
     </div>\n};
-	}
-	else {
+  }
+  else {
     $html_content .= qq{
     <div style="margin-bottom:5px;padding-right:4px;overflow:hidden">
-	    <img src="$img_src" alt="$label" class="sp-thumb" style="float:left;margin-right:4px;vertical-align:middle" />
-	    <div style="float:left;padding-top:6px">
+      <a href="/$uc_sp/Info/Index" title="$label Ensembl Home page" style="float:left"/>
+        <img src="$img_src" alt="$label" class="sp-thumb" style="margin-right:4px;vertical-align:middle" />
+      </a>
+      <div style="float:left;padding-top:6px">
         <div style="font-style:italic;margin-bottom:3px">$label</div>
         <span><a href="sources_documentation.html#$sp">[sources]</a></span>
       </div>
     </div>\n};
-	}
-	$count_rows ++;
+  }
+  $count_rows ++;
 }
 $html_content .= qq{</td></tr></table>\n};
 
 
 ## HTML/output file ##
 open  HTML, "> $html_file" or die "Can't open $html_file : $!";
-print HTML qq{<p style="padding-top:0px;margin-top:0px">There are currently <b>$count_species</b> variation databases in Ensembl:</p>\n};
+print HTML qq{<p style="padding-top:0px;margin-top:0px">There are currently <span style="font-weight:bold;font-size:1.1em;color:#000">$count_species</span> variation databases in Ensembl:</p>\n};
 print HTML $html_content;
 close(HTML);
 

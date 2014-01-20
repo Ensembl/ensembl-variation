@@ -57,6 +57,7 @@ my %colour = (
     'complex_structural_alteration' => '#99CCFF',
     'tandem_duplication'            => '#732E00',
     'mobile_element_insertion'      => '#FFCC00',
+    'novel_sequence_insertion'      => '#FFCC00',
     'translocation'                 => '#C3A4FF',
     'deletion'                      => '#CC0000',
     'duplication'                   => '#000000',
