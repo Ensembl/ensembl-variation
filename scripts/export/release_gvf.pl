@@ -18,7 +18,7 @@
 =head1 CONTACT
 
   Please email comments or questions to the public Ensembl
-  developers list at <dev@ensembl.org>.
+  developers list at <http://lists.ensembl.org/mailman/listinfo/dev>.
 
   Questions may also be sent to the Ensembl help desk at
   <helpdesk.org>.
@@ -290,5 +290,5 @@ Display this documentation
 
 =head1
 
-For help with this script address questions to dev@ensembl.org
+For help with this script address questions to http://lists.ensembl.org/mailman/listinfo/dev
 

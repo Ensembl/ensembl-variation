@@ -24,4 +24,4 @@ This is what would be the "core" information necessary to have a useful (and usa
 
 In any case, once you have your database, you can use the import_Sanger_database.pl script to import this database in your local copy. This script should take care of all the id headaches.
 
-If you have any problems/questions creating the database, don't hesitate to contact us at dev@ensembl.org
+If you have any problems/questions creating the database, don't hesitate to contact us at http://lists.ensembl.org/mailman/listinfo/dev

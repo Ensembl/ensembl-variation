@@ -307,4 +307,4 @@ Display this documentation
 
 =head1
 
-For help with this script address questions to dev@ensembl.org
+For help with this script address questions to http://lists.ensembl.org/mailman/listinfo/dev
