@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <graphml xmlns="http://graphml.graphdrawing.org/xmlns" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:y="http://www.yworks.com/xml/graphml" xmlns:yed="http://www.yworks.com/xml/yed/3" xsi:schemaLocation="http://graphml.graphdrawing.org/xmlns http://www.yworks.com/xml/schema/graphml/1.1/ygraphml.xsd">
-  <!--Created by yFiles for Java 2.10-->
+  <!--Created by yFiles for Java 2.11-->
   <key for="graphml" id="d0" yfiles.type="resources"/>
   <key for="port" id="d1" yfiles.type="portgraphics"/>
   <key for="port" id="d2" yfiles.type="portgeometry"/>
@@ -55,7 +55,7 @@
     <node id="n2">
       <data key="d6">
         <y:ShapeNode>
-          <y:Geometry height="30.0" width="30.0" x="830.96289996265" y="442.5208333333329"/>
+          <y:Geometry height="30.0" width="30.0" x="913.3202352145496" y="442.5208333333329"/>
           <y:Fill hasColor="false" transparent="false"/>
           <y:BorderStyle hasColor="false" type="line" width="1.0"/>
           <y:NodeLabel alignment="center" autoSizePolicy="content" fontFamily="Arial" fontSize="25" fontStyle="plain" hasBackgroundColor="false" hasLineColor="false" height="31.9296875" modelName="custom" textColor="#000000" visible="true" width="17.90380859375" x="6.048095703125" y="-0.96484375">1<y:LabelModel>
@@ -72,7 +72,7 @@
     <node id="n3">
       <data key="d6">
         <y:ShapeNode>
-          <y:Geometry height="30.0" width="30.0" x="816.0824218750006" y="254.79166666666583"/>
+          <y:Geometry height="30.0" width="30.0" x="1004.9759549857391" y="254.79166666666583"/>
           <y:Fill hasColor="false" transparent="false"/>
           <y:BorderStyle hasColor="false" type="line" width="1.0"/>
           <y:NodeLabel alignment="center" autoSizePolicy="content" fontFamily="Arial" fontSize="25" fontStyle="plain" hasBackgroundColor="false" hasLineColor="false" height="31.9296875" modelName="custom" textColor="#000000" visible="true" width="41.5244140625" x="-5.76220703125" y="-0.96484375">0..*<y:LabelModel>
@@ -565,7 +565,7 @@
     <node id="n32">
       <data key="d6">
         <y:ShapeNode>
-          <y:Geometry height="30.0" width="30.0" x="715.122913327362" y="560.3921874999999"/>
+          <y:Geometry height="30.0" width="30.0" x="715.122913327362" y="557.3921874999999"/>
           <y:Fill hasColor="false" transparent="false"/>
           <y:BorderStyle hasColor="false" type="line" width="1.0"/>
           <y:NodeLabel alignment="center" autoSizePolicy="content" fontFamily="Arial" fontSize="25" fontStyle="plain" hasBackgroundColor="false" hasLineColor="false" height="31.9296875" modelName="custom" textColor="#000000" visible="true" width="17.90380859375" x="6.048095703125" y="-0.96484375">1<y:LabelModel>
@@ -582,23 +582,6 @@
     <node id="n33">
       <data key="d6">
         <y:ShapeNode>
-          <y:Geometry height="30.0" width="30.0" x="468.7086952963931" y="433.9415981529204"/>
-          <y:Fill hasColor="false" transparent="false"/>
-          <y:BorderStyle hasColor="false" type="line" width="1.0"/>
-          <y:NodeLabel alignment="center" autoSizePolicy="content" fontFamily="Arial" fontSize="25" fontStyle="plain" hasBackgroundColor="false" hasLineColor="false" height="31.9296875" modelName="custom" textColor="#000000" visible="true" width="41.5244140625" x="-5.76220703125" y="21.834581121106055">0..*<y:LabelModel>
-              <y:SmartNodeLabelModel distance="4.0"/>
-            </y:LabelModel>
-            <y:ModelParameter>
-              <y:SmartNodeLabelModelParameter labelRatioX="0.0" labelRatioY="-0.24426875055091152" nodeRatioX="0.0" nodeRatioY="0.5" offsetX="0.0" offsetY="0.0" upX="0.0" upY="-1.0"/>
-            </y:ModelParameter>
-          </y:NodeLabel>
-          <y:Shape type="rectangle"/>
-        </y:ShapeNode>
-      </data>
-    </node>
-    <node id="n34">
-      <data key="d6">
-        <y:ShapeNode>
           <y:Geometry height="30.0" width="30.0" x="468.7086952963931" y="564.2923168492266"/>
           <y:Fill hasColor="false" transparent="false"/>
           <y:BorderStyle hasColor="false" type="line" width="1.0"/>
@@ -613,7 +596,7 @@
         </y:ShapeNode>
       </data>
     </node>
-    <node id="n35">
+    <node id="n34">
       <data key="d6">
         <y:ShapeNode>
           <y:Geometry height="61.31306440903052" width="921.6400591790914" x="138.47598281786975" y="-45.996090654734985"/>
@@ -630,7 +613,7 @@
         </y:ShapeNode>
       </data>
     </node>
-    <node id="n36">
+    <node id="n35">
       <data key="d6">
         <y:ShapeNode>
           <y:Geometry height="30.0" width="43.88771350968591" x="1505.2676161301977" y="268.6358134664945"/>
@@ -647,7 +630,7 @@
         </y:ShapeNode>
       </data>
     </node>
-    <node id="n37">
+    <node id="n36">
       <data key="d6">
         <y:ShapeNode>
           <y:Geometry height="30.0" width="76.41121649484535" x="1942.7900991732079" y="513.5921874999999"/>
@@ -664,7 +647,7 @@
         </y:ShapeNode>
       </data>
     </node>
-    <node id="n38">
+    <node id="n37">
       <data key="d6">
         <y:ShapeNode>
           <y:Geometry height="30.0" width="30.0" x="1727.1310137655573" y="150.04573645666557"/>
@@ -681,7 +664,7 @@
         </y:ShapeNode>
       </data>
     </node>
-    <node id="n39">
+    <node id="n38">
       <data key="d6">
         <y:ShapeNode>
           <y:Geometry height="30.0" width="30.0" x="1519.1553296398836" y="446.5208333333329"/>
@@ -698,7 +681,7 @@
         </y:ShapeNode>
       </data>
     </node>
-    <node id="n40">
+    <node id="n39">
       <data key="d6">
         <y:ShapeNode>
           <y:Geometry height="30.0" width="30.0" x="1927.4806153663867" y="280.7420643685565"/>
@@ -715,7 +698,7 @@
         </y:ShapeNode>
       </data>
     </node>
-    <node id="n41">
+    <node id="n40">
       <data key="d6">
         <y:ShapeNode>
           <y:Geometry height="30.0" width="30.0" x="1942.7900991732079" y="859.6121929123701"/>
@@ -732,7 +715,7 @@
         </y:ShapeNode>
       </data>
     </node>
-    <node id="n42">
+    <node id="n41">
       <data key="d6">
         <y:ShapeNode>
           <y:Geometry height="30.0" width="30.0" x="1019.6106153350538" y="949.4893192010295"/>
@@ -749,7 +732,7 @@
         </y:ShapeNode>
       </data>
     </node>
-    <node id="n43">
+    <node id="n42">
       <data key="d6">
         <y:ShapeNode>
           <y:Geometry height="30.0" width="30.0" x="666.5127060217409" y="1170.318749183846"/>
@@ -766,7 +749,7 @@
         </y:ShapeNode>
       </data>
     </node>
-    <node id="n44">
+    <node id="n43">
       <data key="d6">
         <y:ShapeNode>
           <y:Geometry height="30.0" width="159.84111557154142" x="748.3071962010214" y="1117.718749183846"/>
@@ -783,7 +766,7 @@
         </y:ShapeNode>
       </data>
     </node>
-    <node id="n45">
+    <node id="n44">
       <data key="d6">
         <y:ShapeNode>
           <y:Geometry height="30.0" width="214.18220700124675" x="1112.9832243776202" y="476.5208333333329"/>
@@ -800,10 +783,10 @@
         </y:ShapeNode>
       </data>
     </node>
-    <node id="n46">
+    <node id="n45">
       <data key="d6">
         <y:ShapeNode>
-          <y:Geometry height="38.0" width="180.4000000000001" x="876.0824218750006" y="303.7629993556704"/>
+          <y:Geometry height="38.0" width="180.4000000000001" x="1060.2573666476064" y="274.21977072594444"/>
           <y:Fill hasColor="false" transparent="false"/>
           <y:BorderStyle hasColor="false" type="line" width="1.0"/>
           <y:NodeLabel alignment="center" autoSizePolicy="content" fontFamily="Arial" fontSize="30" fontStyle="bold" hasBackgroundColor="false" hasLineColor="false" height="37.515625" modelName="custom" textColor="#000000" visible="true" width="157.3544921875" x="11.522753906250045" y="0.2421875">Phenotype<y:LabelModel>
@@ -817,10 +800,10 @@
         </y:ShapeNode>
       </data>
     </node>
-    <node id="n47">
+    <node id="n46">
       <data key="d6">
         <y:ShapeNode>
-          <y:Geometry height="30.0" width="243.3305781352674" x="899.8346964246766" y="341.7629993556704"/>
+          <y:Geometry height="30.0" width="243.3305781352674" x="1087.1209816079888" y="312.21977072594444"/>
           <y:Fill hasColor="false" transparent="false"/>
           <y:BorderStyle hasColor="false" type="line" width="1.0"/>
           <y:NodeLabel alignment="center" autoSizePolicy="content" fontFamily="Arial" fontSize="20" fontStyle="plain" hasBackgroundColor="false" hasLineColor="false" height="26.34375" modelName="custom" textColor="#0D737F" visible="true" width="248.619140625" x="-15.085430458465567" y="1.828125">get_all_PhenotypeFeatures<y:LabelModel>
@@ -834,7 +817,7 @@
         </y:ShapeNode>
       </data>
     </node>
-    <node id="n48">
+    <node id="n47">
       <data key="d6">
         <y:ShapeNode>
           <y:Geometry height="30.0" width="128.577069609337" x="562.5162357972561" y="817.2677089106535"/>
@@ -851,7 +834,7 @@
         </y:ShapeNode>
       </data>
     </node>
-    <node id="n49">
+    <node id="n48">
       <data key="d6">
         <y:ShapeNode>
           <y:Geometry height="30.0" width="30.0" x="539.9331143685631" y="772.392708333334"/>
@@ -868,7 +851,7 @@
         </y:ShapeNode>
       </data>
     </node>
-    <node id="n50">
+    <node id="n49">
       <data key="d6">
         <y:ShapeNode>
           <y:Geometry height="30.0" width="30.0" x="728.5985090206239" y="772.392708333334"/>
@@ -885,7 +868,7 @@
         </y:ShapeNode>
       </data>
     </node>
-    <node id="n51">
+    <node id="n50">
       <data key="d6">
         <y:ShapeNode>
           <y:Geometry height="30.0" width="128.577069609337" x="276.46621264604835" y="671.4171123281794"/>
@@ -902,7 +885,7 @@
         </y:ShapeNode>
       </data>
     </node>
-    <node id="n52">
+    <node id="n51">
       <data key="d6">
         <y:ShapeNode>
           <y:Geometry height="30.0" width="30.0" x="230.89685051547463" y="662.2671874999999"/>
@@ -919,7 +902,7 @@
         </y:ShapeNode>
       </data>
     </node>
-    <node id="n53">
+    <node id="n52">
       <data key="d6">
         <y:ShapeNode>
           <y:Geometry height="30.0" width="30.0" x="260.8968505154746" y="731.4171123281794"/>
@@ -936,12 +919,12 @@
         </y:ShapeNode>
       </data>
     </node>
-    <node id="n54">
+    <node id="n53">
       <data key="d4"><![CDATA[http://www.ensembl.org/info/docs/Doxygen/variation-api/classBio_1_1EnsEMBL_1_1Variation_1_1PhenotypeFeature.html]]></data>
       <data key="d5"><![CDATA[Click to view the PhenotypeFeature class documentation]]></data>
       <data key="d6">
         <y:GenericNode configuration="BevelNode3">
-          <y:Geometry height="113.9600000000002" width="298.0990171821304" x="715.0984876515752" y="130.25977072594424"/>
+          <y:Geometry height="113.9600000000002" width="298.0990171821304" x="905.9264463946738" y="130.25977072594424"/>
           <y:Fill color="#18894F" color2="#18894F" transparent="false"/>
           <y:BorderStyle color="#000000" type="line" width="2.0"/>
           <y:NodeLabel alignment="center" autoSizePolicy="content" fontFamily="Arial" fontSize="12" fontStyle="plain" hasBackgroundColor="false" hasLineColor="false" hasText="false" height="4.0" modelName="custom" textColor="#000000" visible="true" width="4.0" x="147.0495085910652" y="54.9800000000001">
@@ -974,13 +957,13 @@
             </y:ModelParameter>
           </y:NodeLabel>
           <y:StyleProperties>
-            <y:Property class="java.lang.Boolean" name="ModernNodeShadow" value="true"/>
             <y:Property class="java.lang.Double" name="ModernNodeRadius" value="15.0"/>
+            <y:Property class="java.lang.Boolean" name="ModernNodeShadow" value="true"/>
           </y:StyleProperties>
         </y:GenericNode>
       </data>
     </node>
-    <node id="n55">
+    <node id="n54">
       <data key="d4"><![CDATA[http://www.ensembl.org/info/docs/Doxygen/variation-api/classBio_1_1EnsEMBL_1_1Variation_1_1Allele.html]]></data>
       <data key="d5"><![CDATA[Click to view the Allele class documentation]]></data>
       <data key="d6">
@@ -1023,7 +1006,7 @@
         </y:GenericNode>
       </data>
     </node>
-    <node id="n56">
+    <node id="n55">
       <data key="d4"><![CDATA[http://www.ensembl.org/info/docs/Doxygen/variation-api/classBio_1_1EnsEMBL_1_1Variation_1_1IndividualGenotype.html]]></data>
       <data key="d5"><![CDATA[Click to view the IndividualGenotype class documentation]]></data>
       <data key="d6">
@@ -1041,7 +1024,7 @@
         </y:GenericNode>
       </data>
     </node>
-    <node id="n57">
+    <node id="n56">
       <data key="d4"><![CDATA[http://www.ensembl.org/info/docs/Doxygen/variation-api/classBio_1_1EnsEMBL_1_1Variation_1_1PopulationGenotype.html]]></data>
       <data key="d5"><![CDATA[Click to view the PopulationGenotype class documentation]]></data>
       <data key="d6">
@@ -1059,7 +1042,7 @@
         </y:GenericNode>
       </data>
     </node>
-    <node id="n58">
+    <node id="n57">
       <data key="d4"><![CDATA[http://www.ensembl.org/info/docs/Doxygen/variation-api/classBio_1_1EnsEMBL_1_1Variation_1_1Variation.html]]></data>
       <data key="d5"><![CDATA[Click to view the Variation class documentation]]></data>
       <data key="d6">
@@ -1080,7 +1063,7 @@
         </y:GenericNode>
       </data>
     </node>
-    <node id="n59">
+    <node id="n58">
       <data key="d4"><![CDATA[http://www.ensembl.org/info/docs/Doxygen/variation-api/classBio_1_1EnsEMBL_1_1Variation_1_1Population.html]]></data>
       <data key="d5"><![CDATA[Click to view the Population class documentation]]></data>
       <data key="d6">
@@ -1105,7 +1088,7 @@
         </y:GenericNode>
       </data>
     </node>
-    <node id="n60">
+    <node id="n59">
       <data key="d4"><![CDATA[http://www.ensembl.org/info/docs/Doxygen/funcgen-api/classBio_1_1EnsEMBL_1_1Funcgen_1_1RegulatoryFeature.html]]></data>
       <data key="d5"><![CDATA[Click to view the RegulatoryFeature class documentation]]></data>
       <data key="d6">
@@ -1130,7 +1113,7 @@
         </y:GenericNode>
       </data>
     </node>
-    <node id="n61">
+    <node id="n60">
       <data key="d4"><![CDATA[http://www.ensembl.org/info/docs/Doxygen/variation-api/index.html]]></data>
       <data key="d5"><![CDATA[Click to view the Doxygen documentation for the Variation API]]></data>
       <data key="d6">
@@ -1149,7 +1132,7 @@
         </y:ShapeNode>
       </data>
     </node>
-    <node id="n62">
+    <node id="n61">
       <data key="d4"><![CDATA[http://www.ensembl.org/info/docs/Doxygen/core-api/index.html]]></data>
       <data key="d5"><![CDATA[Click to view the Doxygen documentation for the Core API]]></data>
       <data key="d6">
@@ -1168,7 +1151,7 @@
         </y:ShapeNode>
       </data>
     </node>
-    <node id="n63">
+    <node id="n62">
       <data key="d4"><![CDATA[http://www.ensembl.org/info/docs/Doxygen/funcgen-api/index.html]]></data>
       <data key="d5"><![CDATA[Click to view the Doxygen documentation for the FuncGen API (Regulation)]]></data>
       <data key="d6">
@@ -1187,7 +1170,7 @@
         </y:ShapeNode>
       </data>
     </node>
-    <node id="n64">
+    <node id="n63">
       <data key="d4"><![CDATA[http://www.ensembl.org/info/docs/Doxygen/variation-api/classBio_1_1EnsEMBL_1_1Variation_1_1VariationFeature.html]]></data>
       <data key="d5"><![CDATA[Click to view the VariationFeature class documentation]]></data>
       <data key="d6">
@@ -1212,7 +1195,7 @@
         </y:GenericNode>
       </data>
     </node>
-    <node id="n65">
+    <node id="n64">
       <data key="d4"><![CDATA[http://www.ensembl.org/info/docs/Doxygen/variation-api/classBio_1_1EnsEMBL_1_1Variation_1_1TranscriptVariation.html]]></data>
       <data key="d5"><![CDATA[Click to view the TranscriptVariation class documentation]]></data>
       <data key="d6">
@@ -1237,7 +1220,7 @@
         </y:GenericNode>
       </data>
     </node>
-    <node id="n66">
+    <node id="n65">
       <data key="d4"><![CDATA[http://www.ensembl.org/info/docs/Doxygen/core-api/classBio_1_1EnsEMBL_1_1Slice.html]]></data>
       <data key="d5"><![CDATA[Click to view the Slice class documentation]]></data>
       <data key="d6">
@@ -1262,7 +1245,7 @@
         </y:GenericNode>
       </data>
     </node>
-    <node id="n67">
+    <node id="n66">
       <data key="d4"><![CDATA[http://www.ensembl.org/info/docs/Doxygen/core-api/classBio_1_1EnsEMBL_1_1Transcript.html]]></data>
       <data key="d5"><![CDATA[Click to view the Transcript class documentation]]></data>
       <data key="d6">
@@ -1287,7 +1270,7 @@
         </y:GenericNode>
       </data>
     </node>
-    <node id="n68">
+    <node id="n67">
       <data key="d4"><![CDATA[http://www.ensembl.org/info/docs/Doxygen/variation-api/classBio_1_1EnsEMBL_1_1Variation_1_1TranscriptVariationAllele.html]]></data>
       <data key="d5"><![CDATA[Click to view the TranscriptVariationAllele class documentation]]></data>
       <data key="d6">
@@ -1319,7 +1302,7 @@
         </y:GenericNode>
       </data>
     </node>
-    <node id="n69">
+    <node id="n68">
       <data key="d4"><![CDATA[http://www.ensembl.org/info/docs/Doxygen/variation-api/classBio_1_1EnsEMBL_1_1Variation_1_1OverlapConsequence.html]]></data>
       <data key="d5"><![CDATA[Click to view the OverlapConsequence class documentation]]></data>
       <data key="d6">
@@ -1351,7 +1334,7 @@
         </y:GenericNode>
       </data>
     </node>
-    <node id="n70">
+    <node id="n69">
       <data key="d4"><![CDATA[http://www.ensembl.org/info/docs/Doxygen/variation-api/classBio_1_1EnsEMBL_1_1Variation_1_1RegulatoryFeatureVariation.html]]></data>
       <data key="d5"><![CDATA[Click to view the RegulatoryFeatureVariation class documentation]]></data>
       <data key="d6">
@@ -1379,7 +1362,7 @@
         </y:GenericNode>
       </data>
     </node>
-    <node id="n71">
+    <node id="n70">
       <data key="d4"><![CDATA[http://www.ensembl.org/info/docs/Doxygen/variation-api/classBio_1_1EnsEMBL_1_1Variation_1_1RegulatoryFeatureVariationAllele.html]]></data>
       <data key="d5"><![CDATA[Click to view the RegulatoryFeatureVariationAllele class documentation]]></data>
       <data key="d6">
@@ -1404,7 +1387,7 @@
         </y:GenericNode>
       </data>
     </node>
-    <node id="n72">
+    <node id="n71">
       <data key="d6">
         <y:GenericNode configuration="BevelNode2">
           <y:Geometry height="30.0" width="45.0" x="134.41760481099664" y="1354.352486297249"/>
@@ -1428,7 +1411,7 @@
         </y:GenericNode>
       </data>
     </node>
-    <node id="n73">
+    <node id="n72">
       <data key="d6">
         <y:GenericNode configuration="BevelNode2">
           <y:Geometry height="30.0" width="45.0" x="134.41760481099664" y="1396.1153179123698"/>
@@ -1452,7 +1435,7 @@
         </y:GenericNode>
       </data>
     </node>
-    <node id="n74">
+    <node id="n73">
       <data key="d6">
         <y:GenericNode configuration="BevelNode2">
           <y:Geometry height="30.0" width="45.0" x="134.41760481099664" y="1437.8781495274907"/>
@@ -1476,7 +1459,7 @@
         </y:GenericNode>
       </data>
     </node>
-    <node id="n75">
+    <node id="n74">
       <data key="d6">
         <y:GenericNode configuration="BevelNode2">
           <y:Geometry height="30.0" width="13.549476288659775" x="498.4214061078052" y="1396.1153179123698"/>
@@ -1493,7 +1476,7 @@
         </y:GenericNode>
       </data>
     </node>
-    <node id="n76">
+    <node id="n75">
       <data key="d6">
         <y:GenericNode configuration="BevelNode2">
           <y:Geometry height="30.0" width="13.549476288659775" x="552.882288582032" y="1396.1153179123698"/>
@@ -1517,7 +1500,7 @@
         </y:GenericNode>
       </data>
     </node>
-    <node id="n77">
+    <node id="n76">
       <data key="d6">
         <y:GenericNode configuration="BevelNode2">
           <y:Geometry height="30.0" width="13.549476288659775" x="498.4214061078052" y="1437.8781495274907"/>
@@ -1534,7 +1517,7 @@
         </y:GenericNode>
       </data>
     </node>
-    <node id="n78">
+    <node id="n77">
       <data key="d6">
         <y:GenericNode configuration="BevelNode2">
           <y:Geometry height="30.0" width="13.549476288659775" x="552.882288582032" y="1437.8781495274907"/>
@@ -1558,7 +1541,7 @@
         </y:GenericNode>
       </data>
     </node>
-    <node id="n79">
+    <node id="n78">
       <data key="d6">
         <y:GenericNode configuration="BevelNode2">
           <y:Geometry height="30.0" width="45.0" x="507.8822885820319" y="1354.352486297249"/>
@@ -1581,7 +1564,7 @@
         </y:GenericNode>
       </data>
     </node>
-    <node id="n80">
+    <node id="n79">
       <data key="d6">
         <y:GenericNode configuration="BevelNode">
           <y:Geometry height="167.43227344946808" width="735.3993220393754" x="120.74442038230421" y="1316.06577839347"/>
@@ -1597,7 +1580,7 @@
         </y:GenericNode>
       </data>
     </node>
-    <node id="n81">
+    <node id="n80">
       <data key="d6">
         <y:ShapeNode>
           <y:Geometry height="30.0" width="43.88771350968591" x="1315.58690346754" y="142.01050103519665"/>
@@ -1614,7 +1597,7 @@
         </y:ShapeNode>
       </data>
     </node>
-    <node id="n82">
+    <node id="n81">
       <data key="d6">
         <y:ShapeNode>
           <y:Geometry height="30.0" width="30.0" x="1727.1310137655573" y="80.38860700904648"/>
@@ -1631,7 +1614,130 @@
         </y:ShapeNode>
       </data>
     </node>
-    <edge id="e0" source="n58" target="n54">
+    <node id="n82">
+      <data key="d4"><![CDATA[http://www.ensembl.org/info/docs/Doxygen/variation-api/classBio_1_1EnsEMBL_1_1Variation_1_1Publication.html]]></data>
+      <data key="d5"><![CDATA[Click to view the Publication class documentation]]></data>
+      <data key="d6">
+        <y:GenericNode configuration="BevelNode3">
+          <y:Geometry height="94.0292696907477" width="255.01645577772695" x="523.7459195107897" y="140.2251358805705"/>
+          <y:Fill color="#194775" color2="#194775" transparent="false"/>
+          <y:BorderStyle color="#000000" type="line" width="1.0"/>
+          <y:NodeLabel alignment="center" autoSizePolicy="content" fontFamily="Arial" fontSize="30" fontStyle="bold" hasBackgroundColor="false" hasLineColor="false" height="37.515625" modelName="custom" textColor="#FFFFFF" visible="true" width="165.6748046875" x="44.67082554511353" y="10.130582702982082">Publication<y:LabelModel>
+              <y:SmartNodeLabelModel distance="4.0"/>
+            </y:LabelModel>
+            <y:ModelParameter>
+              <y:SmartNodeLabelModelParameter labelRatioX="0.0" labelRatioY="-0.5" nodeRatioX="2.220446049250313E-16" nodeRatioY="-0.39226139119977765" offsetX="0.0" offsetY="0.0" upX="0.0" upY="-1.0"/>
+            </y:ModelParameter>
+          </y:NodeLabel>
+          <y:NodeLabel alignment="center" autoSizePolicy="content" fontFamily="Arial" fontSize="22" fontStyle="plain" hasBackgroundColor="false" hasLineColor="false" height="28.578125" modelName="custom" textColor="#FFFFFF" visible="true" width="182.4921875" x="36.26213413886353" y="54.94279382864332">(PubMed ID, Title)<y:LabelModel>
+              <y:SmartNodeLabelModel distance="4.0"/>
+            </y:LabelModel>
+            <y:ModelParameter>
+              <y:SmartNodeLabelModelParameter labelRatioX="0.0" labelRatioY="0.5" nodeRatioX="2.220446049250313E-16" nodeRatioY="0.38824383198268764" offsetX="0.0" offsetY="0.0" upX="0.0" upY="-1.0"/>
+            </y:ModelParameter>
+          </y:NodeLabel>
+        </y:GenericNode>
+      </data>
+    </node>
+    <node id="n83">
+      <data key="d6">
+        <y:ShapeNode>
+          <y:Geometry height="30.0" width="30.0" x="779.2873320663869" y="446.5208333333329"/>
+          <y:Fill hasColor="false" transparent="false"/>
+          <y:BorderStyle hasColor="false" type="line" width="1.0"/>
+          <y:NodeLabel alignment="center" autoSizePolicy="content" fontFamily="Arial" fontSize="25" fontStyle="plain" hasBackgroundColor="false" hasLineColor="false" height="31.9296875" modelName="custom" textColor="#000000" visible="true" width="41.5244140625" x="-5.76220703125" y="-0.96484375">1..*<y:LabelModel>
+              <y:SmartNodeLabelModel distance="4.0"/>
+            </y:LabelModel>
+            <y:ModelParameter>
+              <y:SmartNodeLabelModelParameter labelRatioX="0.0" labelRatioY="0.0" nodeRatioX="0.0" nodeRatioY="0.0" offsetX="0.0" offsetY="0.0" upX="0.0" upY="-1.0"/>
+            </y:ModelParameter>
+          </y:NodeLabel>
+          <y:Shape type="rectangle"/>
+        </y:ShapeNode>
+      </data>
+    </node>
+    <node id="n84">
+      <data key="d6">
+        <y:ShapeNode>
+          <y:Geometry height="30.0" width="30.0" x="468.7086952963931" y="433.9415981529204"/>
+          <y:Fill hasColor="false" transparent="false"/>
+          <y:BorderStyle hasColor="false" type="line" width="1.0"/>
+          <y:NodeLabel alignment="center" autoSizePolicy="content" fontFamily="Arial" fontSize="25" fontStyle="plain" hasBackgroundColor="false" hasLineColor="false" height="31.9296875" modelName="custom" textColor="#000000" visible="true" width="41.5244140625" x="-5.76220703125" y="21.834581121106055">0..*<y:LabelModel>
+              <y:SmartNodeLabelModel distance="4.0"/>
+            </y:LabelModel>
+            <y:ModelParameter>
+              <y:SmartNodeLabelModelParameter labelRatioX="0.0" labelRatioY="-0.24426875055091152" nodeRatioX="0.0" nodeRatioY="0.5" offsetX="0.0" offsetY="0.0" upX="0.0" upY="-1.0"/>
+            </y:ModelParameter>
+          </y:NodeLabel>
+          <y:Shape type="rectangle"/>
+        </y:ShapeNode>
+      </data>
+    </node>
+    <node id="n85">
+      <data key="d6">
+        <y:ShapeNode>
+          <y:Geometry height="30.0" width="30.0" x="606.2307239261196" y="246.85560678333934"/>
+          <y:Fill hasColor="false" transparent="false"/>
+          <y:BorderStyle hasColor="false" type="line" width="1.0"/>
+          <y:NodeLabel alignment="center" autoSizePolicy="content" fontFamily="Arial" fontSize="25" fontStyle="plain" hasBackgroundColor="false" hasLineColor="false" height="31.9296875" modelName="custom" textColor="#000000" visible="true" width="41.5244140625" x="-5.76220703125" y="-0.96484375">0..*<y:LabelModel>
+              <y:SmartNodeLabelModel distance="4.0"/>
+            </y:LabelModel>
+            <y:ModelParameter>
+              <y:SmartNodeLabelModelParameter labelRatioX="0.0" labelRatioY="0.0" nodeRatioX="0.0" nodeRatioY="0.0" offsetX="0.0" offsetY="0.0" upX="0.0" upY="-1.0"/>
+            </y:ModelParameter>
+          </y:NodeLabel>
+          <y:Shape type="rectangle"/>
+        </y:ShapeNode>
+      </data>
+    </node>
+    <node id="n86">
+      <data key="d6">
+        <y:ShapeNode>
+          <y:Geometry height="38.0" width="125.5927795428571" x="671.2541473996532" y="271.14979296066076"/>
+          <y:Fill hasColor="false" transparent="false"/>
+          <y:BorderStyle hasColor="false" type="line" width="1.0"/>
+          <y:NodeLabel alignment="center" autoSizePolicy="content" fontFamily="Arial" fontSize="30" fontStyle="bold" hasBackgroundColor="false" hasLineColor="false" height="37.515625" modelName="custom" textColor="#000000" visible="true" width="115.650390625" x="4.971194458928608" y="0.2421875">Citation<y:LabelModel>
+              <y:SmartNodeLabelModel distance="4.0"/>
+            </y:LabelModel>
+            <y:ModelParameter>
+              <y:SmartNodeLabelModelParameter labelRatioX="0.0" labelRatioY="0.0" nodeRatioX="0.0" nodeRatioY="0.0" offsetX="0.0" offsetY="0.0" upX="0.0" upY="-1.0"/>
+            </y:ModelParameter>
+          </y:NodeLabel>
+          <y:Shape type="rectangle"/>
+        </y:ShapeNode>
+      </data>
+    </node>
+    <node id="n87">
+      <data key="d6">
+        <y:ShapeNode>
+          <y:Geometry height="30.0" width="171.29864438785535" x="687.6812178743627" y="309.14979296066076"/>
+          <y:Fill hasColor="false" transparent="false"/>
+          <y:BorderStyle hasColor="false" type="line" width="1.0"/>
+          <y:NodeLabel alignment="center" autoSizePolicy="content" fontFamily="Arial" fontSize="20" fontStyle="plain" hasBackgroundColor="false" hasLineColor="false" height="26.34375" modelName="custom" textColor="#0D737F" visible="true" width="181.900390625" x="-11.037145757333633" y="1.828125">get_all_Publications<y:LabelModel>
+              <y:SmartNodeLabelModel distance="4.0"/>
+            </y:LabelModel>
+            <y:ModelParameter>
+              <y:SmartNodeLabelModelParameter labelRatioX="-0.4393231332851424" labelRatioY="0.0" nodeRatioX="-0.5" nodeRatioY="0.0" offsetX="0.0" offsetY="0.0" upX="0.0" upY="-1.0"/>
+            </y:ModelParameter>
+          </y:NodeLabel>
+          <y:Shape type="rectangle"/>
+        </y:ShapeNode>
+      </data>
+    </node>
+    <edge id="e0" source="n57" target="n53">
+      <data key="d10">
+        <y:PolyLineEdge>
+          <y:Path sx="44.67624411096972" sy="-16.192268824971222" tx="0.0" ty="0.0">
+            <y:Point x="908.8242403536101" y="366.3573498964804"/>
+            <y:Point x="1054.975954985739" y="366.3573498964804"/>
+          </y:Path>
+          <y:LineStyle color="#000000" type="line" width="3.0"/>
+          <y:Arrows source="none" target="delta"/>
+          <y:BendStyle smoothed="false"/>
+        </y:PolyLineEdge>
+      </data>
+    </edge>
+    <edge id="e1" source="n57" target="n54">
       <data key="d10">
         <y:PolyLineEdge>
           <y:Path sx="0.0" sy="0.0" tx="0.0" ty="0.0"/>
@@ -1641,17 +1747,7 @@
         </y:PolyLineEdge>
       </data>
     </edge>
-    <edge id="e1" source="n58" target="n55">
-      <data key="d10">
-        <y:PolyLineEdge>
-          <y:Path sx="0.0" sy="0.0" tx="0.0" ty="0.0"/>
-          <y:LineStyle color="#000000" type="line" width="3.0"/>
-          <y:Arrows source="none" target="delta"/>
-          <y:BendStyle smoothed="false"/>
-        </y:PolyLineEdge>
-      </data>
-    </edge>
-    <edge id="e2" source="n58" target="n56">
+    <edge id="e2" source="n57" target="n55">
       <data key="d10">
         <y:PolyLineEdge>
           <y:Path sx="-73.11835787279495" sy="-27.230737220790047" tx="0.0" ty="0.0">
@@ -1664,7 +1760,7 @@
         </y:PolyLineEdge>
       </data>
     </edge>
-    <edge id="e3" source="n58" target="n57">
+    <edge id="e3" source="n57" target="n56">
       <data key="d10">
         <y:PolyLineEdge>
           <y:Path sx="-61.83588364599086" sy="24.16720092353978" tx="0.0" ty="0.0">
@@ -1677,7 +1773,7 @@
         </y:PolyLineEdge>
       </data>
     </edge>
-    <edge id="e4" source="n55" target="n59">
+    <edge id="e4" source="n54" target="n58">
       <data key="d10">
         <y:PolyLineEdge>
           <y:Path sx="0.0" sy="0.0" tx="0.0" ty="0.0"/>
@@ -1687,7 +1783,7 @@
         </y:PolyLineEdge>
       </data>
     </edge>
-    <edge id="e5" source="n58" target="n64">
+    <edge id="e5" source="n57" target="n63">
       <data key="d10">
         <y:PolyLineEdge>
           <y:Path sx="0.0" sy="0.0" tx="0.0" ty="0.0"/>
@@ -1697,7 +1793,7 @@
         </y:PolyLineEdge>
       </data>
     </edge>
-    <edge id="e6" source="n64" target="n65">
+    <edge id="e6" source="n63" target="n64">
       <data key="d10">
         <y:PolyLineEdge>
           <y:Path sx="63.181855670103005" sy="28.33297411941635" tx="0.0" ty="0.0">
@@ -1710,7 +1806,7 @@
         </y:PolyLineEdge>
       </data>
     </edge>
-    <edge id="e7" source="n65" target="n68">
+    <edge id="e7" source="n64" target="n67">
       <data key="d10">
         <y:PolyLineEdge>
           <y:Path sx="0.0" sy="0.0" tx="0.0" ty="0.0"/>
@@ -1720,7 +1816,7 @@
         </y:PolyLineEdge>
       </data>
     </edge>
-    <edge id="e8" source="n64" target="n70">
+    <edge id="e8" source="n63" target="n69">
       <data key="d10">
         <y:PolyLineEdge>
           <y:Path sx="-80.90169942010402" sy="12.511118449313244" tx="0.0" ty="0.0">
@@ -1733,7 +1829,7 @@
         </y:PolyLineEdge>
       </data>
     </edge>
-    <edge id="e9" source="n70" target="n60">
+    <edge id="e9" source="n69" target="n59">
       <data key="d10">
         <y:PolyLineEdge>
           <y:Path sx="0.0" sy="0.0" tx="0.0" ty="0.0">
@@ -1746,7 +1842,7 @@
         </y:PolyLineEdge>
       </data>
     </edge>
-    <edge id="e10" source="n70" target="n71">
+    <edge id="e10" source="n69" target="n70">
       <data key="d10">
         <y:PolyLineEdge>
           <y:Path sx="0.0" sy="0.0" tx="0.0" ty="0.0"/>
@@ -1756,7 +1852,7 @@
         </y:PolyLineEdge>
       </data>
     </edge>
-    <edge id="e11" source="n68" target="n69">
+    <edge id="e11" source="n67" target="n68">
       <data key="d10">
         <y:PolyLineEdge>
           <y:Path sx="0.0" sy="0.0" tx="0.0" ty="0.0">
@@ -1768,7 +1864,7 @@
         </y:PolyLineEdge>
       </data>
     </edge>
-    <edge id="e12" source="n71" target="n69">
+    <edge id="e12" source="n70" target="n68">
       <data key="d10">
         <y:PolyLineEdge>
           <y:Path sx="0.0" sy="0.0" tx="0.0" ty="0.0">
@@ -1780,7 +1876,7 @@
         </y:PolyLineEdge>
       </data>
     </edge>
-    <edge id="e13" source="n64" target="n66">
+    <edge id="e13" source="n63" target="n65">
       <data key="d10">
         <y:PolyLineEdge>
           <y:Path sx="0.0" sy="0.0" tx="-125.46173478397395" ty="11.728427950432518">
@@ -1792,7 +1888,7 @@
         </y:PolyLineEdge>
       </data>
     </edge>
-    <edge id="e14" source="n65" target="n67">
+    <edge id="e14" source="n64" target="n66">
       <data key="d10">
         <y:PolyLineEdge>
           <y:Path sx="79.90416167320564" sy="-14.166960953606804" tx="0.0" ty="0.0"/>
@@ -1802,7 +1898,7 @@
         </y:PolyLineEdge>
       </data>
     </edge>
-    <edge id="e15" source="n75" target="n76">
+    <edge id="e15" source="n74" target="n75">
       <data key="d10">
         <y:PolyLineEdge>
           <y:Path sx="0.0" sy="0.0" tx="0.0" ty="0.0"/>
@@ -1812,7 +1908,7 @@
         </y:PolyLineEdge>
       </data>
     </edge>
-    <edge id="e16" source="n77" target="n78">
+    <edge id="e16" source="n76" target="n77">
       <data key="d10">
         <y:PolyLineEdge>
           <y:Path sx="0.0" sy="0.0" tx="0.0" ty="0.0"/>
@@ -1822,7 +1918,7 @@
         </y:PolyLineEdge>
       </data>
     </edge>
-    <edge id="e17" source="n57" target="n59">
+    <edge id="e17" source="n56" target="n58">
       <data key="d10">
         <y:PolyLineEdge>
           <y:Path sx="0.0" sy="0.0" tx="0.0" ty="0.0">
@@ -1835,7 +1931,7 @@
         </y:PolyLineEdge>
       </data>
     </edge>
-    <edge id="e18" source="n54" target="n66">
+    <edge id="e18" source="n53" target="n65">
       <data key="d10">
         <y:PolyLineEdge>
           <y:Path sx="0.0" sy="0.0" tx="-115.60334969080623" ty="-10.696930227621209">
@@ -1843,6 +1939,20 @@
             <y:Point x="1379.4746169772259" y="122.01050103519665"/>
           </y:Path>
           <y:LineStyle color="#000000" type="dotted" width="4.0"/>
+          <y:Arrows source="none" target="delta"/>
+          <y:BendStyle smoothed="false"/>
+        </y:PolyLineEdge>
+      </data>
+    </edge>
+    <edge id="e19" source="n57" target="n82">
+      <data key="d9"/>
+      <data key="d10">
+        <y:PolyLineEdge>
+          <y:Path sx="-46.48814512298463" sy="-10.646927210064177" tx="0.0" ty="0.0">
+            <y:Point x="817.6598511196557" y="367.6905355875545"/>
+            <y:Point x="651.2541473996532" y="367.6905355875545"/>
+          </y:Path>
+          <y:LineStyle color="#000000" type="line" width="3.0"/>
           <y:Arrows source="none" target="delta"/>
           <y:BendStyle smoothed="false"/>
         </y:PolyLineEdge>
