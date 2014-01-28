@@ -1,5 +1,5 @@
 #!/usr/bin/env perl
-# Copyright [1999-2013] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
+# Copyright [1999-2014] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@
 =head1 CONTACT
 
   Please email comments or questions to the public Ensembl
-  developers list at <dev@ensembl.org>.
+  developers list at <http://lists.ensembl.org/mailman/listinfo/dev>.
 
   Questions may also be sent to the Ensembl help desk at
   <helpdesk.org>.
@@ -57,6 +57,7 @@ my %colour = (
     'complex_structural_alteration' => '#99CCFF',
     'tandem_duplication'            => '#732E00',
     'mobile_element_insertion'      => '#FFCC00',
+    'novel_sequence_insertion'      => '#FFCC00',
     'translocation'                 => '#C3A4FF',
     'deletion'                      => '#CC0000',
     'duplication'                   => '#000000',

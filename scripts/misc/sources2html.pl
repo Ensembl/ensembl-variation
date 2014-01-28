@@ -1,4 +1,4 @@
-# Copyright [1999-2013] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
+# Copyright [1999-2014] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@
 =head1 CONTACT
 
   Please email comments or questions to the public Ensembl
-  developers list at <dev@ensembl.org>.
+  developers list at <http://lists.ensembl.org/mailman/listinfo/dev>.
 
   Questions may also be sent to the Ensembl help desk at
   <helpdesk.org>.
@@ -70,6 +70,7 @@ if (!$hlist) {
 
 usage() if ($help);
 
+my %top_species = ('homo_sapiens' => 1);
 my $server_name = 'http://static.ensembl.org';
 my $ecaption = 'Ensembl';
 my $previous_host = $phost;
@@ -125,7 +126,9 @@ my $html_footer = qq{
 ### Main ###
 ############
 
+my $html_top_content = '';
 my $html_content = '';
+my %top_species_list;
 my @species_list;
 my %species_news;
 
@@ -174,8 +177,15 @@ foreach my $hostname (@hostnames) {
       $is_new_species = 1;
     }
     
-    $html_content .= qq{\n  <br />\n} if ($start == 1);
-    $html_content .= source_table($s_name,$sth2,$is_new_species,\%p_list);
+    # Display the species at the top of the list
+    if ($top_species{$s_name}) {
+      $html_top_content .= qq{\n  <br />\n} if ($start == 1);
+      $html_top_content .= source_table($s_name,$sth2,$is_new_species,\%p_list);
+    }
+    else {
+      $html_content .= qq{\n  <br />\n} if ($start == 1);
+      $html_content .= source_table($s_name,$sth2,$is_new_species,\%p_list);
+    }
     
     $start = 1 if ($start == 0);
   }
@@ -183,11 +193,22 @@ foreach my $hostname (@hostnames) {
 
 my $html_menu = create_menu();
 
+#$html_top_content .= qq{<div style="margin:25px 0px 35px;height:4px;background-color:#555"></div>} if ($html_content ne '');
+if ($html_content ne '') {
+  $html_top_content .= qq{
+    <div style="background-color:#F2F2F2;margin:50px 0px 25px;padding:5px;border-top:2px solid #336">
+      <h2 style="display:inline;color:#333">Others species</h2>
+    </div>
+  };
+}
+
+
 ## HTML/output file ##
 open  HTML, "> $html_file" or die "Can't open $html_file : $!";
 print HTML $html_header."\n";
 print HTML $html_menu."\n";
 print HTML $html_title."\n";
+print HTML $html_top_content."\n";
 print HTML $html_content."\n";
 print HTML $html_footer."\n";
 close(HTML);
@@ -211,7 +232,12 @@ sub source_table {
      $s_name =~ s/\s/_/g;
   my $s_name_id = lc($s_name);
   
-  push (@species_list,{name => $species, s_name => $s_name, anchor => $s_name_id});
+  if ($top_species{$name}) {
+    $top_species_list{$name} = {name => $species, s_name => $s_name, anchor => $s_name_id};
+  }
+  else {
+    push (@species_list,{name => $species, s_name => $s_name, anchor => $s_name_id});
+  }
   
   my $html = qq{<!-- $species -->};
   if ($is_new) {
@@ -441,27 +467,16 @@ sub create_menu {
       Species list
     </div>
   };
+  foreach my $top_sp (sort { $top_species{$a} <=> $top_species{$b} } keys(%top_species)) {
+    my $species = $top_species_list{$top_sp};
+    $html .= menu_list($species,$label_style,\%desc) if (defined($species));
+  }
+  if (scalar(keys(%top_species_list))) {
+    $html .= qq{<div style="background-color:#BBB;height:1px;margin:2px 0px 6px"></div>};
+  }
+  
   foreach my $species (@species_list) {
-    my $name = $species->{name};
-    my $s_name = $species->{s_name};
-    my $anchor = $species->{anchor};
-    my $new_data = '';
-    if ($species_news{$species->{name}}) {
-      my @types = sort {$b cmp $a} keys(%{$species_news{$species->{name}}});
-      foreach my $type (@types) {
-        my $label_colour = $colours{$type};
-        my $label_desc = $desc{$type};
-        $new_data .= qq{<span style="$label_style;margin-right:5px;background-color:$label_colour" title="$label_desc"></span>};
-      }
-    }
-    #$html .= qq{\n      <li><a href="#$anchor" style="margin-right:5px">$name</a>$new_data</li>};
-    my $img = $name;
-    $html .= qq{
-    <div style="margin-left:5px;margin-bottom:5px">
-      <img src="/i/species/16/$s_name.png" alt="$name" style="border-radius:4px;margin-right:4px;vertical-align:middle" />
-      <a href="#$anchor" style="margin-right:5px">$name</a>$new_data
-    </div>
-    };
+    $html .= menu_list($species,$label_style,\%desc);
   }
   my $v_colour = $colours{'version'};
   my $s_colour = $colours{'source'};
@@ -471,7 +486,6 @@ sub create_menu {
   my $legend_div_id = 'legend';
 
   $html .= sprintf ( qq{
-    </ul>
     <span style="$label_style;margin-left:5px;background-color:$v_colour"></span><small> : $v_label</small>
     <br />
     <span style="$label_style;margin-left:5px;background-color:$s_colour"></span><small> : $s_label</small>
@@ -538,6 +552,35 @@ sub create_menu {
   return $html;
 }
 
+
+sub menu_list {
+  my $species = shift;
+  my $label_style = shift;
+  my $desc = shift;
+  
+  my $name = $species->{name};
+  my $s_name = $species->{s_name};
+  my $anchor = $species->{anchor};
+  my $new_data = '';
+  if ($species_news{$species->{name}}) {
+    my @types = sort {$b cmp $a} keys(%{$species_news{$species->{name}}});
+    foreach my $type (@types) {
+      my $label_colour = $colours{$type};
+      my $label_desc = $desc->{$type};
+      $new_data .= qq{<span style="$label_style;margin-right:5px;background-color:$label_colour" title="$label_desc"></span>};
+    }
+  }
+  my $img = $name;
+  return qq{
+  <div style="margin-left:5px;margin-bottom:5px">
+    <img src="/i/species/16/$s_name.png" alt="$name" style="border-radius:4px;margin-right:4px;vertical-align:middle" />
+    <a href="#$anchor" style="margin-right:5px">$name</a>$new_data
+  </div>
+  };
+}
+
+
+
 sub new_source_or_version {
   my $type = shift;
   my $color = $colours{$type};
@@ -597,8 +640,8 @@ sub table_header {
       <table class="ss">
         <tr><th colspan="2">$name</th><th>Version</th><th>Description</th><th>Data type(s)</th></th>$header_col</tr>
     };
-#<table class="ss" style="width:75%">
 }
+
 
 sub usage {
   
