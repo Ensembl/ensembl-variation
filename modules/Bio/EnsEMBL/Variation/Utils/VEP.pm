@@ -3415,7 +3415,7 @@ sub check_existing_tabix {
         while($existing->{start} >= $input->{start}) {
           #print STDERR "IN ".$input->{variation_name}." ".$input->{start}."\n";
           
-          if($existing->{start} == $input->{start}) {
+          if($existing->{start} == $input->{start} && $existing->{failed} <= $config->{failed}) {
             push @{$input->{existing}}, $existing unless is_var_novel($config, $existing, $input);
             next VAR;
           }
