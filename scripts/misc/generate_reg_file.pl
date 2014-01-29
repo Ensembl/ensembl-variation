@@ -59,6 +59,7 @@ my $aliases = {
     "Macaca_mulatta"            => "macaque",
     "Nomascus_leucogenys"       => "gibbon",
     "Ovis_aries"                => "sheep",
+	"Meleagris_gallopavo"       => "turkey",
 };
 
 my $groups = {
