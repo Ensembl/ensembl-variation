@@ -949,7 +949,7 @@ sub add_lrg_mappings {
         push @new_vfs, $vf;
         
         # make sure the VF has an attached slice
-        $vf->{slice} ||= get_slice($config, $vf->{chr});
+        $vf->{slice} ||= get_slice($config, $vf->{chr}, undef, 1);
         next unless defined($vf->{slice});
         
         # transform LRG <-> chromosome
@@ -3491,6 +3491,7 @@ sub get_slice {
     my $config = shift;
     my $chr = shift;
     my $otherfeatures = shift;
+    my $use_db = shift;
     $otherfeatures ||= '';
     
     return $config->{slice_cache}->{$chr} if defined($config->{slice_cache}) && defined($config->{slice_cache}->{$chr});
@@ -3498,7 +3499,7 @@ sub get_slice {
     my $slice;
     
     # with a FASTA DB we can just spoof slices
-    if(defined($config->{fasta_db})) {
+    if(defined($config->{fasta_db}) && !defined($use_db)) {
         my $length = $config->{fasta_db}->length($chr) || 1;
         
         $slice = Bio::EnsEMBL::Slice->new(
@@ -3791,7 +3792,7 @@ sub cache_transcripts {
     
     foreach my $chr(keys %$include_regions) {
         
-        my $slice = get_slice($config, $chr);
+        my $slice = get_slice($config, $chr, undef, 1);
         
         next unless defined $slice;
         
@@ -4521,7 +4522,7 @@ sub cache_reg_feats {
     
     foreach my $chr(keys %$include_regions) {
         
-        my $slice = get_slice($config, $chr);
+        my $slice = get_slice($config, $chr, undef, 1);
         
         next unless defined $slice;
         
@@ -4985,7 +4986,7 @@ sub build_full_cache {
             my @nnn = split /\-/, $val;
             
             foreach my $chr($nnn[0]..$nnn[-1]) {
-                my $slice = get_slice($config, $chr);
+                my $slice = get_slice($config, $chr, undef, 1);
                 push @slices, $slice if defined($slice);
             }
         }
@@ -5209,7 +5210,7 @@ sub find_existing {
             ORDER BY vf.source_id ASC
         });
         
-        $new_vf->{slice} ||= get_slice($config, $new_vf->{chr});
+        $new_vf->{slice} ||= get_slice($config, $new_vf->{chr}, undef, 1);
         $sth->execute($new_vf->slice->get_seq_region_id, $new_vf->start, $new_vf->end);
         
         my %v;
