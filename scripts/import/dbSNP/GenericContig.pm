@@ -424,10 +424,7 @@ sub source_table {
 
     if(defined $source_name &&  $source_name=~ /Archive/){ 
         $self->{'dbVar'}->do(qq{INSERT IGNORE INTO source (source_id,name,version,description,url,somatic_status, data_types) VALUES (2, "$source_name",$version,"Former variants names imported from dbSNP", "$url", "mixed","variation_synonym")});
-    }
-    elsif(defined $source_name &&  $source_name=~ /PubMed/){
-        $self->{'dbVar'}->do(qq[INSERT IGNORE INTO source (source_id, name, description, url, somatic_status ) values (4, 'PubMed', 'Variants with pubmed citations', 'http://www.ncbi.nlm.nih.gov/pubmed/','mixed')]);
-    }
+    }    
     else{
 
         my $dbname = 'dbSNP';
@@ -804,11 +801,7 @@ sub pubmed_citations{
        
     print $logh Progress::location();
     debug(localtime() . "\tExporting pubmed cited SNPs");
-
-    ## Add source description only if citations are available
-    $self->source_table("PubMed");
-
-   
+    
     ## create tmp table & populate with rs ids & pmids
     $self->{'dbVar'}->do(qq[ create table tmp_pubmed (
                              snp_id varchar(255) not null,
