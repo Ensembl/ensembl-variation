@@ -1506,7 +1506,11 @@ sub vf_to_consequences {
   
   # force empty hash into object's transcript_variations if undefined from whole_genome_fetch
   # this will stop the API trying to go off and fill it again
-  $vf->{transcript_variations} ||= {} if defined $config->{whole_genome};
+  if(defined $config->{whole_genome}) {
+    $vf->{transcript_variations} ||= {};
+    $vf->{regulation_variations}->{$_} ||= [] for (@REG_FEAT_TYPES, 'ExternalFeature');
+  }
+  
   
   # pos stats
   $config->{stats}->{chr}->{$vf->{chr}}->{1e6 * int($vf->start / 1e6)}++;
