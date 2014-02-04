@@ -295,6 +295,7 @@ sub summarise_evidence{
 
       ## additional human evidence 
       $evidence{$var} .= "HapMap,"                if defined $ss_variations->{$var}->{'HM'}  ;
+      $evidence{$var} .= "ESP,"                   if defined $ss_variations->{$var}->{'ESP'} ;
       
       $evidence{$var} .= "1000Genomes,"           if defined $kg_variations->{$var} ;
 
@@ -333,7 +334,8 @@ sub get_ss_variations{
                                                         al.frequency,
                                                         p.name,
                                                         al.subsnp_id,
-                                                        al.count
+                                                        al.count,
+                                                        p.size
                                                  from   subsnp_handle h, allele al
                                                  left outer join population p on ( p.population_id = al.population_id)
                                                  where  al.variation_id between ? and ?
@@ -354,14 +356,15 @@ sub get_ss_variations{
 
 
        ## Save frequency evidence for variant by variant id - ensure at least 2 chromosomes assayed and variant poly
-
-       if(defined $l->[3] && $l->[3] < 1 && $l->[3] > 0 && $l->[6] >1){
+       ## only assign frequency status if population has more than 1 member.
+       if(defined $l->[3] && $l->[3] < 1 && $l->[3] > 0 && $l->[6] >1 && defined $l->[7] && $l->[7] >1){
             ## flag if frequency data available
             $evidence{$l->[0]}{'freq'}  = 1;
 
             ## special case for human only
             $evidence{$l->[0]}{'HM'}  = 1 if defined $l->[4] && $l->[4]   =~/HapMap/i;
 
+	    $evidence{$l->[0]}{'ESP'}  = 1 if defined $l->[4] && $l->[4]   =~/NHLBI-ESP/i;
         }
     }
 
@@ -446,8 +449,8 @@ sub get_KG_variations{
   my %kg_variations;
 
   my $var_ext_sth  = $var_dbh->prepare(qq[ select variation.variation_id 
-                                           from variation, tmp_1kg_var 
-                                           where variation.snp_id =  tmp_1kg_var.rs_id 
+                                           from variation, 1kg_rs_id 
+                                           where variation.snp_id =  1kg_rs_id.rs_id 
                                            and variation.variation_id  between ? and ?
                                          ]);
   $var_ext_sth->execute($first, $last);
