@@ -38,6 +38,7 @@ my %special_options = (
 	'bos_taurus'        => ' --sift b',
 	'canis_familiaris'  => ' --sift b',
 	'danio_rerio'       => ' --sift b',
+	'equus_caballus'    => ' --sift b',
 	'gallus_gallus'     => ' --sift b',
 	'rattus_norvegicus' => ' --sift b',
 	'sus_scrofa'        => ' --sift b',
