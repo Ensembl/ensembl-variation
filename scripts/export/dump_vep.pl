@@ -57,6 +57,7 @@ GetOptions(
 	'queue=s',
 	'version=i',
 	'overwrite',
+  'refseq',
 ) or die "ERROR: Could not parse command line options\n";
 
 # set defaults
@@ -123,6 +124,18 @@ sub get_species_list {
 	my @dbs;
 	push @dbs, $db while $sth->fetch;
 	$sth->finish;
+  
+  # refseq?
+  if(defined($config->{refseq})) {
+    $sth = $dbc->prepare(qq{
+      SHOW DATABASES LIKE '%\_otherfeatures\_$version%'
+    });
+    $sth->execute();
+    $sth->bind_columns(\$db);
+    
+    push @dbs, $db while $sth->fetch;
+    $sth->finish;
+  }
 
 	# remove master and coreexpression
 	@dbs = grep {$_ !~ /master|express/} @dbs;
@@ -134,21 +147,45 @@ sub get_species_list {
 	my @species;
 
 	foreach my $current_db_name (@dbs) {
-
-	    $sth = $dbc->prepare("select meta_value from ".$current_db_name.".meta where meta_key='species.production_name';");
-	    $sth->execute();
-	    my $current_species = $sth->fetchall_arrayref();
-
-	    my @flattened_species_list = sort map { $_->[0] } @$current_species;
-			
-			if(@flattened_species_list) {
-				push @species, @flattened_species_list;
-			}
-			else {
-				$current_db_name =~ s/^([a-z]+\_[a-z,1-9]+)(\_[a-z]+)?(.+)/$1$2/;
-				$current_db_name =~ s/\_core$//;
-				push @species, $current_db_name;
-			}
+    
+    # special case otherfeatures
+    # check it has refseq transcripts
+    if($current_db_name =~ /otherfeatures/) {
+      $sth = $dbc->prepare(qq{
+        SELECT COUNT(*)
+        FROM $current_db_name\.transcript
+        WHERE stable_id LIKE 'NM%'
+        OR source = 'refseq'
+      });
+      $sth->execute;
+      
+      my $count;
+      $sth->bind_columns(\$count);
+      $sth->fetch;
+      
+      if($count) {
+        $current_db_name =~ s/^([a-z]+\_[a-z,1-9]+)(\_[a-z]+)?(.+)/$1$2/;
+        $current_db_name =~ s/\_otherfeatures$/\_refseq/;
+        push @species, $current_db_name;
+      }
+    }
+    
+    else {
+      $sth = $dbc->prepare("select meta_value from ".$current_db_name.".meta where meta_key='species.production_name';");
+      $sth->execute();
+      my $current_species = $sth->fetchall_arrayref();
+      
+      my @flattened_species_list = sort map { $_->[0] } @$current_species;
+      
+      if(@flattened_species_list) {
+        push @species, @flattened_species_list;
+      }
+      else {
+        $current_db_name =~ s/^([a-z]+\_[a-z,1-9]+)(\_[a-z]+)?(.+)/$1$2/;
+        $current_db_name =~ s/\_core$//;
+        push @species, $current_db_name;
+      }
+    }
 	}
 
 	return \@species;
@@ -159,6 +196,8 @@ sub dump_vep {
 	my $host    = shift;
 	my $species = shift;
 	
+  my $refseq = $species =~ s/\_refseq$//;
+  
 	# check if dir exists
 	if(!defined($config->{overwrite}) && -e $config->{dir}.'/'.$species.'/'.$config->{version}) {
 		debug("Existing dump directory found for $species, skipping (use --overwrite to overwrite)\n");
@@ -185,6 +224,7 @@ sub dump_vep {
 		"--port ".$config->{port},
 		"--dir ".$config->{dir},
 		defined $config->{password} ? "--password ".$config->{pass} : "",
+    $refseq ? '--refseq' : '',
 	);
 	
 	debug("Use \"tail -f ".$config->{dir}.'/'.$species.'_vep_dump.farmout'."\" to check progress");
