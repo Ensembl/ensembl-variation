@@ -92,7 +92,7 @@ foreach my $host(@{$config->{hosts}}) {
 		dump_vep($config, $host, $species);
 		
 		debug("Compressing dump file");
-		tar($config, $species);
+		#tar($config, $species);
 	}
 }
 
@@ -195,14 +195,14 @@ sub dump_vep {
 	my $config  = shift;
 	my $host    = shift;
 	my $species = shift;
-	
-  my $refseq = $species =~ s/\_refseq$//;
   
 	# check if dir exists
 	if(!defined($config->{overwrite}) && -e $config->{dir}.'/'.$species.'/'.$config->{version}) {
 		debug("Existing dump directory found for $species, skipping (use --overwrite to overwrite)\n");
 		return;
 	}
+	
+  my $refseq = $species =~ s/\_refseq$//;
 	
 	my $command = join " ", (
 		sprintf(
