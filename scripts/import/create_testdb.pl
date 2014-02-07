@@ -68,8 +68,12 @@ while (<KEY>) {
     $foreign_keys{$table} = [] unless (exists($foreign_keys{$table}));
     push(@{$foreign_keys{$table}},[$col,$ref_table,$ref_col]);
     
-    push(@variation_tables, [$table,$col]) if ($ref_table eq 'variation' && $ref_col eq 'variation_id');
-		push(@struct_var_tables,[$table,$col]) if ($ref_table eq 'structural_variation' && $ref_col eq 'structural_variation_id');
+    push(@variation_tables, [$table, $col, $ref_col]) if ($ref_table eq 'variation' && $ref_col eq 'variation_id');
+    push(@variation_tables, [$table, $col, $ref_col]) if ($table eq 'phenotype_feature' && $ref_table eq 'variation' );
+
+    push(@struct_var_tables,[$table, $col, $ref_col]) if ($ref_table eq 'structural_variation' && $ref_col eq 'structural_variation_id');
+    push(@struct_var_tables,[$table, $col, $ref_col]) if ($table eq 'phenotype_feature' && $ref_table eq 'structural_variation' );
+
 }
 close (KEY);
 
@@ -98,26 +102,27 @@ if (defined($variation_id_file)) {
 } 
 # Otherwise, get some random variation ids from the source database
 else {
-    	
-	# Get random variation ids		
-	@variation_ids = get_random_ids('variation', $VARIATION_SIZE , 'variation');
+        
+        # Get random variation ids              
+        @variation_ids = get_random_ids('variation', $VARIATION_SIZE , 'variation');
 }
 
 # Populate the destination database
 populate_data_table('variation', \@variation_tables, \@variation_ids);
 
 # Create and fill the subsnp_map table
-$dest->dbc->do(qq{CREATE TABLE IF NOT EXISTS subsnp_map (
-									variation_id int(11) unsigned NOT NULL,
-									subsnp_id int(11) unsigned NOT NULL,
-									PRIMARY KEY (variation_id,subsnp_id),
-									KEY variation_idx (variation_id)
-  					  )});
+$dest->dbc->do(qq{ CREATE TABLE IF NOT EXISTS subsnp_map (
+                   variation_id int(11) unsigned NOT NULL,
+                   subsnp_id int(11) unsigned NOT NULL,
+                   PRIMARY KEY (variation_id,subsnp_id),
+                   KEY variation_idx (variation_id)
+                 )});
 
 my $stmt = qq{
-     INSERT INTO subsnp_map ( variation_id, subsnp_id )
+     INSERT IGNORE INTO subsnp_map ( variation_id, subsnp_id )
      SELECT DISTINCT variation_id, subsnp_id FROM allele
    };
+
 $dest->dbc->do($stmt);
 
 
@@ -138,16 +143,16 @@ my $source_db = $source->dbc->dbname();
 my $ins_col_str = join(',',@{$cols});
 my $sel_col_str = 'src.' . join(', src.',@{$cols});
 my $ins_stmt = qq{
-   	INSERT IGNORE INTO
-    	study ($ins_col_str)
+        INSERT IGNORE INTO
+        study ($ins_col_str)
     SELECT
-    	$sel_col_str
-   	FROM
-    	structural_variation dst,
-			$source_db\.study src
-		WHERE
-			src.study_id = dst.study_id
-	};
+        $sel_col_str
+        FROM
+        structural_variation dst,
+                        $source_db\.study src
+                WHERE
+                        src.study_id = dst.study_id
+        };
 my $ins_sth = $dest->dbc->prepare($ins_stmt);
 $ins_sth->execute();
 
@@ -160,7 +165,7 @@ foreach my $table (keys(%foreign_keys)) {
     foreach my $row (@{$foreign_keys{$table}}) {
         add_foreign_data($dest,$table,$row->[0],$row->[1],$row->[2],$srcdb,{}); 
     } 
-		 
+                 
 }
 
 
@@ -170,58 +175,58 @@ foreach my $table (keys(%foreign_keys)) {
 ###########
 
 sub get_random_ids {
-	my $table = shift;
-	my $size  = shift;
-	my $type  = shift;
-	
-	my $column = "$table\_id";
-	my @ids_list;
-	
-	warn (localtime() . "\tWill extract $size random $type"."s from source database");
+        my $table = shift;
+        my $size  = shift;
+        my $type  = shift;
+        
+        my $column = "$table\_id";
+        my @ids_list;
+        
+        warn (localtime() . "\tWill extract $size random $type"."s from source database");
     
-	# Get the min and max variation_ids
-	my $stmt = qq{
-			SELECT
-					MIN($column),
-					MAX($column)
-			FROM
-					$table
-	};
-	my ($min,$max) = @{$source->dbc->db_handle->selectall_arrayref($stmt)->[0]};
+        # Get the min and max variation_ids
+        my $stmt = qq{
+                        SELECT
+                                        MIN($column),
+                                        MAX($column)
+                        FROM
+                                        $table
+        };
+        my ($min,$max) = @{$source->dbc->db_handle->selectall_arrayref($stmt)->[0]};
     
-	# Randomly pull ids from the database until we've reached the desired number of rows
-	$stmt = qq{
-			SELECT $column
-			FROM   $table
-			WHERE  $column = ?
-			LIMIT  1
-	};
-	my $sth = $source->dbc->prepare($stmt);
-	my %ids;
-	while (scalar(keys(%ids)) < $size) {
-		my $id = $min + int(rand($max-$min+1));
-		$sth->execute($id);
-		$sth->bind_columns(\$id);
-		$sth->fetch();
-		next unless defined($id);
-		$ids{$id}++;
-	}
-	return keys(%ids);
+        # Randomly pull ids from the database until we've reached the desired number of rows
+        $stmt = qq{
+                        SELECT $column
+                        FROM   $table
+                        WHERE  $column = ?
+                        LIMIT  1
+        };
+        my $sth = $source->dbc->prepare($stmt);
+        my %ids;
+        while (scalar(keys(%ids)) < $size) {
+                my $id = $min + int(rand($max-$min+1));
+                $sth->execute($id);
+                $sth->bind_columns(\$id);
+                $sth->fetch();
+                next unless defined($id);
+                $ids{$id}++;
+        }
+        return keys(%ids);
 }
 
 
 sub populate_data_table {
-	my $table       = shift;
-	my $asso_tables = shift;
-	my $table_ids   = shift;
-	my $ref_column  = "$table\_id";
-	
-	my $srcdb = $source->dbc->dbname();
-	my $cols = get_table_columns($source,$table);
-	my $sel_col_str = 'tbl.' . join(', tbl.',@{$cols});
-	my $ins_col_str = join(',',@{$cols});
+        my $table       = shift;
+        my $asso_tables = shift;
+        my $table_ids   = shift;
+        my $ref_column  = "$table\_id";
+        
+        my $srcdb = $source->dbc->dbname();
+        my $cols = get_table_columns($source,$table);
+        my $sel_col_str = 'tbl.' . join(', tbl.',@{$cols});
+        my $ins_col_str = join(',',@{$cols});
 
-	my $ins_stmt = qq{
+        my $ins_stmt = qq{
     INSERT INTO
         $table ($ins_col_str)
     SELECT
@@ -230,22 +235,22 @@ sub populate_data_table {
         $srcdb\.$table tbl
     WHERE
         tbl.$ref_column = ? 
-	};
-	print "$ins_stmt\n";
-	my $ins_sth = $dest->dbc->prepare($ins_stmt);
+        };
+        print "$ins_stmt\n";
+        my $ins_sth = $dest->dbc->prepare($ins_stmt);
 
-	map {$ins_sth->execute($_)} @$table_ids;
+        map {$ins_sth->execute($_)} @$table_ids;
     
-	# First we'll import the "core" data, i.e. data from the tables having $ref_column as a foreign key
-	foreach my $row (@$asso_tables) {
+        # First we'll import the "core" data, i.e. data from the tables having $ref_column as a foreign key
+        foreach my $row (@$asso_tables) {
     
     my $a_table = $row->[0];
     my $column = $row->[1];
-    
+    my $ref_column2 = $row->[2];
     # Recursively add foreign relationships to this table
-    add_foreign_data($dest,$table,$ref_column,$a_table,$column,$srcdb,\%foreign_keys);
+    add_foreign_data($dest,$table,$ref_column2,$a_table,$column,$srcdb,\%foreign_keys);
     
-	}
+        }
 }
 
 
