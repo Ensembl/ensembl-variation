@@ -69,7 +69,6 @@ sub run {
 
   if ( $self->required_param('species') =~/mus_musculus|gallus_gallus|rattus_norvegicus|canis_familiaris|homo_sapiens/ ){ $self->set_display();}
 
-  if ( $self->required_param('species') =~/gallus_gallus|canis_familiaris/ ){ $self->fake_read_coverage();}
 
 }
 
@@ -202,49 +201,6 @@ sub set_display{
 	
     }
     close $report;
-}
-
-### Three species have near genome-coverage data, but precise coverage not known
-### Fake to cover entire length of each seq_region, pending view change
-
-sub fake_read_coverage{
-
-
-    my $self = shift;
-
-    my $var_dba  = $self->get_species_adaptor('variation');
-    my $core_dba = $self->get_species_adaptor('core');
-
-    my $len_extr_sth = $core_dba->dbc->prepare(qq[ select seq_region_id,length from seq_region ]);
-
-
-    my $sam_extr_sth = $var_dba->dbc->prepare(qq[ select individual_id from individual
-                                                  where display !='UNDISPLAYABLE']);
-   
-    
-    my $cov_ins_sth = $var_dba->dbc->prepare(qq[ insert into  read_coverage
-                                                 (seq_region_id,seq_region_start,seq_region_end, level, individual_id )
-                                                 values(?,1,?,1,?)]);
-    
-    my %seq;
-    ## extract sequence lengths from core database
-    $len_extr_sth->execute()||die "Failed to extrace seq ids and lengths\n";
-    my $seq = $len_extr_sth->fetchall_arrayref();
-    foreach my $l (@{$seq}){
-        $seq{$l->[0]} = $l->[1];
-    }
-    
-    ## extract samples with display options from variation database
-    $sam_extr_sth->execute()||die "Failed to extrace seq ids and lengths\n";
-    my $sam = $sam_extr_sth->fetchall_arrayref();
-
-    ## add fake read coverage info
-    foreach my $l (@{$sam}){     
-        foreach my $seq_id(keys %seq){            
-            
-            $cov_ins_sth->execute($seq_id ,$seq{$seq_id}, $l->[0])||die "Failed to load read_coverage \n";
-        }
-    }
 }
 
 ## Pig consortium variation names are supported - copy to new releases

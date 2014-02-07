@@ -100,17 +100,17 @@ sub default_options {
         
         # configuration for the various resource options used in the pipeline
         
-        default_lsf_options => '-R"select[mem>2000] rusage[mem=2000]" -M2000000',
-        urgent_lsf_options  => '-q yesterday -R"select[mem>2000] rusage[mem=2000]" -M2000000',
-        highmem_lsf_options => '-q long -R"select[mem>8000] rusage[mem=8000]" -M8000000',
-        medmem_lsf_options  => '-R"select[mem>4000] rusage[mem=4000]" -M4000000',
-        long_lsf_options    => '-q long -R"select[mem>2000] rusage[mem=2000]" -M2000000',
+        default_lsf_options => '-R"select[mem>2000] rusage[mem=2000]" -M2000',
+        urgent_lsf_options  => '-q yesterday -R"select[mem>2000] rusage[mem=2000]" -M2000',
+        highmem_lsf_options => '-q long -R"select[mem>8000] rusage[mem=8000]" -M8000',
+        medmem_lsf_options  => '-R"select[mem>4000] rusage[mem=4000]" -M4000',
+        long_lsf_options    => '-q long -R"select[mem>2000] rusage[mem=2000]" -M2000',
 
         # Polyphen specific parameters
 
         # location of the software
 
-        pph_dir                 => '/software/ensembl/variation/polyphen-2.2.2',
+        pph_dir                 => '/software/ensembl/variation/polyphen',
 
         # where we will keep polyphen's working files etc. as the pipeline runs
 
@@ -148,21 +148,21 @@ sub default_options {
     
         # location of the software
 
-        sift_dir                => '/software/ensembl/variation/sift5.0.2',
+        sift_dir                => '/software/ensembl/variation/sift5.1.0',
 
         sift_working            => $self->o('species_dir').'/sift_working',
         
         # the location of blastpgp etc.
 
-        ncbi_dir                => '/software/ncbiblast/bin',
+        ncbi_dir                => '/software/pubseq/bin/ncbi_blast',
         
         # the protein database used to build alignments if you're not using compara
 
-        blastdb                 => '/data/blastdb/Ensembl/variation/sift5.0.1/uniref90/uniref90.uni',
+        blastdb                 => '/data/blastdb/Ensembl/variation/sift5.1.0/uniref90/uniref90.fasta',
 
         # the following parameters mean the same as for polyphen
 
-        sift_run_type           => FULL,
+        sift_run_type           => UPDATE,
 
         sift_use_compara        => 0,
 
