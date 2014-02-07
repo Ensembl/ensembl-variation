@@ -92,7 +92,7 @@ foreach my $host(@{$config->{hosts}}) {
 		dump_vep($config, $host, $species);
 		
 		debug("Compressing dump file");
-		#tar($config, $species);
+		tar($config, $species);
 	}
 }
 
@@ -192,16 +192,17 @@ sub get_species_list {
 }
 
 sub dump_vep {
-	my $config  = shift;
-	my $host    = shift;
-	my $species = shift;
+	my $config = shift;
+	my $host   = shift;
+	my $sp     = shift;
   
 	# check if dir exists
-	if(!defined($config->{overwrite}) && -e $config->{dir}.'/'.$species.'/'.$config->{version}) {
-		debug("Existing dump directory found for $species, skipping (use --overwrite to overwrite)\n");
+	if(!defined($config->{overwrite}) && -e $config->{dir}.'/'.$sp.'/'.$config->{version}) {
+		debug("Existing dump directory found for $sp, skipping (use --overwrite to overwrite)\n");
 		return;
 	}
 	
+  my $species = $sp;
   my $refseq = $species =~ s/\_refseq$//;
 	
 	my $command = join " ", (
@@ -212,8 +213,8 @@ sub dump_vep {
 			$config->{mem},
 			$config->{mem},
 			$config->{queue},
-			$config->{dir}.'/'.$species.'_vep_dump.farmout',
-			$config->{dir}.'/'.$species.'_vep_dump.farmerr',
+			$config->{dir}.'/'.$sp.'_vep_dump.farmout',
+			$config->{dir}.'/'.$sp.'_vep_dump.farmerr',
 		),
 		$config->{command},
 		defined $special_options{$species} ? $special_options{$species} : "",
@@ -229,6 +230,7 @@ sub dump_vep {
 	
 	debug("Use \"tail -f ".$config->{dir}.'/'.$species.'_vep_dump.farmout'."\" to check progress");
 	system($command);
+  #print "$command\n";
 }
 
 sub tar {
@@ -251,6 +253,7 @@ sub tar {
 	
 	my $command = "tar -cz -C $root_dir -f $tar_file $sub_dir";
 	system($command);# or die "ERROR: Failed to create tar file $tar_file\n";
+  #print "$command\n";
 }
 
 # gets time
