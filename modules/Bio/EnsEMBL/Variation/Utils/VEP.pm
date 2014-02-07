@@ -1232,7 +1232,7 @@ sub vf_list_to_cons {
     push @{$vf_hash{$_->{chr}}{int($_->{start} / $config->{chunk_size})}{$_->{start}}}, $_ for @$listref;
     
     # get chr list
-    my @chrs = sort {($a !~ /^\d+$/ || $b !~ /^\d+/) ? $a cmp $b : $a <=> $b} keys %{{map {$_->{chr} => 1} @$listref}};
+    my @chrs = sort {$a.$b !~ /^\d+$/ ? $a cmp $b : $a <=> $b} keys %{{map {$_->{chr} => 1} @$listref}};
     
     # get non-variants
     my @non_variants = grep {$_->{non_variant}} @$listref;
