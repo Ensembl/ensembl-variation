@@ -127,7 +127,6 @@ sub set_div {
   my $label = ($1 =~ /dbsnp/i) ? 'ClinVar' : $1;
   my $second_label = ($2) ? $2 : '';
   $name = qq{<span style="color:#333">$label</span>$second_label};
-  $desc =~ s/dbSNP/ClinVar and dbSNP/;
   my $div = qq{
 <div id="$id" style="float:left;margin-right:100px;">
   <span style="font-weight:bold">$name</span><br />
