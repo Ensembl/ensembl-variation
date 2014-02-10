@@ -62,7 +62,8 @@ sub run {
 
     $dbc->do(qq{ALTER TABLE $temp_table  drop seq_region_id,       drop variation_id ,
                                          drop seq_region_start,    drop seq_region_end,
-                                         drop seq_region_strand,   drop source_id})
+                                         drop seq_region_strand,   drop source_id,
+                                         drop map_weight })
         or die "Failed to alter temp table";
 
    
