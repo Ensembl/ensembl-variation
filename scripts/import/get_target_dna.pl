@@ -60,7 +60,7 @@ GetOptions('species=s'         => \$species,
 	   'file=s'            => \$file,
 	   'seq_region_name=s' => \$seq_region_name,
 	   'coord_sys_name=s'  => \$coord_sys_name,
-        'registry_file' => \$registry_file,		
+        'registry_file=s' => \$registry_file,		
 	  );
 
 $registry_file ||= $Bin . "/ensembl.registry";
