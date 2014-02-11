@@ -315,10 +315,10 @@ sub variation {
     $self->{'variation'} = shift;
   }
   elsif(!defined($self->{'variation'}) && $self->{'adaptor'} &&
-        defined($self->{'_variation_id'})) {
+        defined($self->{'_object_id'}) && $self->{'type'} eq 'Variation') {
     # lazy-load from database on demand
     my $va = $self->{'adaptor'}->db()->get_VariationAdaptor();
-    $self->{'variation'} = $va->fetch_by_dbID($self->{'_variation_id'});
+    $self->{'variation'} = $va->fetch_by_name($self->{'_object_id'});
   }
 
   return $self->{'variation'};
