@@ -48,7 +48,7 @@ use Getopt::Long;
 # optional a directory or sequence files (for unknown placing)
 
 
-our ($species, $target_dir, $start,$end, $reverse_comp, $file,$seq_region_id,$coord_sys_name, $seq_region_name, $TMP_DIR, $TMP_FILE, $repeat_masked, $chr_name,$read_file);
+our ($species, $target_dir, $start,$end, $reverse_comp, $file,$seq_region_id,$coord_sys_name, $seq_region_name, $TMP_DIR, $TMP_FILE, $repeat_masked, $chr_name,$read_file, $registry_file);
 
 GetOptions('species=s'         => \$species,
 	   'target_dir=s'      => \$target_dir,
@@ -60,8 +60,10 @@ GetOptions('species=s'         => \$species,
 	   'file=s'            => \$file,
 	   'seq_region_name=s' => \$seq_region_name,
 	   'coord_sys_name=s'  => \$coord_sys_name,
+        'registry_file=s' => \$registry_file,		
 	  );
-my $registry_file ||= $Bin . "/ensembl.registry";
+
+$registry_file ||= $Bin . "/ensembl.registry";
 
 $coord_sys_name  ||= 'toplevel';
 

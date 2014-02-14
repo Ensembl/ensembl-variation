@@ -41,8 +41,10 @@ sub get_files {
     	if ($file =~ m/\.$file_type/) {
 			$file =~ s/\.$file_type//g;
 			my @file_name_parts =  split('-', $file);
-			if (scalar @file_name_parts == 3) {
-    			($species, $range, $type) = @file_name_parts;
+			if (scalar @file_name_parts > 2) {
+				$species = shift @file_name_parts;
+				$range = shift @file_name_parts;
+				$type = join('-', @file_name_parts);
     			$files{$type}{$range} = 1;
 			} else {
 	    		($species, $type) = @file_name_parts;
