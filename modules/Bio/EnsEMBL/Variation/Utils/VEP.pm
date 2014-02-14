@@ -4596,6 +4596,9 @@ sub cache_reg_feats {
                     @{$features};
             }
         }
+        
+        # delete reference to slice adaptor before we write to cache
+        delete $slice->{adaptor};
     }
     
     end_progress($config);
@@ -4619,8 +4622,6 @@ sub clean_reg_feat {
             delete $rf->{binding_matrix}->{$key};
         }
     }
-    
-    delete $rf->{slice}->{adaptor};
     
     return $rf;
 }
@@ -5037,15 +5038,18 @@ sub build_full_cache {
             $regions->{$chr} = [$start.'-'.$end];
             
             # store transcripts
-            my $tmp_cache = (defined($config->{rebuild}) ? load_dumped_transcript_cache($config, $chr, $start.'-'.$end) : cache_transcripts($config, $regions));
-            $tmp_cache->{$chr} ||= [];
+            if($config->{build_parts} =~ /t/) {
+                my $tmp_cache = (defined($config->{rebuild}) ? load_dumped_transcript_cache($config, $chr, $start.'-'.$end) : cache_transcripts($config, $regions));
+                $tmp_cache->{$chr} ||= [];
+                
+                #(defined($config->{tabix}) ? dump_transcript_cache_tabix($config, $tmp_cache, $chr, $start.'-'.$end) : dump_transcript_cache($config, $tmp_cache, $chr, $start.'-'.$end));
+                dump_transcript_cache($config, $tmp_cache, $chr, $start.'-'.$end);
+                undef $tmp_cache;
+            }
             
-            #(defined($config->{tabix}) ? dump_transcript_cache_tabix($config, $tmp_cache, $chr, $start.'-'.$end) : dump_transcript_cache($config, $tmp_cache, $chr, $start.'-'.$end));
-            dump_transcript_cache($config, $tmp_cache, $chr, $start.'-'.$end);
-            undef $tmp_cache;
             
             # store reg feats
-            if(defined($config->{regulatory})) {
+            if($config->{build_parts} =~ /r/ && defined($config->{regulatory})) {
                 my $rf_cache = cache_reg_feats($config, $regions);
                 $rf_cache->{$chr} ||= {};
                 
@@ -5058,12 +5062,14 @@ sub build_full_cache {
             }
             
             # store variations
-            my $variation_cache;
-            $variation_cache->{$chr} = get_variations_in_region($config, $chr, $start.'-'.$end);
-            $variation_cache->{$chr} ||= {};
-            
-            dump_variation_cache($config, $variation_cache, $chr, $start.'-'.$end);
-            undef $variation_cache;
+            if($config->{build_parts} =~ /v/) {
+                my $variation_cache;
+                $variation_cache->{$chr} = get_variations_in_region($config, $chr, $start.'-'.$end);
+                $variation_cache->{$chr} ||= {};
+                
+                dump_variation_cache($config, $variation_cache, $chr, $start.'-'.$end);
+                undef $variation_cache;
+            }
             
             # restore quiet status
             $config->{quiet} = $quiet;
@@ -5478,6 +5484,7 @@ sub have_maf_cols {
 
 sub have_clin_sig {
     my $config = shift;
+    return 0 if defined($config->{build_test});
     
     if(!defined($config->{have_clin_sig})) {
         
@@ -5523,6 +5530,7 @@ sub get_clin_sig {
 
 sub have_pubmed {
     my $config = shift;
+    return 0 if defined($config->{build_test});
     
     if(!defined($config->{have_pubmed})) {
         
