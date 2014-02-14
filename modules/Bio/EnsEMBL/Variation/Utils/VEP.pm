@@ -1920,9 +1920,6 @@ sub tva_to_line {
     Consequence      => join ",", map {$_->$term_method || $_->SO_term} sort {$a->rank <=> $b->rank} @{$tva->get_all_OverlapConsequences},
   };
   
-  # update stats
-  $config->{stats}->{transcripts}->{$t->stable_id} = 1 if defined($t);
-  
   if(defined($tv->translation_start)) {
     $config->{stats}->{protein_pos}->{int(10 * ($tv->translation_start / ($t->{_variation_effect_feature_cache}->{peptide} ? length($t->{_variation_effect_feature_cache}->{peptide}) : $t->translation->length)))}++;
   }
@@ -2008,8 +2005,6 @@ sub rfva_to_line {
     Feature_type => 'RegulatoryFeature',
     Feature      => $rf->stable_id,
   };
-  
-  $config->{stats}->{regfeats}->{$rf->stable_id} = 1;
   
   if(defined($config->{cell_type}) && scalar(@{$config->{cell_type}})) {
     $base_line->{Extra}->{CELL_TYPE} = join ",",
@@ -2111,6 +2106,10 @@ sub add_extra_fields {
     # add transcript-specific fields
     $line = add_extra_fields_transcript($config, $line, $bvfoa) if $bvfoa->isa('Bio::EnsEMBL::Variation::BaseTranscriptVariationAllele');
     
+    # stats
+    $config->{stats}->{gene}->{$line->{Gene}}++ if defined($line->{Gene});
+    $config->{stats}->{lc($line->{Feature_type})}->{$line->{Feature}}++ if defined($line->{Feature_type}) && defined($line->{Feature});
+    
     return $line;
 }
 
@@ -2131,8 +2130,6 @@ sub add_extra_fields_transcript {
         $gene = $config->{ga}->fetch_by_transcript_stable_id($tr->stable_id);
         $line->{Gene} = $gene ? $gene->stable_id : '-';
     }
-    
-    $config->{stats}->{genes}->{$line->{Gene}}++ if defined($line->{Gene});
     
     # exon/intron numbers
     if ($config->{numbers}) {
