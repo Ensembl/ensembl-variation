@@ -36,48 +36,21 @@ sub default_options {
     # these values, if you find you do need to then we should probably
     # make it an option here, contact the variation team to discuss
     # this - patches are welcome!
-
     return {
-		hive_force_init         => 1,
-		hive_use_param_stack    => 0,
-		hive_use_triggers       => 0,
-		hive_root_dir           => $ENV{'HOME'} . '/HEAD/ensembl-hive',
-        ensembl_cvs_root_dir    => $ENV{'HOME'} . '/HEAD',
-
-		debug                   => 1,		
-		species                 => 'rattus_norvegicus',
-        pipeline_name           => 'remapping',
-
-        pipeline_dir            => '/lustre/scratch109/ensembl/at7/remapping/rattus_norvegicus/',
-
-        output_dir              => $self->o('pipeline_dir') . '/hive_output',
-
-        reg_file                     => $self->o('pipeline_dir' ). '/ensembl.registry',
-		fasta_files_dir              => $self->o('pipeline_dir') . '/fasta_files/',	
-		bam_files_dir                => $self->o('pipeline_dir') . '/bam_files/',
-		old_assembly_fasta_file_dir  => $self->o('pipeline_dir') . '/old_assembly/',
-		new_assembly_fasta_file_dir  => $self->o('pipeline_dir') . '/new_assembly/',
-		new_assembly_fasta_file_name => 'Rattus_norvegicus.Rnor_5.0.74.dna.toplevel.fa',
-	    mapping_results_dir          => $self->o('pipeline_dir') . '/mapping_results/',
-
-		tool_dir => '/nfs/users/nfs_a/at7/tools/',
-		bwa_dir => 'bwa-0.7.5a',
-		samtools_dir => 'samtools-0.1.19',
-
-        # init_pipeline.pl will create the hive database on this machine, naming it
-        # <username>_<pipeline_name>, and will drop any existing database with this
-        # name
-
-        hive_db_host    => 'ens-variation',
-        hive_db_port    => 3306,
-        hive_db_user    => 'ensadmin',
+		hive_force_init       => 1,
+		hive_use_param_stack  => 0,
+		hive_use_triggers     => 0,
+		hive_root_dir         => $ENV{'HOME'} . '/DEV/ensembl-hive',
+        ensembl_cvs_root_dir  => $ENV{'HOME'} . '/DEV',
+        hive_db_port          => 3306,
+        hive_db_user          => 'ensadmin',
 
         pipeline_db => {
             -host   => $self->o('hive_db_host'),
             -port   => $self->o('hive_db_port'),
             -user   => $self->o('hive_db_user'),
             -pass   => $self->o('hive_db_password'),            
-            -dbname => $ENV{'USER'} . '_' . $self->o('pipeline_name') . '_' . $self->o('species'),
+            -dbname => $ENV{'USER'} . '_' . $self->o('pipeline_name'),
 			-driver => 'mysql',
         },
     };
@@ -87,20 +60,19 @@ sub pipeline_wide_parameters {
     my ($self) = @_;
     return {
         %{$self->SUPER::pipeline_wide_parameters},          # here we inherit anything from the base class
-        registry_file                => $self->o('reg_file'),
-		fasta_files_dir              => $self->o('fasta_files_dir'),
-        bam_files_dir                => $self->o('bam_files_dir'),
-		mapping_results_dir          => $self->o('mapping_results_dir'),
-		old_assembly_fasta_file_dir  => $self->o('old_assembly_fasta_file_dir'),
-		new_assembly_fasta_file_dir  => $self->o('new_assembly_fasta_file_dir'),
-		new_assembly_fasta_file_name => $self->o('new_assembly_fasta_file_name'),
+        registry_file                => $self->o('registry_file'),
+		fasta_files_dir              => $self->o('fasta_files'),
+        bam_files_dir                => $self->o('bam_files'),
+		mapping_results_dir          => $self->o('mapping_results'),
+		old_assembly_fasta_file_dir  => $self->o('old_assembly'),
+		new_assembly_fasta_file_dir  => $self->o('new_assembly'),
+		new_assembly_fasta_file_name => $self->o('new_assembly_file_name'),
 		species                      => $self->o('species'),
-		tool_dir                     => $self->o('tool_dir'),
-		bwa_dir                      => $self->o('bwa_dir'),
-		samtools_dir                 => $self->o('samtools_dir'),
+		bwa_dir                      => $self->o('bwa_location'),
+		samtools_dir                 => $self->o('samtools_location'),
 		pipeline_dir                 => $self->o('pipeline_dir'),
-		flank_seq_length             => 200,	
-		generate_fasta_files         => 1,
+		flank_seq_length             => $self->o('flank_seq_length'),	
+		generate_fasta_files         => $self->o('generate_fasta_files'),
 		debug                        => $self->o('debug'),
     };
 }
@@ -117,7 +89,6 @@ sub resource_classes {
 
 sub pipeline_analyses {
     my ($self) = @_;
-   
     my @analyses;
     push @analyses, (
 			{	-logic_name => 'pre_run_checks',
