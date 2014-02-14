@@ -2165,7 +2165,7 @@ sub add_extra_fields_transcript {
         $symbol = $tr->{_gene_symbol} || $tr->{_gene_hgnc};
         $source = $tr->{_gene_symbol_source};
         
-        if(!defined($symbol)) {
+        if(!defined($symbol) && defined($config->{database})) {
           
             if(!defined($gene)) {
                 $gene = $config->{ga}->fetch_by_transcript_stable_id($tr->stable_id);
