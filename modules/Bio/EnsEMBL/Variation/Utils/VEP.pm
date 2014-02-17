@@ -1561,6 +1561,8 @@ sub vf_to_consequences {
       $line->{Consequence} = $vf->display_consequence($config->{terms}) || $vf->display_consequence;
     }
     
+    $config->{stats}->{consequences}->{$_}++ for split(',', $line->{Consequence});
+    
     push @return, $line;
   }
   
