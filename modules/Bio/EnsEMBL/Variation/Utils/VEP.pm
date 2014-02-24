@@ -180,7 +180,8 @@ our %COL_DESCS = (
     'CLIN_SIG'           => 'Clinical significance of variant from dbSNP',
     'BIOTYPE'            => 'Biotype of transcript',
     'PUBMED'             => 'Pubmed ID(s) of publications that cite existing variant',
-    'ALLELE_NUM'         => 'Allele number from input; 0 is reference, 1 is first alternate etc'
+    'ALLELE_NUM'         => 'Allele number from input; 0 is reference, 1 is first alternate etc',
+    'STRAND'             => 'Strand of the feature (1/-1)',
 );
 
 our @REG_FEAT_TYPES = qw(
@@ -2103,6 +2104,14 @@ sub add_extra_fields {
     # allele number
     if(defined($config->{allele_number})) {
       $line->{Extra}->{ALLELE_NUM} = $bvfoa->variation_feature->{_allele_nums}->{$bvfoa->variation_feature_seq} || '?' if $bvfoa->variation_feature->{_allele_nums};
+    }
+    
+    # strand
+    if(my $f = $bvfoa->feature) {
+      my $strand = $f->seq_region_strand;
+      
+      # regfeats have an undefined strand (0); recommended not to report this
+      $line->{Extra}->{STRAND} = $strand if $strand;
     }
     
     # add transcript-specific fields
