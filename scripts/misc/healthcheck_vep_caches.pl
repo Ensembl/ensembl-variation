@@ -144,7 +144,7 @@ foreach my $host(split /\,/, $config->{host}) {
     $sth->finish;
     
     foreach my $slice(@slices) {
-      printf("\r - checking chromosome dirs %i / %i", ++$i, scalar @slices);
+      #printf("\r - checking chromosome dirs %i / %i", ++$i, scalar @slices);
       
       my $chr = $slice->seq_region_name;
       
