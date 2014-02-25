@@ -66,9 +66,18 @@ $config->{port} ||= 3306;
 
 $config->{cache_region_size} = 1e6;
 
+my %match_species = ();
+if($config->{species} ne 'all') {
+  $match_species{$_} = 1 for split(/\,/, $config->{species});
+}
+
 foreach my $host(split /\,/, $config->{host}) {
   
   my $species_list = get_species_list($config, $host);
+  
+  if($config->{species} eq 'all') {
+    $match_species{$_} = 1 for @$species_list;
+  }
   
   $config->{reg}->load_registry_from_db(
     -host       => $host,
@@ -79,7 +88,7 @@ foreach my $host(split /\,/, $config->{host}) {
   );
   
   foreach my $species(@$species_list) {
-    next if $config->{species} ne 'all' && $config->{species} ne $species;
+    next unless $match_species{$species};
     
     print "\nChecking $species\n";
     
@@ -206,7 +215,9 @@ foreach my $host(split /\,/, $config->{host}) {
     # check FASTA file
     print " - checking FASTA file\n";
     opendir CACHE, $dir;
-    my ($fa, $idx) = grep {/\.fa(\.index)?$/} readdir CACHE;
+    my @read = readdir CACHE;
+    my ($fa)  = grep {/\.fa$/} @read;
+    my ($idx) = grep {/\.index$/} @read;
     closedir CACHE;
     
     ok(defined($fa), "\[$species\] FASTA file present");
