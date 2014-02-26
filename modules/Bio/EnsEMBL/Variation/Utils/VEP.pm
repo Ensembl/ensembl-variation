@@ -312,8 +312,8 @@ sub detect_format {
     elsif (
         $data[0] =~ /(chr)?\w+/ &&
         $data[1] =~ /^\d+$/ &&
-        $data[3] =~ /^[ACGTN-]+$/i &&
-        $data[4] =~ /^([\.ACGTN-]+\,?)+$/i
+        $data[3] =~ /^[ACGTN\-\.]+$/i &&
+        $data[4] =~ /^([\.ACGTN\-]+\,?)+|(\<[A-Z]+\>)$/i
     ) {
         return 'vcf';
     }
