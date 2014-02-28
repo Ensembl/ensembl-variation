@@ -4315,6 +4315,15 @@ sub prefetch_transcript_data {
         }
     }
     
+    # selenocysteines
+    if(my $tl = $tr->translation) {
+      $tr->{_variation_effect_feature_cache}->{selenocysteines} = [
+        sort {$a <=> $b}
+        map {$_->{start}}
+        @{$tl->get_all_SeqEdits('_selenocysteine')}
+      ];
+    }
+    
     # gene
     $tr->{_gene} ||= $config->{ga}->fetch_by_transcript_stable_id($tr->stable_id);
     
