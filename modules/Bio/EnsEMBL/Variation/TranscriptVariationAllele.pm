@@ -243,6 +243,25 @@ sub peptide {
                 $pep .= $codon_seq->translate(undef, undef, undef, $codon_table)->seq;
             }
             
+            # selenocysteines?
+            if($self->{is_reference}) {
+              my $tv = $self->transcript_variation;
+              my $cs_positions = $tv->_selenocysteine_positions;
+              
+              if(scalar @$cs_positions) {
+                my $pep_pos = 0;
+                
+                for my $tr_pos($tv->translation_start..$tv->translation_end) {
+                  if(grep {$tr_pos == $_} @$cs_positions) {
+                    substr($pep, $pep_pos, 1) = 'U';
+                  }
+                  
+                  $pep_pos++;
+                  last if $pep_pos >= length($pep);
+                }
+              }
+            }
+            
             if($partial_codon) {
                 $pep .= 'X';
             }
