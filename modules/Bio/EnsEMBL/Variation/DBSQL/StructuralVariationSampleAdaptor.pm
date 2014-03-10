@@ -275,7 +275,8 @@ sub _tables {
 sub _left_join {
   my $self = shift;
   my @tables = ([ 'individual i1', 'i1.individual_id = svs.individual_id'],
-								[ 'individual i2', 'i2.individual_id = svs.strain_id']
+								[ 'individual i2', 'i2.individual_id = svs.strain_id'],
+								[ 'study st', 'st.study_id = sv.study_id']
 							 );
 	
 	# If we are excluding failed_structural_variations, add that table
@@ -287,7 +288,7 @@ sub _left_join {
 sub _default_where_clause {
   my $self = shift;
 
-  return 'svs.structural_variation_id = sv.structural_variation_id AND sv.study_id=st.study_id';
+  return 'svs.structural_variation_id = sv.structural_variation_id';
 }
 
 sub _columns {
