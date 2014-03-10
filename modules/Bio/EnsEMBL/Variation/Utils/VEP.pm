@@ -3408,7 +3408,8 @@ sub check_existing_tabix {
       my $region_string = join " ", map {$_->{chr}.':'.($_->{start} > $_->{end} ? $_->{end}.'-'.$_->{start} : $_->{start}.'-'.$_->{end})} @tmp_list;
       
       my $file = get_dump_file_name($config, $chr, "all", "vars");
-      die("ERROR: Could not read from file $file\n") unless -e $file;
+      next unless -e $file;
+      #die("ERROR: Could not read from file $file\n") unless -e $file;
       
       open VARS, "tabix $file $region_string 2>&1 |"
         or die "\nERROR: Could not open tabix pipe for $file\n";
