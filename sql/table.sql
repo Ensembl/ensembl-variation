@@ -250,15 +250,16 @@ create table variation_synonym (
 @column variation_id	 	   Foreign key references to the @link variation table.
 @column subsnp_id		   Foreign key references to the @link subsnp_handle table.
 @column allele_code_id 		   Foreign key reference to @link allele_code table.
-@column frequency		   Frequency of this allele in the sample.
 @column population_id		   Foreign key references to the @link population table.
-@column count			   Number of individuals in the sample where this allele is found.
+@column frequency		   Frequency of this allele in the population.
+@column count			   Number of individuals in the population where this allele is found.
 @column frequency_submitter_handle dbSNP handle for submitter of frequency data [may be different to submitter of observed variant]
 
 @see variation
-@see population
 @see subsnp_handle
 @see allele_code
+@see population
+@see submitter_handle
 */
 
 CREATE TABLE allele (
