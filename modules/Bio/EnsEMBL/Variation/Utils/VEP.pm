@@ -2193,9 +2193,10 @@ sub add_extra_fields_transcript {
     
     # gene symbol
     if(defined $config->{symbol}) {
-        my ($symbol, $source);
-        $symbol = $tr->{_gene_symbol} || $tr->{_gene_hgnc};
-        $source = $tr->{_gene_symbol_source};
+        my ($symbol, $source, $hgnc_id);
+        $symbol  = $tr->{_gene_symbol} || $tr->{_gene_hgnc};
+        $source  = $tr->{_gene_symbol_source};
+        $hgnc_id = $tr->{_gene_hgnc_id} if defined($tr->{_gene_hgnc_id});
         
         if(!defined($symbol) && defined($config->{database})) {
           
@@ -2204,8 +2205,9 @@ sub add_extra_fields_transcript {
             }
             
             if(my $xref = $gene->display_xref) {
-                $symbol = $xref->display_id;
-                $source = $xref->dbname;
+                $symbol  = $xref->display_id;
+                $source  = $xref->dbname;
+                $hgnc_id = $xref->primary_id if $source eq 'HGNC';
             }
             
             else {
@@ -2219,6 +2221,7 @@ sub add_extra_fields_transcript {
         
         $line->{Extra}->{SYMBOL} = $symbol if defined($symbol);
         $line->{Extra}->{SYMBOL_SOURCE} = $source if defined($source);
+        $line->{Extra}->{HGNC_ID} = $hgnc_id if defined($hgnc_id);
     }
     
     # CCDS
@@ -4120,6 +4123,7 @@ sub prefetch_transcript_data {
             if(my $xref = $tr->{_gene}->display_xref) {
                 $tr->{_gene_symbol} = $xref->display_id;
                 $tr->{_gene_symbol_source} = $xref->dbname;
+                $tr->{_gene_hgnc_id} = $xref->primary_id if $xref->dbname eq 'HGNC';
             }
             
             else {
@@ -4130,6 +4134,7 @@ sub prefetch_transcript_data {
             # cache it on the gene object too
             $tr->{_gene}->{_symbol} = $tr->{_gene_symbol};
             $tr->{_gene}->{_symbol_source} = $tr->{_gene_symbol_source};
+            $tr->{_gene}->{_hgnc_id} = $tr->{_gene_hgnc_id} if defined($tr->{_gene_hgnc_id});
         }
     }
     
