@@ -1648,7 +1648,7 @@ sub pick_worst_vfoa {
   if(scalar @vfoa_info) {
     my $picked = (sort {
       $b->{canonical} <=> $a->{canonical} ||
-      $a->{biotype} <=> $b->{biotype} ||
+      $b->{biotype} <=> $a->{biotype} ||
       $a->{rank} <=> $b->{rank} ||
       $b->{length} <=> $a->{length}
     } @vfoa_info)[0]->{vfoa};
