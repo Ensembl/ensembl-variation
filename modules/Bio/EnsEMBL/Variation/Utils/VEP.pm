@@ -152,6 +152,7 @@ our %COL_DESCS = (
     'CCDS'               => 'Indicates if transcript is a CCDS transcript',
     'SYMBOL'             => 'Gene symbol (e.g. HGNC)',
     'SYMBOL_SOURCE'      => 'Source of gene symbol',
+    'HGNC_ID'            => 'Stable identifer of HGNC gene symbol',
     'ENSP'               => 'Ensembl protein identifer',
     'HGVSc'              => 'HGVS coding sequence name',
     'HGVSp'              => 'HGVS protein sequence name',
