@@ -1048,6 +1048,8 @@ sub get_all_consequences {
                   *PARENT = $parent;
                   *STDERR = *PARENT;
                   
+                  #die("TEST DEATH\n") if rand() < 0.1;
+                  
                   my $cons = vf_list_to_cons($config, \@temp_array);
                   
                   # what we're doing here is sending a serialised hash of the
@@ -1081,20 +1083,22 @@ sub get_all_consequences {
           }
         }
         
-        my $fh = $config->{out_file_handle};
-        my $done_processes = 0;
-        
         # read child input
-        while(my @ready = $sel->can_read  and $done_processes < scalar @pids ) {
-            foreach $fh (@ready) {
+        while(my @ready = $sel->can_read()) {
+            my $no_read = 1;
+            
+            foreach my $fh(@ready) {
+                $no_read++;
+                
                 my $line = $fh->getline();
                 next unless defined($line) && $line;
+                
+                $no_read = 0;
                 
                 # child finished
                 if($line =~ /^DONE/) {
                     $sel->remove($fh);
                     $fh->close;
-                    $done_processes++;
                     $active_forks--;
                     last;
                 }
@@ -1168,13 +1172,12 @@ sub get_all_consequences {
                 # something's wrong
                 else {
                     print STDERR "\n$line\n";
-                    # kill the other pids
-                    #foreach my $pid(@pids) {
-                    #  kill(15, $pid);
-                    #}
-                    #die("\nERROR: Forked process failed\n$line\n");
                 }
             }
+            
+            # read-through detected, DIE
+            die("\nERROR: Forked process(es) died\n") if $no_read;
+            
             last if $active_forks < $config->{fork};
         }
       }
