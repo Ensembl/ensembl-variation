@@ -48,7 +48,7 @@ package Bio::EnsEMBL::Variation::BaseTranscriptVariationAllele;
 use strict;
 use warnings;
 
-use base qw(Bio::EnsEMBL::Variation::VariationFeatureOverlapAllele);
+use base qw(Bio::EnsEMBL::Variation::BaseVariationFeatureOverlapAllele);
 
 =head2 base_transcript_variation
 
@@ -62,7 +62,7 @@ use base qw(Bio::EnsEMBL::Variation::VariationFeatureOverlapAllele);
 sub base_transcript_variation {
     my ($self, $btv) = @_;
     assert_ref($btv, 'Bio::EnsEMBL::Variation::BaseTranscriptVariation') if $btv;
-    return $self->variation_feature_overlap($btv);
+    return $self->base_variation_feature_overlap($btv);
 }
 
 =head2 transcript
