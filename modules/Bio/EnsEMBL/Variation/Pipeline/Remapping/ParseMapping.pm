@@ -160,6 +160,7 @@ sub map_variant {
 #        next;
 		# return
     }	
+    my $snp_q_pos = $length_before_var;			
 
 	while (my $sub_string = shift @cigar_string) {
         my $operation = $sub_string->[0];
@@ -177,31 +178,37 @@ sub map_variant {
             $target_match_length = $count;
         }
 
-        my $snp_q_pos = $length_before_var + 1;			
         $new_q_start = $q_start + $query_match_length - 1 if ($operation eq 'M');
-        $new_q_start = $q_start + $query_match_length + 1 if ($operation eq 'I');	
-        $new_q_start = $q_start + $query_match_length + 1 if ($operation eq 'D');	
+        $new_q_start = $q_start + $query_match_length if ($operation eq 'D' || $operation eq 'I');	
 
         $new_t_start = $t_start + $target_match_length - 1 if ($operation eq 'M');
-        $new_t_start = $t_start + $target_match_length + 1 if ($operation eq 'I');
-        $new_t_start = $t_start + $target_match_length + 1 if ($operation eq 'D');
+        $new_t_start = $t_start + $target_match_length if ($operation eq 'D' || $operation eq 'I');
 
 
-        if (($snp_q_pos >= $q_start and $snp_q_pos <= $new_q_start) or 
-            ($snp_q_pos >= $new_q_start and $snp_q_pos <= $q_start)) {
+        if (($q_start <= $snp_q_pos and $snp_q_pos < $new_q_start) or 
+            ($new_q_start < $snp_q_pos and $snp_q_pos <= $q_start)) {
             if ($operation eq 'M') {
-                $snp_t_start = $t_start + abs($snp_q_pos - $q_start);
-                $snp_t_end = $snp_t_start + $length_var - 1;	
-            } elsif ($operation eq 'I') { # $target_match_length == 0   # insertion covering variant site ... 
-                $snp_t_start = $t_start + 1;
-                $snp_t_end = $snp_t_start;
-                $indel_colocation = 1;
-                $flag_suspicious = 1;				
-            } elsif ($operation eq 'D') { # $query_match_length == 0    # deletion covering variant site ...
-                $snp_t_start = $t_start + $target_match_length + 1;
-                $snp_t_end = $snp_t_start;
-                $indel_colocation = 1;	
-                $flag_suspicious = 1;
+                if ($length_var == 0) {
+                    $snp_t_start = $t_start + abs($snp_q_pos - $q_start);
+                    $snp_t_end = $snp_t_start + 1;
+                    ($snp_t_start, $snp_t_end) = ($snp_t_end, $snp_t_start);
+                } else {
+                	$snp_t_start = $t_start + abs($snp_q_pos - $q_start + 1);
+                	$snp_t_end = $snp_t_start + $length_var - 1;
+				}	
+            } else { 
+				if ($operation eq 'I' && ($new_q_start > $snp_q_pos)) {
+                    $indel_colocation = 1;
+                    $flag_suspicious = 1;
+                }
+				if ($length_var == 0) {
+					$snp_t_start = $new_t_start;
+                    $snp_t_end = $snp_t_start + 1;
+                    ($snp_t_start, $snp_t_end) = ($snp_t_end, $snp_t_start);
+				} else {
+					$snp_t_start = $new_t_start + 1;
+					$snp_t_end = $snp_t_start + $length_var - 1;
+				}
             } 
         }
         if ($snp_t_start && $snp_t_end) {
