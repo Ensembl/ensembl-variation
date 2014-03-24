@@ -118,7 +118,7 @@ sub run {
         if ($length_query_seq == 0) {
             $flag_suspicious = 1;
         } else {
-            $relative_alignment_score = ($length_query_seq - ($count_ns + $edit_distance)) / $length_query_seq;	
+            $relative_alignment_score = ($length_query_seq - ($clipped_nucleotides + $edit_distance)) / $length_query_seq;	
         }
 
         my $mapping_info = join("\t", (
