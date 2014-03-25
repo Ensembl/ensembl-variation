@@ -31,7 +31,7 @@ package Bio::EnsEMBL::Variation::Pipeline::InitTranscriptEffect;
 
 use strict;
 use warnings;
-
+use Data::Dumper;
 use base qw(Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess);
 
 my $DEBUG = 0;
@@ -41,6 +41,7 @@ sub fetch_input {
     my $self = shift;
 
     my $include_lrg = $self->param('include_lrg');
+    my $biotypes = $self->param('limit_biotypes');
 
     my $core_dba = $self->get_species_adaptor('core');
     my $var_dba = $self->get_species_adaptor('variation');
@@ -60,9 +61,16 @@ sub fetch_input {
     
     my $gene_count = 0;
 
-    # fetch all the regular genes
+    my @genes;  
 
-    my @genes = @{ $ga->fetch_all };
+    if ( grep {defined($_)} @$biotypes ) {  # If array is not empty  
+       # Limiting genes to specified biotypes 
+       @genes = map { @{$ga->fetch_all_by_logic_name($_)} } @$biotypes;
+
+    }else { 
+       # fetch all genes 
+       @genes = @{ $ga->fetch_all };
+    }  
 
     if ($include_lrg) {
         # fetch the LRG genes as well

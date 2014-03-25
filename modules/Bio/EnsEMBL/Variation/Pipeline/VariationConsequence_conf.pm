@@ -103,7 +103,10 @@ sub default_options {
         
         # set this flag to 1 to include LRG transcripts in the transcript effect analysis
 
-        include_lrg => 1,
+        include_lrg => 1, 
+
+        # Limit analysis to specific gene biotypes
+        limit_biotypes => [],
 
         # these flags control which parts of the pipeline are run
 
@@ -172,6 +175,7 @@ sub pipeline_analyses {
                 -module     => 'Bio::EnsEMBL::Variation::Pipeline::InitTranscriptEffect',
                 -parameters => {
                     include_lrg => $self->o('include_lrg'),
+                    limit_biotypes => $self->o('limit_biotypes'),
                     @common_params,
                 },
                 -input_ids  => [{}],
