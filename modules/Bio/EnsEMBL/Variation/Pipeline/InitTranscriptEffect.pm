@@ -31,7 +31,6 @@ package Bio::EnsEMBL::Variation::Pipeline::InitTranscriptEffect;
 
 use strict;
 use warnings;
-use Data::Dumper;
 use base qw(Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess);
 
 my $DEBUG = 0;
