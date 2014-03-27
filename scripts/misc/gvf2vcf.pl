@@ -81,7 +81,7 @@ if ($host || $registry_file) {
             $registry->load_registry_from_db(-host => $host, -user => $user);
         }
     } else {
-        $registry->load_all($registry);
+        $registry->load_all($registry_file);
     }
     my $cdba = $registry->get_DBAdaptor($species, 'core');
     $slice_adaptor = $cdba->get_SliceAdaptor;
