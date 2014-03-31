@@ -1233,7 +1233,7 @@ sub vf_list_to_cons {
     push @{$vf_hash{$_->{chr}}{int($_->{start} / $config->{chunk_size})}{$_->{start}}}, $_ for @$listref;
     
     # get chr list
-    my @chrs = sort {$a.$b !~ /^\d+$/ ? $a cmp $b : $a <=> $b} keys %{{map {$_->{chr} => 1} @$listref}};
+    my @chrs = sort {natural_sort($a,$b)} keys %{{map {$_->{chr} => 1} @$listref}};
     
     # get non-variants
     my @non_variants = grep {$_->{non_variant}} @$listref;
@@ -1498,6 +1498,16 @@ sub vf_list_to_cons {
     }
     
     return \@return;
+}
+
+sub natural_sort {
+  my ($a, $b) = @_;
+  if($a =~ /^[0-9]+$/ && $b =~ /^[0-9]+$/) {
+    return $a <=> $b;
+  }
+  else {
+    return $a cmp $b;
+  }
 }
 
 # takes a variation feature and returns ready to print consequence information
