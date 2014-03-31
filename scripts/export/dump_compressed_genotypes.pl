@@ -1,4 +1,33 @@
+#!/usr/bin/env perl
+# Copyright [1999-2014] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
+# 
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+# 
+#      http://www.apache.org/licenses/LICENSE-2.0
+# 
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
+
+
+=head1 CONTACT
+
+  Use this script to dump genotypes from compressed_genotype_var
+  Re-import to compressed_genotype_region using
+  ensembl-variation/scripts/import/compress_genotypes_by_region_from_file.pl
+
+  Please email comments or questions to the public Ensembl
+  developers list at <http://lists.ensembl.org/mailman/listinfo/dev>.
+
+  Questions may also be sent to the Ensembl help desk at
+  <helpdesk.org>.
+
+=cut
 use strict;
 use Getopt::Long;
 use Bio::EnsEMBL::Registry;
@@ -76,19 +105,9 @@ foreach my $sr_id(@sr_ids) {
 		while(@genotypes) {
 			my $individual_id = shift @genotypes;
 			my $gt_code = shift @genotypes;
-      
-      $ss = 0 unless defined $ss;
-      next if $done{$individual_id}{$gt_code}{$ss};
-      $done{$individual_id}{$gt_code}{$ss} = 1;
 			
       print join("\t", ($n, $i, $s, $e, $r, $v, $ss, $individual_id, $gt_code));
       print "\n";
-      
-			#my $igtype  = Bio::EnsEMBL::Variation::IndividualGenotype->new_fast({
-			#	_variation_id => $v,
-			#	subsnp        => $ss,
-			#	adaptor       => $ga,
-			#});
 		}
 	}
   

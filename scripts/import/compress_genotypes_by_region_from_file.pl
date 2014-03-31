@@ -17,6 +17,9 @@
 
 =head1 CONTACT
 
+  Use this script to re-import files dumped by
+  ensembl-variation/scripts/export/dump_compressed_genotypes.pl
+
   Please email comments or questions to the public Ensembl
   developers list at <http://lists.ensembl.org/mailman/listinfo/dev>.
 
@@ -33,7 +36,6 @@ use ImportUtils qw(loadfile);
 use Bio::EnsEMBL::Utils::Exception qw(warning throw verbose);
 use DBH;
 use Bio::EnsEMBL::Variation::DBSQL::DBAdaptor;
-use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
 use Bio::EnsEMBL::Registry;
 use FindBin qw( $Bin );
 use POSIX;
@@ -45,36 +47,21 @@ use constant MAX_SHORT => 2**16 -1;
 $| = 1;
 
 ## Backslash Escaping
-
-
 my %Printable = ( "\\"=>'\\', "\r"=>'r', "\n"=>'n', "\t"=>'t', "\""=>'"' );
 
-my ($TMP_DIR, $TMP_FILE, $species, $selected_seq_region, $registry_file, $genotype_table, $monoploid, $no_flip, $jump, $has_proxy, $restart);
+my ($TMP_DIR, $TMP_FILE, $species, $registry_file);
 
 GetOptions(
-	'tmpdir=s'        => \$TMP_DIR,
-	'tmpfile=s'       => \$TMP_FILE,
-	'species=s'       => \$species,
-	'seq_region=i'    => \$selected_seq_region,
-	'registry_file=s' => \$registry_file,
-	'monoploid'       => \$monoploid,
-	'no_flip'         => \$no_flip,
-	'jump=i'          => \$jump,
-	'proxy=i'         => \$has_proxy,
-	'start=i'         => \$restart,
+  'tmpdir=s'        => \$TMP_DIR,
+  'tmpfile=s'       => \$TMP_FILE,
+  'species=s'       => \$species,
+  'registry_file=s' => \$registry_file,
 );
 
 
-$monoploid = 0 unless defined($monoploid);
-$jump ||= 10000000;
+$TMP_FILE .= "_".$ENV{HOST}.'_'.$$;
 
-#$selected_seq_region ||= $ENV{LSB_JOBINDEX} if defined($ENV{LSB_JOBINDEX});
-undef $selected_seq_region unless $selected_seq_region;
-
-$TMP_FILE .= "_".$selected_seq_region if defined($selected_seq_region);
-
-my $dump_file = 'compressed_genotype_region.txt';
-$dump_file .= "_".$selected_seq_region if defined($selected_seq_region);
+my $dump_file = 'compressed_genotype_region.txt_'.$ENV{HOST}.'_'.$$;
 
 warn("Make sure you have an updated ensembl.registry file!\n");
 
@@ -97,7 +84,6 @@ $ImportUtils::TMP_FILE = $TMP_FILE;
 
 
 compress_genotypes($dbVar);
-#update_meta_coord($dbCore,$dbVar,"compressed_genotype_region");
 
 #reads the genotype and variation_feature data and compress it in one table with blob field
 sub compress_genotypes{
@@ -154,8 +140,6 @@ sub compress_genotypes{
     if ($seq_region_start != $genotypes->{$sample_id}->{region_start}){					
       #compress information
       $blob = pack ("w",$seq_region_start - $genotypes->{$sample_id}->{region_end} - 1);
-      
-      $DB::single = 1 unless $variation_id && $genotype_code;
       $genotypes->{$sample_id}->{genotypes} .= escape($blob) .escape(pack("w", $variation_id)). escape(pack("w", $genotype_code));
     }
     else{
@@ -176,38 +160,65 @@ sub compress_genotypes{
 
 
 sub print_file{
-    my $file = shift;
-    my $genotypes = shift;
-    my $seq_region_id = shift;
-    my $sample_id = shift;
-
-    open( FH, ">>$file") or die "Could not add compressed information: $!\n";
-    if (!defined $sample_id){
-	#new chromosome, print all the genotypes and flush the hash
-	foreach my $sample_id (keys %{$genotypes}){
-	    print FH join("\t",$sample_id,$seq_region_id, $genotypes->{$sample_id}->{region_start}, $genotypes->{$sample_id}->{region_end}, 1, $genotypes->{$sample_id}->{genotypes}) . "\n";
-	}
+  my $file = shift;
+  my $genotypes = shift;
+  my $seq_region_id = shift;
+  my $sample_id = shift;
+  
+  open( FH, ">>$file") or die "Could not add compressed information: $!\n";
+  if (!defined $sample_id){
+    #new chromosome, print all the genotypes and flush the hash
+    foreach my $sample_id (keys %{$genotypes}){
+      print FH join("\t",$sample_id,$seq_region_id, $genotypes->{$sample_id}->{region_start}, $genotypes->{$sample_id}->{region_end}, 1, $genotypes->{$sample_id}->{genotypes}) . "\n";
     }
-    else{
-	#only print the region corresponding to sample_id
-	print FH join("\t",$sample_id,$seq_region_id, $genotypes->{$sample_id}->{region_start}, $genotypes->{$sample_id}->{region_end}, 1, $genotypes->{$sample_id}->{genotypes}) . "\n";
-    }
-    close FH;
+  }
+  else{
+    #only print the region corresponding to sample_id
+    print FH join("\t",$sample_id,$seq_region_id, $genotypes->{$sample_id}->{region_start}, $genotypes->{$sample_id}->{region_end}, 1, $genotypes->{$sample_id}->{genotypes}) . "\n";
+  }
+  close FH;
 }
 
 sub import_genotypes{
-    my $dbVar = shift;
+  my $dbVar = shift;
+  
+  # check for lock file
+	my $sleeps = 0;
+	
+	my $lock_file = $ENV{HOME}.'/.compress_genotypes_lockfile';
+	
+	while(-e $lock_file) {
+		$sleeps++;
+		sleep(1);
+		
+		if($sleeps % 60 == 0) {
+			print STDERR
+				"WARNING: Process ".
+				"has been waiting to insert for ".
+				($sleeps / 60)." min".($sleeps > 60 ? 's' : '').
+				", you may need to delete the lock file ".$lock_file.
+				" if you are sure no LOAD DATA MySQL process is still running\n";
+		}
+	}
+	
+	# create lock file
+	open TMP, '> '.$lock_file or die "Could not write to lock file\n";
+	print TMP '1';
+	close TMP;
 
-    #debug("Importing compressed genotype data");
-	#debug("mv $TMP_DIR/$dump_file $TMP_DIR/$TMP_FILE");
-	
-	#$dbVar->do(qq{LOAD DATA INFILE "$TMP_DIR/$dump_file" INTO TABLE compressed_genotype_region});
-	
-    #my $call = "mv $TMP_DIR/$dump_file $TMP_DIR/$TMP_FILE";
-    #system($call);
-    loadfile("$TMP_DIR/$dump_file", $dbVar,qw(compressed_genotype_region individual_id seq_region_id seq_region_start seq_region_end seq_region_strand genotypes));
-    
-    unlink("$TMP_DIR/$dump_file");
+  #debug("Importing compressed genotype data");
+  #debug("mv $TMP_DIR/$dump_file $TMP_DIR/$TMP_FILE");
+  
+  #$dbVar->do(qq{LOAD DATA INFILE "$TMP_DIR/$dump_file" INTO TABLE compressed_genotype_region});
+  
+  #my $call = "mv $TMP_DIR/$dump_file $TMP_DIR/$TMP_FILE";
+  #system($call);
+  loadfile("$TMP_DIR/$dump_file", $dbVar,qw(compressed_genotype_region individual_id seq_region_id seq_region_start seq_region_end seq_region_strand genotypes));
+  
+  #unlink("$TMP_DIR/$dump_file");
+  
+  # remove lock file
+  unlink($lock_file);
 }
 
 
