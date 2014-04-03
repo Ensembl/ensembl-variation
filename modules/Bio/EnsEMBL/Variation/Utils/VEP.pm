@@ -182,6 +182,7 @@ our %COL_DESCS = (
     'PUBMED'             => 'Pubmed ID(s) of publications that cite existing variant',
     'ALLELE_NUM'         => 'Allele number from input; 0 is reference, 1 is first alternate etc',
     'STRAND'             => 'Strand of the feature (1/-1)',
+    'PICK'               => 'Indicates if this consequence has been picked as the most severe',
 );
 
 our @REG_FEAT_TYPES = qw(
@@ -1603,6 +1604,13 @@ sub vf_to_consequences {
     # pick worst?
     @vfoas = (pick_worst_vfoa($config, \@vfoas)) if defined($config->{pick});
     
+    # flag picked?
+    if(defined($config->{flag_pick})) {
+      if(my $worst = pick_worst_vfoa($config, \@vfoas)) {
+        $worst->{PICK} = 1;
+      }
+    }
+    
     # pick per gene?
     @vfoas = @{pick_vfoa_per_gene($config, \@vfoas)} if defined($config->{per_gene});
     
@@ -2126,6 +2134,9 @@ sub add_extra_fields {
     
     # add transcript-specific fields
     $line = add_extra_fields_transcript($config, $line, $bvfoa) if $bvfoa->isa('Bio::EnsEMBL::Variation::BaseTranscriptVariationAllele');
+    
+    # picked?
+    $line->{Extra}->{PICK} = 1 if defined($bvfoa->{PICK});
     
     # stats
     $config->{stats}->{gene}->{$line->{Gene}}++ if defined($line->{Gene});
