@@ -2974,7 +2974,7 @@ sub fetch_transcripts {
         $region_count += scalar @{$regions->{$chr}};
     }
     
-    my $counter;
+    my ($counter, $gencode_skip_count);
     
     debug("Reading transcript data from cache and/or database") unless defined($config->{quiet});
     
@@ -3059,6 +3059,12 @@ sub fetch_transcripts {
                     #    }
                     #}
                     
+                    # using gencode basic?
+                    if(defined($config->{gencode_basic}) && !(grep {$_->{code} eq 'gencode_basic'} @{$tr->get_all_Attributes})) {
+                      $gencode_skip_count++;
+                      next;
+                    }
+                    
                     $seen_trs{$dbID} = 1;
                     
                     push @{$tr_cache->{$chr}}, $tr;
@@ -3082,6 +3088,7 @@ sub fetch_transcripts {
     my $tr_count = 0;
     $tr_count += scalar @{$tr_cache->{$_}} for keys %$tr_cache;
     
+    debug("Skipped $gencode_skip_count transcripts not in Gencode basic set") if $gencode_skip_count && !defined($config->{quiet});
     debug("Retrieved $tr_count transcripts ($count_from_mem mem, $count_from_cache cached, $count_from_db DB, $count_duplicates duplicates)") unless defined($config->{quiet});
     
     return $tr_count;
@@ -3906,6 +3913,12 @@ sub clean_transcript {
         my @new_atts;
         foreach my $att(@{$tr->{attributes}}) {
             push @new_atts, $att if $att->{code} eq 'miRNA';
+            
+            # get and clean gencode_basic attribute
+            if($att->{code} eq 'gencode_basic') {
+              delete $att->{$_} for grep {$_ ne 'code'} keys %$att;
+              push @new_atts, $att;
+            }
         }
         $tr->{attributes} = \@new_atts;
     }
