@@ -154,6 +154,9 @@ our %COL_DESCS = (
     'SYMBOL_SOURCE'      => 'Source of gene symbol',
     'HGNC_ID'            => 'Stable identifer of HGNC gene symbol',
     'ENSP'               => 'Ensembl protein identifer',
+    'SWISSPROT'          => 'UniProtKB/Swiss-Prot identifier',
+    'TREMBL'             => 'UniProtKB/TrEMBL identifier',
+    'UNIPARC'            => 'UniParc identifier',
     'HGVSc'              => 'HGVS coding sequence name',
     'HGVSp'              => 'HGVS protein sequence name',
     'SIFT'               => 'SIFT prediction and/or score',
@@ -2155,14 +2158,7 @@ sub add_extra_fields_transcript {
     my $tr = $tva->transcript;
     
     # get gene
-    my $gene;
-    
     $line->{Gene} = $tr->{_gene_stable_id};
-    
-    if(!defined($line->{Gene})) {
-        $gene = $config->{ga}->fetch_by_transcript_stable_id($tr->stable_id);
-        $line->{Gene} = $gene ? $gene->stable_id : '-';
-    }
     
     # exon/intron numbers
     if ($config->{numbers}) {
@@ -2194,78 +2190,40 @@ sub add_extra_fields_transcript {
     
     # gene symbol
     if(defined $config->{symbol}) {
-        my ($symbol, $source, $hgnc_id);
-        $symbol  = $tr->{_gene_symbol} || $tr->{_gene_hgnc};
-        $source  = $tr->{_gene_symbol_source};
-        $hgnc_id = $tr->{_gene_hgnc_id} if defined($tr->{_gene_hgnc_id});
+        my $symbol  = $tr->{_gene_symbol} || $tr->{_gene_hgnc};
+        my $source  = $tr->{_gene_symbol_source};
+        my $hgnc_id = $tr->{_gene_hgnc_id} if defined($tr->{_gene_hgnc_id});
         
-        if(!defined($symbol) && defined($config->{database})) {
-          
-            if(!defined($gene)) {
-                $gene = $config->{ga}->fetch_by_transcript_stable_id($tr->stable_id);
-            }
-            
-            if(my $xref = $gene->display_xref) {
-                $symbol  = $xref->display_id;
-                $source  = $xref->dbname;
-                $hgnc_id = $xref->primary_id if $source eq 'HGNC';
-            }
-            
-            else {
-              my ($entry) = @{$gene->get_all_DBEntries('RefSeq_gene_name')};
-              $symbol = $entry->display_id if $entry;
-            }
-        }
-        
-        $symbol = undef if defined($symbol) && $symbol eq '-';
-        $source = undef if defined($source) && $source eq '-';
-        
-        $line->{Extra}->{SYMBOL} = $symbol if defined($symbol);
-        $line->{Extra}->{SYMBOL_SOURCE} = $source if defined($source);
-        $line->{Extra}->{HGNC_ID} = $hgnc_id if defined($hgnc_id);
+        $line->{Extra}->{SYMBOL} = $symbol if defined($symbol) && $symbol ne '-';
+        $line->{Extra}->{SYMBOL_SOURCE} = $source if defined($source) && $source ne '-';
+        $line->{Extra}->{HGNC_ID} = $hgnc_id if defined($hgnc_id) && $hgnc_id ne '-';
     }
     
     # CCDS
-    if(defined($config->{ccds})) {
-        my $ccds = $tr->{_ccds};
-        
-        if(!defined($ccds)) {
-            my @entries = grep {$_->database eq 'CCDS'} @{$tr->get_all_DBEntries};
-            $ccds = $entries[0]->display_id if scalar @entries;
-        }
-        
-        $ccds = undef if defined($ccds) && $ccds eq '-';
-        
-        $line->{Extra}->{CCDS} = $ccds if defined($ccds);
-    }   
+    $line->{Extra}->{CCDS} = $tr->{_ccds} if
+      defined($config->{ccds}) &&
+      defined($tr->{_ccds}) &&
+      $tr->{_ccds} ne '-';
     
     # refseq xref
-    if(defined($config->{xref_refseq})) {
-        my $refseq = $tr->{_refseq};
-        
-        if(!defined($refseq)) {
-            my @entries = grep {$_->database eq 'RefSeq_mRNA'} @{$tr->get_all_DBEntries};
-            if(scalar @entries) {
-                $refseq = join ",", map {$_->display_id."-".$_->database} @entries;
-            }
-        }
-        
-        $refseq = undef if defined($refseq) && $refseq eq '-';
-        
-        $line->{Extra}->{RefSeq} = $refseq if defined($refseq);
-    }
+    $line->{Extra}->{RefSeq} = $tr->{_refseq} if
+      defined($config->{xref_refseq}) &&
+      defined($tr->{_refseq}) &&
+      $tr->{_refseq} ne '-';
     
     # protein ID
-    if(defined $config->{protein}) {
-        my $protein = $tr->{_protein};
-        
-        if(!defined($protein)) {
-            $protein = $tr->translation->stable_id if defined($tr->translation);
+    $line->{Extra}->{ENSP} = $tr->{_protein} if
+      defined($config->{protein}) &&
+      defined($tr->{_protein}) &&
+      $tr->{_protein} ne '-';
+    
+    # uniprot
+    if(defined $config->{uniprot}) {
+        for my $db(qw(swissprot trembl uniparc)) {
+            my $id = $tr->{'_'.$db};
+            $id = undef if defined($id) && $id eq '-';
+            $line->{Extra}->{uc($db)} = $id if defined($id);
         }
-        
-        $protein = undef if defined($protein) && $protein eq '-';
-        
-        $line->{Extra}->{ENSP} = $protein if defined($protein);
     }
     
     # canonical transcript
@@ -3887,15 +3845,7 @@ sub cache_transcripts {
                         # indicate if canonical
                         $tr->{is_canonical} = 1 if defined $canonical_tr_id and $tr->dbID eq $canonical_tr_id;
                         
-                        if(defined($config->{prefetch})) {
-                            prefetch_transcript_data($config, $tr);
-                        }
-                        
-                        # CCDS
-                        elsif(defined($config->{ccds})) {
-                            my @entries = grep {$_->database eq 'CCDS'} @{$tr->get_all_DBEntries};
-                            $tr->{_ccds} = $entries[0]->display_id if scalar @entries;
-                        }
+                        prefetch_transcript_data($config, $tr);
                         
                         # strip some unnecessary data from the transcript object
                         clean_transcript($tr) if defined($config->{write_cache});
@@ -4151,6 +4101,33 @@ sub prefetch_transcript_data {
     }
     else {
         $tr->{_refseq} = '-';
+    }
+    
+    # Uniprot
+    if(defined($tr->translation)) {
+        @entries = grep {$_->database eq 'Uniprot/SWISSPROT'} @{$tr->translation->get_all_DBEntries};
+        if(scalar @entries) {
+            $tr->{_swissprot} = join ",", map {$_->display_id} @entries;
+        }
+        else {
+            $tr->{_swissprot} = '-';
+        }
+        
+        @entries = grep {$_->database eq 'Uniprot/SPTREMBL'} @{$tr->translation->get_all_DBEntries};
+        if(scalar @entries) {
+            $tr->{_trembl} = join ",", map {$_->display_id} @entries;
+        }
+        else {
+            $tr->{_trembl} = '-';
+        }
+        
+        @entries = grep {$_->database eq 'UniParc'} @{$tr->translation->get_all_DBEntries};
+        if(scalar @entries) {
+            $tr->{_uniparc} = join ",", map {$_->display_id} @entries;
+        }
+        else {
+            $tr->{_uniparc} = '-';
+        }
     }
     
     # protein stable ID
