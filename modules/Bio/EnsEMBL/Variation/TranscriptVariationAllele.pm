@@ -1165,6 +1165,9 @@ sub _get_surrounding_peptides{
 
   my $ref_trans  = $self->transcript_variation->_peptide();
 
+  ## can't find peptide after the end
+  return if length($ref_trans) <=  $ref_pos ;
+
   my $ref_string = substr($ref_trans, $ref_pos-1, $length);
 
   return ($ref_string);
@@ -1344,6 +1347,9 @@ sub _check_peptides_post_del{
     ## check peptides after deletion - get same length as deletion
     my $post_pos = $hgvs_notation->{end}+1;
     my $post_seq = $self->_get_surrounding_peptides($post_pos, $deleted_length);
+
+    ## if a stop is deleted and no sequence is available beyond to check, return
+    return $hgvs_notation unless defined $post_seq;
 
     for (my $n = 0; $n< $deleted_length; $n++){
 
