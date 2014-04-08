@@ -1383,7 +1383,7 @@ sub vf_list_to_cons {
                         
                         # search for data in main line hash as well as extra field
                         my $data = defined $line->{$col} ? $line->{$col} : $line->{Extra}->{$col};
-                        reverse_comp(\$data) if $vf->strand < 0 and $col eq 'Allele';
+                        reverse_comp(\$data) if $vf->strand < 0 and $col eq 'Allele' and $config->{format} ne 'vcf';
                         
                         # "-" means null for everything except the Allele field (confusing...)
                         $data = undef if defined($data) and $data eq '-' and $col ne 'Allele';
