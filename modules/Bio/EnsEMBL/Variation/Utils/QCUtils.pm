@@ -270,6 +270,8 @@ sub summarise_evidence{
 
     my %evidence;
 
+    my $evidence_ids = get_evidence_attribs($var_dbh);
+
 
     ## summarise ss information
     my $ss_variations =  get_ss_variations($var_dbh, $first, $last);
@@ -287,28 +289,60 @@ sub summarise_evidence{
 
     foreach my $var(keys %$ss_variations ){
 
-      ## dbSNP ss submissions
-      $evidence{$var} = "Multiple_observations,"  if defined $ss_variations->{$var}->{count} && $ss_variations->{$var}->{count} > 1;
-
-      $evidence{$var} .= "Frequency,"             if defined $ss_variations->{$var}->{'freq'};
+	## dbSNP ss submissions
+	push @{$evidence{$var}},  $evidence_ids->{Multiple_observations}  
+	   if defined $ss_variations->{$var}->{count} && $ss_variations->{$var}->{count} > 1;
+	
+	push @{$evidence{$var}}, $evidence_ids->{Frequency}            
+           if defined $ss_variations->{$var}->{'freq'};
 
 
       ## additional human evidence 
-      $evidence{$var} .= "HapMap,"                if defined $ss_variations->{$var}->{'HM'}  ;
-      $evidence{$var} .= "ESP,"                   if defined $ss_variations->{$var}->{'ESP'} ;
+      push @{$evidence{$var}}, $evidence_ids->{'HapMap'}
+           if defined $ss_variations->{$var}->{'HM'}  ;
+
+      push @{$evidence{$var}},  $evidence_ids->{ESP}
+           if defined $ss_variations->{$var}->{'ESP'} ;
       
-      $evidence{$var} .= "1000Genomes,"           if defined $kg_variations->{$var} ;
+      push @{$evidence{$var}}, $evidence_ids->{'1000Genomes'}
+           if defined $kg_variations->{$var} ;
 
       ## pubmed citations
-      $evidence{$var} .= "Cited,"                 if defined $pubmed_variations->{$var}; 
-
-      ## remove trailing commas
-      $evidence{$var} =~ s/\,$//                  if defined $evidence{$var} ;
-
-    }
+      push @{$evidence{$var}}, $evidence_ids->{Cited}               
+           if defined $pubmed_variations->{$var}; 
+	   
+    }    
     return \%evidence;
+    
+}
+
+=head2  get_evidence_attribs
+
+ Get ids from attib table for variation evidence statuses
+ May be species specific, so don't rely on fixed ids
+
+=cut
+sub get_evidence_attribs{
+
+    my $var_dbh = shift;
+
+    my %evidence_ids;
+    my $attrib_ext_sth  = $var_dbh->prepare(qq[ select at.attrib_id,
+                                                       at.value
+                                                from   attrib at, attrib_type att
+                                                where  att.code ='evidence'
+                                                and    att.attrib_type_id = at.attrib_type_id ]);
+    $attrib_ext_sth->execute();
+    my $dat = $attrib_ext_sth->fetchall_arrayref();
+
+    foreach my $l ( @{$dat} ){
+       $evidence_ids{$l->[1]} = $l->[0];
+    }
+
+    return \%evidence_ids;
 
 }
+
 =head2  get_ss_variations
 
   Summarise information from dbSNP ss submissions:

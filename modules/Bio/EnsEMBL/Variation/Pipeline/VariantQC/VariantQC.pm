@@ -86,20 +86,21 @@ sub run {
   if($first ==1){$last--;}
 
   ## find supporting evidence & merge to single string  
-  my $evidence_summary ;
+  my $evidence_attribs ;
   if($self->required_param('evidence_check') ==1){
       
-      $evidence_summary = summarise_evidence($var_dba->dbc(),
-                                             $self->required_param('species'),
-                                             $first,
-                                             $last);
+       $evidence_attribs = summarise_evidence( $var_dba->dbc(),
+                                               $self->required_param('species'),
+                                               $first,
+                                               $last);   
+
   }
 
 
   ## Database updates 
 
   ## write to new variation featues 
-  write_variation_features($var_dba, $var_data, $evidence_summary ); 
+  write_variation_features($var_dba, $var_data, $evidence_attribs ); 
  
   ## write to new failed_variation table
   write_variant_fails($var_dba, $failed_variant);
@@ -112,7 +113,7 @@ sub run {
 
 
   ## write to new variation with evidence string & flip status
-  my $minor_allele = $self->write_variation(  $evidence_summary , $flip );
+  my $minor_allele = $self->write_variation(  $evidence_attribs , $flip );
   
 
   ## check dbSNP MAF against variation_feature allele string
@@ -665,13 +666,16 @@ sub write_variation_features{
                                                   (variation_id, variation_name, seq_region_id,  seq_region_start, 
                                                    seq_region_end, seq_region_strand,  allele_string, map_weight,  
                                                    source_id, consequence_types, variation_set_id, somatic,
-                                                   class_attrib_id, alignment_quality, flags, evidence,
+                                                   class_attrib_id, alignment_quality, flags, evidence_attribs,
                                                    minor_allele, minor_allele_freq, minor_allele_count,validation_status )
                                                   values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                                                 ]);       
   
   
   foreach my $data (@{$to_load}){ 
+
+      my $evidence_attribs = join(",", @{$evidence->{$data->{v_id}}} ) if defined $evidence->{$data->{v_id}};
+
 
     die "No allele string for $data->{name}\n" unless defined  $data->{allele};
     $varfeat_ins_sth->execute( $data->{v_id},
@@ -689,7 +693,7 @@ sub write_variation_features{
                                $data->{class_attrib_id},
                                $data->{align_qual},
                                $data->{flags},
-			       $evidence->{$data->{v_id}},
+			       $evidence_attribs,
                                $data->{min_allele},
                                $data->{min_af},
                                $data->{min_al_count},
@@ -720,6 +724,7 @@ sub write_variation{
 
   my %minor_allele;
 
+
   my $var_ext_sth = $var_dba->dbc->prepare(qq[ select v.variation_id,
                                                       v.source_id,
                                                       v.name, 
@@ -749,7 +754,7 @@ sub write_variation{
                                                minor_allele_freq,
                                                minor_allele_count,
                                                clinical_significance,
-                                               evidence,
+                                               evidence_attribs,
                                                validation_status)
                                                values (?,?,?,?,?,?,?,?,?,?,?,?)
                                               ]); 
@@ -770,6 +775,8 @@ sub write_variation{
     ## save minor allele for later checking
     $minor_allele{$v->[0]} = $v->[6] if defined $v->[6];
 
+      my $evidence_attribs = join(",", @{$evidence->{$v->[0]}}) if defined $evidence->{$v->[0]};
+
     ## substitute in new values as appropriate
     $var_ins_sth->execute( $v->[0],
                            $v->[1],
@@ -781,7 +788,7 @@ sub write_variation{
                            $v->[7],
                            $v->[8],
                            $v->[10],
-                           $evidence->{$v->[0]},
+                           $evidence_attribs,
                            $v->[11])||    die "ERROR writing variation table\n";    
 
   }
