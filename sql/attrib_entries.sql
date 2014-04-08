@@ -25,6 +25,7 @@ INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES 
 INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES (25, 'allele_symbol', 'Allele symbol', 'Allele symbol linked with phenotype association');
 INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES (26, 'allele_accession_id', 'Allele accession ID', 'Allele accession ID linked with phenotype association');
 INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES (33, 'marker_accession_id', 'Marker accession ID', 'Marker ID linked with phenotype association');
+INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES (419, 'evidence', 'Variant evidence status', 'Evidence status for a variant');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (2, 2, 'SNV');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (1, 1, 'SO:0001483');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (3, 3, 'SNP');
@@ -587,6 +588,12 @@ INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (272, 7, 'pr
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (273, 7, 'possibly damaging');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (274, 7, 'benign');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (275, 7, 'unknown');
+INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (367, 419, 'Multiple_observations');
+INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (368, 419, 'Frequency');
+INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (369, 419, 'HapMap');
+INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (370, 419, '1000Genomes');
+INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (371, 419, 'Cited');
+INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (372, 419, 'ESP');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (224, 11, 'Not tested');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (225, 11, 'Benign');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (226, 11, 'Pathogenic');

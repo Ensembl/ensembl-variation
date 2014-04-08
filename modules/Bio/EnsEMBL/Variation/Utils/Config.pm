@@ -77,6 +77,15 @@ our @dgva_clinical_significance_types = (
     'risk factor'
 );
 
+our @evidence_statuses = (
+    'Multiple_observations',
+    'Frequency',
+    'HapMap',
+    '1000Genomes',
+    'Cited',
+    'ESP'
+);
+
 our @VARIATION_CLASSES = (
     {
         SO_accession => 'SO:0001483',
@@ -957,6 +966,12 @@ our @ATTRIB_TYPES = (
 		name => 'Marker accession ID',
 		description => 'Marker ID linked with phenotype association',
 	},
+	{
+		code => 'evidence',
+		name => 'Variant evidence status',
+		description => 'Evidence status for a variant',
+	},
+
 
 );
 
@@ -968,6 +983,7 @@ our %ATTRIBS = (
    'polyphen_prediction' => ['probably damaging', 'possibly damaging', 'benign', 'unknown'],
    'sift_prediction'     => [qw(tolerated deleterious)],
    'prot_func_analysis'  => [qw(sift polyphen_humvar polyphen_humdiv)],
+   'evidence'            => \@evidence_statuses,
 );
 
 # attrib sets are specified by putting a hashref in the @ATTRIB_SETS array having the attrib_type code as key and the attrib as value. new attrib entries will be inserted as necessary

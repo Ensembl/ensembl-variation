@@ -115,6 +115,16 @@ sub store {
 		$sth->finish();
 		$var->{source_id} = $source_id;
     }
+    if( defined $var->{evidence}){
+	## store these by attrib id to allow different values in different species
+	my $aa = $self->db->get_AttributeAdaptor;
+
+	foreach my $ev_term( @{$var->{evidence}} ){
+
+	    my $ev_class_id = $aa->attrib_id_for_type_value('evidence',$ev_term);
+	    push @{$var->{evidence_attribs}},  $ev_class_id;
+	}
+    }
     
     throw("No source ID found for source name ", $var->{source}) unless defined($var->{source_id});
     
@@ -131,7 +141,7 @@ sub store {
             minor_allele_freq,
             minor_allele_count,
             clinical_significance,
-            evidence
+            evidence_attribs
         ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
     });
     
@@ -147,7 +157,7 @@ sub store {
         $var->minor_allele_frequency,
         $var->minor_allele_count,
         $var->{clinical_significance} ? (join ",", @{$var->{clinical_significance}}) : undef,
-        $var->{evidence} ? (join ",", @{$var->{evidence}}) : undef
+        $var->{evidence_attribs} ? (join ",", @{$var->{evidence_attribs}}) : undef  
     );
     
     $sth->finish;
@@ -178,6 +188,17 @@ sub update {
     }
     
     throw("No source ID found for source name ", $var->{source}) unless defined($var->{source_id});
+
+ if( defined $var->{evidence}){
+	## store these by attrib id to allow differnt values in different species
+	my $aa = $self->db->get_AttributeAdaptor;
+
+	foreach my $ev_term( @$var->{evidence} ){
+
+	    my $ev_class_id = $aa->attrib_id_for_type_value('evidence',$ev_term);
+	    push @{$var->{evidence_attribs}},  $ev_class_id;
+	}
+    }
     
     my $sth = $dbh->prepare(q{
         UPDATE variation
@@ -192,7 +213,7 @@ sub update {
                minor_allele_freq = ?,
                minor_allele_count = ?,
                clinical_significance = ?,
-               evidence = ?
+               evidence_attribs = ?
          WHERE variation_id = ?
     });
     
@@ -208,7 +229,7 @@ sub update {
         $var->minor_allele_frequency,
         $var->minor_allele_count,
         join(",",@{$var->{clinical_significance}}) || undef,
-        join(",",@{$var->{evidence}}) || undef,
+        join(",",@{$var->{evidence_attribs}}) || undef,   ### HERE
         $var->dbID
     );
     
@@ -396,7 +417,7 @@ sub _columns {
         "v.minor_allele_freq",
         "v.minor_allele_count",
         "v.clinical_significance",
-        "v.evidence"
+        "v.evidence_attribs"
     );
     
     
@@ -1477,12 +1498,19 @@ sub _obj_from_row {
         
         # Get the validation status
         my @states;
+
         if (defined($row->{v_validation_status})) {
             @states = split(/,/,$row->{v_validation_status}); 
         } 
+        ## convert attrib ids to values for evidence
         my @evidence;
-        if (defined($row->{evidence})) {
-            @evidence = split(/,/,$row->{evidence}); 
+        if (defined($row->{evidence_attribs})) {
+            my $aa  = $self->db->get_AttributeAdaptor;
+            my @attrib_ids = split(/,/,$row->{evidence_attribs});
+            foreach my $attrib_id (@attrib_ids){
+                my $evidence_value = $aa->attrib_value_for_id($attrib_id);
+                push @evidence, $evidence_value ; 
+            }
         } 
 	my @clin_sig;
         if (defined($row->{clinical_significance})) {
