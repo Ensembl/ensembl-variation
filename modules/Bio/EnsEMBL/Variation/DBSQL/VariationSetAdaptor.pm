@@ -338,6 +338,64 @@ sub fetch_all_by_Variation {
 }
 
 
+
+=head2 fetch_all_by_Variation_super_VariationSet
+
+  Arg [1]    : Bio::EnsEMBL::Variation::Variation
+  Arg [2]    : Bio::EnsEMBL::Variation::VariationSet
+  Example    : my $vs = $vsa->fetch_all_by_Variation_super_VariationSet($var, $var_set);
+  Description: Retrieves all variation sets which a particular variation
+               is present in, which are subsets of a given super set.
+  Returntype : reference to list of Bio::EnsEMBL::Variation::VariationSets
+  Exceptions : throw on incorrect argument
+  Caller     : general
+  Status     : Experimental
+
+=cut
+
+sub fetch_all_by_Variation_super_VariationSet {
+
+    my $self      = shift;
+    my $var       = shift;
+    my $superset  = shift;
+
+    assert_ref($var,'Bio::EnsEMBL::Variation::Variation');
+    assert_ref($superset,'Bio::EnsEMBL::Variation::VariationSet');
+
+  my $cols = join(',',$self->_columns());
+  my $stmt = qq{
+    SELECT
+      $cols
+    FROM
+      variation_set vs,
+      variation_set vssup,
+      variation_set_structure vss,
+      variation_set_variation vsv
+    WHERE
+      vss.variation_set_super = ? AND 
+      vss.variation_set_sub =  vs.variation_set_id AND
+      vs.variation_set_id = vsv.variation_set_id AND
+      vsv.variation_id = ?
+  };
+
+  my $sth = $self->prepare($stmt);
+
+  $sth->execute($superset->dbID(), $var->dbID() );
+
+  my $result = $self->_objs_from_sth($sth);
+  $sth->finish();
+
+# store variation sets in a hash with dbID as key to remove duplicates.
+  my %sets;
+  foreach my $set (@{$result}) {
+    $sets{$set->dbID()} = $set;   
+  }
+  
+  my @res = values %sets;
+  return \@res;
+}
+
+
 =head2 fetch_all_by_StructuralVariation
 
   Arg [1]    : Bio::EnsEMBL::Variation::StructuralVariation
