@@ -3034,7 +3034,7 @@ sub fetch_transcripts {
             # no cache found on disk or not using cache
             if(!defined($tmp_cache->{$chr})) {
                 
-                if(defined($config->{offline})) {
+                unless(defined($config->{write_cache}) || defined($config->{database})) {
                     # restore quiet status
                     $config->{quiet} = $quiet;
                     
@@ -3175,7 +3175,7 @@ sub fetch_regfeats {
             # no cache found on disk or not using cache
             if(!defined($tmp_cache->{$chr})) {
                 
-                if(defined($config->{offline})) {
+                unless(defined($config->{write_cache}) || defined($config->{database})) {
                     
                     # restore quiet status
                     $config->{quiet} = $quiet;
@@ -3323,7 +3323,7 @@ sub check_existing_hash {
                         
                         # load from DB if not found in cache
                         if(!defined($tmp_cache->{$chr})) {
-                            if(defined($config->{offline})) {
+                            unless(defined($config->{write_cache}) || defined($config->{database})) {
                                 debug("WARNING: Could not find variation cache for $chr\:$region") unless defined($config->{quiet});
                                 next;
                             }
