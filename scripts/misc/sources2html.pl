@@ -90,6 +90,30 @@ my $sep = "\t";
 my $start = 0;
 my %colours = ( 'version' => '#090', 'source'  => '#00F' );
 
+my $url_root = 'http://www.ensembl.org/';
+
+my %data_type_example = (
+  'variation'            => {
+                             'sql' => qq{SELECT name FROM variation WHERE somatic=0 AND variation_id NOT IN (SELECT variation_id FROM failed_variation) AND source_id=? LIMIT 1},
+                             'url' => 'Variation/Explore?v='
+                             },
+  'variation_synonym'    => {
+                             'sql' => qq{SELECT v.name FROM variation v, variation_synonym s WHERE v.variation_id=s.variation_id AND 
+                                         s.source_id= ? AND v.variation_id NOT IN (SELECT variation_id FROM failed_variation) LIMIT 1},
+                             'url' => 'Variation/Explore?v='
+                            },
+  'structural_variation' => {
+                             'sql' => qq{SELECT variation_name FROM structural_variation WHERE is_evidence=0 AND somatic=0 AND structural_variation_id NOT IN 
+                                         (SELECT structural_variation_id FROM failed_structural_variation) AND source_id=? LIMIT 1},
+                             'url' => 'StructuralVariation/Explore?sv='
+                            },
+  'phenotype_feature'    => {
+                             'sql' => qq{SELECT object_id, type FROM phenotype_feature WHERE source_id=? AND is_significant=1 LIMIT 1},
+                             'Variation'           => 'Variation/Phenotype?v=',
+                             'StructuralVariation' => 'StructuralVariation/Phenotype?v=',
+                             'Gene'                => 'Gene/Phenotype?g='
+                            },
+);
 
 ##############
 ### Header ###
@@ -155,7 +179,7 @@ foreach my $hostname (@hostnames) {
     # Get list of sources from the new databases
     my $sql2 = qq{SELECT source_id, name, version, description, url, type, somatic_status, data_types FROM source};
     my $sth2 = get_connection_and_query($dbname, $hostname, $sql2);
-    $sth2->bind_columns(\$source_id,\$source,\$s_version,\$s_description,\$s_url,\$s_type,\$s_status, \$s_data_types);
+    $sth2->bind_columns(\$source_id,\$source,\$s_version,\$s_description,\$s_url,\$s_type,\$s_status,\$s_data_types);
     
     
     # Previous database (and sources)
@@ -180,11 +204,11 @@ foreach my $hostname (@hostnames) {
     # Display the species at the top of the list
     if ($top_species{$s_name}) {
       $html_top_content .= qq{\n  <br />\n} if ($start == 1);
-      $html_top_content .= source_table($s_name,$sth2,$is_new_species,\%p_list);
+      $html_top_content .= source_table($s_name,$sth2,$is_new_species,$dbname,$hostname,\%p_list);
     }
     else {
       $html_content .= qq{\n  <br />\n} if ($start == 1);
-      $html_content .= source_table($s_name,$sth2,$is_new_species,\%p_list);
+      $html_content .= source_table($s_name,$sth2,$is_new_species,$dbname,$hostname,\%p_list);
     }
     
     $start = 1 if ($start == 0);
@@ -222,15 +246,15 @@ sub source_table {
   my $name        = shift;
   my $sth         = shift;
   my $is_new      = shift;
+  my $db_name     = shift;
+  my $hostname    = shift;
   my $p_list      = shift;
+
   
-  my $species = $name;
+  my $s_name = ucfirst($name);
+  my $species = $s_name;
      $species =~ s/_/ /;
-     $species =~ /^(\w)(.+)$/;
-     $species = uc($1).$2;
-  my $s_name = $species;
-     $s_name =~ s/\s/_/g;
-  my $s_name_id = lc($s_name);
+  my $s_name_id = $name;
   
   if ($top_species{$name}) {
     $top_species_list{$name} = {name => $species, s_name => $s_name, anchor => $s_name_id};
@@ -321,44 +345,46 @@ sub source_table {
     # Data types
     my @data_types = split(",", $s_data_types);
     my $data_type_string = '';
+    my $examples;
     foreach my $dt (@data_types) {
       $data_type_string .= ',<br />' if ($data_type_string ne '');
+
+      my $data_type_label = ucfirst($dt);
+      $data_type_label =~ s/_/ /g;
+
       if ($dt eq 'phenotype_feature') {
-        $data_type_string .= '<span class="_ht" title="Provides phenotype associations">Phenotype</span>';
-        $s_phenotype = qq{<img src="/img/phenotype_small_icon.png" style="border-radius:5px;border:1px solid #000" alt="$phe_title" title="$phe_title" />};
+        $data_type_string .= '<span class="_ht conhelp" title="Provides phenotype associations">Phenotype</span>';
+        $s_phenotype = qq{<img src="/i/val/var_phenotype_data_small.png" style="border-radius:5px;border:1px solid #000" alt="$phe_title" title="$phe_title" />};
       }
       elsif ($dt eq 'study') {
-        $data_type_string .= '<span class="_ht" title="Data are grouped by study/publication">'.ucfirst($dt).'</span>';
+        $data_type_string .= '<span class="_ht conhelp" title="Data are grouped by study/publication">'.$data_type_label.'</span>';
       }
       elsif ($dt eq 'variation_synonym') {
-        $data_type_string .= '<span class="_ht" title="Some/all variants already exist in an other source, or are redundant in this source, with different IDs">'.ucfirst($dt).'</span>';
+        $data_type_string .= '<span class="_ht conhelp" title="Some/all variants already exist in an other source, or are redundant in this source, with different IDs">'.$data_type_label.'</span>';
       }
       else {
-        $data_type_string .= ucfirst($dt);
+        $data_type_string .= $data_type_label;
       }
+
+      my $example = get_example($dt, $source_id, $s_name, $db_name, $hostname);
+      $examples .= '<br />' if ($examples);
+      $examples .= $example;
+
     }
-    $data_type_string =~ s/_/ /g;
     $data_type_string = '-' if ($data_type_string eq '');
     
-    # New source/version
-    my $s_new_stuff = ($s_new_type) ? new_source_or_version($s_new_type) : '';
-    
     $s_type = 'main' if (!defined($s_type));
-    $other_flag{$s_type} = 1 if ($s_phenotype ne '' || $s_new_stuff ne '' || $s_somatic_status ne '-');
-      
-    my $new = qq{<td style="text-align:center;width:22px;padding:2px 3px;border-left:1px solid #BBB">$s_new_stuff   </td>};
-    my $left_border = ';border-left:1px solid #DDD';
-    my $first_border = ($s_new_stuff eq '') ? '' : $left_border ;   
+    $other_flag{$s_type} = 1 if ($s_phenotype ne '' || $s_somatic_status ne '-');
     
     my $row = qq{
         $s_header
         <td>$source</td>
         <td>$s_version</td>
-        <td>$s_description</td>
+        <td style="max-width:800px">$s_description</td>
         <td style="max-width:120px">$data_type_string</td>
-        $new
-        <td style="text-align:center;width:22px;padding:2px 3px$left_border">$s_phenotype</td>
-        <td style="text-align:center;width:22px;padding:2px 3px$left_border">$s_somatic_status   </td>
+        <td style="padding:1px;margin:0px">$examples</td>
+        <td style="text-align:center;width:22px;padding:2px 3px;border-left:1px solid #BBB">$s_phenotype</td>
+        <td style="text-align:center;width:22px;padding:2px 3px;border-left:1px solid #DDD">$s_somatic_status</td>
     };
     
     # Is chip ?
@@ -437,6 +463,7 @@ sub get_connection_and_query {
   my $dbname = shift;
   my $hname  = shift;
   my $sql    = shift;
+  my $params = shift;
   
   my ($host, $port) = split /\:/, $hname;
 
@@ -445,7 +472,12 @@ sub get_connection_and_query {
   my $dbh = DBI->connect($dsn, $login, $pswd) or die "Connection failed";
 
   my $sth = $dbh->prepare($sql);
-  $sth->execute;
+  if ($params) {
+    $sth->execute(join(',',@$params));
+  }
+  else {
+    $sth->execute;
+  }
   return $sth;
 }
 
@@ -544,8 +576,8 @@ sub create_menu {
   </div>
 </div>
   },
-  new_source_or_version('version'),
-  new_source_or_version('source'),
+  qq{<div style="width:4px;height:25px;background-color:$v_colour;margin-left:10px"></div>},
+  qq{<div style="width:4px;height:25px;background-color:$s_colour;margin-left:10px"></div>},
   somatic_status('germline'),
   somatic_status('somatic'),
   somatic_status('mixed'));
@@ -564,17 +596,20 @@ sub menu_list {
   my $new_data = '';
   if ($species_news{$species->{name}}) {
     my @types = sort {$b cmp $a} keys(%{$species_news{$species->{name}}});
+    my $count_type = 0;
     foreach my $type (@types) {
+      $count_type ++;
+      my $type_margin = ($count_type == scalar(@types)) ? '2px' : '1px';
       my $label_colour = $colours{$type};
       my $label_desc = $desc->{$type};
-      $new_data .= qq{<span style="$label_style;margin-right:5px;background-color:$label_colour" title="$label_desc"></span>};
+      $new_data .= qq{<span style="$label_style;margin-left:2px;margin-right:$type_margin;background-color:$label_colour" title="$label_desc"></span>};
     }
   }
   my $img = $name;
   return qq{
-  <div style="margin-left:5px;margin-bottom:5px">
+  <div style="margin-left:4px;margin-bottom:5px">
     <img src="/i/species/16/$s_name.png" alt="$name" style="border-radius:4px;margin-right:4px;vertical-align:middle" />
-    <a href="#$anchor" style="margin-right:5px">$name</a>$new_data
+    <a href="#$anchor" style="margin-right:2px">$name</a>$new_data
   </div>
   };
 }
@@ -626,20 +661,53 @@ sub table_header {
   if ($flag->{$type}) {
     my $alt_text = qq{See the icons description on the table on the right handside of the page};
     $header_col = qq{
-    <th colspan=3 style="width:56px;text-align:center;border-left:1px solid #BBB;background-color:#BBB">
+    <th colspan=2 style="width:56px;text-align:center;border-left:1px solid #BBB;background-color:#BBB">
        Other<span class="_ht ht" title="$alt_text"><img src="/i/16/info.png" style="position:relative;top:2px;width:12px;height:12px;margin-left:3px" title="$alt_text" alt="info"/></span>
     </th>}; 
   }
   else {  
-    $header_col = qq{<th colspan=3></th>};
+    $header_col = qq{<th colspan=2></th>};
   }
   
   return qq{
     <br />
     <div>
       <table class="ss">
-        <tr><th colspan="2">$name</th><th>Version</th><th>Description</th><th>Data type(s)</th></th>$header_col</tr>
+        <tr><th colspan="2">$name</th><th>Version</th><th style="max-width:800px">Description</th><th>Data type(s)</th><th style="padding-left:1px;padding-right:1px;margin-left:0px;margin-right:0px" title="Example(s)">e.g.</th></th>$header_col</tr>
     };
+}
+
+sub get_example {
+  my $data_type = shift;
+  my $source_id = shift;
+  my $species   = shift;
+  my $database  = shift;
+  my $hostname  = shift;
+
+  return '' if (!$data_type_example{$data_type});
+
+  my $sql = $data_type_example{$data_type}{'sql'};
+  my $url = $data_type_example{$data_type}{'url'};
+
+  my $sth = get_connection_and_query($database, $hostname, $sql, [$source_id]);
+
+  if ($sth) {
+    my @result  = $sth->fetchrow_array;
+    my $example = $result[0];
+    my $url;
+    if ($result[1] && $data_type_example{$data_type}{$result[1]}) {
+      $url = $data_type_example{$data_type}{$result[1]};
+    }
+    else {
+      $url = $data_type_example{$data_type}{'url'};
+    }
+    if ($example && $url) {
+      $data_type =~ s/_/ /g;
+      my $example_url = "/$species/$url$example";
+      return qq{<a href="$example_url" target="_blank" title="See a $data_type example"><img src="/i/16/internal_link.png" alt="Link"/></a>};
+    }
+  }
+  return '';
 }
 
 
