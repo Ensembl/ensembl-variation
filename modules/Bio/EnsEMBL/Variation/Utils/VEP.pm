@@ -99,6 +99,8 @@ use vars qw(@ISA @EXPORT_OK);
     &dump_adaptor_cache
     &load_dumped_adaptor_cache
     &load_dumped_variation_cache
+    &load_dumped_transcript_cache
+    &prefetch_transcript_data
     &get_all_consequences
     &get_slice
     &build_slice_cache
@@ -4413,9 +4415,6 @@ sub prefetch_transcript_data {
         @{$tl->get_all_SeqEdits('_selenocysteine')}
       ];
     }
-    
-    # gene
-    $tr->{_gene} ||= $config->{ga}->fetch_by_transcript_stable_id($tr->stable_id);
     
     # gene symbol
     if(defined $config->{symbol}) {
