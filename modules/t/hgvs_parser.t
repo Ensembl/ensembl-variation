@@ -269,7 +269,13 @@ my @test_input = (
            "ENSP00000344757.2:p.Lys118delinsIleTer",
            "del ins, stop_gained",
           ],
-
+          ["6:g.30558477_30558478insA",
+          "A",
+          "ENST00000396515.3:c.716_717insA",
+          "A",
+          "ENST00000396515.3:c.716_717insA(p.=)",
+          "insertion, stop retained"
+          ],
 );
 
 foreach my $line(@test_input){
