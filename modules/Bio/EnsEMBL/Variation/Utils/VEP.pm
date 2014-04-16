@@ -1545,9 +1545,6 @@ sub vf_to_consequences {
   # method name stub for getting *VariationAlleles
   my $allele_method = defined($config->{process_ref_homs}) ? 'get_all_' : 'get_all_alternate_';
   
-  # find any co-located existing VFs
-  $vf->{existing} ||= find_existing($config, $vf) if defined $config->{check_existing};
-  
   # get stats
   my $so_term = SO_variation_class($vf->allele_string, 1);
   if(defined($so_term)) {
@@ -5221,50 +5218,6 @@ sub format_coords {
 
 # METHODS TO FIND CO-LOCATED / EXISTING VARIATIONS
 ##################################################
-
-# finds an existing VF in the db
-sub find_existing {
-    my $config = shift;
-    my $new_vf = shift;
-    
-    if(defined($config->{vfa}) && defined($config->{vfa}->db)) {
-        
-        my $maf_cols = have_maf_cols($config) ? 'vf.minor_allele, vf.minor_allele_freq' : 'NULL, NULL';
-        
-        my $sth = $config->{vfa}->db->dbc->prepare(qq{
-            SELECT variation_name, IF(fv.variation_id IS NULL, 0, 1), seq_region_start, seq_region_end, allele_string, seq_region_strand, $maf_cols
-            FROM variation_feature vf LEFT JOIN failed_variation fv
-    	    ON vf.variation_id = fv.variation_id
-            WHERE vf.seq_region_id = ?
-            AND vf.seq_region_start = ?
-            AND vf.seq_region_end = ?
-            ORDER BY vf.source_id ASC
-        });
-        
-        $new_vf->{slice} ||= get_slice($config, $new_vf->{chr}, undef, 1);
-        $sth->execute($new_vf->slice->get_seq_region_id, $new_vf->start, $new_vf->end);
-        
-        my %v;
-        $v{$_} = undef for @VAR_CACHE_COLS;
-        
-        my %vars_by_id;
-        $sth->bind_col($_+1, \$v{$VAR_CACHE_COLS[$_]}) for (0..4);
-        
-        my @found;
-        
-        while($sth->fetch) {
-            my %v_copy = %v;
-            $v_copy{allele_string} =~ s/\s+/\_/g;
-            push @found, \%v_copy unless is_var_novel($config, \%v_copy, $new_vf) || $v_copy{failed} > $config->{failed};
-        }
-        
-        $sth->finish();
-        
-        return (scalar @found ? \@found : []);
-    }
-    
-    return undef;
-}
 
 # compare a new vf to one from the cache / DB
 sub is_var_novel {
