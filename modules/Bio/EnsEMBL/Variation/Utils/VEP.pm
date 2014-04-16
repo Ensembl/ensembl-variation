@@ -318,7 +318,7 @@ sub detect_format {
         $data[0] =~ /(chr)?\w+/ &&
         $data[1] =~ /^\d+$/ &&
         $data[3] =~ /^[ACGTN\-\.]+$/i &&
-        $data[4] =~ /^([\.ACGTN\-]+\,?)+|(\<[A-Z]+\>)$/i
+        $data[4] && $data[4] =~ /^([\.ACGTN\-]+\,?)+|(\<[A-Z]+\>)$/i
     ) {
         return 'vcf';
     }
@@ -717,7 +717,7 @@ sub parse_pileup {
             $var = $data[3];
         }
         else {
-            ($var = unambiguity_code($data[3])) =~ s/$data[2]//ig;
+            ($var = (unambiguity_code($data[3]) || $data[3])) =~ s/$data[2]//ig;
         }
         
         for my $alt(split //, $var){
