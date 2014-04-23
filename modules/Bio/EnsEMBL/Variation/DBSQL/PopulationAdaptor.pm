@@ -218,9 +218,9 @@ sub fetch_by_name {
     throw('Name argument expected.') if (!defined($name));
 
     my $sth = $self->prepare(q{
-        SELECT population_id, name, size, description, collection, freqs_from_gts, display
-        FROM   population
-        WHERE  name = ?;});
+        SELECT p.population_id, p.name, p.size, p.description, p.collection, p.freqs_from_gts, p.display, dg.display_name, dg.display_priority
+        FROM   population p left outer join display_group dg on dg.display_group_id = p.display_group_id
+        WHERE  p.name = ?;});
 
     $sth->bind_param(1,$name,SQL_VARCHAR);
     $sth->execute();
@@ -254,9 +254,9 @@ sub fetch_all_by_dbID_list {
     return [] unless scalar @$list >= 1;
     my $id_str = (@$list > 1)  ? " IN (".join(',',@$list).")"   :   ' = \''.$list->[0].'\'';
     my $sth = $self->prepare(qq{
-        SELECT population_id, name, size, description, collection, freqs_from_gts, display
-        FROM population
-        WHERE  population_id $id_str;});
+        SELECT p.population_id, p.name, p.size, p.description, p.collection, p.freqs_from_gts, p.display, dg.display_name, dg.display_priority
+        FROM population p left outer join display_group dg on dg.display_group_id = p.display_group_id
+        WHERE  p.population_id $id_str;});
     $sth->execute();
     my $populations = $self->_objs_from_sth($sth);
     $sth->finish();
@@ -284,9 +284,9 @@ sub fetch_all_by_name_search {
     throw('Name argument expected.') if(!defined($name));
 
     my $sth = $self->prepare(q{
-        SELECT population_id, name, size, description, collection, freqs_from_gts, display
-        FROM   population
-        WHERE  name like concat('%', ?, '%')});
+        SELECT p.population_id, p.name, p.size, p.description, p.collection, p.freqs_from_gts, p.display dg.display_name dg.display_priority
+        FROM   population p left outer join display_group dg on dg.display_group_id = population.display_group_id
+        WHERE  p.name like concat('%', ?, '%')});
 
   $sth->bind_param(1,$name,SQL_VARCHAR);
   $sth->execute();
@@ -324,8 +324,9 @@ sub fetch_all_by_super_Population {
     }
 
     my $sth = $self->prepare(q{
-        SELECT p.population_id, p.name, p.size, p.description, p.collection, p.freqs_from_gts, p.display
-        FROM   population p, population_structure ps
+        SELECT p.population_id, p.name, p.size, p.description, p.collection, p.freqs_from_gts, p.display, dg.display_name, dg.display_priority
+        FROM population_structure ps,  population p
+        LEFT OUTER JOIN display_group dg on p.display_group_id = dg.display_group_id
         WHERE  p.population_id = ps.sub_population_id
         AND    ps.super_population_id = ?});
 
@@ -365,8 +366,9 @@ sub fetch_all_by_sub_Population {
     }
 
     my $sth = $self->prepare(q{
-        SELECT p.population_id, p.name, p.size, p.description, p.collection, p.freqs_from_gts, p.display
-        FROM   population p, population_structure ps
+        SELECT p.population_id, p.name, p.size, p.description, p.collection, p.freqs_from_gts, p.display, dg.display_name, dg.display_priority
+        FROM   population_structure ps, population p
+        LEFT OUTER JOIN display_group dg on dg.display_group_id = p.display_group_id
         WHERE  p.population_id = ps.super_population_id
         AND    ps.sub_population_id = ?});
 
@@ -490,8 +492,9 @@ sub fetch_all_by_Individual {
     } 
 
     my $sth = $self->prepare(qq{
-        SELECT p.population_id, p.name, p.size, p.description, p.collection, p.freqs_from_gts, p.display
-        FROM population p, individual_population ip
+        SELECT p.population_id, p.name, p.size, p.description, p.collection, p.freqs_from_gts, p.display, dg.display_name, dg.display_priority
+        FROM individual_population ip, population p
+        LEFT OUTER JOIN display_group dg on p.display_group_id = dg.display_group_id
         WHERE p.population_id = ip.population_id
         AND ip.individual_id = ?});
     $sth->bind_param(1,$ind->dbID,SQL_INTEGER);
@@ -533,8 +536,9 @@ sub fetch_all_by_Individual_list {
 	my $id_str = " IN (" . join(',', map {$_->dbID} @$list). ")";	
 	
 	my $sth = $self->prepare(qq{
-		SELECT p.population_id, p.name, p.size, p.description, p.collection, p.freqs_from_gts, p.display
-		FROM population p, individual_population ip
+		SELECT p.population_id, p.name, p.size, p.description, p.collection, p.freqs_from_gts, p.display, dg.display_name, dg.display_priority
+                FROM individual_population ip, population p
+                LEFT OUTER JOIN display_group dg on dg.display_group_id = p.display_group_id
 		WHERE p.population_id = ip.population_id
 		AND ip.individual_id $id_str
 	});
@@ -576,8 +580,9 @@ sub fetch_tagged_Population{
     } 
 
     my $sth = $self->prepare(qq{
-		SELECT p.population_id, p.name, p.size, p.description, p.collection, p.freqs_from_gts, p.display
-		FROM population p, tagged_variation_feature tvf
+		SELECT p.population_id, p.name, p.size, p.description, p.collection, p.freqs_from_gts, p.display, dg.display_name, dg.display_priority
+                FROM tagged_variation_feature tvf, population p
+                LEFT OUTER JOIN display_group dg on dg.display_group_id = p.display_group_id
 		WHERE p.population_id = tvf.population_id
 		AND   tvf.tagged_variation_feature_id = ?
 	});
@@ -619,8 +624,9 @@ sub fetch_tag_Population {
     } 
 
     my $sth = $self->prepare(qq{
-		SELECT p.population_id, p.name, p.size, p.description, p.collection, p.freqs_from_gts, p.display
-		FROM population p, tagged_variation_feature tvf
+		SELECT p.population_id, p.name, p.size, p.description, p.collection, p.freqs_from_gts, p.display, dg.display_name, dg.display_priority
+                FROM tagged_variation_feature tvf, population p 
+                LEFT OUTER JOIN display_group dg on dg.display_group_id = p.display_group_id
 		WHERE p.population_id = tvf.population_id
 		AND   tvf.variation_feature_id = ?
 	});
@@ -784,9 +790,9 @@ sub _objs_from_sth {
 
   my @pops;
 
-  my ($pop_id, $name, $size, $desc, $collection, $freqs, $display);
+  my ($pop_id, $name, $size, $desc, $collection, $freqs, $display, $display_name, $display_priority);
 
-  $sth->bind_columns(\$pop_id, \$name, \$size, \$desc, \$collection, \$freqs, \$display);
+  $sth->bind_columns(\$pop_id, \$name, \$size, \$desc, \$collection, \$freqs, \$display, \$display_name, \$display_priority);
 
   while($sth->fetch()) {
     push @pops, Bio::EnsEMBL::Variation::Population->new(
@@ -797,18 +803,34 @@ sub _objs_from_sth {
         -DESCRIPTION => $desc,
         -COLLECTION => $collection,
         -FREQS => $freqs,
-        -DISPLAY => $display,);
+        -DISPLAY => $display,
+        -DISPLAY_GROUP_NAME => $display_name,
+        -DISPLAY_GROUP_PRIORITY => $display_priority,
+);
     }
     return \@pops;
 }
 
 sub _tables {
-    return (['population','p']);
+    return (['population','p'],
+            ['display_group', 'dg']);
 }
 
 sub _columns {
-    return qw(p.population_id p.name p.size p.description p.collection p.freqs_from_gts p.display);
+    return qw(p.population_id p.name p.size p.description p.collection p.freqs_from_gts p.display dg.display_priority dg.display_name);
 }
+
+sub _left_join {
+    my $self = shift;
+    
+    my @left_join = (
+        ['display_group dg', 'p.display_group_id = dg.display_group_id'],
+    );       
+ 
+    return @left_join;
+}
+
+
 
 sub _default_where_clause {
     return '';
