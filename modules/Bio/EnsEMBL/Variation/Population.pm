@@ -120,8 +120,8 @@ sub new {
 
   my $class = ref($caller) || $caller;
 
-  my ($dbID, $adaptor, $name, $desc, $size, $freqs, $sub_pops, $display, $collection) =
-    rearrange(['DBID','ADAPTOR','NAME', 'DESCRIPTION', 'SIZE', 'FREQS', 'SUB_POPULATIONS', 'DISPLAY', 'COLLECTION'], @_);
+  my ($dbID, $adaptor, $name, $desc, $size, $freqs, $sub_pops, $display, $collection, $display_name, $display_priority) =
+    rearrange(['DBID','ADAPTOR','NAME', 'DESCRIPTION', 'SIZE', 'FREQS', 'SUB_POPULATIONS', 'DISPLAY', 'COLLECTION','DISPLAY_GROUP_NAME','DISPLAY_GROUP_PRIORITY'], @_);
 
   return bless {'dbID'        => $dbID,
                 'adaptor'     => $adaptor,
@@ -131,6 +131,8 @@ sub new {
                 'freqs'       => $freqs,
                 'sub_populations' => $sub_pops,
                 'display' => $display,
+                "display_group_name" => $display_name,
+                "display_group_priority" => $display_priority,
                 'collection' => $collection,}, $class;
 }
 
@@ -349,5 +351,45 @@ sub _freqs_from_gts {
   $self->{freqs} = shift @_ if @_;
   return $self->{freqs};
 }
+
+=head2 display_group_priority
+
+  Arg [1]    : none
+  Example    : $priority = $p->display_group_priority()
+  Description: Retrieves the priority of the group of populations this 
+               population belongs to, enabling the ordering of frequency 
+               data on the Population genetics page
+  Returntype : 0 or the rank of the group
+  Exceptions : none
+  Caller     : webcode
+  Status     : experimental
+
+=cut
+
+sub display_group_priority{
+    my $self = shift;
+    $self->{display_group_priority} = shift @_ if @_;
+    return $self->{display_group_priority};
+}
+
+=head2 display_group_name
+
+  Arg [1]    : none
+  Example    : $name = $p->display_group_name()
+  Description: Retrieves the name of the group of populations this 
+               population belongs to, to serve as the table header
+               on the Population genetics page
+  Returntype : null or a string representing the name of the group
+  Exceptions : none
+  Caller     : webcode
+  Status     : experimental
+
+=cut
+sub display_group_name{
+    my $self = shift;
+    $self->{display_group_name} = shift @_ if @_;
+    return $self->{display_group_name};
+}
+
 
 1;
