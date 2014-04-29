@@ -316,6 +316,10 @@ sub project_features_in_seq_region {
         my $fh = FileHandle->new("$dir_newasm/$report_type\_$seq_region_name.txt", 'w');
         $out->{$report_type} = $fh;
     }
+    if ($config->{flip}) {
+        my $fh = FileHandle->new("$dir_newasm/flip_$seq_region_name.txt", 'w');
+        $out->{flip} = $fh;
+    }
 
     my $fh = FileHandle->new("$dir_oldasm/$seq_region_name.txt", 'r');
        
@@ -348,10 +352,16 @@ sub project_features_in_seq_region {
                         ($new_start, $new_end) = ($new_end, $new_start);
                     }
                     if ($strand != $new_strand && $config->{flip}) {
-                        reverse_comp(\($data->{allele_string}));                    
+                        my $report_flip_fh = $out->{flip};
+                        my $prev_allele_string = $data->{allele_string};
+                        reverse_comp(\($data->{allele_string}));        
+                        my $new_allele_string = $data->{allele_string};
+                        my $vf_id = $data->{variation_feature_id};
+                        my $var_name = $data->{variation_name};           
                         if ($new_strand == -1) { 
                             $new_strand = 1;
                         }
+                        print $report_flip_fh join("\t", ("VF_ID=$vf_id", "VAR_NAME=$var_name", "PREV_ALLELE_STRING=$prev_allele_string", "NEW_ALLELE_STRING=$new_allele_string", "PREV_STRAND=$strand", "NEW_STRAND=$new_strand")), "\n";
                     }
                     if ($config->{qc_ref_allele}) {
                     }
