@@ -499,8 +499,8 @@ Description:
     - create empty variation_feature table, eg variation_feature_hgmd_38
     - run script with all necessary parameters
 
-    The script populates variation_feature_hgmd_38. The script generates a table for features that couldn't be projected: variation_feature_hgmd_37_no_projection
-    You can choose that features that are projected to the reverse strand will be flipped on the fly. (You don't need to run variant QC pipeline).
+    The script populates variation_feature_hgmd_38. Features that couldn't be projected are stored in
+    working_dir/dir_newasm/no_projection_seq_region_name.txt.
 
 Options:
 
