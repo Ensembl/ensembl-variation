@@ -256,7 +256,7 @@ sub dump_features {
         my $fh = FileHandle->new("$dir_oldasm/$seq_region_name.txt", 'w');
         $sth->execute($seq_region_id);
 
-        while (my $row = $sth->fetchrow_array_ref) {
+        while (my $row = $sth->fetchrow_arrayref) {
             my @values = map { defined $_ ? $_ : '\N' } @$row;
             my @pairs = ();
             for my $i (0..$#column_names) {
@@ -308,7 +308,7 @@ sub project_features_in_seq_region {
 
     my $out = {};
     foreach my $report_type (qw/projection no_projection not_useful_projection/) {
-        my $fh = FileHandle->new("$dir_newasm/$report_type\_$seq_region_name.txt");
+        my $fh = FileHandle->new("$dir_newasm/$report_type\_$seq_region_name.txt", 'w');
         $out->{$report_type} = $fh;
     }
 
