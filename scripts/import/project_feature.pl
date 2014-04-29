@@ -219,17 +219,22 @@ sub dump_features {
     }
 
     my $dbh          = $vdba->dbc->db_handle;
-    my @column_names = (); 
     my $sth = $dbh->prepare(qq{
         SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS 
         WHERE TABLE_SCHEMA = '$dbname'
-        AND TABLE_NAME ='$feature_table';
+        AND TABLE_NAME = '$feature_table';
     });
     $sth->execute();
 
     # QC that all necessary columns are there: e.g. seq_region_id, ...
-    my $column_names = join(',', sort $sth->fetchrow_array); 
-    $config->{sorted_column_names} = $column_names;
+    my @column_names = ();
+    while (my @name = $sth->fetchrow_array) {
+        push @column_names, $name[0];
+    }
+    $sth->finish();
+    @column_names = sort @column_names;
+    my $column_names_concat = join(',', @column_names); 
+    $config->{sorted_column_names} = $column_names_concat;
     $sth->finish();
 
     my $dir_oldasm = $config->{dir_oldasm};
@@ -245,7 +250,7 @@ sub dump_features {
     }
         
     $sth = $dbh->prepare(qq{
-        SELECT * FROM $feature_table WHERE seq_region_id = ?;     
+        SELECT $column_names_concat FROM $feature_table WHERE seq_region_id = ?;     
     }, {mysql_use_result => 1}); 
 
     foreach my $slice (@$slices) {
@@ -262,7 +267,7 @@ sub dump_features {
             for my $i (0..$#column_names) {
                 push @pairs, "$column_names[$i]=$values[$i]";
             } 
-            print $fh join("\t", @pairs);
+            print $fh join("\t", @pairs), "\n";
         }
         $sth->finish();
         $fh->close(); 
@@ -354,6 +359,7 @@ sub project_features_in_seq_region {
                     $data->{seq_region_start}  = $new_start;
                     $data->{seq_region_end}    = $new_end;
                     $data->{seq_region_strand} = $new_strand;
+                    $data->{seq_region_id}     = $new_seq_region_id;
 
                     write_output($out->{projection}, $data); 
                 } else { # not a useful_projection, could be that feature from alt loci is projected to ref seq?
@@ -381,7 +387,7 @@ sub project_features_in_seq_region {
             }
             # update data
             unless ($failed_projection) {
-                foreach my $location (qw/outer_start seq_region_start inner_start inner_end seq_region_end/) {
+                foreach my $location (qw/outer_start seq_region_start inner_start inner_end seq_region_end outer_end/) {
                     $data->{$location} = $new_locations->{$location}; 
                 }
                 write_output($out->{projection}, $data); 
@@ -446,26 +452,24 @@ sub load_features {
 
     $dbc->do(qq{ DROP TABLE IF EXISTS $result_table});
     $dbc->do(qq{ CREATE TABLE $result_table like $feature_table });
-
-    my $sorted_column_names = join(' ', split(',', $config->{sorted_column_names}));
+    my $column_names = $config->{sorted_column_names};
     my $dir_newasm = $config->{dir_newasm};
     opendir(DIR, $dir_newasm) or die $!;
     while (my $file = readdir(DIR)) {
-        if ($file =~ /projection_(.+)\.txt$/) {
+        if ($file =~ /^projection_(.+)\.txt$/) {
             my $seq_region_name = $1;     
             run_cmd("cp $dir_newasm/projection_$seq_region_name.txt $dir_newasm/load_projection_$seq_region_name.txt");
             my $TMP_DIR = $dir_newasm;
             my $tmp_file = "load_projection_$seq_region_name.txt";
             $ImportUtils::TMP_DIR = $TMP_DIR;
             $ImportUtils::TMP_FILE = $tmp_file;
-            load($dbc, qq{$result_table $sorted_column_names});
+            load($dbc, ($result_table, $column_names));
         }
     }
     closedir(DIR); 
 }
 
 sub run_cmd {
-    my $self = shift;
     my $cmd = shift;
     if (my $return_value = system($cmd)) {
         $return_value >>= 8;
