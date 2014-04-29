@@ -351,16 +351,17 @@ sub project_features_in_seq_region {
                     if ($is_insertion) {
                         ($new_start, $new_end) = ($new_end, $new_start);
                     }
-                    if ($strand != $new_strand && $config->{flip}) {
+                    if ($new_strand == -1 && $config->{flip}) {
+                        my $vf_id = $data->{variation_feature_id};
+                        my $var_name = $data->{variation_name};           
+
                         my $report_flip_fh = $out->{flip};
+
                         my $prev_allele_string = $data->{allele_string};
                         reverse_comp(\($data->{allele_string}));        
                         my $new_allele_string = $data->{allele_string};
-                        my $vf_id = $data->{variation_feature_id};
-                        my $var_name = $data->{variation_name};           
-                        if ($new_strand == -1) { 
-                            $new_strand = 1;
-                        }
+                        $new_strand = 1;
+                                                
                         print $report_flip_fh join("\t", ("VF_ID=$vf_id", "VAR_NAME=$var_name", "PREV_ALLELE_STRING=$prev_allele_string", "NEW_ALLELE_STRING=$new_allele_string", "PREV_STRAND=$strand", "NEW_STRAND=$new_strand")), "\n";
                     }
                     if ($config->{qc_ref_allele}) {
