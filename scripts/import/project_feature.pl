@@ -36,6 +36,7 @@ use ImportUtils qw(load);
 
 use DBI;
 use FileHandle;
+use File::Path qw(make_path);
 use Getopt::Long;
 
 $| = 1;
