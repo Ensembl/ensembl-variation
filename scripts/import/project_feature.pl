@@ -464,6 +464,15 @@ sub load_features {
     closedir(DIR); 
 }
 
+sub run_cmd {
+    my $self = shift;
+    my $cmd = shift;
+    if (my $return_value = system($cmd)) {
+        $return_value >>= 8;
+        die "system($cmd) failed: $return_value";
+    }
+}
+
 sub usage {
     my $usage =<<END;
 Usage:
