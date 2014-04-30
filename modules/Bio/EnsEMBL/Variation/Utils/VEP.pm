@@ -989,6 +989,12 @@ sub get_all_consequences {
         }
     }
     
+    # log sorted order for VCF input
+    if($config->{format} eq 'vcf') {
+      my $i = 0;
+      $_->{_order} = sprintf("%09d", ++$i) for @$listref;
+    }
+    
     my (@temp_array, @return, %by_pid, @pids);
     my $active_forks = 0;
     
@@ -1221,6 +1227,13 @@ sub get_all_consequences {
         #exit(0) if grep {$_ < 0} @$mem_diff;
     }
     
+    # check and order
+    my $test = $return[0];
+    if(ref($test) ne 'HASH' && $$test =~ /^\#\#\#ORDER\#\#\#/) {
+      @return = sort {$$a cmp $$b} @return;
+      $$_ =~ s/\#\#\#ORDER\#\#\# \d+ // for @return; 
+    }
+    
     return \@return;
 }
 
@@ -1411,6 +1424,10 @@ sub vf_list_to_cons {
                 $_ ||= '.' for @$line;
                 
                 my $tmp = join "\t", @$line;
+                
+                # add order
+                $tmp = "###ORDER### ".$vf->{_order}." ".$tmp if defined($vf->{_order});
+                
                 push @return, \$tmp;
             }
             
