@@ -2608,6 +2608,15 @@ sub validate_svf {
     my $config = shift;
     my $svf = shift;
     
+    if($svf->{start} > $svf->{end} + 1) {
+        warn(
+            "WARNING: start > end+1 : (START=".$svf->{start}.
+            ", END=".$svf->{end}.
+            ") on line ".$config->{line_number}."\n"
+        ) unless defined($config->{quiet});
+        return 0;
+    }
+    
     return 1;
 }
 
