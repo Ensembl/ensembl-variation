@@ -152,6 +152,7 @@ our %COL_DESCS = (
     'CCDS'               => 'Indicates if transcript is a CCDS transcript',
     'SYMBOL'             => 'Gene symbol (e.g. HGNC)',
     'SYMBOL_SOURCE'      => 'Source of gene symbol',
+    'SOURCE'             => 'Source of transcript in merged gene set',
     'HGNC_ID'            => 'Stable identifer of HGNC gene symbol',
     'ENSP'               => 'Ensembl protein identifer',
     'SWISSPROT'          => 'UniProtKB/Swiss-Prot identifier',
@@ -2467,6 +2468,11 @@ sub add_extra_fields_transcript {
     # biotype
     if(defined $config->{biotype}) {
         $line->{Extra}->{BIOTYPE} = $tr->biotype;
+    }
+    
+    # source cache of transcript if using --merged
+    if(defined $config->{merged} && defined $tr->{_source_cache}) {
+        $line->{Extra}->{SOURCE} = $tr->{_source_cache};
     }
     
     return $line;
