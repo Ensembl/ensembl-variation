@@ -145,7 +145,7 @@ foreach my $species(@refseq_species) {
           my $ref_cache;
           $ref_cache = fd_retrieve($ref_fh);
           close $ref_fh;
-          $_->{_source_cache} = 'RefSeq' for @{$ens_cache->{$chr}};
+          $_->{_source_cache} = 'RefSeq' for @{$ref_cache->{$chr}};
           
           # merge and sort transcript lists
           my $mrg_cache;
