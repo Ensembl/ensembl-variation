@@ -47,7 +47,7 @@ SET storage_engine=MYISAM;
 @column minor_allele_count  The number of samples the minor allele of this variant is found in, as reported by dbSNP
 @column clinical_significance  A set of clinical significance classes assigned to the variant.<br /> 
                                The list of clinical significances is available <a href="/info/genome/variation/data_description.html#clin_significance">here</a>.
-@column evidence            A summary of the evidence supporting a variant as a guide to its potential reliability. See the evidence descriptions <a href="/info/genome/variation/data_description.html#evidence_status">here</a>.
+@column evidence_attribs            A summary of the evidence supporting a variant as a guide to its potential reliability. See the evidence descriptions <a href="/info/genome/variation/data_description.html#evidence_status">here</a>.
 
 @see variation_synonym
 @see failed_variation
@@ -74,7 +74,7 @@ create table variation (
   minor_allele_freq float DEFAULT NULL,
   minor_allele_count int(10) unsigned DEFAULT NULL,
   clinical_significance SET('drug-response','histocompatibility','non-pathogenic','other','pathogenic','probable-non-pathogenic','probable-pathogenic','unknown','untested'),
-  evidence SET('Multiple_observations','Frequency','HapMap','1000Genomes','Cited','ESP'),
+  evidence_attribs   SET('367','368','369','370','371','372') DEFAULT NULL,
 
 	primary key( variation_id ),
 	unique ( name ),
@@ -107,7 +107,7 @@ create table variation (
 @column minor_allele_freq      The 'global' frequency of the minor allele of this variant, as reported by dbSNP
 @column minor_allele_count     The number of samples the minor allele of this variant is found in, as reported by dbSNP
 @column alignment_quality      Quality of alignment for variants mapped by flanks rather than position justified.
-@column evidence               A summary of the evidence supporting a variant as a guide to its potential reliability. See the evidence descriptions <a href="/info/genome/variation/data_description.html#evidence_status">here</a>.
+@column evidence_attribs       A summary of the evidence supporting a variant as a guide to its potential reliability. See the evidence descriptions <a href="/info/genome/variation/data_description.html#evidence_status">here</a>.
 @column clinical_significance  A set of clinical significance classes assigned to the variant.<br /> 
                                The list of clinical significances is available <a href="/info/genome/variation/data_description.html#clin_significance">here</a>.
 
@@ -197,7 +197,7 @@ create table variation_feature(
     minor_allele_freq float DEFAULT NULL,
     minor_allele_count int(10) unsigned DEFAULT NULL,
     alignment_quality double  DEFAULT NULL,
-    evidence SET('Multiple_observations','Frequency','HapMap','1000Genomes','Cited','ESP'),
+    evidence_attribs   SET('367','368','369','370','371','372') DEFAULT NULL,    
     clinical_significance SET('drug-response','histocompatibility','non-pathogenic','other','pathogenic','probable-non-pathogenic','probable-pathogenic','unknown','untested') DEFAULT NULL,
 
    	primary key( variation_feature_id ),
@@ -586,6 +586,7 @@ CREATE TABLE tagged_variation_feature (
 @column collection        Flag indicating if the population is defined based on geography (0) or a collection of individuals with respect to some other criteria (1).
 @column freqs_from_gts    Flag indicating if the population frequencies can be retrieved from the allele table (0) or from the individual genotypes (1).
 @column display           Information used by Biomart.
+@column display_group     used to group population for display on the Population Genetics page
 
 @see population_synonym
 @see individual_population
@@ -593,6 +594,7 @@ CREATE TABLE tagged_variation_feature (
 @see population_genotype
 @see allele
 @see tagged_variation_feature
+@see display_group
 */
 
 CREATE TABLE population(
@@ -603,6 +605,7 @@ CREATE TABLE population(
     collection tinyint(1) default 0,
     freqs_from_gts tinyint(1),
     display enum('LD', 'MARTDISPLAYABLE', 'UNDISPLAYABLE') default 'UNDISPLAYABLE',
+    display_group_id tinyint(1) ,
 
     primary key(population_id)
 );
@@ -769,6 +772,26 @@ CREATE TABLE population_synonym (
   key population_idx (population_id),
   key (name, source_id)
 );
+
+/**
+@colour #FF8500
+@desc Used to store groups of populations displayed separately on the Population Genetics page
+
+@column display_group_id     Primary key, internal identifier.
+@column display_priority     Priority level for group (smallest number is highest on page) 
+@column display_name         Name of the group to be displayed as the table header.
+
+@see population
+*/
+CREATE TABLE display_group(
+  display_group_id int(10) unsigned not null auto_increment ,
+  display_priority int(10) unsigned not null, 
+  display_name     varchar(255) not null,
+
+	primary key( display_group_id ),
+	unique ( display_name ),
+	unique ( display_priority )
+ );
 
 
 /**

@@ -8,11 +8,12 @@ create table display_group(
   display_name     varchar(255) not null,
 
 	primary key( display_group_id ),
-	unique ( display_name )
+	unique ( display_name ),
+	unique ( display_priority ),
 
  );
 
-ALTER TABLE population ADD column display_group_id tinyint(1) default 0;
+ALTER TABLE population ADD column display_group_id tinyint(1) default null;
 
 
 
