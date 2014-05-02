@@ -90,7 +90,8 @@ my $sep = "\t";
 my $start = 0;
 my %colours = ( 'version' => '#090', 'source'  => '#00F' );
 
-my $url_root = 'http://www.ensembl.org/';
+my $phen_icon = '/i/val/var_phenotype_data_small.png';
+my $internal_link = '/img/internal_link.png';
 
 my %data_type_example = (
   'variation'            => {
@@ -203,11 +204,9 @@ foreach my $hostname (@hostnames) {
     
     # Display the species at the top of the list
     if ($top_species{$s_name}) {
-      $html_top_content .= qq{\n  <br />\n} if ($start == 1);
       $html_top_content .= source_table($s_name,$sth2,$is_new_species,$dbname,$hostname,\%p_list);
     }
     else {
-      $html_content .= qq{\n  <br />\n} if ($start == 1);
       $html_content .= source_table($s_name,$sth2,$is_new_species,$dbname,$hostname,\%p_list);
     }
     
@@ -354,7 +353,7 @@ sub source_table {
 
       if ($dt eq 'phenotype_feature') {
         $data_type_string .= '<span class="_ht conhelp" title="Provides phenotype associations">Phenotype</span>';
-        $s_phenotype = qq{<img src="/i/val/var_phenotype_data_small.png" style="border-radius:5px;border:1px solid #000" alt="$phe_title" title="$phe_title" />};
+        $s_phenotype = qq{<img src="$phen_icon" style="border-radius:5px;border:1px solid #000" alt="$phe_title" title="$phe_title" />};
       }
       elsif ($dt eq 'study') {
         $data_type_string .= '<span class="_ht conhelp" title="Data are grouped by study/publication">'.$data_type_label.'</span>';
@@ -539,7 +538,7 @@ sub create_menu {
       </tr>
       <tr>
         <td style="padding-top:6px;text-align:center;">
-          <img src="/img/phenotype_small_icon.png" style="margin-left:auto;margin-right:auto;border-radius:5px;border:1px solid #000;margin-right:1px" alt="Provides phenotype data" title="Provides phenotype data"/>
+          <img src="$phen_icon" style="margin-left:auto;margin-right:auto;border-radius:5px;border:1px solid #000;margin-right:1px" alt="Provides phenotype data" title="Provides phenotype data"/>
         </td>
         <td style="padding-top:6px">Source which provides<br />phenotype association data</td>
       </tr>
@@ -669,9 +668,7 @@ sub table_header {
     $header_col = qq{<th colspan=2></th>};
   }
   
-  return qq{
-    <br />
-    <div>
+  return qq{    <div style="margin:6px 0px 40px">
       <table class="ss">
         <tr><th colspan="2">$name</th><th>Version</th><th style="max-width:800px">Description</th><th>Data type(s)</th><th style="padding-left:1px;padding-right:1px;margin-left:0px;margin-right:0px" title="Example(s)">e.g.</th></th>$header_col</tr>
     };
@@ -704,7 +701,7 @@ sub get_example {
     if ($example && $url) {
       $data_type =~ s/_/ /g;
       my $example_url = "/$species/$url$example";
-      return qq{<a href="$example_url" target="_blank" title="See a $data_type example"><img src="/i/16/internal_link.png" alt="Link"/></a>};
+      return qq{<a href="$example_url" target="_blank" title="See a $data_type example"><img src="$internal_link" alt="Link"/></a>};
     }
   }
   return '';
