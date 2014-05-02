@@ -31,12 +31,8 @@ limitations under the License.
 use strict;
 use Getopt::Long;
 use File::Copy;
-use Storable qw(nstore_fd fd_retrieve freeze thaw);
+use Storable qw(nstore_fd fd_retrieve);
 use Bio::EnsEMBL::Registry;
-BEGIN {
-  $| = 1;
-	use Test::More;
-}
 
 my $config = {};
 
@@ -97,6 +93,9 @@ foreach my $species(@refseq_species) {
   my %ens_chrs = map {$_ => 1} grep {-d $ens_root.'/'.$_ && !/^\./} readdir ENSROOT;
   my %ref_chrs = map {$_ => 1} grep {-d $ref_root.'/'.$_ && !/^\./} readdir REFROOT;
   
+  closedir ENSROOT;
+  closedir REFROOT;
+  
   # mkdirs
   my %mrg_chrs = map {$_ => 1} (keys %ens_chrs, keys %ref_chrs);
   
@@ -112,6 +111,9 @@ foreach my $species(@refseq_species) {
       
       my %ens_files = map {$_ => 1} grep {!/^\./} readdir ENSCHR;
       my %ref_files = map {$_ => 1} grep {!/^\./ && !/var/ && !/reg/} readdir REFCHR;
+      
+      closedir ENSCHR;
+      closedir REFCHR;
       
       # simply copy all var and reg files since they will be the same
       print "  >> Copying var and reg files\n";
@@ -132,7 +134,7 @@ foreach my $species(@refseq_species) {
           print "   > Merging $chr $file\n";
           
           # read in Ensembl cache
-          open my $ens_fh, $config->{compress}." ".$ens_root.'/'.$chr.'/'.$file." |" or return undef;
+          open my $ens_fh, $config->{compress}." ".$ens_root.'/'.$chr.'/'.$file." |";
           my $ens_cache;
           $ens_cache = fd_retrieve($ens_fh);
           close $ens_fh;
@@ -141,7 +143,7 @@ foreach my $species(@refseq_species) {
           $_->{_source_cache} = 'Ensembl' for @{$ens_cache->{$chr}};
           
           # do same for RefSeq
-          open my $ref_fh, $config->{compress}." ".$ref_root.'/'.$chr.'/'.$file." |" or return undef;
+          open my $ref_fh, $config->{compress}." ".$ref_root.'/'.$chr.'/'.$file." |";
           my $ref_cache;
           $ref_cache = fd_retrieve($ref_fh);
           close $ref_fh;
