@@ -178,6 +178,7 @@ $html_content .= qq{</td></tr></table>\n};
 open  HTML, "> $html_file" or die "Can't open $html_file : $!";
 print HTML qq{<p style="padding-top:0px;margin-top:0px">There are currently <span style="font-weight:bold;font-size:1.1em;color:#000">$count_species</span> variation databases in Ensembl:</p>\n};
 print HTML $html_content;
+print HTML qq{<p style="padding-top:5px">The <b>full list of species</b> and their assembly versions in Ensembl is available <a href="/info/about/species.html">here</a>.</p>\n};
 close(HTML);
 
 
