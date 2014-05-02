@@ -1491,7 +1491,7 @@ sub parse_zfin {
     my $phen = $data[4];
     
     for my $i(6, 8, 10, 12) {
-      $phen .= ', '.$data[$i] if $data[$i];
+      $phen .= ($phen ? ', ' : '').$data[$i] if $data[$i];
     }
     
     if($symbol && $phen) {
