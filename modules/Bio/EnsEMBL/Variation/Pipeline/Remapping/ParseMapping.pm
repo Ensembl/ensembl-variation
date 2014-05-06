@@ -302,7 +302,7 @@ sub get_query_sequences {
     my $alignments = shift;
     my $map_weights = shift;
     my $query_sequences;	
-# to save space BWA abbreviates sequences for query sequences that map multiple times:
+    # to save space BWA abbreviates sequences for query sequences that map multiple times:
     foreach my $alignment (@$alignments) {
         my $query_name = $alignment->query->name;
         if ($map_weights->{$query_name} > 1 ) {
@@ -319,13 +319,12 @@ sub get_query_sequences {
     return $query_sequences;
 }
 
-
 sub write_output {
     my $self = shift;
     $self->dataflow_output_id({
-            'fh_mappings' => $self->param('fh_mappings'),
-            'fh_failed_mappings' => $self->param('fh_failed_mappings'),
-            }, 1);	
+        'fh_mappings'        => $self->param('fh_mappings'),
+        'fh_failed_mappings' => $self->param('fh_failed_mappings'),
+    }, 1);	
 }
 
 1;
