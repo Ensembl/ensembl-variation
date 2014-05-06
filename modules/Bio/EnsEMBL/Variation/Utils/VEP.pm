@@ -1838,17 +1838,29 @@ sub vf_to_consequences {
     my @vfoas = map {@{$_->$method}} @{$vfos};
     
     # pick worst?
-    @vfoas = (pick_worst_vfoa($config, \@vfoas)) if defined($config->{pick});
+    if(defined($config->{pick})) {
+      @vfoas = (pick_worst_vfoa($config, \@vfoas)) if defined($config->{pick});
+    }
+    
+    # pick worst per allele?
+    if(defined($config->{pick_allele})) {
+      my %by_allele;
+      push @{$by_allele{$_->variation_feature_seq}}, $_ for @vfoas;
+      @vfoas = ();
+      push @vfoas, pick_worst_vfoa($config, $by_allele{$_}) for keys %by_allele;
+    }
     
     # flag picked?
-    if(defined($config->{flag_pick})) {
+    elsif(defined($config->{flag_pick})) {
       if(my $worst = pick_worst_vfoa($config, \@vfoas)) {
         $worst->{PICK} = 1;
       }
     }
     
     # pick per gene?
-    @vfoas = @{pick_vfoa_per_gene($config, \@vfoas)} if defined($config->{per_gene});
+    elsif(defined($config->{per_gene})) {
+      @vfoas = @{pick_vfoa_per_gene($config, \@vfoas)};
+    }
     
     # process remaining
     push @return, map {vfoa_to_line($config, $_)} grep {defined($_)} @vfoas;
