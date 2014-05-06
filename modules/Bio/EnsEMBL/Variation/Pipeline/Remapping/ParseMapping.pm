@@ -128,7 +128,7 @@ sub run {
             unless ($flag_suspicious || $indel_colocation) {
                 print $fh_mappings $mapping_result, "\n";
             } else {
-                my $pre = $indel_colocation ? "INDEL\t" : '';
+                my $pre = $indel_colocation ? "INDEL\t" : "SUSPICIOUS\t";
                 print $fh_failed_mappings $pre, $mapping_result, "\n";
             }
         }
@@ -200,7 +200,6 @@ sub map_variant {
             } else { 
                 if ($operation eq 'I' && ($new_q_start > $snp_q_pos)) {
                     $indel_colocation = 1;
-                    $flag_suspicious = 1;
                 }
                 if ($length_var == 0) {
                     $snp_t_start = $new_t_start;
