@@ -21,7 +21,7 @@ sub run {
     my $pipeline_dir = $self->param('pipeline_dir');
     die "$pipeline_dir doesn't exist" unless (-d $pipeline_dir);		
 
-    foreach my $folder qw/fasta_files_dir bam_files_dir old_assembly_fasta_file_dir new_assembly_fasta_file_dir mapping_results_dir/ {
+    foreach my $folder (qw/fasta_files_dir bam_files_dir old_assembly_fasta_file_dir new_assembly_fasta_file_dir mapping_results_dir/) {
         my $dir = $self->param($folder);
         die "$dir for $folder doesn't exist" unless (-d $dir);		
     }
