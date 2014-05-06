@@ -56,7 +56,7 @@ GetOptions(
 
     'use_new_vdb_only',             
     'include_asm_exceptions',       # Include features on patches and alt loci. Else only project features on ref sequence (e.g. human 1..22,X,Y,MT)
-
+    'load_failed_projections',
     'flip',                         # flip on the fly. This is useful if you don't want to run Variant QC for the projected features.
     'qc_ref_allele',
 
@@ -138,8 +138,10 @@ init_db_connections($config);
 init_synonyms($config);
 dump_features($config);
 project_features($config);
-load_features($config);
-
+load_features($config, 'projection');
+if ($config->{load_failed_projections}) {
+    load_features($config, 'no_projection');
+}
 sub init_db_connections {
     my $config = shift;
 
@@ -453,13 +455,16 @@ sub write_output {
 
 sub load_features {
     my $config = shift;
-    
+    my $type = shift; # projection or no_projection 
     my $vdba_newasm = $config->{vdba_newasm};
     my $dbc         = $vdba_newasm->dbc;
 
     # create or truncate table
     my $result_table = $config->{feature_table_name_newasm};
     my $feature_table = $config->{feature_table_name_oldasm};
+    if ($type eq 'no_projection') {
+        $result_table = $result_table . '_failed';
+    }
 
     $dbc->do(qq{ DROP TABLE IF EXISTS $result_table});
     $dbc->do(qq{ CREATE TABLE $result_table like $feature_table });
@@ -467,11 +472,11 @@ sub load_features {
     my $dir_newasm = $config->{dir_newasm};
     opendir(DIR, $dir_newasm) or die $!;
     while (my $file = readdir(DIR)) {
-        if ($file =~ /^projection_(.+)\.txt$/) {
+        if ($file =~ /^$type\_(.+)\.txt$/) {
             my $seq_region_name = $1;     
-            run_cmd("cp $dir_newasm/projection_$seq_region_name.txt $dir_newasm/load_projection_$seq_region_name.txt");
+            run_cmd("cp $dir_newasm/$type\_$seq_region_name.txt $dir_newasm/load\_$type\_$seq_region_name.txt");
             my $TMP_DIR = $dir_newasm;
-            my $tmp_file = "load_projection_$seq_region_name.txt";
+            my $tmp_file = "load\_$type\_$seq_region_name.txt";
             $ImportUtils::TMP_DIR = $TMP_DIR;
             $ImportUtils::TMP_FILE = $tmp_file;
             load($dbc, ($result_table, $column_names));
@@ -516,7 +521,7 @@ Options:
 
     --use_new_vdb_only                           # if this is set, feature table with features to project must be stored in vdb_newas
     --include_asm_exceptions                     # include features on patches and alt loci. Else only project features on ref sequence (e.g. human 1..22,X,Y,MT)
-
+    --load_failed_projections                    # load failed projections into variation database 
     --flip                                       # flip on the fly. This is useful if you don't want to run Variant QC for the projected features.
     --qc_ref_allele
 
