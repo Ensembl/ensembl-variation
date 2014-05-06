@@ -220,22 +220,33 @@ sub map_variant {
     return [$snp_t_start, $snp_t_end, $indel_colocation, $flag_suspicious];
 }
 
-
 sub test_all_variants_are_mapped {
     my $self = shift;
     my ($fasta_file, $map_weights) = @_;
-# test same number ids as in input fasta file
+    # test same number ids as in input fasta file
+    my $input_ids = {};
     my $fh_fasta_file = FileHandle->new($fasta_file, 'r');
-    my $count_input_ids = 0;
     while (<$fh_fasta_file>) {
         chomp;
         if (/^>/) {
-            $count_input_ids++;			
+            my $query_name = $_;
+            $query_name =~ s/>//;
+            $input_ids->{$query_name} = 1;
         }
     }
     $fh_fasta_file->close();
-    unless (scalar keys %$map_weights == $count_input_ids) {
-        die("Number of ids differ in fasta ($count_input_ids) and bam file (", scalar keys %$map_weights, "):$fasta_file");
+
+    my $count_mapped_ids = scalar keys %$map_weights;
+    my $count_input_ids = scalar keys %$input_ids;
+
+    unless ($count_mapped_ids == $count_input_ids) {
+        my $unmapped_input_ids = {};
+        foreach my $id (keys %$map_weights) {
+            unless ($input_ids->{$id}) {
+                $self->warning("Not mapped $id");
+            }
+        }
+        die("Number of ids differ in fasta ($count_input_ids) and bam file ($count_mapped_ids): $fasta_file");
     }
 }
 
