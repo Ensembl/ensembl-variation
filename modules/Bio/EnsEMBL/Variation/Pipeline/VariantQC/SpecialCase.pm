@@ -69,6 +69,7 @@ sub run {
 
   if ( $self->required_param('species') =~/mus_musculus|gallus_gallus|rattus_norvegicus|canis_familiaris|homo_sapiens/ ){ $self->set_display();}
 
+  $self->add_chip_info();
 
 }
 
@@ -277,5 +278,135 @@ sub get_synonym{
 
     return $all_syn;
 }
+
+
+sub add_chip_info{
+
+    my $self = shift;
+
+    my $int_dba  = $self->get_adaptor('multi', 'intvar');
+
+    my $chip_ext_sth = $int_dba->prepare(qq[ select name, shortname, description 
+                                             from genotyping_chip
+                                             where species = ?
+                                              ]);
+
+    $chip_ext_sth->execute( $self->required_param('species') );
+    my $dat = $chip_ext_sth->fetchall_arrayref();
+
+    return unless defined $dat->[0]->[0];
+
+
+    ## enter chip info if any is available
+
+    my $var_dba = $self->get_species_adaptor('variation');
+
+    my $attrib_ext_sth = $var_dba->prepare(qq[select attrib_id from attrib where value = ? and attrib_type_id = ?]);
+
+    my $meta_ins_sth   = $var_dba->prepare(qq[insert into meta (species_id, meta_key, meta_value ) values (?,?,?) ]);
+
+    my $set_ins_sth = $var_dba->prepare(qq[ insert into variation_set 
+                                            ( name, description, short_name_attrib_id ) 
+                                             values (?,?,?)]);
+
+    my $setstr_ins_sth = $var_dba->prepare(qq[ insert into variation_set_structure 
+                                               (variation_set_super,variation_set_sub) values (?,?)]);
+
+
+    ## set up default menus first
+    $meta_ins_sth->execute('\N', "web_config", "source#Sequence variants (dbSNP and all other sources)#variation_feature_variation#dbsnp");
+    $meta_ins_sth->execute('\N', "web_config", "menu#dbSNP#dbsnp# ");
+    $meta_ins_sth->execute('\N', "web_config", "menu#Failed variants#failed#");
+
+
+    ## enter parent set 
+    $attrib_ext_sth->execute("all_chips", 9);
+    my $super_att = $attrib_ext_sth->fetchall_arrayref();
+   
+    return unless defined $super_att->[0]->[0];
+
+    $set_ins_sth->execute("Genotyping chip variants", 
+			  "Variants which have assays on commercial chips held in ensembl",
+			  $super_att->[0]->[0] );
+    
+    my $super_set =$var_dba->db_handle->last_insert_id(undef, undef, qw(variation_set variation_set_id))
+	|| die "no insert id for chip super set\n";
+
+    $meta_ins_sth->execute('\N', "web_config", 
+			   "set#All variants on genotyping chips#variation_set_all_chips#var_other");
+
+    $meta_ins_sth->execute('\N', "web_config", 
+			   "menu#Arrays and other#var_other#");
+    
+
+
+
+
+    ### enter individual chips as sets
+
+    foreach my $chip (@{$dat}){
+
+	$attrib_ext_sth->execute( $chip->[1], 9);
+	my $att = $attrib_ext_sth->fetchall_arrayref();
+
+	$set_ins_sth->execute( $chip->[0], $chip->[2], $att->[0]->[0] );
+    
+	my $sub_set =$var_dba->db_handle->last_insert_id(undef, undef, qw(variation_set variation_set_id))
+	    || die "no insert id for chip sub set\n";
+
+	$setstr_ins_sth->execute( $super_set , $sub_set);
+
+	my $meta_string = "set#" . $chip->[0]. "#variation_set_" .  $chip->[1] . "#var_other";
+	$meta_ins_sth->execute('\N', "web_config", $meta_string );
+
+	populate_set($var_dba, $int_dba, $chip->[1], $sub_set);
+    }
+
+
+}
+
+
+sub populate_set{
+
+    my $var_dba   = shift; 
+    my $int_dba   = shift; 
+    my $chip_name = shift;
+    my $set_id    = shift;
+
+
+    ### check the chip content is loaded 
+    my $check_avail = $int_dba->prepare(qq[show tables like '$chip_name']);
+    $check_avail->execute();
+    my $avail =  $check_avail->fetchall_arrayref();
+
+    return unless defined $avail->[0]->[0];
+
+
+    open my $set_log, ">>variation_set_report.txt"|| die "Failed to open variation_set_report.txt: $!";
+
+    my $v_adaptor = $var_dba->get_VariationAdaptor;
+
+    my $vset_ins_sth = $var_dba->prepare(qq[ insert into variation_set_variation 
+                                             (variation_id, variation_set_id) values( ?,?)]); 
+
+
+    ## extract info from production db
+    my $list_ext_sth =  $int_dba->prepare(qq[select name from  $chip_name]);
+    $list_ext_sth->execute();
+    while(my $var = $list_ext_sth->fetchrow_arrayref()){
+
+	my $var_ob = $v_adaptor->fetch_by_name($var->[0]);
+
+	unless (defined $var_ob){
+	    ### report and skip if variant not found
+	    print $set_log "$var->[0] not found for chip $chip_name\n";
+	    next;
+	}
+	## add variant to chip set
+	$vset_ins_sth->execute( $var_ob->dbID(), $set_id );
+    }
+
+}
+
 
 1;
