@@ -158,6 +158,37 @@ sub pipeline_analyses {
         {
             -logic_name => 'finish_parse_mapping',
             -module     => 'Bio::EnsEMBL::Variation::Pipeline::Remapping::FinishParseMapping',
+            -flow_into => {
+                1 => ['init_filter_mapping'],
+            },
+        },
+        {
+            -logic_name        => 'init_filter_mapping',
+            -module            => 'Bio::EnsEMBL::Variation::Pipeline::Remapping::InitFilterMapping',
+            -rc_name           => 'default_mem',
+            -analysis_capacity => 5,
+            -flow_into => {
+                '2->A' => ['filter_mapping'],
+                'A->1' => ['finish_filter_mapping']
+            },
+        },
+        {
+            -logic_name        => 'filter_mapping',
+            -module            => 'Bio::EnsEMBL::Variation::Pipeline::Remapping::FilterMapping',
+            -analysis_capacity => 5,
+            -rc_name           => 'default_mem',
+        },
+        {
+            -logic_name => 'finish_filter_mapping',
+            -module     => 'Bio::EnsEMBL::Variation::Pipeline::Remapping::FinishFilterMapping',
+            -flow_into => {
+                1 => ['load_mapping'],
+            },
+
+        },
+        {
+            -logic_name => 'load_mapping',
+            -module     => 'Bio::EnsEMBL::Variation::Pipeline::Remapping::LoadMapping',
         },
     );
     return \@analyses;
