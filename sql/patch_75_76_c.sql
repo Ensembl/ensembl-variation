@@ -9,7 +9,7 @@ create table display_group(
 
 	primary key( display_group_id ),
 	unique ( display_name ),
-	unique ( display_priority ),
+	unique ( display_priority )
 
  );
 
