@@ -733,6 +733,9 @@ sub get_hgvs_alleles{
   else {
     throw ("The variant class for HGVS notation '$hgvs' is unknown or could not be correctly recognized");
   }
+  ## get rid of: c.748_753del6insGGCCG
+  undef $ref_allele  if defined $ref_allele && $ref_allele =~/\d+/;
+
   return ($ref_allele, $alt_allele) ;
 }
 
