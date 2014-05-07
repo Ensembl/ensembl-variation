@@ -278,8 +278,8 @@ my $bsub_cmd = qq{$FARM_BINARY -R'select[mem>$memory\] rusage[mem=$memory\]' -M$
   my ($jobid) = $submission =~ m/^Job \<([0-9]+)\>/i;
   print $logh Progress::location();
   warn "Need to wait for job id $jobid\nSenfin:$FARM_BINARY -J $jobid\_waiting -q $wait_queue -w'ended($jobid)' -K -o $file_prefix\_waiting.out sleep 1\n\n";
-  #Submit a job that depends on the job array so that the script will halt
-  system(qq{$FARM_BINARY -J $jobid\_waiting -q $wait_queue -w'ended($jobid)' -K -o $file_prefix\_waiting.out sleep 1});
+  #Submit a job that depends on the job array so that the script will halt  (added meme req after problems on farm3)
+  system(qq{$FARM_BINARY -R"select[mem>2000] rusage[mem=2000]" -M2000 -J $jobid\_waiting -q $wait_queue -w'ended($jobid)' -K -o $file_prefix\_waiting.out sleep 1});
   print $logh Progress::location();
   
   #Check the error and output logs for each subtask. If the error file is empty, delete it. If not, warn that the task generated errors. If the output file doesn't say that it completed successfully, report the job as unseccessful and report which tasks that failed
@@ -1704,7 +1704,7 @@ sub parallelized_allele_table {
     # If we still have subtasks that fail, this needs to be resolved before proceeding
     die("Some subtasks are failing (see log output). This needs to be resolved before proceeding with the loading of genotypes!") unless ($result->{'success'});
   }
-
+##  $jobindex = 360;  Put number of subfiles here if running on load_only
 
   debug(localtime() . " Creating single allele file to load ");
 
@@ -1829,6 +1829,7 @@ sub write_allele_task_file{
     my $counter = 0;
     my $ss_extract_sth = $dbh->prepare($stmt);
     $ss_extract_sth->execute() ||die "Error extracting ss ids for allele_table binning\n";
+
     $ss_extract_sth->bind_columns(\$ssid);
     debug(localtime() . "\tAt write_allele_task_file - executed");
     while( $ss_extract_sth->fetchrow_arrayref()){
