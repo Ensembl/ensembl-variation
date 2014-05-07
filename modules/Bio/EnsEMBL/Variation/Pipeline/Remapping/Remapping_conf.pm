@@ -100,9 +100,8 @@ sub resource_classes {
     my ($self) = @_;
     return {
         %{$self->SUPER::resource_classes},  # inherit 'default' from the parent class
-            'init_mapping'  => { 'LSF' => '-R"select[mem>2500] rusage[mem=2500]" -M2500'}, 
-            'run_mapping'   => { 'LSF' => '-R"select[mem>5500] rusage[mem=5500]" -M5500'}, 
-            'parse_mapping' => { 'LSF' => '-R"select[mem>2500] rusage[mem=2500]" -M2500'}, 
+            'default_mem' => { 'LSF' => '-R"select[mem>2500] rusage[mem=2500]" -M2500'}, 
+            'high_mem'    => { 'LSF' => '-R"select[mem>5500] rusage[mem=5500]" -M5500'}, 
     };
 }
 
@@ -121,7 +120,7 @@ sub pipeline_analyses {
         {   
             -logic_name        => 'init_mapping', 
             -module            => 'Bio::EnsEMBL::Variation::Pipeline::Remapping::InitMapping',
-            -rc_name           => 'init_mapping',
+            -rc_name           => 'default_mem',
             -analysis_capacity => 5,
             -flow_into => { 
                 '2->A' => ['run_mapping'],
@@ -131,7 +130,7 @@ sub pipeline_analyses {
         {
             -logic_name => 'run_mapping',
             -module     => 'Bio::EnsEMBL::Variation::Pipeline::Remapping::RunMapping',
-            -rc_name    => 'run_mapping',
+            -rc_name    => 'high_mem',
         },
         {	
             -logic_name => 'finish_mapping',
@@ -143,7 +142,7 @@ sub pipeline_analyses {
         {
             -logic_name        => 'init_parse_mapping', 
             -module            => 'Bio::EnsEMBL::Variation::Pipeline::Remapping::InitParseMapping',
-            -rc_name           => 'init_mapping',
+            -rc_name           => 'default_mem',
             -analysis_capacity => 5,
             -flow_into => { 
                 '2->A' => ['parse_mapping'],
@@ -154,7 +153,7 @@ sub pipeline_analyses {
             -logic_name        => 'parse_mapping',
             -module            => 'Bio::EnsEMBL::Variation::Pipeline::Remapping::ParseMapping',
             -analysis_capacity => 5,
-            -rc_name           => 'parse_mapping',
+            -rc_name           => 'default_mem',
         },
         {
             -logic_name => 'finish_parse_mapping',
