@@ -101,7 +101,6 @@ sub generate_mapping_input {
     }
     foreach my $seq_region_name (keys %$seq_regions) {
         my $end = $seq_regions->{$seq_region_name}->{end};
-        $self->warning("Seqname " . $seq_region_name . " End " . $end);
     }
 
     $self->param('seq_regions', $seq_regions);
