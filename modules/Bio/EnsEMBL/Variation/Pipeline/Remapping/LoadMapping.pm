@@ -71,7 +71,7 @@ sub load_features {
     my $sth = $dbh->prepare(qq{
         SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
         WHERE TABLE_SCHEMA = '$dbname'
-        AND TABLE_NAME = '$feature_table';
+        AND TABLE_NAME = '$result_table';
     });
     $sth->execute();
 
