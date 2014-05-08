@@ -147,7 +147,7 @@ sub generate_mapping_input {
                 $self->qc_alleles($query_sequence, $upstream_flank_length, $variant_length, $allele_string, $variation_name);
 #                $allele_string = $self->qc_alleles($config, $query_sequence, $upstream_flank_length, $variant_length, $allele_string, $variation_name);
 
-                my $name = "$seq_region_name:$start:$end:$strand:$allele_string:$variation_name";
+                my $name = "$seq_region_name:$start:$end:$strand:$variation_name";
                 my $id = ">$feature_id-$upstream_flank_length-$variant_length-$downstream_flank_length-$name";
                 print $fh_fasta_file "$id\n$query_sequence\n";
             } # end while (read feature file for seq_region)
