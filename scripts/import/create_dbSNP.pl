@@ -43,13 +43,14 @@ use Net::FTP;
 use DBI;
 
 
-my ($db, $build, $pass, $host, $db_name );
+my ($db, $build, $pass, $host, $db_name, $db_load_only );
 
 GetOptions ("db=s"          => \$db,
             "build=s"       => \$build,        
             "pass=s"        => \$pass, 
             "host=s"        => \$host,
-            "db_name=s"       => \$db_name,  
+            "db_name=s"     => \$db_name,  
+	    "db_load_only"  => \$db_load_only 
     );
 
 usage() unless defined  $db && defined $build;
@@ -61,7 +62,7 @@ my $ddl ;
 if($db_name =~ /shared/){
     @required_files = (qw[ Allele GtyAllele ObsVariation PopClass PopClassCode UniGty UniVariation]);
     ## get files from dbSNP ftp site
-    $ddl = download_shared_files(\@required_files) 
+    $ddl = download_shared_files(\@required_files, $db_load_only) 
 }
 else{
    @required_files = (qw[ AlleleFreqBySsPop  Batch GtyFreqBySsPop Individual PedigreeIndividual PopLine Population RsMergeArch SNP SNPSubSNPLink SubInd  SubmittedIndividual SubSNP SubSNPPubmed ]);
@@ -70,20 +71,24 @@ else{
     push @required_files, "b$build\_SNPContigLoc";
 
     ## get files from dbSNP ftp site
-    $ddl = download_organism_files(\@required_files) 
+   $ddl = download_organism_files(\@required_files, $db_load_only) 
 }
 
 die "Error: no ddl\n" unless defined $ddl;
 
-## check md5sum
-check_files(\@required_files);
 
 ## convert types in ddl files
 my $new_ddl = reformat_ddl_files($ddl);
 
-## convert nulls in data files
-reformat_data_files(\@required_files);
+unless (defined $db_load_only){
 
+    ## check md5sum
+    check_files(\@required_files);
+
+
+    ## convert nulls in data files
+    reformat_data_files(\@required_files);
+}
 
 ## load into mysql
 load_data( $db_name, 
@@ -98,6 +103,8 @@ load_data( $db_name,
 sub download_organism_files{
     
     my $required_files = shift;
+    my $db_load_only   = shift;
+
     print localtime(). " downloading files\n";
 
     my $ftp = Net::FTP->new("ftp.ncbi.nih.gov", Debug => 0 )|| die "Cannot connect to ftp.ncbi.nih.gov: $@";    
@@ -105,13 +112,15 @@ sub download_organism_files{
     $ftp->cwd("snp/organisms/$db/database/organism\_data")  || die "Cannot change working directory ", $ftp->message;
     $ftp->binary(); 
     
-    ## pick up the required data files
-    foreach my $file ( @$required_files ){
-        warn "looking for $file\n";
-        $ftp->get( "$file\.bcp.gz" ) || die " Failed to download file :$file\.bcp.gz\n" ;
-        #print $ftp->message() . "\n";
-        $ftp->get( "$file\.bcp.gz.md5" );
-        #print $ftp->message() . "\n";
+    unless (defined $db_load_only ){
+	## pick up the required data files
+	foreach my $file ( @$required_files ){
+	    warn "looking for $file\n";
+	    $ftp->get( "$file\.bcp.gz" ) || die " Failed to download file :$file\.bcp.gz\n" ;
+	    #print $ftp->message() . "\n";
+	    $ftp->get( "$file\.bcp.gz.md5" );
+	    #print $ftp->message() . "\n";
+	}
     }
 
     ## pick up ddl also
@@ -376,5 +385,8 @@ sub usage{
 
     die  "\n\tUsage: create_dbSNP.pl -db [zebrafish_7955] -build [138]
 
-\tFor local database creation -pass [admin password]  -host [db server]  -db_name [name for empty mirror database]\n\n";
+\tFor local database creation -pass [admin password]  -host [db server]  -db_name [name for empty mirror database]
+
+\tTo skip data file download/reformatting and only create the local database use -db_load_only\n\n";
+
 }

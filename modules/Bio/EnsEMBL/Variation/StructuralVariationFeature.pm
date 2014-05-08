@@ -133,8 +133,8 @@ our @ISA = ('Bio::EnsEMBL::Variation::BaseVariationFeature');
   
   Arg [-SOURCE_DESCRIPTION] :
   string - description of the source
-	
-	Arg [-STUDY] :
+        
+        Arg [-STUDY] :
     object ref - the study object describing where the structural variant comes from.
   
   Arg [-IS_SOMATIC] :
@@ -143,9 +143,11 @@ our @ISA = ('Bio::EnsEMBL::Variation::BaseVariationFeature');
   Arg [-BREAKPOINT_ORDER] :
     int - For a structural variant with multiple breakpoints, this gives the predicted order of the breakpoint event.
   
-	Arg [-LENGTH] :
-	  int - Length of the structural variant. Useful when the structural variant is an insertion with given length. 
-	
+  Arg [-LENGTH] :
+    int - Length of the structural variant. Useful when the structural variant is an insertion with given length. 
+  Arg [-STRUCTURAL_VARIATION] :
+    int - the structural variation object for this feature 
+
   Example    :
     $svf = Bio::EnsEMBL::Variation::StructuralVariationFeature->new
        (-start   => 100,
@@ -172,10 +174,10 @@ sub new {
   
   my (
     $var_name, 
-		$structural_variation_id,
+    $structural_variation_id,
     $source, 
     $source_description,
-		$study, 
+    $study, 
     $class_so_term, 
     $inner_start, 
     $inner_end,
@@ -184,13 +186,14 @@ sub new {
     $allele_string,
     $is_somatic,
     $breakpoint_order,
-		$length
+    $length,
+    $structural_variation
   ) = rearrange([qw(
   VARIATION_NAME 
-	_STRUCTURAL_VARIATION_ID
+  _STRUCTURAL_VARIATION_ID
   SOURCE 
   SOURCE_DESCRIPTION
-	STUDY
+  STUDY
   CLASS_SO_TERM
   INNER_START 
   INNER_END 
@@ -199,15 +202,16 @@ sub new {
   ALLELE_STRING
   IS_SOMATIC
   BREAKPOINT_ORDER
-	LENGTH
+  LENGTH
+  STRUCTURAL_VARIATION
   )], @_);
 
 
   $self->{'variation_name'}           = $var_name;
-	$self->{'_structural_variation_id'} = $structural_variation_id;
+  $self->{'_structural_variation_id'} = $structural_variation_id;
   $self->{'source'}                   = $source;
   $self->{'source_description'}       = $source_description;
-	$self->{'study'}                    = $study;
+  $self->{'study'}                    = $study;
   $self->{'class_SO_term'}            = $class_so_term;
   $self->{'inner_start'}              = $inner_start;
   $self->{'inner_end'}                = $inner_end;
@@ -216,8 +220,8 @@ sub new {
   $self->{'allele_string'}            = $allele_string;
   $self->{'is_somatic'}               = $is_somatic || 0;
   $self->{'breakpoint_order'}         = $breakpoint_order;
-	$self->{'length'}                   = $length;
-
+  $self->{'length'}                   = $length;
+  $self->{'structural_variation'}     = $structural_variation;
   return $self;
 }
 
@@ -741,7 +745,7 @@ sub get_all_OverlapConsequences {
 
   Example     : $svf->_get_all_supporting_evidence_classes
   Description : Retrieves the classes (SO term) of the supporting evidence associated 
-	              with this structural variation feature (mainly, for web purposes).
+                with this structural variation feature (mainly, for web purposes).
                 Return empty list if there are none.
   Returntype  : reference to list of string
   Exceptions  : None
@@ -753,10 +757,10 @@ sub get_all_OverlapConsequences {
 sub get_all_supporting_evidence_classes {
   my $self = shift;
   my $ssva = $self->adaptor->db->get_SupportingStructuralVariationAdaptor();
-	
-	my $ssv_SO_list = $ssva->fetch_all_SO_term_by_structural_variation_dbID($self->{_structural_variation_id});
+        
+        my $ssv_SO_list = $ssva->fetch_all_SO_term_by_structural_variation_dbID($self->{_structural_variation_id});
   
-	return $ssv_SO_list;
+        return $ssv_SO_list;
 }
 
 

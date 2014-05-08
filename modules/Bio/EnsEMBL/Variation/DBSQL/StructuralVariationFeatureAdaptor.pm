@@ -851,14 +851,14 @@ sub store {
         $svf->{slice} ? $svf->seq_region_end : $svf->{end},
         $svf->{outer_end} || undef,
         $svf->strand,
-        $svf->structural_variation ? $svf->structural_variation->dbID : $svf->{structural_variation_id},
+        $svf->structural_variation ? $svf->structural_variation->dbID : $svf->{_structural_variation_id},
         $svf->allele_string,
         $svf->variation_name,
         $svf->{source_id},
         $svf->{study_id},
         $class_attrib_id || 0,
         $svf->structural_variation ? $svf->structural_variation->is_evidence : 0,
-        $svf->structural_variation ? $svf->structural_variation->is_somatic : 0,
+        $svf->structural_variation ? $svf->structural_variation->is_somatic :  $svf->{is_somatic},
         $svf->{breakpoint_order} || undef,
         $svf->{length} || undef
     );
