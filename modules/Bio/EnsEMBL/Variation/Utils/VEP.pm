@@ -64,7 +64,7 @@ use IO::Select;
 use Bio::EnsEMBL::Registry;
 use Bio::EnsEMBL::Variation::VariationFeature;
 use Bio::EnsEMBL::Variation::DBSQL::VariationFeatureAdaptor;
-use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(MAX_DISTANCE_FROM_TRANSCRIPT overlap);
+use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(overlap);
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
 use Bio::EnsEMBL::Variation::Utils::Sequence qw(unambiguity_code SO_variation_class);
 use Bio::EnsEMBL::Variation::Utils::EnsEMBL2GFF3;
@@ -2809,7 +2809,7 @@ sub whole_genome_fetch_transcript {
     my $tr_cache = $config->{tr_cache};
     my $slice_cache = $config->{slice_cache};
     
-    my $up_down_size = MAX_DISTANCE_FROM_TRANSCRIPT;
+    my $up_down_size = up_down_size();
     
     # check we have defined regions
     return unless defined($vf_hash->{$chr}) && defined($tr_cache->{$chr});
@@ -2946,6 +2946,8 @@ sub whole_genome_fetch_sv {
     my $rf_cache = $config->{rf_cache};
     my $slice_cache = $config->{slice_cache};
     
+    my $up_down_size = up_down_size();
+    
     debug("Analyzing structural variations") unless defined($config->{quiet});
     
     my($i, $total) = (0, scalar @$svfs);
@@ -2958,7 +2960,7 @@ sub whole_genome_fetch_sv {
         my %done_genes = ();
         
         if(defined($tr_cache->{$chr})) {
-            foreach my $tr(grep {overlap($_->{start} - MAX_DISTANCE_FROM_TRANSCRIPT, $_->{end} + MAX_DISTANCE_FROM_TRANSCRIPT, $svf->{start}, $svf->{end})} @{$tr_cache->{$chr}}) {
+            foreach my $tr(grep {overlap($_->{start} - $up_down_size, $_->{end} + $up_down_size, $svf->{start}, $svf->{end})} @{$tr_cache->{$chr}}) {
                 my $svo = Bio::EnsEMBL::Variation::TranscriptStructuralVariation->new(
                     -transcript                   => $tr,
                     -structural_variation_feature => $svf,
@@ -3565,12 +3567,19 @@ sub get_slice {
 # METHODS THAT DEAL WITH "REGIONS"
 ##################################
 
+# gets up/down size - this can be changed by UpDownDistance plugin
+sub up_down_size {
+  return (sort {$a <=> $b} ($Bio::EnsEMBL::Variation::Utils::VariationEffect::UPSTREAM_DISTANCE, $Bio::EnsEMBL::Variation::Utils::VariationEffect::DOWNSTREAM_DISTANCE))[-1];
+}
+
 # gets regions from VF hash
 sub regions_from_hash {
     my $config = shift;
     my $vf_hash = shift;
     
     my %include_regions;
+    
+    my $up_down_size = up_down_size();
     
     # if using cache we just want the regions of cache_region_size
     # since that's what we'll get from the cache (or DB if no cache found)
@@ -3585,7 +3594,7 @@ sub regions_from_hash {
             foreach my $chunk(keys %{$vf_hash->{$chr}}) {
                 foreach my $pos(keys %{$vf_hash->{$chr}{$chunk}}) {
                     my @tmp = sort {$a <=> $b} map {($_->{start}, $_->{end})} @{$vf_hash->{$chr}{$chunk}{$pos}};
-                    my ($s, $e) = ($tmp[0] - MAX_DISTANCE_FROM_TRANSCRIPT, $tmp[-1] + MAX_DISTANCE_FROM_TRANSCRIPT);
+                    my ($s, $e) = ($tmp[0] - $up_down_size, $tmp[-1] + $up_down_size);
                     
                     my $low = int ($s / $region_size);
                     my $high = int ($e / $region_size) + 1;
@@ -3626,6 +3635,8 @@ sub add_region {
     my $end = shift;
     my $region_list = shift;
     
+    my $up_down_size = up_down_size();
+    
     # fix end for insertions
     $end = $start if $end < $start;
     
@@ -3636,8 +3647,8 @@ sub add_region {
         my ($region_start, $region_end) = split /\-/, $region_list->[$i];
         
         if($start <= $region_end && $end >= $region_start) {
-            my $new_region_start = ($start < $end ? $start : $end) - MAX_DISTANCE_FROM_TRANSCRIPT;
-            my $new_region_end = ($start > $end ? $start : $end) + MAX_DISTANCE_FROM_TRANSCRIPT;
+            my $new_region_start = ($start < $end ? $start : $end) - $up_down_size;
+            my $new_region_end = ($start > $end ? $start : $end) + $up_down_size;
             
             $new_region_start = 1 if $new_region_start < 1;
             
@@ -3652,10 +3663,10 @@ sub add_region {
     }
     
     unless($added) {
-        my $s = $start - MAX_DISTANCE_FROM_TRANSCRIPT;
+        my $s = $start - $up_down_size;
         $s = 1 if $s < 1;
         
-        push @{$region_list}, $s.'-'.($end + MAX_DISTANCE_FROM_TRANSCRIPT);
+        push @{$region_list}, $s.'-'.($end + $up_down_size);
     }
 }
 
