@@ -89,8 +89,8 @@ sub generate_mapping_input {
     # store end-coordinates for all seq_regions to check that variation_location + flank_seq_length < slice_end
     my $cdba = $self->param('cdba');
     my $sa = $cdba->get_SliceAdaptor;
-    # don't include asm exceptions
-    my $slices = $sa->fetch_all('toplevel', undef, 0);
+    # don't include asm exceptions, fetch the full length of the Y chromosome
+    my $slices = $sa->fetch_all('toplevel', undef, 0, 1);
     my $seq_regions = {};
     foreach my $slice (@$slices) {
         my $end             = $slice->end;
@@ -271,7 +271,7 @@ sub dump_features {
     my $dump_features_dir = $self->param('dump_features_dir');
     my $sa = $cdba->get_SliceAdaptor;
     # don't include asm exceptions
-    my $slices = $sa->fetch_all('toplevel', undef, 0, 0);
+    my $slices = $sa->fetch_all('toplevel', undef, 0, 1);
 
     my $seq_region_ids = {};
     foreach my $slice (@$slices) {
