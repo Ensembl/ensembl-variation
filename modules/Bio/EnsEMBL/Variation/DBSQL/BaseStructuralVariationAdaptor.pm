@@ -448,7 +448,7 @@ sub store {
         (join ",", @{$sv->get_all_validation_states}) || undef,
         $class_attrib_id || 0,
         $sv->is_evidence || 0,
-        $sv->somatic || 0,
+        $sv->is_somatic  || 0,
         $sv->alias || undef,
         $clin_sign_attrib_id || undef
     );
