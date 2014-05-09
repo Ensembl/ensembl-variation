@@ -54,6 +54,9 @@ sub run {
         $self->dump_features();
         $self->generate_mapping_input();
     }
+    if ($self->param('mode') eq 'remap_multi_map') {
+        $self->dump_multi_map_features();
+    }
 }
 
 sub write_output {
@@ -239,6 +242,121 @@ sub qc_alleles {
         my $fh = $self->param('qc_ref_seq');
         print $fh "$variation_name\t$ref_allele\t$ref\n";
     }
+}
+
+sub dump_multi_map_features {
+    my $self = shift;
+
+    # parse fasta files and store: rsname to fasta_file_number
+    # Query_name in fasta_file >14086.1-110-1-497-G:C/G:rs708635
+    # parse variation_features on ref_sequence: store variation_feature info in dump_feature/file_number
+    # make a note if feature was stored
+
+    my $fasta_files_dir = $self->param('fasta_files_dir');
+    my $rs_id_to_file_number = {};
+    my $file_numbers = {};
+    opendir(DIR, $dump_features_dir) or die $!;
+    while (my $file = readdir(DIR)) {
+        if ($file =~ /^(.+)\.fa$/) {
+            my $file_number = $1;
+            my $file_numbers->{$file_number} = 1;
+            my $fh = FileHandle->new("$fasta_files_dir/$file", 'r');
+            while (<$fh>) {
+                chomp;
+                my $line = $_;
+                if ($line =~ /^>/) {
+                    my @query_name_components = split(':', $line);
+                    my $rs_id = pop @query_name_components;
+                    $rs_id_to_file_number->{$rs_id} = $file_number;
+                }
+            }
+        }
+    }
+    closedir(DIR);
+
+    my $dump_features_dir = $self->param('dump_features_dir');
+    my $fh_hash = {};
+    foreach my $file_number (keys %$file_numbers) {
+        my $fh = FileHandle->new("$dump_features/$file_number.txt", 'w');
+        $fh_hash->{$file_number} = $fh;
+    }
+
+    my $file_count = scalar keys %$file_numbers;
+    $self->param('file_count', $file_count);
+
+    my $cdba = $self->param('cdba');
+    my $vdba = $self->param('vdba');
+
+    my $dbname = $vdba->dbc->dbname();
+    my $feature_table = $self->param('feature_table');
+
+    my $dbh = $vdba->dbc->db_handle;
+    my $sth = $dbh->prepare(qq{
+        SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = '$dbname'
+        AND TABLE_NAME = '$feature_table';
+    });
+    $sth->execute();
+
+    # QC that all necessary columns are there: e.g. seq_region_id, ...
+    my @column_names = ();
+    while (my @name = $sth->fetchrow_array) {
+        push @column_names, $name[0];
+    }
+    $sth->finish();
+    @column_names = sort @column_names;
+    my $column_names_concat = join(',', @column_names);
+    $self->param('sorted_column_names', $column_names_concat);
+    $sth->finish();
+
+    my $sa = $cdba->get_SliceAdaptor;
+    # don't include asm exceptions
+    my $slices = $sa->fetch_all('toplevel', undef, 0, 1);
+
+    my $seq_region_ids = {};
+    foreach my $slice (@$slices) {
+        my $seq_region_name = $slice->seq_region_name;
+        next if ($seq_region_name =~ /PATCH/);
+        my $seq_region_id = $slice->get_seq_region_id;
+        $seq_region_ids->{$seq_region_id} = $seq_region_name;
+    }
+
+    $sth = $dbh->prepare(qq{
+        SELECT variation_name,map_weight,$column_names_concat FROM $feature_table WHERE seq_region_id = ?;
+    }, {mysql_use_result => 1});
+
+    my $vf_info_is_stored = {};
+
+    foreach my $seq_region_id (keys %$seq_region_ids) {
+        my $seq_region_name = $seq_region_ids->{$seq_region_id};
+        $sth->execute($seq_region_id);
+        while (my $row = $sth->fetchrow_arrayref) {
+            my @values = map { defined $_ ? $_ : '\N' } @$row;
+            my $variation_name = $values[0];
+            my $map_weight = $values[1];
+            next if ($map_weight == 1);
+            next if ($vf_info_is_stores->{$variation_name});
+            my $file_number = $rs_id_to_file_number->{$variation_name};
+            unless ($file_number) {
+                $self->warning("No sequence information for $variation_name from dbSNP");
+                next;
+            }
+            my $fh = $fh_hash->{$file_number};
+            my @pairs = ();
+            for my $i (0..$#column_names) {
+                push @pairs, "$column_names[$i]=$values[$i]";
+            }
+            push @pairs, "seq_region_name=$seq_region_name";
+            print $fh join("\t", @pairs), "\n";
+        }
+        $sth->finish();
+    }
+
+    foreach my $file_number (keys %$fh_hash) {
+        my $fh = $fh_hash->{$file_number};
+        $fh->close();
+    }
+
 }
 
 sub dump_features {
