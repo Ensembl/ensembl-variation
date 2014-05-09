@@ -21,8 +21,6 @@ sub fetch_input {
     my $mapping_results_dir = $self->param('mapping_results_dir');
     my $compare_locations  = $self->param('compare_locations');
 
-    $self->warning($species);
-    $self->warning($bam_file);
     my $sam = Bio::DB::Sam->new( -bam => $bam_file, -fasta => $fasta_file,);	
 
     $self->param('sam', $sam);	
