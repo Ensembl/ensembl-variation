@@ -27,8 +27,6 @@ sub write_output {
             'fasta_file'  => "$fasta_files_dir/$file_number.fa",
             'bam_file'    => "$bam_files_dir/$file_number.bam",
         };
-        $self->warning("$fasta_files_dir/$file_number.fa");
-        $self->warning("$bam_files_dir/$file_number.bam");
         $file_number++;
     }
     $self->dataflow_output_id(\@input, 2);
