@@ -298,6 +298,8 @@ sub detect_format {
     my $line = shift;
     my @data = split /\s+/, $line;
     
+    $DB::single = 1;
+    
     # HGVS: ENST00000285667.3:c.1047_1048insC
     if (
         scalar @data == 1 &&
@@ -318,7 +320,7 @@ sub detect_format {
         $data[0] =~ /(chr)?\w+/ &&
         $data[1] =~ /^\d+$/ &&
         $data[3] =~ /^[ACGTN\-\.]+$/i &&
-        $data[4] && $data[4] =~ /^([\.ACGTN\-]+\,?)+|(\<[A-Z]+\>)$/i
+        $data[4] && $data[4] =~ /^([\.ACGTN\-]+\,?)+$|^(\<[A-Z]+\>)$/i
     ) {
         return 'vcf';
     }
@@ -602,6 +604,7 @@ sub parse_vcf {
                 my $tmp_chr = $chr;
                 $tmp_chr =~ s/chr//ig;
                 my $slice = get_slice($config, $tmp_chr);
+                
                 $ref .= $slice ? $slice->sub_Slice($start + 1, $start + $num_deleted - 1)->seq : ("N" x ($num_deleted - 1)) unless length($ref) > 1 || $start == $end;
             }
             
