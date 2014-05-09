@@ -50,12 +50,13 @@ sub fetch_input {
 
 sub run {
     my $self = shift;
-    if ($self->param('generate_fasta_files')) {
-        $self->dump_features();
-        $self->generate_mapping_input();
-    }
     if ($self->param('mode') eq 'remap_multi_map') {
         $self->dump_multi_map_features();
+    } else {
+        if ($self->param('generate_fasta_files')) {
+            $self->dump_features();
+            $self->generate_mapping_input();
+        }
     }
 }
 
