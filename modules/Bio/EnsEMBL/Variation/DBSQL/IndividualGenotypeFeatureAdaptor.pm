@@ -221,7 +221,7 @@ sub _objs_from_sth{
     my (@results, %slice_hash, %sr_name_hash, %sr_cs_hash, %individual_hash, %gt_code_hash);
 
 	my ($individual_id, $seq_region_id, $seq_region_start, $seq_region_end, $seq_region_strand, $genotypes);
-	
+  
 	$sth->bind_columns(
 		\$individual_id, \$seq_region_id, \$seq_region_start,
 		\$seq_region_end, \$seq_region_strand, \$genotypes
@@ -325,12 +325,19 @@ sub _objs_from_sth{
 		#while( my( $gt_code, $gap ) = splice @genotypes, 0, 2 ) {
 		while( my( $variation_id, $gt_code, $gap ) = splice @genotypes, 0, 3 ) {
 			
+      # if fetching by variation ID, skip those without
 			if(defined($self->{_variation_id})) {
 				if($variation_id != $self->{_variation_id}) {
 					$snp_start += $gap + 1 if defined $gap;
 					next;
 				}
 			}
+      
+      # if fetching by slice, skip those outside slice range
+      if($dest_slice && ($snp_start < 1 || $snp_start > $dest_slice_length)) {
+        $snp_start += $gap + 1 if defined $gap;
+        next;
+      }
 			
 			my $igtype  = Bio::EnsEMBL::Variation::IndividualGenotypeFeature->new_fast({
 				'start'   => $snp_start,
