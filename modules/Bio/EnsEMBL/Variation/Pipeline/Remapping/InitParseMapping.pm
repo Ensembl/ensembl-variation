@@ -15,7 +15,6 @@ sub write_output {
 
     opendir(my $dh, $fasta_files_dir) or die "Not a directory $fasta_files_dir";
     my $max_file_count = scalar(grep {$_ =~ m/\.fa$/} readdir($dh));
-    $self->warning($max_file_count);
     closedir($dh);
 
     while ($file_number <= $max_file_count) {
