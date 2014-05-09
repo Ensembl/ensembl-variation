@@ -331,6 +331,8 @@ sub filter_mapping_results_dbsnp {
                 if ($score >= $threshold) {
                     $filtered->{$result} = $score;
                     my ($vf_id, $new_seq_info, $query_name) = split("\t", $result);
+                    # remove version for vf_id: 
+                    $query_name =~ s/\.\d+//g;
                     my $line = $self->print_feature_line($query_name, $new_seq_info, $score);
                     print $fh_filtered_mappings $line, "\n";
                 }   
@@ -376,11 +378,16 @@ sub join_feature_data {
     my $fh_init_feature = FileHandle->new($file_init_feature, 'r'); 
     
     my $feature_data = {};
+    my $key = '';
     while (<$fh_init_feature>) {
         chomp;
         my $data = $self->read_data($_);
-        my $variation_feature_id = $data->{variation_feature_id};
-        $feature_data->{$variation_feature_id} = $data;
+        if ($self->param('mode') eq 'remap_multi_map') {
+            $key = $data->{variation_name};
+        } else {
+            $key = $data->{variation_feature_id};
+        }
+        $feature_data->{$key} = $data;
     }
     $fh_init_feature->close();
 
@@ -408,17 +415,33 @@ sub join_feature_data {
     my $file_load_features = $self->param('file_load_features');
     my $fh_load_features = FileHandle->new($file_load_features, 'w');   
     $fh_mappings = FileHandle->new($file_filtered_mappings, 'r');
-
+    my ($data, $variation_feature_id, $version, $variation_name);
     while (<$fh_mappings>) {
         chomp;
         my ($query_name, $seq_name, $start, $end, $strand, $score) = split("\t", $_);
-        # query_name: 156358-150-1-150-11:5502587:5502587:1:T/C:rs202026261:dbSNP:SNV
-        my @query_name_components = split('-', $query_name, 2);
-        my $variation_feature_id = $query_name_components[0];
+        
+        if ($self->param('mode') eq 'remap_multi_map') {
+            # query_name: 44919.0-200-1-200-C:C/G:rs2455513
+            my @query_name_components = split(':', $query_name);
+            $variation_name = pop @query_name_components; 
+            $variation_feature_id = shift @query_name_components;
+#            my $vf_id_info = shift @query_name_components; 
+#            ($variation_feature_id, $version) = split('\.', $vf_id_info);
+        } else {
+            # query_name: 156358-150-1-150-11:5502587:5502587:1:T/C:rs202026261:dbSNP:SNV
+            my @query_name_components = split('-', $query_name, 2);
+            $variation_feature_id = $query_name_components[0];
+        }
         my $seq_region_id = $seq_region_ids->{$seq_name};
         my $map_weight = $map_weights->{$query_name};
 
-        my $data = $feature_data->{$variation_feature_id};
+        if ($self->param('mode') eq 'remap_multi_map') {
+            $data = $feature_data->{$variation_name};
+            $data->{variation_feature_id} = $variation_feature_id;
+        } else {
+            $data = $feature_data->{$variation_feature_id};
+        }
+
         $data->{seq_region_id} = $seq_region_id;
         $data->{seq_region_start} = $start;
         $data->{seq_region_end} = $end;
