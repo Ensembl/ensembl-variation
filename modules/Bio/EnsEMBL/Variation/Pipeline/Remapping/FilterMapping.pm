@@ -73,7 +73,11 @@ sub fetch_input {
 sub run {
     my $self = shift;
     $self->report_failed_mappings();
-    $self->filter_mapping_results();
+    if ($self->param('mode') eq 'remap_multi_map') {
+        $self->filter_mapping_results_dbsnp();
+    } else {
+        $self->filter_mapping_results();
+    }
     $self->write_statistics();
     $self->join_feature_data();
 }
@@ -241,6 +245,115 @@ sub filter_mapping_results {
 
     $fh_filtered_mappings->close();
 
+}
+
+sub filter_mapping_results_dbsnp {
+    my $self = shift;
+    my $algn_score_threshold = $self->param('algn_score_threshold');
+
+    my $file_mappings = $self->param('file_mappings');
+    my $fh_mappings = FileHandle->new($file_mappings, 'r');
+
+    my $file_filtered_mappings = $self->param('file_filtered_mappings');
+    my $fh_filtered_mappings = FileHandle->new($file_filtered_mappings, 'w');
+
+    my ($stats_failed, $stats_unique_map, $stats_multi_map);
+
+    my $mapped = {};
+    while (<$fh_mappings>) {
+        chomp;
+        # old_seq_info is not in available
+        #       1 19432 19432 1 480394.0-101-1-101-A/G:rs75513536       8       203M    1                       clipped nucleotides 0
+        #       1 19432 19432 1 480394.1-101-1-101-A/G:rs75513536       8       203M    0.995073891625616       clipped nucleotides 0
+
+        #        1 18849 18849 -1        14086.1-110-1-497-G:C/G:rs708635        3       41S567M 0.932565789473684       clipped nucleotides 41
+        #        1 19172 19172 -1        14567.1-200-1-200-T:C/T:rs806720        8       110M2I289M      0.992518703241895       clipped nucleotides 0
+        #        1 19241 19241 -1        4257.1-257-1-250-G:A/G:rs380444 3       508M    0.998031496062992       clipped nucleotides 0
+        my ($old_seq_info, $new_seq_info, $query_name, $map_weight, $cigar, $relative_algn_score, $clipped_info) = split("\t", $_);
+
+        my ($chrom_name, $start, $end, $strand) = split(' ', $new_seq_info);
+        my @query_name_components = split('-', $query_name, 5);
+        my $vf_id_info = $query_name_components[0];
+        my ($vf_id, $version) = split('\.', $vf_id_info);
+        my ($allele, $allele_string, $rsid) = split(':', $query_name_components[4]);
+        $mapped->{$vf_id}->{$new_seq_info}->{$query_name} = $relative_algn_score;
+    }
+    $fh_mappings->close();
+
+    #content of $mapped could look like this:
+    #3509 22 18401349 18401376 -1 3509.1-200-28-200--/CGGAGCCAGAGGGCCGGGGGGTCCCACA:rs361903 0.992990654205608
+    #3509 22 18718507 18718506 1 3509.0-200-0-200--/CGGAGCCAGAGGGCCGGGGGGTCCCACA:rs361903 1
+    #3509 22 18223193 18223220 1 3509.1-200-28-200--/CGGAGCCAGAGGGCCGGGGGGTCCCACA:rs361903 0.992990654205608
+    #3509 22 21344289 21344316 1 3509.1-200-28-200--/CGGAGCCAGAGGGCCGGGGGGTCCCACA:rs361903 0.995327102803738
+    #3509 22 18650965 18650992 -1 3509.1-200-28-200--/CGGAGCCAGAGGGCCGGGGGGTCCCACA:rs361903 0.995327102803738
+
+    #27587 9 65226786 65226786 -1 27587.1-140-1-507-C/G:rs1838599 0.998456790123457
+    #27587 9 65226786 65226786 -1 27587.0-140-1-507-C/G:rs1838599 1
+
+    #27587 9 63022076 63022076 1 27587.1-140-1-507-C/G:rs1838599 0.970679012345679
+    #27587 9 63022076 63022076 1 27587.0-140-1-507-C/G:rs1838599 0.972222222222222
+
+    #27587 9 65795203 65795203 1 27587.1-140-1-507-C/G:rs1838599 0.976851851851852
+    #27587 9 65795203 65795203 1 27587.0-140-1-507-C/G:rs1838599 0.978395061728395
+
+    #27587 9 64741286 64741286 -1 27587.1-140-1-507-C/G:rs1838599 0.983024691358025
+    #27587 9 64741286 64741286 -1 27587.0-140-1-507-C/G:rs1838599 0.984567901234568
+
+    # if coords are the same, choose the one with better score --> consider allele string?
+
+
+    foreach my $vf_id (keys %$mapped) {
+        my $passed = {};
+
+        foreach my $new_seq_info (keys %{$mapped->{$vf_id}}) {
+            # query_name to score
+            my $query_name_to_score = $mapped->{$vf_id}->{$new_seq_info};
+            my @scores = sort { $query_name_to_score->{$b} <=> $query_name_to_score->{$a} } keys(%$query_name_to_score);
+            my $query_name = $scores[0];
+            my $score = $query_name_to_score->{$query_name};
+
+            if ($score >= $algn_score_threshold) {
+                $passed->{"$vf_id\t$new_seq_info\t$query_name"} = $score;
+            }
+        }
+
+        my $count_passed = scalar keys %$passed;
+        if ($count_passed > 0) {
+            # filter by score
+            my $filtered = {};
+            my @keys = sort {$passed->{$b} <=> $passed->{$a}} keys(%$passed);
+            my $threshold = $algn_score_threshold;
+            if ($passed->{$keys[0]} == 1.0) {
+                $threshold = 1.0;
+            }
+            foreach my $result (keys %$passed) {
+                my $score = $passed->{$result};
+                if ($score >= $threshold) {
+                    $filtered->{$result} = $score;
+                    my ($vf_id, $new_seq_info, $query_name) = split("\t", $result);
+                    my $line = $self->print_feature_line($query_name, $new_seq_info, $score);
+                    print $fh_filtered_mappings $line, "\n";
+                }   
+            }
+
+            $count_passed = scalar keys %$filtered;
+            if ($count_passed == 0) {
+                $stats_failed++;
+            } elsif ($count_passed == 1) {
+                $stats_unique_map++;
+            } else {
+                $stats_multi_map++;
+            }
+        } else {
+            $stats_failed++;
+        }
+    }
+
+    $fh_filtered_mappings->close();
+
+    $self->param('stats_unique_map', $stats_unique_map);
+    $self->param('stats_multi_map', $stats_multi_map);
+    $self->param('stats_failed', $stats_failed);
 }
 
 sub write_statistics {
