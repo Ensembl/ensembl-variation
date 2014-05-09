@@ -48,8 +48,10 @@ sub default_options {
         generate_fasta_files    => 0,
         flank_seq_length        => 150,
         algn_score_threshold    => 0.95,
-        use_prior_for_filtering => 0,
+        use_prior_for_filtering => 1,
         entries_per_file        => 50000,
+        mode                    => 'remap_db_table', # options: remap_db_table (default), remap_multi_map, remap_alt_loci
+        feature_table           => 'variation_feature',
         pipeline_dir            => $self->o('pipeline_dir'),
         dump_features_dir       => $self->o('pipeline_dir') . '/dump_features',
         fasta_files_dir         => $self->o('pipeline_dir') . '/fasta_files',
@@ -70,6 +72,7 @@ sub pipeline_wide_parameters {
     my ($self) = @_;
     return {
         %{$self->SUPER::pipeline_wide_parameters},          # here we inherit anything from the base class
+        mode                         => $self->o('mode'),
         registry_file                => $self->o('registry_file'),
         registry_file_newasm         => $self->o('registry_file_newasm'),
         dump_features_dir            => $self->o('dump_features'),
