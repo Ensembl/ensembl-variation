@@ -53,7 +53,7 @@ sub run {
     if ($self->param('mode') eq 'remap_multi_map') {
         $self->dump_multi_map_features();
     } elsif ($self->param('mode') eq 'remap_alt_loci') {
-        $self->dump_alt_loci_features();
+        $self->dump_features_overlapping_alt_loci();
     } else {
         if ($self->param('generate_fasta_files')) {
             $self->dump_features();
@@ -359,6 +359,142 @@ sub dump_multi_map_features {
         my $fh = $fh_hash->{$file_number};
         $fh->close();
     }
+
+}
+
+
+sub dump_features_overlapping_alt_loci {
+    my $self = shift; 
+
+    my $cdba = $self->{cdba};
+
+    my $alt_loci_to_coords = {};
+    my $ref_to_alt_loci = {};
+    my $ref_to_unique_region_coords = {};
+
+    my $sa = $cdba->get_SliceAdaptor;
+    my $aefa = $cdba->get_AssemblyExceptionFeatureAdaptor;
+    my $slices = $sa->fetch_all('chromosome', undef, 1, 1);
+
+    foreach my $slice (@$slices) {
+        my $seq_region_name = $slice->seq_region_name;
+        my $assembly_exception_type = $slice->assembly_exception_type; # 'HAP', 'PAR', 'PATCH_FIX' or 'PATCH_NOVEL'
+        if ($assembly_exception_type eq 'HAP') {
+            my $alt_slices = $sa->fetch_by_region_unique('chromosome', $seq_region_name);
+            foreach my $alt_slice (@$alt_slices) {
+                my $start = $alt_slice->start;
+                my $end = $alt_slice->end;
+                $alt_loci_to_coords->{$seq_region_name}->{start} = $start;
+                $alt_loci_to_coords->{$seq_region_name}->{end} = $end;
+            }
+        } elsif ($assembly_exception_type eq 'REF') {
+            my $assembly_exception_features = $aefa->fetch_all_by_Slice($slice);
+            my $ref_start = $slice->start;
+            my $ref_end = $slice->end; 
+            $ref_to_unique_region_coords->{start} = $end;
+            $ref_to_unique_region_coords->{end} = $start;
+            foreach my $feature (@$assembly_exception_features) {
+                my $alt_slice = $feature->alternate_slice();
+                my $alt_slice_name = $alt_slice->seq_region_name;
+                unless ($alt_slice_name =~ /^X$|^Y$|PATCH/) {
+                    $ref_to_alt_loci->{$seq_region_name}->{$alt_slice_name} = 1; 
+                }
+            }
+        }
+    } 
+    # compute boundaries
+    foreach my $ref (keys %$ref_to_alt_loci) {
+        foreach my $alt_loci (keys %{$ref_to_alt_loci->{$ref}}) {
+            my $start = $alt_loci_to_coords->{$alt_loci}->{start};
+            my $end = $alt_loci_to_coords->{$alt_loci}->{end};
+            if ($ref_to_unique_region_coords->{$ref}->{start} > $start) {
+                $ref_to_unique_region_coords->{$ref} = $start;
+            }
+            if ($ref_to_unique_region_coords->{$ref}->{end} < $end) {
+                $ref_to_unique_region_coords->{$ref} = $end;
+            }
+        }
+    } 
+
+    my $vdba = $self->param('vdba');
+
+    my $dbname = $vdba->dbc->dbname();
+    my $feature_table = $self->param('feature_table');
+
+    my $dbh = $vdba->dbc->db_handle;
+    my $sth = $dbh->prepare(qq{
+        SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = '$dbname'
+        AND TABLE_NAME = '$feature_table';
+    });
+    $sth->execute();
+
+    # QC that all necessary columns are there: e.g. seq_region_id, ...
+    my @column_names = ();
+    while (my @name = $sth->fetchrow_array) {
+        push @column_names, $name[0];
+    }
+    $sth->finish();
+    @column_names = sort @column_names;
+    my $column_names_concat = join(',', @column_names);
+    $self->param('sorted_column_names', $column_names_concat);
+    $sth->finish();
+
+    my $dump_features_dir = $self->param('dump_features_dir');
+    my $sa = $cdba->get_SliceAdaptor;
+    # don't include asm exceptions
+    my $slices = $sa->fetch_all('toplevel', undef, 0, 1);
+
+    my $seq_region_ids = {};
+    foreach my $slice (@$slices) {
+        my $seq_region_name = $slice->seq_region_name;
+        if ($slice->assembly_exception_type eq 'REF') {
+            my $seq_region_id = $slice->get_seq_region_id;
+            $seq_region_ids->{$seq_region_id} = $seq_region_name;
+        }
+    }
+
+    $sth = $dbh->prepare(qq{
+        SELECT seq_region_start,seq_region_end,source_id,$column_names_concat FROM $feature_table WHERE seq_region_id = ?;
+    }, {mysql_use_result => 1});
+
+    my $file_count = 1;
+    my $entries_per_file = $self->param('entries_per_file');
+    my $count_entries = 0;
+    my $fh = FileHandle->new("$dump_features_dir/$file_count.txt", 'w');
+
+   foreach my $seq_region_id (keys %$seq_region_ids) {
+        my $seq_region_name = $seq_region_ids->{$seq_region_id};
+        $sth->execute($seq_region_id);
+        while (my $row = $sth->fetchrow_arrayref) {
+            my @values = map { defined $_ ? $_ : '\N' } @$row;
+            my $seq_region_start = shift @values;
+            my $seq_region_end = shift @values;
+            my $source_id = shift @values;
+
+            next unless ($source_id == 1);
+            my $alt_loci_start = $ref_to_unique_region_coords->{$seq_region_name}->{start};
+            my $alt_loci_end = $ref_to_unique_region_coords->{$seq_region_name}->{end};
+            next unless ($seq_region_start >= $alt_loci_start && $seq_region_end <= $alt_loci_end);
+
+            my @pairs = ();
+            for my $i (0..$#column_names) {
+                push @pairs, "$column_names[$i]=$values[$i]";
+            }
+            push @pairs, "seq_region_name=$seq_region_name";
+            if ($count_entries >= $entries_per_file) {
+                $fh->close();
+                $file_count++;
+                $fh = FileHandle->new("$dump_features_dir/$file_count.txt", 'w');
+                $count_entries = 0;
+            }
+            $count_entries++;
+            print $fh join("\t", @pairs), "\n";
+        }
+        $sth->finish();
+    }
+    $fh->close();
+    $self->param('file_count', $file_count);
 
 }
 
