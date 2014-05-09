@@ -52,6 +52,8 @@ sub run {
     my $self = shift;
     if ($self->param('mode') eq 'remap_multi_map') {
         $self->dump_multi_map_features();
+    } elsif ($self->param('mode') eq 'remap_alt_loci') {
+        $self->dump_alt_loci_features();
     } else {
         if ($self->param('generate_fasta_files')) {
             $self->dump_features();
