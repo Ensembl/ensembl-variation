@@ -256,7 +256,7 @@ sub dump_multi_map_features {
     my $fasta_files_dir = $self->param('fasta_files_dir');
     my $rs_id_to_file_number = {};
     my $file_numbers = {};
-    opendir(DIR, $dump_features_dir) or die $!;
+    opendir(DIR, $fasta_files_dir) or die $!;
     while (my $file = readdir(DIR)) {
         if ($file =~ /^(.+)\.fa$/) {
             my $file_number = $1;
@@ -278,7 +278,7 @@ sub dump_multi_map_features {
     my $dump_features_dir = $self->param('dump_features_dir');
     my $fh_hash = {};
     foreach my $file_number (keys %$file_numbers) {
-        my $fh = FileHandle->new("$dump_features/$file_number.txt", 'w');
+        my $fh = FileHandle->new("$dump_features_dir/$file_number.txt", 'w');
         $fh_hash->{$file_number} = $fh;
     }
 
@@ -336,7 +336,7 @@ sub dump_multi_map_features {
             my $variation_name = $values[0];
             my $map_weight = $values[1];
             next if ($map_weight == 1);
-            next if ($vf_info_is_stores->{$variation_name});
+            next if ($vf_info_is_stored->{$variation_name});
             my $file_number = $rs_id_to_file_number->{$variation_name};
             unless ($file_number) {
                 $self->warning("No sequence information for $variation_name from dbSNP");
