@@ -75,6 +75,8 @@ sub run {
     $self->report_failed_mappings();
     if ($self->param('mode') eq 'remap_multi_map') {
         $self->filter_mapping_results_dbsnp();
+    } elsif ($self->param('mode') eq 'remap_alt_loci') {
+        $self->fliter_mapping_results_alt_loci();
     } else {
         $self->filter_mapping_results();
     }
@@ -357,6 +359,107 @@ sub filter_mapping_results_dbsnp {
     $self->param('stats_multi_map', $stats_multi_map);
     $self->param('stats_failed', $stats_failed);
 }
+
+sub filter_mapping_results_alt_loci {
+    my $self = shift;
+
+    my $alt_loci_to_ref = {};
+    my $alt_loci_coords = {};
+
+    my $cdba = $self->param('cdba');
+    my $sa = $cdba->get_SliceAdaptor;
+    my $aefa = $cdba->get_AssemblyExceptionFeatureAdaptor;
+    my $slices = $sa->fetch_all('chromosome', undef, 1, 1);
+
+    foreach my $slice (@$slices) {
+        my $seq_region_name = $slice->seq_region_name;
+        my $assembly_exception_type = $slice->assembly_exception_type; # 'HAP', 'PAR', 'PATCH_FIX' or 'PATCH_NOVEL'
+        if ($assembly_exception_type eq 'HAP') {
+            my $alt_slices = $sa->fetch_by_region_unique('chromosome', $seq_region_name);
+            foreach my $alt_slice (@$alt_slices) {
+                my $start = $alt_slice->start;
+                my $end = $alt_slice->end;
+                $alt_loci_coords->{$seq_region_name}->{start} = $start;
+                $alt_loci_coords->{$seq_region_name}->{end} = $end;
+            }
+        } elsif ($assembly_exception_type eq 'REF') {
+            my $assembly_exception_features = $aefa->fetch_all_by_Slice($slice);
+            my $ref_start = $slice->start;
+            my $ref_end = $slice->end;
+            $ref_to_unique_region_coords->{start} = $end;
+            $ref_to_unique_region_coords->{end} = $start;
+            foreach my $feature (@$assembly_exception_features) {
+                my $alt_slice = $feature->alternate_slice();
+                my $alt_slice_name = $alt_slice->seq_region_name;
+                unless ($alt_slice_name =~ /^X$|^Y$|PATCH/) {
+                    $alt_loci_to_ref->{$alt_slice_name}->{$seq_region_name} = 1;
+                }
+            }
+        }
+    }
+
+    my $algn_score_threshold = $self->param('algn_score_threshold');
+
+    my $file_mappings = $self->param('file_mappings');
+    my $fh_mappings = FileHandle->new($file_mappings, 'r');
+
+    my $file_filtered_mappings = $self->param('file_filtered_mappings');
+    my $fh_filtered_mappings = FileHandle->new($file_filtered_mappings, 'w');
+
+    my ($stats_failed, $stats_unique_map, $stats_multi_map);
+
+    my $mapped = {};
+    while (<$fh_mappings>) {
+        chomp;
+        my ($old_seq_info, $new_seq_info, $query_name, $map_weight, $cigar, $relative_algn_score, $clipped_info) = split("\t", $_);
+        #        CHR_HSCHR1_1_CTG3 118061 118060 1       160136-150-0-150-11:5620652:5620651:1:-/ATTT:rs72401051:dbSNP:insertion 107     112H165M23H     0.503333333333333       clipped nucleotides 135
+        #        CHR_HSCHR1_1_CTG3 118082 118082 1       160137-150-1-150-11:5620673:5620673:1:G/A:rs375926866:dbSNP:SNV 112     91H165M45H      0.501661129568106       clipped nucleotides 136
+        #        CHR_HSCHR1_1_CTG3 118144 118144 1       160139-150-1-150-11:5620735:5620735:1:G/A:rs7952456:dbSNP:SNV   126     29H165M107H     0.501661129568106       clipped nucleotides 136
+        #        CHR_HSCHR1_1_CTG3 118182 118182 1       175371-150-1-150-11:6171720:6171720:1:A/G:rs11040769:dbSNP:SNV  189     11H167M1D66M2I53M2H     0.81063122923588        clipped nucleotides 13
+
+        # query_name: 156358-150-1-150-11:5502587:5502587:1:T/C:rs202026261:dbSNP:SNV
+
+        # filter old chrom name
+        my @query_name_components_fst_part = split('-', $query_name, 5);
+        my @query_name_components_snd_part = split(':', $query_name_components_fst_part[4], 2);
+        my $old_chrom_name = $query_name_components_snd_part[0];
+
+        my ($alt_loci_name, $start, $end, $strand) = split(' ', $new_seq_info);
+        if ($alt_loci_to_ref->{$old_chrom_name}->{$alt_loci_name}) {
+            my $alt_loci_start = $alt_loci_coords->{$alt_loci_name}->{start};
+            my $alt_loci_end   = $alt_loci_coords->{$alt_loci_name}->{end};
+            my $updated_start  = $alt_loci_start + $start - 1;
+            my $updated_end    = $alt_loci_start + $end - 1;
+            my $updated_seq_info = join(' ', $alt_loci_name, $updated_start, $updated_end, $strand);
+            # check mappings:
+            if ($start < 150 || ($end > ($alt_loci_end - 150) ) ) {
+                $mappings->{$query_name}->{$alt_loci_name}->{$updated_seq_info} = $relative_algn_score;
+                #print STDERR "Edge mapping $_\n";
+            } else {
+                if ($relative_algn_score >= $algn_score_threshold ) {
+                    $mappings->{$query_name}->{$alt_loci_name}->{$updated_seq_info} = $relative_algn_score;
+                }
+            }
+        }
+    }
+    $fh_mappings->close();
+
+    foreach my $query_name (keys %$mappings) {
+        foreach my $chrom (keys %{$mappings->{$query_name}}) {
+            foreach my $new_seq_info (keys %{$mappings->{$query_name}->{$chrom}}) {
+                my $score = $mappings->{$query_name}->{$chrom}->{$new_seq_info};
+                my $line = $self->print_feature_line($query_name, $new_seq_info, $score);
+                print $fh_filtered_mappings $line, "\n";
+            }
+        }
+    }
+    $fh_filtered_mappings->close();
+
+    $self->param('stats_unique_map', $stats_unique_map);
+    $self->param('stats_multi_map', $stats_multi_map);
+    $self->param('stats_failed', $stats_failed);
+}
+
 
 sub write_statistics {
     my $self = shift;
