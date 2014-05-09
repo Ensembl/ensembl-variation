@@ -260,7 +260,7 @@ sub dump_multi_map_features {
     while (my $file = readdir(DIR)) {
         if ($file =~ /^(.+)\.fa$/) {
             my $file_number = $1;
-            my $file_numbers->{$file_number} = 1;
+            $file_numbers->{$file_number} = 1;
             my $fh = FileHandle->new("$fasta_files_dir/$file", 'r');
             while (<$fh>) {
                 chomp;
@@ -333,8 +333,8 @@ sub dump_multi_map_features {
         $sth->execute($seq_region_id);
         while (my $row = $sth->fetchrow_arrayref) {
             my @values = map { defined $_ ? $_ : '\N' } @$row;
-            my $variation_name = $values[0];
-            my $map_weight = $values[1];
+            my $variation_name = shift @values;
+            my $map_weight     = shift @values;
             next if ($map_weight == 1);
             next if ($vf_info_is_stored->{$variation_name});
             my $file_number = $rs_id_to_file_number->{$variation_name};
