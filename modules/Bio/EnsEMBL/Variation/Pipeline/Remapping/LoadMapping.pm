@@ -62,6 +62,12 @@ sub load_features {
     my $dbname = $vdba->dbc->dbname();
     my $feature_table = $self->param('feature_table');
     my $result_table = "$feature_table\_mapping_results";
+    if ($self->param('mode') eq 'remap_multi_map') {
+        $result_table = "$feature_table\_multi_map_results";
+    }
+    if ($self->param('mode') eq 'remap_alt_loci') {
+        $result_table = "$feature_table\_map_alt_loci_results";
+    }
     $dbc->do(qq{ DROP TABLE IF EXISTS $result_table});
     $dbc->do(qq{ CREATE TABLE $result_table like $feature_table });
     $dbc->do(qq{ ALTER TABLE $result_table ADD variation_feature_id_old int(10) unsigned});
