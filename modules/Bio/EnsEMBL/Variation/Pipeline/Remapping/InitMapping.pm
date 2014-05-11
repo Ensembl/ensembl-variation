@@ -391,8 +391,8 @@ sub dump_features_overlapping_alt_loci {
             my $assembly_exception_features = $aefa->fetch_all_by_Slice($slice);
             my $ref_start = $slice->start;
             my $ref_end = $slice->end; 
-            $ref_to_unique_region_coords->{start} = $end;
-            $ref_to_unique_region_coords->{end} = $start;
+            $ref_to_unique_region_coords->{start} = $ref_end;
+            $ref_to_unique_region_coords->{end} = $ref_start;
             foreach my $feature (@$assembly_exception_features) {
                 my $alt_slice = $feature->alternate_slice();
                 my $alt_slice_name = $alt_slice->seq_region_name;
@@ -441,9 +441,8 @@ sub dump_features_overlapping_alt_loci {
     $sth->finish();
 
     my $dump_features_dir = $self->param('dump_features_dir');
-    my $sa = $cdba->get_SliceAdaptor;
     # don't include asm exceptions
-    my $slices = $sa->fetch_all('toplevel', undef, 0, 1);
+    $slices = $sa->fetch_all('toplevel', undef, 0, 1);
 
     my $seq_region_ids = {};
     foreach my $slice (@$slices) {
