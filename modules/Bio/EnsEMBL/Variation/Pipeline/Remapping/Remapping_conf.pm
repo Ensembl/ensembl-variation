@@ -45,7 +45,7 @@ sub default_options {
         hive_db_port            => 3306,
         hive_db_user            => 'ensadmin',
         debug                   => 0,
-        generate_fasta_files    => 0,
+        generate_fasta_files    => 1,
         flank_seq_length        => 150,
         algn_score_threshold    => 0.95,
         use_prior_for_filtering => 1,
@@ -53,10 +53,14 @@ sub default_options {
         mode                    => 'remap_db_table', # options: remap_db_table (default), remap_multi_map, remap_alt_loci
         feature_table           => 'variation_feature',
         pipeline_dir            => $self->o('pipeline_dir'),
+        bam_files_dir           => $self->o('pipeline_dir') . '/bam_files',
         dump_features_dir       => $self->o('pipeline_dir') . '/dump_features',
         fasta_files_dir         => $self->o('pipeline_dir') . '/fasta_files',
-        bam_files_dir           => $self->o('pipeline_dir') . '/bam_files',
+        filtered_mappings_dir   => $self->o('pipeline_dir') . '/filtered_mappings',
+        load_features_dir       => $self->o('pipeline_dir') . '/load_features',
         mapping_results_dir     => $self->o('pipeline_dir') . '/mapping_results', 
+        statistics_dir          => $self->o('pipeline_dir') . '/statistics',   
+        
         pipeline_db => {
             -host   => $self->o('hive_db_host'),
             -port   => $self->o('hive_db_port'),
