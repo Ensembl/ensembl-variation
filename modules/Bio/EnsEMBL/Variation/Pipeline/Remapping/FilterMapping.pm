@@ -365,7 +365,7 @@ sub filter_mapping_results_alt_loci {
 
     my $alt_loci_to_ref = {};
     my $alt_loci_coords = {};
-
+    my $ref_to_unique_region_coords = {}; 
     my $cdba = $self->param('cdba');
     my $sa = $cdba->get_SliceAdaptor;
     my $aefa = $cdba->get_AssemblyExceptionFeatureAdaptor;
@@ -386,8 +386,8 @@ sub filter_mapping_results_alt_loci {
             my $assembly_exception_features = $aefa->fetch_all_by_Slice($slice);
             my $ref_start = $slice->start;
             my $ref_end = $slice->end;
-            $ref_to_unique_region_coords->{start} = $end;
-            $ref_to_unique_region_coords->{end} = $start;
+            $ref_to_unique_region_coords->{start} = $ref_end;
+            $ref_to_unique_region_coords->{end} = $ref_start;
             foreach my $feature (@$assembly_exception_features) {
                 my $alt_slice = $feature->alternate_slice();
                 my $alt_slice_name = $alt_slice->seq_region_name;
@@ -408,7 +408,7 @@ sub filter_mapping_results_alt_loci {
 
     my ($stats_failed, $stats_unique_map, $stats_multi_map);
 
-    my $mapped = {};
+    my $mappings = {};
     while (<$fh_mappings>) {
         chomp;
         my ($old_seq_info, $new_seq_info, $query_name, $map_weight, $cigar, $relative_algn_score, $clipped_info) = split("\t", $_);
