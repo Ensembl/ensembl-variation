@@ -76,7 +76,7 @@ sub run {
     if ($self->param('mode') eq 'remap_multi_map') {
         $self->filter_mapping_results_dbsnp();
     } elsif ($self->param('mode') eq 'remap_alt_loci') {
-        $self->fliter_mapping_results_alt_loci();
+        $self->filter_mapping_results_alt_loci();
     } else {
         $self->filter_mapping_results();
     }
@@ -425,7 +425,7 @@ sub filter_mapping_results_alt_loci {
         my $old_chrom_name = $query_name_components_snd_part[0];
 
         my ($alt_loci_name, $start, $end, $strand) = split(' ', $new_seq_info);
-        if ($alt_loci_to_ref->{$old_chrom_name}->{$alt_loci_name}) {
+        if ($alt_loci_to_ref->{$alt_loci_name}->{$old_chrom_name}) {
             my $alt_loci_start = $alt_loci_coords->{$alt_loci_name}->{start};
             my $alt_loci_end   = $alt_loci_coords->{$alt_loci_name}->{end};
             my $updated_start  = $alt_loci_start + $start - 1;
