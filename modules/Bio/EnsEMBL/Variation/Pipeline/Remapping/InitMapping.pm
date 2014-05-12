@@ -54,6 +54,7 @@ sub run {
         $self->dump_multi_map_features();
     } elsif ($self->param('mode') eq 'remap_alt_loci') {
         $self->dump_features_overlapping_alt_loci();
+        $self->generate_mapping_input();
     } else {
         if ($self->param('generate_fasta_files')) {
             $self->dump_features();
@@ -366,7 +367,7 @@ sub dump_multi_map_features {
 sub dump_features_overlapping_alt_loci {
     my $self = shift; 
 
-    my $cdba = $self->{cdba};
+    my $cdba = $self->param('cdba');
 
     my $alt_loci_to_coords = {};
     my $ref_to_alt_loci = {};
@@ -391,8 +392,8 @@ sub dump_features_overlapping_alt_loci {
             my $assembly_exception_features = $aefa->fetch_all_by_Slice($slice);
             my $ref_start = $slice->start;
             my $ref_end = $slice->end; 
-            $ref_to_unique_region_coords->{start} = $ref_end;
-            $ref_to_unique_region_coords->{end} = $ref_start;
+            $ref_to_unique_region_coords->{$seq_region_name}->{start} = $ref_end;
+            $ref_to_unique_region_coords->{$seq_region_name}->{end} = $ref_start;
             foreach my $feature (@$assembly_exception_features) {
                 my $alt_slice = $feature->alternate_slice();
                 my $alt_slice_name = $alt_slice->seq_region_name;
@@ -408,10 +409,10 @@ sub dump_features_overlapping_alt_loci {
             my $start = $alt_loci_to_coords->{$alt_loci}->{start};
             my $end = $alt_loci_to_coords->{$alt_loci}->{end};
             if ($ref_to_unique_region_coords->{$ref}->{start} > $start) {
-                $ref_to_unique_region_coords->{$ref} = $start;
+                $ref_to_unique_region_coords->{$ref}->{start} = $start;
             }
             if ($ref_to_unique_region_coords->{$ref}->{end} < $end) {
-                $ref_to_unique_region_coords->{$ref} = $end;
+                $ref_to_unique_region_coords->{$ref}->{end} = $end;
             }
         }
     } 
