@@ -3948,17 +3948,13 @@ sub clean_transcript {
         delete $tr->{$key} if defined($tr->{$key});
     }
     
-    # clean all attributes but miRNA
+    # clean attributes
     if(defined($tr->{attributes})) {
         my @new_atts;
+        my %keep = map {$_ => 1} qw(gencode_basic miRNA ncRNA cds_start_NF cds_end_NF);
         foreach my $att(@{$tr->{attributes}}) {
-            push @new_atts, $att if $att->{code} eq 'miRNA';
-            
-            # get and clean gencode_basic attribute
-            if($att->{code} eq 'gencode_basic') {
-              delete $att->{$_} for grep {$_ ne 'code'} keys %$att;
-              push @new_atts, $att;
-            }
+            delete $att->{description};
+            push @new_atts, $att if defined($keep{$att->{code}});
         }
         $tr->{attributes} = \@new_atts;
     }
