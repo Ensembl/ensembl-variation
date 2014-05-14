@@ -663,6 +663,7 @@ create table individual(
   mother_individual_id int(10) unsigned,
   individual_type_id int(10) unsigned NOT NULL DEFAULT 0,
   display enum('REFERENCE', 'DEFAULT', 'DISPLAYABLE', 'UNDISPLAYABLE', 'LD', 'MARTDISPLAYABLE') default 'UNDISPLAYABLE',
+  has_coverage tinyint(1) unsigned NOT NULL DEFAULT 0,
 
   primary key(individual_id)
 );
