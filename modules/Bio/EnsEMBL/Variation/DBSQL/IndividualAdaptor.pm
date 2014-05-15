@@ -115,7 +115,8 @@ sub store {
 			mother_individual_id,
 			individual_type_id,
             display
-		) VALUES (?,?,?,?,?,?,?)
+            has_coverage
+		) VALUES (?,?,?,?,?,?,?,?)
 	});
 	$sth->execute(
 		$individual->name,
@@ -125,6 +126,7 @@ sub store {
 		$individual->mother_Individual ? $individual->mother_Individual->dbID : undef,
 		$individual_type_id,
         $individual->display,
+        $individual->has_coverage
 	);
 	$sth->finish;
 	my $dbID = $dbh->last_insert_id(undef, undef, 'individual', 'individual_id');
@@ -538,8 +540,8 @@ sub _objs_from_sth {
     my $self = shift;
     my $sth = shift;
 
-    my ($dbID, $name, $desc, $gender, $father_id, $mother_id, $it_name, $it_desc, $display_flag);
-    $sth->bind_columns(\$dbID, \$name, \$desc, \$gender, \$father_id, \$mother_id, \$it_name, \$it_desc, \$display_flag);
+    my ($dbID, $name, $desc, $gender, $father_id, $mother_id, $it_name, $it_desc, $display_flag, $has_coverage);
+    $sth->bind_columns(\$dbID, \$name, \$desc, \$gender, \$father_id, \$mother_id, \$it_name, \$it_desc, \$display_flag, \$has_coverage);
 
     my %seen;
     my %wanted_fathers;
@@ -571,6 +573,7 @@ sub _objs_from_sth {
             -adaptor     => $self,
             -description => $desc,
             -display     => $display_flag,
+            -has_coverage => $has_coverage,
             -gender      => $gender,
             -name        => $name,
             -father_individual => $father,
@@ -611,7 +614,7 @@ sub _tables {
 		['individual_type','it'])}
 
 sub _columns {
-    return qw(i.individual_id i.name i.description i.gender i.father_individual_id i.mother_individual_id it.name it.description i.display);
+    return qw(i.individual_id i.name i.description i.gender i.father_individual_id i.mother_individual_id it.name it.description i.display i.has_coverage);
 }
 
 sub _default_where_clause {
