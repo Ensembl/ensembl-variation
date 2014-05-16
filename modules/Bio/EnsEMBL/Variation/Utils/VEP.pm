@@ -2130,7 +2130,7 @@ sub add_extra_fields {
     
     # allele number
     if(defined($config->{allele_number})) {
-      $line->{Extra}->{ALLELE_NUM} = $bvfoa->variation_feature->{_allele_nums}->{$bvfoa->variation_feature_seq} || '?' if $bvfoa->variation_feature->{_allele_nums};
+      $line->{Extra}->{ALLELE_NUM} = $bvfoa->base_variation_feature->{_allele_nums}->{$bvfoa->variation_feature_seq} || '?' if $bvfoa->base_variation_feature->{_allele_nums};
     }
     
     # strand
