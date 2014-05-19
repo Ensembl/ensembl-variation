@@ -53,8 +53,10 @@ sub run {
     if ($self->param('mode') eq 'remap_multi_map') {
         $self->dump_multi_map_features();
     } elsif ($self->param('mode') eq 'remap_alt_loci') {
-        $self->dump_features_overlapping_alt_loci();
+        #$self->dump_features_overlapping_alt_loci();
         $self->generate_mapping_input();
+    } elsif($self->param('mode') eq 'remap_read_coverage') {
+        $self->generate_remap_read_coverage_input();
     } else {
         if ($self->param('generate_fasta_files')) {
             $self->dump_features();
@@ -85,6 +87,11 @@ sub write_output {
     }
     $self->dataflow_output_id(\@jobs, 2);
 }
+
+sub generate_remap_read_coverage_input {
+    my $self = shift;
+}
+
 
 sub generate_mapping_input {
     my $self = shift;
@@ -122,11 +129,12 @@ sub generate_mapping_input {
     $self->param('qc_ref_seq', $fh_ref_seq);
 
     my $variants_with_multi_map = {};
-
+    my $file_count = 0;
     opendir(DIR, $dump_features_dir) or die $!;
     while (my $file = readdir(DIR)) {
         if ($file =~ /^(.+)\.txt$/) {
             my $file_number = $1;
+            $file_count++;
             my $fh = FileHandle->new("$dump_features_dir/$file", 'r');
             my $fh_fasta_file = FileHandle->new("$fasta_files_dir/$file_number.fa", 'w');
             while (<$fh>) {
@@ -176,6 +184,8 @@ sub generate_mapping_input {
         print $fh_qc_multi_map "$variation_name\t$count\n";
     }
     $fh_qc_multi_map->close();
+    $self->param('file_count', $file_count);
+
 }
 
 sub flank_coordinates {
@@ -402,7 +412,7 @@ sub dump_features_overlapping_alt_loci {
                 }
             }
         }
-    } 
+    }
     # compute boundaries
     foreach my $ref (keys %$ref_to_alt_loci) {
         foreach my $alt_loci (keys %{$ref_to_alt_loci->{$ref}}) {
@@ -465,6 +475,7 @@ sub dump_features_overlapping_alt_loci {
 
    foreach my $seq_region_id (keys %$seq_region_ids) {
         my $seq_region_name = $seq_region_ids->{$seq_region_id};
+        my @alt_loci_names = keys %{$ref_to_alt_loci->{$seq_region_name}};
         $sth->execute($seq_region_id);
         while (my $row = $sth->fetchrow_arrayref) {
             my @values = map { defined $_ ? $_ : '\N' } @$row;
@@ -473,10 +484,20 @@ sub dump_features_overlapping_alt_loci {
             my $source_id = shift @values;
 
             next unless ($source_id == 1);
-            my $alt_loci_start = $ref_to_unique_region_coords->{$seq_region_name}->{start};
-            my $alt_loci_end = $ref_to_unique_region_coords->{$seq_region_name}->{end};
-            next unless ($seq_region_start >= $alt_loci_start && $seq_region_end <= $alt_loci_end);
 
+            my $overlaps_alt_loci = 0;
+            foreach my $alt_loci_name (@alt_loci_names) {
+                my $alt_loci_start = $alt_loci_to_coords->{$alt_loci_name}->{start};
+                my $alt_loci_end   = $alt_loci_to_coords->{$alt_loci_name}->{end};
+                if ($seq_region_start >= $alt_loci_start && $seq_region_end <= $alt_loci_end) {
+                    $overlaps_alt_loci = 1;
+                    last;
+                } 
+            }
+    #        my $alt_loci_start = $ref_to_unique_region_coords->{$seq_region_name}->{start};
+    #        my $alt_loci_end = $ref_to_unique_region_coords->{$seq_region_name}->{end};
+    #        next unless ($seq_region_start >= $alt_loci_start && $seq_region_end <= $alt_loci_end);
+            next unless ($overlaps_alt_loci);
             my @pairs = ();
             for my $i (0..$#column_names) {
                 push @pairs, "$column_names[$i]=$values[$i]";
