@@ -3416,15 +3416,15 @@ sub check_existing_tabix {
   
   my $max = 200;
   my $total = scalar @$listref;
-  my $i = 0;
+  my $p = 0;
   
   foreach my $chr(keys %by_chr) {
     my $list = $by_chr{$chr};
     
     while(scalar @$list) {
       my @tmp_list = sort {$a->{start} <=> $b->{start}} splice @$list, 0, $max;
-      progress($config, $i, $total);
-      $i += scalar @tmp_list;
+      progress($config, $p, $total);
+      $p += scalar @tmp_list;
       
       my $region_string = join " ", map {$_->{chr}.':'.($_->{start} > $_->{end} ? $_->{end}.'-'.$_->{start} : $_->{start}.'-'.$_->{end})} @tmp_list;
       
@@ -3435,28 +3435,23 @@ sub check_existing_tabix {
       open VARS, "tabix $file $region_string 2>&1 |"
         or die "\nERROR: Could not open tabix pipe for $file\n";
       
-      my $i = 0;
+      # convert list to hash so we can look up quickly by position
+      my %hash;
+      push @{$hash{$_->{start}}}, $_ for @tmp_list;
       
       VAR: while(<VARS>) {
         chomp;
         my $existing = parse_variation($config, $_);
-        #print STDERR "EX ".$existing->{variation_name}." ".$existing->{start}."\n";
         
-        # compare to current indexed var
-        my $input = $tmp_list[$i];
-        last if !$input;
-        
-        while($existing->{start} >= $input->{start}) {
-          #print STDERR "IN ".$input->{variation_name}." ".$input->{start}."\n";
-          
-          if($existing->{start} == $input->{start} && $existing->{failed} <= $config->{failed}) {
-            push @{$input->{existing}}, $existing unless is_var_novel($config, $existing, $input);
-            next VAR;
-          }
-          else {
-            $i++;
-            $input = $tmp_list[$i];
-            last if !$input;
+        foreach my $input(@{$hash{$existing->{start}} || []}) {          
+          if(
+            $existing->{start} == $input->{start} &&
+            $existing->{failed} <= $config->{failed} &&
+            !is_var_novel($config, $existing, $input)
+          ) {
+            push @{$input->{existing}}, $existing unless
+              grep {$_->{variation_name} eq $existing->{variation_name}}
+              @{$input->{existing} || []};
           }
         }
       }
