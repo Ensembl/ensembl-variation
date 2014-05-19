@@ -1229,7 +1229,7 @@ sub get_all_consequences {
     
     # check and order
     my $test = $return[0];
-    if(ref($test) ne 'HASH' && $$test =~ /^\#\#\#ORDER\#\#\#/) {
+    if(defined($test) && ref($test) ne 'HASH' && $$test =~ /^\#\#\#ORDER\#\#\#/) {
       @return = sort {$$a cmp $$b} @return;
       $$_ =~ s/\#\#\#ORDER\#\#\# \d+ // for @return; 
     }
