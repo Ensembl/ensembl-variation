@@ -204,7 +204,8 @@ create table variation_feature(
 	  key pos_idx( seq_region_id, seq_region_start, seq_region_end ),
 	  key variation_idx( variation_id ),
     key variation_set_idx ( variation_set_id ),
-    key consequence_type_idx (consequence_types)
+    key consequence_type_idx (consequence_types),
+    key source_idx (source_id)
 );
 
 
@@ -327,7 +328,8 @@ CREATE TABLE IF NOT EXISTS `phenotype_feature` (
   KEY `phenotype_idx` (`phenotype_id`),
   KEY `object_idx` (`object_id`,`type`),
   KEY `type_idx` (`type`),
-  KEY `pos_idx` (`seq_region_id`,`seq_region_start`,`seq_region_end`)
+  KEY `pos_idx` (`seq_region_id`,`seq_region_start`,`seq_region_end`),
+  KEY `source_idx` (`source_id`)
 );
 
 
