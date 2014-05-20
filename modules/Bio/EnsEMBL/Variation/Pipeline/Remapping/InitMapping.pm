@@ -92,6 +92,53 @@ sub write_output {
 
 sub generate_remap_read_coverage_input {
     my $self = shift;
+    
+    my $old_assembly_fasta_file_dir = $self->param('old_assembly_fasta_file_dir');
+    my $fasta_db = Bio::DB::Fasta->new($old_assembly_fasta_file_dir, -reindex => 1);
+    $self->param('fasta_db', $fasta_db);
+
+    my $dump_features_dir = $self->param('dump_features_dir');
+    my $fasta_files_dir = $self->param('fasta_files_dir');
+
+    my $strand = 1;
+    opendir (IND_DIR, $dump_features_dir) or die $!;
+    while (my $individual_dir = readdir(IND_DIR)) {
+        next if ($individual_dir =~ /^\./);
+        make_path("$fasta_files_dir/$individual_dir") or die "Failed to create dir $fasta_files_dir/$individual_dir $!";;
+        opendir(DIR, "$dump_features_dir/$individual_dir") or die $!;
+        while (my $file = readdir(DIR)) {
+            if ($file =~ /^(.+)\.txt$/) {
+                my $file_number = $1;
+                my $fh = FileHandle->new("$dump_features_dir/$individual_dir/$file", 'r');
+                my $fh_fasta_file = FileHandle->new("$fasta_files_dir/$individual_dir/$file_number.fa", 'w');
+                while (<$fh>) {
+                    chomp;
+                    my $data = $self->read_line($_);
+                    my $seq_region_name = $data->{seq_region_name},
+                    my $start           = $data->{seq_region_start};
+                    my $end             = $data->{seq_region_end};
+                    my $entry           = $data->{entry};
+                
+                    if (($end - $start + 1 ) > 1000) {
+                        my $upstream_query_sequence   = $self->get_query_sequence($seq_region_name, $start, $start + 500, $strand);
+                        print $fh_fasta_file ">$entry:upstream\n$upstream_query_sequence\n";
+                        my $downstream_query_sequence = $self->get_query_sequence($seq_region_name, $end - 500, $end, $strand);
+                        print $fh_fasta_file ">$entry:downstream\n$downstream_query_sequence\n";
+                    } elsif ($end < $start) {
+                        $self->warning("End smaller that start for $seq_region_name:$start-$end");
+                    } else {
+                        my $query_sequence = $self->get_query_sequence($seq_region_name, $start, $end, $strand);
+                        print $fh_fasta_file ">$entry:complete\n$query_sequence\n";
+                    }
+                }
+                $fh->close();
+                $fh_fasta_file->close();
+            }
+        }
+        closedir(DIR);
+    }
+    closedir(IND_DIR);
+
 }
 
 
@@ -402,9 +449,10 @@ sub dump_read_coverage {
     }, {mysql_use_result => 1});
     $sth->execute();
 
-    my @keys = ('seq_region_id', 'seq_region_start', 'seq_region_end', 'level', 'individual_id', 'name');
+    my @keys = ('seq_region_id', 'seq_region_start', 'seq_region_end', 'level', 'individual_id', 'individual_name', 'seq_region_name');
 
     my $dump_features_dir = $self->param('dump_features_dir');
+    my $entry = 1;
     foreach my $individual_name (@individual_names) {
         my $file_count = 1;
         my $entries_per_file = $self->param('entries_per_file');
@@ -424,6 +472,8 @@ sub dump_read_coverage {
             for my $i (0..$#keys) {
                 push @pairs, "$keys[$i]=$values[$i]";
             }
+            push @pairs, "entry=$entry";
+            $entry++;
             if ($count_entries >= $entries_per_file) {
                 $fh->close();
                 $file_count++;
