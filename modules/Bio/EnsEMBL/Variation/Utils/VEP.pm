@@ -1384,7 +1384,7 @@ sub vf_list_to_cons {
                 # and process them into VCF-compatible string
                 my $string = 'CSQ=';
                 
-                foreach my $line(@{vf_to_consequences($config, $vf)}) {
+                foreach my $line(grep {defined($_)} @{vf_to_consequences($config, $vf)}) {
                     
                     # use the field list (can be user-defined by setting --fields)
                     for my $col(@{$config->{fields}}) {
@@ -1458,7 +1458,7 @@ sub vf_list_to_cons {
                   use CGI qw(escape);
                 };
                 
-                foreach my $con(@{vf_to_consequences($config, $vf)}) {
+                foreach my $con(grep {defined($_)} @{vf_to_consequences($config, $vf)}) {
                     my $line = "<doc>\n";
                     
                     # create unique ID
