@@ -33,6 +33,7 @@ use warnings;
 use FileHandle;
 use Bio::DB::Fasta;
 use Bio::EnsEMBL::Registry;
+use File::Path qw(make_path);
 
 use base ('Bio::EnsEMBL::Hive::Process');
 
@@ -56,6 +57,7 @@ sub run {
         #$self->dump_features_overlapping_alt_loci();
         $self->generate_mapping_input();
     } elsif($self->param('mode') eq 'remap_read_coverage') {
+        $self->dump_read_coverage();
         $self->generate_remap_read_coverage_input();
     } else {
         if ($self->param('generate_fasta_files')) {
@@ -373,6 +375,68 @@ sub dump_multi_map_features {
 
 }
 
+sub dump_read_coverage {
+    my $self = shift;
+
+    my $vdba = $self->param('vdba');
+    my $ia = $vdba->get_IndividualAdaptor;
+    my @individual_names = split(',', $self->param('individuals'));
+    my $name_to_id = {};
+    foreach my $name (@individual_names) {
+        my $individuals = $ia->fetch_all_by_name($name);
+        die "Could not find individual object for $name" unless ($individuals);
+        die "Found more than one individual with name $name" unless ((scalar @$individuals) == 1);
+        my $individual = $individuals->[0];
+        $name_to_id->{$name} = $individual->dbID();
+    } 
+
+    my $dbname = $vdba->dbc->dbname();
+
+    my $dbh = $vdba->dbc->db_handle;
+    my $sth = $dbh->prepare(qq{
+        SELECT rc.seq_region_id, rc.seq_region_start, rc.seq_region_end, rc.level, rc.individual_id, i.name, sr.name
+        FROM read_coverage rc, seq_region sr, individual i
+        WHERE rc.seq_region_id = sr.seq_region_id
+        AND rc.individual_id = i.individual_id
+        AND i.name = ?; 
+    }, {mysql_use_result => 1});
+    $sth->execute();
+
+    my @keys = ('seq_region_id', 'seq_region_start', 'seq_region_end', 'level', 'individual_id', 'name');
+
+    my $dump_features_dir = $self->param('dump_features_dir');
+    foreach my $individual_name (@individual_names) {
+        my $file_count = 1;
+        my $entries_per_file = $self->param('entries_per_file');
+        my $count_entries = 0;
+        my $individual_id = $name_to_id->{$individual_name};
+
+        unless (-d "$dump_features_dir/$individual_id") {
+            make_path("$dump_features_dir/$individual_id") or die "Failed to create dir $dump_features_dir/$individual_id $!";;
+        }
+
+        my $fh = FileHandle->new("$dump_features_dir/$individual_id/$file_count.txt", 'w');
+
+        $sth->execute($individual_name);
+        while (my $row = $sth->fetchrow_arrayref) {
+            my @values = map { defined $_ ? $_ : '\N' } @$row;
+            my @pairs = ();
+            for my $i (0..$#keys) {
+                push @pairs, "$keys[$i]=$values[$i]";
+            }
+            if ($count_entries >= $entries_per_file) {
+                $fh->close();
+                $file_count++;
+                $fh = FileHandle->new("$dump_features_dir/$individual_id/$file_count.txt", 'w');
+                $count_entries = 0;
+            }
+            $count_entries++;
+            print $fh join("\t", @pairs), "\n";
+        }
+        $fh->close();
+        $sth->finish();
+    }
+}
 
 sub dump_features_overlapping_alt_loci {
     my $self = shift; 
