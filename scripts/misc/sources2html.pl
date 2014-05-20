@@ -36,6 +36,8 @@ use Getopt::Long;
 ### Options ###
 ###############
 my ($e_version,$html_file,$source_id,$source,$s_version,$s_description,$s_url,$s_type,$s_status,$s_data_types,$hlist,$phost,$help);
+my ($set_id,$set_name,$set_description);
+
 ## EG options
 my ($site, $etype);
 
@@ -114,6 +116,11 @@ my %data_type_example = (
                              'StructuralVariation' => 'StructuralVariation/Phenotype?v=',
                              'Gene'                => 'Gene/Phenotype?g='
                             },
+  'variation_set'        => {
+                             'sql' => qq{SELECT v.name FROM variation v, variation_set_variation s WHERE v.variation_id=s.variation_id AND v.variation_id NOT IN 
+                                         (SELECT variation_id FROM failed_variation) AND s.variation_set_id=? LIMIT 1},
+                             'url' => 'Variation/Explore?v='
+                            },                         
 );
 
 ##############
@@ -157,6 +164,15 @@ my %top_species_list;
 my @species_list;
 my %species_news;
 
+
+my $sql2 = qq{SELECT source_id, name, version, description, url, type, somatic_status, data_types FROM source};
+my $sql4 = qq{SELECT name, version FROM source};
+
+my $sql2b = qq{SELECT variation_set_id, name, description FROM variation_set WHERE 
+               (name like "%illumina%" OR name like "%affymetrix%" OR description like "%illumina%" OR description like "%affymetrix%")
+               AND name NOT IN (SELECT name FROM source)};
+my $sql4b = $sql2b;
+
 foreach my $hostname (@hostnames) {
 
   my $sql = qq{SHOW DATABASES LIKE '%variation_$e_version%'};
@@ -178,9 +194,11 @@ foreach my $hostname (@hostnames) {
     }
     print "\n";
     # Get list of sources from the new databases
-    my $sql2 = qq{SELECT source_id, name, version, description, url, type, somatic_status, data_types FROM source};
     my $sth2 = get_connection_and_query($dbname, $hostname, $sql2);
     $sth2->bind_columns(\$source_id,\$source,\$s_version,\$s_description,\$s_url,\$s_type,\$s_status,\$s_data_types);
+    
+    my $sth2b = get_connection_and_query($dbname, $hostname, $sql2b);
+    $sth2b->bind_columns(\$set_id,\$set_name,\$set_description);
     
     
     # Previous database (and sources)
@@ -188,14 +206,20 @@ foreach my $hostname (@hostnames) {
     my $sql3 = qq{SHOW DATABASES LIKE '%$s_name\_variation_$p_version%'};
     my $sth3 = get_connection_and_query($database, $previous_host, $sql3);
     my $p_dbname = $sth3->fetchrow_array;
-    
+ 
     my %p_list;
+    my %p_set_list;
     my $is_new_species = 0;
     if ($p_dbname) {
-      my $sql4 = qq{SELECT name, version FROM source};
+      # Previous sources
       my $sth4 = get_connection_and_query($p_dbname, $previous_host, $sql4);
       while (my @p = $sth4->fetchrow_array) {
         $p_list{$p[0]} = $p[1];
+      }
+      # Previous sets
+      my $sth4b = get_connection_and_query($p_dbname, $previous_host, $sql4b);
+      while (my @s = $sth4b->fetchrow_array) {
+        $p_set_list{$s[0]} = $s[1];
       }
     }
     else {
@@ -204,10 +228,10 @@ foreach my $hostname (@hostnames) {
     
     # Display the species at the top of the list
     if ($top_species{$s_name}) {
-      $html_top_content .= source_table($s_name,$sth2,$is_new_species,$dbname,$hostname,\%p_list);
+      $html_top_content .= source_table($s_name,$sth2,$sth2b,$is_new_species,$dbname,$hostname,\%p_list,\%p_set_list);
     }
     else {
-      $html_content .= source_table($s_name,$sth2,$is_new_species,$dbname,$hostname,\%p_list);
+      $html_content .= source_table($s_name,$sth2,$sth2b,$is_new_species,$dbname,$hostname,\%p_list,\%p_set_list);
     }
     
     $start = 1 if ($start == 0);
@@ -242,12 +266,14 @@ close(HTML);
 ###############
 
 sub source_table {
-  my $name        = shift;
-  my $sth         = shift;
-  my $is_new      = shift;
-  my $db_name     = shift;
-  my $hostname    = shift;
-  my $p_list      = shift;
+  my $name       = shift;
+  my $sth        = shift;
+  my $sth_set    = shift;
+  my $is_new     = shift;
+  my $db_name    = shift;
+  my $hostname   = shift;
+  my $p_list     = shift;
+  my $p_set_list = shift;
 
   
   my $s_name = ucfirst($name);
@@ -284,6 +310,7 @@ sub source_table {
   
   my $bg = 1;
   my @p_sources = keys(%{$p_list});
+  my @p_sets = keys(%{$p_set_list});
   my %other_flag;
   
   # Chip headers
@@ -293,7 +320,10 @@ sub source_table {
   # LSDB headers
   my $lbg = 1;
   my $lsdb_table;
-     
+  
+  
+  ########## Sources ##########    
+  
   while ($sth->fetch) {
   
     # Check if the source or its version is new
@@ -412,6 +442,72 @@ sub source_table {
       if ($bg == 1) { $bg = 2; }
       else { $bg = 1; }
     }
+  }
+  
+  
+  ########## Sets ##########
+  
+  while ($sth_set->fetch) {
+   
+    # Check if the set is new
+    my $s_new      = '';
+    my $s_new_type = '';
+    my $s_header   = '<td style="width:4px;padding:0px;margin:0px';
+    if (!grep {$_ eq $set_name} @p_sets) {
+      $s_new_type = 'source';
+    }
+   
+    if ($s_new_type) {
+      $species_news{$species}{$s_new_type} = 1;
+      my $borders = ";border-top:1px solid #FFF;border-bottom:1px solid #FFF";
+      if ($s_type eq 'chip') {
+        $s_header .= $borders if ($cbg == 1);
+      }
+      elsif ($s_type eq 'lsdb') {
+        $s_header .= $borders if ($lbg == 1);
+      }
+      else {
+        $s_header .= $borders if ($bg == 1);
+      }
+      $s_new = '<span style="color:'.$colours{$s_new_type}.'">New '.$s_new_type.'</span>' if ($s_new_type);
+      $s_header .= ';background-color:'.$colours{$s_new_type};
+    }
+      
+    $s_header .= '"></td>';
+
+    
+    # Display
+    my $source = qq{$set_name};
+    
+    # Version
+    my $s_version = format_version('');  
+    
+    # Somatic status
+    my $s_somatic_status = somatic_status('');
+    
+    # Data types
+    my @data_types = split(",", $s_data_types);
+    my $data_type_string = '<span class="_ht conhelp" title="Existing variants from 1 or several sources have been associated with this variation set">Variation set</span>';
+    
+    my $example = get_example('variation_set', $set_id, $s_name, $db_name, $hostname);
+    
+    my $row = qq{
+        $s_header
+        <td>$source</td>
+        <td>$s_version</td>
+        <td style="max-width:800px">$set_description</td>
+        <td style="max-width:120px">$data_type_string</td>
+        <td style="padding:1px;margin:0px">$example</td>
+        <td style="text-align:center;width:22px;padding:2px 3px;border-left:1px solid #BBB"></td>
+        <td style="text-align:center;width:22px;padding:2px 3px;border-left:1px solid #DDD">$s_somatic_status</td>
+    };
+    $chip_table .= qq{
+    <tr class="bg$cbg">
+      $row
+    </tr>};
+    if ($cbg == 1) { $cbg = 2; }
+    else { $cbg = 1; }
+
   }
  
   # Main source header
@@ -668,7 +764,9 @@ sub table_header {
     $header_col = qq{<th colspan=2></th>};
   }
   
-  return qq{    <div style="margin:6px 0px 40px">
+  my $top_margin = ($type eq 'main') ? '6px' : '0px';
+  
+  return qq{    <div style="margin:$top_margin 0px 40px">
       <table class="ss">
         <tr><th colspan="2">$name</th><th>Version</th><th style="max-width:800px">Description</th><th>Data type(s)</th><th style="padding-left:1px;padding-right:1px;margin-left:0px;margin-right:0px" title="Example(s)">e.g.</th></th>$header_col</tr>
     };
@@ -676,7 +774,7 @@ sub table_header {
 
 sub get_example {
   my $data_type = shift;
-  my $source_id = shift;
+  my $param     = shift;
   my $species   = shift;
   my $database  = shift;
   my $hostname  = shift;
@@ -686,7 +784,7 @@ sub get_example {
   my $sql = $data_type_example{$data_type}{'sql'};
   my $url = $data_type_example{$data_type}{'url'};
 
-  my $sth = get_connection_and_query($database, $hostname, $sql, [$source_id]);
+  my $sth = get_connection_and_query($database, $hostname, $sql, [$param]);
 
   if ($sth) {
     my @result  = $sth->fetchrow_array;
