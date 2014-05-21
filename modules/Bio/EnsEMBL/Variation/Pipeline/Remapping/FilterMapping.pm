@@ -77,6 +77,8 @@ sub run {
         $self->filter_mapping_results_dbsnp();
     } elsif ($self->param('mode') eq 'remap_alt_loci') {
         $self->filter_mapping_results_alt_loci();
+    } elsif ($self->param('mode') eq 'remap_read_coverage') {
+        $self->filter_read_coverage_mapping_results();
     } else {
         $self->filter_mapping_results();
     }
