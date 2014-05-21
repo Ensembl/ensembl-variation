@@ -256,7 +256,7 @@ sub fetch_all_by_name {
   defined($name) || throw("Name argument expected.");
 
   my $sth = $self->prepare(q{
-    SELECT i.individual_id, i.name, i.description, i.gender, i.father_individual_id, i.mother_individual_id, it.name, it.description, i.display
+    SELECT i.individual_id, i.name, i.description, i.gender, i.father_individual_id, i.mother_individual_id, it.name, it.description, i.display, i.has_coverage
     FROM   individual i, individual_type it
     WHERE  i.name = ?
     AND    it.individual_type_id = i.individual_type_id;});
@@ -298,7 +298,7 @@ sub fetch_all_by_Population {
     }
 
     my $sth = $self->prepare(q{
-        SELECT i.individual_id, i.name, i.description, i.gender, i.father_individual_id, i.mother_individual_id, it.name, it.description, i.display 
+        SELECT i.individual_id, i.name, i.description, i.gender, i.father_individual_id, i.mother_individual_id, it.name, it.description, i.display, i.has_coverage 
         FROM   individual i, individual_population ip, individual_type it
         WHERE  i.individual_id = ip.individual_id
         AND    i.individual_type_id = it.individual_type_id
@@ -344,12 +344,12 @@ sub fetch_all_by_parent_Individual {
     my $gender = $parent->gender() || '';
 
     my $father_sql = q{
-        SELECT i.individual_id, i.name, i.description, i.gender, i.father_individual_id, i.mother_individual_id, it.name, it.description, i.display 
+        SELECT i.individual_id, i.name, i.description, i.gender, i.father_individual_id, i.mother_individual_id, it.name, it.description, i.display, i.has_coverage 
         FROM   individual i, individual_type it
         WHERE  i.father_individual_id = ?
         AND    i.individual_type_id = it.individual_type_id;};
     my $mother_sql = q{
-        SELECT i.individual_id, i.name, i.description, i.gender, i.father_individual_id, i.mother_individual_id, it.name, it.description, i.display 
+        SELECT i.individual_id, i.name, i.description, i.gender, i.father_individual_id, i.mother_individual_id, it.name, it.description, i.display, i.has_coverage 
         FROM   individual i, individual_type it
         WHERE  i.mother_individual_id = ?
         AND    i.individual_type_id = it.individual_type_id;};
@@ -539,7 +539,7 @@ sub _get_sample_name_by_dbID {
 sub _objs_from_sth {
     my $self = shift;
     my $sth = shift;
-
+    
     my ($dbID, $name, $desc, $gender, $father_id, $mother_id, $it_name, $it_desc, $display_flag, $has_coverage);
     $sth->bind_columns(\$dbID, \$name, \$desc, \$gender, \$father_id, \$mother_id, \$it_name, \$it_desc, \$display_flag, \$has_coverage);
 
