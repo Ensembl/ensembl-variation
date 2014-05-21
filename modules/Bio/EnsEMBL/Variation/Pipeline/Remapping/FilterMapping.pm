@@ -38,29 +38,33 @@ use base ('Bio::EnsEMBL::Hive::Process');
 
 sub fetch_input {
     my $self = shift;
-    my $file_number           = $self->param('file_number');
-    my $mapping_results_dir   = $self->param('mapping_results_dir');
-    my $filtered_mappings_dir = $self->param('filtered_mappings_dir');
-    my $statistics_dir        = $self->param('statistics_dir');
-    my $dump_features_dir     = $self->param('dump_features_dir');
-    my $load_features_dir     = $self->param('load_features_dir');
-    my $fasta_files_dir       = $self->param('fasta_files_dir');
 
-    my $file_mappings          = "$mapping_results_dir/mappings_$file_number.txt";
-    my $file_failed_mappings   = "$mapping_results_dir/failed_mapping_$file_number.txt";
-    my $file_init_feature      = "$dump_features_dir/$file_number.txt";
-    my $file_filtered_mappings = "$filtered_mappings_dir/$file_number.txt";
-    my $file_statistics        = "$statistics_dir/$file_number.txt";    
-    my $file_load_features     = "$load_features_dir/$file_number.txt";
-    my $fasta_file             = "$fasta_files_dir/$file_number.fa";
-
-    $self->param('file_mappings', $file_mappings);
-    $self->param('file_failed_mappings', $file_failed_mappings);
-    $self->param('file_init_feature', $file_init_feature);
-    $self->param('file_filtered_mappings', $file_filtered_mappings);
-    $self->param('file_statistics', $file_statistics);
-    $self->param('file_load_features', $file_load_features);
-    $self->param('fasta_file', $fasta_file);
+    # initialise file names
+    my $params = {
+        mapping_results_dir   => 'file_mappings',
+        filtered_mappings_dir => 'file_filtered_mappings',
+        statistics_dir        => 'file_statistics',
+        dump_features_dir     => 'file_init_feature',
+        load_features_dir     => 'file_load_features',
+        fasta_files_dir       => 'fasta_file',
+    };
+    my $file_number = $self->param('file_number');
+    foreach my $param (keys %$params) {
+        my $dir = $self->param($param);
+        if ($param =~ /mappings_results_dir/) {
+            my $file_mappings = "$dir/mappings_$file_number.txt";
+            my $file_failed_mappings = "$dir/failed_mapping_$file_number.txt";
+            $self->param('file_mappings', $file_mappings);
+            $self->param('file_failed_mappings', $file_failed_mappings);
+        } elsif ($param =~ /fasta_files_dir/) {
+            my $fasta_file = "$dir/$file_number.fa";
+            $self->param('fasta_file', $fasta_file);
+        } else {
+            my $file = "$dir/$file_number.txt";
+            my $file_param = $params->{$param};
+            $self->param($file_param, $file);
+        }
+    }
 
     # get seq_region ids for new assembly
     my $registry = 'Bio::EnsEMBL::Registry';
