@@ -93,7 +93,7 @@ my $start = 0;
 my %colours = ( 'version' => '#090', 'source'  => '#00F' );
 
 my $phen_icon = '/i/val/var_phenotype_data_small.png';
-my $internal_link = '/img/internal_link.png';
+my $internal_link = '/i/16/internal_link.png';
 
 my %data_type_example = (
   'variation'            => {
@@ -375,24 +375,28 @@ sub source_table {
     my @data_types = split(",", $s_data_types);
     my $data_type_string = '';
     my $examples;
+    
     foreach my $dt (@data_types) {
-      $data_type_string .= ',<br />' if ($data_type_string ne '');
+      my $extra_style = ($data_type_string ne '') ? qq{style="margin-top:3px"} : '';
 
       my $data_type_label = ucfirst($dt);
       $data_type_label =~ s/_/ /g;
 
       if ($dt eq 'phenotype_feature') {
-        $data_type_string .= '<span class="_ht conhelp" title="Provides phenotype associations">Phenotype</span>';
+        $data_type_string .= qq{<div $extra_style><span class="_ht conhelp" title="Provides phenotype associations">Phenotype</span></div>};
         $s_phenotype = qq{<img src="$phen_icon" style="border-radius:5px;border:1px solid #000" alt="$phe_title" title="$phe_title" />};
       }
       elsif ($dt eq 'study') {
-        $data_type_string .= '<span class="_ht conhelp" title="Data are grouped by study/publication">'.$data_type_label.'</span>';
+        $data_type_string .= qq{<div $extra_style><span class="_ht conhelp" title="Data are grouped by study/publication">$data_type_label</span></div>};
       }
       elsif ($dt eq 'variation_synonym') {
-        $data_type_string .= '<span class="_ht conhelp" title="Some/all variants already exist in an other source, or are redundant in this source, with different IDs">'.$data_type_label.'</span>';
+        $data_type_string .= qq{<div $extra_style><span class="_ht conhelp" title="$data_type_label - Some/all variants already exist in an other source, or are redundant in this source, with different IDs">Synonym</span></div>};
+      }
+      elsif ($dt eq 'structural_variation') {
+        $data_type_string .= qq{<div $extra_style><span class="_ht conhelp" title="$data_type_label">SV</span></div>};
       }
       else {
-        $data_type_string .= $data_type_label;
+        $data_type_string .= qq{<div $extra_style>$data_type_label</div>};
       }
 
       my $example = get_example($dt, $source_id, $s_name, $db_name, $hostname);
@@ -405,16 +409,7 @@ sub source_table {
     $s_type = 'main' if (!defined($s_type));
     $other_flag{$s_type} = 1 if ($s_phenotype ne '' || $s_somatic_status ne '-');
     
-    my $row = qq{
-        $s_header
-        <td>$source</td>
-        <td>$s_version</td>
-        <td style="max-width:800px">$s_description</td>
-        <td style="max-width:120px">$data_type_string</td>
-        <td style="padding:1px;margin:0px">$examples</td>
-        <td style="text-align:center;width:22px;padding:2px 3px;border-left:1px solid #BBB">$s_phenotype</td>
-        <td style="text-align:center;width:22px;padding:2px 3px;border-left:1px solid #DDD">$s_somatic_status</td>
-    };
+    my $row = set_row($s_header,$source,$s_version,$s_description,$data_type_string,$examples,$s_phenotype,$s_somatic_status);
     
     # Is chip ?
     if ($s_type eq 'chip') {
@@ -482,25 +477,14 @@ sub source_table {
     # Version
     my $s_version = format_version('');  
     
-    # Somatic status
-    my $s_somatic_status = somatic_status('');
-    
     # Data types
     my @data_types = split(",", $s_data_types);
-    my $data_type_string = '<span class="_ht conhelp" title="Existing variants from 1 or several sources have been associated with this variation set">Variation set</span>';
+    my $data_type_string = qq{<div><span class="_ht conhelp" title="Variation set - Existing variants from 1 or several sources have been associated with this variation set">Set</span></div>};
     
     my $example = get_example('variation_set', $set_id, $s_name, $db_name, $hostname);
     
-    my $row = qq{
-        $s_header
-        <td>$source</td>
-        <td>$s_version</td>
-        <td style="max-width:800px">$set_description</td>
-        <td style="max-width:120px">$data_type_string</td>
-        <td style="padding:1px;margin:0px">$example</td>
-        <td style="text-align:center;width:22px;padding:2px 3px;border-left:1px solid #BBB"></td>
-        <td style="text-align:center;width:22px;padding:2px 3px;border-left:1px solid #DDD">$s_somatic_status</td>
-    };
+    my $row = set_row($s_header,$source,$s_version,$set_description,$data_type_string,$example,'','');
+
     $chip_table .= qq{
     <tr class="bg$cbg">
       $row
@@ -768,9 +752,34 @@ sub table_header {
   
   return qq{    <div style="margin:$top_margin 0px 40px">
       <table class="ss">
-        <tr><th colspan="2">$name</th><th>Version</th><th style="max-width:800px">Description</th><th>Data type(s)</th><th style="padding-left:1px;padding-right:1px;margin-left:0px;margin-right:0px" title="Example(s)">e.g.</th></th>$header_col</tr>
+        <tr><th colspan="2">$name</th><th>Version</th><th style="fvmax-width:800px">Description</th><th>Data type(s)</th><th class="_ht" style="padding-left:1px;padding-right:1px;margin-left:0px;margin-right:0px" title="Example(s) page(s)">e.g.</th></th>$header_col</tr>
     };
 }
+
+
+sub set_row {
+  my $header         = shift;
+  my $source         = shift;
+  my $version        = shift;
+  my $desc           = shift;
+  my $data_type      = shift;
+  my $example        = shift;
+  my $phenotype      = shift;
+  my $somatic_status = shift;
+
+  my $row = qq{
+        $header
+        <td>$source</td>
+        <td>$version</td>
+        <td style="max-width:800px">$desc</td>
+        <td style="min-width:70px;max-width:90px">$data_type</td>
+        <td style="padding:3px 1px 2px;margin:0px">$example</td>
+        <td style="text-align:center;width:22px;padding:2px 3px;border-left:1px solid #BBB">$phenotype</td>
+        <td style="text-align:center;width:22px;padding:2px 3px;border-left:1px solid #DDD">$somatic_status</td>
+  };
+  return $row;
+}
+
 
 sub get_example {
   my $data_type = shift;
