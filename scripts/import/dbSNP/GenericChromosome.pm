@@ -47,9 +47,8 @@ sub variation_feature{
      debug(localtime() . "\tDumping seq_region data using GenericChromosome");
 
      #only take toplevel coordinates
-     dumpSQL($self->{'dbCore'}->db_handle, qq{SELECT sr.seq_region_id, 
-  				      if (sr.name like "E%", CONCAT("LG",sr.name),sr.name) ##add LG for chicken
-  				      FROM   seq_region_attrib sra, attrib_type at, seq_region sr
+     dumpSQL($self->{'dbCore'}->db_handle, qq{SELECT sr.seq_region_id, sr.name
+  				       	      FROM seq_region_attrib sra, attrib_type at, seq_region sr
   				      WHERE sra.attrib_type_id=at.attrib_type_id 
  	                              AND at.code="toplevel" 
                                        AND sr.seq_region_id = sra.seq_region_id 
@@ -60,7 +59,8 @@ sub variation_feature{
      load($self->{'dbVar'}, "seq_region", "seq_region_id", "name");
      print Progress::location();
 
-     my $version_number = substr($self->{'dbSNP_version'},1);
+     my $version_number = $self->{'dbSNP_version'};
+    $version_number =~ s/^b//;
      debug(localtime() . "\tDumping SNPLoc data for dbSNP version $version_number " );
     
      my ($tablename1,$tablename2,$row);
@@ -117,6 +117,9 @@ sub variation_feature{
      else{
          $tablename1 = $self->{'dbSNP_version'} . "_SNPContigLoc" ;
          $tablename2 = $self->{'dbSNP_version'} . "_ContigInfo";
+
+	 $tablename1 = 'b' .  $tablename1 unless  $tablename1 =~/^b/;
+	 $tablename2 = 'b' .  $tablename2 unless  $tablename2 =~/^b/;
      }
 
     my $stmt;
@@ -238,44 +241,6 @@ sub variation_feature{
      create_and_load($self->{'dbVar'}, "tmp_contig_loc_chrom", "snp_id i* not_null", "ctg * not_null", "ctg_gi i", "ctg_start i not_null", "ctg_end i", "chr *", "start i", "end i", "strand i", "aln_quality d");
   print Progress::location();
 
-    #As a correction for the human haplotypes that dbSNP actually reported on the chromosome 6 (and 4 & 17), cross-check the ctg_gi against the pontus_dbsnp_import_external_data.refseq_to_ensembl table and replace the chr if necessary
-    if ($self->{'dbm'}->dbCore()->species() =~ m/homo_sapiens|human/i) {
-	
-	#Add an index on contig_gi to the tmp_contig_loc_chrom table
-	$stmt = qq{
-	    CREATE INDEX
-		ctg_gi_idx
-	    ON
-		tmp_contig_loc_chrom (
-		    ctg_gi ASC
-		)
-	};
-	$self->{'dbVar'}->do($stmt);
-	print Progress::location();
-	
-	# Replace the chr name with the haplotype name if necessary
-	$stmt = qq{
-	    UPDATE
-		tmp_contig_loc_chrom loc,
-		pontus_dbsnp132_human_external_data.refseq_to_ensembl hap
-	    SET
-		loc.chr = hap.ensembl_id
-	    WHERE
-		loc.ctg_gi = hap.gi
-	};
-	$self->{'dbVar'}->do($stmt);
-	print Progress::location();
-	
-	# Drop the contig_gi index again since we don't need it anymore
-	$stmt = qq{
-	    DROP INDEX
-		ctg_gi_idx
-	    ON
-		tmp_contig_loc_chrom
-	};
-	$self->{'dbVar'}->do($stmt);
-	print Progress::location();
-    }
     
     debug(localtime() . "\tCreating genotyped variations");
     #creating the temporary table with the genotyped variations
@@ -299,9 +264,9 @@ sub variation_feature{
                                       tcl.strand, v.name, v.source_id, v.validation_status, tcl.aln_quality
 				      FROM variation v, tmp_contig_loc_chrom tcl, seq_region ts
 				      WHERE v.snp_id = tcl.snp_id
-				      AND tcl.start>2 #to get rid of lots of start=1
+				      AND tcl.start>2 
                                       AND tcl.chr = ts.name
-    });
+    });#to get rid of lots of start=1
 
     create_and_load($self->{'dbVar'},'tmp_variation_feature_chrom',"variation_id i* not_null","seq_region_id i", "seq_region_start i", "seq_region_end i", "seq_region_strand", "variation_name", "source_id", "validation_status", "aln_quality d");
   print Progress::location();
@@ -397,11 +362,8 @@ sub variation_feature{
     $self->{'dbVar'}->do("DROP TABLE IF EXISTS tmp_genotyped_var");
     $self->{'dbVar'}->do("DROP TABLE IF EXISTS tmp_variation_feature_chrom");
     $self->{'dbVar'}->do("DROP TABLE IF EXISTS tmp_variation_feature_ctg");
-    #for the chicken, delete 13,000 SNPs that cannot be mapped to EnsEMBL coordinate
-    if ($self->{'dbm'}->dbCore()->species =~ /gga/i){
-        $self->{'dbVar'}->do("DELETE FROM variation_feature WHERE seq_region_end = -1");
-        print Progress::location();
-    }
+    
+
 }
 
 ## haplotype & patch mappings are held against the contigs rather than chromosomes

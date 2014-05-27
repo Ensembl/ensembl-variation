@@ -39,6 +39,7 @@ sub new {
   my $class = shift;
   my $registryfile = shift;
   my $species = shift;
+  my $schema = shift; ##for postgresSQL
   
   my $registry = 'Bio::EnsEMBL::Registry';
   $registry->load_all( $registryfile );
@@ -48,7 +49,8 @@ sub new {
   $ref->{'registry'} = $registry;
   $ref->{'species'} = $species;
   $ref->{'bulk_insert_buffer_size'} = (512 * 1024 * 1024);
-  
+  $ref->{'schema_name'}  = $schema if defined $schema;    
+
   return bless($ref,$class);
 }
 
@@ -65,7 +67,16 @@ sub dbSNP_shared {
 sub dbSNP {
   my $self = shift;
   
-  return $self->get_dbAdaptor('dbsnp');
+  my $adaptor =  $self->get_dbAdaptor('dbsnp');
+
+  if(defined $self->{'schema_name'}){
+      print "setting search path for postgreSQL: " .$self->{'schema_name'} . "\n";
+      my $sth = "SET search_path TO $self->{'schema_name'},dbsnp_main,public";
+      $adaptor->dbc()->do($sth);
+  }
+  return $adaptor;
+
+
 }
 sub dbVar {
   my $self = shift;
@@ -123,5 +134,13 @@ sub species {
   
   return $self->{'species'};
 }
+
+## for postgreSQL
+sub schema {
+  my $self = shift;
+
+  return $self->{'schema'};
+}
+
 
 1;
