@@ -22,7 +22,7 @@ sub run {
     my $pipeline_dir = $self->param('pipeline_dir');
     die "$pipeline_dir doesn't exist" unless (-d $pipeline_dir);		
 
-    foreach my $folder (qw/bam_files_dir filtered_mappings_dir load_features_dir mapping_results_dir/) {
+    foreach my $folder (qw/bam_files_dir filtered_mappings_dir load_features_dir mapping_results_dir statistics_dir/) {
         my $dir = $self->param($folder);
         if (-d $dir) {
             remove_tree($dir);
@@ -68,14 +68,7 @@ sub run {
             die("New assembly file is not indexed. $file_type is missing.");
         }
     }
-    # 3. bam_files_dir, mapping_results_dir empty?
-    foreach my $name ('bam_files_dir') {
-        $dir = $self->param($name);
-        if (! $self->is_empty($dir)) {
-            die("$name is not empty. Delete files before running the pipeline.");
-        }
-    }	
-    # 4. check bwa and samtools are working
+    # 3. check bwa and samtools are working
 
 
     1;
