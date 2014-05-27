@@ -31,15 +31,51 @@ use strict;
 
 use base ('Bio::EnsEMBL::Hive::Process');
 
+use File::Path qw(make_path);
+
 sub write_output {
     my $self = shift;
 
     my $mapping_results_dir = $self->param('mapping_results_dir');
-    
+    my $filtered_mappings_dir = $self->param('filtered_mappings_dir');
+    my $load_features_dir = $self->param('load_features_dir');  
+    if ($self->param('mode') eq 'remap_read_coverage') {
+        my @input = ();
+        opendir (IND_DIR, $mapping_results_dir) or die $!;
+        while (my $individual_dir = readdir(IND_DIR)) {
+            next if ($individual_dir =~ /^\./);
+            make_path("$filtered_mappings_dir/$individual_dir") or die "Failed to create $filtered_mappings_dir/$individual_dir $!";
+            make_path("$load_features_dir/$individual_dir") or die "Failed to create $load_features_dir/$individual_dir $!";
+
+            my $count_mappings_files =  $self->compare_file_counts("$mapping_results_dir/$individual_dir");
+            my $file_number = 1;
+            while ($file_number <= $count_mappings_files) {
+                die "No such file $mapping_results_dir/$individual_dir/mappings_$file_number.txt" unless (-e "$mapping_results_dir/$individual_dir/mappings_$file_number.txt");
+                die "No such file $mapping_results_dir/$individual_dir/failed_mapping_$file_number.txt" unless (-e "$mapping_results_dir/$individual_dir/failed_mapping_$file_number.txt");
+                push @input, {
+                    'file_number' => $file_number,
+                    'individual_id' => $individual_dir,
+                };
+                $file_number++;
+            }
+        }
+        closedir(IND_DIR);
+        $self->dataflow_output_id(\@input, 2);
+    } else {
+        my $count_mappings_files = $self->compare_file_counts($mapping_results_dir);
+        my $input = $self->input_for_filter_mappings($mapping_results_dir, $count_mappings_files);
+        $self->dataflow_output_id($input, 2);
+    }
+    1;
+}
+
+sub compare_file_counts {
+    my $self = shift;
+    my $dir = shift;
     my $count_mappings_files = 0;
     my $count_failed_mappings_files = 0;
 
-    opendir(DIR, $mapping_results_dir) or die "Not a directory $mapping_results_dir";
+    opendir(DIR, $dir) or die "Not a directory $dir";
     while (my $file = readdir(DIR)) {
         if ($file =~ m/^mappings_(.+)\.txt$/) {
             $count_mappings_files++;
@@ -49,22 +85,28 @@ sub write_output {
     }
     closedir(DIR); 
 
-    die "File count for mappings ($count_mappings_files) and failed_mappings ($count_failed_mappings_files) in $mapping_results_dir differs" unless ($count_mappings_files == $count_failed_mappings_files);
+    die "File count for mappings ($count_mappings_files) and failed_mappings ($count_failed_mappings_files) in $dir differs" unless ($count_mappings_files == $count_failed_mappings_files);
+    return $count_mappings_files;
+}
 
+sub input_for_filter_mappigs {
+    my $self = shift;
+    my $dir = shift;
+    my $count_mappings_files = shift;
     my @input;
     my $file_number = 1;
 
     while ($file_number <= $count_mappings_files) {
-        die "No such file $mapping_results_dir/mappings_$file_number.txt" unless (-e "$mapping_results_dir/mappings_$file_number.txt");
-        die "No such file $mapping_results_dir/failed_mapping_$file_number.txt" unless (-e "$mapping_results_dir/failed_mapping_$file_number.txt");
+        die "No such file $dir/mappings_$file_number.txt" unless (-e "$dir/mappings_$file_number.txt");
+        die "No such file $dir/failed_mapping_$file_number.txt" unless (-e "$dir/failed_mapping_$file_number.txt");
         push @input, {
             'file_number' => $file_number,
         };
         $file_number++;
     }
-    $self->dataflow_output_id(\@input, 2);
-    1;
+    return \@input; 
 }
+
 
 
 1;
