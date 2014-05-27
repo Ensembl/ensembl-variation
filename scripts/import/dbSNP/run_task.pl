@@ -46,7 +46,8 @@ my @option_defs = (
   'logfile=s',
   'tempdir=s',
   'tempfile=s',
-  'source_engine:s'
+  'source_engine:s',
+  'schema_name:s',
 );
 
 my %options;
@@ -64,13 +65,15 @@ my $logfile = $options{'logfile'};
 my $tempdir = $options{'tempdir'};
 my $tempfile = $options{'tempfile'};
 my $source_engine = $options{'source_engine'};
+my $schema_name = $options{'schema_name'};
 
 $ImportUtils::TMP_DIR = $tempdir;
 $ImportUtils::TMP_FILE = $tempfile;
 
 my $dbm = dbSNP::DBManager->new(
     $registryfile,
-    $species
+    $species,
+    $schema_name 
 );
 $dbm->dbSNP_shared($dbSNP_shared);
 

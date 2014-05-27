@@ -81,7 +81,8 @@ my @option_defs = (
   'tmpfile=s',
   'limit=i',
   'mapping_file_dir=s',
-  'schema_file=s',
+  'schema_file=s',  ## ddl
+  'schema_name:s',  ## postgreSQL schema name
   'dshost=s',
   'dsuser=s',
   'dspass=s',
@@ -104,12 +105,12 @@ debug("\n######### " . localtime() . " #########\n\tImport script launched\n");
 print STDOUT "\n######### " . localtime() . " #########\n\tImport script launched\n";
 
 my $LIMIT_SQL = $options{'limit'};
-my $dbSNP_BUILD_VERSION = $options{'dbSNP_version'};
 my $shared_db = $options{'shared_db'};
 my $TMP_DIR = $options{'tmpdir'};
 my $TMP_FILE = $options{'tmpfile'};
 my $MAPPING_FILE_DIR = $options{'mapping_file_dir'};
 my $SCHEMA_FILE = $options{'schema_file'};
+my $schema_name = $options{'schema_name'};
 my $GROUP_TERM  = $options{'group_term'};
 my $GROUP_LABEL = $options{'group_label'};
 my $species = $options{'species'};
@@ -123,8 +124,8 @@ my $mssql_driver = $options{'mssql_driver'};
 my $scriptdir = $options{'scriptdir'};
 my $logfile = $options{'logfile'};
 my $ens_version = $options{'ensembl_version'};
-my $source_engine ;
-defined $options{'source_engine'} ?  $source_engine = $options{'source_engine'} :  $source_engine = 'mysql';
+my $dbSNP_version = $options{'dbSNP_version'};
+my $source_engine = $options{'source_engine'} ||  'mysql';
 
 my @skip_routines;
 @skip_routines = @{$options{'skip_routine'}} if (defined($options{'skip_routine'}));
@@ -136,13 +137,19 @@ $ImportUtils::TMP_FILE = $TMP_FILE;
 die("Please provide a current schema definition file for the variation database, use -schema_file option!") unless (-e $SCHEMA_FILE);
 # die("You must specify the dbSNP mirror host, port, user, pass, db and build version (-dshost, -dsport, -dsuser, -dspass, and -dbSNP_version options)") unless (defined($dshost) && defined($dsport) && defined($dsuser) && defined($dspass) && defined($dbSNP_BUILD_VERSION));
 die("You must specify a temp dir and temp file (-tmpdir and -tmpfile options)") unless(defined($ImportUtils::TMP_DIR) && defined($ImportUtils::TMP_FILE));
-die("You must specify the species. Use -species option") unless (defined($species));
-die("You must specify the dbSNP build. Use -dbSNP_version option") unless (defined($dbSNP_BUILD_VERSION));
-die("You must specify the dbSNP shared database. Use -shared_db option") unless (defined($shared_db));
-die("You must specify the sql driver, either through an environment variable (SYBASE) or the -sql_driver option") unless ((defined($mssql_driver) || defined($ENV{'SYBASE'})) ||  $source_engine !~/mssql/i);
+die("You must specify the species. Use -species option") 
+    unless (defined($species));
+die("You must specify the dbSNP build. Use -dbSNP_version option") 
+    unless (defined($dbSNP_version));
+die("You must specify the dbSNP shared database. Use -shared_db option") 
+    unless (defined($shared_db));
+die("You must specify the sql driver, either through an environment variable (SYBASE) or the -sql_driver option") unless ((defined($mssql_driver) || defined($ENV{'SYBASE'})) ||  $source_engine =~/mysql|postgreSQL/i);
+
+die("A schema name must be specified for postgreSQL imports")
+    if  $source_engine =~/postgreSQL/i &&  !defined $schema_name;
 
 warn("Note that the port for the dbSNP mirror is overridden by the freetds configuration file!\n") if (defined($dsport));
-warn("Make sure you have a updated ensembl.registry file!\n");
+
 
 # Set the driver
 $ENV{'SYBASE'} = $mssql_driver if (defined($mssql_driver));
@@ -166,7 +173,7 @@ if (defined($logfile)) {
   print $logh "\n######### " . localtime() . " #########\n\tImport script launched\n";
 }
 
-my $dbm = dbSNP::DBManager->new($registry_file,$species);
+my $dbm = dbSNP::DBManager->new($registry_file,$species, $schema_name );
 $dbm->dbSNP_shared($shared_db);
 my $dbCore = $dbm->dbCore();
 
@@ -183,7 +190,7 @@ my @parameters = (
   -tmpfile => $TMP_FILE,
   -limit => $LIMIT_SQL,
   -mapping_file_dir => $MAPPING_FILE_DIR,
-  -dbSNP_version => $dbSNP_BUILD_VERSION,
+  -dbSNP_version => $dbSNP_version,
   -assembly_version => $ASSEMBLY_VERSION,
   -group_term  => $GROUP_TERM,
   -group_label => $GROUP_LABEL,
@@ -191,6 +198,7 @@ my @parameters = (
   -scriptdir => $scriptdir,
   -log => $logh,
   -source_engine => $source_engine,
+  -schema_name   => $schema_name
 );
 
 my $import_object;
