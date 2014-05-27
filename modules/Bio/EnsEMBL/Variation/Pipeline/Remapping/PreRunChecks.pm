@@ -18,7 +18,7 @@ sub fetch_input {
 sub run {
     my $self = shift;
 
-# 1. check all folders are created 
+    # 1. check all folders are created 
     my $pipeline_dir = $self->param('pipeline_dir');
     die "$pipeline_dir doesn't exist" unless (-d $pipeline_dir);		
 
@@ -43,6 +43,17 @@ sub run {
         if ($count == 0) {
             die ("There are no fasta_files. Set parameter 'generate_fasta_files' to 1 in the conf file.");
         }				
+        # remove index files
+        if ($self->param('mode') eq 'remap_read_coverage') {
+            opendir (IND_DIR, $dir) or die $!;
+            while (my $individual_dir = readdir(IND_DIR)) {
+                next if ($individual_dir =~ /^\./);
+                $self->run_cmd("rm $dir/$individual_dir/*.fai");
+            }
+            closedir (IND_DIR);
+        } else {
+            $self->run_cmd("rm $dir/*.fai");
+        }
     }
 
     foreach my $folder (qw/old_assembly_fasta_file_dir new_assembly_fasta_file_dir/) {
@@ -50,21 +61,21 @@ sub run {
         die "$dir for $folder doesn't exist" unless (-d $dir);		
     }
 
-# 2. check new_assembly_fasta_file is indexed
+    # 2. check new_assembly_fasta_file is indexed
     my $dir = $self->param('new_assembly_fasta_file_dir');
     foreach my $file_type (('.fa.amb', '.fa.ann', '.fa.bwt', '.fa.pac', '.fa.sa')) {
         unless ($self->count_files($dir, $file_type)) {
             die("New assembly file is not indexed. $file_type is missing.");
         }
     }
-# 3. bam_files_dir, mapping_results_dir empty?
+    # 3. bam_files_dir, mapping_results_dir empty?
     foreach my $name ('bam_files_dir') {
         $dir = $self->param($name);
         if (! $self->is_empty($dir)) {
             die("$name is not empty. Delete files before running the pipeline.");
         }
     }	
-# 4. check bwa and samtools are working
+    # 4. check bwa and samtools are working
 
 
     1;
@@ -89,6 +100,14 @@ sub count_files {
     return $count;
 }
 
+sub run_cmd {
+    my $self = shift;
+    my $cmd = shift;
+    if (my $return_value = system($cmd)) {
+        $return_value >>= 8;
+        die "system($cmd) failed: $return_value";
+    }
+}
 
 sub write_output {
     my $self = shift;
