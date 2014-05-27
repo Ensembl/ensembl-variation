@@ -56,9 +56,10 @@ sub fetch_input {
     }
     foreach my $param (keys %$params) {
         my $dir = $self->param($param) . $individual_dir;
-        if ($param =~ /mappings_results_dir/) {
+        if ($param =~ /mapping_results_dir/) {
             my $file_mappings = "$dir/mappings_$file_number.txt";
             my $file_failed_mappings = "$dir/failed_mapping_$file_number.txt";
+            
             $self->param('file_mappings', $file_mappings);
             $self->param('file_failed_mappings', $file_failed_mappings);
         } elsif ($param =~ /fasta_files_dir/) {
@@ -76,29 +77,70 @@ sub fetch_input {
     $registry->load_all($self->param('registry_file_newasm'));
     my $cdba = $registry->get_DBAdaptor($self->param('species'), 'core');
     $self->param('cdba', $cdba);
+    my $vdba = $registry->get_DBAdaptor($self->param('species'), 'variation');
+    $self->param('vdba', $vdba);
 
 }
 
 sub run {
     my $self = shift;
-    $self->report_failed_mappings();
     if ($self->param('mode') eq 'remap_multi_map') {
+        $self->report_failed_mappings();
         $self->filter_mapping_results_dbsnp();
+        $self->join_feature_data();
     } elsif ($self->param('mode') eq 'remap_alt_loci') {
         $self->filter_mapping_results_alt_loci();
+        $self->report_failed_mappings();
+        $self->join_feature_data();
     } elsif ($self->param('mode') eq 'remap_read_coverage') {
+        $self->report_failed_read_coverage_mappings();
         $self->filter_read_coverage_mapping_results();
+        $self->join_read_coverage_data();
     } else {
+        $self->report_failed_mappings();
         $self->filter_mapping_results();
+        $self->join_feature_data();
     }
     $self->write_statistics();
-    $self->join_feature_data();
 }
 
 sub write_output {
     my $self = shift;
-
 }
+
+sub report_failed_read_coverage_mappings {
+    my $self = shift;
+    my $count_mapped = 0;
+    my $count_unmapped = 0;
+    my $file_mappings = $self->param('file_mappings');
+    my $file_failed_mappings = $self->param('file_failed_mappings');
+
+    my $mapped = {};
+    my $unmapped = {};
+    my $fh_mappings = FileHandle->new($file_mappings, 'r');
+    while (<$fh_mappings>) {
+        chomp;
+        my ($query_name, $seq_name, $start, $end, $strand, $map_weight, $score) = split("\t", $_);
+        my ($id, $type) = split(':', $query_name);
+        $mapped->{$id} = 1;
+    }
+    $fh_mappings->close();
+
+    #my $fh_failed_mappings = FileHandle->new($file_failed_mappings, 'r');
+    #while (<$fh_failed_mappings>) {
+    #    chomp;
+    #    my ($indel, $old_seq_info, $new_seq_info, $query_name, $map_weight, $cigar, $relative_algn_score, $clipped_info) = split("\t", $_);
+    #    unless ($mapped->{$query_name}) {
+    #        $unmapped->{$query_name} = 1;
+    #    }
+    #}
+    #$fh_failed_mappings->close();
+    $count_mapped = scalar keys %$mapped;
+
+    $self->param('pre_count_mapped', $count_mapped);
+    $self->param('pre_count_unmapped', $count_unmapped);
+}
+
 
 sub report_failed_mappings {
     my $self = shift;
@@ -470,6 +512,164 @@ sub filter_mapping_results_alt_loci {
     $self->param('stats_multi_map', $stats_multi_map);
     $self->param('stats_failed', $stats_failed);
 }
+sub filter_read_coverage_mapping_results {
+    my $self = shift;
+    my $algn_score_threshold = $self->param('algn_score_threshold');
+
+    my $file_mappings = $self->param('file_mappings');
+    my $fh_mappings = FileHandle->new($file_mappings, 'r');
+
+    my ($stats_failed, $stats_unique_map, $stats_multi_map);
+
+    my $mapped = {};
+    while (<$fh_mappings>) {
+        chomp;
+        #107100:upstream 1       460501  461001  1       6       1       496     0.99001996007984   
+        #query_name seq_region_name start end strand map_weight edit_dist score_count algn_score
+        my ($query_name, $new_seq_name, $new_start, $new_end, $new_strand, $map_weight, $algn_score) = split("\t", $_); 
+
+        my ($id, $type) = split(':', $query_name);   
+     
+        $mapped->{$id}->{$type}->{$new_seq_name}->{"$new_start:$new_end:$new_strand"} = $algn_score;
+    }
+    $fh_mappings->close();
+
+    my $file_init_feature = $self->param('file_init_feature');
+    my $fh_init_feature = FileHandle->new($file_init_feature, 'r'); 
+    
+    my $feature_data = {};
+    while (<$fh_init_feature>) {
+        chomp;
+        my $data = $self->read_data($_);
+        $feature_data->{$data->{entry}} = $data;
+    }
+    $fh_init_feature->close();
+  
+    my $file_filtered_mappings = $self->param('file_filtered_mappings');
+    my $fh_filtered_mappings = FileHandle->new($file_filtered_mappings, 'w');
+ 
+    foreach my $id (keys %$mapped) {
+        my $init_data = $feature_data->{$id};
+        my $old_chrom = $init_data->{seq_region_name};
+        my $old_start = $init_data->{seq_region_start}; 
+        my $old_end = $init_data->{seq_region_end};
+        my $diff = $old_end - $old_start + 1;
+        my $types = scalar keys %{$mapped->{$id}};
+        my $count_out = 0;
+        my @output_lines = ();
+        if ($types == 2) {
+            my $filtered = {};
+            foreach my $seq_name (keys %{$mapped->{$id}->{upstream}}) {
+                my $filtered_upstream   = $mapped->{$id}->{upstream}->{$seq_name};
+                my $filtered_downstream = $mapped->{$id}->{downstream}->{$seq_name};
+                next unless ($filtered_upstream && $filtered_downstream);
+                foreach my $upstream_mapping (keys %$filtered_upstream) {
+                    my $upstream_score = $filtered_upstream->{$upstream_mapping};
+                    my ($up_start, $up_end, $up_strand) = split(':', $upstream_mapping);
+                    foreach my $downstream_mapping (keys %$filtered_downstream) {
+                        my $downstream_score = $filtered_downstream->{$downstream_mapping};
+                        my ($down_start, $down_end, $down_strand) = split(':', $downstream_mapping);
+                        my $mapping_diff = $down_end - $up_start + 1;
+                        my $diff_score = abs($mapping_diff - $diff);
+                        $filtered->{$seq_name}->{"$up_start:$down_end"} = $diff_score;
+                    }
+                }
+            }           
+            if ($filtered->{$old_chrom}) {
+                my $mappings = $filtered->{$old_chrom};
+                my @keys = sort {$mappings->{$a} <=> $mappings->{$b}} keys(%$mappings);
+                my $threshold = $mappings->{$keys[0]};
+                foreach my $mapping (@keys) {
+                    my $score = $mappings->{$mapping};
+                    if ($score <= $threshold) {
+                        $count_out++;
+                        my ($new_start, $new_end) = split(':', $mapping);
+                        push @output_lines, "$id\t$old_chrom\t$new_start\t$new_end\t$score\n";
+                    }
+                }
+            } else {
+               # compute best score over all seq_names
+                my $seq_regions = {};
+                foreach my $seq_name (keys %$filtered) {
+                    my $mappings = $filtered->{$seq_name};
+                    my @keys = sort {$mappings->{$a} <=> $mappings->{$b}} keys(%$mappings);
+                    my $threshold = $mappings->{$keys[0]};
+                    $seq_regions->{$seq_name} = $threshold;
+                }
+                my @pot_seq_regions = ();
+                my @keys = sort {$seq_regions->{$a} <=> $seq_regions->{$b}} keys(%$seq_regions);
+                my $threshold = $seq_regions->{$keys[0]};
+                foreach my $seq_region (keys %$seq_regions) {
+                    if ($seq_regions->{$seq_region} <= $threshold) {
+                        push @pot_seq_regions, $seq_region;
+                    }
+                }
+                foreach my $new_chrom (@pot_seq_regions) {
+                    my $mappings = $filtered->{$new_chrom};
+                    my @keys = sort {$mappings->{$a} <=> $mappings->{$b}} keys(%$mappings);
+                    my $threshold = $mappings->{$keys[0]};
+                    foreach my $mapping (@keys) {
+                        my $score = $mappings->{$mapping};
+                        if ($score <= $threshold) {
+                            $count_out++;
+                            my ($new_start, $new_end) = split(':', $mapping);
+                            push @output_lines, "$id\t$new_chrom\t$new_start\t$new_end\t$score\n";
+                        }
+                    }
+                }
+            }
+        } elsif ($types == 1) {
+            foreach my $type (keys %{$mapped->{$id}}) {
+                my $mappings = {};
+                if ($mapped->{$id}->{$type}->{$old_chrom}) {
+                    foreach my $coords (keys %{$mapped->{$id}->{$type}->{$old_chrom}}) {
+                        $mappings->{"$old_chrom:$coords"} = $mapped->{$id}->{$type}->{$old_chrom}->{$coords};
+                    }
+                } else {
+                    foreach my $seq_name (keys %{$mapped->{$id}->{$type}}) {
+                        foreach my $coords (keys %{$mapped->{$id}->{$type}->{$seq_name}}) {
+                            $mappings->{"$seq_name:$coords"} = $mapped->{$id}->{$type}->{$seq_name}->{$coords};
+                        }
+                    }
+                }
+                my @keys = sort {$mappings->{$a} <=> $mappings->{$b}} keys(%$mappings);
+                my $threshold = $mappings->{$keys[0]};
+                foreach my $mapping (@keys) {
+                    my $score = $mappings->{$mapping};
+                    if ($score <= $threshold) {
+                        $count_out++;
+                        my ($chrom, $new_start, $new_end) = split(':', $mapping);
+                        push @output_lines, "$id\t$chrom\t$new_start\t$new_end\t$score\n";
+                    }
+                }
+            }
+        } else {
+            $self->warning("Error for id: $id. More than 2 types");
+        }
+        
+        if ($count_out == 1) {
+            $stats_unique_map++;
+        } elsif ($count_out > 1 && $count_out <= 5) {
+            $stats_multi_map++;
+        } elsif ($count_out > 5) {
+            $stats_failed++;
+           # $self->warning("Multi map $id count $count_out");
+        } else {
+            $stats_failed++;
+        }
+        if ($count_out >= 1 && $count_out <= 5) {
+            foreach my $line (@output_lines) {
+                print $fh_filtered_mappings $line;
+            }
+        }
+    }
+
+    $fh_filtered_mappings->close();
+    $self->param('stats_unique_map', $stats_unique_map);
+    $self->param('stats_multi_map', $stats_multi_map);
+    $self->param('stats_failed', $stats_failed);
+
+}
 
 
 sub write_statistics {
@@ -483,6 +683,125 @@ sub write_statistics {
     }
     $fh_statistics->close();
 
+}
+
+sub join_read_coverage_data {
+    my $self = shift;
+    my $file_init_feature = $self->param('file_init_feature');
+    $self->warning($file_init_feature);
+    my $fh_init_feature = FileHandle->new($file_init_feature, 'r'); 
+    
+    my $read_coverage_data = {};
+    while (<$fh_init_feature>) {
+        chomp;
+        my $data = $self->read_data($_);
+        my $key = $data->{entry};
+        $read_coverage_data->{$key} = $data;
+    }
+    $fh_init_feature->close();
+
+    # get new seq_region_ids
+    my $seq_region_ids = {};
+    my $cdba = $self->param('cdba');
+    my $sa = $cdba->get_SliceAdaptor;
+    my $slices = $sa->fetch_all('toplevel', undef, 1);
+    foreach my $slice (@$slices) {
+        $seq_region_ids->{$slice->seq_region_name} = $slice->get_seq_region_id;
+    }
+
+    # new individual_id
+    my $individual_name_oldasm;
+    my $old_individual_id = $self->param('individual_id');
+    $self->warning($old_individual_id);
+
+   # my $registry_oldasm = 'Bio::EnsEMBL::Registry';
+   # $registry_oldasm->load_all($self->param('registry_file_newasm'));
+   # my $vdba_oldasm = $registry_oldasm->get_DBAdaptor($self->param('species'), 'variation');
+
+    my $vdba_oldasm = new Bio::EnsEMBL::Variation::DBSQL::DBAdaptor(
+            -host   => 'ens-livemirror',
+            -user   => 'ensro',
+            -port   => 3306,
+            -dbname => 'homo_sapiens_variation_74_37',
+        );
+
+    $self->warning('got vdba oldasm');
+
+
+    my $dbname = $vdba_oldasm->dbc->dbname();
+    my $dbh = $vdba_oldasm->dbc->db_handle;
+    my $individual_id = 'sample_id';
+    my $individual_table = 'sample';
+    my $table_names = get_table_names($dbh, $dbname);
+    if (grep /read_coverage/, @$table_names) {
+        my $column_names = get_column_names($dbh, $dbname, 'read_coverage');
+        if (grep /individual_id/, @$column_names) {
+            $individual_id = 'individual_id';
+            $individual_table = 'individual';
+        }
+    } else {
+        die "No read_coverage table in $dbname";
+    }
+    my $sth = $dbh->prepare(qq{
+        SELECT name FROM $individual_table WHERE $individual_id=$old_individual_id;
+    }, {mysql_use_result => 1});
+ 
+    my @old_names = ();
+    $sth->execute();
+    while (my $row = $sth->fetchrow_arrayref) {
+        push @old_names, $row->[0];
+    }
+    $sth->finish();
+
+    die ("Wrong number of names for individual id in old variation db: " . scalar @old_names) if (scalar @old_names != 1);
+
+    $individual_name_oldasm = $old_names[0];
+
+    $self->warning("Old name $individual_name_oldasm");
+
+
+    my $vdba = $self->param('vdba');
+    my $ia = $vdba->get_IndividualAdaptor;
+
+    my $individuals_newasm = $ia->fetch_all_by_name($individual_name_oldasm);
+    if ((scalar @$individuals_newasm) > 1) {
+        die "More than one name for $individual_name_oldasm in new database";
+    }
+    my $individual_newasm = $individuals_newasm->[0];    
+    my $new_individual_id = $individual_newasm->dbID();
+
+    $self->warning("New individual id $new_individual_id");
+
+    # join feature data with mapping data:
+    my $file_load_features = $self->param('file_load_features');
+    $self->warning($file_load_features);
+    my $fh_load_features = FileHandle->new($file_load_features, 'w');   
+    my $file_filtered_mappings = $self->param('file_filtered_mappings');
+    my $fh_mappings = FileHandle->new($file_filtered_mappings, 'r');
+    my ($data, $variation_feature_id, $version, $variation_name);
+    while (<$fh_mappings>) {
+        chomp;
+        my ($entry, $seq_name, $start, $end, $strand, $score) = split("\t", $_);
+        my $seq_region_id = $seq_region_ids->{$seq_name};
+        $data = $read_coverage_data->{$entry};     
+        $data->{seq_region_id} = $seq_region_id;
+        $data->{seq_region_start} = $start;
+        $data->{seq_region_end} = $end;
+        $data->{individual_id} = $new_individual_id;
+
+        my @output = ();
+        foreach my $column_name (sort keys %$data) {
+            unless ($column_name =~ /^individual_name$/ || $column_name =~ /^seq_region_name$/ || $column_name =~ /^entry$/) {
+                push @output, $data->{$column_name};
+            }
+        }
+        my $line = join("\t", @output);
+        
+        print $fh_load_features $line, "\n"; 
+    }
+
+    $fh_mappings->close();
+    $fh_load_features->close();
 }
 
 sub join_feature_data {
@@ -591,6 +910,7 @@ sub print_feature_line {
     return $line;
 }
 
+
 # returns the row that will be loaded into the new variation_feature_table
 # change variation_feature_id to old_variation_feature_id
 sub print_complete_feature_line {
@@ -607,6 +927,43 @@ sub print_complete_feature_line {
     my $line = join("\t", @output);
     return $line;
 }
+
+sub get_column_names {
+    my ($dbh, $dbname, $table_name) = @_;
+    my $query = qq{SHOW columns FROM $dbname.$table_name};
+    my $column_names_info = run_query($dbh, $query);
+    my @column_names = ();
+    foreach my $column_name_info (@$column_names_info) {
+        my ($name, $info) = split(',', $column_name_info, 2);
+        push @column_names, $name;
+    }
+    return \@column_names;
+}
+
+sub get_table_names {
+    my ($dbh, $dbname) = @_;
+    my $query = qq{
+        SHOW TABLES FROM $dbname;
+    };
+    my $table_names = run_query($dbh, $query);
+    return $table_names;
+}
+
+sub run_query {
+    my ($dbh, $query) = @_;
+    my $sth = $dbh->prepare($query);
+    $sth->execute();
+    my @results = ();
+    while (my $row = $sth->fetchrow_arrayref) {
+        my @values = map { defined $_ ? $_ : '\N' } @$row;
+        push @results, join(',', @values);
+    }
+    $sth->finish();
+    return \@results;
+}
+
+
+
 
 
 1;
