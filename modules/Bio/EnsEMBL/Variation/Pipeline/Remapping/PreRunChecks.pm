@@ -3,6 +3,7 @@ package Bio::EnsEMBL::Variation::Pipeline::Remapping::PreRunChecks;
 use strict;
 use warnings;
 
+use File::Path qw(make_path remove_tree);
 use FileHandle;
 use Bio::EnsEMBL::Registry;
 
@@ -21,7 +22,30 @@ sub run {
     my $pipeline_dir = $self->param('pipeline_dir');
     die "$pipeline_dir doesn't exist" unless (-d $pipeline_dir);		
 
-    foreach my $folder (qw/fasta_files_dir bam_files_dir old_assembly_fasta_file_dir new_assembly_fasta_file_dir mapping_results_dir/) {
+    foreach my $folder (qw/bam_files_dir filtered_mappings_dir load_features_dir mapping_results_dir/) {
+        my $dir = $self->param($folder);
+        if (-d $dir) {
+            remove_tree($dir);
+        }
+        make_path($dir);
+    } 
+    unless ($self->param('use_fasta_files')) {
+        foreach my $folder (qw/dump_features_dir fasta_files_dir/) {
+            my $dir = $self->param($folder);
+            if (-d $dir) {
+                remove_tree($dir);
+            }
+            make_path($dir);
+        } 
+    } else {
+        my $dir = $self->param('fasta_files_dir');
+        my $count = $self->count_files($dir, '.fa');
+        if ($count == 0) {
+            die ("There are no fasta_files. Set parameter 'generate_fasta_files' to 1 in the conf file.");
+        }				
+    }
+
+    foreach my $folder (qw/old_assembly_fasta_file_dir new_assembly_fasta_file_dir/) {
         my $dir = $self->param($folder);
         die "$dir for $folder doesn't exist" unless (-d $dir);		
     }
@@ -40,15 +64,7 @@ sub run {
             die("$name is not empty. Delete files before running the pipeline.");
         }
     }	
-# 4. if not generate_fasta_files check that fasta_files dir contains files
-    $dir = $self->param('fasta_files_dir');
-    unless ($self->param('generate_fasta_files')) {
-        my $count = $self->count_files($dir, '.fa');
-        if ($count == 0) {
-            die ("There are no fasta_files. Set parameter 'generate_fasta_files' to 1 in the conf file.");
-        }				
-    }
-# 5. check bwa and samtools are working
+# 4. check bwa and samtools are working
 
 
     1;
