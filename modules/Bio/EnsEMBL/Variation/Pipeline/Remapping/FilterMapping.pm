@@ -139,6 +139,9 @@ sub report_failed_read_coverage_mappings {
 
     $self->param('pre_count_mapped', $count_mapped);
     $self->param('pre_count_unmapped', $count_unmapped);
+    my $count_input_ids = 0;
+    $self->param('count_input_ids', $count_input_ids);
+
 }
 
 
@@ -688,7 +691,6 @@ sub write_statistics {
 sub join_read_coverage_data {
     my $self = shift;
     my $file_init_feature = $self->param('file_init_feature');
-    $self->warning($file_init_feature);
     my $fh_init_feature = FileHandle->new($file_init_feature, 'r'); 
     
     my $read_coverage_data = {};
@@ -710,55 +712,8 @@ sub join_read_coverage_data {
     }
 
     # new individual_id
-    my $individual_name_oldasm;
+    my $individual_name_oldasm = $self->param('individual_name');
     my $old_individual_id = $self->param('individual_id');
-    $self->warning($old_individual_id);
-
-   # my $registry_oldasm = 'Bio::EnsEMBL::Registry';
-   # $registry_oldasm->load_all($self->param('registry_file_newasm'));
-   # my $vdba_oldasm = $registry_oldasm->get_DBAdaptor($self->param('species'), 'variation');
-
-    my $vdba_oldasm = new Bio::EnsEMBL::Variation::DBSQL::DBAdaptor(
-            -host   => 'ens-livemirror',
-            -user   => 'ensro',
-            -port   => 3306,
-            -dbname => 'homo_sapiens_variation_74_37',
-        );
-
-    $self->warning('got vdba oldasm');
-
-
-    my $dbname = $vdba_oldasm->dbc->dbname();
-    my $dbh = $vdba_oldasm->dbc->db_handle;
-    my $individual_id = 'sample_id';
-    my $individual_table = 'sample';
-    my $table_names = get_table_names($dbh, $dbname);
-    if (grep /read_coverage/, @$table_names) {
-        my $column_names = get_column_names($dbh, $dbname, 'read_coverage');
-        if (grep /individual_id/, @$column_names) {
-            $individual_id = 'individual_id';
-            $individual_table = 'individual';
-        }
-    } else {
-        die "No read_coverage table in $dbname";
-    }
-    my $sth = $dbh->prepare(qq{
-        SELECT name FROM $individual_table WHERE $individual_id=$old_individual_id;
-    }, {mysql_use_result => 1});
- 
-    my @old_names = ();
-    $sth->execute();
-    while (my $row = $sth->fetchrow_arrayref) {
-        push @old_names, $row->[0];
-    }
-    $sth->finish();
-
-    die ("Wrong number of names for individual id in old variation db: " . scalar @old_names) if (scalar @old_names != 1);
-
-    $individual_name_oldasm = $old_names[0];
-
-    $self->warning("Old name $individual_name_oldasm");
-
 
     my $vdba = $self->param('vdba');
     my $ia = $vdba->get_IndividualAdaptor;
@@ -770,11 +725,8 @@ sub join_read_coverage_data {
     my $individual_newasm = $individuals_newasm->[0];    
     my $new_individual_id = $individual_newasm->dbID();
 
-    $self->warning("New individual id $new_individual_id");
-
     # join feature data with mapping data:
     my $file_load_features = $self->param('file_load_features');
-    $self->warning($file_load_features);
     my $fh_load_features = FileHandle->new($file_load_features, 'w');   
     my $file_filtered_mappings = $self->param('file_filtered_mappings');
     my $fh_mappings = FileHandle->new($file_filtered_mappings, 'r');
@@ -961,8 +913,6 @@ sub run_query {
     $sth->finish();
     return \@results;
 }
-
-
 
 
 
