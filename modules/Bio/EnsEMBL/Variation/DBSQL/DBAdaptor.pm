@@ -92,6 +92,7 @@ sub get_available_adaptors{
 		'Allele'                          => 'Bio::EnsEMBL::Variation::DBSQL::AlleleAdaptor',
 		'ProteinFunctionPredictionMatrix' => 'Bio::EnsEMBL::Variation::DBSQL::ProteinFunctionPredictionMatrixAdaptor',
     'Phenotype'                       => 'Bio::EnsEMBL::Variation::DBSQL::PhenotypeAdaptor',
+    'ReadCoverage'                    => 'Bio::EnsEMBL::Variation::DBSQL::ReadCoverageAdaptor',
     'RegulatoryFeatureVariation'      => 'Bio::EnsEMBL::Variation::DBSQL::RegulatoryFeatureVariationAdaptor',
     'MotifFeatureVariation'           => 'Bio::EnsEMBL::Variation::DBSQL::MotifFeatureVariationAdaptor',
     'PhenotypeFeature'                => 'Bio::EnsEMBL::Variation::DBSQL::PhenotypeFeatureAdaptor',

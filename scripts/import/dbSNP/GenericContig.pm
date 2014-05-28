@@ -51,7 +51,8 @@ use DBI qw(:sql_types);
 use Fcntl qw( LOCK_SH LOCK_EX );
 use List::Util qw ( min max );
 
-our $FARM_BINARY = 'bsub';
+#our $FARM_BINARY = "bsub -R 'select[gpfs]'  ";  ##EBI
+our $FARM_BINARY = "bsub";
 
 our %FARM_PARAMS = (
   
@@ -118,8 +119,8 @@ sub new {
   my $caller = shift;
   my $class = ref($caller) || $caller;
 
-  my ($dbm, $tmp_dir, $tmp_file, $limit, $mapping_file_dir, $dbSNP_BUILD_VERSION, $ASSEMBLY_VERSION, $GROUP_TERM,$GROUP_LABEL, $skip_routines, $scriptdir, $logh, $source_engine) =
-        rearrange([qw(DBMANAGER TMPDIR TMPFILE LIMIT MAPPING_FILE_DIR DBSNP_VERSION ASSEMBLY_VERSION GROUP_TERM GROUP_LABEL SKIP_ROUTINES SCRIPTDIR LOG SOURCE_ENGINE )],@_);
+  my ($dbm, $tmp_dir, $tmp_file, $limit, $mapping_file_dir, $dbSNP_VERSION, $ASSEMBLY_VERSION, $GROUP_TERM,$GROUP_LABEL, $skip_routines, $scriptdir, $logh, $source_engine, $schema_name) =
+        rearrange([qw(DBMANAGER TMPDIR TMPFILE LIMIT MAPPING_FILE_DIR DBSNP_VERSION ASSEMBLY_VERSION GROUP_TERM GROUP_LABEL SKIP_ROUTINES SCRIPTDIR LOG SOURCE_ENGINE SCHEMA_NAME )],@_);
 
 
   my $dbSNP = $dbm->dbSNP()->dbc();
@@ -143,8 +144,8 @@ sub new {
 		'tmpdir' => $tmp_dir,
 		'tmpfile' => $tmp_file,
 		'limit' => $limit,
-    'mapping_file_dir' => $mapping_file_dir,
-		'dbSNP_version' => $dbSNP_BUILD_VERSION,
+                'mapping_file_dir' => $mapping_file_dir,
+		'dbSNP_version' => $dbSNP_VERSION,
 		'dbSNP_share_db' => $shared_db,
 		'assembly_version' => $ASSEMBLY_VERSION,
 		'skip_routines' => $skip_routines,
@@ -155,6 +156,8 @@ sub new {
 		'group_term'  => $GROUP_TERM,
 		'group_label' => $GROUP_LABEL,
 		'source_engine' => $source_engine,
+		'schema_name'   => $schema_name,
+
 		}, $class;
 }
 
@@ -259,7 +262,7 @@ sub run_on_farm {
   
   #Wrap the command to be executed into a shell script
   my $tempfile = $task . "_" . $self->{'tmpfile'};
-  my $task_command = qq{perl $self->{'scriptdir'}/$script -species $self->{'species'} -dbSNP_shared $self->{'dbSNP_share_db'} -registry_file $self->{'registry_file'} -task $task -file_prefix $file_prefix -task_management_file $task_manager_file -tempdir $self->{'tmpdir'} -tempfile $tempfile  -source_engine $self->{source_engine} } . join(" ",@args);
+  my $task_command = qq{perl $self->{'scriptdir'}/$script -species $self->{'species'} -dbSNP_shared $self->{'dbSNP_share_db'} -registry_file $self->{'registry_file'} -task $task -file_prefix $file_prefix -task_management_file $task_manager_file -tempdir $self->{'tmpdir'} -tempfile $tempfile  -source_engine $self->{source_engine} -schema_name $self->{schema_name}} . join(" ",@args);
   warn"Sending task_command $task_command\n";
   my $script_wrapper = $file_prefix . '_command.sh';
   open(CMD,'>',$script_wrapper);
@@ -270,15 +273,16 @@ sub run_on_farm {
   print $logh "Running $script with task management file: $task_manager_file\n";
   print $logh Progress::location();
   ### changed $memory_long to $memory for farm3
-#  my $bsub_cmd = qq{$FARM_BINARY -R'select[mem>$memory\] rusage[mem=$memory\]' -M$memory_long -q $queue -J'$jobname$array_options' -o $logfile_prefix\%J.%I.out -e $logfile_prefix\%J.%I.err bash $script_wrapper};
-my $bsub_cmd = qq{$FARM_BINARY -R'select[mem>$memory\] rusage[mem=$memory\]' -M$memory -q $queue -J'$jobname$array_options' -o $logfile_prefix\%J.%I.out -e $logfile_prefix\%J.%I.err bash $script_wrapper};
+  my $bsub_cmd = qq{$FARM_BINARY -R'select[mem>$memory\] rusage[mem=$memory\]' -M$memory_long -q $queue -J'$jobname$array_options' -o $logfile_prefix\%J.%I.out -e $logfile_prefix\%J.%I.err bash $script_wrapper};
+#my $bsub_cmd = qq{$FARM_BINARY -R'select[mem>$memory\] rusage[mem=$memory\]' -M$memory  -J'$jobname$array_options' -o $logfile_prefix\%J.%I.out -e $logfile_prefix\%J.%I.err bash $script_wrapper}; ### EBI
   warn "sending to farm:  $bsub_cmd\n";
   #Submit the job array to the farm
   my $submission = `$bsub_cmd`;
   my ($jobid) = $submission =~ m/^Job \<([0-9]+)\>/i;
   print $logh Progress::location();
-  warn "Need to wait for job id $jobid\nSenfin:$FARM_BINARY -J $jobid\_waiting -q $wait_queue -w'ended($jobid)' -K -o $file_prefix\_waiting.out sleep 1\n\n";
+  warn "Need to wait for job id $jobid\nSenfin:$FARM_BINARY -J $jobid\_waiting  -w'ended($jobid)' -K -o $file_prefix\_waiting.out sleep 1\n\n";
   #Submit a job that depends on the job array so that the script will halt  (added meme req after problems on farm3)
+#  system(qq{$FARM_BINARY -R"select[mem>2000] rusage[mem=2000]" -M2000 -J $jobid\_waiting  -w'ended($jobid)' -K -o $file_prefix\_waiting.out sleep 1});  ###EBI
   system(qq{$FARM_BINARY -R"select[mem>2000] rusage[mem=2000]" -M2000 -J $jobid\_waiting -q $wait_queue -w'ended($jobid)' -K -o $file_prefix\_waiting.out sleep 1});
   print $logh Progress::location();
   
@@ -422,6 +426,7 @@ sub source_table {
     my ($species,$tax_id,$version) = $dbSNP_db_name  =~ m/^(.+)?\_([0-9]+)\_([0-9]+)$/;
     my $url = 'http://www.ncbi.nlm.nih.gov/projects/SNP/';
 
+    $version =  $self->{'dbSNP_version'} unless defined $version;
     if(defined $source_name &&  $source_name=~ /Archive/){ 
         $self->{'dbVar'}->do(qq{INSERT IGNORE INTO source (source_id,name,version,description,url,somatic_status, data_types) VALUES (2, "$source_name",$version,"Former variants names imported from dbSNP", "$url", "mixed","variation_synonym")});
     }    
@@ -444,6 +449,9 @@ sub table_exists_and_populated {
     my $sql;
     if($self->{source_engine} =~/mssql|sqlserver/ ){
 	$sql = qq[SELECT OBJECT_ID('$table')];
+    }
+    elsif($self->{source_engine} =~/pg|postgreSQL/i ){
+        $sql = qq[SELECT * FROM pg_catalog.pg_tables where tablename like '$table'];
     }
     else{
 	$sql = qq[show tables like '$table'];
@@ -894,7 +902,18 @@ sub variation_table {
 	              THEN  NULL
 	              ELSE snp.validation_status
 	            END,
-	            NULL,
+	            snp.snp_id
+		    FROM SNP snp 
+		    WHERE exemplar_subsnp_id != 0
+	       } ;
+    }
+    elsif( $self->{source_engine} =~/postgreSQL/i ){
+	$stmt .= qq{ 1, 
+	             'rs' || snp.snp_id AS sorting_id, 
+	             CASE WHEN snp.validation_status = 0
+	              THEN  NULL
+	              ELSE snp.validation_status
+	            END,
 	            snp.snp_id
 		    FROM SNP snp 
 		    WHERE exemplar_subsnp_id != 0
@@ -904,7 +923,6 @@ sub variation_table {
 	$stmt .= qq{ 1, 
 	          CONCAT('rs', CAST(snp.snp_id AS CHAR)) AS sorting_id, 	          
                   snp.validation_status,
-	          NULL,
 	          snp.snp_id
 		  FROM SNP snp 
 		  WHERE exemplar_subsnp_id != 0
@@ -928,7 +946,7 @@ sub variation_table {
       $self->{'dbVar'}->do( qq[ALTER TABLE variation disable keys]);  
 
     }
-    load( $self->{'dbVar'}, "variation", "source_id", "name", "validation_status", "ancestral_allele", "snp_id" ) unless ($resume_at_subsnp_id > 0);
+    load( $self->{'dbVar'}, "variation", "source_id", "name", "validation_status", "snp_id" ) unless ($resume_at_subsnp_id > 0);
     $self->{'dbVar'}->do( "ALTER TABLE variation ADD INDEX snpidx( snp_id )" ) unless ($resume_at_subsnp_id > 0);
     debug(localtime() . "\tVariation table loaded");
     
@@ -1219,9 +1237,21 @@ sub population_table {
   # load PopClassCode data as populations 
   #    - these are super_populations  like 'MULTI-NATIONAL' and 'NORTH/EAST AFRICA & MIDDLE EAST'
 
-  debug(localtime() . "\tDumping population class data");
+  debug(localtime() . "\tDumping population class data" );
 
-  my $stmt = qq{
+    my $stmt;
+    if($self->{source_engine} =~/postgreSQL/i){
+	$stmt = qq{
+                SELECT 
+                  btrim(pop_class), 
+                  (pop_class_id), 
+                  btrim(pop_class_text)
+		FROM 
+		  $self->{'dbSNP_share_db'}.PopClassCode
+               };
+    }
+    else{
+	$stmt = qq{
                 SELECT 
                   RTRIM(pop_class), 
                   RTRIM(pop_class_id), 
@@ -1229,6 +1259,7 @@ sub population_table {
 		FROM 
 		  $self->{'dbSNP_share_db'}.PopClassCode
                };
+    }
   dumpSQL($self->{'dbSNP'},$stmt);
 
   load($self->{'dbVar'}, 'population', 'name', 'pop_class_id', 'description');
@@ -1237,12 +1268,17 @@ sub population_table {
 
 
 
-  debug(localtime() . "\tDumping population data");
+  debug(localtime() . "\tDumping population data" );
 
   # load Population data as populations
     my $concat_syntax ;
     if($self->{source_engine} =~/mssql/){
 	$concat_syntax = qq[ p.handle+':'+p.loc_pop_id ];
+    }
+    elsif($self->{source_engine} =~/postgreSQL/i){
+	warn "setting search path for postgreSQL: " .$self->{'schema_name'} . "\n";
+	my $sth = "SET search_path TO $self->{'schema_name'},dbsnp_main,public";
+	$concat_syntax = qq[ p.handle || loc_pop_id ];
     }
     else{
 	$concat_syntax = qq[ CONCAT(p.handle,':',p.loc_pop_id) ];
@@ -2284,6 +2320,13 @@ sub parallelized_individual_genotypes {
                  FROM $self->{'snp_dbname'}..sysobjects 
                  WHERE name LIKE 'SubInd%'SELECT OBJECT_ID('SubInd%')];
     }
+  elsif($self->{source_engine} =~/postgreSQL/ ){
+      $sql = qq[ SELECT tablename 
+                 FROM pg_catalog.pg_tables
+                 WHERE schemaname = '$self->{schema_name}' 
+                 AND tablename LIKE 'subind%' ];
+      warn "doing $sql\n";
+    }
     else{
 	$sql = qq[show tables like 'SubInd%'];
     }
@@ -2701,11 +2744,12 @@ sub population_genotypes {
     if ($self->{'limit'}) {
       $stmt .= "TOP $self->{'limit'} ";
     }
+#ROUND(gtfsp.cnt,0),
     $stmt .= qq{
                   gtfsp.subsnp_id AS sorting_id, 
                   gtfsp.pop_id, 
                   gtfsp.freq,
-                  ROUND(gtfsp.cnt,0),
+                  gtfsp.cnt,
                   a1.allele, 
                   a2.allele
 	       	FROM   
@@ -2841,6 +2885,13 @@ sub archive_rs_synonyms {
                           'rs' + CAST(rsCurrent as VARCHAR(20)) , 
                           orien2Current,
                           'rs' + CAST(rsLow as VARCHAR(20)) 
+                          FROM RsMergeArch ] ;
+    }
+    elsif($self->{source_engine} =~/postgreSQL/ ){
+	$concat_sql = qq[ SELECT 'rs' || rsHigh,
+                          'rs' || rsCurrent, 
+                          orien2Current,
+                          'rs' || rsLow 
                           FROM RsMergeArch ] ;
     }
     else{

@@ -50,7 +50,7 @@ our @short_names = qw(1kg_hct 1kg_hct_ceu 1kg_hct_yri 1kg_hce 1kg_hce_ceu 1kg_hc
                       esp_6500 clin_assoc all_chips
                       Chicken600K EquineSNP50 BovineHD BovineLD BovineSNP50  
                       phencode HumanOmni5 OvineSNP50 OvineHDSNP
-                      ExomeChip ImmunoChip
+                      ExomeChip ImmunoChip HumanOmniExpress ClinVar
                      );
 
 our @dbsnp_clinical_significance_types = qw(
@@ -64,6 +64,23 @@ our @dbsnp_clinical_significance_types = qw(
     histocompatibility
     other
 );
+
+our @clinvar_clinical_significance_types = (
+    'Uncertain significance',
+    'not provided',
+    'Benign',
+    'Likely benign',
+    'Likely pathogenic',
+    'Pathogenic',
+    'drug response',
+    'histocompatibility',
+    'other',
+    'confers sensitivity',
+    'risk factor',
+    'association',
+    'protective' 
+);
+
 
 our @dgva_clinical_significance_types = (
     'Not tested',
@@ -887,6 +904,11 @@ our @ATTRIB_TYPES = (
         description => 'The clinical significance of a structural variant as reported by DGVa',
     },
     {
+         code => 'clinvar_clin_sig',
+         name => 'ClinVar clinical significance',
+         description => 'The clinical significance of a variant as reported by ClinVar',
+    },
+    {
         code => 'prot_func_analysis',
         name => 'Protein function analysis ',
         description => 'The program used to make protein function predictions',
@@ -980,6 +1002,7 @@ our %ATTRIBS = (
    'short_name'          => \@short_names,
    'dbsnp_clin_sig'      => \@dbsnp_clinical_significance_types,
    'dgva_clin_sig'       => \@dgva_clinical_significance_types,
+   'clinvar_clin_sig'    => \@clinvar_clinical_significance_types,
    'polyphen_prediction' => ['probably damaging', 'possibly damaging', 'benign', 'unknown'],
    'sift_prediction'     => [qw(tolerated deleterious)],
    'prot_func_analysis'  => [qw(sift polyphen_humvar polyphen_humdiv)],

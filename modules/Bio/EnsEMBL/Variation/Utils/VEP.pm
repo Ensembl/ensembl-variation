@@ -1237,7 +1237,7 @@ sub get_all_consequences {
     
     # check and order
     my $test = $return[0];
-    if(ref($test) ne 'HASH' && $$test =~ /^\#\#\#ORDER\#\#\#/) {
+    if(defined($test) && ref($test) ne 'HASH' && $$test =~ /^\#\#\#ORDER\#\#\#/) {
       @return = sort {$$a cmp $$b} @return;
       $$_ =~ s/\#\#\#ORDER\#\#\# \d+ // for @return; 
     }
@@ -1392,7 +1392,7 @@ sub vf_list_to_cons {
                 # and process them into VCF-compatible string
                 my $string = 'CSQ=';
                 
-                foreach my $line(@{vf_to_consequences($config, $vf)}) {
+                foreach my $line(grep {defined($_)} @{vf_to_consequences($config, $vf)}) {
                     
                     # use the field list (can be user-defined by setting --fields)
                     for my $col(@{$config->{fields}}) {
@@ -1466,7 +1466,7 @@ sub vf_list_to_cons {
                   use CGI qw(escape);
                 };
                 
-                foreach my $con(@{vf_to_consequences($config, $vf)}) {
+                foreach my $con(grep {defined($_)} @{vf_to_consequences($config, $vf)}) {
                     my $line = "<doc>\n";
                     
                     # create unique ID
@@ -2145,7 +2145,7 @@ sub add_extra_fields {
     
     # allele number
     if(defined($config->{allele_number})) {
-      $line->{Extra}->{ALLELE_NUM} = $bvfoa->variation_feature->{_allele_nums}->{$bvfoa->variation_feature_seq} || '?' if $bvfoa->variation_feature->{_allele_nums};
+      $line->{Extra}->{ALLELE_NUM} = $bvfoa->base_variation_feature->{_allele_nums}->{$bvfoa->variation_feature_seq} || '?' if $bvfoa->base_variation_feature->{_allele_nums};
     }
     
     # strand
@@ -3416,15 +3416,15 @@ sub check_existing_tabix {
   
   my $max = 200;
   my $total = scalar @$listref;
-  my $i = 0;
+  my $p = 0;
   
   foreach my $chr(keys %by_chr) {
     my $list = $by_chr{$chr};
     
     while(scalar @$list) {
       my @tmp_list = sort {$a->{start} <=> $b->{start}} splice @$list, 0, $max;
-      progress($config, $i, $total);
-      $i += scalar @tmp_list;
+      progress($config, $p, $total);
+      $p += scalar @tmp_list;
       
       my $region_string = join " ", map {$_->{chr}.':'.($_->{start} > $_->{end} ? $_->{end}.'-'.$_->{start} : $_->{start}.'-'.$_->{end})} @tmp_list;
       
@@ -3435,28 +3435,23 @@ sub check_existing_tabix {
       open VARS, "tabix $file $region_string 2>&1 |"
         or die "\nERROR: Could not open tabix pipe for $file\n";
       
-      my $i = 0;
+      # convert list to hash so we can look up quickly by position
+      my %hash;
+      push @{$hash{$_->{start}}}, $_ for @tmp_list;
       
       VAR: while(<VARS>) {
         chomp;
         my $existing = parse_variation($config, $_);
-        #print STDERR "EX ".$existing->{variation_name}." ".$existing->{start}."\n";
         
-        # compare to current indexed var
-        my $input = $tmp_list[$i];
-        last if !$input;
-        
-        while($existing->{start} >= $input->{start}) {
-          #print STDERR "IN ".$input->{variation_name}." ".$input->{start}."\n";
-          
-          if($existing->{start} == $input->{start} && $existing->{failed} <= $config->{failed}) {
-            push @{$input->{existing}}, $existing unless is_var_novel($config, $existing, $input);
-            next VAR;
-          }
-          else {
-            $i++;
-            $input = $tmp_list[$i];
-            last if !$input;
+        foreach my $input(@{$hash{$existing->{start}} || []}) {          
+          if(
+            $existing->{start} == $input->{start} &&
+            $existing->{failed} <= $config->{failed} &&
+            !is_var_novel($config, $existing, $input)
+          ) {
+            push @{$input->{existing}}, $existing unless
+              grep {$_->{variation_name} eq $existing->{variation_name}}
+              @{$input->{existing} || []};
           }
         }
       }
@@ -3948,17 +3943,13 @@ sub clean_transcript {
         delete $tr->{$key} if defined($tr->{$key});
     }
     
-    # clean all attributes but miRNA
+    # clean attributes
     if(defined($tr->{attributes})) {
         my @new_atts;
+        my %keep = map {$_ => 1} qw(gencode_basic miRNA ncRNA cds_start_NF cds_end_NF);
         foreach my $att(@{$tr->{attributes}}) {
-            push @new_atts, $att if $att->{code} eq 'miRNA';
-            
-            # get and clean gencode_basic attribute
-            if($att->{code} eq 'gencode_basic') {
-              delete $att->{$_} for grep {$_ ne 'code'} keys %$att;
-              push @new_atts, $att;
-            }
+            delete $att->{description};
+            push @new_atts, $att if defined($keep{$att->{code}});
         }
         $tr->{attributes} = \@new_atts;
     }

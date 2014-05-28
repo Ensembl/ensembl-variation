@@ -43,38 +43,35 @@ GetOptions(
   'password|p=s',
   'port|P=i',
   'database|d=s',
-  
-  'registry|r=s',
-  'species|s=s',
 ) or die "ERROR: Failed to parse command-line flags\n";
 
-die("ERROR: No species defined (--species)") unless defined($config->{species});
-
-$config->{reg} = 'Bio::EnsEMBL::Registry';
-
-if(defined($config->{registry})) {
-  $config->{reg}->load_all($config->{registry});
+foreach(qw(host database)) {
+  die("ERROR: No $_ defined (--$_)") unless defined($config->{$_});
 }
 
-else {
-  for(qw(host user port)) {
-    die("ERROR: --$_ not defined") unless defined $config->{$_};
-  }
-  
-  $config->{reg}->load_registry_from_db(
-    -host       => $config->{host},
-    -user       => $config->{user},
-    -pass       => $config->{password},
-    -port       => $config->{port},
-  );
-}
+$config->{port} ||= 3306;
+$config->{user} ||= 'ensro';
 
-# get adaptors
-my $ga = $config->{reg}->get_adaptor($config->{species}, "variation", "individualgenotype");
-die("ERROR: Failed to get genotype adaptor") unless defined($ga);
+Bio::EnsEMBL::Registry->load_registry_from_db(
+  -host       => $config->{host},
+  -user       => $config->{user},
+  -pass       => $config->{password},
+  -port       => $config->{port},
+);
+
+# connect to DB
+my $connection_string = sprintf(
+  "DBI:mysql(RaiseError=>1):host=%s;port=%s;db=%s",
+  $config->{host},
+  $config->{port},
+  $config->{database}
+);
+my $dbc = DBI->connect(
+  $connection_string, $config->{user}, $config->{password}
+);
 
 # first get seq_regions
-my $sth = $ga->dbc->prepare(qq{
+my $sth = $dbc->prepare(qq{
   SELECT DISTINCT(seq_region_id)
   FROM variation_feature
 });
@@ -85,7 +82,7 @@ $sth->bind_columns(\$sr_id);
 push @sr_ids, $sr_id while $sth->fetch();
 $sth->finish();
 
-$sth = $ga->dbc->prepare(qq{
+$sth = $dbc->prepare(qq{
   SELECT vf.variation_name, vf.seq_region_id, vf.seq_region_start, vf.seq_region_end, vf.seq_region_strand, g.*
   FROM compressed_genotype_var g, variation_feature vf
   WHERE vf.seq_region_id = ?
