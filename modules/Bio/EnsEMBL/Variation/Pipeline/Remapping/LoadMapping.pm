@@ -44,11 +44,73 @@ sub fetch_input {
 
 sub run {
     my $self = shift;
-    $self->load_features();
+    if ($self->param('mode') eq 'remap_read_coverage') {
+        $self->load_read_coverage();
+    } else {
+        $self->load_features();
+    }
 }
 
 sub write_output {
     my $self = shift;
+}
+
+
+sub load_read_coverage {
+    my $self = shift;
+
+    my $load_features_dir = $self->param('load_features_dir');
+    my $vdba = $self->param('vdba');
+    my $dbc = $vdba->dbc;
+
+    my $dbname = $vdba->dbc->dbname();
+    my $read_coverage_table = 'read_coverage';
+    my $result_table = "$read_coverage_table\_mapping_results";
+
+    $dbc->do(qq{ DROP TABLE IF EXISTS $result_table});
+    $dbc->do(qq{ CREATE TABLE $result_table like $read_coverage_table });
+    $dbc->do(qq{ ALTER TABLE $result_table DISABLE KEYS});
+
+    my $dbh = $dbc->db_handle;
+    my $sth = $dbh->prepare(qq{
+        SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = '$dbname'
+        AND TABLE_NAME = '$result_table';
+    });
+    $sth->execute();
+
+    # QC that all necessary columns are there: e.g. seq_region_id, ...
+    my @column_names = ();
+    while (my @name = $sth->fetchrow_array) {
+        push @column_names, $name[0];
+    }
+    $sth->finish();
+    @column_names = sort @column_names;
+
+    my $column_names_concat = join(',', @column_names);
+
+    opendir(IND_DIR, $load_features_dir) or die $!;
+    while (my $individual_dir = readdir(IND_DIR))  {
+        next if ($individual_dir =~ /^\./);
+        my $dir = "$load_features_dir/$individual_dir";
+        opendir(DIR, $dir) or die $!;
+        while (my $file = readdir(DIR)) {
+            if ($file =~ /^(.+)\.txt$/) {
+                my $file_number = $1;
+                $self->run_cmd("cp $dir/$file_number.txt $dir/load_$file_number.txt");
+                my $TMP_DIR = $dir;
+                my $tmp_file = "load_$file_number.txt";
+                $ImportUtils::TMP_DIR = $TMP_DIR;
+                $ImportUtils::TMP_FILE = $tmp_file;
+                load($dbc, ($result_table, $column_names_concat));
+            }
+        }
+        closedir(DIR);
+    }   
+    closedir(IND_DIR);
+
+    $dbc->do(qq{ ALTER TABLE $result_table ENABLE KEYS});
+    $dbh->disconnect;
 }
 
 sub load_features {
