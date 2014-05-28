@@ -22,15 +22,22 @@ sub fetch_input {
     my $compare_locations  = $self->param('compare_locations');
 
     my $sam = Bio::DB::Sam->new( -bam => $bam_file, -fasta => $fasta_file,);	
-
     $self->param('sam', $sam);	
 
-    my $fh_mappings        = FileHandle->new("$mapping_results_dir/mappings_$file_number.txt", 'w');
-    my $fh_failed_mappings = FileHandle->new("$mapping_results_dir/failed_mapping_$file_number.txt", 'w');
+    if ($self->param('mode') eq 'remap_read_coverage') {
+        my $individual_id = $self->param('individual_id');
+        my $fh_mappings        = FileHandle->new("$mapping_results_dir/$individual_id/mappings_$file_number.txt", 'w');
+        my $fh_failed_mappings = FileHandle->new("$mapping_results_dir/$individual_id/failed_mapping_$file_number.txt", 'w');
 
-    $self->param('fh_mappings', $fh_mappings);
-    $self->param('fh_failed_mappings', $fh_failed_mappings);
+        $self->param('fh_mappings', $fh_mappings);
+        $self->param('fh_failed_mappings', $fh_failed_mappings);
+    } else {
+        my $fh_mappings        = FileHandle->new("$mapping_results_dir/mappings_$file_number.txt", 'w');
+        my $fh_failed_mappings = FileHandle->new("$mapping_results_dir/failed_mapping_$file_number.txt", 'w');
 
+        $self->param('fh_mappings', $fh_mappings);
+        $self->param('fh_failed_mappings', $fh_failed_mappings);
+    }
     if ($compare_locations) {
         my $registry = 'Bio::EnsEMBL::Registry';
         $registry->load_all($registry_file);
@@ -40,6 +47,62 @@ sub fetch_input {
 }
 
 sub run {
+    my $self = shift;
+    if ($self->param('mode') eq 'remap_read_coverage') {
+        $self->parse_read_location();
+    } else {
+        $self->parse_variation_location();
+    }
+}
+
+
+sub parse_read_location {
+    my $self = shift;
+    my $sam                = $self->param('sam');
+    my $fh_mappings        = $self->param('fh_mappings');
+    my $fh_failed_mappings = $self->param('fh_failed_mappings');
+    my $fasta_file         = $self->param('fasta_file');
+
+    my @alignments = $sam->features();
+
+    my $map_weights = $self->get_map_weights(\@alignments);
+    $self->test_all_variants_are_mapped($fasta_file, $map_weights);
+    my $query_sequences = $self->get_query_sequences(\@alignments, $map_weights);
+
+    foreach my $alignment (@alignments) {
+        my $query_name = $alignment->query->name;
+        my $seq_region_name = $alignment->seq_id;
+        my $t_start = $alignment->start;
+        my $t_end   = $alignment->end;
+        my $t_strand = $alignment->strand;
+        my $diff = $t_end - $t_start + 1;
+        my $map_weight = $map_weights->{$query_name};		
+
+        my @components = split(':', $query_name);
+        if ((scalar @components) == 5) { # query sequence is patch
+            my $id = $components[0];
+            my $type = $components[1];
+            my $upstream_seq_length = $components[2];
+            my $read_length = $components[2];
+            $t_start = $t_start + 100 - 1;
+            $t_end = $t_start + $read_length - 1;
+            $query_name = "$id:$type";
+        }
+
+        my $edit_distance         = $alignment->aux_get("NM");
+        my $alignment_score_count = $alignment->aux_get("AS"); 
+        my $score = $alignment_score_count/$diff;
+
+        print $fh_mappings join("\t", $query_name, $seq_region_name, $t_start, $t_end, $t_strand, $map_weight, $score), "\n";
+
+    }
+    $fh_mappings->close();
+    $fh_failed_mappings->close();
+
+}
+
+
+sub parse_variation_location {
     my $self = shift;
 
     my $sam                = $self->param('sam');
