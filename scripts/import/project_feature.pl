@@ -89,6 +89,16 @@ if ($config->{help} || !$args) {
     exit(0);
 }
 
+# vdbname_oldasm is only required if variation_feature table from vdbname_oldasm is projected
+unless ($config->{vdbname_oldasm} && $config->{vhost_oldasm}) {
+    unless ($config->{vdbname_newasm} && $config->{vhost_newasm}) {
+        die 'The script requires information about the variation database that contains the table which needs to be projected. Try --help for usage instructions';
+    } else {
+        $config->{use_new_vdb_only} = 1;
+    }
+}
+
+
 # Test argument settings are correct -------------------------
 my $args_complete = 1;
 foreach my $arg (qw/newasm_name oldasm_name working_dir feature_type
@@ -536,9 +546,9 @@ Options:
     --cport_newasm                               # default 3306
 
     # Connection params for vdb_oldasm are needed, if feature table from old asm is not copied to new variation database
-    --vdb_oldasm | --vdbname_oldasm              # required unless use_new_vdb_only is set
+    --vdb_oldasm | --vdbname_oldasm              # required unless feature table that needs to be projected is in vdbname_newasm
     --vuser_oldasm                               # default ensro
-    --vhost_oldasm                               # required unless use_neq_vdb_olny is set
+    --vhost_oldasm                               # required unless feature table that needs to be projected is in vdbname_newasm
     --vport_oldasm                               # default 3306
 
     --vdb_newasm | --vdbname_newasm              # required
