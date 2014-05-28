@@ -70,7 +70,6 @@ sub run {
     }
     # 3. check bwa and samtools are working
 
-
     1;
 }
 
