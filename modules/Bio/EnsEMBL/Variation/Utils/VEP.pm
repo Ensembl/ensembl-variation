@@ -2809,7 +2809,8 @@ sub whole_genome_fetch_transcript {
     my $tr_cache = $config->{tr_cache};
     my $slice_cache = $config->{slice_cache};
     
-    my $up_down_size = up_down_size();
+    my $up_size   = $Bio::EnsEMBL::Variation::Utils::VariationEffect::UPSTREAM_DISTANCE;
+    my $down_size = $Bio::EnsEMBL::Variation::Utils::VariationEffect::DOWNSTREAM_DISTANCE;
     
     # check we have defined regions
     return unless defined($vf_hash->{$chr}) && defined($tr_cache->{$chr});
@@ -2829,8 +2830,8 @@ sub whole_genome_fetch_transcript {
         my $tr = $tr_cache->{$chr}->[$tr_counter++];
         
         # do each overlapping VF
-        my $s = $tr->start - $up_down_size;
-        my $e = $tr->end + $up_down_size;
+        my $s = $tr->start - ($tr->strand == 1 ? $up_size : $down_size);
+        my $e = $tr->end + ($tr->strand == 1 ? $down_size : $up_size);
         
         # get the chunks this transcript overlaps
         my %chunks;
@@ -2946,7 +2947,8 @@ sub whole_genome_fetch_sv {
     my $rf_cache = $config->{rf_cache};
     my $slice_cache = $config->{slice_cache};
     
-    my $up_down_size = up_down_size();
+    my $up_size   = $Bio::EnsEMBL::Variation::Utils::VariationEffect::UPSTREAM_DISTANCE;
+    my $down_size = $Bio::EnsEMBL::Variation::Utils::VariationEffect::DOWNSTREAM_DISTANCE;
     
     debug("Analyzing structural variations") unless defined($config->{quiet});
     
@@ -2960,7 +2962,16 @@ sub whole_genome_fetch_sv {
         my %done_genes = ();
         
         if(defined($tr_cache->{$chr})) {
-            foreach my $tr(grep {overlap($_->{start} - $up_down_size, $_->{end} + $up_down_size, $svf->{start}, $svf->{end})} @{$tr_cache->{$chr}}) {
+            foreach my $tr(
+              grep {
+                overlap(
+                  $_->{start} - ($_->strand == 1 ? $up_size : $down_size),
+                  $_->{end} + ($_->strand == 1 ? $down_size : $up_size),
+                  $svf->{start},
+                  $svf->{end}
+                )
+              } @{$tr_cache->{$chr}}
+            ) {
                 my $svo = Bio::EnsEMBL::Variation::TranscriptStructuralVariation->new(
                     -transcript                   => $tr,
                     -structural_variation_feature => $svf,
