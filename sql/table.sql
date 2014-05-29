@@ -1005,8 +1005,8 @@ CREATE TABLE read_coverage (
 @column study_id								Foreign key references to the @link study table.	
 @column class_attrib_id					Foreign key references to the @link attrib table. Defines the type of structural variant.<br /> 
                                 The list of structural variation classes is available <a href="/info/genome/variation/data_description.html#classes">here</a>.
-@column clinical_significance_attrib_id  Foreign key references to the @link attrib, identifying the clinical significance of this variant, as reported by DGVa.<br /> 
-                                         The list of clinical significances is available <a href="/info/genome/variation/data_description.html#clin_significance">here</a>.
+@column clinical_significance   A set of clinical significance classes assigned to the structural variant.<br /> 
+                                The list of clinical significances is available <a href="/info/genome/variation/data_description.html#clin_significance">here</a>.
 @column validation_status				Validation status of the variant.
 @column is_evidence             Flag indicating if the structural variation is a supporting evidence (1) or not (0).
 @column somatic                 Flags whether this structural variation is known to be somatic or not
@@ -1023,7 +1023,7 @@ CREATE TABLE structural_variation (
 	source_id int(10) unsigned NOT NULL,
   study_id int(10) unsigned DEFAULT NULL,
 	class_attrib_id int(10) unsigned NOT NULL DEFAULT 0,
-	clinical_significance_attrib_id int(10) unsigned DEFAULT NULL,
+	clinical_significance SET('uncertain significance','not provided','benign','likely benign','likely pathogenic','pathogenic','drug response','histocompatibility','other','confers sensitivity','risk factor','association','protective') DEFAULT NULL,
   validation_status ENUM('validated','not validated','high quality'),
 	is_evidence TINYINT(4) DEFAULT 0,
 	somatic TINYINT(1) NOT NULL DEFAULT 0,
@@ -1032,8 +1032,7 @@ CREATE TABLE structural_variation (
   KEY name_idx (variation_name),
 	KEY source_idx (source_id),
 	KEY study_idx (study_id),
-	KEY attrib_idx (class_attrib_id),
-	KEY clinical_attrib_idx (clinical_significance_attrib_id)
+	KEY attrib_idx (class_attrib_id)
 );
 
 
