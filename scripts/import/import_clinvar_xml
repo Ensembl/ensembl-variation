@@ -1,0 +1,356 @@
+#!/usr/bin/env perl
+
+=head1 LICENSE
+
+Copyright [1999-2014] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+=cut
+
+
+=head1 CONTACT
+
+ Please email comments or questions to the public Ensembl
+ developers list at <http://lists.ensembl.org/mailman/listinfo/dev>.
+
+ Questions may also be sent to the Ensembl help desk at
+ <http://www.ensembl.org/Help/Contact>.
+
+=cut
+
+
+use strict;
+use warnings;
+use Getopt::Long;
+use XML::Simple;
+use XML::Parser;
+use XML::Records;
+use Data::Dumper;
+
+
+use Bio::EnsEMBL::Variation::Utils::Sequence qw( get_hgvs_alleles);
+use Bio::EnsEMBL::Variation::VariationFeature;
+use Bio::DB::Fasta;
+use Bio::EnsEMBL::Registry;
+
+my ($data_file, $registry_file, $assembly);
+
+GetOptions ("data_file=s"  => \$data_file,
+	    "registry=s"   => \$registry_file,
+	    "assembly=s"   => \$assembly,
+    );
+
+usage() unless defined $data_file && defined $registry_file && defined $assembly;
+
+my $reg = 'Bio::EnsEMBL::Registry';
+$reg->load_all($registry_file);
+
+my $variation_adaptor     = $reg->get_adaptor('homo_sapiens', 'variation', 'variation');
+my $var_feat_adaptor      = $reg->get_adaptor('homo_sapiens', 'variation', 'variationfeature');
+my $allele_adaptor        = $reg->get_adaptor('homo_sapiens', 'variation', 'allele');
+
+my $pheno_feat_adaptor    = $reg->get_adaptor('homo_sapiens', 'variation', 'phenotypefeature');
+my $phenotype_adaptor     = $reg->get_adaptor('homo_sapiens', 'variation', 'phenotype');
+
+my $slice_adaptor         = $reg->get_adaptor('homo_sapiens', 'core', 'slice');
+
+my $source   = "dbSNP_ClinVar";
+
+my $ref = XML::Records->new($data_file);
+$ref->set_records('ClinVarSet');
+
+
+my @records;
+
+while (my $set = $ref->get_record() ){
+    
+    ## dump current structure on exit
+    my $current = Dumper $set;
+
+    my %record;
+    eval{
+
+	foreach my $acc(@{$set->{ReferenceClinVarAssertion}->{ClinVarAccession}}){
+	    next unless ref($acc) eq  'HASH';
+	    ### ClinVar reference accession 
+	    $record{Acc} =  $acc->{Acc} .".".  $acc->{Version} ;;
+	}
+	## clinical significance
+	$record{Desc} = $set->{ReferenceClinVarAssertion}->{ClinicalSignificance}->{Description};
+	## confidence of assertation
+	$record{Status} = $set->{ReferenceClinVarAssertion}->{ClinicalSignificance}->{ReviewStatus} ;
+
+	my @measures;
+	if(ref($set->{ReferenceClinVarAssertion}->{MeasureSet}->{Measure}) eq 'ARRAY'){
+	    @measures = @{$set->{ReferenceClinVarAssertion}->{MeasureSet}->{Measure}};
+	}
+	else{
+	    push @measures, $set->{ReferenceClinVarAssertion}->{MeasureSet}->{Measure};
+	}
+
+	foreach my $measure(@measures){
+
+	    ### get location(s)
+
+	    foreach my $loc(@{$measure->{SequenceLocation}}){
+
+		next unless ref($loc) eq  'HASH'; 
+		next unless $loc->{Assembly} eq $assembly;
+
+		$record{Chr}    = $loc->{Chr} ; 
+		$record{start}  = $loc->{start} ; 
+		$record{end}    = $loc->{stop} ; 
+	        ## default to positive strand as alleles come from HGVS 
+		$record{strand} = '1';
+		$record{Ass}    = $loc->{Assembly}; 
+
+
+	    }
+	    my @attrib_set;
+	    if(ref($measure->{AttributeSet}) eq 'ARRAY'){
+		@attrib_set = @{$measure->{AttributeSet}};
+	    }
+	    else{
+		push @attrib_set, $measure->{AttributeSet}
+	    }
+	    ### get HGVS name for allele string
+	    foreach my $attrib (@attrib_set){
+		
+		## Not all of them have a current top level genomic
+		next unless $attrib->{Attribute}->[1]->{Type} =~ /HGVS,\s+genomic,\s+top/ ;
+		
+		$record{hgvs_g} =  $attrib->{Attribute}->[1]->{Change} 
+		if $attrib->{Attribute}->[1]->{Type} eq "HGVS, genomic, top level";
+
+		## this will pick up the previous hgvs string if none set
+		$record{hgvs_g} =  $attrib->{Attribute}->[1]->{Change} 
+		if !defined $record{hgvs_g} ;
+
+
+	    }
+	   	   
+
+	    ### get dbSNP rs id  & OMIM id Xrefs, if available
+	    
+	    if(defined $measure->{XRef}){
+		
+		foreach my $xref( @{$measure->{XRef}} ){
+		    
+		    next unless ref($xref) eq  'HASH';
+		    $record{$xref->{DB}} = $xref->{ID} ;
+		} 
+	    }
+
+
+	}
+
+	### Trait info
+	
+	if( exists $set->{ReferenceClinVarAssertion}->{TraitSet}->{Type} ){ 
+
+	    my $type = $set->{ReferenceClinVarAssertion}->{TraitSet}->{Type};
+ 	    	    	    
+	    my @traits; ### could be one or many
+
+	    if  (ref($set->{ReferenceClinVarAssertion}->{TraitSet}->{Trait}) eq 'ARRAY'){
+		@traits = @{$set->{ReferenceClinVarAssertion}->{TraitSet}->{Trait}};
+	    }
+	    else{
+		push @traits, $set->{ReferenceClinVarAssertion}->{TraitSet}->{Trait};
+	    } 
+	    
+
+	    foreach my $trait (@traits){ 
+
+		######### trait names & name types
+		my @names;
+		if  (ref($trait->{Name}) eq 'ARRAY'){ @names = @{$trait->{Name}};}
+		else{ push @names, $trait->{Name};}	    
+		
+		foreach my $name ( @names ){
+		    next unless  $name->{ElementValue}->[1]->{Type} eq "Preferred";
+		    $record{disease} =  $name->{ElementValue}->[0];
+		}
+	    }
+	}
+	
+
+
+	if (defined $record{dbSNP} && $record{dbSNP} =~/\d+/ && $record{Chr}){
+	    # || defined $record{dbVar} ;
+	    import( \%record)
+	}
+	else{
+	   my $message =  "Not importing var: ";
+	   $message .= " rs: $record{dbSNP} "        if defined $record{dbSNP} ;
+	   $message .= " on chr: $record{Chr} "      if defined $record{Chr} ;
+	   $message .= " with HGVS: $record{hgvs_g}" if defined $record{hgvs_g} ;
+	   $message .= " due to missing data ($record{Acc})\n";
+	   warn $message;
+	}
+    };
+    if( $@ ne ''){
+	print "ERROR: $@\n$current\n\n";
+	die;
+    }
+    
+}
+    
+
+sub import{
+
+    my $record = shift;
+
+    $record->{dbSNP}  = "rs" . $record->{dbSNP};     
+
+    ## look for existing or enter new variation object
+    my $var_ob = $variation_adaptor->fetch_by_name($record->{dbSNP});
+
+    if(!defined $var_ob && !defined $record->{hgvs_g}  ){
+	warn "Not entering new refSNP: $record->{dbSNP} as no HGVS available for alleles\n";
+	return undef;
+    }
+
+
+    ## need alleles to input for standard variation & for risk allele
+    $record->{hgvs_g} = $record->{Chr} . ":" . $record->{hgvs_g};
+
+    my ($ref_allele, $alt_allele);
+    eval{
+	($ref_allele, $alt_allele) = get_hgvs_alleles( $record->{hgvs_g} );
+    };
+    ## not printing bulky error message        
+    warn "Problem finding allele for $record->{dbSNP}\n" unless $@ eq '';
+
+
+    ## get slice for variation & phenotype feature
+    my $slice = $slice_adaptor->fetch_by_region( 'chromosome', $record->{Chr} );
+
+    $var_ob = enter_var($record, $slice, $ref_allele, $alt_allele)
+	unless defined $var_ob ;   
+
+    return undef unless defined $var_ob; ## allele finding failures exit here
+
+
+    ## look for existing or enter new phenotype object
+    my $pheno = get_phenotype($record->{disease});
+
+    my $type = 'Variation';
+
+    my %attribs;
+    $attribs{review_status}    = $record->{Status};
+    $attribs{external_id}      = $record->{Acc};
+    $attribs{clinvar_clin_sig} = $record->{Desc};
+    $attribs{risk_allele}      = $alt_allele if defined  $alt_allele;
+   
+    my $phenofeat = Bio::EnsEMBL::Variation::PhenotypeFeature->new(
+	-slice          => $slice,
+	-start          => $record->{start},
+	-strand         => $record->{strand},
+	-end            => $record->{end},
+	-phenotype      => $pheno,
+	-is_significant => 1,
+	-type           => $type,
+	-object         => $var_ob,
+	-source         => $source,
+	-attribs        => \%attribs
+	);
+        $pheno_feat_adaptor->store($phenofeat);
+
+
+}
+
+
+
+### retrieve or enter phenotype object
+sub get_phenotype{
+
+    my $desc = shift;
+
+    $desc =~s /\\x2c|\\X2C/\,/g; ## decode commas
+    $desc =~s /\'//g;            ## remove '
+
+    
+    my $pheno = $phenotype_adaptor->fetch_by_description( $desc )->[0];
+
+    unless ( ref($pheno) eq 'Bio::EnsEMBL::Variation::Phenotype' ){
+        $pheno = Bio::EnsEMBL::Variation::Phenotype->new(-description => $desc);
+        $phenotype_adaptor->store($pheno);
+    }
+    return $pheno;
+}
+
+
+### enter variation and associated info
+sub enter_var{
+
+    my $data       = shift;
+    my $slice      = shift;
+    my $ref_allele = shift;
+    my $alt_allele = shift;
+
+     unless (defined $ref_allele && defined $alt_allele){
+	 warn "ERROR: missing alleles for $data->{hgvs_g} / $data->{dbSNP}\n";
+	 return undef;
+     }
+
+      
+    my $var = Bio::EnsEMBL::Variation::Variation->new
+        ( -name              => $data->{dbSNP},
+          -source            => $source,
+	  -is_somatic        => 0,
+          -adaptor           => $variation_adaptor,
+        );
+    $variation_adaptor->store($var);
+    
+
+
+    foreach my $allele ( $ref_allele, $alt_allele){
+        $allele =~s/\s+//;
+        my $al = Bio::EnsEMBL::Variation::Allele->new(
+            -variation_id   => $var->dbID(),
+            -allele         => $allele,
+            -adaptor        => $allele_adaptor,
+            );
+        $allele_adaptor->store($al);
+    }
+
+
+    my $allele_str = $ref_allele ."/". $alt_allele;
+    
+    my $vf = Bio::EnsEMBL::Variation::VariationFeature->new
+        (-start           => $data->{start},
+         -end             => $data->{end},
+         -strand          => 1,
+         -slice           => $slice,
+         -variation_name  => $data->{dbSNP},
+         -map_weight      => 1,
+         -allele_string   => $allele_str,
+         -variation       => $var,
+         -source          => $source,
+         -is_somatic      => 0,
+         -adaptor         => $var_feat_adaptor,
+        );
+    $var_feat_adaptor->store($vf);
+    
+    
+    return $var;
+}
+
+
+sub usage{
+
+    die "\n\tUsage: import_clinvar_xml -data_file [ClinVar xml] -registry [registry file] -assembly [GRCh37/GRCh38]\n\n";
+
+}
