@@ -31,7 +31,7 @@ our $SOURCENAME = 'dbSNP_ClinVar';
 my $registry_file;
 
 GetOptions ("registry_file=s"       => \$registry_file);
-die "\nERROR: registry file for human db needed\n\n" unless defined $registry_file;
+die "\nERROR: registry file for human database needed\n\n" unless defined $registry_file;
 
 my $registry = 'Bio::EnsEMBL::Registry';
 $registry->load_all($registry_file);
@@ -46,11 +46,9 @@ my $variation_ids = update_variation($dbh);
 
 add_to_set($dbh, $variation_ids );
 
-fix_allele($dbh);
-
 check_phenotype_names($dbh);
 
-delete_pheno_less($dbh);
+#delete_pheno_less($dbh);
 
 check_counts($dbh);
 
@@ -59,14 +57,15 @@ check_counts($dbh);
 sub update_variation{
 
     my $dbh = shift;
-    warn "starting     update_variation\n";
+    warn "starting  update_variation\n";
     my $clinvar_ext_sth = $dbh->prepare(qq[ select variation.variation_id, phenotype_feature_attrib.value
-                                            from   variation, phenotype_feature, phenotype_feature_attrib, source
+                                            from   variation, phenotype_feature, phenotype_feature_attrib, source, attrib_type
                                             where source.name = ?
-                                            and   phenotype_feature.source_id = source.source_id
-                                            and   phenotype_feature.phenotype_feature_id = phenotype_feature_attrib.phenotype_feature_id
-                                            and   phenotype_feature_attrib.attrib_type_id = 10
-                                            and   variation.name = phenotype_feature.object_id
+                                            and phenotype_feature.source_id = source.source_id
+                                            and phenotype_feature.phenotype_feature_id = phenotype_feature_attrib.phenotype_feature_id
+                                            and phenotype_feature_attrib.attrib_type_id = attrib_type.attrib_type_id 
+                                            and attrib_type.code = 'clinvar_clin_sig'
+                                            and variation.name = phenotype_feature.object_id
                                             ]);
 
 
@@ -76,7 +75,10 @@ sub update_variation{
                                         where variation_id = ?
                                        ] );
 
-
+    my $varf_upd_sth = $dbh->prepare(qq[ update variation_feature
+                                         set clinical_significance = ?
+                                         where variation_id = ?
+                                       ] );
 
     $clinvar_ext_sth->execute( $SOURCENAME );
     my $var_list = $clinvar_ext_sth->fetchall_arrayref();
@@ -87,8 +89,10 @@ sub update_variation{
 
     foreach my $l (@{$var_list}){
 
+        ## save ids to make 2 variation_sets - 'All' and 'Clinically significant'
+	$assoc{$l->[0]}{A} = 1;
 	## only variants with associated statuses to go into set
-	$assoc{$l->[0]} = 1  if $l->[1] =~ /pathogenic|drug-response|histocompatibility/ && $l->[1] !~ /non/;
+	$assoc{$l->[0]}{C} = 1  if $l->[1] =~ /pathogenic|drug-response|histocompatibility/i && $l->[1] !~ /non/;
 
 	push @{$class{$l->[0]}}, $l->[1];
     }
@@ -97,6 +101,7 @@ sub update_variation{
 	my @statuses = unique( @{$class{$var}});
 	my $statuses = join",", @statuses;
 	$var_upd_sth->execute($statuses, $var);
+	$varf_upd_sth->execute($statuses, $var);
     }
 
     return \%assoc;
@@ -106,7 +111,8 @@ sub add_to_set{
 
     my ($dbh, $variation_ids ) = @_;
 
-    my $set_id  = get_set($dbh);
+    my $clin_set_id  = get_set($dbh, 'clin_assoc');
+    my $all_set_id   = get_set($dbh, 'ClinVar');
 
     my $vsv_ins_sth = $dbh->prepare(qq[ insert into variation_set_variation
                                        (variation_id, variation_set_id)
@@ -114,8 +120,11 @@ sub add_to_set{
 
 
     foreach my $var ( keys %{$variation_ids} ){
-   
-	$vsv_ins_sth->execute( $var, $set_id );
+	warn "var_Set :  $var $variation_ids->{$var}{C} \n";
+	## update 'all clinvar' set
+	$vsv_ins_sth->execute( $var, $all_set_id );
+	## update 'clinically associated' set
+	$vsv_ins_sth->execute( $var, $clin_set_id ) if $variation_ids->{$var}{C} == 1;
     }
 }
 
@@ -124,55 +133,59 @@ sub add_to_set{
 sub get_set{
 
     my $dbh = shift;
-    
-    my $set_ext_sth = $dbh->prepare(qq[ select variation_set_id from variation_set where name ='clinically associated']);
+    my $set = shift; ## short attrib name for set
 
-    my $set_ins_sth = $dbh->prepare(qq[insert into variation_set (  name, description, short_name_attrib_id) 
-                                        values ( 'clinically associated', 
-                                       'Variants described by ClinVar as being probable-pathogenic, pathogenic, drug-response or histocompatibility',
-                                        345) ]);
+    ## info on sets
+    my $data =      {
+
+	'clin_assoc' => {
+	    'desc' => 'Variants described by ClinVar as being probable-pathogenic, pathogenic, drug-response or histocompatibility',
+	    'name' => 'Clinically associated'},
+
+	'ClinVar'           => {
+	    'desc' => 'Variants with ClinVar annotation',
+	    'name' => 'All ClinVar'},
+    };
+
+    my $attrib_ext_sth = $dbh->prepare(qq[ select attrib_id from attrib 
+                                           where value = ? and attrib_type_id = 9]);
+    
+    my $set_ext_sth = $dbh->prepare(qq[ select variation_set_id 
+                                        from variation_set, attrib
+                                        where variation_set.short_name_attrib_id = attrib.attrib_id
+                                        and attrib.value =? ]);
+
+    my $set_ins_sth = $dbh->prepare(qq[ insert into variation_set 
+                                       (name, description, short_name_attrib_id) 
+                                        values ( ?,?,?  ) ]);
 
     my $set_del_sth = $dbh->prepare(qq[ delete from variation_set_variation where variation_set_id = ?]);
 
 
     ### look for old set record
-    $set_ext_sth->execute();
-    my $id = $set_ext_sth->fetchall_arrayref();
+    $set_ext_sth->execute( $set);
+    my $set_id = $set_ext_sth->fetchall_arrayref();
 
-    if (defined $id->[0]->[0] ){
+    if (defined $set_id->[0]->[0] ){
 	## remove old set content
-	$set_del_sth->execute($id->[0]->[0]);
-	return $id->[0]->[0] ;
+	$set_del_sth->execute($set_id->[0]->[0]);
+	return $set_id->[0]->[0] ;
     }
 
     ### enter new set record
-    $set_ins_sth->execute(); 
-    $set_ext_sth->execute();
-    $id = $set_ext_sth->fetchall_arrayref();
 
-    return $id->[0]->[0] if defined $id->[0]->[0] ;
+    $attrib_ext_sth->execute( $set);
+    my $attrib_id = $attrib_ext_sth->fetchall_arrayref();
+    die "Exiting: attrib not available for $set\n" unless defined $attrib_id->[0]->[0];
 
+    $set_ins_sth->execute( $data->{$set}->{name}, $data->{$set}->{desc}, $attrib_id->[0]->[0] ); 
+    $set_id = $dbh->db_handle->last_insert_id(undef, undef, qw(variation_set set_id))|| die "no insert id for set $set\n";
 
-    ### give up
-    die "ERROR: variation set could not be entered\n"; 
+    return $set_id;
 
 }
 
 
-## remove empty frequency and population info 
-sub fix_allele{
-
-    my $dbh = shift;
-    
-    my $allele_upd_sth = $dbh->prepare(qq[ update allele 
-                                           set frequency = \\N, population_id = \\N 
-                                           where population_id = (select population_id from population where name ='clinvar')
-                                           and frequency = 0
-                                        ]);
-
-
-    $allele_upd_sth->execute($SOURCENAME );
-}
 
 ## check for unsupported characters in phenotype names 
 sub check_phenotype_names{
@@ -193,15 +206,22 @@ sub check_phenotype_names{
     }
 }
 
+## basic report on imported data
 sub check_counts{
  
    my $dbh = shift;
 
-   my $var_count_ext_sth   = $dbh->prepare(qq[ select count(*) from variation where clinical_significance is not null ]);
+   my $var_count_ext_sth   = $dbh->prepare(qq[ select count(*) from variation 
+                                               where clinical_significance is not null 
+                                               ]);
+
+   my $varf_count_ext_sth  = $dbh->prepare(qq[ select count(*) from variation_feature 
+                                               where clinical_significance is not null 
+                                               ]);
    
    my $set_count_ext_sth   = $dbh->prepare(qq[ select count(*) from variation_set, variation_set_variation
                                                where variation_set.variation_set_id = variation_set_variation.variation_set_id
-                                               and   variation_set.name ='clinically associated' ]);
+                                               and   variation_set.name = ? ]);
 
    my $pheno_count_ext_sth = $dbh->prepare(qq[ select count(*) from phenotype_feature, source 
                                                where source.name = ?
@@ -210,7 +230,10 @@ sub check_counts{
    my $featless_count_ext_sth = $dbh->prepare(qq[ select count(*) from phenotype 
                                                   where phenotype_id not in (select phenotype_id from phenotype_feature) ]);
 
-   my $class_ext_sth       = $dbh->prepare(qq[ select value from attrib where attrib_type_id = 10 ]);
+   my $class_ext_sth       = $dbh->prepare(qq[ select attrib.value 
+                                               from attrib, attrib_type
+                                               where attrib.attrib_type_id = attrib_type.attrib_type_id 
+                                               and attrib_type.code = 'clinvar_clin_sig' ]);
 
    my $class_count_ext_sth = $dbh->prepare(qq[ select clinical_significance, count(*) 
                                                from variation where clinical_significance is not null 
@@ -225,10 +248,15 @@ sub check_counts{
    my $var =  $var_count_ext_sth->fetchall_arrayref();
    warn "$var->[0]->[0] variation entries with ClinVar statuses\n";
 
-   $set_count_ext_sth->execute()||die;
-   my $set =  $set_count_ext_sth->fetchall_arrayref();
-   warn "$set->[0]->[0] variation entries in ClinVar associated set\n";
+   $varf_count_ext_sth->execute()||die;
+   my $varf =  $varf_count_ext_sth->fetchall_arrayref();
+   warn "$varf->[0]->[0] variation_feature entries with ClinVar statuses\n";
 
+   foreach my $set ('clinically associated', 'All ClinVar'){
+       $set_count_ext_sth->execute($set)||die;
+       my $set_count =  $set_count_ext_sth->fetchall_arrayref();
+       warn "$set_count->[0]->[0] variation entries in $set set\n";
+   }
 
    $featless_count_ext_sth->execute()||die;
    my $featless =  $featless_count_ext_sth->fetchall_arrayref();
@@ -251,11 +279,12 @@ sub check_counts{
    }
 }
 
+## check for and remove 'not provided' phenotypes
 sub delete_pheno_less{
 
     my $dbh = shift;
 
-    my $pheno_ext_sth   = $dbh->prepare(qq[ select phenotype_id from phenotype where description = "." ]);
+    my $pheno_ext_sth   = $dbh->prepare(qq[ select phenotype_id from phenotype where description = "not provided" ]);
     
     my $pheno_attrib_del_sth   = $dbh->prepare(qq[ delete from phenotype_feature_attrib 
                                                    where  phenotype_feature_id in
