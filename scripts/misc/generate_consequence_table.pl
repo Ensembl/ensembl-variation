@@ -110,18 +110,9 @@ for my $cons_set (@OVERLAP_CONSEQUENCES) {
 
     $so_acc = qq{<a rel="external" href="$SO_BASE_LINK/$so_acc">$so_acc</a>};
 
-    my $row = "$so_term|$so_desc|$so_acc";
+    my $row = "$so_term|$so_desc|$so_acc|$display_term";
 
-    $cons_rows{$row} = $rank;
-    
-    push(@{$consequences{$display_term}},$row);
-    
-    if ($consequences_rank{$display_term}) {
-      $consequences_rank{$display_term} = $rank if ($consequences_rank{$display_term} > $rank);
-    }
-    else {
-      $consequences_rank{$display_term} = $rank;
-    }  
+    $cons_rows{$row} = $rank;  
 }
 
 
@@ -133,42 +124,24 @@ my $cons_table =
 my $bg = '';
 my $border_top = ';border-top:1px solid #FFF';
 my $not_first = 0;
-for my $d_term (sort {$consequences_rank{$a} <=> $consequences_rank{$b}} keys(%consequences)) {
 
-  my $cons_list = $consequences{$d_term};
-  my $count = scalar @$cons_list;
-  my $rspan = ($count > 1) ? qq{ rowspan="$count"} : '';
-  
-  my $first_SO_term = (split(/\|/, $cons_list->[0]))[0];
-  
-  my $c = ($colour{$d_term}) ? $colour{$d_term} : $colour{'default'};
-  
-  my $line = 1;
-  
-  my $cons_line;
-  my $SO_term_id;
-  
-  for my $row (sort {$cons_rows{$a} <=> $cons_rows{$b}} @$cons_list) {
-    my $SO_term = (split(/\|/, $row))[0];
-       $SO_term_id = $SO_term if (!defined($SO_term_id));
-    $row =~ s/\|/<\/td>\n    <td>/g;
+for my $row (sort {$cons_rows{$a} <=> $cons_rows{$b}} keys(%cons_rows)) {
+  my $SO_term = (split(/\|/, $row))[0];
+  $row =~ s/\|/<\/td>\n    <td>/g;
     
-    # Fetch the group colour
-    $row =~ /^(\S+)</;
-    $c = $colour{lc($1)} if ($colour{lc($1)});
-    my $border = ($not_first == 1) ? $border_top : '';
-    
-    $cons_line .= qq{  </tr>\n  <tr$bg id="$SO_term">\n} if ($line !=1 );
-    
-    $cons_line .= (defined($c)) ? qq{    <td style="padding:0px;margin:0px;background-color:$c$border"></td>} : qq{    <td></td>};
-    $cons_line .= qq{    <td>$row</td>\n};
-    $cons_line .= qq{    <td$rspan>$d_term</td>\n} if ($line == 1);
-    $line ++;
-    $not_first = 1;
-  }
-  $SO_term_id = $first_SO_term if (!defined($SO_term_id));
-  $cons_table .= qq{  <tr$bg id="$SO_term_id">\n$cons_line  </tr>\n};
+  # Fetch the group colour
+  $row =~ /^(\S+)</;
+  my $c = ($colour{lc($1)}) ? $colour{lc($1)} : $colour{'default'};
+  my $border = ($not_first == 1) ? $border_top : '';
+  
+  my $cons_line = ($not_first == 0) ? '' : qq{  </tr>\n};
+  $cons_line .= qq{  <tr$bg id="$SO_term">\n};
+  $cons_line .= (defined($c)) ? qq{    <td style="padding:0px;margin:0px;background-color:$c$border"></td>} : qq{    <td></td>};
+  $cons_line .= qq{    <td>$row</td>\n};
+  $not_first = 1;
   $bg = ($bg eq '') ? qq{ class="bg2"} : '';
+    
+  $cons_table .= qq{$cons_line  </tr>\n};
 }
 
 $cons_table .= qq{</table>\n};
