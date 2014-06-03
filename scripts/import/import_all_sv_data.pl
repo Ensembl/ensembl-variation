@@ -37,7 +37,7 @@ use ImportUtils qw(dumpSQL debug create_and_load load);
 use LWP::Simple;
 
 our ($species, $input_file, $input_dir, $source_name, $TMP_DIR, $TMP_FILE, $var_set_id, $mapping, $num_gaps,
-     $target_assembly, $cs_version_number, $size_diff, $version, $registry_file, $replace_study, $debug);
+     $target_assembly, $cs_version_number, $size_diff, $version, $registry_file, $medgen_file, $hpo_file, $replace_study, $debug);
 
 GetOptions('species=s'         => \$species,
            'source_name=s'     => \$source_name,
@@ -52,6 +52,8 @@ GetOptions('species=s'         => \$species,
            'size_diff=i'       => \$size_diff,
            'version=i'         => \$version,
            'registry=s'        => \$registry_file,
+           'medgen_file=s'     => \$medgen_file,
+           'hpo_file=s'        => \$hpo_file,
            'replace!'          => \$replace_study,
            'debug!'            => \$debug,
           );
@@ -82,16 +84,17 @@ $TMP_FILE = $ImportUtils::TMP_FILE;
 
 my %display_name = ( 'COSMIC' => 'http://cancer.sanger.ac.uk/cancergenome/projects/cosmic/' );
 
-my $add         = '';
-my $study_table = "study$add";
-my $sv_table    = "structural_variation$add";
-my $svf_table   = "structural_variation_feature$add";
-my $sva_table   = "structural_variation_association$add";
-my $sv_failed   = "failed_structural_variation$add";
-my $set_table   = "variation_set_structural_variation$add";
-my $svs_table   = "structural_variation_sample$add";
-my $pf_table    = "phenotype_feature$add";
-my $temp_table  = "temp_cnv$add";
+my $add             = '';
+my $study_table     = "study$add";
+my $sv_table        = "structural_variation$add";
+my $svf_table       = "structural_variation_feature$add";
+my $sva_table       = "structural_variation_association$add";
+my $sv_failed       = "failed_structural_variation$add";
+my $set_table       = "variation_set_structural_variation$add";
+my $svs_table       = "structural_variation_sample$add";
+my $pf_table        = "phenotype_feature$add";
+my $temp_table      = "temp_sv$add";
+my $temp_phen_table = "temp_sv_phenotype$add";
 
 my $tmp_sv_col      = 'tmp_class_name';
 my $tmp_sv_clin_col = 'tmp_clinic_name';
@@ -118,7 +121,7 @@ $cs_version_number =~ s/\D//g;
 my %var_set = ('pilot1' => 31, 'pilot2' => 32);
 
 # Clinical significance
-my $clinical_attrib_type = 'dgva_clin_sig';
+my $clinical_attrib_type = 'dgva_clin_sig';#'clin_sign';
 my $stmt = qq{ SELECT attrib_type_id FROM attrib_type WHERE code='$clinical_attrib_type'};
 my $clinical_attrib_type_id = ($dbVar->selectall_arrayref($stmt))->[0][0];
 
@@ -222,12 +225,16 @@ sub load_file_data{
   
   # drop any table that may be there
   $dbVar->do("DROP TABLE IF EXISTS $temp_table;");
+  $dbVar->do("DROP TABLE IF EXISTS $temp_phen_table;");
   
   create_and_load(
   $dbVar, "$temp_table", "id *", "type", "chr *", "outer_start i", "start i", "inner_start i",
-  "inner_end i", "end i", "outer_end i", "strand i", "parent *", "clinic", "phenotype *", "sample *", "strain *",
+  "inner_end i", "end i", "outer_end i", "strand i", "parent *", "clinic", "sample *", "strain *",
   "gender", "is_ssv i", "is_failed i", "population", "bp_order i", "is_somatic i", "status", "alias", "length i");    
   
+  # Move the 2nd file in $TMP_DIR/$TMP_FILE before loading the 2nd table
+  `mv $TMP_DIR/$TMP_FILE\2 $TMP_DIR/$TMP_FILE`;
+  create_and_load( $dbVar, "$temp_phen_table", "id *", "phenotype *");
   
   # fix nulls
   if (($dbVar->selectrow_arrayref(qq{SELECT count(*) FROM $temp_table WHERE (outer_start=0 AND start=0 AND inner_start=0) OR (inner_end=0 AND end=0 AND outer_end=0);}))->[0] != 0) {
@@ -241,7 +248,7 @@ sub load_file_data{
   }
   
   
-  foreach my $col('clinic', 'phenotype', 'sample', 'strain', 'status', 'alias', 'length') {
+  foreach my $col('clinic', 'sample', 'strain', 'status', 'alias', 'length') {
     $dbVar->do(qq{UPDATE $temp_table SET $col = NULL WHERE $col = '';});
   }
   
@@ -277,10 +284,10 @@ sub study_table{
   $data->{desc} = $data->{s_desc} if ($data->{s_desc} and !$data->{desc});
   
   my $stmt;
-  my $study      = $data->{study};
-  my $assembly   = $data->{assembly};
-  my $study_desc = $data->{desc};
-  my $study_type = $data->{study_type};
+  my $study        = $data->{study};
+  my $assembly     = $data->{assembly};
+  my $study_desc   = $data->{desc};
+  my $study_type   = $data->{study_type};
   my $pmid         = $data->{pubmed};
   my $first_author = $data->{first_author};
   my $year         = $data->{year};
@@ -791,7 +798,7 @@ sub structural_variation_sample {
         if ($dbVar->selectrow_arrayref(qq{SELECT individual_id FROM individual WHERE name='$sample' AND display='UNDISPLAYABLE'})) {
           $dbVar->do(qq{UPDATE individual SET display='MARTDISPLAYABLE' WHERE name='$sample' AND display='UNDISPLAYABLE'});
         }
-        if ($dbVar->selectrow_arrayref(qq{SELECT individual_id FROM individual WHERE name=$sample AND display!='UNDISPLAYABLE' AND individual_type_id!=1})) {
+        if ($dbVar->selectrow_arrayref(qq{SELECT individual_id FROM individual WHERE name='$sample' AND display!='UNDISPLAYABLE' AND individual_type_id!=1})) {
           $dbVar->do(qq{UPDATE individual SET individual_type_id=1 WHERE name='$sample' AND display!='UNDISPLAYABLE' AND type!=1});
         }
       }
@@ -835,7 +842,7 @@ sub phenotype_feature {
   my $stmt;
   
   # Check if there is some phenotype entries
-  $stmt = qq{ SELECT count(phenotype) FROM $temp_table WHERE phenotype is not null };
+  $stmt = qq{ SELECT count(phenotype) FROM $temp_phen_table WHERE phenotype is not null };
   if (($dbVar->selectall_arrayref($stmt))->[0][0] == 0) {
     debug(localtime()." Inserting into $pf_table table skipped: no phenotype data for this study");
     return;
@@ -844,7 +851,7 @@ sub phenotype_feature {
   debug(localtime()." Inserting into $pf_table table");
   
   # Create phenotype entries
-  $stmt = qq{ SELECT DISTINCT phenotype FROM $temp_table 
+  $stmt = qq{ SELECT DISTINCT phenotype FROM $temp_phen_table 
               WHERE phenotype NOT IN (SELECT description FROM phenotype)
             };
   my $rows = $dbVar->selectall_arrayref($stmt);
@@ -881,11 +888,13 @@ sub phenotype_feature {
       svf.seq_region_strand
     FROM
       $temp_table t, 
+      $temp_phen_table tp,
       $svf_table svf,
       phenotype p
     WHERE 
       svf.variation_name=t.id AND
-      p.description=t.phenotype
+      t.id=tp.id AND
+      p.description=tp.phenotype
   };
   $dbVar->do($stmt);
 }  
@@ -893,6 +902,7 @@ sub phenotype_feature {
 
 sub drop_tmp_table {
   $dbVar->do(qq{DROP TABLE $temp_table;});
+  $dbVar->do(qq{DROP TABLE $temp_phen_table;});
 }
 
 
@@ -912,7 +922,8 @@ sub parse_gvf {
   # get a slice adaptor
   my $sa = Bio::EnsEMBL::Registry->get_adaptor($species, 'core', 'slice');
   
-  open OUT, ">$TMP_DIR/$TMP_FILE" or die "Could not write to output file $TMP_DIR/$TMP_FILE\n";
+  open OUT,  ">$TMP_DIR/$TMP_FILE" or die "Could not write to output file $TMP_DIR/$TMP_FILE\n";
+  open OUT2, ">$TMP_DIR/$TMP_FILE\2" or die "Could not write to output file $TMP_DIR/$TMP_FILE\2\n";
   
   my $header;
   my $assembly;
@@ -1040,12 +1051,20 @@ sub parse_gvf {
       $info->{is_failed} = $is_failed;
                
       my $data = generate_data_row($info);           
-    
       print OUT (join "\t", @{$data})."\n";
+      
+      if ($info->{phenotype}) {
+        my @phenotypes = map { decode_text($_) } keys(%{$info->{phenotype}});
+        foreach my $phenotype (@phenotypes) {
+          my $phen_data = generate_phenotype_data_row($info,$phenotype);
+          print OUT2 (join "\t", @{$phen_data})."\n";
+        }
+      }
     }
   }
   close IN;
   close OUT;
+  close OUT2;
   
   if ($mapping && $assembly !~ /$cs_version_number/) {
     debug(localtime()." Finished SV mapping:\n\t\tSuccess: ".(join " ", %num_mapped)." not required $no_mapping_needed\n\t\tFailed: ".(join " ", %num_not_mapped)." (In no existing chromosome: $skipped)");
@@ -1131,7 +1150,6 @@ sub get_header_info {
     }
     
     
-    
     if (defined($sample)) {
       $subject = defined($subject) ? $subject : $sample;
       
@@ -1191,9 +1209,12 @@ sub parse_header {
     elsif($assembly =~ /36/) {
       $assembly = 'NCBI36';
     }
-    elsif($assembly !~ /$cs_version_number/) {
-      warn("Could not guess assembly from file - assuming to be GRCh37");
+    elsif($assembly =~ /37/) {
       $assembly = 'GRCh37';
+    }
+    elsif($assembly !~ /$cs_version_number/) {
+      warn("Could not guess assembly from file - assuming to be GRCh38");
+      $assembly = 'GRCh38';
     }
     # For patches
     elsif($assembly =~ /(\w+\d+)\.p\d+/) {
@@ -1280,13 +1301,15 @@ sub parse_9th_col {
           $info->{sample} = ($samples{$value}{subject}) ? $samples{$value}{subject} : $value;
         }  
         $info->{population}  = ($samples{$value}{population}) ? $samples{$value}{population} : undef; # 1000 Genomes study
-        $info->{phenotype}   = ($samples{$value}{phenotype}) ? $samples{$value}{phenotype} : $samples{$value}{tissue};
         $info->{gender}      = ($samples{$value}{gender}) ? $samples{$value}{gender} : undef;
         $info->{strain_name} = $info->{population} if ($species =~ /mouse|mus_musculus/i);
+        
+        my $s_phenotype = ($samples{$value}{phenotype}) ? $samples{$value}{phenotype} : $samples{$value}{tissue};
+        $info->{phenotype}{$s_phenotype} = 1;
       }
     }
     
-    $info->{clinical}   = $value if ($key eq 'clinical_significance');
+    $info->{clinical}   = $value if ($key eq 'clinical_significance'); #lc($value) if ($key eq 'clinical_significance');
     $info->{parent}     = $value if ($key eq 'Parent'); # Check how the 'parent' key is spelled
     $info->{is_somatic} = 1 if ($key eq 'var_origin' && $value =~ /somatic/i);
     $info->{bp_order}   = ($info->{submitter_variant_id} =~ /\w_(\d+)$/) ? $1 : undef;
@@ -1298,9 +1321,35 @@ sub parse_9th_col {
     $info->{_bp_detail} = $value if ($key eq 'Breakpoint_detail');
     $info->{_bp_range}  = $value if ($key eq 'breakpoint_range');
     
+    # Phenotype
+    $info->{phenotype}{$value} = 1 if ($key eq 'phenotype_description');
   }
   
-  $info->{phenotype} = $info->{phenotype_description} if (defined($info->{phenotype_description}) && !defined($info->{phenotype}));
+  
+  ## Phenotype(s) ##
+  
+  if (!($info->{phenotype}) && $info->{phenotype_link}) {
+    
+    # Look at the MedGen data
+    if ($medgen_file) {
+      foreach my $medgen (split('MedGen:',$info->{phenotype_link})) {
+        if ($medgen =~ /^([A-Za-z]\d+)/) {
+          my $phenotype_value = get_medgen_phenotype($1);
+          $info->{phenotype}{$phenotype_value} = 1 if (defined($phenotype_value) && $phenotype_value ne '');
+        }
+      }
+    }
+    
+    # Look at the HP ontology data
+    if ($medgen_file) {
+      foreach my $medgen (split('HP:',$info->{phenotype_link})) {
+        if ($medgen =~ /^(\d+)/) {
+          my $phenotype_value = get_hpo_phenotype("HP:$1");
+          $info->{phenotype}{$phenotype_value} = 1 if (defined($phenotype_value) && $phenotype_value ne '');
+        }
+      }
+    }
+  }
   
   # Flag to know if the entry is a sv or a ssv
   $info->{is_ssv} = ($info->{ID} =~ /ssv/) ? 1 : 0;
@@ -1669,7 +1718,6 @@ sub generate_data_row {
              $info->{strand}, 
              $info->{parent},
              $info->{clinical},
-             $info->{phenotype},
              $info->{sample},
              $info->{strain_name},
              $info->{gender},
@@ -1682,6 +1730,15 @@ sub generate_data_row {
              $info->{alias},
              $info->{length}
             );
+  return \@row;
+}
+
+sub generate_phenotype_data_row {
+  my $info      = shift;
+  my $phenotype = shift;
+  
+  my @row = ($info->{ID}, $phenotype);
+  
   return \@row;
 }
 
@@ -1714,6 +1771,40 @@ sub check_breakpoint_coordinates {
 }
 
 
+## Get phenotype descriptions ##
+
+sub get_medgen_phenotype {
+  my $id = shift;
+  
+  return undef unless (-e $medgen_file && defined($id));
+  
+  my $res = `grep $id $medgen_file`;
+  
+  if ($res) {
+    my $phen_desc = (split(',',$res))[1];
+    $phen_desc =~ s/"//g;
+    return $phen_desc;
+  }
+  
+  return undef;
+}
+
+sub get_hpo_phenotype {
+  my $id = shift;
+  
+  return undef unless (-e $hpo_file && defined($id));
+  
+  my $res = `grep "is: $id" $hpo_file`;
+  
+  if ($res) {
+    my $phen_desc = (split(' ! ',$res))[1];
+    return $phen_desc;
+  }
+  
+  return undef;
+}
+
+
 sub usage {
   die shift, qq{
 
@@ -1729,6 +1820,8 @@ Options -
   -size_diff       : % difference allowed in size after mapping (optional)
   -version         : version number of the data (required)
   -registry        : registry file (optional)
+  -medgen_file     : Path to the unzipped MedGen file (see on ftp://ftp.ncbi.nlm.nih.gov/pub/medgen/csv/NAMES.csv.gz)
+  -hpo_file        : Path to the Human Phenotype Ontology (HPO) file (see on http://compbio.charite.de/hudson/job/hpo/lastStableBuild/artifact/ontology/human-phenotype-ontology_xp.obo)
   -replace         : flag to remove the existing study data from the database before import them (optional)
   -debug           : flag to keep the $temp_table table (optional)
   };
