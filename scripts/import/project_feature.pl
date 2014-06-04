@@ -396,8 +396,8 @@ sub project_features_in_seq_region {
             my $new_locations = {};
             my $failed_projection = 0;
             foreach my $location (qw/outer_start seq_region_start inner_start inner_end seq_region_end outer_end/) {
-                next if ($location eq '\N');
-                my $feature = project_feature($config, $slice_newdb_oldasm, $location, $location, $strand);
+                next if ($data->{$location} eq '\N');
+                my $feature = project_feature($config, $slice_newdb_oldasm, $data->{$location}, $data->{$location}, $strand);
                 if ($feature) {
                     my $new_start  = $feature->seq_region_start;
                     my $new_strand = $feature->seq_region_strand;
@@ -458,7 +458,8 @@ sub write_output {
 
     my @output = ();
     foreach my $column_name (sort keys %$data) {
-        push @output, $data->{$column_name};
+        my $column_value = ($data->{$column_name}) ? $data->{$column_name} : '';
+        push @output, $column_value;
     } 
     print $fh join("\t", @output), "\n";
 }
