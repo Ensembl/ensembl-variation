@@ -2876,8 +2876,8 @@ sub whole_genome_fetch {
     }
     
     my $slice_cache = $config->{slice_cache};
-    $slice_cache = build_slice_cache($config, $config->{tr_cache}) unless defined($slice_cache->{$chr});
-    $slice_cache = build_slice_cache($config, $config->{rf_cache}) unless defined($slice_cache->{$chr});
+    build_slice_cache($config, $config->{tr_cache}) unless defined($slice_cache->{$chr});
+    build_slice_cache($config, $config->{rf_cache}) unless defined($slice_cache->{$chr});
     
     debug("Analyzing chromosome $chr") unless defined($config->{quiet});
     
@@ -2888,8 +2888,13 @@ sub whole_genome_fetch {
     my ($tmp_vf_hash, @svfs);
     
     foreach my $chunk(keys %{$vf_hash->{$chr}}) {
-        foreach my $pos(keys %{$vf_hash->{$chr}{$chunk}}) {
+        foreach my $pos(keys %{$vf_hash->{$chr}{$chunk}}) {            
             foreach my $vf(@{$vf_hash->{$chr}{$chunk}{$pos}}) {
+                
+                # copy slice while we're here
+                $vf->{slice} ||= $slice_cache->{$chr};
+                $vf->{slice} = $slice_cache->{$chr} if defined($vf->{slice}->{is_fake}) && defined($slice_cache->{$chr});
+                
                 if($vf->isa('Bio::EnsEMBL::Variation::StructuralVariationFeature')) {
                     push @svfs, $vf;
                 }
@@ -2918,9 +2923,6 @@ sub whole_genome_fetch {
     # sort results into @finished_vfs array
     foreach my $chunk(keys %{$vf_hash->{$chr}}) {
         foreach my $pos(keys %{$vf_hash->{$chr}{$chunk}}) {
-            
-            # pinch slice from slice cache if we don't already have it
-            $_->{slice} ||= $slice_cache->{$chr} for @{$vf_hash->{$chr}{$chunk}{$pos}};
             
             if(defined($config->{regulatory})) {
                 foreach my $type(@REG_FEAT_TYPES) {
@@ -3005,16 +3007,12 @@ sub whole_genome_fetch_transcript {
     my $chr = shift;
     
     my $tr_cache = $config->{tr_cache};
-    my $slice_cache = $config->{slice_cache};
     
     my $up_size   = $Bio::EnsEMBL::Variation::Utils::VariationEffect::UPSTREAM_DISTANCE;
     my $down_size = $Bio::EnsEMBL::Variation::Utils::VariationEffect::DOWNSTREAM_DISTANCE;
     
     # check we have defined regions
     return unless defined($vf_hash->{$chr}) && defined($tr_cache->{$chr});
-    
-    # copy slice from transcript to slice cache
-    $slice_cache = build_slice_cache($config, $tr_cache) unless defined($slice_cache->{$chr});
     
     debug("Analyzing variants") unless defined($config->{quiet});
     
@@ -3045,11 +3043,7 @@ sub whole_genome_fetch_transcript {
                 grep {$_->{start} <= $e && $_->{end} >= $s}
                 map {@{$vf_hash->{$chr}{$chunk}{$_}}}
                 keys %{$vf_hash->{$chr}{$chunk}}
-            ) {
-                # pinch slice from slice cache if we don't already have it
-                $vf->{slice} ||= $slice_cache->{$chr};
-                $vf->{slice} = $slice_cache->{$chr} if defined($vf->{slice}->{is_fake});
-                
+            ) {                
                 my $tv = Bio::EnsEMBL::Variation::TranscriptVariation->new(
                     -transcript        => $tr,
                     -variation_feature => $vf,
@@ -3091,7 +3085,6 @@ sub whole_genome_fetch_reg {
     my $chr = shift;
     
     my $rf_cache = $config->{rf_cache};
-    my $slice_cache = $config->{slice_cache};
     
     foreach my $type(keys %{$rf_cache->{$chr}}) {
         debug("Analyzing ".$type."s") unless defined($config->{quiet});
@@ -3143,7 +3136,6 @@ sub whole_genome_fetch_sv {
     
     my $tr_cache = $config->{tr_cache};
     my $rf_cache = $config->{rf_cache};
-    my $slice_cache = $config->{slice_cache};
     
     my $up_size   = $Bio::EnsEMBL::Variation::Utils::VariationEffect::UPSTREAM_DISTANCE;
     my $down_size = $Bio::EnsEMBL::Variation::Utils::VariationEffect::DOWNSTREAM_DISTANCE;
@@ -3332,9 +3324,6 @@ sub fetch_transcripts {
             
             # restore quiet status
             $config->{quiet} = $quiet;
-            
-            # build slice cache
-            $slice_cache = build_slice_cache($config, $tr_cache) unless defined($slice_cache->{$chr});
         }
     }
     
@@ -3768,6 +3757,8 @@ sub get_slice {
     
     # first try to get a chromosome
     eval { $slice = $config->{$otherfeatures.'sa'}->fetch_by_region(undef, $chr); };
+    
+    $config->{slice_cache}->{$chr} ||= $slice;
     
     return $slice;
 }
@@ -4213,7 +4204,7 @@ sub build_slice_cache {
     my $config = shift;
     my $tr_cache = shift;
     
-    my %slice_cache;
+    $config->{slice_cache} ||= {};
     
     foreach my $chr(keys %$tr_cache) {
         
@@ -4221,27 +4212,27 @@ sub build_slice_cache {
         
         if(ref($tmp) eq 'HASH') {
           foreach my $type(keys %$tmp) {
-            $slice_cache{$chr} ||= scalar @{$tmp->{$type}} ? $tmp->{$type}->[0]->slice : &get_slice($config, $chr);
+            $config->{slice_cache}->{$chr} ||= scalar @{$tmp->{$type}} ? $tmp->{$type}->[0]->slice : &get_slice($config, $chr);
           }
         }
         else {
-          $slice_cache{$chr} ||= scalar @$tmp ? $tmp->[0]->slice : &get_slice($config, $chr);
+          $config->{slice_cache}->{$chr} ||= scalar @$tmp ? $tmp->[0]->slice : &get_slice($config, $chr);
         }
         
-        if(!defined($slice_cache{$chr})) {
-            delete $slice_cache{$chr}
+        if(!defined($config->{slice_cache}->{$chr})) {
+            delete $config->{slice_cache}->{$chr}
         }
         
         else {
             # reattach adaptor to the coord system
-            $slice_cache{$chr}->{coord_system}->{adaptor} ||= $config->{csa};
+            $config->{slice_cache}->{$chr}->{coord_system}->{adaptor} ||= $config->{csa};
             
             # log length for stats
-            $config->{stats}->{chr_lengths}->{$chr} ||= $slice_cache{$chr}->end;
+            $config->{stats}->{chr_lengths}->{$chr} ||= $config->{slice_cache}->{$chr}->end;
         }
     }
     
-    return \%slice_cache;
+    return $config->{slice_cache};
 }
 
 # pre-fetches per-transcript data
@@ -4882,7 +4873,7 @@ sub cache_reg_feats {
         }
         
         # delete reference to slice adaptor before we write to cache
-        delete $slice->{adaptor};
+        delete $slice->{adaptor} if defined($config->{write_cache});
     }
     
     end_progress($config);
@@ -4997,6 +4988,9 @@ sub load_dumped_reg_feat_cache {
     my $rf_cache;
     $rf_cache = fd_retrieve($fh);
     close $fh;
+    
+    # reattach adaptors
+    $_->{slice}->{adaptor} = $config->{sa} for map {@{$rf_cache->{$chr}->{$_}}} keys %{$rf_cache->{$chr}};
     
     return $rf_cache;
 }
