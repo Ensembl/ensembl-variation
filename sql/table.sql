@@ -1369,6 +1369,37 @@ CREATE TABLE transcript_variation (
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 /**
+@table variation_hgvs
+
+@colour #FF4DC8
+@desc This table is used in web index creation. It links a variation_id to all possible transcript and protein level change descriptions in HGVS annotation.
+@column variation_id         Primary key, foreign key references @link variation
+@column hgvs_name            Primary key, HGVS change description
+**/
+
+create table variation_hgvs(
+variation_id int(10) unsigned not null,
+hgvs_name varchar(255) not null,
+primary key(variation_id, hgvs_name));
+
+/**
+@table variation_genename
+
+@colour #FF4DC8
+@desc This table is used in web index creation. It links a variation_id to the names of the genes the variation is within
+@column variation_id         Primary key, foreign key references @link variation
+@column gene_name            Primary key, display name of gene
+**/
+
+
+create table variation_genename (
+variation_id int(10) unsigned not null, 
+gene_name varchar(255) not null, 
+primary key(variation_id, gene_name));
+
+
+
+/**
 @table motif_feature_variation
 
 @colour #FF4DC8
