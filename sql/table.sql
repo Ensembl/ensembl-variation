@@ -1023,7 +1023,7 @@ CREATE TABLE structural_variation (
 	source_id int(10) unsigned NOT NULL,
   study_id int(10) unsigned DEFAULT NULL,
 	class_attrib_id int(10) unsigned NOT NULL DEFAULT 0,
-	clinical_significance SET('uncertain significance','not provided','benign','likely benign','likely pathogenic','pathogenic','drug response','histocompatibility','other','confers sensitivity','risk factor','association','protective') DEFAULT NULL,
+	clinical_significance ENUM('uncertain significance','not provided','benign','likely benign','likely pathogenic','pathogenic','drug response','histocompatibility','other','confers sensitivity','risk factor','association','protective') DEFAULT NULL,
   validation_status ENUM('validated','not validated','high quality'),
 	is_evidence TINYINT(4) DEFAULT 0,
 	somatic TINYINT(1) NOT NULL DEFAULT 0,

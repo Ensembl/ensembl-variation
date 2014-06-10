@@ -1,6 +1,6 @@
 # Replace the column clinical_significance_attrib_id by clinical_significance in structural_variation
 
-ALTER TABLE structural_variation ADD COLUMN clinical_significance SET('uncertain significance','not provided','benign','likely benign','likely pathogenic','pathogenic','drug response','histocompatibility','other','confers sensitivity','risk factor','association','protective') DEFAULT NULL AFTER clinical_significance_attrib_id;
+ALTER TABLE structural_variation ADD COLUMN clinical_significance ENUM('uncertain significance','not provided','benign','likely benign','likely pathogenic','pathogenic','drug response','histocompatibility','other','confers sensitivity','risk factor','association','protective') DEFAULT NULL AFTER clinical_significance_attrib_id;
 
 ALTER TABLE structural_variation ADD COLUMN tmp_clin_sign VARCHAR(255) DEFAULT NULL;
 
