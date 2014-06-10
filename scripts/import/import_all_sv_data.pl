@@ -1323,30 +1323,28 @@ sub parse_9th_col {
     
     # Phenotype
     $info->{phenotype}{$value} = 1 if ($key eq 'phenotype_description');
+    $info->{phenotype_link} = $value if ($key eq 'phenotype_link');
   }
   
   
   ## Phenotype(s) ##
   
-  if (!($info->{phenotype}) && $info->{phenotype_link}) {
+  if ($info->{phenotype_link}) {
     
-    # Look at the MedGen data
-    if ($medgen_file) {
-      foreach my $medgen (split('MedGen:',$info->{phenotype_link})) {
-        if ($medgen =~ /^([A-Za-z]\d+)/) {
-          my $phenotype_value = get_medgen_phenotype($1);
-          $info->{phenotype}{$phenotype_value} = 1 if (defined($phenotype_value) && $phenotype_value ne '');
-        }
+    my @phenotype_links = split(',',$info->{phenotype_link});
+
+    foreach my $p_link (@phenotype_links) {
+      # Look at the MedGen data
+      if ($medgen_file && $p_link =~ /^MedGen:[A-Za-z]\d+$/) {
+        $p_link =~ /^MedGen:([A-Za-z]\d+)$/;
+        my $phenotype_value = get_medgen_phenotype($1);
+        $info->{phenotype}{$phenotype_value} = 1 if (defined($phenotype_value) && $phenotype_value ne '');
       }
-    }
     
-    # Look at the HP ontology data
-    if ($medgen_file) {
-      foreach my $medgen (split('HP:',$info->{phenotype_link})) {
-        if ($medgen =~ /^(\d+)/) {
-          my $phenotype_value = get_hpo_phenotype("HP:$1");
-          $info->{phenotype}{$phenotype_value} = 1 if (defined($phenotype_value) && $phenotype_value ne '');
-        }
+      # Look at the HP ontology data
+      if ($hpo_file && $p_link =~ /^HP:\d+$/) {
+        my $phenotype_value = get_hpo_phenotype($p_link);
+        $info->{phenotype}{$phenotype_value} = 1 if (defined($phenotype_value) && $phenotype_value ne '');
       }
     }
   }
