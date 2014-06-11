@@ -395,6 +395,7 @@ sub project_features_in_seq_region {
             my $strand = $data->{seq_region_strand};    
             my $new_locations = {};
             my $failed_projection = 0;
+            my $new_seq_region_id;
             foreach my $location (qw/outer_start seq_region_start inner_start inner_end seq_region_end outer_end/) {
                 next if ($data->{$location} eq '\N');
                 my $feature = project_feature($config, $slice_newdb_oldasm, $data->{$location}, $data->{$location}, $strand);
@@ -402,6 +403,7 @@ sub project_features_in_seq_region {
                     my $new_start  = $feature->seq_region_start;
                     my $new_strand = $feature->seq_region_strand;
                     $new_locations->{$location} = $new_start;
+                    $new_seq_region_id = $feature->slice->get_seq_region_id;
                 } else {
                     write_output($out->{no_projection}, $data); 
                     $failed_projection = 1;
@@ -413,6 +415,7 @@ sub project_features_in_seq_region {
                 foreach my $location (qw/outer_start seq_region_start inner_start inner_end seq_region_end outer_end/) {
                     $data->{$location} = $new_locations->{$location}; 
                 }
+                $data->{seq_region_id} = $new_seq_region_id;
                 write_output($out->{projection}, $data); 
             }
         }
