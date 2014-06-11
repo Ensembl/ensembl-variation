@@ -2,9 +2,9 @@
 ## update clinical significance terms to match ClinVar website rather than dbSNP
 
 
-ALTER TABLE variation MODIFY column clinical_significance set ('Uncertain significance','not provided','Benign','Likely benign','Likely pathogenic','Pathogenic','drug response','histocompatibility','other','confers sensitivity','risk factor','association','protective');
+ALTER TABLE variation MODIFY column clinical_significance set ('uncertain significance','not provided','benign','likely benign','likely pathogenic','pathogenic','drug response','histocompatibility','other','confers sensitivity','risk factor','association','protective');
 
-ALTER TABLE variation_feature MODIFY column clinical_significance set ('Uncertain significance','not provided','Benign','Likely benign','Likely pathogenic','Pathogenic','drug response','histocompatibility','other','confers sensitivity','risk factor','association','protective');
+ALTER TABLE variation_feature MODIFY column clinical_significance set ('uncertain significance','not provided','benign','likely benign','likely pathogenic','pathogenic','drug response','histocompatibility','other','confers sensitivity','risk factor','association','protective');
 
 
 #patch identifier
