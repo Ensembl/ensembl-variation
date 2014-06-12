@@ -60,9 +60,11 @@ my $http = HTTP::Tiny->new();
 my %check_species = ("bos_taurus"      =>   [ "bos taurus",   "cow",   "bovine", "cattle" ],
                      "mus_musculus"    =>   [ "mus musculus", "mouse", "murine", "mice"],
                      "homo_sapiens"    =>   [ "homo sapiens", "human", "child", "patient" ],
-                     "gallus_gallus"   =>   [ "gallus gallus", "chicken", ],
+                     "gallus_gallus"   =>   [ "gallus gallus", "chicken", "hen" ],
                      "canis_familiaris"=>   [ "canis familiaris", "dog", "canine"],
                      "rattus_norvegicus"=>  [ "rattus norvegicus", "rat"],
+		     "sus_scrofa"      =>   [ "sus scrofa", "pig", "porcine" ],
+		     "ovis_aries"      =>   [ "ovis aries", "sheep", "ovine"],
     );
 
 our $species_string = join "|", @{$check_species{$species}} if defined $check_species{$species};
@@ -102,10 +104,10 @@ elsif($type eq "UCSC"){
     $data_file = get_current_UCSC_data() unless defined $data_file;
     
     ## read UCSC file, ommitting suspected errors
-    $file_data = parse_UCSC_file($data_file, $avoid_list);
+#    $file_data = parse_UCSC_file($data_file, $avoid_list);
 
     ##import any new publications & citations 
-    import_citations($reg, $file_data);
+#    import_citations($reg, $file_data);
 
     ## update variations & variation_features to have Cited status
     update_evidence($dba) unless defined $no_evidence;
@@ -255,7 +257,11 @@ sub get_publication_info_from_epmc{
     
     ### check title available       
     unless (defined $ref->{resultList}->{result}->{title}){
-        print $error_log "ALL\t$data->{$pub}->{pmid}\t$data->{$pub}->{pmcid} - as no title\n";
+        my $mess = "ALL\t";
+        $mess .= "pmid:$data->{$pub}->{pmid}\t"   if defined $data->{$pub}->{pmid};
+        $mess .= "pmcid:$data->{$pub}->{pcmid}\t" if defined $data->{$pub}->{pmcid};
+        print $error_log $mess ." as no title\n";
+
          return undef;
     }        
    
@@ -429,14 +435,20 @@ sub update_evidence{
 
     my $dba = shift;
 
-    my $ev_ext_sth = $dba->dbc()->prepare(qq[ select variation.variation_id, variation.evidence 
+    ## find cited attrib
+    my $attrib_ext_sth = $dba->dbc()->prepare(qq[ select attrib_id from attrib where value ='Cited']);
+    $attrib_ext_sth->execute()||die;
+    my $attrib =  $attrib_ext_sth->fetchall_arrayref();
+    die "Not updating evidence as no attrib found\n" unless defined $attrib->[0]->[0];
+
+    my $ev_ext_sth = $dba->dbc()->prepare(qq[ select variation.variation_id, variation.evidence_attribs 
                                               from variation, variation_citation
                                               where variation.variation_id = variation_citation.variation_id
-                                              and variation.evidence not like '%Cited%'
+                                              and variation.evidence_attribs not like '%$attrib->[0]->[0];%'
                                              ]);
 
-    my $var_upd_sth     = $dba->dbc()->prepare(qq[ update variation set evidence = ? where variation_id = ?]);
-    my $varfeat_upd_sth = $dba->dbc()->prepare(qq[ update variation_feature set evidence = ? where variation_id = ?]);
+    my $var_upd_sth     = $dba->dbc()->prepare(qq[ update variation set evidence_attribs = ? where variation_id = ?]);
+    my $varfeat_upd_sth = $dba->dbc()->prepare(qq[ update variation_feature set evidence_attribs = ? where variation_id = ?]);
 
     $ev_ext_sth->execute()||die;
     my $dat =  $ev_ext_sth->fetchall_arrayref();
@@ -448,10 +460,10 @@ sub update_evidence{
 
         my $evidence;
         if($l->[1] =~ /\w+/){
-            $evidence .= "$l->[1],Cited";
+            $evidence .= "$l->[1],$attrib->[0]->[0]";
         }
         else{
-            $evidence = "Cited";
+            $evidence = "$attrib->[0]->[0]";
         }
         $var_upd_sth->execute($evidence, $l->[0]);
         $varfeat_upd_sth->execute($evidence, $l->[0]);
