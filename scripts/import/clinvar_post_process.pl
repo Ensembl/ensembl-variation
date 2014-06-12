@@ -120,11 +120,11 @@ sub add_to_set{
 
 
     foreach my $var ( keys %{$variation_ids} ){
-	warn "var_Set :  $var $variation_ids->{$var}{C} \n";
 	## update 'all clinvar' set
 	$vsv_ins_sth->execute( $var, $all_set_id );
 	## update 'clinically associated' set
-	$vsv_ins_sth->execute( $var, $clin_set_id ) if $variation_ids->{$var}{C} == 1;
+	$vsv_ins_sth->execute( $var, $clin_set_id ) 
+	    if defined $variation_ids->{$var}{C} && $variation_ids->{$var}{C} == 1;
     }
 }
 
