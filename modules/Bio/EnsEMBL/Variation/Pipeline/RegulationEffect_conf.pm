@@ -95,6 +95,7 @@ sub default_options {
         debug => 0,
 
         only_update_vf => 0,
+        update_vf => 1,
         only_motif_feature => 0,
         only_regulatory_feature => 0,
 
@@ -148,6 +149,7 @@ sub pipeline_wide_parameters {
         disambiguate_single_nucleotide_alleles => $self->o('disambiguate_single_nucleotide_alleles'),
         debug => $self->o('debug'),
         only_update_vf => $self->o('only_update_vf'),
+        update_vf => $self->o('update_vf'),
         only_motif_feature => $self->o('only_motif_feature'),   
         only_regulatory_feature => $self->o('only_regulatory_feature'),
         species => $self->o('species'),
