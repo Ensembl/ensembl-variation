@@ -62,15 +62,12 @@ sub fetch_input {
     my $sa = $cdba->get_SliceAdaptor or die 'Failed to get SliceAdaptor';
 
     my $slices = $sa->fetch_all('toplevel', undef, 0, 1);
-    #if ($self->param('debug')) {
-    #    my $slice = $slices->[0];    
-    #    $slices = [];
-    #    push @$slices, $slice;
-    #}
 
-    #my $slice = $sa->fetch_by_region('chromosome', 12);
-    #my $slices = [];
-    #push @$slices, $slice;
+    if ($self->param('debug')) {
+        my $slice = $sa->fetch_by_region('chromosome', 12);
+        $slices = [];
+        push @$slices, $slice;
+    }
 
     my $regulatory_feature_set = $fsa->fetch_by_name('RegulatoryFeatures:MultiCell');
     my @external_feature_sets = @{$fsa->fetch_all_by_type('external')};
