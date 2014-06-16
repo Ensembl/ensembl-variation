@@ -86,19 +86,6 @@ sub default_options {
         
         disambiguate_single_nucleotide_alleles => 0,
 
-        # configuration for the various resource options used in the pipeline
-        # EBI farm users should either change these here, or override them on the
-        # command line to suit the EBI farm. The names of each option hopefully
-        # reflect their usage, but you may want to change the details (memory
-        # requirements, queue parameters etc.) to suit your own data
-        
-        default_lsf_options => '-R"select[mem>2000] rusage[mem=2000]" -M2000000',
-        urgent_lsf_options  => '-q yesterday -R"select[mem>2000] rusage[mem=2000]" -M2000000',
-        highmem_lsf_options => '-R"select[mem>15000] rusage[mem=15000]" -M15000000', # this is Sanger LSF speak for "give me 15GB of memory"
-        long_lsf_options    => '-q long -R"select[mem>2000] rusage[mem=2000]" -M2000000',
-
-        # options controlling the number of workers used for the parallelisable analyses
-        # these default values seem to work for most species
 
         # set this flag to 1 to include LRG transcripts in the transcript effect analysis
 
@@ -132,11 +119,17 @@ sub default_options {
 
 sub resource_classes {
     my ($self) = @_;
+    # configuration for the various resource options used in the pipeline
+    # EBI farm users should either change these here, or override them on the
+    # command line to suit the EBI farm. The names of each option hopefully
+    # reflect their usage, but you may want to change the details (memory
+    # requirements, queue parameters etc.) to suit your own data
+
     return {
-          'default' => { 'LSF' => $self->o('default_lsf_options') },
-          'urgent'  => { 'LSF' => $self->o('urgent_lsf_options')  },
-          'highmem' => { 'LSF' => $self->o('highmem_lsf_options') },
-          'long'    => { 'LSF' => $self->o('long_lsf_options')    },
+          'default' => { 'LSF' => '-R"select[mem>2000] rusage[mem=2000]" -M2000'},
+          'urgent'  => { 'LSF' => '-q yesterday -R"select[mem>2000] rusage[mem=2000]" -M2000'},
+          'highmem' => { 'LSF' => '-R"select[mem>15000] rusage[mem=15000]" -M15000'},
+          'long'    => { 'LSF' => '-q long -R"select[mem>2000] rusage[mem=2000]" -M2000000'},
     };
 }
 
