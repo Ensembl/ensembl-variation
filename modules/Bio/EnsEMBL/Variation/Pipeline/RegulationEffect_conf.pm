@@ -92,6 +92,11 @@ sub default_options {
         include_lrg => 1,
         include_external_features => 0,
         debug => 0,
+
+        only_update_vf => 0,
+        only_motif_feature => 0,
+        only_regulatory_feature => 0,
+
         # connection parameters for the hive database, you should supply the hive_db_password
         # option on the command line to init_pipeline.pl (parameters for the target database
         # should be set in the registry file defined above)
@@ -141,6 +146,9 @@ sub pipeline_wide_parameters {
         include_external_features => $self->o('include_external_features'),
         disambiguate_single_nucleotide_alleles => $self->o('disambiguate_single_nucleotide_alleles'),
         debug => $self->o('debug'),
+        only_update_vf => $self->o('only_update_vf'),
+        only_motif_feature => $self->o('only_motif_feature'),   
+        only_regulatory_feature => $self->o('only_regulatory_feature'),
     };
 }
 
