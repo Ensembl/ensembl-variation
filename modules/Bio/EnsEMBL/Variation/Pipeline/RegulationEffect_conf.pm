@@ -60,6 +60,7 @@ sub default_options {
         
         pipeline_name           => 'regulation_effect',
 
+        species                 => $self->o('species'),
         # a directory to keep hive output files and your registry file, you should
         # create this if it doesn't exist
         
@@ -149,6 +150,7 @@ sub pipeline_wide_parameters {
         only_update_vf => $self->o('only_update_vf'),
         only_motif_feature => $self->o('only_motif_feature'),   
         only_regulatory_feature => $self->o('only_regulatory_feature'),
+        species => $self->o('species'),
     };
 }
 
