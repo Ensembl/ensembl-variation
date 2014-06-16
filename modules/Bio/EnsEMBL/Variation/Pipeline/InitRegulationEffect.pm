@@ -45,10 +45,14 @@ sub fetch_input {
 
     # clear tables
     my $vdbc = $vdba->dbc();
-    $vdbc->do('TRUNCATE TABLE regulatory_feature_variation');
-    $vdbc->do('TRUNCATE TABLE motif_feature_variation');
-    $vdbc->do('ALTER TABLE regulatory_feature_variation DISABLE KEYS');
-    $vdbc->do('ALTER TABLE motif_feature_variation DISABLE KEYS');
+
+    unless ($self->param('only_regulatory_feature')) {
+        $vdbc->do('TRUNCATE TABLE motif_feature_variation');
+        $vdbc->do('ALTER TABLE motif_feature_variation DISABLE KEYS');
+    unless ($self->param('only_motif_feature')) {
+        $vdbc->do('TRUNCATE TABLE regulatory_feature_variation');
+        $vdbc->do('ALTER TABLE regulatory_feature_variation DISABLE KEYS');
+    }
 
     # get regulation object ids
     my $rfa = $fdba->get_RegulatoryFeatureAdaptor or die 'Failed to get RegulatoryFeatureAdaptor';
@@ -74,19 +78,23 @@ sub fetch_input {
     foreach my $slice (@$slices) {
         # get all RegulatoryFeatures
         my @feature_ids = ();
-        my $it = $rfa->fetch_Iterator_by_Slice_FeatureSets($slice, [$regulatory_feature_set]);
-        while ($it->has_next()) {
-            my $rf = $it->next();
-            push @feature_ids, { feature_id => $rf->stable_id,
-                                 feature_type => 'regulatory_feature',
-                                 species => $species, };
+        unless ($self->param('only_motif_feature')) {
+            my $it = $rfa->fetch_Iterator_by_Slice_FeatureSets($slice, [$regulatory_feature_set]);
+            while ($it->has_next()) {
+                my $rf = $it->next();
+                push @feature_ids, { feature_id => $rf->stable_id,
+                                     feature_type => 'regulatory_feature',
+                                     species => $species, };
+            }
         }
         # get all MotifFeatures
-        my @mfs = @{$mfa->fetch_all_by_Slice($slice)};
-        foreach my $mf (@mfs) {
-            push @feature_ids, { feature_id => $mf->dbID,
-                                 feature_type => 'motif_feature',
-                                 species => $species, };  
+        unless ($self->param('only_regulatory_feature')) {
+            my @mfs = @{$mfa->fetch_all_by_Slice($slice)};
+            foreach my $mf (@mfs) {
+                push @feature_ids, { feature_id => $mf->dbID,
+                                     feature_type => 'motif_feature',
+                                     species => $species, };  
+            }
         }
         # get all ExternalFeatures
         if ($self->param('include_external_features')) {
