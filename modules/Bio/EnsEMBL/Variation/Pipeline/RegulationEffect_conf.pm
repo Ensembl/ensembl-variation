@@ -146,13 +146,6 @@ sub pipeline_wide_parameters {
 
 sub pipeline_analyses {
     my ($self) = @_;
-
-    my @common_params = (
-        ensembl_registry => $self->o('reg_file'),
-        include_external_features => $self->o('include_external_features'),
-        disambiguate_single_nucleotide_alleles => $self->o('disambiguate_single_nucleotide_alleles'),
-        debug => $self->o('debug'),
-    );
    
     my @analyses;
         push @analyses, (
@@ -160,7 +153,7 @@ sub pipeline_analyses {
                 -module => 'Bio::EnsEMBL::Variation::Pipeline::InitRegulationEffect',
                 -parameters => { @common_params, },
                 -hive_capacity => 1,
-                -input_ids => [{'species' => 'Mus_musculus'},],
+                -input_ids => [{},],
                 -flow_into => {
                     '2->A' => ['regulation_effect'],
                     'A->1' => ['finish_regulation_effect'],
@@ -168,13 +161,11 @@ sub pipeline_analyses {
             },
             {   -logic_name => 'regulation_effect',
                 -module => 'Bio::EnsEMBL::Variation::Pipeline::RegulationEffect',
-                -parameters => { @common_params, },
                 -rc_name => 'default',
                 -hive_capacity  =>  20,
             }, 
             {   -logic_name => 'finish_regulation_effect',
                 -module => 'Bio::EnsEMBL::Variation::Pipeline::FinishRegulationEffect',
-                -parameters => { @common_params, },
                 -hive_capacity => 1,
             },
         );
