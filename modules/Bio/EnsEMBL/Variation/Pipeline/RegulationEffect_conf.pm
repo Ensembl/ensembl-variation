@@ -49,33 +49,35 @@ sub default_options {
     return {
 
         # general pipeline options that you should change to suit your environment
-        
+       
+        hive_force_init => 1,
+        hive_use_param_stack => 0,
+        hive_use_triggers => 0, 
         # the location of your checkout of the ensembl API (the hive looks for SQL files here)
-        
-        ensembl_cvs_root_dir    => $ENV{'HOME'}.'/HEAD',
-
+        ensembl_cvs_root_dir    => $ENV{'HOME'} . '/DEV',
+        hive_root_dir           => $ENV{'HOME'} . '/DEV/ensembl-hive'
         # a name for your pipeline (will also be used in the name of the hive database)
         
         pipeline_name           => 'regulation_effect',
 
         # a directory to keep hive output files and your registry file, you should
         # create this if it doesn't exist
-
-        pipeline_dir            => '/lustre/scratch110/ensembl/at7/human/'.$self->o('pipeline_name'),
+        
+        pipeline_dir            => $self->o('pipeline_dir'),
 
         # a directory where hive workers will dump STDOUT and STDERR for their jobs
         # if you use lots of workers this directory can get quite big, so it's
         # a good idea to keep it on lustre, or some other place where you have a 
         # healthy quota!
         
-        output_dir              => $self->o('pipeline_dir').'/hive_output',
+        output_dir              => $self->o('pipeline_dir') . '/hive_output',
 
         # a standard ensembl registry file containing connection parameters
         # for your target database(s) (and also possibly aliases for your species
         # of interest that you can then supply to init_pipeline.pl with the -species
         # option)
         
-        reg_file                => $self->o('pipeline_dir').'/ensembl.registry',
+        reg_file                => $self->o('pipeline_dir') . '/ensembl.registry',
 
         # if set to 1 this option tells the transcript_effect analysis to disambiguate
         # ambiguity codes in single nucleotide alleles, so e.g. an allele string like
@@ -107,8 +109,6 @@ sub default_options {
         # option on the command line to init_pipeline.pl (parameters for the target database
         # should be set in the registry file defined above)
 
-        # Should hive use triggeres?
-        hive_use_triggers       => 0,
 
         # init_pipeline.pl will create the hive database on this machine, naming it
         # <username>_<pipeline_name>, and will drop any existing database with this
@@ -123,7 +123,8 @@ sub default_options {
             -port   => $self->o('hive_db_port'),
             -user   => $self->o('hive_db_user'),
             -pass   => $self->o('hive_db_password'),            
-            -dbname => $ENV{'USER'}.'_'.$self->o('pipeline_name').'_mouse',
+            -dbname => $ENV{'USER'}. '_' . $self->o('pipeline_name'),
+            -driver => 'mysql',
         },
     };
 }
