@@ -133,6 +133,17 @@ sub resource_classes {
     };
 }
 
+sub pipeline_wide_parameters {
+    my ($self) = @_;
+    return {
+        %{$self->SUPER::pipeline_wide_parameters},
+        ensembl_registry => $self->o('reg_file'),
+        include_external_features => $self->o('include_external_features'),
+        disambiguate_single_nucleotide_alleles => $self->o('disambiguate_single_nucleotide_alleles'),
+        debug => $self->o('debug'),
+    };
+}
+
 sub pipeline_analyses {
     my ($self) = @_;
 
