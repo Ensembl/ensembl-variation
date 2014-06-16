@@ -129,14 +129,6 @@ sub default_options {
     };
 }
 
-sub pipeline_create_commands {
-    my ($self) = @_;
-    return [
-        'mysql '.$self->dbconn_2_mysql('pipeline_db', 0).q{-e 'DROP DATABASE IF EXISTS }.$self->o('pipeline_db', '-dbname').q{'},
-        @{$self->SUPER::pipeline_create_commands}, 
-        'mysql '.$self->dbconn_2_mysql('pipeline_db', 1).q{-e 'INSERT INTO meta (meta_key, meta_value) VALUES ("hive_output_dir", "}.$self->o('output_dir').q{")'},
-    ];
-}
 
 sub resource_classes {
     my ($self) = @_;
