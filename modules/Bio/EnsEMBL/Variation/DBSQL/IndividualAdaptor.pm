@@ -114,7 +114,7 @@ sub store {
 			father_individual_id,
 			mother_individual_id,
 			individual_type_id,
-            display
+            display,
             has_coverage
 		) VALUES (?,?,?,?,?,?,?,?)
 	});
