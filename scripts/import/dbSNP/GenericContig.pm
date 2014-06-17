@@ -2948,7 +2948,7 @@ sub archive_rs_synonyms {
                                  (SELECT v.variation_id, 2, r.rsHigh
                                   FROM variation v, rsHist r
                                   WHERE v.name = r.rsLow                              
-                                  AND  r.rsCurrent is null
+                                  AND  r.rsCurrent not like 'rs%'
                                   AND v.snp_id between $start and $end)
                              }); 
       }
