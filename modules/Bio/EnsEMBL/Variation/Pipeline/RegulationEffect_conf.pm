@@ -117,7 +117,7 @@ sub default_options {
             -port   => $self->o('hive_db_port'),
             -user   => $self->o('hive_db_user'),
             -pass   => $self->o('hive_db_password'),            
-            -dbname => $ENV{'USER'} . '_' . $self->o('pipeline_name') . '_' . $self->o('species'),
+            -dbname => $ENV{'USER'} . '_' . $self->o('pipeline_name'),
             -driver => 'mysql',
         },
     };
@@ -160,26 +160,35 @@ sub pipeline_analyses {
     my ($self) = @_;
    
     my @analyses;
-#        push @analyses, (
-#            {   -logic_name => 'init_regulation_effect',
-#                -module => 'Bio::EnsEMBL::Variation::Pipeline::InitRegulationEffect',
-#                -hive_capacity => 1,
-#                -input_ids => [{},],
-#                -flow_into => {
-#                    '2->A' => ['regulation_effect'],
-#                    'A->1' => ['finish_regulation_effect'],
-#                },
-#            },
-#            {   -logic_name => 'regulation_effect',
-#                -module => 'Bio::EnsEMBL::Variation::Pipeline::RegulationEffect',
-#                -rc_name => 'default',
-#                -hive_capacity  =>  20,
-#            }, 
-#            {   -logic_name => 'finish_regulation_effect',
-#                -module => 'Bio::EnsEMBL::Variation::Pipeline::FinishRegulationEffect',
-#                -hive_capacity => 1,
-#            },
-#        );
+    if ($self->o('only_update_vf')) {
+        push @analyses, (
+            {   -logic_name => 'finish_regulation_effect',
+                -module => 'Bio::EnsEMBL::Variation::Pipeline::FinishRegulationEffect',
+                -hive_capacity => 1,
+            },
+        );
+    } else {
+        push @analyses, (
+            {   -logic_name => 'init_regulation_effect',
+                -module => 'Bio::EnsEMBL::Variation::Pipeline::InitRegulationEffect',
+                -hive_capacity => 1,
+                -input_ids => [{},],
+                -flow_into => {
+                    '2->A' => ['regulation_effect'],
+                    'A->1' => ['finish_regulation_effect'],
+                },
+            },
+            {   -logic_name => 'regulation_effect',
+                -module => 'Bio::EnsEMBL::Variation::Pipeline::RegulationEffect',
+                -rc_name => 'default',
+                -hive_capacity  =>  20,
+            }, 
+            {   -logic_name => 'finish_regulation_effect',
+                -module => 'Bio::EnsEMBL::Variation::Pipeline::FinishRegulationEffect',
+                -hive_capacity => 1,
+            },
+        );
+    }
     return \@analyses;
 }
 
