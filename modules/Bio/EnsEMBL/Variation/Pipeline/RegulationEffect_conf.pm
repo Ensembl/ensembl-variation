@@ -164,6 +164,7 @@ sub pipeline_analyses {
         push @analyses, (
             {   -logic_name => 'finish_regulation_effect',
                 -module => 'Bio::EnsEMBL::Variation::Pipeline::FinishRegulationEffect',
+                -input_ids => [{},],
                 -hive_capacity => 1,
             },
         );
