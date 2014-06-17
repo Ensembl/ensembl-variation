@@ -156,14 +156,14 @@ sub in_informative_position {
         my $vf = $self->variation_feature;
 
         unless (($vf->start == $vf->end) && ($self->variation_feature_seq ne '-')) {
-            return undef;
+            return 0;
         }
 
         # get the 1-based position
 
         my $start = $self->motif_start;
 
-        return undef unless defined $start && $start >= 1 && $start <= $self->motif_feature->length;
+        return 0 unless defined $start && $start >= 1 && $start <= $self->motif_feature->length;
 
         $self->{in_informative_position} = $self->motif_feature->binding_matrix->is_position_informative($start);
     }
