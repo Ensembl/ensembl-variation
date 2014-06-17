@@ -49,6 +49,7 @@ sub fetch_input {
     unless ($self->param('only_regulatory_feature')) {
         $vdbc->do('TRUNCATE TABLE motif_feature_variation');
         $vdbc->do('ALTER TABLE motif_feature_variation DISABLE KEYS');
+    }
     unless ($self->param('only_motif_feature')) {
         $vdbc->do('TRUNCATE TABLE regulatory_feature_variation');
         $vdbc->do('ALTER TABLE regulatory_feature_variation DISABLE KEYS');
