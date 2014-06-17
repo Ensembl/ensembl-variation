@@ -214,6 +214,8 @@ sub post_process {
 		update_table($dbVar->dbc, $tmp_table, ($VARIATION_FEATURE_TABLE, $VAR_COL, $VAR_COL, 'variation_set_id', 'variation_set_id'), $clean);
     
     print STDOUT "done!\n" unless ($quiet);
+
+    if($species =~/homo|human/i){
 	
 	# create MTMP table
 	my $mtmp_table_name = 'MTMP_variation_set_'.$sv_prefix.'variation';
@@ -257,7 +259,7 @@ sub post_process {
 	
 	load($dbVar->dbc, $mtmp_table_name);
 	
-	
+    }
     
     # ...and lastly, drop the temporary table
     print STDOUT localtime() . "\tDropping the temp table $tmp_table..." unless ($quiet);
