@@ -79,7 +79,7 @@ sub run {
         my $motif_feature = $mfa->fetch_by_dbID($feature_id) 
             or die "Failed to fetch MotifFeature for id: $feature_id";
         my $rf = $rfa->fetch_all_by_attribute_feature($motif_feature)->[0];
-        if ($rf->stable_id) { 
+        if ($rf) { 
             # we need to include failed variations
             $mfva->db->include_failed_variations(1);
             my $slice = $sa->fetch_by_Feature($motif_feature) or die "Failed to get slice around motif feature: " . $motif_feature->dbID;
