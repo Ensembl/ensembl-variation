@@ -55,7 +55,7 @@ sub default_options {
         hive_use_triggers => 0, 
         # the location of your checkout of the ensembl API (the hive looks for SQL files here)
         ensembl_cvs_root_dir    => $ENV{'HOME'} . '/DEV',
-        hive_root_dir           => $ENV{'HOME'} . '/DEV/ensembl-hive'
+        hive_root_dir           => $ENV{'HOME'} . '/DEV/ensembl-hive',
         # a name for your pipeline (will also be used in the name of the hive database)
         
         pipeline_name           => 'regulation_effect',
@@ -78,7 +78,7 @@ sub default_options {
         # of interest that you can then supply to init_pipeline.pl with the -species
         # option)
         
-        reg_file                => $self->o('pipeline_dir') . '/ensembl.registry',
+        registry_file           => $self->o('pipeline_dir') . '/ensembl.registry',
 
         # if set to 1 this option tells the transcript_effect analysis to disambiguate
         # ambiguity codes in single nucleotide alleles, so e.g. an allele string like
@@ -117,7 +117,7 @@ sub default_options {
             -port   => $self->o('hive_db_port'),
             -user   => $self->o('hive_db_user'),
             -pass   => $self->o('hive_db_password'),            
-            -dbname => $ENV{'USER'}. '_' . $self->o('pipeline_name'),
+            -dbname => $ENV{'USER'} . '_' . $self->o('pipeline_name') . '_' . $self->o('species'),
             -driver => 'mysql',
         },
     };
@@ -136,7 +136,7 @@ sub resource_classes {
           'default' => { 'LSF' => '-R"select[mem>2000] rusage[mem=2000]" -M2000'},
           'urgent'  => { 'LSF' => '-q yesterday -R"select[mem>2000] rusage[mem=2000]" -M2000'},
           'highmem' => { 'LSF' => '-R"select[mem>15000] rusage[mem=15000]" -M15000'},
-          'long'    => { 'LSF' => '-q long -R"select[mem>2000] rusage[mem=2000]" -M2000000'},
+          'long'    => { 'LSF' => '-q long -R"select[mem>2000] rusage[mem=2000]" -M2000'},
     };
 }
 
@@ -144,7 +144,7 @@ sub pipeline_wide_parameters {
     my ($self) = @_;
     return {
         %{$self->SUPER::pipeline_wide_parameters},
-        ensembl_registry => $self->o('reg_file'),
+        ensembl_registry => $self->o('registry_file'),
         include_external_features => $self->o('include_external_features'),
         disambiguate_single_nucleotide_alleles => $self->o('disambiguate_single_nucleotide_alleles'),
         debug => $self->o('debug'),
@@ -160,27 +160,26 @@ sub pipeline_analyses {
     my ($self) = @_;
    
     my @analyses;
-        push @analyses, (
-            {   -logic_name => 'init_regulation_effect',
-                -module => 'Bio::EnsEMBL::Variation::Pipeline::InitRegulationEffect',
-                -parameters => { @common_params, },
-                -hive_capacity => 1,
-                -input_ids => [{},],
-                -flow_into => {
-                    '2->A' => ['regulation_effect'],
-                    'A->1' => ['finish_regulation_effect'],
-                },
-            },
-            {   -logic_name => 'regulation_effect',
-                -module => 'Bio::EnsEMBL::Variation::Pipeline::RegulationEffect',
-                -rc_name => 'default',
-                -hive_capacity  =>  20,
-            }, 
-            {   -logic_name => 'finish_regulation_effect',
-                -module => 'Bio::EnsEMBL::Variation::Pipeline::FinishRegulationEffect',
-                -hive_capacity => 1,
-            },
-        );
+#        push @analyses, (
+#            {   -logic_name => 'init_regulation_effect',
+#                -module => 'Bio::EnsEMBL::Variation::Pipeline::InitRegulationEffect',
+#                -hive_capacity => 1,
+#                -input_ids => [{},],
+#                -flow_into => {
+#                    '2->A' => ['regulation_effect'],
+#                    'A->1' => ['finish_regulation_effect'],
+#                },
+#            },
+#            {   -logic_name => 'regulation_effect',
+#                -module => 'Bio::EnsEMBL::Variation::Pipeline::RegulationEffect',
+#                -rc_name => 'default',
+#                -hive_capacity  =>  20,
+#            }, 
+#            {   -logic_name => 'finish_regulation_effect',
+#                -module => 'Bio::EnsEMBL::Variation::Pipeline::FinishRegulationEffect',
+#                -hive_capacity => 1,
+#            },
+#        );
     return \@analyses;
 }
 
