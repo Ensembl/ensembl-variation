@@ -1822,6 +1822,8 @@ sub svf_to_consequences {
             
             add_extra_fields($config, $line, $svoa);
             
+            $line = run_plugins($svoa, $line, $config);
+            
             push @return, $line;
         }
     }
