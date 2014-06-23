@@ -2055,7 +2055,7 @@ sub get_phenotype_id {
     if(@matches) {
       
       # we only want the best match
-      my $best = scalar @matches == 1 ? $matches[0] : (sort {adist($description, $a) <=> adist($description, $b)} @matches)[0];
+      my $best = scalar @matches == 1 ? $matches[0] : (sort {abs(adist($description, $a)) <=> abs(adist($description, $b))} @matches)[0];
       
       # find characters that differ
       my $diff = diff([split(//,$description)], [split(//,$best)]);
