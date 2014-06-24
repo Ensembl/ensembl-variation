@@ -240,7 +240,6 @@ foreach my $hostname (@hostnames) {
 
 my $html_menu = create_menu();
 
-#$html_top_content .= qq{<div style="margin:25px 0px 35px;height:4px;background-color:#555"></div>} if ($html_content ne '');
 if ($html_content ne '') {
   $html_top_content .= qq{
     <div style="background-color:#F2F2F2;margin:50px 0px 25px;padding:5px;border-top:2px solid #336">
@@ -290,7 +289,7 @@ sub source_table {
   
   my $html = qq{<!-- $species -->};
   if ($is_new) {
-    $html = qq{
+    $html .= qq{
     <div id="$s_name_id" style="padding-left:0px;padding-bottom:1px">
       <img src="/i/species/48/$s_name.png" alt="$species" class="sp-thumb" style="float:none;margin-right:4px;padding:2px;vertical-align:middle;background-color:#00F" />
       <span style="font-weight:bold;font-size:1.1em;color:#333">$species</span><span style="padding-left:20px;color:#00F;font-weight:bold">New species!</span>
@@ -298,7 +297,7 @@ sub source_table {
     };
   }
   else {
-    $html = qq{
+    $html .= qq{
     <div id="$s_name_id" style="padding-left:0px;padding-bottom:3px">
       <img src="/i/species/48/$s_name.png" alt="$species" class="sp-thumb" style="float:none;margin-right:4px;vertical-align:middle" />
       <span style="font-weight:bold;font-size:1.1em;color:#333">$species</span>
@@ -358,7 +357,7 @@ sub source_table {
     
     # Display
     if ($s_url) {
-      $source = qq{<a href="$s_url">$source</a>};
+      $source = qq{<a href="$s_url" style="text-decoration:none" target="_blank">$source</a>};
     }
     
     # Version
@@ -506,6 +505,7 @@ sub source_table {
   $html .= qq{$source_table\n    </table>\n  </div>};
   $html .= qq{$chip_table\n    </table>\n  </div>} if ($chip_table);
   $html .= qq{$lsdb_table\n    </table>\n  </div>} if ($lsdb_table);
+  $html .= qq{<div style="height:20px"></div>};
   
   return $html;
 }
@@ -688,7 +688,7 @@ sub menu_list {
   return qq{
   <div style="margin-left:4px;margin-bottom:5px">
     <img src="/i/species/16/$s_name.png" alt="$name" style="border-radius:4px;margin-right:4px;vertical-align:middle" />
-    <a href="#$anchor" style="margin-right:2px">$name</a>$new_data
+    <a href="#$anchor" style="margin-right:2px;text-decoration:none;vertical-align:middle">$name</a>$new_data
   </div>
   };
 }
@@ -750,9 +750,9 @@ sub table_header {
   
   my $top_margin = ($type eq 'main') ? '6px' : '0px';
   
-  return qq{    <div style="margin:$top_margin 0px 40px">
+  return qq{    <div style="margin:$top_margin 0px 30px">
       <table class="ss">
-        <tr><th colspan="2">$name</th><th>Version</th><th style="fvmax-width:800px">Description</th><th>Data type(s)</th><th class="_ht" style="padding-left:1px;padding-right:1px;margin-left:0px;margin-right:0px" title="Example(s) page(s)">e.g.</th></th>$header_col</tr>
+        <tr><th colspan="2">$name</th><th>Version</th><th style="max-width:800px">Description</th><th>Data type(s)</th><th class="_ht" style="padding-left:1px;padding-right:1px;margin-left:0px;margin-right:0px" title="Example(s) page(s)">e.g.</th></th>$header_col</tr>
     };
 }
 
@@ -769,7 +769,7 @@ sub set_row {
 
   my $row = qq{
         $header
-        <td>$source</td>
+        <td style="font-weight:bold">$source</td>
         <td>$version</td>
         <td style="max-width:800px">$desc</td>
         <td style="min-width:70px;max-width:90px">$data_type</td>
