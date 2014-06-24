@@ -34,17 +34,17 @@ SET storage_engine=MYISAM;
 			although this fails our <a href="/info/genome/variation/data_description.html#quality_control">Quality Control</a>.<br /> 
       This table stores a variation's name (commonly an ID of the form e.g. rs123456, assigned by dbSNP), along with a validation status and ancestral (or reference) allele.
 
-@column variation_id		    Primary key, internal identifier.
-@column source_id			      Foreign key references to the @link source table.
-@column name				        Name of the variation. e.g. "rs1333049".
-@column validation_status	  Variant discovery method and validation from dbSNP.
-@column ancestral_allele	  Taken from dbSNP to show ancestral allele for the variation.
-@column flipped				      This is set to 1 if the variant is flipped from the negative to the positive strand during import.
-@column class_attrib_id		  Class of the variation, key into the @link attrib table.<br /> The list of variation classes is available <a href="/info/genome/variation/data_description.html#classes">here</a>.
-@column somatic             flags whether this variation is known to be somatic or not
-@column minor_allele        The minor allele of this variant, as reported by dbSNP
-@column minor_allele_freq   The 'global' frequency of the minor allele of this variant, as reported by dbSNP
-@column minor_allele_count  The number of samples the minor allele of this variant is found in, as reported by dbSNP
+@column variation_id		       Primary key, internal identifier.
+@column source_id			         Foreign key references to the @link source table.
+@column name				           Name of the variation. e.g. "rs1333049".
+@column validation_status	     Variant discovery method and validation from dbSNP.
+@column ancestral_allele	     Taken from dbSNP to show ancestral allele for the variation.
+@column flipped				         This is set to 1 if the variant is flipped from the negative to the positive strand during import.
+@column class_attrib_id		     Class of the variation, key into the @link attrib table.<br /> The list of variation classes is available <a href="/info/genome/variation/data_description.html#classes">here</a>.
+@column somatic                Flags whether this variation is known to be somatic or not
+@column minor_allele           The minor allele of this variant, as reported by dbSNP
+@column minor_allele_freq      The 'global' frequency of the minor allele of this variant, as reported by dbSNP
+@column minor_allele_count     The number of samples the minor allele of this variant is found in, as reported by dbSNP
 @column clinical_significance  A set of clinical significance classes assigned to the variant.<br /> 
                                The list of clinical significances is available <a href="/info/genome/variation/data_description.html#clin_significance">here</a>.
 @column evidence_attribs            A summary of the evidence supporting a variant as a guide to its potential reliability. See the evidence descriptions <a href="/info/genome/variation/data_description.html#evidence_status">here</a>.
@@ -589,7 +589,7 @@ CREATE TABLE tagged_variation_feature (
 @column collection        Flag indicating if the population is defined based on geography (0) or a collection of individuals with respect to some other criteria (1).
 @column freqs_from_gts    Flag indicating if the population frequencies can be retrieved from the allele table (0) or from the individual genotypes (1).
 @column display           Information used by Biomart.
-@column display_group     used to group population for display on the Population Genetics page
+@column display_group_id  Used to group population for display on the Population Genetics page
 
 @see population_synonym
 @see individual_population
@@ -649,6 +649,7 @@ create table population_structure (
 @column mother_individual_id    Self referential ID, the mother of this individual if known.
 @column individual_type_id      Foreign key references to the @link individual_type table.
 @column display                 Information used by the website: individuals with little information are filtered from some web displays.
+@column has_coverage            Indicate if the individual has coverage data populated in the read coverage table
 
 @see individual_synonym
 @see individual_type
@@ -778,6 +779,8 @@ CREATE TABLE population_synonym (
 );
 
 /**
+@table display_group
+
 @colour #FF8500
 @desc Used to store groups of populations displayed separately on the Population Genetics page
 
@@ -846,7 +849,7 @@ CREATE TABLE population_genotype (
 @table tmp_individual_genotype_single_bp
 
 @colour #FF8500
-@desc his table is only needed to create master schema when run healthcheck system. Needed for other species, but human, so keep it.
+@desc This table is only needed to create master schema when run healthcheck system. Needed for other species, but human, so keep it.
 
 @column variation_id     Primary key. Foreign key references to the @link variation table.
 @column subsnp_id        Foreign key references to the @link subsnp_handle table.
@@ -913,7 +916,7 @@ create table individual_genotype_multiple_bp (
 @column seq_region_start     The start position of the variation on the @link seq_region.
 @column seq_region_end       The end position of the variation on the @link seq_region.
 @column seq_region_strand    The orientation of the variation on the @link seq_region.
-@column genotypes            Encoded representation of the genotype data:<br />Each row in the compressed table stores genotypes from one individual in one fixed-size region of the genome (arbitrarily defined as 100 Kb). The compressed string (using Perl's pack method) consisting of a repeating triplet of elements: a distance in base pairs from the previous genotype; a variation dbID; a genotype_code_id identifier.<br />For example, a given row may have a start position of 1000, indicating the chromosomal position of the first genotype in this row. The unpacked genotypes field then may contain the following elements:<br />0, 1, 1, 20, 2, 5, 35, 3, 3, ...<br />The first genotype has a position of 1000 + 0 = 1000, and corresponds to the variation with the identifier 1 and genotype_code corresponding to A and G.<br />The second genotype has a position of 1000 + 20 = 1020, variation_id 2 and genotype_code representing C and C.<br />The third genotype similarly has a position of 1055, and so on.
+@column genotypes            Encoded representation of the genotype data:<br />Each row in the compressed table stores genotypes from one individual in one fixed-size region of the genome (arbitrarily defined as 100 Kb). The compressed string (using Perl's pack method) consisting of a repeating triplet of elements: a  <span style="color:#D00">distance</span> in base pairs from the previous genotype; a <span style="color:#090">variation dbID</span>; a <span style="color:#00D">genotype_code_id</span> identifier.<br />For example, a given row may have a start position of 1000, indicating the chromosomal position of the first genotype in this row. The unpacked genotypes field then may contain the following elements:<br /><b><span style="color:#D00">0</span>, <span style="color:#090">1</span>,  <span style="color:#00D">1</span>, <span style="color:#D00">20</span>, <span style="color:#090">2</span>, <span style="color:#00D">5</span>, <span style="color:#D00">35</span>, <span style="color:#090">3</span>, <span style="color:#00D">3</span>, ...</b><br />The first genotype ("<span style="color:#D00">0</span>,<span style="color:#090">1</span>,<span style="color:#00D">1</span>") has a position of 1000 + <span style="color:#D00">0</span> = 1000, and corresponds to the variation with the internal identifier <span style="color:#090">1</span> and genotype_code_id corresponding to the genotype A|G (internal ID <span style="color:#00D">1</span>).<br />The second genotype ("<span style="color:#D00">20</span>,<span style="color:#090">2</span>,<span style="color:#00D">5</span>") has a position of 1000 + <span style="color:#D00">20</span> = 1020, internal variation_id <span style="color:#090">2</span> and genotype_code_id corresponding to the genotype C|C ( internal ID <span style="color:#00D">5</span>).<br />The third genotype similarly has a position of 1055, and so on.
 
 @see individual
 @see seq_region
@@ -937,11 +940,11 @@ CREATE TABLE compressed_genotype_region (
 @table compressed_genotype_var
 
 @colour #FF8500
-@desc This table holds genotypes compressed using the pack() method in Perl. These genotypes are mapped directly to variation objects. The data have been compressed to reduce table size. All genotypes in the database are included in this table (included duplicates of those genotypes contained in the compressed_genotype_region table). This table is optimised for retrieval from 
+@desc This table holds genotypes compressed using the pack() method in Perl. These genotypes are mapped directly to variation objects. The data have been compressed to reduce table size. All genotypes in the database are included in this table (included duplicates of those genotypes contained in the compressed_genotype_region table). This table is optimised for retrieval from variation.
 
 @column variation_id	Foreign key references to the @link variation table.
-@column subsnp_id		Foreign key references to the @link subsnp_handle table.
-@column genotypes       Encoded representation of the genotype data:<br />Each row in the compressed table stores genotypes from one subsnp of a variation (or one variation if no subsnp is defined). The compressed string (using Perl's pack method) consisting of a repeating pair of elements: an internal individual_id corresponding to an individual; a genotype_code_id identifier.
+@column subsnp_id		  Foreign key references to the @link subsnp_handle table.
+@column genotypes     Encoded representation of the genotype data:<br />Each row in the compressed table stores genotypes from one subsnp of a variation (or one variation if no subsnp is defined). The compressed string (using Perl's pack method) consisting of a repeating pair of elements: an internal individual_id corresponding to an individual; a genotype_code_id identifier.
 
 @see individual
 @see variation
@@ -1374,12 +1377,13 @@ CREATE TABLE transcript_variation (
 @desc This table is used in web index creation. It links a variation_id to all possible transcript and protein level change descriptions in HGVS annotation.
 @column variation_id         Primary key, foreign key references @link variation
 @column hgvs_name            Primary key, HGVS change description
-**/
+*/
 
 create table variation_hgvs(
 variation_id int(10) unsigned not null,
 hgvs_name varchar(255) not null,
 primary key(variation_id, hgvs_name));
+
 
 /**
 @table variation_genename
@@ -1388,14 +1392,12 @@ primary key(variation_id, hgvs_name));
 @desc This table is used in web index creation. It links a variation_id to the names of the genes the variation is within
 @column variation_id         Primary key, foreign key references @link variation
 @column gene_name            Primary key, display name of gene
-**/
-
+*/
 
 create table variation_genename (
 variation_id int(10) unsigned not null, 
 gene_name varchar(255) not null, 
 primary key(variation_id, gene_name));
-
 
 
 /**
