@@ -1146,18 +1146,31 @@ sub parse_orphanet {
           $ens_ids{$ens_node->to_literal} = 1;
         }
       }
-      if (defined($ref)) {
-        my $genes = $ga->fetch_all_by_external_name($ref, 'HGNC');
+      if (defined($ref) || scalar keys %ens_ids) {
+        my $genes = [];
         
-        # we don't want any LRG genes
-        @$genes = grep {$_->stable_id !~ /^LRG_/} @$genes;
+        if(scalar keys %ens_ids) {
+          foreach my $ens_id(keys %ens_ids) {
+            my $g = $ga->fetch_by_stable_id($ens_id);
+            push @$genes, $g if defined($g);
+          }
+        }
         
-        # and we don't want any duplicates if possible
-        @$genes = grep {$ens_ids{$_->stable_id}} @$genes if scalar keys %ens_ids;
+        
+        
+        if(scalar @$genes == 0 && defined($ref)) {
+          my $genes = $ref =~ /^\d+$/ ? $ga->fetch_all_by_description('%HGNC:'.$ref.']%') : $ga->fetch_all_by_external_name($ref, 'HGNC');
+          
+          # we don't want any LRG genes
+          @$genes = grep {$_->stable_id !~ /^LRG_/} @$genes;
+          
+          # and we don't want any duplicates if possible
+          @$genes = grep {$ens_ids{$_->stable_id}} @$genes if scalar keys %ens_ids;
+        }
         
         if ( scalar(@$genes) > 0) {
           if(scalar @$genes != 1) {
-            print STDERR "WARNING: Found ".(scalar @$genes)." matching Ensembl genes for HGNC ID $ref\n";
+            print STDERR "WARNING: Found ".(scalar @$genes)." matching Ensembl genes for HGNC ID $ref or Ens IDs ".join(",", keys %ens_ids)."\n";
           }
           
           next unless scalar @$genes;
@@ -2056,6 +2069,9 @@ sub get_phenotype_id {
       
       # we only want the best match
       my $best = scalar @matches == 1 ? $matches[0] : (sort {abs(adist($description, $a)) <=> abs(adist($description, $b))} @matches)[0];
+      
+      # if distance is 0, return
+      return $phenotype_cache{$mapped{$best}} if adist($description, $best) == 0;
       
       # find characters that differ
       my $diff = diff([split(//,$description)], [split(//,$best)]);
