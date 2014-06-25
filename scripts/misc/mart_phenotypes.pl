@@ -127,6 +127,7 @@ foreach my $db (@db_list) {
 		$row->{pf_id}          = $pf_id;
 		$row->{gene_stable_id} = $gene_id;
 		$row->{is_significant} = $is_sgn;
+        $desc =~ s/\&|,//g;
 		$row->{description}    = $desc;
 		$row->{source}         = $source;
 		if ($code eq 'strain_id') {
