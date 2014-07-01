@@ -50,18 +50,18 @@ my @filters = ('fail_');
 $registry->load_registry_from_db(
     -host => $host,
     -user => 'ensro',
-		-db_version => $db_version
+    -db_version => $db_version
 );
 
 my $vdb = $registry->get_DBAdaptor($species,'variation');
 my $dbVar = $vdb->dbc->db_handle;
 
 my $table_header = qq{
-	<tr>
-		<th style="width:200px">Name</th>
-		<th>Size</th>
-		<th>Description</th>
-	</tr>
+  <tr>
+    <th style="width:200px">Name</th>
+    <th>Size</th>
+    <th>Description</th>
+  </tr>
 };
 
 
@@ -73,14 +73,14 @@ my %pops = ('1000 Genomes' => { 'term' => '1000GENOMES:phase_1_%', 'constraint' 
 
 foreach my $project (sort(keys(%pops))) {
   
-	my $bg = '';
+  my $bg = '';
+
+  my $term = $pops{$project}{term};
+  my $constraint  = ($pops{$project}{constraint}) ? $pops{$project}{constraint}.' AND ' : '';
   
-	my $term = $pops{$project}{term};
-	my $constraint  = ($pops{$project}{constraint}) ? $pops{$project}{constraint}.' AND ' : '';
-	
   print "<h4>Populations from the $project Project (Human)</h4>\n";
-	$project =~ s/ /_/g;
-	$project = lc $project;
+  $project =~ s/ /_/g;
+  $project = lc $project;
   print "<table id=\"$project\" class=\"ss\">\n";
   print "$table_header\n";
 
@@ -88,23 +88,21 @@ foreach my $project (sort(keys(%pops))) {
   my $stmt = qq{ SELECT population_id, name, size, description FROM population WHERE $constraint name like ? ORDER BY name};
   my $sth = $dbVar->prepare($stmt);
   $sth->execute($term);
-	
+
   while(my @data = $sth->fetchrow_array) {
-	  $data[2] = '-' if (!$data[2]);
-		
-		my @desc = split(/\.,/, $data[3]);
-		$data[3] = "$desc[0]. $desc[1]." if scalar(@desc > 1);
-		
-		print "\t<tr$bg>\n";
-	  print "\t\t<td>$data[1]</td>\n";
-	  print "\t\t<td>$data[2]</td>\n";
-	  print "\t\t<td>$data[3]</td>\n";
-	  print "\t</tr>\n";
-		
-		if ($bg eq '') { $bg = ' class="bg2"'; }	
-	  else { $bg = ''; }
-	}
-	
-	print "</table>\n\n";
-	$sth->finish;
+    $data[2] = '-' if (!$data[2]);
+    my ($pop_name,$pop_suffix) = split(":", $data[1]);
+    $pop_name .=  ":<b>$pop_suffix</b>" if ($pop_suffix);
+
+    my @desc = split(/\.,/, $data[3]);
+    $data[3] = "$desc[0]. $desc[1]." if scalar(@desc > 1);
+
+    print qq{  <tr$bg>\n    <td>$pop_name</td>\n    <td style="text-align:right">$data[2]</td>\n    <td>$data[3]</td>\n  </tr>\n};
+
+    if ($bg eq '') { $bg = ' class="bg2"'; }
+    else { $bg = ''; }
+  }
+
+  print "</table>\n\n";
+  $sth->finish;
 }
