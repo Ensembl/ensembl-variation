@@ -76,7 +76,7 @@ sub _tables {
 
 sub _columns {
   return qw( sv.structural_variation_id sv.variation_name sv.validation_status s.name s.version s.description 
-             sv.class_attrib_id sv.study_id sv.is_evidence sv.somatic sv.alias sv.clinical_significance_attrib_id);
+             sv.class_attrib_id sv.study_id sv.is_evidence sv.somatic sv.alias sv.clinical_significance);
 }
 
 # Add a left join to the failed_structural_variation table
@@ -412,21 +412,6 @@ sub store {
     }
     throw("No class ID found for the class name ", $sv->{class_SO_term}) unless defined($class_attrib_id);
     
-    # look up clinical_significance_attrib_id
-    my $clin_sign_attrib_id;
-    if(defined($sv->{clinical_significance})) {
-      my $sth = $dbh->prepare(q{
-           SELECT attrib_id FROM attrib WHERE value = ? 
-              AND attrib_type_id IN (SELECT attrib_type_id FROM attrib_type WHERE code='dgva_clin_sig')
-      });
-      $sth->execute($sv->{clinical_significance});
-        
-      $sth->bind_columns(\$clin_sign_attrib_id);
-      $sth->fetch();
-      $sth->finish();
-      throw("No attrib ID found for the clinical significance ", $sv->{clinical_significance}) unless defined($clin_sign_attrib_id);
-    }
-    
     my $sth = $dbh->prepare(q{
         INSERT INTO structural_variation (
             source_id,
@@ -437,7 +422,7 @@ sub store {
             is_evidence,
             somatic,
             alias,
-            clinical_significance_attrib_id
+            clinical_significance
         ) VALUES (?,?,?,?,?,?,?,?,?)
     });
     
@@ -445,12 +430,12 @@ sub store {
         $sv->{source_id},
         $sv->{study_id} || undef,
         $sv->variation_name,
-        (join ",", @{$sv->get_all_validation_states}) || undef,
+        $sv->validation_status || undef,
         $class_attrib_id || 0,
         $sv->is_evidence || 0,
         $sv->is_somatic  || 0,
         $sv->alias || undef,
-        $clin_sign_attrib_id || undef
+        $sv->clinical_significance ? (join ",", @{$sv->clinical_significance}) : undef,
     );
     
     $sth->finish;

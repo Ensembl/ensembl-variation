@@ -72,7 +72,7 @@ use warnings;
 package Bio::EnsEMBL::Variation::BaseStructuralVariation;
 
 use Bio::EnsEMBL::Storable;
-use Bio::EnsEMBL::Utils::Exception qw(throw warning);
+use Bio::EnsEMBL::Utils::Exception qw( warning throw deprecate );
 use Bio::EnsEMBL::Utils::Argument  qw(rearrange);
 use Bio::EnsEMBL::Variation::Utils::Constants qw(%VARIATION_CLASSES); 
 use Bio::EnsEMBL::Variation::Failable;
@@ -105,7 +105,7 @@ our @ISA = ('Bio::EnsEMBL::Storable','Bio::EnsEMBL::Variation::Failable');
     object ref - the study object describing where the structural variant comes from.
   
   Arg [-VALIDATION_STATUS] :
-    string - the status of the structural variant (e.g. validated, not validated, ...)
+    string - the status of the structural variant (e.g. validated, not validated, high quality, ...)
   
   Arg [-IS_EVIDENCE] :
     int - flag to inform whether the structural variant is a supporting evidence (1) or not (0).
@@ -117,7 +117,7 @@ our @ISA = ('Bio::EnsEMBL::Storable','Bio::EnsEMBL::Variation::Failable');
     string - other name given to the structural variant.
     
   Arg [-CLINICAL_SIGNIFICANCE] :
-    string - clinical significance associated with the structural variant, e.g. 'Pathogenic'.
+    reference to list of strings - clinical significance(s) associated with the structural variant, e.g. 'pathogenic'.
     
   Example for a structural variation:
     $sv = Bio::EnsEMBL::Variation::StructuralVariation->new
@@ -164,7 +164,7 @@ sub new {
           SOURCE_DESCRIPTION 
           CLASS_SO_TERM
           STUDY
-          VALIDATION_STATES
+          VALIDATION_STATUS
           IS_EVIDENCE
           IS_SOMATIC
           ALIAS
@@ -390,14 +390,35 @@ sub alias {
   Returntype : string
   Exceptions : none
   Caller     : general
-  Status     : At Risk
+  Status     : Deprecated
 
 =cut
 
 sub clinical_significance {
   my $self = shift;
-  return $self->{'clinical_significance'} = shift if(@_);
-  return $self->{'clinical_significance'};
+  deprecate("The 'clinical_significance' method should no longer be used, use the method 'get_all_clinical_significance_states' instead\n");
+  push @{$self->{clinical_significance}}, shift if(@_);
+  return defined($self->{clinical_significance}) ?  join ",", @{$self->{clinical_significance}} : undef;
+}
+
+
+=head2 get_all_clinical_significance_states
+
+  Arg [1]    : none
+  Example    : my @csstates = @{$sv->get_all_clinical_significance_states()};
+  Description: Retrieves all clinical_significance states associated with this structural variant, as reported by dbVar/ClinVar,
+               e.g. 'pathogenic','benign', 'drug response',...
+  Returntype : reference to list of strings
+  Exceptions : none
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub get_all_clinical_significance_states {
+    my $self = shift;
+    
+    return $self->{'clinical_significance'};
 }
 
 
@@ -411,14 +432,35 @@ sub clinical_significance {
   Returntype : reference to list of strings
   Exceptions : none
   Caller     : general
-  Status     : At Risk
+  Status     : Deprecated
 
 =cut
 
 sub get_all_validation_states {
   my $self = shift;
+  deprecate('The use of this method is deprecated. Use the method "validation_status()" instead');
+  return $self->{'validation_status'} ? [$self->{'validation_status'}] : [];
+}
 
-  return $self->{'validation_status'} || [];
+
+=head2 validation_status
+
+  Arg [1]    : none
+  Example    : my $status = $sv->validation_status();
+  Description: Getter/Setter of the validation status for the structural variant. Current
+               possible validation statuses are 'validated','not validated',
+               'high quality'
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub validation_status {
+  my $self = shift;
+  return $self->{'validation_status'} = shift if(@_);
+  return $self->{'validation_status'};
 }
 
 

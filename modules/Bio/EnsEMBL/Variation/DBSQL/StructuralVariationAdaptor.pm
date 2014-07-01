@@ -100,11 +100,11 @@ sub _objs_from_sth {
   my @svs;
   
   my ($struct_variation_id, $variation_name, $validation_status, $source_name, $source_version, 
-      $source_description, $class_attrib_id, $study_id, $is_evidence, $is_somatic, $alias, $clin_sign_attrib_id);
+      $source_description, $class_attrib_id, $study_id, $is_evidence, $is_somatic, $alias, $clinical_significance);
 
   $sth->bind_columns(\$struct_variation_id, \$variation_name, \$validation_status, \$source_name, 
                      \$source_version, \$source_description, \$class_attrib_id, \$study_id, \$is_evidence, 
-                     \$is_somatic, \$alias, \$clin_sign_attrib_id);
+                     \$is_somatic, \$alias, \$clinical_significance);
 
   my $aa  = $self->db->get_AttributeAdaptor;
   my $sta = $self->db->get_StudyAdaptor();
@@ -113,15 +113,14 @@ sub _objs_from_sth {
   
     my $study;
     $study = $sta->fetch_by_dbID($study_id) if (defined($study_id));
-  
-    # Get the validation status
-    $validation_status ||= 0;
-    my @states = split(/,/,$validation_status);
-  
+
+    my @clin_sig;
+    @clin_sig = split(/,/,$clinical_significance) if (defined($clinical_significance));  
+
     push @svs, Bio::EnsEMBL::Variation::StructuralVariation->new(
        -dbID                  => $struct_variation_id,
        -VARIATION_NAME        => $variation_name,
-       -VALIDATION_STATES     => \@states,
+       -VALIDATION_STATUS     => $validation_status,
        -ADAPTOR               => $self,
        -SOURCE                => $source_name,
        -SOURCE_VERSION        => $source_version,
@@ -131,7 +130,7 @@ sub _objs_from_sth {
        -IS_EVIDENCE           => $is_evidence || 0,
        -IS_SOMATIC            => $is_somatic || 0,
        -ALIAS                 => $alias,
-       -CLINICAL_SIGNIFICANCE => $aa->attrib_value_for_id($clin_sign_attrib_id)
+       -CLINICAL_SIGNIFICANCE => \@clin_sig
     );
   }
   return \@svs;
