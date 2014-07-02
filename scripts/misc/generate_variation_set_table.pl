@@ -50,7 +50,7 @@ my @filters = ('fail_');
 $registry->load_registry_from_db(
     -host => $host,
     -user => 'ensro',
-		-db_version => $db_version
+    -db_version => $db_version
 );
 
 # Get a VariationSetAdaptor on the human variation database
@@ -61,32 +61,32 @@ my $top_vss = $vs_adaptor->fetch_all_top_VariationSets();
 
 
 my $table_header = qq{
-	<tr>
-		<th>Name</th>
-		<th>Short name</th>
-		<th>Description</th>
-	</tr>
+  <tr>
+    <th>Name</th>
+    <th>Short name</th>
+    <th>Description</th>
+  </tr>
 };
-	
+
 # Loop over the top level variation sets and recursively print the subsets
 my $com_rowcount = 0;
 my $rowcount     = 0;
 my $com_sets;
 my $sets;
 foreach my $top_vs (@{$top_vss}) {
-	my $is_com = 0;
-	# Common set
-	foreach my $com_filter (@filters) {
-		if ($top_vs->short_name =~ /^$com_filter/) {
-			$com_sets->{$top_vs->short_name} = $top_vs;
-			$is_com = 1;
-			last;
-		}
-	}
-	# Human specific set
-	if (!$is_com) {
-		$sets->{$top_vs->short_name} = $top_vs;
-	}
+  my $is_com = 0;
+  # Common set
+  foreach my $com_filter (@filters) {
+    if ($top_vs->short_name =~ /^$com_filter/) {
+      $com_sets->{$top_vs->short_name} = $top_vs;
+      $is_com = 1;
+      last;
+    }
+  }
+  # Human specific set
+  if (!$is_com) {
+    $sets->{$top_vs->short_name} = $top_vs;
+  }
 }
 
 
@@ -96,7 +96,7 @@ print "<table id=\"variation_set_table\" class=\"ss\">\n";
 print "$table_header\n";
 
 foreach my $com_set_name (sort(keys(%$com_sets))) {
-	print_set($com_sets->{$com_set_name},\$com_rowcount);
+  print_set($com_sets->{$com_set_name},\$com_rowcount);
 }
 print "</table>\n";
 
@@ -107,7 +107,7 @@ print "<table id=\"human_variation_set_table\" class=\"ss\">\n";
 print $table_header;
 
 foreach my $set_name (sort(keys(%$sets))) {
-	print_set($sets->{$set_name},\$rowcount);
+  print_set($sets->{$set_name},\$rowcount);
 }
 print "</table>\n";
 
@@ -115,40 +115,40 @@ print "</table>\n";
 
 # We define a function that will help us recurse over the set hierarchy and print the data   
 sub print_set {
-	my $set = shift;
-	my $rowcount = shift;
-	my $indent = shift || 0;
-	
-	# Highlight even row numbers
-	${$rowcount}++;
-	my $rowclass = (${$rowcount}%2 == 0 ? " class=\"bg2\"" : "");
-	
-	# Put a bullet next to subsets (will only be correct for one level of nesting - needs to be modified if we're having multiple levels in the future)
-	my $bullet_open = "";
-	my $bullet_close = "";
-	if ($indent > 0) {
-		$bullet_open = "<ul style=\"margin:0px\"><li style=\"margin:0px\">";
-		$bullet_close = "</li></ul>";
-	}
-	
-	# Print the set attributes
-	print "\t<tr$rowclass>\n";
-	print "\t\t<td>$bullet_open" . $set->name() . "$bullet_close</td>\n";
-	print "\t\t<td>" . $set->short_name() . "</td>\n";
-	print "\t\t<td>" . $set->description() . "</td>\n";
-	print "\t</tr>\n";
-	
-	# Get the subsets that have the current set as immediate parent
-	my $subsets = $set->get_all_sub_VariationSets(1);
-	
-	# Call the print subroutine for each of the subsets with an increased indentation
-	my $ssets;
-	foreach my $sub_vs (@{$subsets}) {
-		$ssets->{$sub_vs->name} = $sub_vs;
-	}
-	foreach my $sset_name (sort(keys(%$ssets))) {
-		print_set($ssets->{$sset_name},$rowcount,$indent+1);
-	}
+  my $set = shift;
+  my $rowcount = shift;
+  my $indent = shift || 0;
+  
+  # Highlight even row numbers
+  ${$rowcount}++;
+  my $rowclass = (${$rowcount}%2 == 0 ? " class=\"bg2\"" : "");
+  
+  # Put a bullet next to subsets (will only be correct for one level of nesting - needs to be modified if we're having multiple levels in the future)
+  my $bullet_open = "";
+  my $bullet_close = "";
+  if ($indent > 0) {
+    $bullet_open = "<ul style=\"margin:0px\"><li style=\"margin:0px\">";
+    $bullet_close = "</li></ul>";
+  }
+  
+  # Print the set attributes
+  print "  <tr$rowclass>\n";
+  print "    <td>$bullet_open" . $set->name() . "$bullet_close</td>\n";
+  print "    <td>" . $set->short_name() . "</td>\n";
+  print "    <td>" . $set->description() . "</td>\n";
+  print "  </tr>\n";
+  
+  # Get the subsets that have the current set as immediate parent
+  my $subsets = $set->get_all_sub_VariationSets(1);
+  
+  # Call the print subroutine for each of the subsets with an increased indentation
+  my $ssets;
+  foreach my $sub_vs (@{$subsets}) {
+    $ssets->{$sub_vs->name} = $sub_vs;
+  }
+  foreach my $sset_name (sort(keys(%$ssets))) {
+    print_set($ssets->{$sset_name},$rowcount,$indent+1);
+  }
 }
 
 sub usage {
