@@ -54,91 +54,86 @@ my $vdb = $registry->get_DBAdaptor($species,'variation');
 my $dbVar = $vdb->dbc->db_handle;
 
 
-my $list_stmt = qq{ SELECT value FROM attrib WHERE attrib_type_id IN 
-                    (select attrib_type_id from attrib_type where code=?)
-                  };
-my $desc_stmt = qq{ SELECT name,description FROM attrib_type WHERE code=? };
-
-my %types = (
-  'dbsnp_clin_sig' => { 'query' => qq{ SELECT name FROM variation
-                                     WHERE FIND_IN_SET(?,clinical_significance)
-                                     AND variation_id NOT IN (SELECT variation_id FROM failed_variation) 
-                                     LIMIT 1},
-                        'link' => qq{/Homo_sapiens/Variation/Explore?v=},
-                        'icon' => 1
-                      },
-  'dgva_clin_sig' => { 'query' => qq{ SELECT v1.variation_name FROM structural_variation v1, structural_variation v2, structural_variation_association vas, attrib a
-                                    WHERE v2.structural_variation_id=vas.supporting_structural_variation_id
-                                    AND v2.clinical_significance_attrib_id=a.attrib_id
-																		AND a.value=?
-                                    AND v1.structural_variation_id=vas.structural_variation_id
-                                    AND v1.structural_variation_id NOT IN 
-                                    (SELECT structural_variation_id FROM failed_structural_variation)
-                                    LIMIT 1},
-                       'link' => qq{/Homo_sapiens/StructuralVariation/Evidence?sv=}
-                     },
-);
+my %info = (
+             'label'     => ['ClinVar','DGVa'],
+             'clin_sign' => [
+                             qq{ SELECT DISTINCT clinical_significance FROM variation WHERE variation_id NOT IN (SELECT variation_id FROM failed_variation) AND clinical_significance is not NULL},
+                             qq{ SELECT DISTINCT clinical_significance FROM structural_variation 
+                                 WHERE structural_variation_id NOT IN (SELECT structural_variation_id FROM failed_structural_variation)
+                                 AND clinical_significance is not NULL
+                               }
+                            ],
+             'query'     => [
+                             qq{ SELECT name FROM variation
+                                 WHERE FIND_IN_SET(?,clinical_significance)
+                                   AND variation_id NOT IN (SELECT variation_id FROM failed_variation) 
+                                 LIMIT 1
+                               },
+                             qq{ SELECT v1.variation_name FROM structural_variation v1, structural_variation v2, structural_variation_association vas
+                                 WHERE v1.is_evidence=0
+                                   AND FIND_IN_SET(?,v2.clinical_significance)
+                                   AND v2.structural_variation_id=vas.supporting_structural_variation_id
+                                   AND v2.is_evidence=1
+                                   AND v1.structural_variation_id=vas.structural_variation_id
+                                   AND v1.structural_variation_id NOT IN 
+                                   (SELECT structural_variation_id FROM failed_structural_variation)
+                                 LIMIT 1
+                                }
+                             ],
+             'link'      => [ qq{/Homo_sapiens/Variation/Explore?v=},qq{/Homo_sapiens/StructuralVariation/Evidence?sv=}],
+           );
 
 my $html;
 my $bg = '';
 my $icon_path = '/i/val/clinsig_';
+my $border_left = qq{ style="border-left:1px solid #BBB"};
 
-
-# Types
-foreach my $type (keys %types) {
-  my @list_val;
-  
-  my ($name,$desc) = execute_stmt_one_result($desc_stmt,$type);
-  
-  my $sth = $dbVar->prepare($list_stmt);
-  $sth->execute($type);
-  while (my $val = ($sth->fetchrow_array)[0]){
-    push (@list_val,$val);
+# Clinical significance terms
+my %clin_sign;
+foreach my $type_stmt (@{$info{'clin_sign'}}) {
+  my $sth = $dbVar->prepare($type_stmt);
+  $sth->execute();
+  while (my ($vals) = $sth->fetchrow_array()){
+    foreach my $val (split(',',$vals)) {
+      $clin_sign{$val} = 1;
+    }
   }  
   $sth->finish;
-
-  my $content = add_table_header($type);
-  foreach my $value (sort(@list_val)) {
-    my $example = get_variant_example($type,$value);
-    my $label = ucfirst($value);
-    my $icon_col = ($types{$type}{'icon'}) ? qq{<td style="text-align:center"><img src="$icon_path$value.png" title="$label"/></td>} : '';
-    $content .= qq{    <tr$bg>$icon_col<td>$value$example</td></tr>\n};
-    $bg = set_bg();
-  }
-  
-  $html .= set_div($content, $type, $name, $desc);  
 }
-$html .= qq{\n<div style="clear:both" />};
+
+# Clinical significance examples
+my $html_content = add_table_header($info{'label'});
+
+my $count = 0;
+my $cs_term_count = scalar (keys %clin_sign);
+foreach my $cs_term (sort(keys %clin_sign)) {
+  $count ++;
+  print STDERR qq{Term "$cs_term" done ($count/$cs_term_count)\n};
+  my $icon_label = $cs_term;
+     $icon_label =~ s/ /-/g;
+  my $icon_col = qq{<td style="text-align:center"><img src="$icon_path$icon_label.png" title="$cs_term"/></td>};
+  my $examples;
+  for (my $i=0; $i < scalar(@{$info{'query'}});$i++) {
+    $examples .= get_variant_example($i,$cs_term);
+  }
+  $html_content .= qq{  <tr$bg>$icon_col<td>$cs_term</td>$examples</tr>\n};
+  $bg = set_bg();
+}
 
 
 ## CONTENT ##
+$html = qq{
+<table class="ss" style="width:auto">
+  $html_content
+</table>
+};
 print $html;
 
 
 
-sub set_div {
-  my $content = shift;
-  my $id   = shift;
-  my $name = shift;
-  my $desc = shift;
-  
-  $desc = (defined($desc)) ? qq{<p>$desc.</p>\n} : ''; 
-  $name =~ /^(.+)(\s+clinical\s+significance)/;
-  my $label = ($1 =~ /dbsnp/i) ? 'ClinVar' : $1;
-  my $second_label = ($2) ? $2 : '';
-  $name = qq{<span style="color:#333">$label</span>$second_label};
-  my $div = qq{
-<div id="$id" style="float:left;margin-right:100px;">
-  <span style="font-weight:bold">$name</span><br />
-  $desc
-  <table class="ss" style="width:auto">
-   $content
-  </table>
-</div>};
-
-  return $div;
-}
-
+#############
+## METHODS ##
+#############
 
 sub set_bg {
   return ($bg eq '') ? ' class="bg2"' : '';
@@ -157,24 +152,24 @@ sub execute_stmt_one_result {
 
 
 sub get_variant_example {
-  my $type  = shift;
+  my $order = shift;
   my $value = shift;
+  
+  my $var = (execute_stmt_one_result($info{'query'}->[$order],$value))[0];
+  my $example = (defined($var)) ? sprintf (qq{<a href="%s%s">%s</a>},$info{'link'}->[$order],$var,$var) : '-';
 
-  return '' if (!defined($types{$type}));
-  
-  my $example = qq{</td><td>};
-  
-  my $var = (execute_stmt_one_result($types{$type}{query},$value))[0];
-  $example .= (defined($var)) ? sprintf (qq{<a href="%s%s">%s</a>},$types{$type}{link},$var,$var) : '';
-  
-  return $example;
+  return qq{<td$border_left>$example</td>};
 }
 
 sub add_table_header {
-  my $type = shift;
-  my $icon_column = ($types{$type}{'icon'}) ? qq{<th><span class="_ht ht" title="Icons designed by Ensembl">Icon</span></th>} : '';
-  my $ex_column = ($types{$type}) ? qq{<th>Example</th>} : '';
-  return qq{ <tr>$icon_column<th>Value</th>$ex_column</tr>\n};
+  my $labels = shift;
+  my $icon_column = qq{<th><span class="_ht ht" title="Icons designed by Ensembl">Icon</span></th>};
+
+  my $eg_columns;
+  foreach my $label (@$labels) {
+    $eg_columns .= qq{<th$border_left>$label example</th>};
+  }
+  return qq{  <tr>$icon_column<th>Value</th>$eg_columns</tr>\n};
 }
 
 
