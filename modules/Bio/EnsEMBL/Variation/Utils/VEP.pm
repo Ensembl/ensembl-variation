@@ -290,6 +290,8 @@ sub parse_line {
     
     $vfs = add_lrg_mappings($config, $vfs) if defined($config->{lrg});
     
+    $_->{_line} = $line for @$vfs;
+    
     return $vfs;
 }
 
@@ -998,7 +1000,7 @@ sub get_all_consequences {
     }
     
     # log sorted order for VCF input
-    if($config->{format} eq 'vcf') {
+    if($config->{format} eq 'vcf' || defined($config->{rest})) {
       my $i = 0;
       $_->{_order} = sprintf("%09d", ++$i) for @$listref;
     }
@@ -1240,6 +1242,9 @@ sub get_all_consequences {
     if(defined($test) && ref($test) ne 'HASH' && $$test =~ /^\#\#\#ORDER\#\#\#/) {
       @return = sort {$$a cmp $$b} @return;
       $$_ =~ s/\#\#\#ORDER\#\#\# \d+ // for @return; 
+    }
+    elsif(defined($test) && ref($test) eq 'HASH' && defined($test->{_order})) {
+      @return = map {delete $_->{_order}; $_} sort {$a->{_order} cmp $b->{_order}} @return;
     }
     
     return \@return;
@@ -1514,6 +1519,11 @@ sub vf_list_to_cons {
                 }
             }
             
+            # structured hash output for REST API
+            elsif(defined($config->{rest})) {
+              push @return, format_rest_output($config, $vf);
+            }
+            
             # normal output
             else {
                 push @return, @{vf_to_consequences($config, $vf)};
@@ -1536,6 +1546,166 @@ sub natural_sort {
   else {
     return $a cmp $b;
   }
+}
+
+sub format_rest_output {
+  my ($config, $vf) = @_;
+  
+  # define the set of fields that are lists
+  my @list_fields = qw(domains cell_type consequence refseq pubmed clin_sig);
+  
+  # define some to delete
+  my @delete_fields = qw(
+    Location
+    Uploaded_variation
+    Existing_variation
+    GMAF AFR_MAF AMR_MAF ASN_MAF EUR_MAF AA_MAF EA_MAF
+    PUBMED CLIN_SIG
+  );
+  
+  # define some fields to rename
+  my %rename = (
+    'consequence' => 'consequence_terms',
+    'gene' => 'gene_id',
+    'allele' => 'variant_allele',
+    'symbol' => 'gene_symbol',
+    'symbol_source' => 'gene_symbol_source',
+    'overlapbp' => 'bp_overlap',
+    'overlappc' => 'percentage_overlap',
+    'refseq' => 'refseq_transcript_ids',
+    'ensp' => 'protein_id',
+    'chr' => 'seq_region_name',
+    'variation_name' => 'id',
+  );
+  
+  my $hash = {
+    id => $vf->{variation_name},
+    seq_region_name => $vf->{chr},
+    start => $vf->{end},
+    end => $vf->{end},
+    location => ($vf->{chr} || $vf->seq_region_name).':'.format_coords($vf->start, $vf->end),
+    strand => $vf->{strand},
+    _order => $vf->{_order},
+    input => $vf->{_line},
+  };
+  
+  if(defined($vf->{allele_string})) {
+    $hash->{allele_string} = $vf->{allele_string};
+  }
+  else {
+    $hash->{variant_class} = $vf->{class_SO_term};
+  }
+  
+  # add existing variants
+  if(defined($vf->{existing}) && scalar @{$vf->{existing}}) {
+    foreach my $ex(@{$vf->{existing}}) {
+      delete $ex->{$_} for qw(failed);
+      
+      # frequencies
+      foreach my $pop(grep {defined($ex->{$_})} qw(AFR AMR ASN EUR AA EA)) {
+        my $tmp = $ex->{$pop};
+        
+        if($tmp =~ /(\w)\:([\d\.]+)/) {
+          $ex->{lc($pop).'_maf'} = $1;
+          $ex->{lc($pop).'_allele'} = $2;
+        }
+        else {
+          $ex->{lc($pop).'_maf'} = $tmp;
+        }
+        
+        delete $ex->{$pop};
+      }
+      
+      # remove empty
+      foreach my $key(keys %$ex) {
+        delete $ex->{$key} if !defined($ex->{$key});
+      }
+      
+      # fix comma-separated lists into arrays
+      foreach my $key(grep {defined($ex->{$_})} @list_fields) {
+        $ex->{$key} = [split(',', $ex->{$key})];
+      }
+      
+      # rename
+      foreach my $key(grep {defined($ex->{$_})} keys %rename) {
+        $ex->{$rename{$key}} = $ex->{$key};
+        delete $ex->{$key};
+      }
+      
+      push @{$hash->{colocated_variants}}, $ex;
+    }
+  }
+  
+  # record all cons terms so we can get the most severe
+  my @con_terms;
+  
+  # add consequence stuff
+  foreach my $con(grep {defined($_)} @{vf_to_consequences($config, $vf)}) {
+    
+    # flatten
+    $con->{$_} = $con->{Extra}->{$_} for keys %{$con->{Extra}};
+    delete $con->{Extra};
+    
+    # remove unwanted keys
+    delete $con->{$_} for @delete_fields;
+    
+    # lc and remove empty
+    foreach my $key(keys %$con) {
+      my $tmp = $con->{$key};
+      delete $con->{$key};
+      
+      next if !defined($tmp) || $tmp eq '-';
+      $con->{lc($key)} = $tmp;
+    }
+    
+    my $ftype = lc($con->{feature_type} || 'intergenic');
+    $ftype =~ s/feature/\_feature/;
+    delete $con->{feature_type};
+    
+    # fix SIFT and PolyPhen
+    foreach my $tool(qw(sift polyphen)) {
+      if(defined($con->{$tool}) && $con->{$tool} =~ m/([a-z\_]+)?\(?([\d\.]+)?\)?/i) {
+        my ($pred, $score) = ($1, $2);
+        $con->{$tool.'_prediction'} = $pred if $pred;
+        $con->{$tool.'_score'} = $score if defined($score);
+        delete $con->{$tool};
+      }
+    }
+    
+    # fix comma-separated lists into arrays
+    foreach my $key(grep {defined($con->{$_})} @list_fields) {
+      $con->{$key} = [split(',', $con->{$key})];
+    }
+    
+    # fix domains
+    if(defined($con->{domains})) {
+      my @dom;
+      
+      foreach(@{$con->{domains}}) {
+        m/(\w+)\:(\w+)/;
+        push @dom, {"db" => $1, "name" => $2} if $1 && $2;
+      }
+      $con->{domains} = \@dom;
+    }
+    
+    # log observed consequence terms
+    push @con_terms, @{$con->{consequence}};
+    
+    # rename
+    $rename{feature} = lc($ftype).'_id';
+    foreach my $key(grep {defined($con->{$_})} keys %rename) {
+      $con->{$rename{$key}} = $con->{$key};
+      delete $con->{$key};
+    }
+    
+    push @{$hash->{$ftype.'_consequences'}}, $con;
+  }
+  
+  # get most severe consequence from those logged in @con_terms
+  my %all_cons = %Bio::EnsEMBL::Variation::Utils::Constants::OVERLAP_CONSEQUENCES;
+  $hash->{most_severe_consequence} = (sort {$all_cons{$a}->rank <=> $all_cons{$b}->rank} @con_terms)[0];
+  
+  return $hash;
 }
 
 # takes a variation feature and returns ready to print consequence information
@@ -2270,7 +2440,7 @@ sub init_line {
     my $line = {
         Uploaded_variation  => $vf->variation_name,
         Location            => ($vf->{chr} || $vf->seq_region_name).':'.format_coords($vf->start, $vf->end),
-        Existing_variation  => defined $vf->{existing} && scalar @{$vf->{existing}} ? join ",", map {$_->{variation_name}} @{$vf->{existing}} : '-',
+        Existing_variation  => defined $vf->{existing} && scalar @{$vf->{existing}} ? join ",", map {$_->{variation_name} || ''} @{$vf->{existing}} : '-',
         Extra               => {},
     };
     
