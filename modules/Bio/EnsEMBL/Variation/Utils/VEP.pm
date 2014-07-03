@@ -1586,8 +1586,10 @@ sub format_rest_output {
     location => ($vf->{chr} || $vf->seq_region_name).':'.format_coords($vf->start, $vf->end),
     strand => $vf->{strand},
     _order => $vf->{_order},
-    input => $vf->{_line},
   };
+  
+  # add original input for use by POST endpoints
+  $hash->{input} = $vf->{_line} if defined($vf->{_line});
   
   if(defined($vf->{allele_string})) {
     $hash->{allele_string} = $vf->{allele_string};
