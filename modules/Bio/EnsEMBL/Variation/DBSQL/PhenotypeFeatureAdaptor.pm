@@ -707,12 +707,12 @@ sub _left_join {
   
   return @lj;
 }
+## e!76 fix for non-supplied ClinVar phenotypes
+sub _default_where_clause {
+  my $self = shift;
 
-#sub _default_where_clause {
-#  my $self = shift;
-#
-#  return 'pf.phenotype_id = p.phenotype_id';
-#}
+  return 'pf.phenotype_id = p.phenotype_id and p.description is not null';
+}
 
 sub _columns {
   return qw(

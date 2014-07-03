@@ -565,7 +565,10 @@ sub get_all_attributes {
   if(!defined($self->{attribs})) {
   $self->{attribs} = $self->adaptor->_fetch_attribs_by_dbID($self->dbID);
   }
-  
+  ## standardise clinical significance terms to lowercase
+  $self->{attribs}->{'clinvar_clin_sig'} = "\L$self->{attribs}->{'clinvar_clin_sig'}"
+     if defined $self->{attribs}->{'clinvar_clin_sig'};
+
   return $self->{attribs};
 }
 
@@ -684,9 +687,9 @@ sub clinical_significance {
   my $self = shift;
   my $new  = shift;
   
-  $self->_set_attribute('dbsnp_clin_sig', $new) if defined($new);
+  $self->_set_attribute('clinvar_clin_sig', $new) if defined($new);
   
-  return defined($self->get_all_attributes->{'dbsnp_clin_sig'}) ? $self->get_all_attributes->{'dbsnp_clin_sig'} : undef;
+  return defined($self->get_all_attributes->{'clinvar_clin_sig'}) ? $self->get_all_attributes->{'clinvar_clin_sig'} : undef;
 }
 
 
