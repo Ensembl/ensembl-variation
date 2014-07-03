@@ -192,17 +192,19 @@ sub check_phenotype_names{
 
     my $dbh = shift;
 
-    my $pheno_ext_sth = $dbh->prepare(qq[ select description from phenotype ]);
+    my $pheno_ext_sth = $dbh->prepare(qq[ select phenotype_id, description from phenotype ]);
     $pheno_ext_sth->execute()||die;
 
     my $ph =  $pheno_ext_sth->fetchall_arrayref();
     foreach my $l (@{$ph}){
 
-        next unless defined $l->[0];
-	my $full = $l->[0];
-	$l->[0] =~ s/\w+|\-|\,|\(|\)|\s+|\/|\.|\;|\+|\'|\:|\@|\*|\%//g;
+	warn "Phenotype id:$l->[0] has no description unless defined $l->[1]\n";
 
-	warn "Phenotype : $full looks suspect\n" if(length($l->[0]) >0);
+	my $full = $l->[1];
+	$l->[1] =~ s/\w+|\-|\,|\(|\)|\s+|\/|\.|\;|\+|\'|\:|\@|\*|\%//g;
+
+	warn "Phenotype : $full (id:$l->[0]) looks suspect\n" if(length($l->[1]) >0);
+
     }
 }
 

@@ -87,7 +87,7 @@ while (my $set = $ref->get_record() ){
 	    $record{Acc} =  $acc->{Acc} .".".  $acc->{Version} ;;
 	}
 	## clinical significance
-	$record{Desc} = $set->{ReferenceClinVarAssertion}->{ClinicalSignificance}->{Description};
+	$record{Desc} = "\L$set->{ReferenceClinVarAssertion}->{ClinicalSignificance}->{Description}";
 	## confidence of assertation
 	$record{Status} = $set->{ReferenceClinVarAssertion}->{ClinicalSignificance}->{ReviewStatus} ;
 
