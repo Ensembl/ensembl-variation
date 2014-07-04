@@ -83,6 +83,24 @@ my %info = (
              'link'      => [ qq{/Homo_sapiens/Variation/Explore?v=},qq{/Homo_sapiens/StructuralVariation/Evidence?sv=}],
            );
 
+
+my %star_ranking = ( 'status' => { 'not classified by submitter'       => 0,
+                                   'classified by single submitter'    => 1,
+                                   'classified by multiple submitters' => 2,
+                                   'reviewed by expert panel'          => 3,
+                                   'reviewed by professional society'  => 4
+                                 },
+                     'query'  => [qq{ SELECT pf.object_id FROM phenotype_feature pf, phenotype_feature_attrib pfa, attrib_type a 
+                                     WHERE pf.phenotype_feature_id=pfa.phenotype_feature_id 
+                                       AND pfa.attrib_type_id=a.attrib_type_id
+                                       AND a.code='review_status'
+                                       AND pf.type='Variation'
+                                       AND pfa.value=?
+                                   }],
+                     'link'   => [qq{/Homo_sapiens/Variation/Phenotype?v=}]
+                   );
+
+
 my $html;
 my $bg = '';
 my $icon_path = '/i/val/clinsig_';
@@ -114,9 +132,24 @@ foreach my $cs_term (sort(keys %clin_sign)) {
   my $icon_col = qq{<td style="text-align:center"><img src="$icon_path$icon_label.png" title="$cs_term"/></td>};
   my $examples;
   for (my $i=0; $i < scalar(@{$info{'query'}});$i++) {
-    $examples .= get_variant_example($i,$cs_term);
+    $examples .= get_variant_example($i,$cs_term,\%info);
   }
   $html_content .= qq{  <tr$bg>$icon_col<td>$cs_term</td>$examples</tr>\n};
+  $bg = set_bg();
+}
+
+# Four-star rating
+my $html_star_content;
+foreach my $review_status (sort {$star_ranking{'status'}{$a} <=> $star_ranking{'status'}{$b}} keys(%{$star_ranking{'status'}})) {
+  my $count_stars = $star_ranking{'status'}{$review_status};
+  my $stars = qq{<span class="_ht" title="$review_status">};
+  for (my $i=1; $i<5; $i++) {
+    my $star_color = ($i <= $count_stars) ? 'gold' : 'grey';
+    $stars .= qq{<img style="vertical-align:top" src="/i/val/$star_color\_star.png" alt="$star_color"/>};
+  }
+  $stars .= qq{</span>};
+  my $star_example = get_variant_example(0,$review_status,\%star_ranking);
+  $html_star_content .= qq{  <tr$bg>\n    <td>$stars</td>\n    <td>$review_status</td>\n    $star_example\n  </tr>};
   $bg = set_bg();
 }
 
@@ -125,6 +158,13 @@ foreach my $cs_term (sort(keys %clin_sign)) {
 $html = qq{
 <table class="ss" style="width:auto">
   $html_content
+</table>
+<p>Further explanations about the clinical significance terms are available on the <a href="http://www.ncbi.nlm.nih.gov/clinvar/docs/clinsig/" target="_blank">ClinVar website</a>.</p>
+<h3>ClinVar rating</h3>
+<p>We use the <a href="http://www.ncbi.nlm.nih.gov/clinvar/docs/details/#interpretation" target="_blank">ClinVar "four-star" rating</a> system to indicate the quality of classification/validation of the variant:</p>
+<table class="ss" style="width:auto">
+  <tr><th>Rating</th><th>Description</th><th$border_left>Example</th></tr>
+$html_star_content
 </table>
 };
 print $html;
@@ -154,9 +194,10 @@ sub execute_stmt_one_result {
 sub get_variant_example {
   my $order = shift;
   my $value = shift;
+  my $data  = shift;
   
-  my $var = (execute_stmt_one_result($info{'query'}->[$order],$value))[0];
-  my $example = (defined($var)) ? sprintf (qq{<a href="%s%s">%s</a>},$info{'link'}->[$order],$var,$var) : '-';
+  my $var = (execute_stmt_one_result($data->{'query'}->[$order],$value))[0];
+  my $example = (defined($var)) ? sprintf (qq{<a href="%s%s">%s</a>},$data->{'link'}->[$order],$var,$var) : '-';
 
   return qq{<td$border_left>$example</td>};
 }
