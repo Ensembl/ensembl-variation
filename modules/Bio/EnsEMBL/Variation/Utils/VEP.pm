@@ -1656,10 +1656,20 @@ sub format_rest_output {
       my $tmp = $con->{$key};
       delete $con->{$key};
       
+      next if !defined($tmp) || $tmp eq '-';
+      
       # convert YES to 1
       $tmp = 1 if $tmp eq 'YES';
       
-      next if !defined($tmp) || $tmp eq '-';
+      # fix position fields into start and end
+      if($key =~ /(\w+?)\_position$/i) {
+        my $coord_type = lc($1);
+        my ($s, $e) = split('-', $tmp);
+        $con->{$coord_type.'_start'} = $s;
+        $con->{$coord_type.'_end'} = defined($e) && $e =~ /^\d+$/ ? $e : $s;
+        next;
+      }
+      
       $con->{lc($key)} = $tmp;
     }
     
@@ -1710,7 +1720,34 @@ sub format_rest_output {
   my %all_cons = %Bio::EnsEMBL::Variation::Utils::Constants::OVERLAP_CONSEQUENCES;
   $hash->{most_severe_consequence} = (sort {$all_cons{$a}->rank <=> $all_cons{$b}->rank} @con_terms)[0];
   
+  numberify($hash);
+  
   return $hash;
+}
+
+sub numberify {
+  my $ref = shift;
+  
+  if(ref($ref) eq 'HASH') {
+    foreach my $k(keys %$ref) {
+      if(ref($ref->{$k}) =~ /HASH|ARRAY/) {
+        numberify($ref->{$k});
+      }
+      else {
+        $ref->{$k} = $ref->{$k} + 0 if defined($ref->{$k}) && $ref->{$k} =~ /^\-?[\d\.]+$/ && $k ne 'seq_region_name' && $k ne 'id';
+      }
+    }
+  }
+  elsif(ref($ref) eq 'ARRAY') {
+    foreach my $i(0..((scalar @$ref) - 1)) {
+      if(ref($ref->[$i]) =~ /HASH|ARRAY/) {
+        numberify($ref->[$i]);
+      }
+      else {
+        $ref->[$i] = $ref->[$i] + 0 if defined($ref->[$i]) && $ref->[$i] =~ /^\-?[\d\.]+$/;
+      }
+    }
+  }
 }
 
 # takes a variation feature and returns ready to print consequence information
