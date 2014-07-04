@@ -1575,7 +1575,6 @@ sub format_rest_output {
     seq_region_name => $vf->{chr},
     start => $vf->{end},
     end => $vf->{end},
-    location => ($vf->{chr} || $vf->seq_region_name).':'.format_coords($vf->start, $vf->end),
     strand => $vf->{strand},
     _order => $vf->{_order},
   };
