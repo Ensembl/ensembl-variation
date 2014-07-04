@@ -10,7 +10,7 @@ You may obtain a copy of the License at
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+WITHOUT WARRANTIES OR CONDITIONS OF ANY kind, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 
@@ -600,6 +600,13 @@ sub hgvs_transcript {
     #warn "Error - not continuing; no HGVS annotation\n";
     return undef;
     } 
+
+    ## HGVS defined deletion at 3'most possible position - move if required
+    if( $hgvs_notation->{'type'} eq 'del' || $hgvs_notation->{'type'} eq 'ins'){
+
+	my $post_seq =  substr($slice->seq(), $slice_end);
+	$hgvs_notation = _shift_3prime($hgvs_notation,  $post_seq);
+    }
  
     ## compare calculated reference base to input reference base to flag incorrect input
     my $ref_al_for_checking  = $self->transcript_variation->get_reference_TranscriptVariationAllele->variation_feature_seq();
@@ -1343,36 +1350,72 @@ sub _check_peptides_post_del{
     my $self          = shift;
     my $hgvs_notation = shift;
 
-    my $deleted_length = (length $hgvs_notation->{ref});
-
-    ## check peptides after deletion - get same length as deletion
+   
+    ## check peptides after deletion 
     my $post_pos = $hgvs_notation->{end}+1;
-    my $post_seq = $self->_get_surrounding_peptides($post_pos, $deleted_length);
+    my $post_seq = $self->_get_surrounding_peptides($post_pos );
 
     ## if a stop is deleted and no sequence is available beyond to check, return
     return $hgvs_notation unless defined $post_seq;
 
-    for (my $n = 0; $n< $deleted_length; $n++){
+    $hgvs_notation = _shift_3prime($hgvs_notation,  $post_seq);
+    return $hgvs_notation;
+}
 
-        my $check_next_del  = substr( $hgvs_notation->{ref}, $n, 1);
-        my $check_next_post = substr( $post_seq, $n, 1);
+## HGVS aligns changes 3' (alt string may look different at transcript level to genomic level)
+## AAC[TG]TAT => AACT[GT]AT
+## TTA[GGG]GGTTTA =>TTAGG[GGG]TTTA
 
-        if($check_next_del eq  $check_next_post){
+sub _shift_3prime{
 
-            ## move position of deletion along
-            $hgvs_notation->{start}++;
-            $hgvs_notation->{end}++;
+    my $hgvs_notation = shift;
+    my $post_seq      = shift;
 
-            ## modify deleted sequence
-            $hgvs_notation->{ref} = substr($hgvs_notation->{ref},1);
-            $hgvs_notation->{ref} .= $check_next_del;
-
-        }
-        else{
-            last;
-        }
+    my $seq_to_check;
+    if( $hgvs_notation->{type} eq 'ins'){
+	$seq_to_check = $hgvs_notation->{alt};
+    }
+    elsif ($hgvs_notation->{type} eq 'del'){
+	$seq_to_check = $hgvs_notation->{ref};
+    }
+    else{
+	return $hgvs_notation;
     }
 
+    ## return if nothing to check
+    return $hgvs_notation unless defined $post_seq && defined $seq_to_check;
+
+    ## get length of pattern to check 
+    my $deleted_length = (length $seq_to_check);
+
+    ## move along sequence after deletion looking for match to start of deletion
+    for (my $n = 0; $n<= (length($post_seq) - $deleted_length); $n++ ){
+
+       
+	## check each position in deletion/ following seq for match
+	my $check_next_del  = substr( $seq_to_check, 0, 1);
+	my $check_next_post = substr( $post_seq, $n, 1);
+
+	if($check_next_del eq $check_next_post){
+		
+	    ## move position of deletion along
+	    $hgvs_notation->{start}++;
+	    $hgvs_notation->{end}++;
+		
+	    ## modify deleted sequence - remove start & append to end
+	    $seq_to_check = substr($seq_to_check,1);
+	    $seq_to_check .= $check_next_del;
+
+	}
+	else{
+	    last;	    
+	}
+    }
+    ## set new HGVS string
+    $hgvs_notation->{alt} = $seq_to_check if $hgvs_notation->{type} eq 'ins';
+    $hgvs_notation->{ref} = $seq_to_check if $hgvs_notation->{type} eq 'del';
+    
+    
     return $hgvs_notation;
 }
 
