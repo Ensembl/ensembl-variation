@@ -84,8 +84,8 @@ my $database = "";
 my $login = "ensro";
 my $pswd = "";
 my $sep = "\t";
-my %colors = ( 'version' => '#090', 'source'  => '#00F' );
 my $nb_col = 4;
+my $default_port = 3306;
 
 my $html;
 
@@ -93,14 +93,18 @@ my $html;
 my $html_content = '<table style="border:1px solid #CCC;border-radius:8px;padding:6px 6px 0px;margin-bottom:5px"><tr><td>';
 my %species_list;
 
-foreach my $hostname (@hostnames) {
+my $sql  = qq{SHOW DATABASES LIKE '%variation_$e_version%'};
+my $sql2 = qq{SELECT count(variation_id) FROM variation};
 
-  my $sql = qq{SHOW DATABASES LIKE '%variation_$e_version%'};
+foreach my $hostname (@hostnames) {
+  
   my $sth = get_connection_and_query($database, $hostname, $sql);
 
   # loop over databases
   while (my ($dbname) = $sth->fetchrow_array) {
     next if ($dbname =~ /^master_schema/);
+    next if ($dbname =~ /sample$/);
+    
     print $dbname;
     $dbname =~ /^(.+)_variation/;
     my $s_name = $1;
@@ -125,7 +129,13 @@ foreach my $hostname (@hostnames) {
     my $sth3 = get_connection_and_query($database, $previous_host, $sql3);
     my $p_dbname = $sth3->fetchrow_array;
     
-    $species_list{$s_name}{new} = 1 if (!$p_dbname);
+    $species_list{$s_name}{'new'} = 1 if (!$p_dbname);
+    
+    # Count the number of variations
+    my $sth2 = get_connection_and_query($dbname, $hostname, $sql2);
+    my $count_var = $sth2->fetchrow_array;
+    $sth2->finish;
+    $species_list{$s_name}{'count'} = round_count($count_var);
   }
 }
 
@@ -135,36 +145,38 @@ my $count_rows = 0;
 
 foreach my $sp (sort keys(%species_list)) {
   if ($count_rows == $nb_sp_by_col) {
-    $html_content .= qq{\n  </td>\n  <td style="width:10px"></td>\n  <td>\n};
+    $html_content .= qq{\n  </td>\n  <td style="width:8px"></td>\n  <td>\n};
     $count_rows = 0;
   }
   my $label = $species_list{$sp}{label};
   my $uc_sp = ucfirst($sp);      
   my $img_src = "/i/species/48/$uc_sp.png";
+  my $var_count = $species_list{$sp}{'count'};
   
-  if ($species_list{$sp}{new}) {
+  if ($species_list{$sp}{'new'}) {
     $html_content .= qq{
-    <div style="margin-bottom:5px;padding-right:4px;overflow:hidden;background-color:#336;padding:1px;color:#FFF;border-radius:8px">
+    <div style="margin-bottom:6px;padding-right:4px;overflow:hidden;background-color:#336;padding:1px;color:#FFF;border-radius:8px">
       <div style="float:left">
         <a href="/$uc_sp/Info/Index" title="$label Ensembl Home page"/>
           <img src="$img_src" alt="$label" class="sp-thumb" style="float:left;margin-right:4px;vertical-align:middle" />
         </a>
       </div>
-      <div style="float:left;padding-top:2px;padding-left:2px">
-        <span style="font-style:italic">$label</span><br />
-        <span><a href="sources_documentation.html#$sp" style="color:#AAF">[sources]</a></span><br />
-        <span style="font-weight:bold;color:#F00">New species in Variation</span>
+      <div style="float:left;padding-left:2px">
+        <span style="font-style:italic;font-weight:bold">$label</span><br />
+        <span>$var_count variants</span><br />
+        <span><a href="sources_documentation.html#$sp" style="color:#AAF">[sources]</a></span> <span style="font-weight:bold;color:#F00">New species</span>
       </div>
     </div>\n};
   }
   else {
     $html_content .= qq{
-    <div style="margin-bottom:5px;padding-right:4px;overflow:hidden">
+    <div style="margin-bottom:6px;padding-right:4px;overflow:hidden">
       <a href="/$uc_sp/Info/Index" title="$label Ensembl Home page" style="float:left"/>
         <img src="$img_src" alt="$label" class="sp-thumb" style="margin-right:4px;vertical-align:middle" />
       </a>
-      <div style="float:left;padding-top:6px">
-        <div style="font-style:italic;margin-bottom:3px">$label</div>
+      <div style="float:left">
+        <div style="font-style:italic;font-weight:bold;margin-bottom:3px">$label</div>
+        <div>$var_count variants</div>
         <span><a href="sources_documentation.html#$sp">[sources]</a></span>
       </div>
     </div>\n};
@@ -189,7 +201,7 @@ sub get_connection_and_query {
   my $sql    = shift;
   
   my ($host, $port) = split /\:/, $hname;
-
+  
   # DBI connection 
   my $dsn = "DBI:mysql:$dbname:$host:$port";
   my $dbh = DBI->connect($dsn, $login, $pswd) or die "Connection failed";
@@ -197,6 +209,23 @@ sub get_connection_and_query {
   my $sth = $dbh->prepare($sql);
   $sth->execute;
   return $sth;
+}
+
+
+sub round_count {
+  my $number = shift;
+  my $new_number;
+  my $count;
+  if ($number =~ /^(\d+)\d{6}$/) {
+    $new_number = $1;
+    $count  = "> $1 million";
+    $count .= 's' if ($new_number != 1);
+  }
+  elsif ($number =~ /^(\d+)\d{3}$/) {
+    $new_number = $1;
+    $count = "> $1,000";
+  }
+  return $count;
 }
 
 
