@@ -1648,6 +1648,9 @@ sub format_rest_output {
       my $tmp = $con->{$key};
       delete $con->{$key};
       
+      # convert YES to 1
+      $tmp = 1 if $tmp eq 'YES';
+      
       next if !defined($tmp) || $tmp eq '-';
       $con->{lc($key)} = $tmp;
     }
