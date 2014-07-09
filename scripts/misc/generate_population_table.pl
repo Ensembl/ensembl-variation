@@ -56,6 +56,10 @@ $registry->load_registry_from_db(
 my $vdb = $registry->get_DBAdaptor($species,'variation');
 my $dbVar = $vdb->dbc->db_handle;
 
+my $evidence_icon_prefix = '/i/val/evidence_';
+my $evidence_icon_suffix = '.png';
+my $evidence_doc_url  = '#evidence_status';
+
 my $table_header = qq{
   <tr>
     <th style="width:200px">Name</th>
@@ -64,26 +68,45 @@ my $table_header = qq{
   </tr>
 };
 
-
-
-my %pops = ('1000 Genomes' => { 'term' => '1000GENOMES:phase_1_%', 'constraint' => 'size is not null'},
-            'HapMap'       => { 'term' => 'CSHL-HAPMAP:%'},
+my %pops = ('1000 Genomes'                   => { 'order'      => 1,
+                                                  'species'    => 'Human',
+                                                  'term'       => '1000GENOMES:phase_1_%',
+                                                  'constraint' => 'size is not null',
+                                                  'url'        => 'http://www.1000genomes.org',
+                                                  'evidence'   => '1000Genomes'
+                                                },
+            'HapMap'                         => { 'order'    => 2,
+                                                  'species'  => 'Human',
+                                                  'term'     => 'CSHL-HAPMAP:%',
+                                                  'url'      => 'http://hapmap.ncbi.nlm.nih.gov/index.html.en',
+                                                  'evidence' => 'HapMap'
+                                                },
+            'Exome Sequencing Project (ESP)' => { 'order'    => 3,
+                                                  'species'  => 'Human',
+                                                  'term'     => 'ESP6500:%',
+                                                  'url'      => 'http://evs.gs.washington.edu/EVS/',
+                                                  'evidence' => 'ESP'
+                                                }
            );
 
 
-foreach my $project (sort(keys(%pops))) {
+foreach my $project (sort{ $pops{$a}{'order'} <=> $pops{$b}{'order'} } keys(%pops)) {
   
   my $bg = '';
 
-  my $term = $pops{$project}{term};
-  my $constraint  = ($pops{$project}{constraint}) ? $pops{$project}{constraint}.' AND ' : '';
+  my $term = $pops{$project}{'term'};
+  my $spe  = $pops{$project}{'species'};
+  my $constraint  = ($pops{$project}{'constraint'}) ? $pops{$project}{'constraint'}.' AND ' : '';
+  my $project_word = ($project =~ /project/i) ? '' : ' Project';
+  my $url = $pops{$project}{'url'};
+  my $evidence = $pops{$project}{'evidence'};
   
-  print "<h4>Populations from the $project Project (Human)</h4>\n";
-  $project =~ s/ /_/g;
-  $project = lc $project;
-  print "<table id=\"$project\" class=\"ss\">\n";
-  print "$table_header\n";
+  print qq{<h4>Populations from the <a href="$url" target="_blank" style="text-decoration:none">$project$project_word</a> ($spe)</h4>\n};
 
+  my $project_id = $project;
+  $project_id =~ s/ /_/g;
+  $project_id = lc $project_id;
+  print qq{<table id="$project_id" class="ss" style="margin-bottom:4px">\n  $table_header\n};
 
   my $stmt = qq{ SELECT population_id, name, size, description FROM population WHERE $constraint name like ? ORDER BY name};
   my $sth = $dbVar->prepare($stmt);
@@ -94,15 +117,45 @@ foreach my $project (sort(keys(%pops))) {
     my ($pop_name,$pop_suffix) = split(":", $data[1]);
     $pop_name .=  ":<b>$pop_suffix</b>" if ($pop_suffix);
 
+    $data[3] = '-' if (!$data[3]);
     my @desc = split(/\.,/, $data[3]);
     $data[3] = "$desc[0]. $desc[1]." if scalar(@desc > 1);
 
-    print qq{  <tr$bg>\n    <td>$pop_name</td>\n    <td style="text-align:right">$data[2]</td>\n    <td>$data[3]</td>\n  </tr>\n};
+    my $size = ($data[2] && $data[2] ne '-' ) ? $data[2] : get_size($data[0]);
+
+    print qq{  <tr$bg>\n    <td>$pop_name</td>\n    <td style="text-align:right">$size</td>\n    <td>$data[3]</td>\n  </tr>\n};
 
     if ($bg eq '') { $bg = ' class="bg2"'; }
     else { $bg = ''; }
   }
 
-  print "</table>\n\n";
+  print "</table>\n";
   $sth->finish;
+
+  # Evidence status
+  if ($pops{$project}{'evidence'}) {
+    my $evidence = $pops{$project}{'evidence'};
+    my $evidence_img = "$evidence_icon_prefix$evidence$evidence_icon_suffix";
+    my $margin = ($pops{$project}{'order'} eq scalar(keys(%pops))) ? '20px' : '25px';
+    print qq{
+<p style="margin-bottom:$margin">
+Variants which have been discovered in this project have the "evidence status" <a href="$evidence_doc_url"><b>$evidence</b></a>.
+On the website this corresponds to the icon <a href="$evidence_doc_url"><img class="_ht" src="$evidence_img" title="$evidence" style="vertical-align:bottom"/></a>.
+</p>
+    };
+  }
+}
+
+
+
+sub get_size {
+  my $pop_id = shift;
+
+  my $stmt = qq{ SELECT count(*) FROM individual_population WHERE population_id=?};
+  my $sth = $dbVar->prepare($stmt);
+  $sth->execute($pop_id);
+  my $size = ($sth->fetchrow_array)[0];
+  $sth->finish;
+
+  return ($size == 0) ? '-' : $size;
 }
