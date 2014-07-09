@@ -552,6 +552,8 @@ sub associated_studies {
   Example    : %attribs = %{$obj->get_all_attributes}
   Description: Retrieves attributes of this PhenotypeFeature as a hash reference
                containing key-value pairs e.g. "p_value" => 0.0000012
+               Here is a list of the keys used: associated_gene, beta_coef, clinvar_clin_sig, external_id,
+               inheritance_type, odds_ratio, p_value, review_status, risk_allele, variation_names
   Returntype : hashref
   Exceptions : none
   Caller     : general
