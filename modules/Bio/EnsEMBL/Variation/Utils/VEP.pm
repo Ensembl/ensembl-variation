@@ -4182,7 +4182,7 @@ sub clean_transcript {
         $tr->{translation}->{transcript} = $tr;
         weaken($tr->{translation}->{transcript});
         
-        for my $key(qw(attributes protein_features created_date modified_date)) {
+        for my $key(qw(attributes protein_features created_date modified_date dbentries)) {
             delete $tr->translation->{$key};
         }
     }
