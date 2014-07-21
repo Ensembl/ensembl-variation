@@ -1843,7 +1843,7 @@ sub vf_to_consequences {
     }
     
     # pick worst per allele?
-    if(defined($config->{pick_allele})) {
+    elsif(defined($config->{pick_allele})) {
       my %by_allele;
       push @{$by_allele{$_->variation_feature_seq}}, $_ for @vfoas;
       @vfoas = ();
