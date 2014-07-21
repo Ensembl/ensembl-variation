@@ -5350,6 +5350,9 @@ sub build_full_cache {
                 #(defined($config->{tabix}) ? dump_transcript_cache_tabix($config, $tmp_cache, $chr, $start.'-'.$end) : dump_transcript_cache($config, $tmp_cache, $chr, $start.'-'.$end));
                 dump_transcript_cache($config, $tmp_cache, $chr, $start.'-'.$end);
                 undef $tmp_cache;
+                
+                # restore slice adaptor
+                $slice->{adaptor} ||= $config->{sa};
             }
             
             
@@ -5364,6 +5367,9 @@ sub build_full_cache {
                 
                 # this gets cleaned off but needs to be there for the next loop
                 $slice->{coord_system}->{adaptor} = $config->{csa};
+                
+                # restore slice adaptor
+                $slice->{adaptor} ||= $config->{sa};
             }
             
             # store variations
