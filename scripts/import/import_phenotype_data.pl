@@ -566,10 +566,16 @@ sub parse_nhgri {
     }
     # Add ratio/coef
     if (defined($ratio)) {
-      if ($ratio_info =~ /unit/) {
-        $data{'odds_ratio'} = $ratio;
+      # Parse the ratio info column to extract the unit information (we are not interested in the confidence interval)
+      if ($ratio_info =~ /^(\s*(\[|\().+(\)|\]))?\s*(.+)$/) {
+        my $unit = $4;
+        if ($unit =~ /^\s+$/ || $unit =~ /^\s*(\(|\[)/ || $unit =~ /\]\s*$/ || $unit =~ /^\s*NR\s*$/) {
+          $data{'odds_ratio'} = $ratio;
+        } else {
+          $data{'beta_coef'} = "$ratio $unit";
+        }
       } else {
-        $data{'beta_coef'} = $ratio
+        $data{'odds_ratio'} = $ratio;
       }
     }
     
