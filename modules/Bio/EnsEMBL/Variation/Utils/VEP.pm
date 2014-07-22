@@ -1269,7 +1269,7 @@ sub vf_list_to_cons {
     my @non_variants = grep {$_->{non_variant}} @$listref;
     
     # check existing VFs
-    if(defined($config->{'cache_var_type'}) && $config->{'cache_var_type'} eq 'tabix') {
+    if(defined($config->{'cache_var_type'}) && $config->{'cache_var_type'} eq 'tabix' && !defined($config->{database})) {
       check_existing_tabix($config, $listref) if defined($config->{check_existing});
     }
     else {
