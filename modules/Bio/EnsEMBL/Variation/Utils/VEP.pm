@@ -5409,6 +5409,8 @@ sub write_cache_info {
     print OUT "# CACHE UPDATED ".get_time()."\n";
     
     foreach my $param(qw(
+        species
+        assembly
         host
         port
         user
