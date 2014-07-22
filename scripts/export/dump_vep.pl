@@ -33,7 +33,7 @@ my $config = {};
 
 my %special_options = (
 	'homo_sapiens'      => ' --sift b --polyphen b --regulatory'.
-	                       ' --freq_file /nfs/ensembl/wm2/VEP/cache/1kg_esp_freqs.txt,AFR,AMR,ASN,EUR,AA,EA',
+	                       ' --freq_file /nfs/ensembl/wm2/VEP/cache/ALL_1KG_ESP_freqs_with_alleles.txt,AFR,AMR,ASN,EUR,AA,EA',
 	'mus_musculus'      => ' --regulatory --sift b',
 	'bos_taurus'        => ' --sift b',
 	'canis_familiaris'  => ' --sift b',
@@ -87,12 +87,14 @@ foreach my $host(@{$config->{hosts}}) {
 	my $species_list = get_species_list($config, $host);
 	debug("Found ".(scalar @$species_list)." valid databases\n");
 	
-	foreach my $species(@$species_list) {
+	foreach my $species_hash(@$species_list) {
+    my ($species, $assembly) = ($species_hash->{species}, $species_hash->{assembly});
+    
 		debug("Running VEP dump for $species");
-		dump_vep($config, $host, $species);
+		dump_vep($config, $host, $species, $assembly);
 		
 		debug("Compressing dump file");
-		tar($config, $species);
+		tar($config, $species, $assembly);
 	}
 }
 
@@ -151,6 +153,13 @@ sub get_species_list {
     # special case otherfeatures
     # check it has refseq transcripts
     if($current_db_name =~ /otherfeatures/) {
+    
+      # get assembly name
+      $sth = $dbc->prepare("select meta_value from ".$current_db_name.".meta where meta_key='assembly.default';");
+      $sth->execute();
+      my $assembly = $sth->fetchall_arrayref()->[0]->[0];
+      die("ERROR: Could not get assembly name from meta table for $current_db_name\n") unless $assembly;
+      
       $sth = $dbc->prepare(qq{
         SELECT COUNT(*)
         FROM $current_db_name\.transcript
@@ -166,25 +175,30 @@ sub get_species_list {
       if($count) {
         $current_db_name =~ s/^([a-z]+\_[a-z,1-9]+)(\_[a-z]+)?(.+)/$1$2/;
         $current_db_name =~ s/\_otherfeatures$/\_refseq/;
-        push @species, $current_db_name;
+        push @species, { species => $current_db_name, assembly => $assembly};
       }
     }
     
     else {
-      $sth = $dbc->prepare("select meta_value from ".$current_db_name.".meta where meta_key='species.production_name';");
+      # get assembly and species names
+      $sth = $dbc->prepare("select species_id, meta_key, meta_value from ".$current_db_name.".meta where meta_key in ('assembly.default', 'species.production_name');");
       $sth->execute();
-      my $current_species = $sth->fetchall_arrayref();
       
-      my @flattened_species_list = sort map { $_->[0] } @$current_species;
+      my ($species_id, $key, $value, $by_species);
+      $sth->bind_columns(\$species_id, \$key, \$value);
       
-      if(@flattened_species_list) {
-        push @species, @flattened_species_list;
+      $by_species->{$species_id}->{$key} = $value while $sth->fetch();
+      $sth->finish();
+      
+      my $count = 0;
+      
+      foreach my $hash(values %$by_species) {
+        next unless $hash->{'assembly.default'} && $hash->{'species.production_name'};
+        push @species, { species => $hash->{'species.production_name'}, assembly => $hash->{'assembly.default'}};
+        $count++;
       }
-      else {
-        $current_db_name =~ s/^([a-z]+\_[a-z,1-9]+)(\_[a-z]+)?(.+)/$1$2/;
-        $current_db_name =~ s/\_core$//;
-        push @species, $current_db_name;
-      }
+      
+      die("ERROR: Problem getting species and assembly names from $current_db_name; check meta table\n") unless $count;
     }
 	}
 
@@ -195,10 +209,11 @@ sub dump_vep {
 	my $config = shift;
 	my $host   = shift;
 	my $sp     = shift;
+  my $ass    = shift;
   
 	# check if dir exists
-	if(!defined($config->{overwrite}) && -e $config->{dir}.'/'.$sp.'/'.$config->{version}) {
-		debug("Existing dump directory found for $sp, skipping (use --overwrite to overwrite)\n");
+	if(!defined($config->{overwrite}) && -e $config->{dir}.'/'.$sp.'/'.$config->{version}.'_'.$ass) {
+		debug("Existing dump directory found for $sp $ass, skipping (use --overwrite to overwrite)\n");
 		return;
 	}
 	
@@ -234,10 +249,11 @@ sub dump_vep {
 }
 
 sub tar {
-	my $config  = shift;
-	my $species = shift;
+	my $config   = shift;
+	my $species  = shift;
+  my $assembly = shift;
 	
-	my $tar_file = $config->{dir}."/".$species."_vep_".$config->{version}.".tar.gz";
+	my $tar_file = $config->{dir}."/".$species."_vep_".$config->{version}."_".$assembly.".tar.gz";
 	
 	# check if tar exists
 	if(!defined($config->{overwrite}) && -e $tar_file) {
@@ -247,7 +263,7 @@ sub tar {
 	
 	# check dir exists
 	my $root_dir = $config->{dir};
-	my $sub_dir  = $species."/".$config->{version};
+	my $sub_dir  = $species."/".$config->{version}."_".$assembly;
 	
 	die("ERROR: VEP dump directory $root_dir/$sub_dir not found") unless -e $root_dir.'/'.$sub_dir;
 	
