@@ -188,6 +188,7 @@ our %COL_DESCS = (
     'ALLELE_NUM'         => 'Allele number from input; 0 is reference, 1 is first alternate etc',
     'STRAND'             => 'Strand of the feature (1/-1)',
     'PICK'               => 'Indicates if this consequence has been picked as the most severe',
+    'SOMATIC'            => 'Somatic status of existing variant',
 );
 
 our @REG_FEAT_TYPES = qw(
@@ -218,6 +219,7 @@ our @VEP_WEB_CONFIG = qw(
 our @VAR_CACHE_COLS = qw(
     variation_name
     failed
+    somatic
     start
     end
     allele_string
@@ -2588,6 +2590,10 @@ sub init_line {
                     $var->{pubmed};
             }
         }
+        
+        # somatic?
+        my @somatic = map {$_->{somatic}} @{$vf->{existing}};
+        $line->{Extra}->{SOMATIC} = join(",", @somatic) if grep {$_ > 0} @somatic;
     }
     
     # copy entries from base_line
@@ -4717,6 +4723,7 @@ sub dump_variation_cache {
             my @tmp = (
                 $v->{variation_name},
                 $v->{failed} == 0 ? '' : $v->{failed},
+                $v->{somatic} == 0 ? '' : $v->{somatic},
                 $v->{start},
                 $v->{end} == $v->{start} ? '' : $v->{end},
                 $v->{allele_string},
@@ -4784,9 +4791,10 @@ sub parse_variation {
   
   my %v = map {$cols[$_] => $data[$_] eq '.' ? undef : $data[$_]} (0..$#data);
   
-  $v{failed} ||= 0;
-  $v{end}    ||= $v{start};
-  $v{strand} ||= 1;
+  $v{failed}  ||= 0;
+  $v{somatic} ||= 0;
+  $v{end}     ||= $v{start};
+  $v{strand}  ||= 1;
   
   # hack for odd frequency data
   foreach my $pop(qw(AFR AMR ASN EUR)) {
@@ -5631,7 +5639,7 @@ sub get_variations_in_region {
         my $maf_cols = have_maf_cols($config) ? 'vf.minor_allele, vf.minor_allele_freq' : 'NULL, NULL';
         
         my $sth = $config->{vfa}->db->dbc->prepare(qq{
-            SELECT vf.variation_id, vf.variation_name, IF(fv.variation_id IS NULL, 0, 1), vf.seq_region_start, vf.seq_region_end, vf.allele_string, vf.seq_region_strand, $maf_cols
+            SELECT vf.variation_id, vf.variation_name, IF(fv.variation_id IS NULL, 0, 1), vf.somatic, vf.seq_region_start, vf.seq_region_end, vf.allele_string, vf.seq_region_strand, $maf_cols
             FROM variation_feature vf
             LEFT JOIN failed_variation fv ON fv.variation_id = vf.variation_id
             WHERE vf.seq_region_id = ?
