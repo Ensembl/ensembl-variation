@@ -5289,6 +5289,9 @@ sub build_full_cache {
         
         debug((defined($config->{rebuild}) ? "Rebuild" : "Creat")."ing cache for chromosome $chr") unless defined($config->{quiet});
         
+        # cache slice
+        $config->{slice_cache}->{$chr} = $slice;
+        
         while($start < $slice->end) {
             
             progress($config, $counter++, $region_count);
