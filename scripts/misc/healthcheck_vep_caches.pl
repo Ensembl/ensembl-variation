@@ -87,7 +87,10 @@ foreach my $host(split /\,/, $config->{host}) {
     -db_version => $config->{version},
   );
   
-  foreach my $species(@$species_list) {
+  foreach my $species_hash(@$species_list) {
+    
+    my ($species, $assembly) = ($species_hash->{species}, $species_hash->{assembly});
+    
     next unless $match_species{$species};
     
     print "\nChecking $species\n";
@@ -101,7 +104,7 @@ foreach my $host(split /\,/, $config->{host}) {
     # check directory structure
     print " - checking directory structure\n";
     
-    my $dir = $config->{dir}.'/'.$species.'/'.$config->{version};
+    my $dir = $config->{dir}.'/'.$species.'/'.$config->{version}.($config->{version} >= 76 ? '_'.$assembly : '');
     
     ok(-d $config->{dir}.'/'.$species, "\[$species\] species dir exists");
     ok(-d $dir, "\[$species\] version dir exists");
@@ -246,58 +249,67 @@ print "\n\nDone testing\n";
 done_testing();
 
 sub get_species_list {
-  my $config = shift;
-  my $host   = shift;
+	my $config = shift;
+	my $host   = shift;
 
-  my $connection_string = sprintf(
-    "DBI:mysql(RaiseError=>1):host=%s;port=%s;db=mysql",
-    $host,
-    $config->{port}
-  );
-  
-  # connect to DB
-  $config->{dbc} = DBI->connect(
-    $connection_string, $config->{user}, $config->{password}
-  );
-  
-  my $version = $config->{version};
+	my $connection_string = sprintf(
+			"DBI:mysql(RaiseError=>1):host=%s;port=%s;db=mysql",
+			$host,
+			$config->{port}
+		);
+	
+	# connect to DB
+	$config->{dbc} = DBI->connect(
+	    $connection_string, $config->{user}, $config->{password}
+	);
+	
+	my $version = $config->{version};
 
-  my $sth = $config->{dbc}->prepare(qq{
-    SHOW DATABASES LIKE '%\_core\_$version%'
-  });
-  $sth->execute();
-  
-  my $db;
-  $sth->bind_columns(\$db);
-  
-  my @dbs;
-  push @dbs, $db while $sth->fetch;
-  $sth->finish;
+	my $sth = $config->{dbc}->prepare(qq{
+		SHOW DATABASES LIKE '%\_core\_$version%'
+	});
+	$sth->execute();
+	
+	my $db;
+	$sth->bind_columns(\$db);
+	
+	my @dbs;
+	push @dbs, $db while $sth->fetch;
+	$sth->finish;
   
   # refseq?
-  $sth = $config->{dbc}->prepare(qq{
-    SHOW DATABASES LIKE '%\_otherfeatures\_$version%'
-  });
-  $sth->execute();
-  $sth->bind_columns(\$db);
-  
-  push @dbs, $db while $sth->fetch;
-  $sth->finish;
+  if(defined($config->{refseq})) {
+    $sth = $config->{dbc}->prepare(qq{
+      SHOW DATABASES LIKE '%\_otherfeatures\_$version%'
+    });
+    $sth->execute();
+    $sth->bind_columns(\$db);
+    
+    push @dbs, $db while $sth->fetch;
+    $sth->finish;
+  }
 
-  # remove master and coreexpression
-  @dbs = grep {$_ !~ /master|express/} @dbs;
+	# remove master and coreexpression
+	@dbs = grep {$_ !~ /master|express/} @dbs;
 
-  # filter on pattern if given
-  my $pattern = $config->{pattern};
-  @dbs = grep {$_ =~ /$pattern/} @dbs if defined($pattern);
+	# filter on pattern if given
+	my $pattern = $config->{pattern};
+	@dbs = grep {$_ =~ /$pattern/} @dbs if defined($pattern);
 
-  my @species;
+	my @species;
 
-  foreach my $current_db_name (@dbs) {
+	foreach my $current_db_name (@dbs) {
     
     # special case otherfeatures
     # check it has refseq transcripts
     if($current_db_name =~ /otherfeatures/) {
+    
+      # get assembly name
+      $sth = $config->{dbc}->prepare("select meta_value from ".$current_db_name.".meta where meta_key='assembly.default';");
+      $sth->execute();
+      my $assembly = $sth->fetchall_arrayref()->[0]->[0];
+      die("ERROR: Could not get assembly name from meta table for $current_db_name\n") unless $assembly;
+      
       $sth = $config->{dbc}->prepare(qq{
         SELECT COUNT(*)
         FROM $current_db_name\.transcript
@@ -313,29 +325,34 @@ sub get_species_list {
       if($count) {
         $current_db_name =~ s/^([a-z]+\_[a-z,1-9]+)(\_[a-z]+)?(.+)/$1$2/;
         $current_db_name =~ s/\_otherfeatures$/\_refseq/;
-        push @species, $current_db_name;
+        push @species, { species => $current_db_name, assembly => $assembly};
       }
     }
     
     else {
-      $sth = $config->{dbc}->prepare("select meta_value from ".$current_db_name.".meta where meta_key='species.production_name';");
+      # get assembly and species names
+      $sth = $config->{dbc}->prepare("select species_id, meta_key, meta_value from ".$current_db_name.".meta where meta_key in ('assembly.default', 'species.production_name');");
       $sth->execute();
-      my $current_species = $sth->fetchall_arrayref();
       
-      my @flattened_species_list = sort map { $_->[0] } @$current_species;
+      my ($species_id, $key, $value, $by_species);
+      $sth->bind_columns(\$species_id, \$key, \$value);
       
-      if(@flattened_species_list) {
-        push @species, @flattened_species_list;
+      $by_species->{$species_id}->{$key} = $value while $sth->fetch();
+      $sth->finish();
+      
+      my $count = 0;
+      
+      foreach my $hash(values %$by_species) {
+        next unless $hash->{'assembly.default'} && $hash->{'species.production_name'};
+        push @species, { species => $hash->{'species.production_name'}, assembly => $hash->{'assembly.default'}};
+        $count++;
       }
-      else {
-        $current_db_name =~ s/^([a-z]+\_[a-z,1-9]+)(\_[a-z]+)?(.+)/$1$2/;
-        $current_db_name =~ s/\_core$//;
-        push @species, $current_db_name;
-      }
+      
+      die("ERROR: Problem getting species and assembly names from $current_db_name; check meta table\n") unless $count;
     }
-  }
+	}
 
-  return \@species;
+	return \@species;
 }
 
 sub has_variation {
