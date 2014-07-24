@@ -94,54 +94,64 @@ our @ISA = ('Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor', 'Bio::EnsEMBL::DBSQL:
 =cut
 
 sub fetch_all_by_Slice{
-    my $self = shift;
-    my $slice = shift; 
-    my $individual = shift;
-
-    if(!ref($slice) || !$slice->isa('Bio::EnsEMBL::Slice')) {
-	throw('Bio::EnsEMBL::Slice arg expected');
+  my $self = shift;
+  my $slice = shift; 
+  my $individual = shift;
+  
+  if(!ref($slice) || !$slice->isa('Bio::EnsEMBL::Slice')) {
+    throw('Bio::EnsEMBL::Slice arg expected');
+  }
+  
+  if (defined $individual){
+    if(!ref($individual) || !$individual->isa('Bio::EnsEMBL::Variation::Individual')) {
+      throw('Bio::EnsEMBL::Variation::Individual arg expected');
     }
-    
-    if (defined $individual){
-		if(!ref($individual) || !$individual->isa('Bio::EnsEMBL::Variation::Individual')) {
-			throw('Bio::EnsEMBL::Variation::Individual arg expected');
-		}
-		if(!defined($individual->dbID())) {
-			throw("Individual arg must have defined dbID");
-		}
+    if(!defined($individual->dbID())) {
+      throw("Individual arg must have defined dbID");
     }
-	
-    %{$self->{'_slice_feature_cache'}} = (); #clean the cache to avoid caching problems
+  }
+  
+  %{$self->{'_slice_feature_cache'}} = (); #clean the cache to avoid caching problems
+  
+  my $genotype_adaptor = $self->db->get_IndividualGenotypeFeatureAdaptor; #get genotype adaptor
+  my $genotypes = $genotype_adaptor->fetch_all_by_Slice($slice, $individual); #and get all genotype data 
+  my $afs = $self->SUPER::fetch_all_by_Slice_constraint($slice, $self->db->_exclude_failed_variations_constraint()); #get all AlleleFeatures within the Slice
+  my @new_afs = ();
+  
+  # merge AlleleFeatures with genotypes
+  foreach my $af (@{$afs}){
     
-	my $genotype_adaptor = $self->db->get_IndividualGenotypeFeatureAdaptor; #get genotype adaptor
-    my $genotypes = $genotype_adaptor->fetch_all_by_Slice($slice, $individual); #and get all genotype data 
-    my $afs = $self->SUPER::fetch_all_by_Slice_constraint($slice, $self->db->_exclude_failed_variations_constraint()); #get all AlleleFeatures within the Slice
-    my @new_afs = ();
-	
-    # merge AlleleFeatures with genotypes
-    foreach my $af (@{$afs}){
-		
-		# get the variation ID of this AF
-		my $af_variation_id = $af->{_variation_id} || $af->variation->dbID;
-		
-		# get all genotypes that have this var id
-		foreach my $gt(grep {$_->{_variation_id} == $af_variation_id} @$genotypes) {
-			
-			# create a clone of the AF
-			my $new_af = { %$af };
-			bless $new_af, ref $af;
-			
-			# add the genotype
-			$new_af->allele_string($gt->ambiguity_code);
-			
-			# add the individual
-			$new_af->individual($gt->individual);
-			
-			push @new_afs, $new_af;
-		}
-	}
-	
-    return \@new_afs;
+    # get valid alleles from allele_string
+    my %valid_alleles = map {$_ => 1} split('/', $af->{allele_string});
+    
+    # get the variation ID of this AF
+    my $af_variation_id = $af->{_variation_id} || $af->variation->dbID;
+    
+    # get all genotypes that have this var id
+    foreach my $gt(grep {$_->{_variation_id} == $af_variation_id} @$genotypes) {
+      
+      # skip genotypes whose alleles are not found in allele string
+      my $skip = 0;
+      foreach my $allele(@{$gt->genotype}) {
+        $skip = 1 unless exists($valid_alleles{$allele});
+      }
+      #next if $skip;
+      
+      # create a clone of the AF
+      my $new_af = { %$af };
+      bless $new_af, ref $af;
+      
+      # add the genotype
+      $new_af->allele_string($gt->ambiguity_code);
+      
+      # add the individual
+      $new_af->individual($gt->individual);
+      
+      push @new_afs, $new_af;
+    }
+  }
+  
+  return \@new_afs;
 }
 
 sub _tables{    
