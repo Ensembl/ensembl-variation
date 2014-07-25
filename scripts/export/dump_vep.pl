@@ -104,7 +104,7 @@ sub get_species_list {
 	my $host   = shift;
 
 	my $connection_string = sprintf(
-			"DBI:mysql(RaiseError=>1):host=%s;port=%s;db=mysql",
+			"DBI:mysql(RaiseError=>1):host=%s;port=%s",
 			$host,
 			$config->{port}
 		);
@@ -225,8 +225,9 @@ sub dump_vep {
 	
 	my $command = join " ", (
 		sprintf(
-			'bsub -K -J %s -M %i -R"select[mem>%i] rusage[mem=%i]" -q %s -o %s -e %s',
+			'bsub -K -J %s_%s -M %i -R"select[mem>%i] rusage[mem=%i]" -q %s -o %s -e %s',
 			$species,
+      $ass,
 			$config->{mem},
 			$config->{mem},
 			$config->{mem},
