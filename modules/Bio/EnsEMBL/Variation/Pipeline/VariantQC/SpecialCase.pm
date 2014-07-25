@@ -34,11 +34,11 @@ Bio::EnsEMBL::Variation::Pipeline::VariantQC::SpecialCase
 
 =head1 DESCRIPTION
 
-ammends failure status in special cases:
-    - variants with pubmed ids should not be failed
+ammends failure status in special cases and imports static data from production db
     - variants in PAR regions should not be failed on multiple map locations
+    - some individuals need their display status setting
+    - chip set information is imported
 
-It is quicker to handle these in bulk at the end
 
 =cut
 
@@ -61,9 +61,10 @@ sub run {
 
   my $self = shift;
 
-  if ( $self->param('run_PAR_check') ==1 ){ $self->check_PAR_variants();}
+  if ( $self->required_param('species') =~/homo_sapiens/ ){ $self->check_PAR_variants();}
 
-  if ( $self->param('run_Pubmed_check') ==1 ){ $self->check_Pubmed_variants();}
+# switched of as of e!77
+#  if ( $self->param('run_Pubmed_check') ==1 ){ $self->check_Pubmed_variants();}
 
   if ( $self->required_param('species') =~/sus_scrofa/ ){ $self->add_synonym();}
 
@@ -165,7 +166,6 @@ sub set_display{
 
     my $display_update_sth = $var_dba->dbc->prepare(qq[update individual set display = ? where name = ? ]);
 
-    #### ADAPT TO NEW SCHEMA
     ## check individuals are neither missing or duplicated
     my $individual_check_sth =  $var_dba->dbc->prepare(qq[ select count(*) from individual
                                                            where individual.name = ?
