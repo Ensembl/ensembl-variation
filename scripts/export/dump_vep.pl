@@ -54,6 +54,7 @@ GetOptions(
 	'command=s',
 	'mem=i',
 	'pattern=s',
+  'exclude_pattern=s',
 	'queue=s',
 	'version=i',
 	'overwrite',
@@ -144,7 +145,9 @@ sub get_species_list {
 
 	# filter on pattern if given
 	my $pattern = $config->{pattern};
+  my $exclude = $config->{exclude_pattern};
 	@dbs = grep {$_ =~ /$pattern/} @dbs if defined($pattern);
+	@dbs = grep {$_ !~ /$exclude/} @dbs if defined($exclude);
 
 	my @species;
 
