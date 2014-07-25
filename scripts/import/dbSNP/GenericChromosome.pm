@@ -126,6 +126,7 @@ sub variation_feature{
     #The group term (the name of the reference assembly in the dbSNP b[version]_SNPContigInfo_[assembly]_[assembly version] table) is either specified via the config file or, if not, attempted to automatically determine from the data
     my $group_term = $self->{'group_term'};
     my $group_label = $self->{'group_label'};
+
     if (defined($group_term) && defined($group_label)) {
 	warn "Using group_term:$group_term and group_label:$group_label to extract mappings \n";
     }
@@ -178,17 +179,14 @@ sub variation_feature{
     #$group_term = 'GRCh' if ($self->{'dbm'}->dbCore()->species =~ m/homo|human/i && $release > 130);
     
 	#	     t2.group_term LIKE 'ref_%'
-     $stmt = "SELECT ";
-     if ($self->{'limit'}) {
-       $stmt .= "TOP $self->{'limit'} ";
-     }
+ 
     ###Extract mappings for Mitochondria as well as named reference 
     my $extract_mappings_for = qq['$group_term', 'non-nuclear'];
-
+  
 ## Type 3: DelOnCtg  Deletion on the contig: part of the snp flanking sequence including 
 ##                   the snp was absent on the contig sequence in the alignment
-
-     $stmt .= qq{
+=head
+     $stmt .= qq{ SELECT
                    loc.snp_id AS sorting_id, 
                    ctg.contig_acc,
 		   ctg.contig_gi,
@@ -225,15 +223,11 @@ sub variation_feature{
       WHERE
         ctg.group_term in($extract_mappings_for) AND
         ctg.group_label LIKE '$group_label'
-	        };
-     if ($self->{'limit'}) {
-       $stmt .= qq{    
-		   ORDER BY
-		     sorting_id ASC  
+       ORDER BY  sorting_id ASC  
 	          };
-     }
 
-     dumpSQL($self->{'dbSNP'},$stmt);
+
+     dumpSQL($self->{'dbSNP'},$stmt, $self->{source_engine} );
     
     
     debug(localtime() . "\tLoading SNPLoc data");
@@ -352,7 +346,7 @@ sub variation_feature{
 	print Progress::location();
       }
     }
-
+=cut
     if ($self->{'dbm'}->dbCore()->species =~ /homo/i){
 	debug(localtime() . "\tDumping non-primary assembly data for human");
 	$self->extract_haplotype_mappings($tablename1, $tablename2, $group_label);
@@ -375,7 +369,7 @@ sub extract_haplotype_mappings{
     my $ContigInfo   = shift;
     my $group_label  = shift;
         
-
+=head pre GRCh38
     ## copy synonyms & fake chrom seq_region_ids from core db to temp table
     my $syn_ext_stmt = qq[ select sr2.seq_region_id, sr2.name, srs.synonym, assembly.asm_start, assembly.asm_end
                            from  seq_region sr1, seq_region_synonym srs, seq_region sr2, assembly
@@ -383,9 +377,19 @@ sub extract_haplotype_mappings{
                            and sr2.name = sr1.name
                            and sr2.seq_region_id = assembly.asm_seq_region_id
                            and sr1.seq_region_id = assembly.cmp_seq_region_id
-
 ];
-    dumpSQL($self->{'dbCore'},$syn_ext_stmt);       
+=cut
+
+    my $syn_ext_stmt = qq[ select sr.seq_region_id, 
+                                  sr.name,  
+                                  srs.synonym, 
+                                  asse.seq_region_start, 
+                                  asse.seq_region_start 
+                          from  seq_region sr, seq_region_synonym srs, assembly_exception asse  
+                          where sr.seq_region_id = srs.seq_region_id  
+                          and sr.seq_region_id = asse.seq_region_id];
+
+   dumpSQL($self->{'dbCore'},$syn_ext_stmt);       
     
 
     create_and_load($self->{'dbVar'}, "tmp_hap_synonym", "seq_region_id i* not_null", "name * not_null", "synonym * not_null", "asm_start i", "asm_end i"   );
@@ -397,9 +401,23 @@ sub extract_haplotype_mappings{
     warn "DANGER: Patch id $problem->[0]->[0] name $problem->[0]->[1] on reverse strand\n" if defined $problem->[0]->[0];
 
 
+ my $concat_syntax ;
+    if($self->{source_engine} =~/mssql/){
+	$concat_syntax = qq[ ctg.genbank_acc + '.' + cast(ctg.genbank_ver as nvarchar(10)) ];
+    }
+    elsif($self->{source_engine} =~/postgreSQL/i){
+	warn "setting search path for postgreSQL: " .$self->{'schema_name'} . "\n";
+	my $sth = "SET search_path TO $self->{'schema_name'},dbsnp_main,public";
+	$concat_syntax = qq[ ctg.genbank_acc ||  '.' || ctg.genbank_ver   ];
+    }
+    else{
+	$concat_syntax = qq[  CONCAT(ctg.genbank_acc, '.', ctg.genbank_ver  ];
+    }
+    
+
     ## extract variant mappings on patches/haplotypes
     my $dat_ext_stmt =  qq[ SELECT loc.snp_id,                            
-                            ctg.genbank_acc + '.' + cast(ctg.genbank_ver as nvarchar(10)),
+                             $concat_syntax,
                             loc.lc_ngbr+2, 
                             loc.rc_ngbr,                            
                             CASE WHEN     loc.orientation = 1

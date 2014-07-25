@@ -254,8 +254,9 @@ print $logh $clock->duration('start_dump','end_dump');
 ### This behaviour ceased as of 30/1/2013
 
 
-## update meta 
-my $meta_ins_sth = $dbm->dbVar()->dbc->db_handle->prepare(qq[ INSERT INTO meta (species_id, meta_key, meta_value) values (?,?,?)]);
+
+##d update meta 
+my $meta_ins_sth = $dbm->dbVar()->dbc->db_handle->prepare(qq[ INSERT ignore INTO meta (species_id, meta_key, meta_value) values (?,?,?)]);
 my $meta_upd_sth = $dbm->dbVar()->dbc->db_handle->prepare(qq[ UPDATE meta set meta_value = ? where  meta_key = ?]);
 
 $meta_ins_sth->execute('1', 'species.production_name', $dbm->dbVar()->species() ) ||die;

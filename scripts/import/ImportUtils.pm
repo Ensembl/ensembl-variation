@@ -42,7 +42,7 @@ our @EXPORT_OK = qw(dumpSQL debug create_and_load load loadfile get_create_state
 our $TMP_DIR = "/tmp";
 our $TMP_FILE = 'tabledump.txt';
 
-#ÊThis will strip non-xml-compliant characters from an infile, saving a backup in {infile name}.bak
+# This will strip non-xml-compliant characters from an infile, saving a backup in {infile name}.bak
 # If no infile was specified, will use the tempfile but no backup will be kept. If no xml version was specified, will default to 1.1
 # A replacement character or string can be passed
 # If the xml version was not recognized, will do nothing.
@@ -81,9 +81,17 @@ sub make_xml_compliant {
 sub dumpSQL {
   my $db  = shift;
   my $sql = shift;
-  my $sth = $db->prepare( $sql );
-  dumpPreparedSQL($sth);
-  $sth->finish();
+  my $dbe = shift;  ## handle postgreSQL differently
+
+  if($dbe =~/pg|postgreSQL/i ){
+    dumpSQL_PG($db, $sql);
+  }
+  else{
+   my $sth = $db->prepare( $sql );
+   dumpPreparedSQL($sth);
+   $sth->finish();
+  }
+ 
 }
 
 sub dumpPreparedSQL {
@@ -104,6 +112,35 @@ sub dumpPreparedSQL {
 
   close FH;
 }
+
+## use postgresql cursors to avoid memory issues on large exports
+sub dumpSQL_PG {
+ my $dbh = shift; 
+ my $sql = shift;
+
+  local *FH;
+  my $counter = 0;
+  open( FH, ">$TMP_DIR/$TMP_FILE" )
+      or die( "Cannot open $TMP_DIR/$TMP_FILE: $!" );
+
+   $dbh->db_handle->begin_work();
+   $dbh->do("DECLARE csr CURSOR  FOR $sql");
+   while (1) {
+     my $sth = $dbh->prepare("fetch 100000 from csr");
+     $sth->execute;
+     last if 0 == $sth->rows;
+   
+     while ( my $aref = $sth->fetchrow_arrayref() ) {
+       my @a = map {defined($_) ? $_ : '\N'} @$aref;
+       print FH join("\t", @a), "\n";
+     }
+  }
+   $dbh->do("CLOSE csr");
+   $dbh->db_handle->rollback();
+   close FH;
+}
+
+
 
 # load imports a table, optionally not all columns
 # if table doesnt exist, create a varchar(255) for each column
