@@ -51,8 +51,8 @@ use DBI qw(:sql_types);
 use Fcntl qw( LOCK_SH LOCK_EX );
 use List::Util qw ( min max );
 
-#our $FARM_BINARY = "bsub -R 'select[gpfs]'  ";  ##EBI
-our $FARM_BINARY = "bsub";
+our $FARM_BINARY = "bsub -R 'select[gpfs]'  ";  ##EBI
+#our $FARM_BINARY = "bsub";
 
 our %FARM_PARAMS = (
   
@@ -66,7 +66,7 @@ our %FARM_PARAMS = (
   
   'allele_table' => {
     'script' => 'run_task.pl',
-    'max_concurrent_jobs' => 10, ## reduced from 40 using same mysql server for both 
+    'max_concurrent_jobs' => 30, ## reduced from 40 using same mysql server for both 
     'memory' => 2000,
     'queue' => 1,
     'wait_queue' => 0
@@ -75,7 +75,7 @@ our %FARM_PARAMS = (
   'allele_table_load' => {
     'script' => 'run_task.pl',
     'max_concurrent_jobs' => 5,
-    'memory' => 4000, #was 8000 for human
+    'memory' => 6000, #was 8000 for human
     'queue' => 2,
     'wait_queue' => 0
   },
@@ -86,7 +86,7 @@ our %FARM_PARAMS = (
   ## mouse - 20/29 failed 4G limit - 5 needed 9.5G
   'individual_genotypes' => {
     'script' => 'run_task.pl',
-    'max_concurrent_jobs' => 20,
+    'max_concurrent_jobs' => 30,
     'memory' => 4000,           
     'queue' => 1,
     'wait_queue' => 0
@@ -186,6 +186,7 @@ sub dump_dbSNP{
    'population_genotypes',
    'parallelized_allele_table',
 #   'flanking_sequence_table',
+   'allele_string',
    'variation_feature',   
     'cleanup'
   );
@@ -273,8 +274,8 @@ sub run_on_farm {
   print $logh "Running $script with task management file: $task_manager_file\n";
   print $logh Progress::location();
   ### changed $memory_long to $memory for farm3
-  my $bsub_cmd = qq{$FARM_BINARY -R'select[mem>$memory\] rusage[mem=$memory\]' -M$memory_long -q $queue -J'$jobname$array_options' -o $logfile_prefix\%J.%I.out -e $logfile_prefix\%J.%I.err bash $script_wrapper};
-#my $bsub_cmd = qq{$FARM_BINARY -R'select[mem>$memory\] rusage[mem=$memory\]' -M$memory  -J'$jobname$array_options' -o $logfile_prefix\%J.%I.out -e $logfile_prefix\%J.%I.err bash $script_wrapper}; ### EBI
+#  my $bsub_cmd = qq{$FARM_BINARY -R'select[mem>$memory\] rusage[mem=$memory\]' -M$memory_long -q $queue -J'$jobname$array_options' -o $logfile_prefix\%J.%I.out -e $logfile_prefix\%J.%I.err bash $script_wrapper};
+my $bsub_cmd = qq{$FARM_BINARY -R'select[mem>$memory\] rusage[mem=$memory\]' -M$memory  -J'$jobname$array_options' -o $logfile_prefix\%J.%I.out -e $logfile_prefix\%J.%I.err bash $script_wrapper}; ### EBI
   warn "sending to farm:  $bsub_cmd\n";
   #Submit the job array to the farm
   my $submission = `$bsub_cmd`;
@@ -282,8 +283,8 @@ sub run_on_farm {
   print $logh Progress::location();
   warn "Need to wait for job id $jobid\nSenfin:$FARM_BINARY -J $jobid\_waiting  -w'ended($jobid)' -K -o $file_prefix\_waiting.out sleep 1\n\n";
   #Submit a job that depends on the job array so that the script will halt  (added meme req after problems on farm3)
-#  system(qq{$FARM_BINARY -R"select[mem>2000] rusage[mem=2000]" -M2000 -J $jobid\_waiting  -w'ended($jobid)' -K -o $file_prefix\_waiting.out sleep 1});  ###EBI
-  system(qq{$FARM_BINARY -R"select[mem>2000] rusage[mem=2000]" -M2000 -J $jobid\_waiting -q $wait_queue -w'ended($jobid)' -K -o $file_prefix\_waiting.out sleep 1});
+  system(qq{$FARM_BINARY -R"select[mem>2000] rusage[mem=2000]" -M2000 -J $jobid\_waiting  -w'ended($jobid)' -K -o $file_prefix\_waiting.out sleep 1});  ###EBI
+#  system(qq{$FARM_BINARY -R"select[mem>2000] rusage[mem=2000]" -M2000 -J $jobid\_waiting -q $wait_queue -w'ended($jobid)' -K -o $file_prefix\_waiting.out sleep 1});
   print $logh Progress::location();
   
   #Check the error and output logs for each subtask. If the error file is empty, delete it. If not, warn that the task generated errors. If the output file doesn't say that it completed successfully, report the job as unseccessful and report which tasks that failed
@@ -427,7 +428,9 @@ sub source_table {
     my $url = 'http://www.ncbi.nlm.nih.gov/projects/SNP/';
 
     $version =  $self->{'dbSNP_version'} unless defined $version;
+    $version =~ s/b//;
     if(defined $source_name &&  $source_name=~ /Archive/){ 
+
         $self->{'dbVar'}->do(qq{INSERT IGNORE INTO source (source_id,name,version,description,url,somatic_status, data_types) VALUES (2, "$source_name",$version,"Former variants names imported from dbSNP", "$url", "mixed","variation_synonym")});
     }    
     else{
@@ -436,7 +439,8 @@ sub source_table {
 
         $self->{'dbVar'}->do(qq{INSERT INTO source (source_id,name,version,description,url,somatic_status, data_types) VALUES (1,"$dbname",$version,"Variants (including SNPs and indels) imported from dbSNP", "$url", "mixed","variation")});
     }
-
+    my $source_id = $self->{'dbVar'}->db_handle->last_insert_id(undef, undef, qw(source source_id))|| die "no insert id for source\n";
+    return $source_id;
 }
 
 sub table_exists_and_populated {
@@ -451,6 +455,7 @@ sub table_exists_and_populated {
 	$sql = qq[SELECT OBJECT_ID('$table')];
     }
     elsif($self->{source_engine} =~/pg|postgreSQL/i ){
+        $table = "\L$table";
         $sql = qq[SELECT * FROM pg_catalog.pg_tables where tablename like '$table'];
     }
     else{
@@ -499,7 +504,7 @@ sub clin_sig {
         WHERE   cs.clin_sig_id = csc.code
     };
     
-    dumpSQL($self->{'dbSNP'}, $stmt);
+    dumpSQL($self->{'dbSNP'}, $stmt, $self->{source_engine});
     
     print $logh Progress::location();
     debug(localtime() . "\tLoading clinical significance");
@@ -582,7 +587,7 @@ sub minor_allele_freq {
         WHERE   af.allele_id = a.allele_id
     };
 
-    dumpSQL($self->{'dbSNP'}, $stmt);
+    dumpSQL($self->{'dbSNP'}, $stmt, $self->{source_engine});
     
     print $logh Progress::location();
     debug(localtime() . "\tLoading global minor allele freqs");
@@ -679,7 +684,7 @@ sub suspect_snps {
         FROM    SNPSuspect ss
     };
 
-    dumpSQL($self->{'dbSNP'}, $stmt);
+    dumpSQL($self->{'dbSNP'}, $stmt, $self->{source_engine});
     
     print $logh Progress::location();
     debug(localtime() . "\tLoading suspect SNPs");
@@ -819,7 +824,7 @@ sub pubmed_citations{
 
     my $pubmed_ins_sth = $self->{'dbVar'}->prepare(qq[ insert into tmp_pubmed (snp_id, pubmed_id) values (?,?)]);
 
-    my $sth = $self->{'dbSNP'}->prepare(qq[ SELECT snp_id, pubmed_id from SNPPubmed ]);
+    my $sth = $self->{'dbSNP'}->prepare(qq[ SELECT snp_id, pubmed_id from SNPPubmed where pubmed_id is not null ]);
     $sth->execute();
 
     print $logh Progress::location();
@@ -935,7 +940,7 @@ sub variation_table {
 		     sorting_id ASC  
 	          };
     }
-    dumpSQL($self->{'dbSNP'},$stmt) unless ($resume_at_subsnp_id > 0);
+    dumpSQL($self->{'dbSNP'},$stmt, $self->{source_engine}) unless ($resume_at_subsnp_id > 0);
 
     
     debug(localtime() . "\tLoading RefSNPs into variation table");
@@ -957,7 +962,6 @@ sub variation_table {
     debug(localtime() . "\tVariation table indexed");
 
 
-
     debug(localtime() . "\tStarting subSNPhandle");
     #create a subsnp_handle table
     $stmt = qq{
@@ -971,7 +975,7 @@ sub variation_table {
                  s.batch_id = 
                  b.batch_id
               };
-    dumpSQL($self->{'dbSNP'},$stmt);
+    dumpSQL($self->{'dbSNP'},$stmt, $self->{source_engine});
     load( $self->{'dbVar'}, "subsnp_handle", "subsnp_id", "handle");
     debug(localtime() . "\tFinished subSNPhandle");
    
@@ -986,7 +990,6 @@ sub variation_table {
                 SNPSubSNPLink sssl ON ( sssl.subsnp_id = ss.subsnp_id AND ss.SOMATIC_ind = 'Y')
                 where not exists (select * from SubSNP ss2 JOIN SNPSubSNPLink sssl2 ON ( sssl2.subsnp_id = ss2.subsnp_id AND ss2.SOMATIC_ind = 'N')
                 where  sssl2.snp_id = sssl.snp_id )
-                and sssl.snp_id between ? and ?
 	};
 	my $sth = $self->{'dbSNP'}->prepare($stmt);
   	print $logh Progress::location();
@@ -1048,6 +1051,7 @@ sub subsnp_synonyms{
 
     my $self = shift;
     my $logh = $self->{'log'};
+    my $is_pg = 1 if $self->{source_engine} =~/pg|postgreSQL/i ;
 
    # create a temp table of subSNP info
     
@@ -1076,7 +1080,7 @@ sub subsnp_synonyms{
 	            subsnp_id ASC  
 	         };
     }
-   dumpSQL($self->{'dbSNP'},$stmt) ;
+   dumpSQL($self->{'dbSNP'},$stmt, $is_pg) ; 
    create_and_load( $self->{'dbVar'}, "tmp_var_allele", "subsnp_id i*  not_null", "refsnp_id v* not_null", "substrand_reversed_flag i", "moltype", "allele_id i");
   
   print $logh Progress::location(); 
@@ -1278,7 +1282,7 @@ sub population_table {
     elsif($self->{source_engine} =~/postgreSQL/i){
 	warn "setting search path for postgreSQL: " .$self->{'schema_name'} . "\n";
 	my $sth = "SET search_path TO $self->{'schema_name'},dbsnp_main,public";
-	$concat_syntax = qq[ p.handle || loc_pop_id ];
+	$concat_syntax = qq[ p.handle || ':' || loc_pop_id ];
     }
     else{
 	$concat_syntax = qq[ CONCAT(p.handle,':',p.loc_pop_id) ];
@@ -1703,10 +1707,12 @@ sub parallelized_allele_table {
 
     ## improve binning for sparsely submitted species
     #hash out task file creation if re-running 1 failed job
-    $jobindex = write_allele_task_file($self->{'dbSNP'}->db_handle(),$task_manager_file, $loadfile,  $allelefile, $samplefile,$self->{limit});
-
-#    my $jobindex = 795;
-#    my $start = 795;
+    if($self->{source_engine} =~/postgreSQL/ ){
+        $jobindex =write_allele_task_file_pg($self->{'dbSNP'}->db_handle(),$task_manager_file, $loadfile,  $allelefile, $samplefile,$self->{limit});
+    }
+    else{
+        $jobindex = write_allele_task_file($self->{'dbSNP'}->db_handle(),$task_manager_file, $loadfile,  $allelefile, $samplefile,$self->{limit});
+    }
     my $start = 1 ;
     debug(localtime() . "\tAt allele table - written export task file");
     # Run the job on the farm
@@ -1740,7 +1746,8 @@ sub parallelized_allele_table {
     # If we still have subtasks that fail, this needs to be resolved before proceeding
     die("Some subtasks are failing (see log output). This needs to be resolved before proceeding with the loading of genotypes!") unless ($result->{'success'});
   }
-##  $jobindex = 360;  Put number of subfiles here if running on load_only
+
+# $jobindex =  2606;  ##Put number of subfiles here if running on load_only
 
   debug(localtime() . " Creating single allele file to load ");
 
@@ -1767,9 +1774,22 @@ sub parallelized_allele_table {
   debug(localtime() . "\tAt allele table - data load complete");
   $self->{'dbVar'}->do( qq[ alter table allele enable keys]);
   debug(localtime() . "\tAt allele table - indexing complete");
+  debug(localtime() . "\tEnding allele table");
+
+}
+
+## this can run to extract data from dbSNP while alleles loaded into ensembl
+sub allele_string{
+
+  my $self = shift;
+  #Put the log filehandle in a local variable
+  my $logh = $self->{'log'};
+  my $stmt;
 
 
-  #Finally, create the allele_string table needed for variation_feature    ## change to store A/T rather than seperate rows per allele
+  debug(localtime() . "\tAt allele_string table - starting");
+
+  #Create the allele_string table needed for variation_feature    ## change to store A/T rather than seperate rows per allele
   $stmt = qq{
     SELECT 
       snp.snp_id, 
@@ -1780,7 +1800,7 @@ sub parallelized_allele_table {
 	uv.univar_id = snp.univar_id
       )
   };
-  dumpSQL($self->{'dbSNP'},$stmt);
+  dumpSQL($self->{'dbSNP'},$stmt, $self->{source_engine} );
   print $logh Progress::location();
   create_and_load($self->{'dbVar'},"tmp_allele_string","snp_name * not_null","allele");
   print $logh Progress::location();
@@ -1813,7 +1833,7 @@ sub parallelized_allele_table {
   $self->{'dbVar'}->do($stmt);
 
   print $logh Progress::location();
-  debug(localtime() . "\tEnding allele table");
+  debug(localtime() . "\tEnding allele string table");
 
 }
 
@@ -1873,27 +1893,92 @@ sub write_allele_task_file{
 	$counter++;
 	unless(defined $first){
 	    ### set up first bin
-	    $first = $ssid;
-#	    warn "setting first to $ssid\n";
-	    $jobindex   = 1;
-	    next;
-	}
-	if($counter >=100000){
-	    ## end bin
-	     print MGMT qq{$jobindex $loadfile\_$jobindex $first $previous $allelefile $samplefile\n};
+            $first = $ssid;
+#           warn "setting first to $ssid\n";
+            $jobindex   = 1;
+            next;
+        }
+        if($counter >=100000){
+            ## end bin
+             print MGMT qq{$jobindex $loadfile\_$jobindex $first $previous $allelefile $samplefile\n};
 
-	    ## start new bin
-	    $first       = $ssid;
+            ## start new bin
+            $first       = $ssid;
 
-	    $counter     = 1;
-	    $jobindex++;
-	}
-	else{
-	    $previous = $ssid;
-	}
-	
+            $counter     = 1;
+            $jobindex++;
+        }
+        else{
+            $previous = $ssid;
+        }
+        
     }
 
+
+    ### write out last bin
+    print MGMT qq{$jobindex $loadfile\_$jobindex $first $previous $allelefile $samplefile\n};
+    close MGMT;
+    debug(localtime() . "\tFinished allele task file");
+
+    return ($jobindex);
+}
+
+sub write_allele_task_file_pg{
+
+    my ($dbh, $task_manager_file, $loadfile,  $allelefile, $samplefile, $limit) = @_;
+    #warn "Starting allele_task file \n";
+    ### previously binning at 500,000, switched to 400,000
+    my ($first, $previous,  $jobindex, $ssid);
+    debug(localtime() . "\tAt write_allele_task_file - starting");
+   open(MGMT,'>',$task_manager_file) || die "Failed to open allele table task management file ($task_manager_file): $!\n";;
+    my $stmt = "SELECT ";
+    if ($limit) {
+        $stmt .= "TOP $limit ";
+    }
+    $stmt .= qq[ ss.subsnp_id
+                 FROM  SubSNP ss
+                 order by ss.subsnp_id
+                 ];
+
+    my $counter = 0;
+    
+    $dbh->begin_work();
+    $dbh->do("DECLARE csr CURSOR  FOR $stmt");
+    $stmt = "fetch 100000 from csr";
+    while (1) {
+        my $sth = $dbh->prepare($stmt);
+            $sth->execute;
+        last if 0 == $sth->rows;
+        
+        debug(localtime() . "\tAt write_allele_task_file - executed");
+        while( $ssid = $sth->fetchrow_arrayref()){
+            
+            $counter++;
+            unless(defined $first){
+                ### set up first bin
+                $first = $ssid->[0];
+#           warn "setting first to $ssid\n";
+                $jobindex   = 1;
+                next;
+            }
+            if($counter >=100000){
+                ## end bin
+                print MGMT qq{$jobindex $loadfile\_$jobindex $first $previous $allelefile $samplefile\n};
+                
+                ## start new bin
+                $first       = $ssid->[0];
+                
+                $counter     = 1;
+                $jobindex++;
+            }
+            else{
+                $previous = $ssid->[0];
+            }       
+        }
+    }
+    
+    $dbh->do("CLOSE csr");
+    $dbh->rollback();
 
     ### write out last bin
     print MGMT qq{$jobindex $loadfile\_$jobindex $first $previous $allelefile $samplefile\n};
@@ -2247,7 +2332,7 @@ sub variation_feature {
 		     sorting_id ASC  
 	          };
      }
-      dumpSQL($self->{'dbSNP'},$stmt);
+      dumpSQL($self->{'dbSNP'},$stmt, $self->{source_engine});
     
     
   debug(localtime() . "\tLoading SNPLoc data");
@@ -2303,6 +2388,7 @@ sub parallelized_individual_genotypes {
   my $multi_bp_gty_table = 'individual_genotype_multiple_bp';
   my $jobindex;
 
+
  #Get the create statement for tmp_individual_genotype_single_bp from master schema. We will need this to create the individual chromosome tables
   my $ind_gty_stmt = get_create_statement($genotype_table,$self->{'schema_file'});
  
@@ -2310,6 +2396,7 @@ sub parallelized_individual_genotypes {
 
   #Put the log filehandle in a local variable
   my $logh = $self->{'log'}; 
+
 
   my $task_manager_file = 'individual_genotypes_task_management.txt';
 
@@ -2445,8 +2532,8 @@ sub parallelized_individual_genotypes {
 
   # Loop over the subtables and load each of them
   my @subtables;
-  $jobindex = 0;  ## reset for loading jobs
-  $task_manager_file = $file_prefix . '_task_management_load.txt';
+  my $jobindex = 0;  ## reset for loading jobs
+  my $task_manager_file = $file_prefix . '_task_management_load.txt';
   open(MGMT,'>',$task_manager_file);
   foreach my $subind_table (keys(%gty_tables)) {
     
@@ -2732,8 +2819,7 @@ sub population_genotypes {
                  WHERE 
                    a1.rev_allele_id = a2.allele_id
                 };
-      dumpSQL($self->{'dbSNP'},$stmt);
-
+      dumpSQL($self->{'dbSNP'},$stmt, $self->{source_engine});
       create_and_load($self->{'dbVar'}, "tmp_rev_allele", "allele_id i* not_null","allele * not_null", "rev_allele not_null");
       print $logh Progress::location();
       
@@ -2768,7 +2854,7 @@ sub population_genotypes {
 		     sorting_id ASC  
 	          };
      }
-    dumpSQL($self->{'dbSNP'},$stmt);
+    dumpSQL($self->{'dbSNP'},$stmt, $self->{source_engine});
 
      debug(localtime() . "\tloading population_genotype data");
 
@@ -2873,7 +2959,7 @@ sub archive_rs_synonyms {
     debug(localtime() . "\tLooking for old rs");  
 
     ## Add source description only if old refSNP names found
-    $self->source_table("Archive dbSNP");
+    my $source_id = $self->source_table("Archive dbSNP");
 
     my $logh = $self->{'log'};
     
@@ -2902,7 +2988,8 @@ sub archive_rs_synonyms {
                           FROM RsMergeArch ];
     }
     # export old rs id from dbSNP
-    dumpSQL($self->{'dbSNP'}, $concat_sql  ) ;
+    debug(localtime() . "\tExporting old rs with $concat_sql");  
+    dumpSQL($self->{'dbSNP'}, $concat_sql , $self->{source_engine} ) ;
 
    #loading it to variation database in temp rshist table
    create_and_load( $self->{'dbVar'}, "rsHist", "rsHigh * not_null", "rsCurrent * not_null","orien2Current not_null", "rsLow") ;
@@ -2926,7 +3013,7 @@ sub archive_rs_synonyms {
       my $end =  $start + $batch_size;
 
       $self->{'dbVar'}->do(qq{INSERT INTO variation_synonym (variation_id, source_id, name)
-                             (SELECT v.variation_id, 2, r.rsHigh
+                             (SELECT v.variation_id, $source_id, r.rsHigh
                               FROM variation v, rsHist r
                               WHERE v.name = r.rsCurrent
                               AND v.snp_id between $start and $end)
@@ -2935,7 +3022,7 @@ sub archive_rs_synonyms {
       ## take from rsLow if rsCurrent has no id
       if($self->{source_engine} =~/mssql/ ){
 	  $self->{'dbVar'}->do(qq{INSERT INTO variation_synonym (variation_id, source_id, name)
-                                 (SELECT v.variation_id, 2, r.rsHigh
+                                 (SELECT v.variation_id, $source_id, r.rsHigh
                                  FROM variation v, rsHist r
                                  WHERE v.name = r.rsLow
                                  AND  r.rsCurrent = 'rs'
@@ -2945,7 +3032,7 @@ sub archive_rs_synonyms {
       else{
 	  ## for missing data in mysql mirror
 	  $self->{'dbVar'}->do(qq{INSERT INTO variation_synonym (variation_id, source_id, name)
-                                 (SELECT v.variation_id, 2, r.rsHigh
+                                 (SELECT v.variation_id, $source_id, r.rsHigh
                                   FROM variation v, rsHist r
                                   WHERE v.name = r.rsLow                              
                                   AND  r.rsCurrent not like 'rs%'

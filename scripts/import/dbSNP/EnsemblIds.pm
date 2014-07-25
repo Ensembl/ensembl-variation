@@ -59,14 +59,14 @@ sub dump_dbSNP{
     $duration = Progress::time_format($end-$start);
     print $duration->{'weeks'} . " weeks, " . $duration->{'days'} . " days, " . $duration->{'hours'} . " hours, " . $duration->{'minutes'} . " minutes and " . $duration->{'seconds'} . " seconds spent in SUPER::dump_dbSNP()\n";
     
-    
+
     $start = time();
     $self->dump_LSDBIDs() if $self->{'dbm'}->dbCore()->species =~ /hum|homo/i;
     print Progress::location();
     $end = time();
     $duration = Progress::time_format($end-$start);
     print $duration->{'weeks'} . " weeks, " . $duration->{'days'} . " days, " . $duration->{'hours'} . " hours, " . $duration->{'minutes'} . " minutes and " . $duration->{'seconds'} . " seconds spent in dump_LSDBIDs()\n";
-  
+
 }
 
 #get ENSIDs from dbSNP
@@ -336,11 +336,11 @@ sub dump_LSDBIDs {
 		FROM SubSNP ss
 			JOIN SNPSubSNPLink sl ON sl.subsnp_id = ss.subsnp_id
 			JOIN Batch b ON b.batch_id = ss.batch_id
-			JOIN $self->{'dbSNP_share_db'}..Method m ON b.method_id = m.method_id AND m.method_class = 109
+			JOIN $self->{'dbSNP_share_db'}.Method m ON b.method_id = m.method_id AND m.method_class = 109
                 WHERE b.handle !='SWISSPROT'
 	};
 
-    dumpSQL($self->{'dbSNP'}, $stmt);
+    dumpSQL($self->{'dbSNP'}, $stmt, $self->{source_engine});
     
     print Progress::location();
     debug(localtime() . "\tCopying IDs to synonym table\n");
