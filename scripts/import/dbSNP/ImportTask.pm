@@ -177,7 +177,7 @@ sub allele_table {
       
       my $sep_alleles = get_alleles_from_pattern($line->[2]);    ## Reported allele pattern [ eg A/T ]
       foreach my $sep_allele (@$sep_alleles){
-          if ($line->[3] ==1 ){
+          if ($line->[3] ==1 && $line->[3] !~ m /[^ACGTUSWNXKBYVHMDR\-]/i ){ ##don't flip descriptions
               $line->[2] =~/^\(\w+\)/ ?  $sep_allele = revcomp_tandem($sep_allele):           
                   defined $QUICK_COMP{$sep_allele} ? $sep_allele = $QUICK_COMP{$sep_allele} : reverse_comp(\$sep_allele);
           }
@@ -321,7 +321,7 @@ sub allele_table_pg {
         
         my $sep_alleles = get_alleles_from_pattern($line->[2]);    ## Reported allele pattern [ eg A/T ]
         foreach my $sep_allele (@$sep_alleles){
-          if ($line->[3] ==1 ){
+          if ($line->[3] ==1 && $line->[3] !~ m /[^ACGTUSWNXKBYVHMDR\-]/i ){ ##don't flip descriptions
               $line->[2] =~/^\(\w+\)/ ?  $sep_allele = revcomp_tandem($sep_allele):           
                   defined $QUICK_COMP{$sep_allele} ? $sep_allele = $QUICK_COMP{$sep_allele} : reverse_comp(\$sep_allele);
           }
