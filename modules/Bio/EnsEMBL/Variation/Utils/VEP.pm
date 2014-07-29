@@ -1610,8 +1610,8 @@ sub format_rest_output {
         my $tmp = $ex->{$pop};
         
         if($tmp =~ /(\w)\:([\d\.]+)/) {
-          $ex->{lc($pop).'_maf'} = $1;
-          $ex->{lc($pop).'_allele'} = $2;
+          $ex->{lc($pop).'_maf'} = $2;
+          $ex->{lc($pop).'_allele'} = $1;
         }
         else {
           $ex->{lc($pop).'_maf'} = $tmp;
