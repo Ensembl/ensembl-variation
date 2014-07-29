@@ -76,7 +76,7 @@ foreach my $host(split /\,/, $config->{host}) {
   my $species_list = get_species_list($config, $host);
   
   if($config->{species} eq 'all') {
-    $match_species{$_} = 1 for @$species_list;
+    $match_species{$_} = 1 for map {$_->{species}} @$species_list;
   }
   
   $config->{reg}->load_registry_from_db(
@@ -253,7 +253,7 @@ sub get_species_list {
 	my $host   = shift;
 
 	my $connection_string = sprintf(
-			"DBI:mysql(RaiseError=>1):host=%s;port=%s;db=mysql",
+			"DBI:mysql(RaiseError=>1):host=%s;port=%s",
 			$host,
 			$config->{port}
 		);
