@@ -187,19 +187,23 @@ sub store_uncompressed {
 		$_->individual ? $_->individual->dbID : undef,
 	} @$gts;
 	
-	my $sth = $dbh->prepare_cached(qq{
-		INSERT INTO $table(
-			variation_id,
-			subsnp_id,
-			allele_1,
-			allele_2,
-			individual_id
-		) VALUES $q_string
-	});
+	# Store the individual genotype entry, only if the array contains at least one element
 	
-	$sth->execute(@args);
+	if (@args > 0) {
+		my $sth = $dbh->prepare_cached(qq{
+			INSERT INTO $table(
+				variation_id,
+				subsnp_id,
+				allele_1,
+				allele_2,
+				individual_id
+			) VALUES $q_string
+		});
 	
-	$sth->finish;
+		$sth->execute(@args);
+
+		$sth->finish;
+	}
 	
 	return scalar @$gts;
 }
