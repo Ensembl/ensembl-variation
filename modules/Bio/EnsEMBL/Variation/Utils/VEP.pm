@@ -3245,7 +3245,7 @@ sub fetch_transcripts {
         $region_count += scalar @{$regions->{$chr}};
     }
     
-    my ($counter, $gencode_skip_count);
+    my ($counter, $gencode_skip_count, $nm_skip_count);
     
     debug("Reading transcript data from cache and/or database") unless defined($config->{quiet});
     
@@ -3333,6 +3333,25 @@ sub fetch_transcripts {
                     # using gencode basic?
                     if(defined($config->{gencode_basic}) && !(grep {$_->{code} eq 'gencode_basic'} @{$tr->get_all_Attributes})) {
                       $gencode_skip_count++;
+                      next;
+                    }
+                    
+                    # using only_refseq?
+                    if(
+                      defined($config->{only_refseq}) &&
+                      (
+                        (
+                          defined($config->{refseq}) &&
+                          $tr->stable_id !~ /^[A-Z]{2}\_\d+/
+                        ) ||
+                        (
+                          defined($config->{merged}) &&
+                          $tr->{_source_cache} eq 'RefSeq' &&
+                          $tr->stable_id !~ /^[A-Z]{2}\_\d+/
+                        )
+                      )
+                    ) {
+                      $nm_skip_count++;
                       next;
                     }
                     
