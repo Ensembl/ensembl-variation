@@ -4797,8 +4797,12 @@ sub parse_variation {
   $v{strand}  ||= 1;
   
   # hack for odd frequency data
-  foreach my $pop(qw(AFR AMR ASN EUR)) {
-    $v{$pop} = 1 - $v{$pop} if defined($v{$pop}) && $v{$pop} =~ /\d+/ && $v{$pop} > 0.5;
+  if(defined($config->{old_maf})) {
+    foreach my $pop(grep {defined($v{$_})} qw(AFR AMR ASN EUR)) {
+     $v{$pop} =~ s/^.+?\://;
+     $v{$pop} =~ s/\,.+//g;
+     $v{$pop} = 1 - $v{$pop} if $v{$pop} =~ /\d+/ && $v{$pop} > 0.5;
+    }
   }
   
   return \%v;
