@@ -3245,7 +3245,7 @@ sub fetch_transcripts {
         $region_count += scalar @{$regions->{$chr}};
     }
     
-    my ($counter, $gencode_skip_count, $nm_skip_count);
+    my ($counter, $gencode_skip_count, $refseq_skip_count);
     
     debug("Reading transcript data from cache and/or database") unless defined($config->{quiet});
     
@@ -3336,9 +3336,9 @@ sub fetch_transcripts {
                       next;
                     }
                     
-                    # using only_refseq?
+                    # using all_refseq?
                     if(
-                      defined($config->{only_refseq}) &&
+                      !defined($config->{all_refseq}) &&
                       (
                         (
                           defined($config->{refseq}) &&
@@ -3351,7 +3351,7 @@ sub fetch_transcripts {
                         )
                       )
                     ) {
-                      $nm_skip_count++;
+                      $refseq_skip_count++;
                       next;
                     }
                     
