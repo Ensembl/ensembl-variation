@@ -619,14 +619,13 @@ sub hgvs_transcript {
     #warn "Error - not continuing; no HGVS annotation\n";
     return undef;
     } 
-
+    ## to be included in e!77
     ## HGVS defined deletion at 3'most possible position - move if required
-    if( $hgvs_notation->{'type'} eq 'del' || $hgvs_notation->{'type'} eq 'ins'){
+##    if( $hgvs_notation->{'type'} eq 'del' || $hgvs_notation->{'type'} eq 'ins'){
+##	my $post_seq =  substr($slice->seq(), $slice_end);
+##	$hgvs_notation = _shift_3prime($hgvs_notation,  $post_seq);
+##    }
 
-	my $post_seq =  substr($slice->seq(), $slice_end);
-	$hgvs_notation = _shift_3prime($hgvs_notation,  $post_seq);
-    }
- 
     ## compare calculated reference base to input reference base to flag incorrect input
     my $ref_al_for_checking  = $self->transcript_variation->get_reference_TranscriptVariationAllele->variation_feature_seq();
     if( $self->transcript_variation->variation_feature->strand() <0 && $refseq_strand >0 ||
