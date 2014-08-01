@@ -46,10 +46,10 @@ sub default_options {
     # this - patches are welcome!
 
     return {
-		hive_force_init      => 1,
-		hive_use_param_stack => 0,
+        hive_force_init      => 1,
+        hive_use_param_stack => 0,
         hive_use_triggers    => 0,
-		hive_root_dir        => $ENV{'HOME'} . '/DEV/ensembl-hive',	
+        hive_root_dir        => $ENV{'HOME'} . '/DEV/ensembl-hive', 
         ensembl_cvs_root_dir => $ENV{'HOME'} . '/DEV',
         hive_no_init         => 0,
 
@@ -63,8 +63,8 @@ sub default_options {
 
         script_dir         => $self->o('ensembl_cvs_root_dir') . '/ensembl-variation/scripts',
 
-		gvf_validator      => '/nfs/users/nfs_a/at7/tools/gvf_validator',
-		so_file            => '/nfs/users/nfs_a/at7/obo/e76/so.obo',
+        gvf_validator      => '/nfs/users/nfs_a/at7/tools/gvf_validator',
+        so_file            => '/nfs/users/nfs_a/at7/obo/e76/so.obo',
 
         prefetched_frequencies => $self->o('prefetched_frequencies'),
         tmp_dir           => $self->o('tmp_dir'),
@@ -83,7 +83,7 @@ sub default_options {
             -user   => $self->o('hive_db_user'),
             -pass   => $self->o('hive_db_password'),            
             -dbname => $ENV{'USER'} . '_' . $self->o('pipeline_name'),
-			-driver => 'mysql',
+            -driver => 'mysql',
         },
     };
 }
@@ -92,43 +92,43 @@ sub pipeline_wide_parameters {
     my ($self) = @_;
     return {
         %{$self->SUPER::pipeline_wide_parameters}, # here we inherit anything from the base class
-		release          => $self->o('ensembl_release'),
+        release          => $self->o('ensembl_release'),
         registry_file    => $self->o('registry_file'),
         output_path      => $self->o('pipeline_dir'),
         pipeline_dir     => $self->o('pipeline_dir'),
         script_dir       => $self->o('script_dir'), 
-		so_file          => $self->o('so_file'),	
-		gvf_validator    => $self->o('gvf_validator'),
+        so_file          => $self->o('so_file'),    
+        gvf_validator    => $self->o('gvf_validator'),
         tmp_dir          => $self->o('tmp_dir'),
     };
 }
 
 sub resource_classes {
-	my ($self) = @_;
-	return {
-		%{$self->SUPER::resource_classes},
-	    'default' => { 'LSF' => '-R"select[mem>1500] rusage[mem=1500]" -M1500'},
+    my ($self) = @_;
+    return {
+        %{$self->SUPER::resource_classes},
+        'default' => { 'LSF' => '-R"select[mem>1500] rusage[mem=1500]" -M1500'},
         'urgent'  => { 'LSF' => '-q yesterday -R"select[mem>2000] rusage[mem=2000]" -M2000'},
         'highmem' => { 'LSF' => '-R"select[mem>15000] rusage[mem=15000]" -M15000'}, # this is Sanger LSF speak for "give me 15GB of memory"
         'long'    => { 'LSF' => '-q long -R"select[mem>2000] rusage[mem=2000]" -M2000'},
-	};
+    };
 }
 
 sub pipeline_analyses {
     my ($self) = @_;
     my @analyses;
-		push @analyses, (
-			{	-logic_name => 'pre_run_checks_gvf_dumps',
-				-module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::PreRunChecks',
-				-input_ids => [{},],
-				-max_retry_count => 1,
-				-flow_into => {
-					1 => ['export_config_file'],
-				},
+        push @analyses, (
+            {   -logic_name => 'pre_run_checks_gvf_dumps',
+                -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::PreRunChecks',
+                -input_ids => [{},],
+                -max_retry_count => 1,
+                -flow_into => {
+                    1 => ['export_config_file'],
+                },
                 -parameters => {
-					'file_type' => 'gvf',	
-				},
-			},
+                    'file_type' => 'gvf',   
+                },
+            },
             {   -logic_name => 'export_config_file',
                 -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::Config',
                 -parameters => {
@@ -142,13 +142,13 @@ sub pipeline_analyses {
                     1 => ['species_factory_gvf_dumps'],
                 },
             },
-			{	-logic_name => 'species_factory_gvf_dumps',
-				-module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::SpeciesFactory', 
+            {   -logic_name => 'species_factory_gvf_dumps',
+                -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::SpeciesFactory', 
                 -flow_into => {
                     '2->A' => ['init_dump'],
                     'A->1' => ['report_gvf_dumps']
                  },
-			},
+            },
             {   -logic_name => 'init_dump',
                 -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::InitSubmitJob',
                 -max_retry_count => 1,
@@ -218,8 +218,8 @@ sub pipeline_analyses {
                     1 => ['species_factory_gvf_dumps_population'],
                 },
             },
-			{	-logic_name => 'species_factory_gvf_dumps_population',
-				-module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::SpeciesFactory', 
+            {   -logic_name => 'species_factory_gvf_dumps_population',
+                -module => 'Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::SpeciesFactory', 
                 -flow_into => {
                     '2->A' => ['init_population_dump'],
                     'A->1' => ['report_population_gvf_dumps']
@@ -312,7 +312,7 @@ sub pipeline_analyses {
                 },
             },
 
-		);
+        );
     return \@analyses;
 }
 
