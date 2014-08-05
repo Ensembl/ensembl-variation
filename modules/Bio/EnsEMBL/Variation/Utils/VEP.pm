@@ -111,6 +111,7 @@ use vars qw(@ISA @EXPORT_OK);
     &end_progress
     @REG_FEAT_TYPES
     @OUTPUT_COLS
+    @EXTRA_HEADERS
     %COL_DESCS
     @VEP_WEB_CONFIG
     %FILTER_SHORTCUTS
@@ -131,6 +132,52 @@ our @OUTPUT_COLS = qw(
     Codons
     Existing_variation
     Extra
+);
+
+
+ 
+# define headers that would normally go in the extra field
+# keyed on the config parameter used to turn it on
+our @EXTRA_HEADERS = (
+  
+  # general
+  { flag => 'individual',      cols => ['IND','ZYG'] },
+  { flag => 'allele_number',   cols => ['ALLELE_NUM'] },
+  { flag => 'user',            cols => ['DISTANCE','STRAND'] },
+  { flag => 'flag_pick',       cols => ['PICK'] },
+  
+  # gene-related
+  { flag => 'symbol',          cols => ['SYMBOL','SYMBOL_SOURCE','HGNC_ID'] },
+  { flag => 'biotype',         cols => ['BIOTYPE'] },
+  { flag => 'canonical',       cols => ['CANONICAL'] },
+  { flag => 'ccds',            cols => ['CCDS'] },
+  { flag => 'protein',         cols => ['ENSP'] },
+  { flag => 'uniprot',         cols => ['SWISSPROT', 'TREMBL', 'UNIPARC'] },
+  { flag => 'xref_refseq',     cols => ['RefSeq'] },
+  
+  # non-synonymous predictions
+  { flag => 'sift',            cols => ['SIFT'] },
+  { flag => 'polyphen',        cols => ['PolyPhen'] },
+  
+  # transcript/protein stuff
+  { flag => 'numbers',         cols => ['EXON','INTRON'] },
+  { flag => 'domains',         cols => ['DOMAINS'] },
+  { flag => 'hgvs',            cols => ['HGVSc','HGVSp'] },
+  
+  # frequency stuff
+  { flag => 'gmaf',            cols => ['GMAF'] },
+  { flag => 'maf_1kg',         cols => ['AFR_MAF','AMR_MAF','ASN_MAF','EUR_MAF'] },
+  { flag => 'maf_esp',         cols => ['AA_MAF','EA_MAF'] },
+  { flag => 'check_frequency', cols => ['FREQS'] },
+  
+  # misc variation stuff
+  { flag => 'check_existing',  cols => ['CLIN_SIG','SOMATIC'] },
+  { flag => 'pubmed',          cols => ['PUBMED'] },
+  { flag => 'check_svs',       cols => ['SV'] },
+  
+  # regulatory
+  { flag => 'regulatory',      cols => ['MOTIF_NAME','MOTIF_POS','HIGH_INF_POS','MOTIF_SCORE_CHANGE'] },
+  { flag => 'cell_type',       cols => ['CELL_TYPE'] },
 );
 
 our %COL_DESCS = (
