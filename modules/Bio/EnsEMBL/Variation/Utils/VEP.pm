@@ -3325,7 +3325,7 @@ sub fetch_transcripts {
             # no cache found on disk or not using cache
             if(!defined($tmp_cache->{$chr})) {
                 
-                unless(defined($config->{write_cache}) || defined($config->{database})) {
+                unless(defined($config->{write_cache}) || defined($config->{database}) || $chr =~ /LRG/) {
                     # restore quiet status
                     $config->{quiet} = $quiet;
                     
@@ -3489,7 +3489,7 @@ sub fetch_regfeats {
             # no cache found on disk or not using cache
             if(!defined($tmp_cache->{$chr})) {
                 
-                unless(defined($config->{write_cache}) || defined($config->{database})) {
+                unless(defined($config->{write_cache}) || defined($config->{database}) || $chr =~ /LRG/) {
                     
                     # restore quiet status
                     $config->{quiet} = $quiet;
