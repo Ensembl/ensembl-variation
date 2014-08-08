@@ -153,3 +153,6 @@ ALTER TABLE variation_set_variation ADD FOREIGN KEY (variation_set_id) REFERENCE
 ALTER TABLE variation_synonym ADD FOREIGN KEY (subsnp_id) REFERENCES subsnp_handle(subsnp_id);
 ALTER TABLE variation_synonym ADD FOREIGN KEY (source_id) REFERENCES source(source_id);
 ALTER TABLE variation_synonym ADD FOREIGN KEY (variation_id) REFERENCES variation(variation_id);
+
+ALTER TABLE variation_genename ADD FOREIGN KEY (variation_id) REFERENCES variation(variation_id);
+ALTER TABLE variation_hgvs     ADD FOREIGN KEY (variation_id) REFERENCES variation(variation_id);
