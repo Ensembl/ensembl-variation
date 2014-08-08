@@ -94,9 +94,12 @@ sub default_options {
             -user   => 'ensadmin',
             -pass   => $self->o('password'),            
             -dbname => $ENV{USER}.'_'.$self->o('pipeline_name').'_'. $self->o('species') .'_hive',
+            -driver => 'mysql',
         },
         
         hive_use_triggers       => 0,
+        hive_force_init => 0,
+        hive_use_param_stack => 0,
         
         # configuration for the various resource options used in the pipeline
         
