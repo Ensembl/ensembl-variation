@@ -226,6 +226,7 @@ sub extract_data{
         my ($ref_allele, $alt_allele);
         
         eval{
+	    ## this expects dups to have alleles declared
             ($ref_allele, $alt_allele) = get_hgvs_alleles( $l->[2] );
         };
         if($@){
@@ -239,6 +240,11 @@ sub extract_data{
         if ($change =~/del/  && ! $ref_allele ){
             $ref_allele =  $db->seq($l->[3], $l->[4], $l->[5]) ;
             reverse_comp(\$ref_allele )if $l->[6] eq "-";
+        }
+	if ($change =~/dup/  && ! $alt_allele ){
+            my $dup_allele =  $db->seq($l->[3], $l->[4], $l->[5]) ;
+            reverse_comp(\$ref_allele )if $l->[6] eq "-";
+	    $alt_allele = "dup"  . $dup_allele
         }
         unless (defined $ref_allele && defined $alt_allele){
             warn "Skipping $l->[2] from $l->[7] as could not determine alleles\n";
