@@ -63,8 +63,8 @@ sub run {
 
   if ( $self->required_param('species') =~/homo_sapiens/ ){ $self->check_PAR_variants();}
 
-# switched of as of e!77
-#  if ( $self->param('run_Pubmed_check') ==1 ){ $self->check_Pubmed_variants();}
+
+  if ( $self->param('run_Pubmed_check') ==1 ){ $self->check_Pubmed_variants();}
 
   if ( $self->required_param('species') =~/sus_scrofa/ ){ $self->add_synonym();}
 
@@ -120,8 +120,7 @@ sub check_PAR_variants{
 	
 =head2  check_Pubmed_variants
 
- Remove all fail statuses from cited variants for which dbSNP holds Pubmed ids
- Citations ar held on studies 
+ Set display statuses on cited variants for which dbSNP holds Pubmed ids
 
 =cut
 sub check_Pubmed_variants{
@@ -131,9 +130,10 @@ sub check_Pubmed_variants{
     my $var_dba = $self->get_species_adaptor('variation');
 
     ## check if there are any cited variants
-    $self->warning('Setting cited variants to non-failed ');
+    $self->warning('Setting cited variants to displayable ');
  
-    $var_dba->dbc->do(qq[ delete from failed_variation_working 
+    $var_dba->dbc->do(qq[ update variation_working 
+                          set display = 1
                           where variation_id in (select variation_id from variation_citation)
                         ]);
 
