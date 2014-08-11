@@ -69,7 +69,7 @@ sub dbSNP {
   
   my $adaptor =  $self->get_dbAdaptor('dbsnp');
 
-  if(defined $self->{'schema_name'}){
+  if(defined $self->{'schema_name'} && $self->{'schema_name'} =~/\w+/){
       print "setting search path for postgreSQL: " .$self->{'schema_name'} . "\n";
       my $sth = "SET search_path TO $self->{'schema_name'},dbsnp_main,public";
       $adaptor->dbc()->do($sth);
