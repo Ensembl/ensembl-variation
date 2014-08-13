@@ -139,6 +139,10 @@ our @VARIATION_CLASSES = (
         SO_accession => 'SO:0001059',
         SO_term => 'sequence_alteration',
     },
+    {
+        SO_accession => 'SO:0001645',
+        SO_term => 'genetic_marker',
+    },
     # Structural variation classes
     {
         SO_accession => 'SO:0001537',
