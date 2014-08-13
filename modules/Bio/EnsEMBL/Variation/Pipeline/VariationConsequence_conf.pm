@@ -105,6 +105,12 @@ sub default_options {
 
         include_lrg => 1, 
 
+        # set this flag to 1 to try and identify genetic markers in SetVariationClass module
+        # This is very specific to data imported from dbSNP by ensembl.
+        # ensembl genomes might need different methods for idenfifying markers:
+        # for the future add identify_marker_eg flag and add code to SetVariationClass module 
+        identify_marker_e => 1, 
+
         # Limit analysis to specific gene biotypes
         limit_biotypes => [],
 
