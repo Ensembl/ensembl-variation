@@ -491,7 +491,7 @@ our @OVERLAP_CONSEQUENCES = (
     },
     {
         SO_accession => 'SO:0001619',
-        SO_term => 'nc_transcript_variant',
+        SO_term => 'non_coding_transcript_variant',
         display_term => 'WITHIN_NON_CODING_GENE',
         feature_SO_term => 'ncRNA',
         feature_class => 'Bio::EnsEMBL::Transcript',
@@ -504,7 +504,7 @@ our @OVERLAP_CONSEQUENCES = (
     },
     {
         SO_accession => 'SO:0001792',
-        SO_term => 'non_coding_exon_variant',
+        SO_term => 'non_coding_transcript_exon_variant',
         display_term => 'WITHIN_NON_CODING_GENE',
         feature_SO_term => 'ncRNA',
         feature_class => 'Bio::EnsEMBL::Transcript',
