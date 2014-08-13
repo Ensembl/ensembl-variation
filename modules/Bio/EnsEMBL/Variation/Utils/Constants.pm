@@ -51,6 +51,7 @@ use constant SO_TERM_DELETION => 'deletion';
 use constant SO_TERM_INDEL => 'indel';
 use constant SO_TERM_TANDEM_REPEAT => 'tandem_repeat';
 use constant SO_TERM_SEQUENCE_ALTERATION => 'sequence_alteration';
+use constant SO_TERM_GENETIC_MARKER => 'genetic_marker';
 use constant SO_TERM_STRUCTURAL_VARIANT => 'structural_variant';
 use constant SO_TERM_PROBE => 'probe';
 use constant SO_TERM_COPY_NUMBER_GAIN => 'copy_number_gain';
@@ -146,6 +147,12 @@ our %VARIATION_CLASSES = (
   'somatic_display_term' => 'somatic_sequence_alteration',
   'SO_accession' => 'SO:0001059',
   'display_term' => 'sequence_alteration'
+}
+,
+'genetic_marker' => {
+  'somatic_display_term' => 'somatic_genetic_marker',
+  'SO_accession' => 'SO:0001645',
+  'display_term' => 'genetic_marker'
 }
 ,
 'structural_variant' => {
