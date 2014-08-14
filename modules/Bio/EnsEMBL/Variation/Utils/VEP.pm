@@ -111,6 +111,7 @@ use vars qw(@ISA @EXPORT_OK);
     &end_progress
     @REG_FEAT_TYPES
     @OUTPUT_COLS
+    @EXTRA_HEADERS
     %COL_DESCS
     @VEP_WEB_CONFIG
     %FILTER_SHORTCUTS
@@ -131,6 +132,52 @@ our @OUTPUT_COLS = qw(
     Codons
     Existing_variation
     Extra
+);
+
+
+ 
+# define headers that would normally go in the extra field
+# keyed on the config parameter used to turn it on
+our @EXTRA_HEADERS = (
+  
+  # general
+  { flag => 'individual',      cols => ['IND','ZYG'] },
+  { flag => 'allele_number',   cols => ['ALLELE_NUM'] },
+  { flag => 'user',            cols => ['DISTANCE','STRAND'] },
+  { flag => 'flag_pick',       cols => ['PICK'] },
+  
+  # gene-related
+  { flag => 'symbol',          cols => ['SYMBOL','SYMBOL_SOURCE','HGNC_ID'] },
+  { flag => 'biotype',         cols => ['BIOTYPE'] },
+  { flag => 'canonical',       cols => ['CANONICAL'] },
+  { flag => 'ccds',            cols => ['CCDS'] },
+  { flag => 'protein',         cols => ['ENSP'] },
+  { flag => 'uniprot',         cols => ['SWISSPROT', 'TREMBL', 'UNIPARC'] },
+  { flag => 'xref_refseq',     cols => ['RefSeq'] },
+  
+  # non-synonymous predictions
+  { flag => 'sift',            cols => ['SIFT'] },
+  { flag => 'polyphen',        cols => ['PolyPhen'] },
+  
+  # transcript/protein stuff
+  { flag => 'numbers',         cols => ['EXON','INTRON'] },
+  { flag => 'domains',         cols => ['DOMAINS'] },
+  { flag => 'hgvs',            cols => ['HGVSc','HGVSp'] },
+  
+  # frequency stuff
+  { flag => 'gmaf',            cols => ['GMAF'] },
+  { flag => 'maf_1kg',         cols => ['AFR_MAF','AMR_MAF','ASN_MAF','EUR_MAF'] },
+  { flag => 'maf_esp',         cols => ['AA_MAF','EA_MAF'] },
+  { flag => 'check_frequency', cols => ['FREQS'] },
+  
+  # misc variation stuff
+  { flag => 'check_existing',  cols => ['CLIN_SIG','SOMATIC'] },
+  { flag => 'pubmed',          cols => ['PUBMED'] },
+  { flag => 'check_svs',       cols => ['SV'] },
+  
+  # regulatory
+  { flag => 'regulatory',      cols => ['MOTIF_NAME','MOTIF_POS','HIGH_INF_POS','MOTIF_SCORE_CHANGE'] },
+  { flag => 'cell_type',       cols => ['CELL_TYPE'] },
 );
 
 our %COL_DESCS = (
@@ -1610,8 +1657,8 @@ sub format_rest_output {
         my $tmp = $ex->{$pop};
         
         if($tmp =~ /(\w)\:([\d\.]+)/) {
-          $ex->{lc($pop).'_maf'} = $1;
-          $ex->{lc($pop).'_allele'} = $2;
+          $ex->{lc($pop).'_maf'} = $2;
+          $ex->{lc($pop).'_allele'} = $1;
         }
         else {
           $ex->{lc($pop).'_maf'} = $tmp;
@@ -3245,7 +3292,7 @@ sub fetch_transcripts {
         $region_count += scalar @{$regions->{$chr}};
     }
     
-    my ($counter, $gencode_skip_count);
+    my ($counter, $gencode_skip_count, $refseq_skip_count);
     
     debug("Reading transcript data from cache and/or database") unless defined($config->{quiet});
     
@@ -3278,7 +3325,7 @@ sub fetch_transcripts {
             # no cache found on disk or not using cache
             if(!defined($tmp_cache->{$chr})) {
                 
-                unless(defined($config->{write_cache}) || defined($config->{database})) {
+                unless(defined($config->{write_cache}) || defined($config->{database}) || $chr =~ /LRG/) {
                     # restore quiet status
                     $config->{quiet} = $quiet;
                     
@@ -3333,6 +3380,25 @@ sub fetch_transcripts {
                     # using gencode basic?
                     if(defined($config->{gencode_basic}) && !(grep {$_->{code} eq 'gencode_basic'} @{$tr->get_all_Attributes})) {
                       $gencode_skip_count++;
+                      next;
+                    }
+                    
+                    # using all_refseq?
+                    if(
+                      !defined($config->{all_refseq}) &&
+                      (
+                        (
+                          defined($config->{refseq}) &&
+                          $tr->stable_id !~ /^[A-Z]{2}\_\d+/
+                        ) ||
+                        (
+                          defined($config->{merged}) &&
+                          $tr->{_source_cache} eq 'RefSeq' &&
+                          $tr->stable_id !~ /^[A-Z]{2}\_\d+/
+                        )
+                      )
+                    ) {
+                      $refseq_skip_count++;
                       next;
                     }
                     
@@ -3423,7 +3489,7 @@ sub fetch_regfeats {
             # no cache found on disk or not using cache
             if(!defined($tmp_cache->{$chr})) {
                 
-                unless(defined($config->{write_cache}) || defined($config->{database})) {
+                unless(defined($config->{write_cache}) || defined($config->{database}) || $chr =~ /LRG/) {
                     
                     # restore quiet status
                     $config->{quiet} = $quiet;
@@ -4797,8 +4863,12 @@ sub parse_variation {
   $v{strand}  ||= 1;
   
   # hack for odd frequency data
-  foreach my $pop(qw(AFR AMR ASN EUR)) {
-    $v{$pop} = 1 - $v{$pop} if defined($v{$pop}) && $v{$pop} =~ /\d+/ && $v{$pop} > 0.5;
+  if(defined($config->{old_maf})) {
+    foreach my $pop(grep {defined($v{$_})} qw(AFR AMR ASN EUR)) {
+     $v{$pop} =~ s/^.+?\://;
+     $v{$pop} =~ s/\,.+//g;
+     $v{$pop} = 1 - $v{$pop} if $v{$pop} =~ /\d+/ && $v{$pop} > 0.5;
+    }
   }
   
   return \%v;

@@ -347,6 +347,9 @@ sub update_variant_citation {
     
     my $citation_ins_sth = $dbh->prepare(qq[ insert into variation_citation( variation_id, publication_id) values ( ?,?) ]);   
     
+    ## ensure any variations with citations are displayed in browser tracks/ rturned by default
+    my $display_upt_sth = $dbh->prepare(qq[ update variation set display =? where  variation_id =?  ]);
+   
     my @var_objects ;
 
     if(  defined $var->[0]){ 
@@ -373,6 +376,9 @@ sub update_variant_citation {
         next unless $count->[0]->[0] ==0;
 
         $citation_ins_sth->execute( $var_obj->dbID(), $pub->{dbID});
+
+	## set cited variants to be displayable
+	$display_upt_sth->execute( 1,  $var_obj->dbID());
         
     }    
 }

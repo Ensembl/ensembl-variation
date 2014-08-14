@@ -52,7 +52,6 @@ GetOptions ("data=s"        => \$data_file,
 usage() unless defined $registry_file && defined $type && defined  $species && (defined $data_file || $type eq "UCSC" || $type eq "disease") ;
 
 
-my $xs   = XML::Simple->new();
 my $http = HTTP::Tiny->new();
 
 
@@ -104,10 +103,10 @@ elsif($type eq "UCSC"){
     $data_file = get_current_UCSC_data() unless defined $data_file;
     
     ## read UCSC file, ommitting suspected errors
-#    $file_data = parse_UCSC_file($data_file, $avoid_list);
+    $file_data = parse_UCSC_file($data_file, $avoid_list);
 
     ##import any new publications & citations 
-#    import_citations($reg, $file_data);
+    import_citations($reg, $file_data);
 
     ## update variations & variation_features to have Cited status
     update_evidence($dba) unless defined $no_evidence;
@@ -171,6 +170,8 @@ sub import_citations{
 
         ## looking up missing data from EPMC before redundancy check
         my $ref = get_publication_info_from_epmc($data, $pub, $error_log);
+	
+	next unless defined $ref->{resultList}->{result}->{title} || defined $data->{$pub}->{title};
         
         ## save ids 
         my $pmid   = $ref->{resultList}->{result}->{pmid}   || $data->{$pub}->{pmid};
@@ -242,12 +243,14 @@ sub get_publication_info_from_epmc{
     elsif( defined $data->{$pub}->{doi} ){
         $ref   = get_epmc_data( "search/query=$data->{$pub}->{doi}" );
         ## check results of full text query
-         return undef unless $ref->{resultList}->{result}->{doi} eq $data->{$pub}->{doi}; 
+         return undef unless defined  $data->{$pub}->{doi} &&
+	     $ref->{resultList}->{result}->{doi} eq $data->{$pub}->{doi}; 
     }
     elsif(defined $data->{$pub}->{pmcid}){
         $ref   = get_epmc_data( "search/query=$data->{$pub}->{pmcid}" );
         ## check results of full text query
-         return undef unless $ref->{resultList}->{result}->{pmcid} eq $data->{$pub}->{pmcid};  
+         return undef unless defined $data->{$pub}->{pmcid} &&
+	     $ref->{resultList}->{result}->{pmcid} eq $data->{$pub}->{pmcid};  
         
     }
     else{
@@ -271,6 +274,9 @@ sub get_epmc_data{
 
     my $id = shift; ## specific part of URL including pmid or pmcid 
 
+    return undef unless defined $id && $id =~/\d+/;
+
+    my $xs   = XML::Simple->new();
     my $server = 'http://www.ebi.ac.uk/europepmc/webservices/rest/';
     my $request  = $server . $id;
 
@@ -416,7 +422,8 @@ sub check_dbSNP{
         }
         ## dbSNP may list publications which have not been mined
         my $looks_ok  = check_species($mined ,$ref) ;
-        if ($looks_ok == 0 && $ref->{resultList}->{result}->{title} !~/$species_string/i){
+        if ($looks_ok == 0 && defined $ref->{resultList}->{result}->{title} &&
+	    $ref->{resultList}->{result}->{title} !~/$species_string/i){
             print $error_log "WARN dbSNP data:\t$l->[1]\t($ref->{resultList}->{result}->{title}) - species not mentioned\n"
         }
 
@@ -469,6 +476,8 @@ sub update_evidence{
         $varfeat_upd_sth->execute($evidence, $l->[0]);
     }
 }
+
+
 
 sub report_summary{
 

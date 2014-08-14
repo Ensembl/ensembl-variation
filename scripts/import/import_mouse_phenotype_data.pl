@@ -441,7 +441,7 @@ sub get_marker_coords {
             	next unless scalar @$genes;
 
             	my $marker_type = $values[1];
-            	print STDERR "WARNING: type is not Gene\n" unless ($marker_type eq 'Gene');
+            	print STDERR "WARNING: type is not Gene (type = $marker_type)\n" unless ($marker_type eq 'Gene');
 
             	my $chromosome = $values[5];
             	my $start_coord = $values[6];

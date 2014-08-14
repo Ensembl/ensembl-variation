@@ -67,7 +67,7 @@ pod2usage(1) if $help;
 die "Species argument is needed" unless ($species);
 die "Input file argument needed" unless ($gvf_file);
 die "Input file is not GVF?" unless ($gvf_file =~ m/\.gvf/ || $gvf_file =~ m/\.gvf.gz/);
-die "'Reference fasta file' argument is need for the VCF file" unless ($ref_fasta_file);
+warn "'Reference fasta file' argument is recommended for the VCF file" unless ($ref_fasta_file);
 die "Cannot read from fasta file at the moment" if ($fasta_file);
 die "Either a connection to the Ensembl core database or a fasta file is needed" unless ($registry_file || ($host && $user));
 
@@ -205,14 +205,13 @@ sub print_vcf_header {
     my $gvf_source_field = $gvf_header{'##data-source'};
     $gvf_source_field =~ s/Source=//;
     my $vcf_source_field = $gvf_source_field . ';This file was parsed from a GVF file.';
-    # fasta file
-    my $reference_info = $ref_fasta_file;
 
     # Meta-information
     print $vcf_header_fh "##fileformat=VCFv$vcf_version", "\n";
     print $vcf_header_fh "##fileDate=$vcf_file_date", "\n";
     print $vcf_header_fh "##source=$vcf_source_field", "\n";
-    print $vcf_header_fh "##reference=$reference_info", "\n";
+    print $vcf_header_fh "##reference=$ref_fasta_file", "\n"
+        if $ref_fasta_file;
     
     #INFO=<ID=ID,Number=number,Type=type,Description=”description”>
     #Types for INFO fields are: Integer, Float, Flag, Character, and String.

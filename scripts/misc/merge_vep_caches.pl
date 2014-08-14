@@ -64,118 +64,142 @@ opendir DIR, $config->{dir};
 my @refseq_species = grep {
   !/^\./ &&
   -d $config->{dir}.'/'.$_ &&
-  -d $config->{dir}.'/'.$_.'/'.$config->{version} &&
-  -d $config->{dir}.'/'.$_.'_refseq' &&
-  -d $config->{dir}.'/'.$_.'_refseq/'.$config->{version}
+#  -d $config->{dir}.'/'.$_.'/'.$config->{version} &&
+  -d $config->{dir}.'/'.$_.'_refseq' # &&
+#  -d $config->{dir}.'/'.$_.'_refseq/'.$config->{version}
 } readdir DIR;
 closedir DIR;
+
+# get matched assemblies
+my %assemblies = ();
+
+foreach my $species(@refseq_species) {
+  opendir ENS, $config->{dir}.'/'.$species;
+  opendir REF, $config->{dir}.'/'.$species.'_refseq';
+
+  my $v = $config->{version};
+  my %ens_ass_match = map {$_ => 1} grep {$_ =~ /^$v/} readdir ENS;
+  my %ref_ass_match = map {$_ => 1} grep {$_ =~ /^$v/} readdir REF;
+
+  foreach my $ass(keys %ens_ass_match) {
+    if(defined($ref_ass_match{$ass})) {
+      $ass =~ s/^$v\_?//;
+      push @{$assemblies{$species}}, $ass;
+    }
+  }
+}
 
 foreach my $species(@refseq_species) {
   next unless $config->{species} eq 'all' || defined($match_species{$species});
   
   print ">>>> Processing $species\n";
+
+  foreach my $ass(@{$assemblies{$species}}) {
+
+    print ">>>> Processing assembly $ass\n" if $ass;
   
-  my $ens_root = join("/", $config->{dir}, $species, $config->{version});
-  my $ref_root = join("/", $config->{dir}, $species.'_refseq', $config->{version});
-  my $mrg_root = join("/", $config->{dir}, $species.'_merged', $config->{version});
+    my $ens_root = join("/", $config->{dir}, $species, $config->{version}.($ass ? '_'.$ass : ''));
+    my $ref_root = join("/", $config->{dir}, $species.'_refseq', $config->{version}.($ass ? '_'.$ass : ''));
+    my $mrg_root = join("/", $config->{dir}, $species.'_merged', $config->{version}.($ass ? '_'.$ass : ''));
   
-  # create merged dir
-  mkdir($config->{dir}.'/'.$species.'_merged/');
-  mkdir($mrg_root);
+    # create merged dir
+    mkdir($config->{dir}.'/'.$species.'_merged/');
+    mkdir($mrg_root);
   
-  # copy info
-  copy($ens_root.'/info.txt', $mrg_root.'/info.txt');
+    # copy info
+    copy($ens_root.'/info.txt', $mrg_root.'/info.txt');
   
-  opendir ENSROOT, $ens_root;
-  opendir REFROOT, $ref_root;
+    opendir ENSROOT, $ens_root;
+    opendir REFROOT, $ref_root;
   
-  # list chromosomes
-  my %ens_chrs = map {$_ => 1} grep {-d $ens_root.'/'.$_ && !/^\./} readdir ENSROOT;
-  my %ref_chrs = map {$_ => 1} grep {-d $ref_root.'/'.$_ && !/^\./} readdir REFROOT;
+    # list chromosomes
+    my %ens_chrs = map {$_ => 1} grep {-d $ens_root.'/'.$_ && !/^\./} readdir ENSROOT;
+    my %ref_chrs = map {$_ => 1} grep {-d $ref_root.'/'.$_ && !/^\./} readdir REFROOT;
   
-  closedir ENSROOT;
-  closedir REFROOT;
+    closedir ENSROOT;
+    closedir REFROOT;
   
-  # mkdirs
-  my %mrg_chrs = map {$_ => 1} (keys %ens_chrs, keys %ref_chrs);
+    # mkdirs
+    my %mrg_chrs = map {$_ => 1} (keys %ens_chrs, keys %ref_chrs);
   
-  foreach my $chr(keys %mrg_chrs) {
-    print " >>> Processing chromosome $chr\n";
+    foreach my $chr(keys %mrg_chrs) {
+      print " >>> Processing chromosome $chr\n";
     
-    mkdir($mrg_root.'/'.$chr);
+      mkdir($mrg_root.'/'.$chr);
     
-    # exists in both
-    if(-d $ens_root.'/'.$chr && -d $ref_root.'/'.$chr) {
-      opendir ENSCHR, $ens_root.'/'.$chr;
-      opendir REFCHR, $ref_root.'/'.$chr;
+      # exists in both
+      if(-d $ens_root.'/'.$chr && -d $ref_root.'/'.$chr) {
+        opendir ENSCHR, $ens_root.'/'.$chr;
+        opendir REFCHR, $ref_root.'/'.$chr;
       
-      my %ens_files = map {$_ => 1} grep {!/^\./} readdir ENSCHR;
-      my %ref_files = map {$_ => 1} grep {!/^\./ && !/var/ && !/reg/} readdir REFCHR;
+        my %ens_files = map {$_ => 1} grep {!/^\./} readdir ENSCHR;
+        my %ref_files = map {$_ => 1} grep {!/^\./ && !/var/ && !/reg/} readdir REFCHR;
       
-      closedir ENSCHR;
-      closedir REFCHR;
+        closedir ENSCHR;
+        closedir REFCHR;
       
-      # simply copy all var and reg files since they will be the same
-      print "  >> Copying var and reg files\n";
+        # simply copy all var and reg files since they will be the same
+        print "  >> Copying var and reg files\n";
       
-      foreach my $file(grep {/var|reg/} keys %ens_files) {
-        copy($ens_root.'/'.$chr.'/'.$file, $mrg_root.'/'.$chr.'/'.$file);
-        delete $ens_files{$file};
-      }
-      
-      print "  >> Merging transcript files\n";
-      
-      my %mrg_files = map {$_ => 1} (keys %ens_files, keys %ref_files);
-      
-      foreach my $file(keys %mrg_files) {
-        
-        # exists in both, need to concatenate
-        if(-e $ens_root.'/'.$chr.'/'.$file && -e $ref_root.'/'.$chr.'/'.$file) {
-          print "   > Merging $chr $file\n";
-          
-          # read in Ensembl cache
-          open my $ens_fh, $config->{compress}." ".$ens_root.'/'.$chr.'/'.$file." |";
-          my $ens_cache;
-          $ens_cache = fd_retrieve($ens_fh);
-          close $ens_fh;
-          
-          # add a flag to each transcript indicating which cache it came from
-          $_->{_source_cache} = 'Ensembl' for @{$ens_cache->{$chr}};
-          
-          # do same for RefSeq
-          open my $ref_fh, $config->{compress}." ".$ref_root.'/'.$chr.'/'.$file." |";
-          my $ref_cache;
-          $ref_cache = fd_retrieve($ref_fh);
-          close $ref_fh;
-          $_->{_source_cache} = 'RefSeq' for @{$ref_cache->{$chr}};
-          
-          # merge and sort transcript lists
-          my $mrg_cache;
-          @{$mrg_cache->{$chr}} = sort {$a->{start} <=> $b->{start}} (@{$ens_cache->{$chr}}, @{$ref_cache->{$chr}});
-          
-          # dump to new file
-          open my $mrg_fh, "| gzip -9 -c > ".$mrg_root.'/'.$chr.'/'.$file or die "ERROR: Could not write to dump file";
-          nstore_fd($mrg_cache, $mrg_fh);
-          close $mrg_fh;
+        foreach my $file(grep {/var|reg/} keys %ens_files) {
+          copy($ens_root.'/'.$chr.'/'.$file, $mrg_root.'/'.$chr.'/'.$file);
+          delete $ens_files{$file};
         }
+      
+        print "  >> Merging transcript files\n";
+      
+        my %mrg_files = map {$_ => 1} (keys %ens_files, keys %ref_files);
+      
+        foreach my $file(keys %mrg_files) {
         
-        # otherwise simply copy
-        else {
-          my $root = -e $ens_root.'/'.$chr.'/'.$file ? $ens_root : $ref_root;
-          copy($root.'/'.$chr.'/'.$file, $mrg_root.'/'.$chr.'/'.$file);
+          # exists in both, need to concatenate
+          if(-e $ens_root.'/'.$chr.'/'.$file && -e $ref_root.'/'.$chr.'/'.$file) {
+            print "   > Merging $chr $file\n";
+          
+            # read in Ensembl cache
+            open my $ens_fh, $config->{compress}." ".$ens_root.'/'.$chr.'/'.$file." |";
+            my $ens_cache;
+            $ens_cache = fd_retrieve($ens_fh);
+            close $ens_fh;
+          
+            # add a flag to each transcript indicating which cache it came from
+            $_->{_source_cache} = 'Ensembl' for @{$ens_cache->{$chr}};
+          
+            # do same for RefSeq
+            open my $ref_fh, $config->{compress}." ".$ref_root.'/'.$chr.'/'.$file." |";
+            my $ref_cache;
+            $ref_cache = fd_retrieve($ref_fh);
+            close $ref_fh;
+            $_->{_source_cache} = 'RefSeq' for @{$ref_cache->{$chr}};
+          
+            # merge and sort transcript lists
+            my $mrg_cache;
+            @{$mrg_cache->{$chr}} = sort {$a->{start} <=> $b->{start}} (@{$ens_cache->{$chr}}, @{$ref_cache->{$chr}});
+          
+            # dump to new file
+            open my $mrg_fh, "| gzip -9 -c > ".$mrg_root.'/'.$chr.'/'.$file or die "ERROR: Could not write to dump file";
+            nstore_fd($mrg_cache, $mrg_fh);
+            close $mrg_fh;
+          }
+        
+          # otherwise simply copy
+          else {
+            my $root = -e $ens_root.'/'.$chr.'/'.$file ? $ens_root : $ref_root;
+            copy($root.'/'.$chr.'/'.$file, $mrg_root.'/'.$chr.'/'.$file);
+          }
         }
       }
-    }
     
-    # only exists in one, simply copy all files
-    else {
-      print "  >> Copying all files\n";
+      # only exists in one, simply copy all files
+      else {
+        print "  >> Copying all files\n";
       
-      my $root = -d $ens_root.'/'.$chr ? $ens_root : $ref_root;
+        my $root = -d $ens_root.'/'.$chr ? $ens_root : $ref_root;
       
-      opendir CHR, $root.'/'.$chr;
-      copy($root.'/'.$chr.'/'.$_, $mrg_root.'/'.$chr.'/'.$_) for grep {!/^\./} readdir CHR;
-      closedir CHR;
+        opendir CHR, $root.'/'.$chr;
+        copy($root.'/'.$chr.'/'.$_, $mrg_root.'/'.$chr.'/'.$_) for grep {!/^\./} readdir CHR;
+        closedir CHR;
+      }
     }
   }
 }
