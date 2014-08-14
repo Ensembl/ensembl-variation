@@ -252,7 +252,7 @@ sub import{
     $attribs{review_status}    = $record->{Status};
     $attribs{external_id}      = $record->{Acc};
     $attribs{clinvar_clin_sig} = $record->{Desc};
-    $attribs{risk_allele}      = $alt_allele if defined  $alt_allele;
+    $attribs{risk_allele}      = $alt_allele if defined  $alt_allele && $alt_allele ne "-";
    
     my $phenofeat = Bio::EnsEMBL::Variation::PhenotypeFeature->new(
 	-slice          => $slice,

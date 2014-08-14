@@ -26,7 +26,7 @@ use warnings;
 use Getopt::Long;
 use Bio::EnsEMBL::Registry;
 
-our $SOURCENAME = 'dbSNP_ClinVar';
+our $SOURCENAME = 'ClinVar';
 
 my $registry_file;
 
@@ -198,7 +198,7 @@ sub check_phenotype_names{
     my $ph =  $pheno_ext_sth->fetchall_arrayref();
     foreach my $l (@{$ph}){
 
-	warn "Phenotype id:$l->[0] has no description unless defined $l->[1]\n";
+	warn "Phenotype id:$l->[0] has no description\n" unless defined $l->[1];
 
 	my $full = $l->[1];
 	$l->[1] =~ s/\w+|\-|\,|\(|\)|\s+|\/|\.|\;|\+|\'|\:|\@|\*|\%//g;
