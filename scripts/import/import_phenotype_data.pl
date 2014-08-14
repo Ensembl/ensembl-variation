@@ -531,10 +531,10 @@ sub parse_nhgri {
     my $pubmed_id      = $content[1];
     my $study          = $content[6];
     my $phenotype      = $content[7];
-    my $gene           = $content[13];
-    my $rs_risk_allele = $content[20];
+    my $gene           = ($content[13] =~ /\?/) ? '' : $content[13];
+    my $rs_risk_allele = ($content[20] =~ /\?/) ? '' : $content[20];
     my $rs_id          = $content[21];
-    my $risk_frequency = $content[26];
+    my $risk_frequency = ($content[20] ne '') ? $content[26] : '';
     my $pvalue         = $content[27];
     my $ratio          = $content[30];
     my $ratio_info     = $content[31];
@@ -2029,6 +2029,7 @@ sub get_phenotype_id {
   my ($name, $description);
   $name = $phenotype->{name};
   $description = $phenotype->{description};
+  $description =~ s/^\s+|\s+$//g; # Remove spaces at the beginning and the end of the description
   
   if(!defined($description)) {
   die "ERROR: No description found for phenotype\n";
