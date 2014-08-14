@@ -36,10 +36,11 @@ use base qw(Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess);
 use Bio::EnsEMBL::Variation::Utils::Sequence qw(SO_variation_class);
 use Bio::EnsEMBL::Variation::Utils::Constants qw(:SO_class_terms);
 
+
 sub run {
 
     my $self = shift;
-    
+
     my $var_id_start = $self->required_param('variation_id_start');
 
     my $var_id_stop  = $self->required_param('variation_id_stop');
@@ -133,7 +134,7 @@ sub run {
             }
         }
 
-        my $so_term = SO_variation_class($allele_string, $ref_correct);
+        my $so_term = $self->assign_SO_variation_class($allele_string, $ref_correct);
 
         my $attrib_id = $aa->attrib_id_for_type_value('SO_term', $so_term);
 
@@ -179,7 +180,7 @@ sub run {
 
             my $ref_correct = 0;
 
-            my $so_term = SO_variation_class($allele_string, $ref_correct);
+            my $so_term = $self->assign_SO_variation_class($allele_string, $ref_correct);
 
             my $attrib_id = $aa->attrib_id_for_type_value('SO_term', $so_term);
 
@@ -199,13 +200,13 @@ sub assign_SO_variation_class {
     my $ref_correct = shift;
     my $identify_marker_e = $self->param('identify_marker_e');
 #    my $identify_marker_eg = $self->param('identify_marker_eg');
-
     my $so_term = SO_variation_class($allele_string, $ref_correct);
 
     my $sequence_alteration = SO_TERM_SEQUENCE_ALTERATION;
     my $genetic_marker = SO_TERM_GENETIC_MARKER;
-    if ($so_term eq $sequence_alteration && $identify_marker_e) {
-        if ($allele_string =~ /^\([^\(\)\/]+\)$/)) {
+
+    if (($so_term eq $sequence_alteration) && $identify_marker_e) {
+        if ($allele_string =~ /^\([^\(\)\/]+\)$/) {
             # (D19S912) 
             $allele_string =~ s/\(|\)//g;
             my $cdba = $self->get_species_adaptor('core');
