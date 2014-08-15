@@ -268,6 +268,33 @@ sub fetch_all_by_name {
   return $individuals;
 }
 
+=head2 fetch_all_by_name_list
+
+  Arg [1]    : listref of individual names
+  Example    : $inds = $ind_adaptor->fetch_all_by_name_list(["NA12347", "NA12348"]);
+  Description: Retrieves a listref of individual objects via a list of names
+  Returntype : listref of Bio::EnsEMBL::Variation::Individual objects
+  Exceptions : throw if list argument is not defined
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub fetch_all_by_name_list {
+  my $self = shift;
+  my $list = shift;
+
+  if (!defined($list) || ref($list) ne 'ARRAY') {
+    throw("list reference argument is required");
+  }
+  
+  return [] unless scalar @$list >= 1;
+  
+  my $id_str = (@$list > 1)  ? " IN (".join(',', map {'"'.$_.'"'} @$list).")"   :   ' = \''.$list->[0].'\'';
+  
+  return $self->generic_fetch("i.name ".$id_str);
+}
+
 =head2 fetch_all_by_Population
 
   Arg [1]    : Bio::EnsEMBL::Variation::Population $pop
