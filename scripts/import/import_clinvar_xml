@@ -65,7 +65,7 @@ my $phenotype_adaptor     = $reg->get_adaptor('homo_sapiens', 'variation', 'phen
 
 my $slice_adaptor         = $reg->get_adaptor('homo_sapiens', 'core', 'slice');
 
-my $source   = "dbSNP_ClinVar";
+my $source   = "ClinVar";
 
 my $ref = XML::Records->new($data_file);
 $ref->set_records('ClinVarSet');
@@ -86,10 +86,21 @@ while (my $set = $ref->get_record() ){
 	    ### ClinVar reference accession 
 	    $record{Acc} =  $acc->{Acc} .".".  $acc->{Version} ;;
 	}
-	## clinical significance
-	$record{Desc} = "\L$set->{ReferenceClinVarAssertion}->{ClinicalSignificance}->{Description}";
-	## confidence of assertation
-	$record{Status} = $set->{ReferenceClinVarAssertion}->{ClinicalSignificance}->{ReviewStatus} ;
+
+        ## clinical significance
+
+        if ($set->{ReferenceClinVarAssertion}->{ClinicalSignificance}->{Description} =~/conflict/){       
+            ## if there are 2 conflicting statuses for a variant/trait combination
+            ## Description = 'conflicting data from submitters' - values in explanation
+            $record{Desc} = "\L$set->{ReferenceClinVarAssertion}->{ClinicalSignificance}->{Explanation}->[0]";
+            $record{Desc} =~ s/\(\d+\)//g; ## remove bracketed counts 
+            $record{Desc} =~ s/\;/\,/g;    ## switch to comma delimited for set 
+        }
+        else{
+            $record{Desc} = "\L$set->{ReferenceClinVarAssertion}->{ClinicalSignificance}->{Description}";
+        }
+        ## confidence of assertation
+        $record{Status} = $set->{ReferenceClinVarAssertion}->{ClinicalSignificance}->{ReviewStatus} ;
 
 	my @measures;
 	if(ref($set->{ReferenceClinVarAssertion}->{MeasureSet}->{Measure}) eq 'ARRAY'){
