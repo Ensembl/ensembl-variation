@@ -189,6 +189,39 @@ sub fetch_by_Slice {
     return $ldFeatureContainer;
 }
 
+sub fetch_by_Slice_VCF {
+  my $self = shift;
+  my $slice = shift;
+  my $population = shift;
+  
+  my $vca = $self->db->get_VCFCollectionAdaptor();
+  
+  # fetch genotypes
+  my @genotypes;
+  
+  foreach my $vc(@{$vca->fetch_all}) {
+    push @genotypes, @{$vc->get_all_IndividualGenotypes_by_Slice($slice, $population)};
+    
+    # tag genotypes with populations
+    my $hash = $vc->_get_Population_Individual_hash();
+    
+    if(defined($population)) {
+      delete $hash->{$_} for grep {$_ != $population->dbID} keys %$hash;
+    }
+    
+    # "invert" hash
+    my %inverted;
+    
+    foreach my $pop_id(keys %$hash) {
+      $inverted{$_}{$pop_id} = 1 for keys %{$hash->{$pop_id}};
+    }
+    
+    $_->{_population_ids} = [keys %{$inverted{$_->individual->dbID}}] for @genotypes;
+  }
+  
+  return $self->_objs_from_sth(\@genotypes, $slice);
+}
+
 =head2 fetch_by_VariationFeature
 
   Arg [1]    : Bio::EnsEMBL:Variation::VariationFeature $vf
@@ -540,15 +573,34 @@ sub _objs_from_sth {
 	
   #my $file= $self->temp_path."/".sprintf( "ld%08x%08x%08x", $$, time, rand( 0x7fffffff) );
   #open IN, ">$file.in";
-  $sth->bind_columns(\$individual_id, \$seq_region_id, \$seq_region_start, \$seq_region_end, \$genotypes, \$population_id);
-  while($sth->fetch()) {
-    #only print genotypes without parents genotyped
-    if (!exists $siblings->{$population_id . '-' . $individual_id}){ #necessary to use the population_id
-      $self->_store_genotype(\%individual_information,\%alleles_variation, $individual_id, $seq_region_start, $genotypes, $population_id, $slice);
-      $previous_seq_region_id = $seq_region_id;
+  
+  # we've got an array of genotypes from the VCF method
+  if(ref($sth) eq 'ARRAY') {
+    foreach my $gt_obj(@$sth) {
+      my $snp_start = $gt_obj->{variation_feature}->seq_region_start;
+      my $gt = $gt_obj->genotype;
+      my $individual_id = $gt_obj->individual->dbID;
+      
+      foreach my $population_id(@{$gt_obj->{_population_ids}}) {
+        $alleles_variation{$snp_start}->{$population_id}->{$gt->[0]}++;
+        $alleles_variation{$snp_start}->{$population_id}->{$gt->[1]}++;
+        
+        $individual_information{$population_id}->{$snp_start}->{$individual_id}->{allele_1} = $gt->[0];
+        $individual_information{$population_id}->{$snp_start}->{$individual_id}->{allele_2} = $gt->[1];
+      }
     }
   }
-  $sth->finish();
+  else {
+    $sth->bind_columns(\$individual_id, \$seq_region_id, \$seq_region_start, \$seq_region_end, \$genotypes, \$population_id);
+    while($sth->fetch()) {
+      #only print genotypes without parents genotyped
+      if (!exists $siblings->{$population_id . '-' . $individual_id}){ #necessary to use the population_id
+        $self->_store_genotype(\%individual_information,\%alleles_variation, $individual_id, $seq_region_start, $genotypes, $population_id, $slice);
+        $previous_seq_region_id = $seq_region_id;
+      }
+    }
+    $sth->finish();
+  }
   
   #we have to print the variations
   my (%in_files, %in_file_names);
