@@ -99,6 +99,7 @@ sub get_available_adaptors{
     'Publication'                     => 'Bio::EnsEMBL::Variation::DBSQL::PublicationAdaptor',
     'StructuralVariationSample'       => 'Bio::EnsEMBL::Variation::DBSQL::StructuralVariationSampleAdaptor',
     'Source'                          => 'Bio::EnsEMBL::Variation::DBSQL::SourceAdaptor',
+    'VCFCollection'                   => 'Bio::EnsEMBL::Variation::DBSQL::VCFCollectionAdaptor',
     );
 	
     return (\%pairs);
