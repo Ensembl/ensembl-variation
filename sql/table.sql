@@ -83,6 +83,28 @@ create table variation (
 
 
 /**
+@table variation_attrib
+
+@desc This table stores miscellaneous attributes associated with a variation entry.
+
+@column variation_id        	 Foreign key references @link variation table
+@column attrib_type_id			   Foreign key references @link attrib_type table, describes the type of attribute
+@column value                  Attribute value
+
+@see variation
+@see attrib_type
+*/
+
+CREATE TABLE variation_attrib (
+  variation_id INT(11) UNSIGNED NOT NULL,
+  attrib_type_id INT(11) DEFAULT NULL,
+  value VARCHAR(255) DEFAULT NULL,
+  KEY variation_idx (variation_id),
+  KEY type_value_idx (attrib_type_id,value)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+
+
+/**
 @table variation_feature
 
 @desc This table represents mappings of variations to genomic locations. It stores an allele string representing the different possible alleles that are found at that locus e.g. "A/T" for a SNP, as well as a "worst case" consequence of the mutation. It also acts as part of the relationship between variations and transcripts.
