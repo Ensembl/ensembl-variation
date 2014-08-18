@@ -48,6 +48,7 @@ SET storage_engine=MYISAM;
 @column clinical_significance  A set of clinical significance classes assigned to the variant.<br /> 
                                The list of clinical significances is available <a href="/info/genome/variation/data_description.html#clin_significance">here</a>.
 @column evidence_attribs            A summary of the evidence supporting a variant as a guide to its potential reliability. See the evidence descriptions <a href="/info/genome/variation/data_description.html#evidence_status">here</a>.
+@column display                Flags whether this variation should be displayed in browser tracks and returned by default by the API
 
 @see variation_synonym
 @see failed_variation
@@ -75,6 +76,7 @@ create table variation (
   minor_allele_count int(10) unsigned DEFAULT NULL,
   clinical_significance SET('uncertain significance','not provided','benign','likely benign','likely pathogenic','pathogenic','drug response','histocompatibility','other','confers sensitivity','risk factor','association','protective'),
   evidence_attribs   SET('367','368','369','370','371','372') DEFAULT NULL,
+  display int(1) DEFAULT 1,
 
 	primary key( variation_id ),
 	unique ( name ),
@@ -650,6 +652,7 @@ create table population_structure (
 @column individual_type_id      Foreign key references to the @link individual_type table.
 @column display                 Information used by the website: individuals with little information are filtered from some web displays.
 @column has_coverage            Indicate if the individual has coverage data populated in the read coverage table
+@column variation_set_id        Indicates the variation sets for which an individual has genotypes
 
 @see individual_synonym
 @see individual_type
@@ -667,6 +670,8 @@ create table individual(
   individual_type_id int(10) unsigned NOT NULL DEFAULT 0,
   display enum('REFERENCE', 'DEFAULT', 'DISPLAYABLE', 'UNDISPLAYABLE', 'LD', 'MARTDISPLAYABLE') default 'UNDISPLAYABLE',
   has_coverage tinyint(1) unsigned NOT NULL DEFAULT 0,
+  variation_set_id  set('1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20','21','22','23','24','25','26','27','28','29','30','31','32','33','34','35','36','37','38','39','40','41','42','43','44','45','46','47','48','49','50','51','52','53','54','55','56','57','58','59','60','61','62','63','64'),
+
 
   primary key(individual_id)
 );
