@@ -49,11 +49,16 @@ sub default_options {
     return {
 
         # general pipeline options that you should change to suit your environment
-        
+       
+        hive_force_init => 1,
+        hive_use_param_stack => 0,
+        hive_use_triggers => 0,
+        hive_auto_rebalance_semaphores => 0, 
+        hive_no_init => 0,
         # the location of your checkout of the ensembl API (the hive looks for SQL files here)
         
-        ensembl_cvs_root_dir    => $ENV{'HOME'}.'/ensembl-branches/HEAD',
-
+        ensembl_cvs_root_dir    => $ENV{'HOME'} . '/DEV',
+        hive_root_dir           => $ENV{'HOME'} . '/DEV/ensembl-hive', 
         # a name for your pipeline (will also be used in the name of the hive database)
         
         pipeline_name           => 'variation_consequence',
@@ -61,7 +66,7 @@ sub default_options {
         # a directory to keep hive output files and your registry file, you should
         # create this if it doesn't exist
 
-        pipeline_dir            => '/lustre/scratch110/ensembl/user/'.$self->o('pipeline_name'),
+        pipeline_dir            => '/lustre/scratch109/ensembl/at7/release_77/chicken/' . $self->o('pipeline_name'),
 
         # a directory where hive workers will dump STDOUT and STDERR for their jobs
         # if you use lots of workers this directory can get quite big, so it's
@@ -116,7 +121,7 @@ sub default_options {
 
         # these flags control which parts of the pipeline are run
 
-        run_transcript_effect   => 1,
+        run_transcript_effect   => 0,
         run_variation_class     => 1,
 
         # connection parameters for the hive database, you should supply the hive_db_password
@@ -140,18 +145,11 @@ sub default_options {
             -user   => $self->o('hive_db_user'),
             -pass   => $self->o('hive_db_password'),            
             -dbname => $ENV{'USER'}.'_'.$self->o('pipeline_name').'_'.$self->o('species'),
+            -driver => 'mysql',
         },
     };
 }
 
-sub pipeline_create_commands {
-    my ($self) = @_;
-    return [
-        'mysql '.$self->dbconn_2_mysql('pipeline_db', 0).q{-e 'DROP DATABASE IF EXISTS }.$self->o('pipeline_db', '-dbname').q{'},
-        @{$self->SUPER::pipeline_create_commands}, 
-        'mysql '.$self->dbconn_2_mysql('pipeline_db', 1).q{-e 'INSERT INTO meta (meta_key, meta_value) VALUES ("hive_output_dir", "}.$self->o('output_dir').q{")'},
-    ];
-}
 
 sub resource_classes {
     my ($self) = @_;
@@ -255,6 +253,7 @@ sub pipeline_analyses {
                 -module         => 'Bio::EnsEMBL::Variation::Pipeline::InitVariationClass',
                 -parameters     => {
                     num_chunks  => 50,
+                    
                     @common_params,
                 },
                 -input_ids      => [{}],
@@ -270,6 +269,7 @@ sub pipeline_analyses {
             {   -logic_name     => 'set_variation_class',
                 -module         => 'Bio::EnsEMBL::Variation::Pipeline::SetVariationClass',
                 -parameters     => {
+                    identify_marker_e => $self->o('identify_marker_e'), 
                     @common_params,
                 },
                 -input_ids      => [],
