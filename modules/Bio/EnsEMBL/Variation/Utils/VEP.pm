@@ -1771,6 +1771,9 @@ sub format_rest_output {
   my %all_cons = %Bio::EnsEMBL::Variation::Utils::Constants::OVERLAP_CONSEQUENCES;
   $hash->{most_severe_consequence} = (sort {$all_cons{$a}->rank <=> $all_cons{$b}->rank} @con_terms)[0];
   
+  # add assembly
+  $hash->{assembly} = $config->{assembly} || $config->{cache_assembly};
+  
   numberify($hash);
   
   return $hash;
