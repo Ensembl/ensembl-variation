@@ -92,4 +92,25 @@ sub get_all_diffs {
   return $self->{diffs};
 }
 
+sub mean_sift_score {
+  return $_[0]->_mean_score('sift');
+}
+
+sub mean_polyphen_score {
+  return $_[0]->_mean_score('polyphen');
+}
+
+sub _mean_score {
+  my $self = shift;
+  my $tool = shift;
+  
+  my @scores = grep {defined($_)} map {$_->{$tool.'_score'}} @{$self->get_all_diffs};
+  return undef unless @scores;
+  
+  my $sum = 0;
+  $sum += $_ for @scores;
+  
+  return $sum / scalar @scores;
+}
+
 1;
