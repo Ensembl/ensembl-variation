@@ -4993,7 +4993,7 @@ sub cache_reg_feats {
 sub clean_reg_feat {
     my $rf = shift;
     
-    foreach my $key(qw/adaptor binary_string bound_start bound_end attribute_cache feature_type feature_set analysis set/) {
+    foreach my $key(qw/adaptor binary_string bound_start bound_end attribute_cache feature_set analysis set/) {
         delete $rf->{$key};
     }
     
@@ -5004,6 +5004,8 @@ sub clean_reg_feat {
             delete $rf->{binding_matrix}->{$key};
         }
     }
+    
+    $rf->{feature_type} = $rf->{feature_type}->{so_name} if $rf->{feature_type};
     
     return $rf;
 }
