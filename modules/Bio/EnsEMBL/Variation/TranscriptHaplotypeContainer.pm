@@ -129,6 +129,24 @@ sub get_all_TranscriptHaplotypes {
   return [@{$_[0]->get_all_CDSHaplotypes}, @{$_[0]->get_all_ProteinHaplotypes}];
 }
 
+sub get_all_CDSHaplotypes_by_Individual {
+  my $self = shift;
+  my $ind = shift;
+  return [grep {$_->{individuals}->{$ind->name}} @{$self->get_all_CDSHaplotypes}];
+}
+
+sub get_all_ProteinHaplotypes_by_Individual {
+  my $self = shift;
+  my $ind = shift;
+  return [grep {$_->{individuals}->{$ind->name}} @{$self->get_all_ProteinHaplotypes}];
+}
+
+sub get_all_TranscriptHaplotypes_by_Individual {
+  my $self = shift;
+  my $ind = shift;
+  return [grep {$_->{individuals}->{$ind->name}} @{$self->get_all_TranscriptHaplotypes}];
+}
+
 sub get_all_most_frequent_CDSHaplotypes {
   my $self = shift;
   
@@ -176,11 +194,45 @@ sub total_haplotype_count {
   return $self->{total_haplotype_count};
 }
 
+sub total_population_counts {
+  my $self = shift;
+  
+  if(!defined($self->{total_population_counts})) {
+    my $counts = {};
+    
+    my $hash = $self->_get_individual_population_hash();
+    
+    foreach my $ind(keys %$hash) {
+      $counts->{$_} += (scalar keys %{$self->{protein_haplotypes}} ? 2 : 1) for keys %{$hash->{$ind}};
+    }
+    
+    $self->{total_population_counts} = $counts;
+  }
+  
+  return $self->{total_population_counts};
+}
+
+sub _get_individual_population_hash {
+  my $self = shift;
+  
+  if(!defined($self->{_individual_population_hash})) {
+    my $hash = {};
+    
+    foreach my $ind(values %{{map {$_->individual->name => $_->individual()} @{$self->get_all_IndividualGenotypeFeatures}}}) {
+      $hash->{$ind->name}->{$_->name} = 1 for @{$ind->get_all_Populations};
+    }
+    
+    $self->{_individual_population_hash} = $hash;
+  }
+  
+  return $self->{_individual_population_hash};
+}
+
 sub prefetch_everything {
   my $self = shift;
   
   foreach my $haplo(@{$self->get_all_TranscriptHaplotypes}) {
-    $haplo->$_ for qw(name count frequency get_all_diffs);
+    $haplo->$_ for qw(name count frequency get_all_diffs get_all_population_frequencies);
   }
 }
 
@@ -198,7 +250,7 @@ sub _init {
   my $mappings = $self->_get_mappings;
   
   # remove any variation features that didn't get a mapping
-  my @new_vars = grep {defined($mappings->{$_->{start}.'-'.$_->{end}})} @$vfs;
+  my @new_vars = grep {defined($mappings->{$_->{slice} ? $_->seq_region_start.'-'.$_->seq_region_end : $_->{start}.'-'.$_->{end}})} @$vfs;
   $self->_variation_features(\@new_vars);
   
   # group vfs by individual
@@ -264,7 +316,7 @@ sub _get_mappings {
     my $tr = $self->transcript();
     
     # get unique coords
-    my @coords = keys %{{map {$_->{start}.'-'.$_->{end} => 1} @{$self->_variation_features}}};
+    my @coords = keys %{{map {$_->{slice} ? $_->seq_region_start.'-'.$_->seq_region_end : $_->{start}.'-'.$_->{end} => 1} @{$self->_variation_features}}};
     
     # get transcript mapper
     my $mapper = $tr->{_variation_effect_feature_cache}->{mapper} || $tr->get_TranscriptMapper;
@@ -314,8 +366,9 @@ sub _mutate_sequences {
     # iterate through in reverse order
     foreach my $gt(reverse @$gts) {
       my $vf = $gt->variation_feature;
+      my ($s, $e) = $vf->{slice} ? ($vf->seq_region_start, $vf->seq_region_end) : ($vf->{start}, $vf->{end});
       
-      my $mapping = $mappings->{$vf->{start}.'-'.$vf->{end}};
+      my $mapping = $mappings->{$s.'-'.$e};
       next unless $mapping;
       
       my $genotype = $gt->genotype->[$hap];
@@ -394,7 +447,9 @@ sub _get_unique_VariationFeatures_with_consequences {
     my @alleles = split /\//, $vf->{allele_string};
     my $ref_allele = shift @alleles;
     
-    my $key = join('-', $vf->{start}, $vf->{end}, $ref_allele);
+    my ($s, $e) = $vf->{slice} ? ($vf->seq_region_start, $vf->seq_region_end) : ($vf->{start}, $vf->{end});
+    
+    my $key = join('-', $s, $e, $ref_allele);
     
     if(!defined($unique_vfs{$key})) {
       my $vf_copy = { %$vf };
