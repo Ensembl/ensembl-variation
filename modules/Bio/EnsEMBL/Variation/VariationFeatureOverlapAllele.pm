@@ -61,7 +61,7 @@ package Bio::EnsEMBL::Variation::VariationFeatureOverlapAllele;
 
 use strict;
 use warnings;
-
+use Data::Dumper;
 use Bio::EnsEMBL::Utils::Argument qw(rearrange);
 use Bio::EnsEMBL::Utils::Scalar qw(assert_ref);
 use Bio::EnsEMBL::Utils::Exception qw(throw);
@@ -137,7 +137,7 @@ sub new {
 }
 
 sub new_fast {
-    my ($class, $hashref) = @_;
+    my ($class, $hashref, $strong ) = @_;
     
     # swap a variation_feature_overlap argument for a base_variation_feature_overlap one
 
@@ -147,7 +147,7 @@ sub new_fast {
     
     # and call the superclass
 
-    return $class->SUPER::new_fast($hashref);
+    return $class->SUPER::new_fast($hashref, $strong);
 }
 
 =head2 dbID
