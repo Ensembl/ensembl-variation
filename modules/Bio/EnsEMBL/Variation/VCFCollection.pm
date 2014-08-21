@@ -81,22 +81,12 @@ sub new {
     id => $id,
     type => $type,
     individual_prefix => $individual_prefix,
+    chromosomes => $chromosomes,
+    filename_template => $filename_template,
     #_raw_populations => $populations,
   );
   
   bless(\%collection, $class);
-  
-  my $obj;
-  
-  foreach my $chr(@$chromosomes) {
-    my $file = $filename_template;
-    
-    if($file =~ s/\#\#\#CHR\#\#\#/$chr/ || !$obj) {
-      $obj = Bio::EnsEMBL::IO::Parser::VCF4Tabix->open($file);
-    }
-    
-    $collection{files}->{$chr} = $obj;
-  }
   
   return \%collection;
 }
@@ -125,12 +115,33 @@ sub individual_prefix {
   return $self->{individual_prefix};
 }
 
+sub filename_template {
+  my $self = shift;
+  $self->{filename_template} = shift if @_;
+  return $self->{filename_template};
+}
+
 sub list_chromosomes {
-  return [keys %{$_[0]->{files}}];
+  return $_[0]->{chromosomes};
 }
 
 sub get_vcf_by_chr {
-  return $_[0]->{files}->{$_[1]};
+  my $self = shift;
+  my $chr = shift;
+  
+  if(!defined($self->{files}) || !exists($self->{files}->{$chr})) {
+    my $obj;
+    
+    my $file = $self->filename_template;
+    
+    if($file =~ s/\#\#\#CHR\#\#\#/$chr/) {
+      $obj = Bio::EnsEMBL::IO::Parser::VCF4Tabix->open($file);
+    }
+    
+    $self->{files}->{$chr} = $obj;
+  }
+  
+  return $self->{files}->{$chr};
 }
 
 sub current {
@@ -267,7 +278,7 @@ sub _get_Population_Individual_hash {
   return $self->{_population_hash};
 }
 
-sub get_all_IndividualGenotypes_by_VariationFeature {
+sub get_all_IndividualGenotypeFeatures_by_VariationFeature {
   my $self = shift;
   my $vf = shift;
   my $sample = shift;
@@ -277,14 +288,14 @@ sub get_all_IndividualGenotypes_by_VariationFeature {
   
   my $vcf = $self->current();
   
-  return $self->_create_IndividualGenotypes(
+  return $self->_create_IndividualGenotypeFeatures(
     $self->_limit_Individuals($self->get_all_Individuals, $sample),
     $vcf->get_individuals_genotypes,
     $vf
   );
 }
 
-sub get_all_IndividualGenotypes_by_Slice {
+sub get_all_IndividualGenotypeFeatures_by_Slice {
   my $self = shift;
   my $slice = shift;
   my $sample = shift;
@@ -314,7 +325,7 @@ sub get_all_IndividualGenotypes_by_Slice {
     }
     
     if($vf) {
-      push @genotypes, @{$self->_create_IndividualGenotypes($individuals, $vcf->get_individuals_genotypes, $vf)};
+      push @genotypes, @{$self->_create_IndividualGenotypeFeatures($individuals, $vcf->get_individuals_genotypes, $vf)};
     }
     
     $vcf->next();
@@ -345,7 +356,7 @@ sub _limit_Individuals {
   return $individuals;
 }
 
-sub _create_IndividualGenotypes {
+sub _create_IndividualGenotypeFeatures {
   my $self = shift;
   my $individuals = shift;
   my $raw_gts = shift;
@@ -353,7 +364,7 @@ sub _create_IndividualGenotypes {
   
   my @genotypes;
   
-  $self->{_gta} ||= $self->adaptor->db->get_IndividualGenotypeAdaptor;
+  $self->{_gta} ||= $self->adaptor->db->get_IndividualGenotypeFeatureAdaptor;
   
   foreach my $ind(@$individuals) {
     next unless defined($raw_gts->{$ind->{_raw_name}});
@@ -369,13 +380,17 @@ sub _create_IndividualGenotypes {
     }
     
     # create genotype objects
-    push @genotypes, Bio::EnsEMBL::Variation::IndividualGenotype->new_fast({
+    push @genotypes, Bio::EnsEMBL::Variation::IndividualGenotypeFeature->new_fast({
       _variation_id => $vf->{_variation_id},
       variation_feature => $vf,
       individual => $ind,
       genotype => \@bits,
       phased => $phased,
       adaptor => $self->{_gta},
+      start => $vf->start,
+      end => $vf->end,
+      strand => $vf->seq_region_strand,
+      slice => $vf->slice,
     });
   }
   
