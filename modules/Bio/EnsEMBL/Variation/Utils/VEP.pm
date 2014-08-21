@@ -1772,7 +1772,7 @@ sub format_rest_output {
   $hash->{most_severe_consequence} = (sort {$all_cons{$a}->rank <=> $all_cons{$b}->rank} @con_terms)[0];
   
   # add assembly
-  $hash->{assembly} = $config->{assembly} || $config->{cache_assembly};
+  $hash->{assembly_name} = $config->{assembly} || $config->{cache_assembly};
   
   numberify($hash);
   
