@@ -62,6 +62,9 @@ use Bio::EnsEMBL::Variation::VCFCollection;
 use Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor;
 our @ISA = ('Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor');
 
+use base qw(Exporter);
+our @EXPORT_OK = qw($CONFIG_FILE);
+
 our $CONFIG_FILE = "/nfs/users/nfs_w/wm2/Variation/modules/Bio/EnsEMBL/Variation/DBSQL/vcf_config.json";
 
 sub new {
