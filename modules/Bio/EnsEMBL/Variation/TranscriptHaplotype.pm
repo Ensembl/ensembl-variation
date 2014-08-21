@@ -136,6 +136,38 @@ sub frequency {
   return $self->{frequency};
 }
 
+sub get_all_population_counts {
+  my $self = shift;
+  
+  if(!defined($self->{population_counts})) {
+    my $ind_pop_hash = $self->container->_get_individual_population_hash();
+    my $counts = {};
+    
+    foreach my $ind(keys %{$self->{individuals}}) {
+      $counts->{$_} += $self->{individuals}->{$ind} for keys %{$ind_pop_hash->{$ind}};
+    }
+    
+    $self->{population_counts} = $counts;
+  }
+  
+  return $self->{population_counts};
+}
+
+sub get_all_population_frequencies {
+  my $self = shift;
+  
+  if(!defined($self->{population_frequencies})) {
+    my $totals = $self->container->total_population_counts;
+    my $counts = $self->get_all_population_counts;
+    
+    my %freqs = map {$_ => $counts->{$_} / $totals->{$_}} keys %$counts;
+    
+    $self->{population_frequencies} = \%freqs;
+  }
+  
+  return $self->{population_frequencies};
+}
+
 sub name {
   my $self = shift;
   
