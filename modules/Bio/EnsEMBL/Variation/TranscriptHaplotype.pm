@@ -117,7 +117,7 @@ sub get_other_Haplotypes {
 sub count {
   my $self = shift;
   
-  if(!defined($self->{count})) {
+  if(!exists($self->{count})) {
     $self->{count} = $self->container->{_counts}->{$self->hex};
   }
   
@@ -127,7 +127,7 @@ sub count {
 sub frequency {
   my $self = shift;
   
-  if(!defined($self->{frequency})) {
+  if(!exists($self->{frequency})) {
     my $total = $self->container->total_haplotype_count;
     my $count = $self->count;
     $self->{frequency} = $count / $total;
@@ -139,7 +139,7 @@ sub frequency {
 sub get_all_population_counts {
   my $self = shift;
   
-  if(!defined($self->{population_counts})) {
+  if(!exists($self->{population_counts})) {
     my $ind_pop_hash = $self->container->_get_individual_population_hash();
     my $counts = {};
     
@@ -156,7 +156,7 @@ sub get_all_population_counts {
 sub get_all_population_frequencies {
   my $self = shift;
   
-  if(!defined($self->{population_frequencies})) {
+  if(!exists($self->{population_frequencies})) {
     my $totals = $self->container->total_population_counts;
     my $counts = $self->get_all_population_counts;
     
@@ -171,17 +171,19 @@ sub get_all_population_frequencies {
 sub name {
   my $self = shift;
   
-  if(!defined($self->{name})) {
+  if(!exists($self->{name})) {
     $self->{name} = sprintf("%s:%s", $self->transcript->stable_id, join(",", @{$self->_get_raw_diffs}) || 'REF');
   }
   
   return $self->{name};
 }
 
+## Get differences between this TranscriptHaplotype and the reference sequence
+## Uses align_seqs (slow!) to do alignment if there's an indel
 sub _get_raw_diffs {
   my $self = shift;
   
-  if(!defined($self->{_raw_diffs})) {
+  if(!exists($self->{_raw_diffs})) {
     my $s1 = $self->transcript->{$self->type};
     my $s2 = $self->seq;
     my $indel = $self->has_indel;
@@ -248,6 +250,8 @@ sub _get_raw_diffs {
   return $self->{_raw_diffs};
 }
 
+## Convert this object to a hash that can be written as JSON.
+## Basically just deletes "private" keys starting with "_"
 sub TO_JSON {
   my $self = shift;
   
