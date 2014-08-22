@@ -71,7 +71,9 @@ sub new {
   my $caller = shift;
   my $class = ref($caller) || $caller;
   
-  my $self = $class->SUPER::new(shift);
+  my $self;
+  eval {$self = $class->SUPER::new(shift);};
+  $self ||= {};
 
   my ($config_file) = rearrange([qw(CONFIG_FILE)], @_);
   
@@ -102,7 +104,7 @@ sub new {
       -filename_template => $hash->{filename_template},
       -chromosomes => $hash->{chromosomes},
       -individual_prefix => $hash->{individual_prefix},
-      -populations => $hash->{populations},
+      -individual_populations => $hash->{individual_populations},
       -adaptor => $self,
     );
     
