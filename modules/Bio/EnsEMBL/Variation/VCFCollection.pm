@@ -58,9 +58,11 @@ package Bio::EnsEMBL::Variation::VCFCollection;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Utils::Argument qw(rearrange);
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
+use Bio::EnsEMBL::Variation::Utils::VEP qw(parse_line);
 
 use Bio::EnsEMBL::IO::Parser::VCF4Tabix;
 use Bio::EnsEMBL::Variation::IndividualGenotype;
+use Bio::EnsEMBL::Variation::Population;
 
 our %TYPES = (
   'remote' => 1,
@@ -71,7 +73,7 @@ sub new {
   my $caller = shift;
   my $class = ref($caller) || $caller;
   
-  my ($id, $type, $filename_template, $chromosomes, $individual_prefix, $populations, $adaptor) = rearrange([qw(ID TYPE FILENAME_TEMPLATE CHROMOSOMES INDIVIDUAL_PREFIX POPULATIONS ADAPTOR)], @_);
+  my ($id, $type, $filename_template, $chromosomes, $individual_prefix, $ind_pops, $adaptor) = rearrange([qw(ID TYPE FILENAME_TEMPLATE CHROMOSOMES INDIVIDUAL_PREFIX INDIVIDUAL_POPULATIONS ADAPTOR)], @_);
   
   throw("ERROR: No id defined for collection") unless $id;
   throw("ERROR: Collection type $type invalid") unless $type && defined($TYPES{$type});
@@ -83,7 +85,8 @@ sub new {
     individual_prefix => $individual_prefix,
     chromosomes => $chromosomes,
     filename_template => $filename_template,
-    #_raw_populations => $populations,
+    _use_db => 1,
+    _raw_populations => $ind_pops,
   );
   
   bless(\%collection, $class);
@@ -123,6 +126,12 @@ sub filename_template {
 
 sub list_chromosomes {
   return $_[0]->{chromosomes};
+}
+
+sub use_db {
+  my $self = shift;
+  $self->{_use_db} = shift if @_;
+  return $self->{_use_db};
 }
 
 sub get_vcf_by_chr {
@@ -211,12 +220,13 @@ sub get_all_Individuals {
     my $vcf = $self->get_vcf_by_chr($chr);
     
     my $prefix = $self->individual_prefix || '';
-    my $ia = $self->adaptor->db->get_IndividualAdaptor();
+    my $ia = $self->use_db ? $self->adaptor->db->get_IndividualAdaptor() : undef;
     
     my $ind_names = $vcf->get_individuals();
     
     # do a fetch_all_by_name_list
-    my %ind_objs = map {$_->name() => $_} @{$ia->fetch_all_by_name_list([map {$prefix.$_} @$ind_names])};
+    my %ind_objs;
+    %ind_objs = map {$_->name() => $_} @{$ia->fetch_all_by_name_list([map {$prefix.$_} @$ind_names])} if $self->use_db;
     
     # some may not be in DB
     foreach my $ind_name(@$ind_names) {
@@ -228,7 +238,7 @@ sub get_all_Individuals {
           -adaptor         => $ia,
           -type_individual => 'outbred',
           -display         => 'UNDISPLAYABLE',
-          #-dbID            => --($self->{_individual_id}),
+          -dbID            => --($self->{_individual_id}),
         );
       
       # store the raw name to easily match to data returned from other methods
@@ -260,7 +270,22 @@ sub _get_Population_Individual_hash {
     
     # populations defined in config?
     if(defined($self->{_raw_populations})) {
-      1;
+      my $hash;
+      my $pops;
+      
+      foreach my $ind(@{$self->get_all_Individuals}) {
+        foreach my $pop(@{$self->{_raw_populations}->{$ind->name} || $self->{_raw_populations}->{$ind->{_raw_name}} || []}) {
+          $pops->{$pop} ||= Bio::EnsEMBL::Variation::Population->new_fast({
+            name => $pop,
+            dbID => --($self->{_population_id}),
+          });
+          
+          $hash->{$pops->{$pop}->dbID}->{$ind->dbID} = 1;
+          push @{$ind->{populations}}, $pops->{$pop};
+        }
+        
+        $self->{populations} = [values %$pops];
+      }
     }
     
     # otherwise we'll have to fetch from the individuals
@@ -304,10 +329,14 @@ sub get_all_IndividualGenotypeFeatures_by_Slice {
   
   my $vcf = $self->current();
   
-  # get VariationFeatures
+  # get VariationFeatures if using DB
   my %vfs_by_pos;
-  foreach my $vf(@{$slice->get_all_VariationFeatures()}) {
-    push @{$vfs_by_pos{$vf->seq_region_start}}, $vf;
+  my $use_db = $self->use_db;
+  
+  if($use_db) {
+    foreach my $vf(@{$slice->get_all_VariationFeatures()}) {
+      push @{$vfs_by_pos{$vf->seq_region_start}}, $vf;
+    }
   }
   
   my @genotypes;
@@ -318,10 +347,18 @@ sub get_all_IndividualGenotypeFeatures_by_Slice {
   while($vcf->{record} && $vcf->get_start <= $slice->end) {
     my $start = $vcf->get_raw_start;
     
-    # try to match this VCF record to VariationFeature at this position
     my $vf;
-    foreach my $tmp_vf(@{$vfs_by_pos{$start} || []}) {
-      $vf = $tmp_vf if(grep {$tmp_vf->variation_name eq $_} @{$vcf->get_IDs});
+    
+    # try to match this VCF record to VariationFeature at this position
+    if($use_db) {
+      foreach my $tmp_vf(@{$vfs_by_pos{$start} || []}) {
+        $vf = $tmp_vf if(grep {$tmp_vf->variation_name eq $_} @{$vcf->get_IDs});
+      }
+    }
+    
+    # otherwise create a VariationFeature object
+    else {
+      $vf = parse_line({format => 'vcf'}, join("\t", @{$vcf->{record}}))->[0];
     }
     
     if($vf) {
@@ -364,7 +401,7 @@ sub _create_IndividualGenotypeFeatures {
   
   my @genotypes;
   
-  $self->{_gta} ||= $self->adaptor->db->get_IndividualGenotypeFeatureAdaptor;
+  $self->{_gta} ||= $self->use_db ? $self->adaptor->db->get_IndividualGenotypeFeatureAdaptor : undef;
   
   foreach my $ind(@$individuals) {
     next unless defined($raw_gts->{$ind->{_raw_name}});
@@ -375,7 +412,7 @@ sub _create_IndividualGenotypeFeatures {
     my @bits = split(/\||\/|\\/, $raw_gt);
     
     # reverse complement alleles if VF is on -ve strand
-    if($vf->seq_region_strand < 0) {
+    if(($vf->{strand} || $vf->seq_region_strand || 1) < 0) {
       reverse_comp($$_) for @bits
     }
     
