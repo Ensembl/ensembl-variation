@@ -75,13 +75,8 @@ sub get_all_diffs {
     my @diffs;
     
     foreach my $raw_diff(@{$self->_get_raw_diffs}) {
-      my $diff = {
-        diff => $raw_diff,
-      };
-      
-      for(qw(sift_score sift_prediction polyphen_score polyphen_prediction)) {
-        $diff->{$_} = $missense_preds->{$raw_diff}->{$_} if defined($missense_preds->{$raw_diff}) && defined($missense_preds->{$raw_diff}->{$_});
-      }
+      my $diff = $missense_preds->{$raw_diff} || {};
+      $diff->{diff} = $raw_diff;
       
       push @diffs, $diff;
     }
