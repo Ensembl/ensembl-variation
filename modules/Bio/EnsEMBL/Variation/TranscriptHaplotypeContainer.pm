@@ -150,7 +150,7 @@ sub get_all_TranscriptHaplotypes_by_Individual {
 sub get_all_most_frequent_CDSHaplotypes {
   my $self = shift;
   
-  if(!defined($self->{_most_frequent_cds})) {
+  if(!exists($self->{_most_frequent_cds})) {
     $self->{_most_frequent_cds} = $self->_get_most_frequent($self->get_all_CDSHaplotypes);
   }
   return $self->{_most_frequent_cds};
@@ -159,7 +159,7 @@ sub get_all_most_frequent_CDSHaplotypes {
 sub get_all_most_frequent_ProteinHaplotypes {
   my $self = shift;
   
-  if(!defined($self->{_most_frequent_protein})) {
+  if(!exists($self->{_most_frequent_protein})) {
     $self->{_most_frequent_protein} = $self->_get_most_frequent($self->get_all_ProteinHaplotypes);
   }
   return $self->{_most_frequent_protein};
@@ -181,7 +181,7 @@ sub _get_most_frequent {
 sub total_haplotype_count {
   my $self = shift;
   
-  if(!defined($self->{total_haplotype_count})) {
+  if(!exists($self->{total_haplotype_count})) {
     my $count = 0;
     $count += $_ for values %{$self->{_counts}};
     
@@ -197,7 +197,7 @@ sub total_haplotype_count {
 sub total_population_counts {
   my $self = shift;
   
-  if(!defined($self->{total_population_counts})) {
+  if(!exists($self->{total_population_counts})) {
     my $counts = {};
     
     my $hash = $self->_get_individual_population_hash();
@@ -212,10 +212,11 @@ sub total_population_counts {
   return $self->{total_population_counts};
 }
 
+## Generates a two-level hash giving the populations for each individual
 sub _get_individual_population_hash {
   my $self = shift;
   
-  if(!defined($self->{_individual_population_hash})) {
+  if(!exists($self->{_individual_population_hash})) {
     my $hash = {};
     
     foreach my $ind(values %{{map {$_->individual->name => $_->individual()} @{$self->get_all_IndividualGenotypeFeatures}}}) {
@@ -228,7 +229,10 @@ sub _get_individual_population_hash {
   return $self->{_individual_population_hash};
 }
 
-sub prefetch_everything {
+## Prefetches everything that would otherwise be lazy-loaded
+## This is mainly used to populate hash keys that need to be present when
+## creating JSON output
+sub _prefetch_everything {
   my $self = shift;
   
   foreach my $haplo(@{$self->get_all_TranscriptHaplotypes}) {
@@ -236,6 +240,7 @@ sub prefetch_everything {
   }
 }
 
+## Creates all the TranscriptHaplotype objects for this container
 sub _init {
   my $self = shift;
   
@@ -244,13 +249,13 @@ sub _init {
   
   # cache reference sequences on transcript object
   $tr->{cds} = $tr->{_variation_effect_feature_cache}->{translateable_seq} || $tr->translateable_seq;
-  $tr->{protein} = $tr->{_variation_effect_feature_cache}->{peptide}.'*' || $tr->translation->seq;  
+  $tr->{protein} = ($tr->{_variation_effect_feature_cache}->{peptide} || $tr->translation->seq).'*';
   
   # get mappings of all variation feature coordinates
   my $mappings = $self->_get_mappings;
   
   # remove any variation features that didn't get a mapping
-  my @new_vars = grep {defined($mappings->{$_->{slice} ? $_->seq_region_start.'-'.$_->seq_region_end : $_->{start}.'-'.$_->{end}})} @$vfs;
+  my @new_vars = grep {defined($mappings->{$_->{start}.'-'.$_->{end}})} @$vfs;
   $self->_variation_features(\@new_vars);
   
   # group vfs by individual
@@ -307,24 +312,32 @@ sub _init {
       }
     }
   }
+  
+  # clear cached translated sequences
+  delete($self->{_translations});
 }
 
+## Uses a transcript's mapper to get genomic->CDS coord mappings for each
+## VariationFeaturem, with the results keyed on $vf->{start} rather than
+## $vf->seq_region_start as this saves some time otherwise spent diving into
+## core code
 sub _get_mappings {
   my $self = shift;
   
-  if(!defined($self->{_mappings})) {
+  if(!exists($self->{_mappings})) {
     my $tr = $self->transcript();
     
     # get unique coords
-    my @coords = keys %{{map {$_->{slice} ? $_->seq_region_start.'-'.$_->seq_region_end : $_->{start}.'-'.$_->{end} => 1} @{$self->_variation_features}}};
+    my %coords = map {$_->{start}.'-'.$_->{end} => $_} @{$self->_variation_features};
     
     # get transcript mapper
     my $mapper = $tr->{_variation_effect_feature_cache}->{mapper} || $tr->get_TranscriptMapper;
     
     my %mappings;
     
-    foreach my $coord(@coords) {
-      my ($s, $e) = split '-', $coord;
+    foreach my $coord(keys %coords) {
+      my $vf = $coords{$coord};
+      my ($s, $e) = $vf->{slice} ? ($vf->seq_region_start, $vf->seq_region_end) : split '-', $coord;
       
       my @mapped = $mapper->genomic2cds($s, $e, $tr->strand);
       
@@ -345,6 +358,9 @@ sub _get_mappings {
   return $self->{_mappings};
 }
 
+## Applies a set of IndividualGenotypeFeatures to the transcript sequence
+## Returns a hashref that contains the info necessary to construct a
+## TranscriptHaplotype object
 sub _mutate_sequences {
   my $self = shift;
   my $gts = shift;
@@ -366,7 +382,7 @@ sub _mutate_sequences {
     # iterate through in reverse order
     foreach my $gt(reverse @$gts) {
       my $vf = $gt->variation_feature;
-      my ($s, $e) = $vf->{slice} ? ($vf->seq_region_start, $vf->seq_region_end) : ($vf->{start}, $vf->{end});
+      my ($s, $e) = ($vf->{start}, $vf->{end});
       
       my $mapping = $mappings->{$s.'-'.$e};
       next unless $mapping;
@@ -386,7 +402,7 @@ sub _mutate_sequences {
     }
     
     # now translate
-    my $protein = Bio::Seq->new(-seq => $seq)->translate(undef, undef, undef, $codon_table)->seq;
+    my $protein = $self->_get_translation($seq, $codon_table);
     
     # remove anything beyond a stop
     #$protein =~ s/\*.+/\*/;
@@ -399,30 +415,76 @@ sub _mutate_sequences {
   return $return;
 }
 
+## Gets a translation - these are cached on $self by a hex of the seq to avoid
+## doing the translation more than once for each distinct CDS sequence
+sub _get_translation {
+  my $self = shift;
+  my $seq = shift;
+  my $codon_table = shift;
+  
+  my $hex = md5_hex($seq);
+  
+  if(!exists($self->{_translations}) || !exists($self->{_translations}->{$hex})) {
+    $self->{_translations}->{$hex} = Bio::Seq->new(-seq => $seq)->translate(undef, undef, undef, $codon_table)->seq;
+  }
+  
+  return $self->{_translations}->{$hex};
+}
+
+## Get e.g. SIFT and PolyPhen predictions for all mutations observed
+## They are then cached and can be used to annotate the diffs retrieved from
+## each individual haplotype
 sub _get_missense_predictions {
   my $self = shift;
   
-  if(!defined($self->{_missense_predictions})) {
-    
-    # get VF consequences
-    my $vf_consequences = $self->_get_unique_VariationFeatures_with_consequences;
+  if(!exists($self->{_missense_predictions})) {
     
     # get SIFT and PolyPhen scores by mutation
-    my $missense_preds;
-    foreach my $vf(@$vf_consequences) {
-      foreach my $tva(map {@{$_->get_all_alternate_TranscriptVariationAlleles}} @{$vf->get_all_TranscriptVariations}) {
-        next unless grep {$_->SO_term eq 'missense_variant'} @{$tva->get_all_OverlapConsequences};
-        my $mut = $tva->transcript_variation->translation_start.$tva->pep_allele_string;
-        $mut =~ s/\//\>/;
-        
-        $missense_preds->{$mut} ||= {
-          sift_prediction => $tva->sift_prediction,
-          sift_score => $tva->sift_score,
-          polyphen_prediction => $tva->polyphen_prediction,
-          polyphen_score => $tva->polyphen_score
-        };
-        
-        s/ /\_/ for values %{$missense_preds->{$mut}};
+    my $missense_preds = {};
+    
+    # declare $vfs here otherwise it goes out of scope and the VariationFeature
+    # objects can disappear, weird side effect of weaken()?
+    my ($vfs, @tvs);
+    my $tr = $self->transcript();
+    
+    # fetch from database?
+    if($vfs->[0]->{dbID}) {
+      
+      $vfs = $self->_variation_features;
+      
+      # get a TranscriptVariationAdaptor via the VariationFeature's adaptor
+      my $tva = $vfs->[0]->adaptor->db->get_TranscriptVariationAdaptor();
+      
+      # its faster to fetch them all in one go as this only hits the DB once
+      @tvs = @{$tva->fetch_all_by_VariationFeatures($vfs, [$tr])};
+    }
+    
+    # otherwise fetch from cache on object
+    else {
+      
+      # get VF consequences
+      $vfs = $self->_get_unique_VariationFeatures_with_consequences;
+      
+      @tvs = map {@{$_->get_all_TranscriptVariations([$tr])}} @$vfs;
+    }
+    
+    foreach my $tva(map {@{$_->get_all_alternate_TranscriptVariationAlleles}} @tvs) {
+      next unless grep {$_->SO_term eq 'missense_variant'} @{$tva->get_all_OverlapConsequences};
+      #next unless $tva->pep_allele_string;
+      my $mut = $tva->transcript_variation->translation_start.$tva->pep_allele_string;
+      $mut =~ s/\//\>/;
+      
+      $missense_preds->{$mut} ||= {
+        sift_prediction => $tva->sift_prediction,
+        sift_score => $tva->sift_score,
+        polyphen_prediction => $tva->polyphen_prediction,
+        polyphen_score => $tva->polyphen_score,
+        #consequences => [map {$_->SO_term} @{$tva->get_all_OverlapConsequences}],
+      };
+      
+      foreach my $key(keys %{$missense_preds->{$mut}}) {
+        delete $missense_preds->{$mut}->{$key} unless defined $missense_preds->{$mut}->{$key};
+        $missense_preds->{$mut}->{$key} =~ s/ /\_/ if ref($missense_preds->{$mut}->{$key}) eq 'SCALAR';
       }
     }
     
@@ -432,35 +494,39 @@ sub _get_missense_predictions {
   return $self->{_missense_predictions};
 }
 
+## Generates TranscriptVariation objects representing consequences.
+## Only used when our VariationFeatures have been created from e.g. a VCF file
 sub _get_unique_VariationFeatures_with_consequences {
   my $self = shift;
   
   my $tr = $self->transcript;
   my $vfs = $self->_variation_features;
   
-  my $db = $self->db();
-  my $tva = $db ? $db->get_TranscriptVariationAdaptor : Bio::EnsEMBL::Variation::DBSQL::TranscriptVariationAdaptor->new_fake;
-  
+  # uniquify the VFs - this is because there will be multiple VFs with the same
+  # coords and alleles due to the way the VEP's VCF parser works
   my %unique_vfs;
   
   foreach my $vf(@$vfs) {
     my @alleles = split /\//, $vf->{allele_string};
     my $ref_allele = shift @alleles;
     
-    my ($s, $e) = $vf->{slice} ? ($vf->seq_region_start, $vf->seq_region_end) : ($vf->{start}, $vf->{end});
+    my ($s, $e) = ($vf->{start}, $vf->{end});
     
     my $key = join('-', $s, $e, $ref_allele);
     
     if(!defined($unique_vfs{$key})) {
       my $vf_copy = { %$vf };
       bless $vf_copy, ref($vf);
-      delete $vf_copy->{$_} for qw(phased individual genotype non_variant hom_ref);
+      delete $vf_copy->{$_} for qw(_line phased individual genotype non_variant hom_ref);
       $vf_copy->{ref_allele} = $ref_allele;
       $unique_vfs{$key} = $vf_copy;
     }
     
     $unique_vfs{$key}->{alleles}->{$_} = 1 for @alleles;
   }
+  
+  # we only need a fake TVA
+  my $tva = Bio::EnsEMBL::Variation::DBSQL::TranscriptVariationAdaptor->new_fake;
   
   # merge VF alleles and get consequences
   foreach my $vf(values %unique_vfs) {
@@ -486,17 +552,25 @@ sub _get_unique_VariationFeatures_with_consequences {
   return [sort {$a->{start} <=> $b->{start}} values %unique_vfs];
 }
 
+## Convert this object to a hash that can be written as JSON.
+## Basically just prefetches everything that would otherwise be lazy loaded,
+## deletes "private" keys starting with "_", and presents the haplotypes in
+## order of frequency
 sub TO_JSON {
   my $self = shift;
   
   # prefetch counts, predictions etc
-  $self->prefetch_everything();
+  $self->_prefetch_everything();
   
   # make a hash copy of self
   my %copy = %{$self};
   
-  # delete keys starting with _
+  # delete keys starting with "_"
   delete $copy{$_} for grep {$_ =~ /^\_/} keys %copy;
+  
+  # convert haplotype hashrefs to listrefs
+  $copy{'cds_haplotypes'} = [sort {$b->count <=> $a->count} @{$self->get_all_CDSHaplotypes}];
+  $copy{'protein_haplotypes'} = [sort {$b->count <=> $a->count} @{$self->get_all_ProteinHaplotypes}];
   
   return \%copy;
 }
