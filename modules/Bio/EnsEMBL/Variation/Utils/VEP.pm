@@ -1442,7 +1442,7 @@ sub vf_list_to_cons {
                 
                 # nuke existing CSQ field
                 if($line->[7] =~ /CSQ\=/ && !defined($config->{keep_csq})) {
-                  $line->[7] =~ s/CSQ\=\S+?\;?(\s|$)/$1/;
+                  $line->[7] =~ s/CSQ\=\S+?(\;|$)(\S|$)/$2/;
                 }
                 
                 # get all the lines the normal way                
