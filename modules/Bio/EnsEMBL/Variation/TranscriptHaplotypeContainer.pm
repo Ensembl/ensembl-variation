@@ -44,6 +44,7 @@ package Bio::EnsEMBL::Variation::TranscriptHaplotypeContainer;
 use strict;
 use warnings;
 
+use Bio::EnsEMBL::Utils::Scalar qw(assert_ref);
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
 
 use Bio::EnsEMBL::Variation::CDSHaplotype;
@@ -62,6 +63,11 @@ sub new {
   my $transcript = shift;
   my $gts = shift;
   my $db = shift;
+  
+  # check what we've been given looks sensible
+  assert_ref($transcript, 'Bio::EnsEMBL::Transcript', 'Transcript');
+  assert_ref($gts, 'ARRAY', 'Genotypes listref');
+  assert_ref($gts->[0], 'Bio::EnsEMBL::Variation::IndividualGenotypeFeature', 'First member of genotypes listref');
   
   my $self = {
     _transcript => $transcript,
