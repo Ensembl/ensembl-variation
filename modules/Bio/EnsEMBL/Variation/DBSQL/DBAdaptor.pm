@@ -175,17 +175,18 @@ sub include_failed_variations {
 }
 
 
-# API-internal method for getting the constraint to filter out failed variations. Assumes that the
-# failed_variation table has been (left) joined to the query and that the table alias is either supplied
-# or equals 'fv'
+# API-internal method for getting the constraint to filter out variations not shown by default 
+# (those failing standard QC which are not cited). 
+# Assumes that the variation table has been (left) joined to the query and that the table 
+# alias is either supplied or equals 'v'
 sub _exclude_failed_variations_constraint {
     my $self = shift;
     my $table_alias = shift;
     
-    # If not specified, assume that the failed_variation table alias is 'fv'
-    $table_alias ||= 'fv';
+    # If not specified, assume that the variation table alias is 'v'
+    $table_alias ||= 'v';
     
-    return $self->_exclude_failed_constraint('variation_id',$table_alias);
+    return $table_alias . ".display =1";
 }
 
 # API-internal method for getting the constraint to filter out failed structural variations. Assumes that the

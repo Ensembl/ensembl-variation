@@ -225,7 +225,8 @@ sub fetch_all_by_Population {
   my $constraint = "pg.population_id = " . $pop->dbID();
   
   # Add the constraint for failed variations
-  $constraint .= " AND " . $self->db->_exclude_failed_variations_constraint();
+  $constraint .= " AND " . $self->db->_exclude_failed_variations_constraint()
+      unless $self->db->include_failed_variations() ;
   
   return $self->generic_fetch($constraint);
 }
@@ -359,19 +360,33 @@ sub _fetch_all_by_Variation_from_Genotypes {
 sub fetch_all {
   my $self = shift;
   
-  # Add the constraint for failed variations
-  my $constraint = $self->db->_exclude_failed_variations_constraint();
+  my $constraint;
+  # Add the constraint for failed variations if required
+  $constraint = $self->db->_exclude_failed_variations_constraint()  unless $self->db->include_failed_variations() ;
   
   return $self->generic_fetch($constraint);
 }
 
-sub _tables{return (
-  ['population_genotype','pg'],
-  ['failed_variation','fv']
-)}
+sub _tables{
+    my $self = shift;
 
-#Add a left join to the failed_variation table
-sub _left_join { return ([ 'failed_variation', 'fv.variation_id = pg.variation_id']); }
+    my @tables = (
+        ['population_genotype','pg']
+        );
+    # join to variation table if fails are not to be included    
+    push @tables, ['variation','v']   unless $self->db->include_failed_variations() ;
+
+    return @tables;
+}
+
+#Add a left join to the variation table if fails are not to be included
+sub _left_join { 
+  my $self = shift;
+
+  return undef if $self->db->include_failed_variations() ;
+  return ([ 'variation', 'v.variation_id = pg.variation_id']) ; 
+
+}
 
 sub _columns{
   return qw(pg.population_genotype_id pg.variation_id pg.subsnp_id pg.population_id pg.genotype_code_id pg.frequency pg.count)
