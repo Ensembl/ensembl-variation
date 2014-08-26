@@ -444,7 +444,8 @@ sub _get_missense_predictions {
     
     # declare $vfs here otherwise it goes out of scope and the VariationFeature
     # objects can disappear, weird side effect of weaken()?
-    my ($vfs, @tvs);
+    my $vfs = $self->_variation_features;
+    my @tvs;
     my $tr = $self->transcript();
     
     # fetch from database?
