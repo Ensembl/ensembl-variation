@@ -120,11 +120,6 @@ $cs_version_number =~ s/\D//g;
 # variation set
 my %var_set = ('pilot1' => 31, 'pilot2' => 32);
 
-# Clinical significance
-my $clinical_attrib_type = 'dgva_clin_sig';#'clin_sign';
-my $stmt = qq{ SELECT attrib_type_id FROM attrib_type WHERE code='$clinical_attrib_type'};
-my $clinical_attrib_type_id = ($dbVar->selectall_arrayref($stmt))->[0][0];
-
 
 # run the mapping sub-routine if the data needs mapping
 my (%num_mapped, %num_not_mapped, %samples, %subjects, %study_done);
@@ -426,7 +421,7 @@ sub structural_variation {
       study_id,
       class_attrib_id,
       $tmp_sv_col,
-      clinical_significance_attrib_id,
+      clinical_significance,
       $tmp_sv_clin_col,
       is_evidence,
       somatic,
@@ -440,7 +435,7 @@ sub structural_variation {
       $study_id,
       a1.attrib_id,
       t.type,
-      a2.attrib_id,
+      t.clinic,
       t.clinic,
       t.is_ssv,
       t.is_somatic,
@@ -448,8 +443,7 @@ sub structural_variation {
       t.alias
     FROM
       $temp_table t 
-      LEFT JOIN attrib a1 ON (t.type=a1.value) 
-      LEFT JOIN attrib a2 ON (t.clinic=a2.value AND a2.attrib_type_id=$clinical_attrib_type_id)
+      LEFT JOIN attrib a1 ON (t.type=a1.value)
   };
   $dbVar->do($stmt);
 }
@@ -1309,7 +1303,7 @@ sub parse_9th_col {
       }
     }
     
-    $info->{clinical}   = $value if ($key eq 'clinical_significance'); #lc($value) if ($key eq 'clinical_significance');
+    $info->{clinical}   = lc($value) if ($key eq 'clinical_significance');
     $info->{parent}     = $value if ($key eq 'Parent'); # Check how the 'parent' key is spelled
     $info->{is_somatic} = 1 if ($key eq 'var_origin' && $value =~ /somatic/i);
     $info->{bp_order}   = ($info->{submitter_variant_id} =~ /\w_(\d+)$/) ? $1 : undef;
@@ -1421,7 +1415,7 @@ sub pre_processing {
   
   if ($dbVar->do(qq{show columns from $sv_table like '$tmp_sv_clin_col';}) != 1){
     $dbVar->do(qq{ALTER TABLE $sv_table ADD COLUMN $tmp_sv_clin_col varchar(255);});
-  }  
+  }
   
 }
 
@@ -1556,7 +1550,17 @@ sub post_processing_phenotype {
       sva.supporting_structural_variation_id=sv.structural_variation_id AND
       sv.is_evidence=1 AND
       sv.variation_name=pf1.object_id AND
-      pf1.type='SupportingStructuralVariation'
+      pf1.type='SupportingStructuralVariation' AND
+      NOT EXISTS (SELECT pf2.phenotype_feature_id FROM $pf_table pf2 WHERE 
+                    pf2.object_id=svf.variation_name AND
+                    pf2.phenotype_id=pf1.phenotype_id AND
+                    pf2.source_id=$source_id AND
+                    pf2.study_id=svf.study_id AND
+                    pf2.seq_region_id=svf.seq_region_id AND 
+                    pf2.seq_region_start=svf.seq_region_start AND
+                    pf2.seq_region_end=svf.seq_region_end AND
+                    pf2.seq_region_strand=svf.seq_region_strand
+                 )
   };
   $dbVar->do($stmt);
 }  
@@ -1635,12 +1639,12 @@ sub cleanup {
   }
   
   # Column tmp_clinic_name" in structural_variation
-  my $sth2 = $dbVar->prepare(qq{ SELECT count(*) FROM $sv_table WHERE clinical_significance_attrib_id is NULL AND $tmp_sv_clin_col is not NULL});
+  my $sth2 = $dbVar->prepare(qq{ SELECT count(*) FROM $sv_table WHERE clinical_significance is NULL AND $tmp_sv_clin_col is not NULL});
   $sth2->execute();
   my $sv_clin_count = ($sth2->fetchrow_array)[0];
   $sth2->finish;
   if ($sv_clin_count != 0) {
-    print STDERR "\tThe table $sv_table has $sv_clin_count variants with no clinical_significance_attrib_id value where a clinical significance is defined!\nPlease, look at the column '$tmp_sv_clin_col'\n";
+    print STDERR "\tThe table $sv_table has $sv_clin_count variants with clinical_significance values which don't match the authorized values!\nPlease, look at the column '$tmp_sv_clin_col'\n";
     $sv_flag = 1;
   } 
   else {
@@ -1680,7 +1684,7 @@ sub remove_data {
   # phenotype_feature                  
   $dbVar->do(qq{ DELETE from $pf_table WHERE object_id IN 
                  (SELECT variation_name FROM $sv_table WHERE study_id=$study_id) AND 
-                 (type='StructuralVariation' OR type='SupportingStructuralVariation')
+                 study_id=$study_id
             });          
   # failed_structural_variation
   $dbVar->do(qq{ DELETE from $sv_failed WHERE structural_variation_id IN 
@@ -1792,11 +1796,11 @@ sub get_hpo_phenotype {
   
   return undef unless (-e $hpo_file && defined($id));
   
-  my $res = `grep "is: $id" $hpo_file`;
+  my $res = `grep -A1 -w "id: $id" $hpo_file`;
   
   if ($res) {
-    my $phen_desc = (split(' ! ',$res))[1];
-    return $phen_desc;
+    $res =~ /name:\s(.+)$/;
+    return $1 if ($1);
   }
   
   return undef;
@@ -1806,7 +1810,7 @@ sub get_hpo_phenotype {
 sub usage {
   die shift, qq{
 
-Options -
+Options:
   -species         : species name (required)
   -target_assembly : assembly version to map to (optional)
   -tmpdir          : (optional)
@@ -1819,7 +1823,7 @@ Options -
   -version         : version number of the data (required)
   -registry        : registry file (optional)
   -medgen_file     : Path to the unzipped MedGen file (see on ftp://ftp.ncbi.nlm.nih.gov/pub/medgen/csv/NAMES.csv.gz)
-  -hpo_file        : Path to the Human Phenotype Ontology (HPO) file (see on http://compbio.charite.de/hudson/job/hpo/lastStableBuild/artifact/ontology/human-phenotype-ontology_xp.obo)
+  -hpo_file        : Path to the Human Phenotype Ontology (HPO) file (see on http://compbio.charite.de/hudson/job/hpo/lastSuccessfulBuild/artifact/hp/hp.obo)
   -replace         : flag to remove the existing study data from the database before import them (optional)
   -debug           : flag to keep the $temp_table table (optional)
   };
