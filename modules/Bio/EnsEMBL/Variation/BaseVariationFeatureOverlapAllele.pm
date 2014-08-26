@@ -113,10 +113,10 @@ sub new {
 }
 
 sub new_fast {
-    my ($class, $hashref) = @_;
+    my ($class, $hashref, $strong) = @_;
     my $self = bless $hashref, $class;
     # avoid a memory leak, because the bvfo also has a reference to us
-    weaken $self->{base_variation_feature_overlap} if $self->{base_variation_feature_overlap};
+    weaken $self->{base_variation_feature_overlap} if $self->{base_variation_feature_overlap} && !defined $strong;
     return $self;
 }
 

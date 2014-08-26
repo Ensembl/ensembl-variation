@@ -1771,6 +1771,9 @@ sub format_rest_output {
   my %all_cons = %Bio::EnsEMBL::Variation::Utils::Constants::OVERLAP_CONSEQUENCES;
   $hash->{most_severe_consequence} = (sort {$all_cons{$a}->rank <=> $all_cons{$b}->rank} @con_terms)[0];
   
+  # add assembly
+  $hash->{assembly_name} = $config->{assembly} || $config->{cache_assembly};
+  
   numberify($hash);
   
   return $hash;
@@ -4990,7 +4993,7 @@ sub cache_reg_feats {
 sub clean_reg_feat {
     my $rf = shift;
     
-    foreach my $key(qw/adaptor binary_string bound_start bound_end attribute_cache feature_type feature_set analysis set/) {
+    foreach my $key(qw/adaptor binary_string bound_start bound_end attribute_cache feature_set analysis set/) {
         delete $rf->{$key};
     }
     
@@ -5001,6 +5004,8 @@ sub clean_reg_feat {
             delete $rf->{binding_matrix}->{$key};
         }
     }
+    
+    $rf->{feature_type} = $rf->{feature_type}->{so_name} if $rf->{feature_type};
     
     return $rf;
 }

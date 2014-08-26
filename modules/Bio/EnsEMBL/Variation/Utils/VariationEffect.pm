@@ -54,7 +54,7 @@ use warnings;
 
 use base qw(Exporter);
 
-our @EXPORT_OK = qw(overlap within_cds MAX_DISTANCE_FROM_TRANSCRIPT within_intron stop_lost affects_start_codon $UPSTREAM_DISTANCE $DOWNSTREAM_DISTANCE);
+our @EXPORT_OK = qw(overlap within_cds MAX_DISTANCE_FROM_TRANSCRIPT within_intron stop_lost affects_start_codon frameshift $UPSTREAM_DISTANCE $DOWNSTREAM_DISTANCE);
 
 use constant MAX_DISTANCE_FROM_TRANSCRIPT => 5000;
 
@@ -241,8 +241,9 @@ sub feature_elongation {
         complete_within_feature($bvfoa) and
         (copy_number_gain($bvfoa) or insertion($bvfoa)) and
         not(
-            $bvfoa->isa('Bio::EnsEMBL::Variation::BaseTranscriptVariationAllele') and
-            (inframe_insertion($bvfoa) or stop_lost($bvfoa))# or frameshift($bvfoa))
+            ($bvfoa->isa('Bio::EnsEMBL::Variation::BaseTranscriptVariationAllele') and
+            (inframe_insertion($bvfoa) or stop_lost($bvfoa)))# or frameshift($bvfoa))
+	    or stop_retained($bvfoa)
         )
     );
 }
@@ -578,7 +579,7 @@ sub complex_indel {
 sub _get_peptide_alleles {
     my $bvfoa = shift;
     
-    return () if frameshift($bvfoa);
+#    return () if frameshift($bvfoa);
 
     my $alt_pep = $bvfoa->peptide;
     
@@ -830,10 +831,10 @@ sub stop_lost {
     if($bvfoa->isa('Bio::EnsEMBL::Variation::TranscriptVariationAllele')) {
         
         # special case frameshift
-        if(frameshift($bvfoa)) {
-          my $ref_pep = _get_ref_pep($bvfoa);
-          return $ref_pep && $ref_pep =~ /\*/;
-        }
+#        if(frameshift($bvfoa)) {
+#          my $ref_pep = _get_ref_pep($bvfoa);
+#          return $ref_pep && $ref_pep =~ /\*/;
+#        }
         
         my ($ref_pep, $alt_pep) = _get_peptide_alleles($bvfoa);
         
