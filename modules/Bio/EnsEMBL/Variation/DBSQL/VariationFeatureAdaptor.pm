@@ -1153,8 +1153,8 @@ sub _tables {
 		[ 'source', 's']
 	);
 
-   # If we are including failed_variations, add that table
-   push(@tables,['failed_variation', 'fv']) unless ($self->db->include_failed_variations());
+   # If we are excluding failed_variations, add variation table
+   push(@tables,['variation', 'v']) unless ($self->db->include_failed_variations());
 
    # add bits for tagged variation feature
    push @tables, ['tagged_variation_feature', 'tvf'] if defined $self->{tag};
@@ -1162,13 +1162,13 @@ sub _tables {
    return @tables;
 }
 
-#Add a left join to the failed_variation table
+#Add a left join to the variation table
 sub _left_join { 
     my $self = shift;
     
     # If we are including failed variations, skip the left join
     return () if ($self->db->include_failed_variations());
-    return ([ 'failed_variation', 'fv.variation_id = vf.variation_id']); 
+    return ([ 'variation', 'v.variation_id = vf.variation_id']); 
 }
 
 sub _default_where_clause {
@@ -1837,7 +1837,7 @@ sub fetch_by_hgvs_notation {
   foreach my $allele ($ref_allele,$alt_allele) {
      push(@allele_objs,Bio::EnsEMBL::Variation::Allele->new('-adaptor' => $self, '-allele' => $allele));
   }
-    
+
     #Create a variation object. Use the HGVS string as its name
     my $variation = Bio::EnsEMBL::Variation::Variation->new(
          '-adaptor' => $self->db()->get_VariationAdaptor(),
