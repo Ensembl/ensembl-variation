@@ -2811,7 +2811,7 @@ sub validate_vf {
     return 0 if defined($config->{chr}) && !$config->{chr}->{$vf->{chr}};
     
     # fix inputs
-    $vf->{chr} =~ s/^chr//ig unless $vf->{chr} =~ /^chromosome$/i;
+    $vf->{chr} =~ s/^chr//ig unless $vf->{chr} =~ /^chromosome$/i || $vf->{chr} =~ /^CHR\_/;
     $vf->{chr} = 'MT' if $vf->{chr} eq 'M';
     $vf->{strand} ||= 1;
     $vf->{strand} = ($vf->{strand} =~ /\-/ ? "-1" : "1");
