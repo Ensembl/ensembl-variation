@@ -437,8 +437,6 @@ sub _tables {
     # If we are constraining on population_id, add the allele table
     push(@tables,['allele', 'a']) if ($self->{'_constrain_population'});
 
-    # Add the failed_variation table if we are filtering on those
-    push(@tables,['failed_variation', 'fv']) unless ($self->db->include_failed_variations());
     
     return @tables;
 }
@@ -451,8 +449,6 @@ sub _left_join {
         ['source s2', 'vs.source_id = s2.source_id']
     );
     
-    # If we are filtering on failed variations, left join
-    push(@left_join,['failed_variation', 'v.variation_id = fv.variation_id']) unless ($self->db->include_failed_variations());
  
     return @left_join;
 }
@@ -466,6 +462,9 @@ sub _default_where_clause {
     
     # If we are constraining on population_id, we should have a constraint on the allele tables as well
     $constraint .= qq{ AND a.variation_id = v.variation_id } if ($self->{'_constrain_population'});
+
+    # constrain to variants passing QC filters or those which are cited, unless include_failed_variants set
+    $constraint .= qq{ AND v.display = 1 }  unless $self->db->include_failed_variations() ;
     
     return $constraint;
 }
