@@ -4,7 +4,7 @@ ALTER TABLE variation_feature ADD COLUMN display int(1) DEFAULT 1;
 
 UPDATE variation_feature SET display = 0 WHERE variation_id in (SELECT failed_variation.variation_id FROM failed_variation
 left outer join variation_citation on failed_variation.variation_id = variation_citation.variation_id 
-where variation_citation.publication is null );
+where variation_citation.publication_id is null );
 
 
 #patch identifier
