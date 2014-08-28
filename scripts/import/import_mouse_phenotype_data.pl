@@ -267,6 +267,10 @@ sub import_phenotype_features {
     	my $hash;
     	foreach my $pair (@pairs) {
         	my ($key, $value) = split("=", $pair);
+            if ($key eq 'allele_symbol') { # change e.g. Cdk5rap2<tm1a(EUCOMM)Wtsi> to Cdk5rap2_tm1a(EUCOMM)Wtsi 
+                $value =~ s/</_/g;
+                $value =~ s/>//g;
+            }
         	$hash->{$key} = $value;
     	}
 		my $attribs = {};
