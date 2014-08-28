@@ -1,3 +1,4 @@
+
 =head1 LICENSE
 
 Copyright [1999-2014] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
@@ -338,10 +339,7 @@ sub fetch_all_by_Slice_constraint {
     else {
         $constraint = $somatic_constraint;
     }
-    
-    # Add the constraint for failed variations
-    $constraint .= " AND " . $self->db->_exclude_failed_variations_constraint();
-    
+        
     return $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint);
 }
 
@@ -396,9 +394,6 @@ sub fetch_all_somatic_by_Slice_constraint {
     else {
         $constraint = $somatic_constraint;
     }
-    
-    # Add the constraint for failed variations
-    $constraint .= " AND " . $self->db->_exclude_failed_variations_constraint();
     
     return $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint);
 }
@@ -537,7 +532,7 @@ sub _internal_fetch_all_with_phenotype_by_Slice{
   }
     
   # Add the constraint for failed variations
-  $extra_sql .= " AND " . $self->db->_exclude_failed_variations_constraint();
+  $extra_sql .= " AND vf.display = 1 " unless $self->db->include_failed_variations();
     
   my $cols = join ",", $self->_columns();
     
@@ -718,7 +713,7 @@ sub fetch_all_by_Slice_Population {
   }
   
   # Add the constraint for failed variations
-  $extra_sql .= " AND " . $self->db->_exclude_failed_variations_constraint();
+  $extra_sql .= " AND vf.display = 1 " unless $self->db->include_failed_variations();
 
   my $cols = join ",", $self->_columns();
   
@@ -803,7 +798,7 @@ sub _internal_fetch_all_with_phenotype {
   }
     
   # Add the constraint for failed variations
-  $extra_sql .= " AND " . $self->db->_exclude_failed_variations_constraint();
+  $extra_sql .= " AND vf.display = 1 " unless $self->db->include_failed_variations();
     
   my $cols = join ",", $self->_columns();
     
@@ -1153,8 +1148,6 @@ sub _tables {
 		[ 'source', 's']
 	);
 
-   # If we are excluding failed_variations, add variation table
-   push(@tables,['variation', 'v']) unless ($self->db->include_failed_variations());
 
    # add bits for tagged variation feature
    push @tables, ['tagged_variation_feature', 'tvf'] if defined $self->{tag};
@@ -1162,14 +1155,6 @@ sub _tables {
    return @tables;
 }
 
-#Add a left join to the variation table
-sub _left_join { 
-    my $self = shift;
-    
-    # If we are including failed variations, skip the left join
-    return () if ($self->db->include_failed_variations());
-    return ([ 'variation', 'v.variation_id = vf.variation_id']); 
-}
 
 sub _default_where_clause {
   my $self = shift;
@@ -1182,6 +1167,8 @@ sub _default_where_clause {
     ($self->{tag} eq 'tagged' ? $self->{tag}.'_' : '').
     'variation_feature_id = vf.variation_feature_id'
   if defined $self->{tag};
+
+  $clause .= ' AND vf.display = 1 ' unless $self->db->include_failed_variations();
 
   return $clause;
 }
