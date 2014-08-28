@@ -112,6 +112,7 @@ create table variation (
 @column evidence_attribs       A summary of the evidence supporting a variant as a guide to its potential reliability. See the evidence descriptions <a href="/info/genome/variation/data_description.html#evidence_status">here</a>.
 @column clinical_significance  A set of clinical significance classes assigned to the variant.<br /> 
                                The list of clinical significances is available <a href="/info/genome/variation/data_description.html#clin_significance">here</a>.
+@column display                Flags whether this variation should be displayed in browser tracks and returned by default by the API
 
 @see variation
 @see tagged_variation_feature
@@ -201,6 +202,7 @@ create table variation_feature(
     alignment_quality double  DEFAULT NULL,
     evidence_attribs   SET('367','368','369','370','371','372') DEFAULT NULL,    
     clinical_significance SET('uncertain significance','not provided','benign','likely benign','likely pathogenic','pathogenic','drug response','histocompatibility','other','confers sensitivity','risk factor','association','protective') DEFAULT NULL,
+    display int(1) DEFAULT 1,
 
    	primary key( variation_feature_id ),
 	  key pos_idx( seq_region_id, seq_region_start, seq_region_end ),
