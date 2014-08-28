@@ -71,7 +71,7 @@ foreach my $host(qw(ens-staging ens-staging2)) {
 	foreach my $db(@list) {
 		my $species = $db;
 		$species =~ s/^([a-z]+\_[a-z]+)(.+)/$1/;
-		
+        next if ($species =~ /homo_sapiens/);	
 		# connect to DB
 		my $dbc = DBI->connect(
 			sprintf(
