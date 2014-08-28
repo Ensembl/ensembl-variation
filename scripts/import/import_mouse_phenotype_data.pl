@@ -326,6 +326,7 @@ sub import_phenotype_features {
 				my $individual = new Bio::EnsEMBL::Variation::Individual(
 					-name => $strain_name,
 					-gender => $gender, 
+                    -individual_type_id => 1, 
 				);
 				$individual_adaptor->store($individual);
 				$strain_id = $individual_adaptor->last_insert_id();
