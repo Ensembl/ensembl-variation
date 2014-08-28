@@ -3356,6 +3356,9 @@ sub fetch_transcripts {
                 $config->{loaded_tr}->{$chr}->{$region} = 1;
             }
             
+            ## hack to copy HGNC IDs
+            my %hgnc_ids = ();
+            
             # add loaded transcripts to main cache
             if(defined($tmp_cache->{$chr})) {
                 while(my $tr = shift @{$tmp_cache->{$chr}}) {
@@ -3407,9 +3410,17 @@ sub fetch_transcripts {
                       next;
                     }
                     
+                    ## hack to copy HGNC IDs
+                    $hgnc_ids{$tr->{_gene_symbol}} = $tr->{_gene_hgnc_id} if defined($tr->{_gene_hgnc_id});
+                    
                     $seen_trs{$dbID} = 1;
                     
                     push @{$tr_cache->{$chr}}, $tr;
+                }
+                
+                ## hack to copy HGNC IDs
+                for(@{$tr_cache->{$chr}}) {
+                  $_->{_gene_hgnc_id} = $hgnc_ids{$_->{_gene_symbol}} if ($hgnc_ids{$_->{_gene_symbol}});
                 }
             }
             
@@ -4425,7 +4436,8 @@ sub prefetch_transcript_data {
         # get from gene cache if found already
         if(defined($tr->{_gene}->{_symbol})) {
             $tr->{_gene_symbol} = $tr->{_gene}->{_symbol};
-            $tr->{_gene_symbol_source} = $tr->{_gene}->{_symbol_source}
+            $tr->{_gene_symbol_source} = $tr->{_gene}->{_symbol_source};
+            $tr->{_gene_hgnc_id} = $tr->{_gene}->{_hgnc_id}
         }
         else {
             $tr->{_gene_symbol} ||= undef;
