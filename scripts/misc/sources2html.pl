@@ -219,7 +219,7 @@ foreach my $hostname (@hostnames) {
       # Previous sets
       my $sth4b = get_connection_and_query($p_dbname, $previous_host, $sql4b);
       while (my @s = $sth4b->fetchrow_array) {
-        $p_set_list{$s[0]} = $s[1];
+        $p_set_list{$s[1]} = $s[2];
       }
     }
     else {
@@ -736,17 +736,11 @@ sub table_header {
   my $type = shift;
   my $flag = shift;
   
-  my $header_col;
-  if ($flag->{$type}) {
-    my $alt_text = qq{See the icons description on the table on the right handside of the page};
-    $header_col = qq{
+  my $alt_text = qq{Phenotype data, somatic/germline data, ... See the icons description on the table on the right handside of the page};
+  my $header_col = qq{
     <th colspan=2 style="width:56px;text-align:center;border-left:1px solid #BBB;background-color:#BBB">
-       Other<span class="_ht ht" title="$alt_text"><img src="/i/16/info.png" style="position:relative;top:2px;width:12px;height:12px;margin-left:3px" title="$alt_text" alt="info"/></span>
-    </th>}; 
-  }
-  else {  
-    $header_col = qq{<th colspan=2></th>};
-  }
+       <span class="_ht ht" title="$alt_text">Other</span>
+    </th>};
   
   my $top_margin = ($type eq 'main') ? '6px' : '0px';
   
