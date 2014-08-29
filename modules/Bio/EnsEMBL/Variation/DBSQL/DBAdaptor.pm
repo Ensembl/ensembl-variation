@@ -100,6 +100,7 @@ sub get_available_adaptors{
     'StructuralVariationSample'       => 'Bio::EnsEMBL::Variation::DBSQL::StructuralVariationSampleAdaptor',
     'Source'                          => 'Bio::EnsEMBL::Variation::DBSQL::SourceAdaptor',
     'VCFCollection'                   => 'Bio::EnsEMBL::Variation::DBSQL::VCFCollectionAdaptor',
+    'TranscriptHaplotype'             => 'Bio::EnsEMBL::Variation::DBSQL::TranscriptHaplotypeAdaptor',
     );
 	
     return (\%pairs);
