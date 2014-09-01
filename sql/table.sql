@@ -174,8 +174,8 @@ create table variation_feature(
         'stop_gained',
         'synonymous_variant',
         'frameshift_variant',
-        'nc_transcript_variant',
-        'non_coding_exon_variant',
+        'non_coding_transcript_variant',
+        'non_coding_transcript_exon_variant',
         'mature_miRNA_variant',
         'NMD_transcript_variant',
         '5_prime_UTR_variant',
@@ -1345,8 +1345,8 @@ CREATE TABLE transcript_variation (
                                             'stop_gained',
                                             'synonymous_variant',
                                             'frameshift_variant',
-                                            'nc_transcript_variant',
-                                            'non_coding_exon_variant',
+                                            'non_coding_transcript_variant',
+                                            'non_coding_transcript_exon_variant',
                                             'mature_miRNA_variant',
                                             'NMD_transcript_variant',
                                             '5_prime_UTR_variant',
@@ -1467,8 +1467,8 @@ CREATE TABLE IF NOT EXISTS motif_feature_variation (
                                             'stop_gained',
                                             'synonymous_variant',
                                             'frameshift_variant',
-                                            'nc_transcript_variant',
-                                            'non_coding_exon_variant',
+                                            'non_coding_transcript_variant',
+                                            'non_coding_transcript_exon_variant',
                                             'mature_miRNA_variant',
                                             'NMD_transcript_variant',
                                             '5_prime_UTR_variant',
@@ -1544,8 +1544,8 @@ CREATE TABLE IF NOT EXISTS regulatory_feature_variation (
                                             'stop_gained',
                                             'synonymous_variant',
                                             'frameshift_variant',
-                                            'nc_transcript_variant',
-                                            'non_coding_exon_variant',
+                                            'non_coding_transcript_variant',
+                                            'non_coding_transcript_exon_variant',
                                             'mature_miRNA_variant',
                                             'NMD_transcript_variant',
                                             '5_prime_UTR_variant',
@@ -1812,19 +1812,16 @@ CREATE TABLE meta (
 
 
 # Add schema type and schema version to the meta table.
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_type', 'variation'), (NULL, 'schema_version', '76');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_type', 'variation'), (NULL, 'schema_version', '77');
 
 # Patch IDs for new release
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_75_76_a.sql|schema version');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_75_76_b.sql|Change evidence storage in Variation & Variation_feature table to attribs');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_75_76_c.sql|Add new table and extra column to population table to specify if population is to be displayed seperately on the PopulationGenetics page and if so with what priority');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_75_76_d.sql|Restore read_coverage table');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_75_76_e.sql|Add has_coverage flag to individual table');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_75_76_f.sql|Add index on the source_id column in variation_feature and phenotype_feature');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_75_76_g.sql|update variation and variation_feature to use the same clinical significance terms as ClinVar');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_75_76_h.sql|Replace the column clinical_significance_attrib_id by clinical_significance in structural_variation');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_75_76_i.sql|Add tables required for HGVS index creation');
-
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_76_77_a.sql|schema version');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_76_77_b.sql|Add new column to Variation table to flag whether variants should be displayed or not');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_76_77_c.sql|update SO consequence terms');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_76_77_d.sql|update SO terms in attrib table');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_76_77_e.sql|add variation_attrib table');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_76_77_f.sql|Add new variation_set_id column to individual table');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_76_77_g.sql|Add new column to Variation_feature table to flag whether variants should be displayed or not');
 
 /**
 @header  Failed tables

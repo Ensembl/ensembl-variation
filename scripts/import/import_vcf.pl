@@ -1275,7 +1275,7 @@ sub connect_to_dbs {
 		my $reg = 'Bio::EnsEMBL::Registry';
 		
 		if(defined($config->{host}) && defined($config->{user})) {
-			$reg->load_registry_from_db(-host => $config->{host}, -user => $config->{user}, -pass => $config->{password});
+			$reg->load_registry_from_db(-host => $config->{host}, -port => $config->{port}, -user => $config->{user}, -pass => $config->{password});
 		}
 		
 		else {

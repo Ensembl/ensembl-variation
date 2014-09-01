@@ -267,6 +267,10 @@ sub import_phenotype_features {
     	my $hash;
     	foreach my $pair (@pairs) {
         	my ($key, $value) = split("=", $pair);
+            if ($key eq 'allele_symbol') { # change e.g. Cdk5rap2<tm1a(EUCOMM)Wtsi> to Cdk5rap2_tm1a(EUCOMM)Wtsi 
+                $value =~ s/</_/g;
+                $value =~ s/>//g;
+            }
         	$hash->{$key} = $value;
     	}
 		my $attribs = {};
@@ -326,6 +330,7 @@ sub import_phenotype_features {
 				my $individual = new Bio::EnsEMBL::Variation::Individual(
 					-name => $strain_name,
 					-gender => $gender, 
+                    -individual_type_id => 1, 
 				);
 				$individual_adaptor->store($individual);
 				$strain_id = $individual_adaptor->last_insert_id();

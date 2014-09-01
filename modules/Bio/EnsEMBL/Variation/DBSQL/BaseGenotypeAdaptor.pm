@@ -111,7 +111,7 @@ sub _cache_genotype_codes {
   # only fetch codes with dbID higher than what we have already
   $self->db->{_max_genotype_code} ||= 0;
 	
-	my %gt_codes = map {(join "|", (@{$_->genotype}, defined($_->phased) ? $_->phased : "NULL")) => $_->dbID} @{$self->{_genotype_code_adaptor}->generic_fetch('gc.genotype_code_id > '.$self->db->{_max_genotype_code})};
+	my %gt_codes = map {(join "|", (@{$_->genotype}, defined($_->phased) ? $_->phased : "NULL")) => $_->dbID} sort {$b->dbID <=> $a->dbID} @{$self->{_genotype_code_adaptor}->generic_fetch('gc.genotype_code_id > '.$self->db->{_max_genotype_code})};
   
   # store highest code
   $self->db->{_max_genotype_code} = (sort {$a <=> $b} values %gt_codes)[-1];
