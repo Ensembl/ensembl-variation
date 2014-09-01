@@ -146,6 +146,7 @@ sub configure {
 		'create_name',
 		'chrom_regexp=s',
 		'force_no_var',
+    'ss_ids',
 		
 		'fork=i',
 		'test=i',
@@ -739,17 +740,31 @@ sub main {
 			
 			# could be a structural variation feature
 			next unless $data->{tmp_vf}->isa('Bio::EnsEMBL::Variation::VariationFeature');
+      
+      # ssIDs as IDs?
+      if(defined($config->{ss_ids})) {
+        my ($ss_id) = grep {$_ =~ /^\d+$/} split(/\;/, $data->{ID});
+        
+        if(defined($ss_id)) {
+          $data->{SS_ID} = $ss_id;
+        }
+      }
 			
 			# sometimes ID has many IDs separated by ";", take the lowest rs number, otherwise the first
 			if($data->{ID} =~ /\;/) {
 				if($data->{ID} =~ /rs/) {
 					$data->{ID} = (sort {(split("rs", $a))[-1] <=> (split("rs", $b))[-1]} split /\;/, $data->{ID})[0];
 				}
+        elsif(defined($config->{ss_ids}) && defined($data->{SS_ID})) {
+          $data->{ID} = 'ss'.$data->{SS_ID};
+        }
 				else {
 					$data->{ID} = (split /\;/, $data->{ID})[0];
 				}
 			}
-			
+      elsif(defined($config->{ss_ids}) && defined($data->{SS_ID})) {
+        $data->{ID} = 'ss'.$data->{SS_ID};
+      }
 			
 			# make a var name if none exists
 			if(!defined($data->{ID}) || $data->{ID} eq '.' || defined($config->{create_name})) {
@@ -1954,9 +1969,14 @@ sub variation_feature {
 	} @$existing_vfs) {
 		
 		my @existing_alleles = split /\//, $existing_vf->allele_string;
+    my @new_alleles_copy = @new_alleles;
+    
+    if($existing_vf->seq_region_strand < 0) {
+      reverse_comp(\$_) for @new_alleles_copy;
+    }
 		
 		my %combined_alleles;
-		$combined_alleles{$_}++ for (@existing_alleles, @new_alleles);
+		$combined_alleles{$_}++ for (@existing_alleles, @new_alleles_copy);
 		
 		# new alleles, need to merge
 		if(scalar keys %combined_alleles > scalar @existing_alleles) {
@@ -1972,7 +1992,7 @@ sub variation_feature {
 			my $new_allele_string =
 				$existing_vf->allele_string.
 				'/'.
-				(join '/', grep {$combined_alleles{$_} == 1} @new_alleles);
+				(join '/', grep {$combined_alleles{$_} == 1} @new_alleles_copy);
 			
 			if(defined($config->{test})) {
 				debug($config, "(TEST) Changing allele_string for ", $existing_vf->variation_name, " from ", $existing_vf->allele_string, " to $new_allele_string");
@@ -2208,7 +2228,8 @@ sub get_genotypes {
 			variation => $data->{variation},
 			individual => $config->{individuals}->[$i-9],
 			genotype => \@bits,
-			phased => $phased
+			phased => $phased,
+      subsnp => defined($data->{SS_ID}) ? $data->{SS_ID} : undef,
 		}) if scalar @bits;
 	}
 	
