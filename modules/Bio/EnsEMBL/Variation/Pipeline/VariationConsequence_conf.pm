@@ -66,7 +66,7 @@ sub default_options {
         # a directory to keep hive output files and your registry file, you should
         # create this if it doesn't exist
 
-        pipeline_dir            => '/lustre/scratch109/ensembl/at7/release_77/chicken/' . $self->o('pipeline_name'),
+        pipeline_dir            => '/lustre/scratch109/ensembl/at7/release_77/human/' . $self->o('pipeline_name'),
 
         # a directory where hive workers will dump STDOUT and STDERR for their jobs
         # if you use lots of workers this directory can get quite big, so it's
@@ -121,7 +121,7 @@ sub default_options {
 
         # these flags control which parts of the pipeline are run
 
-        run_transcript_effect   => 0,
+        run_transcript_effect   => 1,
         run_variation_class     => 1,
 
         # connection parameters for the hive database, you should supply the hive_db_password
