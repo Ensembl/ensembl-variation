@@ -60,7 +60,7 @@ Bio::EnsEMBL::Variation::Variation - Ensembl representation of a nucleotide vari
     ...
 
     # print out the default name and source of the variation and the version
-    print $v->source(), ':',$v->name(), ".",$v->version,"\n";
+    print $v->source(), ':',$v->name(), ".",$v->source_version(),"\n";
 
     # print out every synonym associated with this variation
     @synonyms = @{$v->get_all_synonyms()};
@@ -128,14 +128,20 @@ use Scalar::Util qw(weaken);
     Adaptor which provides database connectivity for this Variation object
 
   Arg [-NAME] :
-    string - the name of this SNP
+    string - the name of this variant
 
   Arg [-SOURCE] :
-    string - the source of this SNP 
+    string - the source of this variant 
 
   Arg [-SOURCE_DESCRIPTION] :
-    string - description of the SNP source
-    
+    string - description of the variant source
+
+  Arg [-SOURCE_VERSION] :
+    string - version of the variant source
+
+  Arg [-SOURCE_URL] :
+    string - url of the variant source
+
   Arg [-SOURCE_TYPE] :
     string - the source type of this variant
 
@@ -182,10 +188,10 @@ sub new {
   my $caller = shift;
   my $class = ref($caller) || $caller;
 
-  my ($dbID, $adaptor, $name, $class_so_term, $src, $src_desc, $src_url, $src_type, $src_somatic_status, $is_somatic, $flipped, $syns,
+  my ($dbID, $adaptor, $name, $class_so_term, $src, $src_desc, $src_version, $src_url, $src_type, $src_somatic_status, $is_somatic, $flipped, $syns,
       $ancestral_allele, $alleles, $valid_states, $moltype, $five_seq, $three_seq, $flank_flag, $minor_allele, $minor_allele_frequency,
       $minor_allele_count, $clinical_significance, $evidence ) =
-        rearrange([qw(dbID ADAPTOR NAME CLASS_SO_TERM SOURCE SOURCE_DESCRIPTION SOURCE_URL SOURCE_TYPE SOURCE_SOMATIC_STATUS
+        rearrange([qw(dbID ADAPTOR NAME CLASS_SO_TERM SOURCE SOURCE_DESCRIPTION SOURCE_VERSION SOURCE_URL SOURCE_TYPE SOURCE_SOMATIC_STATUS
                       IS_SOMATIC FLIPPED SYNONYMS ANCESTRAL_ALLELE ALLELES VALIDATION_STATES MOLTYPE 
                       FIVE_PRIME_FLANKING_SEQ THREE_PRIME_FLANKING_SEQ FLANK_FLAG MINOR_ALLELE MINOR_ALLELE_FREQUENCY 
                       MINOR_ALLELE_COUNT CLINICAL_SIGNIFICANCE EVIDENCE)],@_);
@@ -202,6 +208,7 @@ sub new {
     'class_SO_term' => $class_so_term,
     'source' => $src,
     'source_description' => $src_desc,
+    'source_version' => $src_version,
     'source_url' => $src_url,
     'source_type'=> $src_type,
     'source_somatic_status' => $src_somatic_status,
@@ -677,6 +684,27 @@ sub source_description{
   my $self = shift;
   return $self->{'source_description'} = shift if(@_);
   return $self->{'source_description'};
+}
+
+
+
+=head2 source_version
+
+  Arg [1]    : string $source_version (optional)
+               The new value to set the source version attribute to
+  Example    : $source_version = $v->source_version()
+  Description: Getter/Setter for the source version attribute
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub source_version{
+  my $self = shift;
+  return $self->{'source_version'} = shift if(@_);
+  return $self->{'source_version'};
 }
 
 

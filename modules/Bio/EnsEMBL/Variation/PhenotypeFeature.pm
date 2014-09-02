@@ -98,6 +98,8 @@ our %TYPES = (
     object - associated object
   Arg [-SOURCE] :
     string - source of the phenotype association
+  Arg [-SOURCE_VERSION] :
+    string - version of the source of the phenotype association
   Arg [-STUDY_NAME] :
     string - name of study reporting the association
   Arg [-STUDY_DESCRIPTION] :
@@ -133,11 +135,11 @@ sub new {
   my $class = ref($caller) || $caller;
   my $self = $class->SUPER::new(@_);
 
-  my ($dbID,$adaptor,$phenotype_id,$phenotype,$type,$object,$object_id,$source,$study,$study_id,$is_significant,$attribs) =
+  my ($dbID,$adaptor,$phenotype_id,$phenotype,$type,$object,$object_id,$source,$source_version,$study,$study_id,$is_significant,$attribs) =
     rearrange([qw(
       dbID ADAPTOR _PHENOTYPE_ID PHENOTYPE
       TYPE OBJECT _OBJECT_ID
-      SOURCE STUDY _STUDY_ID
+      SOURCE SOURCE_VERSION STUDY _STUDY_ID
       IS_SIGNIFICANT
       ATTRIBS
     )], @_);
@@ -171,6 +173,7 @@ sub new {
   
   $self->{type}           = $type;
   $self->{source}         = $source;
+  $self->{source_version} = $source_version;
   $self->{is_significant} = $is_significant;
   $self->{attribs}        = $attribs || {};
   
@@ -390,6 +393,26 @@ sub source {
   my $self = shift;
   return $self->{'source'} = shift if(@_);
   return $self->{'source'};
+}
+
+
+=head2 source_version
+
+  Arg [1]    : string source version (optional)
+               The new value to set the source version attribute to
+  Example    : $source = $obj->source_version()
+  Description: Getter/Setter for the source version attribute.
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub source_version {
+  my $self = shift;
+  return $self->{'source_version'} = shift if(@_);
+  return $self->{'source_version'};
 }
 
 
