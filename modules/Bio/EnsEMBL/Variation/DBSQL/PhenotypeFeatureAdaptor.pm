@@ -718,7 +718,7 @@ sub _columns {
   return qw(
     pf.phenotype_feature_id pf.object_id pf.type pf.is_significant
     pf.seq_region_id pf.seq_region_start pf.seq_region_end pf.seq_region_strand
-    pf.phenotype_id s.name pf.study_id
+    pf.phenotype_id s.name s.version pf.study_id
   );
 }
 
@@ -756,13 +756,13 @@ sub _objs_from_sth {
   my (
     $phenotype_feature_id, $object_id, $object_type, $is_significant,
     $seq_region_id, $seq_region_start, $seq_region_end, $seq_region_strand,
-    $phenotype_id, $source_name, $study_id
+    $phenotype_id, $source_name, $source_version, $study_id
   );
   
   $sth->bind_columns(
     \$phenotype_feature_id, \$object_id, \$object_type, \$is_significant,
     \$seq_region_id, \$seq_region_start, \$seq_region_end, \$seq_region_strand,
-    \$phenotype_id, \$source_name, \$study_id
+    \$phenotype_id, \$source_name, \$source_version, \$study_id
   );
   
   my $sta = $self->db()->get_StudyAdaptor();
@@ -843,6 +843,7 @@ sub _objs_from_sth {
         'adaptor'        => $self,
         '_study_id'      => $study_id,
         'source'         => $source_name,
+        'source_version' => $source_version,
         'is_significant' => $is_significant,
       }
     );
