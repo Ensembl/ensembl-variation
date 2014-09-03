@@ -100,7 +100,7 @@ foreach my $db (@db_list) {
 	$sth->finish();	
 
 	my $sth = $dbc->prepare(qq{
-		SELECT pf.phenotype_feature_id, pf.object_id, pf.is_significant, p.description, at.code, pfa.value, s.name
+		SELECT pf.phenotype_feature_id, pf.object_id, p.description, at.code, pfa.value, s.name
 		FROM attrib_type at
 		LEFT JOIN phenotype_feature_attrib as pfa ON (at.attrib_type_id = pfa.attrib_type_id)
 		LEFT JOIN phenotype_feature as pf ON (pf.phenotype_feature_id = pfa.phenotype_feature_id)
@@ -111,8 +111,8 @@ foreach my $db (@db_list) {
 	});
 
 	$sth->execute();
-   	my ($pf_id, $gene_id, $is_sgn, $desc, $code, $value, $source);
-	$sth->bind_columns(\($pf_id, $gene_id, $is_sgn, $desc, $code, $value, $source));	    
+   	my ($pf_id, $gene_id, $desc, $code, $value, $source);
+	$sth->bind_columns(\($pf_id, $gene_id, $desc, $code, $value, $source));	    
 	my $current_pf_id;
 	my $row;
     open OUT, ">$TMP_DIR/$TMP_FILE";
@@ -126,7 +126,6 @@ foreach my $db (@db_list) {
 		}
 		$row->{pf_id}          = $pf_id;
 		$row->{gene_stable_id} = $gene_id;
-		$row->{is_significant} = $is_sgn;
         $desc =~ s/\&|,//g;
 		$row->{description}    = $desc;
 		$row->{source}         = $source;
@@ -162,7 +161,6 @@ sub get_values {
 		$row->{gene_stable_id}, 
 		$row->{description}, 
 		$row->{source}, 
-		$row->{is_significant}, 
 		$row->{p_value}, 
 		$row->{strain_name}, 
 		$row->{strain_gender},
