@@ -541,7 +541,7 @@ CREATE TABLE seq_region (
 Note that for each species, there must be one co-ordinate system that has the attribute "top_level" and one that has the attribute "sequence_level".
 
 @column coord_system_id      Primary key, internal identifier.
-@column species_id           Indentifies the species for multi-species databases.
+@column species_id           Identifies the species for multi-species databases.
 @column name                 Co-oridinate system name, e.g. 'chromosome', 'contig', 'scaffold' etc.
 @column version              Assembly.
 @column rank                 Co-oridinate system rank.
@@ -606,7 +606,7 @@ CREATE TABLE tagged_variation_feature (
 @table population
 
 @colour #FF8500
-@desc Stores information about a population. A population may be an ethnic group (e.g. caucasian, hispanic), assay group (e.g. 24 europeans), phenotypic group (e.g. blue eyed, diabetes) etc. Populations may be composed of other populations by defining relationships in the population_structure table.
+@desc Stores information about a population. A population may be an ethnic group (e.g. Caucasian, Hispanic), assay group (e.g. 24 Europeans), phenotypic group (e.g. blue eyed, diabetes) etc. Populations may be composed of other populations by defining relationships in the population_structure table.
 
 @column population_id     Primary key, internal identifier.
 @column name              Name of the population.
@@ -614,7 +614,7 @@ CREATE TABLE tagged_variation_feature (
 @column description       Description of the population.
 @column collection        Flag indicating if the population is defined based on geography (0) or a collection of individuals with respect to some other criteria (1).
 @column freqs_from_gts    Flag indicating if the population frequencies can be retrieved from the allele table (0) or from the individual genotypes (1).
-@column display           Information used by Biomart.
+@column display           Information used by BioMart.
 @column display_group_id  Used to group population for display on the Population Genetics page
 
 @see population_synonym
@@ -704,7 +704,7 @@ create table individual(
 @table individual_type
 
 @colour #FF8500
-@desc This table gives a deatailed description for each of the possible individual types: fully_inbred, partly_inbred, outbred, mutant  
+@desc This table gives a detailed description for each of the possible individual types: fully_inbred, partly_inbred, outbred, mutant  
 @column individual_type_id	Primary key, internal identifier.
 @column name				Short name of the individual type. e.g. "fully_inbred","mutant".
 @column description			Long name of the individual type.
@@ -1115,7 +1115,7 @@ CREATE TABLE structural_variation_association (
 @column is_evidence                      Flag indicating if the structural variation is a supporting evidence (1) or not (0).
 @column variation_set_id		             The structural variation feature can belong to a @link variation_set.
 @column somatic                          Flags whether this structural variation is known to be somatic or not
-@column breakpoint_order                 Defines the order of the breakpoints when several events/mutation occured for a structural variation (e.g. somatic mutations)
+@column breakpoint_order                 Defines the order of the breakpoints when several events/mutation occurred for a structural variation (e.g. somatic mutations)
 @column length                           Length of the structural variant. Used for the variants with a class "insertion", when the size of the insertion is known.
 
 @see structural_variation
@@ -1228,7 +1228,7 @@ CREATE TABLE IF NOT EXISTS variation_set_variation (
 @table variation_set
 
 @colour #FFD700
-@desc This table containts the name of sets and subsets of variations stored in the database. It usually represents the name of the project or subproject where a group of variations has been identified.
+@desc This table contains the name of sets and subsets of variations stored in the database. It usually represents the name of the project or subproject where a group of variations has been identified.
 
 @column variation_set_id			Primary key, internal identifier.
 @column name									Name of the set e.g. "Phenotype-associated variations".
@@ -1325,7 +1325,7 @@ CREATE TABLE IF NOT EXISTS variation_set_structural_variation (
 @column polyphen_prediction      The PolyPhen prediction for the effect of this allele on the protein
 @column polyphen_score           The PolyPhen score corresponding to the prediction 
 @column sift_prediction          The SIFT prediction for the effect of this allele on the protein 
-@column sift_score               The SIFT score corresponsing to this prediction
+@column sift_score               The SIFT score corresponding to this prediction
 
 @see variation_feature
 */
@@ -1639,14 +1639,14 @@ create table source(
 
 @colour #7CFC00
 @desc This table contains details of the studies.
-			The studies information can come from internal studies (DGVa, EGA) or from external studies (Uniprot, NHGRI, ...).
+			The studies information can come from internal studies (DGVa, EGA) or from external studies (UniProt, NHGRI, ...).
 
 @column study_id						Primary key, internal identifier.
 @column source_id						Foreign key references to the @link source table.
 @column name								Name of the study. e.g. "EGAS00000000001"
 @column description					Description of the study.
 @column url									URL to find the study data (http or ftp).
-@column external_reference	The pubmed/id or project name associated with this study.
+@column external_reference	The PubMed/id or project name associated with this study.
 @column study_type					Displays the type of the study (e.g. genome-wide association study, control-set, case-set, curated, ...).
 
 @see source
@@ -1671,7 +1671,7 @@ CREATE TABLE study (
 @table associate_study
 
 @colour #7CFC00
-@desc This table contains identifiers of associated studies (e.g. NHGRI and EGA studies with the same pubmed identifier).
+@desc This table contains identifiers of associated studies (e.g. NHGRI and EGA studies with the same PubMed identifier).
 
 @column study1_id		Primary key. Foreign key references to the @link study table.
 @column study2_id		Primary key. Foreign key references to the @link study table.
@@ -1771,7 +1771,7 @@ CREATE TABLE variation_citation (
 
 @column table_name			Name of the feature table, e.g. "variation_feature".
 @column coord_system_id		Foreign key to core database coord_system table refers to coordinate system that features from this table can be found in.
-@column max_length			Maximun length of the feature. 
+@column max_length			Maximum length of the feature. 
 */
 
 CREATE TABLE meta_coord (
@@ -1840,7 +1840,7 @@ INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patc
 @column failed_description_id	Primary key, internal identifier.
 @column description				Text containing the reason why the Variation has been flagged as failed. e.g. "Variation does not map to the genome".
 
-@example See below the list of the descriptions available in the ensembl variation databases:
+@example See below the list of the descriptions available in the Ensembl variation databases:
          @sql SELECT * FROM failed_description;
 
 @see failed_variation
