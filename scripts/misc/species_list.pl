@@ -35,7 +35,7 @@ use Getopt::Long;
 ###############
 ### Options ###
 ###############
-my ($e_version,$html_file,$hlist,$phost,$help);
+my ($e_version,$html_file,$hlist,$user,$port,$help);
 ## EG options
 my ($site, $etype);
 
@@ -46,7 +46,8 @@ GetOptions(
      'o=s'     => \$html_file,
      'help!'   => \$help,
      'hlist=s' => \$hlist,
-     'phost=s' => \$phost,
+     'user=s'  => \$user,
+     'port=i'  => \$port,
      'site=s'  => \$site,
      'etype=s' => \$etype
 );
@@ -59,12 +60,12 @@ if (!$html_file) {
   print "> Error! Please give an output file using the option '-o'\n";
   usage();
 }
-if (!$phost) {
-  print "> Error! Please give host name where the previous databases are stored using the option '-phost'\n";
-  usage();
-}
 if (!$hlist) {
   print "> Error! Please give the list of host names where the new databases are stored using the option '-hlist'\n";
+  usage();
+}
+if (!$user) {
+  print "> Error! Please give user name using the option '-user'\n";
   usage();
 }
 
@@ -72,7 +73,6 @@ usage() if ($help);
 
 my $server_name = 'http://static.ensembl.org';
 my $ecaption = 'Ensembl';
-my $previous_host = $phost;
 my @hostnames = split /,/, $hlist;
 
 if ($site) {
@@ -81,19 +81,26 @@ if ($site) {
 
 # Settings
 my $database = "";
-my $login = "ensro";
 my $pswd = "";
-my $sep = "\t";
-my $nb_col = 4;
+my $db_type = 'variation';
 my $default_port = 3306;
+$port ||= $default_port;
 
 my $html;
 
 
-my $html_content = '<table style="border:1px solid #CCC;border-radius:8px;padding:6px 6px 0px;margin-bottom:5px"><tr><td>';
+my %tables = ( 'Genotype - Individual' => { 'order' => 2 , 'table' => 'compressed_genotype_var'},
+               'Genotype - Population' => { 'order' => 3 , 'table' => 'population_genotype'},
+               'Phenotype'             => { 'order' => 4 , 'table' => 'phenotype_feature'},
+               'Citation'              => { 'order' => 5 , 'table' => 'variation_citation'},
+               'Structural variant'    => { 'order' => 1 , 'table' => 'structural_variation'}
+             );
+my %columns = ( 'SIFT'     => {'order' => 1 ,'table' => 'meta', 'column' => 'meta_key', 'value' => 'sift_version'},
+                'PolyPhen' => {'order' => 2 ,'table' => 'meta', 'column' => 'meta_key', 'value' => 'polyphen_version'}
+              );            
 my %species_list;
 
-my $sql  = qq{SHOW DATABASES LIKE '%variation_$e_version%'};
+my $sql  = qq{SHOW DATABASES LIKE '%$db_type\_$e_version%'};
 my $sql2 = qq{SELECT count(variation_id) FROM variation};
 
 foreach my $hostname (@hostnames) {
@@ -121,15 +128,7 @@ foreach my $hostname (@hostnames) {
     
     my $label_name = ucfirst($s_name);
        $label_name =~ s/_/ /g;
-    $species_list{$s_name}{label} = $label_name;   
-    
-    # Previous database (and sources)
-    my $p_version = $e_version-1;
-    my $sql3 = qq{SHOW DATABASES LIKE '%$s_name\_variation_$p_version%'};
-    my $sth3 = get_connection_and_query($database, $previous_host, $sql3);
-    my $p_dbname = $sth3->fetchrow_array;
-    
-    $species_list{$s_name}{'new'} = 1 if (!$p_dbname);
+    $species_list{$s_name}{label} = $label_name;
     
     # Count the number of variations
     my $sth2 = get_connection_and_query($dbname, $hostname, $sql2);
@@ -140,50 +139,60 @@ foreach my $hostname (@hostnames) {
 }
 
 my $count_species = scalar(keys(%species_list));
-my $nb_sp_by_col = ceil($count_species/$nb_col);
-my $count_rows = 0;
+
+# Get the populated tables by species
+my $species_data_tables = get_species_data_tables();
+
+my $species_data_columns = get_species_data_columns();
+
+my $data_tables_header  = join("</th><th>", (sort { $tables{$a}{'order'} <=> $tables{$b}{'order'} } keys(%tables)));
+my $data_columns_header = join("</th><th>", (sort { $columns{$a}{'order'} <=> $columns{$b}{'order'} } keys(%columns)));
+
+my $html_content = qq{<table class="ss" style="width:80%"><tr class="ss_header"><th>Species</th><th>Sequence variant count</th>
+                      <th>$data_tables_header</th><th>$data_columns_header</th></tr>
+                     };
+my $bg = '';
 
 foreach my $sp (sort keys(%species_list)) {
-  if ($count_rows == $nb_sp_by_col) {
-    $html_content .= qq{\n  </td>\n  <td style="width:8px"></td>\n  <td>\n};
-    $count_rows = 0;
-  }
+
   my $label = $species_list{$sp}{label};
   my $uc_sp = ucfirst($sp);      
   my $img_src = "/i/species/48/$uc_sp.png";
   my $var_count = $species_list{$sp}{'count'};
   
-  if ($species_list{$sp}{'new'}) {
-    $html_content .= qq{
-    <div style="margin-bottom:6px;padding-right:4px;overflow:hidden;background-color:#336;padding:1px;color:#FFF;border-radius:8px">
-      <div style="float:left">
-        <a href="/$uc_sp/Info/Index" title="$label Ensembl Home page"/>
-          <img src="$img_src" alt="$label" class="sp-thumb" style="float:left;margin-right:4px;vertical-align:middle" />
-        </a>
+  $html_content .= qq{
+  <tr$bg>
+    <td>
+      <div>
+        <div style="float:left;vertical-align:middle;margin-right:4px">
+          <a rel="external" href="/$uc_sp/Info/Index" title="$label Ensembl Home page" style="vertical-align:middle">
+            <img src="$img_src" alt="$label" class="sp-thumb" style="vertical-align:middle;width:32px;height:32px" />
+          </a>
+        </div>
+        <div style="float:left;margin-top:0px">
+          <div class="bigtext" style="font-style:italic;margin-bottom:2px">$label</div>
+          <div><a href="sources_documentation.html#$sp" style="text-decoration:none" title="$label sources list">[sources]</a></div>
+        </div>
+        <div style="clear:both"></div>
       </div>
-      <div style="float:left;padding-left:2px">
-        <span style="font-style:italic;font-weight:bold">$label</span><br />
-        <span>$var_count variants</span><br />
-        <span><a href="sources_documentation.html#$sp" style="color:#AAF">[sources]</a></span> <span style="font-weight:bold;color:#F00">New species</span>
-      </div>
-    </div>\n};
+    </td>
+    <td>$var_count variants</td>\n};
+  
+  # Tables
+  foreach my $type (sort { $tables{$a}{'order'} <=> $tables{$b}{'order'} } keys(%tables)) {
+    my $has_data = ($species_data_tables->{$sp}{$type}) ? qq{<img src="/i/16/check.png" title="Data available" />} : '-';
+    $html_content .= qq{    <td style="text-align:center">$has_data</td>\n};
   }
-  else {
-    $html_content .= qq{
-    <div style="margin-bottom:6px;padding-right:4px;overflow:hidden">
-      <a href="/$uc_sp/Info/Index" title="$label Ensembl Home page" style="float:left"/>
-        <img src="$img_src" alt="$label" class="sp-thumb" style="margin-right:4px;vertical-align:middle" />
-      </a>
-      <div style="float:left">
-        <div style="font-style:italic;font-weight:bold;margin-bottom:3px">$label</div>
-        <div>$var_count variants</div>
-        <span><a href="sources_documentation.html#$sp">[sources]</a></span>
-      </div>
-    </div>\n};
+  # SIFT, PolyPhen
+  foreach my $type (sort { $columns{$a}{'order'} <=> $columns{$b}{'order'} } keys(%columns)) {
+    my $has_data = ($species_data_columns->{$sp}{$type}) ?  qq{<img src="/i/16/check.png" title="Data available" />} : '-';
+    $html_content .= qq{    <td style="text-align:center">$has_data</td>\n};
   }
-  $count_rows ++;
+  
+  $html_content .= qq{  </tr>};
+  $bg = set_bg();
 }
-$html_content .= qq{</td></tr></table>\n};
+$html_content .= qq{</table>\n};
 
 
 ## HTML/output file ##
@@ -204,7 +213,7 @@ sub get_connection_and_query {
   
   # DBI connection 
   my $dsn = "DBI:mysql:$dbname:$host:$port";
-  my $dbh = DBI->connect($dsn, $login, $pswd) or die "Connection failed";
+  my $dbh = DBI->connect($dsn, $user, $pswd) or die "Connection failed";
 
   my $sth = $dbh->prepare($sql);
   $sth->execute;
@@ -229,6 +238,72 @@ sub round_count {
 }
 
 
+# Get the list of species where the given tables are populated
+sub get_species_data_tables {
+
+  my %species_list;
+  foreach my $type (keys(%tables)) {
+    my $table = $tables{$type}{'table'};
+    my $sql = qq{SELECT table_schema FROM information_schema.tables WHERE table_rows>=1 AND 
+                 TABLE_SCHEMA like '%$db_type\_$e_version%' AND TABLE_NAME='$table'};
+
+  
+    foreach my $hostname (@hostnames) {
+      my $sth = get_connection_and_query("", $hostname, $sql);
+
+      # loop over databases
+      while (my ($dbname) = $sth->fetchrow_array) {
+        next if ($dbname =~ /^master_schema/);
+
+        $dbname =~ /^(.+)_$db_type/;
+        my $s_name = $1;
+
+        $species_list{$s_name}{$type} = 1;
+      }
+      $sth->finish();
+    }
+  }
+  return \%species_list;
+}
+
+# Get the list of species where the given columns are populated
+sub get_species_data_columns {
+
+  my %species_list;
+  foreach my $type (keys(%columns)) {
+    my $t_name = $columns{$type}{'table'};
+    my $c_name = $columns{$type}{'column'};
+    my $v_name = $columns{$type}{'value'};
+    my $sql_col = qq{SELECT count(*) FROM $t_name WHERE $c_name="$v_name"};
+
+    foreach my $hostname (@hostnames) {
+  
+      my $sth = get_connection_and_query($database, $hostname, $sql);
+
+      # loop over databases
+      while (my ($dbname) = $sth->fetchrow_array) {
+        next if ($dbname =~ /^master_schema/);
+        next if ($dbname =~ /sample$/);
+        
+        $dbname =~ /^(.+)_variation/;
+        my $s_name = $1;
+
+        my $sth_col = get_connection_and_query($dbname, $hostname, $sql_col);
+        my $col_count = ($sth_col->fetchrow_array)[0];
+        $sth_col->finish();
+        
+        $species_list{$s_name}{$type} = 1 if ($col_count != 0);
+      }
+      $sth->finish();
+    }
+  }
+  return \%species_list;
+}
+
+sub set_bg {
+  return ($bg eq '') ? ' class="bg2"' : '';
+}
+
 sub usage {
   
   print qq{
@@ -242,9 +317,10 @@ sub usage {
       
     -v              Ensembl version, e.g. 65 (Required)
     -o              An HTML output file name (Required)      
-    -phost          Host name where the previous databases are stored, e.g. ensembldb.ensembl.org  (Required)
     -hlist          The list of host names where the new databases are stored, separated by a coma,
                     e.g. ensembldb.ensembl.org1, ensembldb.ensembl.org2 (Required)
+    -user           MySQL user name (Required)
+    -pass           MySQL password. 3306 by default (optional)
     -site           The URL of the website (optional)
     -etype          The type of Ensembl, e.g. Plant (optional)
   } . "\n";
