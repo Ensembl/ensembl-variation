@@ -188,30 +188,24 @@ sub new {
   my $caller = shift;
   my $class = ref($caller) || $caller;
 
-  my ($dbID, $adaptor, $name, $class_so_term, $src, $src_desc, $src_version, $src_url, $src_type, $src_somatic_status, $is_somatic, $flipped, $syns,
+  my ($dbID, $adaptor, $name, $class_so_term, $source_id, $is_somatic, $flipped, $syns,
       $ancestral_allele, $alleles, $valid_states, $moltype, $five_seq, $three_seq, $flank_flag, $minor_allele, $minor_allele_frequency,
       $minor_allele_count, $clinical_significance, $evidence ) =
-        rearrange([qw(dbID ADAPTOR NAME CLASS_SO_TERM SOURCE SOURCE_DESCRIPTION SOURCE_VERSION SOURCE_URL SOURCE_TYPE SOURCE_SOMATIC_STATUS
-                      IS_SOMATIC FLIPPED SYNONYMS ANCESTRAL_ALLELE ALLELES VALIDATION_STATES MOLTYPE 
-                      FIVE_PRIME_FLANKING_SEQ THREE_PRIME_FLANKING_SEQ FLANK_FLAG MINOR_ALLELE MINOR_ALLELE_FREQUENCY 
-                      MINOR_ALLELE_COUNT CLINICAL_SIGNIFICANCE EVIDENCE)],@_);
+        rearrange([qw(dbID ADAPTOR NAME CLASS_SO_TERM _SOURCE_ID IS_SOMATIC FLIPPED SYNONYMS ANCESTRAL_ALLELE ALLELES 
+                      VALIDATION_STATES MOLTYPE FIVE_PRIME_FLANKING_SEQ THREE_PRIME_FLANKING_SEQ FLANK_FLAG 
+                      MINOR_ALLELE MINOR_ALLELE_FREQUENCY MINOR_ALLELE_COUNT CLINICAL_SIGNIFICANCE EVIDENCE)],@_);
 
   # convert the validation state strings into a bit field
   # this preserves the same order and representation as in the database
   # and filters out invalid states
   my $vcode = Bio::EnsEMBL::Variation::Utils::Sequence::get_validation_code($valid_states);
-  
+
   my $self = bless {
     'dbID' => $dbID,
     'adaptor' => $adaptor,
     'name'   => $name,
     'class_SO_term' => $class_so_term,
-    'source' => $src,
-    'source_description' => $src_desc,
-    'source_version' => $src_version,
-    'source_url' => $src_url,
-    'source_type'=> $src_type,
-    'source_somatic_status' => $src_somatic_status,
+    '_source_id' => $source_id,
     'is_somatic' => $is_somatic,
     'flipped' => $flipped,
     'synonyms' => $syns || {},
@@ -627,6 +621,41 @@ sub add_evidence_value {
     return $self->{'evidence'};    
 }
 
+
+=head2 source_object
+
+  Arg [1]    : Bio::EnsEMBL::Variation::Source $src (optional)
+               The new value to set the source attribute to
+  Example    : $source_obj = $v->source_object()
+  Description: Getter/Setter for the source object attribute
+  Returntype : Bio::EnsEMBL::Variation::Source
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub source_object {
+  my $self = shift;
+  
+  # set
+ if(@_) {
+    if(!ref($_[0]) || !$_[0]->isa('Bio::EnsEMBL::Variation::Source')) {
+      throw("Bio::EnsEMBL::Variation::Source argument expected");
+    }
+    $self->{'source'} = shift;
+  }
+  # get
+  elsif(!defined($self->{'source'}) && $self->adaptor() && defined($self->{'_source_id'})) {
+    # lazy-load from database on demand
+    my $sa = $self->adaptor->db()->get_SourceAdaptor();
+    $self->{'source'} = $sa->fetch_by_dbID($self->{'_source_id'});
+  }
+  
+  return $self->{'source'};
+}
+
+
 =head2 source
 
   Arg [1]    : string $source (optional)
@@ -636,14 +665,38 @@ sub add_evidence_value {
   Returntype : string
   Exceptions : none
   Caller     : general
-  Status     : Stable
+  Status     : DEPRECATED
 
 =cut
 
 sub source{
   my $self = shift;
-  return $self->{'source'} = shift if(@_);
-  return $self->{'source'};
+  deprecate("Method deprecated. Please use the 'source_name' method instead.\n");
+  return $self->source_name(@_) if(@_);
+  return $self->source_name;
+}
+
+
+=head2 source_name
+
+  Arg [1]    : string $source_name (optional)
+               The new value to set the source name attribute to
+  Example    : $source_name = $v->source_name()
+  Description: Getter/Setter for the source name attribute
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub source_name{
+  my $self = shift;
+  my $source = $self->source_object;
+  return unless defined $source;
+  
+  $source->name(@_) if(@_);
+  return $source->name;
 }
 
 
@@ -662,8 +715,11 @@ sub source{
 
 sub source_type{
   my $self = shift;
-  return $self->{'source_type'} = shift if(@_);
-  return $self->{'source_type'};
+  my $source = $self->source_object;
+  return unless defined $source;
+  
+  $source->type(@_) if(@_);
+  return $source->type;
 }
 
 
@@ -682,8 +738,11 @@ sub source_type{
 
 sub source_description{
   my $self = shift;
-  return $self->{'source_description'} = shift if(@_);
-  return $self->{'source_description'};
+  my $source = $self->source_object;
+  return unless defined $source;
+  
+  $source->description(@_) if(@_);
+  return $source->description;
 }
 
 
@@ -703,8 +762,11 @@ sub source_description{
 
 sub source_version{
   my $self = shift;
-  return $self->{'source_version'} = shift if(@_);
-  return $self->{'source_version'};
+  my $source = $self->source_object;
+  return unless defined $source;
+  
+  $source->version(@_) if(@_);
+  return $source->version;
 }
 
 
@@ -724,8 +786,11 @@ sub source_version{
 
 sub source_url{
   my $self = shift;
-  return $self->{'source_url'} = shift if(@_);
-  return $self->{'source_url'};
+  my $source = $self->source_object;
+  return unless defined $source;
+  
+  $source->url(@_) if(@_);
+  return $source->url;
 }
 
 =head2 source_somatic_status
@@ -744,8 +809,11 @@ sub source_url{
 
 sub source_somatic_status{
   my $self = shift;
-  return $self->{'source_somatic_status'} = shift if(@_);
-  return $self->{'source_somatic_status'};
+  my $source = $self->source_object;
+  return unless defined $source;
+  
+  $source->somatic_status(@_) if(@_);
+  return $source->somatic_status;
 }
 
 =head2 has_somatic_source
@@ -764,7 +832,7 @@ sub source_somatic_status{
 
 sub has_somatic_source {
   my ($self, $has_somatic_source) = @_;
-  $self->{has_somatic_source} = (defined $has_somatic_source) ? $has_somatic_source : ($self->{'source_somatic_status'} eq 'somatic' ? 1 : 0);
+  $self->{has_somatic_source} = (defined $has_somatic_source) ? $has_somatic_source : ($self->source_somatic_status eq 'somatic' ? 1 : 0);
   return $self->{has_somatic_source};
 }
 
