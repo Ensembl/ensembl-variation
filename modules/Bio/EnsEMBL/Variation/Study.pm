@@ -61,7 +61,7 @@ use warnings;
 package Bio::EnsEMBL::Variation::Study;
 
 use Bio::EnsEMBL::Storable;
-use Bio::EnsEMBL::Utils::Exception qw(throw warning);
+use Bio::EnsEMBL::Utils::Exception qw(throw deprecate warning);
 use Bio::EnsEMBL::Utils::Argument  qw(rearrange);
 
 our @ISA = ('Bio::EnsEMBL::Storable');
@@ -110,8 +110,8 @@ sub new {
 
   my $self = $class->SUPER::new(@_);
 	my ($dbID,$adaptor,$study_name,$study_description,$study_url,$external_reference,
-	    $study_type,$source_name,$associate) = 
-			rearrange([qw(dbID ADAPTOR NAME DESCRIPTION URL EXTERNAL_REFERENCE TYPE SOURCE ASSOCIATE)], @_);
+	    $study_type,$source_id,$associate) = 
+			rearrange([qw(dbID ADAPTOR NAME DESCRIPTION URL EXTERNAL_REFERENCE TYPE _SOURCE_ID ASSOCIATE)], @_);
 
   $self = {
 			'dbID' => $dbID,
@@ -121,7 +121,7 @@ sub new {
 			'url' => $study_url,
 			'external_reference' => $external_reference,
 			'type' => $study_type,
-			'source' => $source_name,
+			'_source_id' => $source_id,
 			'associate' => $associate
 	};
 	
@@ -229,12 +229,66 @@ sub type{
 }
 
 
+=head2 source_object
+
+  Arg [1]    : Bio::EnsEMBL::Variation::Source $src (optional)
+               The new value to set the source attribute to
+  Example    : $source_obj = $st->source_object()
+  Description: Getter/Setter for the source object attribute
+  Returntype : Bio::EnsEMBL::Variation::Source
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub source_object {
+  my $self = shift;
+  
+  # set
+ if(@_) {
+    if(!ref($_[0]) || !$_[0]->isa('Bio::EnsEMBL::Variation::Source')) {
+      throw("Bio::EnsEMBL::Variation::Source argument expected");
+    }
+    $self->{'source'} = shift;
+  }
+  # get
+  elsif(!defined($self->{'source'}) && $self->adaptor() && defined($self->{'_source_id'})) {
+    # lazy-load from database on demand
+    my $sa = $self->adaptor->db()->get_SourceAdaptor();
+    $self->{'source'} = $sa->fetch_by_dbID($self->{'_source_id'});
+  }
+  
+  return $self->{'source'};
+}
+
+
 =head2 source
 
-  Arg [1]    : string $newval (optional)
+  Arg [1]    : string $source (optional)
                The new value to set the source attribute to
-  Example    : $name = $obj->source()
+  Example    : $source = $st->source()
   Description: Getter/Setter for the source attribute
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : DEPRECATED
+
+=cut
+
+sub source{
+  my $self = shift;
+  deprecate("Method deprecated. Please use the 'source_name' method instead.\n");
+  return $self->source_name(@_) if(@_);
+  return $self->source_name;
+}
+
+=head2 source_name
+
+  Arg [1]    : string $source_name (optional)
+               The new value to set the source name attribute to
+  Example    : $source_name = $st->source_name()
+  Description: Getter/Setter for the source name attribute
   Returntype : string
   Exceptions : none
   Caller     : general
@@ -242,11 +296,38 @@ sub type{
 
 =cut
 
-sub source{
+sub source_name{
   my $self = shift;
-  return $self->{'source'} = shift if(@_);
-  return $self->{'source'};
+  my $source = $self->source_object;
+  return unless defined $source;
+  
+  $source->name(@_) if(@_);
+  return $source->name;
 }
+
+
+=head2 source_version
+
+  Arg [1]    : string $source_version (optional)
+               The new value to set the source version attribute to
+  Example    : $source_version = $st->source_version()
+  Description: Getter/Setter for the source version attribute
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub source_version{
+  my $self = shift;
+  my $source = $self->source_object;
+  return unless defined $source;
+  
+  $source->version(@_) if(@_);
+  return $source->version;
+}
+
 
 
 =head2 associated_studies

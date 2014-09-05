@@ -110,7 +110,7 @@ sub store {
     my $dbh = $self->dbc->db_handle;
     
     # look up source_id
-    if(!defined($vf->{source_id})) {
+    if(!defined($vf->{_source_id})) {
         my $sth = $dbh->prepare(q{
             SELECT source_id FROM source WHERE name = ?
         });
@@ -120,7 +120,7 @@ sub store {
         $sth->bind_columns(\$source_id);
         $sth->fetch();
         $sth->finish(); 
-        $vf->{source_id} = $source_id;
+        $vf->{_source_id} = $source_id;
     }
     if( defined $vf->{evidence}){
 	## store these by attrib id to allow differnt values in different species
@@ -133,7 +133,7 @@ sub store {
 	}
     }
     throw("No source ID found for source name ", $vf->{source})
-        unless defined($vf->{source_id});
+        unless defined($vf->{_source_id});
     
     my $sth = $dbh->prepare(q{
         INSERT INTO variation_feature (
@@ -170,7 +170,7 @@ sub store {
         $vf->variation_name,
         $vf->map_weight || 1,
         $vf->{flags},
-        $vf->{source_id},
+        $vf->source_object ? $vf->source_object->dbID : $vf->{_source_id},
         (join ",", @{$vf->get_all_validation_states}) || undef,
         $vf->{slice} ? (join ",", @{$vf->consequence_type('SO')}) : 'intergenic_variant',
         $vf->{variation_set_id} || '',
@@ -211,7 +211,7 @@ sub update {
     my $dbh = $self->dbc->db_handle;
 
     # look up source_id
-    if(!defined($vf->{source_id})) {
+    if(!defined($vf->{_source_id})) {
         my $sth = $dbh->prepare(q{
             SELECT source_id FROM source WHERE name = ?
         });
@@ -221,11 +221,11 @@ sub update {
         $sth->bind_columns(\$source_id);
         $sth->fetch();
         $sth->finish();
-        $vf->{source_id} = $source_id;
+        $vf->{_source_id} = $source_id;
     }
 
-    throw("No source ID found for source name ", $vf->{source})
-        unless defined($vf->{source_id});
+    throw("No source ID found for source name ", $vf->source_name)
+        unless defined($vf->{_source_id});
 
     my $sth = $dbh->prepare(q{
         UPDATE variation_feature SET
@@ -262,7 +262,7 @@ sub update {
         $vf->variation_name,
         $vf->map_weight || 1,
         $vf->{flags},
-        $vf->{source_id},
+        $vf->source_object ? $vf->source_object->dbID : $vf->{_source_id},
         (join ",", @{$vf->get_all_validation_states}) || undef,
         $vf->{slice} ?
           (join ",", @{$vf->consequence_type('SO')}) : 'intergenic_variant',
@@ -1176,7 +1176,7 @@ sub _default_where_clause {
 sub _columns {
   return qw( vf.variation_feature_id vf.seq_region_id vf.seq_region_start
              vf.seq_region_end vf.seq_region_strand vf.variation_id
-             vf.allele_string vf.variation_name vf.map_weight s.name s.version vf.somatic 
+             vf.allele_string vf.variation_name vf.map_weight vf.source_id vf.somatic 
              vf.validation_status vf.consequence_types vf.class_attrib_id
              vf.minor_allele vf.minor_allele_freq vf.minor_allele_count vf.alignment_quality vf.evidence_attribs vf.clinical_significance);
 }
@@ -1203,14 +1203,14 @@ sub _objs_from_sth {
 
     my ($variation_feature_id, $seq_region_id, $seq_region_start,
       $seq_region_end, $seq_region_strand, $variation_id,
-      $allele_string, $variation_name, $map_weight, $source_name, $source_version,
+      $allele_string, $variation_name, $map_weight, $source_id,
       $is_somatic, $validation_status, $consequence_types, $class_attrib_id,
 	  $minor_allele, $minor_allele_freq, $minor_allele_count, $last_vf_id,$alignment_quality,$evidence_attribs,$clin_sig);
 
     $sth->bind_columns(\$variation_feature_id, \$seq_region_id,
                      \$seq_region_start, \$seq_region_end, \$seq_region_strand,
                      \$variation_id, \$allele_string, \$variation_name,
-                     \$map_weight, \$source_name, \$source_version, \$is_somatic, \$validation_status, 
+                     \$map_weight, \$source_id, \$is_somatic, \$validation_status, 
                      \$consequence_types, \$class_attrib_id,
 		     \$minor_allele, \$minor_allele_freq, \$minor_allele_count,\$alignment_quality, \$evidence_attribs, \$clin_sig);
 
@@ -1351,8 +1351,7 @@ sub _objs_from_sth {
                 'adaptor'  => $self,
                 'dbID'     => $variation_feature_id,
                 'map_weight' => $map_weight,
-                'source'   => $source_name,
-                'source_version' => $source_version,
+                '_source_id'   => $source_id,
                 'is_somatic' => $is_somatic,
                 'validation_code' => $validation_code,
                 'overlap_consequences' => $overlap_consequences,

@@ -94,7 +94,7 @@ package Bio::EnsEMBL::Variation::VariationFeature;
 use Scalar::Util qw(weaken isweak);
 
 use Bio::EnsEMBL::Variation::BaseVariationFeature;
-use Bio::EnsEMBL::Utils::Exception qw(throw warning);
+use Bio::EnsEMBL::Utils::Exception qw(throw deprecate warning);
 use Bio::EnsEMBL::Utils::Scalar qw(assert_ref);
 use Bio::EnsEMBL::Utils::Argument  qw(rearrange);
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp expand); 
@@ -198,8 +198,7 @@ sub new {
       $map_weight, 
       $variation,
       $variation_id, 
-      $source, 
-      $source_version, 
+      $source_id, 
       $is_somatic, 
       $validation_code, 
       $overlap_consequences,
@@ -215,8 +214,7 @@ sub new {
           MAP_WEIGHT 
           VARIATION 
           _VARIATION_ID 
-          SOURCE 
-          SOURCE_VERSION
+          _SOURCE_ID
           IS_SOMATIC 
           VALIDATION_CODE 
 		  OVERLAP_CONSEQUENCES 
@@ -233,8 +231,7 @@ sub new {
   $self->{'map_weight'}             = $map_weight;
   $self->{'variation'}              = $variation;
   $self->{'_variation_id'}          = $variation_id;
-  $self->{'source'}                 = $source;
-  $self->{'source_version'}         = $source_version;
+  $self->{'_source_id'}             = $source_id;
   $self->{'is_somatic'}             = $is_somatic;
   $self->{'validation_code'}        = $validation_code;
   $self->{'overlap_consequences'}   = $overlap_consequences;
@@ -1062,40 +1059,103 @@ sub add_evidence_value {
     return $self->{'evidence'};    
 }
 
-=head2 source
 
-  Arg [1]    : string $source_name (optional) - the new value to set the source attribute to
-  Example    : $source = $vf->source;
-  Description: Getter/Setter for the source attribute
-  Returntype : the source name as a string, 
+=head2 source_object
+
+  Arg [1]    : Bio::EnsEMBL::Variation::Source $src (optional)
+               The new value to set the source attribute to
+  Example    : $source_obj = $vf->source_object()
+  Description: Getter/Setter for the source object attribute
+  Returntype : Bio::EnsEMBL::Variation::Source
   Exceptions : none
   Caller     : general
   Status     : Stable
 
 =cut
 
-sub source {
-  my ($self, $source) = @_;
-  $self->{source} = $source if $source;
-  return $self->{source};
+sub source_object {
+  my $self = shift;
+  
+  # set
+ if(@_) {
+    if(!ref($_[0]) || !$_[0]->isa('Bio::EnsEMBL::Variation::Source')) {
+      throw("Bio::EnsEMBL::Variation::Source argument expected");
+    }
+    $self->{'source'} = shift;
+  }
+  # get
+  elsif(!defined($self->{'source'}) && $self->adaptor() && defined($self->{'_source_id'})) {
+    # lazy-load from database on demand
+    my $sa = $self->adaptor->db()->get_SourceAdaptor();
+    $self->{'source'} = $sa->fetch_by_dbID($self->{'_source_id'});
+  }
+  
+  return $self->{'source'};
+}
+
+
+=head2 source
+
+  Arg [1]    : string $source (optional)
+               The new value to set the source attribute to
+  Example    : $source = $vf->source()
+  Description: Getter/Setter for the source attribute
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : DEPRECATED
+
+=cut
+
+sub source{
+  my $self = shift;
+  deprecate("Method deprecated. Please use the 'source_name' method instead.\n");
+  return $self->source_name(@_) if(@_);
+  return $self->source_name;
+}
+
+=head2 source_name
+
+  Arg [1]    : string $source_name (optional)
+               The new value to set the source name attribute to
+  Example    : $source_name = $vf->source_name()
+  Description: Getter/Setter for the source name attribute
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub source_name{
+  my $self = shift;
+  my $source = $self->source_object;
+  return unless defined $source;
+  
+  $source->name(@_) if(@_);
+  return $source->name;
 }
 
 =head2 source_version
 
-  Arg [1]    : number $source_version (optional) - the new value to set the source version attribute to
-  Example    : $source_version = $vf->source_version;
+  Arg [1]    : string $source_version (optional)
+               The new value to set the source version attribute to
+  Example    : $source_version = $vf->source_version()
   Description: Getter/Setter for the source version attribute
-  Returntype : the source version as a number 
+  Returntype : string
   Exceptions : none
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
-sub source_version {
-  my ($self, $source_version) = @_;
-  $self->{source_version} = $source_version if $source_version;
-  return $self->{source_version};
+sub source_version{
+  my $self = shift;
+  my $source = $self->source_object;
+  return unless defined $source;
+  
+  $source->version(@_) if(@_);
+  return $source->version;
 }
 
 =head2 is_somatic

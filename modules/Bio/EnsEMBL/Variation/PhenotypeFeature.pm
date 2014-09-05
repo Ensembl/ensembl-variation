@@ -54,7 +54,7 @@ use warnings;
 
 package Bio::EnsEMBL::Variation::PhenotypeFeature;
 
-use Bio::EnsEMBL::Utils::Exception qw(throw warning);
+use Bio::EnsEMBL::Utils::Exception qw(throw deprecate warning);
 use Bio::EnsEMBL::Utils::Argument  qw(rearrange);
 use Bio::EnsEMBL::Feature;
 
@@ -135,11 +135,11 @@ sub new {
   my $class = ref($caller) || $caller;
   my $self = $class->SUPER::new(@_);
 
-  my ($dbID,$adaptor,$phenotype_id,$phenotype,$type,$object,$object_id,$source,$source_version,$study,$study_id,$is_significant,$attribs) =
+  my ($dbID,$adaptor,$phenotype_id,$phenotype,$type,$object,$object_id,$source,$source_id,$study,$study_id,$is_significant,$attribs) =
     rearrange([qw(
       dbID ADAPTOR _PHENOTYPE_ID PHENOTYPE
       TYPE OBJECT _OBJECT_ID
-      SOURCE SOURCE_VERSION STUDY _STUDY_ID
+      SOURCE _SOURCE_ID STUDY _STUDY_ID
       IS_SIGNIFICANT
       ATTRIBS
     )], @_);
@@ -163,6 +163,14 @@ sub new {
     $self->{_object_id} = $object_id;
   }
   
+  # can get source or source ID
+  if(defined($source)) {
+    $self->{source} = $source;
+  }
+  elsif(defined($source_id)) {
+    $self->{_source_id} = $source_id;
+  }
+  
   # can get study or study ID
   if(defined($study)) {
     $self->{study} = $study;
@@ -172,8 +180,6 @@ sub new {
   }
   
   $self->{type}           = $type;
-  $self->{source}         = $source;
-  $self->{source_version} = $source_version;
   $self->{is_significant} = $is_significant;
   $self->{attribs}        = $attribs || {};
   
@@ -376,12 +382,66 @@ sub is_significant {
 }
 
 
+=head2 source_object
+
+  Arg [1]    : Bio::EnsEMBL::Variation::Source $src (optional)
+               The new value to set the source attribute to
+  Example    : $source_obj = $pf->source_object()
+  Description: Getter/Setter for the source object attribute
+  Returntype : Bio::EnsEMBL::Variation::Source
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub source_object {
+  my $self = shift;
+  
+  # set
+ if(@_) {
+    if(!ref($_[0]) || !$_[0]->isa('Bio::EnsEMBL::Variation::Source')) {
+      throw("Bio::EnsEMBL::Variation::Source argument expected");
+    }
+    $self->{'source'} = shift;
+  }
+  # get
+  elsif(!defined($self->{'source'}) && $self->adaptor() && defined($self->{'_source_id'})) {
+    # lazy-load from database on demand
+    my $sa = $self->adaptor->db()->get_SourceAdaptor();
+    $self->{'source'} = $sa->fetch_by_dbID($self->{'_source_id'});
+  }
+  
+  return $self->{'source'};
+}
+
+
 =head2 source
 
-  Arg [1]    : string source (optional)
+  Arg [1]    : string $source (optional)
                The new value to set the source attribute to
-  Example    : $source = $obj->source()
-  Description: Getter/Setter for the source attribute.
+  Example    : $source = $pf->source()
+  Description: Getter/Setter for the source attribute
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : DEPRECATED
+
+=cut
+
+sub source{
+  my $self = shift;
+  deprecate("Method deprecated. Please use the 'source_name' method instead.\n");
+  return $self->source_name(@_) if(@_);
+  return $self->source_name;
+}
+
+=head2 source_name
+
+  Arg [1]    : string $source_name (optional)
+               The new value to set the source name attribute to
+  Example    : $source_name = $pf->source_name()
+  Description: Getter/Setter for the source name attribute
   Returntype : string
   Exceptions : none
   Caller     : general
@@ -389,19 +449,22 @@ sub is_significant {
 
 =cut
 
-sub source {
+sub source_name{
   my $self = shift;
-  return $self->{'source'} = shift if(@_);
-  return $self->{'source'};
+  my $source = $self->source_object;
+  return unless defined $source;
+  
+  $source->name(@_) if(@_);
+  return $source->name;
 }
 
 
 =head2 source_version
 
-  Arg [1]    : string source version (optional)
+  Arg [1]    : string $source_version (optional)
                The new value to set the source version attribute to
-  Example    : $source = $obj->source_version()
-  Description: Getter/Setter for the source version attribute.
+  Example    : $source_version = $pf->source_version()
+  Description: Getter/Setter for the source version attribute
   Returntype : string
   Exceptions : none
   Caller     : general
@@ -409,10 +472,13 @@ sub source {
 
 =cut
 
-sub source_version {
+sub source_version{
   my $self = shift;
-  return $self->{'source_version'} = shift if(@_);
-  return $self->{'source_version'};
+  my $source = $self->source_object;
+  return unless defined $source;
+  
+  $source->version(@_) if(@_);
+  return $source->version;
 }
 
 
