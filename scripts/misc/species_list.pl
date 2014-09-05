@@ -148,7 +148,7 @@ my $species_data_columns = get_species_data_columns();
 my $data_tables_header  = join("</th><th>", (sort { $tables{$a}{'order'} <=> $tables{$b}{'order'} } keys(%tables)));
 my $data_columns_header = join("</th><th>", (sort { $columns{$a}{'order'} <=> $columns{$b}{'order'} } keys(%columns)));
 
-my $html_content = qq{<table class="ss" style="width:80%"><tr class="ss_header"><th>Species</th><th>Sequence variant count</th>
+my $html_content = qq{<table class="ss" style="width:auto"><tr class="ss_header"><th>Species</th><th>Sequence variant count</th>
                       <th>$data_tables_header</th><th>$data_columns_header</th></tr>
                      };
 my $bg = '';
