@@ -3420,7 +3420,7 @@ sub fetch_transcripts {
                 
                 ## hack to copy HGNC IDs
                 for(@{$tr_cache->{$chr}}) {
-                  $_->{_gene_hgnc_id} = $hgnc_ids{$_->{_gene_symbol}} if ($hgnc_ids{$_->{_gene_symbol}});
+                  $_->{_gene_hgnc_id} = $hgnc_ids{$_->{_gene_symbol}} if defined($_->{_gene_symbol}) && defined($hgnc_ids{$_->{_gene_symbol}});
                 }
             }
             
