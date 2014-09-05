@@ -123,8 +123,8 @@ sub fetch_input {
 
     # if we're doing full runs, then we just use all the translations
 
-    @sift_md5s = @translation_md5s if $sift_run_type == FULL;
-    @pph_md5s  = @translation_md5s if $pph_run_type == FULL;
+    @sift_md5s = @translation_md5s if ($sift_run_type == "FULL");
+    @pph_md5s  = @translation_md5s if ($pph_run_type == "FULL");
 
     # if we're updating we need to check which translations already have predictions
         
