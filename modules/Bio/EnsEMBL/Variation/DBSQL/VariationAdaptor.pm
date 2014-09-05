@@ -103,17 +103,17 @@ sub store {
 	my $dbh = $self->dbc->db_handle;
     
     # look up source_id
-    if(!defined($var->{source_id})) {
+    if(!defined($var->{_source_id})) {
         my $sth = $dbh->prepare(q{
             SELECT source_id FROM source WHERE name = ?
         });
-        $sth->execute($var->{source});
+        $sth->execute($var->{source_name});
         
         my $source_id;
 		$sth->bind_columns(\$source_id);
 		$sth->fetch();
 		$sth->finish();
-		$var->{source_id} = $source_id;
+		$var->{_source_id} = $source_id;
     }
     if( defined $var->{evidence}){
 	## store these by attrib id to allow different values in different species
@@ -126,7 +126,7 @@ sub store {
 	}
     }
     
-    throw("No source ID found for source name ", $var->{source}) unless defined($var->{source_id});
+    throw("No source ID found for source name ", $var->{source}) unless defined($var->{_source_id});
     
     my $sth = $dbh->prepare(q{
         INSERT INTO variation (
@@ -146,7 +146,7 @@ sub store {
     });
     
     $sth->execute(
-        $var->{source_id},
+        $var->{_source_id},
         $var->name,
         (join ",", @{$var->get_all_validation_states}) || undef,
         $var->ancestral_allele,
@@ -174,7 +174,7 @@ sub update {
 	my $dbh = $self->dbc->db_handle;
     
     # look up source_id
-    if(!defined($var->{source_id})) {
+    if(!defined($var->{_source_id})) {
         my $sth = $dbh->prepare(q{
             SELECT source_id FROM source WHERE name = ?
         });
@@ -184,10 +184,10 @@ sub update {
 		$sth->bind_columns(\$source_id);
 		$sth->fetch();
 		$sth->finish();
-		$var->{source_id} = $source_id;
+		$var->{_source_id} = $source_id;
     }
     
-    throw("No source ID found for source name ", $var->{source}) unless defined($var->{source_id});
+    throw("No source ID found for source name ", $var->{source_name}) unless defined($var->{_source_id});
 
  if( defined $var->{evidence}){
 	## store these by attrib id to allow differnt values in different species
@@ -218,7 +218,7 @@ sub update {
     });
     
     $sth->execute(
-        $var->{source_id},
+        $var->{_source_id},
         $var->name,
         (join ",", @{$var->get_all_validation_states}) || undef,
         $var->ancestral_allele,
