@@ -126,7 +126,7 @@ sub store {
 	}
     }
     
-    throw("No source ID found for source name ", $var->{source}) unless defined($var->{_source_id});
+    throw("No source ID found for source name ", $var->source_name) unless defined($var->{_source_id});
     
     my $sth = $dbh->prepare(q{
         INSERT INTO variation (
@@ -146,7 +146,7 @@ sub store {
     });
     
     $sth->execute(
-        $var->{_source_id},
+        $var->source_object ? $var->source_object->dbID : $var->{_source_id},
         $var->name,
         (join ",", @{$var->get_all_validation_states}) || undef,
         $var->ancestral_allele,
@@ -187,7 +187,7 @@ sub update {
 		$var->{_source_id} = $source_id;
     }
     
-    throw("No source ID found for source name ", $var->{source_name}) unless defined($var->{_source_id});
+    throw("No source ID found for source name ", $var->source_name) unless defined($var->{_source_id});
 
  if( defined $var->{evidence}){
 	## store these by attrib id to allow differnt values in different species
@@ -218,7 +218,7 @@ sub update {
     });
     
     $sth->execute(
-        $var->{_source_id},
+        $var->source_object ? $var->source_object->dbID : $var->{_source_id},
         $var->name,
         (join ",", @{$var->get_all_validation_states}) || undef,
         $var->ancestral_allele,
