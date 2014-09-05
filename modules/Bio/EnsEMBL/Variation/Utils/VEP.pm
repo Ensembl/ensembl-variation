@@ -2341,7 +2341,7 @@ sub rfva_to_line {
   }
   
   # this currently always returns 'RegulatoryFeature', so we ignore it for now
-  #$base_line->{Extra}->{REG_FEAT_TYPE} = $rf->feature_type->name;
+  $base_line->{Extra}->{BIOTYPE} = $rf->{feature_type} if defined($rf->{feature_type});
   
   my $method = $allele_method.'RegulatoryFeatureVariationAlleles';
   
