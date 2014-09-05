@@ -31,9 +31,13 @@ use warnings;
 
 use DBI;
 
-my $release = $ARGV[0] || die "Usage: $0 <release_num>\n";
+my $release = $ARGV[0] || die "Usage: $0 <release_num> <optional comma-separated list of server names>\n";
 
 my @servers = qw(ens-staging ens-staging2);
+
+if ($ARGV[1]) {
+    @servers =  map { s/(^\s+|\s+$)//g; $_ } split(',', $ARGV[1]);
+}
 
 my $default_port = 3306;
 
