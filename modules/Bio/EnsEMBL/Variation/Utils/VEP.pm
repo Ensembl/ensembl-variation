@@ -1464,6 +1464,7 @@ sub vf_list_to_cons {
                         # "-" means null for everything except the Allele field (confusing...)
                         $data = undef if defined($data) and $data eq '-' and $col ne 'Allele';
                         $data =~ s/\,/\&/g if defined $data;
+                        $data =~ s/\;/\%3B/g if defined $data;
                         $string .= defined($data) ? $data : '';
                         $string .= '|';
                     }
