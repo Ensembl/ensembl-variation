@@ -114,7 +114,7 @@ sub store {
         my $sth = $dbh->prepare(q{
             SELECT source_id FROM source WHERE name = ?
         });
-        $sth->execute($vf->{source});
+        $sth->execute($vf->{source}->name);
         
         my $source_id;
         $sth->bind_columns(\$source_id);
@@ -132,7 +132,7 @@ sub store {
 	    push @{$vf->{evidence_attribs}},  $ev_class_id;
 	}
     }
-    throw("No source ID found for source name ", $vf->{source})
+    throw("No source ID found for source name ", $vf->{source}->name)
         unless defined($vf->{_source_id});
     
     my $sth = $dbh->prepare(q{
@@ -170,7 +170,7 @@ sub store {
         $vf->variation_name,
         $vf->map_weight || 1,
         $vf->{flags},
-        $vf->source_object ? $vf->source_object->dbID : $vf->{_source_id},
+        $vf->{source} ? $vf->{source}->dbID : $vf->{_source_id},
         (join ",", @{$vf->get_all_validation_states}) || undef,
         $vf->{slice} ? (join ",", @{$vf->consequence_type('SO')}) : 'intergenic_variant',
         $vf->{variation_set_id} || '',
@@ -215,7 +215,7 @@ sub update {
         my $sth = $dbh->prepare(q{
             SELECT source_id FROM source WHERE name = ?
         });
-        $sth->execute($vf->{source});
+        $sth->execute($vf->{source}->name);
 
         my $source_id;
         $sth->bind_columns(\$source_id);
@@ -224,7 +224,7 @@ sub update {
         $vf->{_source_id} = $source_id;
     }
 
-    throw("No source ID found for source name ", $vf->source_name)
+    throw("No source ID found for source name ", $vf->{source}->name)
         unless defined($vf->{_source_id});
 
     my $sth = $dbh->prepare(q{
@@ -262,7 +262,7 @@ sub update {
         $vf->variation_name,
         $vf->map_weight || 1,
         $vf->{flags},
-        $vf->source_object ? $vf->source_object->dbID : $vf->{_source_id},
+        $vf->{source} ? $vf->{source}->dbID : $vf->{_source_id},
         (join ",", @{$vf->get_all_validation_states}) || undef,
         $vf->{slice} ?
           (join ",", @{$vf->consequence_type('SO')}) : 'intergenic_variant',

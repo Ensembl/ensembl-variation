@@ -107,7 +107,7 @@ sub store {
         my $sth = $dbh->prepare(q{
             SELECT source_id FROM source WHERE name = ?
         });
-        $sth->execute($var->{source_name});
+        $sth->execute($var->{source}->name);
         
         my $source_id;
 		$sth->bind_columns(\$source_id);
@@ -146,7 +146,7 @@ sub store {
     });
     
     $sth->execute(
-        $var->source_object ? $var->source_object->dbID : $var->{_source_id},
+        $var->{source} ? $var->{source}->dbID : $var->{_source_id},
         $var->name,
         (join ",", @{$var->get_all_validation_states}) || undef,
         $var->ancestral_allele,
@@ -178,7 +178,7 @@ sub update {
         my $sth = $dbh->prepare(q{
             SELECT source_id FROM source WHERE name = ?
         });
-        $sth->execute($var->{source});
+        $sth->execute($var->{source}->name);
         
         my $source_id;
 		$sth->bind_columns(\$source_id);
@@ -187,7 +187,7 @@ sub update {
 		$var->{_source_id} = $source_id;
     }
     
-    throw("No source ID found for source name ", $var->source_name) unless defined($var->{_source_id});
+    throw("No source ID found for source name ", $var->{source}->name) unless defined($var->{_source_id});
 
  if( defined $var->{evidence}){
 	## store these by attrib id to allow differnt values in different species
@@ -218,7 +218,7 @@ sub update {
     });
     
     $sth->execute(
-        $var->source_object ? $var->source_object->dbID : $var->{_source_id},
+        $var->{source} ? $var->{source}->dbID : $var->{_source_id},
         $var->name,
         (join ",", @{$var->get_all_validation_states}) || undef,
         $var->ancestral_allele,
