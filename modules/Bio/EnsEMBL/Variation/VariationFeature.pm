@@ -148,10 +148,7 @@ our $DEBUG = 0;
     int - the variation object associated with this feature.
 
   Arg [-SOURCE] :
-    string - the name of the source where the SNP comes from
-  
-  Arg [-SOURCE_VERSION] :
-    number - the version of the source where the SNP comes from
+    object ref - the source object describing where the variant comes from.
 
   Arg [-VALIDATION_CODE] :
      reference to list of strings
@@ -173,8 +170,8 @@ our $DEBUG = 0;
         -allele_string => 'A/T',
         -variation_name => 'rs635421',
         -map_weight  => 1,
-	    -source  => 'dbSNP',
-	    -validation_code => ['cluster','doublehit'],
+	      -source  => 'dbSNP',
+	      -validation_code => ['cluster','doublehit'],
         -variation => $v
     );
 
@@ -198,7 +195,8 @@ sub new {
       $map_weight, 
       $variation,
       $variation_id, 
-      $source_id, 
+      $source_id,
+      $source,
       $is_somatic, 
       $validation_code, 
       $overlap_consequences,
@@ -215,6 +213,7 @@ sub new {
           VARIATION 
           _VARIATION_ID 
           _SOURCE_ID
+          SOURCE
           IS_SOMATIC 
           VALIDATION_CODE 
 		  OVERLAP_CONSEQUENCES 
@@ -232,6 +231,7 @@ sub new {
   $self->{'variation'}              = $variation;
   $self->{'_variation_id'}          = $variation_id;
   $self->{'_source_id'}             = $source_id;
+  $self->{'source'}                 = $source;
   $self->{'is_somatic'}             = $is_somatic;
   $self->{'validation_code'}        = $validation_code;
   $self->{'overlap_consequences'}   = $overlap_consequences;

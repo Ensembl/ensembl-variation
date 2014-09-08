@@ -36,7 +36,7 @@ Bio::EnsEMBL::Variation::Variation - Ensembl representation of a nucleotide vari
 =head1 SYNOPSIS
 
     $v = Bio::EnsEMBL::Variation::Variation->new(-name   => 'rs123',
-                                                 -source => 'dbSNP');
+                                                 -source => $source);
 
     # add additional synonyms for the same SNP
     $v->add_synonym('dbSNP', 'ss3242');
@@ -60,7 +60,7 @@ Bio::EnsEMBL::Variation::Variation - Ensembl representation of a nucleotide vari
     ...
 
     # print out the default name and source of the variation and the version
-    print $v->source(), ':',$v->name(), ".",$v->source_version(),"\n";
+    print $v->source_name(), ':',$v->name(), ".",$v->source_version(),"\n";
 
     # print out every synonym associated with this variation
     @synonyms = @{$v->get_all_synonyms()};
@@ -131,22 +131,7 @@ use Scalar::Util qw(weaken);
     string - the name of this variant
 
   Arg [-SOURCE] :
-    string - the source of this variant 
-
-  Arg [-SOURCE_DESCRIPTION] :
-    string - description of the variant source
-
-  Arg [-SOURCE_VERSION] :
-    string - version of the variant source
-
-  Arg [-SOURCE_URL] :
-    string - url of the variant source
-
-  Arg [-SOURCE_TYPE] :
-    string - the source type of this variant
-
-  Arg [-SOURCE_SOMATIC_STATUS] :
-    string - the source somatic status of this variant (somatic, germline or mixed)
+    object ref - the source object describing where the variant comes from. 
 
   Arg [-SYNONYMS] :
     reference to hash with list reference values -  keys are source
@@ -173,7 +158,7 @@ use Scalar::Util qw(weaken);
 
   Example    : $v = Bio::EnsEMBL::Variation::Variation->new
                     (-name   => 'rs123',
-                     -source => 'dbSNP');
+                     -source => $source);
 
   Description: Constructor. Instantiates a new Variation object.
   Returntype : Bio::EnsEMBL::Variation::Variation
@@ -188,10 +173,10 @@ sub new {
   my $caller = shift;
   my $class = ref($caller) || $caller;
 
-  my ($dbID, $adaptor, $name, $class_so_term, $source_id, $is_somatic, $flipped, $syns,
+  my ($dbID, $adaptor, $name, $class_so_term, $source_id, $source, $is_somatic, $flipped, $syns,
       $ancestral_allele, $alleles, $valid_states, $moltype, $five_seq, $three_seq, $flank_flag, $minor_allele, $minor_allele_frequency,
       $minor_allele_count, $clinical_significance, $evidence ) =
-        rearrange([qw(dbID ADAPTOR NAME CLASS_SO_TERM _SOURCE_ID IS_SOMATIC FLIPPED SYNONYMS ANCESTRAL_ALLELE ALLELES 
+        rearrange([qw(dbID ADAPTOR NAME CLASS_SO_TERM _SOURCE_ID SOURCE IS_SOMATIC FLIPPED SYNONYMS ANCESTRAL_ALLELE ALLELES 
                       VALIDATION_STATES MOLTYPE FIVE_PRIME_FLANKING_SEQ THREE_PRIME_FLANKING_SEQ FLANK_FLAG 
                       MINOR_ALLELE MINOR_ALLELE_FREQUENCY MINOR_ALLELE_COUNT CLINICAL_SIGNIFICANCE EVIDENCE)],@_);
 
@@ -206,6 +191,7 @@ sub new {
     'name'   => $name,
     'class_SO_term' => $class_so_term,
     '_source_id' => $source_id,
+    'source' => $source,
     'is_somatic' => $is_somatic,
     'flipped' => $flipped,
     'synonyms' => $syns || {},
