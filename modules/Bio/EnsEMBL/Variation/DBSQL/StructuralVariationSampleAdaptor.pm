@@ -259,7 +259,6 @@ sub fetch_all_by_strain {
 sub _tables { 
   my $self = shift;
   my @tables = ([ 'structural_variation_sample', 'svs'],
-	              [ 'study', 'st'],
 								[ 'structural_variation', 'sv'],
 								[ 'individual', 'i1'],
 								[ 'individual', 'i2']
@@ -275,8 +274,7 @@ sub _tables {
 sub _left_join {
   my $self = shift;
   my @tables = ([ 'individual i1', 'i1.individual_id = svs.individual_id'],
-								[ 'individual i2', 'i2.individual_id = svs.strain_id'],
-								[ 'study st', 'st.study_id = sv.study_id']
+								[ 'individual i2', 'i2.individual_id = svs.strain_id']
 							 );
 	
 	# If we are excluding failed_structural_variations, add that table
@@ -306,11 +304,9 @@ sub _objs_from_sth {
   $sth->bind_columns(\$structural_variation_sample_id,\$svar_id,\$study_id,\$individual_id,\$strain_id);
 										 
 	my $inda = $self->db()->get_IndividualAdaptor();
-	my $sta  = $self->db()->get_StudyAdaptor();
 	
   while($sth->fetch()) {
     
-		$study      = $sta->fetch_by_dbID($study_id) if (defined($study_id));
 		$individual = $inda->fetch_by_dbID($individual_id) if (defined($individual_id));
 		$strain     = $inda->fetch_by_dbID($strain_id) if (defined($strain_id)); 
 		
@@ -320,7 +316,7 @@ sub _objs_from_sth {
       -INDIVIDUAL               => $individual,
       -STRAIN                   => $strain,
       -ADAPTOR                  => $self,
-      -STUDY                    => $study,
+      -_STUDY_ID                => $study_id,
     );
   }
 

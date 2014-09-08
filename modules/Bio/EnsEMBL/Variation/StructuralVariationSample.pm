@@ -117,15 +117,17 @@ sub new {
   my $class = ref($caller) || $caller;
   my $self = $class->SUPER::new(@_);
 
-  my ($dbID,$adaptor,$structural_variation_id,$individual,$strain,$study) =
-    rearrange([qw(dbID ADAPTOR _STRUCTURAL_VARIATION_ID INDIVIDUAL STRAIN STUDY)],@_); 
+  my ($dbID,$adaptor,$structural_variation_id,$individual,$strain,$study_id, $study) =
+    rearrange([qw(dbID ADAPTOR _STRUCTURAL_VARIATION_ID INDIVIDUAL STRAIN _STUDY_ID STUDY)],@_); 
 
   $self->{'dbID'}                     = $dbID;
   $self->{'adaptor'}                  = $adaptor;
   $self->{'_structural_variation_id'} = $structural_variation_id;
   $self->{'individual'}               = $individual;
   $self->{'strain'}                   = $strain;
+  $self->{'_study_id'}                = $study_id;
   $self->{'study'}                    = $study;
+  
   return $self;
 }
 
@@ -194,7 +196,21 @@ sub structural_variation {
 
 sub study {
   my $self = shift;
-  return $self->{'study'} = shift if(@_);
+  
+  # set
+ if(@_) {
+    if(!ref($_[0]) || !$_[0]->isa('Bio::EnsEMBL::Variation::Study')) {
+      throw("Bio::EnsEMBL::Variation::Study argument expected");
+    }
+    $self->{'study'} = shift;
+  }
+  # get
+  elsif(!defined($self->{'study'}) && $self->adaptor() && defined($self->{'_study_id'})) {
+    # lazy-load from database on demand
+    my $sa = $self->adaptor->db()->get_StudyAdaptor();
+    $self->{'study'} = $sa->fetch_by_dbID($self->{'_study_id'});
+  }
+  
   return $self->{'study'};
 }
 
