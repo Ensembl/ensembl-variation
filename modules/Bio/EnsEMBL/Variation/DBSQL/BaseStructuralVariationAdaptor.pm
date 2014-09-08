@@ -66,7 +66,7 @@ my $DEFAULT_ITERATOR_CACHE_SIZE = 10000;
 # method used by superclass to construct SQL
 sub _tables { 
   my $self = shift;
-  my @tables = (['structural_variation', 'sv'], ['source', 's']);
+  my @tables = (['structural_variation', 'sv']);
   
   # If we are excluding failed_structural_variations, add that table
   push(@tables,['failed_structural_variation', 'fsv']) unless ($self->db->include_failed_variations());
@@ -75,7 +75,7 @@ sub _tables {
 }
 
 sub _columns {
-  return qw( sv.structural_variation_id sv.variation_name sv.validation_status s.name s.version s.description 
+  return qw( sv.structural_variation_id sv.variation_name sv.validation_status sv.source_id
              sv.class_attrib_id sv.study_id sv.is_evidence sv.somatic sv.alias sv.clinical_significance);
 }
 
@@ -86,12 +86,6 @@ sub _left_join {
   # If we are including failed structural variations, skip the left join
   return () if ($self->db->include_failed_variations());
   return (['failed_structural_variation', 'fsv.structural_variation_id=sv.structural_variation_id']);
-}
-
-
-sub _default_where_clause {
-  my $self = shift;
-  return 'sv.source_id=s.source_id';
 }
 
 
@@ -208,6 +202,44 @@ sub fetch_all_by_Study {
   } 
   
   my $constraint = $self->_internal_exclude_failed_constraint('sv.study_id = '.$study->dbID);
+  
+  my $result = $self->generic_fetch($constraint);
+
+  return $result;
+}
+
+
+=head2 fetch_all_by_Source
+
+  Arg [1]     : Bio::EnsEMBL::Variation::Source $source_id
+  Example     : my $source = $source_adaptor->fetch_by_name('DGVa');
+                foreach my $sv (@{$sv_adaptor->fetch_all_by_Source($source)}){
+                   print $sv->variation_name,"\n";
+                }
+  Description : Retrieves all structural variations from a specified source
+  ReturnType  : reference to list of Bio::EnsEMBL::Variation::StructuralVariation or 
+                Bio::EnsEMBL::Variation::SupportingStructuralVariation objects
+  Exceptions  : throw if incorrect argument is passed
+                warning if provided source does not have a dbID
+  Caller      : general
+  Status      : At Risk
+
+=cut
+
+sub fetch_all_by_Source {
+  my $self = shift;
+  my $source = shift;
+
+  if(!ref($source) || !$source->isa('Bio::EnsEMBL::Variation::Source')) {
+    throw("Bio::EnsEMBL::Variation::Source arg expected");
+  }
+    
+  if(!$source->dbID()) {
+    warning("Source does not have dbID, cannot retrieve structural variants");
+    return [];
+  } 
+  
+  my $constraint = $self->_internal_exclude_failed_constraint('sv.source_id = '.$source->dbID);
   
   my $result = $self->generic_fetch($constraint);
 
@@ -370,32 +402,32 @@ sub store {
     my $dbh = $self->dbc->db_handle;
     
     # look up source_id
-    if(!defined($sv->{source_id})) {
+    if(!defined($sv->{_source_id})) {
       my $sth = $dbh->prepare(q{
            SELECT source_id FROM source WHERE name = ?
       });
-      $sth->execute($sv->{source});
+      $sth->execute($sv->source_name);
         
       my $source_id;
       $sth->bind_columns(\$source_id);
       $sth->fetch();
       $sth->finish();
-      $sv->{source_id} = $source_id;
+      $sv->{_source_id} = $source_id;
     }
-    throw("No source ID found for source name ", $sv->{source}) unless defined($sv->{source_id});
+    throw("No source ID found for source name ", $sv->source_name) unless defined($sv->{_source_id});
     
     # look up study_id
-    if(!defined($sv->{study_id}) && defined($sv->{study})) {
+    if(!defined($sv->{_study_id}) && defined($sv->study)) {
       my $sth = $dbh->prepare(q{
            SELECT study_id FROM study WHERE name = ?
       });
-      $sth->execute($sv->{study}->name);
+      $sth->execute($sv->study->name);
       
       my $study_id;  
       $sth->bind_columns(\$study_id);
       $sth->fetch();
       $sth->finish();
-      $sv->{study_id} = $study_id;
+      $sv->{_study_id} = $study_id;
     }
     
     # look up class_attrib_id
@@ -427,8 +459,8 @@ sub store {
     });
     
     $sth->execute(
-        $sv->{source_id},
-        $sv->{study_id} || undef,
+        $sv->{_source_id},
+        $sv->{_study_id} || undef,
         $sv->variation_name,
         $sv->validation_status || undef,
         $class_attrib_id || 0,
@@ -444,8 +476,6 @@ sub store {
     my $dbID = $dbh->last_insert_id(undef, undef, 'structural_variation', 'structural_variation_id');
     $sv->{dbID}    = $dbID;
     $sv->{adaptor} = $self;
-    
-    $sth->finish;
 }
 
 1;

@@ -40,12 +40,15 @@ Bio::EnsEMBL::Variation::StructuralVariation - Ensembl representation of a struc
     # A Study object
     $study = $study_adaptor->fetch_by_name('estd59');
     
+    # A Source object
+    $source = $source_adaptor->fetch_by_name('DGVa');
+    
     # Structural variation representing a CNV
     $sv = Bio::EnsEMBL::Variation::StructuralVariation->new
        (-variation_name => 'esv234231',
         -class_so_term => 'structural_variant',
-        -source => 'DGVa',
-        -source_description => 'Database of Genomic Variants Archive',
+        -source => $source,
+        -study => $study,
         -is_evidence => 0,
         -is_somatic => 0);
 

@@ -314,9 +314,8 @@ sub fetch_all_by_Slice_SO_term {
 
   my $sth = $self->prepare(qq{
     SELECT DISTINCT $cols
-    FROM $from, source s
-    WHERE svf.source_id = s.source_id
-      AND svf.seq_region_id = ?
+    FROM $from
+    WHERE svf.seq_region_id = ?
       AND svf.seq_region_end > ?
       AND svf.seq_region_start < ?
       AND svf.class_attrib_id = ?
@@ -446,7 +445,7 @@ sub fetch_all_by_Slice_VariationSet {
 sub _tables { 
   my $self = shift;
     
-  my @tables = ( ['structural_variation_feature', 'svf'], [ 'source', 's'] );
+  my @tables = ( ['structural_variation_feature', 'svf'] );
   
   # If we are excluding failed_structural_variations, add that table
   push(@tables,['failed_structural_variation', 'fsv']) unless ($self->db->include_failed_variations());
@@ -463,16 +462,11 @@ sub _left_join {
   return (['failed_structural_variation', 'fsv.structural_variation_id=svf.structural_variation_id']);
 }
 
-sub _default_where_clause {
-  my $self = shift;
-
-  return 'svf.source_id = s.source_id';
-}
 
 sub _columns {
   return qw( svf.structural_variation_feature_id svf.seq_region_id svf.outer_start svf.seq_region_start 
              svf.inner_start svf.inner_end svf.seq_region_end svf.outer_end svf.seq_region_strand 
-             svf.structural_variation_id svf.variation_name s.name s.description svf.study_id svf.class_attrib_id 
+             svf.structural_variation_id svf.variation_name svf.source_id svf.study_id svf.class_attrib_id 
              svf.allele_string svf.somatic svf.breakpoint_order svf.length);
 }
 
@@ -487,7 +481,6 @@ sub _objs_from_sth {
 
     my $sa = $self->db()->dnadb()->get_SliceAdaptor();
 
-    my $sta = $self->db->get_StudyAdaptor;
     my $aa  = $self->db->get_AttributeAdaptor;
 
     my %slice_hash;
@@ -495,13 +488,12 @@ sub _objs_from_sth {
     my %sr_cs_hash;
 
     my ($structural_variation_feature_id, $seq_region_id, $outer_start, $seq_region_start, $inner_start, $inner_end, 
-        $seq_region_end, $outer_end, $seq_region_strand, $structural_variation_id, $variation_name, $source_name, 
-        $source_description, $study_id, $class_attrib_id, $allele_string, $is_somatic, $bp_order, $length, $last_svf_id);
+        $seq_region_end, $outer_end, $seq_region_strand, $structural_variation_id, $variation_name, $source_id, $study_id, $class_attrib_id, $allele_string, $is_somatic, $bp_order, $length, $last_svf_id);
 
     $sth->bind_columns(\$structural_variation_feature_id, \$seq_region_id, \$outer_start, \$seq_region_start, 
                        \$inner_start, \$inner_end, \$seq_region_end, \$outer_end, \$seq_region_strand, 
-                       \$structural_variation_id, \$variation_name, \$source_name, \$source_description, 
-                       \$study_id, \$class_attrib_id, \$allele_string, \$is_somatic, \$bp_order, \$length);
+                       \$structural_variation_id, \$variation_name, \$source_id, \$study_id, 
+                       \$class_attrib_id, \$allele_string, \$is_somatic, \$bp_order, \$length);
 
     my $asm_cs;
     my $cmp_cs;
@@ -602,9 +594,6 @@ sub _objs_from_sth {
                 $slice = $dest_slice;
             }
             
-            my $study;
-            $study = $sta->fetch_by_dbID($study_id) if (defined($study_id));
-            
             return $self->_create_feature_fast('Bio::EnsEMBL::Variation::StructuralVariationFeature',
         
                {'outer_start'        => $outer_start,
@@ -618,9 +607,8 @@ sub _objs_from_sth {
                 'variation_name'     => $variation_name,
                 'adaptor'            => $self,
                 'dbID'               => $structural_variation_feature_id,
-                'source'             => $source_name,
-                'source_description' => $source_description,
-                'study'              => $study,
+                '_source_id'         => $source_id,
+                '_study_id'          => $study_id,
                 '_structural_variation_id' => $structural_variation_id,
                 'class_SO_term'      => $aa->attrib_value_for_id($class_attrib_id),
                 'class_attrib_id'    => $class_attrib_id,
@@ -718,6 +706,54 @@ sub fetch_all_by_Study {
 }
 
 
+=head2 fetch_all_by_Source
+
+  Arg [1]     : Bio::EnsEMBL::Variation::Source $source_id
+  Arg [2]     : int $include_supporting_evidence [optional]
+  Example     : my $source = $source_adaptor->fetch_by_name('DGVa');
+                foreach my $svf (@{$svf_adaptor->fetch_all_by_Source($source)}){
+                   print $svf->variation_name,"\n";
+                }
+  Description : Retrieves all structural variation features from a specified source
+                If $include_supporting_evidence is set (i.e. $include_supporting_evidence=1), structural variation features from 
+                both structural variation (SV) and their supporting structural variations (SSV) will be 
+                returned. By default, it only returns features from structural variations (SV).
+  ReturnType  : reference to list of Bio::EnsEMBL::Variation::StructuralVariationFeature
+  Exceptions  : throw if incorrect argument is passed
+                warning if provided study does not have a dbID
+  Caller      : general
+  Status      : At Risk
+
+=cut
+
+sub fetch_all_by_Source {
+  my $self = shift;
+  my $source = shift;
+  my $include_supporting_evidence = shift;
+
+  if(!ref($source) || !$source->isa('Bio::EnsEMBL::Variation::Source')) {
+    throw("Bio::EnsEMBL::Variation::Source arg expected");
+  }
+    
+  if(!$source->dbID()) {
+    warning("Source does not have dbID, cannot retrieve structural variants");
+    return [];
+  } 
+  
+  my $constraint = $self->_internal_exclude_failed_constraint('svf.source_id = '.$source->dbID);
+  
+  # Include/exclude the supporting evidences
+  if (!$include_supporting_evidence) {
+    $constraint .= " AND " if (defined($constraint));
+    $constraint .= " svf.is_evidence=0 ";
+  }
+  
+  my $result = $self->generic_fetch($constraint);
+
+  return $result;
+}
+
+
 # Exclude the constraint for failed structural variant
 sub _internal_exclude_failed_constraint {
   my $self = shift;
@@ -777,32 +813,32 @@ sub store {
   my $dbh = $self->dbc->db_handle;
     
   # look up source_id
-  if(!defined($svf->{source_id})) {
+  if(!defined($svf->{_source_id})) {
     my $sth = $dbh->prepare(q{
             SELECT source_id FROM source WHERE name = ?
     });
-    $sth->execute($svf->{source});
+    $sth->execute($svf->source_name);
         
     my $source_id;
     $sth->bind_columns(\$source_id);
     $sth->fetch();
     $sth->finish();
-    $svf->{source_id} = $source_id;
+    $svf->{_source_id} = $source_id;
   }
-  throw("No source ID found for source name ", $svf->{source}) unless defined($svf->{source_id});  
+  throw("No source ID found for source name ", $svf->source_name) unless defined($svf->{_source_id});  
     
   # look up study_id
-  if(!defined($svf->{study_id}) && defined($svf->{study})) {
+  if(!defined($svf->{_study_id}) && defined($svf->study)) {
     my $sth = $dbh->prepare(q{
        SELECT study_id FROM study WHERE name = ?
     });
-    $sth->execute($svf->{study}->name);
+    $sth->execute($svf->study->name);
       
     my $study_id;  
     $sth->bind_columns(\$study_id);
     $sth->fetch();
     $sth->finish();
-    $svf->{study_id} = $study_id;
+    $svf->{_study_id} = $study_id;
   }
     
   # look up class_attrib_id
@@ -854,8 +890,8 @@ sub store {
         $svf->structural_variation ? $svf->structural_variation->dbID : $svf->{_structural_variation_id},
         $svf->allele_string,
         $svf->variation_name,
-        $svf->{source_id},
-        $svf->{study_id},
+        $svf->{_source_id},
+        $svf->{_study_id} || undef,
         $class_attrib_id || 0,
         $svf->structural_variation ? $svf->structural_variation->is_evidence : 0,
         $svf->structural_variation ? $svf->structural_variation->is_somatic :  $svf->{is_somatic},
