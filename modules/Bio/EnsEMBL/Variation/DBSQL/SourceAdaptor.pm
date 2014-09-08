@@ -218,4 +218,40 @@ sub get_source_version{
     return $version;
 }
 
+
+sub store {
+  my ($self, $source) = @_;
+    
+	my $dbh = $self->dbc->db_handle;
+    
+  my $sth = $dbh->prepare(q{
+        INSERT INTO source (
+            name,
+            version,
+            description,
+            url,
+            type,
+            somatic_status,
+            data_types
+        ) VALUES (?,?,?,?,?,?,?)
+    });
+    
+    $sth->execute(
+        $source->name,
+        $source->version || undef,
+        $source->description || undef,
+        $source->url || undef,
+        $source->type || undef,
+        $source->somatic_status || 'germline',
+        (join ",", @{$source->get_all_data_types}) || undef
+    );
+    
+    $sth->finish;
+    
+    # get dbID
+	  my $dbID = $dbh->last_insert_id(undef, undef, 'source', 'source_id');
+    $source->{dbID}    = $dbID;
+    $source->{adaptor} = $self;
+}
+
 1;
