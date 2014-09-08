@@ -242,8 +242,8 @@ my $html_menu = create_menu();
 
 if ($html_content ne '') {
   $html_top_content .= qq{
-    <div style="background-color:#F2F2F2;margin:50px 0px 25px;padding:5px;border-top:2px solid #336">
-      <h2 style="display:inline;color:#333">Others species</h2>
+    <div style="background-color:#F0F0F0;margin:50px 0px 25px;padding:5px;border-top:2px solid #336;border-bottom:1px solid #336">
+      <h2 style="display:inline;color:#000">Others species</h2>
     </div>
   };
 }
@@ -291,7 +291,7 @@ sub source_table {
   if ($is_new) {
     $html .= qq{
     <div id="$s_name_id" style="padding-left:0px;padding-bottom:1px">
-      <img src="/i/species/48/$s_name.png" alt="$species" class="sp-thumb" style="float:none;margin-right:4px;padding:2px;vertical-align:middle;background-color:#00F" />
+      <a rel="external" href="/$s_name/Info/Index" title="$species Ensembl Home page" style="vertical-align:middle"><img src="/i/species/48/$s_name.png" alt="$species" class="sp-thumb" style="float:none;margin-right:4px;padding:2px;vertical-align:middle;background-color:#00F" /></a>
       <span style="font-weight:bold;font-size:1.1em;color:#333">$species</span><span style="padding-left:20px;color:#00F;font-weight:bold">New species!</span>
     </div>
     };
@@ -299,7 +299,7 @@ sub source_table {
   else {
     $html .= qq{
     <div id="$s_name_id" style="padding-left:0px;padding-bottom:3px">
-      <img src="/i/species/48/$s_name.png" alt="$species" class="sp-thumb" style="float:none;margin-right:4px;vertical-align:middle" />
+      <a rel="external" href="/$s_name/Info/Index" title="$species Ensembl Home page" style="vertical-align:middle"><img src="/i/species/48/$s_name.png" alt="$species" class="sp-thumb" style="float:none;margin-right:4px;vertical-align:middle" /></a>
       <span style="font-weight:bold;font-size:1.1em;color:#333">$species</span>
     </div>
     };
@@ -583,7 +583,7 @@ sub create_menu {
     $html .= menu_list($species,$label_style,\%desc) if (defined($species));
   }
   if (scalar(keys(%top_species_list))) {
-    $html .= qq{<div style="background-color:#BBB;height:1px;margin:2px 0px 6px"></div>};
+    $html .= qq{<div style="border-top:1px dotted #336;height:1px;margin:2px 0px 6px"></div>};
   }
   
   foreach my $species (@species_list) {
