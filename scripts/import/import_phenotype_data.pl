@@ -553,8 +553,10 @@ sub parse_nhgri {
       'study_description' => $study
     );
     
-    # Post process the odds_ratio data
+    # Post process the ratio data
     if (defined($ratio)) {
+      $ratio =~ s/µ/micro/g;
+
       if ($ratio =~ /(\d+)?(\.\d+)$/) {
         my $pre  = $1;
         my $post = $2;
