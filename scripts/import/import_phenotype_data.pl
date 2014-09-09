@@ -161,7 +161,7 @@ die ("Database credentials (--host, --dbname, --user, --pass, --port) are requir
 die ("A source (--source) is required") unless (defined($source));
 die ("A source version (--version) is required") unless (defined($source_version));
 
-$port ||= 3306;
+$port  ||= 3306;
 $cport ||= $port;
 $chost ||= $host;
 $cuser ||= $user;
@@ -539,7 +539,7 @@ sub parse_nhgri {
     my $ratio          = $content[30];
     my $ratio_info     = $content[31];
 
-    if ($rs_risk_allele =~ /$rs_id-\s*(\?|\w+)/i) {
+    if ($rs_risk_allele =~ /^\s*$rs_id-+\s*(\?|\w+)\s*$/i) {
       $rs_risk_allele = $1;
     }
       
