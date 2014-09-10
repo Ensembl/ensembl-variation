@@ -115,7 +115,7 @@ sub fetch_all_by_Slice{
   
   my $genotype_adaptor = $self->db->get_IndividualGenotypeFeatureAdaptor; #get genotype adaptor
   my $genotypes = $genotype_adaptor->fetch_all_by_Slice($slice, $individual); #and get all genotype data 
-  my $afs = $self->SUPER::fetch_all_by_Slice_constraint($slice, $self->db->_exclude_failed_variations_constraint()); #get all AlleleFeatures within the Slice
+  my $afs = $self->SUPER::fetch_all_by_Slice_constraint($slice, $self->db->_exclude_failed_variations_constraint('vf')); #get all AlleleFeatures within the Slice
   my @new_afs = ();
   
   # merge AlleleFeatures with genotypes
@@ -162,20 +162,9 @@ sub _tables{
 		['source', 's FORCE INDEX(PRIMARY)']
 	);
 	
-	# if we are including failed_variations, add that table
-	push(@tables,['failed_variation', 'fv']) unless ($self->db->include_failed_variations());
-	
 	return @tables;
 }
 
-#Add a left join to the failed_variation table
-sub _left_join {
-	my $self = shift;
-	
-    # If we are including failed variations, skip the left join
-    return () if ($self->db->include_failed_variations());
-    return ([ 'failed_variation', 'fv.variation_id = vf.variation_id']); 
-}
 
 sub _columns{
     my $self = shift;
