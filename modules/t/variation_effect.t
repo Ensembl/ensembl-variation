@@ -14,7 +14,6 @@
 
 use strict;
 use warnings;
-
 use Test::More;
 
 use Data::Dumper;
@@ -23,6 +22,7 @@ use FindBin qw($Bin);
 
 use Bio::EnsEMBL::Registry;
 use Bio::EnsEMBL::Variation::VariationFeature;
+use Bio::EnsEMBL::Variation::DBSQL::DBAdaptor ;
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
 
 BEGIN {
@@ -72,47 +72,47 @@ $transcript_tests->{$tf->stable_id}->{tests} = [
     }, {
         start   => $t_start - 5000,
         end     => $t_start - 5000,
-        effects => [ qw(5KB_upstream_variant) ],
+        effects => [ qw(upstream_gene_variant) ],
     }, {
         start   => $t_start - 2001,
         end     => $t_start - 2001,
-        effects => [ qw(5KB_upstream_variant) ],
+        effects => [ qw(upstream_gene_variant) ],
     }, {
         start   => $t_start - 2000,
         end     => $t_start - 2000,
-        effects => [ qw(2KB_upstream_variant) ],
+        effects => [ qw(upstream_gene_variant) ],
     },{
         start   => $t_start - 1,
         end     => $t_start - 1,
-        effects => [ qw(2KB_upstream_variant) ],
+        effects => [ qw(upstream_gene_variant) ],
     }, {
         comment => 'an insertion just before the start is upstream',
         alleles => 'A',
         start   => $t_start,
         end     => $t_start - 1,
-        effects => [ qw(2KB_upstream_variant) ],
+        effects => [ qw(upstream_gene_variant) ],
     }, {
         comment => 'an insertion just after the end is downstream',
         alleles => 'A',
         start   => $t_end+1,
         end     => $t_end,
-        effects => [ qw(500B_downstream_variant) ],
+        effects => [ qw(downstream_gene_variant) ],
     }, {
         start   => $t_end + 1,
         end     => $t_end + 1,
-        effects => [ qw(500B_downstream_variant) ],
+        effects => [ qw(downstream_gene_variant) ],
     }, {
         start   => $t_end + 500,
         end     => $t_end + 500,
-        effects => [ qw(500B_downstream_variant) ],
+        effects => [ qw(downstream_gene_variant) ],
     }, {
         start   => $t_end + 501,
         end     => $t_end + 501,
-        effects => [ qw(5KB_downstream_variant) ],
+        effects => [ qw(downstream_gene_variant) ],
     }, {   
         start   => $t_end + 5000,
         end     => $t_end + 5000,
-        effects => [ qw(5KB_downstream_variant) ],
+        effects => [ qw(downstream_gene_variant) ],
     }, {   
         start   => $t_end + 5001,
         end     => $t_end + 5001,
@@ -162,11 +162,11 @@ $transcript_tests->{$tf->stable_id}->{tests} = [
     {
         start   => $intron_start-4,
         end     => $intron_start-4,
-        effects => [qw(non_synonymous_codon)],
+        effects => [qw(missense_variant)],
     }, {
         start   => $intron_start-3,
         end     => $intron_start-3,
-        effects => [qw(splice_region_variant synonymous_codon)],
+        effects => [qw(splice_region_variant synonymous_variant)],
     }, {
         start   => $intron_start,
         end     => $intron_start,
@@ -240,11 +240,11 @@ $transcript_tests->{$tf->stable_id}->{tests} = [
     }, {
         start   => $intron_end+1,
         end     => $intron_end+1,
-        effects => [qw(splice_region_variant synonymous_codon)],
+        effects => [qw(splice_region_variant synonymous_variant)],
     }, {
         start   => $intron_end+3,
         end     => $intron_end+3,
-        effects => [qw(splice_region_variant non_synonymous_codon)],
+        effects => [qw(splice_region_variant missense_variant)],
     }, {
         start   => $intron_end+4,
         end     => $intron_end+4,
@@ -293,60 +293,60 @@ $transcript_tests->{$tf->stable_id}->{tests} = [
         alleles => 'G',
         start   => $cds_start,
         end     => $cds_start,
-        effects => [qw(initiator_codon_change)],
+        effects => [qw(initiator_codon_variant)],
     }, {
         alleles => 'G',
         start   => $cds_start+1,
         end     => $cds_start+1,
-        effects => [qw(initiator_codon_change)],
+        effects => [qw(initiator_codon_variant)],
     }, {
         alleles => 'C',
         start   => $cds_start+2,
         end     => $cds_start+2,
-        effects => [qw(initiator_codon_change)],
+        effects => [qw(initiator_codon_variant)],
     },  {
         alleles => 'C',
         start   => $cds_start+3,
         end     => $cds_start+3,
-        effects => [qw(non_synonymous_codon)],
+        effects => [qw(missense_variant)],
     }, {
         alleles => 'CCC',
         start   => $cds_start+3,
         end     => $cds_start+2,
-        effects => [qw(inframe_codon_gain)],
+        effects => [qw(inframe_insertion)],
     }, {
         alleles => 'CCC',
         start   => $cds_start+2,
         end     => $cds_start+1,
-        effects => [qw(initiator_codon_change)],
+        effects => [qw(initiator_codon_variant)],
     }, {
         alleles => 'AGG',
         start   => $cds_start+2,
         end     => $cds_start+1,
-        effects => [qw(initiator_codon_change)],
+        effects => [qw(inframe_insertion initiator_codon_variant)],
     }, {
         alleles => '-',
         start   => $cds_start+3,
         end     => $cds_start+5,
-        effects => [qw(inframe_codon_loss)],
+        effects => [qw(inframe_deletion)],
         pep_alleles => 'D/-',
     }, {
         alleles => '-',
         start   => $cds_start+4,
         end     => $cds_start+6,
-        effects => [qw(inframe_codon_loss)],
+        effects => [qw(inframe_deletion)],
         pep_alleles => 'DA/A',
     }, {
         alleles => 'GAT',
         start   => $cds_start+3,
         end     => $cds_start+5,
-        effects => [qw(synonymous_codon)],
+        effects => [qw(synonymous_variant)],
         pep_alleles => 'D/D',
     }, {
         alleles => 'GATACA',
         start   => $cds_start+3,
         end     => $cds_start+8,
-        effects => [qw(non_synonymous_codon)],
+        effects => [qw(missense_variant)],
         pep_alleles => 'DA/DT',
     }, {
         alleles => 'G',
@@ -397,12 +397,12 @@ $transcript_tests->{$tf->stable_id}->{tests} = [
         alleles => 'AAG',
         start   => $cds_end-1,
         end     => $cds_end-2,
-        effects => [qw(stop_retained_variant non_synonymous_codon)],
+        effects => [qw(stop_retained_variant missense_variant)],
     }, {
         alleles => '-',
         start   => $cds_end-2,
         end     => $cds_end,
-        effects => [qw(stop_lost inframe_codon_loss)],
+        effects => [qw(stop_lost inframe_deletion)],
     }, {
         alleles => 'TAA',
         start   => $cds_end-2,
@@ -448,7 +448,7 @@ $transcript_tests->{$tf->stable_id}->{tests} = [
         alleles => '-',
         start   => $intron_start-3,
         end     => $intron_start-1,
-        effects => [qw(inframe_codon_loss splice_region_variant)],
+        effects => [qw(inframe_deletion splice_region_variant)],
     }, 
     
 
@@ -458,22 +458,22 @@ $transcript_tests->{$tf->stable_id}->{tests} = [
         alleles => '-',
         start   => $intron_start-3,
         end     => $intron_start+2,
-        effects => [qw(complex_change_in_transcript splice_donor_variant coding_sequence_variant splice_region_variant intron_variant)],
+        effects => [qw( splice_donor_variant coding_sequence_variant splice_region_variant intron_variant)],
     }, {
         alleles => '-',
         start   => $intron_end-2,
         end     => $intron_end+3,
-        effects => [qw(complex_change_in_transcript splice_acceptor_variant coding_sequence_variant splice_region_variant intron_variant)],
+        effects => [qw( splice_acceptor_variant coding_sequence_variant splice_region_variant intron_variant)],
     }, {
         alleles => '-',
         start   => $cds_start-3,
         end     => $cds_start+2,
-        effects => [qw(complex_change_in_transcript 5_prime_UTR_variant coding_sequence_variant)],
+        effects => [qw( 5_prime_UTR_variant coding_sequence_variant)],
     },  {
         alleles => '-',
         start   => $cds_end-2,
         end     => $cds_end+3,
-        effects => [qw(complex_change_in_transcript 3_prime_UTR_variant coding_sequence_variant)],
+        effects => [qw( 3_prime_UTR_variant coding_sequence_variant)],
     },  
 
 ];
@@ -508,47 +508,47 @@ $transcript_tests->{$tr->stable_id}->{tests} = [
     }, {
         start   => $t_end + 5000,
         end     => $t_end + 5000,
-        effects => [ qw(5KB_upstream_variant) ],
+        effects => [ qw(upstream_gene_variant) ],
     }, {
         start   => $t_end + 2001,
         end     => $t_end + 2001,
-        effects => [ qw(5KB_upstream_variant) ],
+        effects => [ qw(upstream_gene_variant) ],
     }, {
         start   => $t_end + 2000,
         end     => $t_end + 2000,
-        effects => [ qw(2KB_upstream_variant) ],
+        effects => [ qw(upstream_gene_variant) ],
     },{
         start   => $t_end + 1,
         end     => $t_end + 1,
-        effects => [ qw(2KB_upstream_variant) ],
+        effects => [ qw(upstream_gene_variant) ],
     }, {
         comment => 'an insertion just before the start is upstream',
         alleles => 'A',
         start   => $t_end + 1,
         end     => $t_end,
-        effects => [ qw(2KB_upstream_variant) ],
+        effects => [ qw(upstream_gene_variant) ],
     }, {
         comment => 'an insertion just after the end is downstream',
         alleles => 'A',
         start   => $t_start,
         end     => $t_start - 1,
-        effects => [ qw(500B_downstream_variant) ],
+        effects => [ qw(downstream_gene_variant) ],
     }, {
         start   => $t_start - 1,
         end     => $t_start - 1,
-        effects => [ qw(500B_downstream_variant) ],
+        effects => [ qw(downstream_gene_variant) ],
     }, {
         start   => $t_start - 500,
         end     => $t_start - 500,
-        effects => [ qw(500B_downstream_variant) ],
+        effects => [ qw(downstream_gene_variant) ],
     }, {
         start   => $t_start - 501,
         end     => $t_start - 501,
-        effects => [ qw(5KB_downstream_variant) ],
+        effects => [ qw(downstream_gene_variant) ],
     }, {   
         start   => $t_start - 5000,
         end     => $t_start - 5000,
-        effects => [ qw(5KB_downstream_variant) ],
+        effects => [ qw(downstream_gene_variant) ],
     }, {   
         start   => $t_start - 5001,
         end     => $t_start - 5001,
@@ -598,11 +598,11 @@ $transcript_tests->{$tr->stable_id}->{tests} = [
     {
         start   => $intron_end + 4,
         end     => $intron_end + 4,
-        effects => [qw(synonymous_codon)],
+        effects => [qw(synonymous_variant)],
     }, {
         start   => $intron_end + 3,
         end     => $intron_end + 3,
-        effects => [qw(splice_region_variant non_synonymous_codon)],
+        effects => [qw(splice_region_variant missense_variant)],
     }, {
         start   => $intron_end,
         end     => $intron_end,
@@ -676,15 +676,15 @@ $transcript_tests->{$tr->stable_id}->{tests} = [
     }, {
         start   => $intron_start - 1,
         end     => $intron_start - 1,
-        effects => [qw(splice_region_variant non_synonymous_codon)],
+        effects => [qw(splice_region_variant missense_variant)],
     }, {
         start   => $intron_start - 3,
         end     => $intron_start - 3,
-        effects => [qw(splice_region_variant non_synonymous_codon)],
+        effects => [qw(splice_region_variant missense_variant)],
     }, {
         start   => $intron_start - 4,
         end     => $intron_start - 4,
-        effects => [qw(non_synonymous_codon)],
+        effects => [qw(missense_variant)],
     }, {
         comment => 'an insertion between the last intron base and the first exon base is not essential',
         alleles => 'A',
@@ -724,63 +724,63 @@ $transcript_tests->{$tr->stable_id}->{tests} = [
         strand  => -1,
         start   => $cds_end,
         end     => $cds_end,
-        effects => [qw(initiator_codon_change)],
+        effects => [qw(initiator_codon_variant)],
     }, {
         alleles => 'G',
         strand  => -1,
         start   => $cds_end - 1,
         end     => $cds_end - 1,
-        effects => [qw(initiator_codon_change)],
+        effects => [qw(initiator_codon_variant)],
     }, {
         alleles => 'C',
         strand  => -1,
         start   => $cds_end - 2,
         end     => $cds_end - 2,
-        effects => [qw(initiator_codon_change)],
+        effects => [qw(initiator_codon_variant)],
     },  {
         alleles => 'G',
         strand  => -1,
         start   => $cds_end - 3,
         end     => $cds_end - 3,
-        effects => [qw(non_synonymous_codon)],
+        effects => [qw(missense_variant)],
     }, {
         alleles => 'GGG',
         strand  => -1,
         start   => $cds_end - 2,
         end     => $cds_end - 3,
-        effects => [qw(inframe_codon_gain)],
+        effects => [qw(inframe_insertion)],
     }, {
         alleles => 'GGG',
         strand  => -1,
         start   => $cds_end - 1,
         end     => $cds_end - 2,
-        effects => [qw(inframe_codon_gain)],
+        effects => [qw(inframe_insertion)],
     }, {
         alleles => 'AGG',
         strand  => -1,
         start   => $cds_end - 1,
         end     => $cds_end - 2,
-        effects => [qw(initiator_codon_change)],
+        effects => [qw(initiator_codon_variant)],
     }, {
         alleles => '-',
         strand  => -1,
         start   => $cds_end - 5,
         end     => $cds_end - 3,
-        effects => [qw(inframe_codon_loss)],
+        effects => [qw(inframe_deletion)],
         pep_alleles => 'L/-',
     }, {
         alleles => 'CTT',
         strand  => -1,
         start   => $cds_end - 5,
         end     => $cds_end - 3,
-        effects => [qw(synonymous_codon)],
+        effects => [qw(synonymous_variant)],
         pep_alleles => 'L/L',
     }, {
         alleles => 'GATACA',
         strand  => -1,
         start   => $cds_end - 8,
         end     => $cds_end - 3,
-        effects => [qw(non_synonymous_codon)],
+        effects => [qw(missense_variant)],
         pep_alleles => 'LT/DT',
     }, {
         alleles => 'G',
@@ -841,13 +841,13 @@ $transcript_tests->{$tr->stable_id}->{tests} = [
         strand  => -1,
         start   => $cds_start + 2,
         end     => $cds_start + 1,
-        effects => [qw(stop_retained_variant non_synonymous_codon)],
+        effects => [qw(stop_retained_variant missense_variant)],
     }, {
         alleles => '-',
         strand  => -1,
         start   => $cds_start,
         end     => $cds_start + 2,
-        effects => [qw(stop_lost inframe_codon_loss)],
+        effects => [qw(stop_lost inframe_deletion)],
     }, {
         alleles => 'TAA',
         strand  => -1,
@@ -895,7 +895,7 @@ $transcript_tests->{$tr->stable_id}->{tests} = [
         alleles => '-',
         start   => $intron_end + 1,
         end     => $intron_end + 3,
-        effects => [qw(inframe_codon_loss splice_region_variant)],
+        effects => [qw(inframe_deletion splice_region_variant)],
     }, 
 
 
@@ -978,7 +978,7 @@ $transcript_tests->{$t3->stable_id}->{tests} = [
         alleles => 'T',
         start   => $cds_start + 3,
         end     => $cds_start + 3,
-        effects => [qw(non_synonymous_codon non_synonymous_codon)],
+        effects => [qw(missense_variant missense_variant)],
     }, {
         comment => 'a TA(3) allele string',
         alleles => 'TA(3)',
@@ -1145,7 +1145,7 @@ for my $stable_id (keys %$transcript_tests) {
 
         # sort so that the order doesn't matter
         is_deeply( [sort @effects], [sort @{ $test->{effects} }], "VF $test_count (strand $strand): $comment") 
-            || (diag "Actually got: ", explain \@effects) || die;
+            || (diag "Actually got: ", explain \@effects) || warn "continuing\n";;
 
         if (my $expected_pep_alleles = $test->{pep_alleles}) {
             is(

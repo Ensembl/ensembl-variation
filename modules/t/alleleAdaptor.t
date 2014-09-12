@@ -20,12 +20,12 @@ use FindBin qw($Bin);
 
 use Bio::EnsEMBL::Registry;
 use Bio::EnsEMBL::Variation::Population;
+use Bio::EnsEMBL::Test::TestUtils;
+use Bio::EnsEMBL::Test::MultiTestDB;
 
-my $reg = 'Bio::EnsEMBL::Registry';
-$reg->load_all("$Bin/test.ensembl.registry.72");
+my $multi = Bio::EnsEMBL::Test::MultiTestDB->new('homo_sapiens');
+my $vdba = $multi->get_DBAdaptor('variation');
 
-my $vdba = $reg->get_DBAdaptor('human', 'variation');
-my $cdba = $reg->get_DBAdaptor('human', 'core');
 
 my $name = 'rs144235347';
 

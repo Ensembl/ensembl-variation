@@ -49,12 +49,13 @@ ok($variation_set->description() eq $description, "description");
 # test getter/setters
 
 
-ok(test_getter_setter($variation_set, 'name', 'new name', "get/set new name"));
-ok(test_getter_setter($variation_set, 'description', 'new description', "get/set new description"));
+ok(test_getter_setter($variation_set, 'name', 'new name'), "get/set new name");
+ok(test_getter_setter($variation_set, 'description', 'new description'), "get/set new description");
 
 
 print "Expecting error message:\n";
 # test constructor with a value which is too high
+
 my $variation_set2= Bio::EnsEMBL::Variation::VariationSet->new
       ( -dbID        => 102,
         -name        => $name,

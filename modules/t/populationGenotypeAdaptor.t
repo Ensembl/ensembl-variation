@@ -19,12 +19,17 @@ use Test::More;
 use FindBin qw($Bin);
 
 use Bio::EnsEMBL::Registry;
+use Bio::EnsEMBL::Variation::DBSQL::DBAdaptor;
+use Bio::EnsEMBL::Test::TestUtils;
+use Bio::EnsEMBL::Test::MultiTestDB;
 
-my $reg = 'Bio::EnsEMBL::Registry';
-$reg->load_all("$Bin/test.ensembl.registry.72");
+my $multi = Bio::EnsEMBL::Test::MultiTestDB->new('homo_sapiens');
+my $vdba = $multi->get_DBAdaptor('variation');
 
-my $cdba = $reg->get_DBAdaptor('human', 'core');
-my $vdba = $reg->get_DBAdaptor('human', 'variation');
+#my $reg = 'Bio::EnsEMBL::Registry';
+#$reg->load_all("$Bin/testnew.ensembl.registry");
+#warn "using $Bin/testnew.ensembl.registry\n";
+#my $vdba = $reg->get_DBAdaptor('human', 'variation');
 
 my $pgta = $vdba->get_PopulationGenotypeAdaptor();
 
@@ -42,6 +47,7 @@ is($pgt->population->name, 'KWOK:HydatidiformMoles', 'population name');
 
 
 my $variation_name = 'rs144235347';
+#my $variation_name = 'rs7698608';
 my $variation = $va->fetch_by_name($variation_name);
 
 my $pgts = $pgta->fetch_all_by_Variation($variation);
@@ -52,14 +58,14 @@ foreach (@$pgts) {
     push @{$hash->{$_->population->name}}, $_->allele(1) . "|" . $_->allele(2);
 }
 
+## on the fly checks via compressed_genotype_var
 is(join(',', sort @{$hash->{'1000GENOMES:phase_1_GBR'}}), 'C|C', 'pgts for GBR');
 is(join(',', sort @{$hash->{'1000GENOMES:phase_1_LWK'}}), 'C|C,C|T', 'pgts for LWK');
 
 my $population = $pa->fetch_by_name('PCJB:CUDAS');
 my @pgts = sort {$a->dbID() <=> $b->dbID()} @{$pgta->fetch_all_by_Population($population)};
 
-is(scalar @pgts, 9, 'number of pgts for population');
-is($pgts[0]->dbID(), 8670757, 'dbID');
+is(scalar @pgts, 3, 'number of pgts for population');
 is($pgts[0]->variation()->name(), 'rs2255888', 'variation name');
 is($pgts[0]->allele(1), 'T', 'allele1');
 is($pgts[0]->allele(2), 'C', 'allele2');

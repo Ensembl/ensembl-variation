@@ -14,25 +14,25 @@
 
 use strict;
 use warnings;
+use Test::More;
 
-BEGIN { $| = 1;
-	use Test;
-	plan tests => 12;
-}
-
-use FindBin qw($Bin);
-
-use Bio::EnsEMBL::Registry;
 use Bio::EnsEMBL::Test::TestUtils;
 use Bio::EnsEMBL::Variation::Allele;
 use Bio::EnsEMBL::Variation::Population;
 use Bio::EnsEMBL::Variation::DBSQL::DBAdaptor;
 
-## adaptor needed as availablity checked in Allele.pm
-my $reg = 'Bio::EnsEMBL::Registry';
-$reg->no_version_check(1); ## version not relevant for test db
-$reg->load_all("$Bin/test.ensembl.registry");
-my $allele_adaptor    = $reg->get_adaptor('mus_musculus', 'variation', 'allele');
+use Bio::EnsEMBL::Test::TestUtils;
+use Bio::EnsEMBL::Test::MultiTestDB;
+
+
+our $verbose = 0;
+
+my $multi = Bio::EnsEMBL::Test::MultiTestDB->new('homo_sapiens');
+my $vdb = $multi->get_DBAdaptor('variation');
+
+
+my $allele_adaptor = $vdb->get_AlleleAdaptor();
+    
 
 
 # test constructor
@@ -53,12 +53,12 @@ my $al = Bio::EnsEMBL::Variation::Allele->new
    -count      => $count,
    -adaptor    => $allele_adaptor);
 
-ok($al->dbID() == $dbID);
-ok($al->frequency() == $frequency);
-ok($al->population() == $p);
-ok($al->allele() eq $allele);
-ok($al->subsnp() eq "ss$subsnp");
-ok($al->count() eq $count);
+ok($al->dbID() == $dbID,            "dbID");
+ok($al->frequency() == $frequency,  "frequency");
+ok($al->population() == $p,         "population");
+ok($al->allele() eq $allele,        "allele");
+ok($al->subsnp() eq "ss$subsnp",    "ss id" );
+ok($al->count() eq $count,          "count");
 
 # test getter/setters
 
@@ -72,4 +72,7 @@ ok(test_getter_setter($al, 'subsnp_handle','TSC'));
 
 
 $al->frequency_subsnp_handle($p, 'HapMap');
-ok($al->frequency_subsnp_handle($p) eq 'HapMap');
+ok($al->frequency_subsnp_handle($p) eq 'HapMap', "frequency submitter");
+
+
+done_testing();

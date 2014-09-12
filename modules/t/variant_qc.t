@@ -36,6 +36,7 @@ use_ok('Bio::EnsEMBL::Variation::Pipeline::VariantQC::UpdatePopulationGenotype')
 use_ok('Bio::EnsEMBL::Variation::Pipeline::VariantQC::FlipPopulationGenotype');
 use_ok('Bio::EnsEMBL::Variation::Pipeline::VariantQC::FinishVariantQC');
 use_ok('Bio::EnsEMBL::Variation::Pipeline::VariantQC::RegisterDBSNPImport');
+use_ok('Bio::EnsEMBL::Variation::Pipeline::TranscriptEffect');
 
 
 
@@ -72,9 +73,9 @@ ok( remove_ambiguous_alleles("A/T") eq "A/T",            "Utils::QCUtils remove_
 ok( check_variant_size(10,12,"A")   eq 0,                "Utils::QCUtils variant size error1");
 ok( check_variant_size(10,10,"AA")  eq 0,                "Utils::QCUtils variant size error2");
 ok( check_variant_size(10,12,"-")   eq 0,                "Utils::QCUtils variant size error3");
-ok( check_variant_size(10,10,"-")   eq 1,                "Utils::QCUtils variant size insertion");
+ok( check_variant_size(10,9,"-")    eq 1,                "Utils::QCUtils variant size insertion");
 ok( check_variant_size(10,12,"AAA") eq 1,                "Utils::QCUtils variant size del");
-ok( check_variant_size(10,10,"A")   eq 1,                "Utils::QCUtils variant size error");
+ok( check_variant_size(10,10,"A")   eq 1,                "Utils::QCUtils variant size substitution");
 
 
 done_testing();

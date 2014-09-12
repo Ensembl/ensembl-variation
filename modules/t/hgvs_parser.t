@@ -33,19 +33,30 @@ use Bio::EnsEMBL::Variation::VariationFeature;
 use Bio::EnsEMBL::Variation::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Variation::DBSQL::VariationFeatureAdaptor;
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
+use Bio::EnsEMBL::Test::TestUtils;
+use Bio::EnsEMBL::Test::MultiTestDB;
 
-BEGIN {
-    use_ok('Bio::EnsEMBL::Variation::DBSQL::VariationFeatureAdaptor');
-}
-my $DEBUG = 0;
+#my $multi = Bio::EnsEMBL::Test::MultiTestDB->new('homo_sapiens');
+#my $vdba = $multi->get_DBAdaptor('variation');
+#my $cdba = $multi->get_DBAdaptor('variation');
 
 my $reg = 'Bio::EnsEMBL::Registry';
 $reg->no_version_check(1); ## switch off version check for test 
 $reg->load_all("$Bin/test.ensembl.registry");
+print "using $Bin/test.ensembl.registry\n";
 
 my $variationfeature_adaptor    = $reg->get_adaptor('human', 'variation', 'variationfeature');
 my $transcript_adaptor          = $reg->get_adaptor('human', 'core',      'transcript');
 my $transcript_variation_adaptor= $reg->get_adaptor('human', 'variation', 'transcriptvariation');
+
+
+use_ok('Bio::EnsEMBL::Variation::DBSQL::VariationFeatureAdaptor');
+
+my $DEBUG = 0;
+
+#my $variationfeature_adaptor    = $vba->get_variationFeatureSdaptor;
+#my $transcript_adaptor          = $cba->get_transcriptAdaptor;
+#my $transcript_variation_adaptor= $vba->get_transcriptVariationAdaptor;
 
 
 ## TEST DATA:  hgvs_genomic,  variant_allele, hgvs_[non]coding,  variant_allele, hgvs_protein,  test_description 
@@ -285,7 +296,11 @@ foreach my $line(@test_input){
     ## create variation feature from hgvs string
 
     ### All will have genomic nomenclature
-    my $variation_feature_g = $variationfeature_adaptor->fetch_by_hgvs_notation($line->[0] );
+    my $variation_feature_g ;
+    eval{
+     $variation_feature_g = $variationfeature_adaptor->fetch_by_hgvs_notation($line->[0] );
+    };
+    unless($@ eq ""){print "fetch genomic error : $@\n";}
     test_output($variation_feature_g, "genomic", $line, $line->[1] );
 
     ### Some will have transcript nomenclature
@@ -302,7 +317,7 @@ foreach my $line(@test_input){
       };
       if($@){
         ## only non-ambiguous substitutions handled
-        warn "Problem creating variation_feature for $line->[4] : $@\n";
+       # warn "Problem creating variation_feature for $line->[4] : $@\n";
       }
       else{
         test_output($variation_feature_p, "protein" , $line, $line->[3]);

@@ -17,10 +17,7 @@ use lib 't';
 use strict;
 use warnings;
 
-BEGIN { $| = 1;
-	use Test;
-	plan tests => 12;
-}
+use Test::More;
 
 use Bio::EnsEMBL::Test::TestUtils;
 use Data::Dumper;
@@ -113,50 +110,52 @@ my $ldContainer = Bio::EnsEMBL::Variation::LDFeatureContainer->new('-name' => 'c
 											    }
 							    );
 
-ok($ldContainer->name()  eq 'container_1');
+ok($ldContainer->name()  eq 'container_1', "container name");
 
 print_container($ldContainer);
 
 # test getter_setter
 
-ok(test_getter_setter($ldContainer,'name','container_new_name'));
+ok(test_getter_setter($ldContainer,'name','container_new_name'), "name setter" );
 
 
 #test methods
 my $variations = $ldContainer->get_variations();
-ok(@{$variations} == 4);
+ok(@{$variations} == 4, "count variants in container");
 
 #to check how to get the r_square value for 2 variation_features with a known and an unknown population
 my $r_square;
 $r_square = $ldContainer->get_r_square($vf1,$vf2,51);
-ok($r_square == 0.258275);
+ok($r_square == 0.258275, "r squared for vfs and population");
 
 $r_square = $ldContainer->get_r_square($vf1,$vf2);
-ok($r_square == 0.642712);
+ok($r_square == 0.642712, "r squared for vfs, no population");
 
 
 #to check how to get the d_prime value for 2 variation_features with a known and an unknown population
 my $d_prime;
 $d_prime = $ldContainer->get_d_prime($vf3,$vf4,140);
-ok($d_prime == 0.999924);
+ok($d_prime == 0.999924, "d prime for vfs, with population");
 
 $d_prime = $ldContainer->get_d_prime($vf1,$vf2);
-ok($d_prime == 0.999887);
+ok($d_prime == 0.999887, "d prime for vfs, no population");
 
 #check method to get ALL ld values in container (d_prime, r2, snp_distance_count and sample_count
 my $ld_values;
 $ld_values = $ldContainer->get_all_ld_values();
-ok(@{$ld_values} == 2);
+ok(@{$ld_values} == 2, "count total stats");
 my $r_squares = $ldContainer->get_all_r_square_values();
-ok(@{$r_squares} == 2);
+ok(@{$r_squares} == 2, "count r squared");
 my $d_primes = $ldContainer->get_all_d_prime_values();
-ok(@{$d_primes} == 2);
+ok(@{$d_primes} == 2, "count d prime");
 
 #check method to retrieve populations in a container
 my $populations = $ldContainer->get_all_populations();
-ok(@{$populations} == 2);
+ok(@{$populations} == 2, "count populations");
 $populations = $ldContainer->get_all_populations($vf3,$vf4);
-ok($populations->[0] == 140);
+ok($populations->[0] == 140, "population id");
+
+done_testing();
 
 sub print_container {
   my $container = shift;

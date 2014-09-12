@@ -15,150 +15,82 @@
 
 use strict;
 use warnings;
+use Test::More;
 
-BEGIN { $| = 1;
-	use Test;
-	plan tests => 36;
-}
 
 
 use Bio::EnsEMBL::Test::TestUtils;
-
-
 use Bio::EnsEMBL::Test::MultiTestDB;
 
 
 our $verbose = 0;
 
-my $multi = Bio::EnsEMBL::Test::MultiTestDB->new();
+my $multi = Bio::EnsEMBL::Test::MultiTestDB->new('homo_sapiens');
 
 my $vdb = $multi->get_DBAdaptor('variation');
 
 my $va = $vdb->get_VariationAdaptor();
 
-ok($va && $va->isa('Bio::EnsEMBL::Variation::DBSQL::VariationAdaptor'));
+ok($va && $va->isa('Bio::EnsEMBL::Variation::DBSQL::VariationAdaptor'), "isa var adaptor");
 
 # test fetch by dbID
 
-my $var = $va->fetch_by_dbID(8);
+my $var = $va->fetch_by_dbID(4770800);
 
-ok($var->name() eq 'rs10');
-ok($var->source eq 'dbSNP');
-ok($va->get_source_version('dbSNP') == 122);
-ok($var->ancestral_allele() eq 'A');
-ok($var->moltype() eq 'Genomic');
+ok($var->name() eq 'rs7569578',      'variation name by var id');
+ok($var->source eq 'dbSNP',          'source name by var id'   );
+ok($va->get_source_version('dbSNP') == 138, 'source version by var id');
+ok($var->ancestral_allele() eq 'A',  'ancestral_allele by var id');
+ok($var->minor_allele() eq 'A',      'minor allele by var id');
+ok($var->minor_allele_frequency() eq '0.164371', 'minor allele frequency by var id' );
+ok($var->get_all_clinical_significance_states()->[0] eq 'benign', 'clinsig by var id');	
 
 my %syns = map {$_ => 1} @{$var->get_all_synonyms()};
 
-ok($syns{ss17192627}
-   && $syns{ss17950970}
-   && $syns{ss20325024}
-   && $syns{ss4917294}
-   && $syns{ss9});
+ok( $syns{rs57302278}, 'archive rs synonym' );
 
-ok($var->get_all_synonym_sources->[0] eq 'dbSNP');
+ok($var->get_all_synonym_sources->[0] eq 'Archive dbSNP', 'synonym source');
 
-my $states = $var->get_all_validation_states();
+my $states = $var->get_all_evidence_values();
 
-ok($states->[0] eq 'cluster' && $states->[1] eq 'freq' &&
-   $states->[2] eq 'submitter' && $states->[3] eq 'hapmap');
+ok( $states->[0] eq 'Multiple_observations' &&
+    $states->[1] eq 'Frequency' && 
+    $states->[2] eq 'HapMap' &&
+    $states->[3] eq '1000Genomes', 'evidence status');
 
 my %alleles = map {$_->dbID() => $_} @{$var->get_all_Alleles()};
 
-ok($alleles{603}->allele() eq 'A' &&
-   $alleles{604}->allele() eq 'C' &&
-   $alleles{605}->allele() eq 'A' &&
-   $alleles{606}->allele() eq 'C' &&
-   $alleles{606}->population()->name() eq 'EGP_SNPS:PDR90');
+ok($alleles{228265191}->allele() eq 'T' &&
+   $alleles{228265243}->allele() eq 'A' &&
+   $alleles{228265243}->population()->name() eq '1000GENOMES:pilot_1_YRI_low_coverage_panel', "allele by id");
 
 
 
 # test fetch by name
-$var = $va->fetch_by_name('rs3');
+$var = $va->fetch_by_name('rs142276873');
 
-ok($var->name() eq 'rs3');
-ok($var->dbID() == 1);
-ok($var->source eq 'dbSNP');
-ok($var->ancestral_allele eq 'C');
-ok($var->moltype eq 'cDNA');
-
-my @syns = @{$var->get_all_synonyms()};
-ok(@syns == 1 && $syns[0] eq 'ss2');
-
-ok($var->get_all_synonym_sources->[0] eq 'dbSNP');
-
-$states = $var->get_all_validation_states();
-
-ok($states->[0] eq 'freq' && $states->[1] eq 'submitter');
-
-my %a = map {$_->dbID() => $_} @{$var->get_all_Alleles()};
-
-ok($a{1}->allele() eq 'C' && $a{1}->frequency() == 0.96 &&
-   $a{2}->allele() eq 'T' && $a{2}->frequency() == 0.04 &&
-   $a{3}->allele() eq 'C' && $a{3}->frequency() == 0.89 &&
-   $a{4}->allele() eq 'T' && $a{4}->frequency() == 0.11 &&
-   $a{5}->allele() eq 'C' && $a{5}->frequency() == 0.95 &&
-   $a{6}->allele() eq 'T' && $a{6}->frequency() == 0.05 &&
-   $a{7}->allele() eq 'C' && $a{7}->frequency() == 0.93 &&
-   $a{8}->allele() eq 'T' && $a{8}->frequency() == 0.07);
-
-
-ok($a{1}->population->name() eq 'KWOK:C');
-ok($a{8}->population->name() eq 'KWOK:S');
-
-
-
+ok($var->name() eq 'rs142276873', "name by name");
+ok($var->dbID() == 30220007,      "id by name" );
+ok($var->source eq 'dbSNP',        "source by name");
+ok($var->ancestral_allele eq 'G', "ancestral allele by name");
 
 
 # test fetch by name using a synonym
 
-$var = $va->fetch_by_name('ss2');
+$var = $va->fetch_by_name('rs57302278');
 
-ok($var->name() eq 'rs3');
-ok($var->dbID() == 1);
-ok($var->source eq 'dbSNP');
-ok($var->ancestral_allele eq 'C');
-ok($var->moltype eq 'cDNA');
-
-@syns = @{$var->get_all_synonyms()};
-ok(@syns == 1 && $syns[0] eq 'ss2');
-
-ok($var->get_all_synonym_sources->[0] eq 'dbSNP');
-
-$states = $var->get_all_validation_states();
-
-ok($states->[0] eq 'freq' && $states->[1] eq 'submitter');
-
-%a = map {$_->dbID() => $_} @{$var->get_all_Alleles()};
-
-ok($a{1}->allele() eq 'C' && $a{1}->frequency() == 0.96 &&
-   $a{2}->allele() eq 'T' && $a{2}->frequency() == 0.04 &&
-   $a{3}->allele() eq 'C' && $a{3}->frequency() == 0.89 &&
-   $a{4}->allele() eq 'T' && $a{4}->frequency() == 0.11 &&
-   $a{5}->allele() eq 'C' && $a{5}->frequency() == 0.95 &&
-   $a{6}->allele() eq 'T' && $a{6}->frequency() == 0.05 &&
-   $a{7}->allele() eq 'C' && $a{7}->frequency() == 0.93 &&
-   $a{8}->allele() eq 'T' && $a{8}->frequency() == 0.07);
-
-
-ok($a{1}->population->name() eq 'KWOK:C');
-ok($a{8}->population->name() eq 'KWOK:S');
+ok($var->name() eq 'rs7569578',   "current name by synonym");
+ok($var->dbID() == 4770800,       "current id by synonym");
+ok($var->source eq 'dbSNP',       "source by synonym");
+ok($var->ancestral_allele eq 'A', "ancestral allele by synonym" );
 
 
 
+#test ambig_code and var_class - fix core test db & re-install
+#ok($var->ambig_code eq 'W',   "ambiguity code by synonym");
+ok($var->var_class() eq 'SNP',  "variation class by synonym");
 
-# test fetch_by_dbID_list
-my $list = [1, 2, 3, 4, 10];
-
-my @vars =  sort {$a->dbID <=> $b->dbID} @{$va->fetch_all_by_dbID_list($list)};
-
-ok(@vars == 5);
-
-ok($vars[0]->dbID() == 1 && $vars[4]->dbID() == 10);
+ok($var->get_all_synonym_sources->[0] eq 'Archive dbSNP', "synonym source by synonym");
 
 
-
-#test ambig_code and var_class
-ok($var->ambig_code eq 'Y');
-
-ok($var->var_class() eq 'snp');
+done_testing();

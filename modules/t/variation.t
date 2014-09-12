@@ -15,10 +15,8 @@
 use strict;
 use warnings;
 use Data::Dumper;
-BEGIN { $| = 1;
-	use Test::More;
-	plan tests => 23;
-}
+use Test::More;
+use Bio::EnsEMBL::Test::MultiTestDB;
 
 use FindBin qw($Bin);
 
@@ -28,13 +26,12 @@ use Bio::EnsEMBL::Variation::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Variation::Variation;
 use Bio::EnsEMBL::Variation::Allele;
 
+my $multi = Bio::EnsEMBL::Test::MultiTestDB->new('homo_sapiens');
 
-## adaptor needed as availabilty checked in Allele.pm
-my $reg = 'Bio::EnsEMBL::Registry';
-$reg->no_version_check(1); ## version not relevant for test db
-$reg->load_all("$Bin/test.ensembl.registry");
-my $variation_adaptor    = $reg->get_adaptor('homo_sapiens', 'variation', 'variation');
+my $vdb = $multi->get_DBAdaptor('variation');
+my $core = $multi->get_DBAdaptor('core');
 
+my $variation_adaptor = $vdb->get_VariationAdaptor;
 
 # test constructor
 
@@ -90,7 +87,7 @@ ok($v->get_all_validation_states()->[0] eq 'cluster' &&
    $v->get_all_validation_states()->[1] eq 'submitter', "validation");
 
 #test amibg_code
-#ok($v->ambig_code() eq 'M', "ambig code");
+ok($v->ambig_code() eq 'M', "ambig code");
 
 #test variation_class
 ok($v->var_class() eq 'SNP', "class");
@@ -103,7 +100,7 @@ ok(test_getter_setter($v, 'source', 'newsource'), "get/set source");
 ok(test_getter_setter($v, 'source_url', 'http://www.ncbi.nlm.nih.gov/projects/SNP/'), "get/set source url");
 ok(test_getter_setter($v, 'ancestral_allele','C'), "get/set ancestral_allele");
 ok(test_getter_setter($v, 'moltype','cDNA'), "get/set moltype");
-ok(test_getter_setter($v, 'clinical_significance', $clin_sig), "get/set clin_sig");
+
 
 
 # test add_synonym and get_all_synonym_sources
@@ -139,54 +136,37 @@ $v->add_validation_state('freq');
 ok(join(',', @{$v->get_all_validation_states()}) eq 'cluster,freq,submitter', "valiation states 2");
 
 
-=head test requiring MultiTestDB
-my $multi = Bio::EnsEMBL::Test::MultiTestDB->new();
 
-my $vdb = $multi->get_DBAdaptor('variation');
-my $core = $multi->get_DBAdaptor('core');
-$vdb->dnadb($core);
 
-my $var_adaptor = $vdb->get_VariationAdaptor;
 #test get_all_IndividualGenotypes
 
-my $variation_id = 191;
-
-my $variation = Bio::EnsEMBL::Variation::Variation->new(
-   -dbID => $variation_id,
-   -name => 'rs193',
-   -adaptor => $variation_adaptor 
-   );
+my $variation = $variation_adaptor->fetch_by_dbID(1748253);
 
 my $igty = $variation->get_all_IndividualGenotypes();
 my @igtys = sort {$a->individual->dbID() <=> $b->individual->dbID()}
             @{$variation->get_all_IndividualGenotypes()};
-ok(@igtys == 96);
-ok($igtys[0]->variation()->name() eq 'rs193');
-ok($igtys[0]->allele1() eq 'C');
-ok($igtys[0]->allele2() eq 'T');
-ok($igtys[0]->individual()->name() eq 'NA17011');
+
+ok(@igtys == 2,                                   "ind geno to count" );
+ok($igtys[0]->variation()->name() eq 'rs2299222', "ind geno to var name");
+ok($igtys[0]->allele1() eq 'T',                   "ind geno to allele1");
+ok($igtys[0]->allele2() eq 'T',                   "ind geno to allele2");
+ok($igtys[0]->individual()->name() eq 'NA12891',  "ind geno to dna name");
+
+
 
 #test get_all_PopulationGenotypes
-$variation_id = 2863;
 
-$variation = Bio::EnsEMBL::Variation::Variation->new(
-   -dbID => $variation_id,
-   -name => 'rs2872',
-   -adaptor => $var_adaptor
-   );
+my $variation_p =  $variation_adaptor->fetch_by_name('rs17081232');
 
-@igtys = ();
+my @pgtys = sort {$a->dbID() <=> $b->dbID()}
+            @{$variation_p->get_all_PopulationGenotypes()};
 
-@igtys = sort {$a->dbID() <=> $b->dbID()}
-            @{$variation->get_all_PopulationGenotypes()};
-
-ok(@igtys == 12);
-ok($igtys[0]->dbID() == 1);
-ok($igtys[0]->population()->name() eq 'AFFY:AfAm');
-ok($igtys[0]->allele1() eq 'C');
-ok($igtys[0]->allele2() eq 'C');
-ok($igtys[0]->frequency() == 0.666667);
-=cut
+ok(@pgtys == 14,                                  "pop geno to count" );
+ok($pgtys[0]->dbID() == 50885783,                 "pop geno to dbID");
+ok($pgtys[0]->allele1() eq 'A',                   "pop geno to allele1");
+ok($pgtys[0]->allele2() eq 'G',                   "pop geno to allele1");
+ok($pgtys[0]->frequency() == 0.125,               "pop geno to freq");
+ok($pgtys[0]->population()->name() eq 'PERLEGEN:AFD_EUR_PANEL',"pop geno to pop name");
 
 
 done_testing();
