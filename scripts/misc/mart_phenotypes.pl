@@ -77,7 +77,6 @@ foreach my $db (@db_list) {
 		`gene_stable_id` varchar(255) NOT NULL,
 		`description` varchar(255) NOT NULL,
 		`source` varchar(24) NOT NULL,
-		`is_significant` tinyint(1) unsigned NOT NULL,
 		`p_value` double default NULL, 
 		`strain_name`  varchar(255) default NULL,
 		`strain_gender` varchar(255) default NULL,
