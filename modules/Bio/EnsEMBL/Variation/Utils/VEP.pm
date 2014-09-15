@@ -1718,6 +1718,10 @@ sub format_rest_output {
         my ($s, $e) = split('-', $tmp);
         $con->{$coord_type.'_start'} = $s;
         $con->{$coord_type.'_end'} = defined($e) && $e =~ /^\d+$/ ? $e : $s;
+        
+        # on rare occasions coord can be "?"; for now just don't print anything
+        delete $con->{$coord_type.'_start'} unless $con->{$coord_type.'_start'} =~ /^\d+$/;
+        delete $con->{$coord_type.'_end'} unless $con->{$coord_type.'_end'} =~ /^\d+$/;
         next;
       }
       
