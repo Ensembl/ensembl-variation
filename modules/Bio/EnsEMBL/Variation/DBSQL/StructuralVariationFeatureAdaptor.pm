@@ -445,7 +445,7 @@ sub fetch_all_by_Slice_VariationSet {
 sub _tables { 
   my $self = shift;
     
-  my @tables = ( ['structural_variation_feature', 'svf'] );
+  my @tables = ( ['structural_variation_feature', 'svf'], [ 'source', 's'] );
   
   # If we are excluding failed_structural_variations, add that table
   push(@tables,['failed_structural_variation', 'fsv']) unless ($self->db->include_failed_variations());
@@ -462,6 +462,11 @@ sub _left_join {
   return (['failed_structural_variation', 'fsv.structural_variation_id=svf.structural_variation_id']);
 }
 
+sub _default_where_clause {
+  my $self = shift;
+
+  return 'svf.source_id = s.source_id';
+}
 
 sub _columns {
   return qw( svf.structural_variation_feature_id svf.seq_region_id svf.outer_start svf.seq_region_start 
