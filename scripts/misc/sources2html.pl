@@ -177,10 +177,12 @@ foreach my $hostname (@hostnames) {
 
   my $sql = qq{SHOW DATABASES LIKE '%variation_$e_version%'};
   my $sth = get_connection_and_query($database, $hostname, $sql);
-
+  my $db_found = 0;
+  
   # loop over databases
   while (my ($dbname) = $sth->fetchrow_array) {
     next if ($dbname =~ /^master_schema/);
+    $db_found ++;
     print $dbname;
     $dbname =~ /^(.+)_variation/;
     my $s_name = $1;
@@ -236,6 +238,7 @@ foreach my $hostname (@hostnames) {
     
     $start = 1 if ($start == 0);
   }
+   die ("No variation databases found on $hostname for the version $e_version!") if ($db_found == 0);
 }
 
 my $html_menu = create_menu();
@@ -572,9 +575,9 @@ sub create_menu {
   my $html = qq{
   <!-- Right hand side menu -->
   <div style="float:right">
-  <div style="margin-left:8px;margin-top:2px;padding-bottom:2px;background-color:#F2F2F2;color:#333;border-radius:5px">
-    <div style="padding:5px;font-weight:bold;color:#FFF;background-color:#336;border-top-left-radius:5px;border-top-right-radius:5px;margin-bottom:5px">
-      <img src="/i/16/rev/info.png" style="vertical-align:top" alt="info" />
+  <div style="margin-left:8px;margin-top:2px;padding-bottom:2px;background-color:#F9F9F9;color:#333;border-left:1px dotted #BBB;border-right:1px dotted #BBB;border-bottom:1px dotted #BBB">
+    <div style="padding:5px;font-weight:bold;color:#000;background-color:#FFF;border-top:2px solid #336;border-bottom:1px solid #336;;margin-bottom:5px">
+      <img src="/i/16/info.png" style="vertical-align:top" alt="info" /> 
       Species list
     </div>
   };
@@ -602,9 +605,9 @@ sub create_menu {
     <span style="$label_style;margin-left:5px;background-color:$s_colour"></span><small> : $s_label</small>
   </div>
   <br />
-  <div id="$legend_div_id" style="margin-left:8px;margin-top:2px;background-color:#F2F2F2;color:#333;border-radius:5px">
-    <div style="padding:5px;font-weight:bold;color:#FFF;background-color:#336;border-top-left-radius:5px;border-top-right-radius:5px">
-      <img src="/i/16/rev/info.png" style="vertical-align:top" />
+  <div id="$legend_div_id" style="margin-left:8px;margin-top:2px;padding-bottom:2px;background-color:#F9F9F9;color:#333;border-left:1px dotted #BBB;border-right:1px dotted #BBB;border-bottom:1px dotted #BBB">
+    <div style="padding:5px;font-weight:bold;color:#000;background-color:#FFF;border-top:2px solid #336;border-bottom:1px solid #336;;margin-bottom:2px">
+      <img src="/i/16/info.png" style="vertical-align:top" />
       Icons legend
     </div> 
     <table>
