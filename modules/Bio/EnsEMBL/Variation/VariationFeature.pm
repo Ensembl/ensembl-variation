@@ -783,8 +783,14 @@ sub variation {
   elsif(!defined($self->{'variation'}) && $self->adaptor() &&
         defined($self->{'_variation_id'})) {
     # lazy-load from database on demand
+    ## temp fix for miss-match in variation & variationfeature display statuses
+    my $failed = $self->adaptor->db()->include_failed_variations;
+    $self->adaptor->db()->include_failed_variations(1);
+
     my $va = $self->adaptor->db()->get_VariationAdaptor();
     $self->{'variation'} = $va->fetch_by_dbID($self->{'_variation_id'});
+    ## reset
+    $self->adaptor->db()->include_failed_variations($failed);
   }
 
   return $self->{'variation'};
