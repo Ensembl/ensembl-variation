@@ -500,7 +500,7 @@ our @OVERLAP_CONSEQUENCES = (
         tier => '3',
         predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::within_non_coding_gene',
         description => 'A transcript variant of a non coding RNA gene',
-        label => 'NC transcript variant',
+        label => 'Non coding transcript variant',
     },
     {
         SO_accession => 'SO:0001792',
@@ -513,7 +513,7 @@ our @OVERLAP_CONSEQUENCES = (
         tier => '3',
         predicate => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::non_coding_exon_variant',
         description => 'A sequence variant that changes non-coding exon sequence in a non-coding transcript',
-        label => 'Non coding exon variant',
+        label => 'Non coding transcript exon variant',
     },
     {
         SO_accession => 'SO:0001620',
