@@ -191,12 +191,11 @@ sub fetch_all_by_dbID_list {
     return ($result ? $result : undef);
 }
 
-=head2 fetch_all_by_variant
+=head2 fetch_all_by_Variation
 
   Arg [1]    : listref $list
   Example    : $publication = $publication_adaptor->fetch_all_by_variant( $var_object]);
-  Description: Retrieves a listref of publication objects via a list of internal
-               dbID identifiers
+  Description: Retrieves a listref of publication objects via a variation object
   Returntype : listref of Bio::EnsEMBL::Variation::Publication objects
   Exceptions : throw if variation argument is not defined
   Caller     : general
@@ -347,8 +346,9 @@ sub update_variant_citation {
     
     my $citation_ins_sth = $dbh->prepare(qq[ insert into variation_citation( variation_id, publication_id) values ( ?,?) ]);   
     
-    ## ensure any variations with citations are displayed in browser tracks/ rturned by default
-    my $display_upt_sth = $dbh->prepare(qq[ update variation set display =? where  variation_id =?  ]);
+    ## ensure any variations with citations are displayed in browser tracks/ returned by default
+    my $vdisplay_upt_sth  = $dbh->prepare(qq[ update variation set display =? where  variation_id =?  ]);
+    my $vfdisplay_upt_sth = $dbh->prepare(qq[ update variation_feature set display =? where  variation_id =?  ]);
    
     my @var_objects ;
 
@@ -378,8 +378,8 @@ sub update_variant_citation {
         $citation_ins_sth->execute( $var_obj->dbID(), $pub->{dbID});
 
 	## set cited variants to be displayable
-	$display_upt_sth->execute( 1,  $var_obj->dbID());
-        
+	$vdisplay_upt_sth->execute( 1,  $var_obj->dbID());
+        $vfdisplay_upt_sth->execute( 1,  $var_obj->dbID());
     }    
 }
 

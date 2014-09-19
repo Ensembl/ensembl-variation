@@ -540,7 +540,6 @@ sub _internal_fetch_all_with_phenotype_by_Slice{
     SELECT $cols
     FROM (variation_feature vf, phenotype_feature pf,
         source s $extra_table) # need to link twice to source
-    LEFT JOIN failed_variation fv ON (fv.variation_id = vf.variation_id)
     WHERE vf.seq_region_id = pf.seq_region_id
     AND vf.seq_region_start = pf.seq_region_start
     AND vf.seq_region_end = pf.seq_region_end
@@ -720,7 +719,6 @@ sub fetch_all_by_Slice_Population {
   my $sth = $self->prepare(qq{
 	SELECT $cols
 	FROM (variation_feature vf, source s, allele a)
-	LEFT JOIN failed_variation fv ON (fv.variation_id = vf.variation_id)
 	WHERE vf.source_id = s.source_id
 	AND vf.variation_id = a.variation_id
 	AND a.population_id = ?
@@ -806,7 +804,6 @@ sub _internal_fetch_all_with_phenotype {
         SELECT $cols
         FROM (variation_feature vf, phenotype_feature pf,
         source s $extra_table) # need to link twice to source
-        LEFT JOIN failed_variation fv ON (fv.variation_id = vf.variation_id)
         WHERE vf.source_id = s.source_id
         AND vf.seq_region_id = pf.seq_region_id
 				AND vf.seq_region_start = pf.seq_region_start
