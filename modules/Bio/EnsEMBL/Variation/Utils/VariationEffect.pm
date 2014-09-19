@@ -242,8 +242,8 @@ sub feature_elongation {
         (copy_number_gain($bvfoa) or insertion($bvfoa)) and
         not(
             ($bvfoa->isa('Bio::EnsEMBL::Variation::BaseTranscriptVariationAllele') and
-            (inframe_insertion($bvfoa) or stop_lost($bvfoa)))# or frameshift($bvfoa))
-	    or stop_retained($bvfoa)
+            (inframe_insertion($bvfoa) or stop_lost($bvfoa) or stop_retained($bvfoa)))# or frameshift($bvfoa))
+	    
         )
     );
 }
