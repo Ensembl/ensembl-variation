@@ -51,3 +51,4 @@
 51	\N	patch	patch_76_77_e.sql|add variation_attrib table
 52	\N	patch	patch_76_77_f.sql|Add new variation_set_id column to individual table
 53	\N	patch	patch_76_77_g.sql|Add new column to Variation_feature table to flag whether variants should be displayed or not
+54	\N	pairwise_ld.default_population	679
