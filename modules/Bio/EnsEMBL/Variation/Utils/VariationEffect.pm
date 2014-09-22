@@ -241,10 +241,14 @@ sub feature_elongation {
         complete_within_feature($bvfoa) and
         (copy_number_gain($bvfoa) or insertion($bvfoa)) and
         not(
-            ($bvfoa->isa('Bio::EnsEMBL::Variation::BaseTranscriptVariationAllele') and
-            (inframe_insertion($bvfoa) or stop_lost($bvfoa) or stop_retained($bvfoa)))# or frameshift($bvfoa))
-	    
-        )
+            ( $bvfoa->isa('Bio::EnsEMBL::Variation::BaseTranscriptVariationAllele') and
+              (inframe_insertion($bvfoa) or stop_lost($bvfoa) )
+            )
+            or
+            ( $bvfoa->isa('Bio::EnsEMBL::Variation::TranscriptVariationAllele') and
+              stop_retained($bvfoa)
+            )
+         )  # or frameshift($bvfoa))
     );
 }
 
@@ -579,7 +583,7 @@ sub complex_indel {
 sub _get_peptide_alleles {
     my $bvfoa = shift;
     
-#    return () if frameshift($bvfoa);
+    #return () if frameshift($bvfoa);
 
     my $alt_pep = $bvfoa->peptide;
     
