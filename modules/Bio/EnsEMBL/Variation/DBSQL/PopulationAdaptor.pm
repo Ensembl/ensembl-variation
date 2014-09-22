@@ -284,8 +284,8 @@ sub fetch_all_by_name_search {
     throw('Name argument expected.') if(!defined($name));
 
     my $sth = $self->prepare(q{
-        SELECT p.population_id, p.name, p.size, p.description, p.collection, p.freqs_from_gts, p.display dg.display_name dg.display_priority
-        FROM   population p left outer join display_group dg on dg.display_group_id = population.display_group_id
+        SELECT p.population_id, p.name, p.size, p.description, p.collection, p.freqs_from_gts, p.display, dg.display_name, dg.display_priority
+        FROM   population p left outer join display_group dg on dg.display_group_id = p.display_group_id
         WHERE  p.name like concat('%', ?, '%')});
 
   $sth->bind_param(1,$name,SQL_VARCHAR);

@@ -20,54 +20,59 @@ use FindBin qw($Bin);
 
 use Bio::EnsEMBL::Registry;
 use Bio::EnsEMBL::Variation::Population;
+use Bio::EnsEMBL::Test::TestUtils;
+use Bio::EnsEMBL::Test::MultiTestDB;
 
-my $reg = 'Bio::EnsEMBL::Registry';
-$reg->load_all("$Bin/test.ensembl.registry.72");
+my $multi = Bio::EnsEMBL::Test::MultiTestDB->new('homo_sapiens');
+my $vdba = $multi->get_DBAdaptor('variation');
 
-my $vdba = $reg->get_DBAdaptor('human', 'variation');
+
 my $pa = $vdba->get_PopulationAdaptor;
 my $ia = $vdba->get_IndividualAdaptor;
-my $va = $vdba->get_VariationAdaptor;
-my $vfa = $vdba->get_VariationFeatureAdaptor;
+
 my ($populations, $population, $all);
+
 # fetch_all_1KG_Populations
 $populations = $pa->fetch_all_1KG_Populations;
-is(scalar @$populations, 31, "Number of 1000 genomes populations");
+is(scalar @$populations, 22, "Number of 1000 genomes populations");
+
 # fetch_all_HapMap_Populations
 $populations = $pa->fetch_all_HapMap_Populations;
 is(scalar @$populations, 12, "Number of HapMap populations");
+
 # fetch_all_LD_Populations
 $populations = $pa->fetch_all_LD_Populations;
-is(scalar @$populations, 26, "Number of LD populations");
+is(scalar @$populations, 18, "Number of LD populations");
+
 # fetch_default_LDPopulation
 $population = $pa->fetch_default_LDPopulation;
 is($population->name, 'CSHL-HAPMAP:HapMap-CEU', "Name for default LD population");
 
 # fetch_by_dbID
-$population = $pa->fetch_by_dbID(145);
-is($population->name, 'MPJ6:E-1', "Fetch by dbID 145");
+$population = $pa->fetch_by_dbID(649);
+is($population->name, 'PERLEGEN:AFD_EUR_PANEL', "Fetch by dbID 649");
+
 # fetch_all_by_dbID_list
-my $list = [145, 400892];
+my $list = [101082, 101083];
 $populations = $pa->fetch_all_by_dbID_list($list);
 $all = join(',', map{$_->name} sort {$a->name cmp $b->name} @$populations);
-is($all, 'COSMIC:gene:ZZZ3:tumour_site:ovary,MPJ6:E-1', "Fetch by list [145, 400892]");
+is($all, '1000GENOMES:phase_1_AFR,1000GENOMES:phase_1_EUR', "Fetch by list");
 
 # fetch_all_by_Individual
 # 1000GENOMES:phase_1:HG01625 101495 -> 1000GENOMES:phase_1_ALL,1000GENOMES:phase_1_EUR,1000GENOMES:phase_1_IBS
-# CH18564 17630
-my @individual_dbids = (101495, 17630);
+
+my @individual_dbids = (101495, 101096);
 my $individual = $ia->fetch_by_dbID($individual_dbids[0]);
 $populations = $pa->fetch_all_by_Individual($individual);
 is(scalar @$populations, 3, "Number of populations for individual HG01625");
 
 # fetch_all_by_Individual_list
-# 101495, 17630 -> 1000GENOMES:phase_1_ALL,1000GENOMES:phase_1_EUR,1000GENOMES:phase_1_IBS,CSHL-HAPMAP:HAPMAP-CHB,CSHL-HAPMAP:HapMap-HCB,EGP_SNPS:CHB_GENO_PANEL,ILLUMINA:CHB,PGA-UW-FHCRC:CHB_GENO_PANEL
 my $individuals = [];
 foreach my $dbid (@individual_dbids) {
    push @$individuals, $ia->fetch_by_dbID($dbid); 
 }
 $populations = $pa->fetch_all_by_Individual_list($individuals);
-is(scalar @$populations, 8, "Number of populations for individuals HG01625 and CH18564");
+is(scalar @$populations, 6, "Number of populations for individuals HG01625 and HG00109");
 
 # fetch_by_name
 $population = $pa->fetch_by_name('1000GENOMES:phase_1_IBS');
@@ -75,7 +80,7 @@ is($population->name, '1000GENOMES:phase_1_IBS', "Fetch by name 1000GENOMES:phas
 
 # fetch_all_by_name_search
 $populations = $pa->fetch_all_by_name_search('1000GENOMES');
-is(scalar @$populations, 31, "Number of populations for fetch by name search = 1000GENOMES");
+is(scalar @$populations, 22, "Number of populations for fetch by name search = 1000GENOMES");
 
 # fetch_all_by_sub_Population
 $population = $pa->fetch_by_name('1000GENOMES:phase_1_IBS');
@@ -90,13 +95,13 @@ $populations = $pa->fetch_all_by_super_Population($population);
 is(scalar @$populations, 5, "Fetch by super-population 1000GENOMES:phase_1_EUR");
 
 # fetch_population_by_synonym
-$populations = $pa->fetch_population_by_synonym(627);
+$populations = $pa->fetch_population_by_synonym(1372);
 $all = join(',', map {$_->name} sort {$a->name cmp $b->name} @$populations);
-is($all, 'MPJ6:E-1', "Fetch by synonym 627");
+is($all, 'PERLEGEN:AFD_AFR_PANEL', "Fetch by synonym 1372");
 
 # fetch_synonyms
-my $synonyms = $pa->fetch_synonyms(145);
-is(join(',', @$synonyms), 627, "Fetch synonyms for 145");
+my $synonyms = $pa->fetch_synonyms(650);
+is(join(',', @$synonyms), 1372, "Fetch synonyms for dbID 650");
 
 # fetch_tag_Population
 #my $v = $va->fetch_by_name('rs205621');

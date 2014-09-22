@@ -1,0 +1,3 @@
+1	1	1000 Genomes Project Phase 1
+2	2	HapMap Project
+3	3	NHLBI Exome Sequencing Project
