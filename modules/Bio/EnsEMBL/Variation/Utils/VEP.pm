@@ -232,7 +232,7 @@ our %COL_DESCS = (
     'EA_MAF'             => 'Frequency of existing variant in NHLBI-ESP European American population',
     'DISTANCE'           => 'Shortest distance from variant to transcript',
     'CLIN_SIG'           => 'Clinical significance of variant from dbSNP',
-    'BIOTYPE'            => 'Biotype of transcript',
+    'BIOTYPE'            => 'Biotype of transcript or regulatory feature',
     'PUBMED'             => 'Pubmed ID(s) of publications that cite existing variant',
     'ALLELE_NUM'         => 'Allele number from input; 0 is reference, 1 is first alternate etc',
     'STRAND'             => 'Strand of the feature (1/-1)',
@@ -351,8 +351,6 @@ sub parse_line {
 sub detect_format {
     my $line = shift;
     my @data = split /\s+/, $line;
-    
-    $DB::single = 1;
     
     # HGVS: ENST00000285667.3:c.1047_1048insC
     if (
