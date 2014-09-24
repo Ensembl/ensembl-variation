@@ -625,13 +625,21 @@ sub parse_vcf {
                 }
                 
                 else {
-                    $ref = substr($ref, 1) || '-';
-                    $start++;
+                    # find out if all the alts start with the same base
+                    my %first_bases = map {substr($_, 0, 1) => 1} ($ref, split(/\,/, $alt));
                     
-                    foreach my $alt_allele(split /\,/, $alt) {
-                        $alt_allele = substr($alt_allele, 1);
-                        $alt_allele = '-' if $alt_allele eq '';
-                        push @alts, $alt_allele;
+                    if(scalar %first_bases == 1) {
+                        $ref = substr($ref, 1) || '-';
+                        $start++;
+                    
+                        foreach my $alt_allele(split /\,/, $alt) {
+                            $alt_allele = substr($alt_allele, 1);
+                            $alt_allele = '-' if $alt_allele eq '';
+                            push @alts, $alt_allele;
+                        }
+                    }
+                    else {
+                        push @alts, split(/\,/, $alt);
                     }
                 }
                 
