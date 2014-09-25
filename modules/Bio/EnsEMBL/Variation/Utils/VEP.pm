@@ -628,7 +628,7 @@ sub parse_vcf {
                     # find out if all the alts start with the same base
                     my %first_bases = map {substr($_, 0, 1) => 1} ($ref, split(/\,/, $alt));
                     
-                    if(scalar %first_bases == 1) {
+                    if(scalar keys %first_bases == 1) {
                         $ref = substr($ref, 1) || '-';
                         $start++;
                     
