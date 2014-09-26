@@ -314,9 +314,12 @@ sub get_all_IndividualGenotypeFeatures_by_VariationFeature {
   
   my $vcf = $self->current();
   
+  my $individuals = $self->_limit_Individuals($self->get_all_Individuals, $sample);
+  my @individual_names = map {$_->{_raw_name}} @$individuals;
+  
   return $self->_create_IndividualGenotypeFeatures(
-    $self->_limit_Individuals($self->get_all_Individuals, $sample),
-    $vcf->get_individuals_genotypes,
+    $individuals,
+    $vcf->get_individuals_genotypes(\@individual_names),
     $vf
   );
 }
@@ -342,6 +345,7 @@ sub get_all_IndividualGenotypeFeatures_by_Slice {
   
   my @genotypes;
   my $individuals = $self->_limit_Individuals($self->get_all_Individuals, $sample);
+  my @individual_names = map {$_->{_raw_name}} @$individuals;
   
   return [] unless scalar @$individuals;
   
@@ -363,7 +367,7 @@ sub get_all_IndividualGenotypeFeatures_by_Slice {
     }
     
     if($vf) {
-      push @genotypes, @{$self->_create_IndividualGenotypeFeatures($individuals, $vcf->get_individuals_genotypes, $vf)};
+      push @genotypes, @{$self->_create_IndividualGenotypeFeatures($individuals, $vcf->get_individuals_genotypes(\@individual_names), $vf)};
     }
     
     $vcf->next();
