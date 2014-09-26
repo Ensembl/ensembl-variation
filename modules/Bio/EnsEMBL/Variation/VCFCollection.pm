@@ -751,6 +751,8 @@ sub _get_Population_Individual_hash {
         
         $self->{populations} = [values %$pops];
       }
+      
+      $self->{_population_hash} = $hash;
     }
     
     # otherwise we'll have to fetch from the individuals
