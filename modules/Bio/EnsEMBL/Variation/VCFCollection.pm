@@ -873,6 +873,8 @@ sub _get_Population_Sample_hash {
         
         $self->{populations} = [values %$pops];
       }
+      
+      $self->{_population_hash} = $hash;
     }
     
     # otherwise we'll have to fetch from the samples
