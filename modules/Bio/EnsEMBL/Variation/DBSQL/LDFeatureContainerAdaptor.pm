@@ -200,7 +200,7 @@ sub fetch_by_Slice_VCF {
   my @genotypes;
   
   foreach my $vc(@{$vca->fetch_all}) {
-    push @genotypes, @{$vc->get_all_IndividualGenotypes_by_Slice($slice, $population)};
+    push @genotypes, @{$vc->get_all_IndividualGenotypeFeatures_by_Slice($slice, $population)};
     
     # tag genotypes with populations
     my $hash = $vc->_get_Population_Individual_hash();
