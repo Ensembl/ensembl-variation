@@ -934,7 +934,8 @@ sub _make_hgvs_tva{
     my $transcript = $self->transcript_variation->transcript();
     my $moved_tv = Bio::EnsEMBL::Variation::TranscriptVariation->new(
 	-transcript        => $transcript,
-	-variation_feature => $moved_vf
+	-variation_feature => $moved_vf,
+	-no_ref_check      => 1
 	);
 
     my $hgvs_tva = Bio::EnsEMBL::Variation::TranscriptVariationAllele->new_fast({
