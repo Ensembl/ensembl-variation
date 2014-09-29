@@ -1,0 +1,33 @@
+To run the pipeline the following parameters need to be initialised:
+
+Dump GVF and VCF files for all species in the registry file (no population allele frequency dumps:
+init_pipeline.pl ReleaseDumps_conf.pm
+-ensembl_release
+-hive_db_password
+-pipeline_dir
+-pipeline_name
+-registry_file
+-tmp_dir
+
+Dump allele frequencies for popoulations (1000G, HAPMAP, ESP) for human:
+init_pipeline.pl ReleaseDumps_conf.pm
+-ensembl_release
+-hive_db_password
+-pipeline_dir
+-pipeline_name
+-registry_file
+-tmp_dir
+-prefetched_frequencies
+-human_population_dumps 1
+
+
+Finish data dumps (add readme file, compute checksums, create tabix for vcf files) for all species in the registry file:
+init_pipeline.pl ReleaseDumps_conf.pm
+-ensembl_release
+-hive_db_password
+-pipeline_dir
+-pipeline_name
+-registry_file
+-tmp_dir
+-finish_dumps 1
+
