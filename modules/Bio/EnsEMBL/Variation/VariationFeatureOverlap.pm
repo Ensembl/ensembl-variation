@@ -268,13 +268,20 @@ sub variation_feature {
     if (my $vf_id = $self->{_variation_feature_id}) {
         
         # lazy-load the VariationFeature
-        
+
         if (my $adap = $self->{adaptor}) {
+
             if (my $vfa = $adap->db->get_VariationFeatureAdaptor) {
+                ## return failed data via transcript as previous (slow otherwise especially for counts)
+                my $failed = $self->adaptor->db()->include_failed_variations;
+                $self->adaptor->db()->include_failed_variations(1);
+
                 if (my $vf = $vfa->fetch_by_dbID($vf_id)) {
                     $self->base_variation_feature($vf);
                     delete $self->{_variation_feature_id};
                 }
+                ## reset fail flag
+                $self->adaptor->db()->include_failed_variations($failed);
             }
         }
     }
