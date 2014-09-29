@@ -1,0 +1,87 @@
+This directory contains gzip compressed GVF (Genome Variation Format) files: 
+
+    %s.gvf.gz 
+        All germline variations from the current Ensembl release for this
+        species
+    %s_structural_variations.gvf.gz
+        All structural variations (if available for this species)
+    %s_failed.gvf.gz
+        Any variations that have been failed by the Ensembl QC checks
+    %s_incl_consequences.gvf.gz
+        All consequences of the variations on the Ensembl transcriptome,
+        as called by the variation consequence pipeline
+
+For human only:
+    Homo_sapiens_somatic.gvf.gz
+        All somatic mutations from the current Ensembl release.
+    Homo_sapiens_somatic_incl_consequences.gvf.gz
+        All consequences of somatic mutations on the Ensembl transcriptome,
+        as called by the variation consequence pipeline
+    Homo_sapiens_phenotype_associated.gvf.gz
+        All variations from the current Ensembl release that have been
+        associated with a phenotype
+    Homo_sapiens_clinically_associated.gvf.gz
+        All variations from the current Ensembl release that have been
+        described by ClinVar as being probable-pathogenic, pathogenic,
+        drug-response or histocompatibility
+
+Additionally, we provide for human:
+    - files with germline variations observed in the Watson and Venter
+      genomes along with their genotypes
+    - files containing allele frequencies from several of the HapMap,
+      1000 genomes phase 1 populations and from populations from the
+      Exome Sequencing Project
+
+If available for this species, the file includes information on:
+    - ancestral_allele
+    - evidence
+    - clinical_significance
+    - global minor allele, frequency and count
+Incl_consequences files include sift (if available for this species)
+and polyphen (human only) predictions.
+
+
+Please note that depending on the amount of variation data available for this
+species the uncompressed file may be very large (e.g. the entire germline file
+for human is ~3GB and the file including consequences is ~10GB).
+
+The data contained in these files is presented in GVF format, this is a
+simple tab-delimited format derived from GFF3 which shows the location of
+each variant along with the reference and variant sequences, an identifier
+for the source of the data (typically a dbSNP rsID), and other relevant
+information (e.g. genotypes, allele frequencies, the predicted effect of
+this variant on a transcript), a short example is presented below. For
+more details about GVF please refer to:
+
+Reese, M.G. et al. A standard variation file format for human genome sequences.
+Genome Biology. 2010;11(8):R88 PMID: 20796305
+
+and:
+
+http://www.sequenceontology.org/gvf.html
+
+Questions about these files can be addressed to the Ensembl helpdesk:
+helpdesk@ensembl.org, or to the developer's mailing list: dev@ensembl.org.
+
+-----
+
+Example content from the human germline GVF dump is shown below:
+
+##gff-version 3
+##gvf-version 1.07
+##file-date 2014-07-13
+##genome-build ensembl GRCh38
+##species http://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi?id=9606
+##feature-ontology http://song.cvs.sourceforge.net/viewvc/song/ontology/so.obo?revision=1.283
+##data-source Source=ensembl;version=76;url=http://e76.ensembl.org/Homo_sapiens
+##file-version 76
+##sequence-region 8 1 145138636
+8       dbSNP   SNV     60059   60059   .       +       .       ID=1;Variant_seq=T;Dbxref=dbSNP_138:rs371829072;Reference_seq=C
+8       dbSNP   SNV     60211   60211   .       +       .       ID=2;Variant_seq=T;Dbxref=dbSNP_138:rs376064598;Reference_seq=G
+8       dbSNP   SNV     60220   60220   .       +       .       ID=3;Variant_seq=A;Dbxref=dbSNP_138:rs368575943;Reference_seq=G
+8       dbSNP   SNV     60251   60251   .       +       .       ID=4;Variant_seq=T;Dbxref=dbSNP_138:rs372357503;Reference_seq=C
+8       dbSNP   SNV     60288   60288   .       +       .       ID=5;Variant_seq=G;Dbxref=dbSNP_138:rs375561901;Reference_seq=C
+8       dbSNP   SNV     60290   60290   .       +       .       ID=6;Variant_seq=C;evidence_values=Multiple_observations;Dbxref=dbSNP_138:rs200947342;Reference_seq=A
+8       dbSNP   SNV     60323   60323   .       +       .       ID=7;Variant_seq=G;Dbxref=dbSNP_138:rs199540500;Reference_seq=C
+8       dbSNP   SNV     60341   60341   .       +       .       ID=8;Variant_seq=G;evidence_values=Multiple_observations;Dbxref=dbSNP_138:rs201908809;Reference_seq=C
+8       dbSNP   SNV     60346   60346   .       +       .       ID=9;Variant_seq=G;Dbxref=dbSNP_138:rs78893626;Reference_seq=A
