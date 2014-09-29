@@ -32,9 +32,10 @@ use strict;
 use warnings;
 
 use base ('Bio::EnsEMBL::Variation::Pipeline::ReleaseDataDumps::BaseDataDumpsProcess');
-
+use Bio::EnsEMBL::Registry;
 use FileHandle;
 use JSON;
+
 
 sub fetch_input {
 	my $self = shift;
@@ -61,12 +62,9 @@ sub write_config_file {
     # individuals:
     # sets: phenotypes, clinically_associated
     my $config = {};
-    $self->variation_data_survey($config);
-
-    my $populations = $self->param('populations');
-    my $individuals = $self->param('individuals');
-
     my $species_variation_data = $self->get_all_species();
+
+    $self->variation_data_survey($config);
 
     foreach my $species (keys %$species_variation_data) {
         my $species_config = {
@@ -80,7 +78,6 @@ sub write_config_file {
                 push @{$species_config->{incl_consequences}}, $attribute;
             }
         } 
-        
         if ($config->{$species}->{sift}) {
             push @{$species_config->{incl_consequences}}, 'sift';
         }
@@ -89,15 +86,6 @@ sub write_config_file {
             if ($config->{$species}->{clinical_significance_svs}) {
                 push @{$species_config->{structural_variations}}, 'clinical_significance';
             }
-        }
-#        if ($config->{$species}->{phenotypes}) {
-#            $species_config->{sets}->{phenotype_associated} = $species_config->{generic};
-#        }
-        if (defined $populations->{$species}) {
-            $species_config->{populations} = $populations->{$species};
-        }
-        if (defined $individuals->{$species}) {
-            $species_config->{individuals} = $individuals->{$species};
         }
         if ($species eq 'Homo_sapiens') {
             $species_config->{sets}->{clinically_associated} = ['evidence', 'ancestral_allele', 'clinical_significance', 'global_maf'];
@@ -110,7 +98,7 @@ sub write_config_file {
         $config->{$species} = $species_config;
     }
     my $pipeline_dir = $self->param('pipeline_dir');
-    my $config_file = "$pipeline_dir/data_dumps_config_human.json"; 
+    my $config_file = "$pipeline_dir/data_dumps_config.json"; 
     my $fh = FileHandle->new($config_file, 'w');
     my $json = JSON->new->allow_nonref;
     print $fh $json->encode($config);
@@ -127,12 +115,11 @@ sub variation_data_survey {
 
     my $queries = {
         sift => 'select count(*) from protein_function_predictions;',
-        ancestral_allele => 'select variation_id from variation where ancestral_allele is not null limit 1',
-        global_maf => 'select variation_id from variation where minor_allele is not null limit 1',
-        clinical_significance => 'select variation_id from variation where clinical_significance is not null limit 1',
-        clinical_significance_svs => 'select structural_variation_id from structural_variation where clinical_significance is not null limit 1',
-#        phenotypes => 'select count(*) from phenotype_feature',
-        svs => 'select count(*) from structural_variation',
+        ancestral_allele => 'select variation_id from variation where ancestral_allele is not null limit 1;',
+        global_maf => 'select variation_id from variation where minor_allele is not null limit 1;',
+        clinical_significance => 'select variation_id from variation where clinical_significance is not null limit 1;',
+        clinical_significance_svs => 'select structural_variation_id from structural_variation where clinical_significance is not null limit 1;',
+        svs => 'select count(*) from structural_variation;',
     };
 
     foreach my $data_type (keys %$queries) {
