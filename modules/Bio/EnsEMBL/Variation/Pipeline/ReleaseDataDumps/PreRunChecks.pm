@@ -47,12 +47,6 @@ sub run {
         foreach my $dir (qw/pipeline_dir script_dir/) {
             die "$dir doesn't exist" unless (-d $self->param($dir));
         }
-        my $prefetched_frequencies_dir = $self->param('prefetched_frequencies');
-        if (defined $prefetched_frequencies_dir) {
-            die "$prefetched_frequencies_dir doesn't exist" unless (-d $prefetched_frequencies_dir);
-        } else {
-            $self->warning("No DIR with prefetched frequencies defined.");
-        }
 		my $gvf_validator = $self->param('gvf_validator');
 		my $so_file = $self->param('so_file');
 		die "gvf validator not defined" unless (defined $gvf_validator);
