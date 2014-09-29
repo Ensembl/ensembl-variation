@@ -1,0 +1,83 @@
+This directory contains sorted and bgzip-compressed VCF (Variant Call Format) files:
+
+    %s.vcf.gz 
+        All germline variations from the current Ensembl release for this
+        species
+    %s_structural_variations.vcf.gz
+        All structural variations (if available for this species)
+    %s_incl_consequences.vcf.gz
+        All consequences of the variations on the Ensembl transcriptome,
+        as called by the variation consequence pipeline
+
+For human only:
+    Homo_sapiens_somatic.vcf.gz
+        All somatic mutations from the current Ensembl release.
+    Homo_sapiens_somatic_incl_consequences.vcf.gz
+        All consequences of somatic mutations on the Ensembl transcriptome,
+        as called by the variation consequence pipeline
+    Homo_sapiens_phenotype_associated.vcf.gz
+        All variations from the current Ensembl release that have been
+        associated with a phenotype
+    Homo_sapiens_clinically_associated.vcf.gz
+        All variations from the current Ensembl release that have been
+        described by ClinVar as being probable-pathogenic, pathogenic,
+        drug-response or histocompatibility
+
+Additionally, we provide for human:
+    - files with germline variations observed in the Watson and Venter
+      genomes along with their genotypes
+    - files containing allele frequencies from several of the HapMap,
+      1000 genomes phase 1 populations and from populations from the
+      Exome Sequencing Project
+
+If available for this species, the file includes information on:
+    - ancestral_allele
+    - evidence
+    - clinical_significance
+    - global minor allele, frequency and count
+Incl_consequences files include sift (if available for this species)
+and polyphen (human only) predictions.
+
+
+The data contained in these files is presented in VCF format. For more details about
+the format refer to:
+http://www.1000genomes.org/wiki/Analysis/Variant%%20Call%%20Format/vcf-variant-call-format-version-41
+
+Questions about these files can be addressed to the Ensembl helpdesk:
+helpdesk@ensembl.org, or to the developer's mailing list: dev@ensembl.org.
+
+-----
+
+Example content from the human germline VCF dump is shown below:
+
+##fileformat=VCFv4.1
+##fileDate=20140713
+##source=ensembl;version=76;url=http://e76.ensembl.org/Gallus_gallus
+##reference=ftp://ftp.ensembl.org/pub/release-76/fasta/Gallus_gallus/dna/
+##INFO=<ID=dbSNP_140,Number=0,Type=Flag,Description="Variants (including SNPs and indels) imported from dbSNP">
+##INFO=<ID=TSA,Number=1,Type=String,Description="Type of sequence alteration. Child of term sequence_alteration as defined by the sequence ontology project.">
+##INFO=<ID=E_Cited,Number=0,Type=Flag,Description="Cited.http://www.ensembl.org/info/docs/variation/data_description.html#evidence_status">
+##INFO=<ID=E_ESP,Number=0,Type=Flag,Description="ESP.http://www.ensembl.org/info/docs/variation/data_description.html#evidence_status">
+##INFO=<ID=E_1000G,Number=0,Type=Flag,Description="1000Genomes.http://www.ensembl.org/info/docs/variation/data_description.html#evidence_status">
+##INFO=<ID=E_Multiple_observations,Number=0,Type=Flag,Description="Multiple_observations.http://www.ensembl.org/info/docs/variation/data_description.html#evidence_status">
+##INFO=<ID=E_Freq,Number=0,Type=Flag,Description="Frequency.http://www.ensembl.org/info/docs/variation/data_description.html#evidence_status">
+##INFO=<ID=E_Hapmap,Number=0,Type=Flag,Description="HapMap.http://www.ensembl.org/info/docs/variation/data_description.html#evidence_status">
+#CHROM  POS     ID      REF     ALT     QUAL    FILTER  INFO
+1       1819    rs14807616      G       T       .       .       dbSNP_140;TSA=SNV;E_Freq
+1       1830    rs14807617      G       A       .       .       dbSNP_140;TSA=SNV;E_Freq
+1       1878    rs14222596      G       C       .       .       dbSNP_140;TSA=SNV;E_Freq
+1       1907    rs13935659      G       T       .       .       dbSNP_140;TSA=SNV;E_Freq
+1       1916    rs13789020      C       T       .       .       dbSNP_140;TSA=SNV;E_Freq
+1       1920    rs14354723      C       T       .       .       dbSNP_140;TSA=SNV;E_Freq
+1       1921    rs15416557      A       G       .       .       dbSNP_140;TSA=SNV;E_Freq
+1       2187    rs318013082     C       G       .       .       dbSNP_140;TSA=SNV
+1       2311    rs14723176      G       A       .       .       dbSNP_140;TSA=SNV;E_Freq
+1       2350    rs14707527      T       C       .       .       dbSNP_140;TSA=SNV;E_Freq
+1       3664    rs13813940      A       T       .       .       dbSNP_140;TSA=SNV;E_Multiple_observations;E_Freq
+1       3668    rs314311150     C       A       .       .       dbSNP_140;TSA=SNV
+1       4170    rs16708515      T       C       .       .       dbSNP_140;TSA=SNV;E_Freq
+1       4672    rs16753437      A       G       .       .       dbSNP_140;TSA=SNV;E_Freq
+1       8512    rs16753440      C       T       .       .       dbSNP_140;TSA=SNV;E_Freq
+1       8552    rs16753441      C       T       .       .       dbSNP_140;TSA=SNV;E_Freq
+1       8610    rs14743337      A       G       .       .       dbSNP_140;TSA=SNV;E_Freq
+
