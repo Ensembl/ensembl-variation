@@ -4880,6 +4880,8 @@ sub parse_variation {
     push @cols, ('AFR', 'AMR', 'ASN', 'EUR');
   }
   
+  $DB::single = 1;
+  
   my %v = map {$cols[$_] => $data[$_] eq '.' ? undef : $data[$_]} (0..$#data);
   
   $v{failed}  ||= 0;
@@ -4898,7 +4900,7 @@ sub parse_variation {
   
   # sanity check frequency data
   foreach my $pop(grep {defined($v{$_})} qw(AFR AMR ASN EUR AA EA)) {
-    $v{$pop} = undef unless $v{$pop} =~ /^([ACGTN-]+\:)?(0\.\d+|1)$/;
+    $v{$pop} = undef unless $v{$pop} =~ /^([ACGTN-]+\:)?(0|0\.\d+|1)$/;
   }
   
   return \%v;
