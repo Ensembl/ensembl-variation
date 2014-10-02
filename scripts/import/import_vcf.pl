@@ -617,7 +617,7 @@ sub main {
 		# header lines
 		next if /^##/;
 		
-		my @split = split /\t/;
+		my @split = split /\s+/;
 		my $data = {};
 		$data->{line} = $_;
 		
