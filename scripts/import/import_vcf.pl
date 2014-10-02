@@ -140,6 +140,7 @@ sub configure {
 		'add_tables=s',
 		
 		'only_existing',
+    'no_merge',
 		'skip_n',
 		'mart_genotypes',
 		
@@ -1948,14 +1949,16 @@ sub variation_feature {
 	my $var_in_db = defined($data->{variation}->{dbID}) ? 1 : 0;
 	
 	# get VF entries either from variation object or VCF locus
-	my $existing_vfs = $var_in_db ?
+	my $existing_vfs = [];
+  
+  $existing_vfs = $var_in_db ?
 		$vfa->fetch_all_by_Variation($data->{variation}) :
 		$vfa->_fetch_all_by_coords(
 			$config->{seq_region_ids}->{$vf->{chr}},
 			$vf->{start},
 			$vf->{end},
 			$config->{somatic}
-		);
+		) if !defined($config->{no_merge});
 	
 	# flag to indicate if we've added a synonym
 	my $added_synonym = 0;
@@ -2223,6 +2226,8 @@ sub get_genotypes {
 		foreach my $bit(split /\||\/|\\/, $gt) {
 			push @bits, ($bit eq '.' ? '.' : $alleles[$bit]);
 		}
+    
+    @bits = grep {defined($_)} @bits;
 		
 		push @genotypes, Bio::EnsEMBL::Variation::IndividualGenotype->new_fast({
 			variation => $data->{variation},
