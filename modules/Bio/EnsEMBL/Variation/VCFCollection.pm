@@ -74,7 +74,7 @@ sub new {
   my $caller = shift;
   my $class = ref($caller) || $caller;
   
-  my ($id, $type, $filename_template, $chromosomes, $individual_prefix, $ind_pops, $adaptor) = rearrange([qw(ID TYPE FILENAME_TEMPLATE CHROMOSOMES INDIVIDUAL_PREFIX INDIVIDUAL_POPULATIONS ADAPTOR)], @_);
+  my ($id, $type, $filename_template, $chromosomes, $ind_prefix, $pop_prefix, $ind_pops, $adaptor) = rearrange([qw(ID TYPE FILENAME_TEMPLATE CHROMOSOMES INDIVIDUAL_PREFIX POPULATION_PREFIX INDIVIDUAL_POPULATIONS ADAPTOR)], @_);
   
   throw("ERROR: No id defined for collection") unless $id;
   throw("ERROR: Collection type $type invalid") unless $type && defined($TYPES{$type});
@@ -83,7 +83,8 @@ sub new {
     adaptor => $adaptor,
     id => $id,
     type => $type,
-    individual_prefix => $individual_prefix,
+    individual_prefix => $ind_prefix,
+    population_prefix => $pop_prefix,
     chromosomes => $chromosomes,
     filename_template => $filename_template,
     _use_db => 1,
@@ -116,7 +117,13 @@ sub type {
 sub individual_prefix {
   my $self = shift;
   $self->{individual_prefix} = shift if @_;
-  return $self->{individual_prefix};
+  return $self->{individual_prefix} || '';
+}
+
+sub population_prefix {
+  my $self = shift;
+  $self->{population_prefix} = shift if @_;
+  return $self->{population_prefix} || '';
 }
 
 sub filename_template {
@@ -139,14 +146,13 @@ sub get_vcf_by_chr {
   my $self = shift;
   my $chr = shift;
   
-  if(!defined($self->{files}) || !exists($self->{files}->{$chr})) {
+  if(!exists($self->{files}) || !exists($self->{files}->{$chr})) {
     my $obj;
     
     my $file = $self->filename_template;
     
-    if($file =~ s/\#\#\#CHR\#\#\#/$chr/) {
-      $obj = Bio::EnsEMBL::IO::Parser::VCF4Tabix->open($file);
-    }
+    $file =~ s/\#\#\#CHR\#\#\#/$chr/;
+    $obj = Bio::EnsEMBL::IO::Parser::VCF4Tabix->open($file);
     
     $self->{files}->{$chr} = $obj;
   }
@@ -220,7 +226,7 @@ sub get_all_Individuals {
     my $chr = $self->list_chromosomes->[0];
     my $vcf = $self->get_vcf_by_chr($chr);
     
-    my $prefix = $self->individual_prefix || '';
+    my $prefix = $self->individual_prefix;
     my $ia = $self->use_db ? $self->adaptor->db->get_IndividualAdaptor() : undef;
     
     my $ind_names = $vcf->get_individuals();
@@ -264,21 +270,67 @@ sub get_all_Populations {
   return $self->{populations};
 }
 
+sub get_all_population_names {
+  my $self = shift;
+  
+  if(!exists($self->{_population_names})) {
+    
+    my @names;
+    
+    if(defined($self->{_raw_populations})) {
+      my $prefix = $self->population_prefix;
+      @names =
+        map {$prefix.$_}
+        map {@{$self->{_raw_populations}->{$_}}}
+        keys %{$self->{_raw_populations}};
+    }
+    
+    else {
+      @names = map {$_->name} @{$self->get_all_Populations};
+    }
+    
+    $self->{_population_names} = \@names;
+  }
+  
+  return $self->{_population_names};
+}
+
+sub has_Population {
+  my $self = shift;
+  my $pop = shift;
+  
+  my $name = ref($pop) eq 'SCALAR' ? $pop : $pop->name;
+  
+  return grep {$name eq $_} @{$self->get_all_population_names};
+}
+
 sub _get_Population_Individual_hash {
   my $self = shift;
   
-  if(!defined($self->{_population_hash})) {
+  if(!exists($self->{_population_hash})) {
+    my $hash;
     
     # populations defined in config?
     if(defined($self->{_raw_populations})) {
-      my $hash;
       my $pops;
+      my $pa;
+      my $prefix = $self->population_prefix;
       
       foreach my $ind(@{$self->get_all_Individuals}) {
         foreach my $pop(@{$self->{_raw_populations}->{$ind->name} || $self->{_raw_populations}->{$ind->{_raw_name}} || []}) {
+          
+          # try and fetch from DB
+          if(!defined($pops->{$pop})) {
+            if($self->use_db) {
+              $pa ||= $self->adaptor->db->get_PopulationAdaptor();
+              $pops->{$pop} = $pa->fetch_by_name($prefix.$pop);
+            }
+          }
+          
           $pops->{$pop} ||= Bio::EnsEMBL::Variation::Population->new_fast({
-            name => $pop,
+            name => $prefix.$pop,
             dbID => --($self->{_population_id}),
+            _raw_name => $pop,
           });
           
           $hash->{$pops->{$pop}->dbID}->{$ind->dbID} = 1;
@@ -296,9 +348,10 @@ sub _get_Population_Individual_hash {
       my @dbIDs = grep {defined($_)} map {$_->dbID || undef} @$inds;
       
       my $pa = $self->adaptor->db->get_PopulationAdaptor();
-      my $hash = $pa->_get_individual_population_hash(\@dbIDs);
-      $self->{_population_hash} = $hash;
+      $hash = $pa->_get_individual_population_hash(\@dbIDs);
     }
+
+    $self->{_population_hash} = $hash;
   }
   
   return $self->{_population_hash};
@@ -374,6 +427,29 @@ sub get_all_IndividualGenotypeFeatures_by_Slice {
   }
   
   return \@genotypes;
+}
+
+sub get_all_LD_genotypes_by_Slice {
+  my $self = shift;
+  my $slice = shift;
+  my $sample = shift;
+  
+  return {} unless $self->seek_by_Slice($slice);
+  
+  my $vcf = $self->current();
+  
+  my @genotypes;
+  my $individuals = $self->_limit_Individuals($self->get_all_Individuals, $sample);
+  my @individual_names = map {$_->{_raw_name}} @$individuals;
+  
+  my %gts;
+  
+  while($vcf->{record} && $vcf->get_start <= $slice->end) {
+    $gts{$vcf->get_raw_start} = $vcf->get_individuals_genotypes(\@individual_names);
+    $vcf->next();
+  }
+  
+  return \%gts;
 }
 
 sub _limit_Individuals {
