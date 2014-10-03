@@ -65,7 +65,7 @@ our @ISA = ('Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor');
 use base qw(Exporter);
 our @EXPORT_OK = qw($CONFIG_FILE);
 
-our $CONFIG_FILE = "/nfs/users/nfs_w/wm2/Variation/modules/Bio/EnsEMBL/Variation/DBSQL/vcf_config.json";
+our $CONFIG_FILE;
 
 sub new {
   my $caller = shift;
@@ -77,7 +77,8 @@ sub new {
 
   my ($config_file) = rearrange([qw(CONFIG_FILE)], @_);
   
-  $config_file ||= $CONFIG_FILE;
+  # try and get config file from global variable or ENV
+  $config_file ||= $CONFIG_FILE || $ENV{ENSEMBL_VARIATION_VCF_CONFIG_FILE};
   
   throw("ERROR: No config file defined") unless defined($config_file);
   throw("ERROR: Config file $config_file does not exist") unless -e $config_file;
