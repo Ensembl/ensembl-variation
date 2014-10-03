@@ -261,7 +261,7 @@ sub get_all_Individuals {
 sub get_all_Populations {
   my $self = shift;
   
-  if(!defined($self->{populations})) {
+  if(!exists($self->{populations})) {
     my $hash = $self->_get_Population_Individual_hash;
     my $pa = $self->adaptor->db->get_PopulationAdaptor();
     $self->{populations} = $pa->fetch_all_by_dbID_list([keys %$hash]);
