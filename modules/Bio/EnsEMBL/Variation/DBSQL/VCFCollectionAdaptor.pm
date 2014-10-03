@@ -105,6 +105,7 @@ sub new {
       -filename_template => $hash->{filename_template},
       -chromosomes => $hash->{chromosomes},
       -individual_prefix => $hash->{individual_prefix},
+      -population_prefix => $hash->{population_prefix},
       -individual_populations => $hash->{individual_populations},
       -adaptor => $self,
     );
@@ -121,7 +122,7 @@ sub fetch_by_id {
 }
 
 sub fetch_all {
-  return [values %{$_[0]->{collections}}];
+  return [values %{$_[0]->{collections} || {}}];
 }
 
 1;
