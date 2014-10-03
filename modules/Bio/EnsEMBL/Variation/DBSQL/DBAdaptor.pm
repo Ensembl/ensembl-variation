@@ -311,6 +311,16 @@ sub shift_hgvs_variants_3prime{
     return $self->{'shift_hgvs_variants_3prime'};
 }
 
-
+sub use_vcf {
+  my $self = shift;
+  
+  # default to 0
+  $self->{use_vcf} = 0 if !exists($self->{use_vcf});
+  
+  # allow user to switch
+  $self->{use_vcf} = shift if @_;
+  
+  return $self->{use_vcf}
+}
 
 1;
