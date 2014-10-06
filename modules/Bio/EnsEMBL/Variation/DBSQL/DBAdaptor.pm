@@ -86,7 +86,6 @@ sub get_available_adaptors{
 		'MetaCoordContainer'              => 'Bio::EnsEMBL::DBSQL::MetaCoordContainer',
 		'MetaContainer'                   => 'Bio::EnsEMBL::Variation::DBSQL::MetaContainer',
 		'GenotypeCode'                    => 'Bio::EnsEMBL::Variation::DBSQL::GenotypeCodeAdaptor',
-		'VariationAnnotation'             => 'Bio::EnsEMBL::Variation::DBSQL::VariationAnnotationAdaptor',
 		'VariationSet'                    => 'Bio::EnsEMBL::Variation::DBSQL::VariationSetAdaptor',
 		'OverlapConsequence'              => 'Bio::EnsEMBL::Variation::DBSQL::OverlapConsequenceAdaptor',
 		'Attribute'                       => 'Bio::EnsEMBL::Variation::DBSQL::AttributeAdaptor',
