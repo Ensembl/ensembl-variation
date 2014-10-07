@@ -820,11 +820,17 @@ sub _create_hgvs_tva{
     my $var_class  =  $self->transcript_variation->variation_feature->var_class();
 
 
+    $DB::single = 1;
     ##  only check insertions & deletions & don't move beyond transcript
     if( ($var_class eq 'deletion' || $var_class eq 'insertion' ) &&  
         $slice_start != length($slice->seq()) &&
         (  defined $self->transcript_variation->adaptor() && 
-           $self->transcript_variation->adaptor->db->shift_hgvs_variants_3prime()  == 1)
+           (
+             UNIVERSAL::can($self->transcript_variation->adaptor, 'isa') ? 
+             $self->transcript_variation->adaptor->db->shift_hgvs_variants_3prime()  == 1 :
+             $Bio::EnsEMBL::Variation::DBSQL::TranscriptVariationAdaptor::DEFAULT_SHIFT_HGVS_VARIANTS_3PRIME == 1
+           )
+        )
         ){                  
 	
 	print "checking position for $var_class, transcript strand is : ".  $self->transcript_variation->transcript->strand() ."\n" if $DEBUG ==1;       
