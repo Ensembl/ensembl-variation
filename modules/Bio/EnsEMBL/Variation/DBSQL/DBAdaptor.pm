@@ -269,45 +269,6 @@ sub include_non_significant_phenotype_associations {
     return $self->{'include_non_significant_phenotypes'};
 }
 
-=head2 shift_hgvs_variants_3prime
-
-  Arg [1]    : int $newval (optional)
-  Example    :
-		#Get a DBAdaptor for the human variation database
-		my $dba = $registry->get_DBAdaptor('human','variation');
-		
-		#Configure the DBAdaptor to return failed variations when using
-		#fetch methods in the various object adaptors
-		$dba->shift_hgvs_variants_3prime(1);
-		
-		#Proceed to extract HGVS annotation as normal
-
-		
-  Description: Getter/Setter for the behaviour of the adaptors connected through this
-	       DBAdaptor when it comes to HGVS transcript and protein level annotation.
-	       The default behaviour is to keep the positions as input. Formal HGVS annotation
-               requires any variant to be described at the most 3 prime location possible which 
-               changes the variation consequence in a very small number of cases.
-  Returntype : int
-  Exceptions : none
-  Caller     : general
-  Status     : at risk
-
-=cut
-
-sub shift_hgvs_variants_3prime{
-    my $self = shift;
-    my $move_3prime = shift;
-
-    #If the flag should be modified, do that
-    if (defined($move_3prime)) {$self->{'shift_hgvs_variants_3prime'} = $move_3prime;}
-    
-    #In case the flag has not been set at all, set it to the default value
-    unless (exists($self->{'shift_hgvs_variants_3prime'})) {$self->{'shift_hgvs_variants_3prime'} = $DEFAULT_SHIFT_HGVS_VARIANTS_3PRIME;}
-    
-    return $self->{'shift_hgvs_variants_3prime'};
-}
-
 sub use_vcf {
   my $self = shift;
   
