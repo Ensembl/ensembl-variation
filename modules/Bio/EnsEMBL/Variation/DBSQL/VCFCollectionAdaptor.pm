@@ -98,7 +98,29 @@ sub new {
   
   throw("ERROR: No collections defined in config file") unless $config->{collections} && scalar @{$config->{collections}};
   
+  $self->{collections} = {};
+  $self->{order} = [];
+  
   foreach my $hash(@{$config->{collections}}) {
+    
+    # check the species and assembly if we can
+    if($self->db) {
+      my $species = $hash->{species};
+      my $assembly = $hash->{assembly};
+      
+      # check species
+      throw("ERROR: No species defined in collection ".$hash->{id}."\n") unless defined($species);
+      next unless lc($self->db->species) =~ lc($species);
+      
+      # check assembly
+      if($assembly) {
+        next unless lc($self->db->dnadb->get_CoordSystemAdaptor->fetch_all->[0]->version) eq lc($assembly);
+      }
+      else {
+        warn("WARNING: No assembly defined in collection ".$hash->{id}."\n");
+      }
+    }
+    
     my $collection = Bio::EnsEMBL::Variation::VCFCollection->new(
       -id => $hash->{id},
       -type => $hash->{type},
