@@ -1349,4 +1349,28 @@ sub get_all_Publications{
 
 }
 
+=head2 get_all_attributes
+
+Example    : %attribs = %{$obj->get_all_attributes}
+Description: Retrieves attributes of this Variation as a hash reference
+             containing key-value pairs e.g. "A_homoeologue_locus" => "EPlTAEV01066791"
+             Here is a list of the keys used: A_homoeologue_locus, B_homoeologue_locus, D_homoeologue_locus
+             This is used to cross-reference SNP loci in the context of polyploid genomes
+Returntype : hashref
+Exceptions : none
+Caller     : general
+Status     : Stable
+                                                        
+=cut
+
+sub get_all_attributes {
+    my $self = shift;
+
+    if(!defined($self->{attribs})) {
+        $self->{attribs} = $self->adaptor->_fetch_attribs_by_dbID($self->dbID);
+    }
+
+    return $self->{attribs};
+}
+
 1;

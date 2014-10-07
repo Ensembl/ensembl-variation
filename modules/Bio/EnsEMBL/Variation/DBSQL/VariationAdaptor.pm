@@ -1333,6 +1333,34 @@ sub fetch_all_by_publication{
 
 }
 
+# Internal method
+# Fetches attributes
+sub _fetch_attribs_by_dbID {
+    my $self = shift;
+    my $id = shift; 
+  
+    throw("Cannot fetch attributes without dbID") unless defined($id);
+    
+    my $attribs = {};
+ 
+    my $sth = $self->dbc->prepare(qq{
+      SELECT at.code, a.value
+      FROM variation_attrib a, attrib_type at
+      WHERE a.attrib_type_id = at.attrib_type_id
+      AND a.variation_id = ?
+    });
+
+    $sth->bind_param(1,$id,SQL_INTEGER);
+    $sth->execute();
+
+    my ($key, $value);
+
+    $sth->bind_columns(\$key, \$value);
+    $attribs->{$key} = $value while $sth->fetch;
+    $sth->finish;
+
+    return $attribs;
+} 
 
 =head2 is_failed
 
