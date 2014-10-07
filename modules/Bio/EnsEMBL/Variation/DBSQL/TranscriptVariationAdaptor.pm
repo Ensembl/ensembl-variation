@@ -93,6 +93,8 @@ use Bio::EnsEMBL::Variation::ProteinFunctionPredictionMatrix;
 
 use base qw(Bio::EnsEMBL::Variation::DBSQL::VariationFeatureOverlapAdaptor);
 
+our $DEFAULT_SHIFT_HGVS_VARIANTS_3PRIME  = 0;
+
 =head2 store
 
   Arg [1]    : Bio::EnsEMBL::Variation::TranscriptVariation $tv
