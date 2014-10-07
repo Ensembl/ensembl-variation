@@ -54,6 +54,7 @@ my @option_defs = (
   'help!',
 	'tmpdir=s',
 	'tmpfile=s',
+  'no_mtmp',
 );
 
 my %options;
@@ -66,6 +67,7 @@ my $clean = $options{'clean'};
 my $quiet = $options{'quiet'};
 my $help = $options{'help'};
 my $sv_prefix = $options{'sv'} ? 'structural_' : '';
+my $no_mtmp = $options{'no_mtmp'};
 
 my $TMP_DIR = $options{tmpdir} || '/tmp/';
 my $TMP_FILE = $options{tmpfile} || $$.'_vfvs.txt';
@@ -215,7 +217,7 @@ sub post_process {
     
     print STDOUT "done!\n" unless ($quiet);
 
-    if($species =~/homo|human/i){
+    unless( defined $no_mtmp){
 	
 	# create MTMP table
 	my $mtmp_table_name = 'MTMP_variation_set_'.$sv_prefix.'variation';
@@ -313,6 +315,9 @@ Command line switches:
                     Suppresses output.
                     
   -help             Displays this message.
+
+  -no_mtmp          (Optional)
+                    Don't create the MTMP_variation_set_variation table
         
 };
     
