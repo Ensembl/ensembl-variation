@@ -103,17 +103,17 @@ sub store {
 	my $dbh = $self->dbc->db_handle;
     
     # look up source_id
-    if(!defined($var->{source_id})) {
+    if(!defined($var->{_source_id})) {
         my $sth = $dbh->prepare(q{
             SELECT source_id FROM source WHERE name = ?
         });
-        $sth->execute($var->{source});
+        $sth->execute($var->{source}->name);
         
         my $source_id;
 		$sth->bind_columns(\$source_id);
 		$sth->fetch();
 		$sth->finish();
-		$var->{source_id} = $source_id;
+		$var->{_source_id} = $source_id;
     }
     if( defined $var->{evidence}){
 	## store these by attrib id to allow different values in different species
@@ -126,7 +126,7 @@ sub store {
 	}
     }
     
-    throw("No source ID found for source name ", $var->{source}) unless defined($var->{source_id});
+    throw("No source ID found for source name ", $var->source_name) unless defined($var->{_source_id});
     
     my $sth = $dbh->prepare(q{
         INSERT INTO variation (
@@ -146,7 +146,7 @@ sub store {
     });
     
     $sth->execute(
-        $var->{source_id},
+        $var->{source} ? $var->{source}->dbID : $var->{_source_id},
         $var->name,
         (join ",", @{$var->get_all_validation_states}) || undef,
         $var->ancestral_allele,
@@ -174,20 +174,20 @@ sub update {
 	my $dbh = $self->dbc->db_handle;
     
     # look up source_id
-    if(!defined($var->{source_id})) {
+    if(!defined($var->{_source_id})) {
         my $sth = $dbh->prepare(q{
             SELECT source_id FROM source WHERE name = ?
         });
-        $sth->execute($var->{source});
+        $sth->execute($var->{source}->name);
         
         my $source_id;
 		$sth->bind_columns(\$source_id);
 		$sth->fetch();
 		$sth->finish();
-		$var->{source_id} = $source_id;
+		$var->{_source_id} = $source_id;
     }
     
-    throw("No source ID found for source name ", $var->{source}) unless defined($var->{source_id});
+    throw("No source ID found for source name ", $var->{source}->name) unless defined($var->{_source_id});
 
  if( defined $var->{evidence}){
 	## store these by attrib id to allow differnt values in different species
@@ -218,7 +218,7 @@ sub update {
     });
     
     $sth->execute(
-        $var->{source_id},
+        $var->{source} ? $var->{source}->dbID : $var->{_source_id},
         $var->name,
         (join ",", @{$var->get_all_validation_states}) || undef,
         $var->ancestral_allele,
@@ -402,12 +402,7 @@ sub _columns {
         "v.name AS v_name",
         "v.validation_status AS v_validation_status",
         "v.class_attrib_id AS v_class_attrib_id",
-        "s1.name AS v_source_name",
-        "s1.description AS v_source_description",
-        "s1.version AS v_source_version",
-        "s1.url AS v_source_url",
-        "s1.type AS v_source_type",
-        "s1.somatic_status AS v_source_somatic_status",
+        "v.source_id AS v_source_id",
         "v.somatic AS v_somatic",
         "v.flipped AS v_flipped",
         "v.ancestral_allele AS v_ancestral_allele",
@@ -1540,21 +1535,17 @@ sub _obj_from_row {
                 push @evidence, $evidence_value ; 
             }
         } 
-	my @clin_sig;
+	      my @clin_sig;
         if (defined($row->{clinical_significance})) {
             @clin_sig = split(/,/,$row->{clinical_significance}); 
         } 
+        
         # Create the variation object
         $obj = Bio::EnsEMBL::Variation::Variation->new(
             -dbID   => $row->{variation_id},
             -ADAPTOR => $self,
             -NAME   => $row->{v_name},
-            -SOURCE => $row->{v_source_name},
-            -SOURCE_DESCRIPTION => $row->{v_source_description},
-            -SOURCE_VERSION => $row->{v_source_version},
-            -SOURCE_URL => $row->{v_source_url},
-            -SOURCE_TYPE => $row->{v_source_type},
-            -SOURCE_SOMATIC_STATUS => $row->{v_source_somatic_status},
+            -_SOURCE_ID => $row->{v_source_id},
             -IS_SOMATIC => $row->{v_somatic},
             -FLIPPED => $row->{v_flipped},
             -ANCESTRAL_ALLELE => $row->{v_ancestral_allele},

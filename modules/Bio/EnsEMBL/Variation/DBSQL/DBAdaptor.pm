@@ -98,6 +98,7 @@ sub get_available_adaptors{
     'PhenotypeFeature'                => 'Bio::EnsEMBL::Variation::DBSQL::PhenotypeFeatureAdaptor',
     'Publication'                     => 'Bio::EnsEMBL::Variation::DBSQL::PublicationAdaptor',
     'StructuralVariationSample'       => 'Bio::EnsEMBL::Variation::DBSQL::StructuralVariationSampleAdaptor',
+    'Source'                          => 'Bio::EnsEMBL::Variation::DBSQL::SourceAdaptor',
     );
 	
     return (\%pairs);

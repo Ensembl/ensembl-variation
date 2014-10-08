@@ -44,10 +44,11 @@ Bio::EnsEMBL::Variation::BaseStructuralVariation - Ensembl representation of a s
     $sv = Bio::EnsEMBL::Variation::StructuralVariation->new
        (-variation_name => 'esv234231',
         -class_so_term => ''copy_number_variation',
-        -source => 'DGVa',
-        -source_description => 'Database of Genomic Variants Archive',
         -is_evidence => 0,
-        -is_somatic => 0);
+        -is_somatic => 0,
+        -source => $source,
+        -study => $study
+       );
 
     ...
 
@@ -93,10 +94,7 @@ our @ISA = ('Bio::EnsEMBL::Storable','Bio::EnsEMBL::Variation::Failable');
     string - the sequence ontology term defining the class of the structural variant.
     
   Arg [-SOURCE] :
-    string - the name of the source where the structural variant comes from
-  
-  Arg [-SOURCE_DESCRIPTION] :
-    string - description of the source
+    object ref - the source object describing where the structural variant comes from.
 
   Arg [-TYPE] :
      string - the class of structural variant e.g. 'copy_number_variation'
@@ -123,10 +121,11 @@ our @ISA = ('Bio::EnsEMBL::Storable','Bio::EnsEMBL::Variation::Failable');
     $sv = Bio::EnsEMBL::Variation::StructuralVariation->new
        (-variation_name => 'esv25480',
         -class_so_term => ''copy_number_variation',
-        -source => 'DGVa',
-        -source_description => 'Database of Genomic Variants Archive',
         -is_evidence => 0,
-        -is_somatic => 0);
+        -is_somatic => 0,
+        -source => $source,
+        -study => $study
+       );
     
   Description: Constructor. Instantiates a new structural variant object.
   Returntype : Bio::EnsEMBL::Variation::StructuralVariation or 
@@ -145,10 +144,10 @@ sub new {
     $dbID,
     $adaptor,
     $var_name,
-    $source, 
-    $source_version, 
-    $source_description, 
+    $source_id,
+    $source,
     $class_so_term,
+    $study_id,
     $study,
     $validation_status,
     $is_evidence,
@@ -159,10 +158,10 @@ sub new {
           dbID
           ADAPTOR
           VARIATION_NAME
-          SOURCE 
-          SOURCE_VERSION
-          SOURCE_DESCRIPTION 
+          _SOURCE_ID
+          SOURCE
           CLASS_SO_TERM
+          _STUDY_ID
           STUDY
           VALIDATION_STATUS
           IS_EVIDENCE
@@ -175,10 +174,10 @@ sub new {
     'dbID'                  => $dbID,
     'adaptor'               => $adaptor,
     'variation_name'        => $var_name,
+    '_source_id'            => $source_id,
     'source'                => $source,
-    'source_version'        => $source_version,
-    'source_description'    => $source_description,
     'class_SO_term'         => $class_so_term,
+    '_study_id'             => $study_id,
     'study'                 => $study,
     'validation_status'     => $validation_status,
     'is_evidence'           => $is_evidence || 0,
@@ -302,12 +301,67 @@ sub class_SO_accession {
 }
 
 
+=head2 source_object
+
+  Arg [1]    : Bio::EnsEMBL::Variation::Source $src (optional)
+               The new value to set the source attribute to
+  Example    : $source_obj = $sv->source_object()
+  Description: Getter/Setter for the source object attribute
+  Returntype : Bio::EnsEMBL::Variation::Source
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub source_object {
+  my $self = shift;
+  
+  # set
+ if(@_) {
+    if(!ref($_[0]) || !$_[0]->isa('Bio::EnsEMBL::Variation::Source')) {
+      throw("Bio::EnsEMBL::Variation::Source argument expected");
+    }
+    $self->{'source'} = shift;
+  }
+  # get
+  elsif(!defined($self->{'source'}) && $self->adaptor() && defined($self->{'_source_id'})) {
+    # lazy-load from database on demand
+    my $sa = $self->adaptor->db()->get_SourceAdaptor();
+    $self->{'source'} = $sa->fetch_by_dbID($self->{'_source_id'});
+  }
+  
+  return $self->{'source'};
+}
+
+
 =head2 source
 
   Arg [1]    : string $source (optional)
                The new value to set the source attribute to
-  Example    : $source = $svf->source()
+  Example    : $source = $sv->source()
   Description: Getter/Setter for the source attribute
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : DEPRECATED
+
+=cut
+
+sub source{
+  my $self = shift;
+  deprecate("Method deprecated. Please use the 'source_name' method instead.\n");
+  return $self->source_name(@_) if(@_);
+  return $self->source_name;
+}
+
+
+=head2 source_name
+
+  Arg [1]    : string $source_name (optional)
+               The new value to set the source name attribute to
+  Example    : $source_name = $sv->source_name()
+  Description: Getter/Setter for the source name attribute
   Returntype : string
   Exceptions : none
   Caller     : general
@@ -315,50 +369,59 @@ sub class_SO_accession {
 
 =cut
 
-sub source {
+sub source_name{
   my $self = shift;
-  return $self->{'source'} = shift if(@_);
-  return $self->{'source'};
+  my $source = $self->source_object;
+  return unless defined $source;
+  
+  $source->name(@_) if(@_);
+  return $source->name;
 }
 
 
 =head2 source_version
 
   Arg [1]    : string $source_version (optional)
-               The new value to set the source_version attribute to
-  Example    : $source_version = $svf->source_version()
-  Description: Getter/Setter for the source_version attribute
+               The new value to set the source version attribute to
+  Example    : $source_version = $sv->source_version()
+  Description: Getter/Setter for the source version attribute
   Returntype : string
   Exceptions : none
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
-sub source_version {
+sub source_version{
   my $self = shift;
-  return $self->{'source_version'} = shift if(@_);
-  return $self->{'source_version'};
+  my $source = $self->source_object;
+  return unless defined $source;
+  
+  $source->version(@_) if(@_);
+  return $source->version;
 }
 
 
 =head2 source_description
 
   Arg [1]    : string $source_description (optional)
-               The new value to set the source_description attribute to
-  Example    : $source_description = $svf->source_description()
-  Description: Getter/Setter for the source_description attribute
+               The new value to set the source description attribute to
+  Example    : $source_description = $sv->source_description()
+  Description: Getter/Setter for the source description attribute
   Returntype : string
   Exceptions : none
   Caller     : general
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
-sub source_description {
+sub source_description{
   my $self = shift;
-  return $self->{'source_description'} = shift if(@_);
-  return $self->{'source_description'};
+  my $source = $self->source_object;
+  return unless defined $source;
+  
+  $source->description(@_) if(@_);
+  return $source->description;
 }
 
 
@@ -518,9 +581,24 @@ sub is_somatic{
 
 sub study {
   my $self = shift;
-  return $self->{'study'} = shift if(@_);
+  
+  # set
+ if(@_) {
+    if(!ref($_[0]) || !$_[0]->isa('Bio::EnsEMBL::Variation::Study')) {
+      throw("Bio::EnsEMBL::Variation::Study argument expected");
+    }
+    $self->{'study'} = shift;
+  }
+  # get
+  elsif(!defined($self->{'study'}) && $self->adaptor() && defined($self->{'_study_id'})) {
+    # lazy-load from database on demand
+    my $sa = $self->adaptor->db()->get_StudyAdaptor();
+    $self->{'study'} = $sa->fetch_by_dbID($self->{'_study_id'});
+  }
+  
   return $self->{'study'};
 }
+
 
 sub stable_id {
   my $self = shift;

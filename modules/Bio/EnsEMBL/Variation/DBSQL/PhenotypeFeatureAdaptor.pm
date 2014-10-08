@@ -718,7 +718,7 @@ sub _columns {
   return qw(
     pf.phenotype_feature_id pf.object_id pf.type pf.is_significant
     pf.seq_region_id pf.seq_region_start pf.seq_region_end pf.seq_region_strand
-    pf.phenotype_id s.name s.version pf.study_id
+    pf.phenotype_id pf.source_id pf.study_id
   );
 }
 
@@ -756,13 +756,13 @@ sub _objs_from_sth {
   my (
     $phenotype_feature_id, $object_id, $object_type, $is_significant,
     $seq_region_id, $seq_region_start, $seq_region_end, $seq_region_strand,
-    $phenotype_id, $source_name, $source_version, $study_id
+    $phenotype_id, $source_id, $study_id
   );
   
   $sth->bind_columns(
     \$phenotype_feature_id, \$object_id, \$object_type, \$is_significant,
     \$seq_region_id, \$seq_region_start, \$seq_region_end, \$seq_region_strand,
-    \$phenotype_id, \$source_name, \$source_version, \$study_id
+    \$phenotype_id, \$source_id, \$study_id
   );
   
   my $sta = $self->db()->get_StudyAdaptor();
@@ -842,8 +842,7 @@ sub _objs_from_sth {
         '_phenotype_id'  => $phenotype_id,
         'adaptor'        => $self,
         '_study_id'      => $study_id,
-        'source'         => $source_name,
-        'source_version' => $source_version,
+        '_source_id'     => $source_id,
         'is_significant' => $is_significant,
       }
     );
@@ -898,7 +897,7 @@ sub store{
 
     $sth->execute(
         $pf->phenotype->dbID(),        
-        $pf->{source_id},
+        $pf->source_object ? $pf->source_object->dbID : $pf->{_source_id},
         defined($pf->study)? $pf->study->dbID() : undef,
         $pf->{type},
         defined($pf->{_object_id})? $pf->{_object_id} :  $pf->object->stable_id(),
@@ -906,7 +905,7 @@ sub store{
         defined($pf->{slice}) ? $pf->slice()->get_seq_region_id() : undef,
         defined($pf->{start}) ? $pf->{start} :undef,
         defined($pf->{end})   ? $pf->{end} : undef,
-  defined($pf->{strand})? $pf->{strand} : undef         
+        defined($pf->{strand})? $pf->{strand} : undef         
     );
   
    $sth->finish;

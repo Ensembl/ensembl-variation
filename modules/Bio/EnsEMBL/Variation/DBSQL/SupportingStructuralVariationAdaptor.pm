@@ -79,7 +79,7 @@ our @ISA = ('Bio::EnsEMBL::Variation::DBSQL::BaseStructuralVariationAdaptor');
 
 sub _default_where_clause {
   my $self = shift;
-  return $self->SUPER::_default_where_clause().' AND is_evidence=1';
+  return 'is_evidence=1';
 }
 
 
@@ -93,20 +93,15 @@ sub _objs_from_sth {
   #
   my @svs;
   
-  my ($struct_variation_id, $variation_name, $validation_status, $source_name, $source_version, 
-      $source_description, $class_attrib_id, $study_id, $is_evidence, $is_somatic, $alias, $clinical_significance );
+  my ($struct_variation_id, $variation_name, $validation_status, $source_id, $class_attrib_id,
+      $study_id, $is_evidence, $is_somatic, $alias, $clinical_significance);
 
-  $sth->bind_columns(\$struct_variation_id, \$variation_name, \$validation_status, \$source_name, 
-                     \$source_version, \$source_description, \$class_attrib_id, \$study_id, \$is_evidence, 
-                     \$is_somatic, \$alias, \$clinical_significance);
+  $sth->bind_columns(\$struct_variation_id, \$variation_name, \$validation_status, \$source_id, \$class_attrib_id,
+                     \$study_id, \$is_evidence, \$is_somatic, \$alias, \$clinical_significance);
                      
   my $aa  = $self->db->get_AttributeAdaptor;
-  my $sta = $self->db->get_StudyAdaptor();
   
   while($sth->fetch()) {
-  
-    my $study;
-    $study = $sta->fetch_by_dbID($study_id) if (defined($study_id));
 
     my @clin_sig;
     @clin_sig = split(/,/,$clinical_significance) if (defined($clinical_significance));
@@ -116,11 +111,9 @@ sub _objs_from_sth {
        -VARIATION_NAME        => $variation_name,
        -VALIDATION_STATUS     => $validation_status,
        -ADAPTOR               => $self,
-       -SOURCE                => $source_name,
-       -SOURCE_VERSION        => $source_version,
-       -SOURCE_DESCRIPTION    => $source_description,
+       -_SOURCE_ID            => $source_id,
        -CLASS_SO_TERM         => $aa->attrib_value_for_id($class_attrib_id),
-       -STUDY                 => $study,
+       -_STUDY_ID             => $study_id,
        -IS_EVIDENCE           => $is_evidence || 0,
        -IS_SOMATIC            => $is_somatic || 0,
        -ALIAS                 => $alias,
@@ -160,9 +153,8 @@ sub fetch_all_by_StructuralVariation {
     return [];
   } 
   
-  my $cols = qq{ sa.supporting_structural_variation_id, sv.variation_name, sv.validation_status, s.name, 
-                 s.version, s.description, sv.class_attrib_id, sv.study_id, sv.is_evidence, sv.somatic, 
-                 sv.alias, sv.clinical_significance
+  my $cols = qq{ sa.supporting_structural_variation_id, sv.variation_name, sv.validation_status, sv.source_id, 
+                 sv.class_attrib_id, sv.study_id, sv.is_evidence, sv.somatic, sv.alias, sv.clinical_significance
                };
   
   my $tables;
@@ -178,17 +170,18 @@ sub fetch_all_by_StructuralVariation {
   }
   
   # Special case for one human study where SV can be a supporting evidence of an other SV
-  my $constraint = $self->SUPER::_default_where_clause();
+  my $constraint;
   
   # Add the constraint for failed structural variant
   if (!$self->db->include_failed_variations()) {
-    $constraint .= " AND " . $self->db->_exclude_failed_structural_variations_constraint();
+    $constraint .= ' AND ' . $self->db->_exclude_failed_structural_variations_constraint();
   }
+  
+  $constraint .= ($constraint) ? ' AND ' : '';
            
   my $sth = $self->prepare(qq{SELECT $cols
                                 FROM $tables, structural_variation_association sa
-                                WHERE $constraint 
-                                      AND sa.supporting_structural_variation_id=sv.structural_variation_id
+                                WHERE $constraint sa.supporting_structural_variation_id=sv.structural_variation_id
                                       AND sa.structural_variation_id = ?});
   $sth->bind_param(1,$sv->dbID,SQL_INTEGER);
   $sth->execute();

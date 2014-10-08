@@ -209,7 +209,7 @@ sub _fetch_all_associate_study_id {
 
 
 sub _columns {
-  return qw(st.study_id st.name st.description st.url st.external_reference st.study_type s.name);
+  return qw(st.study_id st.name st.description st.url st.external_reference st.study_type st.source_id);
 }
 
 sub _tables { return (['study', 'st'],['source', 's']); }
@@ -229,10 +229,10 @@ sub _objs_from_sth {
 
   my @study;
 
-  my ($study_id,$study_name,$study_description,$study_url,$external_reference,$study_type,$source_name,$associate);
+  my ($study_id,$study_name,$study_description,$study_url,$external_reference,$study_type,$source_id,$associate);
 
   $sth->bind_columns(\$study_id, \$study_name, \$study_description, \$study_url, 
-	                   \$external_reference, \$study_type, \$source_name);
+	                   \$external_reference, \$study_type, \$source_id);
 
   while($sth->fetch()) {
 		
@@ -246,7 +246,7 @@ sub _objs_from_sth {
 			 -URL => $study_url,
 			 -EXTERNAL_REFERENCE => $external_reference,
 			 -TYPE => $study_type,
-			 -SOURCE => $source_name,
+			 -_SOURCE_ID => $source_id,
 			 -ASSOCIATE => $associate);
   }
 
