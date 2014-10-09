@@ -1042,6 +1042,7 @@ CREATE TABLE read_coverage (
 @column validation_status				Validation status of the variant.
 @column is_evidence             Flag indicating if the structural variation is a supporting evidence (1) or not (0).
 @column somatic                 Flags whether this structural variation is known to be somatic or not
+@column copy_number             Add the copy number for the CNV supporting structural variants when available.
 
 @see source
 @see study
@@ -1059,6 +1060,7 @@ CREATE TABLE structural_variation (
   validation_status ENUM('validated','not validated','high quality'),
 	is_evidence TINYINT(4) DEFAULT 0,
 	somatic TINYINT(1) NOT NULL DEFAULT 0,
+	copy_number TINYINT(2) DEFAULT NULL,
 	
   PRIMARY KEY (structural_variation_id),
   KEY name_idx (variation_name),
@@ -1685,24 +1687,6 @@ CREATE TABLE associate_study (
 	primary key( study1_id,study2_id )
 );
 
-/**
-@table  study_variation
-
-@colour #7CFC00
-@desc   Links a variation to a study
-
-@column variation_id  Primary key, foreign key references @link variation
-@column study_id      Primary key, foreign key references @link study
-
-@see  variation 
-@see  study  
-*/
-CREATE TABLE study_variation (
-   variation_id int(10) unsigned not null,
-   study_id int(10) unsigned not null,
-   PRIMARY KEY study_variation_idx (variation_id, study_id)
-);
-
 
 /**
 @table publication
@@ -1815,13 +1799,10 @@ CREATE TABLE meta (
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_type', 'variation'), (NULL, 'schema_version', '78');
 
 # Patch IDs for new release
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_76_77_a.sql|schema version');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_76_77_b.sql|Add new column to Variation table to flag whether variants should be displayed or not');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_76_77_c.sql|update SO consequence terms');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_76_77_d.sql|update SO terms in attrib table');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_76_77_e.sql|add variation_attrib table');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_76_77_f.sql|Add new variation_set_id column to individual table');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_76_77_g.sql|Add new column to Variation_feature table to flag whether variants should be displayed or not');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_77_78_a.sql|schema version');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL,'patch', 'patch_77_78_b.sql|Add a column copy_number for CNV supporting structural variants');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL,'patch', 'patch_77_78_c.sql|Drop the table study_variation');
+
 
 /**
 @header  Failed tables
@@ -2001,7 +1982,7 @@ CREATE TABLE attrib (
     value               TEXT NOT NULL,
 
     PRIMARY KEY (attrib_id),
-    UNIQUE KEY type_val_idx (attrib_type_id, value(40))
+    UNIQUE KEY type_val_idx (attrib_type_id, value(80))
 );
 
 /**
