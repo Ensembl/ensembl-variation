@@ -255,7 +255,18 @@ sub fetch_all_by_Variation {
 	}
 
 	if(!defined($cached)) {
-		$cached = $self->generic_fetch("g.variation_id = " . $variation->dbID());
+    
+    my $use_vcf = $self->db->use_vcf();
+    
+    if($use_vcf) {
+      my $vf = $variation->get_all_VariationFeatures->[0];
+      @$cached =
+        map {@{$_->get_all_IndividualGenotypeFeatures_by_VariationFeature($vf)}}
+        @{$self->db->get_VCFCollectionAdaptor->fetch_all() || []};
+    }
+    if($use_vcf <= 1) {
+      push @$cached, @{$self->generic_fetch("g.variation_id = " . $variation->dbID())};
+    }
 		for(@$cached) {
 			$_->variation($variation);
 			weaken($_->{'variation'});
