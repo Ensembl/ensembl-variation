@@ -187,19 +187,23 @@ sub store_uncompressed {
 		$_->individual ? $_->individual->dbID : undef,
 	} @$gts;
 	
-	my $sth = $dbh->prepare_cached(qq{
-		INSERT INTO $table(
-			variation_id,
-			subsnp_id,
-			allele_1,
-			allele_2,
-			individual_id
-		) VALUES $q_string
-	});
+	# Store the individual genotype entry, only if the array contains at least one element
 	
-	$sth->execute(@args);
+	if (@args > 0) {
+		my $sth = $dbh->prepare_cached(qq{
+			INSERT INTO $table(
+				variation_id,
+				subsnp_id,
+				allele_1,
+				allele_2,
+				individual_id
+			) VALUES $q_string
+		});
 	
-	$sth->finish;
+		$sth->execute(@args);
+
+		$sth->finish;
+	}
 	
 	return scalar @$gts;
 }
@@ -251,7 +255,18 @@ sub fetch_all_by_Variation {
 	}
 
 	if(!defined($cached)) {
-		$cached = $self->generic_fetch("g.variation_id = " . $variation->dbID());
+    
+    my $use_vcf = $self->db->use_vcf();
+    
+    if($use_vcf) {
+      my $vf = $variation->get_all_VariationFeatures->[0];
+      @$cached =
+        map {@{$_->get_all_IndividualGenotypeFeatures_by_VariationFeature($vf)}}
+        @{$self->db->get_VCFCollectionAdaptor->fetch_all() || []};
+    }
+    if($use_vcf <= 1) {
+      push @$cached, @{$self->generic_fetch("g.variation_id = " . $variation->dbID())};
+    }
 		for(@$cached) {
 			$_->variation($variation);
 			weaken($_->{'variation'});
