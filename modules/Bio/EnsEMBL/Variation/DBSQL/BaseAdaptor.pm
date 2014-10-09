@@ -131,7 +131,7 @@ sub _get_consequence_constraint {
         # and then we OR together all relevant terms
 
         for my $term (@$terms) {
-            next unless $cons_map->{$term->name};
+            next unless $term && $cons_map->{$term->name};
             $query |= $cons_map->{$term->name};
         }
     }
