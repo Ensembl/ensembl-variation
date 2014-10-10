@@ -880,7 +880,7 @@ CREATE TABLE population_genotype (
 @colour #FF8500
 @desc This table is only needed to create master schema when run healthcheck system. Needed for other species, but human, so keep it.
 
-@column variation_id     Primary key. Foreign key references to the @link variation table.
+@column variation_id     Foreign key references to the @link variation table.
 @column subsnp_id        Foreign key references to the @link subsnp_handle table.
 @column allele_1         One of the alleles of the genotype, e.g. "TAG".
 @column allele_2         The other allele of the genotype.
