@@ -4646,7 +4646,7 @@ sub load_dumped_transcript_cache {
     
     debug("Reading cached transcript data for chromosome $chr".(defined $region ? "\:$region" : "")." from dumped file") unless defined($config->{quiet});
     
-    open my $fh, $config->{compress}." ".$dump_file." |" or return undef;
+    open my $fh, $config->{compress}." ".$dump_file." |" or die "ERROR: $!";
     my $tr_cache;
     $tr_cache = fd_retrieve($fh);
     close $fh;
@@ -4853,7 +4853,7 @@ sub load_dumped_variation_cache {
     
     return undef unless -e $dump_file;
     
-    open DUMP, $config->{compress}." ".$dump_file." |" or return undef;
+    open DUMP, $config->{compress}." ".$dump_file." |" or die "ERROR: $!";
     
     my $v_cache;
     
@@ -5123,7 +5123,7 @@ sub load_dumped_reg_feat_cache {
     
     debug("Reading cached reg feat data for chromosome $chr".(defined $region ? "\:$region" : "")." from dumped file") unless defined($config->{quiet});
     
-    open my $fh, $config->{compress}." ".$dump_file." |" or return undef;
+    open my $fh, $config->{compress}." ".$dump_file." |" or die "ERROR: $!";
     my $rf_cache;
     $rf_cache = fd_retrieve($fh);
     close $fh;
