@@ -50,7 +50,7 @@ our @short_names = qw(1kg_hct 1kg_hct_ceu 1kg_hct_yri 1kg_hce 1kg_hce_ceu 1kg_hc
                       esp_6500 clin_assoc all_chips
                       Chicken600K EquineSNP50 BovineHD BovineLD BovineSNP50  
                       phencode HumanOmni5 OvineSNP50 OvineHDSNP
-                      ExomeChip ImmunoChip HumanOmniExpress ClinVar
+                      ExomeChip ImmunoChip HumanOmniExpress ClinVar MGP
                      );
 
 our @dbsnp_clinical_significance_types = qw(

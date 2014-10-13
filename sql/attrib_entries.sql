@@ -599,6 +599,7 @@ INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (358, 9, 'Ex
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (359, 9, 'ImmunoChip');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (373, 9, 'HumanOmniExpress');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (374, 9, 'ClinVar');
+INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (353, 9, 'MGP');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (270, 8, 'tolerated');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (271, 8, 'deleterious');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (272, 7, 'probably damaging');
