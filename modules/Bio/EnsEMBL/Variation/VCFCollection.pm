@@ -205,7 +205,7 @@ sub seek_by_VariationFeature {
     last if !$vcf->{record};
     
     # if it has an ID, we can use that
-    last if(grep {$vf->variation_name eq $_} @{$vcf->get_IDs});
+    last if(grep {$vf->variation_name eq $_ || $vf->variation_name eq 'ss'.$_} @{$vcf->get_IDs});
     
     # otherwise compare coords
     last if $vcf->get_start == $vf->seq_region_start;
@@ -410,7 +410,7 @@ sub get_all_IndividualGenotypeFeatures_by_Slice {
     # try to match this VCF record to VariationFeature at this position
     if($use_db) {
       foreach my $tmp_vf(@{$vfs_by_pos{$start} || []}) {
-        $vf = $tmp_vf if(grep {$tmp_vf->variation_name eq $_} @{$vcf->get_IDs});
+        $vf = $tmp_vf if(grep {$tmp_vf->variation_name eq $_ || $tmp_vf->variation_name eq 'ss'.$_} @{$vcf->get_IDs});
       }
     }
     
