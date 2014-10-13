@@ -196,7 +196,7 @@ sub seek_by_VariationFeature {
   my $self = shift;
   my $vf = shift;
   
-  my $vcf = $self->seek($vf->seq_region_name, $vf->seq_region_start - 1, $vf->seq_region_end + 1);
+  my $vcf = $self->seek($vf->seq_region_name, $vf->seq_region_start - 2, $vf->seq_region_end + 2);
   
   # compare IDs
   my $count = 0;
@@ -498,6 +498,18 @@ sub _create_IndividualGenotypeFeatures {
     # reverse complement alleles if VF is on -ve strand
     if(($vf->{strand} || $vf->seq_region_strand || 1) < 0) {
       reverse_comp($$_) for @bits
+    }
+    
+    # adjust alleles for non-SNVs
+    if(defined($vf->{class_SO_term}) && $vf->{class_SO_term} ne 'SNV') {
+      my $vcf = $self->current();
+      my @alleles = (($vcf->get_reference),@{$vcf->get_alternatives});
+      my %first_char = map {substr($_, 0, 1)} @alleles;
+      
+      # only do this if the first base is the same in all alleles
+      if(scalar keys %first_char == 1) {
+        $_ = substr($_, 1) || '-' for @bits;
+      }
     }
     
     # create genotype objects
