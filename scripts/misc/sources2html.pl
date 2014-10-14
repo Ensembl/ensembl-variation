@@ -54,19 +54,19 @@ GetOptions(
 );
 
 if (!$e_version) {
-  print "> Error! Please give an Ensembl version, using the option '-v' \n";
+  print STDERR "> Error! Please give an Ensembl version, using the option '-v' \n";
   usage();
 }
 if (!$html_file) {
-  print "> Error! Please give an output file using the option '-o'\n";
+  print STDERR "> Error! Please give an output file using the option '-o'\n";
   usage();
 }
 if (!$phost) {
-  print "> Error! Please give host name where the previous databases are stored using the option '-phost'\n";
+  print STDERR "> Error! Please give host name where the previous databases are stored using the option '-phost'\n";
   usage();
 }
 if (!$hlist) {
-  print "> Error! Please give the list of host names where the new databases are stored using the option '-hlist'\n";
+  print STDERR "> Error! Please give the list of host names where the new databases are stored using the option '-hlist'\n";
   usage();
 }
 
@@ -97,29 +97,35 @@ my $internal_link = '/i/16/internal_link.png';
 
 my %data_type_example = (
   'variation'            => {
-                             'sql' => qq{SELECT name FROM variation WHERE somatic=0 AND variation_id NOT IN (SELECT variation_id FROM failed_variation) AND source_id=? LIMIT 1},
-                             'url' => 'Variation/Explore?v='
+                             'sql'       => qq{SELECT name FROM variation WHERE somatic=0 AND variation_id NOT IN (SELECT variation_id FROM failed_variation) AND source_id=? LIMIT 1},
+                             'sql_som'   => qq{SELECT name FROM variation WHERE variation_id NOT IN (SELECT variation_id FROM failed_variation) AND source_id=? LIMIT 1},
+                             'count_spe' => qq{SELECT source_id, COUNT(variation_id) FROM variation GROUP BY source_id},
+                             'url'       => 'Variation/Explore?v='
                              },
   'variation_synonym'    => {
-                             'sql' => qq{SELECT v.name FROM variation v, variation_synonym s WHERE v.variation_id=s.variation_id AND 
-                                         s.source_id= ? AND v.variation_id NOT IN (SELECT variation_id FROM failed_variation) LIMIT 1},
-                             'url' => 'Variation/Explore?v='
+                             'sql'       => qq{SELECT v.name FROM variation v, variation_synonym s WHERE v.variation_id=s.variation_id AND 
+                                           s.source_id= ? AND v.variation_id NOT IN (SELECT variation_id FROM failed_variation) LIMIT 1},
+                             'count_spe' => qq{SELECT source_id, COUNT(variation_synonym_id) FROM variation_synonym GROUP BY source_id},
+                             'url'       => 'Variation/Explore?v='
                             },
   'structural_variation' => {
-                             'sql' => qq{SELECT variation_name FROM structural_variation WHERE is_evidence=0 AND somatic=0 AND structural_variation_id NOT IN 
-                                         (SELECT structural_variation_id FROM failed_structural_variation) AND source_id=? LIMIT 1},
-                             'url' => 'StructuralVariation/Explore?sv='
+                             'sql'       => qq{SELECT variation_name FROM structural_variation WHERE is_evidence=0 AND somatic=0 AND structural_variation_id NOT IN 
+                                           (SELECT structural_variation_id FROM failed_structural_variation) AND source_id=? LIMIT 1},
+                             'count_spe' => qq{SELECT source_id, COUNT(structural_variation_id) FROM structural_variation WHERE is_evidence=0 GROUP BY source_id},            
+                             'url'       => 'StructuralVariation/Explore?sv='
                             },
   'phenotype_feature'    => {
-                             'sql' => qq{SELECT object_id, type FROM phenotype_feature WHERE source_id=? AND is_significant=1 LIMIT 1},
+                             'sql'      => qq{SELECT object_id, type FROM phenotype_feature WHERE source_id=? AND is_significant=1 LIMIT 1},
+                             'count_spe' => qq{SELECT source_id, COUNT(phenotype_feature_id) FROM phenotype_feature GROUP BY source_id},  
                              'Variation'           => 'Variation/Phenotype?v=',
                              'StructuralVariation' => 'StructuralVariation/Phenotype?v=',
                              'Gene'                => 'Gene/Phenotype?g='
                             },
   'variation_set'        => {
-                             'sql' => qq{SELECT v.name FROM variation v, variation_set_variation s WHERE v.variation_id=s.variation_id AND v.variation_id NOT IN 
-                                         (SELECT variation_id FROM failed_variation) AND s.variation_set_id=? LIMIT 1},
-                             'url' => 'Variation/Explore?v='
+                             'sql'   => qq{SELECT v.name FROM variation v, variation_set_variation s WHERE v.variation_id=s.variation_id AND v.variation_id NOT IN 
+                                           (SELECT variation_id FROM failed_variation) AND s.variation_set_id=? LIMIT 1},
+                             'count' => qq{SELECT COUNT(variation_id) FROM variation_set_variation WHERE variation_set_id=?},
+                             'url'   => 'Variation/Explore?v='
                             },                         
 );
 
@@ -183,18 +189,18 @@ foreach my $hostname (@hostnames) {
   while (my ($dbname) = $sth->fetchrow_array) {
     next if ($dbname =~ /^master_schema/);
     $db_found ++;
-    print $dbname;
+    print STDERR $dbname;
     $dbname =~ /^(.+)_variation/;
     my $s_name = $1;
 
     if ($etype) { # EG site - need to filter out species
       my $img_thumb = sprintf qq{eg-plugins/%s/htdocs/img/species/thumb_%s.png}, $etype, ucfirst($s_name);
       if (! -e $img_thumb) {
-        print "\t... skipping \n";
+        print STDERR "\t... skipping \n";
         next;
       } 
     }
-    print "\n";
+    print STDERR "\n";
     # Get list of sources from the new databases
     my $sth2 = get_connection_and_query($dbname, $hostname, $sql2);
     $sth2->bind_columns(\$source_id,\$source,\$s_version,\$s_description,\$s_url,\$s_type,\$s_status,\$s_data_types);
@@ -324,6 +330,12 @@ sub source_table {
   my $lsdb_table;
   
   
+  my $counts_species = get_species_count(\%data_type_example, $s_name, $db_name, $hostname);
+  my $type_style  = qq{style="float:left;width:65px;text-align:left"};
+  my $count_style = qq{style="float:left;width:60px;text-align:right;margin:0px 5px"};
+  my $eg_style    = qq{style="float:left;width:20px;text-align:center"};
+  my $spaces      = "          ";
+  
   ########## Sources ##########    
   
   while ($sth->fetch) {
@@ -358,7 +370,7 @@ sub source_table {
     $s_header .= '"></td>';
 
     
-    # Display
+    # Source
     if ($s_url) {
       $source = qq{<a href="$s_url" style="text-decoration:none" target="_blank">$source</a>};
     }
@@ -368,6 +380,7 @@ sub source_table {
     
     # Somatic status
     my $s_somatic_status = somatic_status($s_status);
+    my $is_somatic = ($s_status eq 'somatic') ? 1 : undef;
     
     # Phenotype
     my $phe_title = "Provides phenotype data";
@@ -376,42 +389,50 @@ sub source_table {
     # Data types
     my @data_types = split(",", $s_data_types);
     my $data_type_string = '';
+    my $counts;
     my $examples;
     
     foreach my $dt (@data_types) {
-      my $extra_style = ($data_type_string ne '') ? qq{style="margin-top:3px"} : '';
-
+      $data_type_string .= qq{$spaces<div>};
+      
       my $data_type_label = ucfirst($dt);
       $data_type_label =~ s/_/ /g;
 
       if ($dt eq 'phenotype_feature') {
-        $data_type_string .= qq{<div $extra_style><span class="_ht conhelp" title="Provides phenotype associations">Phenotype</span></div>};
+        $data_type_string .= qq{\n$spaces  <div $type_style><span class="_ht conhelp" title="Provides phenotype associations">Phenotype</span></div>};
         $s_phenotype = qq{<img src="$phen_icon" style="border-radius:5px;border:1px solid #000" alt="$phe_title" title="$phe_title" />};
       }
       elsif ($dt eq 'study') {
-        $data_type_string .= qq{<div $extra_style><span class="_ht conhelp" title="Data are grouped by study/publication">$data_type_label</span></div>};
+        $data_type_string .= qq{\n$spaces  <div $type_style><span class="_ht conhelp" title="Data are grouped by study/publication">$data_type_label</span></div>};
       }
       elsif ($dt eq 'variation_synonym') {
-        $data_type_string .= qq{<div $extra_style><span class="_ht conhelp" title="$data_type_label - Some/all variants already exist in an other source, or are redundant in this source, with different IDs">Synonym</span></div>};
+        $data_type_string .= qq{\n$spaces  <div $type_style><span class="_ht conhelp" title="$data_type_label - Some/all variants already exist in an other source, or are redundant in this source, with different IDs">Synonym</span></div>};
       }
       elsif ($dt eq 'structural_variation') {
-        $data_type_string .= qq{<div $extra_style><span class="_ht conhelp" title="$data_type_label">SV</span></div>};
+        $data_type_string .= qq{\n$spaces  <div $type_style><span class="_ht conhelp" title="$data_type_label">SV</span></div>};
       }
       else {
-        $data_type_string .= qq{<div $extra_style>$data_type_label</div>};
+        $data_type_string .= qq{\n$spaces  <div $type_style>$data_type_label</div>};
       }
-
-      my $example = get_example($dt, $source_id, $s_name, $db_name, $hostname);
-      $examples .= '<br />' if ($examples);
-      $examples .= $example;
-
+      
+      # Count
+      my $count = $counts_species->{$dt}{$source_id};
+      $data_type_string .= qq{\n$spaces  <div $count_style>$count</div>};
+      
+      # Example
+      my $somatic_example = ($is_somatic && $dt eq 'variation') ? 1 : undef;
+      my $example = get_example($dt, $source_id, $s_name, $db_name, $hostname, $somatic_example);
+      $data_type_string .= qq{\n$spaces  <div $eg_style>$example</div>};
+      
+      $data_type_string .= qq{\n$spaces  <div style="clear:both"></div>\n$spaces</div>};
     }
+    
     $data_type_string = '-' if ($data_type_string eq '');
     
     $s_type = 'main' if (!defined($s_type));
     $other_flag{$s_type} = 1 if ($s_phenotype ne '' || $s_somatic_status ne '-');
     
-    my $row = set_row($s_header,$source,$s_version,$s_description,$data_type_string,$examples,$s_phenotype,$s_somatic_status);
+    my $row = set_row($s_header,$source,$s_version,$s_description,$data_type_string,$s_phenotype,$s_somatic_status);
     
     # Is chip ?
     if ($s_type eq 'chip') {
@@ -481,11 +502,19 @@ sub source_table {
     
     # Data types
     my @data_types = split(",", $s_data_types);
-    my $data_type_string = qq{<div><span class="_ht conhelp" title="Variation set - Existing variants from 1 or several sources have been associated with this variation set">Set</span></div>};
+    my $data_type_string = qq{\n$spaces<div>\n$spaces  <div $type_style><span class="_ht conhelp" title="Variation set - Existing variants from 1 or several sources have been associated with this variation set">Set</span></div>};
     
+    # Count
+    my $count = get_species_set_count($set_id, $s_name, $db_name, $hostname);
+    $data_type_string .= qq{\n$spaces  <div $count_style>$count</div>};;
+   
+    # Example
     my $example = get_example('variation_set', $set_id, $s_name, $db_name, $hostname);
+    $data_type_string .= qq{\n$spaces  <div $eg_style>$example</div>};
     
-    my $row = set_row($s_header,$source,$s_version,$set_description,$data_type_string,$example,'','');
+    $data_type_string .= qq{\n$spaces  <div style="clear:both"></div>\n$spaces</div>};
+    
+    my $row = set_row($s_header,$source,$s_version,$set_description,$data_type_string,'','');
 
     $chip_table .= qq{
     <tr class="bg$cbg">
@@ -747,9 +776,20 @@ sub table_header {
   
   my $top_margin = ($type eq 'main') ? '6px' : '0px';
   
+  my $data_type_header = qq{
+     <th style="width:155px;text-align:center">Data type(s)
+       <div>
+         <div style="float:left;width:65px;text-align:center"><small>Type</small></div>
+         <div style="float:left;width:70px;text-align:center"><span class="_ht conhelp" title="Variants count"><small>Count</small></span></div>
+         <div style="float:left;width:20px;text-align:center"><span class="_ht conhelp" title="Example"><small>e.g.</small></span></div>
+         <div style="clear:both"></div>
+       </div>
+     </th>
+  };
+  
   return qq{    <div style="margin:$top_margin 0px 30px">
       <table class="ss">
-        <tr><th colspan="2">$name</th><th>Version</th><th style="max-width:800px">Description</th><th>Data type(s)</th><th class="_ht" style="padding-left:1px;padding-right:1px;margin-left:0px;margin-right:0px" title="Example(s) page(s)">e.g.</th></th>$header_col</tr>
+        <tr><th colspan="2">$name</th><th>Version</th><th style="max-width:800px">Description</th>$data_type_header</th>$header_col</tr>
     };
 }
 
@@ -760,7 +800,6 @@ sub set_row {
   my $version        = shift;
   my $desc           = shift;
   my $data_type      = shift;
-  my $example        = shift;
   my $phenotype      = shift;
   my $somatic_status = shift;
 
@@ -769,8 +808,7 @@ sub set_row {
         <td style="font-weight:bold">$source</td>
         <td>$version</td>
         <td style="max-width:800px">$desc</td>
-        <td style="min-width:70px;max-width:90px">$data_type</td>
-        <td style="padding:3px 1px 2px;margin:0px">$example</td>
+        <td>$data_type</td>
         <td style="text-align:center;width:22px;padding:2px 3px;border-left:1px solid #BBB">$phenotype</td>
         <td style="text-align:center;width:22px;padding:2px 3px;border-left:1px solid #DDD">$somatic_status</td>
   };
@@ -778,16 +816,88 @@ sub set_row {
 }
 
 
-sub get_example {
-  my $data_type = shift;
+sub get_species_count {
+  my $data_types = shift;
+  my $species    = shift;
+  my $database   = shift;
+  my $hostname   = shift;
+
+  my %count_by_type;
+  
+  foreach my $type (keys(%$data_types)) {
+    next if ($type eq 'variation_set');
+    my $sql = $data_types->{$type}{'count_spe'};
+
+    my $sth = get_connection_and_query($database, $hostname, $sql);
+
+    if ($sth) {
+      while (my ($source_id,$count) = $sth->fetchrow_array) {
+        $count_by_type{$type}{$source_id} = get_count($count);
+      }
+      $sth->finish();
+    }
+  }
+  return \%count_by_type;
+}
+
+sub get_species_set_count {
   my $param     = shift;
   my $species   = shift;
   my $database  = shift;
   my $hostname  = shift;
+  my $data_type = 'variation_set';
 
   return '' if (!$data_type_example{$data_type});
 
-  my $sql = $data_type_example{$data_type}{'sql'};
+  my $sql = $data_type_example{$data_type}{'count'};
+  
+  my $sth = get_connection_and_query($database, $hostname, $sql, [$param]);
+
+  if ($sth) {
+    my @result  = $sth->fetchrow_array;
+    return get_count($result[0]);
+  }
+  return '-'; 
+}
+
+sub get_count {
+  my $count = shift;
+  
+  my $count_label;
+  my $count_display;
+  my $bg_color;
+  if ($count =~ /^(\d+)\d{6}$/) {
+    $count = "$1 million";
+    $count_label = "Over $count variants";
+    $count_display = "+ $count";
+    $bg_color = '#800';
+  }
+  elsif ($count =~ /^(\d+)\d{3}$/) {
+    $count = "$1,000";
+    $count_label = "Over $count variants";
+    $count_display = "+ $count";
+    $bg_color = '#007';
+  }
+  else {
+    $count_label = "$count variants";
+    $count_display = $count;
+    $bg_color = '#070';
+  }
+  return qq{<span style="background-color:$bg_color;color:#FFF;border-radius:5px;padding:1px 2px;cursor:help;white-space:nowrap" title="$count_label"><small>$count_display</small></span>};
+}
+
+sub get_example {
+  my $data_type  = shift;
+  my $param      = shift;
+  my $species    = shift;
+  my $database   = shift;
+  my $hostname   = shift;
+  my $is_somatic = shift;
+
+  return '' if (!$data_type_example{$data_type});
+
+  my $sql_query = ($is_somatic) ? 'sql_som' : 'sql';
+  my $sql = $data_type_example{$data_type}{$sql_query};
   my $url = $data_type_example{$data_type}{'url'};
 
   my $sth = get_connection_and_query($database, $hostname, $sql, [$param]);
