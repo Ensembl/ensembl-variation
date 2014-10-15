@@ -535,7 +535,7 @@ sub parse_nhgri {
     my $rs_risk_allele = ($content[20] =~ /\?/) ? '' : $content[20];
     my $rs_id          = $content[21];
     my $risk_frequency = ($content[20] ne '') ? $content[26] : '';
-    my $pvalue         = $content[27];
+    my $pvalue         = ($content[27] ne '') ? $content[27] : '';
     my $ratio          = $content[30];
     my $ratio_info     = $content[31];
 
@@ -552,6 +552,8 @@ sub parse_nhgri {
       'p_value' => $pvalue,
       'study_description' => $study
     );
+    
+    
     
     # Post process the ratio data
     if (defined($ratio)) {
