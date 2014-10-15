@@ -41,7 +41,7 @@ GetOptions(
   'help|h',                  # displays help message
   
   'dir|d=s',                 
-  'version|v=i',
+  'version|v=s',
   'species|s=s',
 ) or die "ERROR: Failed to parse command-line flags\n";
 
@@ -203,6 +203,8 @@ foreach my $species(@refseq_species) {
     }
   }
 }
+
+print "Finished\n";
 
 sub usage {
   
