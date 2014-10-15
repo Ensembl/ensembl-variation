@@ -96,8 +96,6 @@ use vars qw(@ISA @EXPORT_OK);
     &vf_to_consequences
     &validate_vf
     &read_cache_info
-    &dump_adaptor_cache
-    &load_dumped_adaptor_cache
     &load_dumped_variation_cache
     &load_dumped_transcript_cache
     &prefetch_transcript_data
@@ -4754,48 +4752,6 @@ sub clean_slice_adaptor{
     $config->{sa}->{sr_id_cache} = {};
     delete $config->{sa}->{db}->{seq_region_cache};
     delete $config->{sa}->{db}->{name_cache};
-}
-
-
-# dump adaptors to cache
-sub dump_adaptor_cache {
-    my $config = shift;
-    
-    $config->{reg}->disconnect_all;
-    delete $config->{sa}->{dbc}->{_sql_helper};
-    
-    my $dir = $config->{dir};
-    my $dump_file = $dir.'/adaptors.gz';
-    
-    # make directory if it doesn't exist
-    if(!(-e $dir)) {
-        mkpath($dir);
-	}
-    
-    open my $fh, "| gzip -9 -c > ".$dump_file or die "ERROR: Could not write to dump file $dump_file";
-    nstore_fd($config, $fh);
-    close $fh;
-}
-
-# load dumped adaptors
-sub load_dumped_adaptor_cache {
-    my $config = shift;
-    
-    my $dir = $config->{dir};
-    my $dump_file = $dir.'/adaptors.gz';
-    
-    return undef unless -e $dump_file;
-    
-    debug("Reading cached adaptor data") unless defined($config->{quiet});
-    
-    open my $fh, $config->{compress}." ".$dump_file." |" or return undef;
-    my $cached_config;
-    $cached_config = fd_retrieve($fh);
-    close $fh;
-    
-    $config->{$_} = $cached_config->{$_} for qw(sa ga ta vfa svfa tva pfpma mca csa RegulatoryFeature_adaptor MotifFeature_adaptor);
-    
-    return 1;
 }
 
 # dumps cached variations to disk
