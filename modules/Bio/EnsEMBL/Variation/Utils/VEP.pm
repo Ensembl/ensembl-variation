@@ -151,6 +151,7 @@ our @EXTRA_HEADERS = (
   { flag => 'symbol',          cols => ['SYMBOL','SYMBOL_SOURCE','HGNC_ID'] },
   { flag => 'biotype',         cols => ['BIOTYPE'] },
   { flag => 'canonical',       cols => ['CANONICAL'] },
+  { flag => 'tsl',             cols => ['TSL']},
   { flag => 'ccds',            cols => ['CCDS'] },
   { flag => 'protein',         cols => ['ENSP'] },
   { flag => 'uniprot',         cols => ['SWISSPROT', 'TREMBL', 'UNIPARC'] },
@@ -197,6 +198,7 @@ our %COL_DESCS = (
     'Codons'             => 'Reference and variant codon sequence',
     'Existing_variation' => 'Identifier(s) of co-located known variants',
     'CANONICAL'          => 'Indicates if transcript is canonical for this gene',
+    'TSL'                => 'Transcript support level',
     'CCDS'               => 'Indicates if transcript is a CCDS transcript',
     'SYMBOL'             => 'Gene symbol (e.g. HGNC)',
     'SYMBOL_SOURCE'      => 'Source of gene symbol',
@@ -2583,6 +2585,12 @@ sub add_extra_fields_transcript {
         $line->{Extra}->{SOURCE} = $tr->{_source_cache};
     }
     
+    # transcript support level
+    if(defined($config->{tsl}) && (my ($tsl) = @{$tr->get_all_Attributes('TSL')})) {
+        $tsl->value =~ m/tsl(\d+)/;
+        $line->{Extra}->{TSL} = $1 if $1;
+    }
+    
     return $line;
 }
 
@@ -4309,7 +4317,7 @@ sub clean_transcript {
     # clean attributes
     if(defined($tr->{attributes})) {
         my @new_atts;
-        my %keep = map {$_ => 1} qw(gencode_basic miRNA ncRNA cds_start_NF cds_end_NF);
+        my %keep = map {$_ => 1} qw(gencode_basic miRNA ncRNA cds_start_NF cds_end_NF TSL);
         foreach my $att(@{$tr->{attributes}}) {
             delete $att->{description};
             push @new_atts, $att if defined($keep{$att->{code}});
