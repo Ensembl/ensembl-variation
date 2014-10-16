@@ -41,6 +41,7 @@ sub param_defaults {
   return {
     'refseq' => 0,
     'merged' => 0,
+    'convert' => 0,
     'include_pattern' => '',
     'exclude_pattern' => '',
   };
@@ -59,6 +60,7 @@ sub fetch_input {
   
   $self->param('species_list', \@species);
   $self->param('refseq_list', [grep {$_->{species_refseq}} @species]);
+  $self->param('variation_list', [grep {$_->{variation}} @species]);
   return;
 }
 
@@ -67,6 +69,7 @@ sub write_output {
 
   $self->dataflow_output_id($self->param('species_list'), 2);
   $self->dataflow_output_id($self->param('refseq_list'), 3) if $self->param('merged');
+  $self->dataflow_output_id($self->param('variation_list'), 4) if $self->param('convert');
   return;
 }
 
@@ -145,8 +148,14 @@ sub get_species_list {
       my $count;
       $sth->bind_columns(\$count);
       $sth->fetch;
+      $sth->finish();
       
       if($count) {
+
+        my $var_db_name = $current_db_name;
+        $var_db_name =~ s/otherfeatures/variation/;
+        my $has_var_db = $dbc->do("SHOW DATABASES LIKE '$var_db_name';");
+        
         $current_db_name =~ s/^([a-z]+\_[a-z,1-9]+)(\_[a-z]+)?(.+)/$1$2/;
         $current_db_name =~ s/\_otherfeatures$//;
         
@@ -156,11 +165,10 @@ sub get_species_list {
         $species_hash{species} = $current_db_name;
         $species_hash{assembly} = $assembly;
         $species_hash{species_refseq} = 1;
+        $species_hash{variation} = $has_var_db;
 
         push @species, \%species_hash;
       }
-      
-      $sth->finish();
     }
     
     else {
@@ -175,6 +183,11 @@ sub get_species_list {
       $sth->finish();
       
       my $count = 0;
+      
+      # do we have a variation DB?
+      my $var_db_name = $current_db_name;
+      $var_db_name =~ s/core/variation/;
+      my $has_var_db = $dbc->do("SHOW DATABASES LIKE '$var_db_name';");
       
       foreach $species_id(keys %$species_ids) {
         $sth = $dbc->prepare("SELECT version FROM ".$current_db_name.".coord_system WHERE species_id = ".$species_id." ORDER BY rank LIMIT 1;");
@@ -191,6 +204,7 @@ sub get_species_list {
         
         $species_hash{species} = $species_ids->{$species_id};
         $species_hash{assembly} = $assembly;
+        $species_hash{variation} = $has_var_db;
         $sth->finish();
 
         push @species, \%species_hash;
