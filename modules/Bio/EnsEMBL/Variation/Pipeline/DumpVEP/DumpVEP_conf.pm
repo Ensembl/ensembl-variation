@@ -224,7 +224,7 @@ sub pipeline_analyses {
         vep_command          => $self->o('vep_command'),
         @common_params
       },
-      -rc_name       => 'default',
+      -rc_name       => 'highmem',
       -hive_capacity => 3,
     },
     {
