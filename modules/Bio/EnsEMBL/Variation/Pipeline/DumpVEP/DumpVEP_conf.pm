@@ -49,41 +49,40 @@ sub default_options {
   return {
 
     # general pipeline options that you should change to suit your environment
-       
     hive_force_init => 1,
     hive_use_param_stack => 0,
     hive_use_triggers => 0,
     hive_auto_rebalance_semaphores => 0, 
     hive_no_init => 0,
+    
     # the location of your checkout of the ensembl API (the hive looks for SQL files here)
-        
+    # this pipeline requires you have ensembl-variation and ensembl-tools in this dir as
     ensembl_cvs_root_dir    => $ENV{'HOME'} . '/Git',
     hive_root_dir           => $ENV{'HOME'} . '/Git/ensembl-hive', 
-    # a name for your pipeline (will also be used in the name of the hive database)
-        
+    
+    # a name for your pipeline (will also be used in the name of the hive database)    
     pipeline_name           => 'dump_vep',
 
     # a directory to keep hive output files and your registry file, you should
     # create this if it doesn't exist
-
     pipeline_dir            => '/lustre/scratch109/ensembl/'.$ENV{'USER'}.'/'.$self->o('pipeline_name'),
 
     # a directory where hive workers will dump STDOUT and STDERR for their jobs
     # if you use lots of workers this directory can get quite big, so it's
     # a good idea to keep it on lustre, or some other place where you have a 
     # healthy quota!
-        
     output_dir              => $self->o('pipeline_dir').'/hive_output',
     
     # command line stuff for VEP
-    # gets prefixed with ensembl_cvs_root_dir/ensembl-tools/scripts/variant_effect_predictor/
-    vep_command  => 'variant_effect_predictor.pl --build all',
+    # gets prefixed with ensembl_cvs_root_dir/ensembl-tools/scripts/variant_effect_predictor/variant_effect_predictor.pl
+    vep_command  => '--build all',
     
-    # you might want to add a -I here to point to a master repo instead of your default branch picked up by PERL5LIB
+    # you might want to add a -I here to point to a master repo
+    # instead of your default branch picked up by PERL5LIB
     perl_command => $^X,
         
     # specify which servers to scan for databases to dump
-    dump_servers            => [
+    dump_servers => [
       {
         host => 'ens-staging1',
         port => 3306,
@@ -105,43 +104,40 @@ sub default_options {
     refseq => 1,
     merged => 1,
     
+    # tabix-convert species with var DBs?
+    # this creates an extra tar.gz file for each of these species
+    # the web interface and REST API use these in preference to the non-converted ones
+    convert => 1,
+    
     # include or exclude DBs with these patterns
     include_pattern => undef,
     exclude_pattern => undef,
     
     # special flags apply to certain species
     species_flags => {
+      
+      # human has SIFT, PolyPhen, regulatory data and a file containing SNP frequencies
       homo_sapiens => {
         sift => 'b',
         polyphen => 'b',
         regulatory => 1,
         freq_file => '/nfs/ensembl/wm2/VEP/cache/ALL_1KG_ESP_freqs_with_alleles.txt,AFR,AMR,ASN,EUR,AA,EA',
       },
+      
+      # mouse has SIFT and regulatory data
       mus_musculus => {
         regulatory => 1,
         sift => 'b',
       },
-      bos_taurus => {
-        sift => 'b',
-      },
-      canis_familiaris => {
-        sift => 'b',
-      },
-      danio_rerio => {
-        sift => 'b',
-      },
-      equus_caballus => {
-        sift => 'b',
-      },
-      gallus_gallus => {
-        sift => 'b',
-      },
-      rattus_norvegicus => {
-        sift => 'b',
-      },
-      sus_scrofa => {
-        sift => 'b',
-      },
+      
+      # these species just have SIFT
+      bos_taurus        => { sift => 'b', },
+      canis_familiaris  => { sift => 'b', },
+      danio_rerio       => { sift => 'b', },
+      equus_caballus    => { sift => 'b', },
+      gallus_gallus     => { sift => 'b', },
+      rattus_norvegicus => { sift => 'b', },
+      sus_scrofa        => { sift => 'b', },
     },
 
     # configuration for the various resource options used in the pipeline
@@ -195,6 +191,7 @@ sub pipeline_analyses {
     perl_command
     refseq
     merged
+    convert
   );
    
   my @analyses = (
@@ -213,35 +210,40 @@ sub pipeline_analyses {
       -hive_capacity => 1,
       -flow_into     => {
         '2' => ['dump_vep', 'finish_dump'],
-        '3' => ['merge_vep']
+        '3' => ['merge_vep'],
+        '4' => ['convert_vep'],
       },
     },
     {
       -logic_name    => 'dump_vep',
       -module        => 'Bio::EnsEMBL::Variation::Pipeline::DumpVEP::DumpVEP',
       -parameters    => {
-        species_flags        => $self->o('species_flags'),
-        vep_command          => $self->o('vep_command'),
+        species_flags  => $self->o('species_flags'),
+        vep_command    => $self->o('vep_command'),
         @common_params
       },
       -rc_name       => 'highmem',
       -hive_capacity => 3,
     },
     {
-      -logic_name => 'merge_vep',
-      -module     => 'Bio::EnsEMBL::Variation::Pipeline::DumpVEP::MergeVEP',
-      -parameters => {
-        @common_params
-      },
-      -wait_for   => ['dump_vep'],
+      -logic_name    => 'merge_vep',
+      -module        => 'Bio::EnsEMBL::Variation::Pipeline::DumpVEP::MergeVEP',
+      -parameters    => { @common_params },
+      -wait_for      => ['dump_vep'],
+      -hive_capacity => 10,
+    },
+    {
+      -logic_name    => 'convert_vep',
+      -module        => 'Bio::EnsEMBL::Variation::Pipeline::DumpVEP::ConvertVEP',
+      -parameters    => { @common_params },
+      -wait_for      => ['merge_vep'],
+      -hive_capacity => 10,
     },
     {
       -logic_name => 'finish_dump',
       -module     => 'Bio::EnsEMBL::Variation::Pipeline::DumpVEP::FinishDump',
-      -parameters => {
-        @common_params
-      },
-      -wait_for   => ['merge_vep'],
+      -parameters => { @common_params },
+      -wait_for   => ['convert_vep'],
     }
   );
 
