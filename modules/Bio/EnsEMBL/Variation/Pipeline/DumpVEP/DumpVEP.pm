@@ -72,7 +72,7 @@ sub run {
   
   # construct command
   my $cmd = sprintf(
-    '%s %s/%s --host %s --port %i --user %s %s --species %s --assembly %s --db_version %s --dir %s %s',
+    '%s %s/variant_effect_predictor.pl %s --host %s --port %i --user %s %s --species %s --assembly %s --db_version %s --dir %s %s',
     $perl,
     $vep_dir,
     $vep,
