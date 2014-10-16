@@ -115,6 +115,7 @@ use vars qw(@ISA @EXPORT_OK);
     %COL_DESCS
     @VEP_WEB_CONFIG
     %FILTER_SHORTCUTS
+    @PICK_ORDER
 );
 
 our @OUTPUT_COLS = qw(
@@ -274,6 +275,8 @@ our @VAR_CACHE_COLS = qw(
     minor_allele
     minor_allele_freq
 );
+
+our @PICK_ORDER = qw(canonical tsl biotype rank length);
 
 our %FILTER_SHORTCUTS = (
     upstream => {
@@ -1936,9 +1939,10 @@ sub vf_to_consequences {
 # picks the worst of a list of VariationFeatureOverlapAlleles
 # VFOAs are ordered by a heirarchy:
 # 1: canonical
-# 2: biotype (protein coding favoured)
-# 3: consequence rank
-# 4: transcript length
+# 2: transcript support level
+# 3: biotype (protein coding favoured)
+# 4: consequence rank
+# 5: transcript length
 sub pick_worst_vfoa {
   my $config = shift;
   my $vfoas = shift;
@@ -1957,32 +1961,61 @@ sub pick_worst_vfoa {
       vfoa => $vfoa,
       rank => $ranks{$ocs[0]->SO_term},
       
-      # these will only be used by transcript types, default to 0 for others
+      # these will only be used by transcript types, default to 1 for others
       # to avoid writing an else clause below
-      canonical => 0,
+      canonical => 1,
       length => 0,
-      biotype => 0
+      biotype => 1,
+      tsl => 100,
     };
     
     if($vfoa->isa('Bio::EnsEMBL::Variation::TranscriptVariationAllele')) {
       my $tr = $vfoa->feature;
-      $info->{canonical} = $tr->is_canonical ? 1 : 0;
-      $info->{length} = $tr->length();
-      $info->{biotype} = $tr->biotype eq 'protein_coding' ? 1 : 0;
+      
+      # 0 is "best"
+      $info->{canonical} = $tr->is_canonical ? 0 : 1;
+      $info->{biotype} = $tr->biotype eq 'protein_coding' ? 0 : 1;
+      
+      # "invert" length so longer is best
+      $info->{length} = 0 - $tr->length();
+      
+      # lower TSL is best
+      if(my ($tsl) = @{$tr->get_all_Attributes('TSL')}) {
+        $tsl->value =~ m/tsl(\d+)/;
+        $info->{tsl} = $1 if $1;
+      }
     }
     
     push @vfoa_info, $info;
   }
   
   if(scalar @vfoa_info) {
-    my $picked = (sort {
-      $b->{canonical} <=> $a->{canonical} ||
-      $b->{biotype} <=> $a->{biotype} ||
-      $a->{rank} <=> $b->{rank} ||
-      $b->{length} <=> $a->{length}
-    } @vfoa_info)[0]->{vfoa};
+    my @order = defined($config->{pick_order}) ? @{$config->{pick_order}} : @PICK_ORDER;
+    my $picked;
     
-    return $picked;
+    # go through each category in order
+    foreach my $cat(@order) {
+      
+      # sort on that category
+      @vfoa_info = sort {$a->{$cat} <=> $b->{$cat}} @vfoa_info;
+      
+      # take the first (will have the lowest value of $cat)
+      $picked = shift @vfoa_info;
+      my @tmp = ($picked);
+      
+      # now add to @tmp those vfoas that have the same value of $cat as $picked
+      push @tmp, shift @vfoa_info while @vfoa_info && $vfoa_info[0]->{$cat} eq $picked->{$cat};
+      
+      # if there was only one, return
+      return $picked->{vfoa} if scalar @tmp == 1;
+      
+      # otherwise shrink the array to just those that had the lowest
+      # this gives fewer to sort on the next round
+      @vfoa_info = @tmp;
+    }
+    
+    # probably shouldn't get here, but if we do, return the first
+    return $vfoa_info[0]->{vfoa};
   }
   
   return undef;
