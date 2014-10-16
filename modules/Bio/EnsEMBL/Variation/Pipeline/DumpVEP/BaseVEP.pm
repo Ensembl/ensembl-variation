@@ -36,6 +36,7 @@ use base qw(Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess);
 sub tar {
   my $self = shift;
   my $type = shift;
+  my $mod  = shift;
   
   my $species  = $self->required_param('species');
   my $assembly = $self->required_param('assembly');
@@ -43,13 +44,15 @@ sub tar {
   my $dir      = $self->required_param('pipeline_dir');
   
   $species .= $type ? '_'.$type : '';
+  $mod ||= '';
   
   my $tar_file = sprintf(
-    '%s/%s_vep_%i_%s.tar.gz',
+    '%s/%s_vep_%i_%s%s.tar.gz',
     $dir,
     $species,
     $version,
-    $assembly
+    $assembly,
+    $mod
   );
   
   # check if tar exists
