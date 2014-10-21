@@ -451,7 +451,6 @@ sub update_evidence{
     my $ev_ext_sth = $dba->dbc()->prepare(qq[ select variation.variation_id, variation.evidence_attribs 
                                               from variation, variation_citation
                                               where variation.variation_id = variation_citation.variation_id
-                                              and variation.evidence_attribs not like '%$attrib->[0]->[0];%'
                                              ]);
 
     my $var_upd_sth     = $dba->dbc()->prepare(qq[ update variation set evidence_attribs = ? where variation_id = ?]);
