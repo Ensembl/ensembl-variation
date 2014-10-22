@@ -176,7 +176,7 @@ foreach my $project (sort{ $pops{$a}{'order'} <=> $pops{$b}{'order'} } keys(%pop
   my $url = $pops{$project}{'url'};
   my $evidence = $pops{$project}{'evidence'};
   
-  $html_pop .= qq{<h4>Populations from the <a href="$url" target="_blank" style="text-decoration:none">$project$project_word</a> ($spe)</h4>\n};
+  $html_pop .= qq{<ul style="padding-left:1em;margin-left:2px"><li><h3>Populations from the <a href="$url" target="_blank" style="text-decoration:none">$project$project_word</a> ($spe)</h3></li></ul>\n};
 
   my $project_id = $project;
   $project_id =~ s/ /_/g;
