@@ -863,7 +863,7 @@ sub store{
    }
 
     # look up source_id
-    if(!defined($pf->{source_id})) {
+    if(defined $pf->{source} && !defined($pf->{source_id})) {
         my $sth = $dbh->prepare(q{
             SELECT source_id FROM source WHERE name = ?
         });
@@ -877,7 +877,7 @@ sub store{
     }
 
     throw("No source ID found for source name ", $pf->{source})
-        unless defined($pf->{source_id});
+        unless (defined($pf->{source_id}) || defined ( $pf->{source_object}->dbID));
 
 
     my $sth = $dbh->prepare(q{
@@ -897,7 +897,7 @@ sub store{
 
     $sth->execute(
         $pf->phenotype->dbID(),        
-        $pf->source_object ? $pf->source_object->dbID : $pf->{_source_id},
+        $pf->{source_object} ? $pf->{source_object}->dbID : $pf->{source_id},
         defined($pf->study)? $pf->study->dbID() : undef,
         $pf->{type},
         defined($pf->{_object_id})? $pf->{_object_id} :  $pf->object->stable_id(),

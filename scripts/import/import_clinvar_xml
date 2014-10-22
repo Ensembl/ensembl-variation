@@ -55,9 +55,11 @@ usage() unless defined $data_file && defined $registry_file && defined $assembly
 
 my $reg = 'Bio::EnsEMBL::Registry';
 $reg->load_all($registry_file);
-
-my $variation_adaptor     = $reg->get_adaptor('homo_sapiens', 'variation', 'variation');
-my $var_feat_adaptor      = $reg->get_adaptor('homo_sapiens', 'variation', 'variationfeature');
+my $dba = $reg->get_DBAdaptor('homo_sapiens','variation');
+$dba->include_failed_variations(1);
+ 
+my $variation_adaptor     = $dba->get_VariationAdaptor('human', 'variation', );
+my $var_feat_adaptor      = $dba->get_VariationFeatureAdaptor('human', 'variation', );
 my $allele_adaptor        = $reg->get_adaptor('homo_sapiens', 'variation', 'allele');
 
 my $pheno_feat_adaptor    = $reg->get_adaptor('homo_sapiens', 'variation', 'phenotypefeature');
@@ -65,7 +67,11 @@ my $phenotype_adaptor     = $reg->get_adaptor('homo_sapiens', 'variation', 'phen
 
 my $slice_adaptor         = $reg->get_adaptor('homo_sapiens', 'core', 'slice');
 
-my $source   = "ClinVar";
+## fetch ClinVar source object
+my $source   =   get_source($reg, "ClinVar");
+## default ClinVar phenotype description if non available
+my $default_pheno  = "ClinVar: phenotype not specified";
+ 
 
 my $ref = XML::Records->new($data_file);
 $ref->set_records('ClinVarSet');
@@ -253,6 +259,9 @@ sub import{
 
     return undef unless defined $var_ob; ## allele finding failures exit here
 
+    ## deal with non-specified phenos
+    $record->{disease} = $default_pheno unless $record->{disease} =~/\w+/;
+    $record->{disease} = $default_pheno if $record->{disease} eq "not provided";
 
     ## look for existing or enter new phenotype object
     my $pheno = get_phenotype($record->{disease});
@@ -274,7 +283,7 @@ sub import{
 	-is_significant => 1,
 	-type           => $type,
 	-object         => $var_ob,
-	-source         => $source,
+	-source_object  => $source,
 	-attribs        => \%attribs
 	);
         $pheno_feat_adaptor->store($phenofeat);
@@ -357,6 +366,20 @@ sub enter_var{
     
     
     return $var;
+}
+
+sub get_source{
+
+    my $reg  = shift;
+    my $desc = shift;
+
+    my $source_adaptor  = $reg->get_adaptor('homo_sapiens', 'variation', 'source');
+
+    my $source = $source_adaptor->fetch_by_name( $desc );
+
+    die "Source information not held for $desc\n"  unless defined $source;
+
+    return $source;
 }
 
 
