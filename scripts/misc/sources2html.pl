@@ -90,7 +90,12 @@ my $login = "ensro";
 my $pswd = "";
 my $sep = "\t";
 my $start = 0;
-my %colours = ( 'version' => '#090', 'source'  => '#00F' );
+my %colours = ( 'version'  => '#090',
+                'source'   => '#00F',
+                'million'  => '#800',
+                'thousand' => '#007', 
+                'hundred'  => '#070'
+              );
 
 my $phen_icon = '/i/val/var_phenotype_data_small.png';
 my $internal_link = '/i/16/internal_link.png';
@@ -623,6 +628,9 @@ sub create_menu {
   }
   my $v_colour = $colours{'version'};
   my $s_colour = $colours{'source'};
+  my $m_colour = $colours{'million'};
+  my $t_colour = $colours{'thousand'};
+  my $h_colour = $colours{'hundred'};
   my $v_label  = $desc{'version'};
   my $s_label  = $desc{'source'};
   
@@ -638,7 +646,8 @@ sub create_menu {
     <div style="padding:5px;font-weight:bold;color:#000;background-color:#FFF;border-top:2px solid #336;border-bottom:1px solid #336;;margin-bottom:2px">
       <img src="/i/16/info.png" style="vertical-align:top" />
       Icons legend
-    </div> 
+    </div>
+    <!-- Main legend -->
     <table>
       <tr>
         <td style="padding-top:8px;text-align:center">%s   </td>
@@ -667,6 +676,29 @@ sub create_menu {
         <td style="padding-top:6px">The source contains both<br />germline and somatic data</td>
       </tr>
     </table>
+    
+    <!-- Variant and structural variant count colour legend -->
+    <div style="border-top:1px dotted #BBB;margin-top:2px;padding:4px 4px 0px">
+      <div style="float:left">Variant count: </div>
+      <div style="float:right">
+        <div style="margin-bottom:4px">
+          <span style="background-color:$m_colour;color:#FFF;border-radius:5px;padding:1px 2px;cursor:default;white-space:nowrap;">
+            <small>> 1 million</small>
+          </span>
+        </div>
+        <div style="margin-bottom:4px">
+          <span style="background-color:$t_colour;color:#FFF;border-radius:5px;padding:1px 2px;cursor:default;white-space:nowrap">
+            <small>1,000 to 999,999</small>
+          </span>
+        </div>
+        <div style="margin-bottom:4px">
+          <span style="background-color:$h_colour;color:#FFF;border-radius:5px;padding:1px 2px;cursor:default;white-space:nowrap">
+            <small>< 1000</small>
+          </span>
+        </div>
+      </div>
+      <div style="clear:both"></div>
+    </div>
 
     <!-- Javascript used to fix the legend on the right handside when you scroll down -->
     <script language="Javascript" type="text/javascript">
@@ -770,14 +802,14 @@ sub table_header {
   
   my $alt_text = qq{Phenotype data, somatic/germline data, ... See the icons description on the table on the right handside of the page};
   my $header_col = qq{
-    <th colspan=2 style="width:56px;text-align:center;border-left:1px solid #BBB;background-color:#BBB">
+    <th colspan=2 style="width:56px;text-align:center;border-left:1px solid #CCC;background-color:#BBB">
        <span class="_ht ht" title="$alt_text">Other</span>
     </th>};
   
   my $top_margin = ($type eq 'main') ? '6px' : '0px';
   
   my $data_type_header = qq{
-     <th style="width:155px;text-align:center">Data type(s)
+     <th style="width:155px;text-align:center;border-left:1px solid #CCC;background-color:#BBB">Data type(s)
        <div>
          <div style="float:left;width:65px;text-align:center"><small>Type</small></div>
          <div style="float:left;width:70px;text-align:center"><span class="_ht conhelp" title="Variants count"><small>Count</small></span></div>
@@ -808,8 +840,8 @@ sub set_row {
         <td style="font-weight:bold">$source</td>
         <td>$version</td>
         <td style="max-width:800px">$desc</td>
-        <td>$data_type</td>
-        <td style="text-align:center;width:22px;padding:2px 3px;border-left:1px solid #BBB">$phenotype</td>
+        <td style="border-left:1px solid #CCC">$data_type</td>
+        <td style="text-align:center;width:22px;padding:2px 3px;border-left:1px solid #CCC">$phenotype</td>
         <td style="text-align:center;width:22px;padding:2px 3px;border-left:1px solid #DDD">$somatic_status</td>
   };
   return $row;
@@ -869,19 +901,19 @@ sub get_count {
   if ($count =~ /^(\d+)\d{6}$/) {
     $count = "$1 million";
     $count_label = "Over $count variants";
-    $count_display = "+ $count";
-    $bg_color = '#800';
+    $count_display = "> $count";
+    $bg_color = $colours{'million'};
   }
   elsif ($count =~ /^(\d+)\d{3}$/) {
     $count = "$1,000";
     $count_label = "Over $count variants";
-    $count_display = "+ $count";
-    $bg_color = '#007';
+    $count_display = "> $count";
+    $bg_color = $colours{'thousand'};
   }
   else {
     $count_label = "$count variants";
     $count_display = $count;
-    $bg_color = '#070';
+    $bg_color = $colours{'hundred'};
   }
   return qq{<span style="background-color:$bg_color;color:#FFF;border-radius:5px;padding:1px 2px;cursor:help;white-space:nowrap" title="$count_label"><small>$count_display</small></span>};
 }
