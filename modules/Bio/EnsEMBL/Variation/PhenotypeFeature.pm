@@ -100,6 +100,8 @@ our %TYPES = (
     string - source of the phenotype association
   Arg [-SOURCE_VERSION] :
     string - version of the source of the phenotype association
+  Arg [-SOURCE_OBJECT] :
+    object  - source of the phenotype association
   Arg [-STUDY_NAME] :
     string - name of study reporting the association
   Arg [-STUDY_DESCRIPTION] :
@@ -135,11 +137,11 @@ sub new {
   my $class = ref($caller) || $caller;
   my $self = $class->SUPER::new(@_);
 
-  my ($dbID,$adaptor,$phenotype_id,$phenotype,$type,$object,$object_id,$source,$source_id,$study,$study_id,$is_significant,$attribs) =
+  my ($dbID,$adaptor,$phenotype_id,$phenotype,$type,$object,$object_id,$source,$source_id,$source_object,$study,$study_id,$is_significant,$attribs) =
     rearrange([qw(
       dbID ADAPTOR _PHENOTYPE_ID PHENOTYPE
       TYPE OBJECT _OBJECT_ID
-      SOURCE _SOURCE_ID STUDY _STUDY_ID
+      SOURCE _SOURCE_ID SOURCE_OBJECT STUDY _STUDY_ID
       IS_SIGNIFICANT
       ATTRIBS
     )], @_);
@@ -170,7 +172,10 @@ sub new {
   elsif(defined($source_id)) {
     $self->{_source_id} = $source_id;
   }
-  
+   elsif(defined($source_object)) {
+    $self->{source_object} = $source_object;
+  }
+
   # can get study or study ID
   if(defined($study)) {
     $self->{study} = $study;
@@ -178,7 +183,8 @@ sub new {
   elsif(defined($study_id)) {
     $self->{_study_id} = $study_id;
   }
-  
+
+
   $self->{type}           = $type;
   $self->{is_significant} = $is_significant;
   $self->{attribs}        = $attribs || {};
