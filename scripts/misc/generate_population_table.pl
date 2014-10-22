@@ -33,9 +33,7 @@ GetOptions(
      'help!'     => \$help,
      'hlist=s'   => \$hlist,
      'user=s'    => \$user,
-     'port=i'    => \$port,
-     'site=s'    => \$site,
-     'etype=s'   => \$etype
+     'port=i'    => \$port
 );
 
 ## Missing arguments ##
@@ -77,6 +75,11 @@ my %pops = ('1000 Genomes'                   => { 'order'      => 1,
                                                   'term'     => 'ESP6500:%',
                                                   'url'      => 'http://evs.gs.washington.edu/EVS/',
                                                   'evidence' => 'ESP'
+                                                },
+            'Mouse Genomes Project (MGP)'    => { 'order'    => 4,
+                                                  'species'  => 'Mus musculus',
+                                                  'term'     => 'Mouse_Genomes_Project',
+                                                  'url'      => 'http://www.sanger.ac.uk/resources/mouse/genomes/'
                                                 }
            );
            
@@ -88,6 +91,7 @@ my $pswd = "";
 my $db_type = 'variation';
 my $default_port = 3306;
 my $margin_bottom_max = '35px';
+my $size_max_width = '36px';
 
 my $evidence_icon_prefix = '/i/val/evidence_';
 my $evidence_icon_suffix = '.png';
@@ -110,23 +114,17 @@ my %species_host;
 my $pop_table_header = qq{
   <tr>
     <th style="width:200px">Name</th>
-    <th>Size</th>
+    <th style="width:$size_max_width">Size</th>
     <th>Description</th>
   </tr>
 };
-
-my $html_pop_gen_table_header = qq{
-<h2 id="populations_gen">Populations genotypes</h2>
-<p>In the table displayed below, we listed the populations of the main genotyping projects having genotypes at the population level (e.g. allele and genotype frequencies)</p>
-<table class="ss">\n  <tr><th>Species</th><th>Project</th><th>Population name</th><th style="max-width:700px">Population description</th><th>Size</th></tr>};
 
 
 ##########
 ## Main ##
 ##########
 
-## Population genotypes ##
-my $html_pop_gen = '';
+## Species / host / database ##
 foreach my $hostname (@hostnames) {
   
   my $sth = get_connection_and_query($database, $hostname, $sql);
@@ -136,32 +134,17 @@ foreach my $hostname (@hostnames) {
     next if ($dbname =~ /^master_schema/);
     next if ($dbname =~ /sample$/);
     
-    print $dbname;
+    print "$dbname\n";
     $dbname =~ /^(.+)_variation/;
-    my $s_name = $1;
-    
-    if ($etype) { # EG site - need to filter out species
-      my $img_thumb = sprintf qq{eg-plugins/%s/htdocs/img/species/thumb_%s.png}, $etype, ucfirst($s_name);
-      #  print "- checking for $img_thumb ... ";
-      if (! -e $img_thumb) {
-        print "\t... skipping \n";
-        next;
-      } 
-    }
-    print "\n";
+    my $s_name = $1; 
     
     my $label_name = ucfirst($s_name);
        $label_name =~ s/_/ /g;
     
     $species_host{$label_name} = {'host' => $hostname, 'dbname' => $dbname};
-    
-    my $projects_list = store_data($dbname, $hostname);
-    $html_pop_gen .= table_rows($label_name,$projects_list,$first_species);
-    $first_species = $label_name if (!$first_species && scalar(keys(%$projects_list)));
   }
   $sth->finish;
 }
-$html_pop_gen .= qq{</table>\n<div style="margin-bottom:$margin_bottom_max"></p>};
 
 
 ## Populations ##
@@ -176,7 +159,7 @@ foreach my $project (sort{ $pops{$a}{'order'} <=> $pops{$b}{'order'} } keys(%pop
   my $url = $pops{$project}{'url'};
   my $evidence = $pops{$project}{'evidence'};
   
-  $html_pop .= qq{<ul style="padding-left:1em;margin-left:2px"><li><h3>Populations from the <a href="$url" target="_blank" style="text-decoration:none">$project$project_word</a> ($spe)</h3></li></ul>\n};
+  $html_pop .= qq{<ul style="padding-left:1em;margin-left:2px"><li><h3>Populations from the <a href="$url" target="_blank" style="text-decoration:none">$project$project_word</a> (<i>$spe</i>)</h3></li></ul>\n};
 
   my $project_id = $project;
   $project_id =~ s/ /_/g;
@@ -241,38 +224,21 @@ On the website this corresponds to the icon <a href="$evidence_doc_url"><img cla
 </p>
     };
   }
+  else {
+    $html_pop .= qq{\n<div style="margin-bottom:$margin_bottom_max"></div>\n};
+  }
 }
 
 
 ## HTML/output file ##
 open  HTML, "> $html_file" or die "Can't open $html_file : $!";
 print HTML $html_pop;
-print HTML $html_pop_gen_table_header;
-print HTML $html_pop_gen;
 close(HTML);
 
 
 #############
 ## Methods ##
 #############
-
-sub store_data {
-  my $dbname   = shift;
-  my $hostname = shift;
-  
-  my %projects_list;
-  
-  my $sth2 = get_connection_and_query($dbname, $hostname, $sql2);
-  
-  while( my ($name,$desc,$size,$freq_from_gts,$display_name,$display_order) = $sth2->fetchrow_array ) {
-    $desc = parse_desc($desc);
-    $projects_list{$display_name}{'order'} = $display_order;
-    $projects_list{$display_name}{'pop'}{$name}{'desc'} = $desc;
-    $projects_list{$display_name}{'pop'}{$name}{'size'} = $size;
-  }
-  $sth2->finish;
-  return \%projects_list;
-}
 
 sub get_population_structure {
   my $pops     = shift;
@@ -314,60 +280,6 @@ sub add_population_to_list {
     }
   }
   return $pop_list;
-}
-
-sub table_rows {
-  my $species = shift;
-  my $projects_list = shift;
-  my $first_species = shift;
-  
-  my $html = '';
-  
-  my $count_projects;
-  foreach my $project (sort {$projects_list->{$a}{'order'} <=> $projects_list->{$b}{'order'} } keys(%$projects_list)) {
-    $count_projects += scalar(keys(%{$projects_list->{$project}{'pop'}}));
-  }
-
-  foreach my $project (sort {$projects_list->{$a}{'order'} <=> $projects_list->{$b}{'order'} } keys(%$projects_list)) {
-    my $count_pops = scalar(keys(%{$projects_list->{$project}{'pop'}}));
-    foreach my $pop (sort { ($a !~ /ALL/ cmp $b !~ /ALL/) || $a cmp $b } keys(%{$projects_list->{$project}{'pop'}})) {
-      my $desc = $projects_list->{$project}{'pop'}{$pop}{'desc'};
-      my $size = $projects_list->{$project}{'pop'}{$pop}{'size'};
-      $html .= get_row($species,$project,$pop,$desc,$size,$first_species,$count_projects,$count_pops);
-      $count_projects = undef;
-      $count_pops     = undef;
-    }
-  }
-  return $html;
-}
-
-sub get_row {
-  my $species = shift;
-  my $project = shift;
-  my $name    = shift;
-  my $desc    = shift;
-  my $size    = shift;
-  my $first_spe = shift;
-  my $count_projects = shift;
-  my $count_pops     = shift;
-  
-  my ($pop_name,$pop_suffix) = split(":", $name);
-  $pop_name .=  ":<b>$pop_suffix</b>" if ($pop_suffix);
-  
-  my $border_top = $count_projects ? ($first_spe ? 'border-top:4px solid #AAA' : '') : ($count_pops ? 'border-top:1px solid #CCC' : '');
-  
-  my $species_col = ($count_projects) ? qq{\n    <td rowspan="$count_projects" style="border-right:1px solid #CCC;background-color:#FFF;font-style:italic;$border_top">$species</td>\n} : '';   
-  my $project_col = ($count_pops)     ? qq{\n    <td rowspan="$count_pops" style="border-right:1px solid #CCC;background-color:#FFF;$border_top">$project</td>} : '';
-  
-  my $html = qq{    
-  <tr$bg>$species_col$project_col
-    <td style="$border_top">$pop_name</td>
-    <td style="max-width:700px;$border_top">$desc</td>
-    <td style="text-align:right;$border_top">$size</td>
-  </tr>};
-  $bg = set_bg($bg);
-  
-  return $html;
 }
 
 # Connects and execute a query
@@ -425,7 +337,7 @@ sub usage {
   print qq{
   Usage: perl sources2html.pl [OPTION]
   
-  Put all variation sources, for each species, into an HTML document.
+  Create HTML tables for listing the population in the main genotyping projects available in Ensembl Variation.
   
   Options:
 
@@ -436,9 +348,7 @@ sub usage {
     -hlist          The list of host names where the new databases are stored, separated by a coma,
                     e.g. ensembldb.ensembl.org1, ensembldb.ensembl.org2 (Required)
     -user           MySQL user name (Required)
-    -pass           MySQL password. 3306 by default (optional)
-    -site           The URL of the website (optional)
-    -etype          The type of Ensembl, e.g. Plant (optional)
+    -port           MySQL port. 3306 by default (optional)
   } . "\n";
   exit(0);
 }
