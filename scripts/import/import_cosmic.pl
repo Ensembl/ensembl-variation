@@ -81,32 +81,21 @@ my $dbh = $registry->get_adaptor(
 )->dbc->db_handle;
 
 open my $INPUT, "<$import_file" or die "Can't open '$import_file'";    
+
+my $set_version_sth = $dbh->prepare(qq{UPDATE source SET version = ? WHERE source_id = ?});
     
 # check to see if we already have the COSMIC source
-
-my $src_sth = $dbh->prepare(qq{
-    SELECT  source_id
-    FROM    source
-    WHERE   name LIKE "COSMIC%"
-});
-
+my $src_sth = $dbh->prepare(qq{ SELECT source_id FROM source WHERE name LIKE "COSMIC%" });
 $src_sth->execute;
 
-my $existing_src = $src_sth->fetchrow_arrayref;
+my ($source_id) = $src_sth->fetchrow_array;
 
-my $source_id;
-
-if ($existing_src) {
-    $source_id = $existing_src->[0];
-    
+if ($source_id) {
     print "Found existing source_id: $source_id\n";
-    my $sth = $dbh->prepare(qq{  UPDATE source SET version=? WHERE source_id=? });
-    $sth->execute($version,$source_id);
+    $set_version_sth->execute($version,$source_id);
 }
 else {
-
     # if not, add it
-
     my $sth = $dbh->prepare(qq{
         INSERT INTO source (name, description, url, somatic_status, version) 
         VALUES (
@@ -131,18 +120,15 @@ my %failed_desc_list = ( 1 => 'Variation has no associated sequence',
                          2 => 'Mapped position is not compatible with reported alleles'
                        );
 
-my $vf_table = "variation_feature";
+my $vf_table = 'variation_feature';
+my $cosmic_phe_prefix = 'COSMIC:tumour_site:';
 
-my $set_version_sth = $dbh->prepare(qq{
-    UPDATE  source
-    SET     version = ?
-    WHERE   source_id = ?
-});
-
+# Variations
 my $find_existing_var_sth = $dbh->prepare(qq{
     SELECT variation_id FROM variation WHERE name = ?
 });
 
+# Variation set COSMIC
 my $get_cosmic_set_id_sth = $dbh->prepare(qq{
     SELECT variation_set_id FROM variation_set WHERE name = "COSMIC phenotype variants"
 });
@@ -153,15 +139,17 @@ my ($cosmic_set_id) = $get_cosmic_set_id_sth->fetchrow_array;
 
 die "Didn't find COSMIC set id?" unless defined $cosmic_set_id;
 
+
+# Variation set phenotypes
 my $get_phenotype_set_id_sth = $dbh->prepare(qq{
     SELECT variation_set_id FROM variation_set WHERE name like '%phenotype-associated variants%'
 });
-
 $get_phenotype_set_id_sth->execute;
 
 my ($phenotype_set_id) = $get_phenotype_set_id_sth->fetchrow_array;
 
-die "Didn't find COSMIC phenotype id?" unless defined $phenotype_set_id;
+die "Didn't find COSMIC variation set id?" unless defined $phenotype_set_id;
+
 
 my $add_var_sth = $dbh->prepare(qq{
     INSERT INTO variation (source_id, name, flipped, class_attrib_id, somatic) VALUES (?,?,?,?,1)
@@ -182,8 +170,8 @@ my $add_vf_sth = $dbh->prepare(qq{
     VALUES (?,?,?,?,?,?,?,?,?,?,1)
 });
 
-my $find_existing_population_sth = $dbh->prepare(qq{
-    SELECT population_id FROM population WHERE name = ? AND size = ? 
+my $select_populations_sth = $dbh->prepare(qq{
+    SELECT population_id, name FROM population WHERE name like "COSMIC%"
 });
 
 my $add_population_sth = $dbh->prepare(qq{
@@ -196,8 +184,8 @@ my $add_allele_with_code_sth = $dbh->prepare(qq{
     VALUES (?,?,?,?)
 });
 
-my $find_matching_phenotype_sth = $dbh->prepare(qq{
-    SELECT phenotype_id FROM phenotype WHERE description LIKE ? ORDER BY phenotype_id LIMIT 1
+my $select_phenotypes_sth = $dbh->prepare(qq{
+    SELECT phenotype_id, description FROM phenotype WHERE description LIKE "$cosmic_phe_prefix%"
 });
 
 my $add_phenotype_sth = $dbh->prepare(qq{
@@ -216,6 +204,9 @@ my $add_phe_feature_attrib_sth = $dbh->prepare(qq{
 });
 
 # allele code id
+my $select_allele_codes_sth = $dbh->prepare(qq{
+    SELECT allele_code_id, allele FROM allele_code WHERE allele IN ('A','T','G','C','-');
+});
 
 my $get_allele_code_sth = $dbh->prepare(qq{
     SELECT allele_code_id
@@ -246,18 +237,39 @@ my $get_class_attrib_ids_sth = $dbh->prepare(qq{
     AND    at.code = 'SO_term'
 });
 
-$get_class_attrib_ids_sth->execute;
-
-my %class_attrib_ids;
-
-while (my ($value, $attrib_id) = $get_class_attrib_ids_sth->fetchrow_array) {
-    $class_attrib_ids{$value} = $attrib_id;
-}
-
-
 my $patched_version = 0;
 
+my %class_attrib_ids;
 my %cosmic_genes_list;
+my %cosmic_populations_list;
+my %cosmic_phenotypes_list;
+my %allele_codes_list;
+
+#### Pre load some of the data ####
+# Variant classes list
+$get_class_attrib_ids_sth->execute;
+while (my ($value, $attrib_id) = $get_class_attrib_ids_sth->fetchrow_array) {
+  $class_attrib_ids{$value} = $attrib_id;
+}
+
+# Existing COSMIC populations (empty if you used the "remove_cosmic.pl" script before running this script)
+$select_populations_sth->execute;
+while (my ($p_id, $p_name) = $select_populations_sth->fetchrow_array) {
+  $cosmic_populations_list{$p_name} = $p_id;
+}
+
+# Existing COSMIC phenotypes
+$select_phenotypes_sth->execute;
+while (my ($phe_id, $phe_name) = $select_phenotypes_sth->fetchrow_array) {
+  $cosmic_phenotypes_list{$phe_name} = $phe_id;
+}
+
+# Allele code IDs (A,T,G,C,')
+$select_allele_codes_sth->execute;
+while (my ($ac_id, $ac_name) = $select_allele_codes_sth->fetchrow_array) {
+  $allele_codes_list{$ac_name} = $ac_id;
+}
+
 
 # loop over the input file
 
@@ -280,6 +292,7 @@ MAIN_LOOP : while(<$INPUT>) {
         $stop, 
         $mut_nt, 
         $mut_aa,
+        $is_snp,
         $tumour_site,
         $mutated_samples,
         $total_samples,
@@ -307,6 +320,7 @@ MAIN_LOOP : while(<$INPUT>) {
         $stop, 
         $mut_nt, 
         $mut_aa,
+        $is_snp,
         $tumour_site,
         $mutated_samples,
         $total_samples,
@@ -653,8 +667,9 @@ MAIN_LOOP : while(<$INPUT>) {
         }
        
         if ($mismatching_reference) {
-            print "Reference bases don't match for $cosmic_gene (".$ens_gene->stable_id."): $mismatching_reference\n";
-#
+            my $ens_gene_id = ($ens_gene) ? $ens_gene->stable_id : 'Ensembl gene not found';
+            print "Reference bases don't match for $cosmic_gene ($ens_gene_id): $mismatching_reference\n";
+
 #            print "Other variations here:\n";
 #
 #            my $vfs = $slice->get_all_VariationFeatures;
@@ -693,19 +708,15 @@ MAIN_LOOP : while(<$INPUT>) {
 
         # all OK so far so let's (try to) add stuff to the database
 
-        # first check to see if we already have this variation
-        
-        $find_existing_var_sth->execute($cosmic_id);
-
-        my $existing_var = $find_existing_var_sth->fetchrow_arrayref;
-
-        my $variation_id;
         my $seq_region_id = $sa->get_seq_region_id($slice);
 
-        if ($existing_var) {
-            $variation_id = $existing_var->[0];
-        }
-        else {
+        # first check to see if we already have this variation
+
+        $find_existing_var_sth->execute($cosmic_id);
+
+        my ($variation_id) = $find_existing_var_sth->fetchrow_array;
+
+        if (!$variation_id) {
 
             # it's new, so add the main variation object,
 
@@ -748,12 +759,8 @@ MAIN_LOOP : while(<$INPUT>) {
 
         my $sample_name = "COSMIC:gene:$cosmic_gene:tumour_site:$tumour_site";
         
-        $find_existing_population_sth->execute($sample_name, $total_samples);
-
-        my $existing_population = $find_existing_population_sth->fetchrow_arrayref;
-        
-        if ($existing_population) {
-            $population_id = $existing_population->[0];
+        if ($cosmic_populations_list{$sample_name}) {
+            $population_id = $cosmic_populations_list{$sample_name};
         }
         else {
             # there is not, so add it
@@ -765,6 +772,7 @@ MAIN_LOOP : while(<$INPUT>) {
             );
 
             $population_id = $dbh->last_insert_id(undef, undef, undef, undef);
+            $cosmic_populations_list{$sample_name} = $population_id;
         }
 
         my $mut_freq = $mutated_samples / $total_samples;
@@ -791,14 +799,10 @@ MAIN_LOOP : while(<$INPUT>) {
 
         my $phenotype_id;
         
-        my $phenotype_name = "COSMIC:tumour_site:$tumour_site";
+        my $phenotype_name = "$cosmic_phe_prefix$tumour_site";
 
-        $find_matching_phenotype_sth->execute($phenotype_name);
-        
-        my $existing_cosmic_phen = $find_matching_phenotype_sth->fetchrow_arrayref;
-        
-        if ($existing_cosmic_phen) {
-            $phenotype_id = $existing_cosmic_phen->[0];
+        if ($cosmic_phenotypes_list{$phenotype_name}) {
+            $phenotype_id = $cosmic_phenotypes_list{$phenotype_name};
         }
         else {
             $add_phenotype_sth->execute($phenotype_name);
@@ -845,10 +849,17 @@ sub get_failed_description_id {
 sub get_allele_code {
     my $allele = shift;
     
-    # Check if an entry exists in the allele_code table
-    $get_allele_code_sth->execute($allele);
     my $allele_code_id;
-    ($allele_code_id) = $get_allele_code_sth->fetchrow_array;
+
+    # Check if an entry exists in the allele_code hash
+    if ($allele_codes_list{$allele}) { # A,T,G,C,-
+      $allele_code_id = $allele_codes_list{$allele};
+    }
+    # Check if an entry exists in the allele_code table
+    else {
+      $get_allele_code_sth->execute($allele);
+      ($allele_code_id) = $get_allele_code_sth->fetchrow_array;
+    }
     
     # Check with large allele, because of issue with the allele index 
     # (limited to unique 1000 first bases)
