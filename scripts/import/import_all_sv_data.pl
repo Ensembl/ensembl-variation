@@ -82,6 +82,37 @@ else {
 $TMP_DIR  = $ImportUtils::TMP_DIR;
 $TMP_FILE = $ImportUtils::TMP_FILE;
 
+my @attribs = ('ID','SO_term','chr','outer_start','start','inner_start','inner_end','end',
+               'outer_end','strand','parent','clinical','sample','strain_name','gender','is_ssv',
+               'is_failed','population','bp_order','is_somatic','status','alias','length','copy_number');
+
+my %attribs_col = ('ID'          => 'id *',
+                   'SO_term'     => 'type',
+                   'chr'         => 'chr *',
+                   'outer_start' => 'outer_start i',
+                   'start'       => 'start i',
+                   'inner_start' => 'inner_start i',
+                   'inner_end'   => 'inner_end i',
+                   'end'         => 'end i',
+                   'outer_end'   => 'outer_end i',
+                   'strand'      => 'strand i',
+                   'parent'      => 'parent *',
+                   'clinical'    => 'clinic',
+                   'sample'      => 'sample *',
+                   'strain_name' => 'strain *',
+                   'gender'      => 'gender',
+                   'is_ssv'      => 'is_ssv i',
+                   'is_failed'   => 'is_failed i',
+                   'population'  => 'population',
+                   'bp_order'    => 'bp_order i',
+                   'is_somatic'  => 'is_somatic i',
+                   'status'      => 'status',
+                   'alias'       => 'alias',
+                   'length'      => 'length i',
+                   'copy_number' => 'copy_number' # Not 'i' because we need to differenciate between "0 copy" and the "default value (0)"
+                  );
+
+
 my %display_name = ( 'COSMIC' => 'http://cancer.sanger.ac.uk/cancergenome/projects/cosmic/' );
 
 my $add             = '';
@@ -222,10 +253,8 @@ sub load_file_data{
   $dbVar->do("DROP TABLE IF EXISTS $temp_table;");
   $dbVar->do("DROP TABLE IF EXISTS $temp_phen_table;");
   
-  create_and_load(
-  $dbVar, "$temp_table", "id *", "type", "chr *", "outer_start i", "start i", "inner_start i",
-  "inner_end i", "end i", "outer_end i", "strand i", "parent *", "clinic", "sample *", "strain *",
-  "gender", "is_ssv i", "is_failed i", "population", "bp_order i", "is_somatic i", "status", "alias", "length i");    
+  my @cols = map { $attribs_col{$_}} @attribs;
+  create_and_load($dbVar, "$temp_table", @cols);
   
   # Move the 2nd file in $TMP_DIR/$TMP_FILE before loading the 2nd table
   `mv $TMP_DIR/$TMP_FILE\2 $TMP_DIR/$TMP_FILE`;
@@ -238,12 +267,12 @@ sub load_file_data{
     $dbVar->do(qq{UPDATE $temp_table SET outer_end=outer_start, end=start, inner_end=inner_start WHERE outer_end=0 AND end=0 AND inner_end=0});
   }
   
-  foreach my $coord('outer_start', 'inner_start', 'inner_end', 'outer_end', 'start', 'end') {
+  foreach my $coord('outer_start', 'inner_start', 'inner_end', 'outer_end', 'start', 'end', 'bp_order') {
     $dbVar->do(qq{UPDATE $temp_table SET $coord = NULL WHERE $coord = 0;});
   }
   
   
-  foreach my $col('clinic', 'sample', 'strain', 'status', 'alias', 'length') {
+  foreach my $col('clinic', 'sample', 'strain', 'status', 'alias', 'length', 'copy_number') {
     $dbVar->do(qq{UPDATE $temp_table SET $col = NULL WHERE $col = '';});
   }
   
@@ -251,13 +280,9 @@ sub load_file_data{
   $dbVar->do(qq{UPDATE $temp_table SET start=outer_start, end=inner_start, 
                 outer_end=inner_start, inner_start=NULL, inner_end=NULL
                 WHERE outer_start=outer_end AND inner_start=inner_end;});
-  # Case with breakpoints            
-  $dbVar->do(qq{UPDATE $temp_table SET bp_order=null 
-                WHERE bp_order=0;});                                            
-}
+}                
 
-
-sub source{
+sub source {
   debug(localtime()." Inserting into source table");
   
   # Check if the DGVa source already exists, else it create the entry
@@ -426,7 +451,8 @@ sub structural_variation {
       is_evidence,
       somatic,
       validation_status,
-      alias
+      alias,
+      copy_number
     )
     SELECT
       DISTINCT
@@ -440,7 +466,8 @@ sub structural_variation {
       t.is_ssv,
       t.is_somatic,
       t.status,
-      t.alias
+      t.alias,
+      t.copy_number
     FROM
       $temp_table t 
       LEFT JOIN attrib a1 ON (t.type=a1.value)
@@ -624,8 +651,8 @@ sub structural_variation_set {
   if ($var_set_id eq '1kg') {
   
     my %pop_1kg_p1 = (
-      'ASW' => 'AFR', 'LWK' => 'AFR', 'YRI' => 'AFR',                                 # AFR
-      'CLM'  => 'AMR', 'PEL'  => 'AMR', 'PUR'  => 'AMR', 'MXL'  => 'AMR',                 # AMR
+      'ASW' => 'AFR', 'LWK' => 'AFR', 'YRI' => 'AFR',                                      # AFR
+      'CLM'  => 'AMR', 'PEL'  => 'AMR', 'PUR'  => 'AMR', 'MXL'  => 'AMR',                  # AMR
       'CEU'  => 'EUR', 'TSI'  => 'EUR', 'FIN'  => 'EUR', 'GBR'  => 'EUR', 'IBS'  => 'EUR', # EUR
       'CHB'  => 'ASN', 'JPT'  => 'ASN', 'CHS'  => 'ASN', 'CDX'  => 'ASN', 'KHV'  => 'ASN', # ASN
     );
@@ -1303,14 +1330,21 @@ sub parse_9th_col {
       }
     }
     
-    $info->{clinical}   = lc($value) if ($key eq 'clinical_significance');
-    $info->{parent}     = $value if ($key eq 'Parent'); # Check how the 'parent' key is spelled
-    $info->{is_somatic} = 1 if ($key eq 'var_origin' && $value =~ /somatic/i);
-    $info->{bp_order}   = ($info->{submitter_variant_id} =~ /\w_(\d+)$/) ? $1 : undef;
-    $info->{status}     = 'High quality' if ($key eq 'variant_region_description' && $value =~ /high.quality/i);
-    $info->{alias}      = $value if ($key eq 'Alias' && $value !~ /^\d+$/);
-    $info->{length}     = $value if ($key eq 'variant_call_length');
+    $info->{clinical}    = lc($value) if ($key eq 'clinical_significance');
+    $info->{parent}      = $value if ($key eq 'Parent'); # Check how the 'parent' key is spelled
+    $info->{is_somatic}  = 1 if ($key eq 'var_origin' && $value =~ /somatic/i);
+    $info->{bp_order}    = ($info->{submitter_variant_id} =~ /\w_(\d+)$/) ? $1 : undef;
+    $info->{status}      = 'High quality' if ($key eq 'variant_region_description' && $value =~ /high.quality/i);
+    $info->{alias}       = $value if ($key eq 'Alias' && $value !~ /^\d+$/);
+    $info->{length}      = $value if ($key eq 'variant_call_length');
     
+    # Copy number
+    if ($key eq 'copy_number') {
+      my $copy = (split(/[-,\.\~]/,$value))[0];
+         $copy =~ s/\D//g; # Remove non numeric character
+      $info->{copy_number} = $copy if ($copy ne '');
+    }
+
     # Breakpoint definition
     $info->{_bp_detail} = $value if ($key eq 'Breakpoint_detail');
     $info->{_bp_range}  = $value if ($key eq 'breakpoint_range');
@@ -1699,39 +1733,16 @@ sub generate_data_row {
   my $info = shift;
   my $somatic = shift;
  
-  my $bp_order = $info->{bp_order};
   if ($info->{is_somatic} == 1 || $somatic) {
-    $bp_order = 1 if(!defined($bp_order));
+    $info->{bp_order}= 1 if(!defined($info->{bp_order}));
   } else {
-    $bp_order = undef;
+    $info->{bp_order} = undef;
   }
  
   $info->{phenotype} = decode_text($info->{phenotype}); 
  
-  my @row = ($info->{ID},
-             $info->{SO_term},
-             $info->{chr}, 
-             $info->{outer_start}, 
-             $info->{start}, 
-             $info->{inner_start}, 
-             $info->{inner_end}, 
-             $info->{end}, 
-             $info->{outer_end},
-             $info->{strand}, 
-             $info->{parent},
-             $info->{clinical},
-             $info->{sample},
-             $info->{strain_name},
-             $info->{gender},
-             $info->{is_ssv}, 
-             $info->{is_failed},
-             $info->{population},
-             $bp_order,
-             $info->{is_somatic},
-             $info->{status},
-             $info->{alias},
-             $info->{length}
-            );
+  my @row = map { $info->{$_} } @attribs;
+
   return \@row;
 }
 
