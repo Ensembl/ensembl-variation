@@ -921,11 +921,11 @@ sub _make_hgvs_tva{
 
     my $allele_string =  $ref_allele . "/" . $alt_allele;
 
-    my $start     = $self->transcript_variation->variation_feature->seq_region_start() + $offset;
-    my $end       = $self->transcript_variation->variation_feature->seq_region_end() + $offset;
+    my $start     = $self->transcript_variation->variation_feature->start() + $offset;
+    my $end       = $self->transcript_variation->variation_feature->end() + $offset;
 
     print "Starting make hgvs tva - vf at $start - $end  $allele_string\n" if $DEBUG ==1;
-    print "previous pos :".  $self->transcript_variation->variation_feature->seq_region_start() ."-" . $self->transcript_variation->variation_feature->seq_region_end() ."\n" if $DEBUG ==1;
+    print "previous pos :".  $self->transcript_variation->variation_feature->start() ."-" . $self->transcript_variation->variation_feature->end() ."\n" if $DEBUG ==1;
     my $moved_vf =  Bio::EnsEMBL::Variation::VariationFeature->new(
 	-start          => $start,
 	-end            => $end,
