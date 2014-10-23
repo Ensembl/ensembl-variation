@@ -149,6 +149,11 @@ sub get_vcf_by_chr {
   if(!exists($self->{files}) || !exists($self->{files}->{$chr})) {
     my $obj;
     
+    # check we have this chromosome
+    if(my $chrs = $self->list_chromosomes) {
+      return unless grep {$chr eq $_} @$chrs;
+    }
+    
     my $file = $self->filename_template;
     
     $file =~ s/\#\#\#CHR\#\#\#/$chr/;
@@ -187,6 +192,8 @@ sub seek_by_Slice {
   my $slice = shift;
   
   my $vcf = $self->seek($slice->seq_region_name, $slice->start, $slice->end);
+  return unless $vcf;
+  
   $vcf->next();
   
   return defined($vcf->{record});
@@ -197,6 +204,7 @@ sub seek_by_VariationFeature {
   my $vf = shift;
   
   my $vcf = $self->seek($vf->seq_region_name, $vf->seq_region_start - 2, $vf->seq_region_end + 2);
+  return unless $vcf;
   
   # compare IDs
   my $count = 0;
