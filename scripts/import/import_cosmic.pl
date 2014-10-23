@@ -807,6 +807,7 @@ MAIN_LOOP : while(<$INPUT>) {
         else {
             $add_phenotype_sth->execute($phenotype_name);
             $phenotype_id = $dbh->last_insert_id(undef, undef, undef, undef);
+            $cosmic_phenotypes_list{$phenotype_name} = $phenotype_id;
         }
 
         # add variation annotation (phenotype_feature)
