@@ -4070,7 +4070,10 @@ sub prune_cache {
     
     # delete no longer in use chroms
     foreach my $chr(keys %$cache) {
-        delete $cache->{$chr} unless defined $regions->{$chr} && scalar @{$regions->{$chr}};
+        unless(defined $regions->{$chr} && scalar @{$regions->{$chr}}) {
+            delete $cache->{$chr};
+            delete $loaded->{$chr};
+        }
     }
     
     my $new_count = 0;
