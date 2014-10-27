@@ -624,4 +624,4 @@ INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (369, 419, '
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (370, 419, '1000Genomes');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (371, 419, 'Cited');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (372, 419, 'ESP');
-
+INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (390, 9, 'HumanCoreExome');
