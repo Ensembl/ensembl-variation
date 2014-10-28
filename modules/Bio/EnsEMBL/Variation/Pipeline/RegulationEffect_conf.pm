@@ -53,6 +53,8 @@ sub default_options {
         hive_force_init => 1,
         hive_use_param_stack => 0,
         hive_use_triggers => 0, 
+        hive_auto_rebalance_semaphores => 0,
+        hive_no_init => 0,
         # the location of your checkout of the ensembl API (the hive looks for SQL files here)
         ensembl_cvs_root_dir    => $ENV{'HOME'} . '/DEV',
         hive_root_dir           => $ENV{'HOME'} . '/DEV/ensembl-hive',
