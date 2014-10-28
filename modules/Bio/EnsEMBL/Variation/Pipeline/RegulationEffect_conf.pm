@@ -94,8 +94,8 @@ sub default_options {
         include_external_features => 0,
         debug => 0,
 
-        only_update_vf => 1,
-        update_vf => 0,
+        only_update_vf => 0,
+        update_vf => 1,
         only_motif_feature => 0,
         only_regulatory_feature => 0,
 
