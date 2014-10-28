@@ -120,7 +120,7 @@ my %data_type_example = (
                              'url'       => 'StructuralVariation/Explore?sv='
                             },
   'phenotype_feature'    => {
-                             'sql'      => qq{SELECT object_id, type FROM phenotype_feature WHERE source_id=? AND is_significant=1 LIMIT 1},
+                             'sql'      => qq{SELECT object_id, type FROM phenotype_feature WHERE source_id=? AND is_significant=1 AND type!="SupportingStructuralVariation" LIMIT 1},
                              'count_spe' => qq{SELECT source_id, COUNT(phenotype_feature_id) FROM phenotype_feature GROUP BY source_id},  
                              'Variation'           => 'Variation/Phenotype?v=',
                              'StructuralVariation' => 'StructuralVariation/Phenotype?v=',
@@ -181,7 +181,7 @@ my $sql4 = qq{SELECT name, version FROM source};
 
 my $sql2b = qq{SELECT variation_set_id, name, description FROM variation_set WHERE 
                (name like "%illumina%" OR name like "%affymetrix%" OR description like "%illumina%" OR description like "%affymetrix%")
-               AND name NOT IN (SELECT name FROM source)};
+                AND name NOT IN (SELECT name FROM source)};
 my $sql4b = $sql2b;
 
 foreach my $hostname (@hostnames) {
@@ -374,7 +374,9 @@ sub source_table {
       
     $s_header .= '"></td>';
 
-    
+    my $sql5 = qq{SELECT variation_set_id FROM variation_set WHERE name="$source" AND name IN (SELECT name FROM source) AND 
+                  (name like "%illumina%" OR name like "%affymetrix%" OR description like "%illumina%" OR description like "%affymetrix%")};
+
     # Source
     if ($s_url) {
       $source = qq{<a href="$s_url" style="text-decoration:none" target="_blank">$source</a>};
@@ -420,6 +422,7 @@ sub source_table {
         $data_type_string .= qq{\n$spaces  <div $type_style>$data_type_label</div>};
       }
       
+      
       # Count
       my $count = $counts_species->{$dt}{$source_id};
       $data_type_string .= qq{\n$spaces  <div $count_style>$count</div>};
@@ -429,6 +432,24 @@ sub source_table {
       my $example = get_example($dt, $source_id, $s_name, $db_name, $hostname, $somatic_example);
       $data_type_string .= qq{\n$spaces  <div $eg_style>$example</div>};
       
+      $data_type_string .= qq{\n$spaces  <div style="clear:both"></div>\n$spaces</div>};
+    }
+    
+    my $sth5 = get_connection_and_query( $db_name, $hostname, $sql5);
+    my ($source_var_set_id) = $sth5->fetchrow_array;
+    
+    # Variation source (i.e. chip data) having data in variation set as well
+    if ($source_var_set_id) { # Also in variation set 
+      $data_type_string .= qq{\n$spaces<div>\n$spaces  <div $type_style><span class="_ht conhelp" title="Variation set - Existing variants from 1 or several sources have been associated with this variation set">Set</span></div>};
+    
+      # Count
+      my $count = get_species_set_count($source_var_set_id, $s_name, $db_name, $hostname);
+      $data_type_string .= qq{\n$spaces  <div $count_style>$count</div>};;
+   
+      # Example
+      my $example = get_example('variation_set', $source_var_set_id, $s_name, $db_name, $hostname);
+      $data_type_string .= qq{\n$spaces  <div $eg_style>$example</div>};
+    
       $data_type_string .= qq{\n$spaces  <div style="clear:both"></div>\n$spaces</div>};
     }
     
@@ -678,26 +699,28 @@ sub create_menu {
     </table>
     
     <!-- Variant and structural variant count colour legend -->
-    <div style="border-top:1px dotted #BBB;margin-top:2px;padding:4px 4px 0px">
-      <div style="float:left">Variant count: </div>
-      <div style="float:right">
-        <div style="margin-bottom:4px">
-          <span style="background-color:$m_colour;color:#FFF;border-radius:5px;padding:1px 2px;cursor:default;white-space:nowrap;">
-            <small>> 1 million</small>
-          </span>
-        </div>
-        <div style="margin-bottom:4px">
-          <span style="background-color:$t_colour;color:#FFF;border-radius:5px;padding:1px 2px;cursor:default;white-space:nowrap">
-            <small>1,000 to 999,999</small>
-          </span>
-        </div>
-        <div style="margin-bottom:4px">
-          <span style="background-color:$h_colour;color:#FFF;border-radius:5px;padding:1px 2px;cursor:default;white-space:nowrap">
-            <small>< 1000</small>
-          </span>
-        </div>
-      </div>
-      <div style="clear:both"></div>
+    <div style="border-top:1px dotted #BBB;margin-top:2px;padding:4px 0px 0px">
+      <span style="padding-left:4px;font-weight:bold">Variant count:</span>
+      <table>
+        <tr>
+          <td style="padding-top:4px;text-align:center">
+            <span style="background-color:$m_colour;color:#FFF;border-radius:5px;padding:1px 2px 1px 20px;cursor:default"></span>
+          </td>
+          <td style="padding-top:3px">greater than 1 million</td>
+        </tr>
+        <tr>
+          <td style="padding-top:4px;text-align:center">
+            <span style="background-color:$t_colour;color:#FFF;border-radius:5px;padding:1px 2px 1px 20px;cursor:default"></span>
+          </td>
+          <td style="padding-top:3px">from 1,000 to 999,999</td>
+        </tr>
+        <tr>
+          <td style="padding-top:4px;text-align:center">
+            <span style="background-color:$h_colour;color:#FFF;border-radius:5px;padding:1px 2px 1px 20px;cursor:default"></span>
+          </td>
+          <td style="padding-top:3px">less than 1,000</td>
+        </tr>
+      </table>
     </div>
 
     <!-- Javascript used to fix the legend on the right handside when you scroll down -->
