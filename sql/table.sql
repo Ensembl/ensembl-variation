@@ -1331,6 +1331,7 @@ CREATE TABLE IF NOT EXISTS variation_set_structural_variation (
 @column polyphen_score           The PolyPhen score corresponding to the prediction 
 @column sift_prediction          The SIFT prediction for the effect of this allele on the protein 
 @column sift_score               The SIFT score corresponding to this prediction
+@column display                  Flags whether this transcript_variation should be displayed in browser tracks and returned by default by the API
 
 @see variation_feature
 */
@@ -1396,6 +1397,7 @@ CREATE TABLE transcript_variation (
     polyphen_score                      float DEFAULT NULL,
     sift_prediction                     enum('tolerated', 'deleterious') DEFAULT NULL,
     sift_score                          float DEFAULT NULL,
+    display                             int(1) DEFAULT 1,
 
     PRIMARY KEY                         (transcript_variation_id),
     KEY variation_feature_idx           (variation_feature_id),
