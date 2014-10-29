@@ -1622,8 +1622,10 @@ You can see the complete list, by species, <a href="/info/genome/variation/sourc
 @see variation_synonym
 @see variation_feature
 @see individual_synonym
+@see phenotype_feature
 @see population_synonym
 @see structural_variation
+@see structural_variation_feature
 @see study
 */
 
@@ -1657,7 +1659,9 @@ create table source(
 @column study_type					Displays the type of the study (e.g. genome-wide association study, control-set, case-set, curated, ...).
 
 @see source
+@see phenotype_feature
 @see structural_variation
+@see structural_variation_feature
 */
 
 CREATE TABLE study (
