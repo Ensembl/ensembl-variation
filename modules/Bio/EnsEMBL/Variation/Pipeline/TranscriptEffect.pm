@@ -111,12 +111,14 @@ sub run {
 
                 next unless defined $allele->hgvs_transcript();
 
+		my $var_id = $vf->get_Variation_dbID();
+
                 my $hgvs_transcript = (split/\:/, $allele->hgvs_transcript())[1];
                 my $hgvs_protein    = (split/\:/, $allele->hgvs_protein())[1];
 
-                $hgvslu_ins_sth->execute( $vf->variation->dbID(), $hgvs_transcript) if defined $hgvs_transcript;
+                $hgvslu_ins_sth->execute( $var_id, $hgvs_transcript) if defined $hgvs_transcript;
 
-                $hgvslu_ins_sth->execute( $vf->variation->dbID(), $hgvs_protein) 
+                $hgvslu_ins_sth->execute( $var_id, $hgvs_protein) 
                     if defined $hgvs_protein && $hgvs_protein =~/^p/; ## don't store synonymous
             }
         }                                           
