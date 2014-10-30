@@ -106,8 +106,6 @@ ALTER TABLE structural_variation_sample ADD FOREIGN KEY (structural_variation_id
 
 ALTER TABLE study ADD FOREIGN KEY (source_id) REFERENCES source(source_id);
 
-ALTER TABLE study_variation ADD FOREIGN KEY (study_id) REFERENCES study(study_id);
-ALTER TABLE study_variation ADD FOREIGN KEY (variation_id) REFERENCES variation(variation_id);
 
 ALTER TABLE tagged_variation_feature ADD FOREIGN KEY (variation_feature_id) REFERENCES variation_feature(variation_feature_id);
 ALTER TABLE tagged_variation_feature ADD FOREIGN KEY (population_id) REFERENCES population(population_id);
