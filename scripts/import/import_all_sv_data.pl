@@ -234,6 +234,7 @@ post_processing_feature();
 post_processing_sample();
 post_processing_phenotype();
 post_processing_clinical_significance();
+post_processing_failed_variants();
 
 # Finishing methods
 meta_coord();
@@ -1633,6 +1634,18 @@ sub post_processing_clinical_significance {
 
   $dbVar->do(qq{DROP TABLE $temp_clin_table});
 }
+
+
+# Unfail the variants which have at least one good mapping (e.g. Mapping to chromosome 14 'OK' and mapping to sequence NT_187600.1 'Not OK').
+sub post_processing_failed_variants {
+  debug(localtime()." Post processing of the table $sv_failed: unflag the variants which have at least one entry in the $svf_table table");
+  
+  my $stmt = qq{DELETE FROM $sv_failed WHERE structural_variation_id IN (SELECT structural_variation_id FROM $svf_table) and failed_description_id IN (17,18)};
+  
+  $dbVar->do($stmt);
+}
+
+
 
 
 #### Finishing methods ####
