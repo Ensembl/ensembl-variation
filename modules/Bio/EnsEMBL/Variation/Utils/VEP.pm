@@ -516,7 +516,7 @@ sub parse_vcf {
         # parse INFO field
         my %info = ();
         
-        foreach my $bit(split /\;/, $data[7]) {
+        foreach my $bit(split /\;/, ($data[7] || '')) {
             my ($key, $value) = split /\=/, $bit;
             $info{$key} = $value;
         }
