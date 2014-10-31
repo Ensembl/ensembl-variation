@@ -126,6 +126,7 @@ my $svs_table       = "structural_variation_sample$add";
 my $pf_table        = "phenotype_feature$add";
 my $temp_table      = "temp_sv$add";
 my $temp_phen_table = "temp_sv_phenotype$add";
+my $temp_clin_table = "temp_sv_clin_sign$add";
 
 my $tmp_sv_col      = 'tmp_class_name';
 my $tmp_sv_clin_col = 'tmp_clinic_name';
@@ -232,6 +233,7 @@ post_processing_annotation() if ($species =~ /mouse|mus/i);
 post_processing_feature();
 post_processing_sample();
 post_processing_phenotype();
+post_processing_clinical_significance();
 
 # Finishing methods
 meta_coord();
@@ -1600,6 +1602,37 @@ sub post_processing_phenotype {
 }  
   
 
+# Update clinical significances at the SV level (the clinical significance is defined at the SSV level)
+sub post_processing_clinical_significance {
+  debug(localtime()." Post processing of the table $sv_table for clinical significance");
+
+  # Create temporary table
+  $dbVar->do(qq{DROP TABLE IF EXISTS $temp_clin_table});
+  $dbVar->do(qq{CREATE TABLE $temp_clin_table (sv_id int(10), clin_sign varchar(255), primary key (sv_id))});
+
+  my $stmt = qq{
+    INSERT INTO
+    $temp_clin_table (sv_id, clin_sign)
+    SELECT
+      sva.structural_variation_id,
+      GROUP_CONCAT(distinct sv.clinical_significance ORDER BY sv.clinical_significance DESC SEPARATOR ',')
+    FROM
+      $sv_table sv,
+      $sva_table sva
+    WHERE
+      sv.structural_variation_id=sva.supporting_structural_variation_id AND
+      sv.clinical_significance is not null
+    GROUP BY sva.structural_variation_id;
+  };
+  $dbVar->do($stmt);
+
+  my $stmt2 = qq{
+    UPDATE $sv_table sv, $temp_clin_table t SET sv.clinical_significance=t.clin_sign WHERE sv.structural_variation_id=t.sv_id;
+  };
+  $dbVar->do($stmt2);
+
+  $dbVar->do(qq{DROP TABLE $temp_clin_table});
+}
 
 
 #### Finishing methods ####
