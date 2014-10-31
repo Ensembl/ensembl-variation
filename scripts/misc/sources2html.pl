@@ -120,11 +120,12 @@ my %data_type_example = (
                              'url'       => 'StructuralVariation/Explore?sv='
                             },
   'phenotype_feature'    => {
-                             'sql'      => qq{SELECT object_id, type FROM phenotype_feature WHERE source_id=? AND is_significant=1 AND type!="SupportingStructuralVariation" LIMIT 1},
+                             'sql'       => qq{SELECT object_id, type, phenotype_id FROM phenotype_feature WHERE source_id=? AND is_significant=1 AND type!="SupportingStructuralVariation" LIMIT 1},
                              'count_spe' => qq{SELECT source_id, COUNT(phenotype_feature_id) FROM phenotype_feature GROUP BY source_id},  
                              'Variation'           => 'Variation/Phenotype?v=',
                              'StructuralVariation' => 'StructuralVariation/Phenotype?v=',
-                             'Gene'                => 'Gene/Phenotype?g='
+                             'Gene'                => 'Gene/Phenotype?g=',
+                             'QTL'                 => 'Phenotype/Locations?ph='
                             },
   'variation_set'        => {
                              'sql'   => qq{SELECT v.name FROM variation v, variation_set_variation s WHERE v.variation_id=s.variation_id AND v.variation_id NOT IN 
@@ -664,58 +665,65 @@ sub create_menu {
   </div>
   <br />
   <div id="$legend_div_id" style="margin-left:8px;margin-top:2px;padding-bottom:2px;background-color:#F9F9F9;color:#333;border-left:1px dotted #BBB;border-right:1px dotted #BBB;border-bottom:1px dotted #BBB">
+    <!-- Legend header -->
     <div style="padding:5px;font-weight:bold;color:#000;background-color:#FFF;border-top:2px solid #336;border-bottom:1px solid #336;;margin-bottom:2px">
-      <img src="/i/16/info.png" style="vertical-align:top" />
-      Icons legend
+      <div style="float:left">
+        <img src="/i/16/info.png" style="vertical-align:top" />
+        Icons legend
+      </div>
+      <div style="float:right">
+        <a href="#top" style="text-decoration:none">[Top]</a>
+      </div>
+      <div style="clear:both"></div>
     </div>
     <!-- Main legend -->
     <table>
       <tr>
-        <td style="padding-top:8px;text-align:center">%s   </td>
-        <td style="padding-top:6px"><b>New version</b> of the data<br />source in this release<br />for the species</td>
+        <td style="padding-top:6px;text-align:center">%s   </td>
+        <td style="padding-top:4px"><b>New version</b> of the data<br />source in this release<br />for the species</td>
       </tr>
       <tr>
-        <td style="padding-top:8px;text-align:center">%s   </td>
-        <td style="padding-top:6px"><b>New data source</b> in this<br />release for the species</td>
+        <td style="padding-top:6px;text-align:center">%s   </td>
+        <td style="padding-top:4px"><b>New data source</b> in this<br />release for the species</td>
       </tr>
       <tr>
         <td style="padding-top:6px;text-align:center;">
           <img src="$phen_icon" style="margin-left:auto;margin-right:auto;border-radius:5px;border:1px solid #000;margin-right:1px" alt="Provides phenotype data" title="Provides phenotype data"/>
         </td>
-        <td style="padding-top:6px">Source which provides<br />phenotype association data</td>
+        <td style="padding-top:4px">Source which provides<br />phenotype association data</td>
       </tr>
       <tr>
         <td style="padding-top:6px;text-align:center">%s   </td>
-        <td style="padding-top:6px">The source contains only<br />germline data</td>
+        <td style="padding-top:4px">The source contains only<br />germline data</td>
       </tr>
       <tr>
         <td style="padding-top:6px;text-align:center">%s    </td>
-        <td style="padding-top:6px">The source contains only<br />somatic data</td>
+        <td style="padding-top:4px">The source contains only<br />somatic data</td>
       </tr>
       <tr>
         <td style="padding-top:6px;text-align:center">%s    </td>
-        <td style="padding-top:6px">The source contains both<br />germline and somatic data</td>
+        <td style="padding-top:4px">The source contains both<br />germline and somatic data</td>
       </tr>
     </table>
     
     <!-- Variant and structural variant count colour legend -->
     <div style="border-top:1px dotted #BBB;margin-top:2px;padding:4px 0px 0px">
-      <span style="padding-left:4px;font-weight:bold">Variant count:</span>
+      <span style="padding-left:4px;font-weight:bold">Data types - variants count:</span>
       <table>
         <tr>
           <td style="padding-top:4px;text-align:center">
             <span style="background-color:$m_colour;color:#FFF;border-radius:5px;padding:1px 2px 1px 20px;cursor:default"></span>
           </td>
-          <td style="padding-top:3px">greater than 1 million</td>
+          <td style="padding-top:4px">greater than 1 million</td>
         </tr>
         <tr>
-          <td style="padding-top:4px;text-align:center">
+          <td style="padding-top:3px;text-align:center">
             <span style="background-color:$t_colour;color:#FFF;border-radius:5px;padding:1px 2px 1px 20px;cursor:default"></span>
           </td>
           <td style="padding-top:3px">from 1,000 to 999,999</td>
         </tr>
         <tr>
-          <td style="padding-top:4px;text-align:center">
+          <td style="padding-top:3px;text-align:center">
             <span style="background-color:$h_colour;color:#FFF;border-radius:5px;padding:1px 2px 1px 20px;cursor:default"></span>
           </td>
           <td style="padding-top:3px">less than 1,000</td>
@@ -742,8 +750,8 @@ sub create_menu {
   </div>
 </div>
   },
-  qq{<div style="width:4px;height:25px;background-color:$v_colour;margin-left:10px"></div>},
-  qq{<div style="width:4px;height:25px;background-color:$s_colour;margin-left:10px"></div>},
+  qq{<div style="width:4px;height:25px;background-color:$v_colour;margin-left:9px"></div>},
+  qq{<div style="width:4px;height:25px;background-color:$s_colour;margin-left:9px"></div>},
   somatic_status('germline'),
   somatic_status('somatic'),
   somatic_status('mixed'));
@@ -863,7 +871,7 @@ sub set_row {
         <td style="font-weight:bold">$source</td>
         <td>$version</td>
         <td style="max-width:800px">$desc</td>
-        <td style="border-left:1px solid #CCC">$data_type</td>
+        <td style="border-left:1px solid #CCC;padding:4px 2px">$data_type</td>
         <td style="text-align:center;width:22px;padding:2px 3px;border-left:1px solid #CCC">$phenotype</td>
         <td style="text-align:center;width:22px;padding:2px 3px;border-left:1px solid #DDD">$somatic_status</td>
   };
@@ -959,7 +967,7 @@ sub get_example {
 
   if ($sth) {
     my @result  = $sth->fetchrow_array;
-    my $example = $result[0];
+    my $example = ($result[1] eq 'QTL') ? $result[2] : $result[0];
     my $url;
     if ($result[1] && $data_type_example{$data_type}{$result[1]}) {
       $url = $data_type_example{$data_type}{$result[1]};
