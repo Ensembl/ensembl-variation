@@ -274,14 +274,27 @@ sub SO_isa {
 }
 
 sub get_sorted_OverlapConsequences {
-    my $self = shift;
-    
-    if(!defined($self->base_variation_feature_overlap->adaptor->{sorted_cons})) {
-        my @sorted = sort {$a->tier <=> $b->tier} values %OVERLAP_CONSEQUENCES;
-        $self->base_variation_feature_overlap->adaptor->{sorted_cons} = \@sorted;
+  my $self = shift;
+  
+  # this can either be cached on the VEP config hash
+  if(defined($self->base_variation_feature->{config})) {
+    if(!defined($self->base_variation_feature->{config}->{sorted_cons})) {
+      my @sorted = sort {$a->tier <=> $b->tier} values %OVERLAP_CONSEQUENCES;
+      $self->base_variation_feature->{config}->{sorted_cons} = \@sorted;
     }
     
+    return $self->base_variation_feature->{config}->{sorted_cons};
+  }
+  
+  # or on the TVA adaptor
+  else {
+    if(!defined($self->base_variation_feature_overlap->adaptor->{sorted_cons})) {
+      my @sorted = sort {$a->tier <=> $b->tier} values %OVERLAP_CONSEQUENCES;
+      $self->base_variation_feature_overlap->adaptor->{sorted_cons} = \@sorted;
+    }
+  
     return $self->base_variation_feature_overlap->adaptor->{sorted_cons};
+  }
 }
 
 1;

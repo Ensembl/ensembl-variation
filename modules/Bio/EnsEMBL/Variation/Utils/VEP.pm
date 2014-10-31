@@ -1066,6 +1066,14 @@ sub get_all_consequences {
       $_->{_order} = sprintf("%09d", ++$i) for @$listref;
     }
     
+    # cache link to config on VFs
+    # this allows some stuff to be cached on here
+    # which would otherwise be cached on adaptors that don't exist in offline mode
+    for(@$listref) {
+      $_->{config} = $config;
+      weaken($_->{config});
+    }
+    
     my (@temp_array, @return, %by_pid, @pids);
     my $active_forks = 0;
     
