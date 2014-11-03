@@ -228,7 +228,6 @@ sub round_count {
   if ($number =~ /^(\d+)\d{6}$/) {
     $new_number = $1;
     $count  = "> $1 million";
-    $count .= 's' if ($new_number != 1);
   }
   elsif ($number =~ /^(\d+)\d{3}$/) {
     $new_number = $1;
