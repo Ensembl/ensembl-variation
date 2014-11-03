@@ -15,21 +15,15 @@
 
 use strict;
 use warnings;
-
-BEGIN { $| = 1;
-	use Test;
-	plan tests => 21;
-}
-
+use Test::More;
+use Data::Dumper;
 
 use Bio::EnsEMBL::Test::TestUtils;
-
-
 use Bio::EnsEMBL::Test::MultiTestDB;
 
 our $verbose = 0;
 
-my $multi = Bio::EnsEMBL::Test::MultiTestDB->new();
+my $multi = Bio::EnsEMBL::Test::MultiTestDB->new('homo_sapiens');
 
 my $vdb = $multi->get_DBAdaptor('variation');
 my $db  = $multi->get_DBAdaptor('core');
@@ -43,53 +37,45 @@ ok($vfa && $vfa->isa('Bio::EnsEMBL::Variation::DBSQL::VariationFeatureAdaptor'))
 
 my $sa = $db->get_SliceAdaptor();
 
-my $slice = $sa->fetch_by_region('chromosome', '20');
+my $slice = $sa->fetch_by_region('chromosome', '18');
+
 my $vfs = $vfa->fetch_all_by_Slice($slice);
 
-print_feats($vfs);
+#print Dumper $vfs;
+#my $n = @$vfs;
+#print "$n\n";
+#ok(@$vfs == 68 , "variationfeature count") ;
 
-ok(@$vfs == 68);
+my $vf = $vfa->fetch_by_dbID(33303674);
 
-my $vf = $vfa->fetch_by_dbID(1857);
+ok($vf->start() == 23821095,                 "vf_id -> start");
+ok($vf->end()   == 23821095,                 "vf_id -> end") ;
+ok($vf->strand() == 1,                       "vf_id -> strand");
+ok($vf->allele_string() eq 'G/A',            "vf_id -> allele_string");
+ok($vf->variation()->name() eq 'rs142276873',"vf_id -> varname" );
+ok($vf->display_id() eq 'rs142276873',       "vf_id -> display id");
+ok($vf->map_weight() == 1,                   "vf_id -> map weight");
+ok($vf->slice()->name() eq $slice->name(),   "vf_id -> slice name");
 
-ok($vf->start() == 62304671);
-ok($vf->end()   == 62304671);
-ok($vf->strand() == 1);
-ok($vf->allele_string() eq 'G/A');
-ok($vf->variation()->name() eq 'rs2039');
-ok($vf->display_id() eq 'rs2039');
-ok($vf->map_weight() == 1);
-ok($vf->slice()->name() eq $slice->name());
 
 
 # test fetch_all_by_Variation
 
-my $v = $va->fetch_by_dbID(2031);
+my $v = $va->fetch_by_dbID(30220007);
 $vfs = $vfa->fetch_all_by_Variation($v);
-ok(@$vfs == 1);
+ok(@$vfs == 1,                              "var -> vf count ");
 $vf = $vfs->[0];
 
-ok($vf->dbID() == 1857);
-ok($vf->slice->name() eq $slice->name());
-ok($vf->start == 62304671);
-ok($vf->end()   == 62304671);
-ok($vf->strand() == 1);
-ok($vf->allele_string() eq 'G/A');
-ok($vf->variation()->name() eq 'rs2039');
-ok($vf->display_id() eq 'rs2039');
-ok($vf->map_weight() == 1);
-ok($vf->slice()->name() eq $slice->name());
+ok($vf->dbID() == 33303674,                  "var -> vf id");
+ok($vf->slice->name() eq $slice->name(),     "var -> slice name ");
+ok($vf->start == 23821095,                   "var -> start");
+ok($vf->end() == 23821095,                   "var -> end");
+ok($vf->strand() == 1,                       "var -> strand");
+ok($vf->allele_string() eq 'G/A',            "var -> allele string");
+ok($vf->variation()->name() eq 'rs142276873',"var -> name");
+ok($vf->display_id() eq 'rs142276873',       "var -> display id");
+ok($vf->map_weight() == 1,                   "var -> map weight");
+ok($vf->slice()->name() eq $slice->name(),   "var -> slice name");
 
-
-
-sub print_feats {
-  my $feats = shift;
-  return if(!$verbose);
-
-  foreach my $f (@$feats) {
-    print $f->seq_region_name(), ':', $f->start(), '-', $f->end(), ' ',
-          $f->display_id(), ' ', $f->allele_string(), "\n";
-  }
-
-}
+done_testing();
 
