@@ -5956,6 +5956,7 @@ sub get_clin_sig {
     
     my ($v, $c, %cs);
     $sth->bind_columns(\$v, \$c);
+    $c =~ s/\s+/\_/g;
     $cs{$v} = $c while $sth->fetch();
     $sth->finish();
     
