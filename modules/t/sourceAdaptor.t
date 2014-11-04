@@ -59,3 +59,5 @@ ok($source->somatic_status() eq $somatic_status, "somatic_status");
 ok($source->get_all_data_types()->[0] eq $data_types[0], "data_type");
 
 
+done_testing();
+

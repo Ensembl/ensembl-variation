@@ -38,7 +38,7 @@ ok($va && $va->isa('Bio::EnsEMBL::Variation::DBSQL::VariationAdaptor'), "isa var
 my $var = $va->fetch_by_dbID(4770800);
 
 ok($var->name() eq 'rs7569578',      'variation name by var id');
-ok($var->source eq 'dbSNP',          'source name by var id'   );
+ok($var->source_name() eq 'dbSNP',          'source name by var id'   );
 ok($va->get_source_version('dbSNP') == 138, 'source version by var id');
 ok($var->ancestral_allele() eq 'A',  'ancestral_allele by var id');
 ok($var->minor_allele() eq 'A',      'minor allele by var id');
@@ -71,7 +71,7 @@ $var = $va->fetch_by_name('rs142276873');
 
 ok($var->name() eq 'rs142276873', "name by name");
 ok($var->dbID() == 30220007,      "id by name" );
-ok($var->source eq 'dbSNP',        "source by name");
+ok($var->source_name() eq 'dbSNP',"source by name");
 ok($var->ancestral_allele eq 'G', "ancestral allele by name");
 
 
@@ -81,7 +81,7 @@ $var = $va->fetch_by_name('rs57302278');
 
 ok($var->name() eq 'rs7569578',   "current name by synonym");
 ok($var->dbID() == 4770800,       "current id by synonym");
-ok($var->source eq 'dbSNP',       "source by synonym");
+ok($var->source_name() eq 'dbSNP',"source by synonym");
 ok($var->ancestral_allele eq 'A', "ancestral allele by synonym" );
 
 

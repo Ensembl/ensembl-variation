@@ -25,6 +25,7 @@ use Bio::EnsEMBL::Test::TestUtils;
 use Bio::EnsEMBL::Variation::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Variation::Variation;
 use Bio::EnsEMBL::Variation::Allele;
+use Bio::EnsEMBL::Variation::Source;
 
 my $multi = Bio::EnsEMBL::Test::MultiTestDB->new('homo_sapiens');
 
@@ -33,11 +34,24 @@ my $core = $multi->get_DBAdaptor('core');
 
 my $variation_adaptor = $vdb->get_VariationAdaptor;
 
+
 # test constructor
+
+## need source object 
+
+my $source_name           = 'dbSNP';
+my $source_version        = 138;
+my $source_description    = 'Variants (including SNPs and indels) imported from dbSNP (mapped to GRCh38)';
+
+my $source = Bio::EnsEMBL::Variation::Source->new
+  (-name           => $source_name,
+   -version        => $source_version,
+   -description    => $source_description
+);
+
 
 my $dbID = 123;
 my $name = 'rs5432';
-my $source = 'dbSNP';
 my @synonyms = ( ['dbSNP', 'ss355',  1,],
                  ['dbSNP', 'ss556',  1,],
                  ['TSC',   '12565',  1 ] );
@@ -46,6 +60,7 @@ foreach my $synonyms (@synonyms){
     $syonym{$synonyms->[0]}{$synonyms->[1]}{$synonyms->[2]}++;
 }
 
+## need allele objects
 my $a1 = Bio::EnsEMBL::Variation::Allele->new(-allele => 'A', -adaptor => $variation_adaptor);
 my $a2 = Bio::EnsEMBL::Variation::Allele->new(-allele => 'C', -adaptor => $variation_adaptor);
 my $alleles = [$a1,$a2];
@@ -69,13 +84,13 @@ my $v = Bio::EnsEMBL::Variation::Variation->new
    -flipped           => 0,
   );
 
-ok($v->dbID() eq 123,             "db ID");
-ok($v->name() eq $name,           "name");
-ok($v->source() eq $source,       "source");
-ok($v->is_somatic() eq 0,         "is_somatic");
-ok($v->flipped() eq 0,            "flipped");
-ok($v->moltype() eq 'Genomic',    "moltype");
-ok($v->ancestral_allele() eq 'A', "ancestral_allele");
+ok($v->dbID() eq 123,                "db ID");
+ok($v->name() eq $name,              "name");
+ok($v->source_name() eq $source_name,"source");
+ok($v->is_somatic() eq 0,            "is_somatic");
+ok($v->flipped() eq 0,               "flipped");
+ok($v->moltype() eq 'Genomic',       "moltype");
+ok($v->ancestral_allele() eq 'A',    "ancestral_allele");
 
 
 my $n = scalar @{$v->get_all_synonyms()};
@@ -96,8 +111,6 @@ ok($v->var_class() eq 'SNP', "class");
 # test getter/setters
 
 ok(test_getter_setter($v, 'name', 'newname'), "get/set name");
-ok(test_getter_setter($v, 'source', 'newsource'), "get/set source");
-ok(test_getter_setter($v, 'source_url', 'http://www.ncbi.nlm.nih.gov/projects/SNP/'), "get/set source url");
 ok(test_getter_setter($v, 'ancestral_allele','C'), "get/set ancestral_allele");
 ok(test_getter_setter($v, 'moltype','cDNA'), "get/set moltype");
 
