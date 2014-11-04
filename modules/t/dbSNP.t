@@ -42,7 +42,7 @@ foreach my $t (@test_patterns){
   my $als = get_alleles_from_pattern($t->[0]);
 
   my $ens_string = join "/", @{$als}; 
-  warn "\n$ens_string\n";
+#  warn "\n$ens_string\n";
 
   ok( $t->[1] eq $ens_string , "[ testing: $t->[0] -> $t->[1] ]");
 
