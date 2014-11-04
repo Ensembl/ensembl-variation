@@ -31,17 +31,24 @@
 use strict;
 use warnings;
 use Bio::EnsEMBL::Registry;
+use Getopt::Long;
 
 my $registry = 'Bio::EnsEMBL::Registry';
 
 # Print the usage instructions if run without parameters
 usage() unless (scalar(@ARGV));
 
-my $species    = shift;
-my $host       = shift;
-my $db_version = shift;
+my ($species, $host, $db_version, $output_file, $help);
 
-die ("Species, db_host and db_version must be specified") unless ($species && $host && $db_version);
+GetOptions(
+  'v=i'         => \$db_version,
+  'o=s'         => \$output_file,
+  'host=s'      => \$host,
+  'species|s=s' => \$species,
+  'help!'       => \$help
+);
+
+usage ("Species, host, version and output_file must be specified") unless ($species && $host && $db_version && $output_file);
 
 # Filters
 my @filters = ('fail_');
@@ -91,25 +98,31 @@ foreach my $top_vs (@{$top_vss}) {
 
 
 ## Print the common table headers
-print "<h4>Variation sets common to all species</h4>\n";
-print "<table id=\"variation_set_table\" class=\"ss\">\n";
-print "$table_header\n";
+my $html;
+$html .= "<h4>Variation sets common to all species</h4>\n";
+$html .= "<table id=\"variation_set_table\" class=\"ss\">\n";
+$html .= "$table_header\n";
 
 foreach my $com_set_name (sort(keys(%$com_sets))) {
-  print_set($com_sets->{$com_set_name},\$com_rowcount);
+  $html .= print_set($com_sets->{$com_set_name},\$com_rowcount);
 }
-print "</table>\n";
+$html .= "</table>\n";
 
 
 ## Print the human specific table headers
-print "<br />\n<h4>Variation sets specific to Human</h4>\n";
-print "<table id=\"human_variation_set_table\" class=\"ss\">\n";
-print $table_header;
+$html .= "<br />\n<h4>Variation sets specific to Human</h4>\n";
+$html .= "<table id=\"human_variation_set_table\" class=\"ss\">\n";
+$html .= $table_header;
 
 foreach my $set_name (sort(keys(%$sets))) {
-  print_set($sets->{$set_name},\$rowcount);
+  $html .= print_set($sets->{$set_name},\$rowcount);
 }
-print "</table>\n";
+$html .= "</table>\n";
+
+
+open  OUT, "> $output_file" or die $!;
+print OUT $html;
+close(OUT);
 
 
 
@@ -118,6 +131,8 @@ sub print_set {
   my $set = shift;
   my $rowcount = shift;
   my $indent = shift || 0;
+  
+  my $html_set;
   
   # Highlight even row numbers
   ${$rowcount}++;
@@ -132,11 +147,11 @@ sub print_set {
   }
   
   # Print the set attributes
-  print "  <tr$rowclass>\n";
-  print "    <td>$bullet_open" . $set->name() . "$bullet_close</td>\n";
-  print "    <td>" . $set->short_name() . "</td>\n";
-  print "    <td>" . $set->description() . "</td>\n";
-  print "  </tr>\n";
+  $html_set .= "  <tr$rowclass>\n";
+  $html_set .= "    <td>$bullet_open" . $set->name() . "$bullet_close</td>\n";
+  $html_set .= "    <td>" . $set->short_name() . "</td>\n";
+  $html_set .= "    <td>" . $set->description() . "</td>\n";
+  $html_set .= "  </tr>\n";
   
   # Get the subsets that have the current set as immediate parent
   my $subsets = $set->get_all_sub_VariationSets(1);
@@ -147,24 +162,27 @@ sub print_set {
     $ssets->{$sub_vs->name} = $sub_vs;
   }
   foreach my $sset_name (sort(keys(%$ssets))) {
-    print_set($ssets->{$sset_name},$rowcount,$indent+1);
+    $html_set .= print_set($ssets->{$sset_name},$rowcount,$indent+1);
   }
+  return $html_set;
 }
 
 sub usage {
-    
-    print STDOUT qq{
-Usage:
-
-  $0 SPECIES DB_HOST DB_VERSION
+  my $msg = shift;
+  print qq{
+  $msg
+  Usage: perl generate_variation_set_table.pl [OPTION]
   
-Description:
+  Update the variation set tables in "data_description.html" (under public-plugins/ensembl/htdocs/info/genome/variation/).
+  
+  Options:
 
-  Prints html code for a table containing the available variation sets for a species. The species 
-  has to be specified on the command line as the first argument and the host database has to be 
-  specified as the second argument
-         
-};
-    
-    exit(0);
+    -help           Print this message
+      
+    -v              Ensembl version, e.g. 65 (Required)
+    -o              An HTML output file name (Required)
+    -host           Host of the human database (Required)
+    -species        Species name (Required) 
+  } . "\n";
+  exit(0);
 }

@@ -31,17 +31,24 @@
 use strict;
 use warnings;
 use Bio::EnsEMBL::Registry;
+use Getopt::Long;
 
 my $registry = 'Bio::EnsEMBL::Registry';
 
 # Print the usage instructions if run without parameters
 usage() unless (scalar(@ARGV));
 
-my $species    = shift;
-my $host       = shift;
-my $db_version = shift;
+my ($species, $host, $db_version, $output_file, $help);
 
-die ("Species, db_host and db_version must be specified") unless ($species && $host && $db_version);
+GetOptions(
+  'v=i'         => \$db_version,
+  'o=s'         => \$output_file,
+  'host=s'      => \$host,
+  'species|s=s' => \$species,
+  'help!'       => \$help
+);
+
+usage ("Species, host, version and output_file must be specified") unless ($species && $host && $db_version && $output_file);
 
 # Load the registry from db
 $registry->load_registry_from_db(
@@ -167,7 +174,12 @@ $html = qq{
 $html_star_content
 </table>
 };
-print $html;
+
+
+open  OUT, "> $output_file" or die $!;
+print OUT $html;
+close(OUT);
+
 
 
 
@@ -215,19 +227,21 @@ sub add_table_header {
 
 
 sub usage {
-    
-    print STDOUT qq{
-Usage:
-
-  $0 SPECIES DB_HOST DB_VERSION
+  my $msg = shift;
+  print qq{
+  $msg
+  Usage: perl generate_clin_significance_tables.pl [OPTION]
   
-Description:
+  Update the clinical significance tables in "data_description.html" (under public-plugins/ensembl/htdocs/info/genome/variation/).
+  
+  Options:
 
-  Prints html code for a table containing the different clinical significances for a species. The species 
-  has to be specified on the command line as the first argument and the host database has to be 
-  specified as the second argument
-         
-};
-    
-    exit(0);
+    -help           Print this message
+      
+    -v              Ensembl version, e.g. 65 (Required)
+    -o              An HTML output file name (Required)
+    -host           Host of the human database (Required)
+    -species        Species name (Required)
+  } . "\n";
+  exit(0);
 }

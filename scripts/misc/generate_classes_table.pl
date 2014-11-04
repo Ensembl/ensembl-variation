@@ -32,14 +32,24 @@ use strict;
 use warnings;
 use Bio::EnsEMBL::Registry;
 use Bio::EnsEMBL::Variation::Utils::Constants qw(%VARIATION_CLASSES);
+use Getopt::Long;
 
 my $registry = 'Bio::EnsEMBL::Registry';
 
-my $species    = shift;
-my $host       = shift;
-my $db_version = shift;
+# Print the usage instructions if run without parameters
+usage() unless (scalar(@ARGV));
 
-die ("Species, db_host and db_version must be specified") unless ($species && $host && $db_version);
+my ($species, $host, $db_version, $output_file, $help);
+
+GetOptions(
+  'v=i'         => \$db_version,
+  'o=s'         => \$output_file,
+  'host=s'      => \$host,
+  'species|s=s' => \$species,
+  'help!'       => \$help
+);
+
+usage ("Species, host, version and output_file must be specified") unless ($species && $host && $db_version && $output_file);
 
 # Load the registry from db
 $registry->load_registry_from_db(
@@ -157,7 +167,10 @@ The colours are based on the <a rel="external" href="http://www.ncbi.nlm.nih.gov
 
 $html.= get_var_class_piechart();
 
-print $html;
+open  OUT, "> $output_file" or die $!;
+print OUT $html;
+close(OUT);
+
 
 
 sub print_line {
@@ -251,3 +264,22 @@ sub get_var_class_piechart {
   return $html;
 } 
 
+sub usage {
+  my $msg = shift;
+  print qq{
+  $msg
+  Usage: perl generate_classes_table.pl [OPTION]
+  
+  Update the classes table in "data_description.html" (under public-plugins/ensembl/htdocs/info/genome/variation/).
+  
+  Options:
+
+    -help           Print this message
+      
+    -v              Ensembl version, e.g. 65 (Required)
+    -o              An HTML output file name (Required)
+    -host           Host of the human database (Required)
+    -species        Species name (Required)
+  } . "\n";
+  exit(0);
+}
