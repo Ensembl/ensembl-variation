@@ -16,10 +16,25 @@ use strict;
 use warnings;
 
 use Test::More;
-
+use Data::Dumper;
 
 use Bio::EnsEMBL::Test::TestUtils;
 use Bio::EnsEMBL::Variation::Study;
+use Bio::EnsEMBL::Variation::Source;
+
+## need source object 
+
+my $source_name           = 'EGA';
+my $source_version        = 13;
+my $source_description    = 'EGA description';
+
+my $source = Bio::EnsEMBL::Variation::Source->new
+  (-name           => $source_name,
+   -version        => $source_version,
+   -description    => $source_description
+);
+
+
 
 
 my $name                = 'studyname';
@@ -27,8 +42,6 @@ my $description         = 'longer study description';
 my $url                 = 'http://www.ensembl.org/';
 my $external_reference  = 'pubmed/22566624';
 my $type                = 'GWAS';
-my $source              = 'EGA';
-
 
 
 # test constructor
@@ -41,13 +54,13 @@ my $study = Bio::EnsEMBL::Variation::Study->new
    -source             => $source
 );
 
-
+print Dumper $study;
 ok($study->name() eq $name, "name");
 ok($study->description() eq $description, "$description");
 ok($study->url() eq $url, "url");
 ok($study->external_reference() eq $external_reference, "reference");
 ok($study->type() eq $type, "type");
-ok($study->source() eq $source, "source");
+ok($study->source_name() eq $source_name, "source");
 
 
 # test getter/setters

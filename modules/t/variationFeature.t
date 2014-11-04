@@ -21,6 +21,7 @@ BEGIN { $| = 1;
 }
 
 use Bio::EnsEMBL::Test::TestUtils;
+use Bio::EnsEMBL::Variation::Source;
 use_ok('Bio::EnsEMBL::Variation::Variation');
 use_ok('Bio::EnsEMBL::Variation::VariationFeature');
 
@@ -29,8 +30,22 @@ use_ok('Bio::EnsEMBL::Variation::VariationFeature');
 
 # test constructor
 
+## need source object 
+
+my $source_name           = 'dbSNP';
+my $source_version        = 138;
+my $source_description    = 'Variants (including SNPs and indels) imported from dbSNP (mapped to GRCh38)';
+
+my $source = Bio::EnsEMBL::Variation::Source->new
+  (-name           => $source_name,
+   -version        => $source_version,
+   -description    => $source_description
+);
+
+
+## need a variation object 
 my $v = Bio::EnsEMBL::Variation::Variation->new(-name => 'rs2421',
-                                                -source => 'dbSNP');
+                                                -source => $source);
 
 
 my $start = 100;
@@ -39,7 +54,6 @@ my $strand = 1;
 my $vname = $v->name();
 my $map_weight = 1;
 my $allele_str = 'A/T';
-my $source = 'dbSNP';
 my $is_somatic = 0;
 my $minor_allele = 'A';
 my $minor_allele_frequency = 0.1;
@@ -68,7 +82,7 @@ ok($vf->variation_name() eq $vname,     "get name");
 ok($vf->map_weight() == $map_weight,    "get map_weight");
 ok($vf->allele_string() eq $allele_str, "get allele");
 ok($vf->display_id() eq $vname,         "display_name");
-ok($vf->source()    eq $source,         "source");
+ok($vf->source_name()  eq $source_name,  "source");
 ok($vf->length()    == 1,               "length");
 ok($vf->is_somatic() eq $is_somatic,    "is_somatic");
 ok($vf->minor_allele()  eq $minor_allele, "minor allele"); 
@@ -79,7 +93,7 @@ ok($vf->minor_allele_count() == $minor_allele_count,  "minor allele count");
 # test getter/setters
 
 my $v2 = Bio::EnsEMBL::Variation::Variation->new(-name => 'rs12311',
-                                                 -source => 'dbSNP');
+                                                 -source => $source);
 
 ok(test_getter_setter($vf, 'variation', $v2));
 ok(test_getter_setter($vf, 'map_weight', 4));
