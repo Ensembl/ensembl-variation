@@ -949,7 +949,7 @@ sub convert_to_vcf {
             # default to N in case we can't get it
             my $prev_base = 'N';
             
-            unless(defined($config->{cache})) {
+            if(defined($vf->slice)) {
                 my $slice = $vf->slice->sub_Slice($vf->start - 1, $vf->start - 1);
                 $prev_base = $slice->seq if defined($slice);
             }
