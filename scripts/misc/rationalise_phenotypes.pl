@@ -104,7 +104,7 @@ $dbc->do(qq{
     KEY `new_phenotype_id` (`new_phenotype_id`)
   )
 });
-$dbc->do(qq{TRUNCATE TABLE phenotype_map});
+# $dbc->do(qq{TRUNCATE TABLE phenotype_map});
 
 $sth = $dbc->prepare("INSERT INTO phenotype_map(old_phenotype_id, new_phenotype_id) VALUES (?, ?)");
 
