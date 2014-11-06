@@ -50,6 +50,8 @@ GetOptions(
   'user|u=s',
   'password|p=s',
   'port|P=i',
+  
+  'no_fasta|nf',   # don't check FASTA files
 ) or die "ERROR: Failed to parse command-line flags\n";
 
 do { usage(); exit(0); } if $config->{help};
@@ -216,30 +218,32 @@ foreach my $host(split /\,/, $config->{host}) {
     
     
     # check FASTA file
-    print " - checking FASTA file\n";
-    opendir CACHE, $dir;
-    my @read = readdir CACHE;
-    my ($fa)  = grep {/\.fa$/} @read;
-    my ($idx) = grep {/\.index$/} @read;
-    closedir CACHE;
+    unless($config->{no_fasta}) {
+      print " - checking FASTA file\n";
+      opendir CACHE, $dir;
+      my @read = readdir CACHE;
+      my ($fa)  = grep {/\.fa$/} @read;
+      my ($idx) = grep {/\.index$/} @read;
+      closedir CACHE;
     
-    ok(defined($fa), "\[$species\] FASTA file present");
-    ok(defined($idx), "\[$species\] FASTA index file present");
-    ok($fa =~ /^$species/i, "\[$species\] FASTA file matches species name") if($fa);
-    ok($fa =~ /\.$config->{version}\./, "\[$species\] FASTA file matches version") if($idx);
+      ok(defined($fa), "\[$species\] FASTA file present");
+      ok(defined($idx), "\[$species\] FASTA index file present");
+      ok($fa =~ /^$species/i, "\[$species\] FASTA file matches species name") if($fa);
+      ok($fa =~ /\.$config->{version}\./, "\[$species\] FASTA file matches version") if($idx);
     
-    # only check indexing ok if built already
-    if(defined($idx)) {
-      eval q{
-        use Bio::DB::Fasta;
-      };
-      
-      if(!$@) {
+      # only check indexing ok if built already
+      if(defined($idx)) {
         eval q{
-          Bio::DB::Fasta->new($dir.'/'.$fa);
+          use Bio::DB::Fasta;
         };
+      
+        if(!$@) {
+          eval q{
+            Bio::DB::Fasta->new($dir.'/'.$fa);
+          };
         
-        ok(!$@, "\[$species\] FASTA index loads in Bio::DB::Fasta") or diag($@);
+          ok(!$@, "\[$species\] FASTA index loads in Bio::DB::Fasta") or diag($@);
+        }
       }
     }
   }
