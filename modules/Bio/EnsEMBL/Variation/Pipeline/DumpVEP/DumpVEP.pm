@@ -102,6 +102,33 @@ sub run {
   
   die "ERROR: Encountered an error running VEP\n".join("", @buffer)."\n" unless $finished;
   
+  # healthcheck resultant cache
+  my $script_dir = $self->required_param('ensembl_cvs_root_dir').'/ensembl-variation/scripts/misc';
+  
+  $cmd = sprintf(
+    '%s %s/healthcheck_vep_caches.pl --host %s --port %i --user %s %s --species %s --version %s --dir %s --no_fasta',
+    $perl,
+    $script_dir,
+    
+    $host,
+    $port,
+    $user,
+    $pass,
+    
+    $species.($refseq ? '_refseq' : ''),
+    $version,
+    $dir
+  );$finished = 0;
+  
+  open CMD, "$cmd 2>&1 |" or die "ERROR: Failed to run command $cmd";
+  
+  my $pipedir = $self->required_param('pipeline_dir');
+
+  open REPORT, ">>", "$pipedir/$species\_QC_report.txt" or die "Failed to open $pipedir/$species\_QC_report.txt : $!\n";
+  while(<CMD>) { print REPORT; }
+  close CMD;
+  close REPORT;
+  
   $self->tar($self->param('species_refseq') ? 'refseq' : '');
   
   return;
