@@ -5433,6 +5433,7 @@ sub build_full_cache {
   }
     
   # open build status file
+  mkpath($config->{dir}) if !-d $config->{dir};
   open DONE, '>> '.$config->{dir}.'/.build' or die("ERROR: Unable to open build status file\n");
     
   foreach my $slice(@slices) {
