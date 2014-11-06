@@ -117,6 +117,9 @@ our @ISA = ('Bio::EnsEMBL::Storable','Bio::EnsEMBL::Variation::Failable');
   Arg [-CLINICAL_SIGNIFICANCE] :
     reference to list of strings - clinical significance(s) associated with the structural variant, e.g. 'pathogenic'.
     
+  Arg [-COPY_NUMBER] :
+    int - Number of sequence copies for the supporting evidence of a structural variant classified as "copy number variant" (CNV) when available.
+
   Example for a structural variation:
     $sv = Bio::EnsEMBL::Variation::StructuralVariation->new
        (-variation_name => 'esv25480',
@@ -153,7 +156,8 @@ sub new {
     $is_evidence,
     $is_somatic,
     $alias,
-    $clinical_significance
+    $clinical_significance,
+    $copy_number
   ) = rearrange([qw(
           dbID
           ADAPTOR
@@ -168,6 +172,7 @@ sub new {
           IS_SOMATIC
           ALIAS
           CLINICAL_SIGNIFICANCE
+          COPY_NUMBER
     )], @_);
     
   my $self = bless {
@@ -183,7 +188,8 @@ sub new {
     'is_evidence'           => $is_evidence || 0,
     'is_somatic'            => $is_somatic || 0,
     'alias'                 => $alias,
-    'clinical_significance' => $clinical_significance
+    'clinical_significance' => $clinical_significance,
+    'copy_number'           => $copy_number
   };
   return $self;
 }
@@ -565,6 +571,24 @@ sub is_somatic{
 }
 
 
+=head2 copy_number
+
+  Arg [1]    : int $copy (optional)
+  Example    : $copy_number = $sv->copy_number()
+  Description: Getter/Setter of the number of copies from a structural variant
+               classified as 'copy number variant' (CNV) when available.
+  Returntype : int
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub copy_number {
+  my $self = shift;
+  return $self->{'copy_number'} = shift if(@_);
+  return $self->{'copy_number'};
+}
 
 
 =head2 study

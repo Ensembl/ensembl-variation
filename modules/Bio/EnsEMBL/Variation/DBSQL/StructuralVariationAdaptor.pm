@@ -100,10 +100,10 @@ sub _objs_from_sth {
   my @svs;
   
   my ($struct_variation_id, $variation_name, $validation_status, $source_id, $class_attrib_id,
-      $study_id, $is_evidence, $is_somatic, $alias, $clinical_significance);
+      $study_id, $is_evidence, $is_somatic, $alias, $clinical_significance, $copy_number);
 
   $sth->bind_columns(\$struct_variation_id, \$variation_name, \$validation_status, \$source_id, \$class_attrib_id,
-                     \$study_id, \$is_evidence, \$is_somatic, \$alias, \$clinical_significance);
+                     \$study_id, \$is_evidence, \$is_somatic, \$alias, \$clinical_significance, \$copy_number);
 
   my $aa  = $self->db->get_AttributeAdaptor;
   
@@ -123,7 +123,8 @@ sub _objs_from_sth {
        -IS_EVIDENCE           => $is_evidence || 0,
        -IS_SOMATIC            => $is_somatic || 0,
        -ALIAS                 => $alias,
-       -CLINICAL_SIGNIFICANCE => \@clin_sig
+       -CLINICAL_SIGNIFICANCE => \@clin_sig,
+       -COPY_NUMBER           => $copy_number
     );
   }
   return \@svs;

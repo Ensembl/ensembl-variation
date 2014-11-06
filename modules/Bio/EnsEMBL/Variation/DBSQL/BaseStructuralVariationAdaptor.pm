@@ -75,8 +75,8 @@ sub _tables {
 }
 
 sub _columns {
-  return qw( sv.structural_variation_id sv.variation_name sv.validation_status sv.source_id
-             sv.class_attrib_id sv.study_id sv.is_evidence sv.somatic sv.alias sv.clinical_significance);
+  return qw( sv.structural_variation_id sv.variation_name sv.validation_status sv.source_id sv.class_attrib_id
+             sv.study_id sv.is_evidence sv.somatic sv.alias sv.clinical_significance sv.copy_number);
 }
 
 # Add a left join to the failed_structural_variation table
@@ -454,8 +454,9 @@ sub store {
             is_evidence,
             somatic,
             alias,
-            clinical_significance
-        ) VALUES (?,?,?,?,?,?,?,?,?)
+            clinical_significance,
+            copy_number
+        ) VALUES (?,?,?,?,?,?,?,?,?,?)
     });
     
     $sth->execute(
@@ -468,6 +469,7 @@ sub store {
         $sv->is_somatic  || 0,
         $sv->alias || undef,
         $sv->clinical_significance ? (join ",", @{$sv->clinical_significance}) : undef,
+        $sv->copy_number || undef
     );
     
     $sth->finish;
