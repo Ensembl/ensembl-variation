@@ -1916,4 +1916,22 @@ sub get_Variation_dbID {
   return $self->{_variation_id};
 }
 
+=head2 display
+
+  Arg [1]    : none
+  Example    : print $vf->display(), "\n";
+  Description: Returns the display status for the VariationFeature. 
+               1 => returned by default, 
+               0 => returned only DBAdaptor::include_failed_variations() is set
+  Returntype : boolean
+  Exceptions : none
+  Caller     : TranscriptVariationAdaptor
+  Status     : Experimental
+
+=cut
+
+sub display {
+  my $self = shift;
+  return $self->{'display'} || '';
+}
 1;
