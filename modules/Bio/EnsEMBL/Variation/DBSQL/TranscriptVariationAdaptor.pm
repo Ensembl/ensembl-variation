@@ -130,8 +130,9 @@ sub store {
             polyphen_prediction,
             polyphen_score,
             sift_prediction,
-            sift_score
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            sift_score,
+            display
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     });
 
     for my $allele (@{ $tv->get_all_alternate_TranscriptVariationAlleles }) {
@@ -157,7 +158,8 @@ sub store {
             $allele->polyphen_prediction,
             $allele->polyphen_score,
             $allele->sift_prediction,
-            $allele->sift_score
+            $allele->sift_score,
+            $tv->variation_feature->display
         );
     }
 }
@@ -399,6 +401,7 @@ sub _objs_from_sth {
         $polyphen_score,
         $sift_prediction,
         $sift_score,
+        $display
     );
     
     $sth->bind_columns(
@@ -423,6 +426,7 @@ sub _objs_from_sth {
         \$polyphen_score,
         \$sift_prediction,
         \$sift_score,
+        \$display
     );
     
     my %tvs;
@@ -462,6 +466,7 @@ sub _objs_from_sth {
                 translation_start       => $translation_start,
                 translation_end         => $translation_end,
                 distance_to_transcript  => $distance_to_transcript,
+                display                 => $display,
                 adaptor                 => $self,
             });
             
@@ -535,8 +540,19 @@ sub _columns {
         polyphen_score 
         sift_prediction
         sift_score
+        display
     );
 }
+
+sub _default_where_clause {
+
+  my $self = shift;
+  
+  my $clause = ' tv.display = 1 ' unless $self->db->include_failed_variations();
+  return $clause;
+
+}
+
 
 #sub _get_prediction_matrix {
 #    my ($self, $analysis, $transcript_stable_id) = @_;
