@@ -145,11 +145,13 @@ my $species_data_tables = get_species_data_tables();
 
 my $species_data_columns = get_species_data_columns();
 
-my $data_tables_header  = join("</th><th>", (sort { $tables{$a}{'order'} <=> $tables{$b}{'order'} } keys(%tables)));
-my $data_columns_header = join("</th><th>", (sort { $columns{$a}{'order'} <=> $columns{$b}{'order'} } keys(%columns)));
+my $th_border_left = qq{style="border-left:1px solid #DDD"};
 
-my $html_content = qq{<table class="ss" style="width:auto"><tr class="ss_header"><th>Species</th><th>Sequence variant count</th>
-                      <th>$data_tables_header</th><th>$data_columns_header</th></tr>
+my $data_tables_header  = join("</th><th $th_border_left>", (sort { $tables{$a}{'order'} <=> $tables{$b}{'order'} } keys(%tables)));
+my $data_columns_header = join("</th><th $th_border_left>", (sort { $columns{$a}{'order'} <=> $columns{$b}{'order'} } keys(%columns)));
+
+my $html_content = qq{<table class="ss" style="width:auto"><tr class="ss_header"><th>Species</th><th $th_border_left>Sequence variant count</th>
+                      <th $th_border_left>$data_tables_header</th><th $th_border_left>$data_columns_header</th></tr>
                      };
 my $bg = '';
 
