@@ -567,6 +567,13 @@ sub hgvs_transcript {
     my $self = shift;
     my $notation = shift;   
 
+    ## temp fix for e!78
+    if(defined $self->{hgvs_transcript}  && 
+      $self->{hgvs_transcript} =~/LRG\w+\.\d\:/){
+        my @d = split/\.|\:/, $self->{hgvs_transcript}, 3;
+        $self->{hgvs_transcript} = $d[0] . ":". $d[2];
+    }
+
     ##### set if string supplied
     $self->{hgvs_transcript} = $notation   if defined $notation;
     ##### return if held 
@@ -612,7 +619,7 @@ sub hgvs_transcript {
 	print "Exiting hgvs_transcript: no slice start position for $var_name in trans" . $self->transcript_variation->transcript_stable_id() . "\n " if $DEBUG == 1 ;
 	return undef;
     }
-	
+
     ## this may be different to the input one for insertions/deletions
     my $variation_feature_sequence  = $self->{hgvs_tva}->variation_feature_seq() ;
 
@@ -660,7 +667,8 @@ sub hgvs_transcript {
 
     ### create reference name - transcript name & seq version
     my $stable_id = $self->transcript_variation->transcript_stable_id();    
-    $stable_id .= "." . $self->transcript_variation->transcript->version() unless $stable_id =~ /\.\d+$/;
+    $stable_id .= "." . $self->transcript_variation->transcript->version() 
+       unless ($stable_id =~ /\.\d+$/ || $stable_id =~/LRG/); ## no version required for LRG's
     $hgvs_notation->{'ref_name'} =  $stable_id;
   
 
@@ -722,6 +730,12 @@ sub hgvs_protein {
     ### set if string supplied
     $self->{hgvs_protein} = $notation  if defined $notation;
     
+   ## temp fix for e!78
+   if(defined $self->{hgvs_protein}  && 
+      $self->{hgvs_protein} =~/LRG\w+\.\d+\:/){
+        my @d = split/\.|\:/, $self->{hgvs_protein}, 3;
+        $self->{hgvs_protein} =  $d[0] . ":". $d[2];
+    }
     ### return if set
     return $self->{hgvs_protein}       if defined $self->{hgvs_protein} ;
     
@@ -751,7 +765,8 @@ sub hgvs_protein {
     print "Checking translation start: " . $self->{hgvs_tva}->transcript_variation->translation_start() ."\n" if $DEBUG ==1;
     ### get reference sequence [add seq version to transcript name]
     my $stable_id = $self->transcript_variation->transcript->translation->display_id();
-    $stable_id .= "." . $self->transcript_variation->transcript->translation->version() unless $stable_id =~ /\.\d+$/;
+    $stable_id .= "." . $self->transcript_variation->transcript->translation->version() 
+       unless ($stable_id =~ /\.\d+$/ || $stable_id =~ /LRG/); ## no version required for LRG
     $hgvs_notation->{ref_name} =  $stable_id;
 
     $hgvs_notation->{'numbering'} = 'p';
