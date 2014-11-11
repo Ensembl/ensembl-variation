@@ -77,7 +77,8 @@ sub run {
   my ($var_data, $flip, $allele_string, $failed_variant, $failed_allele) = $self->run_variation_checks();
 
   ## allele specific checks 
-  my ($allele_data, $failed_allele, $failed_ss) = $self->run_allele_checks( $flip, $failed_allele, $allele_string);  
+  my ($allele_data,  $failed_ss);
+  ($allele_data, $failed_allele, $failed_ss) = $self->run_allele_checks( $flip, $failed_allele, $allele_string);  
  
   my $var_dba = $self->get_species_adaptor('variation');
 

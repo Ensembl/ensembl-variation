@@ -369,15 +369,15 @@ sub create_1KG_table{
 
     my $var_dba  = $self->get_species_adaptor('variation');
     ## drop any pre-existing table and run clean new import
-    $var_dba->dbc->do(qq[ DROP TABLE IF EXISTS tmp_1kg_var ]);
+    $var_dba->dbc->do(qq[ DROP TABLE IF EXISTS tmp_1kg_rsid ]);
 
-    my $export_stmt = qq[ select rs_id from 1kg_rs_id ];
+    my $export_stmt = qq[ select rs_id from tmp_1kg_rsid ];
     dumpSQL($int_dba->dbc(), $export_stmt);
 
 
-    create_and_load( $var_dba->dbc(), "tmp_1kg_var", "rs_id int not_null");
+    create_and_load( $var_dba->dbc(), "tmp_1kg_rsid", "rs_id int not_null");
     
-    $var_dba->dbc->do(qq[ ALTER TABLE tmp_1kg_var ADD INDEX rsidx( rs_id )]);
+    $var_dba->dbc->do(qq[ ALTER TABLE tmp_1kg_rsid ADD INDEX rsidx( rs_id )]);
 
 
     
