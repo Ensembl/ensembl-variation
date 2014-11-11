@@ -483,8 +483,8 @@ sub get_KG_variations{
   my %kg_variations;
 
   my $var_ext_sth  = $var_dbh->prepare(qq[ select variation.variation_id 
-                                           from variation, 1kg_rs_id 
-                                           where variation.snp_id =  1kg_rs_id.rs_id 
+                                           from variation, tmp_1kg_rsid 
+                                           where variation.snp_id =  tmp_1kg_rsid.rs_id 
                                            and variation.variation_id  between ? and ?
                                          ]);
   $var_ext_sth->execute($first, $last);
