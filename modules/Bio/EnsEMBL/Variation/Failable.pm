@@ -59,9 +59,9 @@ package Bio::EnsEMBL::Variation::Failable;
                be passed. If multiple failed descriptions are specified, they should
                be separated with semi-colons.  
   Example    : $failed_str = $sv->failed_description();
-  Description: Get/Sets the failed description for this structural variant. The failed
+  Description: Get/Sets the failed description for this variant. The failed
                descriptions are lazy-loaded from the database.
-  Returntype : Semi-colon separated string 
+  Returntype : String (semi-colon separated)
   Exceptions : Thrown on illegal argument.
   Caller     : general
   Status     : Stable
@@ -106,7 +106,7 @@ sub failed_description {
                 }
                 
   Description: Gets all failed descriptions associated with this Structural variant.
-  Returntype : Reference to a list of strings 
+  Returntype : Listref of strings
   Exceptions : Thrown if an adaptor is not attached to this object.
   Caller     : general
   Status     : At risk

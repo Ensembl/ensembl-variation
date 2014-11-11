@@ -142,10 +142,10 @@ use Scalar::Util qw(weaken);
     string - the ancestral allele of this SNP
 
   Arg [-ALLELES] :
-    reference to list of Bio::EnsEMBL::Variation::Allele objects
+    Listref of Bio::EnsEMBL::Variation::Allele objects
 
   Arg [-VALIDATION_STATES] :
-    reference to list of strings
+    Listref of strings
 
   Arg [-MOLTYPE] :
     string - the moltype of this SNP
@@ -309,7 +309,7 @@ sub stable_id {
   Example     : $genes = $v->get_all_genes();
   Description : Retrieves all the genes where this Variation
                 has a consequence.
-  ReturnType  : reference to list of Bio::EnsEMBL::Gene
+  ReturnType  : Listref of Bio::EnsEMBL::Gene
   Exceptions  : None
   Caller      : general
   Status      : At Risk
@@ -357,7 +357,7 @@ sub get_all_Genes{
   Args        : None
   Example     : $vfs = $v->get_all_VariationFeatures();
   Description : Retrieves all VariationFeatures for this Variation
-  ReturnType  : reference to list of Bio::EnsEMBL::Variation::VariationFeature
+  ReturnType  : Listref of Bio::EnsEMBL::Variation::VariationFeature
   Exceptions  : None
   Caller      : general
   Status      : Stable
@@ -386,7 +386,7 @@ sub get_all_VariationFeatures{
   Args        : None
   Example     : $vf = $v->get_VariationFeature_by_dbID();
   Description : Retrieves a VariationFeature for this Variation by it's internal
-        database identifier
+                 database identifier
   ReturnType  : Bio::EnsEMBL::Variation::VariationFeature
   Exceptions  : None
   Caller      : general
@@ -443,7 +443,7 @@ sub get_VariationFeature_by_dbID{
   Description: Retrieves synonyms for this Variation. If a source argument
                is provided all synonyms from that source are returned,
                otherwise all synonyms are returned.
-  Returntype : reference to list of strings
+  Returntype : Listref of strings
   Exceptions : none
   Caller     : general
   Status     : Stable
@@ -475,7 +475,7 @@ sub get_all_synonyms {
   Example    : my @sources = @{$v->get_all_synonym_sources()};
   Description: Retrieves a list of all the sources for synonyms of this
                Variation.
-  Returntype : reference to a list of strings
+  Returntype : Listref of strings
   Exceptions : none
   Caller     : general
   Status     : At Risk
@@ -525,7 +525,7 @@ sub add_synonym {
   Description: Retrieves all evidence values for this variation. Current
                possible evidence values are 'Multiple_observations',
               'Frequency','HapMap', '1000Genomes','Cited'
-  Returntype : reference to list of strings
+  Returntype : Listref of strings
   Exceptions : none
   Caller     : general
   Status     : At Risk
@@ -547,7 +547,7 @@ sub get_all_evidence_values {
   Description: Retrieves all validation states for this variation.  Current
                possible validation statuses are 'cluster','freq','submitter',
                'doublehit', 'hapmap'
-  Returntype : reference to list of strings
+  Returntype : Listref of strings
   Exceptions : none
   Caller     : general
   Status     : At Risk
@@ -739,7 +739,7 @@ sub source_description{
                The new value to set the source version attribute to
   Example    : $source_version = $v->source_version()
   Description: Getter/Setter for the source version attribute
-  Returntype : string
+  Returntype : int
   Exceptions : none
   Caller     : general
   Status     : Stable
@@ -867,7 +867,7 @@ sub flipped {
   Arg [1]    : none
   Example    : @alleles = @{$v->get_all_Alleles()};
   Description: Retrieves all Alleles associated with this variation
-  Returntype : reference to list of Bio::EnsEMBL::Variation::Allele objects
+  Returntype : Listref of Bio::EnsEMBL::Variation::Allele objects
   Exceptions : none
   Caller     : general
   Status     : Stable
@@ -992,7 +992,7 @@ sub three_prime_flanking_seq{
   Example    : $ind_genotypes = $var->get_all_IndividualGenotypes()
   Description: Getter for IndividualGenotypes for this Variation, returns empty list if 
                there are none 
-  Returntype : listref of IndividualGenotypes
+  Returntype : Listref of IndividualGenotypes
   Exceptions : none
   Caller     : general
   Status     : Stable
@@ -1018,7 +1018,7 @@ sub get_all_IndividualGenotypes {
   Example    : $pop_genotypes = $var->get_all_PopulationGenotypes()
   Description: Getter for PopulationGenotypes for this Variation, returns empty list if 
                there are none. 
-  Returntype : listref of PopulationGenotypes
+  Returntype : Listref of PopulationGenotypes
   Exceptions : none
   Caller     : general
   Status     : Stable
@@ -1147,7 +1147,7 @@ sub var_class{
                different from the allele in Chimp. If none of the alleles
                is the same as the ancestral, will return reference allele
                frequency
-  Returntype : float
+  Returntype : Float
   Exceptions : none
   Caller     : general
   Status     : At Risk
@@ -1326,7 +1326,7 @@ sub clinical_significance {
                 histocompatibility
                 other 
 
-  Returntype : reference to list of strings
+  Returntype : Listref of strings
   Exceptions : none
   Caller     : general
   Status     : At Risk
@@ -1346,7 +1346,7 @@ sub get_all_clinical_significance_states {
   Example    : my $pfs = $var->get_all_PhenotypeFeatures()
   Description: Getter for PhenotypeFeatures for this Variation, returns empty list if 
                there are none. 
-  Returntype : listref of PhenotypeFeatures
+  Returntype : Listref of PhenotypeFeatures
   Exceptions : none
   Caller     : general
 
@@ -1387,7 +1387,7 @@ sub display_consequence {
   Example    : my $pubs = $var->get_all_Publications()
   Description: Getter for Publications citing this Variation, returns empty list if 
                there are none. 
-  Returntype : listref of Publications
+  Returntype : Listref of Publications
   Exceptions : none
   Caller     : general
 
