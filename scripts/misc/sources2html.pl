@@ -35,7 +35,7 @@ use Getopt::Long;
 ###############
 ### Options ###
 ###############
-my ($e_version,$html_file,$source_id,$source,$s_version,$s_description,$s_url,$s_type,$s_status,$s_data_types,$hlist,$phost,$help);
+my ($e_version,$html_file,$source_id,$source,$s_version,$s_description,$s_url,$s_type,$s_status,$s_data_types,$s_order,$hlist,$phost,$help);
 my ($set_id,$set_name,$set_description);
 
 ## EG options
@@ -176,8 +176,13 @@ my %top_species_list;
 my @species_list;
 my %species_news;
 
+my $cols_sql2  = 'source_id, name, version, description, url, type, somatic_status, data_types';
+my $term_sql2  = 'dbSNP';
+my $condition1 = qq{SELECT $cols_sql2, 1 AS ordering FROM source WHERE name = "$term_sql2"};
+my $condition2 = qq{SELECT $cols_sql2, 2 AS ordering FROM source WHERE name like "%$term_sql2%" AND name != "$term_sql2"};
+my $condition3 = qq{SELECT $cols_sql2, 3 AS ordering FROM source WHERE name not like "%$term_sql2%"};
 
-my $sql2 = qq{SELECT source_id, name, version, description, url, type, somatic_status, data_types FROM source};
+my $sql2 = qq{$condition1 UNION $condition2 UNION $condition3 ORDER BY ordering, name};
 my $sql4 = qq{SELECT name, version FROM source};
 
 my $sql2b = qq{SELECT variation_set_id, name, description FROM variation_set WHERE 
@@ -209,7 +214,7 @@ foreach my $hostname (@hostnames) {
     print STDERR "\n";
     # Get list of sources from the new databases
     my $sth2 = get_connection_and_query($dbname, $hostname, $sql2);
-    $sth2->bind_columns(\$source_id,\$source,\$s_version,\$s_description,\$s_url,\$s_type,\$s_status,\$s_data_types);
+    $sth2->bind_columns(\$source_id,\$source,\$s_version,\$s_description,\$s_url,\$s_type,\$s_status,\$s_data_types,\$s_order);
     
     my $sth2b = get_connection_and_query($dbname, $hostname, $sql2b);
     $sth2b->bind_columns(\$set_id,\$set_name,\$set_description);
