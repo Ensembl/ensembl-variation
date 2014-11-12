@@ -177,13 +177,12 @@ sub fetch_all_by_StructuralVariation {
   if (!$self->db->include_failed_variations()) {
     $constraint .= ' AND ' . $self->db->_exclude_failed_structural_variations_constraint();
   }
-  
-  $constraint .= ($constraint) ? ' AND ' : '';
            
   my $sth = $self->prepare(qq{SELECT $cols
                                 FROM $tables, structural_variation_association sa
-                                WHERE $constraint sa.supporting_structural_variation_id=sv.structural_variation_id
-                                      AND sa.structural_variation_id = ?});
+                               WHERE sa.supporting_structural_variation_id=sv.structural_variation_id
+                                 AND sa.structural_variation_id = ?$constraint});
+
   $sth->bind_param(1,$sv->dbID,SQL_INTEGER);
   $sth->execute();
 
