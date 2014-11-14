@@ -18,53 +18,30 @@ use warnings;
 use Test::More;
 use Bio::EnsEMBL::Test::TestUtils;
 use Bio::EnsEMBL::Test::MultiTestDB;
-
+use Bio::EnsEMBL::Variation::Individual;
+use Bio::EnsEMBL::Variation::IndividualGenotype;
+use Bio::EnsEMBL::Variation::Variation;
 our $verbose = 0;
 
-my $multi = Bio::EnsEMBL::Test::MultiTestDB->new('homo_sapiens');
-
-my $vdb = $multi->get_DBAdaptor('variation');
-my $va = $vdb->get_VariationAdaptor();
-my $igta = $vdb->get_IndividualGenotypeAdaptor();
-
-ok($va && $va->isa('Bio::EnsEMBL::Variation::DBSQL::VariationAdaptor'), 'isa variation_adaptor');
-ok($igta && $igta->isa('Bio::EnsEMBL::Variation::DBSQL::IndividualGenotypeAdaptor'), 'isa individual_genotype_adaptor');
-
-my $variation = $va->fetch_by_dbID(4770800);
-
-my $igts = $igta->fetch_all_by_Variation($variation);
-
-ok(scalar @$igts == 3, 'number of returned individual genotypes for variation');
-
-my @filtered_igts = grep {$_->individual->name eq 'NA18635'} @$igts;
-
-ok(scalar @filtered_igts == 1, 'number of individual genotypes for individual');
-
-my $igt = $filtered_igts[0];
-
-ok($igt->allele1 eq 'A', 'allele1');
-ok($igt->allele2 eq 'T', 'allele2');
-
-
 # test constructor
-my $ind = Bio::EnsEMBL::Variation::Individual->new
-  (-name => 'test individual',
-   -description => 'This is a test individual',
-   -gender => 'Male');
+my $ind = Bio::EnsEMBL::Variation::Individual->new(
+  -name => 'test individual',
+  -description => 'This is a test individual',
+  -gender => 'Male');
 
-my $var = Bio::EnsEMBL::Variation::Variation->new
-  (-name => 'rs123',
-   -synonyms => {'dbSNP' => ['ss12', 'ss144']},
-   -source => 'dbSNP');
+my $var = Bio::EnsEMBL::Variation::Variation->new(
+  -name => 'rs123',
+  -synonyms => {'dbSNP' => ['ss12', 'ss144']},
+  -source => 'dbSNP');
 
 my $genotype = ['A','C'];
 my $subsnp   ='ss12';
 
-my $ind_gtype = Bio::EnsEMBL::Variation::IndividualGenotype->new
-  (-genotype => $genotype,
-   -variation => $var,
-   -individual => $ind,
-   -subsnp     => $subsnp  
+my $ind_gtype = Bio::EnsEMBL::Variation::IndividualGenotype->new(
+  -genotype => $genotype,
+  -variation => $var,
+  -individual => $ind,
+  -subsnp     => $subsnp  
 );
 
 ok($ind_gtype->individual()->name() eq $ind->name(), "ind name");
