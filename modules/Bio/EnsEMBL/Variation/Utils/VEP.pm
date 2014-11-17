@@ -4946,6 +4946,9 @@ sub cache_reg_feats {
         
         my $slice = get_slice($config, $chr, undef, 1);
         
+        # get a seq_region_Slice as for patch regions $slice won't cover the whole seq_region
+        my $sr_slice = $slice->seq_region_Slice();
+        
         next unless defined $slice;
         
         # prefetch some things
@@ -4976,9 +4979,13 @@ sub cache_reg_feats {
             
             my ($s, $e) = split /\-/, $region;
             
+            # adjust relative to seq_region
+            $s = ($s - $slice->start) + 1;
+            $e = ($e - $slice->start) + 1;
+            
             # sanity check start and end
             $s = 1 if $s < 1;
-            $e = $slice->end if $e > $slice->end;
+            $e = $slice->length if $e > $slice->length;
             
             # get sub-slice
             my $sub_slice = $slice->sub_Slice($s, $e);
@@ -5016,7 +5023,7 @@ sub cache_reg_feats {
                 
                 push @{$rf_cache->{$chr}->{$type}},
                     map { clean_reg_feat($_) }
-                    map { $_->transfer($slice) }
+                    map { $_->transfer($sr_slice) }
                     @{$features};
             }
         }
