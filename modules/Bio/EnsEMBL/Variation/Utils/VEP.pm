@@ -5409,7 +5409,14 @@ sub build_full_cache {
   push @slices, @{$config->{sa}->fetch_all('lrg', undef, 1, undef, 1)} if defined($config->{lrg});
     
   if(lc($config->{build}) ne 'all') {
-    my %inc = %{{map {$_ => 1} split(/\,/, $config->{build})}};
+    my @i;
+    
+    foreach my $r(split(/\,/, $config->{build})) {
+      my ($f, $t) = split(/\-/, $r);
+      push @i, ($t ? ($f..$t) : $f);
+    }
+    
+    my %inc = %{{map {$_ => 1} @i}};
     @slices = grep {$inc{$_->seq_region_name}} @slices;
   }
     
