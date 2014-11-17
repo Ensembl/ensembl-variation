@@ -5030,6 +5030,7 @@ sub cache_reg_feats {
         
         # delete reference to slice adaptor before we write to cache
         delete $slice->{adaptor} if defined($config->{write_cache});
+        delete $sr_slice->{adaptor} if defined($config->{write_cache});
     }
     
     end_progress($config);
