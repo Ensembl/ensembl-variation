@@ -4209,6 +4209,9 @@ sub cache_transcripts {
         
         my $slice = get_slice($config, $chr, undef, 1);
         
+        # get a seq_region_Slice as for patch regions $slice won't cover the whole seq_region
+        my $sr_slice = $slice->seq_region_Slice();
+        
         next unless defined $slice;
         
         # prefetch some things
@@ -4242,9 +4245,13 @@ sub cache_transcripts {
             
             my ($s, $e) = split /\-/, $region;
             
+            # adjust relative to seq_region
+            $s = ($s - $slice->start) + 1;
+            $e = ($e - $slice->start) + 1;
+            
             # sanity check start and end
             $s = 1 if $s < 1;
-            $e = $slice->end if $e > $slice->end;
+            $e = $slice->length if $e > $slice->length;
             
             # get sub-slice
             my $sub_slice = $slice->sub_Slice($s, $e);
@@ -4255,7 +4262,7 @@ sub cache_transcripts {
                 # for some reason unless seq is called here the sequence becomes Ns later
                 $sub_slice->seq;
                 
-                foreach my $gene(map {$_->transfer($slice)} @{$sub_slice->get_all_Genes(undef, undef, 1)}) {
+                foreach my $gene(map {$_->transfer($sr_slice)} @{$sub_slice->get_all_Genes(undef, undef, 1)}) {
                     my $gene_stable_id = $gene->stable_id;
                     my $canonical_tr_id = $gene->{canonical_transcript_id};
                     
@@ -4887,8 +4894,6 @@ sub parse_variation {
     push @cols, ('AFR', 'AMR', 'ASN', 'EUR');
   }
   
-  $DB::single = 1;
-  
   my %v = map {$cols[$_] => $data[$_] eq '.' ? undef : $data[$_]} (0..$#data);
   
   $v{failed}  ||= 0;
@@ -5399,22 +5404,13 @@ sub cache_custom_annotation {
 sub build_full_cache {
   my $config = shift;
     
-  my @slices;
+  my @slices = @{$config->{sa}->fetch_all('toplevel')};
+  push @slices, map {$_->alternate_slice} map {@{$_->get_all_AssemblyExceptionFeatures}} @slices;
+  push @slices, @{$config->{sa}->fetch_all('lrg', undef, 1, undef, 1)} if defined($config->{lrg});
     
-  if($config->{build} =~ /all/i) {
-    @slices = @{$config->{sa}->fetch_all('toplevel')};
-    push @slices, map {$_->alternate_slice} map {@{$_->get_all_AssemblyExceptionFeatures}} @slices;
-    push @slices, @{$config->{sa}->fetch_all('lrg', undef, 1, undef, 1)} if defined($config->{lrg});
-  }
-  else {
-    foreach my $val(split /\,/, $config->{build}) {
-      my @nnn = split /\-/, $val;
-            
-      foreach my $chr($nnn[0]..$nnn[-1]) {
-        my $slice = get_slice($config, $chr, undef, 1);
-        push @slices, $slice if defined($slice);
-      }
-    }
+  if(lc($config->{build}) ne 'all') {
+    my %inc = %{{map {$_ => 1} split(/\,/, $config->{build})}};
+    @slices = grep {$inc{$_->seq_region_name}} @slices;
   }
     
   # check and load clin_sig
