@@ -4162,6 +4162,9 @@ sub cache_transcripts {
         
         my $slice = get_slice($config, $chr, undef, 1);
         
+        # get a seq_region_Slice as for patch regions $slice won't cover the whole seq_region
+        my $sr_slice = $slice->seq_region_Slice();
+        
         next unless defined $slice;
         
         # prefetch some things
@@ -4195,9 +4198,13 @@ sub cache_transcripts {
             
             my ($s, $e) = split /\-/, $region;
             
+            # adjust relative to seq_region
+            $s = ($s - $slice->start) + 1;
+            $e = ($e - $slice->start) + 1;
+            
             # sanity check start and end
             $s = 1 if $s < 1;
-            $e = $slice->end if $e > $slice->end;
+            $e = $slice->length if $e > $slice->length;
             
             # get sub-slice
             my $sub_slice = $slice->sub_Slice($s, $e);
@@ -4208,7 +4215,7 @@ sub cache_transcripts {
                 # for some reason unless seq is called here the sequence becomes Ns later
                 $sub_slice->seq;
                 
-                foreach my $gene(map {$_->transfer($slice)} @{$sub_slice->get_all_Genes(undef, undef, 1)}) {
+                foreach my $gene(map {$_->transfer($sr_slice)} @{$sub_slice->get_all_Genes(undef, undef, 1)}) {
                     my $gene_stable_id = $gene->stable_id;
                     my $canonical_tr_id = $gene->{canonical_transcript_id};
                     
@@ -4882,8 +4889,6 @@ sub parse_variation {
     push @cols, ('AFR', 'AMR', 'ASN', 'EUR');
   }
   
-  $DB::single = 1;
-  
   my %v = map {$cols[$_] => $data[$_] eq '.' ? undef : $data[$_]} (0..$#data);
   
   $v{failed}  ||= 0;
@@ -5392,127 +5397,169 @@ sub cache_custom_annotation {
 
 # builds a full cache for this species
 sub build_full_cache {
-    my $config = shift;
+  my $config = shift;
     
-    my @slices;
+  my @slices = @{$config->{sa}->fetch_all('toplevel')};
+  push @slices, map {$_->alternate_slice} map {@{$_->get_all_AssemblyExceptionFeatures}} @slices;
+  push @slices, @{$config->{sa}->fetch_all('lrg', undef, 1, undef, 1)} if defined($config->{lrg});
     
-    if($config->{build} =~ /all/i) {
-        @slices = @{$config->{sa}->fetch_all('toplevel')};
-        push @slices, map {$_->alternate_slice} map {@{$_->get_all_AssemblyExceptionFeatures}} @slices;
-        push @slices, @{$config->{sa}->fetch_all('lrg', undef, 1, undef, 1)} if defined($config->{lrg});
+  if(lc($config->{build}) ne 'all') {
+    my @i;
+    
+    foreach my $r(split(/\,/, $config->{build})) {
+      my ($f, $t) = split(/\-/, $r);
+      push @i, ($t ? ($f..$t) : $f);
     }
-    else {
-        foreach my $val(split /\,/, $config->{build}) {
-            my @nnn = split /\-/, $val;
+    
+    my %inc = %{{map {$_ => 1} @i}};
+    @slices = grep {$inc{$_->seq_region_name}} @slices;
+  }
+    
+  # check and load clin_sig
+  $config->{clin_sig} = get_clin_sig($config) if have_clin_sig($config);
+    
+  # check and load pubmed
+  $config->{pubmed} = get_pubmed($config) if have_pubmed($config);
+    
+  # check for unfinished build status
+  my %build_done;
+    
+  if(-e $config->{dir}.'/.build') {
+    open IN, $config->{dir}.'/.build';
+    while(<IN>) { chomp; $build_done{$_} = 1; }
+    close IN;
+  }
+    
+  # open build status file
+  mkpath($config->{dir}) if !-d $config->{dir};
+  open DONE, '>> '.$config->{dir}.'/.build' or die("ERROR: Unable to open build status file\n");
+    
+  foreach my $slice(@slices) {
+    my $chr = $slice->seq_region_name;
+        
+    # check for features, we don't want a load of effectively empty dirs
+    my $dbc = $config->{sa}->db->dbc;
+    my $sth = $dbc->prepare("SELECT COUNT(*) FROM transcript WHERE seq_region_id = ?");
+    $sth->execute($slice->get_seq_region_id);
+        
+    my $count;
+    $sth->bind_columns(\$count);
+    $sth->fetch;
+    $sth->finish;
+        
+    next unless $count > 0;
+        
+    my $regions;
+        
+    # for progress
+    my $region_count = int($slice->end / $config->{cache_region_size}) + 1;
+    my $counter = 0;
+        
+    # initial region
+    my $start = 1 + ($config->{cache_region_size} * int($slice->start / $config->{cache_region_size}));
+    my $end   = ($start - 1) + $config->{cache_region_size};
+        
+    debug((defined($config->{rebuild}) ? "Rebuild" : "Creat")."ing cache for chromosome $chr") unless defined($config->{quiet});
+        
+    # cache slice
+    $config->{slice_cache}->{$chr} = $slice;
+        
+    while($start < $slice->end) {
             
-            foreach my $chr($nnn[0]..$nnn[-1]) {
-                my $slice = get_slice($config, $chr, undef, 1);
-                push @slices, $slice if defined($slice);
-            }
+      progress($config, $counter++, $region_count);
+            
+      # store quiet status
+      my $quiet = $config->{quiet};
+      $config->{quiet} = 1;
+            
+      # spoof regions
+      $regions->{$chr} = [$start.'-'.$end];
+            
+      # store transcripts
+      if($config->{build_parts} =~ /t/) {
+              
+        my $file = get_dump_file_name($config, $chr, $start.'-'.$end, 'transcript');
+                
+        if(!exists($build_done{$file})) {
+            
+          my $tmp_cache = (defined($config->{rebuild}) ? load_dumped_transcript_cache($config, $chr, $start.'-'.$end) : cache_transcripts($config, $regions));
+          $tmp_cache->{$chr} ||= [];
+              
+          #(defined($config->{tabix}) ? dump_transcript_cache_tabix($config, $tmp_cache, $chr, $start.'-'.$end) : dump_transcript_cache($config, $tmp_cache, $chr, $start.'-'.$end));
+          dump_transcript_cache($config, $tmp_cache, $chr, $start.'-'.$end);
+          undef $tmp_cache;
+              
+          # restore slice adaptor
+          $slice->{adaptor} ||= $config->{sa};
+              
+          print DONE "$file\n";
+          $build_done{$file} = 1;
         }
-    }
-    
-    # check and load clin_sig
-    $config->{clin_sig} = get_clin_sig($config) if have_clin_sig($config);
-    
-    # check and load pubmed
-    $config->{pubmed} = get_pubmed($config) if have_pubmed($config);
-    
-    foreach my $slice(@slices) {
-        my $chr = $slice->seq_region_name;
-        
-        # check for features, we don't want a load of effectively empty dirs
-        my $dbc = $config->{sa}->db->dbc;
-        my $sth = $dbc->prepare("SELECT COUNT(*) FROM transcript WHERE seq_region_id = ?");
-        $sth->execute($slice->get_seq_region_id);
-        
-        my $count;
-        $sth->bind_columns(\$count);
-        $sth->fetch;
-        $sth->finish;
-        
-        next unless $count > 0;
-        
-        my $regions;
-        
-        # for progress
-        my $region_count = int($slice->end / $config->{cache_region_size}) + 1;
-        my $counter = 0;
-        
-        # initial region
-        my $start = 1 + ($config->{cache_region_size} * int($slice->start / $config->{cache_region_size}));
-        my $end   = ($start - 1) + $config->{cache_region_size};
-        
-        debug((defined($config->{rebuild}) ? "Rebuild" : "Creat")."ing cache for chromosome $chr") unless defined($config->{quiet});
-        
-        # cache slice
-        $config->{slice_cache}->{$chr} = $slice;
-        
-        while($start < $slice->end) {
+      }
             
-            progress($config, $counter++, $region_count);
             
-            # store quiet status
-            my $quiet = $config->{quiet};
-            $config->{quiet} = 1;
-            
-            # spoof regions
-            $regions->{$chr} = [$start.'-'.$end];
-            
-            # store transcripts
-            if($config->{build_parts} =~ /t/) {
-                my $tmp_cache = (defined($config->{rebuild}) ? load_dumped_transcript_cache($config, $chr, $start.'-'.$end) : cache_transcripts($config, $regions));
-                $tmp_cache->{$chr} ||= [];
+      # store reg feats
+      if($config->{build_parts} =~ /r/ && defined($config->{regulatory})) {
+              
+        my $file = get_dump_file_name($config, $chr, $start.'-'.$end, 'reg');
                 
-                #(defined($config->{tabix}) ? dump_transcript_cache_tabix($config, $tmp_cache, $chr, $start.'-'.$end) : dump_transcript_cache($config, $tmp_cache, $chr, $start.'-'.$end));
-                dump_transcript_cache($config, $tmp_cache, $chr, $start.'-'.$end);
-                undef $tmp_cache;
+        if(!exists($build_done{$file})) {
                 
-                # restore slice adaptor
-                $slice->{adaptor} ||= $config->{sa};
-            }
-            
-            
-            # store reg feats
-            if($config->{build_parts} =~ /r/ && defined($config->{regulatory})) {
-                my $rf_cache = cache_reg_feats($config, $regions);
-                $rf_cache->{$chr} ||= {};
+          my $rf_cache = cache_reg_feats($config, $regions);
+          $rf_cache->{$chr} ||= {};
                 
-                dump_reg_feat_cache($config, $rf_cache, $chr, $start.'-'.$end);
-                #(defined($config->{tabix}) ? dump_reg_feat_cache_tabix($config, $rf_cache, $chr, $start.'-'.$end) : dump_reg_feat_cache($config, $rf_cache, $chr, $start.'-'.$end));
-                undef $rf_cache;
+          dump_reg_feat_cache($config, $rf_cache, $chr, $start.'-'.$end);
+          #(defined($config->{tabix}) ? dump_reg_feat_cache_tabix($config, $rf_cache, $chr, $start.'-'.$end) : dump_reg_feat_cache($config, $rf_cache, $chr, $start.'-'.$end));
+          undef $rf_cache;
                 
-                # this gets cleaned off but needs to be there for the next loop
-                $slice->{coord_system}->{adaptor} = $config->{csa};
+          # this gets cleaned off but needs to be there for the next loop
+          $slice->{coord_system}->{adaptor} = $config->{csa};
                 
-                # restore slice adaptor
-                $slice->{adaptor} ||= $config->{sa};
-            }
-            
-            # store variations
-            if($config->{build_parts} =~ /v/) {
-                my $variation_cache;
-                $variation_cache->{$chr} = get_variations_in_region($config, $chr, $start.'-'.$end);
-                $variation_cache->{$chr} ||= {};
-                
-                dump_variation_cache($config, $variation_cache, $chr, $start.'-'.$end);
-                undef $variation_cache;
-            }
-            
-            # restore quiet status
-            $config->{quiet} = $quiet;
-            
-            # increment by cache_region_size to get next region
-            $start += $config->{cache_region_size};
-            $end += $config->{cache_region_size};
+          # restore slice adaptor
+          $slice->{adaptor} ||= $config->{sa};
+              
+          print DONE "$file\n";
+          $build_done{$file} = 1;
         }
-        
-        end_progress($config);
-        
-        undef $regions;
+      }
+            
+      # store variations
+      if($config->{build_parts} =~ /v/) {
+              
+        my $file = get_dump_file_name($config, $chr, $start.'-'.$end, 'var');
+                
+        if(!exists($build_done{$file})) {
+                  
+          my $variation_cache;
+          $variation_cache->{$chr} = get_variations_in_region($config, $chr, $start.'-'.$end);
+          $variation_cache->{$chr} ||= {};
+                
+          dump_variation_cache($config, $variation_cache, $chr, $start.'-'.$end);
+          undef $variation_cache;
+              
+          print DONE "$file\n";
+          $build_done{$file} = 1;
+        }
+      }
+            
+      # restore quiet status
+      $config->{quiet} = $quiet;
+            
+      # increment by cache_region_size to get next region
+      $start += $config->{cache_region_size};
+      $end += $config->{cache_region_size};
     }
+        
+    end_progress($config);
+        
+    undef $regions;
+  }
     
-    write_cache_info($config);
+  # remove build status file
+  close DONE;
+  unlink($config->{dir}.'/.build') or die("ERROR: Unable to remove build status file\n");
+    
+  write_cache_info($config);
 }
 
 # write an info file that defines what is in the cache
