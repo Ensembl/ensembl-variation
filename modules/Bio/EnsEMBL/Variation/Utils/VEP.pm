@@ -5421,6 +5421,19 @@ sub build_full_cache {
     my %inc = %{{map {$_ => 1} @i}};
     @slices = grep {$inc{$_->seq_region_name}} @slices;
   }
+  
+  # now do a filtering step to catch slices with the same name
+  # this happens for Y in human; we only want the longest one
+  my %by_name;
+  push @{$by_name{$_->seq_region_name}}, $_ for @slices;
+  @slices = ();
+  
+  foreach my $name(keys %by_name) {
+    my @sorted = sort {$a->length <=> $b->length} @{$by_name{$name}};
+    push @slices, $sorted[-1];
+  }
+  
+  debug("Going to dump features from ".(scalar @slices)." regions") unless defined($config->{quiet});
     
   # check and load clin_sig
   $config->{clin_sig} = get_clin_sig($config) if have_clin_sig($config);
@@ -5466,7 +5479,7 @@ sub build_full_cache {
     my $start = 1 + ($config->{cache_region_size} * int($slice->start / $config->{cache_region_size}));
     my $end   = ($start - 1) + $config->{cache_region_size};
         
-    debug((defined($config->{rebuild}) ? "Rebuild" : "Creat")."ing cache for chromosome $chr") unless defined($config->{quiet});
+    debug((defined($config->{rebuild}) ? "Rebuild" : "Creat")."ing cache for chromosome $chr (".$slice->get_seq_region_id.")") unless defined($config->{quiet});
         
     # cache slice
     $config->{slice_cache}->{$chr} = $slice;
