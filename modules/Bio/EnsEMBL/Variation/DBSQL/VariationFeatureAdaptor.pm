@@ -1706,7 +1706,7 @@ sub fetch_by_hgvs_notation {
       #try and fetch via gene
       if(!defined($transcript)) {
         my $gene_adaptor = $transcript_adaptor->db->get_GeneAdaptor();
-        my ($gene) = @{$gene_adaptor->fetch_all_by_external_name($reference)};
+        my ($gene) = grep {$_->external_name eq $reference} @{$gene_adaptor->fetch_all_by_external_name($reference)};
         
         if($gene) {  
           $transcript = $gene->canonical_transcript();
