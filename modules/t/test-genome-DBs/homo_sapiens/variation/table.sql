@@ -379,6 +379,7 @@ CREATE TABLE `structural_variation` (
   `validation_status` enum('validated','not validated','high quality') DEFAULT NULL,
   `is_evidence` tinyint(4) DEFAULT '0',
   `somatic` tinyint(1) NOT NULL DEFAULT '0',
+  `copy_number` tinyint(2) DEFAULT NULL,
   PRIMARY KEY (`structural_variation_id`),
   KEY `name_idx` (`variation_name`),
   KEY `source_idx` (`source_id`),
@@ -447,11 +448,6 @@ CREATE TABLE `study` (
   KEY `source_idx` (`source_id`)
 ) ENGINE=MyISAM  ;
 
-CREATE TABLE `study_variation` (
-  `variation_id` int(10) unsigned NOT NULL,
-  `study_id` int(10) unsigned NOT NULL,
-  PRIMARY KEY (`variation_id`,`study_id`)
-) ENGINE=MyISAM ;
 
 CREATE TABLE `submitter_handle` (
   `handle_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
@@ -516,6 +512,7 @@ CREATE TABLE `transcript_variation` (
   `polyphen_score` float DEFAULT NULL,
   `sift_prediction` enum('tolerated','deleterious') DEFAULT NULL,
   `sift_score` float DEFAULT NULL,
+  `display`  int(1) DEFAULT 1,
   PRIMARY KEY (`transcript_variation_id`),
   KEY `variation_feature_idx` (`variation_feature_id`),
   KEY `consequence_type_idx` (`consequence_types`),

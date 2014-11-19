@@ -28,7 +28,7 @@ use Data::Dumper;
 
 use FindBin qw($Bin);
 
-use Bio::EnsEMBL::Registry;
+
 use Bio::EnsEMBL::Variation::VariationFeature;
 use Bio::EnsEMBL::Variation::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Variation::DBSQL::VariationFeatureAdaptor;
@@ -36,27 +36,17 @@ use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
 use Bio::EnsEMBL::Test::TestUtils;
 use Bio::EnsEMBL::Test::MultiTestDB;
 
-#my $multi = Bio::EnsEMBL::Test::MultiTestDB->new('homo_sapiens');
-#my $vdba = $multi->get_DBAdaptor('variation');
-#my $cdba = $multi->get_DBAdaptor('variation');
-
-my $reg = 'Bio::EnsEMBL::Registry';
-$reg->no_version_check(1); ## switch off version check for test 
-$reg->load_all("$Bin/test.ensembl.registry");
-print "using $Bin/test.ensembl.registry\n";
-
-my $variationfeature_adaptor    = $reg->get_adaptor('human', 'variation', 'variationfeature');
-my $transcript_adaptor          = $reg->get_adaptor('human', 'core',      'transcript');
-my $transcript_variation_adaptor= $reg->get_adaptor('human', 'variation', 'transcriptvariation');
-
+my $multi = Bio::EnsEMBL::Test::MultiTestDB->new('homo_sapiens');
+my $vdba = $multi->get_DBAdaptor('variation');
+my $cdba = $multi->get_DBAdaptor('core');
 
 use_ok('Bio::EnsEMBL::Variation::DBSQL::VariationFeatureAdaptor');
 
 my $DEBUG = 0;
 
-#my $variationfeature_adaptor    = $vba->get_variationFeatureSdaptor;
-#my $transcript_adaptor          = $cba->get_transcriptAdaptor;
-#my $transcript_variation_adaptor= $vba->get_transcriptVariationAdaptor;
+my $variationfeature_adaptor    = $vdba->get_variationFeatureAdaptor;
+my $transcript_adaptor          = $cdba->get_transcriptAdaptor;
+my $transcript_variation_adaptor= $vdba->get_transcriptVariationAdaptor;
 
 
 ## TEST DATA:  hgvs_genomic,  variant_allele, hgvs_[non]coding,  variant_allele, hgvs_protein,  test_description 

@@ -52,16 +52,15 @@
 55	transcr_class	Transcript class	Transcript class
 56	KnwnPTCount	processed_transcript_KNOWN	Number of Known Processed Transcripts
 57	ccds	CCDS	CCDS identifier
-58	CCDS_PublicNote	CCDS Public Note	Public Note for CCDS identifier, provided by http://www.ncbi.nlm.nih.gov/CCDS
 59	Frameshift	Frameshift	Frameshift modelled as intron
 60	PTCount	processed_transcript	Number of Processed Transcripts
 61	PredPTCount	processed_transcript_PREDICTED	Number of Predicted Processed Transcripts
 62	ncRNA	Structure	RNA secondary structure line
 63	skip_clone	skip clone  Skip clone in align_by_clone_identity.pl	\N
-64	coding_cnt	Protein coding gene count	Number of protein coding Genes
+64	GeneNo_knwCod	known protein_coding Gene Count	Number of known protein_coding Genes
 65	GeneNo_novCod	novel protein_coding Gene Count	Number of novel protein_coding Genes
 66	GeneNo_rRNA	rRNA Gene Count	Number of rRNA Genes
-67	pseudogene_cnt	Pseudogene count	Number of pseudogenes
+67	GeneNo_pseudo	pseudogene Gene Count	Number of pseudogene Genes
 68	GeneNo_snRNA	snRNA Gene Count	Number of snRNA Genes
 69	GeneNo_snoRNA	snoRNA Gene Count	Number of snoRNA Genes
 70	GeneNo_miRNA	miRNA Gene Count	Number of miRNA Genes
@@ -69,8 +68,8 @@
 72	GeneNo_scRNA	scRNA Gene Count	Number of scRNA Genes
 73	GeneNo_MTrRNA	Mt_rRNA Gene Count	Number of Mt_rRNA Genes
 74	GeneNo_MTtRNA	Mt_tRNA Gene Count	Number of Mt_tRNA Genes
-75	GeneNo_RNA_pseu	RNA_pseudogene Gene Count	Number of RNA_pseudogene Genes
-76	GeneNo_tRNA	tRNA Gene Count	Number of tRNA Genes
+75	GeneNo_RNA_pseu	scRNA_pseudogene Gene Count	Number of scRNA_pseudogene Genes
+76	GeneNo_tRNA	tRNA Gene Count	 Number of tRNA Genes
 77	GeneNo_rettran	retrotransposed Gene Count	Number of retrotransposed Genes
 78	GeneNo_snlRNA	snlRNA Gene Count	Number of snlRNA Genes
 79	GeneNo_proc_tr	processed_transcript Gene Count	Number of processed transcript Genes
@@ -126,7 +125,7 @@
 137	MultAssem	Multiple Assembled seq region	Part of Seq Region is part of more than one assembly
 140	wgs	WGS contig	WGS contig integrated into the map
 141	bac	AGP clones	tiling path of clones
-142	GeneGC	Gene GC	Percentage GC content for this gene
+142	GeneGC	Gene GC	 Percentage GC content for this gene
 143	TotAssemblyLeng	Finished sequence length	Length of the assembly not counting sequence gaps
 144	amino_acid_sub	Amino acid substitution	Some translations have been manually curated for amino acid substitiutions. For example a stop codon may be changed to an amino acid in order to prevent premature truncation, or one amino acid can be substituted for another.
 145	_rna_edit	rna_edit	RNA edit
@@ -167,13 +166,15 @@
 183	KnwnTRCount	TR_gene_known	Number of Known TR Genes
 184	TRGeneCount	TR_gene	Number of TR Genes
 185	TRPsCount	TR_pseudo	Number of TR Pseudogenes
-188	ep_ott_support	otter protein exon support	Evidence ID that was used as supporting feature for building a gene in Vega
-189	ed_ott_support	otter dna exon support	Evidence ID that was used as supporting feature for building a gene in Vega
+186	tp_ott_support	otter protein transcript support Evidence ID that was used as supporting feature for building a gene in Vega	\N
+187	td_ott_support	otter dna transcript support Evidence ID that was used as supporting feature for building a gene in Vega	\N
+188	ep_ott_support	otter protein exon support Evidence ID that was used as supporting feature for building a gene in Vega	\N
+189	ed_ott_support	otter dna exon support Evidence ID that was used as supporting feature for building a gene in Vega	\N
 190	GeneNo_lincRNA	lincRNA Gene Count	Number of lincRNA Genes
 191	StopGained	SNP causes stop codon to be gained	This transcript has a variant that causes a stop codon to be gained in at least 10 percent of a HapMap population
 192	StopLost	SNP causes stop codon to be lost	This transcript has a variant that causes a stop codon to be lost in at least 10 percent of a HapMap population
 193	GeneNo_class_I_	class_I_RNA Gene Count	Number of class_I_RNA Genes
-194	GeneNo_SRP_RNA	SRP_RNA Gene Count	Number of SRP_RNA Genes
+194	GeneNo_SRP_RNA 	SRP_RNA Gene Count	Number of SRP_RNA Genes
 195	GeneNo_class_II	class_II_RNA Gene Count	Number of class_II_RNA Genes
 196	GeneNo_P_RNA	RNase_P_RNA Gene Count	Number of RNase_P_RNA Genes
 197	GeneNo_RNase_MR	RNase_MRP_RNA Gene Count	Number of RNase_MRP_RNA Genes
@@ -182,6 +183,8 @@
 216	GeneInLRG	Gene in LRG	This gene is contained within an LRG region
 217	GeneOverlapLRG	Gene overlaps LRG	This gene is partially overlapped by a LRG region (start or end outside LRG)
 218	readthrough_tra	readthrough transcript	Havana readthrough transcripts
+58	CCDS_PublicNote	CCDS Public Note	Public Note for CCDS identifier, provided by http://www.ncbi.nlm.nih.gov/CCDS
+314	LRG	Locus Reference Genomic	Locus Reference Genomic sequence
 300	CNE	Constitutive exon	An exon that is always included in the mature mRNA, even in different mRNA isoforms
 301	CE	Cassette exon	One exon is spliced out of the primary transcript together with its flanking introns
 302	IR	Intron retention	A sequence is spliced out as an intron or remains in the mature mRNA transcript
@@ -196,34 +199,8 @@
 311	AT	Alternative termination	Alternative choice of polyadenylation sites
 312	patch_fix	Assembly Patch Fix	Assembly patch that will, in the next assembly release, replace the corresponding sequence found in the current assembly
 313	patch_novel	Assembly Patch Novel	Assembly patch that will, in the next assembly release, be retained as an alternate non-reference sequence in a similar way to haplotypes
-314	LRG	Locus Reference Genomic	Locus Reference Genomic sequence
 315	NoEvidence	Evidence for transcript removed	Supporting evidence for this projected transcript has been removed
 316	circular_seq	Circular sequence	Circular chromosome or plasmid molecule
 317	external_db	External database	External database to which seq_region name may be linked
 318	split_tscript	split_tscript	split_tscript
 319	Threep	Three prime end	Alternate three prime end
-320	gene_cluster	Gene cluster	Havana annotated gene cluster
-328	_rib_frameshift	Ribosomal Frameshift	Position and magnitude of frameshift
-345	vega_ref_chrom	Vega reference chromosome	Haplotypes reference a regular chromosome (indicated in the value of the attribute)
-346	PutPCCount	protein_coding_PUTATIVE	Number of Putative Protein Coding
-347	proj_alt_seq	Projection altered sequence	Projected sequence differs from original
-348	hav_gene_type	Havana gene biotype	Gene biotype assigned by Havana
-349	GeneNo_asense	antisense Gene Count	Number of antisense Genes
-350	GeneNo_sense_in	sense_intronic Gene Count	Number of sense_intronic Genes
-351	GeneNo_amb_orf	ambiguous_orf Gene Count	Number of ambiguous_orf Genes
-352	GeneNo_ret_int	retained_intron Gene Count	Number of retained_intron Genes
-353	noncoding_cnt	Non coding gene count	Number of non coding genes
-354	GeneNo_ncrna_h	ncrna_host Gene Count	Number of ncrna_host Genes
-355	GeneNo_sens_ov	sense_overlapping Gene Count	Number of sense_overlapping Genes
-356	GeneNo_3prime	3prime_overlapping Gene Count	Number of 3prime_overlapping Genes
-357	GeneNo_tmRNA	tmRNA Gene Count	Number of tmRNA Genes
-358	PHIbase_mutant	PHI-base mutant	PHI-base phenotype of the mutants
-359	GeneNo_ribozyme	ribozyme Gene Count	Number of ribozyme Genes
-360	ncrna_host	ncrna_host	Havana ncrna_host gene
-361	peptide-class	Peptide classification	The classification of the gene or transcript based on alignment to NR (values: TE WH NH)
-362	working-set	Working Gene Set	High-confidence set of genes, composed of evidence-based genes and non-overlapping protein-coding ab initio gene models
-363	filtered-set	Filtered Gene Set v1	Working genes that are screened for TE content and orthology with sorghum and rice.
-364	super-set	Super Working Gene Set	Set of all working gene set loci from both Builds 4a and 5a
-365	projected4a2	Projected by alignment	Temporary (Monday, August 23, 2010)
-366	merged	Merged species	\N
-367	karyotype_rank	Rank in the karyotype	For a given seq_region, if it is part of the species karyotype, will indicate its rank
