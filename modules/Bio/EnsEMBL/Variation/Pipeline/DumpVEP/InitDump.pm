@@ -165,7 +165,7 @@ sub get_species_list {
         $species_hash{species} = $current_db_name;
         $species_hash{assembly} = $assembly;
         $species_hash{species_refseq} = 1;
-        $species_hash{variation} = $has_var_db;
+        $species_hash{variation} = $has_var_db == 1 ? 1 : 0;
 
         push @species, \%species_hash;
       }
@@ -204,7 +204,7 @@ sub get_species_list {
         
         $species_hash{species} = $species_ids->{$species_id};
         $species_hash{assembly} = $assembly;
-        $species_hash{variation} = $has_var_db;
+        $species_hash{variation} = $has_var_db == 1 ? 1 : 0;
         $sth->finish();
 
         push @species, \%species_hash;
