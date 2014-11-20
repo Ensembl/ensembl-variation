@@ -59,6 +59,7 @@ sub convert {
   $type ||= '';
   
   # basic params
+  my $debug    = $self->param('debug');
   my $species  = $self->required_param('species');
   my $assembly = $self->required_param('assembly');
   my $version  = $self->required_param('ensembl_release');
@@ -84,16 +85,21 @@ sub convert {
   
   my $finished = 0;
   
-  open CMD, "$cmd 2>&1 |" or die "ERROR: Failed to run command $cmd";
-  my @buffer;
-  while(<CMD>) {
-    $finished = 1 if /All done/;
-    push @buffer, $_;
-    shift @buffer if scalar @buffer > 5;
+  if($debug) {
+    print STDERR "$cmd\n";
   }
-  close CMD;
+  else {
+    open CMD, "$cmd 2>&1 |" or die "ERROR: Failed to run command $cmd";
+    my @buffer;
+    while(<CMD>) {
+      $finished = 1 if /All done/;
+      push @buffer, $_;
+      shift @buffer if scalar @buffer > 5;
+    }
+    close CMD;
   
-  die "ERROR: Encountered an error running convert script\n".join("", @buffer)."\n" unless $finished;
+    die "ERROR: Encountered an error running convert script\n".join("", @buffer)."\n" unless $finished;
+  }
   
   $self->tar($type, $mod);
   

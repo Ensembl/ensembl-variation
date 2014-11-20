@@ -38,6 +38,7 @@ sub tar {
   my $type = shift;
   my $mod  = shift;
   
+  my $debug    = $self->param('debug');
   my $species  = $self->required_param('species');
   my $assembly = $self->required_param('assembly');
   my $version  = $self->required_param('ensembl_release');
@@ -68,8 +69,14 @@ sub tar {
   die("ERROR: VEP dump directory $root_dir/$sub_dir not found") unless -e $root_dir.'/'.$sub_dir;
   
   my $command = "tar -cz -C $root_dir -f $tar_file $sub_dir";
-  my $output = `$command`;
-  die "ERROR: Failed to create tar file $tar_file\n$output\n" if $output;
+  
+  if($debug) {
+    print STDERR "$command\n";
+  }
+  else {
+    my $output = `$command`;
+    die "ERROR: Failed to create tar file $tar_file\n$output\n" if $output;
+  }
   
   return;
 }
