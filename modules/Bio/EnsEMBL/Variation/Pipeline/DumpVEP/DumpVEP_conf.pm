@@ -84,17 +84,17 @@ sub default_options {
     # specify which servers to scan for databases to dump
     dump_servers => [
       {
-        host => 'ens-staging1',
-        port => 3306,
+        host => 'ensdb-web-14',
+        port => 5337,
         user => 'ensro',
         pass => $self->o('dump_db_password'),
       },
-      {
-        host => 'ens-staging2',
-        port => 3306,
-        user => 'ensro',
-        pass => $self->o('dump_db_password'),
-      },
+      # {
+      #   host => 'ens-staging2',
+      #   port => 3306,
+      #   user => 'ensro',
+      #   pass => $self->o('dump_db_password'),
+      # },
     ],
     
     # dump databases of this version number
@@ -148,7 +148,7 @@ sub default_options {
         
     default_lsf_options => '-R"select[mem>2000] rusage[mem=2000]" -M2000',
     urgent_lsf_options  => '-q yesterday -R"select[mem>2000] rusage[mem=2000]" -M2000',
-    highmem_lsf_options => '-R"select[mem>15000] rusage[mem=15000]" -M15000', # this is Sanger LSF speak for "give me 15GB of memory"
+    highmem_lsf_options => '-q basement -R"select[mem>15000] rusage[mem=15000]" -M15000', # this is Sanger LSF speak for "give me 15GB of memory"
     long_lsf_options    => '-q long -R"select[mem>2000] rusage[mem=2000]" -M2000',
 
     # init_pipeline.pl will create the hive database on this machine, naming it
@@ -167,6 +167,8 @@ sub default_options {
       -dbname => $ENV{'USER'}.'_'.$self->o('pipeline_name'),
       -driver => 'mysql',
     },
+    
+    debug => 0,
   };
 }
 
@@ -192,6 +194,7 @@ sub pipeline_analyses {
     refseq
     merged
     convert
+    debug
   );
    
   my @analyses = (
@@ -238,14 +241,15 @@ sub pipeline_analyses {
       -parameters    => { @common_params },
       -wait_for      => ['merge_vep'],
       -hive_capacity => 10,
-    },
-    {
-      -logic_name => 'finish_dump',
-      -module     => 'Bio::EnsEMBL::Variation::Pipeline::DumpVEP::FinishDump',
-      -parameters => { @common_params },
-      -wait_for   => ['convert_vep'],
     }
   );
+  
+  push @analyses, {
+    -logic_name => 'finish_dump',
+    -module     => 'Bio::EnsEMBL::Variation::Pipeline::DumpVEP::FinishDump',
+    -parameters => { @common_params },
+    -wait_for   => ['convert_vep'],
+  } unless $self->o('debug');
 
   return \@analyses;
 }
