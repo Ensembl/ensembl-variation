@@ -4834,7 +4834,7 @@ sub dump_variation_cache {
                 $v->{allele_string},
                 $v->{strand} == 1 ? '' : $v->{strand},
                 $v->{minor_allele} || '',
-                defined($v->{minor_allele_freq}) ? sprintf("%.4f", $v->{minor_allele_freq}) : '',
+                defined($v->{minor_allele_freq}) && $v->{minor_allele_freq} =~ /^[0-9\.]$/ ? sprintf("%.4f", $v->{minor_allele_freq}) : '',
             );
             
             if(have_clin_sig($config) && defined($config->{clin_sig})) {
@@ -4923,7 +4923,8 @@ sub get_variation_columns {
     my $config = shift;
     
     if(!defined($config->{cache_variation_cols})) {
-        $config->{cache_variation_cols} = \@VAR_CACHE_COLS;
+        my @copy = @VAR_CACHE_COLS;
+        $config->{cache_variation_cols} = \@copy;
         push @{$config->{cache_variation_cols}}, 'clin_sig' if have_clin_sig($config) && defined($config->{clin_sig});
         push @{$config->{cache_variation_cols}}, 'pubmed' if have_pubmed($config) && defined($config->{pubmed});
         push @{$config->{cache_variation_cols}}, @{$config->{freq_file_pops}} if defined($config->{freq_file_pops});
@@ -5431,13 +5432,15 @@ sub build_full_cache {
   # now do a filtering step to catch slices with the same name
   # this happens for Y in human; we only want the longest one
   my %by_name;
-  push @{$by_name{$_->seq_region_name}}, $_ for @slices;
-  @slices = ();
-  
-  foreach my $name(keys %by_name) {
-    my @sorted = sort {$a->length <=> $b->length} @{$by_name{$name}};
-    push @slices, $sorted[-1];
-  }
+  $by_name{$_->seq_region_name}++ for @slices;
+  # @slices = ();
+  #
+  # $DB::single = 1;
+  #
+  # foreach my $name(keys %by_name) {
+  #   my @sorted = sort {$a->length <=> $b->length} @{$by_name{$name}};
+  #   push @slices, $sorted[-1];
+  # }
   
   debug("Going to dump features from ".(scalar @slices)." regions") unless defined($config->{quiet});
     
@@ -5485,7 +5488,7 @@ sub build_full_cache {
     my $start = 1 + ($config->{cache_region_size} * int($slice->start / $config->{cache_region_size}));
     my $end   = ($start - 1) + $config->{cache_region_size};
         
-    debug((defined($config->{rebuild}) ? "Rebuild" : "Creat")."ing cache for chromosome $chr (".$slice->get_seq_region_id.")") unless defined($config->{quiet});
+    debug((defined($config->{rebuild}) ? "Rebuild" : "Creat")."ing cache for chromosome $chr (".$slice->name.")") unless defined($config->{quiet});
         
     # cache slice
     $config->{slice_cache}->{$chr} = $slice;
@@ -5506,9 +5509,25 @@ sub build_full_cache {
               
         my $file = get_dump_file_name($config, $chr, $start.'-'.$end, 'transcript');
                 
-        if(!exists($build_done{$file})) {
+        if(!exists($build_done{$file}) || $by_name{$chr} > 1) {
+          
+          my $tmp_cache;
+          
+          # load and merge if we've already done this one
+          if(exists($build_done{$file})) {
+            my $old = load_dumped_transcript_cache($config, $chr, $start.'-'.$end);
+            my $new = cache_transcripts($config, $regions);
             
-          my $tmp_cache = (defined($config->{rebuild}) ? load_dumped_transcript_cache($config, $chr, $start.'-'.$end) : cache_transcripts($config, $regions));
+            # merge
+            my %merged = map {$_->dbID => $_} (@{$old->{$chr}}, @{$new->{$chr}});
+            
+            $tmp_cache->{$chr} = [sort {$a->start <=> $b->start || $b->end <=> $b->end} values %merged];
+          }
+          
+          else {
+            $tmp_cache = (defined($config->{rebuild}) ? load_dumped_transcript_cache($config, $chr, $start.'-'.$end) : cache_transcripts($config, $regions));
+          }
+          
           $tmp_cache->{$chr} ||= [];
               
           #(defined($config->{tabix}) ? dump_transcript_cache_tabix($config, $tmp_cache, $chr, $start.'-'.$end) : dump_transcript_cache($config, $tmp_cache, $chr, $start.'-'.$end));
@@ -5529,10 +5548,36 @@ sub build_full_cache {
               
         my $file = get_dump_file_name($config, $chr, $start.'-'.$end, 'reg');
                 
-        if(!exists($build_done{$file})) {
+        if(!exists($build_done{$file}) || $by_name{$chr} > 1) {
                 
-          my $rf_cache = cache_reg_feats($config, $regions);
+          my $rf_cache;
+          
+          # merge?
+          if(exists($build_done{$file})) {
+            my $old = load_dumped_reg_feat_cache($config, $chr, $start.'-'.$end);
+            my $new = cache_reg_feats($config, $regions);
+            
+            # merge each RF type
+            foreach my $type(keys %{{map {$_ => 1} (keys %{$old->{$chr}}, keys %{$new->{$chr}})}}) {
+              
+              # delete adaptors since they get re-added by load_dumped_reg_feat_cache
+              if($old->{$chr}->{$type}->[0]) {
+                delete $old->{$chr}->{$type}->[0]->{slice}->{adaptor};
+                delete $old->{$chr}->{$type}->[0]->{slice}->{coord_system}->{adaptor};
+              }
+              
+              my %merged = map {$_->dbID => $_} (@{$old->{$chr}->{$type} || []}, @{$new->{$chr}->{$type} || []});
+            
+              $rf_cache->{$chr}->{$type} = [sort {$a->start <=> $b->start || $b->end <=> $b->end} values %merged];
+            }
+          }
+          else {
+            $rf_cache = cache_reg_feats($config, $regions);
+          }
           $rf_cache->{$chr} ||= {};
+          
+          delete $slice->{adaptor};
+          delete $slice->{coord_system}->{adaptor};
                 
           dump_reg_feat_cache($config, $rf_cache, $chr, $start.'-'.$end);
           #(defined($config->{tabix}) ? dump_reg_feat_cache_tabix($config, $rf_cache, $chr, $start.'-'.$end) : dump_reg_feat_cache($config, $rf_cache, $chr, $start.'-'.$end));
@@ -5554,10 +5599,24 @@ sub build_full_cache {
               
         my $file = get_dump_file_name($config, $chr, $start.'-'.$end, 'var');
                 
-        if(!exists($build_done{$file})) {
+        if(!exists($build_done{$file}) || $by_name{$chr} > 1) {
                   
           my $variation_cache;
-          $variation_cache->{$chr} = get_variations_in_region($config, $chr, $start.'-'.$end);
+          
+          # merge?
+          if(exists($build_done{$file})) {
+            my $old = load_dumped_variation_cache($config, $chr, $start.'-'.$end);
+            my $new = get_variations_in_region($config, $chr, $start.'-'.$end);
+            
+            foreach my $pos(keys %{{map {$_ => 1} (keys %{$old->{$chr}}, keys %{$new})}}) {
+              my %merged = map {join("", sort grep {defined($_)} values %$_) => $_} (@{$old->{$chr}->{$pos} || []}, @{$new->{$pos} || []});
+              $variation_cache->{$chr}->{$pos} = [sort {$a->{start} <=> $b->{start} || $a->{start} <=> $b->{start}} values %merged];
+            }
+          }
+          else {
+            $variation_cache->{$chr} = get_variations_in_region($config, $chr, $start.'-'.$end);
+          }
+          
           $variation_cache->{$chr} ||= {};
                 
           dump_variation_cache($config, $variation_cache, $chr, $start.'-'.$end);
@@ -5981,8 +6040,12 @@ sub get_clin_sig {
     
     my ($v, $c, %cs);
     $sth->bind_columns(\$v, \$c);
-    $c =~ s/\s+/\_/g;
-    $cs{$v} = $c while $sth->fetch();
+    
+    while($sth->fetch()) {
+      $c =~ s/\s+/\_/g;
+      $cs{$v} = $c;
+    }
+    
     $sth->finish();
     
     return \%cs;
