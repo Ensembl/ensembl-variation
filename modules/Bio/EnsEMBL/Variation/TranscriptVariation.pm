@@ -319,6 +319,8 @@ sub _protein_function_predictions {
     my $matrix = $tran->{_variation_effect_feature_cache}->{protein_function_predictions}->{$analysis};
 
     unless ($matrix || exists($tran->{_variation_effect_feature_cache}->{protein_function_predictions}->{$analysis})) {
+        return undef unless $self->{adaptor}->db;
+        
         my $pfpma = $self->{adaptor}->db->get_ProteinFunctionPredictionMatrixAdaptor;
            
         $matrix = $pfpma->fetch_by_analysis_translation_md5($analysis, $self->_translation_md5);
