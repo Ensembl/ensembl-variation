@@ -46,7 +46,7 @@ sub run {
   
   my $type = $self->param('species_refseq') ? 'refseq' : '';
   
-  $self->convert($type);
+  $self->convert($type, '_tabixconverted');
   
   # convert the merged cache too if this is the RefSeq one
   $self->convert('merged', '_tabixconverted') if $type;
