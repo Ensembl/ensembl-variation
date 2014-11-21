@@ -84,17 +84,17 @@ sub default_options {
     # specify which servers to scan for databases to dump
     dump_servers => [
       {
-        host => 'ensdb-web-14',
-        port => 5337,
+        host => 'ens-staging1',
+        port => 3306,
         user => 'ensro',
         pass => $self->o('dump_db_password'),
       },
-      # {
-      #   host => 'ens-staging2',
-      #   port => 3306,
-      #   user => 'ensro',
-      #   pass => $self->o('dump_db_password'),
-      # },
+      {
+        host => 'ens-staging2',
+        port => 3306,
+        user => 'ensro',
+        pass => $self->o('dump_db_password'),
+      },
     ],
     
     # dump databases of this version number
