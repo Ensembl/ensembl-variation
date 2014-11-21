@@ -1933,6 +1933,13 @@ sub vf_to_consequences {
       }
     }
     
+    # flag worst per allele?
+    elsif(defined($config->{flag_pick_allele})) {
+      my %by_allele;
+      push @{$by_allele{$_->variation_feature_seq}}, $_ for @vfoas;
+      pick_worst_vfoa($config, $by_allele{$_})->{PICK} = 1 for keys %by_allele;
+    }
+    
     # pick per gene?
     elsif(defined($config->{per_gene})) {
       @vfoas = @{pick_vfoa_per_gene($config, \@vfoas)};
