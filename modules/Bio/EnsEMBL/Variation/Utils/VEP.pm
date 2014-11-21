@@ -146,6 +146,7 @@ our @EXTRA_HEADERS = (
   { flag => 'allele_number',   cols => ['ALLELE_NUM'] },
   { flag => 'user',            cols => ['DISTANCE','STRAND'] },
   { flag => 'flag_pick',       cols => ['PICK'] },
+  { flag => 'flag_pick_allele',cols => ['PICK'] },
   
   # gene-related
   { flag => 'symbol',          cols => ['SYMBOL','SYMBOL_SOURCE','HGNC_ID'] },
