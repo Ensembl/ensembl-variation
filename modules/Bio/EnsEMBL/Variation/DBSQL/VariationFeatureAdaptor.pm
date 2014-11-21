@@ -1817,13 +1817,15 @@ sub fetch_by_hgvs_notation {
 
   #Create Allele objects
   my @allele_objs;
-  foreach my $allele ($ref_allele,$alt_allele) {
-     push(@allele_objs,Bio::EnsEMBL::Variation::Allele->new('-adaptor' => $self, '-allele' => $allele));
+  if($self->db) {
+    foreach my $allele ($ref_allele,$alt_allele) {
+       push(@allele_objs,Bio::EnsEMBL::Variation::Allele->new('-adaptor' => $self, '-allele' => $allele));
+    }
   }
 
     #Create a variation object. Use the HGVS string as its name
     my $variation = Bio::EnsEMBL::Variation::Variation->new(
-         '-adaptor' => $self->db()->get_VariationAdaptor(),
+         '-adaptor' => $self->db ? $self->db()->get_VariationAdaptor() : undef,
          '-name'    => $hgvs,
          '-source'  => 'Parsed from HGVS notation',
          '-alleles' => \@allele_objs
@@ -1840,6 +1842,7 @@ sub fetch_by_hgvs_notation {
        '-variation'     => $variation,
        '-allele_string' => "$ref_allele/$alt_allele"
     );
+    
   if($DEBUG==1){print "Created object $hgvs allele_string: $ref_allele/$alt_allele, start:$start, end:$end\n";}
 
   return $variation_feature;
