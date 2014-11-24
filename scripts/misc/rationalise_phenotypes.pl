@@ -221,7 +221,7 @@ Removed phenotypes are backed up to phenotype_bak_map
 Changed phenotype_feature entries are backed up to phenotype_feature_bak_map
 
 Usage:
-perl filter_vep.pl -h [host] -u [user] -p [pass] -P [port] -d [database]
+perl rationalise_phenotypes.pl -h [host] -u [user] -p [pass] -P [port] -d [database]
 
 };
 }
