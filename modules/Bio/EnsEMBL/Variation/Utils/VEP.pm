@@ -1999,8 +1999,9 @@ sub pick_worst_vfoa {
       
       # lower TSL is best
       if(my ($tsl) = @{$tr->get_all_Attributes('TSL')}) {
-        $tsl->value =~ m/tsl(\d+)/;
-        $info->{tsl} = $1 if $1;
+        if($tsl->value =~ m/tsl(\d+)/) {
+          $info->{tsl} = $1 if $1;
+        }
       }
     }
     
@@ -2600,10 +2601,13 @@ sub add_extra_fields_transcript {
         $line->{Extra}->{SOURCE} = $tr->{_source_cache};
     }
     
+    $DB::single = 1;
+    
     # transcript support level
     if(defined($config->{tsl}) && (my ($tsl) = @{$tr->get_all_Attributes('TSL')})) {
-        $tsl->value =~ m/tsl(\d+)/;
-        $line->{Extra}->{TSL} = $1 if $1;
+        if($tsl->value =~ m/tsl(\d+)/) {
+            $line->{Extra}->{TSL} = $1 if $1;
+        }
     }
     
     return $line;
