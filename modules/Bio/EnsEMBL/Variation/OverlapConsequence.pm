@@ -46,6 +46,7 @@ Bio::EnsEMBL::Variation::OverlapConsequence
         -label              => 'Non-synonymous coding',
         -rank               => 7,
         -feature_class      => 'Bio::EnsEMBL::Transcript',
+        -impact             => 'MODERATE',
     );
 
     if ($oc->predicate($transcript_variation_allele)) {
@@ -102,6 +103,9 @@ use Bio::EnsEMBL::Variation::Utils::VariationEffect;
     The relative rank of this consequence type when compred to other OverlapConsequence
     objects
   
+  Arg [-IMPACT] : 
+    Impact rating, one of: MODIFIER, LOW, MODERATE, HIGH
+  
   Arg [-DISPLAY_TERM] : 
     The Ensembl display term for this consequence type (used by default on the website)
 
@@ -129,6 +133,7 @@ use Bio::EnsEMBL::Variation::Utils::VariationEffect;
         -predicate          => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::non_synonymous_codon',
         -label              => 'Non-synonymous coding',
         -rank               => 7,
+        -impact             => 'MODERATE',
         -tier               => 1,
         -feature_class      => 'Bio::EnsEMBL::Transcript',
     );
@@ -151,6 +156,7 @@ sub new {
         $variant_feature_class,
         $predicate,
         $rank,
+        $impact,
         $tier,
         $display_term,
         $NCBI_term,
@@ -165,6 +171,7 @@ sub new {
             VARIANT_FEATURE_CLASS
             PREDICATE
             RANK
+            IMPACT
             TIER
             DISPLAY_TERM
             NCBI_TERM
@@ -181,6 +188,7 @@ sub new {
         variant_feature_class   => $variant_feature_class,
         predicate               => $predicate,
         rank                    => $rank,
+        impact                  => $impact,
         tier                    => $tier,
         display_term            => $display_term,
         NCBI_term               => $NCBI_term,
@@ -310,6 +318,23 @@ sub rank {
     my ($self, $rank) = @_;
     $self->{rank} = $rank if $rank;
     return $self->{rank};
+}
+
+=head2 impact
+
+  Arg [1]    : (optional) impact level to set
+  Description: Get/set the impact level of this OverlapConsequence. One of MODIFIER, LOW,
+               MODERATE, HIGH 
+  Returntype : string
+  Exceptions : none
+  Status     : Stable
+
+=cut
+
+sub impact {
+    my ($self, $impact) = @_;
+    $self->{impact} = $impact if $impact;
+    return $self->{impact};
 }
 
 =head2 tier

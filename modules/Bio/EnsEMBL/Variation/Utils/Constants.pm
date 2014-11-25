@@ -238,14 +238,15 @@ our %VARIATION_CLASSES = (
 );
 
 our $DEFAULT_OVERLAP_CONSEQUENCE = Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
-  'tier' => '4',
-  'SO_term' => 'intergenic_variant',
   'is_default' => 1,
-  'label' => 'Intergenic variant',
   'description' => 'A sequence variant located in the intergenic region, between genes',
-  'rank' => '38',
   'SO_accession' => 'SO:0001628',
-  'display_term' => 'INTERGENIC'
+  'SO_term' => 'intergenic_variant',
+  'tier' => '4',
+  'label' => 'Intergenic variant',
+  'rank' => '38',
+  'display_term' => 'INTERGENIC',
+  'impact' => 'MODIFIER'
 }
 );
 
@@ -262,6 +263,7 @@ our %OVERLAP_CONSEQUENCES = (
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::upstream',
   'label' => 'Upstream gene variant',
   'rank' => '24',
+  'impact' => 'MODIFIER',
   'display_term' => 'UPSTREAM',
   'feature_class' => 'Bio::EnsEMBL::Transcript'
 }
@@ -276,6 +278,7 @@ our %OVERLAP_CONSEQUENCES = (
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::downstream',
   'label' => 'Downstream gene variant',
   'rank' => '25',
+  'impact' => 'MODIFIER',
   'display_term' => 'DOWNSTREAM',
   'feature_class' => 'Bio::EnsEMBL::Transcript'
 }
@@ -291,6 +294,7 @@ our %OVERLAP_CONSEQUENCES = (
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::donor_splice_site',
   'label' => 'Splice donor variant',
   'rank' => '3',
+  'impact' => 'HIGH',
   'display_term' => 'ESSENTIAL_SPLICE_SITE',
   'feature_class' => 'Bio::EnsEMBL::Transcript'
 }
@@ -306,6 +310,7 @@ our %OVERLAP_CONSEQUENCES = (
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::acceptor_splice_site',
   'label' => 'Splice acceptor variant',
   'rank' => '3',
+  'impact' => 'HIGH',
   'display_term' => 'ESSENTIAL_SPLICE_SITE',
   'feature_class' => 'Bio::EnsEMBL::Transcript'
 }
@@ -320,6 +325,7 @@ our %OVERLAP_CONSEQUENCES = (
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::splice_region',
   'label' => 'Splice region variant',
   'rank' => '13',
+  'impact' => 'LOW',
   'display_term' => 'SPLICE_SITE',
   'feature_class' => 'Bio::EnsEMBL::Transcript'
 }
@@ -335,6 +341,7 @@ our %OVERLAP_CONSEQUENCES = (
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::within_intron',
   'label' => 'Intron variant',
   'rank' => '21',
+  'impact' => 'MODIFIER',
   'display_term' => 'INTRONIC',
   'feature_class' => 'Bio::EnsEMBL::Transcript'
 }
@@ -350,6 +357,7 @@ our %OVERLAP_CONSEQUENCES = (
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::within_5_prime_utr',
   'label' => '5 prime UTR variant',
   'rank' => '18',
+  'impact' => 'MODIFIER',
   'display_term' => '5PRIME_UTR',
   'feature_class' => 'Bio::EnsEMBL::Transcript'
 }
@@ -365,6 +373,7 @@ our %OVERLAP_CONSEQUENCES = (
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::within_3_prime_utr',
   'label' => '3 prime UTR variant',
   'rank' => '19',
+  'impact' => 'MODIFIER',
   'display_term' => '3PRIME_UTR',
   'feature_class' => 'Bio::EnsEMBL::Transcript'
 }
@@ -380,6 +389,7 @@ our %OVERLAP_CONSEQUENCES = (
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::synonymous_variant',
   'label' => 'Synonymous variant',
   'rank' => '15',
+  'impact' => 'LOW',
   'display_term' => 'SYNONYMOUS_CODING',
   'feature_class' => 'Bio::EnsEMBL::Transcript'
 }
@@ -395,6 +405,7 @@ our %OVERLAP_CONSEQUENCES = (
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::missense_variant',
   'label' => 'Missense variant',
   'rank' => '12',
+  'impact' => 'MODERATE',
   'display_term' => 'NON_SYNONYMOUS_CODING',
   'feature_class' => 'Bio::EnsEMBL::Transcript'
 }
@@ -409,6 +420,7 @@ our %OVERLAP_CONSEQUENCES = (
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::inframe_insertion',
   'label' => 'Inframe insertion',
   'rank' => '10',
+  'impact' => 'MODERATE',
   'display_term' => 'NON_SYNONYMOUS_CODING',
   'feature_class' => 'Bio::EnsEMBL::Transcript'
 }
@@ -423,6 +435,7 @@ our %OVERLAP_CONSEQUENCES = (
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::inframe_deletion',
   'label' => 'Inframe deletion',
   'rank' => '11',
+  'impact' => 'MODERATE',
   'display_term' => 'NON_SYNONYMOUS_CODING',
   'feature_class' => 'Bio::EnsEMBL::Transcript'
 }
@@ -438,6 +451,7 @@ our %OVERLAP_CONSEQUENCES = (
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::stop_gained',
   'label' => 'Stop gained',
   'rank' => '4',
+  'impact' => 'HIGH',
   'display_term' => 'STOP_GAINED',
   'feature_class' => 'Bio::EnsEMBL::Transcript'
 }
@@ -452,6 +466,7 @@ our %OVERLAP_CONSEQUENCES = (
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::stop_lost',
   'label' => 'Stop lost',
   'rank' => '6',
+  'impact' => 'HIGH',
   'display_term' => 'STOP_LOST',
   'feature_class' => 'Bio::EnsEMBL::Transcript'
 }
@@ -466,6 +481,7 @@ our %OVERLAP_CONSEQUENCES = (
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::stop_retained',
   'label' => 'Stop retained variant',
   'rank' => '15',
+  'impact' => 'LOW',
   'display_term' => 'SYNONYMOUS_CODING',
   'feature_class' => 'Bio::EnsEMBL::Transcript'
 }
@@ -480,6 +496,7 @@ our %OVERLAP_CONSEQUENCES = (
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::affects_start_codon',
   'label' => 'Initiator codon variant',
   'rank' => '7',
+  'impact' => 'LOW',
   'display_term' => 'NON_SYNONYMOUS_CODING',
   'feature_class' => 'Bio::EnsEMBL::Transcript'
 }
@@ -495,6 +512,7 @@ our %OVERLAP_CONSEQUENCES = (
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::frameshift',
   'label' => 'Frameshift variant',
   'rank' => '5',
+  'impact' => 'HIGH',
   'display_term' => 'FRAMESHIFT_CODING',
   'feature_class' => 'Bio::EnsEMBL::Transcript'
 }
@@ -509,6 +527,7 @@ our %OVERLAP_CONSEQUENCES = (
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::partial_codon',
   'label' => 'Incomplete terminal codon variant',
   'rank' => '14',
+  'impact' => 'LOW',
   'display_term' => 'PARTIAL_CODON',
   'feature_class' => 'Bio::EnsEMBL::Transcript'
 }
@@ -523,6 +542,7 @@ our %OVERLAP_CONSEQUENCES = (
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::within_nmd_transcript',
   'label' => 'NMD transcript variant',
   'rank' => '22',
+  'impact' => 'MODIFIER',
   'display_term' => 'NMD_TRANSCRIPT',
   'feature_class' => 'Bio::EnsEMBL::Transcript'
 }
@@ -537,6 +557,7 @@ our %OVERLAP_CONSEQUENCES = (
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::within_non_coding_gene',
   'label' => 'Non coding transcript variant',
   'rank' => '23',
+  'impact' => 'MODIFIER',
   'display_term' => 'WITHIN_NON_CODING_GENE',
   'feature_class' => 'Bio::EnsEMBL::Transcript'
 }
@@ -551,6 +572,7 @@ our %OVERLAP_CONSEQUENCES = (
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::non_coding_exon_variant',
   'label' => 'Non coding transcript exon variant',
   'rank' => '20',
+  'impact' => 'MODIFIER',
   'display_term' => 'WITHIN_NON_CODING_GENE',
   'feature_class' => 'Bio::EnsEMBL::Transcript'
 }
@@ -565,6 +587,7 @@ our %OVERLAP_CONSEQUENCES = (
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::within_mature_miRNA',
   'label' => 'Mature miRNA variant',
   'rank' => '17',
+  'impact' => 'MODIFIER',
   'display_term' => 'WITHIN_MATURE_miRNA',
   'feature_class' => 'Bio::EnsEMBL::Transcript'
 }
@@ -579,6 +602,7 @@ our %OVERLAP_CONSEQUENCES = (
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::coding_unknown',
   'label' => 'Coding sequence variant',
   'rank' => '16',
+  'impact' => 'MODIFIER',
   'display_term' => 'CODING_UNKNOWN',
   'feature_class' => 'Bio::EnsEMBL::Transcript'
 }
@@ -593,6 +617,7 @@ our %OVERLAP_CONSEQUENCES = (
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::within_regulatory_feature',
   'label' => 'Regulatory region variant',
   'rank' => '36',
+  'impact' => 'MODIFIER',
   'display_term' => 'REGULATORY_REGION',
   'feature_class' => 'Bio::EnsEMBL::Funcgen::RegulatoryFeature'
 }
@@ -607,6 +632,7 @@ our %OVERLAP_CONSEQUENCES = (
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::within_motif_feature',
   'label' => 'TF binding site',
   'rank' => '30',
+  'impact' => 'MODIFIER',
   'display_term' => 'REGULATORY_REGION',
   'feature_class' => 'Bio::EnsEMBL::Funcgen::MotifFeature'
 }
@@ -621,6 +647,7 @@ our %OVERLAP_CONSEQUENCES = (
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::feature_ablation',
   'label' => 'Transcript ablation',
   'rank' => '1',
+  'impact' => 'HIGH',
   'feature_class' => 'Bio::EnsEMBL::Transcript'
 }
 ),
@@ -634,6 +661,7 @@ our %OVERLAP_CONSEQUENCES = (
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::feature_amplification',
   'label' => 'Transcript amplification',
   'rank' => '8',
+  'impact' => 'HIGH',
   'feature_class' => 'Bio::EnsEMBL::Transcript'
 }
 ),
@@ -647,6 +675,7 @@ our %OVERLAP_CONSEQUENCES = (
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::feature_ablation',
   'label' => 'TFBS ablation',
   'rank' => '26',
+  'impact' => 'MODERATE',
   'feature_class' => 'Bio::EnsEMBL::Funcgen::MotifFeature'
 }
 ),
@@ -660,6 +689,7 @@ our %OVERLAP_CONSEQUENCES = (
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::feature_amplification',
   'label' => 'TFBS amplification',
   'rank' => '28',
+  'impact' => 'MODIFIER',
   'feature_class' => 'Bio::EnsEMBL::Funcgen::MotifFeature'
 }
 ),
@@ -673,6 +703,7 @@ our %OVERLAP_CONSEQUENCES = (
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::feature_ablation',
   'label' => 'Regulatory region ablation',
   'rank' => '31',
+  'impact' => 'MODERATE',
   'feature_class' => 'Bio::EnsEMBL::Funcgen::RegulatoryFeature'
 }
 ),
@@ -686,6 +717,7 @@ our %OVERLAP_CONSEQUENCES = (
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::feature_amplification',
   'label' => 'Regulatory region amplification',
   'rank' => '33',
+  'impact' => 'MODIFIER',
   'feature_class' => 'Bio::EnsEMBL::Funcgen::RegulatoryFeature'
 }
 ),
@@ -699,6 +731,7 @@ our %OVERLAP_CONSEQUENCES = (
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::feature_elongation',
   'label' => 'Feature elongation',
   'rank' => '36',
+  'impact' => 'MODIFIER',
   'feature_class' => 'Bio::EnsEMBL::Feature'
 }
 ),
@@ -712,6 +745,7 @@ our %OVERLAP_CONSEQUENCES = (
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::feature_truncation',
   'label' => 'Feature truncation',
   'rank' => '37',
+  'impact' => 'MODIFIER',
   'feature_class' => 'Bio::EnsEMBL::Feature'
 }
 ),
