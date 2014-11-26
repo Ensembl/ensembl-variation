@@ -20,6 +20,12 @@ use FindBin qw($Bin);
 
 use Bio::EnsEMBL::Registry;
 
+
+use_ok('Bio::EnsEMBL::Variation::DBSQL::ReadCoverageAdaptor');
+use_ok('Bio::EnsEMBL::Variation::ReadCoverage');
+
+## examples to be added to test-genome-DBs files
+=head
 my $reg = 'Bio::EnsEMBL::Registry';
 $reg->load_all("$Bin/test.ensembl.registry.72");
 
@@ -65,5 +71,5 @@ is(scalar @regions, 28, 'Number of regions');
 #foreach my $rc (@{$rca->fetch_all_regions_covered($slice, $individuals)}) {
 #    print "range is ", $rc->[0], '-', $rc->[1], "\n";
 #}
-
+=cut
 done_testing();

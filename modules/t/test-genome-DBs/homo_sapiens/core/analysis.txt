@@ -21,9 +21,15 @@
 8180	2006-07-13 15:53:10	scanprosite	Prosite_patterns	\N	/data/blastdb/Ensembl/interpro_scan/prosite.patterns	\N	\N	\N	-confirm => /data/blastdb/Ensembl/interpro_scan/confirm.patterns	ProteinAnnotation/PrositePattern	\N	Prosite_pattern	domain
 8181	2009-05-12 18:26:57	ncrna	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N
 8182	2009-05-20 12:21:06	blastmirna	all_mirnas.fa	\N	/lustre/scratch1/ensembl/sw4/ncRNA/BLAST/all_mirnas.fa	wublastn	\N	wublastn	\N	Bio::EnsEMBL::Analysis::RunnableDB::BlastmiRNA	\N	ensembl	gene
-8183	2006-07-13 15:53:10	signalp	signal_peptide	\N	\N	signalp	\N	signalp		ProteinAnnotation/Signalp	\N	Signalp	annotation
-8184	2009-03-06 16:28:16	vertrna	embl_vertrna	\N	embl_vertrna	wutblastn	\N	wutblastn	-cpus => 1, -hitdist => 40	BlastGenscanDNA	\N	wutblastn	similarity
-8185	2009-05-13 13:23:17	tigrfam	TIGRfam	\N	/data/blastdb/Ensembl/interpro_scan/TIGRFAMs_HMM.LIB	hmmpfam	\N	hmmpfam	--cut_ga	ProteinAnnotation/Hmmpfam	\N	TIGRFAM	domain
-8186	2007-09-07 12:01:22	uniprot_tr	\N	14.7	\N	\N	\N	\N	percentid_cutoff => 40, ori_analysis => Uniprot_raw, hit_db => TrEMBL, mode => single	DepthFilter	\N	\N	\N
-8187	2010-11-19 16:14:59	ensembl_lincrna	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N
-8188	2009-07-27 17:25:00	cdna_update	\N	\N	\N	exonerate	0.9.0	/usr/local/ensembl/bin/exonerate-0.9.0	\N	Exonerate2Genes	1	Exonerate	similarity
+8183	2009-05-20 12:21:05	rfamblast	Rfam	\N	/lustre/scratch1/ensembl/sw4/ncRNA/BLAST/high_copy.fasta	wublastn	\N	wublastn	lowcopy => /lustre/scratch1/ensembl/sw4/ncRNA/BLAST/low_copy.fasta	Bio::EnsEMBL::Analysis::RunnableDB::BlastRfam	\N	ensembl	gene
+8184	2006-07-13 15:53:10	signalp	signal_peptide	\N	\N	signalp	\N	signalp		ProteinAnnotation/Signalp	\N	Signalp	annotation
+8185	2010-11-19 16:14:59	ensembl_lincrna	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N
+8186	2009-07-27 17:25:00	cdna_update	\N	\N	\N	exonerate	0.9.0	/usr/local/ensembl/bin/exonerate-0.9.0	\N	Exonerate2Genes	1	Exonerate	similarity
+8187	2007-09-07 12:01:22	uniprot_tr	\N	14.7	\N	\N	\N	\N	percentid_cutoff => 40, ori_analysis => Uniprot_raw, hit_db => TrEMBL, mode => single	DepthFilter	\N	\N	\N
+8188	2009-08-05 12:38:18	ncrna_pseudogene	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N
+8189	2009-05-13 13:23:17	pirsf	PIRSF	\N	/data/blastdb/Ensembl/interpro_scan/sf_hmm;/data/blastdb/Ensembl/interpro_scan/sf_hmm_sub	hmmpfam	\N	hmmpfam	-thresholds => /data/blastdb/Ensembl/interpro_scan/pirsf.dat, -options => -E 0.01	ProteinAnnotation/PIRSF	\N	PIRSF	domain
+8190	2007-09-07 12:01:22	est2genome_mouse	\N	28-Jan-09 (98)	\N	\N	\N	\N	ori_analysis => Est2genome_mouse_raw, mode => single	DepthFilter	\N	\N	\N
+8191	2007-09-07 12:01:22	est2genome_other	\N	28-Jan-09 (98)	\N	\N	\N	\N	ori_analysis => Est2genome_other_raw, mode => single	DepthFilter	\N	\N	\N
+8192	2009-05-13 13:23:17	tigrfam	TIGRfam	\N	/data/blastdb/Ensembl/interpro_scan/TIGRFAMs_HMM.LIB	hmmpfam	\N	hmmpfam	--cut_ga	ProteinAnnotation/Hmmpfam	\N	TIGRFAM	domain
+8193	2009-03-06 16:28:16	vertrna	embl_vertrna	\N	embl_vertrna	wutblastn	\N	wutblastn	-cpus => 1, -hitdist => 40	BlastGenscanDNA	\N	wutblastn	similarity
+8194	2009-03-27 11:33:33	human_est	human_ests	\N	/lustre/work1/ensembl/jb16/NCBI37/ests/est_chunks	\N	\N	exonerate-0.9.0	\N	Exonerate2Genes	\N	\N	\N

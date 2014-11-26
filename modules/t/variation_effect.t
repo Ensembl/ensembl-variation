@@ -24,16 +24,18 @@ use Bio::EnsEMBL::Registry;
 use Bio::EnsEMBL::Variation::VariationFeature;
 use Bio::EnsEMBL::Variation::DBSQL::DBAdaptor ;
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
+use Bio::EnsEMBL::Test::MultiTestDB;
 
 BEGIN {
     use_ok('Bio::EnsEMBL::Variation::TranscriptVariation');
 }
 
-my $reg = 'Bio::EnsEMBL::Registry';
+our $DEBUG = 0;
 
-$reg->load_all("$Bin/test.ensembl.registry");
+my $multi = Bio::EnsEMBL::Test::MultiTestDB->new('homo_sapiens');
+my $vdba = $multi->get_DBAdaptor('variation');
+my $cdba = $multi->get_DBAdaptor('core');
 
-my $cdba = $reg->get_DBAdaptor('human', 'core');
 
 my $ta = $cdba->get_TranscriptAdaptor;
 
@@ -284,7 +286,7 @@ $transcript_tests->{$tf->stable_id}->{tests} = [
         alleles => '-',
         start   => $exon_start-10,
         end     => $exon_end+10,
-        effects => [qw(intron_variant splice_region_variant splice_acceptor_variant coding_sequence_variant splice_donor_variant complex_change_in_transcript)],
+        effects => [qw(intron_variant splice_acceptor_variant splice_donor_variant coding_sequence_variant )],
     },
 
     # check the CDS 
@@ -323,7 +325,7 @@ $transcript_tests->{$tf->stable_id}->{tests} = [
         alleles => 'AGG',
         start   => $cds_start+2,
         end     => $cds_start+1,
-        effects => [qw(inframe_insertion initiator_codon_variant)],
+        effects => [qw( initiator_codon_variant)],
     }, {
         alleles => '-',
         start   => $cds_start+3,
@@ -397,7 +399,7 @@ $transcript_tests->{$tf->stable_id}->{tests} = [
         alleles => 'AAG',
         start   => $cds_end-1,
         end     => $cds_end-2,
-        effects => [qw(stop_retained_variant missense_variant)],
+        effects => [qw(inframe_insertion stop_retained_variant )],
     }, {
         alleles => '-',
         start   => $cds_end-2,
@@ -458,12 +460,12 @@ $transcript_tests->{$tf->stable_id}->{tests} = [
         alleles => '-',
         start   => $intron_start-3,
         end     => $intron_start+2,
-        effects => [qw( splice_donor_variant coding_sequence_variant splice_region_variant intron_variant)],
+        effects => [qw( splice_donor_variant coding_sequence_variant intron_variant)],
     }, {
         alleles => '-',
         start   => $intron_end-2,
         end     => $intron_end+3,
-        effects => [qw( splice_acceptor_variant coding_sequence_variant splice_region_variant intron_variant)],
+        effects => [qw( splice_acceptor_variant coding_sequence_variant  intron_variant)],
     }, {
         alleles => '-',
         start   => $cds_start-3,
@@ -841,7 +843,7 @@ $transcript_tests->{$tr->stable_id}->{tests} = [
         strand  => -1,
         start   => $cds_start + 2,
         end     => $cds_start + 1,
-        effects => [qw(stop_retained_variant missense_variant)],
+        effects => [qw(inframe_insertion stop_retained_variant)],
     }, {
         alleles => '-',
         strand  => -1,
@@ -905,22 +907,22 @@ $transcript_tests->{$tr->stable_id}->{tests} = [
         alleles => '-',
         start   => $intron_end - 2,
         end     => $intron_end + 3,
-        effects => [qw(complex_change_in_transcript splice_donor_variant coding_sequence_variant splice_region_variant intron_variant)],
+        effects => [qw(splice_donor_variant coding_sequence_variant intron_variant)],
     }, {
         alleles => '-',
         start   => $intron_start - 3,
         end     => $intron_start + 2,
-        effects => [qw(complex_change_in_transcript splice_acceptor_variant coding_sequence_variant splice_region_variant intron_variant)],
+        effects => [qw( splice_acceptor_variant coding_sequence_variant intron_variant)],
     }, {
         alleles => '-',
         start   => $cds_end - 2,
         end     => $cds_end + 3,
-        effects => [qw(complex_change_in_transcript 5_prime_UTR_variant coding_sequence_variant)],
+        effects => [qw( 5_prime_UTR_variant coding_sequence_variant)],
     },  {
         alleles => '-',
         start   => $cds_start - 3,
         end     => $cds_start + 2,
-        effects => [qw(complex_change_in_transcript 3_prime_UTR_variant coding_sequence_variant)],
+        effects => [qw( 3_prime_UTR_variant coding_sequence_variant)],
     },  
 
 
@@ -1030,7 +1032,7 @@ $transcript_tests->{$mirna->stable_id}->{tests} = [
     {
         start   => $t_start,
         end     => $t_start,
-        effects => [qw(nc_transcript_variant)],
+        effects => [qw(non_coding_transcript_variant non_coding_transcript_exon_variant)],
     }, {
         start   => $t_start + 40,
         end     => $t_start + 40,
@@ -1069,7 +1071,7 @@ $transcript_tests->{$nc_fs_t->stable_id}->{tests} = [
         comment => "a non-coding transcript with a frameshift intron",
         start   => $fs_intron_start,
         end     => $fs_intron_start,
-        effects => [qw(nc_transcript_variant)],
+        effects => [qw(non_coding_transcript_variant)],
     }, 
 ];
 
@@ -1139,13 +1141,20 @@ for my $stable_id (keys %$transcript_tests) {
 
         my $comment = $test->{comment} || (join ',', @{ $test->{effects} }) || 'no effect';
 
-        #print "Got: ", (join ',', @effects), "\n";
 
         my $strand = $tv->transcript->strand;
 
         # sort so that the order doesn't matter
         is_deeply( [sort @effects], [sort @{ $test->{effects} }], "VF $test_count (strand $strand): $comment") 
-            || (diag "Actually got: ", explain \@effects) || warn "continuing\n";;
+            || (diag "Actually got: ", explain \@effects, "but expected: ", explain \@{ $test->{effects}} ) ||  
+            print join(",",(sort @{ $test->{effects}} )) ."\tgot\t".  join(",",(sort @effects)) . "\t";
+
+        if($DEBUG ==1){
+          print $tv->hgvs_genomic()->{$test->{alleles}} ."\t" ;
+          print $tv->hgvs_transcript()->{$test->{alleles}} ."\t" if defined  $tv->hgvs_transcript()->{$test->{alleles}};
+          print $tv->hgvs_protein()->{$test->{alleles}} if defined  $tv->hgvs_protein()->{$test->{alleles}};
+          print "\n" ;
+        }
 
         if (my $expected_pep_alleles = $test->{pep_alleles}) {
             is(

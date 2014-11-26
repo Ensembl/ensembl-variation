@@ -1,19 +1,7 @@
-{ 
- 'port'   => 3362,
- 'driver' => 'mysql',
- 'user'   => 'ensadmin',
- 'pass'   => 'ensembl',
- 'host'   => 'ecs2',
- 'zip'    => 'test_genome.zip',
-  
-  #add a line with the dbname and module
-  'databases' => 
-      {'homo_sapiens' => 
-            {'core' => 'Bio::EnsEMBL::DBSQL::DBAdaptor',
-             'variation' => 'Bio::EnsEMBL::Variation::DBSQL::DBAdaptor'}},
-
-#uncomment to use preloaded databases (useful when doing lots of testing)
-  'preloaded'   => {'homo_sapiens' => 
-                        { 'core' => 'dr2_test_core',
-                          'variation' => 'dr2_test_variation' }}	
+{
+  'port'   => '3306',
+  'driver' => 'mysql',
+  'user'   => 'user with write access',
+  'pass'   => 'password for user',
+  'host'   => 'database host'
 }

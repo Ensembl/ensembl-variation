@@ -12,15 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-use lib 't';
-
 use strict;
 use warnings;
-
-BEGIN { $| = 1;
-	use Test;
-	plan tests => 3;
-}
+use Test::More;
 
 
 use Bio::EnsEMBL::Test::TestUtils;
@@ -29,6 +23,13 @@ use Bio::EnsEMBL::Variation::VariationFeature;
 
 our $verbose = 0;
 
+use_ok('Bio::EnsEMBL::Variation::LDFeatureContainer');
+use_ok('Bio::EnsEMBL::Variation::DBSQL::LDFeatureContainerAdaptor');
+
+## examples to be updated & added to test-genome-DBs files
+
+
+=head
 my $multi = Bio::EnsEMBL::Test::MultiTestDB->new();
 
 my $vdb = $multi->get_DBAdaptor('variation');
@@ -85,3 +86,6 @@ sub print_container {
   }
 
 }
+=cut
+
+done_testing();

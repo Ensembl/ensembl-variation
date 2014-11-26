@@ -21,6 +21,13 @@ use FindBin qw($Bin);
 use Bio::EnsEMBL::Registry;
 use Bio::EnsEMBL::Variation::Individual;
 
+use_ok('Bio::EnsEMBL::Variation::AlleleFeature');
+use_ok('Bio::EnsEMBL::Variation::DBSQL::AlleleFeatureAdaptor');
+
+## examples to be added to test-genome-DBs files
+
+=head
+
 my $reg = 'Bio::EnsEMBL::Registry';
 $reg->load_all("$Bin/test.ensembl.registry.72");
 
@@ -59,5 +66,5 @@ is($hash->{'29436-29436-1'}->{'allele_string'}, 'G|G', 'Test allele_string');
 is($hash->{'29436-29436-1'}->{'consequence_type'}, 'SARA', 'Test consequence_type');
 is($hash->{'126113-126113-1'}->{'variation_name'}, 'rs79114531', 'Test variation_name');
 is($hash->{'126113-126113-1'}->{'consequence_type'}, 'nc_transcript_variant, intron_variant, downstream_gene_variant, upstream_gene_variant', 'Test consequence_type');
-
+=cut
 done_testing();
