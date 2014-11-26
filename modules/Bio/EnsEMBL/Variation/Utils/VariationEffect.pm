@@ -240,15 +240,9 @@ sub feature_elongation {
     return (
         complete_within_feature($bvfoa) and
         (copy_number_gain($bvfoa) or insertion($bvfoa)) and
-        not(
-            ( $bvfoa->isa('Bio::EnsEMBL::Variation::BaseTranscriptVariationAllele') and
-              (inframe_insertion($bvfoa) or stop_lost($bvfoa) )
-            )
-            or
-            ( $bvfoa->isa('Bio::EnsEMBL::Variation::TranscriptVariationAllele') and
-              stop_retained($bvfoa)
-            )
-         )  # or frameshift($bvfoa))
+        not(           
+             $bvfoa->isa('Bio::EnsEMBL::Variation::TranscriptVariationAllele')
+        )
     );
 }
 
@@ -259,8 +253,7 @@ sub feature_truncation {
         (partial_overlap_feature($bvfoa) or complete_within_feature($bvfoa)) and
         (copy_number_loss($bvfoa) or deletion($bvfoa)) and
         not(
-            $bvfoa->isa('Bio::EnsEMBL::Variation::BaseTranscriptVariationAllele') and
-            (inframe_deletion($bvfoa) or stop_gained($bvfoa))# or frameshift($bvfoa))
+             $bvfoa->isa('Bio::EnsEMBL::Variation::TranscriptVariationAllele')
         )
     );
 }
@@ -708,6 +701,7 @@ sub missense_variant {
     return 0 if stop_lost($bvfoa);
     return 0 if stop_gained($bvfoa);
     return 0 if partial_codon($bvfoa);
+    return 0 if frameshift($bvfoa);
 
     return 0 if inframe_deletion($bvfoa);
     return 0 if inframe_insertion($bvfoa);
@@ -717,19 +711,20 @@ sub missense_variant {
 
 sub inframe_insertion {
     my $bvfoa = shift;
-    
+
     # sequence variant
     if($bvfoa->base_variation_feature->isa('Bio::EnsEMBL::Variation::VariationFeature')) {
         my ($ref_codon, $alt_codon) = _get_codon_alleles($bvfoa);
-        
+
+        return 0 if affects_start_codon($bvfoa);
         return 0 unless defined $ref_codon;
-        
+
         return ( length($alt_codon) > length ($ref_codon) );
     }
     
     # structural variant
     elsif($bvfoa->base_variation_feature->isa('Bio::EnsEMBL::Variation::StructuralVariationFeature')) {
-        
+
         # TO BE DONE, NO WAY OF KNOWING WHAT SEQUENCE IS INSERTED YET
         return 0;
         
