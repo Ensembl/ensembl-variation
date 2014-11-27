@@ -32,3 +32,12 @@
 63646322	1	rs2255888	freq,hapmap,1000Genome	\N	0	2	0	\N	\N	\N	\N	\N	1
 63646323	1	rs144235347		\N	0	2	0	\N	\N	\N	\N	\N	1
 63646324	1	rs1162	cluster,freq,doublehit,hapmap,1000Genome	\N	0	2	0	\N	\N	\N	\N	\N	1
+11951520	1	rs56179254	cluster,freq	G	0	2	0	\N	\N	\N		367,368,372	1
+20949480	1	rs80359157	\N	C	0	2	0	\N	\N	\N		\N	1
+20949482	1	rs80359159	cluster	C	0	2	0	\N	\N	\N	pathogenic	\N	1
+20949483	1	rs80359161	\N	G	0	2	0	\N	\N	\N	\N	\N	1
+20949484	1	rs80359162	\N	C	0	2	0	\N	\N	\N		\N	1
+20949486	1	rs80359164	\N	A	0	2	0	\N	\N	\N		\N	1
+20949487	1	rs80359165	cluster	A	0	2	0	\N	\N	\N	pathogenic	367,372	1
+51737500	1	rs200814465	\N	A	0	2	0	\N	\N	\N	\N	368	1
+53003732	1	rs202155613	cluster,1000Genome	C	0	2	0	G	0.000459137	1		367	1
