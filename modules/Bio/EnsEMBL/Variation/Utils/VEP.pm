@@ -2650,8 +2650,6 @@ sub init_line {
     
     # gmaf?
     if(defined($config->{gmaf}) && defined($vf->{existing}) && scalar @{$vf->{existing}}) {
-      $DB::single = 1;
-      
         my @gmafs =
           map {$_->{minor_allele}.':'.$_->{minor_allele_freq}}
           grep {defined($_->{minor_allele}) && $_->{minor_allele_freq} =~ /\d/}
