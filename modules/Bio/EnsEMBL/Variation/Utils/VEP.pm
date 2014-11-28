@@ -2650,6 +2650,8 @@ sub init_line {
     
     # gmaf?
     if(defined($config->{gmaf}) && defined($vf->{existing}) && scalar @{$vf->{existing}}) {
+      $DB::single = 1;
+      
         my @gmafs =
           map {$_->{minor_allele}.':'.$_->{minor_allele_freq}}
           grep {defined($_->{minor_allele}) && $_->{minor_allele_freq} =~ /\d/}
@@ -4844,7 +4846,7 @@ sub dump_variation_cache {
                 $v->{allele_string},
                 $v->{strand} == 1 ? '' : $v->{strand},
                 $v->{minor_allele} || '',
-                defined($v->{minor_allele_freq}) && $v->{minor_allele_freq} =~ /^[0-9\.]$/ ? sprintf("%.4f", $v->{minor_allele_freq}) : '',
+                defined($v->{minor_allele_freq}) && $v->{minor_allele_freq} =~ /^[0-9\.]+$/ ? sprintf("%.4f", $v->{minor_allele_freq}) : '',
             );
             
             if(have_clin_sig($config) && defined($config->{clin_sig})) {
