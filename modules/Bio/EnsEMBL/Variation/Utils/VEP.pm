@@ -1631,7 +1631,7 @@ sub format_rest_output {
     Uploaded_variation
     Existing_variation
     GMAF AFR_MAF AMR_MAF ASN_MAF EUR_MAF AA_MAF EA_MAF
-    PUBMED CLIN_SIG
+    PUBMED CLIN_SIG SOMATIC
   );
   
   # define some fields to rename
