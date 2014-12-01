@@ -276,7 +276,7 @@ sub variations{
   return $self->{'variants'} = shift if(@_);
  
    my $variation_adaptor = $self->adaptor->db->get_VariationAdaptor();      
-   $self->{'variants'} = $variation_adaptor->fetch_all_by_Publication($self);
+   $self->{'variants'} = $variation_adaptor->fetch_all_by_publication($self);
 
    return $self->{'variants'};
 }
