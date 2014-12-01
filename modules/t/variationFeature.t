@@ -15,10 +15,7 @@
 use strict;
 use warnings;
 
-BEGIN { $| = 1;
-	use Test::More;
-	plan tests => 22;
-}
+use Test::More;
 
 use Bio::EnsEMBL::Test::TestUtils;
 use Bio::EnsEMBL::Variation::Source;
@@ -44,7 +41,8 @@ my $source = Bio::EnsEMBL::Variation::Source->new
 
 
 ## need a variation object 
-my $v = Bio::EnsEMBL::Variation::Variation->new(-name => 'rs2421',
+my $v = Bio::EnsEMBL::Variation::Variation->new(-dbID => 12345,
+                                                -name => 'rs2421',
                                                 -source => $source);
 
 
@@ -78,16 +76,23 @@ my $vf = Bio::EnsEMBL::Variation::VariationFeature->new
 ok($vf->start()   == $start,            "get start");
 ok($vf->end()     == $end,              "get end");
 ok($vf->strand()  == $strand,           "get strand");
-ok($vf->variation_name() eq $vname,     "get name");
+ok($vf->variation_name() eq $vname,     "get variation_name");
+ok($vf->name() eq $vname,               "get name");
 ok($vf->map_weight() == $map_weight,    "get map_weight");
 ok($vf->allele_string() eq $allele_str, "get allele");
+ok($vf->ref_allele_string() eq 'A', "get ref allele");
 ok($vf->display_id() eq $vname,         "display_name");
 ok($vf->source_name()  eq $source_name,  "source");
+ok($vf->source_version()  eq $source_version,  "source version");
 ok($vf->length()    == 1,               "length");
 ok($vf->is_somatic() eq $is_somatic,    "is_somatic");
 ok($vf->minor_allele()  eq $minor_allele, "minor allele"); 
 ok($vf->minor_allele_frequency() == $minor_allele_frequency , "minor allele freq"); 
 ok($vf->minor_allele_count() == $minor_allele_count,  "minor allele count"); 
+ok($vf->get_Variation_dbID() == 12345,    "get variation db id");
+
+ok($vf->add_evidence_value("Cited"), 'add a permitted evidence value' );
+ok($vf->get_all_evidence_values()->[0] eq 'Cited', 'get_all_evidence_values');
 
 
 # test getter/setters
@@ -108,3 +113,5 @@ ok($vf->ambig_code eq 'W', "ambiguity code");
 #test variation class
 ok($vf->var_class eq 'SNP', "class");
 
+
+done_testing();

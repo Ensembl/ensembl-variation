@@ -42,9 +42,12 @@ my $pub = $pa->fetch_by_pmid('22779046');
 ok($pub->pmid() eq '22779046',       'PMID by PMID');
 ok($pub->pmcid() eq 'PMC3392070',   'PMCID by PMID'  );
 ok($pub->year() eq '2012',          'year by PMID');
+ok($pub->doi() eq '10.1001/2012.journal.123', 'doi by PMID');
+ok($pub->ucsc_id() eq 'PMC3392070',   'UCSC ID by PMID'  );
 ok($pub->title() eq 'Coanalysis of GWAS with eQTLs reveals disease-tissue associations.',    'title by PMID');
 ok($pub->authors() eq 'Kang HP, Morgan AA, Chen R, Schadt EE, Butte AJ.',     'authors by PMID');
-
+ok($pub->variations()->[0]->name() eq 'rs7698608', 'variations by PMID - name of first');
+ok(scalar @{$pub->variations()} ==1,            'variations by PMID - count');
 
 my $pub2 = $pa->fetch_by_pmcid('PMC3392070',);
 ok($pub2->pmid() eq '22779046',       'PMID by PMCID');
@@ -52,7 +55,11 @@ ok($pub2->pmid() eq '22779046',       'PMID by PMCID');
 my $pub3 = $pa->fetch_by_dbID(36249);
 ok($pub3->pmid() eq '22779046',       'PMID by dbID');
 
+my $pub4 = $pa->fetch_by_doi('10.1001/2012.journal.123');
+ok($pub4->pmid() eq '22779046',       'PMID by doi');
 
+my $pubs = $pa->fetch_all_by_dbID_list([36249]);
+ok($pubs->[0]->pmid() eq '22779046',       'PMID by dbID list');
 
 
 my $var = $va->fetch_by_name("rs7698608");

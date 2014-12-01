@@ -38,12 +38,19 @@ ok($va && $va->isa('Bio::EnsEMBL::Variation::DBSQL::VariationAdaptor'), "isa var
 my $var = $va->fetch_by_dbID(4770800);
 
 ok($var->name() eq 'rs7569578',      'variation name by var id');
+ok($var->stable_id() eq 'rs7569578',      'stable id by var id');
 ok($var->source_name() eq 'dbSNP',          'source name by var id'   );
-ok($va->get_source_version('dbSNP') == 138, 'source version by var id');
+ok($var->source_description() eq 'Variants (including SNPs and indels) imported from dbSNP',   'source description by var id'   );
+ok($var->source_version() == 138, 'source version by var id');
+ok($var->source_url() eq 'http://www.ncbi.nlm.nih.gov/projects/SNP/', 'source url by var id');
+ok($va->get_source_version('dbSNP') == 138, 'source version by var adaptor/name');
 ok($var->ancestral_allele() eq 'A',  'ancestral_allele by var id');
 ok($var->minor_allele() eq 'A',      'minor allele by var id');
+ok($var->minor_allele_count() == 358, 'minor allele count by var id');
 ok($var->minor_allele_frequency() eq '0.164371', 'minor allele frequency by var id' );
-ok($var->get_all_clinical_significance_states()->[0] eq 'benign', 'clinsig by var id');	
+ok($var->get_all_clinical_significance_states()->[0] eq 'benign', 'clinsig by var id');
+ok($var->display_consequence() eq 'Intron variant', 'display status by var id');
+ok( !$var->is_failed(),              "failed status");
 
 my %syns = map {$_ => 1} @{$var->get_all_synonyms()};
 
@@ -57,6 +64,7 @@ ok( $states->[0] eq 'Multiple_observations' &&
     $states->[1] eq 'Frequency' && 
     $states->[2] eq 'HapMap' &&
     $states->[3] eq '1000Genomes', 'evidence status');
+ok( $var->add_evidence_value("Cited"), 'add a permitted evidence value' );
 
 my %alleles = map {$_->dbID() => $_} @{$var->get_all_Alleles()};
 
@@ -73,6 +81,10 @@ ok($var->name() eq 'rs142276873', "name by name");
 ok($var->dbID() == 30220007,      "id by name" );
 ok($var->source_name() eq 'dbSNP',"source by name");
 ok($var->ancestral_allele eq 'G', "ancestral allele by name");
+
+# test fetch by subsnp
+my $var_ss = $va->fetch_by_subsnp_id('ss11455892');
+ok($var_ss->name() eq 'rs7569578', 'fetch by subsnp'); 
 
 
 # test fetch by name using a synonym
@@ -91,6 +103,14 @@ ok($var->ancestral_allele eq 'A', "ancestral allele by synonym" );
 ok($var->var_class() eq 'SNP',  "variation class by synonym");
 
 ok($var->get_all_synonym_sources->[0] eq 'Archive dbSNP', "synonym source by synonym");
+
+## check a failed one
+my @fails = ('None of the variant alleles match the reference allele', 'Mapped position is not compatible with reported alleles');
+my $fail_desc = join(";", @fails);
+my $failed_var = $va->fetch_by_name('rs67521280');
+ok($failed_var->name() eq 'rs67521280', "name by name");
+ok($failed_var->failed_description() eq $fail_desc,   "fail description"); 
+ok(join(";", @{$failed_var->get_all_failed_descriptions()}) eq $fail_desc,   "all fail descriptions");
 
 
 done_testing();
