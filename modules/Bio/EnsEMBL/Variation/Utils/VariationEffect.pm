@@ -237,24 +237,22 @@ sub feature_amplification {
 sub feature_elongation {
     my $bvfoa = shift;
     
+    return 0 if $bvfoa->isa('Bio::EnsEMBL::Variation::TranscriptVariationAllele');
+    
     return (
         complete_within_feature($bvfoa) and
-        (copy_number_gain($bvfoa) or insertion($bvfoa)) and
-        not(           
-             $bvfoa->isa('Bio::EnsEMBL::Variation::TranscriptVariationAllele')
-        )
+        (copy_number_gain($bvfoa) or insertion($bvfoa))
     );
 }
 
 sub feature_truncation {
     my $bvfoa = shift;
     
+    return 0 if $bvfoa->isa('Bio::EnsEMBL::Variation::TranscriptVariationAllele');
+    
     return (
         (partial_overlap_feature($bvfoa) or complete_within_feature($bvfoa)) and
-        (copy_number_loss($bvfoa) or deletion($bvfoa)) and
-        not(
-             $bvfoa->isa('Bio::EnsEMBL::Variation::TranscriptVariationAllele')
-        )
+        (copy_number_loss($bvfoa) or deletion($bvfoa))
     );
 }
 
