@@ -4552,7 +4552,7 @@ sub get_dump_file_name {
     my $dump_file = $dir.'/'.$region.$type.'.gz';
     
     # make directory if it doesn't exist
-    if(!(-e $dir) && defined($config->{write_cache})) {
+    if(defined($config->{write_cache}) && !(-e $dir)) {
         mkpath($dir);
     }
     
@@ -5303,6 +5303,8 @@ sub cache_custom_annotation {
                             $feature->{$field} = $1;
                           }
                         }
+                        
+                        $feature->{$_} =~ s/\;/\,/g for keys %$feature;
                     }
                     
                     elsif($custom->{format} eq 'gff' || $custom->{format} eq 'gtf') {
