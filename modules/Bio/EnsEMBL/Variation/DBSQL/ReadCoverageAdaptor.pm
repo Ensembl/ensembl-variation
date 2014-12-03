@@ -166,9 +166,7 @@ sub fetch_all_by_Slice_Individual_depth{
 		if (!$args[0]->isa('Bio::EnsEMBL::Variation::Individual')){
 		    throw('Bio::EnsEMBL::Variation::Individual arg expected');
 		}
-		
-		$constraint = "rc.individual_id = ?";
-		$self->bind_param_generic_fetch($args[0]->dbID,SQL_INTEGER);
+		$constraint = "rc.individual_id = " . $args[0]->dbID;
 	    }
 	}
 	$rcs = $self->fetch_all_by_Slice_constraint($slice,$constraint);    
@@ -224,6 +222,9 @@ sub get_coverage_levels{
 	push @levels, $level_coverage;
     }
     $sth->finish();
+    
+    # HACK
+    @levels = (1, 2) unless scalar @levels;
 
     return \@levels;
 }
