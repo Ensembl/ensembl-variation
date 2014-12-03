@@ -1368,6 +1368,9 @@ sub display_consequence {
     
     my @ocs = map {@{$_->get_all_OverlapConsequences}} @{$self->get_all_VariationFeatures};
     
+    ## there is no consequence if there is no genomic location
+    return undef if scalar @ocs == 0;
+
     my $highest;
     
     for my $cons (@ocs) {
