@@ -899,7 +899,7 @@ sub parse_vep {
     # might get allele string from ID
     my $allele_string;
     
-    if($data[0] =~ /^\w\_\w\_\w$/) {
+    if($data[0] =~ /^\w+\_\w+\_\w+$/) {
         my @split = split /\_/, $data[0];
         $allele_string = $split[-1] if $split[-1] =~ /[ACGTN-]+\/[ACGTN-]+/;
     }
