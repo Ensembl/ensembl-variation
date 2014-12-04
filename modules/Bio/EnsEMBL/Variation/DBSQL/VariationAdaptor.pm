@@ -1167,7 +1167,8 @@ sub fetch_Iterator_by_VariationSet {
     };
       
     # Add the constraint for failed variations
-    my $constraint = " AND " . $self->db->_exclude_failed_variations_constraint();
+    my $constraint = " AND fv.variation_id is null "
+       unless $self->db->include_failed_variations() ;
     
     my $sth = $self->prepare(qq{SELECT MIN(vsv.variation_id), MAX(vsv.variation_id) $stmt $constraint});
     $sth->execute();
@@ -1270,7 +1271,8 @@ sub _fetch_all_dbIDs_by_VariationSet {
   my $set_str = "(" . join(",",@var_set_ids) .")";
 
   # Add the constraint for failed variations
-  my $constraint = " AND " . $self->db->_exclude_failed_variations_constraint();
+  my $constraint = " AND fv.variation_id is null "
+       unless $self->db->include_failed_variations() ;
   
   # Then get the dbIDs for all these sets
   my $stmt = qq{
