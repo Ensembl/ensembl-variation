@@ -1161,8 +1161,10 @@ sub fetch_Iterator_by_VariationSet {
             vsv.variation_set_id IN ($var_set_id)
     };
       
-    # Add the constraint for failed variations
-    my $constraint = " AND " . $self->db->_exclude_failed_variations_constraint();
+    # Add the constraint for failed variations 
+    my $constraint = " ";
+    $constraint .=  " AND fv.variation_id is null "
+       unless $self->db->include_failed_variations() ;
     
     my $sth = $self->prepare(qq{SELECT MIN(vsv.variation_id), MAX(vsv.variation_id) $stmt $constraint});
     $sth->execute();
@@ -1265,7 +1267,9 @@ sub _fetch_all_dbIDs_by_VariationSet {
   my $set_str = "(" . join(",",@var_set_ids) .")";
 
   # Add the constraint for failed variations
-  my $constraint = " AND " . $self->db->_exclude_failed_variations_constraint();
+  my $constraint = " ";
+  $constraint .= " AND fv.variation_id is null "
+       unless $self->db->include_failed_variations() ;
   
   # Then get the dbIDs for all these sets
   my $stmt = qq{
@@ -1316,7 +1320,12 @@ sub fetch_all_by_publication{
     my @var;
     my $variation_id;
 
-    my $sth = $self->prepare(qq{ SELECT  variation_id from variation_citation where publication_id = ?  });
+    my $stmt = "SELECT  variation_id from variation_citation where publication_id = ? ";
+    # Add the constraint for failed variations
+    $stmt .= " AND " . $self->db->_exclude_failed_variations_constraint()
+        unless $self->db->include_failed_variations();
+
+    my $sth = $self->prepare($stmt);
     $sth->execute( $pub_obj->dbID() );
     $sth->bind_columns(\$variation_id);
     while ($sth->fetch()){

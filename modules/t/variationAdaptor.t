@@ -16,7 +16,7 @@
 use strict;
 use warnings;
 use Test::More;
-
+use Data::Dumper;
 
 
 use Bio::EnsEMBL::Test::TestUtils;
@@ -111,6 +111,32 @@ my $failed_var = $va->fetch_by_name('rs67521280');
 ok($failed_var->name() eq 'rs67521280', "name by name");
 ok($failed_var->failed_description() eq $fail_desc,   "fail description"); 
 ok(join(";", @{$failed_var->get_all_failed_descriptions()}) eq $fail_desc,   "all fail descriptions");
+
+print "\n\nVar set\n";
+
+my $vs_adaptor = $vdb->get_VariationSetAdaptor();
+my $vs = $vs_adaptor->fetch_by_short_name('1kg_com');
+ok($vs && $vs->isa('Bio::EnsEMBL::Variation::VariationSet'), "isa var set");
+
+ok($vs->short_name() eq '1kg_com',  "variation set short name");
+ok($vs->name() eq '1000 Genomes - All - common',  "variation set name");
+ok($vs->description() eq 'Variants genotyped by the 1000 Genomes project (phase 1) with frequency of at least 1%',  "variation set description");
+
+
+my $limit = 10;
+my $fetched = 0;
+my $it = $vs->get_Variation_Iterator();
+ok($it && $it->isa('Bio::EnsEMBL::Variation::VariationIterator'), "isa var iterator");
+
+
+my $set_var;
+while ($fetched < $limit && $it->has_next()) {
+    
+    $set_var = $it->next();
+    $fetched++;
+} 
+ok($fetched ==10 ,    "variation iterator limit");
+ok($set_var->name() eq 'rs117161559', "last set member is as expected");
 
 
 done_testing();
