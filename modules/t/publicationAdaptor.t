@@ -63,10 +63,18 @@ ok($pubs->[0]->pmid() eq '22779046',       'PMID by dbID list');
 
 
 my $var = $va->fetch_by_name("rs7698608");
-my $pubs = $pa->fetch_all_by_Variation($var);
-ok($pubs->[0]->pmid() eq '22779046',     'PMID by variation');
-ok($pubs->[0]->pmcid() eq 'PMC3392070',   'PMCID by variation'  );
+my $pubs2 = $pa->fetch_all_by_Variation($var);
+ok($pubs2->[0]->pmid() eq '22779046',     'PMID by variation');
+ok($pubs2->[0]->pmcid() eq 'PMC3392070',   'PMCID by variation'  );
 
 
+## count +/- fails
+my $vars = $va->fetch_all_by_publication($pubs->[0]);
+ok(scalar(@{$vars}) ==1,   "variation count by publication - no fails");
+
+
+$va->db->include_failed_variations(1);
+my $varfs = $va->fetch_all_by_publication($pubs->[0]);
+ok(scalar(@{$varfs}) ==2,   "variation count by publication - inc fails");
 
 done_testing();
