@@ -864,7 +864,7 @@ sub flipped {
 
 =head2 get_all_Alleles
 
-  Arg [1]    : none
+  Arg [1]    : Bio::EnsEMBL::Variation::Population $pop (optional)
   Example    : @alleles = @{$v->get_all_Alleles()};
   Description: Retrieves all Alleles associated with this variation
   Returntype : Listref of Bio::EnsEMBL::Variation::Allele objects
@@ -876,16 +876,21 @@ sub flipped {
 
 sub get_all_Alleles {
   my $self = shift;
+  my $pop  = shift;
   
   # If the private hash key 'alleles' does not exist, no attempt has been made to load them, so do that
   unless (exists($self->{alleles})) {
       
-      # Get an AlleleAdaptor
-      assert_ref($self->adaptor(),'Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor');
-      my $allele_adaptor = $self->adaptor->db->get_AlleleAdaptor();
+    # Get an AlleleAdaptor
+    assert_ref($self->adaptor(),'Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor');
+    my $allele_adaptor = $self->adaptor->db->get_AlleleAdaptor();
       
-      $self->add_Allele($allele_adaptor->fetch_all_by_Variation($self));
-  } 
+    $self->add_Allele($allele_adaptor->fetch_all_by_Variation($self));
+  }
+  
+  if($pop && assert_ref($pop, 'Bio::EnsEMBL::Variation::Population')) {
+    return [grep {$_->population && $_->population->dbID == $pop->dbID} @{$self->{alleles}}];
+  }
 
   return $self->{alleles};
 }
@@ -1014,7 +1019,7 @@ sub get_all_IndividualGenotypes {
 
 =head2 get_all_PopulationGenotypes
 
-  Args       : none
+  Arg [1]    : Bio::EnsEMBL::Variation::Population $pop (optional)
   Example    : $pop_genotypes = $var->get_all_PopulationGenotypes()
   Description: Getter for PopulationGenotypes for this Variation, returns empty list if 
                there are none. 
@@ -1026,16 +1031,21 @@ sub get_all_IndividualGenotypes {
 =cut
 
 sub get_all_PopulationGenotypes {
-    my $self = shift;
+  my $self = shift;
+  my $pop  = shift;
 
-    #simulate a lazy-load on demand situation, used by the Glovar team
-    if (!defined($self->{'populationGenotypes'}) && defined ($self->{'adaptor'})){
-  my $pgtya = $self->{'adaptor'}->db()->get_PopulationGenotypeAdaptor();
+  #simulate a lazy-load on demand situation, used by the Glovar team
+  if (!defined($self->{populationGenotypes}) && defined ($self->{'adaptor'})){
+    my $pgtya = $self->adaptor->db()->get_PopulationGenotypeAdaptor();
   
-  return $pgtya->fetch_all_by_Variation($self);
-    }
-    return $self->{'populationGenotypes'};
-
+    $self->{populationGenotypes} = $pgtya->fetch_all_by_Variation($self);
+  }
+  
+  if($pop && assert_ref($pop, 'Bio::EnsEMBL::Variation::Population')) {
+    return [grep {$_->population && $_->population->dbID == $pop->dbID} @{$self->{populationGenotypes}}];
+  }
+  
+  return $self->{populationGenotypes};
 }
 
 

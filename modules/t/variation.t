@@ -182,4 +182,24 @@ ok($pgtys[0]->frequency() == 0.125,               "pop geno to freq");
 ok($pgtys[0]->population()->name() eq 'PERLEGEN:AFD_EUR_PANEL',"pop geno to pop name");
 
 
+# test get_all_Alleles($pop)
+my $pop = $variation_adaptor->db->get_PopulationAdaptor()->fetch_by_name('PERLEGEN:AFD_EUR_PANEL');
+my @p_alleles = @{$variation_p->get_all_Alleles($pop) || []};
+my $total_freq = 0;
+$total_freq += $_->frequency for @p_alleles;
+
+ok(@p_alleles == 2,                                             "get alleles by pop - count");
+ok($p_alleles[0]->population->name eq 'PERLEGEN:AFD_EUR_PANEL', "get alleles by pop - name");
+ok(join(",", sort map {$_->allele()} @p_alleles) eq 'A,G',      "get alleles by pop - alleles");
+ok($total_freq == 1,                                            "get alleles by pop - total frequency");
+
+# test get_all_PopulationGenotypes($pop)
+my @p_pgtys = @{$variation_p->get_all_PopulationGenotypes($pop) || []};
+$total_freq = 0;
+$total_freq += $_->frequency for @p_pgtys;
+
+ok(@p_alleles == 2,                                           "get pop geno by pop - count");
+ok($p_pgtys[0]->population->name eq 'PERLEGEN:AFD_EUR_PANEL', "get pop geno by pop - name");
+ok($total_freq == 1,                                          "get pop geno by pop - total frequency");
+
 done_testing();
