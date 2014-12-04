@@ -728,14 +728,21 @@ sub _selenocysteine_positions {
   my $tr = $self->transcript;
   
   unless(exists $tr->{_variation_effect_feature_cache}->{selenocysteines}) {
-    my $tl = $tr->translation;
     
-    if($tl) {
-      $tr->{_variation_effect_feature_cache}->{selenocysteines} = [
-        sort {$a <=> $b}
-        map {$_->{start}}
-        @{$tl->get_all_SeqEdits('_selenocysteine')}
-      ];
+    if(!$self->adaptor->{db}) {
+      $tr->{_variation_effect_feature_cache}->{selenocysteines} = [];
+    }
+    
+    else {
+      my $tl = $tr->translation;
+    
+      if($tl) {
+        $tr->{_variation_effect_feature_cache}->{selenocysteines} = [
+          sort {$a <=> $b}
+          map {$_->{start}}
+          @{$tl->get_all_SeqEdits('_selenocysteine')}
+        ];
+      }
     }
   }
   
