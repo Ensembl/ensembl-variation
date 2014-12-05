@@ -58,12 +58,12 @@ ok($vf->map_weight() == 1,                   "vf_id -> map weight");
 ok($vf->slice()->name() eq $slice->name(),   "vf_id -> slice name");
 
 
-
 # test fetch_all_by_Variation
 
 my $v = $va->fetch_by_dbID(30220007);
 $vfs = $vfa->fetch_all_by_Variation($v);
 ok(@$vfs == 1,                              "var -> vf count ");
+
 $vf = $vfs->[0];
 
 ok($vf->dbID() == 33303674,                  "var -> vf id");
@@ -76,6 +76,23 @@ ok($vf->variation()->name() eq 'rs142276873',"var -> name");
 ok($vf->display_id() eq 'rs142276873',       "var -> display id");
 ok($vf->map_weight() == 1,                   "var -> map weight");
 ok($vf->slice()->name() eq $slice->name(),   "var -> slice name");
+ok(@{$vf->consequence_type()} == 2 , "var -> consequence type count"); 
+ok($vf->display_consequence() eq 'intron_variant', "var -> display consequence"); 
+ok($vf->consequence_type()->[0] eq 'NMD_transcript_variant', "var -> consequence type"); 
+
+
+my $cons = $vf->most_severe_OverlapConsequence();
+ok($cons->description() eq 'A transcript variant occurring within an intron', "consequence description");
+ok($cons->label() eq 'Intron variant',                                        "consequence label");
+ok($cons->SO_term() eq 'intron_variant',                                      "consequence SO_term"); 
+ok($cons->SO_accession() eq 'SO:0001627',                                     "consequence SO_accession"); 
+ok($cons->tier() eq '3',                                                      "consequence tier"); 
+ok($cons->rank() eq '21',                                                     "consequence rank"); 
+ok($cons->NCBI_term() eq 'intron',                                            "consequence NCBI term"); 
+ok($cons->impact() eq 'MODIFIER',                                             "consequence impact"); 
+ok($cons->display_term() eq 'INTRONIC',                                       "consequence display_term"); 
+
+
 
 done_testing();
 
