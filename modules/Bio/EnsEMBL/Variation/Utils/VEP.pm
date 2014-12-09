@@ -4219,10 +4219,10 @@ sub cache_transcripts {
         
         my $slice = get_slice($config, $chr, undef, 1);
         
+        next unless defined $slice;
+        
         # get a seq_region_Slice as for patch regions $slice won't cover the whole seq_region
         my $sr_slice = $slice->seq_region_Slice();
-        
-        next unless defined $slice;
         
         # prefetch some things
         $slice->is_circular;
@@ -4957,10 +4957,10 @@ sub cache_reg_feats {
         
         my $slice = get_slice($config, $chr, undef, 1);
         
+        next unless defined $slice;
+        
         # get a seq_region_Slice as for patch regions $slice won't cover the whole seq_region
         my $sr_slice = $slice->seq_region_Slice();
-        
-        next unless defined $slice;
         
         # prefetch some things
         $slice->is_circular;
