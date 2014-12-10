@@ -110,6 +110,34 @@ sub attrib_id_for_type_code {
         undef;
 }
 
+sub attrib_type_code_for_attrib_type_id {
+    my ($self, $a_type_id) = @_;
+
+    unless ($self->{attrib_types_by_ids}) {
+
+        my $attrib_types;
+
+        my $sql = qq{
+            SELECT  t.attrib_type_id, t.code
+            FROM    attrib_type t
+        };
+
+        my $sth = $self->prepare($sql);
+
+        $sth->execute;
+
+        while (my ($attrib_type_id, $code ) = $sth->fetchrow_array) {
+            $attrib_types->{$attrib_type_id}  = $code ;
+        }
+
+        $self->{attrib_types_by_ids}  = $attrib_types;
+    }
+
+    return defined $a_type_id ?
+        $self->{attrib_types_by_ids}->{$a_type_id} :
+        undef;
+}
+
 sub display_term_for_SO_term {
     my ($self, $SO_term) = @_;
     return $self->_SO_mappings->{SO_terms}->{$SO_term}->{display_term};
