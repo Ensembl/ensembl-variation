@@ -46,7 +46,7 @@ GetOptions(
      'colour_file|c=s'  => \$web_colour_file,
      'mapping_file|m=s' => \$web_mapping_colour,
      'output_file|o=s'  => \$output_file,
-     'help!'          => \$help
+     'help!'            => \$help
 );
 
 if (!$output_file) {
@@ -217,7 +217,7 @@ sub usage {
                     Useful because some colour names are internal to Ensembl and won't be displayed in the 
                     documentation pages (i.e. not using the perl modules).
                     The module ColourMap.pm can be find in:
-                    ensembl-draw/modules/Sanger/Graphics/ColourMap.pm
+                    ensembl-webcode/modules/EnsEMBL/Draw/ColourMap.pm
   } . "\n";
   exit(0);
 }
