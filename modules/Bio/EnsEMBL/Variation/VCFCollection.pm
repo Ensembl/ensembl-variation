@@ -28,17 +28,29 @@ limitations under the License.
 =cut
 
 #
-# Ensembl module for Bio::EnsEMBL::Variation::DBSQL::VCFAdaptor
+# Ensembl module for Bio::EnsEMBL::Variation::VCFCollection
 #
 #
 
 =head1 NAME
 
-Bio::EnsEMBL::DBSQL::VCFAdaptor
+Bio::EnsEMBL::DBSQL::VCFCollection
 
 =head1 SYNOPSIS
+  my $reg = 'Bio::EnsEMBL::Registry';
 
+  # get VCF Collection Adaptor
+  my $vca = $reg->get_adaptor('human', 'variation', 'vcfcollection');
 
+  # iterate over collections
+  foreach my $c(@{$vca->fetch_all})
+
+    # get individuals
+    my $individuals = $c->get_all_Individuals;
+
+    # get genotypes for a VariationFeature
+    my $gts = $c->get_all_IndividualGenotypeFeatures_by_VariationFeature($vf);
+  }
 
 =head1 DESCRIPTION
 
@@ -70,6 +82,37 @@ our %TYPES = (
   'local'  => 1,
 );
 
+
+=head2 new
+
+  Arg [-ID]:                     string - identifier for this collection
+  Arg [-TYPE]:                   string - "local" or "remote"
+  Arg [-FILENAME_TEMPLATE]:      string
+  Arg [-CHROMOSOMES]:            arrayref of strings
+  Arg [-INDIVIDUAL_PREFIX]:      string
+  Arg [-POPULATION_PREFIX]:      string
+  Arg [-INDIVIDUAL_POPULATIONS]: hashref - { 'ind1': ['pop1','pop2'] }
+  Arg [-ADAPTOR]:                Bio::EnsEMBL::Variation::DBSQL::VCFCollectionAdaptor
+
+  Example    : my $collection = Bio::EnsEMBL::Variation::VCFCollection->new(
+                 -id                      => 'test',
+                 -type                    => 'local',
+                  -filename_template      => '/path/to/vcfs/test_###CHR###.vcf.gz',
+                  -chromosomes            => [1, 2, 3],
+                  -individual_populations => {
+                    'ind1': ['pop1','pop2'],
+                    'ind2': ['pop3']
+                  }
+               );
+
+  Description: Constructor.  Instantiates a new VCFCollection object.
+  Returntype : Bio::EnsEMBL::Variation::DBSQL::VCFCollection
+  Exceptions : none
+  Caller     : internal
+  Status     : Stable
+
+=cut
+
 sub new {
   my $caller = shift;
   my $class = ref($caller) || $caller;
@@ -96,11 +139,40 @@ sub new {
   return \%collection;
 }
 
+
+=head2 adaptor
+
+  Arg [1]    : Bio::EnsEMBL::Variation::DBSQL::VCFCollectionAdaptor $adaptor (optional)
+               Set the adaptor for this VCFCollection
+  Example    : my $adaptor = $collection->adaptor()
+  Description: Getter/Setter for the adaptor.
+  Returntype : Bio::EnsEMBL::Variation::DBSQL::VCFCollectionAdaptor
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
 sub adaptor {
   my $self = shift;
   $self->{adaptor} = shift if @_;
   return $self->{adaptor};
 }
+
+
+=head2 id
+
+  Arg [1]    : string $id (optional)
+               The new value to set the ID attribute to
+  Example    : my $id = $collection->id()
+  Description: Getter/Setter for the observed count of this allele
+               within its associated population.
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
 
 sub id {
   my $self = shift;
@@ -108,11 +180,48 @@ sub id {
   return $self->{id};
 }
 
+
+=head2 type
+
+  Arg [1]    : string $type (optional)
+               The new value to set the type attribute to
+  Example    : my $type = $collection->type()
+  Description: Getter/Setter for the type of this collection
+               ('local' or 'remote').
+  Returntype : string
+  Exceptions : invalid type
+  Caller     : general
+  Status     : Stable
+
+=cut
+
 sub type {
   my $self = shift;
-  $self->{type} = shift if @_;
+  
+  if(@_) {
+    my $type = shift;
+    throw("ERROR: Collection type $type invalid") unless $type && defined($TYPES{$type});
+    $self->{type} = shift if @_;
+  }
+  
   return $self->{type};
 }
+
+
+=head2 individual_prefix
+
+  Arg [1]    : string $individual_prefix (optional)
+               The new value to set the individual_prefix attribute to
+  Example    : my $individual_prefix = $collection->individual_prefix()
+  Description: Getter/Setter for the individual_prefix of this collection.
+               This property can be useful to align individual names from
+               the VCF header with entries in the individual database table.
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
 
 sub individual_prefix {
   my $self = shift;
@@ -120,11 +229,45 @@ sub individual_prefix {
   return $self->{individual_prefix} || '';
 }
 
+
+=head2 population_prefix
+
+  Arg [1]    : string $population_prefix (optional)
+               The new value to set the population_prefix attribute to
+  Example    : my $population_prefix = $collection->population_prefix()
+  Description: Getter/Setter for the population_prefix of this collection.
+               This property can be useful to align population names from
+               the config file with entries in the population database table.
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
 sub population_prefix {
   my $self = shift;
   $self->{population_prefix} = shift if @_;
   return $self->{population_prefix} || '';
 }
+
+
+=head2 filename_template
+
+  Arg [1]    : string $filename_template (optional)
+               The new value to set the filename_template attribute to
+  Example    : my $filename_template = $collection->filename_template()
+  Description: Getter/Setter for the filename template of this collection.
+               The wildcard string '###CHR###' can be used in this template
+               and will be replaced with the chromosome name when reading,
+               allowing a collection to consist of e.g. one VCF file per
+               chromosome.
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
 
 sub filename_template {
   my $self = shift;
@@ -132,9 +275,41 @@ sub filename_template {
   return $self->{filename_template};
 }
 
+
+=head2 list_chromosomes
+
+  Example    : my $chrs = $collection->list_chromosomes()
+  Description: Get list of chromosome names covered by this collection.
+  Returntype : arrayref of strings
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
 sub list_chromosomes {
   return $_[0]->{chromosomes};
 }
+
+
+=head2 use_db
+
+  Arg [1]    : int $use_db (optional)
+               The new value to set the use_db attribute to.
+  Example    : my $use_db = $collection->use_db()
+  Description: Getter/Setter for the use_db attribute of this collection.
+               If set to 1 (default), the API will attempt to retrieve
+               Individual and Population objects from the database, using
+               individual_prefix and population_prefix as appropriate.
+               If set to 0, the API will create "fake" Individual and
+               Population objects. Fake objects will also be created if
+               the DB fetch fails for an individual.
+  Returntype : int
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
 
 sub use_db {
   my $self = shift;
@@ -142,88 +317,18 @@ sub use_db {
   return $self->{_use_db};
 }
 
-sub get_vcf_by_chr {
-  my $self = shift;
-  my $chr = shift;
-  
-  if(!exists($self->{files}) || !exists($self->{files}->{$chr})) {
-    my $obj;
-    
-    # check we have this chromosome
-    if(my $chrs = $self->list_chromosomes) {
-      return unless grep {$chr eq $_} @$chrs;
-    }
-    
-    my $file = $self->filename_template;
-    
-    $file =~ s/\#\#\#CHR\#\#\#/$chr/;
-    $obj = Bio::EnsEMBL::IO::Parser::VCF4Tabix->open($file);
-    
-    $self->{files}->{$chr} = $obj;
-  }
-  
-  return $self->{files}->{$chr};
-}
 
-sub current {
-  my $self = shift;
-  $self->{current} = shift if @_;
-  return $self->{current};
-}
+=head2 get_all_Individuals
 
-sub seek {
-  my $self = shift;
-  my ($c, $s, $e) = @_;
-  
-  my $vcf = $self->get_vcf_by_chr($c);
-  return unless $vcf;
-  
-  # set current to the correct VCF
-  $self->current($vcf);
-  
-  # now seek
-  $vcf->seek($c, $s, $e);
-  
-  return $self->current;
-}
+  Example    : my $inds = $collection->get_all_Individuals()
+  Description: Get all individual objects that will have genotypes in
+               this collection.
+  Returntype : arrayref of Bio::EnsEMBL::Variation::Individual
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
 
-sub seek_by_Slice {
-  my $self = shift;
-  my $slice = shift;
-  
-  my $vcf = $self->seek($slice->seq_region_name, $slice->start, $slice->end);
-  return unless $vcf;
-  
-  $vcf->next();
-  
-  return defined($vcf->{record});
-}
-
-sub seek_by_VariationFeature {
-  my $self = shift;
-  my $vf = shift;
-  
-  my $vcf = $self->seek($vf->seq_region_name, $vf->seq_region_start - 2, $vf->seq_region_end + 2);
-  return unless $vcf;
-  
-  # compare IDs
-  my $count = 0;
-  
-  while($count++ < 10 && $vcf->next()) {
-    last if !$vcf->{record};
-    
-    # if it has an ID, we can use that
-    last if(grep {$vf->variation_name eq $_ || $vf->variation_name eq 'ss'.$_} @{$vcf->get_IDs});
-    
-    # otherwise compare coords
-    last if $vcf->get_start == $vf->seq_region_start;
-    
-    # if we've gone too far, quit out
-    return 0 if $vcf->get_start > $vf->seq_region_start + 1;
-  }
-  
-  return defined($vcf->{record});
-}
+=cut
 
 sub get_all_Individuals {
   my $self = shift;
@@ -232,7 +337,7 @@ sub get_all_Individuals {
     
     # we should only need to get individuals from one chromosome's VCF
     my $chr = $self->list_chromosomes->[0];
-    my $vcf = $self->get_vcf_by_chr($chr);
+    my $vcf = $self->_get_vcf_by_chr($chr);
     
     my $prefix = $self->individual_prefix;
     my $ia = $self->use_db ? $self->adaptor->db->get_IndividualAdaptor() : undef;
@@ -266,6 +371,19 @@ sub get_all_Individuals {
   return $self->{individuals};
 }
 
+
+=head2 get_all_Populations
+
+  Example    : my $pops = $collection->get_all_Populations()
+  Description: Get all population objects for the individuals in this
+               collection.
+  Returntype : arrayref of Bio::EnsEMBL::Variation::Population
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
 sub get_all_Populations {
   my $self = shift;
   
@@ -278,30 +396,17 @@ sub get_all_Populations {
   return $self->{populations};
 }
 
-sub get_all_population_names {
-  my $self = shift;
-  
-  if(!exists($self->{_population_names})) {
-    
-    my @names;
-    
-    if(defined($self->{_raw_populations})) {
-      my $prefix = $self->population_prefix;
-      @names =
-        map {$prefix.$_}
-        map {@{$self->{_raw_populations}->{$_}}}
-        keys %{$self->{_raw_populations}};
-    }
-    
-    else {
-      @names = map {$_->name} @{$self->get_all_Populations};
-    }
-    
-    $self->{_population_names} = \@names;
-  }
-  
-  return $self->{_population_names};
-}
+
+=head2 has_Population
+  Arg[1]     : string $pop OR Bio::EnsEMBL::Variation::Population $pop
+  Example    : my $has_pop = $collection->has_Population($pop)
+  Description: Returns true if this collection contains this population
+  Returntype : boolean
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
 
 sub has_Population {
   my $self = shift;
@@ -309,61 +414,24 @@ sub has_Population {
   
   my $name = ref($pop) eq 'SCALAR' ? $pop : $pop->name;
   
-  return grep {$name eq $_} @{$self->get_all_population_names};
+  return grep {$name eq $_} @{$self->_get_all_population_names};
 }
 
-sub _get_Population_Individual_hash {
-  my $self = shift;
-  
-  if(!exists($self->{_population_hash})) {
-    my $hash;
-    
-    # populations defined in config?
-    if(defined($self->{_raw_populations})) {
-      my $pops;
-      my $pa;
-      my $prefix = $self->population_prefix;
-      
-      foreach my $ind(@{$self->get_all_Individuals}) {
-        foreach my $pop(@{$self->{_raw_populations}->{$ind->name} || $self->{_raw_populations}->{$ind->{_raw_name}} || []}) {
-          
-          # try and fetch from DB
-          if(!defined($pops->{$pop})) {
-            if($self->use_db) {
-              $pa ||= $self->adaptor->db->get_PopulationAdaptor();
-              $pops->{$pop} = $pa->fetch_by_name($prefix.$pop);
-            }
-          }
-          
-          $pops->{$pop} ||= Bio::EnsEMBL::Variation::Population->new_fast({
-            name => $prefix.$pop,
-            dbID => --($self->{_population_id}),
-            _raw_name => $pop,
-          });
-          
-          $hash->{$pops->{$pop}->dbID}->{$ind->dbID} = 1;
-          push @{$ind->{populations}}, $pops->{$pop};
-        }
-        
-        $self->{populations} = [values %$pops];
-      }
-    }
-    
-    # otherwise we'll have to fetch from the individuals
-    else {
-      my $inds = $self->get_all_Individuals();
-      
-      my @dbIDs = grep {defined($_)} map {$_->dbID || undef} @$inds;
-      
-      my $pa = $self->adaptor->db->get_PopulationAdaptor();
-      $hash = $pa->_get_individual_population_hash(\@dbIDs);
-    }
 
-    $self->{_population_hash} = $hash;
-  }
-  
-  return $self->{_population_hash};
-}
+=head2 get_all_IndividualGenotypeFeatures_by_VariationFeature
+
+  Arg[1]     : Bio::EnsEMBL::Variation::VariationFeature $vf
+  Arg[2]     : (optional) Bio::EnsEMBL::Variation::Population OR
+               Bio::EnsEMBL::Variation::Individual
+  Example    : my $gts = $collection->get_all_IndividualGenotypeFeatures_by_VariationFeature($vf)
+  Description: Get all IndividualGenotypeFeatures for a given
+               VariationFeature object
+  Returntype : arrayref of Bio::EnsEMBL::Variation::IndividualGenotypeFeature
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
 
 sub get_all_IndividualGenotypeFeatures_by_VariationFeature {
   my $self = shift;
@@ -371,9 +439,9 @@ sub get_all_IndividualGenotypeFeatures_by_VariationFeature {
   my $sample = shift;
   
   # seek to record for VariationFeature
-  return [] unless $self->seek_by_VariationFeature($vf);
+  return [] unless $self->_seek_by_VariationFeature($vf);
   
-  my $vcf = $self->current();
+  my $vcf = $self->_current();
   
   my $individuals = $self->_limit_Individuals($self->get_all_Individuals, $sample);
   my @individual_names = map {$_->{_raw_name}} @$individuals;
@@ -385,14 +453,30 @@ sub get_all_IndividualGenotypeFeatures_by_VariationFeature {
   );
 }
 
+
+=head2 get_all_IndividualGenotypeFeatures_by_Slice
+
+  Arg[1]     : Bio::EnsEMBL::Slice $slice
+  Arg[2]     : (optional) Bio::EnsEMBL::Variation::Population OR
+               Bio::EnsEMBL::Variation::Individual
+  Example    : my $gts = $collection->get_all_IndividualGenotypeFeatures_by_Slice($slice)
+  Description: Get all IndividualGenotypeFeatures for a given
+               genomic region represented by a slice
+  Returntype : arrayref of Bio::EnsEMBL::Variation::IndividualGenotypeFeature
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
 sub get_all_IndividualGenotypeFeatures_by_Slice {
   my $self = shift;
   my $slice = shift;
   my $sample = shift;
   
-  return [] unless $self->seek_by_Slice($slice);
+  return [] unless $self->_seek_by_Slice($slice);
   
-  my $vcf = $self->current();
+  my $vcf = $self->_current();
   
   # get VariationFeatures if using DB
   my %vfs_by_pos;
@@ -437,14 +521,21 @@ sub get_all_IndividualGenotypeFeatures_by_Slice {
   return \@genotypes;
 }
 
-sub get_all_LD_genotypes_by_Slice {
+
+## INTERNAL METHODS
+###################
+
+# This method is called in LDFeatureContainerAdaptor::_fetch_by_Slice_VCF.
+# It bypasses a lot of the object-creation overhead of
+# get_all_IndividualGenotypeFeatures_by_Slice so should return quite a bit faster
+sub _get_all_LD_genotypes_by_Slice {
   my $self = shift;
   my $slice = shift;
   my $sample = shift;
   
-  return {} unless $self->seek_by_Slice($slice);
+  return {} unless $self->_seek_by_Slice($slice);
   
-  my $vcf = $self->current();
+  my $vcf = $self->_current();
   
   my @genotypes;
   my $individuals = $self->_limit_Individuals($self->get_all_Individuals, $sample);
@@ -510,7 +601,7 @@ sub _create_IndividualGenotypeFeatures {
     
     # adjust alleles for non-SNVs
     if(defined($vf->{class_SO_term}) && $vf->{class_SO_term} ne 'SNV') {
-      my $vcf = $self->current();
+      my $vcf = $self->_current();
       my @alleles = (($vcf->get_reference),@{$vcf->get_alternatives});
       my %first_char = map {substr($_, 0, 1)} @alleles;
       
@@ -522,18 +613,179 @@ sub _create_IndividualGenotypeFeatures {
     
     # create genotype objects
     push @genotypes, Bio::EnsEMBL::Variation::IndividualGenotypeFeature->new_fast({
-      _variation_id => $vf->{_variation_id},
+      _variation_id     => $vf->{_variation_id},
       variation_feature => $vf,
-      individual => $ind,
-      genotype => \@bits,
-      phased => $phased,
-      adaptor => $self->{_gta},
-      start => $vf->start,
-      end => $vf->end,
-      strand => $vf->seq_region_strand,
-      slice => $vf->slice,
+      individual        => $ind,
+      genotype          => \@bits,
+      phased            => $phased,
+      adaptor           => $self->{_gta},
+      start             => $vf->start,
+      end               => $vf->end,
+      strand            => $vf->seq_region_strand,
+      slice             => $vf->slice,
     });
   }
   
   return \@genotypes;
+}
+
+sub _get_vcf_by_chr {
+  my $self = shift;
+  my $chr = shift;
+  
+  if(!exists($self->{files}) || !exists($self->{files}->{$chr})) {
+    my $obj;
+    
+    # check we have this chromosome
+    if(my $chrs = $self->list_chromosomes) {
+      return unless grep {$chr eq $_} @$chrs;
+    }
+    
+    my $file = $self->filename_template;
+    
+    $file =~ s/\#\#\#CHR\#\#\#/$chr/;
+    $obj = Bio::EnsEMBL::IO::Parser::VCF4Tabix->open($file);
+    
+    $self->{files}->{$chr} = $obj;
+  }
+  
+  return $self->{files}->{$chr};
+}
+
+sub _current {
+  my $self = shift;
+  $self->{current} = shift if @_;
+  return $self->{current};
+}
+
+sub _seek {
+  my $self = shift;
+  my ($c, $s, $e) = @_;
+  
+  my $vcf = $self->_get_vcf_by_chr($c);
+  return unless $vcf;
+  
+  # set current to the correct VCF
+  $self->_current($vcf);
+  
+  # now seek
+  $vcf->seek($c, $s, $e);
+  
+  return $self->_current;
+}
+
+sub _seek_by_Slice {
+  my $self = shift;
+  my $slice = shift;
+  
+  my $vcf = $self->_seek($slice->seq_region_name, $slice->start, $slice->end);
+  return unless $vcf;
+  
+  $vcf->next();
+  
+  return defined($vcf->{record});
+}
+
+sub _seek_by_VariationFeature {
+  my $self = shift;
+  my $vf = shift;
+  
+  my $vcf = $self->_seek($vf->seq_region_name, $vf->seq_region_start - 2, $vf->seq_region_end + 2);
+  return unless $vcf;
+  
+  # compare IDs
+  my $count = 0;
+  
+  while($count++ < 10 && $vcf->next()) {
+    last if !$vcf->{record};
+    
+    # if it has an ID, we can use that
+    last if(grep {$vf->variation_name eq $_ || $vf->variation_name eq 'ss'.$_} @{$vcf->get_IDs});
+    
+    # otherwise compare coords
+    last if $vcf->get_start == $vf->seq_region_start;
+    
+    # if we've gone too far, quit out
+    return 0 if $vcf->get_start > $vf->seq_region_start + 1;
+  }
+  
+  return defined($vcf->{record});
+}
+
+sub _get_Population_Individual_hash {
+  my $self = shift;
+  
+  if(!exists($self->{_population_hash})) {
+    my $hash;
+    
+    # populations defined in config?
+    if(defined($self->{_raw_populations})) {
+      my $pops;
+      my $pa;
+      my $prefix = $self->population_prefix;
+      
+      foreach my $ind(@{$self->get_all_Individuals}) {
+        foreach my $pop(@{$self->{_raw_populations}->{$ind->name} || $self->{_raw_populations}->{$ind->{_raw_name}} || []}) {
+          
+          # try and fetch from DB
+          if(!defined($pops->{$pop})) {
+            if($self->use_db) {
+              $pa ||= $self->adaptor->db->get_PopulationAdaptor();
+              $pops->{$pop} = $pa->fetch_by_name($prefix.$pop);
+            }
+          }
+          
+          $pops->{$pop} ||= Bio::EnsEMBL::Variation::Population->new_fast({
+            name => $prefix.$pop,
+            dbID => --($self->{_population_id}),
+            _raw_name => $pop,
+          });
+          
+          $hash->{$pops->{$pop}->dbID}->{$ind->dbID} = 1;
+          push @{$ind->{populations}}, $pops->{$pop};
+        }
+        
+        $self->{populations} = [values %$pops];
+      }
+    }
+    
+    # otherwise we'll have to fetch from the individuals
+    else {
+      my $inds = $self->get_all_Individuals();
+      
+      my @dbIDs = grep {defined($_)} map {$_->dbID || undef} @$inds;
+      
+      my $pa = $self->adaptor->db->get_PopulationAdaptor();
+      $hash = $pa->_get_individual_population_hash(\@dbIDs);
+    }
+
+    $self->{_population_hash} = $hash;
+  }
+  
+  return $self->{_population_hash};
+}
+
+sub _get_all_population_names {
+  my $self = shift;
+  
+  if(!exists($self->{_population_names})) {
+    
+    my @names;
+    
+    if(defined($self->{_raw_populations})) {
+      my $prefix = $self->population_prefix;
+      @names =
+        map {$prefix.$_}
+        map {@{$self->{_raw_populations}->{$_}}}
+        keys %{$self->{_raw_populations}};
+    }
+    
+    else {
+      @names = map {$_->name} @{$self->get_all_Populations};
+    }
+    
+    $self->{_population_names} = \@names;
+  }
+  
+  return $self->{_population_names};
 }
