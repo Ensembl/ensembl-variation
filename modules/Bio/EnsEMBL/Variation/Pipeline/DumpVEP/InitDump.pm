@@ -118,8 +118,8 @@ sub get_species_list {
   @dbs = grep {$_ !~ /master|express/} @dbs;
 
   # filter on pattern if given
-  my $pattern = $self->param('include_pattern');
-  my $exclude = $self->param('exclude_pattern');
+  my $pattern = exists($server->{include_pattern}) ? $server->{include_pattern} : $self->param('include_pattern');
+  my $exclude = exists($server->{exclude_pattern}) ? $server->{exclude_pattern} : $self->param('exclude_pattern');
   @dbs = grep {$_ =~ /$pattern/i} @dbs if $pattern;
   @dbs = grep {$_ !~ /$exclude/i} @dbs if $exclude;
 
