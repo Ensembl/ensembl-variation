@@ -311,6 +311,31 @@ sub shift_hgvs_variants_3prime{
     return $self->{'shift_hgvs_variants_3prime'};
 }
 
+=head2 use_vcf
+
+  Arg [1]    : int $newval (optional)
+  Example    :
+		# Get a LD feature container adaptor
+		my $ldfca = $registry->get_DBAdaptor('human','variation','ldfeaturecontainer');
+		
+		# tell the adaptor to include genotypes from VCF files
+		$ldfca->db->use_vcf(1);
+		
+		# fetch LD container as normal
+    my $ldfc = $ldfca->fetch_by_Slice($slice, $population);
+
+  Description: Getter/Setter the use_vcf property. Switching this to a
+               non-zero value instructs the API to look in configured
+               VCF files for genotype-based data. Setting to 1 tells the
+               API to use both the DB and VCF; setting to 2 tells the API
+               to use only VCF.
+  Returntype : int
+  Exceptions : none
+  Caller     : general
+  Status     : at risk
+
+=cut
+
 sub use_vcf {
   my $self = shift;
   

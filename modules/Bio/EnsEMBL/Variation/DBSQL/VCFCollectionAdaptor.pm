@@ -37,8 +37,42 @@ limitations under the License.
 Bio::EnsEMBL::DBSQL::VCFCollectionAdaptor
 
 =head1 SYNOPSIS
+  my $reg = 'Bio::EnsEMBL::Registry';
 
+  # set path to configuration file
+  # optionally it can be set as environment variable $ENSEMBL_VARIATION_VCF_CONFIG_FILE
+  $Bio::EnsEMBL::Variation::DBSQL::VCFCollectionAdaptor::CONFIG_FILE = '/path/to/vcf_config.json';
 
+  ## explicit use
+
+  # get VCF Collection Adaptor
+  my $vca = $reg->get_adaptor('human', 'variation', 'vcfcollection');
+  my $va  = $reg->get_adaptor('human', 'variation', 'variation');
+
+  my $v = $va->fetch_by_name('rs699');
+  my $vf = $v->get_all_VariationFeatures->[0];
+
+  # iterate over collections
+  foreach my $c(@{$vca->fetch_all})
+
+    # get individuals
+    my $individuals = $c->get_all_Individuals;
+
+    # get genotypes for this VariationFeature
+    my $gts = $c->get_all_IndividualGenotypeFeatures_by_VariationFeature($vf);
+  }
+
+  ## implicit use
+
+  # get LD Feature Container Adaptor
+  my $ldfca = $reg->get_adaptor('human', 'variation', 'ldfeaturecontainer');
+  my $sa    = $reg->get_adaptor('human', 'core', 'slice');
+
+  # tell API to use _only_ VCF to retrieve genotypes (value of 1 uses both DB and VCF)
+  $vca->db->use_vcf(2);
+
+  # fetch LD Feature Container
+  my $ldfc = $ldfca->fetch_by_Slice($sa->fetch_by_region('chromosome', 1, 230700048, 230720047));
 
 =head1 DESCRIPTION
 
@@ -66,6 +100,22 @@ use base qw(Exporter);
 our @EXPORT_OK = qw($CONFIG_FILE);
 
 our $CONFIG_FILE;
+
+
+=head2 new
+
+  Arg [-CONFIG]: string - path to JSON configuration file
+  Example    : my $vca = Bio::EnsEMBL::Variation::VCFCollectionAdaptor->new(
+                 -config => '/path/to/vcf_config.json'
+               );
+
+  Description: Constructor.  Instantiates a new VCFCollectionAdaptor object.
+  Returntype : Bio::EnsEMBL::Variation::DBSQL::VCFCollectionAdaptor
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
 
 sub new {
   my $caller = shift;
@@ -139,9 +189,33 @@ sub new {
   return $self;
 }
 
+
+=head2 fetch_by_id
+
+  Example    : my $collection = $vca->fetch_by_id('1000GenomesPhase3');
+  Description: Fetches VCFCollection with given ID
+  Returntype : Bio::EnsEMBL::Variation::VCFCollection
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
 sub fetch_by_id {
   return $_[0]->{collections}->{$_[1]};
 }
+
+
+=head2 fetch_all
+
+  Example    : my $collections = $vca->fetch_all();
+  Description: Fetches all configured VCFCollections
+  Returntype : Arrayref of Bio::EnsEMBL::Variation::VCFCollection
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
 
 sub fetch_all {
   return [values %{$_[0]->{collections} || {}}];
