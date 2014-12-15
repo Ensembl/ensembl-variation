@@ -95,6 +95,13 @@ sub default_options {
         user => 'ensro',
         pass => $self->o('dump_db_password'),
       },
+      {
+        host => 'ensdb-web-14',
+        port => 5337,
+        user => 'ensro',
+        pass => $self->o('dump_db_password'),
+        include_pattern => 'homo_sapiens',
+      }
     ],
     
     # dump databases of this version number
