@@ -412,7 +412,7 @@ sub has_Population {
   my $self = shift;
   my $pop = shift;
   
-  my $name = ref($pop) eq 'SCALAR' ? $pop : $pop->name;
+  my $name = ref($pop) eq '' ? $pop : $pop->name;
   
   return grep {$name eq $_} @{$self->_get_all_population_names};
 }
