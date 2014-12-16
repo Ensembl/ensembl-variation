@@ -23,11 +23,12 @@ before_install:
     - wget http://sourceforge.net/projects/samtools/files/tabix/tabix-0.2.6.tar.bz2
     - tar -xjvf tabix-0.2.6.tar.bz2
     - cd tabix-0.2.6
-    - make && make install
+    - make
     - cd perl
     - perl Makefile.PL
     - make && make install
     - cd ../../
+    - export PATH=$PATH:$PWD/tabix-0.2.6
 
 install:
     - cpanm -v --installdeps --with-recommends --notest --cpanfile ensembl/cpanfile .  
