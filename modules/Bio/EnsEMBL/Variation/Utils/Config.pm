@@ -1031,6 +1031,21 @@ our @ATTRIB_TYPES = (
 		name => 'Variant evidence status',
 		description => 'Evidence status for a variant',
 	},
+       {
+               code => 'sequence_number',
+               name => 'Number of sequences in alignment',
+               description => 'Number of protein sequences in the alignment use to make a protein impact prediction',
+       },
+       {
+               code => 'based_on',
+               name => 'Evidence type used for protein impact prediction',
+               description => 'Evidence type used for a PolyPhen protein impact prediction',
+       },
+       {
+               code => 'conservation_score', 
+               name => 'Sift conservation score',
+               description => 'Median conservation value in an alignment used to make a Sift prediction',
+       },
 
 
 );
@@ -1042,7 +1057,7 @@ our %ATTRIBS = (
    'dgva_clin_sig'       => \@dgva_clinical_significance_types,
    'clinvar_clin_sig'    => \@clinvar_clinical_significance_types,
    'polyphen_prediction' => ['probably damaging', 'possibly damaging', 'benign', 'unknown'],
-   'sift_prediction'     => [qw(tolerated deleterious)],
+   'sift_prediction'     => ['tolerated', 'deleterious', 'tolerated(low evidence)', 'deleterious(low evidence)'],
    'prot_func_analysis'  => [qw(sift polyphen_humvar polyphen_humdiv)],
    'evidence'            => \@evidence_statuses,
 );

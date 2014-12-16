@@ -27,6 +27,9 @@ INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES 
 INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES (26, 'allele_accession_id', 'Allele accession ID', 'Allele accession ID linked with phenotype association');
 INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES (33, 'marker_accession_id', 'Marker accession ID', 'Marker ID linked with phenotype association');
 INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES (419, 'evidence', 'Variant evidence status', 'Evidence status for a variant');
+INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES (422, 'sequence_number', 'Number of sequences in alignment', 'Number of protein sequences in the alignment use to make a protein impact prediction');
+INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES (423, 'based_on', 'Evidence type used for protein impact prediction', 'Evidence type used for a PolyPhen protein impact prediction');
+INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES (424, 'conservation_score', 'Sift conservation score', 'Median conservation value in an alignment used to make a Sift prediction');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (2, 2, 'SNV');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (1, 1, 'SO:0001483');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (3, 3, 'SNP');
@@ -600,8 +603,11 @@ INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (359, 9, 'Im
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (373, 9, 'HumanOmniExpress');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (374, 9, 'ClinVar');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (353, 9, 'MGP');
+INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (390, 9, 'HumanCoreExome');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (270, 8, 'tolerated');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (271, 8, 'deleterious');
+INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (391, 8, 'tolerated(low evidence)');
+INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (392, 8, 'deleterious(low evidence)');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (272, 7, 'probably damaging');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (273, 7, 'possibly damaging');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (274, 7, 'benign');
@@ -624,4 +630,4 @@ INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (369, 419, '
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (370, 419, '1000Genomes');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (371, 419, 'Cited');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (372, 419, 'ESP');
-INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (390, 9, 'HumanCoreExome');
+
