@@ -23,6 +23,7 @@ before_install:
     - tar -xjvf tabix-0.2.6.tar.bz2
     - cd tabix-0.2.6
     - make
+    - cd ../
 
 install:
     - cpanm -v --installdeps --with-recommends --notest --cpanfile ensembl/cpanfile .  
