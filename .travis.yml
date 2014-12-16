@@ -24,7 +24,6 @@ before_install:
     - cd tabix-0.2.6
     - make
 
-
 install:
     - cpanm -v --installdeps --with-recommends --notest --cpanfile ensembl/cpanfile .  
     - cpanm -n Devel::Cover::Report::Coveralls
