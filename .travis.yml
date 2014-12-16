@@ -15,6 +15,7 @@ before_install:
     - git clone --branch master --depth 1 https://github.com/Ensembl/ensembl-hive.git
     - git clone --branch master --depth 1 https://github.com/Ensembl/ensembl-internal-variation.git
     - git clone --branch variation --depth 1 https://github.com/Ensembl/ensembl-io.git
+    - export PERL5LIB=$PERL5LIB:$PWD/ensembl-io/modules/
     - wget https://github.com/bioperl/bioperl-live/archive/bioperl-release-1-2-3.zip
     - unzip bioperl-release-1-2-3.zip
     - echo -e "[server]\nwait_timeout=28000" | sudo tee -a /etc/mysql/my.cnf
@@ -24,6 +25,8 @@ before_install:
     - cd tabix-0.2.6
     - make
     - cd ../
+    - export PATH=$PATH:/$PWD/tabix-0.2.6/
+    - export PERL5LIB=$PERL5LIB:/$PWD/tabix-0.2.6/perl/
 
 install:
     - cpanm -v --installdeps --with-recommends --notest --cpanfile ensembl/cpanfile .  
