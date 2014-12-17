@@ -9,7 +9,7 @@ echo "Using $PERL5LIB"
 if [ "$COVERALLS" = 'true' ]; then
   PERL5OPT='-MDevel::Cover=+ignore,bioperl,+ignore,ensembl-test' perl $PWD/modules/t/VCFCollectionAdaptor.t
 else
-  perl $PWD/modules/t/VCFCollectionAdaptor.t
+  perl $PWD/ensembl-test/scripts/runtests.pl $PWD/modules/t $SKIP_TESTS
 fi
 
 rt=$?

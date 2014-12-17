@@ -4,7 +4,7 @@ perl:
   - "5.14"
 
 env:
-  - COVERALLS=false  DB=mysql
+  - COVERALLS=true  DB=mysql
 
 before_install:
     - sudo apt-get -y update
