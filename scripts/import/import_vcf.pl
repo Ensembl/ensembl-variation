@@ -1902,13 +1902,12 @@ sub variation {
 	if(!defined($var) && !defined($config->{only_existing})) {
 		$var = Bio::EnsEMBL::Variation::Variation->new_fast({
 			name             => $var_id,
-			source           => $config->{source},
+			_source_id       => $config->{source_id},
 			is_somatic       => $config->{somatic},
 			ancestral_allele => $data->{info}->{AA} eq '.' ? undef : uc($data->{info}->{AA})
 		});
 		
 		# add in some hacky stuff so flanking sequence gets written
-		$var->{source_id}             = $config->{source_id};
 		$var->{seq_region_id}         = $config->{seq_region_ids}->{$vf->{chr}};
 		$var->{seq_region_strand}     = 1;
 		$var->{up_seq_region_start}   = $vf->{start} - $config->{flank};
@@ -1967,7 +1966,7 @@ sub variation_feature {
 	foreach my $existing_vf (sort {
 		(count_common_alleles($vf->allele_string, $b->allele_string) <=> count_common_alleles($vf->allele_string, $a->allele_string)) ||
 		($a->map_weight <=> $b->map_weight) ||
-		($b->source eq 'dbSNP') <=> ($a->source eq 'dbSNP') ||
+		($b->source_name eq 'dbSNP') <=> ($a->source_name eq 'dbSNP') ||
 		(split 'rs', $a->variation_name)[-1] <=> (split 'rs', $b->variation_name)[-1]
 	} @$existing_vfs) {
 		
@@ -2087,7 +2086,7 @@ sub variation_feature {
 		my $so_term = SO_variation_class($vf->{allele_string}, 1);
 		
 		# add in some info needed (since we won't have a slice)
-		$vf->{source_id}       = $config->{source_id};
+		$vf->{_source_id}      = $config->{source_id};
 		$vf->{is_somatic}      = $config->{somatic};
 		$vf->{class_attrib_id} = $config->{attribute_adaptor}->attrib_id_for_type_value('SO_term', $so_term);
 		
