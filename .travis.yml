@@ -17,17 +17,15 @@ before_install:
     - git clone --branch master --depth 1 https://github.com/Ensembl/ensembl-io.git
     - wget https://github.com/bioperl/bioperl-live/archive/bioperl-release-1-2-3.zip
     - unzip bioperl-release-1-2-3.zip
-    - echo -e "[server]\nwait_timeout=28000" | sudo tee -a /etc/mysql/my.cnf
-    - sudo service mysql restart
-    - wget http://sourceforge.net/projects/samtools/files/tabix/tabix-0.2.6.tar.bz2
-    - tar -xjvf tabix-0.2.6.tar.bz2
-    - cd tabix-0.2.6
+    - git clone --branch master --depth 1 https://github.com/samtools/tabix.git
+    - cd tabix
     - make
     - cd perl
-    - sed -i.bak "s/-lz -L.. -ltabix/-L.. -ltabix -lz/" Makefile.PL
     - perl Makefile.PL
     - make && make install
     - cd ../../
+    - echo -e "[server]\nwait_timeout=28000" | sudo tee -a /etc/mysql/my.cnf
+    - sudo service mysql restart
 
 install:
     - cpanm -v --installdeps --with-recommends --notest --cpanfile ensembl/cpanfile .  
