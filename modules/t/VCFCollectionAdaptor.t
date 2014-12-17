@@ -65,11 +65,11 @@ ok($pops && scalar @$pops == 19, "get_all_Populations count 19");
 ok($coll->has_Population('1000GENOMES:phase_1_CEU'), "has_Population 1000GENOMES:phase_1_CEU");
 
 # fetch genotypes by slice
-my $slice = $sa->fetch_by_region('chromosome', 2, 45401130, 45421130);
+# my $slice = $sa->fetch_by_region('chromosome', 2, 45401130, 45421130);
 
-my $gts = $coll->get_all_IndividualGenotypeFeatures_by_Slice($slice);
-ok($gts && scalar @$gts == 1092, "get_all_IndividualGenotypeFeatures_by_Slice count 1092");
-ok($gts->[0]->genotype_string eq 'T|T', "get_all_IndividualGenotypeFeatures_by_Slice first genotype T|T");
+# my $gts = $coll->get_all_IndividualGenotypeFeatures_by_Slice($slice);
+# ok($gts && scalar @$gts == 1092, "get_all_IndividualGenotypeFeatures_by_Slice count 1092");
+# ok($gts->[0]->genotype_string eq 'T|T', "get_all_IndividualGenotypeFeatures_by_Slice first genotype T|T");
 
 # fetch genotypes by VF
 my $va = $vdb->get_VariationAdaptor();
@@ -81,10 +81,10 @@ ok($gts && scalar @$gts == 1092, "get_all_IndividualGenotypeFeatures_by_Variatio
 ok($gts->[0]->genotype_string eq 'T|T', "get_all_IndividualGenotypeFeatures_by_VariationFeature first genotype T|T");
 
 # fetch LD genotypes by slice
-my $ld_gts = $coll->_get_all_LD_genotypes_by_Slice($slice);
-ok($ld_gts && ref($ld_gts) eq 'HASH', "_get_all_LD_genotypes_by_Slice is hash");
-ok(scalar keys %$ld_gts == 374, "_get_all_LD_genotypes_by_Slice has 374 position keys");
-ok($ld_gts->{45421006} && scalar keys %{$ld_gts->{45421006}}, "_get_all_LD_genotypes_by_Slice pos 45421006 has 1092 genotypes");
-ok($ld_gts->{45411130}->{NA20811} eq 'T|A', "_get_all_LD_genotypes_by_Slice pos 45411130 ind NA20811 has genotype T|A");
+# my $ld_gts = $coll->_get_all_LD_genotypes_by_Slice($slice);
+# ok($ld_gts && ref($ld_gts) eq 'HASH', "_get_all_LD_genotypes_by_Slice is hash");
+# ok(scalar keys %$ld_gts == 374, "_get_all_LD_genotypes_by_Slice has 374 position keys");
+# ok($ld_gts->{45421006} && scalar keys %{$ld_gts->{45421006}}, "_get_all_LD_genotypes_by_Slice pos 45421006 has 1092 genotypes");
+# ok($ld_gts->{45411130}->{NA20811} eq 'T|A', "_get_all_LD_genotypes_by_Slice pos 45411130 ind NA20811 has genotype T|A");
 
 done_testing();
