@@ -42,7 +42,6 @@ use strict;
 use warnings;
 use Getopt::Long;
 
-
 use Bio::DB::Fasta;
 use Bio::EnsEMBL::Registry;
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp );
@@ -86,7 +85,7 @@ my %source_data  = ( "name"    => "PhenCode",
                      "somatic" => 0
     );
 
-my $source_id = get_source($varfeat_adaptor->dbc,  \%source_data );
+my $source_ob = get_source($reg,  \%source_data );
 
 ## get seq_region_ids for quick variation_feature creation
 my $seq_ids   = get_seq_ids($varfeat_adaptor->dbc );
@@ -120,7 +119,7 @@ while(<$infile>){
 
     if( $ref_len> 50 || $al_len  > 52){
         ## long deletions to go in structural variation table for display purposes
-        my $dbID = insert_svar($varfeat_adaptor->dbc, \@a, $source_id ,$seq_ids );
+        my $dbID = insert_svar($varfeat_adaptor->dbc, \@a, $source_ob ,$seq_ids );
         ## save structural var ids to add to variation_set later
         $new_svar{$dbID} = 1;
     }
@@ -156,12 +155,12 @@ sub insert_var{
 
     my $var = enter_var($line, 
                         $variation_adaptor,
-                        $source_id 
+                        $source_ob 
         );
    
     enter_varfeat($line, 
                   $varfeat_adaptor,
-                  $source_id,
+                  $source_ob,
                   $var,
                   $seq_ids
         );
@@ -362,27 +361,29 @@ sub run_checks{
 ## look up or insert source
 sub get_source {
 
-    my $dbh         = shift;
+    my $reg         = shift;
     my $source_data = shift;
 
+    my $source_adaptor = $reg->get_adaptor('homo_sapiens', 'variation', 'source');
 
-    my $source_ext_sth = $dbh->prepare(qq[ select source_id from source where name = ?]);
-    my $source_ins_sth = $dbh->prepare(qq[insert into source (name, version, description, url, somatic_status) values (?,?,?,?,?) ]);
+    my $source = $source_adaptor->fetch_by_name($source_data->{name});
 
     ### source already loaded
-    $source_ext_sth->execute($source_data->{name})||die;
-    my $id = $source_ext_sth->fetchall_arrayref();
-
-    return $id->[0]->[0] if defined $id->[0]->[0];
+    return $source if defined $source;
 
     ## add new source
-    $source_ins_sth->execute($source_data->{name}, $source_data->{version}, $source_data->{desc}, $source_data->{url}, $source_data->{somatic} )||die;
-    $source_ext_sth->execute($source_data->{name})||die;
-    my $idn = $source_ext_sth->fetchall_arrayref();
-    
-    return $idn->[0]->[0] if defined $idn->[0]->[0];
+    $source = Bio::EnsEMBL::Variation::Source->new
+       (-name        => $source_data->{name},
+        -version     => $source_data->{version},
+        -description => $source_data->{desc},
+        -url         => $source_data->{url},
+     );
 
-    die "Failed to get source for $source_data->{name} \n";
+    $source_adaptor->store($source);
+
+    return $source if defined $source;
+
+    die "Failed to find or enter source for $source_data->{name} \n";
 
 }
  
@@ -412,10 +413,9 @@ sub enter_var{
 
     my $var = Bio::EnsEMBL::Variation::Variation->new_fast({
         name             => $line->[0],
-        source_id        => $source_id,
+        _source_id       => $source_ob->dbID,
         is_somatic       => 0
                                                            });
-
     $adaptor->store($var);
 
     if(defined $line->[8] && $line->[8] =~ /\d+/){
@@ -426,10 +426,10 @@ sub enter_var{
         my $var_id = $var->dbID();
 
         foreach my $type (@fails){
-               warn "Adding fail infor var:$var_id, reason:$type\n";
                $adaptor->dbc->do(qq[ insert into failed_variation (variation_id, failed_description_id) values ($var_id, $type ) ]);
          }
     }
+
     return $var;
 }
 
@@ -443,7 +443,7 @@ sub enter_varfeat{
 
     my $varfeat = Bio::EnsEMBL::Variation::VariationFeature->new_fast({
         variation_name   => $line->[0],
-        source_id        => $source_id,
+        _source_id       => $source_ob->dbID,
         allele_string    => $line->[1], 
         _variation_id    => $var->dbID(),                                          
         seq_region_id    => $seq_ids->{$line->[2]},
