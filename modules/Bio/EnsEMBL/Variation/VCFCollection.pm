@@ -75,6 +75,7 @@ use Bio::EnsEMBL::Variation::Utils::VEP qw(parse_line);
 
 use Bio::EnsEMBL::IO::Parser::VCF4Tabix;
 use Bio::EnsEMBL::Variation::IndividualGenotype;
+use Bio::EnsEMBL::Variation::Individual;
 use Bio::EnsEMBL::Variation::Population;
 
 our %TYPES = (
@@ -353,13 +354,13 @@ sub get_all_Individuals {
       
       # either use the DB one or create one
       my $ind = $ind_objs{$prefix.$ind_name} ||
-        Bio::EnsEMBL::Variation::Individual->new(
-          -name            => $prefix.$ind_name,
-          -adaptor         => $ia,
-          -type_individual => 'outbred',
-          -display         => 'UNDISPLAYABLE',
-          -dbID            => --($self->{_individual_id}),
-        );
+        Bio::EnsEMBL::Variation::Individual->new_fast({
+          name            => $prefix.$ind_name,
+          adaptor         => $ia,
+          type_individual => 'outbred',
+          display         => 'UNDISPLAYABLE',
+          dbID            => --($self->{_individual_id}),
+        });
       
       # store the raw name to easily match to data returned from other methods
       $ind->{_raw_name} = $ind_name;
@@ -389,8 +390,11 @@ sub get_all_Populations {
   
   if(!exists($self->{populations})) {
     my $hash = $self->_get_Population_Individual_hash;
-    my $pa = $self->adaptor->db->get_PopulationAdaptor();
-    $self->{populations} = $pa->fetch_all_by_dbID_list([keys %$hash]);
+    
+    if(!exists($self->{populations}) && $self->use_db) {
+      my $pa = $self->adaptor->db->get_PopulationAdaptor;
+      $self->{populations} = $pa->fetch_all_by_dbID_list([keys %$hash]);
+    }
   }
   
   return $self->{populations};
