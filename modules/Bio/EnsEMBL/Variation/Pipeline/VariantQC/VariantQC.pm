@@ -514,7 +514,7 @@ sub export_data_adding_allele_string{
 	$strand_summary{$l->[0]} = $save{strand};
     }
   }
-  close $log;
+
   return (\@to_check, \%map_count, \%strand_summary);  
 
 }
