@@ -168,6 +168,12 @@ sub name {
   return $self->{'name'};
 }
 
+sub new_fast {
+  my $class = shift;
+  my $hashref = shift;
+  return bless $hashref, $class;
+}
+
 =head2 description
 
   Arg [1]    : String $description (optional) 
