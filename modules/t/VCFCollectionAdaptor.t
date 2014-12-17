@@ -73,20 +73,17 @@ ok($v && $v->isa('Bio::EnsEMBL::Variation::Variation'), "get variation rs7569578
 my ($vf) = @{$v->get_all_VariationFeatures};
 ok($vf && $vf->isa('Bio::EnsEMBL::Variation::VariationFeature'), "get variation feature");
 
-# my $gts;
-# eval {$gts = $coll->get_all_IndividualGenotypeFeatures_by_VariationFeature($vf);};
-# debug("ERROR?\n$@\n");
-#
-# ok($gts && scalar @$gts == 3, "get_all_IndividualGenotypeFeatures_by_VariationFeature count 3");
-# ok($gts->[0]->genotype_string eq 'T|T', "get_all_IndividualGenotypeFeatures_by_VariationFeature first genotype T|T");
+my $gts = $coll->get_all_IndividualGenotypeFeatures_by_VariationFeature($vf);
+ok($gts && scalar @$gts == 3, "get_all_IndividualGenotypeFeatures_by_VariationFeature count 3");
+ok($gts->[0]->genotype_string eq 'T|T', "get_all_IndividualGenotypeFeatures_by_VariationFeature first genotype T|T");
 
 # fetch genotypes by slice
 my $slice = $sa->fetch_by_region('chromosome', 2, 45401130, 45421130);
 ok($slice && $slice->isa('Bio::EnsEMBL::Slice'), "get slice");
 
-# $gts = $coll->get_all_IndividualGenotypeFeatures_by_Slice($slice);
-# ok($gts && scalar @$gts == 3, "get_all_IndividualGenotypeFeatures_by_Slice count 3");
-# ok($gts->[0]->genotype_string eq 'T|T', "get_all_IndividualGenotypeFeatures_by_Slice first genotype T|T");
+$gts = $coll->get_all_IndividualGenotypeFeatures_by_Slice($slice);
+ok($gts && scalar @$gts == 3, "get_all_IndividualGenotypeFeatures_by_Slice count 3");
+ok($gts->[0]->genotype_string eq 'T|T', "get_all_IndividualGenotypeFeatures_by_Slice first genotype T|T");
 
 # fetch LD genotypes by slice
 my $ld_gts = $coll->_get_all_LD_genotypes_by_Slice($slice);
