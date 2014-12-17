@@ -305,7 +305,7 @@ sub summarise_evidence{
            if defined $ss_variations->{$var}->{'ESP'} ;
       
       push @{$evidence{$var}}, $evidence_ids->{'1000Genomes'}
-           if defined $kg_variations->{$var} ;
+           if (defined $kg_variations->{$var} ||  defined $ss_variations->{$var}->{'KG'}) ;
 
       ## pubmed citations
       push @{$evidence{$var}}, $evidence_ids->{Cited}               
@@ -384,6 +384,8 @@ sub get_ss_variations{
         $evidence{$l->[0]}{'obs'}  = 1;  ## save default value for each variant - full set to loop through later.
 
         $l->[2] = "N" unless defined $l->[2];
+
+        $evidence{$l->[0]}{'KG'}  = 1 if $l->[1] =~/1000GENOMES/;
 
         #save  submitter handle, population and ss id to try to discern independent submissions
         push  @{$save_by_var{$l->[0]}}, [  $l->[1], $l->[2], $l->[5] ];
@@ -483,8 +485,8 @@ sub get_KG_variations{
   my %kg_variations;
 
   my $var_ext_sth  = $var_dbh->prepare(qq[ select variation.variation_id 
-                                           from variation, tmp_1kg_rsid 
-                                           where variation.snp_id =  tmp_1kg_rsid.rs_id 
+                                           from variation, 1kg_rs_id 
+                                           where variation.snp_id =  1kg_rs_id.rs_id 
                                            and variation.variation_id  between ? and ?
                                          ]);
   $var_ext_sth->execute($first, $last);

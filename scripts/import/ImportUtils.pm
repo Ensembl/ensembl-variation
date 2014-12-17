@@ -280,6 +280,9 @@ sub create_and_load {
   $sql .= $create_cols.")";
 
   $sql .= " MAX_ROWS = 100000000" if ($tablename =~ /^tmp.*gty$/); #need to make bigger this table for human
+
+  $sql .= " ENGINE = 'MyISAM' "; ##may not be default engine
+
   $db->do( $sql );
 
   load( $db, $tablename, @col_names );
