@@ -533,9 +533,14 @@ sub _get_all_LD_genotypes_by_Slice {
   my $slice = shift;
   my $sample = shift;
   
+  print STDERR "Seeking\n";
+  
   return {} unless $self->_seek_by_Slice($slice);
   
   my $vcf = $self->_current();
+  
+  
+  print STDERR "Limiting individuals\n";
   
   my @genotypes;
   my $individuals = $self->_limit_Individuals($self->get_all_Individuals, $sample);
@@ -544,6 +549,9 @@ sub _get_all_LD_genotypes_by_Slice {
   my %gts;
   
   while($vcf->{record} && $vcf->get_start <= $slice->end) {
+  
+    print STDERR "Getting gentoypes at ".$vcf->get_raw_start."\n";
+    
     $gts{$vcf->get_raw_start} = $vcf->get_individuals_genotypes(\@individual_names);
     $vcf->next();
   }
@@ -662,11 +670,19 @@ sub _seek {
   my $self = shift;
   my ($c, $s, $e) = @_;
   
+  print STDERR "Getting VCF\n";
+  
   my $vcf = $self->_get_vcf_by_chr($c);
   return unless $vcf;
   
+  
+  print STDERR "Set VCF to current\n";
+  
   # set current to the correct VCF
   $self->_current($vcf);
+  
+  
+  print STDERR "Running seek method on IO object\n";
   
   # now seek
   $vcf->seek($c, $s, $e);
