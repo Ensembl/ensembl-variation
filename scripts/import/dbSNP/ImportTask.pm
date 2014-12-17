@@ -65,7 +65,7 @@ sub new {
 
 ### export allele data (with frequencies where possible) 
 ### from  local dbSNP database - mysql/SQLserver version
-sub allele_table {
+sub allele_table_MYSQL {
     
   my $self = shift;
   my $loadfile   = shift;
@@ -151,7 +151,7 @@ sub allele_table {
       
       my $row = join("\t",($variation_ids->{$line->[0]}{'variation_id'},$line->[0],$population{$line->[1]},$alleles{$line->[2]}->[$line->[3]],$line->[4],$line->[5],$handle{$line->[6]} )) ;
 
-      print  $output_file $row;
+      print  $output_file "$row\n";
   }
 
 
@@ -160,7 +160,7 @@ sub allele_table {
 
 
   # Fetch all alleles and exclude those already written
-  my $ss_no_freq_sth = $dbm->dbSNP()->dbc->prepare($ss_with_freq_stmt) ||
+  my $ss_no_freq_sth = $dbm->dbSNP()->dbc->prepare($ss_no_freq_stmt) ||
       die "ERROR preparing ss_freq_sth: $DBI::errstr\n";
 
   $ss_no_freq_sth->execute()||
@@ -177,7 +177,7 @@ sub allele_table {
       
       my $sep_alleles = get_alleles_from_pattern($line->[2]);    ## Reported allele pattern [ eg A/T ]
       foreach my $sep_allele (@$sep_alleles){
-          if ($line->[3] ==1 && $line->[3] !~ m /[^ACGTUSWNXKBYVHMDR\-]/i ){ ##don't flip descriptions
+          if ($line->[3] ==1 && $sep_allele !~ m /[^ACGTUSWNXKBYVHMDR\-]/i ){ ##don't flip descriptions
               $line->[2] =~/^\(\w+\)/ ?  $sep_allele = revcomp_tandem($sep_allele):           
                   defined $QUICK_COMP{$sep_allele} ? $sep_allele = $QUICK_COMP{$sep_allele} : reverse_comp(\$sep_allele);
           }
@@ -187,7 +187,7 @@ sub allele_table {
           ## ens variation_id, subsnp_id, ens population_id, allele, frequency, count, handle
           my $row = join("\t",($variation_ids->{$line->[0]}{'variation_id'},$line->[0],$population{$line->[1]},$sep_allele,'\N','\N','\N' )) ;
           
-          print $output_file $row;
+          print $output_file "$row\n";
       }
   }
 
@@ -199,8 +199,8 @@ sub allele_table {
 
 
 ### export allele data (with frequencies where possible) from  
-### local dbSNP database PostgreSQL vesion
-sub allele_table_pg {
+### local dbSNP database PostgreSQL version
+sub allele_table {
     
   my $self       = shift;
   my $loadfile   = shift;
@@ -291,7 +291,7 @@ sub allele_table_pg {
           
           my $row = join("\t",($variation_ids->{$line->[0]}{'variation_id'},$line->[0],$population{$line->[1]},$alleles{$line->[2]}->[$line->[3]],$line->[4],$line->[5],$handle{$line->[6]} )) ;
 	  
-          print  $output_file $row;
+          print  $output_file "$row\n";
       }
   }
   $dbm->dbSNP()->dbc->do("CLOSE $cursor_name");
@@ -321,7 +321,7 @@ sub allele_table_pg {
         
         my $sep_alleles = get_alleles_from_pattern($line->[2]);    ## Reported allele pattern [ eg A/T ]
         foreach my $sep_allele (@$sep_alleles){
-          if ($line->[3] ==1 && $line->[3] !~ m /[^ACGTUSWNXKBYVHMDR\-]/i ){ ##don't flip descriptions
+          if ($line->[3] ==1 && $sep_allele !~ m /[^ACGTUSWNXKBYVHMDR\-]/i ){ ##don't flip descriptions
               $line->[2] =~/^\(\w+\)/ ?  $sep_allele = revcomp_tandem($sep_allele):           
                   defined $QUICK_COMP{$sep_allele} ? $sep_allele = $QUICK_COMP{$sep_allele} : reverse_comp(\$sep_allele);
           }
@@ -331,7 +331,7 @@ sub allele_table_pg {
           ## ens variation_id, subsnp_id, ens population_id, allele, frequency, count, handle
           my $row = join("\t",($variation_ids->{$line->[0]}{'variation_id'},$line->[0],$population{$line->[1]},$sep_allele,'\N','\N','\N' )) ;
           
-          print $output_file $row;
+          print $output_file "$row\n";
         }
      }
   }
@@ -581,6 +581,8 @@ sub calculate_gtype {
   my $shared_db = $dbm->dbSNP_shared();
   my $dbVar = $dbm->dbVar();
   my $dbSNP = $dbm->dbSNP();
+
+  my $stmt; ## re-used for multiple queries
   
   #A prepared statement for getting the genotype data from the dbSNP mirror. Note the chr_num, dbSNP is storing the gty allele for each chromosome copy? Anyway, we'll get duplicated rows if not specifying this (or using distinct)
   #Order the results by subsnp_id so that we can do the subsnp_id -> variation_id lookup more efficiently
@@ -592,38 +594,9 @@ sub calculate_gtype {
   else{
       $len_sql = "LENGTH";
   }
-  my $stmt = qq{
-    SELECT 
-      si.subsnp_id,
-      si.submitted_ind_id, 
-      ug.allele_id_1,
-      ug.allele_id_2,
-      CASE WHEN	si.submitted_strand_code IS NOT NULL
-      THEN	si.submitted_strand_code
-      ELSE	0
-      END,
-      ga.rev_flag,
-      $len_sql(ug.gty_str) AS pattern_length     
-    FROM   
-      $subind_table si JOIN 
-      $shared_db.GtyAllele ga ON (
-	ga.gty_id = si.gty_id
-      ) JOIN 
-      $shared_db.UniGty ug ON (
-	ug.unigty_id = ga.unigty_id
-      ) JOIN
-      SubmittedIndividual sind ON (
-	sind.submitted_ind_id = si.submitted_ind_id
-      )        
-    WHERE
-      si.submitted_ind_id BETWEEN ? AND ? AND
-      ga.chr_num = 1
-    ORDER BY
-      si.subsnp_id ASC
-  };
-  my $subind_sth = $dbSNP->dbc()->prepare($stmt) ||die;
+
   
-  #ÊPrepared statement to get the corresponding variation_ids for a range of subsnps from variation_synonym
+  #Prepared statement to get the corresponding variation_ids for a range of subsnps from variation_synonym
   $stmt = qq{
     SELECT
       vs.subsnp_id,
@@ -663,65 +636,11 @@ sub calculate_gtype {
   my $allele_sth = $dbSNP->dbc()->prepare($stmt);
   
 
- ## hack to add individuals missing from main import
   my %all_individuals;
-=head not needed anymore?
-  my $individual_type_id;
-  if ($dbm->dbCore()->species() =~ /homo|pan|anoph/i) {  $individual_type_id = 3; }
-  elsif ($dbm->dbCore()->species() =~ /mus/i) {          $individual_type_id = 1; }
-  else {                                                 $individual_type_id = 2; }
-
-  my $miss_ind_ext_sth = $dbSNP->dbc()->prepare(qq[select si.loc_ind_id_upp,
-                                                          pop.loc_pop_id_upp
-                                                    from SubmittedIndividual si
-                                                    LEFT OUTER JOIN Population pop on (pop.pop_id = si.pop_id)
-                                                    where si.submitted_ind_id =?]);
 
 
-   my $ind_ins_sth = $dbVar->dbc()->prepare(qq [INSERT INTO individual 
-                                               (sample_id, gender, individual_type_id)
-		                               values ( ?,'Unknown', $individual_type_id)
-		                                ]);
 
-    my $sam_ins_sth = $dbVar->dbc()->prepare(qq [ INSERT INTO sample
-                                                (name, description)
-             	   	                         values (?,?)
-             		                        ]);
-  
-    my $sam_ext_sth = $dbVar->dbc()->prepare(qq [ select sample_id
-                                                 from sample 
-             	   	                         where name =? and description=?
-             		                        ]);
-  
-    my $samind_ext_sth = $dbVar->dbc()->prepare(qq [ select sample.sample_id
-                                                 from sample, individual 
-             	   	                         where sample.name =? and description=?
-          	   	                         and sample.sample_id = individual.sample_id
-             		                        ]);
-
-    my $sampop_ext_sth = $dbVar->dbc()->prepare(qq [ select sample.sample_id
-                                                 from sample, population 
-             	   	                         where sample.name =? and description=?
-          	   	                         and sample.sample_id = population.sample_id
-             		                        ]);
-  
-
-    my $pop_ins_sth = $dbVar->dbc()->prepare(qq [ INSERT INTO population
-                                                (sample_id)
-             	   	                         values (?)
-             		                        ]);
-  
-   
-    my $indpop_ins_sth = $dbVar->dbc()->prepare(qq [ INSERT INTO individual_population
-                                                (individual_sample_id, population_sample_id )
-             	   	                         values (?,?)
-             		                        ]);
-  
-
-=cut
-
-
-  #ÊHash to hold the alleles in memory
+  #Hash to hold the alleles in memory
   my %alleles;
   #ÊIf the allele file exist, we'll read alleles from it
 #  %alleles = %{read_alleles($allele_file)} if (defined($allele_file) && -e $allele_file);
@@ -731,9 +650,9 @@ sub calculate_gtype {
   # Keep track if we did any new lookups
   my $new_alleles = 0;
   
-  #ÊHash to keep individual_ids in memory
+  #Hash to keep individual_ids in memory
   my %individuals;
-  #ÊIf the sample file exist, we'll read alleles from it
+  #If the sample file exist, we'll read alleles from it
   #%individuals = %{read_samples($sample_file)} if (defined($sample_file) && -e $sample_file);
   print $logh Progress::location();
   # The individual_id = 0 is a replacement for NULL but since it's used for a key in the hash below, we need it to have an actual numerical value
@@ -760,15 +679,51 @@ sub calculate_gtype {
   open(SGL,'>',$loadfile) or die ("Could not open import file $loadfile for writing");
   
   # First, get all SubSNPs
-  $subind_sth->bind_param(1,$start,SQL_INTEGER);
-  $subind_sth->bind_param(2,$end,SQL_INTEGER);
   
-  # Fetch the import data as an arrayref
-  $subind_sth->execute();
   print $logh Progress::location();
-  
-  #ÊNow, loop over the import data and print it to the tempfile so we can import the data. Replace the allele_id with the corresponding allele on-the-fly
-  while (my $data = $subind_sth->fetchrow_arrayref()) {
+
+  my $sql = qq{
+    SELECT 
+      si.subsnp_id,
+      si.submitted_ind_id, 
+      ug.allele_id_1,
+      ug.allele_id_2,
+      CASE WHEN	si.submitted_strand_code IS NOT NULL
+      THEN	si.submitted_strand_code
+      ELSE	0
+      END,
+      ga.rev_flag,
+      $len_sql(ug.gty_str) AS pattern_length     
+    FROM   
+      $subind_table si JOIN 
+      $shared_db.GtyAllele ga ON (
+	ga.gty_id = si.gty_id
+      ) JOIN 
+      $shared_db.UniGty ug ON (
+	ug.unigty_id = ga.unigty_id
+      ) JOIN
+      SubmittedIndividual sind ON (
+	sind.submitted_ind_id = si.submitted_ind_id
+      )        
+    WHERE
+      si.submitted_ind_id BETWEEN $start AND $end AND
+      ga.chr_num = 1
+    ORDER BY
+      si.subsnp_id ASC
+  };
+
+   $dbSNP->dbc()->db_handle->begin_work();
+   $dbSNP->dbc()->do("DECLARE csr CURSOR  FOR $sql");
+
+  #Now, loop over the import data and print it to the tempfile so we can import the data. Replace the allele_id with the corresponding allele on-the-fly
+
+   while (1) {
+     my $csth = $dbSNP->dbc()->prepare("fetch 50000 from csr");
+     $csth->execute;
+     last if 0 == $csth->rows;
+   
+     while ( my $data = $csth->fetchrow_arrayref() ) {
+
     my $subsnp_id = $data->[0];
     my $ind_sub_id  = $data->[1];
     my $allele_1 = $data->[2];
@@ -814,66 +769,7 @@ sub calculate_gtype {
 	$new_alleles = 1;
       }
     }
-    #ÊLook up the sample id in the database if necessary
-=head
-    if(!exists $all_individuals{$ind_id}{$ind_sub_id} ){
-	if (exists $samples{$ind_id}){
-	    $all_individuals{$ind_id}{$ind_sub_id} = $samples{$ind_id};
-	}
-	elsif($ind_id eq "MISS"){ 
-            ## hack for non dbSNP-curated sample - enter or look up by submitter name 
-	    print "Warning - missing sample checking for $subsnp_id  (submitted_ind_id $ind_sub_id) from handle $handle \n";
 
-	    my ($ind_subname, $pop_subname);
-
-	    ## get submitted name & pop from dbSNP 
-	    $miss_ind_ext_sth->execute( $ind_sub_id)||die;
-	    my $miss_dat = $miss_ind_ext_sth->fetchall_arrayref();
-	    if(defined $miss_dat->[0]->[0]){
-		$ind_subname = $miss_dat->[0]->[0];
-	    }
-	    else{
-		die "Error looking up submitted_ind_id  $ind_sub_id\n";
-	    }
-	    if(defined $miss_dat->[0]->[1]){
-		$pop_subname = $miss_dat->[0]->[1];
-	    }
-
-            ## look up or enter individual
-	    my $individual_description =  $handle  . "|" . $ind_subname ;
-	    $samind_ext_sth->execute( $ind_subname, $individual_description)||die;
-	    my $new_sam_id = $samind_ext_sth->fetchall_arrayref();
-	    unless(defined $new_sam_id->[0]->[0]){
-		print "Failed to find ind $ind_subname desc =$individual_description from pop $pop_subname - entering\n";
-		$sam_ins_sth->execute( $ind_subname, $individual_description)||die "Failed to enter non-curated sample:$!\n";
-		$sam_ext_sth->execute( $ind_subname, $individual_description)||die;
-		$new_sam_id = $sam_ext_sth->fetchall_arrayref();
-		$ind_ins_sth->execute( $new_sam_id->[0]->[0] )||die;
-		#print "Entered $ind_subname as ens id $new_sam_id->[0]->[0] \n";
-		## check and enter population
-		if(defined $pop_subname){
-		   # print "Checking pop: $pop_subname\n";
-		    my $population_description =  $handle  . "|" . $pop_subname ;
-		    $sampop_ext_sth->execute($pop_subname, $population_description);
-		    my $pop_id = $sampop_ext_sth->fetchall_arrayref();
-		    unless(defined $pop_id->[0]->[0]){
-			#print "Entering new pop: $pop_subname\n";
-			#### enter population if missing
-			$sam_ins_sth->execute( $pop_subname, $population_description)||die "Failed to enter non-curated sample:$!\n";
-			$sam_ext_sth->execute( $pop_subname, $population_description)||die;	
-			$pop_id = $sam_ext_sth->fetchall_arrayref();
-			$pop_ins_sth->execute( $pop_id->[0]->[0])||die;	
-		    }
-		    #print "Linking ind:$ind_subname ($new_sam_id->[0]->[0])  to pop:$pop_subname ($pop_id->[0]->[0])\n";
-		    $indpop_ins_sth->execute($new_sam_id->[0]->[0], $pop_id->[0]->[0])||die;	
-		}	    		
-	    }
-	    $all_individuals{$ind_id}{$ind_sub_id} = $new_sam_id->[0]->[0];
-
-	}
-
-	else{
-=cut
     if(!exists $individuals{$ind_sub_id} ){
 
 	$individual_sth->execute($ind_sub_id);
@@ -915,7 +811,9 @@ sub calculate_gtype {
       next if ($allele_1 =~ m/indeterminate/i);
       push(@multiple_bp_gty,$row);
     }
-  }
+     }
+   }
+ $dbSNP->dbc()->do("CLOSE csr");
   print $logh Progress::location();
 =head  
   if (scalar(@single_bp_gty)) {

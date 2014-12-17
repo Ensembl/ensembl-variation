@@ -115,7 +115,8 @@ sub variation_feature{
     }
 
      else{
-         $tablename1 = $self->{'dbSNP_version'} . "_SNPContigLoc" ;
+         ## tables names now _SNPContigLoc_105/ _SNPContigLoc_106 for human
+         $tablename1 = $self->{'dbSNP_version'} . "_SNPContigLoc";
          $tablename2 = $self->{'dbSNP_version'} . "_ContigInfo";
 
 	 $tablename1 = 'b' .  $tablename1 unless  $tablename1 =~/^b/;
@@ -185,7 +186,7 @@ sub variation_feature{
   
 ## Type 3: DelOnCtg  Deletion on the contig: part of the snp flanking sequence including 
 ##                   the snp was absent on the contig sequence in the alignment
-=head
+
      $stmt .= qq{ SELECT
                    loc.snp_id AS sorting_id, 
                    ctg.contig_acc,
@@ -235,7 +236,7 @@ sub variation_feature{
      create_and_load($self->{'dbVar'}, "tmp_contig_loc_chrom", "snp_id i* not_null", "ctg * not_null", "ctg_gi i", "ctg_start i not_null", "ctg_end i", "chr *", "start i", "end i", "strand i", "aln_quality d");
   print Progress::location();
 
-    
+
     debug(localtime() . "\tCreating genotyped variations");
     #creating the temporary table with the genotyped variations
 
@@ -346,7 +347,7 @@ sub variation_feature{
 	print Progress::location();
       }
     }
-=cut
+
     if ($self->{'dbm'}->dbCore()->species =~ /homo/i){
 	debug(localtime() . "\tDumping non-primary assembly data for human");
 	$self->extract_haplotype_mappings($tablename1, $tablename2, $group_label);
@@ -441,7 +442,6 @@ sub extract_haplotype_mappings{
 
     create_and_load($self->{'dbVar'}, "tmp_contig_loc_hap", "snp_id i* not_null", "seq_av * not_null",  "seq_start i not_null", "seq_end i", "strand i", "aln_quality d");
     print Progress::location();
-
 
     debug(localtime() . "\tAdding VariationFeature data for haplotypes");
     ### copy to variation_feature table
