@@ -89,20 +89,20 @@ create table variation (
 
 @desc This table stores miscellaneous attributes associated with a variation entry.
 
-@column variation_id        	 Foreign key references @link variation table
-@column attrib_type_id			   Foreign key references @link attrib_type table, describes the type of attribute
-@column value                  Attribute value
+@column variation_id     Foreign key references @link variation table
+@column attrib_id			   Foreign key references @link attrib table, describes the attribute
+@column value            Attribute value
 
 @see variation
-@see attrib_type
+@see attrib
 */
 
 CREATE TABLE variation_attrib (
   variation_id INT(11) UNSIGNED NOT NULL,
-  attrib_type_id INT(11) DEFAULT NULL,
+  attrib_id INT(11) DEFAULT NULL,
   value VARCHAR(255) DEFAULT NULL,
   KEY variation_idx (variation_id),
-  KEY type_value_idx (attrib_type_id,value)
+  KEY attrib_value_idx (attrib_id,value)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
@@ -381,24 +381,15 @@ CREATE TABLE IF NOT EXISTS `phenotype_feature_attrib` (
 );
 
 
-
-
-/**
-@header  Other tables
-@desc    These tables define the other data associated with a variation.
-@colour  #000
-*/
-
-
 /**
 @table phenotype
 
 @desc This table stores details of the phenotypes associated with phenotype_features.
 
-@column phenotype_id	        Primary key, internal identifier.
-@column stable_id               Ensembl stable identifier for the phenotype
-@column name					Phenotype short name. e.g. "CAD".
-@column description	varchar		Phenotype long name. e.g. "Coronary Artery Disease".
+@column phenotype_id         Primary key, internal identifier.
+@column stable_id            Ensembl stable identifier for the phenotype
+@column name                 Phenotype short name. e.g. "CAD".
+@column description varchar  Phenotype long name. e.g. "Coronary Artery Disease".
 
 @see phenotype_feature
 */
@@ -413,6 +404,15 @@ CREATE TABLE `phenotype` (
   UNIQUE KEY `desc_idx` (`description`),
   KEY `stable_idx` (`stable_id`)
 );
+
+
+
+
+/**
+@header  Other tables
+@desc    These tables define the other data associated with a variation.
+@colour  #000
+*/
 
 
 /**
