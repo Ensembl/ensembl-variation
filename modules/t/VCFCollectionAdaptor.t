@@ -73,7 +73,10 @@ ok($v && $v->isa('Bio::EnsEMBL::Variation::Variation'), "get variation rs7569578
 my ($vf) = @{$v->get_all_VariationFeatures};
 ok($vf && $vf->isa('Bio::EnsEMBL::Variation::VariationFeature'), "get variation feature");
 
-my $gts = $coll->get_all_IndividualGenotypeFeatures_by_VariationFeature($vf);
+my $gts;
+eval {$gts = $coll->get_all_IndividualGenotypeFeatures_by_VariationFeature($vf);};
+debug("ERROR?\n$@\n");
+
 ok($gts && scalar @$gts == 1092, "get_all_IndividualGenotypeFeatures_by_VariationFeature count 1092");
 ok($gts->[0]->genotype_string eq 'T|T', "get_all_IndividualGenotypeFeatures_by_VariationFeature first genotype T|T");
 
