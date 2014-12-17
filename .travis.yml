@@ -27,7 +27,6 @@ before_install:
     - perl Makefile.PL
     - make && make install
     - cd ../../
-    - export PATH=$PATH:$PWD/tabix-0.2.6
 
 install:
     - cpanm -v --installdeps --with-recommends --notest --cpanfile ensembl/cpanfile .  
