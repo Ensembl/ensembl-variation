@@ -24,6 +24,7 @@ before_install:
     - cd tabix-0.2.6
     - make
     - cd perl
+    - sed -i.bak "s/-lz -L.. -ltabix/-L.. -ltabix -lz/" Makefile.PL
     - perl Makefile.PL
     - make && make install
     - cd ../../
