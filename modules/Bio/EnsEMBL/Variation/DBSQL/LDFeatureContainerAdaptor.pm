@@ -517,7 +517,7 @@ sub _objs_from_sth {
   #create a hash that maps the position->vf_id
   my %pos_vf = ();
   my $region_Slice = $slice->seq_region_Slice();
-  map {$pos_vf{$_->seq_region_start} = $_->transfer($region_Slice)} sort {($a->source eq 'dbSNP') <=> ($b->source eq 'dbSNP')} @{$variations};
+  map {$pos_vf{$_->seq_region_start} = $_->transfer($region_Slice)} sort {($a->source_name eq 'dbSNP') <=> ($b->source_name eq 'dbSNP')} @{$variations};
 
   my %alleles_variation = (); #will contain a record of the alleles in the variation. A will be the major, and a the minor. When more than 2 alleles
   #, the genotypes for that variation will be discarded
