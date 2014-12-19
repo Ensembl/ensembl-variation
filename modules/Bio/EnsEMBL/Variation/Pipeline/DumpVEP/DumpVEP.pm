@@ -109,27 +109,33 @@ sub run {
   
     # healthcheck resultant cache
     my $script_dir = $self->required_param('ensembl_cvs_root_dir').'/ensembl-variation/scripts/misc';
-  
+    
+    # we use Test::Harness as the test script itself will run many 1000's of tests
+    # Test::Harness gives a nice summary output instead of splurging everything to STDOUT/ERR
+    # to run this under Test::Harness we need to set ENV variables
+    $ENV{HC_VEP_HOST}     = $host;
+    $ENV{HC_VEP_PORT}     = $port;
+    $ENV{HC_VEP_USER}     = $user;
+    $ENV{HC_VEP_SPECIES}  = $species.($refseq ? '_refseq' : '');
+    $ENV{HC_VEP_VERSION}  = $version;
+    $ENV{HC_VEP_DIR}      = $dir;
+    $ENV{HC_VEP_NO_FASTA} = 1;
+    $ENV{HC_VEP_MAX_VARS} = 100;
+    $ENV{HC_VEP_RANDOM}   = $self->param('hc_random');
+    
     $cmd = sprintf(
-      '%s %s/healthcheck_vep_caches.pl --host %s --port %i --user %s %s --species %s --version %s --dir %s --no_fasta',
+      '%s -MTest::Harness -e"runtests(@ARGV)" %s/healthcheck_vep_caches.pl',
       $perl,
-      $script_dir,
+      $script_dir
+    );
     
-      $host,
-      $port,
-      $user,
-      $pass,
-    
-      $species.($refseq ? '_refseq' : ''),
-      $version,
-      $dir
-    );$finished = 0;
+    $finished = 0;
   
     open CMD, "$cmd 2>&1 |" or die "ERROR: Failed to run command $cmd";
   
     my $pipedir = $self->required_param('pipeline_dir');
 
-    open REPORT, ">>", "$pipedir/$species\_QC_report.txt" or die "Failed to open $pipedir/$species\_QC_report.txt : $!\n";
+    open REPORT, ">>", "$pipedir/$species\_$version\_$assembly\_QC_report.txt" or die "Failed to open $pipedir/$species\_$version\_$assembly\_QC_report.txt : $!\n";
     while(<CMD>) { print REPORT; }
     close CMD;
     close REPORT;
