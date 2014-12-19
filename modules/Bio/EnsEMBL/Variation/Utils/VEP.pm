@@ -2623,16 +2623,23 @@ sub get_custom_annotation {
     }
     
     foreach my $custom(@{$config->{custom}}) {
+    
         next unless defined($cache->{$chr}->{$custom->{name}});
+    
+        my ($s, $e) = ($vf->{start}, $vf->{end});
+
+        # adjust start for BED as it is 0-based
+        $s-- if $custom->{format} eq 'bed';
         
         # exact type must match coords of variant exactly
         if($custom->{type} eq 'exact') {
-            foreach my $feature(values %{$cache->{$chr}->{$custom->{name}}->{$vf->{start}}}) {
+          
+            foreach my $feature(values %{$cache->{$chr}->{$custom->{name}}->{$s}}) {
                 
                 next unless
                     $feature->{chr}   eq $chr &&
-                    $feature->{start} eq $vf->{start} &&
-                    $feature->{end}   eq $vf->{end};
+                    $feature->{start} == $s &&
+                    $feature->{end}   == $e;
                     
                 $annotation->{$custom->{name}} .= $feature->{name}.',';
                 
@@ -2649,8 +2656,8 @@ sub get_custom_annotation {
                     
                     next unless
                         $feature->{chr}   eq $chr &&
-                        $feature->{end}   >= $vf->{start} &&
-                        $feature->{start} <= $vf->{end};
+                        $feature->{end}   >= $s &&
+                        $feature->{start} <= $e;
                         
                     $annotation->{$custom->{name}} .= $feature->{name}.',';
                     foreach my $field(@{$custom->{fields}}) {
