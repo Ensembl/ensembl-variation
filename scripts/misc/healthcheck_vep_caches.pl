@@ -30,7 +30,14 @@ limitations under the License.
 
 use strict;
 use Getopt::Long;
+use Storable qw(fd_retrieve);
 use Bio::EnsEMBL::Registry;
+use Data::Dumper;
+use IPC::Open3;
+
+$Data::Dumper::Maxdepth = 1;
+$Data::Dumper::Indent = 1;
+
 BEGIN {
   $| = 1;
 	use Test::More;
@@ -40,7 +47,7 @@ my $config = {};
 
 GetOptions(
   $config,
-  'help|h',                  # displays help message
+  'help',                  # displays help message
   
   'dir|d=s',                 
   'version|v=i',
@@ -48,25 +55,44 @@ GetOptions(
   
   'host|h=s',                  # DB options
   'user|u=s',
-  'password|p=s',
-  'port|P=i',
+  'password=s',
+  'port|p=i',
   
   'no_fasta|nf',   # don't check FASTA files
+  
+  'random|r=f',
+  'max_vars|m=i',
 ) or die "ERROR: Failed to parse command-line flags\n";
 
 do { usage(); exit(0); } if $config->{help};
 
 $config->{reg} = 'Bio::EnsEMBL::Registry';
+$config->{reg}->no_version_check(1);
 
-$config->{dir}     ||= $ENV{HOME}.'/.vep/';
-$config->{version} ||= $config->{reg}->software_version;
-$config->{species} ||= 'all';
+$config->{dir}      ||= $ENV{HC_VEP_DIR}      || $ENV{HOME}.'/.vep/';
+$config->{version}  ||= $ENV{HC_VEP_VERSION}  || $config->{reg}->software_version;
+$config->{species}  ||= $ENV{HC_VEP_SPECIES}  || 'all';
+$config->{host}     ||= $ENV{HC_VEP_HOST}     || 'ens-staging1,ens-staging2';
+$config->{user}     ||= $ENV{HC_VEP_USER}     || 'ensro';
+$config->{port}     ||= $ENV{HC_VEP_PORT}     || 3306;
+$config->{no_fasta} ||= $ENV{HC_VEP_NO_FASTA} || undef;
+$config->{max_vars} ||= $ENV{HC_VEP_MAX_VARS} || 100;
 
-$config->{host} ||= 'ens-staging1,ens-staging2';
-$config->{user} ||= 'ensro';
-$config->{port} ||= 3306;
+if(!defined($config->{random})) {
+  if(defined($ENV{HC_VEP_RANDOM})) {
+    $config->{random} = $ENV{HC_VEP_RANDOM};
+  }
+  else {
+    $config->{random} = 0;
+  }
+}
 
 $config->{cache_region_size} = 1e6;
+
+
+if(defined($config->{random})) {
+  die("ERROR: --random must be between 0 and 1\n") unless $config->{random} >= 0 && $config->{random} <= 1;
+}
 
 my %match_species = ();
 if($config->{species} ne 'all') {
@@ -95,7 +121,10 @@ foreach my $host(split /\,/, $config->{host}) {
     
     next unless $match_species{$species};
     
-    print "\nChecking $species\n";
+    print STDERR "\nChecking $species\n";
+    
+    $config->{tests}->{$species} = {};
+    $config->{current} = $config->{tests}->{$species};
     
     my $sp = $species;
     my $refseq = $sp =~ s/\_refseq//;
@@ -103,17 +132,10 @@ foreach my $host(split /\,/, $config->{host}) {
     my $has_var = has_variation($config, $sp);
     my $has_reg = has_regulation($config, $sp);
     
-    # check directory structure
-    print " - checking directory structure\n";
-    
     my $dir = $config->{dir}.'/'.$species.'/'.$config->{version}.($config->{version} >= 76 ? '_'.$assembly : '');
     
     ok(-d $config->{dir}.'/'.$species, "\[$species\] species dir exists");
     ok(-d $dir, "\[$species\] version dir exists");
-    
-    
-    # check info file
-    print " - checking info.txt\n";
     
     ok(-e $dir.'/info.txt', "\[$species\] info.txt exists");
     ok(open(IN, $dir.'/info.txt'), "\[$species\] info.txt readable");
@@ -125,15 +147,23 @@ foreach my $host(split /\,/, $config->{host}) {
       $v = $_ if /^variation_cols/;
       $r = $_ if /^regulatory/;
       $tabix = $_ if /^var_type/;
+      $config->{current}->{expect_sift} = 1 if /sift_version/i;
+      $config->{current}->{expect_polyphen} = 1 if /polyphen_version/i;
     }
     close IN;
     
     ok(defined($v), "\[$species\] variation_cols defined in info.txt") if $has_var;
     ok(defined($r), "\[$species\] regulation defined in info.txt") if $has_reg;
     
-    
-    # check chromosome dirs exist
-    print " - checking chromosome dirs";
+    # store var cols etc
+    if($v) {
+      $config->{current}->{variation_cols} = [split(",", (split("\t", $v))[-1])];
+      $config->{current}->{vdb} = $config->{reg}->get_adaptor($sp, 'variation', 'variation')->db->dbc;
+    }
+        
+    my @types = ('');
+    push @types, '_var' if $has_var && !$tabix;
+    push @types, '_reg' if $has_reg;
     
     my $sa = $config->{reg}->get_adaptor($sp, $refseq ? 'otherfeatures' : 'core', 'slice');
     my @slices = @{$sa->fetch_all('toplevel')};
@@ -158,27 +188,37 @@ foreach my $host(split /\,/, $config->{host}) {
     $sth->finish;
     
     foreach my $slice(@slices) {
-      #printf("\r - checking chromosome dirs %i / %i", ++$i, scalar @slices);
+      # printf("\r - checking chromosome dirs %i / %i", ++$i, scalar @slices);
       
       my $chr = $slice->seq_region_name;
       
       next unless $counts{$slice->get_seq_region_id};
       
-      push @missing_dirs, $chr unless -d $dir.'/'.$chr;
+      if(!-d $dir.'/'.$chr) {
+        push @missing_dirs, $chr;
+        next;
+      }
       
       # initial region
       my $start = 1 + ($config->{cache_region_size} * int($slice->start / $config->{cache_region_size}));
       my $end   = ($start - 1) + $config->{cache_region_size};
       
+      my $region_count = int($config->{random} * $slice->end / $config->{cache_region_size}) + 1;
+      my $checked_count = 0;
+      
       while($start < $slice->end) {
-        
-        my @types = ('');
-        push @types, '_var' if $has_var && !$tabix;
-        push @types, '_reg' if $has_reg;
         
         foreach my $type(@types) {
           my $file = $dir.'/'.$chr.'/'.$start.'-'.$end.$type.'.gz';
           push @missing_files, $file unless -e $file;
+        }
+        
+        # check this region?
+        if($config->{random} && ($checked_count < $region_count) && (rand() < $config->{random})) {
+
+          check_region(\@types, $dir, $chr, $start, $end);
+
+          $checked_count++;
         }
         
         # increment by cache_region_size to get next region
@@ -195,10 +235,27 @@ foreach my $host(split /\,/, $config->{host}) {
           my $filepath = $dir.'/'.$chr.'/all_vars.gz';
           my $result = `tabix $filepath 1:1-1 2>&1`;
           push @tabix_broken, $chr.' ('.$result.')' if $result =~ /fail/;
+          
+          if($config->{random}) {
+            my $vs = 0;
+            
+            my $pid = open3(\*OUT, \*IN, \*ERR, "gzip -qdc $filepath");
+            while(<IN>) {
+              next unless rand() < $config->{random};
+              chomp;
+              check_variation(parse_variation($config, $_));
+              if(++$vs > $config->{max_vars}) {
+                kill -9, $pid;
+                last;
+              }
+            }
+            close IN;
+            close OUT;
+            close ERR;
+          }
         }
       }
     }
-    print "\n";
     
     # only want to display a few if loads
     @missing_dirs = (@missing_dirs[0..4], "...and ".(scalar @missing_dirs - 5)." more...") if scalar @missing_dirs > 5;
@@ -216,10 +273,16 @@ foreach my $host(split /\,/, $config->{host}) {
         or diag("Tabix-based variation cache broken for the following chromosome names:\n".join(", ", @tabix_broken)."\n");
     }
     
+    # sift/polyphen
+    if($config->{current}->{found_protein_coding}) {
+      foreach my $tool(grep {$config->{current}->{'expect_'.$_}} qw(sift polyphen)) {
+        ok($config->{current}->{'found_'.$tool}, "found $tool data");
+      }
+    }
+    
     
     # check FASTA file
     unless($config->{no_fasta}) {
-      print " - checking FASTA file\n";
       opendir CACHE, $dir;
       my @read = readdir CACHE;
       my ($fa)  = grep {/\.fa$/} @read;
@@ -249,7 +312,6 @@ foreach my $host(split /\,/, $config->{host}) {
   }
 }
 
-print "\n\nDone testing\n";
 done_testing();
 
 sub get_species_list {
@@ -282,16 +344,14 @@ sub get_species_list {
 	$sth->finish;
   
   # refseq?
-  if(defined($config->{refseq})) {
-    $sth = $config->{dbc}->prepare(qq{
-      SHOW DATABASES LIKE '%\_otherfeatures\_$version%'
-    });
-    $sth->execute();
-    $sth->bind_columns(\$db);
-    
-    push @dbs, $db while $sth->fetch;
-    $sth->finish;
-  }
+  $sth = $config->{dbc}->prepare(qq{
+    SHOW DATABASES LIKE '%\_otherfeatures\_$version%'
+  });
+  $sth->execute();
+  $sth->bind_columns(\$db);
+  
+  push @dbs, $db while $sth->fetch;
+  $sth->finish;
 
 	# remove master and coreexpression
 	@dbs = grep {$_ !~ /master|express/} @dbs;
@@ -403,6 +463,190 @@ sub has_regulation {
   return defined($v) && $v > 0;
 }
 
+sub check_region {
+  my ($types, $dir, $chr, $start, $end) = @_;
+
+  foreach my $type(@$types) {
+    my $short_name = $chr.'/'.$start.'-'.$end.$type.'.gz';
+    my $file = $dir.'/'.$short_name;
+    
+    if($type eq '_var') {
+      my $vs = 0;
+      
+      my $pid = open3(\*OUT, \*IN, \*ERR, "gzip -qdc $file");
+      while(<IN>) {
+        next unless rand() < $config->{random};
+        chomp;
+        check_variation(parse_variation($config, $_));
+        if(++$vs > $config->{max_vars}) {
+          kill -9, $pid;
+          last;
+        }
+      }
+      close IN;
+      close OUT;
+      close ERR;
+    }
+    
+    else {
+      open my $fh, "gzip -dc $file |";
+      my $data;
+      ok($data = fd_retrieve($fh), "Open cache file $short_name") or diag($!);
+      close $fh;
+
+      # should be a hash keyed on chr name
+      if(ok($data && ref($data) eq 'HASH', "Cache file is hashref")) {
+
+        ok($data->{$chr}, "Cache file has chr key") or diag("expected $chr, got ".join(",", keys %$data));
+
+        my $chr_data = $data->{$chr};
+
+        # reg cache is a hash with a key for each feature type
+        if($type eq '_reg') {
+          ok(ref($chr_data) eq 'HASH', "Reg feat cache is hashref");
+
+          foreach my $key(keys %$chr_data) {
+            ok($key eq 'RegulatoryFeature' || $key eq 'MotifFeature', "key is RegulatoryFeature or MotifFeature") or diag("got $key");
+
+            my $val = $chr_data->{$key};
+            if(ok(ref($val) eq 'ARRAY', "value is arrayref")) {
+              check_rf($_, $key) for @$val;
+            }
+          }
+        }
+
+        # transcript cache is an array
+        else {
+          if(ok(ref($chr_data) eq 'ARRAY', "Transcript cache is arrayref")) {
+            check_tr($_) for @$chr_data;
+          }
+        }
+      }
+    }
+  }
+}
+
+sub check_basics {
+  my $ref = shift;
+  
+  my $n = $ref->{dbID} || $ref->{variation_name};
+  
+  ok($ref->{start}, "Object has start") or diag(Dumper $ref);
+  ok($ref->{end}, "Object has end") or diag(Dumper $ref);
+  ok($ref->{dbID} || $ref->{variation_name}, "Object has ID") or diag(Dumper $ref);
+  ok(defined($ref->{strand}) || defined($ref->{seq_region_strand}), "Object has strand") or diag(Dumper $ref);
+}
+
+sub check_variation {
+  my $v = shift;
+  
+  check_basics($v);
+  
+  my $n = $v->{variation_name};
+  
+  # check frequency
+  if($v->{minor_allele}) {
+    ok($v->{minor_allele} =~ /[ACGTN-]+/, "minor allele is valid allele") or diag("$n minor allele ".$v->{minor_allele});
+    ok($v->{minor_allele_freq} =~ /[0-9\.]+/ && $v->{minor_allele_freq} >= 0 && $v->{minor_allele_freq} <= 0.5, "$n 0 <= frequency <= 0.5") or diag("$n freq ".$v->{minor_allele_freq});
+  }
+  
+  # check clinsig
+  if($v->{clin_sig}) {
+    my $valid = get_clinsig_values();
+    
+    for(split(',', $v->{clin_sig})) {
+      ok(exists($valid->{$_}), "clin_sig is valid") or diag("$n clin_sig $_");
+    }
+  }
+  
+  # check pubmed
+  if($v->{pubmed}) {
+    ok($v->{pubmed} =~ /([0-9]+\,?)+/, "pubmed looks ok") or diag("$n pubmed ".$v->{pubmed});
+  }
+}
+
+sub check_rf {
+  my $rf = shift;
+  my $type = shift;
+  check_basics($rf);
+  
+  ok($rf->isa('Bio::EnsEMBL::Funcgen::'.$type), "RF type check") or diag("expected Bio::EnsEMBL::Funcgen::".$type." got ".$rf);
+  
+  if($type eq 'MotifFeature') {
+    ok($rf->{display_label}, "motif feature has display_label");
+    
+    if($rf->{binding_matrix}) {
+      ok($rf->{binding_matrix}->isa('Bio::EnsEMBL::Funcgen::BindingMatrix'), "binding matrix check");
+    }
+    
+    ok($rf->{_variation_effect_feature_cache} && $rf->{_variation_effect_feature_cache}->{seq}, "motif feature has cached sequence");
+  }
+}
+
+sub check_tr {
+  my $tr = shift;
+  check_basics($tr);
+  
+  ok($tr->isa('Bio::EnsEMBL::Transcript'), "tr type check") or diag("expected Bio::EnsEMBL::Transcript got ".$tr);
+  
+  ok($tr->{_variation_effect_feature_cache}, "tr has _variation_effect_feature_cache key") or diag(Dumper $tr);
+  ok($tr->{_variation_effect_feature_cache}->{mapper} && $tr->{_variation_effect_feature_cache}->{mapper}->isa('Bio::EnsEMBL::TranscriptMapper'), "tr has mapper") or diag(Dumper $tr->{_variation_effect_feature_cache});
+  
+  # protein coding
+  if($tr->{biotype} eq 'protein_coding') {
+    $config->{current}->{found_protein_coding} = 1;
+    
+    ok($tr->{_variation_effect_feature_cache}->{translateable_seq}, "tr has translateable_seq");
+    ok($tr->{_variation_effect_feature_cache}->{peptide}, "tr has peptide");
+    
+    if($tr->{_variation_effect_feature_cache}->{protein_function_predictions}) {
+      $config->{current}->{'found_'.$_} = 1 for map {s/\_.+//g; $_} keys %{$tr->{_variation_effect_feature_cache}->{protein_function_predictions}};
+    }
+  }
+}
+
+sub parse_variation {
+  my $config = shift;
+  my $line = shift;
+  
+  my @cols = @{$config->{current}->{variation_cols}};
+  my @data = split / |\t/, $line;
+  
+  # assumption fix for old cache files
+  if(scalar @data > scalar @cols) {
+    push @cols, ('AFR', 'AMR', 'ASN', 'EUR');
+  }
+  
+  my %v = map {$cols[$_] => $data[$_] eq '.' ? undef : $data[$_]} (0..$#data);
+  
+  $v{failed}  ||= 0;
+  $v{somatic} ||= 0;
+  $v{end}     ||= $v{start};
+  $v{strand}  ||= 1;
+  
+  return \%v;
+}
+
+sub get_clinsig_values {
+  if(!exists($config->{current}->{clinsig_values})) {
+    my $sth = $config->{current}->{vdb}->prepare(qq{
+      DESCRIBE variation
+    });
+    
+    $sth->execute();
+    
+    my $v = $sth->fetchall_hashref('Field')->{clinical_significance}->{Type};
+    $v = (split(/\(|\)/, $v))[1];
+    my %valid = map {$_ => 1} map {$_ =~ s/\'//g; $_ =~ s/\s+/\_/g; $_} split(/\,\s*/, $v);
+    
+    $sth->finish();
+    
+    $config->{current}->{clinsig_values} = \%valid;
+  }
+  
+  return $config->{current}->{clinsig_values};
+}
+
 sub usage {
   
   print qq{
@@ -416,8 +660,18 @@ Flags: (defaults follow in parentheses)
 
 --hosts | -h      Database host(s), comma-separated (ens-staging1,ens-staging2)
 --user | -u       Database username (ensro)
---password | -p   Database password
---port | -P       Database port (3306)
+--password        Database password
+--port | -p       Database port (3306)
+
+--no_fasta | -nf  Don't look for and check FASTA file
+--random | -r [n] Check content of fraction n cache per chromosome (0)
+                  Use --random 1 to check everything!!!
+--max_vars | -m   Maximum number of variants to check per cache file (100)
+
+Flags may also be set as env variables prefixed HC_VEP_ e.g.
+
+export HC_VEP_VERSION=78
+export HC_VEP_SPECIES=homo_sapiens
 };
 
   return 0;
