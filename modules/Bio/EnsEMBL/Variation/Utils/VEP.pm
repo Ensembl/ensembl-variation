@@ -376,7 +376,7 @@ sub detect_format {
         $data[0] =~ /(chr)?\w+/ &&
         $data[1] =~ /^\d+$/ &&
         $data[3] =~ /^[ACGTN\-\.]+$/i &&
-        $data[4] && $data[4] =~ /^([\.ACGTN\-]+\,?)+$|^(\<[A-Z]+\>)$/i
+        $data[4] && $data[4] =~ /^([\.ACGTN\-]+\,?)+$|^(\<[\w]+\>)$/i
     ) {
         return 'vcf';
     }
