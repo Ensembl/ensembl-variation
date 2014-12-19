@@ -120,6 +120,10 @@ sub default_options {
     include_pattern => undef,
     exclude_pattern => undef,
     
+    # this sets the fraction of files per cache that
+    # healthcheck_vep_caches.pl checks
+    hc_random => 0.01,
+    
     # special flags apply to certain species
     species_flags => {
       
@@ -230,6 +234,7 @@ sub pipeline_analyses {
       -parameters    => {
         species_flags  => $self->o('species_flags'),
         vep_command    => $self->o('vep_command'),
+        hc_random      => $self->o('hc_random'),
         @common_params
       },
       -rc_name       => 'highmem',
