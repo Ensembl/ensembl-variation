@@ -57,6 +57,27 @@ sub run {
   
   my $species_flags_cmd = $refseq.' ';
   if(my $flags = $species_flags->{$species}) {
+    
+    # assembly-specific
+    if(my $as = $flags->{assembly_specific}) {
+      delete $flags->{assembly_specific};
+      
+      if($as->{$assembly}) {
+        
+        foreach my $key(keys %{$as->{$assembly}}) {
+          my $v = $as->{$assembly}->{$key};
+          
+          if(ref($v) eq 'ARRAY') {
+            $species_flags_cmd .= sprintf(' --%s %s ', $key, $_ eq '1' ? '' : $_) for @{$v};
+          }
+          
+          else {
+            $species_flags_cmd .= sprintf(' --%s %s ', $key, $v eq '1' ? '' : $_);
+          }
+        }
+      }
+    }
+    
     $species_flags_cmd .= join(' ', map {$flags->{$_} eq '1' ? '--'.$_ : '--'.$_.' '.$flags->{$_}} keys %$flags);
   }
   
