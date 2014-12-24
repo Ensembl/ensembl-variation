@@ -132,7 +132,22 @@ sub default_options {
         sift => 'b',
         polyphen => 'b',
         regulatory => 1,
-        freq_file => '/nfs/ensembl/wm2/VEP/cache/ALL_1KG_ESP_freqs_with_alleles.txt,AFR,AMR,ASN,EUR,AA,EA',
+        
+        # assembly-specific stuff
+        assembly_specific => {
+          GRCh37 => {
+            freq_vcf => [
+              '/nfs/ensembl/wm2/VEP/cache/1KG.phase3.GRCh37.vcf.gz,AFR,AMR,EAS,EUR,SAS',
+              '/nfs/ensembl/wm2/VEP/cache/ESP.GRCh37.vcf.gz,AA,EA',
+            ],
+          },
+          GRCh38 => {
+            freq_vcf => [
+              '/nfs/ensembl/wm2/VEP/cache/1KG.phase3.GRCh38.vcf.gz,AFR,AMR,EAS,EUR,SAS',
+              '/nfs/ensembl/wm2/VEP/cache/ESP.GRCh38.vcf.gz,AA,EA',
+            ],
+          },
+        }
       },
       
       # mouse has SIFT and regulatory data
@@ -223,7 +238,7 @@ sub pipeline_analyses {
       -meadow_type   => 'LOCAL',
       -hive_capacity => 1,
       -flow_into     => {
-        '2' => ['dump_vep', 'finish_dump'],
+        '2' => $self->o('debug') ? ['dump_vep'] : ['dump_vep', 'finish_dump'],
         '3' => ['merge_vep'],
         '4' => ['convert_vep'],
       },
@@ -237,7 +252,7 @@ sub pipeline_analyses {
         hc_random      => $self->o('hc_random'),
         @common_params
       },
-      -rc_name       => 'highmem',
+      -rc_name       => 'default',
       -hive_capacity => 3,
     },
     {
