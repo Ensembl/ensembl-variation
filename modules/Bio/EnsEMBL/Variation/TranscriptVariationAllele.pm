@@ -1433,10 +1433,14 @@ sub _get_alternate_cds{
   ### fix alternate allele if deletion or on opposite strand
   my $alt_allele  = $self->variation_feature_seq();
   $alt_allele  =~ s/\-//;
-  if( $self->transcript_variation->variation_feature->strand() <0 && $self->transcript_variation->transcript->strand() >0 ||
+  if(
+    $alt_allele &&
+    (
+      $self->transcript_variation->variation_feature->strand() <0 && $self->transcript_variation->transcript->strand() >0 ||
       $self->transcript_variation->variation_feature->strand() >0 && $self->transcript_variation->transcript->strand() < 0
-      ){    
-      reverse_comp(\$alt_allele) ;
+    )
+  ){    
+    reverse_comp(\$alt_allele) ;
   }
   ### build alternate seq
   my $alternate_seq  = $upstream_seq . $alt_allele . $downstream_seq ;
