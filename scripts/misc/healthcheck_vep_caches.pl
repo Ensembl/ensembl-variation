@@ -546,8 +546,28 @@ sub check_variation {
   
   # check frequency
   if($v->{minor_allele}) {
-    ok($v->{minor_allele} =~ /[ACGTN-]+/, "minor allele is valid allele") or diag("$n minor allele ".$v->{minor_allele});
-    ok($v->{minor_allele_freq} =~ /[0-9\.]+/ && $v->{minor_allele_freq} >= 0 && $v->{minor_allele_freq} <= 0.5, "$n 0 <= frequency <= 0.5") or diag("$n freq ".$v->{minor_allele_freq});
+    ok($v->{minor_allele} =~ /^[ACGTN-]+$/, "minor allele is valid allele") or diag("minor allele ".$v->{minor_allele});
+    ok($v->{minor_allele_freq} =~ /^[0-9\.]+$/ && $v->{minor_allele_freq} >= 0 && $v->{minor_allele_freq} <= 0.5, "$n 0 <= frequency <= 0.5") or diag("$n freq ".$v->{minor_allele_freq});
+  }
+  
+  # check population freqs
+  foreach my $p(qw(AFR AMR ASN EAS EUR SAS AA EA)) {
+    if($v->{$p}) {
+      foreach my $set(split(',', $v->{$p})) {
+        my ($a, $f) = split(':', $set);
+        
+        if(!defined($f)) {
+          $f = $a;
+          $a = undef;
+        }
+        
+        if($a) {
+          ok($a =~ /^[ACGTN-]+$/, "$p allele is valid allele") or diag("$n $p minor allele $a");
+        }
+        
+        ok($f =~ /^[0-9\.]+$/ && $f >= 0 && $f <= 1, "0 <= frequency <= 1") or diag("$n $p freq $f");
+      }
+    }
   }
   
   # check clinsig
@@ -561,7 +581,7 @@ sub check_variation {
   
   # check pubmed
   if($v->{pubmed}) {
-    ok($v->{pubmed} =~ /([0-9]+\,?)+/, "pubmed looks ok") or diag("$n pubmed ".$v->{pubmed});
+    ok($v->{pubmed} =~ /^([0-9]+\,?)+$/, "pubmed looks ok") or diag("$n pubmed ".$v->{pubmed});
   }
 }
 
