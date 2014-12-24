@@ -169,7 +169,7 @@ our @EXTRA_HEADERS = (
   
   # frequency stuff
   { flag => 'gmaf',            cols => ['GMAF'] },
-  { flag => 'maf_1kg',         cols => ['AFR_MAF','AMR_MAF','ASN_MAF','EUR_MAF'] },
+  { flag => 'maf_1kg',         cols => ['AFR_MAF','AMR_MAF','ASN_MAF','EAS_MAF','EUR_MAF','SAS_MAF'] },
   { flag => 'maf_esp',         cols => ['AA_MAF','EA_MAF'] },
   { flag => 'check_frequency', cols => ['FREQS'] },
   
@@ -229,7 +229,9 @@ our %COL_DESCS = (
     'AFR_MAF'            => 'Frequency of existing variant in 1000 Genomes Phase 1 combined African population',
     'AMR_MAF'            => 'Frequency of existing variant in 1000 Genomes Phase 1 combined American population',
     'ASN_MAF'            => 'Frequency of existing variant in 1000 Genomes Phase 1 combined Asian population',
+    'EAS_MAF'            => 'Frequency of existing variant in 1000 Genomes Phase 1 combined East Asian population',
     'EUR_MAF'            => 'Frequency of existing variant in 1000 Genomes Phase 1 combined European population',
+    'SAS_MAF'            => 'Frequency of existing variant in 1000 Genomes Phase 1 combined South Asian population',
     'AA_MAF'             => 'Frequency of existing variant in NHLBI-ESP African American population',
     'EA_MAF'             => 'Frequency of existing variant in NHLBI-ESP European American population',
     'DISTANCE'           => 'Shortest distance from variant to transcript',
@@ -277,6 +279,7 @@ our @VAR_CACHE_COLS = qw(
     strand
     minor_allele
     minor_allele_freq
+    clin_sig
 );
 
 our @PICK_ORDER = qw(canonical tsl biotype rank length);
@@ -2663,7 +2666,7 @@ sub init_line {
         
         # 1KG MAFs?
         if(defined($config->{maf_1kg})) {
-            my @pops = qw(AFR AMR ASN EUR);
+            my @pops = qw(AFR AMR ASN EAS EUR SAS);
             
             foreach my $var(@{$vf->{existing}}) {
                 foreach my $pop(grep {defined($var->{$_})} @pops) {
@@ -4831,47 +4834,60 @@ sub clean_slice_adaptor{
 
 # dumps cached variations to disk
 sub dump_variation_cache {
-    my $config = shift;
-    my $v_cache = shift;
-    my $chr = shift;
-    my $region = shift;
+  my $config = shift;
+  my $v_cache = shift;
+  my $chr = shift;
+  my $region = shift;
     
-    my $dump_file = get_dump_file_name($config, $chr, $region, 'var');
+  my $dump_file = get_dump_file_name($config, $chr, $region, 'var');
     
-    open DUMP, "| gzip -9 -c > ".$dump_file or die "ERROR: Could not write to adaptor dump file $dump_file";
+  open DUMP, "| gzip -9 -c > ".$dump_file or die "ERROR: Could not write to adaptor dump file $dump_file";
     
-    foreach my $pos(keys %{$v_cache->{$chr}}) {
-        foreach my $v(@{$v_cache->{$chr}->{$pos}}) {
-            my @tmp = (
-                $v->{variation_name},
-                $v->{failed} == 0 ? '' : $v->{failed},
-                $v->{somatic} == 0 ? '' : $v->{somatic},
-                $v->{start},
-                $v->{end} == $v->{start} ? '' : $v->{end},
-                $v->{allele_string},
-                $v->{strand} == 1 ? '' : $v->{strand},
-                $v->{minor_allele} || '',
-                defined($v->{minor_allele_freq}) && $v->{minor_allele_freq} =~ /^[0-9\.]+$/ ? sprintf("%.4f", $v->{minor_allele_freq}) : '',
-            );
+  # get freqs from VCFs?
+  if(defined($config->{freq_vcf}) && scalar @{$config->{freq_vcf}}) {
+    freqs_from_vcf($config, $v_cache->{$chr}, $chr);
+  }
+    
+  foreach my $pos(keys %{$v_cache->{$chr}}) {
+    foreach my $v(@{$v_cache->{$chr}->{$pos}}) {
+      my @tmp = (
+        $v->{variation_name},
+        $v->{failed} == 0 ? '' : $v->{failed},
+        $v->{somatic} == 0 ? '' : $v->{somatic},
+        $v->{start},
+        $v->{end} == $v->{start} ? '' : $v->{end},
+        $v->{allele_string},
+        $v->{strand} == 1 ? '' : $v->{strand},
+        $v->{minor_allele} || '',
+        defined($v->{minor_allele_freq}) && $v->{minor_allele_freq} =~ /^[0-9\.]+$/ ? sprintf("%.4f", $v->{minor_allele_freq}) : '',
+        $v->{clin_sig} || '',
+      );
             
-            if(have_clin_sig($config) && defined($config->{clin_sig})) {
-                push @tmp, $config->{clin_sig}->{$v->{variation_name}} || '';
-            }
-            
-            if(have_pubmed($config) && defined($config->{pubmed})) {
-                push @tmp, $config->{pubmed}->{$v->{variation_name}} || '';
-            }
-            
-            if(defined($config->{freqs})) {
-                push @tmp, $config->{'freqs'}->{$v->{variation_name}} || '';
-            }
-            
-            print DUMP join(" ", @tmp);
-            print DUMP "\n";
+      if(have_pubmed($config) && defined($config->{pubmed})) {
+        push @tmp, $config->{pubmed}->{$v->{variation_name}} || '';
+      }
+
+      if(defined($config->{freq_vcf}) && scalar @{$config->{freq_vcf}}) {
+        foreach my $pop(map {@{$_->{pops}}} @{$config->{freq_vcf}}) {
+          push @tmp, $v->{$pop} || '';
         }
+      }
+            
+      if(defined($config->{freqs})) {
+        if($config->{freqs}->{$v->{variation_name}}) {
+          push @tmp, $config->{freqs}->{$v->{variation_name}};
+        }
+        else {
+          push @tmp, '' for @{$config->{just_file_pops}};
+        }
+      }
+            
+      print DUMP join(" ", @tmp);
+      print DUMP "\n";
     }
+  }
     
-    close DUMP;    
+  close DUMP;    
 }
 
 # loads dumped variation cache
@@ -4942,12 +4958,141 @@ sub get_variation_columns {
     if(!defined($config->{cache_variation_cols})) {
         my @copy = @VAR_CACHE_COLS;
         $config->{cache_variation_cols} = \@copy;
-        push @{$config->{cache_variation_cols}}, 'clin_sig' if have_clin_sig($config) && defined($config->{clin_sig});
         push @{$config->{cache_variation_cols}}, 'pubmed' if have_pubmed($config) && defined($config->{pubmed});
         push @{$config->{cache_variation_cols}}, @{$config->{freq_file_pops}} if defined($config->{freq_file_pops});
     }
     
     return $config->{cache_variation_cols};
+}
+
+# gets frequency data from VCF during --build
+sub freqs_from_vcf {
+  my $config = shift;
+  my $v_cache = shift;
+  my $chr = shift;
+  
+  # sort by pos and exclude somatic vars
+  my @list =
+    grep {!$_->{somatic}}
+    sort {$a->{start} <=> $b->{start} || $a->{end} <=> $b->{end}}
+    map {@{$v_cache->{$_}}}
+    keys %$v_cache;
+  return unless scalar @list;
+  
+  # create region string to pass to tabix
+  # seems getting the whole region is faster than getting smaller chunks
+  my $region_string = $chr.':'.($list[0]->{start} - 1).'-'.($list[-1]->{end} + 1);
+  
+  my %match;
+  
+  # iterate over each VCF file in the config
+  foreach my $vcf_conf(@{$config->{freq_vcf}}) {
+    my $file = $vcf_conf->{file};
+    next unless -e $file;
+    
+    open VCF, "tabix $file $region_string 2>&1 |"
+      or die "\nERROR: Could not open tabix pipe for $file\n";
+    
+    while(<VCF>) {
+      chomp;
+      
+      # use parse_vcf to process the line
+      # this allows us to match coordinates to input
+      # without worrying about indel weirdness
+      my ($vcf_vf) = @{parse_vcf($config, $_)};
+      
+      # check if we have a match
+      if($v_cache->{$vcf_vf->{start}}) {
+        
+        # make sure to ignore somatic again here
+        foreach my $v(grep {!$_->{somatic}} @{$v_cache->{$vcf_vf->{start}}}) {
+          
+          # several ways to match, start with simplest for speed
+          my $match = 0;
+          
+          # name matches
+          if($vcf_vf->{variation_name} && $v->{variation_name} eq $vcf_vf->{variation_name}) {
+            $match = 1;
+            $match{name}++;
+          }
+          
+          # allele string and coords match
+          elsif($vcf_vf->{allele_string} && $v->{allele_string} eq $vcf_vf->{allele_string} && $v->{start} == $vcf_vf->{start} && $v->{end} == $vcf_vf->{end}) {
+            $match = 1;
+            $match{allele_string}++;
+          }
+          
+          # coords match and VCF allele string is contained in DB allele string
+          elsif($v->{start} == $vcf_vf->{start} && $v->{end} == $vcf_vf->{end}) {
+            my @v_alleles = split('/', $v->{allele_string});
+            my @vcf_alleles = split('/', $vcf_vf->{allele_string});
+            
+            # ref allele must match
+            if($v_alleles[0] eq $vcf_alleles[0]) {
+              
+              # check if the VCF alleles exist in the allele string
+              my %h = map {$_ => 1} @v_alleles;
+              my @m = grep {$h{$_}} @vcf_alleles;
+              if(scalar @m == scalar @vcf_alleles) {
+                $match = 1;
+                $match{part_allele_string}++;
+              }
+            }
+          }
+          
+          if($match) {
+            
+            # get the alleles from the VCF entry
+            my @vcf_alleles = split('/', $vcf_vf->{allele_string});
+            shift @vcf_alleles;
+            
+            # match to parts of the INFO field from the VCF
+            while(m/([A-Z]+)\_A([CF])\=([0-9\.\,]+)/g) {
+              
+              # check the matched population name is one we're interested in
+              my ($pop) = grep {$1 eq $_} @{$vcf_conf->{pops}};
+              
+              if($pop) {
+                my @f;
+                
+                # have count, e.g AA_AC from ESP 
+                if($2 eq 'C') {
+                  
+                  # get total count
+                  my @c = split(',', $3);
+                  my $total = 0;
+                  $total += $_ for @c;
+                  
+                  # ESP VCFs include REF as last allele so remove it
+                  pop @c;
+                  
+                  my $i = 0;
+                  foreach my $c(@c) {
+                    my $f = sprintf('%.4f', ($c / $total));
+                    $f =~ s/\.?0+$//;
+                    push @f, $vcf_alleles[$i++].':'.($f || '0');
+                  }
+                }
+                
+                # have freq, e.g. AFR_AF from 1KG
+                else {
+                  my $i = 0;
+                  foreach my $f(split(',', $3)) {
+                    push @f, $vcf_alleles[$i++].':'.($f || 0);
+                  }
+                }
+                
+                # add freqs to object
+                $v->{$pop} = join(',', @f);
+              }
+            }
+          }
+        }
+      }
+    }
+  
+    close VCF;
+  }
 }
 
 # caches regulatory features
@@ -5463,9 +5608,6 @@ sub build_full_cache {
   
   debug("Going to dump features from ".(scalar @slices)." regions") unless defined($config->{quiet});
     
-  # check and load clin_sig
-  $config->{clin_sig} = get_clin_sig($config) if have_clin_sig($config);
-    
   # check and load pubmed
   $config->{pubmed} = get_pubmed($config) if have_pubmed($config);
     
@@ -5899,7 +6041,7 @@ sub get_variations_in_region {
         my $maf_cols = have_maf_cols($config) ? 'vf.minor_allele, vf.minor_allele_freq' : 'NULL, NULL';
         
         my $sth = $config->{vfa}->db->dbc->prepare(qq{
-            SELECT vf.variation_id, vf.variation_name, IF(fv.variation_id IS NULL, 0, 1), vf.somatic, vf.seq_region_start, vf.seq_region_end, vf.allele_string, vf.seq_region_strand, $maf_cols
+            SELECT vf.variation_id, vf.variation_name, IF(fv.variation_id IS NULL, 0, 1), vf.somatic, vf.seq_region_start, vf.seq_region_end, vf.allele_string, vf.seq_region_strand, $maf_cols, REPLACE(vf.clinical_significance, " ", "_")
             FROM variation_feature vf
             LEFT JOIN failed_variation fv ON fv.variation_id = vf.variation_id
             WHERE vf.seq_region_id = ?
@@ -5932,46 +6074,6 @@ sub get_variations_in_region {
         }
         
         $sth->finish();
-        
-        # now get stuff from variation table
-        #if(scalar keys %vars_by_id) {
-        #    my $max_size = 200;
-        #    my @id_list = keys %vars_by_id;
-        #    
-        #    while(@id_list) {
-        #        my @ids;
-        #        if(@id_list > $max_size) {
-        #            @ids = splice(@id_list, 0, $max_size);
-        #        }
-        #        else {
-        #            @ids = splice(@id_list, 0);
-        #        }
-        #        
-        #        my $id_str;
-        #        if(@ids > 1)  {
-        #            $id_str = " IN (" . join(',', @ids). ")";
-        #        }
-        #        else {
-        #            $id_str = " = ".$ids[0];
-        #        }
-        #        
-        #        $sth = $config->{vfa}->db->dbc->prepare(qq{
-        #            SELECT variation_id, ancestral_allele
-        #            FROM variation
-        #            WHERE variation_id $id_str
-        #        });
-        #        
-        #        my $ancestral_allele;
-        #        $sth->execute();
-        #        $sth->bind_columns(\$var_id, \$ancestral_allele);
-        #        
-        #        while($sth->fetch) {
-        #            $vars_by_id{$var_id}->{ancestral_allele} = $ancestral_allele;
-        #        }
-        #        
-        #        $sth->finish();
-        #    }
-        #}
     }
     
     return \%variations;
@@ -6019,104 +6121,53 @@ sub have_maf_cols {
     return $config->{have_maf_cols};
 }
 
-sub have_clin_sig {
-    my $config = shift;
-    return 0 if defined($config->{build_test});
-    
-    if(!defined($config->{have_clin_sig})) {
-        
-        if(defined($config->{vfa}) && defined($config->{vfa}->db)) {
-            my $sth = $config->{vfa}->db->dbc->prepare(qq{
-                SELECT COUNT(*) FROM variation
-                WHERE clinical_significance IS NOT NULL
-            });
-            $sth->execute;
-            
-            my $count;
-            $sth->bind_columns(\$count);
-            $sth->fetch();
-            $sth->finish();
-            
-            $config->{have_clin_sig} = $count;
-        }
-        else {
-            $config->{have_clin_sig} = 0;
-        }
-    }
-    
-    return $config->{have_clin_sig};
-}
-
-sub get_clin_sig {
-    my $config = shift;
-    
-    my $sth = $config->{vfa}->db->dbc->prepare(qq{
-        SELECT name, clinical_significance
-        FROM variation
-        WHERE clinical_significance IS NOT NULL
-    });
-    $sth->execute;
-    
-    my ($v, $c, %cs);
-    $sth->bind_columns(\$v, \$c);
-    
-    while($sth->fetch()) {
-      $c =~ s/\s+/\_/g;
-      $cs{$v} = $c;
-    }
-    
-    $sth->finish();
-    
-    return \%cs;
-}
-
 sub have_pubmed {
-    my $config = shift;
-    return 0 if defined($config->{build_test});
+  my $config = shift;
+  return 0 if defined($config->{build_test});
     
-    if(!defined($config->{have_pubmed})) {
+  if(!defined($config->{have_pubmed})) {
         
-        if(defined($config->{vfa}) && defined($config->{vfa}->db)) {
+    if(defined($config->{vfa}) && defined($config->{vfa}->db)) {
             
-            my $sth = $config->{vfa}->db->dbc->prepare(qq{
-                SELECT COUNT(*) FROM variation_citation
-            });
-            $sth->execute;
+      my $sth = $config->{vfa}->db->dbc->prepare(qq{
+        SELECT COUNT(*) FROM variation_citation
+      });
+      $sth->execute;
             
-            my $count;
-            $sth->bind_columns(\$count);
-            $sth->fetch();
-            $sth->finish();
+      my $count;
+      $sth->bind_columns(\$count);
+      $sth->fetch();
+      $sth->finish();
             
-            $config->{have_pubmed} = $count;
-        }
-        else {
-            $config->{have_pubmed} = 0;
-        }
+      $config->{have_pubmed} = $count;
     }
+    else {
+      $config->{have_pubmed} = 0;
+    }
+  }
     
-    return $config->{have_pubmed};
+  return $config->{have_pubmed};
 }
 
 sub get_pubmed {
-    my $config = shift;
+  my $config = shift;
     
-    my $sth = $config->{vfa}->db->dbc->prepare(qq{
-        SELECT v.name, GROUP_CONCAT(p.pmid)
-        FROM variation v, variation_citation c, publication p
-        WHERE v.variation_id = c.variation_id
-        AND c.publication_id = p.publication_id
-        AND p.pmid IS NOT NULL
-        GROUP BY v.variation_id
-    });
-    $sth->execute;
+  my $sth = $config->{vfa}->db->dbc->prepare(qq{
+    SELECT v.name, GROUP_CONCAT(p.pmid)
+    FROM variation v, variation_citation c, publication p
+    WHERE v.variation_id = c.variation_id
+    AND c.publication_id = p.publication_id
+    AND p.pmid IS NOT NULL
+    GROUP BY v.variation_id
+  });
+  $sth->execute;
     
-    my ($v, $p, %pm);
-    $sth->bind_columns(\$v, \$p);
-    $pm{$v} = $p while $sth->fetch();
-    $sth->finish();
+  my ($v, $p, %pm);
+  $sth->bind_columns(\$v, \$p);
+  $pm{$v} = $p while $sth->fetch();
+  $sth->finish();
     
-    return \%pm;
+  return \%pm;
 }
 
 sub merge_hashes {
