@@ -402,17 +402,17 @@ sub _store_genotype{
 		my $gt = $self->_genotype_from_code($gt_code);
 		
 		if(
-			defined $gt &&
+			defined $gt->[0] &&
 			($snp_start >= $slice_start) &&
 			($snp_start <= $slice_end) &&
 			$gt->[0] =~ /^[ACGT]$/ &&
-			$gt->[1] =~ /[ACGT]$/
+			(defined $gt->[1] && $gt->[1] =~ /[ACGT]$/)
 		) {		
 			$alleles_variation->{$snp_start}->{$population_id}->{$gt->[0]}++;
-			$alleles_variation->{$snp_start}->{$population_id}->{$gt->[1]}++;
+			$alleles_variation->{$snp_start}->{$population_id}->{$gt->[1]}++ if defined $gt->[1];
 			
 			$individual_information->{$population_id}->{$snp_start}->{$individual_id}->{allele_1} = $gt->[0];
-			$individual_information->{$population_id}->{$snp_start}->{$individual_id}->{allele_2} = $gt->[1];
+			$individual_information->{$population_id}->{$snp_start}->{$individual_id}->{allele_2} = $gt->[1] if defined $gt->[1];
 		}
 		
 		$snp_start += $gap + 1  if defined $gap;
