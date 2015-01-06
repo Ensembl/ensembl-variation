@@ -29,8 +29,12 @@ use Bio::EnsEMBL::Registry;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Variation::DBSQL::DBAdaptor;
 use DBI qw(:sql_types);
+use Getopt::Long;
+our ($registry_file);
 
-my $registry_file = "./ensembl.registry";
+GetOptions('registry=s' => \$registry_file);
+
+$registry_file ||= "./ensembl.registry";
 my $species = 'human';
 
 my $var_table = 'HGMD_PUBLIC_variation';
