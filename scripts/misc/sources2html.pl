@@ -930,6 +930,7 @@ sub get_species_set_count {
 
 sub get_count {
   my $count = shift;
+  my $symbol = '+';
   
   my $count_label;
   my $count_display;
@@ -937,13 +938,13 @@ sub get_count {
   if ($count =~ /^(\d+)\d{6}$/) {
     $count = "$1 million";
     $count_label = "Over $count variants";
-    $count_display = "> $count";
+    $count_display = "$count$symbol";
     $bg_color = $colours{'million'};
   }
   elsif ($count =~ /^(\d+)\d{3}$/) {
     $count = "$1,000";
     $count_label = "Over $count variants";
-    $count_display = "> $count";
+    $count_display = "$count$symbol";
     $bg_color = $colours{'thousand'};
   }
   else {
