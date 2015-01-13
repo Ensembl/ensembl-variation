@@ -87,8 +87,13 @@ my $default_port = 3306;
 $port ||= $default_port;
 
 my $html;
-
-
+   
+my %colours = ( 'lot_million' => { 'order' => 1, 'colour' => '#800', 'legend' => 'From 10 million'},#'#800'
+                'few_million' => { 'order' => 2, 'colour' => '#007', 'legend' => 'From 1 million to 9.9 million'},#ff6500
+                'thousand'    => { 'order' => 3, 'colour' => '#006266', 'legend' => 'From 1,000 to 999,999'},
+                'hundred'     => { 'order' => 4, 'colour' => '#070', 'legend' => 'From 1 to 999'}
+              );              
+              
 my %tables = ( 'Genotype - Individual' => { 'order' => 2 , 'table' => 'compressed_genotype_var'},
                'Genotype - Population' => { 'order' => 3 , 'table' => 'population_genotype'},
                'Phenotype'             => { 'order' => 4 , 'table' => 'phenotype_feature'},
@@ -178,7 +183,7 @@ foreach my $sp (sort keys(%species_list)) {
         <div style="clear:both"></div>
       </div>
     </td>
-    <td>$var_count variants</td>\n};
+    <td style="text-align:right">$var_count</td>\n};
   
   # Tables
   foreach my $type (sort { $tables{$a}{'order'} <=> $tables{$b}{'order'} } keys(%tables)) {
@@ -197,10 +202,31 @@ foreach my $sp (sort keys(%species_list)) {
 $html_content .= qq{</table>\n};
 
 
+# Legend
+my $html_legend = qq{
+<div style="max-width:800px;border:1px #DDD solid;padding:2px">
+  <div style="float:left;margin-right:5px;font-weight:bold">Colour legend: </div>
+};
+foreach my $type (sort { $colours{$a}{'order'} <=> $colours{$b}{'order'} } keys(%colours)) {
+  my $desc   = $colours{$type}{'legend'};
+  my $colour = $colours{$type}{'colour'};
+  $html_legend .= qq{  
+  <div style="float:left;margin-left:20px">
+    <span style="background-color:$colour;color:#FFF;border-radius:5px;padding:0px 12px;white-space:nowrap;margin-right:5px"></span>
+    <span>$desc</span>
+  </div>};
+}
+$html_legend .= qq{ 
+  <div style="clear:both"></div>
+</div>
+};
+
+
 ## HTML/output file ##
 open  HTML, "> $html_file" or die "Can't open $html_file : $!";
 print HTML qq{<p style="padding-top:0px;margin-top:0px">There are currently <span style="font-weight:bold;font-size:1.1em;color:#000">$count_species</span> variation databases in Ensembl:</p>\n};
 print HTML $html_content;
+print HTML $html_legend;
 print HTML qq{<p style="padding-top:5px">The <b>full list of species</b> and their assembly versions in Ensembl is available <a href="/info/about/species.html">here</a>.</p>\n};
 close(HTML);
 
@@ -224,19 +250,45 @@ sub get_connection_and_query {
 
 
 sub round_count {
-  my $number = shift;
-  my $new_number;
-  my $count;
-  if ($number =~ /^(\d+)\d{6}$/) {
-    $new_number = $1;
-    $count  = "> $1 million";
+  my $count = shift;
+  my $type = 'variants';
+  my $symbol = '+';
+  
+  my $count_label;
+  my $count_display;
+  my $bg_color;
+  # From 1 to 9.9 million
+  if ($count =~ /^(\d)(\d)\d{5}$/) {
+    my $number = ($2!=0) ? "$1.$2" : $1;
+    $count = "$number million";
+    $count_label = "Over $count $type";
+    $count_display = "$count$symbol";
+    $bg_color = $colours{'few_million'}{'colour'};
   }
-  elsif ($number =~ /^(\d+)\d{3}$/) {
-    $new_number = $1;
-    $count = "> $1,000";
+  # From 10 million
+  elsif ($count =~ /^(\d+)\d{6}$/) {
+    my $number = $1;
+    $count = "$number million";
+    $count_label = "Over $count $type";
+    $count_display = "$count$symbol";
+    $bg_color = $colours{'lot_million'}{'colour'};
   }
-  return $count;
+  # From 1,000 to 999,999
+  elsif ($count =~ /^(\d+)\d{3}$/) {
+    $count = "$1,000";
+    $count_label = "Over $count $type";
+    $count_display = "$count$symbol";
+    $bg_color = $colours{'thousand'}{'colour'};
+  }
+  # From 1 to 999
+  else {
+    $count_label = "$count $type";
+    $count_display = "$count";
+    $bg_color = $colours{'hundred'}{'colour'};
+  }
+  return qq{<span style="background-color:$bg_color;color:#FFF;border-radius:5px;padding:1px 3px;cursor:help;white-space:nowrap" title="$count_label">$count_display</span>};
 }
+
 
 
 # Get the list of species where the given tables are populated

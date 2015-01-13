@@ -90,11 +90,12 @@ my $login = "ensro";
 my $pswd = "";
 my $sep = "\t";
 my $start = 0;
-my %colours = ( 'version'  => '#090',
-                'source'   => '#00F',
-                'million'  => '#800',
-                'thousand' => '#007', 
-                'hundred'  => '#070'
+my %colours = ( 'version'     => '#090',
+                'source'      => '#00F',
+                'lot_million' => '#800',
+                'few_million' => '#007',
+                'thousand'    => '#006266', 
+                'hundred'     => '#070'
               );
 
 my $phen_icon = '/i/val/var_phenotype_data_small.png';
@@ -653,13 +654,14 @@ sub create_menu {
   foreach my $species (@species_list) {
     $html .= menu_list($species,$label_style,\%desc);
   }
-  my $v_colour = $colours{'version'};
-  my $s_colour = $colours{'source'};
-  my $m_colour = $colours{'million'};
-  my $t_colour = $colours{'thousand'};
-  my $h_colour = $colours{'hundred'};
-  my $v_label  = $desc{'version'};
-  my $s_label  = $desc{'source'};
+  my $v_colour  = $colours{'version'};
+  my $s_colour  = $colours{'source'};
+  my $lm_colour = $colours{'lot_million'};
+  my $fm_colour = $colours{'few_million'};
+  my $t_colour  = $colours{'thousand'};
+  my $h_colour  = $colours{'hundred'};
+  my $v_label   = $desc{'version'};
+  my $s_label   = $desc{'source'};
   
   my $legend_div_id = 'legend';
 
@@ -717,9 +719,15 @@ sub create_menu {
       <table>
         <tr>
           <td style="padding-top:4px;text-align:center">
-            <span style="background-color:$m_colour;color:#FFF;border-radius:5px;padding:1px 2px 1px 20px;cursor:default"></span>
+            <span style="background-color:$lm_colour;color:#FFF;border-radius:5px;padding:1px 2px 1px 20px;cursor:default"></span>
           </td>
           <td style="padding-top:4px">greater than 1 million</td>
+        </tr>
+        <tr>
+          <td style="padding-top:4px;text-align:center">
+            <span style="background-color:$fm_colour;color:#FFF;border-radius:5px;padding:1px 2px 1px 20px;cursor:default"></span>
+          </td>
+          <td style="padding-top:4px">from 1 million to 9.9 million</td>
         </tr>
         <tr>
           <td style="padding-top:3px;text-align:center">
@@ -935,18 +943,30 @@ sub get_count {
   my $count_label;
   my $count_display;
   my $bg_color;
-  if ($count =~ /^(\d+)\d{6}$/) {
-    $count = "$1 million";
+  # From 1 to 9.9 million
+  if ($count =~ /^(\d)(\d)\d{5}$/) {
+    my $number = ($2!=0) ? "$1.$2" : $1;
+    $count = "$number million";
     $count_label = "Over $count variants";
     $count_display = "$count$symbol";
-    $bg_color = $colours{'million'};
+    $bg_color = $colours{'few_million'};
   }
+  # From 10 million
+  elsif ($count =~ /^(\d+)\d{6}$/) {
+    my $number = $1;
+    $count = "$number million";
+    $count_label = "Over $count variants";
+    $count_display = "$count$symbol";
+    $bg_color = $colours{'lot_million'};
+  }
+  # From 1,000 to 999,999
   elsif ($count =~ /^(\d+)\d{3}$/) {
     $count = "$1,000";
     $count_label = "Over $count variants";
     $count_display = "$count$symbol";
     $bg_color = $colours{'thousand'};
   }
+  # From 1 to 999
   else {
     $count_label = "$count variants";
     $count_display = $count;
