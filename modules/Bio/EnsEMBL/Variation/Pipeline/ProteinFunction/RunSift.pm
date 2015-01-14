@@ -189,6 +189,8 @@ sub run {
             -translation_md5    => $translation_md5,
         );
 
+	my %evidence_stored;
+
         while (<RESULTS>) {
 
             chomp;
@@ -202,13 +204,23 @@ sub run {
 
             next unless $ref_aa && $alt_aa && defined $pos;
 
+            my $low_quality = 0;
+            $low_quality = 1 if $median_cons > 3.25 || $num_seqs < 10;
+
             $pred_matrix->add_prediction(
                 $pos,
                 $alt_aa,
                 $prediction, 
                 $score,
+                $low_quality
             );
-        }
+	    unless ($evidence_stored{$pos} ==1){
+		## add attribs by position
+		$pred_matrix->add_evidence( 'sequence_number',    $pos, $num_seqs );
+		$pred_matrix->add_evidence( 'conservation_score', $pos, $median_cons  );
+		$evidence_stored{$pos} = 1;
+	    }
+	}
         
         my $var_dba = $self->get_species_adaptor('variation');
 

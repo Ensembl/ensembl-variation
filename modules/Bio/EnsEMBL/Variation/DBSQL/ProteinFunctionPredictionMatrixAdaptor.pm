@@ -1,3 +1,4 @@
+
 =head1 LICENSE
 
 Copyright [1999-2014] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
@@ -40,7 +41,6 @@ function prediction matrices from the variation databases.
  
 use strict;
 use warnings;
-
 package Bio::EnsEMBL::Variation::DBSQL::ProteinFunctionPredictionMatrixAdaptor;
 
 use Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor;
@@ -103,6 +103,48 @@ sub store {
     });
  
     $matrix_sth->execute($matrix->translation_md5, $analysis_attrib_id, $matrix->serialize);
+
+
+   ## store attribs
+
+   my $trans_id_sth = $dbh->prepare(qq{ SELECT translation_md5_id 
+                                        FROM translation_md5 
+                                        WHERE translation_md5 = ?
+                                      });
+    $trans_id_sth->execute($matrix->translation_md5);
+    my $trans_id = $trans_id_sth->fetchall_arrayref();
+
+
+   my $attrib_sth = $dbh->prepare(qq{
+        INSERT INTO protein_function_predictions_attrib 
+         (translation_md5_id, analysis_attrib_id, attrib_type_id ,  position_values)
+        VALUES (?,?,?,?)
+    });
+
+    my %attrib_id;
+
+    my %attribs;
+    ##  compress position-value data by evidence type atrib 
+    foreach my $ev ( @{$matrix->{evidence}} ){   ## array of arrays [type  pos value]
+	$attrib_id{$ev->[0]}  = $self->db->get_AttributeAdaptor->attrib_id_for_type_code($ev->[0])
+	    unless defined $attrib_id{$ev->[0]} ;
+	die "No attrib available for evidence type $ev->[0]\n" unless defined $attrib_id{$ev->[0]} ;
+
+          ## store conservation score as int not float
+	  $ev->[2] = $ev->[2]*100 if $ev->[0] eq 'conservation_score';
+
+	$attribs{$ev->[0]} .=  pack("ww", $ev->[1],  $ev->[2]);
+    }
+
+    ## compressed by type - now store
+    foreach my $evidence_attrib(keys %attribs){
+
+        $attrib_sth->execute($trans_id->[0]->[0], 
+                             $analysis_attrib_id, 
+                             $attrib_id{ $evidence_attrib }, 
+                             $attribs{$evidence_attrib}
+                            );
+    }
 }
 
 =head2 fetch_by_analysis_translation_md5
@@ -167,6 +209,49 @@ sub fetch_sift_predictions_by_translation_md5 {
     return $self->fetch_by_analysis_translation_md5('sift', $translation_md5);
 }
 
+sub fetch_evidence_for_prediction{
+   my ($self, $translation_md5, $analysis_type) = @_;
+
+   my %evidence;
+
+   my $dbh = $self->dbc->db_handle;
+
+   ## look up evidence data
+   my $evidence_sth = $dbh->prepare(qq{ SELECT attrib_type.code, 
+                                               pfpa.position_values
+                                        from protein_function_predictions_attrib pfpa, 
+                                             attrib, 
+                                             attrib_type, 
+                                             translation_md5
+                                        where translation_md5.translation_md5 = ?
+                                        and pfpa.translation_md5_id = translation_md5.translation_md5_id
+                                        and pfpa.analysis_attrib_id = attrib.attrib_id
+                                        and attrib.value = ?
+                                        and pfpa.attrib_type_id = attrib_type.attrib_type_id
+                                        });
+
+ 
+   $evidence_sth->execute($translation_md5, $analysis_type );
+   my $ev_data = $evidence_sth->fetchall_arrayref();
+  
+   foreach my $evidence(@{$ev_data}){
+
+       ## unpack position- value data
+       my @attribs = unpack("(ww)*", $evidence->[1] );
+       my %data;
+       
+       while(@attribs) {
+          my $position = shift @attribs;
+          my $value    = shift @attribs;
+          ## stored conservation score as int not float
+	  $value  = $value /100 if $evidence->[0] eq 'conservation_score';
+	  $evidence{$evidence->[0]}{$position} = $value;
+       }
+   
+   }
+   return \%evidence;
+
+}
 sub _columns {
     return qw(t.translation_md5 a.value p.prediction_matrix);
 }
@@ -202,12 +287,16 @@ sub _objs_from_sth {
         if ($matrix) {
             my ($super_analysis, $sub_analysis) = split /_/, $analysis;
             
-            push @matrices, Bio::EnsEMBL::Variation::ProteinFunctionPredictionMatrix->new(
+           my $matrix = Bio::EnsEMBL::Variation::ProteinFunctionPredictionMatrix->new(
                 -translation_md5    => $md5,
                 -analysis           => $super_analysis,
                 -sub_analysis       => $sub_analysis,
                 -matrix             => $matrix,
+                -adaptor            => $self
             );
+
+
+	    push @matrices, $matrix;
         }
     }
 
