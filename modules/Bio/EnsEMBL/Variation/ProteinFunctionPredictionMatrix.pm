@@ -116,7 +116,7 @@ my $PREDICTION_TO_VAL = {
         'tolerated'     => 0,
         'deleterious'   => 1,
         'tolerated - low confidence'    => 2, 
-        'deleterious -low confidence'   => 3, 
+        'deleterious - low confidence'   => 3, 
 
     },
 };
