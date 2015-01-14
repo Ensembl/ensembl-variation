@@ -42,8 +42,8 @@ Bio::EnsEMBL::Variation::ProteinFunctionPredictionMatrix
 
   # add some predictions
 
-  $orig_pfpm->add_prediction(1, 'A', 'probably damaging', 0.967);
-  $orig_pfpm->add_prediction(2, 'C', 'benign', 0.09);
+  $orig_pfpm->add_prediction(1, 'A', 'probably damaging', 0.967, 1);
+  $orig_pfpm->add_prediction(2, 'C', 'benign', 0.09, 0);
 
   # serialize the matrix to a compressed binary string
 
@@ -115,6 +115,9 @@ my $PREDICTION_TO_VAL = {
     sift => {
         'tolerated'     => 0,
         'deleterious'   => 1,
+        'tolerated - low confidence'    => 2, 
+        'deleterious -low confidence'   => 3, 
+
     },
 };
 
@@ -132,7 +135,6 @@ our $NO_PREDICTION = pack($PACK_FORMAT, 0xFFFF);
 # the number of bytes in a short
 
 my $BYTES_PER_PREDICTION = 2;
-
 
 # constants derived from the the user-defined constants
 
@@ -201,12 +203,14 @@ sub new {
         $matrix,
         $peptide_length,
         $translation_md5,
+        $adaptor
     ) = rearrange([qw(
             ANALYSIS
             SUB_ANALYSIS
             MATRIX
             PEPTIDE_LENGTH
             TRANSLATION_MD5
+            ADAPTOR
         )], @_);
     
     throw("analysis argument required") unless defined $analysis;
@@ -220,9 +224,11 @@ sub new {
         matrix          => $matrix,
         peptide_length  => $peptide_length,
         translation_md5 => $translation_md5,
+        adaptor         => $adaptor
     }, $class;
 
     $self->{matrix_compressed} = defined $matrix ? 1 : 0;
+
 
     return $self;
 }
@@ -342,10 +348,16 @@ sub get_prediction {
 =cut
 
 sub add_prediction {
-    my ($self, $pos, $aa, $prediction, $score) = @_;
+    my ($self, $pos, $aa, $prediction, $score, $is_low_quality) = @_;
 
-    $self->{preds}->{$pos}->{$aa} = [$prediction, $score];
+    $self->{preds}->{$pos}->{$aa} = [$prediction, $score, $is_low_quality];
 }
+sub add_evidence {
+    my ($self, $pos, $type, $value) = @_;
+
+    push @{$self->{evidence}} , [$pos, $type, $value];
+}
+
 
 =head2 serialize
 
@@ -383,7 +395,8 @@ sub serialize {
                 my $short;
 
                 if ($self->{preds}->{$pos}->{$aa}) {
-                    my ($prediction, $score) = @{ $self->{preds}->{$pos}->{$aa} };
+                    my ($prediction, $score, $low_quality) = @{ $self->{preds}->{$pos}->{$aa} };
+		    $prediction .= " - low confidence" if $low_quality ==1;
                 
                     $short = $self->prediction_to_short($prediction, $score);
                 }
@@ -686,6 +699,20 @@ sub prediction_from_matrix {
 
     return $self->prediction_from_short($pred);
 }
+
+sub evidence_for_prediction{
+
+    my ($self, $pos, $evidence_type) = @_;
+
+    unless (defined $self->{evidence}){ 
+        my $pfpma = $self->{adaptor}->db->get_ProteinFunctionPredictionMatrixAdaptor;
+	$self->{evidence} =  $pfpma->fetch_evidence_for_prediction( $self->{translation_md5}, 
+                                                                    $self->{analysis});
+    }
+    return $self->{evidence}->{$evidence_type}->{$pos};
+}
+
+
 
 1;
 

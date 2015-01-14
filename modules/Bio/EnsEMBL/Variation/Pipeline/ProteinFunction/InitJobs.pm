@@ -201,7 +201,7 @@ sub update_meta{
     my $var_dbh = $var_dba->dbc->db_handle;
     
     my $update_meta_sth = $var_dbh->prepare(qq{
-            insert into meta ( meta_key, meta_value) values (?,?)
+            insert ignore into meta ( meta_key, meta_value) values (?,?)
         });
 
     if ($self->required_param('sift_run_type')  == FULL){

@@ -55,8 +55,6 @@ sub default_options {
 
         debug_mode              => 0,
 
-        species                 => 'Homo_sapiens',
-    
         # the location of your ensembl checkout, the hive looks here for SQL files etc.
 
         ensembl_cvs_root_dir    => $ENV{'HOME'}.'/ensembl-branches/HEAD/',
@@ -84,7 +82,7 @@ sub default_options {
         
         # set this flag to include LRG translations in the analysis
 
-        include_lrg             => 1,
+        include_lrg             => 0,
         
         # connection details for the hive's own database
 
@@ -151,21 +149,21 @@ sub default_options {
     
         # location of the software
 
-        sift_dir                => '/software/ensembl/variation/sift5.1.0',
+        sift_dir                => '/software/ensembl/variation/sift5.2.2',
 
         sift_working            => $self->o('species_dir').'/sift_working',
         
         # the location of blastpgp etc.
 
-        ncbi_dir                => '/software/pubseq/bin/ncbi_blast',
+        ncbi_dir                => '/software/pubseq/bin/ncbi_blast+',
         
         # the protein database used to build alignments if you're not using compara
 
-        blastdb                 => '/data/blastdb/Ensembl/variation/sift5.1.0/uniref90/uniref90.fasta',
+        blastdb                 => '/data/blastdb/Ensembl/variation/sift5.2.2/uniref90/uniref90.fasta',
 
         # the following parameters mean the same as for polyphen
 
-        sift_run_type           => UPDATE,
+        sift_run_type           => FULL,
 
         sift_use_compara        => 0,
 
