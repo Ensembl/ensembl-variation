@@ -1395,7 +1395,7 @@ CREATE TABLE transcript_variation (
     hgvs_protein                        text,
     polyphen_prediction                 enum('unknown', 'benign', 'possibly damaging', 'probably damaging') DEFAULT NULL,
     polyphen_score                      float DEFAULT NULL,
-    sift_prediction                     enum('tolerated', 'deleterious') DEFAULT NULL,
+    sift_prediction                     enum('tolerated', 'deleterious', 'tolerated - low confidence', 'deleterious - low confidence') DEFAULT NULL,
     sift_score                          float DEFAULT NULL,
     display                             int(1) DEFAULT 1,
 
@@ -1805,12 +1805,12 @@ CREATE TABLE meta (
 
 
 # Add schema type and schema version to the meta table.
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_type', 'variation'), (NULL, 'schema_version', '78');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_type', 'variation'), (NULL, 'schema_version', '79');
 
 # Patch IDs for new release
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_77_78_a.sql|schema version');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL,'patch', 'patch_77_78_b.sql|Add a column copy_number for CNV supporting structural variants');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL,'patch', 'patch_77_78_c.sql|Drop the table study_variation');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_78_79_a.sql|schema version');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_78_79_b.sql|change the column attrib_type_id by attrib_id in the variation_attrib table');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_78_79_c.sql|Store more detailed Sift information');
 
 
 /**
@@ -2069,7 +2069,28 @@ CREATE TABLE translation_md5 (
     UNIQUE KEY md5_idx (translation_md5)
 );
 
+/**
+@table  protein_function_predictions_attrib
 
+@colour #1E90FF
+@desc   Contains information on the data use in protein function predictions
+
+@column translation_md5_id  Identifies the MD5 hash corresponding to the protein sequence to which 
+                            these data use in prediction apply
+@column analysis_attrib_id  Identifies the analysis (sift, polyphen etc.) that produced these values 
+@column attrib_type_id      Key into the @link attrib_type table, identifies the type of this attribute
+@column position_values     A compressed binary string containing data relevant to the quality of the predictions
+
+@see    protein_function_predictions
+*/
+CREATE TABLE protein_function_predictions_attrib (
+    translation_md5_id int(11) unsigned NOT NULL,
+    analysis_attrib_id int(11) unsigned NOT NULL,
+    attrib_type_id     int(11) unsigned NOT NULL,
+    position_values    blob,
+    
+    PRIMARY KEY (translation_md5_id, analysis_attrib_id,attrib_type_id )
+);
 
 /**
 @legend #FF8500 Tables containing individual, population and genotype data
