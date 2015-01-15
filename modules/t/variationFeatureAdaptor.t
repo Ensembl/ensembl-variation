@@ -56,13 +56,8 @@ ok($vf->variation()->name() eq 'rs142276873',"vf_id -> varname" );
 ok($vf->display_id() eq 'rs142276873',       "vf_id -> display id");
 ok($vf->map_weight() == 1,                   "vf_id -> map weight");
 ok($vf->slice()->name() eq $slice->name(),   "vf_id -> slice name");
+ok($vf->display() ==1,                       "vf_id -> display=1");
 
-
-# test fetch_all_by_Variation
-
-my $v = $va->fetch_by_dbID(30220007);
-$vfs = $vfa->fetch_all_by_Variation($v);
-ok(@$vfs == 1,                              "var -> vf count ");
 
 $vf = $vfs->[0];
 
@@ -92,6 +87,18 @@ ok($cons->NCBI_term() eq 'intron',                                            "c
 ok($cons->impact() eq 'MODIFIER',                                             "consequence impact"); 
 ok($cons->display_term() eq 'INTRONIC',                                       "consequence display_term"); 
 
+
+# test fetch_all_by_Variation inc failed
+$va->db->include_failed_variations(1);
+$vfa->db->include_failed_variations(1);
+
+my $v = $va->fetch_by_dbID(14128071);
+$vfs = $vfa->fetch_all_by_Variation($v);
+
+ok(@$vfs == 1,                                 "var -> vf count ");
+ok($vfs->[0]->display() eq '0',                "var -> display = 0");
+ok($vfs->[0]->variation_name() eq 'rs67521280',"var -> vf_name" );
+ok($vfs->[0]->dbID() eq 15275234 ,             "var -> vf_id" );
 
 
 done_testing();

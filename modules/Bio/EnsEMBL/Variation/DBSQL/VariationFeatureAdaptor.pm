@@ -1175,7 +1175,8 @@ sub _columns {
              vf.seq_region_end vf.seq_region_strand vf.variation_id
              vf.allele_string vf.variation_name vf.map_weight vf.source_id vf.somatic 
              vf.validation_status vf.consequence_types vf.class_attrib_id
-             vf.minor_allele vf.minor_allele_freq vf.minor_allele_count vf.alignment_quality vf.evidence_attribs vf.clinical_significance);
+             vf.minor_allele vf.minor_allele_freq vf.minor_allele_count vf.alignment_quality 
+             vf.evidence_attribs vf.clinical_significance vf.display);
 }
 
 sub _objs_from_sth {
@@ -1202,14 +1203,16 @@ sub _objs_from_sth {
       $seq_region_end, $seq_region_strand, $variation_id,
       $allele_string, $variation_name, $map_weight, $source_id,
       $is_somatic, $validation_status, $consequence_types, $class_attrib_id,
-	  $minor_allele, $minor_allele_freq, $minor_allele_count, $last_vf_id,$alignment_quality,$evidence_attribs,$clin_sig);
+      $minor_allele, $minor_allele_freq, $minor_allele_count, $last_vf_id,
+      $alignment_quality,$evidence_attribs,$clin_sig,$display );
 
     $sth->bind_columns(\$variation_feature_id, \$seq_region_id,
                      \$seq_region_start, \$seq_region_end, \$seq_region_strand,
                      \$variation_id, \$allele_string, \$variation_name,
                      \$map_weight, \$source_id, \$is_somatic, \$validation_status, 
                      \$consequence_types, \$class_attrib_id,
-		     \$minor_allele, \$minor_allele_freq, \$minor_allele_count,\$alignment_quality, \$evidence_attribs, \$clin_sig);
+		     \$minor_allele, \$minor_allele_freq, \$minor_allele_count,
+                     \$alignment_quality, \$evidence_attribs, \$clin_sig, \$display);
 
     my $asm_cs;
     my $cmp_cs;
@@ -1328,7 +1331,7 @@ sub _objs_from_sth {
             if (defined($clin_sig)) {
               @clin_sig = split(/,/,$clin_sig );
             }
-            
+
             #my $overlap_consequences = $self->_variation_feature_consequences_for_set_number($consequence_types);
             
             my $overlap_consequences = [ map { $OVERLAP_CONSEQUENCES{$_} } split /,/, $consequence_types ];
@@ -1359,7 +1362,8 @@ sub _objs_from_sth {
                 'minor_allele_count' => $minor_allele_count,
                 'flank_match'  => $alignment_quality,
                 'evidence'     => \@evidence,
-                'clinical_significance' => \@clin_sig
+                'clinical_significance' => \@clin_sig,
+                'display'   => $display
                 }
             );
         }
