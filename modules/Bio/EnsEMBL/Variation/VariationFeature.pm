@@ -205,7 +205,8 @@ sub new {
       $minor_allele_freq,
       $minor_allele_count,
       $evidence,
-      $clin_sig
+      $clin_sig,
+      $display
   ) = rearrange([qw(
           ALLELE_STRING 
           VARIATION_NAME 
@@ -223,6 +224,7 @@ sub new {
           MINOR_ALLELE_COUNT
           EVIDENCE
           CLINICAL_SIGNIFICANCE
+          DISPLAY
         )], @_);
 
   $self->{'allele_string'}          = $allele_str;
@@ -241,6 +243,7 @@ sub new {
   $self->{'minor_allele_count'}     = $minor_allele_count;
   $self->{'evidence'}               = $evidence;
   $self->{'clinical_significance'}  = $clin_sig;
+  $self->{'display'}                = $display;
   return $self;
 }
 
@@ -1932,6 +1935,6 @@ sub get_Variation_dbID {
 
 sub display {
   my $self = shift;
-  return $self->{'display'} || '';
+  return $self->{'display'} || '0';
 }
 1;
