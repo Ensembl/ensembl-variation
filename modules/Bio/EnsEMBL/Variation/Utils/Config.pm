@@ -1046,6 +1046,11 @@ our @ATTRIB_TYPES = (
                name => 'Sift conservation score',
                description => 'Median conservation value in an alignment used to make a Sift prediction',
        },
+       {
+               code => 'review_status',
+               name => 'ClinVar review_status', 
+               description => 'ClinVar review_status for assertation', 
+       }
 
 
 );
