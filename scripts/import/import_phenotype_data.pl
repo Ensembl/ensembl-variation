@@ -248,11 +248,12 @@ elsif ($source =~ m/nhgri/i) {
   $source_name = 'NHGRI_GWAS_catalog';
 }
 elsif($source =~ /omim.*gene/i) {
-  die("ERROR: No core DB parameters supplied (--chost, --cdbname, --cuser) or could not connect to core database") unless defined($core_db_adaptor);
-  die("ERROR: mim2gene file required (--mim2gene [file])\n") unless defined($mim2gene) && -e $mim2gene;
+  #die("ERROR: No core DB parameters supplied (--chost, --cdbname, --cuser) or could not connect to core database") unless defined($core_db_adaptor);
+  #die("ERROR: mim2gene file required (--mim2gene [file])\n") unless defined($mim2gene) && -e $mim2gene;
   
-  $result = parse_omim_gene($infile, $mim2gene, $core_db_adaptor);
-  $source_name = 'OMIMGENE';
+  #$result = parse_omim_gene($infile, $mim2gene, $core_db_adaptor);
+  $result = parse_omim_gene($infile);
+  $source_name = 'MIM disease';
 }
 elsif ($source =~ m/^omim$/i) {
   $result = parse_omim($infile);
@@ -1278,23 +1279,9 @@ sub parse_ddg2p {
   return {'phenotypes' => \@phenotypes};
 }
 
+
 sub parse_omim_gene {
   my $infile = shift;
-  my $mim2gene_file = shift;
-  my $core_db_adaptor = shift;
-  
-  # parse mim2gene
-  my $mim2gene = parse_mim2gene($mim2gene_file);
-  
-  my $ga = $core_db_adaptor->get_GeneAdaptor;
-  die("ERROR: Could not get gene adaptor") unless defined($ga);
-  
-  my @phenotypes;
-  
-  # set input record separator
-  local $/ = "*RECORD*";
-  
-  # Open the input file for reading
   open(IN, ($infile =~ /(z|gz)$/i ? "zcat $infile | " : $infile)) or die ("Could not open $infile for reading");
   
   # first record is empty
@@ -1304,56 +1291,103 @@ sub parse_omim_gene {
   while (<IN>) {
     chomp;
     
-    if(/\*FIELD\*\s+NO\n(\d+)/){
-      my $number = $1;
-      next unless $mim2gene->{$number} && $mim2gene->{$number}->{symbols} ne '-';
-      
-      if(/\*FIELD\*\sTI\n([\^\#\%\+\*]*)\d+(.*)\n/){
-        my $label = $2; # taken from description as acc is meaning less
-        my $type = $1;
-        $label =~ s/\;\s[A-Z0-9]+$//; # strip gene name at end
-        $label = $label." [".$type.$number."]";
-        
-        my $symbol = $mim2gene->{$number}->{symbols};
-        my $genes = $ga->fetch_all_by_external_name($symbol, 'HGNC');
-        
-        # we don't want any LRG genes
-        @$genes = grep {$_->stable_id !~ /^LRG_/} @$genes;
-        
-        # try to get only the one with the correct display label
-        if(scalar @{$genes} > 0) {
-          my @tmp = grep {$_->external_name eq $symbol} @$genes;
-          @$genes = @tmp if scalar @tmp;
-        }
-        
-        if ( scalar(@$genes) > 0) {
-          if(scalar @$genes != 1) {
-            print STDERR "WARNING: Found ".(scalar @$genes)." matching Ensembl genes for HGNC ID $symbol\n";
-          }
-          
-          next unless scalar @$genes;
-          
-          foreach my $gene(@$genes) {
-            push @phenotypes, {
-              'id' => $gene->stable_id,
-              'description' => $label,
-              'external_id' => $number,
-              'seq_region_id' => $gene->slice->get_seq_region_id,
-              'seq_region_start' => $gene->seq_region_start,
-              'seq_region_end' => $gene->seq_region_end,
-              'seq_region_strand' => $gene->seq_region_strand,
-              'type' => 'Gene',
-            };
-          }
-        }
-      }
-    }
+    my @content = split(/\t/,$_);
     
-    last if scalar @phenotypes >= 20;
+    my $desc = $content[6];
+    next if (!$desc || $desc eq '');
+    
+    push @phenotypes, {
+      'id'                => $content[0],
+      'description'       => $desc,
+      'external_id'       => $content[5],
+      'seq_region_id'     => $content[1],
+      'seq_region_start'  => $content[2],
+      'seq_region_end'    => $content[3],
+      'seq_region_strand' => $content[4],
+      'type'              => 'Gene',
+    };
   }
+  close IN;
   
-  return {'phenotypes' => \@phenotypes};
+  return {'phenotypes' => \@phenotypes}; 
 }
+ 
+#sub parse_omim_gene {
+#  my $infile = shift;
+#  my $mim2gene_file = shift;
+#  my $core_db_adaptor = shift;
+#  
+#  # parse mim2gene
+#  my $mim2gene = parse_mim2gene($mim2gene_file);
+#  
+#  my $ga = $core_db_adaptor->get_GeneAdaptor;
+#  die("ERROR: Could not get gene adaptor") unless defined($ga);
+# 
+#  my @phenotypes;
+#  
+#  # set input record separator
+#  local $/ = "*RECORD*";
+#  
+#  # Open the input file for reading
+#  open(IN, ($infile =~ /(z|gz)$/i ? "zcat $infile | " : $infile)) or die ("Could not open $infile for reading");
+#  
+#  # first record is empty
+#  <IN>;
+#  
+#  # Read through the file and parse out the desired fields
+#  while (<IN>) {
+#    chomp;
+#    
+#    if(/\*FIELD\*\s+NO\n(\d+)/){
+#      my $number = $1;
+#      next unless $mim2gene->{$number} && $mim2gene->{$number}->{symbols} ne '-';
+#      
+#      if(/\*FIELD\*\sTI\n([\^\#\%\+\*]*)\d+(.*)\n/){
+#        my $label = $2; # taken from description as acc is meaning less
+#        my $type = $1;
+#        $label =~ s/\;\s[A-Z0-9]+$//; # strip gene name at end
+#        $label = $label." [".$type.$number."]";
+#        
+#        my $symbol = $mim2gene->{$number}->{symbols};
+#        my $genes = $ga->fetch_all_by_external_name($symbol, 'HGNC');
+#        
+#        # we don't want any LRG genes
+#        @$genes = grep {$_->stable_id !~ /^LRG_/} @$genes;
+#        
+#        # try to get only the one with the correct display label
+#        if(scalar @{$genes} > 0) {
+#          my @tmp = grep {$_->external_name eq $symbol} @$genes;
+#          @$genes = @tmp if scalar @tmp;
+#        }
+#        
+#        if ( scalar(@$genes) > 0) {
+#          if(scalar @$genes != 1) {
+#            print STDERR "WARNING: Found ".(scalar @$genes)." matching Ensembl genes for HGNC ID $symbol\n";
+#          }
+#          
+#          next unless scalar @$genes;
+#          
+#          foreach my $gene(@$genes) {
+#            push @phenotypes, {
+#              'id' => $gene->stable_id,
+#              'description' => $label,
+#              'external_id' => $number,
+#              'seq_region_id' => $gene->slice->get_seq_region_id,
+#              'seq_region_start' => $gene->seq_region_start,
+#              'seq_region_end' => $gene->seq_region_end,
+#              'seq_region_strand' => $gene->seq_region_strand,
+#              'type' => 'Gene',
+#            };
+#          }
+#        }
+#      }
+#    }
+#    
+#    last if scalar @phenotypes >= 20;
+#  }
+#  
+#  return {'phenotypes' => \@phenotypes};
+#}
 
 sub parse_mim2gene {
 	my $file = shift;
