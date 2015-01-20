@@ -51,6 +51,8 @@ our @short_names = qw(1kg_hct 1kg_hct_ceu 1kg_hct_yri 1kg_hce 1kg_hce_ceu 1kg_hc
                       Chicken600K EquineSNP50 BovineHD BovineLD BovineSNP50  
                       phencode HumanOmni5 OvineSNP50 OvineHDSNP
                       ExomeChip ImmunoChip HumanOmniExpress ClinVar MGP HumanCoreExome
+                      1kg_3 1kg_3_afr 1kg_3_amr 1kg_3_eas 1kg_3_sas 1kg_3_eur 1kg_3_com 
+                      1kg_3_afr_com 1kg_3_amr_com 1kg_3_eas_com 1kg_3_sas_com 1kg_3_eur_com
                      );
 
 our @dbsnp_clinical_significance_types = qw(
@@ -1062,7 +1064,7 @@ our %ATTRIBS = (
    'dgva_clin_sig'       => \@dgva_clinical_significance_types,
    'clinvar_clin_sig'    => \@clinvar_clinical_significance_types,
    'polyphen_prediction' => ['probably damaging', 'possibly damaging', 'benign', 'unknown'],
-   'sift_prediction'     => ['tolerated', 'deleterious', 'tolerated(low evidence)', 'deleterious(low evidence)'],
+   'sift_prediction'     => ['tolerated', 'deleterious', 'tolerated - low confidence', 'deleterious - low confidence'],
    'prot_func_analysis'  => [qw(sift polyphen_humvar polyphen_humdiv)],
    'evidence'            => \@evidence_statuses,
 );
