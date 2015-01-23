@@ -26,3 +26,8 @@
 25	allele_symbol	Allele symbol	Allele symbol linked with phenotype association
 26	allele_accession_id	Allele accession ID	Allele accession ID linked with phenotype association
 33	marker_accession_id	Marker accession ID	Marker ID linked with phenotype association
+420	clinvar_clin_sig	ClinVar clinical significance	The clinical significance of a variant as reported by ClinVar
+422	sequence_number	Number of sequences in alignment	Number of protein sequences in the alignment use to make a protein impact prediction
+423	based_on	Evidence type used for protein impact prediction	Evidence type used for a PolyPhen protein impact prediction
+424	conservation_score	Sift conservation score	Median conservation value in an alignment used to make a Sift prediction
+421	review_status	ClinVar review_status	ClinVar review_status for assertation
