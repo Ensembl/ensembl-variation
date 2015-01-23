@@ -42,7 +42,7 @@ use base qw(Exporter);
 use Bio::DB::Fasta;
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp );
 
-our @EXPORT_OK = qw(check_four_bases get_reference_base check_illegal_characters check_for_ambiguous_alleles remove_ambiguous_alleles find_ambiguous_alleles check_variant_size summarise_evidence count_rows count_group_by );
+our @EXPORT_OK = qw(check_four_bases get_reference_base check_illegal_characters check_for_ambiguous_alleles remove_ambiguous_alleles find_ambiguous_alleles check_variant_size summarise_evidence count_rows count_group_by count_for_statement);
 
 
  
@@ -544,6 +544,22 @@ sub count_group_by{
    }
 
    return \%count; 
+
+}
+
+sub count_for_statement{
+
+   my $var_dba  = shift;
+   my $stat     = shift;
+
+   return unless defined  $stat ;
+
+   my  $row_count_ext_sth  = $var_dba->dbc->prepare( $stat );   
+
+   $row_count_ext_sth->execute();
+   my $count = $row_count_ext_sth->fetchall_arrayref();
+  
+   return $count->[0]->[0];
 
 }
 
