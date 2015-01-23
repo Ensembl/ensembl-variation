@@ -319,3 +319,45 @@
 370	419	1000Genomes
 371	419	Cited
 372	419	ESP
+375	2	genetic_marker
+376	1	SO:0001645
+361	2	novel_sequence_insertion
+362	1	SO:0001838
+363	3	Novel sequence insertion
+377	420	Uncertain significance
+378	420	not provided
+379	420	Benign
+380	420	Likely benign
+381	420	Likely pathogenic
+382	420	Pathogenic
+383	420	drug response
+384	420	histocompatibility
+385	420	other
+386	420	confers sensitivity
+387	420	risk factor
+388	420	association
+389	420	protective
+360	9	all_chips
+358	9	ExomeChip
+359	9	ImmunoChip
+373	9	HumanOmniExpress
+374	9	ClinVar
+353	9	MGP
+403	9	HumanCoreExome
+404	9	1kg_3
+405	9	1kg_3_afr
+406	9	1kg_3_amr
+407	9	1kg_3_eas
+408	9	1kg_3_sas
+409	9	1kg_3_eur
+410	9	1kg_3_com
+411	9	1kg_3_afr_com
+412	9	1kg_3_amr_com
+413	9	1kg_3_eas_com
+414	9	1kg_3_sas_com
+415	9	1kg_3_eur_com
+391	8	tolerated - low confidence
+392	8	deleterious - low confidence
+364	11	not provided
+365	11	association
+366	11	risk factor

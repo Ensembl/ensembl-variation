@@ -396,7 +396,7 @@ sub serialize {
 
                 if ($self->{preds}->{$pos}->{$aa}) {
                     my ($prediction, $score, $low_quality) = @{ $self->{preds}->{$pos}->{$aa} };
-		    $prediction .= " - low confidence" if $low_quality ==1;
+		    $prediction .= " - low confidence" if defined $low_quality && $low_quality ==1;
                 
                     $short = $self->prediction_to_short($prediction, $score);
                 }

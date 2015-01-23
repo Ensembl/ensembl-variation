@@ -304,6 +304,14 @@ CREATE TABLE `protein_function_predictions` (
   PRIMARY KEY (`translation_md5_id`,`analysis_attrib_id`)
 ) ENGINE=MyISAM ;
 
+CREATE TABLE `protein_function_predictions_attrib` (
+  `translation_md5_id` int(11) unsigned NOT NULL,
+  `analysis_attrib_id` int(11) unsigned NOT NULL,
+  `attrib_type_id`     int(11) unsigned NOT NULL,
+  `position_values`    blob,
+  PRIMARY KEY (`translation_md5_id`, `attrib_type_id` )
+) ENGINE=MyISAM;
+
 CREATE TABLE `publication` (
   `publication_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `title` varchar(255) DEFAULT NULL,
@@ -548,10 +556,10 @@ CREATE TABLE `variation` (
 
 CREATE TABLE `variation_attrib` (
   `variation_id` int(11) unsigned NOT NULL,
-  `attrib_type_id` int(11) DEFAULT NULL,
+  `attrib_id` int(11) DEFAULT NULL,
   `value` varchar(255) DEFAULT NULL,
   KEY `variation_idx` (`variation_id`),
-  KEY `type_value_idx` (`attrib_type_id`,`value`)
+  KEY `attrib_value_idx` (`attrib_id`,`value`)
 ) ENGINE=MyISAM ;
 
 CREATE TABLE `variation_citation` (
