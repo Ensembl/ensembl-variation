@@ -24,6 +24,9 @@ use Test::More;
 use Data::Dumper;
 use FindBin qw($Bin);
 
+use Bio::EnsEMBL::Test::TestUtils;
+use Bio::EnsEMBL::Test::MultiTestDB;
+
 use Bio::EnsEMBL::Registry;
 use Bio::EnsEMBL::Variation::Utils::Sequence qw(revcomp_tandem);
 use Bio::EnsEMBL::Variation::Utils::QCUtils qw( check_four_bases check_illegal_characters remove_ambiguous_alleles find_ambiguous_alleles check_variant_size check_for_ambiguous_alleles);
@@ -78,7 +81,15 @@ ok( check_variant_size(10,12,"AAA") eq 1,                "Utils::QCUtils variant
 ok( check_variant_size(10,10,"A")   eq 1,                "Utils::QCUtils variant size substitution");
 
 ok( check_for_ambiguous_alleles('M/R') eq 1,             "Utils::QCUtils check_for_ambiguous_alleles positive"); 
-ok( check_for_ambiguous_alleles('A/C') eq "",             "Utils::QCUtils check_for_ambiguous_alleles negative");
+ok( check_for_ambiguous_alleles('A/C') eq "",            "Utils::QCUtils check_for_ambiguous_alleles negative");
+
+
+my $multi = Bio::EnsEMBL::Test::MultiTestDB->new('homo_sapiens');
+
+my $vdb = $multi->get_DBAdaptor('variation');
+
+ok(count_rows($vdb, "allele") eq 7526, "allele count");
+
 
 done_testing();
 

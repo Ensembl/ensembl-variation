@@ -41,6 +41,7 @@ use strict;
 use warnings;
 
 use base qw(Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess);
+use Bio::EnsEMBL::Variation::Utils::QCUtils qw( count_rows count_for_statement);
 
 my $DEBUG = 0;
 
@@ -65,11 +66,11 @@ sub run {
     open my $report, ">", "$dir/preQC_report.txt" || die "Failed to open preQC_report.txt : $!\n";
     print $report "\n\tChecking pre-QC tables \n\n";
 
-
-    my $varfeat_count   = $self->count_variation_feature();
-    my $variation_count = $self->count_variation();
-    my $allele_count    = $self->count_allele();
-    my $fail_count      = $self->count_failed_variation();
+    my $var_dba   = $self->get_species_adaptor('variation');
+    my $varfeat_count   = count_rows($var_dba,'variation_feature');
+    my $variation_count = count_rows($var_dba,'variation');
+    my $allele_count    = count_rows($var_dba,'allele');
+    my $fail_count      = count_rows($var_dba,'failed_variation');
 
     my $mean_vf   = substr(( $varfeat_count / $variation_count),0,5);
     my $mean_al   = substr(( $allele_count / $variation_count),0,5);
@@ -130,57 +131,6 @@ VariationFeature where end+1<start: $bad_position
 }
 
 
-sub count_variation_feature{
-
-    my $self = shift;
-    my $var_dba   = $self->get_species_adaptor('variation');
-
-    my $varfeat_ext_sth  = $var_dba->dbc->prepare(qq[ select count(*) from variation_feature]);
-    $varfeat_ext_sth->execute() || die "Failed to extract varfeat count \n";
-    my $varfeat_count = $varfeat_ext_sth->fetchall_arrayref();
-
-    defined $varfeat_count->[0]->[0]  ?  return $varfeat_count->[0]->[0] : return 0;
-}
-
-
-sub count_variation{
-
-    my $self = shift;
-    my $var_dba   = $self->get_species_adaptor('variation');
-
-    my $var_ext_sth   = $var_dba->dbc->prepare(qq[ select count(*) from variation]);
-    $var_ext_sth->execute() || die "Failed to extract var count\n";
-    my $var_count     = $var_ext_sth->fetchall_arrayref();
-
-    defined $var_count->[0]->[0]  ?  return $var_count->[0]->[0] : return 0;
-}
-
-sub count_allele{
-
-    my $self = shift;
-    my $var_dba   = $self->get_species_adaptor('variation');
-
-    my $allele_ext_sth = $var_dba->dbc->prepare(qq[ select count(*) from allele]);
-    $allele_ext_sth->execute()|| die "Failed to extract allele count\n";   
-    my $allele_count   = $allele_ext_sth->fetchall_arrayref();
-
-    defined $allele_count->[0]->[0]  ?  return $allele_count->[0]->[0] : return 0;
-}
-
-
-sub count_failed_variation{
-
-    my $self = shift;
-    my $var_dba   = $self->get_species_adaptor('variation');
-
-
-    my $fail_ext_sth  = $var_dba->dbc->prepare(qq[ select count(*) from failed_variation]);
-    $fail_ext_sth->execute() || die "Failed to extract fail count\n";   
-    my $fail_count    = $fail_ext_sth->fetchall_arrayref();
-
-    defined $fail_count->[0]->[0]  ?  return $fail_count->[0]->[0] : return 0;
-}
-
 ## Checks for missing data
  
  sub count_no_ss_allele{
@@ -188,17 +138,13 @@ sub count_failed_variation{
     my $self = shift;
     my $var_dba   = $self->get_species_adaptor('variation');
 
-  
-    my $no_allele_ext_sth      = $var_dba->dbc->prepare(qq[ select count(*) from variation 
-                                                            left outer join  allele on allele.variation_id = variation.variation_id
-                                                            where allele.allele is null
-                                                           ]);
+    my $no_allele_ext_stat  = (qq[ select count(*) from variation 
+                                   left outer join  allele on allele.variation_id = variation.variation_id
+                                   where allele.allele is null
+                                ]);
 
+    return count_for_statement($var_dba, $no_allele_ext_stat );
 
-    $no_allele_ext_sth->execute() || die "Failed to extract no_allele count\n";   
-    my $no_allele_count    = $no_allele_ext_sth->fetchall_arrayref();
-
-    defined $no_allele_count->[0]->[0]  ?  return $no_allele_count->[0]->[0] : return 0;
 }
 
 =head2 count_no_allele_string
@@ -211,15 +157,11 @@ sub count_no_allele_string{
     my $self = shift;
     my $var_dba   = $self->get_species_adaptor('variation');
 
-    my $no_allele_str_ext_sth  = $var_dba->dbc->prepare(qq[ select count(*) from variation
-                                                            where variation_id not in (select variation_id  from allele_string)]);
+    my $no_allele_str_ext_stat  = (qq[ select count(*) from variation
+                                     where variation_id not in (select variation_id  from allele_string)]);
  
-    $no_allele_str_ext_sth->execute() || die "Failed to extract no allele string count\n";
-    my $no_allele_str_count    = $no_allele_str_ext_sth->fetchall_arrayref();
+    return count_for_statement($var_dba, $no_allele_str_ext_stat );
 
-    defined $no_allele_str_count->[0]->[0]  ?  return $no_allele_str_count->[0]->[0] : return 0;
-
- 
 }
 
 
@@ -233,11 +175,9 @@ sub count_bad_varfeat{
     my $self = shift;
     my $var_dba   = $self->get_species_adaptor('variation');
 
-    my $varfeat_ext_sth = $var_dba->dbc->prepare(qq[ select count(*) from variation_feature where seq_region_start =0 or seq_region_end =0  ]);
-    $varfeat_ext_sth->execute()|| die "Failed to extract failed seq_region_start/end count\n";   
-    my $varfeat_count   = $varfeat_ext_sth->fetchall_arrayref();
+    my $varfeat_ext_stat = (qq[ select count(*) from variation_feature where seq_region_start =0 or seq_region_end =0  ]);
+    return count_for_statement($var_dba, $varfeat_ext_stat);
 
-    defined $varfeat_count->[0]->[0]  ?  return $varfeat_count->[0]->[0] : return 0;
 }
 =head2 count_seq_region_problem
 
@@ -249,14 +189,12 @@ sub count_seq_region_problem{
     my $self = shift;
     my $var_dba   = $self->get_species_adaptor('variation');
 
-    my $varfeat_ext_sth = $var_dba->dbc->prepare(qq[ select count(*) from variation_feature 
-                                                     left outer join  seq_region on ( variation_feature.seq_region_id =  seq_region.seq_region_id)
-                                                     where  seq_region.name is null  ]);
+    my $varfeat_ext_sth = (qq[ select count(*) from variation_feature 
+                               left outer join  seq_region on ( variation_feature.seq_region_id =  seq_region.seq_region_id)
+                               where  seq_region.name is null  ]);
 
-    $varfeat_ext_sth->execute()|| die "Failed to extract failed seq_region_id count\n";   
-    my $varfeat_count   = $varfeat_ext_sth->fetchall_arrayref();
+    return count_for_statement($var_dba, $varfeat_ext_sth );
 
-    defined $varfeat_count->[0]->[0]  ?  return $varfeat_count->[0]->[0] : return 0;
 }
 
 
@@ -320,13 +258,12 @@ sub count_alleleless_geno{
 
    foreach my $table ( @{$tables} ){ 
 
-     my $no_allele_ext_sth  = $var_dba->dbc->prepare(qq[select count(*) from $table where allele_1 is null or allele_2 is null ]);
+     my $no_allele_ext_stat  = (qq[select count(*) from $table where allele_1 is null or allele_2 is null ]);
 
-     $no_allele_ext_sth->execute() || die "Failed to extract no allele count for $table\n";
-     my $no_allele_count    = $no_allele_ext_sth->fetchall_arrayref();
+     my $no_allele_count    = count_for_statement($var_dba, $no_allele_ext_stat );
 
-     if (defined $no_allele_count->[0]->[0]){
-        $total_problem_genotypes += $no_allele_count->[0]->[0];
+     if (defined $no_allele_count){
+        $total_problem_genotypes += $no_allele_count;
       }
   }
 
@@ -382,15 +319,11 @@ sub check_complimented_desc{
 
     my $var_dba   = $self->get_species_adaptor('variation');
 
-    my $data_ext_sth = $var_dba->dbc->prepare(qq[ select count(*) from allele_string 
-                                                  where allele_string like '%NOIAELEH%'
-                                                  or allele_string like '%NOIAYESNI%']);
+    my $data_ext_stat = (qq[ select count(*) from allele_string 
+                            where allele_string like '%NOIAELEH%'
+                            or allele_string like '%NOIAYESNI%']);
 
-    $data_ext_sth->execute()||die "Failed to check for complimented allele strings\n";
-
-    my $count = $data_ext_sth->fetchall_arrayref();
-
-    defined $count->[0]->[0]  ?  return $count->[0]->[0] : return 0;
+    return count_for_statement($var_dba , $data_ext_stat);
 }
 
 =head2 check_bad_position
@@ -405,15 +338,11 @@ sub check_bad_position{
 
     my $var_dba   = $self->get_species_adaptor('variation');
 
-    my $data_ext_sth = $var_dba->dbc->prepare(qq[ select count(*) from variation_feature 
-                                                  where seq_region_start > seq_region_end + 1
-                                                ]);
+    my $data_ext_stat = (qq[ select count(*) from variation_feature 
+                           where seq_region_start > seq_region_end + 1
+                           ]);
 
-    $data_ext_sth->execute()||die "Failed to check for incorrect varaition_feature positions\n";
-
-    my $count = $data_ext_sth->fetchall_arrayref();
-
-    defined $count->[0]->[0]  ?  return $count->[0]->[0] : return 0;
+    return count_for_statement($var_dba , $data_ext_stat);
 }
 
 1;

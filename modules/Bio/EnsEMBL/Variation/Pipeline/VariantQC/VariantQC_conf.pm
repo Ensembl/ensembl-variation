@@ -62,6 +62,8 @@ sub default_options {
         # general pipeline options that you should change to suit your environment
 
         hive_use_triggers       => 0,  
+        hive_force_init         => 1,
+        hive_use_param_stack    => 0,
 
         compile_module_once     => 1, 
 
@@ -71,6 +73,7 @@ sub default_options {
         # the location of your checkout of the ensembl API (the hive looks for SQL files here)
         
         ensembl_cvs_root_dir    => $ENV{'HOME'}.'/EBI/bin/HEAD',
+        hive_root_dir           => $ENV{'HOME'}.'/EBI/bin/HEAD/ensembl-hive', 
 
         # a name for your pipeline (will also be used in the name of the hive database)
         
@@ -175,6 +178,7 @@ sub default_options {
             -user   => $self->o('hive_db_user'),
             -pass   => $self->o('hive_db_password'),            
             -dbname => $ENV{'USER'}.'_'.$self->o('pipeline_name') . '_' . $self->o('species'),
+            -driver => 'mysql',
         },
     };
 }
