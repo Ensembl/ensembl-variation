@@ -1688,8 +1688,6 @@ sub fetch_by_hgvs_notation {
   if ($reference=~ /^ENS|^LRG_\d+/){
     $reference =~ s/\.\d+//g;
    }
-  #A small fix in case the reference is a LRG and there is no underscore between name and transcript
-  $reference =~ s/^(LRG_[0-9]+)_?(t[0-9]+)$/$1\_$2/i;
 
   $description =~ s/\s+//;
 
@@ -1735,8 +1733,8 @@ sub fetch_by_hgvs_notation {
    elsif($type =~ m/g/i) {
 
      ($start, $end) =  _parse_hgvs_genomic_position($description) ;  
-      ## grab reference allele
-      $slice = $slice_adaptor->fetch_by_region('chromosome', $reference );    
+      ## grab reference allele; second call after "||" allows for LRG regions to be fetched
+      $slice = $slice_adaptor->fetch_by_region('chromosome', $reference ) || $slice_adaptor->fetch_by_region(undef, $reference);    
       $strand =1; ## strand should be genome strand for HGVS genomic notation
      ($ref_allele, $alt_allele) = get_hgvs_alleles( $hgvs);
    }
