@@ -168,7 +168,7 @@ foreach my $sp (sort keys(%species_list)) {
   my $var_count = $species_list{$sp}{'count'};
   
   $html_content .= qq{
-  <tr$bg>
+  <tr$bg style="vertical-align:middle">
     <td>
       <div>
         <div style="float:left;vertical-align:middle;margin-right:4px">
@@ -286,7 +286,7 @@ sub round_count {
     $count_display = "$count";
     $bg_color = $colours{'hundred'}{'colour'};
   }
-  return qq{<span style="background-color:$bg_color;color:#FFF;border-radius:5px;padding:1px 3px;cursor:help;white-space:nowrap" title="$count_label">$count_display</span>};
+  return qq{<span style="background-color:$bg_color;color:#FFF;border-radius:5px;padding:3px 3px 1px;cursor:help;white-space:nowrap" title="$count_label">$count_display</span>};
 }
 
 
