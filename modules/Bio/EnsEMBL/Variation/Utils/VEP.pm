@@ -4450,6 +4450,10 @@ sub prefetch_transcript_data {
     $tr->{_variation_effect_feature_cache}->{translateable_seq} ||= $tr->translateable_seq;
     $tr->{_variation_effect_feature_cache}->{mapper} ||= $tr->get_TranscriptMapper;
     
+    # three prime UTR
+    my $transferred = $tr->transfer($tr->feature_Slice());
+    $tr->{_variation_effect_feature_cache}->{three_prime_utr} = $transferred->three_prime_utr();
+    
     # peptide
     unless ($tr->{_variation_effect_feature_cache}->{peptide}) {
         my $translation = $tr->translate;
