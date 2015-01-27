@@ -88,10 +88,10 @@ $port ||= $default_port;
 
 my $html;
    
-my %colours = ( 'lot_million' => { 'order' => 1, 'colour' => '#800', 'legend' => 'From 10 million'},#'#800'
-                'few_million' => { 'order' => 2, 'colour' => '#007', 'legend' => 'From 1 million to 9.9 million'},#ff6500
+my %colours = ( 'lot_million' => { 'order' => 1, 'colour' => '#800',    'legend' => 'From 10 million'},
+                'few_million' => { 'order' => 2, 'colour' => '#007',    'legend' => 'From 1 million to 9.9 million'},
                 'thousand'    => { 'order' => 3, 'colour' => '#006266', 'legend' => 'From 1,000 to 999,999'},
-                'hundred'     => { 'order' => 4, 'colour' => '#070', 'legend' => 'From 1 to 999'}
+                'hundred'     => { 'order' => 4, 'colour' => '#070',    'legend' => 'From 1 to 999'}
               );              
               
 my %tables = ( 'Genotype - Individual' => { 'order' => 2 , 'table' => 'compressed_genotype_var'},
@@ -204,21 +204,20 @@ $html_content .= qq{</table>\n};
 
 # Legend
 my $html_legend = qq{
-<div style="max-width:800px;border:1px #DDD solid;padding:2px">
-  <div style="float:left;margin-right:5px;font-weight:bold">Colour legend: </div>
+<span style="border:1px #DDD solid;padding:4px">
+  <span style="margin-right:5px;font-weight:bold">Colour legend: </span>
 };
 foreach my $type (sort { $colours{$a}{'order'} <=> $colours{$b}{'order'} } keys(%colours)) {
   my $desc   = $colours{$type}{'legend'};
   my $colour = $colours{$type}{'colour'};
   $html_legend .= qq{  
-  <div style="float:left;margin-left:20px">
+  <span style="margin-left:20px">
     <span style="background-color:$colour;color:#FFF;border-radius:5px;padding:0px 12px;white-space:nowrap;margin-right:5px"></span>
     <span>$desc</span>
-  </div>};
+  </span>};
 }
-$html_legend .= qq{ 
-  <div style="clear:both"></div>
-</div>
+$html_legend .= qq{
+</span>
 };
 
 
@@ -227,7 +226,7 @@ open  HTML, "> $html_file" or die "Can't open $html_file : $!";
 print HTML qq{<p style="padding-top:0px;margin-top:0px">There are currently <span style="font-weight:bold;font-size:1.1em;color:#000">$count_species</span> variation databases in Ensembl:</p>\n};
 print HTML $html_content;
 print HTML $html_legend;
-print HTML qq{<p style="padding-top:5px">The <b>full list of species</b> and their assembly versions in Ensembl is available <a href="/info/about/species.html">here</a>.</p>\n};
+print HTML qq{<p style="padding-top:15px">The <b>full list of species</b> and their assembly versions in Ensembl is available <a href="/info/about/species.html">here</a>.</p>\n};
 close(HTML);
 
 
