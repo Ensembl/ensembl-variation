@@ -71,6 +71,7 @@ use Bio::EnsEMBL::Variation::Utils::EnsEMBL2GFF3;
 use Bio::EnsEMBL::Variation::StructuralVariationFeature;
 use Bio::EnsEMBL::Variation::DBSQL::StructuralVariationFeatureAdaptor;
 use Bio::EnsEMBL::Variation::TranscriptStructuralVariation;
+use Bio::EnsEMBL::Variation::Source;
 
 # we need to manually include all these modules for caching to work
 use Bio::EnsEMBL::CoordSystem;
@@ -1432,7 +1433,7 @@ sub vf_list_to_cons {
             
             # GVF output
             elsif(defined($config->{gvf})) {
-                $vf->source("User");
+                $vf->source_object(Bio::EnsEMBL::Variation::Source->new_fast({name => "User"}));
                 
                 $config->{gvf_id} ||= 1;
                 
