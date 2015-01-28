@@ -5832,7 +5832,7 @@ sub check_frequencies {
         $freq = $var->{minor_allele_freq} if $sub_pop =~ /all/i;
         
         if(!defined($freq)) {
-            $freq = $var->{$sub_pop} if defined($var->{$sub_pop});
+            $freq = (split(':', $var->{$sub_pop}))[-1] if defined($var->{$sub_pop});
         }
         
         if(defined($freq) && $freq =~ /\d/) {
