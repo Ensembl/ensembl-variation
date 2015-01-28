@@ -1874,6 +1874,7 @@ sub vf_to_consequences {
   # pass a true argument to get_IntergenicVariation to stop it doing a reference allele check
   # (to stay consistent with the rest of the VEP)
   $vf->get_IntergenicVariation(1);
+  return \@return if defined($config->{no_intergenic}) && defined($vf->{intergenic_variation});
   
   # only most severe or summary?
   if(defined($config->{most_severe}) || defined($config->{summary})) {
