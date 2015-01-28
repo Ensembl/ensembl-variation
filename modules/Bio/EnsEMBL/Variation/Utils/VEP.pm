@@ -4347,7 +4347,7 @@ sub cache_transcripts {
 sub clean_transcript {
     my $tr = shift;
     
-    foreach my $key(qw(display_xref external_db external_display_name external_name external_status created_date status description edits_enabled modified_date dbentries is_current analysis transcript_mapper)) {
+    foreach my $key(qw(gencode_basic miRNA ncRNA cds_start_NF cds_end_NF TSL rseq_mrna_match rseq_mrna_nonmatch rseq_5p_mismatch rseq_cds_mismatch rseq_3p_mismatch rseq_nctran_mismatch rseq_no_comparison rseq_ens_match_wt rseq_ens_match_cds rseq_ens_no_match)) {
         delete $tr->{$key} if defined($tr->{$key});
     }
     
