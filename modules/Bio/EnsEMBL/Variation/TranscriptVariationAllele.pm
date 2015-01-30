@@ -1035,6 +1035,7 @@ sub _get_hgvs_protein_format{
         #### list first and last aa in reference only
         my $ref_pep_first = substr($hgvs_notation->{ref}, 0, 3);
         my $ref_pep_last;
+
         if(substr($hgvs_notation->{ref}, -1, 1) eq "X"){
             $ref_pep_last ="Ter";
         }
@@ -1207,8 +1208,8 @@ sub _get_hgvs_peptides{
       }
       else{ $min = $hgvs_notation->{end};}
 
-      $hgvs_notation->{ref} = $self->_get_surrounding_peptides($min);
-
+      $hgvs_notation->{ref} = $self->_get_surrounding_peptides( $min, 
+                                                                $hgvs_notation->{original_ref});
    
   }
   elsif($hgvs_notation->{type} eq "del" ){
@@ -1264,6 +1265,9 @@ sub _clip_alleles{
   my $check_ref   = $hgvs_notation->{ref} ;
   my $check_start = $hgvs_notation->{start};
   my $check_end   = $hgvs_notation->{end};
+
+  ## cache this - if stop needed later
+  $hgvs_notation->{original_ref} = $hgvs_notation->{ref};
 
   ## store identical trimmed seq 
   my $preseq;
@@ -1400,11 +1404,15 @@ sub _get_surrounding_peptides{
 
   my $self    = shift;
   my $ref_pos = shift; 
+  my $original_ref = shift;
   my $length  = shift;
 
   $length = 2 unless defined $length;
 
   my $ref_trans  = $self->transcript_variation->_peptide();
+
+  $ref_trans .= $original_ref
+     if defined $original_ref &&  $original_ref eq "*";
 
   ## can't find peptide after the end
   return if length($ref_trans) <=  $ref_pos ;
@@ -1590,7 +1598,8 @@ sub _check_peptides_post_del{
    
     ## check peptides after deletion 
     my $post_pos = $hgvs_notation->{end}+1;
-    my $post_seq = $self->_get_surrounding_peptides($post_pos );
+    my $post_seq = $self->_get_surrounding_peptides( $post_pos,
+                                                     $hgvs_notation->{original_ref} );
 
     ## if a stop is deleted and no sequence is available beyond to check, return
     return $hgvs_notation unless defined $post_seq;
