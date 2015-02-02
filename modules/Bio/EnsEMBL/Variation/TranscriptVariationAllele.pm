@@ -752,33 +752,36 @@ sub hgvs_protein {
    
     ## return if a new transcript_variation_allele is not available - variation outside transcript
     return undef unless defined  $self->{hgvs_tva} ;
-
+    
+    my $hgvs_tva_tv = $self->{hgvs_tva}->transcript_variation;
+    my $hgvs_tva_vf = $hgvs_tva_tv->variation_feature;
+    my $tr          = $self->transcript_variation->transcript;
 
     ### no HGVS protein annotation for variants outside translated region 
-    unless ( $self->{hgvs_tva}->transcript_variation->translation_start() && 
-	     $self->{hgvs_tva}->transcript_variation->translation_end()){
-	print "Exiting hgvs_protein - variant " . $self->{hgvs_tva}->transcript_variation->variation_feature->variation_name() . "not within translation\n"  if $DEBUG ==1;
+    unless ( $hgvs_tva_tv->translation_start() && 
+	     $hgvs_tva_tv->translation_end()){
+	print "Exiting hgvs_protein - variant " . $hgvs_tva_vf->variation_name() . "not within translation\n"  if $DEBUG ==1;
 	return undef;
     }
          
     print "proceeding with hgvs prot\n" if $DEBUG ==1;
-    print "Checking translation start: " . $self->{hgvs_tva}->transcript_variation->translation_start() ."\n" if $DEBUG ==1;
+    print "Checking translation start: " . $hgvs_tva_tv->translation_start() ."\n" if $DEBUG ==1;
     ### get reference sequence [add seq version to transcript name]
-    my $stable_id = $self->transcript_variation->transcript->translation->display_id();
-    $stable_id .= "." . $self->transcript_variation->transcript->translation->version() 
+    my $stable_id = $tr->translation->display_id();
+    $stable_id .= "." . $tr->translation->version() 
        unless ($stable_id =~ /\.\d+$/ || $stable_id =~ /LRG/); ## no version required for LRG
     $hgvs_notation->{ref_name} =  $stable_id;
 
     $hgvs_notation->{'numbering'} = 'p';
 
     ### get default reference location [changed later in some cases eg. duplication]
-    $hgvs_notation->{start}   = $self->{hgvs_tva}->transcript_variation->translation_start();
-    $hgvs_notation->{end}     = $self->{hgvs_tva}->transcript_variation->translation_end();  
+    $hgvs_notation->{start}   = $hgvs_tva_tv->translation_start();
+    $hgvs_notation->{end}     = $hgvs_tva_tv->translation_end();  
 
 
     ## get default reference & alt peptides  [changed later to hgvs format]
     $hgvs_notation->{alt} = $self->{hgvs_tva}->peptide;
-    $hgvs_notation->{ref} = $self->{hgvs_tva}->transcript_variation->get_reference_TranscriptVariationAllele->peptide;    
+    $hgvs_notation->{ref} = $hgvs_tva_tv->get_reference_TranscriptVariationAllele->peptide;    
     print "Got protein peps: $hgvs_notation->{ref} =>  $hgvs_notation->{alt} (" . $self->{hgvs_tva}->codon() .")\n" if $DEBUG ==1;
     if(defined $hgvs_notation->{alt} && defined $hgvs_notation->{ref}){
         $hgvs_notation = _clip_alleles( $hgvs_notation);
@@ -815,6 +818,10 @@ sub hgvs_protein {
 sub _create_hgvs_tva{
 
     my $self = shift;
+    
+    my $tv   = $self->transcript_variation;
+    my $vf   = $tv->variation_feature;
+    my $tr   = $tv->transcript;
 
     ## copy of current transcript_variation allele fine for majority of cases 
     ##   - increment positions for insertions/deletions as required
@@ -825,30 +832,30 @@ sub _create_hgvs_tva{
 
     ## no annotation possible if variant outside transcript
     unless ($slice_start){
-	print "couldn't get slice pos for " .$self->transcript_variation->variation_feature->variation_name() . " " . $self->transcript_variation->transcript->display_id() . "\n" if $DEBUG ==1; 
+	print "couldn't get slice pos for " .$vf->variation_name() . " " . $tr->display_id() . "\n" if $DEBUG ==1; 
         return undef ;
     }
     
     ## for readability
-    my $ref_allele =  $self->transcript_variation->get_reference_TranscriptVariationAllele->variation_feature_seq();
+    my $ref_allele =  $tv->get_reference_TranscriptVariationAllele->variation_feature_seq();
     my $alt_allele =  $self->variation_feature_seq();
-    my $var_class  =  $self->transcript_variation->variation_feature->var_class();
+    my $var_class  =  $vf->var_class();
 
 
     $DB::single = 1;
     ##  only check insertions & deletions & don't move beyond transcript
     if( ($var_class eq 'deletion' || $var_class eq 'insertion' ) &&  
         $slice_start != length($slice->seq()) &&
-        (  defined $self->transcript_variation->adaptor() && 
+        (  defined $tv->adaptor() && 
            (
-             UNIVERSAL::can($self->transcript_variation->adaptor, 'isa') ? 
-             $self->transcript_variation->adaptor->db->shift_hgvs_variants_3prime()  == 1 :
+             UNIVERSAL::can($tv->adaptor, 'isa') ? 
+             $tv->adaptor->db->shift_hgvs_variants_3prime()  == 1 :
              $Bio::EnsEMBL::Variation::DBSQL::TranscriptVariationAdaptor::DEFAULT_SHIFT_HGVS_VARIANTS_3PRIME == 1
            )
         )
         ){                  
 	
-	print "checking position for $var_class, transcript strand is : ".  $self->transcript_variation->transcript->strand() ."\n" if $DEBUG ==1;       
+	print "checking position for $var_class, transcript strand is : ".  $tr->strand() ."\n" if $DEBUG ==1;       
 	
 
 	my $seq_to_check;
@@ -861,11 +868,11 @@ sub _create_hgvs_tva{
 
 	my $allele_flipped = 0;
 	## switch allele to transcript strand if necessary
-	if( ( $self->transcript_variation->variation_feature->strand() <0 && 
-	      $self->transcript_variation->transcript->strand()>0) 
+	if( ( $vf->strand() <0 && 
+	      $tr->strand()>0) 
 	    ||
-	    ( $self->transcript_variation->variation_feature->strand() >0 && 
-	      $self->transcript_variation->transcript->strand() < 0 )
+	    ( $vf->strand() >0 && 
+	      $tr->strand() < 0 )
 	    ){    
 	    reverse_comp(\$seq_to_check);
 	    $allele_flipped = 1;
@@ -935,22 +942,25 @@ sub _make_hgvs_tva{
     my $offset     = shift;
 
     my $allele_string =  $ref_allele . "/" . $alt_allele;
+    
+    my $tv        = $self->transcript_variation;
+    my $vf        = $tv->variation_feature;
 
-    my $start     = $self->transcript_variation->variation_feature->start() + $offset;
-    my $end       = $self->transcript_variation->variation_feature->end() + $offset;
+    my $start     = $vf->start() + $offset;
+    my $end       = $vf->end() + $offset;
 
     print "Starting make hgvs tva - vf at $start - $end  $allele_string\n" if $DEBUG ==1;
-    print "previous pos :".  $self->transcript_variation->variation_feature->start() ."-" . $self->transcript_variation->variation_feature->end() ."\n" if $DEBUG ==1;
+    print "previous pos :".  $vf->start() ."-" . $vf->end() ."\n" if $DEBUG ==1;
     my $moved_vf =  Bio::EnsEMBL::Variation::VariationFeature->new(
 	-start          => $start,
 	-end            => $end,
 	-allele_string  => $allele_string,
-	-strand         => $self->transcript_variation->variation_feature->strand(),
-	-map_weight     => $self->transcript_variation->variation_feature->map_weight(),
+	-strand         => $vf->strand(),
+	-map_weight     => $vf->map_weight(),
 #	-adaptor        => $self->transcript_variation->adaptor->db->get_VariationFeatureAdaptor(),
-	-variation_name => $self->transcript_variation->variation_feature->variation_name(),
-	-variation      => $self->transcript_variation->variation_feature->variation(),
-	-slice          => $self->transcript_variation->variation_feature->slice()
+	-variation_name => $vf->variation_name(),
+	-variation      => $vf->variation(),
+	-slice          => $vf->slice()
 									       );
     my $transcript = $self->transcript_variation->transcript();
     my $moved_tv = Bio::EnsEMBL::Variation::TranscriptVariation->new(
@@ -1424,11 +1434,15 @@ sub _get_alternate_cds{
   ### get reference sequence
   my $reference_cds_seq = $self->transcript_variation->_translateable_seq();
   
-  return undef unless defined($self->transcript_variation->cds_start) && defined($self->transcript_variation->cds_end());
+  my $tv = $self->transcript_variation;
+  my $vf = $tv->variation_feature;
+  my $tr = $tv->transcript;
+  
+  return undef unless defined($tv->cds_start) && defined($tv->cds_end());
 
   ### get sequences upstream and downstream of variant
-  my $upstream_seq   =  substr($reference_cds_seq, 0, ($self->transcript_variation->cds_start() -1) );
-  my $downstream_seq =  substr($reference_cds_seq, ($self->transcript_variation->cds_end() ) );
+  my $upstream_seq   =  substr($reference_cds_seq, 0, ($tv->cds_start() -1) );
+  my $downstream_seq =  substr($reference_cds_seq, ($tv->cds_end() ) );
 
   ### fix alternate allele if deletion or on opposite strand
   my $alt_allele  = $self->variation_feature_seq();
@@ -1436,8 +1450,8 @@ sub _get_alternate_cds{
   if(
     $alt_allele &&
     (
-      $self->transcript_variation->variation_feature->strand() <0 && $self->transcript_variation->transcript->strand() >0 ||
-      $self->transcript_variation->variation_feature->strand() >0 && $self->transcript_variation->transcript->strand() < 0
+      $vf->strand() <0 && $tr->strand() >0 ||
+      $vf->strand() >0 && $tr->strand() < 0
     )
   ){    
     reverse_comp(\$alt_allele) ;
@@ -1743,13 +1757,15 @@ sub _var2transcript_slice_coords{
   my $ref_slice = $self->transcript->feature_Slice();  #### returns with strand same as feature
 
   my $tr_vf     = $self->variation_feature->transfer($ref_slice);
+  
+  my $tr        = $self->transcript;
 
   # Return undef if this VariationFeature does not fall within the supplied feature.
   return undef if (!defined $tr_vf ||
                    $tr_vf->start  < 1 || 
                    $tr_vf->end    < 1 || 
-                   $tr_vf->start  > ($self->transcript->end - $self->transcript->start + 1) || 
-                   $tr_vf->end    > ($self->transcript->end - $self->transcript->start + 1)); 
+                   $tr_vf->start  > ($tr->end - $tr->start + 1) || 
+                   $tr_vf->end    > ($tr->end - $tr->start + 1)); 
   
   return( $tr_vf->start() , $tr_vf->end(), $ref_slice);
 }
@@ -1782,8 +1798,8 @@ sub _get_cDNA_position {
     #### TranscriptVariation start/stop coord relative to transcript 
     #### Switch to chromosome coordinates taking into account strand
     $position = ( $strand > 0 ? 
-          ( $self->transcript->start() + $position - 1 )  :   
-          ( $self->transcript->end()   - $position + 1));
+          ( $transcript->start() + $position - 1 )  :   
+          ( $transcript->end()   - $position + 1));
 
 
             
