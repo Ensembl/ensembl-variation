@@ -550,11 +550,25 @@ sub _intron_effects {
         my $vf_end   = $vf->end;
 
         my $insertion = $vf_start == $vf_end+1;
+        
+        my $tr = $self->transcript();
+        my $tr_strand = $tr->strand();
+        
+        my ($min, $max) = sort {$a <=> $b} ($vf_start, $vf_end);
+        my $vf_3_prime_end = $tr_strand > 0 ? $max : $min;
 
         for my $intron (@{ $self->_introns }) {
 
             my $intron_start = $intron->start;
             my $intron_end   = $intron->end;
+            
+            # skip remainder if vf out of range
+            last if
+              ( $tr_strand > 1 && $vf_3_prime_end < $intron_start - 8) ||
+              ( $tr_strand < 1 && $vf_3_prime_end > $intron_end + 8);
+              
+            # skip this one if vf out of range
+            next unless overlap($min, $max, $intron_start - 8, $intron_end + 8);
             
             # under various circumstances the genebuild process can introduce
             # artificial short (<= 12 nucleotide) introns into transcripts
