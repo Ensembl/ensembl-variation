@@ -56,5 +56,13 @@ ok($sv->dbID() == 16158654,      "id by name" );
 ok($sv->source_object->name() eq 'DGVa',"source by name");
 ok($sv->alias eq 'HM3_CNP_741', "alias by name");
 
+delete $sv->{$_} for qw(dbID name);
+$sv->variation_name('test');
+
+ok($sva->store($sv), "store");
+
+$sv = $sva->fetch_by_name('test');
+ok($sv && $sv->variation_name eq 'test', "fetch stored");
+
 
 done_testing();

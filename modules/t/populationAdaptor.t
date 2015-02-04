@@ -112,4 +112,13 @@ is(join(',', @$synonyms), 1372, "Fetch synonyms for dbID 650");
 
 # get_sample_id_for_population_names
 
+# store
+$population = $pa->fetch_by_dbID(649);
+delete $population->{$_} for qw(dbID name);
+$population->name('test');
+
+ok($pa->store($population), "store");
+$population = $pa->fetch_by_name("test");
+ok($population && $population->name eq 'test', "fetch stored");
+
 done_testing();

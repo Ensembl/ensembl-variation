@@ -113,4 +113,16 @@ ok($failed_var->name() eq 'rs67521280', "name by name");
 ok($failed_var->failed_description() eq $fail_desc,   "fail description"); 
 ok(join(";", @{$failed_var->get_all_failed_descriptions()}) eq $fail_desc,   "all fail descriptions");
 
+
+# store
+$var = $va->fetch_by_dbID(4770800);
+
+delete $var->{$_} for qw(dbID name);
+$var->name('test');
+
+ok($va->store($var), "store");
+
+$var = $va->fetch_by_name('test');
+ok($var && $var->name eq 'test', "fetch stored");
+
 done_testing();

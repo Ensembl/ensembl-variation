@@ -47,6 +47,24 @@ ok($igt->allele1 eq 'A', 'allele1');
 ok($igt->allele2 eq 'T', 'allele2');
 
 
+# store
+$igt = $igts->[0];
+my $i = $igt->individual->adaptor->fetch_all_by_name('GM18507')->[0];
+$igt->individual($i);
+
+$igta->store([$igt], 1);
+
+delete($igta->{_cache});
+$igts = $igta->fetch_all_by_Variation($variation);
+($igt) = grep {$_->individual->name eq 'GM18507'} @$igts;
+
+ok($igt && $igt->genotype_string eq 'T|T', "store merged");
+
+$igt = $igts->[0];
+
+ok($igta->store([$igt]), "store unmerged");
+ok($igta->store_uncompressed([$igt]), "store uncompressed");
+
 # fetch_all_by_Slice
 #my $sa = $cdba->get_SliceAdaptor;
 #my $slice = $sa->fetch_by_region('chromosome', 13, 54950000, 55000000);

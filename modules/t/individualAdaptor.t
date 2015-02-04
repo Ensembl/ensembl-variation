@@ -107,4 +107,14 @@ is(scalar @$strains, 0, "Number of strains");
 
 # get_reference_strain_name
 
+
+# store
+$individual = $ia->fetch_by_dbID(8675);
+delete $individual->{$_} for qw(dbID name adaptor);
+$individual->name('test');
+ok($ia->store($individual), "store");
+
+($individual) = @{$ia->fetch_all_by_name('test')};
+ok($individual && $individual->name eq 'test', "fetch stored");
+
 done_testing();
