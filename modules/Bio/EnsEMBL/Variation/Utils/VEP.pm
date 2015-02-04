@@ -2289,29 +2289,41 @@ sub tva_to_line {
   my $tv = $tva->transcript_variation;
   my $t  = $tv->transcript;
   
+  my $pre = $tva->_pre_consequence_predicates();
+  
   # method name for consequence terms
   my $term_method = $config->{terms}.'_term';
   
   my $base_line = {
     Feature_type     => 'Transcript',
     Feature          => (defined $t ? $t->stable_id : undef),
-    cDNA_position    => format_coords($tv->cdna_start, $tv->cdna_end).
+    
+    # use pre_consequence_predicates to avoid calling coord methods
+    cDNA_position    =>
+      ($pre->{within_feature} ? format_coords($tv->cdna_start, $tv->cdna_end) : format_coords(undef, undef)).
       (defined($config->{total_length}) ? '/'.$t->length : ''),
-    CDS_position     => format_coords($tv->cds_start, $tv->cds_end).
-      (defined($config->{total_length}) && $t->{_variation_effect_feature_cache}->{translateable_seq} ?
-      '/'.length($t->{_variation_effect_feature_cache}->{translateable_seq}) : ''
+    
+    CDS_position     =>
+      ($pre->{coding} ? format_coords($tv->cds_start, $tv->cds_end) : format_coords(undef, undef)).
+      (
+        defined($config->{total_length}) && $t->{_variation_effect_feature_cache}->{translateable_seq} ?
+        '/'.length($t->{_variation_effect_feature_cache}->{translateable_seq}) : ''
       ),
-    Protein_position => format_coords($tv->translation_start, $tv->translation_end).
-      (defined($config->{total_length}) && $t->{_variation_effect_feature_cache}->{peptide} ?
-      '/'.length($t->{_variation_effect_feature_cache}->{peptide}) : ''
+    
+    Protein_position =>
+      ($pre->{coding} ? format_coords($tv->translation_start, $tv->translation_end) : format_coords(undef, undef)).
+      (
+        defined($config->{total_length}) && $t->{_variation_effect_feature_cache}->{peptide} ?
+        '/'.length($t->{_variation_effect_feature_cache}->{peptide}) : ''
       ),
+    
     Allele           => $tva->variation_feature_seq,
-    Amino_acids      => $tva->pep_allele_string,
-    Codons           => $tva->display_codon_allele_string,
+    Amino_acids      => ($pre->{coding} ? $tva->pep_allele_string : undef),
+    Codons           => ($pre->{coding} ? $tva->display_codon_allele_string : undef),
     Consequence      => join ",", map {$_->$term_method || $_->SO_term} sort {$a->rank <=> $b->rank} @{$tva->get_all_OverlapConsequences},
   };
   
-  if(defined($tv->translation_start)) {
+  if($pre->{coding} && defined($tv->translation_start)) {
     $config->{stats}->{protein_pos}->{int(10 * ($tv->translation_start / ($t->{_variation_effect_feature_cache}->{peptide} ? length($t->{_variation_effect_feature_cache}->{peptide}) : $t->translation->length)))}++;
   }
   
@@ -3209,7 +3221,7 @@ sub whole_genome_fetch_transcript {
                 
                 # prefetching stuff here prevents doing loads at the
                 # end and makes progress reporting more useful
-                $tv->_prefetch_for_vep;
+                # $tv->_prefetch_for_vep;
                 
                 $vf->add_TranscriptVariation($tv);
                 
