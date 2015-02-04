@@ -62,7 +62,10 @@ use Bio::EnsEMBL::Utils::Argument qw(rearrange);
 use Bio::EnsEMBL::Utils::Scalar qw(assert_ref);
 use Bio::EnsEMBL::Utils::Exception qw(throw);
 use Bio::EnsEMBL::Variation::Utils::Constants qw(%OVERLAP_CONSEQUENCES);
+use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(overlap);
 use Scalar::Util qw(weaken);
+
+our $PREDICATE_COUNT = 0;
 
 =head2 new
 
@@ -207,21 +210,42 @@ sub get_all_OverlapConsequences {
         
         my $assigned_tier;
         
+        # get references to frequently used objects
+        # by passing these to the predicates here we reduce the number of method calls dramatically
+        my $bvfo = $self->base_variation_feature_overlap;
+        my $bvf  = $bvfo->base_variation_feature;
+        my $feat = $bvfo->feature;
+        
+        my $pre = $self->_pre_consequence_predicates($feat, $bvfo, $bvf);
+        
         # loop over all the possible consequences
-        for my $oc (@{$self->get_sorted_OverlapConsequences}) {
+        OC: for my $oc (@{$self->get_sorted_OverlapConsequences}) {
+            
+            # check include to hash to determine whether to run this predicate
+            if(my $inc = $oc->include) {
+              foreach my $key(keys %$inc) {
+                if($inc->{$key} == 0) {
+                  next OC if exists($pre->{$key}) && $pre->{$key} ne $inc->{$key};
+                }
+                else {
+                  next OC unless exists($pre->{$key}) && $pre->{$key} eq $inc->{$key};
+                }
+              }
+            }
             
             last if defined($assigned_tier) and $oc->tier > $assigned_tier;
            
             # check that this consequence applies to this type of variation feature
 
-            if ($oc->variant_feature_class && $self->base_variation_feature->isa($oc->variant_feature_class)) {
+            if ($oc->variant_feature_class && $bvf->isa($oc->variant_feature_class)) {
                 
                 # check that this consequence applies to this type of feature
-
-                if ($self->feature->isa($oc->feature_class)) {
+                if ($feat->isa($oc->feature_class)) {
                     
                     # if so, check if the predicate of this consequence holds for this bvfoa
-                    my $check = $oc->predicate->($self);
+                    my $check = $oc->predicate->($self, $feat, $bvfo, $bvf);
+                    
+                    $PREDICATE_COUNT++;
                     
                     #print STDERR $self->base_variation_feature->variation_name." ".$oc->{SO_term}." ".$self->feature->stable_id. " $check\n";
 
@@ -237,6 +261,161 @@ sub get_all_OverlapConsequences {
     }
     
     return $self->{overlap_consequences};
+}
+
+# pre-calculate a bunch of attributes
+# used to work out whether to execute predicates in get_all_OverlapConsequences
+# uses a complex if/else structure to avoid executing unnecessary code
+sub _pre_consequence_predicates {
+  my ($self, $feat, $bvfo, $bvf) = shift;
+  
+  unless(exists($self->{pre_consequence_predicates})) {
+    $bvfo ||= $self->base_variation_feature_overlap;
+    $bvf  ||= $bvfo->base_variation_feature;
+    $feat ||= $bvfo->feature;
+    
+    my $preds = {};
+    
+    $preds->{feature_type} = ref($feat);
+    
+    ## variant type
+    unless(exists($bvf->{pre_consequence_predicates})) {
+      
+      my $bvf_preds = {};
+      
+      my $class_SO_term = $bvf->class_SO_term;
+      my $is_sv = $bvf->isa('Bio::EnsEMBL::Variation::StructuralVariationFeature') ? 1 : 0;
+      
+      $bvf_preds->{sv} = $is_sv;
+      
+      # most variants we see will be SNPs, so test this first
+      if(!$is_sv && $class_SO_term eq 'SNV') {
+        $bvf_preds->{snp} = 1;
+      }
+      elsif($class_SO_term =~ /deletion/) {
+        $bvf_preds->{deletion} = 1;
+      }
+      elsif($class_SO_term =~ /insertion|duplication/) {
+        $bvf_preds->{insertion} = 1;
+      }
+      
+      $bvf->{pre_consequence_predicates} = $bvf_preds;
+    }
+    
+    # copy from bvf
+    $preds->{$_} = $bvf->{pre_consequence_predicates}->{$_} for keys %{$bvf->{pre_consequence_predicates}};
+    
+    
+    ## feature-specific location
+    unless(exists($bvfo->{pre_consequence_predicates})) {
+      
+      my $bvfo_preds = {};
+      my ($min_vf, $max_vf) = sort {$a <=> $b} ($bvf->start, $bvf->end);
+      
+      # within feature
+      $bvfo_preds->{within_feature} = overlap($min_vf, $max_vf, $feat->start, $feat->end) ? 1 : 0;
+      
+      if($bvfo_preds->{within_feature}) {
+        
+        my ($tr_coding_start, $tr_coding_end);
+        
+        if($preds->{feature_type} eq 'Bio::EnsEMBL::Transcript') {
+          
+          # get coding region coords
+          ($tr_coding_start, $tr_coding_end) = ($feat->coding_region_start, $feat->coding_region_end);
+          
+          # store biotype
+          $bvfo_preds->{$feat->biotype} = 1;
+          
+          ## code to get exon/intron status actually slower than calling predicates
+          ## presumably since running it for every variant is slower than lazy-running on demand
+          ## left here in case we find a way to incorporate it in future
+          
+          # my $tr_strand = $feat->strand();
+          # my $vf_3_prime_end = $tr_strand > 0 ? $max_vf : $min_vf;
+          #
+          # # intronic?
+          # $bvfo_preds->{intron} = 0;
+          #
+          # foreach my $intron(@{$bvfo->_introns}) {
+          #   last if
+          #     ( $tr_strand > 1 && $vf_3_prime_end < $intron->start) ||
+          #     ( $tr_strand < 1 && $vf_3_prime_end > $intron->end);
+          #
+          #   if(overlap($min_vf, $max_vf, $intron->start, $intron->end)) {
+          #     $bvfo_preds->{intron} = 1;
+          #     last;
+          #   }
+          # }
+          #
+          # # exonic?
+          # $bvfo_preds->{exon} = 0;
+          #
+          # foreach my $exon(@{$bvfo->_exons}) {
+          #   last if
+          #     ( $tr_strand > 1 && $vf_3_prime_end < $exon->start) ||
+          #     ( $tr_strand < 1 && $vf_3_prime_end > $exon->end);
+          #
+          #   if(overlap($min_vf, $max_vf, $exon->start, $exon->end)) {
+          #     $bvfo_preds->{exon} = 1;
+          #     last;
+          #   }
+          # }
+        }
+        
+        # coding transcript specific
+        if($tr_coding_start && $tr_coding_end) {
+          
+          # completely within UTR
+          if($max_vf < $tr_coding_start || $min_vf > $tr_coding_end) {
+            $bvfo_preds->{utr} = 1;
+          }
+        
+          else {
+        
+            # partially within UTR
+            if($min_vf < $tr_coding_start || $max_vf > $tr_coding_end) {
+              $bvfo_preds->{utr} = 1;
+            }
+            
+            my $cds_coords = $bvfo->cds_coords;
+            
+            # compeletely within coding region
+            if(scalar @$cds_coords == 1 && $cds_coords->[0]->isa('Bio::EnsEMBL::Mapper::Coordinate')) {
+              $bvfo_preds->{coding} = 1;
+            }
+            
+            else {
+              
+              # completely in non-coding region
+              if(scalar @$cds_coords == 0) {
+                $bvfo_preds->{non_coding} = 1;
+              }
+              
+              # partly in coding region
+              else {
+                $bvfo_preds->{coding} = 1;
+              }
+            }
+          }
+        }
+        
+        elsif($preds->{feature_type} eq 'Bio::EnsEMBL::Transcript') {
+          $bvfo_preds->{non_coding} = 1;
+        }
+      }
+      
+      $bvfo->{pre_consequence_predicates} = $bvfo_preds;
+    }
+    
+    # copy from bvfo
+    $preds->{$_} = $bvfo->{pre_consequence_predicates}->{$_} for keys %{$bvfo->{pre_consequence_predicates}};
+    
+    # copy to self
+    $self->{pre_consequence_predicates} = $preds;
+  }
+  
+  return $self->{pre_consequence_predicates};
 }
 
 =head2 add_OverlapConsequence
