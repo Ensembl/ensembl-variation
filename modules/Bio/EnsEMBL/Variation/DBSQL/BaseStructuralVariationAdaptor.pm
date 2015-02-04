@@ -468,7 +468,7 @@ sub store {
         $sv->is_evidence || 0,
         $sv->is_somatic  || 0,
         $sv->alias || undef,
-        $sv->clinical_significance ? (join ",", @{$sv->clinical_significance}) : undef,
+        $sv->get_all_clinical_significance_states ? (join ",", @{$sv->get_all_clinical_significance_states}) : undef,
         $sv->copy_number || undef
     );
     
