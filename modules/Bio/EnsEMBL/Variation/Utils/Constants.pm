@@ -9,9 +9,9 @@ use warnings;
 
 use base qw(Exporter);
 
-our @EXPORT_OK = qw(%OVERLAP_CONSEQUENCES %VARIATION_CLASSES $DEFAULT_OVERLAP_CONSEQUENCE SO_TERM_INDEL ATTRIB_TYPE_ALLELE_ACCESSION_ID SO_TERM_CODING_SEQUENCE_VARIANT SO_TERM_STOP_RETAINED_VARIANT SO_TERM_COMPLEX_STRUCTURAL_ALTERATION SO_TERM_SPLICE_ACCEPTOR_VARIANT SO_TERM_TANDEM_REPEAT SO_TERM_INTERCHROMOSOMAL_BREAKPOINT ATTRIB_TYPE_VARIATION_NAMES SO_TERM_FEATURE_ELONGATION SO_TERM_TRANSCRIPT_ABLATION SO_TERM_TF_BINDING_SITE_VARIANT ATTRIB_TYPE_DISPLAY_TERM SO_TERM_INTRON_VARIANT SO_TERM_STOP_GAINED SO_TERM_SPLICE_DONOR_VARIANT ATTRIB_TYPE_SIFT_PREDICTION SO_TERM_FEATURE_TRUNCATION ATTRIB_TYPE_VARIANCE SO_TERM_INTRACHROMOSOMAL_BREAKPOINT SO_TERM_SPLICE_REGION_VARIANT SO_TERM_TFBS_ABLATION ATTRIB_TYPE_ODDS_RATIO SO_TERM_REGULATORY_REGION_AMPLIFICATION SO_TERM_MISSENSE_VARIANT SO_TERM_SNV ATTRIB_TYPE_EXTERNAL_ID SO_TERM_STRUCTURAL_VARIANT SO_TERM_PROBE ATTRIB_TYPE_LOD_SCORE ATTRIB_TYPE_DBSNP_CLIN_SIG SO_TERM_SEQUENCE_ALTERATION SO_TERM_REGULATORY_REGION_VARIANT ATTRIB_TYPE_MARKER_ACCESSION_ID SO_TERM_SUBSTITUTION ATTRIB_TYPE_DGVA_CLIN_SIG SO_TERM_NON_CODING_TRANSCRIPT_EXON_VARIANT SO_TERM_NOVEL_SEQUENCE_INSERTION SO_TERM_INCOMPLETE_TERMINAL_CODON_VARIANT SO_TERM_DUPLICATION SO_TERM_TFBS_AMPLIFICATION SO_TERM_5_PRIME_UTR_VARIANT ATTRIB_TYPE_STRAIN_ID ATTRIB_TYPE_PROT_FUNC_ANALYSIS SO_TERM_TANDEM_DUPLICATION ATTRIB_TYPE_P_VALUE ATTRIB_TYPE_ASSOCIATED_GENE SO_TERM_MOBILE_ELEMENT_INSERTION SO_TERM_MATURE_MIRNA_VARIANT SO_TERM_NON_CODING_TRANSCRIPT_VARIANT SO_TERM_DOWNSTREAM_GENE_VARIANT SO_TERM_INFRAME_INSERTION SO_TERM_INSERTION SO_TERM_NMD_TRANSCRIPT_VARIANT ATTRIB_TYPE_SO_TERM ATTRIB_TYPE_SAMPLE_ID SO_TERM_INTERGENIC_VARIANT SO_TERM_SYNONYMOUS_VARIANT ATTRIB_TYPE_SHORT_NAME SO_TERM_TRANSLOCATION ATTRIB_TYPE_INHERITANCE_TYPE SO_TERM_COPY_NUMBER_VARIATION ATTRIB_TYPE_POLYPHEN_PREDICTION SO_TERM_REGULATORY_REGION_ABLATION SO_TERM_INVERSION SO_TERM_STOP_LOST ATTRIB_TYPE_RANK SO_TERM_INITIATOR_CODON_VARIANT SO_TERM_3_PRIME_UTR_VARIANT SO_TERM_UPSTREAM_GENE_VARIANT ATTRIB_TYPE_SO_ACCESSION ATTRIB_TYPE_CLINVAR_CLIN_SIG ATTRIB_TYPE_ALLELE_SYMBOL SO_TERM_COPY_NUMBER_LOSS ATTRIB_TYPE_NCBI_TERM SO_TERM_DELETION ATTRIB_TYPE_FEATURE_SO_TERM SO_TERM_FRAMESHIFT_VARIANT SO_TERM_COPY_NUMBER_GAIN ATTRIB_TYPE_RISK_ALLELE ATTRIB_TYPE_BETA_COEF ATTRIB_TYPE_EVIDENCE SO_TERM_INFRAME_DELETION SO_TERM_GENETIC_MARKER SO_TERM_TRANSCRIPT_AMPLIFICATION);
+our @EXPORT_OK = qw(%OVERLAP_CONSEQUENCES %VARIATION_CLASSES $DEFAULT_OVERLAP_CONSEQUENCE SO_TERM_INDEL ATTRIB_TYPE_ALLELE_ACCESSION_ID SO_TERM_CODING_SEQUENCE_VARIANT SO_TERM_STOP_RETAINED_VARIANT SO_TERM_COMPLEX_STRUCTURAL_ALTERATION SO_TERM_SPLICE_ACCEPTOR_VARIANT SO_TERM_TANDEM_REPEAT SO_TERM_INTERCHROMOSOMAL_BREAKPOINT ATTRIB_TYPE_VARIATION_NAMES SO_TERM_FEATURE_ELONGATION SO_TERM_TRANSCRIPT_ABLATION SO_TERM_TF_BINDING_SITE_VARIANT ATTRIB_TYPE_DISPLAY_TERM SO_TERM_INTRON_VARIANT SO_TERM_STOP_GAINED ATTRIB_TYPE_REVIEW_STATUS SO_TERM_SPLICE_DONOR_VARIANT ATTRIB_TYPE_SIFT_PREDICTION SO_TERM_FEATURE_TRUNCATION ATTRIB_TYPE_VARIANCE ATTRIB_TYPE_BASED_ON SO_TERM_INTRACHROMOSOMAL_BREAKPOINT SO_TERM_SPLICE_REGION_VARIANT SO_TERM_TFBS_ABLATION ATTRIB_TYPE_ODDS_RATIO SO_TERM_REGULATORY_REGION_AMPLIFICATION SO_TERM_MISSENSE_VARIANT SO_TERM_SNV ATTRIB_TYPE_EXTERNAL_ID SO_TERM_STRUCTURAL_VARIANT SO_TERM_PROBE ATTRIB_TYPE_DBSNP_CLIN_SIG ATTRIB_TYPE_LOD_SCORE SO_TERM_SEQUENCE_ALTERATION SO_TERM_REGULATORY_REGION_VARIANT ATTRIB_TYPE_MARKER_ACCESSION_ID SO_TERM_SUBSTITUTION ATTRIB_TYPE_DGVA_CLIN_SIG SO_TERM_NON_CODING_TRANSCRIPT_EXON_VARIANT SO_TERM_NOVEL_SEQUENCE_INSERTION SO_TERM_INCOMPLETE_TERMINAL_CODON_VARIANT SO_TERM_DUPLICATION SO_TERM_TFBS_AMPLIFICATION SO_TERM_5_PRIME_UTR_VARIANT ATTRIB_TYPE_CONSERVATION_SCORE ATTRIB_TYPE_PROT_FUNC_ANALYSIS ATTRIB_TYPE_STRAIN_ID SO_TERM_TANDEM_DUPLICATION ATTRIB_TYPE_P_VALUE ATTRIB_TYPE_ASSOCIATED_GENE SO_TERM_MOBILE_ELEMENT_INSERTION SO_TERM_MATURE_MIRNA_VARIANT SO_TERM_NON_CODING_TRANSCRIPT_VARIANT SO_TERM_DOWNSTREAM_GENE_VARIANT SO_TERM_INFRAME_INSERTION SO_TERM_INSERTION SO_TERM_NMD_TRANSCRIPT_VARIANT ATTRIB_TYPE_SO_TERM ATTRIB_TYPE_SAMPLE_ID SO_TERM_INTERGENIC_VARIANT SO_TERM_SYNONYMOUS_VARIANT ATTRIB_TYPE_SHORT_NAME SO_TERM_TRANSLOCATION ATTRIB_TYPE_INHERITANCE_TYPE SO_TERM_COPY_NUMBER_VARIATION ATTRIB_TYPE_POLYPHEN_PREDICTION SO_TERM_REGULATORY_REGION_ABLATION SO_TERM_INVERSION SO_TERM_STOP_LOST ATTRIB_TYPE_RANK SO_TERM_INITIATOR_CODON_VARIANT SO_TERM_3_PRIME_UTR_VARIANT SO_TERM_UPSTREAM_GENE_VARIANT ATTRIB_TYPE_CLINVAR_CLIN_SIG ATTRIB_TYPE_SO_ACCESSION ATTRIB_TYPE_ALLELE_SYMBOL SO_TERM_COPY_NUMBER_LOSS ATTRIB_TYPE_SEQUENCE_NUMBER ATTRIB_TYPE_NCBI_TERM SO_TERM_DELETION ATTRIB_TYPE_FEATURE_SO_TERM SO_TERM_FRAMESHIFT_VARIANT SO_TERM_COPY_NUMBER_GAIN ATTRIB_TYPE_RISK_ALLELE ATTRIB_TYPE_BETA_COEF ATTRIB_TYPE_EVIDENCE SO_TERM_INFRAME_DELETION SO_TERM_GENETIC_MARKER SO_TERM_TRANSCRIPT_AMPLIFICATION);
 
-our %EXPORT_TAGS = ( attrib_types => [qw(ATTRIB_TYPE_RANK ATTRIB_TYPE_ALLELE_ACCESSION_ID ATTRIB_TYPE_ODDS_RATIO ATTRIB_TYPE_EXTERNAL_ID ATTRIB_TYPE_CLINVAR_CLIN_SIG ATTRIB_TYPE_SO_ACCESSION ATTRIB_TYPE_ALLELE_SYMBOL ATTRIB_TYPE_LOD_SCORE ATTRIB_TYPE_DBSNP_CLIN_SIG ATTRIB_TYPE_MARKER_ACCESSION_ID ATTRIB_TYPE_SO_TERM ATTRIB_TYPE_SAMPLE_ID ATTRIB_TYPE_DGVA_CLIN_SIG ATTRIB_TYPE_VARIATION_NAMES ATTRIB_TYPE_NCBI_TERM ATTRIB_TYPE_FEATURE_SO_TERM ATTRIB_TYPE_SHORT_NAME ATTRIB_TYPE_DISPLAY_TERM ATTRIB_TYPE_RISK_ALLELE ATTRIB_TYPE_BETA_COEF ATTRIB_TYPE_INHERITANCE_TYPE ATTRIB_TYPE_EVIDENCE ATTRIB_TYPE_STRAIN_ID ATTRIB_TYPE_PROT_FUNC_ANALYSIS ATTRIB_TYPE_SIFT_PREDICTION ATTRIB_TYPE_P_VALUE ATTRIB_TYPE_VARIANCE ATTRIB_TYPE_POLYPHEN_PREDICTION ATTRIB_TYPE_ASSOCIATED_GENE)], SO_consequence_terms => [qw(SO_TERM_NON_CODING_TRANSCRIPT_VARIANT SO_TERM_DOWNSTREAM_GENE_VARIANT SO_TERM_CODING_SEQUENCE_VARIANT SO_TERM_STOP_RETAINED_VARIANT SO_TERM_INFRAME_INSERTION SO_TERM_NMD_TRANSCRIPT_VARIANT SO_TERM_SPLICE_ACCEPTOR_VARIANT SO_TERM_INTERGENIC_VARIANT SO_TERM_FEATURE_ELONGATION SO_TERM_TRANSCRIPT_ABLATION SO_TERM_SYNONYMOUS_VARIANT SO_TERM_TF_BINDING_SITE_VARIANT SO_TERM_INTRON_VARIANT SO_TERM_STOP_GAINED SO_TERM_SPLICE_DONOR_VARIANT SO_TERM_FEATURE_TRUNCATION SO_TERM_REGULATORY_REGION_ABLATION SO_TERM_TFBS_ABLATION SO_TERM_SPLICE_REGION_VARIANT SO_TERM_STOP_LOST SO_TERM_INITIATOR_CODON_VARIANT SO_TERM_3_PRIME_UTR_VARIANT SO_TERM_REGULATORY_REGION_AMPLIFICATION SO_TERM_UPSTREAM_GENE_VARIANT SO_TERM_MISSENSE_VARIANT SO_TERM_REGULATORY_REGION_VARIANT SO_TERM_NON_CODING_TRANSCRIPT_EXON_VARIANT SO_TERM_INCOMPLETE_TERMINAL_CODON_VARIANT SO_TERM_FRAMESHIFT_VARIANT SO_TERM_TFBS_AMPLIFICATION SO_TERM_5_PRIME_UTR_VARIANT SO_TERM_INFRAME_DELETION SO_TERM_TRANSCRIPT_AMPLIFICATION SO_TERM_MATURE_MIRNA_VARIANT)], SO_class_terms => [qw(SO_TERM_INDEL SO_TERM_SNV SO_TERM_STRUCTURAL_VARIANT SO_TERM_COMPLEX_STRUCTURAL_ALTERATION SO_TERM_INSERTION SO_TERM_PROBE SO_TERM_COPY_NUMBER_LOSS SO_TERM_SEQUENCE_ALTERATION SO_TERM_TANDEM_REPEAT SO_TERM_INTERCHROMOSOMAL_BREAKPOINT SO_TERM_SUBSTITUTION SO_TERM_NOVEL_SEQUENCE_INSERTION SO_TERM_DELETION SO_TERM_COPY_NUMBER_GAIN SO_TERM_DUPLICATION SO_TERM_TRANSLOCATION SO_TERM_COPY_NUMBER_VARIATION SO_TERM_TANDEM_DUPLICATION SO_TERM_GENETIC_MARKER SO_TERM_INVERSION SO_TERM_INTRACHROMOSOMAL_BREAKPOINT SO_TERM_MOBILE_ELEMENT_INSERTION)],  );
+our %EXPORT_TAGS = ( attrib_types => [qw(ATTRIB_TYPE_ALLELE_ACCESSION_ID ATTRIB_TYPE_SO_TERM ATTRIB_TYPE_SAMPLE_ID ATTRIB_TYPE_VARIATION_NAMES ATTRIB_TYPE_SHORT_NAME ATTRIB_TYPE_DISPLAY_TERM ATTRIB_TYPE_INHERITANCE_TYPE ATTRIB_TYPE_REVIEW_STATUS ATTRIB_TYPE_SIFT_PREDICTION ATTRIB_TYPE_VARIANCE ATTRIB_TYPE_POLYPHEN_PREDICTION ATTRIB_TYPE_BASED_ON ATTRIB_TYPE_RANK ATTRIB_TYPE_ODDS_RATIO ATTRIB_TYPE_EXTERNAL_ID ATTRIB_TYPE_SO_ACCESSION ATTRIB_TYPE_CLINVAR_CLIN_SIG ATTRIB_TYPE_DBSNP_CLIN_SIG ATTRIB_TYPE_LOD_SCORE ATTRIB_TYPE_ALLELE_SYMBOL ATTRIB_TYPE_MARKER_ACCESSION_ID ATTRIB_TYPE_SEQUENCE_NUMBER ATTRIB_TYPE_DGVA_CLIN_SIG ATTRIB_TYPE_NCBI_TERM ATTRIB_TYPE_FEATURE_SO_TERM ATTRIB_TYPE_RISK_ALLELE ATTRIB_TYPE_CONSERVATION_SCORE ATTRIB_TYPE_BETA_COEF ATTRIB_TYPE_PROT_FUNC_ANALYSIS ATTRIB_TYPE_STRAIN_ID ATTRIB_TYPE_EVIDENCE ATTRIB_TYPE_P_VALUE ATTRIB_TYPE_ASSOCIATED_GENE)], SO_consequence_terms => [qw(SO_TERM_NON_CODING_TRANSCRIPT_VARIANT SO_TERM_DOWNSTREAM_GENE_VARIANT SO_TERM_CODING_SEQUENCE_VARIANT SO_TERM_STOP_RETAINED_VARIANT SO_TERM_INFRAME_INSERTION SO_TERM_NMD_TRANSCRIPT_VARIANT SO_TERM_SPLICE_ACCEPTOR_VARIANT SO_TERM_INTERGENIC_VARIANT SO_TERM_FEATURE_ELONGATION SO_TERM_TRANSCRIPT_ABLATION SO_TERM_SYNONYMOUS_VARIANT SO_TERM_TF_BINDING_SITE_VARIANT SO_TERM_INTRON_VARIANT SO_TERM_STOP_GAINED SO_TERM_SPLICE_DONOR_VARIANT SO_TERM_FEATURE_TRUNCATION SO_TERM_REGULATORY_REGION_ABLATION SO_TERM_TFBS_ABLATION SO_TERM_SPLICE_REGION_VARIANT SO_TERM_STOP_LOST SO_TERM_INITIATOR_CODON_VARIANT SO_TERM_3_PRIME_UTR_VARIANT SO_TERM_REGULATORY_REGION_AMPLIFICATION SO_TERM_UPSTREAM_GENE_VARIANT SO_TERM_MISSENSE_VARIANT SO_TERM_REGULATORY_REGION_VARIANT SO_TERM_NON_CODING_TRANSCRIPT_EXON_VARIANT SO_TERM_INCOMPLETE_TERMINAL_CODON_VARIANT SO_TERM_FRAMESHIFT_VARIANT SO_TERM_TFBS_AMPLIFICATION SO_TERM_5_PRIME_UTR_VARIANT SO_TERM_INFRAME_DELETION SO_TERM_TRANSCRIPT_AMPLIFICATION SO_TERM_MATURE_MIRNA_VARIANT)], SO_class_terms => [qw(SO_TERM_INDEL SO_TERM_SNV SO_TERM_STRUCTURAL_VARIANT SO_TERM_COMPLEX_STRUCTURAL_ALTERATION SO_TERM_INSERTION SO_TERM_PROBE SO_TERM_COPY_NUMBER_LOSS SO_TERM_SEQUENCE_ALTERATION SO_TERM_TANDEM_REPEAT SO_TERM_INTERCHROMOSOMAL_BREAKPOINT SO_TERM_SUBSTITUTION SO_TERM_NOVEL_SEQUENCE_INSERTION SO_TERM_DELETION SO_TERM_COPY_NUMBER_GAIN SO_TERM_DUPLICATION SO_TERM_TRANSLOCATION SO_TERM_COPY_NUMBER_VARIATION SO_TERM_TANDEM_DUPLICATION SO_TERM_GENETIC_MARKER SO_TERM_INVERSION SO_TERM_INTRACHROMOSOMAL_BREAKPOINT SO_TERM_MOBILE_ELEMENT_INSERTION)],  );
 
 use Bio::EnsEMBL::Variation::OverlapConsequence;
 
@@ -44,6 +44,10 @@ use constant ATTRIB_TYPE_ALLELE_SYMBOL => 'allele_symbol';
 use constant ATTRIB_TYPE_ALLELE_ACCESSION_ID => 'allele_accession_id';
 use constant ATTRIB_TYPE_MARKER_ACCESSION_ID => 'marker_accession_id';
 use constant ATTRIB_TYPE_EVIDENCE => 'evidence';
+use constant ATTRIB_TYPE_SEQUENCE_NUMBER => 'sequence_number';
+use constant ATTRIB_TYPE_BASED_ON => 'based_on';
+use constant ATTRIB_TYPE_CONSERVATION_SCORE => 'conservation_score';
+use constant ATTRIB_TYPE_REVIEW_STATUS => 'review_status';
 
 use constant SO_TERM_SNV => 'SNV';
 use constant SO_TERM_SUBSTITUTION => 'substitution';
@@ -285,6 +289,9 @@ our %OVERLAP_CONSEQUENCES = (
 ),
 'splice_donor_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
   'variant_feature_class' => 'Bio::EnsEMBL::Variation::VariationFeature',
+  'include' => {
+                 'within_feature' => 1
+               },
   'NCBI_term' => 'splice-5',
   'feature_SO_term' => 'primary_transcript',
   'description' => 'A splice variant that changes the 2 base region at the 5\' end of an intron',
@@ -301,6 +308,9 @@ our %OVERLAP_CONSEQUENCES = (
 ),
 'splice_acceptor_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
   'variant_feature_class' => 'Bio::EnsEMBL::Variation::VariationFeature',
+  'include' => {
+                 'within_feature' => 1
+               },
   'NCBI_term' => 'splice-3',
   'feature_SO_term' => 'primary_transcript',
   'description' => 'A splice variant that changes the 2 base region at the 3\' end of an intron',
@@ -317,6 +327,9 @@ our %OVERLAP_CONSEQUENCES = (
 ),
 'splice_region_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
   'variant_feature_class' => 'Bio::EnsEMBL::Variation::VariationFeature',
+  'include' => {
+                 'within_feature' => 1
+               },
   'feature_SO_term' => 'primary_transcript',
   'description' => 'A sequence variant in which a change has occurred within the region of the splice site, either within 1-3 bases of the exon or 3-8 bases of the intron',
   'SO_accession' => 'SO:0001630',
@@ -332,6 +345,9 @@ our %OVERLAP_CONSEQUENCES = (
 ),
 'intron_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
   'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature',
+  'include' => {
+                 'within_feature' => 1
+               },
   'NCBI_term' => 'intron',
   'feature_SO_term' => 'primary_transcript',
   'description' => 'A transcript variant occurring within an intron',
@@ -348,6 +364,9 @@ our %OVERLAP_CONSEQUENCES = (
 ),
 '5_prime_UTR_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
   'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature',
+  'include' => {
+                 'utr' => 1
+               },
   'NCBI_term' => 'untranslated_5',
   'feature_SO_term' => 'mRNA',
   'description' => 'A UTR variant of the 5\' UTR',
@@ -364,6 +383,9 @@ our %OVERLAP_CONSEQUENCES = (
 ),
 '3_prime_UTR_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
   'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature',
+  'include' => {
+                 'utr' => 1
+               },
   'NCBI_term' => 'untranslated_3',
   'feature_SO_term' => 'mRNA',
   'description' => 'A UTR variant of the 3\' UTR',
@@ -380,6 +402,9 @@ our %OVERLAP_CONSEQUENCES = (
 ),
 'synonymous_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
   'variant_feature_class' => 'Bio::EnsEMBL::Variation::VariationFeature',
+  'include' => {
+                 'coding' => 1
+               },
   'NCBI_term' => 'cds-synon',
   'feature_SO_term' => 'mRNA',
   'description' => 'A sequence variant where there is no resulting change to the encoded amino acid',
@@ -396,6 +421,9 @@ our %OVERLAP_CONSEQUENCES = (
 ),
 'missense_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
   'variant_feature_class' => 'Bio::EnsEMBL::Variation::VariationFeature',
+  'include' => {
+                 'coding' => 1
+               },
   'NCBI_term' => 'missense',
   'feature_SO_term' => 'mRNA',
   'description' => 'A sequence variant, that changes one or more bases, resulting in a different amino acid sequence but where the length is preserved',
@@ -412,6 +440,10 @@ our %OVERLAP_CONSEQUENCES = (
 ),
 'inframe_insertion' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
   'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature',
+  'include' => {
+                 'insertion' => 1,
+                 'coding' => 1
+               },
   'feature_SO_term' => 'mRNA',
   'description' => 'An inframe non synonymous variant that inserts bases into in the coding sequence',
   'SO_accession' => 'SO:0001821',
@@ -427,6 +459,10 @@ our %OVERLAP_CONSEQUENCES = (
 ),
 'inframe_deletion' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
   'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature',
+  'include' => {
+                 'deletion' => 1,
+                 'coding' => 1
+               },
   'feature_SO_term' => 'mRNA',
   'description' => 'An inframe non synonymous variant that deletes bases from the coding sequence',
   'SO_accession' => 'SO:0001822',
@@ -442,6 +478,9 @@ our %OVERLAP_CONSEQUENCES = (
 ),
 'stop_gained' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
   'variant_feature_class' => 'Bio::EnsEMBL::Variation::VariationFeature',
+  'include' => {
+                 'coding' => 1
+               },
   'NCBI_term' => 'nonsense',
   'feature_SO_term' => 'mRNA',
   'description' => 'A sequence variant whereby at least one base of a codon is changed, resulting in a premature stop codon, leading to a shortened transcript',
@@ -458,6 +497,9 @@ our %OVERLAP_CONSEQUENCES = (
 ),
 'stop_lost' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
   'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature',
+  'include' => {
+                 'coding' => 1
+               },
   'feature_SO_term' => 'mRNA',
   'description' => 'A sequence variant where at least one base of the terminator codon (stop) is changed, resulting in an elongated transcript',
   'SO_accession' => 'SO:0001578',
@@ -473,6 +515,9 @@ our %OVERLAP_CONSEQUENCES = (
 ),
 'stop_retained_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
   'variant_feature_class' => 'Bio::EnsEMBL::Variation::VariationFeature',
+  'include' => {
+                 'coding' => 1
+               },
   'feature_SO_term' => 'mRNA',
   'description' => 'A sequence variant where at least one base in the terminator codon is changed, but the terminator remains',
   'SO_accession' => 'SO:0001567',
@@ -488,6 +533,9 @@ our %OVERLAP_CONSEQUENCES = (
 ),
 'initiator_codon_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
   'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature',
+  'include' => {
+                 'coding' => 1
+               },
   'feature_SO_term' => 'mRNA',
   'description' => 'A codon variant that changes at least one base of the first codon of a transcript',
   'SO_accession' => 'SO:0001582',
@@ -503,6 +551,9 @@ our %OVERLAP_CONSEQUENCES = (
 ),
 'frameshift_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
   'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature',
+  'include' => {
+                 'coding' => 1
+               },
   'NCBI_term' => 'frameshift',
   'feature_SO_term' => 'mRNA',
   'description' => 'A sequence variant which causes a disruption of the translational reading frame, because the number of nucleotides inserted or deleted is not a multiple of three',
@@ -519,6 +570,9 @@ our %OVERLAP_CONSEQUENCES = (
 ),
 'incomplete_terminal_codon_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
   'variant_feature_class' => 'Bio::EnsEMBL::Variation::VariationFeature',
+  'include' => {
+                 'within_feature' => 1
+               },
   'feature_SO_term' => 'mRNA',
   'description' => 'A sequence variant where at least one base of the final codon of an incompletely annotated transcript is changed',
   'SO_accession' => 'SO:0001626',
@@ -534,6 +588,10 @@ our %OVERLAP_CONSEQUENCES = (
 ),
 'NMD_transcript_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
   'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature',
+  'include' => {
+                 'within_feature' => 1,
+                 'nonsense_mediated_decay' => 1
+               },
   'feature_SO_term' => 'mRNA',
   'description' => 'A variant in a transcript that is the target of NMD',
   'SO_accession' => 'SO:0001621',
@@ -549,6 +607,10 @@ our %OVERLAP_CONSEQUENCES = (
 ),
 'non_coding_transcript_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
   'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature',
+  'include' => {
+                 'within_feature' => 1,
+                 'protein_coding' => 0
+               },
   'feature_SO_term' => 'ncRNA',
   'description' => 'A transcript variant of a non coding RNA gene',
   'SO_accession' => 'SO:0001619',
@@ -564,6 +626,10 @@ our %OVERLAP_CONSEQUENCES = (
 ),
 'non_coding_transcript_exon_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
   'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature',
+  'include' => {
+                 'within_feature' => 1,
+                 'protein_coding' => 0
+               },
   'feature_SO_term' => 'ncRNA',
   'description' => 'A sequence variant that changes non-coding exon sequence in a non-coding transcript',
   'SO_accession' => 'SO:0001792',
@@ -579,6 +645,11 @@ our %OVERLAP_CONSEQUENCES = (
 ),
 'mature_miRNA_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
   'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature',
+  'include' => {
+                 'within_feature' => 1,
+                 'nonsense_mediated_decay' => 0,
+                 'protein_coding' => 0
+               },
   'feature_SO_term' => 'miRNA',
   'description' => 'A transcript variant located with the sequence of the mature miRNA',
   'SO_accession' => 'SO:0001620',
@@ -594,6 +665,9 @@ our %OVERLAP_CONSEQUENCES = (
 ),
 'coding_sequence_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
   'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature',
+  'include' => {
+                 'coding' => 1
+               },
   'feature_SO_term' => 'mRNA',
   'description' => 'A sequence variant that changes the coding sequence',
   'SO_accession' => 'SO:0001580',
@@ -639,6 +713,9 @@ our %OVERLAP_CONSEQUENCES = (
 ),
 'transcript_ablation' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
   'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature',
+  'include' => {
+                 'deletion' => 1
+               },
   'feature_SO_term' => 'mRNA',
   'description' => 'A feature ablation whereby the deleted region includes a transcript feature',
   'SO_accession' => 'SO:0001893',

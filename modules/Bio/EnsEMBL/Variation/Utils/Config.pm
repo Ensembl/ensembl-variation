@@ -265,6 +265,10 @@ our @OVERLAP_CONSEQUENCES = (
         description => 'A splice variant that changes the 2 base region at the 5\' end of an intron',
         label => 'Splice donor variant',
         impact => 'HIGH',
+        include => {
+          within_feature => 1,
+          # intron => 1,
+        }
     },
     {
         SO_accession => 'SO:0001574',
@@ -280,6 +284,10 @@ our @OVERLAP_CONSEQUENCES = (
         description => 'A splice variant that changes the 2 base region at the 3\' end of an intron',
         label => 'Splice acceptor variant',
         impact => 'HIGH',
+        include => {
+          within_feature => 1,
+          # intron => 1,
+        }
     },
     {
         SO_accession => 'SO:0001630',
@@ -294,6 +302,9 @@ our @OVERLAP_CONSEQUENCES = (
         description => 'A sequence variant in which a change has occurred within the region of the splice site, either within 1-3 bases of the exon or 3-8 bases of the intron',
         label => 'Splice region variant',
         impact => 'LOW',
+        include => {
+          within_feature => 1,
+        }
     },
     {
         SO_accession => 'SO:0001627',
@@ -309,6 +320,10 @@ our @OVERLAP_CONSEQUENCES = (
         description => 'A transcript variant occurring within an intron',
         label => 'Intron variant',
         impact => 'MODIFIER',
+        include => {
+          within_feature => 1,
+          # intron => 1,
+        }
     },
     {
         SO_accession => 'SO:0001623',
@@ -324,6 +339,9 @@ our @OVERLAP_CONSEQUENCES = (
         description => 'A UTR variant of the 5\' UTR',
         label => '5 prime UTR variant',
         impact => 'MODIFIER',
+        include => {
+          utr => 1,
+        }
     },
     {
         SO_accession => 'SO:0001624',
@@ -339,6 +357,9 @@ our @OVERLAP_CONSEQUENCES = (
         description => 'A UTR variant of the 3\' UTR',
         label => '3 prime UTR variant',
         impact => 'MODIFIER',
+        include => {
+          utr => 1,
+        }
     },
 #    {
 #        SO_accession => 'SO:0001577',
@@ -367,6 +388,9 @@ our @OVERLAP_CONSEQUENCES = (
         description => 'A sequence variant where there is no resulting change to the encoded amino acid',
         label => 'Synonymous variant',
         impact => 'LOW',
+        include => {
+          coding => 1,
+        }
     },
     {
         SO_accession => 'SO:0001583',
@@ -382,6 +406,9 @@ our @OVERLAP_CONSEQUENCES = (
         description => 'A sequence variant, that changes one or more bases, resulting in a different amino acid sequence but where the length is preserved',
         label => 'Missense variant',
         impact => 'MODERATE',
+        include => {
+          coding => 1,
+        }
     },
     {
         SO_accession => 'SO:0001821',
@@ -396,6 +423,10 @@ our @OVERLAP_CONSEQUENCES = (
         description => 'An inframe non synonymous variant that inserts bases into in the coding sequence',
         label => 'Inframe insertion',
         impact => 'MODERATE',
+        include => {
+          coding => 1,
+          insertion => 1,
+        }
     },
     {
         SO_accession => 'SO:0001822',
@@ -410,6 +441,10 @@ our @OVERLAP_CONSEQUENCES = (
         description => 'An inframe non synonymous variant that deletes bases from the coding sequence',
         label => 'Inframe deletion',
         impact => 'MODERATE',
+        include => {
+          coding => 1,
+          deletion => 1,
+        }
     },
     {
         SO_accession => 'SO:0001587',
@@ -425,6 +460,9 @@ our @OVERLAP_CONSEQUENCES = (
         description => 'A sequence variant whereby at least one base of a codon is changed, resulting in a premature stop codon, leading to a shortened transcript',
         label => 'Stop gained',
         impact => 'HIGH',
+        include => {
+          coding => 1,
+        }
     },
     {
         SO_accession => 'SO:0001578',
@@ -439,6 +477,9 @@ our @OVERLAP_CONSEQUENCES = (
         description => 'A sequence variant where at least one base of the terminator codon (stop) is changed, resulting in an elongated transcript',
         label => 'Stop lost',
         impact => 'HIGH',
+        include => {
+          coding => 1,
+        }
     },
     {
         SO_accession => 'SO:0001567',
@@ -453,6 +494,9 @@ our @OVERLAP_CONSEQUENCES = (
         description => 'A sequence variant where at least one base in the terminator codon is changed, but the terminator remains',
         label => 'Stop retained variant',
         impact => 'LOW',
+        include => {
+          coding => 1,
+        }
     },
     {
         SO_accession => 'SO:0001582',
@@ -467,6 +511,9 @@ our @OVERLAP_CONSEQUENCES = (
         description => 'A codon variant that changes at least one base of the first codon of a transcript',
         label => 'Initiator codon variant',
         impact => 'LOW',
+        include => {
+          coding => 1,
+        }
     },
     {
         SO_accession => 'SO:0001589',
@@ -482,6 +529,9 @@ our @OVERLAP_CONSEQUENCES = (
         description => 'A sequence variant which causes a disruption of the translational reading frame, because the number of nucleotides inserted or deleted is not a multiple of three',
         label => 'Frameshift variant',
         impact => 'HIGH',
+        include => {
+          coding => 1,
+        }
     },
     {
         SO_accession => 'SO:0001626',
@@ -496,6 +546,9 @@ our @OVERLAP_CONSEQUENCES = (
         description => 'A sequence variant where at least one base of the final codon of an incompletely annotated transcript is changed',
         label => 'Incomplete terminal codon variant',
         impact => 'LOW',
+        include => {
+          within_feature => 1,
+        }
     },
     {
         SO_accession => 'SO:0001621',
@@ -510,6 +563,10 @@ our @OVERLAP_CONSEQUENCES = (
         description => 'A variant in a transcript that is the target of NMD',
         label => 'NMD transcript variant',
         impact => 'MODIFIER',
+        include => {
+          within_feature => 1,
+          nonsense_mediated_decay => 1,
+        }
     },
     {
         SO_accession => 'SO:0001619',
@@ -524,6 +581,10 @@ our @OVERLAP_CONSEQUENCES = (
         description => 'A transcript variant of a non coding RNA gene',
         label => 'Non coding transcript variant',
         impact => 'MODIFIER',
+        include => {
+          within_feature => 1,
+          protein_coding => 0,
+        }
     },
     {
         SO_accession => 'SO:0001792',
@@ -538,6 +599,11 @@ our @OVERLAP_CONSEQUENCES = (
         description => 'A sequence variant that changes non-coding exon sequence in a non-coding transcript',
         label => 'Non coding transcript exon variant',
         impact => 'MODIFIER',
+        include => {
+          within_feature => 1,
+          protein_coding => 0,
+          # exon => 1,
+        }
     },
     {
         SO_accession => 'SO:0001620',
@@ -552,6 +618,11 @@ our @OVERLAP_CONSEQUENCES = (
         description => 'A transcript variant located with the sequence of the mature miRNA',
         label => 'Mature miRNA variant',
         impact => 'MODIFIER',
+        include => {
+          within_feature => 1,
+          protein_coding => 0,
+          nonsense_mediated_decay => 0,
+        }
     },
     {
         SO_accession => 'SO:0001580',
@@ -566,6 +637,9 @@ our @OVERLAP_CONSEQUENCES = (
         description => 'A sequence variant that changes the coding sequence',
         label => 'Coding sequence variant',
         impact => 'MODIFIER',
+        include => {
+          coding => 1,
+        }
     },
     {
         SO_accession => 'SO:0001566',
@@ -655,6 +729,9 @@ our @OVERLAP_CONSEQUENCES = (
         description => 'A feature ablation whereby the deleted region includes a transcript feature',
         label => 'Transcript ablation',
         impact => 'HIGH',
+        include => {
+          deletion => 1,
+        }
     },
 #    {
 #        SO_accession => 'SO:0001886',
