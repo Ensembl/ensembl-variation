@@ -117,13 +117,12 @@ sub complete_overlap_feature {
 }
 
 sub deletion {
-    my $bvfoa = shift;
-    
-    my $bvf = $bvfoa->base_variation_feature;
+    my ($bvfoa, $feat, $bvfo, $bvf) = @_;
+    $bvf ||= $bvfoa->base_variation_feature;
     
     # sequence variant will have alleles
     if($bvf->isa('Bio::EnsEMBL::Variation::VariationFeature')) {
-        my ($ref_allele, $alt_allele) = _get_alleles($bvfoa);
+        my ($ref_allele, $alt_allele) = _get_alleles(@_);
         return (
             (defined($ref_allele) && ($alt_allele eq '' || length($alt_allele) < length($ref_allele)) and $ref_allele) or
             $bvf->allele_string =~ /deletion/i
@@ -133,9 +132,9 @@ sub deletion {
     # structural variant depends on class
     if($bvf->isa('Bio::EnsEMBL::Variation::StructuralVariationFeature')) {
         return (
-            ($bvfoa->base_variation_feature->class_SO_term(undef, 1) eq 'deletion') or
-            ($bvfoa->base_variation_feature->class_SO_term(undef, 1) =~ /deletion/i) or
-            ($bvfoa->base_variation_feature->class_SO_term(undef, 1) =~ /loss/i)
+            ($bvf->class_SO_term(undef, 1) eq 'deletion') or
+            ($bvf->class_SO_term(undef, 1) =~ /deletion/i) or
+            ($bvf->class_SO_term(undef, 1) =~ /loss/i)
         );
     }
     
@@ -143,13 +142,12 @@ sub deletion {
 }
 
 sub insertion {
-    my $bvfoa = shift;
-    
-    my $bvf = $bvfoa->base_variation_feature;
+    my ($bvfoa, $feat, $bvfo, $bvf) = @_;
+    $bvf ||= $bvfoa->base_variation_feature;
     
     # sequence variant will have alleles
     if($bvf->isa('Bio::EnsEMBL::Variation::VariationFeature')) {
-        my ($ref_allele, $alt_allele) = _get_alleles($bvfoa);
+        my ($ref_allele, $alt_allele) = _get_alleles(@_);
         return (
             (defined($ref_allele) && ($ref_allele eq '' || length($alt_allele) > length($ref_allele)) and $alt_allele) or
             $bvf->allele_string =~ /insertion/i
@@ -159,11 +157,11 @@ sub insertion {
     # structural variant depends on class
     if($bvf->isa('Bio::EnsEMBL::Variation::StructuralVariationFeature')) {
         return (
-            duplication($bvfoa) or
-            tandem_duplication($bvfoa) or
-            ($bvfoa->base_variation_feature->class_SO_term(undef, 1) eq 'insertion') or
-            ($bvfoa->base_variation_feature->class_SO_term(undef, 1) =~ /insertion/i) or
-            ($bvfoa->base_variation_feature->class_SO_term(undef, 1) =~ /gain/i)
+            duplication(@_) or
+            tandem_duplication(@_) or
+            ($bvf->class_SO_term(undef, 1) eq 'insertion') or
+            ($bvf->class_SO_term(undef, 1) =~ /insertion/i) or
+            ($bvf->class_SO_term(undef, 1) =~ /gain/i)
         );
     }
     
@@ -171,37 +169,39 @@ sub insertion {
 }
 
 sub copy_number_gain {
-    my $bvfoa = shift;
+    my ($bvfoa, $feat, $bvfo, $bvf) = @_;
+    $bvf ||= $bvfoa->base_variation_feature;
     
-    return (duplication($bvfoa) or tandem_duplication($bvfoa) or $bvfoa->base_variation_feature->class_SO_term(undef, 1) =~ /gain/i);
+    return (duplication(@_) or tandem_duplication(@_) or $bvf->class_SO_term(undef, 1) =~ /gain/i);
 }
 
 sub copy_number_loss {
-    my $bvfoa = shift;
+    my ($bvfoa, $feat, $bvfo, $bvf) = @_;
+    $bvf ||= $bvfoa->base_variation_feature;
     
-    return $bvfoa->base_variation_feature->class_SO_term(undef, 1) =~ /loss/i;
+    return $bvf->class_SO_term(undef, 1) =~ /loss/i;
 }
 
 sub duplication {
-    my $bvfoa = shift;
+    my ($bvfoa, $feat, $bvfo, $bvf) = @_;
+    $bvf ||= $bvfoa->base_variation_feature;
     
     return (
         (
-            ($bvfoa->base_variation_feature->class_SO_term(undef, 1) eq 'duplication') or
-            ($bvfoa->base_variation_feature->class_SO_term(undef, 1) =~ /duplication/i)
+            ($bvf->class_SO_term(undef, 1) eq 'duplication') or
+            ($bvf->class_SO_term(undef, 1) =~ /duplication/i)
         ) and
-        (not tandem_duplication($bvfoa))
+        (not tandem_duplication(@_))
     );
 }
 
 sub tandem_duplication {
-    my $bvfoa = shift;
-    
-    my $bvf = $bvfoa->base_variation_feature;
+    my ($bvfoa, $feat, $bvfo, $bvf) = @_;
+    $bvf ||= $bvfoa->base_variation_feature;
     
     # for sequence variants, check sequence vs ref
     if($bvf->isa('Bio::EnsEMBL::Variation::VariationFeature')) {
-        my ($ref_allele, $alt_allele) = _get_alleles($bvfoa);
+        my ($ref_allele, $alt_allele) = _get_alleles(@_);
         
         return 0 unless $ref_allele and $alt_allele;
         return 0 unless
@@ -216,48 +216,52 @@ sub tandem_duplication {
     # structural variant depends on class
     if($bvf->isa('Bio::EnsEMBL::Variation::StructuralVariationFeature')) {
         return (
-            ($bvfoa->base_variation_feature->class_SO_term(undef, 1) eq 'tandem_duplication') or
-            ($bvfoa->base_variation_feature->class_SO_term(undef, 1) =~ /tandem_duplication/i) 
+            ($bvf->class_SO_term(undef, 1) eq 'tandem_duplication') or
+            ($bvf->class_SO_term(undef, 1) =~ /tandem_duplication/i) 
         );
     }
 }
 
 sub feature_ablation {
-    my $bvfoa = shift;
+    my ($bvfoa, $feat, $bvfo, $bvf) = @_;
+    $feat ||= $bvfoa->base_variation_feature_overlap->feature;
     
-    return (deletion($bvfoa) and complete_overlap_feature($bvfoa));
+    return (complete_overlap_feature($bvfoa, $feat) and deletion(@_));
 }
 
 sub feature_amplification {
-    my $bvfoa = shift;
+    my ($bvfoa, $feat, $bvfo, $bvf) = @_;
+    $feat ||= $bvfoa->base_variation_feature_overlap->feature;
     
-    return (copy_number_gain($bvfoa) && complete_overlap_feature($bvfoa));
+    return (complete_overlap_feature($bvfoa, $feat) and copy_number_gain(@_));
 }
 
 sub feature_elongation {
-    my $bvfoa = shift;
+    my ($bvfoa, $feat, $bvfo, $bvf) = @_;
+    $feat ||= $bvfoa->base_variation_feature_overlap->feature;
     
     return 0 if $bvfoa->isa('Bio::EnsEMBL::Variation::TranscriptVariationAllele');
     
     return (
-        complete_within_feature($bvfoa) and
-        (copy_number_gain($bvfoa) or insertion($bvfoa))
+        complete_within_feature($bvfoa, $feat) and
+        (copy_number_gain(@_) or insertion(@_))
     );
 }
 
 sub feature_truncation {
-    my $bvfoa = shift;
+    my ($bvfoa, $feat, $bvfo, $bvf) = @_;
+    $feat ||= $bvfoa->base_variation_feature_overlap->feature;
     
     return 0 if $bvfoa->isa('Bio::EnsEMBL::Variation::TranscriptVariationAllele');
     
     return (
-        (partial_overlap_feature($bvfoa) or complete_within_feature($bvfoa)) and
-        (copy_number_loss($bvfoa) or deletion($bvfoa))
+        (partial_overlap_feature($bvfoa, $feat) or complete_within_feature($bvfoa, $feat)) and
+        (copy_number_loss(@_) or deletion(@_))
     );
 }
 
 #sub transcript_fusion {
-#    #my $bvfoa = shift;
+#    #my ($bvfoa, $feat, $bvfo, $bvf) = @_;
 #    #my $bvf   = $bvfoa->base_variation_feature;
 #    
 #    return 0;
@@ -295,17 +299,17 @@ sub _downstream {
 #package Bio::EnsEMBL::Variation::TranscriptVariationAllele;
 
 sub upstream {
-    my $vfoa    = shift;
-    my $bvf     = $vfoa->base_variation_feature;
-    my $feat    = $vfoa->feature;
+    my ($bvfoa, $feat, $bvfo, $bvf) = @_;
+    $bvf  ||= $bvfoa->base_variation_feature;
+    $feat ||= $bvfoa->base_variation_feature_overlap->feature;
 
     return _upstream($bvf, $feat, $UPSTREAM_DISTANCE);
 }
 
 sub downstream {
-    my $vfoa    = shift;
-    my $bvf     = $vfoa->base_variation_feature;
-    my $feat    = $vfoa->feature;
+    my ($bvfoa, $feat, $bvfo, $bvf) = @_;
+    $bvf  ||= $bvfoa->base_variation_feature;
+    $feat ||= $bvfoa->base_variation_feature_overlap->feature;
 
     return _downstream($bvf, $feat, $DOWNSTREAM_DISTANCE);
 }
@@ -324,31 +328,30 @@ sub affects_transcript {
 }
 
 sub within_transcript {
-    my $bvfoa = shift;
-    return within_feature($bvfoa);
+    return within_feature(@_);
 }
 
 sub within_nmd_transcript {
-    my $bvfoa   = shift;
-    my $tran    = $bvfoa->transcript; 
+    my ($bvfoa, $feat, $bvfo, $bvf) = @_;
+    $feat ||= $bvfoa->base_variation_feature_overlap->feature;
 
-    return ( within_transcript($bvfoa) and ($tran->biotype eq 'nonsense_mediated_decay') );
+    return ( within_transcript(@_) and ($feat->biotype eq 'nonsense_mediated_decay') );
 }
 
 sub within_non_coding_gene {
-    my $bvfoa   = shift;
-    my $tran    = $bvfoa->transcript;
+    my ($bvfoa, $feat, $bvfo, $bvf) = @_;
+    $feat ||= $bvfoa->base_variation_feature_overlap->feature;
     
-    return ( within_transcript($bvfoa) and (not $tran->translation) and (not within_mature_miRNA($bvfoa)));
+    return ( within_transcript(@_) and (not $feat->translation) and (not within_mature_miRNA(@_)));
 }
 
 sub non_coding_exon_variant {
-    my $bvfoa = shift;
+    my ($bvfoa, $feat, $bvfo, $bvf) = @_;
+    $bvfo ||= $bvfoa->base_variation_feature_overlap;
     
-    return 0 unless within_non_coding_gene($bvfoa);
+    return 0 unless within_non_coding_gene(@_);
     
-    my $bvf   = $bvfoa->base_variation_feature;
-    my $exons = $bvfoa->base_variation_feature_overlap->_exons;
+    my $exons = $bvfo->_exons;
     
     if(scalar grep {overlap($bvf->start, $bvf->end, $_->start, $_->end)} @$exons) {
         return 1;
@@ -359,29 +362,28 @@ sub non_coding_exon_variant {
 }
 
 sub within_miRNA {
-    my $bvfoa   = shift;
-    my $tran    = $bvfoa->transcript;
+    my ($bvfoa, $feat, $bvfo, $bvf) = @_;
     
     # don't call this for now
     
     return 0;
+    $feat ||= $bvfoa->base_variation_feature_overlap->feature;
     
-    return ( within_transcript($bvfoa) and ($tran->biotype eq 'miRNA') );
+    return ( within_transcript(@_) and ($feat->biotype eq 'miRNA') );
 }
 
 sub within_mature_miRNA {
-    my $bvfoa     = shift;
-    
-    my $bvfo      = $bvfoa->base_variation_feature_overlap;
-    my $bvf       = $bvfoa->base_variation_feature;
-    my $tran      = $bvfoa->transcript;
+    my ($bvfoa, $feat, $bvfo, $bvf) = @_;
+    $bvfo ||= $bvfoa->base_variation_feature_overlap;
+    $bvf  ||= $bvfo->base_variation_feature;
+    $feat ||= $bvfo->feature;
         
-    return 0 unless ( within_transcript($bvfoa) and ($tran->biotype eq 'miRNA') );
+    return 0 unless ( within_transcript(@_) and ($feat->biotype eq 'miRNA') );
         
-    my ($attribute) = @{ $tran->get_all_Attributes('miRNA') };
+    my ($attribute) = @{ $feat->get_all_Attributes('miRNA') };
     
     if (defined $attribute && $attribute->value =~ /(\d+)-(\d+)/) { 
-        for my $coord ($bvfo->_mapper->cdna2genomic($1, $2, $tran->strand)) {
+        for my $coord ($bvfo->_mapper->cdna2genomic($1, $2, $feat->strand)) {
             if ($coord->isa('Bio::EnsEMBL::Mapper::Coordinate')) {
                 if (overlap(
                         $bvf->start, 
@@ -398,52 +400,54 @@ sub within_mature_miRNA {
 }
 
 sub donor_splice_site {
-    my $bvfoa     = shift;
-    my $tran      = $bvfoa->transcript;
+    my ($bvfoa, $feat, $bvfo, $bvf) = @_;
+    $bvfo ||= $bvfoa->base_variation_feature_overlap;
+    $feat ||= $bvfo->feature;
     
-    return $tran->strand == 1 ? 
-        $bvfoa->base_variation_feature_overlap->_intron_effects->{start_splice_site} :
-        $bvfoa->base_variation_feature_overlap->_intron_effects->{end_splice_site};
+    return $feat->strand == 1 ? 
+        $bvfo->_intron_effects->{start_splice_site} :
+        $bvfo->_intron_effects->{end_splice_site};
 }
 
 sub acceptor_splice_site {
-    my $bvfoa     = shift;
-    my $tran      = $bvfoa->transcript;
+    my ($bvfoa, $feat, $bvfo, $bvf) = @_;
+    $bvfo ||= $bvfoa->base_variation_feature_overlap;
+    $feat ||= $bvfo->feature;
     
-    return $tran->strand == 1 ? 
-        $bvfoa->base_variation_feature_overlap->_intron_effects->{end_splice_site} :
-        $bvfoa->base_variation_feature_overlap->_intron_effects->{start_splice_site};
+    return $feat->strand == 1 ? 
+        $bvfo->_intron_effects->{end_splice_site} :
+        $bvfo->_intron_effects->{start_splice_site};
 }
 
 sub essential_splice_site {
-    my $bvfoa = shift;
-    
-    return ( acceptor_splice_site($bvfoa) or donor_splice_site($bvfoa) );
+    return ( acceptor_splice_site(@_) or donor_splice_site(@_) );
 }
 
 sub splice_region {
-    my $bvfoa    = shift;
+    my ($bvfoa, $feat, $bvfo, $bvf) = @_;
+    $bvfo ||= $bvfoa->base_variation_feature_overlap;
     
-    return 0 if donor_splice_site($bvfoa);
-    return 0 if acceptor_splice_site($bvfoa);
-    return 0 if essential_splice_site($bvfoa);
+    return 0 if donor_splice_site(@_);
+    return 0 if acceptor_splice_site(@_);
+    return 0 if essential_splice_site(@_);
 
-    return $bvfoa->base_variation_feature_overlap->_intron_effects->{splice_region};
+    return $bvfo->_intron_effects->{splice_region};
 }
 
 sub within_intron {
-    my $bvfoa    = shift;
+    my ($bvfoa, $feat, $bvfo, $bvf) = @_;
+    $bvfo ||= $bvfoa->base_variation_feature_overlap;
 
-    return $bvfoa->base_variation_feature_overlap->_intron_effects->{intronic};
+    return $bvfo->_intron_effects->{intronic};
 }
 
 sub within_cds {
-    my $bvfoa     = shift;
-    my $bvf       = $bvfoa->base_variation_feature;
-    my $tran      = $bvfoa->transcript;
-    my $bvfo      = $bvfoa->base_variation_feature_overlap;
+    my ($bvfoa, $feat, $bvfo, $bvf) = @_;
+    $bvfo ||= $bvfoa->base_variation_feature_overlap;
+    $feat ||= $bvfo->feature;
+    $bvf  ||= $bvfo->base_variation_feature;
     
-    my $cds_coords = $bvfoa->base_variation_feature_overlap->cds_coords;
+    my $cds_coords = $bvfo->cds_coords;
     
     if (@$cds_coords > 0) {
         for my $coord (@$cds_coords) {
@@ -457,14 +461,14 @@ sub within_cds {
 
     # we also need to check if the vf is in a frameshift intron within the CDS
 
-    if (defined $tran->translation &&
-        $bvfoa->base_variation_feature_overlap->_intron_effects->{within_frameshift_intron}) {
+    if (defined $feat->translation &&
+        $bvfo->_intron_effects->{within_frameshift_intron}) {
  
         return overlap(
             $bvf->start, 
             $bvf->end, 
-            $tran->coding_region_start,
-            $tran->coding_region_end,
+            $feat->coding_region_start,
+            $feat->coding_region_end,
         );
     }
         
@@ -472,17 +476,16 @@ sub within_cds {
 }
 
 sub within_cdna {
-    my $bvfoa     = shift;
-    my $bvf       = $bvfoa->base_variation_feature;
-    my $tran      = $bvfoa->transcript;
-    my $bvfo      = $bvfoa->base_variation_feature_overlap;
+    my ($bvfoa, $feat, $bvfo, $bvf) = @_;
+    $bvfo ||= $bvfoa->base_variation_feature_overlap;
+    $feat ||= $bvfo->feature;
     
     my $cdna_coords = $bvfo->cdna_coords;
     
     if (@$cdna_coords > 0) {
         for my $coord (@$cdna_coords) {
             if ($coord->isa('Bio::EnsEMBL::Mapper::Coordinate')) {
-                if ($coord->end > 0 && $coord->start <= $tran->length) {
+                if ($coord->end > 0 && $coord->start <= $feat->length) {
                     return 1;
                 }
             }
@@ -491,8 +494,8 @@ sub within_cdna {
     
     # we also need to check if the vf is in a frameshift intron within the cDNA
 
-    if ($bvfoa->base_variation_feature_overlap->_intron_effects->{within_frameshift_intron}) {
-        return within_transcript($bvfoa); 
+    if ($bvfo->_intron_effects->{within_frameshift_intron}) {
+        return within_transcript(@_); 
     }
     
     return 0;
@@ -533,34 +536,37 @@ sub _after_coding {
 }
 
 sub within_5_prime_utr {
-    my $bvfoa     = shift;
-    my $bvf       = $bvfoa->base_variation_feature;
-    my $tran      = $bvfoa->transcript;
+    my ($bvfoa, $feat, $bvfo, $bvf) = @_;
+    $bvfo ||= $bvfoa->base_variation_feature_overlap;
+    $feat ||= $bvfo->feature;
+    $bvf  ||= $bvfo->base_variation_feature;
     
     my $five_prime_of_coding = 
-        $tran->strand == 1 ? 
-            _before_coding($bvf, $tran) : 
-            _after_coding($bvf, $tran);
+        $feat->strand == 1 ? 
+            _before_coding($bvf, $feat) : 
+            _after_coding($bvf, $feat);
     
-    return ( $five_prime_of_coding and within_cdna($bvfoa) );
+    return ( $five_prime_of_coding and within_cdna(@_) );
 }
 
 sub within_3_prime_utr {
-    my $bvfoa     = shift;
-    my $bvf       = $bvfoa->base_variation_feature;
-    my $tran      = $bvfoa->transcript; 
+    my ($bvfoa, $feat, $bvfo, $bvf) = @_;
+    $bvfo ||= $bvfoa->base_variation_feature_overlap;
+    $feat ||= $bvfo->feature;
+    $bvf  ||= $bvfo->base_variation_feature;
     
     my $three_prime_of_coding = 
-        $tran->strand == 1 ? 
-            _after_coding($bvf, $tran) : 
-            _before_coding($bvf, $tran);
+        $feat->strand == 1 ? 
+            _after_coding($bvf, $feat) : 
+            _before_coding($bvf, $feat);
     
-    return ( $three_prime_of_coding and within_cdna($bvfoa) );
+    return ( $three_prime_of_coding and within_cdna(@_) );
 }
 
 sub complex_indel {
-    my $bvfoa     = shift;
-    my $bvf       = $bvfoa->base_variation_feature;
+    my ($bvfoa, $feat, $bvfo, $bvf) = @_;
+    $bvfo ||= $bvfoa->base_variation_feature_overlap;
+    $bvf  ||= $bvfo->base_variation_feature;
    
     # pass the no_db flag to var_class to ensure we don't rely on the database for it 
     # as it may not have been set at this stage in the pipeline
@@ -568,19 +574,19 @@ sub complex_indel {
 
     return 0 unless $class =~ /insertion|deletion|indel/;
 
-    return @{ $bvfoa->base_variation_feature_overlap->cds_coords } > 1;
+    return @{ $bvfo->cds_coords } > 1;
 }
 
 sub _get_peptide_alleles {
-    my $bvfoa = shift;
+    my ($bvfoa, $feat, $bvfo, $bvf) = @_;
     
-    #return () if frameshift($bvfoa);
+    #return () if frameshift(@_);
 
     my $alt_pep = $bvfoa->peptide;
     
     return () unless defined $alt_pep;
     
-    my $ref_pep = _get_ref_pep($bvfoa);
+    my $ref_pep = _get_ref_pep(@_);
     
     return () unless defined $ref_pep;
     
@@ -591,15 +597,15 @@ sub _get_peptide_alleles {
 }
 
 sub _get_ref_pep {
-    my $bvfoa = shift;
-    return $bvfoa->base_variation_feature_overlap->get_reference_TranscriptVariationAllele->peptide;
+    my ($bvfoa, $feat, $bvfo, $bvf) = @_;
+    $bvfo ||= $bvfoa->base_variation_feature_overlap;
+    return $bvfo->get_reference_TranscriptVariationAllele->peptide;
 }
 
 sub _get_codon_alleles {
-    my $bvfoa = shift;
-    my $bvfo  = $bvfoa->base_variation_feature_overlap;
+    my ($bvfoa, $feat, $bvfo, $bvf) = @_;
     
-    return () if frameshift($bvfoa);
+    return () if frameshift(@_);
 
     my $alt_codon = $bvfoa->codon;
     
@@ -616,8 +622,8 @@ sub _get_codon_alleles {
 }
 
 sub _get_alleles {
-    my $bvfoa = shift;
-    my $bvfo  = $bvfoa->base_variation_feature_overlap;
+    my ($bvfoa, $feat, $bvfo, $bvf) = @_;
+    $bvfo ||= $bvfoa->base_variation_feature_overlap;
     
     my $ref_tva = $bvfo->get_reference_VariationFeatureOverlapAllele;
     
@@ -635,9 +641,7 @@ sub _get_alleles {
 }
 
 sub stop_retained {
-    my $bvfoa = shift;
-    
-    my ($ref_pep, $alt_pep) = _get_peptide_alleles($bvfoa);
+    my ($ref_pep, $alt_pep) = _get_peptide_alleles(@_);
     
     return 0 unless $ref_pep;
 
@@ -645,12 +649,14 @@ sub stop_retained {
 }
 
 sub affects_start_codon {
-    my $bvfoa = shift;
-    my $bvfo  = $bvfoa->base_variation_feature_overlap;
+    my ($bvfoa, $feat, $bvfo, $bvf) = @_;
+    $bvfo ||= $bvfoa->base_variation_feature_overlap;
+    $feat ||= $bvfo->feature;
+    $bvf  ||= $bvfo->base_variation_feature;
     
     # sequence variant
     if($bvfo->isa('Bio::EnsEMBL::Variation::TranscriptVariation')) {
-        my ($ref_pep, $alt_pep) = _get_peptide_alleles($bvfoa);
+        my ($ref_pep, $alt_pep) = _get_peptide_alleles(@_);
     
         return 0 unless $ref_pep;
     
@@ -658,14 +664,11 @@ sub affects_start_codon {
     }
     
     # structural variant
-    elsif($bvfo->isa('Bio::EnsEMBL::Variation::TranscriptStructuralVariation')) {
-        my $tr  = $bvfo->transcript;
-        my $bvf = $bvfo->base_variation_feature;
-        
-        my ($tr_crs, $tr_cre) = ($tr->coding_region_start, $tr->coding_region_end);
+    elsif($bvfo->isa('Bio::EnsEMBL::Variation::TranscriptStructuralVariation')) {        
+        my ($tr_crs, $tr_cre) = ($feat->coding_region_start, $feat->coding_region_end);
         return 0 unless defined($tr_crs) && defined($tr_cre);
         
-        if($tr->strand == 1) {
+        if($feat->strand == 1) {
             return overlap($tr_crs, $tr_crs + 2, $bvf->start, $bvf->end);
         }
         else {
@@ -679,57 +682,53 @@ sub affects_start_codon {
 }
 
 sub synonymous_variant {
-    my $bvfoa = shift;
-
-    my ($ref_pep, $alt_pep) = _get_peptide_alleles($bvfoa);
+    my ($ref_pep, $alt_pep) = _get_peptide_alleles(@_);
     
     return 0 unless $ref_pep;
 
-    return ( ($alt_pep eq $ref_pep) and (not stop_retained($bvfoa) and ($alt_pep !~ /X/) and ($ref_pep !~ /X/)) );
+    return ( ($alt_pep eq $ref_pep) and (not stop_retained(@_) and ($alt_pep !~ /X/) and ($ref_pep !~ /X/)) );
 }
 
 sub missense_variant {
-    my $bvfoa = shift;
-    
-    my ($ref_pep, $alt_pep) = _get_peptide_alleles($bvfoa);
+    my ($ref_pep, $alt_pep) = _get_peptide_alleles(@_);
     
     return 0 unless defined $ref_pep;
     
-    return 0 if affects_start_codon($bvfoa);
-    return 0 if stop_lost($bvfoa);
-    return 0 if stop_gained($bvfoa);
-    return 0 if partial_codon($bvfoa);
-    return 0 if frameshift($bvfoa);
+    return 0 if affects_start_codon(@_);
+    return 0 if stop_lost(@_);
+    return 0 if stop_gained(@_);
+    return 0 if partial_codon(@_);
+    return 0 if frameshift(@_);
 
-    return 0 if inframe_deletion($bvfoa);
-    return 0 if inframe_insertion($bvfoa);
+    return 0 if inframe_deletion(@_);
+    return 0 if inframe_insertion(@_);
     
     return ( $ref_pep ne $alt_pep ) && ( length($ref_pep) == length($alt_pep) );
 }
 
 sub inframe_insertion {
-    my $bvfoa = shift;
+    my ($bvfoa, $feat, $bvfo, $bvf) = @_;
+    $bvfo ||= $bvfoa->base_variation_feature_overlap;
+    $bvf  ||= $bvfo->base_variation_feature;
 
     # sequence variant
-    if($bvfoa->base_variation_feature->isa('Bio::EnsEMBL::Variation::VariationFeature')) {
-        my ($ref_codon, $alt_codon) = _get_codon_alleles($bvfoa);
+    if($bvf->isa('Bio::EnsEMBL::Variation::VariationFeature')) {
+        my ($ref_codon, $alt_codon) = _get_codon_alleles(@_);
 
-        return 0 if affects_start_codon($bvfoa);
+        return 0 if affects_start_codon(@_);
         return 0 unless defined $ref_codon;
 
         return ( length($alt_codon) > length ($ref_codon) );
     }
     
     # structural variant
-    elsif($bvfoa->base_variation_feature->isa('Bio::EnsEMBL::Variation::StructuralVariationFeature')) {
+    elsif($bvf->isa('Bio::EnsEMBL::Variation::StructuralVariationFeature')) {
 
         # TO BE DONE, NO WAY OF KNOWING WHAT SEQUENCE IS INSERTED YET
         return 0;
         
         # must be an insertion
-        return 0 unless insertion($bvfoa);
-        
-        my $bvfo = $bvfoa->base_variation_feature_overlap;
+        return 0 unless insertion(@_);
         
         my $cds_coords = $bvfo->cds_coords;
         
@@ -753,11 +752,13 @@ sub inframe_insertion {
 }
 
 sub inframe_deletion {
-    my $bvfoa = shift;
+    my ($bvfoa, $feat, $bvfo, $bvf) = @_;
+    $bvfo ||= $bvfoa->base_variation_feature_overlap;
+    $bvf  ||= $bvfo->base_variation_feature;
     
     # sequence variant
-    if($bvfoa->base_variation_feature->isa('Bio::EnsEMBL::Variation::VariationFeature')) {
-        my ($ref_codon, $alt_codon) = _get_codon_alleles($bvfoa);
+    if($bvf->isa('Bio::EnsEMBL::Variation::VariationFeature')) {
+        my ($ref_codon, $alt_codon) = _get_codon_alleles(@_);
         
         return 0 unless defined $ref_codon;
         return 0 unless length($alt_codon) < length ($ref_codon);
@@ -784,15 +785,13 @@ sub inframe_deletion {
     }
     
     # structural variant
-    elsif($bvfoa->base_variation_feature->isa('Bio::EnsEMBL::Variation::StructuralVariationFeature')) {
+    elsif($bvf->isa('Bio::EnsEMBL::Variation::StructuralVariationFeature')) {
         
         # must be a deletion
-        return 0 unless deletion($bvfoa);
+        return 0 unless deletion(@_);
         
-        my $bvfo       = $bvfoa->base_variation_feature_overlap;
         my $cds_coords = $bvfo->cds_coords;
         my $exons      = $bvfo->_exons;
-        my $bvf        = $bvfo->base_variation_feature;
         
         # in exon
         return (
@@ -809,12 +808,11 @@ sub inframe_deletion {
 }
 
 sub stop_gained {
-    my $bvfoa = shift;
-    my $bvfo  = $bvfoa->base_variation_feature_overlap;
+    my ($bvfoa, $feat, $bvfo, $bvf) = @_;
     
     return 0 unless $bvfoa->isa('Bio::EnsEMBL::Variation::TranscriptVariationAllele');
 
-    my ($ref_pep, $alt_pep) = _get_peptide_alleles($bvfoa);
+    my ($ref_pep, $alt_pep) = _get_peptide_alleles(@_);
     
     return 0 unless defined $ref_pep;
 
@@ -822,18 +820,21 @@ sub stop_gained {
 }
 
 sub stop_lost {
-    my $bvfoa = shift;
+    my ($bvfoa, $feat, $bvfo, $bvf) = @_;
+    $bvfo ||= $bvfoa->base_variation_feature_overlap;
+    $bvf  ||= $bvfo->base_variation_feature;
+    $feat ||= $bvfo->feature;
     
     # sequence variant
     if($bvfoa->isa('Bio::EnsEMBL::Variation::TranscriptVariationAllele')) {
         
         # special case frameshift
-#        if(frameshift($bvfoa)) {
-#          my $ref_pep = _get_ref_pep($bvfoa);
+#        if(frameshift(@_)) {
+#          my $ref_pep = _get_ref_pep(@_);
 #          return $ref_pep && $ref_pep =~ /\*/;
 #        }
         
-        my ($ref_pep, $alt_pep) = _get_peptide_alleles($bvfoa);
+        my ($ref_pep, $alt_pep) = _get_peptide_alleles(@_);
         
         return 0 unless defined $ref_pep;
     
@@ -842,15 +843,12 @@ sub stop_lost {
     
     # structural variant
     elsif($bvfoa->isa('Bio::EnsEMBL::Variation::TranscriptStructuralVariationAllele')) {
-        return 0 unless deletion($bvfoa);
+        return 0 unless deletion(@_);
         
-        my $tr  = $bvfoa->transcript;
-        my $bvf = $bvfoa->base_variation_feature;
-        
-        my ($tr_crs, $tr_cre) = ($tr->coding_region_start, $tr->coding_region_end);
+        my ($tr_crs, $tr_cre) = ($feat->coding_region_start, $feat->coding_region_end);
         return 0 unless defined($tr_crs) && defined($tr_cre);
         
-        if($tr->strand == 1) {
+        if($feat->strand == 1) {
             return overlap($tr_cre-2, $tr_cre, $bvf->start, $bvf->end);
         }
         else {
@@ -864,14 +862,13 @@ sub stop_lost {
 }
 
 sub frameshift {
-    my $bvfoa = shift;
+    my ($bvfoa, $feat, $bvfo, $bvf) = @_;
+    $bvfo ||= $bvfoa->base_variation_feature_overlap;
     
     # sequence variant
     if($bvfoa->isa('Bio::EnsEMBL::Variation::TranscriptVariationAllele')) {
 
-        return 0 if partial_codon($bvfoa);
-    
-        my $bvfo = $bvfoa->base_variation_feature_overlap;
+        return 0 if partial_codon(@_);
     
         return 0 unless defined $bvfo->cds_start && defined $bvfo->cds_end;
         
@@ -888,13 +885,12 @@ sub frameshift {
     
     # structural variant
     elsif($bvfoa->isa('Bio::EnsEMBL::Variation::TranscriptStructuralVariationAllele')) {
-        my $bvf   = $bvfoa->base_variation_feature;
-        my $exons = $bvfoa->base_variation_feature_overlap->_exons;
+        my $exons = $bvfo->_exons;
         
         return (
             (
-                deletion($bvfoa) or
-                copy_number_loss($bvfoa)
+                deletion(@_) or
+                copy_number_loss(@_)
             ) and
             scalar grep {complete_within_feature($bvfoa, $_)} @$exons and
             $bvf->length % 3 != 0
@@ -909,9 +905,8 @@ sub frameshift {
 }
 
 sub partial_codon {
-    my $bvfoa = shift;
-    
-    my $bvfo = $bvfoa->base_variation_feature_overlap;
+    my ($bvfoa, $feat, $bvfo, $bvf) = @_;
+    $bvfo ||= $bvfoa->base_variation_feature_overlap;
     
     return 0 unless defined $bvfo->translation_start;
 
@@ -925,16 +920,16 @@ sub partial_codon {
 }
 
 sub coding_unknown {
-    my $bvfoa = shift;
+    my ($bvfoa, $feat, $bvfo, $bvf) = @_;
     
     # sequence variant
     if($bvfoa->isa('Bio::EnsEMBL::Variation::TranscriptVariationAllele')) {
-        return (within_cds($bvfoa) and ((not $bvfoa->peptide) or (not _get_peptide_alleles($bvfoa)) or ($bvfoa->peptide =~ /X/)) and (not (frameshift($bvfoa) or inframe_deletion($bvfoa))));
+        return (within_cds(@_) and ((not $bvfoa->peptide) or (not _get_peptide_alleles(@_)) or ($bvfoa->peptide =~ /X/)) and (not (frameshift(@_) or inframe_deletion(@_))));
     }
     
     # structural variant
     elsif($bvfoa->isa('Bio::EnsEMBL::Variation::TranscriptStructuralVariationAllele')) {
-        return (within_cds($bvfoa) and not(inframe_insertion($bvfoa) or inframe_deletion($bvfoa) or frameshift($bvfoa)));
+        return (within_cds(@_) and not(inframe_insertion(@_) or inframe_deletion(@_) or frameshift(@_)));
     }
     
     else {
@@ -945,15 +940,15 @@ sub coding_unknown {
 #package Bio::EnsEMBL::Variation::RegulatoryFeatureVariationAllele;
 
 sub within_regulatory_feature {
-    my $rfva = shift;
-    return within_feature($rfva);
+    my ($bvfoa, $feat, $bvfo, $bvf) = @_;
+    return within_feature($bvfoa, $feat);
 }
 
 #package Bio::EnsEMBL::Variation::ExternalFeatureVariationAllele;
 
 sub within_external_feature {
-    my $efva = shift;
-    return (within_feature($efva) and (not within_miRNA_target_site($efva)));
+    my ($bvfoa, $feat, $bvfo, $bvf) = @_;
+    return (within_feature($bvfoa, $feat) and (not within_miRNA_target_site(@_)));
 }
 
 #sub within_miRNA_target_site {
@@ -976,8 +971,8 @@ sub within_external_feature {
 #}
 
 sub within_motif_feature {
-    my $mfva = shift;
-    return within_feature($mfva);
+    my ($bvfoa, $feat, $bvfo, $bvf) = @_;
+    return within_feature($bvfoa, $feat);
 }
 
 #sub increased_binding_affinity {
