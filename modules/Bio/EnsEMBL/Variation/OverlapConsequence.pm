@@ -47,6 +47,9 @@ Bio::EnsEMBL::Variation::OverlapConsequence
         -rank               => 7,
         -feature_class      => 'Bio::EnsEMBL::Transcript',
         -impact             => 'MODERATE',
+        -include            => {
+          coding => 1,
+        },
     );
 
     if ($oc->predicate($transcript_variation_allele)) {
@@ -93,7 +96,10 @@ use Bio::EnsEMBL::Variation::Utils::VariationEffect;
     The Ensembl class that represents the feature affected by this consequence type
 
   Arg [-VARIANT_FEATURE_CLASS] : 
-    The Ensembl class that represents the variation feature this consequence applies to  
+    The Ensembl class that represents the variation feature this consequence applies to
+
+  Arg [-INCLUDE] :
+    A hashref of predicate conditions
   
   Arg [-PREDICATE] : 
     A reference to a subroutine that checks if this consequence type holds for
@@ -136,6 +142,9 @@ use Bio::EnsEMBL::Variation::Utils::VariationEffect;
         -impact             => 'MODERATE',
         -tier               => 1,
         -feature_class      => 'Bio::EnsEMBL::Transcript',
+        -include            => {
+          coding => 1,
+        },
     );
   
   Description: Constructs a new OverlapConsequence instance
@@ -154,6 +163,7 @@ sub new {
         $feature_SO_term,
         $feature_class,
         $variant_feature_class,
+        $include,
         $predicate,
         $rank,
         $impact,
@@ -169,6 +179,7 @@ sub new {
             FEATURE_SO_TERM
             FEATURE_CLASS
             VARIANT_FEATURE_CLASS
+            INCLUDE
             PREDICATE
             RANK
             IMPACT
@@ -186,6 +197,7 @@ sub new {
         feature_SO_term         => $feature_SO_term,
         feature_class           => $feature_class,
         variant_feature_class   => $variant_feature_class,
+        include                 => $include,
         predicate               => $predicate,
         rank                    => $rank,
         impact                  => $impact,
@@ -267,6 +279,22 @@ sub feature_class {
     my ($self, $feature_class) = @_;
     $self->{feature_class} = $feature_class if $feature_class;
     return $self->{feature_class} || '';
+}
+
+=head2 include
+
+  Arg [1]    : (optional) hashref of include conditions
+  Description: Get/set include conditions for predicate to be executed
+  Returntype : hashref
+  Exceptions : none
+  Status     : Stable
+
+=cut
+
+sub include {
+  my ($self, $include) = @_;
+  $self->{include} = $include if $include;
+  return $self->{include} || {};
 }
 
 =head2 predicate
