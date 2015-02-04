@@ -74,7 +74,7 @@ use Bio::EnsEMBL::Variation::ProteinFunctionPredictionMatrix qw($AA_LOOKUP);
 use Bio::EnsEMBL::Utils::Exception qw(throw warning deprecate);
 use Bio::EnsEMBL::Variation::Utils::Sequence qw(hgvs_variant_notation format_hgvs_string);
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
-use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(within_cds within_intron stop_lost affects_start_codon frameshift);
+use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(within_cds within_intron stop_lost affects_start_codon frameshift stop_retained);
 
 use base qw(Bio::EnsEMBL::Variation::VariationFeatureOverlapAllele Bio::EnsEMBL::Variation::BaseTranscriptVariationAllele);
 
@@ -760,6 +760,10 @@ sub hgvs_protein {
 	print "Exiting hgvs_protein - variant " . $self->{hgvs_tva}->transcript_variation->variation_feature->variation_name() . "not within translation\n"  if $DEBUG ==1;
 	return undef;
     }
+    if (stop_retained($self) ){
+	$self->{hgvs_protein} = $self->hgvs_transcript() . "(p.=)";
+      return  $self->{hgvs_protein};
+    }
          
     print "proceeding with hgvs prot\n" if $DEBUG ==1;
     print "Checking translation start: " . $self->{hgvs_tva}->transcript_variation->translation_start() ."\n" if $DEBUG ==1;
@@ -1410,9 +1414,9 @@ sub _get_surrounding_peptides{
   $length = 2 unless defined $length;
 
   my $ref_trans  = $self->transcript_variation->_peptide();
-
+ 
   $ref_trans .= $original_ref
-     if defined $original_ref &&  $original_ref eq "*";
+     if defined $original_ref &&  $original_ref =~ /^\*/;
 
   ## can't find peptide after the end
   return if length($ref_trans) <=  $ref_pos ;

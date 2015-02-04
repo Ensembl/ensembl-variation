@@ -54,7 +54,7 @@ use warnings;
 
 use base qw(Exporter);
 
-our @EXPORT_OK = qw(overlap within_feature within_cds MAX_DISTANCE_FROM_TRANSCRIPT within_intron stop_lost affects_start_codon frameshift $UPSTREAM_DISTANCE $DOWNSTREAM_DISTANCE);
+our @EXPORT_OK = qw(overlap within_feature within_cds MAX_DISTANCE_FROM_TRANSCRIPT within_intron stop_lost stop_retained affects_start_codon frameshift $UPSTREAM_DISTANCE $DOWNSTREAM_DISTANCE);
 
 use constant MAX_DISTANCE_FROM_TRANSCRIPT => 5000;
 
@@ -640,10 +640,21 @@ sub stop_retained {
     my $bvfoa = shift;
     
     my ($ref_pep, $alt_pep) = _get_peptide_alleles($bvfoa);
-    
+
+    return 0 unless defined $alt_pep && $alt_pep =~/^\*/; 
+
+    ## handle an insertion of a stop just before the stop (ref = "-")
+    if( $bvfoa->isa('Bio::EnsEMBL::Variation::TranscriptVariationAllele') &&
+        defined $bvfoa->transcript_variation->transcript->translation &&
+         $bvfoa->transcript_variation->translation_start() > 
+           $bvfoa->transcript_variation->transcript->translation->length()
+	){
+
+	return 1;
+    }
     return 0 unless $ref_pep;
 
-    return ( $alt_pep =~ /\*/ && $ref_pep =~ /\*/ );
+    return ( $alt_pep =~ /^\*/ && $ref_pep =~ /^\*/ );
 }
 
 sub affects_start_codon {
@@ -815,6 +826,7 @@ sub stop_gained {
     my $bvfo  = $bvfoa->base_variation_feature_overlap;
     
     return 0 unless $bvfoa->isa('Bio::EnsEMBL::Variation::TranscriptVariationAllele');
+    return 0 if stop_retained($bvfoa);
 
     my ($ref_pep, $alt_pep) = _get_peptide_alleles($bvfoa);
     
