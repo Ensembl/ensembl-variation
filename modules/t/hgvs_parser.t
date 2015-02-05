@@ -219,7 +219,7 @@ my @test_input = (
            "A",
            "ENSP00000386201.1:p.Arg82Gln",
            "parseable protein change"
-           ],         
+           ],
            ["2:g.98275102C>T",
             "T",
             "ENST00000289228.5:c.445G>A",
@@ -277,6 +277,13 @@ my @test_input = (
           "ENST00000396515.3:c.716_717insA(p.=)",
           "insertion, stop retained"
           ],
+          ["17:g.7128413_7128414insTAGAAAT",
+           "TAGAAAT",
+           "ENST00000356839.4:c.2103_2104insTAGAAAT",
+           "TAGAAAT",  
+           "ENST00000356839.4:c.2103_2104insTAGAAAT(p.=)",
+           "In-frame insertion - no ref peptide - stop retained"
+           ],  
 );
 
 foreach my $line(@test_input){
