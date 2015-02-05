@@ -24,6 +24,10 @@ before_install:
     - perl Makefile.PL
     - make && make install
     - cd ../../
+    - cd C_code/
+    - make
+    - sudo cp calc_genotypes /usr/bin/
+    - cd ../
     - echo -e "[server]\nwait_timeout=28000" | sudo tee -a /etc/mysql/my.cnf
     - sudo service mysql restart
 
