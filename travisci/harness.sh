@@ -7,7 +7,7 @@ export PATH=$PATH:$PWD/tabix
 echo "Running test suite"
 echo "Using $PERL5LIB"
 if [ "$COVERALLS" = 'true' ]; then
-  PERL5OPT='-MDevel::Cover=+ignore,bioperl,+ignore,ensembl-test' perl $PWD/ensembl-test/scripts/runtests.pl -verbose $PWD/modules/t $SKIP_TESTS
+  PERL5OPT='-MDevel::Cover=+ignore,bioperl,+ignore,ensembl-test,+ignore,ensembl,+ignore,ensembl-hive,+ignore,ensembl-io' perl $PWD/ensembl-test/scripts/runtests.pl -verbose $PWD/modules/t $SKIP_TESTS
 else
   perl $PWD/ensembl-test/scripts/runtests.pl $PWD/modules/t $SKIP_TESTS
 fi
