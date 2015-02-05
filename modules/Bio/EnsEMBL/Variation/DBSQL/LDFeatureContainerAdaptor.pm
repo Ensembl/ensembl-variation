@@ -287,13 +287,13 @@ sub get_populations_hash_by_Slice {
       AND ip.population_id = p.population_id
       AND c.individual_id = i.individual_id
       AND c.seq_region_id = ?
-      AND c.seq_region_start >= ? and c.seq_region_start <= ?
+      AND c.seq_region_start <= ?
       AND c.seq_region_end >= ?
       AND i.father_individual_id is NULL AND i.mother_individual_id is NULL
       AND (p.population_id $pop_list)
     });
 	
-    $sth->execute($slice->get_seq_region_id, $slice->start, $slice->end, $slice->start);
+    $sth->execute($sr, $slice_end, $slice_start);
 	
     my %counts = ();
 	
@@ -316,13 +316,13 @@ sub get_populations_hash_by_Slice {
       AND ip.population_id = p.population_id
       AND c.individual_id = i.individual_id
       AND c.seq_region_id = ?
-      AND c.seq_region_start >= ? and c.seq_region_start <= ?
+      AND c.seq_region_start <= ?
       AND c.seq_region_end >= ?
       AND i.father_individual_id is NULL AND i.mother_individual_id is NULL
       AND (p.population_id $pop_list)
     });
 	
-    $sth->execute($sr, $slice_start, $slice_end, $slice_start);
+    $sth->execute($sr, $slice_end, $slice_start);
 	
     my (%enough, %counts, %sample_pop, %counts_pop);
 	
