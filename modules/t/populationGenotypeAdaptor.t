@@ -22,6 +22,7 @@ use Bio::EnsEMBL::Registry;
 use Bio::EnsEMBL::Variation::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Test::TestUtils;
 use Bio::EnsEMBL::Test::MultiTestDB;
+use FileHandle;
 
 my $multi = Bio::EnsEMBL::Test::MultiTestDB->new('homo_sapiens');
 my $vdba = $multi->get_DBAdaptor('variation');
@@ -71,5 +72,49 @@ is($pgts[0]->allele(1), 'T', 'allele1');
 is($pgts[0]->allele(2), 'C', 'allele2');
 is($pgts[0]->frequency(), 0.352252, 'frequency');
 is($pgts[0]->population()->name(), 'PCJB:CUDAS', 'population name');
+
+# store method
+my $pg_hash = {
+  genotype   => ['A','T'],
+  frequency  => 0.12345,
+  population => $pa->fetch_by_name('1000GENOMES:phase_1_GBR'),
+  subsnp     => 12345,
+  count      => 12345,
+  variation  => $variation
+};
+
+my $pg1 = Bio::EnsEMBL::Variation::PopulationGenotype->new_fast($pg_hash);
+
+ok($pgta->store($pg1), "store");
+
+$pg_hash->{population} = $pa->fetch_by_name('1000GENOMES:phase_1_LWK');
+my $pg2 = Bio::EnsEMBL::Variation::PopulationGenotype->new_fast($pg_hash);
+
+my $hash2;
+%$hash2 = %$pg_hash;
+$hash2->{frequency} = 1 - $hash2->{frequency};
+my $pg3 = Bio::EnsEMBL::Variation::PopulationGenotype->new_fast($hash2);
+
+ok($pgta->store_multiple([$pg2, $pg3]), "store_multiple");
+
+my $fetched = $variation->get_all_PopulationGenotypes();
+
+ok((grep {$_->frequency && $_->frequency == 0.12345} @$fetched), "fetch stored pg 1");
+ok((grep {$_->frequency && $_->frequency == 0.12345} grep {$_->population && $_->population->name eq '1000GENOMES:phase_1_LWK'} @$fetched), "fetch stored pg 2");
+ok((grep {$_->frequency && $_->frequency == 0.87655} grep {$_->population && $_->population->name eq '1000GENOMES:phase_1_LWK'} @$fetched), "fetch stored pg 3");
+
+my $fh = FileHandle->new;
+my $tmpfile = "$Bin\/$$\_population_genotype.txt";
+$fh->open(">$tmpfile") or die("ERROR: Could not write to $tmpfile\n");
+ok($pgta->store_to_file_handle($pg1, $fh), "store_to_file_handle");
+$fh->close();
+
+open FH, $tmpfile;
+my @lines = <FH>;
+close FH;
+
+unlink($tmpfile);
+
+ok(scalar @lines == 1 && $lines[0] =~ /12345/, "check dumped data");
 
 done_testing();
