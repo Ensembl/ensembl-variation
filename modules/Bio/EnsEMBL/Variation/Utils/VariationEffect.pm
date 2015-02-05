@@ -3,7 +3,7 @@
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
+you may not use this file excepst in compliance with the License.
 You may obtain a copy of the License at
 
      http://www.apache.org/licenses/LICENSE-2.0
@@ -54,7 +54,7 @@ use warnings;
 
 use base qw(Exporter);
 
-our @EXPORT_OK = qw(overlap within_feature within_cds MAX_DISTANCE_FROM_TRANSCRIPT within_intron stop_lost affects_start_codon frameshift $UPSTREAM_DISTANCE $DOWNSTREAM_DISTANCE);
+our @EXPORT_OK = qw(overlap within_feature within_cds MAX_DISTANCE_FROM_TRANSCRIPT within_intron stop_lost stop_retained affects_start_codon frameshift $UPSTREAM_DISTANCE $DOWNSTREAM_DISTANCE);
 
 use constant MAX_DISTANCE_FROM_TRANSCRIPT => 5000;
 
@@ -579,7 +579,8 @@ sub complex_indel {
 
 sub _get_peptide_alleles {
     my ($bvfoa, $feat, $bvfo, $bvf) = @_;
-    
+
+    return () unless defined $bvfoa;
     #return () if frameshift(@_);
 
     my $alt_pep = $bvfoa->peptide;
@@ -641,11 +642,23 @@ sub _get_alleles {
 }
 
 sub stop_retained {
-    my ($ref_pep, $alt_pep) = _get_peptide_alleles(@_);
-    
+    my $bvfoa = shift;
+
+    my ($ref_pep, $alt_pep) = _get_peptide_alleles($bvfoa);
+    return 0 unless defined $alt_pep && $alt_pep =~/^\*/; 
+
+    ## handle inframe insertion of a stop just before the stop (no ref peptide)
+    if( $bvfoa->isa('Bio::EnsEMBL::Variation::TranscriptVariationAllele') &&
+        defined $bvfoa->transcript_variation->transcript->translation &&
+         $bvfoa->transcript_variation->translation_start() > 
+           $bvfoa->transcript_variation->transcript->translation->length()
+	){
+
+	return 1;
+    }
     return 0 unless $ref_pep;
 
-    return ( $alt_pep =~ /\*/ && $ref_pep =~ /\*/ );
+    return ( $alt_pep =~ /^\*/ && $ref_pep =~ /^\*/ );
 }
 
 sub affects_start_codon {
@@ -811,6 +824,8 @@ sub stop_gained {
     my ($bvfoa, $feat, $bvfo, $bvf) = @_;
     
     return 0 unless $bvfoa->isa('Bio::EnsEMBL::Variation::TranscriptVariationAllele');
+    ## check for inframe insertion before stop 
+    return 0 if stop_retained($bvfoa);
 
     my ($ref_pep, $alt_pep) = _get_peptide_alleles(@_);
     
