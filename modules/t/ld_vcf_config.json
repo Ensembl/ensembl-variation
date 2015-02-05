@@ -1,0 +1,13 @@
+{
+  "collections": [
+    {
+      "id": "ld",
+      "species": "homo_sapiens",
+      "assembly": "GRCh37",
+      "type": "local",
+      "filename_template": "###t-root###/test-genome-DBs/homo_sapiens/variation/ld.vcf.gz",
+      "chromosomes": [ "9" ],
+      "individual_prefix": "1000GENOMES:phase_1:"
+    }
+  ]
+}
