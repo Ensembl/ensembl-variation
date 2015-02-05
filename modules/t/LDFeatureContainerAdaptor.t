@@ -29,7 +29,6 @@ use_ok('Bio::EnsEMBL::Variation::DBSQL::LDFeatureContainerAdaptor');
 ## examples to be updated & added to test-genome-DBs files
 
 
-=head
 my $multi = Bio::EnsEMBL::Test::MultiTestDB->new();
 
 my $vdb = $multi->get_DBAdaptor('variation');
@@ -40,27 +39,67 @@ $vdb->dnadb($db);
 my $ldfca = $vdb->get_LDFeatureContainerAdaptor();
 my $ldContainer;
 
-ok($ldfca && $ldfca->isa('Bio::EnsEMBL::Variation::DBSQL::LDFeatureContainerAdaptor'));
+ok($ldfca && $ldfca->isa('Bio::EnsEMBL::Variation::DBSQL::LDFeatureContainerAdaptor'), "get adaptor");
 
 my $sa = $db->get_SliceAdaptor();
+my $slice = $sa->fetch_by_region('chromosome','9',22124503,22126503);
 
-my $slice = $sa->fetch_by_region('chromosome','7');
+# get_populations_by_Slice
+my $pops = $ldfca->get_populations_by_Slice($slice);
+my $pa = $vdb->get_PopulationAdaptor();
+ok(scalar @$pops && $pops->[0] eq '1000GENOMES:phase_1_CEU', "get_populations_by_Slice");
 
-$ldContainer = $ldfca->fetch_by_Slice($slice,51);
+my $p1 = $pa->fetch_by_name($pops->[0]);
 
+# fetch_by_Slice
+$ldContainer = $ldfca->fetch_by_Slice($slice, $p1);
 my $ld_values;
 print_container($ldContainer);
 $ld_values = count_ld_values($ldContainer);
-ok($ld_values == 1);
+ok($ld_values == 15, "fetch_by_Slice - count LD values");
 
+# fetch_by_VariationFeature
 my $vfa = $vdb->get_VariationFeatureAdaptor();
+my $vf = $vfa->fetch_by_dbID(1004336);
 
-my $vf = $vfa->fetch_by_dbID(153);
-
-$ldContainer = $ldfca->fetch_by_VariationFeature($vf,51);
+$ldContainer = $ldfca->fetch_by_VariationFeature($vf, $p1);
 print_container($ldContainer);
 $ld_values = count_ld_values($ldContainer);
-ok($ld_values == 1);
+ok($ld_values == 5, "fetch_by_VariationFeature - count LD values");
+
+## VCF
+my $dir = $multi->curr_dir();
+no warnings 'once';
+$Bio::EnsEMBL::Variation::DBSQL::VCFCollectionAdaptor::CONFIG_FILE = $dir.'/ld_vcf_config.json';
+my $vca = $vdb->get_VCFCollectionAdaptor();
+my $coll = $vca->fetch_by_id('ld');
+
+# now we need to set the filename_template
+my $temp = $coll->filename_template();
+$temp =~ s/###t\-root###/$dir/;
+$coll->filename_template($temp);
+
+# use just VCF
+my $p2 = $pa->fetch_by_name('1000GENOMES:phase_1_ASW');
+
+$ldfca->db->use_vcf(2);
+$ldContainer = $ldfca->fetch_by_Slice($slice, $p2);
+
+print_container($ldContainer);
+$ld_values = count_ld_values($ldContainer);
+ok($ld_values == 14, "fetch_by_Slice - VCF only");
+
+# use VCF and DB
+$ldfca->db->use_vcf(1);
+$ldContainer = $ldfca->fetch_by_Slice($slice);
+
+print_container($ldContainer);
+$ld_values = count_ld_values($ldContainer);
+ok($ld_values == 44, "fetch_by_Slice - VCF and DB");
+
+
+done_testing();
+
 
 sub count_ld_values{
     my $container = shift;
@@ -86,6 +125,3 @@ sub print_container {
   }
 
 }
-=cut
-
-done_testing();
