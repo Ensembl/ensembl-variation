@@ -88,7 +88,7 @@ my $multi = Bio::EnsEMBL::Test::MultiTestDB->new('homo_sapiens');
 
 my $vdb = $multi->get_DBAdaptor('variation');
 
-ok(count_rows($vdb, "allele") eq 7526, "allele count");
+ok(count_rows($vdb, "meta_coord") eq 4, "meta_coord count");
 
 
 done_testing();
