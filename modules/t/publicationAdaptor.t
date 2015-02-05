@@ -18,7 +18,6 @@ use warnings;
 use Test::More;
 
 
-
 use Bio::EnsEMBL::Test::TestUtils;
 use Bio::EnsEMBL::Test::MultiTestDB;
 
@@ -76,5 +75,37 @@ ok(scalar(@{$vars}) ==1,   "variation count by publication - no fails");
 $va->db->include_failed_variations(1);
 my $varfs = $va->fetch_all_by_publication($pubs->[0]);
 ok(scalar(@{$varfs}) ==2,   "variation count by publication - inc fails");
+
+
+## store
+my $pub_store = Bio::EnsEMBL::Variation::Publication->new( 
+                -title    => "title",
+                -authors  => "authorString",
+                -pmid     => 1234,
+                -pmcid    => "PMC1234",
+                -ucsc_id  => "12345",
+                -year     => 2010,
+                -doi      => "doi:1234",
+                -adaptor  => $pa
+                );
+
+$pa->store($pub_store);
+
+## try updates
+ok($pub_store->ucsc_id() eq '12345',   'inserted UCSC id'  );
+$pa->update_ucsc_id($pub_store, "updated");
+ok($pub_store->ucsc_id() eq 'updated',   'update UCSC id'  );
+
+## and from db
+my $pubup = $pa->fetch_by_dbID($pub_store->dbID);
+ok($pubup->ucsc_id() eq 'updated',   'update UCSC id in db');
+
+## update citation
+my $va = $vdb->get_VariationAdaptor();
+my $var = $va->fetch_by_dbID(4770800);
+$pa->update_variant_citation($pubup, [$var]);
+
+ok($pubup->variations()->[0]->name() eq 'rs7569578', "citation update");
+
 
 done_testing();

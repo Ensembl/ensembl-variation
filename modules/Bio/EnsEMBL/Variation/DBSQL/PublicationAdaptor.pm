@@ -226,41 +226,6 @@ sub fetch_all_by_Variation {
 
 }
 
-=head2 fetch_all_by_Phenotype
-
-  Arg [1]    : listref $list
-  Example    : $publication = $publication_adaptor->fetch_all_by_Phenotype( $phenotype_object]);
-  Description: Retrieves a listref of publication objects in which a phenotype is discussed
-  Returntype : listref of Bio::EnsEMBL::Variation::Publication objects
-  Exceptions : throw if variation argument is not defined
-  Caller     : general
-  Status     : At Risk
-
-=cut
-
-sub fetch_all_by_Phenotype {
-    my $self    = shift;
-    my $pheno_obj = shift;
-    
-    if(!defined($pheno_obj) || ref($pheno_obj ne 'Phenotype')) {
-        throw("phenotype argument is required");
-    }
-    
-    my @pub;
-    my $publication_id;
-
-    my $sth = $self->prepare(qq{SELECT publication_id from phenotype_citation where phenotype_id = ?  });
-    $sth->execute($pheno_obj->dbID);
-    $sth->bind_columns(\$publication_id);
-    while ($sth->fetch()){
-        push @pub, $self->fetch_by_dbID($publication_id)
-    }
-    $sth->finish;
-    
-    return \@pub;
-
-}
-
 
 
 sub _columns {
@@ -391,6 +356,8 @@ sub update_ucsc_id {
 
     throw("No UCSC external id defined") unless defined $ucsc_id;
     throw("No publication defined")      unless defined $pub->{dbID};
+
+    $pub->{ucsc_id} = $ucsc_id;;
 
     my $dbh = $self->dbc->db_handle;
     
