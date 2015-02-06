@@ -366,6 +366,22 @@ sub fetch_Iterator_by_VariationSet {
         # If the iterator is empty, get a new chunk of dbIDs, unless we've fetched all dbIDs 
         unless (defined($iterator) && $iterator->has_next() && $min_sv_id <= $max_sv_id) {
             
+            ## check there are ids in the range to return
+            my $count_sth = $self->prepare(qq{SELECT count(vssv.structural_variation_id) $stmt 
+                                              AND vssv.structural_variation_id BETWEEN ? AND ? $constraint});
+
+            my $done = 0;
+            while( $min_sv_id < $max_sv_id && $done == 0  ){
+                $count_sth->execute($min_sv_id, $min_sv_id+$cache_size);
+                my $count = $count_sth->fetchall_arrayref();
+                if ($count->[0]->[0] > 0){
+                    $done =1;
+                }
+                else{
+                    $min_sv_id += ($cache_size + 1);
+                }
+            }
+
             # Get the next chunk of dbIDs
             $sth->execute($min_sv_id,$min_sv_id+$cache_size);
             $min_sv_id += ($cache_size + 1);
