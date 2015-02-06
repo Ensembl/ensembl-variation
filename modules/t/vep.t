@@ -244,7 +244,12 @@ $cons = get_all_consequences($config, [$vf]);
 ok($cons && ${$cons->[0]} =~ /missense_variant 0 mRNA ENST00000419219/, "gvf output");
 
 # json
-$config = copy_config($base_config, {json => 1, rest => 1});
+$config = copy_config($base_config, {
+  json => 1,
+  rest => 1,
+  check_existing => 1, 
+  sift => 'b'
+});
 
 ($vf) = @{parse_line($config, '21 25606454 25606454 G/C +')};
 $cons = get_all_consequences($config, [$vf]);
@@ -253,8 +258,9 @@ ok($cons && $cons->[0]->{most_severe_consequence} eq 'missense_variant', "json o
 # solr xml
 $config = copy_config($base_config, {
   solr => 1,
-  fields => ['Consequence'],
+  fields => ['Consequence', 'SIFT'],
   summary => 1,
+  sift => 'b'
 });
 
 ($vf) = @{parse_line($config, '21 25606454 25606454 G/C +')};
