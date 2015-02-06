@@ -18,6 +18,7 @@ use warnings;
 use Test::More;
 use Data::Dumper;
 use FindBin qw($Bin);
+use File::Path qw(remove_tree);;
 
 use Bio::EnsEMBL::Test::TestUtils;
 use Bio::EnsEMBL::Test::MultiTestDB;
@@ -165,6 +166,7 @@ $config = copy_config($base_config);
 ($vf) = @{parse_line($config, $lines[0])};
 ok($vf && $vf->allele_string eq 'C/T', "parse_line vcf");
 
+# SV input
 my @vfs = grep {validate_vf($config, $_)} map {@{parse_line($config, $_)}} @lines;
 ok(scalar @vfs == 12, "SVs pass validate_vf");
 
@@ -176,6 +178,48 @@ ok((grep {$_->{Consequence} =~ /feature_truncation/} @sv_cons), "SV del cons");
 
 @sv_cons = grep {$_->{Uploaded_variation} eq 'sv_dup'} @$cons;
 ok((grep {$_->{Consequence} =~ /feature_elongation/} @sv_cons), "SV dup cons");
+
+
+# frequency filtering
+$input = qq{21 25000248 25000248 C/G + test1
+21 25000264 25000264 A/G + test2};
+
+$config = copy_config($base_config, {
+  check_existing => 1,
+  check_frequency => 1,
+  freq_pop => '1kg_asn',
+  freq_freq => 0.04,
+  freq_gt_lt => 'lt',
+  freq_filter => 'include',
+});
+$cons = get_all_consequences($config, [map {@{parse_line($config, $_)}} split("\n", $input)]);
+my %ex = map {$_->{Uploaded_variation} => 1} @$cons;
+ok(!$ex{test1} && $ex{test2}, "check frequency 1");
+ok($cons->[0]->{Extra}->{FREQS} eq '1kg_asn:0.0035', "check frequency 2");
+
+$config = copy_config($base_config, {
+  check_existing => 1,
+  check_frequency => 1,
+  freq_pop => '1kg_asn',
+  freq_freq => 0.04,
+  freq_gt_lt => 'lt',
+  freq_filter => 'exclude',
+});
+$cons = get_all_consequences($config, [map {@{parse_line($config, $_)}} split("\n", $input)]);
+%ex = map {$_->{Uploaded_variation} => 1} @$cons;
+ok($ex{test1} && !$ex{test2}, "check frequency 3");
+
+$config = copy_config($base_config, {
+  check_existing => 1,
+  check_frequency => 1,
+  freq_pop => '1kg_asn',
+  freq_freq => 0.04,
+  freq_gt_lt => 'gt',
+  freq_filter => 'include',
+});
+$cons = get_all_consequences($config, [map {@{parse_line($config, $_)}} split("\n", $input)]);
+%ex = map {$_->{Uploaded_variation} => 1} @$cons;
+ok($ex{test1} && !$ex{test2}, "check frequency 4");
 
 
 ## output formats
@@ -218,6 +262,48 @@ $cons = get_all_consequences($config, [$vf]);
 ok($cons && ${$cons->[0]} =~ /\<field name\=\"Consequence\">missense_variant\<\/field\>/, "solr xml output");
 
 
+## CUSTOM FILES
+if(`which tabix` =~ /tabix/) {
+  $input = qq{21      25592860        rs10576 T       C       .       .       .
+21      25592836        rs1135638       G       A       .       .       .
+21      25587758        rs116645811     G       A       .       .       .};
+  $config = copy_config($base_config, {
+    custom => [
+      {
+        file   => "$Bin\/testdata/test.bed.gz",
+        name   => 'testbed',
+        type   => 'overlap',
+        format => 'bed',
+        coords => 0
+      },
+      {
+        file   => "$Bin\/testdata/test.vcf.gz",
+        name   => 'testvcf',
+        type   => 'exact',
+        format => 'vcf',
+        coords => 0,
+        fields => ['ATTR'],
+      }
+    ],
+    pick => 1,
+  });
+  @vfs = map {@{parse_line($config, $_)}} split("\n", $input);
+  $cons = get_all_consequences($config, \@vfs);
+  
+  my %by_var = map {$_->{Uploaded_variation} => $_->{Extra}} @$cons;
+  ok($by_var{rs116645811}->{testbed} eq 'bed1' && $by_var{rs1135638}->{testbed} eq 'bed2', "custom - bed");
+
+  ok(
+    $by_var{rs116645811}->{testvcf} eq 'vcf1' &&
+    $by_var{rs1135638}->{testvcf} eq 'vcf2' &&
+    $by_var{rs10576}->{testvcf} eq 'vcf3',
+    "custom - vcf"
+  );
+}
+else {
+  print STDERR "# tabix not found, skipping custom file tests\n";
+}
+
 
 ## DATABASE
 ###########
@@ -255,6 +341,41 @@ ok((grep {$_->{Extra}->{HGVSc} eq 'ENST00000522587.1:c.639G>C'} @$cons), "DB out
 delete $config->{format};
 ($vf) = @{parse_line($config, "rs2299222")};
 ok($vf && $vf->variation_name eq 'rs2299222', "parse_line ID");
+
+# build
+$config = copy_config($config, {
+  reg         => 'Bio::EnsEMBL::Registry',
+  build       => 22,
+  build_parts => 'tv',
+  dir         => "$Bin\/testdata/$$\_vep_cache/".$config->{species}."/".$config->{version}."_".$config->{assembly},
+  strip       => 1,
+  write_cache => 1,
+  freq_vcf    => [
+    {
+      pops => ['AFR','ASN'],
+      file => "$Bin\/testdata/freqs.vcf.gz",
+    },
+  ],
+});
+
+print STDERR "# building cache for chr 22\n";
+build_full_cache($config);
+
+$config = copy_config($base_config, {
+  check_existing => 1,
+  maf_1kg        => 1,
+});
+$config->{dir} =~ s/$Bin\/testdata\/vep-cache/$Bin\/testdata\/$$\_vep_cache/;
+
+($vf) = @{parse_line($config, "22 20876358 20876358 C/T +")};
+$cons = get_all_consequences($config, [$vf]);
+ok($cons && scalar @$cons == 1 && $cons->[0]->{Feature} eq 'ENST00000420225', "build - basic test");
+
+ok($cons->[0]->{Extra}->{AFR_MAF} eq 'T:0.03' && $cons->[0]->{Extra}->{AMR_MAF} eq 'T:0.05', "build - freqs from vcf");
+ok($cons->[0]->{Extra}->{CLIN_SIG} eq 'pathogenic', "build - clin_sig");
+
+# remove built cache
+remove_tree("$Bin\/testdata/$$\_vep_cache");
 
 done_testing();
 
