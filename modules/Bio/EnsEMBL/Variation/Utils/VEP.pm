@@ -80,6 +80,8 @@ use Bio::EnsEMBL::Translation;
 use Bio::EnsEMBL::Exon;
 use Bio::EnsEMBL::ProteinFeature;
 use Bio::EnsEMBL::Analysis;
+use Bio::EnsEMBL::Funcgen::RegulatoryFeature;
+use Bio::EnsEMBL::Funcgen::MotifFeature;
 use Bio::EnsEMBL::DBSQL::GeneAdaptor;
 use Bio::EnsEMBL::DBSQL::SliceAdaptor;
 use Bio::EnsEMBL::DBSQL::TranslationAdaptor;
