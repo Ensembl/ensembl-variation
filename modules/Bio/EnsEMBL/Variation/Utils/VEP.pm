@@ -82,6 +82,7 @@ use Bio::EnsEMBL::ProteinFeature;
 use Bio::EnsEMBL::Analysis;
 use Bio::EnsEMBL::Funcgen::RegulatoryFeature;
 use Bio::EnsEMBL::Funcgen::MotifFeature;
+use Bio::EnsEMBL::Funcgen::BindingMatrix;
 use Bio::EnsEMBL::DBSQL::GeneAdaptor;
 use Bio::EnsEMBL::DBSQL::SliceAdaptor;
 use Bio::EnsEMBL::DBSQL::TranslationAdaptor;
@@ -447,7 +448,7 @@ sub parse_ensembl {
         $vf = Bio::EnsEMBL::Variation::StructuralVariationFeature->new_fast({
             start          => $start,
             end            => $end,
-            strand         => $strand,
+            strand         => $strand =~ /\-/ ? -1 : 1,
             adaptor        => $config->{svfa},
             variation_name => $var_name,
             chr            => $chr,
@@ -461,7 +462,7 @@ sub parse_ensembl {
             start          => $start,
             end            => $end,
             allele_string  => $allele_string,
-            strand         => $strand,
+            strand         => $strand =~ /\-/ ? -1 : 1,
             map_weight     => 1,
             adaptor        => $config->{vfa},
             variation_name => $var_name,
