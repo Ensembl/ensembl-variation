@@ -257,11 +257,11 @@ use warnings;
         my $include_coding_details  = $args{include_coding_details};
         my $include_global_maf      = $args{include_global_maf};
 
-        $gff->{source} = $self->source;
+        $gff->{source} = $self->source_name;
 
         $gff->{type} = $self->class_SO_term;
 
-        my $source = $self->source;
+        my $source = $self->source_name;
 
         $source .= '_'.$self->source_version if defined $self->source_version;
 
