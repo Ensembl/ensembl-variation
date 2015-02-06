@@ -364,7 +364,7 @@ sub fetch_Iterator_by_VariationSet {
     return Bio::EnsEMBL::Utils::Iterator->new(sub {
 
         # If the iterator is empty, get a new chunk of dbIDs, unless we've fetched all dbIDs 
-        unless (defined($iterator) && $iterator->has_next() && $min_sv_id <= $max_sv_id) {
+        unless ((defined($iterator) && $iterator->has_next()) || $min_sv_id > $max_sv_id) {
             
             ## check there are ids in the range to return
             my $count_sth = $self->prepare(qq{SELECT count(vssv.structural_variation_id) $stmt 

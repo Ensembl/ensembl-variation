@@ -1183,7 +1183,7 @@ sub fetch_Iterator_by_VariationSet {
     return Bio::EnsEMBL::Utils::Iterator->new(sub {
 
         # If the iterator is empty, get a new chunk of dbIDs, unless we've fetched all dbIDs 
-        unless (defined($iterator) && $iterator->has_next() && $min_variation_id <= $max_variation_id) {
+        unless ((defined($iterator) && $iterator->has_next()) || $min_variation_id > $max_variation_id) {
             
             ## check there are ids in the range to return
             my $count_sth = $self->prepare(qq{SELECT count(vsv.variation_id) $stmt AND vsv.variation_id BETWEEN ? AND ? $constraint});
