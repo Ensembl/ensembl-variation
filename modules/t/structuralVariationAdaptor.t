@@ -28,6 +28,7 @@ our $verbose = 0;
 my $multi = Bio::EnsEMBL::Test::MultiTestDB->new('homo_sapiens');
 
 my $vdb = $multi->get_DBAdaptor('variation');
+   $vdb->include_failed_variations(1);
 
 my $sva = $vdb->get_StructuralVariationAdaptor();
 
@@ -48,6 +49,7 @@ my $clin_sign = $sv->get_all_clinical_significance_states();
 ok($clin_sign->[0] eq 'benign' &&
    $clin_sign->[1] eq 'likely benign', 'clinsig by sv id');	
 
+my $study_test = $sv->study;
 
 # test fetch by name
 print "\n# Test - fetch_by_name\n";
@@ -108,6 +110,46 @@ print "\n# Test - fetch_Iterator_by_VariationSet\n";
 my $sv6 = $sva->fetch_Iterator_by_VariationSet($vs);
 ok($sv6->next()->variation_name eq $sv_names[0], "iterator by VariationSet - 1");
 ok($sv6->next()->variation_name eq $sv_names[1], "iterator by VariationSet - 2");
+
+
+## Other - BaseStructuralVariationAdaptor ##
+my $sv_name = 'CN_674347';
+
+# test fetch all
+print "\n# Test - fetch_all\n";
+my $sv7= $sva->fetch_all();
+ok($sv7->[0]->variation_name eq $sv_name, "sv by all");
+
+# test fetch all somatic
+print "\n# Test - fetch_all_somatic\n";
+my $sv8= $sva->fetch_all_somatic();
+ok($sv8->[0]->variation_name eq 'esv2221103', "sv by all somatic");
+
+# test list dbIDs
+print "\n# Test - list_dbIDs\n";
+my $sv9= $sva->list_dbIDs();
+ok($sv9->[0] == 770260, "sv id by list of dbIDs");
+
+# test fetch by stable_id
+print "\n# Test - fetch_by_stable_id\n";
+my $sv10= $sva->fetch_by_stable_id($sv_name);
+ok($sv10->variation_name eq $sv_name, "sv by stable_id");
+
+# test fetch all by Study
+print "\n# Test - fetch_all_by_Study\n";
+my $sv11= $sva->fetch_all_by_Study($study_test);
+ok($sv11->[0]->variation_name eq $sv_names[0], "sv by study");
+
+# test fetch all by Source
+print "\n# Test - fetch_all_by_Source\n";
+my $sv12= $sva->fetch_all_by_Source($sv->source_object);
+ok($sv12->[0]->variation_name eq $sv_names[0], "sv by source");
+
+# test get_all_failed_descriptions
+print "\n# Test - get_all_failed_descriptions\n";
+my $failed_sv = $sva->fetch_by_name('esv902225');
+my $sv13= $sva->get_all_failed_descriptions($failed_sv);
+ok($sv13->[0] eq 'Variation can not be re-mapped to the current assembly', "failed descriptions");
 
 
 done_testing();
