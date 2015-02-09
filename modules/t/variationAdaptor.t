@@ -34,13 +34,17 @@ my $va = $vdb->get_VariationAdaptor();
 ok($va && $va->isa('Bio::EnsEMBL::Variation::DBSQL::VariationAdaptor'), "isa var adaptor");
 
 my $vsa = $vdb->get_VariationSetAdaptor();
+my $pa  = $vdb->get_PopulationAdaptor();
+
+my $var_name = 'rs7569578';
+my $var_id   = 4770800;
 
 # test fetch by dbID
 
-my $var = $va->fetch_by_dbID(4770800);
+my $var = $va->fetch_by_dbID($var_id);
 
-ok($var->name() eq 'rs7569578',      'variation name by var id');
-ok($var->stable_id() eq 'rs7569578',      'stable id by var id');
+ok($var->name() eq $var_name,      'variation name by var id');
+ok($var->stable_id() eq $var_name,      'stable id by var id');
 ok($var->source_name() eq 'dbSNP',          'source name by var id'   );
 ok($var->source_description() eq 'Variants (including SNPs and indels) imported from dbSNP',   'source description by var id'   );
 ok($var->source_version() == 138, 'source version by var id');
@@ -86,15 +90,15 @@ ok($var->ancestral_allele eq 'G', "ancestral allele by name");
 
 # test fetch by subsnp
 my $var_ss = $va->fetch_by_subsnp_id('ss11455892');
-ok($var_ss->name() eq 'rs7569578', 'fetch by subsnp'); 
+ok($var_ss->name() eq $var_name, 'fetch by subsnp'); 
 
 
 # test fetch by name using a synonym
 
 $var = $va->fetch_by_name('rs57302278');
 
-ok($var->name() eq 'rs7569578',   "current name by synonym");
-ok($var->dbID() == 4770800,       "current id by synonym");
+ok($var->name() eq $var_name,   "current name by synonym");
+ok($var->dbID() == $var_id,       "current id by synonym");
 ok($var->source_name() eq 'dbSNP',"source by synonym");
 ok($var->ancestral_allele eq 'A', "ancestral allele by synonym" );
 
@@ -126,12 +130,14 @@ my @var_dbIDs = values(%var_list);
 my @var_names = sort{ $var_list{$a} <=> $var_list{$b}} keys(%var_list);
 
 # test fetch Iterator by dbID list
+print "\n'# Test - fetch_Iterator_by_dbID_list\n";
 my $it1 = $va->fetch_Iterator_by_dbID_list(\@var_dbIDs);
 ok($var_list{$it1->next()->name}, "iterator by id - 1");
 ok($var_list{$it1->next()->name}, "iterator by id - 2");
 ok($var_list{$it1->next()->name}, "iterator by id - 3");
 
 # test fetch Iterator by VariationSet
+print "\n'# Test - fetch_Iterator_by_VariationSet\n";
 my $vs  = $vsa->fetch_by_name('1000 Genomes - AFR');
 my $isv = $va->fetch_Iterator_by_VariationSet($vs);
 ok($isv->next()->name eq $var_names[0], "iterator by VariationSet - 1");
@@ -139,8 +145,60 @@ ok($isv->next()->name eq $var_names[1], "iterator by VariationSet - 2");
 ok($isv->next()->name eq $var_names[2], "iterator by VariationSet - 3");
 
 
+# test fetch by stable_id
+print "\n# Test - fetch_by_stable_id\n";
+my $var2 = $va->fetch_by_stable_id($var_name);
+ok($var2->name eq $var_name, "var by stable_id");
+
+# test fetch all by source
+print "\n# Test - fetch_all_by_source\n";
+my $var3 = $va->fetch_all_by_source('dbSNP');
+ok($var3->[0]->name eq 'rs12360064', "var by source");
+
+# test fetch all by dbID list
+print "\n# Test - fetch_all_by_dbID_list\n";
+@var_dbIDs = values(%var_list);
+my $var4 = $va->fetch_all_by_dbID_list(\@var_dbIDs);
+ok($var_list{$var4->[0]->name}, "var by list of dbIDs");
+
+# test fetch all by name list
+print "\n# Test - fetch_all_by_name_list\n";
+my $var5 = $va->fetch_all_by_name_list(\@var_names);
+ok($var_list{$var5->[0]->name}, "var by list of names");
+
+# test get all sources
+print "\n# Test - get_all_sources\n";
+my $src1 = $va->get_all_sources();
+ok($src1->[0] eq 'dbSNP',  "get all sources - 1");
+ok($src1->[1] eq 'COSMIC', "get all sources - 2");
+
+# test get flanking sequence
+print "\n# Test - get_flanking_sequence\n";
+my $fs = $va->get_flanking_sequence($var_id, 10);
+ok($fs->[0] eq 'NNNNNNNNNNN', "get the flanking sequence");
+
+# test fetch all by Population
+print "\n# Test - fetch_all_by_Population\n";
+my $pop = $pa->fetch_by_name('CSHL-HAPMAP:HAPMAP-ASW');
+my $var6 = $va->fetch_all_by_Population($pop);
+ok($var6->[0]->name eq 'rs2255888', "var by population");
+
+# test fetch all by VariationSet
+print "\n# Test - fetch_all_by_VariationSet\n";
+my $var7 = $va->fetch_all_by_VariationSet($vs);
+ok($var_list{$var7->[0]->name}, "var by VariationSet - 1");
+ok($var_list{$var7->[1]->name}, "var by VariationSet - 2");
+ok($var_list{$var7->[2]->name}, "var by VariationSet - 3");
+
+# test load alleles
+print "\n# Test - load_alleles\n";
+$va->load_alleles(1);
+my $var8 = $va->fetch_by_dbID($var_id);
+ok($var8->get_all_Alleles, "load alleles");
+
 # store
-$var = $va->fetch_by_dbID(4770800);
+print "\n# Test - store\n";
+$var = $va->fetch_by_dbID($var_id);
 
 delete $var->{$_} for qw(dbID name);
 $var->name('test');
@@ -149,5 +207,12 @@ ok($va->store($var), "store");
 
 $var = $va->fetch_by_name('test');
 ok($var && $var->name eq 'test', "fetch stored");
+
+# update
+print "\n# Test - update\n";
+my $upd_var = $va->fetch_by_name('test');
+$upd_var->name('updated_test');
+ok($upd_var && $upd_var->name eq 'updated_test', "updated variant");
+
 
 done_testing();
