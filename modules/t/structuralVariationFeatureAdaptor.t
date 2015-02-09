@@ -26,12 +26,17 @@ our $verbose = 0;
 my $multi = Bio::EnsEMBL::Test::MultiTestDB->new('homo_sapiens');
 
 my $vdb = $multi->get_DBAdaptor('variation');
-my $db  = $multi->get_DBAdaptor('core');
+my $cdb = $multi->get_DBAdaptor('core');
 
-$vdb->dnadb($db);
 
+$vdb->dnadb($cdb);
+
+my $sa   = $cdb->get_SliceAdaptor();
 my $svfa = $vdb->get_StructuralVariationFeatureAdaptor();
 my $sva  = $vdb->get_StructuralVariationAdaptor();
+my $sta  = $vdb->get_StudyAdaptor();
+my $vsa  = $vdb->get_VariationSetAdaptor();
+my $srca = $vdb->get_SourceAdaptor();
 
 my $dbID = 4509635;
 my $outer_start = 7803891;
@@ -44,6 +49,7 @@ my $study_name  = 'estd59';
 my $chr = '8';
 
 ok($svfa && $svfa->isa('Bio::EnsEMBL::Variation::DBSQL::StructuralVariationFeatureAdaptor'));
+
 
 my $svf = $svfa->fetch_by_dbID($dbID);
 my $source = $svf->source_object;
@@ -63,8 +69,8 @@ ok($slice->seq_region_name() eq $chr,   "svf_id -> slice name");
 
 
 
-# test fetch_all_by_Variation
-
+# test fetch_all_by_StructuralVariation
+print "\n# Test - fetch_all_by_StructuralVariation\n";
 my $sv = $sva->fetch_by_dbID(3506221);
 my $svfs = $svfa->fetch_all_by_StructuralVariation($sv);
 ok(@$svfs == 1,                         "sv -> vf count ");
@@ -84,6 +90,109 @@ ok($svf->strand()      == 1,            "sv -> strand");
 ok($svf->variation_name() eq $var_name, "sv -> name");
 ok($source->name() eq $source_name,     "sv -> source" );
 ok($svf->study->name() eq $study_name,  "sv -> study" );
+
+
+my $study = $sta->fetch_by_name('estd55');
+
+## Slices ##
+my @sv_names = ('esv2751608','esv2421345','esv2758415');
+my $sv_somatic = 'esv2221103';
+
+my $slice_test = $sa->fetch_by_region('chromosome','18');
+my $slice_soma = $sa->fetch_by_region('chromosome','1');
+my $slice_set  = $sa->fetch_by_region('chromosome','8');
+
+# test fetch all by Slice
+print "\n# Test - fetch_all_by_Slice\n";
+my $svfs1 = $svfa->fetch_all_by_Slice($slice_test);
+my $sv_count = 0;
+foreach my $svf1 (@$svfs1) {
+  my $name = $sv_names[$sv_count];
+  $sv_count ++;
+  ok($svf1->variation_name() eq $name, "svby slice - $sv_count");
+}
+
+# test fetch all by Slice constraint
+print "\n# Test - fetch_all_by_Slice_constraint\n";
+my $constraint_2 = "svf.variation_name='".$sv_names[0]."'";
+my $svfs2 = $svfa->fetch_all_by_Slice_constraint($slice_test,$constraint_2);
+ok($svfs2->[0]->variation_name() eq $sv_names[0], "sv by slice constraint");
+
+# test fetch all somatic by Slice
+print "\n# Test - fetch_all_somatic_by_Slice\n";
+my $svfs3 = $svfa->fetch_all_somatic_by_Slice($slice_soma);
+ok($svfs3->[0]->variation_name() eq $sv_somatic, "somatic sv by slice ");
+
+# test fetch all somatic by Slice constraint
+print "\n# Test - fetch_all_somatic_by_Slice_constraint\n";
+my $constraint_4 = "svf.variation_name='$sv_somatic'";
+my $svfs4 = $svfa->fetch_all_somatic_by_Slice($slice_soma);
+ok($svfs4->[0]->variation_name() eq $sv_somatic, "somatic sv by slice constraint");
+
+# test fetch Iterator by Slice constraint
+#print "\n# Test - fetch_Iterator_by_Slice_constraint\n";
+#my $constraint_5 = '';#"svf.seq_region_start>5000000";
+#my $svfs5 = $svfa->fetch_Iterator_by_Slice_constraint($slice_test,$constraint_5);
+#ok($svfs5->[0]->variation_name eq $sv_names[1], "iterator by slice constraint - 1");
+#ok($svfs5->[1]->variation_name eq $sv_names[2], "iterator by slice constraint - 2");
+
+# test fetch all by Slice SO term
+print "\n# Test - fetch_all_by_Slice_SO_term\n";
+my $SO_term_6 = 'inversion';
+my $svfs6 = $svfa->fetch_all_by_Slice_SO_term($slice_test,$SO_term_6);
+ok($svfs6->[0]->variation_name() eq $sv_names[1], "sv by slice and SO term");
+
+# test fetch all cnv probe by Slice
+print "\n# Test - fetch_all_cnv_probe_by_Slice\n";
+my $svfs7 = $svfa->fetch_all_cnv_probe_by_Slice($slice_test);
+ok($svfs7->[0]->variation_name() eq 'CN_674347', "cnv probe by slice");
+
+# test fetch all by Slice Study
+print "\n# Test - fetch_all_by_Slice_Study\n";
+my $svfs8 = $svfa->fetch_all_by_Slice_Study($slice_test, $study);
+ok($svfs8->[0]->variation_name() eq $sv_names[0], "sv by slice and study");
+
+# test fetch all by Slice VariationSet
+print "\n# Test - fetch_all_by_Slice_VariationSet\n";
+my $set = $vsa->fetch_by_name('1000 Genomes - High coverage - Trios');
+my @sv_sets = ('esv93078','esv89107');
+my $svfs8 = $svfa->fetch_all_by_Slice_VariationSet($slice_set, $set);
+ok($svfs8->[0]->variation_name() eq $sv_sets[0], "sv by slice and variation set - 1");
+ok($svfs8->[1]->variation_name() eq $sv_sets[1], "sv by slice and variation set - 2");
+
+
+## Other ##
+
+# test list_dbIDs
+print "\n# Test - list_dbIDs\n";
+my $svfs9 = $svfa->list_dbIDs();
+ok($svfs9->[0] == 1850296, "sv id by list of dbIDs");
+
+# test fetch all by Study
+print "\n# Test - fetch_all_by_Study\n";
+my $svfs10 = $svfa->fetch_all_by_Study($study);
+ok($svfs10->[0]->variation_name() eq $sv_names[0], "sv by study");
+
+# test fetch all by Source
+print "\n# Test - fetch_all_by_Source\n";
+my $svfs11 = $svfa->fetch_all_by_Source($source);
+ok($svfs11->[0]->variation_name() eq 'esv93078', "sv by source");
+
+
+## store ##
+
+# test store
+print "\n# Test - store\n";
+delete $svf->{$_} for qw(dbID seq_region_start variation_name);
+my $new_seq_region_start = 1000;
+my $new_var_name = 'test';
+$svf->start($new_seq_region_start);
+$svf->variation_name($new_var_name);
+
+ok($svfa->store($svf), "store");
+
+my $svfs_store = $svfa->fetch_all_by_Slice_constraint($slice_set, "svf.seq_region_start=$new_seq_region_start");
+ok($svfs_store && $svfs_store->[0]->seq_region_start == $new_seq_region_start && $svfs_store->[0]->variation_name eq $new_var_name, "fetch stored");
 
 done_testing();
 
