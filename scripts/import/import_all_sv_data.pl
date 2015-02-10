@@ -1840,11 +1840,17 @@ sub get_medgen_phenotype {
   my $res = `grep $id $medgen_file`;
   
   if ($res) {
-    my $phen_desc = (split(',',$res))[1];
-    $phen_desc =~ s/"//g;
+    my $phen_desc;
+    if ($res =~ /"(.+)"/) {
+      $phen_desc = $1;
+    }
+    else {
+      $phen_desc = (split(',',$res))[1];
+      $phen_desc =~ s/"//g;
+    }
     return $phen_desc;
   }
-  
+
   return undef;
 }
 
