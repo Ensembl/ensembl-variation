@@ -210,9 +210,12 @@ ok($var && $var->name eq 'test', "fetch stored");
 
 # update
 print "\n# Test - update\n";
+my $upd_name = 'updated_test';
 my $upd_var = $va->fetch_by_name('test');
-$upd_var->name('updated_test');
-ok($upd_var && $upd_var->name eq 'updated_test', "updated variant");
+$upd_var->name($upd_name);
+$va->update($upd_var);
+$var = $va->fetch_by_name($upd_name);
+ok($var && $var->name eq $upd_name, "fetch updated");
 
 
 done_testing();
