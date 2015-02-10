@@ -42,6 +42,7 @@ my %special_options = (
   'gallus_gallus'     => ' --sift b',
   'rattus_norvegicus' => ' --sift b',
   'sus_scrofa'        => ' --sift b',
+  'triticum_aestivum' => ' --sift b',
 );
 
 GetOptions(
