@@ -193,7 +193,7 @@ sub update {
 	## store these by attrib id to allow differnt values in different species
 	my $aa = $self->db->get_AttributeAdaptor;
 
-	foreach my $ev_term( @$var->{evidence} ){
+	foreach my $ev_term( @{$var->{evidence}} ){
 
 	    my $ev_class_id = $aa->attrib_id_for_type_value('evidence',$ev_term);
 	    push @{$var->{evidence_attribs}},  $ev_class_id;
