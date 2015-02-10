@@ -84,7 +84,7 @@ use warnings;
 package Bio::EnsEMBL::Variation::DBSQL::VariationAdaptor;
 
 use Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor;
-use Bio::EnsEMBL::Utils::Exception qw(throw warning);
+use Bio::EnsEMBL::Utils::Exception qw(throw deprecate warning);
 use Bio::EnsEMBL::Utils::Scalar qw(assert_ref check_ref wrap_array);
 
 use Bio::EnsEMBL::Variation::Variation;
@@ -916,11 +916,11 @@ sub get_all_sources{
 
   Args      : none
   Example     : $default_source = $va->get_default_source();
-  Description : Retrieves from the database the default source used for display purposes
+  Description : DEPRECATED - Retrieves from the database the default source used for display purposes
   ReturnType  : string
   Exceptions  : none
   Caller      : web
-  Status      : At Risk
+  Status      : DEPRECATED
 
 =cut
 
@@ -928,13 +928,7 @@ sub get_default_source{
     my $self = shift;
 
     my $source_name;
-    my $sth = $self->prepare(qq{SELECT meta_value from meta where meta_key = ?
-				});
-    $sth->bind_param(1,'source.default_source',SQL_VARCHAR);
-    $sth->execute();
-    $sth->bind_columns(\$source_name);
-    $sth->fetch();
-    $sth->finish();
+    deprecate("The method 'get_default_source' is not used anymore. Please use the method 'get_all_sources' instead.\n");
 
     return $source_name;
 }
