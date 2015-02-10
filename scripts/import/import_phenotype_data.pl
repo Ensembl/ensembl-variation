@@ -1295,9 +1295,18 @@ sub parse_omim_gene {
     
     my $desc = $content[6];
     next if (!$desc || $desc eq '');
+    $desc =~ s/^\s+//;
+    $desc =~ s/\\n$//;
+    $desc =~ s/\\n;/;/g;
+    $desc =~ s/;\\n/;/g;
+    $desc =~ s/\\n/ /g;
+    $desc = (split(';', $desc))[0]; # Only keep the first term
+
+    my $gene = $content[0];
+    next if (!$gene || $gene eq '');
     
     push @phenotypes, {
-      'id'                => $content[0],
+      'id'                => $gene,
       'description'       => $desc,
       'external_id'       => $content[5],
       'seq_region_id'     => $content[1],
