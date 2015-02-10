@@ -216,8 +216,8 @@ sub usage {
     -mapping_file   Web module to map the colour names to the corresponding hexadecimal code. (optional)
                     Useful because some colour names are internal to Ensembl and won't be displayed in the 
                     documentation pages (i.e. not using the perl modules).
-                    The module ColourMap.pm can be find in:
-                    ensembl-webcode/modules/EnsEMBL/Draw/ColourMap.pm
+                    The module NamedColours.pm can be find in:
+                    ensembl-webcode/modules/EnsEMBL/Draw/Utils/NamedColours.pm
   } . "\n";
   exit(0);
 }
