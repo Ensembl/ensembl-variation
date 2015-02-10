@@ -237,37 +237,6 @@ sub fetch_all_by_StructuralVariation {
 }
 
 
-=head2 fetch_Iterator_by_Slice_constraint
-
-  Arg [1]    : Bio::EnsEMBL::Slice $slice
-               the slice from which to obtain features
-  Arg [2]    : (optional) string $constraint
-               An SQL query constraint (i.e. part of the WHERE clause)
-  Description: Returns a listref of structural variation features created 
-               from the database which are on the Slice defined by $slice 
-               and fulfill the SQL constraint defined by $constraint, using the iterator method.
-  Returntype : reference to list StructuralVariationFeature
-  Exceptions : thrown if $slice is not defined
-  Caller     : general
-  Status     : Stable
-
-=cut
-
-sub fetch_Iterator_by_Slice_constraint {
-    my ($self, $slice, $constraint) = @_;
-    
-    $self->{_iterator} = 1;
-    
-    $constraint = $self->_internal_exclude_failed_constraint($constraint,1);
-    
-    my $iterator = $self->fetch_all_by_Slice_constraint($slice, $constraint);
-
-    $self->{_iterator} = 0;
-    
-    return $iterator;
-}
-
-
 =head2 fetch_all_by_Slice_SO_term
 
   Arg [1]     : Bio::EnsEMBL::Slice

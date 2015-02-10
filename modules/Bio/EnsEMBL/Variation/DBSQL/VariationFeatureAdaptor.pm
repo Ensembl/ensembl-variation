@@ -1047,17 +1047,6 @@ sub fetch_Iterator {
     return $self->_generic_fetch_Iterator($cache_size);
 }
 
-sub fetch_Iterator_by_Slice_constraint {
-    my ($self, $slice, $constraint) = @_;
-    
-    $self->{_iterator} = 1;
-    
-    my $iterator = $self->fetch_all_by_Slice_constraint($slice, $constraint);
-
-    $self->{_iterator} = 0;
-    
-    return $iterator;
-}
 
 sub _generic_fetch_Iterator {
 
