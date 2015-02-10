@@ -1,1 +1,2 @@
 1	\N	ACH	ACHONDROPLASIA
+2	\N	\N	COSMIC:tumour_site:skin
