@@ -129,13 +129,6 @@ my $constraint_4 = "svf.variation_name='$sv_somatic'";
 my $svfs4 = $svfa->fetch_all_somatic_by_Slice($slice_soma);
 ok($svfs4->[0]->variation_name() eq $sv_somatic, "somatic sv by slice constraint");
 
-# test fetch Iterator by Slice constraint
-#print "\n# Test - fetch_Iterator_by_Slice_constraint\n";
-#my $constraint_5 = '';#"svf.seq_region_start>5000000";
-#my $svfs5 = $svfa->fetch_Iterator_by_Slice_constraint($slice_test,$constraint_5);
-#ok($svfs5->[0]->variation_name eq $sv_names[1], "iterator by slice constraint - 1");
-#ok($svfs5->[1]->variation_name eq $sv_names[2], "iterator by slice constraint - 2");
-
 # test fetch all by Slice SO term
 print "\n# Test - fetch_all_by_Slice_SO_term\n";
 my $SO_term_6 = 'inversion';
